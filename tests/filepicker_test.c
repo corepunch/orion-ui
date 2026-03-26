@@ -1,9 +1,10 @@
 // File picker logic tests (headless, no SDL/OpenGL required)
-// Validates the icon-assignment and filtering rules used by picker_load_dir,
-// and the scroll-adjusted hit-test arithmetic used in win_columnview.
+// Validates the extension-filter logic used by win_filelist / picker_proc,
+// and the scroll-adjusted hit-test arithmetic shared with win_columnview.
 
 #include "test_framework.h"
 #include <string.h>
+#include <strings.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -13,141 +14,148 @@
 
 #define ICON_FOLDER 1   // icon8_collapse
 #define ICON_FILE   4   // icon8_checkbox
+#define ICON_FILTERED (-1)
 
-static bool is_png(const char *path) {
-  if (!path) return false;
-  size_t n = strlen(path);
-  if (n < 5) return false;
-  const char *ext = path + n - 4;
-  return (ext[0] == '.' &&
-          (ext[1] == 'p' || ext[1] == 'P') &&
-          (ext[2] == 'n' || ext[2] == 'N') &&
-          (ext[3] == 'g' || ext[3] == 'G'));
+// Extension filter matching — mirrors fl_matches_filter in filelist.c.
+// filter is a normalised extension like ".png" or "" (no filter).
+static bool fl_matches_filter(const char *name, const char *filter) {
+  if (!filter || !filter[0]) return true;
+  size_t nlen = strlen(name);
+  size_t flen = strlen(filter);
+  if (nlen < flen) return false;
+  return strcasecmp(name + nlen - flen, filter) == 0;
 }
 
-// Returns the icon that picker_load_dir would assign, or ICON_FILTERED if excluded.
-#define ICON_FILTERED (-1)
-static int picker_entry_icon(const char *name, bool is_dir) {
+// Returns ICON_FOLDER for dirs, ICON_FILE for passing files, ICON_FILTERED
+// for files excluded by the extension filter.
+static int filelist_entry_icon(const char *name, bool is_dir,
+                                const char *filter) {
   if (is_dir) return ICON_FOLDER;
-  if (is_png(name)) return ICON_FILE;
+  if (fl_matches_filter(name, filter)) return ICON_FILE;
   return ICON_FILTERED;
 }
 
 // ---------------------------------------------------------------------------
-// Columnview scroll hit-test arithmetic (from win_columnview click handler)
+// Filelist hit-test arithmetic (mirrors filelist.c / columnview.c)
 // ---------------------------------------------------------------------------
 #define ENTRY_HEIGHT  13
 #define WIN_PADDING    4
 
-static int columnview_hit_row(int my, int scroll_y) {
+static int filelist_hit_row(int my, int scroll_y) {
   return (my - WIN_PADDING + scroll_y) / ENTRY_HEIGHT;
 }
 
-static int columnview_item_y(int row, int scroll_y) {
+static int filelist_item_y(int row, int scroll_y) {
   return row * ENTRY_HEIGHT + WIN_PADDING - scroll_y;
 }
 
 // ---------------------------------------------------------------------------
-// Tests: icon assignment
+// Tests: extension filter
 // ---------------------------------------------------------------------------
 
-void test_directory_gets_folder_icon(void) {
-  TEST("Picker: directory entry gets ICON_FOLDER");
-  ASSERT_EQUAL(picker_entry_icon("subdir", true), ICON_FOLDER);
+void test_png_filter_accepts_png(void) {
+  TEST("Filelist filter: .png file passes .png filter");
+  ASSERT_EQUAL(filelist_entry_icon("photo.png", false, ".png"), ICON_FILE);
   PASS();
 }
 
-void test_png_file_gets_file_icon(void) {
-  TEST("Picker: .png file gets ICON_FILE");
-  ASSERT_EQUAL(picker_entry_icon("photo.png", false), ICON_FILE);
+void test_png_filter_accepts_uppercase_png(void) {
+  TEST("Filelist filter: .PNG file passes .png filter (case-insensitive)");
+  ASSERT_EQUAL(filelist_entry_icon("image.PNG", false, ".png"), ICON_FILE);
   PASS();
 }
 
-void test_uppercase_png_gets_file_icon(void) {
-  TEST("Picker: .PNG (uppercase) gets ICON_FILE");
-  ASSERT_EQUAL(picker_entry_icon("image.PNG", false), ICON_FILE);
+void test_png_filter_rejects_jpg(void) {
+  TEST("Filelist filter: .jpg file is excluded by .png filter");
+  ASSERT_EQUAL(filelist_entry_icon("photo.jpg", false, ".png"), ICON_FILTERED);
   PASS();
 }
 
-void test_jpg_file_is_excluded(void) {
-  TEST("Picker: non-.png file is excluded (returns ICON_FILTERED)");
-  ASSERT_EQUAL(picker_entry_icon("photo.jpg", false), ICON_FILTERED);
+void test_png_filter_rejects_txt(void) {
+  TEST("Filelist filter: .txt file is excluded by .png filter");
+  ASSERT_EQUAL(filelist_entry_icon("readme.txt", false, ".png"), ICON_FILTERED);
   PASS();
 }
 
-void test_txt_file_is_excluded(void) {
-  TEST("Picker: .txt file is excluded");
-  ASSERT_EQUAL(picker_entry_icon("readme.txt", false), ICON_FILTERED);
+void test_no_filter_accepts_any_file(void) {
+  TEST("Filelist filter: any file passes when no filter is set");
+  ASSERT_EQUAL(filelist_entry_icon("photo.jpg", false, ""), ICON_FILE);
+  ASSERT_EQUAL(filelist_entry_icon("readme.txt", false, ""), ICON_FILE);
   PASS();
 }
 
-void test_directory_always_included(void) {
-  TEST("Picker: directory is always included regardless of name");
-  ASSERT_EQUAL(picker_entry_icon("documents", true), ICON_FOLDER);
-  ASSERT_EQUAL(picker_entry_icon("readme.txt", true), ICON_FOLDER);
-  PASS();
-}
-
-// ---------------------------------------------------------------------------
-// Tests: CVN_SELCHANGE must NOT navigate (only CVN_DBLCLK should)
-// ---------------------------------------------------------------------------
-
-// Simulate whether a given notification code should trigger directory navigation.
-// Mirrors the fixed picker_proc logic: only CVN_DBLCLK navigates.
-#define CVN_SELCHANGE 0x0101u
-#define CVN_DBLCLK    0x0102u
-
-static bool should_navigate(uint16_t code, bool is_dir) {
-  return code == CVN_DBLCLK && is_dir;
-}
-
-void test_selchange_does_not_navigate_directory(void) {
-  TEST("Picker: CVN_SELCHANGE on directory must not navigate");
-  ASSERT_FALSE(should_navigate(CVN_SELCHANGE, true));
-  PASS();
-}
-
-void test_dblclk_navigates_directory(void) {
-  TEST("Picker: CVN_DBLCLK on directory must navigate");
-  ASSERT_TRUE(should_navigate(CVN_DBLCLK, true));
-  PASS();
-}
-
-void test_dblclk_does_not_navigate_file(void) {
-  TEST("Picker: CVN_DBLCLK on file must not navigate");
-  ASSERT_FALSE(should_navigate(CVN_DBLCLK, false));
+void test_directory_always_accepted(void) {
+  TEST("Filelist filter: directory always gets ICON_FOLDER regardless of filter");
+  ASSERT_EQUAL(filelist_entry_icon("documents", true, ".png"), ICON_FOLDER);
+  ASSERT_EQUAL(filelist_entry_icon("readme.txt", true, ".png"), ICON_FOLDER);
   PASS();
 }
 
 // ---------------------------------------------------------------------------
-// Tests: columnview scroll hit-test consistency
+// Tests: FLN_* notification routing — navigation is internal to win_filelist;
+// the following tests validate the logic used by picker_proc to decide
+// whether to update the filename edit box for each notification code.
+// ---------------------------------------------------------------------------
+#define FLN_SELCHANGE   300u
+#define FLN_FILEOPEN    301u
+#define FLN_NAVDIR      302u
+
+// Mimic picker_proc logic: FLN_SELCHANGE → update edit box for files only;
+// FLN_FILEOPEN → update edit box (directory double-clicks never reach picker).
+static bool picker_updates_editbox(uint16_t code, bool is_directory) {
+  if (code == FLN_SELCHANGE && !is_directory) return true;
+  if (code == FLN_FILEOPEN  && !is_directory) return true;
+  return false;
+}
+
+void test_selchange_on_file_updates_editbox(void) {
+  TEST("Picker: FLN_SELCHANGE on file updates edit box");
+  ASSERT_TRUE(picker_updates_editbox(FLN_SELCHANGE, false));
+  PASS();
+}
+
+void test_selchange_on_dir_does_not_update_editbox(void) {
+  TEST("Picker: FLN_SELCHANGE on directory does not update edit box");
+  ASSERT_FALSE(picker_updates_editbox(FLN_SELCHANGE, true));
+  PASS();
+}
+
+void test_fileopen_on_file_updates_editbox(void) {
+  TEST("Picker: FLN_FILEOPEN on file updates edit box");
+  ASSERT_TRUE(picker_updates_editbox(FLN_FILEOPEN, false));
+  PASS();
+}
+
+void test_navdir_does_not_update_editbox(void) {
+  TEST("Picker: FLN_NAVDIR does not update edit box");
+  ASSERT_FALSE(picker_updates_editbox(FLN_NAVDIR, true));
+  ASSERT_FALSE(picker_updates_editbox(FLN_NAVDIR, false));
+  PASS();
+}
+
+// ---------------------------------------------------------------------------
+// Tests: scroll-adjusted hit-test consistency
 // ---------------------------------------------------------------------------
 
 void test_hit_row_no_scroll(void) {
-  TEST("Columnview: hit-test row matches paint row (no scroll)");
-  // Item 0 is painted at y = WIN_PADDING; clicking there should hit row 0.
-  ASSERT_EQUAL(columnview_hit_row(WIN_PADDING, 0), 0);
-  // Item 1 is at y = ENTRY_HEIGHT + WIN_PADDING
-  ASSERT_EQUAL(columnview_hit_row(ENTRY_HEIGHT + WIN_PADDING, 0), 1);
+  TEST("Filelist: hit-test row matches paint row (no scroll)");
+  ASSERT_EQUAL(filelist_hit_row(WIN_PADDING, 0), 0);
+  ASSERT_EQUAL(filelist_hit_row(ENTRY_HEIGHT + WIN_PADDING, 0), 1);
   PASS();
 }
 
 void test_hit_row_with_scroll(void) {
-  TEST("Columnview: hit-test row matches paint row (with scroll)");
-  int scroll = ENTRY_HEIGHT; // one row scrolled
-  // After scrolling, item 1's painted y = ENTRY_HEIGHT + WIN_PADDING - scroll = WIN_PADDING.
-  int painted_y_of_item1 = columnview_item_y(1, scroll);
+  TEST("Filelist: hit-test row matches paint row (with scroll)");
+  int scroll = ENTRY_HEIGHT;
+  int painted_y_of_item1 = filelist_item_y(1, scroll);
   ASSERT_EQUAL(painted_y_of_item1, WIN_PADDING);
-  // Clicking at that painted y should hit row 1.
-  ASSERT_EQUAL(columnview_hit_row(painted_y_of_item1, scroll), 1);
+  ASSERT_EQUAL(filelist_hit_row(painted_y_of_item1, scroll), 1);
   PASS();
 }
 
 void test_item_y_decreases_with_scroll(void) {
-  TEST("Columnview: painted y decreases as scroll increases");
-  int y0 = columnview_item_y(0, 0);
-  int y1 = columnview_item_y(0, ENTRY_HEIGHT);
-  ASSERT_TRUE(y1 < y0);
+  TEST("Filelist: painted y decreases as scroll increases");
+  ASSERT_TRUE(filelist_item_y(0, ENTRY_HEIGHT) < filelist_item_y(0, 0));
   PASS();
 }
 
@@ -157,18 +165,19 @@ void test_item_y_decreases_with_scroll(void) {
 
 int main(int argc, char *argv[]) {
   (void)argc; (void)argv;
-  TEST_START("File Picker and Columnview Logic");
+  TEST_START("File Picker and Filelist Logic");
 
-  test_directory_gets_folder_icon();
-  test_png_file_gets_file_icon();
-  test_uppercase_png_gets_file_icon();
-  test_jpg_file_is_excluded();
-  test_txt_file_is_excluded();
-  test_directory_always_included();
+  test_png_filter_accepts_png();
+  test_png_filter_accepts_uppercase_png();
+  test_png_filter_rejects_jpg();
+  test_png_filter_rejects_txt();
+  test_no_filter_accepts_any_file();
+  test_directory_always_accepted();
 
-  test_selchange_does_not_navigate_directory();
-  test_dblclk_navigates_directory();
-  test_dblclk_does_not_navigate_file();
+  test_selchange_on_file_updates_editbox();
+  test_selchange_on_dir_does_not_update_editbox();
+  test_fileopen_on_file_updates_editbox();
+  test_navdir_does_not_update_editbox();
 
   test_hit_row_no_scroll();
   test_hit_row_with_scroll();
@@ -176,3 +185,4 @@ int main(int argc, char *argv[]) {
 
   TEST_END();
 }
+

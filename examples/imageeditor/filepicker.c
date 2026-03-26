@@ -1,4 +1,4 @@
-// File picker dialog (modal, PNG-filtered) — uses win_shellview internally.
+// File picker dialog (modal, PNG-filtered) — uses win_filelist internally.
 
 #include "imageeditor.h"
 
@@ -13,14 +13,9 @@ typedef struct {
   picker_mode_t  mode;
   char           result[512];
   bool           accepted;
-  window_t      *list_win;   // win_shellview child
+  window_t      *list_win;   // win_filelist child
   window_t      *edit_win;   // filename text edit
 } picker_state_t;
-
-// Filter: show all directories and .png files only.
-static bool png_only_filter(const char *name, bool is_dir) {
-  return is_dir || is_png(name);
-}
 
 static result_t picker_proc(window_t *win, uint32_t msg,
                              uint32_t wparam, void *lparam) {
@@ -30,13 +25,13 @@ static result_t picker_proc(window_t *win, uint32_t msg,
       ps = (picker_state_t *)lparam;
       win->userdata = ps;
 
-      // Shell-view handles all directory listing and navigation.
+      // win_filelist handles all directory listing, navigation, and sorting.
       ps->list_win = create_window("", WINDOW_NOTITLE | WINDOW_VSCROLL,
           MAKERECT(2, 2, PICKER_LIST_W, PICKER_LIST_H),
-          win, win_shellview, NULL);
+          win, win_filelist, NULL);
 
-      // Restrict to directories and .png files.
-      send_message(ps->list_win, SVM_SETFILTER, 0, png_only_filter);
+      // Restrict file listing to .png files (directories are always shown).
+      send_message(ps->list_win, FLM_SETFILTER, 0, (void *)".png");
 
       create_window("File:", WINDOW_NOTITLE,
           MAKERECT(2, PICKER_LIST_H + 6, 28, CONTROL_HEIGHT),
@@ -58,13 +53,14 @@ static result_t picker_proc(window_t *win, uint32_t msg,
 
     case kWindowMessageCommand: {
       uint16_t code = HIWORD(wparam);
-      (void)LOWORD(wparam); // index — unused at this level
 
-      if (code == SVN_SELCHANGE) {
+      if (code == FLN_SELCHANGE) {
         // Single-click on a file: populate the filename edit box.
-        const char *name = (const char *)lparam;
-        if (name && name[0]) {
-          strncpy(ps->edit_win->title, name,
+        const fileitem_t *item = (const fileitem_t *)lparam;
+        if (item && !item->is_directory && item->path) {
+          const char *base = strrchr(item->path, '/');
+          base = base ? base + 1 : item->path;
+          strncpy(ps->edit_win->title, base,
                   sizeof(ps->edit_win->title) - 1);
           ps->edit_win->title[sizeof(ps->edit_win->title) - 1] = '\0';
           invalidate_window(ps->edit_win);
@@ -72,12 +68,14 @@ static result_t picker_proc(window_t *win, uint32_t msg,
         return true;
       }
 
-      if (code == SVN_ITEMACTIVATE) {
-        // Double-click on a file: populate edit box (directory navigation is
-        // already handled inside win_shellview before this notification).
-        const char *name = (const char *)lparam;
-        if (name && name[0]) {
-          strncpy(ps->edit_win->title, name,
+      if (code == FLN_FILEOPEN) {
+        // Double-click on a file: populate edit box.
+        // Directory navigation is already handled inside win_filelist.
+        const fileitem_t *item = (const fileitem_t *)lparam;
+        if (item && item->path) {
+          const char *base = strrchr(item->path, '/');
+          base = base ? base + 1 : item->path;
+          strncpy(ps->edit_win->title, base,
                   sizeof(ps->edit_win->title) - 1);
           ps->edit_win->title[sizeof(ps->edit_win->title) - 1] = '\0';
           invalidate_window(ps->edit_win);
@@ -94,12 +92,16 @@ static result_t picker_proc(window_t *win, uint32_t msg,
         }
         const char *fname = ps->edit_win->title;
         if (fname[0]) {
-          // Ask shellview for the current directory.
-          char curpath[512] = {0};
-          send_message(ps->list_win, SVM_GETPATH, sizeof(curpath), curpath);
-
-          char full[600];
-          snprintf(full, sizeof(full), "%s/%s", curpath, fname);
+          // Try the selected item's full path first.  If no file item is
+          // selected (e.g. the user typed a name manually in the edit box),
+          // construct the path from the current directory and the edit-box content.
+          char full[600] = {0};
+          send_message(ps->list_win, FLM_GETSELECTEDPATH, sizeof(full), full);
+          if (!full[0]) {
+            char curpath[512] = {0};
+            send_message(ps->list_win, FLM_GETPATH, sizeof(curpath), curpath);
+            snprintf(full, sizeof(full), "%s/%s", curpath, fname);
+          }
           if (!is_png(full) && strlen(full) + 5 < sizeof(full))
             strcat(full, ".png");
           strncpy(ps->result, full, sizeof(ps->result) - 1);
@@ -133,4 +135,5 @@ static bool show_file_picker(window_t *parent, bool save_mode,
   }
   return false;
 }
+
 

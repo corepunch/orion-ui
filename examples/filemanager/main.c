@@ -10,58 +10,55 @@
 extern bool running;
 
 // ---------------------------------------------------------------------------
-// filemanager_proc — thin wrapper around win_shellview.
-// All directory listing and navigation is handled inside win_shellview.
-// This proc intercepts SVN_* notifications for filemanager-specific behaviour
-// (status bar path display, Lua script execution).
+// filemanager_proc — thin wrapper around win_filelist.
+// All directory listing, sorting, and navigation is handled inside win_filelist.
+// This proc intercepts FLN_* notifications for filemanager-specific behaviour:
+//   FLN_NAVDIR  → update the window status bar with the new path
+//   FLN_FILEOPEN → launch a terminal for .lua scripts
 // ---------------------------------------------------------------------------
 static result_t filemanager_proc(window_t *win, uint32_t msg,
                                   uint32_t wparam, void *lparam) {
   switch (msg) {
     case kWindowMessageCreate:
-      // Start in cwd; lparam=NULL means win_shellview uses getcwd().
-      return win_shellview(win, msg, wparam, NULL);
+      // lparam = NULL: win_filelist starts in the current working directory.
+      return win_filelist(win, msg, wparam, NULL);
 
     case kWindowMessageCommand: {
       uint16_t code = HIWORD(wparam);
 
-      if (code == SVN_PATHCHANGE && lparam) {
-        // Update the window's status bar to show the new path.
+      if (code == FLN_NAVDIR && lparam) {
+        // Update the status bar to show the new directory.
         send_message(win, kWindowMessageStatusBar, 0, lparam);
         return false;
       }
 
 #ifdef USE_LUA
-      if (code == SVN_ITEMACTIVATE && lparam) {
-        const char *name = (const char *)lparam;
-        if (strstr(name, ".lua")) {
-          // Build full path and launch a terminal to execute the script.
-          char curpath[512], fullpath[768];
-          send_message(win, SVM_GETPATH, sizeof(curpath), curpath);
-          snprintf(fullpath, sizeof(fullpath), "%s/%s", curpath, name);
+      if (code == FLN_FILEOPEN && lparam) {
+        const fileitem_t *item = (const fileitem_t *)lparam;
+        if (item->path && strstr(item->path, ".lua")) {
           show_window(
             create_window("Terminal", 0, MAKERECT(16, 16, 240, 120),
-                          NULL, win_terminal, fullpath),
+                          NULL, win_terminal, item->path),
             true);
           return true;
         }
       }
 #endif
 
-      // Let win_shellview handle any remaining CVN_* it may emit internally.
-      return win_shellview(win, msg, wparam, lparam);
+      // Forward anything else (e.g. future FLN_* codes) to win_filelist.
+      return win_filelist(win, msg, wparam, lparam);
     }
 
     case kWindowMessageDestroy:
       running = false;
-      return win_shellview(win, msg, wparam, lparam);
+      return win_filelist(win, msg, wparam, lparam);
 
     default:
-      return win_shellview(win, msg, wparam, lparam);
+      return win_filelist(win, msg, wparam, lparam);
   }
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   (void)argc; (void)argv;
 
   if (!ui_init_graphics(UI_INIT_DESKTOP | UI_INIT_TRAY, "File Manager", 480, 320)) {
@@ -88,9 +85,7 @@ int main(int argc, char* argv[]) {
 
   ui_event_t e;
   while (running) {
-    while (get_message(&e)) {
-      dispatch_message(&e);
-    }
+    while (get_message(&e)) dispatch_message(&e);
     repost_messages();
   }
 
@@ -98,4 +93,5 @@ int main(int argc, char* argv[]) {
   ui_shutdown_graphics();
   return 0;
 }
+
 
