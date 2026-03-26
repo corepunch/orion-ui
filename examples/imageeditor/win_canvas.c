@@ -2,6 +2,9 @@
 
 #include "imageeditor.h"
 
+static int imin(int a, int b) { return a < b ? a : b; }
+static int imax(int a, int b) { return a > b ? a : b; }
+
 result_t win_canvas_proc(window_t *win, uint32_t msg,
                           uint32_t wparam, void *lparam) {
   canvas_win_state_t *state = (canvas_win_state_t *)win->userdata;
@@ -25,6 +28,20 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       draw_rect(doc->canvas_tex,
                 win->frame.x, win->frame.y,
                 CANVAS_W * state->scale, CANVAS_H * state->scale);
+      if (doc->sel_active) {
+        int x0 = imin(doc->sel_x0, doc->sel_x1) * state->scale;
+        int y0 = imin(doc->sel_y0, doc->sel_y1) * state->scale;
+        int x1 = (imax(doc->sel_x0, doc->sel_x1) + 1) * state->scale;
+        int y1 = (imax(doc->sel_y0, doc->sel_y1) + 1) * state->scale;
+        int sw = x1 - x0;
+        int sh = y1 - y0;
+        int ox = win->frame.x + x0;
+        int oy = win->frame.y + y0;
+        fill_rect(0xFFFFFFFF, ox,          oy,          sw, 1);
+        fill_rect(0xFFFFFFFF, ox,          oy + sh - 1, sw, 1);
+        fill_rect(0xFFFFFFFF, ox,          oy,          1,  sh);
+        fill_rect(0xFFFFFFFF, ox + sw - 1, oy,          1,  sh);
+      }
       return true;
     }
 
@@ -39,10 +56,27 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       doc->last_x  = cx;
       doc->last_y  = cy;
 
-      const tool_t *t = (g_app->current_tool >= 0 && g_app->current_tool < NUM_TOOLS)
-                        ? tools[g_app->current_tool] : NULL;
-      if (t && t->on_down)
-        t->on_down(doc, cx, cy, g_app->fg_color, g_app->bg_color);
+      switch (g_app->current_tool) {
+        case TOOL_PENCIL:
+          canvas_draw_circle(doc, cx, cy, 0, g_app->fg_color);
+          break;
+        case TOOL_BRUSH:
+          canvas_draw_circle(doc, cx, cy, 2, g_app->fg_color);
+          break;
+        case TOOL_ERASER:
+          canvas_draw_circle(doc, cx, cy, 3, g_app->bg_color);
+          break;
+        case TOOL_FILL:
+          canvas_flood_fill(doc, cx, cy, g_app->fg_color);
+          break;
+        case TOOL_SELECT:
+          doc->sel_x0 = doc->sel_x1 = cx;
+          doc->sel_y0 = doc->sel_y1 = cy;
+          doc->sel_active = true;
+          break;
+        default:
+          break;
+      }
 
       invalidate_window(win);
       doc_update_title(doc);
@@ -58,11 +92,25 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       int cy = ly / state->scale;
       if (cx == doc->last_x && cy == doc->last_y) return true;
 
-      const tool_t *t = (g_app->current_tool >= 0 && g_app->current_tool < NUM_TOOLS)
-                        ? tools[g_app->current_tool] : NULL;
-      if (t && t->on_drag)
-        t->on_drag(doc, doc->last_x, doc->last_y, cx, cy,
-                   g_app->fg_color, g_app->bg_color);
+      switch (g_app->current_tool) {
+        case TOOL_PENCIL:
+          canvas_draw_line(doc, doc->last_x, doc->last_y, cx, cy, 0, g_app->fg_color);
+          break;
+        case TOOL_BRUSH:
+          canvas_draw_line(doc, doc->last_x, doc->last_y, cx, cy, 2, g_app->fg_color);
+          break;
+        case TOOL_ERASER:
+          canvas_draw_line(doc, doc->last_x, doc->last_y, cx, cy, 3, g_app->bg_color);
+          break;
+        case TOOL_FILL:
+          break;
+        case TOOL_SELECT:
+          doc->sel_x1 = cx;
+          doc->sel_y1 = cy;
+          break;
+        default:
+          break;
+      }
 
       doc->last_x = cx;
       doc->last_y = cy;

@@ -36,7 +36,6 @@
 #define DOC_START_Y   60
 #define DOC_CASCADE   20
 
-#define NUM_TOOLS   4
 #define NUM_COLORS 16
 
 // Menu item IDs
@@ -53,6 +52,19 @@
 
 typedef struct { uint8_t r, g, b, a; } rgba_t;
 
+// ============================================================
+// Tool enum
+// ============================================================
+
+typedef enum {
+  TOOL_PENCIL = 0,
+  TOOL_BRUSH,
+  TOOL_ERASER,
+  TOOL_FILL,
+  TOOL_SELECT,
+  NUM_TOOLS
+} tool_id_t;
+
 typedef struct canvas_doc_s {
   uint8_t  pixels[CANVAS_H * CANVAS_W * 4];
   GLuint   canvas_tex;
@@ -64,6 +76,9 @@ typedef struct canvas_doc_s {
   window_t *win;
   window_t *canvas_win;
   struct canvas_doc_s *next;
+  bool     sel_active;
+  int      sel_x0, sel_y0;
+  int      sel_x1, sel_y1;
 } canvas_doc_t;
 
 typedef struct {
@@ -85,16 +100,6 @@ typedef struct {
 } app_state_t;
 
 // ============================================================
-// Tool plugin interface
-// ============================================================
-
-typedef struct tool_s {
-  const char *name;
-  void (*on_down)(canvas_doc_t *doc, int cx, int cy, rgba_t fg, rgba_t bg);
-  void (*on_drag)(canvas_doc_t *doc, int x0, int y0, int cx, int cy, rgba_t fg, rgba_t bg);
-} tool_t;
-
-// ============================================================
 // Global state
 // ============================================================
 
@@ -103,8 +108,8 @@ extern app_state_t *g_app;
 // Color palette
 extern const rgba_t kPalette[NUM_COLORS];
 
-// Tool registry
-extern const tool_t *tools[];
+// Tool display names (indexed by tool_id_t)
+extern const char *tool_names[NUM_TOOLS];
 
 // ============================================================
 // Canvas helpers (used across files)

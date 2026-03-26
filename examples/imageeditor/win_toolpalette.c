@@ -18,7 +18,7 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
         bool active = g_app && (g_app->current_tool == i);
         if (active)
           fill_rect(COLOR_FOCUSED, 1, ty, win->frame.w - 2, TOOL_ROW_H - 1);
-        draw_text_small(tools[i]->name, 4, ty + 7,
+        draw_text_small(tool_names[i], 4, ty + 7,
                         active ? COLOR_PANEL_BG : COLOR_TEXT_NORMAL);
       }
 
