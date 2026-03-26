@@ -39,6 +39,16 @@ else
         LIBS += -framework OpenGL
         LIB_EXT = .dylib
         LIB_FLAGS = -dynamiclib
+        # Lua on macOS may be keg-only (headers not symlinked into /opt/homebrew/include).
+        # Use pkg-config when available, otherwise fall back to brew --prefix.
+        LUA_PREFIX := $(shell pkg-config --variable=prefix lua5.4 2>/dev/null || \
+                               pkg-config --variable=prefix lua 2>/dev/null || \
+                               brew --prefix lua@5.4 2>/dev/null || \
+                               brew --prefix lua 2>/dev/null || echo "")
+        ifneq ($(LUA_PREFIX),)
+            CFLAGS  += -I$(LUA_PREFIX)/include
+            LDFLAGS += -L$(LUA_PREFIX)/lib
+        endif
     else ifeq ($(UNAME_S),Linux)
         # Linux specific flags
         LIBS += -lGL

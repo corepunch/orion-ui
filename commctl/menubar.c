@@ -113,21 +113,28 @@ static result_t popup_proc(window_t *win, uint32_t msg,
             window_t *mb = pd->menubar;
             menubar_data_t *mbd = mb ? (menubar_data_t *)mb->userdata : NULL;
             if (mbd) mbd->open_popup = NULL;
+            uint16_t item_id = it->id;   // save before destroy
+            destroy_window(win);  // close popup before command runs (e.g. dialogs)
             // Send command to menubar window (application intercepts it there)
             if (mb) {
               send_message(mb, kWindowMessageCommand,
-                           MAKEDWORD(it->id, kMenuBarNotificationItemClick),
+                           MAKEDWORD(item_id, kMenuBarNotificationItemClick),
                            NULL);
             }
-            destroy_window(win);  // WM_DESTROY releases capture + frees pd
             return true;
           }
           y += h;
         }
         return true;  // click inside but not on an item
       }
-      // Fall through to non-client handling (click outside)
-      return false;
+      // Click outside popup bounds – close the popup
+      {
+        menubar_data_t *mbd =
+            pd->menubar ? (menubar_data_t *)pd->menubar->userdata : NULL;
+        if (mbd) mbd->open_popup = NULL;
+        destroy_window(win);
+      }
+      return true;
     }
 
     case kWindowMessageLeftButtonUp:

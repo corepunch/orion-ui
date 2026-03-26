@@ -4,11 +4,21 @@
 #define TOOL_ROW_H     24
 #define SWATCH_H       22
 
+typedef struct {
+  bool dragging;
+} tool_palette_data_t;
+
 result_t win_tool_palette_proc(window_t *win, uint32_t msg,
                                 uint32_t wparam, void *lparam) {
+  tool_palette_data_t *d = (tool_palette_data_t *)win->userdata;
   switch (msg) {
-    case kWindowMessageCreate:
+    case kWindowMessageCreate: {
+      tool_palette_data_t *nd = malloc(sizeof(tool_palette_data_t));
+      memset(nd, 0, sizeof(tool_palette_data_t));
+      win->userdata = nd;
+      d = nd;
       return true;
+    }
 
     case kWindowMessagePaint: {
       fill_rect(COLOR_PANEL_DARK_BG, 0, 0, win->frame.w, win->frame.h);
@@ -43,6 +53,12 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
     case kWindowMessageLeftButtonDown: {
       if (!g_app) return true;
       int ly = (int16_t)HIWORD(wparam);
+      // Click in header – begin drag
+      if (ly < TOOL_HEADER_H) {
+        if (d) d->dragging = true;
+        set_capture(win);
+        return true;
+      }
       if (ly >= TOOL_HEADER_H && ly < TOOL_HEADER_H + NUM_TOOLS * TOOL_ROW_H) {
         int idx = (ly - TOOL_HEADER_H) / TOOL_ROW_H;
         if (idx >= 0 && idx < NUM_TOOLS) {
@@ -50,6 +66,29 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
           invalidate_window(win);
         }
       }
+      return true;
+    }
+
+    case kWindowMessageMouseMove: {
+      if (!d || !d->dragging) return false;
+      int16_t dx = (int16_t)LOWORD((uint32_t)(intptr_t)lparam);
+      int16_t dy = (int16_t)HIWORD((uint32_t)(intptr_t)lparam);
+      move_window(win, win->frame.x + dx, win->frame.y + dy);
+      return true;
+    }
+
+    case kWindowMessageLeftButtonUp: {
+      if (d && d->dragging) {
+        d->dragging = false;
+        set_capture(NULL);
+      }
+      return true;
+    }
+
+    case kWindowMessageDestroy: {
+      if (d && d->dragging) set_capture(NULL);
+      free(d);
+      win->userdata = NULL;
       return true;
     }
 

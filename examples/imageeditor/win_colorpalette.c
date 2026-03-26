@@ -5,6 +5,10 @@
 #define SWATCH_W        (PALETTE_WIN_W / SWATCH_COLS)
 #define SWATCH_ROW_H    22
 
+typedef struct {
+  bool dragging;
+} color_palette_data_t;
+
 const rgba_t kPalette[NUM_COLORS] = {
   {0xFF,0xFF,0xFF,0xFF}, // white
   {0xCC,0xCC,0xCC,0xFF}, // light gray
@@ -26,9 +30,15 @@ const rgba_t kPalette[NUM_COLORS] = {
 
 result_t win_color_palette_proc(window_t *win, uint32_t msg,
                                  uint32_t wparam, void *lparam) {
+  color_palette_data_t *d = (color_palette_data_t *)win->userdata;
   switch (msg) {
-    case kWindowMessageCreate:
+    case kWindowMessageCreate: {
+      color_palette_data_t *nd = malloc(sizeof(color_palette_data_t));
+      memset(nd, 0, sizeof(color_palette_data_t));
+      win->userdata = nd;
+      d = nd;
       return true;
+    }
 
     case kWindowMessagePaint: {
       fill_rect(COLOR_PANEL_DARK_BG, 0, 0, win->frame.w, win->frame.h);
@@ -54,7 +64,12 @@ result_t win_color_palette_proc(window_t *win, uint32_t msg,
       if (!g_app) return true;
       int lx = (int16_t)LOWORD(wparam);
       int ly = (int16_t)HIWORD(wparam);
-      if (ly < COLOR_HEADER_H) return true;
+      // Click in header – begin drag
+      if (ly < COLOR_HEADER_H) {
+        if (d) d->dragging = true;
+        set_capture(win);
+        return true;
+      }
       int col = lx / SWATCH_W;
       int row = (ly - COLOR_HEADER_H) / SWATCH_ROW_H;
       int idx = row * SWATCH_COLS + col;
@@ -63,6 +78,29 @@ result_t win_color_palette_proc(window_t *win, uint32_t msg,
         invalidate_window(win);
         if (g_app->tool_win) invalidate_window(g_app->tool_win);
       }
+      return true;
+    }
+
+    case kWindowMessageMouseMove: {
+      if (!d || !d->dragging) return false;
+      int16_t dx = (int16_t)LOWORD((uint32_t)(intptr_t)lparam);
+      int16_t dy = (int16_t)HIWORD((uint32_t)(intptr_t)lparam);
+      move_window(win, win->frame.x + dx, win->frame.y + dy);
+      return true;
+    }
+
+    case kWindowMessageLeftButtonUp: {
+      if (d && d->dragging) {
+        d->dragging = false;
+        set_capture(NULL);
+      }
+      return true;
+    }
+
+    case kWindowMessageDestroy: {
+      if (d && d->dragging) set_capture(NULL);
+      free(d);
+      win->userdata = NULL;
       return true;
     }
 
