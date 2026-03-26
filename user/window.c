@@ -243,12 +243,18 @@ void set_focus(window_t* win) {
   _focused = win;
 }
 
-// Invalidate window (request repaint)
+// Invalidate window (request repaint).
+// Always routes to the root window so that kWindowMessageNonClientPaint
+// redraws the panel background (via draw_panel), erasing stale pixels from
+// the previous state before kWindowMessagePaint redraws the content.
+// For root windows get_root_window() returns win itself, so behaviour is
+// identical to the previous implementation.  For child windows the root is
+// invalidated, which clears the background and repaints all children —
+// necessary to erase, e.g., a stale selection highlight in a child control.
 void invalidate_window(window_t *win) {
-  if (!win->parent) {
-    post_message(win, kWindowMessageNonClientPaint, 0, NULL);
-  }
-  post_message(win, kWindowMessagePaint, 0, NULL);
+  window_t *root = get_root_window(win);
+  post_message(root, kWindowMessageNonClientPaint, 0, NULL);
+  post_message(root, kWindowMessagePaint, 0, NULL);
 }
 
 // Get titlebar Y position

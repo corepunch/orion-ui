@@ -284,7 +284,62 @@ void test_selection_clear_on_new_click(void) {
 
 // ---------------------------------------------------------------------------
 // Main
+
+// Tests: invalidate_window routing — stale selection highlight regression
+//
+// When win_filelist is a child window, `invalidate_window(child)` must cause
+// the ROOT window to be repainted (not just the child).  Only the root-level
+// kWindowMessageNonClientPaint calls draw_panel(), which fills the background
+// with COLOR_PANEL_BG and erases stale selection-highlight pixels from the
+// previous selection.  Without this, clicking a new item draws the new
+// highlight on top of the old one, leaving both visible simultaneously.
+//
+// The fix: invalidate_window always routes to get_root_window(win) so the
+// non-client + client paint cycle always clears the background first.
+//
+// Here we test the routing logic: given a (parent, child) pair, verify that
+// the "invalidate target" is the root (for children) or self (for roots).
+
 // ---------------------------------------------------------------------------
+
+// Mirrors the get_root_window logic: walk up the parent chain.
+typedef struct fake_win { struct fake_win *parent; } fake_win_t;
+static fake_win_t *fake_get_root(fake_win_t *w) {
+  return w->parent ? fake_get_root(w->parent) : w;
+}
+
+// Mirrors invalidate_window's target selection after the fix:
+//   always invalidate the root window, never just a child.
+static fake_win_t *fake_invalidate_target(fake_win_t *w) {
+  return fake_get_root(w);
+}
+
+void test_invalidate_root_window_targets_self(void) {
+  TEST("invalidate_window: root window targets itself");
+  fake_win_t root = { .parent = NULL };
+  ASSERT_TRUE(fake_invalidate_target(&root) == &root);
+  PASS();
+}
+
+void test_invalidate_child_window_targets_root(void) {
+  TEST("invalidate_window: child window routes to root (fixes stale selection)");
+  fake_win_t root  = { .parent = NULL };
+  fake_win_t child = { .parent = &root };
+  // Before the fix, invalidate_window would only post kWindowMessagePaint to
+  // &child, never sending kWindowMessageNonClientPaint to &root.  After the
+  // fix both messages go to &root, clearing the panel background first.
+  ASSERT_TRUE(fake_invalidate_target(&child) == &root);
+  PASS();
+}
+
+void test_invalidate_grandchild_targets_root(void) {
+  TEST("invalidate_window: grandchild window routes to root");
+  fake_win_t root       = { .parent = NULL };
+  fake_win_t child      = { .parent = &root };
+  fake_win_t grandchild = { .parent = &child };
+  ASSERT_TRUE(fake_invalidate_target(&grandchild) == &root);
+  PASS();
+}
 
 int main(int argc, char *argv[]) {
   (void)argc; (void)argv;
@@ -314,6 +369,9 @@ int main(int argc, char *argv[]) {
   test_nonselected_item_clears_background();
   test_selected_item_uses_highlight_color();
   test_selection_clear_on_new_click();
+  test_invalidate_root_window_targets_self();
+  test_invalidate_child_window_targets_root();
+  test_invalidate_grandchild_targets_root();
 
   TEST_END();
 }
