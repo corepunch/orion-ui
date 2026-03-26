@@ -1,6 +1,5 @@
 // Canvas child window – renders the pixel canvas and dispatches paint events to tools
 
-#include <SDL2/SDL.h>
 #include "imageeditor.h"
 
 result_t win_canvas_proc(window_t *win, uint32_t msg,
@@ -76,27 +75,6 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
     case kWindowMessageLeftButtonUp:
       if (doc) doc->drawing = false;
       return true;
-
-    case kWindowMessageKeyDown: {
-      SDL_Keymod mod = SDL_GetModState();
-      if (mod & KMOD_CTRL) {
-        if (wparam == SDL_SCANCODE_Z) {
-          if (doc && doc_undo(doc)) {
-            doc_update_title(doc);
-            invalidate_window(win);
-          }
-          return true;
-        }
-        if (wparam == SDL_SCANCODE_Y) {
-          if (doc && doc_redo(doc)) {
-            doc_update_title(doc);
-            invalidate_window(win);
-          }
-          return true;
-        }
-      }
-      return false;
-    }
 
     default:
       return false;

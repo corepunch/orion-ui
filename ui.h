@@ -8,6 +8,7 @@
 #include "user/messages.h"
 #include "user/text.h"
 #include "user/draw.h"
+#include "user/accel.h"
 
 // Kernel subsystem (event management)
 #include "kernel/kernel.h"

@@ -56,7 +56,8 @@ bool doc_undo(canvas_doc_t *doc) {
   if (!doc || doc->undo_count == 0) return false;
 
   uint8_t *current = make_snapshot(doc);
-  if (current) stack_push(doc->redo_states, &doc->redo_count, current);
+  if (!current) return false;
+  stack_push(doc->redo_states, &doc->redo_count, current);
 
   doc->undo_count--;
   memcpy(doc->pixels, doc->undo_states[doc->undo_count], kSnapSize);
@@ -75,7 +76,8 @@ bool doc_redo(canvas_doc_t *doc) {
   if (!doc || doc->redo_count == 0) return false;
 
   uint8_t *current = make_snapshot(doc);
-  if (current) stack_push(doc->undo_states, &doc->undo_count, current);
+  if (!current) return false;
+  stack_push(doc->undo_states, &doc->undo_count, current);
 
   doc->redo_count--;
   memcpy(doc->pixels, doc->redo_states[doc->redo_count], kSnapSize);

@@ -109,10 +109,13 @@ static void handle_menu_command(uint16_t id) {
 
 result_t editor_menubar_proc(window_t *win, uint32_t msg,
                               uint32_t wparam, void *lparam) {
-  if (msg == kWindowMessageCommand &&
-      HIWORD(wparam) == kMenuBarNotificationItemClick) {
-    handle_menu_command(LOWORD(wparam));
-    return true;
+  if (msg == kWindowMessageCommand) {
+    uint16_t notif = HIWORD(wparam);
+    if (notif == kMenuBarNotificationItemClick ||
+        notif == kAcceleratorNotification) {
+      handle_menu_command(LOWORD(wparam));
+      return true;
+    }
   }
   return win_menubar(win, msg, wparam, lparam);
 }

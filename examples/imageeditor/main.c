@@ -11,6 +11,19 @@ extern bool running;
 app_state_t *g_app = NULL;
 
 // ============================================================
+// Keyboard accelerators
+// ============================================================
+
+static const accel_t kAccelEntries[] = {
+  { FCONTROL|FVIRTKEY, SDL_SCANCODE_Z, ID_EDIT_UNDO },
+  { FCONTROL|FVIRTKEY, SDL_SCANCODE_Y, ID_EDIT_REDO },
+  { FCONTROL|FVIRTKEY, SDL_SCANCODE_N, ID_FILE_NEW  },
+  { FCONTROL|FVIRTKEY, SDL_SCANCODE_O, ID_FILE_OPEN },
+  { FCONTROL|FVIRTKEY, SDL_SCANCODE_S, ID_FILE_SAVE },
+  { FCONTROL|FVIRTKEY, SDL_SCANCODE_W, ID_FILE_CLOSE},
+};
+
+// ============================================================
 // Application init
 // ============================================================
 
@@ -65,18 +78,27 @@ int main(int argc, char *argv[]) {
   }
 
   create_app_windows();
+
+  g_app->accel = load_accelerators(kAccelEntries,
+                                   (int)(sizeof(kAccelEntries)/sizeof(kAccelEntries[0])));
+
   create_document(NULL);
 
   while (running) {
     ui_event_t e;
     while (get_message(&e)) {
-      dispatch_message(&e);
+      if (!translate_accelerator(g_app->menubar_win, &e, g_app->accel))
+        dispatch_message(&e);
     }
     repost_messages();
   }
 
+  free_accelerators(g_app->accel);
+  g_app->accel = NULL;
+
   while (g_app->docs) {
     canvas_doc_t *next = g_app->docs->next;
+    doc_free_undo(g_app->docs);
     if (g_app->docs->canvas_tex)
       glDeleteTextures(1, &g_app->docs->canvas_tex);
     free(g_app->docs);

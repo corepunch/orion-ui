@@ -92,6 +92,7 @@ typedef struct {
   rgba_t         bg_color;
   int            next_x;
   int            next_y;
+  accel_table_t *accel;
 } app_state_t;
 
 // ============================================================
