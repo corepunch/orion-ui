@@ -6,7 +6,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "../ui.h"
+#include "../../ui.h"
 
 #define USE_LUA
 #define USE_SORTING
