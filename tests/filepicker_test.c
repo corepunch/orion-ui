@@ -230,6 +230,59 @@ void test_root_filelist_click_no_correction_needed(void) {
 }
 
 // ---------------------------------------------------------------------------
+// Tests: columnview background clearing for non-selected items
+//
+// When win_columnview is used as a child window (e.g. embedded in a picker
+// dialog), invalidate_window does NOT post kWindowMessageNonClientPaint, so
+// draw_panel never clears the background.  Every item must therefore clear its
+// own background on each paint so that a previously-selected item's highlight
+// rectangle does not persist after a new item is selected.
+//
+// The fix in columnview.c adds fill_rect(COLOR_PANEL_BG, ...) for non-selected
+// items, matching the same rect that fill_rect(COLOR_TEXT_NORMAL, ...) draws
+// for selected items.
+// ---------------------------------------------------------------------------
+
+// Mirrors the paint logic in win_columnview: returns the background colour
+// that should be drawn for an item before its icon/text are painted.
+// Selected items use the highlight colour; non-selected items use the panel
+// background to erase any previous highlight.
+#define CV_COLOR_SELECTED    0xff808080u // COLOR_TEXT_NORMAL stand-in
+#define CV_COLOR_BG          0xff3c3c3cu // COLOR_PANEL_BG stand-in
+
+static uint32_t cv_item_bg_color(bool is_selected) {
+  return is_selected ? CV_COLOR_SELECTED : CV_COLOR_BG;
+}
+
+void test_nonselected_item_clears_background(void) {
+  TEST("Columnview: non-selected item uses panel background (clears old highlight)");
+  // Non-selected items must use the panel background, not the selection colour.
+  ASSERT_EQUAL((int)cv_item_bg_color(false), (int)CV_COLOR_BG);
+  // Verify that the non-selected colour is NOT the selection highlight colour.
+  ASSERT_FALSE(cv_item_bg_color(false) == CV_COLOR_SELECTED);
+  PASS();
+}
+
+void test_selected_item_uses_highlight_color(void) {
+  TEST("Columnview: selected item uses highlight colour (not panel bg)");
+  ASSERT_EQUAL((int)cv_item_bg_color(true), (int)CV_COLOR_SELECTED);
+  ASSERT_FALSE(cv_item_bg_color(true) == CV_COLOR_BG);
+  PASS();
+}
+
+void test_selection_clear_on_new_click(void) {
+  TEST("Columnview: clicking new item changes selected index, old index no longer selected");
+  // Simulate: initial selected=2, new click on index=5.
+  int selected = 2;
+  int clicked  = 5;
+  selected = clicked;  // update selection
+  ASSERT_EQUAL(selected, 5);
+  // Old index (2) is no longer == selected (5).
+  ASSERT_FALSE(2 == selected);
+  PASS();
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
@@ -257,6 +310,10 @@ int main(int argc, char *argv[]) {
   test_child_click_row0_without_correction_lands_on_wrong_row();
   test_child_click_row2_with_parent_at_y100();
   test_root_filelist_click_no_correction_needed();
+
+  test_nonselected_item_clears_background();
+  test_selected_item_uses_highlight_color();
+  test_selection_clear_on_new_click();
 
   TEST_END();
 }

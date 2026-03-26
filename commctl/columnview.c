@@ -81,6 +81,7 @@ result_t win_columnview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
           draw_icon8(data->items[i].icon, x, y - ICON_DODGE, COLOR_PANEL_BG);
           draw_text_small(data->names[i], x + ICON_OFFSET, y, COLOR_PANEL_BG);
         } else {
+          fill_rect(COLOR_PANEL_BG, x - 2, y - 2, data->column_width - 6, ENTRY_HEIGHT - 2);
           draw_icon8(data->items[i].icon, x, y - ICON_DODGE, data->items[i].color);
           draw_text_small(data->names[i], x + ICON_OFFSET, y, data->items[i].color);
         }
