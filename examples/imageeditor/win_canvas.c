@@ -2,9 +2,6 @@
 
 #include "imageeditor.h"
 
-static int imin(int a, int b) { return a < b ? a : b; }
-static int imax(int a, int b) { return a > b ? a : b; }
-
 result_t win_canvas_proc(window_t *win, uint32_t msg,
                           uint32_t wparam, void *lparam) {
   canvas_win_state_t *state = (canvas_win_state_t *)win->userdata;
@@ -29,10 +26,10 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
                 win->frame.x, win->frame.y,
                 CANVAS_W * state->scale, CANVAS_H * state->scale);
       if (doc->sel_active) {
-        int x0 = imin(doc->sel_x0, doc->sel_x1) * state->scale;
-        int y0 = imin(doc->sel_y0, doc->sel_y1) * state->scale;
-        int x1 = (imax(doc->sel_x0, doc->sel_x1) + 1) * state->scale;
-        int y1 = (imax(doc->sel_y0, doc->sel_y1) + 1) * state->scale;
+        int x0 = MIN(doc->sel_x0, doc->sel_x1) * state->scale;
+        int y0 = MIN(doc->sel_y0, doc->sel_y1) * state->scale;
+        int x1 = (MAX(doc->sel_x0, doc->sel_x1) + 1) * state->scale;
+        int y1 = (MAX(doc->sel_y0, doc->sel_y1) + 1) * state->scale;
         int sw = x1 - x0;
         int sh = y1 - y0;
         int ox = win->frame.x + x0;
