@@ -574,9 +574,11 @@ static result_t canvas_proc(window_t *win, uint32_t msg,
 
     case kWindowMessageLeftButtonDown: {
       if (!doc || !g_app) return true;
-      // wparam holds root-relative coords; canvas is at root-relative (0,0)
-      int lx = (int16_t)LOWORD(wparam) - win->frame.x;
-      int ly = (int16_t)HIWORD(wparam) - win->frame.y;
+      // Canvas child is found via HitTest so LOCAL_X used canvas->frame.x=0.
+      // wparam holds absolute-logical coords; subtract root frame to get canvas-local.
+      window_t *root = get_root_window(win);
+      int lx = (int16_t)LOWORD(wparam) - root->frame.x - win->frame.x;
+      int ly = (int16_t)HIWORD(wparam) - root->frame.y - win->frame.y;
       int cx = lx / CANVAS_SCALE;
       int cy = ly / CANVAS_SCALE;
       doc->drawing = true;
@@ -599,8 +601,9 @@ static result_t canvas_proc(window_t *win, uint32_t msg,
 
     case kWindowMessageMouseMove: {
       if (!doc || !doc->drawing || !g_app) return true;
-      int lx = (int16_t)LOWORD(wparam) - win->frame.x;
-      int ly = (int16_t)HIWORD(wparam) - win->frame.y;
+      window_t *root = get_root_window(win);
+      int lx = (int16_t)LOWORD(wparam) - root->frame.x - win->frame.x;
+      int ly = (int16_t)HIWORD(wparam) - root->frame.y - win->frame.y;
       int cx = lx / CANVAS_SCALE;
       int cy = ly / CANVAS_SCALE;
       if (cx == doc->last_x && cy == doc->last_y) return true;
@@ -838,7 +841,7 @@ static canvas_doc_t *create_document(const char *filename) {
 
   doc_update_title(doc);
   send_message(dwin, kWindowMessageStatusBar, 0,
-               filename ? filename : "New image");
+               (void *)(filename ? filename : "New image"));
   return doc;
 }
 
@@ -901,8 +904,8 @@ static void handle_menu_command(uint16_t id) {
         canvas_doc_t *ndoc = create_document(path);
         if (ndoc) {
           if (!png_load(path, ndoc->pixels)) {
-            send_message(ndoc->win, kWindowMessageStatusBar, 0,
-                         "Failed to open file");
+          send_message(ndoc->win, kWindowMessageStatusBar, 0,
+                         (void *)"Failed to open file");
           } else {
             ndoc->canvas_dirty = true;
             ndoc->modified = false;
@@ -921,9 +924,9 @@ static void handle_menu_command(uint16_t id) {
       if (png_save(doc->filename, doc->pixels)) {
         doc->modified = false;
         doc_update_title(doc);
-        send_message(doc->win, kWindowMessageStatusBar, 0, "Saved");
+        send_message(doc->win, kWindowMessageStatusBar, 0, (void *)"Saved");
       } else {
-        send_message(doc->win, kWindowMessageStatusBar, 0, "Save failed");
+        send_message(doc->win, kWindowMessageStatusBar, 0, (void *)"Save failed");
       }
       break;
 
@@ -938,7 +941,7 @@ static void handle_menu_command(uint16_t id) {
           doc_update_title(doc);
           send_message(doc->win, kWindowMessageStatusBar, 0, path);
         } else {
-          send_message(doc->win, kWindowMessageStatusBar, 0, "Save failed");
+          send_message(doc->win, kWindowMessageStatusBar, 0, (void *)"Save failed");
         }
       }
       break;
@@ -1029,7 +1032,11 @@ int main(void) {
   create_document(NULL);
 
   while (running) {
-    ui_handle_events();
+    ui_event_t e;
+    while (get_message(&e)) {
+      dispatch_message(&e);
+    }
+    repost_messages();
   }
 
   // Cleanup documents

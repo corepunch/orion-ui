@@ -18,7 +18,7 @@ extern window_t *_tracked;
 extern window_t *_captured;
 
 // Macros for coordinate conversion
-#define SCALE_POINT(x) ((x)/2)
+#define SCALE_POINT(x) ((x)/UI_WINDOW_SCALE)
 #define LOCAL_X(VALUE, WIN) (SCALE_POINT((VALUE).x) - (WIN)->frame.x + (WIN)->scroll[0])
 #define LOCAL_Y(VALUE, WIN) (SCALE_POINT((VALUE).y) - (WIN)->frame.y + (WIN)->scroll[1])
 #define CONTAINS(x, y, x1, y1, w1, h1) \

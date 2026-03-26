@@ -1,0 +1,30 @@
+title: Orion UI Framework
+description: Retro-styled, message-driven UI framework written in C
+url: https://corepunch.github.io
+baseurl: /orion-ui
+
+remote_theme: just-the-docs/just-the-docs
+
+# Site logo (optional – remove if no logo image available)
+# logo: assets/logo.png
+
+# Aux links in top nav
+aux_links:
+  "GitHub":
+    - "https://github.com/corepunch/orion-ui"
+
+# Enable search
+search_enabled: true
+search_tokenizer_separator: /[\s/]+/
+
+# Footer
+footer_content: "Orion UI Framework – built on SDL2 and OpenGL 3.2+"
+
+# Default page (docs/index.md redirects to readme)
+# Navigation order is defined by nav_order front-matter in each page
+
+# Colour scheme (dark retro look to match the framework's aesthetic)
+color_scheme: dark
+
+plugins:
+  - jekyll-remote-theme
