@@ -12,8 +12,8 @@
 #define CANVAS_H      200
 #define CANVAS_SCALE  2
 
-#define SCREEN_W      900
-#define SCREEN_H      560
+#define SCREEN_W      800
+#define SCREEN_H      600
 
 #define PALETTE_WIN_X   4
 #define PALETTE_WIN_Y  (MENUBAR_HEIGHT + 4)
