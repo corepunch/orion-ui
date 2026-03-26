@@ -324,9 +324,9 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       for (int i = 0; i < data->count; i++) {
         bool active = (i == data->active_idx);
         int label_w = strwidth(data->menus[i].label) + MENU_LABEL_PAD;
-        int x0 = data->menu_x[i] - 2;
+        int label_x0 = data->menu_x[i] - 2;
         if (active) {
-          fill_rect(COLOR_FOCUSED, x0, 0, label_w, win->frame.h - 1);
+          fill_rect(COLOR_FOCUSED, label_x0, 0, label_w, win->frame.h - 1);
         }
         draw_text_small(data->menus[i].label,
                         data->menu_x[i], 2,
