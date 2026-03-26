@@ -4,6 +4,10 @@
 #include <stdint.h>
 #include "../user/user.h"
 
+// Layout constants (exported for controls that extend win_columnview)
+#define COLUMNVIEW_ENTRY_HEIGHT 13
+#define COLUMNVIEW_WIN_PADDING   4
+
 // ColumnView messages
 enum {
   CVM_ADDITEM = kWindowMessageUser + 100,
