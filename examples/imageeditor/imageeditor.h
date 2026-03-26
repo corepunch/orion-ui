@@ -27,11 +27,11 @@
 #define SCREEN_H      512
 
 #define PALETTE_WIN_X   4
-#define PALETTE_WIN_Y  (MENUBAR_HEIGHT + 4)
+#define PALETTE_WIN_Y  (MENUBAR_HEIGHT + TITLEBAR_HEIGHT + 4)
 #define PALETTE_WIN_W  64
-#define TOOL_WIN_H    (14 + NUM_TOOLS * 24 + 22)
-#define COLOR_WIN_Y   (PALETTE_WIN_Y + TOOL_WIN_H + 4)
-#define COLOR_WIN_H   (12 + 8 * 22)
+#define TOOL_WIN_H    (NUM_TOOLS * 24 + 22)
+#define COLOR_WIN_Y   (PALETTE_WIN_Y + TOOL_WIN_H + TITLEBAR_HEIGHT + 4)
+#define COLOR_WIN_H   (8 * 22)
 
 #define DOC_START_X   76
 #define DOC_START_Y   60

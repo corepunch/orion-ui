@@ -29,7 +29,7 @@ static void create_app_windows(void) {
 
   window_t *tp = create_window(
       "Tools",
-      WINDOW_NOTITLE | WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
+      WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
       MAKERECT(PALETTE_WIN_X, PALETTE_WIN_Y, PALETTE_WIN_W, TOOL_WIN_H),
       NULL, win_tool_palette_proc, NULL);
   show_window(tp, true);
@@ -37,7 +37,7 @@ static void create_app_windows(void) {
 
   window_t *cp = create_window(
       "Colors",
-      WINDOW_NOTITLE | WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
+      WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
       MAKERECT(PALETTE_WIN_X, COLOR_WIN_Y, PALETTE_WIN_W, COLOR_WIN_H),
       NULL, win_color_palette_proc, NULL);
   show_window(cp, true);
