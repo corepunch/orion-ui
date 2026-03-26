@@ -34,12 +34,19 @@ static void stack_push(uint8_t **states, int *count, uint8_t *snap) {
 }
 
 // Save the current canvas pixels as a new undo state.
-// Any existing redo history is discarded.
+// Any existing redo history is discarded if the new undo snapshot is
+// successfully created.
 void doc_push_undo(canvas_doc_t *doc) {
   if (!doc) return;
-  clear_stack(doc->redo_states, &doc->redo_count);
+
   uint8_t *snap = make_snapshot(doc);
-  if (snap) stack_push(doc->undo_states, &doc->undo_count, snap);
+  if (!snap) {
+    // Allocation failed; leave existing undo/redo history intact.
+    return;
+  }
+
+  clear_stack(doc->redo_states, &doc->redo_count);
+  stack_push(doc->undo_states, &doc->undo_count, snap);
 }
 
 // Restore the most recent undo state.
