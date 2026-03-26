@@ -177,7 +177,7 @@ void dispatch_message(SDL_Event *evt) {
         int16_t y = LOCAL_Y(evt->motion, win);
         int16_t dx = evt->motion.xrel;
         int16_t dy = evt->motion.yrel;
-        if (y >= 0 && (win == _captured || win == _focused)) {
+        if (win == _captured || (y >= 0 && win == _focused)) {
           send_message(win, kWindowMessageMouseMove, MAKEDWORD(x, y), (void*)(intptr_t)MAKEDWORD(dx, dy));
         }
       }
