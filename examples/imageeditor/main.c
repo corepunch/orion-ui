@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
   g_app = calloc(1, sizeof(app_state_t));
   if (!g_app) return 1;
 
-  g_app->current_tool = TOOL_PENCIL;
+  g_app->current_tool = ID_TOOL_PENCIL;
   g_app->fg_color = kPalette[4]; // black
   g_app->bg_color = kPalette[0]; // white
   g_app->next_x   = DOC_START_X;

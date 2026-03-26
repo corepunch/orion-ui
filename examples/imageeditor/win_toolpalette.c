@@ -10,7 +10,7 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
   switch (msg) {
     case kWindowMessageCreate: {
       // Create one PUSHLIKE + AUTORADIO button per tool.
-      // The initial tool (TOOL_PENCIL) starts checked.
+      // The initial tool (ID_TOOL_PENCIL) starts checked.
       for (int i = 0; i < NUM_TOOLS; i++) {
         window_t *btn = create_window(
             tool_names[i],
@@ -18,7 +18,7 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
             MAKERECT(1, i * TOOL_ROW_H, win->frame.w - 2, TOOL_ROW_H - 2),
             win, win_button, NULL);
         btn->id    = (uint16_t)(ID_TOOL_PENCIL + i);
-        btn->value = (i == TOOL_PENCIL);
+        btn->value = (btn->id == ID_TOOL_PENCIL);
         show_window(btn, true);
       }
       return true;

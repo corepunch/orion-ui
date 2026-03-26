@@ -57,19 +57,19 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       doc_push_undo(doc);
 
       switch (g_app->current_tool) {
-        case TOOL_PENCIL:
+        case ID_TOOL_PENCIL:
           canvas_draw_circle(doc, cx, cy, 0, g_app->fg_color);
           break;
-        case TOOL_BRUSH:
+        case ID_TOOL_BRUSH:
           canvas_draw_circle(doc, cx, cy, 2, g_app->fg_color);
           break;
-        case TOOL_ERASER:
+        case ID_TOOL_ERASER:
           canvas_draw_circle(doc, cx, cy, 3, g_app->bg_color);
           break;
-        case TOOL_FILL:
+        case ID_TOOL_FILL:
           canvas_flood_fill(doc, cx, cy, g_app->fg_color);
           break;
-        case TOOL_SELECT:
+        case ID_TOOL_SELECT:
           doc->sel_x0 = doc->sel_x1 = cx;
           doc->sel_y0 = doc->sel_y1 = cy;
           doc->sel_active = true;
@@ -93,18 +93,18 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       if (cx == doc->last_x && cy == doc->last_y) return true;
 
       switch (g_app->current_tool) {
-        case TOOL_PENCIL:
+        case ID_TOOL_PENCIL:
           canvas_draw_line(doc, doc->last_x, doc->last_y, cx, cy, 0, g_app->fg_color);
           break;
-        case TOOL_BRUSH:
+        case ID_TOOL_BRUSH:
           canvas_draw_line(doc, doc->last_x, doc->last_y, cx, cy, 2, g_app->fg_color);
           break;
-        case TOOL_ERASER:
+        case ID_TOOL_ERASER:
           canvas_draw_line(doc, doc->last_x, doc->last_y, cx, cy, 3, g_app->bg_color);
           break;
-        case TOOL_FILL:
+        case ID_TOOL_FILL:
           break;
-        case TOOL_SELECT:
+        case ID_TOOL_SELECT:
           doc->sel_x1 = cx;
           doc->sel_y1 = cy;
           break;

@@ -110,17 +110,12 @@ static void handle_menu_command(uint16_t id) {
     case ID_TOOL_ERASER:
     case ID_TOOL_FILL:
     case ID_TOOL_SELECT: {
-      tool_id_t new_tool = (tool_id_t)(id - ID_TOOL_PENCIL);
-      g_app->current_tool = new_tool;
-      // Sync button checked states (needed when triggered by accelerator, not a button click)
+      g_app->current_tool = id;
+      // SetCheck on the selected button clears siblings via autoradio_select
       if (g_app->tool_win) {
-        for (int t = 0; t < NUM_TOOLS; t++) {
-          window_t *btn = get_window_item(g_app->tool_win, (uint32_t)(ID_TOOL_PENCIL + t));
-          if (btn)
-            send_message(btn, kButtonMessageSetCheck,
-                         t == (int)new_tool ? kButtonStateChecked : kButtonStateUnchecked,
-                         NULL);
-        }
+        window_t *btn = get_window_item(g_app->tool_win, (uint32_t)id);
+        if (btn)
+          send_message(btn, kButtonMessageSetCheck, kButtonStateChecked, NULL);
       }
       break;
     }
