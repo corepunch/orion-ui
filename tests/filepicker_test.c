@@ -12,8 +12,13 @@
 // Inline replicas of the functions under test (same logic, no link deps)
 // ---------------------------------------------------------------------------
 
-#define ICON_FOLDER 1   // icon8_collapse
-#define ICON_FILE   4   // icon8_checkbox
+// These constants represent the two categories (folder vs file) returned by
+// the entry-icon helper.  They are arbitrary test-local sentinels; the actual
+// glyph index values used in production (FL_ICON_FOLDER=5, FL_ICON_FILE=6,
+// FL_ICON_UP=7) are an implementation detail of filelist.c and are tested
+// separately in filelist_test.c.
+#define ICON_FOLDER  1
+#define ICON_FILE    4
 #define ICON_FILTERED (-1)
 
 // Extension filter matching — mirrors fl_matches_filter in filelist.c.

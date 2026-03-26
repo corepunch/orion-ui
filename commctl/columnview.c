@@ -57,8 +57,13 @@ result_t win_columnview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
     case kWindowMessagePaint: {
       const int ncol = get_column_count(win->frame.w, data->column_width);
       int scroll_y = (int)win->scroll[1];
-      int clip_top    = win->frame.y;
-      int clip_bottom = win->frame.y + win->frame.h;
+      // For child windows frame.y/frame.h are in root-content-relative (drawing)
+      // coordinates, so they directly bound the visible area.  For root windows
+      // the drawing coordinate system starts at 0 (the content-area origin), so
+      // the visible area is [0, frame.h) regardless of the screen position stored
+      // in frame.y.
+      int clip_top    = win->parent ? win->frame.y              : 0;
+      int clip_bottom = win->parent ? win->frame.y + win->frame.h : win->frame.h;
 
       for (uint32_t i = 0; i < data->count; i++) {
         int col = i % ncol;

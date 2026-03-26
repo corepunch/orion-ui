@@ -33,11 +33,14 @@
 #define FL_WIN_PADDING   COLUMNVIEW_WIN_PADDING
 
 // ---------------------------------------------------------------------------
-// Icons and colours
+// Icons and colours — match the values used by the original filemanager so
+// that the appearance is identical.  draw_icon8 renders icon N as character
+// (N + 128 + 6*16) in the bitmap font, so these are just font glyph indices.
 // ---------------------------------------------------------------------------
-#define FL_ICON_FOLDER   icon8_collapse   // 1
-#define FL_ICON_FILE     icon8_checkbox   // 4
-#define FL_COLOR_FOLDER  0xffa0d000u
+#define FL_ICON_UP      7   // ".." parent-directory entry
+#define FL_ICON_FOLDER  5   // directory
+#define FL_ICON_FILE    6   // regular file
+#define FL_COLOR_FOLDER 0xffa0d000u
 
 // ---------------------------------------------------------------------------
 // Private state
@@ -60,6 +63,7 @@ typedef struct {
 typedef struct {
   char   path[768];
   bool   is_dir;
+  bool   is_hidden;
   size_t size;
   time_t modified;
 } fl_sort_entry_t;
@@ -103,6 +107,16 @@ static bool fl_matches_filter(const filelist_data_t *data, const char *name) {
 }
 
 // ---------------------------------------------------------------------------
+// ".." sentinel helper
+// ---------------------------------------------------------------------------
+// Items[0] is always the ".." parent-directory entry, stored with the literal
+// path string ".." so that fl_basename() naturally returns ".." for display.
+// Use this predicate wherever the sentinel must be identified by path string.
+static inline bool fl_is_parent_sentinel(const char *path) {
+  return path[0] == '.' && path[1] == '.' && path[2] == '\0';
+}
+
+// ---------------------------------------------------------------------------
 // Item list management
 // ---------------------------------------------------------------------------
 
@@ -118,7 +132,8 @@ static void fl_free_items(filelist_data_t *data) {
 // Append one item; takes ownership of a heap-allocated path string.
 static bool fl_push_item(filelist_data_t *data,
                           char *path_heap,   // ownership transferred
-                          bool is_dir, size_t size, time_t modified) {
+                          bool is_dir, bool is_hidden,
+                          size_t size, time_t modified) {
   if (data->count >= data->cap) {
     int new_cap = data->cap ? data->cap * 2 : 32;
     fileitem_t *tmp = realloc(data->items,
@@ -132,8 +147,11 @@ static bool fl_push_item(filelist_data_t *data,
   it->is_directory = is_dir;
   it->size         = size;
   it->modified     = modified;
-  it->icon         = is_dir ? FL_ICON_FOLDER : FL_ICON_FILE;
-  it->color        = is_dir ? FL_COLOR_FOLDER : (uint32_t)COLOR_TEXT_NORMAL;
+  bool is_parent   = fl_is_parent_sentinel(path_heap);
+  it->icon  = is_parent ? FL_ICON_UP : (is_dir ? FL_ICON_FOLDER : FL_ICON_FILE);
+  it->color = is_hidden  ? (uint32_t)COLOR_TEXT_DISABLED
+            : is_dir     ? FL_COLOR_FOLDER
+                         : (uint32_t)COLOR_TEXT_NORMAL;
   return true;
 }
 
@@ -144,33 +162,35 @@ static void fl_load_directory(window_t *win, filelist_data_t *data) {
   win->scroll[0] = 0;
   win->scroll[1] = 0;
 
-  // Compute parent path for the ".." entry.
-  char parent[512];
-  strncpy(parent, data->curpath, sizeof(parent) - 1);
-  parent[sizeof(parent) - 1] = '\0';
-  char *slash = strrchr(parent, '/');
-  if (slash && slash != parent) *slash = '\0';
-  else { parent[0] = '/'; parent[1] = '\0'; }
-
-  // ".." always comes first.
-  fl_push_item(data, strdup(parent), true, 0, 0);
+  // ".." is always the first entry.  Store the sentinel string ".." as its
+  // path; fl_navigate handles the actual parent-path computation when the user
+  // activates it.  This means the display code (strrchr + basename) naturally
+  // produces ".." since there is no '/' in the sentinel string.
+  fl_push_item(data, strdup(".."), true, false, 0, 0);
 
   DIR *dir = opendir(data->curpath);
   if (dir) {
-    // Collect entries that pass the filter.
+    // Collect entries that pass the optional extension filter.
     fl_sort_entry_t *entries = NULL;
     int  count = 0, cap = 0;
 
     struct dirent *ent;
     while ((ent = readdir(dir)) != NULL) {
-      if (ent->d_name[0] == '.') continue; // skip hidden + "." + ".."
+      // Skip only the self-reference "." and parent-reference ".."; all other
+      // entries (including hidden files/directories that start with '.') are
+      // shown — mirroring the original filemanager behaviour.
+      if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
+        continue;
 
       char full[768];
       snprintf(full, sizeof(full), "%s/%s", data->curpath, ent->d_name);
       struct stat st;
       if (stat(full, &st) != 0) continue;
 
-      bool is_dir = S_ISDIR(st.st_mode);
+      bool is_dir    = S_ISDIR(st.st_mode);
+      bool is_hidden = (ent->d_name[0] == '.');
+
+      // Apply caller-supplied extension filter (directories always pass).
       if (!is_dir && !fl_matches_filter(data, ent->d_name)) continue;
 
       if (count >= cap) {
@@ -184,6 +204,7 @@ static void fl_load_directory(window_t *win, filelist_data_t *data) {
       strncpy(entries[count].path, full, sizeof(entries[count].path) - 1);
       entries[count].path[sizeof(entries[count].path) - 1] = '\0';
       entries[count].is_dir   = is_dir;
+      entries[count].is_hidden = is_hidden;
       entries[count].size     = is_dir ? 0 : (size_t)st.st_size;
       entries[count].modified = st.st_mtime;
       count++;
@@ -195,6 +216,7 @@ static void fl_load_directory(window_t *win, filelist_data_t *data) {
       for (int i = 0; i < count; i++) {
         fl_push_item(data, strdup(entries[i].path),
                      entries[i].is_dir,
+                     entries[i].is_hidden,
                      entries[i].size,
                      entries[i].modified);
       }
@@ -203,6 +225,7 @@ static void fl_load_directory(window_t *win, filelist_data_t *data) {
   }
 
   // Populate columnview — display the basename of each item.
+  // For the ".." sentinel the basename IS ".." (no '/' in the string).
   for (int i = 0; i < data->count; i++) {
     const char *base = strrchr(data->items[i].path, '/');
     base = base ? base + 1 : data->items[i].path;
@@ -221,9 +244,22 @@ static void fl_load_directory(window_t *win, filelist_data_t *data) {
 // ---------------------------------------------------------------------------
 static void fl_navigate(window_t *win, filelist_data_t *data, int index) {
   if (index < 0 || index >= data->count) return;
-  strncpy(data->curpath, data->items[index].path,
-          sizeof(data->curpath) - 1);
-  data->curpath[sizeof(data->curpath) - 1] = '\0';
+
+  if (fl_is_parent_sentinel(data->items[index].path)) {
+    // Navigate to the parent of the current directory.
+    char *slash = strrchr(data->curpath, '/');
+    if (slash && slash != data->curpath) {
+      *slash = '\0';                          // e.g. "/home/user" → "/home"
+    } else {
+      data->curpath[0] = '/';                 // e.g. "/foo" or "/" → "/"
+      data->curpath[1] = '\0';
+    }
+  } else {
+    strncpy(data->curpath, data->items[index].path,
+            sizeof(data->curpath) - 1);
+    data->curpath[sizeof(data->curpath) - 1] = '\0';
+  }
+
   fl_load_directory(win, data);
   send_message(get_root_window(win), kWindowMessageCommand,
                MAKEDWORD(0, FLN_NAVDIR), data->curpath);
