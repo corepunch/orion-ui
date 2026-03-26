@@ -43,8 +43,15 @@ static void picker_load_dir(window_t *list_win, picker_state_t *ps) {
     bool is_dir = S_ISDIR(st.st_mode);
     if (!is_dir && !is_png(ent->d_name)) continue;
     if (count >= cap) {
-      cap = cap ? cap * 2 : 32;
-      entries = realloc(entries, sizeof(entry_t) * cap);
+      int new_cap = cap ? cap * 2 : 32;
+      entry_t *new_entries = realloc(entries, sizeof(entry_t) * new_cap);
+      if (!new_entries) {
+        free(entries);
+        closedir(dir);
+        return;
+      }
+      entries = new_entries;
+      cap = new_cap;
     }
     strncpy(entries[count].name, ent->d_name, 255);
     entries[count].name[255] = '\0';
@@ -121,7 +128,8 @@ static result_t picker_proc(window_t *win, uint32_t msg,
         if (item->userdata) {
           char newpath[512];
           if (strcmp(item->text, "..") == 0) {
-            strncpy(newpath, ps->path, sizeof(newpath));
+            strncpy(newpath, ps->path, sizeof(newpath) - 1);
+            newpath[sizeof(newpath) - 1] = '\0';
             char *slash = strrchr(newpath, '/');
             if (slash && slash != newpath) *slash = '\0';
             else { newpath[0]='/'; newpath[1]='\0'; }
@@ -129,10 +137,12 @@ static result_t picker_proc(window_t *win, uint32_t msg,
             snprintf(newpath, sizeof(newpath), "%s/%s", ps->path, item->text);
           }
           strncpy(ps->path, newpath, sizeof(ps->path) - 1);
+          ps->path[sizeof(ps->path) - 1] = '\0';
           picker_load_dir(ps->list_win, ps);
         } else {
           strncpy(ps->edit_win->title, item->text,
                   sizeof(ps->edit_win->title) - 1);
+          ps->edit_win->title[sizeof(ps->edit_win->title) - 1] = '\0';
           invalidate_window(ps->edit_win);
         }
         (void)idx;

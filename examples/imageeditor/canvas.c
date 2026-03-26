@@ -130,8 +130,17 @@ bool png_load(const char *path, uint8_t *out_pixels) {
   png_bytep *rows = malloc(sizeof(png_bytep) * h);
   if (!rows) { png_destroy_read_struct(&png, &info, NULL); fclose(fp); return false; }
 
-  for (int r = 0; r < h; r++)
-    rows[r] = malloc(png_get_rowbytes(png, info));
+  png_size_t rowbytes = png_get_rowbytes(png, info);
+  for (int r = 0; r < h; r++) {
+    rows[r] = malloc(rowbytes);
+    if (!rows[r]) {
+      for (int i = 0; i < r; i++) free(rows[i]);
+      free(rows);
+      png_destroy_read_struct(&png, &info, NULL);
+      fclose(fp);
+      return false;
+    }
+  }
 
   png_read_image(png, rows);
 

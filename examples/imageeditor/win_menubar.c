@@ -63,6 +63,7 @@ static void handle_menu_command(uint16_t id) {
       char path[512] = {0};
       if (show_file_picker(g_app->menubar_win, true, path, sizeof(path))) {
         strncpy(doc->filename, path, sizeof(doc->filename)-1);
+        doc->filename[sizeof(doc->filename)-1] = '\0';
         if (png_save(path, doc->pixels)) {
           doc->modified = false;
           doc_update_title(doc);

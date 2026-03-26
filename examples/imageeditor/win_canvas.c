@@ -34,7 +34,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       doc->last_x  = cx;
       doc->last_y  = cy;
 
-      const tool_t *t = tools[g_app->current_tool];
+      const tool_t *t = (g_app->current_tool >= 0 && g_app->current_tool < NUM_TOOLS)
+                        ? tools[g_app->current_tool] : NULL;
       if (t && t->on_down)
         t->on_down(doc, cx, cy, g_app->fg_color, g_app->bg_color);
 
@@ -52,7 +53,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       int cy = ly / CANVAS_SCALE;
       if (cx == doc->last_x && cy == doc->last_y) return true;
 
-      const tool_t *t = tools[g_app->current_tool];
+      const tool_t *t = (g_app->current_tool >= 0 && g_app->current_tool < NUM_TOOLS)
+                        ? tools[g_app->current_tool] : NULL;
       if (t && t->on_drag)
         t->on_drag(doc, doc->last_x, doc->last_y, cx, cy,
                    g_app->fg_color, g_app->bg_color);

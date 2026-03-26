@@ -33,6 +33,7 @@ void doc_update_title(canvas_doc_t *doc) {
   if (slash) name = slash + 1;
   snprintf(title, sizeof(title), "%s%s", name, doc->modified ? " *" : "");
   strncpy(doc->win->title, title, sizeof(doc->win->title) - 1);
+  doc->win->title[sizeof(doc->win->title) - 1] = '\0';
   invalidate_window(doc->win);
 }
 
@@ -47,8 +48,10 @@ canvas_doc_t *create_document(const char *filename) {
   if (!doc) return NULL;
   canvas_clear(doc);
   doc->modified = false;
-  if (filename)
+  if (filename) {
     strncpy(doc->filename, filename, sizeof(doc->filename) - 1);
+    doc->filename[sizeof(doc->filename) - 1] = '\0';
+  }
 
   int wx = g_app->next_x;
   int wy = g_app->next_y;
