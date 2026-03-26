@@ -105,8 +105,9 @@ void test_directory_always_accepted(void) {
 #define FLN_FILEOPEN    301u
 #define FLN_NAVDIR      302u
 
-// Mimic picker_proc logic: FLN_SELCHANGE → update edit box for files only;
-// FLN_FILEOPEN → update edit box (directory double-clicks never reach picker).
+// Mimic picker_proc logic: returns true when the picker should update its
+// filename edit box.  FLN_SELCHANGE and FLN_FILEOPEN update the box only for
+// file items (not directories); FLN_NAVDIR never updates the box.
 static bool picker_updates_editbox(uint16_t code, bool is_directory) {
   if (code == FLN_SELCHANGE && !is_directory) return true;
   if (code == FLN_FILEOPEN  && !is_directory) return true;
@@ -165,6 +166,70 @@ void test_item_y_decreases_with_scroll(void) {
 }
 
 // ---------------------------------------------------------------------------
+// Tests: child-window coordinate correction
+//
+// When win_filelist is embedded as a child inside a dialog, event.c computes
+// LOCAL_Y = screen_logical_y - child->frame.y.  child->frame.y is
+// parent-content-relative (e.g. 2), NOT the screen position of the dialog
+// (e.g. 50).  win_filelist's click handler must subtract parent->frame.y to
+// recover truly child-local coordinates before calling filelist_hit_row().
+// ---------------------------------------------------------------------------
+
+// Mirrors the coordinate translation in win_filelist's kWindowMessageLeftButtonDown:
+//   my_corrected = LOCAL_Y_delivered - parent_frame_y
+//   (When used as root window parent_frame_y = 0, no correction needed.)
+static int fl_child_local_y(int local_y_delivered, int parent_frame_y) {
+  return local_y_delivered - parent_frame_y;
+}
+
+void test_child_click_row0_with_parent_at_y50(void) {
+  TEST("Child filelist: click on row 0 is correctly resolved when dialog at y=50");
+  // Dialog at screen y=50, filelist at frame.y=2 within dialog.
+  // Click at row 0 (visual y = WIN_PADDING):
+  //   screen_logical_y = 50 + 2 + WIN_PADDING = 56
+  //   LOCAL_Y delivered = screen_y - child.frame.y = 56 - 2 = 54  (wrong raw)
+  //   After correction:  54 - 50 = 4 = WIN_PADDING  (child-local)
+  int delivered_my = 54;   // LOCAL_Y with child.frame.y subtracted only
+  int parent_y     = 50;   // dialog's screen y
+  int local_my     = fl_child_local_y(delivered_my, parent_y);
+  ASSERT_EQUAL(filelist_hit_row(local_my, 0), 0);
+  PASS();
+}
+
+void test_child_click_row0_without_correction_lands_on_wrong_row(void) {
+  TEST("Child filelist: without correction, row 0 click lands on row 3 (regression check)");
+  // Demonstrates the bug: raw delivered_my = 54 maps to row 3, not row 0.
+  int delivered_my = 54;
+  ASSERT_EQUAL(filelist_hit_row(delivered_my, 0), 3);
+  PASS();
+}
+
+void test_child_click_row2_with_parent_at_y100(void) {
+  TEST("Child filelist: click on row 2 is correctly resolved when dialog at y=100");
+  // Dialog at y=100, filelist at frame.y=2.
+  // Row 2 visual y = 2*ENTRY_HEIGHT + WIN_PADDING = 26+4 = 30.
+  // screen_y = 100 + 2 + 30 = 132.
+  // LOCAL_Y delivered = 132 - 2 = 130.
+  // After correction: 130 - 100 = 30 = row 2 visual y.
+  int delivered_my = 130;
+  int parent_y     = 100;
+  int local_my     = fl_child_local_y(delivered_my, parent_y);
+  ASSERT_EQUAL(filelist_hit_row(local_my, 0), 2);
+  PASS();
+}
+
+void test_root_filelist_click_no_correction_needed(void) {
+  TEST("Root filelist (filemanager): parent_frame_y=0, correction is identity");
+  // For a root window, parent is NULL, so parent_frame_y = 0 and fl_child_local_y
+  // is a no-op.  Row 0 click: LOCAL_Y = screen_y - root.frame.y = WIN_PADDING.
+  int delivered_my = WIN_PADDING;
+  int parent_y     = 0;   // root: no parent correction
+  int local_my     = fl_child_local_y(delivered_my, parent_y);
+  ASSERT_EQUAL(filelist_hit_row(local_my, 0), 0);
+  PASS();
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
@@ -187,6 +252,11 @@ int main(int argc, char *argv[]) {
   test_hit_row_no_scroll();
   test_hit_row_with_scroll();
   test_item_y_decreases_with_scroll();
+
+  test_child_click_row0_with_parent_at_y50();
+  test_child_click_row0_without_correction_lands_on_wrong_row();
+  test_child_click_row2_with_parent_at_y100();
+  test_root_filelist_click_no_correction_needed();
 
   TEST_END();
 }

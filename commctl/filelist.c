@@ -310,6 +310,17 @@ result_t win_filelist(window_t *win, uint32_t msg,
       int mx = (int)(int16_t)LOWORD(wparam);
       int my = (int)(int16_t)HIWORD(wparam);
 
+      // event.c computes LOCAL_X/Y as (screen_logical - win->frame.x/y).
+      // For root windows frame.x/y equals the screen position, so the result
+      // is already content-local.  For child windows frame.x/y is
+      // parent-content-relative (e.g. 2), NOT the screen position; the full
+      // screen position of the child is parent->frame.x + child->frame.x.
+      // Subtract the parent's screen position to get truly child-local coords.
+      if (win->parent) {
+        mx -= (int)win->parent->frame.x; // correct for parent's screen x
+        my -= (int)win->parent->frame.y; // correct for parent's screen y
+      }
+
       int col_w = (int)(uint32_t)send_message(win, CVM_GETCOLUMNWIDTH, 0, NULL);
       int ncol  = (col_w > 0 && win->frame.w > 0)
                     ? (win->frame.w / col_w) : 1;
