@@ -31,6 +31,7 @@ typedef struct {
   int         count;       // number of menus
   int        *menu_x;      // x offset for each label (window-local)
   window_t   *open_popup;  // currently visible dropdown, or NULL
+  int         active_idx;  // index of the currently open menu label (-1 if none)
 } menubar_data_t;
 
 // ---- per-popup userdata (flexible array, malloc'd) ----------------------
@@ -38,6 +39,8 @@ typedef struct {
 typedef struct {
   window_t    *menubar;
   int          item_count;
+  int          hovered;    // index of the item under the mouse (-1 if none)
+  int          pressed;    // index of the item pressed on mouse-down (-1 if none)
   menu_item_t  items[];    // C99 flexible array
 } popup_data_t;
 
@@ -70,6 +73,8 @@ static result_t popup_proc(window_t *win, uint32_t msg,
     case kWindowMessageCreate:
       pd = (popup_data_t *)lparam;
       win->userdata = pd;
+      pd->hovered = -1;
+      pd->pressed = -1;
       set_capture(win);    // receive ALL mouse events, even outside our bounds
       return true;
 
@@ -91,10 +96,36 @@ static result_t popup_proc(window_t *win, uint32_t msg,
                     win->frame.w - MENU_SIDE_PAD * 2, 1);
           y += MENU_SEP_H;
         } else {
+          if (i == pd->hovered) {
+            fill_rect(COLOR_FOCUSED, 1, y, win->frame.w - 2, MENU_ITEM_H);
+          }
           draw_text_small(it->label, MENU_SIDE_PAD + 2, y + 2,
-                          COLOR_TEXT_NORMAL);
+                          i == pd->hovered ? COLOR_PANEL_BG : COLOR_TEXT_NORMAL);
           y += MENU_ITEM_H;
         }
+      }
+      return true;
+    }
+
+    case kWindowMessageMouseMove: {
+      int lx = (int16_t)LOWORD(wparam);
+      int ly = (int16_t)HIWORD(wparam);
+      int new_hovered = -1;
+      if (lx >= 0 && lx < win->frame.w && ly >= 0 && ly < win->frame.h) {
+        int y = 2;
+        for (int i = 0; i < pd->item_count; i++) {
+          const menu_item_t *it = &pd->items[i];
+          int h = it->id ? MENU_ITEM_H : MENU_SEP_H;
+          if (it->id && ly >= y && ly < y + h) {
+            new_hovered = i;
+            break;
+          }
+          y += h;
+        }
+      }
+      if (new_hovered != pd->hovered) {
+        pd->hovered = new_hovered;
+        invalidate_window(win);
       }
       return true;
     }
@@ -103,49 +134,90 @@ static result_t popup_proc(window_t *win, uint32_t msg,
       // Coords are popup-window-local (set_capture ensures we get them)
       int lx = (int16_t)LOWORD(wparam);
       int ly = (int16_t)HIWORD(wparam);
-      // Click inside the popup – hit-test items
+      // Click inside the popup – record which item was pressed
+      if (lx >= 0 && lx < win->frame.w && ly >= 0 && ly < win->frame.h) {
+        int y = 2;
+        pd->pressed = -1;
+        for (int i = 0; i < pd->item_count; i++) {
+          const menu_item_t *it = &pd->items[i];
+          int h = it->id ? MENU_ITEM_H : MENU_SEP_H;
+          if (it->id && ly >= y && ly < y + h) {
+            pd->pressed = i;
+            pd->hovered = i;
+            invalidate_window(win);
+            break;
+          }
+          y += h;
+        }
+        return true;
+      }
+      // Click outside popup bounds – close the popup
+      {
+        window_t *mb = pd->menubar;
+        menubar_data_t *mbd = mb ? (menubar_data_t *)mb->userdata : NULL;
+        if (mbd) {
+          mbd->open_popup = NULL;
+          mbd->active_idx = -1;
+        }
+        destroy_window(win);
+        if (mb) invalidate_window(mb);
+      }
+      return true;
+    }
+
+    case kWindowMessageLeftButtonUp: {
+      // Only act if user pressed inside the popup first
+      if (pd->pressed < 0) return true;
+      int lx = (int16_t)LOWORD(wparam);
+      int ly = (int16_t)HIWORD(wparam);
+      // Find which item the mouse was released on
+      int release_item = -1;
       if (lx >= 0 && lx < win->frame.w && ly >= 0 && ly < win->frame.h) {
         int y = 2;
         for (int i = 0; i < pd->item_count; i++) {
           const menu_item_t *it = &pd->items[i];
           int h = it->id ? MENU_ITEM_H : MENU_SEP_H;
           if (it->id && ly >= y && ly < y + h) {
-            window_t *mb = pd->menubar;
-            menubar_data_t *mbd = mb ? (menubar_data_t *)mb->userdata : NULL;
-            if (mbd) mbd->open_popup = NULL;
-            uint16_t item_id = it->id;   // save before destroy
-            destroy_window(win);  // close popup before command runs (e.g. dialogs)
-            // Send command to menubar window (application intercepts it there)
-            if (mb) {
-              send_message(mb, kWindowMessageCommand,
-                           MAKEDWORD(item_id, kMenuBarNotificationItemClick),
-                           NULL);
-            }
-            return true;
+            release_item = i;
+            break;
           }
           y += h;
         }
-        return true;  // click inside but not on an item
       }
-      // Click outside popup bounds – close the popup
-      {
-        menubar_data_t *mbd =
-            pd->menubar ? (menubar_data_t *)pd->menubar->userdata : NULL;
-        if (mbd) mbd->open_popup = NULL;
+      window_t *mb = pd->menubar;
+      menubar_data_t *mbd = mb ? (menubar_data_t *)mb->userdata : NULL;
+      if (mbd) {
+        mbd->open_popup = NULL;
+        mbd->active_idx = -1;
+      }
+      if (release_item >= 0 && release_item == pd->pressed) {
+        // Released on the same item that was pressed – fire action
+        uint16_t item_id = pd->items[release_item].id;
+        destroy_window(win);  // close popup before command runs (e.g. dialogs)
+        if (mb) {
+          invalidate_window(mb);
+          send_message(mb, kWindowMessageCommand,
+                       MAKEDWORD(item_id, kMenuBarNotificationItemClick),
+                       NULL);
+        }
+      } else {
+        // Released on a different item or outside – cancel, just close
         destroy_window(win);
+        if (mb) invalidate_window(mb);
       }
       return true;
     }
 
-    case kWindowMessageLeftButtonUp:
-      return true;
-
-    // With set_capture, a click outside our client rect arrives here
+    // Fallback: non-client mouse-up (should not fire with set_capture, kept for safety)
     case kWindowMessageNonClientLeftButtonUp: {
-      menubar_data_t *mbd =
-          pd->menubar ? (menubar_data_t *)pd->menubar->userdata : NULL;
-      if (mbd) mbd->open_popup = NULL;
+      window_t *mb = pd->menubar;
+      menubar_data_t *mbd = mb ? (menubar_data_t *)mb->userdata : NULL;
+      if (mbd) {
+        mbd->open_popup = NULL;
+        mbd->active_idx = -1;
+      }
       destroy_window(win);
+      if (mb) invalidate_window(mb);
       return true;
     }
 
@@ -162,15 +234,17 @@ static result_t popup_proc(window_t *win, uint32_t msg,
 
 // ---- open / close popup --------------------------------------------------
 
-static void close_popup(menubar_data_t *data) {
+static void close_popup(window_t *mb_win, menubar_data_t *data) {
   if (!data->open_popup) return;
   if (is_window(data->open_popup))
     destroy_window(data->open_popup);
   data->open_popup = NULL;
+  data->active_idx = -1;
+  if (mb_win) invalidate_window(mb_win);
 }
 
 static void open_popup(window_t *mb_win, menubar_data_t *data, int idx) {
-  close_popup(data);
+  close_popup(mb_win, data);
 
   const menu_def_t *menu = &data->menus[idx];
 
@@ -180,6 +254,8 @@ static void open_popup(window_t *mb_win, menubar_data_t *data, int idx) {
   if (!pd) return;
   pd->menubar    = mb_win;
   pd->item_count = menu->item_count;
+  pd->hovered    = -1;
+  pd->pressed    = -1;
   for (int i = 0; i < menu->item_count; i++)
     pd->items[i] = menu->items[i];
 
@@ -201,7 +277,9 @@ static void open_popup(window_t *mb_win, menubar_data_t *data, int idx) {
   popup->userdata = pd;
   show_window(popup, true);
   data->open_popup = popup;
+  data->active_idx = idx;
   invalidate_window(popup);
+  invalidate_window(mb_win);
 }
 
 // ---- menu bar proc -------------------------------------------------------
@@ -212,6 +290,7 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
     case kWindowMessageCreate: {
       menubar_data_t *d = malloc(sizeof(menubar_data_t));
       memset(d, 0, sizeof(menubar_data_t));
+      d->active_idx = -1;
       win->userdata = d;
       return true;
     }
@@ -243,10 +322,15 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       fill_rect(COLOR_DARK_EDGE, 0, win->frame.h - 1, win->frame.w, 1);
       if (!data || !data->menus) return true;
       for (int i = 0; i < data->count; i++) {
-        bool active = data->open_popup && (i == i); // highlight active label
-        (void)active; // simple: just draw all labels the same for now
+        bool active = (i == data->active_idx);
+        int label_w = strwidth(data->menus[i].label) + MENU_LABEL_PAD;
+        int x0 = data->menu_x[i] - 2;
+        if (active) {
+          fill_rect(COLOR_FOCUSED, x0, 0, label_w, win->frame.h - 1);
+        }
         draw_text_small(data->menus[i].label,
-                        data->menu_x[i], 2, COLOR_TEXT_NORMAL);
+                        data->menu_x[i], 2,
+                        active ? COLOR_PANEL_BG : COLOR_TEXT_NORMAL);
       }
       return true;
     }
@@ -265,13 +349,13 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
         }
       }
       // Click outside any label – close any open popup
-      close_popup(data);
+      close_popup(win, data);
       return true;
     }
 
     case kWindowMessageDestroy: {
       if (data) {
-        close_popup(data);
+        close_popup(win, data);
         free(data->menus);
         free(data->menu_x);
         free(data);

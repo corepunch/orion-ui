@@ -174,10 +174,19 @@ void test_popup_closes_before_command_on_item_click(void) {
     ASSERT_NOT_NULL(popup);
     g_popup_ptr = popup; // save so the command handler can check it
 
-    // Click on the first item "Open" (id=1).
+    // Press on the first item "Open" (id=1): highlights item, does NOT fire yet.
     // Items start at y=2; first item occupies y in [2, 14) (MENU_ITEM_H=12).
     // x=10 is inside popup width (MENU_MIN_W=90).
     send_message(popup, kWindowMessageLeftButtonDown,
+                 MAKEDWORD(10, 5), NULL);
+
+    // Popup must still be open after mouse-down (action fires on mouse-up).
+    ASSERT_EQUAL(count_windows(), 2);
+    ASSERT_TRUE(is_window(popup));
+    ASSERT_EQUAL(g_cmd_count, 0);
+
+    // Release on the same item – popup closes and command fires.
+    send_message(popup, kWindowMessageLeftButtonUp,
                  MAKEDWORD(10, 5), NULL);
 
     // The popup must have been destroyed.
@@ -196,6 +205,33 @@ void test_popup_closes_before_command_on_item_click(void) {
     PASS();
 }
 
+void test_popup_cancel_on_different_item_release(void) {
+    TEST("Menubar popup cancels when mouse released on different item");
+
+    test_env_init();
+    reset_counters();
+
+    window_t *mb = make_menubar(menubar_proc_basic);
+    ASSERT_NOT_NULL(mb);
+
+    open_popup(mb);
+    window_t *popup = find_other_window(mb);
+    ASSERT_NOT_NULL(popup);
+
+    // Press on "Open" (y=5, item index 0).
+    send_message(popup, kWindowMessageLeftButtonDown, MAKEDWORD(10, 5), NULL);
+    ASSERT_EQUAL(count_windows(), 2);   // popup still open
+
+    // Release on "Save" (y=17, item index 1) – different item, must cancel.
+    send_message(popup, kWindowMessageLeftButtonUp, MAKEDWORD(10, 17), NULL);
+    ASSERT_EQUAL(g_cmd_count, 0);       // no command fired
+    ASSERT_EQUAL(count_windows(), 1);   // popup closed
+
+    destroy_window(mb);
+    test_env_shutdown();
+    PASS();
+}
+
 void test_popup_command_delivered_for_each_item(void) {
     TEST("Menubar delivers correct item id for each item click");
 
@@ -205,27 +241,27 @@ void test_popup_command_delivered_for_each_item(void) {
     window_t *mb = make_menubar(menubar_proc_basic);
     ASSERT_NOT_NULL(mb);
 
-    // Click item "Save" (id=2).
+    // Press and release on "Save" (id=2).
     // "Open" occupies y in [2, 14), "Save" in [14, 26).
     open_popup(mb);
     window_t *popup = find_other_window(mb);
     ASSERT_NOT_NULL(popup);
 
-    send_message(popup, kWindowMessageLeftButtonDown,
-                 MAKEDWORD(10, 17), NULL);
+    send_message(popup, kWindowMessageLeftButtonDown, MAKEDWORD(10, 17), NULL);
+    send_message(popup, kWindowMessageLeftButtonUp,   MAKEDWORD(10, 17), NULL);
 
     ASSERT_EQUAL(g_cmd_count, 1);
     ASSERT_EQUAL(g_cmd_last_id, 2);
     ASSERT_EQUAL(count_windows(), 1); // popup is gone
 
-    // Now open again and click "Quit" (id=3).
+    // Now open again and press/release on "Quit" (id=3).
     // "Open" [2,14), "Save" [14,26), sep [26,31), "Quit" [31,43)
     open_popup(mb);
     popup = find_other_window(mb);
     ASSERT_NOT_NULL(popup);
 
-    send_message(popup, kWindowMessageLeftButtonDown,
-                 MAKEDWORD(10, 33), NULL);
+    send_message(popup, kWindowMessageLeftButtonDown, MAKEDWORD(10, 33), NULL);
+    send_message(popup, kWindowMessageLeftButtonUp,   MAKEDWORD(10, 33), NULL);
 
     ASSERT_EQUAL(g_cmd_count, 2);
     ASSERT_EQUAL(g_cmd_last_id, 3);
@@ -261,6 +297,37 @@ void test_nonclient_buttonup_closes_popup(void) {
     PASS();
 }
 
+void test_popup_no_action_on_mouseup_without_press(void) {
+    TEST("Menubar popup ignores mouse-up when no item was pressed first");
+
+    test_env_init();
+    reset_counters();
+
+    window_t *mb = make_menubar(menubar_proc_basic);
+    ASSERT_NOT_NULL(mb);
+
+    open_popup(mb);
+    ASSERT_EQUAL(count_windows(), 2);
+
+    window_t *popup = find_other_window(mb);
+    ASSERT_NOT_NULL(popup);
+
+    // Send mouse-up on a valid item without a prior mouse-down inside popup.
+    // This simulates the case where the popup opens from a menubar click
+    // and the mouse-up of that click arrives in the popup.
+    send_message(popup, kWindowMessageLeftButtonUp, MAKEDWORD(10, 5), NULL);
+
+    // Popup must still be open (no action, no close).
+    ASSERT_EQUAL(count_windows(), 2);
+    ASSERT_EQUAL(g_cmd_count, 0);
+
+    // Clean up.
+    destroy_window(popup);
+    destroy_window(mb);
+    test_env_shutdown();
+    PASS();
+}
+
 // ---- main -------------------------------------------------------------------
 
 int main(int argc, char *argv[]) {
@@ -270,8 +337,10 @@ int main(int argc, char *argv[]) {
     test_popup_opens_on_label_click();
     test_popup_closes_on_outside_click();
     test_popup_closes_before_command_on_item_click();
+    test_popup_cancel_on_different_item_release();
     test_popup_command_delivered_for_each_item();
     test_nonclient_buttonup_closes_popup();
+    test_popup_no_action_on_mouseup_without_press();
 
     TEST_END();
 }
