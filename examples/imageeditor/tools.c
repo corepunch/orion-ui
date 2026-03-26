@@ -1,5 +1,7 @@
 // Tool registry – static array of tool pointers
 
+#include "imageeditor.h"
+
 extern tool_t tool_pencil;
 extern tool_t tool_brush;
 extern tool_t tool_eraser;

@@ -1,5 +1,7 @@
 // Pencil tool – draws single pixels
 
+#include "imageeditor.h"
+
 static void pencil_down(canvas_doc_t *doc, int cx, int cy, rgba_t fg, rgba_t bg) {
   (void)bg;
   canvas_draw_circle(doc, cx, cy, 0, fg);

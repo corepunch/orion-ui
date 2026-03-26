@@ -1,5 +1,7 @@
 // Brush tool – draws with a radius-2 circle
 
+#include "imageeditor.h"
+
 static void brush_down(canvas_doc_t *doc, int cx, int cy, rgba_t fg, rgba_t bg) {
   (void)bg;
   canvas_draw_circle(doc, cx, cy, 2, fg);

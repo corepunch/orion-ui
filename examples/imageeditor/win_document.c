@@ -1,5 +1,7 @@
 // Document window proc and document management
 
+#include "imageeditor.h"
+
 // ============================================================
 // Document window proc
 // ============================================================

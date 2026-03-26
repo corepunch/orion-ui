@@ -1,5 +1,7 @@
 // Tool palette floating window
 
+#include "imageeditor.h"
+
 #define TOOL_HEADER_H  14
 #define TOOL_ROW_H     24
 #define SWATCH_H       22

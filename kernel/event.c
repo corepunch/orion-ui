@@ -34,9 +34,9 @@ extern void track_mouse(window_t *win);
 extern void show_window(window_t *win, bool visible);
 extern void end_dialog(window_t *win, uint32_t code);
 
-// Static state for window dragging/resizing
-static window_t *_dragging = NULL;
-static window_t *_resizing = NULL;
+// Drag/resize state (shared with user/window.c for destroy_window cleanup)
+window_t *_dragging = NULL;
+window_t *_resizing = NULL;
 static int drag_anchor[2];
 
 // Handle mouse events on child windows

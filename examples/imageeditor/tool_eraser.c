@@ -1,5 +1,7 @@
 // Eraser tool – paints with the background color using a radius-3 circle
 
+#include "imageeditor.h"
+
 static void eraser_down(canvas_doc_t *doc, int cx, int cy, rgba_t fg, rgba_t bg) {
   (void)fg;
   canvas_draw_circle(doc, cx, cy, 3, bg);

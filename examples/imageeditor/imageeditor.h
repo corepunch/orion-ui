@@ -1,8 +1,19 @@
 #ifndef __IMAGEEDITOR_H__
 #define __IMAGEEDITOR_H__
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <math.h>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <png.h>
+
+#include "../../ui.h"
 
 // ============================================================
 // Constants
@@ -119,5 +130,13 @@ void canvas_flood_fill(canvas_doc_t *doc, int sx, int sy, rgba_t fill);
 canvas_doc_t *create_document(const char *filename);
 void close_document(canvas_doc_t *doc);
 void doc_update_title(canvas_doc_t *doc);
+
+// Window procedures
+result_t editor_menubar_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+result_t win_tool_palette_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+result_t win_color_palette_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+
+// Menu definitions
+extern const menu_def_t kMenus[];
 
 #endif // __IMAGEEDITOR_H__
