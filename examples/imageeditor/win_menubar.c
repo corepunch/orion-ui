@@ -14,8 +14,14 @@ static const menu_item_t kFileItems[] = {
   {"Quit",       ID_FILE_QUIT},
 };
 
+static const menu_item_t kEditItems[] = {
+  {"Undo\tCtrl+Z", ID_EDIT_UNDO},
+  {"Redo\tCtrl+Y", ID_EDIT_REDO},
+};
+
 const menu_def_t kMenus[] = {
   {"File", kFileItems, (int)(sizeof(kFileItems)/sizeof(kFileItems[0]))},
+  {"Edit", kEditItems, (int)(sizeof(kEditItems)/sizeof(kEditItems[0]))},
 };
 
 static void handle_menu_command(uint16_t id) {
@@ -83,6 +89,20 @@ static void handle_menu_command(uint16_t id) {
 
     case ID_FILE_QUIT:
       running = false;
+      break;
+
+    case ID_EDIT_UNDO:
+      if (doc && doc_undo(doc)) {
+        doc_update_title(doc);
+        invalidate_window(doc->canvas_win);
+      }
+      break;
+
+    case ID_EDIT_REDO:
+      if (doc && doc_redo(doc)) {
+        doc_update_title(doc);
+        invalidate_window(doc->canvas_win);
+      }
       break;
   }
 }

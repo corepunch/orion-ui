@@ -105,6 +105,8 @@ void close_document(canvas_doc_t *doc) {
     }
   }
 
+  doc_free_undo(doc);
+
   if (doc->canvas_tex)
     glDeleteTextures(1, &doc->canvas_tex);
 
