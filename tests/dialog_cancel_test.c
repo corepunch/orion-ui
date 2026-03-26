@@ -158,15 +158,10 @@ void test_regular_button_click_unaffected(void) {
 // end_dialog return-code tests
 //
 // These tests validate the per-dialog context mechanism introduced to fix
-// the global _return_code reentrancy bug.  They simulate what show_dialog
-// does internally (set userdata2, then verify end_dialog writes through it)
-// without running the SDL event loop.
+// the global _return_code reentrancy bug.  show_dialog stores a plain
+// uint32_t* in userdata2; end_dialog writes through that pointer.
+// The tests simulate this without running the SDL event loop.
 // ---------------------------------------------------------------------------
-
-// Per-dialog context struct (mirrors the private type in dialog.c).
-// Must stay in sync with dialog.c's dlg_ctx_t – both consist of a single
-// uint32_t result field.  If dialog.c's struct ever changes, update here too.
-typedef struct { uint32_t result; } dlg_ctx_t;
 
 // Test: end_dialog writes the correct return code into the per-dialog context.
 void test_end_dialog_sets_return_code(void) {
@@ -180,25 +175,25 @@ void test_end_dialog_sets_return_code(void) {
                                   &dlg_frame, NULL, dialog_proc, NULL);
     ASSERT_NOT_NULL(dlg);
 
-    // Simulate what show_dialog does: store the context in userdata2.
-    dlg_ctx_t ctx = {0};
-    dlg->userdata2 = &ctx;
+    // Simulate what show_dialog does: store the result pointer in userdata2.
+    uint32_t result = 0;
+    dlg->userdata2 = &result;
 
-    // end_dialog should write 42 into ctx.result and destroy the dialog.
+    // end_dialog should write 42 into result and destroy the dialog.
     end_dialog(dlg, 42);
 
     // The dialog window should now be gone.
     ASSERT_FALSE(is_window(dlg));
-    // And our context should contain the code passed to end_dialog.
-    ASSERT_EQUAL((int)ctx.result, 42);
+    // And our result variable should contain the code passed to end_dialog.
+    ASSERT_EQUAL((int)result, 42);
 
     test_env_shutdown();
     PASS();
 }
 
 // Test: nested dialogs each get their own result (reentrancy).
-// Simulate two show_dialog calls by manually setting up two ctx structs and
-// verifying that end_dialog writes to the correct one based on userdata2.
+// Simulate two show_dialog calls by manually setting up two result variables
+// and verifying that end_dialog writes to the correct one via userdata2.
 void test_end_dialog_reentrancy(void) {
     TEST("end_dialog reentrancy: each dialog context holds its own result");
 
@@ -214,17 +209,17 @@ void test_end_dialog_reentrancy(void) {
     ASSERT_NOT_NULL(dlg1);
     ASSERT_NOT_NULL(dlg2);
 
-    dlg_ctx_t ctx1 = {0};
-    dlg_ctx_t ctx2 = {0};
-    dlg1->userdata2 = &ctx1;
-    dlg2->userdata2 = &ctx2;
+    uint32_t result1 = 0;
+    uint32_t result2 = 0;
+    dlg1->userdata2 = &result1;
+    dlg2->userdata2 = &result2;
 
     // Close inner dialog with code 7, outer with code 3.
     end_dialog(dlg2, 7);
     end_dialog(dlg1, 3);
 
-    ASSERT_EQUAL((int)ctx1.result, 3);
-    ASSERT_EQUAL((int)ctx2.result, 7);
+    ASSERT_EQUAL((int)result1, 3);
+    ASSERT_EQUAL((int)result2, 7);
 
     test_env_shutdown();
     PASS();

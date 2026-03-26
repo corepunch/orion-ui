@@ -134,7 +134,7 @@ void end_dialog(window_t *win, uint32_t code);
    then enters an inner `get_message` / `dispatch_message` loop.
 2. The loop runs until either `end_dialog` destroys the dialog window **or**
    `running` becomes `false` (application quit).
-3. `end_dialog` records the result in a per-dialog context stored inside
+3. `end_dialog` writes the code into the `uint32_t` pointed to by
    `dlg->userdata2`, then calls `destroy_window`.  Once the dialog is gone
    `is_window(dlg)` returns false and the loop exits.
 4. `show_dialog` re-enables the parent and returns the recorded result code.
