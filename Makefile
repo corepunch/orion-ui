@@ -115,6 +115,11 @@ $(OBJ_DIR)/commctl/%.o: commctl/%.c | $(OBJ_DIR)/commctl
 .PHONY: examples
 examples: $(EXAMPLE_BINS)
 
+# Image editor links with libpng for PNG open/save support
+$(BIN_DIR)/imageeditor$(EXE_EXT): examples/imageeditor.c $(STATIC_LIB) | $(BIN_DIR)
+	@echo "Building example: $@"
+	$(CC) $(CFLAGS) -o $@ $< $(STATIC_LIB) $(LDFLAGS) $(LDFLAGS_EXAMPLE) $(LIBS) -lpng
+
 $(BIN_DIR)/%$(EXE_EXT): examples/%.c $(STATIC_LIB) | $(BIN_DIR)
 	@echo "Building example: $@"
 	$(CC) $(CFLAGS) -o $@ $< $(STATIC_LIB) $(LDFLAGS) $(LDFLAGS_EXAMPLE) $(LIBS)
@@ -138,6 +143,11 @@ $(TEST_ENV_OBJ): $(TEST_DIR)/test_env.c | $(OBJ_DIR)
 $(BIN_DIR)/test_basic_test$(EXE_EXT): $(TEST_DIR)/basic_test.c $(STATIC_LIB) | $(BIN_DIR)
 	@echo "Building test: $@"
 	$(CC) $(CFLAGS) -o $@ $< $(STATIC_LIB) $(LDFLAGS) $(LDFLAGS_TEST) $(LIBS)
+
+# Image editor test (pure-C logic, no test_env, no extra libs needed)
+$(BIN_DIR)/test_imageeditor_test$(EXE_EXT): $(TEST_DIR)/imageeditor_test.c | $(BIN_DIR)
+	@echo "Building test: $@"
+	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS) $(LDFLAGS_TEST)
 
 # Build tests that need test_env
 $(BIN_DIR)/test_window_msg_test$(EXE_EXT): $(TEST_DIR)/window_msg_test.c $(TEST_ENV_OBJ) $(STATIC_LIB) | $(BIN_DIR)
