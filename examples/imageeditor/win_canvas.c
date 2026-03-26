@@ -26,10 +26,10 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
                 win->frame.x, win->frame.y,
                 CANVAS_W * state->scale, CANVAS_H * state->scale);
       if (doc->sel_active) {
-        int x0 = MIN(doc->sel_x0, doc->sel_x1) * state->scale;
-        int y0 = MIN(doc->sel_y0, doc->sel_y1) * state->scale;
-        int x1 = (MAX(doc->sel_x0, doc->sel_x1) + 1) * state->scale;
-        int y1 = (MAX(doc->sel_y0, doc->sel_y1) + 1) * state->scale;
+        int x0 = MIN(doc->sel_start.x, doc->sel_end.x) * state->scale;
+        int y0 = MIN(doc->sel_start.y, doc->sel_end.y) * state->scale;
+        int x1 = (MAX(doc->sel_start.x, doc->sel_end.x) + 1) * state->scale;
+        int y1 = (MAX(doc->sel_start.y, doc->sel_end.y) + 1) * state->scale;
         int sw = x1 - x0;
         int sh = y1 - y0;
         int ox = win->frame.x + x0;
@@ -50,8 +50,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       int cx = lx / state->scale;
       int cy = ly / state->scale;
       doc->drawing = true;
-      doc->last_x  = cx;
-      doc->last_y  = cy;
+      doc->last.x  = cx;
+      doc->last.y  = cy;
       doc->sel_active = false;
 
       doc_push_undo(doc);
@@ -70,8 +70,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           canvas_flood_fill(doc, cx, cy, g_app->fg_color);
           break;
         case TOOL_SELECT:
-          doc->sel_x0 = doc->sel_x1 = cx;
-          doc->sel_y0 = doc->sel_y1 = cy;
+          doc->sel_start.x = doc->sel_end.x = cx;
+          doc->sel_start.y = doc->sel_end.y = cy;
           doc->sel_active = true;
           break;
         default:
@@ -90,30 +90,30 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       int ly = (int16_t)HIWORD(wparam) - root->frame.y - win->frame.y;
       int cx = lx / state->scale;
       int cy = ly / state->scale;
-      if (cx == doc->last_x && cy == doc->last_y) return true;
+      if (cx == doc->last.x && cy == doc->last.y) return true;
 
       switch (g_app->current_tool) {
         case TOOL_PENCIL:
-          canvas_draw_line(doc, doc->last_x, doc->last_y, cx, cy, 0, g_app->fg_color);
+          canvas_draw_line(doc, doc->last.x, doc->last.y, cx, cy, 0, g_app->fg_color);
           break;
         case TOOL_BRUSH:
-          canvas_draw_line(doc, doc->last_x, doc->last_y, cx, cy, 2, g_app->fg_color);
+          canvas_draw_line(doc, doc->last.x, doc->last.y, cx, cy, 2, g_app->fg_color);
           break;
         case TOOL_ERASER:
-          canvas_draw_line(doc, doc->last_x, doc->last_y, cx, cy, 3, g_app->bg_color);
+          canvas_draw_line(doc, doc->last.x, doc->last.y, cx, cy, 3, g_app->bg_color);
           break;
         case TOOL_FILL:
           break;
         case TOOL_SELECT:
-          doc->sel_x1 = cx;
-          doc->sel_y1 = cy;
+          doc->sel_end.x = cx;
+          doc->sel_end.y = cy;
           break;
         default:
           break;
       }
 
-      doc->last_x = cx;
-      doc->last_y = cy;
+      doc->last.x = cx;
+      doc->last.y = cy;
       invalidate_window(win);
       return true;
     }

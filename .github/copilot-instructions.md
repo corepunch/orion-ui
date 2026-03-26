@@ -18,6 +18,12 @@ The framework is written in C and uses SDL2 for windowing/input and OpenGL 3.2+ 
 - `examples/` contains example programs demonstrating framework usage
 - `ui.h` is the main header that includes all UI subsystems
 
+### WinAPI Philosophy
+- The codebase stays close to **WinAPI style** — but uses snake_case for function and type names instead of PascalCase
+- When implementing new features, think "how would this be done in WinAPI?" and follow those patterns
+- If a required feature is missing from the core framework (e.g., hotkeys/accelerators, timers, clipboard), **add it to the framework** — do not implement workarounds in application code (e.g., do not handle `WM_KEYDOWN` manually where `WM_COMMAND` from an accelerator is the correct mechanism)
+- Common WinAPI patterns to follow: message loops, window procedures, control notifications via `WM_COMMAND`, `HIWORD`/`LOWORD` packing, resource tables (menus, accelerators), dialog modal loops
+
 ### Naming Conventions
 - Use snake_case for function names (e.g., `create_window`, `draw_text_small`)
 - Use snake_case with _t suffix for type names (e.g., `window_t`, `rect_t`, `winproc_t`)
@@ -34,6 +40,12 @@ The framework is written in C and uses SDL2 for windowing/input and OpenGL 3.2+ 
 - Header files use include guards with pattern `#ifndef __UI_SUBSYSTEM_H__`
 - Prefer standard C types (int, bool, etc.) with stdint.h types when size matters (uint32_t, uint16_t)
 - Use forward declarations to minimize header dependencies
+
+### Struct Design
+- Always prefer named structs over loose coordinate pairs: use `point_t { int x, y; }` instead of `int x, int y` pairs, and `rect_t { int x, y, w, h; }` instead of `int x1, y1, x2, y2`
+- `point_t` and `rect_t` are defined in `user/user.h` and available everywhere via `ui.h`
+- When a concept naturally groups two or more related values, define a struct for it (e.g., `size_t` for `w, h`; `point_t` for `x, y`)
+- Do not scatter parallel `_x` / `_y` (or `_start` / `_end`) fields across a struct when a `point_t` member would be cleaner
 
 ### Message-Based Architecture
 - All UI interaction uses a Windows-style message system
@@ -103,8 +115,9 @@ The framework is written in C and uses SDL2 for windowing/input and OpenGL 3.2+ 
 
 ## When Adding Features
 
-- Maintain compatibility with existing message-based architecture
+- Maintain compatibility with the existing message-based architecture
 - Follow Windows API patterns where applicable (familiar to many developers)
 - Keep the layered architecture clean (user/kernel/commctl separation)
+- **Extend the framework rather than making workarounds**: if something logically belongs in the framework (e.g., timers, clipboard, accelerators, drag-and-drop), add it to the appropriate layer (`user/`, `kernel/`, or `commctl/`) and expose a clean API
 - Add documentation to README.md for new public APIs
 - Consider adding examples for non-trivial new functionality

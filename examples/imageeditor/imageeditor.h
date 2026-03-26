@@ -75,7 +75,7 @@ typedef struct canvas_doc_s {
   GLuint   canvas_tex;
   bool     canvas_dirty;
   bool     drawing;
-  int      last_x, last_y;
+  point_t  last;
   bool     modified;
   char     filename[512];
   window_t *win;
@@ -87,8 +87,8 @@ typedef struct canvas_doc_s {
   uint8_t *redo_states[UNDO_MAX];
   int      redo_count;
   bool     sel_active;
-  int      sel_x0, sel_y0;
-  int      sel_x1, sel_y1;
+  point_t  sel_start;
+  point_t  sel_end;
 } canvas_doc_t;
 
 typedef struct {
