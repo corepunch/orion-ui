@@ -18,15 +18,24 @@
   #include <unistd.h>  // for chdir
 #endif
 
-/* Lua headers - different paths on Windows vs Unix */
+/* Lua headers - probe multiple locations for portability.
+ * Windows (MinGW/MSYS2): lua.h directly in the include path.
+ * Linux (Debian/Ubuntu): lua5.4/lua.h via lua5.4-dev.
+ * macOS (Homebrew): lua.h when linked, lua5.4/lua.h when keg-only. */
 #if defined(_WIN32) || defined(_WIN64)
   #include <lua.h>
   #include <lauxlib.h>
   #include <lualib.h>
-#else
+#elif __has_include(<lua5.4/lua.h>)
   #include <lua5.4/lua.h>
   #include <lua5.4/lauxlib.h>
   #include <lua5.4/lualib.h>
+#elif __has_include(<lua.h>)
+  #include <lua.h>
+  #include <lauxlib.h>
+  #include <lualib.h>
+#else
+  #error "Lua 5.4 headers not found. Install lua5.4-dev (Debian/Ubuntu) or lua (Homebrew) and ensure its prefix is in CFLAGS."
 #endif
 
 #define DEFAULT_TEXT_BUFFER_SIZE 4096
