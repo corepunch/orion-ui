@@ -19,6 +19,11 @@ typedef result_t (*winproc_t)(window_t *, uint32_t, uint32_t, void *);
 // Window hook callback type
 typedef void (*winhook_func_t)(window_t *win, uint32_t msg, uint32_t wparam, void *lparam, void *userdata);
 
+// Point structure
+typedef struct {
+  int x, y;
+} point_t;
+
 // Rectangle structure
 struct rect_s {
   int x, y, w, h;
