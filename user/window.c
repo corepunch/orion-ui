@@ -23,6 +23,8 @@ extern window_t *_resizing;
 // Forward declarations
 extern void post_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 extern int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+extern int titlebar_height(window_t const *win);
+extern int statusbar_height(window_t const *win);
 
 // Window list management
 void push_window(window_t *win, window_t **windows) {
@@ -85,13 +87,18 @@ void *allocate_window_data(window_t *win, size_t size) {
   return data;
 }
 
-// Check if two windows overlap
+// Check if two windows overlap, including their non-client areas (title bar, status bar)
 bool do_windows_overlap(const window_t *a, const window_t *b) {
   if (!a->visible || !b->visible)
     return false;
-  return a && b &&
-  a->frame.x < b->frame.x + b->frame.w && a->frame.x + a->frame.w > b->frame.x &&
-  a->frame.y < b->frame.y + b->frame.h && a->frame.y + a->frame.h > b->frame.y;
+  int border = 1;
+  int a_title = titlebar_height(a), a_status = statusbar_height(a);
+  int b_title = titlebar_height(b), b_status = statusbar_height(b);
+  int a_x1 = a->frame.x - border,              a_y1 = a->frame.y - a_title - border;
+  int a_x2 = a->frame.x + a->frame.w + border, a_y2 = a->frame.y + a->frame.h + a_status + border;
+  int b_x1 = b->frame.x - border,              b_y1 = b->frame.y - b_title - border;
+  int b_x2 = b->frame.x + b->frame.w + border, b_y2 = b->frame.y + b->frame.h + b_status + border;
+  return a_x1 < b_x2 && a_x2 > b_x1 && a_y1 < b_y2 && a_y2 > b_y1;
 }
 
 // Invalidate overlapping windows
@@ -113,6 +120,8 @@ void move_window(window_t *win, int x, int y) {
 
   win->frame.x = x;
   win->frame.y = y;
+
+  invalidate_overlaps(win);
 }
 
 // Resize window
