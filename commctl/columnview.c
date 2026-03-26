@@ -56,24 +56,37 @@ result_t win_columnview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
     
     case kWindowMessagePaint: {
       const int ncol = get_column_count(win->frame.w, data->column_width);
-      
+      int scroll_y = (int)win->scroll[1];
+      // For child windows frame.y/frame.h are in root-content-relative (drawing)
+      // coordinates, so they directly bound the visible area.  For root windows
+      // the drawing coordinate system starts at 0 (the content-area origin), so
+      // the visible area is [0, frame.h) regardless of the screen position stored
+      // in frame.y.
+      int clip_top    = win->parent ? win->frame.y              : 0;
+      int clip_bottom = win->parent ? win->frame.y + win->frame.h : win->frame.h;
+
       for (uint32_t i = 0; i < data->count; i++) {
         int col = i % ncol;
         int x = col * data->column_width + WIN_PADDING;
-        int y = (i / ncol) * ENTRY_HEIGHT + WIN_PADDING;
-        
-        // set_clip_rect(win, &(rect_t){x - 2, y - 2, data->column_width - 6, ENTRY_HEIGHT - 2});
-        
+        int y = (i / ncol) * ENTRY_HEIGHT + WIN_PADDING - scroll_y;
+
+        if (y + ENTRY_HEIGHT <= clip_top) continue;
+        // y = (i/ncol)*ENTRY_HEIGHT + ... is monotonically non-decreasing as i
+        // increases (same row → same y, next row → strictly higher y), so once
+        // an item is below the visible area all subsequent items are too.
+        if (y >= clip_bottom) break;
+
         if (i == data->selected) {
           fill_rect(COLOR_TEXT_NORMAL, x - 2, y - 2, data->column_width - 6, ENTRY_HEIGHT - 2);
           draw_icon8(data->items[i].icon, x, y - ICON_DODGE, COLOR_PANEL_BG);
           draw_text_small(data->names[i], x + ICON_OFFSET, y, COLOR_PANEL_BG);
         } else {
+          fill_rect(COLOR_PANEL_BG, x - 2, y - 2, data->column_width - 6, ENTRY_HEIGHT - 2);
           draw_icon8(data->items[i].icon, x, y - ICON_DODGE, data->items[i].color);
           draw_text_small(data->names[i], x + ICON_OFFSET, y, data->items[i].color);
         }
       }
-      
+
       return false;
     }
     
@@ -137,14 +150,20 @@ result_t win_columnview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
         memmove(data->items + wparam, data->items + wparam + 1, (data->count - wparam - 1) * sizeof(data->items[0]));
         memmove(data->names + wparam, data->names + wparam + 1, (data->count - wparam - 1) * sizeof(data->names[0]));
         data->count--;
-        
+
+        // Update text pointers: after memmove they still point to old (now-wrong)
+        // positions in the names array, so fix each shifted item.
+        for (uint32_t i = wparam; i < data->count; i++) {
+          data->items[i].text = data->names[i];
+        }
+
         // Adjust selection
         if (data->selected == wparam) {
           data->selected = -1;
         } else if (data->selected > wparam) {
           data->selected--;
         }
-        
+
         invalidate_window(win);
         return true;
       }

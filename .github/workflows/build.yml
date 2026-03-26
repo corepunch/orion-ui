@@ -55,7 +55,7 @@ jobs:
       
     - name: Install dependencies
       run: |
-        brew install sdl2 cglm lua libpng
+        brew install sdl2 cglm lua@5.4 libpng
         
     - name: Build library
       run: make library
