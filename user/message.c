@@ -265,6 +265,20 @@ void post_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   };
 }
 
+// Check whether 'target' is still a live window (root or descendant).
+// This guards against dispatching messages to windows that were destroyed
+// after the message was posted (e.g. a button posting invalidate_window on
+// itself after end_dialog has already freed it).
+// Complexity is O(queue_len * window_count) per repost_messages call; both
+// counts are small in practice (queue ≤ 256, windows typically < 50).
+static bool is_valid_window_ptr(window_t *target, window_t *list) {
+  for (window_t *w = list; w; w = w->next) {
+    if (w == target) return true;
+    if (is_valid_window_ptr(target, w->children)) return true;
+  }
+  return false;
+}
+
 void repost_messages(void) {
   for (uint8_t write = queue.write; queue.read != write;) {
     msg_t *m = &queue.messages[queue.read++];
@@ -275,6 +289,7 @@ void repost_messages(void) {
       }
       continue;
     }
+    if (!is_valid_window_ptr(m->target, windows)) continue;
     send_message(m->target, m->msg, m->wparam, m->lparam);
   }
   if (running) {
