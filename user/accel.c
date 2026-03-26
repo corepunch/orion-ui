@@ -50,6 +50,13 @@ bool translate_accelerator(window_t *win, ui_event_t *evt,
     bool has_shift  = (mod & KMOD_SHIFT) != 0;
     bool has_alt    = (mod & KMOD_ALT)   != 0;
     if (has_ctrl == want_ctrl && has_shift == want_shift && has_alt == want_alt) {
+      // Suppress accelerators that require no Ctrl or Alt while a text-editing
+      // control has keyboard focus.  This mirrors the WinAPI behaviour where
+      // an edit control captures character input before TranslateAccelerator
+      // can intercept it, so bare-key shortcuts (e.g. P/B/E/K/S for tools)
+      // don't fire while the user is typing.  Accelerators that require
+      // Ctrl or Alt are never suppressed.
+      if (!want_ctrl && !want_alt && _focused && _focused->editing) continue;
       send_message(win, kWindowMessageCommand,
                    MAKEDWORD(a->cmd, kAcceleratorNotification), NULL);
       return true;

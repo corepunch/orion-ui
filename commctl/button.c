@@ -9,6 +9,20 @@
 // Helper function (will be moved to ui/user/window.c later)
 extern window_t *get_root_window(window_t *window);
 
+// For BUTTON_AUTORADIO: clear all checked siblings then mark this one checked.
+static void autoradio_select(window_t *win) {
+  if (win->parent) {
+    for (window_t *sib = win->parent->children; sib; sib = sib->next) {
+      if (sib != win && (sib->flags & BUTTON_AUTORADIO) && sib->value) {
+        sib->value = false;
+        invalidate_window(sib);
+      }
+    }
+  }
+  win->value = true;
+  invalidate_window(win);
+}
+
 // Button control window procedure
 result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
@@ -38,19 +52,8 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
       return true;
     case kWindowMessageLeftButtonUp:
       win->pressed = false;
-      if (win->flags & BUTTON_AUTORADIO) {
-        // Uncheck all sibling AUTORADIO buttons, then check this one
-        if (win->parent) {
-          for (window_t *sib = win->parent->children; sib; sib = sib->next) {
-            if (sib != win && (sib->flags & BUTTON_AUTORADIO) && sib->value) {
-              sib->value = false;
-              invalidate_window(sib);
-            }
-          }
-        }
-        win->value = true;
-        invalidate_window(win);
-      }
+      if (win->flags & BUTTON_AUTORADIO)
+        autoradio_select(win);
       send_message(get_root_window(win), kWindowMessageCommand, MAKEDWORD(win->id, kButtonNotificationClicked), win);
       invalidate_window(win);
       return true;
@@ -64,28 +67,24 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
     case kWindowMessageKeyUp:
       if (wparam == SDL_SCANCODE_RETURN || wparam == SDL_SCANCODE_SPACE) {
         win->pressed = false;
-        if (win->flags & BUTTON_AUTORADIO) {
-          if (win->parent) {
-            for (window_t *sib = win->parent->children; sib; sib = sib->next) {
-              if (sib != win && (sib->flags & BUTTON_AUTORADIO) && sib->value) {
-                sib->value = false;
-                invalidate_window(sib);
-              }
-            }
-          }
-          win->value = true;
-          invalidate_window(win);
-        }
+        if (win->flags & BUTTON_AUTORADIO)
+          autoradio_select(win);
         send_message(get_root_window(win), kWindowMessageCommand, MAKEDWORD(win->id, kButtonNotificationClicked), win);
         invalidate_window(win);
         return true;
       } else {
         return false;
       }
-    case kButtonMessageSetCheck:
-      win->value = (wparam == kButtonStateChecked);
-      invalidate_window(win);
+    case kButtonMessageSetCheck: {
+      bool checked = (wparam == kButtonStateChecked);
+      if ((win->flags & BUTTON_AUTORADIO) && checked)
+        autoradio_select(win);
+      else {
+        win->value = checked;
+        invalidate_window(win);
+      }
       return true;
+    }
     case kButtonMessageGetCheck:
       return win->value ? kButtonStateChecked : kButtonStateUnchecked;
   }
