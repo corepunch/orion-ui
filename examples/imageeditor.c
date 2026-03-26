@@ -1010,7 +1010,8 @@ static void create_app_windows(void) {
 // main
 // ============================================================
 
-int main(void) {
+int main(int argc, char *argv[]) {
+  (void)argc; (void)argv;
   g_app = calloc(1, sizeof(app_state_t));
   if (!g_app) return 1;
 
