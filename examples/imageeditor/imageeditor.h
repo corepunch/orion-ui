@@ -21,9 +21,13 @@
 
 #define CANVAS_W      320
 #define CANVAS_H      200
+<<<<<<< Updated upstream
+=======
+#define CANVAS_SCALE  1
+>>>>>>> Stashed changes
 
-#define SCREEN_W      768
-#define SCREEN_H      512
+#define SCREEN_W      512
+#define SCREEN_H      342
 
 #define PALETTE_WIN_X   4
 #define PALETTE_WIN_Y  (MENUBAR_HEIGHT + TITLEBAR_HEIGHT + 4)
