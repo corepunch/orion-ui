@@ -196,6 +196,7 @@ static int hit_slider(int lx, int ly) {
 }
 
 static int hit_palette(int lx, int ly) {
+  if (lx < CP_PREV_X) return -1;
   if (ly < CP_PAL_Y || ly >= CP_PAL_Y + CP_PAL_SH) return -1;
   int i = (lx - CP_PREV_X) / CP_PAL_SW;
   if (i < 0 || i >= NUM_USER_COLORS) return -1;
@@ -356,6 +357,8 @@ static result_t cp_proc(window_t *win, uint32_t msg,
         st->hover_pal = pi;
         invalidate_window(win);
       }
+      // Enable MouseLeave notifications so hover clears when the cursor exits
+      track_mouse(win);
       return true;
     }
 
