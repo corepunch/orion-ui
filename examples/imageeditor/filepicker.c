@@ -123,7 +123,21 @@ static result_t picker_proc(window_t *win, uint32_t msg,
       uint16_t code = HIWORD(wparam);
       uint16_t idx  = LOWORD(wparam);
 
-      if (code == CVN_SELCHANGE || code == CVN_DBLCLK) {
+      if (code == CVN_SELCHANGE) {
+        (void)idx;
+        columnview_item_t *item = (columnview_item_t *)lparam;
+        if (!item || !item->text) return true;
+        if (!item->userdata) {
+          strncpy(ps->edit_win->title, item->text,
+                  sizeof(ps->edit_win->title) - 1);
+          ps->edit_win->title[sizeof(ps->edit_win->title) - 1] = '\0';
+          invalidate_window(ps->edit_win);
+        }
+        return true;
+      }
+
+      if (code == CVN_DBLCLK) {
+        (void)idx;
         columnview_item_t *item = (columnview_item_t *)lparam;
         if (!item || !item->text) return true;
 
@@ -147,7 +161,6 @@ static result_t picker_proc(window_t *win, uint32_t msg,
           ps->edit_win->title[sizeof(ps->edit_win->title) - 1] = '\0';
           invalidate_window(ps->edit_win);
         }
-        (void)idx;
         return true;
       }
 
