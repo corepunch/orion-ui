@@ -5,36 +5,20 @@
 #define TOOL_ROW_H     24
 #define SWATCH_H       22
 
-// Custom window procedure for a tool button that highlights when active.
-// For non-paint messages it delegates to the standard win_button proc so
-// click / keyboard / focus behaviour is inherited automatically.
-static result_t tool_button_proc(window_t *win, uint32_t msg,
-                                  uint32_t wparam, void *lparam) {
-  if (msg == kWindowMessagePaint) {
-    bool active = g_app &&
-                  (g_app->current_tool == (tool_id_t)(win->id - ID_TOOL_PENCIL));
-    fill_rect(active ? COLOR_FOCUSED : COLOR_PANEL_DARK_BG,
-              win->frame.x, win->frame.y, win->frame.w, win->frame.h);
-    draw_text_small(win->title,
-                    win->frame.x + 4, win->frame.y + 7,
-                    active ? COLOR_PANEL_BG : COLOR_TEXT_NORMAL);
-    return true;
-  }
-  return win_button(win, msg, wparam, lparam);
-}
-
 result_t win_tool_palette_proc(window_t *win, uint32_t msg,
                                 uint32_t wparam, void *lparam) {
   switch (msg) {
     case kWindowMessageCreate: {
-      // Create one button child per tool, each carrying its ID_TOOL_* id.
+      // Create one PUSHLIKE + AUTORADIO button per tool.
+      // The initial tool (TOOL_PENCIL) starts checked.
       for (int i = 0; i < NUM_TOOLS; i++) {
         window_t *btn = create_window(
             tool_names[i],
-            WINDOW_NOTITLE | WINDOW_NOFILL,
+            WINDOW_NOTITLE | WINDOW_NOFILL | BUTTON_PUSHLIKE | BUTTON_AUTORADIO,
             MAKERECT(1, i * TOOL_ROW_H, win->frame.w - 2, TOOL_ROW_H - 2),
-            win, tool_button_proc, NULL);
-        btn->id = (uint16_t)(ID_TOOL_PENCIL + i);
+            win, win_button, NULL);
+        btn->id    = (uint16_t)(ID_TOOL_PENCIL + i);
+        btn->value = (i == TOOL_PENCIL);
         show_window(btn, true);
       }
       return true;
