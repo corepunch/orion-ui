@@ -38,6 +38,8 @@
 
 #define NUM_COLORS 16
 
+#define UNDO_MAX   20
+
 // Menu item IDs
 #define ID_FILE_NEW     1
 #define ID_FILE_OPEN    2
@@ -45,6 +47,9 @@
 #define ID_FILE_SAVEAS  4
 #define ID_FILE_CLOSE   5
 #define ID_FILE_QUIT    6
+
+#define ID_EDIT_UNDO   10
+#define ID_EDIT_REDO   11
 
 // ============================================================
 // Types
@@ -76,6 +81,11 @@ typedef struct canvas_doc_s {
   window_t *win;
   window_t *canvas_win;
   struct canvas_doc_s *next;
+  // Undo/redo history (heap-allocated pixel snapshots)
+  uint8_t *undo_states[UNDO_MAX];
+  int      undo_count;
+  uint8_t *redo_states[UNDO_MAX];
+  int      redo_count;
   bool     sel_active;
   int      sel_x0, sel_y0;
   int      sel_x1, sel_y1;
@@ -97,6 +107,7 @@ typedef struct {
   rgba_t         bg_color;
   int            next_x;
   int            next_y;
+  accel_table_t *accel;
 } app_state_t;
 
 // ============================================================
@@ -134,6 +145,12 @@ void canvas_clear(canvas_doc_t *doc);
 void canvas_draw_circle(canvas_doc_t *doc, int cx, int cy, int r, rgba_t c);
 void canvas_draw_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1, int radius, rgba_t c);
 void canvas_flood_fill(canvas_doc_t *doc, int sx, int sy, rgba_t fill);
+
+// Undo/redo
+void doc_push_undo(canvas_doc_t *doc);
+bool doc_undo(canvas_doc_t *doc);
+bool doc_redo(canvas_doc_t *doc);
+void doc_free_undo(canvas_doc_t *doc);
 
 // Forward declarations for document management
 canvas_doc_t *create_document(const char *filename);

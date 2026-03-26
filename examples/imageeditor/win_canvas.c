@@ -54,6 +54,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       doc->last_y  = cy;
       doc->sel_active = false;
 
+      doc_push_undo(doc);
+
       switch (g_app->current_tool) {
         case TOOL_PENCIL:
           canvas_draw_circle(doc, cx, cy, 0, g_app->fg_color);

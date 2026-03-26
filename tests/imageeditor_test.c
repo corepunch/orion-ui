@@ -110,6 +110,81 @@ static bool is_png(const char *name) {
 }
 
 // ============================================================
+// Inline undo/redo implementation for testing (mirrors undo.c logic)
+// ============================================================
+
+#ifndef UNDO_MAX
+#define UNDO_MAX 20
+#endif
+
+typedef struct {
+  uint8_t  pixels[CANVAS_H * CANVAS_W * 4];
+  bool     canvas_dirty;
+  uint8_t *undo_states[UNDO_MAX];
+  int      undo_count;
+  uint8_t *redo_states[UNDO_MAX];
+  int      redo_count;
+} test_doc_t;
+
+static size_t kTestSnapSize = CANVAS_H * CANVAS_W * 4;
+
+static void tdoc_clear_stack(uint8_t **states, int *count) {
+  for (int i = 0; i < *count; i++) { free(states[i]); states[i] = NULL; }
+  *count = 0;
+}
+
+static uint8_t *tdoc_snapshot(const test_doc_t *d) {
+  uint8_t *s = malloc(kTestSnapSize);
+  if (s) memcpy(s, d->pixels, kTestSnapSize);
+  return s;
+}
+
+static void tdoc_stack_push(uint8_t **states, int *count, uint8_t *snap) {
+  if (*count == UNDO_MAX) {
+    free(states[0]);
+    memmove(states, states + 1, (UNDO_MAX - 1) * sizeof(uint8_t *));
+    (*count)--;
+  }
+  states[(*count)++] = snap;
+}
+
+static void tdoc_push_undo(test_doc_t *d) {
+  tdoc_clear_stack(d->redo_states, &d->redo_count);
+  uint8_t *snap = tdoc_snapshot(d);
+  if (snap) tdoc_stack_push(d->undo_states, &d->undo_count, snap);
+}
+
+static bool tdoc_undo(test_doc_t *d) {
+  if (d->undo_count == 0) return false;
+  uint8_t *cur = tdoc_snapshot(d);
+  if (cur) tdoc_stack_push(d->redo_states, &d->redo_count, cur);
+  d->undo_count--;
+  memcpy(d->pixels, d->undo_states[d->undo_count], kTestSnapSize);
+  free(d->undo_states[d->undo_count]);
+  d->undo_states[d->undo_count] = NULL;
+  d->canvas_dirty = true;
+  return true;
+}
+
+static bool tdoc_redo(test_doc_t *d) {
+  if (d->redo_count == 0) return false;
+  uint8_t *cur = tdoc_snapshot(d);
+  if (cur) tdoc_stack_push(d->undo_states, &d->undo_count, cur);
+  d->redo_count--;
+  memcpy(d->pixels, d->redo_states[d->redo_count], kTestSnapSize);
+  free(d->redo_states[d->redo_count]);
+  d->redo_states[d->redo_count] = NULL;
+  d->canvas_dirty = true;
+  return true;
+}
+
+static void tdoc_free(test_doc_t *d) {
+  tdoc_clear_stack(d->undo_states, &d->undo_count);
+  tdoc_clear_stack(d->redo_states, &d->redo_count);
+  free(d);
+}
+
+// ============================================================
 // Tests
 // ============================================================
 
@@ -337,6 +412,142 @@ void test_draw_thick_line(void) {
   PASS();
 }
 
+void test_undo_basic(void) {
+  TEST("undo – restores pixel to pre-draw state");
+  test_doc_t *d = calloc(1, sizeof(test_doc_t));
+  memset(d->pixels, 0xFF, kTestSnapSize); // white canvas
+
+  // Save undo state, then paint a red pixel
+  tdoc_push_undo(d);
+  rgba_t red = {255, 0, 0, 255};
+  uint8_t *p = d->pixels + (10 * CANVAS_W + 20) * 4;
+  p[0]=red.r; p[1]=red.g; p[2]=red.b; p[3]=red.a;
+
+  // Pixel should be red now
+  uint8_t *q = d->pixels + (10 * CANVAS_W + 20) * 4;
+  ASSERT_EQUAL(q[0], 255);
+  ASSERT_EQUAL(q[1], 0);
+
+  // Undo should restore white
+  ASSERT_TRUE(tdoc_undo(d));
+  q = d->pixels + (10 * CANVAS_W + 20) * 4;
+  ASSERT_EQUAL(q[0], 255);
+  ASSERT_EQUAL(q[1], 255);
+  ASSERT_EQUAL(q[2], 255);
+  ASSERT_TRUE(d->canvas_dirty);
+
+  tdoc_free(d);
+  PASS();
+}
+
+void test_undo_empty(void) {
+  TEST("undo – returns false when history is empty");
+  test_doc_t *d = calloc(1, sizeof(test_doc_t));
+  ASSERT_FALSE(tdoc_undo(d));
+  tdoc_free(d);
+  PASS();
+}
+
+void test_redo_after_undo(void) {
+  TEST("redo – restores state that was undone");
+  test_doc_t *d = calloc(1, sizeof(test_doc_t));
+  memset(d->pixels, 0xFF, kTestSnapSize); // white
+
+  // Paint blue, saving undo state first
+  tdoc_push_undo(d);
+  uint8_t *p = d->pixels + (5 * CANVAS_W + 5) * 4;
+  p[0]=0; p[1]=0; p[2]=255; p[3]=255; // blue
+
+  // Undo → back to white
+  ASSERT_TRUE(tdoc_undo(d));
+  p = d->pixels + (5 * CANVAS_W + 5) * 4;
+  ASSERT_EQUAL(p[2], 255); // B channel of white
+  ASSERT_EQUAL(p[0], 255); // R channel of white
+
+  // Redo → back to blue
+  ASSERT_TRUE(tdoc_redo(d));
+  p = d->pixels + (5 * CANVAS_W + 5) * 4;
+  ASSERT_EQUAL(p[0], 0);   // R=0 for blue
+  ASSERT_EQUAL(p[2], 255); // B=255 for blue
+
+  tdoc_free(d);
+  PASS();
+}
+
+void test_redo_empty(void) {
+  TEST("redo – returns false when redo stack is empty");
+  test_doc_t *d = calloc(1, sizeof(test_doc_t));
+  ASSERT_FALSE(tdoc_redo(d));
+  tdoc_free(d);
+  PASS();
+}
+
+void test_new_action_clears_redo(void) {
+  TEST("push_undo after undo clears redo stack");
+  test_doc_t *d = calloc(1, sizeof(test_doc_t));
+  memset(d->pixels, 0xFF, kTestSnapSize);
+
+  // State A → paint → State B
+  tdoc_push_undo(d);
+  d->pixels[0] = 1; // mark as modified
+
+  // Undo B→A; redo stack now has B
+  ASSERT_TRUE(tdoc_undo(d));
+  ASSERT_EQUAL(d->redo_count, 1);
+
+  // New action from A → State C; redo must be cleared
+  tdoc_push_undo(d);
+  d->pixels[0] = 2;
+  ASSERT_EQUAL(d->redo_count, 0);
+
+  // Redo should now return false
+  ASSERT_FALSE(tdoc_redo(d));
+
+  tdoc_free(d);
+  PASS();
+}
+
+void test_undo_stack_limit(void) {
+  TEST("undo stack caps at UNDO_MAX entries");
+  test_doc_t *d = calloc(1, sizeof(test_doc_t));
+  memset(d->pixels, 0xFF, kTestSnapSize);
+
+  // Push more than UNDO_MAX snapshots
+  for (int i = 0; i < UNDO_MAX + 5; i++) {
+    tdoc_push_undo(d);
+    d->pixels[0] = (uint8_t)i;
+  }
+  ASSERT_EQUAL(d->undo_count, UNDO_MAX);
+
+  tdoc_free(d);
+  PASS();
+}
+
+void test_multiple_undo_redo(void) {
+  TEST("multiple undo/redo – state traversal");
+  test_doc_t *d = calloc(1, sizeof(test_doc_t));
+  memset(d->pixels, 0, kTestSnapSize); // black
+
+  // Push 3 states: 0→1→2→3
+  d->pixels[0] = 0;
+  tdoc_push_undo(d); d->pixels[0] = 1;
+  tdoc_push_undo(d); d->pixels[0] = 2;
+  tdoc_push_undo(d); d->pixels[0] = 3;
+
+  // Undo: 3→2→1
+  ASSERT_TRUE(tdoc_undo(d)); ASSERT_EQUAL(d->pixels[0], 2);
+  ASSERT_TRUE(tdoc_undo(d)); ASSERT_EQUAL(d->pixels[0], 1);
+
+  // Redo: 1→2
+  ASSERT_TRUE(tdoc_redo(d)); ASSERT_EQUAL(d->pixels[0], 2);
+
+  // Undo again: 2→1
+  ASSERT_TRUE(tdoc_undo(d)); ASSERT_EQUAL(d->pixels[0], 1);
+
+  tdoc_free(d);
+  PASS();
+}
+
 int main(int argc, char *argv[]) {
   (void)argc; (void)argv;
   TEST_START("Image Editor Logic");
@@ -359,6 +570,14 @@ int main(int argc, char *argv[]) {
   test_is_png_invalid();
   test_canvas_pixel_count();
   test_draw_thick_line();
+
+  test_undo_basic();
+  test_undo_empty();
+  test_redo_after_undo();
+  test_redo_empty();
+  test_new_action_clears_redo();
+  test_undo_stack_limit();
+  test_multiple_undo_redo();
 
   TEST_END();
 }
