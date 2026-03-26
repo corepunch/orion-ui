@@ -131,4 +131,12 @@ canvas_doc_t *create_document(const char *filename);
 void close_document(canvas_doc_t *doc);
 void doc_update_title(canvas_doc_t *doc);
 
+// Window procedures
+result_t editor_menubar_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+result_t win_tool_palette_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+result_t win_color_palette_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+
+// Menu definitions
+extern const menu_def_t kMenus[];
+
 #endif // __IMAGEEDITOR_H__

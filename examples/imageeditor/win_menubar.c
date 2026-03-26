@@ -14,7 +14,7 @@ static const menu_item_t kFileItems[] = {
   {"Quit",       ID_FILE_QUIT},
 };
 
-static const menu_def_t kMenus[] = {
+const menu_def_t kMenus[] = {
   {"File", kFileItems, (int)(sizeof(kFileItems)/sizeof(kFileItems[0]))},
 };
 
