@@ -1,8 +1,19 @@
 #ifndef __IMAGEEDITOR_H__
 #define __IMAGEEDITOR_H__
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <math.h>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <png.h>
+
+#include "../../ui.h"
 
 // ============================================================
 // Constants

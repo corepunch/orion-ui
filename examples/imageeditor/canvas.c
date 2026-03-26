@@ -1,5 +1,7 @@
 // Canvas operations: pixel drawing, PNG I/O, GL texture management
 
+#include "imageeditor.h"
+
 // ============================================================
 // Canvas pixel operations
 // ============================================================

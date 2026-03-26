@@ -1,5 +1,7 @@
 // Fill tool – flood fills a region with the foreground color
 
+#include "imageeditor.h"
+
 static void fill_down(canvas_doc_t *doc, int cx, int cy, rgba_t fg, rgba_t bg) {
   (void)bg;
   canvas_flood_fill(doc, cx, cy, fg);

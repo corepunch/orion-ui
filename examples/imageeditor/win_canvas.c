@@ -1,5 +1,7 @@
 // Canvas child window – renders the pixel canvas and dispatches paint events to tools
 
+#include "imageeditor.h"
+
 result_t win_canvas_proc(window_t *win, uint32_t msg,
                           uint32_t wparam, void *lparam) {
   canvas_doc_t *doc = (canvas_doc_t *)win->userdata;

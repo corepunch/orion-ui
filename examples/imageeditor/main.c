@@ -2,45 +2,13 @@
 // MDI architecture: floating tool palette, floating color palette,
 // menu bar, and multiple document windows.
 // PNG open/save via libpng.
-//
-// This file is the single compilation unit for the image editor.
-// All sub-modules are brought in via #include below.
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <strings.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <math.h>
-#include <dirent.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <png.h>
-
-#include "../../ui.h"
+#include "imageeditor.h"
 
 extern bool running;
 
-// Shared types, constants, and forward declarations
-#include "imageeditor.h"
-
 // Global application state
 app_state_t *g_app = NULL;
-
-// Sub-modules (compiled as part of this single translation unit)
-#include "canvas.c"
-#include "win_colorpalette.c"
-#include "tool_pencil.c"
-#include "tool_brush.c"
-#include "tool_eraser.c"
-#include "tool_fill.c"
-#include "tools.c"
-#include "filepicker.c"
-#include "win_canvas.c"
-#include "win_document.c"
-#include "win_toolpalette.c"
-#include "win_menubar.c"
 
 // ============================================================
 // Application init

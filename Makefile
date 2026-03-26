@@ -61,13 +61,6 @@ TEST_DIR = tests
 USER_SRCS = $(wildcard user/*.c)
 KERNEL_SRCS = $(wildcard kernel/*.c)
 COMMCTL_SRCS = $(wildcard commctl/*.c)
-LIB_SRCS = $(USER_SRCS) $(KERNEL_SRCS) $(COMMCTL_SRCS)
-
-# Object files
-USER_OBJS = $(patsubst user/%.c,$(OBJ_DIR)/user/%.o,$(USER_SRCS))
-KERNEL_OBJS = $(patsubst kernel/%.c,$(OBJ_DIR)/kernel/%.o,$(KERNEL_SRCS))
-COMMCTL_OBJS = $(patsubst commctl/%.c,$(OBJ_DIR)/commctl/%.o,$(COMMCTL_SRCS))
-LIB_OBJS = $(USER_OBJS) $(KERNEL_OBJS) $(COMMCTL_OBJS)
 
 # Library targets
 STATIC_LIB = $(LIB_DIR)/liborion.a
@@ -93,35 +86,29 @@ all: library examples
 .PHONY: library
 library: $(STATIC_LIB) $(SHARED_LIB)
 
-$(STATIC_LIB): $(LIB_OBJS) | $(LIB_DIR)
+$(STATIC_LIB): $(USER_SRCS) $(KERNEL_SRCS) $(COMMCTL_SRCS) | $(LIB_DIR) $(OBJ_DIR)
 	@echo "Creating static library: $@"
-	$(AR) rcs $@ $^
+	find user kernel commctl -name "*.c" | sort | sed 's/.*/#include "&"/' | \
+		$(CC) $(CFLAGS) -x c -c -o $(OBJ_DIR)/liborion.o -
+	$(AR) rcs $@ $(OBJ_DIR)/liborion.o
 
-$(SHARED_LIB): $(LIB_OBJS) | $(LIB_DIR)
+$(SHARED_LIB): $(USER_SRCS) $(KERNEL_SRCS) $(COMMCTL_SRCS) | $(LIB_DIR)
 	@echo "Creating shared library: $@"
-	$(CC) $(LIB_FLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
-
-# Object file compilation rules
-$(OBJ_DIR)/user/%.o: user/%.c | $(OBJ_DIR)/user
-	@echo "Compiling: $<"
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(OBJ_DIR)/kernel/%.o: kernel/%.c | $(OBJ_DIR)/kernel
-	@echo "Compiling: $<"
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(OBJ_DIR)/commctl/%.o: commctl/%.c | $(OBJ_DIR)/commctl
-	@echo "Compiling: $<"
-	$(CC) $(CFLAGS) -c $< -o $@
+	find user kernel commctl -name "*.c" | sort | sed 's/.*/#include "&"/' | \
+		$(CC) $(CFLAGS) $(LIB_FLAGS) -x c -o $@ - $(LDFLAGS) $(LIBS)
 
 # Examples
 .PHONY: examples
 examples: $(EXAMPLE_BINS)
 
 # Image editor links with libpng for PNG open/save support
-$(BIN_DIR)/imageeditor$(EXE_EXT): examples/imageeditor/main.c $(STATIC_LIB) | $(BIN_DIR)
+# main.c is appended last so that all sub-module symbols (e.g. kMenus, win procs)
+# are defined before main.c's application code references them.
+$(BIN_DIR)/imageeditor$(EXE_EXT): $(wildcard examples/imageeditor/*.c) $(STATIC_LIB) | $(BIN_DIR)
 	@echo "Building example: $@"
-	$(CC) $(CFLAGS) -Iexamples/imageeditor -o $@ $< $(STATIC_LIB) $(LDFLAGS) $(LDFLAGS_EXAMPLE) $(LIBS) -lpng
+	(find examples/imageeditor -name "*.c" ! -name "main.c" | sort | sed 's/.*/#include "&"/'; \
+	 echo '#include "examples/imageeditor/main.c"') | \
+		$(CC) $(CFLAGS) -Iexamples/imageeditor -x c -o $@ - $(STATIC_LIB) $(LDFLAGS) $(LDFLAGS_EXAMPLE) $(LIBS) -lpng
 
 # Generic rule: compile each example's main.c as a single file directly to binary
 $(BIN_DIR)/%$(EXE_EXT): examples/%/main.c $(STATIC_LIB) | $(BIN_DIR)
@@ -154,7 +141,7 @@ $(BIN_DIR)/test_%$(EXE_EXT): $(TEST_DIR)/%.c $(STATIC_LIB) | $(BIN_DIR)
 	$(CC) $(CFLAGS) -o $@ $< $(STATIC_LIB) $(LDFLAGS) $(LDFLAGS_TEST) $(LIBS)
 
 # Directory creation
-BUILD_DIRS = $(BUILD_DIR) $(LIB_DIR) $(BIN_DIR) $(OBJ_DIR) $(OBJ_DIR)/user $(OBJ_DIR)/kernel $(OBJ_DIR)/commctl
+BUILD_DIRS = $(BUILD_DIR) $(LIB_DIR) $(BIN_DIR) $(OBJ_DIR)
 
 $(BUILD_DIRS):
 	mkdir -p $@

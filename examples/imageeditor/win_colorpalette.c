@@ -1,5 +1,7 @@
 // Color palette floating window
 
+#include "imageeditor.h"
+
 #define COLOR_HEADER_H  12
 #define SWATCH_COLS      2
 #define SWATCH_W        (PALETTE_WIN_W / SWATCH_COLS)

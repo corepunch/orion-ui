@@ -1,5 +1,7 @@
 // File picker dialog (modal, PNG-filtered)
 
+#include "imageeditor.h"
+
 #define PICKER_LIST_W  360
 #define PICKER_LIST_H  220
 #define PICKER_WIN_W   (PICKER_LIST_W + 8)

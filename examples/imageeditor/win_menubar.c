@@ -1,5 +1,7 @@
 // Menu bar window proc and menu command handler
 
+#include "imageeditor.h"
+
 static const menu_item_t kFileItems[] = {
   {"New",        ID_FILE_NEW},
   {"Open...",    ID_FILE_OPEN},
