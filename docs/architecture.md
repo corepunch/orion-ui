@@ -8,17 +8,11 @@ nav_order: 3
 
 Orion mirrors the layered design of classic Windows:
 
-```
-┌─────────────────────────────────┐
-│  Application / Examples         │  your code
-├─────────────────────────────────┤
-│  commctl/   Common Controls     │  buttons, lists, menubar …
-├─────────────────────────────────┤
-│  user/      Window Management   │  create/destroy, draw, text
-├─────────────────────────────────┤
-│  kernel/    Event Loop + SDL    │  SDL2, OpenGL, input
-└─────────────────────────────────┘
-```
+| Application | Examples | your code |
+|---|---|---|
+│ commctl | Common Controls │ buttons, lists, menubar |
+│ user | Window Management │ create/destroy, draw, text |
+│ kernel | Event Loop + SDL │ SDL2, OpenGL, input |
 
 ## `user/` – Window Management (USER.DLL)
 
