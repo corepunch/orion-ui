@@ -21,10 +21,6 @@
 
 #define CANVAS_W      320
 #define CANVAS_H      200
-<<<<<<< Updated upstream
-=======
-#define CANVAS_SCALE  1
->>>>>>> Stashed changes
 
 #define SCREEN_W      512
 #define SCREEN_H      342
