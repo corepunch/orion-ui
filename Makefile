@@ -86,10 +86,11 @@ library: $(STATIC_LIB) $(SHARED_LIB)
 
 $(STATIC_LIB): $(USER_SRCS) $(KERNEL_SRCS) $(COMMCTL_SRCS) | $(LIB_DIR)
 	@echo "Creating static library: $@"
+	tmpobj=$$(mktemp /tmp/liborion_XXXXXX.o) && \
 	find user kernel commctl -name "*.c" | sort | sed 's/.*/#include "&"/' | \
-		$(CC) $(CFLAGS) -x c -c -o $(@:.a=.o) -
-	$(AR) rcs $@ $(@:.a=.o)
-	rm $(@:.a=.o)
+		$(CC) $(CFLAGS) -x c -c -o $$tmpobj - && \
+	$(AR) rcs $@ $$tmpobj && \
+	rm $$tmpobj
 
 $(SHARED_LIB): $(USER_SRCS) $(KERNEL_SRCS) $(COMMCTL_SRCS) | $(LIB_DIR)
 	@echo "Creating shared library: $@"
