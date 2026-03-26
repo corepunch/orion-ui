@@ -175,8 +175,8 @@ void dispatch_message(SDL_Event *evt) {
         if (win->disabled) return;
         int16_t x = LOCAL_X(evt->motion, win);
         int16_t y = LOCAL_Y(evt->motion, win);
-        int16_t dx = evt->motion.xrel / UI_WINDOW_SCALE;
-        int16_t dy = evt->motion.yrel / UI_WINDOW_SCALE;
+        int16_t dx = evt->motion.xrel;
+        int16_t dy = evt->motion.yrel;
         if (win == _captured || (y >= 0 && win == _focused)) {
           send_message(win, kWindowMessageMouseMove, MAKEDWORD(x, y), (void*)(intptr_t)MAKEDWORD(dx, dy));
         }

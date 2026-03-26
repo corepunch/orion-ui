@@ -73,8 +73,8 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
 
     case kWindowMessageMouseMove: {
       if (!d || !d->dragging) return false;
-      int16_t dx = (int16_t)LOWORD((uint32_t)(intptr_t)lparam);
-      int16_t dy = (int16_t)HIWORD((uint32_t)(intptr_t)lparam);
+      int16_t dx = (int16_t)LOWORD((uint32_t)(intptr_t)lparam) / UI_WINDOW_SCALE;
+      int16_t dy = (int16_t)HIWORD((uint32_t)(intptr_t)lparam) / UI_WINDOW_SCALE;
       move_window(win, win->frame.x + dx, win->frame.y + dy);
       return true;
     }
