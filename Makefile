@@ -73,9 +73,10 @@ LIB_OBJS = $(USER_OBJS) $(KERNEL_OBJS) $(COMMCTL_OBJS)
 STATIC_LIB = $(LIB_DIR)/liborion.a
 SHARED_LIB = $(LIB_DIR)/liborion$(LIB_EXT)
 
-# Example sources
-EXAMPLE_SRCS = $(wildcard examples/*.c)
-EXAMPLE_BINS = $(patsubst examples/%.c,$(BIN_DIR)/%$(EXE_EXT),$(EXAMPLE_SRCS))
+# Example sources – each example lives in its own subdirectory with a main.c
+# Compile directly to binary (no intermediate .o files)
+EXAMPLE_DIRS = $(wildcard examples/*/main.c)
+EXAMPLE_BINS = $(patsubst examples/%/main.c,$(BIN_DIR)/%$(EXE_EXT),$(EXAMPLE_DIRS))
 
 # Test sources
 TEST_SRCS = $(wildcard $(TEST_DIR)/*.c)
@@ -116,11 +117,12 @@ $(OBJ_DIR)/commctl/%.o: commctl/%.c | $(OBJ_DIR)/commctl
 examples: $(EXAMPLE_BINS)
 
 # Image editor links with libpng for PNG open/save support
-$(BIN_DIR)/imageeditor$(EXE_EXT): examples/imageeditor.c $(STATIC_LIB) | $(BIN_DIR)
+$(BIN_DIR)/imageeditor$(EXE_EXT): examples/imageeditor/main.c $(STATIC_LIB) | $(BIN_DIR)
 	@echo "Building example: $@"
-	$(CC) $(CFLAGS) -o $@ $< $(STATIC_LIB) $(LDFLAGS) $(LDFLAGS_EXAMPLE) $(LIBS) -lpng
+	$(CC) $(CFLAGS) -Iexamples/imageeditor -o $@ $< $(STATIC_LIB) $(LDFLAGS) $(LDFLAGS_EXAMPLE) $(LIBS) -lpng
 
-$(BIN_DIR)/%$(EXE_EXT): examples/%.c $(STATIC_LIB) | $(BIN_DIR)
+# Generic rule: compile each example's main.c as a single file directly to binary
+$(BIN_DIR)/%$(EXE_EXT): examples/%/main.c $(STATIC_LIB) | $(BIN_DIR)
 	@echo "Building example: $@"
 	$(CC) $(CFLAGS) -o $@ $< $(STATIC_LIB) $(LDFLAGS) $(LDFLAGS_EXAMPLE) $(LIBS)
 
