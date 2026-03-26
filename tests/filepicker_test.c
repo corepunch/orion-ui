@@ -47,7 +47,8 @@ static int filelist_entry_icon(const char *name, bool is_dir,
 #define WIN_PADDING    4
 
 static int filelist_hit_row(int my, int scroll_y) {
-  return (my - WIN_PADDING + scroll_y) / ENTRY_HEIGHT;
+  (void)scroll_y;  // mouse coordinates are already scroll-adjusted (LOCAL_Y adds scroll[1])
+  return (my - WIN_PADDING) / ENTRY_HEIGHT;
 }
 
 static int filelist_item_y(int row, int scroll_y) {
@@ -155,7 +156,10 @@ void test_hit_row_with_scroll(void) {
   int scroll = ENTRY_HEIGHT;
   int painted_y_of_item1 = filelist_item_y(1, scroll);
   ASSERT_EQUAL(painted_y_of_item1, WIN_PADDING);
-  ASSERT_EQUAL(filelist_hit_row(painted_y_of_item1, scroll), 1);
+  // LOCAL_Y includes scroll[1], so my = painted_y + scroll (the scroll is
+  // already baked into the delivered coordinate by event.c).
+  int my = painted_y_of_item1 + scroll;
+  ASSERT_EQUAL(filelist_hit_row(my, scroll), 1);
   PASS();
 }
 

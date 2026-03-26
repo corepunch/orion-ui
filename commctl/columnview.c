@@ -95,7 +95,7 @@ result_t win_columnview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       int my = HIWORD(wparam);
       const int ncol = get_column_count(win->frame.w, data->column_width);
       int col = mx / data->column_width;
-      int row = (my - WIN_PADDING + (int)win->scroll[1]) / ENTRY_HEIGHT;
+      int row = (my - WIN_PADDING) / ENTRY_HEIGHT;
       uint32_t index = row * ncol + col;
       
       if (index < data->count) {

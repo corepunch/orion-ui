@@ -166,7 +166,8 @@ static void fl_load_directory(window_t *win, filelist_data_t *data) {
   // path; fl_navigate handles the actual parent-path computation when the user
   // activates it.  This means the display code (strrchr + basename) naturally
   // produces ".." since there is no '/' in the sentinel string.
-  fl_push_item(data, strdup(".."), true, false, 0, 0);
+  char *parent_path = strdup("..");
+  if (parent_path) fl_push_item(data, parent_path, true, false, 0, 0);
 
   DIR *dir = opendir(data->curpath);
   if (dir) {
@@ -197,7 +198,10 @@ static void fl_load_directory(window_t *win, filelist_data_t *data) {
         int nc = cap ? cap * 2 : 32;
         fl_sort_entry_t *tmp = realloc(entries,
                                         (size_t)nc * sizeof(fl_sort_entry_t));
-        if (!tmp) { free(entries); closedir(dir); return; }
+        if (!tmp) {
+          // Allocation failed; keep existing entries and stop collecting more.
+          break;
+        }
         entries = tmp;
         cap = nc;
       }
@@ -214,7 +218,9 @@ static void fl_load_directory(window_t *win, filelist_data_t *data) {
     if (count > 0) {
       qsort(entries, (size_t)count, sizeof(fl_sort_entry_t), fl_sort_compare);
       for (int i = 0; i < count; i++) {
-        fl_push_item(data, strdup(entries[i].path),
+        char *path = strdup(entries[i].path);
+        if (!path) continue; // skip on allocation failure
+        fl_push_item(data, path,
                      entries[i].is_dir,
                      entries[i].is_hidden,
                      entries[i].size,
@@ -326,7 +332,7 @@ result_t win_filelist(window_t *win, uint32_t msg,
                     ? (win->frame.w / col_w) : 1;
       if (ncol < 1) ncol = 1;
       int col   = mx / col_w;
-      int row   = (my - FL_WIN_PADDING + (int)win->scroll[1]) / FL_ENTRY_HEIGHT;
+      int row   = (my - FL_WIN_PADDING) / FL_ENTRY_HEIGHT;
       int index = row * ncol + col;
 
       if (index < 0 || index >= data->count) return true;
@@ -416,9 +422,11 @@ result_t win_filelist(window_t *win, uint32_t msg,
 
     // -----------------------------------------------------------------------
     case kWindowMessageDestroy:
-      fl_free_items(data);
-      free(data);
-      win->userdata = NULL;
+      if (data) {
+        fl_free_items(data);
+        free(data);
+        win->userdata = NULL;
+      }
       return win_columnview(win, msg, wparam, lparam);
 
     // -----------------------------------------------------------------------
