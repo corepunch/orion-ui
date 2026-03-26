@@ -8,7 +8,9 @@
 #define UI_INIT_DESKTOP 0x01000000u
 #define UI_INIT_TRAY 0x02000000u
 
+#ifndef UI_WINDOW_SCALE
 #define UI_WINDOW_SCALE 2
+#endif
 
 // Event type abstraction
 typedef SDL_Event ui_event_t;

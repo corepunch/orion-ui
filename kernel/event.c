@@ -18,7 +18,7 @@ extern window_t *_tracked;
 extern window_t *_captured;
 
 // Macros for coordinate conversion
-#define SCALE_POINT(x) ((x)/2)
+#define SCALE_POINT(x) ((x)/UI_WINDOW_SCALE)
 #define LOCAL_X(VALUE, WIN) (SCALE_POINT((VALUE).x) - (WIN)->frame.x + (WIN)->scroll[0])
 #define LOCAL_Y(VALUE, WIN) (SCALE_POINT((VALUE).y) - (WIN)->frame.y + (WIN)->scroll[1])
 #define CONTAINS(x, y, x1, y1, w1, h1) \
@@ -101,15 +101,28 @@ void move_to_top(window_t* _win) {
     win->next = NULL;
     return;
   }
-  
-  // Find the tail of the list
-  window_t *tail = *head;
-  while (tail->next)
-    tail = tail->next;
-  
-  // Append `win` to the end of the list
-  tail->next = win;
-  win->next = NULL;
+
+  if (win->flags & WINDOW_ALWAYSONTOP) {
+    // ALWAYSONTOP windows always go to the absolute end of the list so they
+    // are rendered last (on top) and receive mouse clicks preferentially.
+    window_t *tail = *head;
+    while (tail->next)
+      tail = tail->next;
+    tail->next = win;
+    win->next = NULL;
+  } else {
+    // Regular windows are inserted just before the first ALWAYSONTOP window
+    // so they never obscure the always-on-top palette / menu-bar windows.
+    window_t *prev = NULL, *cur = *head;
+    while (cur && !(cur->flags & WINDOW_ALWAYSONTOP)) {
+      prev = cur;
+      cur  = cur->next;
+    }
+    // cur == first ALWAYSONTOP window (or NULL if none)
+    win->next = cur;
+    if (prev) prev->next = win;
+    else      *head      = win;
+  }
 }
 
 // Dispatch SDL event to window system

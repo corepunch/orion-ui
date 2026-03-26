@@ -68,6 +68,75 @@ make examples
 
 The example creates a file manager window showing the current directory contents in two columns. Folders are listed first with a "/" suffix. Click to select an entry, double-click on a folder to navigate into it, or double-click on ".." to go up one level.
 
+## Image Editor Example
+
+**File:** `imageeditor.c`
+
+A MacPaint-inspired raster image editor with a 16-color palette, demonstrating:
+- Rendering a pixel buffer as an OpenGL texture updated in real time
+- Multiple drawing tools: Pencil (1 px), Brush (5 px soft circle), Eraser, Flood Fill
+- 16-color swatch palette and live foreground/background color preview
+- Modal file-picker dialog (reuses the columnview-based file browser from `filemanager.c`)
+  that filters to **PNG files only**
+- PNG open/save via **libpng**
+- Toolbar with New, Open, and Save actions
+- Status bar showing the current file path
+
+### Canvas
+
+The editable canvas is **320 × 200 pixels** displayed at 2× (640 × 400 logical pixels),
+matching the classic MacPaint resolution.
+
+### Building
+
+```bash
+make examples          # builds imageeditor together with all other examples
+```
+
+The image editor requires **libpng** in addition to the standard dependencies:
+
+**Ubuntu/Debian:**
+```bash
+sudo apt-get install libpng-dev
+```
+
+**macOS:**
+```bash
+brew install libpng
+```
+
+**Fedora/RHEL:**
+```bash
+sudo dnf install libpng-devel
+```
+
+### Running
+
+```bash
+./build/bin/imageeditor
+```
+
+### Tools
+
+| Tool    | Description                                  |
+|---------|----------------------------------------------|
+| Pencil  | 1-pixel precise drawing                      |
+| Brush   | 5-pixel circular brush for smooth strokes    |
+| Eraser  | Paints in the current background color       |
+| Fill    | Flood-fills a contiguous region              |
+
+Click a tool name in the left panel to activate it.
+Click a color swatch to set the foreground color.
+
+### Open / Save
+
+Click **Open** or **Save** in the toolbar. A modal dialog opens showing the file system,
+filtered to directories and `.png` files. Navigate into folders by double-clicking them,
+select a file (or type a filename for Save), then press **Open**/**Save** to confirm or
+**Cancel** to abort.
+
+Only PNG files are supported.
+
 ## Future Examples
 
 Additional examples to be added:
