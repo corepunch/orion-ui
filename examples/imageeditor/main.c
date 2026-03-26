@@ -21,6 +21,12 @@ static const accel_t kAccelEntries[] = {
   { FCONTROL|FVIRTKEY, SDL_SCANCODE_O, ID_FILE_OPEN },
   { FCONTROL|FVIRTKEY, SDL_SCANCODE_S, ID_FILE_SAVE },
   { FCONTROL|FVIRTKEY, SDL_SCANCODE_W, ID_FILE_CLOSE},
+  // Tool hotkeys – same as MS Paint
+  { FVIRTKEY, SDL_SCANCODE_P, ID_TOOL_PENCIL },
+  { FVIRTKEY, SDL_SCANCODE_B, ID_TOOL_BRUSH  },
+  { FVIRTKEY, SDL_SCANCODE_E, ID_TOOL_ERASER },
+  { FVIRTKEY, SDL_SCANCODE_K, ID_TOOL_FILL   },
+  { FVIRTKEY, SDL_SCANCODE_S, ID_TOOL_SELECT },
 };
 
 // ============================================================

@@ -51,6 +51,13 @@
 #define ID_EDIT_UNDO   10
 #define ID_EDIT_REDO   11
 
+// Tool command IDs – one per tool_id_t, in the same order
+#define ID_TOOL_PENCIL  20
+#define ID_TOOL_BRUSH   21
+#define ID_TOOL_ERASER  22
+#define ID_TOOL_FILL    23
+#define ID_TOOL_SELECT  24
+
 // ============================================================
 // Types
 // ============================================================

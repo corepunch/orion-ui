@@ -104,6 +104,15 @@ static void handle_menu_command(uint16_t id) {
         invalidate_window(doc->canvas_win);
       }
       break;
+
+    case ID_TOOL_PENCIL:
+    case ID_TOOL_BRUSH:
+    case ID_TOOL_ERASER:
+    case ID_TOOL_FILL:
+    case ID_TOOL_SELECT:
+      g_app->current_tool = (tool_id_t)(id - ID_TOOL_PENCIL);
+      if (g_app->tool_win) invalidate_window(g_app->tool_win);
+      break;
   }
 }
 
@@ -112,7 +121,8 @@ result_t editor_menubar_proc(window_t *win, uint32_t msg,
   if (msg == kWindowMessageCommand) {
     uint16_t notif = HIWORD(wparam);
     if (notif == kMenuBarNotificationItemClick ||
-        notif == kAcceleratorNotification) {
+        notif == kAcceleratorNotification      ||
+        notif == kButtonNotificationClicked) {
       handle_menu_command(LOWORD(wparam));
       return true;
     }
