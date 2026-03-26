@@ -204,10 +204,22 @@ void dispatch_message(SDL_Event *evt) {
                              SCALE_POINT(evt->button.y))))
       {
         if (win->disabled) return;
-        if (win->parent) {
-          set_focus(win);
-        } else {
+        bool activating = (win != _focused);
+        window_t *old_root = _focused ? get_root_window(_focused) : NULL;
+        window_t *new_root = get_root_window(win);
+        bool root_changing = activating && (new_root != old_root);
+        if (activating) {
+          send_message(win, kWindowMessageMouseActivate, 0, NULL);
+          if (root_changing && old_root)
+            send_message(old_root, kWindowMessageActivate, WA_INACTIVE, new_root);
+        }
+        if (!win->parent) {
           move_to_top(win);
+        }
+        if (activating) {
+          set_focus(win);
+          if (root_changing)
+            send_message(new_root, kWindowMessageActivate, WA_CLICKACTIVE, old_root);
         }
         int x = LOCAL_X(evt->button, win);
         int y = LOCAL_Y(evt->button, win);
@@ -222,7 +234,7 @@ void dispatch_message(SDL_Event *evt) {
           _dragging = win;
           drag_anchor[0] = SCALE_POINT(evt->button.x) - win->frame.x;
           drag_anchor[1] = SCALE_POINT(evt->button.y) - win->frame.y;
-        } else if (win == _focused) {
+        } else {
           int msg = 0;
           switch (evt->button.button) {
             case 1: msg = kWindowMessageLeftButtonDown; break;
@@ -252,18 +264,15 @@ void dispatch_message(SDL_Event *evt) {
             case 1: send_message(_dragging, kWindowMessageNonClientLeftButtonUp, MAKEDWORD(x, y), NULL); break;
               // case 3: send_message(win, kWindowMessageNonClientRightButtonDown, MAKEDWORD(x, y), NULL); break;
           }
-          set_focus(_dragging);
           _dragging = NULL;
         }
       } else if (_resizing) {
-        set_focus(_resizing);
         _resizing = NULL;
       } else if ((win = _captured) ||
                  (win = find_window(SCALE_POINT(evt->button.x),
                                     SCALE_POINT(evt->button.y))))
       {
         if (win->disabled) return;
-        set_focus(win);
         if (SCALE_POINT(evt->button.y) >= win->frame.y || win == _captured) {
           int x = LOCAL_X(evt->button, win);
           int y = LOCAL_Y(evt->button, win);

@@ -11,6 +11,8 @@ enum {
   kWindowMessagePaint,
   kWindowMessageRefreshStencil,
   kWindowMessagePaintStencil,
+  kWindowMessageMouseActivate,
+  kWindowMessageActivate,
   kWindowMessageSetFocus,
   kWindowMessageKillFocus,
   kWindowMessageHitTest,
@@ -58,6 +60,11 @@ enum {
   kButtonStateUnchecked,
   kButtonStateChecked
 };
+
+// WM_ACTIVATE state codes (wparam for kWindowMessageActivate)
+#define WA_INACTIVE    0
+#define WA_ACTIVE      1
+#define WA_CLICKACTIVE 2
 
 // Error codes
 #define kComboBoxError -1
