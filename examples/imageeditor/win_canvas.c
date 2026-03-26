@@ -52,6 +52,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       doc->drawing = true;
       doc->last_x  = cx;
       doc->last_y  = cy;
+      doc->sel_active = false;
 
       switch (g_app->current_tool) {
         case TOOL_PENCIL:

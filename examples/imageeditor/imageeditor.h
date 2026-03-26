@@ -92,7 +92,7 @@ typedef struct {
   window_t      *menubar_win;
   window_t      *tool_win;
   window_t      *color_win;
-  int            current_tool;
+  tool_id_t      current_tool;
   rgba_t         fg_color;
   rgba_t         bg_color;
   int            next_x;
