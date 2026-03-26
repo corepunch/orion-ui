@@ -4,34 +4,37 @@
 
 result_t win_canvas_proc(window_t *win, uint32_t msg,
                           uint32_t wparam, void *lparam) {
-  canvas_doc_t *doc = (canvas_doc_t *)win->userdata;
+  canvas_win_state_t *state = (canvas_win_state_t *)win->userdata;
+  canvas_doc_t *doc = state ? state->doc : NULL;
   switch (msg) {
-    case kWindowMessageCreate:
-      doc = (canvas_doc_t *)lparam;
-      win->userdata = doc;
-      doc->canvas_win = win;
+    case kWindowMessageCreate: {
+      canvas_win_state_t *s = allocate_window_data(win, sizeof(canvas_win_state_t));
+      s->doc = (canvas_doc_t *)lparam;
+      s->doc->canvas_win = win;
+      s->scale = 1;
       return true;
+    }
 
     case kWindowMessageSetFocus:
       if (g_app && doc) g_app->active_doc = doc;
       return false;
 
     case kWindowMessagePaint: {
-      if (!doc) return true;
+      if (!state || !doc) return true;
       canvas_upload(doc);
       draw_rect(doc->canvas_tex,
                 win->frame.x, win->frame.y,
-                CANVAS_W * CANVAS_SCALE, CANVAS_H * CANVAS_SCALE);
+                CANVAS_W * state->scale, CANVAS_H * state->scale);
       return true;
     }
 
     case kWindowMessageLeftButtonDown: {
-      if (!doc || !g_app) return true;
+      if (!state || !doc || !g_app) return true;
       window_t *root = get_root_window(win);
       int lx = (int16_t)LOWORD(wparam) - root->frame.x - win->frame.x;
       int ly = (int16_t)HIWORD(wparam) - root->frame.y - win->frame.y;
-      int cx = lx / CANVAS_SCALE;
-      int cy = ly / CANVAS_SCALE;
+      int cx = lx / state->scale;
+      int cy = ly / state->scale;
       doc->drawing = true;
       doc->last_x  = cx;
       doc->last_y  = cy;
@@ -47,12 +50,12 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
     }
 
     case kWindowMessageMouseMove: {
-      if (!doc || !doc->drawing || !g_app) return true;
+      if (!state || !doc || !doc->drawing || !g_app) return true;
       window_t *root = get_root_window(win);
       int lx = (int16_t)LOWORD(wparam) - root->frame.x - win->frame.x;
       int ly = (int16_t)HIWORD(wparam) - root->frame.y - win->frame.y;
-      int cx = lx / CANVAS_SCALE;
-      int cy = ly / CANVAS_SCALE;
+      int cx = lx / state->scale;
+      int cy = ly / state->scale;
       if (cx == doc->last_x && cy == doc->last_y) return true;
 
       const tool_t *t = (g_app->current_tool >= 0 && g_app->current_tool < NUM_TOOLS)

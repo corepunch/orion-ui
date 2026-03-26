@@ -59,7 +59,7 @@ canvas_doc_t *create_document(const char *filename) {
   int wy = g_app->next_y;
   g_app->next_x += DOC_CASCADE;
   g_app->next_y += DOC_CASCADE;
-  if (g_app->next_x + CANVAS_W * CANVAS_SCALE > SCREEN_W) {
+  if (g_app->next_x + CANVAS_W > SCREEN_W) {
     g_app->next_x = DOC_START_X;
     g_app->next_y = DOC_START_Y;
   }
@@ -67,14 +67,14 @@ canvas_doc_t *create_document(const char *filename) {
   window_t *dwin = create_window(
       filename ? filename : "Untitled",
       WINDOW_TOOLBAR | WINDOW_STATUSBAR,
-      MAKERECT(wx, wy, CANVAS_W * CANVAS_SCALE, CANVAS_H * CANVAS_SCALE),
+      MAKERECT(wx, wy, CANVAS_W, CANVAS_H),
       NULL, doc_win_proc, NULL);
   dwin->userdata = doc;
   doc->win = dwin;
 
   window_t *cwin = create_window(
       "", WINDOW_NOTITLE | WINDOW_NOFILL,
-      MAKERECT(0, 0, CANVAS_W * CANVAS_SCALE, CANVAS_H * CANVAS_SCALE),
+      MAKERECT(0, 0, CANVAS_W, CANVAS_H),
       dwin, win_canvas_proc, doc);
   cwin->notabstop = false;
   doc->canvas_win = cwin;

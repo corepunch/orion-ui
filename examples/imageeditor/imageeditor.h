@@ -21,7 +21,6 @@
 
 #define CANVAS_W      320
 #define CANVAS_H      200
-#define CANVAS_SCALE  2
 
 #define SCREEN_W      768
 #define SCREEN_H      512
@@ -66,6 +65,11 @@ typedef struct canvas_doc_s {
   window_t *canvas_win;
   struct canvas_doc_s *next;
 } canvas_doc_t;
+
+typedef struct {
+  canvas_doc_t *doc;
+  int           scale;
+} canvas_win_state_t;
 
 typedef struct {
   canvas_doc_t  *active_doc;
@@ -133,6 +137,7 @@ void doc_update_title(canvas_doc_t *doc);
 
 // Window procedures
 result_t editor_menubar_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+result_t win_canvas_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_tool_palette_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_color_palette_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 
