@@ -36,7 +36,8 @@
 #define DOC_START_Y   60
 #define DOC_CASCADE   20
 
-#define NUM_COLORS 16
+#define NUM_COLORS      16
+#define NUM_USER_COLORS  8
 
 #define UNDO_MAX   20
 
@@ -108,6 +109,8 @@ typedef struct {
   int            next_x;
   int            next_y;
   accel_table_t *accel;
+  rgba_t         user_palette[NUM_USER_COLORS];
+  int            num_user_colors;
 } app_state_t;
 
 // ============================================================
@@ -162,6 +165,9 @@ result_t editor_menubar_proc(window_t *win, uint32_t msg, uint32_t wparam, void 
 result_t win_canvas_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_tool_palette_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_color_palette_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+
+// Color picker dialog
+bool show_color_picker(window_t *parent, rgba_t initial, rgba_t *out);
 
 // Menu definitions
 extern const menu_def_t kMenus[];

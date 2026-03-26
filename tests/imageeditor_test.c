@@ -549,8 +549,6 @@ void test_multiple_undo_redo(void) {
 }
 
 int main(int argc, char *argv[]) {
-  (void)argc; (void)argv;
-  TEST_START("Image Editor Logic");
 
   test_rgba_eq();
   test_rgba_neq();
@@ -578,6 +576,12 @@ int main(int argc, char *argv[]) {
   test_new_action_clears_redo();
   test_undo_stack_limit();
   test_multiple_undo_redo();
+
+  test_rgb_to_hsv_black();
+  test_rgb_to_hsv_white();
+  test_rgb_to_hsv_red();
+  test_hsv_to_rgb_round_trip();
+  test_hsv_to_rgb_gray();
 
   TEST_END();
 }
