@@ -67,7 +67,6 @@
 
 #define NUM_COLORS 16
 #define NUM_TOOLS  10
-#define NUM_COLORS      16
 #define NUM_USER_COLORS  8
 
 #define UNDO_MAX   20
@@ -245,6 +244,7 @@ void doc_push_undo(canvas_doc_t *doc);
 bool doc_undo(canvas_doc_t *doc);
 bool doc_redo(canvas_doc_t *doc);
 void doc_free_undo(canvas_doc_t *doc);
+void doc_discard_undo(canvas_doc_t *doc);
 
 // Forward declarations for document management
 canvas_doc_t *create_document(const char *filename);

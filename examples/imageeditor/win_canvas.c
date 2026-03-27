@@ -64,11 +64,16 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         int y1 = (MAX(doc->sel_start.y, doc->sel_end.y) + 1) * state->scale;
         draw_sel_rect(win->frame.x + x0, win->frame.y + y0, x1 - x0, y1 - y0);
       }
-      // Polygon in-progress: draw a sel_rect preview of the rubber-band edge
+      // Polygon in-progress: draw a sel_rect bounding the rubber-band edge
+      // from the last committed vertex to the current mouse position.
       if (doc->poly_active && doc->poly_count > 0) {
-        point_t last = doc->poly_pts[doc->poly_count - 1];
-        draw_sel_rect(win->frame.x + last.x * state->scale,
-                      win->frame.y + last.y * state->scale, 2, 2);
+        point_t v0 = doc->poly_pts[doc->poly_count - 1];
+        point_t v1 = doc->last;
+        int px0 = MIN(v0.x, v1.x) * state->scale;
+        int py0 = MIN(v0.y, v1.y) * state->scale;
+        int px1 = (MAX(v0.x, v1.x) + 1) * state->scale;
+        int py1 = (MAX(v0.y, v1.y) + 1) * state->scale;
+        draw_sel_rect(win->frame.x + px0, win->frame.y + py0, px1 - px0, py1 - py0);
       }
       return true;
     }
@@ -286,6 +291,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
             memcpy(doc->pixels, doc->shape_snapshot, CANVAS_H * CANVAS_W * 4);
             doc->canvas_dirty = true;
           }
+          doc_discard_undo(doc);  // drop the no-op undo entry pushed at polygon start
           doc->poly_active = false;
           doc->poly_count  = 0;
           invalidate_window(win);

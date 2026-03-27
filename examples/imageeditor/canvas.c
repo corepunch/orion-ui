@@ -146,12 +146,14 @@ void canvas_draw_ellipse_outline(canvas_doc_t *doc, int cx, int cy, int rx, int 
 
 void canvas_draw_ellipse_filled(canvas_doc_t *doc, int cx, int cy, int rx, int ry, rgba_t outline, rgba_t fill) {
   if (rx <= 0 || ry <= 0) return;
+  double rx2 = (double)rx * (double)rx;
+  double ry2 = (double)ry * (double)ry;
   for (int py = cy - ry; py <= cy + ry; py++) {
     if (!canvas_in_bounds(cx, py)) continue;
-    int dy = py - cy;
-    long dx2 = (long)rx * rx * (1 - (long)dy * dy / ((long)ry * ry));
-    if (dx2 < 0) continue;
-    int dx = (int)sqrt((double)dx2);
+    double dy = (double)(py - cy);
+    double t = 1.0 - (dy * dy) / ry2;
+    if (t <= 0.0) continue;
+    int dx = (int)(sqrt(rx2 * t) + 0.5);
     canvas_draw_line(doc, cx - dx + 1, py, cx + dx - 1, py, 0, fill);
   }
   canvas_draw_ellipse_outline(doc, cx, cy, rx, ry, outline);
