@@ -808,6 +808,224 @@ void test_set_pixel_respects_reversed_selection(void) {
   PASS();
 }
 
+// ============================================================
+// Inline selection operation helpers (mirrors canvas.c logic, no GL/SDL)
+// ============================================================
+
+// Direct pixel write (bypasses selection mask)
+static void t_set_pixel_direct(test_canvas_t *s, int x, int y, rgba_t c) {
+  if (!canvas_in_bounds(x, y)) return;
+  uint8_t *p = s->pixels + ((size_t)y * CANVAS_W + x) * 4;
+  p[0]=c.r; p[1]=c.g; p[2]=c.b; p[3]=c.a;
+  s->canvas_dirty = true;
+}
+
+// Normalised selection bounds from sel_x0/y0/x1/y1
+static void t_selection_bounds(const test_canvas_t *s,
+                         int *x0, int *y0, int *x1, int *y1) {
+  *x0 = s->sel_x0 < s->sel_x1 ? s->sel_x0 : s->sel_x1;
+  *x1 = s->sel_x0 > s->sel_x1 ? s->sel_x0 : s->sel_x1;
+  *y0 = s->sel_y0 < s->sel_y1 ? s->sel_y0 : s->sel_y1;
+  *y1 = s->sel_y0 > s->sel_y1 ? s->sel_y0 : s->sel_y1;
+}
+
+// Copy the selected region into a caller-supplied buffer.
+static void t_copy_selection(const test_canvas_t *s,
+                             uint8_t *out, int *out_w, int *out_h) {
+  int x0, y0, x1, y1;
+  t_selection_bounds(s, &x0, &y0, &x1, &y1);
+  *out_w = x1 - x0 + 1;
+  *out_h = y1 - y0 + 1;
+  for (int row = 0; row < *out_h; row++) {
+    for (int col = 0; col < *out_w; col++) {
+      rgba_t c = canvas_get_pixel(s, x0 + col, y0 + row);
+      uint8_t *p = out + ((size_t)row * (*out_w) + col) * 4;
+      p[0]=c.r; p[1]=c.g; p[2]=c.b; p[3]=c.a;
+    }
+  }
+}
+
+// Fill the selected region with fill_color (respects selection mask).
+static void t_clear_selection(test_canvas_t *s, rgba_t fill) {
+  int x0, y0, x1, y1;
+  t_selection_bounds(s, &x0, &y0, &x1, &y1);
+  for (int y = y0; y <= y1; y++)
+    for (int x = x0; x <= x1; x++)
+      canvas_set_pixel(s, x, y, fill);
+}
+
+// Paste a pixel buffer at (dx, dy), bypassing selection mask.
+static void t_paste_pixels(test_canvas_t *s,
+                           const uint8_t *src, int src_w, int src_h,
+                           int dx, int dy) {
+  for (int row = 0; row < src_h; row++) {
+    for (int col = 0; col < src_w; col++) {
+      const uint8_t *p = src + ((size_t)row * src_w + col) * 4;
+      rgba_t c = {p[0], p[1], p[2], p[3]};
+      t_set_pixel_direct(s, dx + col, dy + row, c);
+    }
+  }
+}
+
+// ============================================================
+// Selection operation tests
+// ============================================================
+
+void test_copy_selection_content(void) {
+  TEST("canvas_copy_selection – copies correct pixels into clipboard buffer");
+  test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
+  canvas_clear(c);  /* fill with white */
+  /* Paint a red 3×3 block at (10,10)..(12,12) */
+  rgba_t red = {255, 0, 0, 255};
+  for (int y = 10; y <= 12; y++)
+    for (int x = 10; x <= 12; x++)
+      t_set_pixel_direct(c, x, y, red);
+  /* Select that block */
+  c->sel_active = true;
+  c->sel_x0 = 10; c->sel_y0 = 10; c->sel_x1 = 12; c->sel_y1 = 12;
+  /* Copy */
+  uint8_t *buf = malloc(3 * 3 * 4);
+  int w = 0, h = 0;
+  t_copy_selection(c, buf, &w, &h);
+  ASSERT_EQUAL(w, 3);
+  ASSERT_EQUAL(h, 3);
+  /* Every pixel in the copied buffer must be red */
+  for (int i = 0; i < 9; i++) {
+    rgba_t got = {buf[i*4+0], buf[i*4+1], buf[i*4+2], buf[i*4+3]};
+    ASSERT_TRUE(rgba_eq(got, red));
+  }
+  free(buf);
+  free(c);
+  PASS();
+}
+
+void test_clear_selection_fills_bg(void) {
+  TEST("canvas_clear_selection – fills selected region with background color");
+  test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
+  canvas_clear(c);  /* white */
+  rgba_t red  = {255, 0, 0, 255};
+  rgba_t blue = {0, 0, 255, 255};
+  rgba_t white = {255, 255, 255, 255};
+  /* Paint a red block at (5,5)..(9,9) */
+  for (int y = 5; y <= 9; y++)
+    for (int x = 5; x <= 9; x++)
+      t_set_pixel_direct(c, x, y, red);
+  /* Select and clear with blue */
+  c->sel_active = true;
+  c->sel_x0 = 5; c->sel_y0 = 5; c->sel_x1 = 9; c->sel_y1 = 9;
+  t_clear_selection(c, blue);
+  /* Inside selection must now be blue */
+  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 7, 7), blue));
+  /* Pixel just outside selection must remain white */
+  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 4, 7), white));
+  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 10, 7), white));
+  free(c);
+  PASS();
+}
+
+void test_paste_pixels_at_offset(void) {
+  TEST("t_paste_pixels – places clipboard pixels at destination offset");
+  test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
+  canvas_clear(c);  /* white */
+  rgba_t green = {0, 255, 0, 255};
+  rgba_t white = {255, 255, 255, 255};
+  /* Clipboard: 2×2 green block */
+  uint8_t src[16];
+  for (int i = 0; i < 4; i++) {
+    src[i*4+0]=green.r; src[i*4+1]=green.g;
+    src[i*4+2]=green.b; src[i*4+3]=green.a;
+  }
+  t_paste_pixels(c, src, 2, 2, 100, 50);
+  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 100, 50), green));
+  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 101, 51), green));
+  /* Adjacent pixels outside paste region must be white */
+  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 99, 50), white));
+  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 102, 50), white));
+  free(c);
+  PASS();
+}
+
+void test_cut_selection_clears_and_copies(void) {
+  TEST("canvas_cut_selection – copies pixels to buffer and clears region");
+  test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
+  canvas_clear(c);
+  rgba_t red  = {255, 0, 0, 255};
+  rgba_t white = {255, 255, 255, 255};
+  /* Paint red at (20,20)..(22,22) */
+  for (int y = 20; y <= 22; y++)
+    for (int x = 20; x <= 22; x++)
+      t_set_pixel_direct(c, x, y, red);
+  c->sel_active = true;
+  c->sel_x0 = 20; c->sel_y0 = 20; c->sel_x1 = 22; c->sel_y1 = 22;
+  /* Cut: copy then clear with white */
+  uint8_t *buf = malloc(3 * 3 * 4);
+  int w = 0, h = 0;
+  t_copy_selection(c, buf, &w, &h);
+  t_clear_selection(c, white);
+  /* Buffer must contain the original red pixels */
+  ASSERT_EQUAL(w, 3); ASSERT_EQUAL(h, 3);
+  for (int i = 0; i < 9; i++) {
+    rgba_t got = {buf[i*4+0], buf[i*4+1], buf[i*4+2], buf[i*4+3]};
+    ASSERT_TRUE(rgba_eq(got, red));
+  }
+  /* Canvas must now be white in that region */
+  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 21, 21), white));
+  free(buf);
+  free(c);
+  PASS();
+}
+
+void test_move_selection(void) {
+  TEST("canvas_begin/commit_move – moves selected pixels to new position");
+  test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
+  canvas_clear(c);  /* white */
+  rgba_t red   = {255, 0, 0, 255};
+  rgba_t white = {255, 255, 255, 255};
+  /* Place a red 3×3 block at (10,10) */
+  for (int y = 10; y <= 12; y++)
+    for (int x = 10; x <= 12; x++)
+      t_set_pixel_direct(c, x, y, red);
+  /* Select it */
+  c->sel_active = true;
+  c->sel_x0 = 10; c->sel_y0 = 10; c->sel_x1 = 12; c->sel_y1 = 12;
+  /* Simulate begin_move: extract pixels, clear original region */
+  int bx0, by0, bx1, by1;
+  t_selection_bounds(c, &bx0, &by0, &bx1, &by1);
+  int fw = bx1 - bx0 + 1, fh = by1 - by0 + 1;
+  uint8_t *fpix = malloc((size_t)fw * fh * 4);
+  t_copy_selection(c, fpix, &fw, &fh);
+  t_clear_selection(c, white);  /* clear original */
+  /* Simulate commit_move at (50, 50) */
+  t_paste_pixels(c, fpix, fw, fh, 50, 50);
+  free(fpix);
+  /* Original location must be white */
+  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 11, 11), white));
+  /* New location must be red */
+  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 51, 51), red));
+  free(c);
+  PASS();
+}
+
+void test_paste_respects_oob(void) {
+  TEST("t_paste_pixels – clips pixels that fall outside canvas bounds");
+  test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
+  canvas_clear(c);
+  rgba_t red = {255, 0, 0, 255};
+  /* 4×4 clipboard */
+  uint8_t src[64];
+  for (int i = 0; i < 16; i++) {
+    src[i*4+0]=red.r; src[i*4+1]=red.g; src[i*4+2]=red.b; src[i*4+3]=red.a;
+  }
+  /* Paste partially off the right/bottom edge */
+  t_paste_pixels(c, src, 4, 4, CANVAS_W - 2, CANVAS_H - 2);
+  /* In-bounds pixels must be red */
+  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, CANVAS_W-2, CANVAS_H-2), red));
+  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, CANVAS_W-1, CANVAS_H-1), red));
+  /* No crash – test passes if we reach this point */
+  free(c);
+  PASS();
+}
+
 int main(int argc, char *argv[]) {
   (void)argc; (void)argv;
   TEST_START("Image Editor Logic");
@@ -851,6 +1069,13 @@ int main(int argc, char *argv[]) {
   test_set_pixel_respects_reversed_selection();
   test_flood_fill_respects_selection();
   test_flood_fill_outside_selection_noop();
+
+  test_copy_selection_content();
+  test_clear_selection_fills_bg();
+  test_paste_pixels_at_offset();
+  test_cut_selection_clears_and_copies();
+  test_move_selection();
+  test_paste_respects_oob();
 
   TEST_END();
 }
