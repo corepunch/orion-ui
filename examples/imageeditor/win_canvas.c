@@ -170,6 +170,14 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       return true;
     }
 
+    case kWindowMessageDestroy: {
+      if (state && state->mag_tex) {
+        glDeleteTextures(1, &state->mag_tex);
+        state->mag_tex = 0;
+      }
+      return false;
+    }
+
     case kWindowMessageSetFocus:
       if (g_app && doc) g_app->active_doc = doc;
       return false;
@@ -229,10 +237,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       // Magnifier tool: draw a loupe overlay in the top-right corner of the canvas
       // showing a 16×16 canvas-pixel region centered on the cursor at 4× zoom.
-      #define MAG_PIXELS 16
-      #define MAG_ZOOM   4
-      #define MAG_SIZE   (MAG_PIXELS * MAG_ZOOM)
-      #define MAG_MARGIN 4
+      // Rendered as a single textured quad to avoid 256 fill_rect() calls.
+      enum { MAG_PIXELS = 16, MAG_ZOOM = 4, MAG_SIZE = MAG_PIXELS * MAG_ZOOM, MAG_MARGIN = 4 };
       if (g_app && g_app->current_tool == ID_TOOL_MAGNIFIER &&
           state->hover_valid &&
           win->frame.w  >= MAG_SIZE + MAG_MARGIN * 2 + 4 &&
@@ -241,20 +247,36 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         int loy = win->frame.y + MAG_MARGIN;
         // Border
         fill_rect(0xFF808080, lox - 1, loy - 1, MAG_SIZE + 2, MAG_SIZE + 2);
-        // Magnified pixels
+        // Build a 16×16 RGBA pixel buffer from the canvas region around hover
+        uint8_t mag_buf[MAG_PIXELS * MAG_PIXELS * 4];
         int hx = state->hover.x - MAG_PIXELS / 2;
         int hy = state->hover.y - MAG_PIXELS / 2;
         for (int row = 0; row < MAG_PIXELS; row++) {
           for (int col = 0; col < MAG_PIXELS; col++) {
             int sx = hx + col, sy = hy + row;
-            uint32_t color = canvas_in_bounds(sx, sy)
-                             ? rgba_to_col(canvas_get_pixel(doc, sx, sy))
-                             : COLOR_PANEL_DARK_BG;
-            fill_rect(color,
-                      lox + col * MAG_ZOOM, loy + row * MAG_ZOOM,
-                      MAG_ZOOM, MAG_ZOOM);
+            rgba_t px = canvas_in_bounds(sx, sy)
+                        ? canvas_get_pixel(doc, sx, sy)
+                        : (rgba_t){0x22, 0x22, 0x22, 0xFF};
+            uint8_t *dst = mag_buf + (row * MAG_PIXELS + col) * 4;
+            dst[0] = px.r; dst[1] = px.g; dst[2] = px.b; dst[3] = px.a;
           }
         }
+        // Upload pixel buffer to a cached GL texture and draw as a single quad
+        if (!state->mag_tex) {
+          glGenTextures(1, &state->mag_tex);
+          glBindTexture(GL_TEXTURE_2D, state->mag_tex);
+          glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+          glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+          glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+          glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+          glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, MAG_PIXELS, MAG_PIXELS, 0,
+                       GL_RGBA, GL_UNSIGNED_BYTE, mag_buf);
+        } else {
+          glBindTexture(GL_TEXTURE_2D, state->mag_tex);
+          glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, MAG_PIXELS, MAG_PIXELS,
+                          GL_RGBA, GL_UNSIGNED_BYTE, mag_buf);
+        }
+        draw_rect(state->mag_tex, lox, loy, MAG_SIZE, MAG_SIZE);
         // Crosshair at loupe center
         int lcx = lox + MAG_SIZE / 2;
         int lcy = loy + MAG_SIZE / 2;
@@ -346,7 +368,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         int py = (ly - win->frame.y + state->pan_y) / state->scale;
         if (canvas_in_bounds(px, py)) {
           g_app->fg_color = canvas_get_pixel(doc, px, py);
-          if (g_app->tool_win) invalidate_window(g_app->tool_win);
+          if (g_app->tool_win)  invalidate_window(g_app->tool_win);
+          if (g_app->color_win) invalidate_window(g_app->color_win);
         }
         return true;
       }
@@ -444,7 +467,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         int py = (ly - win->frame.y + state->pan_y) / state->scale;
         if (canvas_in_bounds(px, py)) {
           g_app->bg_color = canvas_get_pixel(doc, px, py);
-          if (g_app->tool_win) invalidate_window(g_app->tool_win);
+          if (g_app->tool_win)  invalidate_window(g_app->tool_win);
+          if (g_app->color_win) invalidate_window(g_app->color_win);
         }
         return true;
       }

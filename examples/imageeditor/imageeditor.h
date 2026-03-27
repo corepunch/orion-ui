@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <math.h>
+#include <time.h>
 #include <dirent.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -177,6 +178,7 @@ typedef struct {
   point_t       pan_start;  // screen-local coords where hand drag began
   point_t       hover;      // canvas pixel coords under the cursor
   bool          hover_valid; // true when hover is on the canvas (for magnifier overlay)
+  GLuint        mag_tex;    // GL texture for magnifier loupe (created once, updated each paint)
 } canvas_win_state_t;
 
 typedef struct {

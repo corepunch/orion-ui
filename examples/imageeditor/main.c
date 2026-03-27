@@ -99,6 +99,8 @@ int main(int argc, char *argv[]) {
   g_app->next_x   = DOC_START_X;
   g_app->next_y   = DOC_START_Y;
 
+  srand((unsigned int)time(NULL));
+
   if (!ui_init_graphics(UI_INIT_DESKTOP, "Orion Image Editor", SCREEN_W, SCREEN_H)) {
     free(g_app);
     return 1;
