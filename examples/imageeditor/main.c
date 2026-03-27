@@ -107,7 +107,7 @@ int main(int argc, char *argv[]) {
       if (!translate_accelerator(g_app->menubar_win, &e, g_app->accel))
         dispatch_message(&e);
     }
-    repost_messages(-1);
+    repost_messages();
   }
 
   free_accelerators(g_app->accel);

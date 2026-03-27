@@ -86,7 +86,7 @@ int main(int argc, char *argv[]) {
   ui_event_t e;
   while (running) {
     while (get_message(&e)) dispatch_message(&e);
-    repost_messages(-1);
+    repost_messages();
   }
 
   destroy_window(main_window);

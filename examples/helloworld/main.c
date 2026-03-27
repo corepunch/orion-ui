@@ -114,7 +114,7 @@ int main(int argc, char* argv[]) {
     }
 
     // Process window messages
-    repost_messages(-1);
+    repost_messages();
   }
 
   destroy_window(main_window);
