@@ -95,17 +95,13 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         case ID_TOOL_SELECT:
           // If clicking inside the existing selection → move mode
           if (doc->sel_active && canvas_in_selection(doc, cx, cy)) {
-            doc_push_undo(doc);
             canvas_begin_move(doc, g_app->bg_color);
             float_tex_upload(doc);
             doc->move_origin.x = cx;
             doc->move_origin.y = cy;
           } else {
-            // Start a new selection
-            if (doc->sel_moving) {
-              float_tex_free(doc);
-              canvas_commit_move(doc);
-            }
+            // Start a new selection; commit any in-progress move first.
+            if (doc->sel_moving) canvas_commit_move(doc);
             doc->sel_active = false;
             doc->sel_start.x = doc->sel_end.x = cx;
             doc->sel_start.y = doc->sel_end.y = cy;
@@ -168,7 +164,6 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
     case kWindowMessageLeftButtonUp:
       if (doc) {
         if (doc->sel_moving) {
-          float_tex_free(doc);
           canvas_commit_move(doc);
           doc_update_title(doc);
         }

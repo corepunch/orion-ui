@@ -820,20 +820,26 @@ static void t_set_pixel_direct(test_canvas_t *s, int x, int y, rgba_t c) {
   s->canvas_dirty = true;
 }
 
-// Normalised selection bounds from sel_x0/y0/x1/y1
-static void t_selection_bounds(const test_canvas_t *s,
-                         int *x0, int *y0, int *x1, int *y1) {
+// Normalised and clamped selection bounds from sel_x0/y0/x1/y1.
+// Returns false when the clamped region is empty (mirrors production behaviour).
+static bool t_selection_bounds(const test_canvas_t *s,
+                               int *x0, int *y0, int *x1, int *y1) {
   *x0 = s->sel_x0 < s->sel_x1 ? s->sel_x0 : s->sel_x1;
   *x1 = s->sel_x0 > s->sel_x1 ? s->sel_x0 : s->sel_x1;
   *y0 = s->sel_y0 < s->sel_y1 ? s->sel_y0 : s->sel_y1;
   *y1 = s->sel_y0 > s->sel_y1 ? s->sel_y0 : s->sel_y1;
+  if (*x0 < 0) *x0 = 0;
+  if (*y0 < 0) *y0 = 0;
+  if (*x1 >= CANVAS_W) *x1 = CANVAS_W - 1;
+  if (*y1 >= CANVAS_H) *y1 = CANVAS_H - 1;
+  return (*x0 <= *x1 && *y0 <= *y1);
 }
 
 // Copy the selected region into a caller-supplied buffer.
 static void t_copy_selection(const test_canvas_t *s,
                              uint8_t *out, int *out_w, int *out_h) {
   int x0, y0, x1, y1;
-  t_selection_bounds(s, &x0, &y0, &x1, &y1);
+  if (!t_selection_bounds(s, &x0, &y0, &x1, &y1)) { *out_w = 0; *out_h = 0; return; }
   *out_w = x1 - x0 + 1;
   *out_h = y1 - y0 + 1;
   for (int row = 0; row < *out_h; row++) {
@@ -848,7 +854,7 @@ static void t_copy_selection(const test_canvas_t *s,
 // Fill the selected region with fill_color (respects selection mask).
 static void t_clear_selection(test_canvas_t *s, rgba_t fill) {
   int x0, y0, x1, y1;
-  t_selection_bounds(s, &x0, &y0, &x1, &y1);
+  if (!t_selection_bounds(s, &x0, &y0, &x1, &y1)) return;
   for (int y = y0; y <= y1; y++)
     for (int x = x0; x <= x1; x++)
       canvas_set_pixel(s, x, y, fill);
@@ -990,7 +996,7 @@ void test_move_selection(void) {
   c->sel_x0 = 10; c->sel_y0 = 10; c->sel_x1 = 12; c->sel_y1 = 12;
   /* Simulate begin_move: extract pixels, clear original region */
   int bx0, by0, bx1, by1;
-  t_selection_bounds(c, &bx0, &by0, &bx1, &by1);
+  if (!t_selection_bounds(c, &bx0, &by0, &bx1, &by1)) { free(c); PASS(); return; }
   int fw = bx1 - bx0 + 1, fh = by1 - by0 + 1;
   uint8_t *fpix = malloc((size_t)fw * fh * 4);
   t_copy_selection(c, fpix, &fw, &fh);
@@ -1023,6 +1029,22 @@ void test_paste_respects_oob(void) {
   ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, CANVAS_W-1, CANVAS_H-1), red));
   /* No crash – test passes if we reach this point */
   free(c);
+  PASS();
+}
+
+void test_selection_bounds_clamped(void) {
+  TEST("t_selection_bounds – clamps out-of-range selection to canvas bounds");
+  test_canvas_t c = {0};
+  c.sel_active = true;
+  /* Selection that extends beyond the canvas on all sides */
+  c.sel_x0 = -10; c.sel_y0 = -5; c.sel_x1 = CANVAS_W + 20; c.sel_y1 = CANVAS_H + 10;
+  int x0, y0, x1, y1;
+  bool ok = t_selection_bounds(&c, &x0, &y0, &x1, &y1);
+  ASSERT_TRUE(ok);
+  ASSERT_EQUAL(x0, 0);
+  ASSERT_EQUAL(y0, 0);
+  ASSERT_EQUAL(x1, CANVAS_W - 1);
+  ASSERT_EQUAL(y1, CANVAS_H - 1);
   PASS();
 }
 
@@ -1076,6 +1098,7 @@ int main(int argc, char *argv[]) {
   test_cut_selection_clears_and_copies();
   test_move_selection();
   test_paste_respects_oob();
+  test_selection_bounds_clamped();
 
   TEST_END();
 }

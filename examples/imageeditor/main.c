@@ -118,6 +118,9 @@ int main(int argc, char *argv[]) {
   while (g_app->docs) {
     canvas_doc_t *next = g_app->docs->next;
     doc_free_undo(g_app->docs);
+    if (g_app->docs->float_tex)
+      glDeleteTextures(1, &g_app->docs->float_tex);
+    free(g_app->docs->float_pixels);
     if (g_app->docs->canvas_tex)
       glDeleteTextures(1, &g_app->docs->canvas_tex);
     free(g_app->docs);

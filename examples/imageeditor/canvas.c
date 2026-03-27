@@ -92,20 +92,27 @@ void canvas_flood_fill(canvas_doc_t *doc, int sx, int sy, rgba_t fill) {
 // Selection operations
 // ============================================================
 
-// Returns normalised selection bounds (x0 <= x1, y0 <= y1).
-static void selection_bounds(const canvas_doc_t *doc,
+// Returns normalised selection bounds clamped to the canvas.
+// Returns false when the clamped region is empty (no-op for callers).
+static bool selection_bounds(const canvas_doc_t *doc,
                              int *x0, int *y0, int *x1, int *y1) {
   *x0 = MIN(doc->sel_start.x, doc->sel_end.x);
   *y0 = MIN(doc->sel_start.y, doc->sel_end.y);
   *x1 = MAX(doc->sel_start.x, doc->sel_end.x);
   *y1 = MAX(doc->sel_start.y, doc->sel_end.y);
+  // Clamp to canvas bounds so callers are safe against out-of-range coords.
+  if (*x0 < 0) *x0 = 0;
+  if (*y0 < 0) *y0 = 0;
+  if (*x1 >= CANVAS_W) *x1 = CANVAS_W - 1;
+  if (*y1 >= CANVAS_H) *y1 = CANVAS_H - 1;
+  return (*x0 <= *x1 && *y0 <= *y1);
 }
 
 // Copy the selected region into the app clipboard.
 void canvas_copy_selection(canvas_doc_t *doc) {
   if (!doc || !doc->sel_active || !g_app) return;
   int x0, y0, x1, y1;
-  selection_bounds(doc, &x0, &y0, &x1, &y1);
+  if (!selection_bounds(doc, &x0, &y0, &x1, &y1)) return;
   int w = x1 - x0 + 1;
   int h = y1 - y0 + 1;
   uint8_t *buf = malloc((size_t)w * h * 4);
@@ -127,7 +134,7 @@ void canvas_copy_selection(canvas_doc_t *doc) {
 void canvas_clear_selection(canvas_doc_t *doc, rgba_t fill) {
   if (!doc || !doc->sel_active) return;
   int x0, y0, x1, y1;
-  selection_bounds(doc, &x0, &y0, &x1, &y1);
+  if (!selection_bounds(doc, &x0, &y0, &x1, &y1)) return;
   for (int y = y0; y <= y1; y++)
     for (int x = x0; x <= x1; x++)
       canvas_set_pixel(doc, x, y, fill);
@@ -154,10 +161,14 @@ void canvas_paste_clipboard(canvas_doc_t *doc) {
       canvas_set_pixel_direct(doc, col, row, c);
     }
   }
-  // Select the pasted region
+  // Select the pasted region (clamped to canvas bounds)
   doc->sel_active   = true;
   doc->sel_start    = (point_t){0, 0};
-  doc->sel_end      = (point_t){w - 1, h - 1};
+  int sel_x1 = w - 1;
+  int sel_y1 = h - 1;
+  if (sel_x1 >= CANVAS_W) sel_x1 = CANVAS_W - 1;
+  if (sel_y1 >= CANVAS_H) sel_y1 = CANVAS_H - 1;
+  doc->sel_end      = (point_t){sel_x1, sel_y1};
 }
 
 // Select the entire canvas.
@@ -182,7 +193,7 @@ void canvas_deselect(canvas_doc_t *doc) {
 void canvas_begin_move(canvas_doc_t *doc, rgba_t bg) {
   if (!doc || !doc->sel_active || doc->sel_moving) return;
   int x0, y0, x1, y1;
-  selection_bounds(doc, &x0, &y0, &x1, &y1);
+  if (!selection_bounds(doc, &x0, &y0, &x1, &y1)) return;
   int w = x1 - x0 + 1;
   int h = y1 - y0 + 1;
   uint8_t *buf = malloc((size_t)w * h * 4);
@@ -223,7 +234,11 @@ void canvas_commit_move(canvas_doc_t *doc) {
   // Update selection to the new position
   doc->sel_start  = (point_t){dx, dy};
   doc->sel_end    = (point_t){dx + w - 1, dy + h - 1};
-  // Release float resources (GL texture freed by win_canvas.c)
+  // Release float resources including the GL texture overlay.
+  if (doc->float_tex) {
+    glDeleteTextures(1, &doc->float_tex);
+    doc->float_tex = 0;
+  }
   free(doc->float_pixels);
   doc->float_pixels = NULL;
   doc->float_w      = 0;
