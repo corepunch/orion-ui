@@ -22,11 +22,12 @@
 #define PALETTE_FILL_ROW_Y \
   (PALETTE_LABEL_Y + PALETTE_LABEL_H + PALETTE_SWATCH_H + PALETTE_FILL_LABEL_H)
 // tools.png: 320×16 = 20 columns × 1 row of 16×16 icons.
-// Tool order: Pencil(0)..Polygon(9).
+// Tool order: Pencil(0)..Magnifier(14).
 // Icon assignments (from visual inspection of tools.png):
 //   13=pencil, 15=brush, 12=eraser, 8=fill, 0=select,
 //   10=line (diagonal line), 6=rect (cross), 1=ellipse (circle outline),
 //   9=rounded-rect (checkerboard-ish), 11=polygon (wavy outline)
+//   17=spray (scattered dots), 14=eyedropper (dropper shape), 16=magnifier (loupe circle)
 static const int k_tool_icon_idx[NUM_TOOLS] = {
   13,   // Pencil
   15,   // Brush
@@ -40,6 +41,9 @@ static const int k_tool_icon_idx[NUM_TOOLS] = {
   1,    // Ellipse
   9,    // Rounded Rect
   11,   // Polygon
+  17,   // Spray
+  14,   // Eyedropper
+  16,   // Magnifier
 };
 
 typedef struct {

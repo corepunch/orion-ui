@@ -226,6 +226,43 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
                   win->frame.y + win->frame.h - SCROLLBAR_SIZE,
                   SCROLLBAR_SIZE, SCROLLBAR_SIZE);
       }
+
+      // Magnifier tool: draw a loupe overlay in the top-right corner of the canvas
+      // showing a 16×16 canvas-pixel region centered on the cursor at 4× zoom.
+      #define MAG_PIXELS 16
+      #define MAG_ZOOM   4
+      #define MAG_SIZE   (MAG_PIXELS * MAG_ZOOM)
+      #define MAG_MARGIN 4
+      if (g_app && g_app->current_tool == ID_TOOL_MAGNIFIER &&
+          state->hover_valid &&
+          win->frame.w  >= MAG_SIZE + MAG_MARGIN * 2 + 4 &&
+          win->frame.h  >= MAG_SIZE + MAG_MARGIN * 2 + 4) {
+        int lox = win->frame.x + win->frame.w - MAG_SIZE - MAG_MARGIN - 2;
+        int loy = win->frame.y + MAG_MARGIN;
+        // Border
+        fill_rect(0xFF808080, lox - 1, loy - 1, MAG_SIZE + 2, MAG_SIZE + 2);
+        // Magnified pixels
+        int hx = state->hover.x - MAG_PIXELS / 2;
+        int hy = state->hover.y - MAG_PIXELS / 2;
+        for (int row = 0; row < MAG_PIXELS; row++) {
+          for (int col = 0; col < MAG_PIXELS; col++) {
+            int sx = hx + col, sy = hy + row;
+            uint32_t color = canvas_in_bounds(sx, sy)
+                             ? rgba_to_col(canvas_get_pixel(doc, sx, sy))
+                             : COLOR_PANEL_DARK_BG;
+            fill_rect(color,
+                      lox + col * MAG_ZOOM, loy + row * MAG_ZOOM,
+                      MAG_ZOOM, MAG_ZOOM);
+          }
+        }
+        // Crosshair at loupe center
+        int lcx = lox + MAG_SIZE / 2;
+        int lcy = loy + MAG_SIZE / 2;
+        fill_rect(0xFF000000, lcx - 3, lcy, 3, 1);
+        fill_rect(0xFF000000, lcx + 1, lcy, 3, 1);
+        fill_rect(0xFF000000, lcx, lcy - 3, 1, 3);
+        fill_rect(0xFF000000, lcx, lcy + 1, 1, 3);
+      }
       return true;
     }
 
@@ -303,6 +340,20 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         return true;
       }
 
+      // Eyedropper (left click): pick foreground color from canvas pixel
+      if (g_app->current_tool == ID_TOOL_EYEDROPPER) {
+        int px = (lx - win->frame.x + state->pan_x) / state->scale;
+        int py = (ly - win->frame.y + state->pan_y) / state->scale;
+        if (canvas_in_bounds(px, py)) {
+          g_app->fg_color = canvas_get_pixel(doc, px, py);
+          if (g_app->tool_win) invalidate_window(g_app->tool_win);
+        }
+        return true;
+      }
+
+      // Magnifier tool: the loupe is a passive overlay; clicks have no effect
+      if (g_app->current_tool == ID_TOOL_MAGNIFIER) return true;
+
       int px = (lx - win->frame.x + state->pan_x) / state->scale;
       int py = (ly - win->frame.y + state->pan_y) / state->scale;
       int tool = g_app->current_tool;
@@ -352,6 +403,9 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         case ID_TOOL_FILL:
           canvas_flood_fill(doc, px, py, g_app->fg_color);
           break;
+        case ID_TOOL_SPRAY:
+          canvas_spray(doc, px, py, 8, g_app->fg_color);
+          break;
         case ID_TOOL_SELECT:
           // If clicking inside the existing selection → move mode
           if (doc->sel_active && canvas_in_selection(doc, px, py)) {
@@ -380,6 +434,20 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
     case kWindowMessageRightButtonDown: {
       // Right-click while polygon is active: commit the polygon
       if (!doc || !g_app) return true;
+
+      // Eyedropper (right click): pick background color from canvas pixel
+      if (state && g_app->current_tool == ID_TOOL_EYEDROPPER) {
+        window_t *root = get_root_window(win);
+        int lx = (int16_t)LOWORD(wparam) - root->frame.x;
+        int ly = (int16_t)HIWORD(wparam) - root->frame.y;
+        int px = (lx - win->frame.x + state->pan_x) / state->scale;
+        int py = (ly - win->frame.y + state->pan_y) / state->scale;
+        if (canvas_in_bounds(px, py)) {
+          g_app->bg_color = canvas_get_pixel(doc, px, py);
+          if (g_app->tool_win) invalidate_window(g_app->tool_win);
+        }
+        return true;
+      }
 
       // Zoom tool (right click): zoom out centered on cursor
       if (state && g_app->current_tool == ID_TOOL_ZOOM) {
@@ -444,8 +512,19 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       int px = (lx - win->frame.x + state->pan_x) / state->scale;
       int py = (ly - win->frame.y + state->pan_y) / state->scale;
 
+      // Always track the hover position (used by the magnifier overlay)
+      state->hover.x    = px;
+      state->hover.y    = py;
+      state->hover_valid = canvas_in_bounds(px, py);
+
       int tool = g_app->current_tool;
       bool shift = (SDL_GetModState() & KMOD_SHIFT) != 0;
+
+      // Magnifier: repaint to update the loupe overlay; nothing else to do
+      if (tool == ID_TOOL_MAGNIFIER) {
+        invalidate_window(win);
+        return true;
+      }
 
       // Update polygon rubber-band preview (stores last mouse position in doc->last)
       if (tool == ID_TOOL_POLYGON && doc->poly_active) {
@@ -480,6 +559,9 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           canvas_draw_line(doc, doc->last.x, doc->last.y, px, py, 3, g_app->bg_color);
           break;
         case ID_TOOL_FILL:
+          break;
+        case ID_TOOL_SPRAY:
+          canvas_spray(doc, px, py, 8, g_app->fg_color);
           break;
         case ID_TOOL_SELECT:
           if (doc->sel_moving) {

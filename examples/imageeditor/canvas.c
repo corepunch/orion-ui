@@ -88,6 +88,19 @@ void canvas_flood_fill(canvas_doc_t *doc, int sx, int sy, rgba_t fill) {
   free(queue);
 }
 
+// Airbrush/spray: scatter random pixels within radius around (cx, cy).
+// Approximately 20 dots per call using Cartesian rejection sampling
+// (naturally higher density toward the center, mimicking a real airbrush).
+void canvas_spray(canvas_doc_t *doc, int cx, int cy, int radius, rgba_t c) {
+  int r2 = radius * radius;
+  for (int i = 0; i < 20; i++) {
+    int dx = (rand() % (2 * radius + 1)) - radius;
+    int dy = (rand() % (2 * radius + 1)) - radius;
+    if (dx * dx + dy * dy <= r2)
+      canvas_set_pixel(doc, cx + dx, cy + dy, c);
+  }
+}
+
 // ============================================================
 // Shape drawing functions
 // ============================================================

@@ -36,12 +36,18 @@ static const accel_t kAccelEntries[] = {
   { FVIRTKEY,          SDL_SCANCODE_E, ID_TOOL_ERASER },
   { FVIRTKEY,          SDL_SCANCODE_K, ID_TOOL_FILL   },
   { FVIRTKEY,          SDL_SCANCODE_S, ID_TOOL_SELECT },
+  { FVIRTKEY,          SDL_SCANCODE_A, ID_TOOL_SPRAY       },
+  { FVIRTKEY,          SDL_SCANCODE_I, ID_TOOL_EYEDROPPER  },
+  { FVIRTKEY,          SDL_SCANCODE_G, ID_TOOL_MAGNIFIER   },
   // Allow tool hotkeys to work even when Shift is held
   { FSHIFT|FVIRTKEY,   SDL_SCANCODE_P, ID_TOOL_PENCIL },
   { FSHIFT|FVIRTKEY,   SDL_SCANCODE_B, ID_TOOL_BRUSH  },
   { FSHIFT|FVIRTKEY,   SDL_SCANCODE_E, ID_TOOL_ERASER },
   { FSHIFT|FVIRTKEY,   SDL_SCANCODE_K, ID_TOOL_FILL   },
   { FSHIFT|FVIRTKEY,   SDL_SCANCODE_S, ID_TOOL_SELECT },
+  { FSHIFT|FVIRTKEY,   SDL_SCANCODE_A, ID_TOOL_SPRAY       },
+  { FSHIFT|FVIRTKEY,   SDL_SCANCODE_I, ID_TOOL_EYEDROPPER  },
+  { FSHIFT|FVIRTKEY,   SDL_SCANCODE_G, ID_TOOL_MAGNIFIER   },
 };
 
 // ============================================================

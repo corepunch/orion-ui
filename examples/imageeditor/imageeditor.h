@@ -23,7 +23,7 @@
 #define CANVAS_H      200
 
 #define SCREEN_W      512
-#define SCREEN_H      342
+#define SCREEN_H      460
 
 #define PALETTE_WIN_X   4
 #define PALETTE_WIN_W  (TB_SPACING*2)
@@ -69,7 +69,7 @@
 #define SCROLLBAR_SIZE  8
 
 #define NUM_COLORS 16
-#define NUM_TOOLS  12
+#define NUM_TOOLS  15
 #define NUM_USER_COLORS  8
 
 #define UNDO_MAX   20
@@ -120,6 +120,9 @@ extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 #define ID_TOOL_ELLIPSE       29
 #define ID_TOOL_ROUNDED_RECT  30
 #define ID_TOOL_POLYGON       31
+#define ID_TOOL_SPRAY         32
+#define ID_TOOL_EYEDROPPER    33
+#define ID_TOOL_MAGNIFIER     34
 
 // ============================================================
 // Types
@@ -172,6 +175,8 @@ typedef struct {
   window_t     *vscroll;    // vertical scrollbar child window
   bool          panning;    // true while hand-tool drag is in progress
   point_t       pan_start;  // screen-local coords where hand drag began
+  point_t       hover;      // canvas pixel coords under the cursor
+  bool          hover_valid; // true when hover is on the canvas (for magnifier overlay)
 } canvas_win_state_t;
 
 typedef struct {
@@ -239,6 +244,7 @@ void canvas_clear(canvas_doc_t *doc);
 void canvas_draw_circle(canvas_doc_t *doc, int cx, int cy, int r, rgba_t c);
 void canvas_draw_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1, int radius, rgba_t c);
 void canvas_flood_fill(canvas_doc_t *doc, int sx, int sy, rgba_t fill);
+void canvas_spray(canvas_doc_t *doc, int cx, int cy, int radius, rgba_t c);
 void canvas_draw_rect_outline(canvas_doc_t *doc, int x, int y, int w, int h, rgba_t c);
 void canvas_draw_rect_filled(canvas_doc_t *doc, int x, int y, int w, int h, rgba_t outline, rgba_t fill);
 void canvas_draw_ellipse_outline(canvas_doc_t *doc, int cx, int cy, int rx, int ry, rgba_t c);
