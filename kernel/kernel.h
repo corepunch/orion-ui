@@ -18,7 +18,7 @@ typedef SDL_Event ui_event_t;
 // Event message queue functions
 int get_message(ui_event_t *evt);
 void dispatch_message(ui_event_t *evt);
-void repost_messages(void);
+void repost_messages(int ignore);
 
 // Graphics context initialization (abstracted)
 bool ui_init_graphics(int flags, const char *title, int width, int height);

@@ -36,4 +36,6 @@ typedef struct {
   uint32_t userdata;
 } columnview_item_t;
 
+result_t win_columnview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+
 #endif // __UI_COLUMNVIEW_H__

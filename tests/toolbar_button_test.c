@@ -7,7 +7,7 @@
 #include "../ui.h"
 #include "../commctl/commctl.h"
 
-extern void repost_messages(void);
+extern void repost_messages(int ignore);
 
 // ---- shared test state -------------------------------------------------- //
 
@@ -39,9 +39,9 @@ static void simulate_click(window_t *btn) {
     int cx = btn->frame.x + btn->frame.w / 2;
     int cy = btn->frame.y + btn->frame.h / 2;
     test_env_post_message(btn, kWindowMessageLeftButtonDown, MAKEDWORD(cx, cy), NULL);
-    repost_messages();
+    repost_messages(kWindowMessagePaint);
     test_env_post_message(btn, kWindowMessageLeftButtonUp, MAKEDWORD(cx, cy), NULL);
-    repost_messages();
+    repost_messages(kWindowMessagePaint);
 }
 
 // ---- tests -------------------------------------------------------------- //
@@ -94,9 +94,9 @@ void test_toolbar_button_keyboard_return(void) {
     btn->id = 201;
 
     test_env_post_message(btn, kWindowMessageKeyDown, SDL_SCANCODE_RETURN, NULL);
-    repost_messages();
+    repost_messages(kWindowMessagePaint);
     test_env_post_message(btn, kWindowMessageKeyUp,   SDL_SCANCODE_RETURN, NULL);
-    repost_messages();
+    repost_messages(kWindowMessagePaint);
 
     ASSERT_EQUAL(g_click_count, 1);
     ASSERT_EQUAL(g_last_cmd_id, 201);
@@ -125,9 +125,9 @@ void test_toolbar_button_keyboard_space(void) {
     btn->id = 202;
 
     test_env_post_message(btn, kWindowMessageKeyDown, SDL_SCANCODE_SPACE, NULL);
-    repost_messages();
+    repost_messages(kWindowMessagePaint);
     test_env_post_message(btn, kWindowMessageKeyUp,   SDL_SCANCODE_SPACE, NULL);
-    repost_messages();
+    repost_messages(kWindowMessagePaint);
 
     ASSERT_EQUAL(g_click_count, 1);
     ASSERT_EQUAL(g_last_cmd_id, 202);
@@ -211,27 +211,31 @@ void test_toolbar_button_set_image_sanity(void) {
         .sheet_w = 32,
         .sheet_h = 160,
     };
+    printf("Sending kButtonMessageSetImage with dummy strip...\n");
     result_t r = send_message(btn, kButtonMessageSetImage, 5, &strip);
     ASSERT_TRUE(r); // message was accepted
 
+    printf("Checking that strip data was stored in button...\n");
     // Userdata should now hold the button data.
     ASSERT_NOT_NULL(btn->userdata);
 
+    printf("Simulating click and verifying it still works...\n");
     // A click must still fire normally.
     simulate_click(btn);
     ASSERT_EQUAL(g_click_count, 1);
-    ASSERT_EQUAL(g_last_cmd_id, 203);
+    ASSERT_EQUAL(g_last_cmd_id, 203);   
 
+    printf("Clearing image with kButtonMessageSetImage and NULL lparam...\n");
     // Clearing the image (lparam=NULL) should also work and release userdata.
     r = send_message(btn, kButtonMessageSetImage, 0, NULL);
     ASSERT_TRUE(r);
     ASSERT_NULL(btn->userdata);
-
+    printf("Simulating click after clearing image...\n");
     // Click still works after clearing.
     reset_state();
     simulate_click(btn);
     ASSERT_EQUAL(g_click_count, 1);
-
+    printf("All assertions passed for this test.\n");
     destroy_window(parent);
     test_env_shutdown();
     PASS();

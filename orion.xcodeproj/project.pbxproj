@@ -1,0 +1,471 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		7870446F2F76A42600A84406 /* message.c in Sources */ = {isa = PBXBuildFile; fileRef = 787044682F76A42600A84406 /* message.c */; };
+		787044702F76A42600A84406 /* filelist.c in Sources */ = {isa = PBXBuildFile; fileRef = 7870444E2F76A42600A84406 /* filelist.c */; };
+		787044712F76A42600A84406 /* renderer_impl.c in Sources */ = {isa = PBXBuildFile; fileRef = 7870445E2F76A42600A84406 /* renderer_impl.c */; };
+		787044722F76A42600A84406 /* tray.c in Sources */ = {isa = PBXBuildFile; fileRef = 787044552F76A42600A84406 /* tray.c */; };
+		787044732F76A42600A84406 /* image.c in Sources */ = {isa = PBXBuildFile; fileRef = 7870444F2F76A42600A84406 /* image.c */; };
+		787044742F76A42600A84406 /* font_6x8.c in Sources */ = {isa = PBXBuildFile; fileRef = 787044652F76A42600A84406 /* font_6x8.c */; };
+		787044752F76A42600A84406 /* checkbox.c in Sources */ = {isa = PBXBuildFile; fileRef = 787044462F76A42600A84406 /* checkbox.c */; };
+		787044762F76A42600A84406 /* menubar.c in Sources */ = {isa = PBXBuildFile; fileRef = 787044532F76A42600A84406 /* menubar.c */; };
+		787044772F76A42600A84406 /* text.c in Sources */ = {isa = PBXBuildFile; fileRef = 7870446B2F76A42600A84406 /* text.c */; };
+		787044782F76A42600A84406 /* accel.c in Sources */ = {isa = PBXBuildFile; fileRef = 787044612F76A42600A84406 /* accel.c */; };
+		787044792F76A42600A84406 /* edit.c in Sources */ = {isa = PBXBuildFile; fileRef = 7870444C2F76A42600A84406 /* edit.c */; };
+		7870447A2F76A42600A84406 /* init.c in Sources */ = {isa = PBXBuildFile; fileRef = 787044582F76A42600A84406 /* init.c */; };
+		7870447B2F76A42600A84406 /* icons.c in Sources */ = {isa = PBXBuildFile; fileRef = 787044672F76A42600A84406 /* icons.c */; };
+		7870447C2F76A42600A84406 /* list.c in Sources */ = {isa = PBXBuildFile; fileRef = 787044512F76A42600A84406 /* list.c */; };
+		7870447D2F76A42600A84406 /* dialog.c in Sources */ = {isa = PBXBuildFile; fileRef = 787044622F76A42600A84406 /* dialog.c */; };
+		7870447E2F76A42600A84406 /* combobox.c in Sources */ = {isa = PBXBuildFile; fileRef = 787044492F76A42600A84406 /* combobox.c */; };
+		7870447F2F76A42600A84406 /* button.c in Sources */ = {isa = PBXBuildFile; fileRef = 787044452F76A42600A84406 /* button.c */; };
+		787044802F76A42600A84406 /* renderer.c in Sources */ = {isa = PBXBuildFile; fileRef = 7870445D2F76A42600A84406 /* renderer.c */; };
+		787044812F76A42600A84406 /* columnview.c in Sources */ = {isa = PBXBuildFile; fileRef = 787044482F76A42600A84406 /* columnview.c */; };
+		787044822F76A42600A84406 /* window.c in Sources */ = {isa = PBXBuildFile; fileRef = 7870446D2F76A42600A84406 /* window.c */; };
+		787044832F76A42600A84406 /* event.c in Sources */ = {isa = PBXBuildFile; fileRef = 787044572F76A42600A84406 /* event.c */; };
+		787044842F76A42600A84406 /* terminal.c in Sources */ = {isa = PBXBuildFile; fileRef = 787044542F76A42600A84406 /* terminal.c */; };
+		787044852F76A42600A84406 /* joystick.c in Sources */ = {isa = PBXBuildFile; fileRef = 7870445A2F76A42600A84406 /* joystick.c */; };
+		787044862F76A42600A84406 /* label.c in Sources */ = {isa = PBXBuildFile; fileRef = 787044502F76A42600A84406 /* label.c */; };
+		787044872F76A42600A84406 /* draw_impl.c in Sources */ = {isa = PBXBuildFile; fileRef = 787044642F76A42600A84406 /* draw_impl.c */; };
+		787044882F76A42600A84406 /* console.c in Sources */ = {isa = PBXBuildFile; fileRef = 7870444B2F76A42600A84406 /* console.c */; };
+		7870448A2F76A5F600A84406 /* toolbar_button_test.c in Sources */ = {isa = PBXBuildFile; fileRef = 787044892F76A5F600A84406 /* toolbar_button_test.c */; };
+		7870448D2F76A60F00A84406 /* test_env.c in Sources */ = {isa = PBXBuildFile; fileRef = 7870448C2F76A60F00A84406 /* test_env.c */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		787044392F76A3FB00A84406 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		7870443B2F76A3FB00A84406 /* orion */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = orion; sourceTree = BUILT_PRODUCTS_DIR; };
+		787044452F76A42600A84406 /* button.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = button.c; sourceTree = "<group>"; };
+		787044462F76A42600A84406 /* checkbox.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = checkbox.c; sourceTree = "<group>"; };
+		787044472F76A42600A84406 /* columnview.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = columnview.h; sourceTree = "<group>"; };
+		787044482F76A42600A84406 /* columnview.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = columnview.c; sourceTree = "<group>"; };
+		787044492F76A42600A84406 /* combobox.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = combobox.c; sourceTree = "<group>"; };
+		7870444A2F76A42600A84406 /* commctl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = commctl.h; sourceTree = "<group>"; };
+		7870444B2F76A42600A84406 /* console.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = console.c; sourceTree = "<group>"; };
+		7870444C2F76A42600A84406 /* edit.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = edit.c; sourceTree = "<group>"; };
+		7870444D2F76A42600A84406 /* filelist.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = filelist.h; sourceTree = "<group>"; };
+		7870444E2F76A42600A84406 /* filelist.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = filelist.c; sourceTree = "<group>"; };
+		7870444F2F76A42600A84406 /* image.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = image.c; sourceTree = "<group>"; };
+		787044502F76A42600A84406 /* label.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = label.c; sourceTree = "<group>"; };
+		787044512F76A42600A84406 /* list.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = list.c; sourceTree = "<group>"; };
+		787044522F76A42600A84406 /* menubar.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = menubar.h; sourceTree = "<group>"; };
+		787044532F76A42600A84406 /* menubar.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = menubar.c; sourceTree = "<group>"; };
+		787044542F76A42600A84406 /* terminal.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = terminal.c; sourceTree = "<group>"; };
+		787044552F76A42600A84406 /* tray.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = tray.c; sourceTree = "<group>"; };
+		787044572F76A42600A84406 /* event.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = event.c; sourceTree = "<group>"; };
+		787044582F76A42600A84406 /* init.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = init.c; sourceTree = "<group>"; };
+		787044592F76A42600A84406 /* joystick.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = joystick.h; sourceTree = "<group>"; };
+		7870445A2F76A42600A84406 /* joystick.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = joystick.c; sourceTree = "<group>"; };
+		7870445B2F76A42600A84406 /* kernel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = kernel.h; sourceTree = "<group>"; };
+		7870445C2F76A42600A84406 /* renderer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = renderer.h; sourceTree = "<group>"; };
+		7870445D2F76A42600A84406 /* renderer.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = renderer.c; sourceTree = "<group>"; };
+		7870445E2F76A42600A84406 /* renderer_impl.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = renderer_impl.c; sourceTree = "<group>"; };
+		787044602F76A42600A84406 /* accel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = accel.h; sourceTree = "<group>"; };
+		787044612F76A42600A84406 /* accel.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = accel.c; sourceTree = "<group>"; };
+		787044622F76A42600A84406 /* dialog.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = dialog.c; sourceTree = "<group>"; };
+		787044632F76A42600A84406 /* draw.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = draw.h; sourceTree = "<group>"; };
+		787044642F76A42600A84406 /* draw_impl.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = draw_impl.c; sourceTree = "<group>"; };
+		787044652F76A42600A84406 /* font_6x8.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = font_6x8.c; sourceTree = "<group>"; };
+		787044662F76A42600A84406 /* gl_compat.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = gl_compat.h; sourceTree = "<group>"; };
+		787044672F76A42600A84406 /* icons.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = icons.c; sourceTree = "<group>"; };
+		787044682F76A42600A84406 /* message.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = message.c; sourceTree = "<group>"; };
+		787044692F76A42600A84406 /* messages.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = messages.h; sourceTree = "<group>"; };
+		7870446A2F76A42600A84406 /* text.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = text.h; sourceTree = "<group>"; };
+		7870446B2F76A42600A84406 /* text.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = text.c; sourceTree = "<group>"; };
+		7870446C2F76A42600A84406 /* user.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = user.h; sourceTree = "<group>"; };
+		7870446D2F76A42600A84406 /* window.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = window.c; sourceTree = "<group>"; };
+		787044892F76A5F600A84406 /* toolbar_button_test.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = toolbar_button_test.c; path = tests/toolbar_button_test.c; sourceTree = "<group>"; };
+		7870448B2F76A60F00A84406 /* test_env.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = test_env.h; path = tests/test_env.h; sourceTree = "<group>"; };
+		7870448C2F76A60F00A84406 /* test_env.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = test_env.c; path = tests/test_env.c; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		787044382F76A3FB00A84406 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		787044322F76A3FB00A84406 = {
+			isa = PBXGroup;
+			children = (
+				7870448B2F76A60F00A84406 /* test_env.h */,
+				7870448C2F76A60F00A84406 /* test_env.c */,
+				787044892F76A5F600A84406 /* toolbar_button_test.c */,
+				787044562F76A42600A84406 /* commctl */,
+				7870445F2F76A42600A84406 /* kernel */,
+				7870446E2F76A42600A84406 /* user */,
+				7870443C2F76A3FB00A84406 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		7870443C2F76A3FB00A84406 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				7870443B2F76A3FB00A84406 /* orion */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		787044562F76A42600A84406 /* commctl */ = {
+			isa = PBXGroup;
+			children = (
+				787044452F76A42600A84406 /* button.c */,
+				787044462F76A42600A84406 /* checkbox.c */,
+				787044472F76A42600A84406 /* columnview.h */,
+				787044482F76A42600A84406 /* columnview.c */,
+				787044492F76A42600A84406 /* combobox.c */,
+				7870444A2F76A42600A84406 /* commctl.h */,
+				7870444B2F76A42600A84406 /* console.c */,
+				7870444C2F76A42600A84406 /* edit.c */,
+				7870444D2F76A42600A84406 /* filelist.h */,
+				7870444E2F76A42600A84406 /* filelist.c */,
+				7870444F2F76A42600A84406 /* image.c */,
+				787044502F76A42600A84406 /* label.c */,
+				787044512F76A42600A84406 /* list.c */,
+				787044522F76A42600A84406 /* menubar.h */,
+				787044532F76A42600A84406 /* menubar.c */,
+				787044542F76A42600A84406 /* terminal.c */,
+				787044552F76A42600A84406 /* tray.c */,
+			);
+			path = commctl;
+			sourceTree = "<group>";
+		};
+		7870445F2F76A42600A84406 /* kernel */ = {
+			isa = PBXGroup;
+			children = (
+				787044572F76A42600A84406 /* event.c */,
+				787044582F76A42600A84406 /* init.c */,
+				787044592F76A42600A84406 /* joystick.h */,
+				7870445A2F76A42600A84406 /* joystick.c */,
+				7870445B2F76A42600A84406 /* kernel.h */,
+				7870445C2F76A42600A84406 /* renderer.h */,
+				7870445D2F76A42600A84406 /* renderer.c */,
+				7870445E2F76A42600A84406 /* renderer_impl.c */,
+			);
+			path = kernel;
+			sourceTree = "<group>";
+		};
+		7870446E2F76A42600A84406 /* user */ = {
+			isa = PBXGroup;
+			children = (
+				787044602F76A42600A84406 /* accel.h */,
+				787044612F76A42600A84406 /* accel.c */,
+				787044622F76A42600A84406 /* dialog.c */,
+				787044632F76A42600A84406 /* draw.h */,
+				787044642F76A42600A84406 /* draw_impl.c */,
+				787044652F76A42600A84406 /* font_6x8.c */,
+				787044662F76A42600A84406 /* gl_compat.h */,
+				787044672F76A42600A84406 /* icons.c */,
+				787044682F76A42600A84406 /* message.c */,
+				787044692F76A42600A84406 /* messages.h */,
+				7870446A2F76A42600A84406 /* text.h */,
+				7870446B2F76A42600A84406 /* text.c */,
+				7870446C2F76A42600A84406 /* user.h */,
+				7870446D2F76A42600A84406 /* window.c */,
+			);
+			path = user;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		7870443A2F76A3FB00A84406 /* orion */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 787044422F76A3FB00A84406 /* Build configuration list for PBXNativeTarget "orion" */;
+			buildPhases = (
+				787044372F76A3FB00A84406 /* Sources */,
+				787044382F76A3FB00A84406 /* Frameworks */,
+				787044392F76A3FB00A84406 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = orion;
+			packageProductDependencies = (
+			);
+			productName = orion;
+			productReference = 7870443B2F76A3FB00A84406 /* orion */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		787044332F76A3FB00A84406 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastUpgradeCheck = 2630;
+				TargetAttributes = {
+					7870443A2F76A3FB00A84406 = {
+						CreatedOnToolsVersion = 26.3;
+					};
+				};
+			};
+			buildConfigurationList = 787044362F76A3FB00A84406 /* Build configuration list for PBXProject "orion" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 787044322F76A3FB00A84406;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 7870443C2F76A3FB00A84406 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				7870443A2F76A3FB00A84406 /* orion */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		787044372F76A3FB00A84406 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7870446F2F76A42600A84406 /* message.c in Sources */,
+				787044702F76A42600A84406 /* filelist.c in Sources */,
+				787044712F76A42600A84406 /* renderer_impl.c in Sources */,
+				7870448A2F76A5F600A84406 /* toolbar_button_test.c in Sources */,
+				787044722F76A42600A84406 /* tray.c in Sources */,
+				787044732F76A42600A84406 /* image.c in Sources */,
+				787044742F76A42600A84406 /* font_6x8.c in Sources */,
+				787044752F76A42600A84406 /* checkbox.c in Sources */,
+				787044762F76A42600A84406 /* menubar.c in Sources */,
+				787044772F76A42600A84406 /* text.c in Sources */,
+				787044782F76A42600A84406 /* accel.c in Sources */,
+				787044792F76A42600A84406 /* edit.c in Sources */,
+				7870447A2F76A42600A84406 /* init.c in Sources */,
+				7870447B2F76A42600A84406 /* icons.c in Sources */,
+				7870447C2F76A42600A84406 /* list.c in Sources */,
+				7870447D2F76A42600A84406 /* dialog.c in Sources */,
+				7870447E2F76A42600A84406 /* combobox.c in Sources */,
+				7870447F2F76A42600A84406 /* button.c in Sources */,
+				787044802F76A42600A84406 /* renderer.c in Sources */,
+				7870448D2F76A60F00A84406 /* test_env.c in Sources */,
+				787044812F76A42600A84406 /* columnview.c in Sources */,
+				787044822F76A42600A84406 /* window.c in Sources */,
+				787044832F76A42600A84406 /* event.c in Sources */,
+				787044842F76A42600A84406 /* terminal.c in Sources */,
+				787044852F76A42600A84406 /* joystick.c in Sources */,
+				787044862F76A42600A84406 /* label.c in Sources */,
+				787044872F76A42600A84406 /* draw_impl.c in Sources */,
+				787044882F76A42600A84406 /* console.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		787044402F76A3FB00A84406 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = BM2R8F5YHC;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = (
+					/opt/homebrew/opt/sdl2/include,
+					/opt/homebrew/include,
+					/opt/homebrew/opt/cglm/include,
+				);
+				LIBRARY_SEARCH_PATHS = (
+					/opt/homebrew/opt/sdl2/lib,
+					/opt/homebrew/lib,
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.1;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_LDFLAGS = (
+					"-lSDL2",
+					"-llua",
+				);
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		787044412F76A3FB00A84406 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = BM2R8F5YHC;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = (
+					/opt/homebrew/opt/sdl2/include,
+					/opt/homebrew/include,
+					/opt/homebrew/opt/cglm/include,
+				);
+				LIBRARY_SEARCH_PATHS = (
+					/opt/homebrew/opt/sdl2/lib,
+					/opt/homebrew/lib,
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.1;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				OTHER_LDFLAGS = (
+					"-lSDL2",
+					"-llua",
+				);
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		787044432F76A3FB00A84406 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = BM2R8F5YHC;
+				ENABLE_HARDENED_RUNTIME = NO;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		787044442F76A3FB00A84406 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = BM2R8F5YHC;
+				ENABLE_HARDENED_RUNTIME = NO;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		787044362F76A3FB00A84406 /* Build configuration list for PBXProject "orion" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				787044402F76A3FB00A84406 /* Debug */,
+				787044412F76A3FB00A84406 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		787044422F76A3FB00A84406 /* Build configuration list for PBXNativeTarget "orion" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				787044432F76A3FB00A84406 /* Debug */,
+				787044442F76A3FB00A84406 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 787044332F76A3FB00A84406 /* Project object */;
+}
