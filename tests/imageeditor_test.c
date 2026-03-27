@@ -36,10 +36,19 @@ static bool canvas_in_bounds(int x, int y) {
 typedef struct {
   uint8_t pixels[CANVAS_H * CANVAS_W * 4];
   bool    canvas_dirty;
+  bool    sel_active;
+  int     sel_x0, sel_y0, sel_x1, sel_y1;
 } test_canvas_t;
+
+static bool canvas_in_selection(const test_canvas_t *s, int x, int y) {
+  if (!s->sel_active) return true;
+  return x >= s->sel_x0 && x <= s->sel_x1 &&
+         y >= s->sel_y0 && y <= s->sel_y1;
+}
 
 static void canvas_set_pixel(test_canvas_t *s, int x, int y, rgba_t c) {
   if (!canvas_in_bounds(x,y)) return;
+  if (!canvas_in_selection(s, x, y)) return;
   uint8_t *p = s->pixels + ((size_t)y*CANVAS_W+x)*4;
   p[0]=c.r; p[1]=c.g; p[2]=c.b; p[3]=c.a;
   s->canvas_dirty = true;
@@ -78,6 +87,7 @@ static void canvas_draw_line(test_canvas_t *s,
 }
 
 static void canvas_flood_fill(test_canvas_t *s, int sx, int sy, rgba_t fill) {
+  if (!canvas_in_selection(s, sx, sy)) return;
   rgba_t target = canvas_get_pixel(s,sx,sy);
   if (rgba_eq(target,fill)) return;
   int total = CANVAS_W*CANVAS_H;
@@ -89,6 +99,7 @@ static void canvas_flood_fill(test_canvas_t *s, int sx, int sy, rgba_t fill) {
   while (top>0) {
     top--; int x=stk_x[top],y=stk_y[top];
     if (!canvas_in_bounds(x,y)) continue;
+    if (!canvas_in_selection(s, x, y)) continue;
     int idx=y*CANVAS_W+x;
     if (vis[idx]) continue;
     if (!rgba_eq(canvas_get_pixel(s,x,y),target)) continue;
@@ -649,6 +660,107 @@ void test_hsv_to_rgb_gray(void) {
   PASS();
 }
 
+// ============================================================
+// Selection masking tests
+// ============================================================
+
+void test_canvas_in_selection_no_selection(void) {
+  TEST("canvas_in_selection – returns true everywhere when no selection active");
+  test_canvas_t c = {0};
+  c.sel_active = false;
+  ASSERT_TRUE(canvas_in_selection(&c, 0, 0));
+  ASSERT_TRUE(canvas_in_selection(&c, CANVAS_W-1, CANVAS_H-1));
+  ASSERT_TRUE(canvas_in_selection(&c, 100, 100));
+  PASS();
+}
+
+void test_canvas_in_selection_inside(void) {
+  TEST("canvas_in_selection – returns true for pixels inside selection");
+  test_canvas_t c = {0};
+  c.sel_active = true;
+  c.sel_x0 = 10; c.sel_y0 = 20; c.sel_x1 = 30; c.sel_y1 = 40;
+  ASSERT_TRUE(canvas_in_selection(&c, 10, 20));  /* top-left corner */
+  ASSERT_TRUE(canvas_in_selection(&c, 30, 40));  /* bottom-right corner */
+  ASSERT_TRUE(canvas_in_selection(&c, 20, 30));  /* interior */
+  PASS();
+}
+
+void test_canvas_in_selection_outside(void) {
+  TEST("canvas_in_selection – returns false for pixels outside selection");
+  test_canvas_t c = {0};
+  c.sel_active = true;
+  c.sel_x0 = 10; c.sel_y0 = 20; c.sel_x1 = 30; c.sel_y1 = 40;
+  ASSERT_FALSE(canvas_in_selection(&c, 9,  20));  /* left of selection */
+  ASSERT_FALSE(canvas_in_selection(&c, 31, 20));  /* right of selection */
+  ASSERT_FALSE(canvas_in_selection(&c, 10, 19));  /* above selection */
+  ASSERT_FALSE(canvas_in_selection(&c, 10, 41));  /* below selection */
+  PASS();
+}
+
+void test_set_pixel_respects_selection(void) {
+  TEST("canvas_set_pixel – ignores pixels outside active selection");
+  test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
+  canvas_clear(c);
+  /* Activate a small selection in the center */
+  c->sel_active = true;
+  c->sel_x0 = 50; c->sel_y0 = 50; c->sel_x1 = 60; c->sel_y1 = 60;
+
+  rgba_t red = {255, 0, 0, 255};
+  rgba_t white = {255, 255, 255, 255};
+
+  /* Inside selection: should be written */
+  canvas_set_pixel(c, 55, 55, red);
+  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 55, 55), red));
+
+  /* Outside selection: must remain white */
+  canvas_set_pixel(c, 40, 40, red);
+  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 40, 40), white));
+
+  free(c);
+  PASS();
+}
+
+void test_flood_fill_respects_selection(void) {
+  TEST("canvas_flood_fill – stays within active selection");
+  test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
+  canvas_clear(c); /* all white */
+
+  /* Activate selection: only the left half of the canvas */
+  c->sel_active = true;
+  c->sel_x0 = 0; c->sel_y0 = 0; c->sel_x1 = 159; c->sel_y1 = CANVAS_H - 1;
+
+  rgba_t blue = {0, 0, 255, 255};
+  rgba_t white = {255, 255, 255, 255};
+  canvas_flood_fill(c, 0, 0, blue);
+
+  /* Pixel inside selection must be filled */
+  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 80, 100), blue));
+
+  /* Pixel outside selection (right half) must remain white */
+  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 200, 100), white));
+
+  free(c);
+  PASS();
+}
+
+void test_flood_fill_outside_selection_noop(void) {
+  TEST("canvas_flood_fill – no-op when start pixel is outside selection");
+  test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
+  canvas_clear(c);
+  c->canvas_dirty = false;
+
+  c->sel_active = true;
+  c->sel_x0 = 50; c->sel_y0 = 50; c->sel_x1 = 100; c->sel_y1 = 100;
+
+  rgba_t blue = {0, 0, 255, 255};
+  /* Start outside the selection – should do nothing */
+  canvas_flood_fill(c, 10, 10, blue);
+  ASSERT_FALSE(c->canvas_dirty);
+
+  free(c);
+  PASS();
+}
+
 int main(int argc, char *argv[]) {
   (void)argc; (void)argv;
   TEST_START("Image Editor Logic");
@@ -683,6 +795,13 @@ int main(int argc, char *argv[]) {
   test_rgb_to_hsv_red();
   test_hsv_to_rgb_round_trip();
   test_hsv_to_rgb_gray();
+
+  test_canvas_in_selection_no_selection();
+  test_canvas_in_selection_inside();
+  test_canvas_in_selection_outside();
+  test_set_pixel_respects_selection();
+  test_flood_fill_respects_selection();
+  test_flood_fill_outside_selection_noop();
 
   TEST_END();
 }

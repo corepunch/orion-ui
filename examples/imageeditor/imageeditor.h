@@ -137,6 +137,15 @@ static inline bool canvas_in_bounds(int x, int y) {
   return x >= 0 && x < CANVAS_W && y >= 0 && y < CANVAS_H;
 }
 
+static inline bool canvas_in_selection(const canvas_doc_t *doc, int x, int y) {
+  if (!doc->sel_active) return true;
+  int x0 = MIN(doc->sel_start.x, doc->sel_end.x);
+  int y0 = MIN(doc->sel_start.y, doc->sel_end.y);
+  int x1 = MAX(doc->sel_start.x, doc->sel_end.x);
+  int y1 = MAX(doc->sel_start.y, doc->sel_end.y);
+  return x >= x0 && x <= x1 && y >= y0 && y <= y1;
+}
+
 // Forward declarations for canvas operations
 void canvas_set_pixel(canvas_doc_t *doc, int x, int y, rgba_t c);
 rgba_t canvas_get_pixel(const canvas_doc_t *doc, int x, int y);

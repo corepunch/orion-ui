@@ -8,6 +8,7 @@
 
 void canvas_set_pixel(canvas_doc_t *doc, int x, int y, rgba_t c) {
   if (!canvas_in_bounds(x, y)) return;
+  if (!canvas_in_selection(doc, x, y)) return;
   uint8_t *p = doc->pixels + ((size_t)y * CANVAS_W + x) * 4;
   p[0]=c.r; p[1]=c.g; p[2]=c.b; p[3]=c.a;
   doc->canvas_dirty = true;
@@ -48,6 +49,7 @@ void canvas_draw_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1,
 }
 
 void canvas_flood_fill(canvas_doc_t *doc, int sx, int sy, rgba_t fill) {
+  if (!canvas_in_selection(doc, sx, sy)) return;
   rgba_t target = canvas_get_pixel(doc, sx, sy);
   if (rgba_eq(target, fill)) return;
 
@@ -66,6 +68,7 @@ void canvas_flood_fill(canvas_doc_t *doc, int sx, int sy, rgba_t fill) {
     int ny[4] = {cur.y,   cur.y,   cur.y+1, cur.y-1};
     for (int i = 0; i < 4; i++) {
       if (canvas_in_bounds(nx[i], ny[i]) &&
+          canvas_in_selection(doc, nx[i], ny[i]) &&
           rgba_eq(canvas_get_pixel(doc, nx[i], ny[i]), target) &&
           tail < capacity) {
         canvas_set_pixel(doc, nx[i], ny[i], fill);
