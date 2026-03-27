@@ -57,6 +57,8 @@
 #define ID_EDIT_UNDO   10
 #define ID_EDIT_REDO   11
 
+#define ID_HELP_ABOUT  30
+
 // Tool command IDs – these are the authoritative tool identifiers used everywhere
 #define ID_TOOL_PENCIL  20
 #define ID_TOOL_BRUSH   21
@@ -176,6 +178,9 @@ result_t win_color_palette_proc(window_t *win, uint32_t msg, uint32_t wparam, vo
 
 // Color picker dialog
 bool show_color_picker(window_t *parent, rgba_t initial, rgba_t *out);
+
+// About dialog
+void show_about_dialog(window_t *parent);
 
 // Menu definitions
 extern const menu_def_t kMenus[];
