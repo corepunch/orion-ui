@@ -70,8 +70,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           canvas_flood_fill(doc, cx, cy, g_app->fg_color);
           break;
         case ID_TOOL_SELECT:
-          doc->sel_x0 = doc->sel_x1 = cx;
-          doc->sel_y0 = doc->sel_y1 = cy;
+          doc->sel_start.x = doc->sel_end.x = cx;
+          doc->sel_start.y = doc->sel_end.y = cy;
           doc->sel_active = true;
           break;
         default:
@@ -94,19 +94,19 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       switch (g_app->current_tool) {
         case ID_TOOL_PENCIL:
-          canvas_draw_line(doc, doc->last_x, doc->last_y, cx, cy, 0, g_app->fg_color);
+          canvas_draw_line(doc, doc->last.x, doc->last.y, cx, cy, 0, g_app->fg_color);
           break;
         case ID_TOOL_BRUSH:
-          canvas_draw_line(doc, doc->last_x, doc->last_y, cx, cy, 2, g_app->fg_color);
+          canvas_draw_line(doc, doc->last.x, doc->last.y, cx, cy, 2, g_app->fg_color);
           break;
         case ID_TOOL_ERASER:
-          canvas_draw_line(doc, doc->last_x, doc->last_y, cx, cy, 3, g_app->bg_color);
+          canvas_draw_line(doc, doc->last.x, doc->last.y, cx, cy, 3, g_app->bg_color);
           break;
         case ID_TOOL_FILL:
           break;
         case ID_TOOL_SELECT:
-          doc->sel_x1 = cx;
-          doc->sel_y1 = cy;
+          doc->sel_end.x = cx;
+          doc->sel_end.y = cy;
           break;
         default:
           break;

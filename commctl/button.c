@@ -5,6 +5,7 @@
 #include "../user/user.h"
 #include "../user/messages.h"
 #include "../user/draw.h"
+#include "commctl.h"
 
 // Helper function (will be moved to ui/user/window.c later)
 extern window_t *get_root_window(window_t *window);
@@ -37,13 +38,27 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
       fill_rect(_focused == win ? COLOR_FOCUSED : COLOR_PANEL_BG,
                 win->frame.x-2, win->frame.y-2, win->frame.w+4, win->frame.h+4);
       draw_button(&win->frame, 1, 1, show_pressed);
-      if (!show_pressed) {
-        draw_text_small(win->title, win->frame.x+4, win->frame.y+4, COLOR_DARK_EDGE);
+      int px = show_pressed ? 1 : 0;
+      if ((win->flags & BUTTON_BITMAP) && win->userdata) {
+        // Draw the icon centered within the button area (analogous to WinAPI BS_BITMAP)
+        button_image_t *img = (button_image_t *)win->userdata;
+        float u0 = (float)(img->icon_col * img->icon_w) / (float)img->sheet_w;
+        float v0 = (float)(img->icon_row * img->icon_h) / (float)img->sheet_h;
+        float u1 = u0 + (float)img->icon_w / (float)img->sheet_w;
+        float v1 = v0 + (float)img->icon_h / (float)img->sheet_h;
+        int ix = win->frame.x + (win->frame.w - img->icon_w) / 2 + px;
+        int iy = win->frame.y + (win->frame.h - img->icon_h) / 2 + px;
+        draw_sprite_region((int)img->tex, ix, iy, img->icon_w, img->icon_h,
+                           u0, v0, u1, v1, 1.0f);
+      } else {
+        if (!show_pressed) {
+          draw_text_small(win->title, win->frame.x+4, win->frame.y+4, COLOR_DARK_EDGE);
+        }
+        draw_text_small(win->title,
+                        win->frame.x + (show_pressed ? 4 : 3),
+                        win->frame.y + (show_pressed ? 4 : 3),
+                        COLOR_TEXT_NORMAL);
       }
-      draw_text_small(win->title,
-                      win->frame.x + (show_pressed ? 4 : 3),
-                      win->frame.y + (show_pressed ? 4 : 3),
-                      COLOR_TEXT_NORMAL);
       return true;
     }
     case kWindowMessageLeftButtonDown:
@@ -87,6 +102,13 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
     }
     case kButtonMessageGetCheck:
       return win->value ? kButtonStateChecked : kButtonStateUnchecked;
+    case kButtonMessageSetImage:
+      // Analogous to WinAPI BM_SETIMAGE: store a pointer to button_image_t.
+      // The caller owns the button_image_t and must keep it alive for the
+      // lifetime of the button.
+      win->userdata = lparam;
+      invalidate_window(win);
+      return true;
   }
   return false;
 }

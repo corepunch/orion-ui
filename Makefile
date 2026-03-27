@@ -64,6 +64,7 @@ endif
 BUILD_DIR = build
 LIB_DIR = $(BUILD_DIR)/lib
 BIN_DIR = $(BUILD_DIR)/bin
+SHARE_DIR = $(BUILD_DIR)/share
 TEST_DIR = tests
 
 # Source files
@@ -90,6 +91,12 @@ TEST_ENV_BINS = $(patsubst $(TEST_DIR)/%.c,$(BIN_DIR)/test_%$(EXE_EXT),$(TEST_EN
 .PHONY: all
 all: library examples
 
+# Shared data assets
+.PHONY: share
+share: | $(SHARE_DIR)
+	@echo "Copying shared data assets..."
+	cp examples/imageeditor/tools.png $(SHARE_DIR)/tools.png
+
 # Library targets
 .PHONY: library
 library: $(STATIC_LIB) $(SHARED_LIB)
@@ -109,7 +116,7 @@ $(SHARED_LIB): $(USER_SRCS) $(KERNEL_SRCS) $(COMMCTL_SRCS) | $(LIB_DIR)
 
 # Examples
 .PHONY: examples
-examples: $(EXAMPLE_BINS)
+examples: share $(EXAMPLE_BINS)
 
 # Image editor links with libpng for PNG open/save support
 # main.c is appended last so that all sub-module symbols (e.g. kMenus, win procs)
@@ -146,7 +153,7 @@ $(BIN_DIR)/test_%$(EXE_EXT): $(TEST_DIR)/%.c $(STATIC_LIB) | $(BIN_DIR)
 	$(CC) $(CFLAGS) -o $@ $< $(STATIC_LIB) $(LDFLAGS) $(LDFLAGS_TEST) $(LIBS)
 
 # Directory creation
-BUILD_DIRS = $(BUILD_DIR) $(LIB_DIR) $(BIN_DIR)
+BUILD_DIRS = $(BUILD_DIR) $(LIB_DIR) $(BIN_DIR) $(SHARE_DIR)
 
 $(BUILD_DIRS):
 	mkdir -p $@
@@ -172,4 +179,4 @@ help:
 	@echo ""
 	@echo "Output directories:"
 	@echo "  $(LIB_DIR)  - Libraries"
-	@echo "  $(BIN_DIR)  - Executables (examples and tests)"
+	@echo "  $(SHARE_DIR) - Shared data assets (icons, etc.)"

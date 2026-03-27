@@ -28,7 +28,10 @@
 #define PALETTE_WIN_X   4
 #define PALETTE_WIN_Y  (MENUBAR_HEIGHT + TITLEBAR_HEIGHT + 4)
 #define PALETTE_WIN_W  64
-#define TOOL_WIN_H    (NUM_TOOLS * 24 + 22)
+#define TOOL_ICON_W    16
+#define TOOL_ICON_H    16
+#define TOOL_ICON_ROW_H 24
+#define TOOL_WIN_H    (((NUM_TOOLS + 1) / 2) * TOOL_ICON_ROW_H + 26)
 #define COLOR_WIN_Y   (PALETTE_WIN_Y + TOOL_WIN_H + TITLEBAR_HEIGHT + 4)
 #define COLOR_WIN_H   (8 * 22)
 
