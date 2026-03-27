@@ -96,7 +96,7 @@ void test_dialog_cancel_no_crash(void) {
     // Before the fix, repost_messages would SIGSEGV (pc=0x0) because it
     // dispatched the stale kWindowMessagePaint targeting the freed cancel_btn,
     // whose proc field reads as NULL from freed memory.
-    repost_messages(-1);
+    repost_messages();
 
     // The dialog was destroyed; cancel command must have been processed.
     ASSERT_TRUE(g_cancel_received);
@@ -144,7 +144,7 @@ void test_regular_button_click_unaffected(void) {
 
     post_message(btn, kWindowMessageLeftButtonDown, MAKEDWORD(cx, cy), NULL);
     post_message(btn, kWindowMessageLeftButtonUp,   MAKEDWORD(cx, cy), NULL);
-    repost_messages(-1);
+    repost_messages();
 
     ASSERT_EQUAL(g_cmd_count, 1);
 

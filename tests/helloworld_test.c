@@ -106,10 +106,10 @@ void test_button_click_increments_counter(void) {
     get_button_center(button, &button_center_x, &button_center_y);
     
     test_env_post_message(button, kWindowMessageLeftButtonDown, MAKEDWORD(button_center_x, button_center_y), NULL);
-    repost_messages(-1);
+    repost_messages();
     
     test_env_post_message(button, kWindowMessageLeftButtonUp, MAKEDWORD(button_center_x, button_center_y), NULL);
-    repost_messages(-1);
+    repost_messages();
     
     // Verify click was registered
     ASSERT_EQUAL(test_click_count, 1);
@@ -146,10 +146,10 @@ void test_multiple_button_clicks(void) {
     // Click button 5 times
     for (int i = 1; i <= 5; i++) {
         test_env_post_message(button, kWindowMessageLeftButtonDown, MAKEDWORD(button_center_x, button_center_y), NULL);
-        repost_messages(-1);
+        repost_messages();
         
         test_env_post_message(button, kWindowMessageLeftButtonUp, MAKEDWORD(button_center_x, button_center_y), NULL);
-        repost_messages(-1);
+        repost_messages();
         
         // Verify counter incremented correctly
         ASSERT_EQUAL(test_click_count, i);
