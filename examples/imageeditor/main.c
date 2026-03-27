@@ -96,8 +96,7 @@ int main(int argc, char *argv[]) {
 
   create_app_windows();
 
-  g_app->accel = load_accelerators(kAccelEntries,
-                                   (int)(sizeof(kAccelEntries)/sizeof(kAccelEntries[0])));
+  g_app->accel = load_accelerators(kAccelEntries, (int)(sizeof(kAccelEntries)/sizeof(kAccelEntries[0])));
 
   create_document(NULL);
 
