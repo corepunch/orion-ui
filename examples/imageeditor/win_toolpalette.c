@@ -211,13 +211,15 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
 
       int sy = 2;
       draw_text_small("FG", 2, sy, COLOR_TEXT_DISABLED);
-      draw_text_small("BG", 34, sy, COLOR_TEXT_DISABLED);
+      draw_text_small("BG", TB_SPACING+2, sy, COLOR_TEXT_DISABLED);
       sy += 8;
       if (g_app) {
-        fill_rect(COLOR_DARK_EDGE, 1,  sy - 1, 28, 14);
-        fill_rect(rgba_to_col(g_app->fg_color), 2,  sy, 26, 12);
-        fill_rect(COLOR_DARK_EDGE, 33, sy - 1, 28, 14);
-        fill_rect(rgba_to_col(g_app->bg_color), 34, sy, 26, 12);
+        #define DrawSwatch(swatch_col, x, color) \
+          fill_rect(swatch_col, x+1,  sy - 1, TB_SPACING-2, 16); \
+          fill_rect(rgba_to_col(color), x+2,  sy, TB_SPACING-4, 14); 
+
+        DrawSwatch(COLOR_DARK_EDGE, 0, g_app->fg_color);
+        DrawSwatch(COLOR_DARK_EDGE, TB_SPACING, g_app->bg_color);
       }
       return true;
     }

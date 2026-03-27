@@ -26,7 +26,7 @@
 #define SCREEN_H      342
 
 #define PALETTE_WIN_X   4
-#define PALETTE_WIN_W  64
+#define PALETTE_WIN_W  (TB_SPACING*2)
 #define TOOL_ICON_W    16
 #define TOOL_ICON_H    16
 #define TOOL_ICON_ROW_H 24

@@ -97,7 +97,7 @@ enum {
 
 // Titlebar and toolbar dimensions
 #define TITLEBAR_HEIGHT   12
-#define TOOLBAR_HEIGHT    20
+#define TOOLBAR_HEIGHT    22
 #define STATUSBAR_HEIGHT  12
 #define RESIZE_HANDLE     8
 #define BUTTON_HEIGHT     13
@@ -108,7 +108,7 @@ enum {
 // Control button dimensions
 #define CONTROL_BUTTON_WIDTH    8
 #define CONTROL_BUTTON_PADDING  2
-#define TB_SPACING              20  // equals TOOLBAR_HEIGHT so toolbar buttons are square
+#define TB_SPACING              TOOLBAR_HEIGHT  // equals TOOLBAR_HEIGHT so toolbar buttons are square
 
 // Scroll and interaction constants
 #define SCROLL_SENSITIVITY      5
