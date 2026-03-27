@@ -42,8 +42,14 @@ typedef struct {
 
 static bool canvas_in_selection(const test_canvas_t *s, int x, int y) {
   if (!s->sel_active) return true;
-  return x >= s->sel_x0 && x <= s->sel_x1 &&
-         y >= s->sel_y0 && y <= s->sel_y1;
+  /* Normalize selection bounds so reversed drag directions work correctly,
+   * matching the MIN/MAX semantics used in the production helper. */
+  int x0 = s->sel_x0 < s->sel_x1 ? s->sel_x0 : s->sel_x1;
+  int x1 = s->sel_x0 > s->sel_x1 ? s->sel_x0 : s->sel_x1;
+  int y0 = s->sel_y0 < s->sel_y1 ? s->sel_y0 : s->sel_y1;
+  int y1 = s->sel_y0 > s->sel_y1 ? s->sel_y0 : s->sel_y1;
+  return x >= x0 && x <= x1 &&
+         y >= y0 && y <= y1;
 }
 
 static void canvas_set_pixel(test_canvas_t *s, int x, int y, rgba_t c) {
@@ -761,6 +767,47 @@ void test_flood_fill_outside_selection_noop(void) {
   PASS();
 }
 
+void test_canvas_in_selection_reversed(void) {
+  TEST("canvas_in_selection – reversed drag direction (right-to-left / bottom-to-top)");
+  test_canvas_t c = {0};
+  c.sel_active = true;
+  /* Simulate dragging from bottom-right (30,40) back to top-left (10,20) */
+  c.sel_x0 = 30; c.sel_y0 = 40; c.sel_x1 = 10; c.sel_y1 = 20;
+  /* Corners of the normalised rect must be inside */
+  ASSERT_TRUE(canvas_in_selection(&c, 10, 20));  /* top-left */
+  ASSERT_TRUE(canvas_in_selection(&c, 30, 40));  /* bottom-right */
+  ASSERT_TRUE(canvas_in_selection(&c, 20, 30));  /* interior */
+  /* Pixels outside the normalised rect must be excluded */
+  ASSERT_FALSE(canvas_in_selection(&c, 9,  20));
+  ASSERT_FALSE(canvas_in_selection(&c, 31, 20));
+  ASSERT_FALSE(canvas_in_selection(&c, 10, 19));
+  ASSERT_FALSE(canvas_in_selection(&c, 10, 41));
+  PASS();
+}
+
+void test_set_pixel_respects_reversed_selection(void) {
+  TEST("canvas_set_pixel – reversed selection masks correctly");
+  test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
+  canvas_clear(c);
+  /* Selection dragged right-to-left: x0>x1, y0>y1 */
+  c->sel_active = true;
+  c->sel_x0 = 60; c->sel_y0 = 60; c->sel_x1 = 50; c->sel_y1 = 50;
+
+  rgba_t red = {255, 0, 0, 255};
+  rgba_t white = {255, 255, 255, 255};
+
+  /* Inside the normalised [50,60]×[50,60] region */
+  canvas_set_pixel(c, 55, 55, red);
+  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 55, 55), red));
+
+  /* Outside — must remain white */
+  canvas_set_pixel(c, 40, 40, red);
+  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 40, 40), white));
+
+  free(c);
+  PASS();
+}
+
 int main(int argc, char *argv[]) {
   (void)argc; (void)argv;
   TEST_START("Image Editor Logic");
@@ -799,7 +846,9 @@ int main(int argc, char *argv[]) {
   test_canvas_in_selection_no_selection();
   test_canvas_in_selection_inside();
   test_canvas_in_selection_outside();
+  test_canvas_in_selection_reversed();
   test_set_pixel_respects_selection();
+  test_set_pixel_respects_reversed_selection();
   test_flood_fill_respects_selection();
   test_flood_fill_outside_selection_noop();
 
