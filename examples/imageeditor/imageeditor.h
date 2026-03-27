@@ -81,8 +81,14 @@
 #define ID_FILE_CLOSE   5
 #define ID_FILE_QUIT    6
 
-#define ID_EDIT_UNDO   10
-#define ID_EDIT_REDO   11
+#define ID_EDIT_UNDO        10
+#define ID_EDIT_REDO        11
+#define ID_EDIT_CUT         12
+#define ID_EDIT_COPY        13
+#define ID_EDIT_PASTE       14
+#define ID_EDIT_CLEAR_SEL   15
+#define ID_EDIT_SELECT_ALL  16
+#define ID_EDIT_DESELECT    17
 
 #define ID_VIEW_ZOOM_IN   40
 #define ID_VIEW_ZOOM_OUT  41
@@ -91,6 +97,12 @@
 #define ID_VIEW_ZOOM_4X   44
 #define ID_VIEW_ZOOM_6X   45
 #define ID_VIEW_ZOOM_8X   46
+
+// Supported zoom levels and their corresponding View menu IDs.
+// These are the single source of truth used by win_canvas.c and win_menubar.c.
+#define NUM_ZOOM_LEVELS 5
+extern const int kZoomLevels[NUM_ZOOM_LEVELS];
+extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 
 #define ID_HELP_ABOUT  30
 
@@ -126,6 +138,14 @@ typedef struct canvas_doc_s {
   bool     sel_active;
   point_t  sel_start;
   point_t  sel_end;
+  // Floating selection state (during move drag)
+  bool     sel_moving;
+  point_t  move_origin;    // canvas pixel where drag began
+  point_t  float_pos;      // current top-left of floating selection
+  int      float_w;
+  int      float_h;
+  uint8_t *float_pixels;   // RGBA data extracted from canvas
+  GLuint   float_tex;      // cached GL texture for float_pixels (0 = none)
 } canvas_doc_t;
 
 typedef struct {
@@ -151,6 +171,10 @@ typedef struct {
   accel_table_t *accel;
   rgba_t         user_palette[NUM_USER_COLORS];
   int            num_user_colors;
+  // Clipboard (shared across documents)
+  uint8_t       *clipboard;
+  int            clipboard_w;
+  int            clipboard_h;
 } app_state_t;
 
 // ============================================================
@@ -197,6 +221,18 @@ void canvas_clear(canvas_doc_t *doc);
 void canvas_draw_circle(canvas_doc_t *doc, int cx, int cy, int r, rgba_t c);
 void canvas_draw_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1, int radius, rgba_t c);
 void canvas_flood_fill(canvas_doc_t *doc, int sx, int sy, rgba_t fill);
+
+// Selection operations
+void canvas_copy_selection(canvas_doc_t *doc);
+void canvas_cut_selection(canvas_doc_t *doc, rgba_t fill);
+void canvas_clear_selection(canvas_doc_t *doc, rgba_t fill);
+void canvas_paste_clipboard(canvas_doc_t *doc);
+void canvas_select_all(canvas_doc_t *doc);
+void canvas_deselect(canvas_doc_t *doc);
+
+// Move-selection helpers (called from win_canvas.c)
+void canvas_begin_move(canvas_doc_t *doc, rgba_t bg);
+void canvas_commit_move(canvas_doc_t *doc);
 
 // Undo/redo
 void doc_push_undo(canvas_doc_t *doc);

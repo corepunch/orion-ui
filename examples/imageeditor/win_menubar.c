@@ -15,8 +15,16 @@ static const menu_item_t kFileItems[] = {
 };
 
 static const menu_item_t kEditItems[] = {
-  {"Undo\tCtrl+Z", ID_EDIT_UNDO},
-  {"Redo\tCtrl+Y", ID_EDIT_REDO},
+  {"Undo", ID_EDIT_UNDO},
+  {"Redo", ID_EDIT_REDO},
+  {NULL, 0},
+  {"Cut", ID_EDIT_CUT},
+  {"Copy", ID_EDIT_COPY},
+  {"Paste", ID_EDIT_PASTE},
+  {NULL, 0},
+  {"Clear Selection", ID_EDIT_CLEAR_SEL},
+  {"Select All", ID_EDIT_SELECT_ALL},
+  {"Deselect", ID_EDIT_DESELECT},
 };
 
 static const menu_item_t kViewItems[] = {
@@ -122,6 +130,51 @@ static void handle_menu_command(uint16_t id) {
       }
       break;
 
+    case ID_EDIT_CUT:
+      if (doc && doc->sel_active) {
+        doc_push_undo(doc);
+        canvas_cut_selection(doc, g_app->bg_color);
+        doc_update_title(doc);
+        invalidate_window(doc->canvas_win);
+      }
+      break;
+
+    case ID_EDIT_COPY:
+      if (doc && doc->sel_active)
+        canvas_copy_selection(doc);
+      break;
+
+    case ID_EDIT_PASTE:
+      if (doc && g_app->clipboard) {
+        canvas_paste_clipboard(doc);
+        doc_update_title(doc);
+        invalidate_window(doc->canvas_win);
+      }
+      break;
+
+    case ID_EDIT_CLEAR_SEL:
+      if (doc && doc->sel_active) {
+        doc_push_undo(doc);
+        canvas_clear_selection(doc, g_app->bg_color);
+        doc_update_title(doc);
+        invalidate_window(doc->canvas_win);
+      }
+      break;
+
+    case ID_EDIT_SELECT_ALL:
+      if (doc) {
+        canvas_select_all(doc);
+        invalidate_window(doc->canvas_win);
+      }
+      break;
+
+    case ID_EDIT_DESELECT:
+      if (doc) {
+        canvas_deselect(doc);
+        invalidate_window(doc->canvas_win);
+      }
+      break;
+
     case ID_HELP_ABOUT:
       show_about_dialog(g_app->menubar_win);
       break;
@@ -137,25 +190,19 @@ static void handle_menu_command(uint16_t id) {
       canvas_win_state_t *state = (canvas_win_state_t *)doc->canvas_win->userdata;
       if (!state) break;
 
-      static const int zoom_vals[] = {1, 2, 4, 6, 8};
-      static const int zoom_ids[]  = {
-        ID_VIEW_ZOOM_1X, ID_VIEW_ZOOM_2X, ID_VIEW_ZOOM_4X,
-        ID_VIEW_ZOOM_6X, ID_VIEW_ZOOM_8X
-      };
-      int nz = (int)(sizeof(zoom_vals)/sizeof(zoom_vals[0]));
       int new_scale = state->scale;
 
       if (id == ID_VIEW_ZOOM_IN) {
-        for (int i = 0; i < nz; i++) {
-          if (zoom_vals[i] > state->scale) { new_scale = zoom_vals[i]; break; }
+        for (int i = 0; i < NUM_ZOOM_LEVELS; i++) {
+          if (kZoomLevels[i] > state->scale) { new_scale = kZoomLevels[i]; break; }
         }
       } else if (id == ID_VIEW_ZOOM_OUT) {
-        for (int i = nz - 1; i >= 0; i--) {
-          if (zoom_vals[i] < state->scale) { new_scale = zoom_vals[i]; break; }
+        for (int i = NUM_ZOOM_LEVELS - 1; i >= 0; i--) {
+          if (kZoomLevels[i] < state->scale) { new_scale = kZoomLevels[i]; break; }
         }
       } else {
-        for (int i = 0; i < nz; i++) {
-          if (zoom_ids[i] == (int)id) { new_scale = zoom_vals[i]; break; }
+        for (int i = 0; i < NUM_ZOOM_LEVELS; i++) {
+          if (kZoomMenuIDs[i] == (int)id) { new_scale = kZoomLevels[i]; break; }
         }
       }
 

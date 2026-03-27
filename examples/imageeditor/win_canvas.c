@@ -2,9 +2,13 @@
 
 #include "imageeditor.h"
 
-// Valid zoom levels (MacPaint/Photoshop 1.0 style)
-static const int kZoomLevels[] = {1, 2, 4, 6, 8};
-static const int kNumZoomLevels = 5;
+// Single source of truth for zoom levels and their View menu IDs.
+// win_menubar.c also references these via the extern declarations in imageeditor.h.
+const int kZoomLevels[NUM_ZOOM_LEVELS]  = {1, 2, 4, 6, 8};
+const int kZoomMenuIDs[NUM_ZOOM_LEVELS] = {
+  ID_VIEW_ZOOM_1X, ID_VIEW_ZOOM_2X, ID_VIEW_ZOOM_4X,
+  ID_VIEW_ZOOM_6X, ID_VIEW_ZOOM_8X
+};
 
 // ---- scrollbar helpers -------------------------------------------------------
 
@@ -74,14 +78,55 @@ static bool canvas_hit_scrollbar(window_t *sb, int cx, int cy) {
       && cy >= sb->frame.y && cy < sb->frame.y + sb->frame.h;
 }
 
-// Set zoom level on a canvas window (called by menu/accelerator handler)
+// Set zoom level on a canvas window (called by menu/accelerator handler).
+// new_scale is snapped to the nearest supported zoom level so callers can
+// never trigger a divide-by-zero or produce unexpected canvas sizes.
 void canvas_win_set_zoom(window_t *win, int new_scale) {
   canvas_win_state_t *state = (canvas_win_state_t *)win->userdata;
   if (!state) return;
-  state->scale = new_scale;
+
+  // Snap new_scale to the closest supported zoom level
+  int clamped = kZoomLevels[0];
+  if (new_scale <= kZoomLevels[0]) {
+    clamped = kZoomLevels[0];
+  } else if (new_scale >= kZoomLevels[NUM_ZOOM_LEVELS - 1]) {
+    clamped = kZoomLevels[NUM_ZOOM_LEVELS - 1];
+  } else {
+    for (int i = 1; i < NUM_ZOOM_LEVELS; i++) {
+      if (new_scale <= kZoomLevels[i]) {
+        int dist_prev = new_scale - kZoomLevels[i - 1];
+        int dist_curr = kZoomLevels[i] - new_scale;
+        clamped = (dist_prev <= dist_curr) ? kZoomLevels[i - 1] : kZoomLevels[i];
+        break;
+      }
+    }
+  }
+
+  state->scale = clamped;
   clamp_pan(state, win->frame.w, win->frame.h);
   canvas_sync_scrollbars(win, state);
   invalidate_window(win);
+// Release the floating-selection GL texture if one exists.
+static void float_tex_free(canvas_doc_t *doc) {
+  if (doc->float_tex) {
+    glDeleteTextures(1, &doc->float_tex);
+    doc->float_tex = 0;
+  }
+}
+
+// Upload float_pixels into a (re)created float_tex.
+static void float_tex_upload(canvas_doc_t *doc) {
+  float_tex_free(doc);
+  if (!doc->float_pixels || doc->float_w <= 0 || doc->float_h <= 0) return;
+  glGenTextures(1, &doc->float_tex);
+  glBindTexture(GL_TEXTURE_2D, doc->float_tex);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
+               doc->float_w, doc->float_h, 0,
+               GL_RGBA, GL_UNSIGNED_BYTE, doc->float_pixels);
 }
 
 result_t win_canvas_proc(window_t *win, uint32_t msg,
@@ -126,7 +171,15 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
                 cx, cy,
                 CANVAS_W * state->scale, CANVAS_H * state->scale);
 
-      if (doc->sel_active) {
+      if (doc->sel_moving && doc->float_tex) {
+        // Draw the floating selection at its current position
+        int sx = win->frame.x + doc->float_pos.x * state->scale;
+        int sy = win->frame.y + doc->float_pos.y * state->scale;
+        int sw = doc->float_w * state->scale;
+        int sh = doc->float_h * state->scale;
+        draw_rect(doc->float_tex, sx, sy, sw, sh);
+        draw_sel_rect(sx, sy, sw, sh);
+      } else if (doc->sel_active) {
         int x0 = MIN(doc->sel_start.x, doc->sel_end.x) * state->scale - state->pan_x;
         int y0 = MIN(doc->sel_start.y, doc->sel_end.y) * state->scale - state->pan_y;
         int x1 = (MAX(doc->sel_start.x, doc->sel_end.x) + 1) * state->scale - state->pan_x;
@@ -224,10 +277,20 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           canvas_flood_fill(doc, px, py, g_app->fg_color);
           break;
         case ID_TOOL_SELECT:
-          doc->sel_active = false;
-          doc->sel_start.x = doc->sel_end.x = px;
-          doc->sel_start.y = doc->sel_end.y = py;
-          doc->sel_active = true;
+          // If clicking inside the existing selection → move mode
+          if (doc->sel_active && canvas_in_selection(doc, cx, cy)) {
+            canvas_begin_move(doc, g_app->bg_color);
+            float_tex_upload(doc);
+            doc->move_origin.x = cx;
+            doc->move_origin.y = cy;
+          } else {
+            // Start a new selection; commit any in-progress move first.
+            if (doc->sel_moving) canvas_commit_move(doc);
+            doc->sel_active = false;
+            doc->sel_start.x = doc->sel_end.x = cx;
+            doc->sel_start.y = doc->sel_end.y = cy;
+            doc->sel_active = true;
+          }
           break;
         default:
           break;
@@ -260,8 +323,17 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         case ID_TOOL_FILL:
           break;
         case ID_TOOL_SELECT:
-          doc->sel_end.x = px;
-          doc->sel_end.y = py;
+          if (doc->sel_moving) {
+            int dx = cx - doc->move_origin.x;
+            int dy = cy - doc->move_origin.y;
+            doc->float_pos.x += dx;
+            doc->float_pos.y += dy;
+            doc->move_origin.x = cx;
+            doc->move_origin.y = cy;
+          } else {
+            doc->sel_end.x = cx;
+            doc->sel_end.y = cy;
+          }
           break;
         default:
           break;
@@ -274,7 +346,13 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
     }
 
     case kWindowMessageLeftButtonUp:
-      if (doc) doc->drawing = false;
+      if (doc) {
+        if (doc->sel_moving) {
+          canvas_commit_move(doc);
+          doc_update_title(doc);
+        }
+        doc->drawing = false;
+      }
       return true;
 
     default:
