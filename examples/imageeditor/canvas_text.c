@@ -6,11 +6,17 @@
 #include "imageeditor.h"
 
 // Font search paths (in order of preference).
-// Mirrors the fallback strategy used for tools.png.
+// The bundled Inconsolata-Regular.ttf is tried first from standard share
+// locations (mirroring the fallback strategy used for tools.png), then
+// system-installed fonts are tried as a last resort.
 static const char * const k_font_paths[] = {
-  "build/share/LiberationSans-Regular.ttf",
-  "../share/LiberationSans-Regular.ttf",
-  "share/LiberationSans-Regular.ttf",
+  // Bundled font – copied to build/share/ by `make share`
+  "build/share/Inconsolata-Regular.ttf",       // run from repository root
+  "../share/Inconsolata-Regular.ttf",          // run from build/bin/
+  "share/Inconsolata-Regular.ttf",             // run from build/
+  "examples/imageeditor/Inconsolata-Regular.ttf", // fallback: source tree
+  // System-installed fonts (last resort – keeps the app working on systems
+  // where `make share` was not run but a compatible font is present)
   "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
   "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf",
   "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
