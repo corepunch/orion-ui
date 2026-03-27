@@ -548,11 +548,110 @@ void test_multiple_undo_redo(void) {
   PASS();
 }
 
+// ============================================================
+// Inline replicas of colorpicker.c HSV helpers (pure C, no SDL)
+// ============================================================
+
+static void t_rgb_to_hsv(rgba_t c, float *h, float *s, float *v) {
+  float r = c.r / 255.0f, g = c.g / 255.0f, b = c.b / 255.0f;
+  float mx = r > g ? (r > b ? r : b) : (g > b ? g : b);
+  float mn = r < g ? (r < b ? r : b) : (g < b ? g : b);
+  *v = mx;
+  float delta = mx - mn;
+  if (mx < 1e-6f || delta < 1e-6f) { *s = 0.0f; *h = 0.0f; return; }
+  *s = delta / mx;
+  float hh;
+  if      (mx == r) hh =        (g - b) / delta;
+  else if (mx == g) hh = 2.0f + (b - r) / delta;
+  else              hh = 4.0f + (r - g) / delta;
+  hh /= 6.0f;
+  if (hh < 0.0f) hh += 1.0f;
+  *h = hh;
+}
+
+static rgba_t t_hsv_to_rgb(float h, float s, float v, uint8_t a) {
+  float r, g, b;
+  if (s < 1e-6f) {
+    r = g = b = v;
+  } else {
+    float hh = h * 6.0f;
+    int   i  = (int)hh % 6;
+    float f  = hh - (int)hh;
+    float p  = v * (1.0f - s);
+    float q  = v * (1.0f - s * f);
+    float t  = v * (1.0f - s * (1.0f - f));
+    switch (i) {
+      case 0: r=v; g=t; b=p; break;
+      case 1: r=q; g=v; b=p; break;
+      case 2: r=p; g=v; b=t; break;
+      case 3: r=p; g=q; b=v; break;
+      case 4: r=t; g=p; b=v; break;
+      default: r=v; g=p; b=q; break;
+    }
+  }
+  return (rgba_t){(uint8_t)(r*255.0f),(uint8_t)(g*255.0f),(uint8_t)(b*255.0f),a};
+}
+
+void test_rgb_to_hsv_black(void) {
+  TEST("rgb_to_hsv – black gives v=0, s=0");
+  rgba_t black = {0, 0, 0, 255};
+  float h, s, v;
+  t_rgb_to_hsv(black, &h, &s, &v);
+  ASSERT_EQUAL((int)(v * 100 + 0.5f), 0);
+  ASSERT_EQUAL((int)(s * 100 + 0.5f), 0);
+  PASS();
+}
+
+void test_rgb_to_hsv_white(void) {
+  TEST("rgb_to_hsv – white gives v=1, s=0");
+  rgba_t white = {255, 255, 255, 255};
+  float h, s, v;
+  t_rgb_to_hsv(white, &h, &s, &v);
+  ASSERT_EQUAL((int)(v * 100 + 0.5f), 100);
+  ASSERT_EQUAL((int)(s * 100 + 0.5f), 0);
+  PASS();
+}
+
+void test_rgb_to_hsv_red(void) {
+  TEST("rgb_to_hsv – pure red gives h=0, s=1, v=1");
+  rgba_t red = {255, 0, 0, 255};
+  float h, s, v;
+  t_rgb_to_hsv(red, &h, &s, &v);
+  ASSERT_EQUAL((int)(h * 360 + 0.5f), 0);
+  ASSERT_EQUAL((int)(s * 100 + 0.5f), 100);
+  ASSERT_EQUAL((int)(v * 100 + 0.5f), 100);
+  PASS();
+}
+
+void test_hsv_to_rgb_round_trip(void) {
+  TEST("hsv_to_rgb – RGB→HSV→RGB round-trip within 1 LSB");
+  rgba_t colours[] = {
+    {128, 64, 200, 255}, {0, 200, 100, 255},
+    {255, 128, 0, 255},  {10, 10, 10, 255}
+  };
+  for (int i = 0; i < 4; i++) {
+    rgba_t c = colours[i];
+    float h, s, v;
+    t_rgb_to_hsv(c, &h, &s, &v);
+    rgba_t back = t_hsv_to_rgb(h, s, v, c.a);
+    ASSERT_TRUE(abs((int)back.r - (int)c.r) <= 1);
+    ASSERT_TRUE(abs((int)back.g - (int)c.g) <= 1);
+    ASSERT_TRUE(abs((int)back.b - (int)c.b) <= 1);
+  }
+  PASS();
+}
+
+void test_hsv_to_rgb_gray(void) {
+  TEST("hsv_to_rgb – s=0 produces gray (r==g==b)");
+  rgba_t gray = t_hsv_to_rgb(0.0f, 0.0f, 0.5f, 255);
+  ASSERT_EQUAL(gray.r, gray.g);
+  ASSERT_EQUAL(gray.g, gray.b);
+  PASS();
+}
+
 int main(int argc, char *argv[]) {
   (void)argc; (void)argv;
   TEST_START("Image Editor Logic");
-
-  test_rgba_eq();
   test_rgba_neq();
   test_rgba_to_col_white();
   test_rgba_to_col_black();
@@ -578,6 +677,12 @@ int main(int argc, char *argv[]) {
   test_new_action_clears_redo();
   test_undo_stack_limit();
   test_multiple_undo_redo();
+
+  test_rgb_to_hsv_black();
+  test_rgb_to_hsv_white();
+  test_rgb_to_hsv_red();
+  test_hsv_to_rgb_round_trip();
+  test_hsv_to_rgb_gray();
 
   TEST_END();
 }

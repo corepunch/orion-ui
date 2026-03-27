@@ -68,8 +68,12 @@ result_t win_color_palette_proc(window_t *win, uint32_t msg,
       int row = ly / SWATCH_ROW_H;
       int idx = row * SWATCH_COLS + col;
       if (idx >= 0 && idx < NUM_COLORS) {
-        g_app->bg_color = kPalette[idx];
-        if (g_app->tool_win) invalidate_window(g_app->tool_win);
+        rgba_t result;
+        if (show_color_picker(win, kPalette[idx], &result)) {
+          g_app->fg_color = result;
+          invalidate_window(win);
+          if (g_app->tool_win) invalidate_window(g_app->tool_win);
+        }
       }
       return true;
     }
