@@ -984,6 +984,10 @@ void test_snap_scale_midpoint(void) {
   ASSERT_EQUAL(t_snap_scale(5), 4);
   /* 7 is between 6 and 8 (equidistant) — should snap to 6 (prefer lower) */
   ASSERT_EQUAL(t_snap_scale(7), 6);
+  PASS();
+}
+
+// ============================================================
 // Inline selection operation helpers (mirrors canvas.c logic, no GL/SDL)
 // ============================================================
 
