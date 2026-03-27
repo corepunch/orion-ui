@@ -17,6 +17,11 @@ app_state_t *g_app = NULL;
 static const accel_t kAccelEntries[] = {
   { FCONTROL|FVIRTKEY, SDL_SCANCODE_Z, ID_EDIT_UNDO },
   { FCONTROL|FVIRTKEY, SDL_SCANCODE_Y, ID_EDIT_REDO },
+  { FCONTROL|FVIRTKEY, SDL_SCANCODE_X, ID_EDIT_CUT  },
+  { FCONTROL|FVIRTKEY, SDL_SCANCODE_C, ID_EDIT_COPY },
+  { FCONTROL|FVIRTKEY, SDL_SCANCODE_V, ID_EDIT_PASTE},
+  { FCONTROL|FVIRTKEY, SDL_SCANCODE_A, ID_EDIT_SELECT_ALL},
+  { FVIRTKEY,          SDL_SCANCODE_ESCAPE, ID_EDIT_DESELECT},
   { FCONTROL|FVIRTKEY, SDL_SCANCODE_N, ID_FILE_NEW  },
   { FCONTROL|FVIRTKEY, SDL_SCANCODE_O, ID_FILE_OPEN },
   { FCONTROL|FVIRTKEY, SDL_SCANCODE_S, ID_FILE_SAVE },
@@ -91,8 +96,7 @@ int main(int argc, char *argv[]) {
 
   create_app_windows();
 
-  g_app->accel = load_accelerators(kAccelEntries,
-                                   (int)(sizeof(kAccelEntries)/sizeof(kAccelEntries[0])));
+  g_app->accel = load_accelerators(kAccelEntries, (int)(sizeof(kAccelEntries)/sizeof(kAccelEntries[0])));
 
   create_document(NULL);
 
@@ -108,9 +112,15 @@ int main(int argc, char *argv[]) {
   free_accelerators(g_app->accel);
   g_app->accel = NULL;
 
+  free(g_app->clipboard);
+  g_app->clipboard = NULL;
+
   while (g_app->docs) {
     canvas_doc_t *next = g_app->docs->next;
     doc_free_undo(g_app->docs);
+    if (g_app->docs->float_tex)
+      glDeleteTextures(1, &g_app->docs->float_tex);
+    free(g_app->docs->float_pixels);
     if (g_app->docs->canvas_tex)
       glDeleteTextures(1, &g_app->docs->canvas_tex);
     free(g_app->docs);
