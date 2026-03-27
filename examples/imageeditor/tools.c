@@ -15,4 +15,5 @@ const char *tool_names[NUM_TOOLS] = {
   "Ellipse",
   "RoundRect",
   "Polygon",
+  "Text",
 };

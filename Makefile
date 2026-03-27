@@ -96,6 +96,15 @@ all: library examples
 share: | $(SHARE_DIR)
 	@echo "Copying shared data assets..."
 	cp examples/imageeditor/tools.png $(SHARE_DIR)/tools.png
+	@if [ -f /usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf ]; then \
+		cp /usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf $(SHARE_DIR)/LiberationSans-Regular.ttf; \
+	elif [ -f /usr/share/fonts/truetype/freefont/FreeSans.ttf ]; then \
+		cp /usr/share/fonts/truetype/freefont/FreeSans.ttf $(SHARE_DIR)/LiberationSans-Regular.ttf; \
+	elif [ -f /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf ]; then \
+		cp /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf $(SHARE_DIR)/LiberationSans-Regular.ttf; \
+	else \
+		echo "Note: no TTF font found for text tool – will search system paths at runtime"; \
+	fi
 
 # Library targets
 .PHONY: library

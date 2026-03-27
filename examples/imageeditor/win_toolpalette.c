@@ -40,6 +40,7 @@ static const int k_tool_icon_idx[NUM_TOOLS] = {
   1,    // Ellipse
   9,    // Rounded Rect
   11,   // Polygon
+  3,    // Text
 };
 
 typedef struct {
