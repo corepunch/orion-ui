@@ -21,6 +21,18 @@ static const accel_t kAccelEntries[] = {
   { FCONTROL|FVIRTKEY, SDL_SCANCODE_O, ID_FILE_OPEN },
   { FCONTROL|FVIRTKEY, SDL_SCANCODE_S, ID_FILE_SAVE },
   { FCONTROL|FVIRTKEY, SDL_SCANCODE_W, ID_FILE_CLOSE},
+  // Tool hotkeys – same as MS Paint
+  { FVIRTKEY,          SDL_SCANCODE_P, ID_TOOL_PENCIL },
+  { FVIRTKEY,          SDL_SCANCODE_B, ID_TOOL_BRUSH  },
+  { FVIRTKEY,          SDL_SCANCODE_E, ID_TOOL_ERASER },
+  { FVIRTKEY,          SDL_SCANCODE_K, ID_TOOL_FILL   },
+  { FVIRTKEY,          SDL_SCANCODE_S, ID_TOOL_SELECT },
+  // Allow tool hotkeys to work even when Shift is held
+  { FSHIFT|FVIRTKEY,   SDL_SCANCODE_P, ID_TOOL_PENCIL },
+  { FSHIFT|FVIRTKEY,   SDL_SCANCODE_B, ID_TOOL_BRUSH  },
+  { FSHIFT|FVIRTKEY,   SDL_SCANCODE_E, ID_TOOL_ERASER },
+  { FSHIFT|FVIRTKEY,   SDL_SCANCODE_K, ID_TOOL_FILL   },
+  { FSHIFT|FVIRTKEY,   SDL_SCANCODE_S, ID_TOOL_SELECT },
 };
 
 // ============================================================
@@ -66,7 +78,7 @@ int main(int argc, char *argv[]) {
   g_app = calloc(1, sizeof(app_state_t));
   if (!g_app) return 1;
 
-  g_app->current_tool = TOOL_PENCIL;
+  g_app->current_tool = ID_TOOL_PENCIL;
   g_app->fg_color = kPalette[4]; // black
   g_app->bg_color = kPalette[0]; // white
   g_app->next_x   = DOC_START_X;

@@ -104,6 +104,21 @@ static void handle_menu_command(uint16_t id) {
         invalidate_window(doc->canvas_win);
       }
       break;
+
+    case ID_TOOL_PENCIL:
+    case ID_TOOL_BRUSH:
+    case ID_TOOL_ERASER:
+    case ID_TOOL_FILL:
+    case ID_TOOL_SELECT: {
+      g_app->current_tool = id;
+      // SetCheck on the selected button clears siblings via autoradio_select
+      if (g_app->tool_win) {
+        window_t *btn = get_window_item(g_app->tool_win, (uint32_t)id);
+        if (btn)
+          send_message(btn, kButtonMessageSetCheck, kButtonStateChecked, NULL);
+      }
+      break;
+    }
   }
 }
 
@@ -112,7 +127,8 @@ result_t editor_menubar_proc(window_t *win, uint32_t msg,
   if (msg == kWindowMessageCommand) {
     uint16_t notif = HIWORD(wparam);
     if (notif == kMenuBarNotificationItemClick ||
-        notif == kAcceleratorNotification) {
+        notif == kAcceleratorNotification      ||
+        notif == kButtonNotificationClicked) {
       handle_menu_command(LOWORD(wparam));
       return true;
     }

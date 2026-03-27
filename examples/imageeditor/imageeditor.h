@@ -36,6 +36,8 @@
 #define DOC_START_Y   60
 #define DOC_CASCADE   20
 
+#define NUM_COLORS 16
+#define NUM_TOOLS   5
 #define NUM_COLORS      16
 #define NUM_USER_COLORS  8
 
@@ -52,24 +54,18 @@
 #define ID_EDIT_UNDO   10
 #define ID_EDIT_REDO   11
 
+// Tool command IDs – these are the authoritative tool identifiers used everywhere
+#define ID_TOOL_PENCIL  20
+#define ID_TOOL_BRUSH   21
+#define ID_TOOL_ERASER  22
+#define ID_TOOL_FILL    23
+#define ID_TOOL_SELECT  24
+
 // ============================================================
 // Types
 // ============================================================
 
 typedef struct { uint8_t r, g, b, a; } rgba_t;
-
-// ============================================================
-// Tool enum
-// ============================================================
-
-typedef enum {
-  TOOL_PENCIL = 0,
-  TOOL_BRUSH,
-  TOOL_ERASER,
-  TOOL_FILL,
-  TOOL_SELECT,
-  NUM_TOOLS
-} tool_id_t;
 
 typedef struct canvas_doc_s {
   uint8_t  pixels[CANVAS_H * CANVAS_W * 4];
@@ -103,7 +99,7 @@ typedef struct {
   window_t      *menubar_win;
   window_t      *tool_win;
   window_t      *color_win;
-  tool_id_t      current_tool;
+  int            current_tool;
   rgba_t         fg_color;
   rgba_t         bg_color;
   int            next_x;
@@ -122,7 +118,7 @@ extern app_state_t *g_app;
 // Color palette
 extern const rgba_t kPalette[NUM_COLORS];
 
-// Tool display names (indexed by tool_id_t)
+// Tool display names (in ID_TOOL_PENCIL..ID_TOOL_SELECT order; index with tool - ID_TOOL_PENCIL)
 extern const char *tool_names[NUM_TOOLS];
 
 // ============================================================

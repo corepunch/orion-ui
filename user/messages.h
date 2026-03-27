@@ -84,6 +84,12 @@ enum {
 #define WINDOW_TOOLBAR      (1 << 11)
 #define WINDOW_STATUSBAR    (1 << 12)
 
+// Button style flags (analogous to WinAPI BS_* styles)
+// BUTTON_PUSHLIKE: button stays visually pressed while win->value == true (like a toggle/check button)
+// BUTTON_AUTORADIO: clicking auto-clears all sibling AUTORADIO buttons and sets this one checked
+#define BUTTON_PUSHLIKE     (1 << 13)
+#define BUTTON_AUTORADIO    (1 << 14)
+
 // Titlebar and toolbar dimensions
 #define TITLEBAR_HEIGHT   12
 #define TOOLBAR_HEIGHT    20
