@@ -105,7 +105,7 @@
 extern const int kZoomLevels[NUM_ZOOM_LEVELS];
 extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 
-#define ID_HELP_ABOUT  30
+#define ID_HELP_ABOUT  100
 
 // Tool command IDs – these are the authoritative tool identifiers used everywhere
 #define ID_TOOL_PENCIL        20

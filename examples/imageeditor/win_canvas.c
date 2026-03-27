@@ -378,9 +378,11 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
     }
 
     case kWindowMessageRightButtonDown: {
-      if (!state || !doc || !g_app) return false;
+      // Right-click while polygon is active: commit the polygon
+      if (!doc || !g_app) return true;
+
       // Zoom tool (right click): zoom out centered on cursor
-      if (g_app->current_tool == ID_TOOL_ZOOM) {
+      if (state && g_app->current_tool == ID_TOOL_ZOOM) {
         window_t *root = get_root_window(win);
         int lx = (int16_t)LOWORD(wparam) - root->frame.x;
         int ly = (int16_t)HIWORD(wparam) - root->frame.y;
@@ -394,6 +396,23 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         }
         if (new_scale != state->scale)
           apply_zoom_centered(win, state, new_scale, cx, cy, mx, my);
+        return true;
+      } else if (g_app->current_tool == ID_TOOL_POLYGON && doc->poly_active && doc->poly_count >= 2) {
+        if (g_app->shape_filled)
+          canvas_draw_polygon_filled(doc, doc->poly_pts, doc->poly_count, g_app->fg_color, g_app->bg_color);
+        else
+          canvas_draw_polygon_outline(doc, doc->poly_pts, doc->poly_count, g_app->fg_color);
+        // Fix up undo: undo_states[top] was pushed with pre-draw pixels from shape_begin.
+        // After drawing, swap undo entry (pre-draw) with shape_snapshot (drawn) to align them.
+        // Actually the undo was already pushed correctly on first click via doc_push_undo
+        // in the polygon start handler; shape_snapshot holds the pre-draw state.
+        // We need undo_states[top] = pre-draw, but it currently = pre-draw (correct!).
+        // Nothing extra needed — doc_push_undo was called at polygon start.
+        doc->poly_active = false;
+        doc->poly_count  = 0;
+        doc->modified = true;
+        doc_update_title(doc);
+        invalidate_window(win);
         return true;
       }
       return false;
@@ -514,31 +533,6 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         doc->drawing = false;
       }
       return true;
-    }
-
-    case kWindowMessageRightButtonDown: {
-      // Right-click while polygon is active: commit the polygon
-      if (!doc || !g_app) return true;
-      int tool = g_app->current_tool;
-      if (tool == ID_TOOL_POLYGON && doc->poly_active && doc->poly_count >= 2) {
-        if (g_app->shape_filled)
-          canvas_draw_polygon_filled(doc, doc->poly_pts, doc->poly_count, g_app->fg_color, g_app->bg_color);
-        else
-          canvas_draw_polygon_outline(doc, doc->poly_pts, doc->poly_count, g_app->fg_color);
-        // Fix up undo: undo_states[top] was pushed with pre-draw pixels from shape_begin.
-        // After drawing, swap undo entry (pre-draw) with shape_snapshot (drawn) to align them.
-        // Actually the undo was already pushed correctly on first click via doc_push_undo
-        // in the polygon start handler; shape_snapshot holds the pre-draw state.
-        // We need undo_states[top] = pre-draw, but it currently = pre-draw (correct!).
-        // Nothing extra needed — doc_push_undo was called at polygon start.
-        doc->poly_active = false;
-        doc->poly_count  = 0;
-        doc->modified = true;
-        doc_update_title(doc);
-        invalidate_window(win);
-        return true;
-      }
-      return false;
     }
 
     case kWindowMessageKeyDown: {
