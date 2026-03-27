@@ -156,6 +156,8 @@ void draw_statusbar(window_t *win, const char *text) {
 
 // Set OpenGL viewport for window
 void set_viewport(rect_t const *frame) {
+  extern bool running;
+  if (!running) return;
   int w, h;
   SDL_GL_GetDrawableSize(window, &w, &h);
   
@@ -167,6 +169,8 @@ void set_viewport(rect_t const *frame) {
 }
 
 void set_clip_rect(window_t const *win, rect_t const *r) {
+  extern bool running;
+  if (!running) return;
   rect_t ogl_rect = get_opengl_rect(win?&(rect_t){
     win->frame.x + r->x, win->frame.y + r->y, r->w, r->h
   }:r);

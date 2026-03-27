@@ -7,7 +7,7 @@
 #include "../ui.h"
 #include "../commctl/commctl.h"
 
-extern void repost_messages(int ignore);
+extern void repost_messages(void);
 
 // ---- shared test state -------------------------------------------------- //
 
@@ -39,9 +39,9 @@ static void simulate_click(window_t *btn) {
     int cx = btn->frame.x + btn->frame.w / 2;
     int cy = btn->frame.y + btn->frame.h / 2;
     test_env_post_message(btn, kWindowMessageLeftButtonDown, MAKEDWORD(cx, cy), NULL);
-    repost_messages(kWindowMessagePaint);
+    repost_messages();
     test_env_post_message(btn, kWindowMessageLeftButtonUp, MAKEDWORD(cx, cy), NULL);
-    repost_messages(kWindowMessagePaint);
+    repost_messages();
 }
 
 // ---- tests -------------------------------------------------------------- //
@@ -94,9 +94,9 @@ void test_toolbar_button_keyboard_return(void) {
     btn->id = 201;
 
     test_env_post_message(btn, kWindowMessageKeyDown, SDL_SCANCODE_RETURN, NULL);
-    repost_messages(kWindowMessagePaint);
+    repost_messages();
     test_env_post_message(btn, kWindowMessageKeyUp,   SDL_SCANCODE_RETURN, NULL);
-    repost_messages(kWindowMessagePaint);
+    repost_messages();
 
     ASSERT_EQUAL(g_click_count, 1);
     ASSERT_EQUAL(g_last_cmd_id, 201);
@@ -125,9 +125,9 @@ void test_toolbar_button_keyboard_space(void) {
     btn->id = 202;
 
     test_env_post_message(btn, kWindowMessageKeyDown, SDL_SCANCODE_SPACE, NULL);
-    repost_messages(kWindowMessagePaint);
+    repost_messages();
     test_env_post_message(btn, kWindowMessageKeyUp,   SDL_SCANCODE_SPACE, NULL);
-    repost_messages(kWindowMessagePaint);
+    repost_messages();
 
     ASSERT_EQUAL(g_click_count, 1);
     ASSERT_EQUAL(g_last_cmd_id, 202);

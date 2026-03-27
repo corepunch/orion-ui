@@ -61,3 +61,4 @@ _codeql_detected_source_root
 # Test output files
 tests/*.txt
 tests/test_*.txt
+*.deb

@@ -337,10 +337,9 @@ static bool is_valid_window_ptr(window_t *target, window_t *list) {
   return false;
 }
 
-void repost_messages(int ignore) {
+void repost_messages(void) {
   for (uint8_t write = queue.write; queue.read != write;) {
     msg_t *m = &queue.messages[queue.read++];
-    if (m->msg == ignore) continue;
     if (m->target == NULL) continue;
     if (m->msg == kWindowMessageRefreshStencil) {
       if (running) {

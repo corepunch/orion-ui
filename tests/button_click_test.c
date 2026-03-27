@@ -82,15 +82,15 @@ void test_button_click_with_scaling(void) {
     test_env_post_message(button, kWindowMessageLeftButtonDown, MAKEDWORD(button_center_x, button_center_y), NULL);
     
     // Process the message queue (simulate message pump)
-    // repost_messages(-1) processes all queued messages asynchronously
-    repost_messages(-1);
+    // repost_messages() processes all queued messages asynchronously
+    repost_messages();
     
     // Verify LBUTTONDOWN was tracked
     ASSERT_TRUE(test_env_was_message_sent(kWindowMessageLeftButtonDown));
     
     // Now post kWindowMessageLeftButtonUp to trigger the button click
     test_env_post_message(button, kWindowMessageLeftButtonUp, MAKEDWORD(button_center_x, button_center_y), NULL);
-    repost_messages(-1);
+    repost_messages();
     
     // Verify LBUTTONUP was tracked
     ASSERT_TRUE(test_env_was_message_sent(kWindowMessageLeftButtonUp));
@@ -134,10 +134,10 @@ void test_multiple_button_clicks(void) {
     // Click button 3 times
     for (int i = 0; i < 3; i++) {
         test_env_post_message(button, kWindowMessageLeftButtonDown, MAKEDWORD(button_center_x, button_center_y), NULL);
-        repost_messages(-1);
+        repost_messages();
         
         test_env_post_message(button, kWindowMessageLeftButtonUp, MAKEDWORD(button_center_x, button_center_y), NULL);
-        repost_messages(-1);
+        repost_messages();
     }
     
     // Verify 3 clicks were registered
@@ -176,10 +176,10 @@ void test_button_click_positions(void) {
     int y = button_frame.y + 2;
     
     test_env_post_message(button, kWindowMessageLeftButtonDown, MAKEDWORD(x, y), NULL);
-    repost_messages(-1);
+    repost_messages();
     
     test_env_post_message(button, kWindowMessageLeftButtonUp, MAKEDWORD(x, y), NULL);
-    repost_messages(-1);
+    repost_messages();
     
     ASSERT_EQUAL(test_kButtonNotificationClicked_count, 1);
     ASSERT_EQUAL(test_last_button_id, 103);
@@ -189,10 +189,10 @@ void test_button_click_positions(void) {
     y = button_frame.y + button_frame.h - 2;
     
     test_env_post_message(button, kWindowMessageLeftButtonDown, MAKEDWORD(x, y), NULL);
-    repost_messages(-1);
+    repost_messages();
     
     test_env_post_message(button, kWindowMessageLeftButtonUp, MAKEDWORD(x, y), NULL);
-    repost_messages(-1);
+    repost_messages();
     
     ASSERT_EQUAL(test_kButtonNotificationClicked_count, 2);
     
@@ -235,7 +235,7 @@ void test_post_message_async_behavior(void) {
     ASSERT_EQUAL(test_kButtonNotificationClicked_count, 0);
     
     // Now process the message queue
-    repost_messages(-1);
+    repost_messages();
     
     // After processing, the click should be registered
     ASSERT_EQUAL(test_kButtonNotificationClicked_count, 1);
