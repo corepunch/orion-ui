@@ -81,6 +81,14 @@
 #define ID_EDIT_UNDO   10
 #define ID_EDIT_REDO   11
 
+#define ID_VIEW_ZOOM_IN   40
+#define ID_VIEW_ZOOM_OUT  41
+#define ID_VIEW_ZOOM_1X   42
+#define ID_VIEW_ZOOM_2X   43
+#define ID_VIEW_ZOOM_4X   44
+#define ID_VIEW_ZOOM_6X   45
+#define ID_VIEW_ZOOM_8X   46
+
 #define ID_HELP_ABOUT  30
 
 // Tool command IDs – these are the authoritative tool identifiers used everywhere
@@ -120,6 +128,8 @@ typedef struct canvas_doc_s {
 typedef struct {
   canvas_doc_t *doc;
   int           scale;
+  int           pan_x;   // horizontal pan offset in screen pixels
+  int           pan_y;   // vertical pan offset in screen pixels
 } canvas_win_state_t;
 
 typedef struct {
@@ -199,6 +209,9 @@ result_t editor_menubar_proc(window_t *win, uint32_t msg, uint32_t wparam, void 
 result_t win_canvas_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_tool_palette_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_color_palette_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+
+// Zoom support
+void canvas_win_set_zoom(window_t *canvas_win, int new_scale);
 
 // Color picker dialog
 bool show_color_picker(window_t *parent, rgba_t initial, rgba_t *out);

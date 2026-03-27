@@ -808,6 +808,127 @@ void test_set_pixel_respects_reversed_selection(void) {
   PASS();
 }
 
+// ============================================================
+// Zoom / pan logic tests
+// The following helpers mirror the pure-C pan-clamping and
+// coordinate-mapping logic from win_canvas.c without requiring
+// SDL or OpenGL.
+// ============================================================
+
+static const int t_kZoomLevels[] = {1, 2, 4, 6, 8};
+static const int t_kNumZoomLevels = 5;
+
+/* Replicate clamp_pan from win_canvas.c */
+static void t_clamp_pan(int scale, int win_w, int win_h,
+                         int *pan_x, int *pan_y) {
+  int max_x = CANVAS_W * scale - win_w;
+  int max_y = CANVAS_H * scale - win_h;
+  if (max_x < 0) max_x = 0;
+  if (max_y < 0) max_y = 0;
+  if (*pan_x < 0) *pan_x = 0;
+  if (*pan_y < 0) *pan_y = 0;
+  if (*pan_x > max_x) *pan_x = max_x;
+  if (*pan_y > max_y) *pan_y = max_y;
+}
+
+/* Replicate zoom-in stepping from handle_menu_command */
+static int t_zoom_in(int current) {
+  for (int i = 0; i < t_kNumZoomLevels; i++) {
+    if (t_kZoomLevels[i] > current) return t_kZoomLevels[i];
+  }
+  return current; /* already at max */
+}
+
+/* Replicate zoom-out stepping */
+static int t_zoom_out(int current) {
+  for (int i = t_kNumZoomLevels - 1; i >= 0; i--) {
+    if (t_kZoomLevels[i] < current) return t_kZoomLevels[i];
+  }
+  return current; /* already at min */
+}
+
+void test_zoom_level_cycle_in(void) {
+  TEST("zoom – zoom-in cycles through all levels and stops at 8x");
+  ASSERT_EQUAL(t_zoom_in(1), 2);
+  ASSERT_EQUAL(t_zoom_in(2), 4);
+  ASSERT_EQUAL(t_zoom_in(4), 6);
+  ASSERT_EQUAL(t_zoom_in(6), 8);
+  ASSERT_EQUAL(t_zoom_in(8), 8); /* already at max */
+  PASS();
+}
+
+void test_zoom_level_cycle_out(void) {
+  TEST("zoom – zoom-out cycles through all levels and stops at 1x");
+  ASSERT_EQUAL(t_zoom_out(8), 6);
+  ASSERT_EQUAL(t_zoom_out(6), 4);
+  ASSERT_EQUAL(t_zoom_out(4), 2);
+  ASSERT_EQUAL(t_zoom_out(2), 1);
+  ASSERT_EQUAL(t_zoom_out(1), 1); /* already at min */
+  PASS();
+}
+
+void test_pan_clamp_no_zoom(void) {
+  TEST("pan clamp – 1x zoom: pan always clamped to zero (canvas fits)");
+  int px = 100, py = 50;
+  t_clamp_pan(1, CANVAS_W, CANVAS_H, &px, &py);
+  ASSERT_EQUAL(px, 0);
+  ASSERT_EQUAL(py, 0);
+  PASS();
+}
+
+void test_pan_clamp_zoom_4x(void) {
+  TEST("pan clamp – 4x zoom: pan stays within valid range");
+  /* win size equals canvas size; at 4x, max_pan = 3*CANVAS */
+  int px = 9999, py = 9999;
+  t_clamp_pan(4, CANVAS_W, CANVAS_H, &px, &py);
+  ASSERT_EQUAL(px, CANVAS_W * 4 - CANVAS_W);  /* 3*320 = 960 */
+  ASSERT_EQUAL(py, CANVAS_H * 4 - CANVAS_H);  /* 3*200 = 600 */
+  PASS();
+}
+
+void test_pan_clamp_negative(void) {
+  TEST("pan clamp – negative pan values are clamped to 0");
+  int px = -50, py = -20;
+  t_clamp_pan(2, CANVAS_W, CANVAS_H, &px, &py);
+  ASSERT_EQUAL(px, 0);
+  ASSERT_EQUAL(py, 0);
+  PASS();
+}
+
+void test_pan_clamp_within_range(void) {
+  TEST("pan clamp – valid pan values are unchanged");
+  int px = 100, py = 80;
+  /* 2x zoom, window size = CANVAS size → max_pan = CANVAS */
+  t_clamp_pan(2, CANVAS_W, CANVAS_H, &px, &py);
+  ASSERT_EQUAL(px, 100);
+  ASSERT_EQUAL(py, 80);
+  PASS();
+}
+
+void test_zoom_coord_mapping(void) {
+  TEST("zoom coord mapping – mouse local + pan correctly maps to canvas pixel");
+  /* At 4x zoom with pan_x=100, pan_y=200:
+   * mouse at local (8, 12) → canvas pixel (108/4, 212/4) = (27, 53) */
+  int scale = 4, pan_x = 100, pan_y = 200;
+  int mouse_local_x = 8, mouse_local_y = 12;
+  int canvas_x = (mouse_local_x + pan_x) / scale;
+  int canvas_y = (mouse_local_y + pan_y) / scale;
+  ASSERT_EQUAL(canvas_x, 27);
+  ASSERT_EQUAL(canvas_y, 53);
+  PASS();
+}
+
+void test_zoom_coord_mapping_1x(void) {
+  TEST("zoom coord mapping – 1x zoom with zero pan passes through unchanged");
+  int scale = 1, pan_x = 0, pan_y = 0;
+  int mx = 55, my = 123;
+  int cx = (mx + pan_x) / scale;
+  int cy = (my + pan_y) / scale;
+  ASSERT_EQUAL(cx, 55);
+  ASSERT_EQUAL(cy, 123);
+  PASS();
+}
+
 int main(int argc, char *argv[]) {
   (void)argc; (void)argv;
   TEST_START("Image Editor Logic");
@@ -851,6 +972,15 @@ int main(int argc, char *argv[]) {
   test_set_pixel_respects_reversed_selection();
   test_flood_fill_respects_selection();
   test_flood_fill_outside_selection_noop();
+
+  test_zoom_level_cycle_in();
+  test_zoom_level_cycle_out();
+  test_pan_clamp_no_zoom();
+  test_pan_clamp_zoom_4x();
+  test_pan_clamp_negative();
+  test_pan_clamp_within_range();
+  test_zoom_coord_mapping();
+  test_zoom_coord_mapping_1x();
 
   TEST_END();
 }
