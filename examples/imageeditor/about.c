@@ -57,7 +57,14 @@ static GLuint load_banner_texture(void) {
   png_infop info = png_create_info_struct(png);
   if (!info) { png_destroy_read_struct(&png, NULL, NULL); fclose(fp); return 0; }
 
+  // Declared volatile so their values survive longjmp in the error path.
+  volatile uint8_t   *pixels = NULL;
+  volatile png_bytep *rows   = NULL;
+
   if (setjmp(png_jmpbuf(png))) {
+    // longjmp error path: free any heap buffers already allocated.
+    free((void *)rows);
+    free((void *)pixels);
     png_destroy_read_struct(&png, &info, NULL);
     fclose(fp);
     return 0;
@@ -83,20 +90,22 @@ static GLuint load_banner_texture(void) {
   png_read_update_info(png, info);
 
   size_t rowbytes = png_get_rowbytes(png, info);
-  uint8_t *pixels = malloc((size_t)h * rowbytes);
-  png_bytep *rows  = malloc(sizeof(png_bytep) * (size_t)h);
+  pixels = malloc((size_t)h * rowbytes);
+  rows   = malloc(sizeof(png_bytep) * (size_t)h);
   if (!pixels || !rows) {
-    free(pixels); free(rows);
+    free((void *)rows);
+    free((void *)pixels);
     png_destroy_read_struct(&png, &info, NULL);
     fclose(fp);
     return 0;
   }
 
   for (int r = 0; r < h; r++)
-    rows[r] = pixels + (size_t)r * rowbytes;
+    rows[r] = (uint8_t *)pixels + (size_t)r * rowbytes;
 
-  png_read_image(png, rows);
-  free(rows);
+  png_read_image(png, (png_bytepp)rows);
+  free((void *)rows);
+  rows = NULL;
   png_destroy_read_struct(&png, &info, NULL);
   fclose(fp);
 
@@ -107,8 +116,8 @@ static GLuint load_banner_texture(void) {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-  free(pixels);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, (void *)pixels);
+  free((void *)pixels);
 
   return tex;
 }
