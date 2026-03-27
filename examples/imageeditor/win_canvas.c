@@ -34,10 +34,28 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         int sh = y1 - y0;
         int ox = win->frame.x + x0;
         int oy = win->frame.y + y0;
-        fill_rect(0xFFFFFFFF, ox,          oy,          sw, 1);
-        fill_rect(0xFFFFFFFF, ox,          oy + sh - 1, sw, 1);
-        fill_rect(0xFFFFFFFF, ox,          oy,          1,  sh);
-        fill_rect(0xFFFFFFFF, ox + sw - 1, oy,          1,  sh);
+        /* Dashed border (2 px black + 2 px white) – always visible on any background */
+        const int dash = 4;
+        for (int i = 0; i < sw; i += dash) {
+          int blen = MIN(dash / 2, sw - i);
+          fill_rect(0xff000000, ox + i,             oy,          blen, 1);
+          fill_rect(0xff000000, ox + i,             oy + sh - 1, blen, 1);
+          int wlen = MIN(dash / 2, sw - i - dash / 2);
+          if (wlen > 0) {
+            fill_rect(0xffffffff, ox + i + dash / 2, oy,          wlen, 1);
+            fill_rect(0xffffffff, ox + i + dash / 2, oy + sh - 1, wlen, 1);
+          }
+        }
+        for (int i = 0; i < sh; i += dash) {
+          int blen = MIN(dash / 2, sh - i);
+          fill_rect(0xff000000, ox,          oy + i,             1, blen);
+          fill_rect(0xff000000, ox + sw - 1, oy + i,             1, blen);
+          int wlen = MIN(dash / 2, sh - i - dash / 2);
+          if (wlen > 0) {
+            fill_rect(0xffffffff, ox,          oy + i + dash / 2, 1, wlen);
+            fill_rect(0xffffffff, ox + sw - 1, oy + i + dash / 2, 1, wlen);
+          }
+        }
       }
       return true;
     }
@@ -52,7 +70,6 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       doc->drawing = true;
       doc->last.x  = cx;
       doc->last.y  = cy;
-      doc->sel_active = false;
 
       doc_push_undo(doc);
 
@@ -70,6 +87,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           canvas_flood_fill(doc, cx, cy, g_app->fg_color);
           break;
         case ID_TOOL_SELECT:
+          doc->sel_active = false;
           doc->sel_start.x = doc->sel_end.x = cx;
           doc->sel_start.y = doc->sel_end.y = cy;
           doc->sel_active = true;
