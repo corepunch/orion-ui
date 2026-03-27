@@ -37,7 +37,7 @@ uint32_t show_dialog(char const *title,
     while (get_message(&event)) {
       dispatch_message(&event);
     }
-    repost_messages(-1);
+    repost_messages();
   }
   if (parent) enable_window(parent, true);
   return result;

@@ -39,20 +39,20 @@ static result_t noop_proc(window_t *win, uint32_t msg,
 void test_toolbar_wrapping_height(void) {
     TEST("Toolbar wrapping: toolbar height grows with wrapping rows");
 
-    // 5 buttons in a 64px wide window → TB_SPACING=20 → 3 per row → 2 rows
-    int h1 = compute_toolbar_height(5, 64);
+    // 5 buttons in a 66px wide window → TB_SPACING=22 → 3 per row → 2 rows
+    int h1 = compute_toolbar_height(5, 66);
     ASSERT_EQUAL(h1, 2 * TOOLBAR_HEIGHT);
 
-    // 3 buttons in a 64px wide window → 3 per row → 1 row
-    int h2 = compute_toolbar_height(3, 64);
+    // 3 buttons in a 66px wide window → 3 per row → 1 row
+    int h2 = compute_toolbar_height(3, 66);
     ASSERT_EQUAL(h2, 1 * TOOLBAR_HEIGHT);
 
-    // 7 buttons in a 64px wide window → 3 per row → 3 rows
-    int h3 = compute_toolbar_height(7, 64);
+    // 7 buttons in a 66px wide window → 3 per row → 3 rows
+    int h3 = compute_toolbar_height(7, 66);
     ASSERT_EQUAL(h3, 3 * TOOLBAR_HEIGHT);
 
-    // 5 buttons in a 40px wide window → 40/20 = 2 per row → 3 rows
-    int h4 = compute_toolbar_height(5, 40);
+    // 5 buttons in a 44px wide window → 44/22 = 2 per row → 3 rows
+    int h4 = compute_toolbar_height(5, 44);
     ASSERT_EQUAL(h4, 3 * TOOLBAR_HEIGHT);
 
     // 1 button in any window → 1 row
@@ -84,7 +84,7 @@ void test_toolbar_set_strip(void) {
         .sheet_h = 160,
     };
     send_message(win, kToolBarMessageSetStrip, 0, &strip);
-    repost_messages(-1);
+    repost_messages();
 
     ASSERT_EQUAL((int)win->toolbar_strip.tex,     42);
     ASSERT_EQUAL(win->toolbar_strip.icon_w,       16);
@@ -94,7 +94,7 @@ void test_toolbar_set_strip(void) {
 
     // Clearing with NULL should zero the strip.
     send_message(win, kToolBarMessageSetStrip, 0, NULL);
-    repost_messages(-1);
+    repost_messages();
     ASSERT_EQUAL((int)win->toolbar_strip.tex, 0);
 
     destroy_window(win);
@@ -118,7 +118,7 @@ void test_toolbar_set_active_button(void) {
         {.icon = 2, .ident = 12, .active = false},
     };
     send_message(win, kToolBarMessageAddButtons, 3, buttons);
-    repost_messages(-1);
+    repost_messages();
 
     ASSERT_EQUAL((int)win->num_toolbar_buttons, 3);
     ASSERT_TRUE(win->toolbar_buttons[0].active);   // ident 10 is active
@@ -127,7 +127,7 @@ void test_toolbar_set_active_button(void) {
 
     // Activate button with ident 11; button 10 should become inactive.
     send_message(win, kToolBarMessageSetActiveButton, 11, NULL);
-    repost_messages(-1);
+    repost_messages();
 
     ASSERT_FALSE(win->toolbar_buttons[0].active);
     ASSERT_TRUE(win->toolbar_buttons[1].active);
@@ -135,7 +135,7 @@ void test_toolbar_set_active_button(void) {
 
     // Activate button with ident 12.
     send_message(win, kToolBarMessageSetActiveButton, 12, NULL);
-    repost_messages(-1);
+    repost_messages();
 
     ASSERT_FALSE(win->toolbar_buttons[0].active);
     ASSERT_FALSE(win->toolbar_buttons[1].active);
@@ -143,7 +143,7 @@ void test_toolbar_set_active_button(void) {
 
     // Unknown ident clears all active flags.
     send_message(win, kToolBarMessageSetActiveButton, 99, NULL);
-    repost_messages(-1);
+    repost_messages();
 
     ASSERT_FALSE(win->toolbar_buttons[0].active);
     ASSERT_FALSE(win->toolbar_buttons[1].active);
@@ -166,7 +166,7 @@ void test_toolbar_add_buttons_replaces(void) {
 
     toolbar_button_t first[] = {{.icon=0, .ident=1, .active=false}};
     send_message(win, kToolBarMessageAddButtons, 1, first);
-    repost_messages(-1);
+    repost_messages();
     ASSERT_EQUAL((int)win->num_toolbar_buttons, 1);
 
     toolbar_button_t second[] = {
@@ -174,7 +174,7 @@ void test_toolbar_add_buttons_replaces(void) {
         {.icon=1, .ident=11, .active=false},
     };
     send_message(win, kToolBarMessageAddButtons, 2, second);
-    repost_messages(-1);
+    repost_messages();
     ASSERT_EQUAL((int)win->num_toolbar_buttons, 2);
     ASSERT_EQUAL(win->toolbar_buttons[0].ident, 10);
     ASSERT_EQUAL(win->toolbar_buttons[1].ident, 11);

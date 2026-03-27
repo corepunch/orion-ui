@@ -6,6 +6,15 @@
 // Canvas pixel operations
 // ============================================================
 
+// Write a pixel directly (bypasses selection mask – used for paste/move commit).
+static void canvas_set_pixel_direct(canvas_doc_t *doc, int x, int y, rgba_t c) {
+  if (!canvas_in_bounds(x, y)) return;
+  uint8_t *p = doc->pixels + ((size_t)y * CANVAS_W + x) * 4;
+  p[0]=c.r; p[1]=c.g; p[2]=c.b; p[3]=c.a;
+  doc->canvas_dirty = true;
+  doc->modified     = true;
+}
+
 void canvas_set_pixel(canvas_doc_t *doc, int x, int y, rgba_t c) {
   if (!canvas_in_bounds(x, y)) return;
   if (!canvas_in_selection(doc, x, y)) return;
@@ -329,6 +338,164 @@ void canvas_shape_preview(canvas_doc_t *doc, int x0, int y0, int x1, int y1,
 // No-op: snapshot is kept until next shape begins or doc is freed
 void canvas_shape_commit(canvas_doc_t *doc) {
   (void)doc;
+}
+
+// ============================================================
+// Selection operations
+// ============================================================
+
+// Returns normalised selection bounds clamped to the canvas.
+// Returns false when the clamped region is empty (no-op for callers).
+static bool selection_bounds(const canvas_doc_t *doc,
+                             int *x0, int *y0, int *x1, int *y1) {
+  *x0 = MIN(doc->sel_start.x, doc->sel_end.x);
+  *y0 = MIN(doc->sel_start.y, doc->sel_end.y);
+  *x1 = MAX(doc->sel_start.x, doc->sel_end.x);
+  *y1 = MAX(doc->sel_start.y, doc->sel_end.y);
+  // Clamp to canvas bounds so callers are safe against out-of-range coords.
+  if (*x0 < 0) *x0 = 0;
+  if (*y0 < 0) *y0 = 0;
+  if (*x1 >= CANVAS_W) *x1 = CANVAS_W - 1;
+  if (*y1 >= CANVAS_H) *y1 = CANVAS_H - 1;
+  return (*x0 <= *x1 && *y0 <= *y1);
+}
+
+// Copy the selected region into the app clipboard.
+void canvas_copy_selection(canvas_doc_t *doc) {
+  if (!doc || !doc->sel_active || !g_app) return;
+  int x0, y0, x1, y1;
+  if (!selection_bounds(doc, &x0, &y0, &x1, &y1)) return;
+  int w = x1 - x0 + 1;
+  int h = y1 - y0 + 1;
+  uint8_t *buf = malloc((size_t)w * h * 4);
+  if (!buf) return;
+  for (int row = 0; row < h; row++) {
+    for (int col = 0; col < w; col++) {
+      rgba_t c = canvas_get_pixel(doc, x0 + col, y0 + row);
+      uint8_t *p = buf + ((size_t)row * w + col) * 4;
+      p[0]=c.r; p[1]=c.g; p[2]=c.b; p[3]=c.a;
+    }
+  }
+  free(g_app->clipboard);
+  g_app->clipboard   = buf;
+  g_app->clipboard_w = w;
+  g_app->clipboard_h = h;
+}
+
+// Fill the selected region with fill_color.
+void canvas_clear_selection(canvas_doc_t *doc, rgba_t fill) {
+  if (!doc || !doc->sel_active) return;
+  int x0, y0, x1, y1;
+  if (!selection_bounds(doc, &x0, &y0, &x1, &y1)) return;
+  for (int y = y0; y <= y1; y++)
+    for (int x = x0; x <= x1; x++)
+      canvas_set_pixel(doc, x, y, fill);
+}
+
+// Copy selection to clipboard, then clear the selection region.
+void canvas_cut_selection(canvas_doc_t *doc, rgba_t fill) {
+  if (!doc) return;
+  canvas_copy_selection(doc);
+  canvas_clear_selection(doc, fill);
+}
+
+// Paste clipboard pixels at (0, 0), bypassing the selection mask.
+// The pasted region becomes the new selection.
+void canvas_paste_clipboard(canvas_doc_t *doc) {
+  if (!doc || !g_app || !g_app->clipboard) return;
+  doc_push_undo(doc);
+  int w = g_app->clipboard_w;
+  int h = g_app->clipboard_h;
+  for (int row = 0; row < h; row++) {
+    for (int col = 0; col < w; col++) {
+      const uint8_t *p = g_app->clipboard + ((size_t)row * w + col) * 4;
+      rgba_t c = {p[0], p[1], p[2], p[3]};
+      canvas_set_pixel_direct(doc, col, row, c);
+    }
+  }
+  // Select the pasted region (clamped to canvas bounds)
+  doc->sel_active   = true;
+  doc->sel_start    = (point_t){0, 0};
+  int sel_x1 = w - 1;
+  int sel_y1 = h - 1;
+  if (sel_x1 >= CANVAS_W) sel_x1 = CANVAS_W - 1;
+  if (sel_y1 >= CANVAS_H) sel_y1 = CANVAS_H - 1;
+  doc->sel_end      = (point_t){sel_x1, sel_y1};
+}
+
+// Select the entire canvas.
+void canvas_select_all(canvas_doc_t *doc) {
+  if (!doc) return;
+  doc->sel_active   = true;
+  doc->sel_start    = (point_t){0, 0};
+  doc->sel_end      = (point_t){CANVAS_W - 1, CANVAS_H - 1};
+}
+
+// Clear selection (no-op on pixels).
+void canvas_deselect(canvas_doc_t *doc) {
+  if (!doc) return;
+  // Commit any in-progress move before deselecting.
+  if (doc->sel_moving) canvas_commit_move(doc);
+  doc->sel_active = false;
+}
+
+// Extract the current selection into a float buffer and clear that region.
+// Enters "move mode": the caller should track float_pos deltas and call
+// canvas_commit_move() when the drag ends.
+void canvas_begin_move(canvas_doc_t *doc, rgba_t bg) {
+  if (!doc || !doc->sel_active || doc->sel_moving) return;
+  int x0, y0, x1, y1;
+  if (!selection_bounds(doc, &x0, &y0, &x1, &y1)) return;
+  int w = x1 - x0 + 1;
+  int h = y1 - y0 + 1;
+  uint8_t *buf = malloc((size_t)w * h * 4);
+  if (!buf) return;
+  // Extract pixels
+  for (int row = 0; row < h; row++) {
+    for (int col = 0; col < w; col++) {
+      rgba_t c = canvas_get_pixel(doc, x0 + col, y0 + row);
+      uint8_t *p = buf + ((size_t)row * w + col) * 4;
+      p[0]=c.r; p[1]=c.g; p[2]=c.b; p[3]=c.a;
+    }
+  }
+  // Clear the region from canvas
+  for (int y = y0; y <= y1; y++)
+    for (int x = x0; x <= x1; x++)
+      canvas_set_pixel_direct(doc, x, y, bg);
+  doc->float_pixels  = buf;
+  doc->float_w       = w;
+  doc->float_h       = h;
+  doc->float_pos     = (point_t){x0, y0};
+  doc->sel_moving    = true;
+}
+
+// Paste float_pixels back at float_pos, update selection bounds, end move.
+void canvas_commit_move(canvas_doc_t *doc) {
+  if (!doc || !doc->sel_moving) return;
+  int dx = doc->float_pos.x;
+  int dy = doc->float_pos.y;
+  int w  = doc->float_w;
+  int h  = doc->float_h;
+  for (int row = 0; row < h; row++) {
+    for (int col = 0; col < w; col++) {
+      const uint8_t *p = doc->float_pixels + ((size_t)row * w + col) * 4;
+      rgba_t c = {p[0], p[1], p[2], p[3]};
+      canvas_set_pixel_direct(doc, dx + col, dy + row, c);
+    }
+  }
+  // Update selection to the new position
+  doc->sel_start  = (point_t){dx, dy};
+  doc->sel_end    = (point_t){dx + w - 1, dy + h - 1};
+  // Release float resources including the GL texture overlay.
+  if (doc->float_tex) {
+    glDeleteTextures(1, &doc->float_tex);
+    doc->float_tex = 0;
+  }
+  free(doc->float_pixels);
+  doc->float_pixels = NULL;
+  doc->float_w      = 0;
+  doc->float_h      = 0;
+  doc->sel_moving   = false;
 }
 
 // ============================================================
