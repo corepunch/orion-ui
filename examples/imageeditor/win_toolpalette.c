@@ -50,63 +50,12 @@ typedef struct {
 
 // Load a PNG file and return heap-allocated RGBA pixels (caller frees),
 // or NULL on failure.  Writes image dimensions to *out_w / *out_h.
+// Uses inverted luminance as alpha so black icon lines are fully opaque
+// and the white background is transparent.
 static uint8_t *load_png_rgba(const char *path, int *out_w, int *out_h) {
-  FILE *fp = fopen(path, "rb");
-  if (!fp) return NULL;
-
-  png_structp png = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-  if (!png) { fclose(fp); return NULL; }
-  png_infop info = png_create_info_struct(png);
-  if (!info) { png_destroy_read_struct(&png, NULL, NULL); fclose(fp); return NULL; }
-
-  // Declare volatile so that the setjmp error path can safely free them after
-  // a libpng longjmp, even if allocation happened after the setjmp call.
-  uint8_t * volatile pixel_buf = NULL;
-  png_bytep * volatile rows = NULL;
-
-  if (setjmp(png_jmpbuf(png))) {
-    free(pixel_buf);
-    free(rows);
-    png_destroy_read_struct(&png, &info, NULL);
-    fclose(fp);
-    return NULL;
-  }
-
-  png_init_io(png, fp);
-  png_read_info(png, info);
-
-  int w = (int)png_get_image_width(png, info);
-  int h = (int)png_get_image_height(png, info);
-  png_byte ct = png_get_color_type(png, info);
-  png_byte bd = png_get_bit_depth(png, info);
-
-  if (bd == 16) png_set_strip_16(png);
-  if (ct == PNG_COLOR_TYPE_PALETTE)      png_set_palette_to_rgb(png);
-  if (ct == PNG_COLOR_TYPE_GRAY && bd<8) png_set_expand_gray_1_2_4_to_8(png);
-  if (png_get_valid(png, info, PNG_INFO_tRNS)) png_set_tRNS_to_alpha(png);
-  if (ct == PNG_COLOR_TYPE_RGB ||
-      ct == PNG_COLOR_TYPE_GRAY ||
-      ct == PNG_COLOR_TYPE_PALETTE) png_set_filler(png, 0xFF, PNG_FILLER_AFTER);
-  if (ct == PNG_COLOR_TYPE_GRAY || ct == PNG_COLOR_TYPE_GRAY_ALPHA)
-    png_set_gray_to_rgb(png);
-  png_read_update_info(png, info);
-
-  // Use a single contiguous pixel buffer so the setjmp error handler only
-  // needs to free two allocations regardless of how many rows exist.
-  png_size_t rowbytes = png_get_rowbytes(png, info);
-  pixel_buf = malloc((size_t)rowbytes * h);
-  rows      = malloc(sizeof(png_bytep) * h);
-  if (!pixel_buf || !rows) {
-    free(pixel_buf);
-    free(rows);
-    png_destroy_read_struct(&png, &info, NULL);
-    fclose(fp);
-    return NULL;
-  }
-  for (int r = 0; r < h; r++)
-    rows[r] = pixel_buf + (size_t)r * rowbytes;
-
-  png_read_image(png, rows);
+  int w = 0, h = 0;
+  uint8_t *src = load_image(path, &w, &h);
+  if (!src) return NULL;
 
   // Convert to RGBA: treat the source as black-on-white artwork.
   // Use inverted luminance as alpha so that black icon lines are fully
@@ -117,7 +66,7 @@ static uint8_t *load_png_rgba(const char *path, int *out_w, int *out_h) {
   if (rgba) {
     for (int row = 0; row < h; row++) {
       for (int col = 0; col < w; col++) {
-        png_bytep px = &rows[row][col * 4];
+        uint8_t *px = src + (row * w + col) * 4;
         uint8_t src_r = px[0], src_g = px[1], src_b = px[2];
         uint8_t lum = (uint8_t)(((int)src_r * 77 + (int)src_g * 150 + (int)src_b * 29) >> 8);
         uint8_t alpha = (uint8_t)(255 - lum);
@@ -129,11 +78,7 @@ static uint8_t *load_png_rgba(const char *path, int *out_w, int *out_h) {
     }
   }
 
-  free(rows);
-  free(pixel_buf);
-  png_destroy_read_struct(&png, &info, NULL);
-  fclose(fp);
-
+  free(src);
   *out_w = w;
   *out_h = h;
   return rgba;

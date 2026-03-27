@@ -501,7 +501,7 @@ void canvas_commit_move(canvas_doc_t *doc) {
 }
 
 // ============================================================
-// PNG I/O (libpng)
+// PNG I/O (stb_image)
 // ============================================================
 
 static bool is_png(const char *path) {
@@ -519,99 +519,22 @@ bool png_load(const char *path, uint8_t *out_pixels);
 bool png_save(const char *path, const uint8_t *pixels);
 
 bool png_load(const char *path, uint8_t *out_pixels) {
-  FILE *fp = fopen(path, "rb");
-  if (!fp) return false;
-
-  png_structp png = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-  if (!png) { fclose(fp); return false; }
-
-  png_infop info = png_create_info_struct(png);
-  if (!info) { png_destroy_read_struct(&png, NULL, NULL); fclose(fp); return false; }
-
-  if (setjmp(png_jmpbuf(png))) {
-    png_destroy_read_struct(&png, &info, NULL);
-    fclose(fp);
-    return false;
-  }
-
-  png_init_io(png, fp);
-  png_read_info(png, info);
-
-  int w = (int)png_get_image_width(png, info);
-  int h = (int)png_get_image_height(png, info);
-  png_byte ct  = png_get_color_type(png, info);
-  png_byte bd  = png_get_bit_depth(png, info);
-
-  if (bd == 16) png_set_strip_16(png);
-  if (ct == PNG_COLOR_TYPE_PALETTE)       png_set_palette_to_rgb(png);
-  if (ct == PNG_COLOR_TYPE_GRAY && bd<8)  png_set_expand_gray_1_2_4_to_8(png);
-  if (png_get_valid(png, info, PNG_INFO_tRNS)) png_set_tRNS_to_alpha(png);
-  if (ct == PNG_COLOR_TYPE_RGB  ||
-      ct == PNG_COLOR_TYPE_GRAY ||
-      ct == PNG_COLOR_TYPE_PALETTE) png_set_filler(png, 0xFF, PNG_FILLER_AFTER);
-  if (ct == PNG_COLOR_TYPE_GRAY || ct == PNG_COLOR_TYPE_GRAY_ALPHA)
-    png_set_gray_to_rgb(png);
-  png_read_update_info(png, info);
-
-  png_bytep *rows = malloc(sizeof(png_bytep) * h);
-  if (!rows) { png_destroy_read_struct(&png, &info, NULL); fclose(fp); return false; }
-
-  png_size_t rowbytes = png_get_rowbytes(png, info);
-  for (int r = 0; r < h; r++) {
-    rows[r] = malloc(rowbytes);
-    if (!rows[r]) {
-      for (int i = 0; i < r; i++) free(rows[i]);
-      free(rows);
-      png_destroy_read_struct(&png, &info, NULL);
-      fclose(fp);
-      return false;
-    }
-  }
-
-  png_read_image(png, rows);
+  int w = 0, h = 0;
+  uint8_t *pixels = load_image(path, &w, &h);
+  if (!pixels) return false;
 
   memset(out_pixels, 0xFF, CANVAS_H * CANVAS_W * 4);
   int copy_w = w < CANVAS_W ? w : CANVAS_W;
   int copy_h = h < CANVAS_H ? h : CANVAS_H;
   for (int row = 0; row < copy_h; row++)
-    memcpy(out_pixels + row * CANVAS_W * 4, rows[row], (size_t)copy_w * 4);
+    memcpy(out_pixels + row * CANVAS_W * 4, pixels + row * w * 4, (size_t)copy_w * 4);
 
-  for (int r = 0; r < h; r++) free(rows[r]);
-  free(rows);
-  png_destroy_read_struct(&png, &info, NULL);
-  fclose(fp);
+  free(pixels);
   return true;
 }
 
 bool png_save(const char *path, const uint8_t *pixels) {
-  FILE *fp = fopen(path, "wb");
-  if (!fp) return false;
-
-  png_structp png = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-  if (!png) { fclose(fp); return false; }
-
-  png_infop info = png_create_info_struct(png);
-  if (!info) { png_destroy_write_struct(&png, NULL); fclose(fp); return false; }
-
-  if (setjmp(png_jmpbuf(png))) {
-    png_destroy_write_struct(&png, &info);
-    fclose(fp);
-    return false;
-  }
-
-  png_init_io(png, fp);
-  png_set_IHDR(png, info, CANVAS_W, CANVAS_H, 8,
-               PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE,
-               PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
-  png_write_info(png, info);
-
-  for (int r = 0; r < CANVAS_H; r++)
-    png_write_row(png, (png_bytep)(pixels + r * CANVAS_W * 4));
-
-  png_write_end(png, NULL);
-  png_destroy_write_struct(&png, &info);
-  fclose(fp);
-  return true;
+  return save_image_png(path, pixels, CANVAS_W, CANVAS_H);
 }
 
 // ============================================================
