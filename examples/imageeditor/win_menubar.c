@@ -111,11 +111,11 @@ static void handle_menu_command(uint16_t id) {
     case ID_TOOL_FILL:
     case ID_TOOL_SELECT: {
       g_app->current_tool = id;
-      // SetCheck on the selected button clears siblings via autoradio_select
+      // Update the active toolbar button in the tool palette.
+      // kToolBarMessageSetActiveButton marks the matching button as active
+      // and clears all others, equivalent to the old autoradio_select on child buttons.
       if (g_app->tool_win) {
-        window_t *btn = get_window_item(g_app->tool_win, (uint32_t)id);
-        if (btn)
-          send_message(btn, kButtonMessageSetCheck, kButtonStateChecked, NULL);
+        send_message(g_app->tool_win, kToolBarMessageSetActiveButton, (uint32_t)id, NULL);
       }
       break;
     }

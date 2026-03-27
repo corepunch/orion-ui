@@ -1,8 +1,8 @@
-// Tool palette floating window
-// Uses toolbar buttons (win_toolbar_button) loaded from tools.png,
-// laid out in a 2-column grid matching the Photoshop 1.0 toolbox style.
+// Tool palette window
+// Uses WINDOW_TOOLBAR for tool buttons (PNG icons from tools.png with wrapping).
+// The client area shows FG/BG color swatches.
 // Follows the WinAPI TB_ADDBITMAP / TBBUTTON pattern: one bitmap_strip_t
-// shared across all buttons; each button stores only an icon index (iBitmap).
+// shared across all toolbar buttons; each button stores only an icon index (iBitmap).
 
 #include "imageeditor.h"
 #include "../../commctl/commctl.h"
@@ -10,7 +10,6 @@
 // tools.png tile size (all icons are the same size in the strip)
 #define ICON_W    16
 #define ICON_H    16
-#define SWATCH_H  26
 
 // Icon index = row * cols + col, where cols = sheet_w / ICON_W.
 // tools.png: 32×160 = 2 columns × 10 rows of 16×16 icons.
@@ -175,44 +174,25 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
 
       d->tools_tex = load_tools_texture(&d->strip);
 
-      // Create one toolbar button per tool, arranged in 2 columns.
-      // Each button stores only the icon index (iBitmap) into the shared strip.
-      int col_w = win->frame.w / 2;
-      for (int i = 0; i < NUM_TOOLS; i++) {
-        int row = i / 2;
-        int col = i % 2;
-        int bx = col * col_w + 1;
-        int by = row * TOOL_ICON_ROW_H;
-        int bw = col_w - 2;
-        int bh = TOOL_ICON_ROW_H - 2;
-
-        uint32_t flags = WINDOW_NOTITLE | WINDOW_NOFILL |
-                         BUTTON_PUSHLIKE | BUTTON_AUTORADIO;
-
-        window_t *btn = create_window(
-            tool_names[i], flags,
-            MAKERECT(bx, by, bw, bh),
-            win, win_toolbar_button, NULL);
-        btn->id    = (uint16_t)(ID_TOOL_PENCIL + i);
-        btn->value = (btn->id == ID_TOOL_PENCIL);
-
-        if (d->tools_tex) {
-          // wparam = icon index (iBitmap); lparam = shared bitmap_strip_t*.
-          // win_toolbar_button makes a private copy of the strip descriptor.
-          send_message(btn, kButtonMessageSetImage,
-                       (uint32_t)k_tool_icon_idx[i], &d->strip);
-        }
-
-        show_window(btn, true);
+      // Associate the PNG strip with the window's toolbar.
+      // The toolbar rendering in message.c will use this strip for icon display.
+      if (d->tools_tex) {
+        send_message(win, kToolBarMessageSetStrip, 0, &d->strip);
       }
+
+      // Add one toolbar button per tool.
+      // icon = PNG strip index (iBitmap); ident = tool command ID.
+      toolbar_button_t buttons[NUM_TOOLS];
+      for (int i = 0; i < NUM_TOOLS; i++) {
+        buttons[i].icon   = k_tool_icon_idx[i];
+        buttons[i].ident  = ID_TOOL_PENCIL + i;
+        buttons[i].active = (i == 0);  // Pencil is selected by default
+      }
+      send_message(win, kToolBarMessageAddButtons, NUM_TOOLS, buttons);
       return true;
     }
 
     case kWindowMessageDestroy: {
-      // Each toolbar button owns a private copy of bitmap_strip_t (made by
-      // kButtonMessageSetImage), so they do not hold pointers into our data.
-      // It is safe to delete the GL texture and free the palette data here,
-      // before clear_window_children destroys the children.
       tool_palette_data_t *d = (tool_palette_data_t *)win->userdata;
       if (d && d->tools_tex) {
         glDeleteTextures(1, &d->tools_tex);
@@ -224,13 +204,12 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
     }
 
     case kWindowMessagePaint: {
+      // Client area: FG/BG color swatches.
       fill_rect(COLOR_PANEL_DARK_BG, 0, 0, win->frame.w, win->frame.h);
       fill_rect(COLOR_DARK_EDGE, win->frame.w - 1, 0, 1, win->frame.h);
       fill_rect(COLOR_DARK_EDGE, 0, win->frame.h - 1, win->frame.w, 1);
 
-      // Color swatches below the tool buttons
-      int num_tool_rows = (NUM_TOOLS + 1) / 2;
-      int sy = num_tool_rows * TOOL_ICON_ROW_H + 2;
+      int sy = 2;
       draw_text_small("FG", 2, sy, COLOR_TEXT_DISABLED);
       draw_text_small("BG", 34, sy, COLOR_TEXT_DISABLED);
       sy += 8;
@@ -240,16 +219,17 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
         fill_rect(COLOR_DARK_EDGE, 33, sy - 1, 28, 14);
         fill_rect(rgba_to_col(g_app->bg_color), 34, sy, 26, 12);
       }
-      return false; // allow children (buttons) to paint themselves
+      return true;
     }
 
-    case kWindowMessageCommand: {
-      // Button children send kWindowMessageCommand with kButtonNotificationClicked
-      // to their root window (this window).  Forward the command to the menubar
-      // so that both button clicks and accelerator hotkeys are handled in one place.
-      if (HIWORD(wparam) == kButtonNotificationClicked && g_app) {
+    case kToolBarMessageButtonClick: {
+      // A toolbar button was clicked: update the active button state and
+      // forward the command to the menubar (same path as keyboard accelerators).
+      int clicked_ident = (int)wparam;
+      send_message(win, kToolBarMessageSetActiveButton, (uint32_t)clicked_ident, NULL);
+      if (g_app) {
         send_message(g_app->menubar_win, kWindowMessageCommand,
-                     MAKEDWORD(LOWORD(wparam), kButtonNotificationClicked), lparam);
+                     MAKEDWORD((uint16_t)clicked_ident, kButtonNotificationClicked), lparam);
       }
       return true;
     }

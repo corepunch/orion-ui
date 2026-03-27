@@ -47,6 +47,8 @@ enum {
   kStatusBarMessageAddWindow,
   kToolBarMessageAddButtons,
   kToolBarMessageButtonClick,
+  kToolBarMessageSetStrip,         // wparam=0, lparam=bitmap_strip_t* (or NULL to clear)
+  kToolBarMessageSetActiveButton,  // wparam=ident of button to mark active
 };
 
 // Control notification messages
