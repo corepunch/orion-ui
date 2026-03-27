@@ -39,6 +39,7 @@ enum {
 enum {
   kButtonMessageSetCheck = kWindowMessageUser,
   kButtonMessageGetCheck,
+  kButtonMessageSetImage,       // wparam = icon index (iBitmap); lparam = bitmap_strip_t*
   kComboBoxMessageAddString,
   kComboBoxMessageGetCurrentSelection,
   kComboBoxMessageSetCurrentSelection,
@@ -87,6 +88,8 @@ enum {
 // Button style flags (analogous to WinAPI BS_* styles)
 // BUTTON_PUSHLIKE: button stays visually pressed while win->value == true (like a toggle/check button)
 // BUTTON_AUTORADIO: clicking auto-clears all sibling AUTORADIO buttons and sets this one checked
+// Bitmap/image buttons are a separate window class (win_toolbar_button), not a flag on win_button.
+// Use kButtonMessageSetImage on a win_toolbar_button window to assign an icon from a bitmap_strip_t.
 #define BUTTON_PUSHLIKE     (1 << 13)
 #define BUTTON_AUTORADIO    (1 << 14)
 

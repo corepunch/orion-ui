@@ -43,9 +43,11 @@ const char* sprite_vs_src = "#version 150 core\n"
 "uniform mat4 projection;\n"
 "uniform vec2 offset;\n"
 "uniform vec2 scale;\n"
+"uniform vec2 uv_offset;\n"
+"uniform vec2 uv_scale;\n"
 "void main() {\n"
 "  col = color;\n"
-"  tex = texcoord;\n"
+"  tex = texcoord * uv_scale + uv_offset;\n"
 "  gl_Position = projection * vec4(position * scale + offset, 0.0, 1.0);\n"
 "}";
 
@@ -149,6 +151,8 @@ void push_sprite_args(int tex, int x, int y, int w, int h, float alpha) {
   glUniform2f(glGetUniformLocation(g_ref.program, "offset"), x, y);
   glUniform2f(glGetUniformLocation(g_ref.program, "scale"), w, h);
   glUniform1f(glGetUniformLocation(g_ref.program, "alpha"), alpha);
+  glUniform2f(glGetUniformLocation(g_ref.program, "uv_offset"), 0.0f, 0.0f);
+  glUniform2f(glGetUniformLocation(g_ref.program, "uv_scale"), 1.0f, 1.0f);
 }
 
 void set_projection(int x, int y, int w, int h) {
@@ -184,6 +188,22 @@ void draw_rect_ex(int tex, int x, int y, int w, int h, int type, float alpha) {
 // Draw a sprite at the specified screen position
 void draw_rect(int tex, int x, int y, int w, int h) {
   draw_rect_ex(tex, x, y, w, h, false, 1);
+}
+
+// Draw a sub-region of a sprite sheet at the specified screen position.
+// (u0,v0)-(u1,v1) are normalized texture coordinates selecting the icon.
+void draw_sprite_region(int tex, int x, int y, int w, int h,
+                        float u0, float v0, float u1, float v1, float alpha) {
+  push_sprite_args(tex, x, y, w, h, alpha);
+  glUniform2f(glGetUniformLocation(g_ref.program, "uv_offset"), u0, v0);
+  glUniform2f(glGetUniformLocation(g_ref.program, "uv_scale"), u1 - u0, v1 - v0);
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  glDisable(GL_DEPTH_TEST);
+  g_ref.mesh.draw_mode = GL_TRIANGLE_FAN;
+  R_MeshDraw(&g_ref.mesh);
+  glEnable(GL_DEPTH_TEST);
+  glDisable(GL_BLEND);
 }
 
 int ui_get_system_metrics(ui_system_metrics_t metric) {
