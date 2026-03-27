@@ -15,8 +15,8 @@ static const menu_item_t kFileItems[] = {
 };
 
 static const menu_item_t kEditItems[] = {
-  {"Undo\tCtrl+Z", ID_EDIT_UNDO},
-  {"Redo\tCtrl+Y", ID_EDIT_REDO},
+  {"Undo", ID_EDIT_UNDO},
+  {"Redo", ID_EDIT_REDO},
 };
 
 static const menu_item_t kHelpItems[] = {

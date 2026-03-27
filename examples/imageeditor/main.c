@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
 
   g_app->accel = load_accelerators(kAccelEntries,
                                    (int)(sizeof(kAccelEntries)/sizeof(kAccelEntries[0])));
-
+  send_message(g_app->menubar_win, kMenuBarMessageSetAccelerators, 0, g_app->accel);
   create_document(NULL);
 
   while (running) {

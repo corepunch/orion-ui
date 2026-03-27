@@ -5,6 +5,7 @@
 #include <SDL2/SDL.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "user.h"
 #include "messages.h"
@@ -63,4 +64,23 @@ bool translate_accelerator(window_t *win, ui_event_t *evt,
     }
   }
   return false;
+}
+
+const accel_t *accel_find_cmd(const accel_table_t *table, uint16_t cmd) {
+  if (!table) return NULL;
+  for (int i = 0; i < table->count; i++) {
+    if (table->entries[i].cmd == cmd)
+      return &table->entries[i];
+  }
+  return NULL;
+}
+
+int accel_format(const accel_t *a, char *buf, int bufsize) {
+  if (!a || !buf || bufsize <= 0) return 0;
+  const char *kname = SDL_GetScancodeName((SDL_Scancode)a->key);
+  return snprintf(buf, (size_t)bufsize, "%s%s%s%s",
+                  (a->fVirt & FCONTROL) ? "Ctrl+"  : "",
+                  (a->fVirt & FSHIFT)   ? "Shift+" : "",
+                  (a->fVirt & FALT)     ? "Alt+"   : "",
+                  kname ? kname : "");
 }
