@@ -106,6 +106,8 @@ void canvas_win_set_zoom(window_t *win, int new_scale) {
   clamp_pan(state, win->frame.w, win->frame.h);
   canvas_sync_scrollbars(win, state);
   invalidate_window(win);
+}
+
 // Release the floating-selection GL texture if one exists.
 static void float_tex_free(canvas_doc_t *doc) {
   if (doc->float_tex) {
