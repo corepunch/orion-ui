@@ -47,6 +47,8 @@ enum {
   kStatusBarMessageAddWindow,
   kToolBarMessageAddButtons,
   kToolBarMessageButtonClick,
+  kToolBarMessageSetStrip,         // wparam=0, lparam=bitmap_strip_t* (or NULL to clear)
+  kToolBarMessageSetActiveButton,  // wparam=ident of button to mark active
 };
 
 // Control notification messages
@@ -95,7 +97,7 @@ enum {
 
 // Titlebar and toolbar dimensions
 #define TITLEBAR_HEIGHT   12
-#define TOOLBAR_HEIGHT    20
+#define TOOLBAR_HEIGHT    22
 #define STATUSBAR_HEIGHT  12
 #define RESIZE_HANDLE     8
 #define BUTTON_HEIGHT     13
@@ -106,7 +108,7 @@ enum {
 // Control button dimensions
 #define CONTROL_BUTTON_WIDTH    8
 #define CONTROL_BUTTON_PADDING  2
-#define TB_SPACING              18
+#define TB_SPACING              TOOLBAR_HEIGHT  // equals TOOLBAR_HEIGHT so toolbar buttons are square
 
 // Scroll and interaction constants
 #define SCROLL_SENSITIVITY      5

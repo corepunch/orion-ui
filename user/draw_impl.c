@@ -53,7 +53,13 @@ int titlebar_height(window_t const *win) {
     t += TITLEBAR_HEIGHT;
   }
   if (win->flags&WINDOW_TOOLBAR) {
-    t += TOOLBAR_HEIGHT;
+    int buttons_per_row = (win->num_toolbar_buttons > 0 && win->frame.w > 0)
+        ? MAX(1, win->frame.w / TB_SPACING)
+        : 1;
+    int num_rows = (win->num_toolbar_buttons > 0)
+        ? (int)((win->num_toolbar_buttons + (uint32_t)buttons_per_row - 1) / (uint32_t)buttons_per_row)
+        : 1;
+    t += num_rows * TOOLBAR_HEIGHT;
   }
   return t;
 }

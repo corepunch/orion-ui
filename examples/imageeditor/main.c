@@ -54,7 +54,7 @@ static void create_app_windows(void) {
 
   window_t *tp = create_window(
       "Tools",
-      WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
+      WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE | WINDOW_TOOLBAR,
       MAKERECT(PALETTE_WIN_X, PALETTE_WIN_Y, PALETTE_WIN_W, TOOL_WIN_H),
       NULL, win_tool_palette_proc, NULL);
   show_window(tp, true);

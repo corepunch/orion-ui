@@ -46,6 +46,9 @@ extern void draw_panel(window_t const *win);
 extern void draw_window_controls(window_t *win);
 extern void draw_statusbar(window_t *win, const char *text);
 extern void draw_bevel(rect_t const *r);
+extern void draw_button(rect_t const *r, int dx, int dy, bool pressed);
+extern void draw_sprite_region(int tex, int x, int y, int w, int h,
+                               float u0, float v0, float u1, float v1, float alpha);
 extern void paint_window_stencil(window_t const *w);
 extern void repaint_stencil(void);
 extern void set_fullscreen(void);
@@ -142,15 +145,43 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
             draw_text_small(win->title, frame->x+2, window_title_bar_y(win), -1);
           }
           if (win->flags&WINDOW_TOOLBAR) {
-            int t = TOOLBAR_HEIGHT;
-            rect_t rect = {win->frame.x+1, win->frame.y-t+1, win->frame.w-2, t-2};
+            int bpr = (win->num_toolbar_buttons > 0 && win->frame.w > 0)
+                ? MAX(1, win->frame.w / TB_SPACING) : 1;
+            int nrows = (win->num_toolbar_buttons > 0)
+                ? (int)((win->num_toolbar_buttons + (uint32_t)bpr - 1) / (uint32_t)bpr)
+                : 1;
+            int total_h = nrows * TOOLBAR_HEIGHT;
+            rect_t rect = {win->frame.x+1, win->frame.y-total_h+1, win->frame.w-2, total_h-2};
             draw_bevel(&rect);
             fill_rect(COLOR_PANEL_BG, rect.x, rect.y, rect.w, rect.h);
+            bitmap_strip_t *strip = (win->toolbar_strip.tex != 0) ? &win->toolbar_strip : NULL;
             for (uint32_t i = 0; i < win->num_toolbar_buttons; i++) {
               toolbar_button_t const *but = &win->toolbar_buttons[i];
-              uint32_t col = but->active ? COLOR_TEXT_SUCCESS : COLOR_TEXT_NORMAL;
-              draw_icon16(but->icon, rect.x + i * TB_SPACING + 2, rect.y + 2, COLOR_DARK_EDGE);
-              draw_icon16(but->icon, rect.x + i * TB_SPACING + 1, rect.y + 1, col);
+              int row = (int)i / bpr;
+              int col = (int)i % bpr;
+              int bx = rect.x + col * TB_SPACING + 2;
+              int by = rect.y + row * TOOLBAR_HEIGHT + 2;
+              if (strip) {
+                // Draw button background (pressed/unpressed)
+                rect_t btn_r = {bx - 2, by - 2, TB_SPACING - 2, TOOLBAR_HEIGHT - 2};
+                draw_button(&btn_r, 1, 1, but->active);
+                int px = but->active ? 1 : 0;
+                int icon_index = but->icon;
+                if (strip->cols > 0) {
+                  int scol = icon_index % strip->cols;
+                  int srow = icon_index / strip->cols;
+                  float u0 = (float)(scol * strip->icon_w) / (float)strip->sheet_w;
+                  float v0 = (float)(srow * strip->icon_h) / (float)strip->sheet_h;
+                  float u1 = u0 + (float)strip->icon_w / (float)strip->sheet_w;
+                  float v1 = v0 + (float)strip->icon_h / (float)strip->sheet_h;
+                  draw_sprite_region((int)strip->tex, bx + px, by + px,
+                                     strip->icon_w, strip->icon_h, u0, v0, u1, v1, 1.0f);
+                }
+              } else {
+                uint32_t col = but->active ? COLOR_TEXT_SUCCESS : COLOR_TEXT_NORMAL;
+                draw_icon16(but->icon, bx, by, COLOR_DARK_EDGE);
+                draw_icon16(but->icon, bx-1, by-1, col);
+              }
             }
           }
           if (win->flags&WINDOW_STATUSBAR) {
@@ -170,10 +201,27 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         }
         break;
       case kToolBarMessageAddButtons:
+        if (win->toolbar_buttons) free(win->toolbar_buttons);
         win->num_toolbar_buttons = wparam;
         win->toolbar_buttons = malloc(sizeof(toolbar_button_t)*wparam);
         memcpy(win->toolbar_buttons, lparam, sizeof(toolbar_button_t)*wparam);
         break;
+      case kToolBarMessageSetStrip:
+        if (lparam) {
+          memcpy(&win->toolbar_strip, lparam, sizeof(bitmap_strip_t));
+        } else {
+          memset(&win->toolbar_strip, 0, sizeof(bitmap_strip_t));
+        }
+        invalidate_window(win);
+        break;
+      case kToolBarMessageSetActiveButton: {
+        uint32_t ident = wparam;
+        for (uint32_t i = 0; i < win->num_toolbar_buttons; i++) {
+          win->toolbar_buttons[i].active = (win->toolbar_buttons[i].ident == (int)ident);
+        }
+        invalidate_window(win);
+        break;
+      }
       case kWindowMessageStatusBar:
         if (lparam) {
           strncpy(win->statusbar_text, (const char*)lparam, sizeof(win->statusbar_text) - 1);
@@ -220,13 +268,23 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
           if (win->flags&WINDOW_TOOLBAR) {
             uint16_t x = LOWORD(wparam);
             uint16_t y = HIWORD(wparam);
-            int _x = win->frame.x + 2;
-            int _y = win->frame.y - TOOLBAR_HEIGHT + 2;
+            int bpr = (win->num_toolbar_buttons > 0 && win->frame.w > 0)
+                ? MAX(1, win->frame.w / TB_SPACING) : 1;
+            int nrows = (win->num_toolbar_buttons > 0)
+                ? (int)((win->num_toolbar_buttons + (uint32_t)bpr - 1) / (uint32_t)bpr)
+                : 1;
+            int total_h = nrows * TOOLBAR_HEIGHT;
+            int base_x = win->frame.x + 2;
+            int base_y = win->frame.y - total_h + 2;
             #define CONTAINS(x, y, x1, y1, w1, h1) \
             ((x1) <= (x) && (y1) <= (y) && (x1) + (w1) > (x) && (y1) + (h1) > (y))
             for (uint32_t i = 0; i < win->num_toolbar_buttons; i++) {
               toolbar_button_t *but = &win->toolbar_buttons[i];
-              if (CONTAINS(x, y, _x + i * TB_SPACING, _y, 16, 16)) {
+              int row = (int)i / bpr;
+              int col = (int)i % bpr;
+              int bx = base_x + col * TB_SPACING;
+              int by = base_y + row * TOOLBAR_HEIGHT;
+              if (CONTAINS(x, y, bx, by, TB_SPACING, TOOLBAR_HEIGHT)) {
                 send_message(win, kToolBarMessageButtonClick, but->ident, but);
               }
             }

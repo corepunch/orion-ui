@@ -26,12 +26,36 @@
 #define SCREEN_H      342
 
 #define PALETTE_WIN_X   4
-#define PALETTE_WIN_Y  (MENUBAR_HEIGHT + TITLEBAR_HEIGHT + 4)
-#define PALETTE_WIN_W  64
+#define PALETTE_WIN_W  (TB_SPACING*2)
 #define TOOL_ICON_W    16
 #define TOOL_ICON_H    16
 #define TOOL_ICON_ROW_H 24
-#define TOOL_WIN_H    (((NUM_TOOLS + 1) / 2) * TOOL_ICON_ROW_H + 26)
+
+// Compute the toolbar height for the tool palette (wraps based on window width and TB_SPACING).
+// buttons_per_row = PALETTE_WIN_W / TB_SPACING = 64/20 = 3
+// num_rows = ceil(NUM_TOOLS / buttons_per_row) = ceil(5/3) = 2
+// TOOL_TOOLBAR_H = num_rows * TOOLBAR_HEIGHT = 2*20 = 40
+//
+// NOTE: These macros replicate the runtime wrapping formula from
+// draw_impl.c:titlebar_height() as compile-time constants so that window
+// positions can be expressed in terms of layout constants.  If TB_SPACING,
+// TOOLBAR_HEIGHT, PALETTE_WIN_W, or NUM_TOOLS change, verify that these
+// macros still match the runtime computation.
+#define TOOL_BTN_PER_ROW  ((PALETTE_WIN_W) / (TB_SPACING))
+#define TOOL_TOOLBAR_ROWS (((NUM_TOOLS) + (TOOL_BTN_PER_ROW) - 1) / (TOOL_BTN_PER_ROW))
+#define TOOL_TOOLBAR_H    ((TOOL_TOOLBAR_ROWS) * (TOOLBAR_HEIGHT))
+
+// PALETTE_WIN_Y is the frame.y (top of client area) of the tool window.
+// Position it so that its title bar sits 4px below the menu bar.
+// title bar top = frame.y - titlebar_height = frame.y - (TITLEBAR_HEIGHT + TOOL_TOOLBAR_H)
+// We want title bar top = MENUBAR_HEIGHT + 4
+// So: frame.y = MENUBAR_HEIGHT + 4 + TITLEBAR_HEIGHT + TOOL_TOOLBAR_H
+#define PALETTE_WIN_Y  (MENUBAR_HEIGHT + 4 + TITLEBAR_HEIGHT + TOOL_TOOLBAR_H)
+
+// Client area of the tool palette only needs to show the FG/BG color swatches:
+//   2px label + 8px text height + 13px swatch height + 2px padding = 25px
+#define SWATCH_CLIENT_H 26
+#define TOOL_WIN_H    SWATCH_CLIENT_H
 #define COLOR_WIN_Y   (PALETTE_WIN_Y + TOOL_WIN_H + TITLEBAR_HEIGHT + 4)
 #define COLOR_WIN_H   (8 * 22)
 
