@@ -307,6 +307,30 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       int py = (ly - win->frame.y + state->pan_y) / state->scale;
       int tool = g_app->current_tool;
 
+      // Text tool: record position and show text options dialog
+      if (tool == ID_TOOL_TEXT) {
+        if (!canvas_in_bounds(px, py)) return true;
+        text_options_t opts;
+        memset(&opts, 0, sizeof(opts));
+        opts.font_size = g_app->text_font_size;
+        opts.color     = g_app->fg_color;
+        opts.antialias = g_app->text_antialias;
+        if (show_text_dialog(win, &opts) && opts.text[0]) {
+          // Persist settings for next use
+          g_app->text_font_size = opts.font_size;
+          g_app->text_antialias = opts.antialias;
+          doc_push_undo(doc);
+          if (canvas_draw_text_stb(doc, px, py, &opts)) {
+            doc->modified = true;
+            doc_update_title(doc);
+            invalidate_window(win);
+          } else {
+            doc_discard_undo(doc);
+          }
+        }
+        return true;
+      }
+
       // Polygon: accumulate vertices on each click; commit on right-click
       if (tool == ID_TOOL_POLYGON) {
         if (!doc->poly_active) {

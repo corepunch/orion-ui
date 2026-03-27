@@ -96,6 +96,7 @@ all: library examples
 share: | $(SHARE_DIR)
 	@echo "Copying shared data assets..."
 	cp examples/imageeditor/tools.png $(SHARE_DIR)/tools.png
+	cp examples/imageeditor/Inconsolata-Regular.ttf $(SHARE_DIR)/Inconsolata-Regular.ttf
 
 # Library targets
 .PHONY: library
