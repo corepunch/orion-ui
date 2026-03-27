@@ -31,6 +31,13 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
       win->frame.w = MAX(win->frame.w, strwidth(win->title)+6);
       win->frame.h = MAX(win->frame.h, BUTTON_HEIGHT);
       return true;
+    case kWindowMessageDestroy:
+      // Free the owned button_image_t copy if one was set via kButtonMessageSetImage.
+      if ((win->flags & BUTTON_BITMAP) && win->userdata) {
+        free(win->userdata);
+        win->userdata = NULL;
+      }
+      return true;
     case kWindowMessagePaint: {
       // BUTTON_PUSHLIKE: render as pressed whenever the button is checked (value==true)
       bool show_pressed = win->pressed ||
@@ -102,13 +109,23 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
     }
     case kButtonMessageGetCheck:
       return win->value ? kButtonStateChecked : kButtonStateUnchecked;
-    case kButtonMessageSetImage:
-      // Analogous to WinAPI BM_SETIMAGE: store a pointer to button_image_t.
-      // The caller owns the button_image_t and must keep it alive for the
-      // lifetime of the button.
-      win->userdata = lparam;
+    case kButtonMessageSetImage: {
+      // Analogous to WinAPI BM_SETIMAGE: make a private copy of the button_image_t
+      // so that the button owns its own image descriptor and callers do not need to
+      // keep the original alive for the button's lifetime.
+      if (lparam) {
+        button_image_t *copy = malloc(sizeof(button_image_t));
+        if (!copy) return false;  // OOM: keep old image, do not invalidate
+        memcpy(copy, lparam, sizeof(button_image_t));
+        if (win->userdata) free(win->userdata);
+        win->userdata = copy;
+      } else {
+        if (win->userdata) free(win->userdata);
+        win->userdata = NULL;
+      }
       invalidate_window(win);
       return true;
+    }
   }
   return false;
 }

@@ -21,7 +21,8 @@ static const int k_tool_icon_col[NUM_TOOLS] = { 0, 1, 1, 0, 0 };
 
 typedef struct {
   GLuint         tools_tex;
-  button_image_t images[NUM_TOOLS];
+  int            sheet_w;   // actual loaded PNG width
+  int            sheet_h;   // actual loaded PNG height
 } tool_palette_data_t;
 
 // Load a PNG file and return heap-allocated RGBA pixels (caller frees),
@@ -108,7 +109,8 @@ static uint8_t *load_png_rgba(const char *path, int *out_w, int *out_h) {
 }
 
 // Try to load tools.png from several candidate locations (share directory).
-static GLuint load_tools_texture(void) {
+// Writes the actual texture dimensions to *out_w/*out_h on success.
+static GLuint load_tools_texture(int *out_w, int *out_h) {
   static const char *k_paths[] = {
     "build/share/tools.png",             // run from repository root
     "../share/tools.png",                // run from build/bin/
@@ -132,6 +134,8 @@ static GLuint load_tools_texture(void) {
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
                  GL_RGBA, GL_UNSIGNED_BYTE, rgba);
     free(rgba);
+    *out_w = w;
+    *out_h = h;
     return tex;
   }
   return 0;
@@ -144,7 +148,10 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       tool_palette_data_t *d =
           (tool_palette_data_t *)allocate_window_data(win, sizeof(tool_palette_data_t));
 
-      d->tools_tex = load_tools_texture();
+      int sheet_w = 0, sheet_h = 0;
+      d->tools_tex = load_tools_texture(&sheet_w, &sheet_h);
+      d->sheet_w   = sheet_w;
+      d->sheet_h   = sheet_h;
 
       // Create one PUSHLIKE + AUTORADIO button per tool, arranged in 2 columns,
       // matching the Photoshop 1.0 toolbox layout.
@@ -170,14 +177,20 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
         btn->value = (btn->id == ID_TOOL_PENCIL);
 
         if (d->tools_tex) {
-          d->images[i].tex      = (uint32_t)d->tools_tex;
-          d->images[i].icon_col = k_tool_icon_col[i];
-          d->images[i].icon_row = k_tool_icon_row[i];
-          d->images[i].icon_w   = ICON_W;
-          d->images[i].icon_h   = ICON_H;
-          d->images[i].sheet_w  = TOOLS_TEX_W;
-          d->images[i].sheet_h  = TOOLS_TEX_H;
-          send_message(btn, kButtonMessageSetImage, 0, &d->images[i]);
+          // Use the actual loaded sheet dimensions so UV math stays correct even
+          // if a differently-sized tools.png is found on one of the fallback paths.
+          button_image_t img = {
+            .tex      = (uint32_t)d->tools_tex,
+            .icon_col = k_tool_icon_col[i],
+            .icon_row = k_tool_icon_row[i],
+            .icon_w   = ICON_W,
+            .icon_h   = ICON_H,
+            .sheet_w  = d->sheet_w,
+            .sheet_h  = d->sheet_h,
+          };
+          // kButtonMessageSetImage makes a private copy; the local img can be
+          // stack-allocated here.
+          send_message(btn, kButtonMessageSetImage, 0, &img);
         }
 
         show_window(btn, true);
@@ -186,6 +199,11 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
     }
 
     case kWindowMessageDestroy: {
+      // Children are destroyed AFTER this handler returns (clear_window_children
+      // is called by destroy_window after sending kWindowMessageDestroy to the
+      // parent). Because each child button owns a private copy of button_image_t
+      // (via kButtonMessageSetImage), it is safe to free the palette's data and
+      // delete the GL texture here without leaving buttons with dangling pointers.
       tool_palette_data_t *d = (tool_palette_data_t *)win->userdata;
       if (d && d->tools_tex) {
         glDeleteTextures(1, &d->tools_tex);
