@@ -39,6 +39,7 @@ static const accel_t kAccelEntries[] = {
   { FVIRTKEY,          SDL_SCANCODE_A, ID_TOOL_SPRAY       },
   { FVIRTKEY,          SDL_SCANCODE_I, ID_TOOL_EYEDROPPER  },
   { FVIRTKEY,          SDL_SCANCODE_G, ID_TOOL_MAGNIFIER   },
+  { FVIRTKEY,          SDL_SCANCODE_T, ID_TOOL_TEXT   },
   // Allow tool hotkeys to work even when Shift is held
   { FSHIFT|FVIRTKEY,   SDL_SCANCODE_P, ID_TOOL_PENCIL },
   { FSHIFT|FVIRTKEY,   SDL_SCANCODE_B, ID_TOOL_BRUSH  },
@@ -48,6 +49,7 @@ static const accel_t kAccelEntries[] = {
   { FSHIFT|FVIRTKEY,   SDL_SCANCODE_A, ID_TOOL_SPRAY       },
   { FSHIFT|FVIRTKEY,   SDL_SCANCODE_I, ID_TOOL_EYEDROPPER  },
   { FSHIFT|FVIRTKEY,   SDL_SCANCODE_G, ID_TOOL_MAGNIFIER   },
+  { FSHIFT|FVIRTKEY,   SDL_SCANCODE_T, ID_TOOL_TEXT   },
 };
 
 // ============================================================
@@ -98,6 +100,8 @@ int main(int argc, char *argv[]) {
   g_app->bg_color = kPalette[0]; // white
   g_app->next_x   = DOC_START_X;
   g_app->next_y   = DOC_START_Y;
+  g_app->text_font_size = 16;
+  g_app->text_antialias = true;
 
   srand((unsigned int)time(NULL));
 

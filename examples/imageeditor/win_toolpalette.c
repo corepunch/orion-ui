@@ -37,13 +37,14 @@ static const int k_tool_icon_idx[NUM_TOOLS] = {
   4,    // Hand
   5,    // Zoom
   10,   // Line
-  6,    // Rect
-  1,    // Ellipse
-  9,    // Rounded Rect
-  11,   // Polygon
+  20,   // Rect
+  22,   // Ellipse
+  21,   // Rounded Rect
+  23,   // Polygon
   17,   // Spray
   14,   // Eyedropper
   16,   // Magnifier
+  7,    // Text
 };
 
 typedef struct {

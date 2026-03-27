@@ -70,7 +70,7 @@
 #define SCROLLBAR_SIZE  8
 
 #define NUM_COLORS 16
-#define NUM_TOOLS  15
+#define NUM_TOOLS  16
 #define NUM_USER_COLORS  8
 
 #define UNDO_MAX   20
@@ -124,6 +124,7 @@ extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 #define ID_TOOL_SPRAY         32
 #define ID_TOOL_EYEDROPPER    33
 #define ID_TOOL_MAGNIFIER     34
+#define ID_TOOL_TEXT          35
 
 // ============================================================
 // Types
@@ -196,6 +197,9 @@ typedef struct {
   rgba_t         user_palette[NUM_USER_COLORS];
   int            num_user_colors;
   bool           shape_filled;  // true = shapes draw filled, false = outline only
+  // Text tool persistent settings
+  int            text_font_size;  // pixel height, default 16
+  bool           text_antialias;  // default true
   // Clipboard (shared across documents)
   uint8_t       *clipboard;
   int            clipboard_w;
@@ -295,6 +299,20 @@ void canvas_win_set_zoom(window_t *canvas_win, int new_scale);
 
 // Color picker dialog
 bool show_color_picker(window_t *parent, rgba_t initial, rgba_t *out);
+
+// Text dialog – show text insertion options; returns true if accepted.
+typedef struct {
+  char   text[256];    // text to render (NUL-terminated)
+  int    font_size;    // pixel height
+  rgba_t color;        // text color
+  bool   antialias;    // true = antialiased rendering
+} text_options_t;
+bool show_text_dialog(window_t *parent, text_options_t *opts);
+
+// Render a UTF-8 string into the canvas at (x, y) using stb_truetype.
+// Returns true if at least one pixel was written.
+bool canvas_draw_text_stb(canvas_doc_t *doc, int x, int y,
+                           const text_options_t *opts);
 
 // About dialog
 void show_about_dialog(window_t *parent);
