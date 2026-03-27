@@ -15,8 +15,16 @@ static const menu_item_t kFileItems[] = {
 };
 
 static const menu_item_t kEditItems[] = {
-  {"Undo\tCtrl+Z", ID_EDIT_UNDO},
-  {"Redo\tCtrl+Y", ID_EDIT_REDO},
+  {"Undo", ID_EDIT_UNDO},
+  {"Redo", ID_EDIT_REDO},
+  {NULL, 0},
+  {"Cut", ID_EDIT_CUT},
+  {"Copy", ID_EDIT_COPY},
+  {"Paste", ID_EDIT_PASTE},
+  {NULL, 0},
+  {"Clear Selection", ID_EDIT_CLEAR_SEL},
+  {"Select All", ID_EDIT_SELECT_ALL},
+  {"Deselect", ID_EDIT_DESELECT},
 };
 
 static const menu_item_t kViewItems[] = {
@@ -118,6 +126,51 @@ static void handle_menu_command(uint16_t id) {
     case ID_EDIT_REDO:
       if (doc && doc_redo(doc)) {
         doc_update_title(doc);
+        invalidate_window(doc->canvas_win);
+      }
+      break;
+
+    case ID_EDIT_CUT:
+      if (doc && doc->sel_active) {
+        doc_push_undo(doc);
+        canvas_cut_selection(doc, g_app->bg_color);
+        doc_update_title(doc);
+        invalidate_window(doc->canvas_win);
+      }
+      break;
+
+    case ID_EDIT_COPY:
+      if (doc && doc->sel_active)
+        canvas_copy_selection(doc);
+      break;
+
+    case ID_EDIT_PASTE:
+      if (doc && g_app->clipboard) {
+        canvas_paste_clipboard(doc);
+        doc_update_title(doc);
+        invalidate_window(doc->canvas_win);
+      }
+      break;
+
+    case ID_EDIT_CLEAR_SEL:
+      if (doc && doc->sel_active) {
+        doc_push_undo(doc);
+        canvas_clear_selection(doc, g_app->bg_color);
+        doc_update_title(doc);
+        invalidate_window(doc->canvas_win);
+      }
+      break;
+
+    case ID_EDIT_SELECT_ALL:
+      if (doc) {
+        canvas_select_all(doc);
+        invalidate_window(doc->canvas_win);
+      }
+      break;
+
+    case ID_EDIT_DESELECT:
+      if (doc) {
+        canvas_deselect(doc);
         invalidate_window(doc->canvas_win);
       }
       break;

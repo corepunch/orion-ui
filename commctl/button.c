@@ -38,13 +38,13 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
       fill_rect(_focused == win ? COLOR_FOCUSED : COLOR_PANEL_BG,
                 win->frame.x-2, win->frame.y-2, win->frame.w+4, win->frame.h+4);
       draw_button(&win->frame, 1, 1, show_pressed);
+      int tx = win->frame.x + (win->frame.w - strwidth(win->title)) / 2;
+      int ty = win->frame.y + (win->frame.h - CHAR_HEIGHT) / 2;
+      int px = show_pressed ? 1 : 0;
       if (!show_pressed) {
-        draw_text_small(win->title, win->frame.x+4, win->frame.y+4, COLOR_DARK_EDGE);
+        draw_text_small(win->title, tx + 1, ty + 1, COLOR_DARK_EDGE);
       }
-      draw_text_small(win->title,
-                      win->frame.x + (show_pressed ? 4 : 3),
-                      win->frame.y + (show_pressed ? 4 : 3),
-                      COLOR_TEXT_NORMAL);
+      draw_text_small(win->title, tx + px, ty + px, COLOR_TEXT_NORMAL);
       return true;
     }
     case kWindowMessageLeftButtonDown:

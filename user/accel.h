@@ -64,4 +64,15 @@ void free_accelerators(accel_table_t *table);
 bool translate_accelerator(window_t *win, ui_event_t *evt,
                            accel_table_t *table);
 
+// Return a pointer to the first entry in table whose cmd field equals cmd,
+// or NULL if no such entry exists.  The returned pointer is valid until
+// free_accelerators() is called on table.
+const accel_t *accel_find_cmd(const accel_table_t *table, uint16_t cmd);
+
+// Format an accelerator entry as a human-readable shortcut string,
+// e.g. "Ctrl+Z" or "Ctrl+Shift+S".
+// Writes at most bufsize bytes including the NUL terminator.
+// Returns the number of characters written (not counting NUL).
+int accel_format(const accel_t *a, char *buf, int bufsize);
+
 #endif // __UI_ACCEL_H__
