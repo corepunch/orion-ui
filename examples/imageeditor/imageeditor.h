@@ -67,7 +67,7 @@
 #define SCROLLBAR_SIZE  8
 
 #define NUM_COLORS 16
-#define NUM_TOOLS   5
+#define NUM_TOOLS   7
 #define NUM_COLORS      16
 #define NUM_USER_COLORS  8
 
@@ -112,6 +112,8 @@ extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 #define ID_TOOL_ERASER  22
 #define ID_TOOL_FILL    23
 #define ID_TOOL_SELECT  24
+#define ID_TOOL_HAND    25
+#define ID_TOOL_ZOOM    26
 
 // ============================================================
 // Types
