@@ -27,6 +27,17 @@ static const menu_item_t kEditItems[] = {
   {"Deselect", ID_EDIT_DESELECT},
 };
 
+static const menu_item_t kViewItems[] = {
+  {"Zoom In\tCtrl++",  ID_VIEW_ZOOM_IN},
+  {"Zoom Out\tCtrl+-", ID_VIEW_ZOOM_OUT},
+  {NULL, 0},
+  {"1x",               ID_VIEW_ZOOM_1X},
+  {"2x",               ID_VIEW_ZOOM_2X},
+  {"4x",               ID_VIEW_ZOOM_4X},
+  {"6x",               ID_VIEW_ZOOM_6X},
+  {"8x",               ID_VIEW_ZOOM_8X},
+};
+
 static const menu_item_t kHelpItems[] = {
   {"About...", ID_HELP_ABOUT},
 };
@@ -34,6 +45,7 @@ static const menu_item_t kHelpItems[] = {
 const menu_def_t kMenus[] = {
   {"File", kFileItems, (int)(sizeof(kFileItems)/sizeof(kFileItems[0]))},
   {"Edit", kEditItems, (int)(sizeof(kEditItems)/sizeof(kEditItems[0]))},
+  {"View", kViewItems, (int)(sizeof(kViewItems)/sizeof(kViewItems[0]))},
   {"Help", kHelpItems, (int)(sizeof(kHelpItems)/sizeof(kHelpItems[0]))},
 };
 
@@ -167,11 +179,49 @@ static void handle_menu_command(uint16_t id) {
       show_about_dialog(g_app->menubar_win);
       break;
 
+    case ID_VIEW_ZOOM_IN:
+    case ID_VIEW_ZOOM_OUT:
+    case ID_VIEW_ZOOM_1X:
+    case ID_VIEW_ZOOM_2X:
+    case ID_VIEW_ZOOM_4X:
+    case ID_VIEW_ZOOM_6X:
+    case ID_VIEW_ZOOM_8X: {
+      if (!doc || !doc->canvas_win) break;
+      canvas_win_state_t *state = (canvas_win_state_t *)doc->canvas_win->userdata;
+      if (!state) break;
+
+      int new_scale = state->scale;
+
+      if (id == ID_VIEW_ZOOM_IN) {
+        for (int i = 0; i < NUM_ZOOM_LEVELS; i++) {
+          if (kZoomLevels[i] > state->scale) { new_scale = kZoomLevels[i]; break; }
+        }
+      } else if (id == ID_VIEW_ZOOM_OUT) {
+        for (int i = NUM_ZOOM_LEVELS - 1; i >= 0; i--) {
+          if (kZoomLevels[i] < state->scale) { new_scale = kZoomLevels[i]; break; }
+        }
+      } else {
+        for (int i = 0; i < NUM_ZOOM_LEVELS; i++) {
+          if (kZoomMenuIDs[i] == (int)id) { new_scale = kZoomLevels[i]; break; }
+        }
+      }
+
+      canvas_win_set_zoom(doc->canvas_win, new_scale);
+
+      // Update status bar with current zoom
+      char zoom_msg[32];
+      snprintf(zoom_msg, sizeof(zoom_msg), "Zoom: %dx", new_scale);
+      send_message(doc->win, kWindowMessageStatusBar, 0, zoom_msg);
+      break;
+    }
+
     case ID_TOOL_PENCIL:
     case ID_TOOL_BRUSH:
     case ID_TOOL_ERASER:
     case ID_TOOL_FILL:
-    case ID_TOOL_SELECT: {
+    case ID_TOOL_SELECT:
+    case ID_TOOL_HAND:
+    case ID_TOOL_ZOOM: {
       g_app->current_tool = id;
       // Update the active toolbar button in the tool palette.
       // kToolBarMessageSetActiveButton marks the matching button as active

@@ -6,9 +6,6 @@
 #include "test_env.h"
 #include "../ui.h"
 
-// Forward declaration for message queue processing
-extern void repost_messages(void);
-
 // Test state tracking
 static int test_kButtonNotificationClicked_count = 0;
 static uint32_t test_last_button_id = 0;

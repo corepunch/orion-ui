@@ -63,8 +63,11 @@
 #define DOC_START_Y   60
 #define DOC_CASCADE   20
 
+// Width/height of the interactive scrollbars on the canvas window
+#define SCROLLBAR_SIZE  8
+
 #define NUM_COLORS 16
-#define NUM_TOOLS   5
+#define NUM_TOOLS   7
 #define NUM_COLORS      16
 #define NUM_USER_COLORS  8
 
@@ -87,6 +90,20 @@
 #define ID_EDIT_SELECT_ALL  16
 #define ID_EDIT_DESELECT    17
 
+#define ID_VIEW_ZOOM_IN   40
+#define ID_VIEW_ZOOM_OUT  41
+#define ID_VIEW_ZOOM_1X   42
+#define ID_VIEW_ZOOM_2X   43
+#define ID_VIEW_ZOOM_4X   44
+#define ID_VIEW_ZOOM_6X   45
+#define ID_VIEW_ZOOM_8X   46
+
+// Supported zoom levels and their corresponding View menu IDs.
+// These are the single source of truth used by win_canvas.c and win_menubar.c.
+#define NUM_ZOOM_LEVELS 5
+extern const int kZoomLevels[NUM_ZOOM_LEVELS];
+extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
+
 #define ID_HELP_ABOUT  30
 
 // Tool command IDs – these are the authoritative tool identifiers used everywhere
@@ -95,6 +112,8 @@
 #define ID_TOOL_ERASER  22
 #define ID_TOOL_FILL    23
 #define ID_TOOL_SELECT  24
+#define ID_TOOL_HAND    25
+#define ID_TOOL_ZOOM    26
 
 // ============================================================
 // Types
@@ -134,6 +153,12 @@ typedef struct canvas_doc_s {
 typedef struct {
   canvas_doc_t *doc;
   int           scale;
+  int           pan_x;      // horizontal pan offset in screen pixels
+  int           pan_y;      // vertical pan offset in screen pixels
+  window_t     *hscroll;    // horizontal scrollbar child window
+  window_t     *vscroll;    // vertical scrollbar child window
+  bool          panning;    // true while hand-tool drag is in progress
+  point_t       pan_start;  // screen-local coords where hand drag began
 } canvas_win_state_t;
 
 typedef struct {
@@ -229,6 +254,9 @@ result_t editor_menubar_proc(window_t *win, uint32_t msg, uint32_t wparam, void 
 result_t win_canvas_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_tool_palette_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_color_palette_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+
+// Zoom support
+void canvas_win_set_zoom(window_t *canvas_win, int new_scale);
 
 // Color picker dialog
 bool show_color_picker(window_t *parent, rgba_t initial, rgba_t *out);

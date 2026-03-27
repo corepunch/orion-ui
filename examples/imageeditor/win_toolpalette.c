@@ -20,6 +20,8 @@ static const int k_tool_icon_idx[NUM_TOOLS] = {
   12,   // Eraser
   8,    // Fill
   0,    // Select
+  4,    // Hand
+  5,    // Zoom
 };
 
 typedef struct {

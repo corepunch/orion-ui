@@ -10,8 +10,6 @@
 #include "../ui.h"
 #include "../commctl/commctl.h"
 
-extern void repost_messages(void);
-
 // ---- helpers ----------------------------------------------------------------
 
 // Inline copy of the toolbar-height computation to allow white-box assertions
