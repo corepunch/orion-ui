@@ -32,7 +32,7 @@
 #define TOOL_ICON_ROW_H 24
 
 // Compute the toolbar height for the tool palette (wraps based on window width and TB_SPACING).
-// buttons_per_row = PALETTE_WIN_W / TB_SPACING = 64/18 = 3
+// buttons_per_row = PALETTE_WIN_W / TB_SPACING = 64/20 = 3
 // num_rows = ceil(NUM_TOOLS / buttons_per_row) = ceil(5/3) = 2
 // TOOL_TOOLBAR_H = num_rows * TOOLBAR_HEIGHT = 2*20 = 40
 //

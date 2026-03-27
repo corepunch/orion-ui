@@ -39,7 +39,7 @@ static result_t noop_proc(window_t *win, uint32_t msg,
 void test_toolbar_wrapping_height(void) {
     TEST("Toolbar wrapping: toolbar height grows with wrapping rows");
 
-    // 5 buttons in a 64px wide window → TB_SPACING=18 → 3 per row → 2 rows
+    // 5 buttons in a 64px wide window → TB_SPACING=20 → 3 per row → 2 rows
     int h1 = compute_toolbar_height(5, 64);
     ASSERT_EQUAL(h1, 2 * TOOLBAR_HEIGHT);
 
@@ -51,7 +51,7 @@ void test_toolbar_wrapping_height(void) {
     int h3 = compute_toolbar_height(7, 64);
     ASSERT_EQUAL(h3, 3 * TOOLBAR_HEIGHT);
 
-    // 5 buttons in a 40px wide window → 40/18 = 2 per row → 3 rows
+    // 5 buttons in a 40px wide window → 40/20 = 2 per row → 3 rows
     int h4 = compute_toolbar_height(5, 40);
     ASSERT_EQUAL(h4, 3 * TOOLBAR_HEIGHT);
 
