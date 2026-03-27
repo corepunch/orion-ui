@@ -280,17 +280,17 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           break;
         case ID_TOOL_SELECT:
           // If clicking inside the existing selection → move mode
-          if (doc->sel_active && canvas_in_selection(doc, cx, cy)) {
+          if (doc->sel_active && canvas_in_selection(doc, px, py)) {
             canvas_begin_move(doc, g_app->bg_color);
             float_tex_upload(doc);
-            doc->move_origin.x = cx;
-            doc->move_origin.y = cy;
+            doc->move_origin.x = px;
+            doc->move_origin.y = py;
           } else {
             // Start a new selection; commit any in-progress move first.
             if (doc->sel_moving) canvas_commit_move(doc);
             doc->sel_active = false;
-            doc->sel_start.x = doc->sel_end.x = cx;
-            doc->sel_start.y = doc->sel_end.y = cy;
+            doc->sel_start.x = doc->sel_end.x = px;
+            doc->sel_start.y = doc->sel_end.y = py;
             doc->sel_active = true;
           }
           break;
@@ -326,15 +326,15 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           break;
         case ID_TOOL_SELECT:
           if (doc->sel_moving) {
-            int dx = cx - doc->move_origin.x;
-            int dy = cy - doc->move_origin.y;
+            int dx = px - doc->move_origin.x;
+            int dy = py - doc->move_origin.y;
             doc->float_pos.x += dx;
             doc->float_pos.y += dy;
-            doc->move_origin.x = cx;
-            doc->move_origin.y = cy;
+            doc->move_origin.x = px;
+            doc->move_origin.y = py;
           } else {
-            doc->sel_end.x = cx;
-            doc->sel_end.y = cy;
+            doc->sel_end.x = px;
+            doc->sel_end.y = py;
           }
           break;
         default:
