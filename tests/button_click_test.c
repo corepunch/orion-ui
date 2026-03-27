@@ -6,9 +6,6 @@
 #include "test_env.h"
 #include "../ui.h"
 
-// Forward declaration for message queue processing
-extern void repost_messages(void);
-
 // Test state tracking
 static int test_kButtonNotificationClicked_count = 0;
 static uint32_t test_last_button_id = 0;
@@ -82,7 +79,6 @@ void test_button_click_with_scaling(void) {
     test_env_post_message(button, kWindowMessageLeftButtonDown, MAKEDWORD(button_center_x, button_center_y), NULL);
     
     // Process the message queue (simulate message pump)
-    // repost_messages(-1) processes all queued messages asynchronously
     repost_messages(-1);
     
     // Verify LBUTTONDOWN was tracked

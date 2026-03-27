@@ -7,9 +7,6 @@
 
 #include <string.h>
 
-// Forward declaration for message queue processing
-extern void repost_messages(void);
-
 // Button ID constant (same as in helloworld.c)
 #define ID_BUTTON_CLICKME 101
 

@@ -63,6 +63,9 @@
 #define DOC_START_Y   60
 #define DOC_CASCADE   20
 
+// Width/height of the interactive scrollbars on the canvas window
+#define SCROLLBAR_SIZE  8
+
 #define NUM_COLORS 16
 #define NUM_TOOLS   5
 #define NUM_COLORS      16
@@ -148,8 +151,10 @@ typedef struct canvas_doc_s {
 typedef struct {
   canvas_doc_t *doc;
   int           scale;
-  int           pan_x;   // horizontal pan offset in screen pixels
-  int           pan_y;   // vertical pan offset in screen pixels
+  int           pan_x;      // horizontal pan offset in screen pixels
+  int           pan_y;      // vertical pan offset in screen pixels
+  window_t     *hscroll;    // horizontal scrollbar child window
+  window_t     *vscroll;    // vertical scrollbar child window
 } canvas_win_state_t;
 
 typedef struct {
