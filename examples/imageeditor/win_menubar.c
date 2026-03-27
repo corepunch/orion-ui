@@ -19,9 +19,14 @@ static const menu_item_t kEditItems[] = {
   {"Redo\tCtrl+Y", ID_EDIT_REDO},
 };
 
+static const menu_item_t kHelpItems[] = {
+  {"About...", ID_HELP_ABOUT},
+};
+
 const menu_def_t kMenus[] = {
   {"File", kFileItems, (int)(sizeof(kFileItems)/sizeof(kFileItems[0]))},
   {"Edit", kEditItems, (int)(sizeof(kEditItems)/sizeof(kEditItems[0]))},
+  {"Help", kHelpItems, (int)(sizeof(kHelpItems)/sizeof(kHelpItems[0]))},
 };
 
 static void handle_menu_command(uint16_t id) {
@@ -103,6 +108,10 @@ static void handle_menu_command(uint16_t id) {
         doc_update_title(doc);
         invalidate_window(doc->canvas_win);
       }
+      break;
+
+    case ID_HELP_ABOUT:
+      show_about_dialog(g_app->menubar_win);
       break;
 
     case ID_TOOL_PENCIL:
