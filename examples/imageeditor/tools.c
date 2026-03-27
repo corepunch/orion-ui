@@ -1,4 +1,4 @@
-// Tool display names – in ID_TOOL_PENCIL..ID_TOOL_POLYGON order; index with (tool - ID_TOOL_PENCIL)
+// Tool display names – in ID_TOOL_PENCIL..ID_TOOL_TEXT order; index with (tool - ID_TOOL_PENCIL)
 
 #include "imageeditor.h"
 
@@ -15,5 +15,8 @@ const char *tool_names[NUM_TOOLS] = {
   "Ellipse",
   "RoundRect",
   "Polygon",
+  "Spray",
+  "Eyedropper",
+  "Magnifier",
   "Text",
 };

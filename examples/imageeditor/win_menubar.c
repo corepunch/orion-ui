@@ -227,6 +227,9 @@ static void handle_menu_command(uint16_t id) {
     case ID_TOOL_ELLIPSE:
     case ID_TOOL_ROUNDED_RECT:
     case ID_TOOL_POLYGON:
+    case ID_TOOL_SPRAY:
+    case ID_TOOL_EYEDROPPER:
+    case ID_TOOL_MAGNIFIER:
     case ID_TOOL_TEXT: {
       g_app->current_tool = id;
       // Update the active toolbar button in the tool palette.

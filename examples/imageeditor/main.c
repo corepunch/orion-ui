@@ -36,6 +36,9 @@ static const accel_t kAccelEntries[] = {
   { FVIRTKEY,          SDL_SCANCODE_E, ID_TOOL_ERASER },
   { FVIRTKEY,          SDL_SCANCODE_K, ID_TOOL_FILL   },
   { FVIRTKEY,          SDL_SCANCODE_S, ID_TOOL_SELECT },
+  { FVIRTKEY,          SDL_SCANCODE_A, ID_TOOL_SPRAY       },
+  { FVIRTKEY,          SDL_SCANCODE_I, ID_TOOL_EYEDROPPER  },
+  { FVIRTKEY,          SDL_SCANCODE_G, ID_TOOL_MAGNIFIER   },
   { FVIRTKEY,          SDL_SCANCODE_T, ID_TOOL_TEXT   },
   // Allow tool hotkeys to work even when Shift is held
   { FSHIFT|FVIRTKEY,   SDL_SCANCODE_P, ID_TOOL_PENCIL },
@@ -43,6 +46,9 @@ static const accel_t kAccelEntries[] = {
   { FSHIFT|FVIRTKEY,   SDL_SCANCODE_E, ID_TOOL_ERASER },
   { FSHIFT|FVIRTKEY,   SDL_SCANCODE_K, ID_TOOL_FILL   },
   { FSHIFT|FVIRTKEY,   SDL_SCANCODE_S, ID_TOOL_SELECT },
+  { FSHIFT|FVIRTKEY,   SDL_SCANCODE_A, ID_TOOL_SPRAY       },
+  { FSHIFT|FVIRTKEY,   SDL_SCANCODE_I, ID_TOOL_EYEDROPPER  },
+  { FSHIFT|FVIRTKEY,   SDL_SCANCODE_G, ID_TOOL_MAGNIFIER   },
   { FSHIFT|FVIRTKEY,   SDL_SCANCODE_T, ID_TOOL_TEXT   },
 };
 
@@ -96,6 +102,8 @@ int main(int argc, char *argv[]) {
   g_app->next_y   = DOC_START_Y;
   g_app->text_font_size = 16;
   g_app->text_antialias = true;
+
+  srand((unsigned int)time(NULL));
 
   if (!ui_init_graphics(UI_INIT_DESKTOP, "Orion Image Editor", SCREEN_W, SCREEN_H)) {
     free(g_app);
