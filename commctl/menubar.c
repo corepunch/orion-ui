@@ -16,6 +16,7 @@
 #include "../user/messages.h"
 #include "../user/draw.h"
 #include "../user/text.h"
+#include "../user/accel.h"
 #include "menubar.h"
 
 #define MENU_ITEM_H      12   // height of a normal dropdown row
@@ -23,28 +24,54 @@
 #define MENU_SIDE_PAD     4   // horizontal text padding inside dropdown
 #define MENU_MIN_W       90   // minimum popup width
 #define MENU_LABEL_PAD   12   // extra space around each top-level label
+#define MENU_HOTKEY_GAP  12   // minimum gap between label and right-aligned hotkey
 
 // ---- per-menubar userdata -----------------------------------------------
 
 typedef struct {
-  menu_def_t *menus;       // shallow copy of the menu_def_t array
-  int         count;       // number of menus
-  int        *menu_x;      // x offset for each label (window-local)
-  window_t   *open_popup;  // currently visible dropdown, or NULL
-  int         active_idx;  // index of the currently open menu label (-1 if none)
+  menu_def_t      *menus;       // shallow copy of the menu_def_t array
+  int              count;       // number of menus
+  int             *menu_x;      // x offset for each label (window-local)
+  window_t        *open_popup;  // currently visible dropdown, or NULL
+  int              active_idx;  // index of the currently open menu label (-1 if none)
+  accel_table_t   *accel;       // optional accelerator table for hotkey hints (not owned)
 } menubar_data_t;
 
 // ---- per-popup userdata (flexible array, malloc'd) ----------------------
 
 typedef struct {
-  window_t    *menubar;
-  int          item_count;
-  int          hovered;    // index of the item under the mouse (-1 if none)
-  int          pressed;    // index of the item pressed on mouse-down (-1 if none)
-  menu_item_t  items[];    // C99 flexible array
+  window_t      *menubar;
+  accel_table_t *accel;       // for hotkey lookup; not owned (may be NULL)
+  int            item_count;
+  int            hovered;    // index of the item under the mouse (-1 if none)
+  int            pressed;    // index of the item pressed on mouse-down (-1 if none)
+  menu_item_t    items[];    // C99 flexible array
 } popup_data_t;
 
 // ---- helpers -------------------------------------------------------------
+
+// Return the display width of a label, stopping at a '\t' character.
+static int item_label_width(const char *label) {
+  if (!label) return 0;
+  const char *tab = strchr(label, '\t');
+  return tab ? strnwidth(label, (int)(tab - label)) : strwidth(label);
+}
+
+// Draw a menu item label, stopping at a '\t' character.
+static void draw_item_label(const char *label, int x, int y, uint32_t col) {
+  if (!label) return;
+  const char *tab = strchr(label, '\t');
+  if (tab) {
+    int len = (int)(tab - label);
+    char buf[256];
+    int n = len < (int)(sizeof(buf) - 1) ? len : (int)(sizeof(buf) - 1);
+    memcpy(buf, label, (size_t)n);
+    buf[n] = '\0';
+    draw_text_small(buf, x, y, col);
+  } else {
+    draw_text_small(label, x, y, col);
+  }
+}
 
 static int popup_height(const menu_def_t *m) {
   int h = 4;
@@ -53,12 +80,20 @@ static int popup_height(const menu_def_t *m) {
   return h;
 }
 
-static int popup_width(const menu_def_t *m) {
+static int popup_width(const menu_def_t *m, const accel_table_t *accel) {
   int w = MENU_MIN_W;
   for (int i = 0; i < m->item_count; i++) {
     if (m->items[i].id) {
-      int tw = strwidth(m->items[i].label) + MENU_SIDE_PAD * 2;
-      if (tw > w) w = tw;
+      int lw = item_label_width(m->items[i].label) + MENU_SIDE_PAD * 2;
+      if (accel) {
+        const accel_t *a = accel_find_cmd(accel, m->items[i].id);
+        if (a) {
+          char hkbuf[32];
+          accel_format(a, hkbuf, sizeof(hkbuf));
+          lw += MENU_HOTKEY_GAP + strwidth(hkbuf) + MENU_SIDE_PAD;
+        }
+      }
+      if (lw > w) w = lw;
     }
   }
   return w;
@@ -99,8 +134,20 @@ static result_t popup_proc(window_t *win, uint32_t msg,
           if (i == pd->hovered) {
             fill_rect(COLOR_FOCUSED, 1, y, win->frame.w - 2, MENU_ITEM_H);
           }
-          draw_text_small(it->label, MENU_SIDE_PAD + 2, y + 2,
-                          i == pd->hovered ? COLOR_PANEL_BG : COLOR_TEXT_NORMAL);
+          bool hov = (i == pd->hovered);
+          uint32_t label_col  = hov ? COLOR_PANEL_BG : COLOR_TEXT_NORMAL;
+          uint32_t hotkey_col = hov ? COLOR_PANEL_BG : COLOR_TEXT_DISABLED;
+          draw_item_label(it->label, MENU_SIDE_PAD + 2, y + 2, label_col);
+          if (pd->accel) {
+            const accel_t *a = accel_find_cmd(pd->accel, it->id);
+            if (a) {
+              char hkbuf[32];
+              accel_format(a, hkbuf, sizeof(hkbuf));
+              int hw = strwidth(hkbuf);
+              draw_text_small(hkbuf, win->frame.w - MENU_SIDE_PAD - hw, y + 2,
+                              hotkey_col);
+            }
+          }
           y += MENU_ITEM_H;
         }
       }
@@ -253,13 +300,14 @@ static void open_popup(window_t *mb_win, menubar_data_t *data, int idx) {
                             sizeof(menu_item_t) * menu->item_count);
   if (!pd) return;
   pd->menubar    = mb_win;
+  pd->accel      = data->accel;
   pd->item_count = menu->item_count;
   pd->hovered    = -1;
   pd->pressed    = -1;
   for (int i = 0; i < menu->item_count; i++)
     pd->items[i] = menu->items[i];
 
-  int pw = popup_width(menu);
+  int pw = popup_width(menu, data->accel);
   int ph = popup_height(menu);
   int px = mb_win->frame.x + data->menu_x[idx];
   int py = mb_win->frame.y + MENUBAR_HEIGHT;
@@ -315,6 +363,10 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       invalidate_window(win);
       return true;
     }
+
+    case kMenuBarMessageSetAccelerators:
+      if (data) data->accel = (accel_table_t *)lparam;
+      return true;
 
     case kWindowMessagePaint: {
       fill_rect(COLOR_PANEL_DARK_BG, 0, 0, win->frame.w, win->frame.h);

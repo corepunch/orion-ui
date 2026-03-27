@@ -15,16 +15,16 @@ static const menu_item_t kFileItems[] = {
 };
 
 static const menu_item_t kEditItems[] = {
-  {"Undo\tCtrl+Z",        ID_EDIT_UNDO},
-  {"Redo\tCtrl+Y",        ID_EDIT_REDO},
-  {NULL,                  0},
-  {"Cut\tCtrl+X",         ID_EDIT_CUT},
-  {"Copy\tCtrl+C",        ID_EDIT_COPY},
-  {"Paste\tCtrl+V",       ID_EDIT_PASTE},
-  {NULL,                  0},
-  {"Clear Selection",     ID_EDIT_CLEAR_SEL},
-  {"Select All\tCtrl+A",  ID_EDIT_SELECT_ALL},
-  {"Deselect\tEsc",       ID_EDIT_DESELECT},
+  {"Undo", ID_EDIT_UNDO},
+  {"Redo", ID_EDIT_REDO},
+  {NULL, 0},
+  {"Cut", ID_EDIT_CUT},
+  {"Copy", ID_EDIT_COPY},
+  {"Paste", ID_EDIT_PASTE},
+  {NULL, 0},
+  {"Clear Selection", ID_EDIT_CLEAR_SEL},
+  {"Select All", ID_EDIT_SELECT_ALL},
+  {"Deselect", ID_EDIT_DESELECT},
 };
 
 static const menu_item_t kHelpItems[] = {
