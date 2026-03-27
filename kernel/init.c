@@ -61,11 +61,14 @@ void init_ui_checker_texture(void) {
   }
 }
 
-void shutdown_white_texture(void) {
+void shutdown_ui_textures(void) {
   SAFE_DELETE_N(ui_white_texture, glDeleteTextures);
   SAFE_DELETE_N(ui_checker_texture, glDeleteTextures);
 }
 
+void shutdown_white_texture(void) {
+  shutdown_ui_textures();
+}
 // Initialize window and OpenGL context
 static bool ui_init_window(const char *title, int width, int height) {
   // Set OpenGL attributes before creating window
