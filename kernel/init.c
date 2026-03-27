@@ -20,6 +20,9 @@ void ui_shutdown_prog(void);
 // Internal white texture for drawing solid colors
 GLuint ui_white_texture = 0;
 
+// Internal 4×4 checker texture for drawing selection outlines
+GLuint ui_checker_texture = 0;
+
 // Initialize the internal white texture
 void init_ui_white_texture(void) {
   if (ui_white_texture == 0) {
@@ -32,10 +35,40 @@ void init_ui_white_texture(void) {
   }
 }
 
-void shutdown_white_texture(void) {
-  SAFE_DELETE_N(ui_white_texture, glDeleteTextures);
+// Initialize the 4×4 checker texture used for dashed selection outlines.
+// Row 0-1: B B W W  (black in cols 0-1, white in cols 2-3)
+// Row 2-3: W W B B  (white in cols 0-1, black in cols 2-3)
+// Sampling along U (v=0..0.25) gives a B,B,W,W repeating dash for horizontal edges.
+// Sampling along V (u=0..0.25) gives the same pattern for vertical edges.
+void init_ui_checker_texture(void) {
+  if (ui_checker_texture == 0) {
+    /* 4×4 RGBA pixels: rows 0-1 are black-black-white-white, rows 2-3 are white-white-black-black.
+     * Sampling row 0 along U gives B,B,W,W dashes for horizontal edges.
+     * Sampling col 0 along V gives B,B,W,W dashes for vertical edges. */
+    static const uint8_t pixels[4 * 4 * 4] = {
+      /* row 0 */   0,  0,  0,255,   0,  0,  0,255, 255,255,255,255, 255,255,255,255,
+      /* row 1 */   0,  0,  0,255,   0,  0,  0,255, 255,255,255,255, 255,255,255,255,
+      /* row 2 */ 255,255,255,255, 255,255,255,255,   0,  0,  0,255,   0,  0,  0,255,
+      /* row 3 */ 255,255,255,255, 255,255,255,255,   0,  0,  0,255,   0,  0,  0,255,
+    };
+    glGenTextures(1, &ui_checker_texture);
+    glBindTexture(GL_TEXTURE_2D, ui_checker_texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 4, 4, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  }
 }
 
+void shutdown_ui_textures(void) {
+  SAFE_DELETE_N(ui_white_texture, glDeleteTextures);
+  SAFE_DELETE_N(ui_checker_texture, glDeleteTextures);
+}
+
+void shutdown_white_texture(void) {
+  shutdown_ui_textures();
+}
 // Initialize window and OpenGL context
 static bool ui_init_window(const char *title, int width, int height) {
   // Set OpenGL attributes before creating window
@@ -137,6 +170,7 @@ bool ui_init_graphics(int flags, const char *title, int width, int height) {
   ui_init_prog();
   
   init_ui_white_texture();
+  init_ui_checker_texture();
 
   init_console();
   

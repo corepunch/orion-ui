@@ -227,6 +227,32 @@ void fill_rect(int color, int x, int y, int w, int h) {
   draw_rect_ex(ui_white_texture, x, y, w, h, false, 1);
 }
 
+// Draw a dashed selection-outline rectangle using 4 tiled draw calls instead of
+// one fill_rect per dash segment.  The 4×4 checker texture is sampled with tiled
+// UVs so that the first row/column produces a B,B,W,W repeating dash regardless
+// of the selection size, keeping the GL call count constant (O(1)).
+void draw_sel_rect(int x, int y, int w, int h) {
+  extern bool running;
+  extern GLuint ui_checker_texture;
+
+  if (!running || w < 1 || h < 1) return;
+
+  // Top edge: tile along U, sample only the first texture row (v 0..0.25)
+  draw_sprite_region(ui_checker_texture, x, y, w, 1,
+                     0.0f, 0.0f, (float)w / 4.0f, 0.25f, 1.0f);
+  // Bottom edge
+  draw_sprite_region(ui_checker_texture, x, y + h - 1, w, 1,
+                     0.0f, 0.0f, (float)w / 4.0f, 0.25f, 1.0f);
+  if (h > 2) {
+    // Left edge (skip corners already drawn above): tile along V, sample col 0 (u 0..0.25)
+    draw_sprite_region(ui_checker_texture, x, y + 1, 1, h - 2,
+                       0.0f, 0.0f, 0.25f, (float)(h - 2) / 4.0f, 1.0f);
+    // Right edge
+    draw_sprite_region(ui_checker_texture, x + w - 1, y + 1, 1, h - 2,
+                       0.0f, 0.0f, 0.25f, (float)(h - 2) / 4.0f, 1.0f);
+  }
+}
+
 void draw_icon8(int icon, int x, int y, uint32_t col) {
   char str[2] = { icon+128+6*16, 0 };
   draw_text_small(str, x, y, col);
