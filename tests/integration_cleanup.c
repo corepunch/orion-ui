@@ -85,7 +85,7 @@ int main(int argc, char* argv[]) {
     dispatch_message(&e);
     msg_count++;
   }
-  repost_messages();
+  repost_messages(-1);
 
   printf("Processed %d messages\n", msg_count);
 

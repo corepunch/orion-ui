@@ -11,8 +11,8 @@
 #define ABOUT_WIN_H    120
 
 // Banner panel on the left (maintains conan.png aspect ratio ~1024:1063)
-#define ABOUT_BANNER_W  90
-#define ABOUT_BANNER_H  93
+#define ABOUT_BANNER_W  ABOUT_WIN_H
+#define ABOUT_BANNER_H  ABOUT_WIN_H
 
 // OK button
 #define ABOUT_BTN_W     50
@@ -152,7 +152,7 @@ static result_t about_proc(window_t *win, uint32_t msg,
 
       // Banner image (left panel)
       create_window("", WINDOW_NOTITLE | WINDOW_NOFILL,
-                    MAKERECT(2, 2, ABOUT_BANNER_W, ABOUT_BANNER_H),
+                    MAKERECT(0, 0, ABOUT_BANNER_W, ABOUT_BANNER_H),
                     win, win_image, (void *)(uintptr_t)s->banner_tex);
 
       // App info labels (right column)
@@ -164,18 +164,12 @@ static result_t about_proc(window_t *win, uint32_t msg,
       make_label(win, "Orion UI framework.", 76, DIM);
 
       // OK button (centered at the bottom)
-      int bx = (ABOUT_WIN_W - ABOUT_BTN_W) / 2;
+      int bx = ABOUT_WIN_W - ABOUT_BTN_W - 4;
       int by = ABOUT_WIN_H - ABOUT_BTN_H - 4;
       create_window("OK", 0,
                     MAKERECT(bx, by, ABOUT_BTN_W, ABOUT_BTN_H),
                     win, win_button, NULL);
       return true;
-    }
-
-    case kWindowMessagePaint: {
-      // Separator line between the banner and the text column
-      fill_rect(COLOR_DARK_EDGE, ABOUT_BANNER_W + 4, 2, 1, ABOUT_BANNER_H);
-      return false; // let sub-windows (image, labels, button) paint themselves
     }
 
     case kWindowMessageCommand: {

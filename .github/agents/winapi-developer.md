@@ -17,7 +17,7 @@ You are now working on **Orion**, a lightweight WinAPI-style UI framework writte
 | `DestroyWindow`       | `destroy_window(win)`                         |
 | `ShowWindow`          | `show_window(win, visible)`                   |
 | `InvalidateRect`      | `invalidate_window(win)`                      |
-| `GetMessage` loop     | `while (get_message(&e)) dispatch_message(&e); repost_messages();` |
+| `GetMessage` loop     | `while (get_message(&e)) dispatch_message(&e); repost_messages(-1);` |
 | `WM_COMMAND` + `HIWORD`/`LOWORD` | Same — `HIWORD(wparam)` = notification code, `LOWORD(wparam)` = control id |
 | `TranslateAccelerator`| `translate_accelerator(win, accel_table, &e)` |
 | `DialogBox` / `EndDialog` | `show_dialog(parent, proc, userdata)` / `end_dialog(win, result)` |

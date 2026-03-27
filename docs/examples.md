@@ -92,7 +92,7 @@ int ly = (int16_t)HIWORD(wparam) - root->frame.y - win->frame.y;
    ui_event_t e;
    while (running) {
      while (get_message(&e)) dispatch_message(&e);
-     repost_messages();
+     repost_messages(-1);
    }
    ui_shutdown_graphics();
    ```

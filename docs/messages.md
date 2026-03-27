@@ -12,7 +12,7 @@ nav_order: 6
 // Synchronous: calls win->proc immediately; returns proc's return value
 int  send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 
-// Asynchronous: queued, delivered on the next repost_messages() call
+// Asynchronous: queued, delivered on the next repost_messages(-1) call
 void post_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 ```
 
@@ -120,7 +120,7 @@ ui_event_t e;
 while (running) {
     while (get_message(&e))   // drain SDL event queue
         dispatch_message(&e);
-    repost_messages();        // process posted (async) messages + repaint
+    repost_messages(-1);        // process posted (async) messages + repaint
 }
 ```
 

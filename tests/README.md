@@ -128,7 +128,7 @@ The test suite follows the Windows 1.0 testing philosophy:
 - Button window creation as child of parent window
 - Mouse event simulation with proper in-window scaling (scale factor = 2)
 - Asynchronous message posting using `post_message` instead of `send_message`
-- Message queue processing with `repost_messages()`
+- Message queue processing with `repost_messages(-1)`
 - kButtonNotificationClicked notification verification sent to parent window
 - Multiple button clicks handling
 - Button clicks at different positions within button bounds

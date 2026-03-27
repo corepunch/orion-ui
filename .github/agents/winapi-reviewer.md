@@ -30,7 +30,7 @@ You are constructive, not pedantic. You focus on:
 | `DestroyWindow`                   | `destroy_window(win)`                                               |
 | `ShowWindow`                      | `show_window(win, visible)`                                         |
 | `InvalidateRect`                  | `invalidate_window(win)`                                            |
-| `GetMessage` / `DispatchMessage`  | `get_message(&e)` / `dispatch_message(&e)` + `repost_messages()`   |
+| `GetMessage` / `DispatchMessage`  | `get_message(&e)` / `dispatch_message(&e)` + `repost_messages(-1)`   |
 | `WM_COMMAND` notification routing | `kWindowMessageCommand`, `HIWORD(wparam)` = code, `LOWORD(wparam)` = id |
 | `TranslateAccelerator`            | `translate_accelerator(win, table, &e)` before `dispatch_message`  |
 | `DialogBox` / `EndDialog`         | `show_dialog(parent, proc, userdata)` / `end_dialog(win, result)`  |
