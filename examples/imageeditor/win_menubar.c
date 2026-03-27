@@ -137,25 +137,19 @@ static void handle_menu_command(uint16_t id) {
       canvas_win_state_t *state = (canvas_win_state_t *)doc->canvas_win->userdata;
       if (!state) break;
 
-      static const int zoom_vals[] = {1, 2, 4, 6, 8};
-      static const int zoom_ids[]  = {
-        ID_VIEW_ZOOM_1X, ID_VIEW_ZOOM_2X, ID_VIEW_ZOOM_4X,
-        ID_VIEW_ZOOM_6X, ID_VIEW_ZOOM_8X
-      };
-      int nz = (int)(sizeof(zoom_vals)/sizeof(zoom_vals[0]));
       int new_scale = state->scale;
 
       if (id == ID_VIEW_ZOOM_IN) {
-        for (int i = 0; i < nz; i++) {
-          if (zoom_vals[i] > state->scale) { new_scale = zoom_vals[i]; break; }
+        for (int i = 0; i < NUM_ZOOM_LEVELS; i++) {
+          if (kZoomLevels[i] > state->scale) { new_scale = kZoomLevels[i]; break; }
         }
       } else if (id == ID_VIEW_ZOOM_OUT) {
-        for (int i = nz - 1; i >= 0; i--) {
-          if (zoom_vals[i] < state->scale) { new_scale = zoom_vals[i]; break; }
+        for (int i = NUM_ZOOM_LEVELS - 1; i >= 0; i--) {
+          if (kZoomLevels[i] < state->scale) { new_scale = kZoomLevels[i]; break; }
         }
       } else {
-        for (int i = 0; i < nz; i++) {
-          if (zoom_ids[i] == (int)id) { new_scale = zoom_vals[i]; break; }
+        for (int i = 0; i < NUM_ZOOM_LEVELS; i++) {
+          if (kZoomMenuIDs[i] == (int)id) { new_scale = kZoomLevels[i]; break; }
         }
       }
 

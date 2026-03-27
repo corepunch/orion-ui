@@ -2,9 +2,13 @@
 
 #include "imageeditor.h"
 
-// Valid zoom levels (MacPaint/Photoshop 1.0 style)
-static const int kZoomLevels[] = {1, 2, 4, 6, 8};
-static const int kNumZoomLevels = 5;
+// Single source of truth for zoom levels and their View menu IDs.
+// win_menubar.c also references these via the extern declarations in imageeditor.h.
+const int kZoomLevels[NUM_ZOOM_LEVELS]  = {1, 2, 4, 6, 8};
+const int kZoomMenuIDs[NUM_ZOOM_LEVELS] = {
+  ID_VIEW_ZOOM_1X, ID_VIEW_ZOOM_2X, ID_VIEW_ZOOM_4X,
+  ID_VIEW_ZOOM_6X, ID_VIEW_ZOOM_8X
+};
 
 // Clamp pan to the valid range for the current zoom level and window size
 static void clamp_pan(canvas_win_state_t *state, int win_w, int win_h) {
@@ -16,11 +20,31 @@ static void clamp_pan(canvas_win_state_t *state, int win_w, int win_h) {
   if (state->pan_y > max_y) state->pan_y = max_y;
 }
 
-// Set zoom level on a canvas window (called by menu/accelerator handler)
+// Set zoom level on a canvas window (called by menu/accelerator handler).
+// new_scale is snapped to the nearest supported zoom level so callers can
+// never trigger a divide-by-zero or produce unexpected canvas sizes.
 void canvas_win_set_zoom(window_t *win, int new_scale) {
   canvas_win_state_t *state = (canvas_win_state_t *)win->userdata;
   if (!state) return;
-  state->scale = new_scale;
+
+  // Snap new_scale to the closest supported zoom level
+  int clamped = kZoomLevels[0];
+  if (new_scale <= kZoomLevels[0]) {
+    clamped = kZoomLevels[0];
+  } else if (new_scale >= kZoomLevels[NUM_ZOOM_LEVELS - 1]) {
+    clamped = kZoomLevels[NUM_ZOOM_LEVELS - 1];
+  } else {
+    for (int i = 1; i < NUM_ZOOM_LEVELS; i++) {
+      if (new_scale <= kZoomLevels[i]) {
+        int dist_prev = new_scale - kZoomLevels[i - 1];
+        int dist_curr = kZoomLevels[i] - new_scale;
+        clamped = (dist_prev <= dist_curr) ? kZoomLevels[i - 1] : kZoomLevels[i];
+        break;
+      }
+    }
+  }
+
+  state->scale = clamped;
   clamp_pan(state, win->frame.w, win->frame.h);
   invalidate_window(win);
 }

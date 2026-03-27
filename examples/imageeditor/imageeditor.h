@@ -89,6 +89,12 @@
 #define ID_VIEW_ZOOM_6X   45
 #define ID_VIEW_ZOOM_8X   46
 
+// Supported zoom levels and their corresponding View menu IDs.
+// These are the single source of truth used by win_canvas.c and win_menubar.c.
+#define NUM_ZOOM_LEVELS 5
+extern const int kZoomLevels[NUM_ZOOM_LEVELS];
+extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
+
 #define ID_HELP_ABOUT  30
 
 // Tool command IDs – these are the authoritative tool identifiers used everywhere

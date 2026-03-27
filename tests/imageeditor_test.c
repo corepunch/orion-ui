@@ -815,8 +815,9 @@ void test_set_pixel_respects_reversed_selection(void) {
 // SDL or OpenGL.
 // ============================================================
 
-static const int t_kZoomLevels[] = {1, 2, 4, 6, 8};
-static const int t_kNumZoomLevels = 5;
+// Mirror of the shared zoom level table from win_canvas.c / imageeditor.h
+#define T_NUM_ZOOM_LEVELS 5
+static const int t_kZoomLevels[T_NUM_ZOOM_LEVELS] = {1, 2, 4, 6, 8};
 
 /* Replicate clamp_pan from win_canvas.c */
 static void t_clamp_pan(int scale, int win_w, int win_h,
@@ -831,9 +832,25 @@ static void t_clamp_pan(int scale, int win_w, int win_h,
   if (*pan_y > max_y) *pan_y = max_y;
 }
 
+/* Replicate the scale-snapping logic from canvas_win_set_zoom() */
+static int t_snap_scale(int new_scale) {
+  if (new_scale <= t_kZoomLevels[0])
+    return t_kZoomLevels[0];
+  if (new_scale >= t_kZoomLevels[T_NUM_ZOOM_LEVELS - 1])
+    return t_kZoomLevels[T_NUM_ZOOM_LEVELS - 1];
+  for (int i = 1; i < T_NUM_ZOOM_LEVELS; i++) {
+    if (new_scale <= t_kZoomLevels[i]) {
+      int dist_prev = new_scale - t_kZoomLevels[i - 1];
+      int dist_curr = t_kZoomLevels[i] - new_scale;
+      return (dist_prev <= dist_curr) ? t_kZoomLevels[i - 1] : t_kZoomLevels[i];
+    }
+  }
+  return t_kZoomLevels[T_NUM_ZOOM_LEVELS - 1];
+}
+
 /* Replicate zoom-in stepping from handle_menu_command */
 static int t_zoom_in(int current) {
-  for (int i = 0; i < t_kNumZoomLevels; i++) {
+  for (int i = 0; i < T_NUM_ZOOM_LEVELS; i++) {
     if (t_kZoomLevels[i] > current) return t_kZoomLevels[i];
   }
   return current; /* already at max */
@@ -841,7 +858,7 @@ static int t_zoom_in(int current) {
 
 /* Replicate zoom-out stepping */
 static int t_zoom_out(int current) {
-  for (int i = t_kNumZoomLevels - 1; i >= 0; i--) {
+  for (int i = T_NUM_ZOOM_LEVELS - 1; i >= 0; i--) {
     if (t_kZoomLevels[i] < current) return t_kZoomLevels[i];
   }
   return current; /* already at min */
@@ -929,6 +946,47 @@ void test_zoom_coord_mapping_1x(void) {
   PASS();
 }
 
+void test_snap_scale_zero(void) {
+  TEST("snap_scale – zero clamps to minimum zoom level (1x)");
+  ASSERT_EQUAL(t_snap_scale(0), 1);
+  PASS();
+}
+
+void test_snap_scale_negative(void) {
+  TEST("snap_scale – negative value clamps to minimum zoom level (1x)");
+  ASSERT_EQUAL(t_snap_scale(-5), 1);
+  ASSERT_EQUAL(t_snap_scale(-100), 1);
+  PASS();
+}
+
+void test_snap_scale_above_max(void) {
+  TEST("snap_scale – value above 8 clamps to maximum zoom level (8x)");
+  ASSERT_EQUAL(t_snap_scale(9), 8);
+  ASSERT_EQUAL(t_snap_scale(100), 8);
+  PASS();
+}
+
+void test_snap_scale_exact(void) {
+  TEST("snap_scale – exact supported levels are preserved unchanged");
+  ASSERT_EQUAL(t_snap_scale(1), 1);
+  ASSERT_EQUAL(t_snap_scale(2), 2);
+  ASSERT_EQUAL(t_snap_scale(4), 4);
+  ASSERT_EQUAL(t_snap_scale(6), 6);
+  ASSERT_EQUAL(t_snap_scale(8), 8);
+  PASS();
+}
+
+void test_snap_scale_midpoint(void) {
+  TEST("snap_scale – unsupported value snaps to nearest supported level");
+  /* 3 is between 2 and 4 (equidistant) — should snap to 2 (prefer lower) */
+  ASSERT_EQUAL(t_snap_scale(3), 2);
+  /* 5 is between 4 and 6 (equidistant) — should snap to 4 (prefer lower) */
+  ASSERT_EQUAL(t_snap_scale(5), 4);
+  /* 7 is between 6 and 8 (equidistant) — should snap to 6 (prefer lower) */
+  ASSERT_EQUAL(t_snap_scale(7), 6);
+  PASS();
+}
+
 int main(int argc, char *argv[]) {
   (void)argc; (void)argv;
   TEST_START("Image Editor Logic");
@@ -981,6 +1039,12 @@ int main(int argc, char *argv[]) {
   test_pan_clamp_within_range();
   test_zoom_coord_mapping();
   test_zoom_coord_mapping_1x();
+
+  test_snap_scale_zero();
+  test_snap_scale_negative();
+  test_snap_scale_above_max();
+  test_snap_scale_exact();
+  test_snap_scale_midpoint();
 
   TEST_END();
 }
