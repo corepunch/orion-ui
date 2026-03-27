@@ -320,10 +320,13 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           g_app->text_font_size = opts.font_size;
           g_app->text_antialias = opts.antialias;
           doc_push_undo(doc);
-          canvas_draw_text_stb(doc, px, py, &opts);
-          doc->modified = true;
-          doc_update_title(doc);
-          invalidate_window(win);
+          if (canvas_draw_text_stb(doc, px, py, &opts)) {
+            doc->modified = true;
+            doc_update_title(doc);
+            invalidate_window(win);
+          } else {
+            doc_discard_undo(doc);
+          }
         }
         return true;
       }

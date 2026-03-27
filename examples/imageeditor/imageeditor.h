@@ -162,9 +162,6 @@ typedef struct canvas_doc_s {
   int      float_h;
   uint8_t *float_pixels;   // RGBA data extracted from canvas
   GLuint   float_tex;      // cached GL texture for float_pixels (0 = none)
-  // Text tool pending placement
-  int      text_x;         // canvas x where text tool was clicked
-  int      text_y;         // canvas y where text tool was clicked
 } canvas_doc_t;
 
 typedef struct {
@@ -304,8 +301,9 @@ typedef struct {
 } text_options_t;
 bool show_text_dialog(window_t *parent, text_options_t *opts);
 
-// Render text into the canvas at (x, y) using stb_truetype.
-void canvas_draw_text_stb(canvas_doc_t *doc, int x, int y,
+// Render a UTF-8 string into the canvas at (x, y) using stb_truetype.
+// Returns true if at least one pixel was written.
+bool canvas_draw_text_stb(canvas_doc_t *doc, int x, int y,
                            const text_options_t *opts);
 
 // About dialog

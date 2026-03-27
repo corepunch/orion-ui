@@ -70,6 +70,8 @@ static int slider_x_to_size(int lx) {
 
 // Convert a font size to a slider thumb x-pixel
 static int size_to_slider_x(int sz) {
+  if (sz < TD_SIZE_MIN) sz = TD_SIZE_MIN;
+  if (sz > TD_SIZE_MAX) sz = TD_SIZE_MAX;
   return TD_SLIDER_X + (sz - TD_SIZE_MIN) * TD_SLIDER_W / (TD_SIZE_MAX - TD_SIZE_MIN);
 }
 
