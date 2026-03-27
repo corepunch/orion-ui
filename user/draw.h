@@ -11,6 +11,8 @@ void draw_rect(int tex, int x, int y, int w, int h);
 void draw_rect_ex(int tex, int x, int y, int w, int h, int type, float alpha);
 void draw_sprite_region(int tex, int x, int y, int w, int h,
                         float u0, float v0, float u1, float v1, float alpha);
+// Draw a dashed selection-outline rectangle (4 GL draw calls, O(1) regardless of size)
+void draw_sel_rect(int x, int y, int w, int h);
 
 // Icon drawing functions
 void draw_icon8(int icon, int x, int y, uint32_t col);
