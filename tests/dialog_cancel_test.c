@@ -17,7 +17,6 @@
 #include "test_env.h"
 #include "../ui.h"
 
-extern void repost_messages(void);
 extern void end_dialog(window_t *win, uint32_t code);
 
 // Tracks whether the dialog's Cancel command was received.

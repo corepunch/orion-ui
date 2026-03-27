@@ -8,6 +8,8 @@ const char *tool_names[NUM_TOOLS] = {
   "Eraser",
   "Fill",
   "Select",
+  "Hand",
+  "Zoom",
   "Line",
   "Rect",
   "Ellipse",

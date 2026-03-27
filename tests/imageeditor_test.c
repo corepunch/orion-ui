@@ -809,6 +809,185 @@ void test_set_pixel_respects_reversed_selection(void) {
 }
 
 // ============================================================
+// Zoom / pan logic tests
+// The following helpers mirror the pure-C pan-clamping and
+// coordinate-mapping logic from win_canvas.c without requiring
+// SDL or OpenGL.
+// ============================================================
+
+// Mirror of the shared zoom level table from win_canvas.c / imageeditor.h
+#define T_NUM_ZOOM_LEVELS 5
+static const int t_kZoomLevels[T_NUM_ZOOM_LEVELS] = {1, 2, 4, 6, 8};
+
+/* Replicate clamp_pan from win_canvas.c */
+static void t_clamp_pan(int scale, int win_w, int win_h,
+                         int *pan_x, int *pan_y) {
+  int max_x = CANVAS_W * scale - win_w;
+  int max_y = CANVAS_H * scale - win_h;
+  if (max_x < 0) max_x = 0;
+  if (max_y < 0) max_y = 0;
+  if (*pan_x < 0) *pan_x = 0;
+  if (*pan_y < 0) *pan_y = 0;
+  if (*pan_x > max_x) *pan_x = max_x;
+  if (*pan_y > max_y) *pan_y = max_y;
+}
+
+/* Replicate the scale-snapping logic from canvas_win_set_zoom() */
+static int t_snap_scale(int new_scale) {
+  if (new_scale <= t_kZoomLevels[0])
+    return t_kZoomLevels[0];
+  if (new_scale >= t_kZoomLevels[T_NUM_ZOOM_LEVELS - 1])
+    return t_kZoomLevels[T_NUM_ZOOM_LEVELS - 1];
+  for (int i = 1; i < T_NUM_ZOOM_LEVELS; i++) {
+    if (new_scale <= t_kZoomLevels[i]) {
+      int dist_prev = new_scale - t_kZoomLevels[i - 1];
+      int dist_curr = t_kZoomLevels[i] - new_scale;
+      return (dist_prev <= dist_curr) ? t_kZoomLevels[i - 1] : t_kZoomLevels[i];
+    }
+  }
+  return t_kZoomLevels[T_NUM_ZOOM_LEVELS - 1];
+}
+
+/* Replicate zoom-in stepping from handle_menu_command */
+static int t_zoom_in(int current) {
+  for (int i = 0; i < T_NUM_ZOOM_LEVELS; i++) {
+    if (t_kZoomLevels[i] > current) return t_kZoomLevels[i];
+  }
+  return current; /* already at max */
+}
+
+/* Replicate zoom-out stepping */
+static int t_zoom_out(int current) {
+  for (int i = T_NUM_ZOOM_LEVELS - 1; i >= 0; i--) {
+    if (t_kZoomLevels[i] < current) return t_kZoomLevels[i];
+  }
+  return current; /* already at min */
+}
+
+void test_zoom_level_cycle_in(void) {
+  TEST("zoom – zoom-in cycles through all levels and stops at 8x");
+  ASSERT_EQUAL(t_zoom_in(1), 2);
+  ASSERT_EQUAL(t_zoom_in(2), 4);
+  ASSERT_EQUAL(t_zoom_in(4), 6);
+  ASSERT_EQUAL(t_zoom_in(6), 8);
+  ASSERT_EQUAL(t_zoom_in(8), 8); /* already at max */
+  PASS();
+}
+
+void test_zoom_level_cycle_out(void) {
+  TEST("zoom – zoom-out cycles through all levels and stops at 1x");
+  ASSERT_EQUAL(t_zoom_out(8), 6);
+  ASSERT_EQUAL(t_zoom_out(6), 4);
+  ASSERT_EQUAL(t_zoom_out(4), 2);
+  ASSERT_EQUAL(t_zoom_out(2), 1);
+  ASSERT_EQUAL(t_zoom_out(1), 1); /* already at min */
+  PASS();
+}
+
+void test_pan_clamp_no_zoom(void) {
+  TEST("pan clamp – 1x zoom: pan always clamped to zero (canvas fits)");
+  int px = 100, py = 50;
+  t_clamp_pan(1, CANVAS_W, CANVAS_H, &px, &py);
+  ASSERT_EQUAL(px, 0);
+  ASSERT_EQUAL(py, 0);
+  PASS();
+}
+
+void test_pan_clamp_zoom_4x(void) {
+  TEST("pan clamp – 4x zoom: pan stays within valid range");
+  /* win size equals canvas size; at 4x, max_pan = 3*CANVAS */
+  int px = 9999, py = 9999;
+  t_clamp_pan(4, CANVAS_W, CANVAS_H, &px, &py);
+  ASSERT_EQUAL(px, CANVAS_W * 4 - CANVAS_W);  /* 3*320 = 960 */
+  ASSERT_EQUAL(py, CANVAS_H * 4 - CANVAS_H);  /* 3*200 = 600 */
+  PASS();
+}
+
+void test_pan_clamp_negative(void) {
+  TEST("pan clamp – negative pan values are clamped to 0");
+  int px = -50, py = -20;
+  t_clamp_pan(2, CANVAS_W, CANVAS_H, &px, &py);
+  ASSERT_EQUAL(px, 0);
+  ASSERT_EQUAL(py, 0);
+  PASS();
+}
+
+void test_pan_clamp_within_range(void) {
+  TEST("pan clamp – valid pan values are unchanged");
+  int px = 100, py = 80;
+  /* 2x zoom, window size = CANVAS size → max_pan = CANVAS */
+  t_clamp_pan(2, CANVAS_W, CANVAS_H, &px, &py);
+  ASSERT_EQUAL(px, 100);
+  ASSERT_EQUAL(py, 80);
+  PASS();
+}
+
+void test_zoom_coord_mapping(void) {
+  TEST("zoom coord mapping – mouse local + pan correctly maps to canvas pixel");
+  /* At 4x zoom with pan_x=100, pan_y=200:
+   * mouse at local (8, 12) → canvas pixel (108/4, 212/4) = (27, 53) */
+  int scale = 4, pan_x = 100, pan_y = 200;
+  int mouse_local_x = 8, mouse_local_y = 12;
+  int canvas_x = (mouse_local_x + pan_x) / scale;
+  int canvas_y = (mouse_local_y + pan_y) / scale;
+  ASSERT_EQUAL(canvas_x, 27);
+  ASSERT_EQUAL(canvas_y, 53);
+  PASS();
+}
+
+void test_zoom_coord_mapping_1x(void) {
+  TEST("zoom coord mapping – 1x zoom with zero pan passes through unchanged");
+  int scale = 1, pan_x = 0, pan_y = 0;
+  int mx = 55, my = 123;
+  int cx = (mx + pan_x) / scale;
+  int cy = (my + pan_y) / scale;
+  ASSERT_EQUAL(cx, 55);
+  ASSERT_EQUAL(cy, 123);
+  PASS();
+}
+
+void test_snap_scale_zero(void) {
+  TEST("snap_scale – zero clamps to minimum zoom level (1x)");
+  ASSERT_EQUAL(t_snap_scale(0), 1);
+  PASS();
+}
+
+void test_snap_scale_negative(void) {
+  TEST("snap_scale – negative value clamps to minimum zoom level (1x)");
+  ASSERT_EQUAL(t_snap_scale(-5), 1);
+  ASSERT_EQUAL(t_snap_scale(-100), 1);
+  PASS();
+}
+
+void test_snap_scale_above_max(void) {
+  TEST("snap_scale – value above 8 clamps to maximum zoom level (8x)");
+  ASSERT_EQUAL(t_snap_scale(9), 8);
+  ASSERT_EQUAL(t_snap_scale(100), 8);
+  PASS();
+}
+
+void test_snap_scale_exact(void) {
+  TEST("snap_scale – exact supported levels are preserved unchanged");
+  ASSERT_EQUAL(t_snap_scale(1), 1);
+  ASSERT_EQUAL(t_snap_scale(2), 2);
+  ASSERT_EQUAL(t_snap_scale(4), 4);
+  ASSERT_EQUAL(t_snap_scale(6), 6);
+  ASSERT_EQUAL(t_snap_scale(8), 8);
+  PASS();
+}
+
+void test_snap_scale_midpoint(void) {
+  TEST("snap_scale – unsupported value snaps to nearest supported level");
+  /* 3 is between 2 and 4 (equidistant) — should snap to 2 (prefer lower) */
+  ASSERT_EQUAL(t_snap_scale(3), 2);
+  /* 5 is between 4 and 6 (equidistant) — should snap to 4 (prefer lower) */
+  ASSERT_EQUAL(t_snap_scale(5), 4);
+  /* 7 is between 6 and 8 (equidistant) — should snap to 6 (prefer lower) */
+  ASSERT_EQUAL(t_snap_scale(7), 6);
+  PASS();
+}
+
+// ============================================================
 // Inline selection operation helpers (mirrors canvas.c logic, no GL/SDL)
 // ============================================================
 
@@ -1092,6 +1271,20 @@ int main(int argc, char *argv[]) {
   test_flood_fill_respects_selection();
   test_flood_fill_outside_selection_noop();
 
+  test_zoom_level_cycle_in();
+  test_zoom_level_cycle_out();
+  test_pan_clamp_no_zoom();
+  test_pan_clamp_zoom_4x();
+  test_pan_clamp_negative();
+  test_pan_clamp_within_range();
+  test_zoom_coord_mapping();
+  test_zoom_coord_mapping_1x();
+
+  test_snap_scale_zero();
+  test_snap_scale_negative();
+  test_snap_scale_above_max();
+  test_snap_scale_exact();
+  test_snap_scale_midpoint();
   test_copy_selection_content();
   test_clear_selection_fills_bg();
   test_paste_pixels_at_offset();

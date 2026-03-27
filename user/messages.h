@@ -49,6 +49,8 @@ enum {
   kToolBarMessageButtonClick,
   kToolBarMessageSetStrip,         // wparam=0, lparam=bitmap_strip_t* (or NULL to clear)
   kToolBarMessageSetActiveButton,  // wparam=ident of button to mark active
+  kScrollBarMessageSetInfo,        // lparam = scrollbar_info_t*
+  kScrollBarMessageGetPos,         // returns current scroll position
 };
 
 // Control notification messages
@@ -56,6 +58,7 @@ enum {
   kEditNotificationUpdate = 100,
   kButtonNotificationClicked,
   kComboBoxNotificationSelectionChange,
+  kScrollBarNotificationChanged,  // wparam: MAKEDWORD(scrollbar_id, kScrollBarNotificationChanged); lparam: (void*)(intptr_t)new_pos
 };
 
 // Button state

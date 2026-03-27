@@ -3,6 +3,112 @@
 #include "imageeditor.h"
 #include <SDL2/SDL.h>   // for SDL_GetModState / KMOD_SHIFT
 
+// Single source of truth for zoom levels and their View menu IDs.
+// win_menubar.c also references these via the extern declarations in imageeditor.h.
+const int kZoomLevels[NUM_ZOOM_LEVELS]  = {1, 2, 4, 6, 8};
+const int kZoomMenuIDs[NUM_ZOOM_LEVELS] = {
+  ID_VIEW_ZOOM_1X, ID_VIEW_ZOOM_2X, ID_VIEW_ZOOM_4X,
+  ID_VIEW_ZOOM_6X, ID_VIEW_ZOOM_8X
+};
+
+// ---- scrollbar helpers -------------------------------------------------------
+
+// Update scrollbar info and visibility to match the current zoom/pan state.
+// Called after any change to scale, pan, or window size.
+static void canvas_sync_scrollbars(window_t *win, canvas_win_state_t *state) {
+  if (!state->hscroll || !state->vscroll) return;
+
+  int canvas_w = CANVAS_W * state->scale;
+  int canvas_h = CANVAS_H * state->scale;
+  int win_w    = win->frame.w;
+  int win_h    = win->frame.h;
+
+  bool need_h = canvas_w > win_w;
+  bool need_v = canvas_h > win_h;
+
+  // Viewport sizes account for the other scrollbar if both are shown
+  int view_w = need_v ? win_w - SCROLLBAR_SIZE : win_w;
+  int view_h = need_h ? win_h - SCROLLBAR_SIZE : win_h;
+
+  if (need_h) {
+    state->hscroll->frame = (rect_t){0, win_h - SCROLLBAR_SIZE, view_w, SCROLLBAR_SIZE};
+    scrollbar_info_t hi = { 0, canvas_w, view_w, state->pan_x };
+    send_message(state->hscroll, kScrollBarMessageSetInfo, 0, &hi);
+    state->hscroll->visible = true;
+  } else {
+    state->pan_x = 0;
+    state->hscroll->visible = false;
+  }
+
+  if (need_v) {
+    state->vscroll->frame = (rect_t){win_w - SCROLLBAR_SIZE, 0, SCROLLBAR_SIZE, view_h};
+    scrollbar_info_t vi = { 0, canvas_h, view_h, state->pan_y };
+    send_message(state->vscroll, kScrollBarMessageSetInfo, 0, &vi);
+    state->vscroll->visible = true;
+  } else {
+    state->pan_y = 0;
+    state->vscroll->visible = false;
+  }
+}
+
+// Clamp pan to the valid range for the current zoom level and window size
+static void clamp_pan(canvas_win_state_t *state, int win_w, int win_h) {
+  int max_x = MAX(0, CANVAS_W * state->scale - win_w);
+  int max_y = MAX(0, CANVAS_H * state->scale - win_h);
+  if (state->pan_x < 0) state->pan_x = 0;
+  if (state->pan_y < 0) state->pan_y = 0;
+  if (state->pan_x > max_x) state->pan_x = max_x;
+  if (state->pan_y > max_y) state->pan_y = max_y;
+}
+
+// Forward a mouse event from the canvas to a scrollbar child.
+// The forwarded wparam is adjusted so that win_scrollbar's sb_axis() formula
+// (LOWORD/HIWORD - root.frame.x/y) yields the correct scrollbar-local coord.
+// Since canvas.frame.x/y == 0, LOWORD/HIWORD in canvas wparam == logical_x/y.
+static bool canvas_forward_to_scrollbar(window_t *sb, uint32_t msg, uint32_t wparam) {
+  if (!sb || !sb->visible) return false;
+  int fwd_lo = (int16_t)LOWORD(wparam) - sb->frame.x;
+  int fwd_hi = (int16_t)HIWORD(wparam) - sb->frame.y;
+  return (bool)send_message(sb, msg, MAKEDWORD(fwd_lo, fwd_hi), NULL);
+}
+
+// Test whether canvas-local (cx, cy) falls inside a scrollbar child.
+static bool canvas_hit_scrollbar(window_t *sb, int cx, int cy) {
+  if (!sb || !sb->visible) return false;
+  return cx >= sb->frame.x && cx < sb->frame.x + sb->frame.w
+      && cy >= sb->frame.y && cy < sb->frame.y + sb->frame.h;
+}
+
+// Set zoom level on a canvas window (called by menu/accelerator handler).
+// new_scale is snapped to the nearest supported zoom level so callers can
+// never trigger a divide-by-zero or produce unexpected canvas sizes.
+void canvas_win_set_zoom(window_t *win, int new_scale) {
+  canvas_win_state_t *state = (canvas_win_state_t *)win->userdata;
+  if (!state) return;
+
+  // Snap new_scale to the closest supported zoom level
+  int clamped = kZoomLevels[0];
+  if (new_scale <= kZoomLevels[0]) {
+    clamped = kZoomLevels[0];
+  } else if (new_scale >= kZoomLevels[NUM_ZOOM_LEVELS - 1]) {
+    clamped = kZoomLevels[NUM_ZOOM_LEVELS - 1];
+  } else {
+    for (int i = 1; i < NUM_ZOOM_LEVELS; i++) {
+      if (new_scale <= kZoomLevels[i]) {
+        int dist_prev = new_scale - kZoomLevels[i - 1];
+        int dist_curr = kZoomLevels[i] - new_scale;
+        clamped = (dist_prev <= dist_curr) ? kZoomLevels[i - 1] : kZoomLevels[i];
+        break;
+      }
+    }
+  }
+
+  state->scale = clamped;
+  clamp_pan(state, win->frame.w, win->frame.h);
+  canvas_sync_scrollbars(win, state);
+  invalidate_window(win);
+}
+
 // Release the floating-selection GL texture if one exists.
 static void float_tex_free(canvas_doc_t *doc) {
   if (doc->float_tex) {
@@ -26,6 +132,17 @@ static void float_tex_upload(canvas_doc_t *doc) {
                GL_RGBA, GL_UNSIGNED_BYTE, doc->float_pixels);
 }
 
+// Apply a new zoom level centered on the canvas pixel (cx, cy) currently
+// displayed at screen-local position (mx, my) inside the canvas frame.
+// new_scale must be a valid zoom level; the pan is re-derived so the
+// pointed-at canvas pixel stays under the cursor after zooming.
+static void apply_zoom_centered(window_t *win, canvas_win_state_t *state,
+                                int new_scale, int cx, int cy, int mx, int my) {
+  state->pan_x = cx * new_scale - mx;
+  state->pan_y = cy * new_scale - my;
+  canvas_win_set_zoom(win, new_scale);
+}
+
 result_t win_canvas_proc(window_t *win, uint32_t msg,
                           uint32_t wparam, void *lparam) {
   canvas_win_state_t *state = (canvas_win_state_t *)win->userdata;
@@ -36,6 +153,20 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       s->doc = (canvas_doc_t *)lparam;
       s->doc->canvas_win = win;
       s->scale = 1;
+      s->pan_x = 0;
+      s->pan_y = 0;
+      // Create interactive scrollbar children.  Both start hidden; they are
+      // shown and repositioned by canvas_sync_scrollbars() on demand.
+      s->hscroll = create_window("", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_HSCROLL,
+          MAKERECT(0, win->frame.h - SCROLLBAR_SIZE,
+                   win->frame.w - SCROLLBAR_SIZE, SCROLLBAR_SIZE),
+          win, win_scrollbar, NULL);
+      s->vscroll = create_window("", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL,
+          MAKERECT(win->frame.w - SCROLLBAR_SIZE, 0,
+                   SCROLLBAR_SIZE, win->frame.h - SCROLLBAR_SIZE),
+          win, win_scrollbar, NULL);
+      s->hscroll->visible = false;
+      s->vscroll->visible = false;
       return true;
     }
 
@@ -46,9 +177,14 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
     case kWindowMessagePaint: {
       if (!state || !doc) return true;
       canvas_upload(doc);
+
+      // Draw canvas offset by pan so zoomed content scrolls correctly
+      int cx = win->frame.x - state->pan_x;
+      int cy = win->frame.y - state->pan_y;
       draw_rect(doc->canvas_tex,
-                win->frame.x, win->frame.y,
+                cx, cy,
                 CANVAS_W * state->scale, CANVAS_H * state->scale);
+
       if (doc->sel_moving && doc->float_tex) {
         // Draw the floating selection at its current position
         int sx = win->frame.x + doc->float_pos.x * state->scale;
@@ -58,10 +194,10 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         draw_rect(doc->float_tex, sx, sy, sw, sh);
         draw_sel_rect(sx, sy, sw, sh);
       } else if (doc->sel_active) {
-        int x0 = MIN(doc->sel_start.x, doc->sel_end.x) * state->scale;
-        int y0 = MIN(doc->sel_start.y, doc->sel_end.y) * state->scale;
-        int x1 = (MAX(doc->sel_start.x, doc->sel_end.x) + 1) * state->scale;
-        int y1 = (MAX(doc->sel_start.y, doc->sel_end.y) + 1) * state->scale;
+        int x0 = MIN(doc->sel_start.x, doc->sel_end.x) * state->scale - state->pan_x;
+        int y0 = MIN(doc->sel_start.y, doc->sel_end.y) * state->scale - state->pan_y;
+        int x1 = (MAX(doc->sel_start.x, doc->sel_end.x) + 1) * state->scale - state->pan_x;
+        int y1 = (MAX(doc->sel_start.y, doc->sel_end.y) + 1) * state->scale - state->pan_y;
         draw_sel_rect(win->frame.x + x0, win->frame.y + y0, x1 - x0, y1 - y0);
       }
       // Polygon in-progress: draw a sel_rect bounding the rubber-band edge
@@ -69,50 +205,133 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       if (doc->poly_active && doc->poly_count > 0) {
         point_t v0 = doc->poly_pts[doc->poly_count - 1];
         point_t v1 = doc->last;
-        int px0 = MIN(v0.x, v1.x) * state->scale;
-        int py0 = MIN(v0.y, v1.y) * state->scale;
-        int px1 = (MAX(v0.x, v1.x) + 1) * state->scale;
-        int py1 = (MAX(v0.y, v1.y) + 1) * state->scale;
+        int px0 = MIN(v0.x, v1.x) * state->scale - state->pan_x;
+        int py0 = MIN(v0.y, v1.y) * state->scale - state->pan_y;
+        int px1 = (MAX(v0.x, v1.x) + 1) * state->scale - state->pan_x;
+        int py1 = (MAX(v0.y, v1.y) + 1) * state->scale - state->pan_y;
         draw_sel_rect(win->frame.x + px0, win->frame.y + py0, px1 - px0, py1 - py0);
+      }
+
+      // Paint scrollbar children on top of the canvas content
+      if (state->hscroll && state->hscroll->visible)
+        send_message(state->hscroll, kWindowMessagePaint, wparam, lparam);
+      if (state->vscroll && state->vscroll->visible)
+        send_message(state->vscroll, kWindowMessagePaint, wparam, lparam);
+
+      // Fill the corner square when both bars are visible
+      if (state->hscroll && state->hscroll->visible &&
+          state->vscroll && state->vscroll->visible) {
+        fill_rect(COLOR_PANEL_DARK_BG,
+                  win->frame.x + win->frame.w - SCROLLBAR_SIZE,
+                  win->frame.y + win->frame.h - SCROLLBAR_SIZE,
+                  SCROLLBAR_SIZE, SCROLLBAR_SIZE);
       }
       return true;
     }
 
-    case kWindowMessageLeftButtonDown: {
-      if (!state || !doc || !g_app) return true;
-      window_t *root = get_root_window(win);
-      int lx = (int16_t)LOWORD(wparam) - root->frame.x - win->frame.x;
-      int ly = (int16_t)HIWORD(wparam) - root->frame.y - win->frame.y;
-      int cx = lx / state->scale;
-      int cy = ly / state->scale;
+    case kWindowMessageCommand: {
+      // Scrollbar child notifications: update pan and re-sync bars
+      if (!state) return false;
+      uint16_t code = HIWORD(wparam);
+      uint16_t id   = LOWORD(wparam);
+      if (code == kScrollBarNotificationChanged) {
+        int new_pos = (int)(intptr_t)lparam;
+        if (state->hscroll && id == state->hscroll->id)
+          state->pan_x = new_pos;
+        else if (state->vscroll && id == state->vscroll->id)
+          state->pan_y = new_pos;
+        invalidate_window(win);
+        return true;
+      }
+      return false;
+    }
 
+    case kWindowMessageWheel: {
+      if (!state) return false;
+      int canvas_w  = CANVAS_W * state->scale;
+      int canvas_h  = CANVAS_H * state->scale;
+      int max_pan_x = MAX(0, canvas_w - win->frame.w);
+      int max_pan_y = MAX(0, canvas_h - win->frame.h);
+      if (max_pan_x > 0 || max_pan_y > 0) {
+        // LOWORD = -wheel.x * SCROLL_SENSITIVITY; HIWORD = wheel.y * SCROLL_SENSITIVITY
+        int dx =  (int16_t)LOWORD(wparam);  // positive → scroll right → increase pan_x
+        int dy = -(int16_t)HIWORD(wparam);  // positive → scroll down  → increase pan_y
+        state->pan_x = MIN(MAX(state->pan_x + dx, 0), max_pan_x);
+        state->pan_y = MIN(MAX(state->pan_y + dy, 0), max_pan_y);
+        canvas_sync_scrollbars(win, state);
+        invalidate_window(win);
+        return true;
+      }
+      return false;
+    }
+
+    case kWindowMessageLeftButtonDown: {
+      if (!state) return true;
+      // canvas-local coords: logical_x - root.frame.x  (canvas.frame.x == 0)
+      window_t *root = get_root_window(win);
+      int lx = (int16_t)LOWORD(wparam) - root->frame.x;
+      int ly = (int16_t)HIWORD(wparam) - root->frame.y;
+
+      // Route clicks on scrollbar areas to the scrollbar control first
+      if (canvas_hit_scrollbar(state->hscroll, lx, ly))
+        return canvas_forward_to_scrollbar(state->hscroll, msg, wparam);
+      if (canvas_hit_scrollbar(state->vscroll, lx, ly))
+        return canvas_forward_to_scrollbar(state->vscroll, msg, wparam);
+
+      if (!doc || !g_app) return true;
+
+      // Hand tool: begin pan drag in screen space
+      if (g_app->current_tool == ID_TOOL_HAND) {
+        state->panning = true;
+        state->pan_start.x = lx;
+        state->pan_start.y = ly;
+        return true;
+      }
+
+      // Zoom tool (left click): zoom in centered on cursor
+      if (g_app->current_tool == ID_TOOL_ZOOM) {
+        int mx = lx - win->frame.x;
+        int my = ly - win->frame.y;
+        int cx = (mx + state->pan_x) / state->scale;
+        int cy = (my + state->pan_y) / state->scale;
+        int new_scale = state->scale;
+        for (int i = 0; i < NUM_ZOOM_LEVELS; i++) {
+          if (kZoomLevels[i] > state->scale) { new_scale = kZoomLevels[i]; break; }
+        }
+        if (new_scale != state->scale)
+          apply_zoom_centered(win, state, new_scale, cx, cy, mx, my);
+        return true;
+      }
+
+      int px = (lx - win->frame.x + state->pan_x) / state->scale;
+      int py = (ly - win->frame.y + state->pan_y) / state->scale;
       int tool = g_app->current_tool;
 
       // Polygon: accumulate vertices on each click; commit on right-click
       if (tool == ID_TOOL_POLYGON) {
         if (!doc->poly_active) {
           doc_push_undo(doc);
-          canvas_shape_begin(doc, cx, cy);  // snapshot for cancel/undo
+          canvas_shape_begin(doc, px, py);  // snapshot for cancel/undo
           doc->poly_active = true;
           doc->poly_count  = 0;
         }
         if (doc->poly_count < (int)(sizeof(doc->poly_pts)/sizeof(doc->poly_pts[0]))) {
-          doc->poly_pts[doc->poly_count++] = (point_t){cx, cy};
+          doc->poly_pts[doc->poly_count++] = (point_t){px, py};
         }
-        doc->last.x = cx;
-        doc->last.y = cy;
+        doc->last.x = px;
+        doc->last.y = py;
         invalidate_window(win);
         return true;
       }
 
       doc->drawing   = true;
-      doc->last.x    = cx;
-      doc->last.y    = cy;
+      doc->last.x    = px;
+      doc->last.y    = py;
 
       if (canvas_is_shape_tool(tool)) {
         // Shape tools: take snapshot then preview – undo is pushed on mouse-up
-        canvas_shape_begin(doc, cx, cy);
-        canvas_shape_preview(doc, cx, cy, cx, cy, tool,
+        canvas_shape_begin(doc, px, py);
+        canvas_shape_preview(doc, px, py, px, py, tool,
                              g_app->shape_filled, g_app->fg_color, g_app->bg_color, false);
         invalidate_window(win);
         return true;
@@ -122,30 +341,30 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       switch (tool) {
         case ID_TOOL_PENCIL:
-          canvas_draw_circle(doc, cx, cy, 0, g_app->fg_color);
+          canvas_draw_circle(doc, px, py, 0, g_app->fg_color);
           break;
         case ID_TOOL_BRUSH:
-          canvas_draw_circle(doc, cx, cy, 2, g_app->fg_color);
+          canvas_draw_circle(doc, px, py, 2, g_app->fg_color);
           break;
         case ID_TOOL_ERASER:
-          canvas_draw_circle(doc, cx, cy, 3, g_app->bg_color);
+          canvas_draw_circle(doc, px, py, 3, g_app->bg_color);
           break;
         case ID_TOOL_FILL:
-          canvas_flood_fill(doc, cx, cy, g_app->fg_color);
+          canvas_flood_fill(doc, px, py, g_app->fg_color);
           break;
         case ID_TOOL_SELECT:
           // If clicking inside the existing selection → move mode
-          if (doc->sel_active && canvas_in_selection(doc, cx, cy)) {
+          if (doc->sel_active && canvas_in_selection(doc, px, py)) {
             canvas_begin_move(doc, g_app->bg_color);
             float_tex_upload(doc);
-            doc->move_origin.x = cx;
-            doc->move_origin.y = cy;
+            doc->move_origin.x = px;
+            doc->move_origin.y = py;
           } else {
             // Start a new selection; commit any in-progress move first.
             if (doc->sel_moving) canvas_commit_move(doc);
             doc->sel_active = false;
-            doc->sel_start.x = doc->sel_end.x = cx;
-            doc->sel_start.y = doc->sel_end.y = cy;
+            doc->sel_start.x = doc->sel_end.x = px;
+            doc->sel_start.y = doc->sel_end.y = py;
             doc->sel_active = true;
           }
           break;
@@ -158,75 +377,116 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       return true;
     }
 
+    case kWindowMessageRightButtonDown: {
+      if (!state || !doc || !g_app) return false;
+      // Zoom tool (right click): zoom out centered on cursor
+      if (g_app->current_tool == ID_TOOL_ZOOM) {
+        window_t *root = get_root_window(win);
+        int lx = (int16_t)LOWORD(wparam) - root->frame.x;
+        int ly = (int16_t)HIWORD(wparam) - root->frame.y;
+        int mx = lx - win->frame.x;
+        int my = ly - win->frame.y;
+        int cx = (mx + state->pan_x) / state->scale;
+        int cy = (my + state->pan_y) / state->scale;
+        int new_scale = state->scale;
+        for (int i = NUM_ZOOM_LEVELS - 1; i >= 0; i--) {
+          if (kZoomLevels[i] < state->scale) { new_scale = kZoomLevels[i]; break; }
+        }
+        if (new_scale != state->scale)
+          apply_zoom_centered(win, state, new_scale, cx, cy, mx, my);
+        return true;
+      }
+      return false;
+    }
+
     case kWindowMessageMouseMove: {
-      if (!state || !doc || !g_app) return true;
+      if (!state || !g_app) return true;
+
+      // Hand tool: update pan while dragging
+      if (state->panning) {
+        window_t *root = get_root_window(win);
+        int lx = (int16_t)LOWORD(wparam) - root->frame.x;
+        int ly = (int16_t)HIWORD(wparam) - root->frame.y;
+        state->pan_x -= lx - state->pan_start.x;
+        state->pan_y -= ly - state->pan_start.y;
+        state->pan_start.x = lx;
+        state->pan_start.y = ly;
+        clamp_pan(state, win->frame.w, win->frame.h);
+        canvas_sync_scrollbars(win, state);
+        invalidate_window(win);
+        return true;
+      }
+
+      if (!doc) return true;
+
       window_t *root = get_root_window(win);
-      int lx = (int16_t)LOWORD(wparam) - root->frame.x - win->frame.x;
-      int ly = (int16_t)HIWORD(wparam) - root->frame.y - win->frame.y;
-      int cx = lx / state->scale;
-      int cy = ly / state->scale;
+      int lx = (int16_t)LOWORD(wparam) - root->frame.x;
+      int ly = (int16_t)HIWORD(wparam) - root->frame.y;
+      int px = (lx - win->frame.x + state->pan_x) / state->scale;
+      int py = (ly - win->frame.y + state->pan_y) / state->scale;
 
       int tool = g_app->current_tool;
       bool shift = (SDL_GetModState() & KMOD_SHIFT) != 0;
 
       // Update polygon rubber-band preview (stores last mouse position in doc->last)
       if (tool == ID_TOOL_POLYGON && doc->poly_active) {
-        doc->last.x = cx;
-        doc->last.y = cy;
+        doc->last.x = px;
+        doc->last.y = py;
         invalidate_window(win);
         return true;
       }
 
       if (!doc->drawing) return true;
-      if (cx == doc->last.x && cy == doc->last.y) return true;
+      if (px == doc->last.x && py == doc->last.y) return true;
 
       if (canvas_is_shape_tool(tool)) {
         canvas_shape_preview(doc,
                              doc->shape_start.x, doc->shape_start.y,
-                             cx, cy, tool,
+                             px, py, tool,
                              g_app->shape_filled, g_app->fg_color, g_app->bg_color, shift);
-        doc->last.x = cx;
-        doc->last.y = cy;
+        doc->last.x = px;
+        doc->last.y = py;
         invalidate_window(win);
         return true;
       }
 
       switch (tool) {
         case ID_TOOL_PENCIL:
-          canvas_draw_line(doc, doc->last.x, doc->last.y, cx, cy, 0, g_app->fg_color);
+          canvas_draw_line(doc, doc->last.x, doc->last.y, px, py, 0, g_app->fg_color);
           break;
         case ID_TOOL_BRUSH:
-          canvas_draw_line(doc, doc->last.x, doc->last.y, cx, cy, 2, g_app->fg_color);
+          canvas_draw_line(doc, doc->last.x, doc->last.y, px, py, 2, g_app->fg_color);
           break;
         case ID_TOOL_ERASER:
-          canvas_draw_line(doc, doc->last.x, doc->last.y, cx, cy, 3, g_app->bg_color);
+          canvas_draw_line(doc, doc->last.x, doc->last.y, px, py, 3, g_app->bg_color);
           break;
         case ID_TOOL_FILL:
           break;
         case ID_TOOL_SELECT:
           if (doc->sel_moving) {
-            int dx = cx - doc->move_origin.x;
-            int dy = cy - doc->move_origin.y;
+            int dx = px - doc->move_origin.x;
+            int dy = py - doc->move_origin.y;
             doc->float_pos.x += dx;
             doc->float_pos.y += dy;
-            doc->move_origin.x = cx;
-            doc->move_origin.y = cy;
+            doc->move_origin.x = px;
+            doc->move_origin.y = py;
           } else {
-            doc->sel_end.x = cx;
-            doc->sel_end.y = cy;
+            doc->sel_end.x = px;
+            doc->sel_end.y = py;
           }
           break;
         default:
           break;
       }
 
-      doc->last.x = cx;
-      doc->last.y = cy;
+      doc->last.x = px;
+      doc->last.y = py;
       invalidate_window(win);
       return true;
     }
 
     case kWindowMessageLeftButtonUp: {
+      if (state) state->panning = false;
       if (!doc || !g_app) return true;
       int tool = g_app->current_tool;
 
