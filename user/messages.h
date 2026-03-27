@@ -39,7 +39,7 @@ enum {
 enum {
   kButtonMessageSetCheck = kWindowMessageUser,
   kButtonMessageGetCheck,
-  kButtonMessageSetImage,       // wparam unused; lparam = button_image_t*
+  kButtonMessageSetImage,       // wparam = icon index (iBitmap); lparam = bitmap_strip_t*
   kComboBoxMessageAddString,
   kComboBoxMessageGetCurrentSelection,
   kComboBoxMessageSetCurrentSelection,
