@@ -39,7 +39,14 @@ static uint8_t *load_png_rgba(const char *path, int *out_w, int *out_h) {
   png_infop info = png_create_info_struct(png);
   if (!info) { png_destroy_read_struct(&png, NULL, NULL); fclose(fp); return NULL; }
 
+  // Declare volatile so that the setjmp error path can safely free them after
+  // a libpng longjmp, even if allocation happened after the setjmp call.
+  uint8_t * volatile pixel_buf = NULL;
+  png_bytep * volatile rows = NULL;
+
   if (setjmp(png_jmpbuf(png))) {
+    free(pixel_buf);
+    free(rows);
     png_destroy_read_struct(&png, &info, NULL);
     fclose(fp);
     return NULL;
@@ -64,20 +71,21 @@ static uint8_t *load_png_rgba(const char *path, int *out_w, int *out_h) {
     png_set_gray_to_rgb(png);
   png_read_update_info(png, info);
 
-  png_bytep *rows = malloc(sizeof(png_bytep) * h);
-  if (!rows) { png_destroy_read_struct(&png, &info, NULL); fclose(fp); return NULL; }
-
+  // Use a single contiguous pixel buffer so the setjmp error handler only
+  // needs to free two allocations regardless of how many rows exist.
   png_size_t rowbytes = png_get_rowbytes(png, info);
-  for (int r = 0; r < h; r++) {
-    rows[r] = malloc(rowbytes);
-    if (!rows[r]) {
-      for (int i = 0; i < r; i++) free(rows[i]);
-      free(rows);
-      png_destroy_read_struct(&png, &info, NULL);
-      fclose(fp);
-      return NULL;
-    }
+  pixel_buf = malloc((size_t)rowbytes * h);
+  rows      = malloc(sizeof(png_bytep) * h);
+  if (!pixel_buf || !rows) {
+    free(pixel_buf);
+    free(rows);
+    png_destroy_read_struct(&png, &info, NULL);
+    fclose(fp);
+    return NULL;
   }
+  for (int r = 0; r < h; r++)
+    rows[r] = pixel_buf + (size_t)r * rowbytes;
+
   png_read_image(png, rows);
 
   // Convert to RGBA: treat the source as black-on-white artwork.
@@ -101,8 +109,8 @@ static uint8_t *load_png_rgba(const char *path, int *out_w, int *out_h) {
     }
   }
 
-  for (int r = 0; r < h; r++) free(rows[r]);
   free(rows);
+  free(pixel_buf);
   png_destroy_read_struct(&png, &info, NULL);
   fclose(fp);
 
@@ -127,6 +135,14 @@ static GLuint load_tools_texture(bitmap_strip_t *strip) {
     int w = 0, h = 0;
     uint8_t *rgba = load_png_rgba(k_paths[i], &w, &h);
     if (!rgba) continue;
+
+    // Validate that the PNG tiles evenly into ICON_W × ICON_H cells.
+    // If cols would be 0 (w < ICON_W) or the dimensions don't divide evenly,
+    // this file is unusable — skip it and try the next fallback path.
+    if (w < ICON_W || h < ICON_H || (w % ICON_W) != 0 || (h % ICON_H) != 0) {
+      free(rgba);
+      continue;
+    }
 
     GLuint tex;
     glGenTextures(1, &tex);

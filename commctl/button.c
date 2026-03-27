@@ -122,7 +122,7 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
       draw_button(&win->frame, 1, 1, show_pressed);
       int px = show_pressed ? 1 : 0;
       toolbar_button_data_t *bd = (toolbar_button_data_t *)win->userdata;
-      if (bd) {
+      if (bd && bd->strip.cols > 0) {
         // Compute UV sub-region for the Nth icon in the strip.
         bitmap_strip_t *s = &bd->strip;
         int col = bd->index % s->cols;
