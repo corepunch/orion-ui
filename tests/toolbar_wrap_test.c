@@ -10,8 +10,6 @@
 #include "../ui.h"
 #include "../commctl/commctl.h"
 
-extern void repost_messages(void);
-
 // ---- helpers ----------------------------------------------------------------
 
 // Inline copy of the toolbar-height computation to allow white-box assertions
@@ -39,21 +37,23 @@ static result_t noop_proc(window_t *win, uint32_t msg,
 void test_toolbar_wrapping_height(void) {
     TEST("Toolbar wrapping: toolbar height grows with wrapping rows");
 
-    // 5 buttons in a 64px wide window → TB_SPACING=20 → 3 per row → 2 rows
+    // TB_SPACING == TOOLBAR_HEIGHT == 22 (toolbar buttons are square).
+
+    // 5 buttons in a 64px wide window → 64/22 = 2 per row → ceil(5/2) = 3 rows
     int h1 = compute_toolbar_height(5, 64);
-    ASSERT_EQUAL(h1, 2 * TOOLBAR_HEIGHT);
+    ASSERT_EQUAL(h1, 3 * TOOLBAR_HEIGHT);
 
-    // 3 buttons in a 64px wide window → 3 per row → 1 row
+    // 3 buttons in a 64px wide window → 2 per row → ceil(3/2) = 2 rows
     int h2 = compute_toolbar_height(3, 64);
-    ASSERT_EQUAL(h2, 1 * TOOLBAR_HEIGHT);
+    ASSERT_EQUAL(h2, 2 * TOOLBAR_HEIGHT);
 
-    // 7 buttons in a 64px wide window → 3 per row → 3 rows
+    // 7 buttons in a 64px wide window → 2 per row → ceil(7/2) = 4 rows
     int h3 = compute_toolbar_height(7, 64);
-    ASSERT_EQUAL(h3, 3 * TOOLBAR_HEIGHT);
+    ASSERT_EQUAL(h3, 4 * TOOLBAR_HEIGHT);
 
-    // 5 buttons in a 40px wide window → 40/20 = 2 per row → 3 rows
+    // 5 buttons in a 40px wide window → 40/22 = 1 per row → 5 rows
     int h4 = compute_toolbar_height(5, 40);
-    ASSERT_EQUAL(h4, 3 * TOOLBAR_HEIGHT);
+    ASSERT_EQUAL(h4, 5 * TOOLBAR_HEIGHT);
 
     // 1 button in any window → 1 row
     int h5 = compute_toolbar_height(1, 64);
