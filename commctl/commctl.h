@@ -10,6 +10,15 @@
 // Kept here as a comment for documentation purposes:
 // A fixed-size-tile bitmap strip used with kButtonMessageSetImage (wparam=index, lparam=bitmap_strip_t*).
 
+// Scrollbar info structure (WinAPI SCROLLINFO analogue).
+// Used with kScrollBarMessageSetInfo.
+typedef struct {
+  int min_val; // minimum scroll position
+  int max_val; // maximum scroll position (content size)
+  int page;    // visible page size (viewport dimension)
+  int pos;     // current scroll position
+} scrollbar_info_t;
+
 // Common control window procedures
 result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
@@ -26,6 +35,7 @@ result_t win_columnview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
 result_t win_filelist(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_terminal(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+result_t win_scrollbar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 
 // Terminal API functions
 const char* terminal_get_buffer(window_t *win);
