@@ -25,6 +25,7 @@
 #define MENU_MIN_W       90   // minimum popup width
 #define MENU_LABEL_PAD   12   // extra space around each top-level label
 #define MENU_HOTKEY_GAP  12   // minimum gap between label and right-aligned hotkey
+#define MENU_START_Y      1   // vertical padding above the first dropdown item and below the last one
 
 // ---- per-menubar userdata -----------------------------------------------
 
@@ -74,7 +75,7 @@ static void draw_item_label(const char *label, int x, int y, uint32_t col) {
 }
 
 static int popup_height(const menu_def_t *m) {
-  int h = 4;
+  int h = MENU_START_Y * 2; // top and bottom padding
   for (int i = 0; i < m->item_count; i++)
     h += m->items[i].id ? MENU_ITEM_H : MENU_SEP_H;
   return h;
@@ -122,7 +123,7 @@ static result_t popup_proc(window_t *win, uint32_t msg,
       fill_rect(COLOR_DARK_EDGE, 0,               0,               1, win->frame.h);
       fill_rect(COLOR_DARK_EDGE, win->frame.w - 1, 0,               1, win->frame.h);
       // Items
-      int y = 2;
+      int y = MENU_START_Y;
       for (int i = 0; i < pd->item_count; i++) {
         const menu_item_t *it = &pd->items[i];
         if (!it->id) {
@@ -159,7 +160,7 @@ static result_t popup_proc(window_t *win, uint32_t msg,
       int ly = (int16_t)HIWORD(wparam);
       int new_hovered = -1;
       if (lx >= 0 && lx < win->frame.w && ly >= 0 && ly < win->frame.h) {
-        int y = 2;
+        int y = MENU_START_Y;
         for (int i = 0; i < pd->item_count; i++) {
           const menu_item_t *it = &pd->items[i];
           int h = it->id ? MENU_ITEM_H : MENU_SEP_H;
@@ -183,7 +184,7 @@ static result_t popup_proc(window_t *win, uint32_t msg,
       int ly = (int16_t)HIWORD(wparam);
       // Click inside the popup – record which item was pressed
       if (lx >= 0 && lx < win->frame.w && ly >= 0 && ly < win->frame.h) {
-        int y = 2;
+        int y = MENU_START_Y;
         pd->pressed = -1;
         for (int i = 0; i < pd->item_count; i++) {
           const menu_item_t *it = &pd->items[i];
@@ -220,7 +221,7 @@ static result_t popup_proc(window_t *win, uint32_t msg,
       // Find which item the mouse was released on
       int release_item = -1;
       if (lx >= 0 && lx < win->frame.w && ly >= 0 && ly < win->frame.h) {
-        int y = 2;
+        int y = MENU_START_Y;
         for (int i = 0; i < pd->item_count; i++) {
           const menu_item_t *it = &pd->items[i];
           int h = it->id ? MENU_ITEM_H : MENU_SEP_H;
@@ -309,7 +310,7 @@ static void open_popup(window_t *mb_win, menubar_data_t *data, int idx) {
 
   int pw = popup_width(menu, data->accel);
   int ph = popup_height(menu);
-  int px = mb_win->frame.x + data->menu_x[idx];
+  int px = mb_win->frame.x + data->menu_x[idx] - 1; // TODO: why -1?
   int py = mb_win->frame.y + MENUBAR_HEIGHT;
 
   // Clamp to screen
