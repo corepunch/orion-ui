@@ -154,12 +154,85 @@ void test_regular_button_click_unaffected(void) {
     PASS();
 }
 
+// ---------------------------------------------------------------------------
+// end_dialog return-code tests
+//
+// These tests validate the per-dialog context mechanism introduced to fix
+// the global _return_code reentrancy bug.  show_dialog stores a plain
+// uint32_t* in userdata2; end_dialog writes through that pointer.
+// The tests simulate this without running the SDL event loop.
+// ---------------------------------------------------------------------------
+
+// Test: end_dialog writes the correct return code into the per-dialog context.
+void test_end_dialog_sets_return_code(void) {
+    TEST("end_dialog stores correct return code in per-dialog context");
+
+    test_env_init();
+
+    rect_t dlg_frame = {50, 50, 200, 150};
+    window_t *dlg = create_window("ReturnCode Dialog",
+                                  WINDOW_DIALOG | WINDOW_NOTITLE,
+                                  &dlg_frame, NULL, dialog_proc, NULL);
+    ASSERT_NOT_NULL(dlg);
+
+    // Simulate what show_dialog does: store the result pointer in userdata2.
+    uint32_t result = 0;
+    dlg->userdata2 = &result;
+
+    // end_dialog should write 42 into result and destroy the dialog.
+    end_dialog(dlg, 42);
+
+    // The dialog window should now be gone.
+    ASSERT_FALSE(is_window(dlg));
+    // And our result variable should contain the code passed to end_dialog.
+    ASSERT_EQUAL((int)result, 42);
+
+    test_env_shutdown();
+    PASS();
+}
+
+// Test: nested dialogs each get their own result (reentrancy).
+// Simulate two show_dialog calls by manually setting up two result variables
+// and verifying that end_dialog writes to the correct one via userdata2.
+void test_end_dialog_reentrancy(void) {
+    TEST("end_dialog reentrancy: each dialog context holds its own result");
+
+    test_env_init();
+
+    rect_t f1 = {10, 10, 200, 150};
+    rect_t f2 = {20, 20, 200, 150};
+
+    window_t *dlg1 = create_window("Outer", WINDOW_DIALOG | WINDOW_NOTITLE,
+                                   &f1, NULL, dialog_proc, NULL);
+    window_t *dlg2 = create_window("Inner", WINDOW_DIALOG | WINDOW_NOTITLE,
+                                   &f2, NULL, dialog_proc, NULL);
+    ASSERT_NOT_NULL(dlg1);
+    ASSERT_NOT_NULL(dlg2);
+
+    uint32_t result1 = 0;
+    uint32_t result2 = 0;
+    dlg1->userdata2 = &result1;
+    dlg2->userdata2 = &result2;
+
+    // Close inner dialog with code 7, outer with code 3.
+    end_dialog(dlg2, 7);
+    end_dialog(dlg1, 3);
+
+    ASSERT_EQUAL((int)result1, 3);
+    ASSERT_EQUAL((int)result2, 7);
+
+    test_env_shutdown();
+    PASS();
+}
+
 int main(int argc, char *argv[]) {
     (void)argc; (void)argv;
     TEST_START("Dialog Cancel Crash Regression");
 
     test_dialog_cancel_no_crash();
     test_regular_button_click_unaffected();
+    test_end_dialog_sets_return_code();
+    test_end_dialog_reentrancy();
 
     TEST_END();
 }

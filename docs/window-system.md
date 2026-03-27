@@ -103,14 +103,121 @@ destroy_window(win);
 
 ## Dialogs
 
-```c
-// Show a modal dialog; blocks until end_dialog() is called
-uint32_t result = show_dialog("Open File",
-                              MAKERECT(50, 50, 400, 300),
-                              parent_win, dialog_proc, init_data);
+Modal dialogs follow the same pattern as Win32 `DialogBoxParam` / `EndDialog`:
+`show_dialog` runs a **nested message loop** that blocks the caller until
+`end_dialog` is called, then returns the numeric result code.
 
-// Inside dialog_proc – close with a result code
-end_dialog(win, 1);  // 0 = cancel, non-zero = accept
+### API
+
+```c
+// Create and display a modal dialog.
+// Blocks until end_dialog() closes the dialog.
+// Returns the code passed to end_dialog() (0 on X-button close).
+uint32_t show_dialog(
+    const char  *title,    // title bar text
+    rect_t const *frame,   // MAKERECT(x, y, w, h) – logical pixels
+    window_t    *parent,   // owner window, or NULL
+    winproc_t    proc,     // dialog window procedure
+    void        *param     // forwarded as lparam to kWindowMessageCreate
+);
+
+// Close the dialog and return a result code to show_dialog's caller.
+// 'win' can be the dialog window itself or any child (e.g. a button).
+// The result code 0 conventionally means "cancelled".
+void end_dialog(window_t *win, uint32_t code);
+```
+
+### How it works
+
+1. `show_dialog` creates a top-level `WINDOW_DIALOG` window, calls
+   `enable_window(parent, false)` to block mouse/keyboard input to the owner,
+   then enters an inner `get_message` / `dispatch_message` loop.
+2. The loop runs until either `end_dialog` destroys the dialog window **or**
+   `running` becomes `false` (application quit).
+3. `end_dialog` writes the code into the `uint32_t` pointed to by
+   `dlg->userdata2`, then calls `destroy_window`.  Once the dialog is gone
+   `is_window(dlg)` returns false and the loop exits.
+4. `show_dialog` re-enables the parent and returns the recorded result code.
+
+Each `show_dialog` call stores its result on its **own stack frame**, so
+nested dialogs are fully reentrant — closing an inner dialog never corrupts
+the outer dialog's result.
+
+### Minimal example
+
+```c
+typedef struct { char path[512]; } open_state_t;
+
+static result_t open_proc(window_t *win, uint32_t msg,
+                           uint32_t wparam, void *lparam) {
+  open_state_t *s = (open_state_t *)win->userdata;
+  switch (msg) {
+    case kWindowMessageCreate:
+      win->userdata = lparam;  // open_state_t * passed via param
+      // Create child controls
+      create_window("OK", 0, MAKERECT(10, 60, 60, BUTTON_HEIGHT),
+                    win, win_button, NULL);
+      create_window("Cancel", 0, MAKERECT(80, 60, 60, BUTTON_HEIGHT),
+                    win, win_button, NULL);
+      return true;
+
+    case kWindowMessageCommand:
+      if (HIWORD(wparam) == kButtonNotificationClicked) {
+        window_t *btn = (window_t *)lparam;
+        if (strcmp(btn->title, "OK") == 0) {
+          strncpy(s->path, "chosen.png", sizeof(s->path) - 1);
+          end_dialog(win, 1);   // 1 = accepted
+        } else {
+          end_dialog(win, 0);   // 0 = cancelled
+        }
+      }
+      return true;
+
+    default:
+      return false;
+  }
+}
+
+// Caller
+open_state_t state = {0};
+uint32_t ok = show_dialog("Open File",
+                           MAKERECT(100, 80, 200, 100),
+                           my_win, open_proc, &state);
+if (ok)
+  load_file(state.path);
+```
+
+### Conventions
+
+| Result code | Meaning |
+|---|---|
+| `0` | Cancelled (user pressed Cancel or closed the X button) |
+| `1` | Accepted (user pressed OK / Open / Save) |
+| Any other | Application-defined (e.g. multi-button confirmation dialogs) |
+
+### Real-world usage
+
+The image-editor's file picker (`examples/imageeditor/filepicker.c`) shows a
+complete dialog with a `win_filelist` browser, a filename edit box, and
+Open/Save/Cancel buttons — all driven by `show_dialog` / `end_dialog`.
+
+```c
+// Invoked from the File > Open and File > Save As menu handlers:
+static bool show_file_picker(window_t *parent, bool save_mode,
+                              char *out_path, size_t out_sz) {
+  picker_state_t ps = {0};
+  ps.mode = save_mode ? PICKER_SAVE : PICKER_OPEN;
+
+  uint32_t result = show_dialog(save_mode ? "Save PNG" : "Open PNG",
+      MAKERECT(50, 50, PICKER_WIN_W, PICKER_WIN_H),
+      parent, picker_proc, &ps);
+
+  if (result && ps.accepted) {
+    strncpy(out_path, ps.result, out_sz - 1);
+    return true;
+  }
+  return false;
+}
 ```
 
 ## Mouse Coordinate Notes

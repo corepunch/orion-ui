@@ -38,6 +38,8 @@
 
 #define NUM_COLORS 16
 #define NUM_TOOLS   5
+#define NUM_COLORS      16
+#define NUM_USER_COLORS  8
 
 #define UNDO_MAX   20
 
@@ -70,7 +72,7 @@ typedef struct canvas_doc_s {
   GLuint   canvas_tex;
   bool     canvas_dirty;
   bool     drawing;
-  int      last_x, last_y;
+  point_t  last;
   bool     modified;
   char     filename[512];
   window_t *win;
@@ -82,8 +84,8 @@ typedef struct canvas_doc_s {
   uint8_t *redo_states[UNDO_MAX];
   int      redo_count;
   bool     sel_active;
-  int      sel_x0, sel_y0;
-  int      sel_x1, sel_y1;
+  point_t  sel_start;
+  point_t  sel_end;
 } canvas_doc_t;
 
 typedef struct {
@@ -103,6 +105,8 @@ typedef struct {
   int            next_x;
   int            next_y;
   accel_table_t *accel;
+  rgba_t         user_palette[NUM_USER_COLORS];
+  int            num_user_colors;
 } app_state_t;
 
 // ============================================================
@@ -157,6 +161,9 @@ result_t editor_menubar_proc(window_t *win, uint32_t msg, uint32_t wparam, void 
 result_t win_canvas_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_tool_palette_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_color_palette_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+
+// Color picker dialog
+bool show_color_picker(window_t *parent, rgba_t initial, rgba_t *out);
 
 // Menu definitions
 extern const menu_def_t kMenus[];
