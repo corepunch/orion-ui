@@ -1,6 +1,6 @@
 // Tool palette window
 // Uses WINDOW_TOOLBAR for tool buttons (PNG icons from tools.png with wrapping).
-// The client area shows FG/BG color swatches.
+// The client area shows FG/BG color swatches and a filled/outline shape mode selector.
 // Follows the WinAPI TB_ADDBITMAP / TBBUTTON pattern: one bitmap_strip_t
 // shared across all toolbar buttons; each button stores only an icon index (iBitmap).
 
@@ -11,9 +11,22 @@
 #define ICON_W    16
 #define ICON_H    16
 
-// Icon index = row * cols + col, where cols = sheet_w / ICON_W.
-// tools.png: 32×160 = 2 columns × 10 rows of 16×16 icons.
-// Tool order: Pencil(0), Brush(1), Eraser(2), Fill(3), Select(4).
+// Layout constants for the client-area swatches and fill-mode row.
+// Both paint and hit-test must use these same values to stay in sync.
+#define PALETTE_LABEL_Y   2   // top of FG/BG labels
+#define PALETTE_LABEL_H   8   // height of small text
+#define PALETTE_SWATCH_H  16  // height of color swatch boxes
+#define PALETTE_FILL_LABEL_H 9 // height of "Fill:" label row
+#define PALETTE_FILL_ROW_H   12 // height of Outline/Filled toggle buttons
+// Derived: y of the toggle buttons = LABEL_Y + LABEL_H + SWATCH_H + FILL_LABEL_H
+#define PALETTE_FILL_ROW_Y \
+  (PALETTE_LABEL_Y + PALETTE_LABEL_H + PALETTE_SWATCH_H + PALETTE_FILL_LABEL_H)
+// tools.png: 320×16 = 20 columns × 1 row of 16×16 icons.
+// Tool order: Pencil(0)..Polygon(9).
+// Icon assignments (from visual inspection of tools.png):
+//   13=pencil, 15=brush, 12=eraser, 8=fill, 0=select,
+//   10=line (diagonal line), 6=rect (cross), 1=ellipse (circle outline),
+//   9=rounded-rect (checkerboard-ish), 11=polygon (wavy outline)
 static const int k_tool_icon_idx[NUM_TOOLS] = {
   13,   // Pencil
   15,   // Brush
@@ -22,6 +35,11 @@ static const int k_tool_icon_idx[NUM_TOOLS] = {
   0,    // Select
   4,    // Hand
   5,    // Zoom
+  10,   // Line
+  6,    // Rect
+  1,    // Ellipse
+  9,    // Rounded Rect
+  11,   // Polygon
 };
 
 typedef struct {
@@ -206,24 +224,55 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
     }
 
     case kWindowMessagePaint: {
-      // Client area: FG/BG color swatches.
+      // Client area: FG/BG color swatches + fill mode selector.
       fill_rect(COLOR_PANEL_DARK_BG, 0, 0, win->frame.w, win->frame.h);
       fill_rect(COLOR_DARK_EDGE, win->frame.w - 1, 0, 1, win->frame.h);
       fill_rect(COLOR_DARK_EDGE, 0, win->frame.h - 1, win->frame.w, 1);
 
-      int sy = 2;
+      int sy = PALETTE_LABEL_Y;
       draw_text_small("FG", 2, sy, COLOR_TEXT_DISABLED);
       draw_text_small("BG", TB_SPACING+2, sy, COLOR_TEXT_DISABLED);
-      sy += 8;
+      sy += PALETTE_LABEL_H;
       if (g_app) {
         #define DrawSwatch(swatch_col, x, color) \
-          fill_rect(swatch_col, x+1,  sy - 1, TB_SPACING-2, 16); \
-          fill_rect(rgba_to_col(color), x+2,  sy, TB_SPACING-4, 14); 
+          fill_rect(swatch_col, x+1,  sy - 1, TB_SPACING-2, PALETTE_SWATCH_H); \
+          fill_rect(rgba_to_col(color), x+2,  sy, TB_SPACING-4, PALETTE_SWATCH_H-2); 
 
         DrawSwatch(COLOR_DARK_EDGE, 0, g_app->fg_color);
         DrawSwatch(COLOR_DARK_EDGE, TB_SPACING, g_app->bg_color);
+
+        // Fill mode row: show "Outline" / "Filled" mini toggles
+        int fy = sy + PALETTE_SWATCH_H;
+        draw_text_small("Fill:", 2, fy, COLOR_TEXT_DISABLED);
+        fy += PALETTE_FILL_LABEL_H;
+        // Outline button (active when !shape_filled)
+        uint32_t outline_col = g_app->shape_filled ? COLOR_BUTTON_BG : COLOR_FOCUSED;
+        fill_rect(COLOR_DARK_EDGE,  1,           fy,   TB_SPACING-2, PALETTE_FILL_ROW_H);
+        fill_rect(outline_col,      2,           fy+1, TB_SPACING-4, PALETTE_FILL_ROW_H-2);
+        draw_text_small("O", 5,                 fy+2, COLOR_TEXT_NORMAL);
+        // Filled button (active when shape_filled)
+        uint32_t filled_col = g_app->shape_filled ? COLOR_FOCUSED : COLOR_BUTTON_BG;
+        fill_rect(COLOR_DARK_EDGE,  TB_SPACING+1, fy, TB_SPACING-2, PALETTE_FILL_ROW_H);
+        fill_rect(filled_col,       TB_SPACING+2, fy+1, TB_SPACING-4, PALETTE_FILL_ROW_H-2);
+        draw_text_small("F", TB_SPACING+5,       fy+2, COLOR_TEXT_NORMAL);
       }
       return true;
+    }
+
+    case kWindowMessageLeftButtonDown: {
+      // Check if click is in the fill mode row
+      if (!g_app) return false;
+      int mx = (int16_t)LOWORD(wparam);
+      int my = (int16_t)HIWORD(wparam);
+      if (my >= PALETTE_FILL_ROW_Y && my < PALETTE_FILL_ROW_Y + PALETTE_FILL_ROW_H) {
+        bool was_filled = g_app->shape_filled;
+        g_app->shape_filled = (mx >= TB_SPACING);
+        if (g_app->shape_filled != was_filled) {
+          invalidate_window(win);
+        }
+        return true;
+      }
+      return false;
     }
 
     case kToolBarMessageButtonClick: {

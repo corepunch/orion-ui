@@ -1,4 +1,4 @@
-// Tool display names – in ID_TOOL_PENCIL..ID_TOOL_SELECT order; index with (tool - ID_TOOL_PENCIL)
+// Tool display names – in ID_TOOL_PENCIL..ID_TOOL_POLYGON order; index with (tool - ID_TOOL_PENCIL)
 
 #include "imageeditor.h"
 
@@ -10,4 +10,9 @@ const char *tool_names[NUM_TOOLS] = {
   "Select",
   "Hand",
   "Zoom",
+  "Line",
+  "Rect",
+  "Ellipse",
+  "RoundRect",
+  "Polygon",
 };

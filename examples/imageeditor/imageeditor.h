@@ -32,9 +32,9 @@
 #define TOOL_ICON_ROW_H 24
 
 // Compute the toolbar height for the tool palette (wraps based on window width and TB_SPACING).
-// buttons_per_row = PALETTE_WIN_W / TB_SPACING = 64/20 = 3
-// num_rows = ceil(NUM_TOOLS / buttons_per_row) = ceil(5/3) = 2
-// TOOL_TOOLBAR_H = num_rows * TOOLBAR_HEIGHT = 2*20 = 40
+// buttons_per_row = PALETTE_WIN_W / TB_SPACING = (TB_SPACING*2) / TB_SPACING = 2
+// num_rows = ceil(NUM_TOOLS / buttons_per_row)
+// TOOL_TOOLBAR_H = num_rows * TOOLBAR_HEIGHT
 //
 // NOTE: These macros replicate the runtime wrapping formula from
 // draw_impl.c:titlebar_height() as compile-time constants so that window
@@ -52,10 +52,12 @@
 // So: frame.y = MENUBAR_HEIGHT + 4 + TITLEBAR_HEIGHT + TOOL_TOOLBAR_H
 #define PALETTE_WIN_Y  (MENUBAR_HEIGHT + 4 + TITLEBAR_HEIGHT + TOOL_TOOLBAR_H)
 
-// Client area of the tool palette only needs to show the FG/BG color swatches:
-//   2px label + 8px text height + 13px swatch height + 2px padding = 25px
+// Client area of the tool palette shows FG/BG swatches + fill mode selector.
+//   FG/BG swatches: 2px label + 8px text + 14px swatch + 2px gap = 26px
+//   Fill mode row: 2px gap + 8px text + 14px icons = 24px
 #define SWATCH_CLIENT_H 26
-#define TOOL_WIN_H    SWATCH_CLIENT_H
+#define FILL_MODE_H     24
+#define TOOL_WIN_H    (SWATCH_CLIENT_H + FILL_MODE_H)
 #define COLOR_WIN_Y   (PALETTE_WIN_Y + TOOL_WIN_H + TITLEBAR_HEIGHT + 4)
 #define COLOR_WIN_H   (8 * 22)
 
@@ -67,8 +69,7 @@
 #define SCROLLBAR_SIZE  8
 
 #define NUM_COLORS 16
-#define NUM_TOOLS   7
-#define NUM_COLORS      16
+#define NUM_TOOLS  12
 #define NUM_USER_COLORS  8
 
 #define UNDO_MAX   20
@@ -107,13 +108,18 @@ extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 #define ID_HELP_ABOUT  30
 
 // Tool command IDs – these are the authoritative tool identifiers used everywhere
-#define ID_TOOL_PENCIL  20
-#define ID_TOOL_BRUSH   21
-#define ID_TOOL_ERASER  22
-#define ID_TOOL_FILL    23
-#define ID_TOOL_SELECT  24
-#define ID_TOOL_HAND    25
-#define ID_TOOL_ZOOM    26
+#define ID_TOOL_PENCIL        20
+#define ID_TOOL_BRUSH         21
+#define ID_TOOL_ERASER        22
+#define ID_TOOL_FILL          23
+#define ID_TOOL_SELECT        24
+#define ID_TOOL_HAND          25
+#define ID_TOOL_ZOOM          26
+#define ID_TOOL_LINE          27
+#define ID_TOOL_RECT          28
+#define ID_TOOL_ELLIPSE       29
+#define ID_TOOL_ROUNDED_RECT  30
+#define ID_TOOL_POLYGON       31
 
 // ============================================================
 // Types
@@ -140,6 +146,13 @@ typedef struct canvas_doc_s {
   bool     sel_active;
   point_t  sel_start;
   point_t  sel_end;
+  // Shape tool rubber-band preview state
+  uint8_t *shape_snapshot;  // pixel backup taken when shape drag starts
+  point_t  shape_start;     // canvas coords where the shape drag began
+  // Polygon tool in-progress vertices
+  point_t  poly_pts[256];
+  int      poly_count;
+  bool     poly_active;     // true while accumulating polygon vertices
   // Floating selection state (during move drag)
   bool     sel_moving;
   point_t  move_origin;    // canvas pixel where drag began
@@ -175,6 +188,7 @@ typedef struct {
   accel_table_t *accel;
   rgba_t         user_palette[NUM_USER_COLORS];
   int            num_user_colors;
+  bool           shape_filled;  // true = shapes draw filled, false = outline only
   // Clipboard (shared across documents)
   uint8_t       *clipboard;
   int            clipboard_w;
@@ -225,6 +239,18 @@ void canvas_clear(canvas_doc_t *doc);
 void canvas_draw_circle(canvas_doc_t *doc, int cx, int cy, int r, rgba_t c);
 void canvas_draw_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1, int radius, rgba_t c);
 void canvas_flood_fill(canvas_doc_t *doc, int sx, int sy, rgba_t fill);
+void canvas_draw_rect_outline(canvas_doc_t *doc, int x, int y, int w, int h, rgba_t c);
+void canvas_draw_rect_filled(canvas_doc_t *doc, int x, int y, int w, int h, rgba_t outline, rgba_t fill);
+void canvas_draw_ellipse_outline(canvas_doc_t *doc, int cx, int cy, int rx, int ry, rgba_t c);
+void canvas_draw_ellipse_filled(canvas_doc_t *doc, int cx, int cy, int rx, int ry, rgba_t outline, rgba_t fill);
+void canvas_draw_rounded_rect_outline(canvas_doc_t *doc, int x, int y, int w, int h, int r, rgba_t c);
+void canvas_draw_rounded_rect_filled(canvas_doc_t *doc, int x, int y, int w, int h, int r, rgba_t outline, rgba_t fill);
+void canvas_draw_polygon_outline(canvas_doc_t *doc, const point_t *pts, int count, rgba_t c);
+void canvas_draw_polygon_filled(canvas_doc_t *doc, const point_t *pts, int count, rgba_t outline, rgba_t fill);
+bool canvas_is_shape_tool(int tool_id);
+void canvas_shape_begin(canvas_doc_t *doc, int cx, int cy);
+void canvas_shape_preview(canvas_doc_t *doc, int x0, int y0, int x1, int y1, int tool, bool filled, rgba_t fg, rgba_t bg, bool shift_held);
+void canvas_shape_commit(canvas_doc_t *doc);
 
 // Selection operations
 void canvas_copy_selection(canvas_doc_t *doc);
@@ -243,6 +269,7 @@ void doc_push_undo(canvas_doc_t *doc);
 bool doc_undo(canvas_doc_t *doc);
 bool doc_redo(canvas_doc_t *doc);
 void doc_free_undo(canvas_doc_t *doc);
+void doc_discard_undo(canvas_doc_t *doc);
 
 // Forward declarations for document management
 canvas_doc_t *create_document(const char *filename);

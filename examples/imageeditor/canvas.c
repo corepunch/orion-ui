@@ -89,6 +89,260 @@ void canvas_flood_fill(canvas_doc_t *doc, int sx, int sy, rgba_t fill) {
 }
 
 // ============================================================
+// Shape drawing functions
+// ============================================================
+
+void canvas_draw_rect_outline(canvas_doc_t *doc, int x, int y, int w, int h, rgba_t c) {
+  if (w <= 0 || h <= 0) return;
+  canvas_draw_line(doc, x,     y,     x+w-1, y,     0, c);
+  canvas_draw_line(doc, x,     y+h-1, x+w-1, y+h-1, 0, c);
+  canvas_draw_line(doc, x,     y,     x,     y+h-1, 0, c);
+  canvas_draw_line(doc, x+w-1, y,     x+w-1, y+h-1, 0, c);
+}
+
+void canvas_draw_rect_filled(canvas_doc_t *doc, int x, int y, int w, int h, rgba_t outline, rgba_t fill) {
+  if (w <= 0 || h <= 0) return;
+  for (int dy = 1; dy < h - 1; dy++)
+    canvas_draw_line(doc, x+1, y+dy, x+w-2, y+dy, 0, fill);
+  canvas_draw_rect_outline(doc, x, y, w, h, outline);
+}
+
+// Midpoint ellipse algorithm (Bresenham's)
+void canvas_draw_ellipse_outline(canvas_doc_t *doc, int cx, int cy, int rx, int ry, rgba_t c) {
+  if (rx <= 0 || ry <= 0) return;
+  long rx2 = (long)rx * rx, ry2 = (long)ry * ry;
+  long x = 0, y = ry;
+  long dx = 2 * ry2 * x, dy = 2 * rx2 * y;
+  long p = (long)(ry2 - rx2 * ry + 0.25f * rx2);
+
+  while (dx < dy) {
+    canvas_set_pixel(doc, (int)(cx+x), (int)(cy+y), c);
+    canvas_set_pixel(doc, (int)(cx-x), (int)(cy+y), c);
+    canvas_set_pixel(doc, (int)(cx+x), (int)(cy-y), c);
+    canvas_set_pixel(doc, (int)(cx-x), (int)(cy-y), c);
+    x++;
+    dx += 2 * ry2;
+    if (p < 0) {
+      p += ry2 + dx;
+    } else {
+      y--; dy -= 2 * rx2; p += ry2 + dx - dy;
+    }
+  }
+  p = (long)(ry2 * (x + 0.5f) * (x + 0.5f) + rx2 * (y-1) * (y-1) - rx2 * ry2);
+  while (y >= 0) {
+    canvas_set_pixel(doc, (int)(cx+x), (int)(cy+y), c);
+    canvas_set_pixel(doc, (int)(cx-x), (int)(cy+y), c);
+    canvas_set_pixel(doc, (int)(cx+x), (int)(cy-y), c);
+    canvas_set_pixel(doc, (int)(cx-x), (int)(cy-y), c);
+    y--;
+    dy -= 2 * rx2;
+    if (p > 0) {
+      p += rx2 - dy;
+    } else {
+      x++; dx += 2 * ry2; p += rx2 - dy + dx;
+    }
+  }
+}
+
+void canvas_draw_ellipse_filled(canvas_doc_t *doc, int cx, int cy, int rx, int ry, rgba_t outline, rgba_t fill) {
+  if (rx <= 0 || ry <= 0) return;
+  double rx2 = (double)rx * (double)rx;
+  double ry2 = (double)ry * (double)ry;
+  for (int py = cy - ry; py <= cy + ry; py++) {
+    if (!canvas_in_bounds(cx, py)) continue;
+    double dy = (double)(py - cy);
+    double t = 1.0 - (dy * dy) / ry2;
+    if (t <= 0.0) continue;
+    int dx = (int)(sqrt(rx2 * t) + 0.5);
+    canvas_draw_line(doc, cx - dx + 1, py, cx + dx - 1, py, 0, fill);
+  }
+  canvas_draw_ellipse_outline(doc, cx, cy, rx, ry, outline);
+}
+
+// Rounded rectangle using arc + straight edges
+void canvas_draw_rounded_rect_outline(canvas_doc_t *doc, int x, int y, int w, int h, int r, rgba_t c) {
+  if (w <= 0 || h <= 0) return;
+  if (r < 0) r = 0;
+  if (r > w / 2) r = w / 2;
+  if (r > h / 2) r = h / 2;
+  // Straight edges
+  canvas_draw_line(doc, x+r,   y,     x+w-r-1, y,     0, c);
+  canvas_draw_line(doc, x+r,   y+h-1, x+w-r-1, y+h-1, 0, c);
+  canvas_draw_line(doc, x,     y+r,   x,        y+h-r-1, 0, c);
+  canvas_draw_line(doc, x+w-1, y+r,   x+w-1,   y+h-r-1, 0, c);
+  // Four quarter arcs using midpoint circle algorithm
+  int px = 0, py = r, d = 3 - 2*r;
+  while (px <= py) {
+    canvas_set_pixel(doc, x+r-px,   y+r-py,   c);
+    canvas_set_pixel(doc, x+w-r+px-1, y+r-py, c);
+    canvas_set_pixel(doc, x+r-py,   y+r-px,   c);
+    canvas_set_pixel(doc, x+w-r+py-1, y+r-px, c);
+    canvas_set_pixel(doc, x+r-px,   y+h-r+py-1, c);
+    canvas_set_pixel(doc, x+w-r+px-1, y+h-r+py-1, c);
+    canvas_set_pixel(doc, x+r-py,   y+h-r+px-1, c);
+    canvas_set_pixel(doc, x+w-r+py-1, y+h-r+px-1, c);
+    if (d < 0) { d += 4*px + 6; }
+    else       { d += 4*(px-py) + 10; py--; }
+    px++;
+  }
+}
+
+void canvas_draw_rounded_rect_filled(canvas_doc_t *doc, int x, int y, int w, int h, int r, rgba_t outline, rgba_t fill) {
+  if (w <= 0 || h <= 0) return;
+  if (r < 0) r = 0;
+  if (r > w / 2) r = w / 2;
+  if (r > h / 2) r = h / 2;
+  // Fill rows from y+r to y+h-r (full width interior)
+  for (int dy = r; dy < h - r; dy++)
+    canvas_draw_line(doc, x+1, y+dy, x+w-2, y+dy, 0, fill);
+  // Fill corner arcs using circle scan-line fill
+  int px = 0, py = r, d = 3 - 2*r;
+  while (px <= py) {
+    // Fill horizontal spans for corner arcs
+    canvas_draw_line(doc, x+r-py+1, y+r-px, x+w-r+py-2, y+r-px, 0, fill);
+    canvas_draw_line(doc, x+r-px+1, y+r-py, x+w-r+px-2, y+r-py, 0, fill);
+    canvas_draw_line(doc, x+r-py+1, y+h-r+px-1, x+w-r+py-2, y+h-r+px-1, 0, fill);
+    canvas_draw_line(doc, x+r-px+1, y+h-r+py-1, x+w-r+px-2, y+h-r+py-1, 0, fill);
+    if (d < 0) { d += 4*px + 6; }
+    else       { d += 4*(px-py) + 10; py--; }
+    px++;
+  }
+  canvas_draw_rounded_rect_outline(doc, x, y, w, h, r, outline);
+}
+
+// Polygon: draw edges between consecutive vertices and close the last to first
+void canvas_draw_polygon_outline(canvas_doc_t *doc, const point_t *pts, int count, rgba_t c) {
+  if (count < 2) return;
+  for (int i = 0; i < count - 1; i++)
+    canvas_draw_line(doc, pts[i].x, pts[i].y, pts[i+1].x, pts[i+1].y, 0, c);
+  canvas_draw_line(doc, pts[count-1].x, pts[count-1].y, pts[0].x, pts[0].y, 0, c);
+}
+
+// Scanline fill for a closed polygon using the ray-casting / edge table approach
+void canvas_draw_polygon_filled(canvas_doc_t *doc, const point_t *pts, int count, rgba_t outline, rgba_t fill) {
+  if (count < 3) { canvas_draw_polygon_outline(doc, pts, count, outline); return; }
+  // Find bounding box
+  int y_min = pts[0].y, y_max = pts[0].y;
+  for (int i = 1; i < count; i++) {
+    if (pts[i].y < y_min) y_min = pts[i].y;
+    if (pts[i].y > y_max) y_max = pts[i].y;
+  }
+  y_min = MAX(y_min, 0); y_max = MIN(y_max, CANVAS_H - 1);
+  int *xs = malloc(sizeof(int) * count * 2);
+  if (!xs) { canvas_draw_polygon_outline(doc, pts, count, outline); return; }
+  for (int y = y_min; y <= y_max; y++) {
+    int n = 0;
+    for (int i = 0, j = count - 1; i < count; j = i++) {
+      int yi = pts[i].y, yj = pts[j].y;
+      if ((yi <= y && yj > y) || (yj <= y && yi > y)) {
+        xs[n++] = pts[i].x + (y - yi) * (pts[j].x - pts[i].x) / (yj - yi);
+      }
+    }
+    // Sort intersections
+    for (int a = 0; a < n - 1; a++)
+      for (int b = a + 1; b < n; b++)
+        if (xs[a] > xs[b]) { int t = xs[a]; xs[a] = xs[b]; xs[b] = t; }
+    for (int a = 0; a + 1 < n; a += 2)
+      canvas_draw_line(doc, xs[a], y, xs[a+1], y, 0, fill);
+  }
+  free(xs);
+  canvas_draw_polygon_outline(doc, pts, count, outline);
+}
+
+// Returns true if tool is a shape tool that uses rubber-band dragging
+bool canvas_is_shape_tool(int tool_id) {
+  switch (tool_id) {
+    case ID_TOOL_LINE:
+    case ID_TOOL_RECT:
+    case ID_TOOL_ELLIPSE:
+    case ID_TOOL_ROUNDED_RECT:
+      return true;
+    default:
+      return false;
+  }
+}
+
+// Save pixel snapshot before starting a shape drag (no undo push yet)
+void canvas_shape_begin(canvas_doc_t *doc, int cx, int cy) {
+  if (!doc->shape_snapshot) {
+    doc->shape_snapshot = malloc(CANVAS_H * CANVAS_W * 4);
+  }
+  if (doc->shape_snapshot) {
+    memcpy(doc->shape_snapshot, doc->pixels, CANVAS_H * CANVAS_W * 4);
+  }
+  doc->shape_start.x = cx;
+  doc->shape_start.y = cy;
+}
+
+// Restore snapshot and draw a preview of the current shape without pushing undo.
+// shift_held constrains the shape (45° line, square, circle).
+void canvas_shape_preview(canvas_doc_t *doc, int x0, int y0, int x1, int y1,
+                          int tool, bool filled, rgba_t fg, rgba_t bg, bool shift_held) {
+  // Restore snapshot
+  if (doc->shape_snapshot) {
+    memcpy(doc->pixels, doc->shape_snapshot, CANVAS_H * CANVAS_W * 4);
+    doc->canvas_dirty = true;
+  }
+  if (shift_held) {
+    int dx = x1 - x0, dy = y1 - y0;
+    switch (tool) {
+      case ID_TOOL_LINE: {
+        // Snap to nearest 45° increment
+        if (abs(dx) > abs(dy) * 2) { dy = 0; }
+        else if (abs(dy) > abs(dx) * 2) { dx = 0; }
+        else { int s = MAX(abs(dx), abs(dy)); dx = (dx<0?-s:s); dy = (dy<0?-s:s); }
+        x1 = x0 + dx; y1 = y0 + dy;
+        break;
+      }
+      case ID_TOOL_RECT:
+      case ID_TOOL_ROUNDED_RECT: {
+        // Make square: use shorter dimension
+        int s = MIN(abs(dx), abs(dy));
+        x1 = x0 + (dx < 0 ? -s : s);
+        y1 = y0 + (dy < 0 ? -s : s);
+        break;
+      }
+      case ID_TOOL_ELLIPSE: {
+        // Make circle
+        int s = MIN(abs(dx), abs(dy));
+        x1 = x0 + (dx < 0 ? -s : s);
+        y1 = y0 + (dy < 0 ? -s : s);
+        break;
+      }
+    }
+  }
+  int lx = MIN(x0, x1), rx = MAX(x0, x1);
+  int ty = MIN(y0, y1), by = MAX(y0, y1);
+  int w = rx - lx + 1, h = by - ty + 1;
+  int cx2 = (lx + rx) / 2, cy2 = (ty + by) / 2;
+  int rxa = (rx - lx + 1) / 2, rya = (by - ty + 1) / 2;
+  int corner_r = MIN(8, MIN(w / 4, h / 4));
+
+  switch (tool) {
+    case ID_TOOL_LINE:
+      canvas_draw_line(doc, x0, y0, x1, y1, 0, fg);
+      break;
+    case ID_TOOL_RECT:
+      if (filled) canvas_draw_rect_filled(doc, lx, ty, w, h, fg, bg);
+      else        canvas_draw_rect_outline(doc, lx, ty, w, h, fg);
+      break;
+    case ID_TOOL_ELLIPSE:
+      if (filled) canvas_draw_ellipse_filled(doc, cx2, cy2, rxa, rya, fg, bg);
+      else        canvas_draw_ellipse_outline(doc, cx2, cy2, rxa, rya, fg);
+      break;
+    case ID_TOOL_ROUNDED_RECT:
+      if (filled) canvas_draw_rounded_rect_filled(doc, lx, ty, w, h, corner_r, fg, bg);
+      else        canvas_draw_rounded_rect_outline(doc, lx, ty, w, h, corner_r, fg);
+      break;
+  }
+}
+
+// No-op: snapshot is kept until next shape begins or doc is freed
+void canvas_shape_commit(canvas_doc_t *doc) {
+  (void)doc;
+}
+
+// ============================================================
 // Selection operations
 // ============================================================
 

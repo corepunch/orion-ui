@@ -1,6 +1,7 @@
 // Canvas child window – renders the pixel canvas and dispatches paint events to tools
 
 #include "imageeditor.h"
+#include <SDL2/SDL.h>   // for SDL_GetModState / KMOD_SHIFT
 
 // Single source of truth for zoom levels and their View menu IDs.
 // win_menubar.c also references these via the extern declarations in imageeditor.h.
@@ -199,6 +200,17 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         int y1 = (MAX(doc->sel_start.y, doc->sel_end.y) + 1) * state->scale - state->pan_y;
         draw_sel_rect(win->frame.x + x0, win->frame.y + y0, x1 - x0, y1 - y0);
       }
+      // Polygon in-progress: draw a sel_rect bounding the rubber-band edge
+      // from the last committed vertex to the current mouse position.
+      if (doc->poly_active && doc->poly_count > 0) {
+        point_t v0 = doc->poly_pts[doc->poly_count - 1];
+        point_t v1 = doc->last;
+        int px0 = MIN(v0.x, v1.x) * state->scale - state->pan_x;
+        int py0 = MIN(v0.y, v1.y) * state->scale - state->pan_y;
+        int px1 = (MAX(v0.x, v1.x) + 1) * state->scale - state->pan_x;
+        int py1 = (MAX(v0.y, v1.y) + 1) * state->scale - state->pan_y;
+        draw_sel_rect(win->frame.x + px0, win->frame.y + py0, px1 - px0, py1 - py0);
+      }
 
       // Paint scrollbar children on top of the canvas content
       if (state->hscroll && state->hscroll->visible)
@@ -214,7 +226,6 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
                   win->frame.y + win->frame.h - SCROLLBAR_SIZE,
                   SCROLLBAR_SIZE, SCROLLBAR_SIZE);
       }
-
       return true;
     }
 
@@ -243,8 +254,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       int max_pan_y = MAX(0, canvas_h - win->frame.h);
       if (max_pan_x > 0 || max_pan_y > 0) {
         // LOWORD = -wheel.x * SCROLL_SENSITIVITY; HIWORD = wheel.y * SCROLL_SENSITIVITY
-        int dx =  (int16_t)LOWORD(wparam);  // positive → scroll right → increase pan_x
-        int dy = -(int16_t)HIWORD(wparam);  // positive → scroll down  → increase pan_y
+        int dx = -(int16_t)LOWORD(wparam);  // natural scroll: flip x axis
+        int dy = -(int16_t)HIWORD(wparam);  // natural scroll: flip y axis
         state->pan_x = MIN(MAX(state->pan_x + dx, 0), max_pan_x);
         state->pan_y = MIN(MAX(state->pan_y + dy, 0), max_pan_y);
         canvas_sync_scrollbars(win, state);
@@ -294,13 +305,41 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       int px = (lx - win->frame.x + state->pan_x) / state->scale;
       int py = (ly - win->frame.y + state->pan_y) / state->scale;
-      doc->drawing = true;
-      doc->last.x  = px;
-      doc->last.y  = py;
+      int tool = g_app->current_tool;
+
+      // Polygon: accumulate vertices on each click; commit on right-click
+      if (tool == ID_TOOL_POLYGON) {
+        if (!doc->poly_active) {
+          doc_push_undo(doc);
+          canvas_shape_begin(doc, px, py);  // snapshot for cancel/undo
+          doc->poly_active = true;
+          doc->poly_count  = 0;
+        }
+        if (doc->poly_count < (int)(sizeof(doc->poly_pts)/sizeof(doc->poly_pts[0]))) {
+          doc->poly_pts[doc->poly_count++] = (point_t){px, py};
+        }
+        doc->last.x = px;
+        doc->last.y = py;
+        invalidate_window(win);
+        return true;
+      }
+
+      doc->drawing   = true;
+      doc->last.x    = px;
+      doc->last.y    = py;
+
+      if (canvas_is_shape_tool(tool)) {
+        // Shape tools: take snapshot then preview – undo is pushed on mouse-up
+        canvas_shape_begin(doc, px, py);
+        canvas_shape_preview(doc, px, py, px, py, tool,
+                             g_app->shape_filled, g_app->fg_color, g_app->bg_color, false);
+        invalidate_window(win);
+        return true;
+      }
 
       doc_push_undo(doc);
 
-      switch (g_app->current_tool) {
+      switch (tool) {
         case ID_TOOL_PENCIL:
           canvas_draw_circle(doc, px, py, 0, g_app->fg_color);
           break;
@@ -378,15 +417,40 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         return true;
       }
 
-      if (!doc || !doc->drawing) return true;
+      if (!doc) return true;
+
       window_t *root = get_root_window(win);
       int lx = (int16_t)LOWORD(wparam) - root->frame.x;
       int ly = (int16_t)HIWORD(wparam) - root->frame.y;
       int px = (lx - win->frame.x + state->pan_x) / state->scale;
       int py = (ly - win->frame.y + state->pan_y) / state->scale;
+
+      int tool = g_app->current_tool;
+      bool shift = (SDL_GetModState() & KMOD_SHIFT) != 0;
+
+      // Update polygon rubber-band preview (stores last mouse position in doc->last)
+      if (tool == ID_TOOL_POLYGON && doc->poly_active) {
+        doc->last.x = px;
+        doc->last.y = py;
+        invalidate_window(win);
+        return true;
+      }
+
+      if (!doc->drawing) return true;
       if (px == doc->last.x && py == doc->last.y) return true;
 
-      switch (g_app->current_tool) {
+      if (canvas_is_shape_tool(tool)) {
+        canvas_shape_preview(doc,
+                             doc->shape_start.x, doc->shape_start.y,
+                             px, py, tool,
+                             g_app->shape_filled, g_app->fg_color, g_app->bg_color, shift);
+        doc->last.x = px;
+        doc->last.y = py;
+        invalidate_window(win);
+        return true;
+      }
+
+      switch (tool) {
         case ID_TOOL_PENCIL:
           canvas_draw_line(doc, doc->last.x, doc->last.y, px, py, 0, g_app->fg_color);
           break;
@@ -421,9 +485,28 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       return true;
     }
 
-    case kWindowMessageLeftButtonUp:
+    case kWindowMessageLeftButtonUp: {
       if (state) state->panning = false;
-      if (doc) {
+      if (!doc || !g_app) return true;
+      int tool = g_app->current_tool;
+
+      if (canvas_is_shape_tool(tool) && doc->drawing) {
+        // Commit the final shape.  doc->pixels already has the drawn result.
+        // We need the undo stack to hold the PRE-draw state (shape_snapshot).
+        // doc_push_undo() saves the CURRENT pixels; after that we swap the
+        // newly pushed entry (= drawn pixels) with shape_snapshot (= pre-draw)
+        // so that undo correctly restores the pre-draw state.
+        doc_push_undo(doc);
+        if (doc->shape_snapshot && doc->undo_count > 0) {
+          uint8_t *tmp = doc->undo_states[doc->undo_count - 1];
+          doc->undo_states[doc->undo_count - 1] = doc->shape_snapshot;
+          doc->shape_snapshot = tmp;  // reuse buffer next time
+        }
+        doc->drawing  = false;
+        doc->modified = true;
+        doc_update_title(doc);
+        invalidate_window(win);
+      } else {
         if (doc->sel_moving) {
           canvas_commit_move(doc);
           doc_update_title(doc);
@@ -431,6 +514,59 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         doc->drawing = false;
       }
       return true;
+    }
+
+    case kWindowMessageRightButtonDown: {
+      // Right-click while polygon is active: commit the polygon
+      if (!doc || !g_app) return true;
+      int tool = g_app->current_tool;
+      if (tool == ID_TOOL_POLYGON && doc->poly_active && doc->poly_count >= 2) {
+        if (g_app->shape_filled)
+          canvas_draw_polygon_filled(doc, doc->poly_pts, doc->poly_count, g_app->fg_color, g_app->bg_color);
+        else
+          canvas_draw_polygon_outline(doc, doc->poly_pts, doc->poly_count, g_app->fg_color);
+        // Fix up undo: undo_states[top] was pushed with pre-draw pixels from shape_begin.
+        // After drawing, swap undo entry (pre-draw) with shape_snapshot (drawn) to align them.
+        // Actually the undo was already pushed correctly on first click via doc_push_undo
+        // in the polygon start handler; shape_snapshot holds the pre-draw state.
+        // We need undo_states[top] = pre-draw, but it currently = pre-draw (correct!).
+        // Nothing extra needed — doc_push_undo was called at polygon start.
+        doc->poly_active = false;
+        doc->poly_count  = 0;
+        doc->modified = true;
+        doc_update_title(doc);
+        invalidate_window(win);
+        return true;
+      }
+      return false;
+    }
+
+    case kWindowMessageKeyDown: {
+      if (!doc || !g_app) return false;
+      int tool = g_app->current_tool;
+      // Escape cancels an in-progress polygon or shape drag
+      if (wparam == SDL_SCANCODE_ESCAPE) {
+        if (tool == ID_TOOL_POLYGON && doc->poly_active) {
+          if (doc->shape_snapshot) {
+            memcpy(doc->pixels, doc->shape_snapshot, CANVAS_H * CANVAS_W * 4);
+            doc->canvas_dirty = true;
+          }
+          doc_discard_undo(doc);  // drop the no-op undo entry pushed at polygon start
+          doc->poly_active = false;
+          doc->poly_count  = 0;
+          invalidate_window(win);
+          return true;
+        }
+        if (canvas_is_shape_tool(tool) && doc->drawing && doc->shape_snapshot) {
+          memcpy(doc->pixels, doc->shape_snapshot, CANVAS_H * CANVAS_W * 4);
+          doc->canvas_dirty = true;
+          doc->drawing = false;
+          invalidate_window(win);
+          return true;
+        }
+      }
+      return false;
+    }
 
     default:
       return false;

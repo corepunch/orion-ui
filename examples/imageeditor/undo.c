@@ -95,3 +95,12 @@ void doc_free_undo(canvas_doc_t *doc) {
   clear_stack(doc->undo_states, &doc->undo_count);
   clear_stack(doc->redo_states, &doc->redo_count);
 }
+
+// Drop the most recently pushed undo entry without applying it.
+// Use this when an operation is cancelled after pushing an undo state.
+void doc_discard_undo(canvas_doc_t *doc) {
+  if (!doc || doc->undo_count == 0) return;
+  doc->undo_count--;
+  free(doc->undo_states[doc->undo_count]);
+  doc->undo_states[doc->undo_count] = NULL;
+}

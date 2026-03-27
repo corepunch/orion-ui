@@ -107,6 +107,8 @@ void close_document(canvas_doc_t *doc) {
 
   doc_free_undo(doc);
 
+  free(doc->shape_snapshot);
+  doc->shape_snapshot = NULL;
   if (doc->float_tex)
     glDeleteTextures(1, &doc->float_tex);
   free(doc->float_pixels);
