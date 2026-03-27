@@ -15,11 +15,11 @@
 // tools.png: 32×160 = 2 columns × 10 rows of 16×16 icons.
 // Tool order: Pencil(0), Brush(1), Eraser(2), Fill(3), Select(4).
 static const int k_tool_icon_idx[NUM_TOOLS] = {
-  5*2+0,   // Pencil:  row 5, col 0  → index 10
-  5*2+1,   // Brush:   row 5, col 1  → index 11
-  6*2+1,   // Eraser:  row 6, col 1  → index 13
-  3*2+0,   // Fill:    row 3, col 0  → index  6
-  0*2+0,   // Select:  row 0, col 0  → index  0
+  13,   // Pencil
+  15,   // Brush
+  12,   // Eraser
+  8,    // Fill
+  0,    // Select
 };
 
 typedef struct {
