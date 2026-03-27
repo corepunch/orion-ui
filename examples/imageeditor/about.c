@@ -18,8 +18,11 @@
 #define ABOUT_BTN_W     50
 #define ABOUT_BTN_H     13
 
-// Text column starts to the right of the banner
+// Text column starts to the right of the banner + separator
 #define ABOUT_TEXT_X   (ABOUT_BANNER_W + 8)
+
+// Width available for labels in the right column
+#define ABOUT_LABEL_W  (ABOUT_WIN_W - ABOUT_TEXT_X - 4)
 
 // ──────────────────────────────────────────────────────────────────
 // State
@@ -123,6 +126,18 @@ static GLuint load_banner_texture(void) {
 }
 
 // ──────────────────────────────────────────────────────────────────
+// Helpers to create labeled sub-windows
+// ──────────────────────────────────────────────────────────────────
+
+#define DIM  ((void *)(uintptr_t)COLOR_TEXT_DISABLED)
+
+static void make_label(window_t *parent, const char *text, int y, void *color) {
+  create_window(text, WINDOW_NOTITLE | WINDOW_NOFILL,
+                MAKERECT(ABOUT_TEXT_X, y, ABOUT_LABEL_W, CONTROL_HEIGHT),
+                parent, win_label, color);
+}
+
+// ──────────────────────────────────────────────────────────────────
 // Dialog window procedure
 // ──────────────────────────────────────────────────────────────────
 
@@ -135,36 +150,32 @@ static result_t about_proc(window_t *win, uint32_t msg,
       about_state_t *s = allocate_window_data(win, sizeof(about_state_t));
       s->banner_tex = load_banner_texture();
 
+      // Banner image (left panel)
+      create_window("", WINDOW_NOTITLE | WINDOW_NOFILL,
+                    MAKERECT(2, 2, ABOUT_BANNER_W, ABOUT_BANNER_H),
+                    win, win_image, (void *)(uintptr_t)s->banner_tex);
+
+      // App info labels (right column)
+      make_label(win, "Orion Image Editor",  8, NULL);
+      make_label(win, "Version 1.0",        22, DIM);
+      make_label(win, "A MacPaint-inspired", 40, DIM);
+      make_label(win, "pixel art editor.",   50, DIM);
+      make_label(win, "Built with the",      66, DIM);
+      make_label(win, "Orion UI framework.", 76, DIM);
+
+      // OK button (centered at the bottom)
       int bx = (ABOUT_WIN_W - ABOUT_BTN_W) / 2;
       int by = ABOUT_WIN_H - ABOUT_BTN_H - 4;
       create_window("OK", 0,
-          MAKERECT(bx, by, ABOUT_BTN_W, ABOUT_BTN_H),
-          win, win_button, NULL);
+                    MAKERECT(bx, by, ABOUT_BTN_W, ABOUT_BTN_H),
+                    win, win_button, NULL);
       return true;
     }
 
     case kWindowMessagePaint: {
-      fill_rect(COLOR_PANEL_BG, 0, 0, win->frame.w, win->frame.h);
-
-      // Banner image on the left
-      if (st && st->banner_tex) {
-        draw_rect(st->banner_tex, 2, 2, ABOUT_BANNER_W, ABOUT_BANNER_H);
-      } else {
-        fill_rect(COLOR_PANEL_DARK_BG, 2, 2, ABOUT_BANNER_W, ABOUT_BANNER_H);
-      }
-
-      // Separator line between banner and text
+      // Separator line between the banner and the text column
       fill_rect(COLOR_DARK_EDGE, ABOUT_BANNER_W + 4, 2, 1, ABOUT_BANNER_H);
-
-      // App info on the right
-      draw_text_small("Orion Image Editor", ABOUT_TEXT_X,  8, COLOR_TEXT_NORMAL);
-      draw_text_small("Version 1.0",        ABOUT_TEXT_X, 22, COLOR_TEXT_DISABLED);
-      draw_text_small("A MacPaint-inspired", ABOUT_TEXT_X, 40, COLOR_TEXT_DISABLED);
-      draw_text_small("pixel art editor.",   ABOUT_TEXT_X, 50, COLOR_TEXT_DISABLED);
-      draw_text_small("Built with the",      ABOUT_TEXT_X, 66, COLOR_TEXT_DISABLED);
-      draw_text_small("Orion UI framework.", ABOUT_TEXT_X, 76, COLOR_TEXT_DISABLED);
-
-      return false; // let children (OK button) paint
+      return false; // let sub-windows (image, labels, button) paint themselves
     }
 
     case kWindowMessageCommand: {
