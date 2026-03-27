@@ -157,6 +157,8 @@ typedef struct {
   int           pan_y;      // vertical pan offset in screen pixels
   window_t     *hscroll;    // horizontal scrollbar child window
   window_t     *vscroll;    // vertical scrollbar child window
+  bool          panning;    // true while hand-tool drag is in progress
+  point_t       pan_start;  // screen-local coords where hand drag began
 } canvas_win_state_t;
 
 typedef struct {

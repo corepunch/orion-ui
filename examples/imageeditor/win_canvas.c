@@ -131,6 +131,17 @@ static void float_tex_upload(canvas_doc_t *doc) {
                GL_RGBA, GL_UNSIGNED_BYTE, doc->float_pixels);
 }
 
+// Apply a new zoom level centered on the canvas pixel (cx, cy) currently
+// displayed at screen-local position (mx, my) inside the canvas frame.
+// new_scale must be a valid zoom level; the pan is re-derived so the
+// pointed-at canvas pixel stays under the cursor after zooming.
+static void apply_zoom_centered(window_t *win, canvas_win_state_t *state,
+                                int new_scale, int cx, int cy, int mx, int my) {
+  state->pan_x = cx * new_scale - mx;
+  state->pan_y = cy * new_scale - my;
+  canvas_win_set_zoom(win, new_scale);
+}
+
 result_t win_canvas_proc(window_t *win, uint32_t msg,
                           uint32_t wparam, void *lparam) {
   canvas_win_state_t *state = (canvas_win_state_t *)win->userdata;
@@ -257,6 +268,30 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         return canvas_forward_to_scrollbar(state->vscroll, msg, wparam);
 
       if (!doc || !g_app) return true;
+
+      // Hand tool: begin pan drag in screen space
+      if (g_app->current_tool == ID_TOOL_HAND) {
+        state->panning = true;
+        state->pan_start.x = lx;
+        state->pan_start.y = ly;
+        return true;
+      }
+
+      // Zoom tool (left click): zoom in centered on cursor
+      if (g_app->current_tool == ID_TOOL_ZOOM) {
+        int mx = lx - win->frame.x;
+        int my = ly - win->frame.y;
+        int cx = (mx + state->pan_x) / state->scale;
+        int cy = (my + state->pan_y) / state->scale;
+        int new_scale = state->scale;
+        for (int i = 0; i < NUM_ZOOM_LEVELS; i++) {
+          if (kZoomLevels[i] > state->scale) { new_scale = kZoomLevels[i]; break; }
+        }
+        if (new_scale != state->scale)
+          apply_zoom_centered(win, state, new_scale, cx, cy, mx, my);
+        return true;
+      }
+
       int px = (lx - win->frame.x + state->pan_x) / state->scale;
       int py = (ly - win->frame.y + state->pan_y) / state->scale;
       doc->drawing = true;
@@ -303,8 +338,47 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       return true;
     }
 
+    case kWindowMessageRightButtonDown: {
+      if (!state || !doc || !g_app) return false;
+      // Zoom tool (right click): zoom out centered on cursor
+      if (g_app->current_tool == ID_TOOL_ZOOM) {
+        window_t *root = get_root_window(win);
+        int lx = (int16_t)LOWORD(wparam) - root->frame.x;
+        int ly = (int16_t)HIWORD(wparam) - root->frame.y;
+        int mx = lx - win->frame.x;
+        int my = ly - win->frame.y;
+        int cx = (mx + state->pan_x) / state->scale;
+        int cy = (my + state->pan_y) / state->scale;
+        int new_scale = state->scale;
+        for (int i = NUM_ZOOM_LEVELS - 1; i >= 0; i--) {
+          if (kZoomLevels[i] < state->scale) { new_scale = kZoomLevels[i]; break; }
+        }
+        if (new_scale != state->scale)
+          apply_zoom_centered(win, state, new_scale, cx, cy, mx, my);
+        return true;
+      }
+      return false;
+    }
+
     case kWindowMessageMouseMove: {
-      if (!state || !doc || !doc->drawing || !g_app) return true;
+      if (!state || !g_app) return true;
+
+      // Hand tool: update pan while dragging
+      if (state->panning) {
+        window_t *root = get_root_window(win);
+        int lx = (int16_t)LOWORD(wparam) - root->frame.x;
+        int ly = (int16_t)HIWORD(wparam) - root->frame.y;
+        state->pan_x -= lx - state->pan_start.x;
+        state->pan_y -= ly - state->pan_start.y;
+        state->pan_start.x = lx;
+        state->pan_start.y = ly;
+        clamp_pan(state, win->frame.w, win->frame.h);
+        canvas_sync_scrollbars(win, state);
+        invalidate_window(win);
+        return true;
+      }
+
+      if (!doc || !doc->drawing) return true;
       window_t *root = get_root_window(win);
       int lx = (int16_t)LOWORD(wparam) - root->frame.x;
       int ly = (int16_t)HIWORD(wparam) - root->frame.y;
@@ -348,6 +422,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
     }
 
     case kWindowMessageLeftButtonUp:
+      if (state) state->panning = false;
       if (doc) {
         if (doc->sel_moving) {
           canvas_commit_move(doc);
