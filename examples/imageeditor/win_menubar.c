@@ -118,7 +118,12 @@ static void handle_menu_command(uint16_t id) {
     case ID_TOOL_BRUSH:
     case ID_TOOL_ERASER:
     case ID_TOOL_FILL:
-    case ID_TOOL_SELECT: {
+    case ID_TOOL_SELECT:
+    case ID_TOOL_LINE:
+    case ID_TOOL_RECT:
+    case ID_TOOL_ELLIPSE:
+    case ID_TOOL_ROUNDED_RECT:
+    case ID_TOOL_POLYGON: {
       g_app->current_tool = id;
       // Update the active toolbar button in the tool palette.
       // kToolBarMessageSetActiveButton marks the matching button as active

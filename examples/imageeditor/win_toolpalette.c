@@ -1,6 +1,6 @@
 // Tool palette window
 // Uses WINDOW_TOOLBAR for tool buttons (PNG icons from tools.png with wrapping).
-// The client area shows FG/BG color swatches.
+// The client area shows FG/BG color swatches and a filled/outline shape mode selector.
 // Follows the WinAPI TB_ADDBITMAP / TBBUTTON pattern: one bitmap_strip_t
 // shared across all toolbar buttons; each button stores only an icon index (iBitmap).
 
@@ -12,14 +12,23 @@
 #define ICON_H    16
 
 // Icon index = row * cols + col, where cols = sheet_w / ICON_W.
-// tools.png: 32×160 = 2 columns × 10 rows of 16×16 icons.
-// Tool order: Pencil(0), Brush(1), Eraser(2), Fill(3), Select(4).
+// tools.png: 320×16 = 20 columns × 1 row of 16×16 icons.
+// Tool order: Pencil(0)..Polygon(9).
+// Icon assignments (from visual inspection of tools.png):
+//   13=pencil, 15=brush, 12=eraser, 8=fill, 0=select,
+//   10=line (diagonal line), 6=rect (cross), 1=ellipse (circle outline),
+//   9=rounded-rect (checkerboard-ish), 11=polygon (wavy outline)
 static const int k_tool_icon_idx[NUM_TOOLS] = {
   13,   // Pencil
   15,   // Brush
   12,   // Eraser
   8,    // Fill
   0,    // Select
+  10,   // Line
+  6,    // Rect
+  1,    // Ellipse
+  9,    // Rounded Rect
+  11,   // Polygon
 };
 
 typedef struct {
@@ -204,7 +213,7 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
     }
 
     case kWindowMessagePaint: {
-      // Client area: FG/BG color swatches.
+      // Client area: FG/BG color swatches + fill mode selector.
       fill_rect(COLOR_PANEL_DARK_BG, 0, 0, win->frame.w, win->frame.h);
       fill_rect(COLOR_DARK_EDGE, win->frame.w - 1, 0, 1, win->frame.h);
       fill_rect(COLOR_DARK_EDGE, 0, win->frame.h - 1, win->frame.w, 1);
@@ -220,8 +229,41 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
 
         DrawSwatch(COLOR_DARK_EDGE, 0, g_app->fg_color);
         DrawSwatch(COLOR_DARK_EDGE, TB_SPACING, g_app->bg_color);
+
+        // Fill mode row: show "Outline" / "Filled" mini toggles
+        int fy = sy + 16;
+        draw_text_small("Fill:", 2, fy, COLOR_TEXT_DISABLED);
+        fy += 9;
+        // Outline button (active when !shape_filled)
+        uint32_t outline_col = g_app->shape_filled ? COLOR_BUTTON_BG : COLOR_FOCUSED;
+        fill_rect(COLOR_DARK_EDGE,  1,           fy,   TB_SPACING-2, 12);
+        fill_rect(outline_col,      2,           fy+1, TB_SPACING-4, 10);
+        draw_text_small("O", 5,                 fy+2, COLOR_TEXT_NORMAL);
+        // Filled button (active when shape_filled)
+        uint32_t filled_col = g_app->shape_filled ? COLOR_FOCUSED : COLOR_BUTTON_BG;
+        fill_rect(COLOR_DARK_EDGE,  TB_SPACING+1, fy, TB_SPACING-2, 12);
+        fill_rect(filled_col,       TB_SPACING+2, fy+1, TB_SPACING-4, 10);
+        draw_text_small("F", TB_SPACING+5,       fy+2, COLOR_TEXT_NORMAL);
       }
       return true;
+    }
+
+    case kWindowMessageLeftButtonDown: {
+      // Check if click is in the fill mode row
+      if (!g_app) return false;
+      int mx = (int16_t)LOWORD(wparam);
+      int my = (int16_t)HIWORD(wparam);
+      // Fill mode row starts at: sy(=2+8+16) + 9 = 35, height 12
+      int fy = 2 + 8 + 16 + 9;
+      if (my >= fy && my < fy + 12) {
+        bool was_filled = g_app->shape_filled;
+        g_app->shape_filled = (mx >= TB_SPACING);
+        if (g_app->shape_filled != was_filled) {
+          invalidate_window(win);
+        }
+        return true;
+      }
+      return false;
     }
 
     case kToolBarMessageButtonClick: {
