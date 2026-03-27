@@ -251,8 +251,23 @@ void dispatch_message(SDL_Event *evt) {
       if (_dragging) {
         int x = SCALE_POINT(evt->button.x);
         int y = SCALE_POINT(evt->button.y);
-        int b = (_dragging->frame.x + _dragging->frame.w - CONTROL_BUTTON_PADDING - x) / CONTROL_BUTTON_WIDTH;
-        if (b == 0) {
+        /* Determine whether the release landed on the close button.
+         * Two bugs existed in the original formula:
+         *   1. No Y check: clicking anywhere in the non-client area (including
+         *      the toolbar, which sits between the title bar and client area
+         *      when WINDOW_TOOLBAR is set) at the right X would close the window.
+         *   2. Negative integer division: when x was slightly past the close-
+         *      button right edge the numerator became negative, and C truncates
+         *      toward zero (-1/8 == 0), so b==0 misfired for 7 extra pixels.
+         * Fix: use explicit X and Y range checks instead.
+         */
+        int close_x = _dragging->frame.x + _dragging->frame.w
+                      - CONTROL_BUTTON_WIDTH - CONTROL_BUTTON_PADDING;
+        int title_y  = window_title_bar_y(_dragging) - 2; /* top of title bar strip */
+        bool on_close = !(_dragging->flags & WINDOW_NOTITLE)
+                        && x >= close_x && x < close_x + CONTROL_BUTTON_WIDTH
+                        && y >= title_y && y < title_y + TITLEBAR_HEIGHT;
+        if (on_close) {
           if (_dragging->flags & WINDOW_DIALOG) {
             end_dialog(_dragging, -1);
           } else {
