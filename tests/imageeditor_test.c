@@ -1303,11 +1303,26 @@ void test_crop_to_selection_reversed_drag(void) {
 #define T_NUM_ZOOM_LEVELS 5
 static const int t_kZoomLevels[T_NUM_ZOOM_LEVELS] = {1, 2, 4, 6, 8};
 
-/* Replicate clamp_pan from win_canvas.c */
+/* Scrollbar thickness – must match SCROLLBAR_SIZE in imageeditor.h */
+#define T_SCROLLBAR_SIZE 8
+
+/* Replicate clamp_pan from win_canvas.c (including scrollbar-interdependence) */
 static void t_clamp_pan(int scale, int win_w, int win_h,
                          int *pan_x, int *pan_y) {
-  int max_x = CANVAS_W * scale - win_w;
-  int max_y = CANVAS_H * scale - win_h;
+  int canvas_w = CANVAS_W * scale;
+  int canvas_h = CANVAS_H * scale;
+
+  /* Mirror scrollbar-interdependence: one bar shrinks the perpendicular axis */
+  int need_h = canvas_w > win_w;
+  int need_v = canvas_h > win_h;
+  if (need_h && !need_v) need_v = canvas_h > win_h - T_SCROLLBAR_SIZE;
+  if (need_v && !need_h) need_h = canvas_w > win_w - T_SCROLLBAR_SIZE;
+
+  int view_w = need_v ? win_w - T_SCROLLBAR_SIZE : win_w;
+  int view_h = need_h ? win_h - T_SCROLLBAR_SIZE : win_h;
+
+  int max_x = canvas_w - view_w;
+  int max_y = canvas_h - view_h;
   if (max_x < 0) max_x = 0;
   if (max_y < 0) max_y = 0;
   if (*pan_x < 0) *pan_x = 0;
@@ -1379,11 +1394,16 @@ void test_pan_clamp_no_zoom(void) {
 
 void test_pan_clamp_zoom_4x(void) {
   TEST("pan clamp – 4x zoom: pan stays within valid range");
-  /* win size equals canvas size; at 4x, max_pan = 3*CANVAS */
+  /* At 4x zoom with win size == canvas size, both scrollbars are needed.
+   * Each bar consumes T_SCROLLBAR_SIZE px from the opposite viewport axis,
+   * so: max_pan_x = canvas_w*4 - (win_w - T_SCROLLBAR_SIZE)
+   *               = 4*320 - (320-8) = 1280 - 312 = 968
+   *     max_pan_y = canvas_h*4 - (win_h - T_SCROLLBAR_SIZE)
+   *               = 4*200 - (200-8) = 800  - 192 = 608  */
   int px = 9999, py = 9999;
   t_clamp_pan(4, CANVAS_W, CANVAS_H, &px, &py);
-  ASSERT_EQUAL(px, CANVAS_W * 4 - CANVAS_W);  /* 3*320 = 960 */
-  ASSERT_EQUAL(py, CANVAS_H * 4 - CANVAS_H);  /* 3*200 = 600 */
+  ASSERT_EQUAL(px, CANVAS_W * 4 - (CANVAS_W - T_SCROLLBAR_SIZE));  /* 968 */
+  ASSERT_EQUAL(py, CANVAS_H * 4 - (CANVAS_H - T_SCROLLBAR_SIZE));  /* 608 */
   PASS();
 }
 
@@ -1403,6 +1423,38 @@ void test_pan_clamp_within_range(void) {
   t_clamp_pan(2, CANVAS_W, CANVAS_H, &px, &py);
   ASSERT_EQUAL(px, 100);
   ASSERT_EQUAL(py, 80);
+  PASS();
+}
+
+void test_pan_clamp_hscroll_forces_vscroll(void) {
+  TEST("pan clamp – wide canvas needs hscroll, whose height forces vscroll");
+  /* Canvas is wider than the window (need_h=true) but its height exactly
+   * equals the window height (would be need_v=false with the old logic).
+   * The horizontal scrollbar consumes T_SCROLLBAR_SIZE pixels of height,
+   * so the effective view_h = win_h - T_SCROLLBAR_SIZE < canvas_h.
+   * max_pan_y must therefore be T_SCROLLBAR_SIZE, not 0. */
+  int win_w = CANVAS_W - 10;   /* canvas overflows width  */
+  int win_h = CANVAS_H;        /* canvas exactly fits height without hscroll */
+  int px = 999, py = 999;
+  t_clamp_pan(1, win_w, win_h, &px, &py);
+  /* max_pan_x = CANVAS_W - (win_w - T_SCROLLBAR_SIZE) = 10+8 = 18 */
+  ASSERT_EQUAL(px, CANVAS_W - (win_w - T_SCROLLBAR_SIZE));
+  /* max_pan_y = CANVAS_H - (win_h - T_SCROLLBAR_SIZE) = T_SCROLLBAR_SIZE */
+  ASSERT_EQUAL(py, T_SCROLLBAR_SIZE);
+  PASS();
+}
+
+void test_pan_clamp_vscroll_forces_hscroll(void) {
+  TEST("pan clamp – tall canvas needs vscroll, whose width forces hscroll");
+  /* Symmetric case: canvas fits width but overflows height. */
+  int win_w = CANVAS_W;        /* canvas exactly fits width without vscroll */
+  int win_h = CANVAS_H - 10;   /* canvas overflows height */
+  int px = 999, py = 999;
+  t_clamp_pan(1, win_w, win_h, &px, &py);
+  /* max_pan_x = CANVAS_W - (win_w - T_SCROLLBAR_SIZE) = T_SCROLLBAR_SIZE */
+  ASSERT_EQUAL(px, T_SCROLLBAR_SIZE);
+  /* max_pan_y = CANVAS_H - (win_h - T_SCROLLBAR_SIZE) = 10+8 = 18 */
+  ASSERT_EQUAL(py, CANVAS_H - (win_h - T_SCROLLBAR_SIZE));
   PASS();
 }
 
@@ -1761,6 +1813,8 @@ int main(int argc, char *argv[]) {
   test_pan_clamp_zoom_4x();
   test_pan_clamp_negative();
   test_pan_clamp_within_range();
+  test_pan_clamp_hscroll_forces_vscroll();
+  test_pan_clamp_vscroll_forces_hscroll();
   test_zoom_coord_mapping();
   test_zoom_coord_mapping_1x();
 
