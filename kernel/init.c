@@ -158,6 +158,10 @@ bool ui_init_graphics(int flags, const char *title, int width, int height) {
     printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
     return false;
   }
+
+  // Register the custom repaint-wakeup event type used by post_message().
+  g_ui_repaint_event = SDL_RegisterEvents(1);
+
   // Use ui_init_window to create window and context
   if (!ui_init_window(title, width * UI_WINDOW_SCALE, height * UI_WINDOW_SCALE)) {
     SDL_Quit();
