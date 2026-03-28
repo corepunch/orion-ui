@@ -9,6 +9,7 @@
 #include "user/text.h"
 #include "user/draw.h"
 #include "user/accel.h"
+#include "user/image.h"
 
 // Kernel subsystem (event management)
 #include "kernel/kernel.h"

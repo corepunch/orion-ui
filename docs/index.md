@@ -102,17 +102,17 @@ Orion supports Linux, macOS, and Windows platforms.
 
 **Linux (Ubuntu/Debian):**
 ```bash
-sudo apt-get install liblua5.4-dev libsdl2-dev libgl1-mesa-dev libcglm-dev libpng-dev
+sudo apt-get install liblua5.4-dev libsdl2-dev libgl1-mesa-dev libcglm-dev
 ```
 
 **macOS:**
 ```bash
-brew install sdl2 cglm lua libpng
+brew install sdl2 cglm lua
 ```
 
 **Windows (MSYS2/MinGW64):**
 ```bash
-pacman -S mingw-w64-x86_64-gcc mingw-w64-x86_64-make mingw-w64-x86_64-SDL2 mingw-w64-x86_64-lua mingw-w64-x86_64-cglm mingw-w64-x86_64-libpng make
+pacman -S mingw-w64-x86_64-gcc mingw-w64-x86_64-make mingw-w64-x86_64-SDL2 mingw-w64-x86_64-lua mingw-w64-x86_64-cglm make
 ```
 
 ### Build Commands
