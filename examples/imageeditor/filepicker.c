@@ -2,10 +2,12 @@
 
 #include "imageeditor.h"
 
-#define PICKER_LIST_W  360
-#define PICKER_LIST_H  220
-#define PICKER_WIN_W   (PICKER_LIST_W + 8)
-#define PICKER_WIN_H   (PICKER_LIST_H + 60)
+#define PICKER_LIST_W  320
+#define PICKER_LIST_H  140
+#define WIN_PADDING 4
+#define PICKER_WIN_W   (PICKER_LIST_W + WIN_PADDING * 2)
+#define PICKER_WIN_H   (PICKER_LIST_H + 22 + BUTTON_HEIGHT + WIN_PADDING)
+#define BUTTON_WIDTH 50
 
 typedef enum { PICKER_OPEN, PICKER_SAVE } picker_mode_t;
 
@@ -38,25 +40,25 @@ static result_t picker_proc(window_t *win, uint32_t msg,
 
       // win_filelist handles all directory listing, navigation, and sorting.
       ps->list_win = create_window("", WINDOW_NOTITLE | WINDOW_VSCROLL,
-          MAKERECT(2, 2, PICKER_LIST_W, PICKER_LIST_H),
+          MAKERECT(WIN_PADDING, WIN_PADDING, PICKER_LIST_W, PICKER_LIST_H),
           win, win_filelist, NULL);
 
       // Restrict file listing to .png files (directories are always shown).
       send_message(ps->list_win, FLM_SETFILTER, 0, (void *)".png");
 
       create_window("File:", WINDOW_NOTITLE,
-          MAKERECT(2, PICKER_LIST_H + 6, 28, CONTROL_HEIGHT),
+          MAKERECT(WIN_PADDING, PICKER_LIST_H + 4, 28, CONTROL_HEIGHT),
           win, win_label, NULL);
 
       ps->edit_win = create_window("", WINDOW_NOTITLE,
-          MAKERECT(32, PICKER_LIST_H + 4, PICKER_LIST_W - 32, CONTROL_HEIGHT),
+          MAKERECT(32, PICKER_LIST_H + 4, PICKER_WIN_W - 32 - WIN_PADDING, CONTROL_HEIGHT),
           win, win_textedit, NULL);
 
       create_window(ps->mode == PICKER_OPEN ? "Open" : "Save", 0,
-          MAKERECT(2, PICKER_LIST_H + 22, 50, BUTTON_HEIGHT),
+          MAKERECT(PICKER_WIN_W - (BUTTON_WIDTH + WIN_PADDING) * 2, PICKER_LIST_H + 22, BUTTON_WIDTH, BUTTON_HEIGHT),
           win, win_button, NULL);
       create_window("Cancel", 0,
-          MAKERECT(56, PICKER_LIST_H + 22, 50, BUTTON_HEIGHT),
+          MAKERECT(PICKER_WIN_W - (BUTTON_WIDTH + WIN_PADDING), PICKER_LIST_H + 22, BUTTON_WIDTH, BUTTON_HEIGHT),
           win, win_button, NULL);
 
       return true;
