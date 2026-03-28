@@ -26,24 +26,55 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
       return false;
     case kWindowMessageClose: {
       // WM_CLOSE analogue: give the user a chance to save before closing.
-      // Return true to cancel the close, false to allow the default hide.
+      // doc_confirm_close() shows a dialog if modified and calls close_document().
+      // Return true in all cases — we have handled the close ourselves.
       if (!doc) return false;
-      if (doc->modified) {
-        int res = message_box(win,
-                              "This image has unsaved changes.\nDo you want to close it?",
-                              "Unsaved Changes",
-                              MB_YESNOCANCEL);
-        if (res == IDCANCEL) return true;  // cancel — leave window open
-        if (res == IDYES && doc->filename[0])
-          png_save(doc->filename, doc);
-        // IDNO or IDYES-with-save: fall through to close_document
-      }
-      close_document(doc);  // removes from list, destroys window, frees doc
+      doc_confirm_close(doc, win);
       return true;  // prevent the default show_window(win, false)
     }
     default:
       return false;
   }
+}
+
+// ============================================================
+// Document title helper
+// ============================================================
+
+void doc_update_title(canvas_doc_t *doc) {
+  if (!doc->win) return;
+  char title[64];
+  const char *name = doc->filename[0] ? doc->filename : "Untitled";
+  const char *slash = strrchr(name, '/');
+  if (slash) name = slash + 1;
+  snprintf(title, sizeof(title), "%s%s", name, doc->modified ? " *" : "");
+  strncpy(doc->win->title, title, sizeof(doc->win->title) - 1);
+  doc->win->title[sizeof(doc->win->title) - 1] = '\0';
+  invalidate_window(doc->win);
+}
+
+// ============================================================
+// Document management
+// ============================================================
+
+// Show an "Unsaved Changes" dialog when doc->modified is set.
+// If the user chooses Yes, saves the file (if a filename is known).
+// If the user chooses Cancel, returns false without closing.
+// Otherwise calls close_document() and returns true.
+bool doc_confirm_close(canvas_doc_t *doc, window_t *parent_win) {
+  if (!doc) return true;
+  if (doc->modified) {
+    int res = message_box(parent_win,
+                          "This image has unsaved changes.\nDo you want to close it?",
+                          "Unsaved Changes",
+                          MB_YESNOCANCEL);
+    if (res == IDCANCEL) return false;
+    if (res == IDYES && doc->filename[0])
+      png_save(doc->filename, doc);
+    // IDNO or IDYES-with-save: fall through to close_document
+  }
+  close_document(doc);
+  return true;
 }
 
 // ============================================================

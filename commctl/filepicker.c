@@ -190,11 +190,10 @@ static result_t fp_proc(window_t *win, uint32_t msg,
       // Apply the initial filter
       fp_apply_filter(ps);
 
-      // Pre-fill the edit box with any path already in the buffer
+      // Pre-fill the edit box with any path already in the buffer.
+      // Navigate to the pre-filled directory; the basename is copied into the
+      // edit_win below, after it's created.
       if (ps->ofn->lpstrFile && ps->ofn->lpstrFile[0]) {
-        const char *base = strrchr(ps->ofn->lpstrFile, '/');
-        base = base ? base + 1 : ps->ofn->lpstrFile;
-        // Also navigate to the directory that was pre-filled
         const char *slash = strrchr(ps->ofn->lpstrFile, '/');
         if (slash) {
           char dir[512];
@@ -204,7 +203,6 @@ static result_t fp_proc(window_t *win, uint32_t msg,
           dir[dlen] = '\0';
           send_message(ps->list_win, FLM_SETPATH, 0, dir);
         }
-        (void)base;  // will be copied into edit_win below, after it's created
       }
 
       // "File:" label
