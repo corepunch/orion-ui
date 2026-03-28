@@ -146,14 +146,20 @@ void dispatch_message(SDL_Event *evt) {
         ui_update_screen_size(new_w, new_h);
         int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
         int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
+        // Phase 1: update all frame dimensions synchronously so the stencil
+        // refresh in phase 2 sees the new bounds.
         for (win = windows; win; win = win->next) {
           if (!win->parent) {
             if (win->flags & WINDOW_ALWAYSINBACK) {
               resize_window(win, sw, sh);
             } else {
-              post_message(win, kWindowMessageDisplayChange, MAKEDWORD(sw, sh), NULL);
+              send_message(win, kWindowMessageDisplayChange, MAKEDWORD(sw, sh), NULL);
             }
           }
+        }
+        // Phase 2: rebuild the stencil with updated bounds, then repaint.
+        post_message((window_t *)1, kWindowMessageRefreshStencil, 0, NULL);
+        for (win = windows; win; win = win->next) {
           if (win->visible) {
             invalidate_window(win);
           }

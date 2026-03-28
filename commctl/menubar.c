@@ -408,7 +408,6 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
 
     case kWindowMessageDisplayChange: {
       win->frame.w = LOWORD(wparam);
-      invalidate_window(win);
       return false;
     }
 
