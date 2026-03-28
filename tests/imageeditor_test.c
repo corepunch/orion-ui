@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <math.h>
 
 // ============================================================
 // Inline replicas of the functions under test.
@@ -805,6 +806,359 @@ void test_set_pixel_respects_reversed_selection(void) {
 }
 
 // ============================================================
+// Shape drawing helper replicas
+// (user stories: draw rectangles, ellipses, polygons, spray)
+// ============================================================
+
+/* Minimal point type used by polygon tests */
+typedef struct { int x, y; } t_point_t;
+
+/* Replicate canvas_draw_rect_outline from canvas.c */
+static void t_canvas_draw_rect_outline(test_canvas_t *s, int x, int y,
+                                        int w, int h, uint32_t c) {
+  if (w <= 0 || h <= 0) return;
+  canvas_draw_line(s, x,     y,     x+w-1, y,     c, 0);
+  canvas_draw_line(s, x,     y+h-1, x+w-1, y+h-1, c, 0);
+  canvas_draw_line(s, x,     y,     x,     y+h-1, c, 0);
+  canvas_draw_line(s, x+w-1, y,     x+w-1, y+h-1, c, 0);
+}
+
+/* Replicate canvas_draw_rect_filled from canvas.c */
+static void t_canvas_draw_rect_filled(test_canvas_t *s, int x, int y,
+                                       int w, int h,
+                                       uint32_t outline, uint32_t fill) {
+  if (w <= 0 || h <= 0) return;
+  for (int dy = 1; dy < h - 1; dy++)
+    canvas_draw_line(s, x+1, y+dy, x+w-2, y+dy, fill, 0);
+  t_canvas_draw_rect_outline(s, x, y, w, h, outline);
+}
+
+/* Replicate canvas_draw_ellipse_outline from canvas.c (Bresenham midpoint) */
+static void t_canvas_draw_ellipse_outline(test_canvas_t *s,
+                                           int cx, int cy,
+                                           int rx, int ry, uint32_t c) {
+  if (rx <= 0 || ry <= 0) return;
+  long rx2 = (long)rx*rx, ry2 = (long)ry*ry;
+  long ex = 0, ey = ry;
+  long dx2 = 2*ry2*ex, dy2 = 2*rx2*ey;
+  long p = (long)(ry2 - rx2*ry + 0.25*rx2);
+  while (dx2 < dy2) {
+    canvas_set_pixel(s, (int)(cx+ex), (int)(cy+ey), c);
+    canvas_set_pixel(s, (int)(cx-ex), (int)(cy+ey), c);
+    canvas_set_pixel(s, (int)(cx+ex), (int)(cy-ey), c);
+    canvas_set_pixel(s, (int)(cx-ex), (int)(cy-ey), c);
+    ex++; dx2 += 2*ry2;
+    if (p < 0) { p += ry2 + dx2; }
+    else { ey--; dy2 -= 2*rx2; p += ry2 + dx2 - dy2; }
+  }
+  p = (long)(ry2*(ex+0.5)*(ex+0.5) + rx2*(ey-1)*(ey-1) - rx2*ry2);
+  while (ey >= 0) {
+    canvas_set_pixel(s, (int)(cx+ex), (int)(cy+ey), c);
+    canvas_set_pixel(s, (int)(cx-ex), (int)(cy+ey), c);
+    canvas_set_pixel(s, (int)(cx+ex), (int)(cy-ey), c);
+    canvas_set_pixel(s, (int)(cx-ex), (int)(cy-ey), c);
+    ey--; dy2 -= 2*rx2;
+    if (p > 0) { p += rx2 - dy2; }
+    else { ex++; dx2 += 2*ry2; p += rx2 - dy2 + dx2; }
+  }
+}
+
+/* Replicate canvas_draw_ellipse_filled from canvas.c */
+static void t_canvas_draw_ellipse_filled(test_canvas_t *s,
+                                          int cx, int cy,
+                                          int rx, int ry,
+                                          uint32_t outline, uint32_t fill) {
+  if (rx <= 0 || ry <= 0) return;
+  double rx2 = (double)rx*(double)rx;
+  double ry2 = (double)ry*(double)ry;
+  for (int py = cy - ry; py <= cy + ry; py++) {
+    if (!canvas_in_bounds(cx, py)) continue;
+    double ddy = (double)(py - cy);
+    double t   = 1.0 - (ddy*ddy) / ry2;
+    if (t <= 0.0) continue;
+    int ddx = (int)(sqrt(rx2 * t) + 0.5);
+    canvas_draw_line(s, cx-ddx+1, py, cx+ddx-1, py, fill, 0);
+  }
+  t_canvas_draw_ellipse_outline(s, cx, cy, rx, ry, outline);
+}
+
+/* Replicate canvas_draw_polygon_outline from canvas.c */
+static void t_canvas_draw_polygon_outline(test_canvas_t *s,
+                                           const t_point_t *pts, int count,
+                                           uint32_t c) {
+  if (count < 2) return;
+  for (int i = 0; i < count - 1; i++)
+    canvas_draw_line(s, pts[i].x, pts[i].y, pts[i+1].x, pts[i+1].y, c, 0);
+  canvas_draw_line(s, pts[count-1].x, pts[count-1].y, pts[0].x, pts[0].y, c, 0);
+}
+
+/* Replicate canvas_spray from canvas.c */
+static void t_canvas_spray(test_canvas_t *s, int cx, int cy,
+                             int radius, uint32_t c) {
+  int r2 = radius * radius;
+  for (int i = 0; i < 20; i++) {
+    int ddx = (rand() % (2 * radius + 1)) - radius;
+    int ddy = (rand() % (2 * radius + 1)) - radius;
+    if (ddx * ddx + ddy * ddy <= r2)
+      canvas_set_pixel(s, cx + ddx, cy + ddy, c);
+  }
+}
+
+/* Replicate canvas_is_shape_tool from canvas.c */
+static bool t_canvas_is_shape_tool(int tool_id) {
+  switch (tool_id) {
+    case 27: /* ID_TOOL_LINE */
+    case 28: /* ID_TOOL_RECT */
+    case 29: /* ID_TOOL_ELLIPSE */
+    case 30: /* ID_TOOL_ROUNDED_RECT */
+      return true;
+    default:
+      return false;
+  }
+}
+
+// ============================================================
+// User Story: Draw a rectangle to frame an area of the canvas
+// ============================================================
+
+void test_draw_rect_outline(void) {
+  TEST("canvas_draw_rect_outline – all four edges are coloured");
+  test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
+  canvas_clear(c);
+  uint32_t red = MAKE_COLOR(255, 0, 0, 255);
+  /* 30×15 rect with top-left at (10, 20) */
+  t_canvas_draw_rect_outline(c, 10, 20, 30, 15, red);
+  /* All four corners must be red */
+  ASSERT_TRUE(canvas_get_pixel(c, 10, 20) == red);  /* top-left */
+  ASSERT_TRUE(canvas_get_pixel(c, 39, 20) == red);  /* top-right  x+w-1 */
+  ASSERT_TRUE(canvas_get_pixel(c, 10, 34) == red);  /* bot-left   y+h-1 */
+  ASSERT_TRUE(canvas_get_pixel(c, 39, 34) == red);  /* bot-right */
+  /* Interior must remain white */
+  uint32_t interior = canvas_get_pixel(c, 20, 25);
+  ASSERT_EQUAL(COLOR_R(interior), 255);
+  ASSERT_EQUAL(COLOR_G(interior), 255);
+  ASSERT_EQUAL(COLOR_B(interior), 255);
+  free(c);
+  PASS();
+}
+
+void test_draw_rect_outline_zero_size(void) {
+  TEST("canvas_draw_rect_outline – zero-size rect is a no-op");
+  test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
+  canvas_clear(c);
+  c->canvas_dirty = false;
+  uint32_t red = MAKE_COLOR(255, 0, 0, 255);
+  t_canvas_draw_rect_outline(c, 10, 10, 0, 5, red);
+  t_canvas_draw_rect_outline(c, 10, 10, 5, 0, red);
+  ASSERT_FALSE(c->canvas_dirty);
+  free(c);
+  PASS();
+}
+
+// ============================================================
+// User Story: Fill a rectangular area with a flat color
+// ============================================================
+
+void test_draw_rect_filled(void) {
+  TEST("canvas_draw_rect_filled – interior receives fill color, border uses outline");
+  test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
+  canvas_clear(c);
+  uint32_t outline = MAKE_COLOR(0, 0, 0, 255);
+  uint32_t fill    = MAKE_COLOR(0, 128, 255, 255);
+  t_canvas_draw_rect_filled(c, 10, 10, 20, 10, outline, fill);
+  /* An interior pixel should have the fill color */
+  ASSERT_TRUE(canvas_get_pixel(c, 15, 14) == fill);
+  /* The border pixel should have the outline color */
+  ASSERT_TRUE(canvas_get_pixel(c, 10, 10) == outline);
+  /* A pixel outside the rect must remain white */
+  uint32_t outside = canvas_get_pixel(c, 5, 5);
+  ASSERT_EQUAL(COLOR_R(outside), 255);
+  free(c);
+  PASS();
+}
+
+// ============================================================
+// User Story: Draw an oval/circle shape on the canvas
+// ============================================================
+
+void test_draw_ellipse_outline(void) {
+  TEST("canvas_draw_ellipse_outline – topmost and bottommost ellipse points are coloured");
+  test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
+  canvas_clear(c);
+  uint32_t blue = MAKE_COLOR(0, 0, 255, 255);
+  int cx = 80, cy = 60, rx = 20, ry = 10;
+  t_canvas_draw_ellipse_outline(c, cx, cy, rx, ry, blue);
+  /* Topmost point: (cx, cy-ry) */
+  ASSERT_TRUE(canvas_get_pixel(c, cx, cy - ry) == blue);
+  /* Bottommost point: (cx, cy+ry) */
+  ASSERT_TRUE(canvas_get_pixel(c, cx, cy + ry) == blue);
+  /* Center should remain white (outline only) */
+  uint32_t center = canvas_get_pixel(c, cx, cy);
+  ASSERT_EQUAL(COLOR_R(center), 255);
+  ASSERT_EQUAL(COLOR_G(center), 255);
+  free(c);
+  PASS();
+}
+
+void test_draw_ellipse_filled(void) {
+  TEST("canvas_draw_ellipse_filled – center pixel receives fill color");
+  test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
+  canvas_clear(c);
+  uint32_t outline = MAKE_COLOR(0, 0, 0, 255);
+  uint32_t fill    = MAKE_COLOR(255, 200, 0, 255);
+  t_canvas_draw_ellipse_filled(c, 100, 80, 15, 8, outline, fill);
+  /* Center must be filled */
+  ASSERT_TRUE(canvas_get_pixel(c, 100, 80) == fill);
+  /* Point well outside the ellipse must remain white */
+  uint32_t far = canvas_get_pixel(c, 160, 80);
+  ASSERT_EQUAL(COLOR_R(far), 255);
+  ASSERT_EQUAL(COLOR_G(far), 255);
+  free(c);
+  PASS();
+}
+
+void test_draw_ellipse_circle(void) {
+  TEST("canvas_draw_ellipse_outline – rx==ry produces a circle (leftmost point coloured)");
+  test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
+  canvas_clear(c);
+  uint32_t grn = MAKE_COLOR(0, 255, 0, 255);
+  int cx = 50, cy = 50, r = 15;
+  t_canvas_draw_ellipse_outline(c, cx, cy, r, r, grn);
+  /* Leftmost and rightmost points */
+  ASSERT_TRUE(canvas_get_pixel(c, cx - r, cy) == grn);
+  ASSERT_TRUE(canvas_get_pixel(c, cx + r, cy) == grn);
+  free(c);
+  PASS();
+}
+
+// ============================================================
+// User Story: Draw a custom polygon by clicking multiple points
+// ============================================================
+
+void test_draw_polygon_triangle(void) {
+  TEST("canvas_draw_polygon_outline – all three vertices of a triangle are coloured");
+  test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
+  canvas_clear(c);
+  uint32_t grn = MAKE_COLOR(0, 255, 0, 255);
+  t_point_t tri[] = {{50, 10}, {90, 50}, {10, 50}};
+  t_canvas_draw_polygon_outline(c, tri, 3, grn);
+  /* Each vertex must be coloured */
+  ASSERT_TRUE(canvas_get_pixel(c, 50, 10) == grn);
+  ASSERT_TRUE(canvas_get_pixel(c, 90, 50) == grn);
+  ASSERT_TRUE(canvas_get_pixel(c, 10, 50) == grn);
+  free(c);
+  PASS();
+}
+
+void test_draw_polygon_single_edge(void) {
+  TEST("canvas_draw_polygon_outline – two-point polygon draws one closed edge");
+  test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
+  canvas_clear(c);
+  uint32_t red = MAKE_COLOR(255, 0, 0, 255);
+  t_point_t seg[] = {{10, 10}, {20, 10}};
+  t_canvas_draw_polygon_outline(c, seg, 2, red);
+  /* Mid-point of the only horizontal edge */
+  ASSERT_TRUE(canvas_get_pixel(c, 15, 10) == red);
+  free(c);
+  PASS();
+}
+
+// ============================================================
+// User Story: Apply soft spray-paint airbrush texture
+// ============================================================
+
+void test_spray_deposits_pixels(void) {
+  TEST("canvas_spray – deposits pixels within the spray radius");
+  test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
+  canvas_clear(c);
+  uint32_t red = MAKE_COLOR(255, 0, 0, 255);
+  srand(42);
+  /* Apply many spray strokes to guarantee coverage */
+  for (int i = 0; i < 50; i++)
+    t_canvas_spray(c, 100, 100, 10, red);
+  /* Count coloured pixels inside the spray radius */
+  int colored = 0;
+  for (int ddy = -10; ddy <= 10; ddy++)
+    for (int ddx = -10; ddx <= 10; ddx++)
+      if (ddx*ddx + ddy*ddy <= 100) {
+        uint32_t px = canvas_get_pixel(c, 100+ddx, 100+ddy);
+        if (COLOR_R(px) == 255 && COLOR_G(px) == 0)
+          colored++;
+      }
+  ASSERT_TRUE(colored > 0);
+  /* Pixels far outside the area must remain white; stay within canvas bounds */
+  uint32_t far_pix = canvas_get_pixel(c, 150, 150);
+  ASSERT_EQUAL(COLOR_R(far_pix), 255);
+  ASSERT_EQUAL(COLOR_G(far_pix), 255);
+  free(c);
+  PASS();
+}
+
+void test_spray_respects_radius(void) {
+  TEST("canvas_spray – never deposits pixels beyond its radius");
+  test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
+  canvas_clear(c);
+  uint32_t red = MAKE_COLOR(255, 0, 0, 255);
+  int cx = 50, cy = 50, radius = 5;
+  srand(7);
+  for (int i = 0; i < 200; i++)
+    t_canvas_spray(c, cx, cy, radius, red);
+  /* No pixel strictly outside the radius must be coloured */
+  for (int ddy = -(radius+2); ddy <= (radius+2); ddy++) {
+    for (int ddx = -(radius+2); ddx <= (radius+2); ddx++) {
+      if (ddx*ddx + ddy*ddy > radius*radius) {
+        uint32_t px = canvas_get_pixel(c, cx+ddx, cy+ddy);
+        ASSERT_EQUAL(COLOR_R(px), 255);  /* should still be white */
+        ASSERT_EQUAL(COLOR_G(px), 255);
+        ASSERT_EQUAL(COLOR_B(px), 255);
+      }
+    }
+  }
+  free(c);
+  PASS();
+}
+
+// ============================================================
+// User Story: Know which tools use rubber-band drag preview
+// ============================================================
+
+void test_is_shape_tool(void) {
+  TEST("canvas_is_shape_tool – shape tools return true, non-shape tools return false");
+  /* Shape tools */
+  ASSERT_TRUE(t_canvas_is_shape_tool(27));   /* ID_TOOL_LINE */
+  ASSERT_TRUE(t_canvas_is_shape_tool(28));   /* ID_TOOL_RECT */
+  ASSERT_TRUE(t_canvas_is_shape_tool(29));   /* ID_TOOL_ELLIPSE */
+  ASSERT_TRUE(t_canvas_is_shape_tool(30));   /* ID_TOOL_ROUNDED_RECT */
+  /* Non-shape tools */
+  ASSERT_FALSE(t_canvas_is_shape_tool(20));  /* ID_TOOL_PENCIL */
+  ASSERT_FALSE(t_canvas_is_shape_tool(21));  /* ID_TOOL_BRUSH */
+  ASSERT_FALSE(t_canvas_is_shape_tool(22));  /* ID_TOOL_ERASER */
+  ASSERT_FALSE(t_canvas_is_shape_tool(23));  /* ID_TOOL_FILL */
+  ASSERT_FALSE(t_canvas_is_shape_tool(24));  /* ID_TOOL_SELECT */
+  ASSERT_FALSE(t_canvas_is_shape_tool(33));  /* ID_TOOL_EYEDROPPER */
+  ASSERT_FALSE(t_canvas_is_shape_tool(35));  /* ID_TOOL_TEXT */
+  PASS();
+}
+
+// ============================================================
+// User Story: Draw diagonal lines at arbitrary angles
+// ============================================================
+
+void test_canvas_draw_line_diagonal(void) {
+  TEST("canvas_draw_line – diagonal line passes through start and end");
+  test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
+  canvas_clear(c);
+  uint32_t col = MAKE_COLOR(200, 100, 50, 255);
+  canvas_draw_line(c, 5, 5, 25, 25, col, 0);
+  ASSERT_TRUE(canvas_get_pixel(c,  5,  5) == col);
+  ASSERT_TRUE(canvas_get_pixel(c, 25, 25) == col);
+  /* Midpoint must also be set for a 45° line */
+  ASSERT_TRUE(canvas_get_pixel(c, 15, 15) == col);
+  free(c);
+  PASS();
+}
+
+// ============================================================
 // Zoom / pan logic tests
 // The following helpers mirror the pure-C pan-clamping and
 // coordinate-mapping logic from win_canvas.c without requiring
@@ -1288,6 +1642,19 @@ int main(int argc, char *argv[]) {
   test_move_selection();
   test_paste_respects_oob();
   test_selection_bounds_clamped();
+
+  test_draw_rect_outline();
+  test_draw_rect_outline_zero_size();
+  test_draw_rect_filled();
+  test_draw_ellipse_outline();
+  test_draw_ellipse_filled();
+  test_draw_ellipse_circle();
+  test_draw_polygon_triangle();
+  test_draw_polygon_single_edge();
+  test_spray_deposits_pixels();
+  test_spray_respects_radius();
+  test_is_shape_tool();
+  test_canvas_draw_line_diagonal();
 
   TEST_END();
 }
