@@ -10,6 +10,12 @@
 #include "../user/user.h"
 #include "../user/messages.h"
 
+// Custom SDL event type registered at startup.
+// Posted to the SDL queue whenever an internal message is queued so that
+// SDL_WaitEvent() in get_message() wakes up and the caller's
+// repost_messages() can drain the internal queue.
+Uint32 g_ui_repaint_event = (Uint32)-1;
+
 // External references
 extern bool running;
 extern window_t *windows;
@@ -127,6 +133,9 @@ void move_to_top(window_t* _win) {
 
 // Dispatch SDL event to window system
 void dispatch_message(SDL_Event *evt) {
+  // Repaint wakeup events are only used to unblock SDL_WaitEvent; ignore them.
+  if (g_ui_repaint_event != (Uint32)-1 && evt->type == g_ui_repaint_event)
+    return;
   window_t *win;
   switch (evt->type) {
     case SDL_QUIT:
@@ -312,7 +321,20 @@ void dispatch_message(SDL_Event *evt) {
   }
 }
 
-// Get next SDL event
+// Get next SDL event.
+// Blocks with SDL_WaitEvent on the first call per cycle (saving CPU), then
+// drains any additional queued events with SDL_PollEvent.  Returns 0 when the
+// SDL queue is empty, which causes the caller's while-loop to exit and call
+// repost_messages() to process internal (paint/async) messages.
+// Note: s_draining_queue is a function-local static; this function must be called
+// from a single thread (the main thread), which is the Orion convention.
 int get_message(SDL_Event *evt) {
-  return SDL_PollEvent(evt);
+  static bool s_draining_queue = false;
+  if (s_draining_queue) {
+    int r = SDL_PollEvent(evt);
+    if (!r) s_draining_queue = false;
+    return r;
+  }
+  s_draining_queue = true;
+  return SDL_WaitEvent(evt);
 }
