@@ -355,3 +355,66 @@ void enable_window(window_t *win, bool enable) {
   win->disabled = !enable;
   invalidate_window(win);
 }
+
+// ---- Built-in scrollbar API (WinAPI SetScrollInfo / GetScrollInfo style) ----
+
+// Clamp pos to the valid range [min_val .. max_val-page]
+static int sb_clamp_range(win_sb_t const *sb, int pos) {
+  int max_pos = sb->max_val - sb->page;
+  if (max_pos < sb->min_val) max_pos = sb->min_val;
+  if (pos < sb->min_val) return sb->min_val;
+  if (pos > max_pos)     return max_pos;
+  return pos;
+}
+
+// Update one built-in scrollbar from a scroll_info_t.
+// Auto-shows the bar when content exceeds the viewport; hides it otherwise.
+void set_scroll_info(window_t *win, int bar, scroll_info_t const *info, bool redraw) {
+  if (!win || !info) return;
+  win_sb_t *sb = (bar == SB_VERT) ? &win->vscroll : &win->hscroll;
+  if (info->fMask & SIF_RANGE) {
+    sb->min_val = info->nMin;
+    sb->max_val = info->nMax;
+  }
+  if (info->fMask & SIF_PAGE) {
+    sb->page = info->nPage;
+  }
+  if (info->fMask & SIF_POS) {
+    sb->pos = sb_clamp_range(sb, info->nPos);
+  }
+  // Automatic show/hide: hide when the whole content fits in the viewport
+  sb->visible = (sb->page < sb->max_val - sb->min_val);
+  if (redraw) invalidate_window(win);
+}
+
+void get_scroll_info(window_t *win, int bar, scroll_info_t *info) {
+  if (!win || !info) return;
+  win_sb_t *sb = (bar == SB_VERT) ? &win->vscroll : &win->hscroll;
+  if (info->fMask & SIF_RANGE) {
+    info->nMin = sb->min_val;
+    info->nMax = sb->max_val;
+  }
+  if (info->fMask & SIF_PAGE) info->nPage = sb->page;
+  if (info->fMask & SIF_POS)  info->nPos  = sb->pos;
+}
+
+int get_scroll_pos(window_t *win, int bar) {
+  if (!win) return 0;
+  return (bar == SB_VERT) ? win->vscroll.pos : win->hscroll.pos;
+}
+
+// Explicitly enable or disable a built-in scrollbar's interactivity.
+void enable_scroll_bar(window_t *win, int bar, bool enable) {
+  if (!win) return;
+  if (bar == SB_HORZ || bar == SB_BOTH) win->hscroll.visible = enable;
+  if (bar == SB_VERT || bar == SB_BOTH) win->vscroll.visible = enable;
+  invalidate_window(win);
+}
+
+// Show or hide a built-in scrollbar explicitly.
+void show_scroll_bar(window_t *win, int bar, bool show) {
+  if (!win) return;
+  if (bar == SB_HORZ || bar == SB_BOTH) win->hscroll.visible = show;
+  if (bar == SB_VERT || bar == SB_BOTH) win->vscroll.visible = show;
+  invalidate_window(win);
+}

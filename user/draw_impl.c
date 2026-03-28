@@ -267,3 +267,66 @@ void draw_icon16(int icon, int x, int y, uint32_t col) {
   draw_text_small((char[]) { icon+128, icon+129, 0 }, x, y, col);
   draw_text_small((char[]) { icon+144, icon+145, 0 }, x, y+8, col);
 }
+
+// ---- Built-in scrollbar rendering -------------------------------------------
+//
+// Called from send_message() after kWindowMessagePaint when a window has
+// WINDOW_HSCROLL and/or WINDOW_VSCROLL set.  The bars are drawn in the same
+// projection as the window's paint pass (root-relative coordinates), on top
+// of the window's content.
+
+static int builtin_sb_thumb_len(win_sb_t const *sb, int track) {
+  int range = sb->max_val - sb->min_val;
+  if (range <= 0 || sb->page >= range) return track;
+  int tl = track * sb->page / range;
+  return tl < 8 ? 8 : tl;
+}
+
+static int builtin_sb_thumb_off(win_sb_t const *sb, int track, int tl) {
+  int travel = sb->max_val - sb->min_val - sb->page;
+  if (travel <= 0) return 0;
+  int tt = track - tl;
+  if (tt <= 0) return 0;
+  return (sb->pos - sb->min_val) * tt / travel;
+}
+
+void draw_builtin_scrollbars(window_t *win) {
+  bool has_h = (win->flags & WINDOW_HSCROLL) && win->hscroll.visible;
+  bool has_v = (win->flags & WINDOW_VSCROLL) && win->vscroll.visible;
+  if (!has_h && !has_v) return;
+
+  // Coordinate base: for child windows use win->frame.x/y (offset within the
+  // root-relative projection); for top-level windows the projection already
+  // starts at the window's top-left, so use 0.
+  int base_x = win->parent ? win->frame.x : 0;
+  int base_y = win->parent ? win->frame.y : 0;
+
+  if (has_h) {
+    win_sb_t *sb = &win->hscroll;
+    int x  = base_x;
+    int y  = base_y + win->frame.h - SCROLLBAR_WIDTH;
+    int bw = win->frame.w - (has_v ? SCROLLBAR_WIDTH : 0);
+    int tl = builtin_sb_thumb_len(sb, bw);
+    int to = builtin_sb_thumb_off(sb, bw, tl);
+    fill_rect(COLOR_PANEL_DARK_BG, x, y, bw, SCROLLBAR_WIDTH);
+    fill_rect(COLOR_LIGHT_EDGE,    x + to, y, tl, SCROLLBAR_WIDTH);
+  }
+
+  if (has_v) {
+    win_sb_t *sb = &win->vscroll;
+    int x  = base_x + win->frame.w - SCROLLBAR_WIDTH;
+    int y  = base_y;
+    int bh = win->frame.h - (has_h ? SCROLLBAR_WIDTH : 0);
+    int tl = builtin_sb_thumb_len(sb, bh);
+    int to = builtin_sb_thumb_off(sb, bh, tl);
+    fill_rect(COLOR_PANEL_DARK_BG, x, y, SCROLLBAR_WIDTH, bh);
+    fill_rect(COLOR_LIGHT_EDGE,    x, y + to, SCROLLBAR_WIDTH, tl);
+  }
+
+  if (has_h && has_v) {
+    fill_rect(COLOR_PANEL_DARK_BG,
+              base_x + win->frame.w - SCROLLBAR_WIDTH,
+              base_y + win->frame.h - SCROLLBAR_WIDTH,
+              SCROLLBAR_WIDTH, SCROLLBAR_WIDTH);
+  }
+}

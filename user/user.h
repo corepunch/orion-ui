@@ -57,6 +57,17 @@ typedef struct {
   flags_t flags;
 } windef_t;
 
+// Internal state for one built-in scrollbar (horizontal or vertical).
+// Two of these live inside window_t when WINDOW_HSCROLL / WINDOW_VSCROLL is set.
+typedef struct {
+  int  min_val, max_val;   // content range
+  int  page, pos;          // viewport size and current scroll position
+  bool visible;            // bar is currently drawn
+  bool dragging;           // thumb drag in progress
+  int  drag_start_mouse;   // axis coord (window-local) when drag began
+  int  drag_start_pos;     // pos value when drag began
+} win_sb_t;
+
 // Window structure
 struct window_s {
   rect_t frame;
@@ -80,6 +91,8 @@ struct window_s {
   bitmap_strip_t toolbar_strip;
   void *userdata;
   void *userdata2;
+  win_sb_t hscroll;   // built-in horizontal scrollbar state (WINDOW_HSCROLL)
+  win_sb_t vscroll;   // built-in vertical scrollbar state (WINDOW_VSCROLL)
   struct window_s *next;
   struct window_s *children;
   struct window_s *parent;
@@ -135,6 +148,15 @@ uint32_t show_dialog(char const *title, const rect_t* frame, window_t *parent,
 
 // Drawing functions
 void draw_button(rect_t const *r, int dx, int dy, bool pressed);
+
+// Built-in scrollbar API (analogous to WinAPI SetScrollInfo / GetScrollInfo).
+// These operate on the WINDOW_HSCROLL / WINDOW_VSCROLL built-in bars, not on
+// win_scrollbar child windows.  bar = SB_HORZ, SB_VERT, or SB_BOTH.
+void set_scroll_info(window_t *win, int bar, scroll_info_t const *info, bool redraw);
+void get_scroll_info(window_t *win, int bar, scroll_info_t *info);
+int  get_scroll_pos(window_t *win, int bar);
+void enable_scroll_bar(window_t *win, int bar, bool enable);
+void show_scroll_bar(window_t *win, int bar, bool show);
 
 // Global window list
 extern window_t *windows;

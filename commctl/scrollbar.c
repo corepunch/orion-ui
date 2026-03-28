@@ -1,9 +1,13 @@
 // commctl/scrollbar.c — scrollbar control
 //
 // win_scrollbar is a thin, interactive scrollbar that mirrors WinAPI scrollbar
-// behaviour.  Orientation is determined by the window flag:
-//   WINDOW_HSCROLL → horizontal bar
-//   WINDOW_VSCROLL → vertical bar
+// behaviour.  Orientation is set via the lparam passed to kWindowMessageCreate:
+//   (void *)0 → horizontal bar   (SB_HORZ)
+//   (void *)1 → vertical bar     (SB_VERT)
+//
+// Do NOT set WINDOW_HSCROLL or WINDOW_VSCROLL on the scrollbar window itself.
+// Those flags are reserved for parent windows that want built-in framework
+// scrollbars managed by set_scroll_info() / get_scroll_info().
 //
 // Coordinate convention
 // ---------------------
@@ -40,6 +44,7 @@ typedef struct {
   int min_val, max_val; // content range
   int page;             // viewport size (= visible portion of content)
   int pos;              // current scroll position [min_val .. max_val-page]
+  bool is_vertical;     // orientation: set from lparam at kWindowMessageCreate
   bool dragging;
   int drag_start_mouse; // scrollbar-local axis coord when drag began
   int drag_start_pos;   // pos value when drag began
@@ -48,7 +53,8 @@ typedef struct {
 // ---- geometry helpers -------------------------------------------------------
 
 static bool sb_vertical(window_t *win) {
-  return !!(win->flags & WINDOW_VSCROLL);
+  scrollbar_state_t *s = (scrollbar_state_t *)win->userdata;
+  return s && s->is_vertical;
 }
 
 // Length of the track (the scrollable dimension of the bar)
@@ -113,11 +119,12 @@ result_t win_scrollbar(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
   switch (msg) {
     case kWindowMessageCreate: {
       scrollbar_state_t *ns = allocate_window_data(win, sizeof(scrollbar_state_t));
-      ns->min_val  = 0;
-      ns->max_val  = 100;
-      ns->page     = 10;
-      ns->pos      = 0;
-      ns->dragging = false;
+      ns->min_val    = 0;
+      ns->max_val    = 100;
+      ns->page       = 10;
+      ns->pos        = 0;
+      ns->is_vertical = (bool)(intptr_t)lparam;
+      ns->dragging   = false;
       // Scrollbar children are routed through their parent's proc; they must
       // not intercept find_window hit-testing on their own.
       win->notabstop = true;

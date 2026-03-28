@@ -27,4 +27,9 @@ void set_clip_rect(window_t const *, rect_t const *r);
 void ui_set_stencil_for_window(uint32_t window_id);
 void ui_set_stencil_for_root_window(uint32_t window_id);
 
+// Draw built-in scrollbars for a window on top of its painted content.
+// Called by send_message() after kWindowMessagePaint when WINDOW_HSCROLL or
+// WINDOW_VSCROLL is set.  Safe to call when neither bar is visible (no-op).
+void draw_builtin_scrollbars(window_t *win);
+
 #endif

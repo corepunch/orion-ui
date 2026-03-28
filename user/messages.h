@@ -33,6 +33,11 @@ enum {
   kWindowMessageJoyButtonUp,
   kWindowMessageJoyAxisMotion,
   kWindowMessageStatusBar,
+  // Sent to a window when its built-in horizontal/vertical scrollbar position
+  // changes (analogous to WinAPI WM_HSCROLL / WM_VSCROLL).
+  // wparam = new scroll position; lparam = NULL.
+  kWindowMessageHScroll,
+  kWindowMessageVScroll,
   kWindowMessageUser = 1000
 };
 
@@ -98,6 +103,29 @@ enum {
 // Use kButtonMessageSetImage on a win_toolbar_button window to assign an icon from a bitmap_strip_t.
 #define BUTTON_PUSHLIKE     (1 << 13)
 #define BUTTON_AUTORADIO    (1 << 14)
+
+// Scroll bar constants (WinAPI-style, used with set_scroll_info / get_scroll_info)
+#define SB_HORZ  0   // horizontal scroll bar
+#define SB_VERT  1   // vertical scroll bar
+#define SB_BOTH  3   // both scroll bars
+
+#define SIF_RANGE  0x0001   // nMin and nMax are valid
+#define SIF_PAGE   0x0002   // nPage is valid
+#define SIF_POS    0x0004   // nPos is valid
+#define SIF_ALL    (SIF_RANGE | SIF_PAGE | SIF_POS)
+
+// Width of a built-in scrollbar strip in logical pixels
+#define SCROLLBAR_WIDTH  8
+
+// Scroll info struct (analogous to WinAPI SCROLLINFO).
+// Passed to set_scroll_info() / get_scroll_info().
+typedef struct {
+  uint32_t fMask;  // SIF_* flags indicating which fields are valid
+  int      nMin;   // minimum scroll position
+  int      nMax;   // maximum scroll position
+  int      nPage;  // page size (viewport dimension along the scroll axis)
+  int      nPos;   // current scroll position
+} scroll_info_t;
 
 // Titlebar and toolbar dimensions
 #define TITLEBAR_HEIGHT   12

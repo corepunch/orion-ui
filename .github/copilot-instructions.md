@@ -25,6 +25,72 @@ The framework is written in C and uses SDL2 for windowing/input and OpenGL 3.2+ 
 - Common WinAPI patterns to follow: message loops, window procedures, control notifications via `WM_COMMAND`, `HIWORD`/`LOWORD` packing, resource tables (menus, accelerators), dialog modal loops
 - **Always search the existing framework before inventing new mechanisms.** Orion already has toolbars (`WINDOW_TOOLBAR`), toolbar buttons (`kToolBarMessageAddButtons`), bitmap strips (`bitmap_strip_t`), accelerators, dialogs, status bars, etc. If you need something that sounds like it belongs in a UI framework, look for it first.
 
+### Scrollbars — Built-in vs. Standalone
+
+**`WINDOW_HSCROLL` / `WINDOW_VSCROLL` — built-in scrollbars on a window**
+
+Set these flags at creation time on the window whose **content** scrolls.  The
+framework paints the bars automatically and intercepts mouse events in their
+area before calling `win->proc`.  Call `set_scroll_info()` to describe the
+content range; handle `kWindowMessageHScroll` / `kWindowMessageVScroll` for
+position changes.
+
+```c
+// Correct: built-in scrollbars on the scrollable content window
+window_t *view = create_window("View",
+    WINDOW_HSCROLL | WINDOW_VSCROLL,
+    MAKERECT(0, 0, w, h), parent, my_view_proc, NULL);
+
+// In kWindowMessageCreate (or whenever content/zoom changes):
+scroll_info_t si = {
+    .fMask = SIF_RANGE | SIF_PAGE | SIF_POS,
+    .nMin  = 0,
+    .nMax  = content_w,   // total content size
+    .nPage = view_w,      // visible viewport size
+    .nPos  = pan_x,       // current offset
+};
+set_scroll_info(view, SB_HORZ, &si, false);
+
+// Handle scroll notifications:
+case kWindowMessageHScroll:
+    state->pan_x = (int)wparam;
+    sync_scrollbars(win, state);
+    invalidate_window(win);
+    return true;
+case kWindowMessageVScroll:
+    state->pan_y = (int)wparam;
+    sync_scrollbars(win, state);
+    invalidate_window(win);
+    return true;
+```
+
+**`win_scrollbar` — standalone scrollbar control**
+
+When a scrollbar needs to exist as an independent child window (custom
+layouts), use `win_scrollbar`.  Orientation comes from `lparam`:
+`(void *)0` = horizontal, `(void *)1` = vertical.  Do **not** set
+`WINDOW_HSCROLL` or `WINDOW_VSCROLL` on the scrollbar window itself.
+
+```c
+window_t *vsb = create_window("", WINDOW_NOTITLE | WINDOW_NOFILL,
+    MAKERECT(w - 8, 0, 8, h - 8),
+    parent, win_scrollbar, (void *)1 /* SB_VERT */);
+
+scrollbar_info_t info = { 0, content_h, view_h, pos };
+send_message(vsb, kScrollBarMessageSetInfo, 0, &info);
+```
+
+**Common scrollbar mistakes to avoid**
+
+| ❌ Wrong | ✅ Correct |
+|---|---|
+| Setting `WINDOW_HSCROLL` on a `win_scrollbar` child to indicate orientation | Pass `(void *)0` or `(void *)1` as `lparam`; those flags are for the **parent** |
+| Creating `win_scrollbar` children when you want built-in scrollbars | Add `WINDOW_HSCROLL`/`WINDOW_VSCROLL` to the scrollable window and call `set_scroll_info()` |
+| Manually painting scrollbar children from the parent `kWindowMessagePaint` | The framework paints built-in bars automatically after calling `win->proc` |
+| Forwarding mouse events to scrollbar children | Not needed; the framework intercepts clicks in the bar area before `win->proc` |
+| Handling `kScrollBarNotificationChanged` for built-in scrollbars | Handle `kWindowMessageHScroll` / `kWindowMessageVScroll` |
+| Forgetting scrollbar interdependence | If one bar appears it shrinks the viewport on the other axis — re-check both `need_h` / `need_v` after setting either |
+
 ### Toolbars and Bitmap-Strip Icon Buttons
 
 **WINDOW_TOOLBAR — built-in toolbar strip above a window's client area**
@@ -182,3 +248,5 @@ for (int i = 0; i < NUM_TOOLS; i++) {
 3. **Don't build a custom floating palette window from scratch when `WINDOW_TOOLBAR` already exists.** Any window gains a built-in toolbar strip via `WINDOW_TOOLBAR` + `kToolBarMessageAddButtons`. Only create a separate palette/floating window when the design genuinely requires it (e.g., Photoshop's detachable toolbox), and even then, use `win_toolbar_button` children rather than custom paint code.
 
 4. **Don't hard-code texture dimensions.** When loading a PNG, always propagate the actual loaded `w`/`h` into the strip descriptor (`strip.sheet_w = loaded_w; strip.cols = loaded_w / icon_w`). Never assume a fixed size — the file found on a fallback path may differ.
+
+5. **Don't put `WINDOW_HSCROLL` / `WINDOW_VSCROLL` on a `win_scrollbar` window.** Those flags mean "this window has built-in framework scrollbars" and are intercepted by `send_message()`. The orientation of a standalone `win_scrollbar` is set via `lparam` at create time: `(void *)0` = horizontal, `(void *)1` = vertical. See the [Scrollbars](#scrollbars----built-in-vs-standalone) section above.
