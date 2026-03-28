@@ -54,20 +54,20 @@ static const int k_tool_order[NUM_TOOLS] = {
 static const int k_tool_icon_idx[NUM_TOOLS] = {
   0,    // Select
   4,    // Hand
-  14,   // Eyedropper
+  11,   // Eyedropper
   5,    // Zoom
   13,   // Pencil
   15,   // Brush
-  17,   // Spray
+  18,   // Spray
   8,    // Fill
   12,   // Eraser
   10,   // Line
   7,    // Text
-  20,   // Rect
-  22,   // Ellipse
-  21,   // Rounded Rect
-  23,   // Polygon
-  16,   // Magnifier
+  21,   // Rect
+  23,   // Ellipse
+  22,   // Rounded Rect
+  24,   // Polygon
+  6,    // Magnifier
 };
 
 typedef struct {

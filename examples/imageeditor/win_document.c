@@ -66,7 +66,7 @@ canvas_doc_t *create_document(const char *filename) {
 
   window_t *dwin = create_window(
       filename ? filename : "Untitled",
-      WINDOW_TOOLBAR | WINDOW_STATUSBAR,
+      /* WINDOW_TOOLBAR |*/ WINDOW_STATUSBAR,
       MAKERECT(wx, wy, CANVAS_W, CANVAS_H),
       NULL, doc_win_proc, NULL);
   dwin->userdata = doc;

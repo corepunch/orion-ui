@@ -24,7 +24,7 @@
 #define CANVAS_H      200
 
 #define SCREEN_W      512
-#define SCREEN_H      460
+#define SCREEN_H      342
 
 #define PALETTE_WIN_X   4
 #define PALETTE_WIN_W  (TB_SPACING*2)
