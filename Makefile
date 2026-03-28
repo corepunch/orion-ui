@@ -119,14 +119,14 @@ $(SHARED_LIB): $(USER_SRCS) $(KERNEL_SRCS) $(COMMCTL_SRCS) | $(LIB_DIR)
 .PHONY: examples
 examples: share $(EXAMPLE_BINS)
 
-# Image editor links with libpng for PNG open/save support
+# Image editor links against the Orion library (PNG I/O via stb_image).
 # main.c is appended last so that all sub-module symbols (e.g. kMenus, win procs)
 # are defined before main.c's application code references them.
 $(BIN_DIR)/imageeditor$(EXE_EXT): $(wildcard examples/imageeditor/*.c) $(STATIC_LIB) | $(BIN_DIR)
 	@echo "Building example: $@"
 	(find examples/imageeditor -name "*.c" ! -name "main.c" | sort | sed 's/.*/#include "&"/'; \
 	 echo '#include "examples/imageeditor/main.c"') | \
-		$(CC) $(CFLAGS) -Iexamples/imageeditor -x c -o $@ - -x none $(STATIC_LIB) $(LDFLAGS) $(LDFLAGS_EXAMPLE) $(LIBS) -lpng
+		$(CC) $(CFLAGS) -Iexamples/imageeditor -x c -o $@ - -x none $(STATIC_LIB) $(LDFLAGS) $(LDFLAGS_EXAMPLE) $(LIBS)
 
 # Generic rule: compile each example's main.c as a single file directly to binary
 $(BIN_DIR)/%$(EXE_EXT): examples/%/main.c $(STATIC_LIB) | $(BIN_DIR)
@@ -147,6 +147,11 @@ test: $(TEST_BINS)
 $(TEST_ENV_BINS): $(BIN_DIR)/test_%$(EXE_EXT): $(TEST_DIR)/%.c $(STATIC_LIB) | $(BIN_DIR)
 	@echo "Building test with environment: $@"
 	$(CC) $(CFLAGS) -o $@ $< $(TEST_DIR)/test_env.c $(STATIC_LIB) $(LDFLAGS) $(LDFLAGS_TEST) $(LIBS)
+
+# Image API test – self-contained, pulls in user/image.c directly (no SDL/GL needed)
+$(BIN_DIR)/test_image_test$(EXE_EXT): $(TEST_DIR)/image_test.c | $(BIN_DIR)
+	@echo "Building test: $@"
+	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS_TEST) -lm
 
 # Generic test build rule (tests without test_env)
 $(BIN_DIR)/test_%$(EXE_EXT): $(TEST_DIR)/%.c $(STATIC_LIB) | $(BIN_DIR)

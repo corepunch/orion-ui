@@ -51,66 +51,9 @@ static GLuint load_banner_texture(void) {
   }
   if (!found) return 0;
 
-  FILE *fp = fopen(found, "rb");
-  if (!fp) return 0;
-
-  png_structp png = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-  if (!png) { fclose(fp); return 0; }
-
-  png_infop info = png_create_info_struct(png);
-  if (!info) { png_destroy_read_struct(&png, NULL, NULL); fclose(fp); return 0; }
-
-  // Declared volatile so their values survive longjmp in the error path.
-  volatile uint8_t   *pixels = NULL;
-  volatile png_bytep *rows   = NULL;
-
-  if (setjmp(png_jmpbuf(png))) {
-    // longjmp error path: free any heap buffers already allocated.
-    free((void *)rows);
-    free((void *)pixels);
-    png_destroy_read_struct(&png, &info, NULL);
-    fclose(fp);
-    return 0;
-  }
-
-  png_init_io(png, fp);
-  png_read_info(png, info);
-
-  int w = (int)png_get_image_width(png, info);
-  int h = (int)png_get_image_height(png, info);
-  png_byte ct = png_get_color_type(png, info);
-  png_byte bd = png_get_bit_depth(png, info);
-
-  if (bd == 16) png_set_strip_16(png);
-  if (ct == PNG_COLOR_TYPE_PALETTE)                       png_set_palette_to_rgb(png);
-  if (ct == PNG_COLOR_TYPE_GRAY && bd < 8)                png_set_expand_gray_1_2_4_to_8(png);
-  if (png_get_valid(png, info, PNG_INFO_tRNS))            png_set_tRNS_to_alpha(png);
-  if (ct == PNG_COLOR_TYPE_RGB  ||
-      ct == PNG_COLOR_TYPE_GRAY ||
-      ct == PNG_COLOR_TYPE_PALETTE)                       png_set_filler(png, 0xFF, PNG_FILLER_AFTER);
-  if (ct == PNG_COLOR_TYPE_GRAY || ct == PNG_COLOR_TYPE_GRAY_ALPHA)
-                                                          png_set_gray_to_rgb(png);
-  png_read_update_info(png, info);
-
-  size_t rowbytes = png_get_rowbytes(png, info);
-  pixels = malloc((size_t)h * rowbytes);
-  rows   = malloc(sizeof(png_bytep) * (size_t)h);
-  if (!pixels || !rows) {
-    free((void *)rows);
-    free((void *)pixels);
-    png_destroy_read_struct(&png, &info, NULL);
-    fclose(fp);
-    return 0;
-  }
-
-  for (int r = 0; r < h; r++)
-    rows[r] = (uint8_t *)pixels + (size_t)r * rowbytes;
-
-  png_read_image(png, (png_bytepp)rows);
-  free((void *)rows);
-  rows = NULL;
-  png_destroy_read_struct(&png, &info, NULL);
-  fclose(fp);
+  int w = 0, h = 0;
+  uint8_t *pixels = load_image(found, &w, &h);
+  if (!pixels) return 0;
 
   GLuint tex;
   glGenTextures(1, &tex);
@@ -119,8 +62,8 @@ static GLuint load_banner_texture(void) {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, (void *)pixels);
-  free((void *)pixels);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+  image_free(pixels);
 
   return tex;
 }

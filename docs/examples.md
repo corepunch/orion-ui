@@ -56,7 +56,7 @@ Demonstrates the full framework surface:
 | Canvas rendering | OpenGL texture (`glTexImage2D` / `glTexSubImage2D`) + `draw_rect` |
 | Drawing tools | Pencil, brush, eraser, flood-fill (BFS) |
 | File picker dialog | Modal dialog with `win_columnview` |
-| PNG I/O | libpng `png_read_image` / `png_write_row` |
+| PNG I/O | `load_image` / `save_image_png` (stb_image, built into the framework) |
 
 ### Running at larger size
 
@@ -96,8 +96,8 @@ int ly = (int16_t)HIWORD(wparam) - root->frame.y - win->frame.y;
    }
    ui_shutdown_graphics();
    ```
-4. Add a Makefile rule if your example needs extra libraries (e.g. `-lpng`):
+4. Add a Makefile rule if your example needs extra libraries:
    ```makefile
    $(BIN_DIR)/myapp$(EXE_EXT): examples/myapp.c $(STATIC_LIB) | $(BIN_DIR)
-       $(CC) $(CFLAGS) -o $@ $< $(STATIC_LIB) $(LDFLAGS) $(LDFLAGS_EXAMPLE) $(LIBS) -lpng
+       $(CC) $(CFLAGS) -o $@ $< $(STATIC_LIB) $(LDFLAGS) $(LDFLAGS_EXAMPLE) $(LIBS)
    ```
