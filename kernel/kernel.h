@@ -60,5 +60,6 @@ typedef enum {
 } ui_system_metrics_t;
 
 int ui_get_system_metrics(ui_system_metrics_t);
+void ui_update_screen_size(int width, int height);
 
 #endif

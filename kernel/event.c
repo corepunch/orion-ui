@@ -9,6 +9,7 @@
 
 #include "../user/user.h"
 #include "../user/messages.h"
+#include "kernel.h"
 
 // Custom SDL event type registered at startup.
 // Posted to the SDL queue whenever an internal message is queued so that
@@ -39,6 +40,7 @@ extern void set_focus(window_t* win);
 extern void track_mouse(window_t *win);
 extern void show_window(window_t *win, bool visible);
 extern void end_dialog(window_t *win, uint32_t code);
+extern void invalidate_window(window_t *win);
 
 // Drag/resize state (shared with user/window.c for destroy_window cleanup)
 window_t *_dragging = NULL;
@@ -138,6 +140,23 @@ void dispatch_message(SDL_Event *evt) {
     return;
   window_t *win;
   switch (evt->type) {
+    case SDL_WINDOWEVENT:
+      if (evt->window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+        int new_w = evt->window.data1;
+        int new_h = evt->window.data2;
+        ui_update_screen_size(new_w, new_h);
+        int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
+        int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
+        for (win = windows; win; win = win->next) {
+          if ((win->flags & WINDOW_ALWAYSINBACK) && !win->parent) {
+            resize_window(win, sw, sh);
+          }
+          if (win->visible) {
+            invalidate_window(win);
+          }
+        }
+      }
+      break;
     case SDL_QUIT:
       running = false;
       break;
