@@ -27,6 +27,12 @@ static void canvas_sync_scrollbars(window_t *win, canvas_win_state_t *state) {
   bool need_h = canvas_w > win_w;
   bool need_v = canvas_h > win_h;
 
+  // Resolve scrollbar interdependence: adding one scrollbar shrinks the
+  // viewport in the perpendicular axis, which may force the other bar to
+  // appear even if the content originally fit that axis.
+  if (need_h && !need_v) need_v = canvas_h > win_h - SCROLLBAR_SIZE;
+  if (need_v && !need_h) need_h = canvas_w > win_w - SCROLLBAR_SIZE;
+
   // Viewport sizes account for the other scrollbar if both are shown
   int view_w = need_v ? win_w - SCROLLBAR_SIZE : win_w;
   int view_h = need_h ? win_h - SCROLLBAR_SIZE : win_h;
@@ -55,8 +61,22 @@ static void canvas_sync_scrollbars(window_t *win, canvas_win_state_t *state) {
 // Clamp pan to the valid range for the current zoom level and window size
 static void clamp_pan(canvas_win_state_t *state, int win_w, int win_h) {
   canvas_doc_t *doc = state->doc;
-  int max_x = MAX(0, doc->canvas_w * state->scale - win_w);
-  int max_y = MAX(0, doc->canvas_h * state->scale - win_h);
+  int canvas_w = doc->canvas_w * state->scale;
+  int canvas_h = doc->canvas_h * state->scale;
+
+  // Mirror the scrollbar-interdependence logic from canvas_sync_scrollbars so
+  // that the maximum pan correctly accounts for whichever scrollbars will be
+  // shown.
+  bool need_h = canvas_w > win_w;
+  bool need_v = canvas_h > win_h;
+  if (need_h && !need_v) need_v = canvas_h > win_h - SCROLLBAR_SIZE;
+  if (need_v && !need_h) need_h = canvas_w > win_w - SCROLLBAR_SIZE;
+
+  int view_w = need_v ? win_w - SCROLLBAR_SIZE : win_w;
+  int view_h = need_h ? win_h - SCROLLBAR_SIZE : win_h;
+
+  int max_x = MAX(0, canvas_w - view_w);
+  int max_y = MAX(0, canvas_h - view_h);
   if (state->pan_x < 0) state->pan_x = 0;
   if (state->pan_y < 0) state->pan_y = 0;
   if (state->pan_x > max_x) state->pan_x = max_x;
@@ -313,8 +333,16 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       if (!state) return false;
       int canvas_w  = doc->canvas_w * state->scale;
       int canvas_h  = doc->canvas_h * state->scale;
-      int max_pan_x = MAX(0, canvas_w - win->frame.w);
-      int max_pan_y = MAX(0, canvas_h - win->frame.h);
+      // Mirror the scrollbar-interdependence logic so max pan is correct when
+      // only one scrollbar is visible (its presence shrinks the other axis).
+      bool need_h = canvas_w > win->frame.w;
+      bool need_v = canvas_h > win->frame.h;
+      if (need_h && !need_v) need_v = canvas_h > win->frame.h - SCROLLBAR_SIZE;
+      if (need_v && !need_h) need_h = canvas_w > win->frame.w - SCROLLBAR_SIZE;
+      int view_w    = need_v ? win->frame.w - SCROLLBAR_SIZE : win->frame.w;
+      int view_h    = need_h ? win->frame.h - SCROLLBAR_SIZE : win->frame.h;
+      int max_pan_x = MAX(0, canvas_w - view_w);
+      int max_pan_y = MAX(0, canvas_h - view_h);
       if (max_pan_x > 0 || max_pan_y > 0) {
         // LOWORD = -wheel.x * SCROLL_SENSITIVITY; HIWORD = wheel.y * SCROLL_SENSITIVITY
         int dx = -(int16_t)LOWORD(wparam);  // natural scroll: flip x axis
