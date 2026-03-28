@@ -118,11 +118,17 @@ extern bool running;
 
 ui_event_t e;
 while (running) {
-    while (get_message(&e))   // drain SDL event queue
+    while (get_message(&e))   // blocks until event, then drains queue
         dispatch_message(&e);
-    repost_messages(-1);        // process posted (async) messages + repaint
+    repost_messages();        // process posted (async) messages + repaint
 }
 ```
+
+`get_message()` sleeps with `SDL_WaitEvent` when the SDL queue is empty, so
+the process yields the CPU instead of spinning.  Calls to `post_message()`
+(including `invalidate_window()`) push a lightweight wakeup event into the
+SDL queue so that the wait is interrupted and the internal message queue is
+processed promptly.
 
 ## Message Hooks
 

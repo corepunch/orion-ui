@@ -15,6 +15,11 @@
 // Event type abstraction
 typedef SDL_Event ui_event_t;
 
+// Custom SDL event type used to wake up SDL_WaitEvent() when an internal
+// message is posted via post_message().  Initialized by ui_init_graphics().
+// Value (Uint32)-1 means not yet registered (treated as "no wakeup events").
+extern Uint32 g_ui_repaint_event;
+
 // Event message queue functions
 int get_message(ui_event_t *evt);
 void dispatch_message(ui_event_t *evt);

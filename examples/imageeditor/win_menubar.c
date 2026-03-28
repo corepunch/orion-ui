@@ -57,24 +57,32 @@ static void handle_menu_command(uint16_t id) {
 
   switch (id) {
     case ID_FILE_NEW:
-      create_document(NULL);
+      create_document(NULL, CANVAS_W, CANVAS_H);
       break;
 
     case ID_FILE_OPEN: {
       char path[512] = {0};
       if (show_file_picker(g_app->menubar_win, false, path, sizeof(path))) {
-        canvas_doc_t *ndoc = create_document(path);
+        int img_w = 0, img_h = 0;
+        uint8_t *px = load_image(path, &img_w, &img_h);
+        if (!px || img_w <= 0 || img_h <= 0) {
+          if (px) image_free(px);
+          break;
+        }
+        canvas_doc_t *ndoc = create_document(path, img_w, img_h);
         if (ndoc) {
-          if (!png_load(path, ndoc->pixels)) {
-            send_message(ndoc->win, kWindowMessageStatusBar, 0,
-                         (void *)"Failed to open file");
-          } else {
-            ndoc->canvas_dirty = true;
-            ndoc->modified = false;
-            doc_update_title(ndoc);
-            send_message(ndoc->win, kWindowMessageStatusBar, 0, path);
-            invalidate_window(ndoc->canvas_win);
-          }
+          // Swap the white placeholder pixels for the actual loaded image.
+          // Use image_free() so the allocator always matches regardless of
+          // which allocation path (malloc vs stb) produced the buffer.
+          image_free(ndoc->pixels);
+          ndoc->pixels = px;
+          ndoc->canvas_dirty = true;
+          ndoc->modified = false;
+          doc_update_title(ndoc);
+          send_message(ndoc->win, kWindowMessageStatusBar, 0, path);
+          invalidate_window(ndoc->canvas_win);
+        } else {
+          image_free(px);
         }
       }
       break;
@@ -83,7 +91,7 @@ static void handle_menu_command(uint16_t id) {
     case ID_FILE_SAVE:
       if (!doc) break;
       if (!doc->filename[0]) goto do_save_as;
-      if (png_save(doc->filename, doc->pixels)) {
+      if (png_save(doc->filename, doc)) {
         doc->modified = false;
         doc_update_title(doc);
         send_message(doc->win, kWindowMessageStatusBar, 0, (void *)"Saved");
@@ -99,7 +107,7 @@ static void handle_menu_command(uint16_t id) {
       if (show_file_picker(g_app->menubar_win, true, path, sizeof(path))) {
         strncpy(doc->filename, path, sizeof(doc->filename)-1);
         doc->filename[sizeof(doc->filename)-1] = '\0';
-        if (png_save(path, doc->pixels)) {
+        if (png_save(path, doc)) {
           doc->modified = false;
           doc_update_title(doc);
           send_message(doc->win, kWindowMessageStatusBar, 0, path);

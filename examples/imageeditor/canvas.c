@@ -8,30 +8,30 @@
 
 // Write a pixel directly (bypasses selection mask – used for paste/move commit).
 static void canvas_set_pixel_direct(canvas_doc_t *doc, int x, int y, uint32_t c) {
-  if (!canvas_in_bounds(x, y)) return;
-  uint8_t *p = doc->pixels + ((size_t)y * CANVAS_W + x) * 4;
+  if (!canvas_in_bounds(doc, x, y)) return;
+  uint8_t *p = doc->pixels + ((size_t)y * doc->canvas_w + x) * 4;
   p[0]=COLOR_R(c); p[1]=COLOR_G(c); p[2]=COLOR_B(c); p[3]=COLOR_A(c);
   doc->canvas_dirty = true;
   doc->modified     = true;
 }
 
 void canvas_set_pixel(canvas_doc_t *doc, int x, int y, uint32_t c) {
-  if (!canvas_in_bounds(x, y)) return;
+  if (!canvas_in_bounds(doc, x, y)) return;
   if (!canvas_in_selection(doc, x, y)) return;
-  uint8_t *p = doc->pixels + ((size_t)y * CANVAS_W + x) * 4;
+  uint8_t *p = doc->pixels + ((size_t)y * doc->canvas_w + x) * 4;
   p[0]=COLOR_R(c); p[1]=COLOR_G(c); p[2]=COLOR_B(c); p[3]=COLOR_A(c);
   doc->canvas_dirty = true;
   doc->modified     = true;
 }
 
 uint32_t canvas_get_pixel(const canvas_doc_t *doc, int x, int y) {
-  if (!canvas_in_bounds(x, y)) return MAKE_COLOR(0,0,0,0);
-  const uint8_t *p = doc->pixels + ((size_t)y * CANVAS_W + x) * 4;
+  if (!canvas_in_bounds(doc, x, y)) return MAKE_COLOR(0,0,0,0);
+  const uint8_t *p = doc->pixels + ((size_t)y * doc->canvas_w + x) * 4;
   return MAKE_COLOR(p[0],p[1],p[2],p[3]);
 }
 
 void canvas_clear(canvas_doc_t *doc) {
-  memset(doc->pixels, 0xFF, sizeof(doc->pixels));
+  memset(doc->pixels, 0xFF, (size_t)doc->canvas_w * doc->canvas_h * 4);
   doc->canvas_dirty = true;
   doc->modified     = false;
 }
@@ -62,13 +62,16 @@ void canvas_flood_fill(canvas_doc_t *doc, int sx, int sy, uint32_t fill) {
   uint32_t target = canvas_get_pixel(doc, sx, sy);
   if (target == fill) return;
 
-  typedef struct { int16_t x, y; } pt_t;
-  int capacity = CANVAS_W * CANVAS_H;
+  typedef struct { int x, y; } pt_t;
+  // Use size_t arithmetic to avoid overflow for large canvases.
+  size_t capacity = (size_t)doc->canvas_w * (size_t)doc->canvas_h;
+  // Sanity-cap the queue at 64 M entries (~512 MB) to avoid OOM on huge images.
+  if (capacity > 64 * 1024 * 1024) capacity = 64 * 1024 * 1024;
   pt_t *queue = malloc(sizeof(pt_t) * capacity);
   if (!queue) return;
 
-  int head = 0, tail = 0;
-  queue[tail++] = (pt_t){(int16_t)sx, (int16_t)sy};
+  size_t head = 0, tail = 0;
+  queue[tail++] = (pt_t){sx, sy};
   canvas_set_pixel(doc, sx, sy, fill);
 
   while (head < tail) {
@@ -76,12 +79,12 @@ void canvas_flood_fill(canvas_doc_t *doc, int sx, int sy, uint32_t fill) {
     int nx[4] = {cur.x+1, cur.x-1, cur.x,   cur.x};
     int ny[4] = {cur.y,   cur.y,   cur.y+1, cur.y-1};
     for (int i = 0; i < 4; i++) {
-      if (canvas_in_bounds(nx[i], ny[i]) &&
+      if (canvas_in_bounds(doc, nx[i], ny[i]) &&
           canvas_in_selection(doc, nx[i], ny[i]) &&
           canvas_get_pixel(doc, nx[i], ny[i]) == target &&
           tail < capacity) {
         canvas_set_pixel(doc, nx[i], ny[i], fill);
-        queue[tail++] = (pt_t){(int16_t)nx[i], (int16_t)ny[i]};
+        queue[tail++] = (pt_t){nx[i], ny[i]};
       }
     }
   }
@@ -162,7 +165,7 @@ void canvas_draw_ellipse_filled(canvas_doc_t *doc, int cx, int cy, int rx, int r
   double rx2 = (double)rx * (double)rx;
   double ry2 = (double)ry * (double)ry;
   for (int py = cy - ry; py <= cy + ry; py++) {
-    if (!canvas_in_bounds(cx, py)) continue;
+    if (!canvas_in_bounds(doc, cx, py)) continue;
     double dy = (double)(py - cy);
     double t = 1.0 - (dy * dy) / ry2;
     if (t <= 0.0) continue;
@@ -240,7 +243,7 @@ void canvas_draw_polygon_filled(canvas_doc_t *doc, const point_t *pts, int count
     if (pts[i].y < y_min) y_min = pts[i].y;
     if (pts[i].y > y_max) y_max = pts[i].y;
   }
-  y_min = MAX(y_min, 0); y_max = MIN(y_max, CANVAS_H - 1);
+  y_min = MAX(y_min, 0); y_max = MIN(y_max, doc->canvas_h - 1);
   int *xs = malloc(sizeof(int) * count * 2);
   if (!xs) { canvas_draw_polygon_outline(doc, pts, count, outline); return; }
   for (int y = y_min; y <= y_max; y++) {
@@ -277,11 +280,12 @@ bool canvas_is_shape_tool(int tool_id) {
 
 // Save pixel snapshot before starting a shape drag (no undo push yet)
 void canvas_shape_begin(canvas_doc_t *doc, int cx, int cy) {
+  size_t sz = (size_t)doc->canvas_w * doc->canvas_h * 4;
   if (!doc->shape_snapshot) {
-    doc->shape_snapshot = malloc(CANVAS_H * CANVAS_W * 4);
+    doc->shape_snapshot = malloc(sz);
   }
   if (doc->shape_snapshot) {
-    memcpy(doc->shape_snapshot, doc->pixels, CANVAS_H * CANVAS_W * 4);
+    memcpy(doc->shape_snapshot, doc->pixels, sz);
   }
   doc->shape_start.x = cx;
   doc->shape_start.y = cy;
@@ -293,7 +297,7 @@ void canvas_shape_preview(canvas_doc_t *doc, int x0, int y0, int x1, int y1,
                           int tool, bool filled, uint32_t fg, uint32_t bg, bool shift_held) {
   // Restore snapshot
   if (doc->shape_snapshot) {
-    memcpy(doc->pixels, doc->shape_snapshot, CANVAS_H * CANVAS_W * 4);
+    memcpy(doc->pixels, doc->shape_snapshot, (size_t)doc->canvas_w * doc->canvas_h * 4);
     doc->canvas_dirty = true;
   }
   if (shift_held) {
@@ -370,8 +374,8 @@ static bool selection_bounds(const canvas_doc_t *doc,
   // Clamp to canvas bounds so callers are safe against out-of-range coords.
   if (*x0 < 0) *x0 = 0;
   if (*y0 < 0) *y0 = 0;
-  if (*x1 >= CANVAS_W) *x1 = CANVAS_W - 1;
-  if (*y1 >= CANVAS_H) *y1 = CANVAS_H - 1;
+  if (*x1 >= doc->canvas_w) *x1 = doc->canvas_w - 1;
+  if (*y1 >= doc->canvas_h) *y1 = doc->canvas_h - 1;
   return (*x0 <= *x1 && *y0 <= *y1);
 }
 
@@ -432,8 +436,8 @@ void canvas_paste_clipboard(canvas_doc_t *doc) {
   doc->sel_start    = (point_t){0, 0};
   int sel_x1 = w - 1;
   int sel_y1 = h - 1;
-  if (sel_x1 >= CANVAS_W) sel_x1 = CANVAS_W - 1;
-  if (sel_y1 >= CANVAS_H) sel_y1 = CANVAS_H - 1;
+  if (sel_x1 >= doc->canvas_w) sel_x1 = doc->canvas_w - 1;
+  if (sel_y1 >= doc->canvas_h) sel_y1 = doc->canvas_h - 1;
   doc->sel_end      = (point_t){sel_x1, sel_y1};
 }
 
@@ -442,7 +446,7 @@ void canvas_select_all(canvas_doc_t *doc) {
   if (!doc) return;
   doc->sel_active   = true;
   doc->sel_start    = (point_t){0, 0};
-  doc->sel_end      = (point_t){CANVAS_W - 1, CANVAS_H - 1};
+  doc->sel_end      = (point_t){doc->canvas_w - 1, doc->canvas_h - 1};
 }
 
 // Clear selection (no-op on pixels).
@@ -475,8 +479,8 @@ void canvas_crop_to_selection(canvas_doc_t *doc) {
   // Fill the entire canvas with white.
   canvas_clear(doc);
   // Stamp the copied region at (0,0), clipping to the canvas dimensions.
-  for (int row = 0; row < h && row < CANVAS_H; row++) {
-    for (int col = 0; col < w && col < CANVAS_W; col++) {
+  for (int row = 0; row < h && row < doc->canvas_h; row++) {
+    for (int col = 0; col < w && col < doc->canvas_w; col++) {
       const uint8_t *p = buf + ((size_t)row * w + col) * 4;
       uint32_t c = MAKE_COLOR(p[0], p[1], p[2], p[3]);
       canvas_set_pixel_direct(doc, col, row, c);
@@ -549,37 +553,8 @@ void canvas_commit_move(canvas_doc_t *doc) {
 // PNG I/O (stb_image)
 // ============================================================
 
-static bool is_png(const char *path) {
-  if (!path) return false;
-  size_t n = strlen(path);
-  if (n < 5) return false;
-  const char *ext = path + n - 4;
-  return (ext[0]=='.' &&
-          (ext[1]=='p'||ext[1]=='P') &&
-          (ext[2]=='n'||ext[2]=='N') &&
-          (ext[3]=='g'||ext[3]=='G'));
-}
-
-bool png_load(const char *path, uint8_t *out_pixels);
-bool png_save(const char *path, const uint8_t *pixels);
-
-bool png_load(const char *path, uint8_t *out_pixels) {
-  int w = 0, h = 0;
-  uint8_t *pixels = load_image(path, &w, &h);
-  if (!pixels) return false;
-
-  memset(out_pixels, 0xFF, CANVAS_H * CANVAS_W * 4);
-  int copy_w = w < CANVAS_W ? w : CANVAS_W;
-  int copy_h = h < CANVAS_H ? h : CANVAS_H;
-  for (int row = 0; row < copy_h; row++)
-    memcpy(out_pixels + row * CANVAS_W * 4, pixels + row * w * 4, (size_t)copy_w * 4);
-
-  image_free(pixels);
-  return true;
-}
-
-bool png_save(const char *path, const uint8_t *pixels) {
-  return save_image_png(path, pixels, CANVAS_W, CANVAS_H);
+bool png_save(const char *path, const canvas_doc_t *doc) {
+  return save_image_png(path, doc->pixels, doc->canvas_w, doc->canvas_h);
 }
 
 // ============================================================
@@ -595,12 +570,12 @@ static void canvas_upload(canvas_doc_t *doc) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, CANVAS_W, CANVAS_H, 0,
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, doc->canvas_w, doc->canvas_h, 0,
                  GL_RGBA, GL_UNSIGNED_BYTE, doc->pixels);
     doc->canvas_tex = tex;
   } else if (doc->canvas_dirty) {
     glBindTexture(GL_TEXTURE_2D, doc->canvas_tex);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, CANVAS_W, CANVAS_H,
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, doc->canvas_w, doc->canvas_h,
                     GL_RGBA, GL_UNSIGNED_BYTE, doc->pixels);
   }
   doc->canvas_dirty = false;

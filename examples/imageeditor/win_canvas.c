@@ -18,13 +18,20 @@ const int kZoomMenuIDs[NUM_ZOOM_LEVELS] = {
 static void canvas_sync_scrollbars(window_t *win, canvas_win_state_t *state) {
   if (!state->hscroll || !state->vscroll) return;
 
-  int canvas_w = CANVAS_W * state->scale;
-  int canvas_h = CANVAS_H * state->scale;
+  canvas_doc_t *doc = state->doc;
+  int canvas_w = doc->canvas_w * state->scale;
+  int canvas_h = doc->canvas_h * state->scale;
   int win_w    = win->frame.w;
   int win_h    = win->frame.h;
 
   bool need_h = canvas_w > win_w;
   bool need_v = canvas_h > win_h;
+
+  // Resolve scrollbar interdependence: adding one scrollbar shrinks the
+  // viewport in the perpendicular axis, which may force the other bar to
+  // appear even if the content originally fit that axis.
+  if (need_h && !need_v) need_v = canvas_h > win_h - SCROLLBAR_SIZE;
+  if (need_v && !need_h) need_h = canvas_w > win_w - SCROLLBAR_SIZE;
 
   // Viewport sizes account for the other scrollbar if both are shown
   int view_w = need_v ? win_w - SCROLLBAR_SIZE : win_w;
@@ -53,8 +60,23 @@ static void canvas_sync_scrollbars(window_t *win, canvas_win_state_t *state) {
 
 // Clamp pan to the valid range for the current zoom level and window size
 static void clamp_pan(canvas_win_state_t *state, int win_w, int win_h) {
-  int max_x = MAX(0, CANVAS_W * state->scale - win_w);
-  int max_y = MAX(0, CANVAS_H * state->scale - win_h);
+  canvas_doc_t *doc = state->doc;
+  int canvas_w = doc->canvas_w * state->scale;
+  int canvas_h = doc->canvas_h * state->scale;
+
+  // Mirror the scrollbar-interdependence logic from canvas_sync_scrollbars so
+  // that the maximum pan correctly accounts for whichever scrollbars will be
+  // shown.
+  bool need_h = canvas_w > win_w;
+  bool need_v = canvas_h > win_h;
+  if (need_h && !need_v) need_v = canvas_h > win_h - SCROLLBAR_SIZE;
+  if (need_v && !need_h) need_h = canvas_w > win_w - SCROLLBAR_SIZE;
+
+  int view_w = need_v ? win_w - SCROLLBAR_SIZE : win_w;
+  int view_h = need_h ? win_h - SCROLLBAR_SIZE : win_h;
+
+  int max_x = MAX(0, canvas_w - view_w);
+  int max_y = MAX(0, canvas_h - view_h);
   if (state->pan_x < 0) state->pan_x = 0;
   if (state->pan_y < 0) state->pan_y = 0;
   if (state->pan_x > max_x) state->pan_x = max_x;
@@ -167,6 +189,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           win, win_scrollbar, NULL);
       s->hscroll->visible = false;
       s->vscroll->visible = false;
+      // Sync scrollbars: show them if canvas is already larger than the window
+      canvas_sync_scrollbars(win, s);
       return true;
     }
 
@@ -191,7 +215,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       int cy = win->frame.y - state->pan_y;
       draw_rect(doc->canvas_tex,
                 cx, cy,
-                CANVAS_W * state->scale, CANVAS_H * state->scale);
+                doc->canvas_w * state->scale, doc->canvas_h * state->scale);
 
       if (doc->sel_moving && doc->float_tex) {
         // Draw the floating selection at its current position
@@ -254,7 +278,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         for (int row = 0; row < MAG_PIXELS; row++) {
           for (int col = 0; col < MAG_PIXELS; col++) {
             int sx = hx + col, sy = hy + row;
-            uint32_t px = canvas_in_bounds(sx, sy)
+            uint32_t px = canvas_in_bounds(doc, sx, sy)
                         ? canvas_get_pixel(doc, sx, sy)
                         : MAKE_COLOR(0x22, 0x22, 0x22, 0xFF);
             uint8_t *dst = mag_buf + (row * MAG_PIXELS + col) * 4;
@@ -311,10 +335,18 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       // mid-stroke would invalidate doc->last (stored in pre-pan pixel coords)
       // and produce a visible position jump on the next MouseMove segment.
       if (doc && doc->drawing) return true;
-      int canvas_w  = CANVAS_W * state->scale;
-      int canvas_h  = CANVAS_H * state->scale;
-      int max_pan_x = MAX(0, canvas_w - win->frame.w);
-      int max_pan_y = MAX(0, canvas_h - win->frame.h);
+      int canvas_w  = doc->canvas_w * state->scale;
+      int canvas_h  = doc->canvas_h * state->scale;
+      // Mirror the scrollbar-interdependence logic so max pan is correct when
+      // only one scrollbar is visible (its presence shrinks the other axis).
+      bool need_h = canvas_w > win->frame.w;
+      bool need_v = canvas_h > win->frame.h;
+      if (need_h && !need_v) need_v = canvas_h > win->frame.h - SCROLLBAR_SIZE;
+      if (need_v && !need_h) need_h = canvas_w > win->frame.w - SCROLLBAR_SIZE;
+      int view_w    = need_v ? win->frame.w - SCROLLBAR_SIZE : win->frame.w;
+      int view_h    = need_h ? win->frame.h - SCROLLBAR_SIZE : win->frame.h;
+      int max_pan_x = MAX(0, canvas_w - view_w);
+      int max_pan_y = MAX(0, canvas_h - view_h);
       if (max_pan_x > 0 || max_pan_y > 0) {
         // LOWORD = -wheel.x * SCROLL_SENSITIVITY; HIWORD = wheel.y * SCROLL_SENSITIVITY
         int dx = -(int16_t)LOWORD(wparam);  // natural scroll: flip x axis
@@ -374,7 +406,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       if (g_app->current_tool == ID_TOOL_EYEDROPPER) {
         int px = (lx - win->frame.x + state->pan_x) / state->scale;
         int py = (ly - win->frame.y + state->pan_y) / state->scale;
-        if (canvas_in_bounds(px, py)) {
+        if (canvas_in_bounds(doc, px, py)) {
           g_app->fg_color = canvas_get_pixel(doc, px, py);
           if (g_app->tool_win)  invalidate_window(g_app->tool_win);
           if (g_app->color_win) invalidate_window(g_app->color_win);
@@ -391,7 +423,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       // Text tool: record position and show text options dialog
       if (tool == ID_TOOL_TEXT) {
-        if (!canvas_in_bounds(px, py)) return true;
+        if (!canvas_in_bounds(doc, px, py)) return true;
         text_options_t opts;
         memset(&opts, 0, sizeof(opts));
         opts.font_size = g_app->text_font_size;
@@ -497,7 +529,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         int ly = (int16_t)HIWORD(wparam) - root->frame.y;
         int px = (lx - win->frame.x + state->pan_x) / state->scale;
         int py = (ly - win->frame.y + state->pan_y) / state->scale;
-        if (canvas_in_bounds(px, py)) {
+        if (canvas_in_bounds(doc, px, py)) {
           g_app->bg_color = canvas_get_pixel(doc, px, py);
           if (g_app->tool_win)  invalidate_window(g_app->tool_win);
           if (g_app->color_win) invalidate_window(g_app->color_win);
@@ -571,7 +603,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       // Always track the hover position (used by the magnifier overlay)
       state->hover.x    = px;
       state->hover.y    = py;
-      state->hover_valid = canvas_in_bounds(px, py);
+      state->hover_valid = canvas_in_bounds(doc, px, py);
 
       int tool = g_app->current_tool;
       bool shift = (SDL_GetModState() & KMOD_SHIFT) != 0;
@@ -680,7 +712,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       if (wparam == SDL_SCANCODE_ESCAPE) {
         if (tool == ID_TOOL_POLYGON && doc->poly_active) {
           if (doc->shape_snapshot) {
-            memcpy(doc->pixels, doc->shape_snapshot, CANVAS_H * CANVAS_W * 4);
+            memcpy(doc->pixels, doc->shape_snapshot, (size_t)doc->canvas_w * doc->canvas_h * 4);
             doc->canvas_dirty = true;
           }
           doc_discard_undo(doc);  // drop the no-op undo entry pushed at polygon start
@@ -690,12 +722,20 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           return true;
         }
         if (canvas_is_shape_tool(tool) && doc->drawing && doc->shape_snapshot) {
-          memcpy(doc->pixels, doc->shape_snapshot, CANVAS_H * CANVAS_W * 4);
+          memcpy(doc->pixels, doc->shape_snapshot, (size_t)doc->canvas_w * doc->canvas_h * 4);
           doc->canvas_dirty = true;
           doc->drawing = false;
           invalidate_window(win);
           return true;
         }
+      }
+      return false;
+    }
+
+    case kWindowMessageResize: {
+      if (state) {
+        clamp_pan(state, win->frame.w, win->frame.h);
+        canvas_sync_scrollbars(win, state);
       }
       return false;
     }
