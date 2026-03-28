@@ -4,48 +4,10 @@
 Orion is a retro-styled UI framework written in C that brings the familiar Windows API message-based architecture to modern cross-platform development. Extracted from DOOM-ED, it features a clean three-layer design modeled after classic Windows DLLs (USER, KERNEL, COMCTL), making it instantly recognizable to developers who've worked with Win32. Built on SDL2 and OpenGL 3.2+, Orion delivers hardware-accelerated rendering with a nostalgic bitmap font aesthetic reminiscent of DOS and early Windows interfaces. The framework provides a complete set of common controls (buttons, checkboxes, edit boxes, lists, combo boxes, and a console) all following message-driven patterns that feel both vintage and powerful. Perfect for game tools, retro-style applications, or anyone who misses the simplicity and directness of classic GUI programming.
 
 **filemanager.c** example:
-![Screenshot 2026-01-16 at 15 21 17](https://github.com/user-attachments/assets/1474fcfa-17eb-4731-8af5-06a83ace958f)
+![536838382-1474fcfa-17eb-4731-8af5-06a83ace958f](https://github.com/user-attachments/assets/ec7bce63-7595-418c-9d71-66b860cd699c)
 
 **helloworld.c** example:
 ![Screenshot 2026-01-16 at 15 20 19](https://github.com/user-attachments/assets/57ef5b20-56ff-4d4c-8057-d7f2e699a08e)
-
-
-## Directory Structure
-
-```
-ui/
-├── ui.h              # Main header that includes all UI subsystems
-├── user/             # Window management and user interface (USER.DLL equivalent)
-│   ├── user.h        # Window structures and management functions
-│   ├── messages.h    # Window message constants and macros
-│   ├── draw.h        # Drawing primitives (rectangles, icons)
-│   ├── text.h        # Text rendering functions (NEW)
-│   ├── text.c        # Text rendering implementation (small font, DOOM/Hexen fonts)
-│   ├── window.c      # Window management implementation
-│   ├── message.c     # Message queue implementation
-│   └── draw_impl.c   # Drawing primitives implementation
-├── kernel/           # Event loop and SDL integration (KERNEL.DLL equivalent)
-│   ├── kernel.h      # Event management and SDL initialization
-│   ├── renderer.h    # Renderer API - OpenGL abstraction (NEW)
-│   ├── renderer_impl.c # Renderer API implementation (NEW)
-│   ├── renderer.c    # Sprite rendering implementation
-│   ├── event.c       # Event loop implementation
-│   ├── init.c        # SDL initialization
-│   └── joystick.c    # Joystick/gamepad support
-└── commctl/          # Common controls (COMCTL32.DLL equivalent)
-    ├── commctl.h     # Common control window procedures
-    ├── button.c      # Button control implementation
-    ├── checkbox.c    # Checkbox control implementation
-    ├── edit.c        # Text edit control implementation
-    ├── label.c       # Label (static text) control implementation
-    ├── list.c        # List control implementation
-    ├── combobox.c    # Combobox (dropdown) control implementation
-    ├── console.c     # Console control implementation (NEW)
-    ├── columnview.h  # ColumnView control header (NEW)
-    ├── columnview.c  # Multi-column item view implementation (NEW)
-    ├── terminal.c    # Lua script terminal implementation (NEW)
-    └── commctl.h     # Common control window procedures and API
-```
 
 ## Architecture
 
