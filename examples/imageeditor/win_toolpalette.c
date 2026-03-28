@@ -22,29 +22,52 @@
 #define PALETTE_FILL_ROW_Y \
   (PALETTE_LABEL_Y + PALETTE_LABEL_H + PALETTE_SWATCH_H + PALETTE_FILL_LABEL_H)
 // tools.png: 320×16 = 20 columns × 1 row of 16×16 icons.
-// Tool order: Pencil(0)..Magnifier(14).
 // Icon assignments (from visual inspection of tools.png):
-//   13=pencil, 15=brush, 12=eraser, 8=fill, 0=select,
-//   10=line (diagonal line), 6=rect (cross), 1=ellipse (circle outline),
-//   9=rounded-rect (checkerboard-ish), 11=polygon (wavy outline)
-//   17=spray (scattered dots), 14=eyedropper (dropper shape), 16=magnifier (loupe circle)
+//   0=select, 4=hand, 14=eyedropper, 5=zoom,
+//   13=pencil, 15=brush, 17=spray (airbrush), 8=fill (paint bucket),
+//   12=eraser, 10=line (diagonal line), 7=text,
+//   20=rect, 22=ellipse, 21=rounded-rect, 23=polygon (wavy outline),
+//   16=magnifier (loupe circle)
+
+// Display order for the tool palette – mirrors the Photoshop 1.0 toolbox layout:
+// selection/navigation tools first, then painting tools, then shape tools.
+static const int k_tool_order[NUM_TOOLS] = {
+  ID_TOOL_SELECT,
+  ID_TOOL_HAND,
+  ID_TOOL_EYEDROPPER,
+  ID_TOOL_ZOOM,
+  ID_TOOL_PENCIL,
+  ID_TOOL_BRUSH,
+  ID_TOOL_SPRAY,
+  ID_TOOL_FILL,
+  ID_TOOL_ERASER,
+  ID_TOOL_LINE,
+  ID_TOOL_TEXT,
+  ID_TOOL_RECT,
+  ID_TOOL_ELLIPSE,
+  ID_TOOL_ROUNDED_RECT,
+  ID_TOOL_POLYGON,
+  ID_TOOL_MAGNIFIER,
+};
+
+// Icon index in tools.png for each tool in k_tool_order.
 static const int k_tool_icon_idx[NUM_TOOLS] = {
-  13,   // Pencil
-  15,   // Brush
-  12,   // Eraser
-  8,    // Fill
   0,    // Select
   4,    // Hand
+  14,   // Eyedropper
   5,    // Zoom
+  13,   // Pencil
+  15,   // Brush
+  17,   // Spray
+  8,    // Fill
+  12,   // Eraser
   10,   // Line
+  7,    // Text
   20,   // Rect
   22,   // Ellipse
   21,   // Rounded Rect
   23,   // Polygon
-  17,   // Spray
-  14,   // Eyedropper
   16,   // Magnifier
-  7,    // Text
 };
 
 typedef struct {
@@ -210,8 +233,8 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       toolbar_button_t buttons[NUM_TOOLS];
       for (int i = 0; i < NUM_TOOLS; i++) {
         buttons[i].icon   = k_tool_icon_idx[i];
-        buttons[i].ident  = ID_TOOL_PENCIL + i;
-        buttons[i].active = (i == 0);  // Pencil is selected by default
+        buttons[i].ident  = k_tool_order[i];
+        buttons[i].active = (i == 0);  // Select is the default tool (first in PS1.0 order)
       }
       send_message(win, kToolBarMessageAddButtons, NUM_TOOLS, buttons);
       return true;
