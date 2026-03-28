@@ -16,6 +16,18 @@
 #include "../user/image.c"
 
 // ============================================================
+// Cross-platform temp directory helper.
+// On Windows (MinGW) TEMP/TMP are set; on POSIX TMPDIR or /tmp.
+// ============================================================
+static const char *temp_dir(void) {
+  const char *d = getenv("TEMP");
+  if (!d) d = getenv("TMP");
+  if (!d) d = getenv("TMPDIR");
+  if (!d) d = "/tmp";
+  return d;
+}
+
+// ============================================================
 // Minimal 1×1 red RGBA PNG used for embedded-data tests.
 // Generated with: python3 -c "
 //   import zlib, struct
@@ -41,8 +53,8 @@ static const uint8_t k_red_1x1_png[] = {
 
 // Write the embedded PNG bytes to a temp file, return path (static buffer).
 static const char *write_temp_png(void) {
-  static char path[256];
-  snprintf(path, sizeof(path), "/tmp/orion_image_test_%d.png", (int)getpid());
+  static char path[512];
+  snprintf(path, sizeof(path), "%s/orion_image_test_%d.png", temp_dir(), (int)getpid());
   FILE *f = fopen(path, "wb");
   if (!f) return NULL;
   fwrite(k_red_1x1_png, 1, sizeof(k_red_1x1_png), f);
@@ -91,8 +103,10 @@ void test_load_image_null_out_params(void) {
 
 void test_load_image_missing_file(void) {
   TEST("load_image: missing file zeros dimensions and returns NULL");
+  char path[512];
+  snprintf(path, sizeof(path), "%s/orion_nonexistent_orion_%d.png", temp_dir(), (int)getpid());
   int w = 99, h = 99;
-  uint8_t *px = load_image("/tmp/this_file_does_not_exist_orion.png", &w, &h);
+  uint8_t *px = load_image(path, &w, &h);
   ASSERT_NULL(px);
   ASSERT_EQUAL(w, 0);
   ASSERT_EQUAL(h, 0);
@@ -110,8 +124,8 @@ void test_save_and_reload(void) {
     0xFF, 0xFF, 0xFF, 0xFF,   // white
   };
 
-  char path[256];
-  snprintf(path, sizeof(path), "/tmp/orion_roundtrip_%d.png", (int)getpid());
+  char path[512];
+  snprintf(path, sizeof(path), "%s/orion_roundtrip_%d.png", temp_dir(), (int)getpid());
 
   bool ok = save_image_png(path, src, 2, 2);
   ASSERT_TRUE(ok);
