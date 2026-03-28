@@ -17,6 +17,17 @@ typedef struct {
   window_t      *edit_win;   // filename text edit
 } picker_state_t;
 
+static bool is_png(const char *path) {
+  if (!path) return false;
+  size_t n = strlen(path);
+  if (n < 5) return false;
+  const char *ext = path + n - 4;
+  return (ext[0]=='.' &&
+          (ext[1]=='p'||ext[1]=='P') &&
+          (ext[2]=='n'||ext[2]=='N') &&
+          (ext[3]=='g'||ext[3]=='G'));
+}
+
 static result_t picker_proc(window_t *win, uint32_t msg,
                              uint32_t wparam, void *lparam) {
   picker_state_t *ps = (picker_state_t *)win->userdata;

@@ -113,7 +113,7 @@ bool canvas_draw_text_stb(canvas_doc_t *doc, int cx, int cy,
         for (int col = 0; col < bmp_w; col++) {
           int px = dst_x0 + col;
           int py = dst_y0 + row;
-          if (!canvas_in_bounds(px, py)) continue;
+          if (!canvas_in_bounds(doc, px, py)) continue;
 
           uint8_t alpha = bmp[row * bmp_w + col];
           if (!opts->antialias) {

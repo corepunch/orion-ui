@@ -1,10 +1,8 @@
 // Undo/redo history for canvas documents.
-// Each history entry is a heap-allocated full pixel snapshot (~250 KB).
+// Each history entry is a heap-allocated full pixel snapshot.
 // Up to UNDO_MAX entries are kept per stack; the oldest is dropped when full.
 
 #include "imageeditor.h"
-
-static size_t kSnapSize = CANVAS_W * CANVAS_H * 4;
 
 // Free all entries on one stack and reset its count to zero.
 static void clear_stack(uint8_t **states, int *count) {
@@ -17,8 +15,9 @@ static void clear_stack(uint8_t **states, int *count) {
 
 // Allocate and return a snapshot of doc->pixels, or NULL on OOM.
 static uint8_t *make_snapshot(const canvas_doc_t *doc) {
-  uint8_t *snap = malloc(kSnapSize);
-  if (snap) memcpy(snap, doc->pixels, kSnapSize);
+  size_t sz = (size_t)doc->canvas_w * doc->canvas_h * 4;
+  uint8_t *snap = malloc(sz);
+  if (snap) memcpy(snap, doc->pixels, sz);
   return snap;
 }
 
@@ -60,7 +59,7 @@ bool doc_undo(canvas_doc_t *doc) {
   stack_push(doc->redo_states, &doc->redo_count, current);
 
   doc->undo_count--;
-  memcpy(doc->pixels, doc->undo_states[doc->undo_count], kSnapSize);
+  memcpy(doc->pixels, doc->undo_states[doc->undo_count], (size_t)doc->canvas_w * doc->canvas_h * 4);
   free(doc->undo_states[doc->undo_count]);
   doc->undo_states[doc->undo_count] = NULL;
 
@@ -80,7 +79,7 @@ bool doc_redo(canvas_doc_t *doc) {
   stack_push(doc->undo_states, &doc->undo_count, current);
 
   doc->redo_count--;
-  memcpy(doc->pixels, doc->redo_states[doc->redo_count], kSnapSize);
+  memcpy(doc->pixels, doc->redo_states[doc->redo_count], (size_t)doc->canvas_w * doc->canvas_h * 4);
   free(doc->redo_states[doc->redo_count]);
   doc->redo_states[doc->redo_count] = NULL;
 
