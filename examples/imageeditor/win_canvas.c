@@ -307,6 +307,10 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
     case kWindowMessageWheel: {
       if (!state) return false;
+      // Never scroll while a drawing stroke is in progress – changing pan
+      // mid-stroke would invalidate doc->last (stored in pre-pan pixel coords)
+      // and produce a visible position jump on the next MouseMove segment.
+      if (doc && doc->drawing) return true;
       int canvas_w  = CANVAS_W * state->scale;
       int canvas_h  = CANVAS_H * state->scale;
       int max_pan_x = MAX(0, canvas_w - win->frame.w);
@@ -338,6 +342,10 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         return canvas_forward_to_scrollbar(state->vscroll, msg, wparam);
 
       if (!doc || !g_app) return true;
+
+      // Clear any stale panning state – if the user switched away from Hand
+      // while holding the button, panning must not bleed into MouseMove.
+      if (g_app->current_tool != ID_TOOL_HAND) state->panning = false;
 
       // Hand tool: begin pan drag in screen space
       if (g_app->current_tool == ID_TOOL_HAND) {
