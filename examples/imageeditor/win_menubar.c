@@ -25,6 +25,8 @@ static const menu_item_t kEditItems[] = {
   {"Clear Selection", ID_EDIT_CLEAR_SEL},
   {"Select All", ID_EDIT_SELECT_ALL},
   {"Deselect", ID_EDIT_DESELECT},
+  {NULL, 0},
+  {"Crop to Selection", ID_EDIT_CROP},
 };
 
 static const menu_item_t kViewItems[] = {
@@ -171,6 +173,15 @@ static void handle_menu_command(uint16_t id) {
     case ID_EDIT_DESELECT:
       if (doc) {
         canvas_deselect(doc);
+        invalidate_window(doc->canvas_win);
+      }
+      break;
+
+    case ID_EDIT_CROP:
+      if (doc && doc->sel_active) {
+        doc_push_undo(doc);
+        canvas_crop_to_selection(doc);
+        doc_update_title(doc);
         invalidate_window(doc->canvas_win);
       }
       break;
