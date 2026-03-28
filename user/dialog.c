@@ -40,6 +40,19 @@ uint32_t show_dialog(char const *title,
     repost_messages();
   }
   if (parent) enable_window(parent, true);
+  // Force a clean stencil rebuild + full repaint to clear the area the dialog
+  // occupied.  destroy_window's recursive child teardown re-queues
+  // kWindowMessageRefreshStencil *after* any already-pending paint messages
+  // (a dedup side-effect), so the repaint inside the loop above may paint
+  // against a stale stencil, leaving a ghost.  Posting a fresh RefreshStencil
+  // here, after all dialog windows are gone, guarantees correct ordering.
+  if (running) {
+    post_message((window_t*)1, kWindowMessageRefreshStencil, 0, NULL);
+    for (window_t *w = windows; w; w = w->next) {
+      if (w->visible) invalidate_window(w);
+    }
+    repost_messages();
+  }
   return result;
 }
 
