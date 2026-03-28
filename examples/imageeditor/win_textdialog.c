@@ -108,7 +108,7 @@ static void paint_td(window_t *win, const td_state_t *st) {
   int sw_x = TD_LBL_X + 6 * 6 + 2; // after "Color:" text
   fill_rect((int)COLOR_DARK_EDGE, sw_x - 1, TD_COLOR_Y - 1,
             TD_SWATCH_W + 2, TD_SWATCH_H + 2);
-  fill_rect((int)rgba_to_col(opts->color), sw_x, TD_COLOR_Y,
+  fill_rect((int)opts->color, sw_x, TD_COLOR_Y,
             TD_SWATCH_W, TD_SWATCH_H);
 
   (void)win;
@@ -193,7 +193,7 @@ static result_t td_proc(window_t *win, uint32_t msg,
 
       if (src->id == TD_ID_COLOR) {
         // Open color picker to change text color
-        rgba_t new_col = st->opts->color;
+        uint32_t new_col = st->opts->color;
         if (show_color_picker(win, st->opts->color, &new_col)) {
           st->opts->color = new_col;
           invalidate_window(win);

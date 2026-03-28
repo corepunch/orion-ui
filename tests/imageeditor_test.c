@@ -19,15 +19,12 @@
 #define CANVAS_W 320
 #define CANVAS_H 200
 
-typedef struct { uint8_t r, g, b, a; } rgba_t;
-
-static bool rgba_eq(rgba_t a, rgba_t b) {
-  return a.r==b.r && a.g==b.g && a.b==b.b && a.a==b.a;
-}
-
-static uint32_t rgba_to_col(rgba_t c) {
-  return ((uint32_t)c.a<<24)|((uint32_t)c.b<<16)|((uint32_t)c.g<<8)|(uint32_t)c.r;
-}
+#define MAKE_COLOR(r,g,b,a) \
+  (((uint32_t)(uint8_t)(a)<<24)|((uint32_t)(uint8_t)(b)<<16)|((uint32_t)(uint8_t)(g)<<8)|(uint32_t)(uint8_t)(r))
+#define COLOR_R(c) ((uint8_t)((c) & 0xFF))
+#define COLOR_G(c) ((uint8_t)(((c) >> 8) & 0xFF))
+#define COLOR_B(c) ((uint8_t)(((c) >> 16) & 0xFF))
+#define COLOR_A(c) ((uint8_t)(((c) >> 24) & 0xFF))
 
 static bool canvas_in_bounds(int x, int y) {
   return x>=0 && x<CANVAS_W && y>=0 && y<CANVAS_H;
@@ -52,18 +49,18 @@ static bool canvas_in_selection(const test_canvas_t *s, int x, int y) {
          y >= y0 && y <= y1;
 }
 
-static void canvas_set_pixel(test_canvas_t *s, int x, int y, rgba_t c) {
+static void canvas_set_pixel(test_canvas_t *s, int x, int y, uint32_t c) {
   if (!canvas_in_bounds(x,y)) return;
   if (!canvas_in_selection(s, x, y)) return;
   uint8_t *p = s->pixels + ((size_t)y*CANVAS_W+x)*4;
-  p[0]=c.r; p[1]=c.g; p[2]=c.b; p[3]=c.a;
+  p[0]=COLOR_R(c); p[1]=COLOR_G(c); p[2]=COLOR_B(c); p[3]=COLOR_A(c);
   s->canvas_dirty = true;
 }
 
-static rgba_t canvas_get_pixel(const test_canvas_t *s, int x, int y) {
-  if (!canvas_in_bounds(x,y)) return (rgba_t){0,0,0,0};
+static uint32_t canvas_get_pixel(const test_canvas_t *s, int x, int y) {
+  if (!canvas_in_bounds(x,y)) return MAKE_COLOR(0,0,0,0);
   const uint8_t *p = s->pixels + ((size_t)y*CANVAS_W+x)*4;
-  return (rgba_t){p[0],p[1],p[2],p[3]};
+  return MAKE_COLOR(p[0],p[1],p[2],p[3]);
 }
 
 static void canvas_clear(test_canvas_t *s) {
@@ -71,14 +68,14 @@ static void canvas_clear(test_canvas_t *s) {
   s->canvas_dirty = true;
 }
 
-static void canvas_draw_circle(test_canvas_t *s, int cx, int cy, int r, rgba_t c) {
+static void canvas_draw_circle(test_canvas_t *s, int cx, int cy, int r, uint32_t c) {
   for (int dy=-r; dy<=r; dy++)
     for (int dx=-r; dx<=r; dx++)
       if (dx*dx+dy*dy<=r*r) canvas_set_pixel(s,cx+dx,cy+dy,c);
 }
 
 static void canvas_draw_line(test_canvas_t *s,
-                             int x0,int y0,int x1,int y1,rgba_t c,int r) {
+                             int x0,int y0,int x1,int y1,uint32_t c,int r) {
   int dx=abs(x1-x0), sx=x0<x1?1:-1;
   int dy=-abs(y1-y0), sy=y0<y1?1:-1;
   int err=dx+dy;
@@ -92,10 +89,10 @@ static void canvas_draw_line(test_canvas_t *s,
   }
 }
 
-static void canvas_flood_fill(test_canvas_t *s, int sx, int sy, rgba_t fill) {
+static void canvas_flood_fill(test_canvas_t *s, int sx, int sy, uint32_t fill) {
   if (!canvas_in_selection(s, sx, sy)) return;
-  rgba_t target = canvas_get_pixel(s,sx,sy);
-  if (rgba_eq(target,fill)) return;
+  uint32_t target = canvas_get_pixel(s,sx,sy);
+  if (target == fill) return;
   int total = CANVAS_W*CANVAS_H;
   int *stk_x=malloc(sizeof(int)*total), *stk_y=malloc(sizeof(int)*total);
   bool *vis=calloc(total,sizeof(bool));
@@ -108,7 +105,7 @@ static void canvas_flood_fill(test_canvas_t *s, int sx, int sy, rgba_t fill) {
     if (!canvas_in_selection(s, x, y)) continue;
     int idx=y*CANVAS_W+x;
     if (vis[idx]) continue;
-    if (!rgba_eq(canvas_get_pixel(s,x,y),target)) continue;
+    if (canvas_get_pixel(s,x,y) != target) continue;
     vis[idx]=true; canvas_set_pixel(s,x,y,fill);
     for (int d=0;d<4&&top<total;d++){stk_x[top]=x+ddx[d];stk_y[top]=y+ddy[d];top++;}
   }
@@ -205,41 +202,41 @@ static void tdoc_free(test_doc_t *d) {
 // Tests
 // ============================================================
 
-void test_rgba_eq(void) {
-  TEST("rgba_eq – matching colors");
-  rgba_t a = {255,0,128,255};
-  rgba_t b = {255,0,128,255};
-  ASSERT_TRUE(rgba_eq(a,b));
+void test_color_eq(void) {
+  TEST("MAKE_COLOR – matching colors are equal");
+  uint32_t a = MAKE_COLOR(255,0,128,255);
+  uint32_t b = MAKE_COLOR(255,0,128,255);
+  ASSERT_TRUE(a == b);
   PASS();
 }
 
 void test_rgba_neq(void) {
-  TEST("rgba_eq – differing colors");
-  rgba_t a = {255,0,0,255};
-  rgba_t b = {0,255,0,255};
-  ASSERT_FALSE(rgba_eq(a,b));
+  TEST("MAKE_COLOR – differing colors are not equal");
+  uint32_t a = MAKE_COLOR(255,0,0,255);
+  uint32_t b = MAKE_COLOR(0,255,0,255);
+  ASSERT_FALSE(a == b);
   PASS();
 }
 
 void test_rgba_to_col_white(void) {
-  TEST("rgba_to_col – white = 0xFFFFFFFF");
-  rgba_t w = {255,255,255,255};
-  ASSERT_EQUAL(rgba_to_col(w), 0xFFFFFFFFu);
+  TEST("MAKE_COLOR – white = 0xFFFFFFFF");
+  uint32_t w = MAKE_COLOR(255,255,255,255);
+  ASSERT_EQUAL(w, 0xFFFFFFFFu);
   PASS();
 }
 
 void test_rgba_to_col_black(void) {
-  TEST("rgba_to_col – black = 0xFF000000");
-  rgba_t b = {0,0,0,255};
-  ASSERT_EQUAL(rgba_to_col(b), 0xFF000000u);
+  TEST("MAKE_COLOR – black = 0xFF000000");
+  uint32_t b = MAKE_COLOR(0,0,0,255);
+  ASSERT_EQUAL(b, 0xFF000000u);
   PASS();
 }
 
 void test_rgba_to_col_red(void) {
-  TEST("rgba_to_col – red: R in LSB, A in MSB");
-  rgba_t r = {255,0,0,255};
+  TEST("MAKE_COLOR – red: R in LSB, A in MSB");
+  uint32_t r = MAKE_COLOR(255,0,0,255);
   // Expected: AA=0xFF, BB=0x00, GG=0x00, RR=0xFF → 0xFF0000FF
-  ASSERT_EQUAL(rgba_to_col(r), 0xFF0000FFu);
+  ASSERT_EQUAL(r, 0xFF0000FFu);
   PASS();
 }
 
@@ -258,14 +255,14 @@ void test_canvas_clear(void) {
   TEST("canvas_clear – all pixels become white");
   test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
   canvas_clear(c);
-  rgba_t p = canvas_get_pixel(c, 0, 0);
-  ASSERT_EQUAL(p.r, 255);
-  ASSERT_EQUAL(p.g, 255);
-  ASSERT_EQUAL(p.b, 255);
-  ASSERT_EQUAL(p.a, 255);
+  uint32_t p = canvas_get_pixel(c, 0, 0);
+  ASSERT_EQUAL(COLOR_R(p), 255);
+  ASSERT_EQUAL(COLOR_G(p), 255);
+  ASSERT_EQUAL(COLOR_B(p), 255);
+  ASSERT_EQUAL(COLOR_A(p), 255);
   // Also check a pixel in the interior
-  rgba_t q = canvas_get_pixel(c, 160, 100);
-  ASSERT_TRUE(rgba_eq(p, q));
+  uint32_t q = canvas_get_pixel(c, 160, 100);
+  ASSERT_TRUE(p == q);
   ASSERT_TRUE(c->canvas_dirty);
   free(c);
   PASS();
@@ -275,13 +272,13 @@ void test_set_get_pixel(void) {
   TEST("canvas_set_pixel / canvas_get_pixel – round-trip");
   test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
   canvas_clear(c);
-  rgba_t col = {10, 20, 30, 255};
+  uint32_t col = MAKE_COLOR(10, 20, 30, 255);
   canvas_set_pixel(c, 5, 7, col);
-  rgba_t got = canvas_get_pixel(c, 5, 7);
-  ASSERT_TRUE(rgba_eq(col, got));
+  uint32_t got = canvas_get_pixel(c, 5, 7);
+  ASSERT_TRUE(col == got);
   // Neighbouring pixel must be unchanged (white)
-  rgba_t nbr = canvas_get_pixel(c, 6, 7);
-  ASSERT_EQUAL(nbr.r, 255);
+  uint32_t nbr = canvas_get_pixel(c, 6, 7);
+  ASSERT_EQUAL(COLOR_R(nbr), 255);
   free(c);
   PASS();
 }
@@ -291,8 +288,8 @@ void test_set_pixel_out_of_bounds(void) {
   test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
   canvas_clear(c);
   c->canvas_dirty = false;
-  canvas_set_pixel(c, -1, 0, (rgba_t){0,0,0,255});
-  canvas_set_pixel(c, 0, CANVAS_H, (rgba_t){0,0,0,255});
+  canvas_set_pixel(c, -1, 0, MAKE_COLOR(0,0,0,255));
+  canvas_set_pixel(c, 0, CANVAS_H, MAKE_COLOR(0,0,0,255));
   // dirty flag must not have changed
   ASSERT_FALSE(c->canvas_dirty);
   free(c);
@@ -303,14 +300,14 @@ void test_canvas_draw_circle(void) {
   TEST("canvas_draw_circle – centre pixel is coloured");
   test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
   canvas_clear(c);
-  rgba_t red = {255,0,0,255};
+  uint32_t red = MAKE_COLOR(255,0,0,255);
   canvas_draw_circle(c, 50, 50, 3, red);
   // Centre must be red
-  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 50, 50), red));
+  ASSERT_TRUE(canvas_get_pixel(c, 50, 50) == red);
   // Pixel far away must still be white
-  rgba_t far_pix = canvas_get_pixel(c, 100, 100);
-  ASSERT_EQUAL(far_pix.r, 255);
-  ASSERT_EQUAL(far_pix.g, 255);
+  uint32_t far_pix = canvas_get_pixel(c, 100, 100);
+  ASSERT_EQUAL(COLOR_R(far_pix), 255);
+  ASSERT_EQUAL(COLOR_G(far_pix), 255);
   free(c);
   PASS();
 }
@@ -319,11 +316,11 @@ void test_canvas_draw_line_horizontal(void) {
   TEST("canvas_draw_line – horizontal line");
   test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
   canvas_clear(c);
-  rgba_t blue = {0,0,255,255};
+  uint32_t blue = MAKE_COLOR(0,0,255,255);
   canvas_draw_line(c, 10, 10, 20, 10, blue, 0);
   // Every pixel from x=10 to x=20 at y=10 must be blue
   for (int x = 10; x <= 20; x++) {
-    ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, x, 10), blue));
+    ASSERT_TRUE(canvas_get_pixel(c, x, 10) == blue);
   }
   free(c);
   PASS();
@@ -333,9 +330,9 @@ void test_canvas_draw_line_single_point(void) {
   TEST("canvas_draw_line – start==end draws a single pixel");
   test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
   canvas_clear(c);
-  rgba_t grn = {0,255,0,255};
+  uint32_t grn = MAKE_COLOR(0,255,0,255);
   canvas_draw_line(c, 30, 40, 30, 40, grn, 0);
-  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 30, 40), grn));
+  ASSERT_TRUE(canvas_get_pixel(c, 30, 40) == grn);
   free(c);
   PASS();
 }
@@ -346,25 +343,25 @@ void test_flood_fill_simple(void) {
   canvas_clear(c); // all white
 
   // Draw a black border box 10×10 at (20,20)
-  rgba_t blk = {0,0,0,255};
+  uint32_t blk = MAKE_COLOR(0,0,0,255);
   for (int x=20;x<30;x++) { canvas_set_pixel(c,x,20,blk); canvas_set_pixel(c,x,29,blk); }
   for (int y=20;y<30;y++) { canvas_set_pixel(c,20,y,blk); canvas_set_pixel(c,29,y,blk); }
 
   // Fill interior with red
-  rgba_t red = {255,0,0,255};
+  uint32_t red = MAKE_COLOR(255,0,0,255);
   canvas_flood_fill(c, 25, 25, red);
 
   // All interior pixels must be red
-  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 25, 25), red));
-  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 21, 21), red));
+  ASSERT_TRUE(canvas_get_pixel(c, 25, 25) == red);
+  ASSERT_TRUE(canvas_get_pixel(c, 21, 21) == red);
 
   // Border pixels must remain black
-  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 20, 20), blk));
-  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 29, 20), blk));
+  ASSERT_TRUE(canvas_get_pixel(c, 20, 20) == blk);
+  ASSERT_TRUE(canvas_get_pixel(c, 29, 20) == blk);
 
   // Pixel outside the box must remain white
-  rgba_t out = canvas_get_pixel(c, 10, 10);
-  ASSERT_EQUAL(out.r, 255);
+  uint32_t out = canvas_get_pixel(c, 10, 10);
+  ASSERT_EQUAL(COLOR_R(out), 255);
   free(c);
   PASS();
 }
@@ -374,7 +371,7 @@ void test_flood_fill_same_color(void) {
   test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
   canvas_clear(c);
   c->canvas_dirty = false;
-  rgba_t white = {255,255,255,255};
+  uint32_t white = MAKE_COLOR(255,255,255,255);
   canvas_flood_fill(c, 0, 0, white); // fill white on white
   // dirty flag must not be set
   ASSERT_FALSE(c->canvas_dirty);
@@ -415,16 +412,16 @@ void test_draw_thick_line(void) {
   TEST("canvas_draw_line with radius – thick horizontal stroke");
   test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
   canvas_clear(c);
-  rgba_t col = {50, 100, 150, 255};
+  uint32_t col = MAKE_COLOR(50, 100, 150, 255);
   // Draw a thick horizontal line at y=100 with radius 2
   canvas_draw_line(c, 50, 100, 80, 100, col, 2);
   // Pixels within radius of the line must be coloured
-  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 65, 100), col)); // on line
-  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 65, 101), col)); // 1 px below
-  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 65, 102), col)); // 2 px below (r=2)
+  ASSERT_TRUE(canvas_get_pixel(c, 65, 100) == col); // on line
+  ASSERT_TRUE(canvas_get_pixel(c, 65, 101) == col); // 1 px below
+  ASSERT_TRUE(canvas_get_pixel(c, 65, 102) == col); // 2 px below (r=2)
   // Pixel further away must remain white
-  rgba_t far = canvas_get_pixel(c, 65, 105);
-  ASSERT_EQUAL(far.r, 255);
+  uint32_t far = canvas_get_pixel(c, 65, 105);
+  ASSERT_EQUAL(COLOR_R(far), 255);
   free(c);
   PASS();
 }
@@ -436,9 +433,8 @@ void test_undo_basic(void) {
 
   // Save undo state, then paint a red pixel
   tdoc_push_undo(d);
-  rgba_t red = {255, 0, 0, 255};
   uint8_t *p = d->pixels + (10 * CANVAS_W + 20) * 4;
-  p[0]=red.r; p[1]=red.g; p[2]=red.b; p[3]=red.a;
+  p[0]=255; p[1]=0; p[2]=0; p[3]=255;
 
   // Pixel should be red now
   uint8_t *q = d->pixels + (10 * CANVAS_W + 20) * 4;
@@ -569,8 +565,8 @@ void test_multiple_undo_redo(void) {
 // Inline replicas of colorpicker.c HSV helpers (pure C, no SDL)
 // ============================================================
 
-static void t_rgb_to_hsv(rgba_t c, float *h, float *s, float *v) {
-  float r = c.r / 255.0f, g = c.g / 255.0f, b = c.b / 255.0f;
+static void t_rgb_to_hsv(uint32_t c, float *h, float *s, float *v) {
+  float r = COLOR_R(c) / 255.0f, g = COLOR_G(c) / 255.0f, b = COLOR_B(c) / 255.0f;
   float mx = r > g ? (r > b ? r : b) : (g > b ? g : b);
   float mn = r < g ? (r < b ? r : b) : (g < b ? g : b);
   *v = mx;
@@ -586,7 +582,7 @@ static void t_rgb_to_hsv(rgba_t c, float *h, float *s, float *v) {
   *h = hh;
 }
 
-static rgba_t t_hsv_to_rgb(float h, float s, float v, uint8_t a) {
+static uint32_t t_hsv_to_rgb(float h, float s, float v, uint8_t a) {
   float r, g, b;
   if (s < 1e-6f) {
     r = g = b = v;
@@ -606,12 +602,12 @@ static rgba_t t_hsv_to_rgb(float h, float s, float v, uint8_t a) {
       default: r=v; g=p; b=q; break;
     }
   }
-  return (rgba_t){(uint8_t)(r*255.0f),(uint8_t)(g*255.0f),(uint8_t)(b*255.0f),a};
+  return MAKE_COLOR((uint8_t)(r*255.0f),(uint8_t)(g*255.0f),(uint8_t)(b*255.0f),a);
 }
 
 void test_rgb_to_hsv_black(void) {
   TEST("rgb_to_hsv – black gives v=0, s=0");
-  rgba_t black = {0, 0, 0, 255};
+  uint32_t black = MAKE_COLOR(0, 0, 0, 255);
   float h, s, v;
   t_rgb_to_hsv(black, &h, &s, &v);
   ASSERT_EQUAL((int)(v * 100 + 0.5f), 0);
@@ -621,7 +617,7 @@ void test_rgb_to_hsv_black(void) {
 
 void test_rgb_to_hsv_white(void) {
   TEST("rgb_to_hsv – white gives v=1, s=0");
-  rgba_t white = {255, 255, 255, 255};
+  uint32_t white = MAKE_COLOR(255, 255, 255, 255);
   float h, s, v;
   t_rgb_to_hsv(white, &h, &s, &v);
   ASSERT_EQUAL((int)(v * 100 + 0.5f), 100);
@@ -631,7 +627,7 @@ void test_rgb_to_hsv_white(void) {
 
 void test_rgb_to_hsv_red(void) {
   TEST("rgb_to_hsv – pure red gives h=0, s=1, v=1");
-  rgba_t red = {255, 0, 0, 255};
+  uint32_t red = MAKE_COLOR(255, 0, 0, 255);
   float h, s, v;
   t_rgb_to_hsv(red, &h, &s, &v);
   ASSERT_EQUAL((int)(h * 360 + 0.5f), 0);
@@ -642,27 +638,27 @@ void test_rgb_to_hsv_red(void) {
 
 void test_hsv_to_rgb_round_trip(void) {
   TEST("hsv_to_rgb – RGB→HSV→RGB round-trip within 1 LSB");
-  rgba_t colours[] = {
-    {128, 64, 200, 255}, {0, 200, 100, 255},
-    {255, 128, 0, 255},  {10, 10, 10, 255}
+  uint32_t colours[] = {
+    MAKE_COLOR(128, 64, 200, 255), MAKE_COLOR(0, 200, 100, 255),
+    MAKE_COLOR(255, 128, 0, 255),  MAKE_COLOR(10, 10, 10, 255)
   };
   for (int i = 0; i < 4; i++) {
-    rgba_t c = colours[i];
+    uint32_t c = colours[i];
     float h, s, v;
     t_rgb_to_hsv(c, &h, &s, &v);
-    rgba_t back = t_hsv_to_rgb(h, s, v, c.a);
-    ASSERT_TRUE(abs((int)back.r - (int)c.r) <= 1);
-    ASSERT_TRUE(abs((int)back.g - (int)c.g) <= 1);
-    ASSERT_TRUE(abs((int)back.b - (int)c.b) <= 1);
+    uint32_t back = t_hsv_to_rgb(h, s, v, COLOR_A(c));
+    ASSERT_TRUE(abs((int)COLOR_R(back) - (int)COLOR_R(c)) <= 1);
+    ASSERT_TRUE(abs((int)COLOR_G(back) - (int)COLOR_G(c)) <= 1);
+    ASSERT_TRUE(abs((int)COLOR_B(back) - (int)COLOR_B(c)) <= 1);
   }
   PASS();
 }
 
 void test_hsv_to_rgb_gray(void) {
   TEST("hsv_to_rgb – s=0 produces gray (r==g==b)");
-  rgba_t gray = t_hsv_to_rgb(0.0f, 0.0f, 0.5f, 255);
-  ASSERT_EQUAL(gray.r, gray.g);
-  ASSERT_EQUAL(gray.g, gray.b);
+  uint32_t gray = t_hsv_to_rgb(0.0f, 0.0f, 0.5f, 255);
+  ASSERT_EQUAL(COLOR_R(gray), COLOR_G(gray));
+  ASSERT_EQUAL(COLOR_G(gray), COLOR_B(gray));
   PASS();
 }
 
@@ -711,16 +707,16 @@ void test_set_pixel_respects_selection(void) {
   c->sel_active = true;
   c->sel_x0 = 50; c->sel_y0 = 50; c->sel_x1 = 60; c->sel_y1 = 60;
 
-  rgba_t red = {255, 0, 0, 255};
-  rgba_t white = {255, 255, 255, 255};
+  uint32_t red = MAKE_COLOR(255, 0, 0, 255);
+  uint32_t white = MAKE_COLOR(255, 255, 255, 255);
 
   /* Inside selection: should be written */
   canvas_set_pixel(c, 55, 55, red);
-  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 55, 55), red));
+  ASSERT_TRUE(canvas_get_pixel(c, 55, 55) == red);
 
   /* Outside selection: must remain white */
   canvas_set_pixel(c, 40, 40, red);
-  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 40, 40), white));
+  ASSERT_TRUE(canvas_get_pixel(c, 40, 40) == white);
 
   free(c);
   PASS();
@@ -735,15 +731,15 @@ void test_flood_fill_respects_selection(void) {
   c->sel_active = true;
   c->sel_x0 = 0; c->sel_y0 = 0; c->sel_x1 = 159; c->sel_y1 = CANVAS_H - 1;
 
-  rgba_t blue = {0, 0, 255, 255};
-  rgba_t white = {255, 255, 255, 255};
+  uint32_t blue = MAKE_COLOR(0, 0, 255, 255);
+  uint32_t white = MAKE_COLOR(255, 255, 255, 255);
   canvas_flood_fill(c, 0, 0, blue);
 
   /* Pixel inside selection must be filled */
-  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 80, 100), blue));
+  ASSERT_TRUE(canvas_get_pixel(c, 80, 100) == blue);
 
   /* Pixel outside selection (right half) must remain white */
-  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 200, 100), white));
+  ASSERT_TRUE(canvas_get_pixel(c, 200, 100) == white);
 
   free(c);
   PASS();
@@ -758,7 +754,7 @@ void test_flood_fill_outside_selection_noop(void) {
   c->sel_active = true;
   c->sel_x0 = 50; c->sel_y0 = 50; c->sel_x1 = 100; c->sel_y1 = 100;
 
-  rgba_t blue = {0, 0, 255, 255};
+  uint32_t blue = MAKE_COLOR(0, 0, 255, 255);
   /* Start outside the selection – should do nothing */
   canvas_flood_fill(c, 10, 10, blue);
   ASSERT_FALSE(c->canvas_dirty);
@@ -793,16 +789,16 @@ void test_set_pixel_respects_reversed_selection(void) {
   c->sel_active = true;
   c->sel_x0 = 60; c->sel_y0 = 60; c->sel_x1 = 50; c->sel_y1 = 50;
 
-  rgba_t red = {255, 0, 0, 255};
-  rgba_t white = {255, 255, 255, 255};
+  uint32_t red = MAKE_COLOR(255, 0, 0, 255);
+  uint32_t white = MAKE_COLOR(255, 255, 255, 255);
 
   /* Inside the normalised [50,60]×[50,60] region */
   canvas_set_pixel(c, 55, 55, red);
-  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 55, 55), red));
+  ASSERT_TRUE(canvas_get_pixel(c, 55, 55) == red);
 
   /* Outside — must remain white */
   canvas_set_pixel(c, 40, 40, red);
-  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 40, 40), white));
+  ASSERT_TRUE(canvas_get_pixel(c, 40, 40) == white);
 
   free(c);
   PASS();
@@ -992,10 +988,10 @@ void test_snap_scale_midpoint(void) {
 // ============================================================
 
 // Direct pixel write (bypasses selection mask)
-static void t_set_pixel_direct(test_canvas_t *s, int x, int y, rgba_t c) {
+static void t_set_pixel_direct(test_canvas_t *s, int x, int y, uint32_t c) {
   if (!canvas_in_bounds(x, y)) return;
   uint8_t *p = s->pixels + ((size_t)y * CANVAS_W + x) * 4;
-  p[0]=c.r; p[1]=c.g; p[2]=c.b; p[3]=c.a;
+  p[0]=COLOR_R(c); p[1]=COLOR_G(c); p[2]=COLOR_B(c); p[3]=COLOR_A(c);
   s->canvas_dirty = true;
 }
 
@@ -1023,15 +1019,15 @@ static void t_copy_selection(const test_canvas_t *s,
   *out_h = y1 - y0 + 1;
   for (int row = 0; row < *out_h; row++) {
     for (int col = 0; col < *out_w; col++) {
-      rgba_t c = canvas_get_pixel(s, x0 + col, y0 + row);
+      uint32_t c = canvas_get_pixel(s, x0 + col, y0 + row);
       uint8_t *p = out + ((size_t)row * (*out_w) + col) * 4;
-      p[0]=c.r; p[1]=c.g; p[2]=c.b; p[3]=c.a;
+      p[0]=COLOR_R(c); p[1]=COLOR_G(c); p[2]=COLOR_B(c); p[3]=COLOR_A(c);
     }
   }
 }
 
 // Fill the selected region with fill_color (respects selection mask).
-static void t_clear_selection(test_canvas_t *s, rgba_t fill) {
+static void t_clear_selection(test_canvas_t *s, uint32_t fill) {
   int x0, y0, x1, y1;
   if (!t_selection_bounds(s, &x0, &y0, &x1, &y1)) return;
   for (int y = y0; y <= y1; y++)
@@ -1046,8 +1042,7 @@ static void t_paste_pixels(test_canvas_t *s,
   for (int row = 0; row < src_h; row++) {
     for (int col = 0; col < src_w; col++) {
       const uint8_t *p = src + ((size_t)row * src_w + col) * 4;
-      rgba_t c = {p[0], p[1], p[2], p[3]};
-      t_set_pixel_direct(s, dx + col, dy + row, c);
+      t_set_pixel_direct(s, dx + col, dy + row, MAKE_COLOR(p[0], p[1], p[2], p[3]));
     }
   }
 }
@@ -1061,7 +1056,7 @@ void test_copy_selection_content(void) {
   test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
   canvas_clear(c);  /* fill with white */
   /* Paint a red 3×3 block at (10,10)..(12,12) */
-  rgba_t red = {255, 0, 0, 255};
+  uint32_t red = MAKE_COLOR(255, 0, 0, 255);
   for (int y = 10; y <= 12; y++)
     for (int x = 10; x <= 12; x++)
       t_set_pixel_direct(c, x, y, red);
@@ -1076,8 +1071,8 @@ void test_copy_selection_content(void) {
   ASSERT_EQUAL(h, 3);
   /* Every pixel in the copied buffer must be red */
   for (int i = 0; i < 9; i++) {
-    rgba_t got = {buf[i*4+0], buf[i*4+1], buf[i*4+2], buf[i*4+3]};
-    ASSERT_TRUE(rgba_eq(got, red));
+    uint32_t got = MAKE_COLOR(buf[i*4+0], buf[i*4+1], buf[i*4+2], buf[i*4+3]);
+    ASSERT_TRUE(got == red);
   }
   free(buf);
   free(c);
@@ -1088,9 +1083,9 @@ void test_clear_selection_fills_bg(void) {
   TEST("canvas_clear_selection – fills selected region with background color");
   test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
   canvas_clear(c);  /* white */
-  rgba_t red  = {255, 0, 0, 255};
-  rgba_t blue = {0, 0, 255, 255};
-  rgba_t white = {255, 255, 255, 255};
+  uint32_t red  = MAKE_COLOR(255, 0, 0, 255);
+  uint32_t blue = MAKE_COLOR(0, 0, 255, 255);
+  uint32_t white = MAKE_COLOR(255, 255, 255, 255);
   /* Paint a red block at (5,5)..(9,9) */
   for (int y = 5; y <= 9; y++)
     for (int x = 5; x <= 9; x++)
@@ -1100,10 +1095,10 @@ void test_clear_selection_fills_bg(void) {
   c->sel_x0 = 5; c->sel_y0 = 5; c->sel_x1 = 9; c->sel_y1 = 9;
   t_clear_selection(c, blue);
   /* Inside selection must now be blue */
-  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 7, 7), blue));
+  ASSERT_TRUE(canvas_get_pixel(c, 7, 7) == blue);
   /* Pixel just outside selection must remain white */
-  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 4, 7), white));
-  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 10, 7), white));
+  ASSERT_TRUE(canvas_get_pixel(c, 4, 7) == white);
+  ASSERT_TRUE(canvas_get_pixel(c, 10, 7) == white);
   free(c);
   PASS();
 }
@@ -1112,20 +1107,20 @@ void test_paste_pixels_at_offset(void) {
   TEST("t_paste_pixels – places clipboard pixels at destination offset");
   test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
   canvas_clear(c);  /* white */
-  rgba_t green = {0, 255, 0, 255};
-  rgba_t white = {255, 255, 255, 255};
+  uint32_t green = MAKE_COLOR(0, 255, 0, 255);
+  uint32_t white = MAKE_COLOR(255, 255, 255, 255);
   /* Clipboard: 2×2 green block */
   uint8_t src[16];
   for (int i = 0; i < 4; i++) {
-    src[i*4+0]=green.r; src[i*4+1]=green.g;
-    src[i*4+2]=green.b; src[i*4+3]=green.a;
+    src[i*4+0]=COLOR_R(green); src[i*4+1]=COLOR_G(green);
+    src[i*4+2]=COLOR_B(green); src[i*4+3]=COLOR_A(green);
   }
   t_paste_pixels(c, src, 2, 2, 100, 50);
-  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 100, 50), green));
-  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 101, 51), green));
+  ASSERT_TRUE(canvas_get_pixel(c, 100, 50) == green);
+  ASSERT_TRUE(canvas_get_pixel(c, 101, 51) == green);
   /* Adjacent pixels outside paste region must be white */
-  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 99, 50), white));
-  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 102, 50), white));
+  ASSERT_TRUE(canvas_get_pixel(c, 99, 50) == white);
+  ASSERT_TRUE(canvas_get_pixel(c, 102, 50) == white);
   free(c);
   PASS();
 }
@@ -1134,8 +1129,8 @@ void test_cut_selection_clears_and_copies(void) {
   TEST("canvas_cut_selection – copies pixels to buffer and clears region");
   test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
   canvas_clear(c);
-  rgba_t red  = {255, 0, 0, 255};
-  rgba_t white = {255, 255, 255, 255};
+  uint32_t red  = MAKE_COLOR(255, 0, 0, 255);
+  uint32_t white = MAKE_COLOR(255, 255, 255, 255);
   /* Paint red at (20,20)..(22,22) */
   for (int y = 20; y <= 22; y++)
     for (int x = 20; x <= 22; x++)
@@ -1150,11 +1145,11 @@ void test_cut_selection_clears_and_copies(void) {
   /* Buffer must contain the original red pixels */
   ASSERT_EQUAL(w, 3); ASSERT_EQUAL(h, 3);
   for (int i = 0; i < 9; i++) {
-    rgba_t got = {buf[i*4+0], buf[i*4+1], buf[i*4+2], buf[i*4+3]};
-    ASSERT_TRUE(rgba_eq(got, red));
+    uint32_t got = MAKE_COLOR(buf[i*4+0], buf[i*4+1], buf[i*4+2], buf[i*4+3]);
+    ASSERT_TRUE(got == red);
   }
   /* Canvas must now be white in that region */
-  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 21, 21), white));
+  ASSERT_TRUE(canvas_get_pixel(c, 21, 21) == white);
   free(buf);
   free(c);
   PASS();
@@ -1164,8 +1159,8 @@ void test_move_selection(void) {
   TEST("canvas_begin/commit_move – moves selected pixels to new position");
   test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
   canvas_clear(c);  /* white */
-  rgba_t red   = {255, 0, 0, 255};
-  rgba_t white = {255, 255, 255, 255};
+  uint32_t red   = MAKE_COLOR(255, 0, 0, 255);
+  uint32_t white = MAKE_COLOR(255, 255, 255, 255);
   /* Place a red 3×3 block at (10,10) */
   for (int y = 10; y <= 12; y++)
     for (int x = 10; x <= 12; x++)
@@ -1184,9 +1179,9 @@ void test_move_selection(void) {
   t_paste_pixels(c, fpix, fw, fh, 50, 50);
   free(fpix);
   /* Original location must be white */
-  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 11, 11), white));
+  ASSERT_TRUE(canvas_get_pixel(c, 11, 11) == white);
   /* New location must be red */
-  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, 51, 51), red));
+  ASSERT_TRUE(canvas_get_pixel(c, 51, 51) == red);
   free(c);
   PASS();
 }
@@ -1195,17 +1190,17 @@ void test_paste_respects_oob(void) {
   TEST("t_paste_pixels – clips pixels that fall outside canvas bounds");
   test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
   canvas_clear(c);
-  rgba_t red = {255, 0, 0, 255};
+  uint32_t red = MAKE_COLOR(255, 0, 0, 255);
   /* 4×4 clipboard */
   uint8_t src[64];
   for (int i = 0; i < 16; i++) {
-    src[i*4+0]=red.r; src[i*4+1]=red.g; src[i*4+2]=red.b; src[i*4+3]=red.a;
+    src[i*4+0]=COLOR_R(red); src[i*4+1]=COLOR_G(red); src[i*4+2]=COLOR_B(red); src[i*4+3]=COLOR_A(red);
   }
   /* Paste partially off the right/bottom edge */
   t_paste_pixels(c, src, 4, 4, CANVAS_W - 2, CANVAS_H - 2);
   /* In-bounds pixels must be red */
-  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, CANVAS_W-2, CANVAS_H-2), red));
-  ASSERT_TRUE(rgba_eq(canvas_get_pixel(c, CANVAS_W-1, CANVAS_H-1), red));
+  ASSERT_TRUE(canvas_get_pixel(c, CANVAS_W-2, CANVAS_H-2) == red);
+  ASSERT_TRUE(canvas_get_pixel(c, CANVAS_W-1, CANVAS_H-1) == red);
   /* No crash – test passes if we reach this point */
   free(c);
   PASS();
@@ -1230,6 +1225,7 @@ void test_selection_bounds_clamped(void) {
 int main(int argc, char *argv[]) {
   (void)argc; (void)argv;
   TEST_START("Image Editor Logic");
+  test_color_eq();
   test_rgba_neq();
   test_rgba_to_col_white();
   test_rgba_to_col_black();

@@ -209,7 +209,7 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       if (g_app) {
         #define DrawSwatch(swatch_col, x, color) \
           fill_rect(swatch_col, x+1,  sy - 1, TB_SPACING-2, PALETTE_SWATCH_H); \
-          fill_rect(rgba_to_col(color), x+2,  sy, TB_SPACING-4, PALETTE_SWATCH_H-2); 
+          fill_rect(color, x+2,  sy, TB_SPACING-4, PALETTE_SWATCH_H-2); 
 
         DrawSwatch(COLOR_DARK_EDGE, 0, g_app->fg_color);
         DrawSwatch(COLOR_DARK_EDGE, TB_SPACING, g_app->bg_color);

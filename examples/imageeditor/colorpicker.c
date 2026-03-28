@@ -62,8 +62,8 @@
 // HSV conversion helpers
 // ──────────────────────────────────────────────────────────────────
 
-static void rgb_to_hsv(rgba_t c, float *h, float *s, float *v) {
-  float r = c.r / 255.0f, g = c.g / 255.0f, b = c.b / 255.0f;
+static void rgb_to_hsv(uint32_t c, float *h, float *s, float *v) {
+  float r = COLOR_R(c) / 255.0f, g = COLOR_G(c) / 255.0f, b = COLOR_B(c) / 255.0f;
   float mx = r > g ? (r > b ? r : b) : (g > b ? g : b);
   float mn = r < g ? (r < b ? r : b) : (g < b ? g : b);
   *v = mx;
@@ -79,7 +79,7 @@ static void rgb_to_hsv(rgba_t c, float *h, float *s, float *v) {
   *h = hh;
 }
 
-static rgba_t hsv_to_rgb(float h, float s, float v, uint8_t a) {
+static uint32_t hsv_to_rgb(float h, float s, float v, uint8_t a) {
   float r, g, b;
   if (s < 1e-6f) {
     r = g = b = v;
@@ -99,7 +99,7 @@ static rgba_t hsv_to_rgb(float h, float s, float v, uint8_t a) {
       default: r=v; g=p; b=q; break;
     }
   }
-  return (rgba_t){(uint8_t)(r*255.0f),(uint8_t)(g*255.0f),(uint8_t)(b*255.0f),a};
+  return MAKE_COLOR((uint8_t)(r*255.0f),(uint8_t)(g*255.0f),(uint8_t)(b*255.0f),a);
 }
 
 // ──────────────────────────────────────────────────────────────────
@@ -107,8 +107,8 @@ static rgba_t hsv_to_rgb(float h, float s, float v, uint8_t a) {
 // ──────────────────────────────────────────────────────────────────
 
 typedef struct {
-  rgba_t orig;       // original colour ("Old" preview)
-  rgba_t cur;        // colour being edited ("New" preview)
+  uint32_t orig;       // original colour ("Old" preview)
+  uint32_t cur;        // colour being edited ("New" preview)
   float  h, s, v;   // HSV kept in sync with cur.rgb
   int    dragging;   // slider index being dragged (0-5), or -1
   int    hover_pal;  // palette swatch under cursor, or -1
@@ -116,7 +116,7 @@ typedef struct {
 } cp_state_t;
 
 static void sync_hsv(cp_state_t *st) { rgb_to_hsv(st->cur, &st->h, &st->s, &st->v); }
-static void sync_rgb(cp_state_t *st) { st->cur = hsv_to_rgb(st->h, st->s, st->v, st->cur.a); }
+static void sync_rgb(cp_state_t *st) { st->cur = hsv_to_rgb(st->h, st->s, st->v, COLOR_A(st->cur)); }
 
 // ──────────────────────────────────────────────────────────────────
 // Slider helpers
@@ -128,9 +128,9 @@ static const int   kSliderMax[6]   = {255, 255, 255, 360, 100, 100};
 
 static int slider_int_val(const cp_state_t *st, int idx) {
   switch (idx) {
-    case 0: return st->cur.r;
-    case 1: return st->cur.g;
-    case 2: return st->cur.b;
+    case 0: return COLOR_R(st->cur);
+    case 1: return COLOR_G(st->cur);
+    case 2: return COLOR_B(st->cur);
     case 3: return (int)(st->h * 360.0f + 0.5f);
     case 4: return (int)(st->s * 100.0f + 0.5f);
     case 5: return (int)(st->v * 100.0f + 0.5f);
@@ -140,17 +140,15 @@ static int slider_int_val(const cp_state_t *st, int idx) {
 
 // Colour for a gradient segment at normalised position t ∈ [0,1]
 static uint32_t slider_grad_col(const cp_state_t *st, int idx, float t) {
-  rgba_t c;
   switch (idx) {
-    case 0: c = (rgba_t){(uint8_t)(t*255),0,0,0xFF};            break;
-    case 1: c = (rgba_t){0,(uint8_t)(t*255),0,0xFF};            break;
-    case 2: c = (rgba_t){0,0,(uint8_t)(t*255),0xFF};            break;
-    case 3: c = hsv_to_rgb(t, 1.0f, 1.0f, 0xFF);               break;
-    case 4: c = hsv_to_rgb(st->h, t, 1.0f, 0xFF);              break;
-    case 5: c = hsv_to_rgb(st->h, st->s > 1e-6f ? st->s : 1.0f, t, 0xFF); break;
-    default: c = (rgba_t){0,0,0,0xFF};                          break;
+    case 0: return MAKE_COLOR((uint8_t)(t*255),0,0,0xFF);
+    case 1: return MAKE_COLOR(0,(uint8_t)(t*255),0,0xFF);
+    case 2: return MAKE_COLOR(0,0,(uint8_t)(t*255),0xFF);
+    case 3: return hsv_to_rgb(t, 1.0f, 1.0f, 0xFF);
+    case 4: return hsv_to_rgb(st->h, t, 1.0f, 0xFF);
+    case 5: return hsv_to_rgb(st->h, st->s > 1e-6f ? st->s : 1.0f, t, 0xFF);
+    default: return MAKE_COLOR(0,0,0,0xFF);
   }
-  return rgba_to_col(c);
 }
 
 static void draw_slider(int idx, const cp_state_t *st) {
@@ -209,9 +207,9 @@ static void drag_slider(cp_state_t *st, int idx, int lx) {
   if (raw > CP_TRK_W) raw = CP_TRK_W;
   int val = raw * kSliderMax[idx] / CP_TRK_W;
   switch (idx) {
-    case 0: st->cur.r = (uint8_t)val; sync_hsv(st); break;
-    case 1: st->cur.g = (uint8_t)val; sync_hsv(st); break;
-    case 2: st->cur.b = (uint8_t)val; sync_hsv(st); break;
+    case 0: st->cur = MAKE_COLOR((uint8_t)val, COLOR_G(st->cur), COLOR_B(st->cur), COLOR_A(st->cur)); sync_hsv(st); break;
+    case 1: st->cur = MAKE_COLOR(COLOR_R(st->cur), (uint8_t)val, COLOR_B(st->cur), COLOR_A(st->cur)); sync_hsv(st); break;
+    case 2: st->cur = MAKE_COLOR(COLOR_R(st->cur), COLOR_G(st->cur), (uint8_t)val, COLOR_A(st->cur)); sync_hsv(st); break;
     case 3: st->h = (float)val / 360.0f; sync_rgb(st); break;
     case 4: st->s = (float)val / 100.0f; sync_rgb(st); break;
     case 5: st->v = (float)val / 100.0f; sync_rgb(st); break;
@@ -227,15 +225,15 @@ static void paint_cp(const cp_state_t *st) {
   draw_text_small("New", CP_PREV_X + 2, CP_NEW_LBL_Y, COLOR_TEXT_DISABLED);
   fill_rect((int)COLOR_DARK_EDGE,      CP_PREV_X - 1, CP_NEW_Y - 1,
                                        CP_PREV_W + 2,  CP_NEW_H + 2);
-  fill_rect((int)rgba_to_col(st->cur), CP_PREV_X,     CP_NEW_Y,
-                                       CP_PREV_W,      CP_NEW_H);
+  fill_rect((int)st->cur,  CP_PREV_X,     CP_NEW_Y,
+                           CP_PREV_W,      CP_NEW_H);
 
   // "Old" colour preview
   draw_text_small("Old", CP_PREV_X + 2, CP_OLD_LBL_Y, COLOR_TEXT_DISABLED);
   fill_rect((int)COLOR_DARK_EDGE,       CP_PREV_X - 1, CP_OLD_Y - 1,
                                         CP_PREV_W + 2,  CP_OLD_H + 2);
-  fill_rect((int)rgba_to_col(st->orig), CP_PREV_X,     CP_OLD_Y,
-                                        CP_PREV_W,      CP_OLD_H);
+  fill_rect((int)st->orig, CP_PREV_X,     CP_OLD_Y,
+                           CP_PREV_W,      CP_OLD_H);
 
   // Separator between RGB and HSV groups
   fill_rect((int)COLOR_DARK_EDGE,
@@ -252,7 +250,7 @@ static void paint_cp(const cp_state_t *st) {
     int px = CP_PREV_X + i * CP_PAL_SW;
     bool has = (g_app && i < g_app->num_user_colors);
     fill_rect((int)COLOR_DARK_EDGE, px - 1, CP_PAL_Y - 1, CP_PAL_SW + 1, CP_PAL_SH + 2);
-    fill_rect(has ? (int)rgba_to_col(g_app->user_palette[i]) : (int)COLOR_PANEL_DARK_BG,
+    fill_rect(has ? (int)g_app->user_palette[i] : (int)COLOR_PANEL_DARK_BG,
               px, CP_PAL_Y, CP_PAL_SW - 1, CP_PAL_SH);
     if (has && i == st->hover_pal)
       fill_rect((int)COLOR_FOCUSED, px, CP_PAL_Y, CP_PAL_SW - 1, 1);
@@ -388,7 +386,7 @@ static result_t cp_proc(window_t *win, uint32_t msg,
 // Public API
 // ──────────────────────────────────────────────────────────────────
 
-bool show_color_picker(window_t *parent, rgba_t initial, rgba_t *out) {
+bool show_color_picker(window_t *parent, uint32_t initial, uint32_t *out) {
   cp_state_t st = {0};
   st.orig      = initial;
   st.cur       = initial;

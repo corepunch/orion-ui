@@ -123,16 +123,15 @@ bool canvas_draw_text_stb(canvas_doc_t *doc, int cx, int cy,
           if (alpha == 0) continue;
 
           // Alpha-blend text color over the existing canvas pixel
-          rgba_t bg = canvas_get_pixel(doc, px, py);
-          rgba_t fg = opts->color;
+          uint32_t bg = canvas_get_pixel(doc, px, py);
+          uint32_t fg = opts->color;
           uint8_t inv = (uint8_t)(255 - alpha);
-          rgba_t out = {
-            (uint8_t)((fg.r * alpha + bg.r * inv) / 255),
-            (uint8_t)((fg.g * alpha + bg.g * inv) / 255),
-            (uint8_t)((fg.b * alpha + bg.b * inv) / 255),
+          canvas_set_pixel(doc, px, py, MAKE_COLOR(
+            (uint8_t)((COLOR_R(fg) * alpha + COLOR_R(bg) * inv) / 255),
+            (uint8_t)((COLOR_G(fg) * alpha + COLOR_G(bg) * inv) / 255),
+            (uint8_t)((COLOR_B(fg) * alpha + COLOR_B(bg) * inv) / 255),
             255
-          };
-          canvas_set_pixel(doc, px, py, out);
+          ));
           drew = true;
         }
       }
