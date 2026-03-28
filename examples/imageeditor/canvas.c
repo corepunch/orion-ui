@@ -453,6 +453,40 @@ void canvas_deselect(canvas_doc_t *doc) {
   doc->sel_active = false;
 }
 
+// Crop the canvas to the active selection: copy the selected pixels, fill the
+// entire canvas with white, then stamp the copied pixels at the top-left
+// corner (0,0).  The selection is cleared afterwards.
+void canvas_crop_to_selection(canvas_doc_t *doc) {
+  if (!doc || !doc->sel_active) return;
+  int x0, y0, x1, y1;
+  if (!selection_bounds(doc, &x0, &y0, &x1, &y1)) return;
+  int w = x1 - x0 + 1;
+  int h = y1 - y0 + 1;
+  uint8_t *buf = malloc((size_t)w * h * 4);
+  if (!buf) return;
+  // Copy the selected region into the temporary buffer.
+  for (int row = 0; row < h; row++) {
+    for (int col = 0; col < w; col++) {
+      uint32_t c = canvas_get_pixel(doc, x0 + col, y0 + row);
+      uint8_t *p = buf + ((size_t)row * w + col) * 4;
+      p[0] = COLOR_R(c); p[1] = COLOR_G(c); p[2] = COLOR_B(c); p[3] = COLOR_A(c);
+    }
+  }
+  // Fill the entire canvas with white.
+  canvas_clear(doc);
+  // Stamp the copied region at (0,0), clipping to the canvas dimensions.
+  for (int row = 0; row < h && row < CANVAS_H; row++) {
+    for (int col = 0; col < w && col < CANVAS_W; col++) {
+      const uint8_t *p = buf + ((size_t)row * w + col) * 4;
+      uint32_t c = MAKE_COLOR(p[0], p[1], p[2], p[3]);
+      canvas_set_pixel_direct(doc, col, row, c);
+    }
+  }
+  free(buf);
+  doc->sel_active = false;
+  doc->canvas_dirty = true;
+}
+
 // Extract the current selection into a float buffer and clear that region.
 // Enters "move mode": the caller should track float_pos deltas and call
 // canvas_commit_move() when the drag ends.

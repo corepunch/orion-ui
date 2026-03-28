@@ -1159,6 +1159,140 @@ void test_canvas_draw_line_diagonal(void) {
 }
 
 // ============================================================
+// User Story: Crop canvas to the active selection
+// ============================================================
+
+/* Replicate canvas_crop_to_selection from canvas.c.
+ * Works against test_canvas_t whose sel_active / sel_x0…sel_y1 mirror
+ * the production sel_active / sel_start / sel_end fields. */
+static void t_canvas_crop_to_selection(test_canvas_t *s) {
+  if (!s->sel_active) return;
+  int x0 = s->sel_x0 < s->sel_x1 ? s->sel_x0 : s->sel_x1;
+  int y0 = s->sel_y0 < s->sel_y1 ? s->sel_y0 : s->sel_y1;
+  int x1 = s->sel_x0 > s->sel_x1 ? s->sel_x0 : s->sel_x1;
+  int y1 = s->sel_y0 > s->sel_y1 ? s->sel_y0 : s->sel_y1;
+  if (x0 < 0) x0 = 0;
+  if (y0 < 0) y0 = 0;
+  if (x1 >= CANVAS_W) x1 = CANVAS_W - 1;
+  if (y1 >= CANVAS_H) y1 = CANVAS_H - 1;
+  if (x0 > x1 || y0 > y1) return;
+  int w = x1 - x0 + 1;
+  int h = y1 - y0 + 1;
+  uint8_t *buf = malloc((size_t)w * h * 4);
+  if (!buf) return;
+  /* Copy selected region into temp buffer */
+  for (int row = 0; row < h; row++) {
+    for (int col = 0; col < w; col++) {
+      uint32_t c = canvas_get_pixel(s, x0 + col, y0 + row);
+      uint8_t *p = buf + ((size_t)row * w + col) * 4;
+      p[0] = COLOR_R(c); p[1] = COLOR_G(c); p[2] = COLOR_B(c); p[3] = COLOR_A(c);
+    }
+  }
+  /* Fill entire canvas with white */
+  canvas_clear(s);
+  /* Deactivate selection before stamping so set_pixel bypasses the mask */
+  s->sel_active = false;
+  /* Stamp buffer at (0,0) */
+  for (int row = 0; row < h && row < CANVAS_H; row++) {
+    for (int col = 0; col < w && col < CANVAS_W; col++) {
+      const uint8_t *p = buf + ((size_t)row * w + col) * 4;
+      uint32_t c = MAKE_COLOR(p[0], p[1], p[2], p[3]);
+      canvas_set_pixel(s, col, row, c);
+    }
+  }
+  free(buf);
+  s->canvas_dirty = true;
+}
+
+void test_crop_to_selection_basic(void) {
+  TEST("canvas_crop_to_selection – selected pixels appear at (0,0) after crop");
+  test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
+  canvas_clear(c);
+  /* Paint a distinct colour in a 10×10 block at (50,40) */
+  uint32_t red = MAKE_COLOR(255, 0, 0, 255);
+  for (int dy = 0; dy < 10; dy++)
+    for (int dx = 0; dx < 10; dx++)
+      canvas_set_pixel(c, 50 + dx, 40 + dy, red);
+  /* Select exactly that block */
+  c->sel_active = true;
+  c->sel_x0 = 50; c->sel_y0 = 40;
+  c->sel_x1 = 59; c->sel_y1 = 49;
+  t_canvas_crop_to_selection(c);
+  /* Top-left of canvas must now contain the red pixels */
+  ASSERT_TRUE(canvas_get_pixel(c, 0, 0) == red);
+  ASSERT_TRUE(canvas_get_pixel(c, 9, 9) == red);
+  /* Selection must be cleared */
+  ASSERT_FALSE(c->sel_active);
+  /* Pixels beyond the cropped area must be white */
+  uint32_t beyond = canvas_get_pixel(c, 10, 0);
+  ASSERT_EQUAL(COLOR_R(beyond), 255);
+  ASSERT_EQUAL(COLOR_G(beyond), 255);
+  ASSERT_EQUAL(COLOR_B(beyond), 255);
+  free(c);
+  PASS();
+}
+
+void test_crop_to_selection_no_selection(void) {
+  TEST("canvas_crop_to_selection – no-op when selection is inactive");
+  test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
+  canvas_clear(c);
+  /* Paint a marker pixel */
+  uint32_t blue = MAKE_COLOR(0, 0, 255, 255);
+  canvas_set_pixel(c, 100, 100, blue);
+  c->sel_active = false;
+  t_canvas_crop_to_selection(c);
+  /* Canvas should be unchanged */
+  ASSERT_TRUE(canvas_get_pixel(c, 100, 100) == blue);
+  free(c);
+  PASS();
+}
+
+void test_crop_to_selection_preserves_content(void) {
+  TEST("canvas_crop_to_selection – content outside selection is discarded");
+  test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
+  canvas_clear(c);
+  /* Scatter different colours across the canvas */
+  uint32_t red   = MAKE_COLOR(255, 0, 0, 255);
+  uint32_t green = MAKE_COLOR(0, 255, 0, 255);
+  canvas_set_pixel(c, 20, 20, red);    /* inside selection */
+  canvas_set_pixel(c, 200, 100, green); /* outside selection */
+  /* Select a 30×30 area around (10,10)–(39,39) */
+  c->sel_active = true;
+  c->sel_x0 = 10; c->sel_y0 = 10;
+  c->sel_x1 = 39; c->sel_y1 = 39;
+  t_canvas_crop_to_selection(c);
+  /* The red pixel was at canvas (20,20). The selection top-left is (10,10),
+   * so after crop it moves to offset (20-10, 20-10) = (10,10) in the new canvas. */
+  ASSERT_TRUE(canvas_get_pixel(c, 10, 10) == red);
+  /* The green pixel at (200,100) was outside the selection and must have been
+   * discarded (entire canvas filled white, only the cropped region placed at origin).
+   * Check a point well outside the 30×30 cropped area that must be white. */
+  uint32_t gone = canvas_get_pixel(c, 100, 80);
+  ASSERT_EQUAL(COLOR_R(gone), 255);
+  ASSERT_EQUAL(COLOR_G(gone), 255);
+  free(c);
+  PASS();
+}
+
+void test_crop_to_selection_reversed_drag(void) {
+  TEST("canvas_crop_to_selection – reversed selection (right-to-left drag) is normalised");
+  test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
+  canvas_clear(c);
+  uint32_t col = MAKE_COLOR(128, 64, 192, 255);
+  canvas_set_pixel(c, 30, 30, col);
+  /* Reversed drag: x1 < x0, y1 < y0 */
+  c->sel_active = true;
+  c->sel_x0 = 40; c->sel_y0 = 40;
+  c->sel_x1 = 20; c->sel_y1 = 20;
+  t_canvas_crop_to_selection(c);
+  /* Pixel at (30,30) was 10px from top-left of normalised selection (20,20) */
+  ASSERT_TRUE(canvas_get_pixel(c, 10, 10) == col);
+  ASSERT_FALSE(c->sel_active);
+  free(c);
+  PASS();
+}
+
+// ============================================================
 // Zoom / pan logic tests
 // The following helpers mirror the pure-C pan-clamping and
 // coordinate-mapping logic from win_canvas.c without requiring
@@ -1655,6 +1789,11 @@ int main(int argc, char *argv[]) {
   test_spray_respects_radius();
   test_is_shape_tool();
   test_canvas_draw_line_diagonal();
+
+  test_crop_to_selection_basic();
+  test_crop_to_selection_no_selection();
+  test_crop_to_selection_preserves_content();
+  test_crop_to_selection_reversed_drag();
 
   TEST_END();
 }

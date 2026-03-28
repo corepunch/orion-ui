@@ -93,6 +93,7 @@
 #define ID_EDIT_CLEAR_SEL   15
 #define ID_EDIT_SELECT_ALL  16
 #define ID_EDIT_DESELECT    17
+#define ID_EDIT_CROP        18
 
 #define ID_VIEW_ZOOM_IN   40
 #define ID_VIEW_ZOOM_OUT  41
@@ -275,6 +276,7 @@ void canvas_clear_selection(canvas_doc_t *doc, uint32_t fill);
 void canvas_paste_clipboard(canvas_doc_t *doc);
 void canvas_select_all(canvas_doc_t *doc);
 void canvas_deselect(canvas_doc_t *doc);
+void canvas_crop_to_selection(canvas_doc_t *doc);
 
 // Move-selection helpers (called from win_canvas.c)
 void canvas_begin_move(canvas_doc_t *doc, uint32_t bg);
