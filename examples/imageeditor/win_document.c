@@ -16,12 +16,10 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
       fill_rect(COLOR_PANEL_DARK_BG, 0, 0, win->frame.w, win->frame.h);
       return false;
     case kWindowMessageResize:
-      // Keep canvas child window in sync with the resized document window.
-      if (doc && doc->canvas_win) {
-        doc->canvas_win->frame.w = win->frame.w;
-        doc->canvas_win->frame.h = win->frame.h;
-        send_message(doc->canvas_win, kWindowMessageResize, 0, NULL);
-      }
+      // Keep the canvas child window in sync with the resized document window
+      // using the framework's resize API instead of direct frame manipulation.
+      if (doc && doc->canvas_win)
+        resize_window(doc->canvas_win, win->frame.w, win->frame.h);
       return false;
     case kWindowMessageSetFocus:
       if (g_app && doc) g_app->active_doc = doc;
@@ -78,15 +76,15 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
   // Compute maximum window size: available screen area to the right of the
   // tool palette and below the menu bar.  Cap the document window so that
   // small images open at their natural size while large images get scrollbars.
-  int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
-  int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
-  int max_win_w = sw - DOC_START_X;
-  int max_win_h = sh - DOC_START_Y;
+  int screen_w = ui_get_system_metrics(kSystemMetricScreenWidth);
+  int screen_h = ui_get_system_metrics(kSystemMetricScreenHeight);
+  int max_win_w = screen_w - DOC_START_X;
+  int max_win_h = screen_h - DOC_START_Y;
   int win_w = w < max_win_w ? w : max_win_w;
   int win_h = h < max_win_h ? h : max_win_h;
 
   // Wrap cascade position when we'd overflow the right edge
-  if (g_app->next_x + win_w > sw) {
+  if (g_app->next_x + win_w > screen_w) {
     g_app->next_x = DOC_START_X;
     g_app->next_y = DOC_START_Y;
   }
