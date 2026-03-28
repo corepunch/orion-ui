@@ -182,6 +182,16 @@ void dispatch_message(SDL_Event *evt) {
               set_focus(find_next_tab_stop(_focused, false));
             }
             break;
+          case SDL_SCANCODE_RETURN: {
+            // WinAPI IsDialogMessage behaviour: trigger the default button
+            // (BS_DEFPUSHBUTTON analogue) when focused control doesn't consume Enter.
+            window_t *def = find_default_button(get_root_window(_focused));
+            if (def) {
+              send_message(def, kWindowMessageLeftButtonDown, 0, NULL);
+              send_message(def, kWindowMessageLeftButtonUp, 0, NULL);
+            }
+            break;
+          }
           default:
             break;
         }

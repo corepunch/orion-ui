@@ -56,7 +56,7 @@ static result_t mb_proc(window_t *win, uint32_t msg,
       uint32_t btype = ms->type & 0x0F;
 
       if (btype == MB_YESNOCANCEL) {
-        create_window("Yes", 0,
+        create_window("Yes", BUTTON_DEFAULT,
             MAKERECT(MB_WIN_W - (MB_BTN_W + MB_PAD) * 3, btn_y,
                      MB_BTN_W, MB_BTN_H),
             win, win_button, NULL);
@@ -69,7 +69,7 @@ static result_t mb_proc(window_t *win, uint32_t msg,
                      MB_BTN_W, MB_BTN_H),
             win, win_button, NULL);
       } else if (btype == MB_YESNO) {
-        create_window("Yes", 0,
+        create_window("Yes", BUTTON_DEFAULT,
             MAKERECT(MB_WIN_W - (MB_BTN_W + MB_PAD) * 2, btn_y,
                      MB_BTN_W, MB_BTN_H),
             win, win_button, NULL);
@@ -78,7 +78,7 @@ static result_t mb_proc(window_t *win, uint32_t msg,
                      MB_BTN_W, MB_BTN_H),
             win, win_button, NULL);
       } else if (btype == MB_OKCANCEL) {
-        create_window("OK", 0,
+        create_window("OK", BUTTON_DEFAULT,
             MAKERECT(MB_WIN_W - (MB_BTN_W + MB_PAD) * 2, btn_y,
                      MB_BTN_W, MB_BTN_H),
             win, win_button, NULL);
@@ -88,7 +88,7 @@ static result_t mb_proc(window_t *win, uint32_t msg,
             win, win_button, NULL);
       } else {
         /* MB_OK */
-        create_window("OK", 0,
+        create_window("OK", BUTTON_DEFAULT,
             MAKERECT((MB_WIN_W - MB_BTN_W) / 2, btn_y, MB_BTN_W, MB_BTN_H),
             win, win_button, NULL);
       }

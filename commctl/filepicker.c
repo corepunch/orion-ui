@@ -255,7 +255,7 @@ static result_t fp_proc(window_t *win, uint32_t msg,
       const char *ok_label = ps->save_mode ? "Save" : "Open";
       int ok_x   = FP_WIN_W - (FP_BTN_W + FP_PAD) * 2;
       int cncl_x = FP_WIN_W - (FP_BTN_W + FP_PAD);
-      create_window(ok_label, 0,
+      create_window(ok_label, BUTTON_DEFAULT,
           MAKERECT(ok_x,   btn_y, FP_BTN_W, FP_BTN_H), win, win_button, NULL);
       create_window("Cancel", 0,
           MAKERECT(cncl_x, btn_y, FP_BTN_W, FP_BTN_H), win, win_button, NULL);
