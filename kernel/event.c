@@ -151,7 +151,7 @@ void dispatch_message(SDL_Event *evt) {
             if (win->flags & WINDOW_ALWAYSINBACK) {
               resize_window(win, sw, sh);
             } else {
-              post_message(win, kWindowMessageResize, 0, NULL);
+              post_message(win, kWindowMessageDisplayChange, (uint32_t)sw, (void*)(intptr_t)sh);
             }
           }
           if (win->visible) {

@@ -26,6 +26,7 @@ enum {
   kWindowMessageRightButtonDown,
   kWindowMessageRightButtonUp,
   kWindowMessageResize,
+  kWindowMessageDisplayChange,   // SDL window/screen was resized; wparam=new_w, lparam=(void*)(intptr_t)new_h
   kWindowMessageKeyDown,
   kWindowMessageKeyUp,
   kWindowMessageJoyButtonDown,
