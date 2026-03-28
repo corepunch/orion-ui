@@ -78,7 +78,7 @@ static uint8_t *load_png_rgba(const char *path, int *out_w, int *out_h) {
     }
   }
 
-  free(src);
+  image_free(src);
   *out_w = w;
   *out_h = h;
   return rgba;

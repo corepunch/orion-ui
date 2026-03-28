@@ -78,7 +78,7 @@ A MacPaint-inspired raster image editor with a 16-color palette, demonstrating:
 - 16-color swatch palette and live foreground/background color preview
 - Modal file-picker dialog (reuses the columnview-based file browser from `filemanager.c`)
   that filters to **PNG files only**
-- PNG open/save via **libpng**
+- PNG open/save via the built-in **stb_image** framework API (`load_image` / `save_image_png`)
 - Toolbar with New, Open, and Save actions
 - Status bar showing the current file path
 
@@ -93,22 +93,8 @@ matching the classic MacPaint resolution.
 make examples          # builds imageeditor together with all other examples
 ```
 
-The image editor requires **libpng** in addition to the standard dependencies:
-
-**Ubuntu/Debian:**
-```bash
-sudo apt-get install libpng-dev
-```
-
-**macOS:**
-```bash
-brew install libpng
-```
-
-**Fedora/RHEL:**
-```bash
-sudo dnf install libpng-devel
-```
+PNG I/O is provided by the Orion framework via `load_image()` / `save_image_png()` (backed by stb_image).
+No additional library installation is required.
 
 ### Running
 

@@ -148,6 +148,11 @@ $(TEST_ENV_BINS): $(BIN_DIR)/test_%$(EXE_EXT): $(TEST_DIR)/%.c $(STATIC_LIB) | $
 	@echo "Building test with environment: $@"
 	$(CC) $(CFLAGS) -o $@ $< $(TEST_DIR)/test_env.c $(STATIC_LIB) $(LDFLAGS) $(LDFLAGS_TEST) $(LIBS)
 
+# Image API test – self-contained, pulls in user/image.c directly (no SDL/GL needed)
+$(BIN_DIR)/test_image$(EXE_EXT): $(TEST_DIR)/image_test.c | $(BIN_DIR)
+	@echo "Building test: $@"
+	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS_TEST) -lm
+
 # Generic test build rule (tests without test_env)
 $(BIN_DIR)/test_%$(EXE_EXT): $(TEST_DIR)/%.c $(STATIC_LIB) | $(BIN_DIR)
 	@echo "Building test: $@"

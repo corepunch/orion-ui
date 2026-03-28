@@ -529,7 +529,7 @@ bool png_load(const char *path, uint8_t *out_pixels) {
   for (int row = 0; row < copy_h; row++)
     memcpy(out_pixels + row * CANVAS_W * 4, pixels + row * w * 4, (size_t)copy_w * 4);
 
-  free(pixels);
+  image_free(pixels);
   return true;
 }
 
