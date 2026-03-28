@@ -62,7 +62,8 @@ typedef struct {
 typedef struct {
   int  min_val, max_val;   // content range
   int  page, pos;          // viewport size and current scroll position
-  bool visible;            // bar is currently drawn
+  bool visible;            // bar is currently drawn (auto show/hide via set_scroll_info)
+  bool enabled;            // bar accepts mouse interaction (enable_scroll_bar)
   bool dragging;           // thumb drag in progress
   int  drag_start_mouse;   // axis coord (window-local) when drag began
   int  drag_start_pos;     // pos value when drag began

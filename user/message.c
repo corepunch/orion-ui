@@ -123,12 +123,23 @@ void remove_from_global_queue(window_t *win) {
 // ---- Built-in scrollbar mouse handling --------------------------------------
 //
 // Computes window-local mouse coordinates from a mouse-message wparam.
-// For child windows (frame.x/y != 0 within root): subtract root frame offset.
-// For top-level windows: wparam already carries window-local coords.
+// Mouse wparams for child windows arrive in root-relative coords:
+//   screen_x - root->frame.x.  For top-level windows they are already
+//   window-local (screen_x - win->frame.x = screen_x - root->frame.x).
+// Subtract only root->frame to get root-client coords (= canvas-local when
+// the child sits at root-client offset (0,0), which is the common case).
 static void sb_local_coords(window_t *win, uint32_t wparam, int *cx, int *cy) {
   window_t *root = get_root_window(win);
-  int adj_x = win->parent ? root->frame.x + win->frame.x : 0;
-  int adj_y = win->parent ? root->frame.y + win->frame.y : 0;
+  int adj_x = 0;
+  int adj_y = 0;
+
+  /* For child windows, mouse wparam is in root-relative coords.
+   * Subtract only the root frame offset to get root-client coords.
+   * Top-level windows already receive window-local coords. */
+  if (win->parent && root) {
+    adj_x = root->frame.x;
+    adj_y = root->frame.y;
+  }
   *cx = (int16_t)LOWORD(wparam) - adj_x;
   *cy = (int16_t)HIWORD(wparam) - adj_y;
 }
@@ -162,7 +173,7 @@ static int handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wpara
   bool has_h = (win->flags & WINDOW_HSCROLL) && win->hscroll.visible;
   bool has_v = (win->flags & WINDOW_VSCROLL) && win->vscroll.visible;
 
-  // Handle ongoing drag (captured move / button-up)
+  // Handle ongoing drag (captured move / button-up) regardless of enabled state
   if (msg == kWindowMessageMouseMove || msg == kWindowMessageLeftButtonUp) {
     if (win->hscroll.dragging) {
       int cx, cy; sb_local_coords(win, wparam, &cx, &cy);
@@ -177,6 +188,7 @@ static int handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wpara
           if (new_pos != win->hscroll.pos) {
             win->hscroll.pos = new_pos;
             send_message(win, kWindowMessageHScroll, (uint32_t)new_pos, NULL);
+            invalidate_window(win);
           }
         }
       } else {
@@ -198,6 +210,7 @@ static int handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wpara
           if (new_pos != win->vscroll.pos) {
             win->vscroll.pos = new_pos;
             send_message(win, kWindowMessageVScroll, (uint32_t)new_pos, NULL);
+            invalidate_window(win);
           }
         }
       } else {
@@ -215,9 +228,10 @@ static int handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wpara
   int cx, cy;
   sb_local_coords(win, wparam, &cx, &cy);
 
-  // Horizontal scrollbar hit
+  // Horizontal scrollbar hit — always consume geometry even when disabled
   if (has_h && cy >= win->frame.h - SCROLLBAR_WIDTH && cy < win->frame.h &&
       cx >= 0 && cx < win->frame.w) {
+    if (!win->hscroll.enabled) return 1; // consume click but do nothing
     int track = win->frame.w - (has_v ? SCROLLBAR_WIDTH : 0);
     if (cx >= track) return 1; // corner square
     int tl = builtin_sb_thumb_len_msg(&win->hscroll, track);
@@ -239,9 +253,10 @@ static int handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wpara
     return 1;
   }
 
-  // Vertical scrollbar hit
+  // Vertical scrollbar hit — always consume geometry even when disabled
   if (has_v && cx >= win->frame.w - SCROLLBAR_WIDTH && cx < win->frame.w &&
       cy >= 0 && cy < win->frame.h) {
+    if (!win->vscroll.enabled) return 1; // consume click but do nothing
     int track = win->frame.h - (has_h ? SCROLLBAR_WIDTH : 0);
     if (cy >= track) return 1; // corner square
     int tl = builtin_sb_thumb_len_msg(&win->vscroll, track);
@@ -395,14 +410,42 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
           }
           break;
         case kWindowMessageWheel:
-          if (win->flags & WINDOW_HSCROLL) {
-            win->scroll[0] = MIN(0, (int)win->scroll[0]+(int16_t)LOWORD(wparam));
-          }
-          if (win->flags & WINDOW_VSCROLL) {
-            win->scroll[1] = MAX(0, (int)win->scroll[1]-(int16_t)HIWORD(wparam));
-          }
-          if (win->flags & (WINDOW_VSCROLL|WINDOW_HSCROLL)) {
-            invalidate_window(win);
+          // When built-in scrollbars are active, drive them directly instead
+          // of using the legacy win->scroll[] projection.
+          if ((win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL)) &&
+              (win->hscroll.visible || win->vscroll.visible)) {
+            bool scrolled = false;
+            if ((win->flags & WINDOW_HSCROLL) && win->hscroll.visible &&
+                win->hscroll.enabled) {
+              int delta = (int16_t)LOWORD(wparam);
+              int new_pos = sb_clamp_msg(&win->hscroll, win->hscroll.pos + delta);
+              if (new_pos != win->hscroll.pos) {
+                win->hscroll.pos = new_pos;
+                send_message(win, kWindowMessageHScroll, (uint32_t)new_pos, NULL);
+                scrolled = true;
+              }
+            }
+            if ((win->flags & WINDOW_VSCROLL) && win->vscroll.visible &&
+                win->vscroll.enabled) {
+              int delta = -(int16_t)HIWORD(wparam);
+              int new_pos = sb_clamp_msg(&win->vscroll, win->vscroll.pos + delta);
+              if (new_pos != win->vscroll.pos) {
+                win->vscroll.pos = new_pos;
+                send_message(win, kWindowMessageVScroll, (uint32_t)new_pos, NULL);
+                scrolled = true;
+              }
+            }
+            if (scrolled) invalidate_window(win);
+          } else {
+            if (win->flags & WINDOW_HSCROLL) {
+              win->scroll[0] = MIN(0, (int)win->scroll[0]+(int16_t)LOWORD(wparam));
+            }
+            if (win->flags & WINDOW_VSCROLL) {
+              win->scroll[1] = MAX(0, (int)win->scroll[1]-(int16_t)HIWORD(wparam));
+            }
+            if (win->flags & (WINDOW_VSCROLL|WINDOW_HSCROLL)) {
+              invalidate_window(win);
+            }
           }
           break;
         case kWindowMessagePaintStencil:

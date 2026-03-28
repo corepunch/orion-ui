@@ -84,8 +84,13 @@ show_scroll_bar(win, SB_VERT, true);    // show
 
 ### Explicitly enabling / disabling a bar
 
+`enable_scroll_bar()` controls whether a bar accepts mouse input, independently
+of its visibility (which is managed automatically by `set_scroll_info()`).  A
+disabled bar is still drawn but ignores clicks; its thumb is rendered in a
+darker colour to signal the non-interactive state.
+
 ```c
-enable_scroll_bar(win, SB_VERT, false);  // disable (grey out)
+enable_scroll_bar(win, SB_VERT, false);  // disable — bar visible but non-interactive
 enable_scroll_bar(win, SB_VERT, true);   // re-enable
 ```
 

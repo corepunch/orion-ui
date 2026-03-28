@@ -308,8 +308,10 @@ void draw_builtin_scrollbars(window_t *win) {
     int bw = win->frame.w - (has_v ? SCROLLBAR_WIDTH : 0);
     int tl = builtin_sb_thumb_len(sb, bw);
     int to = builtin_sb_thumb_off(sb, bw, tl);
+    // Disabled bars render a darker thumb to indicate non-interactive state.
+    uint32_t thumb_col = sb->enabled ? COLOR_LIGHT_EDGE : COLOR_DARK_EDGE;
     fill_rect(COLOR_PANEL_DARK_BG, x, y, bw, SCROLLBAR_WIDTH);
-    fill_rect(COLOR_LIGHT_EDGE,    x + to, y, tl, SCROLLBAR_WIDTH);
+    fill_rect(thumb_col,           x + to, y, tl, SCROLLBAR_WIDTH);
   }
 
   if (has_v) {
@@ -319,8 +321,9 @@ void draw_builtin_scrollbars(window_t *win) {
     int bh = win->frame.h - (has_h ? SCROLLBAR_WIDTH : 0);
     int tl = builtin_sb_thumb_len(sb, bh);
     int to = builtin_sb_thumb_off(sb, bh, tl);
+    uint32_t thumb_col = sb->enabled ? COLOR_LIGHT_EDGE : COLOR_DARK_EDGE;
     fill_rect(COLOR_PANEL_DARK_BG, x, y, SCROLLBAR_WIDTH, bh);
-    fill_rect(COLOR_LIGHT_EDGE,    x, y + to, SCROLLBAR_WIDTH, tl);
+    fill_rect(thumb_col,           x, y + to, SCROLLBAR_WIDTH, tl);
   }
 
   if (has_h && has_v) {

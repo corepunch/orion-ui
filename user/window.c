@@ -369,9 +369,7 @@ static int sb_clamp_range(win_sb_t const *sb, int pos) {
 
 // Update one built-in scrollbar from a scroll_info_t.
 // Auto-shows the bar when content exceeds the viewport; hides it otherwise.
-void set_scroll_info(window_t *win, int bar, scroll_info_t const *info, bool redraw) {
-  if (!win || !info) return;
-  win_sb_t *sb = (bar == SB_VERT) ? &win->vscroll : &win->hscroll;
+static void set_scroll_info_one(win_sb_t *sb, scroll_info_t const *info) {
   if (info->fMask & SIF_RANGE) {
     sb->min_val = info->nMin;
     sb->max_val = info->nMax;
@@ -382,13 +380,35 @@ void set_scroll_info(window_t *win, int bar, scroll_info_t const *info, bool red
   if (info->fMask & SIF_POS) {
     sb->pos = sb_clamp_range(sb, info->nPos);
   }
-  // Automatic show/hide: hide when the whole content fits in the viewport
-  sb->visible = (sb->page < sb->max_val - sb->min_val);
+  // Clamp existing pos whenever range or page changes (even without SIF_POS).
+  if (info->fMask & (SIF_RANGE | SIF_PAGE)) {
+    sb->pos = sb_clamp_range(sb, sb->pos);
+  }
+  // Automatic show/hide: hide when the whole content fits in the viewport.
+  bool should_show = (sb->page < sb->max_val - sb->min_val);
+  sb->visible = should_show;
+  if (should_show && !sb->enabled) {
+    // First time visible: default to enabled.
+    sb->enabled = true;
+  }
+}
+
+void set_scroll_info(window_t *win, int bar, scroll_info_t const *info, bool redraw) {
+  if (!win || !info) return;
+  if (bar == SB_VERT) {
+    set_scroll_info_one(&win->vscroll, info);
+  } else if (bar == SB_HORZ) {
+    set_scroll_info_one(&win->hscroll, info);
+  } else { // SB_BOTH
+    set_scroll_info_one(&win->hscroll, info);
+    set_scroll_info_one(&win->vscroll, info);
+  }
   if (redraw) invalidate_window(win);
 }
 
 void get_scroll_info(window_t *win, int bar, scroll_info_t *info) {
   if (!win || !info) return;
+  if (bar == SB_BOTH) bar = SB_HORZ; // SB_BOTH reads horizontal by convention
   win_sb_t *sb = (bar == SB_VERT) ? &win->vscroll : &win->hscroll;
   if (info->fMask & SIF_RANGE) {
     info->nMin = sb->min_val;
@@ -400,14 +420,16 @@ void get_scroll_info(window_t *win, int bar, scroll_info_t *info) {
 
 int get_scroll_pos(window_t *win, int bar) {
   if (!win) return 0;
-  return (bar == SB_VERT) ? win->vscroll.pos : win->hscroll.pos;
+  if (bar == SB_VERT) return win->vscroll.pos;
+  return win->hscroll.pos; // SB_HORZ or SB_BOTH → horizontal
 }
 
-// Explicitly enable or disable a built-in scrollbar's interactivity.
+// Explicitly enable or disable a built-in scrollbar's mouse interactivity.
+// Disabled bars remain visible but ignore mouse clicks.
 void enable_scroll_bar(window_t *win, int bar, bool enable) {
   if (!win) return;
-  if (bar == SB_HORZ || bar == SB_BOTH) win->hscroll.visible = enable;
-  if (bar == SB_VERT || bar == SB_BOTH) win->vscroll.visible = enable;
+  if (bar == SB_HORZ || bar == SB_BOTH) win->hscroll.enabled = enable;
+  if (bar == SB_VERT || bar == SB_BOTH) win->vscroll.enabled = enable;
   invalidate_window(win);
 }
 
