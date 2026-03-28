@@ -130,10 +130,20 @@ extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 #define ID_TOOL_TEXT          35
 
 // ============================================================
-// Types
+// Color helpers
 // ============================================================
 
-typedef struct { uint8_t r, g, b, a; } rgba_t;
+// Pack r,g,b,a bytes into a single uint32_t (format: 0xAARRGGBB little-endian: LSB=R, MSB=A).
+#define MAKE_COLOR(r,g,b,a) \
+  (((uint32_t)(uint8_t)(a)<<24)|((uint32_t)(uint8_t)(b)<<16)|((uint32_t)(uint8_t)(g)<<8)|(uint32_t)(uint8_t)(r))
+#define COLOR_R(c) ((uint8_t)((c) & 0xFF))
+#define COLOR_G(c) ((uint8_t)(((c) >> 8) & 0xFF))
+#define COLOR_B(c) ((uint8_t)(((c) >> 16) & 0xFF))
+#define COLOR_A(c) ((uint8_t)(((c) >> 24) & 0xFF))
+
+// ============================================================
+// Types
+// ============================================================
 
 typedef struct canvas_doc_s {
   uint8_t  pixels[CANVAS_H * CANVAS_W * 4];
@@ -192,12 +202,12 @@ typedef struct {
   window_t      *tool_win;
   window_t      *color_win;
   int            current_tool;
-  rgba_t         fg_color;
-  rgba_t         bg_color;
+  uint32_t       fg_color;
+  uint32_t       bg_color;
   int            next_x;
   int            next_y;
   accel_table_t *accel;
-  rgba_t         user_palette[NUM_USER_COLORS];
+  uint32_t       user_palette[NUM_USER_COLORS];
   int            num_user_colors;
   bool           shape_filled;  // true = shapes draw filled, false = outline only
   // Text tool persistent settings
@@ -216,7 +226,7 @@ typedef struct {
 extern app_state_t *g_app;
 
 // Color palette
-extern const rgba_t kPalette[NUM_COLORS];
+extern const uint32_t kPalette[NUM_COLORS];
 
 // Tool display names (in ID_TOOL_PENCIL..ID_TOOL_SELECT order; index with tool - ID_TOOL_PENCIL)
 extern const char *tool_names[NUM_TOOLS];
@@ -224,14 +234,6 @@ extern const char *tool_names[NUM_TOOLS];
 // ============================================================
 // Canvas helpers (used across files)
 // ============================================================
-
-static inline bool rgba_eq(rgba_t a, rgba_t b) {
-  return a.r==b.r && a.g==b.g && a.b==b.b && a.a==b.a;
-}
-
-static inline uint32_t rgba_to_col(rgba_t c) {
-  return ((uint32_t)c.a<<24)|((uint32_t)c.b<<16)|((uint32_t)c.g<<8)|(uint32_t)c.r;
-}
 
 static inline bool canvas_in_bounds(int x, int y) {
   return x >= 0 && x < CANVAS_W && y >= 0 && y < CANVAS_H;
@@ -247,36 +249,36 @@ static inline bool canvas_in_selection(const canvas_doc_t *doc, int x, int y) {
 }
 
 // Forward declarations for canvas operations
-void canvas_set_pixel(canvas_doc_t *doc, int x, int y, rgba_t c);
-rgba_t canvas_get_pixel(const canvas_doc_t *doc, int x, int y);
+void canvas_set_pixel(canvas_doc_t *doc, int x, int y, uint32_t c);
+uint32_t canvas_get_pixel(const canvas_doc_t *doc, int x, int y);
 void canvas_clear(canvas_doc_t *doc);
-void canvas_draw_circle(canvas_doc_t *doc, int cx, int cy, int r, rgba_t c);
-void canvas_draw_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1, int radius, rgba_t c);
-void canvas_flood_fill(canvas_doc_t *doc, int sx, int sy, rgba_t fill);
-void canvas_spray(canvas_doc_t *doc, int cx, int cy, int radius, rgba_t c);
-void canvas_draw_rect_outline(canvas_doc_t *doc, int x, int y, int w, int h, rgba_t c);
-void canvas_draw_rect_filled(canvas_doc_t *doc, int x, int y, int w, int h, rgba_t outline, rgba_t fill);
-void canvas_draw_ellipse_outline(canvas_doc_t *doc, int cx, int cy, int rx, int ry, rgba_t c);
-void canvas_draw_ellipse_filled(canvas_doc_t *doc, int cx, int cy, int rx, int ry, rgba_t outline, rgba_t fill);
-void canvas_draw_rounded_rect_outline(canvas_doc_t *doc, int x, int y, int w, int h, int r, rgba_t c);
-void canvas_draw_rounded_rect_filled(canvas_doc_t *doc, int x, int y, int w, int h, int r, rgba_t outline, rgba_t fill);
-void canvas_draw_polygon_outline(canvas_doc_t *doc, const point_t *pts, int count, rgba_t c);
-void canvas_draw_polygon_filled(canvas_doc_t *doc, const point_t *pts, int count, rgba_t outline, rgba_t fill);
+void canvas_draw_circle(canvas_doc_t *doc, int cx, int cy, int r, uint32_t c);
+void canvas_draw_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1, int radius, uint32_t c);
+void canvas_flood_fill(canvas_doc_t *doc, int sx, int sy, uint32_t fill);
+void canvas_spray(canvas_doc_t *doc, int cx, int cy, int radius, uint32_t c);
+void canvas_draw_rect_outline(canvas_doc_t *doc, int x, int y, int w, int h, uint32_t c);
+void canvas_draw_rect_filled(canvas_doc_t *doc, int x, int y, int w, int h, uint32_t outline, uint32_t fill);
+void canvas_draw_ellipse_outline(canvas_doc_t *doc, int cx, int cy, int rx, int ry, uint32_t c);
+void canvas_draw_ellipse_filled(canvas_doc_t *doc, int cx, int cy, int rx, int ry, uint32_t outline, uint32_t fill);
+void canvas_draw_rounded_rect_outline(canvas_doc_t *doc, int x, int y, int w, int h, int r, uint32_t c);
+void canvas_draw_rounded_rect_filled(canvas_doc_t *doc, int x, int y, int w, int h, int r, uint32_t outline, uint32_t fill);
+void canvas_draw_polygon_outline(canvas_doc_t *doc, const point_t *pts, int count, uint32_t c);
+void canvas_draw_polygon_filled(canvas_doc_t *doc, const point_t *pts, int count, uint32_t outline, uint32_t fill);
 bool canvas_is_shape_tool(int tool_id);
 void canvas_shape_begin(canvas_doc_t *doc, int cx, int cy);
-void canvas_shape_preview(canvas_doc_t *doc, int x0, int y0, int x1, int y1, int tool, bool filled, rgba_t fg, rgba_t bg, bool shift_held);
+void canvas_shape_preview(canvas_doc_t *doc, int x0, int y0, int x1, int y1, int tool, bool filled, uint32_t fg, uint32_t bg, bool shift_held);
 void canvas_shape_commit(canvas_doc_t *doc);
 
 // Selection operations
 void canvas_copy_selection(canvas_doc_t *doc);
-void canvas_cut_selection(canvas_doc_t *doc, rgba_t fill);
-void canvas_clear_selection(canvas_doc_t *doc, rgba_t fill);
+void canvas_cut_selection(canvas_doc_t *doc, uint32_t fill);
+void canvas_clear_selection(canvas_doc_t *doc, uint32_t fill);
 void canvas_paste_clipboard(canvas_doc_t *doc);
 void canvas_select_all(canvas_doc_t *doc);
 void canvas_deselect(canvas_doc_t *doc);
 
 // Move-selection helpers (called from win_canvas.c)
-void canvas_begin_move(canvas_doc_t *doc, rgba_t bg);
+void canvas_begin_move(canvas_doc_t *doc, uint32_t bg);
 void canvas_commit_move(canvas_doc_t *doc);
 
 // Undo/redo
@@ -301,14 +303,14 @@ result_t win_color_palette_proc(window_t *win, uint32_t msg, uint32_t wparam, vo
 void canvas_win_set_zoom(window_t *canvas_win, int new_scale);
 
 // Color picker dialog
-bool show_color_picker(window_t *parent, rgba_t initial, rgba_t *out);
+bool show_color_picker(window_t *parent, uint32_t initial, uint32_t *out);
 
 // Text dialog – show text insertion options; returns true if accepted.
 typedef struct {
-  char   text[256];    // text to render (NUL-terminated)
-  int    font_size;    // pixel height
-  rgba_t color;        // text color
-  bool   antialias;    // true = antialiased rendering
+  char     text[256];    // text to render (NUL-terminated)
+  int      font_size;    // pixel height
+  uint32_t color;        // text color
+  bool     antialias;    // true = antialiased rendering
 } text_options_t;
 bool show_text_dialog(window_t *parent, text_options_t *opts);
 

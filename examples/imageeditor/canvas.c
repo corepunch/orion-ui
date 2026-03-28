@@ -7,27 +7,27 @@
 // ============================================================
 
 // Write a pixel directly (bypasses selection mask – used for paste/move commit).
-static void canvas_set_pixel_direct(canvas_doc_t *doc, int x, int y, rgba_t c) {
+static void canvas_set_pixel_direct(canvas_doc_t *doc, int x, int y, uint32_t c) {
   if (!canvas_in_bounds(x, y)) return;
   uint8_t *p = doc->pixels + ((size_t)y * CANVAS_W + x) * 4;
-  p[0]=c.r; p[1]=c.g; p[2]=c.b; p[3]=c.a;
+  p[0]=COLOR_R(c); p[1]=COLOR_G(c); p[2]=COLOR_B(c); p[3]=COLOR_A(c);
   doc->canvas_dirty = true;
   doc->modified     = true;
 }
 
-void canvas_set_pixel(canvas_doc_t *doc, int x, int y, rgba_t c) {
+void canvas_set_pixel(canvas_doc_t *doc, int x, int y, uint32_t c) {
   if (!canvas_in_bounds(x, y)) return;
   if (!canvas_in_selection(doc, x, y)) return;
   uint8_t *p = doc->pixels + ((size_t)y * CANVAS_W + x) * 4;
-  p[0]=c.r; p[1]=c.g; p[2]=c.b; p[3]=c.a;
+  p[0]=COLOR_R(c); p[1]=COLOR_G(c); p[2]=COLOR_B(c); p[3]=COLOR_A(c);
   doc->canvas_dirty = true;
   doc->modified     = true;
 }
 
-rgba_t canvas_get_pixel(const canvas_doc_t *doc, int x, int y) {
-  if (!canvas_in_bounds(x, y)) return (rgba_t){0,0,0,0};
+uint32_t canvas_get_pixel(const canvas_doc_t *doc, int x, int y) {
+  if (!canvas_in_bounds(x, y)) return MAKE_COLOR(0,0,0,0);
   const uint8_t *p = doc->pixels + ((size_t)y * CANVAS_W + x) * 4;
-  return (rgba_t){p[0],p[1],p[2],p[3]};
+  return MAKE_COLOR(p[0],p[1],p[2],p[3]);
 }
 
 void canvas_clear(canvas_doc_t *doc) {
@@ -36,7 +36,7 @@ void canvas_clear(canvas_doc_t *doc) {
   doc->modified     = false;
 }
 
-void canvas_draw_circle(canvas_doc_t *doc, int cx, int cy, int r, rgba_t c) {
+void canvas_draw_circle(canvas_doc_t *doc, int cx, int cy, int r, uint32_t c) {
   for (int dy = -r; dy <= r; dy++)
     for (int dx = -r; dx <= r; dx++)
       if (dx*dx + dy*dy <= r*r)
@@ -44,7 +44,7 @@ void canvas_draw_circle(canvas_doc_t *doc, int cx, int cy, int r, rgba_t c) {
 }
 
 void canvas_draw_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1,
-                      int radius, rgba_t c) {
+                      int radius, uint32_t c) {
   int dx = abs(x1-x0), dy = abs(y1-y0);
   int sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
   int err = dx - dy;
@@ -57,10 +57,10 @@ void canvas_draw_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1,
   }
 }
 
-void canvas_flood_fill(canvas_doc_t *doc, int sx, int sy, rgba_t fill) {
+void canvas_flood_fill(canvas_doc_t *doc, int sx, int sy, uint32_t fill) {
   if (!canvas_in_selection(doc, sx, sy)) return;
-  rgba_t target = canvas_get_pixel(doc, sx, sy);
-  if (rgba_eq(target, fill)) return;
+  uint32_t target = canvas_get_pixel(doc, sx, sy);
+  if (target == fill) return;
 
   typedef struct { int16_t x, y; } pt_t;
   int capacity = CANVAS_W * CANVAS_H;
@@ -78,7 +78,7 @@ void canvas_flood_fill(canvas_doc_t *doc, int sx, int sy, rgba_t fill) {
     for (int i = 0; i < 4; i++) {
       if (canvas_in_bounds(nx[i], ny[i]) &&
           canvas_in_selection(doc, nx[i], ny[i]) &&
-          rgba_eq(canvas_get_pixel(doc, nx[i], ny[i]), target) &&
+          canvas_get_pixel(doc, nx[i], ny[i]) == target &&
           tail < capacity) {
         canvas_set_pixel(doc, nx[i], ny[i], fill);
         queue[tail++] = (pt_t){(int16_t)nx[i], (int16_t)ny[i]};
@@ -91,7 +91,7 @@ void canvas_flood_fill(canvas_doc_t *doc, int sx, int sy, rgba_t fill) {
 // Airbrush/spray: scatter random pixels within radius around (cx, cy).
 // Approximately 20 dots per call using Cartesian rejection sampling
 // (naturally higher density toward the center, mimicking a real airbrush).
-void canvas_spray(canvas_doc_t *doc, int cx, int cy, int radius, rgba_t c) {
+void canvas_spray(canvas_doc_t *doc, int cx, int cy, int radius, uint32_t c) {
   int r2 = radius * radius;
   for (int i = 0; i < 20; i++) {
     int dx = (rand() % (2 * radius + 1)) - radius;
@@ -105,7 +105,7 @@ void canvas_spray(canvas_doc_t *doc, int cx, int cy, int radius, rgba_t c) {
 // Shape drawing functions
 // ============================================================
 
-void canvas_draw_rect_outline(canvas_doc_t *doc, int x, int y, int w, int h, rgba_t c) {
+void canvas_draw_rect_outline(canvas_doc_t *doc, int x, int y, int w, int h, uint32_t c) {
   if (w <= 0 || h <= 0) return;
   canvas_draw_line(doc, x,     y,     x+w-1, y,     0, c);
   canvas_draw_line(doc, x,     y+h-1, x+w-1, y+h-1, 0, c);
@@ -113,7 +113,7 @@ void canvas_draw_rect_outline(canvas_doc_t *doc, int x, int y, int w, int h, rgb
   canvas_draw_line(doc, x+w-1, y,     x+w-1, y+h-1, 0, c);
 }
 
-void canvas_draw_rect_filled(canvas_doc_t *doc, int x, int y, int w, int h, rgba_t outline, rgba_t fill) {
+void canvas_draw_rect_filled(canvas_doc_t *doc, int x, int y, int w, int h, uint32_t outline, uint32_t fill) {
   if (w <= 0 || h <= 0) return;
   for (int dy = 1; dy < h - 1; dy++)
     canvas_draw_line(doc, x+1, y+dy, x+w-2, y+dy, 0, fill);
@@ -121,7 +121,7 @@ void canvas_draw_rect_filled(canvas_doc_t *doc, int x, int y, int w, int h, rgba
 }
 
 // Midpoint ellipse algorithm (Bresenham's)
-void canvas_draw_ellipse_outline(canvas_doc_t *doc, int cx, int cy, int rx, int ry, rgba_t c) {
+void canvas_draw_ellipse_outline(canvas_doc_t *doc, int cx, int cy, int rx, int ry, uint32_t c) {
   if (rx <= 0 || ry <= 0) return;
   long rx2 = (long)rx * rx, ry2 = (long)ry * ry;
   long x = 0, y = ry;
@@ -157,7 +157,7 @@ void canvas_draw_ellipse_outline(canvas_doc_t *doc, int cx, int cy, int rx, int 
   }
 }
 
-void canvas_draw_ellipse_filled(canvas_doc_t *doc, int cx, int cy, int rx, int ry, rgba_t outline, rgba_t fill) {
+void canvas_draw_ellipse_filled(canvas_doc_t *doc, int cx, int cy, int rx, int ry, uint32_t outline, uint32_t fill) {
   if (rx <= 0 || ry <= 0) return;
   double rx2 = (double)rx * (double)rx;
   double ry2 = (double)ry * (double)ry;
@@ -173,7 +173,7 @@ void canvas_draw_ellipse_filled(canvas_doc_t *doc, int cx, int cy, int rx, int r
 }
 
 // Rounded rectangle using arc + straight edges
-void canvas_draw_rounded_rect_outline(canvas_doc_t *doc, int x, int y, int w, int h, int r, rgba_t c) {
+void canvas_draw_rounded_rect_outline(canvas_doc_t *doc, int x, int y, int w, int h, int r, uint32_t c) {
   if (w <= 0 || h <= 0) return;
   if (r < 0) r = 0;
   if (r > w / 2) r = w / 2;
@@ -200,7 +200,7 @@ void canvas_draw_rounded_rect_outline(canvas_doc_t *doc, int x, int y, int w, in
   }
 }
 
-void canvas_draw_rounded_rect_filled(canvas_doc_t *doc, int x, int y, int w, int h, int r, rgba_t outline, rgba_t fill) {
+void canvas_draw_rounded_rect_filled(canvas_doc_t *doc, int x, int y, int w, int h, int r, uint32_t outline, uint32_t fill) {
   if (w <= 0 || h <= 0) return;
   if (r < 0) r = 0;
   if (r > w / 2) r = w / 2;
@@ -224,7 +224,7 @@ void canvas_draw_rounded_rect_filled(canvas_doc_t *doc, int x, int y, int w, int
 }
 
 // Polygon: draw edges between consecutive vertices and close the last to first
-void canvas_draw_polygon_outline(canvas_doc_t *doc, const point_t *pts, int count, rgba_t c) {
+void canvas_draw_polygon_outline(canvas_doc_t *doc, const point_t *pts, int count, uint32_t c) {
   if (count < 2) return;
   for (int i = 0; i < count - 1; i++)
     canvas_draw_line(doc, pts[i].x, pts[i].y, pts[i+1].x, pts[i+1].y, 0, c);
@@ -232,7 +232,7 @@ void canvas_draw_polygon_outline(canvas_doc_t *doc, const point_t *pts, int coun
 }
 
 // Scanline fill for a closed polygon using the ray-casting / edge table approach
-void canvas_draw_polygon_filled(canvas_doc_t *doc, const point_t *pts, int count, rgba_t outline, rgba_t fill) {
+void canvas_draw_polygon_filled(canvas_doc_t *doc, const point_t *pts, int count, uint32_t outline, uint32_t fill) {
   if (count < 3) { canvas_draw_polygon_outline(doc, pts, count, outline); return; }
   // Find bounding box
   int y_min = pts[0].y, y_max = pts[0].y;
@@ -290,7 +290,7 @@ void canvas_shape_begin(canvas_doc_t *doc, int cx, int cy) {
 // Restore snapshot and draw a preview of the current shape without pushing undo.
 // shift_held constrains the shape (45° line, square, circle).
 void canvas_shape_preview(canvas_doc_t *doc, int x0, int y0, int x1, int y1,
-                          int tool, bool filled, rgba_t fg, rgba_t bg, bool shift_held) {
+                          int tool, bool filled, uint32_t fg, uint32_t bg, bool shift_held) {
   // Restore snapshot
   if (doc->shape_snapshot) {
     memcpy(doc->pixels, doc->shape_snapshot, CANVAS_H * CANVAS_W * 4);
@@ -386,9 +386,9 @@ void canvas_copy_selection(canvas_doc_t *doc) {
   if (!buf) return;
   for (int row = 0; row < h; row++) {
     for (int col = 0; col < w; col++) {
-      rgba_t c = canvas_get_pixel(doc, x0 + col, y0 + row);
+      uint32_t c = canvas_get_pixel(doc, x0 + col, y0 + row);
       uint8_t *p = buf + ((size_t)row * w + col) * 4;
-      p[0]=c.r; p[1]=c.g; p[2]=c.b; p[3]=c.a;
+      p[0]=COLOR_R(c); p[1]=COLOR_G(c); p[2]=COLOR_B(c); p[3]=COLOR_A(c);
     }
   }
   free(g_app->clipboard);
@@ -398,7 +398,7 @@ void canvas_copy_selection(canvas_doc_t *doc) {
 }
 
 // Fill the selected region with fill_color.
-void canvas_clear_selection(canvas_doc_t *doc, rgba_t fill) {
+void canvas_clear_selection(canvas_doc_t *doc, uint32_t fill) {
   if (!doc || !doc->sel_active) return;
   int x0, y0, x1, y1;
   if (!selection_bounds(doc, &x0, &y0, &x1, &y1)) return;
@@ -408,7 +408,7 @@ void canvas_clear_selection(canvas_doc_t *doc, rgba_t fill) {
 }
 
 // Copy selection to clipboard, then clear the selection region.
-void canvas_cut_selection(canvas_doc_t *doc, rgba_t fill) {
+void canvas_cut_selection(canvas_doc_t *doc, uint32_t fill) {
   if (!doc) return;
   canvas_copy_selection(doc);
   canvas_clear_selection(doc, fill);
@@ -424,8 +424,7 @@ void canvas_paste_clipboard(canvas_doc_t *doc) {
   for (int row = 0; row < h; row++) {
     for (int col = 0; col < w; col++) {
       const uint8_t *p = g_app->clipboard + ((size_t)row * w + col) * 4;
-      rgba_t c = {p[0], p[1], p[2], p[3]};
-      canvas_set_pixel_direct(doc, col, row, c);
+      canvas_set_pixel_direct(doc, col, row, MAKE_COLOR(p[0], p[1], p[2], p[3]));
     }
   }
   // Select the pasted region (clamped to canvas bounds)
@@ -457,7 +456,7 @@ void canvas_deselect(canvas_doc_t *doc) {
 // Extract the current selection into a float buffer and clear that region.
 // Enters "move mode": the caller should track float_pos deltas and call
 // canvas_commit_move() when the drag ends.
-void canvas_begin_move(canvas_doc_t *doc, rgba_t bg) {
+void canvas_begin_move(canvas_doc_t *doc, uint32_t bg) {
   if (!doc || !doc->sel_active || doc->sel_moving) return;
   int x0, y0, x1, y1;
   if (!selection_bounds(doc, &x0, &y0, &x1, &y1)) return;
@@ -468,9 +467,9 @@ void canvas_begin_move(canvas_doc_t *doc, rgba_t bg) {
   // Extract pixels
   for (int row = 0; row < h; row++) {
     for (int col = 0; col < w; col++) {
-      rgba_t c = canvas_get_pixel(doc, x0 + col, y0 + row);
+      uint32_t c = canvas_get_pixel(doc, x0 + col, y0 + row);
       uint8_t *p = buf + ((size_t)row * w + col) * 4;
-      p[0]=c.r; p[1]=c.g; p[2]=c.b; p[3]=c.a;
+      p[0]=COLOR_R(c); p[1]=COLOR_G(c); p[2]=COLOR_B(c); p[3]=COLOR_A(c);
     }
   }
   // Clear the region from canvas
@@ -494,8 +493,7 @@ void canvas_commit_move(canvas_doc_t *doc) {
   for (int row = 0; row < h; row++) {
     for (int col = 0; col < w; col++) {
       const uint8_t *p = doc->float_pixels + ((size_t)row * w + col) * 4;
-      rgba_t c = {p[0], p[1], p[2], p[3]};
-      canvas_set_pixel_direct(doc, dx + col, dy + row, c);
+      canvas_set_pixel_direct(doc, dx + col, dy + row, MAKE_COLOR(p[0], p[1], p[2], p[3]));
     }
   }
   // Update selection to the new position

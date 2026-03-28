@@ -254,11 +254,11 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         for (int row = 0; row < MAG_PIXELS; row++) {
           for (int col = 0; col < MAG_PIXELS; col++) {
             int sx = hx + col, sy = hy + row;
-            rgba_t px = canvas_in_bounds(sx, sy)
+            uint32_t px = canvas_in_bounds(sx, sy)
                         ? canvas_get_pixel(doc, sx, sy)
-                        : (rgba_t){0x22, 0x22, 0x22, 0xFF};
+                        : MAKE_COLOR(0x22, 0x22, 0x22, 0xFF);
             uint8_t *dst = mag_buf + (row * MAG_PIXELS + col) * 4;
-            dst[0] = px.r; dst[1] = px.g; dst[2] = px.b; dst[3] = px.a;
+            dst[0] = COLOR_R(px); dst[1] = COLOR_G(px); dst[2] = COLOR_B(px); dst[3] = COLOR_A(px);
           }
         }
         // Upload pixel buffer to a cached GL texture and draw as a single quad
