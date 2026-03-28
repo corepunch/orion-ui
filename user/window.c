@@ -122,6 +122,7 @@ void move_window(window_t *win, int x, int y) {
   win->frame.y = y;
 
   invalidate_overlaps(win);
+  invalidate_window(win);
 }
 
 // Resize window

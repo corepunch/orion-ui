@@ -364,6 +364,44 @@ void test_invalidate_routes_to_root(void) {
 }
 
 // =============================================================================
+// Part 5: move_window() redraws window at new position
+// =============================================================================
+
+void test_move_window_repaints_at_new_position(void) {
+  TEST("move_window: window is repainted at new position after move");
+  test_env_init();
+
+  hook_nc_paint_count = 0;
+  hook_paint_count    = 0;
+
+  register_window_hook(kWindowMessageNonClientPaint, hook_nc, NULL);
+  register_window_hook(kWindowMessagePaint,          hook_p,  NULL);
+
+  window_t *win = test_env_create_window("move-test", 10, 10, 80, 60, noop_proc, NULL);
+  ASSERT_NOT_NULL(win);
+
+  // Reset counts after creation.
+  hook_nc_paint_count = 0;
+  hook_paint_count    = 0;
+
+  move_window(win, 50, 50);
+  repost_messages();
+
+  // move_window must enqueue Paint for the window at its new position so that
+  // it redraws its contents there (not just clear the old location).
+  ASSERT_TRUE(hook_paint_count >= 1);
+  ASSERT_EQUAL(win->frame.x, 50);
+  ASSERT_EQUAL(win->frame.y, 50);
+
+  deregister_window_hook(kWindowMessageNonClientPaint, hook_nc, NULL);
+  deregister_window_hook(kWindowMessagePaint,          hook_p,  NULL);
+
+  destroy_window(win);
+  test_env_shutdown();
+  PASS();
+}
+
+// =============================================================================
 // main
 // =============================================================================
 
@@ -389,6 +427,9 @@ int main(int argc, char *argv[]) {
   // Part 4: invalidate_window
   test_invalidate_window_enqueues_paint();
   test_invalidate_routes_to_root();
+
+  // Part 5: move_window
+  test_move_window_repaints_at_new_position();
 
   TEST_END();
 }
