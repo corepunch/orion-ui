@@ -15,6 +15,14 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
     case kWindowMessagePaint:
       fill_rect(COLOR_PANEL_DARK_BG, 0, 0, win->frame.w, win->frame.h);
       return false;
+    case kWindowMessageResize:
+      // Keep canvas child window in sync with the resized document window.
+      if (doc && doc->canvas_win) {
+        doc->canvas_win->frame.w = win->frame.w;
+        doc->canvas_win->frame.h = win->frame.h;
+        send_message(doc->canvas_win, kWindowMessageResize, 0, NULL);
+      }
+      return false;
     case kWindowMessageSetFocus:
       if (g_app && doc) g_app->active_doc = doc;
       return false;
@@ -43,11 +51,18 @@ void doc_update_title(canvas_doc_t *doc) {
 // Document management
 // ============================================================
 
-canvas_doc_t *create_document(const char *filename) {
+canvas_doc_t *create_document(const char *filename, int w, int h) {
   if (!g_app) return NULL;
+  if (w <= 0 || h <= 0) return NULL;
 
   canvas_doc_t *doc = calloc(1, sizeof(canvas_doc_t));
   if (!doc) return NULL;
+
+  doc->canvas_w = w;
+  doc->canvas_h = h;
+  doc->pixels = malloc((size_t)w * h * 4);
+  if (!doc->pixels) { free(doc); return NULL; }
+
   canvas_clear(doc);
   doc->modified = false;
   if (filename) {
@@ -59,7 +74,19 @@ canvas_doc_t *create_document(const char *filename) {
   int wy = g_app->next_y;
   g_app->next_x += DOC_CASCADE;
   g_app->next_y += DOC_CASCADE;
-  if (g_app->next_x + CANVAS_W > SCREEN_W) {
+
+  // Compute maximum window size: available screen area to the right of the
+  // tool palette and below the menu bar.  Cap the document window so that
+  // small images open at their natural size while large images get scrollbars.
+  int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
+  int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
+  int max_win_w = sw - DOC_START_X;
+  int max_win_h = sh - DOC_START_Y;
+  int win_w = w < max_win_w ? w : max_win_w;
+  int win_h = h < max_win_h ? h : max_win_h;
+
+  // Wrap cascade position when we'd overflow the right edge
+  if (g_app->next_x + win_w > sw) {
     g_app->next_x = DOC_START_X;
     g_app->next_y = DOC_START_Y;
   }
@@ -67,14 +94,14 @@ canvas_doc_t *create_document(const char *filename) {
   window_t *dwin = create_window(
       filename ? filename : "Untitled",
       /* WINDOW_TOOLBAR |*/ WINDOW_STATUSBAR,
-      MAKERECT(wx, wy, CANVAS_W, CANVAS_H),
+      MAKERECT(wx, wy, win_w, win_h),
       NULL, doc_win_proc, NULL);
   dwin->userdata = doc;
   doc->win = dwin;
 
   window_t *cwin = create_window(
       "", WINDOW_NOTITLE | WINDOW_NOFILL,
-      MAKERECT(0, 0, CANVAS_W, CANVAS_H),
+      MAKERECT(0, 0, win_w, win_h),
       dwin, win_canvas_proc, doc);
   cwin->notabstop = false;
   doc->canvas_win = cwin;
@@ -115,6 +142,9 @@ void close_document(canvas_doc_t *doc) {
 
   if (doc->canvas_tex)
     glDeleteTextures(1, &doc->canvas_tex);
+
+  free(doc->pixels);
+  doc->pixels = NULL;
 
   if (doc->win && is_window(doc->win))
     destroy_window(doc->win);

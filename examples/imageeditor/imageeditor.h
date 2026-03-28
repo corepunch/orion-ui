@@ -146,7 +146,9 @@ extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 // ============================================================
 
 typedef struct canvas_doc_s {
-  uint8_t  pixels[CANVAS_H * CANVAS_W * 4];
+  uint8_t *pixels;           // heap-allocated RGBA buffer (canvas_w * canvas_h * 4 bytes)
+  int      canvas_w;         // image width in pixels
+  int      canvas_h;         // image height in pixels
   GLuint   canvas_tex;
   bool     canvas_dirty;
   bool     drawing;
@@ -235,8 +237,8 @@ extern const char *tool_names[NUM_TOOLS];
 // Canvas helpers (used across files)
 // ============================================================
 
-static inline bool canvas_in_bounds(int x, int y) {
-  return x >= 0 && x < CANVAS_W && y >= 0 && y < CANVAS_H;
+static inline bool canvas_in_bounds(const canvas_doc_t *doc, int x, int y) {
+  return x >= 0 && x < doc->canvas_w && y >= 0 && y < doc->canvas_h;
 }
 
 static inline bool canvas_in_selection(const canvas_doc_t *doc, int x, int y) {
@@ -289,8 +291,11 @@ bool doc_redo(canvas_doc_t *doc);
 void doc_free_undo(canvas_doc_t *doc);
 void doc_discard_undo(canvas_doc_t *doc);
 
+// PNG I/O
+bool png_save(const char *path, const canvas_doc_t *doc);
+
 // Forward declarations for document management
-canvas_doc_t *create_document(const char *filename);
+canvas_doc_t *create_document(const char *filename, int w, int h);
 void close_document(canvas_doc_t *doc);
 void doc_update_title(canvas_doc_t *doc);
 

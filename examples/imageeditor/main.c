@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
   g_app->accel = load_accelerators(kAccelEntries,
                                    (int)(sizeof(kAccelEntries)/sizeof(kAccelEntries[0])));
   send_message(g_app->menubar_win, kMenuBarMessageSetAccelerators, 0, g_app->accel);
-  create_document(NULL);
+  create_document(NULL, CANVAS_W, CANVAS_H);
 
   while (running) {
     ui_event_t e;
@@ -140,6 +140,7 @@ int main(int argc, char *argv[]) {
     free(g_app->docs->float_pixels);
     if (g_app->docs->canvas_tex)
       glDeleteTextures(1, &g_app->docs->canvas_tex);
+    free(g_app->docs->pixels);
     free(g_app->docs);
     g_app->docs = next;
   }
