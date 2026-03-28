@@ -123,23 +123,14 @@ void remove_from_global_queue(window_t *win) {
 // ---- Built-in scrollbar mouse handling --------------------------------------
 //
 // Computes window-local mouse coordinates from a mouse-message wparam.
-// Mouse wparams for child windows arrive in root-relative coords:
-//   screen_x - root->frame.x.  For top-level windows they are already
-//   window-local (screen_x - win->frame.x = screen_x - root->frame.x).
-// Subtract only root->frame to get root-client coords (= canvas-local when
-// the child sits at root-client offset (0,0), which is the common case).
+// Mouse wparams for child windows arrive in root-relative coords
+// (screen_x - root->frame.x); for top-level windows they are already
+// window-local.  Subtract only root->frame to get root-client coords,
+// which equals canvas-local when the child sits at root-client offset (0,0).
 static void sb_local_coords(window_t *win, uint32_t wparam, int *cx, int *cy) {
   window_t *root = get_root_window(win);
-  int adj_x = 0;
-  int adj_y = 0;
-
-  /* For child windows, mouse wparam is in root-relative coords.
-   * Subtract only the root frame offset to get root-client coords.
-   * Top-level windows already receive window-local coords. */
-  if (win->parent && root) {
-    adj_x = root->frame.x;
-    adj_y = root->frame.y;
-  }
+  int adj_x = (win->parent && root) ? root->frame.x : 0;
+  int adj_y = (win->parent && root) ? root->frame.y : 0;
   *cx = (int16_t)LOWORD(wparam) - adj_x;
   *cy = (int16_t)HIWORD(wparam) - adj_y;
 }
