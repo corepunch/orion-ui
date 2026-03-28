@@ -222,3 +222,11 @@ int ui_get_system_metrics(ui_system_metrics_t metric) {
       return 0;
   }
 }
+
+void ui_update_screen_size(int width, int height) {
+  screen_width = width / UI_WINDOW_SCALE;
+  screen_height = height / UI_WINDOW_SCALE;
+  glm_ortho(0, screen_width, screen_height, 0, -1, 1, g_ref.projection);
+  glUseProgram(g_ref.program);
+  glUniformMatrix4fv(glGetUniformLocation(g_ref.program, "projection"), 1, GL_FALSE, g_ref.projection[0]);
+}

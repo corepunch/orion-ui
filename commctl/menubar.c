@@ -406,6 +406,11 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       return true;
     }
 
+    case kWindowMessageDisplayChange: {
+      win->frame.w = LOWORD(wparam);
+      return false;
+    }
+
     case kWindowMessageDestroy: {
       if (data) {
         close_popup(win, data);

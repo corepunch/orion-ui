@@ -26,6 +26,7 @@ enum {
   kWindowMessageRightButtonDown,
   kWindowMessageRightButtonUp,
   kWindowMessageResize,
+  kWindowMessageDisplayChange,
   kWindowMessageKeyDown,
   kWindowMessageKeyUp,
   kWindowMessageJoyButtonDown,

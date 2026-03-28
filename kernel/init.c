@@ -85,7 +85,7 @@ static bool ui_init_window(const char *title, int width, int height) {
     window = SDL_CreateWindow(title,
                               SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
                               width, height,
-                              SDL_WINDOW_OPENGL|SDL_WINDOW_INPUT_FOCUS);
+                              SDL_WINDOW_OPENGL|SDL_WINDOW_INPUT_FOCUS|SDL_WINDOW_RESIZABLE);
   } else {
     SDL_Rect bounds;
     if (SDL_GetDisplayBounds(1, &bounds) != 0) {
@@ -94,7 +94,7 @@ static bool ui_init_window(const char *title, int width, int height) {
       window = SDL_CreateWindow(title,
                                 SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
                                 width, height,
-                                SDL_WINDOW_OPENGL|SDL_WINDOW_INPUT_FOCUS);
+                                SDL_WINDOW_OPENGL|SDL_WINDOW_INPUT_FOCUS|SDL_WINDOW_RESIZABLE);
     } else {
       // Centered position on display 1
       int w = width;
@@ -102,7 +102,7 @@ static bool ui_init_window(const char *title, int width, int height) {
       int x = bounds.x + (bounds.w - w) / 2;
       int y = bounds.y + (bounds.h - h) / 2;
       
-      window = SDL_CreateWindow(title, x, y, w, h, SDL_WINDOW_OPENGL | SDL_WINDOW_INPUT_FOCUS);
+      window = SDL_CreateWindow(title, x, y, w, h, SDL_WINDOW_OPENGL | SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_RESIZABLE);
     }
   }
   

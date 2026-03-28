@@ -9,6 +9,7 @@
 
 #include "../user/user.h"
 #include "../user/messages.h"
+#include "kernel.h"
 
 // Custom SDL event type registered at startup.
 // Posted to the SDL queue whenever an internal message is queued so that
@@ -32,6 +33,7 @@ extern window_t *_captured;
 
 // External functions
 extern int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+extern void post_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 extern void move_window(window_t *win, int x, int y);
 extern void resize_window(window_t *win, int new_w, int new_h);
 extern window_t *find_window(int x, int y);
@@ -39,6 +41,7 @@ extern void set_focus(window_t* win);
 extern void track_mouse(window_t *win);
 extern void show_window(window_t *win, bool visible);
 extern void end_dialog(window_t *win, uint32_t code);
+extern void invalidate_window(window_t *win);
 
 // Drag/resize state (shared with user/window.c for destroy_window cleanup)
 window_t *_dragging = NULL;
@@ -78,8 +81,6 @@ window_t* find_prev_tab_stop(window_t* win) {
 // Move window to top of Z-order
 void move_to_top(window_t* _win) {
   extern window_t *get_root_window(window_t *window);
-  extern void post_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
-  extern void invalidate_window(window_t *win);
   
   window_t *win = get_root_window(_win);
   post_message(win, kWindowMessageRefreshStencil, 0, NULL);
@@ -138,6 +139,33 @@ void dispatch_message(SDL_Event *evt) {
     return;
   window_t *win;
   switch (evt->type) {
+    case SDL_WINDOWEVENT:
+      if (evt->window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+        int new_w = evt->window.data1;
+        int new_h = evt->window.data2;
+        ui_update_screen_size(new_w, new_h);
+        int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
+        int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
+        // Phase 1: update all frame dimensions synchronously so the stencil
+        // refresh in phase 2 sees the new bounds.
+        for (win = windows; win; win = win->next) {
+          if (!win->parent) {
+            if (win->flags & WINDOW_ALWAYSINBACK) {
+              resize_window(win, sw, sh);
+            } else {
+              send_message(win, kWindowMessageDisplayChange, MAKEDWORD(sw, sh), NULL);
+            }
+          }
+        }
+        // Phase 2: rebuild the stencil with updated bounds, then repaint.
+        post_message((window_t *)1, kWindowMessageRefreshStencil, 0, NULL);
+        for (win = windows; win; win = win->next) {
+          if (win->visible) {
+            invalidate_window(win);
+          }
+        }
+      }
+      break;
     case SDL_QUIT:
       running = false;
       break;
