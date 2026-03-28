@@ -2,9 +2,8 @@
 
 #include "imageeditor.h"
 
-#define SWATCH_COLS      2
-#define SWATCH_W        (PALETTE_WIN_W / SWATCH_COLS)
-#define SWATCH_ROW_H    22
+#define SWATCH_COLS      8
+#define SWATCH_W        (COLOR_WIN_W / SWATCH_COLS)
 
 const rgba_t kPalette[NUM_COLORS] = {
   {0xFF,0xFF,0xFF,0xFF}, // white

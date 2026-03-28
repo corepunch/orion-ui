@@ -58,9 +58,12 @@
 //   Fill mode row: 2px gap + 8px text + 14px icons = 24px
 #define SWATCH_CLIENT_H 26
 #define FILL_MODE_H     24
+#define SWATCH_ROW_H    22
 #define TOOL_WIN_H    (SWATCH_CLIENT_H + FILL_MODE_H)
-#define COLOR_WIN_Y   (PALETTE_WIN_Y + TOOL_WIN_H + TITLEBAR_HEIGHT + 4)
-#define COLOR_WIN_H   (8 * 22)
+#define COLOR_WIN_H   (2 * SWATCH_ROW_H)
+#define COLOR_WIN_X   0
+#define COLOR_WIN_W   SCREEN_W
+#define COLOR_WIN_Y   (SCREEN_H - COLOR_WIN_H)
 
 #define DOC_START_X   76
 #define DOC_START_Y   60
