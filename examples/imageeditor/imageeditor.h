@@ -61,9 +61,9 @@
 #define SWATCH_ROW_H    16
 #define TOOL_WIN_H    (SWATCH_CLIENT_H + FILL_MODE_H)
 #define COLOR_WIN_H   (4 * SWATCH_ROW_H)
-#define COLOR_WIN_X   0
+#define COLOR_WIN_X   (SCREEN_W - COLOR_WIN_W - 4)
 #define COLOR_WIN_W   SWATCH_ROW_H * 4
-#define COLOR_WIN_Y   (SCREEN_H - COLOR_WIN_H)
+#define COLOR_WIN_Y   (MENUBAR_HEIGHT + 4 + TITLEBAR_HEIGHT)
 
 #define DOC_START_X   76
 #define DOC_START_Y   60
