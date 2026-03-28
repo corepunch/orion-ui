@@ -77,26 +77,6 @@ bool doc_confirm_close(canvas_doc_t *doc, window_t *parent_win) {
   return true;
 }
 
-// ============================================================
-// Document title helper
-// ============================================================
-
-void doc_update_title(canvas_doc_t *doc) {
-  if (!doc->win) return;
-  char title[64];
-  const char *name = doc->filename[0] ? doc->filename : "Untitled";
-  const char *slash = strrchr(name, '/');
-  if (slash) name = slash + 1;
-  snprintf(title, sizeof(title), "%s%s", name, doc->modified ? " *" : "");
-  strncpy(doc->win->title, title, sizeof(doc->win->title) - 1);
-  doc->win->title[sizeof(doc->win->title) - 1] = '\0';
-  invalidate_window(doc->win);
-}
-
-// ============================================================
-// Document management
-// ============================================================
-
 canvas_doc_t *create_document(const char *filename, int w, int h) {
   if (!g_app) return NULL;
   if (w <= 0 || h <= 0) return NULL;
