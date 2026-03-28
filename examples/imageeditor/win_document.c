@@ -24,6 +24,23 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
     case kWindowMessageSetFocus:
       if (g_app && doc) g_app->active_doc = doc;
       return false;
+    case kWindowMessageClose: {
+      // WM_CLOSE analogue: give the user a chance to save before closing.
+      // Return true to cancel the close, false to allow the default hide.
+      if (!doc) return false;
+      if (doc->modified) {
+        int res = message_box(win,
+                              "This image has unsaved changes.\nDo you want to close it?",
+                              "Unsaved Changes",
+                              MB_YESNOCANCEL);
+        if (res == IDCANCEL) return true;  // cancel — leave window open
+        if (res == IDYES && doc->filename[0])
+          png_save(doc->filename, doc);
+        // IDNO or IDYES-with-save: fall through to close_document
+      }
+      close_document(doc);  // removes from list, destroys window, frees doc
+      return true;  // prevent the default show_window(win, false)
+    }
     default:
       return false;
   }

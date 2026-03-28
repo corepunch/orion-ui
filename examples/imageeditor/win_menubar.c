@@ -119,7 +119,18 @@ static void handle_menu_command(uint16_t id) {
     }
 
     case ID_FILE_CLOSE:
-      if (doc) close_document(doc);
+      if (doc) {
+        if (doc->modified) {
+          int res = message_box(g_app->menubar_win,
+                                "This image has unsaved changes.\nDo you want to close it?",
+                                "Unsaved Changes",
+                                MB_YESNOCANCEL);
+          if (res == IDCANCEL) break;
+          if (res == IDYES && doc->filename[0])
+            png_save(doc->filename, doc);
+        }
+        close_document(doc);
+      }
       break;
 
     case ID_FILE_QUIT:

@@ -33,6 +33,11 @@ enum {
   kWindowMessageJoyButtonUp,
   kWindowMessageJoyAxisMotion,
   kWindowMessageStatusBar,
+  // Sent when the user clicks the close (X) button on a non-dialog window.
+  // Analogous to WM_CLOSE in WinAPI.
+  // Return true  to cancel the close (e.g. show "unsaved changes?" dialog).
+  // Return false to allow the default action (hide the window).
+  kWindowMessageClose,
   kWindowMessageUser = 1000
 };
 

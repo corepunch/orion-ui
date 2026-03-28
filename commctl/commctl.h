@@ -5,6 +5,8 @@
 #include "columnview.h"
 #include "menubar.h"
 #include "filelist.h"
+#include "filepicker.h"
+#include "msgbox.h"
 
 // bitmap_strip_t is defined in user/user.h and available via the include above.
 // Kept here as a comment for documentation purposes:
