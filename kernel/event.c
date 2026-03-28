@@ -33,6 +33,7 @@ extern window_t *_captured;
 
 // External functions
 extern int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+extern void post_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 extern void move_window(window_t *win, int x, int y);
 extern void resize_window(window_t *win, int new_w, int new_h);
 extern window_t *find_window(int x, int y);
@@ -80,8 +81,6 @@ window_t* find_prev_tab_stop(window_t* win) {
 // Move window to top of Z-order
 void move_to_top(window_t* _win) {
   extern window_t *get_root_window(window_t *window);
-  extern void post_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
-  extern void invalidate_window(window_t *win);
   
   window_t *win = get_root_window(_win);
   post_message(win, kWindowMessageRefreshStencil, 0, NULL);
@@ -148,8 +147,12 @@ void dispatch_message(SDL_Event *evt) {
         int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
         int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
         for (win = windows; win; win = win->next) {
-          if ((win->flags & WINDOW_ALWAYSINBACK) && !win->parent) {
-            resize_window(win, sw, sh);
+          if (!win->parent) {
+            if (win->flags & WINDOW_ALWAYSINBACK) {
+              resize_window(win, sw, sh);
+            } else {
+              post_message(win, kWindowMessageResize, 0, NULL);
+            }
           }
           if (win->visible) {
             invalidate_window(win);

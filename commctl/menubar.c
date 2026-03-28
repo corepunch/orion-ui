@@ -406,6 +406,12 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       return true;
     }
 
+    case kWindowMessageResize: {
+      win->frame.w = ui_get_system_metrics(kSystemMetricScreenWidth);
+      invalidate_window(win);
+      return false;
+    }
+
     case kWindowMessageDestroy: {
       if (data) {
         close_popup(win, data);
