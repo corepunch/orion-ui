@@ -62,13 +62,16 @@ void canvas_flood_fill(canvas_doc_t *doc, int sx, int sy, uint32_t fill) {
   uint32_t target = canvas_get_pixel(doc, sx, sy);
   if (target == fill) return;
 
-  typedef struct { int16_t x, y; } pt_t;
-  int capacity = doc->canvas_w * doc->canvas_h;
+  typedef struct { int x, y; } pt_t;
+  // Use size_t arithmetic to avoid overflow for large canvases.
+  size_t capacity = (size_t)doc->canvas_w * (size_t)doc->canvas_h;
+  // Sanity-cap the queue at 64 M entries (~512 MB) to avoid OOM on huge images.
+  if (capacity > 64 * 1024 * 1024) capacity = 64 * 1024 * 1024;
   pt_t *queue = malloc(sizeof(pt_t) * capacity);
   if (!queue) return;
 
-  int head = 0, tail = 0;
-  queue[tail++] = (pt_t){(int16_t)sx, (int16_t)sy};
+  size_t head = 0, tail = 0;
+  queue[tail++] = (pt_t){sx, sy};
   canvas_set_pixel(doc, sx, sy, fill);
 
   while (head < tail) {
@@ -81,7 +84,7 @@ void canvas_flood_fill(canvas_doc_t *doc, int sx, int sy, uint32_t fill) {
           canvas_get_pixel(doc, nx[i], ny[i]) == target &&
           tail < capacity) {
         canvas_set_pixel(doc, nx[i], ny[i], fill);
-        queue[tail++] = (pt_t){(int16_t)nx[i], (int16_t)ny[i]};
+        queue[tail++] = (pt_t){nx[i], ny[i]};
       }
     }
   }
@@ -549,17 +552,6 @@ void canvas_commit_move(canvas_doc_t *doc) {
 // ============================================================
 // PNG I/O (stb_image)
 // ============================================================
-
-static bool is_png(const char *path) {
-  if (!path) return false;
-  size_t n = strlen(path);
-  if (n < 5) return false;
-  const char *ext = path + n - 4;
-  return (ext[0]=='.' &&
-          (ext[1]=='p'||ext[1]=='P') &&
-          (ext[2]=='n'||ext[2]=='N') &&
-          (ext[3]=='g'||ext[3]=='G'));
-}
 
 bool png_save(const char *path, const canvas_doc_t *doc) {
   return save_image_png(path, doc->pixels, doc->canvas_w, doc->canvas_h);

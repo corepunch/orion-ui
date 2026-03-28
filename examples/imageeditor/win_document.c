@@ -58,7 +58,13 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
 
   doc->canvas_w = w;
   doc->canvas_h = h;
-  doc->pixels = malloc((size_t)w * h * 4);
+  // Guard against integer overflow in the pixel buffer allocation.
+  // Reject images larger than 16384×16384 to keep the size_t arithmetic safe.
+  if ((size_t)w > 16384 || (size_t)h > 16384 ||
+      (size_t)w * (size_t)h > (size_t)16384 * 16384) {
+    free(doc); return NULL;
+  }
+  doc->pixels = malloc((size_t)w * (size_t)h * 4);
   if (!doc->pixels) { free(doc); return NULL; }
 
   canvas_clear(doc);
@@ -80,6 +86,8 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
   int screen_h = ui_get_system_metrics(kSystemMetricScreenHeight);
   int max_win_w = screen_w - DOC_START_X;
   int max_win_h = screen_h - DOC_START_Y;
+  if (max_win_w < 1) max_win_w = 1;
+  if (max_win_h < 1) max_win_h = 1;
   int win_w = w < max_win_w ? w : max_win_w;
   int win_h = h < max_win_h ? h : max_win_h;
 
@@ -141,7 +149,7 @@ void close_document(canvas_doc_t *doc) {
   if (doc->canvas_tex)
     glDeleteTextures(1, &doc->canvas_tex);
 
-  free(doc->pixels);
+  image_free(doc->pixels);
   doc->pixels = NULL;
 
   if (doc->win && is_window(doc->win))

@@ -71,9 +71,10 @@ static void handle_menu_command(uint16_t id) {
         }
         canvas_doc_t *ndoc = create_document(path, img_w, img_h);
         if (ndoc) {
-          // Swap the white placeholder pixels for the actual loaded image,
-          // avoiding a redundant copy.  Both buffers are plain heap memory.
-          free(ndoc->pixels);
+          // Swap the white placeholder pixels for the actual loaded image.
+          // Use image_free() so the allocator always matches regardless of
+          // which allocation path (malloc vs stb) produced the buffer.
+          image_free(ndoc->pixels);
           ndoc->pixels = px;
           ndoc->canvas_dirty = true;
           ndoc->modified = false;
