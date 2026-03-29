@@ -4,11 +4,13 @@
 // No SDL / OpenGL initialisation is required; these tests run headless.
 
 #include "test_framework.h"
+#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <math.h>
+#include <unistd.h>
 
 // ============================================================
 // Inline replicas of the functions under test.
@@ -113,15 +115,24 @@ static void canvas_flood_fill(test_canvas_t *s, int sx, int sy, uint32_t fill) {
   free(stk_x); free(stk_y); free(vis);
 }
 
-static bool is_png(const char *name) {
-  size_t n = strlen(name);
-  if (n < 5) return false; // need at least one char before ".png"
-  // case-insensitive compare last 4 chars to ".png"
-  const char *ext = name + n - 4;
-  return (ext[0]=='.' &&
-          (ext[1]=='p'||ext[1]=='P') &&
-          (ext[2]=='n'||ext[2]=='N') &&
-          (ext[3]=='g'||ext[3]=='G'));
+static bool is_png(const char *path) {
+  if (!path || !path[0]) return false;
+  FILE *f = fopen(path, "rb");
+  if (!f) return false;
+  unsigned char hdr[4];
+  bool ok = (fread(hdr, 1, 4, f) == 4) &&
+            hdr[0] == 0x89 && hdr[1] == 0x50 &&
+            hdr[2] == 0x4E && hdr[3] == 0x47;
+  fclose(f);
+  return ok;
+}
+
+static const char *is_png_temp_dir(void) {
+  const char *d = getenv("TEMP");
+  if (!d) d = getenv("TMP");
+  if (!d) d = getenv("TMPDIR");
+  if (!d) d = "/tmp";
+  return d;
 }
 
 // ============================================================
@@ -381,23 +392,39 @@ void test_flood_fill_same_color(void) {
 }
 
 void test_is_png_valid(void) {
-  TEST("is_png – valid .png filenames");
-  ASSERT_TRUE(is_png("image.png"));
-  ASSERT_TRUE(is_png("image.PNG"));
-  ASSERT_TRUE(is_png("image.Png"));
-  ASSERT_TRUE(is_png("path/to/file.png"));
-  ASSERT_TRUE(is_png("a.png"));
+  TEST("is_png – file with PNG magic number returns true");
+  // Write the 4-byte PNG signature to a temp file.
+  const unsigned char png_hdr[4] = { 0x89, 0x50, 0x4E, 0x47 };
+  char path[512];
+  snprintf(path, sizeof(path), "%s/orion_is_png_valid_%d.bin",
+           is_png_temp_dir(), (int)getpid());
+  FILE *f = fopen(path, "wb");
+  ASSERT_NOT_NULL(f);
+  ASSERT_TRUE(fwrite(png_hdr, 1, 4, f) == 4);
+  fclose(f);
+  ASSERT_TRUE(is_png(path));
+  remove(path);
   PASS();
 }
 
 void test_is_png_invalid(void) {
-  TEST("is_png – non-png filenames return false");
-  ASSERT_FALSE(is_png("image.jpg"));
-  ASSERT_FALSE(is_png("image.bmp"));
-  ASSERT_FALSE(is_png("png"));
-  ASSERT_FALSE(is_png(".png"));   // no filename before the extension
+  TEST("is_png – non-PNG files and bad paths return false");
+  // Write a file with JPEG magic bytes instead of PNG magic.
+  const unsigned char jpeg_hdr[4] = { 0xFF, 0xD8, 0xFF, 0xE0 };
+  char path[512];
+  snprintf(path, sizeof(path), "%s/orion_is_png_invalid_%d.bin",
+           is_png_temp_dir(), (int)getpid());
+  FILE *f = fopen(path, "wb");
+  ASSERT_NOT_NULL(f);
+  ASSERT_TRUE(fwrite(jpeg_hdr, 1, 4, f) == 4);
+  fclose(f);
+  ASSERT_FALSE(is_png(path));
+  remove(path);
+  // Non-existent file must return false.
+  ASSERT_FALSE(is_png("/tmp/orion_no_such_file_orion_xyz.png"));
+  // NULL and empty path must return false.
+  ASSERT_FALSE(is_png(NULL));
   ASSERT_FALSE(is_png(""));
-  ASSERT_FALSE(is_png("imagepng"));
   PASS();
 }
 
