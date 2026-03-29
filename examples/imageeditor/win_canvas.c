@@ -22,38 +22,44 @@ const int kZoomMenuIDs[NUM_ZOOM_LEVELS] = {
 // ---- scrollbar helpers -------------------------------------------------------
 
 // Update built-in scrollbar info to match the current zoom/pan state.
+//
+// The horizontal scrollbar lives on the document window (doc->win) and is
+// merged with its status bar. The vertical scrollbar lives on the canvas
+// window (win) itself. This splits ownership so the doc window always shows
+// the merged row while the canvas handles only vertical scrolling internally.
 static void canvas_sync_scrollbars(window_t *win, canvas_win_state_t *state) {
   canvas_doc_t *doc = state->doc;
+  window_t *dwin   = doc->win;  // document window owns the hscroll
   int canvas_w = doc->canvas_w * state->scale;
   int canvas_h = doc->canvas_h * state->scale;
   int win_w    = win->frame.w;
   int win_h    = win->frame.h;
 
-  // Resolve scrollbar interdependence: adding one bar shrinks the viewport in
-  // the perpendicular axis and may force the other bar to appear.
-  bool need_h = canvas_w > win_w;
-  bool need_v = canvas_h > win_h;
-  if (need_h && !need_v) need_v = canvas_h > win_h - SCROLLBAR_WIDTH;
-  if (need_v && !need_h) need_h = canvas_w > win_w - SCROLLBAR_WIDTH;
-
-  int view_w = need_v ? win_w - SCROLLBAR_WIDTH : win_w;
-  int view_h = need_h ? win_h - SCROLLBAR_WIDTH : win_h;
+  // The vscroll always occupies the right SCROLLBAR_WIDTH pixels of the canvas.
+  // The hscroll is hosted on the doc window and does NOT eat into canvas height.
+  int view_w = win_w - SCROLLBAR_WIDTH;
+  int view_h = win_h;
+  bool need_h = canvas_w > view_w;
+  bool need_v = canvas_h > view_h;
 
 #ifdef CANVAS_SB_ALWAYS_VISIBLE
   // Always-visible mode: lock bars permanently shown before updating their
   // range so the framework does not auto-hide them in set_scroll_info().
-  show_scroll_bar(win, SB_HORZ, true);
-  show_scroll_bar(win, SB_VERT, true);
+  show_scroll_bar(dwin, SB_HORZ, true);
+  show_scroll_bar(win,  SB_VERT, true);
 #endif
 
   scroll_info_t si;
   si.fMask = SIF_RANGE | SIF_PAGE | SIF_POS;
   si.nMin  = 0;
+
+  // Horizontal: update the doc window's built-in hscroll (merged with status bar).
   si.nMax  = canvas_w;
   si.nPage = view_w;
   si.nPos  = state->pan_x;
-  set_scroll_info(win, SB_HORZ, &si, false);
+  set_scroll_info(dwin, SB_HORZ, &si, false);
 
+  // Vertical: update the canvas window's built-in vscroll.
   si.nMax  = canvas_h;
   si.nPage = view_h;
   si.nPos  = state->pan_y;
@@ -63,30 +69,26 @@ static void canvas_sync_scrollbars(window_t *win, canvas_win_state_t *state) {
   // Enable only when scrolling is possible.  Called after set_scroll_info so
   // that the framework's "first-time-visible" heuristic cannot re-enable a bar
   // we want disabled.
-  enable_scroll_bar(win, SB_HORZ, need_h);
-  enable_scroll_bar(win, SB_VERT, need_v);
+  enable_scroll_bar(dwin, SB_HORZ, need_h);
+  enable_scroll_bar(win,  SB_VERT, need_v);
 #endif
 
   if (!need_h) state->pan_x = 0;
   if (!need_v) state->pan_y = 0;
 }
 
-// Clamp pan to the valid range for the current zoom level and window size
+// Clamp pan to the valid range for the current zoom level and window size.
+// Only the vertical scrollbar lives inside the canvas; the horizontal one is
+// merged with the document-window status bar and does not eat canvas height.
 static void clamp_pan(canvas_win_state_t *state, int win_w, int win_h) {
   canvas_doc_t *doc = state->doc;
   int canvas_w = doc->canvas_w * state->scale;
   int canvas_h = doc->canvas_h * state->scale;
 
-  // Mirror the scrollbar-interdependence logic from canvas_sync_scrollbars so
-  // that the maximum pan correctly accounts for whichever scrollbars will be
-  // shown.
-  bool need_h = canvas_w > win_w;
-  bool need_v = canvas_h > win_h;
-  if (need_h && !need_v) need_v = canvas_h > win_h - SCROLLBAR_WIDTH;
-  if (need_v && !need_h) need_h = canvas_w > win_w - SCROLLBAR_WIDTH;
-
-  int view_w = need_v ? win_w - SCROLLBAR_WIDTH : win_w;
-  int view_h = need_h ? win_h - SCROLLBAR_WIDTH : win_h;
+  // vscroll always occupies the right SCROLLBAR_WIDTH pixels; hscroll does not
+  // reduce canvas height (it is rendered in the doc window's status bar row).
+  int view_w = win_w - SCROLLBAR_WIDTH;
+  int view_h = win_h;
 
   int max_x = MAX(0, canvas_w - view_w);
   int max_y = MAX(0, canvas_h - view_h);
@@ -312,14 +314,10 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       if (doc && doc->drawing) return true;
       int canvas_w  = doc->canvas_w * state->scale;
       int canvas_h  = doc->canvas_h * state->scale;
-      // Mirror the scrollbar-interdependence logic so max pan is correct when
-      // only one scrollbar is visible (its presence shrinks the other axis).
-      bool need_h = canvas_w > win->frame.w;
-      bool need_v = canvas_h > win->frame.h;
-      if (need_h && !need_v) need_v = canvas_h > win->frame.h - SCROLLBAR_WIDTH;
-      if (need_v && !need_h) need_h = canvas_w > win->frame.w - SCROLLBAR_WIDTH;
-      int view_w    = need_v ? win->frame.w - SCROLLBAR_WIDTH : win->frame.w;
-      int view_h    = need_h ? win->frame.h - SCROLLBAR_WIDTH : win->frame.h;
+      // Only the vertical scrollbar lives inside the canvas; the horizontal one
+      // is merged with the document-window status bar and does not eat height.
+      int view_w    = win->frame.w - SCROLLBAR_WIDTH;
+      int view_h    = win->frame.h;
       int max_pan_x = MAX(0, canvas_w - view_w);
       int max_pan_y = MAX(0, canvas_h - view_h);
       if (max_pan_x > 0 || max_pan_y > 0) {

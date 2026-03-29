@@ -139,18 +139,42 @@ void draw_window_controls(window_t *win) {
 }
 
 // Draw status bar
+// When WINDOW_HSCROLL is also set and the horizontal bar is visible, the row
+// is shared: status text occupies the left 20 % and the scrollbar the rest.
 void draw_statusbar(window_t *win, const char *text) {
   if (!(win->flags&WINDOW_STATUSBAR)) return;
-  
+
   rect_t r = win->frame;
   int s = statusbar_height(win);
   int y = r.y + r.h;
-  
-  fill_rect(COLOR_STATUSBAR_BG, r.x, y, r.w, s);
+
+  bool has_h = (win->flags & WINDOW_HSCROLL) && win->hscroll.visible;
+  int split_x = has_h ? SB_STATUS_SPLIT_X(r.w) : r.w;
+
+  fill_rect(COLOR_STATUSBAR_BG, r.x, y, split_x, s);
   set_fullscreen();
-  
+
   if (text) {
     draw_text_small(text, r.x + 2, y + 2, COLOR_TEXT_NORMAL);
+  }
+
+  if (has_h) {
+    bool has_v = (win->flags & WINDOW_VSCROLL) && win->vscroll.visible;
+    win_sb_t *sb = &win->hscroll;
+    // Horizontal scrollbar fills the right portion of the status bar row.
+    // Leave room for the vertical scrollbar column if present.
+    int bw = (r.w - split_x) - (has_v ? SCROLLBAR_WIDTH : 0);
+    if (bw > 0) {
+      int tl = builtin_sb_thumb_len(sb, bw);
+      int to = builtin_sb_thumb_off(sb, bw, tl);
+      uint32_t thumb_col = sb->enabled ? COLOR_LIGHT_EDGE : COLOR_DARK_EDGE;
+      fill_rect(COLOR_PANEL_DARK_BG, r.x + split_x, y, bw, s);
+      fill_rect(thumb_col,           r.x + split_x + to, y, tl, s);
+    }
+    // Corner square between the scrollbar and the vscroll column (if any).
+    if (has_v) {
+      fill_rect(COLOR_PANEL_DARK_BG, r.x + r.w - SCROLLBAR_WIDTH, y, SCROLLBAR_WIDTH, s);
+    }
   }
 }
 
@@ -301,7 +325,12 @@ void draw_builtin_scrollbars(window_t *win) {
   int base_x = win->parent ? win->frame.x : 0;
   int base_y = win->parent ? win->frame.y : 0;
 
-  if (has_h) {
+  // When the horizontal bar is merged with the status bar, draw_statusbar()
+  // already rendered it during kWindowMessageNonClientPaint.  Skip it here so
+  // it isn't drawn twice, and don't subtract its height from the vscroll track.
+  bool h_merged = has_h && (win->flags & WINDOW_STATUSBAR);
+
+  if (has_h && !h_merged) {
     win_sb_t *sb = &win->hscroll;
     int x  = base_x;
     int y  = base_y + win->frame.h - SCROLLBAR_WIDTH;
@@ -318,7 +347,9 @@ void draw_builtin_scrollbars(window_t *win) {
     win_sb_t *sb = &win->vscroll;
     int x  = base_x + win->frame.w - SCROLLBAR_WIDTH;
     int y  = base_y;
-    int bh = win->frame.h - (has_h ? SCROLLBAR_WIDTH : 0);
+    // In merged mode the horizontal bar lives in the status-bar row below the
+    // content area, so the vertical bar spans the full content height.
+    int bh = win->frame.h - (has_h && !h_merged ? SCROLLBAR_WIDTH : 0);
     int tl = builtin_sb_thumb_len(sb, bh);
     int to = builtin_sb_thumb_off(sb, bh, tl);
     uint32_t thumb_col = sb->enabled ? COLOR_LIGHT_EDGE : COLOR_DARK_EDGE;
@@ -326,7 +357,7 @@ void draw_builtin_scrollbars(window_t *win) {
     fill_rect(thumb_col,           x, y + to, SCROLLBAR_WIDTH, tl);
   }
 
-  if (has_h && has_v) {
+  if (has_h && !h_merged && has_v) {
     fill_rect(COLOR_PANEL_DARK_BG,
               base_x + win->frame.w - SCROLLBAR_WIDTH,
               base_y + win->frame.h - SCROLLBAR_WIDTH,

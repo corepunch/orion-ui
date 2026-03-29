@@ -132,6 +132,13 @@ enum {
 // Width of a built-in scrollbar strip in logical pixels
 #define SCROLLBAR_WIDTH  8
 
+// When a window has both WINDOW_HSCROLL and WINDOW_STATUSBAR, the horizontal
+// scrollbar is merged into the status-bar row.  The left fraction (%) is
+// reserved for status text; the right fraction hosts the scrollbar thumb.
+// This macro must be used by both the drawing code (draw_impl.c) and the
+// hit-testing code (message.c) to guarantee they agree on the split point.
+#define SB_STATUS_SPLIT_X(win_w)  ((win_w) * 20 / 100)
+
 // Scroll info struct (analogous to WinAPI SCROLLINFO).
 // Passed to set_scroll_info() / get_scroll_info().
 typedef struct {

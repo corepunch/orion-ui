@@ -164,18 +164,33 @@ static int handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wpara
   bool has_h = (win->flags & WINDOW_HSCROLL) && win->hscroll.visible;
   bool has_v = (win->flags & WINDOW_VSCROLL) && win->vscroll.visible;
 
+  // When WINDOW_STATUSBAR and WINDOW_HSCROLL are both set, the horizontal bar
+  // is merged into the status-bar row.  In that case its geometry is:
+  //   y range : [frame.h, frame.h + STATUSBAR_HEIGHT)
+  //   x range : [frame.w*20/100, frame.w)        (right 80 %)
+  //   track   : (frame.w - h_x_min) - vscroll_width
+  bool h_merged = has_h && (win->flags & WINDOW_STATUSBAR);
+  int h_x_min   = h_merged ? SB_STATUS_SPLIT_X(win->frame.w) : 0;
+  int h_y_min   = h_merged ? win->frame.h : win->frame.h - SCROLLBAR_WIDTH;
+  int h_y_max   = h_merged ? win->frame.h + STATUSBAR_HEIGHT : win->frame.h;
+  int h_track   = (win->frame.w - h_x_min) - (has_v ? SCROLLBAR_WIDTH : 0);
+
+  // When merged, the vscroll is not shortened by the hscroll row (which lives
+  // in the status bar, outside the content area).
+  int v_track = win->frame.h - (has_h && !h_merged ? SCROLLBAR_WIDTH : 0);
+
   // Handle ongoing drag (captured move / button-up) regardless of enabled state
   if (msg == kWindowMessageMouseMove || msg == kWindowMessageLeftButtonUp) {
     if (win->hscroll.dragging) {
       int cx, cy; sb_local_coords(win, wparam, &cx, &cy);
-      int track = win->frame.w - (has_v ? SCROLLBAR_WIDTH : 0);
-      int tl    = builtin_sb_thumb_len_msg(&win->hscroll, track);
+      int lx = cx - h_x_min;  // position within the hscroll track
+      int tl  = builtin_sb_thumb_len_msg(&win->hscroll, h_track);
       if (msg == kWindowMessageMouseMove) {
-        int tp = track - tl;
+        int tp = h_track - tl;
         int tr = win->hscroll.max_val - win->hscroll.min_val - win->hscroll.page;
         if (tp > 0 && tr > 0) {
           int new_pos = sb_clamp_msg(&win->hscroll,
-              win->hscroll.drag_start_pos + (cx - win->hscroll.drag_start_mouse) * tr / tp);
+              win->hscroll.drag_start_pos + (lx - win->hscroll.drag_start_mouse) * tr / tp);
           if (new_pos != win->hscroll.pos) {
             win->hscroll.pos = new_pos;
             send_message(win, kWindowMessageHScroll, (uint32_t)new_pos, NULL);
@@ -190,10 +205,9 @@ static int handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wpara
     }
     if (win->vscroll.dragging) {
       int cx, cy; sb_local_coords(win, wparam, &cx, &cy);
-      int track = win->frame.h - (has_h ? SCROLLBAR_WIDTH : 0);
-      int tl    = builtin_sb_thumb_len_msg(&win->vscroll, track);
+      int tl    = builtin_sb_thumb_len_msg(&win->vscroll, v_track);
       if (msg == kWindowMessageMouseMove) {
-        int tp = track - tl;
+        int tp = v_track - tl;
         int tr = win->vscroll.max_val - win->vscroll.min_val - win->vscroll.page;
         if (tp > 0 && tr > 0) {
           int new_pos = sb_clamp_msg(&win->vscroll,
@@ -220,21 +234,21 @@ static int handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wpara
   sb_local_coords(win, wparam, &cx, &cy);
 
   // Horizontal scrollbar hit — always consume geometry even when disabled
-  if (has_h && cy >= win->frame.h - SCROLLBAR_WIDTH && cy < win->frame.h &&
-      cx >= 0 && cx < win->frame.w) {
+  if (has_h && cy >= h_y_min && cy < h_y_max &&
+      cx >= h_x_min && cx < win->frame.w) {
     if (!win->hscroll.enabled) return 1; // consume click but do nothing
-    int track = win->frame.w - (has_v ? SCROLLBAR_WIDTH : 0);
-    if (cx >= track) return 1; // corner square
-    int tl = builtin_sb_thumb_len_msg(&win->hscroll, track);
-    int to = builtin_sb_thumb_off_msg(&win->hscroll, track, tl);
-    if (cx >= to && cx < to + tl) {
+    int lx = cx - h_x_min;  // position within the hscroll track
+    if (lx >= h_track) return 1; // corner square
+    int tl = builtin_sb_thumb_len_msg(&win->hscroll, h_track);
+    int to = builtin_sb_thumb_off_msg(&win->hscroll, h_track, tl);
+    if (lx >= to && lx < to + tl) {
       win->hscroll.dragging         = true;
-      win->hscroll.drag_start_mouse = cx;
+      win->hscroll.drag_start_mouse = lx;
       win->hscroll.drag_start_pos   = win->hscroll.pos;
       set_capture(win);
     } else {
       int new_pos = sb_clamp_msg(&win->hscroll,
-          win->hscroll.pos + (cx < to ? -win->hscroll.page : win->hscroll.page));
+          win->hscroll.pos + (lx < to ? -win->hscroll.page : win->hscroll.page));
       if (new_pos != win->hscroll.pos) {
         win->hscroll.pos = new_pos;
         send_message(win, kWindowMessageHScroll, (uint32_t)new_pos, NULL);
@@ -248,10 +262,9 @@ static int handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wpara
   if (has_v && cx >= win->frame.w - SCROLLBAR_WIDTH && cx < win->frame.w &&
       cy >= 0 && cy < win->frame.h) {
     if (!win->vscroll.enabled) return 1; // consume click but do nothing
-    int track = win->frame.h - (has_h ? SCROLLBAR_WIDTH : 0);
-    if (cy >= track) return 1; // corner square
-    int tl = builtin_sb_thumb_len_msg(&win->vscroll, track);
-    int to = builtin_sb_thumb_off_msg(&win->vscroll, track, tl);
+    if (cy >= v_track) return 1; // corner square
+    int tl = builtin_sb_thumb_len_msg(&win->vscroll, v_track);
+    int to = builtin_sb_thumb_off_msg(&win->vscroll, v_track, tl);
     if (cy >= to && cy < to + tl) {
       win->vscroll.dragging         = true;
       win->vscroll.drag_start_mouse = cy;
