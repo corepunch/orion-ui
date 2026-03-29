@@ -120,6 +120,158 @@ void remove_from_global_queue(window_t *win) {
   }
 }
 
+// ---- Built-in scrollbar mouse handling --------------------------------------
+//
+// Computes window-local mouse coordinates from a mouse-message wparam.
+// Mouse wparams for child windows arrive in root-relative coords
+// (screen_x - root->frame.x); for top-level windows they are already
+// window-local.  Subtract only root->frame to get root-client coords,
+// which equals canvas-local when the child sits at root-client offset (0,0).
+static void sb_local_coords(window_t *win, uint32_t wparam, int *cx, int *cy) {
+  window_t *root = get_root_window(win);
+  int adj_x = (win->parent && root) ? root->frame.x : 0;
+  int adj_y = (win->parent && root) ? root->frame.y : 0;
+  *cx = (int16_t)LOWORD(wparam) - adj_x;
+  *cy = (int16_t)HIWORD(wparam) - adj_y;
+}
+
+static int builtin_sb_thumb_len_msg(win_sb_t const *sb, int track) {
+  int range = sb->max_val - sb->min_val;
+  if (range <= 0 || sb->page >= range) return track;
+  int tl = track * sb->page / range;
+  return tl < 8 ? 8 : tl;
+}
+
+static int builtin_sb_thumb_off_msg(win_sb_t const *sb, int track, int tl) {
+  int travel = sb->max_val - sb->min_val - sb->page;
+  if (travel <= 0) return 0;
+  int tt = track - tl;
+  if (tt <= 0) return 0;
+  return (sb->pos - sb->min_val) * tt / travel;
+}
+
+static int sb_clamp_msg(win_sb_t const *sb, int pos) {
+  int max_pos = sb->max_val - sb->page;
+  if (max_pos < sb->min_val) max_pos = sb->min_val;
+  if (pos < sb->min_val) return sb->min_val;
+  if (pos > max_pos)     return max_pos;
+  return pos;
+}
+
+// Handle mouse events for a window's built-in scrollbars.
+// Returns non-zero if the event was consumed by a scrollbar.
+static int handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wparam) {
+  bool has_h = (win->flags & WINDOW_HSCROLL) && win->hscroll.visible;
+  bool has_v = (win->flags & WINDOW_VSCROLL) && win->vscroll.visible;
+
+  // Handle ongoing drag (captured move / button-up) regardless of enabled state
+  if (msg == kWindowMessageMouseMove || msg == kWindowMessageLeftButtonUp) {
+    if (win->hscroll.dragging) {
+      int cx, cy; sb_local_coords(win, wparam, &cx, &cy);
+      int track = win->frame.w - (has_v ? SCROLLBAR_WIDTH : 0);
+      int tl    = builtin_sb_thumb_len_msg(&win->hscroll, track);
+      if (msg == kWindowMessageMouseMove) {
+        int tp = track - tl;
+        int tr = win->hscroll.max_val - win->hscroll.min_val - win->hscroll.page;
+        if (tp > 0 && tr > 0) {
+          int new_pos = sb_clamp_msg(&win->hscroll,
+              win->hscroll.drag_start_pos + (cx - win->hscroll.drag_start_mouse) * tr / tp);
+          if (new_pos != win->hscroll.pos) {
+            win->hscroll.pos = new_pos;
+            send_message(win, kWindowMessageHScroll, (uint32_t)new_pos, NULL);
+            invalidate_window(win);
+          }
+        }
+      } else {
+        win->hscroll.dragging = false;
+        set_capture(NULL);
+      }
+      return 1;
+    }
+    if (win->vscroll.dragging) {
+      int cx, cy; sb_local_coords(win, wparam, &cx, &cy);
+      int track = win->frame.h - (has_h ? SCROLLBAR_WIDTH : 0);
+      int tl    = builtin_sb_thumb_len_msg(&win->vscroll, track);
+      if (msg == kWindowMessageMouseMove) {
+        int tp = track - tl;
+        int tr = win->vscroll.max_val - win->vscroll.min_val - win->vscroll.page;
+        if (tp > 0 && tr > 0) {
+          int new_pos = sb_clamp_msg(&win->vscroll,
+              win->vscroll.drag_start_pos + (cy - win->vscroll.drag_start_mouse) * tr / tp);
+          if (new_pos != win->vscroll.pos) {
+            win->vscroll.pos = new_pos;
+            send_message(win, kWindowMessageVScroll, (uint32_t)new_pos, NULL);
+            invalidate_window(win);
+          }
+        }
+      } else {
+        win->vscroll.dragging = false;
+        set_capture(NULL);
+      }
+      return 1;
+    }
+    return 0;
+  }
+
+  if (msg != kWindowMessageLeftButtonDown) return 0;
+  if (!has_h && !has_v) return 0;
+
+  int cx, cy;
+  sb_local_coords(win, wparam, &cx, &cy);
+
+  // Horizontal scrollbar hit — always consume geometry even when disabled
+  if (has_h && cy >= win->frame.h - SCROLLBAR_WIDTH && cy < win->frame.h &&
+      cx >= 0 && cx < win->frame.w) {
+    if (!win->hscroll.enabled) return 1; // consume click but do nothing
+    int track = win->frame.w - (has_v ? SCROLLBAR_WIDTH : 0);
+    if (cx >= track) return 1; // corner square
+    int tl = builtin_sb_thumb_len_msg(&win->hscroll, track);
+    int to = builtin_sb_thumb_off_msg(&win->hscroll, track, tl);
+    if (cx >= to && cx < to + tl) {
+      win->hscroll.dragging         = true;
+      win->hscroll.drag_start_mouse = cx;
+      win->hscroll.drag_start_pos   = win->hscroll.pos;
+      set_capture(win);
+    } else {
+      int new_pos = sb_clamp_msg(&win->hscroll,
+          win->hscroll.pos + (cx < to ? -win->hscroll.page : win->hscroll.page));
+      if (new_pos != win->hscroll.pos) {
+        win->hscroll.pos = new_pos;
+        send_message(win, kWindowMessageHScroll, (uint32_t)new_pos, NULL);
+        invalidate_window(win);
+      }
+    }
+    return 1;
+  }
+
+  // Vertical scrollbar hit — always consume geometry even when disabled
+  if (has_v && cx >= win->frame.w - SCROLLBAR_WIDTH && cx < win->frame.w &&
+      cy >= 0 && cy < win->frame.h) {
+    if (!win->vscroll.enabled) return 1; // consume click but do nothing
+    int track = win->frame.h - (has_h ? SCROLLBAR_WIDTH : 0);
+    if (cy >= track) return 1; // corner square
+    int tl = builtin_sb_thumb_len_msg(&win->vscroll, track);
+    int to = builtin_sb_thumb_off_msg(&win->vscroll, track, tl);
+    if (cy >= to && cy < to + tl) {
+      win->vscroll.dragging         = true;
+      win->vscroll.drag_start_mouse = cy;
+      win->vscroll.drag_start_pos   = win->vscroll.pos;
+      set_capture(win);
+    } else {
+      int new_pos = sb_clamp_msg(&win->vscroll,
+          win->vscroll.pos + (cy < to ? -win->vscroll.page : win->vscroll.page));
+      if (new_pos != win->vscroll.pos) {
+        win->vscroll.pos = new_pos;
+        send_message(win, kWindowMessageVScroll, (uint32_t)new_pos, NULL);
+        invalidate_window(win);
+      }
+    }
+    return 1;
+  }
+
+  return 0;
+}
+
 // Send message to window (synchronous)
 int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   if (!win) return false;
@@ -233,23 +385,58 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         }
         break;
     }
+    // Intercept mouse events for built-in scrollbars before calling win->proc
+    if ((win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL)) &&
+        (msg == kWindowMessageLeftButtonDown ||
+         msg == kWindowMessageMouseMove ||
+         msg == kWindowMessageLeftButtonUp)) {
+      if (handle_builtin_scrollbars(win, msg, wparam)) return 1;
+    }
     // Call window procedure
     if (!(value = win->proc(win, msg, wparam, lparam))) {
       switch (msg) {
         case kWindowMessagePaint:
           for (window_t *sub = win->children; sub; sub = sub->next) {
-            sub->proc(sub, kWindowMessagePaint, wparam, lparam);
+            send_message(sub, kWindowMessagePaint, wparam, lparam);
           }
           break;
         case kWindowMessageWheel:
-          if (win->flags & WINDOW_HSCROLL) {
-            win->scroll[0] = MIN(0, (int)win->scroll[0]+(int16_t)LOWORD(wparam));
-          }
-          if (win->flags & WINDOW_VSCROLL) {
-            win->scroll[1] = MAX(0, (int)win->scroll[1]-(int16_t)HIWORD(wparam));
-          }
-          if (win->flags & (WINDOW_VSCROLL|WINDOW_HSCROLL)) {
-            invalidate_window(win);
+          // When built-in scrollbars are active, drive them directly instead
+          // of using the legacy win->scroll[] projection.
+          if ((win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL)) &&
+              (win->hscroll.visible || win->vscroll.visible)) {
+            bool scrolled = false;
+            if ((win->flags & WINDOW_HSCROLL) && win->hscroll.visible &&
+                win->hscroll.enabled) {
+              int delta = (int16_t)LOWORD(wparam);
+              int new_pos = sb_clamp_msg(&win->hscroll, win->hscroll.pos + delta);
+              if (new_pos != win->hscroll.pos) {
+                win->hscroll.pos = new_pos;
+                send_message(win, kWindowMessageHScroll, (uint32_t)new_pos, NULL);
+                scrolled = true;
+              }
+            }
+            if ((win->flags & WINDOW_VSCROLL) && win->vscroll.visible &&
+                win->vscroll.enabled) {
+              int delta = -(int16_t)HIWORD(wparam);
+              int new_pos = sb_clamp_msg(&win->vscroll, win->vscroll.pos + delta);
+              if (new_pos != win->vscroll.pos) {
+                win->vscroll.pos = new_pos;
+                send_message(win, kWindowMessageVScroll, (uint32_t)new_pos, NULL);
+                scrolled = true;
+              }
+            }
+            if (scrolled) invalidate_window(win);
+          } else {
+            if (win->flags & WINDOW_HSCROLL) {
+              win->scroll[0] = MIN(0, (int)win->scroll[0]+(int16_t)LOWORD(wparam));
+            }
+            if (win->flags & WINDOW_VSCROLL) {
+              win->scroll[1] = MAX(0, (int)win->scroll[1]-(int16_t)HIWORD(wparam));
+            }
+            if (win->flags & (WINDOW_VSCROLL|WINDOW_HSCROLL)) {
+              invalidate_window(win);
+            }
           }
           break;
         case kWindowMessagePaintStencil:
@@ -302,6 +489,11 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       set_viewport(&(rect_t){ 0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight)});
       set_projection(0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight));
       fill_rect(col, win->frame.x, win->frame.y, win->frame.w, win->frame.h);
+    }
+    // Draw built-in scrollbars on top of window content
+    if (msg == kWindowMessagePaint && running &&
+        (win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL))) {
+      draw_builtin_scrollbars(win);
     }
   }
   return value;

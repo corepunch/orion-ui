@@ -13,49 +13,40 @@ const int kZoomMenuIDs[NUM_ZOOM_LEVELS] = {
 
 // ---- scrollbar helpers -------------------------------------------------------
 
-// Update scrollbar info and visibility to match the current zoom/pan state.
-// Called after any change to scale, pan, or window size.
+// Update built-in scrollbar info to match the current zoom/pan state.
+// Uses set_scroll_info() so the framework auto-shows/hides each bar.
 static void canvas_sync_scrollbars(window_t *win, canvas_win_state_t *state) {
-  if (!state->hscroll || !state->vscroll) return;
-
   canvas_doc_t *doc = state->doc;
   int canvas_w = doc->canvas_w * state->scale;
   int canvas_h = doc->canvas_h * state->scale;
   int win_w    = win->frame.w;
   int win_h    = win->frame.h;
 
+  // Resolve scrollbar interdependence: adding one bar shrinks the viewport in
+  // the perpendicular axis and may force the other bar to appear.
   bool need_h = canvas_w > win_w;
   bool need_v = canvas_h > win_h;
+  if (need_h && !need_v) need_v = canvas_h > win_h - SCROLLBAR_WIDTH;
+  if (need_v && !need_h) need_h = canvas_w > win_w - SCROLLBAR_WIDTH;
 
-  // Resolve scrollbar interdependence: adding one scrollbar shrinks the
-  // viewport in the perpendicular axis, which may force the other bar to
-  // appear even if the content originally fit that axis.
-  if (need_h && !need_v) need_v = canvas_h > win_h - SCROLLBAR_SIZE;
-  if (need_v && !need_h) need_h = canvas_w > win_w - SCROLLBAR_SIZE;
+  int view_w = need_v ? win_w - SCROLLBAR_WIDTH : win_w;
+  int view_h = need_h ? win_h - SCROLLBAR_WIDTH : win_h;
 
-  // Viewport sizes account for the other scrollbar if both are shown
-  int view_w = need_v ? win_w - SCROLLBAR_SIZE : win_w;
-  int view_h = need_h ? win_h - SCROLLBAR_SIZE : win_h;
+  scroll_info_t si;
+  si.fMask = SIF_RANGE | SIF_PAGE | SIF_POS;
+  si.nMin  = 0;
+  si.nMax  = canvas_w;
+  si.nPage = view_w;
+  si.nPos  = state->pan_x;
+  set_scroll_info(win, SB_HORZ, &si, false);
 
-  if (need_h) {
-    state->hscroll->frame = (rect_t){0, win_h - SCROLLBAR_SIZE, view_w, SCROLLBAR_SIZE};
-    scrollbar_info_t hi = { 0, canvas_w, view_w, state->pan_x };
-    send_message(state->hscroll, kScrollBarMessageSetInfo, 0, &hi);
-    state->hscroll->visible = true;
-  } else {
-    state->pan_x = 0;
-    state->hscroll->visible = false;
-  }
+  si.nMax  = canvas_h;
+  si.nPage = view_h;
+  si.nPos  = state->pan_y;
+  set_scroll_info(win, SB_VERT, &si, false);
 
-  if (need_v) {
-    state->vscroll->frame = (rect_t){win_w - SCROLLBAR_SIZE, 0, SCROLLBAR_SIZE, view_h};
-    scrollbar_info_t vi = { 0, canvas_h, view_h, state->pan_y };
-    send_message(state->vscroll, kScrollBarMessageSetInfo, 0, &vi);
-    state->vscroll->visible = true;
-  } else {
-    state->pan_y = 0;
-    state->vscroll->visible = false;
-  }
+  if (!need_h) state->pan_x = 0;
+  if (!need_v) state->pan_y = 0;
 }
 
 // Clamp pan to the valid range for the current zoom level and window size
@@ -69,11 +60,11 @@ static void clamp_pan(canvas_win_state_t *state, int win_w, int win_h) {
   // shown.
   bool need_h = canvas_w > win_w;
   bool need_v = canvas_h > win_h;
-  if (need_h && !need_v) need_v = canvas_h > win_h - SCROLLBAR_SIZE;
-  if (need_v && !need_h) need_h = canvas_w > win_w - SCROLLBAR_SIZE;
+  if (need_h && !need_v) need_v = canvas_h > win_h - SCROLLBAR_WIDTH;
+  if (need_v && !need_h) need_h = canvas_w > win_w - SCROLLBAR_WIDTH;
 
-  int view_w = need_v ? win_w - SCROLLBAR_SIZE : win_w;
-  int view_h = need_h ? win_h - SCROLLBAR_SIZE : win_h;
+  int view_w = need_v ? win_w - SCROLLBAR_WIDTH : win_w;
+  int view_h = need_h ? win_h - SCROLLBAR_WIDTH : win_h;
 
   int max_x = MAX(0, canvas_w - view_w);
   int max_y = MAX(0, canvas_h - view_h);
@@ -84,23 +75,6 @@ static void clamp_pan(canvas_win_state_t *state, int win_w, int win_h) {
 }
 
 // Forward a mouse event from the canvas to a scrollbar child.
-// The forwarded wparam is adjusted so that win_scrollbar's sb_axis() formula
-// (LOWORD/HIWORD - root.frame.x/y) yields the correct scrollbar-local coord.
-// Since canvas.frame.x/y == 0, LOWORD/HIWORD in canvas wparam == logical_x/y.
-static bool canvas_forward_to_scrollbar(window_t *sb, uint32_t msg, uint32_t wparam) {
-  if (!sb || !sb->visible) return false;
-  int fwd_lo = (int16_t)LOWORD(wparam) - sb->frame.x;
-  int fwd_hi = (int16_t)HIWORD(wparam) - sb->frame.y;
-  return (bool)send_message(sb, msg, MAKEDWORD(fwd_lo, fwd_hi), NULL);
-}
-
-// Test whether canvas-local (cx, cy) falls inside a scrollbar child.
-static bool canvas_hit_scrollbar(window_t *sb, int cx, int cy) {
-  if (!sb || !sb->visible) return false;
-  return cx >= sb->frame.x && cx < sb->frame.x + sb->frame.w
-      && cy >= sb->frame.y && cy < sb->frame.y + sb->frame.h;
-}
-
 // Set zoom level on a canvas window (called by menu/accelerator handler).
 // new_scale is snapped to the nearest supported zoom level so callers can
 // never trigger a divide-by-zero or produce unexpected canvas sizes.
@@ -177,19 +151,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       s->scale = 1;
       s->pan_x = 0;
       s->pan_y = 0;
-      // Create interactive scrollbar children.  Both start hidden; they are
-      // shown and repositioned by canvas_sync_scrollbars() on demand.
-      s->hscroll = create_window("", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_HSCROLL,
-          MAKERECT(0, win->frame.h - SCROLLBAR_SIZE,
-                   win->frame.w - SCROLLBAR_SIZE, SCROLLBAR_SIZE),
-          win, win_scrollbar, NULL);
-      s->vscroll = create_window("", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL,
-          MAKERECT(win->frame.w - SCROLLBAR_SIZE, 0,
-                   SCROLLBAR_SIZE, win->frame.h - SCROLLBAR_SIZE),
-          win, win_scrollbar, NULL);
-      s->hscroll->visible = false;
-      s->vscroll->visible = false;
-      // Sync scrollbars: show them if canvas is already larger than the window
+      // Sync built-in scrollbars (WINDOW_HSCROLL | WINDOW_VSCROLL on this window)
       canvas_sync_scrollbars(win, s);
       return true;
     }
@@ -242,21 +204,6 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         int px1 = (MAX(v0.x, v1.x) + 1) * state->scale - state->pan_x;
         int py1 = (MAX(v0.y, v1.y) + 1) * state->scale - state->pan_y;
         draw_sel_rect(win->frame.x + px0, win->frame.y + py0, px1 - px0, py1 - py0);
-      }
-
-      // Paint scrollbar children on top of the canvas content
-      if (state->hscroll && state->hscroll->visible)
-        send_message(state->hscroll, kWindowMessagePaint, wparam, lparam);
-      if (state->vscroll && state->vscroll->visible)
-        send_message(state->vscroll, kWindowMessagePaint, wparam, lparam);
-
-      // Fill the corner square when both bars are visible
-      if (state->hscroll && state->hscroll->visible &&
-          state->vscroll && state->vscroll->visible) {
-        fill_rect(COLOR_PANEL_DARK_BG,
-                  win->frame.x + win->frame.w - SCROLLBAR_SIZE,
-                  win->frame.y + win->frame.h - SCROLLBAR_SIZE,
-                  SCROLLBAR_SIZE, SCROLLBAR_SIZE);
       }
 
       // Magnifier tool: draw a loupe overlay in the top-right corner of the canvas
@@ -312,20 +259,26 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       return true;
     }
 
-    case kWindowMessageCommand: {
-      // Scrollbar child notifications: update pan and re-sync bars
-      if (!state) return false;
-      uint16_t code = HIWORD(wparam);
-      uint16_t id   = LOWORD(wparam);
-      if (code == kScrollBarNotificationChanged) {
-        int new_pos = (int)(intptr_t)lparam;
-        if (state->hscroll && id == state->hscroll->id)
-          state->pan_x = new_pos;
-        else if (state->vscroll && id == state->vscroll->id)
-          state->pan_y = new_pos;
+    case kWindowMessageHScroll:
+      if (state) {
+        state->pan_x = (int)wparam;
+        clamp_pan(state, win->frame.w, win->frame.h);
+        canvas_sync_scrollbars(win, state);
         invalidate_window(win);
-        return true;
       }
+      return true;
+
+    case kWindowMessageVScroll:
+      if (state) {
+        state->pan_y = (int)wparam;
+        clamp_pan(state, win->frame.w, win->frame.h);
+        canvas_sync_scrollbars(win, state);
+        invalidate_window(win);
+      }
+      return true;
+
+    case kWindowMessageCommand: {
+      if (!state) return false;
       return false;
     }
 
@@ -341,10 +294,10 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       // only one scrollbar is visible (its presence shrinks the other axis).
       bool need_h = canvas_w > win->frame.w;
       bool need_v = canvas_h > win->frame.h;
-      if (need_h && !need_v) need_v = canvas_h > win->frame.h - SCROLLBAR_SIZE;
-      if (need_v && !need_h) need_h = canvas_w > win->frame.w - SCROLLBAR_SIZE;
-      int view_w    = need_v ? win->frame.w - SCROLLBAR_SIZE : win->frame.w;
-      int view_h    = need_h ? win->frame.h - SCROLLBAR_SIZE : win->frame.h;
+      if (need_h && !need_v) need_v = canvas_h > win->frame.h - SCROLLBAR_WIDTH;
+      if (need_v && !need_h) need_h = canvas_w > win->frame.w - SCROLLBAR_WIDTH;
+      int view_w    = need_v ? win->frame.w - SCROLLBAR_WIDTH : win->frame.w;
+      int view_h    = need_h ? win->frame.h - SCROLLBAR_WIDTH : win->frame.h;
       int max_pan_x = MAX(0, canvas_w - view_w);
       int max_pan_y = MAX(0, canvas_h - view_h);
       if (max_pan_x > 0 || max_pan_y > 0) {
@@ -366,12 +319,6 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       window_t *root = get_root_window(win);
       int lx = (int16_t)LOWORD(wparam) - root->frame.x;
       int ly = (int16_t)HIWORD(wparam) - root->frame.y;
-
-      // Route clicks on scrollbar areas to the scrollbar control first
-      if (canvas_hit_scrollbar(state->hscroll, lx, ly))
-        return canvas_forward_to_scrollbar(state->hscroll, msg, wparam);
-      if (canvas_hit_scrollbar(state->vscroll, lx, ly))
-        return canvas_forward_to_scrollbar(state->vscroll, msg, wparam);
 
       if (!doc || !g_app) return true;
 

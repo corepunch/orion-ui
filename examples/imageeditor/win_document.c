@@ -134,7 +134,7 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
   doc->win = dwin;
 
   window_t *cwin = create_window(
-      "", WINDOW_NOTITLE | WINDOW_NOFILL,
+      "", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_HSCROLL | WINDOW_VSCROLL,
       MAKERECT(0, 0, win_w, win_h),
       dwin, win_canvas_proc, doc);
   cwin->notabstop = false;

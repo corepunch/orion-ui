@@ -38,6 +38,8 @@ void post_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 | `kWindowMessageCommand` | Control notification | `LOWORD`=id, `HIWORD`=notification code |
 | `kWindowMessageResize` | Window resized / moved | – |
 | `kWindowMessageStatusBar` | Update status bar text | `lparam` = `(void *)const char *` |
+| `kWindowMessageHScroll` | Built-in H scrollbar moved | `wparam` = new scroll position |
+| `kWindowMessageVScroll` | Built-in V scrollbar moved | `wparam` = new scroll position |
 | `kWindowMessageHitTest` | Find child at point | `lparam` = `window_t **` |
 | `kWindowMessageRefreshStencil` | Stencil buffer needs update | – |
 | `kWindowMessageUser` (1000) | First app-defined message | – |

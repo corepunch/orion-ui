@@ -51,8 +51,8 @@ For child windows `frame.x/y` is relative to the **parent's content area**.
 | `WINDOW_NORESIZE` | Disable resize handle |
 | `WINDOW_TOOLBAR` | Add toolbar strip above content area |
 | `WINDOW_STATUSBAR` | Add status bar below content area |
-| `WINDOW_VSCROLL` | Enable vertical scroll |
-| `WINDOW_HSCROLL` | Enable horizontal scroll |
+| `WINDOW_VSCROLL` | Enable vertical built-in scrollbar |
+| `WINDOW_HSCROLL` | Enable horizontal built-in scrollbar |
 | `WINDOW_ALWAYSONTOP` | Always rendered / hit-tested above regular windows |
 | `WINDOW_ALWAYSINBACK` | Never raised by `move_to_top` |
 | `WINDOW_DIALOG` | Modal dialog (closed by `end_dialog`) |
@@ -249,3 +249,11 @@ window_t *get_root_window(window_t *win);
 // Allocate and zero window userdata (freed automatically on destroy)
 void *allocate_window_data(window_t *win, size_t size);
 ```
+
+## Built-in Scrollbars
+
+Set `WINDOW_HSCROLL` and/or `WINDOW_VSCROLL` at creation time and call
+`set_scroll_info()` to drive the bars.  The framework paints them and sends
+`kWindowMessageHScroll` / `kWindowMessageVScroll` when the user moves a thumb.
+
+See [Scrollbars](scrollbars) for the full API and usage examples.

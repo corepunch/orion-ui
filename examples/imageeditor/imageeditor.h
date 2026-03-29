@@ -68,9 +68,6 @@
 #define DOC_START_Y   60
 #define DOC_CASCADE   20
 
-// Width/height of the interactive scrollbars on the canvas window
-#define SCROLLBAR_SIZE  8
-
 #define NUM_COLORS 16
 #define NUM_TOOLS  16
 #define NUM_USER_COLORS  8
@@ -188,8 +185,6 @@ typedef struct {
   int           scale;
   int           pan_x;      // horizontal pan offset in screen pixels
   int           pan_y;      // vertical pan offset in screen pixels
-  window_t     *hscroll;    // horizontal scrollbar child window
-  window_t     *vscroll;    // vertical scrollbar child window
   bool          panning;    // true while hand-tool drag is in progress
   point_t       pan_start;  // screen-local coords where hand drag began
   point_t       hover;      // canvas pixel coords under the cursor

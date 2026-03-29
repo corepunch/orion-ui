@@ -366,3 +366,113 @@ void enable_window(window_t *win, bool enable) {
   win->disabled = !enable;
   invalidate_window(win);
 }
+
+// ---- Built-in scrollbar API (WinAPI SetScrollInfo / GetScrollInfo style) ----
+
+// Clamp pos to the valid range [min_val .. max_val-page]
+static int sb_clamp_range(win_sb_t const *sb, int pos) {
+  int max_pos = sb->max_val - sb->page;
+  if (max_pos < sb->min_val) max_pos = sb->min_val;
+  if (pos < sb->min_val) return sb->min_val;
+  if (pos > max_pos)     return max_pos;
+  return pos;
+}
+
+// Update one built-in scrollbar from a scroll_info_t.
+// Auto-shows the bar when content exceeds the viewport; hides it otherwise.
+static void set_scroll_info_one(win_sb_t *sb, scroll_info_t const *info) {
+  if (info->fMask & SIF_RANGE) {
+    sb->min_val = info->nMin;
+    sb->max_val = info->nMax;
+  }
+  if (info->fMask & SIF_PAGE) {
+    sb->page = info->nPage;
+  }
+  if (info->fMask & SIF_POS) {
+    sb->pos = sb_clamp_range(sb, info->nPos);
+  }
+  // Clamp existing pos whenever range or page changes (even without SIF_POS).
+  if (info->fMask & (SIF_RANGE | SIF_PAGE)) {
+    sb->pos = sb_clamp_range(sb, sb->pos);
+  }
+  // Automatic show/hide: hide when the whole content fits in the viewport.
+  // Only apply auto logic when not overridden by an explicit show_scroll_bar() call.
+  if (sb->visible_mode == SB_VIS_HIDE) {
+    sb->visible = false; // forced hidden
+  } else if (sb->visible_mode == SB_VIS_SHOW) {
+    sb->visible = true;  // forced shown
+  } else {
+    bool should_show = (sb->page < sb->max_val - sb->min_val);
+    sb->visible = should_show;
+  }
+  if (sb->visible && !sb->enabled) {
+    // First time visible: default to enabled.
+    sb->enabled = true;
+  }
+}
+
+void set_scroll_info(window_t *win, int bar, scroll_info_t const *info, bool redraw) {
+  if (!win || !info) return;
+  if (bar == SB_VERT) {
+    set_scroll_info_one(&win->vscroll, info);
+  } else if (bar == SB_HORZ) {
+    set_scroll_info_one(&win->hscroll, info);
+  } else { // SB_BOTH
+    set_scroll_info_one(&win->hscroll, info);
+    set_scroll_info_one(&win->vscroll, info);
+  }
+  if (redraw) invalidate_window(win);
+}
+
+void get_scroll_info(window_t *win, int bar, scroll_info_t *info) {
+  if (!win || !info) return;
+  if (bar == SB_BOTH) bar = SB_HORZ; // SB_BOTH reads horizontal by convention
+  win_sb_t *sb = (bar == SB_VERT) ? &win->vscroll : &win->hscroll;
+  if (info->fMask & SIF_RANGE) {
+    info->nMin = sb->min_val;
+    info->nMax = sb->max_val;
+  }
+  if (info->fMask & SIF_PAGE) info->nPage = sb->page;
+  if (info->fMask & SIF_POS)  info->nPos  = sb->pos;
+}
+
+int get_scroll_pos(window_t *win, int bar) {
+  if (!win) return 0;
+  if (bar == SB_VERT) return win->vscroll.pos;
+  return win->hscroll.pos; // SB_HORZ or SB_BOTH → horizontal
+}
+
+// Explicitly enable or disable a built-in scrollbar's mouse interactivity.
+// Disabled bars remain visible but ignore mouse clicks.
+void enable_scroll_bar(window_t *win, int bar, bool enable) {
+  if (!win) return;
+  if (bar == SB_HORZ || bar == SB_BOTH) win->hscroll.enabled = enable;
+  if (bar == SB_VERT || bar == SB_BOTH) win->vscroll.enabled = enable;
+  invalidate_window(win);
+}
+
+// Show or hide a built-in scrollbar explicitly.
+// Calling this locks the bar's visibility so that subsequent set_scroll_info()
+// calls do not auto-show or auto-hide it.  To restore auto-visibility mode,
+// call reset_scroll_bar_auto(win, bar).
+void show_scroll_bar(window_t *win, int bar, bool show) {
+  if (!win) return;
+  if (bar == SB_HORZ || bar == SB_BOTH) {
+    win->hscroll.visible = show;
+    win->hscroll.visible_mode = show ? SB_VIS_SHOW : SB_VIS_HIDE;
+  }
+  if (bar == SB_VERT || bar == SB_BOTH) {
+    win->vscroll.visible = show;
+    win->vscroll.visible_mode = show ? SB_VIS_SHOW : SB_VIS_HIDE;
+  }
+  invalidate_window(win);
+}
+
+// Restore auto visibility mode for a built-in scrollbar.
+// After this call, set_scroll_info() will again auto-show/hide the bar based
+// on the content range vs page size, undoing any prior show_scroll_bar() call.
+void reset_scroll_bar_auto(window_t *win, int bar) {
+  if (!win) return;
+  if (bar == SB_HORZ || bar == SB_BOTH) win->hscroll.visible_mode = SB_VIS_AUTO;
+  if (bar == SB_VERT || bar == SB_BOTH) win->vscroll.visible_mode = SB_VIS_AUTO;
+}

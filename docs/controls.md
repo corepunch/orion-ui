@@ -10,6 +10,32 @@ All controls are window procedures registered with `commctl.h`.  Create them
 as child windows of a parent; notifications are sent to the **root window**
 via `kWindowMessageCommand`.
 
+## Scrollbar
+
+See [Scrollbars](scrollbars) for the complete scrollbar documentation covering both **built-in window scrollbars** (`WINDOW_HSCROLL` / `WINDOW_VSCROLL` + `set_scroll_info()`) and the **standalone `win_scrollbar` control**.
+
+```c
+// Standalone scrollbar – orientation set via lparam: 0=horizontal, 1=vertical
+window_t *vsb = create_window("", WINDOW_NOTITLE | WINDOW_NOFILL,
+    MAKERECT(w - 8, 0, 8, h - 8),
+    parent, win_scrollbar, (void *)1 /* SB_VERT */);
+
+scrollbar_info_t info = { .min_val = 0, .max_val = 200, .page = 50, .pos = 0 };
+send_message(vsb, kScrollBarMessageSetInfo, 0, &info);
+
+// Receive position-change notification in the parent proc:
+case kWindowMessageCommand:
+    if (HIWORD(wparam) == kScrollBarNotificationChanged) {
+        int new_pos = (int)(intptr_t)lparam;
+    }
+```
+
+**Important:** Do **not** set `WINDOW_HSCROLL` or `WINDOW_VSCROLL` on a
+`win_scrollbar` window.  Pass `(void *)0` (horizontal) or `(void *)1`
+(vertical) as `lparam` to `create_window`.  The flags `WINDOW_HSCROLL` /
+`WINDOW_VSCROLL` are reserved for parent windows that want the framework's
+built-in scrollbars.
+
 ## Button
 
 ```c
