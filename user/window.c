@@ -386,9 +386,9 @@ static void set_scroll_info_one(win_sb_t *sb, scroll_info_t const *info) {
   }
   // Automatic show/hide: hide when the whole content fits in the viewport.
   // Only apply auto logic when not overridden by an explicit show_scroll_bar() call.
-  if (sb->visible_mode == 0) {
+  if (sb->visible_mode == SB_VIS_HIDE) {
     sb->visible = false; // forced hidden
-  } else if (sb->visible_mode == 1) {
+  } else if (sb->visible_mode == SB_VIS_SHOW) {
     sb->visible = true;  // forced shown
   } else {
     bool should_show = (sb->page < sb->max_val - sb->min_val);
@@ -442,17 +442,26 @@ void enable_scroll_bar(window_t *win, int bar, bool enable) {
 
 // Show or hide a built-in scrollbar explicitly.
 // Calling this locks the bar's visibility so that subsequent set_scroll_info()
-// calls do not auto-show or auto-hide it.  To restore auto-visibility, reset
-// visible_mode to -1 directly before calling set_scroll_info() again.
+// calls do not auto-show or auto-hide it.  To restore auto-visibility mode,
+// call reset_scroll_bar_auto(win, bar).
 void show_scroll_bar(window_t *win, int bar, bool show) {
   if (!win) return;
   if (bar == SB_HORZ || bar == SB_BOTH) {
     win->hscroll.visible = show;
-    win->hscroll.visible_mode = show ? 1 : 0;
+    win->hscroll.visible_mode = show ? SB_VIS_SHOW : SB_VIS_HIDE;
   }
   if (bar == SB_VERT || bar == SB_BOTH) {
     win->vscroll.visible = show;
-    win->vscroll.visible_mode = show ? 1 : 0;
+    win->vscroll.visible_mode = show ? SB_VIS_SHOW : SB_VIS_HIDE;
   }
   invalidate_window(win);
+}
+
+// Restore auto visibility mode for a built-in scrollbar.
+// After this call, set_scroll_info() will again auto-show/hide the bar based
+// on the content range vs page size, undoing any prior show_scroll_bar() call.
+void reset_scroll_bar_auto(window_t *win, int bar) {
+  if (!win) return;
+  if (bar == SB_HORZ || bar == SB_BOTH) win->hscroll.visible_mode = SB_VIS_AUTO;
+  if (bar == SB_VERT || bar == SB_BOTH) win->vscroll.visible_mode = SB_VIS_AUTO;
 }

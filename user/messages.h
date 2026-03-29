@@ -114,6 +114,14 @@ enum {
 #define SIF_POS    0x0004   // nPos is valid
 #define SIF_ALL    (SIF_RANGE | SIF_PAGE | SIF_POS)
 
+// Visibility mode constants for win_sb_t::visible_mode
+// SB_VIS_AUTO: visibility is managed by set_scroll_info() auto show/hide heuristic
+// SB_VIS_HIDE: bar is explicitly hidden (show_scroll_bar(false))
+// SB_VIS_SHOW: bar is explicitly shown  (show_scroll_bar(true))
+#define SB_VIS_AUTO  ((int8_t)-1)
+#define SB_VIS_HIDE  ((int8_t) 0)
+#define SB_VIS_SHOW  ((int8_t) 1)
+
 // Width of a built-in scrollbar strip in logical pixels
 #define SCROLLBAR_WIDTH  8
 

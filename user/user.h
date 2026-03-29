@@ -64,7 +64,7 @@ typedef struct {
   int  page, pos;          // viewport size and current scroll position
   bool visible;            // bar is currently drawn (auto show/hide via set_scroll_info)
   bool enabled;            // bar accepts mouse interaction (enable_scroll_bar)
-  int8_t visible_mode;     // -1 = auto (set_scroll_info controls), 0 = forced hidden, 1 = forced shown
+  int8_t visible_mode;     // SB_VIS_AUTO / SB_VIS_HIDE / SB_VIS_SHOW (see messages.h)
   bool dragging;           // thumb drag in progress
   int  drag_start_mouse;   // axis coord (window-local) when drag began
   int  drag_start_pos;     // pos value when drag began
@@ -159,6 +159,7 @@ void get_scroll_info(window_t *win, int bar, scroll_info_t *info);
 int  get_scroll_pos(window_t *win, int bar);
 void enable_scroll_bar(window_t *win, int bar, bool enable);
 void show_scroll_bar(window_t *win, int bar, bool show);
+void reset_scroll_bar_auto(window_t *win, int bar);
 
 // Global window list
 extern window_t *windows;
