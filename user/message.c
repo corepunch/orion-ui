@@ -397,7 +397,7 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       switch (msg) {
         case kWindowMessagePaint:
           for (window_t *sub = win->children; sub; sub = sub->next) {
-            sub->proc(sub, kWindowMessagePaint, wparam, lparam);
+            send_message(sub, kWindowMessagePaint, wparam, lparam);
           }
           break;
         case kWindowMessageWheel:
