@@ -211,6 +211,17 @@ window_t *get_root_window(window_t *window) {
   return window->parent ? get_root_window(window->parent) : window;
 }
 
+// Find the first descendant (depth-first) with BUTTON_DEFAULT set.
+// Analogous to DM_GETDEFID in WinAPI dialog management.
+window_t *find_default_button(window_t *win) {
+  for (window_t *child = win ? win->children : NULL; child; child = child->next) {
+    if (child->flags & BUTTON_DEFAULT) return child;
+    window_t *found = find_default_button(child);
+    if (found) return found;
+  }
+  return NULL;
+}
+
 // Track mouse over window
 void track_mouse(window_t *win) {
   if (_tracked == win)

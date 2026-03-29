@@ -345,6 +345,106 @@ void test_invalidate_grandchild_targets_root(void) {
   PASS();
 }
 
+// ---------------------------------------------------------------------------
+// Tests: openfilename_t filter parsing (inline replica of fp_parse_filters
+// from commctl/filepicker.c — same logic, no link deps).
+// ---------------------------------------------------------------------------
+
+#define OFN_MAX_FILTERS 16
+
+typedef struct {
+  char description[128];
+  char extension[32];
+} t_fp_filter_t;
+
+static int t_fp_parse_filters(const char *raw, t_fp_filter_t *out, int max) {
+  if (!raw || !raw[0]) return 0;
+  int count = 0;
+  const char *p = raw;
+  while (*p && count < max) {
+    strncpy(out[count].description, p, sizeof(out[count].description) - 1);
+    out[count].description[sizeof(out[count].description) - 1] = '\0';
+    p += strlen(p) + 1;
+    if (!*p) break;
+    const char *pattern = p;
+    p += strlen(p) + 1;
+    const char *star = strchr(pattern, '*');
+    if (star && star[1] == '.') {
+      const char *dot = star + 1;
+      const char *end = strpbrk(dot, ";");
+      if (!end) end = dot + strlen(dot);
+      if (dot[1] == '*') {
+        out[count].extension[0] = '\0';
+      } else {
+        size_t len = (size_t)(end - dot);
+        if (len >= sizeof(out[count].extension)) len = sizeof(out[count].extension) - 1;
+        strncpy(out[count].extension, dot, len);
+        out[count].extension[len] = '\0';
+      }
+    } else {
+      out[count].extension[0] = '\0';
+    }
+    count++;
+  }
+  return count;
+}
+
+// Resolve the active filter from nFilterIndex (1-based) into a 0-based index.
+static int t_fp_active_filter(int nFilterIndex, int num_filters) {
+  return (nFilterIndex >= 1 && nFilterIndex <= num_filters)
+         ? nFilterIndex - 1 : 0;
+}
+
+void test_ofn_filter_parse_png(void) {
+  TEST("OFN filter: PNG filter parsed to .png extension");
+  t_fp_filter_t f[OFN_MAX_FILTERS];
+  int n = t_fp_parse_filters("PNG Files\0*.png\0", f, OFN_MAX_FILTERS);
+  ASSERT_EQUAL(n, 1);
+  ASSERT_EQUAL(strcmp(f[0].description, "PNG Files"), 0);
+  ASSERT_EQUAL(strcmp(f[0].extension,   ".png"),      0);
+  PASS();
+}
+
+void test_ofn_filter_parse_allfiles(void) {
+  TEST("OFN filter: *.* pattern yields empty extension (all files)");
+  t_fp_filter_t f[OFN_MAX_FILTERS];
+  int n = t_fp_parse_filters("All Files\0*.*\0", f, OFN_MAX_FILTERS);
+  ASSERT_EQUAL(n, 1);
+  ASSERT_EQUAL(strcmp(f[0].description, "All Files"), 0);
+  ASSERT_EQUAL(f[0].extension[0], '\0');
+  PASS();
+}
+
+void test_ofn_filter_parse_multiple(void) {
+  TEST("OFN filter: multiple filter pairs parsed correctly");
+  t_fp_filter_t f[OFN_MAX_FILTERS];
+  int n = t_fp_parse_filters("PNG Files\0*.png\0All Files\0*.*\0", f, OFN_MAX_FILTERS);
+  ASSERT_EQUAL(n, 2);
+  ASSERT_EQUAL(strcmp(f[0].extension, ".png"), 0);
+  ASSERT_EQUAL(f[1].extension[0], '\0');
+  PASS();
+}
+
+void test_ofn_filter_parse_empty(void) {
+  TEST("OFN filter: NULL lpstrFilter yields 0 filters");
+  t_fp_filter_t f[OFN_MAX_FILTERS];
+  ASSERT_EQUAL(t_fp_parse_filters(NULL, f, OFN_MAX_FILTERS), 0);
+  ASSERT_EQUAL(t_fp_parse_filters("",   f, OFN_MAX_FILTERS), 0);
+  PASS();
+}
+
+void test_ofn_filter_parse_nFilterIndex(void) {
+  TEST("OFN filter: nFilterIndex 1 selects first filter, 2 selects second");
+  t_fp_filter_t f[OFN_MAX_FILTERS];
+  int n = t_fp_parse_filters("PNG Files\0*.png\0All Files\0*.*\0", f, OFN_MAX_FILTERS);
+  ASSERT_EQUAL(n, 2);
+  ASSERT_EQUAL(t_fp_active_filter(1, n), 0);
+  ASSERT_EQUAL(t_fp_active_filter(2, n), 1);
+  ASSERT_EQUAL(t_fp_active_filter(0, n), 0);   // invalid → clamp to 0
+  ASSERT_EQUAL(t_fp_active_filter(3, n), 0);   // out of range → clamp to 0
+  PASS();
+}
+
 int main(int argc, char *argv[]) {
   (void)argc; (void)argv;
   TEST_START("File Picker and Filelist Logic");
@@ -376,6 +476,12 @@ int main(int argc, char *argv[]) {
   test_invalidate_root_window_targets_self();
   test_invalidate_child_window_targets_root();
   test_invalidate_grandchild_targets_root();
+
+  test_ofn_filter_parse_png();
+  test_ofn_filter_parse_allfiles();
+  test_ofn_filter_parse_multiple();
+  test_ofn_filter_parse_empty();
+  test_ofn_filter_parse_nFilterIndex();
 
   TEST_END();
 }
