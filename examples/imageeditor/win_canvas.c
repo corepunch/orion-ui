@@ -11,10 +11,17 @@ const int kZoomMenuIDs[NUM_ZOOM_LEVELS] = {
   ID_VIEW_ZOOM_6X, ID_VIEW_ZOOM_8X
 };
 
+// ---- scrollbar display mode -------------------------------------------------
+
+// Define CANVAS_SB_ALWAYS_VISIBLE to keep both scrollbars permanently shown
+// (disabled/greyed when the content fits, enabled when scrolling is possible).
+// Comment it out to restore the classic auto-hide behaviour where the bars
+// appear only when the content overflows the viewport.
+#define CANVAS_SB_ALWAYS_VISIBLE
+
 // ---- scrollbar helpers -------------------------------------------------------
 
 // Update built-in scrollbar info to match the current zoom/pan state.
-// Uses set_scroll_info() so the framework auto-shows/hides each bar.
 static void canvas_sync_scrollbars(window_t *win, canvas_win_state_t *state) {
   canvas_doc_t *doc = state->doc;
   int canvas_w = doc->canvas_w * state->scale;
@@ -32,6 +39,13 @@ static void canvas_sync_scrollbars(window_t *win, canvas_win_state_t *state) {
   int view_w = need_v ? win_w - SCROLLBAR_WIDTH : win_w;
   int view_h = need_h ? win_h - SCROLLBAR_WIDTH : win_h;
 
+#ifdef CANVAS_SB_ALWAYS_VISIBLE
+  // Always-visible mode: lock bars permanently shown before updating their
+  // range so the framework does not auto-hide them in set_scroll_info().
+  show_scroll_bar(win, SB_HORZ, true);
+  show_scroll_bar(win, SB_VERT, true);
+#endif
+
   scroll_info_t si;
   si.fMask = SIF_RANGE | SIF_PAGE | SIF_POS;
   si.nMin  = 0;
@@ -44,6 +58,14 @@ static void canvas_sync_scrollbars(window_t *win, canvas_win_state_t *state) {
   si.nPage = view_h;
   si.nPos  = state->pan_y;
   set_scroll_info(win, SB_VERT, &si, false);
+
+#ifdef CANVAS_SB_ALWAYS_VISIBLE
+  // Enable only when scrolling is possible.  Called after set_scroll_info so
+  // that the framework's "first-time-visible" heuristic cannot re-enable a bar
+  // we want disabled.
+  enable_scroll_bar(win, SB_HORZ, need_h);
+  enable_scroll_bar(win, SB_VERT, need_v);
+#endif
 
   if (!need_h) state->pan_x = 0;
   if (!need_v) state->pan_y = 0;
