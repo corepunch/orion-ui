@@ -119,7 +119,7 @@ static void handle_menu_command(uint16_t id) {
     }
 
     case ID_FILE_CLOSE:
-      if (doc) close_document(doc);
+      if (doc) doc_confirm_close(doc, g_app->menubar_win);
       break;
 
     case ID_FILE_QUIT:

@@ -182,6 +182,16 @@ void dispatch_message(SDL_Event *evt) {
               set_focus(find_next_tab_stop(_focused, false));
             }
             break;
+          case SDL_SCANCODE_RETURN: {
+            // WinAPI IsDialogMessage behaviour: trigger the default button
+            // (BS_DEFPUSHBUTTON analogue) when focused control doesn't consume Enter.
+            window_t *def = find_default_button(get_root_window(_focused));
+            if (def) {
+              send_message(def, kWindowMessageLeftButtonDown, 0, NULL);
+              send_message(def, kWindowMessageLeftButtonUp, 0, NULL);
+            }
+            break;
+          }
           default:
             break;
         }
@@ -308,7 +318,13 @@ void dispatch_message(SDL_Event *evt) {
           if (_dragging->flags & WINDOW_DIALOG) {
             end_dialog(_dragging, -1);
           } else {
-            show_window(_dragging, false);
+            /* Send kWindowMessageClose (WM_CLOSE analogue).
+             * If the handler returns true it has taken over (e.g. showed
+             * an "unsaved changes?" dialog and either closed or cancelled).
+             * If it returns false, apply the default action: hide the window. */
+            if (!send_message(_dragging, kWindowMessageClose, 0, NULL)) {
+              show_window(_dragging, false);
+            }
           }
           _dragging = NULL;
         } else {

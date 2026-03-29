@@ -122,6 +122,7 @@ bool is_window(window_t *win);
 int window_title_bar_y(window_t const *win);
 window_t *get_root_window(window_t *window);
 window_t *find_window(int x, int y);
+window_t *find_default_button(window_t *win);
 
 // Global window focus/tracking state
 extern window_t *_focused;

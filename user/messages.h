@@ -38,6 +38,11 @@ enum {
   // wparam = new scroll position; lparam = NULL.
   kWindowMessageHScroll,
   kWindowMessageVScroll,
+  // Sent when the user clicks the close (X) button on a non-dialog window.
+  // Analogous to WM_CLOSE in WinAPI.
+  // Return true  to cancel the close (e.g. show "unsaved changes?" dialog).
+  // Return false to allow the default action (hide the window).
+  kWindowMessageClose,
   kWindowMessageUser = 1000
 };
 
@@ -99,10 +104,12 @@ enum {
 // Button style flags (analogous to WinAPI BS_* styles)
 // BUTTON_PUSHLIKE: button stays visually pressed while win->value == true (like a toggle/check button)
 // BUTTON_AUTORADIO: clicking auto-clears all sibling AUTORADIO buttons and sets this one checked
+// BUTTON_DEFAULT: analogous to BS_DEFPUSHBUTTON — drawn with a black outline; triggered by Enter
 // Bitmap/image buttons are a separate window class (win_toolbar_button), not a flag on win_button.
 // Use kButtonMessageSetImage on a win_toolbar_button window to assign an icon from a bitmap_strip_t.
 #define BUTTON_PUSHLIKE     (1 << 13)
 #define BUTTON_AUTORADIO    (1 << 14)
+#define BUTTON_DEFAULT      (1 << 15)
 
 // Scroll bar constants (WinAPI-style, used with set_scroll_info / get_scroll_info)
 #define SB_HORZ  0   // horizontal scroll bar

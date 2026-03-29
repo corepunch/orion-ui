@@ -293,6 +293,11 @@ bool png_save(const char *path, const canvas_doc_t *doc);
 canvas_doc_t *create_document(const char *filename, int w, int h);
 void close_document(canvas_doc_t *doc);
 void doc_update_title(canvas_doc_t *doc);
+// Show a "Unsaved Changes" dialog when doc->modified is set.
+// If the user confirms, calls close_document().
+// Returns true if the document was closed (or had no unsaved changes),
+// false if the user pressed Cancel.
+bool doc_confirm_close(canvas_doc_t *doc, window_t *parent_win);
 
 // Window procedures
 result_t editor_menubar_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
