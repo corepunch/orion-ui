@@ -24,6 +24,9 @@ extern void draw_icon16(int icon, int x, int y, uint32_t col);
 extern int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 extern void set_projection(int x, int y, int w, int h);
 
+static int builtin_sb_thumb_len(win_sb_t const *sb, int track);
+static int builtin_sb_thumb_off(win_sb_t const *sb, int track, int tl);
+
 void set_fullscreen(void) {
   int w = ui_get_system_metrics(kSystemMetricScreenWidth);
   int h = ui_get_system_metrics(kSystemMetricScreenHeight);
