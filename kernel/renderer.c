@@ -1,8 +1,14 @@
 #include "../ui.h"
 #include "../user/gl_compat.h"
 
-#include <cglm/cglm.h>
-#include <cglm/struct.h>
+#if __has_include(<cglm/cglm.h>)
+#  include <cglm/cglm.h>
+#  if __has_include(<cglm/struct.h>)
+#    include <cglm/struct.h>
+#  endif
+#else
+#  include "cglm_compat.h"
+#endif
 
 #define OFFSET_OF(type, field) (void*)((size_t)&(((type *)0)->field))
 
