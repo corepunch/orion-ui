@@ -68,6 +68,11 @@ window_t* create_window(char const *title,
   }
   win->parent = parent;
   strncpy(win->title, title, sizeof(win->title));
+  // Default built-in scrollbar visibility to auto so set_scroll_info() can
+  // auto-show / auto-hide them.  Without this, memset(0) would leave
+  // visible_mode == SB_VIS_HIDE and the bars would never appear.
+  if (flags & WINDOW_HSCROLL) win->hscroll.visible_mode = SB_VIS_AUTO;
+  if (flags & WINDOW_VSCROLL) win->vscroll.visible_mode = SB_VIS_AUTO;
   _focused = win;
   push_window(win, parent ? &parent->children : &windows);
   send_message(win, kWindowMessageCreate, 0, lparam);

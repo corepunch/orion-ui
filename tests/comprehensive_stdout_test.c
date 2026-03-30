@@ -15,6 +15,7 @@ static bool buffer_contains(const char *buffer, const char *expected) {
 // Test: Comprehensive stdout interception
 void test_terminal_comprehensive_stdout(void) {
   TEST("Terminal comprehensive stdout interception");
+  SKIP_IF_NO_LUA();
   
   test_env_init();
   

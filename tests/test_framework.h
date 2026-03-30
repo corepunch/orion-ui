@@ -76,4 +76,19 @@ static int tests_failed = 0;
 #define ASSERT_STR_EQUAL(a, b) \
     ASSERT(strcmp(a, b) == 0, "Strings not equal")
 
+/* SKIP: gracefully skip a test (counts as a pass with a "SKIP" note).
+ * Call after TEST() which has already incremented tests_run.
+ * Use when the test depends on a feature that is not compiled in. */
+#define SKIP(reason) \
+    tests_passed++; \
+    printf(COLOR_YELLOW "SKIP" COLOR_RESET ": %s\n", reason); \
+    return;
+
+/* SKIP_IF_NO_LUA: skip the test when Lua was not compiled in (-DHAVE_LUA). */
+#ifndef HAVE_LUA
+#  define SKIP_IF_NO_LUA() SKIP("Lua not compiled in")
+#else
+#  define SKIP_IF_NO_LUA() /* Lua available – continue */
+#endif
+
 #endif // __TEST_FRAMEWORK_H__

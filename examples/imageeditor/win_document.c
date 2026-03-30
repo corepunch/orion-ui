@@ -10,6 +10,12 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
                               uint32_t wparam, void *lparam) {
   canvas_doc_t *doc = (canvas_doc_t *)win->userdata;
   switch (msg) {
+    case kWindowMessageHScroll:
+      // Forward horizontal-scroll notifications from the doc window's built-in
+      // hscroll (which is merged with the status bar) to the canvas child.
+      if (doc && doc->canvas_win)
+        send_message(doc->canvas_win, kWindowMessageHScroll, wparam, lparam);
+      return true;
     case kWindowMessageCreate:
       return true;
     case kWindowMessagePaint:
@@ -127,14 +133,14 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
 
   window_t *dwin = create_window(
       filename ? filename : "Untitled",
-      /* WINDOW_TOOLBAR |*/ WINDOW_STATUSBAR,
+      /* WINDOW_TOOLBAR |*/ WINDOW_STATUSBAR | WINDOW_HSCROLL,
       MAKERECT(wx, wy, win_w, win_h),
       NULL, doc_win_proc, NULL);
   dwin->userdata = doc;
   doc->win = dwin;
 
   window_t *cwin = create_window(
-      "", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_HSCROLL | WINDOW_VSCROLL,
+      "", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL,
       MAKERECT(0, 0, win_w, win_h),
       dwin, win_canvas_proc, doc);
   cwin->notabstop = false;

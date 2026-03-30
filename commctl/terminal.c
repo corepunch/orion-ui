@@ -19,27 +19,32 @@
 #endif
 
 /* Lua headers - probe multiple locations for portability.
- * Windows (MinGW/MSYS2): lua.h directly in the include path.
- * Linux (Debian/Ubuntu): lua5.4/lua.h via lua5.4-dev.
- * macOS (Homebrew): lua.h when linked, lua5.4/lua.h when keg-only. */
-#if defined(_WIN32) || defined(_WIN64)
-  #include <lua.h>
-  #include <lauxlib.h>
-  #include <lualib.h>
-#elif __has_include(<lua5.4/lua.h>)
-  #include <lua5.4/lua.h>
-  #include <lua5.4/lauxlib.h>
-  #include <lua5.4/lualib.h>
-#elif __has_include(<lua.h>)
-  #include <lua.h>
-  #include <lauxlib.h>
-  #include <lualib.h>
-#else
-  #error "Lua 5.4 headers not found. Install lua5.4-dev (Debian/Ubuntu) or lua (Homebrew) and ensure its prefix is in CFLAGS."
+ * Requires -DHAVE_LUA in CFLAGS (set by the Makefile when Lua is detected).
+ * Without -DHAVE_LUA the terminal compiles in command-only mode: built-in
+ * commands (help, clear, exit) work normally; Lua scripting is unavailable. */
+#if defined(HAVE_LUA)
+#  if defined(_WIN32) || defined(_WIN64)
+#    include <lua.h>
+#    include <lauxlib.h>
+#    include <lualib.h>
+#  elif __has_include(<lua5.4/lua.h>)
+#    include <lua5.4/lua.h>
+#    include <lua5.4/lauxlib.h>
+#    include <lua5.4/lualib.h>
+#  elif __has_include(<lua.h>)
+#    include <lua.h>
+#    include <lauxlib.h>
+#    include <lualib.h>
+#  else
+    /* -DHAVE_LUA was passed but the headers can't be found; disable gracefully. */
+#    undef HAVE_LUA
+#  endif
 #endif
 
 #define DEFAULT_TEXT_BUFFER_SIZE 4096
+#if defined(HAVE_LUA)
 #define TEXTBUF(L) ((text_buffer_t**)lua_getextraspace(L))
+#endif
 
 #define ICON_CURSOR 8
 
@@ -61,8 +66,13 @@ typedef struct {
 } terminal_cmd_t;
 
 typedef struct terminal_state_s {
+#if defined(HAVE_LUA)
   lua_State *L;          // Main Lua state (NULL if in command mode)
   lua_State *co;         // Coroutine for script execution (NULL if in command mode)
+#else
+  void *L;               // Lua not compiled in
+  void *co;
+#endif
   text_buffer_t *textbuf;
   char input_buffer[256];
   bool waiting_for_input;
@@ -75,6 +85,7 @@ extern void draw_icon8(int icon, int x, int y, uint32_t col);
 // Forward declaration of utility function
 static void f_strcat(text_buffer_t **b, const char *s);
 
+#if defined(HAVE_LUA)
 // Lua C API functions - kept minimal and grouped at the top
 static int f_print(lua_State *L) {
   for (int i = 1, n = lua_gettop(L); i <= n; i++) {
@@ -150,6 +161,7 @@ const char *luaX_addcurrentfolder(lua_State *L, const char *filepath, char *file
   
   return filename_buf;
 }
+#endif /* HAVE_LUA */
 
 // Text buffer utility functions
 static void init_text_buffer(text_buffer_t **buf) {
@@ -181,7 +193,8 @@ static void f_strcat(text_buffer_t **b, const char *s) {
   (*b)->size += l;
 }
 
-// Lua state initialization
+// Lua state initialization and coroutine management (only compiled with Lua)
+#if defined(HAVE_LUA)
 static lua_State *create_lua_state(text_buffer_t **textbuf) {
   lua_State *L = luaL_newstate();
   if (!L) return NULL;
@@ -237,6 +250,7 @@ static void continue_coroutine(terminal_state_t *s, int nargs) {
     s->process_finished = true;
   }
 }
+#endif /* HAVE_LUA */
 
 // Command mode functions
 static void cmd_exit(terminal_state_t *s) {
@@ -343,6 +357,7 @@ result_t win_terminal(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         f_strcat(&s->textbuf, "Type 'help' for available commands\n");
         f_strcat(&s->textbuf, "Terminal> ");
       } else { // Script mode
+#if defined(HAVE_LUA)
         s->command_mode = false;
         s->L = create_lua_state(&s->textbuf);
         if (!s->L) return false;
@@ -363,6 +378,22 @@ result_t win_terminal(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         }
         
         continue_coroutine(s, 0);
+#else
+        /* Lua not compiled in: fall back to command mode with a notice. */
+        s->L = NULL;
+        s->co = NULL;
+        s->command_mode = true;
+        s->waiting_for_input = true;
+        s->process_finished = false;
+        s->input_buffer[0] = '\0';
+
+        init_text_buffer(&s->textbuf);
+        if (!s->textbuf) return false;
+
+        f_strcat(&s->textbuf, "Lua scripting is not available in this build.\n");
+        f_strcat(&s->textbuf, "Install Lua 5.4 (detectable by pkg-config or Homebrew) and rebuild.\n");
+        f_strcat(&s->textbuf, "Terminal> ");
+#endif
       }
       
       return true;
@@ -377,8 +408,10 @@ result_t win_terminal(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         if (s->command_mode) {
           process_command(s, s->input_buffer);
         } else if (s->co) {
+#if defined(HAVE_LUA)
           lua_pushstring(s->co, s->input_buffer);
           continue_coroutine(s, 1);
+#endif
         }
         
         s->input_buffer[0] = '\0';
@@ -409,7 +442,9 @@ result_t win_terminal(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
     case kWindowMessageDestroy:
       if (s) {
         free_text_buffer(&s->textbuf);
+#if defined(HAVE_LUA)
         if (s->L) lua_close(s->L);
+#endif
         free(s);
         win->userdata = NULL;
       }

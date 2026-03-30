@@ -59,8 +59,11 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
       win->pressed = false;
       if (win->flags & BUTTON_AUTORADIO)
         autoradio_select(win);
-      send_message(get_root_window(win), kWindowMessageCommand, MAKEDWORD(win->id, kButtonNotificationClicked), win);
+      // Invalidate BEFORE sending the command: send_message may trigger
+      // end_dialog → destroy_window(win), freeing 'win'. Reading win->parent
+      // in get_root_window() on freed memory causes SIGSEGV on macOS.
       invalidate_window(win);
+      send_message(get_root_window(win), kWindowMessageCommand, MAKEDWORD(win->id, kButtonNotificationClicked), win);
       return true;
     case kWindowMessageKeyDown:
       if (wparam == SDL_SCANCODE_RETURN || wparam == SDL_SCANCODE_SPACE) {
@@ -74,8 +77,9 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
         win->pressed = false;
         if (win->flags & BUTTON_AUTORADIO)
           autoradio_select(win);
-        send_message(get_root_window(win), kWindowMessageCommand, MAKEDWORD(win->id, kButtonNotificationClicked), win);
+        // Same ordering fix as kWindowMessageLeftButtonUp.
         invalidate_window(win);
+        send_message(get_root_window(win), kWindowMessageCommand, MAKEDWORD(win->id, kButtonNotificationClicked), win);
         return true;
       } else {
         return false;
@@ -158,9 +162,12 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
       win->pressed = false;
       if (win->flags & BUTTON_AUTORADIO)
         autoradio_select(win);
+      // Invalidate BEFORE sending the command: send_message may trigger
+      // end_dialog → destroy_window(win), freeing 'win'. Reading win->parent
+      // in get_root_window() on freed memory causes SIGSEGV on macOS.
+      invalidate_window(win);
       send_message(get_root_window(win), kWindowMessageCommand,
                    MAKEDWORD(win->id, kButtonNotificationClicked), win);
-      invalidate_window(win);
       return true;
     case kWindowMessageKeyDown:
       if (wparam == SDL_SCANCODE_RETURN || wparam == SDL_SCANCODE_SPACE) {
@@ -174,9 +181,10 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
         win->pressed = false;
         if (win->flags & BUTTON_AUTORADIO)
           autoradio_select(win);
+        // Same ordering fix as kWindowMessageLeftButtonUp.
+        invalidate_window(win);
         send_message(get_root_window(win), kWindowMessageCommand,
                      MAKEDWORD(win->id, kButtonNotificationClicked), win);
-        invalidate_window(win);
         return true;
       }
       return false;

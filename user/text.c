@@ -142,7 +142,7 @@ int strnwidth(const char* text, int text_length) {
   
   // Pre-calculate all vertices for the entire string
   for (int i = 0; i < text_length; i++) {
-    char c = text[i];
+    unsigned char c = text[i];
     if (c == ' ') {
       cursor_x += SPACE_WIDTH;
       continue;
@@ -279,7 +279,7 @@ void draw_text_wrapped(const char* text, rect_t const *viewport, uint32_t col) {
   int x = viewport->x;
   int y = viewport->y;
   int width = viewport->w;
-  int height = viewport->h;
+  // int height = viewport->h; // Currently not used since we skip per-character visibility checks for performance
   
   static text_vertex_t buffer[MAX_TEXT_LENGTH * VERTICES_PER_CHAR];
   int vertex_count = 0, cx = x, cy = y;
