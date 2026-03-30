@@ -15,8 +15,10 @@ const int kZoomMenuIDs[NUM_ZOOM_LEVELS] = {
 
 // Define CANVAS_SB_ALWAYS_VISIBLE to keep both scrollbars permanently shown
 // (disabled/greyed when the content fits, enabled when scrolling is possible).
-// Comment it out to restore the classic auto-hide behaviour where the bars
-// appear only when the content overflows the viewport.
+// Comment it out for the auto-hide behaviour where set_scroll_info() shows/hides
+// the bars automatically.  Note: the vscroll strip (SCROLLBAR_WIDTH pixels on the
+// right) is always reserved in the layout to avoid jitter when the bar appears or
+// disappears; only the thumb rendering and mouse interaction change between modes.
 #define CANVAS_SB_ALWAYS_VISIBLE
 
 // ---- scrollbar helpers -------------------------------------------------------

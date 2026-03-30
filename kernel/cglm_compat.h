@@ -1,5 +1,5 @@
-#ifndef CGLM_COMPAT_H
-#define CGLM_COMPAT_H
+#ifndef __UI_KERNEL_CGLM_COMPAT_H__
+#define __UI_KERNEL_CGLM_COMPAT_H__
 
 /* Minimal cglm-compatible math definitions for builds without cglm installed.
  * Provides only what kernel/renderer.c uses:
@@ -24,4 +24,4 @@ static inline void glm_ortho(float l, float r, float b, float t,
   /* col 3 */ dest[3][0] = -(r+l)/rl;     dest[3][1] = -(t+b)/tb;   dest[3][2] = -(f+n)/fn;   dest[3][3] = 1.0f;
 }
 
-#endif /* CGLM_COMPAT_H */
+#endif /* __UI_KERNEL_CGLM_COMPAT_H__ */
