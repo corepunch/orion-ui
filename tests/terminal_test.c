@@ -166,6 +166,7 @@ void test_terminal_unknown_command(void) {
 // Test: Load simple Lua script
 void test_terminal_lua_simple_script(void) {
   TEST("Terminal with simple Lua script");
+  SKIP_IF_NO_LUA();
   
   test_env_init();
   
@@ -192,6 +193,7 @@ void test_terminal_lua_simple_script(void) {
 // Test: Interactive Lua script with input
 void test_terminal_lua_interactive_script(void) {
   TEST("Terminal with interactive Lua script");
+  SKIP_IF_NO_LUA();
   
   test_env_init();
   
@@ -240,6 +242,7 @@ void test_terminal_lua_interactive_script(void) {
 // Test: Lua script with error
 void test_terminal_lua_error_handling(void) {
   TEST("Terminal Lua error handling");
+  SKIP_IF_NO_LUA();
   
   test_env_init();
   
@@ -321,6 +324,7 @@ void test_terminal_backspace(void) {
 // Test: Buffer comparison with exact string matching
 void test_terminal_buffer_exact_match(void) {
   TEST("Terminal buffer exact string matching");
+  SKIP_IF_NO_LUA();
   
   test_env_init();
   

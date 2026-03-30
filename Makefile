@@ -18,6 +18,7 @@ ifeq ($(OS),Windows_NT)
     LIBS = -lmingw32 -lSDL2main -lSDL2
     LIBS += -lopengl32 -lglew32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lversion -luuid -lsetupapi
     # Lua library (MSYS2 provides -llua, not -llua5.4 like Unix platforms)
+    CFLAGS += -DHAVE_LUA
     LIBS += -llua
     # For examples: use -mwindows to create Windows GUI application (no console)
     # For tests: use -mconsole to create console application (allows printf output and standard main())
@@ -41,13 +42,24 @@ else
         LIB_FLAGS = -dynamiclib
         # Lua on macOS may be keg-only (headers not symlinked into /opt/homebrew/include).
         # Use pkg-config when available, otherwise fall back to brew --prefix.
-        LUA_PREFIX := $(shell pkg-config --variable=prefix lua5.4 2>/dev/null || \
-                               pkg-config --variable=prefix lua 2>/dev/null || \
-                               brew --prefix lua@5.4 2>/dev/null || \
-                               brew --prefix lua 2>/dev/null || echo "")
-        ifneq ($(LUA_PREFIX),)
-            CFLAGS  += -I$(LUA_PREFIX)/include
-            LDFLAGS += -L$(LUA_PREFIX)/lib
+        # If Lua is not found the build still succeeds but Lua scripting is disabled.
+        LUA_CFLAGS := $(shell pkg-config --cflags lua5.4 2>/dev/null || pkg-config --cflags lua 2>/dev/null)
+        LUA_LIBS   := $(shell pkg-config --libs   lua5.4 2>/dev/null || pkg-config --libs   lua 2>/dev/null)
+        ifeq ($(LUA_CFLAGS),)
+            # pkg-config not available or Lua not registered; try brew --prefix
+            LUA_PREFIX := $(shell brew --prefix lua@5.4 2>/dev/null || \
+                                   brew --prefix lua    2>/dev/null || echo "")
+            ifneq ($(LUA_PREFIX),)
+                LUA_CFLAGS := -I$(LUA_PREFIX)/include
+                LUA_LIBS   := -L$(LUA_PREFIX)/lib -llua5.4
+            endif
+        endif
+        ifneq ($(LUA_CFLAGS),)
+            CFLAGS  += -DHAVE_LUA $(LUA_CFLAGS)
+            LDFLAGS += $(filter -L%,$(LUA_LIBS))
+            LIBS    += $(filter-out -L%,$(LUA_LIBS))
+        else
+            $(info NOTE: Lua not found; building without Lua scripting. Install Lua via Homebrew to enable.)
         endif
     else ifeq ($(UNAME_S),Linux)
         # Linux specific flags
@@ -55,9 +67,16 @@ else
         LIB_EXT = .so
         LIB_FLAGS = -shared -fPIC
         CFLAGS += -fPIC
+        # Lua detection on Linux via pkg-config (lua5.4-dev / liblua5.4-dev)
+        LUA_CFLAGS := $(shell pkg-config --cflags lua5.4 2>/dev/null || pkg-config --cflags lua 2>/dev/null)
+        LUA_LIBS   := $(shell pkg-config --libs   lua5.4 2>/dev/null || pkg-config --libs   lua 2>/dev/null)
+        ifneq ($(LUA_CFLAGS),)
+            CFLAGS += -DHAVE_LUA $(LUA_CFLAGS)
+            LIBS   += $(LUA_LIBS)
+        else
+            $(info NOTE: Lua not found; building without Lua scripting. Install lua5.4-dev to enable.)
+        endif
     endif
-    # Use lua5.4 on Unix-like platforms
-    LIBS += -llua5.4
 endif
 
 # Build directories

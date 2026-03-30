@@ -14,6 +14,7 @@ static bool buffer_contains(const char *buffer, const char *expected) {
 // Test: Verify io.write() is intercepted
 void test_terminal_io_write_interception(void) {
   TEST("Terminal io.write() interception");
+  SKIP_IF_NO_LUA();
   
   test_env_init();
   
