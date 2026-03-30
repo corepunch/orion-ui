@@ -171,8 +171,9 @@ void draw_statusbar(window_t *win, const char *text) {
       int tl = builtin_sb_thumb_len(sb, bw);
       int to = builtin_sb_thumb_off(sb, bw, tl);
       uint32_t thumb_col = sb->enabled ? COLOR_LIGHT_EDGE : COLOR_DARK_EDGE;
+      int pad = (s - SCROLLBAR_WIDTH) / 2;
       fill_rect(COLOR_PANEL_DARK_BG, r.x + split_x, y, bw, s);
-      fill_rect(thumb_col,           r.x + split_x + to, y, tl, s);
+      fill_rect(thumb_col,           r.x + split_x + to, y + pad, tl, SCROLLBAR_WIDTH);
     }
     // Corner square between the scrollbar and the vscroll column (if any).
     if (has_v) {
