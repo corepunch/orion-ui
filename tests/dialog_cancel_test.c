@@ -1,17 +1,23 @@
 // Dialog Cancel Crash Test
 //
 // Regression test for: pressing "Cancel" on a modal dialog crashes with
-// SIGSEGV at 0x0 (null function-pointer dereference inside repost_messages).
+// SIGSEGV at 0x0 (null function-pointer dereference) on macOS.
 //
-// Root cause: win_button calls invalidate_window(win) after the send_message
-// that triggers end_dialog.  end_dialog destroys the dialog and all its
-// children – including the Cancel button itself – so 'win' is freed by the
-// time invalidate_window is called.  The resulting post_message queues a
-// stale pointer; repost_messages then calls send_message on freed memory
-// whose proc field happens to be NULL, causing the crash.
+// Root cause: win_button calls invalidate_window(win) AFTER the send_message
+// that fires kWindowMessageCommand.  If the command handler calls end_dialog,
+// end_dialog destroys the dialog and all its children – including the Cancel
+// button itself – so 'win' is freed by the time invalidate_window is called.
+// invalidate_window calls get_root_window(win) which dereferences win->parent
+// on freed memory; on macOS this raises SIGSEGV.
 //
-// The fix in repost_messages validates every target window against the live
-// window tree before dispatching it.
+// Fix: in win_button (and win_toolbar_button), call invalidate_window(win)
+// BEFORE send_message(root, kWindowMessageCommand, ...).  invalidate_window
+// just posts async repaint messages, so there is no visible difference in
+// behaviour, but win is guaranteed to be alive at that point.
+//
+// A secondary guard: repost_messages() validates every target window with
+// is_valid_window_ptr() before dispatching, so any stale messages that do
+// make it into the queue are harmlessly dropped.
 
 #include "test_framework.h"
 #include "test_env.h"
@@ -84,18 +90,16 @@ void test_dialog_cancel_no_crash(void) {
 
     // kWindowMessageLeftButtonUp triggers the full destroy chain inside
     // send_message (synchronously), exactly as dispatch_message → handle_mouse
-    // would do in production.  During this call win_button will:
-    //   1. Call send_message(dialog, kWindowMessageCommand, ...) →
-    //        dialog_proc → end_dialog → destroy_window(dlg) →
-    //        destroy_window(cancel_btn) → free(cancel_btn)
-    //   2. Then call invalidate_window(freed_cancel_btn) →
-    //        post_message(freed_cancel_btn, kWindowMessagePaint)
-    // The stale message is now sitting in the queue.
+    // would do in production.  With the fix, win_button calls invalidate_window
+    // BEFORE send_message(root, kWindowMessageCommand), so 'win' is still alive
+    // when invalidate_window runs.  The command handler then calls end_dialog →
+    // destroy_window(dlg) → destroy_window(cancel_btn) → free(cancel_btn).
+    // Any stale messages remaining in the queue are safely skipped by the
+    // is_valid_window_ptr guard in repost_messages.
     send_message(cancel_btn, kWindowMessageLeftButtonUp, MAKEDWORD(cx, cy), NULL);
 
-    // Before the fix, repost_messages would SIGSEGV (pc=0x0) because it
-    // dispatched the stale kWindowMessagePaint targeting the freed cancel_btn,
-    // whose proc field reads as NULL from freed memory.
+    // repost_messages processes the queue.  The is_valid_window_ptr guard
+    // ensures any stale messages (if any leaked through) are dropped safely.
     repost_messages();
 
     // The dialog was destroyed; cancel command must have been processed.
