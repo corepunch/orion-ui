@@ -155,7 +155,9 @@ typedef struct {
 #define TITLEBAR_HEIGHT   12
 #define TOOLBAR_HEIGHT    22
 #define STATUSBAR_HEIGHT  12
-#define RESIZE_HANDLE     8
+// Resize handle matches SCROLLBAR_WIDTH so the scrollbar corner cell is fully
+// interactive as a resize drag grip (same as Windows 1.0/2.0 behaviour).
+#define RESIZE_HANDLE     SCROLLBAR_WIDTH
 #define BUTTON_HEIGHT     13
 #define WINDOW_PADDING 4
 #define LINE_PADDING 5
