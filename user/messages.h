@@ -130,7 +130,7 @@ enum {
 #define SB_VIS_SHOW  ((int8_t) 1)
 
 // Width of a built-in scrollbar strip in logical pixels
-#define SCROLLBAR_WIDTH  8
+#define SCROLLBAR_WIDTH  12
 
 // When a window has both WINDOW_HSCROLL and WINDOW_STATUSBAR, the horizontal
 // scrollbar is merged into the status-bar row.  The left fraction (%) is
