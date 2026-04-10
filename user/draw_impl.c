@@ -168,16 +168,36 @@ void draw_statusbar(window_t *win, const char *text) {
     // Leave room for the vertical scrollbar column if present.
     int bw = (r.w - split_x) - (has_v ? SCROLLBAR_WIDTH : 0);
     if (bw > 0) {
-      int tl = builtin_sb_thumb_len(sb, bw);
-      int to = builtin_sb_thumb_off(sb, bw, tl);
-      uint32_t thumb_col = sb->enabled ? COLOR_LIGHT_EDGE : COLOR_DARK_EDGE;
-      int pad = (s - SCROLLBAR_WIDTH) / 2;
       fill_rect(COLOR_PANEL_DARK_BG, r.x + split_x, y, bw, s);
-      fill_rect(thumb_col,           r.x + split_x + to, y + pad, tl, SCROLLBAR_WIDTH);
+      // Arrow buttons (each SCROLLBAR_WIDTH wide)
+      if (bw >= 2 * SCROLLBAR_WIDTH) {
+        int icon_off = (SCROLLBAR_WIDTH - ICON8_SIZE) / 2;
+        fill_rect(COLOR_PANEL_BG, r.x + split_x, y, SCROLLBAR_WIDTH, s);
+        draw_icon8(icon8_scroll_left,  r.x + split_x + icon_off, y + icon_off, COLOR_TEXT_NORMAL);
+        fill_rect(COLOR_PANEL_BG, r.x + split_x + bw - SCROLLBAR_WIDTH, y, SCROLLBAR_WIDTH, s);
+        draw_icon8(icon8_scroll_right, r.x + split_x + bw - SCROLLBAR_WIDTH + icon_off, y + icon_off, COLOR_TEXT_NORMAL);
+        // Thumb in effective track between buttons
+        int eff_track = bw - 2 * SCROLLBAR_WIDTH;
+        if (eff_track > 0) {
+          int tl = builtin_sb_thumb_len(sb, eff_track);
+          int to = builtin_sb_thumb_off(sb, eff_track, tl);
+          uint32_t thumb_col = sb->enabled ? COLOR_LIGHT_EDGE : COLOR_DARK_EDGE;
+          fill_rect(thumb_col, r.x + split_x + SCROLLBAR_WIDTH + to, y, tl, s);
+        }
+      } else {
+        // Not enough room for buttons — draw plain thumb
+        int tl = builtin_sb_thumb_len(sb, bw);
+        int to = builtin_sb_thumb_off(sb, bw, tl);
+        uint32_t thumb_col = sb->enabled ? COLOR_LIGHT_EDGE : COLOR_DARK_EDGE;
+        fill_rect(thumb_col, r.x + split_x + to, y, tl, s);
+      }
     }
-    // Corner square between the scrollbar and the vscroll column (if any).
+    // Corner between the scrollbar and the vscroll column — shows resize icon.
     if (has_v) {
-      fill_rect(COLOR_PANEL_DARK_BG, r.x + r.w - SCROLLBAR_WIDTH, y, SCROLLBAR_WIDTH, s);
+      int cx = r.x + r.w - SCROLLBAR_WIDTH;
+      int icon_off = (SCROLLBAR_WIDTH - ICON8_SIZE) / 2;
+      fill_rect(COLOR_PANEL_DARK_BG, cx, y, SCROLLBAR_WIDTH, s);
+      draw_icon8(icon8_resize_br, cx + icon_off, y + icon_off, COLOR_TEXT_NORMAL);
     }
   }
 }
@@ -334,17 +354,37 @@ void draw_builtin_scrollbars(window_t *win) {
   // it isn't drawn twice, and don't subtract its height from the vscroll track.
   bool h_merged = has_h && (win->flags & WINDOW_STATUSBAR);
 
+  // Offset for centering 8×8 icons inside SCROLLBAR_WIDTH×SCROLLBAR_WIDTH buttons
+  int icon_off = (SCROLLBAR_WIDTH - ICON8_SIZE) / 2;
+
   if (has_h && !h_merged) {
     win_sb_t *sb = &win->hscroll;
     int x  = base_x;
     int y  = base_y + win->frame.h - SCROLLBAR_WIDTH;
     int bw = win->frame.w - (has_v ? SCROLLBAR_WIDTH : 0);
-    int tl = builtin_sb_thumb_len(sb, bw);
-    int to = builtin_sb_thumb_off(sb, bw, tl);
-    // Disabled bars render a darker thumb to indicate non-interactive state.
-    uint32_t thumb_col = sb->enabled ? COLOR_LIGHT_EDGE : COLOR_DARK_EDGE;
+    // Track background
     fill_rect(COLOR_PANEL_DARK_BG, x, y, bw, SCROLLBAR_WIDTH);
-    fill_rect(thumb_col,           x + to, y, tl, SCROLLBAR_WIDTH);
+    // Arrow buttons
+    if (bw >= 2 * SCROLLBAR_WIDTH) {
+      fill_rect(COLOR_PANEL_BG, x, y, SCROLLBAR_WIDTH, SCROLLBAR_WIDTH);
+      draw_icon8(icon8_scroll_left,  x + icon_off, y + icon_off, COLOR_TEXT_NORMAL);
+      fill_rect(COLOR_PANEL_BG, x + bw - SCROLLBAR_WIDTH, y, SCROLLBAR_WIDTH, SCROLLBAR_WIDTH);
+      draw_icon8(icon8_scroll_right, x + bw - SCROLLBAR_WIDTH + icon_off, y + icon_off, COLOR_TEXT_NORMAL);
+      // Thumb in effective track between buttons
+      int eff_track = bw - 2 * SCROLLBAR_WIDTH;
+      if (eff_track > 0) {
+        int tl = builtin_sb_thumb_len(sb, eff_track);
+        int to = builtin_sb_thumb_off(sb, eff_track, tl);
+        uint32_t thumb_col = sb->enabled ? COLOR_LIGHT_EDGE : COLOR_DARK_EDGE;
+        fill_rect(thumb_col, x + SCROLLBAR_WIDTH + to, y, tl, SCROLLBAR_WIDTH);
+      }
+    } else {
+      // Not enough room for buttons — plain thumb
+      int tl = builtin_sb_thumb_len(sb, bw);
+      int to = builtin_sb_thumb_off(sb, bw, tl);
+      uint32_t thumb_col = sb->enabled ? COLOR_LIGHT_EDGE : COLOR_DARK_EDGE;
+      fill_rect(thumb_col, x + to, y, tl, SCROLLBAR_WIDTH);
+    }
   }
 
   if (has_v) {
@@ -354,17 +394,36 @@ void draw_builtin_scrollbars(window_t *win) {
     // In merged mode the horizontal bar lives in the status-bar row below the
     // content area, so the vertical bar spans the full content height.
     int bh = win->frame.h - (has_h && !h_merged ? SCROLLBAR_WIDTH : 0);
-    int tl = builtin_sb_thumb_len(sb, bh);
-    int to = builtin_sb_thumb_off(sb, bh, tl);
-    uint32_t thumb_col = sb->enabled ? COLOR_LIGHT_EDGE : COLOR_DARK_EDGE;
+    // Track background
     fill_rect(COLOR_PANEL_DARK_BG, x, y, SCROLLBAR_WIDTH, bh);
-    fill_rect(thumb_col,           x, y + to, SCROLLBAR_WIDTH, tl);
+    // Arrow buttons
+    if (bh >= 2 * SCROLLBAR_WIDTH) {
+      fill_rect(COLOR_PANEL_BG, x, y, SCROLLBAR_WIDTH, SCROLLBAR_WIDTH);
+      draw_icon8(icon8_scroll_up,   x + icon_off, y + icon_off, COLOR_TEXT_NORMAL);
+      fill_rect(COLOR_PANEL_BG, x, y + bh - SCROLLBAR_WIDTH, SCROLLBAR_WIDTH, SCROLLBAR_WIDTH);
+      draw_icon8(icon8_scroll_down, x + icon_off, y + bh - SCROLLBAR_WIDTH + icon_off, COLOR_TEXT_NORMAL);
+      // Thumb in effective track between buttons
+      int eff_track = bh - 2 * SCROLLBAR_WIDTH;
+      if (eff_track > 0) {
+        int tl = builtin_sb_thumb_len(sb, eff_track);
+        int to = builtin_sb_thumb_off(sb, eff_track, tl);
+        uint32_t thumb_col = sb->enabled ? COLOR_LIGHT_EDGE : COLOR_DARK_EDGE;
+        fill_rect(thumb_col, x, y + SCROLLBAR_WIDTH + to, SCROLLBAR_WIDTH, tl);
+      }
+    } else {
+      // Not enough room for buttons — plain thumb
+      int tl = builtin_sb_thumb_len(sb, bh);
+      int to = builtin_sb_thumb_off(sb, bh, tl);
+      uint32_t thumb_col = sb->enabled ? COLOR_LIGHT_EDGE : COLOR_DARK_EDGE;
+      fill_rect(thumb_col, x, y + to, SCROLLBAR_WIDTH, tl);
+    }
   }
 
+  // Bottom-right corner: resize icon when both scrollbars are visible.
   if (has_h && !h_merged && has_v) {
-    fill_rect(COLOR_PANEL_DARK_BG,
-              base_x + win->frame.w - SCROLLBAR_WIDTH,
-              base_y + win->frame.h - SCROLLBAR_WIDTH,
-              SCROLLBAR_WIDTH, SCROLLBAR_WIDTH);
+    int cx = base_x + win->frame.w - SCROLLBAR_WIDTH;
+    int cy = base_y + win->frame.h - SCROLLBAR_WIDTH;
+    fill_rect(COLOR_PANEL_DARK_BG, cx, cy, SCROLLBAR_WIDTH, SCROLLBAR_WIDTH);
+    draw_icon8(icon8_resize_br, cx + icon_off, cy + icon_off, COLOR_TEXT_NORMAL);
   }
 }
