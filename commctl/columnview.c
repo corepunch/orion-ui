@@ -1,4 +1,3 @@
-#include <SDL2/SDL.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -99,7 +98,7 @@ result_t win_columnview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       uint32_t index = row * ncol + col;
       
       if (index < data->count) {
-        uint32_t now = SDL_GetTicks();
+        uint32_t now = WI_GetMilliseconds();
         
         // Check for double-click
         if (data->last_click_index == index && (now - data->last_click_time) < 500) {

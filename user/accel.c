@@ -2,7 +2,6 @@
 // Maps keyboard shortcuts (key + modifiers) to command IDs and delivers them
 // as kWindowMessageCommand events, mirroring WinAPI TranslateAccelerator.
 
-#include <SDL2/SDL.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -36,10 +35,10 @@ void free_accelerators(accel_table_t *table) {
 bool translate_accelerator(window_t *win, ui_event_t *evt,
                            accel_table_t *table) {
   if (!win || !evt || !table) return false;
-  if (evt->type != SDL_KEYDOWN) return false;
+  if (evt->message != kEventKeyDown) return false;
 
-  SDL_Keymod   mod = SDL_GetModState();
-  uint16_t     sc  = (uint16_t)evt->key.keysym.scancode;
+  uint32_t sc  = evt->keyCode;
+  uint32_t mod = evt->modflags;
 
   for (int i = 0; i < table->count; i++) {
     const accel_t *a = &table->entries[i];
@@ -48,20 +47,15 @@ bool translate_accelerator(window_t *win, ui_event_t *evt,
     bool want_shift = (a->fVirt & FSHIFT)   != 0;
     bool want_alt   = (a->fVirt & FALT)     != 0;
 #ifdef __APPLE__
-    // On macOS, treat Command as Ctrl for accelerator matching since it's the primary modifier for shortcuts.
-    bool has_ctrl   = (mod & KMOD_GUI)  != 0;
+    bool has_ctrl   = (mod & (WI_MOD_CMD  >> 16)) != 0;
 #else
-    bool has_ctrl   = (mod & KMOD_CTRL)  != 0;
+    bool has_ctrl   = (mod & (WI_MOD_CTRL >> 16)) != 0;
 #endif
-    bool has_shift  = (mod & KMOD_SHIFT) != 0;
-    bool has_alt    = (mod & KMOD_ALT)   != 0;
+    bool has_shift  = (mod & (WI_MOD_SHIFT >> 16)) != 0;
+    bool has_alt    = (mod & (WI_MOD_ALT  >> 16)) != 0;
     if (has_ctrl == want_ctrl && has_shift == want_shift && has_alt == want_alt) {
       // Suppress accelerators that require no Ctrl or Alt while a text-editing
-      // control has keyboard focus.  This mirrors the WinAPI behaviour where
-      // an edit control captures character input before TranslateAccelerator
-      // can intercept it, so bare-key shortcuts (e.g. P/B/E/K/S for tools)
-      // don't fire while the user is typing.  Accelerators that require
-      // Ctrl or Alt are never suppressed.
+      // control has keyboard focus, mirroring WinAPI TranslateAccelerator.
       if (!want_ctrl && !want_alt && _focused && _focused->editing) continue;
       send_message(win, kWindowMessageCommand,
                    MAKEDWORD(a->cmd, kAcceleratorNotification), NULL);
@@ -82,7 +76,7 @@ const accel_t *accel_find_cmd(const accel_table_t *table, uint16_t cmd) {
 
 int accel_format(const accel_t *a, char *buf, int bufsize) {
   if (!a || !buf || bufsize <= 0) return 0;
-  const char *kname = SDL_GetScancodeName((SDL_Scancode)a->key);
+  const char *kname = WI_KeynumToString((uint32_t)a->key);
   return snprintf(buf, (size_t)bufsize, "%s%s%s%s",
                   (a->fVirt & FCONTROL) ? "Ctrl+"  : "",
                   (a->fVirt & FSHIFT)   ? "Shift+" : "",

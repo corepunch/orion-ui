@@ -1,7 +1,6 @@
 // Message queue and dispatch implementation
 // Extracted from mapview/window.c
 
-#include <SDL2/SDL.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,9 +39,9 @@ static winhook_t *g_hooks = NULL;
 extern window_t *windows;
 extern window_t *_focused;
 extern bool running;  // Set to true when graphics are initialized
-// Custom SDL event type (defined in kernel/event.c, declared in kernel/kernel.h).
-// Listed here to avoid a user→kernel header dependency.
-extern Uint32 g_ui_repaint_event;
+
+// Forward declaration for kernel/event.c wake-up helper.
+extern void wake_event_loop(void);
 
 // Forward declarations
 extern void draw_panel(window_t const *win);
@@ -529,18 +528,9 @@ void post_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     .wparam = wparam,
     .lparam = lparam,
   };
-  // Wake up SDL_WaitEvent in get_message() so the main loop calls
+  // Wake up WI_WaitEvent in get_message() so the main loop calls
   // repost_messages() and processes this newly-queued message.
-  if (g_ui_repaint_event != (Uint32)-1) {
-    SDL_Event peek;
-    if (SDL_PeepEvents(&peek, 1, SDL_PEEKEVENT,
-                       g_ui_repaint_event, g_ui_repaint_event) == 0) {
-      SDL_Event e;
-      SDL_memset(&e, 0, sizeof(e));
-      e.type = g_ui_repaint_event;
-      SDL_PushEvent(&e);
-    }
-  }
+  wake_event_loop();
 }
 
 // Check whether 'target' is still a live window (root or descendant).

@@ -1,7 +1,6 @@
-// SDL event handling and dispatch
-// Extracted from mapview/window.c
+// Platform event handling and dispatch
+// Translates platform (WI_Message) events into Orion window messages.
 
-#include <SDL2/SDL.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,12 +10,6 @@
 #include "../user/messages.h"
 #include "kernel.h"
 
-// Custom SDL event type registered at startup.
-// Posted to the SDL queue whenever an internal message is queued so that
-// SDL_WaitEvent() in get_message() wakes up and the caller's
-// repost_messages() can drain the internal queue.
-Uint32 g_ui_repaint_event = (Uint32)-1;
-
 // External references
 extern bool running;
 extern window_t *windows;
@@ -24,12 +17,23 @@ extern window_t *_focused;
 extern window_t *_tracked;
 extern window_t *_captured;
 
-// Macros for coordinate conversion
+// Macros for coordinate conversion (platform logical → Orion logical)
 #define SCALE_POINT(x) ((x)/UI_WINDOW_SCALE)
-#define LOCAL_X(VALUE, WIN) (SCALE_POINT((VALUE).x) - (WIN)->frame.x + (WIN)->scroll[0])
-#define LOCAL_Y(VALUE, WIN) (SCALE_POINT((VALUE).y) - (WIN)->frame.y + (WIN)->scroll[1])
+#define LOCAL_X(px, py, WIN) (SCALE_POINT(px) - (WIN)->frame.x + (WIN)->scroll[0])
+#define LOCAL_Y(px, py, WIN) (SCALE_POINT(py) - (WIN)->frame.y + (WIN)->scroll[1])
 #define CONTAINS(x, y, x1, y1, w1, h1) \
 ((x1) <= (x) && (y1) <= (y) && (x1) + (w1) > (x) && (y1) + (h1) > (y))
+
+// Sentinel object — any event posted with this target is a wakeup-only event
+// and should be silently discarded by dispatch_message.
+static int g_wakeup_sentinel;
+
+// Current modifier state (updated on every key event)
+static uint32_t g_mod_state = 0;
+
+uint32_t ui_get_mod_state(void) {
+  return g_mod_state;
+}
 
 // External functions
 extern int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
@@ -91,18 +95,15 @@ void move_to_top(window_t* _win) {
   
   window_t **head = &windows, *p = NULL, *n = *head;
   
-  // Find the node `win` in the list
   while (n != win) {
     p = n;
     n = n->next;
-    if (!n) return;  // If `win` is not found, exit
+    if (!n) return;
   }
   
-  // Remove the node `win` from the list
   if (p) p->next = win->next;
-  else *head = win->next;  // If `win` is at the head, update the head
+  else *head = win->next;
   
-  // If `win` was the only node, just re-add it and return
   if (!*head) {
     *head = win;
     win->next = NULL;
@@ -110,145 +111,167 @@ void move_to_top(window_t* _win) {
   }
 
   if (win->flags & WINDOW_ALWAYSONTOP) {
-    // ALWAYSONTOP windows always go to the absolute end of the list so they
-    // are rendered last (on top) and receive mouse clicks preferentially.
     window_t *tail = *head;
     while (tail->next)
       tail = tail->next;
     tail->next = win;
     win->next = NULL;
   } else {
-    // Regular windows are inserted just before the first ALWAYSONTOP window
-    // so they never obscure the always-on-top palette / menu-bar windows.
     window_t *prev = NULL, *cur = *head;
     while (cur && !(cur->flags & WINDOW_ALWAYSONTOP)) {
       prev = cur;
       cur  = cur->next;
     }
-    // cur == first ALWAYSONTOP window (or NULL if none)
     win->next = cur;
     if (prev) prev->next = win;
     else      *head      = win;
   }
 }
 
-// Dispatch SDL event to window system
-void dispatch_message(SDL_Event *evt) {
-  // Repaint wakeup events are only used to unblock SDL_WaitEvent; ignore them.
-  if (g_ui_repaint_event != (Uint32)-1 && evt->type == g_ui_repaint_event)
+// Dispatch a platform WI_Message to the Orion window system.
+void dispatch_message(ui_event_t *msg) {
+  // Wakeup events are used only to unblock WI_WaitEvent; discard them.
+  if (msg->target == &g_wakeup_sentinel)
     return;
+
   window_t *win;
-  switch (evt->type) {
-    case SDL_WINDOWEVENT:
-      if (evt->window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
-        int new_w = evt->window.data1;
-        int new_h = evt->window.data2;
-        ui_update_screen_size(new_w, new_h);
-        int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
-        int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
-        // Phase 1: update all frame dimensions synchronously so the stencil
-        // refresh in phase 2 sees the new bounds.
-        for (win = windows; win; win = win->next) {
-          if (!win->parent) {
-            if (win->flags & WINDOW_ALWAYSINBACK) {
-              resize_window(win, sw, sh);
-            } else {
-              send_message(win, kWindowMessageDisplayChange, MAKEDWORD(sw, sh), NULL);
-            }
-          }
-        }
-        // Phase 2: rebuild the stencil with updated bounds, then repaint.
-        post_message((window_t *)1, kWindowMessageRefreshStencil, 0, NULL);
-        for (win = windows; win; win = win->next) {
-          if (win->visible) {
-            invalidate_window(win);
-          }
-        }
-      }
-      break;
-    case SDL_QUIT:
+  int px, py; // platform logical coordinates
+
+  switch (msg->message) {
+
+    case kEventWindowClosed:
       running = false;
       break;
-    case SDL_TEXTINPUT:
-      send_message(_focused, kWindowMessageTextInput, 0, evt->text.text);
-      break;
-    case SDL_KEYDOWN:
-      if (_focused && !send_message(_focused, kWindowMessageKeyDown, evt->key.keysym.scancode, NULL)) {
-        switch (evt->key.keysym.scancode) {
-          case SDL_SCANCODE_TAB:
-            if (evt->key.keysym.mod & KMOD_SHIFT) {
-              set_focus(find_prev_tab_stop(_focused));
-            } else {
-              set_focus(find_next_tab_stop(_focused, false));
-            }
-            break;
-          case SDL_SCANCODE_RETURN: {
-            // WinAPI IsDialogMessage behaviour: trigger the default button
-            // (BS_DEFPUSHBUTTON analogue) when focused control doesn't consume Enter.
-            window_t *def = find_default_button(get_root_window(_focused));
-            if (def) {
-              send_message(def, kWindowMessageLeftButtonDown, 0, NULL);
-              send_message(def, kWindowMessageLeftButtonUp, 0, NULL);
-            }
-            break;
+
+    case kEventWindowResized: {
+      int new_w = (int)LOWORD(msg->wParam);
+      int new_h = (int)HIWORD(msg->wParam);
+      ui_update_screen_size(new_w, new_h);
+      int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
+      int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
+      for (win = windows; win; win = win->next) {
+        if (!win->parent) {
+          if (win->flags & WINDOW_ALWAYSINBACK) {
+            resize_window(win, sw, sh);
+          } else {
+            send_message(win, kWindowMessageDisplayChange, MAKEDWORD(sw, sh), NULL);
           }
-          default:
-            break;
+        }
+      }
+      post_message((window_t *)1, kWindowMessageRefreshStencil, 0, NULL);
+      for (win = windows; win; win = win->next) {
+        if (win->visible) {
+          invalidate_window(win);
         }
       }
       break;
-    case SDL_KEYUP:
-      send_message(_focused, kWindowMessageKeyUp, evt->key.keysym.scancode, NULL);
+    }
+
+    case kEventChar:
+      // Some platforms send kEventChar as a separate text-input event.
+      if (*(char*)&msg->lParam != '\0')
+        send_message(_focused, kWindowMessageTextInput, 0, &msg->lParam);
       break;
-    case SDL_JOYAXISMOTION:
-      send_message(_focused, kWindowMessageJoyAxisMotion, MAKEDWORD(evt->jaxis.axis, evt->jaxis.value), NULL);
+
+    case kEventKeyDown: {
+      // Track modifier state from the event's modflags field.
+      g_mod_state = (uint32_t)msg->wParam & 0xFFFF0000u;
+      uint32_t key = (uint32_t)msg->keyCode;
+      // Send text input for printable characters (ASCII 32–126).
+      // The char bytes are stored inline in the lParam field by the platform.
+      char text_ch = *(char*)&msg->lParam;
+      if (text_ch >= 0x20 && text_ch != 0x7f)
+        send_message(_focused, kWindowMessageTextInput, 0, &msg->lParam);
+      if (_focused && !send_message(_focused, kWindowMessageKeyDown, key, NULL)) {
+        if (key == WI_KEY_TAB) {
+          if (msg->modflags & (WI_MOD_SHIFT >> 16)) {
+            set_focus(find_prev_tab_stop(_focused));
+          } else {
+            set_focus(find_next_tab_stop(_focused, false));
+          }
+        } else if (key == WI_KEY_ENTER) {
+          window_t *def = find_default_button(get_root_window(_focused));
+          if (def) {
+            send_message(def, kWindowMessageLeftButtonDown, 0, NULL);
+            send_message(def, kWindowMessageLeftButtonUp, 0, NULL);
+          }
+        }
+      }
       break;
-    case SDL_JOYBUTTONDOWN:
-      send_message(_focused, kWindowMessageJoyButtonDown, evt->jbutton.button, NULL);
+    }
+
+    case kEventKeyUp:
+      g_mod_state = (uint32_t)msg->wParam & 0xFFFF0000u;
+      send_message(_focused, kWindowMessageKeyUp, (uint32_t)msg->keyCode, NULL);
       break;
-    case SDL_MOUSEMOTION:
+
+    case kEventJoyAxisMotion:
+      send_message(_focused, kWindowMessageJoyAxisMotion,
+                   MAKEDWORD(msg->wParam & 0xFF, (uint16_t)(intptr_t)msg->lParam), NULL);
+      break;
+
+    case kEventJoyButtonDown:
+      send_message(_focused, kWindowMessageJoyButtonDown, msg->wParam, NULL);
+      break;
+
+    case kEventMouseMoved:
+    case kEventLeftMouseDragged:
+    case kEventRightMouseDragged:
+    case kEventOtherMouseDragged: {
+      px = (int)msg->x;
+      py = (int)msg->y;
+      int16_t rdx = msg->dx;
+      int16_t rdy = msg->dy;
       if (_dragging) {
         move_window(_dragging,
-                    SCALE_POINT(evt->motion.x) - drag_anchor[0],
-                    SCALE_POINT(evt->motion.y) - drag_anchor[1]);
+                    SCALE_POINT(px) - drag_anchor[0],
+                    SCALE_POINT(py) - drag_anchor[1]);
       } else if (_resizing) {
-        int new_w = SCALE_POINT(evt->motion.x) - _resizing->frame.x;
-        int new_h = SCALE_POINT(evt->motion.y) - _resizing->frame.y;
+        int new_w = SCALE_POINT(px) - _resizing->frame.x;
+        int new_h = SCALE_POINT(py) - _resizing->frame.y;
         resize_window(_resizing, new_w, new_h);
       } else if (((win = _captured) ||
-                  (win = find_window(SCALE_POINT(evt->motion.x),
-                                     SCALE_POINT(evt->motion.y)))))
+                  (win = find_window(SCALE_POINT(px), SCALE_POINT(py)))))
       {
         if (win->disabled) return;
-        int16_t x = LOCAL_X(evt->motion, win);
-        int16_t y = LOCAL_Y(evt->motion, win);
-        int16_t dx = evt->motion.xrel;
-        int16_t dy = evt->motion.yrel;
-        if (win == _captured || (y >= 0 && win == _focused)) {
-          send_message(win, kWindowMessageMouseMove, MAKEDWORD(x, y), (void*)(intptr_t)MAKEDWORD(dx, dy));
+        int16_t lx = (int16_t)LOCAL_X(px, py, win);
+        int16_t ly = (int16_t)LOCAL_Y(px, py, win);
+        if (win == _captured || (ly >= 0 && win == _focused)) {
+          send_message(win, kWindowMessageMouseMove, MAKEDWORD(lx, ly),
+                       (void*)(intptr_t)MAKEDWORD(rdx, rdy));
         }
       }
-      if (_tracked && !CONTAINS(SCALE_POINT(evt->motion.x),
-                                SCALE_POINT(evt->motion.y),
+      if (_tracked && !CONTAINS(SCALE_POINT(px), SCALE_POINT(py),
                                 _tracked->frame.x, _tracked->frame.y,
                                 _tracked->frame.w, _tracked->frame.h))
       {
         track_mouse(NULL);
       }
       break;
-    case SDL_MOUSEWHEEL:
+    }
+
+    case kEventScrollWheel: {
+      px = (int)msg->x;
+      py = (int)msg->y;
       if ((win = _captured) ||
-          (win = find_window(SCALE_POINT(evt->wheel.mouseX),
-                             SCALE_POINT(evt->wheel.mouseY))))
+          (win = find_window(SCALE_POINT(px), SCALE_POINT(py))))
       {
         if (win->disabled) return;
-        send_message(win, kWindowMessageWheel, MAKEDWORD(-evt->wheel.x * SCROLL_SENSITIVITY, evt->wheel.y * SCROLL_SENSITIVITY), NULL);
+        int16_t dx = msg->dx;
+        int16_t dy = msg->dy;
+        send_message(win, kWindowMessageWheel,
+                     MAKEDWORD((uint16_t)(-dx * SCROLL_SENSITIVITY),
+                               (uint16_t)(dy * SCROLL_SENSITIVITY)), NULL);
       }
       break;
-    case SDL_MOUSEBUTTONDOWN:
+    }
+
+    case kEventLeftMouseDown:
+    case kEventRightMouseDown: {
+      px = (int)msg->x;
+      py = (int)msg->y;
       if ((win = _captured) ||
-          (win = find_window(SCALE_POINT(evt->button.x),
-                             SCALE_POINT(evt->button.y))))
+          (win = find_window(SCALE_POINT(px), SCALE_POINT(py))))
       {
         if (win->disabled) return;
         bool activating = (win != _focused);
@@ -268,117 +291,109 @@ void dispatch_message(SDL_Event *evt) {
           if (root_changing)
             send_message(new_root, kWindowMessageActivate, WA_CLICKACTIVE, old_root);
         }
-        int x = LOCAL_X(evt->button, win);
-        int y = LOCAL_Y(evt->button, win);
-        if (x >= win->frame.w - RESIZE_HANDLE &&
-            y >= win->frame.h - RESIZE_HANDLE &&
+        int lx = LOCAL_X(px, py, win);
+        int ly = LOCAL_Y(px, py, win);
+        if (lx >= win->frame.w - RESIZE_HANDLE &&
+            ly >= win->frame.h - RESIZE_HANDLE &&
             !win->parent &&
             !(win->flags&WINDOW_NORESIZE) &&
             win != _captured)
         {
           _resizing = win;
-        } else if (SCALE_POINT(evt->button.y) < win->frame.y && !win->parent && win != _captured) {
+        } else if (SCALE_POINT(py) < win->frame.y && !win->parent && win != _captured) {
           _dragging = win;
-          drag_anchor[0] = SCALE_POINT(evt->button.x) - win->frame.x;
-          drag_anchor[1] = SCALE_POINT(evt->button.y) - win->frame.y;
+          drag_anchor[0] = SCALE_POINT(px) - win->frame.x;
+          drag_anchor[1] = SCALE_POINT(py) - win->frame.y;
         } else {
-          int msg = 0;
-          switch (evt->button.button) {
-            case 1: msg = kWindowMessageLeftButtonDown; break;
-            case 3: msg = kWindowMessageRightButtonDown; break;
-          }
-          if (!handle_mouse(msg, win, x, y)) {
-            send_message(win, msg, MAKEDWORD(x, y), NULL);
+          int wmsg = (msg->message == kEventLeftMouseDown)
+                     ? kWindowMessageLeftButtonDown
+                     : kWindowMessageRightButtonDown;
+          if (!handle_mouse(wmsg, win, lx, ly)) {
+            send_message(win, wmsg, MAKEDWORD(lx, ly), NULL);
           }
         }
       }
       break;
-      
-    case SDL_MOUSEBUTTONUP:
+    }
+
+    case kEventLeftMouseUp:
+    case kEventRightMouseUp: {
+      px = (int)msg->x;
+      py = (int)msg->y;
       if (_dragging) {
-        int x = SCALE_POINT(evt->button.x);
-        int y = SCALE_POINT(evt->button.y);
-        /* Determine whether the release landed on the close button.
-         * Two bugs existed in the original formula:
-         *   1. No Y check: clicking anywhere in the non-client area (including
-         *      the toolbar, which sits between the title bar and client area
-         *      when WINDOW_TOOLBAR is set) at the right X would close the window.
-         *   2. Negative integer division: when x was slightly past the close-
-         *      button right edge the numerator became negative, and C truncates
-         *      toward zero (-1/8 == 0), so b==0 misfired for 7 extra pixels.
-         * Fix: use explicit X and Y range checks instead.
-         */
+        int sx = SCALE_POINT(px);
+        int sy = SCALE_POINT(py);
         int close_x = _dragging->frame.x + _dragging->frame.w
                       - CONTROL_BUTTON_WIDTH - CONTROL_BUTTON_PADDING;
-        int title_y  = window_title_bar_y(_dragging) - 2; /* top of title bar strip */
+        int title_y  = window_title_bar_y(_dragging) - 2;
         bool on_close = !(_dragging->flags & WINDOW_NOTITLE)
-                        && x >= close_x && x < close_x + CONTROL_BUTTON_WIDTH
-                        && y >= title_y && y < title_y + TITLEBAR_HEIGHT;
+                        && sx >= close_x && sx < close_x + CONTROL_BUTTON_WIDTH
+                        && sy >= title_y && sy < title_y + TITLEBAR_HEIGHT;
         if (on_close) {
           if (_dragging->flags & WINDOW_DIALOG) {
             end_dialog(_dragging, -1);
           } else {
-            /* Send kWindowMessageClose (WM_CLOSE analogue).
-             * If the handler returns true it has taken over (e.g. showed
-             * an "unsaved changes?" dialog and either closed or cancelled).
-             * If it returns false, apply the default action: hide the window. */
             if (!send_message(_dragging, kWindowMessageClose, 0, NULL)) {
               show_window(_dragging, false);
             }
           }
           _dragging = NULL;
         } else {
-          switch (evt->button.button) {
-            case 1: send_message(_dragging, kWindowMessageNonClientLeftButtonUp, MAKEDWORD(x, y), NULL); break;
-              // case 3: send_message(win, kWindowMessageNonClientRightButtonDown, MAKEDWORD(x, y), NULL); break;
-          }
+          if (msg->message == kEventLeftMouseUp)
+            send_message(_dragging, kWindowMessageNonClientLeftButtonUp,
+                         MAKEDWORD(sx, sy), NULL);
           _dragging = NULL;
         }
       } else if (_resizing) {
         _resizing = NULL;
       } else if ((win = _captured) ||
-                 (win = find_window(SCALE_POINT(evt->button.x),
-                                    SCALE_POINT(evt->button.y))))
+                 (win = find_window(SCALE_POINT(px), SCALE_POINT(py))))
       {
         if (win->disabled) return;
-        if (SCALE_POINT(evt->button.y) >= win->frame.y || win == _captured) {
-          int x = LOCAL_X(evt->button, win);
-          int y = LOCAL_Y(evt->button, win);
-          int msg = 0;
-          switch (evt->button.button) {
-            case 1: msg = kWindowMessageLeftButtonUp; break;
-            case 3: msg = kWindowMessageRightButtonUp; break;
-          }
-          if (!handle_mouse(msg, win, x, y)) {
-            send_message(win, msg, MAKEDWORD(x, y), NULL);
+        if (SCALE_POINT(py) >= win->frame.y || win == _captured) {
+          int lx = LOCAL_X(px, py, win);
+          int ly = LOCAL_Y(px, py, win);
+          int wmsg = (msg->message == kEventLeftMouseUp)
+                     ? kWindowMessageLeftButtonUp
+                     : kWindowMessageRightButtonUp;
+          if (!handle_mouse(wmsg, win, lx, ly)) {
+            send_message(win, wmsg, MAKEDWORD(lx, ly), NULL);
           }
         } else {
-          int x = SCALE_POINT(evt->button.x);
-          int y = SCALE_POINT(evt->button.y);
-          switch (evt->button.button) {
-            case 1: send_message(win, kWindowMessageNonClientLeftButtonUp, MAKEDWORD(x, y), NULL); break;
-              //              case 3: send_message(win, kWindowMessageNonClientRightButtonDown, MAKEDWORD(x, y), NULL); break;
-          }
+          int sx = SCALE_POINT(px);
+          int sy = SCALE_POINT(py);
+          if (msg->message == kEventLeftMouseUp)
+            send_message(win, kWindowMessageNonClientLeftButtonUp,
+                         MAKEDWORD(sx, sy), NULL);
         }
       }
+      break;
+    }
+
+    default:
       break;
   }
 }
 
-// Get next SDL event.
-// Blocks with SDL_WaitEvent on the first call per cycle (saving CPU), then
-// drains any additional queued events with SDL_PollEvent.  Returns 0 when the
-// SDL queue is empty, which causes the caller's while-loop to exit and call
-// repost_messages() to process internal (paint/async) messages.
-// Note: s_draining_queue is a function-local static; this function must be called
-// from a single thread (the main thread), which is the Orion convention.
-int get_message(SDL_Event *evt) {
+// Get next platform event.
+// Blocks with WI_WaitEvent on the first call per cycle (saving CPU), then
+// drains any additional queued events with WI_PollEvent.  Returns 0 when the
+// platform queue is empty, which causes the caller's while-loop to exit and
+// call repost_messages() to process internal (paint/async) messages.
+int get_message(ui_event_t *evt) {
   static bool s_draining_queue = false;
   if (s_draining_queue) {
-    int r = SDL_PollEvent(evt);
+    int r = WI_PollEvent(evt);
     if (!r) s_draining_queue = false;
     return r;
   }
   s_draining_queue = true;
-  return SDL_WaitEvent(evt);
+  WI_WaitEvent(0);
+  return WI_PollEvent(evt);
+}
+
+// Wake up WI_WaitEvent by posting a sentinel event to the platform queue.
+// Called by post_message() whenever a new Orion internal message is enqueued.
+void wake_event_loop(void) {
+  WI_PostMessageW(&g_wakeup_sentinel, kEventWindowPaint, 0, NULL);
 }

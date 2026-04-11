@@ -22,7 +22,7 @@ static void send_text_input(window_t *win, const char *text) {
 
 // Helper: Send Enter key
 static void send_enter_key(window_t *win) {
-  send_message(win, kWindowMessageKeyDown, SDL_SCANCODE_RETURN, NULL);
+  send_message(win, kWindowMessageKeyDown, WI_KEY_ENTER, NULL);
 }
 
 // Test: Create terminal in command mode
@@ -305,8 +305,8 @@ void test_terminal_backspace(void) {
   
   // Type "helXX" then backspace twice to get "hel"
   send_text_input(terminal, "helXX");
-  send_message(terminal, kWindowMessageKeyDown, SDL_SCANCODE_BACKSPACE, NULL);
-  send_message(terminal, kWindowMessageKeyDown, SDL_SCANCODE_BACKSPACE, NULL);
+  send_message(terminal, kWindowMessageKeyDown, WI_KEY_BACKSPACE, NULL);
+  send_message(terminal, kWindowMessageKeyDown, WI_KEY_BACKSPACE, NULL);
   send_text_input(terminal, "p");
   send_enter_key(terminal);
   

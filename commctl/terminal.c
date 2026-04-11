@@ -1,4 +1,3 @@
-#include <SDL2/SDL.h>
 #include "../user/gl_compat.h"
 #include <stdarg.h>
 #include <stdbool.h>
@@ -401,7 +400,7 @@ result_t win_terminal(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
     case kWindowMessageKeyDown:
       if (s->process_finished || !s->waiting_for_input) {
         return false;
-      } else if (wparam == SDL_SCANCODE_RETURN) {
+      } else if (wparam == WI_KEY_ENTER) {
         f_strcat(&s->textbuf, s->input_buffer);
         f_strcat(&s->textbuf, "\n");
         
@@ -417,7 +416,7 @@ result_t win_terminal(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         s->input_buffer[0] = '\0';
         invalidate_window(win);
         return true;
-      } else if (wparam == SDL_SCANCODE_BACKSPACE) {
+      } else if (wparam == WI_KEY_BACKSPACE) {
         if (strlen(s->input_buffer)) {
           s->input_buffer[strlen(s->input_buffer) - 1] = '\0';
           invalidate_window(win);

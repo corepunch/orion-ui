@@ -1,4 +1,3 @@
-#include <SDL2/SDL.h>
 #include <string.h>
 #include <stdio.h>
 #include <math.h>

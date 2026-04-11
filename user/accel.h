@@ -7,9 +7,9 @@
 // Usage:
 //   1. Declare a static array of accel_t entries, e.g.:
 //        static const accel_t kAccel[] = {
-//          { FCONTROL|FVIRTKEY, SDL_SCANCODE_Z, ID_EDIT_UNDO },
-//          { FCONTROL|FVIRTKEY, SDL_SCANCODE_Y, ID_EDIT_REDO },
-//          { FCONTROL|FVIRTKEY, SDL_SCANCODE_S, ID_FILE_SAVE },
+//          { FCONTROL|FVIRTKEY, 'z', ID_EDIT_UNDO },
+//          { FCONTROL|FVIRTKEY, 'y', ID_EDIT_REDO },
+//          { FCONTROL|FVIRTKEY, 's', ID_FILE_SAVE },
 //        };
 //   2. Load the table once at startup:
 //        accel_table_t *hAccel = load_accelerators(kAccel, 3);
@@ -29,7 +29,7 @@
 #include "../kernel/kernel.h"
 
 // Modifier flags for accel_t.fVirt (mirror WinAPI names).
-#define FVIRTKEY  0x01  // key field is an SDL_Scancode (always set for Orion)
+#define FVIRTKEY  0x01  // key field is a WI_KEY value (always set for Orion)
 #define FSHIFT    0x04  // Shift modifier must be held
 #define FCONTROL  0x08  // Ctrl modifier must be held
 #define FALT      0x10  // Alt modifier must be held
@@ -37,7 +37,7 @@
 // One entry in an accelerator table.  Mirrors the WinAPI ACCEL structure.
 typedef struct {
   uint8_t  fVirt;  // FVIRTKEY combined with zero or more of FSHIFT/FCONTROL/FALT
-  uint16_t key;    // SDL_Scancode of the accelerator key
+  uint16_t key;    // WI_KEY value of the accelerator key (or lowercase ASCII char)
   uint16_t cmd;    // command ID sent as LOWORD(wparam) in kWindowMessageCommand
 } accel_t;
 

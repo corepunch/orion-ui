@@ -1,4 +1,3 @@
-#include <SDL2/SDL.h>
 #include <stdint.h>
 
 #include "../user/user.h"
