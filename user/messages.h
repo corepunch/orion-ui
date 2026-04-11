@@ -129,8 +129,10 @@ enum {
 #define SB_VIS_HIDE  ((int8_t) 0)
 #define SB_VIS_SHOW  ((int8_t) 1)
 
-// Width of a built-in scrollbar strip in logical pixels
+// Width of a built-in scrollbar strip in logical pixels (also height of arrow buttons)
 #define SCROLLBAR_WIDTH  12
+// Pixel size (width and height) of an icon8 glyph
+#define ICON8_SIZE       8
 
 // When a window has both WINDOW_HSCROLL and WINDOW_STATUSBAR, the horizontal
 // scrollbar is merged into the status-bar row.  The left fraction (%) is
@@ -153,7 +155,9 @@ typedef struct {
 #define TITLEBAR_HEIGHT   12
 #define TOOLBAR_HEIGHT    22
 #define STATUSBAR_HEIGHT  12
-#define RESIZE_HANDLE     8
+// Resize handle matches SCROLLBAR_WIDTH so the scrollbar corner cell is fully
+// interactive as a resize drag grip (same as Windows 1.0/2.0 behaviour).
+#define RESIZE_HANDLE     SCROLLBAR_WIDTH
 #define BUTTON_HEIGHT     13
 #define WINDOW_PADDING 4
 #define LINE_PADDING 5
@@ -175,6 +179,13 @@ typedef enum {
   icon8_dropdown,
   icon8_checkbox,
   icon8_editor_helmet,
+  // Scrollbar arrow icons (indices 9–12) and resize-corner icon (index 13).
+  // Pixels for these slots were added to icons.c at their respective positions.
+  icon8_scroll_up    = 9,
+  icon8_scroll_right = 10,
+  icon8_scroll_down  = 11,
+  icon8_scroll_left  = 12,
+  icon8_resize_br    = 13,
   icon8_count,
 } icon8_t;
 

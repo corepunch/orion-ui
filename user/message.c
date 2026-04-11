@@ -173,7 +173,9 @@ static int handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wpara
   int h_x_min   = h_merged ? SB_STATUS_SPLIT_X(win->frame.w) : 0;
   int h_y_min   = h_merged ? win->frame.h : win->frame.h - SCROLLBAR_WIDTH;
   int h_y_max   = h_merged ? win->frame.h + STATUSBAR_HEIGHT : win->frame.h;
-  int h_track   = (win->frame.w - h_x_min) - (has_v ? SCROLLBAR_WIDTH : 0);
+  // In merged mode the resize corner is always at the far right (SCROLLBAR_WIDTH wide),
+  // so always exclude it from the hscroll track.  In non-merged mode only exclude when vscroll is present.
+  int h_track   = (win->frame.w - h_x_min) - (h_merged ? SCROLLBAR_WIDTH : (has_v ? SCROLLBAR_WIDTH : 0));
 
   // When merged, the vscroll is not shortened by the hscroll row (which lives
   // in the status bar, outside the content area).
@@ -183,14 +185,16 @@ static int handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wpara
   if (msg == kWindowMessageMouseMove || msg == kWindowMessageLeftButtonUp) {
     if (win->hscroll.dragging) {
       int cx, cy; sb_local_coords(win, wparam, &cx, &cy);
-      int lx = cx - h_x_min;  // position within the hscroll track
-      int tl  = builtin_sb_thumb_len_msg(&win->hscroll, h_track);
+      // Effective track between arrow buttons
+      int eff_track = h_track - 2 * SCROLLBAR_WIDTH;
+      int lx_eff = (eff_track > 0) ? (cx - h_x_min) - SCROLLBAR_WIDTH : (cx - h_x_min);
+      int tl  = builtin_sb_thumb_len_msg(&win->hscroll, eff_track > 0 ? eff_track : h_track);
       if (msg == kWindowMessageMouseMove) {
-        int tp = h_track - tl;
+        int tp = (eff_track > 0 ? eff_track : h_track) - tl;
         int tr = win->hscroll.max_val - win->hscroll.min_val - win->hscroll.page;
         if (tp > 0 && tr > 0) {
           int new_pos = sb_clamp_msg(&win->hscroll,
-              win->hscroll.drag_start_pos + (lx - win->hscroll.drag_start_mouse) * tr / tp);
+              win->hscroll.drag_start_pos + (lx_eff - win->hscroll.drag_start_mouse) * tr / tp);
           if (new_pos != win->hscroll.pos) {
             win->hscroll.pos = new_pos;
             send_message(win, kWindowMessageHScroll, (uint32_t)new_pos, NULL);
@@ -205,13 +209,15 @@ static int handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wpara
     }
     if (win->vscroll.dragging) {
       int cx, cy; sb_local_coords(win, wparam, &cx, &cy);
-      int tl    = builtin_sb_thumb_len_msg(&win->vscroll, v_track);
+      int eff_track = v_track - 2 * SCROLLBAR_WIDTH;
+      int cy_eff    = (eff_track > 0) ? cy - SCROLLBAR_WIDTH : cy;
+      int tl    = builtin_sb_thumb_len_msg(&win->vscroll, eff_track > 0 ? eff_track : v_track);
       if (msg == kWindowMessageMouseMove) {
-        int tp = v_track - tl;
+        int tp = (eff_track > 0 ? eff_track : v_track) - tl;
         int tr = win->vscroll.max_val - win->vscroll.min_val - win->vscroll.page;
         if (tp > 0 && tr > 0) {
           int new_pos = sb_clamp_msg(&win->vscroll,
-              win->vscroll.drag_start_pos + (cy - win->vscroll.drag_start_mouse) * tr / tp);
+              win->vscroll.drag_start_pos + (cy_eff - win->vscroll.drag_start_mouse) * tr / tp);
           if (new_pos != win->vscroll.pos) {
             win->vscroll.pos = new_pos;
             send_message(win, kWindowMessageVScroll, (uint32_t)new_pos, NULL);
@@ -237,22 +243,68 @@ static int handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wpara
   if (has_h && cy >= h_y_min && cy < h_y_max &&
       cx >= h_x_min && cx < win->frame.w) {
     if (!win->hscroll.enabled) return 1; // consume click but do nothing
-    int lx = cx - h_x_min;  // position within the hscroll track
+    int lx = cx - h_x_min;  // position within the hscroll strip
     if (lx >= h_track) return 1; // corner square
-    int tl = builtin_sb_thumb_len_msg(&win->hscroll, h_track);
-    int to = builtin_sb_thumb_off_msg(&win->hscroll, h_track, tl);
-    if (lx >= to && lx < to + tl) {
-      win->hscroll.dragging         = true;
-      win->hscroll.drag_start_mouse = lx;
-      win->hscroll.drag_start_pos   = win->hscroll.pos;
-      set_capture(win);
+    // Arrow buttons
+    if (h_track >= 2 * SCROLLBAR_WIDTH) {
+      if (lx < SCROLLBAR_WIDTH) {
+        // Left arrow — scroll by one unit
+        int new_pos = sb_clamp_msg(&win->hscroll, win->hscroll.pos - 1);
+        if (new_pos != win->hscroll.pos) {
+          win->hscroll.pos = new_pos;
+          send_message(win, kWindowMessageHScroll, (uint32_t)new_pos, NULL);
+          invalidate_window(win);
+        }
+        return 1;
+      }
+      if (lx >= h_track - SCROLLBAR_WIDTH) {
+        // Right arrow — scroll by one unit
+        int new_pos = sb_clamp_msg(&win->hscroll, win->hscroll.pos + 1);
+        if (new_pos != win->hscroll.pos) {
+          win->hscroll.pos = new_pos;
+          send_message(win, kWindowMessageHScroll, (uint32_t)new_pos, NULL);
+          invalidate_window(win);
+        }
+        return 1;
+      }
+      // Thumb drag in effective track between buttons
+      int eff_track = h_track - 2 * SCROLLBAR_WIDTH;
+      int lx_eff = lx - SCROLLBAR_WIDTH;
+      if (eff_track > 0) {
+        int tl = builtin_sb_thumb_len_msg(&win->hscroll, eff_track);
+        int to = builtin_sb_thumb_off_msg(&win->hscroll, eff_track, tl);
+        if (lx_eff >= to && lx_eff < to + tl) {
+          win->hscroll.dragging         = true;
+          win->hscroll.drag_start_mouse = lx_eff;
+          win->hscroll.drag_start_pos   = win->hscroll.pos;
+          set_capture(win);
+        } else {
+          int new_pos = sb_clamp_msg(&win->hscroll,
+              win->hscroll.pos + (lx_eff < to ? -win->hscroll.page : win->hscroll.page));
+          if (new_pos != win->hscroll.pos) {
+            win->hscroll.pos = new_pos;
+            send_message(win, kWindowMessageHScroll, (uint32_t)new_pos, NULL);
+            invalidate_window(win);
+          }
+        }
+      }
     } else {
-      int new_pos = sb_clamp_msg(&win->hscroll,
-          win->hscroll.pos + (lx < to ? -win->hscroll.page : win->hscroll.page));
-      if (new_pos != win->hscroll.pos) {
-        win->hscroll.pos = new_pos;
-        send_message(win, kWindowMessageHScroll, (uint32_t)new_pos, NULL);
-        invalidate_window(win);
+      // Narrow track — no buttons, plain thumb behaviour
+      int tl = builtin_sb_thumb_len_msg(&win->hscroll, h_track);
+      int to = builtin_sb_thumb_off_msg(&win->hscroll, h_track, tl);
+      if (lx >= to && lx < to + tl) {
+        win->hscroll.dragging         = true;
+        win->hscroll.drag_start_mouse = lx;
+        win->hscroll.drag_start_pos   = win->hscroll.pos;
+        set_capture(win);
+      } else {
+        int new_pos = sb_clamp_msg(&win->hscroll,
+            win->hscroll.pos + (lx < to ? -win->hscroll.page : win->hscroll.page));
+        if (new_pos != win->hscroll.pos) {
+          win->hscroll.pos = new_pos;
+          send_message(win, kWindowMessageHScroll, (uint32_t)new_pos, NULL);
+          invalidate_window(win);
+        }
       }
     }
     return 1;
@@ -263,20 +315,66 @@ static int handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wpara
       cy >= 0 && cy < win->frame.h) {
     if (!win->vscroll.enabled) return 1; // consume click but do nothing
     if (cy >= v_track) return 1; // corner square
-    int tl = builtin_sb_thumb_len_msg(&win->vscroll, v_track);
-    int to = builtin_sb_thumb_off_msg(&win->vscroll, v_track, tl);
-    if (cy >= to && cy < to + tl) {
-      win->vscroll.dragging         = true;
-      win->vscroll.drag_start_mouse = cy;
-      win->vscroll.drag_start_pos   = win->vscroll.pos;
-      set_capture(win);
+    // Arrow buttons
+    if (v_track >= 2 * SCROLLBAR_WIDTH) {
+      if (cy < SCROLLBAR_WIDTH) {
+        // Up arrow — scroll by one unit
+        int new_pos = sb_clamp_msg(&win->vscroll, win->vscroll.pos - 1);
+        if (new_pos != win->vscroll.pos) {
+          win->vscroll.pos = new_pos;
+          send_message(win, kWindowMessageVScroll, (uint32_t)new_pos, NULL);
+          invalidate_window(win);
+        }
+        return 1;
+      }
+      if (cy >= v_track - SCROLLBAR_WIDTH) {
+        // Down arrow — scroll by one unit
+        int new_pos = sb_clamp_msg(&win->vscroll, win->vscroll.pos + 1);
+        if (new_pos != win->vscroll.pos) {
+          win->vscroll.pos = new_pos;
+          send_message(win, kWindowMessageVScroll, (uint32_t)new_pos, NULL);
+          invalidate_window(win);
+        }
+        return 1;
+      }
+      // Thumb drag in effective track between buttons
+      int eff_track = v_track - 2 * SCROLLBAR_WIDTH;
+      int cy_eff = cy - SCROLLBAR_WIDTH;
+      if (eff_track > 0) {
+        int tl = builtin_sb_thumb_len_msg(&win->vscroll, eff_track);
+        int to = builtin_sb_thumb_off_msg(&win->vscroll, eff_track, tl);
+        if (cy_eff >= to && cy_eff < to + tl) {
+          win->vscroll.dragging         = true;
+          win->vscroll.drag_start_mouse = cy_eff;
+          win->vscroll.drag_start_pos   = win->vscroll.pos;
+          set_capture(win);
+        } else {
+          int new_pos = sb_clamp_msg(&win->vscroll,
+              win->vscroll.pos + (cy_eff < to ? -win->vscroll.page : win->vscroll.page));
+          if (new_pos != win->vscroll.pos) {
+            win->vscroll.pos = new_pos;
+            send_message(win, kWindowMessageVScroll, (uint32_t)new_pos, NULL);
+            invalidate_window(win);
+          }
+        }
+      }
     } else {
-      int new_pos = sb_clamp_msg(&win->vscroll,
-          win->vscroll.pos + (cy < to ? -win->vscroll.page : win->vscroll.page));
-      if (new_pos != win->vscroll.pos) {
-        win->vscroll.pos = new_pos;
-        send_message(win, kWindowMessageVScroll, (uint32_t)new_pos, NULL);
-        invalidate_window(win);
+      // Narrow track — no buttons, plain thumb behaviour
+      int tl = builtin_sb_thumb_len_msg(&win->vscroll, v_track);
+      int to = builtin_sb_thumb_off_msg(&win->vscroll, v_track, tl);
+      if (cy >= to && cy < to + tl) {
+        win->vscroll.dragging         = true;
+        win->vscroll.drag_start_mouse = cy;
+        win->vscroll.drag_start_pos   = win->vscroll.pos;
+        set_capture(win);
+      } else {
+        int new_pos = sb_clamp_msg(&win->vscroll,
+            win->vscroll.pos + (cy < to ? -win->vscroll.page : win->vscroll.page));
+        if (new_pos != win->vscroll.pos) {
+          win->vscroll.pos = new_pos;
+          send_message(win, kWindowMessageVScroll, (uint32_t)new_pos, NULL);
+          invalidate_window(win);
+        }
       }
     }
     return 1;
