@@ -167,21 +167,27 @@ void dispatch_message(ui_event_t *msg) {
       break;
     }
 
-    case kEventChar:
+    case kEventChar: {
       // Some platforms send kEventChar as a separate text-input event.
-      if (*(char*)&msg->lParam != '\0')
-        send_message(_focused, kWindowMessageTextInput, 0, &msg->lParam);
+      char ch = *(char*)&msg->lParam;
+      if (ch != '\0') {
+        char buf[2] = { ch, '\0' };
+        send_message(_focused, kWindowMessageTextInput, 0, buf);
+      }
       break;
+    }
 
     case kEventKeyDown: {
-      // Track modifier state from the event's modflags field.
+      // Track modifier state from the key event's wParam high-word bits.
       g_mod_state = (uint32_t)msg->wParam & 0xFFFF0000u;
       uint32_t key = (uint32_t)msg->keyCode;
       // Send text input for printable characters (ASCII 32–126).
       // The char bytes are stored inline in the lParam field by the platform.
       char text_ch = *(char*)&msg->lParam;
-      if (text_ch >= 0x20 && text_ch != 0x7f)
-        send_message(_focused, kWindowMessageTextInput, 0, &msg->lParam);
+      if (text_ch >= 0x20 && text_ch != 0x7f) {
+        char buf[2] = { text_ch, '\0' };
+        send_message(_focused, kWindowMessageTextInput, 0, buf);
+      }
       if (_focused && !send_message(_focused, kWindowMessageKeyDown, key, NULL)) {
         if (key == WI_KEY_TAB) {
           if (msg->modflags & (WI_MOD_SHIFT >> 16)) {

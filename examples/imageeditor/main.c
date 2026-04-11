@@ -21,14 +21,14 @@ static const accel_t kAccelEntries[] = {
   { FCONTROL|FVIRTKEY, 'c', ID_EDIT_COPY },
   { FCONTROL|FVIRTKEY, 'v', ID_EDIT_PASTE},
   { FCONTROL|FVIRTKEY, 'a', ID_EDIT_SELECT_ALL},
-  { FVIRTKEY,          'e'SCAPE, ID_EDIT_DESELECT},
+  { FVIRTKEY,          WI_KEY_ESCAPE, ID_EDIT_DESELECT},
   { FCONTROL|FVIRTKEY, 'n', ID_FILE_NEW  },
   { FCONTROL|FVIRTKEY, 'o', ID_FILE_OPEN },
   { FCONTROL|FVIRTKEY, 's', ID_FILE_SAVE },
   { FCONTROL|FVIRTKEY, 'w', ID_FILE_CLOSE},
   // Zoom shortcuts: Ctrl+= (Ctrl++) and Ctrl+-
-  { FCONTROL|FVIRTKEY, 'e'QUALS, ID_VIEW_ZOOM_IN  },
-  { FCONTROL|FSHIFT|FVIRTKEY, 'e'QUALS, ID_VIEW_ZOOM_IN  },
+  { FCONTROL|FVIRTKEY, '=',  ID_VIEW_ZOOM_IN  },
+  { FCONTROL|FSHIFT|FVIRTKEY, '=',  ID_VIEW_ZOOM_IN  },
   { FCONTROL|FVIRTKEY, '-',  ID_VIEW_ZOOM_OUT },
   // Tool hotkeys – same as MS Paint
   { FVIRTKEY,          'p', ID_TOOL_PENCIL },
