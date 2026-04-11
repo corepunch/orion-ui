@@ -42,6 +42,9 @@ extern bool running;  // Set to true when graphics are initialized
 
 // Forward declaration for kernel/event.c wake-up helper.
 extern void wake_event_loop(void);
+// Forward declarations for kernel/init.c per-frame rendering.
+extern void ui_begin_frame(void);
+extern void ui_end_frame(void);
 
 // Forward declarations
 extern void draw_panel(window_t const *win);
@@ -548,6 +551,9 @@ static bool is_valid_window_ptr(window_t *target, window_t *list) {
 }
 
 void repost_messages(void) {
+  if (running) {
+    ui_begin_frame();   // make GL context current, bind platform framebuffer
+  }
   for (uint8_t write = queue.write; queue.read != write;) {
     msg_t *m = &queue.messages[queue.read++];
     if (m->target == NULL) continue;
@@ -561,7 +567,6 @@ void repost_messages(void) {
     send_message(m->target, m->msg, m->wparam, m->lparam);
   }
   if (running) {
-    glFlush();
-    // SDL_GL_SwapWindow(window);
+    ui_end_frame();     // present frame (swap buffers / flushBuffer)
   }
 }

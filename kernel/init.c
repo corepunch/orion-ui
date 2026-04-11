@@ -143,6 +143,18 @@ void ui_shutdown_graphics(void) {
   WI_Shutdown();
 }
 
+// Begin a render frame: make GL context current and bind platform framebuffer.
+// Must be called once per frame before any OpenGL drawing.
+void ui_begin_frame(void) {
+  WI_BeginPaint();
+}
+
+// End a render frame: present the rendered content to the screen.
+// Replaces the old SDL_GL_SwapWindow call.
+void ui_end_frame(void) {
+  WI_EndPaint();
+}
+
 // Delay execution
 void ui_delay(unsigned int milliseconds) {
   WI_Sleep(milliseconds);
