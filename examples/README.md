@@ -7,7 +7,7 @@ This directory contains example programs demonstrating the use of Orion.
 **File:** `helloworld.c`
 
 A simple standalone application that demonstrates:
-- Initializing SDL and OpenGL
+- Initializing platform and OpenGL
 - Creating windows using Orion
 - Handling window messages and events
 - Drawing text in a window
@@ -31,11 +31,11 @@ The example creates a simple window with "Hello World!" text displayed in the ce
 
 ### Code Structure
 
-1. **Initialization** - Sets up SDL, creates an OpenGL context
+1. **Initialization** - Calls WI_Init, creates an OpenGL context
 2. **Window Creation** - Uses Orion to create a desktop and a hello world window
-3. **Event Loop** - Processes SDL events and window messages
+3. **Event Loop** - Processes platform events and window messages
 4. **Rendering** - Draws the windows and their contents
-5. **Cleanup** - Properly shuts down SDL
+5. **Cleanup** - Calls WI_Shutdown()
 
 ### Current Limitations
 
@@ -145,7 +145,7 @@ Additional examples to be added:
 ## Dependencies
 
 Orion examples require:
-- SDL2
+- corepunch/platform (submodule)
 - OpenGL 3.2+
 
 ### Installing Dependencies
