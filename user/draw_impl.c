@@ -162,7 +162,6 @@ void draw_statusbar(window_t *win, const char *text) {
   }
 
   if (has_h) {
-    bool has_v = (win->flags & WINDOW_VSCROLL) && win->vscroll.visible;
     win_sb_t *sb = &win->hscroll;
     // Horizontal scrollbar fills the right portion of the status bar row.
     // Always reserve the rightmost SCROLLBAR_WIDTH cell for the resize corner.

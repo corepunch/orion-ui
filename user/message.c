@@ -187,7 +187,7 @@ static int handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wpara
       int cx, cy; sb_local_coords(win, wparam, &cx, &cy);
       // Effective track between arrow buttons
       int eff_track = h_track - 2 * SCROLLBAR_WIDTH;
-      int lx_eff = (cx - h_x_min) - SCROLLBAR_WIDTH;
+      int lx_eff = (eff_track > 0) ? (cx - h_x_min) - SCROLLBAR_WIDTH : (cx - h_x_min);
       int tl  = builtin_sb_thumb_len_msg(&win->hscroll, eff_track > 0 ? eff_track : h_track);
       if (msg == kWindowMessageMouseMove) {
         int tp = (eff_track > 0 ? eff_track : h_track) - tl;
@@ -210,7 +210,7 @@ static int handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wpara
     if (win->vscroll.dragging) {
       int cx, cy; sb_local_coords(win, wparam, &cx, &cy);
       int eff_track = v_track - 2 * SCROLLBAR_WIDTH;
-      int cy_eff    = cy - SCROLLBAR_WIDTH;
+      int cy_eff    = (eff_track > 0) ? cy - SCROLLBAR_WIDTH : cy;
       int tl    = builtin_sb_thumb_len_msg(&win->vscroll, eff_track > 0 ? eff_track : v_track);
       if (msg == kWindowMessageMouseMove) {
         int tp = (eff_track > 0 ? eff_track : v_track) - tl;
