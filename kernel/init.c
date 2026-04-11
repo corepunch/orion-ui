@@ -75,22 +75,15 @@ result_t win_tray(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 bool ui_init_graphics(int flags, const char *title, int width, int height) {
   WI_Init();
 
-  // WI_CreateWindow returns TRUE on success on most platforms.  On macOS the
-  // implementation returns FALSE even for a successful window creation (platform
-  // bug), so we cannot rely solely on the return value.  Instead, attempt the
-  // call and verify that a real OpenGL context was established afterwards.
-  WI_CreateWindow(title, width * UI_WINDOW_SCALE, height * UI_WINDOW_SCALE, 0);
-
-  WI_BeginPaint();
-
-  const char *gl_version = (const char *)glGetString(GL_VERSION);
-  if (!gl_version) {
-    printf("Window/OpenGL context could not be created!\n");
+  if (!WI_CreateWindow(title, width * UI_WINDOW_SCALE, height * UI_WINDOW_SCALE, 0)) {
+    printf("Window could not be created!\n");
     WI_Shutdown();
     return false;
   }
 
-  printf("GL_VERSION  : %s\n", gl_version);
+  WI_BeginPaint();
+
+  printf("GL_VERSION  : %s\n", glGetString(GL_VERSION));
   printf("GLSL_VERSION: %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
 
   WI_SetSwapInterval(1);
