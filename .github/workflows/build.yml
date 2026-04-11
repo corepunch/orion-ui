@@ -15,11 +15,13 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        submodules: recursive
       
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y liblua5.4-dev libsdl2-dev libgl1-mesa-dev libcglm-dev libpng-dev
+        sudo apt-get install -y liblua5.4-dev libgl1-mesa-dev libcglm-dev libx11-dev libegl-dev
         
     - name: Build library
       run: make library
@@ -38,10 +40,11 @@ jobs:
     - name: Upload Linux artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: goldie-ui-linux
+        name: orion-linux
         path: |
-          build/lib/libgoldieui.a
-          build/lib/libgoldieui.so
+          build/lib/liborion.a
+          build/lib/liborion.so
+          build/lib/libplatform.so
           build/bin/*
         retention-days: 30
   
@@ -52,10 +55,12 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        submodules: recursive
       
     - name: Install dependencies
       run: |
-        brew install sdl2 cglm lua@5.4 libpng
+        brew install cglm lua@5.4
         
     - name: Build library
       run: make library
@@ -74,10 +79,11 @@ jobs:
     - name: Upload macOS artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: goldie-ui-macos
+        name: orion-macos
         path: |
-          build/lib/libgoldieui.a
-          build/lib/libgoldieui.dylib
+          build/lib/liborion.a
+          build/lib/liborion.dylib
+          build/lib/libplatform.dylib
           build/bin/*
         retention-days: 30
 
@@ -93,6 +99,8 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        submodules: recursive
       
     - name: Setup MSYS2
       uses: msys2/setup-msys2@v2
@@ -102,11 +110,9 @@ jobs:
         install: >-
           mingw-w64-x86_64-gcc
           mingw-w64-x86_64-make
-          mingw-w64-x86_64-SDL2
           mingw-w64-x86_64-glew
           mingw-w64-x86_64-lua
           mingw-w64-x86_64-cglm
-          mingw-w64-x86_64-libpng
           make
         
     - name: Build library
@@ -126,9 +132,9 @@ jobs:
     - name: Upload Windows artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: goldie-ui-windows
+        name: orion-windows
         path: |
-          build/lib/libgoldieui.a
-          build/lib/libgoldieui.dll
+          build/lib/liborion.a
+          build/lib/libplatform.dll
           build/bin/*
         retention-days: 30
