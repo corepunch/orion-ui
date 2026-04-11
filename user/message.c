@@ -173,7 +173,9 @@ static int handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wpara
   int h_x_min   = h_merged ? SB_STATUS_SPLIT_X(win->frame.w) : 0;
   int h_y_min   = h_merged ? win->frame.h : win->frame.h - SCROLLBAR_WIDTH;
   int h_y_max   = h_merged ? win->frame.h + STATUSBAR_HEIGHT : win->frame.h;
-  int h_track   = (win->frame.w - h_x_min) - (has_v ? SCROLLBAR_WIDTH : 0);
+  // In merged mode the resize corner is always at the far right (SCROLLBAR_WIDTH wide),
+  // so always exclude it from the hscroll track.  In non-merged mode only exclude when vscroll is present.
+  int h_track   = (win->frame.w - h_x_min) - (h_merged ? SCROLLBAR_WIDTH : (has_v ? SCROLLBAR_WIDTH : 0));
 
   // When merged, the vscroll is not shortened by the hscroll row (which lives
   // in the status bar, outside the content area).

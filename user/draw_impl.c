@@ -165,8 +165,8 @@ void draw_statusbar(window_t *win, const char *text) {
     bool has_v = (win->flags & WINDOW_VSCROLL) && win->vscroll.visible;
     win_sb_t *sb = &win->hscroll;
     // Horizontal scrollbar fills the right portion of the status bar row.
-    // Leave room for the vertical scrollbar column if present.
-    int bw = (r.w - split_x) - (has_v ? SCROLLBAR_WIDTH : 0);
+    // Always reserve the rightmost SCROLLBAR_WIDTH cell for the resize corner.
+    int bw = (r.w - split_x) - SCROLLBAR_WIDTH;
     if (bw > 0) {
       fill_rect(COLOR_PANEL_DARK_BG, r.x + split_x, y, bw, s);
       // Arrow buttons (each SCROLLBAR_WIDTH wide)
@@ -192,8 +192,8 @@ void draw_statusbar(window_t *win, const char *text) {
         fill_rect(thumb_col, r.x + split_x + to, y, tl, s);
       }
     }
-    // Corner between the scrollbar and the vscroll column — shows resize icon.
-    if (has_v) {
+    // Resize corner — always present at the far right of the status-bar row.
+    {
       int cx = r.x + r.w - SCROLLBAR_WIDTH;
       int icon_off = (SCROLLBAR_WIDTH - ICON8_SIZE) / 2;
       fill_rect(COLOR_PANEL_DARK_BG, cx, y, SCROLLBAR_WIDTH, s);
