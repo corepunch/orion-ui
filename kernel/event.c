@@ -51,6 +51,7 @@ extern void invalidate_window(window_t *win);
 window_t *_dragging = NULL;
 window_t *_resizing = NULL;
 static int drag_anchor[2];
+static int resize_anchor[2];
 
 // Handle mouse events on child windows
 static int handle_mouse(int msg, window_t *win, int x, int y) {
@@ -233,8 +234,8 @@ void dispatch_message(ui_event_t *msg) {
                     SCALE_POINT(px) - drag_anchor[0],
                     SCALE_POINT(py) - drag_anchor[1]);
       } else if (_resizing) {
-        int new_w = SCALE_POINT(px) - _resizing->frame.x;
-        int new_h = SCALE_POINT(py) - _resizing->frame.y;
+        int new_w = SCALE_POINT(px) - resize_anchor[0] - _resizing->frame.x;
+        int new_h = SCALE_POINT(py) - resize_anchor[1] - _resizing->frame.y;
         resize_window(_resizing, new_w, new_h);
       } else if (((win = _captured) ||
                   (win = find_window(SCALE_POINT(px), SCALE_POINT(py)))))
@@ -306,6 +307,8 @@ void dispatch_message(ui_event_t *msg) {
             win != _captured)
         {
           _resizing = win;
+          resize_anchor[0] = SCALE_POINT(px) - (win->frame.x + win->frame.w);
+          resize_anchor[1] = SCALE_POINT(py) - (win->frame.y + win->frame.h);
         } else if (SCALE_POINT(py) < win->frame.y && !win->parent && win != _captured) {
           _dragging = win;
           drag_anchor[0] = SCALE_POINT(px) - win->frame.x;
