@@ -591,7 +591,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         else
           snprintf(sb, sizeof(sb), "%dx%d", doc->canvas_w, doc->canvas_h);
         if (strcmp(sb, state->last_sb) != 0) {
-          memcpy(state->last_sb, sb, sizeof(sb));
+          strncpy(state->last_sb, sb, sizeof(state->last_sb) - 1);
+          state->last_sb[sizeof(state->last_sb) - 1] = '\0';
           send_message(doc->win, kWindowMessageStatusBar, 0, sb);
         }
       }

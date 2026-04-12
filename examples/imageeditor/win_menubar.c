@@ -67,18 +67,28 @@ static const menu_item_t kWindowPrefix[] = {
 static menu_item_t s_window_items[WINDOW_PREFIX_COUNT + WINDOW_MENU_MAX_DOCS];
 static int         s_window_item_count = WINDOW_PREFIX_COUNT;
 
+// Enum keeps the menu-index constants in sync with the kMenus array order.
+// Add new menus here AND in kMenus (immediately below) — the enum prevents
+// the hardcoded index from getting out of step.
+enum {
+  kMenuIdxFile = 0,
+  kMenuIdxEdit,
+  kMenuIdxImage,
+  kMenuIdxView,
+  kMenuIdxWindow,
+  kMenuIdxHelp,
+  kMenuIdxCount
+};
+
 menu_def_t kMenus[] = {
-  {"File",   kFileItems,      (int)(sizeof(kFileItems)/sizeof(kFileItems[0]))},
-  {"Edit",   kEditItems,      (int)(sizeof(kEditItems)/sizeof(kEditItems[0]))},
-  {"Image",  kImageItems,     (int)(sizeof(kImageItems)/sizeof(kImageItems[0]))},
-  {"View",   kViewItems,      (int)(sizeof(kViewItems)/sizeof(kViewItems[0]))},
-  {"Window", s_window_items,  WINDOW_PREFIX_COUNT},
-  {"Help",   kHelpItems,      (int)(sizeof(kHelpItems)/sizeof(kHelpItems[0]))},
+  /* kMenuIdxFile   */ {"File",   kFileItems,      (int)(sizeof(kFileItems)/sizeof(kFileItems[0]))},
+  /* kMenuIdxEdit   */ {"Edit",   kEditItems,      (int)(sizeof(kEditItems)/sizeof(kEditItems[0]))},
+  /* kMenuIdxImage  */ {"Image",  kImageItems,     (int)(sizeof(kImageItems)/sizeof(kImageItems[0]))},
+  /* kMenuIdxView   */ {"View",   kViewItems,      (int)(sizeof(kViewItems)/sizeof(kViewItems[0]))},
+  /* kMenuIdxWindow */ {"Window", s_window_items,  WINDOW_PREFIX_COUNT},
+  /* kMenuIdxHelp   */ {"Help",   kHelpItems,      (int)(sizeof(kHelpItems)/sizeof(kHelpItems[0]))},
 };
 const int kNumMenus = (int)(sizeof(kMenus)/sizeof(kMenus[0]));
-
-// Index of the Window menu entry in kMenus (must stay in sync with the array).
-#define WINDOW_MENU_IDX 4
 
 // Rebuild the Window menu items and re-push the full menu definition to the
 // menu-bar window.  Extensibility: add more fixed entries to kWindowPrefix, or
@@ -103,8 +113,8 @@ void window_menu_rebuild(void) {
   }
 
   s_window_item_count = n;
-  kMenus[WINDOW_MENU_IDX].items      = s_window_items;
-  kMenus[WINDOW_MENU_IDX].item_count = s_window_item_count;
+  kMenus[kMenuIdxWindow].items      = s_window_items;
+  kMenus[kMenuIdxWindow].item_count = s_window_item_count;
 
   send_message(g_app->menubar_win, kMenuBarMessageSetMenus,
                (uint32_t)kNumMenus, kMenus);
@@ -289,17 +299,19 @@ static void handle_menu_command(uint16_t id) {
       if (show_size_dialog(g_app->menubar_win, "Canvas Size", &new_w, &new_h) &&
           (new_w != doc->canvas_w || new_h != doc->canvas_h)) {
         doc_push_undo(doc);
-        canvas_resize(doc, new_w, new_h);
-        // Re-read actual dimensions in case resize failed (allocation error)
-        if (doc->canvas_win) {
-          canvas_win_sync_scrollbars(doc->canvas_win);
-          invalidate_window(doc->canvas_win);
+        if (canvas_resize(doc, new_w, new_h)) {
+          // Only update UI when resize succeeded; read actual dims from doc
+          // in case the alloc partially failed (shouldn't happen, but be safe).
+          canvas_deselect(doc);
+          if (doc->canvas_win) {
+            canvas_win_sync_scrollbars(doc->canvas_win);
+            invalidate_window(doc->canvas_win);
+          }
+          doc_update_title(doc);
+          char sb[32];
+          snprintf(sb, sizeof(sb), "%dx%d", doc->canvas_w, doc->canvas_h);
+          send_message(doc->win, kWindowMessageStatusBar, 0, sb);
         }
-        canvas_deselect(doc);
-        doc_update_title(doc);
-        char sb[32];
-        snprintf(sb, sizeof(sb), "%dx%d", doc->canvas_w, doc->canvas_h);
-        send_message(doc->win, kWindowMessageStatusBar, 0, sb);
       }
       break;
     }
