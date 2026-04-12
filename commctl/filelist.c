@@ -279,11 +279,8 @@ static void fl_navigate(window_t *win, filelist_data_t *data, int index) {
 static int fl_hit_index(window_t *win, filelist_data_t *data, uint32_t wparam) {
   int mx = (int)(int16_t)LOWORD(wparam);
   int my = (int)(int16_t)HIWORD(wparam);
-  // event.c computes LOCAL_X/Y as (screen_logical - win->frame.x/y).
-  // For root windows frame.x/y equals the screen position, so the result
-  // is already content-local.  For child windows frame.x/y is
-  // parent-content-relative, NOT the screen position; subtract the parent's
-  // screen position to get truly child-local coords.
+  // Coordinates from handle_mouse are parent-content-relative; subtract the
+  // parent's screen position to get child-local coords.
   if (win->parent) {
     mx -= (int)win->parent->frame.x;
     my -= (int)win->parent->frame.y;
