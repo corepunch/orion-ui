@@ -35,6 +35,7 @@
 		787044882F76A42600A84406 /* console.c in Sources */ = {isa = PBXBuildFile; fileRef = 7870444B2F76A42600A84406 /* console.c */; };
 		7870448A2F76A5F600A84406 /* toolbar_button_test.c in Sources */ = {isa = PBXBuildFile; fileRef = 787044892F76A5F600A84406 /* toolbar_button_test.c */; };
 		7870448D2F76A60F00A84406 /* test_env.c in Sources */ = {isa = PBXBuildFile; fileRef = 7870448C2F76A60F00A84406 /* test_env.c */; };
+		787044902F76A42600A84406 /* theme.c in Sources */ = {isa = PBXBuildFile; fileRef = 787044912F76A42600A84406 /* theme.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -90,6 +91,7 @@
 		7870446B2F76A42600A84406 /* text.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = text.c; sourceTree = "<group>"; };
 		7870446C2F76A42600A84406 /* user.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = user.h; sourceTree = "<group>"; };
 		7870446D2F76A42600A84406 /* window.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = window.c; sourceTree = "<group>"; };
+		787044912F76A42600A84406 /* theme.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = theme.c; sourceTree = "<group>"; };
 		787044892F76A5F600A84406 /* toolbar_button_test.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = toolbar_button_test.c; path = tests/toolbar_button_test.c; sourceTree = "<group>"; };
 		7870448B2F76A60F00A84406 /* test_env.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = test_env.h; path = tests/test_env.h; sourceTree = "<group>"; };
 		7870448C2F76A60F00A84406 /* test_env.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = test_env.c; path = tests/test_env.c; sourceTree = "<group>"; };
@@ -183,6 +185,7 @@
 				7870446B2F76A42600A84406 /* text.c */,
 				7870446C2F76A42600A84406 /* user.h */,
 				7870446D2F76A42600A84406 /* window.c */,
+				787044912F76A42600A84406 /* theme.c */,
 			);
 			path = user;
 			sourceTree = "<group>";
@@ -275,6 +278,7 @@
 				787044862F76A42600A84406 /* label.c in Sources */,
 				787044872F76A42600A84406 /* draw_impl.c in Sources */,
 				787044882F76A42600A84406 /* console.c in Sources */,
+				787044902F76A42600A84406 /* theme.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

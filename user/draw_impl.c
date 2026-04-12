@@ -259,7 +259,7 @@ void ui_set_stencil_for_root_window(uint32_t window_id) {
 }
 
 // Fill a rectangle with a solid color
-void fill_rect(int color, int x, int y, int w, int h) {
+void fill_rect(uint32_t color, int x, int y, int w, int h) {
   extern bool running;
   extern GLuint ui_white_texture;
   

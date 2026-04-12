@@ -4,6 +4,7 @@
 
 #include <stdint.h>
 #include "messages.h"
+#include "user.h"
 
 uint32_t g_sys_colors[kColorCount] = {
   [kColorWindowBg]             = COLOR_PANEL_BG,
