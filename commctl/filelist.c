@@ -273,6 +273,28 @@ static void fl_navigate(window_t *win, filelist_data_t *data, int index) {
 // ---------------------------------------------------------------------------
 // Window procedure
 // ---------------------------------------------------------------------------
+
+// Convert packed wparam coordinates to a filelist item index.
+// Returns -1 when the position is outside the item grid.
+static int fl_hit_index(window_t *win, filelist_data_t *data, uint32_t wparam) {
+  int mx = (int)(int16_t)LOWORD(wparam);
+  int my = (int)(int16_t)HIWORD(wparam);
+  // Coordinates from handle_mouse are parent-content-relative; subtract the
+  // parent's screen position to get child-local coords.
+  if (win->parent) {
+    mx -= (int)win->parent->frame.x;
+    my -= (int)win->parent->frame.y;
+  }
+  int col_w = (int)(uint32_t)send_message(win, CVM_GETCOLUMNWIDTH, 0, NULL);
+  int ncol  = (col_w > 0 && win->frame.w > 0)
+                ? (win->frame.w / col_w) : 1;
+  if (ncol < 1) ncol = 1;
+  int col   = mx / col_w;
+  int row   = (my - FL_WIN_PADDING) / FL_ENTRY_HEIGHT;
+  int index = row * ncol + col;
+  return (index >= 0 && index < data->count) ? index : -1;
+}
+
 result_t win_filelist(window_t *win, uint32_t msg,
                       uint32_t wparam, void *lparam) {
   filelist_data_t *data = (filelist_data_t *)win->userdata;
@@ -312,29 +334,8 @@ result_t win_filelist(window_t *win, uint32_t msg,
     // Own click handling — NOT delegated to win_columnview to avoid the CVN_*
     // routing (which sends to root, bypassing win_filelist when it is a child).
     case kWindowMessageLeftButtonDown: {
-      int mx = (int)(int16_t)LOWORD(wparam);
-      int my = (int)(int16_t)HIWORD(wparam);
-
-      // event.c computes LOCAL_X/Y as (screen_logical - win->frame.x/y).
-      // For root windows frame.x/y equals the screen position, so the result
-      // is already content-local.  For child windows frame.x/y is
-      // parent-content-relative (e.g. 2), NOT the screen position; the full
-      // screen position of the child is parent->frame.x + child->frame.x.
-      // Subtract the parent's screen position to get truly child-local coords.
-      if (win->parent) {
-        mx -= (int)win->parent->frame.x; // correct for parent's screen x
-        my -= (int)win->parent->frame.y; // correct for parent's screen y
-      }
-
-      int col_w = (int)(uint32_t)send_message(win, CVM_GETCOLUMNWIDTH, 0, NULL);
-      int ncol  = (col_w > 0 && win->frame.w > 0)
-                    ? (win->frame.w / col_w) : 1;
-      if (ncol < 1) ncol = 1;
-      int col   = mx / col_w;
-      int row   = (my - FL_WIN_PADDING) / FL_ENTRY_HEIGHT;
-      int index = row * ncol + col;
-
-      if (index < 0 || index >= data->count) return true;
+      int index = fl_hit_index(win, data, wparam);
+      if (index < 0) return true;
 
       uint32_t now    = axGetMilliseconds();
       bool     is_dbl = (data->last_click_idx == (uint32_t)index &&
@@ -369,6 +370,29 @@ result_t win_filelist(window_t *win, uint32_t msg,
                        MAKEDWORD((uint32_t)index, FLN_SELCHANGE),
                        &data->notify_item);
         }
+      }
+      return true;
+    }
+
+    // -----------------------------------------------------------------------
+    // Platform double-click (kEventLeftDoubleClick) arrives here directly on
+    // macOS, X11, Wayland, Windows, and QNX.  Perform the double-click action
+    // without going through the timing-based fallback.
+    case kWindowMessageLeftButtonDoubleClick: {
+      int index = fl_hit_index(win, data, wparam);
+      if (index < 0) return true;
+
+      // Reset timing state so a subsequent single click starts fresh.
+      data->last_click_ms  = 0;
+      data->last_click_idx = (uint32_t)-1;
+
+      if (data->items[index].is_directory) {
+        fl_navigate(win, data, index);
+      } else {
+        data->notify_item = data->items[index];
+        send_message(get_root_window(win), kWindowMessageCommand,
+                     MAKEDWORD((uint32_t)index, FLN_FILEOPEN),
+                     &data->notify_item);
       }
       return true;
     }

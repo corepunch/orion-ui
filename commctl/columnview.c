@@ -35,6 +35,18 @@ static inline int get_column_count(int window_width, int column_width) {
   return (ncol > 0) ? ncol : 1;
 }
 
+// Convert packed wparam coordinates to a columnview item index.
+// Returns -1 when the position falls outside the item grid.
+static int cv_hit_index(window_t *win, columnview_data_t *data, uint32_t wparam) {
+  int mx = (int)(int16_t)LOWORD(wparam);
+  int my = (int)(int16_t)HIWORD(wparam);
+  const int ncol = get_column_count(win->frame.w, data->column_width);
+  int col = mx / data->column_width;
+  int row = (my - WIN_PADDING) / ENTRY_HEIGHT;
+  int index = row * ncol + col;
+  return (index >= 0 && index < (int)data->count) ? index : -1;
+}
+
 // ColumnView control window procedure
 result_t win_columnview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   columnview_data_t *data = (columnview_data_t *)win->userdata2;
@@ -90,40 +102,49 @@ result_t win_columnview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
     }
     
     case kWindowMessageLeftButtonDown: {
-      int mx = LOWORD(wparam);
-      int my = HIWORD(wparam);
-      const int ncol = get_column_count(win->frame.w, data->column_width);
-      int col = mx / data->column_width;
-      int row = (my - WIN_PADDING) / ENTRY_HEIGHT;
-      uint32_t index = row * ncol + col;
-      
-      if (index < data->count) {
+      int index = cv_hit_index(win, data, wparam);
+      if (index >= 0) {
         uint32_t now = axGetMilliseconds();
-        
+
         // Check for double-click
-        if (data->last_click_index == index && (now - data->last_click_time) < 500) {
+        if (data->last_click_index == (uint32_t)index &&
+            (now - data->last_click_time) < 500) {
           // Send double-click notification
-          send_message(get_root_window(win), kWindowMessageCommand, MAKEDWORD(index, CVN_DBLCLK), &data->items[index]);
-          data->last_click_time = 0;
+          send_message(get_root_window(win), kWindowMessageCommand,
+                       MAKEDWORD(index, CVN_DBLCLK), &data->items[index]);
+          data->last_click_time  = 0;
           data->last_click_index = -1;
         } else {
           // Single click - update selection
           uint32_t old_selection = data->selected;
-          data->selected = index;
-          data->last_click_time = now;
-          data->last_click_index = index;
-          
+          data->selected         = (uint32_t)index;
+          data->last_click_time  = now;
+          data->last_click_index = (uint32_t)index;
+
           // Send selection change notification if changed
           if (old_selection != data->selected) {
-            send_message(get_root_window(win), kWindowMessageCommand, MAKEDWORD(index, CVN_SELCHANGE), &data->items[index]);
+            send_message(get_root_window(win), kWindowMessageCommand,
+                         MAKEDWORD(index, CVN_SELCHANGE), &data->items[index]);
           }
-          
+
           invalidate_window(win);
         }
       }
       return true;
     }
-    
+
+    case kWindowMessageLeftButtonDoubleClick: {
+      int index = cv_hit_index(win, data, wparam);
+      if (index >= 0) {
+        // Reset timing state so a subsequent single click starts fresh.
+        data->last_click_time  = 0;
+        data->last_click_index = -1;
+        send_message(get_root_window(win), kWindowMessageCommand,
+                     MAKEDWORD(index, CVN_DBLCLK), &data->items[index]);
+      }
+      return true;
+    }
+
     case CVM_ADDITEM: {
       columnview_item_t *item = (columnview_item_t *)lparam;
       if (data->count < MAX_COLUMNVIEW_ITEMS && item) {

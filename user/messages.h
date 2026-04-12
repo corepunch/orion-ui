@@ -23,6 +23,7 @@ enum {
   kWindowMessageMouseLeave,
   kWindowMessageLeftButtonDown,
   kWindowMessageLeftButtonUp,
+  kWindowMessageLeftButtonDoubleClick,
   kWindowMessageRightButtonDown,
   kWindowMessageRightButtonUp,
   kWindowMessageResize,
