@@ -9,17 +9,36 @@
 
 #include "../user/user.h"
 
-// Button-set flags (low nibble of `type`)
-#define MB_OK           0x00
-#define MB_OKCANCEL     0x01
-#define MB_YESNO        0x02
-#define MB_YESNOCANCEL  0x03
+// Button-set flags (low nibble of `type`).
+// On Windows these names are already defined by <winuser.h> with the same
+// semantics; guard against redefinition to suppress compiler warnings.
+#ifndef MB_OK
+#  define MB_OK           0x00
+#endif
+#ifndef MB_OKCANCEL
+#  define MB_OKCANCEL     0x01
+#endif
+#ifndef MB_YESNO
+#  define MB_YESNO        0x02
+#endif
+#ifndef MB_YESNOCANCEL
+#  define MB_YESNOCANCEL  0x03
+#endif
 
-// Return values (match WinAPI IDOK / IDCANCEL / IDYES / IDNO)
-#define IDOK     1
-#define IDCANCEL 2
-#define IDYES    6
-#define IDNO     7
+// Return values – mirror WinAPI IDOK / IDCANCEL / IDYES / IDNO exactly so
+// callers can use either the Orion or the native definitions interchangeably.
+#ifndef IDOK
+#  define IDOK     1
+#endif
+#ifndef IDCANCEL
+#  define IDCANCEL 2
+#endif
+#ifndef IDYES
+#  define IDYES    6
+#endif
+#ifndef IDNO
+#  define IDNO     7
+#endif
 
 // Show a modal message-box dialog.
 // parent – owner window (or NULL)
