@@ -7,9 +7,8 @@
 
 // Include UI framework headers
 #include "../../ui.h"
+#include "../../gem_magic.h"
 
-// Running flag
-// bool running = true;
 extern bool running;
 
 // Button ID constant
@@ -72,7 +71,32 @@ result_t hello_window_proc(window_t *win, uint32_t msg, uint32_t wparam, void *l
   }
 }
 
-// Simple main function
+// ---------------------------------------------------------------------------
+// .gem entry points — called by the shell when loaded as a .gem
+// ---------------------------------------------------------------------------
+
+bool gem_init(int argc, char *argv[]) {
+  (void)argc; (void)argv;
+  window_t *win = create_window(
+    "Hello World Window",
+    0,
+    MAKERECT(20, 20, 240, 180),
+    NULL,
+    hello_window_proc,
+    NULL
+  );
+  if (!win) return false;
+  show_window(win, true);
+  return true;
+}
+
+GEM_DEFINE("Hello World", "1.0", gem_init, NULL, NULL)
+
+// ---------------------------------------------------------------------------
+// Standalone entry point — not compiled when building as a .gem
+// ---------------------------------------------------------------------------
+
+#ifndef BUILD_AS_GEM
 int main(int argc, char* argv[]) {
   printf("UI Framework Hello World Example\n");
 
@@ -126,3 +150,4 @@ int main(int argc, char* argv[]) {
   printf("Goodbye!\n");
   return 0;
 }
+#endif /* BUILD_AS_GEM */

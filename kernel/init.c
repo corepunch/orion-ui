@@ -76,6 +76,10 @@ result_t win_tray(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 
 // Initialize graphics context (platform + OpenGL)
 bool ui_init_graphics(int flags, const char *title, int width, int height) {
+  // Guard against double-initialization (e.g. when a gem calls this
+  // after the shell has already initialized the context).
+  if (g_graphics_initialized) return true;
+
   axInit();
 
   if (!axCreateWindow(title, width * UI_WINDOW_SCALE, height * UI_WINDOW_SCALE, 0)) {

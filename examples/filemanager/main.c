@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "../../ui.h"
+#include "../../gem_magic.h"
 
 #define USE_LUA
 
@@ -58,6 +59,32 @@ static result_t filemanager_proc(window_t *win, uint32_t msg,
   }
 }
 
+// ---------------------------------------------------------------------------
+// .gem entry points
+// ---------------------------------------------------------------------------
+
+bool gem_init(int argc, char *argv[]) {
+  const char *start_path = argc > 1 ? argv[1] : NULL;
+  window_t *win = create_window(
+    "File Manager",
+    WINDOW_STATUSBAR,
+    MAKERECT(20, 20, 320, 240),
+    NULL,
+    filemanager_proc,
+    (void *)start_path
+  );
+  if (!win) return false;
+  show_window(win, true);
+  return true;
+}
+
+GEM_DEFINE("File Manager", "1.0", gem_init, NULL, NULL)
+
+// ---------------------------------------------------------------------------
+// Standalone entry point
+// ---------------------------------------------------------------------------
+
+#ifndef BUILD_AS_GEM
 int main(int argc, char *argv[]) {
   (void)argc; (void)argv;
 
@@ -93,5 +120,4 @@ int main(int argc, char *argv[]) {
   ui_shutdown_graphics();
   return 0;
 }
-
-
+#endif /* BUILD_AS_GEM */

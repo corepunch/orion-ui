@@ -1,0 +1,130 @@
+#ifndef GEM_MAGIC_H
+#define GEM_MAGIC_H
+
+#include <stdbool.h>
+
+// gem_interface_t — the ABI every .gem must export via gem_get_interface().
+//
+// Shell discovery sequence:
+//   1. dlopen("foo.gem")
+//   2. sym = dlsym(handle, "gem_get_interface")
+//   3. gem_interface_t *iface = sym();
+//   4. iface->init(argc, argv)   — creates windows, returns true on success
+//   5. … shell runs shared event loop …
+//   6. iface->shutdown()         — called when the gem is unloaded
+typedef struct {
+    const char  *name;          // Display name, e.g. "Image Editor"
+    const char  *version;       // Version string, e.g. "1.0"
+    const char **file_types;    // NULL-terminated list of handled file
+                                // extensions (e.g. {".png",".bmp",NULL}),
+                                // or NULL for no file associations.
+    bool (*init)(int argc, char *argv[]); // Create windows; true = success
+    void (*shutdown)(void);               // Cleanup on unload (may be NULL)
+} gem_interface_t;
+
+// -----------------------------------------------------------------------
+// BUILD_AS_GEM — active when compiling a .gem shared library
+// -----------------------------------------------------------------------
+#ifdef BUILD_AS_GEM
+
+// Redirect 'running' to a local stub that is always false so that any
+// standalone event-loop in gem code is never entered.  Uses an
+// identifier-only (#define, not function-like) replacement so it does not
+// conflict with function declarations.
+//
+// All "extern bool running;" declarations in the gem's TU resolve to this
+// stub through the macro, which is consistent with the definition here.
+// Declared static so each compilation unit gets its own copy (important
+// when gem_magic.h might be included in more than one TU).
+static bool __gem_stub_running = false;
+#define running  __gem_stub_running
+
+// GEM_DEFINE — emit gem_get_interface() with explicit metadata.
+//
+// Macro parameters are suffixed with underscores to avoid accidental
+// expansion inside struct member accesses such as __iface.name.
+//
+//   gem_name_  - display name (string literal or const char *)
+//   gem_ver_   - version string
+//   gem_init_  - bool (*)(int argc, char *argv[])  — create windows
+//   gem_shdn_  - void (*)(void)  — cleanup on unload, or NULL
+//   gem_types_ - NULL-terminated const char *[] of extensions, or NULL
+//
+// Example (with file associations):
+//   static const char *img_types[] = { ".png", ".bmp", NULL };
+//   GEM_DEFINE("Image Editor", "1.0", gem_init, gem_shutdown, img_types)
+//
+// Example (no file associations):
+//   GEM_DEFINE("Hello World", "1.0", gem_init, NULL, NULL)
+#define GEM_DEFINE(gem_name_, gem_ver_, gem_init_, gem_shdn_, gem_types_) \
+    __attribute__((visibility("default")))                                  \
+    gem_interface_t *gem_get_interface(void) {                              \
+        static gem_interface_t __iface;                                     \
+        if (!__iface.name) {                                                \
+            __iface.name       = (gem_name_);                               \
+            __iface.version    = (gem_ver_);                                \
+            __iface.file_types = (gem_types_);                              \
+            __iface.init       = (gem_init_);                               \
+            __iface.shutdown   = (gem_shdn_);                               \
+        }                                                                   \
+        return &__iface;                                                     \
+    }
+
+// -----------------------------------------------------------------------
+// GEM_MAIN — magic standalone-to-gem bridge (-Dmain=gem_main)
+//
+// Add #include "gem_magic.h" + GEM_MAIN() to a simple standalone program
+// and it compiles both as an executable and as a .gem loaded by the shell.
+//
+// In .gem mode the following are automatically handled:
+//   - main() is renamed to gem_main() and called as the gem's init fn.
+//   - while(running){…} is not entered ('running' stub is always false).
+//
+// IMPORTANT caveats for GEM_MAIN programs:
+//   - ui_init_graphics() is safe to call multiple times; the framework
+//     handles the "already initialized" case when used with liborion.so.
+//   - ui_shutdown_graphics() must NOT be called when running inside the
+//     shell.  Guard it: #ifndef BUILD_AS_GEM … #endif
+//   - destroy_window() for the main window after the event loop must also
+//     be guarded: #ifndef BUILD_AS_GEM … #endif
+//
+// For programs with non-trivial cleanup, use the explicit GEM_DEFINE
+// approach with separate gem_init / gem_shutdown functions, and guard
+// the standalone main() with #ifndef BUILD_AS_GEM … #endif.
+//
+// Usage:
+//   #include "../../gem_magic.h"
+//   GEM_MAIN("My App", "1.0", NULL)   // NULL = no file associations
+//
+//   int main(int argc, char *argv[]) {
+//       ui_init_graphics(…);   // safe — no-op if already initialized
+//       window_t *w = create_window(…);
+//       show_window(w, true);
+//       while (running) { … } // not entered in gem mode
+//   #ifndef BUILD_AS_GEM
+//       destroy_window(w);
+//       ui_shutdown_graphics();
+//   #endif
+//   }
+// -----------------------------------------------------------------------
+
+// Rename main() → gem_main() so it can be invoked as the gem's init fn.
+// (No declaration headers use the identifier 'main', so this is safe.)
+#define main  gem_main
+int gem_main(int argc, char *argv[]);
+
+// GEM_MAIN — register the (renamed) main() as the gem's init function.
+#define GEM_MAIN(gem_name_, gem_ver_, gem_types_)                       \
+    static bool __gem_main_init_(int argc, char *argv[]) {              \
+        return gem_main(argc, argv) == 0;                               \
+    }                                                                    \
+    GEM_DEFINE(gem_name_, gem_ver_, __gem_main_init_, NULL, gem_types_)
+
+#else   /* !BUILD_AS_GEM — standalone mode, macros are empty */
+
+#define GEM_DEFINE(n_, v_, i_, s_, t_)  /* no-op */
+#define GEM_MAIN(n_, v_, t_)            /* no-op */
+
+#endif  /* BUILD_AS_GEM */
+
+#endif  /* GEM_MAGIC_H */
