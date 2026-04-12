@@ -550,6 +550,100 @@ void canvas_commit_move(canvas_doc_t *doc) {
 }
 
 // ============================================================
+// Image operations: flip, invert, resize
+// ============================================================
+
+// Flip canvas pixels horizontally (mirror left-right).
+void canvas_flip_h(canvas_doc_t *doc) {
+  if (!doc) return;
+  int w = doc->canvas_w, h = doc->canvas_h;
+  for (int y = 0; y < h; y++) {
+    for (int x = 0; x < w / 2; x++) {
+      uint8_t *l = doc->pixels + ((size_t)y * w + x) * 4;
+      uint8_t *r = doc->pixels + ((size_t)y * w + (w - 1 - x)) * 4;
+      uint8_t tmp[4];
+      memcpy(tmp, l, 4);
+      memcpy(l, r, 4);
+      memcpy(r, tmp, 4);
+    }
+  }
+  doc->canvas_dirty = true;
+  doc->modified     = true;
+}
+
+// Flip canvas pixels vertically (mirror top-bottom).
+void canvas_flip_v(canvas_doc_t *doc) {
+  if (!doc) return;
+  int w = doc->canvas_w, h = doc->canvas_h;
+  size_t row_bytes = (size_t)w * 4;
+  uint8_t *tmp = malloc(row_bytes);
+  if (!tmp) return;
+  for (int y = 0; y < h / 2; y++) {
+    uint8_t *top = doc->pixels + (size_t)y * row_bytes;
+    uint8_t *bot = doc->pixels + (size_t)(h - 1 - y) * row_bytes;
+    memcpy(tmp, top, row_bytes);
+    memcpy(top, bot, row_bytes);
+    memcpy(bot, tmp, row_bytes);
+  }
+  free(tmp);
+  doc->canvas_dirty = true;
+  doc->modified     = true;
+}
+
+// Invert all pixel colors (complement R, G, B; leave alpha unchanged).
+void canvas_invert_colors(canvas_doc_t *doc) {
+  if (!doc) return;
+  size_t n = (size_t)doc->canvas_w * doc->canvas_h;
+  for (size_t i = 0; i < n; i++) {
+    uint8_t *p = doc->pixels + i * 4;
+    p[0] = (uint8_t)(255 - p[0]);
+    p[1] = (uint8_t)(255 - p[1]);
+    p[2] = (uint8_t)(255 - p[2]);
+    // alpha unchanged
+  }
+  doc->canvas_dirty = true;
+  doc->modified     = true;
+}
+
+// Resize the canvas to new_w × new_h.
+// Existing pixels are preserved at the top-left corner; any new area is
+// filled with opaque white.  The GL texture is invalidated so it will be
+// re-created on the next paint.
+void canvas_resize(canvas_doc_t *doc, int new_w, int new_h) {
+  if (!doc || new_w <= 0 || new_h <= 0) return;
+  if (new_w == doc->canvas_w && new_h == doc->canvas_h) return;
+  if ((size_t)new_w > 16384 || (size_t)new_h > 16384) return;
+
+  uint8_t *buf = malloc((size_t)new_w * new_h * 4);
+  if (!buf) return;
+
+  // Fill new canvas with opaque white
+  memset(buf, 0xFF, (size_t)new_w * new_h * 4);
+
+  // Copy existing content (clipped to the smaller of old/new dimensions)
+  int copy_w = new_w < doc->canvas_w ? new_w : doc->canvas_w;
+  int copy_h = new_h < doc->canvas_h ? new_h : doc->canvas_h;
+  for (int y = 0; y < copy_h; y++) {
+    memcpy(buf + (size_t)y * new_w * 4,
+           doc->pixels + (size_t)y * doc->canvas_w * 4,
+           (size_t)copy_w * 4);
+  }
+
+  // Release old GL texture (will be re-created on next canvas_upload)
+  if (doc->canvas_tex) {
+    glDeleteTextures(1, &doc->canvas_tex);
+    doc->canvas_tex = 0;
+  }
+
+  free(doc->pixels);
+  doc->pixels    = buf;
+  doc->canvas_w  = new_w;
+  doc->canvas_h  = new_h;
+  doc->canvas_dirty = true;
+  doc->modified     = true;
+}
+
+// ============================================================
 // PNG I/O (stb_image)
 // ============================================================
 

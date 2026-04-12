@@ -22,6 +22,9 @@ static const accel_t kAccelEntries[] = {
   { FCONTROL|FVIRTKEY, 'v', ID_EDIT_PASTE},
   { FCONTROL|FVIRTKEY, 'a', ID_EDIT_SELECT_ALL},
   { FVIRTKEY,          AX_KEY_ESCAPE, ID_EDIT_DESELECT},
+  // Delete / Backspace clears the active selection (fill with bg color)
+  { FVIRTKEY,          AX_KEY_DEL,       ID_EDIT_CLEAR_SEL },
+  { FVIRTKEY,          AX_KEY_BACKSPACE, ID_EDIT_CLEAR_SEL },
   { FCONTROL|FVIRTKEY, 'n', ID_FILE_NEW  },
   { FCONTROL|FVIRTKEY, 'o', ID_FILE_OPEN },
   { FCONTROL|FVIRTKEY, 's', ID_FILE_SAVE },

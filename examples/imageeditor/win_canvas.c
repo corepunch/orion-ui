@@ -99,7 +99,6 @@ static void clamp_pan(canvas_win_state_t *state, int win_w, int win_h) {
   if (state->pan_y > max_y) state->pan_y = max_y;
 }
 
-// Forward a mouse event from the canvas to a scrollbar child.
 // Set zoom level on a canvas window (called by menu/accelerator handler).
 // new_scale is snapped to the nearest supported zoom level so callers can
 // never trigger a divide-by-zero or produce unexpected canvas sizes.
@@ -128,6 +127,15 @@ void canvas_win_set_zoom(window_t *win, int new_scale) {
   clamp_pan(state, win->frame.w, win->frame.h);
   canvas_sync_scrollbars(win, state);
   invalidate_window(win);
+}
+
+// Public helper: re-clamp pan and update scrollbars without changing zoom.
+// Call this after canvas_resize() to keep scrollbar state consistent.
+void canvas_win_sync_scrollbars(window_t *win) {
+  canvas_win_state_t *state = (canvas_win_state_t *)win->userdata;
+  if (!state) return;
+  clamp_pan(state, win->frame.w, win->frame.h);
+  canvas_sync_scrollbars(win, state);
 }
 
 // Release the floating-selection GL texture if one exists.
@@ -572,6 +580,17 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       state->hover.x    = px;
       state->hover.y    = py;
       state->hover_valid = canvas_in_bounds(doc, px, py);
+
+      // Update status bar with cursor position (Windows Me / MS Paint style)
+      {
+        char sb[48];
+        if (state->hover_valid)
+          snprintf(sb, sizeof(sb), "x=%d, y=%d  |  %dx%d",
+                   px, py, doc->canvas_w, doc->canvas_h);
+        else
+          snprintf(sb, sizeof(sb), "%dx%d", doc->canvas_w, doc->canvas_h);
+        send_message(doc->win, kWindowMessageStatusBar, 0, sb);
+      }
 
       int tool = g_app->current_tool;
       bool shift = (ui_get_mod_state() & AX_MOD_SHIFT) != 0;

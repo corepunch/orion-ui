@@ -106,6 +106,11 @@
 extern const int kZoomLevels[NUM_ZOOM_LEVELS];
 extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 
+#define ID_IMAGE_FLIP_H   50
+#define ID_IMAGE_FLIP_V   51
+#define ID_IMAGE_INVERT   52
+#define ID_IMAGE_RESIZE   53
+
 #define ID_HELP_ABOUT  100
 
 // Tool command IDs – these are the authoritative tool identifiers used everywhere
@@ -245,6 +250,12 @@ static inline bool canvas_in_selection(const canvas_doc_t *doc, int x, int y) {
   return x >= x0 && x <= x1 && y >= y0 && y <= y1;
 }
 
+// Canvas pixel operations (new)
+void canvas_flip_h(canvas_doc_t *doc);
+void canvas_flip_v(canvas_doc_t *doc);
+void canvas_invert_colors(canvas_doc_t *doc);
+void canvas_resize(canvas_doc_t *doc, int new_w, int new_h);
+
 // Forward declarations for canvas operations
 void canvas_set_pixel(canvas_doc_t *doc, int x, int y, uint32_t c);
 uint32_t canvas_get_pixel(const canvas_doc_t *doc, int x, int y);
@@ -308,6 +319,9 @@ result_t win_color_palette_proc(window_t *win, uint32_t msg, uint32_t wparam, vo
 // Zoom support
 void canvas_win_set_zoom(window_t *canvas_win, int new_scale);
 
+// Sync canvas scrollbars after content size changes (e.g. after canvas_resize)
+void canvas_win_sync_scrollbars(window_t *canvas_win);
+
 // Color picker dialog
 bool show_color_picker(window_t *parent, uint32_t initial, uint32_t *out);
 
@@ -330,5 +344,8 @@ void show_about_dialog(window_t *parent);
 
 // Menu definitions
 extern const menu_def_t kMenus[];
+
+// New Image / Canvas Size dialog
+bool show_size_dialog(window_t *parent, const char *title, int *out_w, int *out_h);
 
 #endif // __IMAGEEDITOR_H__

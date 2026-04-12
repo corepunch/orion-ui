@@ -40,15 +40,25 @@ static const menu_item_t kViewItems[] = {
   {"8x",               ID_VIEW_ZOOM_8X},
 };
 
+static const menu_item_t kImageItems[] = {
+  {"Canvas Size...", ID_IMAGE_RESIZE},
+  {NULL, 0},
+  {"Flip Horizontal", ID_IMAGE_FLIP_H},
+  {"Flip Vertical",   ID_IMAGE_FLIP_V},
+  {NULL, 0},
+  {"Invert Colors",   ID_IMAGE_INVERT},
+};
+
 static const menu_item_t kHelpItems[] = {
   {"About...", ID_HELP_ABOUT},
 };
 
 const menu_def_t kMenus[] = {
-  {"File", kFileItems, (int)(sizeof(kFileItems)/sizeof(kFileItems[0]))},
-  {"Edit", kEditItems, (int)(sizeof(kEditItems)/sizeof(kEditItems[0]))},
-  {"View", kViewItems, (int)(sizeof(kViewItems)/sizeof(kViewItems[0]))},
-  {"Help", kHelpItems, (int)(sizeof(kHelpItems)/sizeof(kHelpItems[0]))},
+  {"File",  kFileItems,  (int)(sizeof(kFileItems)/sizeof(kFileItems[0]))},
+  {"Edit",  kEditItems,  (int)(sizeof(kEditItems)/sizeof(kEditItems[0]))},
+  {"Image", kImageItems, (int)(sizeof(kImageItems)/sizeof(kImageItems[0]))},
+  {"View",  kViewItems,  (int)(sizeof(kViewItems)/sizeof(kViewItems[0]))},
+  {"Help",  kHelpItems,  (int)(sizeof(kHelpItems)/sizeof(kHelpItems[0]))},
 };
 
 static void handle_menu_command(uint16_t id) {
@@ -56,9 +66,12 @@ static void handle_menu_command(uint16_t id) {
   canvas_doc_t *doc = g_app->active_doc;
 
   switch (id) {
-    case ID_FILE_NEW:
-      create_document(NULL, CANVAS_W, CANVAS_H);
+    case ID_FILE_NEW: {
+      int w = CANVAS_W, h = CANVAS_H;
+      if (show_size_dialog(g_app->menubar_win, "New Image", &w, &h))
+        create_document(NULL, w, h);
       break;
+    }
 
     case ID_FILE_OPEN: {
       char path[512] = {0};
@@ -193,6 +206,54 @@ static void handle_menu_command(uint16_t id) {
         invalidate_window(doc->canvas_win);
       }
       break;
+
+    case ID_IMAGE_FLIP_H:
+      if (doc) {
+        doc_push_undo(doc);
+        canvas_flip_h(doc);
+        doc_update_title(doc);
+        invalidate_window(doc->canvas_win);
+      }
+      break;
+
+    case ID_IMAGE_FLIP_V:
+      if (doc) {
+        doc_push_undo(doc);
+        canvas_flip_v(doc);
+        doc_update_title(doc);
+        invalidate_window(doc->canvas_win);
+      }
+      break;
+
+    case ID_IMAGE_INVERT:
+      if (doc) {
+        doc_push_undo(doc);
+        canvas_invert_colors(doc);
+        doc_update_title(doc);
+        invalidate_window(doc->canvas_win);
+      }
+      break;
+
+    case ID_IMAGE_RESIZE: {
+      if (!doc) break;
+      int new_w = doc->canvas_w, new_h = doc->canvas_h;
+      if (show_size_dialog(g_app->menubar_win, "Canvas Size", &new_w, &new_h) &&
+          (new_w != doc->canvas_w || new_h != doc->canvas_h)) {
+        doc_push_undo(doc);
+        canvas_resize(doc, new_w, new_h);
+        // Deselect any selection (its coordinates may now be out of bounds)
+        canvas_deselect(doc);
+        if (doc->canvas_win) {
+          canvas_win_sync_scrollbars(doc->canvas_win);
+          invalidate_window(doc->canvas_win);
+        }
+        doc_update_title(doc);
+        char sb[32];
+        snprintf(sb, sizeof(sb), "%dx%d", new_w, new_h);
+        send_message(doc->win, kWindowMessageStatusBar, 0, sb);
+      }
+      break;
+    }
 
     case ID_HELP_ABOUT:
       show_about_dialog(g_app->menubar_win);
