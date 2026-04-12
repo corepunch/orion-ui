@@ -95,7 +95,22 @@ static result_t ni_proc(window_t *win, uint32_t msg,
     }
 
     case kWindowMessageCommand: {
-      if (HIWORD(wparam) != kButtonNotificationClicked) return false;
+      uint16_t notif = HIWORD(wparam);
+
+      // When the user presses Enter inside either edit box, win_textedit fires
+      // kEditNotificationUpdate. Treat that as clicking OK so Enter accepts
+      // the dialog while focus is in a text field.
+      if (notif == kEditNotificationUpdate) {
+        window_t *ew = get_window_item(win, NI_ID_WIDTH);
+        window_t *eh = get_window_item(win, NI_ID_HEIGHT);
+        if (ew) { int v = atoi(ew->title); if (v > 0 && v <= 16384) *st->out_w = v; }
+        if (eh) { int v = atoi(eh->title); if (v > 0 && v <= 16384) *st->out_h = v; }
+        st->accepted = true;
+        end_dialog(win, 1);
+        return true;
+      }
+
+      if (notif != kButtonNotificationClicked) return false;
       window_t *src = (window_t *)lparam;
       if (!src) return false;
 
