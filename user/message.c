@@ -113,6 +113,10 @@ void cleanup_all_hooks(void) {
   g_hooks = NULL;  // Ensure it's NULL for idempotency
 }
 
+void reset_message_queue(void) {
+  memset(&queue, 0, sizeof(queue));
+}
+
 // Remove window from message queue
 void remove_from_global_queue(window_t *win) {
   for (uint8_t w = queue.write, r = queue.read; r != w; r++) {
@@ -516,12 +520,12 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
 
 // Post message to window queue (asynchronous)
 void post_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
-  // Remove duplicate messages from queue
+  // Keep at most one queued instance per (target, msg) pair.
   for (uint8_t w = queue.write, r = queue.read; r != w; r++) {
     if (queue.messages[r].target == win &&
         queue.messages[r].msg == msg)
     {
-      queue.messages[r].target = NULL;
+      return;
     }
   }
   // Add new message
