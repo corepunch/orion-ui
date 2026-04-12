@@ -169,6 +169,9 @@ $(BIN_DIR)/%$(EXE_EXT): examples/%/main.c $(STATIC_LIB) | $(BIN_DIR)
 .PHONY: test
 test: $(TEST_BINS)
 	@echo "Running tests..."
+ifeq ($(OS),Windows_NT)
+	@cp -f $(LIB_DIR)/libplatform.dll $(BIN_DIR)/
+endif
 	@for test in $(TEST_BINS); do \
 		echo "Running $$test..."; \
 		$$test || exit 1; \

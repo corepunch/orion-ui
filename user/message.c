@@ -567,13 +567,6 @@ void repost_messages(void) {
       }
       continue;
     }
-    // Paint messages call OpenGL drawing functions; skip them when the GL
-    // context has not been initialised (e.g. headless unit tests on Windows
-    // where GLEW function pointers are NULL without glewInit()).
-    if ((m->msg == kWindowMessagePaint ||
-         m->msg == kWindowMessageNonClientPaint) && !running) {
-      continue;
-    }
     if (!is_valid_window_ptr(m->target, windows)) continue;
     send_message(m->target, m->msg, m->wparam, m->lparam);
   }
