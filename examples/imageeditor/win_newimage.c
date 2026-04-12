@@ -31,6 +31,9 @@
 #define NI_ID_OK       3
 #define NI_ID_CANCEL   4
 
+// Maximum dimension accepted by the dialog (must match canvas_resize limit).
+#define MAX_IMAGE_DIMENSION 16384
+
 // ──────────────────────────────────────────────────────────────────
 // State
 // ──────────────────────────────────────────────────────────────────
@@ -40,6 +43,22 @@ typedef struct {
   int  *out_h;
   bool  accepted;
 } ni_state_t;
+
+// Parse an edit-box value and write it to *out if it is a valid dimension.
+static void ni_read_dim(window_t *dlg, uint32_t id, int *out) {
+  window_t *w = get_window_item(dlg, id);
+  if (!w) return;
+  int v = atoi(w->title);
+  if (v > 0 && v <= MAX_IMAGE_DIMENSION) *out = v;
+}
+
+// Read both dimensions from the dialog and accept it.
+static void ni_accept(window_t *win, ni_state_t *st) {
+  ni_read_dim(win, NI_ID_WIDTH,  st->out_w);
+  ni_read_dim(win, NI_ID_HEIGHT, st->out_h);
+  st->accepted = true;
+  end_dialog(win, 1);
+}
 
 // ──────────────────────────────────────────────────────────────────
 // Dialog window procedure
@@ -101,12 +120,7 @@ static result_t ni_proc(window_t *win, uint32_t msg,
       // kEditNotificationUpdate. Treat that as clicking OK so Enter accepts
       // the dialog while focus is in a text field.
       if (notif == kEditNotificationUpdate) {
-        window_t *ew = get_window_item(win, NI_ID_WIDTH);
-        window_t *eh = get_window_item(win, NI_ID_HEIGHT);
-        if (ew) { int v = atoi(ew->title); if (v > 0 && v <= 16384) *st->out_w = v; }
-        if (eh) { int v = atoi(eh->title); if (v > 0 && v <= 16384) *st->out_h = v; }
-        st->accepted = true;
-        end_dialog(win, 1);
+        ni_accept(win, st);
         return true;
       }
 
@@ -115,12 +129,7 @@ static result_t ni_proc(window_t *win, uint32_t msg,
       if (!src) return false;
 
       if (src->id == NI_ID_OK) {
-        window_t *ew = get_window_item(win, NI_ID_WIDTH);
-        window_t *eh = get_window_item(win, NI_ID_HEIGHT);
-        if (ew) { int v = atoi(ew->title); if (v > 0 && v <= 16384) *st->out_w = v; }
-        if (eh) { int v = atoi(eh->title); if (v > 0 && v <= 16384) *st->out_h = v; }
-        st->accepted = true;
-        end_dialog(win, 1);
+        ni_accept(win, st);
         return true;
       }
 
