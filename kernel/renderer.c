@@ -125,7 +125,7 @@ bool ui_init_prog(void) {
   R_MeshUpload(&g_ref.mesh, sprite_verts, 4);
   
   // Create orthographic projection matrix for screen-space rendering
-  uint32_t ws = WI_GetSize(NULL);
+  uint32_t ws = axGetSize(NULL);
   int width  = (int)LOWORD(ws);
   int height = (int)HIWORD(ws);
   //  float scale = (float)height / DOOM_HEIGHT;

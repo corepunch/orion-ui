@@ -93,9 +93,9 @@ void test_toolbar_button_keyboard_return(void) {
     ASSERT_NOT_NULL(btn);
     btn->id = 201;
 
-    test_env_post_message(btn, kWindowMessageKeyDown, WI_KEY_ENTER, NULL);
+    test_env_post_message(btn, kWindowMessageKeyDown, AX_KEY_ENTER, NULL);
     repost_messages();
-    test_env_post_message(btn, kWindowMessageKeyUp,   WI_KEY_ENTER, NULL);
+    test_env_post_message(btn, kWindowMessageKeyUp,   AX_KEY_ENTER, NULL);
     repost_messages();
 
     ASSERT_EQUAL(g_click_count, 1);
@@ -124,9 +124,9 @@ void test_toolbar_button_keyboard_space(void) {
     ASSERT_NOT_NULL(btn);
     btn->id = 202;
 
-    test_env_post_message(btn, kWindowMessageKeyDown, WI_KEY_SPACE, NULL);
+    test_env_post_message(btn, kWindowMessageKeyDown, AX_KEY_SPACE, NULL);
     repost_messages();
-    test_env_post_message(btn, kWindowMessageKeyUp,   WI_KEY_SPACE, NULL);
+    test_env_post_message(btn, kWindowMessageKeyUp,   AX_KEY_SPACE, NULL);
     repost_messages();
 
     ASSERT_EQUAL(g_click_count, 1);

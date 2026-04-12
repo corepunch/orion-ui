@@ -12,8 +12,8 @@
 #define UI_WINDOW_SCALE 2
 #endif
 
-// Event type abstraction — maps to the platform WI_Message struct
-typedef struct WI_Message ui_event_t;
+// Event type abstraction — maps to the platform AXmessage struct
+typedef struct AXmessage ui_event_t;
 
 // Event message queue functions
 int get_message(ui_event_t *evt);
@@ -38,7 +38,7 @@ void ui_end_frame(void);
 // Timing functions
 void ui_delay(unsigned int milliseconds);
 
-// Modifier state accessor — returns current WI_MOD_* flags
+// Modifier state accessor — returns current AX_MOD_* flags
 uint32_t ui_get_mod_state(void);
 
 // Sprite stuff

@@ -34,9 +34,9 @@ void set_fullscreen(void) {
 }
 
 rect_t get_opengl_rect(rect_t const *r) {
-  uint32_t ws = WI_GetSize(NULL);
-  float scale_x = (float)LOWORD(ws) * WI_GetScaling() / (float)MAX(1,ui_get_system_metrics(kSystemMetricScreenWidth));
-  float scale_y = (float)HIWORD(ws) * WI_GetScaling() / (float)MAX(1,ui_get_system_metrics(kSystemMetricScreenHeight));
+  uint32_t ws = axGetSize(NULL);
+  float scale_x = (float)LOWORD(ws) * axGetScaling() / (float)MAX(1,ui_get_system_metrics(kSystemMetricScreenWidth));
+  float scale_y = (float)HIWORD(ws) * axGetScaling() / (float)MAX(1,ui_get_system_metrics(kSystemMetricScreenHeight));
   
   return (rect_t){
     (int)(r->x * scale_x),

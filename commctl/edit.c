@@ -57,7 +57,7 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       return true;
     case kWindowMessageKeyDown:
       switch (wparam) {
-        case WI_KEY_ENTER:
+        case AX_KEY_ENTER:
           if (!win->editing) {
             win->cursor_pos = (int)strlen(win->title);
             win->editing = true;
@@ -66,10 +66,10 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
             win->editing = false;
           }
           break;
-        case WI_KEY_ESCAPE:
+        case AX_KEY_ESCAPE:
           win->editing = false;
           break;
-        case WI_KEY_BACKSPACE:
+        case AX_KEY_BACKSPACE:
           if (win->cursor_pos > 0 && win->editing) {
             memmove(win->title + win->cursor_pos - 1,
                     win->title + win->cursor_pos,
@@ -77,12 +77,12 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
             win->cursor_pos--;
           }
           break;
-        case WI_KEY_LEFTARROW:
+        case AX_KEY_LEFTARROW:
           if (win->cursor_pos > 0 && win->editing) {
             win->cursor_pos--;
           }
           break;
-        case WI_KEY_RIGHTARROW:
+        case AX_KEY_RIGHTARROW:
           if (win->cursor_pos < strlen(win->title) && win->editing) {
             win->cursor_pos++;
           }

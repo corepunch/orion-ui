@@ -65,14 +65,14 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
       send_message(get_root_window(win), kWindowMessageCommand, MAKEDWORD(win->id, kButtonNotificationClicked), win);
       return true;
     case kWindowMessageKeyDown:
-      if (wparam == WI_KEY_ENTER || wparam == WI_KEY_SPACE) {
+      if (wparam == AX_KEY_ENTER || wparam == AX_KEY_SPACE) {
         win->pressed = true;
         invalidate_window(win);
         return true;
       }
       return false;
     case kWindowMessageKeyUp:
-      if (wparam == WI_KEY_ENTER || wparam == WI_KEY_SPACE) {
+      if (wparam == AX_KEY_ENTER || wparam == AX_KEY_SPACE) {
         win->pressed = false;
         if (win->flags & BUTTON_AUTORADIO)
           autoradio_select(win);
@@ -169,14 +169,14 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
                    MAKEDWORD(win->id, kButtonNotificationClicked), win);
       return true;
     case kWindowMessageKeyDown:
-      if (wparam == WI_KEY_ENTER || wparam == WI_KEY_SPACE) {
+      if (wparam == AX_KEY_ENTER || wparam == AX_KEY_SPACE) {
         win->pressed = true;
         invalidate_window(win);
         return true;
       }
       return false;
     case kWindowMessageKeyUp:
-      if (wparam == WI_KEY_ENTER || wparam == WI_KEY_SPACE) {
+      if (wparam == AX_KEY_ENTER || wparam == AX_KEY_SPACE) {
         win->pressed = false;
         if (win->flags & BUTTON_AUTORADIO)
           autoradio_select(win);

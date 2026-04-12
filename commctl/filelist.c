@@ -336,7 +336,7 @@ result_t win_filelist(window_t *win, uint32_t msg,
 
       if (index < 0 || index >= data->count) return true;
 
-      uint32_t now    = WI_GetMilliseconds();
+      uint32_t now    = axGetMilliseconds();
       bool     is_dbl = (data->last_click_idx == (uint32_t)index &&
                          (now - data->last_click_ms) < 500u);
 

@@ -98,7 +98,7 @@ result_t win_columnview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       uint32_t index = row * ncol + col;
       
       if (index < data->count) {
-        uint32_t now = WI_GetMilliseconds();
+        uint32_t now = axGetMilliseconds();
         
         // Check for double-click
         if (data->last_click_index == index && (now - data->last_click_time) < 500) {

@@ -531,7 +531,7 @@ void post_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     .wparam = wparam,
     .lparam = lparam,
   };
-  // Wake up WI_WaitEvent in get_message() so the main loop calls
+  // Wake up axWaitEvent in get_message() so the main loop calls
   // repost_messages() and processes this newly-queued message.
   wake_event_loop();
 }

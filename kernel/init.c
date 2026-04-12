@@ -73,15 +73,15 @@ result_t win_tray(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 
 // Initialize graphics context (platform + OpenGL)
 bool ui_init_graphics(int flags, const char *title, int width, int height) {
-  WI_Init();
+  axInit();
 
-  if (!WI_CreateWindow(title, width * UI_WINDOW_SCALE, height * UI_WINDOW_SCALE, 0)) {
+  if (!axCreateWindow(title, width * UI_WINDOW_SCALE, height * UI_WINDOW_SCALE, 0)) {
     printf("Window could not be created!\n");
-    WI_Shutdown();
+    axShutdown();
     return false;
   }
 
-  WI_BeginPaint();
+  axBeginPaint();
 
 #ifdef _WIN32
   /* GLEW must be initialized after the OpenGL context is made current. */
@@ -89,7 +89,7 @@ bool ui_init_graphics(int flags, const char *title, int width, int height) {
   GLenum glew_err = glewInit();
   if (glew_err != GLEW_OK) {
     printf("GLEW init failed: %s\n", (const char *)glewGetErrorString(glew_err));
-    WI_Shutdown();
+    axShutdown();
     return false;
   }
 #endif
@@ -97,7 +97,7 @@ bool ui_init_graphics(int flags, const char *title, int width, int height) {
   printf("GL_VERSION  : %s\n", glGetString(GL_VERSION));
   printf("GLSL_VERSION: %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
 
-  WI_SetSwapInterval(1);
+  axSetSwapInterval(1);
 
   ui_init_prog();
 
@@ -151,23 +151,23 @@ void ui_shutdown_graphics(void) {
 
   shutdown_console();
 
-  WI_Shutdown();
+  axShutdown();
 }
 
 // Begin a render frame: make GL context current and bind platform framebuffer.
 // Must be called once per frame before any OpenGL drawing.
 void ui_begin_frame(void) {
-  WI_BeginPaint();
+  axBeginPaint();
 }
 
 // End a render frame: present the rendered content to the screen.
 // Replaces the old SDL_GL_SwapWindow call.
 void ui_end_frame(void) {
-  WI_EndPaint();
+  axEndPaint();
 }
 
 // Delay execution
 void ui_delay(unsigned int milliseconds) {
-  WI_Sleep(milliseconds);
+  axSleep(milliseconds);
 }
 

@@ -47,12 +47,12 @@ bool translate_accelerator(window_t *win, ui_event_t *evt,
     bool want_shift = (a->fVirt & FSHIFT)   != 0;
     bool want_alt   = (a->fVirt & FALT)     != 0;
 #ifdef __APPLE__
-    bool has_ctrl   = (mod & (WI_MOD_CMD  >> 16)) != 0;
+    bool has_ctrl   = (mod & (AX_MOD_CMD  >> 16)) != 0;
 #else
-    bool has_ctrl   = (mod & (WI_MOD_CTRL >> 16)) != 0;
+    bool has_ctrl   = (mod & (AX_MOD_CTRL >> 16)) != 0;
 #endif
-    bool has_shift  = (mod & (WI_MOD_SHIFT >> 16)) != 0;
-    bool has_alt    = (mod & (WI_MOD_ALT  >> 16)) != 0;
+    bool has_shift  = (mod & (AX_MOD_SHIFT >> 16)) != 0;
+    bool has_alt    = (mod & (AX_MOD_ALT  >> 16)) != 0;
     if (has_ctrl == want_ctrl && has_shift == want_shift && has_alt == want_alt) {
       // Suppress accelerators that require no Ctrl or Alt while a text-editing
       // control has keyboard focus, mirroring WinAPI TranslateAccelerator.
@@ -76,7 +76,7 @@ const accel_t *accel_find_cmd(const accel_table_t *table, uint16_t cmd) {
 
 int accel_format(const accel_t *a, char *buf, int bufsize) {
   if (!a || !buf || bufsize <= 0) return 0;
-  const char *kname = WI_KeynumToString((uint32_t)a->key);
+  const char *kname = axKeynumToString((uint32_t)a->key);
   return snprintf(buf, (size_t)bufsize, "%s%s%s%s",
                   (a->fVirt & FCONTROL) ? "Ctrl+"  : "",
                   (a->fVirt & FSHIFT)   ? "Shift+" : "",

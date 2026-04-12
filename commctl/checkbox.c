@@ -41,14 +41,14 @@ result_t win_checkbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
     case kButtonMessageGetCheck:
       return win->value ? kButtonStateChecked : kButtonStateUnchecked;
     case kWindowMessageKeyDown:
-      if (wparam == WI_KEY_ENTER || wparam == WI_KEY_SPACE) {
+      if (wparam == AX_KEY_ENTER || wparam == AX_KEY_SPACE) {
         win->pressed = true;
         invalidate_window(win);
         return true;
       }
       return false;
     case kWindowMessageKeyUp:
-      if (wparam == WI_KEY_ENTER || wparam == WI_KEY_SPACE) {
+      if (wparam == AX_KEY_ENTER || wparam == AX_KEY_SPACE) {
         win->pressed = false;
         send_message(win, kButtonMessageSetCheck, !send_message(win, kButtonMessageGetCheck, 0, NULL), NULL);
         send_message(get_root_window(win), kWindowMessageCommand, MAKEDWORD(win->id, kButtonNotificationClicked), win);

@@ -1,5 +1,5 @@
 // Platform event handling and dispatch
-// Translates platform (WI_Message) events into Orion window messages.
+// Translates platform (AXmessage) events into Orion window messages.
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -128,9 +128,9 @@ void move_to_top(window_t* _win) {
   }
 }
 
-// Dispatch a platform WI_Message to the Orion window system.
+// Dispatch a platform AXmessage to the Orion window system.
 void dispatch_message(ui_event_t *msg) {
-  // Wakeup events are used only to unblock WI_WaitEvent; discard them.
+  // Wakeup events are used only to unblock axWaitEvent; discard them.
   if (msg->target == &g_wakeup_sentinel)
     return;
 
@@ -189,13 +189,13 @@ void dispatch_message(ui_event_t *msg) {
         send_message(_focused, kWindowMessageTextInput, 0, buf);
       }
       if (_focused && !send_message(_focused, kWindowMessageKeyDown, key, NULL)) {
-        if (key == WI_KEY_TAB) {
-          if (msg->modflags & (WI_MOD_SHIFT >> 16)) {
+        if (key == AX_KEY_TAB) {
+          if (msg->modflags & (AX_MOD_SHIFT >> 16)) {
             set_focus(find_prev_tab_stop(_focused));
           } else {
             set_focus(find_next_tab_stop(_focused, false));
           }
-        } else if (key == WI_KEY_ENTER) {
+        } else if (key == AX_KEY_ENTER) {
           window_t *def = find_default_button(get_root_window(_focused));
           if (def) {
             send_message(def, kWindowMessageLeftButtonDown, 0, NULL);
@@ -382,24 +382,24 @@ void dispatch_message(ui_event_t *msg) {
 }
 
 // Get next platform event.
-// Blocks with WI_WaitEvent on the first call per cycle (saving CPU), then
-// drains any additional queued events with WI_PollEvent.  Returns 0 when the
+// Blocks with axWaitEvent on the first call per cycle (saving CPU), then
+// drains any additional queued events with axPollEvent.  Returns 0 when the
 // platform queue is empty, which causes the caller's while-loop to exit and
 // call repost_messages() to process internal (paint/async) messages.
 int get_message(ui_event_t *evt) {
   static bool s_draining_queue = false;
   if (s_draining_queue) {
-    int r = WI_PollEvent(evt);
+    int r = axPollEvent(evt);
     if (!r) s_draining_queue = false;
     return r;
   }
   s_draining_queue = true;
-  WI_WaitEvent(0);
-  return WI_PollEvent(evt);
+  axWaitEvent(0);
+  return axPollEvent(evt);
 }
 
-// Wake up WI_WaitEvent by posting a sentinel event to the platform queue.
+// Wake up axWaitEvent by posting a sentinel event to the platform queue.
 // Called by post_message() whenever a new Orion internal message is enqueued.
 void wake_event_loop(void) {
-  WI_PostMessageW(&g_wakeup_sentinel, kEventWindowPaint, 0, NULL);
+  axPostMessageW(&g_wakeup_sentinel, kEventWindowPaint, 0, NULL);
 }

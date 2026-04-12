@@ -63,7 +63,7 @@ void conprintf(const char* format, ...) {
   va_end(args);
   
   // Set the timestamp
-  msg->timestamp = WI_GetMilliseconds();
+  msg->timestamp = axGetMilliseconds();
   msg->active = true;
   
   // Also print to stdout for debugging
@@ -74,7 +74,7 @@ void conprintf(const char* format, ...) {
 void draw_console(void) {
   if (!console.show_console) return;
   
-  uint32_t current_time = WI_GetMilliseconds();
+  uint32_t current_time = axGetMilliseconds();
   int y = CONSOLE_PADDING;
   int lines_shown = 0;
   

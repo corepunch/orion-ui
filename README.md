@@ -27,7 +27,7 @@ Handles window creation, destruction, message passing, and basic rendering primi
 Manages the platform (corepunch/platform) event loop and translates platform events into window messages. Also provides the Renderer API for OpenGL abstraction.
 
 **Key Components:**
-- Platform initialization (WI_Init)
+- Platform initialization (axInit)
 - Event loop (`get_message`, `dispatch_message`)
 - Global state (screen dimensions, running flag)
 - **Renderer API**: High-level OpenGL abstraction (`R_Mesh`, `R_Texture`, `R_MeshDrawDynamic`)
@@ -373,7 +373,7 @@ Orion has been verified to have proper cleanup with no memory leaks:
   - Cleans up white texture
   - Cleans up console and text rendering
   - Destroys OpenGL context and platform window
-  - Calls WI_Shutdown()
+  - Calls axShutdown()
 
 All cleanup functions are idempotent and safe to call multiple times.
 

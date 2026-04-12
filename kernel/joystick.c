@@ -11,9 +11,9 @@
 static bool g_joystick_open = false;
 
 bool ui_joystick_init(void) {
-  if (WI_JoystickInit()) {
+  if (axJoystickInit()) {
     g_joystick_open = true;
-    printf("Opened joystick: %s\n", WI_JoystickGetName());
+    printf("Opened joystick: %s\n", axJoystickGetName());
     return true;
   }
   printf("No joystick/gamepad devices found\n");
@@ -22,7 +22,7 @@ bool ui_joystick_init(void) {
 
 void ui_joystick_shutdown(void) {
   if (g_joystick_open) {
-    WI_JoystickShutdown();
+    axJoystickShutdown();
     g_joystick_open = false;
   }
 }
@@ -33,7 +33,7 @@ bool ui_joystick_available(void) {
 
 const char* ui_joystick_get_name(void) {
   if (g_joystick_open) {
-    return WI_JoystickGetName();
+    return axJoystickGetName();
   }
   return NULL;
 }

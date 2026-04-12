@@ -44,7 +44,7 @@ int main(int argc, char* argv[]) {
 #ifdef __APPLE__
   // Skip this test on macOS: the corepunch/platform backend always creates
   // a real NSWindow with NSOpenGL (no headless/dummy driver equivalent), and
-  // repost_messages() calls WI_EndPaint() → [[view openGLContext] flushBuffer]
+  // repost_messages() calls axEndPaint() → [[view openGLContext] flushBuffer]
   // which requires the Cocoa surface to be fully set up.  This test was
   // designed for headless (SDL_VIDEODRIVER=dummy) environments and is not
   // appropriate for the real-display macOS backend.

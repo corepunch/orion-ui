@@ -14,7 +14,7 @@
 
 /**
  * Initialize joystick subsystem.
- * Opens the first available joystick/gamepad device via WI_JoystickInit().
+ * Opens the first available joystick/gamepad device via axJoystickInit().
  *
  * Returns true if a joystick was successfully opened, false otherwise.
  */
@@ -22,7 +22,7 @@ bool ui_joystick_init(void);
 
 /**
  * Shutdown joystick subsystem.
- * Closes any open joystick device via WI_JoystickShutdown().
+ * Closes any open joystick device via axJoystickShutdown().
  */
 void ui_joystick_shutdown(void);
 
