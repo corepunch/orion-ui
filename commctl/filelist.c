@@ -374,6 +374,44 @@ result_t win_filelist(window_t *win, uint32_t msg,
     }
 
     // -----------------------------------------------------------------------
+    // Platform double-click (kEventLeftDoubleClick) arrives here directly on
+    // macOS, X11, Wayland, Windows, and QNX.  Apply the same coordinate
+    // correction as kWindowMessageLeftButtonDown and perform the double-click
+    // action without going through the timing-based fallback.
+    case kWindowMessageLeftButtonDoubleClick: {
+      int mx = (int)(int16_t)LOWORD(wparam);
+      int my = (int)(int16_t)HIWORD(wparam);
+      if (win->parent) {
+        mx -= (int)win->parent->frame.x;
+        my -= (int)win->parent->frame.y;
+      }
+
+      int col_w = (int)(uint32_t)send_message(win, CVM_GETCOLUMNWIDTH, 0, NULL);
+      int ncol  = (col_w > 0 && win->frame.w > 0)
+                    ? (win->frame.w / col_w) : 1;
+      if (ncol < 1) ncol = 1;
+      int col   = mx / col_w;
+      int row   = (my - FL_WIN_PADDING) / FL_ENTRY_HEIGHT;
+      int index = row * ncol + col;
+
+      if (index < 0 || index >= data->count) return true;
+
+      // Reset timing state so a subsequent single click starts fresh.
+      data->last_click_ms  = 0;
+      data->last_click_idx = (uint32_t)-1;
+
+      if (data->items[index].is_directory) {
+        fl_navigate(win, data, index);
+      } else {
+        data->notify_item = data->items[index];
+        send_message(get_root_window(win), kWindowMessageCommand,
+                     MAKEDWORD((uint32_t)index, FLN_FILEOPEN),
+                     &data->notify_item);
+      }
+      return true;
+    }
+
+    // -----------------------------------------------------------------------
     case FLM_SETPATH: {
       const char *path = (const char *)lparam;
       if (path && path[0]) {

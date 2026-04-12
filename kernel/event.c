@@ -322,6 +322,23 @@ void dispatch_message(ui_event_t *msg) {
       break;
     }
 
+    case kEventLeftDoubleClick: {
+      px = (int)msg->x;
+      py = (int)msg->y;
+      if ((win = _captured) ||
+          (win = find_window(SCALE_POINT(px), SCALE_POINT(py))))
+      {
+        if (win->disabled) return;
+        int lx = LOCAL_X(px, py, win);
+        int ly = LOCAL_Y(px, py, win);
+        if (!handle_mouse(kWindowMessageLeftButtonDoubleClick, win, lx, ly)) {
+          send_message(win, kWindowMessageLeftButtonDoubleClick,
+                       MAKEDWORD(lx, ly), NULL);
+        }
+      }
+      break;
+    }
+
     case kEventLeftMouseUp:
     case kEventRightMouseUp: {
       px = (int)msg->x;
