@@ -121,7 +121,7 @@ platform: $(PLATFORM_LIB)
 
 $(PLATFORM_LIB): | $(LIB_DIR)
 	@echo "Building platform library..."
-	$(MAKE) -C $(PLATFORM_DIR) OUTDIR=$(abspath $(LIB_DIR)) LIB_EXT=$(PLATFORM_LIB_EXT)
+	$(MAKE) -C $(PLATFORM_DIR) OUTDIR=$(abspath $(LIB_DIR))
 
 # Shared data assets
 .PHONY: share
@@ -136,11 +136,10 @@ library: $(STATIC_LIB) $(SHARED_LIB)
 
 $(STATIC_LIB): $(USER_SRCS) $(KERNEL_SRCS) $(COMMCTL_SRCS) $(PLATFORM_LIB) | $(LIB_DIR)
 	@echo "Creating static library: $@"
-	tmpobj=$$(mktemp /tmp/liborion_XXXXXX.o) && \
 	find user kernel commctl -name "*.c" | sort | sed 's/.*/#include "&"/' | \
-		$(CC) $(CFLAGS) -x c -c -o $$tmpobj - && \
-	$(AR) rcs $@ $$tmpobj && \
-	rm $$tmpobj
+		$(CC) $(CFLAGS) -x c -c -o $(BUILD_DIR)/liborion_unity.o - && \
+	$(AR) rcs $@ $(BUILD_DIR)/liborion_unity.o && \
+	rm -f $(BUILD_DIR)/liborion_unity.o
 
 $(SHARED_LIB): $(USER_SRCS) $(KERNEL_SRCS) $(COMMCTL_SRCS) $(PLATFORM_LIB) | $(LIB_DIR)
 	@echo "Creating shared library: $@"
@@ -204,7 +203,7 @@ $(BUILD_DIRS):
 clean:
 	@echo "Cleaning build artifacts..."
 	rm -rf $(BUILD_DIR)
-	$(MAKE) -C $(PLATFORM_DIR) OUTDIR=$(abspath $(LIB_DIR)) LIB_EXT=$(PLATFORM_LIB_EXT) clean 2>/dev/null || true
+	$(MAKE) -C $(PLATFORM_DIR) OUTDIR=$(abspath $(LIB_DIR)) clean 2>/dev/null || true
 
 # Help
 .PHONY: help
