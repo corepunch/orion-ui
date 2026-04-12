@@ -22,6 +22,9 @@ static const accel_t kAccelEntries[] = {
   { FCONTROL|FVIRTKEY, AX_KEY_V, ID_EDIT_PASTE},
   { FCONTROL|FVIRTKEY, AX_KEY_A, ID_EDIT_SELECT_ALL},
   { FVIRTKEY,          AX_KEY_ESCAPE, ID_EDIT_DESELECT},
+  // Delete / Backspace clears the active selection (fill with bg color)
+  { FVIRTKEY,          AX_KEY_DEL,       ID_EDIT_CLEAR_SEL },
+  { FVIRTKEY,          AX_KEY_BACKSPACE, ID_EDIT_CLEAR_SEL },
   { FCONTROL|FVIRTKEY, AX_KEY_N, ID_FILE_NEW  },
   { FCONTROL|FVIRTKEY, AX_KEY_O, ID_FILE_OPEN },
   { FCONTROL|FVIRTKEY, AX_KEY_S, ID_FILE_SAVE },
@@ -65,7 +68,7 @@ static void create_app_windows(void) {
       MAKERECT(0, 0, sw, MENUBAR_HEIGHT),
       NULL, editor_menubar_proc, NULL);
   send_message(mb, kMenuBarMessageSetMenus,
-               sizeof(kMenus)/sizeof(kMenus[0]), (void *)kMenus);
+               (uint32_t)kNumMenus, (void *)kMenus);
   show_window(mb, true);
   g_app->menubar_win = mb;
 
