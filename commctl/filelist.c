@@ -39,7 +39,6 @@
 #define FL_ICON_UP      7   // ".." parent-directory entry
 #define FL_ICON_FOLDER  5   // directory
 #define FL_ICON_FILE    6   // regular file
-#define FL_COLOR_FOLDER 0xffa0d000u
 
 // ---------------------------------------------------------------------------
 // Private state
@@ -148,9 +147,9 @@ static bool fl_push_item(filelist_data_t *data,
   it->modified     = modified;
   bool is_parent   = fl_is_parent_sentinel(path_heap);
   it->icon  = is_parent ? FL_ICON_UP : (is_dir ? FL_ICON_FOLDER : FL_ICON_FILE);
-  it->color = is_hidden  ? (uint32_t)COLOR_TEXT_DISABLED
-            : is_dir     ? FL_COLOR_FOLDER
-                         : (uint32_t)COLOR_TEXT_NORMAL;
+  it->color = is_hidden  ? (uint32_t)get_sys_color(kColorTextDisabled)
+            : is_dir     ? (uint32_t)get_sys_color(kColorFolderText)
+                         : (uint32_t)get_sys_color(kColorTextNormal);
   return true;
 }
 

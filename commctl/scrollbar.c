@@ -139,11 +139,11 @@ result_t win_scrollbar(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       int to    = sb_thumb_off(s, track);
       int x = win->frame.x, y = win->frame.y;
       int w = win->frame.w, h = win->frame.h;
-      fill_rect(COLOR_PANEL_DARK_BG, x, y, w, h);
+      fill_rect(get_sys_color(kColorWindowDarkBg), x, y, w, h);
       if (vert)
-        fill_rect(COLOR_LIGHT_EDGE, x, y + to, w, tl);
+        fill_rect(get_sys_color(kColorLightEdge), x, y + to, w, tl);
       else
-        fill_rect(COLOR_LIGHT_EDGE, x + to, y, tl, h);
+        fill_rect(get_sys_color(kColorLightEdge), x + to, y, tl, h);
       return true;
     }
 

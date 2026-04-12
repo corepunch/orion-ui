@@ -37,17 +37,17 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
       // BUTTON_DEFAULT (BS_DEFPUSHBUTTON analogue): use black for the outer 1-px
       // gap so a thin black outline is visible around the button bevel.
       // When the button has keyboard focus COLOR_FOCUSED takes precedence.
-      uint32_t bg = (_focused == win) ? COLOR_FOCUSED :
-                    (win->flags & BUTTON_DEFAULT) ? 0xff000000 : COLOR_PANEL_BG;
+      uint32_t bg = (_focused == win) ? get_sys_color(kColorFocusRing) :
+                    (win->flags & BUTTON_DEFAULT) ? 0xff000000 : get_sys_color(kColorWindowBg);
       fill_rect(bg, win->frame.x-2, win->frame.y-2, win->frame.w+4, win->frame.h+4);
       draw_button(&win->frame, 1, 1, show_pressed);
       int tx = win->frame.x + (win->frame.w - strwidth(win->title)) / 2;
       int ty = win->frame.y + (win->frame.h - CHAR_HEIGHT) / 2;
       int px = show_pressed ? 1 : 0;
       if (!show_pressed) {
-        draw_text_small(win->title, tx + 1, ty + 1, COLOR_DARK_EDGE);
+        draw_text_small(win->title, tx + 1, ty + 1, get_sys_color(kColorDarkEdge));
       }
-      draw_text_small(win->title, tx + px, ty + px, COLOR_TEXT_NORMAL);
+      draw_text_small(win->title, tx + px, ty + px, get_sys_color(kColorTextNormal));
       return true;
     }
     case kWindowMessageLeftButtonDown:
@@ -124,7 +124,7 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
     case kWindowMessagePaint: {
       bool show_pressed = win->pressed ||
                           ((win->flags & BUTTON_PUSHLIKE) && win->value);
-      fill_rect(_focused == win ? COLOR_FOCUSED : COLOR_PANEL_BG,
+      fill_rect(_focused == win ? get_sys_color(kColorFocusRing) : get_sys_color(kColorWindowBg),
                 win->frame.x-2, win->frame.y-2, win->frame.w+4, win->frame.h+4);
       draw_button(&win->frame, 1, 1, show_pressed);
       int px = show_pressed ? 1 : 0;
@@ -145,11 +145,11 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
       } else {
         // Fallback: draw text label when no image has been set.
         if (!show_pressed)
-          draw_text_small(win->title, win->frame.x+4, win->frame.y+4, COLOR_DARK_EDGE);
+          draw_text_small(win->title, win->frame.x+4, win->frame.y+4, get_sys_color(kColorDarkEdge));
         draw_text_small(win->title,
                         win->frame.x + (show_pressed ? 4 : 3),
                         win->frame.y + (show_pressed ? 4 : 3),
-                        COLOR_TEXT_NORMAL);
+                        get_sys_color(kColorTextNormal));
       }
       return true;
     }

@@ -24,8 +24,8 @@ result_t win_label(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     case kWindowMessagePaint: {
       uint32_t col = win->userdata
                      ? (uint32_t)(uintptr_t)win->userdata
-                     : (uint32_t)COLOR_TEXT_NORMAL;
-      draw_text_small(win->title, win->frame.x+1, win->frame.y+1+PADDING, COLOR_DARK_EDGE);
+                     : (uint32_t)get_sys_color(kColorTextNormal);
+      draw_text_small(win->title, win->frame.x+1, win->frame.y+1+PADDING, get_sys_color(kColorDarkEdge));
       draw_text_small(win->title, win->frame.x, win->frame.y+PADDING, col);
       return true;
     }

@@ -414,7 +414,9 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
           }
           if (!(win->flags&WINDOW_NOTITLE)) {
             draw_window_controls(win);
-            draw_text_small(win->title, frame->x+2, window_title_bar_y(win), -1);
+            bool active = (_focused == win);
+            draw_text_small(win->title, frame->x+2, window_title_bar_y(win),
+                            get_sys_color(active ? kColorActiveTitlebarText : kColorInactiveTitlebarText));
           }
           if (win->flags&WINDOW_TOOLBAR) {
             int bpr = (win->num_toolbar_buttons > 0 && win->frame.w > 0)
@@ -425,7 +427,7 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
             int total_h = nrows * TOOLBAR_HEIGHT;
             rect_t rect = {win->frame.x+1, win->frame.y-total_h+1, win->frame.w-2, total_h-2};
             draw_bevel(&rect);
-            fill_rect(COLOR_PANEL_BG, rect.x, rect.y, rect.w, rect.h);
+            fill_rect(get_sys_color(kColorWindowBg), rect.x, rect.y, rect.w, rect.h);
             bitmap_strip_t *strip = (win->toolbar_strip.tex != 0) ? &win->toolbar_strip : NULL;
             for (uint32_t i = 0; i < win->num_toolbar_buttons; i++) {
               toolbar_button_t const *but = &win->toolbar_buttons[i];
@@ -450,8 +452,8 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
                                      strip->icon_w, strip->icon_h, u0, v0, u1, v1, 1.0f);
                 }
               } else {
-                uint32_t col = but->active ? COLOR_TEXT_SUCCESS : COLOR_TEXT_NORMAL;
-                draw_icon16(but->icon, bx, by, COLOR_DARK_EDGE);
+                uint32_t col = but->active ? get_sys_color(kColorTextSuccess) : get_sys_color(kColorTextNormal);
+                draw_icon16(but->icon, bx, by, get_sys_color(kColorDarkEdge));
                 draw_icon16(but->icon, bx-1, by-1, col);
               }
             }
