@@ -68,7 +68,7 @@ static void create_app_windows(void) {
       MAKERECT(0, 0, sw, MENUBAR_HEIGHT),
       NULL, editor_menubar_proc, NULL);
   send_message(mb, kMenuBarMessageSetMenus,
-               sizeof(kMenus)/sizeof(kMenus[0]), (void *)kMenus);
+               (uint32_t)kNumMenus, (void *)kMenus);
   show_window(mb, true);
   g_app->menubar_win = mb;
 

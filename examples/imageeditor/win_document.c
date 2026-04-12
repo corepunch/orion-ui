@@ -155,6 +155,10 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
   doc_update_title(doc);
   send_message(dwin, kWindowMessageStatusBar, 0,
                (void *)(filename ? filename : "New image"));
+
+  // Rebuild the Window menu so the new document appears in the list.
+  window_menu_rebuild();
+
   return doc;
 }
 
@@ -190,4 +194,7 @@ void close_document(canvas_doc_t *doc) {
     destroy_window(doc->win);
 
   free(doc);
+
+  // Rebuild the Window menu to remove the closed document.
+  window_menu_rebuild();
 }

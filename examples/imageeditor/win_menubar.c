@@ -53,13 +53,62 @@ static const menu_item_t kHelpItems[] = {
   {"About...", ID_HELP_ABOUT},
 };
 
-const menu_def_t kMenus[] = {
-  {"File",  kFileItems,  (int)(sizeof(kFileItems)/sizeof(kFileItems[0]))},
-  {"Edit",  kEditItems,  (int)(sizeof(kEditItems)/sizeof(kEditItems[0]))},
-  {"Image", kImageItems, (int)(sizeof(kImageItems)/sizeof(kImageItems[0]))},
-  {"View",  kViewItems,  (int)(sizeof(kViewItems)/sizeof(kViewItems[0]))},
-  {"Help",  kHelpItems,  (int)(sizeof(kHelpItems)/sizeof(kHelpItems[0]))},
+// ── Window menu (dynamic: rebuilt before each popup) ─────────────────────────
+// Fixed prefix entries come first; document entries follow the separator.
+
+static const menu_item_t kWindowPrefix[] = {
+  {"Tools",  ID_WINDOW_TOOLS},
+  {"Colors", ID_WINDOW_COLORS},
+  {NULL,     0},   // separator before document list
 };
+#define WINDOW_PREFIX_COUNT ((int)(sizeof(kWindowPrefix)/sizeof(kWindowPrefix[0])))
+
+// Persistent storage for dynamically built items and document title strings.
+static menu_item_t s_window_items[WINDOW_PREFIX_COUNT + WINDOW_MENU_MAX_DOCS];
+static int         s_window_item_count = WINDOW_PREFIX_COUNT;
+
+menu_def_t kMenus[] = {
+  {"File",   kFileItems,      (int)(sizeof(kFileItems)/sizeof(kFileItems[0]))},
+  {"Edit",   kEditItems,      (int)(sizeof(kEditItems)/sizeof(kEditItems[0]))},
+  {"Image",  kImageItems,     (int)(sizeof(kImageItems)/sizeof(kImageItems[0]))},
+  {"View",   kViewItems,      (int)(sizeof(kViewItems)/sizeof(kViewItems[0]))},
+  {"Window", s_window_items,  WINDOW_PREFIX_COUNT},
+  {"Help",   kHelpItems,      (int)(sizeof(kHelpItems)/sizeof(kHelpItems[0]))},
+};
+const int kNumMenus = (int)(sizeof(kMenus)/sizeof(kMenus[0]));
+
+// Index of the Window menu entry in kMenus (must stay in sync with the array).
+#define WINDOW_MENU_IDX 4
+
+// Rebuild the Window menu items and re-push the full menu definition to the
+// menu-bar window.  Extensibility: add more fixed entries to kWindowPrefix, or
+// register new document classes in the loop below.
+void window_menu_rebuild(void) {
+  if (!g_app || !g_app->menubar_win) return;
+
+  // 1. Copy the fixed prefix entries.
+  int n = 0;
+  for (int i = 0; i < WINDOW_PREFIX_COUNT; i++)
+    s_window_items[n++] = kWindowPrefix[i];
+
+  // 2. One entry per open document, using the window title (filename-only).
+  int doc_idx = 0;
+  for (canvas_doc_t *d = g_app->docs;
+       d && doc_idx < WINDOW_MENU_MAX_DOCS;
+       d = d->next, doc_idx++) {
+    // The window title is kept up-to-date by doc_update_title(); it outlives
+    // this menu as long as the document is open.
+    const char *label = (d->win && d->win->title[0]) ? d->win->title : "Untitled";
+    s_window_items[n++] = (menu_item_t){ label, (uint16_t)(ID_WINDOW_DOC_BASE + doc_idx) };
+  }
+
+  s_window_item_count = n;
+  kMenus[WINDOW_MENU_IDX].items      = s_window_items;
+  kMenus[WINDOW_MENU_IDX].item_count = s_window_item_count;
+
+  send_message(g_app->menubar_win, kMenuBarMessageSetMenus,
+               (uint32_t)kNumMenus, kMenus);
+}
 
 static void handle_menu_command(uint16_t id) {
   if (!g_app) return;
@@ -241,15 +290,15 @@ static void handle_menu_command(uint16_t id) {
           (new_w != doc->canvas_w || new_h != doc->canvas_h)) {
         doc_push_undo(doc);
         canvas_resize(doc, new_w, new_h);
-        // Deselect any selection (its coordinates may now be out of bounds)
-        canvas_deselect(doc);
+        // Re-read actual dimensions in case resize failed (allocation error)
         if (doc->canvas_win) {
           canvas_win_sync_scrollbars(doc->canvas_win);
           invalidate_window(doc->canvas_win);
         }
+        canvas_deselect(doc);
         doc_update_title(doc);
         char sb[32];
-        snprintf(sb, sizeof(sb), "%dx%d", new_w, new_h);
+        snprintf(sb, sizeof(sb), "%dx%d", doc->canvas_w, doc->canvas_h);
         send_message(doc->win, kWindowMessageStatusBar, 0, sb);
       }
       break;
@@ -320,6 +369,31 @@ static void handle_menu_command(uint16_t id) {
       }
       break;
     }
+
+    case ID_WINDOW_TOOLS:
+      // Show and bring the tool palette to front; if hidden, make it visible.
+      if (g_app->tool_win) show_window(g_app->tool_win, true);
+      break;
+
+    case ID_WINDOW_COLORS:
+      // Show and bring the color palette to front.
+      if (g_app->color_win) show_window(g_app->color_win, true);
+      break;
+
+    default:
+      // Window > document entries: activate the n-th open document.
+      if (id >= ID_WINDOW_DOC_BASE &&
+          id < ID_WINDOW_DOC_BASE + WINDOW_MENU_MAX_DOCS) {
+        int target = id - ID_WINDOW_DOC_BASE;
+        int i = 0;
+        for (canvas_doc_t *d = g_app->docs; d; d = d->next, i++) {
+          if (i == target) {
+            show_window(d->win, true);
+            break;
+          }
+        }
+      }
+      break;
   }
 }
 
@@ -333,6 +407,11 @@ result_t editor_menubar_proc(window_t *win, uint32_t msg,
       handle_menu_command(LOWORD(wparam));
       return true;
     }
+  }
+  // Rebuild the Window menu just before a popup opens so it always reflects
+  // the current set of open documents and palette visibility.
+  if (msg == kWindowMessageLeftButtonDown) {
+    window_menu_rebuild();
   }
   return win_menubar(win, msg, wparam, lparam);
 }

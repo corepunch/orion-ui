@@ -111,6 +111,11 @@ extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 #define ID_IMAGE_INVERT   52
 #define ID_IMAGE_RESIZE   53
 
+#define ID_WINDOW_TOOLS    200
+#define ID_WINDOW_COLORS   201
+#define ID_WINDOW_DOC_BASE 300  // IDs 300..315 reserved for open documents
+#define WINDOW_MENU_MAX_DOCS 16
+
 #define ID_HELP_ABOUT  100
 
 // Tool command IDs – these are the authoritative tool identifiers used everywhere
@@ -195,6 +200,7 @@ typedef struct {
   point_t       hover;      // canvas pixel coords under the cursor
   bool          hover_valid; // true when hover is on the canvas (for magnifier overlay)
   GLuint        mag_tex;    // GL texture for magnifier loupe (created once, updated each paint)
+  char          last_sb[48]; // last text sent to status bar — avoids redundant updates
 } canvas_win_state_t;
 
 typedef struct {
@@ -254,7 +260,7 @@ static inline bool canvas_in_selection(const canvas_doc_t *doc, int x, int y) {
 void canvas_flip_h(canvas_doc_t *doc);
 void canvas_flip_v(canvas_doc_t *doc);
 void canvas_invert_colors(canvas_doc_t *doc);
-void canvas_resize(canvas_doc_t *doc, int new_w, int new_h);
+bool canvas_resize(canvas_doc_t *doc, int new_w, int new_h);
 
 // Forward declarations for canvas operations
 void canvas_set_pixel(canvas_doc_t *doc, int x, int y, uint32_t c);
@@ -343,7 +349,11 @@ bool canvas_draw_text_stb(canvas_doc_t *doc, int x, int y,
 void show_about_dialog(window_t *parent);
 
 // Menu definitions
-extern const menu_def_t kMenus[];
+extern menu_def_t kMenus[];  // non-const: Window menu is rebuilt dynamically
+extern const int  kNumMenus;
+
+// Rebuild the Window menu (call after create/close document).
+void window_menu_rebuild(void);
 
 // New Image / Canvas Size dialog
 bool show_size_dialog(window_t *parent, const char *title, int *out_w, int *out_h);

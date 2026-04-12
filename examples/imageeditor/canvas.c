@@ -609,13 +609,14 @@ void canvas_invert_colors(canvas_doc_t *doc) {
 // Existing pixels are preserved at the top-left corner; any new area is
 // filled with opaque white.  The GL texture is invalidated so it will be
 // re-created on the next paint.
-void canvas_resize(canvas_doc_t *doc, int new_w, int new_h) {
-  if (!doc || new_w <= 0 || new_h <= 0) return;
-  if (new_w == doc->canvas_w && new_h == doc->canvas_h) return;
-  if ((size_t)new_w > 16384 || (size_t)new_h > 16384) return;
+// Returns true on success, false if the allocation failed (canvas unchanged).
+bool canvas_resize(canvas_doc_t *doc, int new_w, int new_h) {
+  if (!doc || new_w <= 0 || new_h <= 0) return false;
+  if (new_w == doc->canvas_w && new_h == doc->canvas_h) return true;
+  if ((size_t)new_w > 16384 || (size_t)new_h > 16384) return false;
 
   uint8_t *buf = malloc((size_t)new_w * new_h * 4);
-  if (!buf) return;
+  if (!buf) return false;
 
   // Fill new canvas with opaque white
   memset(buf, 0xFF, (size_t)new_w * new_h * 4);
@@ -635,12 +636,13 @@ void canvas_resize(canvas_doc_t *doc, int new_w, int new_h) {
     doc->canvas_tex = 0;
   }
 
-  free(doc->pixels);
+  image_free(doc->pixels);
   doc->pixels    = buf;
   doc->canvas_w  = new_w;
   doc->canvas_h  = new_h;
   doc->canvas_dirty = true;
   doc->modified     = true;
+  return true;
 }
 
 // ============================================================

@@ -581,7 +581,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       state->hover.y    = py;
       state->hover_valid = canvas_in_bounds(doc, px, py);
 
-      // Update status bar with cursor position (Windows Me / MS Paint style)
+      // Update status bar with cursor position (Windows Me / MS Paint style).
+      // Only send when the text changes to avoid redundant full-window repaints.
       {
         char sb[48];
         if (state->hover_valid)
@@ -589,7 +590,10 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
                    px, py, doc->canvas_w, doc->canvas_h);
         else
           snprintf(sb, sizeof(sb), "%dx%d", doc->canvas_w, doc->canvas_h);
-        send_message(doc->win, kWindowMessageStatusBar, 0, sb);
+        if (strcmp(sb, state->last_sb) != 0) {
+          memcpy(state->last_sb, sb, sizeof(sb));
+          send_message(doc->win, kWindowMessageStatusBar, 0, sb);
+        }
       }
 
       int tool = g_app->current_tool;
