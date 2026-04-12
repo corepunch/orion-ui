@@ -29,10 +29,20 @@
 #include "../kernel/kernel.h"
 
 // Modifier flags for accel_t.fVirt (mirror WinAPI names).
-#define FVIRTKEY  0x01  // key field is a axKEY value (always set for Orion)
-#define FSHIFT    0x04  // Shift modifier must be held
-#define FCONTROL  0x08  // Ctrl modifier must be held
-#define FALT      0x10  // Alt modifier must be held
+// On Windows these are already defined by <winuser.h>; guard against
+// redefinition to suppress compiler warnings.
+#ifndef FVIRTKEY
+#  define FVIRTKEY  0x01  // key field is a WI_KEY value (always set for Orion)
+#endif
+#ifndef FSHIFT
+#  define FSHIFT    0x04  // Shift modifier must be held
+#endif
+#ifndef FCONTROL
+#  define FCONTROL  0x08  // Ctrl modifier must be held
+#endif
+#ifndef FALT
+#  define FALT      0x10  // Alt modifier must be held
+#endif
 
 // One entry in an accelerator table.  Mirrors the WinAPI ACCEL structure.
 typedef struct {

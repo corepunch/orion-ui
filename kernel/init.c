@@ -13,6 +13,9 @@
 bool ui_init_prog(void);
 void ui_shutdown_prog(void);
 
+// Set to true after ui_init_graphics() succeeds; guards begin/end frame.
+static bool g_graphics_initialized = false;
+
 // Internal white texture for drawing solid colors
 GLuint ui_white_texture = 0;
 
@@ -121,6 +124,7 @@ bool ui_init_graphics(int flags, const char *title, int width, int height) {
   }
 
   running = true;
+  g_graphics_initialized = true;
 
   return true;
 }
@@ -152,17 +156,22 @@ void ui_shutdown_graphics(void) {
   shutdown_console();
 
   axShutdown();
+  g_graphics_initialized = false;
 }
 
 // Begin a render frame: make GL context current and bind platform framebuffer.
 // Must be called once per frame before any OpenGL drawing.
+// No-op when graphics have not been initialized (e.g. headless unit tests).
 void ui_begin_frame(void) {
+  if (!g_graphics_initialized) return;
   axBeginPaint();
 }
 
 // End a render frame: present the rendered content to the screen.
 // Replaces the old SDL_GL_SwapWindow call.
+// No-op when graphics have not been initialized.
 void ui_end_frame(void) {
+  if (!g_graphics_initialized) return;
   axEndPaint();
 }
 
