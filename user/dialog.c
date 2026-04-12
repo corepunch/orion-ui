@@ -10,7 +10,6 @@
 // end_dialog() writes through that pointer before destroying the window, so
 // nested dialogs each see only their own result code.
 
-#include <SDL2/SDL.h>
 #include "gl_compat.h"
 
 #include "../ui.h"
@@ -25,7 +24,7 @@ uint32_t show_dialog(char const *title,
                      winproc_t proc,
                      void *param)
 {
-  SDL_Event event;
+  ui_event_t event;
   uint32_t flags = WINDOW_VSCROLL|WINDOW_DIALOG|WINDOW_NOTRAYBUTTON;
   uint32_t result = 0;
   const char *dialog_title = title ? title : "";

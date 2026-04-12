@@ -125,8 +125,9 @@ bool ui_init_prog(void) {
   R_MeshUpload(&g_ref.mesh, sprite_verts, 4);
   
   // Create orthographic projection matrix for screen-space rendering
-  int width, height;
-  SDL_GetWindowSize(SDL_GL_GetCurrentWindow(), &width, &height);
+  uint32_t ws = axGetSize(NULL);
+  int width  = (int)LOWORD(ws);
+  int height = (int)HIWORD(ws);
   //  float scale = (float)height / DOOM_HEIGHT;
   //  float render_width = DOOM_WIDTH * scale;
   //  float offset_x = (width - render_width) / (2.0f * scale);

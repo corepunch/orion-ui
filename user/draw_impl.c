@@ -1,7 +1,7 @@
 // Drawing primitives implementation
 // Extracted from mapview/window.c
 
-#include <SDL2/SDL.h>
+#include "../platform/platform.h"
 #include "gl_compat.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,7 +15,6 @@
 // External references
 extern window_t *windows;
 extern window_t *_focused;
-extern SDL_Window *window;
 
 // Forward declarations
 extern void draw_text_small(const char* text, int x, int y, uint32_t col);
@@ -35,11 +34,9 @@ void set_fullscreen(void) {
 }
 
 rect_t get_opengl_rect(rect_t const *r) {
-  int w, h;
-  SDL_GL_GetDrawableSize(window, &w, &h);
-
-  float scale_x = (float)w / MAX(1,ui_get_system_metrics(kSystemMetricScreenWidth));
-  float scale_y = (float)h / MAX(1,ui_get_system_metrics(kSystemMetricScreenHeight));
+  uint32_t ws = axGetSize(NULL);
+  float scale_x = (float)LOWORD(ws) * axGetScaling() / (float)MAX(1,ui_get_system_metrics(kSystemMetricScreenWidth));
+  float scale_y = (float)HIWORD(ws) * axGetScaling() / (float)MAX(1,ui_get_system_metrics(kSystemMetricScreenHeight));
   
   return (rect_t){
     (int)(r->x * scale_x),
@@ -205,9 +202,6 @@ void draw_statusbar(window_t *win, const char *text) {
 void set_viewport(rect_t const *frame) {
   extern bool running;
   if (!running) return;
-  int w, h;
-  SDL_GL_GetDrawableSize(window, &w, &h);
-  
   rect_t ogl_rect = get_opengl_rect(frame);
   
   glEnable(GL_SCISSOR_TEST);

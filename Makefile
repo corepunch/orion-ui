@@ -8,15 +8,13 @@ CFLAGS = -Wall -Wextra -std=c11 -I. -DGL_SILENCE_DEPRECATION
 # silence unused parameter warnings
 CFLAGS += -Wno-unused-parameter
 LDFLAGS = 
-LIBS = -lSDL2 -lm
+LIBS = -lm
 
 # Platform detection
 # Detect Windows first (uname may not exist or may return different values on Windows)
 ifeq ($(OS),Windows_NT)
     # Windows specific flags (MinGW/MSYS2)
-    # SDL2 on Windows requires specific library order: -lmingw32 -lSDL2main -lSDL2
-    LIBS = -lmingw32 -lSDL2main -lSDL2
-    LIBS += -lopengl32 -lglew32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lversion -luuid -lsetupapi
+    LIBS += -lglew32 -lopengl32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lversion -luuid -lsetupapi
     # Lua library (MSYS2 provides -llua, not -llua5.4 like Unix platforms)
     CFLAGS += -DHAVE_LUA
     LIBS += -llua
@@ -25,6 +23,7 @@ ifeq ($(OS),Windows_NT)
     LDFLAGS_EXAMPLE = -mwindows
     LDFLAGS_TEST = -mconsole
     LIB_EXT = .dll
+    PLATFORM_LIB_EXT = dll
     LIB_FLAGS = -shared
     EXE_EXT = .exe
 else
@@ -39,14 +38,12 @@ else
         LDFLAGS += -L/opt/homebrew/lib -L/usr/local/lib
         LIBS += -framework OpenGL
         LIB_EXT = .dylib
+        PLATFORM_LIB_EXT = dylib
         LIB_FLAGS = -dynamiclib
         # Lua on macOS may be keg-only (headers not symlinked into /opt/homebrew/include).
-        # Use pkg-config when available, otherwise fall back to brew --prefix.
-        # If Lua is not found the build still succeeds but Lua scripting is disabled.
         LUA_CFLAGS := $(shell pkg-config --cflags lua5.4 2>/dev/null || pkg-config --cflags lua 2>/dev/null)
         LUA_LIBS   := $(shell pkg-config --libs   lua5.4 2>/dev/null || pkg-config --libs   lua 2>/dev/null)
         ifeq ($(LUA_CFLAGS),)
-            # pkg-config not available or Lua not registered; try brew --prefix
             LUA_PREFIX := $(shell brew --prefix lua@5.4 2>/dev/null || \
                                    brew --prefix lua    2>/dev/null || echo "")
             ifneq ($(LUA_PREFIX),)
@@ -65,6 +62,7 @@ else
         # Linux specific flags
         LIBS += -lGL
         LIB_EXT = .so
+        PLATFORM_LIB_EXT = so
         LIB_FLAGS = -shared -fPIC
         CFLAGS += -fPIC
         # Lua detection on Linux via pkg-config (lua5.4-dev / liblua5.4-dev)
@@ -86,6 +84,10 @@ BIN_DIR = $(BUILD_DIR)/bin
 SHARE_DIR = $(BUILD_DIR)/share
 TEST_DIR = tests
 
+# Platform submodule library
+PLATFORM_DIR = platform
+PLATFORM_LIB = $(LIB_DIR)/libplatform.$(PLATFORM_LIB_EXT)
+
 # Source files
 USER_SRCS = $(wildcard user/*.c)
 KERNEL_SRCS = $(wildcard kernel/*.c)
@@ -94,6 +96,9 @@ COMMCTL_SRCS = $(wildcard commctl/*.c)
 # Library targets
 STATIC_LIB = $(LIB_DIR)/liborion.a
 SHARED_LIB = $(LIB_DIR)/liborion$(LIB_EXT)
+
+# Link flags for platform library
+PLATFORM_LDFLAGS = -L$(LIB_DIR) -lplatform -Wl,-rpath,$(abspath $(LIB_DIR))
 
 # Example sources – each example lives in its own subdirectory with a main.c
 # Compile directly to binary (no intermediate .o files)
@@ -110,6 +115,14 @@ TEST_ENV_BINS = $(patsubst $(TEST_DIR)/%.c,$(BIN_DIR)/test_%$(EXE_EXT),$(TEST_EN
 .PHONY: all
 all: library examples
 
+# Build the platform submodule shared library
+.PHONY: platform
+platform: $(PLATFORM_LIB)
+
+$(PLATFORM_LIB): | $(LIB_DIR)
+	@echo "Building platform library..."
+	$(MAKE) -C $(PLATFORM_DIR) OUTDIR=$(abspath $(LIB_DIR)) LIB_EXT=$(PLATFORM_LIB_EXT)
+
 # Shared data assets
 .PHONY: share
 share: | $(SHARE_DIR)
@@ -121,7 +134,7 @@ share: | $(SHARE_DIR)
 .PHONY: library
 library: $(STATIC_LIB) $(SHARED_LIB)
 
-$(STATIC_LIB): $(USER_SRCS) $(KERNEL_SRCS) $(COMMCTL_SRCS) | $(LIB_DIR)
+$(STATIC_LIB): $(USER_SRCS) $(KERNEL_SRCS) $(COMMCTL_SRCS) $(PLATFORM_LIB) | $(LIB_DIR)
 	@echo "Creating static library: $@"
 	tmpobj=$$(mktemp /tmp/liborion_XXXXXX.o) && \
 	find user kernel commctl -name "*.c" | sort | sed 's/.*/#include "&"/' | \
@@ -129,10 +142,10 @@ $(STATIC_LIB): $(USER_SRCS) $(KERNEL_SRCS) $(COMMCTL_SRCS) | $(LIB_DIR)
 	$(AR) rcs $@ $$tmpobj && \
 	rm $$tmpobj
 
-$(SHARED_LIB): $(USER_SRCS) $(KERNEL_SRCS) $(COMMCTL_SRCS) | $(LIB_DIR)
+$(SHARED_LIB): $(USER_SRCS) $(KERNEL_SRCS) $(COMMCTL_SRCS) $(PLATFORM_LIB) | $(LIB_DIR)
 	@echo "Creating shared library: $@"
 	find user kernel commctl -name "*.c" | sort | sed 's/.*/#include "&"/' | \
-		$(CC) $(CFLAGS) $(LIB_FLAGS) -x c -o $@ - $(LDFLAGS) $(LIBS)
+		$(CC) $(CFLAGS) $(LIB_FLAGS) -x c -o $@ - $(LDFLAGS) $(PLATFORM_LDFLAGS) $(LIBS)
 
 # Examples
 .PHONY: examples
@@ -145,17 +158,20 @@ $(BIN_DIR)/imageeditor$(EXE_EXT): $(wildcard examples/imageeditor/*.c) $(STATIC_
 	@echo "Building example: $@"
 	(find examples/imageeditor -name "*.c" ! -name "main.c" | sort | sed 's/.*/#include "&"/'; \
 	 echo '#include "examples/imageeditor/main.c"') | \
-		$(CC) $(CFLAGS) -Iexamples/imageeditor -x c -o $@ - -x none $(STATIC_LIB) $(LDFLAGS) $(LDFLAGS_EXAMPLE) $(LIBS)
+		$(CC) $(CFLAGS) -Iexamples/imageeditor -x c -o $@ - -x none $(STATIC_LIB) $(LDFLAGS) $(LDFLAGS_EXAMPLE) $(PLATFORM_LDFLAGS) $(LIBS)
 
 # Generic rule: compile each example's main.c as a single file directly to binary
 $(BIN_DIR)/%$(EXE_EXT): examples/%/main.c $(STATIC_LIB) | $(BIN_DIR)
 	@echo "Building example: $@"
-	$(CC) $(CFLAGS) -o $@ $< $(STATIC_LIB) $(LDFLAGS) $(LDFLAGS_EXAMPLE) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ $< $(STATIC_LIB) $(LDFLAGS) $(LDFLAGS_EXAMPLE) $(PLATFORM_LDFLAGS) $(LIBS)
 
 # Tests
 .PHONY: test
 test: $(TEST_BINS)
 	@echo "Running tests..."
+ifeq ($(OS),Windows_NT)
+	@cp -f $(LIB_DIR)/libplatform.dll $(BIN_DIR)/
+endif
 	@for test in $(TEST_BINS); do \
 		echo "Running $$test..."; \
 		$$test || exit 1; \
@@ -165,9 +181,9 @@ test: $(TEST_BINS)
 # Build tests that need test_env (auto-detected by include)
 $(TEST_ENV_BINS): $(BIN_DIR)/test_%$(EXE_EXT): $(TEST_DIR)/%.c $(STATIC_LIB) | $(BIN_DIR)
 	@echo "Building test with environment: $@"
-	$(CC) $(CFLAGS) -o $@ $< $(TEST_DIR)/test_env.c $(STATIC_LIB) $(LDFLAGS) $(LDFLAGS_TEST) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ $< $(TEST_DIR)/test_env.c $(STATIC_LIB) $(LDFLAGS) $(LDFLAGS_TEST) $(PLATFORM_LDFLAGS) $(LIBS)
 
-# Image API test – self-contained, pulls in user/image.c directly (no SDL/GL needed)
+# Image API test – self-contained, pulls in user/image.c directly (no platform/GL needed)
 $(BIN_DIR)/test_image_test$(EXE_EXT): $(TEST_DIR)/image_test.c | $(BIN_DIR)
 	@echo "Building test: $@"
 	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS_TEST) -lm
@@ -175,7 +191,7 @@ $(BIN_DIR)/test_image_test$(EXE_EXT): $(TEST_DIR)/image_test.c | $(BIN_DIR)
 # Generic test build rule (tests without test_env)
 $(BIN_DIR)/test_%$(EXE_EXT): $(TEST_DIR)/%.c $(STATIC_LIB) | $(BIN_DIR)
 	@echo "Building test: $@"
-	$(CC) $(CFLAGS) -o $@ $< $(STATIC_LIB) $(LDFLAGS) $(LDFLAGS_TEST) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ $< $(STATIC_LIB) $(LDFLAGS) $(LDFLAGS_TEST) $(PLATFORM_LDFLAGS) $(LIBS)
 
 # Directory creation
 BUILD_DIRS = $(BUILD_DIR) $(LIB_DIR) $(BIN_DIR) $(SHARE_DIR)
@@ -188,6 +204,7 @@ $(BUILD_DIRS):
 clean:
 	@echo "Cleaning build artifacts..."
 	rm -rf $(BUILD_DIR)
+	$(MAKE) -C $(PLATFORM_DIR) OUTDIR=$(abspath $(LIB_DIR)) LIB_EXT=$(PLATFORM_LIB_EXT) clean 2>/dev/null || true
 
 # Help
 .PHONY: help

@@ -2,7 +2,6 @@
 // Extracted from mapview/windows/console.c
 // Contains only the small embedded font rendering (console_font_6x8: 6-bit wide, 8 pixels tall)
 
-#include <SDL2/SDL.h>
 #include "gl_compat.h"
 #include <stdarg.h>
 #include <stdbool.h>

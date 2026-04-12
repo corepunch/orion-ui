@@ -5,11 +5,29 @@
 #include <string.h>
 #include <stdlib.h>
 
+extern window_t *_focused;
+extern window_t *_tracked;
+extern window_t *_captured;
+extern bool running;
+
+static void test_env_reset_ui_state(void) {
+    while (windows) {
+        destroy_window(windows);
+    }
+    cleanup_all_hooks();
+    reset_message_queue();
+    _focused = NULL;
+    _tracked = NULL;
+    _captured = NULL;
+    running = false;
+}
+
 // Global test environment
 test_env_t test_env = {0};
 
 // Initialize test environment
 void test_env_init(void) {
+    test_env_reset_ui_state();
     memset(&test_env, 0, sizeof(test_env_t));
     test_env.tracking_enabled = false;
     test_env.event_count = 0;
@@ -19,6 +37,7 @@ void test_env_init(void) {
 void test_env_shutdown(void) {
     test_env_clear_events();
     test_env.tracking_enabled = false;
+    test_env_reset_ui_state();
 }
 
 // Enable/disable event tracking

@@ -1,7 +1,7 @@
 <img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/793ada60-d34d-4dfa-ac3a-688c1d70f67b" />
 
 
-Orion is a retro-styled UI framework written in C that brings the familiar Windows API message-based architecture to modern cross-platform development. Extracted from DOOM-ED, it features a clean three-layer design modeled after classic Windows DLLs (USER, KERNEL, COMCTL), making it instantly recognizable to developers who've worked with Win32. Built on SDL2 and OpenGL 3.2+, Orion delivers hardware-accelerated rendering with a nostalgic bitmap font aesthetic reminiscent of DOS and early Windows interfaces. The framework provides a complete set of common controls (buttons, checkboxes, edit boxes, lists, combo boxes, and a console) all following message-driven patterns that feel both vintage and powerful. Perfect for game tools, retro-style applications, or anyone who misses the simplicity and directness of classic GUI programming.
+Orion is a retro-styled UI framework written in C that brings the familiar Windows API message-based architecture to modern cross-platform development. Extracted from DOOM-ED, it features a clean three-layer design modeled after classic Windows DLLs (USER, KERNEL, COMCTL), making it instantly recognizable to developers who've worked with Win32. Built on the [corepunch/platform](https://github.com/corepunch/platform) layer and OpenGL 3.2+, Orion delivers hardware-accelerated rendering with a nostalgic bitmap font aesthetic reminiscent of DOS and early Windows interfaces. The framework provides a complete set of common controls (buttons, checkboxes, edit boxes, lists, combo boxes, and a console) all following message-driven patterns that feel both vintage and powerful. Perfect for game tools, retro-style applications, or anyone who misses the simplicity and directness of classic GUI programming.
 
 **filemanager.c** example:
 ![536838382-1474fcfa-17eb-4731-8af5-06a83ace958f](https://github.com/user-attachments/assets/ec7bce63-7595-418c-9d71-66b860cd699c)
@@ -24,10 +24,10 @@ Handles window creation, destruction, message passing, and basic rendering primi
 - Window messages (kWindowMessageCreate, kWindowMessagePaint, kWindowMessageLeftButtonUp, etc.)
 
 ### ui/kernel/ - Event Management Layer
-Manages the SDL event loop and translates SDL events into window messages. Also provides the Renderer API for OpenGL abstraction.
+Manages the platform (corepunch/platform) event loop and translates platform events into window messages. Also provides the Renderer API for OpenGL abstraction.
 
 **Key Components:**
-- SDL initialization
+- Platform initialization (axInit)
 - Event loop (`get_message`, `dispatch_message`)
 - Global state (screen dimensions, running flag)
 - **Renderer API**: High-level OpenGL abstraction (`R_Mesh`, `R_Texture`, `R_MeshDrawDynamic`)
@@ -55,7 +55,8 @@ Orion supports Linux, macOS, and Windows platforms.
 
 **Linux (Ubuntu/Debian):**
 ```bash
-sudo apt-get install liblua5.4-dev libsdl2-dev libgl1-mesa-dev libcglm-dev
+git submodule update --init
+sudo apt-get install liblua5.4-dev libgl-dev libegl-dev libx11-dev libcglm-dev
 ```
 
 **macOS:**
@@ -65,7 +66,7 @@ brew install sdl2 cglm lua
 
 **Windows (MSYS2/MinGW64):**
 ```bash
-pacman -S mingw-w64-x86_64-gcc mingw-w64-x86_64-make mingw-w64-x86_64-SDL2 mingw-w64-x86_64-lua mingw-w64-x86_64-cglm make
+pacman -S mingw-w64-x86_64-gcc mingw-w64-x86_64-make  mingw-w64-x86_64-lua mingw-w64-x86_64-cglm make
 ```
 
 ### Build Commands
@@ -371,8 +372,8 @@ Orion has been verified to have proper cleanup with no memory leaks:
   - Cleans up renderer resources (shaders, VAO, VBO)
   - Cleans up white texture
   - Cleans up console and text rendering
-  - Destroys OpenGL context and SDL window
-  - Quits SDL
+  - Destroys OpenGL context and platform window
+  - Calls axShutdown()
 
 All cleanup functions are idempotent and safe to call multiple times.
 
@@ -389,7 +390,7 @@ make test
 
 # Run with valgrind
 valgrind --leak-check=full ./build/bin/test_memory_leak_test
-SDL_VIDEODRIVER=dummy valgrind --leak-check=full ./build/bin/test_integration_cleanup
+valgrind --leak-check=full ./build/bin/test_integration_cleanup
 ```
 
 ## Recent Changes

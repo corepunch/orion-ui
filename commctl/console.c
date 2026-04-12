@@ -1,4 +1,3 @@
-#include <SDL2/SDL.h>
 #include "../user/gl_compat.h"
 #include <stdarg.h>
 #include <stdbool.h>
@@ -20,7 +19,7 @@
 // Console message structure
 typedef struct {
   char text[MAX_MESSAGE_LENGTH];
-  Uint32 timestamp;  // When the message was created
+  uint32_t timestamp;  // When the message was created
   bool active;       // Whether the message is still being displayed
 } console_message_t;
 
@@ -64,7 +63,7 @@ void conprintf(const char* format, ...) {
   va_end(args);
   
   // Set the timestamp
-  msg->timestamp = SDL_GetTicks();
+  msg->timestamp = axGetMilliseconds();
   msg->active = true;
   
   // Also print to stdout for debugging
@@ -75,7 +74,7 @@ void conprintf(const char* format, ...) {
 void draw_console(void) {
   if (!console.show_console) return;
   
-  Uint32 current_time = SDL_GetTicks();
+  uint32_t current_time = axGetMilliseconds();
   int y = CONSOLE_PADDING;
   int lines_shown = 0;
   
@@ -85,7 +84,7 @@ void draw_console(void) {
     console_message_t* msg = &console.messages[msg_index];
     
     // Check if the message should still be displayed
-    Uint32 age = current_time - msg->timestamp;
+    uint32_t age = current_time - msg->timestamp;
     if (age < MESSAGE_DISPLAY_TIME) {
       // Calculate alpha based on age (fade out during the last second)
       float alpha = 1.0f;

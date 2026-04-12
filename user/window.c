@@ -1,11 +1,11 @@
 // Window management implementation
 // Extracted from mapview/window.c
 
-#include <SDL2/SDL.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <stdarg.h>
 
 #include "user.h"
 #include "messages.h"

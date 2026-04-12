@@ -1,7 +1,6 @@
 // Canvas child window – renders the pixel canvas and dispatches paint events to tools
 
 #include "imageeditor.h"
-#include <SDL2/SDL.h>   // for SDL_GetModState / KMOD_SHIFT
 
 // Single source of truth for zoom levels and their View menu IDs.
 // win_menubar.c also references these via the extern declarations in imageeditor.h.
@@ -575,7 +574,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       state->hover_valid = canvas_in_bounds(doc, px, py);
 
       int tool = g_app->current_tool;
-      bool shift = (SDL_GetModState() & KMOD_SHIFT) != 0;
+      bool shift = (ui_get_mod_state() & AX_MOD_SHIFT) != 0;
 
       // Magnifier: repaint to update the loupe overlay; nothing else to do
       if (tool == ID_TOOL_MAGNIFIER) {
@@ -678,7 +677,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       if (!doc || !g_app) return false;
       int tool = g_app->current_tool;
       // Escape cancels an in-progress polygon or shape drag
-      if (wparam == SDL_SCANCODE_ESCAPE) {
+      if (wparam == AX_KEY_ESCAPE) {
         if (tool == ID_TOOL_POLYGON && doc->poly_active) {
           if (doc->shape_snapshot) {
             memcpy(doc->pixels, doc->shape_snapshot, (size_t)doc->canvas_w * doc->canvas_h * 4);

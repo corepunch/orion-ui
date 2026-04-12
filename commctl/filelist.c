@@ -11,7 +11,6 @@
 // that win_columnview uses (which sends to get_root_window and would bypass
 // win_filelist when it is used as a child control).
 
-#include <SDL2/SDL.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -337,7 +336,7 @@ result_t win_filelist(window_t *win, uint32_t msg,
 
       if (index < 0 || index >= data->count) return true;
 
-      uint32_t now    = SDL_GetTicks();
+      uint32_t now    = axGetMilliseconds();
       bool     is_dbl = (data->last_click_idx == (uint32_t)index &&
                          (now - data->last_click_ms) < 500u);
 
