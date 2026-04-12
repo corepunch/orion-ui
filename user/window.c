@@ -267,8 +267,18 @@ void set_focus(window_t* win) {
 // identical to the previous implementation.  For child windows the root is
 // invalidated, which clears the background and repaints all children —
 // necessary to erase, e.g., a stale selection highlight in a child control.
+//
+// A kWindowMessageRefreshStencil is posted before the paint messages so that
+// if the paint messages end up deferred to a later repost_messages() call
+// (because they were added during the current processing cycle, beyond the
+// captured write index), the stencil is always rebuilt at the current window
+// positions before the non-client paint runs.  Without this, a move between
+// two repost_messages() calls would leave NonClientPaint using a stale stencil
+// from the previous frame, causing the focused border to fail the stencil test
+// and not be drawn for that frame.
 void invalidate_window(window_t *win) {
   window_t *root = get_root_window(win);
+  post_message(root, kWindowMessageRefreshStencil, 0, NULL);
   post_message(root, kWindowMessageNonClientPaint, 0, NULL);
   post_message(root, kWindowMessagePaint, 0, NULL);
 }
