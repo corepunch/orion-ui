@@ -131,14 +131,22 @@ void move_window(window_t *win, int x, int y) {
 
 // Resize window
 void resize_window(window_t *win, int new_w, int new_h) {
-  post_message(win, kWindowMessageResize, 0, NULL);
+  // Update dimensions first so every subsequent call (including the
+  // synchronous kWindowMessageResize delivery below) sees the new size.
+  win->frame.w = new_w > 0 ? new_w : win->frame.w;
+  win->frame.h = new_h > 0 ? new_h : win->frame.h;
+
+  // Notify the window synchronously so child-window resize chains
+  // (e.g. doc → canvas) propagate their frames before any queued
+  // paint message runs.  Using send_message here prevents a one-frame
+  // lag where a child's vertical scrollbar still uses the previous
+  // dimensions while the parent's border has already moved.
+  send_message(win, kWindowMessageResize, 0, NULL);
+
   post_message(win, kWindowMessageRefreshStencil, 0, NULL);
 
   invalidate_overlaps(win);
   invalidate_window(win);
-
-  win->frame.w = new_w > 0 ? new_w : win->frame.w;
-  win->frame.h = new_h > 0 ? new_h : win->frame.h;
 }
 
 // Remove window from global window list
