@@ -40,6 +40,18 @@ int main(int argc, char* argv[]) {
   printf("Skipping on Windows (requires display in CI environment)\n");
   return 0;
 #endif
+
+#ifdef __APPLE__
+  // Skip this test on macOS: the corepunch/platform backend always creates
+  // a real NSWindow with NSOpenGL (no headless/dummy driver equivalent), and
+  // repost_messages() calls WI_EndPaint() → [[view openGLContext] flushBuffer]
+  // which requires the Cocoa surface to be fully set up.  This test was
+  // designed for headless (SDL_VIDEODRIVER=dummy) environments and is not
+  // appropriate for the real-display macOS backend.
+  printf("Integration Cleanup Test\n");
+  printf("Skipping on macOS (requires headless rendering not available with platform backend)\n");
+  return 0;
+#endif
   
   printf("Integration Cleanup Test\n");
   printf("Testing full init/shutdown cycle with window creation\n\n");

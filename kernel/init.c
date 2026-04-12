@@ -83,6 +83,17 @@ bool ui_init_graphics(int flags, const char *title, int width, int height) {
 
   WI_BeginPaint();
 
+#ifdef _WIN32
+  /* GLEW must be initialized after the OpenGL context is made current. */
+  glewExperimental = GL_TRUE;
+  GLenum glew_err = glewInit();
+  if (glew_err != GLEW_OK) {
+    printf("GLEW init failed: %s\n", (const char *)glewGetErrorString(glew_err));
+    WI_Shutdown();
+    return false;
+  }
+#endif
+
   printf("GL_VERSION  : %s\n", glGetString(GL_VERSION));
   printf("GLSL_VERSION: %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
 
