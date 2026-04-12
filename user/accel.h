@@ -7,9 +7,9 @@
 // Usage:
 //   1. Declare a static array of accel_t entries, e.g.:
 //        static const accel_t kAccel[] = {
-//          { FCONTROL|FVIRTKEY, 'z', ID_EDIT_UNDO },
-//          { FCONTROL|FVIRTKEY, 'y', ID_EDIT_REDO },
-//          { FCONTROL|FVIRTKEY, 's', ID_FILE_SAVE },
+//          { FCONTROL|FVIRTKEY, AX_KEY_Z, ID_EDIT_UNDO },
+//          { FCONTROL|FVIRTKEY, AX_KEY_Y, ID_EDIT_REDO },
+//          { FCONTROL|FVIRTKEY, AX_KEY_S, ID_FILE_SAVE },
 //        };
 //   2. Load the table once at startup:
 //        accel_table_t *hAccel = load_accelerators(kAccel, 3);
@@ -32,7 +32,7 @@
 // On Windows these are already defined by <winuser.h>; guard against
 // redefinition to suppress compiler warnings.
 #ifndef FVIRTKEY
-#  define FVIRTKEY  0x01  // key field is a WI_KEY value (always set for Orion)
+#  define FVIRTKEY  0x01  // key field is an AX_KEY_* value (always set for Orion)
 #endif
 #ifndef FSHIFT
 #  define FSHIFT    0x04  // Shift modifier must be held
@@ -47,7 +47,7 @@
 // One entry in an accelerator table.  Mirrors the WinAPI ACCEL structure.
 typedef struct {
   uint8_t  fVirt;  // FVIRTKEY combined with zero or more of FSHIFT/FCONTROL/FALT
-  uint16_t key;    // axKEY value of the accelerator key (or lowercase ASCII char)
+  uint16_t key;    // AX_KEY_* constant for the accelerator key
   uint16_t cmd;    // command ID sent as LOWORD(wparam) in kWindowMessageCommand
 } accel_t;
 
