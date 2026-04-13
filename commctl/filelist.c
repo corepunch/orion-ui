@@ -40,6 +40,7 @@
 #define FL_ICON_FOLDER  5   // directory
 #define FL_ICON_FILE    6   // regular file
 #define FL_COLOR_FOLDER 0xffa0d000u
+#define FL_COLOR_GEM    0xff50d050u  // bright green — executable .gem plugin
 
 // ---------------------------------------------------------------------------
 // Private state
@@ -146,8 +147,11 @@ static bool fl_push_item(filelist_data_t *data,
   it->modified     = modified;
   bool is_parent   = fl_is_parent_sentinel(path_heap);
   it->icon  = is_parent ? FL_ICON_UP : (is_dir ? FL_ICON_FOLDER : FL_ICON_FILE);
+  const char *ext = strrchr(path_heap, '.');
+  bool is_gem = !is_dir && ext && strcmp(ext, ".gem") == 0;
   it->color = is_hidden  ? (uint32_t)COLOR_TEXT_DISABLED
             : is_dir     ? FL_COLOR_FOLDER
+            : is_gem     ? FL_COLOR_GEM
                          : (uint32_t)COLOR_TEXT_NORMAL;
   return true;
 }
