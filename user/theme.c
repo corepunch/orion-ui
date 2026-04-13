@@ -31,6 +31,7 @@ uint32_t g_sys_colors[kColorCount] = {
   [kColorFolderText]           = 0xffa0d000,   // folder entry text in file lists
 };
 
+// Defined in user/dialog.c; true while the application's event loop is running.
 extern bool running;
 
 void set_sys_colors(int count, const int *indices, const uint32_t *colors) {

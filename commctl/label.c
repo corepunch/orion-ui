@@ -22,6 +22,9 @@ result_t win_label(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       if (lparam) win->userdata = lparam;
       return true;
     case kWindowMessagePaint: {
+      // Convention: userdata == 0 → default (kColorTextNormal);
+      // 0 < userdata < kColorCount → sys_color_idx_t index resolved at paint time;
+      // userdata >= kColorCount → raw RGBA color (top byte is 0xff for any valid RGBA).
       uint32_t col;
       uintptr_t ud = (uintptr_t)win->userdata;
       if (ud == 0)
