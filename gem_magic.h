@@ -7,8 +7,8 @@
 // gem_interface_t — the ABI every .gem must export via gem_get_interface().
 //
 // Shell discovery sequence:
-//   1. dlopen("foo.gem")
-//   2. sym = dlsym(handle, "gem_get_interface")
+//   1. axDynlibOpen("foo.gem")
+//   2. sym = axDynlibSym(handle, "gem_get_interface")
 //   3. gem_interface_t *iface = sym();
 //   4. iface->init(argc, argv)   — creates windows, returns true on success
 //   5. … shell runs shared event loop …

@@ -165,7 +165,7 @@ int main(int argc, char *argv[]) {
     // 2. Destroy all windows while gem code is still mapped in memory, so
     //    any kWindowMessageDestroy handlers owned by a gem remain valid.
     ui_shutdown_graphics();
-    // 3. Now it is safe to dlclose() — no more window proc calls will be made.
+    // 3. Now it is safe to axDynlibClose() — no more window proc calls will be made.
     shell_cleanup_all_gems();
     return 0;
 }

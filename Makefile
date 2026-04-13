@@ -85,7 +85,7 @@ ifeq ($(OS),Windows_NT)
     SHELL_EXTRA_LDFLAGS =
 else ifeq ($(UNAME_S),Darwin)
     # -undefined dynamic_lookup lets the gem resolve remaining symbols
-    # from the host process at dlopen() time.
+    # from the host process at axDynlibOpen() time.
     GEM_LFLAGS = $(LIB_FLAGS) -undefined dynamic_lookup
     SHELL_EXTRA_LDFLAGS =
 else

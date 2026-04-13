@@ -1,5 +1,4 @@
 #include "gem_loader.h"
-#include <dlfcn.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,19 +30,19 @@ unsigned shell_gem_generation(void) { return g_gem_generation; }
 
 // ---------------------------------------------------------------------------
 bool shell_load_gem(const char *gem_path, int argc, char *argv[]) {
-    void *handle = dlopen(gem_path, RTLD_LAZY | RTLD_LOCAL);
+    void *handle = axDynlibOpen(gem_path);
     if (!handle) {
         fprintf(stderr, "shell: failed to load '%s': %s\n",
-                gem_path, dlerror());
+                gem_path, axDynlibError());
         return false;
     }
 
     typedef gem_interface_t *(*get_iface_fn)(void);
-    get_iface_fn get_iface = (get_iface_fn)dlsym(handle, "gem_get_interface");
+    get_iface_fn get_iface = (get_iface_fn)axDynlibSym(handle, "gem_get_interface");
     if (!get_iface) {
         fprintf(stderr, "shell: '%s' is not a valid .gem (missing gem_get_interface)\n",
                 gem_path);
-        dlclose(handle);
+        axDynlibClose(handle);
         return false;
     }
 
@@ -51,7 +50,7 @@ bool shell_load_gem(const char *gem_path, int argc, char *argv[]) {
     if (!iface || !iface->name || !iface->version || !iface->init) {
         fprintf(stderr, "shell: '%s' returned an incomplete gem_interface_t\n",
                 gem_path);
-        dlclose(handle);
+        axDynlibClose(handle);
         return false;
     }
 
@@ -67,7 +66,7 @@ bool shell_load_gem(const char *gem_path, int argc, char *argv[]) {
 
     if (!iface->init(argc, argv)) {
         fprintf(stderr, "shell: %s init() failed\n", iface->name);
-        dlclose(handle);
+        axDynlibClose(handle);
         return false;
     }
 
@@ -78,7 +77,7 @@ bool shell_load_gem(const char *gem_path, int argc, char *argv[]) {
     loaded_gem_t *lg = calloc(1, sizeof(loaded_gem_t));
     if (!lg) {
         if (iface->shutdown) iface->shutdown();
-        dlclose(handle);
+        axDynlibClose(handle);
         return false;
     }
 
@@ -107,7 +106,7 @@ void shell_unload_gem(window_t *window) {
         if (lg->main_window == window) {
             if (lg->iface->shutdown)
                 lg->iface->shutdown();
-            dlclose(lg->handle);
+            axDynlibClose(lg->handle);
             *pp = lg->next;
             free(lg->path);
             free(lg);
@@ -132,9 +131,9 @@ const char *shell_get_gem_for_extension(const char *extension) {
 
 // Automatic unload-on-main-window-close is unsafe: a gem may create multiple
 // top-level windows.  Unloading when only the tracked window is closed would
-// dlclose() code that remaining windows may still call into.  Gem cleanup is
+// axDynlibClose() code that remaining windows may still call into.  Gem cleanup is
 // deferred to shell_notify_gem_shutdown() + shell_cleanup_all_gems() at shell
-// exit, which guarantees all windows are gone before dlclose().
+// exit, which guarantees all windows are gone before axDynlibClose().
 // Returns the number of gems that were unloaded.
 int shell_check_closed_gems(void) {
     return 0;
@@ -175,7 +174,7 @@ void shell_dispatch_gem_command(uint16_t id) {
             lg->iface->handle_command(id);
     }
 }
-// Does NOT dlclose(): gem procs must remain valid so that window
+// Does NOT axDynlibClose(): gem procs must remain valid so that window
 // kWindowMessageDestroy handlers work when ui_shutdown_graphics() later
 // tears down the gem windows.  Call before ui_shutdown_graphics().
 void shell_notify_gem_shutdown(void) {
@@ -186,7 +185,7 @@ void shell_notify_gem_shutdown(void) {
 }
 
 // ---------------------------------------------------------------------------
-// Release every loaded gem: dlclose() and free loader records.
+// Release every loaded gem: axDynlibClose() and free loader records.
 // Call AFTER ui_shutdown_graphics() — all windows are gone and no more
 // window proc calls will be made into gem code.
 // NOTE: does NOT call iface->shutdown(); use shell_notify_gem_shutdown() for that.
@@ -194,7 +193,7 @@ void shell_cleanup_all_gems(void) {
     while (gems_head) {
         loaded_gem_t *lg = gems_head;
         gems_head = lg->next;
-        dlclose(lg->handle);
+        axDynlibClose(lg->handle);
         free(lg->path);
         free(lg);
     }

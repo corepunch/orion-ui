@@ -148,12 +148,6 @@ static bool fl_push_item(filelist_data_t *data,
   it->modified     = modified;
   bool is_parent   = fl_is_parent_sentinel(path_heap);
   it->icon  = is_parent ? FL_ICON_UP : (is_dir ? FL_ICON_FOLDER : FL_ICON_FILE);
-  const char *ext = strrchr(path_heap, '.');
-  bool is_gem = !is_dir && ext && strcmp(ext, ".gem") == 0;
-  it->color = is_hidden  ? (uint32_t)COLOR_TEXT_DISABLED
-            : is_dir     ? FL_COLOR_FOLDER
-            : is_gem     ? FL_COLOR_GEM
-                         : (uint32_t)COLOR_TEXT_NORMAL;
   return true;
 }
 
@@ -237,9 +231,12 @@ static void fl_load_directory(window_t *win, filelist_data_t *data) {
   for (int i = 0; i < data->count; i++) {
     const char *base = strrchr(data->items[i].path, '/');
     base = base ? base + 1 : data->items[i].path;
-    uint32_t col = data->items[i].is_hidden  ? get_sys_color(kColorTextDisabled)
+    const char *ext = strrchr(base, '.');
+    bool is_gem = !data->items[i].is_directory && ext && strcmp(ext, ".gem") == 0;
+    uint32_t col = data->items[i].is_hidden    ? get_sys_color(kColorTextDisabled)
                  : data->items[i].is_directory ? get_sys_color(kColorFolderText)
-                                              : get_sys_color(kColorTextNormal);
+                 : is_gem                      ? FL_COLOR_GEM
+                                               : get_sys_color(kColorTextNormal);
     send_message(win, CVM_ADDITEM, 0,
       &(columnview_item_t){
         .text     = base,

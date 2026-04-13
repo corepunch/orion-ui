@@ -25,12 +25,12 @@ same message queue, same event infrastructure. The shell's single
 `get_message` / `dispatch_message` loop therefore drives all gem windows
 transparently.
 
-When a `.gem` is loaded with `dlopen`, the shell:
+When a `.gem` is loaded with `axDynlibOpen`, the shell:
 1. Resolves `gem_get_interface()` from the gem
 2. Calls `iface->init(argc, argv)` — the gem creates its windows and returns
 3. The shell's event loop runs; all gem windows respond normally
 4. When the gem's top-level window is closed, the shell detects it and
-   calls `iface->shutdown()`, then `dlclose()`s the gem
+   calls `iface->shutdown()`, then `axDynlibClose()`s the gem
 
 ## Writing a gem app
 
@@ -239,11 +239,11 @@ The shell registers its `shell_handle_open_file` callback at startup via
 ## Shell exit sequence
 
 The shell uses a 3-phase teardown to avoid crashes when gem window procs
-are called after `dlclose()`:
+are called after `axDynlibClose()`:
 
 1. **`shell_notify_gem_shutdown()`** — calls every gem's `shutdown()` while
    the GL context is still active (safe for `glDeleteTextures` etc.)
 2. **`ui_shutdown_graphics()`** — destroys all windows; gem code is still in
    memory so `kWindowMessageDestroy` handlers remain valid
-3. **`shell_cleanup_all_gems()`** — `dlclose()`s all gem handles; no window
+3. **`shell_cleanup_all_gems()`** — `axDynlibClose()`s all gem handles; no window
    proc calls are made after this point
