@@ -38,6 +38,10 @@ bool translate_accelerator(window_t *win, ui_event_t *evt,
   if (evt->message != kEventKeyDown) return false;
 
   uint32_t sc  = evt->keyCode;
+  /* Normalize lowercase letter keys to uppercase: the platform may send
+     97-122 ('a'-'z') for unshifted letter keys, while AX_KEY_A..AX_KEY_Z
+     are defined as uppercase ASCII 65-90. */
+  if (sc >= 'a' && sc <= 'z') sc -= (uint32_t)('a' - 'A');
   uint32_t mod = evt->modflags;
 
   for (int i = 0; i < table->count; i++) {

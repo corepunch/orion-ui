@@ -15,41 +15,44 @@ app_state_t *g_app = NULL;
 // ============================================================
 
 static const accel_t kAccelEntries[] = {
-  { FCONTROL|FVIRTKEY, 'z', ID_EDIT_UNDO },
-  { FCONTROL|FVIRTKEY, 'y', ID_EDIT_REDO },
-  { FCONTROL|FVIRTKEY, 'x', ID_EDIT_CUT  },
-  { FCONTROL|FVIRTKEY, 'c', ID_EDIT_COPY },
-  { FCONTROL|FVIRTKEY, 'v', ID_EDIT_PASTE},
-  { FCONTROL|FVIRTKEY, 'a', ID_EDIT_SELECT_ALL},
+  { FCONTROL|FVIRTKEY, AX_KEY_Z, ID_EDIT_UNDO },
+  { FCONTROL|FVIRTKEY, AX_KEY_Y, ID_EDIT_REDO },
+  { FCONTROL|FVIRTKEY, AX_KEY_X, ID_EDIT_CUT  },
+  { FCONTROL|FVIRTKEY, AX_KEY_C, ID_EDIT_COPY },
+  { FCONTROL|FVIRTKEY, AX_KEY_V, ID_EDIT_PASTE},
+  { FCONTROL|FVIRTKEY, AX_KEY_A, ID_EDIT_SELECT_ALL},
   { FVIRTKEY,          AX_KEY_ESCAPE, ID_EDIT_DESELECT},
-  { FCONTROL|FVIRTKEY, 'n', ID_FILE_NEW  },
-  { FCONTROL|FVIRTKEY, 'o', ID_FILE_OPEN },
-  { FCONTROL|FVIRTKEY, 's', ID_FILE_SAVE },
-  { FCONTROL|FVIRTKEY, 'w', ID_FILE_CLOSE},
+  // Delete / Backspace clears the active selection (fill with bg color)
+  { FVIRTKEY,          AX_KEY_DEL,       ID_EDIT_CLEAR_SEL },
+  { FVIRTKEY,          AX_KEY_BACKSPACE, ID_EDIT_CLEAR_SEL },
+  { FCONTROL|FVIRTKEY, AX_KEY_N, ID_FILE_NEW  },
+  { FCONTROL|FVIRTKEY, AX_KEY_O, ID_FILE_OPEN },
+  { FCONTROL|FVIRTKEY, AX_KEY_S, ID_FILE_SAVE },
+  { FCONTROL|FVIRTKEY, AX_KEY_W, ID_FILE_CLOSE},
   // Zoom shortcuts: Ctrl+= (Ctrl++) and Ctrl+-
-  { FCONTROL|FVIRTKEY, '=',  ID_VIEW_ZOOM_IN  },
-  { FCONTROL|FSHIFT|FVIRTKEY, '=',  ID_VIEW_ZOOM_IN  },
-  { FCONTROL|FVIRTKEY, '-',  ID_VIEW_ZOOM_OUT },
+  { FCONTROL|FVIRTKEY, AX_KEY_EQUALS,  ID_VIEW_ZOOM_IN  },
+  { FCONTROL|FSHIFT|FVIRTKEY, AX_KEY_EQUALS,  ID_VIEW_ZOOM_IN  },
+  { FCONTROL|FVIRTKEY, AX_KEY_MINUS,  ID_VIEW_ZOOM_OUT },
   // Tool hotkeys – same as MS Paint
-  { FVIRTKEY,          'p', ID_TOOL_PENCIL },
-  { FVIRTKEY,          'b', ID_TOOL_BRUSH  },
-  { FVIRTKEY,          'e', ID_TOOL_ERASER },
-  { FVIRTKEY,          'k', ID_TOOL_FILL   },
-  { FVIRTKEY,          's', ID_TOOL_SELECT },
-  { FVIRTKEY,          'a', ID_TOOL_SPRAY       },
-  { FVIRTKEY,          'i', ID_TOOL_EYEDROPPER  },
-  { FVIRTKEY,          'g', ID_TOOL_MAGNIFIER   },
-  { FVIRTKEY,          't', ID_TOOL_TEXT   },
+  { FVIRTKEY,          AX_KEY_P, ID_TOOL_PENCIL },
+  { FVIRTKEY,          AX_KEY_B, ID_TOOL_BRUSH  },
+  { FVIRTKEY,          AX_KEY_E, ID_TOOL_ERASER },
+  { FVIRTKEY,          AX_KEY_K, ID_TOOL_FILL   },
+  { FVIRTKEY,          AX_KEY_S, ID_TOOL_SELECT },
+  { FVIRTKEY,          AX_KEY_A, ID_TOOL_SPRAY       },
+  { FVIRTKEY,          AX_KEY_I, ID_TOOL_EYEDROPPER  },
+  { FVIRTKEY,          AX_KEY_G, ID_TOOL_MAGNIFIER   },
+  { FVIRTKEY,          AX_KEY_T, ID_TOOL_TEXT   },
   // Allow tool hotkeys to work even when Shift is held
-  { FSHIFT|FVIRTKEY,   'p', ID_TOOL_PENCIL },
-  { FSHIFT|FVIRTKEY,   'b', ID_TOOL_BRUSH  },
-  { FSHIFT|FVIRTKEY,   'e', ID_TOOL_ERASER },
-  { FSHIFT|FVIRTKEY,   'k', ID_TOOL_FILL   },
-  { FSHIFT|FVIRTKEY,   's', ID_TOOL_SELECT },
-  { FSHIFT|FVIRTKEY,   'a', ID_TOOL_SPRAY       },
-  { FSHIFT|FVIRTKEY,   'i', ID_TOOL_EYEDROPPER  },
-  { FSHIFT|FVIRTKEY,   'g', ID_TOOL_MAGNIFIER   },
-  { FSHIFT|FVIRTKEY,   't', ID_TOOL_TEXT   },
+  { FSHIFT|FVIRTKEY,   AX_KEY_P, ID_TOOL_PENCIL },
+  { FSHIFT|FVIRTKEY,   AX_KEY_B, ID_TOOL_BRUSH  },
+  { FSHIFT|FVIRTKEY,   AX_KEY_E, ID_TOOL_ERASER },
+  { FSHIFT|FVIRTKEY,   AX_KEY_K, ID_TOOL_FILL   },
+  { FSHIFT|FVIRTKEY,   AX_KEY_S, ID_TOOL_SELECT },
+  { FSHIFT|FVIRTKEY,   AX_KEY_A, ID_TOOL_SPRAY       },
+  { FSHIFT|FVIRTKEY,   AX_KEY_I, ID_TOOL_EYEDROPPER  },
+  { FSHIFT|FVIRTKEY,   AX_KEY_G, ID_TOOL_MAGNIFIER   },
+  { FSHIFT|FVIRTKEY,   AX_KEY_T, ID_TOOL_TEXT   },
 };
 
 // ============================================================
@@ -65,7 +68,7 @@ static void create_app_windows(void) {
       MAKERECT(0, 0, sw, MENUBAR_HEIGHT),
       NULL, editor_menubar_proc, NULL);
   send_message(mb, kMenuBarMessageSetMenus,
-               sizeof(kMenus)/sizeof(kMenus[0]), (void *)kMenus);
+               (uint32_t)kNumMenus, (void *)kMenus);
   show_window(mb, true);
   g_app->menubar_win = mb;
 

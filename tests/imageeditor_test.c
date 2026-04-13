@@ -211,8 +211,104 @@ static void tdoc_free(test_doc_t *d) {
 }
 
 // ============================================================
-// Tests
+// Inline helpers for new canvas operations (flip / invert / resize)
+// Mirrors the production implementations in canvas.c without SDL/GL deps.
 // ============================================================
+
+static void t_flip_h(test_canvas_t *c) {
+  int w = CANVAS_W, h = CANVAS_H;
+  for (int y = 0; y < h; y++) {
+    for (int x = 0; x < w / 2; x++) {
+      uint8_t *l = c->pixels + ((size_t)y * w + x) * 4;
+      uint8_t *r = c->pixels + ((size_t)y * w + (w - 1 - x)) * 4;
+      uint8_t tmp[4];
+      memcpy(tmp, l, 4); memcpy(l, r, 4); memcpy(r, tmp, 4);
+    }
+  }
+  c->canvas_dirty = true;
+}
+
+static void t_flip_v(test_canvas_t *c) {
+  int w = CANVAS_W, h = CANVAS_H;
+  size_t row = (size_t)w * 4;
+  uint8_t *tmp = malloc(row);
+  if (!tmp) return;
+  for (int y = 0; y < h / 2; y++) {
+    uint8_t *top = c->pixels + (size_t)y * row;
+    uint8_t *bot = c->pixels + (size_t)(h - 1 - y) * row;
+    memcpy(tmp, top, row); memcpy(top, bot, row); memcpy(bot, tmp, row);
+  }
+  free(tmp);
+  c->canvas_dirty = true;
+}
+
+static void t_invert_colors(test_canvas_t *c) {
+  size_t n = (size_t)CANVAS_W * CANVAS_H;
+  for (size_t i = 0; i < n; i++) {
+    uint8_t *p = c->pixels + i * 4;
+    p[0] = (uint8_t)(255 - p[0]);
+    p[1] = (uint8_t)(255 - p[1]);
+    p[2] = (uint8_t)(255 - p[2]);
+    // alpha unchanged
+  }
+  c->canvas_dirty = true;
+}
+
+// Dynamic canvas for resize tests (mirrors canvas_doc_t without GL/SDL deps).
+typedef struct {
+  uint8_t *pixels;
+  int      w, h;
+  bool     dirty;
+} dyn_canvas_t;
+
+static dyn_canvas_t *dyn_canvas_create(int w, int h) {
+  dyn_canvas_t *c = calloc(1, sizeof(dyn_canvas_t));
+  if (!c) return NULL;
+  c->pixels = malloc((size_t)w * h * 4);
+  if (!c->pixels) { free(c); return NULL; }
+  memset(c->pixels, 0xFF, (size_t)w * h * 4);  /* white */
+  c->w = w; c->h = h;
+  return c;
+}
+
+static uint32_t dyn_get_pixel(const dyn_canvas_t *c, int x, int y) {
+  if (x < 0 || x >= c->w || y < 0 || y >= c->h)
+    return MAKE_COLOR(0, 0, 0, 0);
+  const uint8_t *p = c->pixels + ((size_t)y * c->w + x) * 4;
+  return MAKE_COLOR(p[0], p[1], p[2], p[3]);
+}
+
+static void dyn_set_pixel(dyn_canvas_t *c, int x, int y, uint32_t col) {
+  if (x < 0 || x >= c->w || y < 0 || y >= c->h) return;
+  uint8_t *p = c->pixels + ((size_t)y * c->w + x) * 4;
+  p[0]=COLOR_R(col); p[1]=COLOR_G(col); p[2]=COLOR_B(col); p[3]=COLOR_A(col);
+}
+
+// Returns true on success, false on alloc failure (canvas unchanged).
+static bool t_resize(dyn_canvas_t *c, int new_w, int new_h) {
+  if (!c || new_w <= 0 || new_h <= 0) return false;
+  if ((size_t)new_w > 16384 || (size_t)new_h > 16384) return false;
+  uint8_t *buf = malloc((size_t)new_w * new_h * 4);
+  if (!buf) return false;
+  memset(buf, 0xFF, (size_t)new_w * new_h * 4);
+  int copy_w = new_w < c->w ? new_w : c->w;
+  int copy_h = new_h < c->h ? new_h : c->h;
+  for (int y = 0; y < copy_h; y++)
+    memcpy(buf + (size_t)y * new_w * 4,
+           c->pixels + (size_t)y * c->w * 4,
+           (size_t)copy_w * 4);
+  free(c->pixels);
+  c->pixels = buf;
+  c->w = new_w; c->h = new_h;
+  c->dirty = true;
+  return true;
+}
+
+static void dyn_canvas_free(dyn_canvas_t *c) {
+  if (c) { free(c->pixels); free(c); }
+}
+
+
 
 void test_color_eq(void) {
   TEST("MAKE_COLOR – matching colors are equal");
@@ -1787,6 +1883,247 @@ void test_selection_bounds_clamped(void) {
   PASS();
 }
 
+// ============================================================
+// canvas_flip_h tests
+// ============================================================
+
+void test_flip_h_mirrors_pixels(void) {
+  TEST("canvas_flip_h – leftmost pixel becomes rightmost after flip");
+  test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
+  canvas_clear(c);
+  uint32_t red = MAKE_COLOR(255, 0, 0, 255);
+  t_set_pixel_direct(c, 0, 0, red);
+  t_flip_h(c);
+  ASSERT_TRUE(canvas_get_pixel(c, CANVAS_W - 1, 0) == red);
+  ASSERT_FALSE(canvas_get_pixel(c, 0, 0) == red);
+  free(c);
+  PASS();
+}
+
+void test_flip_h_even_width(void) {
+  TEST("canvas_flip_h – column 1 maps to column W-2 (even-width check)");
+  test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
+  canvas_clear(c);
+  uint32_t blue = MAKE_COLOR(0, 0, 255, 255);
+  t_set_pixel_direct(c, 1, 5, blue);
+  t_flip_h(c);
+  ASSERT_TRUE(canvas_get_pixel(c, CANVAS_W - 2, 5) == blue);
+  free(c);
+  PASS();
+}
+
+void test_flip_h_single_row(void) {
+  TEST("canvas_flip_h – only the targeted row is modified");
+  test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
+  canvas_clear(c);
+  uint32_t green = MAKE_COLOR(0, 255, 0, 255);
+  uint32_t white = MAKE_COLOR(255, 255, 255, 255);
+  t_set_pixel_direct(c, 0, 3, green);   /* mark row 3 col 0 */
+  t_flip_h(c);
+  ASSERT_TRUE(canvas_get_pixel(c, CANVAS_W - 1, 3) == green);
+  /* Row 4 should still be white (unaffected) */
+  ASSERT_TRUE(canvas_get_pixel(c, CANVAS_W - 1, 4) == white);
+  free(c);
+  PASS();
+}
+
+void test_flip_h_double_is_identity(void) {
+  TEST("canvas_flip_h – applied twice restores original pixels");
+  test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
+  canvas_clear(c);
+  uint32_t red = MAKE_COLOR(200, 100, 50, 255);
+  t_set_pixel_direct(c, 10, 20, red);
+  t_flip_h(c);
+  t_flip_h(c);
+  ASSERT_TRUE(canvas_get_pixel(c, 10, 20) == red);
+  ASSERT_TRUE(canvas_get_pixel(c, CANVAS_W - 1 - 10, 20) ==
+              MAKE_COLOR(255, 255, 255, 255)); /* restored to white */
+  free(c);
+  PASS();
+}
+
+// ============================================================
+// canvas_flip_v tests
+// ============================================================
+
+void test_flip_v_mirrors_rows(void) {
+  TEST("canvas_flip_v – top row becomes bottom row after flip");
+  test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
+  canvas_clear(c);
+  uint32_t red = MAKE_COLOR(255, 0, 0, 255);
+  t_set_pixel_direct(c, 0, 0, red);
+  t_flip_v(c);
+  ASSERT_TRUE(canvas_get_pixel(c, 0, CANVAS_H - 1) == red);
+  ASSERT_FALSE(canvas_get_pixel(c, 0, 0) == red);
+  free(c);
+  PASS();
+}
+
+void test_flip_v_even_height(void) {
+  TEST("canvas_flip_v – row 1 maps to row H-2");
+  test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
+  canvas_clear(c);
+  uint32_t blue = MAKE_COLOR(0, 0, 255, 255);
+  t_set_pixel_direct(c, 5, 1, blue);
+  t_flip_v(c);
+  ASSERT_TRUE(canvas_get_pixel(c, 5, CANVAS_H - 2) == blue);
+  free(c);
+  PASS();
+}
+
+void test_flip_v_single_col(void) {
+  TEST("canvas_flip_v – only the target row is modified");
+  test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
+  canvas_clear(c);
+  uint32_t green = MAKE_COLOR(0, 255, 0, 255);
+  uint32_t white = MAKE_COLOR(255, 255, 255, 255);
+  t_set_pixel_direct(c, 7, 0, green);  /* row 0, col 7 */
+  t_flip_v(c);
+  ASSERT_TRUE(canvas_get_pixel(c, 7, CANVAS_H - 1) == green);
+  /* Other columns in the bottom row should be white */
+  ASSERT_TRUE(canvas_get_pixel(c, 8, CANVAS_H - 1) == white);
+  free(c);
+  PASS();
+}
+
+void test_flip_v_double_is_identity(void) {
+  TEST("canvas_flip_v – applied twice restores original pixels");
+  test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
+  canvas_clear(c);
+  uint32_t red = MAKE_COLOR(100, 200, 50, 255);
+  t_set_pixel_direct(c, 15, 10, red);
+  t_flip_v(c);
+  t_flip_v(c);
+  ASSERT_TRUE(canvas_get_pixel(c, 15, 10) == red);
+  free(c);
+  PASS();
+}
+
+// ============================================================
+// canvas_invert_colors tests
+// ============================================================
+
+void test_invert_colors_complement(void) {
+  TEST("canvas_invert_colors – each RGB channel is complemented");
+  test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
+  canvas_clear(c);
+  uint32_t orig = MAKE_COLOR(100, 150, 200, 255);
+  t_set_pixel_direct(c, 0, 0, orig);
+  t_invert_colors(c);
+  uint32_t inv = canvas_get_pixel(c, 0, 0);
+  ASSERT_EQUAL((int)COLOR_R(inv), 255 - 100);
+  ASSERT_EQUAL((int)COLOR_G(inv), 255 - 150);
+  ASSERT_EQUAL((int)COLOR_B(inv), 255 - 200);
+  free(c);
+  PASS();
+}
+
+void test_invert_colors_alpha_unchanged(void) {
+  TEST("canvas_invert_colors – alpha channel is not modified");
+  test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
+  canvas_clear(c);
+  /* Write a pixel with non-opaque alpha directly */
+  uint8_t *p = c->pixels;
+  p[0]=50; p[1]=60; p[2]=70; p[3]=128;
+  t_invert_colors(c);
+  ASSERT_EQUAL((int)c->pixels[3], 128);  /* alpha must be unchanged */
+  free(c);
+  PASS();
+}
+
+void test_invert_colors_double_is_identity(void) {
+  TEST("canvas_invert_colors – applied twice restores original");
+  test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
+  canvas_clear(c);
+  uint32_t orig = MAKE_COLOR(77, 88, 99, 255);
+  t_set_pixel_direct(c, 5, 5, orig);
+  t_invert_colors(c);
+  t_invert_colors(c);
+  ASSERT_TRUE(canvas_get_pixel(c, 5, 5) == orig);
+  free(c);
+  PASS();
+}
+
+// ============================================================
+// canvas_resize tests
+// ============================================================
+
+void test_resize_grow_preserves_content(void) {
+  TEST("canvas_resize – content in original area is preserved when growing");
+  dyn_canvas_t *c = dyn_canvas_create(4, 4);
+  uint32_t red = MAKE_COLOR(255, 0, 0, 255);
+  dyn_set_pixel(c, 0, 0, red);
+  dyn_set_pixel(c, 3, 3, red);
+  ASSERT_TRUE(t_resize(c, 8, 8));
+  ASSERT_EQUAL(c->w, 8);
+  ASSERT_EQUAL(c->h, 8);
+  ASSERT_TRUE(dyn_get_pixel(c, 0, 0) == red);
+  ASSERT_TRUE(dyn_get_pixel(c, 3, 3) == red);
+  dyn_canvas_free(c);
+  PASS();
+}
+
+void test_resize_shrink_preserves_content(void) {
+  TEST("canvas_resize – content within new bounds is preserved when shrinking");
+  dyn_canvas_t *c = dyn_canvas_create(8, 8);
+  uint32_t blue = MAKE_COLOR(0, 0, 255, 255);
+  dyn_set_pixel(c, 1, 1, blue);
+  ASSERT_TRUE(t_resize(c, 4, 4));
+  ASSERT_EQUAL(c->w, 4);
+  ASSERT_EQUAL(c->h, 4);
+  ASSERT_TRUE(dyn_get_pixel(c, 1, 1) == blue);
+  dyn_canvas_free(c);
+  PASS();
+}
+
+void test_resize_grow_fills_white(void) {
+  TEST("canvas_resize – new area is filled with opaque white");
+  dyn_canvas_t *c = dyn_canvas_create(2, 2);
+  /* Paint entire 2×2 red */
+  for (int y = 0; y < 2; y++)
+    for (int x = 0; x < 2; x++)
+      dyn_set_pixel(c, x, y, MAKE_COLOR(255, 0, 0, 255));
+  ASSERT_TRUE(t_resize(c, 4, 2));
+  uint32_t white = MAKE_COLOR(255, 255, 255, 255);
+  /* New columns (x=2, x=3) must be white */
+  ASSERT_TRUE(dyn_get_pixel(c, 2, 0) == white);
+  ASSERT_TRUE(dyn_get_pixel(c, 3, 1) == white);
+  dyn_canvas_free(c);
+  PASS();
+}
+
+void test_resize_same_is_noop(void) {
+  TEST("canvas_resize – same dimensions is a no-op, content unchanged");
+  dyn_canvas_t *c = dyn_canvas_create(10, 10);
+  uint32_t red = MAKE_COLOR(200, 50, 50, 255);
+  dyn_set_pixel(c, 5, 5, red);
+  ASSERT_TRUE(t_resize(c, 10, 10));
+  ASSERT_TRUE(dyn_get_pixel(c, 5, 5) == red);
+  dyn_canvas_free(c);
+  PASS();
+}
+
+void test_resize_zero_is_rejected(void) {
+  TEST("canvas_resize – zero dimensions are rejected (returns false)");
+  dyn_canvas_t *c = dyn_canvas_create(4, 4);
+  ASSERT_FALSE(t_resize(c, 0, 4));
+  ASSERT_FALSE(t_resize(c, 4, 0));
+  ASSERT_EQUAL(c->w, 4);
+  ASSERT_EQUAL(c->h, 4);
+  dyn_canvas_free(c);
+  PASS();
+}
+
+void test_resize_over_limit_is_rejected(void) {
+  TEST("canvas_resize – dimensions >16384 are rejected");
+  dyn_canvas_t *c = dyn_canvas_create(4, 4);
+  ASSERT_FALSE(t_resize(c, 16385, 4));
+  ASSERT_EQUAL(c->w, 4);
+  dyn_canvas_free(c);
+  PASS();
+}
+
+
 int main(int argc, char *argv[]) {
   (void)argc; (void)argv;
   TEST_START("Image Editor Logic");
@@ -1873,6 +2210,26 @@ int main(int argc, char *argv[]) {
   test_crop_to_selection_no_selection();
   test_crop_to_selection_preserves_content();
   test_crop_to_selection_reversed_drag();
+
+  test_flip_h_mirrors_pixels();
+  test_flip_h_even_width();
+  test_flip_h_single_row();
+  test_flip_v_mirrors_rows();
+  test_flip_v_even_height();
+  test_flip_v_single_col();
+  test_flip_h_double_is_identity();
+  test_flip_v_double_is_identity();
+
+  test_invert_colors_complement();
+  test_invert_colors_alpha_unchanged();
+  test_invert_colors_double_is_identity();
+
+  test_resize_grow_preserves_content();
+  test_resize_shrink_preserves_content();
+  test_resize_grow_fills_white();
+  test_resize_same_is_noop();
+  test_resize_zero_is_rejected();
+  test_resize_over_limit_is_rejected();
 
   TEST_END();
 }
