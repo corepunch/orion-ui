@@ -514,10 +514,9 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       }
       case kToolBarMessageLoadStrip: {
         // wparam = icon tile size (square, pixels); lparam = const char* path
-        // Loads PNG, converts black-on-white artwork to alpha channel,
-        // creates a GL texture (via the renderer), and stores the strip in
-        // win->toolbar_strip.  The window owns the texture; freed on destroy.
-        // Requires graphics to be initialized (running == true).
+        // Loads a PNG (with native RGBA transparency) and stores it as a GL
+        // texture in win->toolbar_strip.  The window owns the texture; freed on
+        // destroy.  Requires graphics to be initialized (running == true).
         const char *path = (const char *)lparam;
         int tile_sz = (int)wparam;
         if (!path || tile_sz <= 0 || !running) break;
@@ -529,17 +528,7 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
           image_free(src);
           break;
         }
-        // Convert: use inverted luminance as alpha; set RGB to 0xC0 (light grey)
-        // so icons are visible on the dark toolbar background.
-        int npx = w * h;
-        for (int i = 0; i < npx; i++) {
-          uint8_t r = src[i*4+0], g = src[i*4+1], b = src[i*4+2];
-          uint8_t lum = (uint8_t)(((int)r*77 + (int)g*150 + (int)b*29) >> 8);
-          src[i*4+0] = 0xC0;
-          src[i*4+1] = 0xC0;
-          src[i*4+2] = 0xC0;
-          src[i*4+3] = (uint8_t)(255 - lum);
-        }
+        // Use the PNG's native RGBA data: real artist colors and PNG alpha channel.
         // Free any previously framework-owned texture via the renderer.
         R_DeleteTexture(win->toolbar_strip_tex);
         uint32_t tex = R_CreateTextureRGBA(w, h, src, R_FILTER_NEAREST, R_WRAP_CLAMP);
