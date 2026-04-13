@@ -65,7 +65,7 @@ static result_t desktop_proc(window_t *win, uint32_t msg,
             return true;
         case kWindowMessagePaint:
             // Draw a simple desktop background.
-            fill_rect(0xff2d5a27, 0, 0, win->frame.w, win->frame.h);
+            fill_rect(0xff403020, 0, 0, win->frame.w, win->frame.h);
             draw_text_small("Orion Shell", 4, 4, 0x88ffffff);
             return true;
         case kWindowMessageDestroy:
