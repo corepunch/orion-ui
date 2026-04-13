@@ -27,17 +27,12 @@ typedef struct {
 // -----------------------------------------------------------------------
 #ifdef BUILD_AS_GEM
 
-// Redirect 'running' to a local stub that is always false so that any
-// standalone event-loop in gem code is never entered.  Uses an
-// identifier-only (#define, not function-like) replacement so it does not
-// conflict with function declarations.
-//
-// All "extern bool running;" declarations in the gem's TU resolve to this
-// stub through the macro, which is consistent with the definition here.
-// Declared static so each compilation unit gets its own copy (important
-// when gem_magic.h might be included in more than one TU).
-static bool __gem_stub_running = false;
-#define running  __gem_stub_running
+// In gem mode, 'ui_is_running()' must not be entered — gems do not own
+// the event loop, the shell does.  Redirect it to a compile-time false so
+// any GEM_MAIN-style event loop is compiled out entirely.
+// 'ui_request_quit()' is silenced: a gem must not shut down the shell.
+#define ui_is_running()   (false)
+#define ui_request_quit() ((void)0)
 
 // GEM_DEFINE — emit gem_get_interface() with explicit metadata.
 //
@@ -78,7 +73,7 @@ static bool __gem_stub_running = false;
 //
 // In .gem mode the following are automatically handled:
 //   - main() is renamed to gem_main() and called as the gem's init fn.
-//   - while(running){…} is not entered ('running' stub is always false).
+//   - while(ui_is_running()){…} is not entered (returns false in gem mode).
 //
 // IMPORTANT caveats for GEM_MAIN programs:
 //   - ui_init_graphics() is safe to call multiple times; the framework
@@ -100,7 +95,7 @@ static bool __gem_stub_running = false;
 //       ui_init_graphics(…);   // safe — no-op if already initialized
 //       window_t *w = create_window(…);
 //       show_window(w, true);
-//       while (running) { … } // not entered in gem mode
+//       while (ui_is_running()) { … } // not entered in gem mode
 //   #ifndef BUILD_AS_GEM
 //       destroy_window(w);
 //       ui_shutdown_graphics();

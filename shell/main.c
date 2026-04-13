@@ -24,7 +24,7 @@ static result_t desktop_proc(window_t *win, uint32_t msg,
             draw_text_small("Orion Shell", 4, 4, 0x88ffffff);
             return true;
         case kWindowMessageDestroy:
-            running = false;
+            ui_request_quit();
             return true;
         default:
             return false;
@@ -77,7 +77,7 @@ int main(int argc, char *argv[]) {
     // own windows AND windows created by loaded gems, because both use
     // the same liborion.so instance and therefore the same window list).
     ui_event_t e;
-    while (running) {
+    while (ui_is_running()) {
         while (get_message(&e))
             dispatch_message(&e);
         // Check whether any loaded gem's main window was closed during

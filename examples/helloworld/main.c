@@ -9,8 +9,6 @@
 #include "../../ui.h"
 #include "../../gem_magic.h"
 
-extern bool running;
-
 // Button ID constant
 #define ID_BUTTON_CLICKME 101
 
@@ -63,7 +61,7 @@ result_t hello_window_proc(window_t *win, uint32_t msg, uint32_t wparam, void *l
        return false;
     
     case kWindowMessageDestroy:
-      running = false;
+      ui_request_quit();
       return true;
       
     default:
@@ -131,7 +129,7 @@ int main(int argc, char* argv[]) {
 
   // Main event loop
   ui_event_t e;
-  while (running) {
+  while (ui_is_running()) {
     // Process events
     while (get_message(&e)) {
       dispatch_message(&e);

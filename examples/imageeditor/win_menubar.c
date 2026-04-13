@@ -195,7 +195,7 @@ static void handle_menu_command(uint16_t id) {
       break;
 
     case ID_FILE_QUIT:
-      running = false;
+      ui_request_quit();
       break;
 
     case ID_EDIT_UNDO:

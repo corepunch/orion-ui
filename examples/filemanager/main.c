@@ -8,8 +8,6 @@
 
 #define USE_LUA
 
-extern bool running;
-
 // ---------------------------------------------------------------------------
 // filemanager_proc — thin wrapper around win_filelist.
 // All directory listing, sorting, and navigation is handled inside win_filelist.
@@ -51,7 +49,7 @@ static result_t filemanager_proc(window_t *win, uint32_t msg,
     }
 
     case kWindowMessageDestroy:
-      running = false;
+      ui_request_quit();
       return win_filelist(win, msg, wparam, lparam);
 
     default:
@@ -111,7 +109,7 @@ int main(int argc, char *argv[]) {
   show_window(main_window, true);
 
   ui_event_t e;
-  while (running) {
+  while (ui_is_running()) {
     while (get_message(&e)) dispatch_message(&e);
     repost_messages();
   }

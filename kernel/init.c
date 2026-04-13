@@ -163,6 +163,19 @@ void ui_shutdown_graphics(void) {
   g_graphics_initialized = false;
 }
 
+// Application lifecycle accessors.
+// 'running' is the authoritative flag defined in user/dialog.c; these
+// functions are the only public interface to it.
+bool ui_is_running(void) {
+  extern bool running;
+  return running;
+}
+
+void ui_request_quit(void) {
+  extern bool running;
+  running = false;
+}
+
 // Begin a render frame: make GL context current and bind platform framebuffer.
 // Must be called once per frame before any OpenGL drawing.
 // No-op when graphics have not been initialized (e.g. headless unit tests).

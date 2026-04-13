@@ -6,8 +6,6 @@
 #include "imageeditor.h"
 #include "../../gem_magic.h"
 
-extern bool running;
-
 // Global application state
 app_state_t *g_app = NULL;
 
@@ -161,7 +159,7 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  while (running) {
+  while (ui_is_running()) {
     ui_event_t e;
     while (get_message(&e)) {
       if (!translate_accelerator(g_app->menubar_win, &e, g_app->accel))
