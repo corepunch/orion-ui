@@ -67,7 +67,7 @@ void shutdown_white_texture(void) {
 }
 
 static result_t win_desktop(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
-  extern void fill_rect(int color, int x, int y, int w, int h);
+  extern void fill_rect(uint32_t color, int x, int y, int w, int h);
   switch (msg) {
     case kWindowMessagePaint:
       fill_rect(0xff6B3529, 0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight));

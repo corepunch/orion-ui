@@ -54,9 +54,9 @@ int main(int argc, char *argv[]) {
     TEST_ASSERT(STATUSBAR_HEIGHT == 12, "STATUSBAR_HEIGHT has correct value");
     TEST_PASS("STATUSBAR_HEIGHT constant is correct");
     
-    // Test 4: COLOR_STATUSBAR_BG is defined
-    TEST_ASSERT(COLOR_STATUSBAR_BG == 0xff2c2c2c, "COLOR_STATUSBAR_BG has correct value");
-    TEST_PASS("COLOR_STATUSBAR_BG is defined correctly");
+    // Test 4: kColorStatusbarBg default value is correct
+    TEST_ASSERT(get_sys_color(kColorStatusbarBg) == 0xff2c2c2c, "kColorStatusbarBg has correct default value");
+    TEST_PASS("kColorStatusbarBg default is defined correctly");
     
     // Test 5: Initialize graphics (headless mode)
     if (!ui_init_graphics(UI_INIT_DESKTOP|UI_INIT_TRAY, "StatusBar Test", 320, 240)) {

@@ -19,7 +19,7 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
     case kWindowMessageCreate:
       return true;
     case kWindowMessagePaint:
-      fill_rect(COLOR_PANEL_DARK_BG, 0, 0, win->frame.w, win->frame.h);
+      fill_rect(get_sys_color(kColorWindowDarkBg), 0, 0, win->frame.w, win->frame.h);
       return false;
     case kWindowMessageResize:
       // Keep the canvas child window in sync with the resized document window

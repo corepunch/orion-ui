@@ -87,7 +87,7 @@ static uint8_t *load_png_rgba(const char *path, int *out_w, int *out_h) {
   // Convert to RGBA: treat the source as black-on-white artwork.
   // Use inverted luminance as alpha so that black icon lines are fully
   // opaque and the white background is transparent.  Icon pixels are
-  // rendered in COLOR_TEXT_NORMAL (light gray) so they are visible on
+  // rendered in kColorTextNormal (light gray) so they are visible on
   // the dark panel background.
   uint8_t *rgba = malloc((size_t)w * h * 4);
   if (rgba) {
@@ -198,36 +198,36 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
 
     case kWindowMessagePaint: {
       // Client area: FG/BG color swatches + fill mode selector.
-      fill_rect(COLOR_PANEL_DARK_BG, 0, 0, win->frame.w, win->frame.h);
-      fill_rect(COLOR_DARK_EDGE, win->frame.w - 1, 0, 1, win->frame.h);
-      fill_rect(COLOR_DARK_EDGE, 0, win->frame.h - 1, win->frame.w, 1);
+      fill_rect(get_sys_color(kColorWindowDarkBg), 0, 0, win->frame.w, win->frame.h);
+      fill_rect(get_sys_color(kColorDarkEdge), win->frame.w - 1, 0, 1, win->frame.h);
+      fill_rect(get_sys_color(kColorDarkEdge), 0, win->frame.h - 1, win->frame.w, 1);
 
       int sy = PALETTE_LABEL_Y;
-      draw_text_small("FG", 2, sy, COLOR_TEXT_DISABLED);
-      draw_text_small("BG", TB_SPACING+2, sy, COLOR_TEXT_DISABLED);
+      draw_text_small("FG", 2, sy, get_sys_color(kColorTextDisabled));
+      draw_text_small("BG", TB_SPACING+2, sy, get_sys_color(kColorTextDisabled));
       sy += PALETTE_LABEL_H;
       if (g_app) {
         #define DrawSwatch(swatch_col, x, color) \
           fill_rect(swatch_col, x+1,  sy - 1, TB_SPACING-2, PALETTE_SWATCH_H); \
           fill_rect(color, x+2,  sy, TB_SPACING-4, PALETTE_SWATCH_H-2); 
 
-        DrawSwatch(COLOR_DARK_EDGE, 0, g_app->fg_color);
-        DrawSwatch(COLOR_DARK_EDGE, TB_SPACING, g_app->bg_color);
+        DrawSwatch(get_sys_color(kColorDarkEdge), 0, g_app->fg_color);
+        DrawSwatch(get_sys_color(kColorDarkEdge), TB_SPACING, g_app->bg_color);
 
         // Fill mode row: show "Outline" / "Filled" mini toggles
         int fy = sy + PALETTE_SWATCH_H;
-        draw_text_small("Fill:", 2, fy, COLOR_TEXT_DISABLED);
+        draw_text_small("Fill:", 2, fy, get_sys_color(kColorTextDisabled));
         fy += PALETTE_FILL_LABEL_H;
         // Outline button (active when !shape_filled)
-        uint32_t outline_col = g_app->shape_filled ? COLOR_BUTTON_BG : COLOR_FOCUSED;
-        fill_rect(COLOR_DARK_EDGE,  1,           fy,   TB_SPACING-2, PALETTE_FILL_ROW_H);
+        uint32_t outline_col = g_app->shape_filled ? get_sys_color(kColorButtonBg) : get_sys_color(kColorFocusRing);
+        fill_rect(get_sys_color(kColorDarkEdge),  1,           fy,   TB_SPACING-2, PALETTE_FILL_ROW_H);
         fill_rect(outline_col,      2,           fy+1, TB_SPACING-4, PALETTE_FILL_ROW_H-2);
-        draw_text_small("O", 5,                 fy+2, COLOR_TEXT_NORMAL);
+        draw_text_small("O", 5,                 fy+2, get_sys_color(kColorTextNormal));
         // Filled button (active when shape_filled)
-        uint32_t filled_col = g_app->shape_filled ? COLOR_FOCUSED : COLOR_BUTTON_BG;
-        fill_rect(COLOR_DARK_EDGE,  TB_SPACING+1, fy, TB_SPACING-2, PALETTE_FILL_ROW_H);
+        uint32_t filled_col = g_app->shape_filled ? get_sys_color(kColorFocusRing) : get_sys_color(kColorButtonBg);
+        fill_rect(get_sys_color(kColorDarkEdge),  TB_SPACING+1, fy, TB_SPACING-2, PALETTE_FILL_ROW_H);
         fill_rect(filled_col,       TB_SPACING+2, fy+1, TB_SPACING-4, PALETTE_FILL_ROW_H-2);
-        draw_text_small("F", TB_SPACING+5,       fy+2, COLOR_TEXT_NORMAL);
+        draw_text_small("F", TB_SPACING+5,       fy+2, get_sys_color(kColorTextNormal));
       }
       return true;
     }

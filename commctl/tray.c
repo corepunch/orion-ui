@@ -74,8 +74,8 @@ result_t win_tray(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       register_window_hook(kWindowMessageDestroy, on_win_destroyed, win);
       return true;
     case kWindowMessagePaint:
-      draw_icon16(icon16_appicon, 4, 1, COLOR_DARK_EDGE);
-      draw_icon16(icon16_appicon, 3, 0, COLOR_TEXT_NORMAL);
+      draw_icon16(icon16_appicon, 4, 1, get_sys_color(kColorDarkEdge));
+      draw_icon16(icon16_appicon, 3, 0, get_sys_color(kColorTextNormal));
       return false;
     case kWindowMessageCommand:
       if (HIWORD(wparam) == kButtonNotificationClicked) {

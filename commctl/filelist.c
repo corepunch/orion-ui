@@ -143,6 +143,7 @@ static bool fl_push_item(filelist_data_t *data,
   fileitem_t *it = &data->items[data->count++];
   it->path         = path_heap;
   it->is_directory = is_dir;
+  it->is_hidden    = is_hidden;
   it->size         = size;
   it->modified     = modified;
   bool is_parent   = fl_is_parent_sentinel(path_heap);
@@ -236,11 +237,14 @@ static void fl_load_directory(window_t *win, filelist_data_t *data) {
   for (int i = 0; i < data->count; i++) {
     const char *base = strrchr(data->items[i].path, '/');
     base = base ? base + 1 : data->items[i].path;
+    uint32_t col = data->items[i].is_hidden  ? get_sys_color(kColorTextDisabled)
+                 : data->items[i].is_directory ? get_sys_color(kColorFolderText)
+                                              : get_sys_color(kColorTextNormal);
     send_message(win, CVM_ADDITEM, 0,
       &(columnview_item_t){
         .text     = base,
         .icon     = data->items[i].icon,
-        .color    = data->items[i].color,
+        .color    = col,
         .userdata = data->items[i].is_directory ? 1u : 0u,
       });
   }

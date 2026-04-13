@@ -46,8 +46,8 @@ result_t hello_window_proc(window_t *win, uint32_t msg, uint32_t wparam, void *l
        int text_y = 8;
       
        // Draw text with shadow effect
-       draw_text_small(text, text_x + 1, text_y + 1, COLOR_DARK_EDGE);
-       draw_text_small(text, text_x, text_y, COLOR_TEXT_NORMAL);
+       draw_text_small(text, text_x + 1, text_y + 1, get_sys_color(kColorDarkEdge));
+       draw_text_small(text, text_x, text_y, get_sys_color(kColorTextNormal));
        return false;
      }
     

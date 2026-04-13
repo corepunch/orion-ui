@@ -83,32 +83,32 @@ static void paint_td(window_t *win, const td_state_t *st) {
   text_options_t *opts = st->opts;
 
   // "Text:" label
-  draw_text_small("Text:", TD_LBL_X, 3, COLOR_TEXT_DISABLED);
+  draw_text_small("Text:", TD_LBL_X, 3, get_sys_color(kColorTextDisabled));
 
   // Size label
   char size_buf[32];
   snprintf(size_buf, sizeof(size_buf), "Size: %dpx", opts->font_size);
-  draw_text_small(size_buf, TD_LBL_X, TD_SIZE_LBL_Y, COLOR_TEXT_DISABLED);
+  draw_text_small(size_buf, TD_LBL_X, TD_SIZE_LBL_Y, get_sys_color(kColorTextDisabled));
 
   // Size slider track (16 segments)
   const int SEGS = 16;
   for (int seg = 0; seg < SEGS; seg++) {
     int x0 = TD_SLIDER_X + seg       * TD_SLIDER_W / SEGS;
     int x1 = TD_SLIDER_X + (seg + 1) * TD_SLIDER_W / SEGS;
-    fill_rect((int)COLOR_BUTTON_BG, x0, TD_SLIDER_Y, x1 - x0, TD_SLIDER_H);
+    fill_rect(get_sys_color(kColorButtonBg), x0, TD_SLIDER_Y, x1 - x0, TD_SLIDER_H);
   }
-  fill_rect((int)COLOR_DARK_EDGE, TD_SLIDER_X, TD_SLIDER_Y, TD_SLIDER_W, 1);
+  fill_rect(get_sys_color(kColorDarkEdge), TD_SLIDER_X, TD_SLIDER_Y, TD_SLIDER_W, 1);
 
   // Slider thumb
   int tx = size_to_slider_x(opts->font_size);
-  fill_rect((int)COLOR_FLARE, tx - 1, TD_SLIDER_Y - 1, 3, TD_SLIDER_H + 2);
+  fill_rect(get_sys_color(kColorFlare), tx - 1, TD_SLIDER_Y - 1, 3, TD_SLIDER_H + 2);
 
   // Color label + swatch
-  draw_text_small("Color:", TD_LBL_X, TD_COLOR_Y + 2, COLOR_TEXT_DISABLED);
+  draw_text_small("Color:", TD_LBL_X, TD_COLOR_Y + 2, get_sys_color(kColorTextDisabled));
   int sw_x = TD_LBL_X + 6 * 6 + 2; // after "Color:" text
-  fill_rect((int)COLOR_DARK_EDGE, sw_x - 1, TD_COLOR_Y - 1,
+  fill_rect(get_sys_color(kColorDarkEdge), sw_x - 1, TD_COLOR_Y - 1,
             TD_SWATCH_W + 2, TD_SWATCH_H + 2);
-  fill_rect((int)opts->color, sw_x, TD_COLOR_Y,
+  fill_rect(opts->color, sw_x, TD_COLOR_Y,
             TD_SWATCH_W, TD_SWATCH_H);
 
   (void)win;

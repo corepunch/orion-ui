@@ -72,7 +72,7 @@ static GLuint load_banner_texture(void) {
 // Helpers to create labeled sub-windows
 // ──────────────────────────────────────────────────────────────────
 
-#define DIM  ((void *)(uintptr_t)COLOR_TEXT_DISABLED)
+#define DIM  ((void *)(uintptr_t)kColorTextDisabled)
 
 static void make_label(window_t *parent, const char *text, int y, void *color) {
   create_window(text, WINDOW_NOTITLE | WINDOW_NOFILL,

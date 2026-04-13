@@ -458,12 +458,12 @@ result_t win_terminal(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         win->frame.w - WINDOW_PADDING * 2,
         win->frame.h - WINDOW_PADDING * 2
       };
-      draw_text_wrapped(s->textbuf->data, &viewport, COLOR_TEXT_NORMAL);
+      draw_text_wrapped(s->textbuf->data, &viewport, get_sys_color(kColorTextNormal));
       
       if (s->waiting_for_input && !s->process_finished) {
         int y = win->frame.h - WINDOW_PADDING - CHAR_HEIGHT + win->scroll[1];
-        draw_text_small(s->input_buffer, WINDOW_PADDING, y, COLOR_TEXT_NORMAL);
-        draw_icon8(ICON_CURSOR, WINDOW_PADDING + strwidth(s->input_buffer), y, COLOR_TEXT_NORMAL);
+        draw_text_small(s->input_buffer, WINDOW_PADDING, y, get_sys_color(kColorTextNormal));
+        draw_icon8(ICON_CURSOR, WINDOW_PADDING + strwidth(s->input_buffer), y, get_sys_color(kColorTextNormal));
       }
       
       return true;

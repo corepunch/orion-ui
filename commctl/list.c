@@ -27,10 +27,10 @@ result_t win_list(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     case kWindowMessagePaint:
       for (uint32_t i = 0; i < cb->cursor_pos; i++) {
         if (i == win->cursor_pos) {
-          fill_rect(COLOR_TEXT_NORMAL, 0, i*LIST_HEIGHT, win->frame.h, LIST_HEIGHT);
-          draw_text_small(texts[i], LIST_X, i*LIST_HEIGHT+LIST_Y, COLOR_PANEL_BG);
+          fill_rect(get_sys_color(kColorTextNormal), 0, i*LIST_HEIGHT, win->frame.w, LIST_HEIGHT);
+          draw_text_small(texts[i], LIST_X, i*LIST_HEIGHT+LIST_Y, get_sys_color(kColorWindowBg));
         } else {
-          draw_text_small(texts[i], LIST_X, i*LIST_HEIGHT+LIST_Y, COLOR_TEXT_NORMAL);
+          draw_text_small(texts[i], LIST_X, i*LIST_HEIGHT+LIST_Y, get_sys_color(kColorTextNormal));
         }
       }
       return true;
