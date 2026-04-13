@@ -6,7 +6,7 @@
 #include "text.h"
 
 // Rectangle drawing functions
-void fill_rect(int color, int x, int y, int w, int h);
+void fill_rect(uint32_t color, int x, int y, int w, int h);
 void draw_rect(int tex, int x, int y, int w, int h);
 void draw_rect_ex(int tex, int x, int y, int w, int h, int type, float alpha);
 void draw_sprite_region(int tex, int x, int y, int w, int h,

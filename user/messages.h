@@ -190,25 +190,41 @@ typedef enum {
   icon8_count,
 } icon8_t;
 
-// Base UI Colors
-#define COLOR_PANEL_BG       0xff3c3c3c  // main panel or window background
-#define COLOR_PANEL_DARK_BG  0xff2c2c2c  // main panel or window background
-#define COLOR_STATUSBAR_BG   0xff2c2c2c  // status bar background
-#define COLOR_LIGHT_EDGE     0xff7f7f7f  // top-left edge for beveled elements
-#define COLOR_DARK_EDGE      0xff1a1a1a  // bottom-right edge for bevel
-#define COLOR_FLARE          0xffcfcfcf  // top-left edge for beveled elements
-#define COLOR_FOCUSED        0xff5EC4F3
+// System color indices — analogous to WinAPI GetSysColor(nIndex).
+// Access via get_sys_color(kColorXxx); change via set_sys_colors().
+typedef enum {
+  kColorWindowBg             = 0,   // general panel / dialog background
+  kColorWindowDarkBg         = 1,   // dark secondary panel background
+  kColorWorkspaceBg          = 2,   // document / canvas workspace area
+  kColorActiveTitlebar       = 3,   // focused window title bar background
+  kColorActiveTitlebarText   = 4,   // focused window title bar text
+  kColorInactiveTitlebar     = 5,   // unfocused window title bar background
+  kColorInactiveTitlebarText = 6,   // unfocused window title bar text
+  kColorStatusbarBg          = 7,   // status bar background
+  kColorLightEdge            = 8,   // highlight edge of beveled elements
+  kColorDarkEdge             = 9,   // shadow edge of beveled elements
+  kColorFlare                = 10,  // corner flare of beveled elements
+  kColorFocusRing            = 11,  // keyboard focus highlight ring
+  kColorButtonBg             = 12,  // button background (unpressed)
+  kColorButtonInner          = 13,  // inner fill of button
+  kColorButtonHover          = 14,  // button hover state
+  kColorTextNormal           = 15,  // standard text
+  kColorTextDisabled         = 16,  // disabled / inactive text
+  kColorTextError            = 17,  // error message text
+  kColorTextSuccess          = 18,  // success message text
+  kColorBorderFocus          = 19,  // focused item dark outline
+  kColorBorderActive         = 20,  // active item border
+  kColorFolderText           = 21,  // folder entry text in file lists
+  kColorCount                = 22
+} sys_color_idx_t;
 
-// Additional UI Colors
-#define COLOR_BUTTON_BG      0xff404040  // button background (unpressed)
-#define COLOR_BUTTON_INNER   0xff505050  // inner fill of button
-#define COLOR_BUTTON_HOVER   0xff5a5a5a  // slightly brighter for hover state
-#define COLOR_TEXT_NORMAL    0xffc0c0c0  // standard text color
-#define COLOR_TEXT_DISABLED  0xff808080  // for disabled/inactive text
-#define COLOR_TEXT_ERROR     0xffff4444  // red text for errors
-#define COLOR_TEXT_SUCCESS   0xff44ff44  // green text for success messages
-#define COLOR_BORDER_FOCUS   0xff101010  // very dark outline for focused item
-#define COLOR_BORDER_ACTIVE  0xff808080  // light gray for active border
+// Runtime-accessible theme table (defined in user/theme.c).
+extern uint32_t g_sys_colors[kColorCount];
+
+// Inline color lookup — equivalent to WinAPI GetSysColor(nIndex).
+static inline uint32_t get_sys_color(sys_color_idx_t idx) {
+  return g_sys_colors[idx];
+}
 
 // Macros for creating rectangles
 #define MAKERECT(X, Y, W, H) (&(rect_t){X, Y, W, H})
