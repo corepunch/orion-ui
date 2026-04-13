@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include "../platform/platform.h"
 #include "../user/gl_compat.h"
@@ -209,5 +210,37 @@ void ui_end_frame(void) {
 // Delay execution
 void ui_delay(unsigned int milliseconds) {
   axSleep(milliseconds);
+}
+
+// Return the directory that contains the running executable (no trailing slash).
+// The returned pointer is to a static buffer valid until the next call.
+// Returns "" on any error.
+const char *ui_get_exe_dir(void) {
+  static char buf[4096];
+  buf[0] = '\0';
+
+#if defined(_WIN32) || defined(_WIN64)
+  #include <windows.h>
+  DWORD len = GetModuleFileNameA(NULL, buf, (DWORD)sizeof(buf));
+  if (len == 0 || len >= (DWORD)sizeof(buf)) { buf[0] = '\0'; return buf; }
+  char *last = strrchr(buf, '\\');
+  if (last) *last = '\0';
+#elif defined(__APPLE__)
+  #include <mach-o/dyld.h>
+  uint32_t size = (uint32_t)sizeof(buf);
+  if (_NSGetExecutablePath(buf, &size) != 0) { buf[0] = '\0'; return buf; }
+  char *last = strrchr(buf, '/');
+  if (last) *last = '\0';
+#else
+  /* Linux / other POSIX */
+  #include <unistd.h>
+  ssize_t len = readlink("/proc/self/exe", buf, sizeof(buf) - 1);
+  if (len <= 0) { buf[0] = '\0'; return buf; }
+  buf[len] = '\0';
+  char *last = strrchr(buf, '/');
+  if (last) *last = '\0';
+#endif
+
+  return buf;
 }
 

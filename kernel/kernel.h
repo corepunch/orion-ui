@@ -38,6 +38,11 @@ void ui_end_frame(void);
 // Timing functions
 void ui_delay(unsigned int milliseconds);
 
+// Returns the directory that contains the running executable (no trailing
+// slash, static buffer).  Returns "" on error.  Useful for resolving
+// paths to data files (e.g. "<exe_dir>/../share/<appname>/icon.png").
+const char *ui_get_exe_dir(void);
+
 // Modifier state accessor — returns current AX_MOD_* flags
 uint32_t ui_get_mod_state(void);
 
