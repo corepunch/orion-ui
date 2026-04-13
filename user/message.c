@@ -438,8 +438,7 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
               int by = rect.y + row * bsz + 2;
               if (strip) {
                 // Draw button background (pressed/unpressed)
-                rect_t btn_r = {bx - 2, by - 2, bsz - 2, bsz - 2};
-                draw_button(&btn_r, 1, 1, but->active);
+                draw_button(&(rect_t){bx-2,by-2,bsz-2,bsz-2}, 1, 1, but->active);
                 int px = but->active ? 1 : 0;
                 int icon_index = but->icon;
                 if (strip->cols > 0) {
@@ -449,7 +448,7 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
                   float v0 = (float)(srow * strip->icon_h) / (float)strip->sheet_h;
                   float u1 = u0 + (float)strip->icon_w / (float)strip->sheet_w;
                   float v1 = v0 + (float)strip->icon_h / (float)strip->sheet_h;
-                  draw_sprite_region((int)strip->tex, bx + px, by + px,
+                  draw_sprite_region((int)strip->tex, bx + px - 1, by + px - 1,
                                      strip->icon_w, strip->icon_h, u0, v0, u1, v1, 1.0f);
                 }
               } else {
