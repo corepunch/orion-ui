@@ -59,28 +59,6 @@ static result_t shell_menubar_proc(window_t *win, uint32_t msg,
 }
 
 // ---------------------------------------------------------------------------
-// Desktop window
-// ---------------------------------------------------------------------------
-
-static result_t desktop_proc(window_t *win, uint32_t msg,
-                               uint32_t wparam, void *lparam) {
-    switch (msg) {
-        case kWindowMessageCreate:
-            return true;
-        case kWindowMessagePaint:
-            // Draw a simple desktop background.
-            fill_rect(0xff403020, 0, 0, win->frame.w, win->frame.h);
-            draw_text_small("Orion Shell", 4, 4, 0x88ffffff);
-            return true;
-        case kWindowMessageDestroy:
-            ui_request_quit();
-            return true;
-        default:
-            return false;
-    }
-}
-
-// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 
@@ -106,14 +84,6 @@ int main(int argc, char *argv[]) {
         NULL, shell_menubar_proc, NULL);
     shell_rebuild_menubar();
     show_window(g_menubar, true);
-
-    // Create a background desktop window (no title bar, always at bottom).
-    window_t *desktop = create_window(
-        "Desktop",
-        WINDOW_NOTITLE | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
-        MAKERECT(0, MENUBAR_HEIGHT, sw, sh - MENUBAR_HEIGHT),
-        NULL, desktop_proc, NULL);
-    show_window(desktop, true);
 
     // Load .gem files named on the command line, or print usage.
     if (argc > 1) {

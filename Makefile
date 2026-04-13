@@ -317,7 +317,7 @@ clean:
 # Help
 .PHONY: help
 help:
-	@echo "Goldie UI Framework - Build System"
+	@echo "Orion UI Framework - Build System"
 	@echo ""
 	@echo "Available targets:"
 	@echo "  all       - Build library, examples, gems, and shell"
