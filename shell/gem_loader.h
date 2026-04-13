@@ -18,7 +18,16 @@ void shell_unload_gem(window_t *window);
 const char *shell_get_gem_for_extension(const char *extension);
 
 // Shut down and dlclose every loaded gem.  Called on shell exit.
+// NOTE: call shell_notify_gem_shutdown() first (while the GL context is still
+// active), then ui_shutdown_graphics() (destroys windows while gem procs are
+// still in memory), then this function to release the library handles.
 void shell_cleanup_all_gems(void);
+
+// Call every loaded gem's shutdown() function while the GL context is still
+// active.  Does NOT dlclose() — gem procs remain valid so that window
+// kWindowMessageDestroy handlers work correctly when ui_shutdown_graphics()
+// later destroys the gem windows.  Call this before ui_shutdown_graphics().
+void shell_notify_gem_shutdown(void);
 
 // Scan all loaded gems and unload any whose main window has been destroyed.
 // Call this from the shell's main loop.  Returns the number unloaded.

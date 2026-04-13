@@ -139,7 +139,28 @@ int shell_check_closed_gems(void) {
 }
 
 // ---------------------------------------------------------------------------
+// Call every loaded gem's shutdown() while the GL context is still active.
+// Does NOT dlclose(): gem procs must remain valid so that window
+// kWindowMessageDestroy handlers work when ui_shutdown_graphics() later
+// tears down the gem windows.  Call before ui_shutdown_graphics().
+void shell_notify_gem_shutdown(void) {
+    for (loaded_gem_t *lg = gems_head; lg; lg = lg->next) {
+        if (lg->iface && lg->iface->shutdown)
+            lg->iface->shutdown();
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Release every loaded gem: dlclose() and free loader records.
+// Call AFTER ui_shutdown_graphics() — all windows are gone and no more
+// window proc calls will be made into gem code.
+// NOTE: does NOT call iface->shutdown(); use shell_notify_gem_shutdown() for that.
 void shell_cleanup_all_gems(void) {
-    while (gems_head)
-        shell_unload_gem(gems_head->main_window);
+    while (gems_head) {
+        loaded_gem_t *lg = gems_head;
+        gems_head = lg->next;
+        dlclose(lg->handle);
+        free(lg->path);
+        free(lg);
+    }
 }

@@ -86,7 +86,13 @@ int main(int argc, char *argv[]) {
         repost_messages();
     }
 
-    shell_cleanup_all_gems();
+    // 1. Call gem shutdown() functions while the GL context is still active
+    //    (e.g. imageeditor deletes OpenGL textures in its shutdown).
+    shell_notify_gem_shutdown();
+    // 2. Destroy all windows while gem code is still mapped in memory, so
+    //    any kWindowMessageDestroy handlers owned by a gem remain valid.
     ui_shutdown_graphics();
+    // 3. Now it is safe to dlclose() — no more window proc calls will be made.
+    shell_cleanup_all_gems();
     return 0;
 }
