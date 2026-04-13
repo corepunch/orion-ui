@@ -130,7 +130,7 @@ PLATFORM_LDFLAGS = -L$(LIB_DIR) -lplatform
 ORION_LDFLAGS = -L$(LIB_DIR) -lorion
 
 # .gem output directory and target list
-GEM_DIR  = $(LIB_DIR)/gems
+GEM_DIR  = $(BUILD_DIR)/gem
 GEM_BINS = $(GEM_DIR)/imageeditor.gem \
            $(GEM_DIR)/filemanager.gem \
            $(GEM_DIR)/helloworld.gem

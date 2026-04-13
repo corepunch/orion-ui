@@ -11,7 +11,7 @@ Orion programs can be compiled in two ways:
 | Mode | Output | Runs as |
 |---|---|---|
 | **Standalone** | executable (`build/bin/myapp`) | `./build/bin/myapp` |
-| **Gem** | shared library (`build/lib/gems/myapp.gem`) | loaded by `orion-shell` |
+| **Gem** | shared library (`build/gem/myapp.gem`) | loaded by `orion-shell` |
 
 Both modes share the same source code. The difference is entirely in how the
 binary is built and how the event loop is driven.
@@ -127,11 +127,11 @@ The Makefile automatically:
 
 ```bash
 # Load a gem at shell startup:
-./build/bin/orion-shell build/lib/gems/myapp.gem
+./build/bin/orion-shell build/gem/myapp.gem
 
 # Load multiple gems:
-./build/bin/orion-shell build/lib/gems/imageeditor.gem \
-                         build/lib/gems/filemanager.gem
+./build/bin/orion-shell build/gem/imageeditor.gem \
+                         build/gem/filemanager.gem
 ```
 
 Gems listed on the command line are loaded in order after the shell creates

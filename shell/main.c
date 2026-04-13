@@ -120,11 +120,11 @@ int main(int argc, char *argv[]) {
         }
     } else {
         printf("Usage: %s <gem1.gem> [gem2.gem] ...\n", argv[0]);
-        printf("       (loading default gems from build/lib/gems/)\n");
+        printf("       (loading default gems from build/gem/)\n");
 
         // Default: try to load whatever gems were built.
         const char *defaults[] = {
-            "build/lib/gems/filemanager.gem",
+            "build/gem/filemanager.gem",
             NULL
         };
         for (int i = 0; defaults[i]; i++) {
