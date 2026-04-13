@@ -37,18 +37,18 @@ static result_t desktop_proc(window_t *win, uint32_t msg,
 
 int main(int argc, char *argv[]) {
     if (!ui_init_graphics(UI_INIT_DESKTOP | UI_INIT_TRAY,
-                          "Orion Shell", 1024, 768)) {
+                          "Orion Shell", 640, 480)) {
         fprintf(stderr, "shell: failed to initialise graphics\n");
         return 1;
     }
 
     // Create a background desktop window (no title bar, always at bottom).
-    int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
-    int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
+    int sw = 480;//ui_get_system_metrics(kSystemMetricScreenWidth);
+    int sh = 320;//ui_get_system_metrics(kSystemMetricScreenHeight);
     window_t *desktop = create_window(
         "Desktop",
         WINDOW_NOTITLE | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
-        MAKERECT(0, 0, sw, sh),
+        MAKERECT(16, 16, sw, sh),
         NULL, desktop_proc, NULL);
     show_window(desktop, true);
 
