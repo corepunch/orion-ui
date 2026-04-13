@@ -13,6 +13,10 @@
 bool ui_init_prog(void);
 void ui_shutdown_prog(void);
 
+// 'running' is the authoritative flag defined in user/dialog.c.
+// Declare it once at file scope so all functions in this file can access it.
+extern bool running;
+
 // Set to true after ui_init_graphics() succeeds; guards begin/end frame.
 static bool g_graphics_initialized = false;
 
@@ -76,6 +80,10 @@ result_t win_tray(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 
 // Initialize graphics context (platform + OpenGL)
 bool ui_init_graphics(int flags, const char *title, int width, int height) {
+  // Guard against double-initialization (e.g. when a gem calls this
+  // after the shell has already initialized the context).
+  if (g_graphics_initialized) return true;
+
   axInit();
 
   if (!axCreateWindow(title, width * UI_WINDOW_SCALE, height * UI_WINDOW_SCALE, 0)) {
@@ -157,6 +165,29 @@ void ui_shutdown_graphics(void) {
 
   axShutdown();
   g_graphics_initialized = false;
+}
+
+// Application lifecycle accessors.
+// These are the only public interface to 'running'.
+bool ui_is_running(void) {
+  return running;
+}
+
+void ui_request_quit(void) {
+  running = false;
+}
+
+// Shell-execute hook — analogous to Win32 ShellExecute().
+static ui_open_file_handler_t g_open_file_handler = NULL;
+
+void ui_register_open_file_handler(ui_open_file_handler_t handler) {
+  g_open_file_handler = handler;
+}
+
+bool ui_open_file(const char *path) {
+  if (g_open_file_handler)
+    return g_open_file_handler(path);
+  return false;
 }
 
 // Begin a render frame: make GL context current and bind platform framebuffer.

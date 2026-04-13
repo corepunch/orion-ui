@@ -254,8 +254,13 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       int clicked_ident = (int)wparam;
       send_message(win, kToolBarMessageSetActiveButton, (uint32_t)clicked_ident, NULL);
       if (g_app) {
-        send_message(g_app->menubar_win, kWindowMessageCommand,
-                     MAKEDWORD((uint16_t)clicked_ident, kButtonNotificationClicked), lparam);
+        if (g_app->menubar_win) {
+          send_message(g_app->menubar_win, kWindowMessageCommand,
+                       MAKEDWORD((uint16_t)clicked_ident, kButtonNotificationClicked), lparam);
+        } else {
+          // In gem mode menubar_win is NULL; dispatch directly.
+          handle_menu_command((uint16_t)clicked_ident);
+        }
       }
       return true;
     }

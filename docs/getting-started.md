@@ -27,6 +27,12 @@ make library
 # Build all example programs
 make examples
 
+# Build loadable .gem plugins + orion-shell (POSIX only)
+make gems shell
+
+# Build everything
+make all
+
 # Build and run the test suite
 make test
 ```
@@ -37,6 +43,13 @@ make test
 ./build/bin/helloworld
 ./build/bin/filemanager
 ./build/bin/imageeditor
+```
+
+To run examples as gems under the shell:
+
+```bash
+./build/bin/orion-shell build/gem/imageeditor.gem \
+                         build/gem/filemanager.gem
 ```
 
 ## Running at 1× Scale
@@ -54,8 +67,6 @@ make examples CFLAGS="-DUI_WINDOW_SCALE=1"
 ```c
 #include "ui.h"
 
-extern bool running;
-
 static result_t my_proc(window_t *win, uint32_t msg,
                         uint32_t wparam, void *lparam) {
   if (msg == kWindowMessagePaint) {
@@ -72,9 +83,9 @@ int main(void) {
                                 NULL, my_proc, NULL);
   show_window(win, true);
   ui_event_t e;
-  while (running) {
+  while (ui_is_running()) {
     while (get_message(&e)) dispatch_message(&e);
-    repost_messages(-1);
+    repost_messages();
   }
   ui_shutdown_graphics();
   return 0;
@@ -88,6 +99,6 @@ CC     = gcc
 CFLAGS = -Wall -std=c11 -I/path/to/orion-ui
 LIBS   = -lSDL2 -lGL -lm -llua5.4
 
-myapp: myapp.c build/lib/liborion.a
-	$(CC) $(CFLAGS) -o $@ $< build/lib/liborion.a $(LIBS)
+myapp: myapp.c build/lib/liborion.so
+	$(CC) $(CFLAGS) -o $@ $< -Lbuild/lib -lorion -Wl,-rpath,build/lib $(LIBS)
 ```

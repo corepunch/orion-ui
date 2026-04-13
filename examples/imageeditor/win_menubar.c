@@ -94,7 +94,7 @@ const int kNumMenus = (int)(sizeof(kMenus)/sizeof(kMenus[0]));
 // menu-bar window.  Extensibility: add more fixed entries to kWindowPrefix, or
 // register new document classes in the loop below.
 void window_menu_rebuild(void) {
-  if (!g_app || !g_app->menubar_win) return;
+  if (!g_app) return;
 
   // 1. Copy the fixed prefix entries.
   int n = 0;
@@ -116,11 +116,15 @@ void window_menu_rebuild(void) {
   kMenus[kMenuIdxWindow].items      = s_window_items;
   kMenus[kMenuIdxWindow].item_count = s_window_item_count;
 
-  send_message(g_app->menubar_win, kMenuBarMessageSetMenus,
-               (uint32_t)kNumMenus, kMenus);
+  // In standalone mode push the updated menus to our local menubar window.
+  // In gem mode menubar_win is NULL; the shell holds a pointer to kMenus
+  // (set during gem_init) and will read the updated data on its next redraw.
+  if (g_app->menubar_win)
+    send_message(g_app->menubar_win, kMenuBarMessageSetMenus,
+                 (uint32_t)kNumMenus, kMenus);
 }
 
-static void handle_menu_command(uint16_t id) {
+void handle_menu_command(uint16_t id) {
   if (!g_app) return;
   canvas_doc_t *doc = g_app->active_doc;
 
@@ -195,7 +199,21 @@ static void handle_menu_command(uint16_t id) {
       break;
 
     case ID_FILE_QUIT:
-      running = false;
+#ifdef BUILD_AS_GEM
+      // In gem mode ui_request_quit() is a no-op.  Destroy all gem-owned
+      // windows so no window procs remain pointing into unloaded code.
+      if (g_app) {
+        // Destroy all document windows first.
+        for (canvas_doc_t *d = g_app->docs, *next = NULL; d; d = next) {
+          next = d->next;
+          if (d->win) destroy_window(d->win);
+        }
+        if (g_app->color_win) destroy_window(g_app->color_win);
+        if (g_app->tool_win)  destroy_window(g_app->tool_win);
+      }
+#else
+      ui_request_quit();
+#endif
       break;
 
     case ID_EDIT_UNDO:

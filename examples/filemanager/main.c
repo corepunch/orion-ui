@@ -4,10 +4,9 @@
 #include <stdlib.h>
 
 #include "../../ui.h"
+#include "../../gem_magic.h"
 
 #define USE_LUA
-
-extern bool running;
 
 // ---------------------------------------------------------------------------
 // filemanager_proc — thin wrapper around win_filelist.
@@ -45,12 +44,21 @@ static result_t filemanager_proc(window_t *win, uint32_t msg,
       }
 #endif
 
+      if (code == FLN_FILEOPEN && lparam) {
+        const fileitem_t *item = (const fileitem_t *)lparam;
+        // Ask the shell to open the file via ui_open_file().  Handles .gem
+        // files (load the gem) and any other extension a loaded gem claims.
+        // Falls back silently if no handler is registered (standalone mode).
+        if (item->path && ui_open_file(item->path))
+          return true;
+      }
+
       // Forward anything else (e.g. future FLN_* codes) to win_filelist.
       return win_filelist(win, msg, wparam, lparam);
     }
 
     case kWindowMessageDestroy:
-      running = false;
+      ui_request_quit();
       return win_filelist(win, msg, wparam, lparam);
 
     default:
@@ -58,6 +66,32 @@ static result_t filemanager_proc(window_t *win, uint32_t msg,
   }
 }
 
+// ---------------------------------------------------------------------------
+// .gem entry points
+// ---------------------------------------------------------------------------
+
+bool gem_init(int argc, char *argv[]) {
+  const char *start_path = argc > 1 ? argv[1] : NULL;
+  window_t *win = create_window(
+    "File Manager",
+    WINDOW_STATUSBAR,
+    MAKERECT(20, 20, 320, 240),
+    NULL,
+    filemanager_proc,
+    (void *)start_path
+  );
+  if (!win) return false;
+  show_window(win, true);
+  return true;
+}
+
+GEM_DEFINE("File Manager", "1.0", gem_init, NULL, NULL)
+
+// ---------------------------------------------------------------------------
+// Standalone entry point
+// ---------------------------------------------------------------------------
+
+#ifndef BUILD_AS_GEM
 int main(int argc, char *argv[]) {
   (void)argc; (void)argv;
 
@@ -84,7 +118,7 @@ int main(int argc, char *argv[]) {
   show_window(main_window, true);
 
   ui_event_t e;
-  while (running) {
+  while (ui_is_running()) {
     while (get_message(&e)) dispatch_message(&e);
     repost_messages();
   }
@@ -93,5 +127,4 @@ int main(int argc, char *argv[]) {
   ui_shutdown_graphics();
   return 0;
 }
-
-
+#endif /* BUILD_AS_GEM */

@@ -4,8 +4,7 @@
 // PNG open/save via libpng.
 
 #include "imageeditor.h"
-
-extern bool running;
+#include "../../gem_magic.h"
 
 // Global application state
 app_state_t *g_app = NULL;
@@ -60,8 +59,9 @@ static const accel_t kAccelEntries[] = {
 // ============================================================
 
 static void create_app_windows(void) {
+#ifndef BUILD_AS_GEM
   int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
-
+  // Standalone: own the menu bar window.
   window_t *mb = create_window(
       "menubar",
       WINDOW_NOTITLE | WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
@@ -71,6 +71,7 @@ static void create_app_windows(void) {
                (uint32_t)kNumMenus, (void *)kMenus);
   show_window(mb, true);
   g_app->menubar_win = mb;
+#endif /* !BUILD_AS_GEM */
 
   window_t *tp = create_window(
       "Tools",
@@ -90,17 +91,19 @@ static void create_app_windows(void) {
 }
 
 // ============================================================
-// main
+// .gem entry points
 // ============================================================
 
-int main(int argc, char *argv[]) {
+static const char *image_editor_types[] = { ".png", ".bmp", NULL };
+
+bool gem_init(int argc, char *argv[]) {
   (void)argc; (void)argv;
   g_app = calloc(1, sizeof(app_state_t));
-  if (!g_app) return 1;
+  if (!g_app) return false;
 
   g_app->current_tool = ID_TOOL_SELECT;
-  g_app->fg_color = kPalette[4]; // black
-  g_app->bg_color = kPalette[0]; // white
+  g_app->fg_color = kPalette[4];
+  g_app->bg_color = kPalette[0];
   g_app->next_x   = DOC_START_X;
   g_app->next_y   = DOC_START_Y;
   g_app->text_font_size = 16;
@@ -108,26 +111,29 @@ int main(int argc, char *argv[]) {
 
   srand((unsigned int)time(NULL));
 
-  if (!ui_init_graphics(UI_INIT_DESKTOP, "Orion Image Editor", SCREEN_W, SCREEN_H)) {
-    free(g_app);
-    return 1;
-  }
-
   create_app_windows();
 
   g_app->accel = load_accelerators(kAccelEntries,
                                    (int)(sizeof(kAccelEntries)/sizeof(kAccelEntries[0])));
-  send_message(g_app->menubar_win, kMenuBarMessageSetAccelerators, 0, g_app->accel);
-  create_document(NULL, CANVAS_W, CANVAS_H);
+  if (g_app->menubar_win)
+    send_message(g_app->menubar_win, kMenuBarMessageSetAccelerators, 0, g_app->accel);
 
-  while (running) {
-    ui_event_t e;
-    while (get_message(&e)) {
-      if (!translate_accelerator(g_app->menubar_win, &e, g_app->accel))
-        dispatch_message(&e);
-    }
-    repost_messages();
-  }
+#ifdef BUILD_AS_GEM
+  // In gem mode there is no local menu-bar window; contribute our menus to
+  // the shell's menu bar instead.  The shell reads these fields after init()
+  // returns and calls shell_rebuild_menubar().
+  gem_interface_t *iface = gem_get_interface();
+  iface->menus          = kMenus;
+  iface->menu_count     = kNumMenus;
+  iface->handle_command = handle_menu_command;
+#endif /* BUILD_AS_GEM */
+
+  create_document(NULL, CANVAS_W, CANVAS_H);
+  return true;
+}
+
+void gem_shutdown(void) {
+  if (!g_app) return;
 
   free_accelerators(g_app->accel);
   g_app->accel = NULL;
@@ -149,7 +155,35 @@ int main(int argc, char *argv[]) {
   }
   free(g_app);
   g_app = NULL;
+}
 
+GEM_DEFINE("Image Editor", "1.0", gem_init, gem_shutdown, image_editor_types)
+
+// ============================================================
+// Standalone entry point
+// ============================================================
+
+#ifndef BUILD_AS_GEM
+int main(int argc, char *argv[]) {
+  if (!ui_init_graphics(UI_INIT_DESKTOP, "Orion Image Editor", SCREEN_W, SCREEN_H))
+    return 1;
+
+  if (!gem_init(argc, argv)) {
+    ui_shutdown_graphics();
+    return 1;
+  }
+
+  while (ui_is_running()) {
+    ui_event_t e;
+    while (get_message(&e)) {
+      if (!translate_accelerator(g_app->menubar_win, &e, g_app->accel))
+        dispatch_message(&e);
+    }
+    repost_messages();
+  }
+
+  gem_shutdown();
   ui_shutdown_graphics();
   return 0;
 }
+#endif /* BUILD_AS_GEM */

@@ -7,6 +7,8 @@ nav_order: 8
 # Examples
 
 All examples live in `examples/` and can be built with `make examples`.
+Each example also compiles as a loadable `.gem` (`make gems`) and can be
+run under `orion-shell`. See [Gem Plugin System](gems.md) for details.
 
 ## Hello World (`helloworld.c`)
 
@@ -90,9 +92,9 @@ int ly = (int16_t)HIWORD(wparam) - root->frame.y - win->frame.y;
                                 NULL, my_proc, NULL);
    show_window(w, true);
    ui_event_t e;
-   while (running) {
+   while (ui_is_running()) {
      while (get_message(&e)) dispatch_message(&e);
-     repost_messages(-1);
+     repost_messages();
    }
    ui_shutdown_graphics();
    ```

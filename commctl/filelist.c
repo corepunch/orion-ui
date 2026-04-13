@@ -39,6 +39,8 @@
 #define FL_ICON_UP      7   // ".." parent-directory entry
 #define FL_ICON_FOLDER  5   // directory
 #define FL_ICON_FILE    6   // regular file
+#define FL_COLOR_FOLDER 0xffa0d000u
+#define FL_COLOR_GEM    0xff50d050u  // bright green — executable .gem plugin
 
 // ---------------------------------------------------------------------------
 // Private state
@@ -50,8 +52,6 @@ typedef struct {
   int        count;
   int        cap;
   int        selected;          // index into items[], -1 when nothing selected
-  uint32_t   last_click_ms;
-  uint32_t   last_click_idx;
   fileitem_t notify_item;       // shallow copy used as lparam during send_message
 } filelist_data_t;
 
@@ -147,7 +147,7 @@ static bool fl_push_item(filelist_data_t *data,
   it->size         = size;
   it->modified     = modified;
   bool is_parent   = fl_is_parent_sentinel(path_heap);
-  it->icon = is_parent ? FL_ICON_UP : (is_dir ? FL_ICON_FOLDER : FL_ICON_FILE);
+  it->icon  = is_parent ? FL_ICON_UP : (is_dir ? FL_ICON_FOLDER : FL_ICON_FILE);
   return true;
 }
 
@@ -231,9 +231,12 @@ static void fl_load_directory(window_t *win, filelist_data_t *data) {
   for (int i = 0; i < data->count; i++) {
     const char *base = strrchr(data->items[i].path, '/');
     base = base ? base + 1 : data->items[i].path;
-    uint32_t col = data->items[i].is_hidden  ? get_sys_color(kColorTextDisabled)
+    const char *ext = strrchr(base, '.');
+    bool is_gem = !data->items[i].is_directory && ext && strcmp(ext, ".gem") == 0;
+    uint32_t col = data->items[i].is_hidden    ? get_sys_color(kColorTextDisabled)
                  : data->items[i].is_directory ? get_sys_color(kColorFolderText)
-                                              : get_sys_color(kColorTextNormal);
+                 : is_gem                      ? FL_COLOR_GEM
+                                               : get_sys_color(kColorTextNormal);
     send_message(win, CVM_ADDITEM, 0,
       &(columnview_item_t){
         .text     = base,
@@ -309,9 +312,8 @@ result_t win_filelist(window_t *win, uint32_t msg,
       data = malloc(sizeof(filelist_data_t));
       if (!data) return false;
       memset(data, 0, sizeof(*data));
-      win->userdata        = data;
-      data->selected       = -1;
-      data->last_click_idx = (uint32_t)-1;
+      win->userdata  = data;
+      data->selected = -1;
 
       // Initial path: lparam if provided, else cwd.
       const char *init = (const char *)lparam;
@@ -337,54 +339,34 @@ result_t win_filelist(window_t *win, uint32_t msg,
       int index = fl_hit_index(win, data, wparam);
       if (index < 0) return true;
 
-      uint32_t now    = axGetMilliseconds();
-      bool     is_dbl = (data->last_click_idx == (uint32_t)index &&
-                         (now - data->last_click_ms) < 500u);
+      // Single click — update selection only.
+      // Double-click navigation/open is handled exclusively in
+      // kWindowMessageLeftButtonDoubleClick, which the platform delivers
+      // as a separate event after the second button-down.  Doing the action
+      // here as well would cause double navigation (1 double-click = 2 levels deep).
+      int old_sel = data->selected;
+      data->selected = index;
+      send_message(win, CVM_SETSELECTION, (uint32_t)index, NULL);
 
-      if (is_dbl) {
-        data->last_click_ms  = 0;
-        data->last_click_idx = (uint32_t)-1;
-
-        if (data->items[index].is_directory) {
-          // Navigate into directory; sends FLN_NAVDIR internally.
-          fl_navigate(win, data, index);
-        } else {
-          // File activated: notify root with a stable shallow copy.
-          data->notify_item = data->items[index];
-          send_message(get_root_window(win), kWindowMessageCommand,
-                       MAKEDWORD((uint32_t)index, FLN_FILEOPEN),
-                       &data->notify_item);
-        }
-      } else {
-        // Single click — update selection.
-        int old_sel = data->selected;
-        data->selected       = index;
-        data->last_click_ms  = now;
-        data->last_click_idx = (uint32_t)index;
-        send_message(win, CVM_SETSELECTION, (uint32_t)index, NULL);
-
-        if (old_sel != index) {
-          // Notify: stable shallow copy for the duration of send_message.
-          data->notify_item = data->items[index];
-          send_message(get_root_window(win), kWindowMessageCommand,
-                       MAKEDWORD((uint32_t)index, FLN_SELCHANGE),
-                       &data->notify_item);
-        }
+      if (old_sel != index) {
+        data->notify_item = data->items[index];
+        send_message(get_root_window(win), kWindowMessageCommand,
+                     MAKEDWORD((uint32_t)index, FLN_SELCHANGE),
+                     &data->notify_item);
       }
       return true;
     }
 
     // -----------------------------------------------------------------------
     // Platform double-click (kEventLeftDoubleClick) arrives here directly on
-    // macOS, X11, Wayland, Windows, and QNX.  Perform the double-click action
-    // without going through the timing-based fallback.
+    // macOS, X11, Wayland, Windows, and QNX.  This is the sole handler for
+    // directory navigation and file activation — the kWindowMessageLeftButtonDown
+    // handler intentionally does NOT duplicate this logic, preventing the
+    // double navigation bug where two kWindowMessageLeftButtonDown events arrive
+    // before kWindowMessageLeftButtonDoubleClick.
     case kWindowMessageLeftButtonDoubleClick: {
       int index = fl_hit_index(win, data, wparam);
       if (index < 0) return true;
-
-      // Reset timing state so a subsequent single click starts fresh.
-      data->last_click_ms  = 0;
-      data->last_click_idx = (uint32_t)-1;
 
       if (data->items[index].is_directory) {
         fl_navigate(win, data, index);

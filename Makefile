@@ -54,7 +54,7 @@ else
         ifneq ($(LUA_CFLAGS),)
             CFLAGS  += -DHAVE_LUA $(LUA_CFLAGS)
             LDFLAGS += $(filter -L%,$(LUA_LIBS))
-            LIBS    += $(filter-out -L%,$(LUA_LIBS))
+            LIBS    += $(filter-out -L% -lm,$(LUA_LIBS))
         else
             $(info NOTE: Lua not found; building without Lua scripting. Install Lua via Homebrew to enable.)
         endif
@@ -77,6 +77,27 @@ else
     endif
 endif
 
+# .gem shared-library build flags (platform-specific)
+# Gems are built against liborion.so so that they share the same window
+# manager instance as the shell (shared event loop).
+ifeq ($(OS),Windows_NT)
+    GEM_LFLAGS = $(LIB_FLAGS)
+    SHELL_EXTRA_LDFLAGS =
+else ifeq ($(UNAME_S),Darwin)
+    # -undefined dynamic_lookup lets the gem resolve remaining symbols
+    # from the host process at axDynlibOpen() time.
+    GEM_LFLAGS = $(LIB_FLAGS) -undefined dynamic_lookup
+    SHELL_EXTRA_LDFLAGS =
+else
+    # Linux: the shell must export its symbols so gem code compiled with
+    # -fPIC can resolve any remaining references at load time.
+    GEM_LFLAGS = $(LIB_FLAGS)
+    SHELL_EXTRA_LDFLAGS = -Wl,--export-dynamic -ldl
+endif
+
+# Compile flags for .gem shared libraries
+GEM_CFLAGS = $(CFLAGS) -DBUILD_AS_GEM
+
 # Build directories
 BUILD_DIR = build
 LIB_DIR = $(BUILD_DIR)/lib
@@ -97,8 +118,26 @@ COMMCTL_SRCS = $(wildcard commctl/*.c)
 STATIC_LIB = $(LIB_DIR)/liborion.a
 SHARED_LIB = $(LIB_DIR)/liborion$(LIB_EXT)
 
+# Shared rpath used exactly once per link command to avoid duplicate-rpath warnings.
+RPATH_FLAGS = -Wl,-rpath,$(abspath $(LIB_DIR))
+
 # Link flags for platform library
-PLATFORM_LDFLAGS = -L$(LIB_DIR) -lplatform -Wl,-rpath,$(abspath $(LIB_DIR))
+PLATFORM_LDFLAGS = -L$(LIB_DIR) -lplatform
+
+# Link flags for the Orion shared library.
+# All programs (examples, tests, gems, shell) link dynamically against
+# liborion.so so they all share the same window manager instance.
+ORION_LDFLAGS = -L$(LIB_DIR) -lorion
+
+# .gem output directory and target list
+GEM_DIR  = $(BUILD_DIR)/gem
+GEM_BINS = $(GEM_DIR)/imageeditor.gem \
+           $(GEM_DIR)/filemanager.gem \
+           $(GEM_DIR)/helloworld.gem
+
+# Shell binary
+SHELL_BIN  = $(BIN_DIR)/orion-shell$(EXE_EXT)
+SHELL_SRCS = $(wildcard shell/*.c)
 
 # Example sources – each example lives in its own subdirectory with a main.c
 # Compile directly to binary (no intermediate .o files)
@@ -113,7 +152,11 @@ TEST_ENV_BINS = $(patsubst $(TEST_DIR)/%.c,$(BIN_DIR)/test_%$(EXE_EXT),$(TEST_EN
 
 # Default target
 .PHONY: all
+ifeq ($(OS),Windows_NT)
 all: library examples
+else
+all: library examples gems shell
+endif
 
 # Build the platform submodule shared library
 .PHONY: platform
@@ -144,7 +187,7 @@ $(STATIC_LIB): $(USER_SRCS) $(KERNEL_SRCS) $(COMMCTL_SRCS) $(PLATFORM_LIB) | $(L
 $(SHARED_LIB): $(USER_SRCS) $(KERNEL_SRCS) $(COMMCTL_SRCS) $(PLATFORM_LIB) | $(LIB_DIR)
 	@echo "Creating shared library: $@"
 	find user kernel commctl -name "*.c" | sort | sed 's/.*/#include "&"/' | \
-		$(CC) $(CFLAGS) $(LIB_FLAGS) -x c -o $@ - $(LDFLAGS) $(PLATFORM_LDFLAGS) $(LIBS)
+		$(CC) $(CFLAGS) $(LIB_FLAGS) -x c -o $@ - $(LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
 
 # Examples
 .PHONY: examples
@@ -153,16 +196,81 @@ examples: share $(EXAMPLE_BINS)
 # Image editor links against the Orion library (PNG I/O via stb_image).
 # main.c is appended last so that all sub-module symbols (e.g. kMenus, win procs)
 # are defined before main.c's application code references them.
-$(BIN_DIR)/imageeditor$(EXE_EXT): $(wildcard examples/imageeditor/*.c) $(STATIC_LIB) | $(BIN_DIR)
+$(BIN_DIR)/imageeditor$(EXE_EXT): $(wildcard examples/imageeditor/*.c) $(SHARED_LIB) | $(BIN_DIR)
 	@echo "Building example: $@"
 	(find examples/imageeditor -name "*.c" ! -name "main.c" | sort | sed 's/.*/#include "&"/'; \
 	 echo '#include "examples/imageeditor/main.c"') | \
-		$(CC) $(CFLAGS) -Iexamples/imageeditor -x c -o $@ - -x none $(STATIC_LIB) $(LDFLAGS) $(LDFLAGS_EXAMPLE) $(PLATFORM_LDFLAGS) $(LIBS)
+		$(CC) $(CFLAGS) -Iexamples/imageeditor -x c -o $@ - \
+		$(LDFLAGS) $(LDFLAGS_EXAMPLE) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
 
 # Generic rule: compile each example's main.c as a single file directly to binary
-$(BIN_DIR)/%$(EXE_EXT): examples/%/main.c $(STATIC_LIB) | $(BIN_DIR)
+$(BIN_DIR)/%$(EXE_EXT): examples/%/main.c $(SHARED_LIB) | $(BIN_DIR)
 	@echo "Building example: $@"
-	$(CC) $(CFLAGS) -o $@ $< $(STATIC_LIB) $(LDFLAGS) $(LDFLAGS_EXAMPLE) $(PLATFORM_LDFLAGS) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS) $(LDFLAGS_EXAMPLE) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
+
+# === .gem shared libraries ===
+#
+# Each .gem is built against liborion.so (the Orion shared library) so that
+# it shares the same window manager, window list, and event infrastructure as
+# the shell — enabling the single shared event loop described in gem_magic.h.
+#
+# gem_magic.h is force-included at the top of every gem's unity build so that
+# BUILD_AS_GEM macros (running stub, ui_init/shutdown no-ops, etc.) apply to
+# every source file in the gem without requiring manual edits to each file.
+
+.PHONY: gems
+gems: $(GEM_BINS)
+	@echo "✓ All .gems built and validated"
+
+# imageeditor.gem — multi-file unity build, same pattern as the standalone binary.
+$(GEM_DIR)/imageeditor.gem: $(wildcard examples/imageeditor/*.c) $(SHARED_LIB) | $(GEM_DIR)
+	@echo "Building .gem: $@"
+	(echo '#include "gem_magic.h"'; \
+	 find examples/imageeditor -name "*.c" | sort | sed 's/.*/#include "&"/') | \
+		$(CC) $(GEM_CFLAGS) $(GEM_LFLAGS) -I. -Iexamples/imageeditor -x c -o $@ - \
+		$(LDFLAGS) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
+	@$(MAKE) --no-print-directory validate-gem GEM=$@
+
+# Generic .gem rule — single main.c examples.
+$(GEM_DIR)/%.gem: examples/%/main.c $(SHARED_LIB) | $(GEM_DIR)
+	@echo "Building .gem: $@"
+	(echo '#include "gem_magic.h"'; echo '#include "$<"') | \
+		$(CC) $(GEM_CFLAGS) $(GEM_LFLAGS) -I. -Iexamples/$* -x c -o $@ - \
+		$(LDFLAGS) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
+	@$(MAKE) --no-print-directory validate-gem GEM=$@
+
+# Validate that a .gem exports the required gem_get_interface symbol.
+.PHONY: validate-gem
+validate-gem:
+	@echo -n "  Validating $(notdir $(GEM))... "
+ifeq ($(OS),Windows_NT)
+	@dumpbin //EXPORTS $(GEM) 2>/dev/null | grep -q "gem_get_interface" \
+		&& echo "✓" || (echo "❌ missing gem_get_interface" && exit 1)
+else ifeq ($(UNAME_S),Darwin)
+	@nm -g $(GEM) 2>/dev/null | grep -q "T _gem_get_interface" \
+		&& echo "✓" || (echo "❌ missing gem_get_interface" && exit 1)
+else
+	@nm -D $(GEM) 2>/dev/null | grep -q "T gem_get_interface" \
+		&& echo "✓" || (echo "❌ missing gem_get_interface" && exit 1)
+endif
+
+$(GEM_DIR):
+	mkdir -p $@
+
+# === Orion Shell ===
+#
+# The shell links against liborion.so (not .a) and exports its symbols with
+# -Wl,--export-dynamic (Linux) so that gems whose unresolved references were
+# not satisfied by liborion.so can still resolve them from the shell.
+
+.PHONY: shell
+shell: $(SHELL_BIN)
+
+$(SHELL_BIN): $(SHELL_SRCS) $(SHARED_LIB) | $(BIN_DIR)
+	@echo "Building Orion Shell: $@"
+	(find shell -name "*.c" | sort | sed 's/.*/#include "&"/') | \
+		$(CC) $(CFLAGS) -I. -Ishell -x c -o $@ - \
+		$(LDFLAGS) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LDFLAGS_EXAMPLE) $(LIBS) $(SHELL_EXTRA_LDFLAGS)
 
 # Tests
 .PHONY: test
@@ -170,6 +278,7 @@ test: $(TEST_BINS)
 	@echo "Running tests..."
 ifeq ($(OS),Windows_NT)
 	@cp -f $(LIB_DIR)/libplatform.dll $(BIN_DIR)/
+	@cp -f $(LIB_DIR)/liborion.dll $(BIN_DIR)/
 endif
 	@for test in $(TEST_BINS); do \
 		echo "Running $$test..."; \
@@ -178,9 +287,9 @@ endif
 	@echo "All tests passed!"
 
 # Build tests that need test_env (auto-detected by include)
-$(TEST_ENV_BINS): $(BIN_DIR)/test_%$(EXE_EXT): $(TEST_DIR)/%.c $(STATIC_LIB) | $(BIN_DIR)
+$(TEST_ENV_BINS): $(BIN_DIR)/test_%$(EXE_EXT): $(TEST_DIR)/%.c $(SHARED_LIB) | $(BIN_DIR)
 	@echo "Building test with environment: $@"
-	$(CC) $(CFLAGS) -o $@ $< $(TEST_DIR)/test_env.c $(STATIC_LIB) $(LDFLAGS) $(LDFLAGS_TEST) $(PLATFORM_LDFLAGS) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ $< $(TEST_DIR)/test_env.c $(LDFLAGS) $(LDFLAGS_TEST) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
 
 # Image API test – self-contained, pulls in user/image.c directly (no platform/GL needed)
 $(BIN_DIR)/test_image_test$(EXE_EXT): $(TEST_DIR)/image_test.c | $(BIN_DIR)
@@ -188,9 +297,9 @@ $(BIN_DIR)/test_image_test$(EXE_EXT): $(TEST_DIR)/image_test.c | $(BIN_DIR)
 	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS_TEST) -lm
 
 # Generic test build rule (tests without test_env)
-$(BIN_DIR)/test_%$(EXE_EXT): $(TEST_DIR)/%.c $(STATIC_LIB) | $(BIN_DIR)
+$(BIN_DIR)/test_%$(EXE_EXT): $(TEST_DIR)/%.c $(SHARED_LIB) | $(BIN_DIR)
 	@echo "Building test: $@"
-	$(CC) $(CFLAGS) -o $@ $< $(STATIC_LIB) $(LDFLAGS) $(LDFLAGS_TEST) $(PLATFORM_LDFLAGS) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS) $(LDFLAGS_TEST) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
 
 # Directory creation
 BUILD_DIRS = $(BUILD_DIR) $(LIB_DIR) $(BIN_DIR) $(SHARE_DIR)
@@ -211,9 +320,11 @@ help:
 	@echo "Goldie UI Framework - Build System"
 	@echo ""
 	@echo "Available targets:"
-	@echo "  all       - Build library and examples (default)"
+	@echo "  all       - Build library, examples, gems, and shell"
 	@echo "  library   - Build static and shared libraries"
 	@echo "  examples  - Build example applications"
+	@echo "  gems      - Build all .gem shared libraries"
+	@echo "  shell     - Build the Orion shell"
 	@echo "  test      - Build and run tests"
 	@echo "  clean     - Remove all build artifacts"
 	@echo "  help      - Show this help message"
