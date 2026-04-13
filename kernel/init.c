@@ -5,6 +5,14 @@
 #include <stdbool.h>
 #include <string.h>
 
+#if defined(_WIN32) || defined(_WIN64)
+#  include <windows.h>
+#elif defined(__APPLE__)
+#  include <mach-o/dyld.h>
+#else
+#  include <unistd.h>
+#endif
+
 #include "../platform/platform.h"
 #include "../user/gl_compat.h"
 #include "../user/user.h"
@@ -220,20 +228,16 @@ const char *ui_get_exe_dir(void) {
   buf[0] = '\0';
 
 #if defined(_WIN32) || defined(_WIN64)
-  #include <windows.h>
   DWORD len = GetModuleFileNameA(NULL, buf, (DWORD)sizeof(buf));
   if (len == 0 || len >= (DWORD)sizeof(buf)) { buf[0] = '\0'; return buf; }
   char *last = strrchr(buf, '\\');
   if (last) *last = '\0';
 #elif defined(__APPLE__)
-  #include <mach-o/dyld.h>
   uint32_t size = (uint32_t)sizeof(buf);
   if (_NSGetExecutablePath(buf, &size) != 0) { buf[0] = '\0'; return buf; }
   char *last = strrchr(buf, '/');
   if (last) *last = '\0';
 #else
-  /* Linux / other POSIX */
-  #include <unistd.h>
   ssize_t len = readlink("/proc/self/exe", buf, sizeof(buf) - 1);
   if (len <= 0) { buf[0] = '\0'; return buf; }
   buf[len] = '\0';
