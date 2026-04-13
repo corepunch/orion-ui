@@ -5,19 +5,10 @@
 #include "stb_truetype.h"
 #include "imageeditor.h"
 
-// Font search paths (in order of preference).
-// The bundled Inconsolata-Regular.ttf is tried first from standard share
-// locations (mirroring the fallback strategy used for tools.png), then
-// system-installed fonts are tried as a last resort.
-static const char * const k_font_paths[] = {
-  // Bundled font – copied to build/share/ by `make share`
-  "build/share/Inconsolata-Regular.ttf",          // run from repository root
-  "../share/Inconsolata-Regular.ttf",             // run from build/bin/
-  "share/Inconsolata-Regular.ttf",                // run from build/
-  "examples/imageeditor/Inconsolata-Regular.ttf", // fallback: source tree
-  // System-installed fonts (last resort)
-  "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+// System font fallback paths tried when the bundled font is unavailable.
+static const char * const k_system_fonts[] = {
   "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf",
+  "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
   "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
   "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
   "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
@@ -31,25 +22,39 @@ static uint8_t      *s_font_data   = NULL;
 static stbtt_fontinfo s_font;
 static bool           s_font_ready = false;
 
+// Try to load and parse a font file.  Returns true on success.
+static bool try_load_font(const char *path) {
+  FILE *fp = fopen(path, "rb");
+  if (!fp) return false;
+  if (fseek(fp, 0, SEEK_END) != 0) { fclose(fp); return false; }
+  long sz = ftell(fp);
+  if (sz <= 0) { fclose(fp); return false; }
+  rewind(fp);
+  uint8_t *data = (uint8_t *)malloc((size_t)sz);
+  if (!data) { fclose(fp); return false; }
+  if ((long)fread(data, 1, (size_t)sz, fp) != sz) { free(data); fclose(fp); return false; }
+  fclose(fp);
+  if (!stbtt_InitFont(&s_font, data, 0)) { free(data); return false; }
+  s_font_data  = data;
+  s_font_ready = true;
+  return true;
+}
+
 static bool ensure_font(void) {
   if (s_font_ready) return true;
-  for (int i = 0; k_font_paths[i]; i++) {
-    FILE *fp = fopen(k_font_paths[i], "rb");
-    if (!fp) continue;
-    if (fseek(fp, 0, SEEK_END) != 0) { fclose(fp); continue; }
-    long sz = ftell(fp);
-    if (sz <= 0) { fclose(fp); continue; }
-    rewind(fp);
-    uint8_t *data = (uint8_t *)malloc((size_t)sz);
-    if (!data) { fclose(fp); continue; }
-    if ((long)fread(data, 1, (size_t)sz, fp) != sz) {
-      free(data); fclose(fp); continue;
-    }
-    fclose(fp);
-    if (!stbtt_InitFont(&s_font, data, 0)) { free(data); continue; }
-    s_font_data  = data;
-    s_font_ready = true;
-    return true;
+
+#ifdef SHAREDIR
+  // Primary: bundled font in the per-application share directory,
+  // resolved relative to the running executable's location.
+  char bundled[4096];
+  snprintf(bundled, sizeof(bundled), "%s/" SHAREDIR "/Inconsolata-Regular.ttf",
+           ui_get_exe_dir());
+  if (try_load_font(bundled)) return true;
+#endif
+
+  // Fallback: system-installed fonts.
+  for (int i = 0; k_system_fonts[i]; i++) {
+    if (try_load_font(k_system_fonts[i])) return true;
   }
   return false;
 }

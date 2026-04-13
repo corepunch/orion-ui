@@ -111,51 +111,46 @@ static uint8_t *load_png_rgba(const char *path, int *out_w, int *out_h) {
   return rgba;
 }
 
-// Try to load tools.png from several candidate locations (share directory).
+// Load tools.png from the per-application share directory,
+// resolved relative to the running executable's location via SHAREDIR.
 // On success, populates *strip with the loaded texture and tile geometry.
 // Returns the GL texture ID (also stored in strip->tex), or 0 on failure.
 static GLuint load_tools_texture(bitmap_strip_t *strip) {
-  static const char *k_paths[] = {
-    "build/share/tools.png",             // run from repository root
-    "../share/tools.png",                // run from build/bin/
-    "share/tools.png",                   // run from build/
-    "examples/imageeditor/tools.png",    // fallback: source tree
-    NULL
-  };
+#ifdef SHAREDIR
+  char path[4096];
+  snprintf(path, sizeof(path), "%s/" SHAREDIR "/tools.png", ui_get_exe_dir());
+  int w = 0, h = 0;
+  uint8_t *rgba = load_png_rgba(path, &w, &h);
+  if (!rgba) return 0;
 
-  for (int i = 0; k_paths[i]; i++) {
-    int w = 0, h = 0;
-    uint8_t *rgba = load_png_rgba(k_paths[i], &w, &h);
-    if (!rgba) continue;
-
-    // Validate that the PNG tiles evenly into ICON_W × ICON_H cells.
-    // If cols would be 0 (w < ICON_W) or the dimensions don't divide evenly,
-    // this file is unusable — skip it and try the next fallback path.
-    if (w < ICON_W || h < ICON_H || (w % ICON_W) != 0 || (h % ICON_H) != 0) {
-      free(rgba);
-      continue;
-    }
-
-    GLuint tex;
-    glGenTextures(1, &tex);
-    glBindTexture(GL_TEXTURE_2D, tex);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
-                 GL_RGBA, GL_UNSIGNED_BYTE, rgba);
+  // Validate that the PNG tiles evenly into ICON_W × ICON_H cells.
+  if (w < ICON_W || h < ICON_H || (w % ICON_W) != 0 || (h % ICON_H) != 0) {
     free(rgba);
-
-    strip->tex     = (uint32_t)tex;
-    strip->icon_w  = ICON_W;
-    strip->icon_h  = ICON_H;
-    strip->cols    = w / ICON_W;  // number of icon columns in the strip
-    strip->sheet_w = w;
-    strip->sheet_h = h;
-    return tex;
+    return 0;
   }
+
+  GLuint tex;
+  glGenTextures(1, &tex);
+  glBindTexture(GL_TEXTURE_2D, tex);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
+               GL_RGBA, GL_UNSIGNED_BYTE, rgba);
+  free(rgba);
+
+  strip->tex     = (uint32_t)tex;
+  strip->icon_w  = ICON_W;
+  strip->icon_h  = ICON_H;
+  strip->cols    = w / ICON_W;
+  strip->sheet_w = w;
+  strip->sheet_h = h;
+  return tex;
+#else
+  (void)strip;
   return 0;
+#endif
 }
 
 result_t win_tool_palette_proc(window_t *win, uint32_t msg,

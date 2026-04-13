@@ -133,7 +133,8 @@ ORION_LDFLAGS = -L$(LIB_DIR) -lorion
 GEM_DIR  = $(BUILD_DIR)/gem
 GEM_BINS = $(GEM_DIR)/imageeditor.gem \
            $(GEM_DIR)/filemanager.gem \
-           $(GEM_DIR)/helloworld.gem
+           $(GEM_DIR)/helloworld.gem \
+           $(GEM_DIR)/terminal.gem
 
 # Shell binary
 SHELL_BIN  = $(BIN_DIR)/orion-shell$(EXE_EXT)
@@ -166,12 +167,17 @@ $(PLATFORM_LIB): | $(LIB_DIR)
 	@echo "Building platform library..."
 	$(MAKE) -C $(PLATFORM_DIR) OUTDIR=$(abspath $(LIB_DIR))
 
-# Shared data assets
+# Shared data assets — copy per-example resources into build/share/<example>/
 .PHONY: share
 share: | $(SHARE_DIR)
-	@echo "Copying shared data assets..."
-	cp examples/imageeditor/tools.png $(SHARE_DIR)/tools.png
-	cp examples/imageeditor/Inconsolata-Regular.ttf $(SHARE_DIR)/Inconsolata-Regular.ttf
+	@for dir in examples/*/; do \
+	  name=$$(basename "$$dir"); \
+	  assets=$$(find "$$dir" -maxdepth 1 \( -name "*.png" -o -name "*.ttf" \) 2>/dev/null); \
+	  if [ -n "$$assets" ]; then \
+	    mkdir -p $(SHARE_DIR)/$$name; \
+	    echo "$$assets" | tr '\n' '\0' | xargs -0 -I{} cp {} $(SHARE_DIR)/$$name/; \
+	  fi; \
+	done
 
 # Library targets
 .PHONY: library
@@ -193,20 +199,18 @@ $(SHARED_LIB): $(USER_SRCS) $(KERNEL_SRCS) $(COMMCTL_SRCS) $(PLATFORM_LIB) | $(L
 .PHONY: examples
 examples: share $(EXAMPLE_BINS)
 
-# Image editor links against the Orion library (PNG I/O via stb_image).
-# main.c is appended last so that all sub-module symbols (e.g. kMenus, win procs)
-# are defined before main.c's application code references them.
-$(BIN_DIR)/imageeditor$(EXE_EXT): $(wildcard examples/imageeditor/*.c) $(SHARED_LIB) | $(BIN_DIR)
+# Static unity-build rule for all examples.
+# The target list is scoped to $(EXAMPLE_BINS) so this rule never fires for
+# test binaries (which share the same $(BIN_DIR)/%$(EXE_EXT) pattern).
+# SECONDEXPANSION lets $$(wildcard ...) expand after % is substituted, so
+# any *.c change in the example directory triggers a rebuild.
+.SECONDEXPANSION:
+$(EXAMPLE_BINS): $(BIN_DIR)/%$(EXE_EXT): $$(wildcard examples/%/*.c) $(SHARED_LIB) | $(BIN_DIR)
 	@echo "Building example: $@"
-	(find examples/imageeditor -name "*.c" ! -name "main.c" | sort | sed 's/.*/#include "&"/'; \
-	 echo '#include "examples/imageeditor/main.c"') | \
-		$(CC) $(CFLAGS) -Iexamples/imageeditor -x c -o $@ - \
+	(find examples/$* -name "*.c" ! -name "main.c" | sort | sed 's/.*/#include "&"/'; \
+	 echo '#include "examples/$*/main.c"') | \
+		$(CC) $(CFLAGS) -I. -Iexamples/$* -DSHAREDIR='"../share/$*"' -x c -o $@ - \
 		$(LDFLAGS) $(LDFLAGS_EXAMPLE) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
-
-# Generic rule: compile each example's main.c as a single file directly to binary
-$(BIN_DIR)/%$(EXE_EXT): examples/%/main.c $(SHARED_LIB) | $(BIN_DIR)
-	@echo "Building example: $@"
-	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS) $(LDFLAGS_EXAMPLE) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
 
 # === .gem shared libraries ===
 #
@@ -222,20 +226,14 @@ $(BIN_DIR)/%$(EXE_EXT): examples/%/main.c $(SHARED_LIB) | $(BIN_DIR)
 gems: $(GEM_BINS)
 	@echo "✓ All .gems built and validated"
 
-# imageeditor.gem — multi-file unity build, same pattern as the standalone binary.
-$(GEM_DIR)/imageeditor.gem: $(wildcard examples/imageeditor/*.c) $(SHARED_LIB) | $(GEM_DIR)
+# Generic .gem unity-build rule — handles both single and multi-file examples.
+# gem_magic.h first; non-main files sorted; main.c last.
+$(GEM_DIR)/%.gem: $$(wildcard examples/%/*.c) $(SHARED_LIB) | $(GEM_DIR)
 	@echo "Building .gem: $@"
 	(echo '#include "gem_magic.h"'; \
-	 find examples/imageeditor -name "*.c" | sort | sed 's/.*/#include "&"/') | \
-		$(CC) $(GEM_CFLAGS) $(GEM_LFLAGS) -I. -Iexamples/imageeditor -x c -o $@ - \
-		$(LDFLAGS) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
-	@$(MAKE) --no-print-directory validate-gem GEM=$@
-
-# Generic .gem rule — single main.c examples.
-$(GEM_DIR)/%.gem: examples/%/main.c $(SHARED_LIB) | $(GEM_DIR)
-	@echo "Building .gem: $@"
-	(echo '#include "gem_magic.h"'; echo '#include "$<"') | \
-		$(CC) $(GEM_CFLAGS) $(GEM_LFLAGS) -I. -Iexamples/$* -x c -o $@ - \
+	 find examples/$* -name "*.c" ! -name "main.c" | sort | sed 's/.*/#include "&"/'; \
+	 echo '#include "examples/$*/main.c"') | \
+		$(CC) $(GEM_CFLAGS) $(GEM_LFLAGS) -I. -Iexamples/$* -DSHAREDIR='"../share/$*"' -x c -o $@ - \
 		$(LDFLAGS) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
 	@$(MAKE) --no-print-directory validate-gem GEM=$@
 
