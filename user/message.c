@@ -419,12 +419,13 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
                             get_sys_color(active ? kColorActiveTitlebarText : kColorInactiveTitlebarText));
           }
           if (win->flags&WINDOW_TOOLBAR) {
+            int bsz = (win->toolbar_btn_size > 0) ? win->toolbar_btn_size : TB_SPACING;
             int bpr = (win->num_toolbar_buttons > 0 && win->frame.w > 0)
-                ? MAX(1, win->frame.w / TB_SPACING) : 1;
+                ? MAX(1, win->frame.w / bsz) : 1;
             int nrows = (win->num_toolbar_buttons > 0)
                 ? (int)((win->num_toolbar_buttons + (uint32_t)bpr - 1) / (uint32_t)bpr)
                 : 1;
-            int total_h = nrows * TOOLBAR_HEIGHT;
+            int total_h = nrows * bsz;
             rect_t rect = {win->frame.x+1, win->frame.y-total_h+1, win->frame.w-2, total_h-2};
             draw_bevel(&rect);
             fill_rect(get_sys_color(kColorWindowBg), rect.x, rect.y, rect.w, rect.h);
@@ -433,11 +434,11 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
               toolbar_button_t const *but = &win->toolbar_buttons[i];
               int row = (int)i / bpr;
               int col = (int)i % bpr;
-              int bx = rect.x + col * TB_SPACING + 2;
-              int by = rect.y + row * TOOLBAR_HEIGHT + 2;
+              int bx = rect.x + col * bsz + 2;
+              int by = rect.y + row * bsz + 2;
               if (strip) {
                 // Draw button background (pressed/unpressed)
-                rect_t btn_r = {bx - 2, by - 2, TB_SPACING - 2, TOOLBAR_HEIGHT - 2};
+                rect_t btn_r = {bx - 2, by - 2, bsz - 2, bsz - 2};
                 draw_button(&btn_r, 1, 1, but->active);
                 int px = but->active ? 1 : 0;
                 int icon_index = but->icon;
@@ -496,6 +497,11 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         invalidate_window(win);
         break;
       }
+      case kToolBarMessageSetButtonSize:
+        win->toolbar_btn_size = (int)wparam;
+        post_message(win, kWindowMessageRefreshStencil, 0, NULL);
+        invalidate_window(win);
+        break;
       case kWindowMessageStatusBar:
         if (lparam) {
           strncpy(win->statusbar_text, (const char*)lparam, sizeof(win->statusbar_text) - 1);
@@ -577,12 +583,13 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
           if (win->flags&WINDOW_TOOLBAR) {
             uint16_t x = LOWORD(wparam);
             uint16_t y = HIWORD(wparam);
+            int bsz = (win->toolbar_btn_size > 0) ? win->toolbar_btn_size : TB_SPACING;
             int bpr = (win->num_toolbar_buttons > 0 && win->frame.w > 0)
-                ? MAX(1, win->frame.w / TB_SPACING) : 1;
+                ? MAX(1, win->frame.w / bsz) : 1;
             int nrows = (win->num_toolbar_buttons > 0)
                 ? (int)((win->num_toolbar_buttons + (uint32_t)bpr - 1) / (uint32_t)bpr)
                 : 1;
-            int total_h = nrows * TOOLBAR_HEIGHT;
+            int total_h = nrows * bsz;
             int base_x = win->frame.x + 2;
             int base_y = win->frame.y - total_h + 2;
             #define CONTAINS(x, y, x1, y1, w1, h1) \
@@ -591,9 +598,9 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
               toolbar_button_t *but = &win->toolbar_buttons[i];
               int row = (int)i / bpr;
               int col = (int)i % bpr;
-              int bx = base_x + col * TB_SPACING;
-              int by = base_y + row * TOOLBAR_HEIGHT;
-              if (CONTAINS(x, y, bx, by, TB_SPACING, TOOLBAR_HEIGHT)) {
+              int bx = base_x + col * bsz;
+              int by = base_y + row * bsz;
+              if (CONTAINS(x, y, bx, by, bsz, bsz)) {
                 send_message(win, kToolBarMessageButtonClick, but->ident, but);
               }
             }

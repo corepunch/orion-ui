@@ -134,7 +134,8 @@ GEM_DIR  = $(BUILD_DIR)/gem
 GEM_BINS = $(GEM_DIR)/imageeditor.gem \
            $(GEM_DIR)/filemanager.gem \
            $(GEM_DIR)/helloworld.gem \
-           $(GEM_DIR)/terminal.gem
+           $(GEM_DIR)/terminal.gem \
+           $(GEM_DIR)/formeditor.gem
 
 # Shell binary
 SHELL_BIN  = $(BIN_DIR)/orion-shell$(EXE_EXT)
@@ -176,6 +177,11 @@ share: | $(SHARE_DIR)
 	  if [ -n "$$assets" ]; then \
 	    mkdir -p $(SHARE_DIR)/$$name; \
 	    echo "$$assets" | tr '\n' '\0' | xargs -0 -I{} cp {} $(SHARE_DIR)/$$name/; \
+	  fi; \
+	  if [ -d "$${dir}share" ]; then \
+	    mkdir -p $(SHARE_DIR)/$$name; \
+	    find "$${dir}share" -maxdepth 1 \( -name "*.png" -o -name "*.ttf" \) 2>/dev/null | \
+	      tr '\n' '\0' | xargs -0 -I{} cp {} $(SHARE_DIR)/$$name/ 2>/dev/null || true; \
 	  fi; \
 	done
 

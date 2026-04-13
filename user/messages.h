@@ -61,6 +61,7 @@ enum {
   kToolBarMessageButtonClick,
   kToolBarMessageSetStrip,         // wparam=0, lparam=bitmap_strip_t* (or NULL to clear)
   kToolBarMessageSetActiveButton,  // wparam=ident of button to mark active
+  kToolBarMessageSetButtonSize,    // wparam=square button size in pixels (0 resets to TB_SPACING)
   kScrollBarMessageSetInfo,        // lparam = scrollbar_info_t*
   kScrollBarMessageGetPos,         // returns current scroll position
 };

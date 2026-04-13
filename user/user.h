@@ -91,6 +91,7 @@ struct window_s {
   uint32_t num_toolbar_buttons;
   toolbar_button_t *toolbar_buttons;
   bitmap_strip_t toolbar_strip;
+  int    toolbar_btn_size;   // 0 = use TB_SPACING default; >0 = custom square button size in pixels
   void *userdata;
   void *userdata2;
   win_sb_t hscroll;   // built-in horizontal scrollbar state (WINDOW_HSCROLL)
