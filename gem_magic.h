@@ -27,9 +27,10 @@ typedef struct {
 // -----------------------------------------------------------------------
 #ifdef BUILD_AS_GEM
 
-// In gem mode, 'ui_is_running()' must not be entered — gems do not own
-// the event loop, the shell does.  Redirect it to a compile-time false so
-// any GEM_MAIN-style event loop is compiled out entirely.
+// In gem mode, 'ui_is_running()' must always be false so that any
+// GEM_MAIN-style event loop body is never executed at runtime.
+// The compiler will typically dead-strip the loop entirely, but the
+// key guarantee is that it is never *entered*, not that it is absent.
 // 'ui_request_quit()' is silenced: a gem must not shut down the shell.
 #define ui_is_running()   (false)
 #define ui_request_quit() ((void)0)

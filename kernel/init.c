@@ -13,6 +13,10 @@
 bool ui_init_prog(void);
 void ui_shutdown_prog(void);
 
+// 'running' is the authoritative flag defined in user/dialog.c.
+// Declare it once at file scope so all functions in this file can access it.
+extern bool running;
+
 // Set to true after ui_init_graphics() succeeds; guards begin/end frame.
 static bool g_graphics_initialized = false;
 
@@ -164,15 +168,12 @@ void ui_shutdown_graphics(void) {
 }
 
 // Application lifecycle accessors.
-// 'running' is the authoritative flag defined in user/dialog.c; these
-// functions are the only public interface to it.
+// These are the only public interface to 'running'.
 bool ui_is_running(void) {
-  extern bool running;
   return running;
 }
 
 void ui_request_quit(void) {
-  extern bool running;
   running = false;
 }
 
