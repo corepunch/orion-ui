@@ -108,7 +108,7 @@ static void paint_td(window_t *win, const td_state_t *st) {
   int sw_x = TD_LBL_X + 6 * 6 + 2; // after "Color:" text
   fill_rect(get_sys_color(kColorDarkEdge), sw_x - 1, TD_COLOR_Y - 1,
             TD_SWATCH_W + 2, TD_SWATCH_H + 2);
-  fill_rect((int)opts->color, sw_x, TD_COLOR_Y,
+  fill_rect(opts->color, sw_x, TD_COLOR_Y,
             TD_SWATCH_W, TD_SWATCH_H);
 
   (void)win;
