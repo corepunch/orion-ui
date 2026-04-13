@@ -13,7 +13,7 @@ extern window_t *_focused;
 
 // Label control window procedure.
 // lparam in kWindowMessageCreate is an optional RGBA color (void*)(uintptr_t)col.
-// When lparam is NULL the default COLOR_TEXT_NORMAL is used.
+// When lparam is NULL the default kColorTextNormal is used.
 result_t win_label(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
     case kWindowMessageCreate:

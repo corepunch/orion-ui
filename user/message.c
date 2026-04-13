@@ -604,7 +604,7 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     }
     // Draw disabled overlay
     if (win->disabled && msg == kWindowMessagePaint) {
-      uint32_t col = (COLOR_PANEL_BG & 0x00FFFFFF) | 0x80000000;
+      uint32_t col = (get_sys_color(kColorWindowBg) & 0x00FFFFFF) | 0x80000000;
       set_viewport(&(rect_t){ 0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight)});
       set_projection(0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight));
       fill_rect(col, win->frame.x, win->frame.y, win->frame.w, win->frame.h);

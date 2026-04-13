@@ -7,28 +7,28 @@
 #include "user.h"
 
 uint32_t g_sys_colors[kColorCount] = {
-  [kColorWindowBg]             = COLOR_PANEL_BG,
-  [kColorWindowDarkBg]         = COLOR_PANEL_DARK_BG,
+  [kColorWindowBg]             = 0xff3c3c3c,   // main panel / window background
+  [kColorWindowDarkBg]         = 0xff2c2c2c,   // dark secondary panel background
   [kColorWorkspaceBg]          = 0xff1e1e1e,   // darker than status bar — canvas workspace
   [kColorActiveTitlebar]       = 0xff1e5aa0,   // focused window: blue caption bar (dark theme)
   [kColorActiveTitlebarText]   = 0xffffffff,   // focused caption text: white
-  [kColorInactiveTitlebar]     = COLOR_PANEL_DARK_BG,  // unfocused: same flat dark gray
+  [kColorInactiveTitlebar]     = 0xff2c2c2c,   // unfocused: flat dark gray
   [kColorInactiveTitlebarText] = 0xff787878,   // unfocused caption text: medium gray
-  [kColorStatusbarBg]          = COLOR_STATUSBAR_BG,
-  [kColorLightEdge]            = COLOR_LIGHT_EDGE,
-  [kColorDarkEdge]             = COLOR_DARK_EDGE,
-  [kColorFlare]                = COLOR_FLARE,
-  [kColorFocusRing]            = COLOR_FOCUSED,
-  [kColorButtonBg]             = COLOR_BUTTON_BG,
-  [kColorButtonInner]          = COLOR_BUTTON_INNER,
-  [kColorButtonHover]          = COLOR_BUTTON_HOVER,
-  [kColorTextNormal]           = COLOR_TEXT_NORMAL,
-  [kColorTextDisabled]         = COLOR_TEXT_DISABLED,
-  [kColorTextError]            = COLOR_TEXT_ERROR,
-  [kColorTextSuccess]          = COLOR_TEXT_SUCCESS,
-  [kColorBorderFocus]          = COLOR_BORDER_FOCUS,
-  [kColorBorderActive]         = COLOR_BORDER_ACTIVE,
-  [kColorFolderText]           = 0xffa0d000,
+  [kColorStatusbarBg]          = 0xff2c2c2c,   // status bar background
+  [kColorLightEdge]            = 0xff7f7f7f,   // top-left edge for beveled elements
+  [kColorDarkEdge]             = 0xff1a1a1a,   // bottom-right edge for bevel
+  [kColorFlare]                = 0xffcfcfcf,   // corner flare for beveled elements
+  [kColorFocusRing]            = 0xff5EC4F3,   // keyboard-focus ring
+  [kColorButtonBg]             = 0xff404040,   // button background (unpressed)
+  [kColorButtonInner]          = 0xff505050,   // inner fill of button
+  [kColorButtonHover]          = 0xff5a5a5a,   // slightly brighter for hover state
+  [kColorTextNormal]           = 0xffc0c0c0,   // standard text color
+  [kColorTextDisabled]         = 0xff808080,   // for disabled/inactive text
+  [kColorTextError]            = 0xffff4444,   // red text for errors
+  [kColorTextSuccess]          = 0xff44ff44,   // green text for success messages
+  [kColorBorderFocus]          = 0xff101010,   // very dark outline for focused item
+  [kColorBorderActive]         = 0xff808080,   // light gray for active border
+  [kColorFolderText]           = 0xffa0d000,   // folder entry text in file lists
 };
 
 void set_sys_colors(int count, const int *indices, const uint32_t *colors) {

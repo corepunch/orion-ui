@@ -190,24 +190,6 @@ typedef enum {
   icon8_count,
 } icon8_t;
 
-// Default system color values (used to initialise the theme table)
-#define COLOR_PANEL_BG       0xff3c3c3c  // main panel or window background
-#define COLOR_PANEL_DARK_BG  0xff2c2c2c  // dark secondary panel background
-#define COLOR_STATUSBAR_BG   0xff2c2c2c  // status bar background
-#define COLOR_LIGHT_EDGE     0xff7f7f7f  // top-left edge for beveled elements
-#define COLOR_DARK_EDGE      0xff1a1a1a  // bottom-right edge for bevel
-#define COLOR_FLARE          0xffcfcfcf  // corner flare for beveled elements
-#define COLOR_FOCUSED        0xff5EC4F3  // keyboard-focus ring
-#define COLOR_BUTTON_BG      0xff404040  // button background (unpressed)
-#define COLOR_BUTTON_INNER   0xff505050  // inner fill of button
-#define COLOR_BUTTON_HOVER   0xff5a5a5a  // slightly brighter for hover state
-#define COLOR_TEXT_NORMAL    0xffc0c0c0  // standard text color
-#define COLOR_TEXT_DISABLED  0xff808080  // for disabled/inactive text
-#define COLOR_TEXT_ERROR     0xffff4444  // red text for errors
-#define COLOR_TEXT_SUCCESS   0xff44ff44  // green text for success messages
-#define COLOR_BORDER_FOCUS   0xff101010  // very dark outline for focused item
-#define COLOR_BORDER_ACTIVE  0xff808080  // light gray for active border
-
 // System color indices — analogous to WinAPI GetSysColor(nIndex).
 // Access via get_sys_color(kColorXxx); change via set_sys_colors().
 typedef enum {

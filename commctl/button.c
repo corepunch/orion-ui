@@ -36,7 +36,7 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
                           ((win->flags & BUTTON_PUSHLIKE) && win->value);
       // BUTTON_DEFAULT (BS_DEFPUSHBUTTON analogue): use black for the outer 1-px
       // gap so a thin black outline is visible around the button bevel.
-      // When the button has keyboard focus COLOR_FOCUSED takes precedence.
+      // When the button has keyboard focus kColorFocusRing takes precedence.
       uint32_t bg = (_focused == win) ? get_sys_color(kColorFocusRing) :
                     (win->flags & BUTTON_DEFAULT) ? 0xff000000 : get_sys_color(kColorWindowBg);
       fill_rect(bg, win->frame.x-2, win->frame.y-2, win->frame.w+4, win->frame.h+4);
