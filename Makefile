@@ -152,7 +152,11 @@ TEST_ENV_BINS = $(patsubst $(TEST_DIR)/%.c,$(BIN_DIR)/test_%$(EXE_EXT),$(TEST_EN
 
 # Default target
 .PHONY: all
+ifeq ($(OS),Windows_NT)
+all: library examples
+else
 all: library examples gems shell
+endif
 
 # Build the platform submodule shared library
 .PHONY: platform

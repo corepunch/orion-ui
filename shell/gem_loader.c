@@ -30,17 +30,6 @@ static unsigned g_gem_generation = 0;  // incremented on every load/unload
 unsigned shell_gem_generation(void) { return g_gem_generation; }
 
 // ---------------------------------------------------------------------------
-// Internal: check whether a window pointer is still alive (in the list).
-// ---------------------------------------------------------------------------
-static bool is_window_alive(window_t *win) {
-    extern window_t *windows;
-    for (window_t *w = windows; w; w = w->next) {
-        if (w == win) return true;
-    }
-    return false;
-}
-
-// ---------------------------------------------------------------------------
 bool shell_load_gem(const char *gem_path, int argc, char *argv[]) {
     void *handle = dlopen(gem_path, RTLD_LAZY | RTLD_LOCAL);
     if (!handle) {
@@ -68,9 +57,13 @@ bool shell_load_gem(const char *gem_path, int argc, char *argv[]) {
 
     printf("shell: loading %s v%s\n", iface->name, iface->version);
 
-    // Snapshot window list so we can detect the gem's first window below.
+    // Snapshot the tail of the window list so we can identify the first window
+    // the gem creates.  create_window() appends to the tail, so we need to
+    // find the node just after the current tail after init() returns.
     extern window_t *windows;
-    window_t *before = windows;
+    window_t *tail_before = NULL;
+    for (window_t *w = windows; w; w = w->next)
+        if (!w->next) { tail_before = w; break; }
 
     if (!iface->init(argc, argv)) {
         fprintf(stderr, "shell: %s init() failed\n", iface->name);
@@ -78,8 +71,9 @@ bool shell_load_gem(const char *gem_path, int argc, char *argv[]) {
         return false;
     }
 
-    // The gem's init() pushed at least one new window to the head of the list.
-    window_t *main_win = (windows != before) ? windows : NULL;
+    // The first window appended by init() is now tail_before->next (or
+    // windows itself if the list was empty before).
+    window_t *main_win = tail_before ? tail_before->next : windows;
 
     loaded_gem_t *lg = calloc(1, sizeof(loaded_gem_t));
     if (!lg) {
@@ -92,8 +86,14 @@ bool shell_load_gem(const char *gem_path, int argc, char *argv[]) {
     lg->handle      = handle;
     lg->iface       = iface;
     lg->main_window = main_win;
-    lg->next        = gems_head;
-    gems_head       = lg;
+    // Append to tail so gems are tracked in load order.
+    if (!gems_head) {
+        gems_head = lg;
+    } else {
+        loaded_gem_t *tail = gems_head;
+        while (tail->next) tail = tail->next;
+        tail->next = lg;
+    }
     g_gem_generation++;
 
     return true;
@@ -130,22 +130,14 @@ const char *shell_get_gem_for_extension(const char *extension) {
     return NULL;
 }
 
-// ---------------------------------------------------------------------------
-// Scan all loaded gems and unload any whose tracked main window has been
-// destroyed.  Call this from the shell's main loop after dispatch_message().
+// Automatic unload-on-main-window-close is unsafe: a gem may create multiple
+// top-level windows.  Unloading when only the tracked window is closed would
+// dlclose() code that remaining windows may still call into.  Gem cleanup is
+// deferred to shell_notify_gem_shutdown() + shell_cleanup_all_gems() at shell
+// exit, which guarantees all windows are gone before dlclose().
 // Returns the number of gems that were unloaded.
 int shell_check_closed_gems(void) {
-    int count = 0;
-    loaded_gem_t *lg = gems_head;
-    while (lg) {
-        loaded_gem_t *next = lg->next;
-        if (lg->main_window && !is_window_alive(lg->main_window)) {
-            shell_unload_gem(lg->main_window);
-            count++;
-        }
-        lg = next;
-    }
-    return count;
+    return 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -212,10 +204,10 @@ void shell_cleanup_all_gems(void) {
 // ui_open_file handler — passed to ui_register_open_file_handler() at shell
 // startup.  Routes files to the appropriate handler:
 //   .gem  → load the gem directly via shell_load_gem()
-//   other → find a loaded gem that declares the extension in file_types and
-//            call its init() with the file path as argv[1] (launches the gem
-//            with that file if not already loaded, or re-inits if already open
-//            — callers that want single-instance semantics can check first).
+//   other → find an already loaded gem that declares the extension in
+//            file_types and call shell_load_gem() with the file path as
+//            argv[1].  This does not auto-discover gems that are not yet
+//            loaded; the caller must ensure the handler gem is loaded first.
 // Returns true if the file was handled, false otherwise.
 bool shell_handle_open_file(const char *path) {
     if (!path) return false;

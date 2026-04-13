@@ -48,8 +48,8 @@ make test
 To run examples as gems under the shell:
 
 ```bash
-./build/bin/orion-shell build/lib/gems/imageeditor.gem \
-                         build/lib/gems/filemanager.gem
+./build/bin/orion-shell build/gem/imageeditor.gem \
+                         build/gem/filemanager.gem
 ```
 
 ## Running at 1× Scale
@@ -85,7 +85,7 @@ int main(void) {
   ui_event_t e;
   while (ui_is_running()) {
     while (get_message(&e)) dispatch_message(&e);
-    repost_messages(-1);
+    repost_messages();
   }
   ui_shutdown_graphics();
   return 0;

@@ -7,14 +7,17 @@
 #include "../ui.h"
 #include "gem_loader.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 // ---------------------------------------------------------------------------
 // Shell menu bar
 // ---------------------------------------------------------------------------
 
-// Shell-owned command IDs (use a range unlikely to clash with any gem).
-#define ID_SHELL_QUIT  1
+// Shell-owned command IDs live in a reserved high range so they cannot
+// collide with gem-defined menu IDs, which commonly start at small values.
+#define ID_SHELL_CMD_BASE  0xF000
+#define ID_SHELL_QUIT      (ID_SHELL_CMD_BASE + 1)
 
 static const menu_item_t kShellFileItems[] = {
     {"Quit", ID_SHELL_QUIT},
@@ -32,6 +35,7 @@ static void shell_rebuild_menubar(void) {
     if (!g_menubar) return;
     menu_def_t *all = NULL;
     int count = shell_collect_menus(kShellMenus, SHELL_MENU_COUNT, &all);
+    if (count <= 0 || all == NULL) return;
     send_message(g_menubar, kMenuBarMessageSetMenus, (uint32_t)count, all);
     free(all);
 }

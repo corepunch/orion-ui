@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
     while (ui_is_running()) {
         ui_event_t e;
         while (get_message(&e)) dispatch_message(&e);
-        repost_messages(-1);
+        repost_messages();
     }
     gem_shutdown();
     ui_shutdown_graphics();
