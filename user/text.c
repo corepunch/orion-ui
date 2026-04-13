@@ -2,7 +2,6 @@
 // Extracted from mapview/windows/console.c
 // Contains only the small embedded font rendering (console_font_6x8: 6-bit wide, 8 pixels tall)
 
-#include "gl_compat.h"
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -222,10 +221,8 @@ void draw_text_small(const char* text, int x, int y, uint32_t col) {
   // Early return if nothing to draw
   if (vertex_count == 0) return;
   
-  // Set up GL state
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-  glDisable(GL_DEPTH_TEST);
+  // Set up blend state for 2-D UI text rendering.
+  R_SetBlendMode(true);
   
   // Get locations for shader uniforms
   push_sprite_args(text_state.small_font.texture.id, 0, 0, 1, 1, 1);
@@ -322,9 +319,7 @@ void draw_text_wrapped(const char* text, rect_t const *viewport, uint32_t col) {
   
   if (vertex_count == 0) return;
   
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-  glDisable(GL_DEPTH_TEST);
+  R_SetBlendMode(true);
   push_sprite_args(text_state.small_font.texture.id, 0, 0, 1, 1, 1);
   R_TextureBind(&text_state.small_font.texture);
   R_MeshDrawDynamic(&text_state.small_font.mesh, buffer, vertex_count);
@@ -333,7 +328,8 @@ void draw_text_wrapped(const char* text, rect_t const *viewport, uint32_t col) {
 // Clean up text rendering resources
 void shutdown_text_rendering(void) {
   // Delete small font resources
-  SAFE_DELETE_N(text_state.small_font.texture.id, glDeleteTextures);
+  R_DeleteTexture((uint32_t)text_state.small_font.texture.id);
+  text_state.small_font.texture.id = 0;
   R_MeshDestroy(&text_state.small_font.mesh);
   
   // Clear the entire state

@@ -237,3 +237,34 @@ void ui_update_screen_size(int width, int height) {
   glUseProgram(g_ref.program);
   glUniformMatrix4fv(glGetUniformLocation(g_ref.program, "projection"), 1, GL_FALSE, g_ref.projection[0]);
 }
+uint32_t R_CreateTextureRGBA(int w, int h, const void *rgba,
+                              R_TextureFilter filter, R_TextureWrap wrap) {
+  GLuint tex = 0;
+  glGenTextures(1, &tex);
+  glBindTexture(GL_TEXTURE_2D, tex);
+  GLenum gl_filter = (filter == R_FILTER_LINEAR) ? GL_LINEAR : GL_NEAREST;
+  GLenum gl_wrap   = (wrap   == R_WRAP_REPEAT)   ? GL_REPEAT : GL_CLAMP_TO_EDGE;
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, gl_wrap);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, gl_wrap);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, rgba);
+  return (uint32_t)tex;
+}
+
+void R_DeleteTexture(uint32_t id) {
+  if (id == 0) return;
+  GLuint tex = (GLuint)id;
+  glDeleteTextures(1, &tex);
+}
+
+void R_SetBlendMode(bool enabled) {
+  if (enabled) {
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDisable(GL_DEPTH_TEST);
+  } else {
+    glDisable(GL_BLEND);
+    glEnable(GL_DEPTH_TEST);
+  }
+}

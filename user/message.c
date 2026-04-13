@@ -10,7 +10,7 @@
 #include "user.h"
 #include "messages.h"
 #include "draw.h"
-#include "gl_compat.h"
+#include "image.h"
 
 // Message queue structure
 typedef struct {
@@ -419,12 +419,13 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
                             get_sys_color(active ? kColorActiveTitlebarText : kColorInactiveTitlebarText));
           }
           if (win->flags&WINDOW_TOOLBAR) {
+            int bsz = (win->toolbar_btn_size > 0) ? win->toolbar_btn_size : TB_SPACING;
             int bpr = (win->num_toolbar_buttons > 0 && win->frame.w > 0)
-                ? MAX(1, win->frame.w / TB_SPACING) : 1;
+                ? MAX(1, win->frame.w / bsz) : 1;
             int nrows = (win->num_toolbar_buttons > 0)
                 ? (int)((win->num_toolbar_buttons + (uint32_t)bpr - 1) / (uint32_t)bpr)
                 : 1;
-            int total_h = nrows * TOOLBAR_HEIGHT;
+            int total_h = nrows * bsz;
             rect_t rect = {win->frame.x+1, win->frame.y-total_h+1, win->frame.w-2, total_h-2};
             draw_bevel(&rect);
             fill_rect(get_sys_color(kColorWindowBg), rect.x, rect.y, rect.w, rect.h);
@@ -433,11 +434,11 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
               toolbar_button_t const *but = &win->toolbar_buttons[i];
               int row = (int)i / bpr;
               int col = (int)i % bpr;
-              int bx = rect.x + col * TB_SPACING + 2;
-              int by = rect.y + row * TOOLBAR_HEIGHT + 2;
+              int bx = rect.x + col * bsz + 2;
+              int by = rect.y + row * bsz + 2;
               if (strip) {
                 // Draw button background (pressed/unpressed)
-                rect_t btn_r = {bx - 2, by - 2, TB_SPACING - 2, TOOLBAR_HEIGHT - 2};
+                rect_t btn_r = {bx - 2, by - 2, bsz - 2, bsz - 2};
                 draw_button(&btn_r, 1, 1, but->active);
                 int px = but->active ? 1 : 0;
                 int icon_index = but->icon;
@@ -493,6 +494,63 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         for (uint32_t i = 0; i < win->num_toolbar_buttons; i++) {
           win->toolbar_buttons[i].active = (win->toolbar_buttons[i].ident == (int)ident);
         }
+        invalidate_window(win);
+        break;
+      }
+      case kToolBarMessageSetButtonSize: {
+        int old_btn_size = win->toolbar_btn_size;
+        // Accept 0 (reset to default TB_SPACING) or a positive value >= 8.
+        // Values in [1,7] are rejected: bsz is used as a divisor in toolbar
+        // column-count calculations (win->frame.w / bsz) and very small sizes
+        // would also produce broken layout (sub-pixel buttons, huge row counts).
+        int new_btn_size = (int)wparam;
+        if (new_btn_size != 0 && new_btn_size < 8) new_btn_size = 8;
+        if (old_btn_size != new_btn_size) {
+          win->toolbar_btn_size = new_btn_size;
+          post_message(win, kWindowMessageRefreshStencil, 0, NULL);
+          invalidate_window(get_root_window(win));
+        }
+        break;
+      }
+      case kToolBarMessageLoadStrip: {
+        // wparam = icon tile size (square, pixels); lparam = const char* path
+        // Loads PNG, converts black-on-white artwork to alpha channel,
+        // creates a GL texture (via the renderer), and stores the strip in
+        // win->toolbar_strip.  The window owns the texture; freed on destroy.
+        // Requires graphics to be initialized (running == true).
+        const char *path = (const char *)lparam;
+        int tile_sz = (int)wparam;
+        if (!path || tile_sz <= 0 || !running) break;
+        int w = 0, h = 0;
+        uint8_t *src = load_image(path, &w, &h);
+        if (!src) break;
+        if (w < tile_sz || h < tile_sz ||
+            (w % tile_sz) != 0 || (h % tile_sz) != 0) {
+          image_free(src);
+          break;
+        }
+        // Convert: use inverted luminance as alpha; set RGB to 0xC0 (light grey)
+        // so icons are visible on the dark toolbar background.
+        int npx = w * h;
+        for (int i = 0; i < npx; i++) {
+          uint8_t r = src[i*4+0], g = src[i*4+1], b = src[i*4+2];
+          uint8_t lum = (uint8_t)(((int)r*77 + (int)g*150 + (int)b*29) >> 8);
+          src[i*4+0] = 0xC0;
+          src[i*4+1] = 0xC0;
+          src[i*4+2] = 0xC0;
+          src[i*4+3] = (uint8_t)(255 - lum);
+        }
+        // Free any previously framework-owned texture via the renderer.
+        R_DeleteTexture(win->toolbar_strip_tex);
+        uint32_t tex = R_CreateTextureRGBA(w, h, src, R_FILTER_NEAREST, R_WRAP_CLAMP);
+        image_free(src);
+        win->toolbar_strip_tex    = tex;
+        win->toolbar_strip.tex    = tex;
+        win->toolbar_strip.icon_w = tile_sz;
+        win->toolbar_strip.icon_h = tile_sz;
+        win->toolbar_strip.cols   = w / tile_sz;
+        win->toolbar_strip.sheet_w = w;
+        win->toolbar_strip.sheet_h = h;
         invalidate_window(win);
         break;
       }
@@ -577,12 +635,13 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
           if (win->flags&WINDOW_TOOLBAR) {
             uint16_t x = LOWORD(wparam);
             uint16_t y = HIWORD(wparam);
+            int bsz = (win->toolbar_btn_size > 0) ? win->toolbar_btn_size : TB_SPACING;
             int bpr = (win->num_toolbar_buttons > 0 && win->frame.w > 0)
-                ? MAX(1, win->frame.w / TB_SPACING) : 1;
+                ? MAX(1, win->frame.w / bsz) : 1;
             int nrows = (win->num_toolbar_buttons > 0)
                 ? (int)((win->num_toolbar_buttons + (uint32_t)bpr - 1) / (uint32_t)bpr)
                 : 1;
-            int total_h = nrows * TOOLBAR_HEIGHT;
+            int total_h = nrows * bsz;
             int base_x = win->frame.x + 2;
             int base_y = win->frame.y - total_h + 2;
             #define CONTAINS(x, y, x1, y1, w1, h1) \
@@ -591,9 +650,9 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
               toolbar_button_t *but = &win->toolbar_buttons[i];
               int row = (int)i / bpr;
               int col = (int)i % bpr;
-              int bx = base_x + col * TB_SPACING;
-              int by = base_y + row * TOOLBAR_HEIGHT;
-              if (CONTAINS(x, y, bx, by, TB_SPACING, TOOLBAR_HEIGHT)) {
+              int bx = base_x + col * bsz;
+              int by = base_y + row * bsz;
+              if (CONTAINS(x, y, bx, by, bsz, bsz)) {
                 send_message(win, kToolBarMessageButtonClick, but->ident, but);
               }
             }

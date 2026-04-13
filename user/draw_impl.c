@@ -53,13 +53,14 @@ int titlebar_height(window_t const *win) {
     t += TITLEBAR_HEIGHT;
   }
   if (win->flags&WINDOW_TOOLBAR) {
+    int bsz = (win->toolbar_btn_size > 0) ? win->toolbar_btn_size : TB_SPACING;
     int buttons_per_row = (win->num_toolbar_buttons > 0 && win->frame.w > 0)
-        ? MAX(1, win->frame.w / TB_SPACING)
+        ? MAX(1, win->frame.w / bsz)
         : 1;
     int num_rows = (win->num_toolbar_buttons > 0)
         ? (int)((win->num_toolbar_buttons + (uint32_t)buttons_per_row - 1) / (uint32_t)buttons_per_row)
         : 1;
-    t += num_rows * TOOLBAR_HEIGHT;
+    t += num_rows * bsz;
   }
   return t;
 }
@@ -261,7 +262,7 @@ void ui_set_stencil_for_root_window(uint32_t window_id) {
 // Fill a rectangle with a solid color
 void fill_rect(uint32_t color, int x, int y, int w, int h) {
   extern bool running;
-  extern GLuint ui_white_texture;
+  extern uint32_t ui_white_texture;
   
   // Skip drawing if graphics aren't initialized (e.g., in tests)
   if (!running) return;
@@ -280,7 +281,7 @@ void fill_rect(uint32_t color, int x, int y, int w, int h) {
 // of the selection size, keeping the GL call count constant (O(1)).
 void draw_sel_rect(int x, int y, int w, int h) {
   extern bool running;
-  extern GLuint ui_checker_texture;
+  extern uint32_t ui_checker_texture;
 
   if (!running || w < 1 || h < 1) return;
 

@@ -189,6 +189,10 @@ void destroy_window(window_t *win) {
   if (_dragging == win) _dragging = NULL;
   if (_resizing == win) _resizing = NULL;
   if (win->toolbar_buttons) free(win->toolbar_buttons);
+  if (win->toolbar_strip_tex) {
+    R_DeleteTexture(win->toolbar_strip_tex);
+    win->toolbar_strip_tex = 0;
+  }
   remove_from_global_list(win);
   remove_from_global_hooks(win);
   remove_from_global_queue(win);
