@@ -70,103 +70,17 @@ static const int k_tool_icon_idx[NUM_TOOLS] = {
   6,    // Magnifier
 };
 
-typedef struct {
-  GLuint         tools_tex;
-  bitmap_strip_t strip;     // shared strip descriptor, owned by palette
-} tool_palette_data_t;
-
-// Load a PNG file and return heap-allocated RGBA pixels (caller frees),
-// or NULL on failure.  Writes image dimensions to *out_w / *out_h.
-// Uses inverted luminance as alpha so black icon lines are fully opaque
-// and the white background is transparent.
-static uint8_t *load_png_rgba(const char *path, int *out_w, int *out_h) {
-  int w = 0, h = 0;
-  uint8_t *src = load_image(path, &w, &h);
-  if (!src) return NULL;
-
-  // Convert to RGBA: treat the source as black-on-white artwork.
-  // Use inverted luminance as alpha so that black icon lines are fully
-  // opaque and the white background is transparent.  Icon pixels are
-  // rendered in kColorTextNormal (light gray) so they are visible on
-  // the dark panel background.
-  uint8_t *rgba = malloc((size_t)w * h * 4);
-  if (rgba) {
-    for (int row = 0; row < h; row++) {
-      for (int col = 0; col < w; col++) {
-        uint8_t *px = src + (row * w + col) * 4;
-        uint8_t src_r = px[0], src_g = px[1], src_b = px[2];
-        uint8_t lum = (uint8_t)(((int)src_r * 77 + (int)src_g * 150 + (int)src_b * 29) >> 8);
-        uint8_t alpha = (uint8_t)(255 - lum);
-        rgba[(row * w + col) * 4 + 0] = 0xC0;
-        rgba[(row * w + col) * 4 + 1] = 0xC0;
-        rgba[(row * w + col) * 4 + 2] = 0xC0;
-        rgba[(row * w + col) * 4 + 3] = alpha;
-      }
-    }
-  }
-
-  image_free(src);
-  *out_w = w;
-  *out_h = h;
-  return rgba;
-}
-
-// Load tools.png from the per-application share directory,
-// resolved relative to the running executable's location via SHAREDIR.
-// On success, populates *strip with the loaded texture and tile geometry.
-// Returns the GL texture ID (also stored in strip->tex), or 0 on failure.
-static GLuint load_tools_texture(bitmap_strip_t *strip) {
-#ifdef SHAREDIR
-  char path[4096];
-  snprintf(path, sizeof(path), "%s/" SHAREDIR "/tools.png", ui_get_exe_dir());
-  int w = 0, h = 0;
-  uint8_t *rgba = load_png_rgba(path, &w, &h);
-  if (!rgba) return 0;
-
-  // Validate that the PNG tiles evenly into ICON_W × ICON_H cells.
-  if (w < ICON_W || h < ICON_H || (w % ICON_W) != 0 || (h % ICON_H) != 0) {
-    free(rgba);
-    return 0;
-  }
-
-  GLuint tex;
-  glGenTextures(1, &tex);
-  glBindTexture(GL_TEXTURE_2D, tex);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
-               GL_RGBA, GL_UNSIGNED_BYTE, rgba);
-  free(rgba);
-
-  strip->tex     = (uint32_t)tex;
-  strip->icon_w  = ICON_W;
-  strip->icon_h  = ICON_H;
-  strip->cols    = w / ICON_W;
-  strip->sheet_w = w;
-  strip->sheet_h = h;
-  return tex;
-#else
-  (void)strip;
-  return 0;
-#endif
-}
-
 result_t win_tool_palette_proc(window_t *win, uint32_t msg,
                                 uint32_t wparam, void *lparam) {
   switch (msg) {
     case kWindowMessageCreate: {
-      tool_palette_data_t *d =
-          (tool_palette_data_t *)allocate_window_data(win, sizeof(tool_palette_data_t));
-
-      d->tools_tex = load_tools_texture(&d->strip);
-
-      // Associate the PNG strip with the window's toolbar.
-      // The toolbar rendering in message.c will use this strip for icon display.
-      if (d->tools_tex) {
-        send_message(win, kToolBarMessageSetStrip, 0, &d->strip);
-      }
+      // Load tools.png into the toolbar strip.  The framework owns the GL
+      // texture and frees it on destroy; no manual glDeleteTextures needed.
+#ifdef SHAREDIR
+      char path[4096];
+      snprintf(path, sizeof(path), "%s/" SHAREDIR "/tools.png", ui_get_exe_dir());
+      send_message(win, kToolBarMessageLoadStrip, ICON_W, path);
+#endif
 
       // Add one toolbar button per tool.
       // icon = PNG strip index (iBitmap); ident = tool command ID.
@@ -174,20 +88,9 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       for (int i = 0; i < NUM_TOOLS; i++) {
         buttons[i].icon   = k_tool_icon_idx[i];
         buttons[i].ident  = k_tool_order[i];
-        buttons[i].active = (i == 0);  // Select is the default tool (first in PS1.0 order)
+        buttons[i].active = (i == 0);  // Select is the default tool
       }
       send_message(win, kToolBarMessageAddButtons, NUM_TOOLS, buttons);
-      return true;
-    }
-
-    case kWindowMessageDestroy: {
-      tool_palette_data_t *d = (tool_palette_data_t *)win->userdata;
-      if (d && d->tools_tex) {
-        glDeleteTextures(1, &d->tools_tex);
-        d->tools_tex = 0;
-      }
-      free(win->userdata);
-      win->userdata = NULL;
       return true;
     }
 

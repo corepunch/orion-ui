@@ -11,6 +11,7 @@
 #include "messages.h"
 #include "draw.h"
 #include "gl_compat.h"
+#include "image.h"
 
 // Message queue structure
 typedef struct {
@@ -505,6 +506,59 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
           post_message(win, kWindowMessageRefreshStencil, 0, NULL);
           invalidate_window(get_root_window(win));
         }
+        break;
+      }
+      case kToolBarMessageLoadStrip: {
+        // wparam = icon tile size (square, pixels); lparam = const char* path
+        // Loads PNG, converts black-on-white artwork to alpha channel,
+        // creates GL texture, and stores the strip in win->toolbar_strip.
+        // The window owns the texture; it is freed on destroy_window().
+        const char *path = (const char *)lparam;
+        int tile_sz = (int)wparam;
+        if (!path || tile_sz <= 0) break;
+        int w = 0, h = 0;
+        uint8_t *src = load_image(path, &w, &h);
+        if (!src) break;
+        if (w < tile_sz || h < tile_sz ||
+            (w % tile_sz) != 0 || (h % tile_sz) != 0) {
+          image_free(src);
+          break;
+        }
+        // Convert: use inverted luminance as alpha; set RGB to 0xC0 (light grey)
+        // so icons are visible on the dark toolbar background.
+        int npx = w * h;
+        for (int i = 0; i < npx; i++) {
+          uint8_t r = src[i*4+0], g = src[i*4+1], b = src[i*4+2];
+          uint8_t lum = (uint8_t)(((int)r*77 + (int)g*150 + (int)b*29) >> 8);
+          src[i*4+0] = 0xC0;
+          src[i*4+1] = 0xC0;
+          src[i*4+2] = 0xC0;
+          src[i*4+3] = (uint8_t)(255 - lum);
+        }
+        // Free any previously framework-owned texture
+        if (win->toolbar_strip_tex) {
+          GLuint old = (GLuint)win->toolbar_strip_tex;
+          glDeleteTextures(1, &old);
+          win->toolbar_strip_tex = 0;
+        }
+        GLuint tex = 0;
+        glGenTextures(1, &tex);
+        glBindTexture(GL_TEXTURE_2D, tex);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
+                     GL_RGBA, GL_UNSIGNED_BYTE, src);
+        image_free(src);
+        win->toolbar_strip_tex    = (uint32_t)tex;
+        win->toolbar_strip.tex    = (uint32_t)tex;
+        win->toolbar_strip.icon_w = tile_sz;
+        win->toolbar_strip.icon_h = tile_sz;
+        win->toolbar_strip.cols   = w / tile_sz;
+        win->toolbar_strip.sheet_w = w;
+        win->toolbar_strip.sheet_h = h;
+        invalidate_window(win);
         break;
       }
       case kWindowMessageStatusBar:

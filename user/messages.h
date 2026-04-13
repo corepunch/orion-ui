@@ -64,6 +64,7 @@ enum {
   kScrollBarMessageSetInfo,        // lparam = scrollbar_info_t*
   kScrollBarMessageGetPos,         // returns current scroll position
   kToolBarMessageSetButtonSize,    // wparam=square button size in pixels (0 resets to TB_SPACING)
+  kToolBarMessageLoadStrip,        // wparam=icon tile size in px (square); lparam=const char* path to PNG
 };
 
 // Control notification messages
