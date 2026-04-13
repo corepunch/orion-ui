@@ -58,6 +58,25 @@ bool ui_is_running(void);
 void ui_request_quit(void);
 #endif
 
+// Shell-execute hook — analogous to Win32 ShellExecute().
+//
+// ui_register_open_file_handler() is called once at startup by whoever owns
+// the process (e.g. orion-shell) to register a handler for ui_open_file().
+//
+// ui_open_file() can be called by any code (file manager, other gems, …) to
+// ask the current "shell" to open a file.  The handler receives the full path
+// and returns true if it handled the file.  If no handler is registered (e.g.
+// running standalone without a shell) the call is silently ignored.
+//
+// Typical shell registration:
+//   ui_register_open_file_handler(shell_handle_open_file);
+//
+// Typical gem usage (filemanager opening a .gem or .lua):
+//   if (!ui_open_file(item->path)) { /* fallback */ }
+typedef bool (*ui_open_file_handler_t)(const char *path);
+void ui_register_open_file_handler(ui_open_file_handler_t handler);
+bool ui_open_file(const char *path);
+
 extern bool mode;
 extern unsigned frame;
 

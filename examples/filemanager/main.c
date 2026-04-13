@@ -44,6 +44,15 @@ static result_t filemanager_proc(window_t *win, uint32_t msg,
       }
 #endif
 
+      if (code == FLN_FILEOPEN && lparam) {
+        const fileitem_t *item = (const fileitem_t *)lparam;
+        // Ask the shell to open the file via ui_open_file().  Handles .gem
+        // files (load the gem) and any other extension a loaded gem claims.
+        // Falls back silently if no handler is registered (standalone mode).
+        if (item->path && ui_open_file(item->path))
+          return true;
+      }
+
       // Forward anything else (e.g. future FLN_* codes) to win_filelist.
       return win_filelist(win, msg, wparam, lparam);
     }

@@ -33,7 +33,10 @@ void shell_notify_gem_shutdown(void);
 // Call this from the shell's main loop.  Returns the number unloaded.
 int shell_check_closed_gems(void);
 
-// Build a combined menu array: prefix menus first, then all loaded gems'
+// Returns a generation counter that increments every time a gem is loaded or
+// unloaded.  Use this in the shell's event loop to detect when the menubar
+// needs to be rebuilt (e.g. after ui_open_file() loads a new gem).
+unsigned shell_gem_generation(void);
 // menus appended in load order.  The caller must free() the returned array.
 // Returns the total number of menu_def_t entries written.
 int shell_collect_menus(const menu_def_t *prefix, int prefix_count,
@@ -41,5 +44,12 @@ int shell_collect_menus(const menu_def_t *prefix, int prefix_count,
 
 // Dispatch a menu command id to every loaded gem's handle_command callback.
 void shell_dispatch_gem_command(uint16_t id);
+
+// Open-file handler suitable for passing to ui_register_open_file_handler().
+// Handles .gem files by loading them via shell_load_gem(); other extensions
+// are matched against loaded gems via shell_get_gem_for_extension() and the
+// matching gem's init is called with the file path as argv[1].
+// Returns true if the file was handled.
+bool shell_handle_open_file(const char *path);
 
 #endif /* SHELL_GEM_LOADER_H */

@@ -24,6 +24,10 @@ typedef struct loaded_gem {
 } loaded_gem_t;
 
 static loaded_gem_t *gems_head = NULL;
+static unsigned g_gem_generation = 0;  // incremented on every load/unload
+
+// Returns the current generation counter so callers can detect changes.
+unsigned shell_gem_generation(void) { return g_gem_generation; }
 
 // ---------------------------------------------------------------------------
 // Internal: check whether a window pointer is still alive (in the list).
@@ -90,6 +94,7 @@ bool shell_load_gem(const char *gem_path, int argc, char *argv[]) {
     lg->main_window = main_win;
     lg->next        = gems_head;
     gems_head       = lg;
+    g_gem_generation++;
 
     return true;
 }
@@ -106,6 +111,7 @@ void shell_unload_gem(window_t *window) {
             *pp = lg->next;
             free(lg->path);
             free(lg);
+            g_gem_generation++;
             return;
         }
         pp = &lg->next;
@@ -200,4 +206,44 @@ void shell_cleanup_all_gems(void) {
         free(lg->path);
         free(lg);
     }
+}
+
+// ---------------------------------------------------------------------------
+// ui_open_file handler — passed to ui_register_open_file_handler() at shell
+// startup.  Routes files to the appropriate handler:
+//   .gem  → load the gem directly via shell_load_gem()
+//   other → find a loaded gem that declares the extension in file_types and
+//            call its init() with the file path as argv[1] (launches the gem
+//            with that file if not already loaded, or re-inits if already open
+//            — callers that want single-instance semantics can check first).
+// Returns true if the file was handled, false otherwise.
+bool shell_handle_open_file(const char *path) {
+    if (!path) return false;
+
+    // Determine the file extension (last dot after the last slash).
+    const char *ext = NULL;
+    const char *p = path;
+    while (*p) {
+        if (*p == '.') ext = p;
+        if (*p == '/' || *p == '\\') ext = NULL;
+        p++;
+    }
+
+    // .gem file → load it directly.
+    if (ext && strcmp(ext, ".gem") == 0) {
+        char *gem_argv[] = { (char *)path, NULL };
+        bool ok = shell_load_gem(path, 1, gem_argv);
+        return ok;
+    }
+
+    // Other extension → ask a loaded gem that handles it.
+    if (ext) {
+        const char *gem_path = shell_get_gem_for_extension(ext);
+        if (gem_path) {
+            char *gem_argv[] = { (char *)gem_path, (char *)path, NULL };
+            return shell_load_gem(gem_path, 2, gem_argv);
+        }
+    }
+
+    return false;
 }

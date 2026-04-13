@@ -90,6 +90,10 @@ int main(int argc, char *argv[]) {
     int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
     int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
 
+    // Register the shell's open-file handler so any gem can call ui_open_file()
+    // to load a .gem or open a file in the appropriate gem.
+    ui_register_open_file_handler(shell_handle_open_file);
+
     // Menu bar — full screen width, always on top.
     g_menubar = create_window(
         "menubar",
@@ -134,12 +138,20 @@ int main(int argc, char *argv[]) {
     // own windows AND windows created by loaded gems, because both use
     // the same liborion.so instance and therefore the same window list).
     ui_event_t e;
+    unsigned last_gem_gen = shell_gem_generation();
     while (ui_is_running()) {
         while (get_message(&e))
             dispatch_message(&e);
         // Check whether any loaded gem's main window was closed during
         // this batch of events and unload the gem if so.
         shell_check_closed_gems();
+        // Rebuild the menu bar if gems were loaded or unloaded (e.g. via
+        // ui_open_file() triggered by the file manager).
+        unsigned gen = shell_gem_generation();
+        if (gen != last_gem_gen) {
+            shell_rebuild_menubar();
+            last_gem_gen = gen;
+        }
         repost_messages();
     }
 

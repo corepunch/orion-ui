@@ -177,6 +177,19 @@ void ui_request_quit(void) {
   running = false;
 }
 
+// Shell-execute hook — analogous to Win32 ShellExecute().
+static ui_open_file_handler_t g_open_file_handler = NULL;
+
+void ui_register_open_file_handler(ui_open_file_handler_t handler) {
+  g_open_file_handler = handler;
+}
+
+bool ui_open_file(const char *path) {
+  if (g_open_file_handler)
+    return g_open_file_handler(path);
+  return false;
+}
+
 // Begin a render frame: make GL context current and bind platform framebuffer.
 // Must be called once per frame before any OpenGL drawing.
 // No-op when graphics have not been initialized (e.g. headless unit tests).
