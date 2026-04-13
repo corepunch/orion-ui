@@ -59,8 +59,9 @@ static const accel_t kAccelEntries[] = {
 // ============================================================
 
 static void create_app_windows(void) {
+#ifndef BUILD_AS_GEM
   int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
-
+  // Standalone: own the menu bar window.
   window_t *mb = create_window(
       "menubar",
       WINDOW_NOTITLE | WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
@@ -70,6 +71,7 @@ static void create_app_windows(void) {
                (uint32_t)kNumMenus, (void *)kMenus);
   show_window(mb, true);
   g_app->menubar_win = mb;
+#endif /* !BUILD_AS_GEM */
 
   window_t *tp = create_window(
       "Tools",
@@ -113,7 +115,19 @@ bool gem_init(int argc, char *argv[]) {
 
   g_app->accel = load_accelerators(kAccelEntries,
                                    (int)(sizeof(kAccelEntries)/sizeof(kAccelEntries[0])));
-  send_message(g_app->menubar_win, kMenuBarMessageSetAccelerators, 0, g_app->accel);
+  if (g_app->menubar_win)
+    send_message(g_app->menubar_win, kMenuBarMessageSetAccelerators, 0, g_app->accel);
+
+#ifdef BUILD_AS_GEM
+  // In gem mode there is no local menu-bar window; contribute our menus to
+  // the shell's menu bar instead.  The shell reads these fields after init()
+  // returns and calls shell_rebuild_menubar().
+  gem_interface_t *iface = gem_get_interface();
+  iface->menus          = kMenus;
+  iface->menu_count     = kNumMenus;
+  iface->handle_command = handle_menu_command;
+#endif /* BUILD_AS_GEM */
+
   create_document(NULL, CANVAS_W, CANVAS_H);
   return true;
 }

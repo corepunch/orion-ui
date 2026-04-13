@@ -10,11 +10,56 @@
 #include <string.h>
 
 // ---------------------------------------------------------------------------
+// Shell menu bar
+// ---------------------------------------------------------------------------
+
+// Shell-owned command IDs (use a range unlikely to clash with any gem).
+#define ID_SHELL_QUIT  1
+
+static const menu_item_t kShellFileItems[] = {
+    {"Quit", ID_SHELL_QUIT},
+};
+static const menu_def_t kShellMenus[] = {
+    {"File", kShellFileItems, 1},
+};
+#define SHELL_MENU_COUNT 1
+
+static window_t *g_menubar = NULL;
+
+// Rebuild the combined menu bar: shell's own menus first, then every loaded
+// gem's contributed menus.  Call after each gem load/unload.
+static void shell_rebuild_menubar(void) {
+    if (!g_menubar) return;
+    menu_def_t *all = NULL;
+    int count = shell_collect_menus(kShellMenus, SHELL_MENU_COUNT, &all);
+    send_message(g_menubar, kMenuBarMessageSetMenus, (uint32_t)count, all);
+    free(all);
+}
+
+static result_t shell_menubar_proc(window_t *win, uint32_t msg,
+                                    uint32_t wparam, void *lparam) {
+    if (msg == kWindowMessageCommand) {
+        uint16_t notif = HIWORD(wparam);
+        if (notif == kMenuBarNotificationItemClick) {
+            uint16_t id = LOWORD(wparam);
+            if (id == ID_SHELL_QUIT) {
+                ui_request_quit();
+            } else {
+                // Route to whichever gem owns this command.
+                shell_dispatch_gem_command(id);
+            }
+            return true;
+        }
+    }
+    return win_menubar(win, msg, wparam, lparam);
+}
+
+// ---------------------------------------------------------------------------
 // Desktop window
 // ---------------------------------------------------------------------------
 
 static result_t desktop_proc(window_t *win, uint32_t msg,
-                              uint32_t wparam, void *lparam) {
+                               uint32_t wparam, void *lparam) {
     switch (msg) {
         case kWindowMessageCreate:
             return true;
@@ -42,13 +87,23 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
+    int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
+
+    // Menu bar — full screen width, always on top.
+    g_menubar = create_window(
+        "menubar",
+        WINDOW_NOTITLE | WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
+        MAKERECT(0, 0, sw, MENUBAR_HEIGHT),
+        NULL, shell_menubar_proc, NULL);
+    shell_rebuild_menubar();
+    show_window(g_menubar, true);
+
     // Create a background desktop window (no title bar, always at bottom).
-    int sw = 480;//ui_get_system_metrics(kSystemMetricScreenWidth);
-    int sh = 320;//ui_get_system_metrics(kSystemMetricScreenHeight);
     window_t *desktop = create_window(
         "Desktop",
         WINDOW_NOTITLE | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
-        MAKERECT(16, 16, sw, sh),
+        MAKERECT(0, MENUBAR_HEIGHT, sw, sh - MENUBAR_HEIGHT),
         NULL, desktop_proc, NULL);
     show_window(desktop, true);
 
@@ -57,9 +112,10 @@ int main(int argc, char *argv[]) {
         for (int i = 1; i < argc; i++) {
             char *gem_argv[] = { argv[i], NULL };
             shell_load_gem(argv[i], 1, gem_argv);
+            shell_rebuild_menubar();
         }
     } else {
-        printf("Usage: %s <gem1.gem> [gem2.gem] …\n", argv[0]);
+        printf("Usage: %s <gem1.gem> [gem2.gem] ...\n", argv[0]);
         printf("       (loading default gems from build/lib/gems/)\n");
 
         // Default: try to load whatever gems were built.
@@ -70,6 +126,7 @@ int main(int argc, char *argv[]) {
         for (int i = 0; defaults[i]; i++) {
             char *gem_argv[] = { (char *)defaults[i], NULL };
             shell_load_gem(defaults[i], 1, gem_argv);
+            shell_rebuild_menubar();
         }
     }
 

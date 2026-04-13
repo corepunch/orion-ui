@@ -33,4 +33,13 @@ void shell_notify_gem_shutdown(void);
 // Call this from the shell's main loop.  Returns the number unloaded.
 int shell_check_closed_gems(void);
 
+// Build a combined menu array: prefix menus first, then all loaded gems'
+// menus appended in load order.  The caller must free() the returned array.
+// Returns the total number of menu_def_t entries written.
+int shell_collect_menus(const menu_def_t *prefix, int prefix_count,
+                        menu_def_t **out_menus);
+
+// Dispatch a menu command id to every loaded gem's handle_command callback.
+void shell_dispatch_gem_command(uint16_t id);
+
 #endif /* SHELL_GEM_LOADER_H */

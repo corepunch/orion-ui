@@ -4,10 +4,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-// POSIX strdup
-#ifndef _GNU_SOURCE
-char *strdup(const char *s);
-#endif
+// Portable strdup — avoids the unreliable _GNU_SOURCE feature-test approach.
+static char *shell_strdup(const char *s) {
+    size_t len = strlen(s) + 1;
+    char *copy = malloc(len);
+    if (!copy) return NULL;
+    memcpy(copy, s, len);
+    return copy;
+}
 
 // Internal record for a single loaded .gem.
 typedef struct loaded_gem {
@@ -80,7 +84,7 @@ bool shell_load_gem(const char *gem_path, int argc, char *argv[]) {
         return false;
     }
 
-    lg->path        = strdup(gem_path);
+    lg->path        = shell_strdup(gem_path);
     lg->handle      = handle;
     lg->iface       = iface;
     lg->main_window = main_win;
@@ -139,7 +143,40 @@ int shell_check_closed_gems(void) {
 }
 
 // ---------------------------------------------------------------------------
-// Call every loaded gem's shutdown() while the GL context is still active.
+// Build a combined menu array for the shell's menu bar.
+// prefix_count entries from prefix come first, then each loaded gem's menus
+// are appended in load order.  The returned array is heap-allocated; caller
+// must free() it.  Returns the total entry count.
+int shell_collect_menus(const menu_def_t *prefix, int prefix_count,
+                        menu_def_t **out_menus) {
+    int total = prefix_count;
+    for (loaded_gem_t *lg = gems_head; lg; lg = lg->next) {
+        if (lg->iface->menus)
+            total += lg->iface->menu_count;
+    }
+    *out_menus = malloc(sizeof(menu_def_t) * (total > 0 ? total : 1));
+    if (!*out_menus) return 0;
+    memcpy(*out_menus, prefix, sizeof(menu_def_t) * prefix_count);
+    int idx = prefix_count;
+    for (loaded_gem_t *lg = gems_head; lg; lg = lg->next) {
+        if (lg->iface->menus) {
+            memcpy(*out_menus + idx, lg->iface->menus,
+                   sizeof(menu_def_t) * lg->iface->menu_count);
+            idx += lg->iface->menu_count;
+        }
+    }
+    return total;
+}
+
+// ---------------------------------------------------------------------------
+// Dispatch a menu command to every loaded gem that has a handle_command
+// callback.  Gems should silently ignore IDs they don't own.
+void shell_dispatch_gem_command(uint16_t id) {
+    for (loaded_gem_t *lg = gems_head; lg; lg = lg->next) {
+        if (lg->iface->handle_command)
+            lg->iface->handle_command(id);
+    }
+}
 // Does NOT dlclose(): gem procs must remain valid so that window
 // kWindowMessageDestroy handlers work when ui_shutdown_graphics() later
 // tears down the gem windows.  Call before ui_shutdown_graphics().

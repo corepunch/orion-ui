@@ -2,6 +2,7 @@
 #define GEM_MAGIC_H
 
 #include <stdbool.h>
+#include "commctl/menubar.h"
 
 // gem_interface_t — the ABI every .gem must export via gem_get_interface().
 //
@@ -12,6 +13,14 @@
 //   4. iface->init(argc, argv)   — creates windows, returns true on success
 //   5. … shell runs shared event loop …
 //   6. iface->shutdown()         — called when the gem is unloaded
+//
+// Menu contribution (optional):
+//   After init() returns the gem may populate:
+//     iface->menus         — pointer to the gem's menu_def_t array
+//     iface->menu_count    — number of entries in that array
+//     iface->handle_command — called by the shell for every menu command ID
+//   The shell merges these menus into its own menu bar and routes commands
+//   via handle_command.  Set all three to NULL/0 for no menu contribution.
 typedef struct {
     const char  *name;          // Display name, e.g. "Image Editor"
     const char  *version;       // Version string, e.g. "1.0"
@@ -20,6 +29,11 @@ typedef struct {
                                 // or NULL for no file associations.
     bool (*init)(int argc, char *argv[]); // Create windows; true = success
     void (*shutdown)(void);               // Cleanup on unload (may be NULL)
+
+    // Menu contribution — filled by init(), read by shell after init() returns.
+    const menu_def_t *menus;          // gem's top-level menu definitions
+    int               menu_count;     // number of entries in menus[]
+    void (*handle_command)(uint16_t id); // dispatch menu commands to gem
 } gem_interface_t;
 
 // -----------------------------------------------------------------------
@@ -35,7 +49,9 @@ typedef struct {
 #define ui_is_running()   (false)
 #define ui_request_quit() ((void)0)
 
-// GEM_DEFINE — emit gem_get_interface() with explicit metadata.
+// Forward declaration — allows gem_init() to retrieve the static interface
+// struct (emitted by GEM_DEFINE below) so it can populate menu fields.
+gem_interface_t *gem_get_interface(void);
 //
 // Macro parameters are suffixed with underscores to avoid accidental
 // expansion inside struct member accesses such as __iface.name.

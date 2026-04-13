@@ -120,7 +120,7 @@ void window_menu_rebuild(void) {
                (uint32_t)kNumMenus, kMenus);
 }
 
-static void handle_menu_command(uint16_t id) {
+void handle_menu_command(uint16_t id) {
   if (!g_app) return;
   canvas_doc_t *doc = g_app->active_doc;
 
@@ -195,7 +195,14 @@ static void handle_menu_command(uint16_t id) {
       break;
 
     case ID_FILE_QUIT:
+#ifdef BUILD_AS_GEM
+      // In gem mode ui_request_quit() is a no-op; close our tool palette so
+      // the shell detects the gem's main window is gone and unloads it.
+      if (g_app && g_app->tool_win)
+        destroy_window(g_app->tool_win);
+#else
       ui_request_quit();
+#endif
       break;
 
     case ID_EDIT_UNDO:

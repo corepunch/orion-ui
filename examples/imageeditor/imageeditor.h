@@ -355,6 +355,10 @@ extern const int  kNumMenus;
 // Rebuild the Window menu (call after create/close document).
 void window_menu_rebuild(void);
 
+// Dispatch a menu command.  Called by editor_menubar_proc (standalone) or
+// by the shell (gem mode) when the user selects a menu item.
+void handle_menu_command(uint16_t id);
+
 // New Image / Canvas Size dialog
 bool show_size_dialog(window_t *parent, const char *title, int *out_w, int *out_h);
 
