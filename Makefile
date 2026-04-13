@@ -121,6 +121,11 @@ SHARED_LIB = $(LIB_DIR)/liborion$(LIB_EXT)
 # Link flags for platform library
 PLATFORM_LDFLAGS = -L$(LIB_DIR) -lplatform -Wl,-rpath,$(abspath $(LIB_DIR))
 
+# Link flags for the Orion shared library.
+# All programs (examples, tests, gems, shell) link dynamically against
+# liborion.so so they all share the same window manager instance.
+ORION_LDFLAGS = -L$(LIB_DIR) -lorion -Wl,-rpath,$(abspath $(LIB_DIR))
+
 # .gem output directory and target list
 GEM_DIR  = $(LIB_DIR)/gems
 GEM_BINS = $(GEM_DIR)/imageeditor.gem \
@@ -184,16 +189,17 @@ examples: share $(EXAMPLE_BINS)
 # Image editor links against the Orion library (PNG I/O via stb_image).
 # main.c is appended last so that all sub-module symbols (e.g. kMenus, win procs)
 # are defined before main.c's application code references them.
-$(BIN_DIR)/imageeditor$(EXE_EXT): $(wildcard examples/imageeditor/*.c) $(STATIC_LIB) | $(BIN_DIR)
+$(BIN_DIR)/imageeditor$(EXE_EXT): $(wildcard examples/imageeditor/*.c) $(SHARED_LIB) | $(BIN_DIR)
 	@echo "Building example: $@"
 	(find examples/imageeditor -name "*.c" ! -name "main.c" | sort | sed 's/.*/#include "&"/'; \
 	 echo '#include "examples/imageeditor/main.c"') | \
-		$(CC) $(CFLAGS) -Iexamples/imageeditor -x c -o $@ - -x none $(STATIC_LIB) $(LDFLAGS) $(LDFLAGS_EXAMPLE) $(PLATFORM_LDFLAGS) $(LIBS)
+		$(CC) $(CFLAGS) -Iexamples/imageeditor -x c -o $@ - -x none \
+		$(LDFLAGS) $(LDFLAGS_EXAMPLE) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(LIBS)
 
 # Generic rule: compile each example's main.c as a single file directly to binary
-$(BIN_DIR)/%$(EXE_EXT): examples/%/main.c $(STATIC_LIB) | $(BIN_DIR)
+$(BIN_DIR)/%$(EXE_EXT): examples/%/main.c $(SHARED_LIB) | $(BIN_DIR)
 	@echo "Building example: $@"
-	$(CC) $(CFLAGS) -o $@ $< $(STATIC_LIB) $(LDFLAGS) $(LDFLAGS_EXAMPLE) $(PLATFORM_LDFLAGS) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS) $(LDFLAGS_EXAMPLE) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(LIBS)
 
 # === .gem shared libraries ===
 #
@@ -215,7 +221,7 @@ $(GEM_DIR)/imageeditor.gem: $(wildcard examples/imageeditor/*.c) $(SHARED_LIB) |
 	(echo '#include "gem_magic.h"'; \
 	 find examples/imageeditor -name "*.c" | sort | sed 's/.*/#include "&"/') | \
 		$(CC) $(GEM_CFLAGS) $(GEM_LFLAGS) -I. -Iexamples/imageeditor -x c -o $@ - -x none \
-		$(LDFLAGS) -L$(LIB_DIR) -lorion -Wl,-rpath,$(abspath $(LIB_DIR)) $(PLATFORM_LDFLAGS) $(LIBS)
+		$(LDFLAGS) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(LIBS)
 	@$(MAKE) --no-print-directory validate-gem GEM=$@
 
 # Generic .gem rule — single main.c examples.
@@ -223,7 +229,7 @@ $(GEM_DIR)/%.gem: examples/%/main.c $(SHARED_LIB) | $(GEM_DIR)
 	@echo "Building .gem: $@"
 	(echo '#include "gem_magic.h"'; echo '#include "$<"') | \
 		$(CC) $(GEM_CFLAGS) $(GEM_LFLAGS) -I. -Iexamples/$* -x c -o $@ - -x none \
-		$(LDFLAGS) -L$(LIB_DIR) -lorion -Wl,-rpath,$(abspath $(LIB_DIR)) $(PLATFORM_LDFLAGS) $(LIBS)
+		$(LDFLAGS) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(LIBS)
 	@$(MAKE) --no-print-directory validate-gem GEM=$@
 
 # Validate that a .gem exports the required gem_get_interface symbol.
@@ -257,8 +263,7 @@ $(SHELL_BIN): $(SHELL_SRCS) $(SHARED_LIB) | $(BIN_DIR)
 	@echo "Building Orion Shell: $@"
 	(find shell -name "*.c" | sort | sed 's/.*/#include "&"/') | \
 		$(CC) $(CFLAGS) -I. -Ishell -x c -o $@ - -x none \
-		$(LDFLAGS) -L$(LIB_DIR) -lorion -Wl,-rpath,$(abspath $(LIB_DIR)) \
-		$(PLATFORM_LDFLAGS) $(LDFLAGS_EXAMPLE) $(LIBS) $(SHELL_EXTRA_LDFLAGS)
+		$(LDFLAGS) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(LDFLAGS_EXAMPLE) $(LIBS) $(SHELL_EXTRA_LDFLAGS)
 
 # Tests
 .PHONY: test
@@ -266,6 +271,7 @@ test: $(TEST_BINS)
 	@echo "Running tests..."
 ifeq ($(OS),Windows_NT)
 	@cp -f $(LIB_DIR)/libplatform.dll $(BIN_DIR)/
+	@cp -f $(LIB_DIR)/liborion.dll $(BIN_DIR)/
 endif
 	@for test in $(TEST_BINS); do \
 		echo "Running $$test..."; \
@@ -274,9 +280,9 @@ endif
 	@echo "All tests passed!"
 
 # Build tests that need test_env (auto-detected by include)
-$(TEST_ENV_BINS): $(BIN_DIR)/test_%$(EXE_EXT): $(TEST_DIR)/%.c $(STATIC_LIB) | $(BIN_DIR)
+$(TEST_ENV_BINS): $(BIN_DIR)/test_%$(EXE_EXT): $(TEST_DIR)/%.c $(SHARED_LIB) | $(BIN_DIR)
 	@echo "Building test with environment: $@"
-	$(CC) $(CFLAGS) -o $@ $< $(TEST_DIR)/test_env.c $(STATIC_LIB) $(LDFLAGS) $(LDFLAGS_TEST) $(PLATFORM_LDFLAGS) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ $< $(TEST_DIR)/test_env.c $(LDFLAGS) $(LDFLAGS_TEST) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(LIBS)
 
 # Image API test – self-contained, pulls in user/image.c directly (no platform/GL needed)
 $(BIN_DIR)/test_image_test$(EXE_EXT): $(TEST_DIR)/image_test.c | $(BIN_DIR)
@@ -284,9 +290,9 @@ $(BIN_DIR)/test_image_test$(EXE_EXT): $(TEST_DIR)/image_test.c | $(BIN_DIR)
 	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS_TEST) -lm
 
 # Generic test build rule (tests without test_env)
-$(BIN_DIR)/test_%$(EXE_EXT): $(TEST_DIR)/%.c $(STATIC_LIB) | $(BIN_DIR)
+$(BIN_DIR)/test_%$(EXE_EXT): $(TEST_DIR)/%.c $(SHARED_LIB) | $(BIN_DIR)
 	@echo "Building test: $@"
-	$(CC) $(CFLAGS) -o $@ $< $(STATIC_LIB) $(LDFLAGS) $(LDFLAGS_TEST) $(PLATFORM_LDFLAGS) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS) $(LDFLAGS_TEST) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(LIBS)
 
 # Directory creation
 BUILD_DIRS = $(BUILD_DIR) $(LIB_DIR) $(BIN_DIR) $(SHARE_DIR)
