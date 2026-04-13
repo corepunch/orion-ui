@@ -37,6 +37,8 @@ int shell_check_closed_gems(void);
 // unloaded.  Use this in the shell's event loop to detect when the menubar
 // needs to be rebuilt (e.g. after ui_open_file() loads a new gem).
 unsigned shell_gem_generation(void);
+
+// Build a combined menu array: prefix menus first, then all loaded gems'
 // menus appended in load order.  The caller must free() the returned array.
 // Returns the total number of menu_def_t entries written.
 int shell_collect_menus(const menu_def_t *prefix, int prefix_count,

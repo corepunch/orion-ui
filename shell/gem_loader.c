@@ -229,14 +229,16 @@ bool shell_handle_open_file(const char *path) {
         p++;
     }
 
-    // .gem file → load it directly.
+    // .gem file → load it directly.  argv[0] is the gem path itself, matching
+    // the convention that argv[0] is always the program/module name.
     if (ext && strcmp(ext, ".gem") == 0) {
         char *gem_argv[] = { (char *)path, NULL };
-        bool ok = shell_load_gem(path, 1, gem_argv);
-        return ok;
+        return shell_load_gem(path, 1, gem_argv);
     }
 
-    // Other extension → ask a loaded gem that handles it.
+    // Other extension → find a loaded gem that handles it and re-invoke its
+    // init() with the file as argv[1]: argv[0]=gem_path, argv[1]=file_path.
+    // This mirrors the standard C convention where argv[0] is the program name.
     if (ext) {
         const char *gem_path = shell_get_gem_for_extension(ext);
         if (gem_path) {
