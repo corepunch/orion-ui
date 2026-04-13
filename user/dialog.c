@@ -10,8 +10,6 @@
 // end_dialog() writes through that pointer before destroying the window, so
 // nested dialogs each see only their own result code.
 
-#include "gl_compat.h"
-
 #include "../ui.h"
 
 // Application running flag – defined here as the authoritative definition;

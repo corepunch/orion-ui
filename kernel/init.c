@@ -30,20 +30,17 @@ extern bool running;
 static bool g_graphics_initialized = false;
 
 // Internal white texture for drawing solid colors
-GLuint ui_white_texture = 0;
+uint32_t ui_white_texture = 0;
 
 // Internal 4×4 checker texture for drawing selection outlines
-GLuint ui_checker_texture = 0;
+uint32_t ui_checker_texture = 0;
 
 // Initialize the internal white texture
 void init_ui_white_texture(void) {
   if (ui_white_texture == 0) {
-    glGenTextures(1, &ui_white_texture);
-    glBindTexture(GL_TEXTURE_2D, ui_white_texture);
     uint32_t white_pixel = 0xFFFFFFFF;
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, &white_pixel);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    ui_white_texture = R_CreateTextureRGBA(1, 1, &white_pixel,
+                                           R_FILTER_NEAREST, R_WRAP_CLAMP);
   }
 }
 
@@ -56,19 +53,16 @@ void init_ui_checker_texture(void) {
       /* row 2 */ 255,255,255,255, 255,255,255,255,   0,  0,  0,255,   0,  0,  0,255,
       /* row 3 */ 255,255,255,255, 255,255,255,255,   0,  0,  0,255,   0,  0,  0,255,
     };
-    glGenTextures(1, &ui_checker_texture);
-    glBindTexture(GL_TEXTURE_2D, ui_checker_texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 4, 4, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    ui_checker_texture = R_CreateTextureRGBA(4, 4, pixels,
+                                             R_FILTER_NEAREST, R_WRAP_REPEAT);
   }
 }
 
 void shutdown_ui_textures(void) {
-  SAFE_DELETE_N(ui_white_texture, glDeleteTextures);
-  SAFE_DELETE_N(ui_checker_texture, glDeleteTextures);
+  R_DeleteTexture(ui_white_texture);
+  ui_white_texture = 0;
+  R_DeleteTexture(ui_checker_texture);
+  ui_checker_texture = 0;
 }
 
 void shutdown_white_texture(void) {

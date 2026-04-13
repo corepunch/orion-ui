@@ -262,7 +262,7 @@ void ui_set_stencil_for_root_window(uint32_t window_id) {
 // Fill a rectangle with a solid color
 void fill_rect(uint32_t color, int x, int y, int w, int h) {
   extern bool running;
-  extern GLuint ui_white_texture;
+  extern uint32_t ui_white_texture;
   
   // Skip drawing if graphics aren't initialized (e.g., in tests)
   if (!running) return;
@@ -281,7 +281,7 @@ void fill_rect(uint32_t color, int x, int y, int w, int h) {
 // of the selection size, keeping the GL call count constant (O(1)).
 void draw_sel_rect(int x, int y, int w, int h) {
   extern bool running;
-  extern GLuint ui_checker_texture;
+  extern uint32_t ui_checker_texture;
 
   if (!running || w < 1 || h < 1) return;
 

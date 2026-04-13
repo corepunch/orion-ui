@@ -10,7 +10,6 @@
 #include "user.h"
 #include "messages.h"
 #include "draw.h"
-#include "gl_compat.h"
 
 // Global window state
 window_t *windows = NULL;
@@ -191,8 +190,7 @@ void destroy_window(window_t *win) {
   if (_resizing == win) _resizing = NULL;
   if (win->toolbar_buttons) free(win->toolbar_buttons);
   if (win->toolbar_strip_tex) {
-    GLuint tex = (GLuint)win->toolbar_strip_tex;
-    glDeleteTextures(1, &tex);
+    R_DeleteTexture(win->toolbar_strip_tex);
     win->toolbar_strip_tex = 0;
   }
   remove_from_global_list(win);

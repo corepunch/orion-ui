@@ -6,7 +6,20 @@
 
 #include <stddef.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include "../user/gl_compat.h"
+
+// Texture filter mode
+typedef enum {
+  R_FILTER_NEAREST = 0,   // Nearest-neighbour (pixel art / UI)
+  R_FILTER_LINEAR  = 1,   // Bilinear (smooth)
+} R_TextureFilter;
+
+// Texture wrap mode
+typedef enum {
+  R_WRAP_CLAMP  = 0,      // Clamp to edge (sprites, icons)
+  R_WRAP_REPEAT = 1,      // Tile (patterns, selection dashes)
+} R_TextureWrap;
 
 // Vertex attribute description
 typedef struct {
@@ -68,5 +81,18 @@ void R_ClearVertexAttribs(size_t count);
 
 // Allocate a font texture with given dimensions and format
 GLuint R_AllocateFontTexture(R_Texture* texture, void *data);
+
+// High-level texture helpers (no GL knowledge required in callers)
+// Create an RGBA texture from pixel data.  Returns the texture ID, or 0 on failure.
+uint32_t R_CreateTextureRGBA(int w, int h, const void *rgba,
+                              R_TextureFilter filter, R_TextureWrap wrap);
+
+// Delete a texture by its ID (no-op when id == 0).
+void R_DeleteTexture(uint32_t id);
+
+// Blend state
+// Enable/disable standard alpha blending (SRC_ALPHA / ONE_MINUS_SRC_ALPHA)
+// and pair it with depth-test disable/enable for 2-D UI rendering.
+void R_SetBlendMode(bool enabled);
 
 #endif /* __UI_RENDERER_H__ */

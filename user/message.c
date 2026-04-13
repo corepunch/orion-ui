@@ -10,7 +10,6 @@
 #include "user.h"
 #include "messages.h"
 #include "draw.h"
-#include "gl_compat.h"
 #include "image.h"
 
 // Message queue structure
@@ -511,8 +510,8 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       case kToolBarMessageLoadStrip: {
         // wparam = icon tile size (square, pixels); lparam = const char* path
         // Loads PNG, converts black-on-white artwork to alpha channel,
-        // creates GL texture, and stores the strip in win->toolbar_strip.
-        // The window owns the texture; it is freed on destroy_window().
+        // creates a GL texture (via the renderer), and stores the strip in
+        // win->toolbar_strip.  The window owns the texture; freed on destroy.
         const char *path = (const char *)lparam;
         int tile_sz = (int)wparam;
         if (!path || tile_sz <= 0) break;
@@ -535,24 +534,12 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
           src[i*4+2] = 0xC0;
           src[i*4+3] = (uint8_t)(255 - lum);
         }
-        // Free any previously framework-owned texture
-        if (win->toolbar_strip_tex) {
-          GLuint old = (GLuint)win->toolbar_strip_tex;
-          glDeleteTextures(1, &old);
-          win->toolbar_strip_tex = 0;
-        }
-        GLuint tex = 0;
-        glGenTextures(1, &tex);
-        glBindTexture(GL_TEXTURE_2D, tex);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
-                     GL_RGBA, GL_UNSIGNED_BYTE, src);
+        // Free any previously framework-owned texture via the renderer.
+        R_DeleteTexture(win->toolbar_strip_tex);
+        uint32_t tex = R_CreateTextureRGBA(w, h, src, R_FILTER_NEAREST, R_WRAP_CLAMP);
         image_free(src);
-        win->toolbar_strip_tex    = (uint32_t)tex;
-        win->toolbar_strip.tex    = (uint32_t)tex;
+        win->toolbar_strip_tex    = tex;
+        win->toolbar_strip.tex    = tex;
         win->toolbar_strip.icon_w = tile_sz;
         win->toolbar_strip.icon_h = tile_sz;
         win->toolbar_strip.cols   = w / tile_sz;
