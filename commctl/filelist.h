@@ -21,8 +21,8 @@
 typedef struct {
   char    *path;         // full absolute path
   int      icon;         // icon index passed to draw_icon8()
-  uint32_t color;        // text colour
   bool     is_directory;
+  bool     is_hidden;    // entry is a hidden file (name starts with '.')
   size_t   size;         // file size in bytes (0 for directories)
   time_t   modified;     // last-modification timestamp
 } fileitem_t;

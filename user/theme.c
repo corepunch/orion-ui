@@ -31,10 +31,18 @@ uint32_t g_sys_colors[kColorCount] = {
   [kColorFolderText]           = 0xffa0d000,   // folder entry text in file lists
 };
 
+extern bool running;
+
 void set_sys_colors(int count, const int *indices, const uint32_t *colors) {
   for (int i = 0; i < count; i++) {
     if (indices[i] >= 0 && indices[i] < kColorCount) {
       g_sys_colors[indices[i]] = colors[i];
+    }
+  }
+  if (running) {
+    post_message((window_t*)1, kWindowMessageRefreshStencil, 0, NULL);
+    for (window_t *w = windows; w; w = w->next) {
+      if (w->visible) invalidate_window(w);
     }
   }
 }

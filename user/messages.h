@@ -221,8 +221,10 @@ typedef enum {
 // Runtime-accessible theme table (defined in user/theme.c).
 extern uint32_t g_sys_colors[kColorCount];
 
-// Fast inline color lookup — use this everywhere instead of the raw COLOR_* macros.
-#define get_sys_color(idx) (g_sys_colors[(int)(idx)])
+// Inline color lookup — equivalent to WinAPI GetSysColor(nIndex).
+static inline uint32_t get_sys_color(sys_color_idx_t idx) {
+  return g_sys_colors[idx];
+}
 
 // Macros for creating rectangles
 #define MAKERECT(X, Y, W, H) (&(rect_t){X, Y, W, H})
