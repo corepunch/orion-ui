@@ -199,11 +199,13 @@ $(SHARED_LIB): $(USER_SRCS) $(KERNEL_SRCS) $(COMMCTL_SRCS) $(PLATFORM_LIB) | $(L
 .PHONY: examples
 examples: share $(EXAMPLE_BINS)
 
-# Generic unity-build rule for all examples.
+# Static unity-build rule for all examples.
+# The target list is scoped to $(EXAMPLE_BINS) so this rule never fires for
+# test binaries (which share the same $(BIN_DIR)/%$(EXE_EXT) pattern).
 # SECONDEXPANSION lets $$(wildcard ...) expand after % is substituted, so
 # any *.c change in the example directory triggers a rebuild.
 .SECONDEXPANSION:
-$(BIN_DIR)/%$(EXE_EXT): $$(wildcard examples/%/*.c) $(SHARED_LIB) | $(BIN_DIR)
+$(EXAMPLE_BINS): $(BIN_DIR)/%$(EXE_EXT): $$(wildcard examples/%/*.c) $(SHARED_LIB) | $(BIN_DIR)
 	@echo "Building example: $@"
 	(find examples/$* -name "*.c" ! -name "main.c" | sort | sed 's/.*/#include "&"/'; \
 	 echo '#include "examples/$*/main.c"') | \
