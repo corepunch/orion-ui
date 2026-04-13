@@ -154,7 +154,7 @@ int shell_collect_menus(const menu_def_t *prefix, int prefix_count,
         if (lg->iface->menus)
             total += lg->iface->menu_count;
     }
-    *out_menus = malloc(sizeof(menu_def_t) * (total > 0 ? total : 1));
+    *out_menus = malloc(sizeof(menu_def_t) * total);
     if (!*out_menus) return 0;
     memcpy(*out_menus, prefix, sizeof(menu_def_t) * prefix_count);
     int idx = prefix_count;
