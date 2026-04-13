@@ -54,7 +54,7 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       return true;
     }
     case kWindowMessagePaint:
-      fill_rect(get_sys_color(kColorWindowDarkBg), win->frame.x, win->frame.y,
+      fill_rect(get_sys_color(kColorWindowDarkBg), 0, 0,
                 win->frame.w, win->frame.h);
       return true;
     case kToolBarMessageButtonClick: {

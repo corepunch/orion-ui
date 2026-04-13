@@ -499,7 +499,12 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       }
       case kToolBarMessageSetButtonSize: {
         int old_btn_size = win->toolbar_btn_size;
+        // Accept 0 (reset to default TB_SPACING) or a positive value >= 8.
+        // Values in [1,7] are rejected: bsz is used as a divisor in toolbar
+        // column-count calculations (win->frame.w / bsz) and very small sizes
+        // would also produce broken layout (sub-pixel buttons, huge row counts).
         int new_btn_size = (int)wparam;
+        if (new_btn_size != 0 && new_btn_size < 8) new_btn_size = 8;
         if (old_btn_size != new_btn_size) {
           win->toolbar_btn_size = new_btn_size;
           post_message(win, kWindowMessageRefreshStencil, 0, NULL);
@@ -512,9 +517,10 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         // Loads PNG, converts black-on-white artwork to alpha channel,
         // creates a GL texture (via the renderer), and stores the strip in
         // win->toolbar_strip.  The window owns the texture; freed on destroy.
+        // Requires graphics to be initialized (running == true).
         const char *path = (const char *)lparam;
         int tile_sz = (int)wparam;
-        if (!path || tile_sz <= 0) break;
+        if (!path || tile_sz <= 0 || !running) break;
         int w = 0, h = 0;
         uint8_t *src = load_image(path, &w, &h);
         if (!src) break;

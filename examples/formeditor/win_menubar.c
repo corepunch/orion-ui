@@ -173,6 +173,32 @@ static int ctrl_type_from_token(const char *tok) {
   return -1;
 }
 
+// Sanitize a string for embedding in a C comment block: strips '"', '*', '/',
+// '\n', '\r' to prevent comment-termination injection.
+static void sanitize_c_comment_str(const char *src, char *dst, size_t dst_sz) {
+  size_t di = 0;
+  for (size_t si = 0; src[si] && di < dst_sz - 1; si++) {
+    char ch = src[si];
+    if (ch == '"' || ch == '*' || ch == '/' || ch == '\n' || ch == '\r')
+      continue;
+    dst[di++] = ch;
+  }
+  dst[di] = '\0';
+}
+
+// Return true when s is a non-empty, valid C identifier.
+static bool is_c_identifier(const char *s) {
+  if (!s || !s[0]) return false;
+  if (!((*s >= 'A' && *s <= 'Z') || (*s >= 'a' && *s <= 'z') || *s == '_'))
+    return false;
+  for (const char *p = s + 1; *p; p++) {
+    if (!((*p >= 'A' && *p <= 'Z') || (*p >= 'a' && *p <= 'z') ||
+          (*p >= '0' && *p <= '9') || *p == '_'))
+      return false;
+  }
+  return true;
+}
+
 bool form_save(form_doc_t *doc, const char *path) {
   FILE *f = fopen(path, "w");
   if (!f) return false;
@@ -181,16 +207,10 @@ bool form_save(form_doc_t *doc, const char *path) {
   fprintf(f, "/* form %d %d */\n", doc->form_w, doc->form_h);
   for (int i = 0; i < doc->element_count; i++) {
     form_element_t *el = &doc->elements[i];
-    // Escape special chars in text/name (just skip quotes for simplicity)
     char safe_text[sizeof(el->text)];
     char safe_name[sizeof(el->name)];
-    int ti = 0, ni = 0;
-    for (int c = 0; el->text[c] && ti < (int)sizeof(safe_text) - 1; c++)
-      if (el->text[c] != '"') safe_text[ti++] = el->text[c];
-    safe_text[ti] = '\0';
-    for (int c = 0; el->name[c] && ni < (int)sizeof(safe_name) - 1; c++)
-      if (el->name[c] != '"') safe_name[ni++] = el->name[c];
-    safe_name[ni] = '\0';
+    sanitize_c_comment_str(el->text, safe_text, sizeof(safe_text));
+    sanitize_c_comment_str(el->name, safe_name, sizeof(safe_name));
     fprintf(f, "/* ctrl %s %d %d %d %d %d \"%s\" \"%s\" */\n",
             ctrl_type_token(el->type),
             el->id, el->x, el->y, el->w, el->h,
@@ -199,10 +219,13 @@ bool form_save(form_doc_t *doc, const char *path) {
   fprintf(f, "/* ORION_FORM_END */\n\n");
 
   // Emit #defines for control IDs so the header is usable directly.
+  // Only emit when safe_name is a valid C identifier.
   for (int i = 0; i < doc->element_count; i++) {
     form_element_t *el = &doc->elements[i];
-    if (el->name[0])
-      fprintf(f, "#define %-30s %d\n", el->name, el->id);
+    char safe_name[sizeof(el->name)];
+    sanitize_c_comment_str(el->name, safe_name, sizeof(safe_name));
+    if (is_c_identifier(safe_name))
+      fprintf(f, "#define %-30s %d\n", safe_name, el->id);
   }
 
   fclose(f);
