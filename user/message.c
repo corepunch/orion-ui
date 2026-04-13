@@ -497,11 +497,16 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         invalidate_window(win);
         break;
       }
-      case kToolBarMessageSetButtonSize:
-        win->toolbar_btn_size = (int)wparam;
-        post_message(win, kWindowMessageRefreshStencil, 0, NULL);
-        invalidate_window(win);
+      case kToolBarMessageSetButtonSize: {
+        int old_btn_size = win->toolbar_btn_size;
+        int new_btn_size = (int)wparam;
+        if (old_btn_size != new_btn_size) {
+          win->toolbar_btn_size = new_btn_size;
+          post_message(win, kWindowMessageRefreshStencil, 0, NULL);
+          invalidate_window(get_root_window(win));
+        }
         break;
+      }
       case kWindowMessageStatusBar:
         if (lparam) {
           strncpy(win->statusbar_text, (const char*)lparam, sizeof(win->statusbar_text) - 1);
