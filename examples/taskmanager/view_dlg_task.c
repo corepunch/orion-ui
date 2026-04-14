@@ -56,8 +56,8 @@ typedef struct {
 static const ctrl_binding_t k_task_bindings[] = {
   { ID_TASK_TITLE_CTRL,    BIND_STRING,    offsetof(task_dlg_state_t, title),    sizeof_field(task_dlg_state_t, title) },
   { ID_TASK_DESC_CTRL,     BIND_STRING,    offsetof(task_dlg_state_t, desc),     sizeof_field(task_dlg_state_t, desc)  },
-  { ID_TASK_PRIORITY_CTRL, BIND_INT_COMBO, offsetof(task_dlg_state_t, priority), 0 },
-  { ID_TASK_STATUS_CTRL,   BIND_INT_COMBO, offsetof(task_dlg_state_t, status),   0 },
+  { ID_TASK_PRIORITY_CTRL, BIND_INT_COMBO, offsetof(task_dlg_state_t, priority), PRIORITY_NORMAL },
+  { ID_TASK_STATUS_CTRL,   BIND_INT_COMBO, offsetof(task_dlg_state_t, status),   STATUS_TODO },
 };
 
 // ============================================================
@@ -114,8 +114,6 @@ static result_t task_dlg_proc(window_t *win, uint32_t msg,
           set_window_item_text(win, ID_TASK_DUEDATE_CTRL, "%s", due_buf);
         }
       }
-      // Defaults (priority=PRIORITY_NORMAL, status=STATUS_TODO) were set at init.
-
       dialog_push(win, s, k_task_bindings, ARRAY_LEN(k_task_bindings));
       return true;
     }
@@ -133,8 +131,6 @@ static result_t task_dlg_proc(window_t *win, uint32_t msg,
           }
 
           dialog_pull(win, s, k_task_bindings, ARRAY_LEN(k_task_bindings));
-          if (s->priority < 0) s->priority = PRIORITY_NORMAL;
-          if (s->status   < 0) s->status   = STATUS_TODO;
 
           // Due date: optional uint32_t — not in binding table (needs custom parsing).
           window_t *edue = get_window_item(win, ID_TASK_DUEDATE_CTRL);
