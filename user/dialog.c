@@ -110,9 +110,12 @@ void dialog_push(window_t *win, const void *state,
   const char *base = (const char *)state;
   for (int i = 0; i < n; i++) {
     switch (b[i].type) {
-      case BIND_STRING:
-        set_window_item_text(win, b[i].ctrl_id, "%s", base + b[i].offset);
+      case BIND_STRING: {
+        int max_len = b[i].size > 0 ? b[i].size - 1 : 0;
+        set_window_item_text(win, b[i].ctrl_id, "%.*s",
+                             max_len, base + b[i].offset);
         break;
+      }
       case BIND_INT_COMBO: {
         window_t *ctrl = get_window_item(win, b[i].ctrl_id);
         if (ctrl) {
