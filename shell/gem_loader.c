@@ -59,7 +59,15 @@ bool shell_load_gem(const char *gem_path, int argc, char *argv[]) {
 
     // Allocate a unique hinstance for this gem so its windows are associated
     // with the app process and WINDOW_ALWAYSONTOP is scoped to the app.
+    if (g_next_hinstance == 0) {
+        fprintf(stderr, "shell: hinstance counter exhausted; cannot load gem '%s'\n",
+                gem_path);
+        axDynlibClose(handle);
+        return false;
+    }
     hinstance_t hinstance = g_next_hinstance++;
+    if (g_next_hinstance == 0)
+        g_next_hinstance = 1;  // skip 0 (reserved for system/unowned) on wrap
 
     // Snapshot the tail of the window list so we can identify the first window
     // the gem creates.  create_window() appends to the tail, so we need to

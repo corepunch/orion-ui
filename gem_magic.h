@@ -141,8 +141,9 @@ extern hinstance_t g_gem_hinstance;
 #else   /* !BUILD_AS_GEM — standalone mode, macros are empty */
 
 #define GEM_DEFINE(n_, v_, i_, s_, t_)  /* no-op */
-// In standalone mode g_gem_hinstance is 0 (system); no-op GEM_MAIN still
-// provides the declaration so gem_init() callers can reference it.
+// In standalone mode g_gem_hinstance is always 0 (system). Provide it as
+// a macro constant so GEM_MAIN-style code can still reference it.
+#define g_gem_hinstance ((hinstance_t)0)
 #define GEM_MAIN(n_, v_, t_)            /* no-op */
 
 #endif  /* BUILD_AS_GEM */

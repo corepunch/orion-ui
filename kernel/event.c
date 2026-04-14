@@ -104,8 +104,10 @@ window_t* find_prev_tab_stop(window_t* win) {
 
 // Move window to top of Z-order.
 //
-// For system/unowned windows (hinstance == 0) the original global behaviour is
-// preserved: WINDOW_ALWAYSONTOP windows go to the absolute top of the stack.
+// For system/unowned windows (hinstance == 0), system WINDOW_ALWAYSONTOP
+// windows stay above other system windows. Non-topmost system windows are
+// inserted below system (h==0) ALWAYSONTOP windows, rather than below every
+// ALWAYSONTOP window globally.
 //
 // For app windows (hinstance != 0) the clicked window's entire app group is
 // brought to front, but only up to just below any system (h==0) ALWAYSONTOP
@@ -233,6 +235,11 @@ void move_to_top(window_t* _win) {
   group_tail->next = cur;
   if (ins_prev) ins_prev->next = group_head;
   else          windows        = group_head;
+
+  // Invalidate every window in the moved group so previously-occluded windows
+  // repaint correctly now that the group has come to the front.
+  for (window_t *gw = group_head; gw != cur; gw = gw->next)
+    invalidate_window(gw);
 }
 
 // Dispatch a platform AXmessage to the Orion window system.
