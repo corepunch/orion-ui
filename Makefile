@@ -230,7 +230,7 @@ $(EXAMPLE_BINS): $(BIN_DIR)/%$(EXE_EXT): $$(wildcard examples/%/*.c) $(SHARED_LI
 
 .PHONY: gems
 gems: $(GEM_BINS)
-	@echo "✓ All .gems built and validated"
+	@echo "OK All .gems built and validated"
 
 # Generic .gem unity-build rule — handles both single and multi-file examples.
 # gem_magic.h first; non-main files sorted; main.c last.
@@ -249,13 +249,13 @@ validate-gem:
 	@echo -n "  Validating $(notdir $(GEM))... "
 ifeq ($(OS),Windows_NT)
 	@dumpbin //EXPORTS $(GEM) 2>/dev/null | grep -q "gem_get_interface" \
-		&& echo "✓" || (echo "❌ missing gem_get_interface" && exit 1)
+		&& echo "OK" || (echo "FAIL missing gem_get_interface" && exit 1)
 else ifeq ($(UNAME_S),Darwin)
 	@nm -g $(GEM) 2>/dev/null | grep -q "T _gem_get_interface" \
-		&& echo "✓" || (echo "❌ missing gem_get_interface" && exit 1)
+		&& echo "OK" || (echo "FAIL missing gem_get_interface" && exit 1)
 else
 	@nm -D $(GEM) 2>/dev/null | grep -q "T gem_get_interface" \
-		&& echo "✓" || (echo "❌ missing gem_get_interface" && exit 1)
+		&& echo "OK" || (echo "FAIL missing gem_get_interface" && exit 1)
 endif
 
 $(GEM_DIR):
