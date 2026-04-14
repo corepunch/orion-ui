@@ -33,7 +33,7 @@ struct rect_s {
 // A fixed-size-tile bitmap strip, analogous to WinAPI HIMAGELIST / TB_ADDBITMAP.
 // Icons are indexed 0..N left-to-right then top-to-bottom.
 // Used with kButtonMessageSetImage and kToolBarMessageSetStrip.
-typedef struct {
+typedef struct bitmap_strip_s {
   uint32_t tex;     // OpenGL texture ID of the strip texture
   int      icon_w;  // pixel width of each icon tile
   int      icon_h;  // pixel height of each icon tile
@@ -156,6 +156,7 @@ void invalidate_window(window_t *win);
 window_t *get_window_item(window_t const *win, uint32_t id);
 bool is_window(window_t *win);
 int window_title_bar_y(window_t const *win);
+bool window_in_drag_area(window_t const *win, int sy);
 window_t *get_root_window(window_t *window);
 window_t *find_window(int x, int y);
 window_t *find_default_button(window_t *win);

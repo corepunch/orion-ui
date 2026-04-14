@@ -169,8 +169,11 @@ $(PLATFORM_LIB): | $(LIB_DIR)
 	$(MAKE) -C $(PLATFORM_DIR) OUTDIR=$(abspath $(LIB_DIR))
 
 # Shared data assets — copy per-example resources into build/share/<example>/
+# and copy the framework's own icon sheet into build/share/orion/.
 .PHONY: share
 share: | $(SHARE_DIR)
+	@mkdir -p $(SHARE_DIR)/orion
+	@cp share/icon_sheet_16x16.png $(SHARE_DIR)/orion/
 	@for dir in examples/*/; do \
 	  name=$$(basename "$$dir"); \
 	  assets=$$(find "$$dir" -maxdepth 1 \( -name "*.png" -o -name "*.ttf" \) 2>/dev/null); \

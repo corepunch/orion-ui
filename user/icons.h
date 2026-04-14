@@ -1,8 +1,15 @@
 #ifndef __ICONS_H__
 #define __ICONS_H__
 
+// Base value for all built-in system icons drawn from icon_sheet_16x16.png.
+// When a toolbar button's icon value is >= SYSICON_BASE the framework
+// automatically sources the icon from the built-in PNG strip rather than
+// from the bitmap font, so no per-window kToolBarMessageLoadStrip call is
+// needed.
+#define SYSICON_BASE 0x10000
+
 enum {
-  sysicon_2d,
+  sysicon_2d = SYSICON_BASE,
   sysicon_accept,
   sysicon_add,
   sysicon_ambient_occlusion,
