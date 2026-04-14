@@ -19,6 +19,9 @@ bool running;
 // Shared modal message loop.  Runs until the dialog window is destroyed or the
 // application exits.  Forces a full repaint after the dialog is gone.
 static uint32_t run_dialog_loop(window_t *dlg, window_t *parent) {
+  // Guard against the window being destroyed during kWindowMessageCreate
+  // (e.g. end_dialog called from the window proc's create handler).
+  if (!is_window(dlg)) return 0;
   uint32_t result = 0;
   ui_event_t event;
   dlg->userdata2 = &result;

@@ -423,6 +423,11 @@ window_t *create_window_from_form(form_def_t const *def, int x, int y,
 
   // Now notify the parent that creation (with children already present) is complete.
   send_message(win, kWindowMessageCreate, 0, lparam);
+  // For root windows (no parent), check whether the proc destroyed the window
+  // during kWindowMessageCreate (e.g. end_dialog called from within the proc).
+  // Child windows are in parent->children, not the global list, so skip the
+  // check for them — child self-destruction during create is not a supported pattern.
+  if (!parent && !is_window(win)) return NULL;
   if (parent) invalidate_window(win);
   return win;
 }
