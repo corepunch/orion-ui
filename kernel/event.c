@@ -19,8 +19,25 @@ extern window_t *_captured;
 
 // Macros for coordinate conversion (platform logical → Orion logical)
 #define SCALE_POINT(x) ((x)/UI_WINDOW_SCALE)
-#define LOCAL_X(px, py, WIN) (SCALE_POINT(px) - (WIN)->frame.x + (WIN)->scroll[0])
-#define LOCAL_Y(px, py, WIN) (SCALE_POINT(py) - (WIN)->frame.y + (WIN)->scroll[1])
+
+// Absolute screen origin of a window.  For top-level windows frame.x/y is
+// already screen-absolute.  For child windows frame.x/y is root-client-local,
+// so we must add the root window's screen origin to get the absolute position.
+// This mirrors WinAPI ChildWindowFromPoint semantics: child procs always
+// receive coordinates in their own client coordinate system.
+static inline int win_abs_x(window_t *w) {
+  if (!w->parent) return w->frame.x;
+  window_t *root = get_root_window(w);
+  return root->frame.x + w->frame.x;
+}
+static inline int win_abs_y(window_t *w) {
+  if (!w->parent) return w->frame.y;
+  window_t *root = get_root_window(w);
+  return root->frame.y + w->frame.y;
+}
+
+#define LOCAL_X(px, py, WIN) (SCALE_POINT(px) - win_abs_x(WIN) + (WIN)->scroll[0])
+#define LOCAL_Y(px, py, WIN) (SCALE_POINT(py) - win_abs_y(WIN) + (WIN)->scroll[1])
 #define CONTAINS(x, y, x1, y1, w1, h1) \
 ((x1) <= (x) && (y1) <= (y) && (x1) + (w1) > (x) && (y1) + (h1) > (y))
 
@@ -53,11 +70,13 @@ window_t *_resizing = NULL;
 static int drag_anchor[2];
 static int resize_anchor[2];
 
-// Handle mouse events on child windows
+// Handle mouse events on child windows.
+// x, y are in the parent window's client coordinate system.
+// Each child receives coords in its own client coordinate system (WinAPI style).
 static int handle_mouse(int msg, window_t *win, int x, int y) {
   for (window_t *c = win->children; c; c = c->next) {
     if (CONTAINS(x, y, c->frame.x, c->frame.y, c->frame.w, c->frame.h) &&
-        c->proc(c, msg, MAKEDWORD(x, y), NULL))
+        c->proc(c, msg, MAKEDWORD(x - c->frame.x, y - c->frame.y), NULL))
     {
       return true;
     }

@@ -37,8 +37,8 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         win->editing = true;
         win->cursor_pos = 0;
         for (int i = 0; i <= (int)strlen(win->title); i++) {
-          int x1 = win->frame.x+PADDING+strnwidth(win->title, i);
-          int x2 = win->frame.x+PADDING+strnwidth(win->title, win->cursor_pos);
+          int x1 = PADDING+strnwidth(win->title, i);
+          int x2 = PADDING+strnwidth(win->title, win->cursor_pos);
           if (abs((int)LOWORD(wparam) - x1) < abs((int)LOWORD(wparam) - x2)) {
             win->cursor_pos = i;
           }

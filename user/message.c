@@ -128,17 +128,12 @@ void remove_from_global_queue(window_t *win) {
 
 // ---- Built-in scrollbar mouse handling --------------------------------------
 //
-// Computes window-local mouse coordinates from a mouse-message wparam.
-// Mouse wparams for child windows arrive in root-relative coords
-// (screen_x - root->frame.x); for top-level windows they are already
-// window-local.  Subtract only root->frame to get root-client coords,
-// which equals canvas-local when the child sits at root-client offset (0,0).
+// All mouse events are delivered in the receiving window's own client
+// coordinate system (see kernel/event.c).  Extract x/y directly from wparam.
 static void sb_local_coords(window_t *win, uint32_t wparam, int *cx, int *cy) {
-  window_t *root = get_root_window(win);
-  int adj_x = (win->parent && root) ? root->frame.x : 0;
-  int adj_y = (win->parent && root) ? root->frame.y : 0;
-  *cx = (int16_t)LOWORD(wparam) - adj_x;
-  *cy = (int16_t)HIWORD(wparam) - adj_y;
+  (void)win;
+  *cx = (int16_t)LOWORD(wparam);
+  *cy = (int16_t)HIWORD(wparam);
 }
 
 static int builtin_sb_thumb_len_msg(win_sb_t const *sb, int track) {
