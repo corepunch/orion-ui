@@ -328,7 +328,7 @@ void dispatch_message(ui_event_t *msg) {
           _resizing = win;
           resize_anchor[0] = SCALE_POINT(px) - (win->frame.x + win->frame.w);
           resize_anchor[1] = SCALE_POINT(py) - (win->frame.y + win->frame.h);
-        } else if (SCALE_POINT(py) < win->frame.y && !win->parent && win != _captured) {
+        } else if (window_in_drag_area(win, SCALE_POINT(py)) && win != _captured) {
           _dragging = win;
           drag_anchor[0] = SCALE_POINT(px) - win->frame.x;
           drag_anchor[1] = SCALE_POINT(py) - win->frame.y;
