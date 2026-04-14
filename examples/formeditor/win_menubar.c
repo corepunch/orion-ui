@@ -461,6 +461,36 @@ void show_about_dialog(window_t *parent) {
 #define PROPS_ID_OK        3
 #define PROPS_ID_CANCEL    4
 
+// Computed row positions (mirrors the form below)
+#define PROPS_ROW1_Y       4
+#define PROPS_ROW2_Y       (PROPS_ROW1_Y + BUTTON_HEIGHT + 6)   // 23
+#define PROPS_INFO_Y       (PROPS_ROW2_Y + BUTTON_HEIGHT + 6)   // 42
+#define PROPS_BTN_Y        (PROPS_H - BUTTON_HEIGHT - 6)        // 91
+
+static const form_ctrl_def_t kPropsChildren[] = {
+  { FORM_CTRL_LABEL,    -1,              {4,          PROPS_ROW1_Y, 60,           CONTROL_HEIGHT}, 0,             "Caption:", "lbl_caption" },
+  { FORM_CTRL_TEXTEDIT, PROPS_ID_CAPTION,{68,         PROPS_ROW1_Y, PROPS_W - 72, BUTTON_HEIGHT},  0,             "",         "edit_caption"},
+  { FORM_CTRL_LABEL,    -1,              {4,          PROPS_ROW2_Y, 60,           CONTROL_HEIGHT}, 0,             "Name:",    "lbl_name"    },
+  { FORM_CTRL_TEXTEDIT, PROPS_ID_NAME,   {68,         PROPS_ROW2_Y, PROPS_W - 72, BUTTON_HEIGHT},  0,             "",         "edit_name"   },
+  { FORM_CTRL_BUTTON,   PROPS_ID_OK,     {PROPS_W-108, PROPS_BTN_Y, 50,           BUTTON_HEIGHT},  BUTTON_DEFAULT, "OK",      "btn_ok"      },
+  { FORM_CTRL_BUTTON,   PROPS_ID_CANCEL, {PROPS_W-54,  PROPS_BTN_Y, 50,           BUTTON_HEIGHT},  0,             "Cancel",   "btn_cancel"  },
+};
+
+static const form_def_t kPropsForm = {
+  .name        = "Element Properties",
+  .w           = PROPS_W,
+  .h           = PROPS_H,
+  .flags       = 0,
+  .children    = kPropsChildren,
+  .child_count = ARRAY_LEN(kPropsChildren),
+};
+
+// DDX bindings: caption and name edits ↔ form_element_t.text / .name
+static const ctrl_binding_t k_props_bindings[] = {
+  { PROPS_ID_CAPTION, BIND_STRING, offsetof(form_element_t, text), sizeof_field(form_element_t, text) },
+  { PROPS_ID_NAME,    BIND_STRING, offsetof(form_element_t, name), sizeof_field(form_element_t, name) },
+};
+
 typedef struct {
   form_element_t *el;
   bool            accepted;
@@ -474,45 +504,17 @@ static result_t props_proc(window_t *win, uint32_t msg,
       ps = (props_state_t *)lparam;
       win->userdata = ps;
 
-      int row = 4;
-      // Caption row
-      create_window("Caption:", WINDOW_NOTITLE | WINDOW_NOFILL,
-          MAKERECT(4, row, 60, CONTROL_HEIGHT), win, win_label, NULL);
-      window_t *cap = create_window(ps->el->text, 0,
-          MAKERECT(68, row, PROPS_W - 72, BUTTON_HEIGHT),
-          win, win_textedit, NULL);
-      cap->id = PROPS_ID_CAPTION;
-
-      row += BUTTON_HEIGHT + 6;
-      // Name row
-      create_window("Name:", WINDOW_NOTITLE | WINDOW_NOFILL,
-          MAKERECT(4, row, 60, CONTROL_HEIGHT), win, win_label, NULL);
-      window_t *nm = create_window(ps->el->name, 0,
-          MAKERECT(68, row, PROPS_W - 72, BUTTON_HEIGHT),
-          win, win_textedit, NULL);
-      nm->id = PROPS_ID_NAME;
-
-      row += BUTTON_HEIGHT + 6;
-      // Type label (read-only info)
+      // Dynamic type-info label (content is computed at runtime).
       char info[64];
       snprintf(info, sizeof(info), "Type: %s  ID: %d  (%d, %d)  %d × %d",
                ctrl_type_token(ps->el->type), ps->el->id,
                ps->el->x, ps->el->y, ps->el->w, ps->el->h);
       create_window(info, WINDOW_NOTITLE | WINDOW_NOFILL,
-          MAKERECT(4, row, PROPS_W - 8, CONTROL_HEIGHT),
+          MAKERECT(4, PROPS_INFO_Y, PROPS_W - 8, CONTROL_HEIGHT),
           win, win_label, (void *)(uintptr_t)kColorTextDisabled);
 
-      // Buttons
-      int by = PROPS_H - BUTTON_HEIGHT - 6;
-      window_t *ok = create_window("OK", BUTTON_DEFAULT,
-          MAKERECT(PROPS_W - 108, by, 50, BUTTON_HEIGHT),
-          win, win_button, NULL);
-      ok->id = PROPS_ID_OK;
-      window_t *ca = create_window("Cancel", 0,
-          MAKERECT(PROPS_W - 54, by, 50, BUTTON_HEIGHT),
-          win, win_button, NULL);
-      ca->id = PROPS_ID_CANCEL;
-
+      // Pre-populate caption/name edits from the element.
+      dialog_push(win, ps->el, k_props_bindings, ARRAY_LEN(k_props_bindings));
       return true;
     }
 
@@ -522,16 +524,7 @@ static result_t props_proc(window_t *win, uint32_t msg,
       if (!src) return false;
 
       if (src->id == PROPS_ID_OK) {
-        window_t *cap = get_window_item(win, PROPS_ID_CAPTION);
-        window_t *nm  = get_window_item(win, PROPS_ID_NAME);
-        if (cap) {
-          strncpy(ps->el->text, cap->title, sizeof(ps->el->text) - 1);
-          ps->el->text[sizeof(ps->el->text) - 1] = '\0';
-        }
-        if (nm) {
-          strncpy(ps->el->name, nm->title, sizeof(ps->el->name) - 1);
-          ps->el->name[sizeof(ps->el->name) - 1] = '\0';
-        }
+        dialog_pull(win, ps->el, k_props_bindings, ARRAY_LEN(k_props_bindings));
         ps->accepted = true;
         end_dialog(win, 1);
         return true;
@@ -551,11 +544,7 @@ bool show_props_dialog(window_t *parent, form_element_t *el) {
   props_state_t ps = {0};
   ps.el       = el;
   ps.accepted = false;
-  int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
-  int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
-  show_dialog("Element Properties",
-              MAKERECT((sw - PROPS_W) / 2, (sh - PROPS_H) / 2, PROPS_W, PROPS_H),
-              parent, props_proc, &ps);
+  show_dialog_from_form(&kPropsForm, "Element Properties", parent, props_proc, &ps);
   return ps.accepted;
 }
 

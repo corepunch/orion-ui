@@ -50,6 +50,17 @@ typedef struct {
 } task_dlg_state_t;
 
 // ============================================================
+// DDX binding table
+// ============================================================
+
+static const ctrl_binding_t k_task_bindings[] = {
+  { ID_TASK_TITLE_CTRL,    BIND_STRING,    offsetof(task_dlg_state_t, title),    sizeof_field(task_dlg_state_t, title) },
+  { ID_TASK_DESC_CTRL,     BIND_STRING,    offsetof(task_dlg_state_t, desc),     sizeof_field(task_dlg_state_t, desc)  },
+  { ID_TASK_PRIORITY_CTRL, BIND_INT_COMBO, offsetof(task_dlg_state_t, priority), 0 },
+  { ID_TASK_STATUS_CTRL,   BIND_INT_COMBO, offsetof(task_dlg_state_t, status),   0 },
+};
+
+// ============================================================
 // Helpers to initialise combo boxes
 // ============================================================
 
@@ -84,37 +95,28 @@ static result_t task_dlg_proc(window_t *win, uint32_t msg,
       win->userdata = lparam;
       s = (task_dlg_state_t *)lparam;
 
-      // Populate combo boxes.
+      // Populate combo items first (must precede dialog_push).
       populate_priority_combo(win);
       populate_status_combo(win);
 
       if (s->task) {
-        // Editing an existing task: pre-populate fields.
-        set_window_item_text(win, ID_TASK_TITLE_CTRL, "%s", s->task->title);
-        set_window_item_text(win, ID_TASK_DESC_CTRL,  "%s", s->task->description);
-
-        window_t *cp = get_window_item(win, ID_TASK_PRIORITY_CTRL);
-        if (cp) send_message(cp, kComboBoxMessageSetCurrentSelection,
-                             (uint32_t)s->task->priority, NULL);
-
-        window_t *cs = get_window_item(win, ID_TASK_STATUS_CTRL);
-        if (cs) send_message(cs, kComboBoxMessageSetCurrentSelection,
-                             (uint32_t)s->task->status, NULL);
+        // Copy existing task data into state so dialog_push can populate controls.
+        strncpy(s->title, s->task->title, sizeof(s->title) - 1);
+        s->title[sizeof(s->title) - 1] = '\0';
+        strncpy(s->desc, s->task->description, sizeof(s->desc) - 1);
+        s->desc[sizeof(s->desc) - 1] = '\0';
+        s->priority = (int)s->task->priority;
+        s->status   = (int)s->task->status;
 
         if (s->task->due_date) {
           char due_buf[32];
           snprintf(due_buf, sizeof(due_buf), "%u", s->task->due_date);
           set_window_item_text(win, ID_TASK_DUEDATE_CTRL, "%s", due_buf);
         }
-      } else {
-        // New task: default to Normal priority, Todo status.
-        window_t *cp = get_window_item(win, ID_TASK_PRIORITY_CTRL);
-        if (cp) send_message(cp, kComboBoxMessageSetCurrentSelection,
-                             PRIORITY_NORMAL, NULL);
-        window_t *cs = get_window_item(win, ID_TASK_STATUS_CTRL);
-        if (cs) send_message(cs, kComboBoxMessageSetCurrentSelection,
-                             STATUS_TODO, NULL);
       }
+      // Defaults (priority=PRIORITY_NORMAL, status=STATUS_TODO) were set at init.
+
+      dialog_push(win, s, k_task_bindings, ARRAY_LEN(k_task_bindings));
       return true;
     }
 
@@ -123,31 +125,18 @@ static result_t task_dlg_proc(window_t *win, uint32_t msg,
         window_t *src = (window_t *)lparam;
 
         if (src->id == ID_OK) {
-          // Read and validate fields.
+          // Validate title before accepting.
           window_t *et = get_window_item(win, ID_TASK_TITLE_CTRL);
           if (!et || et->title[0] == '\0') {
             message_box(win, "Title is required.", "Validation", MB_OK);
             return true;
           }
-          strncpy(s->title, et->title, sizeof(s->title) - 1);
-          s->title[sizeof(s->title) - 1] = '\0';
 
-          window_t *ed = get_window_item(win, ID_TASK_DESC_CTRL);
-          if (ed) {
-            strncpy(s->desc, ed->title, sizeof(s->desc) - 1);
-            s->desc[sizeof(s->desc) - 1] = '\0';
-          } else {
-            s->desc[0] = '\0';
-          }
-
-          window_t *cp = get_window_item(win, ID_TASK_PRIORITY_CTRL);
-          s->priority = cp ? (int)send_message(cp, kComboBoxMessageGetCurrentSelection, 0, NULL) : PRIORITY_NORMAL;
+          dialog_pull(win, s, k_task_bindings, ARRAY_LEN(k_task_bindings));
           if (s->priority < 0) s->priority = PRIORITY_NORMAL;
+          if (s->status   < 0) s->status   = STATUS_TODO;
 
-          window_t *cs = get_window_item(win, ID_TASK_STATUS_CTRL);
-          s->status = cs ? (int)send_message(cs, kComboBoxMessageGetCurrentSelection, 0, NULL) : STATUS_TODO;
-          if (s->status < 0) s->status = STATUS_TODO;
-
+          // Due date: optional uint32_t — not in binding table (needs custom parsing).
           window_t *edue = get_window_item(win, ID_TASK_DUEDATE_CTRL);
           s->due_date = 0;
           if (edue && edue->title[0] != '\0') {
