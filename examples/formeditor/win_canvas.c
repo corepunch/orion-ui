@@ -434,12 +434,12 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       fill_rect(get_sys_color(kColorWorkspaceBg),
                 win->frame.x, win->frame.y, win->frame.w, win->frame.h);
 
-      // Form surface (white rectangle with a 1px dark border)
+      // Form surface (window-colored rectangle with a 1px dark border)
       int fx = win->frame.x + CANVAS_PADDING - s->pan_x;
       int fy = win->frame.y + CANVAS_PADDING - s->pan_y;
       int fw = doc->form_w;
       int fh = doc->form_h;
-      fill_rect(0xFFFFFFFF, fx, fy, fw, fh);
+      fill_rect(get_sys_color(kColorWindowBg), fx, fy, fw, fh);
       fill_rect(get_sys_color(kColorDarkEdge), fx - 1, fy - 1, fw + 2, 1);
       fill_rect(get_sys_color(kColorDarkEdge), fx - 1, fy - 1, 1, fh + 2);
       fill_rect(get_sys_color(kColorDarkEdge), fx - 1, fy + fh, fw + 2, 1);
@@ -460,8 +460,9 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
     case kWindowMessageLeftButtonDown: {
       if (!s || !doc) return false;
-      int lx = (int16_t)LOWORD(wparam);
-      int ly = (int16_t)HIWORD(wparam);
+      window_t *root = get_root_window(win);
+      int lx = (int16_t)LOWORD(wparam) - root->frame.x;
+      int ly = (int16_t)HIWORD(wparam) - root->frame.y;
       int tool = g_app ? g_app->current_tool : ID_TOOL_SELECT;
 
       if (tool == ID_TOOL_SELECT) {
@@ -520,8 +521,9 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
     case kWindowMessageMouseMove: {
       if (!s) return false;
-      int lx = (int16_t)LOWORD(wparam);
-      int ly = (int16_t)HIWORD(wparam);
+      window_t *root = get_root_window(win);
+      int lx = (int16_t)LOWORD(wparam) - root->frame.x;
+      int ly = (int16_t)HIWORD(wparam) - root->frame.y;
 
       if (s->drag_mode == DRAG_MOVE && s->selected_idx >= 0) {
         form_element_t *el = &doc->elements[s->selected_idx];
@@ -566,8 +568,9 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
     case kWindowMessageLeftButtonUp: {
       if (!s) return false;
-      int lx = (int16_t)LOWORD(wparam);
-      int ly = (int16_t)HIWORD(wparam);
+      window_t *root = get_root_window(win);
+      int lx = (int16_t)LOWORD(wparam) - root->frame.x;
+      int ly = (int16_t)HIWORD(wparam) - root->frame.y;
       (void)lx; (void)ly;
 
       if (s->drag_mode == DRAG_MOVE && s->selected_idx >= 0) {
