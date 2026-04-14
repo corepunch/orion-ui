@@ -57,6 +57,38 @@ typedef struct {
   flags_t flags;
 } windef_t;
 
+// Control type codes used in form_ctrl_def_t (analogous to WinAPI dialog-template atom IDs).
+typedef enum {
+  FORM_CTRL_BUTTON   = 0,
+  FORM_CTRL_CHECKBOX = 1,
+  FORM_CTRL_LABEL    = 2,
+  FORM_CTRL_TEXTEDIT = 3,
+  FORM_CTRL_LIST     = 4,
+  FORM_CTRL_COMBOBOX = 5,
+  FORM_CTRL_COUNT    = 6,
+} form_ctrl_type_t;
+
+// Describes one child control in a form definition (analogous to DLGITEMTEMPLATE).
+typedef struct {
+  form_ctrl_type_t  type;   // control class (FORM_CTRL_*)
+  uint32_t          id;     // numeric control ID
+  int               x, y;   // position in parent client coordinates
+  int               w, h;   // control dimensions
+  uint32_t          flags;  // style flags passed to create_window
+  const char       *text;   // initial caption / label text
+  const char       *name;   // identifier name (informational)
+} form_ctrl_def_t;
+
+// Describes a complete form (window + children) as a serializable definition
+// (analogous to DLGTEMPLATE).  Pass to create_window_from_form() to instantiate.
+typedef struct {
+  const char             *name;        // window title
+  int                     w, h;        // client area dimensions
+  uint32_t                flags;       // window flags
+  const form_ctrl_def_t  *children;    // array of child control definitions (may be NULL)
+  int                     child_count; // number of entries in children[]
+} form_def_t;
+
 // Internal state for one built-in scrollbar (horizontal or vertical).
 // Two of these live inside window_t when WINDOW_HSCROLL / WINDOW_VSCROLL is set.
 typedef struct {
@@ -106,6 +138,8 @@ struct window_s {
 window_t *create_window(char const *title, flags_t flags, const rect_t* frame, 
                         window_t *parent, winproc_t proc, void *param);
 window_t *create_window2(windef_t const *def, rect_t const *r, window_t *parent);
+window_t *create_window_from_form(form_def_t const *def, rect_t const *frame,
+                                  window_t *parent, winproc_t proc, void *lparam);
 void *allocate_window_data(window_t *win, size_t size);
 void show_window(window_t *win, bool visible);
 void destroy_window(window_t *win);

@@ -163,6 +163,19 @@ static const char *ctrl_type_token(int type) {
   }
 }
 
+// Map control type to the FORM_CTRL_* enum name (uppercase suffix).
+static const char *ctrl_type_form_token(int type) {
+  switch (type) {
+    case CTRL_BUTTON:   return "BUTTON";
+    case CTRL_CHECKBOX: return "CHECKBOX";
+    case CTRL_LABEL:    return "LABEL";
+    case CTRL_TEXTEDIT: return "TEXTEDIT";
+    case CTRL_LIST:     return "LIST";
+    case CTRL_COMBOBOX: return "COMBOBOX";
+    default:            return "BUTTON";
+  }
+}
+
 static int ctrl_type_from_token(const char *tok) {
   if (strcmp(tok, "button")   == 0) return CTRL_BUTTON;
   if (strcmp(tok, "checkbox") == 0) return CTRL_CHECKBOX;
@@ -184,6 +197,51 @@ static void sanitize_c_comment_str(const char *src, char *dst, size_t dst_sz) {
     dst[di++] = ch;
   }
   dst[di] = '\0';
+}
+
+// Sanitize a string for embedding in a C string literal: escapes '\\'
+// and strips '"', '\n', '\r'.
+static void sanitize_c_str_literal(const char *src, char *dst, size_t dst_sz) {
+  size_t di = 0;
+  for (size_t si = 0; src[si] && di < dst_sz - 2; si++) {
+    char ch = src[si];
+    if (ch == '\\') {
+      dst[di++] = '\\';
+      dst[di++] = '\\';
+    } else if (ch == '"' || ch == '\n' || ch == '\r') {
+      continue;
+    } else {
+      dst[di++] = ch;
+    }
+  }
+  dst[di] = '\0';
+}
+
+// Extract a C identifier from a file path: strips directory component and
+// extension, then replaces non-identifier characters with '_'.
+static void path_to_form_ident(const char *path, char *ident, size_t ident_sz) {
+  const char *base = strrchr(path, '/');
+  if (!base) base = strrchr(path, '\\');
+  base = base ? base + 1 : path;
+  size_t di = 0;
+  for (size_t si = 0; base[si] && base[si] != '.' && di < ident_sz - 1; si++) {
+    char ch = base[si];
+    if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') ||
+        (ch >= '0' && ch <= '9') || ch == '_')
+      ident[di++] = ch;
+    else
+      ident[di++] = '_';
+  }
+  if (di == 0) { ident[0] = 'f'; di = 1; }
+  // Ensure identifier doesn't start with a digit.
+  if (ident[0] >= '0' && ident[0] <= '9') {
+    if (di < ident_sz - 1) {
+      memmove(ident + 1, ident, di + 1);
+      ident[0] = 'f';
+      di++;
+    }
+  }
+  ident[di] = '\0';
 }
 
 // Return true when s is a non-empty, valid C identifier.
@@ -226,6 +284,38 @@ bool form_save(form_doc_t *doc, const char *path) {
     sanitize_c_comment_str(el->name, safe_name, sizeof(safe_name));
     if (is_c_identifier(safe_name))
       fprintf(f, "#define %-30s %d\n", safe_name, el->id);
+  }
+
+  // Emit a form_def_t struct literal that can be passed directly to
+  // create_window_from_form() at runtime, without re-parsing the file.
+  char ident[64];
+  path_to_form_ident(path, ident, sizeof(ident));
+
+  fprintf(f, "\n/* Form definition — pass k%s to create_window_from_form() */\n", ident);
+  if (doc->element_count > 0) {
+    fprintf(f, "static const form_ctrl_def_t k%s_children[] = {\n", ident);
+    for (int i = 0; i < doc->element_count; i++) {
+      form_element_t *el = &doc->elements[i];
+      char safe_text[sizeof(el->text) * 2];
+      char safe_name[sizeof(el->name) * 2];
+      sanitize_c_str_literal(el->text, safe_text, sizeof(safe_text));
+      sanitize_c_str_literal(el->name, safe_name, sizeof(safe_name));
+      fprintf(f, "  { FORM_CTRL_%s, %d, %d, %d, %d, %d, 0, \"%s\", \"%s\" },\n",
+              ctrl_type_form_token(el->type), el->id,
+              el->x, el->y, el->w, el->h,
+              safe_text, safe_name);
+    }
+    fprintf(f, "};\n");
+    fprintf(f, "static const form_def_t k%s = {\n", ident);
+    fprintf(f, "  \"%s\", %d, %d, 0,\n", ident, doc->form_w, doc->form_h);
+    fprintf(f, "  k%s_children,\n", ident);
+    fprintf(f, "  (int)(sizeof(k%s_children) / sizeof(k%s_children[0]))\n",
+            ident, ident);
+    fprintf(f, "};\n");
+  } else {
+    fprintf(f, "static const form_def_t k%s = {\n", ident);
+    fprintf(f, "  \"%s\", %d, %d, 0, NULL, 0\n", ident, doc->form_w, doc->form_h);
+    fprintf(f, "};\n");
   }
 
   fclose(f);

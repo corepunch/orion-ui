@@ -37,14 +37,10 @@ void push_window(window_t *win, window_t **windows) {
   }
 }
 
-// Create a new window
-window_t* create_window(char const *title,
-                        flags_t flags,
-                        rect_t const *frame,
-                        window_t *parent,
-                        winproc_t proc,
-                        void *lparam)
-{
+// Internal: allocate and register a window without sending kWindowMessageCreate.
+// Callers are responsible for sending kWindowMessageCreate (and invalidating if needed).
+static window_t *alloc_window(char const *title, flags_t flags, rect_t const *frame,
+                               window_t *parent, winproc_t proc) {
   window_t *win = malloc(sizeof(window_t));
   memset(win, 0, sizeof(window_t));
   win->frame = *frame;
@@ -75,6 +71,18 @@ window_t* create_window(char const *title,
   if (flags & WINDOW_VSCROLL) win->vscroll.visible_mode = SB_VIS_AUTO;
   _focused = win;
   push_window(win, parent ? &parent->children : &windows);
+  return win;
+}
+
+// Create a new window
+window_t* create_window(char const *title,
+                        flags_t flags,
+                        rect_t const *frame,
+                        window_t *parent,
+                        winproc_t proc,
+                        void *lparam)
+{
+  window_t *win = alloc_window(title, flags, frame, parent, proc);
   send_message(win, kWindowMessageCreate, 0, lparam);
   if (parent) {
     invalidate_window(win);
@@ -359,6 +367,61 @@ void load_window_children(window_t *win, windef_t const *def) {
       x += item->frame.w + LINE_PADDING;
     }
   }
+}
+
+// Forward declarations for standard commctl procedures used by create_window_from_form.
+// These are defined in commctl/*.c, which is compiled before user/*.c in the unity build.
+extern result_t win_button(window_t*, uint32_t, uint32_t, void*);
+extern result_t win_checkbox(window_t*, uint32_t, uint32_t, void*);
+extern result_t win_label(window_t*, uint32_t, uint32_t, void*);
+extern result_t win_textedit(window_t*, uint32_t, uint32_t, void*);
+extern result_t win_list(window_t*, uint32_t, uint32_t, void*);
+extern result_t win_combobox(window_t*, uint32_t, uint32_t, void*);
+
+// Map a FORM_CTRL_* type code to the corresponding commctl window procedure.
+static winproc_t form_ctrl_to_proc(form_ctrl_type_t type) {
+  switch (type) {
+    case FORM_CTRL_BUTTON:   return win_button;
+    case FORM_CTRL_CHECKBOX: return win_checkbox;
+    case FORM_CTRL_LABEL:    return win_label;
+    case FORM_CTRL_TEXTEDIT: return win_textedit;
+    case FORM_CTRL_LIST:     return win_list;
+    case FORM_CTRL_COMBOBOX: return win_combobox;
+    default:                 return NULL;
+  }
+}
+
+// Create a window from a form_def_t, instantiating all child controls from
+// def->children before firing kWindowMessageCreate on the parent.
+// This allows the window proc to find its children already in place during
+// kWindowMessageCreate, analogous to WinAPI CreateDialogIndirect behaviour.
+window_t *create_window_from_form(form_def_t const *def, rect_t const *frame,
+                                  window_t *parent, winproc_t proc, void *lparam) {
+  if (!def || !proc) return NULL;
+  rect_t r = {0, 0, def->w, def->h};
+  if (frame) { r.x = frame->x; r.y = frame->y; }
+
+  // Allocate the parent window without sending kWindowMessageCreate yet.
+  window_t *win = alloc_window(def->name ? def->name : "", def->flags, &r, parent, proc);
+  if (!win) return NULL;
+
+  // Instantiate child controls before the parent proc receives kWindowMessageCreate.
+  if (def->children && def->child_count > 0) {
+    for (int i = 0; i < def->child_count; i++) {
+      const form_ctrl_def_t *cd = &def->children[i];
+      winproc_t cp = form_ctrl_to_proc(cd->type);
+      if (!cp) continue;
+      rect_t cr = {cd->x, cd->y, cd->w, cd->h};
+      window_t *child = create_window(cd->text ? cd->text : "", cd->flags,
+                                      &cr, win, cp, NULL);
+      if (child) child->id = cd->id;
+    }
+  }
+
+  // Now notify the parent that creation (with children already present) is complete.
+  send_message(win, kWindowMessageCreate, 0, lparam);
+  if (parent) invalidate_window(win);
+  return win;
 }
 
 // Show or hide window
