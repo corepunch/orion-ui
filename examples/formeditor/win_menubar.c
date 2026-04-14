@@ -239,6 +239,7 @@ static void path_to_form_ident(const char *path, char *ident, size_t ident_sz) {
       memmove(ident + 1, ident, di + 1);
       ident[0] = 'f';
       di++;
+      if (di >= ident_sz - 1) { ident[ident_sz - 1] = '\0'; return; }
     }
   }
   ident[di] = '\0';
@@ -291,7 +292,7 @@ bool form_save(form_doc_t *doc, const char *path) {
   char ident[64];
   path_to_form_ident(path, ident, sizeof(ident));
 
-  fprintf(f, "\n/* Form definition — pass k%s to create_window_from_form() */\n", ident);
+  fprintf(f, "\n/* Form definition -- pass k%s to create_window_from_form() */\n", ident);
   if (doc->element_count > 0) {
     fprintf(f, "static const form_ctrl_def_t k%s_children[] = {\n", ident);
     for (int i = 0; i < doc->element_count; i++) {
