@@ -327,17 +327,17 @@ void draw_icon8(int icon, int x, int y, uint32_t col) {
 
 void draw_icon16(int icon, int x, int y, uint32_t col) {
   if (icon >= SYSICON_BASE) {
-    extern bitmap_strip_t g_sysicon_strip;
-    if (g_sysicon_strip.tex != 0 && g_sysicon_strip.cols > 0) {
+    bitmap_strip_t *s = ui_get_sysicon_strip();
+    if (s && s->tex != 0 && s->cols > 0) {
       int idx  = icon - SYSICON_BASE;
-      int scol = idx % g_sysicon_strip.cols;
-      int srow = idx / g_sysicon_strip.cols;
-      float u0 = (float)(scol * g_sysicon_strip.icon_w) / (float)g_sysicon_strip.sheet_w;
-      float v0 = (float)(srow * g_sysicon_strip.icon_h) / (float)g_sysicon_strip.sheet_h;
-      float u1 = u0 + (float)g_sysicon_strip.icon_w / (float)g_sysicon_strip.sheet_w;
-      float v1 = v0 + (float)g_sysicon_strip.icon_h / (float)g_sysicon_strip.sheet_h;
-      draw_sprite_region((int)g_sysicon_strip.tex, x, y,
-                         g_sysicon_strip.icon_w, g_sysicon_strip.icon_h,
+      int scol = idx % s->cols;
+      int srow = idx / s->cols;
+      float u0 = (float)(scol * s->icon_w) / (float)s->sheet_w;
+      float v0 = (float)(srow * s->icon_h) / (float)s->sheet_h;
+      float u1 = u0 + (float)s->icon_w / (float)s->sheet_w;
+      float v1 = v0 + (float)s->icon_h / (float)s->sheet_h;
+      draw_sprite_region((int)s->tex, x, y,
+                         s->icon_w, s->icon_h,
                          u0, v0, u1, v1, 1.0f);
     }
     return;

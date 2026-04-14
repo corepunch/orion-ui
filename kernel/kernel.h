@@ -5,6 +5,8 @@
 #include "../platform/platform.h"
 #include "renderer.h"
 
+typedef struct bitmap_strip_s bitmap_strip_t;
+
 #define UI_INIT_DESKTOP 0x01000000u
 #define UI_INIT_TRAY 0x02000000u
 

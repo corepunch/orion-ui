@@ -99,7 +99,7 @@ Any window can have a toolbar strip by setting the `WINDOW_TOOLBAR` flag at crea
 
 **Built-in system icons (sysicon_\* / SYSICON_BASE)**
 
-Orion ships a 20×20 grid PNG icon sheet (`share/orion/icon_sheet_16x16.png`) loaded automatically at startup.  All ~398 icons are listed in `user/icons.h` as `sysicon_<name>` enum values starting at `SYSICON_BASE` (0x10000).  When a toolbar button's `icon` field is `>= SYSICON_BASE` the engine draws it from the built-in sheet — **no `kToolBarMessageLoadStrip` call is needed**.
+Orion ships a 20×20 grid PNG icon sheet.  In the source tree, the asset lives at `share/icon_sheet_16x16.png`; at runtime it is deployed and loaded from `share/orion/icon_sheet_16x16.png` automatically at startup.  All ~398 icons are listed in `user/icons.h` as `sysicon_<name>` enum values starting at `SYSICON_BASE` (0x10000).  When a toolbar button's `icon` field is `>= SYSICON_BASE` the engine draws it from the built-in sheet — **no `kToolBarMessageLoadStrip` call is needed**.
 
 ```c
 #include "user/icons.h"
