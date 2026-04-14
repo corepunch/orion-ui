@@ -47,6 +47,29 @@ static int cv_hit_index(window_t *win, columnview_data_t *data, uint32_t wparam)
   return (index >= 0 && index < (int)data->count) ? index : -1;
 }
 
+// Update the built-in vertical scrollbar to reflect current content and scroll position.
+// Uses row-based units so one scroll-wheel tick equals SCROLL_SENSITIVITY rows.
+static void cv_sync_scroll(window_t *win, columnview_data_t *data) {
+  if (!win || !data || win->frame.h <= 0) return;
+  int ncol = get_column_count(win->frame.w, (int)data->column_width);
+  int total_rows = (data->count == 0) ? 0
+                 : (int)((data->count + (unsigned)ncol - 1) / (unsigned)ncol);
+  int vis_rows   = win->frame.h / ENTRY_HEIGHT;
+  int cur_row    = (int)win->scroll[1] / ENTRY_HEIGHT;
+  // Clamp current pixel offset to valid range.
+  int max_scroll = (total_rows - vis_rows) * ENTRY_HEIGHT;
+  if (max_scroll < 0) max_scroll = 0;
+  if ((int)win->scroll[1] > max_scroll) win->scroll[1] = (uint32_t)max_scroll;
+
+  scroll_info_t si;
+  si.fMask = SIF_ALL;
+  si.nMin  = 0;
+  si.nMax  = total_rows;
+  si.nPage = (uint32_t)vis_rows;
+  si.nPos  = cur_row;
+  set_scroll_info(win, SB_VERT, &si, false);
+}
+
 // ColumnView control window procedure
 result_t win_columnview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   columnview_data_t *data = (columnview_data_t *)win->userdata2;
@@ -62,6 +85,7 @@ result_t win_columnview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       data->column_width = DEFAULT_COLUMN_WIDTH;
       data->last_click_time = 0;
       data->last_click_index = -1;
+      cv_sync_scroll(win, data);
       return true;
     }
     
@@ -158,6 +182,7 @@ result_t win_columnview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
           .userdata = item->userdata,
         };
         data->count++;
+        cv_sync_scroll(win, data);
         invalidate_window(win);
         return data->count - 1; // Return index of added item
       }
@@ -184,6 +209,7 @@ result_t win_columnview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
           data->selected--;
         }
 
+        cv_sync_scroll(win, data);
         invalidate_window(win);
         return true;
       }
@@ -210,12 +236,15 @@ result_t win_columnview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       data->selected = -1;
       data->last_click_time = 0;
       data->last_click_index = -1;
+      win->scroll[1] = 0;
+      cv_sync_scroll(win, data);
       invalidate_window(win);
       return true;
     
     case CVM_SETCOLUMNWIDTH: {
       if (wparam > 0) {
         data->column_width = wparam;
+        cv_sync_scroll(win, data);
         invalidate_window(win);
         return true;
       }
@@ -254,6 +283,35 @@ result_t win_columnview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       return false;
     }
     
+    case kWindowMessageVScroll:
+      win->scroll[1] = (uint32_t)((int)wparam * ENTRY_HEIGHT);
+      cv_sync_scroll(win, data);
+      invalidate_window(win);
+      return true;
+
+    case kWindowMessageResize:
+      cv_sync_scroll(win, data);
+      return false;
+
+    case kWindowMessageWheel: {
+      if (!data) return false;
+      // HIWORD = dy_event * SCROLL_SENSITIVITY; positive = scroll down.
+      // Treat each unit as one row so the speed matches SCROLL_SENSITIVITY rows/tick.
+      int dy = (int16_t)HIWORD(wparam);
+      int ncol = get_column_count(win->frame.w, (int)data->column_width);
+      int total_rows = (data->count == 0) ? 0
+                     : (int)((data->count + (unsigned)ncol - 1) / (unsigned)ncol);
+      int max_scroll = (total_rows * ENTRY_HEIGHT - win->frame.h);
+      if (max_scroll < 0) max_scroll = 0;
+      int new_scroll = (int)win->scroll[1] + dy * ENTRY_HEIGHT;
+      if (new_scroll < 0) new_scroll = 0;
+      if (new_scroll > max_scroll) new_scroll = max_scroll;
+      win->scroll[1] = (uint32_t)new_scroll;
+      cv_sync_scroll(win, data);
+      invalidate_window(win);
+      return true;
+    }
+
     case kWindowMessageDestroy:
       if (data) {
         free(data);

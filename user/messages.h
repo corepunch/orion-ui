@@ -172,7 +172,7 @@ typedef struct {
 #define TB_SPACING              TOOLBAR_HEIGHT  // equals TOOLBAR_HEIGHT so toolbar buttons are square
 
 // Scroll and interaction constants
-#define SCROLL_SENSITIVITY      5
+#define SCROLL_SENSITIVITY      3
 
 // Icon enumerations for UI controls
 typedef enum {

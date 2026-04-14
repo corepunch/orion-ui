@@ -447,9 +447,9 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
                                      strip->icon_w, strip->icon_h, u0, v0, u1, v1, 1.0f);
                 }
               } else {
-                uint32_t col = but->active ? get_sys_color(kColorTextSuccess) : get_sys_color(kColorTextNormal);
-                draw_icon16(but->icon, bx, by, get_sys_color(kColorDarkEdge));
-                draw_icon16(but->icon, bx-1, by-1, col);
+                draw_button(&(rect_t){bx-2,by-2,bsz-2,bsz-2}, 1, 1, but->active);
+                int px = but->active ? 1 : 0;
+                draw_icon16(but->icon, bx + px - 1, by + px - 1, get_sys_color(kColorTextNormal));
               }
             }
           }
@@ -561,8 +561,8 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
           }
           break;
         case kWindowMessageWheel:
-          // When built-in scrollbars are active, drive them directly instead
-          // of using the legacy win->scroll[] projection.
+          // Only drive built-in scrollbars when they are actually visible.
+          // Windows without visible scrollbars should not respond to wheel events.
           if ((win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL)) &&
               (win->hscroll.visible || win->vscroll.visible)) {
             bool scrolled = false;
@@ -587,16 +587,6 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
               }
             }
             if (scrolled) invalidate_window(win);
-          } else {
-            if (win->flags & WINDOW_HSCROLL) {
-              win->scroll[0] = MIN(0, (int)win->scroll[0]+(int16_t)LOWORD(wparam));
-            }
-            if (win->flags & WINDOW_VSCROLL) {
-              win->scroll[1] = MAX(0, (int)win->scroll[1]-(int16_t)HIWORD(wparam));
-            }
-            if (win->flags & (WINDOW_VSCROLL|WINDOW_HSCROLL)) {
-              invalidate_window(win);
-            }
           }
           break;
         case kWindowMessagePaintStencil:
