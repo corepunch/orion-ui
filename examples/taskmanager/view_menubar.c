@@ -17,13 +17,13 @@ static const menu_item_t kFileItems[] = {
 };
 
 static const menu_item_t kTaskItems[] = {
-  {"New Task\tCtrl+N",    ID_TASK_NEW},
-  {"Edit Task\tCtrl+E",   ID_TASK_EDIT},
-  {"Delete Task\tDel",    ID_TASK_DELETE},
+  {"New Task",    ID_TASK_NEW},
+  {"Edit Task",   ID_TASK_EDIT},
+  {"Delete Task", ID_TASK_DELETE},
 };
 
 static const menu_item_t kViewItems[] = {
-  {"Refresh\tF5", ID_VIEW_REFRESH},
+  {"Refresh", ID_VIEW_REFRESH},
 };
 
 static const menu_item_t kHelpItems[] = {

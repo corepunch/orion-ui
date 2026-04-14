@@ -19,7 +19,7 @@ static const menu_item_t kFileItems[] = {
 };
 
 static const menu_item_t kEditItems[] = {
-  {"Delete\tDel",       ID_EDIT_DELETE},
+  {"Delete",            ID_EDIT_DELETE},
   {NULL,                0},
   {"Properties...",     ID_EDIT_PROPS},
 };
