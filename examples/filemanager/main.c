@@ -37,7 +37,7 @@ static result_t filemanager_proc(window_t *win, uint32_t msg,
         if (item->path && strstr(item->path, ".lua")) {
           show_window(
             create_window("Terminal", 0, MAKERECT(16, 16, 240, 120),
-                          NULL, win_terminal, item->path),
+                          NULL, win_terminal, 0, item->path),
             true);
           return true;
         }
@@ -70,7 +70,7 @@ static result_t filemanager_proc(window_t *win, uint32_t msg,
 // .gem entry points
 // ---------------------------------------------------------------------------
 
-bool gem_init(int argc, char *argv[]) {
+bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   const char *start_path = argc > 1 ? argv[1] : NULL;
   window_t *win = create_window(
     "File Manager",
@@ -78,6 +78,7 @@ bool gem_init(int argc, char *argv[]) {
     MAKERECT(20, 20, 320, 240),
     NULL,
     filemanager_proc,
+    hinstance,
     (void *)start_path
   );
   if (!win) return false;
@@ -106,6 +107,7 @@ int main(int argc, char *argv[]) {
     MAKERECT(20, 20, 320, 240),
     NULL,
     filemanager_proc,
+    0,
     NULL
   );
 

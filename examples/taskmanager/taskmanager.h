@@ -101,6 +101,7 @@ typedef struct {
   window_t      *main_win;
   window_t      *list_win;
   window_t      *menubar_win;
+  hinstance_t    hinstance;  // owning app instance
 
   accel_table_t *accel;
 } app_state_t;

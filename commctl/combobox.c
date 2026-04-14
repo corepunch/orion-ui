@@ -40,7 +40,7 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         win->frame.w,
         100,
       };
-      window_t *list = create_window("", WINDOW_NOTITLE|WINDOW_NORESIZE|WINDOW_VSCROLL, &rect, NULL, win_list, win);
+      window_t *list = create_window("", WINDOW_NOTITLE|WINDOW_NORESIZE|WINDOW_VSCROLL, &rect, NULL, win_list, win->hinstance, win);
       send_message(list, 0x5001 /*LIST_SELITEM*/, 2, NULL);
       set_capture(list);
       return true;

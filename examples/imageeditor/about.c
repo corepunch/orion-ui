@@ -77,7 +77,7 @@ static GLuint load_banner_texture(void) {
 static void make_label(window_t *parent, const char *text, int y, void *color) {
   create_window(text, WINDOW_NOTITLE | WINDOW_NOFILL,
                 MAKERECT(ABOUT_TEXT_X, y, ABOUT_LABEL_W, CONTROL_HEIGHT),
-                parent, win_label, color);
+                parent, win_label, 0, color);
 }
 
 // ──────────────────────────────────────────────────────────────────
@@ -96,7 +96,7 @@ static result_t about_proc(window_t *win, uint32_t msg,
       // Banner image (left panel)
       create_window("", WINDOW_NOTITLE | WINDOW_NOFILL,
                     MAKERECT(0, 0, ABOUT_BANNER_W, ABOUT_BANNER_H),
-                    win, win_image, (void *)(uintptr_t)s->banner_tex);
+                    win, win_image, 0, (void *)(uintptr_t)s->banner_tex);
 
       // App info labels (right column)
       make_label(win, "Orion Image Editor",  8, NULL);
@@ -111,7 +111,7 @@ static result_t about_proc(window_t *win, uint32_t msg,
       int by = ABOUT_WIN_H - ABOUT_BTN_H - 4;
       create_window("OK", 0,
                     MAKERECT(bx, by, ABOUT_BTN_W, ABOUT_BTN_H),
-                    win, win_button, NULL);
+                    win, win_button, 0, NULL);
       return true;
     }
 

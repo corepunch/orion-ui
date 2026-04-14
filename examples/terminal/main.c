@@ -6,7 +6,7 @@
 #include "../../ui.h"
 #include "../../gem_magic.h"
 
-bool gem_init(int argc, char *argv[]) {
+bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   const char *script = argc > 1 ? argv[1] : NULL;
   window_t *win = create_window(
     "Terminal",
@@ -14,6 +14,7 @@ bool gem_init(int argc, char *argv[]) {
     MAKERECT(20, 20, 500, 300),
     NULL,
     win_terminal,
+    hinstance,
     (void *)script
   );
   if (!win) return false;
@@ -38,6 +39,7 @@ int main(int argc, char *argv[]) {
     MAKERECT(20, 20, 500, 300),
     NULL,
     win_terminal,
+    0,
     (void *)script
   );
   if (!win) {

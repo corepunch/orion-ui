@@ -20,14 +20,14 @@ result_t hello_window_proc(window_t *win, uint32_t msg, uint32_t wparam, void *l
   switch (msg) {
     case kWindowMessageCreate: {
       // Create a label
-      create_window("UI Framework Demo:", WINDOW_NOTITLE, MAKERECT(20, 20, 200, 20), win, win_label, NULL);
+      create_window("UI Framework Demo:", WINDOW_NOTITLE, MAKERECT(20, 20, 200, 20), win, win_label, 0, NULL);
       // Create a button and assign it an ID
-      window_t *button = create_window("Click Me!", WINDOW_NOTITLE, MAKERECT(20, 40, 100, 0), win, win_button, NULL);
+      window_t *button = create_window("Click Me!", WINDOW_NOTITLE, MAKERECT(20, 40, 100, 0), win, win_button, 0, NULL);
       button->id = ID_BUTTON_CLICKME;
       // Create first checkbox
-      create_window("Enable Feature A", WINDOW_NOTITLE, MAKERECT(20, 60, 150, 20), win, win_checkbox, NULL);      
+      create_window("Enable Feature A", WINDOW_NOTITLE, MAKERECT(20, 60, 150, 20), win, win_checkbox, 0, NULL);      
       // Create second checkbox
-      create_window("Enable Feature B", WINDOW_NOTITLE, MAKERECT(20, 80, 150, 20), win, win_checkbox, NULL);
+      create_window("Enable Feature B", WINDOW_NOTITLE, MAKERECT(20, 80, 150, 20), win, win_checkbox, 0, NULL);
       return true;
     }
       
@@ -73,7 +73,7 @@ result_t hello_window_proc(window_t *win, uint32_t msg, uint32_t wparam, void *l
 // .gem entry points — called by the shell when loaded as a .gem
 // ---------------------------------------------------------------------------
 
-bool gem_init(int argc, char *argv[]) {
+bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   (void)argc; (void)argv;
   window_t *win = create_window(
     "Hello World Window",
@@ -81,6 +81,7 @@ bool gem_init(int argc, char *argv[]) {
     MAKERECT(20, 20, 240, 180),
     NULL,
     hello_window_proc,
+    hinstance,
     NULL
   );
   if (!win) return false;
@@ -114,6 +115,7 @@ int main(int argc, char* argv[]) {
     MAKERECT(20, 20, 240, 180),    // Position and size
     NULL,                          // No parent window
     hello_window_proc,             // Window procedure
+    0,                             // hinstance (standalone = 0)
     NULL
   );
 

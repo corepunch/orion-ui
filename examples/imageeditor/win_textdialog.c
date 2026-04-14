@@ -130,33 +130,33 @@ static result_t td_proc(window_t *win, uint32_t msg,
       // Edit box for text input
       window_t *ed = create_window(st->opts->text, 0,
           MAKERECT(TD_EDIT_X, TD_EDIT_Y, TD_EDIT_W, TD_EDIT_H),
-          win, win_textedit, NULL);
+          win, win_textedit, 0, NULL);
       ed->id = TD_ID_EDIT;
 
       // "Change..." color button
       int change_x = TD_LBL_X + 6 * 6 + 2 + TD_SWATCH_W + 4;
       window_t *cb = create_window("Change...", 0,
           MAKERECT(change_x, TD_COLOR_Y - 1, 54, TD_BTN_H),
-          win, win_button, NULL);
+          win, win_button, 0, NULL);
       cb->id = TD_ID_COLOR;
 
       // Anti-alias checkbox
       window_t *aa = create_window("Anti-alias", 0,
           MAKERECT(TD_AA_X, TD_AA_Y, 74, 12),
-          win, win_checkbox, NULL);
+          win, win_checkbox, 0, NULL);
       aa->id = TD_ID_AA;
       aa->value = st->opts->antialias;
 
       // OK button
       window_t *ok = create_window("OK", 0,
           MAKERECT(TD_BTN_OK_X, TD_BTN_Y, TD_BTN_OK_W, TD_BTN_H),
-          win, win_button, NULL);
+          win, win_button, 0, NULL);
       ok->id = TD_ID_OK;
 
       // Cancel button
       window_t *ca = create_window("Cancel", 0,
           MAKERECT(TD_BTN_CA_X, TD_BTN_Y, TD_BTN_CA_W, TD_BTN_H),
-          win, win_button, NULL);
+          win, win_button, 0, NULL);
       ca->id = TD_ID_CANCEL;
 
       return true;

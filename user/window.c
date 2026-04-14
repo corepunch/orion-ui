@@ -40,13 +40,15 @@ void push_window(window_t *win, window_t **windows) {
 // Internal: allocate and register a window without sending kWindowMessageCreate.
 // Callers are responsible for sending kWindowMessageCreate (and invalidating if needed).
 static window_t *alloc_window(char const *title, flags_t flags, rect_t const *frame,
-                               window_t *parent, winproc_t proc) {
+                               window_t *parent, winproc_t proc, hinstance_t hinstance) {
   window_t *win = malloc(sizeof(window_t));
   if (!win) return NULL;
   memset(win, 0, sizeof(window_t));
   win->frame = *frame;
   win->proc = proc;
   win->flags = flags;
+  // Inherit hinstance from parent for child windows; use supplied value for roots.
+  win->hinstance = parent ? parent->hinstance : hinstance;
   if (parent) {
     win->id = ++parent->child_id;
   } else {
@@ -84,6 +86,7 @@ window_t* create_window(char const *title,
                         rect_t const *frame,
                         window_t *parent,
                         winproc_t proc,
+                        hinstance_t hinstance,
                         void *lparam)
 {
   form_def_t def = {
@@ -96,7 +99,7 @@ window_t* create_window(char const *title,
   };
   int x = frame ? frame->x : 0;
   int y = frame ? frame->y : 0;
-  return create_window_from_form(&def, x, y, parent, proc, lparam);
+  return create_window_from_form(&def, x, y, parent, proc, hinstance, lparam);
 }
 
 void *allocate_window_data(window_t *win, size_t size) {
@@ -350,7 +353,7 @@ extern result_t win_space(window_t *win, uint32_t msg, uint32_t wparam, void *lp
 
 window_t *create_window2(windef_t const *def, rect_t const *r, window_t *parent) {
   rect_t rect = {r->x, r->y, def->w, def->h};
-  window_t *win = create_window(def->text, def->flags, &rect, parent, def->proc, NULL);
+  window_t *win = create_window(def->text, def->flags, &rect, parent, def->proc, 0, NULL);
   win->id = def->id;
   return win;
 }
@@ -401,22 +404,24 @@ static winproc_t form_ctrl_to_proc(form_ctrl_type_t type) {
 // This allows the window proc to find its children already in place during
 // kWindowMessageCreate, analogous to WinAPI CreateDialogIndirect behaviour.
 window_t *create_window_from_form(form_def_t const *def, int x, int y,
-                                  window_t *parent, winproc_t proc, void *lparam) {
+                                  window_t *parent, winproc_t proc,
+                                  hinstance_t hinstance, void *lparam) {
   if (!def || !proc) return NULL;
   rect_t r = {x, y, def->w, def->h};
 
   // Allocate the parent window without sending kWindowMessageCreate yet.
-  window_t *win = alloc_window(def->name ? def->name : "", def->flags, &r, parent, proc);
+  window_t *win = alloc_window(def->name ? def->name : "", def->flags, &r, parent, proc, hinstance);
   if (!win) return NULL;
 
   // Instantiate child controls before the parent proc receives kWindowMessageCreate.
+  // Children inherit hinstance from the parent (pass 0 = inherit).
   if (def->children && def->child_count > 0) {
     for (int i = 0; i < def->child_count; i++) {
       const form_ctrl_def_t *cd = &def->children[i];
       winproc_t cp = form_ctrl_to_proc(cd->type);
       if (!cp) continue;
       window_t *child = create_window(cd->text ? cd->text : "", cd->flags,
-                                      &cd->frame, win, cp, NULL);
+                                      &cd->frame, win, cp, 0, NULL);
       if (child) child->id = cd->id;
     }
   }

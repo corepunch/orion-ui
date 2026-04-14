@@ -19,7 +19,7 @@ result_t test_hello_window_proc(window_t *win, uint32_t msg, uint32_t wparam, vo
   switch (msg) {
     case kWindowMessageCreate: {
       // Create a button and assign it an ID
-      window_t *button = create_window("Click Me!", WINDOW_NOTITLE, MAKERECT(20, 50, 100, 0), win, win_button, NULL);
+      window_t *button = create_window("Click Me!", WINDOW_NOTITLE, MAKERECT(20, 50, 100, 0), win, win_button, 0, NULL);
       button->id = ID_BUTTON_CLICKME;
       return true;
     }

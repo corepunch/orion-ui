@@ -58,7 +58,9 @@ uint32_t show_dialog(char const *title,
 {
   uint32_t flags = WINDOW_VSCROLL|WINDOW_DIALOG|WINDOW_NOTRAYBUTTON;
   const char *dialog_title = title ? title : "";
-  window_t *dlg = create_window(dialog_title, flags, frame, NULL, proc, param);
+  // Dialogs inherit their owner's hinstance so they belong to the same app.
+  hinstance_t hinstance = parent ? get_root_window(parent)->hinstance : 0;
+  window_t *dlg = create_window(dialog_title, flags, frame, NULL, proc, hinstance, param);
   return run_dialog_loop(dlg, parent);
 }
 
@@ -83,7 +85,9 @@ uint32_t show_dialog_from_form(form_def_t const *def, char const *title,
   int x = (sw - def->w) / 2;
   int y = (sh - def->h) / 2;
 
-  window_t *dlg = create_window_from_form(&dlg_def, x, y, NULL, proc, param);
+  // Dialogs inherit their owner's hinstance so they belong to the same app.
+  hinstance_t hinstance = parent ? get_root_window(parent)->hinstance : 0;
+  window_t *dlg = create_window_from_form(&dlg_def, x, y, NULL, proc, hinstance, param);
   if (!dlg) return 0;
   return run_dialog_loop(dlg, parent);
 }

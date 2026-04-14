@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
         "menubar",
         WINDOW_NOTITLE | WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
         MAKERECT(0, 0, sw, MENUBAR_HEIGHT),
-        NULL, shell_menubar_proc, NULL);
+        NULL, shell_menubar_proc, 0, NULL);
     shell_rebuild_menubar();
     show_window(g_menubar, true);
 

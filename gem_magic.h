@@ -10,7 +10,7 @@
 //   1. axDynlibOpen("foo.gem")
 //   2. sym = axDynlibSym(handle, "gem_get_interface")
 //   3. gem_interface_t *iface = sym();
-//   4. iface->init(argc, argv)   — creates windows, returns true on success
+//   4. iface->init(argc, argv, hinstance)   — creates windows, returns true on success
 //   5. … shell runs shared event loop …
 //   6. iface->shutdown()         — called when the gem is unloaded
 //
@@ -27,7 +27,7 @@ typedef struct {
     const char **file_types;    // NULL-terminated list of handled file
                                 // extensions (e.g. {".png",".bmp",NULL}),
                                 // or NULL for no file associations.
-    bool (*init)(int argc, char *argv[]); // Create windows; true = success
+    bool (*init)(int argc, char *argv[], hinstance_t hinstance); // Create windows; true = success
     void (*shutdown)(void);               // Cleanup on unload (may be NULL)
 
     // Menu contribution — filled by init(), read by shell after init() returns.
@@ -126,15 +126,23 @@ gem_interface_t *gem_get_interface(void);
 int gem_main(int argc, char *argv[]);
 
 // GEM_MAIN — register the (renamed) main() as the gem's init function.
-#define GEM_MAIN(gem_name_, gem_ver_, gem_types_)                       \
-    static bool __gem_main_init_(int argc, char *argv[]) {              \
-        return gem_main(argc, argv) == 0;                               \
-    }                                                                    \
+// The shell passes hinstance to init(); GEM_MAIN-style programs receive it
+// as a global for use with create_window() root-window calls.
+extern hinstance_t g_gem_hinstance;
+#define GEM_MAIN(gem_name_, gem_ver_, gem_types_)                         \
+    hinstance_t g_gem_hinstance = 0;                                      \
+    static bool __gem_main_init_(int argc, char *argv[],                  \
+                                 hinstance_t hinstance) {                 \
+        g_gem_hinstance = hinstance;                                      \
+        return gem_main(argc, argv) == 0;                                 \
+    }                                                                     \
     GEM_DEFINE(gem_name_, gem_ver_, __gem_main_init_, NULL, gem_types_)
 
 #else   /* !BUILD_AS_GEM — standalone mode, macros are empty */
 
 #define GEM_DEFINE(n_, v_, i_, s_, t_)  /* no-op */
+// In standalone mode g_gem_hinstance is 0 (system); no-op GEM_MAIN still
+// provides the declaration so gem_init() callers can reference it.
 #define GEM_MAIN(n_, v_, t_)            /* no-op */
 
 #endif  /* BUILD_AS_GEM */

@@ -102,50 +102,137 @@ window_t* find_prev_tab_stop(window_t* win) {
   return it;
 }
 
-// Move window to top of Z-order
+// Move window to top of Z-order.
+//
+// For system/unowned windows (hinstance == 0) the original global behaviour is
+// preserved: WINDOW_ALWAYSONTOP windows go to the absolute top of the stack.
+//
+// For app windows (hinstance != 0) the clicked window's entire app group is
+// brought to front, but only up to just below any system (h==0) ALWAYSONTOP
+// windows (shell menu bar, popup menus, etc.).  Within the app group, normal
+// windows come first and WINDOW_ALWAYSONTOP windows come last, so a toolbox or
+// palette stays above its own document windows while remaining below the active
+// shell menus and below any other app's windows when that app is active.
 void move_to_top(window_t* _win) {
   extern window_t *get_root_window(window_t *window);
-  
+
   window_t *win = get_root_window(_win);
   post_message(win, kWindowMessageRefreshStencil, 0, NULL);
   invalidate_window(win);
-  
-  if (win->flags&WINDOW_ALWAYSINBACK)
+
+  if (win->flags & WINDOW_ALWAYSINBACK)
     return;
-  
-  window_t **head = &windows, *p = NULL, *n = *head;
-  
-  while (n != win) {
-    p = n;
-    n = n->next;
-    if (!n) return;
-  }
-  
-  if (p) p->next = win->next;
-  else *head = win->next;
-  
-  if (!*head) {
-    *head = win;
-    win->next = NULL;
+
+  hinstance_t h = win->hinstance;
+
+  if (h == 0) {
+    // System/unowned window — original global ALWAYSONTOP behaviour.
+    window_t **head = &windows, *p = NULL, *n = *head;
+
+    while (n != win) {
+      p = n;
+      n = n->next;
+      if (!n) return;
+    }
+
+    if (p) p->next = win->next;
+    else *head = win->next;
+
+    if (!*head) {
+      *head = win;
+      win->next = NULL;
+      return;
+    }
+
+    if (win->flags & WINDOW_ALWAYSONTOP) {
+      // Append to absolute tail — globally on top of everything.
+      window_t *tail = *head;
+      while (tail->next)
+        tail = tail->next;
+      tail->next = win;
+      win->next = NULL;
+    } else {
+      // Insert before the first system (h==0) ALWAYSONTOP window so that
+      // system ALWAYSONTOP windows always stay visually on top.
+      window_t *prev = NULL, *cur = *head;
+      while (cur && !(cur->hinstance == 0 && (cur->flags & WINDOW_ALWAYSONTOP))) {
+        prev = cur;
+        cur  = cur->next;
+      }
+      win->next = cur;
+      if (prev) prev->next = win;
+      else      *head      = win;
+    }
     return;
   }
 
-  if (win->flags & WINDOW_ALWAYSONTOP) {
-    window_t *tail = *head;
-    while (tail->next)
-      tail = tail->next;
-    tail->next = win;
-    win->next = NULL;
-  } else {
-    window_t *prev = NULL, *cur = *head;
-    while (cur && !(cur->flags & WINDOW_ALWAYSONTOP)) {
+  // App window (h != 0): bring the entire app group to the front of the
+  // app-window section, which sits below system (h==0) ALWAYSONTOP windows.
+  //
+  // The group is ordered: normals first (clicked window last = on top),
+  // then ALWAYSONTOP windows (clicked window last = on top within group).
+
+  // Step 1: Extract all windows of this app from the global list.
+  window_t *n_head = NULL, *n_tail = NULL;  // normal windows sublist
+  window_t *t_head = NULL, *t_tail = NULL;  // ALWAYSONTOP windows sublist
+
+  window_t *prev = NULL, *cur = windows;
+  while (cur) {
+    window_t *next = cur->next;
+    if (cur->hinstance == h && !(cur->flags & WINDOW_ALWAYSINBACK)) {
+      // Remove from the global list.
+      if (prev) prev->next = next;
+      else      windows    = next;
+      cur->next = NULL;
+
+      if (cur != win) {
+        // Append all other app windows to their respective sublists now;
+        // win itself is appended last (after the loop) so it ends up on top.
+        if (cur->flags & WINDOW_ALWAYSONTOP) {
+          if (t_tail) t_tail->next = cur; else t_head = cur;
+          t_tail = cur;
+        } else {
+          if (n_tail) n_tail->next = cur; else n_head = cur;
+          n_tail = cur;
+        }
+      }
+      // prev stays unchanged — cur was removed from the list.
+    } else {
       prev = cur;
-      cur  = cur->next;
     }
-    win->next = cur;
-    if (prev) prev->next = win;
-    else      *head      = win;
+    cur = next;
   }
+
+  // Append win at the END of its sublist so it is topmost within the group.
+  if (win->flags & WINDOW_ALWAYSONTOP) {
+    if (t_tail) t_tail->next = win; else t_head = win;
+    t_tail = win;
+  } else {
+    if (n_tail) n_tail->next = win; else n_head = win;
+    n_tail = win;
+  }
+  win->next = NULL;
+
+  // Chain the two sublists: normals → topmost.
+  if (n_tail) n_tail->next = t_head;
+  window_t *group_head = n_head ? n_head : t_head;
+  window_t *group_tail = t_tail ? t_tail : n_tail;
+
+  if (!group_head) return;
+
+  // Step 2: Find the insertion point — just before the first system (h==0)
+  // ALWAYSONTOP window so the shell menu bar / popups stay globally on top.
+  window_t *ins_prev = NULL;
+  cur = windows;
+  while (cur && !(cur->hinstance == 0 && (cur->flags & WINDOW_ALWAYSONTOP))) {
+    ins_prev = cur;
+    cur = cur->next;
+  }
+
+  // Insert the app group at the insertion point.
+  group_tail->next = cur;
+  if (ins_prev) ins_prev->next = group_head;
+  else          windows        = group_head;
 }
 
 // Dispatch a platform AXmessage to the Orion window system.

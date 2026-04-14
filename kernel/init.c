@@ -124,14 +124,14 @@ bool ui_init_graphics(int flags, const char *title, int width, int height) {
     show_window(create_window("Desktop",
                               WINDOW_NOTITLE|WINDOW_ALWAYSINBACK|WINDOW_NOTRAYBUTTON,
                               MAKERECT(0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight)),
-                              NULL, win_desktop, NULL), true);
+                              NULL, win_desktop, 0, NULL), true);
   }
 
   if (flags & UI_INIT_TRAY) {
     show_window(create_window("Tray",
                               WINDOW_NOTITLE|WINDOW_NOTRAYBUTTON,
                               MAKERECT(0, 0, 0, 0),
-                              NULL, win_tray, NULL), true);
+                              NULL, win_tray, 0, NULL), true);
   }
 
   running = true;

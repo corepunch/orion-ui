@@ -185,7 +185,7 @@ static result_t fp_proc(window_t *win, uint32_t msg,
       // File browser list
       ps->list_win = create_window("", WINDOW_NOTITLE | WINDOW_VSCROLL,
           MAKERECT(FP_PAD, FP_LIST_Y, FP_LIST_W, FP_LIST_H),
-          win, win_filelist, NULL);
+          win, win_filelist, 0, NULL);
 
       // Apply the initial filter
       fp_apply_filter(ps);
@@ -208,14 +208,14 @@ static result_t fp_proc(window_t *win, uint32_t msg,
       // "File:" label
       create_window("File:", WINDOW_NOTITLE,
           MAKERECT(FP_PAD, FP_FILE_Y, FP_LABEL_W, FP_CTRL_H),
-          win, win_label, NULL);
+          win, win_label, 0, NULL);
 
       // Filename text edit
       int edit_x = FP_PAD + FP_LABEL_W + 2;
       int edit_w = FP_WIN_W - edit_x - FP_PAD;
       ps->edit_win = create_window("", WINDOW_NOTITLE,
           MAKERECT(edit_x, FP_FILE_Y, edit_w, FP_CTRL_H),
-          win, win_textedit, NULL);
+          win, win_textedit, 0, NULL);
 
       // Copy pre-fill basename now that edit_win exists
       if (ps->ofn->lpstrFile && ps->ofn->lpstrFile[0]) {
@@ -232,13 +232,13 @@ static result_t fp_proc(window_t *win, uint32_t msg,
       if (ps->num_filters > 0) {
         create_window("Filter:", WINDOW_NOTITLE,
             MAKERECT(FP_PAD, btn_y, FP_LABEL_W, FP_CTRL_H),
-            win, win_label, NULL);
+            win, win_label, 0, NULL);
 
         int combo_x = FP_PAD + FP_LABEL_W + 2;
         int combo_w = FP_WIN_W - combo_x - FP_PAD;
         ps->filter_combo = create_window("", WINDOW_NOTITLE,
             MAKERECT(combo_x, btn_y, combo_w, FP_CTRL_H),
-            win, win_combobox, NULL);
+            win, win_combobox, 0, NULL);
 
         for (int i = 0; i < ps->num_filters; i++) {
           send_message(ps->filter_combo, kComboBoxMessageAddString,
@@ -256,9 +256,9 @@ static result_t fp_proc(window_t *win, uint32_t msg,
       int ok_x   = FP_WIN_W - (FP_BTN_W + FP_PAD) * 2;
       int cncl_x = FP_WIN_W - (FP_BTN_W + FP_PAD);
       create_window(ok_label, BUTTON_DEFAULT,
-          MAKERECT(ok_x,   btn_y, FP_BTN_W, FP_BTN_H), win, win_button, NULL);
+          MAKERECT(ok_x,   btn_y, FP_BTN_W, FP_BTN_H), win, win_button, 0, NULL);
       create_window("Cancel", 0,
-          MAKERECT(cncl_x, btn_y, FP_BTN_W, FP_BTN_H), win, win_button, NULL);
+          MAKERECT(cncl_x, btn_y, FP_BTN_W, FP_BTN_H), win, win_button, 0, NULL);
 
       return true;
     }

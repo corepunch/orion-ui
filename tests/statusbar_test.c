@@ -71,6 +71,7 @@ int main(int argc, char *argv[]) {
             MAKERECT(10, 10, 200, 100),
             NULL,
             statusbar_test_proc,
+            0,
             NULL
         );
         TEST_ASSERT(win != NULL, "Window with WINDOW_STATUSBAR created");

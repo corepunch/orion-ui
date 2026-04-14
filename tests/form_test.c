@@ -77,7 +77,7 @@ void test_form_children_exist_at_create(void) {
   test_env_init();
   memset(&g_create_state, 0, sizeof(g_create_state));
 
-  window_t *win = create_window_from_form(&kTestForm, 0, 0, NULL, form_test_proc, NULL);
+  window_t *win = create_window_from_form(&kTestForm, 0, 0, NULL, form_test_proc, 0, NULL);
   ASSERT_NOT_NULL(win);
   ASSERT_TRUE(g_create_state.create_fired);
   ASSERT_NOT_NULL(g_create_state.found_name);
@@ -99,7 +99,7 @@ void test_form_child_ids(void) {
   test_env_init();
   memset(&g_create_state, 0, sizeof(g_create_state));
 
-  window_t *win = create_window_from_form(&kTestForm, 0, 0, NULL, form_test_proc, NULL);
+  window_t *win = create_window_from_form(&kTestForm, 0, 0, NULL, form_test_proc, 0, NULL);
   ASSERT_NOT_NULL(win);
   ASSERT_NOT_NULL(g_create_state.found_name);
   ASSERT_NOT_NULL(g_create_state.found_ok);
@@ -123,7 +123,7 @@ void test_form_child_flags(void) {
   test_env_init();
   memset(&g_create_state, 0, sizeof(g_create_state));
 
-  window_t *win = create_window_from_form(&kTestForm, 0, 0, NULL, form_test_proc, NULL);
+  window_t *win = create_window_from_form(&kTestForm, 0, 0, NULL, form_test_proc, 0, NULL);
   ASSERT_NOT_NULL(win);
   ASSERT_TRUE(g_create_state.ok_flags & BUTTON_DEFAULT);
 
@@ -142,7 +142,7 @@ void test_form_child_text(void) {
   test_env_init();
   memset(&g_create_state, 0, sizeof(g_create_state));
 
-  window_t *win = create_window_from_form(&kTestForm, 0, 0, NULL, form_test_proc, NULL);
+  window_t *win = create_window_from_form(&kTestForm, 0, 0, NULL, form_test_proc, 0, NULL);
   ASSERT_NOT_NULL(win);
   ASSERT_STR_EQUAL(g_create_state.name_text, "hello");
 

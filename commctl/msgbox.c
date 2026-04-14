@@ -48,7 +48,7 @@ static result_t mb_proc(window_t *win, uint32_t msg,
       // Text label
       create_window(ms->text ? ms->text : "", WINDOW_NOTITLE,
           MAKERECT(MB_PAD, MB_PAD, MB_WIN_W - MB_PAD * 2, MB_TEXT_H),
-          win, win_label, NULL);
+          win, win_label, 0, NULL);
 
       // Buttons — positioned flush with the right edge, same style as the
       // imageeditor's about-dialog and file-picker.
@@ -59,38 +59,38 @@ static result_t mb_proc(window_t *win, uint32_t msg,
         create_window("Yes", BUTTON_DEFAULT,
             MAKERECT(MB_WIN_W - (MB_BTN_W + MB_PAD) * 3, btn_y,
                      MB_BTN_W, MB_BTN_H),
-            win, win_button, NULL);
+            win, win_button, 0, NULL);
         create_window("No", 0,
             MAKERECT(MB_WIN_W - (MB_BTN_W + MB_PAD) * 2, btn_y,
                      MB_BTN_W, MB_BTN_H),
-            win, win_button, NULL);
+            win, win_button, 0, NULL);
         create_window("Cancel", 0,
             MAKERECT(MB_WIN_W - (MB_BTN_W + MB_PAD), btn_y,
                      MB_BTN_W, MB_BTN_H),
-            win, win_button, NULL);
+            win, win_button, 0, NULL);
       } else if (btype == MB_YESNO) {
         create_window("Yes", BUTTON_DEFAULT,
             MAKERECT(MB_WIN_W - (MB_BTN_W + MB_PAD) * 2, btn_y,
                      MB_BTN_W, MB_BTN_H),
-            win, win_button, NULL);
+            win, win_button, 0, NULL);
         create_window("No", 0,
             MAKERECT(MB_WIN_W - (MB_BTN_W + MB_PAD), btn_y,
                      MB_BTN_W, MB_BTN_H),
-            win, win_button, NULL);
+            win, win_button, 0, NULL);
       } else if (btype == MB_OKCANCEL) {
         create_window("OK", BUTTON_DEFAULT,
             MAKERECT(MB_WIN_W - (MB_BTN_W + MB_PAD) * 2, btn_y,
                      MB_BTN_W, MB_BTN_H),
-            win, win_button, NULL);
+            win, win_button, 0, NULL);
         create_window("Cancel", 0,
             MAKERECT(MB_WIN_W - (MB_BTN_W + MB_PAD), btn_y,
                      MB_BTN_W, MB_BTN_H),
-            win, win_button, NULL);
+            win, win_button, 0, NULL);
       } else {
         /* MB_OK */
         create_window("OK", BUTTON_DEFAULT,
             MAKERECT((MB_WIN_W - MB_BTN_W) / 2, btn_y, MB_BTN_W, MB_BTN_H),
-            win, win_button, NULL);
+            win, win_button, 0, NULL);
       }
       return true;
     }

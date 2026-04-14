@@ -135,14 +135,14 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
       filename ? filename : "Untitled",
       /* WINDOW_TOOLBAR |*/ WINDOW_STATUSBAR | WINDOW_HSCROLL,
       MAKERECT(wx, wy, win_w, win_h),
-      NULL, doc_win_proc, NULL);
+      NULL, doc_win_proc, g_app->hinstance, NULL);
   dwin->userdata = doc;
   doc->win = dwin;
 
   window_t *cwin = create_window(
       "", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL,
       MAKERECT(0, 0, win_w, win_h),
-      dwin, win_canvas_proc, doc);
+      dwin, win_canvas_proc, 0, doc);
   cwin->notabstop = false;
   doc->canvas_win = cwin;
 

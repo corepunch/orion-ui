@@ -273,17 +273,17 @@ static result_t cp_proc(window_t *win, uint32_t msg,
 
       window_t *ok = create_window("OK", 0,
           MAKERECT(CP_BTN_OK_X, CP_BTN_Y, CP_BTN_OK_W, CP_BTN_H),
-          win, win_button, NULL);
+          win, win_button, 0, NULL);
       ok->id = CP_ID_OK;
 
       window_t *ca = create_window("Cancel", 0,
           MAKERECT(CP_BTN_CA_X, CP_BTN_Y, CP_BTN_CA_W, CP_BTN_H),
-          win, win_button, NULL);
+          win, win_button, 0, NULL);
       ca->id = CP_ID_CANCEL;
 
       window_t *ad = create_window("+ Palette", 0,
           MAKERECT(CP_BTN_AD_X, CP_BTN_Y, CP_BTN_AD_W, CP_BTN_H),
-          win, win_button, NULL);
+          win, win_button, 0, NULL);
       ad->id = CP_ID_ADD;
       return true;
     }
