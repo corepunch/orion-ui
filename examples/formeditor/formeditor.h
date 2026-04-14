@@ -39,7 +39,7 @@
 
 // Document window initial position
 #define DOC_START_X       (PALETTE_WIN_X + PALETTE_WIN_W + 10)
-#define DOC_START_Y       (MENUBAR_HEIGHT + 4)
+#define DOC_START_Y       (MENUBAR_HEIGHT + 8 + TITLEBAR_HEIGHT)
 #define DOC_WIN_W         320//(SCREEN_W - DOC_START_X - 4)
 #define DOC_WIN_H         240//(SCREEN_H - DOC_START_Y - 4)
 
