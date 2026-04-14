@@ -11,6 +11,7 @@
 #include "user.h"
 #include "messages.h"
 #include "draw.h"
+#include "icons.h"
 
 // External references
 extern window_t *windows;
@@ -325,6 +326,22 @@ void draw_icon8(int icon, int x, int y, uint32_t col) {
 }
 
 void draw_icon16(int icon, int x, int y, uint32_t col) {
+  if (icon >= SYSICON_BASE) {
+    extern bitmap_strip_t g_sysicon_strip;
+    if (g_sysicon_strip.tex != 0 && g_sysicon_strip.cols > 0) {
+      int idx  = icon - SYSICON_BASE;
+      int scol = idx % g_sysicon_strip.cols;
+      int srow = idx / g_sysicon_strip.cols;
+      float u0 = (float)(scol * g_sysicon_strip.icon_w) / (float)g_sysicon_strip.sheet_w;
+      float v0 = (float)(srow * g_sysicon_strip.icon_h) / (float)g_sysicon_strip.sheet_h;
+      float u1 = u0 + (float)g_sysicon_strip.icon_w / (float)g_sysicon_strip.sheet_w;
+      float v1 = v0 + (float)g_sysicon_strip.icon_h / (float)g_sysicon_strip.sheet_h;
+      draw_sprite_region((int)g_sysicon_strip.tex, x, y,
+                         g_sysicon_strip.icon_w, g_sysicon_strip.icon_h,
+                         u0, v0, u1, v1, 1.0f);
+    }
+    return;
+  }
   icon*=2;
   draw_text_small((char[]) { icon+128, icon+129, 0 }, x, y, col);
   draw_text_small((char[]) { icon+144, icon+145, 0 }, x, y+8, col);
