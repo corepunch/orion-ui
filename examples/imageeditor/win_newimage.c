@@ -66,21 +66,21 @@ static const form_def_t kSizeDialogForm = {
 typedef struct {
   int  *out_w;
   int  *out_h;
+  int   w, h;      // embedded copies for DDX (push/pull)
   bool  accepted;
 } ni_state_t;
 
-// Parse an edit-box value and write it to *out if it is a valid dimension.
-static void ni_read_dim(window_t *dlg, uint32_t id, int *out) {
-  window_t *w = get_window_item(dlg, id);
-  if (!w) return;
-  int v = atoi(w->title);
-  if (v > 0 && v <= MAX_IMAGE_DIMENSION) *out = v;
-}
+// DDX binding table: width and height edit boxes ↔ ni_state_t.w / .h
+static const ctrl_binding_t k_ni_bindings[] = {
+  { NI_ID_WIDTH,  BIND_INT_EDIT, offsetof(ni_state_t, w), 0 },
+  { NI_ID_HEIGHT, BIND_INT_EDIT, offsetof(ni_state_t, h), 0 },
+};
 
-// Read both dimensions from the dialog and accept it.
+// Validate and accept the dialog, copying bounded values back to caller pointers.
 static void ni_accept(window_t *win, ni_state_t *st) {
-  ni_read_dim(win, NI_ID_WIDTH,  st->out_w);
-  ni_read_dim(win, NI_ID_HEIGHT, st->out_h);
+  dialog_pull(win, st, k_ni_bindings, ARRAY_LEN(k_ni_bindings));
+  if (st->w > 0 && st->w <= MAX_IMAGE_DIMENSION) *st->out_w = st->w;
+  if (st->h > 0 && st->h <= MAX_IMAGE_DIMENSION) *st->out_h = st->h;
   st->accepted = true;
   end_dialog(win, 1);
 }
@@ -96,18 +96,13 @@ static result_t ni_proc(window_t *win, uint32_t msg,
   switch (msg) {
     case kWindowMessageCreate: {
       // Children were already created by create_window_from_form() before this
-      // message fired.  Just store state and populate the edit boxes with the
-      // caller-supplied initial dimensions.
+      // message fired.  Store state and push the caller-supplied dimensions
+      // into the edit boxes via DDX.
       st = (ni_state_t *)lparam;
       win->userdata = st;
-
-      char buf[16];
-      snprintf(buf, sizeof(buf), "%d", *st->out_w);
-      set_window_item_text(win, NI_ID_WIDTH, buf);
-
-      snprintf(buf, sizeof(buf), "%d", *st->out_h);
-      set_window_item_text(win, NI_ID_HEIGHT, buf);
-
+      st->w = *st->out_w;
+      st->h = *st->out_h;
+      dialog_push(win, st, k_ni_bindings, ARRAY_LEN(k_ni_bindings));
       return true;
     }
 

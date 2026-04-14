@@ -223,6 +223,36 @@ void create_my_panel(window_t *parent, int x, int y) {
   (see `examples/formeditor/`).  Include those headers and pass the struct
   directly to `create_window_from_form()` or `show_dialog_from_form()`.
 
+### Dialog Data Exchange (DDX)
+
+To eliminate the boilerplate of reading and writing every dialog field
+individually, Orion provides a declarative binding API analogous to MFC's DDX.
+Declare a static `ctrl_binding_t[]` table and call `dialog_push()` on open and
+`dialog_pull()` on accept:
+
+```c
+// Binding table — one entry per control/field pair.
+static const ctrl_binding_t k_bindings[] = {
+  { ID_TITLE_EDIT,    BIND_STRING,    offsetof(my_state_t, title),    sizeof_field(my_state_t, title) },
+  { ID_PRIORITY_COMBO,BIND_INT_COMBO, offsetof(my_state_t, priority), 0 },
+  { ID_SIZE_EDIT,     BIND_INT_EDIT,  offsetof(my_state_t, size),     0 },
+};
+
+// kWindowMessageCreate — push state into controls:
+dialog_push(win, s, k_bindings, ARRAY_LEN(k_bindings));
+
+// OK handler — pull controls back into state:
+dialog_pull(win, s, k_bindings, ARRAY_LEN(k_bindings));
+```
+
+| `bind_type_t` | Control | State field |
+|---|---|---|
+| `BIND_STRING` | `FORM_CTRL_TEXTEDIT` | `char[]` — `size` = `sizeof_field(…)` |
+| `BIND_INT_COMBO` | `FORM_CTRL_COMBOBOX` | `int` — selection index |
+| `BIND_INT_EDIT` | `FORM_CTRL_TEXTEDIT` | `int` — decimal text |
+
+See [Dialogs & DDX](docs/dialogs.md) for the full API reference.
+
 ### Using the ColumnView
 
 ```c
