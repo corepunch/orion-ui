@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Gem Plugin System
-nav_order: 9
+nav_order: 10
 ---
 
 # Gem Plugin System

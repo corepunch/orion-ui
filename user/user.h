@@ -1,6 +1,7 @@
 #ifndef __UI_USER_H__
 #define __UI_USER_H__
 
+#include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -206,5 +207,37 @@ void reset_scroll_bar_auto(window_t *win, int bar);
 // Global window list
 extern window_t *windows;
 extern window_t *g_inspector;
+
+// ── Dialog Data Exchange (DDX) ──────────────────────────────────────────────
+// Analogous to MFC DDX / WinAPI dialog-data routines.
+// Describe each control-to-field mapping in a static ctrl_binding_t array,
+// then call dialog_push() on create and dialog_pull() on accept.
+
+// Returns the number of elements in a statically-sized array.
+#define ARRAY_LEN(a) ((int)(sizeof(a) / sizeof((a)[0])))
+
+// Returns sizeof(((type *)0)->field) — the byte size of a struct field.
+#define sizeof_field(type, field) ((size_t)(sizeof(((type *)0)->field)))
+
+typedef enum {
+  BIND_STRING,    // char[] field: text-edit text ↔ char array (size = sizeof field)
+  BIND_INT_COMBO, // int   field: combo-box selection index ↔ int  (size = 0)
+  BIND_INT_EDIT,  // int   field: text-edit decimal text    ↔ int  (size = 0)
+} bind_type_t;
+
+typedef struct {
+  uint32_t    ctrl_id; // numeric child control ID
+  bind_type_t type;    // BIND_* transfer type
+  size_t      offset;  // offsetof(state_t, field)
+  size_t      size;    // for BIND_STRING: sizeof the char[] field; else 0
+} ctrl_binding_t;
+
+// dialog_push: write state fields → controls (call from kWindowMessageCreate).
+void dialog_push(window_t *win, const void *state,
+                 const ctrl_binding_t *b, int n);
+
+// dialog_pull: read controls → state fields (call in OK handler before accept).
+void dialog_pull(window_t *win, void *state,
+                 const ctrl_binding_t *b, int n);
 
 #endif

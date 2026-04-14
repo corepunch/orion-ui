@@ -10,6 +10,8 @@
 // end_dialog() writes through that pointer before destroying the window, so
 // nested dialogs each see only their own result code.
 
+#include <stdlib.h>
+#include <string.h>
 #include "../ui.h"
 
 // Application running flag – defined here as the authoritative definition;
@@ -97,4 +99,65 @@ void end_dialog(window_t *win, uint32_t code) {
     *(uint32_t *)root->userdata2 = code;
   }
   destroy_window(root);
+}
+
+// ── Dialog Data Exchange (DDX) ────────────────────────────────────────────
+// Push state → controls (populate on open); pull controls → state (read on OK).
+
+void dialog_push(window_t *win, const void *state,
+                 const ctrl_binding_t *b, int n) {
+  if (!win || !state || !b) return;
+  const char *base = (const char *)state;
+  for (int i = 0; i < n; i++) {
+    switch (b[i].type) {
+      case BIND_STRING: {
+        int max_len = b[i].size > 0 ? b[i].size - 1 : 0;
+        set_window_item_text(win, b[i].ctrl_id, "%.*s",
+                             max_len, base + b[i].offset);
+        break;
+      }
+      case BIND_INT_COMBO: {
+        window_t *ctrl = get_window_item(win, b[i].ctrl_id);
+        if (ctrl) {
+          int v = *(const int *)(base + b[i].offset);
+          send_message(ctrl, kComboBoxMessageSetCurrentSelection,
+                       (uint32_t)v, NULL);
+        }
+        break;
+      }
+      case BIND_INT_EDIT: {
+        int v = *(const int *)(base + b[i].offset);
+        set_window_item_text(win, b[i].ctrl_id, "%d", v);
+        break;
+      }
+    }
+  }
+}
+
+void dialog_pull(window_t *win, void *state,
+                 const ctrl_binding_t *b, int n) {
+  if (!win || !state || !b) return;
+  char *base = (char *)state;
+  for (int i = 0; i < n; i++) {
+    window_t *ctrl = get_window_item(win, b[i].ctrl_id);
+    if (!ctrl) continue;
+    switch (b[i].type) {
+      case BIND_STRING: {
+        char  *dst = base + b[i].offset;
+        size_t sz  = b[i].size;
+        if (sz > 0) {
+          strncpy(dst, ctrl->title, sz - 1);
+          dst[sz - 1] = '\0';
+        }
+        break;
+      }
+      case BIND_INT_COMBO:
+        *(int *)(base + b[i].offset) =
+            (int)send_message(ctrl, kComboBoxMessageGetCurrentSelection, 0, NULL);
+        break;
+      case BIND_INT_EDIT:
+        *(int *)(base + b[i].offset) = atoi(ctrl->title);
+        break;
+    }
+  }
 }

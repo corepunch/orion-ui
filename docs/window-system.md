@@ -103,6 +103,10 @@ destroy_window(win);
 
 ## Dialogs
 
+For the complete dialog API — including modal dialogs, declarative forms, and
+the Dialog Data Exchange (DDX) helpers (`dialog_push` / `dialog_pull`) — see
+[Dialogs & DDX](dialogs).
+
 Modal dialogs follow the same pattern as Win32 `DialogBoxParam` / `EndDialog`:
 `show_dialog` runs a **nested message loop** that blocks the caller until
 `end_dialog` is called, then returns the numeric result code.
