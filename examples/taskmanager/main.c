@@ -32,7 +32,8 @@ bool gem_init(int argc, char *argv[]) {
                sw - MAIN_WIN_X - 4,
                sh - MAIN_WIN_Y - 4),
       NULL, main_win_proc, NULL);
-  g_app->main_win = mw;
+  // Note: g_app->main_win is set inside main_win_proc's kWindowMessageCreate
+  // so that app_update_status() works correctly during initial window setup.
   show_window(mw, true);
 
   // Attach accelerators to the menu bar for hotkey hints in menus.

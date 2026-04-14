@@ -151,6 +151,7 @@ void handle_menu_command(uint16_t id) {
           message_box(parent, "Failed to open file.", "Error", MB_OK);
         } else {
           strncpy(g_app->filename, path, sizeof(g_app->filename) - 1);
+          g_app->filename[sizeof(g_app->filename) - 1] = '\0';
           g_app->modified = false;
           tasklist_refresh(g_app->list_win);
           app_update_status(g_app);
@@ -163,6 +164,7 @@ void handle_menu_command(uint16_t id) {
         char path[512] = "";
         if (!prompt_filepath(parent, "Save as:", path, sizeof(path))) return;
         strncpy(g_app->filename, path, sizeof(g_app->filename) - 1);
+        g_app->filename[sizeof(g_app->filename) - 1] = '\0';
       }
       if (!task_file_save(g_app->filename, g_app))
         message_box(parent, "Failed to save file.", "Error", MB_OK);
@@ -174,6 +176,7 @@ void handle_menu_command(uint16_t id) {
       char path[512] = "";
       if (prompt_filepath(parent, "Save as:", path, sizeof(path))) {
         strncpy(g_app->filename, path, sizeof(g_app->filename) - 1);
+        g_app->filename[sizeof(g_app->filename) - 1] = '\0';
         if (!task_file_save(g_app->filename, g_app))
           message_box(parent, "Failed to save file.", "Error", MB_OK);
         else
@@ -250,7 +253,8 @@ result_t app_menubar_proc(window_t *win, uint32_t msg,
                           uint32_t wparam, void *lparam) {
   switch (msg) {
     case kWindowMessageCommand:
-      if (HIWORD(wparam) == kMenuBarNotificationItemClick) {
+      if (HIWORD(wparam) == kMenuBarNotificationItemClick ||
+          HIWORD(wparam) == kAcceleratorNotification) {
         handle_menu_command((uint16_t)LOWORD(wparam));
         return true;
       }

@@ -10,6 +10,9 @@ result_t main_win_proc(window_t *win, uint32_t msg,
                        uint32_t wparam, void *lparam) {
   switch (msg) {
     case kWindowMessageCreate:
+      // Set main_win before calling app_update_status so the status bar
+      // is populated on first paint.
+      g_app->main_win = win;
       // The list view is created as a child that fills the client area.
       g_app->list_win = create_window(
           "tasks",
@@ -31,10 +34,9 @@ result_t main_win_proc(window_t *win, uint32_t msg,
         handle_menu_command((uint16_t)LOWORD(wparam));
         return true;
       }
-      // Forward task-list selection changes to update selected_idx.
+      // CVN notifications: LOWORD(wparam) = item index, lparam = columnview_item_t*.
       if (HIWORD(wparam) == CVN_SELCHANGE) {
-        window_t *list = (window_t *)lparam;
-        int sel = (int)send_message(list, CVM_GETSELECTION, 0, NULL);
+        int sel = (int)(int16_t)LOWORD(wparam);
         if (g_app) g_app->selected_idx = sel;
         return true;
       }
@@ -48,10 +50,10 @@ result_t main_win_proc(window_t *win, uint32_t msg,
       if (g_app && g_app->modified) {
         int r = message_box(win, "Discard unsaved changes and quit?",
                             "Quit", MB_YESNO);
-        if (r != IDYES) return true;  // cancel the close
+        if (r != IDYES) return true;  // user cancelled — keep window open
       }
       ui_request_quit();
-      return true;
+      return false;  // let framework proceed with default close/hide
 
     default:
       return false;

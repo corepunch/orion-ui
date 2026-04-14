@@ -149,7 +149,17 @@ static result_t task_dlg_proc(window_t *win, uint32_t msg,
           if (s->status < 0) s->status = STATUS_TODO;
 
           window_t *edue = get_window_item(win, ID_TASK_DUEDATE_CTRL);
-          s->due_date = (edue && edue->title[0]) ? (uint32_t)atol(edue->title) : 0;
+          s->due_date = 0;
+          if (edue && edue->title[0] != '\0') {
+            char *endp = NULL;
+            unsigned long parsed = strtoul(edue->title, &endp, 10);
+            if (endp == edue->title || *endp != '\0') {
+              message_box(win, "Due date must be a Unix timestamp (e.g. 1735689600) or empty for none.",
+                          "Validation", MB_OK);
+              return true;
+            }
+            s->due_date = (uint32_t)parsed;
+          }
 
           s->accepted = true;
           end_dialog(win, 1);

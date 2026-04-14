@@ -76,16 +76,31 @@ bool task_file_save(const char *path, app_state_t *app) {
     if (fwrite(&e, sizeof(e), 1, f) != 1) { fclose(f); return false; }
   }
 
-  // Write string block.
+  // Write string block — check each write for I/O errors.
   for (int i = 0; i < app->task_count; i++) {
     task_t *t = app->tasks[i];
     const char *title = t->title       ? t->title       : "";
     const char *desc  = t->description ? t->description : "";
-    fwrite(title, strlen(title) + 1, 1, f);
-    fwrite(desc,  strlen(desc)  + 1, 1, f);
+    if (fwrite(title, strlen(title) + 1, 1, f) != 1) { fclose(f); return false; }
+    if (fwrite(desc,  strlen(desc)  + 1, 1, f) != 1) { fclose(f); return false; }
   }
 
-  fclose(f);
+  if (fclose(f) != 0) return false;
+  return true;
+}
+
+// Append a task directly to the array (for use during load only).
+// Unlike app_add_task(), this does NOT assign IDs or set modified.
+static bool file_load_append(app_state_t *app, task_t *task) {
+  if (app->task_count >= app->task_capacity) {
+    int new_cap = app->task_capacity * 2;
+    task_t **newbuf = (task_t **)realloc(app->tasks,
+                                          (size_t)new_cap * sizeof(task_t *));
+    if (!newbuf) return false;
+    app->tasks         = newbuf;
+    app->task_capacity = new_cap;
+  }
+  app->tasks[app->task_count++] = task;
   return true;
 }
 
@@ -139,27 +154,54 @@ bool task_file_load(const char *path, app_state_t *app) {
   app->next_id    = 1;
 
   // Rebuild tasks from the loaded data.
+  size_t strbuf_size = (size_t)str_size;
+  int max_id = 0;
   for (uint32_t i = 0; i < count; i++) {
     task_entry_t *e = &entries[i];
-    const char *title = (e->title_offset < (uint32_t)str_size)
-                        ? strbuf + e->title_offset : "";
-    const char *desc  = (e->desc_offset  < (uint32_t)str_size)
-                        ? strbuf + e->desc_offset  : "";
 
-    task_t *t = task_create(title, desc,
+    // Validate and copy title — bounds check prevents out-of-bounds reads
+    // on malformed/corrupted files.
+    size_t tlen = (size_t)e->title_len;
+    size_t dlen = (size_t)e->desc_len;
+
+    bool title_ok = ((size_t)e->title_offset <= strbuf_size &&
+                     tlen <= strbuf_size - (size_t)e->title_offset);
+    bool desc_ok  = ((size_t)e->desc_offset  <= strbuf_size &&
+                     dlen <= strbuf_size - (size_t)e->desc_offset);
+
+    char *title_buf = (char *)malloc(title_ok ? tlen + 1 : 1);
+    char *desc_buf  = (char *)malloc(desc_ok  ? dlen + 1 : 1);
+    if (!title_buf || !desc_buf) { free(title_buf); free(desc_buf); continue; }
+
+    if (title_ok && tlen > 0)
+      memcpy(title_buf, strbuf + e->title_offset, tlen);
+    title_buf[title_ok ? tlen : 0] = '\0';
+
+    if (desc_ok && dlen > 0)
+      memcpy(desc_buf, strbuf + e->desc_offset, dlen);
+    desc_buf[desc_ok ? dlen : 0] = '\0';
+
+    task_t *t = task_create(title_buf, desc_buf,
                             (task_priority_t)e->priority,
                             (task_status_t)e->status,
                             e->due_date);
+    free(title_buf);
+    free(desc_buf);
     if (!t) continue;
+
+    // Preserve the persisted ID and created date.
     t->id           = (int)e->id;
     t->created_date = e->created_date;
-    if (app_add_task(app, t)) {
-      // Restore original id (app_add_task assigns next_id).
-      t->id = (int)e->id;
-      if (e->id >= app->next_id)
-        app->next_id = (int)e->id + 1;
+
+    if (file_load_append(app, t)) {
+      if ((int)e->id > max_id) max_id = (int)e->id;
+    } else {
+      task_free(t);
     }
   }
+
+  // Ensure next_id is above all loaded IDs.
+  if (max_id >= app->next_id) app->next_id = max_id + 1;
 
   free(strbuf);
   free(entries);

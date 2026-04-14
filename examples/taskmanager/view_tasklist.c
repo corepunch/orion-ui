@@ -9,9 +9,11 @@
 result_t tasklist_proc(window_t *win, uint32_t msg,
                        uint32_t wparam, void *lparam) {
   switch (msg) {
-    case kWindowMessageCreate:
-      send_message(win, CVM_SETCOLUMNWIDTH, 240, NULL);
-      return win_columnview(win, msg, wparam, lparam);
+    case kWindowMessageCreate: {
+      result_t r = win_columnview(win, msg, wparam, lparam);
+      if (r) send_message(win, CVM_SETCOLUMNWIDTH, 240, NULL);
+      return r;
+    }
     default:
       return win_columnview(win, msg, wparam, lparam);
   }
