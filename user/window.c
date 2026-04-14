@@ -74,7 +74,10 @@ static window_t *alloc_window(char const *title, flags_t flags, rect_t const *fr
   return win;
 }
 
-// Create a new window
+// Create a new window.
+// Delegates to create_window_from_form() so that both creation paths share a
+// single implementation.  create_window_from_form() is declared in user.h and
+// defined later in this file; the declaration makes the call valid here.
 window_t* create_window(char const *title,
                         flags_t flags,
                         rect_t const *frame,
@@ -82,12 +85,17 @@ window_t* create_window(char const *title,
                         winproc_t proc,
                         void *lparam)
 {
-  window_t *win = alloc_window(title, flags, frame, parent, proc);
-  send_message(win, kWindowMessageCreate, 0, lparam);
-  if (parent) {
-    invalidate_window(win);
-  }
-  return win;
+  form_def_t def = {
+    .name        = title,
+    .w           = frame ? frame->w : 0,
+    .h           = frame ? frame->h : 0,
+    .flags       = flags,
+    .children    = NULL,
+    .child_count = 0,
+  };
+  int x = frame ? frame->x : 0;
+  int y = frame ? frame->y : 0;
+  return create_window_from_form(&def, x, y, parent, proc, lparam);
 }
 
 void *allocate_window_data(window_t *win, size_t size) {

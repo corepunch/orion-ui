@@ -184,6 +184,8 @@ void reset_message_queue(void);
 void end_dialog(window_t *win, uint32_t code);
 uint32_t show_dialog(char const *title, const rect_t* frame, window_t *parent, 
                      winproc_t proc, void *param);
+uint32_t show_dialog_from_form(form_def_t const *def, char const *title,
+                               window_t *parent, winproc_t proc, void *param);
 
 // Theme functions (analogous to WinAPI SetSysColors / GetSysColor)
 void set_sys_colors(int count, const int *indices, const uint32_t *colors);

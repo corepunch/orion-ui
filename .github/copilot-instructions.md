@@ -191,6 +191,66 @@ for (int i = 0; i < NUM_TOOLS; i++) {
 4. Handle at minimum: WM_CREATE, WM_PAINT, WM_DESTROY, and any control-specific messages
 5. Add usage example to README.md if it's a major control
 
+### Creating a Dialog or Panel with Multiple Controls (use forms)
+
+**Always use `form_def_t` + `show_dialog_from_form()` for any dialog or panel
+that contains two or more standard controls.**  Never build children imperatively
+inside `kWindowMessageCreate` when a static form definition can express the
+same layout.
+
+```c
+// ── 1. Declare children (static, compile-time) ────────────────────
+static const form_ctrl_def_t kMyDlgChildren[] = {
+  { FORM_CTRL_TEXTEDIT, 1, {60, 8, 80, 13}, 0,              "",       "name"   },
+  { FORM_CTRL_BUTTON,   2, {50,30, 40, 13}, BUTTON_DEFAULT, "OK",     "ok"     },
+  { FORM_CTRL_BUTTON,   3, {94,30, 50, 13}, 0,              "Cancel", "cancel" },
+};
+static const form_def_t kMyDlg = {
+  .name="My Dialog", .w=160, .h=52,
+  .children=kMyDlgChildren, .child_count=3,
+};
+
+// ── 2. Window procedure — children already exist at kWindowMessageCreate ──
+static result_t my_dlg_proc(window_t *win, uint32_t msg,
+                             uint32_t wparam, void *lparam) {
+  switch (msg) {
+    case kWindowMessageCreate:
+      win->userdata = lparam;
+      set_window_item_text(win, 1, "default value"); // populate at runtime
+      return true;
+    case kWindowMessagePaint:
+      draw_text_small("Name:", 4, 11, get_sys_color(kColorTextDisabled));
+      return false;
+    case kWindowMessageCommand:
+      if (HIWORD(wparam) == kButtonNotificationClicked) {
+        window_t *src = (window_t *)lparam;
+        if (src->id == 2) { end_dialog(win, 1); return true; }
+        if (src->id == 3) { end_dialog(win, 0); return true; }
+      }
+      return false;
+    default: return false;
+  }
+}
+
+// ── 3a. Show as modal dialog ────────────────────────────────────────
+// show_dialog_from_form() auto-centers, adds WINDOW_DIALOG flags, runs loop.
+show_dialog_from_form(&kMyDlg, "My Dialog", parent, my_dlg_proc, &st);
+
+// ── 3b. Instantiate as modeless / embedded window ──────────────────
+create_window_from_form(&kMyDlg, x, y, parent, my_dlg_proc, NULL);
+```
+
+**Key rules:**
+- `form_ctrl_def_t` supports: `FORM_CTRL_BUTTON`, `FORM_CTRL_CHECKBOX`,
+  `FORM_CTRL_LABEL`, `FORM_CTRL_TEXTEDIT`, `FORM_CTRL_LIST`, `FORM_CTRL_COMBOBOX`.
+- `show_dialog_from_form()` handles centering and dialog flags — no
+  `MAKERECT((sw-W)/2, ...)` boilerplate needed.
+- Runtime values (initial edit text, checkbox states) are set inside
+  `kWindowMessageCreate` via `set_window_item_text()` / `get_window_item()` —
+  the children are already present when that message fires.
+- The form editor (see `examples/formeditor/`) can generate the struct literals
+  directly in its saved `.h` output.
+
 ### Creating Example Programs
 1. Place examples in `examples/` directory
 2. Include `../ui.h` for all UI functionality
@@ -235,7 +295,8 @@ for (int i = 0; i < NUM_TOOLS; i++) {
 - Follow Windows API patterns where applicable (familiar to many developers)
 - Keep the layered architecture clean (user/kernel/commctl separation)
 - **Extend the framework rather than making workarounds**: if something logically belongs in the framework (e.g., timers, clipboard, accelerators, drag-and-drop), add it to the appropriate layer (`user/`, `kernel/`, or `commctl/`) and expose a clean API
-- **Search existing framework before implementing anything new**: grep the codebase for the concept first (e.g., "toolbar", "bitmap", "strip"). Orion already ships toolbars, toolbar buttons, bitmap strips, accelerators, dialogs, and status bars. Reimplementing these as custom structs or flags is always wrong.
+- **Search existing framework before implementing anything new**: grep the codebase for the concept first (e.g., "toolbar", "bitmap", "strip"). Orion already ships toolbars, toolbar buttons, bitmap strips, accelerators, dialogs, status bars, and form-based window creation. Reimplementing these as custom structs or flags is always wrong.
+- **Use `form_def_t` + `show_dialog_from_form()` for all dialogs/panels**: any window with two or more standard child controls must be expressed as a static `form_ctrl_def_t[]` + `form_def_t` and instantiated with `create_window_from_form()` or `show_dialog_from_form()`. Never build children imperatively inside `kWindowMessageCreate` — children defined in a form already exist when that message fires.
 - Add documentation to README.md for new public APIs
 - Consider adding examples for non-trivial new functionality
 
@@ -250,3 +311,5 @@ for (int i = 0; i < NUM_TOOLS; i++) {
 4. **Don't hard-code texture dimensions.** When loading a PNG, always propagate the actual loaded `w`/`h` into the strip descriptor (`strip.sheet_w = loaded_w; strip.cols = loaded_w / icon_w`). Never assume a fixed size — the file found on a fallback path may differ.
 
 5. **Don't put `WINDOW_HSCROLL` / `WINDOW_VSCROLL` on a `win_scrollbar` window.** Those flags mean "this window has built-in framework scrollbars" and are intercepted by `send_message()`. The orientation of a standalone `win_scrollbar` is set via `lparam` at create time: `(void *)0` = horizontal, `(void *)1` = vertical. See the [Scrollbars](#scrollbars----built-in-vs-standalone) section above.
+
+6. **Don't create child controls imperatively in `kWindowMessageCreate` when a `form_def_t` can do it declaratively.** Dialogs and panels with standard controls (buttons, edit boxes, labels, checkboxes, lists, comboboxes) must use `form_ctrl_def_t[]` + `form_def_t`, passed to `create_window_from_form()` or `show_dialog_from_form()`. Writing `create_window(…, win_button, …)` inside a window proc is wrong. The form's children already exist when `kWindowMessageCreate` fires — use `get_window_item()` / `set_window_item_text()` to read or initialise them.
