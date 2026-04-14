@@ -12,6 +12,7 @@
 #include "../../commctl/columnview.h"
 #include "../../commctl/menubar.h"
 #include "../../user/accel.h"
+#include "../../user/icons.h"
 
 // ============================================================
 // Layout constants

@@ -27,7 +27,7 @@ bool gem_init(int argc, char *argv[]) {
   int sh = MIN(240, ui_get_system_metrics(kSystemMetricScreenHeight));
   window_t *mw = create_window(
       "Task Manager",
-      WINDOW_STATUSBAR,
+      WINDOW_STATUSBAR | WINDOW_TOOLBAR,
       MAKERECT(MAIN_WIN_X, MAIN_WIN_Y,
                sw - MAIN_WIN_X - 4,
                sh - MAIN_WIN_Y - 4),
