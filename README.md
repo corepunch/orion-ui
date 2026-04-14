@@ -142,7 +142,7 @@ Dialogs and panels with multiple standard controls should be described using
 `DLGTEMPLATE` / `CreateDialogIndirect` pattern.
 
 ```c
-#include "ui/user/user.h"
+#include "ui.h"
 
 // ── Control type codes ────────────────────────────────────────────
 // FORM_CTRL_BUTTON, FORM_CTRL_CHECKBOX, FORM_CTRL_LABEL,

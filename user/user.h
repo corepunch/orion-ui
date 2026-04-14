@@ -73,7 +73,7 @@ typedef struct {
   form_ctrl_type_t  type;   // control class (FORM_CTRL_*)
   uint32_t          id;     // numeric control ID
   rect_t            frame;  // position and dimensions in parent client coordinates
-  uint32_t          flags;  // style flags passed to create_window
+  flags_t           flags;  // style flags passed to create_window
   const char       *text;   // initial caption / label text
   const char       *name;   // identifier name (informational)
 } form_ctrl_def_t;
@@ -83,7 +83,7 @@ typedef struct {
 typedef struct {
   const char             *name;        // window title
   int                     w, h;        // client area dimensions
-  uint32_t                flags;       // window flags
+  flags_t                 flags;       // window flags
   const form_ctrl_def_t  *children;    // array of child control definitions (may be NULL)
   int                     child_count; // number of entries in children[]
 } form_def_t;

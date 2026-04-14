@@ -71,7 +71,7 @@ uint32_t show_dialog_from_form(form_def_t const *def, char const *title,
 
   // Merge dialog-specific flags into a local copy of the definition.
   form_def_t dlg_def = *def;
-  dlg_def.flags |= WINDOW_DIALOG | WINDOW_NOTRAYBUTTON;
+  dlg_def.flags |= WINDOW_VSCROLL | WINDOW_DIALOG | WINDOW_NOTRAYBUTTON;
   if (title) dlg_def.name = title;
 
   // Center on screen.

@@ -199,18 +199,28 @@ static void sanitize_c_comment_str(const char *src, char *dst, size_t dst_sz) {
   dst[di] = '\0';
 }
 
-// Sanitize a string for embedding in a C string literal: escapes '\\'
-// and strips '"', '\n', '\r'.
+// Sanitize a string for embedding in a C string literal: escapes '\\', '"',
+// '\n', '\r', and '\t' so round-tripping through the form editor is lossless.
 static void sanitize_c_str_literal(const char *src, char *dst, size_t dst_sz) {
   size_t di = 0;
-  for (size_t si = 0; src[si] && di < dst_sz - 2; si++) {
+  if (dst_sz == 0) return;
+  for (size_t si = 0; src[si]; si++) {
     char ch = src[si];
-    if (ch == '\\') {
-      dst[di++] = '\\';
-      dst[di++] = '\\';
-    } else if (ch == '"' || ch == '\n' || ch == '\r') {
-      continue;
+    const char *esc = NULL;
+    switch (ch) {
+      case '\\': esc = "\\\\"; break;
+      case '"':  esc = "\\\""; break;
+      case '\n': esc = "\\n";  break;
+      case '\r': esc = "\\r";  break;
+      case '\t': esc = "\\t";  break;
+      default:   break;
+    }
+    if (esc) {
+      if (di + 2 >= dst_sz) break;
+      dst[di++] = esc[0];
+      dst[di++] = esc[1];
     } else {
+      if (di + 1 >= dst_sz) break;
       dst[di++] = ch;
     }
   }

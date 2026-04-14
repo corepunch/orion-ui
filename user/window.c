@@ -42,6 +42,7 @@ void push_window(window_t *win, window_t **windows) {
 static window_t *alloc_window(char const *title, flags_t flags, rect_t const *frame,
                                window_t *parent, winproc_t proc) {
   window_t *win = malloc(sizeof(window_t));
+  if (!win) return NULL;
   memset(win, 0, sizeof(window_t));
   win->frame = *frame;
   win->proc = proc;
@@ -377,14 +378,10 @@ void load_window_children(window_t *win, windef_t const *def) {
   }
 }
 
-// Forward declarations for standard commctl procedures used by create_window_from_form.
-// These are defined in commctl/*.c, which is compiled before user/*.c in the unity build.
-extern result_t win_button(window_t*, uint32_t, uint32_t, void*);
-extern result_t win_checkbox(window_t*, uint32_t, uint32_t, void*);
-extern result_t win_label(window_t*, uint32_t, uint32_t, void*);
-extern result_t win_textedit(window_t*, uint32_t, uint32_t, void*);
-extern result_t win_list(window_t*, uint32_t, uint32_t, void*);
-extern result_t win_combobox(window_t*, uint32_t, uint32_t, void*);
+// Include commctl prototypes to get the window procedure declarations used by
+// form_ctrl_to_proc().  This avoids duplicating extern declarations that would
+// silently drift if a commctl signature changed.
+#include "../commctl/commctl.h"
 
 // Map a FORM_CTRL_* type code to the corresponding commctl window procedure.
 static winproc_t form_ctrl_to_proc(form_ctrl_type_t type) {
