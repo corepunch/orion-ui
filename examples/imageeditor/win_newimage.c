@@ -1,6 +1,9 @@
 // "New Image" / "Canvas Size" dialog
 // Reusable modal dialog that asks the user for a canvas width and height.
 // Call show_size_dialog() with an initial width/height; returns true if accepted.
+//
+// Uses create_window_from_form() via show_dialog_from_form() so that all child
+// controls are described declaratively in kSizeDialogForm.
 
 #include "imageeditor.h"
 
@@ -24,6 +27,8 @@
 #define NI_BTN_H       13
 #define NI_BTN_W       40
 #define NI_BTN_GAP      4
+#define NI_OK_X        (NI_W - 2 * (NI_BTN_W + NI_BTN_GAP))
+#define NI_CA_X        (NI_W - (NI_BTN_W + NI_BTN_GAP))
 
 // Child IDs
 #define NI_ID_WIDTH    1
@@ -33,6 +38,26 @@
 
 // Maximum dimension accepted by the dialog (must match canvas_resize limit).
 #define MAX_IMAGE_DIMENSION 16384
+
+// ──────────────────────────────────────────────────────────────────
+// Declarative form definition
+// ──────────────────────────────────────────────────────────────────
+
+static const form_ctrl_def_t kSizeDialogChildren[] = {
+  { FORM_CTRL_TEXTEDIT, NI_ID_WIDTH,  {NI_EDIT_X, NI_ROW1_Y, NI_EDIT_W, NI_EDIT_H}, 0,              "",       "width"  },
+  { FORM_CTRL_TEXTEDIT, NI_ID_HEIGHT, {NI_EDIT_X, NI_ROW2_Y, NI_EDIT_W, NI_EDIT_H}, 0,              "",       "height" },
+  { FORM_CTRL_BUTTON,   NI_ID_OK,     {NI_OK_X,   NI_BTN_Y,  NI_BTN_W,  NI_BTN_H},  BUTTON_DEFAULT, "OK",     "ok"     },
+  { FORM_CTRL_BUTTON,   NI_ID_CANCEL, {NI_CA_X,   NI_BTN_Y,  NI_BTN_W,  NI_BTN_H},  0,              "Cancel", "cancel" },
+};
+
+static const form_def_t kSizeDialogForm = {
+  .name        = "",
+  .w           = NI_W,
+  .h           = NI_H,
+  .flags       = 0,
+  .children    = kSizeDialogChildren,
+  .child_count = 4,
+};
 
 // ──────────────────────────────────────────────────────────────────
 // State
@@ -70,38 +95,18 @@ static result_t ni_proc(window_t *win, uint32_t msg,
 
   switch (msg) {
     case kWindowMessageCreate: {
+      // Children were already created by create_window_from_form() before this
+      // message fired.  Just store state and populate the edit boxes with the
+      // caller-supplied initial dimensions.
       st = (ni_state_t *)lparam;
       win->userdata = st;
 
       char buf[16];
-
-      // Width field
       snprintf(buf, sizeof(buf), "%d", *st->out_w);
-      window_t *ew = create_window(buf, 0,
-          MAKERECT(NI_EDIT_X, NI_ROW1_Y, NI_EDIT_W, NI_EDIT_H),
-          win, win_textedit, NULL);
-      ew->id = NI_ID_WIDTH;
+      set_window_item_text(win, NI_ID_WIDTH, buf);
 
-      // Height field
       snprintf(buf, sizeof(buf), "%d", *st->out_h);
-      window_t *eh = create_window(buf, 0,
-          MAKERECT(NI_EDIT_X, NI_ROW2_Y, NI_EDIT_W, NI_EDIT_H),
-          win, win_textedit, NULL);
-      eh->id = NI_ID_HEIGHT;
-
-      // OK button (default, triggered by Enter)
-      int ok_x = NI_W - 2 * (NI_BTN_W + NI_BTN_GAP);
-      window_t *ok = create_window("OK", BUTTON_DEFAULT,
-          MAKERECT(ok_x, NI_BTN_Y, NI_BTN_W, NI_BTN_H),
-          win, win_button, NULL);
-      ok->id = NI_ID_OK;
-
-      // Cancel button
-      int ca_x = NI_W - (NI_BTN_W + NI_BTN_GAP);
-      window_t *ca = create_window("Cancel", 0,
-          MAKERECT(ca_x, NI_BTN_Y, NI_BTN_W, NI_BTN_H),
-          win, win_button, NULL);
-      ca->id = NI_ID_CANCEL;
+      set_window_item_text(win, NI_ID_HEIGHT, buf);
 
       return true;
     }
@@ -157,11 +162,6 @@ bool show_size_dialog(window_t *parent, const char *title, int *out_w, int *out_
   st.out_w = out_w;
   st.out_h = out_h;
 
-  int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
-  int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
-  int dx = (sw - NI_W) / 2;
-  int dy = (sh - NI_H) / 2;
-
-  show_dialog(title, MAKERECT(dx, dy, NI_W, NI_H), parent, ni_proc, &st);
+  show_dialog_from_form(&kSizeDialogForm, title, parent, ni_proc, &st);
   return st.accepted;
 }

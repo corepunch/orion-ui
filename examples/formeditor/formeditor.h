@@ -45,15 +45,17 @@
 
 // ============================================================
 // Control types  (VB3 toolbox order, skipping unsupported)
+// Aliased to the framework's FORM_CTRL_* enum so that form_element_t.type
+// values are directly usable with create_window_from_form().
 // ============================================================
 
-#define CTRL_BUTTON    0
-#define CTRL_CHECKBOX  1
-#define CTRL_LABEL     2
-#define CTRL_TEXTEDIT  3
-#define CTRL_LIST      4
-#define CTRL_COMBOBOX  5
-#define CTRL_TYPE_COUNT 6
+#define CTRL_BUTTON    FORM_CTRL_BUTTON
+#define CTRL_CHECKBOX  FORM_CTRL_CHECKBOX
+#define CTRL_LABEL     FORM_CTRL_LABEL
+#define CTRL_TEXTEDIT  FORM_CTRL_TEXTEDIT
+#define CTRL_LIST      FORM_CTRL_LIST
+#define CTRL_COMBOBOX  FORM_CTRL_COMBOBOX
+#define CTRL_TYPE_COUNT FORM_CTRL_COUNT
 
 // ============================================================
 // Number of tools

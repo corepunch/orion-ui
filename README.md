@@ -134,6 +134,95 @@ window_t *console = create_window("Console", 0, &console_frame, parent, win_cons
 window_t *columnview = create_window("", WINDOW_NOTITLE | WINDOW_TRANSPARENT, &cv_frame, parent, win_columnview, NULL);
 ```
 
+### Declarative Forms (create_window_from_form / show_dialog_from_form)
+
+Dialogs and panels with multiple standard controls should be described using
+`form_def_t` and `form_ctrl_def_t` rather than imperatively calling
+`create_window()` inside `kWindowMessageCreate`.  This mirrors the WinAPI
+`DLGTEMPLATE` / `CreateDialogIndirect` pattern.
+
+```c
+#include "ui.h"
+
+// ── Control type codes ────────────────────────────────────────────
+// FORM_CTRL_BUTTON, FORM_CTRL_CHECKBOX, FORM_CTRL_LABEL,
+// FORM_CTRL_TEXTEDIT, FORM_CTRL_LIST, FORM_CTRL_COMBOBOX
+
+// ── Define children ───────────────────────────────────────────────
+static const form_ctrl_def_t kMyDialogChildren[] = {
+  //  type                 id  {x,  y,  w,  h}         flags           text       name
+  { FORM_CTRL_TEXTEDIT,    1,  {60, 8,  80, 13},        0,              "",        "name"   },
+  { FORM_CTRL_BUTTON,      2,  {50, 30, 40, 13},        BUTTON_DEFAULT, "OK",      "ok"     },
+  { FORM_CTRL_BUTTON,      3,  {94, 30, 50, 13},        0,              "Cancel",  "cancel" },
+};
+
+// ── Define the form ───────────────────────────────────────────────
+static const form_def_t kMyDialogForm = {
+  .name        = "My Dialog",
+  .w           = 160,
+  .h           = 52,
+  .flags       = 0,
+  .children    = kMyDialogChildren,
+  .child_count = 3,
+};
+
+// ── Window procedure ──────────────────────────────────────────────
+// Children already exist when kWindowMessageCreate fires.
+static result_t my_dlg_proc(window_t *win, uint32_t msg,
+                             uint32_t wparam, void *lparam) {
+  switch (msg) {
+    case kWindowMessageCreate:
+      // lparam is the caller-supplied state, NOT used to create children here.
+      win->userdata = lparam;
+      // Set initial text / values from state:
+      set_window_item_text(win, 1, "default");
+      return true;
+
+    case kWindowMessagePaint:
+      draw_text_small("Name:", 4, 11, get_sys_color(kColorTextDisabled));
+      return false;
+
+    case kWindowMessageCommand:
+      if (HIWORD(wparam) == kButtonNotificationClicked) {
+        window_t *src = (window_t *)lparam;
+        if (src->id == 2) { end_dialog(win, 1); return true; }
+        if (src->id == 3) { end_dialog(win, 0); return true; }
+      }
+      return false;
+
+    default: return false;
+  }
+}
+
+// ── Show as a modal dialog ────────────────────────────────────────
+// show_dialog_from_form() centers the window, adds WINDOW_DIALOG flags,
+// and runs the modal loop — no position/size arithmetic needed.
+void show_my_dialog(window_t *parent) {
+  my_state_t st = { ... };
+  show_dialog_from_form(&kMyDialogForm, "My Dialog", parent, my_dlg_proc, &st);
+}
+
+// ── Or instantiate as a modeless window ──────────────────────────
+void create_my_panel(window_t *parent, int x, int y) {
+  create_window_from_form(&kMyDialogForm, x, y, parent, my_dlg_proc, NULL);
+}
+```
+
+**Rules for form-based dialogs:**
+
+- Always define a static `form_ctrl_def_t[]` + `form_def_t` for any dialog with
+  two or more standard controls.
+- Never create child controls imperatively inside `kWindowMessageCreate` when a
+  `form_def_t` can express the same layout statically.
+- Use `set_window_item_text(win, id, ...)` in `kWindowMessageCreate` to set
+  runtime-determined initial values (edit box contents, etc.).
+- Use `show_dialog_from_form()` for modal dialogs — it handles centering, dialog
+  flags, and the modal loop automatically.
+- Use `create_window_from_form()` for modeless panels / embedded sub-forms.
+- The form editor saves `.h` files that declare a compatible `form_def_t` struct
+  (see `examples/formeditor/`).  Include those headers and pass the struct
+  directly to `create_window_from_form()` or `show_dialog_from_form()`.
+
 ### Using the ColumnView
 
 ```c

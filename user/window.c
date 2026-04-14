@@ -37,15 +37,12 @@ void push_window(window_t *win, window_t **windows) {
   }
 }
 
-// Create a new window
-window_t* create_window(char const *title,
-                        flags_t flags,
-                        rect_t const *frame,
-                        window_t *parent,
-                        winproc_t proc,
-                        void *lparam)
-{
+// Internal: allocate and register a window without sending kWindowMessageCreate.
+// Callers are responsible for sending kWindowMessageCreate (and invalidating if needed).
+static window_t *alloc_window(char const *title, flags_t flags, rect_t const *frame,
+                               window_t *parent, winproc_t proc) {
   window_t *win = malloc(sizeof(window_t));
+  if (!win) return NULL;
   memset(win, 0, sizeof(window_t));
   win->frame = *frame;
   win->proc = proc;
@@ -75,11 +72,31 @@ window_t* create_window(char const *title,
   if (flags & WINDOW_VSCROLL) win->vscroll.visible_mode = SB_VIS_AUTO;
   _focused = win;
   push_window(win, parent ? &parent->children : &windows);
-  send_message(win, kWindowMessageCreate, 0, lparam);
-  if (parent) {
-    invalidate_window(win);
-  }
   return win;
+}
+
+// Create a new window.
+// Delegates to create_window_from_form() so that both creation paths share a
+// single implementation.  create_window_from_form() is declared in user.h and
+// defined later in this file; the declaration makes the call valid here.
+window_t* create_window(char const *title,
+                        flags_t flags,
+                        rect_t const *frame,
+                        window_t *parent,
+                        winproc_t proc,
+                        void *lparam)
+{
+  form_def_t def = {
+    .name        = title,
+    .w           = frame ? frame->w : 0,
+    .h           = frame ? frame->h : 0,
+    .flags       = flags,
+    .children    = NULL,
+    .child_count = 0,
+  };
+  int x = frame ? frame->x : 0;
+  int y = frame ? frame->y : 0;
+  return create_window_from_form(&def, x, y, parent, proc, lparam);
 }
 
 void *allocate_window_data(window_t *win, size_t size) {
@@ -359,6 +376,55 @@ void load_window_children(window_t *win, windef_t const *def) {
       x += item->frame.w + LINE_PADDING;
     }
   }
+}
+
+// Include commctl prototypes to get the window procedure declarations used by
+// form_ctrl_to_proc().  This avoids duplicating extern declarations that would
+// silently drift if a commctl signature changed.
+#include "../commctl/commctl.h"
+
+// Map a FORM_CTRL_* type code to the corresponding commctl window procedure.
+static winproc_t form_ctrl_to_proc(form_ctrl_type_t type) {
+  switch (type) {
+    case FORM_CTRL_BUTTON:   return win_button;
+    case FORM_CTRL_CHECKBOX: return win_checkbox;
+    case FORM_CTRL_LABEL:    return win_label;
+    case FORM_CTRL_TEXTEDIT: return win_textedit;
+    case FORM_CTRL_LIST:     return win_list;
+    case FORM_CTRL_COMBOBOX: return win_combobox;
+    default:                 return NULL;
+  }
+}
+
+// Create a window from a form_def_t, instantiating all child controls from
+// def->children before firing kWindowMessageCreate on the parent.
+// This allows the window proc to find its children already in place during
+// kWindowMessageCreate, analogous to WinAPI CreateDialogIndirect behaviour.
+window_t *create_window_from_form(form_def_t const *def, int x, int y,
+                                  window_t *parent, winproc_t proc, void *lparam) {
+  if (!def || !proc) return NULL;
+  rect_t r = {x, y, def->w, def->h};
+
+  // Allocate the parent window without sending kWindowMessageCreate yet.
+  window_t *win = alloc_window(def->name ? def->name : "", def->flags, &r, parent, proc);
+  if (!win) return NULL;
+
+  // Instantiate child controls before the parent proc receives kWindowMessageCreate.
+  if (def->children && def->child_count > 0) {
+    for (int i = 0; i < def->child_count; i++) {
+      const form_ctrl_def_t *cd = &def->children[i];
+      winproc_t cp = form_ctrl_to_proc(cd->type);
+      if (!cp) continue;
+      window_t *child = create_window(cd->text ? cd->text : "", cd->flags,
+                                      &cd->frame, win, cp, NULL);
+      if (child) child->id = cd->id;
+    }
+  }
+
+  // Now notify the parent that creation (with children already present) is complete.
+  send_message(win, kWindowMessageCreate, 0, lparam);
+  if (parent) invalidate_window(win);
+  return win;
 }
 
 // Show or hide window
