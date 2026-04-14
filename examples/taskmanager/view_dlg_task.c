@@ -153,7 +153,7 @@ static result_t task_dlg_proc(window_t *win, uint32_t msg,
           if (edue && edue->title[0] != '\0') {
             char *endp = NULL;
             unsigned long parsed = strtoul(edue->title, &endp, 10);
-            if (endp == edue->title || *endp != '\0') {
+            if (*endp != '\0') {
               message_box(win, "Due date must be a Unix timestamp (e.g. 1735689600) or empty for none.",
                           "Validation", MB_OK);
               return true;
