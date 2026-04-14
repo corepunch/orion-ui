@@ -72,8 +72,7 @@ typedef enum {
 typedef struct {
   form_ctrl_type_t  type;   // control class (FORM_CTRL_*)
   uint32_t          id;     // numeric control ID
-  int               x, y;   // position in parent client coordinates
-  int               w, h;   // control dimensions
+  rect_t            frame;  // position and dimensions in parent client coordinates
   uint32_t          flags;  // style flags passed to create_window
   const char       *text;   // initial caption / label text
   const char       *name;   // identifier name (informational)

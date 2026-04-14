@@ -411,9 +411,8 @@ window_t *create_window_from_form(form_def_t const *def, rect_t const *frame,
       const form_ctrl_def_t *cd = &def->children[i];
       winproc_t cp = form_ctrl_to_proc(cd->type);
       if (!cp) continue;
-      rect_t cr = {cd->x, cd->y, cd->w, cd->h};
       window_t *child = create_window(cd->text ? cd->text : "", cd->flags,
-                                      &cr, win, cp, NULL);
+                                      &cd->frame, win, cp, NULL);
       if (child) child->id = cd->id;
     }
   }

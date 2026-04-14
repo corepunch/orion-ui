@@ -300,9 +300,9 @@ bool form_save(form_doc_t *doc, const char *path) {
       char safe_name[sizeof(el->name) * 2];
       sanitize_c_str_literal(el->text, safe_text, sizeof(safe_text));
       sanitize_c_str_literal(el->name, safe_name, sizeof(safe_name));
-      fprintf(f, "  { FORM_CTRL_%s, %d, %d, %d, %d, %d, 0, \"%s\", \"%s\" },\n",
+      fprintf(f, "  { FORM_CTRL_%s, %d, {%d, %d, %d, %d}, %u, \"%s\", \"%s\" },\n",
               ctrl_type_form_token(el->type), el->id,
-              el->x, el->y, el->w, el->h,
+              el->x, el->y, el->w, el->h, el->flags,
               safe_text, safe_name);
     }
     fprintf(f, "};\n");
