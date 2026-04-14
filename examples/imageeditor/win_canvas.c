@@ -344,10 +344,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
     case kWindowMessageLeftButtonDown: {
       if (!state) return true;
-      // canvas-local coords: logical_x - root.frame.x  (canvas.frame.x == 0)
-      window_t *root = get_root_window(win);
-      int lx = (int16_t)LOWORD(wparam) - root->frame.x;
-      int ly = (int16_t)HIWORD(wparam) - root->frame.y;
+      int lx = (int16_t)LOWORD(wparam);
+      int ly = (int16_t)HIWORD(wparam);
 
       if (!doc || !g_app) return true;
 
@@ -355,7 +353,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       // while holding the button, panning must not bleed into MouseMove.
       if (g_app->current_tool != ID_TOOL_HAND) state->panning = false;
 
-      // Hand tool: begin pan drag in screen space
+      // Hand tool: begin pan drag
       if (g_app->current_tool == ID_TOOL_HAND) {
         state->panning = true;
         state->pan_start.x = lx;
@@ -365,8 +363,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       // Zoom tool (left click): zoom in centered on cursor
       if (g_app->current_tool == ID_TOOL_ZOOM) {
-        int mx = lx - win->frame.x;
-        int my = ly - win->frame.y;
+        int mx = lx;
+        int my = ly;
         int cx = (mx + state->pan_x) / state->scale;
         int cy = (my + state->pan_y) / state->scale;
         int new_scale = state->scale;
@@ -380,8 +378,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       // Eyedropper (left click): pick foreground color from canvas pixel
       if (g_app->current_tool == ID_TOOL_EYEDROPPER) {
-        int px = (lx - win->frame.x + state->pan_x) / state->scale;
-        int py = (ly - win->frame.y + state->pan_y) / state->scale;
+        int px = (lx + state->pan_x) / state->scale;
+        int py = (ly + state->pan_y) / state->scale;
         if (canvas_in_bounds(doc, px, py)) {
           g_app->fg_color = canvas_get_pixel(doc, px, py);
           if (g_app->tool_win)  invalidate_window(g_app->tool_win);
@@ -393,8 +391,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       // Magnifier tool: the loupe is a passive overlay; clicks have no effect
       if (g_app->current_tool == ID_TOOL_MAGNIFIER) return true;
 
-      int px = (lx - win->frame.x + state->pan_x) / state->scale;
-      int py = (ly - win->frame.y + state->pan_y) / state->scale;
+      int px = (lx + state->pan_x) / state->scale;
+      int py = (ly + state->pan_y) / state->scale;
       int tool = g_app->current_tool;
 
       // Text tool: record position and show text options dialog
@@ -500,11 +498,10 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       // Eyedropper (right click): pick background color from canvas pixel
       if (state && g_app->current_tool == ID_TOOL_EYEDROPPER) {
-        window_t *root = get_root_window(win);
-        int lx = (int16_t)LOWORD(wparam) - root->frame.x;
-        int ly = (int16_t)HIWORD(wparam) - root->frame.y;
-        int px = (lx - win->frame.x + state->pan_x) / state->scale;
-        int py = (ly - win->frame.y + state->pan_y) / state->scale;
+        int lx = (int16_t)LOWORD(wparam);
+        int ly = (int16_t)HIWORD(wparam);
+        int px = (lx + state->pan_x) / state->scale;
+        int py = (ly + state->pan_y) / state->scale;
         if (canvas_in_bounds(doc, px, py)) {
           g_app->bg_color = canvas_get_pixel(doc, px, py);
           if (g_app->tool_win)  invalidate_window(g_app->tool_win);
@@ -515,11 +512,10 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       // Zoom tool (right click): zoom out centered on cursor
       if (state && g_app->current_tool == ID_TOOL_ZOOM) {
-        window_t *root = get_root_window(win);
-        int lx = (int16_t)LOWORD(wparam) - root->frame.x;
-        int ly = (int16_t)HIWORD(wparam) - root->frame.y;
-        int mx = lx - win->frame.x;
-        int my = ly - win->frame.y;
+        int lx = (int16_t)LOWORD(wparam);
+        int ly = (int16_t)HIWORD(wparam);
+        int mx = lx;
+        int my = ly;
         int cx = (mx + state->pan_x) / state->scale;
         int cy = (my + state->pan_y) / state->scale;
         int new_scale = state->scale;
@@ -555,9 +551,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       // Hand tool: update pan while dragging
       if (state->panning) {
-        window_t *root = get_root_window(win);
-        int lx = (int16_t)LOWORD(wparam) - root->frame.x;
-        int ly = (int16_t)HIWORD(wparam) - root->frame.y;
+        int lx = (int16_t)LOWORD(wparam);
+        int ly = (int16_t)HIWORD(wparam);
         state->pan_x -= lx - state->pan_start.x;
         state->pan_y -= ly - state->pan_start.y;
         state->pan_start.x = lx;
@@ -570,11 +565,10 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       if (!doc) return true;
 
-      window_t *root = get_root_window(win);
-      int lx = (int16_t)LOWORD(wparam) - root->frame.x;
-      int ly = (int16_t)HIWORD(wparam) - root->frame.y;
-      int px = (lx - win->frame.x + state->pan_x) / state->scale;
-      int py = (ly - win->frame.y + state->pan_y) / state->scale;
+      int lx = (int16_t)LOWORD(wparam);
+      int ly = (int16_t)HIWORD(wparam);
+      int px = (lx + state->pan_x) / state->scale;
+      int py = (ly + state->pan_y) / state->scale;
 
       // Always track the hover position (used by the magnifier overlay)
       state->hover.x    = px;

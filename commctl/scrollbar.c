@@ -11,17 +11,13 @@
 //
 // Coordinate convention
 // ---------------------
-// Mouse events arriving at the scrollbar proc carry coords in the form
-// produced by event.c LOCAL_X/LOCAL_Y:
-//   horiz axis → (int16_t)LOWORD(wparam) = logical_x − scrollbar.frame.x
-//   vert  axis → (int16_t)HIWORD(wparam) = logical_y − scrollbar.frame.y
+// Mouse events arriving at the scrollbar proc carry coords in the window's
+// own client coordinate system (kernel/event.c LOCAL_X/LOCAL_Y semantics):
+//   horiz axis → (int16_t)LOWORD(wparam)  — scrollbar-local x
+//   vert  axis → (int16_t)HIWORD(wparam)  — scrollbar-local y
 //
-// The scrollbar-local coordinate on the scroll axis is therefore:
-//   horiz: LOWORD − root.frame.x
-//   vert:  HIWORD − root.frame.y
-//
-// This holds for both events dispatched via find_window/handle_mouse and for
-// captured events (set_capture), so the formula is used uniformly throughout.
+// This holds for both events dispatched via handle_mouse and for captured
+// events (set_capture), so LOWORD/HIWORD are used directly throughout.
 //
 // Notification
 // ------------
@@ -101,14 +97,13 @@ static void sb_notify(window_t *win, int pos) {
 // ---- axis coordinate -------------------------------------------------------
 
 // Return the scrollbar-local mouse coordinate on the scroll axis.
-// Valid for both forwarded LeftButtonDown and captured MouseMove/Up events
-// (see file-level comment for derivation).
+// Mouse events are delivered in the window's own client coordinate system
+// (see kernel/event.c), so LOWORD/HIWORD are already scrollbar-local.
 static int sb_axis(window_t *win, uint32_t wparam) {
-  window_t *root = get_root_window(win);
   if (sb_vertical(win))
-    return (int16_t)HIWORD(wparam) - root->frame.y;
+    return (int16_t)HIWORD(wparam);
   else
-    return (int16_t)LOWORD(wparam) - root->frame.x;
+    return (int16_t)LOWORD(wparam);
 }
 
 // ---- window procedure ------------------------------------------------------

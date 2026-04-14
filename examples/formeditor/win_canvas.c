@@ -434,12 +434,12 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       fill_rect(get_sys_color(kColorWorkspaceBg),
                 win->frame.x, win->frame.y, win->frame.w, win->frame.h);
 
-      // Form surface (white rectangle with a 1px dark border)
+      // Form surface (window-colored rectangle with a 1px dark border)
       int fx = win->frame.x + CANVAS_PADDING - s->pan_x;
       int fy = win->frame.y + CANVAS_PADDING - s->pan_y;
       int fw = doc->form_w;
       int fh = doc->form_h;
-      fill_rect(0xFFFFFFFF, fx, fy, fw, fh);
+      fill_rect(get_sys_color(kColorWindowBg), fx, fy, fw, fh);
       fill_rect(get_sys_color(kColorDarkEdge), fx - 1, fy - 1, fw + 2, 1);
       fill_rect(get_sys_color(kColorDarkEdge), fx - 1, fy - 1, 1, fh + 2);
       fill_rect(get_sys_color(kColorDarkEdge), fx - 1, fy + fh, fw + 2, 1);
