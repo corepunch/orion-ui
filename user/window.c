@@ -395,11 +395,10 @@ static winproc_t form_ctrl_to_proc(form_ctrl_type_t type) {
 // def->children before firing kWindowMessageCreate on the parent.
 // This allows the window proc to find its children already in place during
 // kWindowMessageCreate, analogous to WinAPI CreateDialogIndirect behaviour.
-window_t *create_window_from_form(form_def_t const *def, rect_t const *frame,
+window_t *create_window_from_form(form_def_t const *def, int x, int y,
                                   window_t *parent, winproc_t proc, void *lparam) {
   if (!def || !proc) return NULL;
-  rect_t r = {0, 0, def->w, def->h};
-  if (frame) { r.x = frame->x; r.y = frame->y; }
+  rect_t r = {x, y, def->w, def->h};
 
   // Allocate the parent window without sending kWindowMessageCreate yet.
   window_t *win = alloc_window(def->name ? def->name : "", def->flags, &r, parent, proc);

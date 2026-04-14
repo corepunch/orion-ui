@@ -137,7 +137,7 @@ struct window_s {
 window_t *create_window(char const *title, flags_t flags, const rect_t* frame, 
                         window_t *parent, winproc_t proc, void *param);
 window_t *create_window2(windef_t const *def, rect_t const *r, window_t *parent);
-window_t *create_window_from_form(form_def_t const *def, rect_t const *frame,
+window_t *create_window_from_form(form_def_t const *def, int x, int y,
                                   window_t *parent, winproc_t proc, void *lparam);
 void *allocate_window_data(window_t *win, size_t size);
 void show_window(window_t *win, bool visible);
