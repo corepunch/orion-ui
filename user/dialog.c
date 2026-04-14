@@ -120,6 +120,7 @@ void dialog_push(window_t *win, const void *state,
         window_t *ctrl = get_window_item(win, b[i].ctrl_id);
         if (ctrl) {
           int v = *(const int *)(base + b[i].offset);
+          if (v < 0) v = (int)b[i].size;
           send_message(ctrl, kComboBoxMessageSetCurrentSelection,
                        (uint32_t)v, NULL);
         }
@@ -151,10 +152,11 @@ void dialog_pull(window_t *win, void *state,
         }
         break;
       }
-      case BIND_INT_COMBO:
-        *(int *)(base + b[i].offset) =
-            (int)send_message(ctrl, kComboBoxMessageGetCurrentSelection, 0, NULL);
+      case BIND_INT_COMBO: {
+        int v = (int)send_message(ctrl, kComboBoxMessageGetCurrentSelection, 0, NULL);
+        *(int *)(base + b[i].offset) = (v >= 0) ? v : (int)b[i].size;
         break;
+      }
       case BIND_INT_EDIT:
         *(int *)(base + b[i].offset) = atoi(ctrl->title);
         break;

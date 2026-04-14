@@ -221,15 +221,16 @@ extern window_t *g_inspector;
 
 typedef enum {
   BIND_STRING,    // char[] field: text-edit text ↔ char array (size = sizeof field)
-  BIND_INT_COMBO, // int   field: combo-box selection index ↔ int  (size = 0)
-  BIND_INT_EDIT,  // int   field: text-edit decimal text    ↔ int  (size = 0)
+  BIND_INT_COMBO, // int   field: combo-box selection index ↔ int  (size = default index)
+  BIND_INT_EDIT,  // int   field: text-edit decimal text    ↔ int  (size = unused)
 } bind_type_t;
 
 typedef struct {
   uint32_t    ctrl_id; // numeric child control ID
   bind_type_t type;    // BIND_* transfer type
   size_t      offset;  // offsetof(state_t, field)
-  size_t      size;    // for BIND_STRING: sizeof the char[] field; else 0
+  size_t      size;    // BIND_STRING: sizeof char[] field;
+                       // BIND_INT_COMBO: default index (used when pull returns < 0)
 } ctrl_binding_t;
 
 // dialog_push: write state fields → controls (call from kWindowMessageCreate).
