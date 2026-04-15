@@ -15,14 +15,18 @@
 // Inline copy of the toolbar-height computation to allow white-box assertions
 // without depending on draw_impl.c's titlebar_height() linkage in tests.
 // Must stay synchronised with the formula in draw_impl.c:titlebar_height().
+// win_w is the total frame width; the usable bevel-inner width is win_w - 2
+// (the toolbar rect is inset by 1px per side: rect.x = frame.x+1, rect.w = frame.w-2).
 static int compute_toolbar_height(int num_buttons, int win_w) {
-    if (num_buttons <= 0 || win_w <= 0) {
-        return TOOLBAR_HEIGHT;  // default: 1 row
+    int bsz = TB_SPACING;
+    int inner_w = win_w - 2;
+    if (num_buttons <= 0 || inner_w <= 0) {
+        return bsz + 2 * TOOLBAR_PADDING;  // default: 1 row
     }
-    int buttons_per_row = win_w / TB_SPACING;
-    if (buttons_per_row < 1) buttons_per_row = 1;
-    int num_rows = (num_buttons + buttons_per_row - 1) / buttons_per_row;
-    return num_rows * TOOLBAR_HEIGHT;
+    int bpr = (inner_w - 2*TOOLBAR_PADDING + TOOLBAR_SPACING) / (bsz + TOOLBAR_SPACING);
+    if (bpr < 1) bpr = 1;
+    int num_rows = (num_buttons + bpr - 1) / bpr;
+    return num_rows * bsz + 2 * TOOLBAR_PADDING;
 }
 
 static result_t noop_proc(window_t *win, uint32_t msg,
@@ -37,25 +41,34 @@ static result_t noop_proc(window_t *win, uint32_t msg,
 void test_toolbar_wrapping_height(void) {
     TEST("Toolbar wrapping: toolbar height grows with wrapping rows");
 
-    // 5 buttons in a 66px wide window → TB_SPACING=22 → 3 per row → 2 rows
-    int h1 = compute_toolbar_height(5, 66);
-    ASSERT_EQUAL(h1, 2 * TOOLBAR_HEIGHT);
+    // With TOOLBAR_PADDING=2 and TOOLBAR_SPACING=4, inner_w = win_w - 2:
+    //   bpr = MAX(1, (inner_w - 4 + 4) / 26) = MAX(1, inner_w / 26)
+    //   height = nrows * TB_SPACING + 2 * TOOLBAR_PADDING
 
-    // 3 buttons in a 66px wide window → 3 per row → 1 row
-    int h2 = compute_toolbar_height(3, 66);
-    ASSERT_EQUAL(h2, 1 * TOOLBAR_HEIGHT);
+    // 5 buttons, 80px → inner_w=78, bpr=78/26=3 → 2 rows
+    int h1 = compute_toolbar_height(5, 80);
+    ASSERT_EQUAL(h1, 2 * TB_SPACING + 2 * TOOLBAR_PADDING);
 
-    // 7 buttons in a 66px wide window → 3 per row → 3 rows
-    int h3 = compute_toolbar_height(7, 66);
-    ASSERT_EQUAL(h3, 3 * TOOLBAR_HEIGHT);
+    // 3 buttons, 80px → inner_w=78, bpr=3 → 1 row
+    int h2 = compute_toolbar_height(3, 80);
+    ASSERT_EQUAL(h2, 1 * TB_SPACING + 2 * TOOLBAR_PADDING);
 
-    // 5 buttons in a 44px wide window → 44/22 = 2 per row → 3 rows
-    int h4 = compute_toolbar_height(5, 44);
-    ASSERT_EQUAL(h4, 3 * TOOLBAR_HEIGHT);
+    // 7 buttons, 80px → inner_w=78, bpr=3 → 3 rows
+    int h3 = compute_toolbar_height(7, 80);
+    ASSERT_EQUAL(h3, 3 * TB_SPACING + 2 * TOOLBAR_PADDING);
+
+    // 5 buttons, 54px → inner_w=52, bpr=52/26=2 → 3 rows
+    int h4 = compute_toolbar_height(5, 54);
+    ASSERT_EQUAL(h4, 3 * TB_SPACING + 2 * TOOLBAR_PADDING);
 
     // 1 button in any window → 1 row
     int h5 = compute_toolbar_height(1, 64);
-    ASSERT_EQUAL(h5, 1 * TOOLBAR_HEIGHT);
+    ASSERT_EQUAL(h5, 1 * TB_SPACING + 2 * TOOLBAR_PADDING);
+
+    // Boundary: 78px → inner_w=76, bpr=76/26=2 (NOT 3 as frame.w/26 would give).
+    // Demonstrates the -2 inset: without it bpr=78/26=3 giving 2 rows.
+    int h6 = compute_toolbar_height(5, 78);
+    ASSERT_EQUAL(h6, 3 * TB_SPACING + 2 * TOOLBAR_PADDING);  // 3 rows because bpr=2
 
     PASS();
 }
@@ -194,14 +207,15 @@ void test_close_button_y_excludes_toolbar(void) {
     test_env_init();
 
     // Create a WINDOW_TOOLBAR window at a known position.
-    // frame: x=10, y=100, w=44, h=150 (total: title bar + toolbar rows + client)
-    // Add 5 toolbar buttons with TB_SPACING=22: buttons_per_row = 44/22 = 2,
-    // num_rows = ceil(5/2) = 3, toolbar_h = 3*22 = 66.
-    // titlebar_height = TITLEBAR_HEIGHT + toolbar_h = 12 + 66 = 78.
-    // New convention: frame.y=100 is the window top.
+    // frame: x=10, y=100, w=44, h=150
+    // With TOOLBAR_PADDING=2 and TOOLBAR_SPACING=4:
+    //   bpr = MAX(1, 44/26) = 1
+    //   5 buttons → 5 rows → toolbar_h = 5*22 + 4 = 114
+    //   titlebar_height = TITLEBAR_HEIGHT + toolbar_h = 12 + 114 = 126
+    // frame.y=100 is the window top.
     // window_title_bar_y = frame.y + 2 = 102.
     // Title bar row: [frame.y, frame.y + TITLEBAR_HEIGHT) = [100, 112).
-    // Toolbar rows: [frame.y + TITLEBAR_HEIGHT, frame.y + titlebar_height) = [112, 178).
+    // Toolbar rows: [frame.y + TITLEBAR_HEIGHT, frame.y + titlebar_height) = [112, 226).
     rect_t frame = {10, 100, 44, 150};
     window_t *win = create_window("Tools", WINDOW_TOOLBAR | WINDOW_NORESIZE,
                                   &frame, NULL, noop_proc, 0, NULL);
@@ -259,11 +273,11 @@ void test_toolbar_button_pressed_on_nonclient_mousedown(void) {
     test_env_clear_events();
 
     // Window at (10, 100), 44px wide, with 1 toolbar button.
-    // bsz = TB_SPACING, bpr = 44/TB_SPACING, total_h = TB_SPACING.
-    // title_only_h = TITLEBAR_HEIGHT (window has title bar).
-    // base_x = 10+2=12, base_y = 100 + TITLEBAR_HEIGHT + 2.
-    // Button 0: bx=12, by=base_y, width=height=TB_SPACING.
-    // Hit-test centre: (12 + TB_SPACING/2, base_y + TB_SPACING/2).
+    // title_only_h = TITLEBAR_HEIGHT = 12
+    // base_x = frame.x + 1 + TOOLBAR_PADDING = 10 + 1 + 2 = 13
+    // base_y = frame.y + title_only_h + 1 + TOOLBAR_PADDING = 100 + 12 + 1 + 2 = 115
+    // Button 0: bx=13, by=115, hit area = bsz x bsz
+    // Hit centre: (13 + bsz/2, 115 + bsz/2)
     rect_t frame = {10, 100, 44, 50};
     window_t *win = create_window("T", WINDOW_TOOLBAR | WINDOW_NORESIZE,
                                   &frame, NULL, noop_proc, 0, NULL);
@@ -272,9 +286,9 @@ void test_toolbar_button_pressed_on_nonclient_mousedown(void) {
     toolbar_button_t buttons[] = {{.icon=0, .ident=7, .active=false}};
     send_message(win, kToolBarMessageAddButtons, 1, buttons);
 
-    int bsz   = TB_SPACING;
-    int base_x = win->frame.x + 2;
-    int base_y = win->frame.y + TITLEBAR_HEIGHT + 2;
+    int bsz    = TB_SPACING;
+    int base_x = win->frame.x + 1 + TOOLBAR_PADDING;
+    int base_y = win->frame.y + TITLEBAR_HEIGHT + 1 + TOOLBAR_PADDING;
     int hit_x  = base_x + bsz / 2;
     int hit_y  = base_y + bsz / 2;
 
@@ -313,9 +327,9 @@ void test_toolbar_button_pressed_cleared_on_up_outside(void) {
     toolbar_button_t buttons[] = {{.icon=0, .ident=8, .active=false}};
     send_message(win, kToolBarMessageAddButtons, 1, buttons);
 
-    int bsz   = TB_SPACING;
-    int base_x = win->frame.x + 2;
-    int base_y = win->frame.y + TITLEBAR_HEIGHT + 2;
+    int bsz    = TB_SPACING;
+    int base_x = win->frame.x + 1 + TOOLBAR_PADDING;
+    int base_y = win->frame.y + TITLEBAR_HEIGHT + 1 + TOOLBAR_PADDING;
     int hit_x  = base_x + bsz / 2;
     int hit_y  = base_y + bsz / 2;
 

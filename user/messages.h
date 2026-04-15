@@ -171,6 +171,8 @@ typedef struct {
 #define CONTROL_BUTTON_WIDTH    8
 #define CONTROL_BUTTON_PADDING  2
 #define TB_SPACING              TOOLBAR_HEIGHT  // equals TOOLBAR_HEIGHT so toolbar buttons are square
+#define TOOLBAR_PADDING         2               // pixels of margin between toolbar border and button area (all sides)
+#define TOOLBAR_SPACING         4               // pixels of gap between consecutive buttons in a toolbar row
 
 // Analogous to WinAPI CW_USEDEFAULT: pass as x or y to create_window() /
 // create_window_from_form() to let the framework auto-position the window.
