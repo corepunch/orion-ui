@@ -7,6 +7,7 @@
 // The window is non-modal: the caller's event loop renders it normally.
 // A left-click anywhere on the window destroys it.
 
+#include <stdio.h>
 #include <stdlib.h>
 #include "../user/user.h"
 #include "../user/draw.h"
@@ -37,9 +38,13 @@ static result_t splash_proc(window_t *win, uint32_t msg,
       return true;
     case kWindowMessageDestroy: {
       splash_state_t *s = (splash_state_t *)win->userdata;
-      if (s && s->tex) {
-        R_DeleteTexture(s->tex);
-        s->tex = 0;
+      if (s) {
+        if (s->tex) {
+          R_DeleteTexture(s->tex);
+          s->tex = 0;
+        }
+        free(s);
+        win->userdata = NULL;
       }
       return false;
     }
@@ -55,7 +60,8 @@ static result_t splash_proc(window_t *win, uint32_t msg,
 // It is destroyed when the user clicks anywhere on it.
 // Returns the window pointer, or NULL if the image could not be loaded.
 window_t *show_splash_screen(const char *path, hinstance_t hinstance) {
-  if (!path) return NULL;
+  extern bool running;
+  if (!path || !running) return NULL;
 
   int w = 0, h = 0;
   uint8_t *pixels = load_image(path, &w, &h);
@@ -79,7 +85,7 @@ window_t *show_splash_screen(const char *path, hinstance_t hinstance) {
   window_t *win = create_window(
       "",
       WINDOW_NOTITLE | WINDOW_NORESIZE | WINDOW_ALWAYSONTOP |
-      WINDOW_NOTRAYBUTTON | WINDOW_NOFILL,
+      WINDOW_NOTRAYBUTTON | WINDOW_NOFILL | WINDOW_TRANSPARENT,
       MAKERECT(x, y, w, h),
       NULL, splash_proc, hinstance, (void *)(uintptr_t)tex);
 

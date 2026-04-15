@@ -49,10 +49,11 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   // Show splash screen if the image is available.
 #ifdef SHAREDIR
   {
-    char splash_path[512];
-    snprintf(splash_path, sizeof(splash_path), "%s/" SHAREDIR "/splash.jpg",
+    char splash_path[4096];
+    int path_len = snprintf(splash_path, sizeof(splash_path), "%s/" SHAREDIR "/splash.jpg",
              ui_get_exe_dir());
-    show_splash_screen(splash_path, hinstance);
+    if (path_len >= 0 && (size_t)path_len < sizeof(splash_path))
+      show_splash_screen(splash_path, hinstance);
   }
 #endif
 
