@@ -52,69 +52,31 @@ static const accel_t kAccelEntries[] = {
 };
 
 // ============================================================
-// File path dialog
+// File path helpers (open/save dialogs, .tdb extension)
 // ============================================================
 
-typedef struct {
-  char *path;
-  int   sz;
-  bool  ok;
-  const char *prompt_label;
-} filepath_dlg_t;
-
-static const form_ctrl_def_t kFileDlgChildren[] = {
-  { FORM_CTRL_TEXTEDIT, 1, {4, 22, 230, 13}, 0,             "", "edit_path"  },
-  { FORM_CTRL_BUTTON,   2, {50, 44, 50, 14}, BUTTON_DEFAULT, "OK",     "btn_ok"     },
-  { FORM_CTRL_BUTTON,   3, {108, 44, 50, 14}, 0,             "Cancel", "btn_cancel" },
-};
-static const form_def_t kFileDlgForm = {
-  .name        = "File Path",
-  .w           = 240,
-  .h           = 68,
-  .flags       = 0,
-  .children    = kFileDlgChildren,
-  .child_count = 3,
-};
-
-static result_t filepath_dlg_proc(window_t *win, uint32_t msg,
-                                   uint32_t wparam, void *lparam) {
-  filepath_dlg_t *s = (filepath_dlg_t *)win->userdata;
-  switch (msg) {
-    case kWindowMessageCreate:
-      win->userdata = lparam;
-      return true;
-    case kWindowMessagePaint:
-      if (s && s->prompt_label)
-        draw_text_small(s->prompt_label, 4, 8, get_sys_color(kColorTextNormal));
-      return false;
-    case kWindowMessageCommand:
-      if (HIWORD(wparam) == kButtonNotificationClicked) {
-        window_t *src = (window_t *)lparam;
-        if (src->id == 2) {
-          window_t *edit = get_window_item(win, 1);
-          if (edit && s) {
-            strncpy(s->path, edit->title, (size_t)s->sz - 1);
-            s->path[s->sz - 1] = '\0';
-            s->ok = true;
-          }
-          end_dialog(win, 1);
-          return true;
-        }
-        if (src->id == 3) { end_dialog(win, 0); return true; }
-      }
-      return false;
-    default: return false;
-  }
+static bool pick_open_path(window_t *parent, char *path, size_t path_sz) {
+  openfilename_t ofn = {0};
+  ofn.lStructSize  = sizeof(ofn);
+  ofn.hwndOwner    = parent;
+  ofn.lpstrFile    = path;
+  ofn.nMaxFile     = (uint32_t)path_sz;
+  ofn.lpstrFilter  = "Task Database\0*.tdb\0All Files\0*.*\0";
+  ofn.nFilterIndex = 1;
+  ofn.Flags        = OFN_FILEMUSTEXIST;
+  return get_open_filename(&ofn);
 }
 
-// Show a simple text-entry dialog for a file path.
-// Returns true and fills path if the user provides a non-empty string.
-static bool prompt_filepath(window_t *parent, const char *prompt,
-                             char *path, int path_sz) {
-  filepath_dlg_t state = { path, path_sz, false, prompt };
-  show_dialog_from_form(&kFileDlgForm, prompt, parent,
-                        filepath_dlg_proc, &state);
-  return state.ok && state.path[0] != '\0';
+static bool pick_save_path(window_t *parent, char *path, size_t path_sz) {
+  openfilename_t ofn = {0};
+  ofn.lStructSize  = sizeof(ofn);
+  ofn.hwndOwner    = parent;
+  ofn.lpstrFile    = path;
+  ofn.nMaxFile     = (uint32_t)path_sz;
+  ofn.lpstrFilter  = "Task Database\0*.tdb\0All Files\0*.*\0";
+  ofn.nFilterIndex = 1;
+  ofn.Flags        = OFN_OVERWRITEPROMPT;
+  return get_save_filename(&ofn);
 }
 
 // ============================================================
@@ -147,7 +109,7 @@ void handle_menu_command(uint16_t id) {
     }
     case ID_FILE_OPEN: {
       char path[512] = "";
-      if (prompt_filepath(parent, "Open file:", path, sizeof(path))) {
+      if (pick_open_path(parent, path, sizeof(path))) {
         if (!task_file_load(path, g_app)) {
           message_box(parent, "Failed to open file.", "Error", MB_OK);
         } else {
@@ -163,7 +125,7 @@ void handle_menu_command(uint16_t id) {
     case ID_FILE_SAVE: {
       if (g_app->filename[0] == '\0') {
         char path[512] = "";
-        if (!prompt_filepath(parent, "Save as:", path, sizeof(path))) return;
+        if (!pick_save_path(parent, path, sizeof(path))) return;
         strncpy(g_app->filename, path, sizeof(g_app->filename) - 1);
         g_app->filename[sizeof(g_app->filename) - 1] = '\0';
       }
@@ -175,7 +137,7 @@ void handle_menu_command(uint16_t id) {
     }
     case ID_FILE_SAVEAS: {
       char path[512] = "";
-      if (prompt_filepath(parent, "Save as:", path, sizeof(path))) {
+      if (pick_save_path(parent, path, sizeof(path))) {
         strncpy(g_app->filename, path, sizeof(g_app->filename) - 1);
         g_app->filename[sizeof(g_app->filename) - 1] = '\0';
         if (!task_file_save(g_app->filename, g_app))

@@ -429,7 +429,7 @@ static result_t about_proc(window_t *win, uint32_t msg,
           win, win_label, 0, (void *)(uintptr_t)kColorTextDisabled);
       // OK button
       create_window("OK", BUTTON_DEFAULT,
-          MAKERECT(ABOUT_W - 54, ABOUT_H - 17, 50, BUTTON_HEIGHT),
+          MAKERECT(ABOUT_W - 54, ABOUT_H - BUTTON_HEIGHT - 4, 50, BUTTON_HEIGHT),
           win, win_button, 0, NULL);
       return true;
     }
@@ -448,7 +448,8 @@ void show_about_dialog(window_t *parent) {
   int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
   int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
   show_dialog("About Orion Form Editor",
-              MAKERECT((sw - ABOUT_W) / 2, (sh - ABOUT_H) / 2, ABOUT_W, ABOUT_H),
+              MAKERECT((sw - ABOUT_W) / 2, (sh - (ABOUT_H + TITLEBAR_HEIGHT)) / 2,
+                       ABOUT_W, ABOUT_H + TITLEBAR_HEIGHT),
               parent, about_proc, NULL);
 }
 
@@ -469,7 +470,7 @@ void show_about_dialog(window_t *parent) {
 #define PROPS_ROW1_Y       4
 #define PROPS_ROW2_Y       (PROPS_ROW1_Y + BUTTON_HEIGHT + 6)   // 23
 #define PROPS_INFO_Y       (PROPS_ROW2_Y + BUTTON_HEIGHT + 6)   // 42
-#define PROPS_BTN_Y        (PROPS_H - BUTTON_HEIGHT - 6)        // 91
+#define PROPS_BTN_Y        (PROPS_H - BUTTON_HEIGHT - 6)        // 86
 
 static const form_ctrl_def_t kPropsChildren[] = {
   { FORM_CTRL_LABEL,    -1,              {4,          PROPS_ROW1_Y, 60,           CONTROL_HEIGHT}, 0,             "Caption:", "lbl_caption" },
@@ -483,7 +484,7 @@ static const form_ctrl_def_t kPropsChildren[] = {
 static const form_def_t kPropsForm = {
   .name        = "Element Properties",
   .w           = PROPS_W,
-  .h           = PROPS_H,
+  .h           = PROPS_H + TITLEBAR_HEIGHT,
   .flags       = 0,
   .children    = kPropsChildren,
   .child_count = ARRAY_LEN(kPropsChildren),

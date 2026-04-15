@@ -398,10 +398,10 @@ bool show_color_picker(window_t *parent, uint32_t initial, uint32_t *out) {
   int sx = ui_get_system_metrics(kSystemMetricScreenWidth);
   int sy = ui_get_system_metrics(kSystemMetricScreenHeight);
   int dx = (sx - CP_WIN_W) / 2;
-  int dy = (sy - CP_WIN_H) / 2;
+  int dy = (sy - (CP_WIN_H + TITLEBAR_HEIGHT)) / 2;
 
   uint32_t result = show_dialog("Edit Color",
-      MAKERECT(dx, dy, CP_WIN_W, CP_WIN_H),
+      MAKERECT(dx, dy, CP_WIN_W, CP_WIN_H + TITLEBAR_HEIGHT),
       parent, cp_proc, &st);
 
   if (result && st.accepted) {

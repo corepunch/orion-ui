@@ -355,7 +355,7 @@ static bool fp_run(openfilename_t *ofn, bool save_mode,
                       ofn->nFilterIndex <= ps.num_filters)
                      ? ofn->nFilterIndex - 1 : 0;
 
-  int h = fp_dialog_height(ps.num_filters);
+  int h = fp_dialog_height(ps.num_filters) + TITLEBAR_HEIGHT;
   uint32_t result = show_dialog(title,
       MAKERECT(50, 30, FP_WIN_W, h),
       ofn->hwndOwner, fp_proc, &ps);
