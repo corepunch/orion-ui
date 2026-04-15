@@ -12,6 +12,9 @@
 #include "draw.h"
 #include "image.h"
 
+#define CONTAINS(x, y, x1, y1, w1, h1) \
+((x1) <= (x) && (y1) <= (y) && (x1) + (w1) > (x) && (y1) + (h1) > (y))
+
 // Message queue structure
 typedef struct {
   window_t *target;
@@ -643,12 +646,9 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
           for (window_t *item = win->children; item; item = item->next) {
             rect_t r = item->frame;
             uint16_t x = LOWORD(wparam), y = HIWORD(wparam);
-            #define CONTAINS(x, y, x1, y1, w1, h1) \
-            ((x1) <= (x) && (y1) <= (y) && (x1) + (w1) > (x) && (y1) + (h1) > (y))
             if (!item->notabstop && CONTAINS(x, y, r.x, r.y, r.w, r.h)) {
               *(window_t **)lparam = item;
             }
-            #undef CONTAINS
           }
           break;
         case kWindowMessageNonClientLeftButtonDown:
@@ -664,8 +664,6 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
             int total_h = nrows * bsz;
             int base_x = win->frame.x + 2;
             int base_y = win->frame.y - total_h + 2;
-            #define CONTAINS(x, y, x1, y1, w1, h1) \
-            ((x1) <= (x) && (y1) <= (y) && (x1) + (w1) > (x) && (y1) + (h1) > (y))
             for (uint32_t i = 0; i < win->num_toolbar_buttons; i++) {
               toolbar_button_t *but = &win->toolbar_buttons[i];
               int row = (int)i / bpr;
@@ -674,7 +672,6 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
               int by = base_y + row * bsz;
               but->pressed = CONTAINS(x, y, bx, by, bsz, bsz);
             }
-            #undef CONTAINS
             invalidate_window(win);
           }
           break;
@@ -691,8 +688,6 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
             int title_only_h = (win->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
             int base_x = win->frame.x + 2;
             int base_y = win->frame.y + title_only_h + 2;
-            #define CONTAINS(x, y, x1, y1, w1, h1) \
-            ((x1) <= (x) && (y1) <= (y) && (x1) + (w1) > (x) && (y1) + (h1) > (y))
             for (uint32_t i = 0; i < win->num_toolbar_buttons; i++) {
               toolbar_button_t *but = &win->toolbar_buttons[i];
               int row = (int)i / bpr;
@@ -705,7 +700,6 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
                 send_message(win, kToolBarMessageButtonClick, but->ident, but);
               }
             }
-            #undef CONTAINS
             invalidate_window(win);
           }
           break;
