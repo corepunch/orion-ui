@@ -52,7 +52,8 @@ typedef struct bitmap_strip_s {
 typedef struct toolbar_button_s {
   int icon;
   int ident;
-  bool active;
+  bool active;   // toggle/selection state (drawn pressed persistently)
+  bool pressed;  // transient mouse-down visual feedback
 } toolbar_button_t;
 
 // Window definition structure (for declarative window creation)

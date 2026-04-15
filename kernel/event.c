@@ -70,6 +70,12 @@ window_t *_resizing = NULL;
 static int drag_anchor[2];
 static int resize_anchor[2];
 
+// Window that received kWindowMessageNonClientLeftButtonDown (toolbar press).
+// Always delivered kWindowMessageNonClientLeftButtonUp on the next left-up,
+// regardless of release position, so pressed state is cleared deterministically.
+// Shared with user/window.c for destroy_window cleanup (extern declared there).
+window_t *_toolbar_down_win = NULL;
+
 // Handle mouse events on child windows.
 // x, y are in the parent window's client coordinate system.
 // Each child receives coords in its own client coordinate system (WinAPI style).
@@ -427,11 +433,24 @@ void dispatch_message(ui_event_t *msg) {
           drag_anchor[0] = SCALE_POINT(px) - win->frame.x;
           drag_anchor[1] = SCALE_POINT(py) - win->frame.y;
         } else {
-          int wmsg = (msg->message == kEventLeftMouseDown)
-                     ? kWindowMessageLeftButtonDown
-                     : kWindowMessageRightButtonDown;
-          if (!handle_mouse(wmsg, win, lx, ly)) {
-            send_message(win, wmsg, MAKEDWORD(lx, ly), NULL);
+          int sx = SCALE_POINT(px);
+          int sy = SCALE_POINT(py);
+          if (msg->message == kEventLeftMouseDown &&
+              (win->flags & WINDOW_TOOLBAR) && sy < win->frame.y) {
+            // Non-client left button down in toolbar area: send dedicated message
+            // so the toolbar can show visual pressed feedback immediately.
+            // Only applies when WINDOW_TOOLBAR is set; title bar clicks are
+            // handled earlier by window_in_drag_area → _dragging path.
+            send_message(win, kWindowMessageNonClientLeftButtonDown,
+                         MAKEDWORD(sx, sy), NULL);
+            _toolbar_down_win = win;
+          } else {
+            int wmsg = (msg->message == kEventLeftMouseDown)
+                       ? kWindowMessageLeftButtonDown
+                       : kWindowMessageRightButtonDown;
+            if (!handle_mouse(wmsg, win, lx, ly)) {
+              send_message(win, wmsg, MAKEDWORD(lx, ly), NULL);
+            }
           }
         }
       }
@@ -459,6 +478,21 @@ void dispatch_message(ui_event_t *msg) {
     case kEventRightMouseUp: {
       px = (int)msg->x;
       py = (int)msg->y;
+      // Always deliver NonClientLeftButtonUp to any window that received a
+      // NonClientLeftButtonDown (toolbar press), even if the release is outside
+      // the window.  This guarantees the pressed state is cleared deterministically.
+      // The break is intentional: toolbar clicks are fully handled by the
+      // NonClientLeftButtonDown/Up pair (analogous to WM_NCLBUTTONDOWN/UP),
+      // so no client LeftButtonDown/Up is sent for this click sequence.
+      // Focus changes already occurred on mouse-down, so no focus work is needed here.
+      if (_toolbar_down_win && msg->message == kEventLeftMouseUp) {
+        int sx = SCALE_POINT(px);
+        int sy = SCALE_POINT(py);
+        send_message(_toolbar_down_win, kWindowMessageNonClientLeftButtonUp,
+                     MAKEDWORD(sx, sy), NULL);
+        _toolbar_down_win = NULL;
+        break;
+      }
       if (_dragging) {
         int sx = SCALE_POINT(px);
         int sy = SCALE_POINT(py);

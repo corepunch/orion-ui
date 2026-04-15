@@ -7,6 +7,7 @@ enum {
   kWindowMessageDestroy,
   kWindowMessageShowWindow,
   kWindowMessageNonClientPaint,
+  kWindowMessageNonClientLeftButtonDown,
   kWindowMessageNonClientLeftButtonUp,
   kWindowMessagePaint,
   kWindowMessageRefreshStencil,

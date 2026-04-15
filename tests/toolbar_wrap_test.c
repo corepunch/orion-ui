@@ -249,6 +249,88 @@ void test_close_button_y_excludes_toolbar(void) {
     PASS();
 }
 
+void test_toolbar_button_pressed_on_nonclient_mousedown(void) {
+    TEST("WINDOW_TOOLBAR: kWindowMessageNonClientLeftButtonDown sets pressed, Up clears it");
+
+    test_env_init();
+    test_env_enable_tracking(true);
+    test_env_clear_events();
+
+    // Window at (10, 100), 44px wide, with 1 toolbar button.
+    // bsz = TB_SPACING, bpr = 44/TB_SPACING, total_h = TB_SPACING.
+    // base_x = 10+2=12, base_y = 100 - TB_SPACING + 2.
+    // Button 0: bx=12, by=base_y, width=height=TB_SPACING.
+    // Hit-test centre: (12 + TB_SPACING/2, base_y + TB_SPACING/2).
+    rect_t frame = {10, 100, 44, 50};
+    window_t *win = create_window("T", WINDOW_TOOLBAR | WINDOW_NORESIZE,
+                                  &frame, NULL, noop_proc, 0, NULL);
+    ASSERT_NOT_NULL(win);
+
+    toolbar_button_t buttons[] = {{.icon=0, .ident=7, .active=false}};
+    send_message(win, kToolBarMessageAddButtons, 1, buttons);
+
+    int bsz   = TB_SPACING;
+    int base_x = win->frame.x + 2;
+    int base_y = win->frame.y - bsz + 2;
+    int hit_x  = base_x + bsz / 2;
+    int hit_y  = base_y + bsz / 2;
+
+    // Button should start unpressed.
+    ASSERT_FALSE(win->toolbar_buttons[0].pressed);
+
+    // Simulate non-client left button down on the toolbar button.
+    send_message(win, kWindowMessageNonClientLeftButtonDown,
+                 MAKEDWORD(hit_x, hit_y), NULL);
+
+    ASSERT_TRUE(win->toolbar_buttons[0].pressed);
+
+    // Simulate non-client left button up — pressed state must be cleared.
+    send_message(win, kWindowMessageNonClientLeftButtonUp,
+                 MAKEDWORD(hit_x, hit_y), NULL);
+
+    ASSERT_FALSE(win->toolbar_buttons[0].pressed);
+
+    destroy_window(win);
+    test_env_shutdown();
+    PASS();
+}
+
+void test_toolbar_button_pressed_cleared_on_up_outside(void) {
+    TEST("WINDOW_TOOLBAR: pressed flag is cleared on NonClientLeftButtonUp even outside button");
+
+    test_env_init();
+    test_env_enable_tracking(true);
+    test_env_clear_events();
+
+    rect_t frame = {10, 100, 44, 50};
+    window_t *win = create_window("T", WINDOW_TOOLBAR | WINDOW_NORESIZE,
+                                  &frame, NULL, noop_proc, 0, NULL);
+    ASSERT_NOT_NULL(win);
+
+    toolbar_button_t buttons[] = {{.icon=0, .ident=8, .active=false}};
+    send_message(win, kToolBarMessageAddButtons, 1, buttons);
+
+    int bsz   = TB_SPACING;
+    int base_x = win->frame.x + 2;
+    int base_y = win->frame.y - bsz + 2;
+    int hit_x  = base_x + bsz / 2;
+    int hit_y  = base_y + bsz / 2;
+
+    // Press the button.
+    send_message(win, kWindowMessageNonClientLeftButtonDown,
+                 MAKEDWORD(hit_x, hit_y), NULL);
+    ASSERT_TRUE(win->toolbar_buttons[0].pressed);
+
+    // Release outside the button — pressed must still be cleared.
+    send_message(win, kWindowMessageNonClientLeftButtonUp,
+                 MAKEDWORD(0, 0), NULL);
+    ASSERT_FALSE(win->toolbar_buttons[0].pressed);
+
+    destroy_window(win);
+    test_env_shutdown();
+    PASS();
+}
+
 // ---- main -------------------------------------------------------------------
 
 int main(int argc, char *argv[]) {
@@ -261,6 +343,8 @@ int main(int argc, char *argv[]) {
     test_toolbar_set_active_button();
     test_toolbar_add_buttons_replaces();
     test_close_button_y_excludes_toolbar();
+    test_toolbar_button_pressed_on_nonclient_mousedown();
+    test_toolbar_button_pressed_cleared_on_up_outside();
 
     TEST_END();
 }
