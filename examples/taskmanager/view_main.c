@@ -65,6 +65,10 @@ result_t main_win_proc(window_t *win, uint32_t msg,
         case CVN_DBLCLK:
           handle_menu_command(ID_TASK_EDIT);
           return true;
+
+        case CVN_DELETE:
+          handle_menu_command(ID_TASK_DELETE);
+          return true;
         
         default:
           return false;

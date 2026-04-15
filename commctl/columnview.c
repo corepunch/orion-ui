@@ -53,6 +53,22 @@ static int cv_hit_index(window_t *win, columnview_data_t *data, uint32_t wparam)
   return (index >= 0 && index < (int)data->count) ? index : -1;
 }
 
+// Ensure the item at the given index is visible, scrolling if necessary.
+static void cv_scroll_to_item(window_t *win, columnview_data_t *data, int index) {
+  if (!win || !data || index < 0 || index >= (int)data->count) return;
+  int eff_w = cv_content_width(win);
+  int ncol  = get_column_count(eff_w, (int)data->column_width);
+  int row   = index / ncol;
+  int item_y_top    = row * ENTRY_HEIGHT + WIN_PADDING;
+  int item_y_bottom = item_y_top + ENTRY_HEIGHT;
+  int scroll_y      = (int)win->scroll[1];
+  int visible_h     = win->frame.h;
+  if (item_y_top - scroll_y < 0)
+    win->scroll[1] = (uint32_t)(item_y_top > 0 ? item_y_top : 0);
+  else if (item_y_bottom - scroll_y > visible_h)
+    win->scroll[1] = (uint32_t)(item_y_bottom - visible_h);
+}
+
 // Update the built-in vertical scrollbar to reflect current content and scroll position.
 // Uses pixel-based range/page so the thumb size matches the visible fraction exactly.
 static void cv_sync_scroll(window_t *win, columnview_data_t *data) {
@@ -336,6 +352,53 @@ result_t win_columnview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       win->scroll[1] = (uint32_t)new_scroll;
       cv_sync_scroll(win, data);
       invalidate_window(win);
+      return true;
+    }
+
+    case kWindowMessageKeyDown: {
+      if (!data || data->count == 0) return false;
+      int eff_w = cv_content_width(win);
+      int ncol  = get_column_count(eff_w, (int)data->column_width);
+      int count = (int)data->count;
+      int cur   = (data->selected == (uint32_t)-1) ? -1 : (int)data->selected;
+      int next  = cur;
+
+      switch (wparam) {
+        case AX_KEY_UPARROW:
+          next = (cur < 0) ? 0 : (cur - ncol >= 0 ? cur - ncol : cur);
+          break;
+        case AX_KEY_DOWNARROW:
+          // Stay at current item if already on the last row; don't jump to count-1.
+          next = (cur < 0) ? 0 : (cur + ncol < count ? cur + ncol : cur);
+          break;
+        case AX_KEY_LEFTARROW:
+          next = (cur < 0) ? 0 : (cur > 0 ? cur - 1 : 0);
+          break;
+        case AX_KEY_RIGHTARROW:
+          next = (cur < 0) ? 0 : (cur + 1 < count ? cur + 1 : cur);
+          break;
+        case AX_KEY_ENTER:
+          if (cur < 0) return false;
+          send_message(get_root_window(win), kWindowMessageCommand,
+                       MAKEDWORD(cur, CVN_DBLCLK), &data->items[cur]);
+          return true;
+        case AX_KEY_DEL:
+          if (cur < 0) return false;
+          send_message(get_root_window(win), kWindowMessageCommand,
+                       MAKEDWORD(cur, CVN_DELETE), &data->items[cur]);
+          return true;
+        default:
+          return false;
+      }
+
+      if (next != cur && next >= 0) {
+        data->selected = (uint32_t)next;
+        cv_scroll_to_item(win, data, next);
+        cv_sync_scroll(win, data);
+        send_message(get_root_window(win), kWindowMessageCommand,
+                     MAKEDWORD(next, CVN_SELCHANGE), &data->items[next]);
+        invalidate_window(win);
+      }
       return true;
     }
 
