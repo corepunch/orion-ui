@@ -488,9 +488,10 @@ void dispatch_message(ui_event_t *msg) {
       if (_toolbar_down_win && msg->message == kEventLeftMouseUp) {
         int sx = SCALE_POINT(px);
         int sy = SCALE_POINT(py);
-        send_message(_toolbar_down_win, kWindowMessageNonClientLeftButtonUp,
+        window_t *toolbar_win = _toolbar_down_win;
+        _toolbar_down_win = NULL;  // clear before send: handler may open a modal loop
+        send_message(toolbar_win, kWindowMessageNonClientLeftButtonUp,
                      MAKEDWORD(sx, sy), NULL);
-        _toolbar_down_win = NULL;
         break;
       }
       if (_dragging) {
