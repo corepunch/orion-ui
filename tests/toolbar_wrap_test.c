@@ -9,7 +9,6 @@
 #include "test_env.h"
 #include "../ui.h"
 #include "../commctl/commctl.h"
-#include <stdlib.h>
 
 // ---- helpers ----------------------------------------------------------------
 
@@ -17,19 +16,13 @@
 static int compute_toolbar_height(int num_buttons, int win_w) {
     int bsz = TB_SPACING;
     int inner_w = win_w - 2;
-    int num_rows = toolbar_count_rows(NULL, 0, inner_w, bsz);  // NULL + 0 → 1 row default
-    if (num_buttons > 0) {
-        // Build a synthetic button array with no spacing tokens.
-        toolbar_button_t *buttons = malloc(sizeof(toolbar_button_t) * (size_t)num_buttons);
-        for (int i = 0; i < num_buttons; i++) {
-            buttons[i].icon = 0;
-            buttons[i].ident = i;
-            buttons[i].active = false;
-            buttons[i].pressed = false;
-        }
-        num_rows = toolbar_count_rows(buttons, (uint32_t)num_buttons, inner_w, bsz);
-        free(buttons);
+    if (num_buttons <= 0) return bsz + 2 * TOOLBAR_PADDING;
+    // Use a fixed-size stack array; tests never need more than 16 buttons.
+    toolbar_button_t buttons[16];
+    for (int i = 0; i < num_buttons && i < 16; i++) {
+        buttons[i] = (toolbar_button_t){.icon=0, .ident=i, .active=false, .pressed=false};
     }
+    int num_rows = toolbar_count_rows(buttons, (uint32_t)num_buttons, inner_w, bsz);
     return num_rows * bsz + 2 * TOOLBAR_PADDING;
 }
 
@@ -371,36 +364,31 @@ void test_toolbar_spacing_token_skipped_in_count(void) {
 }
 
 void test_toolbar_spacing_token_adds_gap(void) {
-    TEST("toolbar_count_rows: spacing token consumes TOOLBAR_SPACING_GAP_WIDTH pixels");
+    TEST("toolbar_count_rows: spacing token can cause row wrapping");
 
-    // Narrow window: available = 30 - 2*TOOLBAR_PADDING = 26 px.
-    // Without token: 2 buttons (22+4 = 26 each step) → 1 row.
-    // Layout: cur_x starts 0.
-    //   btn0: fits (0+22=22 ≤ 26), cur_x → 26
-    //   btn1: cur_x(26) + bsz(22) = 48 > 26, but cur_x==26 >0 → wrap: row=1, cur_x=0
-    //   Actually let me recalculate. Available = inner_w - 2*TOOLBAR_PADDING.
-    //   inner_w = 30-2 = 28, available = 28 - 2*2 = 24.
-    //   btn0: cur_x=0, 0+22 ≤ 24 → place, cur_x = 22+4=26
-    //   btn1: cur_x=26 >0, 26+22=48 > 24 → wrap: row=1, cur_x=0
-    //   Result: 2 rows (without token).
+    // Choose inner_w=52 so that:
+    //   available = inner_w - 2*TOOLBAR_PADDING = 52 - 4 = 48 px
+    //
+    // Without token, 2 buttons fit on one row:
+    //   btn0: cur_x=0, 0+22 <= 48 → place, cur_x=22+4=26
+    //   btn1: cur_x=26, 26+22=48 <= 48 → still fits → 1 row
     toolbar_button_t no_token[] = {
         {.icon=0, .ident=1, .active=false},
         {.icon=1, .ident=2, .active=false},
     };
-    int rows_no_token = toolbar_count_rows(no_token, 2, 30 - 2, TB_SPACING);
-    ASSERT_EQUAL(rows_no_token, 2);
+    int rows_no_token = toolbar_count_rows(no_token, 2, 52, TB_SPACING);
+    ASSERT_EQUAL(rows_no_token, 1);
 
-    // With token between btn0 and btn1: extra TOOLBAR_SPACING_GAP_WIDTH(4) pixels.
-    // btn0: cur_x=0, place, cur_x=26
-    // token: cur_x=30
-    // btn1: cur_x=30 >0, 30+22 > 24 → wrap: row=1, cur_x=0
-    // Result: still 2 rows.
+    // With a spacing token between them, btn1 is pushed past the available width:
+    //   btn0: cur_x=26
+    //   token: cur_x=26+4=30
+    //   btn1: cur_x=30, 30+22=52 > 48 → wrap to row 1 → 2 rows
     toolbar_button_t with_token[] = {
         {.icon=0, .ident=1, .active=false},
         TOOLBAR_SPACING_TOKEN,
         {.icon=1, .ident=2, .active=false},
     };
-    int rows_with_token = toolbar_count_rows(with_token, 3, 30 - 2, TB_SPACING);
+    int rows_with_token = toolbar_count_rows(with_token, 3, 52, TB_SPACING);
     ASSERT_EQUAL(rows_with_token, 2);
 
     PASS();
