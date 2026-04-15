@@ -35,31 +35,40 @@ static inline int get_column_count(int window_width, int column_width) {
   return (ncol > 0) ? ncol : 1;
 }
 
+// Effective content width: subtract the vscroll strip when the bar is visible.
+static inline int cv_content_width(window_t *win) {
+  return win->frame.w - (win->vscroll.visible ? SCROLLBAR_WIDTH : 0);
+}
+
 // Convert packed wparam coordinates to a columnview item index.
 // Returns -1 when the position falls outside the item grid.
 static int cv_hit_index(window_t *win, columnview_data_t *data, uint32_t wparam) {
   int mx = (int)(int16_t)LOWORD(wparam);
   int my = (int)(int16_t)HIWORD(wparam);
-  const int ncol = get_column_count(win->frame.w, data->column_width);
+  int eff_w = cv_content_width(win);
+  const int ncol = get_column_count(eff_w, data->column_width);
   int col = mx / data->column_width;
-  int row = (my - WIN_PADDING) / ENTRY_HEIGHT;
+  int row = (my - WIN_PADDING + (int)win->scroll[1]) / ENTRY_HEIGHT;
   int index = row * ncol + col;
   return (index >= 0 && index < (int)data->count) ? index : -1;
 }
 
 // Update the built-in vertical scrollbar to reflect current content and scroll position.
-// Uses row-based units so one scroll-wheel tick equals SCROLL_SENSITIVITY rows.
+// Uses pixel-based range/page so the thumb size matches the visible fraction exactly.
 static void cv_sync_scroll(window_t *win, columnview_data_t *data) {
   if (!win || !data || win->frame.h <= 0) return;
-  int ncol = get_column_count(win->frame.w, (int)data->column_width);
+  int eff_w     = cv_content_width(win);
+  int ncol      = get_column_count(eff_w, (int)data->column_width);
   int total_rows = (data->count == 0) ? 0
                  : (int)((data->count + (unsigned)ncol - 1) / (unsigned)ncol);
-  int vis_rows   = win->frame.h / ENTRY_HEIGHT;
-  int cur_row    = (int)win->scroll[1] / ENTRY_HEIGHT;
-  // Clamp current pixel offset to valid range.
-  int max_scroll = (total_rows - vis_rows) * ENTRY_HEIGHT;
-  if (max_scroll < 0) max_scroll = 0;
-  if ((int)win->scroll[1] > max_scroll) win->scroll[1] = (uint32_t)max_scroll;
+  int total_h   = total_rows * ENTRY_HEIGHT;
+  // Pixel-based max so the clamp in wheel and VScroll are consistent.
+  int max_scroll_px = total_h - win->frame.h;
+  if (max_scroll_px < 0) max_scroll_px = 0;
+  if ((int)win->scroll[1] > max_scroll_px) win->scroll[1] = (uint32_t)max_scroll_px;
+
+  int cur_row  = (int)win->scroll[1] / ENTRY_HEIGHT;
+  int vis_rows = win->frame.h / ENTRY_HEIGHT;
 
   scroll_info_t si;
   si.fMask = SIF_ALL;
@@ -80,6 +89,10 @@ result_t win_columnview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       if (!data) return false;
       win->userdata2 = data;
       win->flags |= WINDOW_VSCROLL;
+      // alloc_window() only initializes visible_mode to SB_VIS_AUTO when
+      // WINDOW_VSCROLL is present at creation time.  We add the flag here
+      // (post-creation), so we must initialize it explicitly.
+      win->vscroll.visible_mode = SB_VIS_AUTO;
       data->count = 0;
       data->selected = -1;
       data->column_width = DEFAULT_COLUMN_WIDTH;
@@ -90,7 +103,8 @@ result_t win_columnview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
     }
     
     case kWindowMessagePaint: {
-      const int ncol = get_column_count(win->frame.w, data->column_width);
+      int eff_w   = cv_content_width(win);
+      const int ncol = get_column_count(eff_w, data->column_width);
       int scroll_y = (int)win->scroll[1];
       // For child windows frame.y/frame.h are in root-content-relative (drawing)
       // coordinates, so they directly bound the visible area.  For root windows
@@ -283,11 +297,21 @@ result_t win_columnview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       return false;
     }
     
-    case kWindowMessageVScroll:
-      win->scroll[1] = (uint32_t)((int)wparam * ENTRY_HEIGHT);
+    case kWindowMessageVScroll: {
+      // wparam is the new scrollbar row-position; convert to pixel offset.
+      int eff_w = cv_content_width(win);
+      int ncol  = get_column_count(eff_w, (int)data->column_width);
+      int total_rows = (data->count == 0) ? 0
+                     : (int)((data->count + (unsigned)ncol - 1) / (unsigned)ncol);
+      int max_scroll_px = total_rows * ENTRY_HEIGHT - win->frame.h;
+      if (max_scroll_px < 0) max_scroll_px = 0;
+      int new_scroll = (int)wparam * ENTRY_HEIGHT;
+      if (new_scroll > max_scroll_px) new_scroll = max_scroll_px;
+      win->scroll[1] = (uint32_t)new_scroll;
       cv_sync_scroll(win, data);
       invalidate_window(win);
       return true;
+    }
 
     case kWindowMessageResize:
       cv_sync_scroll(win, data);
@@ -295,17 +319,19 @@ result_t win_columnview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
 
     case kWindowMessageWheel: {
       if (!data) return false;
-      // HIWORD = dy_event * SCROLL_SENSITIVITY; positive = scroll down.
-      // Treat each unit as one row so the speed matches SCROLL_SENSITIVITY rows/tick.
+      // HIWORD encodes dy * SCROLL_SENSITIVITY where platform dy > 0 = scroll down
+      // on X11/Windows (Button5 / WM_MOUSEWHEEL with negative delta).  Each unit
+      // scrolls one row.  Positive dy → content moves up → see content below.
       int dy = (int16_t)HIWORD(wparam);
-      int ncol = get_column_count(win->frame.w, (int)data->column_width);
+      int eff_w  = cv_content_width(win);
+      int ncol   = get_column_count(eff_w, (int)data->column_width);
       int total_rows = (data->count == 0) ? 0
                      : (int)((data->count + (unsigned)ncol - 1) / (unsigned)ncol);
-      int max_scroll = (total_rows * ENTRY_HEIGHT - win->frame.h);
-      if (max_scroll < 0) max_scroll = 0;
+      int max_scroll_px = total_rows * ENTRY_HEIGHT - win->frame.h;
+      if (max_scroll_px < 0) max_scroll_px = 0;
       int new_scroll = (int)win->scroll[1] + dy * ENTRY_HEIGHT;
       if (new_scroll < 0) new_scroll = 0;
-      if (new_scroll > max_scroll) new_scroll = max_scroll;
+      if (new_scroll > max_scroll_px) new_scroll = max_scroll_px;
       win->scroll[1] = (uint32_t)new_scroll;
       cv_sync_scroll(win, data);
       invalidate_window(win);
