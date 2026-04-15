@@ -173,6 +173,8 @@ typedef struct {
 #define TB_SPACING              TOOLBAR_HEIGHT  // equals TOOLBAR_HEIGHT so toolbar buttons are square
 #define TOOLBAR_PADDING         2               // pixels of margin between toolbar border and button area (all sides)
 #define TOOLBAR_SPACING         4               // pixels of gap between consecutive buttons in a toolbar row
+#define TOOLBAR_SPACING_GAP_WIDTH  4            // extra gap width inserted by a TOOLBAR_SPACING_TOKEN entry
+#define TOOLBAR_SPACING_TOKEN   { .icon = -1, .ident = 0, .active = false, .pressed = false }  // on-demand spacing between toolbar buttons
 
 // Analogous to WinAPI CW_USEDEFAULT: pass as x or y to create_window() /
 // create_window_from_form() to let the framework auto-position the window.
