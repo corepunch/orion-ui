@@ -31,15 +31,17 @@ result_t main_win_proc(window_t *win, uint32_t msg,
       g_app->list_win = create_window(
           "tasks",
           WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL,
-          MAKERECT(0, 0, win->frame.w, win->frame.h),
+          MAKERECT(0, 0, get_client_rect(win).w, get_client_rect(win).h),
           win, tasklist_proc, 0, NULL);
       tasklist_refresh(g_app->list_win);
       app_update_status(g_app);
       return true;
 
     case kWindowMessageResize:
-      if (g_app->list_win)
-        resize_window(g_app->list_win, win->frame.w, win->frame.h);
+      if (g_app->list_win) {
+        rect_t cr = get_client_rect(win);
+        resize_window(g_app->list_win, cr.w, cr.h);
+      }
       return false;
 
     case kToolBarMessageButtonClick:

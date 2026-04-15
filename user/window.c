@@ -118,12 +118,10 @@ bool do_windows_overlap(const window_t *a, const window_t *b) {
   if (!a->visible || !b->visible)
     return false;
   int border = 1;
-  int a_title = titlebar_height(a), a_status = statusbar_height(a);
-  int b_title = titlebar_height(b), b_status = statusbar_height(b);
-  int a_x1 = a->frame.x - border,              a_y1 = a->frame.y - a_title - border;
-  int a_x2 = a->frame.x + a->frame.w + border, a_y2 = a->frame.y + a->frame.h + a_status + border;
-  int b_x1 = b->frame.x - border,              b_y1 = b->frame.y - b_title - border;
-  int b_x2 = b->frame.x + b->frame.w + border, b_y2 = b->frame.y + b->frame.h + b_status + border;
+  int a_x1 = a->frame.x - border,              a_y1 = a->frame.y - border;
+  int a_x2 = a->frame.x + a->frame.w + border, a_y2 = a->frame.y + a->frame.h + border;
+  int b_x1 = b->frame.x - border,              b_y1 = b->frame.y - border;
+  int b_x2 = b->frame.x + b->frame.w + border, b_y2 = b->frame.y + b->frame.h + border;
   return a_x1 < b_x2 && a_x2 > b_x1 && a_y1 < b_y2 && a_y2 > b_y1;
 }
 
@@ -233,12 +231,11 @@ window_t *find_window(int x, int y) {
   window_t *last = NULL;
   for (window_t *win = windows; win; win = win->next) {
     if (!win->visible) continue;
-    int t = titlebar_height(win);
-    int s = statusbar_height(win);
-    if (CONTAINS(x, y, win->frame.x, win->frame.y-t, win->frame.w, win->frame.h+t+s)) {
+    if (CONTAINS(x, y, win->frame.x, win->frame.y, win->frame.w, win->frame.h)) {
       last = win;
+      int t = titlebar_height(win);
       if (!win->disabled) {
-        send_message(win, kWindowMessageHitTest, MAKEDWORD(x - win->frame.x, y - win->frame.y), &last);
+        send_message(win, kWindowMessageHitTest, MAKEDWORD(x - win->frame.x, y - win->frame.y - t), &last);
       }
     }
   }
@@ -317,23 +314,24 @@ void invalidate_window(window_t *win) {
   post_message(root, kWindowMessagePaint, 0, NULL);
 }
 
-// Get titlebar Y position
+// Get titlebar Y position (top of the title text row within the window frame)
 int window_title_bar_y(window_t const *win) {
-  return win->frame.y + 2 - titlebar_height(win);
+  return win->frame.y + 2;
 }
 
 // Returns true when the absolute screen Y coordinate 'sy' falls within the
 // draggable title-bar row of 'win'.  For windows with WINDOW_TOOLBAR the
 // toolbar rows sit below the title bar and must NOT initiate a drag.
-// Windows without a toolbar are entirely draggable above frame.y.
+// Windows without a toolbar are entirely draggable above client area.
 // Windows with WINDOW_NOTITLE have no title row; their toolbar area is the
 // only non-client space and may be dragged from freely (e.g. tool palettes).
 bool window_in_drag_area(window_t const *win, int sy) {
-  if (win->parent || sy >= win->frame.y) return false;
+  if (win->parent) return false;
+  int t = titlebar_height(win);
+  if (sy < win->frame.y || sy >= win->frame.y + t) return false;
   if (!(win->flags & WINDOW_TOOLBAR) || (win->flags & WINDOW_NOTITLE)) return true;
-  // The title bar row ends at window_title_bar_y(win) + TITLEBAR_HEIGHT - 2.
-  // (window_title_bar_y has a +2 painting offset; -2 corrects it for hit-testing.)
-  return sy < window_title_bar_y(win) + TITLEBAR_HEIGHT - 2;
+  // Has both title bar and toolbar: only the title bar row (top TITLEBAR_HEIGHT px) is draggable.
+  return sy < win->frame.y + TITLEBAR_HEIGHT;
 }
 
 // Get child window by ID
@@ -357,6 +355,50 @@ void set_window_item_text(window_t *win, uint32_t id, const char *fmt, ...) {
   vsnprintf(item->title, sizeof(item->title), fmt, args);
   va_end(args);
   invalidate_window(item);
+}
+
+// Returns the client area of win in client coordinates {0, 0, client_w, client_h}.
+// Analogous to WinAPI GetClientRect.
+rect_t get_client_rect(window_t const *win) {
+  int t = titlebar_height(win);
+  int s = statusbar_height(win);
+  bool has_h = (win->flags & WINDOW_HSCROLL) && win->hscroll.visible;
+  bool has_v = (win->flags & WINDOW_VSCROLL) && win->vscroll.visible;
+  bool h_merged = has_h && (win->flags & WINDOW_STATUSBAR);
+  int hstrip = (has_h && !h_merged) ? SCROLLBAR_WIDTH : 0;
+  int vstrip = has_v ? SCROLLBAR_WIDTH : 0;
+  int cw = win->frame.w - vstrip;
+  int ch = win->frame.h - t - s - hstrip;
+  if (cw < 0) cw = 0;
+  if (ch < 0) ch = 0;
+  return (rect_t){0, 0, cw, ch};
+}
+
+// Adjusts *r (initially a desired client rect) to include the non-client area.
+// Analogous to WinAPI AdjustWindowRectEx (without menu support).
+// After the call, r->x/y are the window-top-left offsets relative to the
+// desired client origin (r->x is 0, r->y is -titlebar_height), and
+// r->w/r->h are the total window dimensions.
+// Accounts for: title bar, toolbar (minimum one row), status bar, and
+// scrollbar strips indicated by WINDOW_HSCROLL / WINDOW_VSCROLL.
+// Note: WINDOW_HSCROLL merged with WINDOW_STATUSBAR does not add extra height
+// (the bar is drawn inside the status-bar row in that case).
+void adjust_window_rect(rect_t *r, flags_t flags) {
+  if (!r) return;
+  // Compute non-client heights for the given flags.
+  int t = 0;
+  if (!(flags & WINDOW_NOTITLE)) t += TITLEBAR_HEIGHT;
+  if (flags & WINDOW_TOOLBAR)    t += TB_SPACING;  // minimum one toolbar row
+  int s = (flags & WINDOW_STATUSBAR) ? STATUSBAR_HEIGHT : 0;
+  // Horizontal scrollbar: adds SCROLLBAR_WIDTH to the bottom unless it is
+  // merged with the status bar (WINDOW_STATUSBAR also set).
+  bool hscroll_standalone = (flags & WINDOW_HSCROLL) && !(flags & WINDOW_STATUSBAR);
+  int hstrip = hscroll_standalone ? SCROLLBAR_WIDTH : 0;
+  // Vertical scrollbar: adds SCROLLBAR_WIDTH to the right.
+  int vstrip = (flags & WINDOW_VSCROLL) ? SCROLLBAR_WIDTH : 0;
+  r->y -= t;
+  r->w += vstrip;
+  r->h += t + s + hstrip;
 }
 
 // Create window from definition
@@ -423,6 +465,29 @@ window_t *create_window_from_form(form_def_t const *def, int x, int y,
                                   window_t *parent, winproc_t proc,
                                   hinstance_t hinstance, void *lparam) {
   if (!def || !proc) return NULL;
+
+  // Resolve CW_USEDEFAULT for root windows: cascade down from (20, 20).
+  // Loop until we find a position not already occupied by another root window,
+  // so that windows always cascade rather than stacking on top of each other.
+  if (!parent && (x == CW_USEDEFAULT || y == CW_USEDEFAULT)) {
+    int cascade_step = 20;
+    int nx = 20, ny = 20;
+    bool occupied = true;
+    while (occupied) {
+      occupied = false;
+      for (window_t *w = windows; w; w = w->next) {
+        if (!w->parent && w->frame.x == nx && w->frame.y == ny) {
+          occupied = true;
+          nx += cascade_step;
+          ny += cascade_step;
+          break;
+        }
+      }
+    }
+    if (x == CW_USEDEFAULT) x = nx;
+    if (y == CW_USEDEFAULT) y = ny;
+  }
+
   rect_t r = {x, y, def->w, def->h};
 
   // Allocate the parent window without sending kWindowMessageCreate yet.

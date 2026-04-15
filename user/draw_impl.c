@@ -128,10 +128,8 @@ void draw_button(rect_t const *r, int dx, int dy, bool pressed) {
 
 // Draw window panel
 void draw_panel(window_t const *win) {
-  int t = titlebar_height(win);
-  int s = statusbar_height(win);
-  int x = win->frame.x, y = win->frame.y-t;
-  int w = win->frame.w, h = win->frame.h+t+s;
+  int x = win->frame.x, y = win->frame.y;
+  int w = win->frame.w, h = win->frame.h;
   if (_focused == win) {
     draw_focused(MAKERECT(x, y, w, h));
   } else if (window_has_focus(win)) {
@@ -155,7 +153,7 @@ void draw_window_controls(window_t *win) {
   int t = titlebar_height(win);
   bool active = window_has_focus(win);
   fill_rect(get_sys_color(active ? kColorActiveTitlebar : kColorInactiveTitlebar),
-            r.x, r.y-t, r.w, t);
+            r.x, r.y, r.w, t);
   set_fullscreen();
   
   for (int i = 0; i < 1; i++) {
@@ -173,7 +171,7 @@ void draw_statusbar(window_t *win, const char *text) {
 
   rect_t r = win->frame;
   int s = statusbar_height(win);
-  int y = r.y + r.h;
+  int y = r.y + r.h - s;  // statusbar row is at bottom of the total window frame
 
   bool has_h = (win->flags & WINDOW_HSCROLL) && win->hscroll.visible;
   int split_x = has_h ? SB_STATUS_SPLIT_X(r.w) : r.w;
@@ -249,11 +247,9 @@ void set_clip_rect(window_t const *win, rect_t const *r) {
 // Paint window to stencil buffer
 void paint_window_stencil(window_t const *w) {
   int p = 1;
-  int t = titlebar_height(w);
-  int s = statusbar_height(w);
   glStencilFunc(GL_ALWAYS, w->id, 0xFF);            // Always pass
   glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE); // Replace stencil with window ID
-  draw_rect(1, w->frame.x-p, w->frame.y-t-p, w->frame.w+p*2, w->frame.h+t+s+p*2);
+  draw_rect(1, w->frame.x-p, w->frame.y-p, w->frame.w+p*2, w->frame.h+p*2);
 }
 
 // Repaint window stencil buffer
@@ -379,9 +375,15 @@ void draw_builtin_scrollbars(window_t *win) {
   bool has_v = (win->flags & WINDOW_VSCROLL) && win->vscroll.visible;
   if (!has_h && !has_v) return;
 
+  // Non-client heights that shift scroll bar positions within the projection.
+  // For child windows (typically WINDOW_NOTITLE) these are usually 0, so
+  // child-window scroll bar behaviour is unchanged.
+  int t = titlebar_height(win);
+  int s = statusbar_height(win);
+
   // Coordinate base: for child windows use win->frame.x/y (offset within the
-  // root-relative projection); for top-level windows the projection already
-  // starts at the window's top-left, so use 0.
+  // root-relative projection); for top-level windows the projection origin
+  // maps to the client top-left, so use 0.
   int base_x = win->parent ? win->frame.x : 0;
   int base_y = win->parent ? win->frame.y : 0;
 
@@ -393,10 +395,15 @@ void draw_builtin_scrollbars(window_t *win) {
   // Offset for centering 8×8 icons inside SCROLLBAR_WIDTH×SCROLLBAR_WIDTH buttons
   int icon_off = (SCROLLBAR_WIDTH - ICON8_SIZE) / 2;
 
+  // Content height (client area minus scrollbar strips).
+  // For top-level windows t/s shift where the strips appear within the frame;
+  // for child windows t=s=0 so the formula degenerates to the old behaviour.
+  int content_h = win->frame.h - t - s;
+
   if (has_h && !h_merged) {
     win_sb_t *sb = &win->hscroll;
     int x  = base_x;
-    int y  = base_y + win->frame.h - SCROLLBAR_WIDTH;
+    int y  = base_y + content_h - SCROLLBAR_WIDTH;
     int bw = win->frame.w - (has_v ? SCROLLBAR_WIDTH : 0);
     // Track background
     fill_rect(get_sys_color(kColorWindowDarkBg), x, y, bw, SCROLLBAR_WIDTH);
@@ -429,7 +436,7 @@ void draw_builtin_scrollbars(window_t *win) {
     int y  = base_y;
     // In merged mode the horizontal bar lives in the status-bar row below the
     // content area, so the vertical bar spans the full content height.
-    int bh = win->frame.h - (has_h && !h_merged ? SCROLLBAR_WIDTH : 0);
+    int bh = content_h - (has_h && !h_merged ? SCROLLBAR_WIDTH : 0);
     // Track background
     fill_rect(get_sys_color(kColorWindowDarkBg), x, y, SCROLLBAR_WIDTH, bh);
     // Arrow buttons
@@ -458,7 +465,7 @@ void draw_builtin_scrollbars(window_t *win) {
   // Bottom-right corner: resize icon when both scrollbars are visible.
   if (has_h && !h_merged && has_v) {
     int cx = base_x + win->frame.w - SCROLLBAR_WIDTH;
-    int cy = base_y + win->frame.h - SCROLLBAR_WIDTH;
+    int cy = base_y + content_h - SCROLLBAR_WIDTH;
     fill_rect(get_sys_color(kColorWindowDarkBg), cx, cy, SCROLLBAR_WIDTH, SCROLLBAR_WIDTH);
     draw_icon8(icon8_resize_br, cx + icon_off, cy + icon_off, get_sys_color(kColorTextNormal));
   }

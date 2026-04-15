@@ -20,9 +20,9 @@ extern window_t *_captured;
 // Macros for coordinate conversion (platform logical → Orion logical)
 #define SCALE_POINT(x) ((x)/UI_WINDOW_SCALE)
 
-// Absolute screen origin of a window.  For top-level windows frame.x/y is
-// already screen-absolute.  For child windows frame.x/y is root-client-local,
-// so we must add the root window's screen origin to get the absolute position.
+// Absolute screen origin of the client area for a window.  For top-level windows
+// the client area starts at frame.y + titlebar_height().  For child windows
+// frame.x/y is root-client-local, so we add the root window's client origin.
 // This mirrors WinAPI ChildWindowFromPoint semantics: child procs always
 // receive coordinates in their own client coordinate system.
 static inline int win_abs_x(window_t *w) {
@@ -31,9 +31,8 @@ static inline int win_abs_x(window_t *w) {
   return root->frame.x + w->frame.x;
 }
 static inline int win_abs_y(window_t *w) {
-  if (!w->parent) return w->frame.y;
   window_t *root = get_root_window(w);
-  return root->frame.y + w->frame.y;
+  return root->frame.y + titlebar_height(root) + (w->parent ? w->frame.y : 0);
 }
 
 #define LOCAL_X(px, py, WIN) (SCALE_POINT(px) - win_abs_x(WIN) + (WIN)->scroll[0])
@@ -63,6 +62,7 @@ extern void track_mouse(window_t *win);
 extern void show_window(window_t *win, bool visible);
 extern void end_dialog(window_t *win, uint32_t code);
 extern void invalidate_window(window_t *win);
+extern int titlebar_height(window_t const *win);
 
 // Drag/resize state (shared with user/window.c for destroy_window cleanup)
 window_t *_dragging = NULL;
@@ -419,8 +419,11 @@ void dispatch_message(ui_event_t *msg) {
         }
         int lx = LOCAL_X(px, py, win);
         int ly = LOCAL_Y(px, py, win);
+        // Resize handle: use frame-relative y (from window top) so the check
+        // naturally maps to the bottom-right corner of the total frame.
+        int ly_frame = SCALE_POINT(py) - win->frame.y;
         if (lx >= win->frame.w - RESIZE_HANDLE &&
-            ly >= win->frame.h - RESIZE_HANDLE &&
+            ly_frame >= win->frame.h - RESIZE_HANDLE &&
             !win->parent &&
             !(win->flags&WINDOW_NORESIZE) &&
             win != _captured)
@@ -524,7 +527,8 @@ void dispatch_message(ui_event_t *msg) {
                  (win = find_window(SCALE_POINT(px), SCALE_POINT(py))))
       {
         if (win->disabled) return;
-        if (SCALE_POINT(py) >= win->frame.y || win == _captured) {
+        // Deliver to client area only if mouse is at or below the title bar / toolbar.
+        if (SCALE_POINT(py) >= win->frame.y + titlebar_height(win) || win == _captured) {
           int lx = LOCAL_X(px, py, win);
           int ly = LOCAL_Y(px, py, win);
           int wmsg = (msg->message == kEventLeftMouseUp)

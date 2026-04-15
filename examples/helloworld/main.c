@@ -78,7 +78,7 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   window_t *win = create_window(
     "Hello World Window",
     0,
-    MAKERECT(20, 20, 240, 180),
+    MAKERECT(20, 20, 240, 180 + TITLEBAR_HEIGHT),
     NULL,
     hello_window_proc,
     hinstance,
@@ -112,7 +112,7 @@ int main(int argc, char* argv[]) {
   window_t *main_window = create_window(
     "Hello World Window",          // Window title
     0,                             // Window flags
-    MAKERECT(20, 20, 240, 180),    // Position and size
+    MAKERECT(20, 20, 240, 180 + TITLEBAR_HEIGHT),  // Position and size (frame = whole window)
     NULL,                          // No parent window
     hello_window_proc,             // Window procedure
     0,                             // hinstance (standalone = 0)

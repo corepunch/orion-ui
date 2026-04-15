@@ -69,10 +69,13 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
       if (doc && doc->canvas_win)
         send_message(doc->canvas_win, kWindowMessageHScroll, wparam, lparam);
       return true;
-    case kWindowMessageResize:
-      if (doc && doc->canvas_win)
-        resize_window(doc->canvas_win, win->frame.w, win->frame.h);
+    case kWindowMessageResize: {
+      if (doc && doc->canvas_win) {
+        rect_t cr = get_client_rect(win);
+        resize_window(doc->canvas_win, cr.w, cr.h);
+      }
       return false;
+    }
     case kWindowMessageClose: {
       if (!doc) return false;
       if (doc->modified) {
@@ -121,10 +124,11 @@ form_doc_t *create_form_doc(int w, int h) {
   dwin->userdata = doc;
   doc->doc_win   = dwin;
 
-  // Canvas child window (owns the VSCROLL)
+  // Canvas child window (owns the VSCROLL) — sized to the document window's client area
+  rect_t cr = get_client_rect(dwin);
   window_t *cwin = create_window(
       "", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL,
-      MAKERECT(0, 0, DOC_WIN_W, DOC_WIN_H),
+      MAKERECT(0, 0, cr.w, cr.h),
       dwin, win_canvas_proc, 0, doc);
   cwin->notabstop = false;
   doc->canvas_win = cwin;

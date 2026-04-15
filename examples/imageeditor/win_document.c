@@ -21,12 +21,13 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
     case kWindowMessagePaint:
       fill_rect(get_sys_color(kColorWindowDarkBg), 0, 0, win->frame.w, win->frame.h);
       return false;
-    case kWindowMessageResize:
-      // Keep the canvas child window in sync with the resized document window
-      // using the framework's resize API instead of direct frame manipulation.
+    case kWindowMessageResize: {
+      // Keep the canvas child window in sync with the document window's client area.
+      rect_t cr = get_client_rect(win);
       if (doc && doc->canvas_win)
-        resize_window(doc->canvas_win, win->frame.w, win->frame.h);
+        resize_window(doc->canvas_win, cr.w, cr.h);
       return false;
+    }
     case kWindowMessageSetFocus:
       if (g_app && doc) g_app->active_doc = doc;
       return false;
@@ -123,7 +124,10 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
   if (max_win_w < 1) max_win_w = 1;
   if (max_win_h < 1) max_win_h = 1;
   int win_w = w < max_win_w ? w : max_win_w;
-  int win_h = h < max_win_h ? h : max_win_h;
+  // frame.h is the total window height (includes title bar + status bar).
+  // Compute non-client overhead for WINDOW_STATUSBAR to get correct total.
+  int nca_h = TITLEBAR_HEIGHT + STATUSBAR_HEIGHT;
+  int win_h = (h + nca_h) < max_win_h ? (h + nca_h) : max_win_h;
 
   // Wrap cascade position when we'd overflow the right edge
   if (g_app->next_x + win_w > screen_w) {
@@ -139,9 +143,11 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
   dwin->userdata = doc;
   doc->win = dwin;
 
+  // Canvas child fills the document window's client area.
+  rect_t cr = get_client_rect(dwin);
   window_t *cwin = create_window(
       "", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL,
-      MAKERECT(0, 0, win_w, win_h),
+      MAKERECT(0, 0, cr.w, cr.h),
       dwin, win_canvas_proc, 0, doc);
   cwin->notabstop = false;
   doc->canvas_win = cwin;
