@@ -24,6 +24,7 @@ typedef struct loaded_gem {
 
 static loaded_gem_t *gems_head = NULL;
 static unsigned g_gem_generation = 0;  // incremented on every load/unload
+static hinstance_t g_next_hinstance = 1;  // next available hinstance (1-based)
 
 // Returns the current generation counter so callers can detect changes.
 unsigned shell_gem_generation(void) { return g_gem_generation; }
@@ -56,6 +57,18 @@ bool shell_load_gem(const char *gem_path, int argc, char *argv[]) {
 
     printf("shell: loading %s v%s\n", iface->name, iface->version);
 
+    // Allocate a unique hinstance for this gem so its windows are associated
+    // with the app process and WINDOW_ALWAYSONTOP is scoped to the app.
+    if (g_next_hinstance == 0) {
+        fprintf(stderr, "shell: hinstance counter exhausted; cannot load gem '%s'\n",
+                gem_path);
+        axDynlibClose(handle);
+        return false;
+    }
+    hinstance_t hinstance = g_next_hinstance++;
+    if (g_next_hinstance == 0)
+        g_next_hinstance = 1;  // skip 0 (reserved for system/unowned) on wrap
+
     // Snapshot the tail of the window list so we can identify the first window
     // the gem creates.  create_window() appends to the tail, so we need to
     // find the node just after the current tail after init() returns.
@@ -64,7 +77,7 @@ bool shell_load_gem(const char *gem_path, int argc, char *argv[]) {
     for (window_t *w = windows; w; w = w->next)
         if (!w->next) { tail_before = w; break; }
 
-    if (!iface->init(argc, argv)) {
+    if (!iface->init(argc, argv, hinstance)) {
         fprintf(stderr, "shell: %s init() failed\n", iface->name);
         axDynlibClose(handle);
         return false;

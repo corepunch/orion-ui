@@ -33,7 +33,7 @@ void test_terminal_command_mode_creation(void) {
   
   // Create terminal with NULL lparam (command mode)
   rect_t frame = {10, 10, 300, 200};
-  window_t *terminal = create_window("Terminal Test", 0, &frame, NULL, win_terminal, NULL);
+  window_t *terminal = create_window("Terminal Test", 0, &frame, NULL, win_terminal, 0, NULL);
   
   ASSERT_NOT_NULL(terminal);
   
@@ -56,7 +56,7 @@ void test_terminal_help_command(void) {
   test_env_init();
   
   rect_t frame = {10, 10, 300, 200};
-  window_t *terminal = create_window("Terminal", 0, &frame, NULL, win_terminal, NULL);
+  window_t *terminal = create_window("Terminal", 0, &frame, NULL, win_terminal, 0, NULL);
   ASSERT_NOT_NULL(terminal);
   
   // Send "help" command
@@ -84,7 +84,7 @@ void test_terminal_clear_command(void) {
   test_env_init();
   
   rect_t frame = {10, 10, 300, 200};
-  window_t *terminal = create_window("Terminal", 0, &frame, NULL, win_terminal, NULL);
+  window_t *terminal = create_window("Terminal", 0, &frame, NULL, win_terminal, 0, NULL);
   ASSERT_NOT_NULL(terminal);
   
   // Send some text first
@@ -118,7 +118,7 @@ void test_terminal_exit_command(void) {
   test_env_init();
   
   rect_t frame = {10, 10, 300, 200};
-  window_t *terminal = create_window("Terminal", 0, &frame, NULL, win_terminal, NULL);
+  window_t *terminal = create_window("Terminal", 0, &frame, NULL, win_terminal, 0, NULL);
   ASSERT_NOT_NULL(terminal);
   
   // Send exit command
@@ -144,7 +144,7 @@ void test_terminal_unknown_command(void) {
   test_env_init();
   
   rect_t frame = {10, 10, 300, 200};
-  window_t *terminal = create_window("Terminal", 0, &frame, NULL, win_terminal, NULL);
+  window_t *terminal = create_window("Terminal", 0, &frame, NULL, win_terminal, 0, NULL);
   ASSERT_NOT_NULL(terminal);
   
   // Send unknown command
@@ -173,7 +173,7 @@ void test_terminal_lua_simple_script(void) {
   // Create terminal with Lua script path (relative to where tests are run)
   const char *script_path = "tests/test_simple.lua";
   rect_t frame = {10, 10, 300, 200};
-  window_t *terminal = create_window("Terminal Lua", 0, &frame, NULL, win_terminal, (void*)script_path);
+  window_t *terminal = create_window("Terminal Lua", 0, &frame, NULL, win_terminal, 0, (void*)script_path);
   ASSERT_NOT_NULL(terminal);
   
   // Get buffer content
@@ -200,7 +200,7 @@ void test_terminal_lua_interactive_script(void) {
   // Create terminal with interactive Lua script (relative to where tests are run)
   const char *script_path = "tests/test_interactive.lua";
   rect_t frame = {10, 10, 300, 200};
-  window_t *terminal = create_window("Terminal Interactive", 0, &frame, NULL, win_terminal, (void*)script_path);
+  window_t *terminal = create_window("Terminal Interactive", 0, &frame, NULL, win_terminal, 0, (void*)script_path);
   ASSERT_NOT_NULL(terminal);
   
   // Get initial buffer content
@@ -249,7 +249,7 @@ void test_terminal_lua_error_handling(void) {
   // Try to load non-existent script (relative path)
   const char *script_path = "tests/nonexistent.lua";
   rect_t frame = {10, 10, 300, 200};
-  window_t *terminal = create_window("Terminal Error", 0, &frame, NULL, win_terminal, (void*)script_path);
+  window_t *terminal = create_window("Terminal Error", 0, &frame, NULL, win_terminal, 0, (void*)script_path);
   ASSERT_NOT_NULL(terminal);
   
   // Get buffer content
@@ -270,7 +270,7 @@ void test_terminal_multiple_commands(void) {
   test_env_init();
   
   rect_t frame = {10, 10, 300, 200};
-  window_t *terminal = create_window("Terminal", 0, &frame, NULL, win_terminal, NULL);
+  window_t *terminal = create_window("Terminal", 0, &frame, NULL, win_terminal, 0, NULL);
   ASSERT_NOT_NULL(terminal);
   
   // Send help command
@@ -300,7 +300,7 @@ void test_terminal_backspace(void) {
   test_env_init();
   
   rect_t frame = {10, 10, 300, 200};
-  window_t *terminal = create_window("Terminal", 0, &frame, NULL, win_terminal, NULL);
+  window_t *terminal = create_window("Terminal", 0, &frame, NULL, win_terminal, 0, NULL);
   ASSERT_NOT_NULL(terminal);
   
   // Type "helXX" then backspace twice to get "hel"
@@ -331,7 +331,7 @@ void test_terminal_buffer_exact_match(void) {
   // Use relative path for portability
   const char *script_path = "tests/test_simple.lua";
   rect_t frame = {10, 10, 300, 200};
-  window_t *terminal = create_window("Terminal", 0, &frame, NULL, win_terminal, (void*)script_path);
+  window_t *terminal = create_window("Terminal", 0, &frame, NULL, win_terminal, 0, (void*)script_path);
   ASSERT_NOT_NULL(terminal);
   
   const char *buffer = terminal_get_buffer(terminal);

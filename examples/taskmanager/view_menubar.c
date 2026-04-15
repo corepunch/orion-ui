@@ -274,7 +274,7 @@ void create_menubar(void) {
       "menubar",
       WINDOW_NOTITLE | WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
       MAKERECT(0, 0, sw, MENUBAR_HEIGHT),
-      NULL, app_menubar_proc, NULL);
+      NULL, app_menubar_proc, g_app->hinstance, NULL);
   send_message(mb, kMenuBarMessageSetMenus,
                (uint32_t)kNumMenus, (void *)kMenus);
   show_window(mb, true);

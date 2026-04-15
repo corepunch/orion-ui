@@ -22,7 +22,7 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 
 void create_button(window_t *tray, window_t *window) {
   rect_t r = { tray->cursor_pos, 2, 0, 12 };
-  window_t *button = create_window(window->title, 0, &r, tray, win_button, window);
+  window_t *button = create_window(window->title, 0, &r, tray, win_button, 0, window);
   tray->cursor_pos += button->frame.w + SPACING;
   button->userdata = window;
 }

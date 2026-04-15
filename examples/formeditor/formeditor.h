@@ -126,6 +126,7 @@ typedef struct {
   form_doc_t  *doc;
   window_t    *menubar_win;
   window_t    *tool_win;
+  hinstance_t  hinstance;  // owning app instance
   int          current_tool;
   accel_table_t *accel;
 } app_state_t;

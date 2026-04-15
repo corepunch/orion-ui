@@ -14,6 +14,12 @@ typedef struct rect_s rect_t;
 typedef uint32_t flags_t;
 typedef uint32_t result_t;
 
+// Application instance handle (analogous to WinAPI HINSTANCE).
+// Each gem/app process receives a unique hinstance_t when loaded.
+// Windows tagged with the same non-zero hinstance belong to the same app.
+// hinstance == 0 means system/unowned (shell, framework, tests).
+typedef uint32_t hinstance_t;
+
 // Window procedure callback type
 typedef result_t (*winproc_t)(window_t *, uint32_t, uint32_t, void *);
 
@@ -108,6 +114,7 @@ struct window_s {
   uint32_t id;
   uint16_t scroll[2];
   uint32_t flags;
+  hinstance_t hinstance;  // owning app instance (0 = system/unowned)
   winproc_t proc;
   uint32_t child_id;
   bool hovered;
@@ -136,10 +143,12 @@ struct window_s {
 
 // Window management functions
 window_t *create_window(char const *title, flags_t flags, const rect_t* frame, 
-                        window_t *parent, winproc_t proc, void *param);
+                        window_t *parent, winproc_t proc, hinstance_t hinstance,
+                        void *param);
 window_t *create_window2(windef_t const *def, rect_t const *r, window_t *parent);
 window_t *create_window_from_form(form_def_t const *def, int x, int y,
-                                  window_t *parent, winproc_t proc, void *lparam);
+                                  window_t *parent, winproc_t proc,
+                                  hinstance_t hinstance, void *lparam);
 void *allocate_window_data(window_t *win, size_t size);
 void show_window(window_t *win, bool visible);
 void destroy_window(window_t *win);

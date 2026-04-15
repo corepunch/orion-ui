@@ -13,12 +13,13 @@
 // gem_init / gem_shutdown (works standalone and as a .gem)
 // ============================================================
 
-bool gem_init(int argc, char *argv[]) {
+bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   (void)argc; (void)argv;
 
   g_app = app_init();
   if (!g_app) return false;
 
+  g_app->hinstance = hinstance;
   // Seed the app with 20 example tasks spread across priorities and statuses.
   {
     struct { const char *title; const char *desc; task_priority_t prio; task_status_t status; } seed[] = {
@@ -65,7 +66,7 @@ bool gem_init(int argc, char *argv[]) {
       MAKERECT(MAIN_WIN_X, MAIN_WIN_Y,
                sw - MAIN_WIN_X - 4,
                sh - MAIN_WIN_Y - 4),
-      NULL, main_win_proc, NULL);
+      NULL, main_win_proc, hinstance, NULL);
   // Note: g_app->main_win is set inside main_win_proc's kWindowMessageCreate
   // so that app_update_status() works correctly during initial window setup.
   show_window(mw, true);
@@ -103,7 +104,7 @@ int main(int argc, char *argv[]) {
                         SCREEN_W, SCREEN_H))
     return 1;
 
-  if (!gem_init(argc, argv)) {
+  if (!gem_init(argc, argv, 0)) {
     ui_shutdown_graphics();
     return 1;
   }

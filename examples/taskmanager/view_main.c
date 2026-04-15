@@ -32,7 +32,7 @@ result_t main_win_proc(window_t *win, uint32_t msg,
           "tasks",
           WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL,
           MAKERECT(0, 0, win->frame.w, win->frame.h),
-          win, tasklist_proc, NULL);
+          win, tasklist_proc, 0, NULL);
       tasklist_refresh(g_app->list_win);
       app_update_status(g_app);
       return true;

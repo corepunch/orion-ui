@@ -322,7 +322,7 @@ static void open_popup(window_t *mb_win, menubar_data_t *data, int idx) {
       "",
       WINDOW_NOTITLE | WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
       MAKERECT(px, py, pw, ph),
-      NULL, popup_proc, pd);
+      NULL, popup_proc, mb_win->hinstance, pd);
   popup->userdata = pd;
   show_window(popup, true);
   data->open_popup = popup;

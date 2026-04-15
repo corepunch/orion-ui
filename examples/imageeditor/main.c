@@ -58,7 +58,7 @@ static const accel_t kAccelEntries[] = {
 // Application init
 // ============================================================
 
-static void create_app_windows(void) {
+static void create_app_windows(hinstance_t hinstance) {
 #ifndef BUILD_AS_GEM
   int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
   // Standalone: own the menu bar window.
@@ -66,7 +66,7 @@ static void create_app_windows(void) {
       "menubar",
       WINDOW_NOTITLE | WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
       MAKERECT(0, 0, sw, MENUBAR_HEIGHT),
-      NULL, editor_menubar_proc, NULL);
+      NULL, editor_menubar_proc, hinstance, NULL);
   send_message(mb, kMenuBarMessageSetMenus,
                (uint32_t)kNumMenus, (void *)kMenus);
   show_window(mb, true);
@@ -77,7 +77,7 @@ static void create_app_windows(void) {
       "Tools",
       WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE | WINDOW_TOOLBAR,
       MAKERECT(PALETTE_WIN_X, PALETTE_WIN_Y, PALETTE_WIN_W, TOOL_WIN_H),
-      NULL, win_tool_palette_proc, NULL);
+      NULL, win_tool_palette_proc, hinstance, NULL);
   show_window(tp, true);
   g_app->tool_win = tp;
 
@@ -85,7 +85,7 @@ static void create_app_windows(void) {
       "Colors",
       WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
       MAKERECT(COLOR_WIN_X, COLOR_WIN_Y, COLOR_WIN_W, COLOR_WIN_H),
-      NULL, win_color_palette_proc, NULL);
+      NULL, win_color_palette_proc, hinstance, NULL);
   show_window(cp, true);
   g_app->color_win = cp;
 }
@@ -96,12 +96,13 @@ static void create_app_windows(void) {
 
 static const char *image_editor_types[] = { ".png", ".bmp", NULL };
 
-bool gem_init(int argc, char *argv[]) {
+bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   (void)argc; (void)argv;
   g_app = calloc(1, sizeof(app_state_t));
   if (!g_app) return false;
 
   g_app->current_tool = ID_TOOL_SELECT;
+  g_app->hinstance    = hinstance;
   g_app->fg_color = kPalette[4];
   g_app->bg_color = kPalette[0];
   g_app->next_x   = DOC_START_X;
@@ -111,7 +112,7 @@ bool gem_init(int argc, char *argv[]) {
 
   srand((unsigned int)time(NULL));
 
-  create_app_windows();
+  create_app_windows(hinstance);
 
   g_app->accel = load_accelerators(kAccelEntries,
                                    (int)(sizeof(kAccelEntries)/sizeof(kAccelEntries[0])));
@@ -168,7 +169,7 @@ int main(int argc, char *argv[]) {
   if (!ui_init_graphics(UI_INIT_DESKTOP, "Orion Image Editor", SCREEN_W, SCREEN_H))
     return 1;
 
-  if (!gem_init(argc, argv)) {
+  if (!gem_init(argc, argv, 0)) {
     ui_shutdown_graphics();
     return 1;
   }

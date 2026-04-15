@@ -209,6 +209,7 @@ typedef struct {
   window_t      *menubar_win;
   window_t      *tool_win;
   window_t      *color_win;
+  hinstance_t    hinstance;  // owning app instance
   int            current_tool;
   uint32_t       fg_color;
   uint32_t       bg_color;

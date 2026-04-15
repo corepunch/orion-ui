@@ -205,7 +205,7 @@ void test_close_button_y_excludes_toolbar(void) {
     // So the title bar strip is [22, 34) and the toolbar is [34, 100).
     rect_t frame = {10, 100, 44, 50};
     window_t *win = create_window("Tools", WINDOW_TOOLBAR | WINDOW_NORESIZE,
-                                  &frame, NULL, noop_proc, NULL);
+                                  &frame, NULL, noop_proc, 0, NULL);
     ASSERT_NOT_NULL(win);
 
     toolbar_button_t buttons[] = {

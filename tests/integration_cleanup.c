@@ -13,11 +13,11 @@ result_t test_window_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lp
   switch (msg) {
     case kWindowMessageCreate:
       // Create some child windows to test cleanup
-      create_window("Test Button", WINDOW_NOTITLE, MAKERECT(10, 10, 100, 30), win, win_button, NULL);
-      create_window("Test Checkbox", WINDOW_NOTITLE, MAKERECT(10, 50, 100, 20), win, win_checkbox, NULL);
+      create_window("Test Button", WINDOW_NOTITLE, MAKERECT(10, 10, 100, 30), win, win_button, 0, NULL);
+      create_window("Test Checkbox", WINDOW_NOTITLE, MAKERECT(10, 50, 100, 20), win, win_checkbox, 0, NULL);
       
       // Create a combobox which allocates userdata
-      window_t *combo = create_window("Test Combo", WINDOW_NOTITLE, MAKERECT(10, 80, 100, 30), win, win_combobox, NULL);
+      window_t *combo = create_window("Test Combo", WINDOW_NOTITLE, MAKERECT(10, 80, 100, 30), win, win_combobox, 0, NULL);
       send_message(combo, kComboBoxMessageAddString, 0, "Item 1");
       send_message(combo, kComboBoxMessageAddString, 0, "Item 2");
       
@@ -78,6 +78,7 @@ int main(int argc, char* argv[]) {
     MAKERECT(100, 100, 320, 200),
     NULL,
     test_window_proc,
+    0,
     NULL
   );
 

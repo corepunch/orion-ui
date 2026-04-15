@@ -71,13 +71,13 @@ void test_dialog_cancel_no_crash(void) {
     // Create the dialog window (child-less root, like show_dialog would).
     rect_t dlg_frame = {50, 50, 200, 150};
     window_t *dlg = create_window("Test Dialog", WINDOW_DIALOG | WINDOW_NOTITLE,
-                                  &dlg_frame, NULL, dialog_proc, NULL);
+                                  &dlg_frame, NULL, dialog_proc, 0, NULL);
     ASSERT_NOT_NULL(dlg);
 
     // Create the Cancel button as a child of the dialog.
     rect_t btn_frame = {70, 110, 50, 20};
     window_t *cancel_btn = create_window("Cancel", 0, &btn_frame,
-                                         dlg, win_button, NULL);
+                                         dlg, win_button, 0, NULL);
     ASSERT_NOT_NULL(cancel_btn);
 
     int cx = btn_frame.x + btn_frame.w / 2;
@@ -140,7 +140,7 @@ void test_regular_button_click_unaffected(void) {
     ASSERT_NOT_NULL(parent);
 
     rect_t btn_frame = {10, 10, 60, 20};
-    window_t *btn = create_window("OK", 0, &btn_frame, parent, win_button, NULL);
+    window_t *btn = create_window("OK", 0, &btn_frame, parent, win_button, 0, NULL);
     ASSERT_NOT_NULL(btn);
 
     int cx = btn_frame.x + btn_frame.w / 2;
@@ -175,7 +175,7 @@ void test_end_dialog_sets_return_code(void) {
     rect_t dlg_frame = {50, 50, 200, 150};
     window_t *dlg = create_window("ReturnCode Dialog",
                                   WINDOW_DIALOG | WINDOW_NOTITLE,
-                                  &dlg_frame, NULL, dialog_proc, NULL);
+                                  &dlg_frame, NULL, dialog_proc, 0, NULL);
     ASSERT_NOT_NULL(dlg);
 
     // Simulate what show_dialog does: store the result pointer in userdata2.
@@ -206,9 +206,9 @@ void test_end_dialog_reentrancy(void) {
     rect_t f2 = {20, 20, 200, 150};
 
     window_t *dlg1 = create_window("Outer", WINDOW_DIALOG | WINDOW_NOTITLE,
-                                   &f1, NULL, dialog_proc, NULL);
+                                   &f1, NULL, dialog_proc, 0, NULL);
     window_t *dlg2 = create_window("Inner", WINDOW_DIALOG | WINDOW_NOTITLE,
-                                   &f2, NULL, dialog_proc, NULL);
+                                   &f2, NULL, dialog_proc, 0, NULL);
     ASSERT_NOT_NULL(dlg1);
     ASSERT_NOT_NULL(dlg2);
 

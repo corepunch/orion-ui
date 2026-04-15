@@ -22,7 +22,7 @@ void test_terminal_comprehensive_stdout(void) {
   // Create terminal with comprehensive test script
   const char *script_path = "tests/test_stdout_comprehensive.lua";
   rect_t frame = {10, 10, 300, 200};
-  window_t *terminal = create_window("Terminal", 0, &frame, NULL, win_terminal, (void*)script_path);
+  window_t *terminal = create_window("Terminal", 0, &frame, NULL, win_terminal, 0, (void*)script_path);
   ASSERT_NOT_NULL(terminal);
   
   // Get buffer content

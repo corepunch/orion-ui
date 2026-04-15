@@ -117,7 +117,7 @@ form_doc_t *create_form_doc(int w, int h) {
       "Untitled",
       WINDOW_STATUSBAR | WINDOW_HSCROLL,
       MAKERECT(DOC_START_X, DOC_START_Y, DOC_WIN_W, DOC_WIN_H),
-      NULL, doc_win_proc, NULL);
+      NULL, doc_win_proc, g_app->hinstance, NULL);
   dwin->userdata = doc;
   doc->doc_win   = dwin;
 
@@ -125,7 +125,7 @@ form_doc_t *create_form_doc(int w, int h) {
   window_t *cwin = create_window(
       "", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL,
       MAKERECT(0, 0, DOC_WIN_W, DOC_WIN_H),
-      dwin, win_canvas_proc, doc);
+      dwin, win_canvas_proc, 0, doc);
   cwin->notabstop = false;
   doc->canvas_win = cwin;
 
@@ -416,17 +416,17 @@ static result_t about_proc(window_t *win, uint32_t msg,
       // Info labels
       create_window("Orion Form Editor", WINDOW_NOTITLE | WINDOW_NOFILL,
           MAKERECT(8, 8, ABOUT_W - 16, CONTROL_HEIGHT),
-          win, win_label, NULL);
+          win, win_label, 0, NULL);
       create_window("Version 1.0", WINDOW_NOTITLE | WINDOW_NOFILL,
           MAKERECT(8, 22, ABOUT_W - 16, CONTROL_HEIGHT),
-          win, win_label, (void *)(uintptr_t)kColorTextDisabled);
+          win, win_label, 0, (void *)(uintptr_t)kColorTextDisabled);
       create_window("VB3-inspired form designer", WINDOW_NOTITLE | WINDOW_NOFILL,
           MAKERECT(8, 36, ABOUT_W - 16, CONTROL_HEIGHT),
-          win, win_label, (void *)(uintptr_t)kColorTextDisabled);
+          win, win_label, 0, (void *)(uintptr_t)kColorTextDisabled);
       // OK button
       create_window("OK", BUTTON_DEFAULT,
           MAKERECT(ABOUT_W - 54, ABOUT_H - 17, 50, BUTTON_HEIGHT),
-          win, win_button, NULL);
+          win, win_button, 0, NULL);
       return true;
     }
     case kWindowMessageCommand:
@@ -511,7 +511,7 @@ static result_t props_proc(window_t *win, uint32_t msg,
                ps->el->x, ps->el->y, ps->el->w, ps->el->h);
       create_window(info, WINDOW_NOTITLE | WINDOW_NOFILL,
           MAKERECT(4, PROPS_INFO_Y, PROPS_W - 8, CONTROL_HEIGHT),
-          win, win_label, (void *)(uintptr_t)kColorTextDisabled);
+          win, win_label, 0, (void *)(uintptr_t)kColorTextDisabled);
 
       // Pre-populate caption/name edits from the element.
       dialog_push(win, ps->el, k_props_bindings, ARRAY_LEN(k_props_bindings));
