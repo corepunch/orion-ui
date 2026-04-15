@@ -35,8 +35,7 @@ void tasklist_refresh(window_t *list_win) {
 
     // Build display string: "Title  [Priority] Status"
     char display[256];
-    snprintf(display, sizeof(display), "#%d  %s  [%s]  %s",
-             t->id,
+    snprintf(display, sizeof(display), "%s  [%s]  %s",
              t->title,
              priority_to_string(t->priority),
              status_to_string(t->status));

@@ -420,9 +420,8 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
           }
           if (!(win->flags&WINDOW_NOTITLE)) {
             draw_window_controls(win);
-            bool active = (_focused == win);
             draw_text_small(win->title, frame->x+2, window_title_bar_y(win),
-                            get_sys_color(active ? kColorActiveTitlebarText : kColorInactiveTitlebarText));
+                            get_sys_color(window_has_focus(win) ? kColorActiveTitlebarText : kColorInactiveTitlebarText));
           }
           if (win->flags&WINDOW_TOOLBAR) {
             int bsz = (win->toolbar_btn_size > 0) ? win->toolbar_btn_size : TB_SPACING;
