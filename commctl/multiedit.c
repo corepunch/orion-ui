@@ -140,8 +140,8 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       // Focus ring (matches win_textedit style).
       fill_rect(focused ? get_sys_color(kColorFocusRing)
                         : get_sys_color(kColorWindowBg),
-                win->frame.x - 2, win->frame.y - 2,
-                win->frame.w + 4, win->frame.h + 4);
+                win->frame.x - 1, win->frame.y - 1,
+                win->frame.w + 2, win->frame.h + 2);
 
       // Inset bevel border.
       draw_button(&win->frame, 1, 1, true);

@@ -21,7 +21,7 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       win->frame.h = MAX(win->frame.h, 13);
       return true;
     case kWindowMessagePaint:
-      fill_rect(_focused == win?get_sys_color(kColorFocusRing):get_sys_color(kColorWindowBg), win->frame.x-2, win->frame.y-2, win->frame.w+4, win->frame.h+4);
+      fill_rect(_focused == win?get_sys_color(kColorFocusRing):get_sys_color(kColorWindowBg), win->frame.x-1, win->frame.y-1, win->frame.w+2, win->frame.h+2);
       draw_button(&win->frame, 1, 1, true);
       draw_text_small(win->title, win->frame.x+PADDING, win->frame.y+PADDING, get_sys_color(kColorTextNormal));
       if (_focused == win && win->editing) {
