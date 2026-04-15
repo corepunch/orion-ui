@@ -11,7 +11,7 @@ static bool show_file_picker(window_t *parent, bool save_mode,
   ofn.hwndOwner    = parent;
   ofn.lpstrFile    = out_path;
   ofn.nMaxFile     = (uint32_t)out_sz;
-  ofn.lpstrFilter  = "PNG Files\0*.png\0All Files\0*.*\0";
+  ofn.lpstrFilter  = "Image Files\0*.png;*.jpg;*.jpeg;*.bmp\0PNG Files\0*.png\0JPEG Files\0*.jpg;*.jpeg\0All Files\0*.*\0";
   ofn.nFilterIndex = 1;
   ofn.Flags        = save_mode ? OFN_OVERWRITEPROMPT : OFN_FILEMUSTEXIST;
 

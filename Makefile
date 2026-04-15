@@ -176,14 +176,14 @@ share: | $(SHARE_DIR)
 	@cp share/icon_sheet_16x16.png $(SHARE_DIR)/orion/
 	@for dir in examples/*/; do \
 	  name=$$(basename "$$dir"); \
-	  assets=$$(find "$$dir" -maxdepth 1 \( -name "*.png" -o -name "*.ttf" \) 2>/dev/null); \
+	  assets=$$(find "$$dir" -maxdepth 1 \( -name "*.png" -o -name "*.ttf" -o -name "*.jpg" -o -name "*.jpeg" \) 2>/dev/null); \
 	  if [ -n "$$assets" ]; then \
 	    mkdir -p $(SHARE_DIR)/$$name; \
 	    echo "$$assets" | tr '\n' '\0' | xargs -0 -I{} cp {} $(SHARE_DIR)/$$name/; \
 	  fi; \
 	  if [ -d "$${dir}share" ]; then \
 	    mkdir -p $(SHARE_DIR)/$$name; \
-	    find "$${dir}share" -maxdepth 1 \( -name "*.png" -o -name "*.ttf" \) 2>/dev/null | \
+	    find "$${dir}share" -maxdepth 1 \( -name "*.png" -o -name "*.ttf" -o -name "*.jpg" -o -name "*.jpeg" \) 2>/dev/null | \
 	      tr '\n' '\0' | xargs -0 -I{} cp {} $(SHARE_DIR)/$$name/ 2>/dev/null || true; \
 	  fi; \
 	done

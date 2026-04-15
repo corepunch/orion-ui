@@ -45,6 +45,17 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
     send_message(g_app->menubar_win, kMenuBarMessageSetAccelerators, 0, g_app->accel);
 
   create_form_doc(FORM_DEFAULT_W, FORM_DEFAULT_H);
+
+  // Show splash screen if the image is available.
+#ifdef SHAREDIR
+  {
+    char splash_path[512];
+    snprintf(splash_path, sizeof(splash_path), "%s/" SHAREDIR "/splash.jpg",
+             ui_get_exe_dir());
+    show_splash_screen(splash_path, hinstance);
+  }
+#endif
+
   return true;
 }
 
