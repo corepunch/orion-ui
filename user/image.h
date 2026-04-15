@@ -5,7 +5,9 @@
 #include <stdbool.h>
 
 // Load an image file into a heap-allocated RGBA pixel buffer.
-// Supports PNG, JPEG, and BMP via stb_image.
+// Supports PNG, JPEG (.jpg and .jpeg), and BMP via stb_image.
+// The image type is determined by the file's magic bytes (first few bytes),
+// not by the filename extension, so renaming a file does not affect loading.
 // Returns NULL on failure; on failure *out_w and *out_h are set to 0.
 // out_w and out_h must not be NULL.
 // Release the returned buffer with image_free().

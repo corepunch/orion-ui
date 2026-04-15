@@ -83,7 +83,7 @@ static void create_app_windows(hinstance_t hinstance) {
 // .gem entry points
 // ============================================================
 
-static const char *image_editor_types[] = { ".png", ".bmp", NULL };
+static const char *image_editor_types[] = { ".png", ".bmp", ".jpg", ".jpeg", NULL };
 
 bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   (void)argc; (void)argv;
@@ -109,6 +109,18 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
     send_message(g_app->menubar_win, kMenuBarMessageSetAccelerators, 0, g_app->accel);
 
   create_document(NULL, CANVAS_W, CANVAS_H);
+
+  // Show splash screen if the image is available.
+#ifdef SHAREDIR
+  {
+    char splash_path[4096];
+    int path_len = snprintf(splash_path, sizeof(splash_path), "%s/" SHAREDIR "/splash.jpg",
+             ui_get_exe_dir());
+    if (path_len >= 0 && (size_t)path_len < sizeof(splash_path))
+      show_splash_screen(splash_path, hinstance);
+  }
+#endif
+
   return true;
 }
 

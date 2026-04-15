@@ -40,6 +40,12 @@ result_t win_terminal(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
 result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_scrollbar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 
+// Splash screen — displays an image in a borderless, always-on-top window that
+// closes when clicked.  image_path is detected by content (magic bytes), so
+// .jpg, .jpeg, .png, and .bmp files are all accepted regardless of extension.
+// Returns the window pointer (non-modal), or NULL if the image cannot be loaded.
+window_t *show_splash_screen(const char *image_path, hinstance_t hinstance);
+
 // Terminal API functions
 const char* terminal_get_buffer(window_t *win);
 
