@@ -252,6 +252,90 @@ static bool sb_try_scroll(window_t *win, win_sb_t *sb, uint32_t scroll_msg, int 
   return true;
 }
 
+// Update the scroll position while a thumb drag is in progress.
+// pos   — current mouse position along the scroll axis, relative to the scrollbar strip origin
+//         (i.e. cx - h_x_min for hscroll; cy for vscroll).
+// track — total track length in pixels for this axis.
+static void sb_handle_drag_move(window_t *win, win_sb_t *sb, uint32_t scroll_msg,
+                                 int pos, int track) {
+  int eff_track = track - 2 * SCROLLBAR_WIDTH;
+  int pos_eff   = (eff_track > 0) ? pos - SCROLLBAR_WIDTH : pos;
+  int tl        = builtin_sb_thumb_len_msg(sb, eff_track > 0 ? eff_track : track);
+  int tp        = (eff_track > 0 ? eff_track : track) - tl;
+  int tr        = sb->max_val - sb->min_val - sb->page;
+  if (tp > 0 && tr > 0) {
+    sb_try_scroll(win, sb, scroll_msg,
+                  sb->drag_start_pos + (pos_eff - sb->drag_start_mouse) * tr / tp);
+  }
+}
+
+// Dispatch a mouse-down click at position pos within a scrollbar track of total length track.
+// Fires SB_ARROW_STEP scrolls for arrow-button hits, starts a thumb drag, or scrolls by page.
+static void sb_handle_track_click(window_t *win, win_sb_t *sb, uint32_t scroll_msg,
+                                   int pos, int track) {
+  if (track >= 2 * SCROLLBAR_WIDTH) {
+    if (pos < SCROLLBAR_WIDTH) {
+      sb_try_scroll(win, sb, scroll_msg, sb->pos - SB_ARROW_STEP);
+      return;
+    }
+    if (pos >= track - SCROLLBAR_WIDTH) {
+      sb_try_scroll(win, sb, scroll_msg, sb->pos + SB_ARROW_STEP);
+      return;
+    }
+    int eff_track = track - 2 * SCROLLBAR_WIDTH;
+    int pos_eff   = pos - SCROLLBAR_WIDTH;
+    if (eff_track > 0) {
+      int tl = builtin_sb_thumb_len_msg(sb, eff_track);
+      int to = builtin_sb_thumb_off_msg(sb, eff_track, tl);
+      if (pos_eff >= to && pos_eff < to + tl) {
+        sb->dragging         = true;
+        sb->drag_start_mouse = pos_eff;
+        sb->drag_start_pos   = sb->pos;
+        set_capture(win);
+      } else {
+        sb_try_scroll(win, sb, scroll_msg,
+                      sb->pos + (pos_eff < to ? -sb->page : sb->page));
+      }
+    }
+  } else {
+    // Narrow track — no room for arrow buttons; plain thumb behaviour
+    int tl = builtin_sb_thumb_len_msg(sb, track);
+    int to = builtin_sb_thumb_off_msg(sb, track, tl);
+    if (pos >= to && pos < to + tl) {
+      sb->dragging         = true;
+      sb->drag_start_mouse = pos;
+      sb->drag_start_pos   = sb->pos;
+      set_capture(win);
+    } else {
+      sb_try_scroll(win, sb, scroll_msg,
+                    sb->pos + (pos < to ? -sb->page : sb->page));
+    }
+  }
+}
+
+// Draw a single toolbar button at rect r.
+// strip — non-NULL when the window has a custom sprite sheet; NULL uses sysicon draw_icon16.
+static void draw_toolbar_button_at(rect_t const *r, int bsz,
+                                    toolbar_button_t const *but,
+                                    bitmap_strip_t const *strip) {
+  bool pressed = but->pressed || but->active;
+  int  px      = pressed ? 1 : 0;
+  if (strip) {
+    draw_button(&(rect_t){r->x, r->y, bsz, bsz}, 1, 1, pressed);
+    if (strip->cols > 0) {
+      int scol = but->icon % strip->cols;
+      int srow = but->icon / strip->cols;
+      draw_sprite_region((int)strip->tex, r->x + 2 + px, r->y + 2 + px,
+                         strip->icon_w, strip->icon_h,
+                         SPRITE_REGION(scol, srow, strip), 1.0f);
+    }
+  } else {
+    draw_button(&(rect_t){r->x, r->y, bsz, bsz - 2}, 1, 1, pressed);
+    draw_icon16(but->icon, r->x + 2 + px + 1, r->y + 2 + px,
+                get_sys_color(kColorTextNormal));
+  }
+}
+
 // Handle mouse events for a window's built-in scrollbars.
 // Returns true if the event was consumed by a scrollbar.
 static bool handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wparam) {
@@ -286,39 +370,17 @@ static bool handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wpar
   if (msg == kWindowMessageMouseMove || msg == kWindowMessageLeftButtonUp) {
     if (win->hscroll.dragging) {
       int cx, cy; sb_local_coords(win, wparam, &cx, &cy); (void)cy;
-      // Effective track between arrow buttons
-      int eff_track = h_track - 2 * SCROLLBAR_WIDTH;
-      int lx_eff = (eff_track > 0) ? (cx - h_x_min) - SCROLLBAR_WIDTH : (cx - h_x_min);
-      int tl  = builtin_sb_thumb_len_msg(&win->hscroll, eff_track > 0 ? eff_track : h_track);
-      if (msg == kWindowMessageMouseMove) {
-        int tp = (eff_track > 0 ? eff_track : h_track) - tl;
-        int tr = win->hscroll.max_val - win->hscroll.min_val - win->hscroll.page;
-        if (tp > 0 && tr > 0) {
-          sb_try_scroll(win, &win->hscroll, kWindowMessageHScroll,
-              win->hscroll.drag_start_pos + (lx_eff - win->hscroll.drag_start_mouse) * tr / tp);
-        }
-      } else {
-        win->hscroll.dragging = false;
-        set_capture(NULL);
-      }
+      if (msg == kWindowMessageMouseMove)
+        sb_handle_drag_move(win, &win->hscroll, kWindowMessageHScroll,
+                            cx - h_x_min, h_track);
+      else { win->hscroll.dragging = false; set_capture(NULL); }
       return true;
     }
     if (win->vscroll.dragging) {
       int cx, cy; sb_local_coords(win, wparam, &cx, &cy); (void)cx;
-      int eff_track = v_track - 2 * SCROLLBAR_WIDTH;
-      int cy_eff    = (eff_track > 0) ? cy - SCROLLBAR_WIDTH : cy;
-      int tl    = builtin_sb_thumb_len_msg(&win->vscroll, eff_track > 0 ? eff_track : v_track);
-      if (msg == kWindowMessageMouseMove) {
-        int tp = (eff_track > 0 ? eff_track : v_track) - tl;
-        int tr = win->vscroll.max_val - win->vscroll.min_val - win->vscroll.page;
-        if (tp > 0 && tr > 0) {
-          sb_try_scroll(win, &win->vscroll, kWindowMessageVScroll,
-              win->vscroll.drag_start_pos + (cy_eff - win->vscroll.drag_start_mouse) * tr / tp);
-        }
-      } else {
-        win->vscroll.dragging = false;
-        set_capture(NULL);
-      }
+      if (msg == kWindowMessageMouseMove)
+        sb_handle_drag_move(win, &win->vscroll, kWindowMessageVScroll, cy, v_track);
+      else { win->vscroll.dragging = false; set_capture(NULL); }
       return true;
     }
     return false;
@@ -336,46 +398,7 @@ static bool handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wpar
     if (!win->hscroll.enabled) return true; // consume click but do nothing
     int lx = cx - h_x_min;  // position within the hscroll strip
     if (lx >= h_track) return true; // corner square
-    // Arrow buttons
-    if (h_track >= 2 * SCROLLBAR_WIDTH) {
-      if (lx < SCROLLBAR_WIDTH) {
-        sb_try_scroll(win, &win->hscroll, kWindowMessageHScroll, win->hscroll.pos - SB_ARROW_STEP);
-        return true;
-      }
-      if (lx >= h_track - SCROLLBAR_WIDTH) {
-        sb_try_scroll(win, &win->hscroll, kWindowMessageHScroll, win->hscroll.pos + SB_ARROW_STEP);
-        return true;
-      }
-      // Thumb drag in effective track between buttons
-      int eff_track = h_track - 2 * SCROLLBAR_WIDTH;
-      int lx_eff = lx - SCROLLBAR_WIDTH;
-      if (eff_track > 0) {
-        int tl = builtin_sb_thumb_len_msg(&win->hscroll, eff_track);
-        int to = builtin_sb_thumb_off_msg(&win->hscroll, eff_track, tl);
-        if (lx_eff >= to && lx_eff < to + tl) {
-          win->hscroll.dragging         = true;
-          win->hscroll.drag_start_mouse = lx_eff;
-          win->hscroll.drag_start_pos   = win->hscroll.pos;
-          set_capture(win);
-        } else {
-          sb_try_scroll(win, &win->hscroll, kWindowMessageHScroll,
-              win->hscroll.pos + (lx_eff < to ? -win->hscroll.page : win->hscroll.page));
-        }
-      }
-    } else {
-      // Narrow track — no buttons, plain thumb behaviour
-      int tl = builtin_sb_thumb_len_msg(&win->hscroll, h_track);
-      int to = builtin_sb_thumb_off_msg(&win->hscroll, h_track, tl);
-      if (lx >= to && lx < to + tl) {
-        win->hscroll.dragging         = true;
-        win->hscroll.drag_start_mouse = lx;
-        win->hscroll.drag_start_pos   = win->hscroll.pos;
-        set_capture(win);
-      } else {
-        sb_try_scroll(win, &win->hscroll, kWindowMessageHScroll,
-            win->hscroll.pos + (lx < to ? -win->hscroll.page : win->hscroll.page));
-      }
-    }
+    sb_handle_track_click(win, &win->hscroll, kWindowMessageHScroll, lx, h_track);
     return true;
   }
 
@@ -384,46 +407,7 @@ static bool handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wpar
       cy >= 0 && cy < content_h) {
     if (!win->vscroll.enabled) return true; // consume click but do nothing
     if (cy >= v_track) return true; // corner square
-    // Arrow buttons
-    if (v_track >= 2 * SCROLLBAR_WIDTH) {
-      if (cy < SCROLLBAR_WIDTH) {
-        sb_try_scroll(win, &win->vscroll, kWindowMessageVScroll, win->vscroll.pos - SB_ARROW_STEP);
-        return true;
-      }
-      if (cy >= v_track - SCROLLBAR_WIDTH) {
-        sb_try_scroll(win, &win->vscroll, kWindowMessageVScroll, win->vscroll.pos + SB_ARROW_STEP);
-        return true;
-      }
-      // Thumb drag in effective track between buttons
-      int eff_track = v_track - 2 * SCROLLBAR_WIDTH;
-      int cy_eff = cy - SCROLLBAR_WIDTH;
-      if (eff_track > 0) {
-        int tl = builtin_sb_thumb_len_msg(&win->vscroll, eff_track);
-        int to = builtin_sb_thumb_off_msg(&win->vscroll, eff_track, tl);
-        if (cy_eff >= to && cy_eff < to + tl) {
-          win->vscroll.dragging         = true;
-          win->vscroll.drag_start_mouse = cy_eff;
-          win->vscroll.drag_start_pos   = win->vscroll.pos;
-          set_capture(win);
-        } else {
-          sb_try_scroll(win, &win->vscroll, kWindowMessageVScroll,
-              win->vscroll.pos + (cy_eff < to ? -win->vscroll.page : win->vscroll.page));
-        }
-      }
-    } else {
-      // Narrow track — no buttons, plain thumb behaviour
-      int tl = builtin_sb_thumb_len_msg(&win->vscroll, v_track);
-      int to = builtin_sb_thumb_off_msg(&win->vscroll, v_track, tl);
-      if (cy >= to && cy < to + tl) {
-        win->vscroll.dragging         = true;
-        win->vscroll.drag_start_mouse = cy;
-        win->vscroll.drag_start_pos   = win->vscroll.pos;
-        set_capture(win);
-      } else {
-        sb_try_scroll(win, &win->vscroll, kWindowMessageVScroll,
-            win->vscroll.pos + (cy < to ? -win->vscroll.page : win->vscroll.page));
-      }
-    }
+    sb_handle_track_click(win, &win->vscroll, kWindowMessageVScroll, cy, v_track);
     return true;
   }
 
@@ -479,23 +463,7 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
             toolbar_button_t const *but = &win->toolbar_buttons[i];
             rect_t r;
             if (!toolbar_iter_next(&it, but, &r)) continue;
-            bool show_pressed = but->pressed || but->active;
-            int px = show_pressed ? 1 : 0;
-            if (strip) {
-              // Draw button background then icon from sprite sheet.
-              draw_button(&(rect_t){r.x, r.y, bsz, bsz}, 1, 1, show_pressed);
-              int icon_index = but->icon;
-              if (strip->cols > 0) {
-                int scol = icon_index % strip->cols;
-                int srow = icon_index / strip->cols;
-                draw_sprite_region((int)strip->tex, r.x + 2 + px, r.y + 2 + px,
-                                   strip->icon_w, strip->icon_h, SPRITE_REGION(scol, srow, strip), 1.0f);
-              }
-            } else {
-              draw_button(&(rect_t){r.x, r.y, bsz, bsz-2}, 1, 1, show_pressed);
-              draw_icon16(but->icon, r.x + 2 + px + 1, r.y + 2 + px,
-                          get_sys_color(kColorTextNormal));
-            }
+            draw_toolbar_button_at(&r, bsz, but, strip);
           }
         }
         if (win->flags&WINDOW_STATUSBAR) {
