@@ -14,8 +14,6 @@
 #define MAX_TEXT_LENGTH 4096  // Increased for terminal output
 #define SMALL_FONT_WIDTH 8
 #define SMALL_FONT_HEIGHT 8
-#define SMALL_LINE_HEIGHT 12
-#define SPACE_WIDTH 3
 #define VERTICES_PER_CHAR 6  // 2 triangles = 6 vertices
 
 typedef struct {
@@ -40,9 +38,15 @@ static struct {
   font_atlas_t small_font;   // Small 6x8 font atlas
 } text_state = {0};
 
-// Helper to get character width
+// Helper to get character width (internal fast path)
 static inline int get_char_width(unsigned char c) {
   return text_state.small_font.char_to[c] - text_state.small_font.char_from[c];
+}
+
+// Public API: pixel width of one glyph (0 when text system not initialized).
+int char_width(unsigned char c) {
+  if (text_state.small_font.char_height == 0) return 0;
+  return get_char_width(c);
 }
 
 // Forward declarations for external functions
@@ -52,8 +56,8 @@ extern void push_sprite_args(int tex, int x, int y, int w, int h, float alpha);
 static bool create_font_atlas(void) {
   extern unsigned char console_font_6x8[];
   // Font atlas dimensions
-  const int char_width = SMALL_FONT_WIDTH;
-  const int char_height = SMALL_FONT_HEIGHT;
+  const int glyph_w = SMALL_FONT_WIDTH;
+  const int glyph_h = SMALL_FONT_HEIGHT;
   const int chars_per_row = 16;
   const int rows = 8;      // 16 * 8 = 128 ASCII characters (0-127)
   
@@ -66,17 +70,17 @@ static bool create_font_atlas(void) {
   
   // Fill the atlas with character data from the font_6x8 array
   for (int c = 0; c < 128; c++) {
-    int atlas_x = (c % chars_per_row) * char_width;
-    int atlas_y = (c / chars_per_row) * char_height;
+    int atlas_x = (c % chars_per_row) * glyph_w;
+    int atlas_y = (c / chars_per_row) * glyph_h;
     // Copy character bits from font data to atlas
     text_state.small_font.char_to[c] = 0;
     text_state.small_font.char_from[c] = 0xff;
-    for (int y = 0; y < char_height; y++) {
-      for (int x = 0; x < char_width; x++) {
+    for (int y = 0; y < glyph_h; y++) {
+      for (int x = 0; x < glyph_w; x++) {
         // Get bit from font data (assuming 1 byte per row, 8 rows per character)
         int bit_pos = x;
-        int font_byte = console_font_6x8[c * char_height + y];
-        int bit_value = ((font_byte >> (char_width - 1 - bit_pos)) & 1);
+        int font_byte = console_font_6x8[c * glyph_h + y];
+        int bit_value = ((font_byte >> (glyph_w - 1 - bit_pos)) & 1);
         // Set corresponding pixel in atlas (convert 1-bit to 8-bit)
         atlas_data[(atlas_y + y) * FONT_TEX_SIZE + atlas_x + x] = bit_value ? 255 : 0;
         if (bit_value) {
@@ -100,7 +104,7 @@ static bool create_font_atlas(void) {
   text_state.small_font.texture.width = FONT_TEX_SIZE;
   text_state.small_font.texture.height = FONT_TEX_SIZE;
   text_state.small_font.texture.format = GL_RED;
-  text_state.small_font.char_height = char_height;
+  text_state.small_font.char_height = glyph_h;
   text_state.small_font.chars_per_row = chars_per_row;
   text_state.small_font.total_chars = chars_per_row * rows;
 

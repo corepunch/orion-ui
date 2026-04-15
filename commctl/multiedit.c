@@ -9,18 +9,15 @@
 
 #include <string.h>
 #include <stdlib.h>
-#include <stdio.h>
 
 #include "../user/user.h"
 #include "../user/messages.h"
 #include "../user/draw.h"
 
-#define ME_BUF_SIZE    2048
-#define ME_PADDING     3
-// Must match SMALL_LINE_HEIGHT in user/text.c.
-#define ME_LINE_HEIGHT 12
-// Must match SPACE_WIDTH in user/text.c.
-#define ME_SPACE_W     3
+#define ME_BUF_SIZE 2048
+#define ME_PADDING  3
+// Maximum number of characters that can be stored (leave room for the NUL).
+#define ME_MAX_LEN  (ME_BUF_SIZE - 2)
 
 extern window_t *_focused;
 extern window_t *get_root_window(window_t *window);
@@ -37,20 +34,21 @@ typedef struct {
 // Internal layout helpers
 // ---------------------------------------------------------------------------
 
-// Advance one character's worth of wrapping state.  Mutates *cx/*cy.
+// Advance one character's worth of wrapping state.  Uses the same algorithm
+// as draw_text_wrapped() / calc_text_height() in user/text.c so that cursor
+// positions exactly match rendered glyph positions.  Mutates *cx/*cy.
 static void me_advance(const char *buf, int i, int max_w, int *cx, int *cy) {
   unsigned char c = (unsigned char)buf[i];
   if (c == '\n') {
     *cx = 0;
-    *cy += ME_LINE_HEIGHT;
+    *cy += SMALL_LINE_HEIGHT;
   } else if (c == ' ') {
-    *cx += ME_SPACE_W;
+    *cx += SPACE_WIDTH;
   } else {
-    char tmp[2] = { (char)c, '\0' };
-    int cw = strnwidth(tmp, 1);
+    int cw = char_width(c);
     if (cw > 0 && *cx + cw > max_w) {
       *cx = 0;
-      *cy += ME_LINE_HEIGHT;
+      *cy += SMALL_LINE_HEIGHT;
     }
     *cx += cw;
   }
@@ -58,12 +56,13 @@ static void me_advance(const char *buf, int i, int max_w, int *cx, int *cy) {
 
 // Compute visual (cx, cy) of byte offset `cursor` in buf.
 // Coordinates are relative to the text-area origin (0, 0).
+// out_x may be NULL when only the row position is needed.
 static void me_cursor_xy(const char *buf, int cursor, int max_w,
                           int *out_x, int *out_y) {
   int cx = 0, cy = 0;
   for (int i = 0; i < cursor && buf[i]; i++)
     me_advance(buf, i, max_w, &cx, &cy);
-  *out_x = cx;
+  if (out_x) *out_x = cx;
   *out_y = cy;
 }
 
@@ -91,13 +90,31 @@ static int me_find_at_xy(const char *buf, int len, int tx, int ty, int max_w) {
 
 // Scroll so that the caret is within the visible viewport.
 static void me_ensure_visible(me_state_t *s, int max_w, int vis_h) {
-  int cx, cy;
-  me_cursor_xy(s->buf, s->cursor, max_w, &cx, &cy);
+  int cy;
+  me_cursor_xy(s->buf, s->cursor, max_w, NULL, &cy);
   if (cy < s->scroll_y)
     s->scroll_y = cy;
-  if (cy + ME_LINE_HEIGHT > s->scroll_y + vis_h)
-    s->scroll_y = cy + ME_LINE_HEIGHT - vis_h;
+  if (cy + SMALL_LINE_HEIGHT > s->scroll_y + vis_h)
+    s->scroll_y = cy + SMALL_LINE_HEIGHT - vis_h;
   if (s->scroll_y < 0) s->scroll_y = 0;
+}
+
+// Compute the absolute screen rect of win's text area.
+// Walks the parent chain so the result is correct even when win is nested
+// inside an intermediate container window (not a direct child of root).
+static rect_t me_text_screen_rect(window_t *win, window_t *root) {
+  int x = win->frame.x + ME_PADDING;
+  int y = win->frame.y + ME_PADDING;
+  for (window_t *p = win->parent; p && p != root; p = p->parent) {
+    x += p->frame.x;
+    y += p->frame.y;
+  }
+  return (rect_t){
+    root->frame.x + x,
+    root->frame.y + titlebar_height(root) + y,
+    win->frame.w - ME_PADDING * 2,
+    win->frame.h - ME_PADDING * 2,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -153,12 +170,8 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
 
       // Clip to text area (scissor uses absolute screen coordinates).
       window_t *root = get_root_window(win);
-      int root_t = titlebar_height(root);
-      set_clip_rect(NULL, &(rect_t){
-        root->frame.x + win->frame.x + ME_PADDING,
-        root->frame.y + root_t + win->frame.y + ME_PADDING,
-        tw, th
-      });
+      rect_t tr = me_text_screen_rect(win, root);
+      set_clip_rect(NULL, &tr);
 
       // Draw wrapped text, offset upward by scroll_y.
       rect_t vp = { tx, ty - s->scroll_y, tw, th + s->scroll_y };
@@ -169,7 +182,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
         int cx, cy;
         me_cursor_xy(s->buf, s->cursor, tw, &cx, &cy);
         int cur_y = ty + cy - s->scroll_y;
-        if (cur_y >= ty - ME_LINE_HEIGHT && cur_y < ty + th) {
+        if (cur_y >= ty - SMALL_LINE_HEIGHT && cur_y < ty + th) {
           fill_rect(get_sys_color(kColorTextNormal),
                     tx + cx, cur_y, 2, CHAR_HEIGHT);
         }
@@ -177,9 +190,8 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
 
       // Reset scissor to full control frame so subsequent rendering is unclipped.
       set_clip_rect(NULL, &(rect_t){
-        root->frame.x + win->frame.x,
-        root->frame.y + root_t + win->frame.y,
-        win->frame.w, win->frame.h
+        tr.x - ME_PADDING, tr.y - ME_PADDING,
+        win->frame.w, win->frame.h,
       });
 
       return true;
@@ -193,7 +205,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       // wparam carries client-local x (LOWORD) and y (HIWORD).
       int lx = (int)(int16_t)LOWORD(wparam) - ME_PADDING;
       int ly = (int)(int16_t)HIWORD(wparam) - ME_PADDING + s->scroll_y;
-      int target_y = (ly / ME_LINE_HEIGHT) * ME_LINE_HEIGHT;
+      int target_y = (ly / SMALL_LINE_HEIGHT) * SMALL_LINE_HEIGHT;
       if (target_y < 0) target_y = 0;
       s->cursor = me_find_at_xy(s->buf, s->len, lx, target_y, tw);
       me_ensure_visible(s, tw, th);
@@ -223,7 +235,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       char c = *(const char *)lparam;
       // Accept only printable ASCII; newlines are handled via AX_KEY_ENTER.
       if ((unsigned char)c < 32 || (unsigned char)c > 126) return true;
-      if (s->len + 1 >= ME_BUF_SIZE - 1) return true;
+      if (s->len >= ME_MAX_LEN) return true;
       memmove(s->buf + s->cursor + 1,
               s->buf + s->cursor,
               (size_t)(s->len - s->cursor + 1));
@@ -245,7 +257,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       switch (wparam) {
 
         case AX_KEY_ENTER:
-          if (s->len + 1 < ME_BUF_SIZE - 1) {
+          if (s->len < ME_MAX_LEN) {
             memmove(s->buf + s->cursor + 1,
                     s->buf + s->cursor,
                     (size_t)(s->len - s->cursor + 1));
@@ -299,7 +311,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
         case AX_KEY_UPARROW: {
           int cx, cy;
           me_cursor_xy(s->buf, s->cursor, tw, &cx, &cy);
-          int ny = cy - ME_LINE_HEIGHT;
+          int ny = cy - SMALL_LINE_HEIGHT;
           if (ny >= 0) {
             s->cursor = me_find_at_xy(s->buf, s->len, cx, ny, tw);
             me_ensure_visible(s, tw, th);
@@ -311,7 +323,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
         case AX_KEY_DOWNARROW: {
           int cx, cy;
           me_cursor_xy(s->buf, s->cursor, tw, &cx, &cy);
-          int ny = cy + ME_LINE_HEIGHT;
+          int ny = cy + SMALL_LINE_HEIGHT;
           int new_pos = me_find_at_xy(s->buf, s->len, cx, ny, tw);
           if (new_pos != s->cursor) {
             s->cursor = new_pos;
@@ -321,17 +333,25 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
           return true;
         }
 
-        case AX_KEY_HOME:
-          s->cursor = 0;
+        case AX_KEY_HOME: {
+          // Move to start of the current logical line (scan back to previous \n or buf start).
+          int p = s->cursor;
+          while (p > 0 && s->buf[p - 1] != '\n') p--;
+          s->cursor = p;
           me_ensure_visible(s, tw, th);
           invalidate_window(win);
           return true;
+        }
 
-        case AX_KEY_END:
-          s->cursor = s->len;
+        case AX_KEY_END: {
+          // Move to end of the current logical line (forward to next \n or buf end).
+          int p = s->cursor;
+          while (p < s->len && s->buf[p] != '\n') p++;
+          s->cursor = p;
           me_ensure_visible(s, tw, th);
           invalidate_window(win);
           return true;
+        }
 
         case AX_KEY_TAB:
           // Notify parent and yield focus so Tab advances to next control.
