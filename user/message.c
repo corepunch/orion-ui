@@ -61,6 +61,19 @@ extern window_t *get_root_window(window_t *window);
 extern int titlebar_height(window_t const *win);
 extern int statusbar_height(window_t const *win);
 
+// Returns win's frame rect in absolute screen coordinates.
+// For root windows, frame.x/y are already screen-absolute.
+// For child windows, frame.x/y are root-client-space coords; they are mapped
+// to screen by adding the root's screen origin and the root's non-client height.
+// root_titlebar_h should be titlebar_height(root) — callers that already have
+// it pass it in to avoid recomputing.
+static rect_t win_frame_in_screen(window_t *win, window_t *root, int root_titlebar_h) {
+  if (win == root) return win->frame;
+  return (rect_t){root->frame.x + win->frame.x,
+                  root->frame.y + root_titlebar_h + win->frame.y,
+                  win->frame.w, win->frame.h};
+}
+
 // Register a window hook
 void register_window_hook(uint32_t msg, winhook_func_t func, void *userdata) {
   winhook_t *hook = malloc(sizeof(winhook_t));
@@ -495,18 +508,8 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
           if (win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL)) {
             int t_win = titlebar_height(win);   /* win's own non-client height */
             rect_t cr = get_client_rect(win);
-            rect_t clip;
-            if (win == root) {
-              // Root window: frame.x/y are absolute screen coordinates.
-              clip = (rect_t){root->frame.x, root->frame.y + t_win, cr.w, cr.h};
-            } else {
-              // Child window: frame.x/y are in root drawing-space (world coords).
-              // Map to screen by adding root->frame.x/y plus the root title offset.
-              clip = (rect_t){root->frame.x + win->frame.x,
-                              root->frame.y + t + win->frame.y + t_win,
-                              cr.w, cr.h};
-            }
-            set_clip_rect(NULL, &clip);
+            rect_t wf = win_frame_in_screen(win, root, t);
+            set_clip_rect(NULL, &(rect_t){wf.x, wf.y + t_win, cr.w, cr.h});
           }
         }
         break;
@@ -722,15 +725,8 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     if (msg == kWindowMessagePaint && running &&
         (win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL))) {
       int root_t = titlebar_height(root);
-      rect_t win_frame_screen;
-      if (win == root) {
-        win_frame_screen = win->frame;
-      } else {
-        win_frame_screen = (rect_t){root->frame.x + win->frame.x,
-                                    root->frame.y + root_t + win->frame.y,
-                                    win->frame.w, win->frame.h};
-      }
-      set_clip_rect(NULL, &win_frame_screen);
+      rect_t wf = win_frame_in_screen(win, root, root_t);
+      set_clip_rect(NULL, &wf);
       draw_builtin_scrollbars(win);
     }
   }
