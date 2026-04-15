@@ -429,9 +429,12 @@ void dispatch_message(ui_event_t *msg) {
         } else {
           int sx = SCALE_POINT(px);
           int sy = SCALE_POINT(py);
-          if (msg->message == kEventLeftMouseDown && sy < win->frame.y) {
+          if (msg->message == kEventLeftMouseDown &&
+              (win->flags & WINDOW_TOOLBAR) && sy < win->frame.y) {
             // Non-client left button down in toolbar area: send dedicated message
             // so the toolbar can show visual pressed feedback immediately.
+            // Only applies when WINDOW_TOOLBAR is set; title bar clicks are
+            // handled earlier by window_in_drag_area → _dragging path.
             send_message(win, kWindowMessageNonClientLeftButtonDown,
                          MAKEDWORD(sx, sy), NULL);
           } else {

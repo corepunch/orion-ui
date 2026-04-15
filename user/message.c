@@ -653,11 +653,10 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
               int col = (int)i % bpr;
               int bx = base_x + col * bsz;
               int by = base_y + row * bsz;
-              if (CONTAINS(x, y, bx, by, bsz, bsz)) {
-                but->pressed = false;
+              bool hit = CONTAINS(x, y, bx, by, bsz, bsz);
+              but->pressed = false;
+              if (hit) {
                 send_message(win, kToolBarMessageButtonClick, but->ident, but);
-              } else {
-                but->pressed = false;
               }
             }
             #undef CONTAINS
