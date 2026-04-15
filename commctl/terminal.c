@@ -338,7 +338,9 @@ result_t win_terminal(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       s = allocate_window_data(win, sizeof(terminal_state_t));
       if (!s) return false;
       
-      win->flags |= WINDOW_VSCROLL;
+      // Note: the terminal does not implement a scrollback buffer, so it does
+      // not set WINDOW_VSCROLL.  The input line is always anchored to the
+      // bottom of the viewport.
       
       if (lparam == NULL) { // Command mode
         s->L = NULL;
@@ -460,7 +462,7 @@ result_t win_terminal(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       draw_text_wrapped(s->textbuf->data, &viewport, get_sys_color(kColorTextNormal));
       
       if (s->waiting_for_input && !s->process_finished) {
-        int y = win->frame.h - WINDOW_PADDING - CHAR_HEIGHT + win->scroll[1];
+        int y = win->frame.h - WINDOW_PADDING - CHAR_HEIGHT;
         draw_text_small(s->input_buffer, WINDOW_PADDING, y, get_sys_color(kColorTextNormal));
         draw_icon8(ICON_CURSOR, WINDOW_PADDING + strwidth(s->input_buffer), y, get_sys_color(kColorTextNormal));
       }
