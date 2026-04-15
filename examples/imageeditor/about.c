@@ -144,8 +144,8 @@ void show_about_dialog(window_t *parent) {
   int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
   int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
   int x  = (sw - ABOUT_WIN_W) / 2;
-  int y  = (sh - ABOUT_WIN_H) / 2;
+  int y  = (sh - (ABOUT_WIN_H + TITLEBAR_HEIGHT)) / 2;
   show_dialog("About Orion Image Editor",
-              MAKERECT(x, y, ABOUT_WIN_W, ABOUT_WIN_H),
+              MAKERECT(x, y, ABOUT_WIN_W, ABOUT_WIN_H + TITLEBAR_HEIGHT),
               parent, about_proc, NULL);
 }
