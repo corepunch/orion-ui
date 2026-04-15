@@ -511,7 +511,7 @@ static result_t props_proc(window_t *win, uint32_t msg,
                ps->el->x, ps->el->y, ps->el->w, ps->el->h);
       create_window(info, WINDOW_NOTITLE | WINDOW_NOFILL,
           MAKERECT(4, PROPS_INFO_Y, PROPS_W - 8, CONTROL_HEIGHT),
-          win, win_label, (void *)(uintptr_t)kColorTextDisabled);
+          win, win_label, 0, (void *)(uintptr_t)kColorTextDisabled);
 
       // Pre-populate caption/name edits from the element.
       dialog_push(win, ps->el, k_props_bindings, ARRAY_LEN(k_props_bindings));
