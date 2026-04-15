@@ -426,8 +426,9 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
           }
           if (win->flags&WINDOW_TOOLBAR) {
             int bsz = (win->toolbar_btn_size > 0) ? win->toolbar_btn_size : TB_SPACING;
-            int bpr = (win->num_toolbar_buttons > 0 && win->frame.w > 0)
-                ? MAX(1, (win->frame.w - 2*TOOLBAR_PADDING + TOOLBAR_SPACING) / (bsz + TOOLBAR_SPACING)) : 1;
+            int inner_w = win->frame.w - 2;  // toolbar bevel insets 1px per side
+            int bpr = (win->num_toolbar_buttons > 0 && inner_w > 0)
+                ? MAX(1, (inner_w - 2*TOOLBAR_PADDING + TOOLBAR_SPACING) / (bsz + TOOLBAR_SPACING)) : 1;
             int nrows = (win->num_toolbar_buttons > 0)
                 ? (int)((win->num_toolbar_buttons + (uint32_t)bpr - 1) / (uint32_t)bpr)
                 : 1;
@@ -633,8 +634,9 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
             uint16_t x = LOWORD(wparam);
             uint16_t y = HIWORD(wparam);
             int bsz = (win->toolbar_btn_size > 0) ? win->toolbar_btn_size : TB_SPACING;
-            int bpr = (win->num_toolbar_buttons > 0 && win->frame.w > 0)
-                ? MAX(1, (win->frame.w - 2*TOOLBAR_PADDING + TOOLBAR_SPACING) / (bsz + TOOLBAR_SPACING)) : 1;
+            int inner_w = win->frame.w - 2;  // toolbar bevel insets 1px per side
+            int bpr = (win->num_toolbar_buttons > 0 && inner_w > 0)
+                ? MAX(1, (inner_w - 2*TOOLBAR_PADDING + TOOLBAR_SPACING) / (bsz + TOOLBAR_SPACING)) : 1;
             int nrows = (win->num_toolbar_buttons > 0)
                 ? (int)((win->num_toolbar_buttons + (uint32_t)bpr - 1) / (uint32_t)bpr)
                 : 1;
@@ -661,8 +663,9 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
             uint16_t x = LOWORD(wparam);
             uint16_t y = HIWORD(wparam);
             int bsz = (win->toolbar_btn_size > 0) ? win->toolbar_btn_size : TB_SPACING;
-            int bpr = (win->num_toolbar_buttons > 0 && win->frame.w > 0)
-                ? MAX(1, (win->frame.w - 2*TOOLBAR_PADDING + TOOLBAR_SPACING) / (bsz + TOOLBAR_SPACING)) : 1;
+            int inner_w = win->frame.w - 2;  // toolbar bevel insets 1px per side
+            int bpr = (win->num_toolbar_buttons > 0 && inner_w > 0)
+                ? MAX(1, (inner_w - 2*TOOLBAR_PADDING + TOOLBAR_SPACING) / (bsz + TOOLBAR_SPACING)) : 1;
             int nrows = (win->num_toolbar_buttons > 0)
                 ? (int)((win->num_toolbar_buttons + (uint32_t)bpr - 1) / (uint32_t)bpr)
                 : 1;

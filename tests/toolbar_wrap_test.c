@@ -15,12 +15,15 @@
 // Inline copy of the toolbar-height computation to allow white-box assertions
 // without depending on draw_impl.c's titlebar_height() linkage in tests.
 // Must stay synchronised with the formula in draw_impl.c:titlebar_height().
+// win_w is the total frame width; the usable bevel-inner width is win_w - 2
+// (the toolbar rect is inset by 1px per side: rect.x = frame.x+1, rect.w = frame.w-2).
 static int compute_toolbar_height(int num_buttons, int win_w) {
     int bsz = TB_SPACING;
-    if (num_buttons <= 0 || win_w <= 0) {
+    int inner_w = win_w - 2;
+    if (num_buttons <= 0 || inner_w <= 0) {
         return bsz + 2 * TOOLBAR_PADDING;  // default: 1 row
     }
-    int bpr = (win_w - 2*TOOLBAR_PADDING + TOOLBAR_SPACING) / (bsz + TOOLBAR_SPACING);
+    int bpr = (inner_w - 2*TOOLBAR_PADDING + TOOLBAR_SPACING) / (bsz + TOOLBAR_SPACING);
     if (bpr < 1) bpr = 1;
     int num_rows = (num_buttons + bpr - 1) / bpr;
     return num_rows * bsz + 2 * TOOLBAR_PADDING;
@@ -38,29 +41,34 @@ static result_t noop_proc(window_t *win, uint32_t msg,
 void test_toolbar_wrapping_height(void) {
     TEST("Toolbar wrapping: toolbar height grows with wrapping rows");
 
-    // With TOOLBAR_PADDING=2 and TOOLBAR_SPACING=4:
-    //   bpr = MAX(1, (win_w - 2*2 + 4) / (22+4)) = MAX(1, win_w / 26)
+    // With TOOLBAR_PADDING=2 and TOOLBAR_SPACING=4, inner_w = win_w - 2:
+    //   bpr = MAX(1, (inner_w - 4 + 4) / 26) = MAX(1, inner_w / 26)
     //   height = nrows * TB_SPACING + 2 * TOOLBAR_PADDING
 
-    // 5 buttons in a 80px wide window → 80/26=3 per row → 2 rows
+    // 5 buttons, 80px → inner_w=78, bpr=78/26=3 → 2 rows
     int h1 = compute_toolbar_height(5, 80);
     ASSERT_EQUAL(h1, 2 * TB_SPACING + 2 * TOOLBAR_PADDING);
 
-    // 3 buttons in a 80px wide window → 3 per row → 1 row
+    // 3 buttons, 80px → inner_w=78, bpr=3 → 1 row
     int h2 = compute_toolbar_height(3, 80);
     ASSERT_EQUAL(h2, 1 * TB_SPACING + 2 * TOOLBAR_PADDING);
 
-    // 7 buttons in a 80px wide window → 3 per row → 3 rows
+    // 7 buttons, 80px → inner_w=78, bpr=3 → 3 rows
     int h3 = compute_toolbar_height(7, 80);
     ASSERT_EQUAL(h3, 3 * TB_SPACING + 2 * TOOLBAR_PADDING);
 
-    // 5 buttons in a 54px wide window → 54/26=2 per row → 3 rows
+    // 5 buttons, 54px → inner_w=52, bpr=52/26=2 → 3 rows
     int h4 = compute_toolbar_height(5, 54);
     ASSERT_EQUAL(h4, 3 * TB_SPACING + 2 * TOOLBAR_PADDING);
 
     // 1 button in any window → 1 row
     int h5 = compute_toolbar_height(1, 64);
     ASSERT_EQUAL(h5, 1 * TB_SPACING + 2 * TOOLBAR_PADDING);
+
+    // Boundary: 78px → inner_w=76, bpr=76/26=2 (NOT 3 as frame.w/26 would give).
+    // Demonstrates the -2 inset: without it bpr=78/26=3 giving 2 rows.
+    int h6 = compute_toolbar_height(5, 78);
+    ASSERT_EQUAL(h6, 3 * TB_SPACING + 2 * TOOLBAR_PADDING);  // 3 rows because bpr=2
 
     PASS();
 }
