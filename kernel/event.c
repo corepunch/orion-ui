@@ -16,6 +16,7 @@ extern window_t *windows;
 extern window_t *_focused;
 extern window_t *_tracked;
 extern window_t *_captured;
+extern int titlebar_height(window_t const *win);
 
 // Macros for coordinate conversion (platform logical → Orion logical)
 #define SCALE_POINT(x) ((x)/UI_WINDOW_SCALE)
@@ -439,7 +440,7 @@ void dispatch_message(ui_event_t *msg) {
           int sx = SCALE_POINT(px);
           int sy = SCALE_POINT(py);
           if (msg->message == kEventLeftMouseDown &&
-              (win->flags & WINDOW_TOOLBAR) && sy < win->frame.y) {
+              (win->flags & WINDOW_TOOLBAR) && sy < win->frame.y + titlebar_height(win)) {
             // Non-client left button down in toolbar area: send dedicated message
             // so the toolbar can show visual pressed feedback immediately.
             // Only applies when WINDOW_TOOLBAR is set; title bar clicks are
