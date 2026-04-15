@@ -444,13 +444,13 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
                   float v0 = (float)(srow * strip->icon_h) / (float)strip->sheet_h;
                   float u1 = u0 + (float)strip->icon_w / (float)strip->sheet_w;
                   float v1 = v0 + (float)strip->icon_h / (float)strip->sheet_h;
-                  draw_sprite_region((int)strip->tex, bx + px - 1, by + px - 1,
+                  draw_sprite_region((int)strip->tex, bx + px, by + px,
                                      strip->icon_w, strip->icon_h, u0, v0, u1, v1, 1.0f);
                 }
               } else {
-                draw_button(&(rect_t){bx-2,by-2,bsz-2,bsz-2}, 1, 1, show_pressed);
+                draw_button(&(rect_t){bx-2,by-2,bsz/*-2*/,bsz-2}, 1, 1, show_pressed);
                 int px = show_pressed ? 1 : 0;
-                draw_icon16(but->icon, bx + px - 1, by + px - 1, get_sys_color(kColorTextNormal));
+                draw_icon16(but->icon, bx + px, by + px, get_sys_color(kColorTextNormal));
               }
             }
           }

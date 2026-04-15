@@ -249,16 +249,15 @@ $(GEM_DIR)/%.gem: $$(wildcard examples/%/*.c) $(SHARED_LIB) | $(GEM_DIR)
 # Validate that a .gem exports the required gem_get_interface symbol.
 .PHONY: validate-gem
 validate-gem:
-	@echo -n "  Validating $(notdir $(GEM))... "
 ifeq ($(OS),Windows_NT)
 	@dumpbin //EXPORTS $(GEM) 2>/dev/null | grep -q "gem_get_interface" \
-		&& echo "OK" || (echo "FAIL missing gem_get_interface" && exit 1)
+		|| (echo "FAIL missing gem_get_interface" && exit 1)
 else ifeq ($(UNAME_S),Darwin)
 	@nm -g $(GEM) 2>/dev/null | grep -q "T _gem_get_interface" \
-		&& echo "OK" || (echo "FAIL missing gem_get_interface" && exit 1)
+		|| (echo "FAIL missing gem_get_interface" && exit 1)
 else
 	@nm -D $(GEM) 2>/dev/null | grep -q "T gem_get_interface" \
-		&& echo "OK" || (echo "FAIL missing gem_get_interface" && exit 1)
+		|| (echo "FAIL missing gem_get_interface" && exit 1)
 endif
 
 $(GEM_DIR):

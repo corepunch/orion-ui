@@ -39,7 +39,7 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
       // When the button has keyboard focus kColorFocusRing takes precedence.
       uint32_t bg = (_focused == win) ? get_sys_color(kColorFocusRing) :
                     (win->flags & BUTTON_DEFAULT) ? 0xff000000 : get_sys_color(kColorWindowBg);
-      fill_rect(bg, win->frame.x-2, win->frame.y-2, win->frame.w+4, win->frame.h+4);
+      fill_rect(bg, win->frame.x-1, win->frame.y-1, win->frame.w+2, win->frame.h+2);
       draw_button(&win->frame, 1, 1, show_pressed);
       int tx = win->frame.x + (win->frame.w - strwidth(win->title)) / 2;
       int ty = win->frame.y + (win->frame.h - CHAR_HEIGHT) / 2;

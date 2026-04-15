@@ -111,13 +111,18 @@ void draw_bevel(rect_t const *r) {
 
 // Draw button
 void draw_button(rect_t const *r, int dx, int dy, bool pressed) {
-  fill_rect(pressed?get_sys_color(kColorDarkEdge):get_sys_color(kColorLightEdge), r->x-dx, r->y-dy, r->w+dx+dy, r->h+dx+dy);
-  fill_rect(pressed?get_sys_color(kColorLightEdge):get_sys_color(kColorDarkEdge), r->x, r->y, r->w+dx, r->h+dy);
-  fill_rect(pressed?get_sys_color(kColorWindowDarkBg):get_sys_color(kColorWindowBg), r->x, r->y, r->w, r->h);
   if (pressed) {
-    fill_rect(get_sys_color(kColorFlare), r->x+r->w, r->y+r->h, dx, dy);
+    fill_rect(get_sys_color(kColorDarkEdge), r->x, r->y, r->w, r->h);
+    fill_rect(get_sys_color(kColorLightEdge), r->x+1, r->y+1, r->w-1, r->h-1);
+    fill_rect(get_sys_color(kColorDarkEdge), r->x+1, r->y+1, r->w-2, r->h-2);
+    fill_rect(get_sys_color(kColorWindowDarkBg), r->x+2, r->y+2, r->w-3, r->h-3);
+    fill_rect(get_sys_color(kColorFlare), r->x+r->w-1, r->y+r->h-1, 1, 1);
   } else {
-    fill_rect(get_sys_color(kColorFlare), r->x-dx, r->y-dy, dx, dy);
+    fill_rect(get_sys_color(kColorDarkEdge), r->x, r->y, r->w, r->h);
+    fill_rect(get_sys_color(kColorLightEdge), r->x, r->y, r->w-1, r->h-1);
+    fill_rect(get_sys_color(kColorDarkEdge), r->x+1, r->y+1, r->w-2, r->h-2);
+    fill_rect(get_sys_color(kColorWindowBg), r->x+1, r->y+1, r->w-3, r->h-3);
+    fill_rect(get_sys_color(kColorFlare), r->x, r->y, 1, 1);
   }
 }
 
