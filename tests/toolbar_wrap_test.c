@@ -40,23 +40,23 @@ static result_t noop_proc(window_t *win, uint32_t msg,
 void test_toolbar_wrapping_height(void) {
     TEST("Toolbar wrapping: toolbar height grows with wrapping rows");
 
-    // With TOOLBAR_PADDING=2 and TOOLBAR_SPACING=4, inner_w = win_w - 2:
-    //   bpr = MAX(1, (inner_w - 4 + 4) / 26) = MAX(1, inner_w / 26)
+    // With TOOLBAR_PADDING=2, inner_w = win_w - 2, available = inner_w - 4:
+    //   bpr = floor(available / TB_SPACING) = floor(available / 22)
     //   height = nrows * TB_SPACING + 2 * TOOLBAR_PADDING
 
-    // 5 buttons, 80px → inner_w=78, bpr=78/26=3 → 2 rows
+    // 5 buttons, 80px → inner_w=78, available=74, bpr=floor(74/22)=3 → 2 rows
     int h1 = compute_toolbar_height(5, 80);
     ASSERT_EQUAL(h1, 2 * TB_SPACING + 2 * TOOLBAR_PADDING);
 
-    // 3 buttons, 80px → inner_w=78, bpr=3 → 1 row
+    // 3 buttons, 80px → available=74, bpr=3 → 1 row
     int h2 = compute_toolbar_height(3, 80);
     ASSERT_EQUAL(h2, 1 * TB_SPACING + 2 * TOOLBAR_PADDING);
 
-    // 7 buttons, 80px → inner_w=78, bpr=3 → 3 rows
+    // 7 buttons, 80px → available=74, bpr=3 → 3 rows
     int h3 = compute_toolbar_height(7, 80);
     ASSERT_EQUAL(h3, 3 * TB_SPACING + 2 * TOOLBAR_PADDING);
 
-    // 5 buttons, 54px → inner_w=52, bpr=52/26=2 → 3 rows
+    // 5 buttons, 54px → inner_w=52, available=48, bpr=floor(48/22)=2 → 3 rows
     int h4 = compute_toolbar_height(5, 54);
     ASSERT_EQUAL(h4, 3 * TB_SPACING + 2 * TOOLBAR_PADDING);
 
@@ -64,9 +64,9 @@ void test_toolbar_wrapping_height(void) {
     int h5 = compute_toolbar_height(1, 64);
     ASSERT_EQUAL(h5, 1 * TB_SPACING + 2 * TOOLBAR_PADDING);
 
-    // Boundary: 78px → inner_w=76, bpr=76/26=2 (NOT 3 as frame.w/26 would give).
-    // Demonstrates the -2 inset: without it bpr=78/26=3 giving 2 rows.
-    int h6 = compute_toolbar_height(5, 78);
+    // Boundary: 70px → inner_w=68, available=64, bpr=64/22=2 (NOT 3 as without-inset gives).
+    // Demonstrates the -2 inset: without it available=66, bpr=66/22=3 giving 2 rows.
+    int h6 = compute_toolbar_height(5, 70);
     ASSERT_EQUAL(h6, 3 * TB_SPACING + 2 * TOOLBAR_PADDING);  // 3 rows because bpr=2
 
     PASS();
@@ -352,7 +352,7 @@ void test_toolbar_spacing_token_skipped_in_count(void) {
 
     // 3 real buttons + 1 spacing token in a wide window → still 1 row.
     // inner_w = 200 - 2 = 198; available = 198 - 4 = 194.
-    // 3 buttons: 0 + 22+4 + 22+4 = 52 → fits in 1 row.
+    // 3 buttons: 0 + 22 + 22 = 44 → fits in 1 row.
     toolbar_button_t buttons[] = {
         {.icon=0, .ident=1, .active=false},
         {.icon=1, .ident=2, .active=false},
@@ -368,29 +368,29 @@ void test_toolbar_spacing_token_skipped_in_count(void) {
 void test_toolbar_spacing_token_adds_gap(void) {
     TEST("toolbar_count_rows: spacing token can cause row wrapping");
 
-    // Choose inner_w=52 so that:
-    //   available = inner_w - 2*TOOLBAR_PADDING = 52 - 4 = 48 px
+    // Choose inner_w=48 so that:
+    //   available = inner_w - 2*TOOLBAR_PADDING = 48 - 4 = 44 px
     //
     // Without token, 2 buttons fit on one row:
-    //   btn0: cur_x=0, 0+22 <= 48 → place, cur_x=22+4=26
-    //   btn1: cur_x=26, 26+22=48 <= 48 → still fits → 1 row
+    //   btn0: cur_x=0, 0+22 <= 44 → place, cur_x=22
+    //   btn1: cur_x=22, 22+22=44 <= 44 → still fits → 1 row
     toolbar_button_t no_token[] = {
         {.icon=0, .ident=1, .active=false},
         {.icon=1, .ident=2, .active=false},
     };
-    int rows_no_token = toolbar_count_rows(no_token, 2, 52, TB_SPACING);
+    int rows_no_token = toolbar_count_rows(no_token, 2, 48, TB_SPACING);
     ASSERT_EQUAL(rows_no_token, 1);
 
     // With a spacing token between them, btn1 is pushed past the available width:
-    //   btn0: cur_x=26
-    //   token: cur_x=26+4=30
-    //   btn1: cur_x=30, 30+22=52 > 48 → wrap to row 1 → 2 rows
+    //   btn0: cur_x=22
+    //   token: cur_x=22+4=26
+    //   btn1: cur_x=26, 26+22=48 > 44 → wrap to row 1 → 2 rows
     toolbar_button_t with_token[] = {
         {.icon=0, .ident=1, .active=false},
         TOOLBAR_SPACING_TOKEN,
         {.icon=1, .ident=2, .active=false},
     };
-    int rows_with_token = toolbar_count_rows(with_token, 3, 52, TB_SPACING);
+    int rows_with_token = toolbar_count_rows(with_token, 3, 48, TB_SPACING);
     ASSERT_EQUAL(rows_with_token, 2);
 
     PASS();
@@ -424,14 +424,14 @@ void test_toolbar_spacing_token_hit_test(void) {
     int base_x = win->frame.x + 1 + TOOLBAR_PADDING;
     int base_y = win->frame.y + TITLEBAR_HEIGHT + 1 + TOOLBAR_PADDING;
 
-    // Button positions (pixel-based layout):
-    //   btn0 (ident=1): cur_x=0  → bx=base_x
-    //   btn1 (ident=2): cur_x=bsz+TOOLBAR_SPACING → bx=base_x+(bsz+TOOLBAR_SPACING)
+    // Button positions (pixel-based layout, no gap between adjacent regular buttons):
+    //   btn0 (ident=1): cur_x=0       → bx=base_x
+    //   btn1 (ident=2): cur_x=bsz     → bx=base_x+bsz
     //   token:          cur_x += TOOLBAR_SPACING_GAP_WIDTH
-    //   btn2 (ident=3): cur_x=2*(bsz+TOOLBAR_SPACING)+TOOLBAR_SPACING_GAP_WIDTH → bx=base_x+that
+    //   btn2 (ident=3): cur_x=2*bsz+TOOLBAR_SPACING_GAP_WIDTH → bx=base_x+that
     int x0 = base_x + 0;
-    int x1 = base_x + (bsz + TOOLBAR_SPACING);
-    int x2 = base_x + 2 * (bsz + TOOLBAR_SPACING) + TOOLBAR_SPACING_GAP_WIDTH;
+    int x1 = base_x + bsz;
+    int x2 = base_x + 2 * bsz + TOOLBAR_SPACING_GAP_WIDTH;
 
     // Hit DELETE (button index 3 in array, ident=3) at centre.
     int hit_x = x2 + bsz / 2;
@@ -470,7 +470,7 @@ void test_toolbar_spacing_token_hit_test(void) {
     // not press any button.
     send_message(win, kWindowMessageNonClientLeftButtonUp,
                  MAKEDWORD(0, 0), NULL);
-    int gap_x = x1 + bsz + TOOLBAR_SPACING + TOOLBAR_SPACING_GAP_WIDTH / 2;
+    int gap_x = x1 + bsz + TOOLBAR_SPACING_GAP_WIDTH / 2;
     send_message(win, kWindowMessageNonClientLeftButtonDown,
                  MAKEDWORD(gap_x, hit_y), NULL);
     ASSERT_FALSE(win->toolbar_buttons[0].pressed);

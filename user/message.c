@@ -71,7 +71,7 @@ static bool toolbar_iter_next(toolbar_iter_t *it,
   r->y = it->base_y + it->cur_row * it->bsz;
   r->w = it->bsz;
   r->h = it->bsz;
-  it->cur_x += it->bsz + TOOLBAR_SPACING;
+  it->cur_x += it->bsz;
   return true;
 }
 
@@ -681,7 +681,10 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     rect_t wf = win_frame_in_screen(win, root, root_t);
     rect_t rootf = root->frame;
     set_viewport(&rootf);
-    set_projection(rootf.x, rootf.y, rootf.w, rootf.h);
+    set_projection(root->scroll[0],
+                   -root_t + root->scroll[1],
+                   root->frame.w + root->scroll[0],
+                   root->frame.h - root_t + root->scroll[1]);
     set_clip_rect(NULL, &wf);
     draw_builtin_scrollbars(win);
   }

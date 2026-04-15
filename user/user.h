@@ -75,7 +75,7 @@ static inline int toolbar_count_rows(const toolbar_button_t *buttons, uint32_t n
         cur_row++;
         cur_x = 0;
       }
-      cur_x += bsz + TOOLBAR_SPACING;
+      cur_x += bsz;
     }
   }
   return has_real ? cur_row + 1 : 1;
