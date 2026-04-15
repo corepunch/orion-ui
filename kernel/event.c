@@ -70,6 +70,11 @@ window_t *_resizing = NULL;
 static int drag_anchor[2];
 static int resize_anchor[2];
 
+// Window that received kWindowMessageNonClientLeftButtonDown (toolbar press).
+// Always delivered kWindowMessageNonClientLeftButtonUp on the next left-up,
+// regardless of release position, so pressed state is cleared deterministically.
+static window_t *_toolbar_down_win = NULL;
+
 // Handle mouse events on child windows.
 // x, y are in the parent window's client coordinate system.
 // Each child receives coords in its own client coordinate system (WinAPI style).
@@ -437,6 +442,7 @@ void dispatch_message(ui_event_t *msg) {
             // handled earlier by window_in_drag_area → _dragging path.
             send_message(win, kWindowMessageNonClientLeftButtonDown,
                          MAKEDWORD(sx, sy), NULL);
+            _toolbar_down_win = win;
           } else {
             int wmsg = (msg->message == kEventLeftMouseDown)
                        ? kWindowMessageLeftButtonDown
@@ -471,6 +477,17 @@ void dispatch_message(ui_event_t *msg) {
     case kEventRightMouseUp: {
       px = (int)msg->x;
       py = (int)msg->y;
+      // Always deliver NonClientLeftButtonUp to any window that received a
+      // NonClientLeftButtonDown (toolbar press), even if the release is outside
+      // the window.  This guarantees the pressed state is cleared deterministically.
+      if (_toolbar_down_win && msg->message == kEventLeftMouseUp) {
+        int sx = SCALE_POINT(px);
+        int sy = SCALE_POINT(py);
+        send_message(_toolbar_down_win, kWindowMessageNonClientLeftButtonUp,
+                     MAKEDWORD(sx, sy), NULL);
+        _toolbar_down_win = NULL;
+        break;
+      }
       if (_dragging) {
         int sx = SCALE_POINT(px);
         int sy = SCALE_POINT(py);

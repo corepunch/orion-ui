@@ -19,6 +19,7 @@ window_t *_captured = NULL;
 
 extern window_t *_dragging;
 extern window_t *_resizing;
+extern window_t *_toolbar_down_win;
 
 // Forward declarations
 extern void post_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
@@ -208,6 +209,7 @@ void destroy_window(window_t *win) {
   if (_tracked == win) track_mouse(NULL);
   if (_dragging == win) _dragging = NULL;
   if (_resizing == win) _resizing = NULL;
+  if (_toolbar_down_win == win) _toolbar_down_win = NULL;
   if (win->toolbar_buttons) free(win->toolbar_buttons);
   if (win->toolbar_strip_tex) {
     R_DeleteTexture(win->toolbar_strip_tex);

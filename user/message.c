@@ -475,6 +475,10 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         win->num_toolbar_buttons = wparam;
         win->toolbar_buttons = malloc(sizeof(toolbar_button_t)*wparam);
         memcpy(win->toolbar_buttons, lparam, sizeof(toolbar_button_t)*wparam);
+        // Zero the transient pressed flag: callers only set icon/ident/active,
+        // leaving pressed uninitialized when the struct is stack-allocated.
+        for (uint32_t i = 0; i < win->num_toolbar_buttons; i++)
+          win->toolbar_buttons[i].pressed = false;
         break;
       case kToolBarMessageSetStrip:
         if (lparam) {
