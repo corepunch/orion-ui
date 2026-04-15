@@ -260,7 +260,8 @@ void test_toolbar_button_pressed_on_nonclient_mousedown(void) {
 
     // Window at (10, 100), 44px wide, with 1 toolbar button.
     // bsz = TB_SPACING, bpr = 44/TB_SPACING, total_h = TB_SPACING.
-    // base_x = 10+2=12, base_y = 100 - TB_SPACING + 2.
+    // title_only_h = TITLEBAR_HEIGHT (window has title bar).
+    // base_x = 10+2=12, base_y = 100 + TITLEBAR_HEIGHT + 2.
     // Button 0: bx=12, by=base_y, width=height=TB_SPACING.
     // Hit-test centre: (12 + TB_SPACING/2, base_y + TB_SPACING/2).
     rect_t frame = {10, 100, 44, 50};
@@ -273,7 +274,7 @@ void test_toolbar_button_pressed_on_nonclient_mousedown(void) {
 
     int bsz   = TB_SPACING;
     int base_x = win->frame.x + 2;
-    int base_y = win->frame.y - bsz + 2;
+    int base_y = win->frame.y + TITLEBAR_HEIGHT + 2;
     int hit_x  = base_x + bsz / 2;
     int hit_y  = base_y + bsz / 2;
 
@@ -314,7 +315,7 @@ void test_toolbar_button_pressed_cleared_on_up_outside(void) {
 
     int bsz   = TB_SPACING;
     int base_x = win->frame.x + 2;
-    int base_y = win->frame.y - bsz + 2;
+    int base_y = win->frame.y + TITLEBAR_HEIGHT + 2;
     int hit_x  = base_x + bsz / 2;
     int hit_y  = base_y + bsz / 2;
 

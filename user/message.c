@@ -638,8 +638,9 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
                 ? (int)((win->num_toolbar_buttons + (uint32_t)bpr - 1) / (uint32_t)bpr)
                 : 1;
             int total_h = nrows * bsz;
+            int title_only_h = (win->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
             int base_x = win->frame.x + 2;
-            int base_y = win->frame.y - total_h + 2;
+            int base_y = win->frame.y + title_only_h + 2;
             #define CONTAINS(x, y, x1, y1, w1, h1) \
             ((x1) <= (x) && (y1) <= (y) && (x1) + (w1) > (x) && (y1) + (h1) > (y))
             for (uint32_t i = 0; i < win->num_toolbar_buttons; i++) {
