@@ -448,7 +448,7 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
               bool show_pressed = but->pressed || but->active;
               if (strip) {
                 // Draw button background (pressed/unpressed)
-                draw_button(&(rect_t){bx-2,by-2,bsz-2,bsz-2}, 1, 1, show_pressed);
+                draw_button(&(rect_t){bx-2,by-2,bsz,bsz}, 1, 1, show_pressed);
                 int px = show_pressed ? 1 : 0;
                 int icon_index = but->icon;
                 if (strip->cols > 0) {
