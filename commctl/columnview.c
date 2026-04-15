@@ -378,16 +378,14 @@ result_t win_columnview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
           next = (cur < 0) ? 0 : (cur + 1 < count ? cur + 1 : cur);
           break;
         case AX_KEY_ENTER:
-          if (cur >= 0) {
-            send_message(get_root_window(win), kWindowMessageCommand,
-                         MAKEDWORD(cur, CVN_DBLCLK), &data->items[cur]);
-          }
+          if (cur < 0) return false;
+          send_message(get_root_window(win), kWindowMessageCommand,
+                       MAKEDWORD(cur, CVN_DBLCLK), &data->items[cur]);
           return true;
         case AX_KEY_DEL:
-          if (cur >= 0) {
-            send_message(get_root_window(win), kWindowMessageCommand,
-                         MAKEDWORD(cur, CVN_DELETE), &data->items[cur]);
-          }
+          if (cur < 0) return false;
+          send_message(get_root_window(win), kWindowMessageCommand,
+                       MAKEDWORD(cur, CVN_DELETE), &data->items[cur]);
           return true;
         default:
           return false;
