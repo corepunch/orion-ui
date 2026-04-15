@@ -26,6 +26,7 @@ enum {
 enum {
   CVN_SELCHANGE = 200,
   CVN_DBLCLK,
+  CVN_DELETE,
 };
 
 // ColumnView item structure
