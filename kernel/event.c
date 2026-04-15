@@ -73,7 +73,8 @@ static int resize_anchor[2];
 // Window that received kWindowMessageNonClientLeftButtonDown (toolbar press).
 // Always delivered kWindowMessageNonClientLeftButtonUp on the next left-up,
 // regardless of release position, so pressed state is cleared deterministically.
-static window_t *_toolbar_down_win = NULL;
+// Shared with user/window.c for destroy_window cleanup (extern declared there).
+window_t *_toolbar_down_win = NULL;
 
 // Handle mouse events on child windows.
 // x, y are in the parent window's client coordinate system.
@@ -480,6 +481,10 @@ void dispatch_message(ui_event_t *msg) {
       // Always deliver NonClientLeftButtonUp to any window that received a
       // NonClientLeftButtonDown (toolbar press), even if the release is outside
       // the window.  This guarantees the pressed state is cleared deterministically.
+      // The break is intentional: toolbar clicks are fully handled by the
+      // NonClientLeftButtonDown/Up pair (analogous to WM_NCLBUTTONDOWN/UP),
+      // so no client LeftButtonDown/Up is sent for this click sequence.
+      // Focus changes already occurred on mouse-down, so no focus work is needed here.
       if (_toolbar_down_win && msg->message == kEventLeftMouseUp) {
         int sx = SCALE_POINT(px);
         int sy = SCALE_POINT(py);
