@@ -388,7 +388,7 @@ void adjust_window_rect(rect_t *r, flags_t flags) {
   // Compute non-client heights for the given flags.
   int t = 0;
   if (!(flags & WINDOW_NOTITLE)) t += TITLEBAR_HEIGHT;
-  if (flags & WINDOW_TOOLBAR)    t += TB_SPACING;  // minimum one toolbar row
+  if (flags & WINDOW_TOOLBAR)    t += TB_SPACING + 2 * TOOLBAR_PADDING;  // minimum one toolbar row
   int s = (flags & WINDOW_STATUSBAR) ? STATUSBAR_HEIGHT : 0;
   // Horizontal scrollbar: adds SCROLLBAR_WIDTH to the bottom unless it is
   // merged with the status bar (WINDOW_STATUSBAR also set).

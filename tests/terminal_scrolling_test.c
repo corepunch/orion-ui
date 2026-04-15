@@ -5,7 +5,7 @@
 #include <string.h>
 
 void test_terminal_has_vscroll_flag(void) {
-  TEST("Terminal has VSCROLL flag");
+  TEST("Terminal does not set VSCROLL (no scrollback buffer)");
   
   test_env_init();
   
@@ -14,11 +14,9 @@ void test_terminal_has_vscroll_flag(void) {
   window_t *terminal = create_window("Terminal Scroll Test", 0, &frame, NULL, win_terminal, 0, NULL);
   ASSERT_NOT_NULL(terminal);
   
-  // Verify VSCROLL flag is set
-  ASSERT_TRUE(terminal->flags & WINDOW_VSCROLL);
-  
-  // Initial scroll position should be 0
-  ASSERT_EQUAL(terminal->scroll[1], 0);
+  // The terminal does not implement a scrollback buffer so it does NOT set
+  // WINDOW_VSCROLL (see commctl/terminal.c kWindowMessageCreate comment).
+  ASSERT_FALSE(terminal->flags & WINDOW_VSCROLL);
   
   destroy_window(terminal);
   test_env_shutdown();

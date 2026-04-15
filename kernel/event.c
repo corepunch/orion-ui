@@ -439,7 +439,7 @@ void dispatch_message(ui_event_t *msg) {
           int sx = SCALE_POINT(px);
           int sy = SCALE_POINT(py);
           if (msg->message == kEventLeftMouseDown &&
-              (win->flags & WINDOW_TOOLBAR) && sy < win->frame.y) {
+              (win->flags & WINDOW_TOOLBAR) && sy < win->frame.y + titlebar_height(win)) {
             // Non-client left button down in toolbar area: send dedicated message
             // so the toolbar can show visual pressed feedback immediately.
             // Only applies when WINDOW_TOOLBAR is set; title bar clicks are

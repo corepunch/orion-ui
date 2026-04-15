@@ -441,12 +441,13 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
           }
           if (win->flags&WINDOW_TOOLBAR) {
             int bsz = (win->toolbar_btn_size > 0) ? win->toolbar_btn_size : TB_SPACING;
-            int bpr = (win->num_toolbar_buttons > 0 && win->frame.w > 0)
-                ? MAX(1, win->frame.w / bsz) : 1;
+            int inner_w = win->frame.w - 2;  // toolbar bevel insets 1px per side
+            int bpr = (win->num_toolbar_buttons > 0 && inner_w > 0)
+                ? MAX(1, (inner_w - 2*TOOLBAR_PADDING + TOOLBAR_SPACING) / (bsz + TOOLBAR_SPACING)) : 1;
             int nrows = (win->num_toolbar_buttons > 0)
                 ? (int)((win->num_toolbar_buttons + (uint32_t)bpr - 1) / (uint32_t)bpr)
                 : 1;
-            int total_h = nrows * bsz;
+            int total_h = nrows * bsz + 2 * TOOLBAR_PADDING;
             // Toolbar rows sit immediately below the title bar (or at the window
             // top when WINDOW_NOTITLE is set).  frame.y is now the window top.
             int title_only_h = (win->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
@@ -458,8 +459,8 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
               toolbar_button_t const *but = &win->toolbar_buttons[i];
               int row = (int)i / bpr;
               int col = (int)i % bpr;
-              int bx = rect.x + col * bsz + 2;
-              int by = rect.y + row * bsz + 2;
+              int bx = rect.x + TOOLBAR_PADDING + col * (bsz + TOOLBAR_SPACING) + 2;
+              int by = rect.y + TOOLBAR_PADDING + row * bsz + 2;
               bool show_pressed = but->pressed || but->active;
               if (strip) {
                 // Draw button background (pressed/unpressed)
@@ -656,19 +657,21 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
             uint16_t x = LOWORD(wparam);
             uint16_t y = HIWORD(wparam);
             int bsz = (win->toolbar_btn_size > 0) ? win->toolbar_btn_size : TB_SPACING;
-            int bpr = (win->num_toolbar_buttons > 0 && win->frame.w > 0)
-                ? MAX(1, win->frame.w / bsz) : 1;
+            int inner_w = win->frame.w - 2;  // toolbar bevel insets 1px per side
+            int bpr = (win->num_toolbar_buttons > 0 && inner_w > 0)
+                ? MAX(1, (inner_w - 2*TOOLBAR_PADDING + TOOLBAR_SPACING) / (bsz + TOOLBAR_SPACING)) : 1;
             int nrows = (win->num_toolbar_buttons > 0)
                 ? (int)((win->num_toolbar_buttons + (uint32_t)bpr - 1) / (uint32_t)bpr)
                 : 1;
-            int total_h = nrows * bsz;
-            int base_x = win->frame.x + 2;
-            int base_y = win->frame.y - total_h + 2;
+            (void)nrows;
+            int title_only_h = (win->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
+            int base_x = win->frame.x + 1 + TOOLBAR_PADDING;
+            int base_y = win->frame.y + title_only_h + 1 + TOOLBAR_PADDING;
             for (uint32_t i = 0; i < win->num_toolbar_buttons; i++) {
               toolbar_button_t *but = &win->toolbar_buttons[i];
               int row = (int)i / bpr;
               int col = (int)i % bpr;
-              int bx = base_x + col * bsz;
+              int bx = base_x + col * (bsz + TOOLBAR_SPACING);
               int by = base_y + row * bsz;
               but->pressed = CONTAINS(x, y, bx, by, bsz, bsz);
             }
@@ -680,19 +683,21 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
             uint16_t x = LOWORD(wparam);
             uint16_t y = HIWORD(wparam);
             int bsz = (win->toolbar_btn_size > 0) ? win->toolbar_btn_size : TB_SPACING;
-            int bpr = (win->num_toolbar_buttons > 0 && win->frame.w > 0)
-                ? MAX(1, win->frame.w / bsz) : 1;
+            int inner_w = win->frame.w - 2;  // toolbar bevel insets 1px per side
+            int bpr = (win->num_toolbar_buttons > 0 && inner_w > 0)
+                ? MAX(1, (inner_w - 2*TOOLBAR_PADDING + TOOLBAR_SPACING) / (bsz + TOOLBAR_SPACING)) : 1;
             int nrows = (win->num_toolbar_buttons > 0)
                 ? (int)((win->num_toolbar_buttons + (uint32_t)bpr - 1) / (uint32_t)bpr)
                 : 1;
+            (void)nrows;
             int title_only_h = (win->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
-            int base_x = win->frame.x + 2;
-            int base_y = win->frame.y + title_only_h + 2;
+            int base_x = win->frame.x + 1 + TOOLBAR_PADDING;
+            int base_y = win->frame.y + title_only_h + 1 + TOOLBAR_PADDING;
             for (uint32_t i = 0; i < win->num_toolbar_buttons; i++) {
               toolbar_button_t *but = &win->toolbar_buttons[i];
               int row = (int)i / bpr;
               int col = (int)i % bpr;
-              int bx = base_x + col * bsz;
+              int bx = base_x + col * (bsz + TOOLBAR_SPACING);
               int by = base_y + row * bsz;
               bool hit = CONTAINS(x, y, bx, by, bsz, bsz);
               but->pressed = false;
