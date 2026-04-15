@@ -1,6 +1,7 @@
 // VIEW: Menu bar and command dispatch for the Task Manager.
 
 #include "taskmanager.h"
+#include "../../gem_magic.h"
 
 // ============================================================
 // Menu definitions
@@ -269,18 +270,12 @@ result_t app_menubar_proc(window_t *win, uint32_t msg,
 // ============================================================
 
 void create_menubar(void) {
-  int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
-  window_t *mb = create_window(
-      "menubar",
-      WINDOW_NOTITLE | WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
-      MAKERECT(0, 0, sw, MENUBAR_HEIGHT),
-      NULL, app_menubar_proc, g_app->hinstance, NULL);
-  send_message(mb, kMenuBarMessageSetMenus,
-               (uint32_t)kNumMenus, (void *)kMenus);
-  show_window(mb, true);
-  g_app->menubar_win = mb;
+  g_app->menubar_win = set_app_menu(app_menubar_proc, kMenus, kNumMenus,
+                                    handle_menu_command, g_app->hinstance);
 
   g_app->accel = load_accelerators(kAccelEntries,
       (int)(sizeof(kAccelEntries)/sizeof(kAccelEntries[0])));
-  send_message(mb, kMenuBarMessageSetAccelerators, 0, g_app->accel);
+  if (g_app->menubar_win)
+    send_message(g_app->menubar_win, kMenuBarMessageSetAccelerators,
+                 0, g_app->accel);
 }

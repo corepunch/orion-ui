@@ -76,13 +76,6 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
     send_message(g_app->menubar_win, kMenuBarMessageSetAccelerators,
                  0, g_app->accel);
 
-#ifdef BUILD_AS_GEM
-  gem_interface_t *iface = gem_get_interface();
-  iface->menus          = kMenus;
-  iface->menu_count     = kNumMenus;
-  iface->handle_command = (void (*)(uint16_t))handle_menu_command;
-#endif
-
   return true;
 }
 

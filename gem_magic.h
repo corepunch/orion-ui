@@ -148,4 +148,56 @@ extern hinstance_t g_gem_hinstance;
 
 #endif  /* BUILD_AS_GEM */
 
+// ---------------------------------------------------------------------------
+// set_app_menu — register the application menu and command handler.
+//
+// In standalone mode: creates a full-width menubar window at y=0, sends
+// kMenuBarMessageSetMenus, shows it, and returns the window pointer.
+// handle_command is unused in this path — the caller's proc is responsible
+// for dispatching kMenuBarNotificationItemClick to the command handler.
+//
+// In gem mode: populates the gem interface's menu-contribution fields
+// (iface->menus / iface->menu_count / iface->handle_command) so the shell
+// can merge them into its own menu bar, then returns NULL.  proc and
+// hinstance are unused in this path.
+//
+// Parameters:
+//   proc           — window procedure for the menu bar window (standalone
+//                    only).  Typically wraps win_menubar and routes
+//                    kMenuBarNotificationItemClick to handle_command.
+//   menus          — array of menu_def_t describing the top-level menus.
+//   menu_count     — number of entries in menus[].
+//   handle_command — dispatch function for menu item selections.  Used
+//                    directly by the shell in gem mode; in standalone mode
+//                    the caller's proc is expected to call it.
+//   hinstance      — owning application instance (standalone only).
+//
+// Returns the menubar window in standalone mode, NULL in gem mode.
+static inline window_t *set_app_menu(
+    winproc_t proc,
+    const menu_def_t *menus, int menu_count,
+    void (*handle_command)(uint16_t id),
+    hinstance_t hinstance)
+{
+#ifdef BUILD_AS_GEM
+    (void)proc; (void)hinstance;
+    gem_interface_t *iface = gem_get_interface();
+    iface->menus          = menus;
+    iface->menu_count     = menu_count;
+    iface->handle_command = handle_command;
+    return NULL;
+#else
+    (void)handle_command;
+    int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
+    window_t *mb = create_window(
+        "menubar",
+        WINDOW_NOTITLE | WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
+        MAKERECT(0, 0, sw, MENUBAR_HEIGHT),
+        NULL, proc, hinstance, NULL);
+    send_message(mb, kMenuBarMessageSetMenus, (uint32_t)menu_count, (void *)menus);
+    show_window(mb, true);
+    return mb;
+#endif
+}
+
 #endif  /* GEM_MAGIC_H */
