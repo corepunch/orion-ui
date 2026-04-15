@@ -39,7 +39,7 @@ struct rect_s {
 // A fixed-size-tile bitmap strip, analogous to WinAPI HIMAGELIST / TB_ADDBITMAP.
 // Icons are indexed 0..N left-to-right then top-to-bottom.
 // Used with kButtonMessageSetImage and kToolBarMessageSetStrip.
-typedef struct {
+typedef struct bitmap_strip_s {
   uint32_t tex;     // OpenGL texture ID of the strip texture
   int      icon_w;  // pixel width of each icon tile
   int      icon_h;  // pixel height of each icon tile
@@ -165,6 +165,7 @@ void invalidate_window(window_t *win);
 window_t *get_window_item(window_t const *win, uint32_t id);
 bool is_window(window_t *win);
 int window_title_bar_y(window_t const *win);
+bool window_in_drag_area(window_t const *win, int sy);
 window_t *get_root_window(window_t *window);
 window_t *find_window(int x, int y);
 window_t *find_default_button(window_t *win);
@@ -230,15 +231,16 @@ extern window_t *g_inspector;
 
 typedef enum {
   BIND_STRING,    // char[] field: text-edit text ↔ char array (size = sizeof field)
-  BIND_INT_COMBO, // int   field: combo-box selection index ↔ int  (size = 0)
-  BIND_INT_EDIT,  // int   field: text-edit decimal text    ↔ int  (size = 0)
+  BIND_INT_COMBO, // int   field: combo-box selection index ↔ int  (size = default index)
+  BIND_INT_EDIT,  // int   field: text-edit decimal text    ↔ int  (size = unused)
 } bind_type_t;
 
 typedef struct {
   uint32_t    ctrl_id; // numeric child control ID
   bind_type_t type;    // BIND_* transfer type
   size_t      offset;  // offsetof(state_t, field)
-  size_t      size;    // for BIND_STRING: sizeof the char[] field; else 0
+  size_t      size;    // BIND_STRING: sizeof char[] field;
+                       // BIND_INT_COMBO: default index (used when pull returns < 0)
 } ctrl_binding_t;
 
 // dialog_push: write state fields → controls (call from kWindowMessageCreate).

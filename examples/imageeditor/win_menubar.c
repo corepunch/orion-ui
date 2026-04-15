@@ -30,8 +30,8 @@ static const menu_item_t kEditItems[] = {
 };
 
 static const menu_item_t kViewItems[] = {
-  {"Zoom In\tCtrl++",  ID_VIEW_ZOOM_IN},
-  {"Zoom Out\tCtrl+-", ID_VIEW_ZOOM_OUT},
+  {"Zoom In",   ID_VIEW_ZOOM_IN},
+  {"Zoom Out",  ID_VIEW_ZOOM_OUT},
   {NULL, 0},
   {"1x",               ID_VIEW_ZOOM_1X},
   {"2x",               ID_VIEW_ZOOM_2X},

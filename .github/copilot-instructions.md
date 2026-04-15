@@ -95,26 +95,39 @@ send_message(vsb, kScrollBarMessageSetInfo, 0, &info);
 
 **WINDOW_TOOLBAR — built-in toolbar strip above a window's client area**
 
-Any window can have a toolbar strip by setting the `WINDOW_TOOLBAR` flag at creation time. The strip is painted automatically by the framework above the title bar. Buttons are added with `kToolBarMessageAddButtons`, each described by a `toolbar_button_t {icon, ident, active}` where `icon` is an `icon16_t` enum value rendered via `draw_icon16()`.
+Any window can have a toolbar strip by setting the `WINDOW_TOOLBAR` flag at creation time. The strip is painted automatically by the framework above the title bar. Buttons are added with `kToolBarMessageAddButtons`, each described by a `toolbar_button_t {icon, ident, active}` where `icon` is a `sysicon_*` value from `user/icons.h`.
+
+**Built-in system icons (sysicon_\* / SYSICON_BASE)**
+
+Orion ships a 20×20 grid PNG icon sheet.  In the source tree, the asset lives at `share/icon_sheet_16x16.png`; at runtime it is deployed and loaded from `share/orion/icon_sheet_16x16.png` automatically at startup.  All ~398 icons are listed in `user/icons.h` as `sysicon_<name>` enum values starting at `SYSICON_BASE` (0x10000).  When a toolbar button's `icon` field is `>= SYSICON_BASE` the engine draws it from the built-in sheet — **no `kToolBarMessageLoadStrip` call is needed**.
 
 ```c
-// Correct: attach a toolbar to a document window
-window_t *doc = create_window("Untitled", WINDOW_TOOLBAR | WINDOW_STATUSBAR,
-    MAKERECT(x, y, w, h), NULL, my_doc_proc, NULL);
+#include "user/icons.h"
 
+// Correct: use sysicon_* values directly — framework sources them from
+//          the built-in PNG sheet automatically.
 static const toolbar_button_t kDocToolbar[] = {
-    { icon16_new,  ID_FILE_NEW,  false },
-    { icon16_open, ID_FILE_OPEN, false },
-    { icon16_save, ID_FILE_SAVE, false },
+    { sysicon_add,    ID_FILE_NEW,  false },
+    { sysicon_folder, ID_FILE_OPEN, false },
+    { sysicon_save,   ID_FILE_SAVE, false },
 };
 send_message(doc, kToolBarMessageAddButtons,
              sizeof(kDocToolbar)/sizeof(kDocToolbar[0]),
              (void *)kDocToolbar);
 ```
 
+For `win_toolbar_button` windows, use `ui_get_sysicon_strip()` to obtain the pre-loaded strip and pass `sysicon_X - SYSICON_BASE` as the index:
+
+```c
+bitmap_strip_t *s = ui_get_sysicon_strip();
+if (s)
+    send_message(btn, kButtonMessageSetImage,
+                 (uint32_t)(sysicon_add - SYSICON_BASE), s);
+```
+
 **win_toolbar_button + bitmap_strip_t — sprite-sheet icon buttons (TB_ADDBITMAP style)**
 
-When icons come from a PNG sprite sheet rather than built-in `icon16_t` enums, use `win_toolbar_button` and `bitmap_strip_t`. This is the Orion equivalent of WinAPI's `TB_ADDBITMAP` / `TBBUTTON.iBitmap`:
+When icons come from a *custom* PNG sprite sheet (not the built-in sheet), use `win_toolbar_button` and `bitmap_strip_t`. This is the Orion equivalent of WinAPI's `TB_ADDBITMAP` / `TBBUTTON.iBitmap`:
 - Load the strip once; store a single `bitmap_strip_t {tex, icon_w, icon_h, cols, sheet_w, sheet_h}`.
 - Each button stores only an integer **index** (iBitmap). The icon at index `n` occupies tile `(n % cols, n / cols)`.
 - Send `kButtonMessageSetImage(wparam=index, lparam=&strip)` — the button owns a private copy, the caller needs no lifetime guarantee.
@@ -139,6 +152,7 @@ for (int i = 0; i < NUM_TOOLS; i++) {
 | Handling icon clicks in a custom `WM_LBUTTONDOWN` in a palette window proc | Use `WINDOW_TOOLBAR` + `kToolBarMessageAddButtons`; clicks fire `kToolBarMessageButtonClick` |
 | Inventing a bespoke floating-window class for a toolbar | Use `WINDOW_TOOLBAR` on the document window, or a separate toolbar window with `win_toolbar_button` children |
 | Hard-coding texture dimensions (`TOOLS_TEX_W/H`) | Derive `cols` from the actually loaded PNG width: `cols = loaded_w / icon_w` |
+| Calling `kToolBarMessageLoadStrip` just to use common icons | Use `sysicon_*` values directly — the engine loads the built-in sheet automatically |
 
 ### Naming Conventions
 - Use snake_case for function names (e.g., `create_window`, `draw_text_small`)

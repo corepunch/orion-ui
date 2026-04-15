@@ -12,6 +12,7 @@
 #include "../../commctl/columnview.h"
 #include "../../commctl/menubar.h"
 #include "../../user/accel.h"
+#include "../../user/icons.h"
 
 // ============================================================
 // Layout constants
@@ -21,7 +22,7 @@
 #define SCREEN_H   480
 
 #define MAIN_WIN_X  60
-#define MAIN_WIN_Y  (MENUBAR_HEIGHT + 8 + TITLEBAR_HEIGHT)
+#define MAIN_WIN_Y  (MENUBAR_HEIGHT + 8 + TITLEBAR_HEIGHT + 20)
 #define MAIN_WIN_W  (SCREEN_W - MAIN_WIN_X - 4)
 #define MAIN_WIN_H  (SCREEN_H - MAIN_WIN_Y - 4)
 

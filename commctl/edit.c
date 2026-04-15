@@ -57,6 +57,12 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       return true;
     case kWindowMessageKeyDown:
       switch (wparam) {
+        case AX_KEY_TAB:
+          if (win->editing) {
+            send_message(get_root_window(win), kWindowMessageCommand, MAKEDWORD(win->id, kEditNotificationUpdate), win);
+            win->editing = false;
+          }
+          return false;
         case AX_KEY_ENTER:
           if (!win->editing) {
             win->cursor_pos = (int)strlen(win->title);

@@ -413,6 +413,66 @@ The framework uses a message-based architecture. Common messages include:
 - `CVN_SELCHANGE` - Selection changed notification
 - `CVN_DBLCLK` - Item double-clicked notification
 
+## Built-in System Icons
+
+Orion ships a PNG icon sheet whose source asset in the repository is
+`share/icon_sheet_16x16.png`. At runtime, the deployed path is typically
+`<exe_dir>/../share/orion/icon_sheet_16x16.png`, and it is loaded automatically
+at `ui_init_graphics()` time.  The sheet is a 20×20 grid of 16×16 pixel RGBA
+icons.  All icon names are defined as an enum in `user/icons.h`.
+
+### Icon index base
+
+Every `sysicon_*` value starts at `SYSICON_BASE` (`0x10000`).  When the
+framework sees a toolbar-button icon value `>= SYSICON_BASE` it draws the icon
+from the built-in sheet automatically — no `kToolBarMessageLoadStrip` call is
+required.
+
+### Using sysicons in a WINDOW_TOOLBAR
+
+```c
+#include "user/icons.h"
+
+static const toolbar_button_t kMyToolbar[] = {
+  { sysicon_add,    ID_NEW,  false },
+  { sysicon_accept, ID_SAVE, false },
+};
+send_message(win, kToolBarMessageAddButtons,
+             sizeof(kMyToolbar) / sizeof(kMyToolbar[0]),
+             (void *)kMyToolbar);
+```
+
+The engine draws the correct icon from the sheet without any extra setup.
+
+### Using sysicons in a standalone win_toolbar_button
+
+For `win_toolbar_button` windows you pass the strip explicitly via
+`kButtonMessageSetImage`.  Use `ui_get_sysicon_strip()` to obtain the
+pre-loaded strip and subtract `SYSICON_BASE` to get the strip-local index:
+
+```c
+bitmap_strip_t *strip = ui_get_sysicon_strip();
+if (strip) {
+  send_message(btn, kButtonMessageSetImage,
+               (uint32_t)(sysicon_add - SYSICON_BASE), strip);
+}
+```
+
+### Available icons
+
+All icons are listed in `user/icons.h` as `sysicon_<name>` enum values
+(e.g., `sysicon_add`, `sysicon_accept`, `sysicon_folder`, `sysicon_save`,
+`sysicon_world`, …).  The enum contains ~398 entries covering common UI
+actions, file types, and editor concepts.
+
+### Asset deployment
+
+The build system copies `share/icon_sheet_16x16.png` to
+`build/share/orion/icon_sheet_16x16.png` as part of the `share` target
+(which is a dependency of `examples`).  The framework resolves the path at
+runtime relative to the running executable:
+`<exe_dir>/../share/orion/icon_sheet_16x16.png`.
+
 ## Text Rendering API
 
 Orion provides text rendering through `ui/user/text.h`:

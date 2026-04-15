@@ -5,6 +5,8 @@
 #include "../platform/platform.h"
 #include "renderer.h"
 
+typedef struct bitmap_strip_s bitmap_strip_t;
+
 #define UI_INIT_DESKTOP 0x01000000u
 #define UI_INIT_TRAY 0x02000000u
 
@@ -92,5 +94,20 @@ typedef enum {
 
 int ui_get_system_metrics(ui_system_metrics_t);
 void ui_update_screen_size(int width, int height);
+
+// Built-in system icon strip.
+// Returns a pointer to the global bitmap_strip_t for icon_sheet_16x16.png,
+// or NULL if the sheet was not found at startup.  Icon values from icons.h
+// (sysicon_*) start at SYSICON_BASE (0x10000); subtract SYSICON_BASE to get
+// the strip index when calling kButtonMessageSetImage.
+//
+// Most callers do not need this: toolbar buttons whose icon field is
+// >= SYSICON_BASE are drawn from the sheet automatically.
+//
+// Example:
+//   bitmap_strip_t *s = ui_get_sysicon_strip();
+//   if (s)
+//     send_message(btn, kButtonMessageSetImage, sysicon_add - SYSICON_BASE, s);
+bitmap_strip_t *ui_get_sysicon_strip(void);
 
 #endif

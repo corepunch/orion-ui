@@ -20,6 +20,39 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   if (!g_app) return false;
 
   g_app->hinstance = hinstance;
+  // Seed the app with 20 example tasks spread across priorities and statuses.
+  {
+    struct { const char *title; const char *desc; task_priority_t prio; task_status_t status; } seed[] = {
+      { "Set up development environment",  "Install SDK, IDE and configure build tools.",           PRIORITY_HIGH,   STATUS_COMPLETED  },
+      { "Write project specification",     "Document requirements and scope for the next release.", PRIORITY_NORMAL, STATUS_COMPLETED  },
+      { "Design database schema",          "Define tables, indexes and foreign-key constraints.",   PRIORITY_HIGH,   STATUS_COMPLETED  },
+      { "Implement user authentication",   "Login, logout, password reset flows.",                  PRIORITY_URGENT, STATUS_INPROGRESS },
+      { "Build REST API endpoints",        "CRUD operations for resources under /api/v1/.",         PRIORITY_HIGH,   STATUS_INPROGRESS },
+      { "Create CI/CD pipeline",           "Set up automated build, test and deploy workflows.",    PRIORITY_NORMAL, STATUS_INPROGRESS },
+      { "Write unit tests for model",      "Achieve >=80% coverage on the data layer.",            PRIORITY_HIGH,   STATUS_TODO       },
+      { "Write integration tests",         "End-to-end tests for all API routes.",                  PRIORITY_NORMAL, STATUS_TODO       },
+      { "Review third-party licenses",     "Audit all dependencies for license compatibility.",     PRIORITY_LOW,    STATUS_TODO       },
+      { "Performance profiling",           "Profile hot paths and reduce P99 latency.",             PRIORITY_HIGH,   STATUS_TODO       },
+      { "Security audit",                  "Penetration testing and OWASP Top-10 review.",          PRIORITY_URGENT, STATUS_TODO       },
+      { "Update API documentation",        "Regenerate OpenAPI spec and publish to docs site.",     PRIORITY_NORMAL, STATUS_TODO       },
+      { "Migrate legacy data",             "Transform and import records from the old database.",   PRIORITY_HIGH,   STATUS_TODO       },
+      { "Implement export to CSV",         "Allow users to download their data as a CSV file.",     PRIORITY_NORMAL, STATUS_TODO       },
+      { "Add dark mode support",           "Detect system preference and apply dark theme.",        PRIORITY_LOW,    STATUS_TODO       },
+      { "Fix pagination bug",              "Off-by-one error on the last page of results.",         PRIORITY_HIGH,   STATUS_TODO       },
+      { "Localize UI strings",             "Extract all user-visible strings into resource files.", PRIORITY_NORMAL, STATUS_TODO       },
+      { "Accessibility review",            "Ensure keyboard nav and screen-reader compatibility.",  PRIORITY_NORMAL, STATUS_TODO       },
+      { "Prepare release notes",           "Summarise changes since the previous release tag.",     PRIORITY_LOW,    STATUS_TODO       },
+      { "Deploy to production",            "Tag release, build artifacts and roll out to prod.",    PRIORITY_URGENT, STATUS_TODO       },
+    };
+    uint32_t base = (uint32_t)time(NULL);
+    for (int i = 0; i < 20; i++) {
+      task_t *t = task_create(seed[i].title, seed[i].desc,
+                              seed[i].prio, seed[i].status,
+                              base + (uint32_t)(i + 1) * 86400u);
+      if (t) app_add_task(g_app, t);
+    }
+    g_app->modified = false;
+  }
 
   // Build the menu bar.
   create_menubar();
@@ -29,7 +62,7 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   int sh = MIN(240, ui_get_system_metrics(kSystemMetricScreenHeight));
   window_t *mw = create_window(
       "Task Manager",
-      WINDOW_STATUSBAR,
+      WINDOW_STATUSBAR | WINDOW_TOOLBAR,
       MAKERECT(MAIN_WIN_X, MAIN_WIN_Y,
                sw - MAIN_WIN_X - 4,
                sh - MAIN_WIN_Y - 4),

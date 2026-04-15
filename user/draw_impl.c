@@ -11,10 +11,18 @@
 #include "user.h"
 #include "messages.h"
 #include "draw.h"
+#include "icons.h"
 
 // External references
 extern window_t *windows;
 extern window_t *_focused;
+extern window_t *get_root_window(window_t *window);
+
+// Returns true if win is the root window that currently "owns" keyboard focus
+// (either win itself is focused, or one of its descendants is focused).
+static bool window_has_focus(const window_t *win) {
+  return _focused && get_root_window(_focused) == (window_t *)win;
+}
 
 // Forward declarations
 extern void draw_text_small(const char* text, int x, int y, uint32_t col);
@@ -82,6 +90,16 @@ void draw_focused(rect_t const *r) {
   fill_rect(get_sys_color(kColorFocusRing), r->x, r->y+r->h, r->w+1, 1);
 }
 
+// Draw a softer single-colour outline for a window that contains focused
+// controls but is not itself the focused widget.
+static void draw_active_frame(rect_t const *r) {
+  uint32_t col = get_sys_color(kColorBorderActive);
+  fill_rect(col, r->x-1, r->y-1, r->w+2, 1);
+  fill_rect(col, r->x-1, r->y-1, 1, r->h+2);
+  fill_rect(col, r->x+r->w, r->y, 1, r->h+1);
+  fill_rect(col, r->x, r->y+r->h, r->w+1, 1);
+}
+
 // Draw bevel border
 void draw_bevel(rect_t const *r) {
   fill_rect(get_sys_color(kColorLightEdge), r->x-1, r->y-1, r->w+2, 1);
@@ -109,9 +127,10 @@ void draw_panel(window_t const *win) {
   int s = statusbar_height(win);
   int x = win->frame.x, y = win->frame.y-t;
   int w = win->frame.w, h = win->frame.h+t+s;
-  bool active = _focused == win;
-  if (active) {
+  if (_focused == win) {
     draw_focused(MAKERECT(x, y, w, h));
+  } else if (window_has_focus(win)) {
+    draw_active_frame(MAKERECT(x, y, w, h));
   } else {
     draw_bevel(MAKERECT(x, y, w, h));
   }
@@ -129,7 +148,7 @@ void draw_panel(window_t const *win) {
 void draw_window_controls(window_t *win) {
   rect_t r = win->frame;
   int t = titlebar_height(win);
-  bool active = (_focused == win);
+  bool active = window_has_focus(win);
   fill_rect(get_sys_color(active ? kColorActiveTitlebar : kColorInactiveTitlebar),
             r.x, r.y-t, r.w, t);
   set_fullscreen();
@@ -307,6 +326,22 @@ void draw_icon8(int icon, int x, int y, uint32_t col) {
 }
 
 void draw_icon16(int icon, int x, int y, uint32_t col) {
+  if (icon >= SYSICON_BASE) {
+    bitmap_strip_t *s = ui_get_sysicon_strip();
+    if (s && s->tex != 0 && s->cols > 0) {
+      int idx  = icon - SYSICON_BASE;
+      int scol = idx % s->cols;
+      int srow = idx / s->cols;
+      float u0 = (float)(scol * s->icon_w) / (float)s->sheet_w;
+      float v0 = (float)(srow * s->icon_h) / (float)s->sheet_h;
+      float u1 = u0 + (float)s->icon_w / (float)s->sheet_w;
+      float v1 = v0 + (float)s->icon_h / (float)s->sheet_h;
+      draw_sprite_region((int)s->tex, x, y,
+                         s->icon_w, s->icon_h,
+                         u0, v0, u1, v1, 1.0f);
+    }
+    return;
+  }
   icon*=2;
   draw_text_small((char[]) { icon+128, icon+129, 0 }, x, y, col);
   draw_text_small((char[]) { icon+144, icon+145, 0 }, x, y+8, col);

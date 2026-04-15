@@ -320,6 +320,20 @@ int window_title_bar_y(window_t const *win) {
   return win->frame.y + 2 - titlebar_height(win);
 }
 
+// Returns true when the absolute screen Y coordinate 'sy' falls within the
+// draggable title-bar row of 'win'.  For windows with WINDOW_TOOLBAR the
+// toolbar rows sit below the title bar and must NOT initiate a drag.
+// Windows without a toolbar are entirely draggable above frame.y.
+// Windows with WINDOW_NOTITLE have no title row; their toolbar area is the
+// only non-client space and may be dragged from freely (e.g. tool palettes).
+bool window_in_drag_area(window_t const *win, int sy) {
+  if (win->parent || sy >= win->frame.y) return false;
+  if (!(win->flags & WINDOW_TOOLBAR) || (win->flags & WINDOW_NOTITLE)) return true;
+  // The title bar row ends at window_title_bar_y(win) + TITLEBAR_HEIGHT - 2.
+  // (window_title_bar_y has a +2 painting offset; -2 corrects it for hit-testing.)
+  return sy < window_title_bar_y(win) + TITLEBAR_HEIGHT - 2;
+}
+
 // Get child window by ID
 window_t *get_window_item(window_t const *win, uint32_t id) {
   for (window_t *item = win->children; item; item = item->next) {

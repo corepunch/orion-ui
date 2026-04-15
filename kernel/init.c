@@ -16,6 +16,8 @@
 #include "../platform/platform.h"
 #include "../user/gl_compat.h"
 #include "../user/user.h"
+#include "../user/image.h"
+#include "../user/icons.h"
 #include "../commctl/commctl.h"
 #include "kernel.h"
 
@@ -34,6 +36,12 @@ uint32_t ui_white_texture = 0;
 
 // Internal 4×4 checker texture for drawing selection outlines
 uint32_t ui_checker_texture = 0;
+
+// Built-in system icon strip loaded from share/orion/icon_sheet_16x16.png.
+// Accessible from draw_impl.c via extern.  Icons are indexed starting at
+// SYSICON_BASE (0x10000); subtract SYSICON_BASE to get the strip index.
+bitmap_strip_t g_sysicon_strip = {0};
+static uint32_t g_sysicon_tex = 0;
 
 // Initialize the internal white texture
 void init_ui_white_texture(void) {
@@ -58,6 +66,36 @@ void init_ui_checker_texture(void) {
   }
 }
 
+// Load the built-in icon sheet from <exe_dir>/../share/orion/icon_sheet_16x16.png.
+// Safe to call multiple times; subsequent calls are no-ops if already loaded.
+static void init_sysicon_strip(void) {
+  if (g_sysicon_tex != 0) return;
+  char path[4096];
+  snprintf(path, sizeof(path), "%s/../share/orion/icon_sheet_16x16.png",
+           ui_get_exe_dir());
+  int w = 0, h = 0;
+  uint8_t *src = load_image(path, &w, &h);
+  if (!src) return;
+  if (w < 16 || h < 16 || (w % 16) != 0 || (h % 16) != 0) {
+    image_free(src);
+    return;
+  }
+  g_sysicon_tex = R_CreateTextureRGBA(w, h, src, R_FILTER_NEAREST, R_WRAP_CLAMP);
+  image_free(src);
+  g_sysicon_strip.tex     = g_sysicon_tex;
+  g_sysicon_strip.icon_w  = 16;
+  g_sysicon_strip.icon_h  = 16;
+  g_sysicon_strip.cols    = w / 16;
+  g_sysicon_strip.sheet_w = w;
+  g_sysicon_strip.sheet_h = h;
+}
+
+static void shutdown_sysicon_strip(void) {
+  R_DeleteTexture(g_sysicon_tex);
+  g_sysicon_tex = 0;
+  g_sysicon_strip = (bitmap_strip_t){0};
+}
+
 void shutdown_ui_textures(void) {
   R_DeleteTexture(ui_white_texture);
   ui_white_texture = 0;
@@ -67,6 +105,11 @@ void shutdown_ui_textures(void) {
 
 void shutdown_white_texture(void) {
   shutdown_ui_textures();
+}
+
+// Return the global built-in icon strip, or NULL if it has not been loaded.
+bitmap_strip_t *ui_get_sysicon_strip(void) {
+  return (g_sysicon_strip.tex != 0) ? &g_sysicon_strip : NULL;
 }
 
 static result_t win_desktop(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
@@ -117,6 +160,7 @@ bool ui_init_graphics(int flags, const char *title, int width, int height) {
 
   init_ui_white_texture();
   init_ui_checker_texture();
+  init_sysicon_strip();
 
   init_console();
 
@@ -162,6 +206,7 @@ void ui_shutdown_graphics(void) {
 
   ui_shutdown_prog();
 
+  shutdown_sysicon_strip();
   shutdown_white_texture();
 
   shutdown_console();

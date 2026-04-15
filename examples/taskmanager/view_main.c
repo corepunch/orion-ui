@@ -3,6 +3,16 @@
 #include "taskmanager.h"
 
 // ============================================================
+// Toolbar button definitions
+// ============================================================
+
+static const toolbar_button_t kMainToolbar[] = {
+  { sysicon_add,    ID_TASK_NEW,    false },
+  { sysicon_pencil, ID_TASK_EDIT,   false },
+  { sysicon_delete, ID_TASK_DELETE, false },
+};
+
+// ============================================================
 // Main window procedure
 // ============================================================
 
@@ -13,6 +23,10 @@ result_t main_win_proc(window_t *win, uint32_t msg,
       // Set main_win before calling app_update_status so the status bar
       // is populated on first paint.
       g_app->main_win = win;
+      // Install toolbar buttons (New / Edit / Delete).
+      send_message(win, kToolBarMessageAddButtons,
+                   sizeof(kMainToolbar) / sizeof(kMainToolbar[0]),
+                   (void *)kMainToolbar);
       // The list view is created as a child that fills the client area.
       g_app->list_win = create_window(
           "tasks",
@@ -27,6 +41,10 @@ result_t main_win_proc(window_t *win, uint32_t msg,
       if (g_app->list_win)
         resize_window(g_app->list_win, win->frame.w, win->frame.h);
       return false;
+
+    case kToolBarMessageButtonClick:
+      handle_menu_command((uint16_t)wparam);
+      return true;
 
     case kWindowMessageCommand: {
       // Forward menu commands and list notifications to menu handler.
