@@ -12,6 +12,9 @@
 #include "draw.h"
 #include "image.h"
 
+#define CONTAINS(x, y, x1, y1, w1, h1) \
+((x1) <= (x) && (y1) <= (y) && (x1) + (w1) > (x) && (y1) + (h1) > (y))
+
 // Message queue structure
 typedef struct {
   window_t *target;
@@ -60,6 +63,19 @@ extern void set_fullscreen(void);
 extern window_t *get_root_window(window_t *window);
 extern int titlebar_height(window_t const *win);
 extern int statusbar_height(window_t const *win);
+
+// Returns win's frame rect in absolute screen coordinates.
+// For root windows, frame.x/y are already screen-absolute.
+// For child windows, frame.x/y are root-client-space coords; they are mapped
+// to screen by adding the root's screen origin and the root's non-client height.
+// root_titlebar_h should be titlebar_height(root) — callers that already have
+// it pass it in to avoid recomputing.
+static rect_t win_frame_in_screen(window_t *win, window_t *root, int root_titlebar_h) {
+  if (win == root) return win->frame;
+  return (rect_t){root->frame.x + win->frame.x,
+                  root->frame.y + root_titlebar_h + win->frame.y,
+                  win->frame.w, win->frame.h};
+}
 
 // Register a window hook
 void register_window_hook(uint32_t msg, winhook_func_t func, void *userdata) {
@@ -420,9 +436,8 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
           }
           if (!(win->flags&WINDOW_NOTITLE)) {
             draw_window_controls(win);
-            bool active = (_focused == win);
             draw_text_small(win->title, frame->x+2, window_title_bar_y(win),
-                            get_sys_color(active ? kColorActiveTitlebarText : kColorInactiveTitlebarText));
+                            get_sys_color(window_has_focus(win) ? kColorActiveTitlebarText : kColorInactiveTitlebarText));
           }
           if (win->flags&WINDOW_TOOLBAR) {
             int bsz = (win->toolbar_btn_size > 0) ? win->toolbar_btn_size : TB_SPACING;
@@ -449,7 +464,7 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
               bool show_pressed = but->pressed || but->active;
               if (strip) {
                 // Draw button background (pressed/unpressed)
-                draw_button(&(rect_t){bx-2,by-2,bsz-2,bsz-2}, 1, 1, show_pressed);
+                draw_button(&(rect_t){bx-2,by-2,bsz,bsz}, 1, 1, show_pressed);
                 int px = show_pressed ? 1 : 0;
                 int icon_index = but->icon;
                 if (strip->cols > 0) {
@@ -488,6 +503,17 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
                          -t + root->scroll[1],
                          root->frame.w + root->scroll[0],
                          root->frame.h - t + root->scroll[1]);
+          // For scrollable windows, tighten the scissor to the client area so
+          // that scrolled content cannot bleed into non-client areas (title bar,
+          // toolbar, status bar).  Only applied when a window actually has
+          // built-in scrollbars — no scissor state is wasted on non-scrollable
+          // windows, and the stencil buffer is not touched at all for this.
+          if (win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL)) {
+            int t_win = titlebar_height(win);   /* win's own non-client height */
+            rect_t cr = get_client_rect(win);
+            rect_t wf = win_frame_in_screen(win, root, t);
+            set_clip_rect(NULL, &(rect_t){wf.x, wf.y + t_win, cr.w, cr.h});
+          }
         }
         break;
       case kToolBarMessageAddButtons:
@@ -621,12 +647,9 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
           for (window_t *item = win->children; item; item = item->next) {
             rect_t r = item->frame;
             uint16_t x = LOWORD(wparam), y = HIWORD(wparam);
-            #define CONTAINS(x, y, x1, y1, w1, h1) \
-            ((x1) <= (x) && (y1) <= (y) && (x1) + (w1) > (x) && (y1) + (h1) > (y))
             if (!item->notabstop && CONTAINS(x, y, r.x, r.y, r.w, r.h)) {
               *(window_t **)lparam = item;
             }
-            #undef CONTAINS
           }
           break;
         case kWindowMessageNonClientLeftButtonDown:
@@ -644,8 +667,6 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
             int title_only_h = (win->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
             int base_x = win->frame.x + 1 + TOOLBAR_PADDING;
             int base_y = win->frame.y + title_only_h + 1 + TOOLBAR_PADDING;
-            #define CONTAINS(x, y, x1, y1, w1, h1) \
-            ((x1) <= (x) && (y1) <= (y) && (x1) + (w1) > (x) && (y1) + (h1) > (y))
             for (uint32_t i = 0; i < win->num_toolbar_buttons; i++) {
               toolbar_button_t *but = &win->toolbar_buttons[i];
               int row = (int)i / bpr;
@@ -654,7 +675,6 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
               int by = base_y + row * bsz;
               but->pressed = CONTAINS(x, y, bx, by, bsz, bsz);
             }
-            #undef CONTAINS
             invalidate_window(win);
           }
           break;
@@ -673,8 +693,6 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
             int title_only_h = (win->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
             int base_x = win->frame.x + 1 + TOOLBAR_PADDING;
             int base_y = win->frame.y + title_only_h + 1 + TOOLBAR_PADDING;
-            #define CONTAINS(x, y, x1, y1, w1, h1) \
-            ((x1) <= (x) && (y1) <= (y) && (x1) + (w1) > (x) && (y1) + (h1) > (y))
             for (uint32_t i = 0; i < win->num_toolbar_buttons; i++) {
               toolbar_button_t *but = &win->toolbar_buttons[i];
               int row = (int)i / bpr;
@@ -687,7 +705,6 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
                 send_message(win, kToolBarMessageButtonClick, but->ident, but);
               }
             }
-            #undef CONTAINS
             invalidate_window(win);
           }
           break;
@@ -700,9 +717,14 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       set_projection(0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight));
       fill_rect(col, win->frame.x, win->frame.y, win->frame.w, win->frame.h);
     }
-    // Draw built-in scrollbars on top of window content
+    // Draw built-in scrollbars on top of window content.
+    // Restore the scissor to the window's full frame first: the bars live in
+    // the non-client area outside the client rect that was scissored above.
     if (msg == kWindowMessagePaint && running &&
         (win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL))) {
+      int root_t = titlebar_height(root);
+      rect_t wf = win_frame_in_screen(win, root, root_t);
+      set_clip_rect(NULL, &wf);
       draw_builtin_scrollbars(win);
     }
   }

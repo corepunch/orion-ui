@@ -25,12 +25,12 @@
 
 // Tool palette
 // toolbox.png: 69x299 = 3 cols x 13 rows at 23x23 pixels
-#define TOOLBOX_ICON_W    23
-#define TOOLBOX_ICON_H    23
-#define TOOLBOX_COLS      3    // 69 / 23
-// Button size: icon 23x23 inside a 27x27 square gives 2px bevel border on each side.
-// (btn_fill_w = bsz-2 = 25, icon offset bx=+2, so 25-2-23 = 0 right gap; outer shadow adds 1px)
-#define TOOLBOX_BTN_SIZE  27
+#define TOOLBOX_ICON_W    21
+#define TOOLBOX_ICON_H    21
+#define TOOLBOX_COLS      3    // 69 / 21
+// Button size: icon 21x21 inside a 25x25 square gives 2px bevel border on each side.
+// (btn_fill_w = bsz-2 = 23, icon offset bx=+1, so 23-2-21 = 0 right gap; outer shadow adds 1px)
+#define TOOLBOX_BTN_SIZE  26
 
 // Palette window — 2-button-wide column
 #define PALETTE_WIN_X     4

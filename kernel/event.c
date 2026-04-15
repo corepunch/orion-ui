@@ -17,6 +17,19 @@ extern window_t *_focused;
 extern window_t *_tracked;
 extern window_t *_captured;
 
+// External functions
+extern int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+extern void post_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+extern void move_window(window_t *win, int x, int y);
+extern void resize_window(window_t *win, int new_w, int new_h);
+extern window_t *find_window(int x, int y);
+extern void set_focus(window_t* win);
+extern void track_mouse(window_t *win);
+extern void show_window(window_t *win, bool visible);
+extern void end_dialog(window_t *win, uint32_t code);
+extern void invalidate_window(window_t *win);
+extern int titlebar_height(window_t const *win);
+
 // Macros for coordinate conversion (platform logical → Orion logical)
 #define SCALE_POINT(x) ((x)/UI_WINDOW_SCALE)
 
@@ -50,19 +63,6 @@ static uint32_t g_mod_state = 0;
 uint32_t ui_get_mod_state(void) {
   return g_mod_state;
 }
-
-// External functions
-extern int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
-extern void post_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
-extern void move_window(window_t *win, int x, int y);
-extern void resize_window(window_t *win, int new_w, int new_h);
-extern window_t *find_window(int x, int y);
-extern void set_focus(window_t* win);
-extern void track_mouse(window_t *win);
-extern void show_window(window_t *win, bool visible);
-extern void end_dialog(window_t *win, uint32_t code);
-extern void invalidate_window(window_t *win);
-extern int titlebar_height(window_t const *win);
 
 // Drag/resize state (shared with user/window.c for destroy_window cleanup)
 window_t *_dragging = NULL;

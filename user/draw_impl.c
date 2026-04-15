@@ -83,22 +83,22 @@ int statusbar_height(window_t const *win) {
   return s;
 }
 
+void draw_wire_rect(rect_t const *r, int expand, uint32_t col) {
+  fill_rect(col, r->x-expand, r->y-expand, r->w+2*expand, 1);
+  fill_rect(col, r->x-expand, r->y-expand, 1, r->h+2*expand);
+  fill_rect(col, r->x + r->w - 1 + expand, r->y-expand, 1, r->h+2*expand);
+  fill_rect(col, r->x-expand, r->y + r->h - 1 + expand, r->w+2*expand, 1);
+}
+
 // Draw focused border
 void draw_focused(rect_t const *r) {
-  fill_rect(get_sys_color(kColorFocusRing), r->x-1, r->y-1, r->w+2, 1);
-  fill_rect(get_sys_color(kColorFocusRing), r->x-1, r->y-1, 1, r->h+2);
-  fill_rect(get_sys_color(kColorFocusRing), r->x+r->w, r->y, 1, r->h+1);
-  fill_rect(get_sys_color(kColorFocusRing), r->x, r->y+r->h, r->w+1, 1);
+  draw_wire_rect(r, 1, get_sys_color(kColorFocusRing));
 }
 
 // Draw a softer single-colour outline for a window that contains focused
 // controls but is not itself the focused widget.
 static void draw_active_frame(rect_t const *r) {
-  uint32_t col = get_sys_color(kColorBorderActive);
-  fill_rect(col, r->x-1, r->y-1, r->w+2, 1);
-  fill_rect(col, r->x-1, r->y-1, 1, r->h+2);
-  fill_rect(col, r->x+r->w, r->y, 1, r->h+1);
-  fill_rect(col, r->x, r->y+r->h, r->w+1, 1);
+  draw_wire_rect(r, 1, get_sys_color(kColorBorderActive));
 }
 
 // Draw bevel border
@@ -131,7 +131,7 @@ void draw_button(rect_t const *r, int dx, int dy, bool pressed) {
 void draw_panel(window_t const *win) {
   int x = win->frame.x, y = win->frame.y;
   int w = win->frame.w, h = win->frame.h;
-  if (_focused == win) {
+  if (window_has_focus(win)) {
     draw_focused(MAKERECT(x, y, w, h));
   } else if (window_has_focus(win)) {
     draw_active_frame(MAKERECT(x, y, w, h));
@@ -152,9 +152,7 @@ void draw_panel(window_t const *win) {
 void draw_window_controls(window_t *win) {
   rect_t r = win->frame;
   int t = titlebar_height(win);
-  bool active = window_has_focus(win);
-  fill_rect(get_sys_color(active ? kColorActiveTitlebar : kColorInactiveTitlebar),
-            r.x, r.y, r.w, t);
+  fill_rect(get_sys_color(window_has_focus(win) ? kColorActiveTitlebar : kColorInactiveTitlebar), r.x, r.y, r.w, t);
   set_fullscreen();
   
   for (int i = 0; i < 1; i++) {

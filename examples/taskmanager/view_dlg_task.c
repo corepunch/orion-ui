@@ -8,19 +8,19 @@
 
 static const form_ctrl_def_t kTaskEditChildren[] = {
   { FORM_CTRL_LABEL,    -1,                    {8,   8,  60, 13}, 0,             "Title:",       "lbl_title"    },
-  { FORM_CTRL_TEXTEDIT, ID_TASK_TITLE_CTRL,    {70,  8, 200, 13}, 0,             "",             "edit_title"   },
+  { FORM_CTRL_TEXTEDIT, ID_TASK_TITLE_CTRL,    {70,  6, 200, 16}, 0,             "",             "edit_title"   },
 
   { FORM_CTRL_LABEL,    -1,                    {8,  28,  60, 13}, 0,             "Description:", "lbl_desc"     },
   { FORM_CTRL_TEXTEDIT, ID_TASK_DESC_CTRL,     {70, 28, 200, 60}, 0,             "",             "edit_desc"    },
 
   { FORM_CTRL_LABEL,    -1,                    {8,  95,  60, 13}, 0,             "Priority:",    "lbl_prio"     },
-  { FORM_CTRL_COMBOBOX, ID_TASK_PRIORITY_CTRL, {70, 95, 100, 20}, 0,             "",             "combo_prio"   },
+  { FORM_CTRL_COMBOBOX, ID_TASK_PRIORITY_CTRL, {70, 95, 100, 18}, 0,             "",             "combo_prio"   },
 
   { FORM_CTRL_LABEL,    -1,                    {8, 120,  60, 13}, 0,             "Status:",      "lbl_status"   },
-  { FORM_CTRL_COMBOBOX, ID_TASK_STATUS_CTRL,   {70, 120, 100, 20}, 0,            "",             "combo_status" },
+  { FORM_CTRL_COMBOBOX, ID_TASK_STATUS_CTRL,   {70, 120, 100, 18}, 0,            "",             "combo_status" },
 
   { FORM_CTRL_LABEL,    -1,                    {8, 145,  60, 13}, 0,             "Due (epoch):", "lbl_due"      },
-  { FORM_CTRL_TEXTEDIT, ID_TASK_DUEDATE_CTRL,  {70, 145, 100, 13}, 0,            "",             "edit_due"     },
+  { FORM_CTRL_TEXTEDIT, ID_TASK_DUEDATE_CTRL,  {70, 143, 100, 16}, 0,            "",             "edit_due"     },
 
   { FORM_CTRL_BUTTON,   ID_OK,                 {80, 170,  60, 18}, BUTTON_DEFAULT, "OK",     "btn_ok"     },
   { FORM_CTRL_BUTTON,   ID_CANCEL,             {150, 170, 60, 18}, 0,              "Cancel", "btn_cancel" },
@@ -29,7 +29,7 @@ static const form_ctrl_def_t kTaskEditChildren[] = {
 static const form_def_t kTaskEditForm = {
   .name        = "Task",
   .w           = 280,
-  .h           = 200,
+  .h           = 208,
   .flags       = 0,
   .children    = kTaskEditChildren,
   .child_count = (int)(sizeof(kTaskEditChildren)/sizeof(kTaskEditChildren[0])),
