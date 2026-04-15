@@ -153,21 +153,24 @@ extern hinstance_t g_gem_hinstance;
 //
 // In standalone mode: creates a full-width menubar window at y=0, sends
 // kMenuBarMessageSetMenus, shows it, and returns the window pointer.
+// handle_command is unused in this path — the caller's proc is responsible
+// for dispatching kMenuBarNotificationItemClick to the command handler.
 //
 // In gem mode: populates the gem interface's menu-contribution fields
 // (iface->menus / iface->menu_count / iface->handle_command) so the shell
-// can merge them into its own menu bar, then returns NULL.
+// can merge them into its own menu bar, then returns NULL.  proc and
+// hinstance are unused in this path.
 //
 // Parameters:
-//   proc           — window procedure for the menu bar window (typically a
-//                    custom proc that routes kMenuBarNotificationItemClick
-//                    to handle_command, then delegates to win_menubar).
-//                    Ignored in gem mode.
+//   proc           — window procedure for the menu bar window (standalone
+//                    only).  Typically wraps win_menubar and routes
+//                    kMenuBarNotificationItemClick to handle_command.
 //   menus          — array of menu_def_t describing the top-level menus.
 //   menu_count     — number of entries in menus[].
-//   handle_command — called by the shell when the user selects a menu item
-//                    (gem mode).  Also available to the standalone proc.
-//   hinstance      — owning application instance.  Ignored in gem mode.
+//   handle_command — dispatch function for menu item selections.  Used
+//                    directly by the shell in gem mode; in standalone mode
+//                    the caller's proc is expected to call it.
+//   hinstance      — owning application instance (standalone only).
 //
 // Returns the menubar window in standalone mode, NULL in gem mode.
 static inline window_t *set_app_menu(
