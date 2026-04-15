@@ -36,6 +36,10 @@ typedef struct {
   int base_x, base_y;
 } toolbar_iter_t;
 
+// Initialise a toolbar layout iterator.
+//   base_x, base_y — screen-space top-left of the usable button area.
+//   avail          — horizontal pixels available for button layout.
+//   bsz            — button size (width == height) in pixels.
 static void toolbar_iter_init(toolbar_iter_t *it,
                                int base_x, int base_y, int avail, int bsz) {
   it->cur_x = it->cur_row = 0;
@@ -43,8 +47,10 @@ static void toolbar_iter_init(toolbar_iter_t *it,
   it->base_x = base_x; it->base_y = base_y;
 }
 
-// Advance one entry.  For spacing tokens advances cur_x and returns false.
-// For real buttons fills *r with {origin_x, origin_y, bsz, bsz} and returns true.
+// Advance one entry.
+// Spacing tokens (icon==-1) advance cur_x by TOOLBAR_SPACING_GAP_WIDTH and
+// return false; *r is not modified in that case.
+// Real buttons fill *r with {origin_x, origin_y, bsz, bsz} and return true.
 static bool toolbar_iter_next(toolbar_iter_t *it,
                                const toolbar_button_t *but, rect_t *r) {
   if (but->icon == -1) {

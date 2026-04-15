@@ -12,14 +12,16 @@
 
 // ---- helpers ----------------------------------------------------------------
 
+#define MAX_TEST_BUTTONS 16  // upper bound for compute_toolbar_height helper
+
 // Delegate to the framework helper so assertions always stay in sync.
 static int compute_toolbar_height(int num_buttons, int win_w) {
     int bsz = TB_SPACING;
     int inner_w = win_w - 2;
     if (num_buttons <= 0) return bsz + 2 * TOOLBAR_PADDING;
-    // Use a fixed-size stack array; tests never need more than 16 buttons.
-    toolbar_button_t buttons[16];
-    for (int i = 0; i < num_buttons && i < 16; i++) {
+    // Use a fixed-size stack array; tests never need more than MAX_TEST_BUTTONS.
+    toolbar_button_t buttons[MAX_TEST_BUTTONS];
+    for (int i = 0; i < num_buttons && i < MAX_TEST_BUTTONS; i++) {
         buttons[i] = (toolbar_button_t){.icon=0, .ident=i, .active=false, .pressed=false};
     }
     int num_rows = toolbar_count_rows(buttons, (uint32_t)num_buttons, inner_w, bsz);
