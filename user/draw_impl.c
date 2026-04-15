@@ -20,7 +20,7 @@ extern window_t *get_root_window(window_t *window);
 
 // Returns true if win is the root window that currently "owns" keyboard focus
 // (either win itself is focused, or one of its descendants is focused).
-static bool window_has_focus(const window_t *win) {
+bool window_has_focus(const window_t *win) {
   return _focused && get_root_window(_focused) == (window_t *)win;
 }
 

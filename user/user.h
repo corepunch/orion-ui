@@ -195,6 +195,7 @@ bool window_in_drag_area(window_t const *win, int sy);
 window_t *get_root_window(window_t *window);
 window_t *find_window(int x, int y);
 window_t *find_default_button(window_t *win);
+bool window_has_focus(const window_t *win);
 
 // Returns the client area of win in client coordinates {0, 0, client_w, client_h}.
 // The client area excludes the title bar, toolbar, status bar, and any visible
