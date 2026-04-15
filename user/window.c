@@ -451,6 +451,7 @@ static winproc_t form_ctrl_to_proc(form_ctrl_type_t type) {
     case FORM_CTRL_CHECKBOX: return win_checkbox;
     case FORM_CTRL_LABEL:    return win_label;
     case FORM_CTRL_TEXTEDIT: return win_textedit;
+    case FORM_CTRL_MULTIEDIT: return win_multiedit;
     case FORM_CTRL_LIST:     return win_list;
     case FORM_CTRL_COMBOBOX: return win_combobox;
     default:                 return NULL;
