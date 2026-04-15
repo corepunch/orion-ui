@@ -427,11 +427,20 @@ void dispatch_message(ui_event_t *msg) {
           drag_anchor[0] = SCALE_POINT(px) - win->frame.x;
           drag_anchor[1] = SCALE_POINT(py) - win->frame.y;
         } else {
-          int wmsg = (msg->message == kEventLeftMouseDown)
-                     ? kWindowMessageLeftButtonDown
-                     : kWindowMessageRightButtonDown;
-          if (!handle_mouse(wmsg, win, lx, ly)) {
-            send_message(win, wmsg, MAKEDWORD(lx, ly), NULL);
+          int sx = SCALE_POINT(px);
+          int sy = SCALE_POINT(py);
+          if (msg->message == kEventLeftMouseDown && sy < win->frame.y) {
+            // Non-client left button down in toolbar area: send dedicated message
+            // so the toolbar can show visual pressed feedback immediately.
+            send_message(win, kWindowMessageNonClientLeftButtonDown,
+                         MAKEDWORD(sx, sy), NULL);
+          } else {
+            int wmsg = (msg->message == kEventLeftMouseDown)
+                       ? kWindowMessageLeftButtonDown
+                       : kWindowMessageRightButtonDown;
+            if (!handle_mouse(wmsg, win, lx, ly)) {
+              send_message(win, wmsg, MAKEDWORD(lx, ly), NULL);
+            }
           }
         }
       }

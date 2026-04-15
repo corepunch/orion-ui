@@ -431,10 +431,11 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
               int col = (int)i % bpr;
               int bx = rect.x + col * bsz + 2;
               int by = rect.y + row * bsz + 2;
+              bool show_pressed = but->pressed || but->active;
               if (strip) {
                 // Draw button background (pressed/unpressed)
-                draw_button(&(rect_t){bx-2,by-2,bsz-2,bsz-2}, 1, 1, but->active);
-                int px = but->active ? 1 : 0;
+                draw_button(&(rect_t){bx-2,by-2,bsz-2,bsz-2}, 1, 1, show_pressed);
+                int px = show_pressed ? 1 : 0;
                 int icon_index = but->icon;
                 if (strip->cols > 0) {
                   int scol = icon_index % strip->cols;
@@ -447,8 +448,8 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
                                      strip->icon_w, strip->icon_h, u0, v0, u1, v1, 1.0f);
                 }
               } else {
-                draw_button(&(rect_t){bx-2,by-2,bsz-2,bsz-2}, 1, 1, but->active);
-                int px = but->active ? 1 : 0;
+                draw_button(&(rect_t){bx-2,by-2,bsz-2,bsz-2}, 1, 1, show_pressed);
+                int px = show_pressed ? 1 : 0;
                 draw_icon16(but->icon, bx + px - 1, by + px - 1, get_sys_color(kColorTextNormal));
               }
             }
@@ -604,6 +605,33 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
             #undef CONTAINS
           }
           break;
+        case kWindowMessageNonClientLeftButtonDown:
+          if (win->flags&WINDOW_TOOLBAR) {
+            uint16_t x = LOWORD(wparam);
+            uint16_t y = HIWORD(wparam);
+            int bsz = (win->toolbar_btn_size > 0) ? win->toolbar_btn_size : TB_SPACING;
+            int bpr = (win->num_toolbar_buttons > 0 && win->frame.w > 0)
+                ? MAX(1, win->frame.w / bsz) : 1;
+            int nrows = (win->num_toolbar_buttons > 0)
+                ? (int)((win->num_toolbar_buttons + (uint32_t)bpr - 1) / (uint32_t)bpr)
+                : 1;
+            int total_h = nrows * bsz;
+            int base_x = win->frame.x + 2;
+            int base_y = win->frame.y - total_h + 2;
+            #define CONTAINS(x, y, x1, y1, w1, h1) \
+            ((x1) <= (x) && (y1) <= (y) && (x1) + (w1) > (x) && (y1) + (h1) > (y))
+            for (uint32_t i = 0; i < win->num_toolbar_buttons; i++) {
+              toolbar_button_t *but = &win->toolbar_buttons[i];
+              int row = (int)i / bpr;
+              int col = (int)i % bpr;
+              int bx = base_x + col * bsz;
+              int by = base_y + row * bsz;
+              but->pressed = CONTAINS(x, y, bx, by, bsz, bsz);
+            }
+            #undef CONTAINS
+            invalidate_window(win);
+          }
+          break;
         case kWindowMessageNonClientLeftButtonUp:
           if (win->flags&WINDOW_TOOLBAR) {
             uint16_t x = LOWORD(wparam);
@@ -626,10 +654,14 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
               int bx = base_x + col * bsz;
               int by = base_y + row * bsz;
               if (CONTAINS(x, y, bx, by, bsz, bsz)) {
+                but->pressed = false;
                 send_message(win, kToolBarMessageButtonClick, but->ident, but);
+              } else {
+                but->pressed = false;
               }
             }
             #undef CONTAINS
+            invalidate_window(win);
           }
           break;
       }
