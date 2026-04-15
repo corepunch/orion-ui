@@ -668,12 +668,18 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     fill_rect(col, win->frame.x, win->frame.y, win->frame.w, win->frame.h);
   }
   // Draw built-in scrollbars on top of window content.
-  // Restore the scissor to the window's full frame first: the bars live in
+  // Restore the window/root paint state first: the disabled overlay above
+  // switches to a fullscreen viewport/projection, but the built-in bars are
+  // drawn in the root-relative coordinate space established by paint setup.
+  // Also restore the scissor to the window's full frame: the bars live in
   // the non-client area outside the client rect that was scissored above.
   if (msg == kWindowMessagePaint && running &&
       (win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL))) {
     int root_t = titlebar_height(root);
     rect_t wf = win_frame_in_screen(win, root, root_t);
+    rect_t rootf = root->frame;
+    set_viewport(&rootf);
+    set_projection(rootf.x, rootf.y, rootf.w, rootf.h);
     set_clip_rect(NULL, &wf);
     draw_builtin_scrollbars(win);
   }
