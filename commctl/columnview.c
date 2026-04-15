@@ -365,9 +365,10 @@ result_t win_columnview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
 
       switch (wparam) {
         case AX_KEY_UPARROW:
-          next = (cur < 0) ? 0 : (cur - ncol >= 0 ? cur - ncol : cur % ncol);
+          next = (cur < 0) ? 0 : (cur - ncol >= 0 ? cur - ncol : cur);
           break;
         case AX_KEY_DOWNARROW:
+          // Stay at current item if already on the last row; don't jump to count-1.
           next = (cur < 0) ? 0 : (cur + ncol < count ? cur + ncol : cur);
           break;
         case AX_KEY_LEFTARROW:
