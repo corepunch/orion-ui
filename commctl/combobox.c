@@ -30,7 +30,7 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       return true;
     case kWindowMessagePaint:
       win_button(win, msg, wparam, lparam);
-      draw_icon8(icon8_maximize, win->frame.x+win->frame.w-10, win->frame.y+3, get_sys_color(kColorTextNormal));
+      draw_icon8(icon8_maximize, win->frame.x+win->frame.w-10, win->frame.y+(win->frame.h-8)/2, get_sys_color(kColorTextNormal));
       return true;
     case kWindowMessageLeftButtonUp: {
       win_button(win, msg, wparam, lparam);
