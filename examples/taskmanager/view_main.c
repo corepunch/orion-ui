@@ -9,6 +9,7 @@
 static const toolbar_button_t kMainToolbar[] = {
   { sysicon_add,    ID_TASK_NEW,    false },
   { sysicon_pencil, ID_TASK_EDIT,   false },
+  TOOLBAR_SPACING_TOKEN,
   { sysicon_delete, ID_TASK_DELETE, false },
 };
 
