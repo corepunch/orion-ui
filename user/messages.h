@@ -171,6 +171,10 @@ typedef struct {
 #define CONTROL_BUTTON_PADDING  2
 #define TB_SPACING              TOOLBAR_HEIGHT  // equals TOOLBAR_HEIGHT so toolbar buttons are square
 
+// Analogous to WinAPI CW_USEDEFAULT: pass as x or y to create_window() /
+// create_window_from_form() to let the framework auto-position the window.
+#define CW_USEDEFAULT  (-32768)
+
 // Scroll and interaction constants
 #define SCROLL_SENSITIVITY      3
 

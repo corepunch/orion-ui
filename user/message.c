@@ -58,6 +58,8 @@ extern void paint_window_stencil(window_t const *w);
 extern void repaint_stencil(void);
 extern void set_fullscreen(void);
 extern window_t *get_root_window(window_t *window);
+extern int titlebar_height(window_t const *win);
+extern int statusbar_height(window_t const *win);
 
 // Register a window hook
 void register_window_hook(uint32_t msg, winhook_func_t func, void *userdata) {
@@ -165,22 +167,30 @@ static int handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wpara
   bool has_h = (win->flags & WINDOW_HSCROLL) && win->hscroll.visible;
   bool has_v = (win->flags & WINDOW_VSCROLL) && win->vscroll.visible;
 
+  // Non-client heights: mouse coords are delivered in CLIENT space
+  // (y=0 = client top, which excludes the title bar and toolbar rows).
+  // For child windows these are typically 0 (WINDOW_NOTITLE).
+  int t = titlebar_height(win);
+  int s = statusbar_height(win);
+  // Content height = client area + scrollbar strips (but NOT titlebar/statusbar).
+  int content_h = win->frame.h - t - s;
+
   // When WINDOW_STATUSBAR and WINDOW_HSCROLL are both set, the horizontal bar
   // is merged into the status-bar row.  In that case its geometry is:
-  //   y range : [frame.h, frame.h + STATUSBAR_HEIGHT)
+  //   y range : [content_h, content_h + STATUSBAR_HEIGHT)
   //   x range : [frame.w*20/100, frame.w)        (right 80 %)
   //   track   : (frame.w - h_x_min) - vscroll_width
   bool h_merged = has_h && (win->flags & WINDOW_STATUSBAR);
   int h_x_min   = h_merged ? SB_STATUS_SPLIT_X(win->frame.w) : 0;
-  int h_y_min   = h_merged ? win->frame.h : win->frame.h - SCROLLBAR_WIDTH;
-  int h_y_max   = h_merged ? win->frame.h + STATUSBAR_HEIGHT : win->frame.h;
+  int h_y_min   = h_merged ? content_h : content_h - SCROLLBAR_WIDTH;
+  int h_y_max   = h_merged ? content_h + STATUSBAR_HEIGHT : content_h;
   // In merged mode the resize corner is always at the far right (SCROLLBAR_WIDTH wide),
   // so always exclude it from the hscroll track.  In non-merged mode only exclude when vscroll is present.
   int h_track   = (win->frame.w - h_x_min) - (h_merged ? SCROLLBAR_WIDTH : (has_v ? SCROLLBAR_WIDTH : 0));
 
   // When merged, the vscroll is not shortened by the hscroll row (which lives
   // in the status bar, outside the content area).
-  int v_track = win->frame.h - (has_h && !h_merged ? SCROLLBAR_WIDTH : 0);
+  int v_track = content_h - (has_h && !h_merged ? SCROLLBAR_WIDTH : 0);
 
   // Handle ongoing drag (captured move / button-up) regardless of enabled state
   if (msg == kWindowMessageMouseMove || msg == kWindowMessageLeftButtonUp) {
@@ -313,7 +323,7 @@ static int handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wpara
 
   // Vertical scrollbar hit — always consume geometry even when disabled
   if (has_v && cx >= win->frame.w - SCROLLBAR_WIDTH && cx < win->frame.w &&
-      cy >= 0 && cy < win->frame.h) {
+      cy >= 0 && cy < content_h) {
     if (!win->vscroll.enabled) return 1; // consume click but do nothing
     if (cy >= v_track) return 1; // corner square
     // Arrow buttons
@@ -421,7 +431,10 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
                 ? (int)((win->num_toolbar_buttons + (uint32_t)bpr - 1) / (uint32_t)bpr)
                 : 1;
             int total_h = nrows * bsz;
-            rect_t rect = {win->frame.x+1, win->frame.y-total_h+1, win->frame.w-2, total_h-2};
+            // Toolbar rows sit immediately below the title bar (or at the window
+            // top when WINDOW_NOTITLE is set).  frame.y is now the window top.
+            int title_only_h = (win->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
+            rect_t rect = {win->frame.x+1, win->frame.y + title_only_h + 1, win->frame.w-2, total_h-2};
             draw_bevel(&rect);
             fill_rect(get_sys_color(kColorWindowBg), rect.x, rect.y, rect.w, rect.h);
             bitmap_strip_t *strip = (win->toolbar_strip.tex != 0) ? &win->toolbar_strip : NULL;
@@ -461,12 +474,17 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       case kWindowMessagePaint:
         // Skip OpenGL calls if graphics aren't initialized (e.g., in tests)
         if (running) {
+          int t = titlebar_height(root);
           ui_set_stencil_for_root_window(get_root_window(win)->id);
           set_viewport(&root->frame);
+          // Shift projection so that y=0 maps to the client area top-left
+          // (i.e. below the title bar / toolbar).  This makes the window proc
+          // coordinate system purely client-relative while allowing scrollbar
+          // drawing code (draw_builtin_scrollbars) to address the full frame.
           set_projection(root->scroll[0],
-                         root->scroll[1],
+                         -t + root->scroll[1],
                          root->frame.w + root->scroll[0],
-                         root->frame.h + root->scroll[1]);
+                         root->frame.h - t + root->scroll[1]);
         }
         break;
       case kToolBarMessageAddButtons:
@@ -614,9 +632,9 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
             int nrows = (win->num_toolbar_buttons > 0)
                 ? (int)((win->num_toolbar_buttons + (uint32_t)bpr - 1) / (uint32_t)bpr)
                 : 1;
-            int total_h = nrows * bsz;
+            int title_only_h = (win->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
             int base_x = win->frame.x + 2;
-            int base_y = win->frame.y - total_h + 2;
+            int base_y = win->frame.y + title_only_h + 2;
             #define CONTAINS(x, y, x1, y1, w1, h1) \
             ((x1) <= (x) && (y1) <= (y) && (x1) + (w1) > (x) && (y1) + (h1) > (y))
             for (uint32_t i = 0; i < win->num_toolbar_buttons; i++) {

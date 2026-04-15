@@ -170,6 +170,22 @@ window_t *get_root_window(window_t *window);
 window_t *find_window(int x, int y);
 window_t *find_default_button(window_t *win);
 
+// Returns the client area of win in client coordinates {0, 0, client_w, client_h}.
+// The client area excludes the title bar, toolbar, status bar, and any visible
+// built-in scrollbar strips.  Analogous to WinAPI GetClientRect.
+rect_t get_client_rect(window_t const *win);
+
+// Adjusts *r (initially a desired client rect) to include the non-client area
+// (title bar, toolbar, optional scrollbar strips) for a window with the given
+// flags.  Analogous to WinAPI AdjustWindowRectEx.
+// After the call, r->x/r->y are the window-top-left offsets (typically negative
+// for y when there is a title bar) and r->w/r->h are the total window dimensions.
+// Usage:
+//   rect_t r = {0, 0, client_w, client_h};
+//   adjust_window_rect(&r, flags);
+//   create_window(title, flags, MAKERECT(win_x + r.x, win_y + r.y, r.w, r.h), ...);
+void adjust_window_rect(rect_t *r, flags_t flags);
+
 // Global window focus/tracking state
 extern window_t *_focused;
 extern window_t *_tracked;

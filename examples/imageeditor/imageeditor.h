@@ -45,12 +45,13 @@
 #define TOOL_TOOLBAR_ROWS (((NUM_TOOLS) + (TOOL_BTN_PER_ROW) - 1) / (TOOL_BTN_PER_ROW))
 #define TOOL_TOOLBAR_H    ((TOOL_TOOLBAR_ROWS) * (TOOLBAR_HEIGHT))
 
-// PALETTE_WIN_Y is the frame.y (top of client area) of the tool window.
-// Position it so that its title bar sits 4px below the menu bar.
-// title bar top = frame.y - titlebar_height = frame.y - (TITLEBAR_HEIGHT + TOOL_TOOLBAR_H)
-// We want title bar top = MENUBAR_HEIGHT + 4
-// So: frame.y = MENUBAR_HEIGHT + 4 + TITLEBAR_HEIGHT + TOOL_TOOLBAR_H
-#define PALETTE_WIN_Y  (MENUBAR_HEIGHT + 4 + TITLEBAR_HEIGHT + TOOL_TOOLBAR_H)
+// PALETTE_WIN_Y is now the window top (title bar top) of the tool palette.
+// frame.y = window top = MENUBAR_HEIGHT + 4 (title bar sits 4px below the menu bar)
+#define PALETTE_WIN_Y  (MENUBAR_HEIGHT + 4)
+
+// Total frame height for the tool palette:
+//   title bar + toolbar rows (non-client) + client content
+#define TOOL_WIN_H    (TITLEBAR_HEIGHT + TOOL_TOOLBAR_H + SWATCH_CLIENT_H + FILL_MODE_H)
 
 // Client area of the tool palette shows FG/BG swatches + fill mode selector.
 //   FG/BG swatches: 2px label + 8px text + 14px swatch + 2px gap = 26px
@@ -58,11 +59,11 @@
 #define SWATCH_CLIENT_H 26
 #define FILL_MODE_H     24
 #define SWATCH_ROW_H    16
-#define TOOL_WIN_H    (SWATCH_CLIENT_H + FILL_MODE_H)
-#define COLOR_WIN_H   (4 * SWATCH_ROW_H)
+// COLOR_WIN_Y: window top sits 4px below the menu bar (frame.y = window top).
+#define COLOR_WIN_H   (TITLEBAR_HEIGHT + 4 * SWATCH_ROW_H)
 #define COLOR_WIN_X   (SCREEN_W - COLOR_WIN_W - 4)
 #define COLOR_WIN_W   SWATCH_ROW_H * 4
-#define COLOR_WIN_Y   (MENUBAR_HEIGHT + 4 + TITLEBAR_HEIGHT)
+#define COLOR_WIN_Y   (MENUBAR_HEIGHT + 4)
 
 #define DOC_START_X   76
 #define DOC_START_Y   60

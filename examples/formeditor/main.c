@@ -11,11 +11,10 @@ static const accel_t kAccelEntries[] = {
   { FVIRTKEY,          AX_KEY_BACKSPACE, ID_EDIT_DELETE },
 };
 
-// Compute palette window Y so its title bar sits 4px below the menu bar.
-// Toolbar rows = ceil(NUM_TOOLS / 2), each row is TOOLBOX_BTN_SIZE tall.
+// frame.y is now the window top (title bar top), not the client area top.
+// Place the window so the title bar sits 4px below the menu bar.
 static int palette_win_y(void) {
-  int rows = (NUM_TOOLS + 1) / 2;
-  return MENUBAR_HEIGHT + 4 + TITLEBAR_HEIGHT + rows * TOOLBOX_BTN_SIZE;
+  return MENUBAR_HEIGHT + 4;
 }
 
 static void create_app_windows(hinstance_t hinstance) {

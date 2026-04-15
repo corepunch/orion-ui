@@ -35,13 +35,18 @@
 // Palette window — 2-button-wide column
 #define PALETTE_WIN_X     4
 #define PALETTE_WIN_W     (TOOLBOX_BTN_SIZE * 2)
-#define PALETTE_WIN_H     4     // minimal client area
+// frame.h is now the total height (non-client + client).
+// Non-client area: title bar + toolbar rows (computed from NUM_TOOLS and TOOLBOX_BTN_SIZE).
+// Client area: 4px (minimal).
+#define PALETTE_WIN_ROWS  (((NUM_TOOLS) + 1) / 2)
+#define PALETTE_WIN_H     (TITLEBAR_HEIGHT + (PALETTE_WIN_ROWS) * TOOLBOX_BTN_SIZE + 4)
 
 // Document window initial position
+// frame.y is the window top; place it 8px below the menu bar.
 #define DOC_START_X       (PALETTE_WIN_X + PALETTE_WIN_W + 10)
-#define DOC_START_Y       (MENUBAR_HEIGHT + 8 + TITLEBAR_HEIGHT)
+#define DOC_START_Y       (MENUBAR_HEIGHT + 8)
 #define DOC_WIN_W         320//(SCREEN_W - DOC_START_X - 4)
-#define DOC_WIN_H         240//(SCREEN_H - DOC_START_Y - 4)
+#define DOC_WIN_H         (240 + TITLEBAR_HEIGHT)//(SCREEN_H - DOC_START_Y - 4)
 
 // ============================================================
 // Control types  (VB3 toolbox order, skipping unsupported)
