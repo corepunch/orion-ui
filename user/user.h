@@ -62,7 +62,7 @@ typedef struct toolbar_button_s {
 // horizontal pixels without occupying a button slot.
 static inline int toolbar_count_rows(const toolbar_button_t *buttons, uint32_t n,
                                       int inner_w, int bsz) {
-  if (n == 0) return 1;
+  if (n == 0 || buttons == NULL) return 1;
   int available = inner_w - 2 * TOOLBAR_PADDING;
   int cur_x = 0, cur_row = 0;
   bool has_real = false;

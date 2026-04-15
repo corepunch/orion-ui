@@ -17,7 +17,7 @@
 static int compute_toolbar_height(int num_buttons, int win_w) {
     int bsz = TB_SPACING;
     int inner_w = win_w - 2;
-    int num_rows = toolbar_count_rows(NULL, 0, inner_w, bsz);  // 0 buttons → 1 row default
+    int num_rows = toolbar_count_rows(NULL, 0, inner_w, bsz);  // NULL + 0 → 1 row default
     if (num_buttons > 0) {
         // Build a synthetic button array with no spacing tokens.
         toolbar_button_t *buttons = malloc(sizeof(toolbar_button_t) * (size_t)num_buttons);
@@ -351,8 +351,6 @@ void test_toolbar_button_pressed_cleared_on_up_outside(void) {
     test_env_shutdown();
     PASS();
 }
-
-// ---- main -------------------------------------------------------------------
 
 void test_toolbar_spacing_token_skipped_in_count(void) {
     TEST("toolbar_count_rows: spacing tokens do not count as button slots");
