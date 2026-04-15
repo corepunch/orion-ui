@@ -319,10 +319,11 @@ result_t win_columnview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
 
     case kWindowMessageWheel: {
       if (!data) return false;
-      // HIWORD encodes dy * SCROLL_SENSITIVITY where platform dy > 0 = scroll down
-      // on X11/Windows (Button5 / WM_MOUSEWHEEL with negative delta).  Each unit
-      // scrolls one row.  Positive dy → content moves up → see content below.
-      int dy = (int16_t)HIWORD(wparam);
+      // HIWORD encodes dy * SCROLL_SENSITIVITY.  SDL dy < 0 = scroll down, so
+      // HIWORD is negative when scrolling down.  Negate to match the framework
+      // convention (message.c: delta = -(int16_t)HIWORD(wparam)) so that positive
+      // dy means "show content below" (increase scroll[1]).
+      int dy = -(int16_t)HIWORD(wparam);
       int eff_w  = cv_content_width(win);
       int ncol   = get_column_count(eff_w, (int)data->column_width);
       int total_rows = (data->count == 0) ? 0
