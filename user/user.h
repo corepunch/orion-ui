@@ -176,10 +176,12 @@ window_t *find_default_button(window_t *win);
 rect_t get_client_rect(window_t const *win);
 
 // Adjusts *r (initially a desired client rect) to include the non-client area
-// (title bar, toolbar, optional scrollbar strips) for a window with the given
-// flags.  Analogous to WinAPI AdjustWindowRectEx.
-// After the call, r->x/r->y are the window-top-left offsets (typically negative
-// for y when there is a title bar) and r->w/r->h are the total window dimensions.
+// (title bar, toolbar, status bar, and scrollbar strips) for a window with the
+// given flags.  Analogous to WinAPI AdjustWindowRectEx.
+// After the call, r->x/r->y are the window-top-left offsets (r->y is negative
+// when there is a title bar) and r->w/r->h are the total window dimensions.
+// WINDOW_HSCROLL adds SCROLLBAR_WIDTH to height unless merged with WINDOW_STATUSBAR.
+// WINDOW_VSCROLL adds SCROLLBAR_WIDTH to width.
 // Usage:
 //   rect_t r = {0, 0, client_w, client_h};
 //   adjust_window_rect(&r, flags);

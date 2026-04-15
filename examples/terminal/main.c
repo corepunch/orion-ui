@@ -11,7 +11,7 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   window_t *win = create_window(
     "Terminal",
     0,
-    MAKERECT(20, 20, 500, 300),
+    MAKERECT(20, 20, 500, 300 + TITLEBAR_HEIGHT),
     NULL,
     win_terminal,
     hinstance,
@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
   window_t *win = create_window(
     "Terminal",
     0,
-    MAKERECT(20, 20, 500, 300),
+    MAKERECT(20, 20, 500, 300 + TITLEBAR_HEIGHT),
     NULL,
     win_terminal,
     0,

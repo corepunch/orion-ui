@@ -377,6 +377,10 @@ rect_t get_client_rect(window_t const *win) {
 // After the call, r->x/y are the window-top-left offsets relative to the
 // desired client origin (r->x is 0, r->y is -titlebar_height), and
 // r->w/r->h are the total window dimensions.
+// Accounts for: title bar, toolbar (minimum one row), status bar, and
+// scrollbar strips indicated by WINDOW_HSCROLL / WINDOW_VSCROLL.
+// Note: WINDOW_HSCROLL merged with WINDOW_STATUSBAR does not add extra height
+// (the bar is drawn inside the status-bar row in that case).
 void adjust_window_rect(rect_t *r, flags_t flags) {
   if (!r) return;
   // Compute non-client heights for the given flags.
@@ -384,10 +388,15 @@ void adjust_window_rect(rect_t *r, flags_t flags) {
   if (!(flags & WINDOW_NOTITLE)) t += TITLEBAR_HEIGHT;
   if (flags & WINDOW_TOOLBAR)    t += TB_SPACING;  // minimum one toolbar row
   int s = (flags & WINDOW_STATUSBAR) ? STATUSBAR_HEIGHT : 0;
-  r->x -= 0;   // no horizontal non-client area
+  // Horizontal scrollbar: adds SCROLLBAR_WIDTH to the bottom unless it is
+  // merged with the status bar (WINDOW_STATUSBAR also set).
+  bool hscroll_standalone = (flags & WINDOW_HSCROLL) && !(flags & WINDOW_STATUSBAR);
+  int hstrip = hscroll_standalone ? SCROLLBAR_WIDTH : 0;
+  // Vertical scrollbar: adds SCROLLBAR_WIDTH to the right.
+  int vstrip = (flags & WINDOW_VSCROLL) ? SCROLLBAR_WIDTH : 0;
   r->y -= t;
-  r->w += 0;   // no extra horizontal non-client area
-  r->h += t + s;
+  r->w += vstrip;
+  r->h += t + s + hstrip;
 }
 
 // Create window from definition
@@ -456,13 +465,21 @@ window_t *create_window_from_form(form_def_t const *def, int x, int y,
   if (!def || !proc) return NULL;
 
   // Resolve CW_USEDEFAULT for root windows: cascade down from (20, 20).
+  // Loop until we find a position not already occupied by another root window,
+  // so that windows always cascade rather than stacking on top of each other.
   if (!parent && (x == CW_USEDEFAULT || y == CW_USEDEFAULT)) {
     int cascade_step = 20;
     int nx = 20, ny = 20;
-    for (window_t *w = windows; w; w = w->next) {
-      if (!w->parent && w->frame.x == nx && w->frame.y == ny) {
-        nx += cascade_step;
-        ny += cascade_step;
+    bool occupied = true;
+    while (occupied) {
+      occupied = false;
+      for (window_t *w = windows; w; w = w->next) {
+        if (!w->parent && w->frame.x == nx && w->frame.y == ny) {
+          occupied = true;
+          nx += cascade_step;
+          ny += cascade_step;
+          break;
+        }
       }
     }
     if (x == CW_USEDEFAULT) x = nx;

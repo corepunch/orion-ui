@@ -46,7 +46,10 @@
 #define DOC_START_X       (PALETTE_WIN_X + PALETTE_WIN_W + 10)
 #define DOC_START_Y       (MENUBAR_HEIGHT + 8)
 #define DOC_WIN_W         320//(SCREEN_W - DOC_START_X - 4)
-#define DOC_WIN_H         (240 + TITLEBAR_HEIGHT)//(SCREEN_H - DOC_START_Y - 4)
+// frame.h is the total window height (non-client + client).
+// The doc window uses WINDOW_STATUSBAR | WINDOW_HSCROLL; HSCROLL is merged
+// into the status bar row so no extra height is needed for HSCROLL.
+#define DOC_WIN_H         (240 + TITLEBAR_HEIGHT + STATUSBAR_HEIGHT)
 
 // ============================================================
 // Control types  (VB3 toolbox order, skipping unsupported)

@@ -189,21 +189,20 @@ void test_toolbar_add_buttons_replaces(void) {
 // to restrict the close-button hit-test to the title bar strip at the top of
 // the non-client area, excluding the toolbar rows below it.
 void test_close_button_y_excludes_toolbar(void) {
-    TEST("Close button Y range is above toolbar area for WINDOW_TOOLBAR windows");
+    TEST("Close button Y range is at window top for WINDOW_TOOLBAR windows");
 
     test_env_init();
 
     // Create a WINDOW_TOOLBAR window at a known position.
-    // frame: x=10, y=100, w=44, h=50
+    // frame: x=10, y=100, w=44, h=150 (total: title bar + toolbar rows + client)
     // Add 5 toolbar buttons with TB_SPACING=22: buttons_per_row = 44/22 = 2,
     // num_rows = ceil(5/2) = 3, toolbar_h = 3*22 = 66.
     // titlebar_height = TITLEBAR_HEIGHT + toolbar_h = 12 + 66 = 78.
-    // window_title_bar_y = frame.y + 2 - titlebar_height = 100 + 2 - 78 = 24.
-    // title bar strip top = window_title_bar_y - 2 = 22.
-    // title bar strip bottom = 22 + TITLEBAR_HEIGHT = 22 + 12 = 34.
-    // Toolbar top = frame.y - toolbar_h = 100 - 66 = 34.
-    // So the title bar strip is [22, 34) and the toolbar is [34, 100).
-    rect_t frame = {10, 100, 44, 50};
+    // New convention: frame.y=100 is the window top.
+    // window_title_bar_y = frame.y + 2 = 102.
+    // Title bar row: [frame.y, frame.y + TITLEBAR_HEIGHT) = [100, 112).
+    // Toolbar rows: [frame.y + TITLEBAR_HEIGHT, frame.y + titlebar_height) = [112, 178).
+    rect_t frame = {10, 100, 44, 150};
     window_t *win = create_window("Tools", WINDOW_TOOLBAR | WINDOW_NORESIZE,
                                   &frame, NULL, noop_proc, 0, NULL);
     ASSERT_NOT_NULL(win);
@@ -217,32 +216,35 @@ void test_close_button_y_excludes_toolbar(void) {
     };
     send_message(win, kToolBarMessageAddButtons, 5, buttons);
 
-    // Compute the Y bounds the event.c fix uses.
-    int title_y = window_title_bar_y(win) - 2;  /* title bar strip top */
-
-    // The title bar strip must be above frame.y (non-client area).
-    ASSERT_TRUE(title_y < win->frame.y);
-
-    // The bottom of the title bar strip must be <= the TOP of the toolbar area.
-    // toolbar_top = frame.y - toolbar_rows * TOOLBAR_HEIGHT = 100 - 66 = 34
     int toolbar_h = compute_toolbar_height((int)win->num_toolbar_buttons, win->frame.w);
-    int toolbar_top = win->frame.y - toolbar_h;
-    int title_bottom = title_y + TITLEBAR_HEIGHT;
-    ASSERT_TRUE(title_bottom <= toolbar_top);
 
-    // A Y coordinate inside the toolbar area must NOT be within the title bar strip.
-    int toolbar_y = toolbar_top + 5;  /* a point 5px into the toolbar */
-    ASSERT_TRUE(toolbar_y >= title_bottom);   /* toolbar click: outside title bar */
+    // window_title_bar_y now returns frame.y + 2 (title row is AT the window top).
+    int title_y = window_title_bar_y(win);
+    ASSERT_EQUAL(title_y, win->frame.y + 2);
 
-    // A Y coordinate inside the title bar strip must be within it.
-    int titlebar_y = title_y + 2;   /* 2px into the title bar strip */
-    ASSERT_TRUE(titlebar_y >= title_y && titlebar_y < title_bottom);
+    // The title bar row starts at frame.y.
+    ASSERT_TRUE(title_y >= win->frame.y);
+    ASSERT_TRUE(title_y < win->frame.y + TITLEBAR_HEIGHT);
 
-    // The close button X range: frame.x + frame.w - CONTROL_BUTTON_WIDTH - CONTROL_BUTTON_PADDING.
+    // Toolbar rows start immediately after the title bar.
+    int toolbar_top = win->frame.y + TITLEBAR_HEIGHT;
+    int toolbar_bottom = toolbar_top + toolbar_h;
+
+    // A Y inside the toolbar must be outside the title bar row.
+    int toolbar_y = toolbar_top + 5;
+    ASSERT_TRUE(toolbar_y >= win->frame.y + TITLEBAR_HEIGHT);
+
+    // A Y inside the title bar row.
+    int titlebar_y = win->frame.y + 2;
+    ASSERT_TRUE(titlebar_y >= win->frame.y && titlebar_y < win->frame.y + TITLEBAR_HEIGHT);
+
+    // The close button X range is within the window.
     int close_x = win->frame.x + win->frame.w - CONTROL_BUTTON_WIDTH - CONTROL_BUTTON_PADDING;
-    // Verify the X range is within the window.
     ASSERT_TRUE(close_x >= win->frame.x);
     ASSERT_TRUE(close_x + CONTROL_BUTTON_WIDTH <= win->frame.x + win->frame.w);
+
+    // Suppress unused variable warning (toolbar_bottom is illustrative).
+    (void)toolbar_bottom;
 
     destroy_window(win);
     test_env_shutdown();
