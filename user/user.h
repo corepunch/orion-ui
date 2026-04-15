@@ -56,6 +56,31 @@ typedef struct toolbar_button_s {
   bool pressed;  // transient mouse-down visual feedback
 } toolbar_button_t;
 
+// Returns the number of toolbar rows needed for 'n' buttons in a window
+// of inner pixel width 'inner_w' and button size 'bsz'.
+// Entries with icon == -1 (TOOLBAR_SPACING_TOKEN) consume TOOLBAR_SPACING_GAP_WIDTH
+// horizontal pixels without occupying a button slot.
+static inline int toolbar_count_rows(const toolbar_button_t *buttons, uint32_t n,
+                                      int inner_w, int bsz) {
+  if (n == 0) return 1;
+  int available = inner_w - 2 * TOOLBAR_PADDING;
+  int cur_x = 0, cur_row = 0;
+  bool has_real = false;
+  for (uint32_t i = 0; i < n; i++) {
+    if (buttons[i].icon == -1) {
+      cur_x += TOOLBAR_SPACING_GAP_WIDTH;
+    } else {
+      has_real = true;
+      if (cur_x > 0 && cur_x + bsz > available) {
+        cur_row++;
+        cur_x = 0;
+      }
+      cur_x += bsz + TOOLBAR_SPACING;
+    }
+  }
+  return has_real ? cur_row + 1 : 1;
+}
+
 // Window definition structure (for declarative window creation)
 typedef struct {
   winproc_t proc;

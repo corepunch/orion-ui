@@ -9,23 +9,27 @@
 #include "test_env.h"
 #include "../ui.h"
 #include "../commctl/commctl.h"
+#include <stdlib.h>
 
 // ---- helpers ----------------------------------------------------------------
 
-// Inline copy of the toolbar-height computation to allow white-box assertions
-// without depending on draw_impl.c's titlebar_height() linkage in tests.
-// Must stay synchronised with the formula in draw_impl.c:titlebar_height().
-// win_w is the total frame width; the usable bevel-inner width is win_w - 2
-// (the toolbar rect is inset by 1px per side: rect.x = frame.x+1, rect.w = frame.w-2).
+// Delegate to the framework helper so assertions always stay in sync.
 static int compute_toolbar_height(int num_buttons, int win_w) {
     int bsz = TB_SPACING;
     int inner_w = win_w - 2;
-    if (num_buttons <= 0 || inner_w <= 0) {
-        return bsz + 2 * TOOLBAR_PADDING;  // default: 1 row
+    int num_rows = toolbar_count_rows(NULL, 0, inner_w, bsz);  // 0 buttons → 1 row default
+    if (num_buttons > 0) {
+        // Build a synthetic button array with no spacing tokens.
+        toolbar_button_t *buttons = malloc(sizeof(toolbar_button_t) * (size_t)num_buttons);
+        for (int i = 0; i < num_buttons; i++) {
+            buttons[i].icon = 0;
+            buttons[i].ident = i;
+            buttons[i].active = false;
+            buttons[i].pressed = false;
+        }
+        num_rows = toolbar_count_rows(buttons, (uint32_t)num_buttons, inner_w, bsz);
+        free(buttons);
     }
-    int bpr = (inner_w - 2*TOOLBAR_PADDING + TOOLBAR_SPACING) / (bsz + TOOLBAR_SPACING);
-    if (bpr < 1) bpr = 1;
-    int num_rows = (num_buttons + bpr - 1) / bpr;
     return num_rows * bsz + 2 * TOOLBAR_PADDING;
 }
 
@@ -350,6 +354,150 @@ void test_toolbar_button_pressed_cleared_on_up_outside(void) {
 
 // ---- main -------------------------------------------------------------------
 
+void test_toolbar_spacing_token_skipped_in_count(void) {
+    TEST("toolbar_count_rows: spacing tokens do not count as button slots");
+
+    // 3 real buttons + 1 spacing token in a wide window → still 1 row.
+    // inner_w = 200 - 2 = 198; available = 198 - 4 = 194.
+    // 3 buttons: 0 + 22+4 + 22+4 = 52 → fits in 1 row.
+    toolbar_button_t buttons[] = {
+        {.icon=0, .ident=1, .active=false},
+        {.icon=1, .ident=2, .active=false},
+        TOOLBAR_SPACING_TOKEN,
+        {.icon=2, .ident=3, .active=false},
+    };
+    int rows = toolbar_count_rows(buttons, 4, 200 - 2, TB_SPACING);
+    ASSERT_EQUAL(rows, 1);
+
+    PASS();
+}
+
+void test_toolbar_spacing_token_adds_gap(void) {
+    TEST("toolbar_count_rows: spacing token consumes TOOLBAR_SPACING_GAP_WIDTH pixels");
+
+    // Narrow window: available = 30 - 2*TOOLBAR_PADDING = 26 px.
+    // Without token: 2 buttons (22+4 = 26 each step) → 1 row.
+    // Layout: cur_x starts 0.
+    //   btn0: fits (0+22=22 ≤ 26), cur_x → 26
+    //   btn1: cur_x(26) + bsz(22) = 48 > 26, but cur_x==26 >0 → wrap: row=1, cur_x=0
+    //   Actually let me recalculate. Available = inner_w - 2*TOOLBAR_PADDING.
+    //   inner_w = 30-2 = 28, available = 28 - 2*2 = 24.
+    //   btn0: cur_x=0, 0+22 ≤ 24 → place, cur_x = 22+4=26
+    //   btn1: cur_x=26 >0, 26+22=48 > 24 → wrap: row=1, cur_x=0
+    //   Result: 2 rows (without token).
+    toolbar_button_t no_token[] = {
+        {.icon=0, .ident=1, .active=false},
+        {.icon=1, .ident=2, .active=false},
+    };
+    int rows_no_token = toolbar_count_rows(no_token, 2, 30 - 2, TB_SPACING);
+    ASSERT_EQUAL(rows_no_token, 2);
+
+    // With token between btn0 and btn1: extra TOOLBAR_SPACING_GAP_WIDTH(4) pixels.
+    // btn0: cur_x=0, place, cur_x=26
+    // token: cur_x=30
+    // btn1: cur_x=30 >0, 30+22 > 24 → wrap: row=1, cur_x=0
+    // Result: still 2 rows.
+    toolbar_button_t with_token[] = {
+        {.icon=0, .ident=1, .active=false},
+        TOOLBAR_SPACING_TOKEN,
+        {.icon=1, .ident=2, .active=false},
+    };
+    int rows_with_token = toolbar_count_rows(with_token, 3, 30 - 2, TB_SPACING);
+    ASSERT_EQUAL(rows_with_token, 2);
+
+    PASS();
+}
+
+void test_toolbar_spacing_token_hit_test(void) {
+    TEST("WINDOW_TOOLBAR: spacing token shifts subsequent button positions");
+
+    test_env_init();
+    test_env_enable_tracking(true);
+    test_env_clear_events();
+
+    // Window at (0, 0), wide enough to hold all 3 real buttons in one row.
+    // frame: x=0, y=0, w=200, h=50
+    rect_t frame = {0, 0, 200, 50};
+    window_t *win = create_window("T", WINDOW_TOOLBAR | WINDOW_NORESIZE,
+                                  &frame, NULL, noop_proc, 0, NULL);
+    ASSERT_NOT_NULL(win);
+
+    // NEW | EDIT | <gap> | DELETE
+    toolbar_button_t buttons[] = {
+        {.icon=0, .ident=1, .active=false},
+        {.icon=1, .ident=2, .active=false},
+        TOOLBAR_SPACING_TOKEN,
+        {.icon=2, .ident=3, .active=false},
+    };
+    send_message(win, kToolBarMessageAddButtons, 4, buttons);
+    ASSERT_EQUAL((int)win->num_toolbar_buttons, 4);
+
+    int bsz    = TB_SPACING;
+    int base_x = win->frame.x + 1 + TOOLBAR_PADDING;
+    int base_y = win->frame.y + TITLEBAR_HEIGHT + 1 + TOOLBAR_PADDING;
+
+    // Button positions (pixel-based layout):
+    //   btn0 (ident=1): cur_x=0  → bx=base_x
+    //   btn1 (ident=2): cur_x=bsz+TOOLBAR_SPACING → bx=base_x+(bsz+TOOLBAR_SPACING)
+    //   token:          cur_x += TOOLBAR_SPACING_GAP_WIDTH
+    //   btn2 (ident=3): cur_x=2*(bsz+TOOLBAR_SPACING)+TOOLBAR_SPACING_GAP_WIDTH → bx=base_x+that
+    int x0 = base_x + 0;
+    int x1 = base_x + (bsz + TOOLBAR_SPACING);
+    int x2 = base_x + 2 * (bsz + TOOLBAR_SPACING) + TOOLBAR_SPACING_GAP_WIDTH;
+
+    // Hit DELETE (button index 3 in array, ident=3) at centre.
+    int hit_x = x2 + bsz / 2;
+    int hit_y = base_y + bsz / 2;
+    send_message(win, kWindowMessageNonClientLeftButtonDown,
+                 MAKEDWORD(hit_x, hit_y), NULL);
+
+    ASSERT_FALSE(win->toolbar_buttons[0].pressed);  // NEW not pressed
+    ASSERT_FALSE(win->toolbar_buttons[1].pressed);  // EDIT not pressed
+    // index 2 is the spacing token — pressed is irrelevant / never set
+    ASSERT_TRUE(win->toolbar_buttons[3].pressed);   // DELETE pressed
+
+    send_message(win, kWindowMessageNonClientLeftButtonUp,
+                 MAKEDWORD(hit_x, hit_y), NULL);
+    ASSERT_FALSE(win->toolbar_buttons[3].pressed);
+
+    // Hit NEW (ident=1).
+    hit_x = x0 + bsz / 2;
+    send_message(win, kWindowMessageNonClientLeftButtonDown,
+                 MAKEDWORD(hit_x, hit_y), NULL);
+    ASSERT_TRUE(win->toolbar_buttons[0].pressed);
+    ASSERT_FALSE(win->toolbar_buttons[1].pressed);
+    ASSERT_FALSE(win->toolbar_buttons[3].pressed);
+
+    // Hit EDIT (ident=2).
+    send_message(win, kWindowMessageNonClientLeftButtonUp,
+                 MAKEDWORD(0, 0), NULL);
+    hit_x = x1 + bsz / 2;
+    send_message(win, kWindowMessageNonClientLeftButtonDown,
+                 MAKEDWORD(hit_x, hit_y), NULL);
+    ASSERT_FALSE(win->toolbar_buttons[0].pressed);
+    ASSERT_TRUE(win->toolbar_buttons[1].pressed);
+    ASSERT_FALSE(win->toolbar_buttons[3].pressed);
+
+    // Verify gap: a click inside the gap area (between EDIT and DELETE) does
+    // not press any button.
+    send_message(win, kWindowMessageNonClientLeftButtonUp,
+                 MAKEDWORD(0, 0), NULL);
+    int gap_x = x1 + bsz + TOOLBAR_SPACING + TOOLBAR_SPACING_GAP_WIDTH / 2;
+    send_message(win, kWindowMessageNonClientLeftButtonDown,
+                 MAKEDWORD(gap_x, hit_y), NULL);
+    ASSERT_FALSE(win->toolbar_buttons[0].pressed);
+    ASSERT_FALSE(win->toolbar_buttons[1].pressed);
+    ASSERT_FALSE(win->toolbar_buttons[3].pressed);
+
+    send_message(win, kWindowMessageNonClientLeftButtonUp,
+                 MAKEDWORD(0, 0), NULL);
+    destroy_window(win);
+    test_env_shutdown();
+    PASS();
+}
+
+// ---- main -------------------------------------------------------------------
+
 int main(int argc, char *argv[]) {
     (void)argc;
     (void)argv;
@@ -362,6 +510,9 @@ int main(int argc, char *argv[]) {
     test_close_button_y_excludes_toolbar();
     test_toolbar_button_pressed_on_nonclient_mousedown();
     test_toolbar_button_pressed_cleared_on_up_outside();
+    test_toolbar_spacing_token_skipped_in_count();
+    test_toolbar_spacing_token_adds_gap();
+    test_toolbar_spacing_token_hit_test();
 
     TEST_END();
 }
