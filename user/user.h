@@ -67,13 +67,14 @@ typedef struct {
 
 // Control type codes used in form_ctrl_def_t (analogous to WinAPI dialog-template atom IDs).
 typedef enum {
-  FORM_CTRL_BUTTON   = 0,
-  FORM_CTRL_CHECKBOX = 1,
-  FORM_CTRL_LABEL    = 2,
-  FORM_CTRL_TEXTEDIT = 3,
-  FORM_CTRL_LIST     = 4,
-  FORM_CTRL_COMBOBOX = 5,
-  FORM_CTRL_COUNT    = 6,
+  FORM_CTRL_BUTTON    = 0,
+  FORM_CTRL_CHECKBOX  = 1,
+  FORM_CTRL_LABEL     = 2,
+  FORM_CTRL_TEXTEDIT  = 3,
+  FORM_CTRL_LIST      = 4,
+  FORM_CTRL_COMBOBOX  = 5,
+  FORM_CTRL_MULTIEDIT = 6,  // multi-line text edit (win_multiedit)
+  FORM_CTRL_COUNT     = 7,
 } form_ctrl_type_t;
 
 // Describes one child control in a form definition (analogous to DLGITEMTEMPLATE).
@@ -252,6 +253,7 @@ typedef enum {
   BIND_STRING,    // char[] field: text-edit text ↔ char array (size = sizeof field)
   BIND_INT_COMBO, // int   field: combo-box selection index ↔ int  (size = default index)
   BIND_INT_EDIT,  // int   field: text-edit decimal text    ↔ int  (size = unused)
+  BIND_MLSTRING,  // char[] field: multi-line text edit ↔ char array (size = sizeof field)
 } bind_type_t;
 
 typedef struct {

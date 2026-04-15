@@ -120,6 +120,13 @@ void dialog_push(window_t *win, const void *state,
                              max_len, base + b[i].offset);
         break;
       }
+      case BIND_MLSTRING: {
+        window_t *ctrl = get_window_item(win, b[i].ctrl_id);
+        if (ctrl)
+          send_message(ctrl, kMultiEditMessageSetText, 0,
+                       (void *)(base + b[i].offset));
+        break;
+      }
       case BIND_INT_COMBO: {
         window_t *ctrl = get_window_item(win, b[i].ctrl_id);
         if (ctrl) {
@@ -154,6 +161,13 @@ void dialog_pull(window_t *win, void *state,
           strncpy(dst, ctrl->title, sz - 1);
           dst[sz - 1] = '\0';
         }
+        break;
+      }
+      case BIND_MLSTRING: {
+        char  *dst = base + b[i].offset;
+        size_t sz  = b[i].size;
+        if (sz > 0)
+          send_message(ctrl, kMultiEditMessageGetText, (uint32_t)sz, dst);
         break;
       }
       case BIND_INT_COMBO: {

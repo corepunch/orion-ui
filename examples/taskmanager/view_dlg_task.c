@@ -10,8 +10,8 @@ static const form_ctrl_def_t kTaskEditChildren[] = {
   { FORM_CTRL_LABEL,    -1,                    {8,   8,  60, 13}, 0,             "Title:",       "lbl_title"    },
   { FORM_CTRL_TEXTEDIT, ID_TASK_TITLE_CTRL,    {70,  6, 200, 16}, 0,             "",             "edit_title"   },
 
-  { FORM_CTRL_LABEL,    -1,                    {8,  28,  60, 13}, 0,             "Description:", "lbl_desc"     },
-  { FORM_CTRL_TEXTEDIT, ID_TASK_DESC_CTRL,     {70, 28, 200, 60}, 0,             "",             "edit_desc"    },
+  { FORM_CTRL_LABEL,     -1,                    {8,  28,  60, 13}, 0,             "Description:", "lbl_desc"     },
+  { FORM_CTRL_MULTIEDIT, ID_TASK_DESC_CTRL,     {70, 28, 200, 60}, 0,             "",             "edit_desc"    },
 
   { FORM_CTRL_LABEL,    -1,                    {8,  95,  60, 13}, 0,             "Priority:",    "lbl_prio"     },
   { FORM_CTRL_COMBOBOX, ID_TASK_PRIORITY_CTRL, {70, 95, 100, 18}, 0,             "",             "combo_prio"   },
@@ -55,7 +55,7 @@ typedef struct {
 
 static const ctrl_binding_t k_task_bindings[] = {
   { ID_TASK_TITLE_CTRL,    BIND_STRING,    offsetof(task_dlg_state_t, title),    sizeof_field(task_dlg_state_t, title) },
-  { ID_TASK_DESC_CTRL,     BIND_STRING,    offsetof(task_dlg_state_t, desc),     sizeof_field(task_dlg_state_t, desc)  },
+  { ID_TASK_DESC_CTRL,     BIND_MLSTRING,  offsetof(task_dlg_state_t, desc),     sizeof_field(task_dlg_state_t, desc)  },
   { ID_TASK_PRIORITY_CTRL, BIND_INT_COMBO, offsetof(task_dlg_state_t, priority), PRIORITY_NORMAL },
   { ID_TASK_STATUS_CTRL,   BIND_INT_COMBO, offsetof(task_dlg_state_t, status),   STATUS_TODO },
 };

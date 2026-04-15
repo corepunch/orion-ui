@@ -66,6 +66,9 @@ enum {
   kScrollBarMessageGetPos,         // returns current scroll position
   kToolBarMessageSetButtonSize,    // wparam=square button size in pixels (0 resets to TB_SPACING)
   kToolBarMessageLoadStrip,        // wparam=icon tile size in px (square); lparam=const char* path to PNG
+  // Multiline text edit messages (analogous to WM_GETTEXT / WM_SETTEXT)
+  kMultiEditMessageGetText,        // wparam=buf_size; lparam=char* dst → copies text, returns length
+  kMultiEditMessageSetText,        // wparam=0; lparam=const char* src → replaces text
 };
 
 // Control notification messages
