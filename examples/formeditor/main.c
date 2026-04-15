@@ -19,17 +19,8 @@ static int palette_win_y(void) {
 }
 
 static void create_app_windows(hinstance_t hinstance) {
-#ifndef BUILD_AS_GEM
-  int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
-  window_t *mb = create_window(
-      "menubar",
-      WINDOW_NOTITLE | WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
-      MAKERECT(0, 0, sw, MENUBAR_HEIGHT),
-      NULL, editor_menubar_proc, hinstance, NULL);
-  send_message(mb, kMenuBarMessageSetMenus, (uint32_t)kNumMenus, (void *)kMenus);
-  show_window(mb, true);
-  g_app->menubar_win = mb;
-#endif
+  g_app->menubar_win = set_app_menu(editor_menubar_proc, kMenus, kNumMenus,
+                                    handle_menu_command, hinstance);
 
   window_t *tp = create_window(
       "Tools",
@@ -53,13 +44,6 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
       (int)(sizeof(kAccelEntries)/sizeof(kAccelEntries[0])));
   if (g_app->menubar_win)
     send_message(g_app->menubar_win, kMenuBarMessageSetAccelerators, 0, g_app->accel);
-
-#ifdef BUILD_AS_GEM
-  gem_interface_t *iface = gem_get_interface();
-  iface->menus          = kMenus;
-  iface->menu_count     = kNumMenus;
-  iface->handle_command = handle_menu_command;
-#endif
 
   create_form_doc(FORM_DEFAULT_W, FORM_DEFAULT_H);
   return true;
