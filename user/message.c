@@ -75,6 +75,22 @@ static bool toolbar_iter_next(toolbar_iter_t *it,
   return true;
 }
 
+// Returns the effective toolbar button size for win (TB_SPACING when no custom size is set).
+static int toolbar_effective_bsz(window_t const *win) {
+  return (win->toolbar_btn_size > 0) ? win->toolbar_btn_size : TB_SPACING;
+}
+
+// Initialise a toolbar layout iterator for win's toolbar in screen-space coordinates.
+static void toolbar_iter_for_win(window_t *win, toolbar_iter_t *it) {
+  int bsz     = toolbar_effective_bsz(win);
+  int inner_w = win->frame.w - 2 * TOOLBAR_BEVEL_WIDTH;
+  int title_h = (win->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
+  toolbar_iter_init(it,
+                    win->frame.x + TOOLBAR_BEVEL_WIDTH + TOOLBAR_PADDING,
+                    win->frame.y + title_h + TOOLBAR_BEVEL_WIDTH + TOOLBAR_PADDING,
+                    inner_w - 2 * TOOLBAR_PADDING, bsz);
+}
+
 // Window hooks
 typedef struct winhook_s {
   winhook_func_t func;
@@ -225,9 +241,20 @@ static int sb_clamp_msg(win_sb_t const *sb, int pos) {
   return pos;
 }
 
+// Clamp new_pos, and if it differs from sb->pos apply it, fire scroll_msg, and invalidate.
+// Returns true if the position actually changed.
+static bool sb_try_scroll(window_t *win, win_sb_t *sb, uint32_t scroll_msg, int new_pos) {
+  new_pos = sb_clamp_msg(sb, new_pos);
+  if (new_pos == sb->pos) return false;
+  sb->pos = new_pos;
+  send_message(win, scroll_msg, (uint32_t)new_pos, NULL);
+  invalidate_window(win);
+  return true;
+}
+
 // Handle mouse events for a window's built-in scrollbars.
-// Returns non-zero if the event was consumed by a scrollbar.
-static int handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wparam) {
+// Returns true if the event was consumed by a scrollbar.
+static bool handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wparam) {
   bool has_h = (win->flags & WINDOW_HSCROLL) && win->hscroll.visible;
   bool has_v = (win->flags & WINDOW_VSCROLL) && win->vscroll.visible;
 
@@ -256,10 +283,9 @@ static int handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wpara
   // in the status bar, outside the content area).
   int v_track = content_h - (has_h && !h_merged ? SCROLLBAR_WIDTH : 0);
 
-  // Handle ongoing drag (captured move / button-up) regardless of enabled state
   if (msg == kWindowMessageMouseMove || msg == kWindowMessageLeftButtonUp) {
     if (win->hscroll.dragging) {
-      int cx, cy; sb_local_coords(win, wparam, &cx, &cy);
+      int cx, cy; sb_local_coords(win, wparam, &cx, &cy); (void)cy;
       // Effective track between arrow buttons
       int eff_track = h_track - 2 * SCROLLBAR_WIDTH;
       int lx_eff = (eff_track > 0) ? (cx - h_x_min) - SCROLLBAR_WIDTH : (cx - h_x_min);
@@ -268,22 +294,17 @@ static int handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wpara
         int tp = (eff_track > 0 ? eff_track : h_track) - tl;
         int tr = win->hscroll.max_val - win->hscroll.min_val - win->hscroll.page;
         if (tp > 0 && tr > 0) {
-          int new_pos = sb_clamp_msg(&win->hscroll,
+          sb_try_scroll(win, &win->hscroll, kWindowMessageHScroll,
               win->hscroll.drag_start_pos + (lx_eff - win->hscroll.drag_start_mouse) * tr / tp);
-          if (new_pos != win->hscroll.pos) {
-            win->hscroll.pos = new_pos;
-            send_message(win, kWindowMessageHScroll, (uint32_t)new_pos, NULL);
-            invalidate_window(win);
-          }
         }
       } else {
         win->hscroll.dragging = false;
         set_capture(NULL);
       }
-      return 1;
+      return true;
     }
     if (win->vscroll.dragging) {
-      int cx, cy; sb_local_coords(win, wparam, &cx, &cy);
+      int cx, cy; sb_local_coords(win, wparam, &cx, &cy); (void)cx;
       int eff_track = v_track - 2 * SCROLLBAR_WIDTH;
       int cy_eff    = (eff_track > 0) ? cy - SCROLLBAR_WIDTH : cy;
       int tl    = builtin_sb_thumb_len_msg(&win->vscroll, eff_track > 0 ? eff_track : v_track);
@@ -291,25 +312,20 @@ static int handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wpara
         int tp = (eff_track > 0 ? eff_track : v_track) - tl;
         int tr = win->vscroll.max_val - win->vscroll.min_val - win->vscroll.page;
         if (tp > 0 && tr > 0) {
-          int new_pos = sb_clamp_msg(&win->vscroll,
+          sb_try_scroll(win, &win->vscroll, kWindowMessageVScroll,
               win->vscroll.drag_start_pos + (cy_eff - win->vscroll.drag_start_mouse) * tr / tp);
-          if (new_pos != win->vscroll.pos) {
-            win->vscroll.pos = new_pos;
-            send_message(win, kWindowMessageVScroll, (uint32_t)new_pos, NULL);
-            invalidate_window(win);
-          }
         }
       } else {
         win->vscroll.dragging = false;
         set_capture(NULL);
       }
-      return 1;
+      return true;
     }
-    return 0;
+    return false;
   }
 
-  if (msg != kWindowMessageLeftButtonDown) return 0;
-  if (!has_h && !has_v) return 0;
+  if (msg != kWindowMessageLeftButtonDown) return false;
+  if (!has_h && !has_v) return false;
 
   int cx, cy;
   sb_local_coords(win, wparam, &cx, &cy);
@@ -317,30 +333,18 @@ static int handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wpara
   // Horizontal scrollbar hit — always consume geometry even when disabled
   if (has_h && cy >= h_y_min && cy < h_y_max &&
       cx >= h_x_min && cx < win->frame.w) {
-    if (!win->hscroll.enabled) return 1; // consume click but do nothing
+    if (!win->hscroll.enabled) return true; // consume click but do nothing
     int lx = cx - h_x_min;  // position within the hscroll strip
-    if (lx >= h_track) return 1; // corner square
+    if (lx >= h_track) return true; // corner square
     // Arrow buttons
     if (h_track >= 2 * SCROLLBAR_WIDTH) {
       if (lx < SCROLLBAR_WIDTH) {
-        // Left arrow — scroll by one unit
-        int new_pos = sb_clamp_msg(&win->hscroll, win->hscroll.pos - 1);
-        if (new_pos != win->hscroll.pos) {
-          win->hscroll.pos = new_pos;
-          send_message(win, kWindowMessageHScroll, (uint32_t)new_pos, NULL);
-          invalidate_window(win);
-        }
-        return 1;
+        sb_try_scroll(win, &win->hscroll, kWindowMessageHScroll, win->hscroll.pos - SB_ARROW_STEP);
+        return true;
       }
       if (lx >= h_track - SCROLLBAR_WIDTH) {
-        // Right arrow — scroll by one unit
-        int new_pos = sb_clamp_msg(&win->hscroll, win->hscroll.pos + 1);
-        if (new_pos != win->hscroll.pos) {
-          win->hscroll.pos = new_pos;
-          send_message(win, kWindowMessageHScroll, (uint32_t)new_pos, NULL);
-          invalidate_window(win);
-        }
-        return 1;
+        sb_try_scroll(win, &win->hscroll, kWindowMessageHScroll, win->hscroll.pos + SB_ARROW_STEP);
+        return true;
       }
       // Thumb drag in effective track between buttons
       int eff_track = h_track - 2 * SCROLLBAR_WIDTH;
@@ -354,13 +358,8 @@ static int handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wpara
           win->hscroll.drag_start_pos   = win->hscroll.pos;
           set_capture(win);
         } else {
-          int new_pos = sb_clamp_msg(&win->hscroll,
+          sb_try_scroll(win, &win->hscroll, kWindowMessageHScroll,
               win->hscroll.pos + (lx_eff < to ? -win->hscroll.page : win->hscroll.page));
-          if (new_pos != win->hscroll.pos) {
-            win->hscroll.pos = new_pos;
-            send_message(win, kWindowMessageHScroll, (uint32_t)new_pos, NULL);
-            invalidate_window(win);
-          }
         }
       }
     } else {
@@ -373,44 +372,27 @@ static int handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wpara
         win->hscroll.drag_start_pos   = win->hscroll.pos;
         set_capture(win);
       } else {
-        int new_pos = sb_clamp_msg(&win->hscroll,
+        sb_try_scroll(win, &win->hscroll, kWindowMessageHScroll,
             win->hscroll.pos + (lx < to ? -win->hscroll.page : win->hscroll.page));
-        if (new_pos != win->hscroll.pos) {
-          win->hscroll.pos = new_pos;
-          send_message(win, kWindowMessageHScroll, (uint32_t)new_pos, NULL);
-          invalidate_window(win);
-        }
       }
     }
-    return 1;
+    return true;
   }
 
   // Vertical scrollbar hit — always consume geometry even when disabled
   if (has_v && cx >= win->frame.w - SCROLLBAR_WIDTH && cx < win->frame.w &&
       cy >= 0 && cy < content_h) {
-    if (!win->vscroll.enabled) return 1; // consume click but do nothing
-    if (cy >= v_track) return 1; // corner square
+    if (!win->vscroll.enabled) return true; // consume click but do nothing
+    if (cy >= v_track) return true; // corner square
     // Arrow buttons
     if (v_track >= 2 * SCROLLBAR_WIDTH) {
       if (cy < SCROLLBAR_WIDTH) {
-        // Up arrow — scroll by one unit
-        int new_pos = sb_clamp_msg(&win->vscroll, win->vscroll.pos - 1);
-        if (new_pos != win->vscroll.pos) {
-          win->vscroll.pos = new_pos;
-          send_message(win, kWindowMessageVScroll, (uint32_t)new_pos, NULL);
-          invalidate_window(win);
-        }
-        return 1;
+        sb_try_scroll(win, &win->vscroll, kWindowMessageVScroll, win->vscroll.pos - SB_ARROW_STEP);
+        return true;
       }
       if (cy >= v_track - SCROLLBAR_WIDTH) {
-        // Down arrow — scroll by one unit
-        int new_pos = sb_clamp_msg(&win->vscroll, win->vscroll.pos + 1);
-        if (new_pos != win->vscroll.pos) {
-          win->vscroll.pos = new_pos;
-          send_message(win, kWindowMessageVScroll, (uint32_t)new_pos, NULL);
-          invalidate_window(win);
-        }
-        return 1;
+        sb_try_scroll(win, &win->vscroll, kWindowMessageVScroll, win->vscroll.pos + SB_ARROW_STEP);
+        return true;
       }
       // Thumb drag in effective track between buttons
       int eff_track = v_track - 2 * SCROLLBAR_WIDTH;
@@ -424,13 +406,8 @@ static int handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wpara
           win->vscroll.drag_start_pos   = win->vscroll.pos;
           set_capture(win);
         } else {
-          int new_pos = sb_clamp_msg(&win->vscroll,
+          sb_try_scroll(win, &win->vscroll, kWindowMessageVScroll,
               win->vscroll.pos + (cy_eff < to ? -win->vscroll.page : win->vscroll.page));
-          if (new_pos != win->vscroll.pos) {
-            win->vscroll.pos = new_pos;
-            send_message(win, kWindowMessageVScroll, (uint32_t)new_pos, NULL);
-            invalidate_window(win);
-          }
         }
       }
     } else {
@@ -443,19 +420,14 @@ static int handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wpara
         win->vscroll.drag_start_pos   = win->vscroll.pos;
         set_capture(win);
       } else {
-        int new_pos = sb_clamp_msg(&win->vscroll,
+        sb_try_scroll(win, &win->vscroll, kWindowMessageVScroll,
             win->vscroll.pos + (cy < to ? -win->vscroll.page : win->vscroll.page));
-        if (new_pos != win->vscroll.pos) {
-          win->vscroll.pos = new_pos;
-          send_message(win, kWindowMessageVScroll, (uint32_t)new_pos, NULL);
-          invalidate_window(win);
-        }
       }
     }
-    return 1;
+    return true;
   }
 
-  return 0;
+  return false;
 }
 
 // Send message to window (synchronous)
@@ -464,301 +436,278 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   rect_t const *frame = &win->frame;
   window_t *root = get_root_window(win);
   int value = 0;
-  if (win) {
-    // Call registered hooks
-    for (winhook_t *hook = g_hooks; hook; hook = hook->next) {
-      if (msg == hook->msg) {
-        hook->func(win, msg, wparam, lparam, hook->userdata);
-      }
+  // Call registered hooks
+  for (winhook_t *hook = g_hooks; hook; hook = hook->next) {
+    if (msg == hook->msg) {
+      hook->func(win, msg, wparam, lparam, hook->userdata);
     }
-    // Handle special messages
-    switch (msg) {
-      case kWindowMessageNonClientPaint:
-        // Skip OpenGL calls if graphics aren't initialized (e.g., in tests)
-        if (running) {
-          ui_set_stencil_for_window(win->id);
-          set_fullscreen();
-          if (!(win->flags&WINDOW_TRANSPARENT)) {
-            draw_panel(win);
-          }
-          if (!(win->flags&WINDOW_NOTITLE)) {
-            draw_window_controls(win);
-            draw_text_small(win->title, frame->x+2, window_title_bar_y(win),
-                            get_sys_color(window_has_focus(win) ? kColorActiveTitlebarText : kColorInactiveTitlebarText));
-          }
-          if (win->flags&WINDOW_TOOLBAR) {
-            int bsz = (win->toolbar_btn_size > 0) ? win->toolbar_btn_size : TB_SPACING;
-            int inner_w = win->frame.w - 2;  // toolbar bevel insets 1px per side
-            int nrows = toolbar_count_rows(win->toolbar_buttons, win->num_toolbar_buttons,
+  }
+  // Handle special messages
+  switch (msg) {
+    case kWindowMessageNonClientPaint:
+      // Skip OpenGL calls if graphics aren't initialized (e.g., in tests)
+      if (running) {
+        ui_set_stencil_for_window(win->id);
+        set_fullscreen();
+        if (!(win->flags&WINDOW_TRANSPARENT)) {
+          draw_panel(win);
+        }
+        if (!(win->flags&WINDOW_NOTITLE)) {
+          draw_window_controls(win);
+          draw_text_small(win->title, frame->x+2, window_title_bar_y(win),
+                          get_sys_color(window_has_focus(win) ? kColorActiveTitlebarText : kColorInactiveTitlebarText));
+        }
+        if (win->flags&WINDOW_TOOLBAR) {
+          int bsz     = toolbar_effective_bsz(win);
+          int inner_w = win->frame.w - 2 * TOOLBAR_BEVEL_WIDTH;
+          int nrows   = toolbar_count_rows(win->toolbar_buttons, win->num_toolbar_buttons,
                                            inner_w, bsz);
-            int total_h = nrows * bsz + 2 * TOOLBAR_PADDING;
-            // Toolbar rows sit immediately below the title bar (or at the window
-            // top when WINDOW_NOTITLE is set).  frame.y is now the window top.
-            int title_only_h = (win->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
-            rect_t rect = {win->frame.x+1, win->frame.y + title_only_h + 1, win->frame.w-2, total_h-2};
-            draw_bevel(&rect);
-            fill_rect(get_sys_color(kColorWindowBg), rect.x, rect.y, rect.w, rect.h);
-            bitmap_strip_t *strip = (win->toolbar_strip.tex != 0) ? &win->toolbar_strip : NULL;
-            toolbar_iter_t it;
-            toolbar_iter_init(&it,
-                              rect.x + TOOLBAR_PADDING, rect.y + TOOLBAR_PADDING,
-                              inner_w - 2 * TOOLBAR_PADDING, bsz);
-            for (uint32_t i = 0; i < win->num_toolbar_buttons; i++) {
-              toolbar_button_t const *but = &win->toolbar_buttons[i];
-              rect_t r;
-              if (!toolbar_iter_next(&it, but, &r)) continue;
-              bool show_pressed = but->pressed || but->active;
-              int px = show_pressed ? 1 : 0;
-              if (strip) {
-                // Draw button background then icon from sprite sheet.
-                draw_button(&(rect_t){r.x, r.y, bsz, bsz}, 1, 1, show_pressed);
-                int icon_index = but->icon;
-                if (strip->cols > 0) {
-                  int scol = icon_index % strip->cols;
-                  int srow = icon_index / strip->cols;
-                  draw_sprite_region((int)strip->tex, r.x + 2 + px, r.y + 2 + px,
-                                     strip->icon_w, strip->icon_h, SPRITE_REGION(scol, srow, strip), 1.0f);
-                }
-              } else {
-                draw_button(&(rect_t){r.x, r.y, bsz, bsz-2}, 1, 1, show_pressed);
-                draw_icon16(but->icon, r.x + 2 + px + 1, r.y + 2 + px,
-                            get_sys_color(kColorTextNormal));
+          int total_h = nrows * bsz + 2 * TOOLBAR_PADDING;
+          // Toolbar rows sit immediately below the title bar (or at the window
+          // top when WINDOW_NOTITLE is set).  frame.y is now the window top.
+          int title_only_h = (win->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
+          rect_t rect = {win->frame.x + TOOLBAR_BEVEL_WIDTH,
+                         win->frame.y + title_only_h + TOOLBAR_BEVEL_WIDTH,
+                         win->frame.w - 2 * TOOLBAR_BEVEL_WIDTH,
+                         total_h - 2 * TOOLBAR_BEVEL_WIDTH};
+          draw_bevel(&rect);
+          fill_rect(get_sys_color(kColorWindowBg), rect.x, rect.y, rect.w, rect.h);
+          bitmap_strip_t *strip = (win->toolbar_strip.tex != 0) ? &win->toolbar_strip : NULL;
+          toolbar_iter_t it;
+          toolbar_iter_for_win(win, &it);
+          for (uint32_t i = 0; i < win->num_toolbar_buttons; i++) {
+            toolbar_button_t const *but = &win->toolbar_buttons[i];
+            rect_t r;
+            if (!toolbar_iter_next(&it, but, &r)) continue;
+            bool show_pressed = but->pressed || but->active;
+            int px = show_pressed ? 1 : 0;
+            if (strip) {
+              // Draw button background then icon from sprite sheet.
+              draw_button(&(rect_t){r.x, r.y, bsz, bsz}, 1, 1, show_pressed);
+              int icon_index = but->icon;
+              if (strip->cols > 0) {
+                int scol = icon_index % strip->cols;
+                int srow = icon_index / strip->cols;
+                draw_sprite_region((int)strip->tex, r.x + 2 + px, r.y + 2 + px,
+                                   strip->icon_w, strip->icon_h, SPRITE_REGION(scol, srow, strip), 1.0f);
               }
+            } else {
+              draw_button(&(rect_t){r.x, r.y, bsz, bsz-2}, 1, 1, show_pressed);
+              draw_icon16(but->icon, r.x + 2 + px + 1, r.y + 2 + px,
+                          get_sys_color(kColorTextNormal));
             }
           }
-          if (win->flags&WINDOW_STATUSBAR) {
-            draw_statusbar(win, win->statusbar_text);
-          }
         }
-        break;
-      case kWindowMessagePaint:
-        // Skip OpenGL calls if graphics aren't initialized (e.g., in tests)
-        if (running) {
-          int t = titlebar_height(root);
-          ui_set_stencil_for_root_window(get_root_window(win)->id);
-          set_viewport(&root->frame);
-          // Shift projection so that y=0 maps to the client area top-left
-          // (i.e. below the title bar / toolbar).  This makes the window proc
-          // coordinate system purely client-relative while allowing scrollbar
-          // drawing code (draw_builtin_scrollbars) to address the full frame.
-          set_projection(root->scroll[0],
-                         -t + root->scroll[1],
-                         root->frame.w + root->scroll[0],
-                         root->frame.h - t + root->scroll[1]);
-          // For scrollable windows, tighten the scissor to the client area so
-          // that scrolled content cannot bleed into non-client areas (title bar,
-          // toolbar, status bar).  Only applied when a window actually has
-          // built-in scrollbars — no scissor state is wasted on non-scrollable
-          // windows, and the stencil buffer is not touched at all for this.
-          if (win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL)) {
-            int t_win = titlebar_height(win);   /* win's own non-client height */
-            rect_t cr = get_client_rect(win);
-            rect_t wf = win_frame_in_screen(win, root, t);
-            set_clip_rect(NULL, &(rect_t){wf.x, wf.y + t_win, cr.w, cr.h});
-          }
+        if (win->flags&WINDOW_STATUSBAR) {
+          draw_statusbar(win, win->statusbar_text);
         }
-        break;
-      case kToolBarMessageAddButtons:
-        if (win->toolbar_buttons) free(win->toolbar_buttons);
-        win->num_toolbar_buttons = wparam;
-        win->toolbar_buttons = malloc(sizeof(toolbar_button_t)*wparam);
-        memcpy(win->toolbar_buttons, lparam, sizeof(toolbar_button_t)*wparam);
-        // Zero the transient pressed flag: callers only set icon/ident/active,
-        // leaving pressed uninitialized when the struct is stack-allocated.
-        for (uint32_t i = 0; i < win->num_toolbar_buttons; i++)
-          win->toolbar_buttons[i].pressed = false;
-        break;
-      case kToolBarMessageSetStrip:
-        if (lparam) {
-          memcpy(&win->toolbar_strip, lparam, sizeof(bitmap_strip_t));
-        } else {
-          memset(&win->toolbar_strip, 0, sizeof(bitmap_strip_t));
-        }
-        invalidate_window(win);
-        break;
-      case kToolBarMessageSetActiveButton: {
-        uint32_t ident = wparam;
-        for (uint32_t i = 0; i < win->num_toolbar_buttons; i++) {
-          win->toolbar_buttons[i].active = (win->toolbar_buttons[i].ident == (int)ident);
-        }
-        invalidate_window(win);
-        break;
       }
-      case kToolBarMessageSetButtonSize: {
-        int old_btn_size = win->toolbar_btn_size;
-        // Accept 0 (reset to default TB_SPACING) or a positive value >= 8.
-        // Values in [1,7] are rejected: bsz is used as a divisor in toolbar
-        // column-count calculations (win->frame.w / bsz) and very small sizes
-        // would also produce broken layout (sub-pixel buttons, huge row counts).
-        int new_btn_size = (int)wparam;
-        if (new_btn_size != 0 && new_btn_size < 8) new_btn_size = 8;
-        if (old_btn_size != new_btn_size) {
-          win->toolbar_btn_size = new_btn_size;
-          post_message(win, kWindowMessageRefreshStencil, 0, NULL);
-          invalidate_window(get_root_window(win));
+      break;
+    case kWindowMessagePaint:
+      // Skip OpenGL calls if graphics aren't initialized (e.g., in tests)
+      if (running) {
+        int t = titlebar_height(root);
+        ui_set_stencil_for_root_window(get_root_window(win)->id);
+        set_viewport(&root->frame);
+        // Shift projection so that y=0 maps to the client area top-left
+        // (i.e. below the title bar / toolbar).  This makes the window proc
+        // coordinate system purely client-relative while allowing scrollbar
+        // drawing code (draw_builtin_scrollbars) to address the full frame.
+        set_projection(root->scroll[0],
+                       -t + root->scroll[1],
+                       root->frame.w + root->scroll[0],
+                       root->frame.h - t + root->scroll[1]);
+        // For scrollable windows, tighten the scissor to the client area so
+        // that scrolled content cannot bleed into non-client areas (title bar,
+        // toolbar, status bar).  Only applied when a window actually has
+        // built-in scrollbars — no scissor state is wasted on non-scrollable
+        // windows, and the stencil buffer is not touched at all for this.
+        if (win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL)) {
+          int t_win = titlebar_height(win);   /* win's own non-client height */
+          rect_t cr = get_client_rect(win);
+          rect_t wf = win_frame_in_screen(win, root, t);
+          set_clip_rect(NULL, &(rect_t){wf.x, wf.y + t_win, cr.w, cr.h});
         }
-        break;
       }
-      case kToolBarMessageLoadStrip: {
-        // wparam = icon tile size (square, pixels); lparam = const char* path
-        // Loads a PNG (with native RGBA transparency) and stores it as a GL
-        // texture in win->toolbar_strip.  The window owns the texture; freed on
-        // destroy.  Requires graphics to be initialized (running == true).
-        const char *path = (const char *)lparam;
-        int tile_sz = (int)wparam;
-        if (!path || tile_sz <= 0 || !running) break;
-        int w = 0, h = 0;
-        uint8_t *src = load_image(path, &w, &h);
-        if (!src) break;
-        if (w < tile_sz || h < tile_sz ||
-            (w % tile_sz) != 0 || (h % tile_sz) != 0) {
-          image_free(src);
-          break;
-        }
-        // Use the PNG's native RGBA data: real artist colors and PNG alpha channel.
-        // Free any previously framework-owned texture via the renderer.
-        R_DeleteTexture(win->toolbar_strip_tex);
-        uint32_t tex = R_CreateTextureRGBA(w, h, src, R_FILTER_NEAREST, R_WRAP_CLAMP);
+      break;
+    case kToolBarMessageAddButtons:
+      if (win->toolbar_buttons) free(win->toolbar_buttons);
+      win->num_toolbar_buttons = wparam;
+      win->toolbar_buttons = malloc(sizeof(toolbar_button_t)*wparam);
+      memcpy(win->toolbar_buttons, lparam, sizeof(toolbar_button_t)*wparam);
+      // Zero the transient pressed flag: callers only set icon/ident/active,
+      // leaving pressed uninitialized when the struct is stack-allocated.
+      for (uint32_t i = 0; i < win->num_toolbar_buttons; i++)
+        win->toolbar_buttons[i].pressed = false;
+      break;
+    case kToolBarMessageSetStrip:
+      if (lparam) {
+        memcpy(&win->toolbar_strip, lparam, sizeof(bitmap_strip_t));
+      } else {
+        memset(&win->toolbar_strip, 0, sizeof(bitmap_strip_t));
+      }
+      invalidate_window(win);
+      break;
+    case kToolBarMessageSetActiveButton: {
+      uint32_t ident = wparam;
+      for (uint32_t i = 0; i < win->num_toolbar_buttons; i++) {
+        win->toolbar_buttons[i].active = (win->toolbar_buttons[i].ident == (int)ident);
+      }
+      invalidate_window(win);
+      break;
+    }
+    case kToolBarMessageSetButtonSize: {
+      int old_btn_size = win->toolbar_btn_size;
+      // Accept 0 (reset to default TB_SPACING) or a positive value >= 8.
+      // Values in [1,7] are rejected: bsz is used as a divisor in toolbar
+      // column-count calculations (win->frame.w / bsz) and very small sizes
+      // would also produce broken layout (sub-pixel buttons, huge row counts).
+      int new_btn_size = (int)wparam;
+      if (new_btn_size != 0 && new_btn_size < 8) new_btn_size = 8;
+      if (old_btn_size != new_btn_size) {
+        win->toolbar_btn_size = new_btn_size;
+        post_message(win, kWindowMessageRefreshStencil, 0, NULL);
+        invalidate_window(get_root_window(win));
+      }
+      break;
+    }
+    case kToolBarMessageLoadStrip: {
+      // wparam = icon tile size (square, pixels); lparam = const char* path
+      // Loads a PNG (with native RGBA transparency) and stores it as a GL
+      // texture in win->toolbar_strip.  The window owns the texture; freed on
+      // destroy.  Requires graphics to be initialized (running == true).
+      const char *path = (const char *)lparam;
+      int tile_sz = (int)wparam;
+      if (!path || tile_sz <= 0 || !running) break;
+      int w = 0, h = 0;
+      uint8_t *src = load_image(path, &w, &h);
+      if (!src) break;
+      if (w < tile_sz || h < tile_sz ||
+          (w % tile_sz) != 0 || (h % tile_sz) != 0) {
         image_free(src);
-        win->toolbar_strip_tex    = tex;
-        win->toolbar_strip.tex    = tex;
-        win->toolbar_strip.icon_w = tile_sz;
-        win->toolbar_strip.icon_h = tile_sz;
-        win->toolbar_strip.cols   = w / tile_sz;
-        win->toolbar_strip.sheet_w = w;
-        win->toolbar_strip.sheet_h = h;
-        invalidate_window(win);
         break;
       }
-      case kWindowMessageStatusBar:
-        if (lparam) {
-          strncpy(win->statusbar_text, (const char*)lparam, sizeof(win->statusbar_text) - 1);
-          win->statusbar_text[sizeof(win->statusbar_text) - 1] = '\0';
+      // Use the PNG's native RGBA data: real artist colors and PNG alpha channel.
+      // Free any previously framework-owned texture via the renderer.
+      R_DeleteTexture(win->toolbar_strip_tex);
+      uint32_t tex = R_CreateTextureRGBA(w, h, src, R_FILTER_NEAREST, R_WRAP_CLAMP);
+      image_free(src);
+      win->toolbar_strip_tex    = tex;
+      win->toolbar_strip.tex    = tex;
+      win->toolbar_strip.icon_w = tile_sz;
+      win->toolbar_strip.icon_h = tile_sz;
+      win->toolbar_strip.cols   = w / tile_sz;
+      win->toolbar_strip.sheet_w = w;
+      win->toolbar_strip.sheet_h = h;
+      invalidate_window(win);
+      break;
+    }
+    case kWindowMessageStatusBar:
+      if (lparam) {
+        strncpy(win->statusbar_text, (const char*)lparam, sizeof(win->statusbar_text) - 1);
+        win->statusbar_text[sizeof(win->statusbar_text) - 1] = '\0';
+        invalidate_window(win);
+      }
+      break;
+  }
+  // Intercept mouse events for built-in scrollbars before calling win->proc
+  if ((win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL)) &&
+      (msg == kWindowMessageLeftButtonDown ||
+       msg == kWindowMessageMouseMove ||
+       msg == kWindowMessageLeftButtonUp)) {
+    if (handle_builtin_scrollbars(win, msg, wparam)) return true;
+  }
+  // Call window procedure
+  if (!(value = win->proc(win, msg, wparam, lparam))) {
+    switch (msg) {
+      case kWindowMessagePaint:
+        for (window_t *sub = win->children; sub; sub = sub->next) {
+          send_message(sub, kWindowMessagePaint, wparam, lparam);
+        }
+        break;
+      case kWindowMessageWheel:
+        // Only drive built-in scrollbars when they are actually visible.
+        // Windows without visible scrollbars should not respond to wheel events.
+        if ((win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL)) &&
+            (win->hscroll.visible || win->vscroll.visible)) {
+          if ((win->flags & WINDOW_HSCROLL) && win->hscroll.visible &&
+              win->hscroll.enabled) {
+            int delta = (int16_t)LOWORD(wparam);
+            sb_try_scroll(win, &win->hscroll, kWindowMessageHScroll,
+                          win->hscroll.pos + delta);
+          }
+          if ((win->flags & WINDOW_VSCROLL) && win->vscroll.visible &&
+              win->vscroll.enabled) {
+            int delta = -(int16_t)HIWORD(wparam);
+            sb_try_scroll(win, &win->vscroll, kWindowMessageVScroll,
+                          win->vscroll.pos + delta);
+          }
+        }
+        break;
+      case kWindowMessagePaintStencil:
+        paint_window_stencil(win);
+        break;
+      case kWindowMessageHitTest:
+        for (window_t *item = win->children; item; item = item->next) {
+          rect_t r = item->frame;
+          uint16_t x = LOWORD(wparam), y = HIWORD(wparam);
+          if (!item->notabstop && CONTAINS(x, y, r.x, r.y, r.w, r.h)) {
+            *(window_t **)lparam = item;
+          }
+        }
+        break;
+      case kWindowMessageNonClientLeftButtonDown:
+        if (win->flags&WINDOW_TOOLBAR) {
+          uint16_t x = LOWORD(wparam);
+          uint16_t y = HIWORD(wparam);
+          toolbar_iter_t it;
+          toolbar_iter_for_win(win, &it);
+          for (uint32_t i = 0; i < win->num_toolbar_buttons; i++) {
+            toolbar_button_t *but = &win->toolbar_buttons[i];
+            rect_t r;
+            if (!toolbar_iter_next(&it, but, &r)) continue;
+            but->pressed = CONTAINS(x, y, r.x, r.y, r.w, r.h);
+          }
+          invalidate_window(win);
+        }
+        break;
+      case kWindowMessageNonClientLeftButtonUp:
+        if (win->flags&WINDOW_TOOLBAR) {
+          uint16_t x = LOWORD(wparam);
+          uint16_t y = HIWORD(wparam);
+          toolbar_iter_t it;
+          toolbar_iter_for_win(win, &it);
+          for (uint32_t i = 0; i < win->num_toolbar_buttons; i++) {
+            toolbar_button_t *but = &win->toolbar_buttons[i];
+            rect_t r;
+            if (!toolbar_iter_next(&it, but, &r)) continue;
+            bool hit = CONTAINS(x, y, r.x, r.y, r.w, r.h);
+            but->pressed = false;
+            if (hit) {
+              send_message(win, kToolBarMessageButtonClick, but->ident, but);
+            }
+          }
           invalidate_window(win);
         }
         break;
     }
-    // Intercept mouse events for built-in scrollbars before calling win->proc
-    if ((win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL)) &&
-        (msg == kWindowMessageLeftButtonDown ||
-         msg == kWindowMessageMouseMove ||
-         msg == kWindowMessageLeftButtonUp)) {
-      if (handle_builtin_scrollbars(win, msg, wparam)) return 1;
-    }
-    // Call window procedure
-    if (!(value = win->proc(win, msg, wparam, lparam))) {
-      switch (msg) {
-        case kWindowMessagePaint:
-          for (window_t *sub = win->children; sub; sub = sub->next) {
-            send_message(sub, kWindowMessagePaint, wparam, lparam);
-          }
-          break;
-        case kWindowMessageWheel:
-          // Only drive built-in scrollbars when they are actually visible.
-          // Windows without visible scrollbars should not respond to wheel events.
-          if ((win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL)) &&
-              (win->hscroll.visible || win->vscroll.visible)) {
-            bool scrolled = false;
-            if ((win->flags & WINDOW_HSCROLL) && win->hscroll.visible &&
-                win->hscroll.enabled) {
-              int delta = (int16_t)LOWORD(wparam);
-              int new_pos = sb_clamp_msg(&win->hscroll, win->hscroll.pos + delta);
-              if (new_pos != win->hscroll.pos) {
-                win->hscroll.pos = new_pos;
-                send_message(win, kWindowMessageHScroll, (uint32_t)new_pos, NULL);
-                scrolled = true;
-              }
-            }
-            if ((win->flags & WINDOW_VSCROLL) && win->vscroll.visible &&
-                win->vscroll.enabled) {
-              int delta = -(int16_t)HIWORD(wparam);
-              int new_pos = sb_clamp_msg(&win->vscroll, win->vscroll.pos + delta);
-              if (new_pos != win->vscroll.pos) {
-                win->vscroll.pos = new_pos;
-                send_message(win, kWindowMessageVScroll, (uint32_t)new_pos, NULL);
-                scrolled = true;
-              }
-            }
-            if (scrolled) invalidate_window(win);
-          }
-          break;
-        case kWindowMessagePaintStencil:
-          paint_window_stencil(win);
-          break;
-        case kWindowMessageHitTest:
-          for (window_t *item = win->children; item; item = item->next) {
-            rect_t r = item->frame;
-            uint16_t x = LOWORD(wparam), y = HIWORD(wparam);
-            if (!item->notabstop && CONTAINS(x, y, r.x, r.y, r.w, r.h)) {
-              *(window_t **)lparam = item;
-            }
-          }
-          break;
-        case kWindowMessageNonClientLeftButtonDown:
-          if (win->flags&WINDOW_TOOLBAR) {
-            uint16_t x = LOWORD(wparam);
-            uint16_t y = HIWORD(wparam);
-            int bsz = (win->toolbar_btn_size > 0) ? win->toolbar_btn_size : TB_SPACING;
-            int inner_w = win->frame.w - 2;  // toolbar bevel insets 1px per side
-            int title_only_h = (win->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
-            toolbar_iter_t it;
-            toolbar_iter_init(&it,
-                              win->frame.x + 1 + TOOLBAR_PADDING,
-                              win->frame.y + title_only_h + 1 + TOOLBAR_PADDING,
-                              inner_w - 2 * TOOLBAR_PADDING, bsz);
-            for (uint32_t i = 0; i < win->num_toolbar_buttons; i++) {
-              toolbar_button_t *but = &win->toolbar_buttons[i];
-              rect_t r;
-              if (!toolbar_iter_next(&it, but, &r)) continue;
-              but->pressed = CONTAINS(x, y, r.x, r.y, r.w, r.h);
-            }
-            invalidate_window(win);
-          }
-          break;
-        case kWindowMessageNonClientLeftButtonUp:
-          if (win->flags&WINDOW_TOOLBAR) {
-            uint16_t x = LOWORD(wparam);
-            uint16_t y = HIWORD(wparam);
-            int bsz = (win->toolbar_btn_size > 0) ? win->toolbar_btn_size : TB_SPACING;
-            int inner_w = win->frame.w - 2;  // toolbar bevel insets 1px per side
-            int title_only_h = (win->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
-            toolbar_iter_t it;
-            toolbar_iter_init(&it,
-                              win->frame.x + 1 + TOOLBAR_PADDING,
-                              win->frame.y + title_only_h + 1 + TOOLBAR_PADDING,
-                              inner_w - 2 * TOOLBAR_PADDING, bsz);
-            for (uint32_t i = 0; i < win->num_toolbar_buttons; i++) {
-              toolbar_button_t *but = &win->toolbar_buttons[i];
-              rect_t r;
-              if (!toolbar_iter_next(&it, but, &r)) continue;
-              bool hit = CONTAINS(x, y, r.x, r.y, r.w, r.h);
-              but->pressed = false;
-              if (hit) {
-                send_message(win, kToolBarMessageButtonClick, but->ident, but);
-              }
-            }
-            invalidate_window(win);
-          }
-          break;
-      }
-    }
-    // Draw disabled overlay
-    if (win->disabled && msg == kWindowMessagePaint) {
-      uint32_t col = (get_sys_color(kColorWindowBg) & 0x00FFFFFF) | 0x80000000;
-      set_viewport(&(rect_t){ 0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight)});
-      set_projection(0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight));
-      fill_rect(col, win->frame.x, win->frame.y, win->frame.w, win->frame.h);
-    }
-    // Draw built-in scrollbars on top of window content.
-    // Restore the scissor to the window's full frame first: the bars live in
-    // the non-client area outside the client rect that was scissored above.
-    if (msg == kWindowMessagePaint && running &&
-        (win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL))) {
-      int root_t = titlebar_height(root);
-      rect_t wf = win_frame_in_screen(win, root, root_t);
-      set_clip_rect(NULL, &wf);
-      draw_builtin_scrollbars(win);
-    }
+  }
+  // Draw disabled overlay
+  if (win->disabled && msg == kWindowMessagePaint) {
+    uint32_t col = (get_sys_color(kColorWindowBg) & 0x00FFFFFF) | 0x80000000;
+    set_viewport(&(rect_t){ 0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight)});
+    set_projection(0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight));
+    fill_rect(col, win->frame.x, win->frame.y, win->frame.w, win->frame.h);
+  }
+  // Draw built-in scrollbars on top of window content.
+  // Restore the scissor to the window's full frame first: the bars live in
+  // the non-client area outside the client rect that was scissored above.
+  if (msg == kWindowMessagePaint && running &&
+      (win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL))) {
+    int root_t = titlebar_height(root);
+    rect_t wf = win_frame_in_screen(win, root, root_t);
+    set_clip_rect(NULL, &wf);
+    draw_builtin_scrollbars(win);
   }
   return value;
 }
