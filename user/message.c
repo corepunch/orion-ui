@@ -15,6 +15,12 @@
 #define CONTAINS(x, y, x1, y1, w1, h1) \
 ((x1) <= (x) && (y1) <= (y) && (x1) + (w1) > (x) && (y1) + (h1) > (y))
 
+#define SPRITE_REGION(scol, srow, strip) \
+  (float)((scol) * (strip)->icon_w) / (float)(strip)->sheet_w, \
+  (float)((srow) * (strip)->icon_h) / (float)(strip)->sheet_h, \
+  (float)((scol) * (strip)->icon_w + (strip)->icon_w) / (float)(strip)->sheet_w, \
+  (float)((srow) * (strip)->icon_h + (strip)->icon_h) / (float)(strip)->sheet_h
+
 // Message queue structure
 typedef struct {
   window_t *target;
@@ -510,12 +516,8 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
                 if (strip->cols > 0) {
                   int scol = icon_index % strip->cols;
                   int srow = icon_index / strip->cols;
-                  float u0 = (float)(scol * strip->icon_w) / (float)strip->sheet_w;
-                  float v0 = (float)(srow * strip->icon_h) / (float)strip->sheet_h;
-                  float u1 = u0 + (float)strip->icon_w / (float)strip->sheet_w;
-                  float v1 = v0 + (float)strip->icon_h / (float)strip->sheet_h;
                   draw_sprite_region((int)strip->tex, r.x + 2 + px, r.y + 2 + px,
-                                     strip->icon_w, strip->icon_h, u0, v0, u1, v1, 1.0f);
+                                     strip->icon_w, strip->icon_h, SPRITE_REGION(scol, srow, strip), 1.0f);
                 }
               } else {
                 draw_button(&(rect_t){r.x, r.y, bsz, bsz-2}, 1, 1, show_pressed);
