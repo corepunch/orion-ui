@@ -61,6 +61,19 @@ extern window_t *get_root_window(window_t *window);
 extern int titlebar_height(window_t const *win);
 extern int statusbar_height(window_t const *win);
 
+// Returns win's frame rect in absolute screen coordinates.
+// For root windows, frame.x/y are already screen-absolute.
+// For child windows, frame.x/y are root-client-space coords; they are mapped
+// to screen by adding the root's screen origin and the root's non-client height.
+// root_titlebar_h should be titlebar_height(root) — callers that already have
+// it pass it in to avoid recomputing.
+static rect_t win_frame_in_screen(window_t *win, window_t *root, int root_titlebar_h) {
+  if (win == root) return win->frame;
+  return (rect_t){root->frame.x + win->frame.x,
+                  root->frame.y + root_titlebar_h + win->frame.y,
+                  win->frame.w, win->frame.h};
+}
+
 // Register a window hook
 void register_window_hook(uint32_t msg, winhook_func_t func, void *userdata) {
   winhook_t *hook = malloc(sizeof(winhook_t));
@@ -486,6 +499,17 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
                          -t + root->scroll[1],
                          root->frame.w + root->scroll[0],
                          root->frame.h - t + root->scroll[1]);
+          // For scrollable windows, tighten the scissor to the client area so
+          // that scrolled content cannot bleed into non-client areas (title bar,
+          // toolbar, status bar).  Only applied when a window actually has
+          // built-in scrollbars — no scissor state is wasted on non-scrollable
+          // windows, and the stencil buffer is not touched at all for this.
+          if (win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL)) {
+            int t_win = titlebar_height(win);   /* win's own non-client height */
+            rect_t cr = get_client_rect(win);
+            rect_t wf = win_frame_in_screen(win, root, t);
+            set_clip_rect(NULL, &(rect_t){wf.x, wf.y + t_win, cr.w, cr.h});
+          }
         }
         break;
       case kToolBarMessageAddButtons:
@@ -694,9 +718,14 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       set_projection(0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight));
       fill_rect(col, win->frame.x, win->frame.y, win->frame.w, win->frame.h);
     }
-    // Draw built-in scrollbars on top of window content
+    // Draw built-in scrollbars on top of window content.
+    // Restore the scissor to the window's full frame first: the bars live in
+    // the non-client area outside the client rect that was scissored above.
     if (msg == kWindowMessagePaint && running &&
         (win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL))) {
+      int root_t = titlebar_height(root);
+      rect_t wf = win_frame_in_screen(win, root, root_t);
+      set_clip_rect(NULL, &wf);
       draw_builtin_scrollbars(win);
     }
   }
