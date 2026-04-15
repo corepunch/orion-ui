@@ -55,7 +55,7 @@ static const accel_t kAccelEntries[] = {
 // File path helpers (open/save dialogs, .tdb extension)
 // ============================================================
 
-static bool pick_open_path(window_t *parent, char *path, int path_sz) {
+static bool pick_open_path(window_t *parent, char *path, size_t path_sz) {
   openfilename_t ofn = {0};
   ofn.lStructSize  = sizeof(ofn);
   ofn.hwndOwner    = parent;
@@ -67,7 +67,7 @@ static bool pick_open_path(window_t *parent, char *path, int path_sz) {
   return get_open_filename(&ofn);
 }
 
-static bool pick_save_path(window_t *parent, char *path, int path_sz) {
+static bool pick_save_path(window_t *parent, char *path, size_t path_sz) {
   openfilename_t ofn = {0};
   ofn.lStructSize  = sizeof(ofn);
   ofn.hwndOwner    = parent;
