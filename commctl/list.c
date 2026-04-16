@@ -42,9 +42,43 @@ result_t win_list(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       invalidate_window(win);
       return true;
     case kWindowMessageLeftButtonUp:
+      if (cb) set_focus(cb);
       send_message(get_root_window(cb), kWindowMessageCommand, MAKEDWORD(cb->id, kComboBoxNotificationSelectionChange), cb);
       destroy_window(win);
       return true;
+    case kWindowMessageKeyDown: {
+      uint32_t key = wparam;
+      if (key == AX_KEY_UPARROW) {
+        if (win->cursor_pos > 0) {
+          win->cursor_pos--;
+          invalidate_window(win);
+        }
+        return true;
+      }
+      if (key == AX_KEY_DOWNARROW) {
+        if (cb && win->cursor_pos + 1 < cb->cursor_pos) {
+          win->cursor_pos++;
+          invalidate_window(win);
+        }
+        return true;
+      }
+      if (key == AX_KEY_ENTER || key == AX_KEY_KP_ENTER) {
+        if (cb) {
+          if (win->cursor_pos < cb->cursor_pos)
+            strncpy(cb->title, texts[win->cursor_pos], sizeof(cb->title));
+          set_focus(cb);
+          send_message(get_root_window(cb), kWindowMessageCommand, MAKEDWORD(cb->id, kComboBoxNotificationSelectionChange), cb);
+        }
+        destroy_window(win);
+        return true;
+      }
+      if (key == AX_KEY_ESCAPE) {
+        if (cb) set_focus(cb);
+        destroy_window(win);
+        return true;
+      }
+      return false;
+    }
     case LIST_SELITEM:
       win->cursor_pos = wparam;
       return true;
