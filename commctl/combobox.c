@@ -45,7 +45,8 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         100,
       };
       window_t *list = create_window("", WINDOW_NOTITLE|WINDOW_NORESIZE|WINDOW_VSCROLL|WINDOW_ALWAYSONTOP|WINDOW_NOTRAYBUTTON, &rect, NULL, win_list, win->hinstance, win);
-      send_message(list, 0x5001 /*LIST_SELITEM*/, 2, NULL);
+      result_t sel = send_message(win, kComboBoxMessageGetCurrentSelection, 0, NULL);
+      send_message(list, 0x5001 /*LIST_SELITEM*/, (uint32_t)sel, NULL);
       show_window(list, true);
       set_capture(list);
       return true;
