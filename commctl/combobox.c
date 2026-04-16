@@ -15,6 +15,8 @@ extern result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *l
 
 // Helper functions (will be moved to ui/user/window.c later)
 extern window_t *get_root_window(window_t *window);
+extern int titlebar_height(window_t const *win);
+extern void show_window(window_t *win, bool visible);
 
 // Combobox control window procedure
 result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
@@ -34,14 +36,17 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       return true;
     case kWindowMessageLeftButtonUp: {
       win_button(win, msg, wparam, lparam);
+      window_t *root = get_root_window(win);
+      int root_t = titlebar_height(root);
       rect_t rect = {
-        get_root_window(win)->frame.x + win->frame.x,
-        get_root_window(win)->frame.y + win->frame.y + win->frame.h + 2,
+        root->frame.x + win->frame.x,
+        root->frame.y + root_t + win->frame.y + win->frame.h + 2,
         win->frame.w,
         100,
       };
-      window_t *list = create_window("", WINDOW_NOTITLE|WINDOW_NORESIZE|WINDOW_VSCROLL, &rect, NULL, win_list, win->hinstance, win);
+      window_t *list = create_window("", WINDOW_NOTITLE|WINDOW_NORESIZE|WINDOW_VSCROLL|WINDOW_ALWAYSONTOP|WINDOW_NOTRAYBUTTON, &rect, NULL, win_list, win->hinstance, win);
       send_message(list, 0x5001 /*LIST_SELITEM*/, 2, NULL);
+      show_window(list, true);
       set_capture(list);
       return true;
     }
