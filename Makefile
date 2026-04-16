@@ -216,7 +216,7 @@ examples: share $(EXAMPLE_BINS)
 .SECONDEXPANSION:
 $(EXAMPLE_BINS): $(BIN_DIR)/%$(EXE_EXT): $$(wildcard examples/%/*.c) $(SHARED_LIB) | $(BIN_DIR)
 	@echo "Building example: $@"
-	(find examples/$* -name "*.c" ! -name "main.c" | sort | sed 's/.*/#include "&"/'; \
+	@(find examples/$* -name "*.c" ! -name "main.c" | sort | sed 's/.*/#include "&"/'; \
 	 echo '#include "examples/$*/main.c"') | \
 		$(CC) $(CFLAGS) -I. -Iexamples/$* -DSHAREDIR='"../share/$*"' -x c -o $@ - \
 		$(LDFLAGS) $(LDFLAGS_EXAMPLE) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
@@ -239,7 +239,7 @@ gems: $(GEM_BINS)
 # gem_magic.h first; non-main files sorted; main.c last.
 $(GEM_DIR)/%.gem: $$(wildcard examples/%/*.c) $(SHARED_LIB) | $(GEM_DIR)
 	@echo "Building .gem: $@"
-	(echo '#include "gem_magic.h"'; \
+	@(echo '#include "gem_magic.h"'; \
 	 find examples/$* -name "*.c" ! -name "main.c" | sort | sed 's/.*/#include "&"/'; \
 	 echo '#include "examples/$*/main.c"') | \
 		$(CC) $(GEM_CFLAGS) $(GEM_LFLAGS) -I. -Iexamples/$* -DSHAREDIR='"../share/$*"' -x c -o $@ - \
@@ -274,7 +274,7 @@ shell: $(SHELL_BIN)
 
 $(SHELL_BIN): $(SHELL_SRCS) $(SHARED_LIB) | $(BIN_DIR)
 	@echo "Building Orion Shell: $@"
-	(find shell -name "*.c" | sort | sed 's/.*/#include "&"/') | \
+	@(find shell -name "*.c" | sort | sed 's/.*/#include "&"/') | \
 		$(CC) $(CFLAGS) -I. -Ishell -x c -o $@ - \
 		$(LDFLAGS) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LDFLAGS_EXAMPLE) $(LIBS) $(SHELL_EXTRA_LDFLAGS)
 
