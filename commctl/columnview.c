@@ -48,7 +48,7 @@ static int cv_hit_index(window_t *win, columnview_data_t *data, uint32_t wparam)
   int eff_w = cv_content_width(win);
   const int ncol = get_column_count(eff_w, data->column_width);
   int col = mx / data->column_width;
-  int row = (my - WIN_PADDING + (int)win->scroll[1]) / ENTRY_HEIGHT;
+  int row = (my - WIN_PADDING) / ENTRY_HEIGHT;
   int index = row * ncol + col;
   return (index >= 0 && index < (int)data->count) ? index : -1;
 }
