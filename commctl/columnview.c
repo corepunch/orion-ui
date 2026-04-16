@@ -70,7 +70,8 @@ static void cv_scroll_to_item(window_t *win, columnview_data_t *data, int index)
 }
 
 // Update the built-in vertical scrollbar to reflect current content and scroll position.
-// Uses pixel-based range/page so the thumb size matches the visible fraction exactly.
+// All values are in pixels so the thumb can be dragged to any sub-row offset,
+// giving smooth per-pixel scrolling identical to the image-editor canvas.
 static void cv_sync_scroll(window_t *win, columnview_data_t *data) {
   if (!win || !data || win->frame.h <= 0) return;
   int eff_w     = cv_content_width(win);
@@ -78,20 +79,16 @@ static void cv_sync_scroll(window_t *win, columnview_data_t *data) {
   int total_rows = (data->count == 0) ? 0
                  : (int)((data->count + (unsigned)ncol - 1) / (unsigned)ncol);
   int total_h   = total_rows * ENTRY_HEIGHT;
-  // Pixel-based max so the clamp in wheel and VScroll are consistent.
   int max_scroll_px = total_h - win->frame.h;
   if (max_scroll_px < 0) max_scroll_px = 0;
   if ((int)win->scroll[1] > max_scroll_px) win->scroll[1] = (uint32_t)max_scroll_px;
 
-  int cur_row  = (int)win->scroll[1] / ENTRY_HEIGHT;
-  int vis_rows = win->frame.h / ENTRY_HEIGHT;
-
   scroll_info_t si;
   si.fMask = SIF_ALL;
   si.nMin  = 0;
-  si.nMax  = total_rows;
-  si.nPage = (uint32_t)vis_rows;
-  si.nPos  = cur_row;
+  si.nMax  = total_h;
+  si.nPage = (uint32_t)win->frame.h;
+  si.nPos  = (int)win->scroll[1];
   set_scroll_info(win, SB_VERT, &si, false);
 }
 
@@ -314,14 +311,14 @@ result_t win_columnview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
     }
     
     case kWindowMessageVScroll: {
-      // wparam is the new scrollbar row-position; convert to pixel offset.
+      // wparam is the new pixel scroll position (pixel-based scrollbar).
       int eff_w = cv_content_width(win);
       int ncol  = get_column_count(eff_w, (int)data->column_width);
       int total_rows = (data->count == 0) ? 0
                      : (int)((data->count + (unsigned)ncol - 1) / (unsigned)ncol);
       int max_scroll_px = total_rows * ENTRY_HEIGHT - win->frame.h;
       if (max_scroll_px < 0) max_scroll_px = 0;
-      int new_scroll = (int)wparam * ENTRY_HEIGHT;
+      int new_scroll = (int)wparam;
       if (new_scroll > max_scroll_px) new_scroll = max_scroll_px;
       win->scroll[1] = (uint32_t)new_scroll;
       cv_sync_scroll(win, data);
@@ -332,28 +329,6 @@ result_t win_columnview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
     case kWindowMessageResize:
       cv_sync_scroll(win, data);
       return false;
-
-    case kWindowMessageWheel: {
-      if (!data) return false;
-      // HIWORD encodes dy * SCROLL_SENSITIVITY.  SDL dy < 0 = scroll down, so
-      // HIWORD is negative when scrolling down.  Negate to match the framework
-      // convention (message.c: delta = -(int16_t)HIWORD(wparam)) so that positive
-      // dy means "show content below" (increase scroll[1]).
-      int dy = -(int16_t)HIWORD(wparam);
-      int eff_w  = cv_content_width(win);
-      int ncol   = get_column_count(eff_w, (int)data->column_width);
-      int total_rows = (data->count == 0) ? 0
-                     : (int)((data->count + (unsigned)ncol - 1) / (unsigned)ncol);
-      int max_scroll_px = total_rows * ENTRY_HEIGHT - win->frame.h;
-      if (max_scroll_px < 0) max_scroll_px = 0;
-      int new_scroll = (int)win->scroll[1] + dy * ENTRY_HEIGHT;
-      if (new_scroll < 0) new_scroll = 0;
-      if (new_scroll > max_scroll_px) new_scroll = max_scroll_px;
-      win->scroll[1] = (uint32_t)new_scroll;
-      cv_sync_scroll(win, data);
-      invalidate_window(win);
-      return true;
-    }
 
     case kWindowMessageKeyDown: {
       if (!data || data->count == 0) return false;
