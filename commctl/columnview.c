@@ -330,27 +330,6 @@ result_t win_columnview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       cv_sync_scroll(win, data);
       return false;
 
-    case kWindowMessageWheel: {
-      if (!data) return false;
-      // dy is already scaled by SCROLL_SENSITIVITY in the kernel event loop.
-      // Use it directly as a pixel offset for smooth per-pixel scrolling,
-      // matching the behaviour of the image-editor canvas.
-      int dy = -(int16_t)HIWORD(wparam);
-      int eff_w  = cv_content_width(win);
-      int ncol   = get_column_count(eff_w, (int)data->column_width);
-      int total_rows = (data->count == 0) ? 0
-                     : (int)((data->count + (unsigned)ncol - 1) / (unsigned)ncol);
-      int max_scroll_px = total_rows * ENTRY_HEIGHT - win->frame.h;
-      if (max_scroll_px < 0) max_scroll_px = 0;
-      int new_scroll = (int)win->scroll[1] + dy;
-      if (new_scroll < 0) new_scroll = 0;
-      if (new_scroll > max_scroll_px) new_scroll = max_scroll_px;
-      win->scroll[1] = (uint32_t)new_scroll;
-      cv_sync_scroll(win, data);
-      invalidate_window(win);
-      return true;
-    }
-
     case kWindowMessageKeyDown: {
       if (!data || data->count == 0) return false;
       int eff_w = cv_content_width(win);
