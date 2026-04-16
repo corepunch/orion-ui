@@ -24,7 +24,7 @@
 
 // Buttons
 #define NI_BTN_Y       (NI_ROW2_Y + NI_EDIT_H + 6)
-#define NI_BTN_H       13
+#define NI_BTN_H       BUTTON_HEIGHT
 #define NI_BTN_W       40
 #define NI_BTN_GAP      4
 #define NI_OK_X        (NI_W - 2 * (NI_BTN_W + NI_BTN_GAP))

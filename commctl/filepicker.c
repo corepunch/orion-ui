@@ -29,7 +29,8 @@
 #define FP_LABEL_W    38   // "File:" / "Filter:" label column width
 #define FP_BTN_W      50
 #define FP_BTN_H      BUTTON_HEIGHT
-#define FP_CTRL_H     CONTROL_HEIGHT
+#define FP_EDIT_H     CONTROL_HEIGHT
+#define FP_COMBO_H    BUTTON_HEIGHT
 #define FP_ROW_GAP     4   // vertical gap between rows
 #define FP_WIN_W      (FP_LIST_W + FP_PAD * 2)
 
@@ -207,14 +208,14 @@ static result_t fp_proc(window_t *win, uint32_t msg,
 
       // "File:" label
       create_window("File:", WINDOW_NOTITLE,
-          MAKERECT(FP_PAD, FP_FILE_Y, FP_LABEL_W, FP_CTRL_H),
+          MAKERECT(FP_PAD, FP_FILE_Y, FP_LABEL_W, FP_EDIT_H),
           win, win_label, 0, NULL);
 
       // Filename text edit
       int edit_x = FP_PAD + FP_LABEL_W + 2;
       int edit_w = FP_WIN_W - edit_x - FP_PAD;
       ps->edit_win = create_window("", WINDOW_NOTITLE,
-          MAKERECT(edit_x, FP_FILE_Y, edit_w, FP_CTRL_H),
+          MAKERECT(edit_x, FP_FILE_Y, edit_w, FP_EDIT_H),
           win, win_textedit, 0, NULL);
 
       // Copy pre-fill basename now that edit_win exists
@@ -226,18 +227,19 @@ static result_t fp_proc(window_t *win, uint32_t msg,
       }
 
       // Compute where the button row starts (depends on filter row presence)
-      int btn_y = FP_FILE_Y + FP_CTRL_H + FP_ROW_GAP;
+      int btn_y = FP_FILE_Y + FP_EDIT_H + FP_ROW_GAP;
 
       // Filter combobox row (shown when at least one filter is defined)
       if (ps->num_filters > 0) {
+        int filter_label_y = btn_y + (FP_COMBO_H - CONTROL_HEIGHT) / 2;
         create_window("Filter:", WINDOW_NOTITLE,
-            MAKERECT(FP_PAD, btn_y, FP_LABEL_W, FP_CTRL_H),
+            MAKERECT(FP_PAD, filter_label_y, FP_LABEL_W, CONTROL_HEIGHT),
             win, win_label, 0, NULL);
 
         int combo_x = FP_PAD + FP_LABEL_W + 2;
         int combo_w = FP_WIN_W - combo_x - FP_PAD;
         ps->filter_combo = create_window("", WINDOW_NOTITLE,
-            MAKERECT(combo_x, btn_y, combo_w, FP_CTRL_H),
+            MAKERECT(combo_x, btn_y, combo_w, FP_COMBO_H),
             win, win_combobox, 0, NULL);
 
         for (int i = 0; i < ps->num_filters; i++) {
@@ -248,7 +250,7 @@ static result_t fp_proc(window_t *win, uint32_t msg,
           send_message(ps->filter_combo, kComboBoxMessageSetCurrentSelection,
                        (uint32_t)ps->active_filter, NULL);
 
-        btn_y += FP_CTRL_H + FP_ROW_GAP;
+        btn_y += FP_COMBO_H + FP_ROW_GAP;
       }
 
       // OK (Open/Save) and Cancel buttons
@@ -335,9 +337,9 @@ static result_t fp_proc(window_t *win, uint32_t msg,
 
 // Compute the dialog height depending on whether a filter row is needed.
 static int fp_dialog_height(int num_filters) {
-  int h = FP_FILE_Y + FP_CTRL_H + FP_ROW_GAP;  // up to and including file row
+  int h = FP_FILE_Y + FP_EDIT_H + FP_ROW_GAP;  // up to and including file row
   if (num_filters > 0)
-    h += FP_CTRL_H + FP_ROW_GAP;                // filter row
+    h += FP_COMBO_H + FP_ROW_GAP;               // filter row
   h += FP_BTN_H + FP_PAD;                       // button row + bottom padding
   return h;
 }

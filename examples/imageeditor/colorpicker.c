@@ -9,7 +9,7 @@
 // ──────────────────────────────────────────────────────────────────
 
 #define CP_WIN_W     240
-#define CP_WIN_H     122
+#define CP_WIN_H     128
 
 // Color preview swatches (left column, x = 0..49)
 #define CP_PREV_X      2
@@ -44,7 +44,7 @@
 
 // Button row
 #define CP_BTN_Y     104
-#define CP_BTN_H      13
+#define CP_BTN_H      BUTTON_HEIGHT
 // Button X positions
 #define CP_BTN_OK_X    2
 #define CP_BTN_OK_W   40

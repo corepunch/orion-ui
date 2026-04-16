@@ -16,7 +16,7 @@
 
 // OK button
 #define ABOUT_BTN_W     50
-#define ABOUT_BTN_H     13
+#define ABOUT_BTN_H     BUTTON_HEIGHT
 
 // Text column starts to the right of the banner + separator
 #define ABOUT_TEXT_X   (ABOUT_BANNER_W + 8)

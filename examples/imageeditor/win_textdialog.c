@@ -35,8 +35,8 @@
 #define TD_AA_Y        TD_COLOR_Y
 
 // Row 4: OK / Cancel
-#define TD_BTN_Y       77
-#define TD_BTN_H       13
+#define TD_BTN_H       BUTTON_HEIGHT
+#define TD_BTN_Y       (TD_H - TD_BTN_H - 6)
 #define TD_BTN_OK_X     2
 #define TD_BTN_OK_W    38
 #define TD_BTN_CA_X    44
