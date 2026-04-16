@@ -69,6 +69,8 @@ enum {
   // Multiline text edit messages (analogous to WM_GETTEXT / WM_SETTEXT)
   kMultiEditMessageGetText,        // wparam=buf_size; lparam=char* dst → copies text, returns length
   kMultiEditMessageSetText,        // wparam=0; lparam=const char* src → replaces text
+  // List (popup) messages
+  kListMessageSetItem,             // wparam=item index to pre-select in the dropdown list
 };
 
 // Control notification messages

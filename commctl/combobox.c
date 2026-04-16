@@ -30,7 +30,8 @@ static void open_dropdown(window_t *win) {
   };
   window_t *list = create_window("", WINDOW_NOTITLE|WINDOW_NORESIZE|WINDOW_VSCROLL|WINDOW_ALWAYSONTOP|WINDOW_NOTRAYBUTTON, &rect, NULL, win_list, win->hinstance, win);
   result_t sel = send_message(win, kComboBoxMessageGetCurrentSelection, 0, NULL);
-  send_message(list, 0x5001 /*LIST_SELITEM*/, (uint32_t)sel, NULL);
+  if (sel != (result_t)kComboBoxError)
+    send_message(list, kListMessageSetItem, (uint32_t)sel, NULL);
   show_window(list, true);
   set_capture(list);
   set_focus(list);
@@ -64,10 +65,10 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       }
       if (key == AX_KEY_UPARROW) {
         result_t sel = send_message(win, kComboBoxMessageGetCurrentSelection, 0, NULL);
-        if (sel > 0) {
+        if (sel != (result_t)kComboBoxError && sel > 0) {
           send_message(win, kComboBoxMessageSetCurrentSelection, (uint32_t)(sel - 1), NULL);
-          send_message(get_root_window(win), kWindowMessageCommand, MAKEDWORD(win->id, kComboBoxNotificationSelectionChange), win);
           invalidate_window(win);
+          send_message(get_root_window(win), kWindowMessageCommand, MAKEDWORD(win->id, kComboBoxNotificationSelectionChange), win);
         }
         return true;
       }
@@ -75,12 +76,12 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         result_t sel = send_message(win, kComboBoxMessageGetCurrentSelection, 0, NULL);
         if (sel == (result_t)kComboBoxError && win->cursor_pos > 0) {
           send_message(win, kComboBoxMessageSetCurrentSelection, 0, NULL);
-          send_message(get_root_window(win), kWindowMessageCommand, MAKEDWORD(win->id, kComboBoxNotificationSelectionChange), win);
           invalidate_window(win);
+          send_message(get_root_window(win), kWindowMessageCommand, MAKEDWORD(win->id, kComboBoxNotificationSelectionChange), win);
         } else if (sel != (result_t)kComboBoxError && (uint32_t)(sel + 1) < win->cursor_pos) {
           send_message(win, kComboBoxMessageSetCurrentSelection, (uint32_t)(sel + 1), NULL);
-          send_message(get_root_window(win), kWindowMessageCommand, MAKEDWORD(win->id, kComboBoxNotificationSelectionChange), win);
           invalidate_window(win);
+          send_message(get_root_window(win), kWindowMessageCommand, MAKEDWORD(win->id, kComboBoxNotificationSelectionChange), win);
         }
         return true;
       }
