@@ -6,7 +6,8 @@
 // Internal state
 // ============================================================
 
-#define TL_MAX_ROWS 256
+#define TL_MAX_ROWS         256   // upper bound matching MAX_TASKS in controller
+#define TL_DBLCLK_MS        500   // double-click interval threshold in milliseconds
 
 typedef struct {
   tasklist_row_t rows[TL_MAX_ROWS];
@@ -45,7 +46,7 @@ static void draw_text_clipped(const char *text, int x, int y,
   int dots_w = strwidth("...");
   int avail  = max_w - dots_w;
   if (avail <= 0) return;
-  char buf[260];
+  char buf[sizeof(((tasklist_row_t *)0)->title) + 4];  // title + "..."
   int n = 0, w = 0;
   while (text[n] && n < (int)(sizeof(buf) - 4)) {
     int cw = char_width((unsigned char)text[n]);
@@ -186,7 +187,7 @@ result_t tasklist_proc(window_t *win, uint32_t msg,
       if (row >= 0) {
         uint32_t now = axGetMilliseconds();
         if (st->last_click_row == row &&
-            (now - st->last_click_time) < 500) {
+            (now - st->last_click_time) < TL_DBLCLK_MS) {
           send_message(get_root_window(win), kWindowMessageCommand,
                        MAKEDWORD(row, CVN_DBLCLK), NULL);
           st->last_click_time = 0;
