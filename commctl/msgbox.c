@@ -20,7 +20,7 @@
 #define MB_PAD       8
 #define MB_BTN_W    50
 #define MB_BTN_H   BUTTON_HEIGHT
-#define MB_WIN_H   (MB_PAD + MB_TEXT_H + MB_PAD + MB_BTN_H + MB_PAD)
+#define MB_WIN_H   (TITLEBAR_HEIGHT + MB_PAD + MB_TEXT_H + MB_PAD + MB_BTN_H + MB_PAD)
 
 // ---------------------------------------------------------------------------
 // Internal state
