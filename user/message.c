@@ -386,7 +386,8 @@ static bool handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wpar
     return false;
   }
 
-  if (msg != kWindowMessageLeftButtonDown) return false;
+  if (msg != kWindowMessageLeftButtonDown &&
+      msg != kWindowMessageLeftButtonDoubleClick) return false;
   if (!has_h && !has_v) return false;
 
   int cx, cy;
@@ -581,6 +582,7 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   // Intercept mouse events for built-in scrollbars before calling win->proc
   if ((win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL)) &&
       (msg == kWindowMessageLeftButtonDown ||
+       msg == kWindowMessageLeftButtonDoubleClick ||
        msg == kWindowMessageMouseMove ||
        msg == kWindowMessageLeftButtonUp)) {
     if (handle_builtin_scrollbars(win, msg, wparam)) return true;
