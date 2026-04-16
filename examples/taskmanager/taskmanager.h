@@ -157,6 +157,24 @@ result_t main_win_proc(window_t *win, uint32_t msg,
 // View — task list (view_tasklist.c)
 // ============================================================
 
+// Column widths (status and priority are fixed; title stretches)
+#define TASKLIST_STATUS_W    70
+#define TASKLIST_PRIORITY_W  60
+#define TASKLIST_ROW_H       13
+#define TASKLIST_PADDING      4
+#define TASKLIST_HEADER_H    13
+
+// Message to add a row (lparam = tasklist_row_t *)
+#define TLVM_ADDROW (kWindowMessageUser + 200)
+
+typedef struct {
+  char     title[256];
+  char     priority[32];
+  char     status[32];
+  uint32_t task_idx;
+  uint32_t color;
+} tasklist_row_t;
+
 result_t tasklist_proc(window_t *win, uint32_t msg,
                        uint32_t wparam, void *lparam);
 void     tasklist_refresh(window_t *list_win);
