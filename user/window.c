@@ -201,15 +201,15 @@ extern void remove_from_global_queue(window_t *win);
 
 // Clear all toolbar child windows
 void clear_toolbar_children(window_t *win) {
-  for (window_t *tc = win->toolbar_children, *next; tc; tc = next) {
-    next = tc->next;
+  while (win->toolbar_children) {
+    window_t *tc   = win->toolbar_children;
+    window_t *next = tc->next;
+    // Detach from parent list before destroy so that any re-entrant traversal
+    // (e.g. is_valid_window_ptr, kWindowMessageDestroy) sees only still-live nodes.
+    win->toolbar_children = next;
     tc->next = NULL;
-    // Detach from parent's toolbar_children list before destroy so that
-    // destroy_window → remove_from_global_list doesn't iterate a partially
-    // freed list.
     destroy_window(tc);
   }
-  win->toolbar_children = NULL;
 }
 
 // Clear all child windows

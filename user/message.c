@@ -98,6 +98,14 @@ static window_t *create_toolbar_child(window_t *parent, winproc_t proc,
     if (c) c->next = NULL;
   }
   tc->next = NULL;
+  // Enforce the requested frame dimensions.  Some procs (win_button, win_label)
+  // expand frame.w/h during kWindowMessageCreate to fit their text content.
+  // Clamping here keeps sequential toolbar layout stable regardless of text length
+  // and ensures that an explicitly-provided width (item->w) is always honoured.
+  tc->frame.x = abs_x;
+  tc->frame.y = abs_y;
+  tc->frame.w = w;
+  tc->frame.h = h;
   // Wire up icon image for button children.
   if (proc == win_toolbar_button && icon >= 0) {
     if (icon >= SYSICON_BASE) {

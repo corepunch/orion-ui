@@ -499,8 +499,19 @@ void dispatch_message(ui_event_t *msg) {
         int sy = SCALE_POINT(py);
         window_t *tc = _toolbar_down_win;
         _toolbar_down_win = NULL;  // clear before send: handler may open a modal loop
-        send_message(tc, kWindowMessageLeftButtonUp,
-                     MAKEDWORD(sx - tc->frame.x, sy - tc->frame.y), NULL);
+        bool hit = CONTAINS(sx, sy, tc->frame.x, tc->frame.y, tc->frame.w, tc->frame.h);
+        if (hit) {
+          // Release inside the button: let win_toolbar_button/win_button fire
+          // the click notification normally via LeftButtonUp.
+          send_message(tc, kWindowMessageLeftButtonUp,
+                       MAKEDWORD(sx - tc->frame.x, sy - tc->frame.y), NULL);
+        } else {
+          // Release outside: clear the pressed visual without firing a click.
+          // This matches the previous hit-tested behaviour where releasing off
+          // the button was a no-op.
+          tc->pressed = false;
+          invalidate_window(tc);
+        }
         break;
       }
       if (_dragging) {
