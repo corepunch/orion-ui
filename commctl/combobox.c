@@ -105,6 +105,11 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       if (wparam == AX_KEY_SPACE || wparam == AX_KEY_ENTER || wparam == AX_KEY_KP_ENTER)
         return true;
       return win_button(win, msg, wparam, lparam);
+    case kComboBoxMessageClear:
+      memset(texts, 0, sizeof(combobox_string_t) * win->cursor_pos);
+      win->cursor_pos = 0;
+      win->title[0] = '\0';
+      return true;
     case kComboBoxMessageAddString:
       if (win->cursor_pos < MAX_COMBOBOX_STRINGS) {
         strncpy(texts[win->cursor_pos++], lparam, sizeof(combobox_string_t));

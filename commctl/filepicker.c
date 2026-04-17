@@ -44,19 +44,25 @@
 // ---------------------------------------------------------------------------
 // Maximum number of filter entries parsed from lpstrFilter
 // ---------------------------------------------------------------------------
-#define FP_MAX_FILTERS 16
+#define FP_MAX_FILTERS   16
+#define FP_MAX_LOC_DEPTH 16  // max breadcrumb depth in location combobox
 
 enum {
   FP_ID_TOOL_UP = 1,
   FP_ID_TOOL_NEW_FOLDER,
+  FP_ID_LOC_COMBO,
   FP_ID_NEWFOLDER_EDIT = 100,
   FP_ID_NEWFOLDER_OK,
   FP_ID_NEWFOLDER_CANCEL,
 };
 
-static const toolbar_button_t kFilePickerToolbar[] = {
-  { sysicon_folder_up, FP_ID_TOOL_UP, 0 },
-  { sysicon_folder, FP_ID_TOOL_NEW_FOLDER, 0 },
+// Toolbar items: "Location:" label + path combobox + separator + icon buttons
+static const toolbar_item_t kFilePickerItems[] = {
+  { TOOLBAR_ITEM_LABEL,    0,                     -1,  54, 0, "Location:" },
+  { TOOLBAR_ITEM_COMBOBOX, FP_ID_LOC_COMBO,       -1, 180, 0, NULL },
+  { TOOLBAR_ITEM_SEPARATOR, 0,                    -1,   0, 0, NULL },
+  { TOOLBAR_ITEM_BUTTON,   FP_ID_TOOL_UP,         sysicon_folder_up, 0, 0, NULL },
+  { TOOLBAR_ITEM_BUTTON,   FP_ID_TOOL_NEW_FOLDER, sysicon_folder,    0, 0, NULL },
 };
 
 typedef struct {
@@ -93,6 +99,9 @@ typedef struct {
   window_t       *list_win;
   window_t       *edit_win;
   window_t       *filter_combo;   // NULL when only 0–1 filters
+  window_t       *location_combo; // toolbar path combobox
+  char            loc_paths[FP_MAX_LOC_DEPTH][512]; // full paths per breadcrumb
+  int             loc_count;      // number of breadcrumb entries
   openfilename_t *ofn;
   fp_filter_t     filters[FP_MAX_FILTERS];
   int             num_filters;
@@ -192,6 +201,58 @@ static int fp_parse_filters(const char *raw, fp_filter_t *out, int max) {
 // Helpers
 // ---------------------------------------------------------------------------
 
+// Populate the location combobox with breadcrumbs for the given absolute path.
+// Each breadcrumb entry stores the full path in ps->loc_paths[] for navigation.
+static void fp_sync_location_combo(fp_state_t *ps, const char *path) {
+  if (!ps->location_combo || !path || !path[0]) return;
+  send_message(ps->location_combo, kComboBoxMessageClear, 0, NULL);
+  ps->loc_count = 0;
+
+  // Root is always the first entry
+  strncpy(ps->loc_paths[0], "/", sizeof(ps->loc_paths[0]) - 1);
+  ps->loc_paths[0][sizeof(ps->loc_paths[0]) - 1] = '\0';
+  send_message(ps->location_combo, kComboBoxMessageAddString, 0, "/");
+  ps->loc_count = 1;
+
+  // Walk path components, building accumulated paths
+  const char *p = path;
+  if (*p == '/') p++;
+  char acc[512] = "/";
+  int sel = 0;  // index of current (deepest) directory
+  while (*p && ps->loc_count < FP_MAX_LOC_DEPTH) {
+    const char *slash = strchr(p, '/');
+    size_t len = slash ? (size_t)(slash - p) : strlen(p);
+    if (len == 0) {
+      if (slash) p++;
+      break;
+    }
+
+    // Append component to accumulated path
+    if (strlen(acc) > 1)
+      strncat(acc, "/", sizeof(acc) - strlen(acc) - 1);
+    size_t avail = sizeof(acc) - strlen(acc) - 1;
+    strncat(acc, p, len < avail ? len : avail);
+    acc[sizeof(acc) - 1] = '\0';
+
+    strncpy(ps->loc_paths[ps->loc_count], acc, sizeof(ps->loc_paths[0]) - 1);
+    ps->loc_paths[ps->loc_count][sizeof(ps->loc_paths[0]) - 1] = '\0';
+
+    // Display the component name (last segment) in the combobox
+    char display[64] = {0};
+    size_t dlen = len < sizeof(display) - 1 ? len : sizeof(display) - 1;
+    strncpy(display, p, dlen);
+    send_message(ps->location_combo, kComboBoxMessageAddString, 0, display);
+    sel = ps->loc_count++;
+
+    p += len;
+    if (*p == '/') p++;
+  }
+
+  send_message(ps->location_combo, kComboBoxMessageSetCurrentSelection,
+               (uint32_t)sel, NULL);
+  invalidate_window(ps->location_combo);
+}
+
 // Apply the currently selected extension filter to the filelist.
 static void fp_apply_filter(fp_state_t *ps) {
   if (!ps->list_win) return;
@@ -230,6 +291,7 @@ static void fp_navigate_to_parent(fp_state_t *ps) {
   }
 
   send_message(ps->list_win, FLM_SETPATH, 0, curpath);
+  fp_sync_location_combo(ps, curpath);
 }
 
 static bool fp_prompt_new_folder(window_t *parent, char *out, size_t out_sz) {
@@ -324,9 +386,17 @@ static result_t fp_proc(window_t *win, uint32_t msg,
     case kWindowMessageCreate: {
       ps = (fp_state_t *)lparam;
       win->userdata = ps;
-      send_message(win, kToolBarMessageAddButtons,
-                   sizeof(kFilePickerToolbar) / sizeof(kFilePickerToolbar[0]),
-                   (void *)kFilePickerToolbar);
+      send_message(win, kToolBarMessageSetItems,
+                   sizeof(kFilePickerItems) / sizeof(kFilePickerItems[0]),
+                   (void *)kFilePickerItems);
+
+      // Locate the path combobox in the newly-created toolbar children
+      for (window_t *tc = win->toolbar_children; tc; tc = tc->next) {
+        if ((int)tc->id == FP_ID_LOC_COMBO) {
+          ps->location_combo = tc;
+          break;
+        }
+      }
 
       // File browser list
       ps->list_win = create_window("", WINDOW_NOTITLE | WINDOW_VSCROLL,
@@ -407,6 +477,14 @@ static result_t fp_proc(window_t *win, uint32_t msg,
       create_window("Cancel", 0,
           MAKERECT(cncl_x, btn_y, FP_BTN_W, FP_BTN_H), win, win_button, 0, NULL);
 
+      // Sync the location combobox with the filelist's initial directory
+      {
+        char init_path[512] = {0};
+        send_message(ps->list_win, FLM_GETPATH, sizeof(init_path), init_path);
+        if (init_path[0])
+          fp_sync_location_combo(ps, init_path);
+      }
+
       return true;
     }
 
@@ -442,6 +520,24 @@ static result_t fp_proc(window_t *win, uint32_t msg,
           if (!ps->save_mode) {
             fp_accept_item(win, ps, item);
           }
+        }
+        return true;
+      }
+
+      // Directory navigation — update location combobox.
+      if (code == FLN_NAVDIR) {
+        fp_sync_location_combo(ps, (const char *)lparam);
+        return true;
+      }
+
+      // Location combobox selection — navigate to chosen breadcrumb.
+      if (code == kComboBoxNotificationSelectionChange && ps->location_combo &&
+          (window_t *)lparam == ps->location_combo) {
+        int sel = (int)send_message(ps->location_combo,
+                                    kComboBoxMessageGetCurrentSelection, 0, NULL);
+        if (sel >= 0 && sel < ps->loc_count) {
+          send_message(ps->list_win, FLM_SETPATH, 0, ps->loc_paths[sel]);
+          fp_sync_location_combo(ps, ps->loc_paths[sel]);
         }
         return true;
       }
