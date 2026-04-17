@@ -6,11 +6,11 @@
 // Toolbar button definitions
 // ============================================================
 
-static const toolbar_button_t kMainToolbar[] = {
-  { sysicon_add,    ID_TASK_NEW,    0 },
-  { sysicon_pencil, ID_TASK_EDIT,   0 },
-  TOOLBAR_SPACING_TOKEN,
-  { sysicon_delete, ID_TASK_DELETE, 0 },
+static const toolbar_item_t kMainToolbar[] = {
+  { TOOLBAR_ITEM_BUTTON, ID_TASK_NEW,    sysicon_add,    0, 0, NULL },
+  { TOOLBAR_ITEM_BUTTON, ID_TASK_EDIT,   sysicon_pencil, 0, 0, NULL },
+  { TOOLBAR_ITEM_SPACER, 0,              0,              0, 0, NULL },
+  { TOOLBAR_ITEM_BUTTON, ID_TASK_DELETE, sysicon_delete, 0, 0, NULL },
 };
 
 // ============================================================
@@ -134,7 +134,7 @@ result_t main_win_proc(window_t *win, uint32_t msg,
       doc->win = win;
       g_app->active_doc = doc;
       // Install toolbar buttons (New / Edit / Delete).
-      send_message(win, kToolBarMessageAddButtons,
+      send_message(win, kToolBarMessageSetItems,
                    sizeof(kMainToolbar) / sizeof(kMainToolbar[0]),
                    (void *)kMainToolbar);
       // The list view is created as a child that fills the client area.

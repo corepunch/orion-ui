@@ -1,8 +1,8 @@
 // Tests for the child-window-based toolbar implementation.
 //
 // These tests are headless (no SDL/OpenGL rendering). The new toolbar
-// creates real child windows in parent->toolbar_children instead of
-// maintaining a flat toolbar_button_t[] array.
+// creates real child windows in parent->toolbar_children using
+// toolbar_item_t and kToolBarMessageSetItems.
 
 #include "test_framework.h"
 #include "test_env.h"
@@ -49,8 +49,8 @@ static window_t *find_toolbar_child(window_t *win, uint32_t id) {
 
 // ---- tests ------------------------------------------------------------------
 
-void test_toolbar_add_buttons_creates_children(void) {
-    TEST("kToolBarMessageAddButtons creates one toolbar child per real button");
+void test_toolbar_set_items_creates_children(void) {
+    TEST("kToolBarMessageSetItems creates one toolbar child per real button");
 
     test_env_init();
 
@@ -59,12 +59,12 @@ void test_toolbar_add_buttons_creates_children(void) {
                                   &frame, NULL, noop_proc, 0, NULL);
     ASSERT_NOT_NULL(win);
 
-    toolbar_button_t buttons[] = {
-        {.icon=0, .ident=10, .flags=0},
-        {.icon=1, .ident=11, .flags=0},
-        {.icon=2, .ident=12, .flags=0},
+    toolbar_item_t items[] = {
+        {TOOLBAR_ITEM_BUTTON, 10, 0, 0, 0, NULL},
+        {TOOLBAR_ITEM_BUTTON, 11, 1, 0, 0, NULL},
+        {TOOLBAR_ITEM_BUTTON, 12, 2, 0, 0, NULL},
     };
-    send_message(win, kToolBarMessageAddButtons, 3, buttons);
+    send_message(win, kToolBarMessageSetItems, 3, items);
 
     // Must have exactly 3 toolbar children.
     ASSERT_EQUAL(count_toolbar_children(win), 3);
@@ -82,8 +82,8 @@ void test_toolbar_add_buttons_creates_children(void) {
     PASS();
 }
 
-void test_toolbar_spacing_token_skipped(void) {
-    TEST("kToolBarMessageAddButtons: spacing tokens (icon==-1) do not create children");
+void test_toolbar_spacer_skipped(void) {
+    TEST("kToolBarMessageSetItems: TOOLBAR_ITEM_SPACER does not create a child");
 
     test_env_init();
 
@@ -92,15 +92,15 @@ void test_toolbar_spacing_token_skipped(void) {
                                   &frame, NULL, noop_proc, 0, NULL);
     ASSERT_NOT_NULL(win);
 
-    toolbar_button_t buttons[] = {
-        {.icon=0, .ident=1, .flags=0},
-        {.icon=1, .ident=2, .flags=0},
-        TOOLBAR_SPACING_TOKEN,
-        {.icon=2, .ident=3, .flags=0},
+    toolbar_item_t items[] = {
+        {TOOLBAR_ITEM_BUTTON, 1, 0, 0, 0, NULL},
+        {TOOLBAR_ITEM_BUTTON, 2, 1, 0, 0, NULL},
+        {TOOLBAR_ITEM_SPACER, 0, 0, 0, 0, NULL},
+        {TOOLBAR_ITEM_BUTTON, 3, 2, 0, 0, NULL},
     };
-    send_message(win, kToolBarMessageAddButtons, 4, buttons);
+    send_message(win, kToolBarMessageSetItems, 4, items);
 
-    // 4 entries, but the spacing token does not create a child.
+    // 4 entries, but the spacer does not create a child.
     ASSERT_EQUAL(count_toolbar_children(win), 3);
 
     destroy_window(win);
@@ -108,8 +108,8 @@ void test_toolbar_spacing_token_skipped(void) {
     PASS();
 }
 
-void test_toolbar_add_buttons_replaces(void) {
-    TEST("kToolBarMessageAddButtons replaces existing toolbar children");
+void test_toolbar_set_items_replaces(void) {
+    TEST("kToolBarMessageSetItems replaces existing toolbar children");
 
     test_env_init();
 
@@ -118,15 +118,15 @@ void test_toolbar_add_buttons_replaces(void) {
                                   &frame, NULL, noop_proc, 0, NULL);
     ASSERT_NOT_NULL(win);
 
-    toolbar_button_t first[] = {{.icon=0, .ident=1, .flags=0}};
-    send_message(win, kToolBarMessageAddButtons, 1, first);
+    toolbar_item_t first[] = {{TOOLBAR_ITEM_BUTTON, 1, 0, 0, 0, NULL}};
+    send_message(win, kToolBarMessageSetItems, 1, first);
     ASSERT_EQUAL(count_toolbar_children(win), 1);
 
-    toolbar_button_t second[] = {
-        {.icon=0, .ident=10, .flags=0},
-        {.icon=1, .ident=11, .flags=0},
+    toolbar_item_t second[] = {
+        {TOOLBAR_ITEM_BUTTON, 10, 0, 0, 0, NULL},
+        {TOOLBAR_ITEM_BUTTON, 11, 1, 0, 0, NULL},
     };
-    send_message(win, kToolBarMessageAddButtons, 2, second);
+    send_message(win, kToolBarMessageSetItems, 2, second);
 
     // Old children are gone, new ones are present.
     ASSERT_EQUAL(count_toolbar_children(win), 2);
@@ -149,12 +149,12 @@ void test_toolbar_set_active_button(void) {
                                   &frame, NULL, noop_proc, 0, NULL);
     ASSERT_NOT_NULL(win);
 
-    toolbar_button_t buttons[] = {
-        {.icon=0, .ident=10, .flags=TOOLBAR_BUTTON_FLAG_ACTIVE},
-        {.icon=1, .ident=11, .flags=0},
-        {.icon=2, .ident=12, .flags=0},
+    toolbar_item_t items[] = {
+        {TOOLBAR_ITEM_BUTTON, 10, 0, 0, TOOLBAR_BUTTON_FLAG_ACTIVE, NULL},
+        {TOOLBAR_ITEM_BUTTON, 11, 1, 0, 0,                          NULL},
+        {TOOLBAR_ITEM_BUTTON, 12, 2, 0, 0,                          NULL},
     };
-    send_message(win, kToolBarMessageAddButtons, 3, buttons);
+    send_message(win, kToolBarMessageSetItems, 3, items);
 
     window_t *btn10 = find_toolbar_child(win, 10);
     window_t *btn11 = find_toolbar_child(win, 11);
@@ -163,7 +163,7 @@ void test_toolbar_set_active_button(void) {
     ASSERT_NOT_NULL(btn11);
     ASSERT_NOT_NULL(btn12);
 
-    // After AddButtons, TOOLBAR_BUTTON_FLAG_ACTIVE → value==true on btn10.
+    // After SetItems, TOOLBAR_BUTTON_FLAG_ACTIVE → value==true on btn10.
     ASSERT_TRUE(btn10->value);
     ASSERT_FALSE(btn11->value);
     ASSERT_FALSE(btn12->value);
@@ -365,8 +365,8 @@ void test_toolbar_button_click_fires_command(void) {
                                   &frame, NULL, click_capture_proc, 0, NULL);
     ASSERT_NOT_NULL(win);
 
-    toolbar_button_t buttons[] = {{.icon=0, .ident=55, .flags=0}};
-    send_message(win, kToolBarMessageAddButtons, 1, buttons);
+    toolbar_item_t items[] = {{TOOLBAR_ITEM_BUTTON, 55, 0, 0, 0, NULL}};
+    send_message(win, kToolBarMessageSetItems, 1, items);
 
     window_t *btn = find_toolbar_child(win, 55);
     ASSERT_NOT_NULL(btn);
@@ -400,8 +400,8 @@ void test_toolbar_notitle_nonclient_mouseup_fires(void) {
                                   &frame, NULL, click_capture_proc, 0, NULL);
     ASSERT_NOT_NULL(win);
 
-    toolbar_button_t buttons[] = {{.icon=0, .ident=77, .flags=0}};
-    send_message(win, kToolBarMessageAddButtons, 1, buttons);
+    toolbar_item_t items[] = {{TOOLBAR_ITEM_BUTTON, 77, 0, 0, 0, NULL}};
+    send_message(win, kToolBarMessageSetItems, 1, items);
 
     window_t *btn = find_toolbar_child(win, 77);
     ASSERT_NOT_NULL(btn);
@@ -435,11 +435,11 @@ void test_toolbar_destroy_clears_children(void) {
                                   &frame, NULL, noop_proc, 0, NULL);
     ASSERT_NOT_NULL(win);
 
-    toolbar_button_t buttons[] = {
-        {.icon=0, .ident=1, .flags=0},
-        {.icon=1, .ident=2, .flags=0},
+    toolbar_item_t items[] = {
+        {TOOLBAR_ITEM_BUTTON, 1, 0, 0, 0, NULL},
+        {TOOLBAR_ITEM_BUTTON, 2, 1, 0, 0, NULL},
     };
-    send_message(win, kToolBarMessageAddButtons, 2, buttons);
+    send_message(win, kToolBarMessageSetItems, 2, items);
     ASSERT_EQUAL(count_toolbar_children(win), 2);
 
     // After destroy the window is freed; if toolbar_children were not freed
@@ -461,8 +461,8 @@ void test_toolbar_move_shifts_children(void) {
                                   &frame, NULL, noop_proc, 0, NULL);
     ASSERT_NOT_NULL(win);
 
-    toolbar_button_t buttons[] = {{.icon=0, .ident=1, .flags=0}};
-    send_message(win, kToolBarMessageAddButtons, 1, buttons);
+    toolbar_item_t items[] = {{TOOLBAR_ITEM_BUTTON, 1, 0, 0, 0, NULL}};
+    send_message(win, kToolBarMessageSetItems, 1, items);
 
     window_t *btn = find_toolbar_child(win, 1);
     ASSERT_NOT_NULL(btn);
@@ -496,10 +496,10 @@ void test_titlebar_height_single_row(void) {
     ASSERT_EQUAL(titlebar_height(win), expected);
 
     // Adding many buttons does not increase the non-client height.
-    toolbar_button_t buttons[10];
+    toolbar_item_t items[10];
     for (int i = 0; i < 10; i++)
-        buttons[i] = (toolbar_button_t){.icon=0, .ident=i, .flags=0};
-    send_message(win, kToolBarMessageAddButtons, 10, buttons);
+        items[i] = (toolbar_item_t){TOOLBAR_ITEM_BUTTON, i, 0, 0, 0, NULL};
+    send_message(win, kToolBarMessageSetItems, 10, items);
 
     ASSERT_EQUAL(titlebar_height(win), expected);
 
@@ -523,8 +523,8 @@ void test_toolbar_button_click_cancelled_if_released_outside(void) {
                                   &frame, NULL, click_capture_proc, 0, NULL);
     ASSERT_NOT_NULL(win);
 
-    toolbar_button_t buttons[] = {{.icon=0, .ident=88, .flags=0}};
-    send_message(win, kToolBarMessageAddButtons, 1, buttons);
+    toolbar_item_t items[] = {{TOOLBAR_ITEM_BUTTON, 88, 0, 0, 0, NULL}};
+    send_message(win, kToolBarMessageSetItems, 1, items);
 
     window_t *btn = find_toolbar_child(win, 88);
     ASSERT_NOT_NULL(btn);
@@ -584,9 +584,9 @@ int main(int argc, char *argv[]) {
     (void)argv;
     TEST_START("Toolbar child-window tests");
 
-    test_toolbar_add_buttons_creates_children();
-    test_toolbar_spacing_token_skipped();
-    test_toolbar_add_buttons_replaces();
+    test_toolbar_set_items_creates_children();
+    test_toolbar_spacer_skipped();
+    test_toolbar_set_items_replaces();
     test_toolbar_set_active_button();
     test_toolbar_set_strip();
     test_toolbar_set_items_button();

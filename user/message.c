@@ -122,39 +122,6 @@ static window_t *create_toolbar_child(window_t *parent, winproc_t proc,
   return tc;
 }
 
-// Lay out toolbar items from a toolbar_button_t[] array and create child
-// windows.  Toolbar children are appended to parent->toolbar_children.
-// The caller is responsible for clearing existing children first.
-static void layout_toolbar_buttons(window_t *parent,
-                                    const toolbar_button_t *buttons,
-                                    uint32_t n) {
-  int bsz     = toolbar_effective_bsz(parent);
-  int title_h = (parent->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
-  int base_x  = parent->frame.x + TOOLBAR_BEVEL_WIDTH + TOOLBAR_PADDING;
-  int base_y  = parent->frame.y + title_h + TOOLBAR_BEVEL_WIDTH + TOOLBAR_PADDING;
-  int cur_x   = 0;
-  window_t **tail = &parent->toolbar_children;
-  while (*tail) tail = &(*tail)->next;  // find end of existing list
-  for (uint32_t i = 0; i < n; i++) {
-    const toolbar_button_t *b = &buttons[i];
-    if (b->icon == -1) {
-      // Spacing token: advance without creating a child.
-      cur_x += TOOLBAR_SPACING_GAP_WIDTH;
-      continue;
-    }
-    flags_t extra = (b->flags & ~(TOOLBAR_BUTTON_FLAG_ACTIVE | TOOLBAR_BUTTON_FLAG_PRESSED));
-    window_t *tc = create_toolbar_child(parent, win_toolbar_button,
-                                         (uint32_t)b->ident, extra, NULL,
-                                         base_x + cur_x, base_y, bsz, bsz,
-                                         b->icon);
-    if (!tc) continue;
-    if (b->flags & TOOLBAR_BUTTON_FLAG_ACTIVE) tc->value = true;
-    *tail = tc;
-    tail  = &tc->next;
-    cur_x += bsz;
-  }
-}
-
 // Lay out toolbar_item_t[] items and create child windows.
 static void layout_toolbar_items(window_t *parent,
                                   const toolbar_item_t *items,
@@ -185,13 +152,15 @@ static void layout_toolbar_items(window_t *parent,
       case TOOLBAR_ITEM_BUTTON: {
         int w = item->w > 0 ? item->w : bsz;
         winproc_t proc = (item->icon >= 0) ? win_toolbar_button : win_button;
+        flags_t extra = item->flags & ~(TOOLBAR_BUTTON_FLAG_ACTIVE | TOOLBAR_BUTTON_FLAG_PRESSED);
         window_t *tc = create_toolbar_child(parent, proc,
                                              (uint32_t)item->ident,
-                                             item->flags,
+                                             extra,
                                              item->text,
                                              base_x + cur_x, base_y,
                                              w, bsz, item->icon);
         if (!tc) { cur_x += w; break; }
+        if (item->flags & TOOLBAR_BUTTON_FLAG_ACTIVE) tc->value = true;
         *tail = tc; tail = &tc->next;
         cur_x += w;
         break;
@@ -598,14 +567,6 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
           set_clip_rect(NULL, &(rect_t){wf.x, wf.y + t_win, cr.w, cr.h});
         }
       }
-      break;
-    case kToolBarMessageAddButtons:
-      // Replace existing toolbar children with new button children.
-      clear_toolbar_children(win);
-      if (wparam > 0 && lparam) {
-        layout_toolbar_buttons(win, (const toolbar_button_t *)lparam, wparam);
-      }
-      invalidate_window(win);
       break;
     case kToolBarMessageSetItems:
       // Replace existing toolbar children with new mixed-type item children.

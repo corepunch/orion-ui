@@ -59,7 +59,6 @@ enum {
   kComboBoxMessageGetListBoxText,
   kComboBoxMessageClear,            // clear all items and reset title
   kStatusBarMessageAddWindow,
-  kToolBarMessageAddButtons,
   kToolBarMessageButtonClick,
   kToolBarMessageSetStrip,         // wparam=0, lparam=bitmap_strip_t* (or NULL to clear)
   kToolBarMessageSetActiveButton,  // wparam=ident of button to mark active
@@ -182,13 +181,12 @@ typedef struct {
 #define TB_SPACING              TOOLBAR_HEIGHT  // equals TOOLBAR_HEIGHT so toolbar buttons are square
 #define TOOLBAR_PADDING         2               // pixels of margin between toolbar border and button area (all sides)
 #define TOOLBAR_SPACING         4               // pixels of gap between consecutive buttons in a toolbar row
-#define TOOLBAR_SPACING_GAP_WIDTH  4            // extra gap width inserted by a TOOLBAR_SPACING_TOKEN entry
+#define TOOLBAR_SPACING_GAP_WIDTH  4            // pixels of gap inserted by a TOOLBAR_ITEM_SPACER entry
 #define TOOLBAR_BEVEL_WIDTH     1               // width of the bevel border drawn around the toolbar button area (each side)
 #define TOOLBAR_LABEL_PADDING           8       // horizontal padding added to auto-computed label width (left+right)
 #define TOOLBAR_COMBOBOX_DEFAULT_WIDTH_MULT  3  // default combobox width = button_size * this multiplier
 #define TOOLBAR_BUTTON_FLAG_ACTIVE   (1u << 0)
 #define TOOLBAR_BUTTON_FLAG_PRESSED  (1u << 1)
-#define TOOLBAR_SPACING_TOKEN   { .icon = -1, .ident = 0, .flags = 0 }  // on-demand spacing between toolbar buttons
 
 // Toolbar item types used with kToolBarMessageSetItems.
 typedef enum {

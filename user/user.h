@@ -48,15 +48,6 @@ typedef struct bitmap_strip_s {
   int      sheet_h; // total texture height in pixels (for UV calculation)
 } bitmap_strip_t;
 
-// Toolbar button structure
-typedef struct toolbar_button_s {
-  int icon;
-  int ident;
-  flags_t flags; // TOOLBAR_BUTTON_FLAG_* bits
-} toolbar_button_t;
-
-
-
 // Window definition structure (for declarative window creation)
 typedef struct {
   winproc_t proc;
