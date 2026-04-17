@@ -45,6 +45,13 @@ static inline int cv_content_width(window_t *win) {
 static int cv_hit_index(window_t *win, columnview_data_t *data, uint32_t wparam) {
   int mx = (int)(int16_t)LOWORD(wparam);
   int my = (int)(int16_t)HIWORD(wparam);
+  // Child windows receive LOCAL_Y_root − c→frame.y from handle_mouse, which
+  // does not include the child's own scroll offset.  Add frame + scroll to
+  // restore the ROOT-content-relative coordinate used by the draw code.
+  if (win->parent) {
+    mx += win->frame.x + (int)win->scroll[0];
+    my += win->frame.y + (int)win->scroll[1];
+  }
   int eff_w = cv_content_width(win);
   const int ncol = get_column_count(eff_w, data->column_width);
   int col = mx / data->column_width;
