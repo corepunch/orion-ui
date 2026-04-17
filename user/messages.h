@@ -236,7 +236,8 @@ typedef enum {
   kColorBorderFocus          = 19,  // focused item dark outline
   kColorBorderActive         = 20,  // active item border
   kColorFolderText           = 21,  // folder entry text in file lists
-  kColorCount                = 22
+  kColorColumnViewBg         = 22,  // report/icon column view background
+  kColorCount                = 23
 } sys_color_idx_t;
 
 // Runtime-accessible theme table (defined in user/theme.c).

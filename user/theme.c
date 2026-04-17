@@ -29,6 +29,7 @@ uint32_t g_sys_colors[kColorCount] = {
   [kColorBorderFocus]          = 0xff101010,   // very dark outline for focused item
   [kColorBorderActive]         = 0xff808080,   // light gray for active border
   [kColorFolderText]           = 0xffa0d000,   // folder entry text in file lists
+  [kColorColumnViewBg]         = 0xff544e47,   // blue-gray for report/icon column views
 };
 
 // Defined in user/dialog.c; true while the application's event loop is running.
