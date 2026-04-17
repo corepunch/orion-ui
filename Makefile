@@ -129,6 +129,10 @@ PLATFORM_LDFLAGS = -L$(LIB_DIR) -lplatform
 # liborion.so so they all share the same window manager instance.
 ORION_LDFLAGS = -L$(LIB_DIR) -lorion
 
+# Tools directory
+TOOLS_SRCS = $(wildcard tools/*.c)
+TOOLS_BINS = $(patsubst tools/%.c,$(BIN_DIR)/%$(EXE_EXT),$(TOOLS_SRCS))
+
 # .gem output directory and target list
 GEM_DIR  = $(BUILD_DIR)/gem
 GEM_BINS = $(GEM_DIR)/imageeditor.gem \
@@ -155,10 +159,23 @@ TEST_ENV_BINS = $(patsubst $(TEST_DIR)/%.c,$(BIN_DIR)/test_%$(EXE_EXT),$(TEST_EN
 # Default target
 .PHONY: all
 ifeq ($(OS),Windows_NT)
-all: library examples
+all: library examples tools
 else
-all: library examples gems shell
+all: library examples gems shell tools
 endif
+
+.PHONY: tools
+tools: $(TOOLS_BINS)
+	@echo "All tools built"
+
+fonts: tools
+	$(BIN_DIR)/font_atlas fonts/ChiKareGo2.ttf share/ChiKareGo2.png -pixelsize=16 -em -sharp -cellw=16 -cellh=16 -v
+
+
+$(BIN_DIR)/%$(EXE_EXT): tools/%.c $(SHARED_LIB) | $(BIN_DIR)
+	@echo "Building tool: $@"
+	$(CC) $(CFLAGS) -I. -Itools -o $@ $< \
+		$(LDFLAGS) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS) 
 
 # Build the platform submodule shared library
 .PHONY: platform

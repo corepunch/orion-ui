@@ -279,14 +279,23 @@ static void fl_navigate(window_t *win, filelist_data_t *data, int index) {
 
 // Convert packed wparam coordinates to a filelist item index.
 // Returns -1 when the position is outside the item grid.
+//
+// Coordinate space notes:
+//   Root window  — wparam carries LOCAL_X/LOCAL_Y directly from kernel/event.c,
+//                  which already adds win->scroll[].  The draw code subtracts
+//                  the same scroll, so the two cancel and items map to the
+//                  correct row with no further adjustment.
+//   Child window — handle_mouse delivers (LOCAL_X_root − c→frame.x,
+//                  LOCAL_Y_root − c→frame.y).  The child's own scroll[1] is
+//                  NOT included.  Add frame.y + scroll[1] (and the x
+//                  equivalents) to restore the ROOT-content-relative coordinate
+//                  that the draw code uses, giving the correct row/col.
 static int fl_hit_index(window_t *win, filelist_data_t *data, uint32_t wparam) {
   int mx = (int)(int16_t)LOWORD(wparam);
   int my = (int)(int16_t)HIWORD(wparam);
-  // Coordinates from handle_mouse are parent-content-relative; subtract the
-  // parent's screen position to get child-local coords.
   if (win->parent) {
-    mx -= (int)win->parent->frame.x;
-    my -= (int)win->parent->frame.y;
+    mx += win->frame.x + (int)win->scroll[0];
+    my += win->frame.y + (int)win->scroll[1];
   }
   int col_w = (int)(uint32_t)send_message(win, CVM_GETCOLUMNWIDTH, 0, NULL);
   int ncol  = (col_w > 0 && win->frame.w > 0)
