@@ -92,7 +92,7 @@ typedef struct {
 // (analogous to DLGTEMPLATE).  Pass to create_window_from_form() to instantiate.
 typedef struct {
   const char             *name;        // window title
-  int                     w, h;        // client area dimensions
+  int                     width, height; // client area dimensions
   flags_t                 flags;       // window flags
   const form_ctrl_def_t  *children;    // array of child control definitions (may be NULL)
   int                     child_count; // number of entries in children[]

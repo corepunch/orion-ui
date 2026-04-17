@@ -27,8 +27,8 @@ static const form_ctrl_def_t kTestFormChildren[] = {
 
 static const form_def_t kTestForm = {
   .name        = "Test Form",
-  .w           = 160,
-  .h           = 52,
+  .width       = 160,
+  .height      = 52,
   .flags       = 0,
   .children    = kTestFormChildren,
   .child_count = 3,

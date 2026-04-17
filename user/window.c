@@ -92,8 +92,8 @@ window_t* create_window(char const *title,
 {
   form_def_t def = {
     .name        = title,
-    .w           = frame ? frame->w : 0,
-    .h           = frame ? frame->h : 0,
+    .width       = frame ? frame->w : 0,
+    .height      = frame ? frame->h : 0,
     .flags       = flags,
     .children    = NULL,
     .child_count = 0,
@@ -516,7 +516,7 @@ window_t *create_window_from_form(form_def_t const *def, int x, int y,
     if (y == CW_USEDEFAULT) y = ny;
   }
 
-  rect_t r = {x, y, def->w, def->h};
+  rect_t r = {x, y, def->width, def->height};
 
   // Allocate the parent window without sending kWindowMessageCreate yet.
   window_t *win = alloc_window(def->name ? def->name : "", def->flags, &r, parent, proc, hinstance);

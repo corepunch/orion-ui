@@ -52,8 +52,8 @@ static const form_ctrl_def_t kSizeDialogChildren[] = {
 
 static const form_def_t kSizeDialogForm = {
   .name        = "",
-  .w           = NI_W,
-  .h           = NI_H,
+  .width       = NI_W,
+  .height      = NI_H,
   .flags       = 0,
   .children    = kSizeDialogChildren,
   .child_count = 4,

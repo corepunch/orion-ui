@@ -72,8 +72,8 @@ static const form_ctrl_def_t kNewFolderChildren[] = {
 
 static const form_def_t kNewFolderForm = {
   .name = "Create Folder",
-  .w = 244,
-  .h = 58,
+  .width = 244,
+  .height = 58,
   .children = kNewFolderChildren,
   .child_count = sizeof(kNewFolderChildren) / sizeof(kNewFolderChildren[0]),
 };

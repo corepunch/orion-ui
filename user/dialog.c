@@ -95,8 +95,8 @@ uint32_t show_dialog_from_form(form_def_t const *def, char const *title,
   // Center on screen.
   int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
   int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
-  int x = (sw - def->w) / 2;
-  int y = (sh - def->h) / 2;
+  int x = (sw - def->width) / 2;
+  int y = (sh - def->height) / 2;
 
   // Dialogs inherit their owner's hinstance so they belong to the same app.
   hinstance_t hinstance = parent ? get_root_window(parent)->hinstance : 0;

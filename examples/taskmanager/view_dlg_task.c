@@ -28,8 +28,8 @@ static const form_ctrl_def_t kTaskEditChildren[] = {
 
 static const form_def_t kTaskEditForm = {
   .name        = "Task",
-  .w           = 280,
-  .h           = 208,
+  .width       = 280,
+  .height      = 208,
   .flags       = 0,
   .children    = kTaskEditChildren,
   .child_count = (int)(sizeof(kTaskEditChildren)/sizeof(kTaskEditChildren[0])),
