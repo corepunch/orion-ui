@@ -36,6 +36,10 @@
 #define FP_COMBO_H    BUTTON_HEIGHT
 #define FP_ROW_GAP     4   // vertical gap between rows
 #define FP_WIN_W      (FP_LIST_W + FP_PAD * 2)
+#define FP_CTRL_X     (FP_PAD + FP_LABEL_W + 2)
+#define FP_CTRL_W     (FP_WIN_W - FP_CTRL_X - FP_PAD)
+#define FP_FILTER_Y   (FP_FILE_Y + FP_EDIT_H + FP_ROW_GAP)
+#define FP_BTN_Y      (FP_FILTER_Y + FP_COMBO_H + FP_ROW_GAP)
 
 // Vertical positions of each row (relative to client-area origin)
 #define FP_LIST_Y     FP_PAD
@@ -49,6 +53,10 @@
 enum {
   FP_ID_TOOL_UP = 1,
   FP_ID_TOOL_NEW_FOLDER,
+  FP_ID_FILE_EDIT,
+  FP_ID_FILTER_COMBO,
+  FP_ID_OK,
+  FP_ID_CANCEL,
   FP_ID_NEWFOLDER_EDIT = 100,
   FP_ID_NEWFOLDER_OK,
   FP_ID_NEWFOLDER_CANCEL,
@@ -76,6 +84,24 @@ static const form_def_t kNewFolderForm = {
   .h = 58,
   .children = kNewFolderChildren,
   .child_count = sizeof(kNewFolderChildren) / sizeof(kNewFolderChildren[0]),
+};
+
+static const form_ctrl_def_t kFilePickerChildren[] = {
+  { FORM_CTRL_LABEL, -1, { FP_PAD, FP_FILE_Y, FP_LABEL_W, FP_EDIT_H }, 0, "File:", "lbl_file" },
+  { FORM_CTRL_TEXTEDIT, FP_ID_FILE_EDIT, { FP_CTRL_X, FP_FILE_Y, FP_CTRL_W, FP_EDIT_H }, 0, "", "edit_file" },
+  { FORM_CTRL_LABEL, -1, { FP_PAD, FP_FILTER_Y + (FP_COMBO_H - CONTROL_HEIGHT) / 2, FP_LABEL_W, CONTROL_HEIGHT }, 0, "Filter:", "lbl_filter" },
+  { FORM_CTRL_COMBOBOX, FP_ID_FILTER_COMBO, { FP_CTRL_X, FP_FILTER_Y, FP_CTRL_W, FP_COMBO_H }, 0, "", "combo_filter" },
+  { FORM_CTRL_BUTTON, FP_ID_OK, { FP_WIN_W - (FP_BTN_W + FP_PAD) * 2, FP_BTN_Y, FP_BTN_W, FP_BTN_H }, BUTTON_DEFAULT, "Open", "btn_ok" },
+  { FORM_CTRL_BUTTON, FP_ID_CANCEL, { FP_WIN_W - (FP_BTN_W + FP_PAD), FP_BTN_Y, FP_BTN_W, FP_BTN_H }, 0, "Cancel", "btn_cancel" },
+};
+
+static const form_def_t kFilePickerForm = {
+  .name = "File Picker",
+  .w = FP_WIN_W,
+  .h = FP_BTN_Y + FP_BTN_H + FP_PAD,
+  .flags = 0,
+  .children = kFilePickerChildren,
+  .child_count = sizeof(kFilePickerChildren) / sizeof(kFilePickerChildren[0]),
 };
 
 // ---------------------------------------------------------------------------
@@ -205,9 +231,7 @@ static void fp_apply_filter(fp_state_t *ps) {
 static void fp_set_edit_from_path(fp_state_t *ps, const char *path) {
   const char *base = strrchr(path, '/');
   base = base ? base + 1 : path;
-  strncpy(ps->edit_win->title, base, sizeof(ps->edit_win->title) - 1);
-  ps->edit_win->title[sizeof(ps->edit_win->title) - 1] = '\0';
-  invalidate_window(ps->edit_win);
+  set_window_item_text(get_root_window(ps->edit_win), FP_ID_FILE_EDIT, "%s", base);
 }
 
 static void fp_get_current_dir(fp_state_t *ps, char *out, size_t out_sz) {
@@ -281,7 +305,7 @@ static void fp_create_folder(window_t *win, fp_state_t *ps) {
 // Build the full path from the selected filelist item or the edit box + cwd.
 // Returns false when the edit box is empty.
 static bool fp_build_path(fp_state_t *ps, char *out, size_t out_sz) {
-  const char *fname = ps->edit_win->title;
+  const char *fname = ps->edit_win ? ps->edit_win->title : NULL;
   if (!fname || !fname[0]) return false;
 
   // Try the selected item's full path first (set by single-click).
@@ -328,6 +352,29 @@ static result_t fp_proc(window_t *win, uint32_t msg,
                    sizeof(kFilePickerToolbar) / sizeof(kFilePickerToolbar[0]),
                    (void *)kFilePickerToolbar);
 
+      ps->edit_win = get_window_item(win, FP_ID_FILE_EDIT);
+      ps->filter_combo = get_window_item(win, FP_ID_FILTER_COMBO);
+
+      if (ps->edit_win && ps->ofn->lpstrFile && ps->ofn->lpstrFile[0]) {
+        const char *base = strrchr(ps->ofn->lpstrFile, '/');
+        base = base ? base + 1 : ps->ofn->lpstrFile;
+        set_window_item_text(win, FP_ID_FILE_EDIT, "%s", base);
+      }
+
+      if (ps->filter_combo) {
+        for (int i = 0; i < ps->num_filters; i++) {
+          send_message(ps->filter_combo, kComboBoxMessageAddString,
+                       0, (void *)ps->filters[i].description);
+        }
+        if (ps->num_filters > 0) {
+          send_message(ps->filter_combo, kComboBoxMessageSetCurrentSelection,
+                       (uint32_t)ps->active_filter, NULL);
+          enable_window(ps->filter_combo, true);
+        } else {
+          enable_window(ps->filter_combo, false);
+        }
+      }
+
       // File browser list
       ps->list_win = create_window("", WINDOW_NOTITLE | WINDOW_VSCROLL,
           MAKERECT(0, 0, FP_LIST_W + FP_PAD * 2, FP_LIST_H + FP_PAD),
@@ -351,61 +398,7 @@ static result_t fp_proc(window_t *win, uint32_t msg,
         }
       }
 
-      // "File:" label
-      create_window("File:", WINDOW_NOTITLE,
-          MAKERECT(FP_PAD, FP_FILE_Y, FP_LABEL_W, FP_EDIT_H),
-          win, win_label, 0, NULL);
-
-      // Filename text edit
-      int edit_x = FP_PAD + FP_LABEL_W + 2;
-      int edit_w = FP_WIN_W - edit_x - FP_PAD;
-      ps->edit_win = create_window("", WINDOW_NOTITLE,
-          MAKERECT(edit_x, FP_FILE_Y, edit_w, FP_EDIT_H),
-          win, win_textedit, 0, NULL);
-
-      // Copy pre-fill basename now that edit_win exists
-      if (ps->ofn->lpstrFile && ps->ofn->lpstrFile[0]) {
-        const char *base = strrchr(ps->ofn->lpstrFile, '/');
-        base = base ? base + 1 : ps->ofn->lpstrFile;
-        strncpy(ps->edit_win->title, base, sizeof(ps->edit_win->title) - 1);
-        ps->edit_win->title[sizeof(ps->edit_win->title) - 1] = '\0';
-      }
-
-      // Compute where the button row starts (depends on filter row presence)
-      int btn_y = FP_FILE_Y + FP_EDIT_H + FP_ROW_GAP;
-
-      // Filter combobox row (shown when at least one filter is defined)
-      if (ps->num_filters > 0) {
-        int filter_label_y = btn_y + (FP_COMBO_H - CONTROL_HEIGHT) / 2;
-        create_window("Filter:", WINDOW_NOTITLE,
-            MAKERECT(FP_PAD, filter_label_y, FP_LABEL_W, CONTROL_HEIGHT),
-            win, win_label, 0, NULL);
-
-        int combo_x = FP_PAD + FP_LABEL_W + 2;
-        int combo_w = FP_WIN_W - combo_x - FP_PAD;
-        ps->filter_combo = create_window("", WINDOW_NOTITLE,
-            MAKERECT(combo_x, btn_y, combo_w, FP_COMBO_H),
-            win, win_combobox, 0, NULL);
-
-        for (int i = 0; i < ps->num_filters; i++) {
-          send_message(ps->filter_combo, kComboBoxMessageAddString,
-                       0, (void *)ps->filters[i].description);
-        }
-        if (ps->active_filter >= 0)
-          send_message(ps->filter_combo, kComboBoxMessageSetCurrentSelection,
-                       (uint32_t)ps->active_filter, NULL);
-
-        btn_y += FP_COMBO_H + FP_ROW_GAP;
-      }
-
-      // OK (Open/Save) and Cancel buttons
-      const char *ok_label = ps->save_mode ? "Save" : "Open";
-      int ok_x   = FP_WIN_W - (FP_BTN_W + FP_PAD) * 2;
-      int cncl_x = FP_WIN_W - (FP_BTN_W + FP_PAD);
-      create_window(ok_label, BUTTON_DEFAULT,
-          MAKERECT(ok_x,   btn_y, FP_BTN_W, FP_BTN_H), win, win_button, 0, NULL);
-      create_window("Cancel", 0,
-          MAKERECT(cncl_x, btn_y, FP_BTN_W, FP_BTN_H), win, win_button, 0, NULL);
+      set_window_item_text(win, FP_ID_OK, "%s", ps->save_mode ? "Save" : "Open");
 
       return true;
     }
@@ -463,7 +456,7 @@ static result_t fp_proc(window_t *win, uint32_t msg,
         window_t *btn = (window_t *)lparam;
         if (!btn) return true;
 
-        if (strcmp(btn->title, "Cancel") == 0) {
+        if (btn->id == FP_ID_CANCEL) {
           end_dialog(win, 0);
           return true;
         }
@@ -491,15 +484,6 @@ static result_t fp_proc(window_t *win, uint32_t msg,
 // Public API
 // ---------------------------------------------------------------------------
 
-// Compute the dialog height depending on whether a filter row is needed.
-static int fp_dialog_height(int num_filters) {
-  int h = FP_FILE_Y + FP_EDIT_H + FP_ROW_GAP;  // up to and including file row
-  if (num_filters > 0)
-    h += FP_COMBO_H + FP_ROW_GAP;               // filter row
-  h += FP_BTN_H + FP_PAD;                       // button row + bottom padding
-  return h;
-}
-
 static bool fp_run(openfilename_t *ofn, bool save_mode,
                    const char *title) {
   if (!ofn || !ofn->lpstrFile || ofn->nMaxFile == 0) return false;
@@ -514,10 +498,7 @@ static bool fp_run(openfilename_t *ofn, bool save_mode,
                       ofn->nFilterIndex <= ps.num_filters)
                      ? ofn->nFilterIndex - 1 : 0;
 
-  rect_t r = {0, 0, FP_WIN_W, fp_dialog_height(ps.num_filters)};
-  adjust_window_rect(&r, flags);
-  uint32_t result = show_dialog_ex(title,
-      MAKERECT(50, 30, r.w, r.h),
+  uint32_t result = show_dialog_from_form_ex(&kFilePickerForm, title,
       ofn->hwndOwner,
       flags,
       fp_proc, &ps);

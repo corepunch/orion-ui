@@ -82,27 +82,41 @@ uint32_t show_dialog(char const *title,
 // kWindowMessageCreate fires, so the window proc can find them already in
 // place — analogous to WinAPI DialogBoxIndirectParam.
 // title overrides def->name when non-NULL.  The dialog is centered on screen.
-uint32_t show_dialog_from_form(form_def_t const *def, char const *title,
-                               window_t *parent, winproc_t proc, void *param)
+uint32_t show_dialog_from_form_ex(form_def_t const *def, char const *title,
+                                  window_t *parent, uint32_t flags,
+                                  winproc_t proc, void *param)
 {
   if (!def || !proc) return 0;
 
   // Merge dialog-specific flags into a local copy of the definition.
   form_def_t dlg_def = *def;
-  dlg_def.flags |= WINDOW_VSCROLL | WINDOW_DIALOG | WINDOW_NOTRAYBUTTON;
+  dlg_def.flags |= flags;
   if (title) dlg_def.name = title;
+
+  rect_t wr = {0, 0, def->w, def->h};
+  adjust_window_rect(&wr, dlg_def.flags);
+  dlg_def.w = wr.w;
+  dlg_def.h = wr.h;
 
   // Center on screen.
   int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
   int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
-  int x = (sw - def->w) / 2;
-  int y = (sh - def->h) / 2;
+  int x = (sw - wr.w) / 2;
+  int y = (sh - wr.h) / 2;
 
   // Dialogs inherit their owner's hinstance so they belong to the same app.
   hinstance_t hinstance = parent ? get_root_window(parent)->hinstance : 0;
   window_t *dlg = create_window_from_form(&dlg_def, x, y, NULL, proc, hinstance, param);
   if (!dlg) return 0;
   return run_dialog_loop(dlg, parent);
+}
+
+uint32_t show_dialog_from_form(form_def_t const *def, char const *title,
+                               window_t *parent, winproc_t proc, void *param)
+{
+  return show_dialog_from_form_ex(def, title, parent,
+                                  WINDOW_VSCROLL | WINDOW_DIALOG | WINDOW_NOTRAYBUTTON,
+                                  proc, param);
 }
 
 // Store the result code and destroy the dialog.
