@@ -395,6 +395,92 @@ static int t_fp_active_filter(int nFilterIndex, int num_filters) {
          ? nFilterIndex - 1 : 0;
 }
 
+// ---------------------------------------------------------------------------
+// Tests: save path normalization (inline replica of fp_name_has_extension /
+// fp_normalize_save_path behavior in commctl/filepicker.c).
+// ---------------------------------------------------------------------------
+
+static bool t_fp_name_has_extension(const char *name, const char *ext) {
+  size_t name_len;
+  size_t ext_len;
+
+  if (!name || !ext || !ext[0]) return true;
+
+  name_len = strlen(name);
+  ext_len = strlen(ext);
+  if (name_len < ext_len) return false;
+  return strcasecmp(name + name_len - ext_len, ext) == 0;
+}
+
+static bool t_fp_normalize_save_path(const char *dir,
+                                     const char *typed,
+                                     const char *ext,
+                                     char *out,
+                                     size_t out_sz) {
+  char file[512];
+  size_t file_len;
+  size_t ext_len;
+
+  if (!dir || !typed || !typed[0] || !out || out_sz == 0) return false;
+
+  strncpy(file, typed, sizeof(file) - 1);
+  file[sizeof(file) - 1] = '\0';
+
+  if (ext && ext[0] && !t_fp_name_has_extension(file, ext)) {
+    file_len = strlen(file);
+    ext_len = strlen(ext);
+    if (file_len + ext_len >= sizeof(file)) return false;
+    memcpy(file + file_len, ext, ext_len + 1);
+  }
+
+  if (strcmp(dir, "/") == 0)
+    snprintf(out, out_sz, "/%s", file);
+  else
+    snprintf(out, out_sz, "%s/%s", dir, file);
+
+  return true;
+}
+
+void test_save_normalize_appends_missing_extension(void) {
+  TEST("Save normalize: appends expected extension when missing");
+  char out[512] = {0};
+  ASSERT_TRUE(t_fp_normalize_save_path("/tmp", "report", ".tdb", out, sizeof(out)));
+  ASSERT_EQUAL(strcmp(out, "/tmp/report.tdb"), 0);
+  PASS();
+}
+
+void test_save_normalize_keeps_existing_extension(void) {
+  TEST("Save normalize: does not append when extension already exists");
+  char out[512] = {0};
+  ASSERT_TRUE(t_fp_normalize_save_path("/tmp", "report.tdb", ".tdb", out, sizeof(out)));
+  ASSERT_EQUAL(strcmp(out, "/tmp/report.tdb"), 0);
+  PASS();
+}
+
+void test_save_normalize_extension_match_is_case_insensitive(void) {
+  TEST("Save normalize: extension match is case-insensitive");
+  char out[512] = {0};
+  ASSERT_TRUE(t_fp_normalize_save_path("/tmp", "report.TDB", ".tdb", out, sizeof(out)));
+  ASSERT_EQUAL(strcmp(out, "/tmp/report.TDB"), 0);
+  PASS();
+}
+
+void test_save_normalize_all_files_filter_does_not_append(void) {
+  TEST("Save normalize: empty extension (all files) does not append");
+  char out[512] = {0};
+  ASSERT_TRUE(t_fp_normalize_save_path("/tmp", "report", "", out, sizeof(out)));
+  ASSERT_EQUAL(strcmp(out, "/tmp/report"), 0);
+  PASS();
+}
+
+void test_save_normalize_root_dir_builds_single_slash_path(void) {
+  TEST("Save normalize: root directory path is joined correctly");
+  char out[512] = {0};
+  ASSERT_TRUE(t_fp_normalize_save_path("/", "report", ".tdb", out, sizeof(out)));
+  ASSERT_EQUAL(strcmp(out, "/report.tdb"), 0);
+  PASS();
+}
+
 void test_ofn_filter_parse_png(void) {
   TEST("OFN filter: PNG filter parsed to .png extension");
   t_fp_filter_t f[OFN_MAX_FILTERS];
@@ -482,6 +568,12 @@ int main(int argc, char *argv[]) {
   test_ofn_filter_parse_multiple();
   test_ofn_filter_parse_empty();
   test_ofn_filter_parse_nFilterIndex();
+
+  test_save_normalize_appends_missing_extension();
+  test_save_normalize_keeps_existing_extension();
+  test_save_normalize_extension_match_is_case_insensitive();
+  test_save_normalize_all_files_filter_does_not_append();
+  test_save_normalize_root_dir_builds_single_slash_path();
 
   TEST_END();
 }

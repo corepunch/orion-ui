@@ -174,7 +174,7 @@ typedef struct {
 #define BUTTON_HEIGHT     18
 #define WINDOW_PADDING 4
 #define LINE_PADDING 5
-#define CONTROL_HEIGHT 13
+#define CONTROL_HEIGHT 14
 
 // Control button dimensions
 #define CONTROL_BUTTON_WIDTH    8
