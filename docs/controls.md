@@ -113,25 +113,25 @@ activation.  Used by the file manager and file-picker dialog.
 
 window_t *cv = create_window("", WINDOW_NOTITLE | WINDOW_VSCROLL,
     MAKERECT(0, 0, 300, 200),
-    parent, win_columnview, NULL);
+    parent, win_reportview, NULL);
 
 // Add items
-columnview_item_t item = {
+reportview_item_t item = {
     .text  = "Documents",
     .icon  = icon8_editor_helmet,
     .color = COLOR_TEXT_NORMAL,
 };
-send_message(cv, CVM_ADDITEM, 0, &item);
+send_message(cv, RVM_ADDITEM, 0, &item);
 
 // Clear all items
-send_message(cv, CVM_CLEAR, 0, NULL);
+send_message(cv, RVM_CLEAR, 0, NULL);
 // Also reset scroll after clearing
 cv->scroll[0] = cv->scroll[1] = 0;
 
 // Selection notification in root proc:
 case kWindowMessageCommand:
-    if (HIWORD(wparam) == CVN_SELCHANGE || HIWORD(wparam) == CVN_DBLCLK) {
-        columnview_item_t *it = (columnview_item_t *)lparam;
+    if (HIWORD(wparam) == RVN_SELCHANGE || HIWORD(wparam) == RVN_DBLCLK) {
+        reportview_item_t *it = (reportview_item_t *)lparam;
         printf("Selected: %s\n", it->text);
     }
 ```
@@ -140,15 +140,15 @@ case kWindowMessageCommand:
 
 | Message | wparam | lparam | Returns |
 |---|---|---|---|
-| `CVM_ADDITEM` | – | `columnview_item_t *` | index |
-| `CVM_DELETEITEM` | index | – | bool |
-| `CVM_CLEAR` | – | – | bool |
-| `CVM_GETITEMCOUNT` | – | – | count |
-| `CVM_GETSELECTION` | – | – | index |
-| `CVM_SETSELECTION` | index | – | bool |
-| `CVM_SETCOLUMNWIDTH` | px | – | bool |
-| `CVM_GETITEMDATA` | index | `columnview_item_t *` | bool |
-| `CVM_SETITEMDATA` | index | `columnview_item_t *` | bool |
+| `RVM_ADDITEM` | – | `reportview_item_t *` | index |
+| `RVM_DELETEITEM` | index | – | bool |
+| `RVM_CLEAR` | – | – | bool |
+| `RVM_GETITEMCOUNT` | – | – | count |
+| `RVM_GETSELECTION` | – | – | index |
+| `RVM_SETSELECTION` | index | – | bool |
+| `RVM_SETCOLUMNWIDTH` | px | – | bool |
+| `RVM_GETITEMDATA` | index | `reportview_item_t *` | bool |
+| `RVM_SETITEMDATA` | index | `reportview_item_t *` | bool |
 
 ## Menu Bar
 

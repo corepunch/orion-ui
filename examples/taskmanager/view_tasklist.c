@@ -1,406 +1,68 @@
-// VIEW: Task list — 3-column report view (Title stretched, Priority/Status fixed).
+// VIEW: Task list adapter. Rendering and interaction are handled by win_reportview.
 
 #include "taskmanager.h"
 
-extern int titlebar_height(window_t const *win);
-
-// ============================================================
-// Internal state
-// ============================================================
-
-#define TL_MAX_ROWS         256   // upper bound matching MAX_TASKS in controller
-
-typedef struct {
-  tasklist_row_t src;
-  char           title_clipped[TASKLIST_TITLE_LEN + 4];
-  char           priority_clipped[32];
-  char           status_clipped[32];
-} tl_row_t;
-
-typedef struct {
-  tl_row_t rows[TL_MAX_ROWS];
-  int      count;
-  int      selected;
-  int      cached_title_w;
-} tl_state_t;
-
-// ============================================================
-// Layout helpers
-// ============================================================
-
-// Width available for the title column (accounts for visible vscrollbar).
-static int tl_title_w(window_t *win) {
-  int sb    = win->vscroll.visible ? SCROLLBAR_WIDTH : 0;
+static int tasklist_title_width(window_t *win) {
+  int count = (int)send_message(win, RVM_GETITEMCOUNT, 0, NULL);
+  int total_h = COLUMNVIEW_ENTRY_HEIGHT + count * COLUMNVIEW_ENTRY_HEIGHT;
+  int need_vscroll = total_h > win->frame.h;
+  int sb = need_vscroll ? SCROLLBAR_WIDTH : 0;
   int avail = win->frame.w - sb - TASKLIST_PRIORITY_W - TASKLIST_STATUS_W;
-  return avail > 20 ? avail : 20;
+  return (avail < 20) ? 20 : avail;
 }
-
-// Total content height (header + rows).
-static int tl_content_h(tl_state_t *st) {
-  return TASKLIST_HEADER_H + st->count * TASKLIST_ROW_H;
-}
-
-// ============================================================
-// Text truncation helper
-// ============================================================
-
-static void tl_make_clipped_text(char *dst, size_t dst_sz,
-                                  const char *text, int max_w) {
-  if (!dst || dst_sz == 0) return;
-  dst[0] = '\0';
-  if (!text || !text[0] || max_w <= 0) return;
-
-  if (strwidth(text) <= max_w) {
-    strncpy(dst, text, dst_sz - 1);
-    dst[dst_sz - 1] = '\0';
-    return;
-  }
-
-  int dots_w = strwidth("...");
-  int avail  = max_w - dots_w;
-  if (avail <= 0) return;
-
-  int n = 0, w = 0;
-  while (text[n] && n < (int)(dst_sz - 4)) {
-    int cw = char_width((unsigned char)text[n]);
-    if (w + cw > avail) break;
-    dst[n] = text[n];
-    w += cw;
-    n++;
-  }
-  memcpy(dst + n, "...", 4);
-}
-
-static void tl_rebuild_title_cache(window_t *win, tl_state_t *st) {
-  if (!win || !st) return;
-
-  int title_w = tl_title_w(win) - TASKLIST_PADDING * 2;
-  if (title_w < 0) title_w = 0;
-  if (st->cached_title_w == title_w) return;
-
-  st->cached_title_w = title_w;
-  for (int i = 0; i < st->count; i++) {
-    tl_make_clipped_text(st->rows[i].title_clipped,
-                         sizeof(st->rows[i].title_clipped),
-                         st->rows[i].src.title, title_w);
-  }
-}
-
-static void tl_build_row_cache(tl_row_t *dst, const tasklist_row_t *src, int title_w) {
-  if (!dst || !src) return;
-  dst->src = *src;
-  tl_make_clipped_text(dst->title_clipped, sizeof(dst->title_clipped),
-                       dst->src.title, title_w - TASKLIST_PADDING * 2);
-  tl_make_clipped_text(dst->priority_clipped, sizeof(dst->priority_clipped),
-                       dst->src.priority, TASKLIST_PRIORITY_W - TASKLIST_PADDING * 2);
-  tl_make_clipped_text(dst->status_clipped, sizeof(dst->status_clipped),
-                       dst->src.status, TASKLIST_STATUS_W - TASKLIST_PADDING * 2);
-}
-
-// ============================================================
-// Scrollbar sync
-// ============================================================
-
-static void tl_sync_scroll(window_t *win, tl_state_t *st) {
-  if (!win || !st || win->frame.h <= 0) return;
-  int total_h = tl_content_h(st);
-  int view_h  = win->frame.h;
-  int max_s   = total_h - view_h;
-  if (max_s < 0) max_s = 0;
-  if ((int)win->scroll[1] > max_s) win->scroll[1] = (uint32_t)max_s;
-
-  scroll_info_t si;
-  si.fMask = SIF_ALL;
-  si.nMin  = 0;
-  si.nMax  = total_h;
-  si.nPage = (uint32_t)view_h;
-  si.nPos  = (int)win->scroll[1];
-  set_scroll_info(win, SB_VERT, &si, false);
-  tl_rebuild_title_cache(win, st);
-}
-
-// ============================================================
-// Hit testing
-// ============================================================
-
-// Returns the row index clicked, or -1 if in the header or out of range.
-// LOCAL_Y (kernel/event.c) packs coordinates as: visual_y + scroll[1], so
-// my is already in content space.  To check whether the click falls inside
-// the fixed non-scrolling header we convert back to visual space:
-//   view_y = my - scroll[1]   (visual position from window top)
-// Row index is derived from my directly because the row layout is also in
-// content space:  row = (my - HEADER_H) / ROW_H.
-static int tl_hit_row(window_t *win, uint32_t wparam, tl_state_t *st) {
-  int my     = (int)(int16_t)HIWORD(wparam);
-  int view_y = my - (int)win->scroll[1];
-  if (view_y < TASKLIST_HEADER_H) return -1;
-  int row = (my - TASKLIST_HEADER_H) / TASKLIST_ROW_H;
-  return (row >= 0 && row < st->count) ? row : -1;
-}
-
-// Adjust win->scroll[1] so the currently selected row is fully visible below
-// the non-scrolling header.  Scrolls up if the row is above the visible area,
-// scrolls down if it extends past the bottom.  Calls tl_sync_scroll to clamp
-// and update the scrollbar thumb after any change.
-static void tl_ensure_visible(window_t *win, tl_state_t *st) {
-  if (st->selected < 0) return;
-  int row_top    = TASKLIST_HEADER_H + st->selected * TASKLIST_ROW_H;
-  int row_bottom = row_top + TASKLIST_ROW_H;
-  int scroll_y   = (int)win->scroll[1];
-  int view_h     = win->frame.h;
-  if (row_top - scroll_y < TASKLIST_HEADER_H) {
-    win->scroll[1] = (uint32_t)(row_top - TASKLIST_HEADER_H);
-    tl_sync_scroll(win, st);
-  } else if (row_bottom - scroll_y > view_h) {
-    win->scroll[1] = (uint32_t)(row_bottom - view_h);
-    tl_sync_scroll(win, st);
-  }
-}
-
-// ============================================================
-// tasklist_proc
-// ============================================================
 
 result_t tasklist_proc(window_t *win, uint32_t msg,
                        uint32_t wparam, void *lparam) {
-  tl_state_t *st = (tl_state_t *)win->userdata2;
+  result_t r = win_reportview(win, msg, wparam, lparam);
 
-  switch (msg) {
-    case kWindowMessageCreate: {
-      st = calloc(1, sizeof(tl_state_t));
-      if (!st) return false;
-      win->userdata2             = st;
-      win->flags                |= WINDOW_VSCROLL;
-      win->vscroll.visible_mode  = SB_VIS_AUTO;
-      st->selected               = -1;
-      st->cached_title_w         = -1;
-      tl_sync_scroll(win, st);
-      return true;
-    }
-
-    case kWindowMessagePaint: {
-      int scroll_y = (int)win->scroll[1];
-      int title_w  = tl_title_w(win);
-      int prio_x   = title_w;
-      int stat_x   = title_w + TASKLIST_PRIORITY_W;
-      int row_w    = win->frame.w - (win->vscroll.visible ? SCROLLBAR_WIDTH : 0);
-      int body_h   = win->frame.h - TASKLIST_HEADER_H;
-
-      int first_row = scroll_y / TASKLIST_ROW_H;
-      int last_row  = (scroll_y + body_h + TASKLIST_ROW_H - 1) / TASKLIST_ROW_H;
-      if (first_row < 0) first_row = 0;
-      if (last_row > st->count) last_row = st->count;
-
-      uint32_t hdr_bg  = get_sys_color(kColorWindowBg);
-      uint32_t hdr_fg  = get_sys_color(kColorTextDisabled);
-      uint32_t sep_col = get_sys_color(kColorDarkEdge);
-
-      // Absolute screen position of this window's content area.
-      // Needed to build scissor rects in screen-pixel space
-      // (same pattern as commctl/combobox.c).
-      window_t *root = get_root_window(win);
-      int root_t = titlebar_height(root);
-      int abs_x  = win->parent ? root->frame.x + win->frame.x : win->frame.x;
-      int abs_y  = win->parent ? root->frame.y + root_t + win->frame.y
-                               : win->frame.y + root_t;
-
-      int hdr_y       = win->parent ? win->frame.y : 0;
-
-      // ── Pass 1: Backgrounds ─────────────────────────────────────────────
-      fill_rect(get_sys_color(kColorWindowBg), 0, TASKLIST_HEADER_H, row_w, body_h);
-      if (st->selected >= first_row && st->selected < last_row) {
-        int y = TASKLIST_HEADER_H + st->selected * TASKLIST_ROW_H - scroll_y;
-        fill_rect(get_sys_color(kColorTextNormal), 0, y, row_w, TASKLIST_ROW_H - 1);
-      }
-
-      // ── Pass 2: Title column text (scissored to column bounds) ───────────
-      set_clip_rect(NULL, &(rect_t){abs_x, abs_y + TASKLIST_HEADER_H,
-                                    title_w, body_h});
-      for (int i = first_row; i < last_row; i++) {
-        int y = TASKLIST_HEADER_H + i * TASKLIST_ROW_H - scroll_y;
-        uint32_t fg = (i == st->selected) ? get_sys_color(kColorWindowBg)
-                                           : st->rows[i].src.color;
-        draw_text_small(st->rows[i].title_clipped, TASKLIST_PADDING, y + 2, fg);
-      }
-
-      // ── Pass 3: Priority column text (scissored to column bounds) ────────
-      set_clip_rect(NULL, &(rect_t){abs_x + prio_x, abs_y + TASKLIST_HEADER_H,
-                                    TASKLIST_PRIORITY_W, body_h});
-      for (int i = first_row; i < last_row; i++) {
-        int y = TASKLIST_HEADER_H + i * TASKLIST_ROW_H - scroll_y;
-        uint32_t fg = (i == st->selected) ? get_sys_color(kColorWindowBg)
-                                           : st->rows[i].src.color;
-        draw_text_small(st->rows[i].priority_clipped, prio_x + TASKLIST_PADDING, y + 2, fg);
-      }
-
-      // ── Pass 4: Status column text (scissored to column bounds) ──────────
-      set_clip_rect(NULL, &(rect_t){abs_x + stat_x, abs_y + TASKLIST_HEADER_H,
-                                    TASKLIST_STATUS_W, body_h});
-      for (int i = first_row; i < last_row; i++) {
-        int y = TASKLIST_HEADER_H + i * TASKLIST_ROW_H - scroll_y;
-        uint32_t fg = (i == st->selected) ? get_sys_color(kColorWindowBg)
-                                           : st->rows[i].src.color;
-        draw_text_small(st->rows[i].status_clipped, stat_x + TASKLIST_PADDING, y + 2, fg);
-      }
-
-      // ── Restore window-level scissor before drawing header and dividers ──
-      set_clip_rect(NULL, &(rect_t){abs_x, abs_y, row_w, win->frame.h});
-
-      // ── Header drawn last — always on top regardless of scroll ───────────
-      fill_rect(hdr_bg, 0, hdr_y, row_w, TASKLIST_HEADER_H);
-      draw_text_small("Title",    TASKLIST_PADDING,          hdr_y + 3, hdr_fg);
-      draw_text_small("Priority", prio_x + TASKLIST_PADDING, hdr_y + 3, hdr_fg);
-      draw_text_small("Status",   stat_x + TASKLIST_PADDING, hdr_y + 3, hdr_fg);
-      fill_rect(sep_col, 0, hdr_y + TASKLIST_HEADER_H - 1, row_w, 1);
-
-      // ── Vertical column dividers ─────────────────────────────────────────
-      fill_rect(sep_col, prio_x, hdr_y, 1, win->frame.h);
-      fill_rect(sep_col, stat_x, hdr_y, 1, win->frame.h);
-
-      return false;
-    }
-
-    case kWindowMessageResize:
-      tl_sync_scroll(win, st);
-      invalidate_window(win);
-      return false;
-
-    case kWindowMessageVScroll: {
-      int total_h = tl_content_h(st);
-      int max_s   = total_h - win->frame.h;
-      if (max_s < 0) max_s = 0;
-      int new_s = (int)wparam;
-      if (new_s > max_s) new_s = max_s;
-      win->scroll[1] = (uint32_t)new_s;
-      tl_sync_scroll(win, st);
-      invalidate_window(win);
-      return true;
-    }
-
-    case kWindowMessageLeftButtonDown: {
-      int row = tl_hit_row(win, wparam, st);
-      if (row >= 0) {
-        int old      = st->selected;
-        st->selected = row;
-        if (old != row) {
-          send_message(get_root_window(win), kWindowMessageCommand,
-                       MAKEDWORD(row, CVN_SELCHANGE), &st->rows[row]);
-          invalidate_window(win);
-        }
-      }
-      return true;
-    }
-
-    case kWindowMessageLeftButtonDoubleClick: {
-      int row = tl_hit_row(win, wparam, st);
-      if (row >= 0) {
-        send_message(get_root_window(win), kWindowMessageCommand,
-                     MAKEDWORD(row, CVN_DBLCLK), &st->rows[row]);
-      }
-      return true;
-    }
-
-    case kWindowMessageKeyDown: {
-      if (!st || st->count == 0) return false;
-      int cur  = st->selected;
-      int next = cur;
-      switch (wparam) {
-        case AX_KEY_UPARROW:
-          next = (cur <= 0) ? 0 : cur - 1;
-          break;
-        case AX_KEY_DOWNARROW:
-          next = (cur < 0) ? 0 : (cur + 1 < st->count ? cur + 1 : cur);
-          break;
-        case AX_KEY_ENTER:
-          if (cur < 0) return false;
-          send_message(get_root_window(win), kWindowMessageCommand,
-                       MAKEDWORD(cur, CVN_DBLCLK), &st->rows[cur]);
-          return true;
-        case AX_KEY_DEL:
-          if (cur < 0) return false;
-          send_message(get_root_window(win), kWindowMessageCommand,
-                       MAKEDWORD(cur, CVN_DELETE), &st->rows[cur]);
-          return true;
-        default:
-          return false;
-      }
-      if (next != cur && next >= 0) {
-        st->selected = next;
-        tl_ensure_visible(win, st);
-        send_message(get_root_window(win), kWindowMessageCommand,
-                     MAKEDWORD(next, CVN_SELCHANGE), &st->rows[next]);
-        invalidate_window(win);
-      }
-      return true;
-    }
-
-    case TLVM_ADDROW: {
-      tasklist_row_t *r = (tasklist_row_t *)lparam;
-      if (!r || st->count >= TL_MAX_ROWS) return (result_t)-1;
-      tl_build_row_cache(&st->rows[st->count], r, tl_title_w(win));
-      st->count++;
-      tl_sync_scroll(win, st);
-      invalidate_window(win);
-      return (result_t)(st->count - 1);
-    }
-
-    case CVM_CLEAR:
-      st->count      = 0;
-      st->selected   = -1;
-      st->cached_title_w = -1;
-      win->scroll[1] = 0;
-      tl_sync_scroll(win, st);
-      invalidate_window(win);
-      return true;
-
-    case CVM_SETSELECTION:
-      if ((int)wparam >= 0 && (int)wparam < st->count) {
-        st->selected = (int)wparam;
-        invalidate_window(win);
-        return true;
-      }
-      return false;
-
-    case CVM_GETSELECTION:
-      return (result_t)st->selected;
-
-    case kWindowMessageDestroy:
-      free(st);
-      win->userdata2 = NULL;
-      return true;
-
-    default:
-      return false;
+  if (msg == kWindowMessageResize) {
+    send_message(win, RVM_SETREPORTCOLUMNWIDTH, 0,
+                 (void *)(uintptr_t)tasklist_title_width(win));
   }
-}
 
-// ============================================================
-// tasklist_refresh — repopulate the list from app state
-// ============================================================
+  return r;
+}
 
 void tasklist_refresh(window_t *list_win) {
   if (!list_win || !g_app) return;
 
-  send_message(list_win, CVM_CLEAR, 0, NULL);
+  send_message(list_win, RVM_SETVIEWMODE, RVM_VIEW_REPORT, NULL);
+  send_message(list_win, RVM_CLEARCOLUMNS, 0, NULL);
+
+  reportview_column_t col_title = { "Title", 0 };
+  reportview_column_t col_prio = { "Priority", TASKLIST_PRIORITY_W };
+  reportview_column_t col_status = { "Status", TASKLIST_STATUS_W };
+
+  send_message(list_win, RVM_ADDCOLUMN, 0, &col_title);
+  send_message(list_win, RVM_ADDCOLUMN, 0, &col_prio);
+  send_message(list_win, RVM_ADDCOLUMN, 0, &col_status);
+
+  send_message(list_win, RVM_CLEAR, 0, NULL);
 
   for (int i = 0; i < g_app->task_count; i++) {
     task_t *t = g_app->tasks[i];
     if (!t) continue;
 
-    tasklist_row_t row;
-    strncpy(row.title,    t->title,                        sizeof(row.title)    - 1);
-    strncpy(row.priority, priority_to_string(t->priority), sizeof(row.priority) - 1);
-    strncpy(row.status,   status_to_string(t->status),     sizeof(row.status)   - 1);
-    row.title[sizeof(row.title) - 1]       = '\0';
-    row.priority[sizeof(row.priority) - 1] = '\0';
-    row.status[sizeof(row.status) - 1]     = '\0';
-    row.task_idx = (uint32_t)i;
-    row.color    = get_sys_color(kColorTextNormal);
+    const char *prio = priority_to_string(t->priority);
+    const char *status = status_to_string(t->status);
 
-    send_message(list_win, TLVM_ADDROW, 0, &row);
+    reportview_item_t item = {
+      .text = t->title,
+      .icon = icon8_editor_helmet,
+      .color = get_sys_color(kColorTextNormal),
+      .userdata = (uint32_t)i,
+      .subitems = { prio, status },
+      .subitem_count = 2,
+    };
+
+    send_message(list_win, RVM_ADDITEM, 0, &item);
   }
 
-  if (g_app->selected_idx >= 0 && g_app->selected_idx < g_app->task_count)
-    send_message(list_win, CVM_SETSELECTION,
-                 (uint32_t)g_app->selected_idx, NULL);
+  if (g_app->selected_idx >= 0 && g_app->selected_idx < g_app->task_count) {
+    send_message(list_win, RVM_SETSELECTION, (uint32_t)g_app->selected_idx, NULL);
+  }
+
+  // Apply width after rows are known so scrollbar-dependent width is stable.
+  send_message(list_win, RVM_SETREPORTCOLUMNWIDTH, 0,
+               (void *)(uintptr_t)tasklist_title_width(list_win));
 }

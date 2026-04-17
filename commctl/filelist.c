@@ -1,14 +1,14 @@
 // commctl/filelist.c — file-browser control
 //
-// win_filelist extends win_columnview: it calls win_columnview for rendering
+// win_filelist extends win_reportview: it calls win_reportview for rendering
 // (kWindowMessagePaint), scroll (kWindowMessageWheel), item management
-// (CVM_*), and cleanup (kWindowMessageDestroy), while implementing its own
+// (RVM_*), and cleanup (kWindowMessageDestroy), while implementing its own
 // directory loading, click/double-click handling, navigation, and extension
 // filtering.
 //
-// Click events are handled here rather than delegated to win_columnview so
-// that FLN_* notifications are emitted directly, avoiding the CVN_* routing
-// that win_columnview uses (which sends to get_root_window and would bypass
+// Click events are handled here rather than delegated to win_reportview so
+// that FLN_* notifications are emitted directly, avoiding the RVN_* routing
+// that win_reportview uses (which sends to get_root_window and would bypass
 // win_filelist when it is used as a child control).
 
 #include <stdio.h>
@@ -154,7 +154,7 @@ static bool fl_push_item(filelist_data_t *data,
 // Rebuild both the private item list and the columnview from disk.
 static void fl_load_directory(window_t *win, filelist_data_t *data) {
   fl_free_items(data);
-  send_message(win, CVM_CLEAR, 0, NULL);
+  send_message(win, RVM_CLEAR, 0, NULL);
   win->scroll[0] = 0;
   win->scroll[1] = 0;
 
@@ -237,8 +237,8 @@ static void fl_load_directory(window_t *win, filelist_data_t *data) {
                  : data->items[i].is_directory ? get_sys_color(kColorFolderText)
                  : is_gem                      ? FL_COLOR_GEM
                                                : get_sys_color(kColorTextNormal);
-    send_message(win, CVM_ADDITEM, 0,
-      &(columnview_item_t){
+    send_message(win, RVM_ADDITEM, 0,
+      &(reportview_item_t){
         .text     = base,
         .icon     = data->items[i].icon,
         .color    = col,
@@ -297,7 +297,7 @@ static int fl_hit_index(window_t *win, filelist_data_t *data, uint32_t wparam) {
     mx += win->frame.x + (int)win->scroll[0];
     my += win->frame.y + (int)win->scroll[1];
   }
-  int col_w = (int)(uint32_t)send_message(win, CVM_GETCOLUMNWIDTH, 0, NULL);
+  int col_w = (int)(uint32_t)send_message(win, RVM_GETCOLUMNWIDTH, 0, NULL);
   int ncol  = (col_w > 0 && win->frame.w > 0)
                 ? (win->frame.w / col_w) : 1;
   if (ncol < 1) ncol = 1;
@@ -315,8 +315,8 @@ result_t win_filelist(window_t *win, uint32_t msg,
 
     // -----------------------------------------------------------------------
     case kWindowMessageCreate: {
-      // Initialise columnview rendering infrastructure.
-      win_columnview(win, msg, wparam, NULL);
+      // Initialise ListView rendering infrastructure.
+      win_reportview(win, msg, wparam, NULL);
 
       data = malloc(sizeof(filelist_data_t));
       if (!data) return false;
@@ -336,13 +336,13 @@ result_t win_filelist(window_t *win, uint32_t msg,
     }
 
     // -----------------------------------------------------------------------
-    // Delegate rendering and scrolling to win_columnview.
+    // Delegate rendering and scrolling to win_reportview.
     case kWindowMessagePaint:
     case kWindowMessageWheel:
-      return win_columnview(win, msg, wparam, lparam);
+      return win_reportview(win, msg, wparam, lparam);
 
     // -----------------------------------------------------------------------
-    // Own click handling — NOT delegated to win_columnview to avoid the CVN_*
+    // Own click handling — NOT delegated to win_reportview to avoid the RVN_*
     // routing (which sends to root, bypassing win_filelist when it is a child).
     case kWindowMessageLeftButtonDown: {
       int index = fl_hit_index(win, data, wparam);
@@ -355,7 +355,7 @@ result_t win_filelist(window_t *win, uint32_t msg,
       // here as well would cause double navigation (1 double-click = 2 levels deep).
       int old_sel = data->selected;
       data->selected = index;
-      send_message(win, CVM_SETSELECTION, (uint32_t)index, NULL);
+      send_message(win, RVM_SETSELECTION, (uint32_t)index, NULL);
 
       if (old_sel != index) {
         data->notify_item = data->items[index];
@@ -441,10 +441,10 @@ result_t win_filelist(window_t *win, uint32_t msg,
         free(data);
         win->userdata = NULL;
       }
-      return win_columnview(win, msg, wparam, lparam);
+      return win_reportview(win, msg, wparam, lparam);
 
     // -----------------------------------------------------------------------
     default:
-      return win_columnview(win, msg, wparam, lparam);
+      return win_reportview(win, msg, wparam, lparam);
   }
 }

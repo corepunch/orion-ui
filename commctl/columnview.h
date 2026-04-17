@@ -4,39 +4,56 @@
 #include <stdint.h>
 #include "../user/user.h"
 
-// Layout constants (exported for controls that extend win_columnview)
+// Layout constants (exported for controls that extend win_reportview)
 #define COLUMNVIEW_ENTRY_HEIGHT 13
 #define COLUMNVIEW_WIN_PADDING   4
+#define REPORTVIEW_MAX_SUBITEMS  8
 
-// ColumnView messages
+// ReportView messages (WinAPI-style report/list view naming).
 enum {
-  CVM_ADDITEM = kWindowMessageUser + 100,
-  CVM_DELETEITEM,
-  CVM_GETITEMCOUNT,
-  CVM_GETSELECTION,
-  CVM_SETSELECTION,
-  CVM_CLEAR,
-  CVM_SETCOLUMNWIDTH,
-  CVM_GETCOLUMNWIDTH,
-  CVM_GETITEMDATA,
-  CVM_SETITEMDATA,
+  RVM_ADDITEM = kWindowMessageUser + 100,
+  RVM_DELETEITEM,
+  RVM_GETITEMCOUNT,
+  RVM_GETSELECTION,
+  RVM_SETSELECTION,
+  RVM_CLEAR,
+  RVM_SETCOLUMNWIDTH,
+  RVM_GETCOLUMNWIDTH,
+  RVM_GETITEMDATA,
+  RVM_SETITEMDATA,
+  RVM_SETVIEWMODE,
+  RVM_ADDCOLUMN,
+  RVM_CLEARCOLUMNS,
+  RVM_GETCOLUMNCOUNT,
+  RVM_SETREPORTCOLUMNWIDTH, // wparam = col_index; lparam = (void*)(uintptr_t)new_width (0 = auto)
 };
 
-// ColumnView notification messages
 enum {
-  CVN_SELCHANGE = 200,
-  CVN_DBLCLK,
-  CVN_DELETE,
+  RVM_VIEW_ICON = 0,
+  RVM_VIEW_REPORT = 1,
 };
 
-// ColumnView item structure
+typedef struct {
+  const char *title;
+  uint32_t width;
+} reportview_column_t;
+
 typedef struct {
   const char *text;
   int icon;
   uint32_t color;
   uint32_t userdata;
-} columnview_item_t;
+  const char *subitems[REPORTVIEW_MAX_SUBITEMS];
+  uint32_t subitem_count;
+} reportview_item_t;
 
-result_t win_columnview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+// ReportView notifications
+enum {
+  RVN_SELCHANGE = 200,
+  RVN_DBLCLK,
+  RVN_DELETE,
+};
+
+result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 
 #endif // __UI_COLUMNVIEW_H__

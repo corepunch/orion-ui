@@ -28,7 +28,7 @@ result_t main_win_proc(window_t *win, uint32_t msg,
       send_message(win, kToolBarMessageAddButtons,
                    sizeof(kMainToolbar) / sizeof(kMainToolbar[0]),
                    (void *)kMainToolbar);
-      // The list view is created as a child that fills the client area.
+        // The list view is created as a child that fills the client area.
       g_app->list_win = create_window(
           "tasks",
           WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL,
@@ -56,18 +56,19 @@ result_t main_win_proc(window_t *win, uint32_t msg,
           handle_menu_command((uint16_t)LOWORD(wparam));
           return true;
         
-        // CVN notifications: LOWORD(wparam) = item index, lparam = columnview_item_t*.
-        case CVN_SELCHANGE: {
-          int sel = (int)(int16_t)LOWORD(wparam);
+        // ReportView notifications: LOWORD(wparam) = row index, lparam = reportview_item_t*.
+        case RVN_SELCHANGE: {
+          reportview_item_t *item = (reportview_item_t *)lparam;
+          int sel = item ? (int)item->userdata : (int)(int16_t)LOWORD(wparam);
           if (g_app) g_app->selected_idx = sel;
           return true;
         }
         
-        case CVN_DBLCLK:
+        case RVN_DBLCLK:
           handle_menu_command(ID_TASK_EDIT);
           return true;
 
-        case CVN_DELETE:
+        case RVN_DELETE:
           handle_menu_command(ID_TASK_DELETE);
           return true;
         

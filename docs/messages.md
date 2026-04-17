@@ -53,8 +53,8 @@ Sent to the **root window** via `kWindowMessageCommand`:
 | `kButtonNotificationClicked` | Button / Checkbox | Button was clicked |
 | `kEditNotificationUpdate` | Text edit | Text content changed |
 | `kComboBoxNotificationSelectionChange` | Combobox | Selected item changed |
-| `CVN_SELCHANGE` | ColumnView | Single-click selection change |
-| `CVN_DBLCLK` | ColumnView | Double-click on item |
+| `RVN_SELCHANGE` | ColumnView | Single-click selection change |
+| `RVN_DBLCLK` | ColumnView | Double-click on item |
 | `kMenuBarNotificationItemClick` | MenuBar | Menu item selected |
 
 Decoding in the parent window procedure:

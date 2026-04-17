@@ -55,7 +55,7 @@ message set.
 | Text edit | `win_textedit` | `commctl.h` |
 | Label | `win_label` | `commctl.h` |
 | List | `win_list` | `commctl.h` |
-| Column view | `win_columnview` | `columnview.h` |
+| Column view | `win_reportview` | `columnview.h` |
 | Menu bar | `win_menubar` | `menubar.h` |
 | Console | `win_console` | `commctl.h` |
 | Terminal | `win_terminal` | `commctl.h` |

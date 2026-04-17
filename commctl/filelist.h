@@ -3,7 +3,7 @@
 
 // commctl/filelist.h - A file-browser specific control
 //
-// win_filelist extends win_columnview: it provides directory listing with
+// win_filelist extends win_reportview: it provides directory listing with
 // sorting, optional extension filtering, path navigation, and file metadata
 // (size, modification time).  All directory management is internal; callers
 // receive FLN_* notifications and drive the control through FLM_* messages.

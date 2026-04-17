@@ -27,15 +27,15 @@ Key patterns shown:
 
 ## File Manager (`filemanager.c`)
 
-A two-pane file browser using `win_columnview`.
+A two-pane file browser using `win_reportview`.
 
 ```bash
 ./build/bin/filemanager
 ```
 
 Key patterns shown:
-- `win_columnview` with `CVM_ADDITEM` / `CVM_CLEAR`
-- `CVN_SELCHANGE` / `CVN_DBLCLK` notifications
+- `win_reportview` with `RVM_ADDITEM` / `RVM_CLEAR`
+- `RVN_SELCHANGE` / `RVN_DBLCLK` notifications
 - `kWindowMessageStatusBar` for path display
 - Directory traversal with `opendir` / `readdir` / `stat`
 
@@ -57,7 +57,7 @@ Demonstrates the full framework surface:
 | Menu bar (File menu) | `win_menubar`, `kMenuBarMessageSetMenus`, chained proc |
 | Canvas rendering | OpenGL texture (`glTexImage2D` / `glTexSubImage2D`) + `draw_rect` |
 | Drawing tools | Pencil, brush, eraser, flood-fill (BFS) |
-| File picker dialog | Modal dialog with `win_columnview` |
+| File picker dialog | Modal dialog with `win_reportview` |
 | PNG I/O | `load_image` / `save_image_png` (stb_image, built into the framework) |
 
 ### Running at larger size

@@ -131,7 +131,7 @@ window_t *edit = create_window("Enter text", 0, &edit_frame, parent, win_textedi
 window_t *console = create_window("Console", 0, &console_frame, parent, win_console, NULL);
 
 // Create a columnview
-window_t *columnview = create_window("", WINDOW_NOTITLE | WINDOW_TRANSPARENT, &cv_frame, parent, win_columnview, NULL);
+window_t *columnview = create_window("", WINDOW_NOTITLE | WINDOW_TRANSPARENT, &cv_frame, parent, win_reportview, NULL);
 ```
 
 ### Declarative Forms (create_window_from_form / show_dialog_from_form)
@@ -260,20 +260,20 @@ See [Dialogs & DDX](docs/dialogs.md) for the full API reference.
 
 // Create a columnview control
 rect_t cv_rect = {0, 0, 400, 300};
-window_t *cv = create_window("", WINDOW_NOTITLE | WINDOW_TRANSPARENT, &cv_rect, parent, win_columnview, NULL);
+window_t *cv = create_window("", WINDOW_NOTITLE | WINDOW_TRANSPARENT, &cv_rect, parent, win_reportview, NULL);
 show_window(cv, true);
 
 // Add items to the columnview
-columnview_item_t item;
+reportview_item_t item;
 strncpy(item.text, "Item 1", sizeof(item.text) - 1);
 item.text[sizeof(item.text) - 1] = '\0';
 item.icon = ICON_FOLDER;  // 8x8 icon index
 item.color = COLOR_TEXT_NORMAL;  // RGBA color
 item.userdata = my_data_ptr;  // Optional user data pointer
-send_message(cv, CVM_ADDITEM, 0, &item);
+send_message(cv, RVM_ADDITEM, 0, &item);
 
 // Set column width (optional, default is 160)
-send_message(cv, CVM_SETCOLUMNWIDTH, 180, NULL);
+send_message(cv, RVM_SETCOLUMNWIDTH, 180, NULL);
 
 // Handle notifications in parent window procedure
 case kWindowMessageCommand: {
@@ -281,10 +281,10 @@ case kWindowMessageCommand: {
   uint16_t code = HIWORD(wparam);
   
   if (id == cv->id) {
-    if (code == CVN_SELCHANGE) {
+    if (code == RVN_SELCHANGE) {
       int index = (int)(intptr_t)lparam;
       // Selection changed to index
-    } else if (code == CVN_DBLCLK) {
+    } else if (code == RVN_DBLCLK) {
       int index = (int)(intptr_t)lparam;
       // Item at index was double-clicked
     }
@@ -293,14 +293,14 @@ case kWindowMessageCommand: {
 }
 
 // Clear all items
-send_message(cv, CVM_CLEAR, 0, NULL);
+send_message(cv, RVM_CLEAR, 0, NULL);
 
 // Get item count
-int count = send_message(cv, CVM_GETITEMCOUNT, 0, NULL);
+int count = send_message(cv, RVM_GETITEMCOUNT, 0, NULL);
 
 // Get/set selection
-int sel = send_message(cv, CVM_GETSELECTION, 0, NULL);
-send_message(cv, CVM_SETSELECTION, new_index, NULL);
+int sel = send_message(cv, RVM_GETSELECTION, 0, NULL);
+send_message(cv, RVM_SETSELECTION, new_index, NULL);
 ```
 
 ### Using the Console
@@ -400,18 +400,18 @@ The framework uses a message-based architecture. Common messages include:
 - `kEditNotificationUpdate` - Text was modified
 
 ### ColumnView Messages
-- `CVM_ADDITEM` - Add item with icon, color, text, and userdata
-- `CVM_DELETEITEM` - Remove item by index
-- `CVM_GETITEMCOUNT` - Get total item count
-- `CVM_GETSELECTION` - Get current selection index
-- `CVM_SETSELECTION` - Set selection by index
-- `CVM_CLEAR` - Clear all items
-- `CVM_SETCOLUMNWIDTH` - Set column width (default 160)
-- `CVM_GETCOLUMNWIDTH` - Get current column width
-- `CVM_GETITEMDATA` - Get item data by index
-- `CVM_SETITEMDATA` - Update item data
-- `CVN_SELCHANGE` - Selection changed notification
-- `CVN_DBLCLK` - Item double-clicked notification
+- `RVM_ADDITEM` - Add item with icon, color, text, and userdata
+- `RVM_DELETEITEM` - Remove item by index
+- `RVM_GETITEMCOUNT` - Get total item count
+- `RVM_GETSELECTION` - Get current selection index
+- `RVM_SETSELECTION` - Set selection by index
+- `RVM_CLEAR` - Clear all items
+- `RVM_SETCOLUMNWIDTH` - Set column width (default 160)
+- `RVM_GETCOLUMNWIDTH` - Get current column width
+- `RVM_GETITEMDATA` - Get item data by index
+- `RVM_SETITEMDATA` - Update item data
+- `RVN_SELCHANGE` - Selection changed notification
+- `RVN_DBLCLK` - Item double-clicked notification
 
 ## Built-in System Icons
 

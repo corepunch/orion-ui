@@ -1,6 +1,6 @@
 // File picker logic tests (headless, no SDL/OpenGL required)
 // Validates the extension-filter logic used by win_filelist / picker_proc,
-// and the scroll-adjusted hit-test arithmetic shared with win_columnview.
+// and the scroll-adjusted hit-test arithmetic shared with win_reportview.
 
 #include "test_framework.h"
 #include <string.h>
@@ -236,7 +236,7 @@ void test_root_filelist_click_no_correction_needed(void) {
 // ---------------------------------------------------------------------------
 // Tests: columnview background clearing for non-selected items
 //
-// When win_columnview is used as a child window (e.g. embedded in a picker
+// When win_reportview is used as a child window (e.g. embedded in a picker
 // dialog), invalidate_window does NOT post kWindowMessageNonClientPaint, so
 // draw_panel never clears the background.  Every item must therefore clear its
 // own background on each paint so that a previously-selected item's highlight
@@ -247,7 +247,7 @@ void test_root_filelist_click_no_correction_needed(void) {
 // for selected items.
 // ---------------------------------------------------------------------------
 
-// Mirrors the paint logic in win_columnview: returns the background colour
+// Mirrors the paint logic in win_reportview: returns the background colour
 // that should be drawn for an item before its icon/text are painted.
 // Selected items use the highlight colour; non-selected items use the panel
 // background to erase any previous highlight.
