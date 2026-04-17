@@ -2,6 +2,8 @@
 
 #include "taskmanager.h"
 
+extern int titlebar_height(window_t const *win);
+
 // ============================================================
 // Internal state
 // ============================================================
@@ -147,42 +149,88 @@ result_t tasklist_proc(window_t *win, uint32_t msg,
       uint32_t hdr_fg  = get_sys_color(kColorTextDisabled);
       uint32_t sep_col = get_sys_color(kColorDarkEdge);
 
-      int hdr_y       = win->parent ? win->frame.y : 0;
+      // Absolute screen position of this window's content area.
+      // Needed to build scissor rects in screen-pixel space
+      // (same pattern as commctl/combobox.c).
+      window_t *root = get_root_window(win);
+      int root_t = titlebar_height(root);
+      int abs_x  = win->parent ? root->frame.x + win->frame.x : win->frame.x;
+      int abs_y  = win->parent ? root->frame.y + root_t + win->frame.y
+                               : win->frame.y + root_t;
+
+      // Vertical culling bounds in draw-space (avoids processing off-screen rows).
       int clip_top    = win->parent ? win->frame.y + TASKLIST_HEADER_H : TASKLIST_HEADER_H;
       int clip_bottom = win->parent ? win->frame.y + win->frame.h      : win->frame.h;
+      int hdr_y       = win->parent ? win->frame.y : 0;
+      int row_body_h  = win->frame.h - TASKLIST_HEADER_H;
 
-      // Rows first — header is drawn after to stay always on top.
+      // ── Pass 1: Row backgrounds (full width) ────────────────────────────
       for (int i = 0; i < st->count; i++) {
-        int content_y = TASKLIST_HEADER_H + i * TASKLIST_ROW_H;
-        int y         = content_y - scroll_y;
-        int abs_y     = win->parent ? win->frame.y + y : y;
-
-        if (abs_y + TASKLIST_ROW_H <= clip_top) continue;
-        if (abs_y >= clip_bottom) break;
-
+        int y      = TASKLIST_HEADER_H + i * TASKLIST_ROW_H - scroll_y;
+        int abs_py = win->parent ? win->frame.y + y : y;
+        if (abs_py + TASKLIST_ROW_H <= clip_top) continue;
+        if (abs_py >= clip_bottom) break;
         bool sel    = (i == st->selected);
-        uint32_t bg = sel ? get_sys_color(kColorTextNormal) : get_sys_color(kColorWindowBg);
-        uint32_t fg = sel ? get_sys_color(kColorWindowBg)   : st->rows[i].color;
-
+        uint32_t bg = sel ? get_sys_color(kColorTextNormal)
+                          : get_sys_color(kColorWindowBg);
         fill_rect(bg, 0, y, row_w, TASKLIST_ROW_H - 1);
-        draw_text_clipped(st->rows[i].title,    TASKLIST_PADDING, y + 2,
-                          title_w - TASKLIST_PADDING * 2, fg);
-        draw_text_clipped(st->rows[i].priority, prio_x + 3,       y + 2,
-                          TASKLIST_PRIORITY_W - 6, fg);
-        draw_text_clipped(st->rows[i].status,   stat_x + 3,       y + 2,
-                          TASKLIST_STATUS_W   - 6, fg);
       }
 
-      // Header drawn after rows so it always paints on top regardless of scroll.
+      // ── Pass 2: Title column text (scissored to column bounds) ───────────
+      set_clip_rect(NULL, &(rect_t){abs_x, abs_y + TASKLIST_HEADER_H,
+                                    title_w, row_body_h});
+      for (int i = 0; i < st->count; i++) {
+        int y      = TASKLIST_HEADER_H + i * TASKLIST_ROW_H - scroll_y;
+        int abs_py = win->parent ? win->frame.y + y : y;
+        if (abs_py + TASKLIST_ROW_H <= clip_top) continue;
+        if (abs_py >= clip_bottom) break;
+        uint32_t fg = (i == st->selected) ? get_sys_color(kColorWindowBg)
+                                           : st->rows[i].color;
+        draw_text_clipped(st->rows[i].title, TASKLIST_PADDING, y + 2,
+                          title_w - TASKLIST_PADDING * 2, fg);
+      }
+
+      // ── Pass 3: Priority column text (scissored to column bounds) ────────
+      set_clip_rect(NULL, &(rect_t){abs_x + prio_x, abs_y + TASKLIST_HEADER_H,
+                                    TASKLIST_PRIORITY_W, row_body_h});
+      for (int i = 0; i < st->count; i++) {
+        int y      = TASKLIST_HEADER_H + i * TASKLIST_ROW_H - scroll_y;
+        int abs_py = win->parent ? win->frame.y + y : y;
+        if (abs_py + TASKLIST_ROW_H <= clip_top) continue;
+        if (abs_py >= clip_bottom) break;
+        uint32_t fg = (i == st->selected) ? get_sys_color(kColorWindowBg)
+                                           : st->rows[i].color;
+        draw_text_clipped(st->rows[i].priority, prio_x + TASKLIST_PADDING, y + 2,
+                          TASKLIST_PRIORITY_W - TASKLIST_PADDING * 2, fg);
+      }
+
+      // ── Pass 4: Status column text (scissored to column bounds) ──────────
+      set_clip_rect(NULL, &(rect_t){abs_x + stat_x, abs_y + TASKLIST_HEADER_H,
+                                    TASKLIST_STATUS_W, row_body_h});
+      for (int i = 0; i < st->count; i++) {
+        int y      = TASKLIST_HEADER_H + i * TASKLIST_ROW_H - scroll_y;
+        int abs_py = win->parent ? win->frame.y + y : y;
+        if (abs_py + TASKLIST_ROW_H <= clip_top) continue;
+        if (abs_py >= clip_bottom) break;
+        uint32_t fg = (i == st->selected) ? get_sys_color(kColorWindowBg)
+                                           : st->rows[i].color;
+        draw_text_clipped(st->rows[i].status, stat_x + TASKLIST_PADDING, y + 2,
+                          TASKLIST_STATUS_W - TASKLIST_PADDING * 2, fg);
+      }
+
+      // ── Restore window-level scissor before drawing header and dividers ──
+      set_clip_rect(NULL, &(rect_t){abs_x, abs_y, row_w, win->frame.h});
+
+      // ── Header drawn last — always on top regardless of scroll ───────────
       fill_rect(hdr_bg, 0, hdr_y, row_w, TASKLIST_HEADER_H);
-      draw_text_small("Title",    TASKLIST_PADDING, hdr_y + 3, hdr_fg);
-      draw_text_small("Priority", prio_x + 3,       hdr_y + 3, hdr_fg);
-      draw_text_small("Status",   stat_x + 3,       hdr_y + 3, hdr_fg);
+      draw_text_small("Title",    TASKLIST_PADDING,          hdr_y + 3, hdr_fg);
+      draw_text_small("Priority", prio_x + TASKLIST_PADDING, hdr_y + 3, hdr_fg);
+      draw_text_small("Status",   stat_x + TASKLIST_PADDING, hdr_y + 3, hdr_fg);
       fill_rect(sep_col, 0, hdr_y + TASKLIST_HEADER_H - 1, row_w, 1);
 
-      // Vertical column dividers — drawn last so they span header and rows.
-      fill_rect(sep_col, prio_x, win->parent ? win->frame.y : 0, 1, win->frame.h);
-      fill_rect(sep_col, stat_x, win->parent ? win->frame.y : 0, 1, win->frame.h);
+      // ── Vertical column dividers ─────────────────────────────────────────
+      fill_rect(sep_col, prio_x, hdr_y, 1, win->frame.h);
+      fill_rect(sep_col, stat_x, hdr_y, 1, win->frame.h);
 
       return false;
     }

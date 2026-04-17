@@ -279,15 +279,12 @@ static void fl_navigate(window_t *win, filelist_data_t *data, int index) {
 
 // Convert packed wparam coordinates to a filelist item index.
 // Returns -1 when the position is outside the item grid.
+// wparam is packed by kernel/event.c as MAKEDWORD(LOCAL_X, LOCAL_Y), where
+// LOCAL_X/LOCAL_Y are already window-content-relative (window origin + scroll
+// offset).  No parent-frame adjustment is needed or correct here.
 static int fl_hit_index(window_t *win, filelist_data_t *data, uint32_t wparam) {
   int mx = (int)(int16_t)LOWORD(wparam);
   int my = (int)(int16_t)HIWORD(wparam);
-  // Coordinates from handle_mouse are parent-content-relative; subtract the
-  // parent's screen position to get child-local coords.
-  if (win->parent) {
-    mx -= (int)win->parent->frame.x;
-    my -= (int)win->parent->frame.y;
-  }
   int col_w = (int)(uint32_t)send_message(win, CVM_GETCOLUMNWIDTH, 0, NULL);
   int ncol  = (col_w > 0 && win->frame.w > 0)
                 ? (win->frame.w / col_w) : 1;
