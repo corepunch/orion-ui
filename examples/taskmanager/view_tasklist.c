@@ -11,9 +11,17 @@ extern int titlebar_height(window_t const *win);
 #define TL_MAX_ROWS         256   // upper bound matching MAX_TASKS in controller
 
 typedef struct {
-  tasklist_row_t rows[TL_MAX_ROWS];
-  int            count;
-  int            selected;
+  tasklist_row_t src;
+  char           title_clipped[TASKLIST_TITLE_LEN + 4];
+  char           priority_clipped[32];
+  char           status_clipped[32];
+} tl_row_t;
+
+typedef struct {
+  tl_row_t rows[TL_MAX_ROWS];
+  int      count;
+  int      selected;
+  int      cached_title_w;
 } tl_state_t;
 
 // ============================================================
@@ -36,27 +44,57 @@ static int tl_content_h(tl_state_t *st) {
 // Text truncation helper
 // ============================================================
 
-static void draw_text_clipped(const char *text, int x, int y,
-                               int max_w, uint32_t col) {
+static void tl_make_clipped_text(char *dst, size_t dst_sz,
+                                  const char *text, int max_w) {
+  if (!dst || dst_sz == 0) return;
+  dst[0] = '\0';
+  if (!text || !text[0] || max_w <= 0) return;
+
   if (strwidth(text) <= max_w) {
-    draw_text_small(text, x, y, col);
+    strncpy(dst, text, dst_sz - 1);
+    dst[dst_sz - 1] = '\0';
     return;
   }
+
   int dots_w = strwidth("...");
   int avail  = max_w - dots_w;
   if (avail <= 0) return;
-  char buf[TASKLIST_TITLE_LEN + 4];  // title + "..."
+
   int n = 0, w = 0;
-  while (text[n] && n < (int)(sizeof(buf) - 4)) {
+  while (text[n] && n < (int)(dst_sz - 4)) {
     int cw = char_width((unsigned char)text[n]);
     if (w + cw > avail) break;
-    buf[n] = text[n];
+    dst[n] = text[n];
     w += cw;
     n++;
   }
-  buf[n] = '\0';
-  strcat(buf, "...");
-  draw_text_small(buf, x, y, col);
+  memcpy(dst + n, "...", 4);
+}
+
+static void tl_rebuild_title_cache(window_t *win, tl_state_t *st) {
+  if (!win || !st) return;
+
+  int title_w = tl_title_w(win) - TASKLIST_PADDING * 2;
+  if (title_w < 0) title_w = 0;
+  if (st->cached_title_w == title_w) return;
+
+  st->cached_title_w = title_w;
+  for (int i = 0; i < st->count; i++) {
+    tl_make_clipped_text(st->rows[i].title_clipped,
+                         sizeof(st->rows[i].title_clipped),
+                         st->rows[i].src.title, title_w);
+  }
+}
+
+static void tl_build_row_cache(tl_row_t *dst, const tasklist_row_t *src, int title_w) {
+  if (!dst || !src) return;
+  dst->src = *src;
+  tl_make_clipped_text(dst->title_clipped, sizeof(dst->title_clipped),
+                       dst->src.title, title_w - TASKLIST_PADDING * 2);
+  tl_make_clipped_text(dst->priority_clipped, sizeof(dst->priority_clipped),
+                       dst->src.priority, TASKLIST_PRIORITY_W - TASKLIST_PADDING * 2);
+  tl_make_clipped_text(dst->status_clipped, sizeof(dst->status_clipped),
+                       dst->src.status, TASKLIST_STATUS_W - TASKLIST_PADDING * 2);
 }
 
 // ============================================================
@@ -78,6 +116,7 @@ static void tl_sync_scroll(window_t *win, tl_state_t *st) {
   si.nPage = (uint32_t)view_h;
   si.nPos  = (int)win->scroll[1];
   set_scroll_info(win, SB_VERT, &si, false);
+  tl_rebuild_title_cache(win, st);
 }
 
 // ============================================================
@@ -134,6 +173,7 @@ result_t tasklist_proc(window_t *win, uint32_t msg,
       win->flags                |= WINDOW_VSCROLL;
       win->vscroll.visible_mode  = SB_VIS_AUTO;
       st->selected               = -1;
+      st->cached_title_w         = -1;
       tl_sync_scroll(win, st);
       return true;
     }
@@ -144,6 +184,12 @@ result_t tasklist_proc(window_t *win, uint32_t msg,
       int prio_x   = title_w;
       int stat_x   = title_w + TASKLIST_PRIORITY_W;
       int row_w    = win->frame.w - (win->vscroll.visible ? SCROLLBAR_WIDTH : 0);
+      int body_h   = win->frame.h - TASKLIST_HEADER_H;
+
+      int first_row = scroll_y / TASKLIST_ROW_H;
+      int last_row  = (scroll_y + body_h + TASKLIST_ROW_H - 1) / TASKLIST_ROW_H;
+      if (first_row < 0) first_row = 0;
+      if (last_row > st->count) last_row = st->count;
 
       uint32_t hdr_bg  = get_sys_color(kColorWindowBg);
       uint32_t hdr_fg  = get_sys_color(kColorTextDisabled);
@@ -158,64 +204,43 @@ result_t tasklist_proc(window_t *win, uint32_t msg,
       int abs_y  = win->parent ? root->frame.y + root_t + win->frame.y
                                : win->frame.y + root_t;
 
-      // Vertical culling bounds in draw-space (avoids processing off-screen rows).
-      int clip_top    = win->parent ? win->frame.y + TASKLIST_HEADER_H : TASKLIST_HEADER_H;
-      int clip_bottom = win->parent ? win->frame.y + win->frame.h      : win->frame.h;
       int hdr_y       = win->parent ? win->frame.y : 0;
-      int row_body_h  = win->frame.h - TASKLIST_HEADER_H;
 
-      // ── Pass 1: Row backgrounds (full width) ────────────────────────────
-      for (int i = 0; i < st->count; i++) {
-        int y      = TASKLIST_HEADER_H + i * TASKLIST_ROW_H - scroll_y;
-        int abs_py = win->parent ? win->frame.y + y : y;
-        if (abs_py + TASKLIST_ROW_H <= clip_top) continue;
-        if (abs_py >= clip_bottom) break;
-        bool sel    = (i == st->selected);
-        uint32_t bg = sel ? get_sys_color(kColorTextNormal)
-                          : get_sys_color(kColorWindowBg);
-        fill_rect(bg, 0, y, row_w, TASKLIST_ROW_H - 1);
+      // ── Pass 1: Backgrounds ─────────────────────────────────────────────
+      fill_rect(get_sys_color(kColorWindowBg), 0, TASKLIST_HEADER_H, row_w, body_h);
+      if (st->selected >= first_row && st->selected < last_row) {
+        int y = TASKLIST_HEADER_H + st->selected * TASKLIST_ROW_H - scroll_y;
+        fill_rect(get_sys_color(kColorTextNormal), 0, y, row_w, TASKLIST_ROW_H - 1);
       }
 
       // ── Pass 2: Title column text (scissored to column bounds) ───────────
       set_clip_rect(NULL, &(rect_t){abs_x, abs_y + TASKLIST_HEADER_H,
-                                    title_w, row_body_h});
-      for (int i = 0; i < st->count; i++) {
-        int y      = TASKLIST_HEADER_H + i * TASKLIST_ROW_H - scroll_y;
-        int abs_py = win->parent ? win->frame.y + y : y;
-        if (abs_py + TASKLIST_ROW_H <= clip_top) continue;
-        if (abs_py >= clip_bottom) break;
+                                    title_w, body_h});
+      for (int i = first_row; i < last_row; i++) {
+        int y = TASKLIST_HEADER_H + i * TASKLIST_ROW_H - scroll_y;
         uint32_t fg = (i == st->selected) ? get_sys_color(kColorWindowBg)
-                                           : st->rows[i].color;
-        draw_text_clipped(st->rows[i].title, TASKLIST_PADDING, y + 2,
-                          title_w - TASKLIST_PADDING * 2, fg);
+                                           : st->rows[i].src.color;
+        draw_text_small(st->rows[i].title_clipped, TASKLIST_PADDING, y + 2, fg);
       }
 
       // ── Pass 3: Priority column text (scissored to column bounds) ────────
       set_clip_rect(NULL, &(rect_t){abs_x + prio_x, abs_y + TASKLIST_HEADER_H,
-                                    TASKLIST_PRIORITY_W, row_body_h});
-      for (int i = 0; i < st->count; i++) {
-        int y      = TASKLIST_HEADER_H + i * TASKLIST_ROW_H - scroll_y;
-        int abs_py = win->parent ? win->frame.y + y : y;
-        if (abs_py + TASKLIST_ROW_H <= clip_top) continue;
-        if (abs_py >= clip_bottom) break;
+                                    TASKLIST_PRIORITY_W, body_h});
+      for (int i = first_row; i < last_row; i++) {
+        int y = TASKLIST_HEADER_H + i * TASKLIST_ROW_H - scroll_y;
         uint32_t fg = (i == st->selected) ? get_sys_color(kColorWindowBg)
-                                           : st->rows[i].color;
-        draw_text_clipped(st->rows[i].priority, prio_x + TASKLIST_PADDING, y + 2,
-                          TASKLIST_PRIORITY_W - TASKLIST_PADDING * 2, fg);
+                                           : st->rows[i].src.color;
+        draw_text_small(st->rows[i].priority_clipped, prio_x + TASKLIST_PADDING, y + 2, fg);
       }
 
       // ── Pass 4: Status column text (scissored to column bounds) ──────────
       set_clip_rect(NULL, &(rect_t){abs_x + stat_x, abs_y + TASKLIST_HEADER_H,
-                                    TASKLIST_STATUS_W, row_body_h});
-      for (int i = 0; i < st->count; i++) {
-        int y      = TASKLIST_HEADER_H + i * TASKLIST_ROW_H - scroll_y;
-        int abs_py = win->parent ? win->frame.y + y : y;
-        if (abs_py + TASKLIST_ROW_H <= clip_top) continue;
-        if (abs_py >= clip_bottom) break;
+                                    TASKLIST_STATUS_W, body_h});
+      for (int i = first_row; i < last_row; i++) {
+        int y = TASKLIST_HEADER_H + i * TASKLIST_ROW_H - scroll_y;
         uint32_t fg = (i == st->selected) ? get_sys_color(kColorWindowBg)
-                                           : st->rows[i].color;
-        draw_text_clipped(st->rows[i].status, stat_x + TASKLIST_PADDING, y + 2,
-                          TASKLIST_STATUS_W - TASKLIST_PADDING * 2, fg);
+                                           : st->rows[i].src.color;
+        draw_text_small(st->rows[i].status_clipped, stat_x + TASKLIST_PADDING, y + 2, fg);
       }
 
       // ── Restore window-level scissor before drawing header and dividers ──
@@ -312,7 +337,7 @@ result_t tasklist_proc(window_t *win, uint32_t msg,
     case TLVM_ADDROW: {
       tasklist_row_t *r = (tasklist_row_t *)lparam;
       if (!r || st->count >= TL_MAX_ROWS) return (result_t)-1;
-      st->rows[st->count] = *r;
+      tl_build_row_cache(&st->rows[st->count], r, tl_title_w(win));
       st->count++;
       tl_sync_scroll(win, st);
       invalidate_window(win);
@@ -322,6 +347,7 @@ result_t tasklist_proc(window_t *win, uint32_t msg,
     case CVM_CLEAR:
       st->count      = 0;
       st->selected   = -1;
+      st->cached_title_w = -1;
       win->scroll[1] = 0;
       tl_sync_scroll(win, st);
       invalidate_window(win);

@@ -58,8 +58,8 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   create_menubar();
 
   // Create the main document window.
-  int sw = MIN(320, ui_get_system_metrics(kSystemMetricScreenWidth));
-  int sh = MIN(240, ui_get_system_metrics(kSystemMetricScreenHeight));
+  int sw = MIN(480, ui_get_system_metrics(kSystemMetricScreenWidth));
+  int sh = MIN(320, ui_get_system_metrics(kSystemMetricScreenHeight));
   window_t *mw = create_window(
       "Task Manager",
       WINDOW_STATUSBAR | WINDOW_TOOLBAR,

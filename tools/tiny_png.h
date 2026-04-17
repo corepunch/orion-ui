@@ -54,6 +54,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if defined(__GNUC__) || defined(__clang__)
+#define TPNG_MAYBE_UNUSED __attribute__((unused))
+#else
+#define TPNG_MAYBE_UNUSED
+#endif
+
 /* ------------------------------------------------------------------ */
 /*  Glyph descriptor (one per character, filled by font_atlas.c)       */
 /* ------------------------------------------------------------------ */
@@ -346,7 +352,7 @@ static int tiny_png_save_font(
 }
 
 /* Convenience: plain save without font metadata (backward compat) */
-static int tiny_png_save(
+static TPNG_MAYBE_UNUSED int tiny_png_save(
     const char* filename,
     const unsigned char* pixels,
     int w, int h,
@@ -370,7 +376,7 @@ static uint32_t tpng__rd_u32be(const unsigned char* p)
 static float tpng__rd_f32be(const unsigned char* p)
     { uint32_t b = tpng__rd_u32be(p); float f; memcpy(&f,&b,4); return f; }
 
-static int tiny_png_read_font_chunk(
+static TPNG_MAYBE_UNUSED int tiny_png_read_font_chunk(
     const unsigned char* png_bytes, size_t png_size,
     TinyPngFontInfo* fi, TinyPngGlyph** glyphs_out)
 {

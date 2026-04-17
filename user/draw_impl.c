@@ -18,6 +18,22 @@ extern window_t *windows;
 extern window_t *_focused;
 extern window_t *get_root_window(window_t *window);
 
+static bool g_scissor_valid = false;
+static rect_t g_scissor_rect = {0};
+
+static void set_scissor_cached(rect_t const *r) {
+  if (!r) return;
+  glEnable(GL_SCISSOR_TEST);
+  if (g_scissor_valid &&
+      g_scissor_rect.x == r->x && g_scissor_rect.y == r->y &&
+      g_scissor_rect.w == r->w && g_scissor_rect.h == r->h) {
+    return;
+  }
+  g_scissor_rect = *r;
+  g_scissor_valid = true;
+  glScissor(r->x, r->y, r->w, r->h);
+}
+
 // Returns true if win is the root window that currently "owns" keyboard focus
 // (either win itself is focused, or one of its descendants is focused).
 bool window_has_focus(const window_t *win) {
@@ -224,9 +240,8 @@ void set_viewport(rect_t const *frame) {
   if (!running) return;
   rect_t ogl_rect = get_opengl_rect(frame);
   
-  glEnable(GL_SCISSOR_TEST);
   glViewport(ogl_rect.x, ogl_rect.y, ogl_rect.w, ogl_rect.h);
-  glScissor(ogl_rect.x, ogl_rect.y, ogl_rect.w, ogl_rect.h);
+  set_scissor_cached(&ogl_rect);
 }
 
 void set_clip_rect(window_t const *win, rect_t const *r) {
@@ -235,8 +250,7 @@ void set_clip_rect(window_t const *win, rect_t const *r) {
   rect_t ogl_rect = get_opengl_rect(win?&(rect_t){
     win->frame.x + r->x, win->frame.y + r->y, r->w, r->h
   }:r);
-  glEnable(GL_SCISSOR_TEST);
-  glScissor(ogl_rect.x, ogl_rect.y, ogl_rect.w, ogl_rect.h);
+  set_scissor_cached(&ogl_rect);
 }
 
 // Paint window to stencil buffer

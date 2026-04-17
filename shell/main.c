@@ -70,7 +70,6 @@ int main(int argc, char *argv[]) {
     }
 
     int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
-    int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
 
     // Register the shell's open-file handler so any gem can call ui_open_file()
     // to load a .gem or open a file in the appropriate gem.
