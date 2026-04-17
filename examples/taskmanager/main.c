@@ -20,8 +20,12 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   if (!g_app) return false;
 
   g_app->hinstance = hinstance;
-  // Seed the app with 20 example tasks spread across priorities and statuses.
+  // Build the menu bar.
+  create_menubar();
+
+  // Create the first document and seed it with example tasks.
   {
+    task_doc_t *doc = create_document(NULL);
     struct { const char *title; const char *desc; task_priority_t prio; task_status_t status; } seed[] = {
       { "Set up development environment",  "Install SDK, IDE and configure build tools.",           PRIORITY_HIGH,   STATUS_COMPLETED  },
       { "Write project specification",     "Document requirements and scope for the next release.", PRIORITY_NORMAL, STATUS_COMPLETED  },
@@ -45,31 +49,18 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
       { "Deploy to production",            "Tag release, build artifacts and roll out to prod.",    PRIORITY_URGENT, STATUS_TODO       },
     };
     uint32_t base = (uint32_t)time(NULL);
+    if (!doc) return false;
     for (int i = 0; i < 20; i++) {
       task_t *t = task_create(seed[i].title, seed[i].desc,
                               seed[i].prio, seed[i].status,
                               base + (uint32_t)(i + 1) * 86400u);
-      if (t) app_add_task(g_app, t);
+      if (t) app_add_task(doc, t);
     }
-    g_app->modified = false;
+    doc->modified = false;
+    tasklist_refresh(doc->list_win);
+    doc_update_title(doc);
+    app_update_status(doc);
   }
-
-  // Build the menu bar.
-  create_menubar();
-
-  // Create the main document window.
-  int sw = MIN(480, ui_get_system_metrics(kSystemMetricScreenWidth));
-  int sh = MIN(320, ui_get_system_metrics(kSystemMetricScreenHeight));
-  window_t *mw = create_window(
-      "Task Manager",
-      WINDOW_STATUSBAR | WINDOW_TOOLBAR,
-      MAKERECT(MAIN_WIN_X, MAIN_WIN_Y,
-               sw - MAIN_WIN_X - 4,
-               sh - MAIN_WIN_Y - 4),
-      NULL, main_win_proc, hinstance, NULL);
-  // Note: g_app->main_win is set inside main_win_proc's kWindowMessageCreate
-  // so that app_update_status() works correctly during initial window setup.
-  show_window(mw, true);
 
   // Attach accelerators to the menu bar for hotkey hints in menus.
   if (g_app->menubar_win && g_app->accel)

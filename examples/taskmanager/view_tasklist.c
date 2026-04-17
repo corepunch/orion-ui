@@ -24,7 +24,8 @@ result_t tasklist_proc(window_t *win, uint32_t msg,
 }
 
 void tasklist_refresh(window_t *list_win) {
-  if (!list_win || !g_app) return;
+  task_doc_t *doc = doc_from_window(list_win);
+  if (!list_win || !doc) return;
 
   send_message(list_win, RVM_SETVIEWMODE, RVM_VIEW_REPORT, NULL);
   send_message(list_win, RVM_CLEARCOLUMNS, 0, NULL);
@@ -39,8 +40,8 @@ void tasklist_refresh(window_t *list_win) {
 
   send_message(list_win, RVM_CLEAR, 0, NULL);
 
-  for (int i = 0; i < g_app->task_count; i++) {
-    task_t *t = g_app->tasks[i];
+  for (int i = 0; i < doc->task_count; i++) {
+    task_t *t = doc->tasks[i];
     if (!t) continue;
 
     const char *prio = priority_to_string(t->priority);
@@ -58,8 +59,8 @@ void tasklist_refresh(window_t *list_win) {
     send_message(list_win, RVM_ADDITEM, 0, &item);
   }
 
-  if (g_app->selected_idx >= 0 && g_app->selected_idx < g_app->task_count) {
-    send_message(list_win, RVM_SETSELECTION, (uint32_t)g_app->selected_idx, NULL);
+  if (doc->selected_idx >= 0 && doc->selected_idx < doc->task_count) {
+    send_message(list_win, RVM_SETSELECTION, (uint32_t)doc->selected_idx, NULL);
   }
 
   // Apply width after rows are known so scrollbar-dependent width is stable.

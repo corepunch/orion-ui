@@ -39,8 +39,8 @@ typedef struct {
 // task_file_save
 // ============================================================
 
-bool task_file_save(const char *path, app_state_t *app) {
-  if (!path || !app) return false;
+bool task_file_save(const char *path, task_doc_t *doc) {
+  if (!path || !doc) return false;
 
   FILE *f = fopen(path, "wb");
   if (!f) return false;
@@ -49,14 +49,14 @@ bool task_file_save(const char *path, app_state_t *app) {
   file_header_t hdr;
   hdr.magic      = TASK_FILE_MAGIC;
   hdr.version    = TASK_FILE_VERSION;
-  hdr.task_count = (uint32_t)app->task_count;
+  hdr.task_count = (uint32_t)doc->task_count;
   hdr.reserved   = 0;
   if (fwrite(&hdr, sizeof(hdr), 1, f) != 1) { fclose(f); return false; }
 
   // Compute string offsets and write task entries.
   uint32_t str_off = 0;
-  for (int i = 0; i < app->task_count; i++) {
-    task_t *t = app->tasks[i];
+  for (int i = 0; i < doc->task_count; i++) {
+    task_t *t = doc->tasks[i];
     uint32_t tlen = t->title       ? (uint32_t)strlen(t->title)       : 0;
     uint32_t dlen = t->description ? (uint32_t)strlen(t->description) : 0;
 
@@ -77,8 +77,8 @@ bool task_file_save(const char *path, app_state_t *app) {
   }
 
   // Write string block — check each write for I/O errors.
-  for (int i = 0; i < app->task_count; i++) {
-    task_t *t = app->tasks[i];
+  for (int i = 0; i < doc->task_count; i++) {
+    task_t *t = doc->tasks[i];
     const char *title = t->title       ? t->title       : "";
     const char *desc  = t->description ? t->description : "";
     if (fwrite(title, strlen(title) + 1, 1, f) != 1) { fclose(f); return false; }
@@ -91,16 +91,16 @@ bool task_file_save(const char *path, app_state_t *app) {
 
 // Append a task directly to the array (for use during load only).
 // Unlike app_add_task(), this does NOT assign IDs or set modified.
-static bool file_load_append(app_state_t *app, task_t *task) {
-  if (app->task_count >= app->task_capacity) {
-    int new_cap = app->task_capacity * 2;
-    task_t **newbuf = (task_t **)realloc(app->tasks,
+static bool file_load_append(task_doc_t *doc, task_t *task) {
+  if (doc->task_count >= doc->task_capacity) {
+    int new_cap = doc->task_capacity * 2;
+    task_t **newbuf = (task_t **)realloc(doc->tasks,
                                           (size_t)new_cap * sizeof(task_t *));
     if (!newbuf) return false;
-    app->tasks         = newbuf;
-    app->task_capacity = new_cap;
+    doc->tasks         = newbuf;
+    doc->task_capacity = new_cap;
   }
-  app->tasks[app->task_count++] = task;
+  doc->tasks[doc->task_count++] = task;
   return true;
 }
 
@@ -108,8 +108,8 @@ static bool file_load_append(app_state_t *app, task_t *task) {
 // task_file_load
 // ============================================================
 
-bool task_file_load(const char *path, app_state_t *app) {
-  if (!path || !app) return false;
+bool task_file_load(const char *path, task_doc_t *doc) {
+  if (!path || !doc) return false;
 
   FILE *f = fopen(path, "rb");
   if (!f) return false;
@@ -148,10 +148,11 @@ bool task_file_load(const char *path, app_state_t *app) {
   fclose(f);
 
   // Clear existing tasks.
-  for (int i = 0; i < app->task_count; i++)
-    task_free(app->tasks[i]);
-  app->task_count = 0;
-  app->next_id    = 1;
+  for (int i = 0; i < doc->task_count; i++)
+    task_free(doc->tasks[i]);
+  doc->task_count = 0;
+  doc->next_id    = 1;
+  doc->selected_idx = -1;
 
   // Rebuild tasks from the loaded data.
   size_t strbuf_size = (size_t)str_size;
@@ -193,7 +194,7 @@ bool task_file_load(const char *path, app_state_t *app) {
     t->id           = (int)e->id;
     t->created_date = e->created_date;
 
-    if (file_load_append(app, t)) {
+    if (file_load_append(doc, t)) {
       if ((int)e->id > max_id) max_id = (int)e->id;
     } else {
       task_free(t);
@@ -201,7 +202,7 @@ bool task_file_load(const char *path, app_state_t *app) {
   }
 
   // Ensure next_id is above all loaded IDs.
-  if (max_id >= app->next_id) app->next_id = max_id + 1;
+  if (max_id >= doc->next_id) doc->next_id = max_id + 1;
 
   free(strbuf);
   free(entries);

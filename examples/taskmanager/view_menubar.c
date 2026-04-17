@@ -85,117 +85,133 @@ static bool pick_save_path(window_t *parent, char *path, size_t path_sz) {
 
 void handle_menu_command(uint16_t id) {
   if (!g_app) return;
-  window_t *parent = g_app->main_win;
+  task_doc_t *doc = g_app->active_doc;
+  window_t *parent = doc ? doc->win : g_app->menubar_win;
 
   switch (id) {
     // ---- File ----
     case ID_FILE_NEW: {
-      if (g_app->modified) {
-        int r = message_box(parent, "Discard unsaved changes?",
-                            "New File", MB_YESNO);
-        if (r != IDYES) return;
-      }
-      // Clear all tasks
-      for (int i = 0; i < g_app->task_count; i++)
-        task_free(g_app->tasks[i]);
-      g_app->task_count  = 0;
-      g_app->next_id     = 1;
-      g_app->selected_idx = -1;
-      g_app->modified    = false;
-      g_app->filename[0] = '\0';
-      tasklist_refresh(g_app->list_win);
-      app_update_status(g_app);
+      create_document(NULL);
       break;
     }
     case ID_FILE_OPEN: {
       char path[512] = "";
       if (pick_open_path(parent, path, sizeof(path))) {
-        if (!task_file_load(path, g_app)) {
+        task_doc_t *existing = app_find_document_by_path(path);
+        if (existing && existing->win) {
+          g_app->active_doc = existing;
+          show_window(existing->win, true);
+          app_update_status(existing);
+          break;
+        }
+
+        task_doc_t *ndoc = create_document(path);
+        if (!ndoc) {
+          message_box(parent, "Failed to create document window.", "Error", MB_OK);
+          return;
+        }
+        if (!task_file_load(path, ndoc)) {
+          close_document(ndoc);
           message_box(parent, "Failed to open file.", "Error", MB_OK);
         } else {
-          strncpy(g_app->filename, path, sizeof(g_app->filename) - 1);
-          g_app->filename[sizeof(g_app->filename) - 1] = '\0';
-          g_app->modified = false;
-          tasklist_refresh(g_app->list_win);
-          app_update_status(g_app);
+          strncpy(ndoc->filename, path, sizeof(ndoc->filename) - 1);
+          ndoc->filename[sizeof(ndoc->filename) - 1] = '\0';
+          ndoc->modified = false;
+          tasklist_refresh(ndoc->list_win);
+          doc_update_title(ndoc);
+          app_update_status(ndoc);
         }
       }
       break;
     }
     case ID_FILE_SAVE: {
-      if (g_app->filename[0] == '\0') {
+      if (!doc) break;
+      if (doc->filename[0] == '\0') {
         char path[512] = "";
         if (!pick_save_path(parent, path, sizeof(path))) return;
-        strncpy(g_app->filename, path, sizeof(g_app->filename) - 1);
-        g_app->filename[sizeof(g_app->filename) - 1] = '\0';
+        strncpy(doc->filename, path, sizeof(doc->filename) - 1);
+        doc->filename[sizeof(doc->filename) - 1] = '\0';
       }
-      if (!task_file_save(g_app->filename, g_app))
+      if (!task_file_save(doc->filename, doc))
         message_box(parent, "Failed to save file.", "Error", MB_OK);
-      else
-        g_app->modified = false;
+      else {
+        doc->modified = false;
+        doc_update_title(doc);
+        app_update_status(doc);
+      }
       break;
     }
     case ID_FILE_SAVEAS: {
+      if (!doc) break;
       char path[512] = "";
       if (pick_save_path(parent, path, sizeof(path))) {
-        strncpy(g_app->filename, path, sizeof(g_app->filename) - 1);
-        g_app->filename[sizeof(g_app->filename) - 1] = '\0';
-        if (!task_file_save(g_app->filename, g_app))
+        strncpy(doc->filename, path, sizeof(doc->filename) - 1);
+        doc->filename[sizeof(doc->filename) - 1] = '\0';
+        if (!task_file_save(doc->filename, doc))
           message_box(parent, "Failed to save file.", "Error", MB_OK);
-        else
-          g_app->modified = false;
+        else {
+          doc->modified = false;
+          doc_update_title(doc);
+          app_update_status(doc);
+        }
       }
       break;
     }
     case ID_FILE_QUIT:
-      if (g_app->modified) {
-        int r = message_box(parent, "Discard unsaved changes and quit?",
-                            "Quit", MB_YESNO);
-        if (r != IDYES) return;
-      }
+      if (!app_close_all_documents(parent)) return;
       ui_request_quit();
       break;
 
     // ---- Task ----
     case ID_TASK_NEW:
       if (show_task_dialog(parent, NULL)) {
-        tasklist_refresh(g_app->list_win);
-        app_update_status(g_app);
+        tasklist_refresh(doc->list_win);
+        doc_update_title(doc);
+        app_update_status(doc);
       }
       break;
     case ID_TASK_EDIT: {
-      int idx = g_app->selected_idx;
-      task_t *t = app_get_task(g_app, idx);
+      int idx;
+      task_t *t;
+      if (!doc) return;
+      idx = doc->selected_idx;
+      t = app_get_task(doc, idx);
       if (!t) {
         message_box(parent, "No task selected.", "Edit Task", MB_OK);
         return;
       }
       if (show_task_dialog(parent, t)) {
-        tasklist_refresh(g_app->list_win);
-        app_update_status(g_app);
+        tasklist_refresh(doc->list_win);
+        doc_update_title(doc);
+        app_update_status(doc);
       }
       break;
     }
     case ID_TASK_DELETE: {
-      int idx = g_app->selected_idx;
-      if (idx < 0 || idx >= g_app->task_count) {
+      int idx;
+      if (!doc) return;
+      idx = doc->selected_idx;
+      if (idx < 0 || idx >= doc->task_count) {
         message_box(parent, "No task selected.", "Delete Task", MB_OK);
         return;
       }
       int r = message_box(parent, "Delete selected task?",
                           "Delete Task", MB_YESNO);
       if (r == IDYES) {
-        app_delete_task(g_app, idx);
-        tasklist_refresh(g_app->list_win);
-        app_update_status(g_app);
+        app_delete_task(doc, idx);
+        tasklist_refresh(doc->list_win);
+        doc_update_title(doc);
+        app_update_status(doc);
       }
       break;
     }
 
     // ---- View ----
     case ID_VIEW_REFRESH:
-      tasklist_refresh(g_app->list_win);
-      app_update_status(g_app);
+      if (doc) {
+        tasklist_refresh(doc->list_win);
+        app_update_status(doc);
+      }
       break;
 
     // ---- Help ----

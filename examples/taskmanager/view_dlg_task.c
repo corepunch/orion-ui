@@ -167,6 +167,7 @@ static result_t task_dlg_proc(window_t *win, uint32_t msg,
 // ============================================================
 
 bool show_task_dialog(window_t *parent, task_t *task) {
+  task_doc_t *doc = doc_from_window(parent);
   task_dlg_state_t state = {
     .task     = task,
     .accepted = false,
@@ -189,14 +190,14 @@ bool show_task_dialog(window_t *parent, task_t *task) {
                 (task_priority_t)state.priority,
                 (task_status_t)state.status,
                 state.due_date);
-    if (g_app) g_app->modified = true;
+    if (doc) doc->modified = true;
   } else {
     // Create mode: build a new task and add to app state.
     task_t *t = task_create(state.title, state.desc,
                             (task_priority_t)state.priority,
                             (task_status_t)state.status,
                             state.due_date);
-    if (t && g_app) app_add_task(g_app, t);
+    if (t && doc) app_add_task(doc, t);
   }
   return true;
 }
