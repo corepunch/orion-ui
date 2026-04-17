@@ -88,12 +88,14 @@ static window_t *create_toolbar_child(window_t *parent, winproc_t proc,
   // that the default kWindowMessagePaint handler (which walks children) does
   // not double-paint toolbar items, and so that clear_window_children does not
   // double-free them (clear_toolbar_children handles that instead).
+  // alloc_window() always appends to the END of parent->children, so tc is
+  // guaranteed to be the last entry; we only need to find its predecessor.
   if (parent->children == tc) {
-    parent->children = tc->next;
+    parent->children = NULL;
   } else {
-    for (window_t *c = parent->children; c; c = c->next) {
-      if (c->next == tc) { c->next = tc->next; break; }
-    }
+    window_t *c = parent->children;
+    while (c && c->next != tc) c = c->next;
+    if (c) c->next = NULL;
   }
   tc->next = NULL;
   // Wire up icon image for button children.
@@ -187,7 +189,7 @@ static void layout_toolbar_items(window_t *parent,
         break;
       }
       case TOOLBAR_ITEM_LABEL: {
-        int w = item->w > 0 ? item->w : (strwidth(item->text ? item->text : "") + 8);
+        int w = item->w > 0 ? item->w : (strwidth(item->text ? item->text : "") + TOOLBAR_LABEL_PADDING);
         window_t *tc = create_toolbar_child(parent, win_label,
                                              (uint32_t)item->ident, 0,
                                              item->text,
@@ -199,7 +201,7 @@ static void layout_toolbar_items(window_t *parent,
         break;
       }
       case TOOLBAR_ITEM_COMBOBOX: {
-        int w = item->w > 0 ? item->w : (bsz * 3);
+        int w = item->w > 0 ? item->w : (bsz * TOOLBAR_COMBOBOX_DEFAULT_WIDTH_MULT);
         window_t *tc = create_toolbar_child(parent, win_combobox,
                                              (uint32_t)item->ident, 0,
                                              item->text,

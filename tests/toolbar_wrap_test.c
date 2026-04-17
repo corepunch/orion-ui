@@ -268,7 +268,7 @@ void test_toolbar_set_items_label(void) {
     window_t *lbl = find_toolbar_child(win, 30);
     ASSERT_NOT_NULL(lbl);
     // Label text is stored in title.
-    ASSERT_TRUE(lbl->title[0] == 'F');
+    ASSERT_TRUE(strncmp(lbl->title, "Filter:", 7) == 0);
     // Explicit width was respected (with label auto-sizing in win_label).
     ASSERT_TRUE(lbl->frame.w >= 40);
 

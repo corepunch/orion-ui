@@ -147,7 +147,10 @@ void move_window(window_t *win, int x, int y) {
   win->frame.x = x;
   win->frame.y = y;
 
-  // Shift toolbar children (screen-absolute frames) by the same delta.
+  // Shift toolbar children by the same delta.
+  // Toolbar children carry screen-absolute frames (unlike regular children
+  // whose frames are root-client-relative) so they must be updated explicitly
+  // whenever their parent window moves.
   for (window_t *tc = win->toolbar_children; tc; tc = tc->next) {
     tc->frame.x += dx;
     tc->frame.y += dy;
