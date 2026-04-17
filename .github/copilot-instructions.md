@@ -107,9 +107,9 @@ Orion ships a 20×20 grid PNG icon sheet.  In the source tree, the asset lives a
 // Correct: use sysicon_* values directly — framework sources them from
 //          the built-in PNG sheet automatically.
 static const toolbar_button_t kDocToolbar[] = {
-    { sysicon_add,    ID_FILE_NEW,  false },
-    { sysicon_folder, ID_FILE_OPEN, false },
-    { sysicon_save,   ID_FILE_SAVE, false },
+  { sysicon_add,    ID_FILE_NEW,  0 },
+  { sysicon_folder, ID_FILE_OPEN, 0 },
+  { sysicon_save,   ID_FILE_SAVE, 0 },
 };
 send_message(doc, kToolBarMessageAddButtons,
              sizeof(kDocToolbar)/sizeof(kDocToolbar[0]),

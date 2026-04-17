@@ -83,8 +83,8 @@ case kWindowMessageCommand: {
 ```c
 // Set up toolbar buttons once in kWindowMessageCreate
 toolbar_button_t buttons[] = {
-    { .icon = icon16_folder, .ident = ID_OPEN },
-    { .icon = icon16_save,   .ident = ID_SAVE },
+    { .icon = icon16_folder, .ident = ID_OPEN, .flags = 0 },
+    { .icon = icon16_save,   .ident = ID_SAVE, .flags = 0 },
 };
 send_message(win, kToolBarMessageAddButtons,
              sizeof(buttons)/sizeof(buttons[0]), buttons);

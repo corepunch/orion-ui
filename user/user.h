@@ -52,9 +52,28 @@ typedef struct bitmap_strip_s {
 typedef struct toolbar_button_s {
   int icon;
   int ident;
-  bool active;   // toggle/selection state (drawn pressed persistently)
-  bool pressed;  // transient mouse-down visual feedback
+  flags_t flags; // TOOLBAR_BUTTON_FLAG_* bits
 } toolbar_button_t;
+
+static inline bool toolbar_button_has_flag(const toolbar_button_t *button, flags_t flag) {
+  return button && ((button->flags & flag) != 0);
+}
+
+static inline bool toolbar_button_is_active(const toolbar_button_t *button) {
+  return toolbar_button_has_flag(button, TOOLBAR_BUTTON_FLAG_ACTIVE);
+}
+
+static inline bool toolbar_button_is_pressed(const toolbar_button_t *button) {
+  return toolbar_button_has_flag(button, TOOLBAR_BUTTON_FLAG_PRESSED);
+}
+
+static inline void toolbar_button_set_flag(toolbar_button_t *button, flags_t flag, bool enabled) {
+  if (!button) return;
+  if (enabled)
+    button->flags |= flag;
+  else
+    button->flags &= ~flag;
+}
 
 // Returns the number of toolbar rows needed for 'n' buttons in a window
 // of inner pixel width 'inner_w' and button size 'bsz'.

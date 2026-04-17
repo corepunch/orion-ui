@@ -22,7 +22,7 @@ static int compute_toolbar_height(int num_buttons, int win_w) {
     // Use a fixed-size stack array; tests never need more than MAX_TEST_BUTTONS.
     toolbar_button_t buttons[MAX_TEST_BUTTONS];
     for (int i = 0; i < num_buttons && i < MAX_TEST_BUTTONS; i++) {
-        buttons[i] = (toolbar_button_t){.icon=0, .ident=i, .active=false, .pressed=false};
+        buttons[i] = (toolbar_button_t){.icon=0, .ident=i, .flags=0};
     }
     int num_rows = toolbar_count_rows(buttons, (uint32_t)num_buttons, inner_w, bsz);
     return num_rows * bsz + 2 * TOOLBAR_PADDING;
@@ -123,41 +123,41 @@ void test_toolbar_set_active_button(void) {
     ASSERT_NOT_NULL(win);
 
     toolbar_button_t buttons[] = {
-        {.icon = 0, .ident = 10, .active = true},
-        {.icon = 1, .ident = 11, .active = false},
-        {.icon = 2, .ident = 12, .active = false},
+        {.icon = 0, .ident = 10, .flags = TOOLBAR_BUTTON_FLAG_ACTIVE},
+        {.icon = 1, .ident = 11, .flags = 0},
+        {.icon = 2, .ident = 12, .flags = 0},
     };
     send_message(win, kToolBarMessageAddButtons, 3, buttons);
     repost_messages();
 
     ASSERT_EQUAL((int)win->num_toolbar_buttons, 3);
-    ASSERT_TRUE(win->toolbar_buttons[0].active);   // ident 10 is active
-    ASSERT_FALSE(win->toolbar_buttons[1].active);
-    ASSERT_FALSE(win->toolbar_buttons[2].active);
+    ASSERT_TRUE(toolbar_button_is_active(&win->toolbar_buttons[0]));   // ident 10 is active
+    ASSERT_FALSE(toolbar_button_is_active(&win->toolbar_buttons[1]));
+    ASSERT_FALSE(toolbar_button_is_active(&win->toolbar_buttons[2]));
 
     // Activate button with ident 11; button 10 should become inactive.
     send_message(win, kToolBarMessageSetActiveButton, 11, NULL);
     repost_messages();
 
-    ASSERT_FALSE(win->toolbar_buttons[0].active);
-    ASSERT_TRUE(win->toolbar_buttons[1].active);
-    ASSERT_FALSE(win->toolbar_buttons[2].active);
+    ASSERT_FALSE(toolbar_button_is_active(&win->toolbar_buttons[0]));
+    ASSERT_TRUE(toolbar_button_is_active(&win->toolbar_buttons[1]));
+    ASSERT_FALSE(toolbar_button_is_active(&win->toolbar_buttons[2]));
 
     // Activate button with ident 12.
     send_message(win, kToolBarMessageSetActiveButton, 12, NULL);
     repost_messages();
 
-    ASSERT_FALSE(win->toolbar_buttons[0].active);
-    ASSERT_FALSE(win->toolbar_buttons[1].active);
-    ASSERT_TRUE(win->toolbar_buttons[2].active);
+    ASSERT_FALSE(toolbar_button_is_active(&win->toolbar_buttons[0]));
+    ASSERT_FALSE(toolbar_button_is_active(&win->toolbar_buttons[1]));
+    ASSERT_TRUE(toolbar_button_is_active(&win->toolbar_buttons[2]));
 
     // Unknown ident clears all active flags.
     send_message(win, kToolBarMessageSetActiveButton, 99, NULL);
     repost_messages();
 
-    ASSERT_FALSE(win->toolbar_buttons[0].active);
-    ASSERT_FALSE(win->toolbar_buttons[1].active);
-    ASSERT_FALSE(win->toolbar_buttons[2].active);
+    ASSERT_FALSE(toolbar_button_is_active(&win->toolbar_buttons[0]));
+    ASSERT_FALSE(toolbar_button_is_active(&win->toolbar_buttons[1]));
+    ASSERT_FALSE(toolbar_button_is_active(&win->toolbar_buttons[2]));
 
     destroy_window(win);
     test_env_shutdown();
@@ -174,14 +174,14 @@ void test_toolbar_add_buttons_replaces(void) {
     window_t *win = test_env_create_window("W", 0, 0, 100, 100, noop_proc, NULL);
     ASSERT_NOT_NULL(win);
 
-    toolbar_button_t first[] = {{.icon=0, .ident=1, .active=false}};
+    toolbar_button_t first[] = {{.icon=0, .ident=1, .flags=0}};
     send_message(win, kToolBarMessageAddButtons, 1, first);
     repost_messages();
     ASSERT_EQUAL((int)win->num_toolbar_buttons, 1);
 
     toolbar_button_t second[] = {
-        {.icon=0, .ident=10, .active=true},
-        {.icon=1, .ident=11, .active=false},
+        {.icon=0, .ident=10, .flags=TOOLBAR_BUTTON_FLAG_ACTIVE},
+        {.icon=1, .ident=11, .flags=0},
     };
     send_message(win, kToolBarMessageAddButtons, 2, second);
     repost_messages();
@@ -221,11 +221,11 @@ void test_close_button_y_excludes_toolbar(void) {
     ASSERT_NOT_NULL(win);
 
     toolbar_button_t buttons[] = {
-        {.icon=0, .ident=1, .active=false},
-        {.icon=1, .ident=2, .active=false},
-        {.icon=2, .ident=3, .active=false},
-        {.icon=3, .ident=4, .active=false},
-        {.icon=4, .ident=5, .active=false},
+        {.icon=0, .ident=1, .flags=0},
+        {.icon=1, .ident=2, .flags=0},
+        {.icon=2, .ident=3, .flags=0},
+        {.icon=3, .ident=4, .flags=0},
+        {.icon=4, .ident=5, .flags=0},
     };
     send_message(win, kToolBarMessageAddButtons, 5, buttons);
 
@@ -282,7 +282,7 @@ void test_toolbar_button_pressed_on_nonclient_mousedown(void) {
                                   &frame, NULL, noop_proc, 0, NULL);
     ASSERT_NOT_NULL(win);
 
-    toolbar_button_t buttons[] = {{.icon=0, .ident=7, .active=false}};
+    toolbar_button_t buttons[] = {{.icon=0, .ident=7, .flags=0}};
     send_message(win, kToolBarMessageAddButtons, 1, buttons);
 
     int bsz    = TB_SPACING;
@@ -292,19 +292,19 @@ void test_toolbar_button_pressed_on_nonclient_mousedown(void) {
     int hit_y  = base_y + bsz / 2;
 
     // Button should start unpressed.
-    ASSERT_FALSE(win->toolbar_buttons[0].pressed);
+    ASSERT_FALSE(toolbar_button_is_pressed(&win->toolbar_buttons[0]));
 
     // Simulate non-client left button down on the toolbar button.
     send_message(win, kWindowMessageNonClientLeftButtonDown,
                  MAKEDWORD(hit_x, hit_y), NULL);
 
-    ASSERT_TRUE(win->toolbar_buttons[0].pressed);
+    ASSERT_TRUE(toolbar_button_is_pressed(&win->toolbar_buttons[0]));
 
     // Simulate non-client left button up — pressed state must be cleared.
     send_message(win, kWindowMessageNonClientLeftButtonUp,
                  MAKEDWORD(hit_x, hit_y), NULL);
 
-    ASSERT_FALSE(win->toolbar_buttons[0].pressed);
+    ASSERT_FALSE(toolbar_button_is_pressed(&win->toolbar_buttons[0]));
 
     destroy_window(win);
     test_env_shutdown();
@@ -323,7 +323,7 @@ void test_toolbar_button_pressed_cleared_on_up_outside(void) {
                                   &frame, NULL, noop_proc, 0, NULL);
     ASSERT_NOT_NULL(win);
 
-    toolbar_button_t buttons[] = {{.icon=0, .ident=8, .active=false}};
+    toolbar_button_t buttons[] = {{.icon=0, .ident=8, .flags=0}};
     send_message(win, kToolBarMessageAddButtons, 1, buttons);
 
     int bsz    = TB_SPACING;
@@ -335,12 +335,12 @@ void test_toolbar_button_pressed_cleared_on_up_outside(void) {
     // Press the button.
     send_message(win, kWindowMessageNonClientLeftButtonDown,
                  MAKEDWORD(hit_x, hit_y), NULL);
-    ASSERT_TRUE(win->toolbar_buttons[0].pressed);
+    ASSERT_TRUE(toolbar_button_is_pressed(&win->toolbar_buttons[0]));
 
     // Release outside the button — pressed must still be cleared.
     send_message(win, kWindowMessageNonClientLeftButtonUp,
                  MAKEDWORD(0, 0), NULL);
-    ASSERT_FALSE(win->toolbar_buttons[0].pressed);
+    ASSERT_FALSE(toolbar_button_is_pressed(&win->toolbar_buttons[0]));
 
     destroy_window(win);
     test_env_shutdown();
@@ -354,10 +354,10 @@ void test_toolbar_spacing_token_skipped_in_count(void) {
     // inner_w = 200 - 2 = 198; available = 198 - 4 = 194.
     // 3 buttons: 0 + 22 + 22 = 44 → fits in 1 row.
     toolbar_button_t buttons[] = {
-        {.icon=0, .ident=1, .active=false},
-        {.icon=1, .ident=2, .active=false},
+        {.icon=0, .ident=1, .flags=0},
+        {.icon=1, .ident=2, .flags=0},
         TOOLBAR_SPACING_TOKEN,
-        {.icon=2, .ident=3, .active=false},
+        {.icon=2, .ident=3, .flags=0},
     };
     int rows = toolbar_count_rows(buttons, 4, 200 - 2, TB_SPACING);
     ASSERT_EQUAL(rows, 1);
@@ -375,8 +375,8 @@ void test_toolbar_spacing_token_adds_gap(void) {
     //   btn0: cur_x=0, 0+22 <= 44 → place, cur_x=22
     //   btn1: cur_x=22, 22+22=44 <= 44 → still fits → 1 row
     toolbar_button_t no_token[] = {
-        {.icon=0, .ident=1, .active=false},
-        {.icon=1, .ident=2, .active=false},
+        {.icon=0, .ident=1, .flags=0},
+        {.icon=1, .ident=2, .flags=0},
     };
     int rows_no_token = toolbar_count_rows(no_token, 2, 48, TB_SPACING);
     ASSERT_EQUAL(rows_no_token, 1);
@@ -386,9 +386,9 @@ void test_toolbar_spacing_token_adds_gap(void) {
     //   token: cur_x=22+4=26
     //   btn1: cur_x=26, 26+22=48 > 44 → wrap to row 1 → 2 rows
     toolbar_button_t with_token[] = {
-        {.icon=0, .ident=1, .active=false},
+        {.icon=0, .ident=1, .flags=0},
         TOOLBAR_SPACING_TOKEN,
-        {.icon=1, .ident=2, .active=false},
+        {.icon=1, .ident=2, .flags=0},
     };
     int rows_with_token = toolbar_count_rows(with_token, 3, 48, TB_SPACING);
     ASSERT_EQUAL(rows_with_token, 2);
@@ -412,10 +412,10 @@ void test_toolbar_spacing_token_hit_test(void) {
 
     // NEW | EDIT | <gap> | DELETE
     toolbar_button_t buttons[] = {
-        {.icon=0, .ident=1, .active=false},
-        {.icon=1, .ident=2, .active=false},
+        {.icon=0, .ident=1, .flags=0},
+        {.icon=1, .ident=2, .flags=0},
         TOOLBAR_SPACING_TOKEN,
-        {.icon=2, .ident=3, .active=false},
+        {.icon=2, .ident=3, .flags=0},
     };
     send_message(win, kToolBarMessageAddButtons, 4, buttons);
     ASSERT_EQUAL((int)win->num_toolbar_buttons, 4);
@@ -439,22 +439,22 @@ void test_toolbar_spacing_token_hit_test(void) {
     send_message(win, kWindowMessageNonClientLeftButtonDown,
                  MAKEDWORD(hit_x, hit_y), NULL);
 
-    ASSERT_FALSE(win->toolbar_buttons[0].pressed);  // NEW not pressed
-    ASSERT_FALSE(win->toolbar_buttons[1].pressed);  // EDIT not pressed
+    ASSERT_FALSE(toolbar_button_is_pressed(&win->toolbar_buttons[0]));  // NEW not pressed
+    ASSERT_FALSE(toolbar_button_is_pressed(&win->toolbar_buttons[1]));  // EDIT not pressed
     // index 2 is the spacing token — pressed is irrelevant / never set
-    ASSERT_TRUE(win->toolbar_buttons[3].pressed);   // DELETE pressed
+    ASSERT_TRUE(toolbar_button_is_pressed(&win->toolbar_buttons[3]));   // DELETE pressed
 
     send_message(win, kWindowMessageNonClientLeftButtonUp,
                  MAKEDWORD(hit_x, hit_y), NULL);
-    ASSERT_FALSE(win->toolbar_buttons[3].pressed);
+    ASSERT_FALSE(toolbar_button_is_pressed(&win->toolbar_buttons[3]));
 
     // Hit NEW (ident=1).
     hit_x = x0 + bsz / 2;
     send_message(win, kWindowMessageNonClientLeftButtonDown,
                  MAKEDWORD(hit_x, hit_y), NULL);
-    ASSERT_TRUE(win->toolbar_buttons[0].pressed);
-    ASSERT_FALSE(win->toolbar_buttons[1].pressed);
-    ASSERT_FALSE(win->toolbar_buttons[3].pressed);
+    ASSERT_TRUE(toolbar_button_is_pressed(&win->toolbar_buttons[0]));
+    ASSERT_FALSE(toolbar_button_is_pressed(&win->toolbar_buttons[1]));
+    ASSERT_FALSE(toolbar_button_is_pressed(&win->toolbar_buttons[3]));
 
     // Hit EDIT (ident=2).
     send_message(win, kWindowMessageNonClientLeftButtonUp,
@@ -462,9 +462,9 @@ void test_toolbar_spacing_token_hit_test(void) {
     hit_x = x1 + bsz / 2;
     send_message(win, kWindowMessageNonClientLeftButtonDown,
                  MAKEDWORD(hit_x, hit_y), NULL);
-    ASSERT_FALSE(win->toolbar_buttons[0].pressed);
-    ASSERT_TRUE(win->toolbar_buttons[1].pressed);
-    ASSERT_FALSE(win->toolbar_buttons[3].pressed);
+    ASSERT_FALSE(toolbar_button_is_pressed(&win->toolbar_buttons[0]));
+    ASSERT_TRUE(toolbar_button_is_pressed(&win->toolbar_buttons[1]));
+    ASSERT_FALSE(toolbar_button_is_pressed(&win->toolbar_buttons[3]));
 
     // Verify gap: a click inside the gap area (between EDIT and DELETE) does
     // not press any button.
@@ -473,9 +473,9 @@ void test_toolbar_spacing_token_hit_test(void) {
     int gap_x = x1 + bsz + TOOLBAR_SPACING_GAP_WIDTH / 2;
     send_message(win, kWindowMessageNonClientLeftButtonDown,
                  MAKEDWORD(gap_x, hit_y), NULL);
-    ASSERT_FALSE(win->toolbar_buttons[0].pressed);
-    ASSERT_FALSE(win->toolbar_buttons[1].pressed);
-    ASSERT_FALSE(win->toolbar_buttons[3].pressed);
+    ASSERT_FALSE(toolbar_button_is_pressed(&win->toolbar_buttons[0]));
+    ASSERT_FALSE(toolbar_button_is_pressed(&win->toolbar_buttons[1]));
+    ASSERT_FALSE(toolbar_button_is_pressed(&win->toolbar_buttons[3]));
 
     send_message(win, kWindowMessageNonClientLeftButtonUp,
                  MAKEDWORD(0, 0), NULL);

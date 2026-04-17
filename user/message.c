@@ -318,7 +318,7 @@ static void sb_handle_track_click(window_t *win, win_sb_t *sb, uint32_t scroll_m
 static void draw_toolbar_button_at(rect_t const *r, int bsz,
                                     toolbar_button_t const *but,
                                     bitmap_strip_t const *strip) {
-  bool pressed = but->pressed || but->active;
+  bool pressed = toolbar_button_is_pressed(but) || toolbar_button_is_active(but);
   int  px      = pressed ? 1 : 0;
   if (strip) {
     draw_button(&(rect_t){r->x, r->y, bsz, bsz}, 1, 1, pressed);
@@ -504,10 +504,10 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       win->num_toolbar_buttons = wparam;
       win->toolbar_buttons = malloc(sizeof(toolbar_button_t)*wparam);
       memcpy(win->toolbar_buttons, lparam, sizeof(toolbar_button_t)*wparam);
-      // Zero the transient pressed flag: callers only set icon/ident/active,
-      // leaving pressed uninitialized when the struct is stack-allocated.
+      // Clear the transient pressed bit; callers should only describe the
+      // persistent button state, not an in-flight mouse gesture.
       for (uint32_t i = 0; i < win->num_toolbar_buttons; i++)
-        win->toolbar_buttons[i].pressed = false;
+        win->toolbar_buttons[i].flags &= ~TOOLBAR_BUTTON_FLAG_PRESSED;
       break;
     case kToolBarMessageSetStrip:
       if (lparam) {
@@ -520,7 +520,9 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     case kToolBarMessageSetActiveButton: {
       uint32_t ident = wparam;
       for (uint32_t i = 0; i < win->num_toolbar_buttons; i++) {
-        win->toolbar_buttons[i].active = (win->toolbar_buttons[i].ident == (int)ident);
+        toolbar_button_set_flag(&win->toolbar_buttons[i],
+                                TOOLBAR_BUTTON_FLAG_ACTIVE,
+                                win->toolbar_buttons[i].ident == (int)ident);
       }
       invalidate_window(win);
       break;
@@ -636,7 +638,8 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
             toolbar_button_t *but = &win->toolbar_buttons[i];
             rect_t r;
             if (!toolbar_iter_next(&it, but, &r)) continue;
-            but->pressed = CONTAINS(x, y, r.x, r.y, r.w, r.h);
+            toolbar_button_set_flag(but, TOOLBAR_BUTTON_FLAG_PRESSED,
+                                    CONTAINS(x, y, r.x, r.y, r.w, r.h));
           }
           invalidate_window(win);
         }
@@ -652,7 +655,7 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
             rect_t r;
             if (!toolbar_iter_next(&it, but, &r)) continue;
             bool hit = CONTAINS(x, y, r.x, r.y, r.w, r.h);
-            but->pressed = false;
+            toolbar_button_set_flag(but, TOOLBAR_BUTTON_FLAG_PRESSED, false);
             if (hit) {
               send_message(win, kToolBarMessageButtonClick, but->ident, but);
             }

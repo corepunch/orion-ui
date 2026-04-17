@@ -434,8 +434,8 @@ required.
 #include "user/icons.h"
 
 static const toolbar_button_t kMyToolbar[] = {
-  { sysicon_add,    ID_NEW,  false },
-  { sysicon_accept, ID_SAVE, false },
+  { sysicon_add,    ID_NEW,  0 },
+  { sysicon_accept, ID_SAVE, 0 },
 };
 send_message(win, kToolBarMessageAddButtons,
              sizeof(kMyToolbar) / sizeof(kMyToolbar[0]),

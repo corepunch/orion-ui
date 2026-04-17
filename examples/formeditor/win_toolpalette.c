@@ -48,7 +48,8 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       for (int i = 0; i < NUM_TOOLS; i++) {
         buttons[i].icon   = k_tool_icon[i];
         buttons[i].ident  = k_tool_order[i];
-        buttons[i].active = (k_tool_order[i] == ID_TOOL_SELECT);
+        buttons[i].flags  = (k_tool_order[i] == ID_TOOL_SELECT)
+                            ? TOOLBAR_BUTTON_FLAG_ACTIVE : 0;
       }
       send_message(win, kToolBarMessageAddButtons, NUM_TOOLS, buttons);
       return true;
