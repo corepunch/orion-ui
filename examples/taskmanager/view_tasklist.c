@@ -43,7 +43,7 @@ static void draw_text_clipped(const char *text, int x, int y,
   int dots_w = strwidth("...");
   int avail  = max_w - dots_w;
   if (avail <= 0) return;
-  char buf[sizeof(((tasklist_row_t *)0)->title) + 4];  // title + "..."
+  char buf[TASKLIST_TITLE_LEN + 4];  // title + "..."
   int n = 0, w = 0;
   while (text[n] && n < (int)(sizeof(buf) - 4)) {
     int cw = char_width((unsigned char)text[n]);
