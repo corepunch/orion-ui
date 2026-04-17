@@ -136,6 +136,8 @@ static void invalidate_overlaps(window_t *win) {
 
 // Move window to new position
 void move_window(window_t *win, int x, int y) {
+  int dx = x - win->frame.x;
+  int dy = y - win->frame.y;
   post_message(win, kWindowMessageResize, 0, NULL);
   post_message(win, kWindowMessageRefreshStencil, 0, NULL);
 
@@ -144,6 +146,12 @@ void move_window(window_t *win, int x, int y) {
 
   win->frame.x = x;
   win->frame.y = y;
+
+  // Shift toolbar children (screen-absolute frames) by the same delta.
+  for (window_t *tc = win->toolbar_children; tc; tc = tc->next) {
+    tc->frame.x += dx;
+    tc->frame.y += dy;
+  }
 
   invalidate_overlaps(win);
 }
@@ -188,6 +196,19 @@ extern void remove_from_global_hooks(window_t *win);
 // Remove window from message queue
 extern void remove_from_global_queue(window_t *win);
 
+// Clear all toolbar child windows
+void clear_toolbar_children(window_t *win) {
+  for (window_t *tc = win->toolbar_children, *next; tc; tc = next) {
+    next = tc->next;
+    tc->next = NULL;
+    // Detach from parent's toolbar_children list before destroy so that
+    // destroy_window → remove_from_global_list doesn't iterate a partially
+    // freed list.
+    destroy_window(tc);
+  }
+  win->toolbar_children = NULL;
+}
+
 // Clear all child windows
 void clear_window_children(window_t *win) {
   for (window_t *item = win->children, *next = item ? item->next : NULL;
@@ -208,7 +229,6 @@ void destroy_window(window_t *win) {
   if (_dragging == win) _dragging = NULL;
   if (_resizing == win) _resizing = NULL;
   if (_toolbar_down_win == win) _toolbar_down_win = NULL;
-  if (win->toolbar_buttons) free(win->toolbar_buttons);
   if (win->toolbar_strip_tex) {
     R_DeleteTexture(win->toolbar_strip_tex);
     win->toolbar_strip_tex = 0;
@@ -216,6 +236,7 @@ void destroy_window(window_t *win) {
   remove_from_global_list(win);
   remove_from_global_hooks(win);
   remove_from_global_queue(win);
+  clear_toolbar_children(win);
   clear_window_children(win);
   free(win);
 }
@@ -342,6 +363,9 @@ window_t *get_window_item(window_t const *win, uint32_t id) {
     }
     window_t *child = get_window_item(item, id);
     if (child) return child;
+  }
+  for (window_t *tc = win->toolbar_children; tc; tc = tc->next) {
+    if (tc->id == id) return tc;
   }
   return NULL;
 }

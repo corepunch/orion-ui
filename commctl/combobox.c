@@ -20,14 +20,26 @@ extern void show_window(window_t *win, bool visible);
 
 // Open the dropdown list popup for 'win' (combobox).
 static void open_dropdown(window_t *win) {
-  window_t *root = get_root_window(win);
-  int root_t = titlebar_height(root);
-  rect_t rect = {
-    root->frame.x + win->frame.x,
-    root->frame.y + root_t + win->frame.y + win->frame.h + 2,
-    win->frame.w,
-    100,
-  };
+  // Determine the screen-absolute position of the combobox bottom edge.
+  // Toolbar children have screen-absolute frame.x/y already; regular body
+  // children have root-client-relative frames.
+  int abs_x, abs_y;
+  bool is_toolbar_child = false;
+  if (win->parent) {
+    for (window_t *tc = win->parent->toolbar_children; tc; tc = tc->next) {
+      if (tc == win) { is_toolbar_child = true; break; }
+    }
+  }
+  if (is_toolbar_child) {
+    abs_x = win->frame.x;
+    abs_y = win->frame.y + win->frame.h + 2;
+  } else {
+    window_t *root = get_root_window(win);
+    int root_t = titlebar_height(root);
+    abs_x = root->frame.x + win->frame.x;
+    abs_y = root->frame.y + root_t + win->frame.y + win->frame.h + 2;
+  }
+  rect_t rect = {abs_x, abs_y, win->frame.w, 100};
   window_t *list = create_window("", WINDOW_NOTITLE|WINDOW_NORESIZE|WINDOW_VSCROLL|WINDOW_ALWAYSONTOP|WINDOW_NOTRAYBUTTON, &rect, NULL, win_list, win->hinstance, win);
   result_t sel = send_message(win, kComboBoxMessageGetCurrentSelection, 0, NULL);
   if (sel != (result_t)kComboBoxError)

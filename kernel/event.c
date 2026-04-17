@@ -440,13 +440,19 @@ void dispatch_message(ui_event_t *msg) {
           int sy = SCALE_POINT(py);
           if (msg->message == kEventLeftMouseDown &&
               (win->flags & WINDOW_TOOLBAR) && sy < win->frame.y + titlebar_height(win)) {
-            // Non-client left button down in toolbar area: send dedicated message
-            // so the toolbar can show visual pressed feedback immediately.
-            // Only applies when WINDOW_TOOLBAR is set; title bar clicks are
-            // handled earlier by window_in_drag_area → _dragging path.
-            send_message(win, kWindowMessageNonClientLeftButtonDown,
-                         MAKEDWORD(sx, sy), NULL);
-            _toolbar_down_win = win;
+            // Toolbar band click: find the toolbar child at (sx, sy) and
+            // deliver LeftButtonDown directly to it.  The child handles pressed
+            // state and fires kWindowMessageCommand on release, just like any
+            // regular button child.
+            for (window_t *tc = win->toolbar_children; tc; tc = tc->next) {
+              if (CONTAINS(sx, sy, tc->frame.x, tc->frame.y, tc->frame.w, tc->frame.h)) {
+                _toolbar_down_win = tc;
+                send_message(tc, kWindowMessageLeftButtonDown,
+                             MAKEDWORD(sx - tc->frame.x, sy - tc->frame.y), NULL);
+                break;
+              }
+            }
+            // No hit (click in gap): no action needed.
           } else {
             int wmsg = (msg->message == kEventLeftMouseDown)
                        ? kWindowMessageLeftButtonDown
@@ -491,10 +497,10 @@ void dispatch_message(ui_event_t *msg) {
       if (_toolbar_down_win && msg->message == kEventLeftMouseUp) {
         int sx = SCALE_POINT(px);
         int sy = SCALE_POINT(py);
-        window_t *toolbar_win = _toolbar_down_win;
+        window_t *tc = _toolbar_down_win;
         _toolbar_down_win = NULL;  // clear before send: handler may open a modal loop
-        send_message(toolbar_win, kWindowMessageNonClientLeftButtonUp,
-                     MAKEDWORD(sx, sy), NULL);
+        send_message(tc, kWindowMessageLeftButtonUp,
+                     MAKEDWORD(sx - tc->frame.x, sy - tc->frame.y), NULL);
         break;
       }
       if (_dragging) {

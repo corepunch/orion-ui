@@ -73,15 +73,10 @@ rect_t get_opengl_rect(rect_t const *r) {
 // Get titlebar height
 int titlebar_height(window_t const *win) {
   int t = 0;
-  if (!(win->flags&WINDOW_NOTITLE)) {
-    t += TITLEBAR_HEIGHT;
-  }
-  if (win->flags&WINDOW_TOOLBAR) {
+  if (!(win->flags & WINDOW_NOTITLE)) t += TITLEBAR_HEIGHT;
+  if (win->flags & WINDOW_TOOLBAR) {
     int bsz = (win->toolbar_btn_size > 0) ? win->toolbar_btn_size : TB_SPACING;
-    int inner_w = win->frame.w - 2;  // toolbar bevel insets 1px per side
-    int num_rows = toolbar_count_rows(win->toolbar_buttons, win->num_toolbar_buttons,
-                                      inner_w, bsz);
-    t += num_rows * bsz + 2 * TOOLBAR_PADDING;
+    t += bsz + 2 * TOOLBAR_PADDING;
   }
   return t;
 }
