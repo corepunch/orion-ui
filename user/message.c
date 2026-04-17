@@ -532,7 +532,7 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         if (win->flags&WINDOW_TOOLBAR) {
           int bsz      = toolbar_effective_bsz(win);
           int title_h  = (win->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
-          int total_h  = bsz + 2 * TOOLBAR_PADDING;
+          int total_h  = bsz + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH);
           rect_t rect  = {win->frame.x + TOOLBAR_BEVEL_WIDTH,
                           win->frame.y + title_h + TOOLBAR_BEVEL_WIDTH,
                           win->frame.w - 2 * TOOLBAR_BEVEL_WIDTH,

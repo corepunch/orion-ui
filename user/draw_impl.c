@@ -76,8 +76,9 @@ int titlebar_height(window_t const *win) {
   if (!(win->flags & WINDOW_NOTITLE)) t += TITLEBAR_HEIGHT;
   if (win->flags & WINDOW_TOOLBAR) {
     // Toolbar children are always laid out in a single row (no wrapping).
+    // The band height = bevel (top) + padding + bsz + padding + bevel (bottom).
     int bsz = (win->toolbar_btn_size > 0) ? win->toolbar_btn_size : TB_SPACING;
-    t += bsz + 2 * TOOLBAR_PADDING;
+    t += bsz + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH);
   }
   return t;
 }
