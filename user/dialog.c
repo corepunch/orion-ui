@@ -52,18 +52,29 @@ static uint32_t run_dialog_loop(window_t *dlg, window_t *parent) {
   return result;
 }
 
+uint32_t show_dialog_ex(char const *title,
+                        const rect_t* frame,
+                        window_t *parent,
+                        uint32_t flags,
+                        winproc_t proc,
+                        void *param)
+{
+  const char *dialog_title = title ? title : "";
+  // Dialogs inherit their owner's hinstance so they belong to the same app.
+  hinstance_t hinstance = parent ? get_root_window(parent)->hinstance : 0;
+  window_t *dlg = create_window(dialog_title, flags, frame, NULL, proc, hinstance, param);
+  return run_dialog_loop(dlg, parent);
+}
+
 uint32_t show_dialog(char const *title,
                      const rect_t* frame,
                      window_t *parent,
                      winproc_t proc,
                      void *param)
 {
-  uint32_t flags = WINDOW_VSCROLL|WINDOW_DIALOG|WINDOW_NOTRAYBUTTON;
-  const char *dialog_title = title ? title : "";
-  // Dialogs inherit their owner's hinstance so they belong to the same app.
-  hinstance_t hinstance = parent ? get_root_window(parent)->hinstance : 0;
-  window_t *dlg = create_window(dialog_title, flags, frame, NULL, proc, hinstance, param);
-  return run_dialog_loop(dlg, parent);
+  return show_dialog_ex(title, frame, parent,
+                        WINDOW_VSCROLL | WINDOW_DIALOG | WINDOW_NOTRAYBUTTON,
+                        proc, param);
 }
 
 // Show a modal dialog whose layout is described by a form_def_t.

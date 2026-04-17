@@ -12,11 +12,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <errno.h>
+#include <sys/stat.h>
 
 #include "filepicker.h"
 #include "filelist.h"
 #include "commctl.h"
 #include "../user/user.h"
+#include "../user/icons.h"
 #include "../user/messages.h"
 
 // ---------------------------------------------------------------------------
@@ -43,6 +46,38 @@
 // ---------------------------------------------------------------------------
 #define FP_MAX_FILTERS 16
 
+enum {
+  FP_ID_TOOL_UP = 1,
+  FP_ID_TOOL_NEW_FOLDER,
+  FP_ID_NEWFOLDER_EDIT = 100,
+  FP_ID_NEWFOLDER_OK,
+  FP_ID_NEWFOLDER_CANCEL,
+};
+
+static const toolbar_button_t kFilePickerToolbar[] = {
+  { sysicon_folder_up, FP_ID_TOOL_UP, 0 },
+  { sysicon_folder, FP_ID_TOOL_NEW_FOLDER, 0 },
+};
+
+typedef struct {
+  char name[256];
+} fp_newfolder_state_t;
+
+static const form_ctrl_def_t kNewFolderChildren[] = {
+  { FORM_CTRL_LABEL, FP_ID_NEWFOLDER_EDIT + 1000, {8, 10, 72, CONTROL_HEIGHT}, 0, "Folder name:", "label_name" },
+  { FORM_CTRL_TEXTEDIT, FP_ID_NEWFOLDER_EDIT, {82, 8, 150, CONTROL_HEIGHT}, 0, "", "edit_name" },
+  { FORM_CTRL_BUTTON, FP_ID_NEWFOLDER_OK, {116, 32, 54, BUTTON_HEIGHT}, BUTTON_DEFAULT, "OK", "ok" },
+  { FORM_CTRL_BUTTON, FP_ID_NEWFOLDER_CANCEL, {176, 32, 60, BUTTON_HEIGHT}, 0, "Cancel", "cancel" },
+};
+
+static const form_def_t kNewFolderForm = {
+  .name = "Create Folder",
+  .w = 244,
+  .h = 58,
+  .children = kNewFolderChildren,
+  .child_count = sizeof(kNewFolderChildren) / sizeof(kNewFolderChildren[0]),
+};
+
 // ---------------------------------------------------------------------------
 // Internal types
 // ---------------------------------------------------------------------------
@@ -63,6 +98,45 @@ typedef struct {
   int             num_filters;
   int             active_filter;  // 0-based
 } fp_state_t;
+
+static result_t fp_newfolder_proc(window_t *win, uint32_t msg,
+                                  uint32_t wparam, void *lparam) {
+  fp_newfolder_state_t *st = (fp_newfolder_state_t *)win->userdata;
+
+  switch (msg) {
+    case kWindowMessageCreate: {
+      st = (fp_newfolder_state_t *)lparam;
+      win->userdata = st;
+      if (st) {
+        set_window_item_text(win, FP_ID_NEWFOLDER_EDIT, "%s", st->name);
+      }
+      window_t *edit = get_window_item(win, FP_ID_NEWFOLDER_EDIT);
+      if (edit) set_focus(edit);
+      return true;
+    }
+
+    case kWindowMessageCommand:
+      if (HIWORD(wparam) == kButtonNotificationClicked) {
+        window_t *src = (window_t *)lparam;
+        if (!src) return true;
+        if (src->id == FP_ID_NEWFOLDER_OK) {
+          dialog_pull(win, st,
+                      &(ctrl_binding_t){ FP_ID_NEWFOLDER_EDIT, offsetof(fp_newfolder_state_t, name), sizeof(st->name), BIND_STRING },
+                      1);
+          end_dialog(win, 1);
+          return true;
+        }
+        if (src->id == FP_ID_NEWFOLDER_CANCEL) {
+          end_dialog(win, 0);
+          return true;
+        }
+      }
+      return false;
+
+    default:
+      return false;
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Filter parsing
@@ -136,6 +210,74 @@ static void fp_set_edit_from_path(fp_state_t *ps, const char *path) {
   invalidate_window(ps->edit_win);
 }
 
+static void fp_get_current_dir(fp_state_t *ps, char *out, size_t out_sz) {
+  if (!out || out_sz == 0) return;
+  out[0] = '\0';
+  send_message(ps->list_win, FLM_GETPATH, (uint32_t)out_sz, out);
+}
+
+static void fp_navigate_to_parent(fp_state_t *ps) {
+  char curpath[512] = {0};
+  fp_get_current_dir(ps, curpath, sizeof(curpath));
+  if (!curpath[0] || strcmp(curpath, "/") == 0) return;
+
+  char *slash = strrchr(curpath, '/');
+  if (slash && slash != curpath) {
+    *slash = '\0';
+  } else {
+    curpath[0] = '/';
+    curpath[1] = '\0';
+  }
+
+  send_message(ps->list_win, FLM_SETPATH, 0, curpath);
+}
+
+static bool fp_prompt_new_folder(window_t *parent, char *out, size_t out_sz) {
+  fp_newfolder_state_t st = {{0}};
+  uint32_t result;
+
+  if (!out || out_sz == 0) return false;
+
+  result = show_dialog_from_form(&kNewFolderForm, "Create Folder", parent,
+                                 fp_newfolder_proc, &st);
+  if (result == 0 || !st.name[0]) return false;
+
+  strncpy(out, st.name, out_sz - 1);
+  out[out_sz - 1] = '\0';
+  return true;
+}
+
+static void fp_create_folder(window_t *win, fp_state_t *ps) {
+  char curpath[512] = {0};
+  char name[256] = {0};
+  char full[768] = {0};
+
+  if (!ps || !ps->list_win) return;
+  fp_get_current_dir(ps, curpath, sizeof(curpath));
+  if (!curpath[0]) return;
+
+  if (!fp_prompt_new_folder(win, name, sizeof(name))) return;
+
+  if (strcmp(name, ".") == 0 || strcmp(name, "..") == 0 || strchr(name, '/')) {
+    message_box(win, "Enter a valid folder name.", "Create Folder", MB_OK);
+    return;
+  }
+
+  if (strcmp(curpath, "/") == 0)
+    snprintf(full, sizeof(full), "/%s", name);
+  else
+    snprintf(full, sizeof(full), "%s/%s", curpath, name);
+
+  if (mkdir(full, 0777) != 0) {
+    char text[256];
+    snprintf(text, sizeof(text), "Could not create folder:\n%s", strerror(errno));
+    message_box(win, text, "Create Folder", MB_OK);
+    return;
+  }
+
+  send_message(ps->list_win, FLM_SETPATH, 0, full);
+}
+
 // Build the full path from the selected filelist item or the edit box + cwd.
 // Returns false when the edit box is empty.
 static bool fp_build_path(fp_state_t *ps, char *out, size_t out_sz) {
@@ -182,6 +324,9 @@ static result_t fp_proc(window_t *win, uint32_t msg,
     case kWindowMessageCreate: {
       ps = (fp_state_t *)lparam;
       win->userdata = ps;
+      send_message(win, kToolBarMessageAddButtons,
+                   sizeof(kFilePickerToolbar) / sizeof(kFilePickerToolbar[0]),
+                   (void *)kFilePickerToolbar);
 
       // File browser list
       ps->list_win = create_window("", WINDOW_NOTITLE | WINDOW_VSCROLL,
@@ -265,6 +410,17 @@ static result_t fp_proc(window_t *win, uint32_t msg,
       return true;
     }
 
+    case kToolBarMessageButtonClick:
+      if (wparam == FP_ID_TOOL_UP) {
+        fp_navigate_to_parent(ps);
+        return true;
+      }
+      if (wparam == FP_ID_TOOL_NEW_FOLDER) {
+        fp_create_folder(win, ps);
+        return true;
+      }
+      return false;
+
     // ------------------------------------------------------------------
     case kWindowMessageCommand: {
       uint16_t code = HIWORD(wparam);
@@ -347,6 +503,7 @@ static int fp_dialog_height(int num_filters) {
 static bool fp_run(openfilename_t *ofn, bool save_mode,
                    const char *title) {
   if (!ofn || !ofn->lpstrFile || ofn->nMaxFile == 0) return false;
+  uint32_t flags = WINDOW_DIALOG | WINDOW_NOTRAYBUTTON | WINDOW_TOOLBAR;
 
   fp_state_t ps = {0};
   ps.save_mode     = save_mode;
@@ -357,10 +514,13 @@ static bool fp_run(openfilename_t *ofn, bool save_mode,
                       ofn->nFilterIndex <= ps.num_filters)
                      ? ofn->nFilterIndex - 1 : 0;
 
-  int h = fp_dialog_height(ps.num_filters) + TITLEBAR_HEIGHT;
-  uint32_t result = show_dialog(title,
-      MAKERECT(50, 30, FP_WIN_W, h),
-      ofn->hwndOwner, fp_proc, &ps);
+  rect_t r = {0, 0, FP_WIN_W, fp_dialog_height(ps.num_filters)};
+  adjust_window_rect(&r, flags);
+  uint32_t result = show_dialog_ex(title,
+      MAKERECT(50, 30, r.w, r.h),
+      ofn->hwndOwner,
+      flags,
+      fp_proc, &ps);
 
   return result != 0 && ps.accepted;
 }
