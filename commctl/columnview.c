@@ -11,6 +11,7 @@
 #define MAX_REPORTVIEW_COLUMNS 16
 #define MAX_REPORTVIEW_TITLE 64
 #define ENTRY_HEIGHT 13
+#define HEADER_HEIGHT 14
 #define DEFAULT_COLUMN_WIDTH 160
 #define ICON_OFFSET 12
 #define ICON_DODGE 1
@@ -137,7 +138,7 @@ static int rv_report_total_width(reportview_data_t *data, int avail_w) {
 static int rv_content_height(window_t *win, reportview_data_t *data) {
   int eff_w = rv_content_width(win);
   if (data->view_mode == RVM_VIEW_REPORT) {
-    return ENTRY_HEIGHT + (int)data->count * ENTRY_HEIGHT;
+    return HEADER_HEIGHT + (int)data->count * ENTRY_HEIGHT;
   }
 
   int ncol = get_column_count(eff_w, data->column_width);
@@ -178,16 +179,16 @@ static int rv_hit_index(window_t *win, reportview_data_t *data, uint32_t wparam)
   int mx = (int)(int16_t)LOWORD(wparam);
   int my = (int)(int16_t)HIWORD(wparam);
 
-  if (win->parent) {
-    mx += win->frame.x + (int)win->scroll[0];
-    my += win->frame.y + (int)win->scroll[1];
-  }
+  // Mouse coordinates arrive in the target window's local client space and
+  // already include this window's scroll offset. Using them directly avoids
+  // double-counting scroll when hit-testing in child windows.
+  (void)win;
 
   if (data->view_mode == RVM_VIEW_REPORT) {
     (void)mx;
-    if (my < ENTRY_HEIGHT)
+    if (my < HEADER_HEIGHT)
       return -1;
-    int row = (my - ENTRY_HEIGHT) / ENTRY_HEIGHT;
+    int row = (my - HEADER_HEIGHT) / ENTRY_HEIGHT;
     return rv_valid_index(data, row) ? row : RV_INVALID_SELECTION;
   }
 
@@ -207,11 +208,11 @@ static void rv_scroll_to_item(window_t *win, reportview_data_t *data, int index)
   int visible_h = win->frame.h;
 
   if (data->view_mode == RVM_VIEW_REPORT) {
-    int item_y_top = ENTRY_HEIGHT + index * ENTRY_HEIGHT;
+    int item_y_top = HEADER_HEIGHT + index * ENTRY_HEIGHT;
     int item_y_bottom = item_y_top + ENTRY_HEIGHT;
 
-    if (item_y_top - scroll_y < ENTRY_HEIGHT) {
-      win->scroll[1] = (uint32_t)(item_y_top - ENTRY_HEIGHT);
+    if (item_y_top - scroll_y < HEADER_HEIGHT) {
+      win->scroll[1] = (uint32_t)(item_y_top - HEADER_HEIGHT);
     } else if (item_y_bottom - scroll_y > visible_h) {
       win->scroll[1] = (uint32_t)(item_y_bottom - visible_h);
     }
@@ -283,7 +284,7 @@ static void rv_paint_icon_view(window_t *win, reportview_data_t *data) {
 static void rv_paint_report_view(window_t *win, reportview_data_t *data) {
   int eff_w = rv_content_width(win);
   int row_w = rv_report_total_width(data, eff_w);
-  int body_h = win->frame.h - ENTRY_HEIGHT;
+  int body_h = win->frame.h - HEADER_HEIGHT;
   int scroll_y = (int)win->scroll[1];
 
   int first_row = (body_h > 0) ? (scroll_y / ENTRY_HEIGHT) : 0;
@@ -291,14 +292,13 @@ static void rv_paint_report_view(window_t *win, reportview_data_t *data) {
   if (first_row < 0) first_row = 0;
   if (last_row > (int)data->count) last_row = (int)data->count;
 
-  uint32_t hdr_bg = get_sys_color(kColorWindowBg);
   uint32_t hdr_fg = get_sys_color(kColorTextNormal);
   uint32_t sep_col = get_sys_color(kColorDarkEdge);
 
-  fill_rect(get_sys_color(kColorWindowBg), 0, ENTRY_HEIGHT, row_w, body_h);
+  fill_rect(get_sys_color(kColorWindowBg), 0, HEADER_HEIGHT, row_w, body_h);
 
   if (data->selected >= first_row && data->selected < last_row) {
-    int y = ENTRY_HEIGHT + data->selected * ENTRY_HEIGHT - scroll_y;
+    int y = HEADER_HEIGHT + data->selected * ENTRY_HEIGHT - scroll_y;
     fill_rect(get_sys_color(kColorTextNormal), 0, y, row_w, ENTRY_HEIGHT - 1);
   }
 
@@ -306,7 +306,7 @@ static void rv_paint_report_view(window_t *win, reportview_data_t *data) {
   for (int row = first_row; row < last_row; row++) {
     reportview_item_t *it = &data->items[row];
     uint32_t fg = (row == data->selected) ? get_sys_color(kColorWindowBg) : it->color;
-    int y = ENTRY_HEIGHT + row * ENTRY_HEIGHT - scroll_y;
+    int y = HEADER_HEIGHT + row * ENTRY_HEIGHT - scroll_y;
     int x = 0;
 
     for (uint32_t col = 0; col < data->column_count; col++) {
@@ -326,16 +326,17 @@ static void rv_paint_report_view(window_t *win, reportview_data_t *data) {
     }
   }
 
-  // fill_rect(hdr_bg, 0, 0, row_w, ENTRY_HEIGHT);
+  // Paint report header separately from row height; HEADER_HEIGHT can differ.
+  // fill_rect(hdr_bg, 0, 0, row_w, HEADER_HEIGHT);
   int x = 0;
   for (uint32_t col = 0; col < data->column_count; col++) {
     int col_w = rv_get_report_column_width(data, (int)col, eff_w);
-    draw_button(&(rect_t){x, 0, col_w, ENTRY_HEIGHT}, 1, 1, false);
+    draw_button(&(rect_t){x, 0, col_w, HEADER_HEIGHT}, 1, 1, false);
     draw_text_small(data->columns[col].title, x + WIN_PADDING, 3, hdr_fg);
     x += col_w;
-    fill_rect(sep_col, x, ENTRY_HEIGHT, 1, win->frame.h - ENTRY_HEIGHT);
+    fill_rect(sep_col, x, HEADER_HEIGHT, 1, win->frame.h - HEADER_HEIGHT);
   }
-  // fill_rect(sep_col, 0, ENTRY_HEIGHT - 1, row_w, 1);
+  // fill_rect(sep_col, 0, HEADER_HEIGHT - 1, row_w, 1);
 }
 
 result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
