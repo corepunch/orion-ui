@@ -15,6 +15,8 @@
 #define ICON_OFFSET 12
 #define ICON_DODGE 1
 #define WIN_PADDING 4
+#define RV_DOUBLE_CLICK_MS 500u
+#define RV_INVALID_SELECTION (-1)
 
 // ReportView/ListView/ColumnView shared data structure.
 typedef struct {
@@ -36,6 +38,71 @@ typedef struct {
   uint32_t view_mode;
   uint32_t column_count;
 } reportview_data_t;
+
+static inline bool rv_valid_index(const reportview_data_t *data, int index) {
+  return data && index >= 0 && index < (int)data->count;
+}
+
+// Centralized command notification helper (WM_COMMAND with RVN_* code).
+static void rv_notify(window_t *win, reportview_data_t *data, int index, uint16_t code) {
+  if (!rv_valid_index(data, index))
+    return;
+  send_message(get_root_window(win), kWindowMessageCommand,
+               MAKEDWORD(index, code), &data->items[index]);
+}
+
+static inline void rv_reset_click_state(reportview_data_t *data) {
+  data->last_click_time = 0;
+  data->last_click_index = RV_INVALID_SELECTION;
+}
+
+// Keep contiguous pointer-backed storage valid after insert/update/delete.
+static bool rv_store_item(reportview_data_t *data, uint32_t i,
+                          const reportview_item_t *item) {
+  if (!data || !item || i >= MAX_COLUMNVIEW_ITEMS)
+    return false;
+
+  char *name = data->names[i];
+  strncpy(name, item->text ? item->text : "", MAX_COLUMNVIEW_ITEM_NAME - 1);
+  name[MAX_COLUMNVIEW_ITEM_NAME - 1] = '\0';
+
+  reportview_item_t dst = *item;
+  dst.text = name;
+  if (dst.subitem_count > REPORTVIEW_MAX_SUBITEMS)
+    dst.subitem_count = REPORTVIEW_MAX_SUBITEMS;
+
+  for (uint32_t s = 0; s < REPORTVIEW_MAX_SUBITEMS; s++) {
+    char *sub = data->subnames[i][s];
+    const char *src = (s < dst.subitem_count && item->subitems[s])
+                    ? item->subitems[s]
+                    : "";
+    strncpy(sub, src, MAX_COLUMNVIEW_ITEM_NAME - 1);
+    sub[MAX_COLUMNVIEW_ITEM_NAME - 1] = '\0';
+    dst.subitems[s] = sub;
+  }
+
+  data->items[i] = dst;
+  return true;
+}
+
+static void rv_rebind_item_refs(reportview_data_t *data, uint32_t start) {
+  if (!data || start >= data->count)
+    return;
+
+  for (uint32_t i = start; i < data->count; i++) {
+    data->items[i].text = data->names[i];
+    if (data->items[i].subitem_count > REPORTVIEW_MAX_SUBITEMS)
+      data->items[i].subitem_count = REPORTVIEW_MAX_SUBITEMS;
+    for (uint32_t s = 0; s < REPORTVIEW_MAX_SUBITEMS; s++)
+      data->items[i].subitems[s] = data->subnames[i][s];
+  }
+}
+
+static void rv_reset_view_state(window_t *win, reportview_data_t *data) {
+  data->selected = RV_INVALID_SELECTION;
+  rv_reset_click_state(data);
+  win->scroll[1] = 0;
+}
 
 static inline int get_column_count(int window_width, int column_width) {
   if (window_width <= 0 || column_width <= 0)
@@ -121,7 +188,7 @@ static int rv_hit_index(window_t *win, reportview_data_t *data, uint32_t wparam)
     if (my < ENTRY_HEIGHT)
       return -1;
     int row = (my - ENTRY_HEIGHT) / ENTRY_HEIGHT;
-    return (row >= 0 && row < (int)data->count) ? row : -1;
+    return rv_valid_index(data, row) ? row : RV_INVALID_SELECTION;
   }
 
   int eff_w = rv_content_width(win);
@@ -129,7 +196,7 @@ static int rv_hit_index(window_t *win, reportview_data_t *data, uint32_t wparam)
   int col = mx / data->column_width;
   int row = (my - WIN_PADDING) / ENTRY_HEIGHT;
   int index = row * ncol + col;
-  return (index >= 0 && index < (int)data->count) ? index : -1;
+  return rv_valid_index(data, index) ? index : RV_INVALID_SELECTION;
 }
 
 static void rv_scroll_to_item(window_t *win, reportview_data_t *data, int index) {
@@ -225,7 +292,7 @@ static void rv_paint_report_view(window_t *win, reportview_data_t *data) {
   if (last_row > (int)data->count) last_row = (int)data->count;
 
   uint32_t hdr_bg = get_sys_color(kColorWindowBg);
-  uint32_t hdr_fg = get_sys_color(kColorTextDisabled);
+  uint32_t hdr_fg = get_sys_color(kColorTextNormal);
   uint32_t sep_col = get_sys_color(kColorDarkEdge);
 
   fill_rect(get_sys_color(kColorWindowBg), 0, ENTRY_HEIGHT, row_w, body_h);
@@ -259,15 +326,16 @@ static void rv_paint_report_view(window_t *win, reportview_data_t *data) {
     }
   }
 
-  fill_rect(hdr_bg, 0, 0, row_w, ENTRY_HEIGHT);
+  // fill_rect(hdr_bg, 0, 0, row_w, ENTRY_HEIGHT);
   int x = 0;
   for (uint32_t col = 0; col < data->column_count; col++) {
     int col_w = rv_get_report_column_width(data, (int)col, eff_w);
+    draw_button(&(rect_t){x, 0, col_w, ENTRY_HEIGHT}, 1, 1, false);
     draw_text_small(data->columns[col].title, x + WIN_PADDING, 3, hdr_fg);
     x += col_w;
-    fill_rect(sep_col, x, 0, 1, win->frame.h);
+    fill_rect(sep_col, x, ENTRY_HEIGHT, 1, win->frame.h - ENTRY_HEIGHT);
   }
-  fill_rect(sep_col, 0, ENTRY_HEIGHT - 1, row_w, 1);
+  // fill_rect(sep_col, 0, ENTRY_HEIGHT - 1, row_w, 1);
 }
 
 result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
@@ -283,7 +351,7 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       win->vscroll.visible_mode = SB_VIS_AUTO;
 
       data->selected = -1;
-      data->last_click_index = -1;
+      data->last_click_index = RV_INVALID_SELECTION;
       data->column_width = DEFAULT_COLUMN_WIDTH;
       data->view_mode = RVM_VIEW_ICON;
 
@@ -300,13 +368,11 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
 
     case kWindowMessageLeftButtonDown: {
       int index = rv_hit_index(win, data, wparam);
-      if (index >= 0) {
+      if (rv_valid_index(data, index)) {
         uint32_t now = axGetMilliseconds();
-        if (data->last_click_index == index && (now - data->last_click_time) < 500) {
-          send_message(get_root_window(win), kWindowMessageCommand,
-                       MAKEDWORD(index, RVN_DBLCLK), &data->items[index]);
-          data->last_click_time = 0;
-          data->last_click_index = -1;
+        if (data->last_click_index == index && (now - data->last_click_time) < RV_DOUBLE_CLICK_MS) {
+          rv_notify(win, data, index, RVN_DBLCLK);
+          rv_reset_click_state(data);
         } else {
           int old_selection = data->selected;
           data->selected = index;
@@ -314,8 +380,7 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
           data->last_click_index = index;
 
           if (old_selection != data->selected) {
-            send_message(get_root_window(win), kWindowMessageCommand,
-                         MAKEDWORD(index, RVN_SELCHANGE), &data->items[index]);
+            rv_notify(win, data, index, RVN_SELCHANGE);
           }
           invalidate_window(win);
         }
@@ -325,11 +390,9 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
 
     case kWindowMessageLeftButtonDoubleClick: {
       int index = rv_hit_index(win, data, wparam);
-      if (index >= 0) {
-        data->last_click_time = 0;
-        data->last_click_index = -1;
-        send_message(get_root_window(win), kWindowMessageCommand,
-                     MAKEDWORD(index, RVN_DBLCLK), &data->items[index]);
+      if (rv_valid_index(data, index)) {
+        rv_reset_click_state(data);
+        rv_notify(win, data, index, RVN_DBLCLK);
       }
       return true;
     }
@@ -340,24 +403,8 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
         return -1;
 
       uint32_t i = data->count;
-      char *name = data->names[i];
-      strncpy(name, item->text ? item->text : "", MAX_COLUMNVIEW_ITEM_NAME - 1);
-      name[MAX_COLUMNVIEW_ITEM_NAME - 1] = '\0';
-
-      reportview_item_t dst = *item;
-      dst.text = name;
-      if (dst.subitem_count > REPORTVIEW_MAX_SUBITEMS)
-        dst.subitem_count = REPORTVIEW_MAX_SUBITEMS;
-
-      for (uint32_t s = 0; s < REPORTVIEW_MAX_SUBITEMS; s++) {
-        char *sub = data->subnames[i][s];
-        const char *src = (s < dst.subitem_count && item->subitems[s]) ? item->subitems[s] : "";
-        strncpy(sub, src, MAX_COLUMNVIEW_ITEM_NAME - 1);
-        sub[MAX_COLUMNVIEW_ITEM_NAME - 1] = '\0';
-        dst.subitems[s] = sub;
-      }
-
-      data->items[i] = dst;
+      if (!rv_store_item(data, i, item))
+        return -1;
       data->count++;
       rv_sync_scroll(win, data);
       invalidate_window(win);
@@ -368,24 +415,15 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       if (wparam >= data->count)
         return false;
 
-      memmove(data->items + wparam, data->items + wparam + 1,
-              (data->count - wparam - 1) * sizeof(data->items[0]));
-      memmove(data->names + wparam, data->names + wparam + 1,
-              (data->count - wparam - 1) * sizeof(data->names[0]));
-      memmove(data->subnames + wparam, data->subnames + wparam + 1,
-              (data->count - wparam - 1) * sizeof(data->subnames[0]));
+      memmove(data->items + wparam, data->items + wparam + 1, (data->count - wparam - 1) * sizeof(data->items[0]));
+      memmove(data->names + wparam, data->names + wparam + 1, (data->count - wparam - 1) * sizeof(data->names[0]));
+      memmove(data->subnames + wparam, data->subnames + wparam + 1, (data->count - wparam - 1) * sizeof(data->subnames[0]));
 
       data->count--;
-      for (uint32_t i = wparam; i < data->count; i++) {
-        data->items[i].text = data->names[i];
-        if (data->items[i].subitem_count > REPORTVIEW_MAX_SUBITEMS)
-          data->items[i].subitem_count = REPORTVIEW_MAX_SUBITEMS;
-        for (uint32_t s = 0; s < REPORTVIEW_MAX_SUBITEMS; s++)
-          data->items[i].subitems[s] = data->subnames[i][s];
-      }
+      rv_rebind_item_refs(data, (uint32_t)wparam);
 
       if (data->selected == (int)wparam) {
-        data->selected = -1;
+        data->selected = RV_INVALID_SELECTION;
       } else if (data->selected > (int)wparam) {
         data->selected--;
       }
@@ -413,10 +451,7 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
 
     case RVM_CLEAR:
       data->count = 0;
-      data->selected = -1;
-      data->last_click_time = 0;
-      data->last_click_index = -1;
-      win->scroll[1] = 0;
+      rv_reset_view_state(win, data);
       rv_sync_scroll(win, data);
       invalidate_window(win);
       return true;
@@ -446,24 +481,8 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
         return false;
 
       uint32_t i = (uint32_t)wparam;
-      char *name = data->names[i];
-      strncpy(name, item->text ? item->text : "", MAX_COLUMNVIEW_ITEM_NAME - 1);
-      name[MAX_COLUMNVIEW_ITEM_NAME - 1] = '\0';
-
-      reportview_item_t dst = *item;
-      dst.text = name;
-      if (dst.subitem_count > REPORTVIEW_MAX_SUBITEMS)
-        dst.subitem_count = REPORTVIEW_MAX_SUBITEMS;
-
-      for (uint32_t s = 0; s < REPORTVIEW_MAX_SUBITEMS; s++) {
-        char *sub = data->subnames[i][s];
-        const char *src = (s < dst.subitem_count && item->subitems[s]) ? item->subitems[s] : "";
-        strncpy(sub, src, MAX_COLUMNVIEW_ITEM_NAME - 1);
-        sub[MAX_COLUMNVIEW_ITEM_NAME - 1] = '\0';
-        dst.subitems[s] = sub;
-      }
-
-      data->items[i] = dst;
+      if (!rv_store_item(data, i, item))
+        return false;
       invalidate_window(win);
       return true;
     }
@@ -471,8 +490,7 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
     case RVM_SETVIEWMODE:
       if (wparam == RVM_VIEW_ICON || wparam == RVM_VIEW_REPORT) {
         data->view_mode = wparam;
-        data->selected = -1;
-        win->scroll[1] = 0;
+        rv_reset_view_state(win, data);
         rv_sync_scroll(win, data);
         invalidate_window(win);
         return true;
@@ -485,8 +503,7 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
         return -1;
 
       uint32_t i = data->column_count;
-      strncpy(data->columns[i].title, col->title ? col->title : "",
-              MAX_REPORTVIEW_TITLE - 1);
+      strncpy(data->columns[i].title, col->title ? col->title : "", MAX_REPORTVIEW_TITLE - 1);
       data->columns[i].title[MAX_REPORTVIEW_TITLE - 1] = '\0';
       data->columns[i].width = col->width;
       data->column_count++;
@@ -547,13 +564,11 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
             break;
           case AX_KEY_ENTER:
             if (cur < 0) return false;
-            send_message(get_root_window(win), kWindowMessageCommand,
-                         MAKEDWORD(cur, RVN_DBLCLK), &data->items[cur]);
+            rv_notify(win, data, cur, RVN_DBLCLK);
             return true;
           case AX_KEY_DEL:
             if (cur < 0) return false;
-            send_message(get_root_window(win), kWindowMessageCommand,
-                         MAKEDWORD(cur, RVN_DELETE), &data->items[cur]);
+            rv_notify(win, data, cur, RVN_DELETE);
             return true;
           default:
             return false;
@@ -577,13 +592,11 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
             break;
           case AX_KEY_ENTER:
             if (cur < 0) return false;
-            send_message(get_root_window(win), kWindowMessageCommand,
-                         MAKEDWORD(cur, RVN_DBLCLK), &data->items[cur]);
+            rv_notify(win, data, cur, RVN_DBLCLK);
             return true;
           case AX_KEY_DEL:
             if (cur < 0) return false;
-            send_message(get_root_window(win), kWindowMessageCommand,
-                         MAKEDWORD(cur, RVN_DELETE), &data->items[cur]);
+            rv_notify(win, data, cur, RVN_DELETE);
             return true;
           default:
             return false;
@@ -594,8 +607,7 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
         data->selected = next;
         rv_scroll_to_item(win, data, next);
         rv_sync_scroll(win, data);
-        send_message(get_root_window(win), kWindowMessageCommand,
-                     MAKEDWORD(next, RVN_SELCHANGE), &data->items[next]);
+        rv_notify(win, data, next, RVN_SELCHANGE);
         invalidate_window(win);
       }
       return true;
