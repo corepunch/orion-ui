@@ -529,17 +529,24 @@ void test_toolbar_button_click_cancelled_if_released_outside(void) {
     window_t *btn = find_toolbar_child(win, 88);
     ASSERT_NOT_NULL(btn);
 
-    // Simulate press (LeftButtonDown inside the child).
-    send_message(btn, kWindowMessageLeftButtonDown, MAKEDWORD(4, 4), NULL);
+    // Drive the real event-layer path: press inside the toolbar button via
+    // dispatch_message so the event layer records _toolbar_down_win, then
+    // release outside so the event layer clears pressed state without firing
+    // a click notification — matching the previous hit-tested behavior.
+    ui_event_t ev = {0};
+    ev.message = kEventLeftMouseDown;
+    ev.x = (uint16_t)((btn->frame.x + 4) * UI_WINDOW_SCALE);
+    ev.y = (uint16_t)((btn->frame.y + 4) * UI_WINDOW_SCALE);
+    dispatch_message(&ev);
     ASSERT_TRUE(btn->pressed);
 
-    // Simulate release FAR outside the child (e.g. at -999,-999 relative to child).
-    // The event.c fix works at the event layer; at the unit-test layer we can
-    // verify the LeftButtonUp-outside path by checking that btn->pressed
-    // is cleared and no click fires when we manually replicate that path.
-    btn->pressed = false;          // mimic the "clear pressed, no click" branch
-    invalidate_window(btn);
-    // g_click_count must remain 0 since we did NOT send LeftButtonUp.
+    // Release well outside the button (to the right of it, same toolbar row).
+    ev.message = kEventLeftMouseUp;
+    ev.x = (uint16_t)((btn->frame.x + btn->frame.w + 10) * UI_WINDOW_SCALE);
+    ev.y = (uint16_t)((btn->frame.y + 4) * UI_WINDOW_SCALE);
+    dispatch_message(&ev);
+
+    ASSERT_FALSE(btn->pressed);
     ASSERT_EQUAL(g_click_count, 0);
     ASSERT_EQUAL(g_last_click_ident, -1);
 

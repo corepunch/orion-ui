@@ -88,14 +88,22 @@ static window_t *create_toolbar_child(window_t *parent, winproc_t proc,
   // that the default kWindowMessagePaint handler (which walks children) does
   // not double-paint toolbar items, and so that clear_window_children does not
   // double-free them (clear_toolbar_children handles that instead).
-  // alloc_window() always appends to the END of parent->children, so tc is
-  // guaranteed to be the last entry; we only need to find its predecessor.
-  if (parent->children == tc) {
-    parent->children = NULL;
-  } else {
+  // Search for tc and splice it out without assuming it is at the tail;
+  // re-entrant create paths may have appended additional siblings after tc.
+  {
+    window_t *prev = NULL;
     window_t *c = parent->children;
-    while (c && c->next != tc) c = c->next;
-    if (c) c->next = NULL;
+    while (c && c != tc) {
+      prev = c;
+      c = c->next;
+    }
+    if (c == tc) {
+      if (prev) {
+        prev->next = tc->next;
+      } else {
+        parent->children = tc->next;
+      }
+    }
   }
   tc->next = NULL;
   // Enforce the requested frame dimensions.  Some procs (win_button, win_label)
