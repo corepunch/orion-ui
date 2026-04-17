@@ -57,6 +57,7 @@ enum {
   kComboBoxMessageGetCurrentSelection,
   kComboBoxMessageSetCurrentSelection,
   kComboBoxMessageGetListBoxText,
+  kComboBoxMessageClear,            // clear all items and reset title
   kStatusBarMessageAddWindow,
   kToolBarMessageAddButtons,
   kToolBarMessageButtonClick,
