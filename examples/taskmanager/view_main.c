@@ -171,12 +171,10 @@ result_t main_win_proc(window_t *win, uint32_t msg,
         
         // ReportView notifications: LOWORD(wparam) = row index, lparam = reportview_item_t*.
         case RVN_SELCHANGE: {
-          reportview_item_t *item = (reportview_item_t *)lparam;
-          int sel = item ? (int)item->userdata : (int)(int16_t)LOWORD(wparam);
-          task_doc_t *cmd_doc = doc_from_window((window_t *)lparam ? (window_t *)lparam : win);
-          if (g_app && cmd_doc) {
-            g_app->active_doc = cmd_doc;
-            cmd_doc->selected_idx = sel;
+          int sel = (int)(int16_t)LOWORD(wparam);
+          if (g_app && doc) {
+            g_app->active_doc = doc;
+            doc->selected_idx = sel;
           }
           return true;
         }

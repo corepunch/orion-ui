@@ -399,18 +399,19 @@ void dispatch_message(ui_event_t *msg) {
       if ((win = _captured) ||
           (win = find_window(SCALE_POINT(px), SCALE_POINT(py))))
       {
+        window_t *click_root = get_root_window(win);
         if (win->disabled) return;
         bool activating = (win != _focused);
         window_t *old_root = _focused ? get_root_window(_focused) : NULL;
-        window_t *new_root = get_root_window(win);
+        window_t *new_root = click_root;
         bool root_changing = activating && (new_root != old_root);
         if (activating) {
           send_message(win, kWindowMessageMouseActivate, 0, NULL);
           if (root_changing && old_root)
             send_message(old_root, kWindowMessageActivate, WA_INACTIVE, new_root);
         }
-        if (!win->parent) {
-          move_to_top(win);
+        if (click_root && !click_root->parent && win != _captured) {
+          move_to_top(click_root);
         }
         if (activating) {
           set_focus(win);
