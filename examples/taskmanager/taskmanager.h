@@ -165,10 +165,11 @@ result_t main_win_proc(window_t *win, uint32_t msg,
 #define TASKLIST_HEADER_H    13
 
 // Message to add a row (lparam = tasklist_row_t *)
-#define TLVM_ADDROW (kWindowMessageUser + 200)
+#define TLVM_ADDROW       (kWindowMessageUser + 200)
+#define TASKLIST_TITLE_LEN 256
 
 typedef struct {
-  char     title[256];
+  char     title[TASKLIST_TITLE_LEN];
   char     priority[32];
   char     status[32];
   uint32_t task_idx;

@@ -7,14 +7,11 @@
 // ============================================================
 
 #define TL_MAX_ROWS         256   // upper bound matching MAX_TASKS in controller
-#define TL_DBLCLK_MS        500   // double-click interval threshold in milliseconds
 
 typedef struct {
   tasklist_row_t rows[TL_MAX_ROWS];
   int            count;
   int            selected;
-  uint32_t       last_click_time;
-  int            last_click_row;
 } tl_state_t;
 
 // ============================================================
@@ -46,7 +43,7 @@ static void draw_text_clipped(const char *text, int x, int y,
   int dots_w = strwidth("...");
   int avail  = max_w - dots_w;
   if (avail <= 0) return;
-  char buf[sizeof(((tasklist_row_t *)0)->title) + 4];  // title + "..."
+  char buf[TASKLIST_TITLE_LEN + 4];  // title + "..."
   int n = 0, w = 0;
   while (text[n] && n < (int)(sizeof(buf) - 4)) {
     int cw = char_width((unsigned char)text[n]);
@@ -86,12 +83,37 @@ static void tl_sync_scroll(window_t *win, tl_state_t *st) {
 // ============================================================
 
 // Returns the row index clicked, or -1 if in the header or out of range.
+// LOCAL_Y (kernel/event.c) packs coordinates as: visual_y + scroll[1], so
+// my is already in content space.  To check whether the click falls inside
+// the fixed non-scrolling header we convert back to visual space:
+//   view_y = my - scroll[1]   (visual position from window top)
+// Row index is derived from my directly because the row layout is also in
+// content space:  row = (my - HEADER_H) / ROW_H.
 static int tl_hit_row(window_t *win, uint32_t wparam, tl_state_t *st) {
-  int my        = (int)(int16_t)HIWORD(wparam);
-  int content_y = my + (int)win->scroll[1];
-  if (content_y < TASKLIST_HEADER_H) return -1;
-  int row = (content_y - TASKLIST_HEADER_H) / TASKLIST_ROW_H;
+  int my     = (int)(int16_t)HIWORD(wparam);
+  int view_y = my - (int)win->scroll[1];
+  if (view_y < TASKLIST_HEADER_H) return -1;
+  int row = (my - TASKLIST_HEADER_H) / TASKLIST_ROW_H;
   return (row >= 0 && row < st->count) ? row : -1;
+}
+
+// Adjust win->scroll[1] so the currently selected row is fully visible below
+// the non-scrolling header.  Scrolls up if the row is above the visible area,
+// scrolls down if it extends past the bottom.  Calls tl_sync_scroll to clamp
+// and update the scrollbar thumb after any change.
+static void tl_ensure_visible(window_t *win, tl_state_t *st) {
+  if (st->selected < 0) return;
+  int row_top    = TASKLIST_HEADER_H + st->selected * TASKLIST_ROW_H;
+  int row_bottom = row_top + TASKLIST_ROW_H;
+  int scroll_y   = (int)win->scroll[1];
+  int view_h     = win->frame.h;
+  if (row_top - scroll_y < TASKLIST_HEADER_H) {
+    win->scroll[1] = (uint32_t)(row_top - TASKLIST_HEADER_H);
+    tl_sync_scroll(win, st);
+  } else if (row_bottom - scroll_y > view_h) {
+    win->scroll[1] = (uint32_t)(row_bottom - view_h);
+    tl_sync_scroll(win, st);
+  }
 }
 
 // ============================================================
@@ -110,7 +132,6 @@ result_t tasklist_proc(window_t *win, uint32_t msg,
       win->flags                |= WINDOW_VSCROLL;
       win->vscroll.visible_mode  = SB_VIS_AUTO;
       st->selected               = -1;
-      st->last_click_row         = -1;
       tl_sync_scroll(win, st);
       return true;
     }
@@ -126,17 +147,11 @@ result_t tasklist_proc(window_t *win, uint32_t msg,
       uint32_t hdr_fg  = get_sys_color(kColorTextDisabled);
       uint32_t sep_col = get_sys_color(kColorDarkEdge);
 
-      // Header row — not scrolled.
-      int hdr_y = win->parent ? win->frame.y : 0;
-      fill_rect(hdr_bg, 0, hdr_y, row_w, TASKLIST_HEADER_H);
-      draw_text_small("Title",    TASKLIST_PADDING, hdr_y + 3, hdr_fg);
-      draw_text_small("Priority", prio_x + 3,       hdr_y + 3, hdr_fg);
-      draw_text_small("Status",   stat_x + 3,       hdr_y + 3, hdr_fg);
-      fill_rect(sep_col, 0, hdr_y + TASKLIST_HEADER_H - 1, row_w, 1);
-
+      int hdr_y       = win->parent ? win->frame.y : 0;
       int clip_top    = win->parent ? win->frame.y + TASKLIST_HEADER_H : TASKLIST_HEADER_H;
       int clip_bottom = win->parent ? win->frame.y + win->frame.h      : win->frame.h;
 
+      // Rows first — header is drawn after to stay always on top.
       for (int i = 0; i < st->count; i++) {
         int content_y = TASKLIST_HEADER_H + i * TASKLIST_ROW_H;
         int y         = content_y - scroll_y;
@@ -158,7 +173,14 @@ result_t tasklist_proc(window_t *win, uint32_t msg,
                           TASKLIST_STATUS_W   - 6, fg);
       }
 
-      // Vertical column dividers.
+      // Header drawn after rows so it always paints on top regardless of scroll.
+      fill_rect(hdr_bg, 0, hdr_y, row_w, TASKLIST_HEADER_H);
+      draw_text_small("Title",    TASKLIST_PADDING, hdr_y + 3, hdr_fg);
+      draw_text_small("Priority", prio_x + 3,       hdr_y + 3, hdr_fg);
+      draw_text_small("Status",   stat_x + 3,       hdr_y + 3, hdr_fg);
+      fill_rect(sep_col, 0, hdr_y + TASKLIST_HEADER_H - 1, row_w, 1);
+
+      // Vertical column dividers — drawn last so they span header and rows.
       fill_rect(sep_col, prio_x, win->parent ? win->frame.y : 0, 1, win->frame.h);
       fill_rect(sep_col, stat_x, win->parent ? win->frame.y : 0, 1, win->frame.h);
 
@@ -185,22 +207,11 @@ result_t tasklist_proc(window_t *win, uint32_t msg,
     case kWindowMessageLeftButtonDown: {
       int row = tl_hit_row(win, wparam, st);
       if (row >= 0) {
-        uint32_t now = axGetMilliseconds();
-        if (st->last_click_row == row &&
-            (now - st->last_click_time) < TL_DBLCLK_MS) {
+        int old      = st->selected;
+        st->selected = row;
+        if (old != row) {
           send_message(get_root_window(win), kWindowMessageCommand,
-                       MAKEDWORD(row, CVN_DBLCLK), NULL);
-          st->last_click_time = 0;
-          st->last_click_row  = -1;
-        } else {
-          int old             = st->selected;
-          st->selected        = row;
-          st->last_click_time = now;
-          st->last_click_row  = row;
-          if (old != row) {
-            send_message(get_root_window(win), kWindowMessageCommand,
-                         MAKEDWORD(row, CVN_SELCHANGE), NULL);
-          }
+                       MAKEDWORD(row, CVN_SELCHANGE), &st->rows[row]);
           invalidate_window(win);
         }
       }
@@ -210,10 +221,8 @@ result_t tasklist_proc(window_t *win, uint32_t msg,
     case kWindowMessageLeftButtonDoubleClick: {
       int row = tl_hit_row(win, wparam, st);
       if (row >= 0) {
-        st->last_click_time = 0;
-        st->last_click_row  = -1;
         send_message(get_root_window(win), kWindowMessageCommand,
-                     MAKEDWORD(row, CVN_DBLCLK), NULL);
+                     MAKEDWORD(row, CVN_DBLCLK), &st->rows[row]);
       }
       return true;
     }
@@ -232,20 +241,21 @@ result_t tasklist_proc(window_t *win, uint32_t msg,
         case AX_KEY_ENTER:
           if (cur < 0) return false;
           send_message(get_root_window(win), kWindowMessageCommand,
-                       MAKEDWORD(cur, CVN_DBLCLK), NULL);
+                       MAKEDWORD(cur, CVN_DBLCLK), &st->rows[cur]);
           return true;
         case AX_KEY_DEL:
           if (cur < 0) return false;
           send_message(get_root_window(win), kWindowMessageCommand,
-                       MAKEDWORD(cur, CVN_DELETE), NULL);
+                       MAKEDWORD(cur, CVN_DELETE), &st->rows[cur]);
           return true;
         default:
           return false;
       }
       if (next != cur && next >= 0) {
         st->selected = next;
+        tl_ensure_visible(win, st);
         send_message(get_root_window(win), kWindowMessageCommand,
-                     MAKEDWORD(next, CVN_SELCHANGE), NULL);
+                     MAKEDWORD(next, CVN_SELCHANGE), &st->rows[next]);
         invalidate_window(win);
       }
       return true;
@@ -262,11 +272,9 @@ result_t tasklist_proc(window_t *win, uint32_t msg,
     }
 
     case CVM_CLEAR:
-      st->count           = 0;
-      st->selected        = -1;
-      st->last_click_time = 0;
-      st->last_click_row  = -1;
-      win->scroll[1]      = 0;
+      st->count      = 0;
+      st->selected   = -1;
+      win->scroll[1] = 0;
       tl_sync_scroll(win, st);
       invalidate_window(win);
       return true;
