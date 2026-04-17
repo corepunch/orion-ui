@@ -60,6 +60,7 @@ enum {
   FP_ID_NEWFOLDER_EDIT = 100,
   FP_ID_NEWFOLDER_OK,
   FP_ID_NEWFOLDER_CANCEL,
+  FP_MSG_SYNC_ACCEPT = kWindowMessageUser + 520,
 };
 
 static const toolbar_button_t kFilePickerToolbar[] = {
@@ -119,11 +120,44 @@ typedef struct {
   window_t       *list_win;
   window_t       *edit_win;
   window_t       *filter_combo;   // NULL when only 0–1 filters
+  window_t       *ok_win;
   openfilename_t *ofn;
   fp_filter_t     filters[FP_MAX_FILTERS];
   int             num_filters;
   int             active_filter;  // 0-based
 } fp_state_t;
+
+static void fp_sync_accept_button(fp_state_t *ps) {
+  bool enable;
+
+  if (!ps || !ps->ok_win || !ps->edit_win) return;
+
+  enable = ps->edit_win->title[0] != '\0';
+  enable_window(ps->ok_win, enable);
+  if (enable)
+    ps->ok_win->flags |= BUTTON_DEFAULT;
+  else
+    ps->ok_win->flags &= ~BUTTON_DEFAULT;
+  invalidate_window(ps->ok_win);
+}
+
+static void fp_clear_edit(fp_state_t *ps) {
+  if (!ps || !ps->edit_win) return;
+  set_window_item_text(get_root_window(ps->edit_win), FP_ID_FILE_EDIT, "%s", "");
+}
+
+static void fp_edit_watch_hook(window_t *win, uint32_t msg,
+                               uint32_t wparam, void *lparam, void *userdata) {
+  fp_state_t *ps = (fp_state_t *)userdata;
+
+  if (!ps || win != ps->edit_win) return;
+
+  if (msg == kWindowMessageTextInput) {
+    post_message(get_root_window(win), FP_MSG_SYNC_ACCEPT, 0, NULL);
+  } else if (msg == kWindowMessageKeyDown && wparam == AX_KEY_BACKSPACE) {
+    post_message(get_root_window(win), FP_MSG_SYNC_ACCEPT, 0, NULL);
+  }
+}
 
 static result_t fp_newfolder_proc(window_t *win, uint32_t msg,
                                   uint32_t wparam, void *lparam) {
@@ -232,6 +266,7 @@ static void fp_set_edit_from_path(fp_state_t *ps, const char *path) {
   const char *base = strrchr(path, '/');
   base = base ? base + 1 : path;
   set_window_item_text(get_root_window(ps->edit_win), FP_ID_FILE_EDIT, "%s", base);
+  fp_sync_accept_button(ps);
 }
 
 static void fp_get_current_dir(fp_state_t *ps, char *out, size_t out_sz) {
@@ -302,11 +337,73 @@ static void fp_create_folder(window_t *win, fp_state_t *ps) {
   send_message(ps->list_win, FLM_SETPATH, 0, full);
 }
 
+static const char *fp_expected_extension(const fp_state_t *ps) {
+  if (!ps || ps->active_filter < 0 || ps->active_filter >= ps->num_filters)
+    return "";
+  return ps->filters[ps->active_filter].extension;
+}
+
+static bool fp_name_has_extension(const char *name, const char *ext) {
+  size_t name_len;
+  size_t ext_len;
+
+  if (!name || !ext || !ext[0]) return true;
+
+  name_len = strlen(name);
+  ext_len = strlen(ext);
+  if (name_len < ext_len) return false;
+  return strcasecmp(name + name_len - ext_len, ext) == 0;
+}
+
+static bool fp_normalize_save_path(fp_state_t *ps, char *path, size_t path_sz) {
+  char dir[512] = {0};
+  char file[512] = {0};
+  const char *ext;
+
+  if (!ps || !path || path_sz == 0 || !ps->edit_win) return false;
+  if (!ps->edit_win->title[0]) return false;
+
+  fp_get_current_dir(ps, dir, sizeof(dir));
+  if (!dir[0]) return false;
+
+  strncpy(file, ps->edit_win->title, sizeof(file) - 1);
+  file[sizeof(file) - 1] = '\0';
+
+  ext = fp_expected_extension(ps);
+  if (ext[0] && !fp_name_has_extension(file, ext)) {
+    size_t file_len = strlen(file);
+    size_t ext_len = strlen(ext);
+    if (file_len + ext_len >= sizeof(file)) return false;
+    memcpy(file + file_len, ext, ext_len + 1);
+    set_window_item_text(get_root_window(ps->edit_win), FP_ID_FILE_EDIT, "%s", file);
+  }
+
+  if (strcmp(dir, "/") == 0)
+    snprintf(path, path_sz, "/%s", file);
+  else
+    snprintf(path, path_sz, "%s/%s", dir, file);
+  return true;
+}
+
+static bool fp_confirm_overwrite(window_t *win, const char *path) {
+  struct stat st;
+  char text[320];
+
+  if (!path || stat(path, &st) != 0) return true;
+
+  snprintf(text, sizeof(text), "File already exists:\n%s\n\nWant to replace it?", path);
+  return message_box(win, text, "Confirm Save As", MB_YESNO) == IDYES;
+}
+
 // Build the full path from the selected filelist item or the edit box + cwd.
 // Returns false when the edit box is empty.
 static bool fp_build_path(fp_state_t *ps, char *out, size_t out_sz) {
   const char *fname = ps->edit_win ? ps->edit_win->title : NULL;
   if (!fname || !fname[0]) return false;
+
+  if (ps->save_mode) {
+    return fp_normalize_save_path(ps, out, out_sz);
+  }
 
   // Try the selected item's full path first (set by single-click).
   char selected[512] = {0};
@@ -354,6 +451,7 @@ static result_t fp_proc(window_t *win, uint32_t msg,
 
       ps->edit_win = get_window_item(win, FP_ID_FILE_EDIT);
       ps->filter_combo = get_window_item(win, FP_ID_FILTER_COMBO);
+      ps->ok_win = get_window_item(win, FP_ID_OK);
 
       if (ps->edit_win && ps->ofn->lpstrFile && ps->ofn->lpstrFile[0]) {
         const char *base = strrchr(ps->ofn->lpstrFile, '/');
@@ -399,9 +497,21 @@ static result_t fp_proc(window_t *win, uint32_t msg,
       }
 
       set_window_item_text(win, FP_ID_OK, "%s", ps->save_mode ? "Save" : "Open");
+      register_window_hook(kWindowMessageTextInput, fp_edit_watch_hook, ps);
+      register_window_hook(kWindowMessageKeyDown, fp_edit_watch_hook, ps);
+      fp_sync_accept_button(ps);
 
       return true;
     }
+
+    case kWindowMessageDestroy:
+      deregister_window_hook(kWindowMessageTextInput, fp_edit_watch_hook, ps);
+      deregister_window_hook(kWindowMessageKeyDown, fp_edit_watch_hook, ps);
+      return false;
+
+    case FP_MSG_SYNC_ACCEPT:
+      fp_sync_accept_button(ps);
+      return true;
 
     case kToolBarMessageButtonClick:
       if (wparam == FP_ID_TOOL_UP) {
@@ -423,6 +533,12 @@ static result_t fp_proc(window_t *win, uint32_t msg,
         const fileitem_t *item = (const fileitem_t *)lparam;
         if (item && !item->is_directory && item->path)
           fp_set_edit_from_path(ps, item->path);
+        return true;
+      }
+
+      if (code == FLN_NAVDIR) {
+        fp_clear_edit(ps);
+        fp_sync_accept_button(ps);
         return true;
       }
 
@@ -451,6 +567,12 @@ static result_t fp_proc(window_t *win, uint32_t msg,
         return true;
       }
 
+      if (code == kEditNotificationUpdate && ps->edit_win &&
+          (window_t *)lparam == ps->edit_win) {
+        fp_sync_accept_button(ps);
+        return false;
+      }
+
       // Button click
       if (code == kButtonNotificationClicked) {
         window_t *btn = (window_t *)lparam;
@@ -464,6 +586,8 @@ static result_t fp_proc(window_t *win, uint32_t msg,
         // OK / Open / Save
         char full[600] = {0};
         if (!fp_build_path(ps, full, sizeof(full))) return true;
+
+        if (ps->save_mode && !fp_confirm_overwrite(win, full)) return true;
 
         strncpy(ps->ofn->lpstrFile, full, ps->ofn->nMaxFile - 1);
         ps->ofn->lpstrFile[ps->ofn->nMaxFile - 1] = '\0';
