@@ -185,7 +185,7 @@ static result_t fp_proc(window_t *win, uint32_t msg,
 
       // File browser list
       ps->list_win = create_window("", WINDOW_NOTITLE | WINDOW_VSCROLL,
-          MAKERECT(FP_PAD, FP_LIST_Y, FP_LIST_W, FP_LIST_H),
+          MAKERECT(0, 0, FP_LIST_W + FP_PAD * 2, FP_LIST_H + FP_PAD),
           win, win_filelist, 0, NULL);
 
       // Apply the initial filter
