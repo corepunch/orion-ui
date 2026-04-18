@@ -39,6 +39,14 @@ result_t win_terminal(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
 result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_scrollbar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 
+// Toolbox — 2-column grid of icon buttons (Photoshop / VB3 / Paint style).
+// See commctl/toolbox.c for the full API and usage examples.
+result_t win_toolbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+
+// Returns the height (in client pixels) that win_toolbox occupies for its
+// button grid.  Call from a wrapping proc to find where custom content starts.
+int toolbox_grid_height(window_t *win);
+
 // Splash screen — displays an image in a borderless, always-on-top window that
 // closes when clicked.  image_path is detected by content (magic bytes), so
 // .jpg, .jpeg, .png, and .bmp files are all accepted regardless of extension.

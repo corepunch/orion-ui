@@ -1,14 +1,12 @@
-// Tool palette — loads toolbox.png (23x23 icons, VB3 toolbox order)
-// and presents them via WINDOW_TOOLBAR with a custom TOOLBOX_BTN_SIZE.
+// Tool palette for the form editor.
+// Uses win_toolbox directly — no extra client content below the grid.
+// toolbox.png is a 21×21-px-per-tile sprite sheet in VB3 toolbox order.
 
 #include "formeditor.h"
 #include "../../commctl/commctl.h"
 
-// VB3 toolbox strip indices for each tool in display order.
-// Strip layout (3 cols x 13 rows, 23x23): index = row*3+col.
-// VB3 canonical order: 0=Pointer, 1=PictureBox, 2=Label, 3=TextBox,
-//   4=Frame, 5=CommandButton, 6=CheckBox, 7=OptionButton,
-//   8=ComboBox, 9=ListBox, ...
+// Icon indices in toolbox.png for each tool, in display order.
+// Strip layout: 3 columns × N rows of 21×21 tiles.
 static const int k_tool_order[NUM_TOOLS] = {
   ID_TOOL_SELECT,
   ID_TOOL_LABEL,
@@ -20,7 +18,7 @@ static const int k_tool_order[NUM_TOOLS] = {
 };
 
 static const int k_tool_icon[NUM_TOOLS] = {
-  0,   // Pointer/Select
+  0,   // Pointer / Select
   2,   // Label
   3,   // TextBox
   5,   // CommandButton
@@ -33,48 +31,49 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
                                 uint32_t wparam, void *lparam) {
   switch (msg) {
     case kWindowMessageCreate: {
-      // Set button size before adding buttons so titlebar_height() is correct.
-      send_message(win, kToolBarMessageSetButtonSize, TOOLBOX_BTN_SIZE, NULL);
+      // Delegate to win_toolbox first so its state is ready.
+      win_toolbox(win, msg, wparam, lparam);
 
-      // Load toolbox.png into the toolbar strip.  The framework owns the GL
-      // texture; no manual glDeleteTextures needed.
+      // Use a larger button size to fit the 21px icons with comfortable margin.
+      send_message(win, kToolboxMessageSetButtonSize, FE_TOOLBOX_BTN_SIZE, NULL);
+
+      // Load the VB3-style icon strip.
 #ifdef SHAREDIR
       char path[4096];
       snprintf(path, sizeof(path), "%s/" SHAREDIR "/toolbox.png", ui_get_exe_dir());
-      send_message(win, kToolBarMessageLoadStrip, TOOLBOX_ICON_W, path);
+      send_message(win, kToolboxMessageLoadStrip, FE_TOOLBOX_ICON_W, path);
 #endif
 
-      toolbar_item_t items[NUM_TOOLS];
+      toolbox_item_t items[NUM_TOOLS];
       for (int i = 0; i < NUM_TOOLS; i++) {
-        items[i] = (toolbar_item_t){
-          TOOLBAR_ITEM_BUTTON, k_tool_order[i], k_tool_icon[i], 0,
-          (k_tool_order[i] == ID_TOOL_SELECT) ? TOOLBAR_BUTTON_FLAG_ACTIVE : 0,
-          NULL
-        };
+        items[i].ident = k_tool_order[i];
+        items[i].icon  = k_tool_icon[i];
       }
-      send_message(win, kToolBarMessageSetItems, NUM_TOOLS, items);
+      send_message(win, kToolboxMessageSetItems, NUM_TOOLS, items);
+      send_message(win, kToolboxMessageSetActiveItem, ID_TOOL_SELECT, NULL);
       return true;
     }
-    case kWindowMessagePaint:
-      fill_rect(get_sys_color(kColorWindowDarkBg), 0, 0,
-                win->frame.w, win->frame.h);
-      return true;
-    case kToolBarMessageButtonClick: {
-      int ident = (int)wparam;
-      send_message(win, kToolBarMessageSetActiveButton, (uint32_t)ident, NULL);
-      if (g_app) {
-        g_app->current_tool = ident;
-        if (g_app->doc && g_app->doc->canvas_win)
-          invalidate_window(g_app->doc->canvas_win);
-        if (g_app->menubar_win)
-          send_message(g_app->menubar_win, kWindowMessageCommand,
-                       MAKEDWORD((uint16_t)ident, kButtonNotificationClicked), lparam);
-        else
-          handle_menu_command((uint16_t)ident);
+
+    case kWindowMessageCommand:
+      // kToolboxNotificationClicked: a tool button was pressed.
+      if (HIWORD(wparam) == kToolboxNotificationClicked) {
+        int ident = (int)(int16_t)LOWORD(wparam);
+        if (g_app) {
+          g_app->current_tool = ident;
+          if (g_app->doc && g_app->doc->canvas_win)
+            invalidate_window(g_app->doc->canvas_win);
+          if (g_app->menubar_win)
+            send_message(g_app->menubar_win, kWindowMessageCommand,
+                         MAKEDWORD((uint16_t)ident, kButtonNotificationClicked),
+                         lparam);
+          else
+            handle_menu_command((uint16_t)ident);
+        }
+        return true;
       }
-      return true;
-    }
-    default:
       return false;
+
+    default:
+      return win_toolbox(win, msg, wparam, lparam);
   }
 }

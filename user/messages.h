@@ -72,6 +72,12 @@ enum {
   kMultiEditMessageSetText,        // wparam=0; lparam=const char* src → replaces text
   // List (popup) messages
   kListMessageSetItem,             // wparam=item index to pre-select in the dropdown list
+  // Toolbox control messages (commctl/toolbox.c)
+  kToolboxMessageSetItems,         // wparam=count; lparam=toolbox_item_t[] — copy item list
+  kToolboxMessageSetActiveItem,    // wparam=ident (-1 = clear active)
+  kToolboxMessageSetStrip,         // wparam=0; lparam=bitmap_strip_t* (NULL=clear) — external strip
+  kToolboxMessageSetButtonSize,    // wparam=size in px (0 = reset to TOOLBOX_BTN_SIZE)
+  kToolboxMessageLoadStrip,        // wparam=icon_w (square tiles); lparam=const char* path — load PNG
 };
 
 // Control notification messages
@@ -80,6 +86,7 @@ enum {
   kButtonNotificationClicked,
   kComboBoxNotificationSelectionChange,
   kScrollBarNotificationChanged,  // wparam: MAKEDWORD(scrollbar_id, kScrollBarNotificationChanged); lparam: (void*)(intptr_t)new_pos
+  kToolboxNotificationClicked,    // sent via kWindowMessageCommand: MAKEDWORD(ident, kToolboxNotificationClicked)
 };
 
 // Button state
@@ -95,6 +102,23 @@ enum {
 
 // Error codes
 #define kComboBoxError -1
+
+// Toolbox item descriptor — one button in a win_toolbox 2-column grid.
+// Set via kToolboxMessageSetItems.  icon is a sysicon_* value (>= SYSICON_BASE)
+// or a tile index into the strip set with kToolboxMessageSetStrip /
+// kToolboxMessageLoadStrip.
+typedef struct {
+  int ident;  // command identifier echoed in kToolboxNotificationClicked
+  int icon;   // strip tile index (0-based), or sysicon_* value (>= SYSICON_BASE)
+} toolbox_item_t;
+
+// Toolbox layout constants.
+// TOOLBOX_COLS is always 2 — toolboxes are a fixed-width 2-column grid.
+// TOOLBOX_BTN_SIZE is the default square button dimension (= TB_SPACING = 22 px).
+// Window width  = TOOLBOX_COLS * TOOLBOX_BTN_SIZE = 44 px.
+// Window height = TITLEBAR_HEIGHT + ceil(n/2) * TOOLBOX_BTN_SIZE.
+#define TOOLBOX_COLS      2
+#define TOOLBOX_BTN_SIZE  TB_SPACING  // 22 px — same as a toolbar button
 
 // Window flags
 #define WINDOW_NOTITLE      (1 << 0)

@@ -211,3 +211,10 @@ show_window(term, true);
 // Read the Lua output buffer
 const char *buf = terminal_get_buffer(term);
 ```
+
+## Toolbox
+
+See [Toolbox](toolbox) for the complete `win_toolbox` documentation — a
+**2-column floating tool-palette** (Photoshop / VB3 / MS Paint style).
+Use this instead of `WINDOW_TOOLBAR` whenever you need a vertical tool-selector
+panel.

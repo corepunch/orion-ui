@@ -1,0 +1,297 @@
+// win_toolbox — 2-column tool-palette grid (Photoshop / VB3 / MS Paint style).
+//
+// Unlike WINDOW_TOOLBAR (a horizontal non-client band at the top of a window),
+// win_toolbox lives entirely inside the window client area and lays buttons in a
+// fixed 2-column grid.  One button is the "active" (currently selected) tool and
+// is drawn with an inset/pressed appearance.
+//
+// Typical usage — create a narrow floating window:
+//
+//   int rows = (NUM_TOOLS + TOOLBOX_COLS - 1) / TOOLBOX_COLS;
+//   window_t *tool_win = create_window("Tools",
+//       WINDOW_NORESIZE | WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON,
+//       MAKERECT(x, y, TOOLBOX_COLS * TOOLBOX_BTN_SIZE,
+//                TITLEBAR_HEIGHT + rows * TOOLBOX_BTN_SIZE),
+//       NULL, my_toolbox_proc, hinstance, NULL);
+//
+//   // Inside my_toolbox_proc (which wraps win_toolbox):
+//   case kWindowMessageCreate: {
+//       // Optional: load a custom icon strip from a PNG sprite sheet.
+//       // Icon tiles are square; wparam = tile size in px.
+//       char path[512];
+//       snprintf(path, sizeof(path), "%s/" SHAREDIR "/tools.png",
+//                ui_get_exe_dir());
+//       send_message(win, kToolboxMessageLoadStrip, 16, path);
+//
+//       toolbox_item_t items[] = {
+//           { ID_TOOL_SELECT, 0 },
+//           { ID_TOOL_PENCIL, 1 },
+//           { ID_TOOL_BRUSH,  2 },
+//       };
+//       send_message(win, kToolboxMessageSetItems, 3, items);
+//       send_message(win, kToolboxMessageSetActiveItem, ID_TOOL_SELECT, NULL);
+//       return true;
+//   }
+//   case kWindowMessageCommand:
+//       if (HIWORD(wparam) == kToolboxNotificationClicked)
+//           handle_tool_selected(LOWORD(wparam));
+//       return false;
+//   default:
+//       return win_toolbox(win, msg, wparam, lparam);
+//
+// Notifications: clicking a button sends kWindowMessageCommand to the toolbox
+// window itself with wparam = MAKEDWORD(ident, kToolboxNotificationClicked) and
+// lparam = the toolbox window.  The wrapping proc intercepts this command.
+
+#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+
+#include "../user/user.h"
+#include "../user/draw.h"
+#include "../user/image.h"
+#include "../user/icons.h"
+#include "../kernel/renderer.h"
+
+// Private state owned by each win_toolbox instance.
+typedef struct {
+  toolbox_item_t *items;       // heap-allocated copy of the item list
+  int             count;       // number of items
+  int             btn_size;    // 0 = use TOOLBOX_BTN_SIZE default
+  int             active_ident; // ident of active item (-1 = none)
+  int             pressed_idx; // index of currently pressed item (-1 = none)
+  bitmap_strip_t  strip;       // icon strip (may point to own_strip_tex or external tex)
+  uint32_t        own_strip_tex; // GL texture owned by kToolboxMessageLoadStrip (0 = none)
+} toolbox_state_t;
+
+static int effective_bsz(const toolbox_state_t *st) {
+  return (st->btn_size > 0) ? st->btn_size : TOOLBOX_BTN_SIZE;
+}
+
+// Returns grid height (in client pixels) for the current item count.
+// Exposed publicly as toolbox_grid_height().
+int toolbox_grid_height(window_t *win) {
+  toolbox_state_t *st = (toolbox_state_t *)win->userdata;
+  if (!st || st->count == 0) return 0;
+  int rows = (st->count + TOOLBOX_COLS - 1) / TOOLBOX_COLS;
+  return rows * effective_bsz(st);
+}
+
+// Hit-test: returns item index at client-local (mx, my), or -1 if none.
+static int toolbox_hit(const toolbox_state_t *st, int mx, int my) {
+  if (mx < 0 || my < 0) return -1;
+  int bsz = effective_bsz(st);
+  int col = mx / bsz;
+  int row = my / bsz;
+  if (col < 0 || col >= TOOLBOX_COLS) return -1;
+  int idx = row * TOOLBOX_COLS + col;
+  if (idx < 0 || idx >= st->count) return -1;
+  return idx;
+}
+
+// Draw a single toolbox button at client-local (bx, by).
+static void draw_toolbox_button(toolbox_state_t *st, int idx,
+                                int bx, int by) {
+  int bsz = effective_bsz(st);
+  rect_t cell = { bx, by, bsz, bsz };
+
+  bool is_active  = (st->items[idx].ident == st->active_ident);
+  bool is_pressed = (idx == st->pressed_idx);
+  bool depressed  = is_pressed || is_active;
+
+  if (depressed) {
+    draw_button(&cell, 1, 1, true);   // inset / pressed look
+  } else {
+    // Inactive: just the dark background from the global fill; no bevel.
+    // This matches the classic Photoshop / MS Paint toolbox look.
+  }
+
+  // Draw icon centred in the cell (shifted 1px when depressed).
+  int px = depressed ? 1 : 0;
+  int icon = st->items[idx].icon;
+
+  if (icon >= SYSICON_BASE) {
+    // Built-in 16×16 sysicon sheet — drawn at full colour.
+    int ix = bx + (bsz - 16) / 2 + px;
+    int iy = by + (bsz - 16) / 2 + px;
+    draw_icon16(icon, ix, iy, 0xFFFFFFFF);
+  } else if (st->strip.tex && st->strip.cols > 0) {
+    // Custom sprite-sheet strip.
+    bitmap_strip_t *s = &st->strip;
+    int col_idx = icon % s->cols;
+    int row_idx = icon / s->cols;
+    float u0 = (float)(col_idx * s->icon_w) / (float)s->sheet_w;
+    float v0 = (float)(row_idx * s->icon_h) / (float)s->sheet_h;
+    float u1 = u0 + (float)s->icon_w / (float)s->sheet_w;
+    float v1 = v0 + (float)s->icon_h / (float)s->sheet_h;
+    int ix = bx + (bsz - s->icon_w) / 2 + px;
+    int iy = by + (bsz - s->icon_h) / 2 + px;
+    draw_sprite_region((int)s->tex, ix, iy, s->icon_w, s->icon_h,
+                       u0, v0, u1, v1, 1.0f);
+  } else {
+    // Text fallback: draw item index as a number.
+    char buf[8];
+    snprintf(buf, sizeof(buf), "%d", idx);
+    draw_text_small(buf, bx + px + 4, by + px + (bsz - 8) / 2,
+                    get_sys_color(kColorTextNormal));
+  }
+}
+
+// Toolbox window procedure.
+result_t win_toolbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  switch (msg) {
+    // ── Lifecycle ─────────────────────────────────────────────────────────
+    case kWindowMessageCreate: {
+      toolbox_state_t *st = allocate_window_data(win, sizeof(toolbox_state_t));
+      st->btn_size     = 0;
+      st->active_ident = -1;
+      st->pressed_idx  = -1;
+      return true;
+    }
+    case kWindowMessageDestroy: {
+      toolbox_state_t *st = (toolbox_state_t *)win->userdata;
+      if (st) {
+        free(st->items);
+        if (st->own_strip_tex)
+          R_DeleteTexture(st->own_strip_tex);
+        free(st);
+        win->userdata = NULL;
+      }
+      return true;
+    }
+
+    // ── Paint ─────────────────────────────────────────────────────────────
+    case kWindowMessagePaint: {
+      toolbox_state_t *st = (toolbox_state_t *)win->userdata;
+      if (!st) return false;
+      int bsz = effective_bsz(st);
+
+      // Fill the entire client area with the dark panel background so that
+      // inactive buttons look flat (icon on plain dark surface) and any area
+      // below the grid (extra client content in wrapping procs) starts clean.
+      fill_rect(get_sys_color(kColorWindowDarkBg), 0, 0, win->frame.w, win->frame.h);
+
+      for (int i = 0; i < st->count; i++) {
+        int col = i % TOOLBOX_COLS;
+        int row = i / TOOLBOX_COLS;
+        draw_toolbox_button(st, i, col * bsz, row * bsz);
+      }
+      return true;
+    }
+
+    // ── Mouse input ───────────────────────────────────────────────────────
+    case kWindowMessageLeftButtonDown: {
+      toolbox_state_t *st = (toolbox_state_t *)win->userdata;
+      if (!st) return false;
+      int mx = (int)(int16_t)LOWORD(wparam);
+      int my = (int)(int16_t)HIWORD(wparam);
+      int idx = toolbox_hit(st, mx, my);
+      if (idx >= 0) {
+        st->pressed_idx = idx;
+        invalidate_window(win);
+        return true;
+      }
+      return false;
+    }
+    case kWindowMessageLeftButtonUp: {
+      toolbox_state_t *st = (toolbox_state_t *)win->userdata;
+      if (!st) return false;
+      int mx    = (int)(int16_t)LOWORD(wparam);
+      int my    = (int)(int16_t)HIWORD(wparam);
+      int idx   = toolbox_hit(st, mx, my);
+      int prev  = st->pressed_idx;
+      st->pressed_idx = -1;
+
+      if (prev >= 0 && prev == idx) {
+        // Confirmed click: update active tool and fire notification.
+        st->active_ident = st->items[idx].ident;
+        invalidate_window(win);
+        // Send kWindowMessageCommand to the toolbox window itself.
+        // A wrapping proc intercepts this before it reaches win_toolbox again.
+        send_message(win, kWindowMessageCommand,
+                     MAKEDWORD((uint16_t)st->items[idx].ident,
+                               kToolboxNotificationClicked),
+                     win);
+        return true;
+      }
+      if (prev >= 0)
+        invalidate_window(win);
+      return false;
+    }
+
+    // ── Toolbox messages ─────────────────────────────────────────────────
+    case kToolboxMessageSetItems: {
+      toolbox_state_t *st = (toolbox_state_t *)win->userdata;
+      if (!st) return false;
+      free(st->items);
+      st->items = NULL;
+      st->count = 0;
+      st->pressed_idx = -1;
+      int count = (int)wparam;
+      if (count > 0 && lparam) {
+        st->items = malloc((size_t)count * sizeof(toolbox_item_t));
+        if (st->items) {
+          memcpy(st->items, lparam, (size_t)count * sizeof(toolbox_item_t));
+          st->count = count;
+        }
+      }
+      invalidate_window(win);
+      return true;
+    }
+    case kToolboxMessageSetActiveItem: {
+      toolbox_state_t *st = (toolbox_state_t *)win->userdata;
+      if (!st) return false;
+      st->active_ident = (int)(int32_t)wparam;
+      invalidate_window(win);
+      return true;
+    }
+    case kToolboxMessageSetStrip: {
+      toolbox_state_t *st = (toolbox_state_t *)win->userdata;
+      if (!st) return false;
+      // External strip: we copy the descriptor but do NOT own the GL texture.
+      if (lparam)
+        memcpy(&st->strip, lparam, sizeof(bitmap_strip_t));
+      else
+        memset(&st->strip, 0, sizeof(bitmap_strip_t));
+      // own_strip_tex remains 0 — caller owns the texture lifetime.
+      invalidate_window(win);
+      return true;
+    }
+    case kToolboxMessageSetButtonSize: {
+      toolbox_state_t *st = (toolbox_state_t *)win->userdata;
+      if (!st) return false;
+      int sz = (int)wparam;
+      st->btn_size = (sz >= 8) ? sz : 0;  // 0 = default TOOLBOX_BTN_SIZE
+      invalidate_window(win);
+      return true;
+    }
+    case kToolboxMessageLoadStrip: {
+      // Load a PNG sprite sheet and own the resulting GL texture.
+      // wparam = square icon tile size in pixels; lparam = const char* path.
+      toolbox_state_t *st = (toolbox_state_t *)win->userdata;
+      if (!st || !lparam) return false;
+      int icon_w = (int)wparam;
+      if (icon_w <= 0) return false;
+      const char *path = (const char *)lparam;
+      int w = 0, h = 0;
+      uint8_t *pixels = load_image(path, &w, &h);
+      if (!pixels) return false;
+      uint32_t tex = R_CreateTextureRGBA(w, h, pixels,
+                                         R_FILTER_NEAREST, R_WRAP_CLAMP);
+      image_free(pixels);
+      if (!tex) return false;
+      if (st->own_strip_tex)
+        R_DeleteTexture(st->own_strip_tex);
+      st->own_strip_tex  = tex;
+      st->strip.tex      = tex;
+      st->strip.icon_w   = icon_w;
+      st->strip.icon_h   = icon_w;  // square tiles
+      st->strip.cols     = w / icon_w;
+      st->strip.sheet_w  = w;
+      st->strip.sheet_h  = h;
+      invalidate_window(win);
+      return true;
+    }
+  }
+  return false;
+}
