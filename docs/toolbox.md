@@ -132,7 +132,8 @@ send_message(win, kToolboxMessageSetItems, 4, kSysTools);
 ## Custom button size
 
 The default button size is `TOOLBOX_BTN_SIZE` (= `TB_SPACING` = 22 px), which
-comfortably fits 16×16 icons with a 3-pixel margin on each side.
+fits a 16×16 icon with 3 px of margin on the left/right and 3 px on top/bottom
+(total button interior = 16 + 6 = 22 px).
 
 If your icons are larger (e.g., 21 px), call `kToolboxMessageSetButtonSize`
 **before** `kToolboxMessageSetItems` so the grid height is computed correctly:

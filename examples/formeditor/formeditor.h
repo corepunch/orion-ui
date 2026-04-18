@@ -32,8 +32,8 @@
 // Palette window dimensions — 2 button columns, rows computed from NUM_TOOLS.
 #define PALETTE_WIN_X     4
 #define PALETTE_WIN_W     (TOOLBOX_COLS * FE_TOOLBOX_BTN_SIZE)
-#define PALETTE_WIN_ROWS  ((NUM_TOOLS + TOOLBOX_COLS - 1) / TOOLBOX_COLS)
-#define PALETTE_WIN_H     (TITLEBAR_HEIGHT + PALETTE_WIN_ROWS * FE_TOOLBOX_BTN_SIZE + 4)
+#define PALETTE_GRID_ROWS ((NUM_TOOLS + TOOLBOX_COLS - 1) / TOOLBOX_COLS)
+#define PALETTE_WIN_H     (TITLEBAR_HEIGHT + PALETTE_GRID_ROWS * FE_TOOLBOX_BTN_SIZE + 4)
 
 // Document window initial position
 // frame.y is the window top; place it 8px below the menu bar.

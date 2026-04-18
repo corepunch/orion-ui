@@ -114,11 +114,13 @@ typedef struct {
 
 // Toolbox layout constants.
 // TOOLBOX_COLS is always 2 — toolboxes are a fixed-width 2-column grid.
-// TOOLBOX_BTN_SIZE is the default square button dimension (= TB_SPACING = 22 px).
+// TOOLBOX_BTN_SIZE is intentionally set equal to TB_SPACING (22 px) so that
+// toolbox buttons have the same square size as toolbar buttons.  If you need
+// a different size, override per-window with kToolboxMessageSetButtonSize.
 // Window width  = TOOLBOX_COLS * TOOLBOX_BTN_SIZE = 44 px.
 // Window height = TITLEBAR_HEIGHT + ceil(n/2) * TOOLBOX_BTN_SIZE.
 #define TOOLBOX_COLS      2
-#define TOOLBOX_BTN_SIZE  TB_SPACING  // 22 px — same as a toolbar button
+#define TOOLBOX_BTN_SIZE  TB_SPACING  // 22 px (= TB_SPACING by design)
 
 // Window flags
 #define WINDOW_NOTITLE      (1 << 0)

@@ -131,7 +131,6 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
     }
 
     case kWindowMessageLeftButtonDown: {
-      if (!g_app) return win_toolbox(win, msg, wparam, lparam);
       int mx = (int)(int16_t)LOWORD(wparam);
       int my = (int)(int16_t)HIWORD(wparam);
       int gy = toolbox_grid_height(win);
@@ -139,7 +138,7 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       // Check if the click is in the shape-mode toggle row.
       int fill_row_y = gy + SWATCH_LABEL_Y + SWATCH_LABEL_H
                        + SWATCH_BOX_H + FILL_LABEL_H;
-      if (my >= fill_row_y && my < fill_row_y + FILL_ROW_H) {
+      if (g_app && my >= fill_row_y && my < fill_row_y + FILL_ROW_H) {
         bool was_filled = g_app->shape_filled;
         g_app->shape_filled = (mx >= TB_SPACING);
         if (g_app->shape_filled != was_filled)
