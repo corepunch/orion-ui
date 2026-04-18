@@ -407,8 +407,11 @@ void test_toolbar_notitle_nonclient_mouseup_fires(void) {
     ASSERT_NOT_NULL(btn);
 
     // Compute a hit point inside the button's screen frame.
-    int hit_x = btn->frame.x + btn->frame.w / 2;
-    int hit_y = btn->frame.y + btn->frame.h / 2;
+    // btn->frame.x/y are toolbar-band-relative; for WINDOW_NOTITLE title_h=0,
+    // so screen coords = win->frame.{x,y} + btn->frame.{x,y}.
+    int title_h = 0; /* WINDOW_NOTITLE */
+    int hit_x = win->frame.x + btn->frame.x + btn->frame.w / 2;
+    int hit_y = (win->frame.y + title_h) + btn->frame.y + btn->frame.h / 2;
 
     // For WINDOW_NOTITLE windows the toolbar band is the drag area, so
     // LeftButtonDown goes through _dragging.  On release the framework sends
@@ -452,7 +455,7 @@ void test_toolbar_destroy_clears_children(void) {
 }
 
 void test_toolbar_move_shifts_children(void) {
-    TEST("move_window shifts toolbar children to new screen positions");
+    TEST("move_window: toolbar children frames are parent-relative and stable after move");
 
     test_env_init();
 
@@ -470,11 +473,13 @@ void test_toolbar_move_shifts_children(void) {
     int orig_x = btn->frame.x;
     int orig_y = btn->frame.y;
 
-    // Move parent by (+10, +20).
+    // Move parent by (+10, +20): toolbar child frames are parent-relative, so
+    // they must NOT change when the parent moves (unlike the old screen-absolute
+    // design, which required an explicit shift for every move).
     move_window(win, 60, 70);
 
-    ASSERT_EQUAL(btn->frame.x, orig_x + 10);
-    ASSERT_EQUAL(btn->frame.y, orig_y + 20);
+    ASSERT_EQUAL(btn->frame.x, orig_x);
+    ASSERT_EQUAL(btn->frame.y, orig_y);
 
     destroy_window(win);
     test_env_shutdown();
@@ -492,7 +497,7 @@ void test_titlebar_height_single_row(void) {
     ASSERT_NOT_NULL(win);
 
     int bsz = TB_SPACING;
-    int expected = TITLEBAR_HEIGHT + bsz + 2 * TOOLBAR_PADDING;
+    int expected = TITLEBAR_HEIGHT + bsz + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH);
     ASSERT_EQUAL(titlebar_height(win), expected);
 
     // Adding many buttons does not increase the non-client height.
@@ -529,21 +534,29 @@ void test_toolbar_button_click_cancelled_if_released_outside(void) {
     window_t *btn = find_toolbar_child(win, 88);
     ASSERT_NOT_NULL(btn);
 
+    // Make the window visible so dispatch_message can find it via find_window().
+    win->visible = true;
+
+    // btn->frame.x/y are toolbar-band-relative (not screen-absolute).
+    // Screen position = win->frame.{x,y} + TITLEBAR_HEIGHT + btn->frame.{x,y}.
+    // (win has a title bar: WINDOW_TOOLBAR without WINDOW_NOTITLE)
+    int title_h = TITLEBAR_HEIGHT;
+
     // Drive the real event-layer path: press inside the toolbar button via
     // dispatch_message so the event layer records _toolbar_down_win, then
     // release outside so the event layer clears pressed state without firing
     // a click notification — matching the previous hit-tested behavior.
     ui_event_t ev = {0};
     ev.message = kEventLeftMouseDown;
-    ev.x = (uint16_t)((btn->frame.x + 4) * UI_WINDOW_SCALE);
-    ev.y = (uint16_t)((btn->frame.y + 4) * UI_WINDOW_SCALE);
+    ev.x = (uint16_t)((win->frame.x + btn->frame.x + 4) * UI_WINDOW_SCALE);
+    ev.y = (uint16_t)((win->frame.y + title_h + btn->frame.y + 4) * UI_WINDOW_SCALE);
     dispatch_message(&ev);
     ASSERT_TRUE(btn->pressed);
 
     // Release well outside the button (to the right of it, same toolbar row).
     ev.message = kEventLeftMouseUp;
-    ev.x = (uint16_t)((btn->frame.x + btn->frame.w + 10) * UI_WINDOW_SCALE);
-    ev.y = (uint16_t)((btn->frame.y + 4) * UI_WINDOW_SCALE);
+    ev.x = (uint16_t)((win->frame.x + btn->frame.x + btn->frame.w + 10) * UI_WINDOW_SCALE);
+    ev.y = (uint16_t)((win->frame.y + title_h + btn->frame.y + 4) * UI_WINDOW_SCALE);
     dispatch_message(&ev);
 
     ASSERT_FALSE(btn->pressed);

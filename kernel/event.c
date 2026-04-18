@@ -441,15 +441,17 @@ void dispatch_message(ui_event_t *msg) {
           int sy = SCALE_POINT(py);
           if (msg->message == kEventLeftMouseDown &&
               (win->flags & WINDOW_TOOLBAR) && sy < win->frame.y + titlebar_height(win)) {
-            // Toolbar band click: find the toolbar child at (sx, sy) and
-            // deliver LeftButtonDown directly to it.  The child handles pressed
-            // state and fires kWindowMessageCommand on release, just like any
-            // regular button child.
+            // Toolbar band click: convert screen coords to toolbar-band-relative
+            // (tc->frame.x/y are relative to toolbar band top-left) before hit
+            // testing, so the parent's screen position does not affect the result.
+            int title_h_val = (win->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
+            int tb_x = sx - win->frame.x;
+            int tb_y = sy - (win->frame.y + title_h_val);
             for (window_t *tc = win->toolbar_children; tc; tc = tc->next) {
-              if (CONTAINS(sx, sy, tc->frame.x, tc->frame.y, tc->frame.w, tc->frame.h)) {
+              if (CONTAINS(tb_x, tb_y, tc->frame.x, tc->frame.y, tc->frame.w, tc->frame.h)) {
                 _toolbar_down_win = tc;
                 send_message(tc, kWindowMessageLeftButtonDown,
-                             MAKEDWORD(sx - tc->frame.x, sy - tc->frame.y), NULL);
+                             MAKEDWORD(tb_x - tc->frame.x, tb_y - tc->frame.y), NULL);
                 break;
               }
             }
@@ -500,12 +502,18 @@ void dispatch_message(ui_event_t *msg) {
         int sy = SCALE_POINT(py);
         window_t *tc = _toolbar_down_win;
         _toolbar_down_win = NULL;  // clear before send: handler may open a modal loop
-        bool hit = CONTAINS(sx, sy, tc->frame.x, tc->frame.y, tc->frame.w, tc->frame.h);
+        // Convert screen coords to toolbar-band-relative for hit testing.
+        // tc->parent is always non-NULL (toolbar children always have a parent).
+        window_t *parent = tc->parent;
+        int title_h_val = (parent->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
+        int tb_x = sx - parent->frame.x;
+        int tb_y = sy - (parent->frame.y + title_h_val);
+        bool hit = CONTAINS(tb_x, tb_y, tc->frame.x, tc->frame.y, tc->frame.w, tc->frame.h);
         if (hit) {
           // Release inside the button: let win_toolbar_button/win_button fire
           // the click notification normally via LeftButtonUp.
           send_message(tc, kWindowMessageLeftButtonUp,
-                       MAKEDWORD(sx - tc->frame.x, sy - tc->frame.y), NULL);
+                       MAKEDWORD(tb_x - tc->frame.x, tb_y - tc->frame.y), NULL);
         } else {
           // Release outside: clear the pressed visual without firing a click.
           // This matches the previous hit-tested behaviour where releasing off

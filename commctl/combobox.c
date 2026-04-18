@@ -21,7 +21,7 @@ extern void show_window(window_t *win, bool visible);
 // Open the dropdown list popup for 'win' (combobox).
 static void open_dropdown(window_t *win) {
   // Determine the screen-absolute position of the combobox bottom edge.
-  // Toolbar children have screen-absolute frame.x/y already; regular body
+  // Toolbar children have toolbar-band-relative frame.x/y; regular body
   // children have root-client-relative frames.
   int abs_x, abs_y;
   bool is_toolbar_child = false;
@@ -31,8 +31,10 @@ static void open_dropdown(window_t *win) {
     }
   }
   if (is_toolbar_child) {
-    abs_x = win->frame.x;
-    abs_y = win->frame.y + win->frame.h + 2;
+    window_t *parent = win->parent;
+    int parent_title_h = (parent->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
+    abs_x = parent->frame.x + win->frame.x;
+    abs_y = parent->frame.y + parent_title_h + win->frame.y + win->frame.h + 2;
   } else {
     window_t *root = get_root_window(win);
     int root_t = titlebar_height(root);

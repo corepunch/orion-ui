@@ -67,17 +67,18 @@ static int toolbar_effective_bsz(window_t const *win) {
   return (win->toolbar_btn_size > 0) ? win->toolbar_btn_size : TB_SPACING;
 }
 
-// Create one toolbar child window at the given screen position, then remove
-// it from parent->children (where create_window puts it) so the caller can
-// add it to parent->toolbar_children.
+// Create one toolbar child window at the given toolbar-band-relative position,
+// then remove it from parent->children (where create_window puts it) so the
+// caller can add it to parent->toolbar_children.
+// Frames are relative to the toolbar band top-left (not screen-absolute).
 // For BUTTON items: sets kButtonMessageSetImage if a sysicon or custom strip.
 static window_t *create_toolbar_child(window_t *parent, winproc_t proc,
                                        uint32_t id, flags_t extra_flags,
                                        const char *title,
-                                       int abs_x, int abs_y, int w, int h,
+                                       int rel_x, int rel_y, int w, int h,
                                        int icon) {
-  rect_t r = {abs_x, abs_y, w, h};
-  // Toolbar children use screen-absolute frames and WINDOW_NOTITLE | WINDOW_NOFILL
+  rect_t r = {rel_x, rel_y, w, h};
+  // Toolbar children use toolbar-band-relative frames and WINDOW_NOTITLE | WINDOW_NOFILL
   // so the framework neither draws a title bar nor fills their background.
   window_t *tc = create_window(title ? title : "",
                                 WINDOW_NOTITLE | WINDOW_NOFILL | extra_flags,
@@ -110,8 +111,8 @@ static window_t *create_toolbar_child(window_t *parent, winproc_t proc,
   // expand frame.w/h during kWindowMessageCreate to fit their text content.
   // Clamping here keeps sequential toolbar layout stable regardless of text length
   // and ensures that an explicitly-provided width (item->w) is always honoured.
-  tc->frame.x = abs_x;
-  tc->frame.y = abs_y;
+  tc->frame.x = rel_x;
+  tc->frame.y = rel_y;
   tc->frame.w = w;
   tc->frame.h = h;
   // Wire up icon image for button children.
@@ -135,9 +136,8 @@ static void layout_toolbar_items(window_t *parent,
                                   const toolbar_item_t *items,
                                   uint32_t n) {
   int bsz     = toolbar_effective_bsz(parent);
-  int title_h = (parent->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
-  int base_x  = parent->frame.x + TOOLBAR_BEVEL_WIDTH + TOOLBAR_PADDING;
-  int base_y  = parent->frame.y + title_h + TOOLBAR_BEVEL_WIDTH + TOOLBAR_PADDING;
+  int base_x  = TOOLBAR_BEVEL_WIDTH + TOOLBAR_PADDING;
+  int base_y  = TOOLBAR_BEVEL_WIDTH + TOOLBAR_PADDING;
   int cur_x   = 0;
   window_t **tail = &parent->toolbar_children;
   while (*tail) tail = &(*tail)->next;
@@ -539,10 +539,18 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
                           total_h - 2 * TOOLBAR_BEVEL_WIDTH};
           draw_bevel(&rect);
           fill_rect(get_sys_color(kColorWindowBg), rect.x, rect.y, rect.w, rect.h);
-          // Paint each toolbar child using its own proc.
+          // Paint each toolbar child. tc->frame.x/y are toolbar-band-relative,
+          // so set up a viewport with (0,0) = toolbar band top-left so each
+          // child can draw at its stored coordinates without knowing the parent's
+          // screen position.  Restore fullscreen projection afterwards so the
+          // status bar and any subsequent code use screen-absolute coordinates.
+          rect_t tb_rect = {win->frame.x, win->frame.y + title_h, win->frame.w, total_h};
+          set_viewport(&tb_rect);
+          set_projection(0, 0, win->frame.w, total_h);
           for (window_t *tc = win->toolbar_children; tc; tc = tc->next) {
             tc->proc(tc, kWindowMessagePaint, 0, NULL);
           }
+          set_fullscreen();
         }
         if (win->flags&WINDOW_STATUSBAR) {
           draw_statusbar(win, win->statusbar_text);
@@ -715,11 +723,15 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         if (win->flags & WINDOW_TOOLBAR) {
           int sx = (int)(int16_t)LOWORD(wparam);
           int sy = (int)(int16_t)HIWORD(wparam);
+          // Convert screen-absolute coords to toolbar-band-relative.
+          int title_h = (win->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
+          int tb_x = sx - win->frame.x;
+          int tb_y = sy - (win->frame.y + title_h);
           for (window_t *tc = win->toolbar_children; tc; tc = tc->next) {
-            if (CONTAINS(sx, sy, tc->frame.x, tc->frame.y, tc->frame.w, tc->frame.h)) {
+            if (CONTAINS(tb_x, tb_y, tc->frame.x, tc->frame.y, tc->frame.w, tc->frame.h)) {
               tc->pressed = true;
               send_message(tc, kWindowMessageLeftButtonUp,
-                           MAKEDWORD(sx - tc->frame.x, sy - tc->frame.y), NULL);
+                           MAKEDWORD(tb_x - tc->frame.x, tb_y - tc->frame.y), NULL);
               break;
             }
           }

@@ -121,7 +121,7 @@ struct window_s {
   char title[64];
   char statusbar_text[64];
   uint32_t cursor_pos;
-  window_t *toolbar_children; // real child windows living in the toolbar band
+  window_t *toolbar_children; // real child windows in the toolbar band (toolbar-band-relative frames)
   bitmap_strip_t toolbar_strip;
   uint32_t toolbar_strip_tex;  // GL texture owned by kToolBarMessageLoadStrip (freed on destroy)
   int    toolbar_btn_size;   // 0 = use TB_SPACING default; >0 = custom square button size in pixels
