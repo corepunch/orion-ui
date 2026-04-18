@@ -57,8 +57,8 @@ enum {
   kComboBoxMessageGetCurrentSelection,
   kComboBoxMessageSetCurrentSelection,
   kComboBoxMessageGetListBoxText,
+  kComboBoxMessageClear,            // clear all items and reset title
   kStatusBarMessageAddWindow,
-  kToolBarMessageAddButtons,
   kToolBarMessageButtonClick,
   kToolBarMessageSetStrip,         // wparam=0, lparam=bitmap_strip_t* (or NULL to clear)
   kToolBarMessageSetActiveButton,  // wparam=ident of button to mark active
@@ -66,6 +66,7 @@ enum {
   kScrollBarMessageGetPos,         // returns current scroll position
   kToolBarMessageSetButtonSize,    // wparam=square button size in pixels (0 resets to TB_SPACING)
   kToolBarMessageLoadStrip,        // wparam=icon tile size in px (square); lparam=const char* path to PNG
+  kToolBarMessageSetItems,         // wparam=count; lparam=toolbar_item_t* — create real child windows
   // Multiline text edit messages (analogous to WM_GETTEXT / WM_SETTEXT)
   kMultiEditMessageGetText,        // wparam=buf_size; lparam=char* dst → copies text, returns length
   kMultiEditMessageSetText,        // wparam=0; lparam=const char* src → replaces text
@@ -180,11 +181,31 @@ typedef struct {
 #define TB_SPACING              TOOLBAR_HEIGHT  // equals TOOLBAR_HEIGHT so toolbar buttons are square
 #define TOOLBAR_PADDING         2               // pixels of margin between toolbar border and button area (all sides)
 #define TOOLBAR_SPACING         4               // pixels of gap between consecutive buttons in a toolbar row
-#define TOOLBAR_SPACING_GAP_WIDTH  4            // extra gap width inserted by a TOOLBAR_SPACING_TOKEN entry
+#define TOOLBAR_SPACING_GAP_WIDTH  4            // pixels of gap inserted by a TOOLBAR_ITEM_SPACER entry
 #define TOOLBAR_BEVEL_WIDTH     1               // width of the bevel border drawn around the toolbar button area (each side)
+#define TOOLBAR_LABEL_PADDING           8       // horizontal padding added to auto-computed label width (left+right)
+#define TOOLBAR_COMBOBOX_DEFAULT_WIDTH_MULT  3  // default combobox width = button_size * this multiplier
 #define TOOLBAR_BUTTON_FLAG_ACTIVE   (1u << 0)
 #define TOOLBAR_BUTTON_FLAG_PRESSED  (1u << 1)
-#define TOOLBAR_SPACING_TOKEN   { .icon = -1, .ident = 0, .flags = 0 }  // on-demand spacing between toolbar buttons
+
+// Toolbar item types used with kToolBarMessageSetItems.
+typedef enum {
+  TOOLBAR_ITEM_BUTTON    = 0,  // icon or text button (win_toolbar_button / win_button)
+  TOOLBAR_ITEM_LABEL     = 1,  // static text label (win_label)
+  TOOLBAR_ITEM_COMBOBOX  = 2,  // drop-down combobox (win_combobox)
+  TOOLBAR_ITEM_SEPARATOR = 3,  // narrow visual separator (no interaction)
+  TOOLBAR_ITEM_SPACER    = 4,  // invisible gap (no child window created)
+} toolbar_item_type_t;
+
+// Descriptor for a single toolbar item (used with kToolBarMessageSetItems).
+typedef struct {
+  toolbar_item_type_t type;   // item type
+  int                 ident;  // command ID / button identifier
+  int                 icon;   // BUTTON: sysicon_* value or custom strip index; -1 = text-only
+  int                 w;      // explicit width in pixels (0 = automatic)
+  uint32_t            flags;  // extra style flags (BUTTON_PUSHLIKE, BUTTON_AUTORADIO, …)
+  const char         *text;   // button caption, label text, or combobox placeholder
+} toolbar_item_t;
 
 // Analogous to WinAPI CW_USEDEFAULT: pass as x or y to create_window() /
 // create_window_from_form() to let the framework auto-position the window.

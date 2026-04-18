@@ -93,10 +93,10 @@ uint32_t show_dialog_from_form_ex(form_def_t const *def, char const *title,
   dlg_def.flags |= flags;
   if (title) dlg_def.name = title;
 
-  rect_t wr = {0, 0, def->w, def->h};
+  rect_t wr = {0, 0, def->width, def->height};
   adjust_window_rect(&wr, dlg_def.flags);
-  dlg_def.w = wr.w;
-  dlg_def.h = wr.h;
+  dlg_def.width = wr.w;
+  dlg_def.height = wr.h;
 
   // Center on screen.
   int sw = ui_get_system_metrics(kSystemMetricScreenWidth);

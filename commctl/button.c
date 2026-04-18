@@ -18,6 +18,12 @@ static void autoradio_select(window_t *win) {
         invalidate_window(sib);
       }
     }
+    for (window_t *sib = win->parent->toolbar_children; sib; sib = sib->next) {
+      if (sib != win && (sib->flags & BUTTON_AUTORADIO) && sib->value) {
+        sib->value = false;
+        invalidate_window(sib);
+      }
+    }
   }
   win->value = true;
   invalidate_window(win);

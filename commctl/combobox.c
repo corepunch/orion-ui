@@ -20,14 +20,28 @@ extern void show_window(window_t *win, bool visible);
 
 // Open the dropdown list popup for 'win' (combobox).
 static void open_dropdown(window_t *win) {
-  window_t *root = get_root_window(win);
-  int root_t = titlebar_height(root);
-  rect_t rect = {
-    root->frame.x + win->frame.x,
-    root->frame.y + root_t + win->frame.y + win->frame.h + 2,
-    win->frame.w,
-    100,
-  };
+  // Determine the screen-absolute position of the combobox bottom edge.
+  // Toolbar children have toolbar-band-relative frame.x/y; regular body
+  // children have root-client-relative frames.
+  int abs_x, abs_y;
+  bool is_toolbar_child = false;
+  if (win->parent) {
+    for (window_t *tc = win->parent->toolbar_children; tc; tc = tc->next) {
+      if (tc == win) { is_toolbar_child = true; break; }
+    }
+  }
+  if (is_toolbar_child) {
+    window_t *parent = win->parent;
+    int parent_title_h = (parent->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
+    abs_x = parent->frame.x + win->frame.x;
+    abs_y = parent->frame.y + parent_title_h + win->frame.y + win->frame.h + 2;
+  } else {
+    window_t *root = get_root_window(win);
+    int root_t = titlebar_height(root);
+    abs_x = root->frame.x + win->frame.x;
+    abs_y = root->frame.y + root_t + win->frame.y + win->frame.h + 2;
+  }
+  rect_t rect = {abs_x, abs_y, win->frame.w, 100};
   window_t *list = create_window("", WINDOW_NOTITLE|WINDOW_NORESIZE|WINDOW_VSCROLL|WINDOW_ALWAYSONTOP|WINDOW_NOTRAYBUTTON, &rect, NULL, win_list, win->hinstance, win);
   result_t sel = send_message(win, kComboBoxMessageGetCurrentSelection, 0, NULL);
   if (sel != (result_t)kComboBoxError)
@@ -93,6 +107,11 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       if (wparam == AX_KEY_SPACE || wparam == AX_KEY_ENTER || wparam == AX_KEY_KP_ENTER)
         return true;
       return win_button(win, msg, wparam, lparam);
+    case kComboBoxMessageClear:
+      memset(texts, 0, sizeof(combobox_string_t) * win->cursor_pos);
+      win->cursor_pos = 0;
+      win->title[0] = '\0';
+      return true;
     case kComboBoxMessageAddString:
       if (win->cursor_pos < MAX_COMBOBOX_STRINGS) {
         strncpy(texts[win->cursor_pos++], lparam, sizeof(combobox_string_t));

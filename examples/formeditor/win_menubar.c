@@ -322,14 +322,22 @@ bool form_save(form_doc_t *doc, const char *path) {
     }
     fprintf(f, "};\n");
     fprintf(f, "static const form_def_t k%s = {\n", ident);
-    fprintf(f, "  \"%s\", %d, %d, 0,\n", ident, doc->form_w, doc->form_h);
-    fprintf(f, "  k%s_children,\n", ident);
-    fprintf(f, "  (int)(sizeof(k%s_children) / sizeof(k%s_children[0]))\n",
-            ident, ident);
+        fprintf(f, "  .name        = \"%s\",\n", ident);
+        fprintf(f, "  .width       = %d,\n", doc->form_w);
+        fprintf(f, "  .height      = %d,\n", doc->form_h);
+        fprintf(f, "  .flags       = 0,\n");
+        fprintf(f, "  .children    = k%s_children,\n", ident);
+        fprintf(f, "  .child_count = (int)(sizeof(k%s_children) / sizeof(k%s_children[0]))\n",
+          ident, ident);
     fprintf(f, "};\n");
   } else {
     fprintf(f, "static const form_def_t k%s = {\n", ident);
-    fprintf(f, "  \"%s\", %d, %d, 0, NULL, 0\n", ident, doc->form_w, doc->form_h);
+        fprintf(f, "  .name        = \"%s\",\n", ident);
+        fprintf(f, "  .width       = %d,\n", doc->form_w);
+        fprintf(f, "  .height      = %d,\n", doc->form_h);
+        fprintf(f, "  .flags       = 0,\n");
+        fprintf(f, "  .children    = NULL,\n");
+        fprintf(f, "  .child_count = 0\n");
     fprintf(f, "};\n");
   }
 
@@ -483,8 +491,8 @@ static const form_ctrl_def_t kPropsChildren[] = {
 
 static const form_def_t kPropsForm = {
   .name        = "Element Properties",
-  .w           = PROPS_W,
-  .h           = PROPS_H + TITLEBAR_HEIGHT,
+  .width       = PROPS_W,
+  .height      = PROPS_H + TITLEBAR_HEIGHT,
   .flags       = 0,
   .children    = kPropsChildren,
   .child_count = ARRAY_LEN(kPropsChildren),

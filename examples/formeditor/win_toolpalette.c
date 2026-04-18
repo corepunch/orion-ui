@@ -44,14 +44,15 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       send_message(win, kToolBarMessageLoadStrip, TOOLBOX_ICON_W, path);
 #endif
 
-      toolbar_button_t buttons[NUM_TOOLS];
+      toolbar_item_t items[NUM_TOOLS];
       for (int i = 0; i < NUM_TOOLS; i++) {
-        buttons[i].icon   = k_tool_icon[i];
-        buttons[i].ident  = k_tool_order[i];
-        buttons[i].flags  = (k_tool_order[i] == ID_TOOL_SELECT)
-                            ? TOOLBAR_BUTTON_FLAG_ACTIVE : 0;
+        items[i] = (toolbar_item_t){
+          TOOLBAR_ITEM_BUTTON, k_tool_order[i], k_tool_icon[i], 0,
+          (k_tool_order[i] == ID_TOOL_SELECT) ? TOOLBAR_BUTTON_FLAG_ACTIVE : 0,
+          NULL
+        };
       }
-      send_message(win, kToolBarMessageAddButtons, NUM_TOOLS, buttons);
+      send_message(win, kToolBarMessageSetItems, NUM_TOOLS, items);
       return true;
     }
     case kWindowMessagePaint:

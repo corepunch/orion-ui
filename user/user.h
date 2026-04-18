@@ -48,58 +48,6 @@ typedef struct bitmap_strip_s {
   int      sheet_h; // total texture height in pixels (for UV calculation)
 } bitmap_strip_t;
 
-// Toolbar button structure
-typedef struct toolbar_button_s {
-  int icon;
-  int ident;
-  flags_t flags; // TOOLBAR_BUTTON_FLAG_* bits
-} toolbar_button_t;
-
-static inline bool toolbar_button_has_flag(const toolbar_button_t *button, flags_t flag) {
-  return button && ((button->flags & flag) != 0);
-}
-
-static inline bool toolbar_button_is_active(const toolbar_button_t *button) {
-  return toolbar_button_has_flag(button, TOOLBAR_BUTTON_FLAG_ACTIVE);
-}
-
-static inline bool toolbar_button_is_pressed(const toolbar_button_t *button) {
-  return toolbar_button_has_flag(button, TOOLBAR_BUTTON_FLAG_PRESSED);
-}
-
-static inline void toolbar_button_set_flag(toolbar_button_t *button, flags_t flag, bool enabled) {
-  if (!button) return;
-  if (enabled)
-    button->flags |= flag;
-  else
-    button->flags &= ~flag;
-}
-
-// Returns the number of toolbar rows needed for 'n' buttons in a window
-// of inner pixel width 'inner_w' and button size 'bsz'.
-// Entries with icon == -1 (TOOLBAR_SPACING_TOKEN) consume TOOLBAR_SPACING_GAP_WIDTH
-// horizontal pixels without occupying a button slot.
-static inline int toolbar_count_rows(const toolbar_button_t *buttons, uint32_t n,
-                                      int inner_w, int bsz) {
-  if (n == 0 || buttons == NULL) return 1;
-  int available = inner_w - 2 * TOOLBAR_PADDING;
-  int cur_x = 0, cur_row = 0;
-  bool has_real = false;
-  for (uint32_t i = 0; i < n; i++) {
-    if (buttons[i].icon == -1) {
-      cur_x += TOOLBAR_SPACING_GAP_WIDTH;
-    } else {
-      has_real = true;
-      if (cur_x > 0 && cur_x + bsz > available) {
-        cur_row++;
-        cur_x = 0;
-      }
-      cur_x += bsz;
-    }
-  }
-  return has_real ? cur_row + 1 : 1;
-}
-
 // Window definition structure (for declarative window creation)
 typedef struct {
   winproc_t proc;
@@ -135,7 +83,7 @@ typedef struct {
 // (analogous to DLGTEMPLATE).  Pass to create_window_from_form() to instantiate.
 typedef struct {
   const char             *name;        // window title
-  int                     w, h;        // client area dimensions
+  int                     width, height; // client area dimensions
   flags_t                 flags;       // window flags
   const form_ctrl_def_t  *children;    // array of child control definitions (may be NULL)
   int                     child_count; // number of entries in children[]
@@ -173,8 +121,7 @@ struct window_s {
   char title[64];
   char statusbar_text[64];
   uint32_t cursor_pos;
-  uint32_t num_toolbar_buttons;
-  toolbar_button_t *toolbar_buttons;
+  window_t *toolbar_children; // real child windows in the toolbar band (toolbar-band-relative frames)
   bitmap_strip_t toolbar_strip;
   uint32_t toolbar_strip_tex;  // GL texture owned by kToolBarMessageLoadStrip (freed on destroy)
   int    toolbar_btn_size;   // 0 = use TB_SPACING default; >0 = custom square button size in pixels
@@ -186,6 +133,11 @@ struct window_s {
   struct window_s *children;
   struct window_s *parent;
 };
+
+// Returns the combined height of the non-client title bar and (if WINDOW_TOOLBAR
+// is set) the single-row toolbar band.  Used by event routing and layout.
+int titlebar_height(window_t const *win);
+int statusbar_height(window_t const *win);
 
 // Window management functions
 window_t *create_window(char const *title, flags_t flags, const rect_t* frame, 
@@ -199,6 +151,7 @@ void *allocate_window_data(window_t *win, size_t size);
 void show_window(window_t *win, bool visible);
 void destroy_window(window_t *win);
 void clear_window_children(window_t *win);
+void clear_toolbar_children(window_t *win);
 void move_window(window_t *win, int x, int y);
 void resize_window(window_t *win, int new_w, int new_h);
 
