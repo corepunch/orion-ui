@@ -61,8 +61,8 @@ uint32_t ui_get_mod_state(void) {
 static int drag_anchor[2];
 static int resize_anchor[2];
 
-// Window that received evNonClientLeftButtonDown (toolbar press).
-// Always delivered evNonClientLeftButtonUp on the next left-up,
+// Window that received evNCLeftButtonDown (toolbar press).
+// Always delivered evNCLeftButtonUp on the next left-up,
 // regardless of release position, so pressed state is cleared deterministically.
 // Shared with user/window.c for destroy_window cleanup (stored in g_ui_runtime).
 
@@ -538,7 +538,7 @@ void dispatch_message(ui_event_t *msg) {
           }
         } else {
           if (msg->message == kEventLeftButtonUp)
-            send_message(g_ui_runtime.dragging, evNonClientLeftButtonUp,
+            send_message(g_ui_runtime.dragging, evNCLeftButtonUp,
                          MAKEDWORD(sx, sy), NULL);
           g_ui_runtime.dragging = NULL;
         }
@@ -562,7 +562,7 @@ void dispatch_message(ui_event_t *msg) {
           int sx = SCALE_POINT(px);
           int sy = SCALE_POINT(py);
           if (msg->message == kEventLeftButtonUp)
-            send_message(win, evNonClientLeftButtonUp,
+            send_message(win, evNCLeftButtonUp,
                          MAKEDWORD(sx, sy), NULL);
         }
       }

@@ -415,9 +415,9 @@ void test_toolbar_notitle_nonclient_mouseup_fires(void) {
 
     // For WINDOW_NOTITLE windows the toolbar band is the drag area, so
     // LeftButtonDown goes through _dragging.  On release the framework sends
-    // evNonClientLeftButtonUp to the parent with screen coords.
+    // evNCLeftButtonUp to the parent with screen coords.
     // The default handler must then activate the toolbar child.
-    send_message(win, evNonClientLeftButtonUp,
+    send_message(win, evNCLeftButtonUp,
                  MAKEDWORD(hit_x, hit_y), NULL);
 
     ASSERT_EQUAL(g_click_count, 1);

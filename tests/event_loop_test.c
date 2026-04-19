@@ -204,7 +204,7 @@ static uint32_t msg_sink_last = 0;
 
 static result_t noop_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   (void)win; (void)wparam; (void)lparam;
-  if (msg == evPaint || msg == evNonClientPaint) {
+  if (msg == evPaint || msg == evNCPaint) {
     msg_sink_count++;
     msg_sink_last = msg;
   }
@@ -306,7 +306,7 @@ void test_invalidate_window_enqueues_paint(void) {
   hook_nc_paint_count = 0;
   hook_paint_count    = 0;
 
-  register_window_hook(evNonClientPaint, hook_nc, NULL);
+  register_window_hook(evNCPaint, hook_nc, NULL);
   register_window_hook(evPaint,          hook_p,  NULL);
 
   window_t *win = test_env_create_window("inv-test", 5, 5, 80, 60, noop_proc, NULL);
@@ -324,7 +324,7 @@ void test_invalidate_window_enqueues_paint(void) {
   ASSERT_TRUE(hook_nc_paint_count >= 1);
   ASSERT_TRUE(hook_paint_count    >= 1);
 
-  deregister_window_hook(evNonClientPaint, hook_nc, NULL);
+  deregister_window_hook(evNCPaint, hook_nc, NULL);
   deregister_window_hook(evPaint,          hook_p,  NULL);
 
   destroy_window(win);
@@ -338,7 +338,7 @@ void test_invalidate_routes_to_root(void) {
 
   last_nc_paint_target = NULL;
 
-  register_window_hook(evNonClientPaint, hook_nc_root, NULL);
+  register_window_hook(evNCPaint, hook_nc_root, NULL);
 
   rect_t parent_frame = {10, 10, 200, 150};
   window_t *parent = create_window("Parent", 0, &parent_frame, NULL, noop_proc, 0, NULL);
@@ -356,7 +356,7 @@ void test_invalidate_routes_to_root(void) {
 
   ASSERT_EQUAL(last_nc_paint_target, parent);
 
-  deregister_window_hook(evNonClientPaint, hook_nc_root, NULL);
+  deregister_window_hook(evNCPaint, hook_nc_root, NULL);
 
   destroy_window(parent);
   test_env_shutdown();

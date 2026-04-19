@@ -23,7 +23,7 @@ void post_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 | `evCreate` | Window just created | `lparam` = value from `create_window` |
 | `evDestroy` | Window about to be freed | – |
 | `evPaint` | Repaint requested | – |
-| `evNonClientPaint` | Non-client area repaint | – |
+| `evNCPaint` | Non-client area repaint | – |
 | `evSetFocus` | Window gains focus | – |
 | `evKillFocus` | Window loses focus | – |
 | `evLeftButtonDown` | LMB pressed | `LOWORD`=x, `HIWORD`=y (window-local) |

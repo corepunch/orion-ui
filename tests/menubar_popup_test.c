@@ -269,7 +269,7 @@ void test_popup_command_delivered_for_each_item(void) {
 }
 
 void test_nonclient_buttonup_closes_popup(void) {
-    TEST("Menubar popup closes on evNonClientLeftButtonUp");
+    TEST("Menubar popup closes on evNCLeftButtonUp");
 
     test_env_init();
     reset_counters();
@@ -283,7 +283,7 @@ void test_nonclient_buttonup_closes_popup(void) {
     window_t *popup = find_other_window(mb);
     ASSERT_NOT_NULL(popup);
 
-    send_message(popup, evNonClientLeftButtonUp,
+    send_message(popup, evNCLeftButtonUp,
                  MAKEDWORD(0, 0), NULL);
 
     ASSERT_EQUAL(count_windows(), 1);

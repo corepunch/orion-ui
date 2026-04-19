@@ -257,7 +257,7 @@ static result_t popup_proc(window_t *win, uint32_t msg,
     }
 
     // Fallback: non-client mouse-up (should not fire with set_capture, kept for safety)
-    case evNonClientLeftButtonUp: {
+    case evNCLeftButtonUp: {
       window_t *mb = pd->menubar;
       menubar_data_t *mbd = mb ? (menubar_data_t *)mb->userdata : NULL;
       if (mbd) {

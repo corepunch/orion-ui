@@ -528,7 +528,7 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   }
   // Handle special messages
   switch (msg) {
-    case evNonClientPaint:
+    case evNCPaint:
       // Skip OpenGL calls if graphics aren't initialized (e.g., in tests)
       if (g_ui_runtime.running) {
         ui_set_stencil_for_window(win->id);
@@ -726,7 +726,7 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
           }
         }
         break;
-      case evNonClientLeftButtonUp:
+      case evNCLeftButtonUp:
         // For WINDOW_NOTITLE toolbar windows the toolbar band is treated as a
         // drag area (window_in_drag_area returns true), so LeftButtonDown is
         // never routed to toolbar children.  Instead the toolbar fires on

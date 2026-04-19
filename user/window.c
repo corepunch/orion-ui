@@ -306,7 +306,7 @@ void set_focus(window_t* win) {
 }
 
 // Invalidate window (request repaint).
-// Always routes to the root window so that evNonClientPaint
+// Always routes to the root window so that evNCPaint
 // redraws the panel background (via draw_panel), erasing stale pixels from
 // the previous state before evPaint redraws the content.
 // For root windows get_root_window() returns win itself, so behaviour is
@@ -325,7 +325,7 @@ void set_focus(window_t* win) {
 void invalidate_window(window_t *win) {
   window_t *root = get_root_window(win);
   post_message(root, evRefreshStencil, 0, NULL);
-  post_message(root, evNonClientPaint, 0, NULL);
+  post_message(root, evNCPaint, 0, NULL);
   post_message(root, evPaint, 0, NULL);
 }
 

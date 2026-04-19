@@ -388,7 +388,7 @@ void draw_builtin_scrollbars(window_t *win) {
   int base_y = win->parent ? win->frame.y : 0;
 
   // When the horizontal bar is merged with the status bar, draw_statusbar()
-  // already rendered it during evNonClientPaint.  Skip it here so
+  // already rendered it during evNCPaint.  Skip it here so
   // it isn't drawn twice, and don't subtract its height from the vscroll track.
   bool h_merged = has_h && (win->flags & WINDOW_STATUSBAR);
 
