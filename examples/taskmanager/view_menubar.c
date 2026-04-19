@@ -87,30 +87,42 @@ void handle_menu_command(uint16_t id) {
   if (!g_app) return;
   task_doc_t *doc = g_app->active_doc;
   window_t *parent = doc ? doc->win : g_app->menubar_win;
+  TM_DEBUG("command id=%u name=%s doc=%p selected_idx=%d task_count=%d modified=%d",
+           (unsigned)id,
+           tm_command_name(id),
+           (void *)doc,
+           doc ? doc->selected_idx : -1,
+           doc ? doc->task_count : -1,
+           doc ? (int)doc->modified : -1);
 
   switch (id) {
     // ---- File ----
     case ID_FILE_NEW: {
       create_document(NULL);
+      TM_DEBUG("action new_document");
       break;
     }
     case ID_FILE_OPEN: {
       char path[512] = "";
       if (pick_open_path(parent, path, sizeof(path))) {
+        TM_DEBUG("action open_dialog accepted path=%s", path);
         task_doc_t *existing = app_find_document_by_path(path);
         if (existing && existing->win) {
           g_app->active_doc = existing;
           show_window(existing->win, true);
           app_update_status(existing);
+          TM_DEBUG("action open_existing_document path=%s", path);
           break;
         }
 
         task_doc_t *ndoc = create_document(path);
         if (!ndoc) {
+          TM_DEBUG("error create_document_failed path=%s", path);
           message_box(parent, "Failed to create document window.", "Error", MB_OK);
           return;
         }
         if (!task_file_load(path, ndoc)) {
+          TM_DEBUG("error task_file_load_failed path=%s", path);
           close_document(ndoc);
           message_box(parent, "Failed to open file.", "Error", MB_OK);
         } else {
@@ -120,6 +132,8 @@ void handle_menu_command(uint16_t id) {
           tasklist_refresh(ndoc->list_win);
           doc_update_title(ndoc);
           app_update_status(ndoc);
+          TM_DEBUG("action open_loaded_document path=%s task_count=%d",
+                   path, ndoc->task_count);
         }
       }
       break;
@@ -138,6 +152,7 @@ void handle_menu_command(uint16_t id) {
         doc->modified = false;
         doc_update_title(doc);
         app_update_status(doc);
+        TM_DEBUG("action save path=%s", doc->filename);
       }
       break;
     }
@@ -153,11 +168,13 @@ void handle_menu_command(uint16_t id) {
           doc->modified = false;
           doc_update_title(doc);
           app_update_status(doc);
+          TM_DEBUG("action save_as path=%s", doc->filename);
         }
       }
       break;
     }
     case ID_FILE_QUIT:
+      TM_DEBUG("action quit_requested");
       if (!app_close_all_documents(parent)) return;
       ui_request_quit();
       break;
@@ -168,6 +185,7 @@ void handle_menu_command(uint16_t id) {
         tasklist_refresh(doc->list_win);
         doc_update_title(doc);
         app_update_status(doc);
+        TM_DEBUG("action task_new task_count=%d", doc ? doc->task_count : -1);
       }
       break;
     case ID_TASK_EDIT: {
@@ -184,6 +202,7 @@ void handle_menu_command(uint16_t id) {
         tasklist_refresh(doc->list_win);
         doc_update_title(doc);
         app_update_status(doc);
+        TM_DEBUG("action task_edit idx=%d", idx);
       }
       break;
     }
@@ -202,6 +221,7 @@ void handle_menu_command(uint16_t id) {
         tasklist_refresh(doc->list_win);
         doc_update_title(doc);
         app_update_status(doc);
+        TM_DEBUG("action task_delete idx=%d new_task_count=%d", idx, doc->task_count);
       }
       break;
     }
@@ -211,12 +231,14 @@ void handle_menu_command(uint16_t id) {
       if (doc) {
         tasklist_refresh(doc->list_win);
         app_update_status(doc);
+        TM_DEBUG("action view_refresh");
       }
       break;
 
     // ---- Help ----
     case ID_HELP_ABOUT:
       show_about_dialog(parent);
+      TM_DEBUG("action show_about");
       break;
 
     default:

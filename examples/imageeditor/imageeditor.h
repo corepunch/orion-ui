@@ -21,9 +21,7 @@
 
 #if IMAGEEDITOR_DEBUG
 #define IE_DEBUG(...) do { \
-  fprintf(stderr, "[imageeditor] "); \
-  fprintf(stderr, __VA_ARGS__); \
-  fputc('\n', stderr); \
+  axLog("[imageeditor] " __VA_ARGS__); \
 } while (0)
 #else
 #define IE_DEBUG(...) ((void)0)

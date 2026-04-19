@@ -16,12 +16,25 @@
 bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   (void)argc; (void)argv;
 
+#if TASKMANAGER_DEBUG
+  {
+    char log_path[1024];
+    int path_len = snprintf(log_path, sizeof(log_path), "%s/taskmanager.log",
+                            axSettingsDirectory());
+    if (path_len >= 0 && (size_t)path_len < sizeof(log_path)) {
+      if (axSetLogFile(log_path))
+        axLog("[taskmanager] logging initialized: %s", axGetLogFile());
+    }
+  }
+#endif
+
   g_app = app_init();
   if (!g_app) return false;
 
   g_app->hinstance = hinstance;
   // Build the menu bar.
   create_menubar();
+  TM_DEBUG("app_init hinstance=%u", (unsigned)hinstance);
 
   // Create the first document and seed it with example tasks.
   {
@@ -72,8 +85,14 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
 
 void gem_shutdown(void) {
   if (!g_app) return;
+  TM_DEBUG("app_shutdown docs_open=%d", g_app->docs != NULL);
   app_shutdown(g_app);
   g_app = NULL;
+#if TASKMANAGER_DEBUG
+  if (axGetLogFile()[0])
+    axLog("[taskmanager] logging shutdown");
+  axSetLogFile(NULL);
+#endif
 }
 
 GEM_DEFINE("Task Manager", "1.0", gem_init, gem_shutdown, NULL)

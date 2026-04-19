@@ -14,6 +14,18 @@
 #include "../../user/accel.h"
 #include "../../user/icons.h"
 
+#ifndef TASKMANAGER_DEBUG
+#define TASKMANAGER_DEBUG 1
+#endif
+
+#if TASKMANAGER_DEBUG
+#define TM_DEBUG(...) do { \
+  axLog("[taskmanager] " __VA_ARGS__); \
+} while (0)
+#else
+#define TM_DEBUG(...) ((void)0)
+#endif
+
 // ============================================================
 // Layout constants
 // ============================================================
@@ -47,6 +59,22 @@
 #define ID_VIEW_REFRESH  20
 
 #define ID_HELP_ABOUT    100
+
+static inline const char *tm_command_name(uint16_t id) {
+  switch (id) {
+    case ID_FILE_NEW:     return "ID_FILE_NEW";
+    case ID_FILE_OPEN:    return "ID_FILE_OPEN";
+    case ID_FILE_SAVE:    return "ID_FILE_SAVE";
+    case ID_FILE_SAVEAS:  return "ID_FILE_SAVEAS";
+    case ID_FILE_QUIT:    return "ID_FILE_QUIT";
+    case ID_TASK_NEW:     return "ID_TASK_NEW";
+    case ID_TASK_EDIT:    return "ID_TASK_EDIT";
+    case ID_TASK_DELETE:  return "ID_TASK_DELETE";
+    case ID_VIEW_REFRESH: return "ID_VIEW_REFRESH";
+    case ID_HELP_ABOUT:   return "ID_HELP_ABOUT";
+    default:              return "ID_UNKNOWN";
+  }
+}
 
 // ============================================================
 // Task dialog control IDs

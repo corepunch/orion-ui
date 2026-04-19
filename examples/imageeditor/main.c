@@ -90,6 +90,18 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   g_app = calloc(1, sizeof(app_state_t));
   if (!g_app) return false;
 
+#if IMAGEEDITOR_DEBUG
+  {
+    char log_path[1024];
+    int path_len = snprintf(log_path, sizeof(log_path), "%s/imageeditor.log",
+                            axSettingsDirectory());
+    if (path_len >= 0 && (size_t)path_len < sizeof(log_path)) {
+      if (axSetLogFile(log_path))
+        axLog("[imageeditor] logging initialized: %s", axGetLogFile());
+    }
+  }
+#endif
+
   g_app->current_tool = ID_TOOL_SELECT;
   g_app->hinstance    = hinstance;
   g_app->fg_color = kPalette[4];
@@ -126,6 +138,12 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
 
 void gem_shutdown(void) {
   if (!g_app) return;
+
+#if IMAGEEDITOR_DEBUG
+  if (axGetLogFile()[0])
+    axLog("[imageeditor] shutting down");
+  axSetLogFile(NULL);
+#endif
 
   free_accelerators(g_app->accel);
   g_app->accel = NULL;

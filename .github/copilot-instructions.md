@@ -303,6 +303,14 @@ create_window_from_form(&kMyDlg, x, y, parent, my_dlg_proc, NULL);
 - Build system integration is planned (Makefile to be added)
 - The framework is designed to be integrated into existing build systems
 
+## Debugging and Reproduction Logging
+
+- When fixing interactive bugs, log **user actions and state transitions** so the exact repro path is visible from logs.
+- Prefer platform logging (`axSetLogFile`, `axLog`, `axLogFlush`) over ad-hoc `printf`/`stderr` so logs are captured in a persistent file.
+- Log at action boundaries (command dispatch, mouse down/up, tool change, dialog open/close), not every frame, to keep logs readable.
+- Include enough context to replay the issue: active document/window id, command id/name, selected index/item, and key mode flags.
+- Keep logging behind a debug toggle (`*_DEBUG`) so it can be enabled during investigation and disabled for normal runs.
+
 ## When Adding Features
 
 - Maintain compatibility with the existing message-based architecture
