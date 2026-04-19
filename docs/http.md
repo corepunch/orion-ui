@@ -1,0 +1,183 @@
+# Async HTTP/HTTPS Client
+
+Orion provides a built-in async HTTP and HTTPS client that integrates with the
+window message loop.  Applications issue requests with a single call and
+receive the response as an ordinary Orion window message — no callbacks, no
+polling, no curl.
+
+## Architecture
+
+```
+Application                 Orion kernel layer             Platform layer
+──────────                  ──────────────────             ──────────────
+http_request_async()  ─────►  queue request
+                              worker thread ──────────────► axNetSocket / axNetConnect
+                                             ──────────────► axTlsConnect (HTTPS)
+                                             ──────────────► axNet/TlsSend/Recv
+                              post_message(kWindowMessageHttpDone)
+window proc ◄─────────────── dispatch_message()
+```
+
+The worker is a single long-lived background thread.  The main thread is
+never blocked.  HTTPS is handled transparently via the platform TLS layer
+(Secure Transport on macOS, OpenSSL on Linux when `HAVE_OPENSSL` is defined,
+Schannel on Windows).
+
+## Quick Start
+
+```c
+#include "ui.h"   /* includes kernel/http.h transitively */
+
+static result_t my_win_proc(window_t *win, uint32_t msg,
+                             uint32_t wparam, void *lparam)
+{
+  switch (msg) {
+    case kWindowMessageCreate:
+      http_request_async(win, "https://api.example.com/data",
+                         NULL, NULL);
+      return true;
+
+    case kWindowMessageHttpDone: {
+      http_request_id_t id   = (http_request_id_t)wparam;
+      http_response_t  *resp = (http_response_t *)lparam;
+      if (resp->status == 200) {
+        /* resp->body is a heap buffer of resp->body_len bytes */
+        printf("Got %zu bytes\n", resp->body_len);
+      } else if (resp->error) {
+        fprintf(stderr, "Request %u failed: %s\n", id, resp->error);
+      }
+      http_response_free(resp);   /* transfer complete; must free */
+      return true;
+    }
+
+    default:
+      return false;
+  }
+}
+```
+
+## Initialisation
+
+`http_init()` / `http_shutdown()` must bracket usage.  They are called
+automatically when the application uses `ui_init_graphics()` and
+`ui_shutdown_graphics()` — standalone callers must call them explicitly.
+
+```c
+if (!http_init()) { /* handle error */ }
+/* ... */
+http_shutdown();
+```
+
+Both functions are idempotent.
+
+## Issuing a Request
+
+```c
+http_request_id_t http_request_async(
+    window_t            *notify_win,   /* window to receive the Done message */
+    const char          *url,          /* "http://…" or "https://…" */
+    const http_options_t *opts,        /* NULL = defaults (GET, no body) */
+    void                *userdata);    /* reserved — pass NULL */
+```
+
+Returns `HTTP_INVALID_REQUEST` (0) on immediate failure (bad URL, OOM,
+subsystem not initialised).
+
+### Options
+
+```c
+typedef struct {
+  http_method_t method;      /* HTTP_GET (default), HTTP_POST, HTTP_PUT, … */
+  const char   *body;        /* request body bytes (NULL = none) */
+  size_t        body_len;    /* 0 = treat body as null-terminated string */
+  const char   *headers;     /* extra headers, each ending with \r\n */
+  uint32_t      timeout_ms;  /* 0 = no timeout */
+} http_options_t;
+```
+
+Example — POST with JSON body:
+
+```c
+http_options_t opts = {
+  .method   = HTTP_POST,
+  .body     = "{\"name\":\"Orion\"}",
+  .headers  = "Content-Type: application/json\r\n",
+};
+http_request_id_t id = http_request_async(win, "https://api.example.com/items",
+                                           &opts, NULL);
+```
+
+## Receiving the Response
+
+### `kWindowMessageHttpDone`
+
+Posted to `notify_win` when the request finishes (success **or** failure).
+
+| Parameter | Value |
+|-----------|-------|
+| `wparam`  | `http_request_id_t` — the handle returned by `http_request_async()` |
+| `lparam`  | `http_response_t*`  — **caller owns**; call `http_response_free()` |
+
+```c
+typedef struct {
+  int               status;      /* HTTP status code; 0 = transport error */
+  char             *body;        /* response body (not null-terminated) */
+  size_t            body_len;    /* body length in bytes */
+  char             *headers;     /* response header block (null-terminated) */
+  const char       *error;       /* static error string, or NULL on success */
+  http_request_id_t request_id;
+} http_response_t;
+```
+
+Always call `http_response_free(resp)` after processing — the framework
+transfers ownership to the window proc.
+
+### `kWindowMessageHttpProgress`
+
+Posted periodically during large downloads **only** when the server sends a
+`Content-Length` header.
+
+| Parameter | Value |
+|-----------|-------|
+| `wparam`  | `http_request_id_t` |
+| `lparam`  | `http_progress_t*` — valid **only during the message handler**; do NOT retain or free |
+
+```c
+typedef struct {
+  size_t            bytes_received;
+  size_t            bytes_total;     /* (size_t)-1 if unknown */
+  http_request_id_t request_id;
+} http_progress_t;
+```
+
+## Cancellation
+
+```c
+void http_cancel(http_request_id_t id);
+```
+
+Marks a pending request as cancelled.  If the worker has not yet started it,
+no `kWindowMessageHttpDone` is posted.  If the worker is already executing the
+request the cancellation is noted but the network I/O continues until the
+current read/write completes; the response is then discarded silently.
+
+Safe to call after the request has already completed (no-op).
+
+## Thread Safety
+
+`http_request_async()` and `http_cancel()` are safe to call from the main
+thread at any time after `http_init()`.  `http_shutdown()` must be called from
+the main thread and must not be called concurrently with
+`http_request_async()`.
+
+## Redirects
+
+Up to 8 HTTP redirects (301, 302, 303, 307, 308) are followed automatically.
+For 303 responses the method is changed to GET regardless of the original
+request method.
+
+## HTTPS
+
+HTTPS is selected automatically when the URL scheme is `https://`.  The
+platform TLS backend performs full certificate verification.  There is no
+public API surface for TLS — it is entirely internal.
