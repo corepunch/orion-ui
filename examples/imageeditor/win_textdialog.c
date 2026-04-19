@@ -100,8 +100,9 @@ static void paint_td(window_t *win, const td_state_t *st) {
   fill_rect(get_sys_color(brDarkEdge), R(TD_SLIDER_X, TD_SLIDER_Y, TD_SLIDER_W, 1));
 
   // Slider thumb
-  int tx = size_to_slider_x(opts->font_size);
-  fill_rect(get_sys_color(brFlare), R(tx - 1, TD_SLIDER_Y - 1, 3, TD_SLIDER_H + 2));
+  fill_rect(get_sys_color(brFlare),
+            R(size_to_slider_x(opts->font_size) - 1,
+              TD_SLIDER_Y - 1, 3, TD_SLIDER_H + 2));
 
   // Color label + swatch
   draw_text_small("Color:", TD_LBL_X, TD_COLOR_Y + 2, get_sys_color(brTextDisabled));

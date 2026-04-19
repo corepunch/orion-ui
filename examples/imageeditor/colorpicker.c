@@ -170,8 +170,9 @@ static void draw_slider(int idx, const cp_state_t *st) {
 
   // Thumb — bright vertical bar at the current value position
   int val = slider_int_val(st, idx);
-  int tx  = CP_TRK_X + val * CP_TRK_W / kSliderMax[idx];
-  fill_rect(get_sys_color(brFlare), R(tx - 1, ty - 1, 3, CP_TRK_H + 2));
+  fill_rect(get_sys_color(brFlare),
+            R(CP_TRK_X + val * CP_TRK_W / kSliderMax[idx] - 1,
+              ty - 1, 3, CP_TRK_H + 2));
 
   // Numeric value
   char buf[8];

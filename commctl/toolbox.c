@@ -124,9 +124,7 @@ static void draw_toolbox_button(toolbox_state_t *st, int idx,
 
   if (icon >= SYSICON_BASE) {
     // Built-in 16×16 sysicon sheet (optionally tinted).
-    int ix = bx + (bsz - 16) / 2 + px;
-    int iy = by + (bsz - 16) / 2 + px;
-    draw_icon16(icon, ix, iy, tint);
+    draw_icon16(icon, bx + (bsz - 16) / 2 + px, by + (bsz - 16) / 2 + px, tint);
   } else if (st->strip.tex && st->strip.cols > 0) {
     // Custom sprite-sheet strip (optionally tinted).
     bitmap_strip_t *s = &st->strip;
@@ -136,9 +134,11 @@ static void draw_toolbox_button(toolbox_state_t *st, int idx,
     float v0 = (float)(row_idx * s->icon_h) / (float)s->sheet_h;
     float u1 = u0 + (float)s->icon_w / (float)s->sheet_w;
     float v1 = v0 + (float)s->icon_h / (float)s->sheet_h;
-    int ix = bx + (bsz - s->icon_w) / 2 + px;
-    int iy = by + (bsz - s->icon_h) / 2 + px;
-    draw_sprite_region((int)s->tex, R(ix, iy, s->icon_w, s->icon_h), u0, v0, u1, v1, tint);
+    draw_sprite_region((int)s->tex,
+                       R(bx + (bsz - s->icon_w) / 2 + px,
+                         by + (bsz - s->icon_h) / 2 + px,
+                         s->icon_w, s->icon_h),
+                       u0, v0, u1, v1, tint);
   } else {
     // Text fallback: draw item index as a number.
     char buf[8];
@@ -184,9 +184,9 @@ result_t win_toolbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       fill_rect(get_sys_color(brWindowDarkBg), R(0, 0, win->frame.w, win->frame.h));
 
       for (int i = 0; i < st->count; i++) {
-        int col = i % TOOLBOX_COLS;
-        int row = i / TOOLBOX_COLS;
-        draw_toolbox_button(st, i, col * bsz, row * bsz);
+        draw_toolbox_button(st, i,
+                            (i % TOOLBOX_COLS) * bsz,
+                            (i / TOOLBOX_COLS) * bsz);
       }
       return true;
     }
@@ -195,9 +195,7 @@ result_t win_toolbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
     case evLeftButtonDown: {
       toolbox_state_t *st = (toolbox_state_t *)win->userdata;
       if (!st) return false;
-      int mx = (int)(int16_t)LOWORD(wparam);
-      int my = (int)(int16_t)HIWORD(wparam);
-      int idx = toolbox_hit(st, mx, my);
+      int idx = toolbox_hit(st, LOWORD(wparam), HIWORD(wparam));
       if (idx >= 0) {
         st->pressed_idx = idx;
         set_capture(win);
@@ -209,9 +207,7 @@ result_t win_toolbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
     case evLeftButtonUp: {
       toolbox_state_t *st = (toolbox_state_t *)win->userdata;
       if (!st) return false;
-      int mx    = (int)(int16_t)LOWORD(wparam);
-      int my    = (int)(int16_t)HIWORD(wparam);
-      int idx   = toolbox_hit(st, mx, my);
+      int idx   = toolbox_hit(st, LOWORD(wparam), HIWORD(wparam));
       int prev  = st->pressed_idx;
       st->pressed_idx = -1;
       set_capture(NULL);

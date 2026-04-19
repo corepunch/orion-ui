@@ -158,8 +158,8 @@ void draw_panel(window_t const *win) {
 // Draw window controls (close, minimize, etc.)
 void draw_window_controls(window_t *win) {
   rect_t r = win->frame;
-  int t = titlebar_height(win);
-  fill_rect(get_sys_color(window_has_focus(win) ? brActiveTitlebar : brInactiveTitlebar), R(r.x, r.y, r.w, t));
+  fill_rect(get_sys_color(window_has_focus(win) ? brActiveTitlebar : brInactiveTitlebar),
+            R(r.x, r.y, r.w, titlebar_height(win)));
   set_fullscreen();
   
   for (int i = 0; i < 1; i++) {
