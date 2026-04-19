@@ -193,6 +193,13 @@ extern window_t *_focused;
 extern window_t *_tracked;
 extern window_t *_captured;
 
+// Global runtime state shared across UI subsystems.
+typedef struct {
+  bool running;
+} ui_runtime_state_t;
+
+extern ui_runtime_state_t g_ui_runtime;
+
 // Window utility functions
 void set_window_item_text(window_t *win, uint32_t id, const char *fmt, ...);
 void load_window_children(window_t *win, windef_t const *def);

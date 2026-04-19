@@ -13,14 +13,12 @@
 
 #define TEST_PASS(msg) printf("PASS: %s\n", msg)
 
-extern bool running;
-
 result_t statusbar_test_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     switch (msg) {
         case kWindowMessageCreate:
             return true;
         case kWindowMessageDestroy:
-            running = false;
+            g_ui_runtime.running = false;
             return true;
         default:
             return false;

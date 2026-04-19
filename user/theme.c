@@ -32,16 +32,13 @@ uint32_t g_sys_colors[kColorCount] = {
   [kColorColumnViewBg]         = 0xff544e47,   // blue-gray for report/icon column views
 };
 
-// Defined in user/dialog.c; true while the application's event loop is running.
-extern bool running;
-
 void set_sys_colors(int count, const int *indices, const uint32_t *colors) {
   for (int i = 0; i < count; i++) {
     if (indices[i] >= 0 && indices[i] < kColorCount) {
       g_sys_colors[indices[i]] = colors[i];
     }
   }
-  if (running) {
+  if (g_ui_runtime.running) {
     post_message((window_t*)1, kWindowMessageRefreshStencil, 0, NULL);
     for (window_t *w = windows; w; w = w->next) {
       if (w->visible) invalidate_window(w);

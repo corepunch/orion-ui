@@ -26,24 +26,15 @@
 #define SCREEN_H      342
 
 #define PALETTE_WIN_X   4
-#define PALETTE_WIN_W  ((TB_SPACING+TOOLBAR_PADDING)*2+4)
+// Tool palette window width: always 2 toolbox columns wide.
+#define PALETTE_WIN_W   (TOOLBOX_COLS * TOOLBOX_BTN_SIZE)
+
 #define TOOL_ICON_W    16
 #define TOOL_ICON_H    16
-#define TOOL_ICON_ROW_H 24
 
-// Compute the toolbar height for the tool palette (wraps based on window width and TB_SPACING).
-// buttons_per_row = PALETTE_WIN_W / TB_SPACING = (TB_SPACING*2) / TB_SPACING = 2
-// num_rows = ceil(NUM_TOOLS / buttons_per_row)
-// TOOL_TOOLBAR_H = num_rows * TOOLBAR_HEIGHT
-//
-// NOTE: These macros replicate the runtime wrapping formula from
-// draw_impl.c:titlebar_height() as compile-time constants so that window
-// positions can be expressed in terms of layout constants.  If TB_SPACING,
-// TOOLBAR_HEIGHT, PALETTE_WIN_W, or NUM_TOOLS change, verify that these
-// macros still match the runtime computation.
-#define TOOL_BTN_PER_ROW  ((PALETTE_WIN_W) / (TB_SPACING))
-#define TOOL_TOOLBAR_ROWS (((NUM_TOOLS) + (TOOL_BTN_PER_ROW) - 1) / (TOOL_BTN_PER_ROW))
-#define TOOL_TOOLBAR_H    ((TOOL_TOOLBAR_ROWS) * (TOOLBAR_HEIGHT))
+// Toolbox grid rows and height: ceil(NUM_TOOLS / 2) rows × button size.
+#define TOOL_TOOLBAR_ROWS (((NUM_TOOLS) + TOOLBOX_COLS - 1) / TOOLBOX_COLS)
+#define TOOL_TOOLBAR_H    ((TOOL_TOOLBAR_ROWS) * TOOLBOX_BTN_SIZE)
 
 // PALETTE_WIN_Y is now the window top (title bar top) of the tool palette.
 // frame.y = window top = MENUBAR_HEIGHT + 4 (title bar sits 4px below the menu bar)

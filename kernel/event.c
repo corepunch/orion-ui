@@ -11,7 +11,6 @@
 #include "kernel.h"
 
 // External references
-extern bool running;
 extern window_t *windows;
 extern window_t *_focused;
 extern window_t *_tracked;
@@ -260,7 +259,7 @@ void dispatch_message(ui_event_t *msg) {
   switch (msg->message) {
 
     case kEventWindowClosed:
-      running = false;
+      g_ui_runtime.running = false;
       break;
 
     case kEventWindowResized: {

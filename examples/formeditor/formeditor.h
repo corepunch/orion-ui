@@ -23,23 +23,17 @@
 // Padding around the form inside the canvas window
 #define CANVAS_PADDING    10
 
-// Tool palette
-// toolbox.png: 69x299 = 3 cols x 13 rows at 23x23 pixels
-#define TOOLBOX_ICON_W    21
-#define TOOLBOX_ICON_H    21
-#define TOOLBOX_COLS      3    // 69 / 21
-// Button size: icon 21x21 inside a 25x25 square gives 2px bevel border on each side.
-// (btn_fill_w = bsz-2 = 23, icon offset bx=+1, so 23-2-21 = 0 right gap; outer shadow adds 1px)
-#define TOOLBOX_BTN_SIZE  26
+// Tool palette — formeditor uses 21px icons inside 26px square buttons.
+// toolbox.png: 63×299 pixels = 3 cols × N rows of 21×21 px icons
+// (3 icon columns in the sprite sheet; display layout is always 2 button columns).
+#define FE_TOOLBOX_ICON_W   21   // icon tile size in toolbox.png
+#define FE_TOOLBOX_BTN_SIZE 26   // square button size used for the formeditor
 
-// Palette window — 2-button-wide column
+// Palette window dimensions — 2 button columns, rows computed from NUM_TOOLS.
 #define PALETTE_WIN_X     4
-#define PALETTE_WIN_W     (TOOLBOX_BTN_SIZE * 2)
-// frame.h is now the total height (non-client + client).
-// Non-client area: title bar + toolbar rows (computed from NUM_TOOLS and TOOLBOX_BTN_SIZE).
-// Client area: 4px (minimal).
-#define PALETTE_WIN_ROWS  (((NUM_TOOLS) + 1) / 2)
-#define PALETTE_WIN_H     (TITLEBAR_HEIGHT + (PALETTE_WIN_ROWS) * TOOLBOX_BTN_SIZE + 4)
+#define PALETTE_WIN_W     (TOOLBOX_COLS * FE_TOOLBOX_BTN_SIZE)
+#define PALETTE_GRID_ROWS ((NUM_TOOLS + TOOLBOX_COLS - 1) / TOOLBOX_COLS)
+#define PALETTE_WIN_H     (TITLEBAR_HEIGHT + PALETTE_GRID_ROWS * FE_TOOLBOX_BTN_SIZE + 4)
 
 // Document window initial position
 // frame.y is the window top; place it 8px below the menu bar.

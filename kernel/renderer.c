@@ -163,8 +163,7 @@ void push_sprite_args(int tex, int x, int y, int w, int h, float alpha) {
 }
 
 void set_projection(int x, int y, int w, int h) {
-  extern bool running;
-  if (!running) return;
+  if (!g_ui_runtime.running) return;
   mat4 projection;
   glm_ortho(x, w, h, y, -1, 1, projection);
   glUseProgram(get_sprite_prog());
@@ -177,8 +176,7 @@ float *get_sprite_matrix(void) {
 
 // Draw a sprite at the specified screen position
 void draw_rect_ex(int tex, int x, int y, int w, int h, int type, float alpha) {
-  extern bool running;
-  if (!running) return;
+  if (!g_ui_runtime.running) return;
   push_sprite_args(tex, x, y, w, h, alpha);
   
   // Enable blending for transparency
@@ -205,8 +203,7 @@ void draw_rect(int tex, int x, int y, int w, int h) {
 // (u0,v0)-(u1,v1) are normalized texture coordinates selecting the icon.
 void draw_sprite_region(int tex, int x, int y, int w, int h,
                         float u0, float v0, float u1, float v1, float alpha) {
-  extern bool running;
-  if (!running) return;
+  if (!g_ui_runtime.running) return;
   push_sprite_args(tex, x, y, w, h, alpha);
   glUniform2f(glGetUniformLocation(g_ref.program, "uv_offset"), u0, v0);
   glUniform2f(glGetUniformLocation(g_ref.program, "uv_scale"), u1 - u0, v1 - v0);

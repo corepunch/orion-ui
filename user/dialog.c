@@ -14,10 +14,6 @@
 #include <string.h>
 #include "../ui.h"
 
-// Application running flag – defined here as the authoritative definition;
-// all other modules declare it as `extern bool running`.
-bool running;
-
 // Shared modal message loop.  Runs until the dialog window is destroyed or the
 // application exits.  Forces a full repaint after the dialog is gone.
 static uint32_t run_dialog_loop(window_t *dlg, window_t *parent) {
@@ -29,7 +25,7 @@ static uint32_t run_dialog_loop(window_t *dlg, window_t *parent) {
   dlg->userdata2 = &result;
   if (parent) enable_window(parent, false);
   show_window(dlg, true);
-  while (running && is_window(dlg)) {
+  while (g_ui_runtime.running && is_window(dlg)) {
     while (get_message(&event)) {
       dispatch_message(&event);
     }
@@ -42,7 +38,7 @@ static uint32_t run_dialog_loop(window_t *dlg, window_t *parent) {
   // (a dedup side-effect), so the repaint inside the loop above may paint
   // against a stale stencil, leaving a ghost.  Posting a fresh RefreshStencil
   // here, after all dialog windows are gone, guarantees correct ordering.
-  if (running) {
+  if (g_ui_runtime.running) {
     post_message((window_t*)1, kWindowMessageRefreshStencil, 0, NULL);
     for (window_t *w = windows; w; w = w->next) {
       if (w->visible) invalidate_window(w);

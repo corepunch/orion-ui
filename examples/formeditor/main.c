@@ -23,7 +23,7 @@ static void create_app_windows(hinstance_t hinstance) {
 
   window_t *tp = create_window(
       "Tools",
-      WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE | WINDOW_TOOLBAR,
+      WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
       MAKERECT(PALETTE_WIN_X, palette_win_y(), PALETTE_WIN_W, PALETTE_WIN_H),
       NULL, win_tool_palette_proc, hinstance, NULL);
   show_window(tp, true);

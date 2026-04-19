@@ -233,8 +233,7 @@ void draw_statusbar(window_t *win, const char *text) {
 
 // Set OpenGL viewport for window
 void set_viewport(rect_t const *frame) {
-  extern bool running;
-  if (!running) return;
+  if (!g_ui_runtime.running) return;
   rect_t ogl_rect = get_opengl_rect(frame);
   
   glViewport(ogl_rect.x, ogl_rect.y, ogl_rect.w, ogl_rect.h);
@@ -242,8 +241,7 @@ void set_viewport(rect_t const *frame) {
 }
 
 void set_clip_rect(window_t const *win, rect_t const *r) {
-  extern bool running;
-  if (!running) return;
+  if (!g_ui_runtime.running) return;
   rect_t ogl_rect = get_opengl_rect(win?&(rect_t){
     win->frame.x + r->x, win->frame.y + r->y, r->w, r->h
   }:r);
@@ -287,11 +285,10 @@ void ui_set_stencil_for_root_window(uint32_t window_id) {
 
 // Fill a rectangle with a solid color
 void fill_rect(uint32_t color, int x, int y, int w, int h) {
-  extern bool running;
   extern uint32_t ui_white_texture;
   
   // Skip drawing if graphics aren't initialized (e.g., in tests)
-  if (!running) return;
+  if (!g_ui_runtime.running) return;
   
   // Update the white texture with the desired color
   glBindTexture(GL_TEXTURE_2D, ui_white_texture);
@@ -306,10 +303,9 @@ void fill_rect(uint32_t color, int x, int y, int w, int h) {
 // UVs so that the first row/column produces a B,B,W,W repeating dash regardless
 // of the selection size, keeping the GL call count constant (O(1)).
 void draw_sel_rect(int x, int y, int w, int h) {
-  extern bool running;
   extern uint32_t ui_checker_texture;
 
-  if (!running || w < 1 || h < 1) return;
+  if (!g_ui_runtime.running || w < 1 || h < 1) return;
 
   // Top edge: tile along U, sample only the first texture row (v 0..0.25)
   draw_sprite_region(ui_checker_texture, x, y, w, 1,

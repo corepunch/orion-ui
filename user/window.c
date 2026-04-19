@@ -16,6 +16,7 @@ window_t *windows = NULL;
 window_t *_focused = NULL;
 window_t *_tracked = NULL;
 window_t *_captured = NULL;
+ui_runtime_state_t g_ui_runtime = { false };
 
 extern window_t *_dragging;
 extern window_t *_resizing;
@@ -136,8 +137,6 @@ static void invalidate_overlaps(window_t *win) {
 
 // Move window to new position
 void move_window(window_t *win, int x, int y) {
-  int dx = x - win->frame.x;
-  int dy = y - win->frame.y;
   post_message(win, kWindowMessageResize, 0, NULL);
   post_message(win, kWindowMessageRefreshStencil, 0, NULL);
 
@@ -146,10 +145,6 @@ void move_window(window_t *win, int x, int y) {
 
   win->frame.x = x;
   win->frame.y = y;
-
-  // Toolbar children carry parent-relative (toolbar-band-relative) frames;
-  // their coordinates are independent of the parent's screen position, so
-  // no explicit shift is needed when the parent window moves.
 
   invalidate_overlaps(win);
 }

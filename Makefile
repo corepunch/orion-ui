@@ -15,9 +15,13 @@ LIBS = -lm
 ifeq ($(OS),Windows_NT)
     # Windows specific flags (MinGW/MSYS2)
     LIBS += -lglew32 -lopengl32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lversion -luuid -lsetupapi
-    # Lua library (MSYS2 provides -llua, not -llua5.4 like Unix platforms)
-    CFLAGS += -DHAVE_LUA
-    LIBS += -llua
+    # Lua library (MSYS2 provides -llua, not -llua5.4 like Unix platforms) – optional for terminal
+    ifeq ($(shell pkg-config --exists lua 2>/dev/null && echo yes || echo no),yes)
+        CFLAGS += -DHAVE_LUA
+        LIBS += $(shell pkg-config --libs lua)
+    else
+        $(info NOTE: Lua not found on Windows; terminal will run in command-only mode.)
+    endif
     # For examples: use -mwindows to create Windows GUI application (no console)
     # For tests: use -mconsole to create console application (allows printf output and standard main())
     LDFLAGS_EXAMPLE = -mwindows
