@@ -67,7 +67,6 @@ void doc_update_title(canvas_doc_t *doc) {
 
 // Show an "Unsaved Changes" dialog when doc->modified is set.
 // If the user chooses Yes, saves the file (if a filename is known).
-// If the user chooses Cancel, returns false without closing.
 // Otherwise calls close_document() and returns true.
 bool doc_confirm_close(canvas_doc_t *doc, window_t *parent_win) {
   if (!doc) return true;
@@ -81,11 +80,10 @@ bool doc_confirm_close(canvas_doc_t *doc, window_t *parent_win) {
     int res = message_box(parent_win,
                           "This image has unsaved changes.\nDo you want to close it?",
                           "Unsaved Changes",
-                          MB_YESNOCANCEL);
+                          MB_YESNO);
     doc->close_prompt_open = false;
     IE_DEBUG("close_confirm_result doc=%p result=%d filename_set=%d",
              (void *)doc, res, doc->filename[0] != '\0');
-    if (res == IDCANCEL) return false;
     if (res == IDYES && doc->filename[0])
       png_save(doc->filename, doc);
     // IDNO or IDYES-with-save: fall through to close_document

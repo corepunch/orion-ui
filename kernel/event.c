@@ -523,14 +523,19 @@ void dispatch_message(ui_event_t *msg) {
                         && sx >= close_x && sx < close_x + CONTROL_BUTTON_WIDTH
                         && sy >= title_y && sy < title_y + TITLEBAR_HEIGHT;
         if (on_close) {
-          if (g_ui_runtime.dragging->flags & WINDOW_DIALOG) {
-            end_dialog(g_ui_runtime.dragging, -1);
+          // Clear dragging BEFORE the send: kWindowMessageClose may open a modal
+          // dialog that pumps events, and a live dragging pointer would cause the
+          // window to follow the mouse during that dialog.  Same pattern as
+          // toolbar_down_win which is cleared before its send above.
+          window_t *closing = g_ui_runtime.dragging;
+          g_ui_runtime.dragging = NULL;
+          if (closing->flags & WINDOW_DIALOG) {
+            end_dialog(closing, -1);
           } else {
-            if (!send_message(g_ui_runtime.dragging, kWindowMessageClose, 0, NULL)) {
-              show_window(g_ui_runtime.dragging, false);
+            if (!send_message(closing, kWindowMessageClose, 0, NULL)) {
+              show_window(closing, false);
             }
           }
-          g_ui_runtime.dragging = NULL;
         } else {
           if (msg->message == kEventLeftMouseUp)
             send_message(g_ui_runtime.dragging, kWindowMessageNonClientLeftButtonUp,
