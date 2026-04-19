@@ -5,8 +5,8 @@
 #include "../user/user.h"
 #include "../user/messages.h"
 #include "../user/draw.h"
-
-#define PADDING 3
+#include "../user/rect.h"
+#include "../user/theme.h"
 
 // Label control window procedure.
 // lparam in kWindowMessageCreate is an optional RGBA color (void*)(uintptr_t)col.
@@ -30,8 +30,9 @@ result_t win_label(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         col = get_sys_color((sys_color_idx_t)ud);
       else
         col = (uint32_t)ud;
-      draw_text_small(win->title, win->frame.x+1, win->frame.y+1+PADDING, get_sys_color(kColorDarkEdge));
-      draw_text_small(win->title, win->frame.x, win->frame.y+PADDING, col);
+      rect_t text_pos = rect_offset(win->frame, 0, LABEL_TEXT_PADDING);
+      draw_text_small(win->title, text_pos.x + TEXT_SHADOW_OFFSET, text_pos.y + TEXT_SHADOW_OFFSET, get_sys_color(kColorDarkEdge));
+      draw_text_small(win->title, text_pos.x, text_pos.y, col);
       return true;
     }
   }

@@ -4,6 +4,8 @@
 #include "../user/user.h"
 #include "../user/messages.h"
 #include "../user/draw.h"
+#include "../user/rect.h"
+#include "../user/theme.h"
 #include "commctl.h"
 
 // Helper function (will be moved to ui/user/window.c later)
@@ -45,15 +47,14 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
       // When the button has keyboard focus kColorFocusRing takes precedence.
       uint32_t bg = (g_ui_runtime.focused == win) ? get_sys_color(kColorFocusRing) :
                     (win->flags & BUTTON_DEFAULT) ? 0xff000000 : get_sys_color(kColorWindowBg);
-      fill_rect(bg, win->frame.x-1, win->frame.y-1, win->frame.w+2, win->frame.h+2);
+      rect_t outer = rect_inset(win->frame, -1);
+      fill_rect(bg, outer.x, outer.y, outer.w, outer.h);
       draw_button(&win->frame, 1, 1, show_pressed);
-      int tx = win->frame.x + (win->frame.w - strwidth(win->title)) / 2;
-      int ty = win->frame.y + (win->frame.h - CHAR_HEIGHT) / 2;
-      int px = show_pressed ? 1 : 0;
-      if (!show_pressed) {
-        draw_text_small(win->title, tx + 1, ty + 1, get_sys_color(kColorDarkEdge));
-      }
-      draw_text_small(win->title, tx + px, ty + px, get_sys_color(kColorTextNormal));
+      rect_t label = rect_center(win->frame, strwidth(win->title), CHAR_HEIGHT);
+      if (!show_pressed)
+        draw_text_small(win->title, label.x + TEXT_SHADOW_OFFSET, label.y + TEXT_SHADOW_OFFSET, get_sys_color(kColorDarkEdge));
+      rect_t label_draw = rect_offset(label, show_pressed ? 1 : 0, show_pressed ? 1 : 0);
+      draw_text_small(win->title, label_draw.x, label_draw.y, get_sys_color(kColorTextNormal));
       return true;
     }
     case kWindowMessageLeftButtonDown:
@@ -130,8 +131,9 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
     case kWindowMessagePaint: {
       bool show_pressed = win->pressed ||
                           ((win->flags & BUTTON_PUSHLIKE) && win->value);
+      rect_t focus_outer = rect_inset(win->frame, -2);
       fill_rect(g_ui_runtime.focused == win ? get_sys_color(kColorFocusRing) : get_sys_color(kColorWindowBg),
-                win->frame.x-2, win->frame.y-2, win->frame.w+4, win->frame.h+4);
+                focus_outer.x, focus_outer.y, focus_outer.w, focus_outer.h);
       draw_button(&win->frame, 1, 1, show_pressed);
       int px = show_pressed ? 1 : 0;
       toolbar_button_data_t *bd = (toolbar_button_data_t *)win->userdata;
@@ -144,18 +146,16 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
         float v0 = (float)(row * s->icon_h) / (float)s->sheet_h;
         float u1 = u0 + (float)s->icon_w / (float)s->sheet_w;
         float v1 = v0 + (float)s->icon_h / (float)s->sheet_h;
-        int ix = win->frame.x + (win->frame.w - s->icon_w) / 2 + px;
-        int iy = win->frame.y + (win->frame.h - s->icon_h) / 2 + px;
-        draw_sprite_region((int)s->tex, ix, iy, s->icon_w, s->icon_h,
+        rect_t icon = rect_offset(rect_center(win->frame, s->icon_w, s->icon_h), px, px);
+        draw_sprite_region((int)s->tex, icon.x, icon.y, s->icon_w, s->icon_h,
                            u0, v0, u1, v1, 1.0f);
       } else {
         // Fallback: draw text label when no image has been set.
+        rect_t inner = rect_inset(win->frame, BUTTON_TEXT_INSET);
         if (!show_pressed)
-          draw_text_small(win->title, win->frame.x+4, win->frame.y+4, get_sys_color(kColorDarkEdge));
-        draw_text_small(win->title,
-                        win->frame.x + (show_pressed ? 4 : 3),
-                        win->frame.y + (show_pressed ? 4 : 3),
-                        get_sys_color(kColorTextNormal));
+          draw_text_small(win->title, inner.x + TEXT_SHADOW_OFFSET, inner.y + TEXT_SHADOW_OFFSET, get_sys_color(kColorDarkEdge));
+        rect_t inner_draw = rect_offset(inner, px, px);
+        draw_text_small(win->title, inner_draw.x, inner_draw.y, get_sys_color(kColorTextNormal));
       }
       return true;
     }
