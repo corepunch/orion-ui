@@ -203,15 +203,25 @@ send_all(int sock, AXtlsctx *tls, const void *buf, int len)
 }
 
 /* Receive bytes, growing the output buffer as needed.
+ * When notify_win is non-NULL and content_length is known (>= 0), posts
+ * kWindowMessageHttpProgress messages periodically during the body download.
  * Returns a heap-allocated buffer (caller frees) and sets *out_len.
  * On error returns NULL. */
 static char *
-recv_response(int sock, AXtlsctx *tls, size_t *out_len)
+recv_response(int sock, AXtlsctx *tls, size_t *out_len,
+              window_t *notify_win, http_request_id_t req_id)
 {
   size_t  cap  = HTTP_RECV_INITIAL;
   size_t  used = 0;
   char   *buf  = (char *)malloc(cap);
   if (!buf) return NULL;
+
+  /* Whether we have already located the header/body boundary and parsed
+   * Content-Length from the response headers. */
+  bool    headers_done   = false;
+  ssize_t content_length = -1; /* -1 = unknown */
+  size_t  body_start     = 0;
+  size_t  last_progress  = 0;
 
   for (;;) {
     if (used + HTTP_CHUNK_SIZE + 1 > cap) {
@@ -228,6 +238,42 @@ recv_response(int sock, AXtlsctx *tls, size_t *out_len)
     if (n < 0) { free(buf); return NULL; }
     if (n == 0) break; /* connection closed */
     used += (size_t)n;
+
+    /* Once headers are complete, extract Content-Length for progress. */
+    if (!headers_done) {
+      buf[used] = '\0';
+      const char *sep = strstr(buf, "\r\n\r\n");
+      if (sep) {
+        headers_done = true;
+        body_start   = (size_t)(sep + 4 - buf);
+
+        /* Scan for Content-Length header. */
+        const char *p = buf;
+        while (p < sep) {
+          const char *eol = strstr(p, "\r\n");
+          if (!eol) break;
+          if (strncasecmp(p, "Content-Length:", 15) == 0) {
+            content_length = (ssize_t)atol(p + 15);
+            break;
+          }
+          p = eol + 2;
+        }
+      }
+    }
+
+    /* Post progress notification when Content-Length is known. */
+    if (headers_done && notify_win && content_length >= 0) {
+      size_t body_received = used > body_start ? used - body_start : 0;
+      if (body_received - last_progress >= HTTP_PROGRESS_INTERVAL) {
+        last_progress = body_received;
+        http_progress_t prog;
+        prog.bytes_received = body_received;
+        prog.bytes_total    = content_length;
+        prog.request_id     = req_id;
+        post_message(notify_win, kWindowMessageHttpProgress,
+                     (uint32_t)req_id, &prog);
+      }
+    }
   }
 
   buf[used] = '\0';
@@ -241,11 +287,11 @@ recv_response(int sock, AXtlsctx *tls, size_t *out_len)
 static int
 parse_http_response(const char *raw, size_t raw_len,
                     int *status_out,
-                    size_t *content_length_out,
+                    size_t *content_length_out,  /* may be NULL */
                     char **location_out)
 {
   *status_out         = 0;
-  *content_length_out = (size_t)-1;
+  if (content_length_out) *content_length_out = (size_t)-1;
   if (location_out) *location_out = NULL;
 
   /* Status line: "HTTP/1.x NNN ..." */
@@ -269,7 +315,7 @@ parse_http_response(const char *raw, size_t raw_len,
     const char *eol = strstr(p, "\r\n");
     if (!eol) break;
 
-    if (strncasecmp(p, "Content-Length:", 15) == 0) {
+    if (content_length_out && strncasecmp(p, "Content-Length:", 15) == 0) {
       *content_length_out = (size_t)atol(p + 15);
     } else if (location_out && strncasecmp(p, "Location:", 9) == 0) {
       const char *loc = p + 9;
@@ -300,7 +346,9 @@ execute_request(http_pending_t *req)
   resp->request_id = req->id;
   resp->error      = NULL;
 
-  char  *current_url = strdup(req->url);
+  char  *current_url    = strdup(req->url);
+  /* Method may change on 303 redirects; use a local copy. */
+  http_method_t  method = req->method;
   if (!current_url) {
     resp->status = 0;
     resp->error  = "out of memory";
@@ -350,7 +398,7 @@ execute_request(http_pending_t *req)
 
     /* Build request line and headers. */
     char req_buf[HTTP_MAX_URL + 512];
-    const char *method_str = method_string(req->method);
+    const char *method_str = method_string(method);
 
     int hdr_len = snprintf(req_buf, sizeof(req_buf),
       "%s %s HTTP/1.1\r\n"
@@ -397,7 +445,8 @@ execute_request(http_pending_t *req)
 
     /* Receive full response. */
     size_t raw_len = 0;
-    char  *raw     = recv_response(sock, tls, &raw_len);
+    char  *raw     = recv_response(sock, tls, &raw_len,
+                                   req->notify_win, req->id);
 
     if (tls) axTlsClose(tls);
     axNetClose(sock);
@@ -410,10 +459,9 @@ execute_request(http_pending_t *req)
     }
 
     int    status = 0;
-    size_t content_length = (size_t)-1;
     char  *location = NULL;
     int    body_offset = parse_http_response(raw, raw_len, &status,
-                                              &content_length, &location);
+                                              NULL, &location);
 
     if (body_offset < 0) {
       free(raw);
@@ -433,8 +481,8 @@ execute_request(http_pending_t *req)
       free(current_url);
       current_url = location; /* location is already heap-allocated */
       location    = NULL;
-      /* For 303 follow-ups, switch to GET regardless of original method. */
-      if (status == 303) req->method = HTTP_GET;
+      /* For 303 responses, switch to GET regardless of original method. */
+      if (status == 303) method = HTTP_GET;
       redirect_count++;
       continue;
     }
@@ -645,7 +693,6 @@ http_request_async(window_t           *notify_win,
       memcpy(req->body, opts->body, blen);
       req->body_len = blen;
     }
-
     if (opts->headers) {
       req->headers = strdup(opts->headers);
       if (!req->headers) {

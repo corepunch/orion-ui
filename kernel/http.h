@@ -18,7 +18,7 @@
  *   // In your window proc:
  *   case kWindowMessageCreate:
  *     http_request_async(win, "https://api.example.com/data",
- *                        NULL, NULL, NULL);
+ *                        NULL, NULL);
  *     return true;
  *
  *   case kWindowMessageHttpDone: {
@@ -36,6 +36,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <sys/types.h>   /* ssize_t */
 
 /* Forward declaration — defined in user/user.h (included transitively). */
 typedef struct window_s window_t;
@@ -160,8 +161,12 @@ typedef struct {
   /** Bytes received so far. */
   size_t bytes_received;
 
-  /** Total expected bytes (-1 if Content-Length was not provided). */
-  size_t bytes_total;
+  /**
+   * @brief Total expected bytes, or -1 if Content-Length was not provided.
+   *
+   * Declared as `ssize_t` so that the sentinel value -1 is unambiguous.
+   */
+  ssize_t bytes_total;
 
   /** The request ID for this progress update. */
   http_request_id_t request_id;
