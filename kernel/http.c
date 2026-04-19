@@ -31,9 +31,16 @@
 #include <strings.h>   /* strncasecmp */
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdarg.h>
 
-/* POSIX threads — available on macOS, Linux, and QNX. */
+/* Threading backend.
+ * - POSIX: pthreads on macOS/Linux/QNX
+ * - Windows: Win32 synchronization/thread primitives */
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <pthread.h>
+#endif
 
 #include "../platform/platform.h"
 #include "../user/user.h"
@@ -92,17 +99,93 @@ typedef struct http_pending_s {
 } http_pending_t;
 
 /* =========================================================================
+ * Internal threading abstraction
+ * ====================================================================== */
+
+#ifdef _WIN32
+typedef HANDLE             http_thread_t;
+typedef CRITICAL_SECTION   http_mutex_t;
+typedef CONDITION_VARIABLE http_cond_t;
+
+static void http_mutex_init(http_mutex_t *m)   { InitializeCriticalSection(m); }
+static void http_mutex_destroy(http_mutex_t *m){ DeleteCriticalSection(m); }
+static void http_mutex_lock(http_mutex_t *m)   { EnterCriticalSection(m); }
+static void http_mutex_unlock(http_mutex_t *m) { LeaveCriticalSection(m); }
+
+static void http_cond_init(http_cond_t *c)     { InitializeConditionVariable(c); }
+static void http_cond_destroy(http_cond_t *c)  { (void)c; }
+static void http_cond_wait(http_cond_t *c, http_mutex_t *m) {
+  SleepConditionVariableCS(c, m, INFINITE);
+}
+static void http_cond_signal(http_cond_t *c)   { WakeConditionVariable(c); }
+
+#define HTTP_THREAD_RET DWORD WINAPI
+static bool http_thread_create(http_thread_t *t, HTTP_THREAD_RET (*fn)(void *), void *arg) {
+  *t = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)fn, arg, 0, NULL);
+  return *t != NULL;
+}
+static void http_thread_join(http_thread_t t) {
+  WaitForSingleObject(t, INFINITE);
+  CloseHandle(t);
+}
+#else
+typedef pthread_t       http_thread_t;
+typedef pthread_mutex_t http_mutex_t;
+typedef pthread_cond_t  http_cond_t;
+
+static void http_mutex_init(http_mutex_t *m)   { pthread_mutex_init(m, NULL); }
+static void http_mutex_destroy(http_mutex_t *m){ pthread_mutex_destroy(m); }
+static void http_mutex_lock(http_mutex_t *m)   { pthread_mutex_lock(m); }
+static void http_mutex_unlock(http_mutex_t *m) { pthread_mutex_unlock(m); }
+
+static void http_cond_init(http_cond_t *c)     { pthread_cond_init(c, NULL); }
+static void http_cond_destroy(http_cond_t *c)  { pthread_cond_destroy(c); }
+static void http_cond_wait(http_cond_t *c, http_mutex_t *m) {
+  pthread_cond_wait(c, m);
+}
+static void http_cond_signal(http_cond_t *c)   { pthread_cond_signal(c); }
+
+#define HTTP_THREAD_RET void *
+static bool http_thread_create(http_thread_t *t, HTTP_THREAD_RET (*fn)(void *), void *arg) {
+  return pthread_create(t, NULL, fn, arg) == 0;
+}
+static void http_thread_join(http_thread_t t) {
+  pthread_join(t, NULL);
+}
+#endif
+
+/* =========================================================================
  * Global state
  * ====================================================================== */
 
 static bool              g_initialized  = false;
-static pthread_t         g_worker;
-static pthread_mutex_t   g_mutex        = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t    g_cond         = PTHREAD_COND_INITIALIZER;
+static bool              g_sync_ready   = false;
+static http_thread_t     g_worker;
+static http_mutex_t      g_mutex;
+static http_cond_t       g_cond;
 static http_pending_t   *g_queue_head   = NULL;
 static http_pending_t   *g_queue_tail   = NULL;
 static bool              g_worker_quit  = false;
 static http_request_id_t g_next_id      = 1; /* starts at 1; 0 = invalid */
+
+static bool
+http_sync_init(void)
+{
+  if (g_sync_ready) return true;
+  http_mutex_init(&g_mutex);
+  http_cond_init(&g_cond);
+  g_sync_ready = true;
+  return true;
+}
+
+static void
+http_sync_shutdown(void)
+{
+  if (!g_sync_ready) return;
+  http_cond_destroy(&g_cond);
+  http_mutex_destroy(&g_mutex);
+  g_sync_ready = false;
+}
 
 /* =========================================================================
  * URL parsing
@@ -187,6 +270,27 @@ method_string(http_method_t m)
   }
 }
 
+/* Append formatted text into a fixed buffer and detect truncation. */
+static bool
+append_fmt(char *buf, size_t cap, int *len, const char *fmt, ...)
+{
+  va_list ap;
+  int n;
+  int rem;
+
+  if (!buf || !len || !fmt || *len < 0) return false;
+  if ((size_t)*len >= cap) return false;
+
+  rem = (int)(cap - (size_t)*len);
+  va_start(ap, fmt);
+  n = vsnprintf(buf + *len, (size_t)rem, fmt, ap);
+  va_end(ap);
+
+  if (n < 0 || n >= rem) return false;
+  *len += n;
+  return true;
+}
+
 /* Send all bytes through either a plain socket or a TLS session. */
 static bool
 send_all(int sock, AXtlsctx *tls, const void *buf, int len)
@@ -266,12 +370,14 @@ recv_response(int sock, AXtlsctx *tls, size_t *out_len,
       size_t body_received = used > body_start ? used - body_start : 0;
       if (body_received - last_progress >= HTTP_PROGRESS_INTERVAL) {
         last_progress = body_received;
-        http_progress_t prog;
-        prog.bytes_received = body_received;
-        prog.bytes_total    = content_length;
-        prog.request_id     = req_id;
-        post_message(notify_win, kWindowMessageHttpProgress,
-                     (uint32_t)req_id, &prog);
+        http_progress_t *prog = (http_progress_t *)malloc(sizeof(*prog));
+        if (prog) {
+          prog->bytes_received = body_received;
+          prog->bytes_total    = content_length;
+          prog->request_id     = req_id;
+          post_message(notify_win, kWindowMessageHttpProgress,
+                       (uint32_t)req_id, prog);
+        }
       }
     }
   }
@@ -400,35 +506,35 @@ execute_request(http_pending_t *req)
     char req_buf[HTTP_MAX_URL + 512];
     const char *method_str = method_string(current_method);
 
-    int hdr_len = snprintf(req_buf, sizeof(req_buf),
+    int hdr_len = 0;
+    bool ok = append_fmt(req_buf, sizeof(req_buf), &hdr_len,
       "%s %s HTTP/1.1\r\n"
       "Host: %s\r\n"
       "Connection: close\r\n"
       "User-Agent: Orion/1.0\r\n",
       method_str, pu.path, pu.host);
 
-    if (req->headers && req->headers[0]) {
-      int rem = (int)sizeof(req_buf) - hdr_len;
-      int n   = snprintf(req_buf + hdr_len, (size_t)rem,
-                         "%s", req->headers);
-      if (n > 0) hdr_len += n;
-    }
+    if (ok && req->headers && req->headers[0])
+      ok = append_fmt(req_buf, sizeof(req_buf), &hdr_len, "%s", req->headers);
 
-    if (req->body && req->body_len > 0) {
-      int rem = (int)sizeof(req_buf) - hdr_len;
-      int n   = snprintf(req_buf + hdr_len, (size_t)rem,
-                         "Content-Length: %zu\r\n", req->body_len);
-      if (n > 0) hdr_len += n;
-    }
+    if (ok && req->body && req->body_len > 0)
+      ok = append_fmt(req_buf, sizeof(req_buf), &hdr_len,
+                      "Content-Length: %zu\r\n", req->body_len);
 
-    /* Terminate header block. */
-    if (hdr_len + 2 < (int)sizeof(req_buf)) {
-      req_buf[hdr_len++] = '\r';
-      req_buf[hdr_len++] = '\n';
+    if (ok)
+      ok = append_fmt(req_buf, sizeof(req_buf), &hdr_len, "\r\n");
+
+    if (!ok) {
+      if (tls) axTlsClose(tls);
+      axNetClose(sock);
+      free(current_url);
+      resp->status = 0;
+      resp->error  = "request headers too large";
+      return resp;
     }
 
     /* Send headers. */
-    bool ok = send_all(sock, tls, req_buf, hdr_len);
+    ok = send_all(sock, tls, req_buf, hdr_len);
 
     /* Send body if present. */
     if (ok && req->body && req->body_len > 0)
@@ -520,18 +626,18 @@ execute_request(http_pending_t *req)
  * Worker thread
  * ====================================================================== */
 
-static void *
+static HTTP_THREAD_RET
 worker_thread(void *arg)
 {
   (void)arg;
 
   for (;;) {
-    pthread_mutex_lock(&g_mutex);
+    http_mutex_lock(&g_mutex);
     while (!g_queue_head && !g_worker_quit)
-      pthread_cond_wait(&g_cond, &g_mutex);
+      http_cond_wait(&g_cond, &g_mutex);
 
     if (g_worker_quit && !g_queue_head) {
-      pthread_mutex_unlock(&g_mutex);
+      http_mutex_unlock(&g_mutex);
       break;
     }
 
@@ -555,22 +661,23 @@ worker_thread(void *arg)
         g_queue_head = next;
       }
       g_queue_tail = NULL;
-      pthread_mutex_unlock(&g_mutex);
+      http_mutex_unlock(&g_mutex);
       continue;
     }
 
     req->state = HTTP_STATE_RUNNING;
-    pthread_mutex_unlock(&g_mutex);
+    http_mutex_unlock(&g_mutex);
 
     /* Execute outside the lock so the main thread can cancel / enqueue. */
     http_response_t *resp = execute_request(req);
 
-    pthread_mutex_lock(&g_mutex);
+    http_mutex_lock(&g_mutex);
     bool cancelled = (req->state == HTTP_STATE_CANCELLED);
+    bool shutting_down = g_worker_quit;
     req->state = HTTP_STATE_DONE;
-    pthread_mutex_unlock(&g_mutex);
+    http_mutex_unlock(&g_mutex);
 
-    if (cancelled) {
+    if (cancelled || shutting_down) {
       /* Discard result; don't post a message. */
       http_response_free(resp);
     } else if (req->notify_win) {
@@ -582,7 +689,7 @@ worker_thread(void *arg)
     }
 
     /* Remove the completed request from the queue. */
-    pthread_mutex_lock(&g_mutex);
+    http_mutex_lock(&g_mutex);
     http_pending_t *cur = g_queue_head;
     http_pending_t *p   = NULL;
     while (cur && cur != req) { p = cur; cur = cur->next; }
@@ -591,7 +698,7 @@ worker_thread(void *arg)
       else   g_queue_head = cur->next;
       if (g_queue_tail == cur) g_queue_tail = p;
     }
-    pthread_mutex_unlock(&g_mutex);
+    http_mutex_unlock(&g_mutex);
 
     free(req->url);
     free(req->body);
@@ -599,7 +706,11 @@ worker_thread(void *arg)
     free(req);
   }
 
+#ifdef _WIN32
+  return 0;
+#else
   return NULL;
+#endif
 }
 
 /* =========================================================================
@@ -610,6 +721,7 @@ bool
 http_init(void)
 {
   if (g_initialized) return true;
+  if (!http_sync_init()) return false;
 
   if (!axNetInit()) return false;
 
@@ -617,7 +729,7 @@ http_init(void)
   g_queue_head  = NULL;
   g_queue_tail  = NULL;
 
-  if (pthread_create(&g_worker, NULL, worker_thread, NULL) != 0) {
+  if (!http_thread_create(&g_worker, worker_thread, NULL)) {
     axNetShutdown();
     return false;
   }
@@ -631,19 +743,19 @@ http_shutdown(void)
 {
   if (!g_initialized) return;
 
-  pthread_mutex_lock(&g_mutex);
+  http_mutex_lock(&g_mutex);
   g_worker_quit = true;
   /* Cancel all pending requests so the worker stops quickly. */
   for (http_pending_t *it = g_queue_head; it; it = it->next)
-    if (it->state == HTTP_STATE_PENDING)
+    if (it->state == HTTP_STATE_PENDING || it->state == HTTP_STATE_RUNNING)
       it->state = HTTP_STATE_CANCELLED;
-  pthread_cond_signal(&g_cond);
-  pthread_mutex_unlock(&g_mutex);
+  http_cond_signal(&g_cond);
+  http_mutex_unlock(&g_mutex);
 
-  pthread_join(g_worker, NULL);
+  http_thread_join(g_worker);
 
   /* Free anything left in the queue (worker drained its own items). */
-  pthread_mutex_lock(&g_mutex);
+  http_mutex_lock(&g_mutex);
   while (g_queue_head) {
     http_pending_t *next = g_queue_head->next;
     free(g_queue_head->url);
@@ -653,10 +765,11 @@ http_shutdown(void)
     g_queue_head = next;
   }
   g_queue_tail = NULL;
-  pthread_mutex_unlock(&g_mutex);
+  http_mutex_unlock(&g_mutex);
 
   axNetShutdown();
   g_initialized = false;
+  http_sync_shutdown();
 }
 
 http_request_id_t
@@ -681,6 +794,8 @@ http_request_async(window_t           *notify_win,
 
   if (opts) {
     req->method     = opts->method;
+    /* timeout_ms is accepted and preserved for forward compatibility.
+     * Current worker implementation does not enforce request timeouts. */
     req->timeout_ms = opts->timeout_ms;
 
     if (opts->body) {
@@ -705,7 +820,7 @@ http_request_async(window_t           *notify_win,
   req->notify_win = notify_win;
   req->state      = HTTP_STATE_PENDING;
 
-  pthread_mutex_lock(&g_mutex);
+  http_mutex_lock(&g_mutex);
   req->id = g_next_id++;
   if (g_next_id == HTTP_INVALID_REQUEST) g_next_id = 1; /* wrap, skip 0 */
 
@@ -716,8 +831,8 @@ http_request_async(window_t           *notify_win,
   } else {
     g_queue_head = g_queue_tail = req;
   }
-  pthread_cond_signal(&g_cond);
-  pthread_mutex_unlock(&g_mutex);
+  http_cond_signal(&g_cond);
+  http_mutex_unlock(&g_mutex);
 
   return req->id;
 }
@@ -727,15 +842,15 @@ http_cancel(http_request_id_t id)
 {
   if (id == HTTP_INVALID_REQUEST) return;
 
-  pthread_mutex_lock(&g_mutex);
+  http_mutex_lock(&g_mutex);
   for (http_pending_t *it = g_queue_head; it; it = it->next) {
     if (it->id == id) {
-      if (it->state == HTTP_STATE_PENDING)
+      if (it->state == HTTP_STATE_PENDING || it->state == HTTP_STATE_RUNNING)
         it->state = HTTP_STATE_CANCELLED;
       break;
     }
   }
-  pthread_mutex_unlock(&g_mutex);
+  http_mutex_unlock(&g_mutex);
 }
 
 void

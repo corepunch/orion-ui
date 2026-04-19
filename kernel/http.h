@@ -62,7 +62,7 @@ typedef uint32_t http_request_id_t;
 
 /** @brief HTTP method constants for the @p method parameter. */
 typedef enum {
-  HTTP_GET    = 0, /**< HTTP GET  (default when @p method is NULL). */
+  HTTP_GET    = 0, /**< HTTP GET  (default when opts is NULL). */
   HTTP_POST   = 1, /**< HTTP POST. */
   HTTP_PUT    = 2, /**< HTTP PUT. */
   HTTP_DELETE = 3, /**< HTTP DELETE. */
@@ -99,10 +99,10 @@ typedef struct {
   const char   *headers;
 
   /**
-   * @brief Connect + receive timeout in milliseconds (0 = no timeout).
+   * @brief Reserved timeout field in milliseconds.
    *
-   * If the server does not respond within this interval the request is
-   * cancelled and kWindowMessageHttpDone is posted with a NULL response.
+   * Current implementation stores this value but does not enforce request
+   * timeouts yet.
    */
   uint32_t      timeout_ms;
 } http_options_t;
@@ -154,8 +154,8 @@ typedef struct {
 /**
  * @brief Download progress snapshot delivered via kWindowMessageHttpProgress.
  *
- * The pointer is only valid for the duration of the message handler — do
- * NOT retain or free it.
+ * The pointer is framework-owned and only valid for the duration of the
+ * message handler — do NOT retain or free it.
  */
 typedef struct {
   /** Bytes received so far. */

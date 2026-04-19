@@ -1,5 +1,7 @@
 # Async HTTP/HTTPS Client
 
+Main project README quick-start section: [README.md](../README.md)
+
 Orion provides a built-in async HTTP and HTTPS client that integrates with the
 window message loop.  Applications issue requests with a single call and
 receive the response as an ordinary Orion window message — no callbacks, no
@@ -56,6 +58,77 @@ static result_t my_win_proc(window_t *win, uint32_t msg,
 }
 ```
 
+## Complete Example (GET + Progress + Cancel)
+
+```c
+#include "ui.h"
+#include <stdio.h>
+#include <stdlib.h>
+
+typedef struct {
+  http_request_id_t active_request;
+} net_demo_state_t;
+
+static result_t net_demo_proc(window_t *win, uint32_t msg,
+                               uint32_t wparam, void *lparam)
+{
+  net_demo_state_t *st = (net_demo_state_t *)win->userdata;
+
+  switch (msg) {
+    case kWindowMessageCreate:
+      st = (net_demo_state_t *)calloc(1, sizeof(*st));
+      if (!st) return false;
+      win->userdata = st;
+      st->active_request = http_request_async(win,
+                                              "https://httpbin.org/bytes/200000",
+                                              NULL, NULL);
+      return true;
+
+    case kWindowMessageHttpProgress: {
+      http_progress_t *p = (http_progress_t *)lparam;
+      printf("request %u progress: %zu/%zd\n",
+             p->request_id, p->bytes_received, p->bytes_total);
+      return true;
+    }
+
+    case kWindowMessageHttpDone: {
+      http_request_id_t id = (http_request_id_t)wparam;
+      http_response_t *resp = (http_response_t *)lparam;
+      if (resp && resp->status == 200) {
+        printf("request %u done: %zu bytes\n", id, resp->body_len);
+      } else if (resp && resp->error) {
+        printf("request %u failed: %s\n", id, resp->error);
+      }
+      http_response_free(resp);
+      if (st && st->active_request == id)
+        st->active_request = HTTP_INVALID_REQUEST;
+      return true;
+    }
+
+    case kWindowMessageKeyDown:
+      if (wparam == AX_KEY_ESCAPE && st &&
+          st->active_request != HTTP_INVALID_REQUEST) {
+        http_cancel(st->active_request);
+        st->active_request = HTTP_INVALID_REQUEST;
+        return true;
+      }
+      return false;
+
+    case kWindowMessageDestroy:
+      if (st) {
+        if (st->active_request != HTTP_INVALID_REQUEST)
+          http_cancel(st->active_request);
+        free(st);
+        win->userdata = NULL;
+      }
+      return true;
+
+    default:
+      return false;
+  }
+}
+```
+
 ## Initialisation
 
 `http_init()` / `http_shutdown()` must bracket usage.  They are called
@@ -91,7 +164,7 @@ typedef struct {
   const char   *body;        /* request body bytes (NULL = none) */
   size_t        body_len;    /* 0 = treat body as null-terminated string */
   const char   *headers;     /* extra headers, each ending with \r\n */
-  uint32_t      timeout_ms;  /* 0 = no timeout */
+  uint32_t      timeout_ms;  /* reserved; currently not enforced */
 } http_options_t;
 ```
 
@@ -105,6 +178,21 @@ http_options_t opts = {
 };
 http_request_id_t id = http_request_async(win, "https://api.example.com/items",
                                            &opts, NULL);
+```
+
+Example — PUT with explicit body length:
+
+```c
+static const char kPayload[] = "hello from Orion";
+
+http_options_t opts = {
+  .method   = HTTP_PUT,
+  .body     = kPayload,
+  .body_len = sizeof(kPayload) - 1,
+  .headers  = "Content-Type: text/plain\r\n",
+};
+
+http_request_async(win, "https://api.example.com/blob/42", &opts, NULL);
 ```
 
 ## Receiving the Response
@@ -140,7 +228,7 @@ Posted periodically during large downloads **only** when the server sends a
 | Parameter | Value |
 |-----------|-------|
 | `wparam`  | `http_request_id_t` |
-| `lparam`  | `http_progress_t*` — valid **only during the message handler**; do NOT retain or free |
+| `lparam`  | `http_progress_t*` — framework-owned and valid **only during the message handler**; do NOT retain or free |
 
 ```c
 typedef struct {
@@ -162,6 +250,12 @@ request the cancellation is noted but the network I/O continues until the
 current read/write completes; the response is then discarded silently.
 
 Safe to call after the request has already completed (no-op).
+
+## Current Limitations
+
+- `timeout_ms` is currently reserved and not enforced by the worker.
+- Chunked transfer decoding is not implemented yet; responses using
+  `Transfer-Encoding: chunked` are returned as raw payload bytes.
 
 ## Thread Safety
 

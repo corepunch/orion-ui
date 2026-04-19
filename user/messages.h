@@ -89,8 +89,8 @@ enum {
   //   kWindowMessageHttpProgress — download progress update (optional, posted
   //     only when Content-Length is known).
   //     wparam = http_request_id_t.
-  //     lparam = http_progress_t*  (valid only during message processing;
-  //              do NOT retain or free; stack-allocated by the framework).
+  //     lparam = http_progress_t*  (framework-owned; valid only during
+  //              message processing; do NOT retain or free).
   //
   // The request handle is returned by http_request_async().  A return value of
   // HTTP_INVALID_REQUEST indicates an immediate error (bad URL, OOM, etc.).

@@ -62,6 +62,13 @@ make examples CFLAGS="-DUI_WINDOW_SCALE=1"
 ./build/bin/imageeditor
 ```
 
+## Async HTTP/HTTPS
+
+Orion includes a message-driven HTTP/HTTPS client in the kernel layer.
+
+- API reference and examples: [Async HTTP/HTTPS Client](http.md)
+- Main README quick-start snippet: [README.md](../README.md)
+
 ## Minimal Program
 
 ```c
