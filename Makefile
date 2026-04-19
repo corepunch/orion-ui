@@ -149,10 +149,30 @@ GEM_BINS = $(GEM_DIR)/imageeditor.gem \
 SHELL_BIN  = $(BIN_DIR)/orion-shell$(EXE_EXT)
 SHELL_SRCS = $(wildcard shell/*.c)
 
-# Example sources – each example lives in its own subdirectory with a main.c
-# Compile directly to binary (no intermediate .o files)
-EXAMPLE_DIRS = $(wildcard examples/*/main.c)
+# Example sources - each example lives in its own subdirectory with a main.c.
+# Browser is built with a dedicated rule because it needs libxml2 flags.
+EXAMPLE_DIRS = $(filter-out examples/browser/main.c,$(wildcard examples/*/main.c))
 EXAMPLE_BINS = $(patsubst examples/%/main.c,$(BIN_DIR)/%$(EXE_EXT),$(EXAMPLE_DIRS))
+
+BROWSER_MAIN = examples/browser/main.c
+BROWSER_BIN = $(BIN_DIR)/browser$(EXE_EXT)
+ifneq ($(wildcard $(BROWSER_MAIN)),)
+EXTRA_EXAMPLE_BINS = $(BROWSER_BIN)
+endif
+
+LIBXML2_CFLAGS = $(shell pkg-config --cflags libxml-2.0 2>/dev/null)
+LIBXML2_LIBS = $(shell pkg-config --libs libxml-2.0 2>/dev/null)
+LIBXML2_PREFIX = $(shell brew --prefix libxml2 2>/dev/null)
+ifeq ($(strip $(LIBXML2_CFLAGS)),)
+ifneq ($(strip $(LIBXML2_PREFIX)),)
+LIBXML2_CFLAGS = -I$(LIBXML2_PREFIX)/include/libxml2
+endif
+endif
+ifeq ($(strip $(LIBXML2_LIBS)),)
+ifneq ($(strip $(LIBXML2_PREFIX)),)
+LIBXML2_LIBS = -L$(LIBXML2_PREFIX)/lib -lxml2
+endif
+endif
 
 # Test sources
 TEST_SRCS = $(filter-out $(TEST_DIR)/test_env.c,$(wildcard $(TEST_DIR)/*.c))
@@ -227,7 +247,7 @@ $(SHARED_LIB): $(USER_SRCS) $(KERNEL_SRCS) $(COMMCTL_SRCS) $(PLATFORM_LIB) | $(L
 
 # Examples
 .PHONY: examples
-examples: share $(EXAMPLE_BINS)
+examples: share $(EXAMPLE_BINS) $(EXTRA_EXAMPLE_BINS)
 
 # Static unity-build rule for all examples.
 # The target list is scoped to $(EXAMPLE_BINS) so this rule never fires for
@@ -241,6 +261,18 @@ $(EXAMPLE_BINS): $(BIN_DIR)/%$(EXE_EXT): $$(wildcard examples/%/*.c) $(SHARED_LI
 	 echo '#include "examples/$*/main.c"') | \
 		$(CC) $(CFLAGS) -I. -Iexamples/$* -DSHAREDIR='"../share/$*"' -x c -o $@ - \
 		$(LDFLAGS) $(LDFLAGS_EXAMPLE) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
+
+# Browser example (MVP) - requires libxml2.
+$(BROWSER_BIN): $(wildcard examples/browser/*.c) $(SHARED_LIB) | $(BIN_DIR)
+	@if [ -z "$(LIBXML2_LIBS)" ]; then \
+		echo "ERROR: libxml2 is required for browser example (install libxml2 + pkg-config)."; \
+		exit 1; \
+	fi
+	@echo "Building example: $@"
+	@(find examples/browser -name "*.c" ! -name "main.c" | sort | sed 's/.*/#include "&"/'; \
+	 echo '#include "examples/browser/main.c"') | \
+		$(CC) $(CFLAGS) $(LIBXML2_CFLAGS) -I. -Iexamples/browser -DSHAREDIR='"../share/browser"' -x c -o $@ - \
+		$(LDFLAGS) $(LDFLAGS_EXAMPLE) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBXML2_LIBS) $(LIBS)
 
 # === .gem shared libraries ===
 #

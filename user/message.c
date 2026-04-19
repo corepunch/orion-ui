@@ -18,6 +18,7 @@
 extern result_t win_toolbar_button(window_t *, uint32_t, uint32_t, void *);
 extern result_t win_label(window_t *, uint32_t, uint32_t, void *);
 extern result_t win_combobox(window_t *, uint32_t, uint32_t, void *);
+extern result_t win_textedit(window_t *, uint32_t, uint32_t, void *);
 extern result_t win_button(window_t *, uint32_t, uint32_t, void *);
 extern bitmap_strip_t *ui_get_sysicon_strip(void);
 
@@ -200,6 +201,19 @@ static void layout_toolbar_items(window_t *parent,
       case TOOLBAR_ITEM_COMBOBOX: {
         int w = item->w > 0 ? item->w : (bsz * TOOLBAR_COMBOBOX_DEFAULT_WIDTH_MULT);
         window_t *tc = create_toolbar_child(parent, win_combobox,
+                                             (uint32_t)item->ident, 0,
+                                             item->text,
+                                             base_x + cur_x, base_y,
+                                             w, bsz, -1);
+        if (!tc) { cur_x += w; break; }
+        *tail = tc; tail = &tc->next;
+        cur_x += w;
+        placed_visual_item = true;
+        break;
+      }
+      case TOOLBAR_ITEM_TEXTEDIT: {
+        int w = item->w > 0 ? item->w : (bsz * 8);
+        window_t *tc = create_toolbar_child(parent, win_textedit,
                                              (uint32_t)item->ident, 0,
                                              item->text,
                                              base_x + cur_x, base_y,
