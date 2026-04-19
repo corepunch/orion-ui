@@ -70,11 +70,14 @@ void doc_update_title(canvas_doc_t *doc) {
 // Otherwise calls close_document() and returns true.
 bool doc_confirm_close(canvas_doc_t *doc, window_t *parent_win) {
   if (!doc) return true;
+  if (doc->close_prompt_open) return false;
   if (doc->modified) {
+    doc->close_prompt_open = true;
     int res = message_box(parent_win,
                           "This image has unsaved changes.\nDo you want to close it?",
                           "Unsaved Changes",
                           MB_YESNOCANCEL);
+    doc->close_prompt_open = false;
     if (res == IDCANCEL) return false;
     if (res == IDYES && doc->filename[0])
       png_save(doc->filename, doc);

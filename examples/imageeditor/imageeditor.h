@@ -151,6 +151,7 @@ typedef struct canvas_doc_s {
   GLuint   canvas_tex;
   bool     canvas_dirty;
   bool     drawing;
+  bool     close_prompt_open;
   point_t  last;
   bool     modified;
   char     filename[512];

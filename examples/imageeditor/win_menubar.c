@@ -90,6 +90,47 @@ menu_def_t kMenus[] = {
 };
 const int kNumMenus = (int)(sizeof(kMenus)/sizeof(kMenus[0]));
 
+static bool cancel_active_canvas_interaction(canvas_doc_t *doc, int old_tool) {
+  bool changed = false;
+  canvas_win_state_t *state;
+
+  if (!doc) return false;
+
+  state = doc->canvas_win ? (canvas_win_state_t *)doc->canvas_win->userdata : NULL;
+  if (state) state->panning = false;
+
+  if (old_tool == ID_TOOL_POLYGON && doc->poly_active) {
+    if (doc->shape_snapshot) {
+      memcpy(doc->pixels, doc->shape_snapshot,
+             (size_t)doc->canvas_w * doc->canvas_h * 4);
+      doc->canvas_dirty = true;
+    }
+    doc_discard_undo(doc);
+    doc->poly_active = false;
+    doc->poly_count = 0;
+    changed = true;
+  }
+
+  if (canvas_is_shape_tool(old_tool) && doc->drawing && doc->shape_snapshot) {
+    memcpy(doc->pixels, doc->shape_snapshot,
+           (size_t)doc->canvas_w * doc->canvas_h * 4);
+    doc->canvas_dirty = true;
+    changed = true;
+  }
+
+  if (doc->sel_moving) {
+    canvas_commit_move(doc);
+    changed = true;
+  }
+
+  if (doc->drawing) {
+    doc->drawing = false;
+    changed = true;
+  }
+
+  return changed;
+}
+
 // Rebuild the Window menu items and re-push the full menu definition to the
 // menu-bar window.  Extensibility: add more fixed entries to kWindowPrefix, or
 // register new document classes in the loop below.
@@ -390,6 +431,10 @@ void handle_menu_command(uint16_t id) {
     case ID_TOOL_EYEDROPPER:
     case ID_TOOL_MAGNIFIER:
     case ID_TOOL_TEXT: {
+      int old_tool = g_app->current_tool;
+      if (doc && old_tool != (int)id && cancel_active_canvas_interaction(doc, old_tool)) {
+        invalidate_window(doc->canvas_win);
+      }
       g_app->current_tool = id;
       // Update the active tool button in the tool palette (win_toolbox).
       if (g_app->tool_win) {
