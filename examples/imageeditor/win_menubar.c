@@ -391,11 +391,9 @@ void handle_menu_command(uint16_t id) {
     case ID_TOOL_MAGNIFIER:
     case ID_TOOL_TEXT: {
       g_app->current_tool = id;
-      // Update the active toolbar button in the tool palette.
-      // kToolBarMessageSetActiveButton marks the matching button as active
-      // and clears all others, equivalent to the old autoradio_select on child buttons.
+      // Update the active tool button in the tool palette (win_toolbox).
       if (g_app->tool_win) {
-        send_message(g_app->tool_win, kToolBarMessageSetActiveButton, (uint32_t)id, NULL);
+        send_message(g_app->tool_win, kToolboxMessageSetActiveItem, (uint32_t)id, NULL);
       }
       break;
     }
