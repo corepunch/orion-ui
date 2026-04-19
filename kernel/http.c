@@ -346,9 +346,9 @@ execute_request(http_pending_t *req)
   resp->request_id = req->id;
   resp->error      = NULL;
 
-  char  *current_url    = strdup(req->url);
+  char  *current_url       = strdup(req->url);
   /* Method may change on 303 redirects; use a local copy. */
-  http_method_t  method = req->method;
+  http_method_t current_method = req->method;
   if (!current_url) {
     resp->status = 0;
     resp->error  = "out of memory";
@@ -398,7 +398,7 @@ execute_request(http_pending_t *req)
 
     /* Build request line and headers. */
     char req_buf[HTTP_MAX_URL + 512];
-    const char *method_str = method_string(method);
+    const char *method_str = method_string(current_method);
 
     int hdr_len = snprintf(req_buf, sizeof(req_buf),
       "%s %s HTTP/1.1\r\n"
@@ -482,7 +482,7 @@ execute_request(http_pending_t *req)
       current_url = location; /* location is already heap-allocated */
       location    = NULL;
       /* For 303 responses, switch to GET regardless of original method. */
-      if (status == 303) method = HTTP_GET;
+      if (status == 303) current_method = HTTP_GET;
       redirect_count++;
       continue;
     }

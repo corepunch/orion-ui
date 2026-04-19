@@ -145,7 +145,7 @@ Posted periodically during large downloads **only** when the server sends a
 ```c
 typedef struct {
   size_t            bytes_received;
-  size_t            bytes_total;     /* (size_t)-1 if unknown */
+  ssize_t           bytes_total;     /* -1 if Content-Length was not provided */
   http_request_id_t request_id;
 } http_progress_t;
 ```
