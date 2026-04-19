@@ -2,7 +2,7 @@
 //
 // Verifies:
 //  1. Children declared in a form_def_t exist and are findable via
-//     get_window_item() when kWindowMessageCreate fires on the parent.
+//     get_window_item() when evCreate fires on the parent.
 //  2. Child IDs, flags, and initial text are applied correctly.
 //  3. show_dialog_from_form() creates a window with WINDOW_DIALOG set,
 //     applies the title override, and includes WINDOW_VSCROLL.
@@ -35,7 +35,7 @@ static const form_def_t kTestForm = {
 };
 
 // ──────────────────────────────────────────────────────────────────────────
-// State captured in the window proc during kWindowMessageCreate
+// State captured in the window proc during evCreate
 // ──────────────────────────────────────────────────────────────────────────
 
 typedef struct {
@@ -52,7 +52,7 @@ static form_create_state_t g_create_state;
 static result_t form_test_proc(window_t *win, uint32_t msg,
                                uint32_t wparam, void *lparam) {
   (void)wparam; (void)lparam;
-  if (msg == kWindowMessageCreate) {
+  if (msg == evCreate) {
     g_create_state.create_fired  = true;
     g_create_state.found_name    = get_window_item(win, FORM_ID_NAME);
     g_create_state.found_ok      = get_window_item(win, FORM_ID_OK);
@@ -68,11 +68,11 @@ static result_t form_test_proc(window_t *win, uint32_t msg,
 }
 
 // ──────────────────────────────────────────────────────────────────────────
-// Test 1: children exist at kWindowMessageCreate
+// Test 1: children exist at evCreate
 // ──────────────────────────────────────────────────────────────────────────
 
 void test_form_children_exist_at_create(void) {
-  TEST("create_window_from_form: children findable in kWindowMessageCreate");
+  TEST("create_window_from_form: children findable in evCreate");
 
   test_env_init();
   memset(&g_create_state, 0, sizeof(g_create_state));
@@ -162,7 +162,7 @@ static char      g_dlg_title[64] = {0};
 static result_t dialog_flag_proc(window_t *win, uint32_t msg,
                                  uint32_t wparam, void *lparam) {
   (void)wparam; (void)lparam;
-  if (msg == kWindowMessageCreate) {
+  if (msg == evCreate) {
     g_dlg_flags = win->flags;
     strncpy(g_dlg_title, win->title, sizeof(g_dlg_title) - 1);
     end_dialog(win, 1);

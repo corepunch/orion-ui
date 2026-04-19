@@ -334,7 +334,7 @@ result_t win_terminal(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
   terminal_state_t *s = (terminal_state_t *)win->userdata;
   
   switch (msg) {
-    case kWindowMessageCreate: {
+    case evCreate: {
       s = allocate_window_data(win, sizeof(terminal_state_t));
       if (!s) return false;
       
@@ -398,7 +398,7 @@ result_t win_terminal(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       
       return true;
     }
-    case kWindowMessageKeyDown:
+    case evKeyDown:
       if (s->process_finished || !s->waiting_for_input) {
         return false;
       } else if (wparam == AX_KEY_ENTER) {
@@ -426,7 +426,7 @@ result_t win_terminal(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       } else {
         return false;
       }
-    case kWindowMessageTextInput:
+    case evTextInput:
       if (s->process_finished || !s->waiting_for_input) {
         return false;
       } else if (isprint(*(char*)lparam)) {
@@ -439,7 +439,7 @@ result_t win_terminal(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         return false;
       }
     
-    case kWindowMessageDestroy:
+    case evDestroy:
       if (s) {
         free_text_buffer(&s->textbuf);
 #if defined(HAVE_LUA)
@@ -450,7 +450,7 @@ result_t win_terminal(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       }
       return true;
       
-    case kWindowMessagePaint: {
+    case evPaint: {
       if (!s) return false;
       
       rect_t viewport = {

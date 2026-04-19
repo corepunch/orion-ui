@@ -30,18 +30,18 @@ static const int k_tool_icon[NUM_TOOLS] = {
 result_t win_tool_palette_proc(window_t *win, uint32_t msg,
                                 uint32_t wparam, void *lparam) {
   switch (msg) {
-    case kWindowMessageCreate: {
+    case evCreate: {
       // Delegate to win_toolbox first so its state is ready.
       win_toolbox(win, msg, wparam, lparam);
 
       // Use a larger button size to fit the 21px icons with comfortable margin.
-      send_message(win, kToolboxMessageSetButtonSize, FE_TOOLBOX_BTN_SIZE, NULL);
+      send_message(win, toolSetButtonSize, FE_TOOLBOX_BTN_SIZE, NULL);
 
       // Load the VB3-style icon strip.
 #ifdef SHAREDIR
       char path[4096];
       snprintf(path, sizeof(path), "%s/" SHAREDIR "/toolbox.png", ui_get_exe_dir());
-      send_message(win, kToolboxMessageLoadStrip, FE_TOOLBOX_ICON_W, path);
+      send_message(win, toolLoadStrip, FE_TOOLBOX_ICON_W, path);
 #endif
 
       toolbox_item_t items[NUM_TOOLS];
@@ -49,12 +49,12 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
         items[i].ident = k_tool_order[i];
         items[i].icon  = k_tool_icon[i];
       }
-      send_message(win, kToolboxMessageSetItems, NUM_TOOLS, items);
-      send_message(win, kToolboxMessageSetActiveItem, ID_TOOL_SELECT, NULL);
+      send_message(win, toolSetItems, NUM_TOOLS, items);
+      send_message(win, toolSetActiveItem, ID_TOOL_SELECT, NULL);
       return true;
     }
 
-    case kWindowMessageCommand:
+    case evCommand:
       // kToolboxNotificationClicked: a tool button was pressed.
       if (HIWORD(wparam) == kToolboxNotificationClicked) {
         int ident = (int)(int16_t)LOWORD(wparam);
@@ -63,7 +63,7 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
           if (g_app->doc && g_app->doc->canvas_win)
             invalidate_window(g_app->doc->canvas_win);
           if (g_app->menubar_win)
-            send_message(g_app->menubar_win, kWindowMessageCommand,
+            send_message(g_app->menubar_win, evCommand,
                          MAKEDWORD((uint16_t)ident, kButtonNotificationClicked),
                          lparam);
           else

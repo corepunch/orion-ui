@@ -9,16 +9,16 @@
 #include "../user/theme.h"
 
 // Label control window procedure.
-// lparam in kWindowMessageCreate is an optional RGBA color (void*)(uintptr_t)col.
+// lparam in evCreate is an optional RGBA color (void*)(uintptr_t)col.
 // When lparam is NULL the default kColorTextNormal is used.
 result_t win_label(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
-    case kWindowMessageCreate:
+    case evCreate:
       win->frame.w = MAX(win->frame.w, strwidth(win->title));
       win->notabstop = true;
       if (lparam) win->userdata = lparam;
       return true;
-    case kWindowMessagePaint: {
+    case evPaint: {
       // Convention: userdata == 0 → default (kColorTextNormal);
       // 0 < userdata < kColorCount → sys_color_idx_t index resolved at paint time;
       // userdata >= kColorCount → raw RGBA color (top byte is 0xff for any valid RGBA).

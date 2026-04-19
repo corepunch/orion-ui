@@ -40,8 +40,8 @@ void push_window(window_t *win, window_t **windows) {
   }
 }
 
-// Internal: allocate and register a window without sending kWindowMessageCreate.
-// Callers are responsible for sending kWindowMessageCreate (and invalidating if needed).
+// Internal: allocate and register a window without sending evCreate.
+// Callers are responsible for sending evCreate (and invalidating if needed).
 static window_t *alloc_window(char const *title, flags_t flags, rect_t const *frame,
                                window_t *parent, winproc_t proc, hinstance_t hinstance) {
   window_t *win = malloc(sizeof(window_t));
@@ -138,8 +138,8 @@ static void invalidate_overlaps(window_t *win) {
 
 // Move window to new position
 void move_window(window_t *win, int x, int y) {
-  post_message(win, kWindowMessageResize, 0, NULL);
-  post_message(win, kWindowMessageRefreshStencil, 0, NULL);
+  post_message(win, evResize, 0, NULL);
+  post_message(win, evRefreshStencil, 0, NULL);
 
   invalidate_overlaps(win);
   invalidate_window(win);
@@ -153,7 +153,7 @@ void move_window(window_t *win, int x, int y) {
 // Resize window
 void resize_window(window_t *win, int new_w, int new_h) {
   // Update dimensions first so every subsequent call (including the
-  // synchronous kWindowMessageResize delivery below) sees the new size.
+  // synchronous evResize delivery below) sees the new size.
   win->frame.w = new_w > 0 ? new_w : win->frame.w;
   win->frame.h = new_h > 0 ? new_h : win->frame.h;
 
@@ -162,9 +162,9 @@ void resize_window(window_t *win, int new_w, int new_h) {
   // paint message runs.  Using send_message here prevents a one-frame
   // lag where a child's vertical scrollbar still uses the previous
   // dimensions while the parent's border has already moved.
-  send_message(win, kWindowMessageResize, 0, NULL);
+  send_message(win, evResize, 0, NULL);
 
-  post_message(win, kWindowMessageRefreshStencil, 0, NULL);
+  post_message(win, evRefreshStencil, 0, NULL);
 
   invalidate_overlaps(win);
   invalidate_window(win);
@@ -196,7 +196,7 @@ void clear_toolbar_children(window_t *win) {
     window_t *tc   = win->toolbar_children;
     window_t *next = tc->next;
     // Detach from parent list before destroy so that any re-entrant traversal
-    // (e.g. is_valid_window_ptr, kWindowMessageDestroy) sees only still-live nodes.
+    // (e.g. is_valid_window_ptr, evDestroy) sees only still-live nodes.
     win->toolbar_children = next;
     tc->next = NULL;
     destroy_window(tc);
@@ -214,9 +214,9 @@ void clear_window_children(window_t *win) {
 
 // Destroy a window
 void destroy_window(window_t *win) {
-  post_message((window_t*)1, kWindowMessageRefreshStencil, 0, NULL);
+  post_message((window_t*)1, evRefreshStencil, 0, NULL);
   invalidate_overlaps(win);
-  send_message(win, kWindowMessageDestroy, 0, NULL);
+  send_message(win, evDestroy, 0, NULL);
   if (g_ui_runtime.focused == win) set_focus(NULL);
   if (g_ui_runtime.captured == win) set_capture(NULL);
   if (g_ui_runtime.tracked == win) track_mouse(NULL);
@@ -250,7 +250,7 @@ window_t *find_window(int x, int y) {
       last = win;
       int t = titlebar_height(win);
       if (!win->disabled) {
-        send_message(win, kWindowMessageHitTest, MAKEDWORD(x - win->frame.x, y - win->frame.y - t), &last);
+        send_message(win, evHitTest, MAKEDWORD(x - win->frame.x, y - win->frame.y - t), &last);
       }
     }
   }
@@ -278,7 +278,7 @@ void track_mouse(window_t *win) {
   if (g_ui_runtime.tracked == win)
     return;
   if (g_ui_runtime.tracked) {
-    send_message(g_ui_runtime.tracked, kWindowMessageMouseLeave, 0, win);
+    send_message(g_ui_runtime.tracked, evMouseLeave, 0, win);
     invalidate_window(g_ui_runtime.tracked);
   }
   g_ui_runtime.tracked = win;
@@ -295,26 +295,26 @@ void set_focus(window_t* win) {
     return;
   if (g_ui_runtime.focused) {
     g_ui_runtime.focused->editing = false;
-    post_message(g_ui_runtime.focused, kWindowMessageKillFocus, 0, win);
+    post_message(g_ui_runtime.focused, evKillFocus, 0, win);
     invalidate_window(g_ui_runtime.focused);
   }
   if (win) {
-    post_message(win, kWindowMessageSetFocus, 0, g_ui_runtime.focused);
+    post_message(win, evSetFocus, 0, g_ui_runtime.focused);
     invalidate_window(win);
   }
   g_ui_runtime.focused = win;
 }
 
 // Invalidate window (request repaint).
-// Always routes to the root window so that kWindowMessageNonClientPaint
+// Always routes to the root window so that evNonClientPaint
 // redraws the panel background (via draw_panel), erasing stale pixels from
-// the previous state before kWindowMessagePaint redraws the content.
+// the previous state before evPaint redraws the content.
 // For root windows get_root_window() returns win itself, so behaviour is
 // identical to the previous implementation.  For child windows the root is
 // invalidated, which clears the background and repaints all children —
 // necessary to erase, e.g., a stale selection highlight in a child control.
 //
-// A kWindowMessageRefreshStencil is posted before the paint messages so that
+// A evRefreshStencil is posted before the paint messages so that
 // if the paint messages end up deferred to a later repost_messages() call
 // (because they were added during the current processing cycle, beyond the
 // captured write index), the stencil is always rebuilt at the current window
@@ -324,9 +324,9 @@ void set_focus(window_t* win) {
 // and not be drawn for that frame.
 void invalidate_window(window_t *win) {
   window_t *root = get_root_window(win);
-  post_message(root, kWindowMessageRefreshStencil, 0, NULL);
-  post_message(root, kWindowMessageNonClientPaint, 0, NULL);
-  post_message(root, kWindowMessagePaint, 0, NULL);
+  post_message(root, evRefreshStencil, 0, NULL);
+  post_message(root, evNonClientPaint, 0, NULL);
+  post_message(root, evPaint, 0, NULL);
 }
 
 // Get titlebar Y position (top of the title text row within the window frame)
@@ -477,9 +477,9 @@ static winproc_t form_ctrl_to_proc(form_ctrl_type_t type) {
 }
 
 // Create a window from a form_def_t, instantiating all child controls from
-// def->children before firing kWindowMessageCreate on the parent.
+// def->children before firing evCreate on the parent.
 // This allows the window proc to find its children already in place during
-// kWindowMessageCreate, analogous to WinAPI CreateDialogIndirect behaviour.
+// evCreate, analogous to WinAPI CreateDialogIndirect behaviour.
 window_t *create_window_from_form(form_def_t const *def, int x, int y,
                                   window_t *parent, winproc_t proc,
                                   hinstance_t hinstance, void *lparam) {
@@ -509,11 +509,11 @@ window_t *create_window_from_form(form_def_t const *def, int x, int y,
 
   rect_t r = {x, y, def->width, def->height};
 
-  // Allocate the parent window without sending kWindowMessageCreate yet.
+  // Allocate the parent window without sending evCreate yet.
   window_t *win = alloc_window(def->name ? def->name : "", def->flags, &r, parent, proc, hinstance);
   if (!win) return NULL;
 
-  // Instantiate child controls before the parent proc receives kWindowMessageCreate.
+  // Instantiate child controls before the parent proc receives evCreate.
   // Children inherit hinstance from the parent (pass 0 = inherit).
   if (def->children && def->child_count > 0) {
     for (int i = 0; i < def->child_count; i++) {
@@ -527,9 +527,9 @@ window_t *create_window_from_form(form_def_t const *def, int x, int y,
   }
 
   // Now notify the parent that creation (with children already present) is complete.
-  send_message(win, kWindowMessageCreate, 0, lparam);
+  send_message(win, evCreate, 0, lparam);
   // For root windows (no parent), check whether the proc destroyed the window
-  // during kWindowMessageCreate (e.g. end_dialog called from within the proc).
+  // during evCreate (e.g. end_dialog called from within the proc).
   // Child windows are in parent->children, not the global list, so skip the
   // check for them — child self-destruction during create is not a supported pattern.
   if (!parent && !is_window(win)) return NULL;
@@ -539,7 +539,7 @@ window_t *create_window_from_form(form_def_t const *def, int x, int y,
 
 // Show or hide window
 void show_window(window_t *win, bool visible) {
-  post_message(win, kWindowMessageRefreshStencil, 0, NULL);
+  post_message(win, evRefreshStencil, 0, NULL);
   if (!visible) {
     invalidate_overlaps(win);
     if (g_ui_runtime.focused == win) set_focus(NULL);
@@ -550,7 +550,7 @@ void show_window(window_t *win, bool visible) {
     set_focus(win);
   }
   win->visible = visible;
-  post_message(win, kWindowMessageShowWindow, visible, NULL);
+  post_message(win, evShowWindow, visible, NULL);
 }
 
 // Check if pointer is a valid window

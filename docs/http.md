@@ -16,7 +16,7 @@ http_request_async()  ─────►  queue request
                               worker thread ──────────────► axNetSocket / axNetConnect
                                              ──────────────► axTlsConnect (HTTPS)
                                              ──────────────► axNet/TlsSend/Recv
-                              post_message(kWindowMessageHttpDone)
+                              post_message(evHttpDone)
 window proc ◄─────────────── dispatch_message()
 ```
 
@@ -34,12 +34,12 @@ static result_t my_win_proc(window_t *win, uint32_t msg,
                              uint32_t wparam, void *lparam)
 {
   switch (msg) {
-    case kWindowMessageCreate:
+    case evCreate:
       http_request_async(win, "https://api.example.com/data",
                          NULL, NULL);
       return true;
 
-    case kWindowMessageHttpDone: {
+    case evHttpDone: {
       http_request_id_t id   = (http_request_id_t)wparam;
       http_response_t  *resp = (http_response_t *)lparam;
       if (resp->status == 200) {
@@ -75,7 +75,7 @@ static result_t net_demo_proc(window_t *win, uint32_t msg,
   net_demo_state_t *st = (net_demo_state_t *)win->userdata;
 
   switch (msg) {
-    case kWindowMessageCreate:
+    case evCreate:
       st = (net_demo_state_t *)calloc(1, sizeof(*st));
       if (!st) return false;
       win->userdata = st;
@@ -84,14 +84,14 @@ static result_t net_demo_proc(window_t *win, uint32_t msg,
                                               NULL, NULL);
       return true;
 
-    case kWindowMessageHttpProgress: {
+    case evHttpProgress: {
       http_progress_t *p = (http_progress_t *)lparam;
       printf("request %u progress: %zu/%zd\n",
              p->request_id, p->bytes_received, p->bytes_total);
       return true;
     }
 
-    case kWindowMessageHttpDone: {
+    case evHttpDone: {
       http_request_id_t id = (http_request_id_t)wparam;
       http_response_t *resp = (http_response_t *)lparam;
       if (resp && resp->status == 200) {
@@ -105,7 +105,7 @@ static result_t net_demo_proc(window_t *win, uint32_t msg,
       return true;
     }
 
-    case kWindowMessageKeyDown:
+    case evKeyDown:
       if (wparam == AX_KEY_ESCAPE && st &&
           st->active_request != HTTP_INVALID_REQUEST) {
         http_cancel(st->active_request);
@@ -114,7 +114,7 @@ static result_t net_demo_proc(window_t *win, uint32_t msg,
       }
       return false;
 
-    case kWindowMessageDestroy:
+    case evDestroy:
       if (st) {
         if (st->active_request != HTTP_INVALID_REQUEST)
           http_cancel(st->active_request);
@@ -197,7 +197,7 @@ http_request_async(win, "https://api.example.com/blob/42", &opts, NULL);
 
 ## Receiving the Response
 
-### `kWindowMessageHttpDone`
+### `evHttpDone`
 
 Posted to `notify_win` when the request finishes (success **or** failure).
 
@@ -220,7 +220,7 @@ typedef struct {
 Always call `http_response_free(resp)` after processing — the framework
 transfers ownership to the window proc.
 
-### `kWindowMessageHttpProgress`
+### `evHttpProgress`
 
 Posted periodically during large downloads **only** when the server sends a
 `Content-Length` header.
@@ -245,7 +245,7 @@ void http_cancel(http_request_id_t id);
 ```
 
 Marks a pending request as cancelled.  If the worker has not yet started it,
-no `kWindowMessageHttpDone` is posted.  If the worker is already executing the
+no `evHttpDone` is posted.  If the worker is already executing the
 request the cancellation is noted but the network I/O continues until the
 current read/write completes; the response is then discarded silently.
 

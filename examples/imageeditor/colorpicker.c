@@ -53,7 +53,7 @@
 #define CP_BTN_AD_X   94
 #define CP_BTN_AD_W   62
 
-// Button child IDs (matched against btn->id in kWindowMessageCommand)
+// Button child IDs (matched against btn->id in evCommand)
 #define CP_ID_OK      1
 #define CP_ID_CANCEL  2
 #define CP_ID_ADD     3
@@ -266,7 +266,7 @@ static result_t cp_proc(window_t *win, uint32_t msg,
   cp_state_t *st = (cp_state_t *)win->userdata;
 
   switch (msg) {
-    case kWindowMessageCreate: {
+    case evCreate: {
       st = (cp_state_t *)lparam;
       win->userdata = st;
       sync_hsv(st);
@@ -288,11 +288,11 @@ static result_t cp_proc(window_t *win, uint32_t msg,
       return true;
     }
 
-    case kWindowMessagePaint:
+    case evPaint:
       paint_cp(st);
       return false;  // returning false lets child buttons paint themselves
 
-    case kWindowMessageCommand: {
+    case evCommand: {
       if (HIWORD(wparam) != kButtonNotificationClicked) return false;
       window_t *btn = (window_t *)lparam;
       if (!btn) return false;
@@ -315,7 +315,7 @@ static result_t cp_proc(window_t *win, uint32_t msg,
       return false;
     }
 
-    case kWindowMessageLeftButtonDown: {
+    case evLeftButtonDown: {
       int lx = (int16_t)LOWORD(wparam);
       int ly = (int16_t)HIWORD(wparam);
 
@@ -340,7 +340,7 @@ static result_t cp_proc(window_t *win, uint32_t msg,
       return false;
     }
 
-    case kWindowMessageMouseMove: {
+    case evMouseMove: {
       int lx = (int16_t)LOWORD(wparam);
       int ly = (int16_t)HIWORD(wparam);
 
@@ -360,7 +360,7 @@ static result_t cp_proc(window_t *win, uint32_t msg,
       return true;
     }
 
-    case kWindowMessageLeftButtonUp:
+    case evLeftButtonUp:
       if (st->dragging >= 0) {
         drag_slider(st, st->dragging, (int16_t)LOWORD(wparam));
         st->dragging = -1;
@@ -370,7 +370,7 @@ static result_t cp_proc(window_t *win, uint32_t msg,
       }
       return false;
 
-    case kWindowMessageMouseLeave:
+    case evMouseLeave:
       if (st->hover_pal >= 0) {
         st->hover_pal = -1;
         invalidate_window(win);

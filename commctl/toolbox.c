@@ -15,31 +15,31 @@
 //       NULL, my_toolbox_proc, hinstance, NULL);
 //
 //   // Inside my_toolbox_proc (which wraps win_toolbox):
-//   case kWindowMessageCreate: {
+//   case evCreate: {
 //       // Optional: load a custom icon strip from a PNG sprite sheet.
 //       // Icon tiles are square; wparam = tile size in px.
 //       char path[512];
 //       snprintf(path, sizeof(path), "%s/" SHAREDIR "/tools.png",
 //                ui_get_exe_dir());
-//       send_message(win, kToolboxMessageLoadStrip, 16, path);
+//       send_message(win, toolLoadStrip, 16, path);
 //
 //       toolbox_item_t items[] = {
 //           { ID_TOOL_SELECT, 0 },
 //           { ID_TOOL_PENCIL, 1 },
 //           { ID_TOOL_BRUSH,  2 },
 //       };
-//       send_message(win, kToolboxMessageSetItems, 3, items);
-//       send_message(win, kToolboxMessageSetActiveItem, ID_TOOL_SELECT, NULL);
+//       send_message(win, toolSetItems, 3, items);
+//       send_message(win, toolSetActiveItem, ID_TOOL_SELECT, NULL);
 //       return true;
 //   }
-//   case kWindowMessageCommand:
+//   case evCommand:
 //       if (HIWORD(wparam) == kToolboxNotificationClicked)
 //           handle_tool_selected(LOWORD(wparam));
 //       return false;
 //   default:
 //       return win_toolbox(win, msg, wparam, lparam);
 //
-// Notifications: clicking a button sends kWindowMessageCommand to the toolbox
+// Notifications: clicking a button sends evCommand to the toolbox
 // window itself with wparam = MAKEDWORD(ident, kToolboxNotificationClicked) and
 // lparam = the toolbox window.  The wrapping proc intercepts this command.
 
@@ -62,7 +62,7 @@ typedef struct {
   int             active_ident; // ident of active item (-1 = none)
   int             pressed_idx; // index of currently pressed item (-1 = none)
   bitmap_strip_t  strip;       // icon strip (may point to own_strip_tex or external tex)
-  uint32_t        own_strip_tex; // GL texture owned by kToolboxMessageLoadStrip (0 = none)
+  uint32_t        own_strip_tex; // GL texture owned by toolLoadStrip (0 = none)
 } toolbox_state_t;
 
 static int effective_bsz(const toolbox_state_t *st) {
@@ -142,14 +142,14 @@ static void draw_toolbox_button(toolbox_state_t *st, int idx,
 result_t win_toolbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
     // ── Lifecycle ─────────────────────────────────────────────────────────
-    case kWindowMessageCreate: {
+    case evCreate: {
       toolbox_state_t *st = allocate_window_data(win, sizeof(toolbox_state_t));
       st->btn_size     = 0;
       st->active_ident = -1;
       st->pressed_idx  = -1;
       return true;
     }
-    case kWindowMessageDestroy: {
+    case evDestroy: {
       toolbox_state_t *st = (toolbox_state_t *)win->userdata;
       if (st) {
         free(st->items);
@@ -162,7 +162,7 @@ result_t win_toolbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
     }
 
     // ── Paint ─────────────────────────────────────────────────────────────
-    case kWindowMessagePaint: {
+    case evPaint: {
       toolbox_state_t *st = (toolbox_state_t *)win->userdata;
       if (!st) return false;
       int bsz = effective_bsz(st);
@@ -181,7 +181,7 @@ result_t win_toolbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
     }
 
     // ── Mouse input ───────────────────────────────────────────────────────
-    case kWindowMessageLeftButtonDown: {
+    case evLeftButtonDown: {
       toolbox_state_t *st = (toolbox_state_t *)win->userdata;
       if (!st) return false;
       int mx = (int)(int16_t)LOWORD(wparam);
@@ -195,7 +195,7 @@ result_t win_toolbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       }
       return false;
     }
-    case kWindowMessageLeftButtonUp: {
+    case evLeftButtonUp: {
       toolbox_state_t *st = (toolbox_state_t *)win->userdata;
       if (!st) return false;
       int mx    = (int)(int16_t)LOWORD(wparam);
@@ -209,9 +209,9 @@ result_t win_toolbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
         // Confirmed click: update active tool and fire notification.
         st->active_ident = st->items[idx].ident;
         invalidate_window(win);
-        // Send kWindowMessageCommand to the toolbox window itself.
+        // Send evCommand to the toolbox window itself.
         // A wrapping proc intercepts this before it reaches win_toolbox again.
-        send_message(win, kWindowMessageCommand,
+        send_message(win, evCommand,
                      MAKEDWORD((uint16_t)st->items[idx].ident,
                                kToolboxNotificationClicked),
                      win);
@@ -223,7 +223,7 @@ result_t win_toolbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
     }
 
     // ── Toolbox messages ─────────────────────────────────────────────────
-    case kToolboxMessageSetItems: {
+    case toolSetItems: {
       toolbox_state_t *st = (toolbox_state_t *)win->userdata;
       if (!st) return false;
       free(st->items);
@@ -241,14 +241,14 @@ result_t win_toolbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       invalidate_window(win);
       return true;
     }
-    case kToolboxMessageSetActiveItem: {
+    case toolSetActiveItem: {
       toolbox_state_t *st = (toolbox_state_t *)win->userdata;
       if (!st) return false;
       st->active_ident = (int)(int32_t)wparam;
       invalidate_window(win);
       return true;
     }
-    case kToolboxMessageSetStrip: {
+    case toolSetStrip: {
       toolbox_state_t *st = (toolbox_state_t *)win->userdata;
       if (!st) return false;
       // Switching to an external strip: release any previously owned texture,
@@ -265,7 +265,7 @@ result_t win_toolbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       invalidate_window(win);
       return true;
     }
-    case kToolboxMessageSetButtonSize: {
+    case toolSetButtonSize: {
       toolbox_state_t *st = (toolbox_state_t *)win->userdata;
       if (!st) return false;
       int sz = (int)wparam;
@@ -273,7 +273,7 @@ result_t win_toolbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       invalidate_window(win);
       return true;
     }
-    case kToolboxMessageLoadStrip: {
+    case toolLoadStrip: {
       // Load a PNG sprite sheet and own the resulting GL texture.
       // wparam = square icon tile size in pixels; lparam = const char* path.
       toolbox_state_t *st = (toolbox_state_t *)win->userdata;

@@ -1,8 +1,8 @@
 // commctl/filelist.c — file-browser control
 //
 // win_filelist extends win_reportview: it calls win_reportview for rendering
-// (kWindowMessagePaint), scroll (kWindowMessageWheel), item management
-// (RVM_*), and cleanup (kWindowMessageDestroy), while implementing its own
+// (evPaint), scroll (evWheel), item management
+// (RVM_*), and cleanup (evDestroy), while implementing its own
 // directory loading, click/double-click handling, navigation, and extension
 // filtering.
 //
@@ -266,7 +266,7 @@ static void fl_navigate(window_t *win, filelist_data_t *data, int index) {
   }
 
   fl_load_directory(win, data);
-  send_message(get_root_window(win), kWindowMessageCommand,
+  send_message(get_root_window(win), evCommand,
                MAKEDWORD(0, FLN_NAVDIR), data->curpath);
 }
 
@@ -311,7 +311,7 @@ result_t win_filelist(window_t *win, uint32_t msg,
   switch (msg) {
 
     // -----------------------------------------------------------------------
-    case kWindowMessageCreate: {
+    case evCreate: {
       // Initialise ListView rendering infrastructure.
       win_reportview(win, msg, wparam, NULL);
 
@@ -334,20 +334,20 @@ result_t win_filelist(window_t *win, uint32_t msg,
 
     // -----------------------------------------------------------------------
     // Delegate rendering and scrolling to win_reportview.
-    case kWindowMessagePaint:
-    case kWindowMessageWheel:
+    case evPaint:
+    case evWheel:
       return win_reportview(win, msg, wparam, lparam);
 
     // -----------------------------------------------------------------------
     // Own click handling — NOT delegated to win_reportview to avoid the RVN_*
     // routing (which sends to root, bypassing win_filelist when it is a child).
-    case kWindowMessageLeftButtonDown: {
+    case evLeftButtonDown: {
       int index = fl_hit_index(win, data, wparam);
       if (index < 0) return true;
 
       // Single click — update selection only.
       // Double-click navigation/open is handled exclusively in
-      // kWindowMessageLeftButtonDoubleClick, which the platform delivers
+      // evLeftButtonDoubleClick, which the platform delivers
       // as a separate event after the second button-down.  Doing the action
       // here as well would cause double navigation (1 double-click = 2 levels deep).
       int old_sel = data->selected;
@@ -356,7 +356,7 @@ result_t win_filelist(window_t *win, uint32_t msg,
 
       if (old_sel != index) {
         data->notify_item = data->items[index];
-        send_message(get_root_window(win), kWindowMessageCommand,
+        send_message(get_root_window(win), evCommand,
                      MAKEDWORD((uint32_t)index, FLN_SELCHANGE),
                      &data->notify_item);
       }
@@ -366,11 +366,11 @@ result_t win_filelist(window_t *win, uint32_t msg,
     // -----------------------------------------------------------------------
     // Platform double-click (kEventLeftDoubleClick) arrives here directly on
     // macOS, X11, Wayland, Windows, and QNX.  This is the sole handler for
-    // directory navigation and file activation — the kWindowMessageLeftButtonDown
+    // directory navigation and file activation — the evLeftButtonDown
     // handler intentionally does NOT duplicate this logic, preventing the
-    // double navigation bug where two kWindowMessageLeftButtonDown events arrive
-    // before kWindowMessageLeftButtonDoubleClick.
-    case kWindowMessageLeftButtonDoubleClick: {
+    // double navigation bug where two evLeftButtonDown events arrive
+    // before evLeftButtonDoubleClick.
+    case evLeftButtonDoubleClick: {
       int index = fl_hit_index(win, data, wparam);
       if (index < 0) return true;
 
@@ -378,7 +378,7 @@ result_t win_filelist(window_t *win, uint32_t msg,
         fl_navigate(win, data, index);
       } else {
         data->notify_item = data->items[index];
-        send_message(get_root_window(win), kWindowMessageCommand,
+        send_message(get_root_window(win), evCommand,
                      MAKEDWORD((uint32_t)index, FLN_FILEOPEN),
                      &data->notify_item);
       }
@@ -432,7 +432,7 @@ result_t win_filelist(window_t *win, uint32_t msg,
     }
 
     // -----------------------------------------------------------------------
-    case kWindowMessageDestroy:
+    case evDestroy:
       if (data) {
         fl_free_items(data);
         free(data);

@@ -186,15 +186,15 @@ test_sequential_ids(void)
   PASS();
 }
 
-/* kWindowMessageHttpDone and kWindowMessageHttpProgress must be defined
+/* evHttpDone and evHttpProgress must be defined
  * and have distinct values. */
 static void
 test_message_constants(void)
 {
   TEST("HTTP message constants are defined and distinct");
-  ASSERT_TRUE(kWindowMessageHttpDone     != 0);
-  ASSERT_TRUE(kWindowMessageHttpProgress != 0);
-  ASSERT_TRUE(kWindowMessageHttpDone     != kWindowMessageHttpProgress);
+  ASSERT_TRUE(evHttpDone     != 0);
+  ASSERT_TRUE(evHttpProgress != 0);
+  ASSERT_TRUE(evHttpDone     != evHttpProgress);
   PASS();
 }
 

@@ -30,9 +30,9 @@ static result_t about_dlg_proc(window_t *win, uint32_t msg,
                                 uint32_t wparam, void *lparam) {
   (void)lparam;
   switch (msg) {
-    case kWindowMessageCreate:
+    case evCreate:
       return true;
-    case kWindowMessageCommand:
+    case evCommand:
       if (HIWORD(wparam) == kButtonNotificationClicked) {
         end_dialog(win, 1);
         return true;

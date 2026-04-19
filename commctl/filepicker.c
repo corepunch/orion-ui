@@ -60,7 +60,7 @@ enum {
   FP_ID_NEWFOLDER_EDIT = 100,
   FP_ID_NEWFOLDER_OK,
   FP_ID_NEWFOLDER_CANCEL,
-  FP_MSG_SYNC_ACCEPT = kWindowMessageUser + 520,
+  FP_MSG_SYNC_ACCEPT = evUser + 520,
 };
 
 // Toolbar items: "Location:" label + path combobox + separator + icon buttons
@@ -159,9 +159,9 @@ static void fp_edit_watch_hook(window_t *win, uint32_t msg,
 
   if (!ps || win != ps->edit_win) return;
 
-  if (msg == kWindowMessageTextInput) {
+  if (msg == evTextInput) {
     post_message(get_root_window(win), FP_MSG_SYNC_ACCEPT, 0, NULL);
-  } else if (msg == kWindowMessageKeyDown && wparam == AX_KEY_BACKSPACE) {
+  } else if (msg == evKeyDown && wparam == AX_KEY_BACKSPACE) {
     post_message(get_root_window(win), FP_MSG_SYNC_ACCEPT, 0, NULL);
   }
 }
@@ -171,7 +171,7 @@ static result_t fp_newfolder_proc(window_t *win, uint32_t msg,
   fp_newfolder_state_t *st = (fp_newfolder_state_t *)win->userdata;
 
   switch (msg) {
-    case kWindowMessageCreate: {
+    case evCreate: {
       st = (fp_newfolder_state_t *)lparam;
       win->userdata = st;
       if (st) {
@@ -182,7 +182,7 @@ static result_t fp_newfolder_proc(window_t *win, uint32_t msg,
       return true;
     }
 
-    case kWindowMessageCommand:
+    case evCommand:
       if (HIWORD(wparam) == kButtonNotificationClicked) {
         window_t *src = (window_t *)lparam;
         if (!src) return true;
@@ -263,13 +263,13 @@ static int fp_parse_filters(const char *raw, fp_filter_t *out, int max) {
 // Each breadcrumb entry stores the full path in ps->loc_paths[] for navigation.
 static void fp_sync_location_combo(fp_state_t *ps, const char *path) {
   if (!ps->location_combo || !path || !path[0]) return;
-  send_message(ps->location_combo, kComboBoxMessageClear, 0, NULL);
+  send_message(ps->location_combo, cbClear, 0, NULL);
   ps->loc_count = 0;
 
   // Root is always the first entry
   strncpy(ps->loc_paths[0], "/", sizeof(ps->loc_paths[0]) - 1);
   ps->loc_paths[0][sizeof(ps->loc_paths[0]) - 1] = '\0';
-  send_message(ps->location_combo, kComboBoxMessageAddString, 0, "/");
+  send_message(ps->location_combo, cbAddString, 0, "/");
   ps->loc_count = 1;
 
   // Walk path components, building accumulated paths
@@ -299,14 +299,14 @@ static void fp_sync_location_combo(fp_state_t *ps, const char *path) {
     char display[64] = {0};
     size_t dlen = len < sizeof(display) - 1 ? len : sizeof(display) - 1;
     strncpy(display, p, dlen);
-    send_message(ps->location_combo, kComboBoxMessageAddString, 0, display);
+    send_message(ps->location_combo, cbAddString, 0, display);
     sel = ps->loc_count++;
 
     p += len;
     if (*p == '/') p++;
   }
 
-  send_message(ps->location_combo, kComboBoxMessageSetCurrentSelection,
+  send_message(ps->location_combo, cbSetCurrentSelection,
                (uint32_t)sel, NULL);
   invalidate_window(ps->location_combo);
 }
@@ -501,10 +501,10 @@ static result_t fp_proc(window_t *win, uint32_t msg,
   switch (msg) {
 
     // ------------------------------------------------------------------
-    case kWindowMessageCreate: {
+    case evCreate: {
       ps = (fp_state_t *)lparam;
       win->userdata = ps;
-      send_message(win, kToolBarMessageSetItems,
+      send_message(win, tbSetItems,
                    sizeof(kFilePickerItems) / sizeof(kFilePickerItems[0]),
                    (void *)kFilePickerItems);
 
@@ -528,11 +528,11 @@ static result_t fp_proc(window_t *win, uint32_t msg,
 
       if (ps->filter_combo) {
         for (int i = 0; i < ps->num_filters; i++) {
-          send_message(ps->filter_combo, kComboBoxMessageAddString,
+          send_message(ps->filter_combo, cbAddString,
                        0, (void *)ps->filters[i].description);
         }
         if (ps->num_filters > 0) {
-          send_message(ps->filter_combo, kComboBoxMessageSetCurrentSelection,
+          send_message(ps->filter_combo, cbSetCurrentSelection,
                        (uint32_t)ps->active_filter, NULL);
           enable_window(ps->filter_combo, true);
         } else {
@@ -564,8 +564,8 @@ static result_t fp_proc(window_t *win, uint32_t msg,
       }
 
       set_window_item_text(win, FP_ID_OK, "%s", ps->save_mode ? "Save" : "Open");
-      register_window_hook(kWindowMessageTextInput, fp_edit_watch_hook, ps);
-      register_window_hook(kWindowMessageKeyDown, fp_edit_watch_hook, ps);
+      register_window_hook(evTextInput, fp_edit_watch_hook, ps);
+      register_window_hook(evKeyDown, fp_edit_watch_hook, ps);
       fp_sync_accept_button(ps);
 
       // Sync the location combobox with the filelist's initial directory
@@ -579,16 +579,16 @@ static result_t fp_proc(window_t *win, uint32_t msg,
       return true;
     }
 
-    case kWindowMessageDestroy:
-      deregister_window_hook(kWindowMessageTextInput, fp_edit_watch_hook, ps);
-      deregister_window_hook(kWindowMessageKeyDown, fp_edit_watch_hook, ps);
+    case evDestroy:
+      deregister_window_hook(evTextInput, fp_edit_watch_hook, ps);
+      deregister_window_hook(evKeyDown, fp_edit_watch_hook, ps);
       return false;
 
     case FP_MSG_SYNC_ACCEPT:
       fp_sync_accept_button(ps);
       return true;
 
-    case kToolBarMessageButtonClick:
+    case tbButtonClick:
       if (wparam == FP_ID_TOOL_UP) {
         fp_navigate_to_parent(ps);
         return true;
@@ -600,7 +600,7 @@ static result_t fp_proc(window_t *win, uint32_t msg,
       return false;
 
     // ------------------------------------------------------------------
-    case kWindowMessageCommand: {
+    case evCommand: {
       uint16_t code = HIWORD(wparam);
 
       // Single-click on a file — populate the filename edit box.
@@ -636,7 +636,7 @@ static result_t fp_proc(window_t *win, uint32_t msg,
       if (code == kComboBoxNotificationSelectionChange && ps->location_combo &&
           (window_t *)lparam == ps->location_combo) {
         int sel = (int)send_message(ps->location_combo,
-                                    kComboBoxMessageGetCurrentSelection, 0, NULL);
+                                    cbGetCurrentSelection, 0, NULL);
         if (sel >= 0 && sel < ps->loc_count) {
           send_message(ps->list_win, FLM_SETPATH, 0, ps->loc_paths[sel]);
           fp_sync_location_combo(ps, ps->loc_paths[sel]);
@@ -648,7 +648,7 @@ static result_t fp_proc(window_t *win, uint32_t msg,
       if (code == kComboBoxNotificationSelectionChange && ps->filter_combo &&
           (window_t *)lparam == ps->filter_combo) {
         int sel = (int)send_message(ps->filter_combo,
-                                    kComboBoxMessageGetCurrentSelection, 0, NULL);
+                                    cbGetCurrentSelection, 0, NULL);
         if (sel >= 0 && sel < ps->num_filters) {
           ps->active_filter = sel;
           fp_apply_filter(ps);

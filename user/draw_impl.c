@@ -265,7 +265,7 @@ void repaint_stencil(void) {
   for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
     if (!w->visible)
       continue;
-    send_message(w, kWindowMessagePaintStencil, 0, NULL);
+    send_message(w, evPaintStencil, 0, NULL);
   }
   glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
   glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
@@ -350,7 +350,7 @@ void draw_icon16(int icon, int x, int y, uint32_t col) {
 
 // ---- Built-in scrollbar rendering -------------------------------------------
 //
-// Called from send_message() after kWindowMessagePaint when a window has
+// Called from send_message() after evPaint when a window has
 // WINDOW_HSCROLL and/or WINDOW_VSCROLL set.  The bars are drawn in the same
 // projection as the window's paint pass (root-relative coordinates), on top
 // of the window's content.
@@ -388,7 +388,7 @@ void draw_builtin_scrollbars(window_t *win) {
   int base_y = win->parent ? win->frame.y : 0;
 
   // When the horizontal bar is merged with the status bar, draw_statusbar()
-  // already rendered it during kWindowMessageNonClientPaint.  Skip it here so
+  // already rendered it during evNonClientPaint.  Skip it here so
   // it isn't drawn twice, and don't subtract its height from the vscroll track.
   bool h_merged = has_h && (win->flags & WINDOW_STATUSBAR);
 

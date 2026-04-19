@@ -72,7 +72,7 @@ forwarded to `win_toolbox`:
 static result_t my_toolbox_proc(window_t *win, uint32_t msg,
                                  uint32_t wparam, void *lparam) {
   switch (msg) {
-    case kWindowMessageCreate: {
+    case evCreate: {
       // 1. Let win_toolbox initialise its internal state first.
       win_toolbox(win, msg, wparam, lparam);
 
@@ -80,20 +80,20 @@ static result_t my_toolbox_proc(window_t *win, uint32_t msg,
       char path[512];
       snprintf(path, sizeof(path), "%s/" SHAREDIR "/tools.png",
                ui_get_exe_dir());
-      send_message(win, kToolboxMessageLoadStrip, 16 /* tile px */, path);
+      send_message(win, toolLoadStrip, 16 /* tile px */, path);
 
       // 3. Set items and mark the default active tool.
-      send_message(win, kToolboxMessageSetItems, MY_TOOL_COUNT, kMyTools);
-      send_message(win, kToolboxMessageSetActiveItem, ID_TOOL_SELECT, NULL);
+      send_message(win, toolSetItems, MY_TOOL_COUNT, kMyTools);
+      send_message(win, toolSetActiveItem, ID_TOOL_SELECT, NULL);
       return true;
     }
 
-    case kWindowMessageCommand:
+    case evCommand:
       if (HIWORD(wparam) == kToolboxNotificationClicked) {
         int tool_id = (int)(int16_t)LOWORD(wparam);
         // Forward to the app's root window / menubar.
         if (app->menubar_win)
-          send_message(app->menubar_win, kWindowMessageCommand,
+          send_message(app->menubar_win, evCommand,
                        MAKEDWORD((uint16_t)tool_id, kButtonNotificationClicked),
                        lparam);
         return true;
@@ -115,7 +115,7 @@ lifecycle automatically.  You only need to intercept the messages you care about
 
 If you don't have a custom sprite sheet, use `sysicon_*` values from
 `user/icons.h`.  Any `icon >= SYSICON_BASE` is drawn from the built-in 16×16
-icon sheet — **no `kToolboxMessageLoadStrip` call needed**:
+icon sheet — **no `toolLoadStrip` call needed**:
 
 ```c
 static const toolbox_item_t kSysTools[] = {
@@ -124,7 +124,7 @@ static const toolbox_item_t kSysTools[] = {
     { ID_TOOL_BRUSH,   sysicon_brush    },
     { ID_TOOL_FILL,    sysicon_bucket   },
 };
-send_message(win, kToolboxMessageSetItems, 4, kSysTools);
+send_message(win, toolSetItems, 4, kSysTools);
 ```
 
 ---
@@ -135,15 +135,15 @@ The default button size is `TOOLBOX_BTN_SIZE` (= `TB_SPACING` = 22 px), which
 fits a 16×16 icon with 3 px of margin on the left/right and 3 px on top/bottom
 (total button interior = 16 + 6 = 22 px).
 
-If your icons are larger (e.g., 21 px), call `kToolboxMessageSetButtonSize`
-**before** `kToolboxMessageSetItems` so the grid height is computed correctly:
+If your icons are larger (e.g., 21 px), call `toolSetButtonSize`
+**before** `toolSetItems` so the grid height is computed correctly:
 
 ```c
-case kWindowMessageCreate: {
+case evCreate: {
     win_toolbox(win, msg, wparam, lparam);
-    send_message(win, kToolboxMessageSetButtonSize, 26, NULL); // 21px icon + margin
-    send_message(win, kToolboxMessageLoadStrip, 21, path);
-    send_message(win, kToolboxMessageSetItems, count, items);
+    send_message(win, toolSetButtonSize, 26, NULL); // 21px icon + margin
+    send_message(win, toolLoadStrip, 21, path);
+    send_message(win, toolSetItems, count, items);
     return true;
 }
 ```
@@ -161,8 +161,8 @@ int win_h = TITLEBAR_HEIGHT + rows * MY_BTN_SIZE;
 ## Optional extra content below the grid
 
 Applications can paint **additional content** (colour swatches, property
-panels, etc.) below the button grid by wrapping `kWindowMessagePaint` and
-`kWindowMessageLeftButtonDown`:
+panels, etc.) below the button grid by wrapping `evPaint` and
+`evLeftButtonDown`:
 
 ```c
 #define EXTRA_H  50  // height of your custom content area
@@ -170,7 +170,7 @@ panels, etc.) below the button grid by wrapping `kWindowMessagePaint` and
 // When creating the window, add EXTRA_H to the client height:
 //   win_h = TITLEBAR_HEIGHT + rows * TOOLBOX_BTN_SIZE + EXTRA_H
 
-case kWindowMessagePaint: {
+case evPaint: {
     // 1. Let win_toolbox fill the background and draw the button grid.
     win_toolbox(win, msg, wparam, lparam);
 
@@ -182,7 +182,7 @@ case kWindowMessagePaint: {
     return true;
 }
 
-case kWindowMessageLeftButtonDown: {
+case evLeftButtonDown: {
     int my = (int)(int16_t)HIWORD(wparam);
     int gy = toolbox_grid_height(win);
     if (my >= gy) {
@@ -203,11 +203,11 @@ grid (= `ceil(n/2) * btn_size`).  It is declared in `commctl/commctl.h`.
 
 | Message | wparam | lparam | Effect |
 |---|---|---|---|
-| `kToolboxMessageSetItems` | count | `toolbox_item_t[]` | Replace item list |
-| `kToolboxMessageSetActiveItem` | ident (or -1) | — | Mark active button |
-| `kToolboxMessageSetStrip` | 0 | `bitmap_strip_t*` or NULL | Set external sprite strip |
-| `kToolboxMessageLoadStrip` | tile_size_px | `const char*` path | Load PNG and own the texture |
-| `kToolboxMessageSetButtonSize` | size_px (0=default) | — | Override button size |
+| `toolSetItems` | count | `toolbox_item_t[]` | Replace item list |
+| `toolSetActiveItem` | ident (or -1) | — | Mark active button |
+| `toolSetStrip` | 0 | `bitmap_strip_t*` or NULL | Set external sprite strip |
+| `toolLoadStrip` | tile_size_px | `const char*` path | Load PNG and own the texture |
+| `toolSetButtonSize` | size_px (0=default) | — | Override button size |
 
 ### `toolbox_item_t`
 
@@ -220,7 +220,7 @@ typedef struct {
 
 ### Notification
 
-When the user clicks a button the toolbox sends `kWindowMessageCommand` to
+When the user clicks a button the toolbox sends `evCommand` to
 itself:
 
 ```c
@@ -228,7 +228,7 @@ wparam = MAKEDWORD(ident, kToolboxNotificationClicked);
 lparam = win;  // the toolbox window
 ```
 
-Intercept this in your wrapper proc's `kWindowMessageCommand` case.
+Intercept this in your wrapper proc's `evCommand` case.
 
 ---
 

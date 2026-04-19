@@ -18,16 +18,16 @@
 static result_t filemanager_proc(window_t *win, uint32_t msg,
                                   uint32_t wparam, void *lparam) {
   switch (msg) {
-    case kWindowMessageCreate:
+    case evCreate:
       // lparam = NULL: win_filelist starts in the current working directory.
       return win_filelist(win, msg, wparam, NULL);
 
-    case kWindowMessageCommand: {
+    case evCommand: {
       uint16_t code = HIWORD(wparam);
 
       if (code == FLN_NAVDIR && lparam) {
         // Update the status bar to show the new directory.
-        send_message(win, kWindowMessageStatusBar, 0, lparam);
+        send_message(win, evStatusBar, 0, lparam);
         return false;
       }
 
@@ -57,7 +57,7 @@ static result_t filemanager_proc(window_t *win, uint32_t msg,
       return win_filelist(win, msg, wparam, lparam);
     }
 
-    case kWindowMessageDestroy:
+    case evDestroy:
       ui_request_quit();
       return win_filelist(win, msg, wparam, lparam);
 

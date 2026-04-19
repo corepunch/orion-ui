@@ -51,7 +51,7 @@ static window_t *g_win;
 // ---- window procedure ------------------------------------------------
 static result_t my_proc(window_t *win, uint32_t msg,
                         uint32_t wparam, void *lparam) {
-    if (msg == kWindowMessagePaint) {
+    if (msg == evPaint) {
         fill_rect(0xff202020, 0, 0, win->frame.w, win->frame.h);
         draw_text_small("Hello from a gem!", 10, 10, 0xffffffff);
         return true;
@@ -244,6 +244,6 @@ are called after `axDynlibClose()`:
 1. **`shell_notify_gem_shutdown()`** — calls every gem's `shutdown()` while
    the GL context is still active (safe for `glDeleteTextures` etc.)
 2. **`ui_shutdown_graphics()`** — destroys all windows; gem code is still in
-   memory so `kWindowMessageDestroy` handlers remain valid
+   memory so `evDestroy` handlers remain valid
 3. **`shell_cleanup_all_gems()`** — `axDynlibClose()`s all gem handles; no window
    proc calls are made after this point

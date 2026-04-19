@@ -34,7 +34,7 @@ window_t *create_window(
     rect_t const *frame,     // MAKERECT(x, y, w, h)
     window_t   *parent,      // NULL = top-level
     winproc_t   proc,
-    void       *lparam       // forwarded to kWindowMessageCreate
+    void       *lparam       // forwarded to evCreate
 );
 ```
 
@@ -74,13 +74,13 @@ default processing or child dispatch.
 static result_t my_proc(window_t *win, uint32_t msg,
                         uint32_t wparam, void *lparam) {
   switch (msg) {
-    case kWindowMessageCreate:
+    case evCreate:
       /* one-time initialisation; lparam = value passed to create_window */
       return true;
-    case kWindowMessagePaint:
+    case evPaint:
       fill_rect(0xff202020, 0, 0, win->frame.w, win->frame.h);
       return true;
-    case kWindowMessageDestroy:
+    case evDestroy:
       free(win->userdata);
       return true;
     default:
@@ -97,7 +97,7 @@ window_t *win = create_window("Title", 0, MAKERECT(100,100,400,300),
                                NULL, my_proc, NULL);
 show_window(win, true);
 
-// Destroy (sends kWindowMessageDestroy, frees children, then frees win)
+// Destroy (sends evDestroy, frees children, then frees win)
 destroy_window(win);
 ```
 
@@ -122,7 +122,7 @@ uint32_t show_dialog(
     rect_t const *frame,   // MAKERECT(x, y, w, h) – logical pixels
     window_t    *parent,   // owner window, or NULL
     winproc_t    proc,     // dialog window procedure
-    void        *param     // forwarded as lparam to kWindowMessageCreate
+    void        *param     // forwarded as lparam to evCreate
 );
 
 // Close the dialog and return a result code to show_dialog's caller.
@@ -156,7 +156,7 @@ static result_t open_proc(window_t *win, uint32_t msg,
                            uint32_t wparam, void *lparam) {
   open_state_t *s = (open_state_t *)win->userdata;
   switch (msg) {
-    case kWindowMessageCreate:
+    case evCreate:
       win->userdata = lparam;  // open_state_t * passed via param
       // Create child controls
       create_window("OK", 0, MAKERECT(10, 60, 60, BUTTON_HEIGHT),
@@ -165,7 +165,7 @@ static result_t open_proc(window_t *win, uint32_t msg,
                     win, win_button, NULL);
       return true;
 
-    case kWindowMessageCommand:
+    case evCommand:
       if (HIWORD(wparam) == kButtonNotificationClicked) {
         window_t *btn = (window_t *)lparam;
         if (strcmp(btn->title, "OK") == 0) {
@@ -229,7 +229,7 @@ static bool show_file_picker(window_t *parent, bool save_mode,
 For **top-level** windows, `LOWORD(wparam)` and `HIWORD(wparam)` in mouse
 messages are **window-local** (0,0 = top-left of content area).
 
-For **child** windows found via `kWindowMessageHitTest`, the coordinates are
+For **child** windows found via `evHitTest`, the coordinates are
 absolute-logical.  Convert to child-local with:
 
 ```c
@@ -258,6 +258,6 @@ void *allocate_window_data(window_t *win, size_t size);
 
 Set `WINDOW_HSCROLL` and/or `WINDOW_VSCROLL` at creation time and call
 `set_scroll_info()` to drive the bars.  The framework paints them and sends
-`kWindowMessageHScroll` / `kWindowMessageVScroll` when the user moves a thumb.
+`evHScroll` / `evVScroll` when the user moves a thumb.
 
 See [Scrollbars](scrollbars) for the full API and usage examples.

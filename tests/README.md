@@ -59,15 +59,15 @@ test_env_enable_tracking(true);
 window_t *win = test_env_create_window("Test", 10, 10, 100, 100, my_proc, NULL);
 
 // Send messages
-test_env_send_message(win, kWindowMessagePaint, 0, NULL);
-test_env_send_message(win, kWindowMessageCommand, 42, NULL);
+test_env_send_message(win, evPaint, 0, NULL);
+test_env_send_message(win, evCommand, 42, NULL);
 
 // Verify messages were sent
-assert(test_env_was_message_sent(kWindowMessagePaint));
-assert(test_env_count_message(kWindowMessageCommand) == 1);
+assert(test_env_was_message_sent(evPaint));
+assert(test_env_count_message(evCommand) == 1);
 
 // Get event details
-test_event_t *event = test_env_find_event(kWindowMessageCommand);
+test_event_t *event = test_env_find_event(evCommand);
 assert(event->wparam == 42);
 
 // Cleanup
@@ -110,13 +110,13 @@ The test suite follows the Windows 1.0 testing philosophy:
 - LOWORD/HIWORD/MAKEDWORD macros
 - MIN/MAX macros
 - Rectangle structures
-- Window message constants (kWindowMessageCreate, kWindowMessageDestroy, kWindowMessagePaint, etc.)
-- Control message constants (kButtonMessageSetCheck, kComboBoxMessageAddString, etc.)
+- Window message constants (evCreate, evDestroy, evPaint, etc.)
+- Control message constants (btnSetCheck, cbAddString, etc.)
 - Notification constants (kButtonNotificationClicked, kEditNotificationUpdate, etc.)
 - Window flags (WINDOW_NOTITLE, WINDOW_TRANSPARENT, etc.)
 
 ### Window and Message Tracking
-- Window creation with automatic kWindowMessageCreate tracking
+- Window creation with automatic evCreate tracking
 - Message sending and receiving with event tracking
 - Multiple message handling
 - Event tracking enable/disable
@@ -138,14 +138,14 @@ The test suite follows the Windows 1.0 testing philosophy:
 
 The test environment leverages Orion's built-in hook system to track window messages. Hooks are registered for common window messages:
 
-- kWindowMessageCreate - Window creation
-- kWindowMessageDestroy - Window destruction  
-- kWindowMessagePaint - Window paint requests
-- kWindowMessageCommand - Command messages
-- kWindowMessageLeftButtonDown/Up - Mouse button events
-- kWindowMessageKeyDown/Up - Keyboard events
-- kWindowMessageMouseMove - Mouse movement
-- kWindowMessageSetFocus/KillFocus - Focus changes
+- evCreate - Window creation
+- evDestroy - Window destruction  
+- evPaint - Window paint requests
+- evCommand - Command messages
+- evLeftButtonDown/Up - Mouse button events
+- evKeyDown/Up - Keyboard events
+- evMouseMove - Mouse movement
+- evSetFocus/KillFocus - Focus changes
 
 Hooks are called before the window procedure, allowing tests to observe all message traffic without modifying window implementations.
 
@@ -228,7 +228,7 @@ Failed tests will cause the build to fail, preventing broken code from being mer
 - Lua script loading via lparam
 - Simple Lua scripts with print() output
 - Interactive Lua scripts with io.read() prompts
-- Simulated text input via kWindowMessageTextInput and kWindowMessageKeyDown messages
+- Simulated text input via evTextInput and evKeyDown messages
 - Buffer content verification and comparison
 - Lua error handling (non-existent files)
 

@@ -4,14 +4,14 @@
 // SIGSEGV at 0x0 (null function-pointer dereference) on macOS.
 //
 // Root cause: win_button calls invalidate_window(win) AFTER the send_message
-// that fires kWindowMessageCommand.  If the command handler calls end_dialog,
+// that fires evCommand.  If the command handler calls end_dialog,
 // end_dialog destroys the dialog and all its children – including the Cancel
 // button itself – so 'win' is freed by the time invalidate_window is called.
 // invalidate_window calls get_root_window(win) which dereferences win->parent
 // on freed memory; on macOS this raises SIGSEGV.
 //
 // Fix: in win_button (and win_toolbar_button), call invalidate_window(win)
-// BEFORE send_message(root, kWindowMessageCommand, ...).  invalidate_window
+// BEFORE send_message(root, evCommand, ...).  invalidate_window
 // just posts async repaint messages, so there is no visible difference in
 // behaviour, but win is guaranteed to be alive at that point.
 //
@@ -35,9 +35,9 @@ static bool g_cancel_received = false;
 static result_t dialog_proc(window_t *win, uint32_t msg,
                              uint32_t wparam, void *lparam) {
     switch (msg) {
-        case kWindowMessageCreate:
+        case evCreate:
             return 1;
-        case kWindowMessageCommand: {
+        case evCommand: {
             uint16_t code = HIWORD(wparam);
             if (code == kButtonNotificationClicked) {
                 window_t *btn = (window_t *)lparam;
@@ -49,7 +49,7 @@ static result_t dialog_proc(window_t *win, uint32_t msg,
             }
             return 0;
         }
-        case kWindowMessageDestroy:
+        case evDestroy:
             return 1;
         default:
             return 0;
@@ -83,20 +83,20 @@ void test_dialog_cancel_no_crash(void) {
     int cx = btn_frame.x + btn_frame.w / 2;
     int cy = btn_frame.y + btn_frame.h / 2;
 
-    // kWindowMessageLeftButtonDown just sets win->pressed = true and
+    // evLeftButtonDown just sets win->pressed = true and
     // calls invalidate_window(win); it never destroys the window, so
     // cancel_btn remains valid after this call.
-    send_message(cancel_btn, kWindowMessageLeftButtonDown, MAKEDWORD(cx, cy), NULL);
+    send_message(cancel_btn, evLeftButtonDown, MAKEDWORD(cx, cy), NULL);
 
-    // kWindowMessageLeftButtonUp triggers the full destroy chain inside
+    // evLeftButtonUp triggers the full destroy chain inside
     // send_message (synchronously), exactly as dispatch_message → handle_mouse
     // would do in production.  With the fix, win_button calls invalidate_window
-    // BEFORE send_message(root, kWindowMessageCommand), so 'win' is still alive
+    // BEFORE send_message(root, evCommand), so 'win' is still alive
     // when invalidate_window runs.  The command handler then calls end_dialog →
     // destroy_window(dlg) → destroy_window(cancel_btn) → free(cancel_btn).
     // Any stale messages remaining in the queue are safely skipped by the
     // is_valid_window_ptr guard in repost_messages.
-    send_message(cancel_btn, kWindowMessageLeftButtonUp, MAKEDWORD(cx, cy), NULL);
+    send_message(cancel_btn, evLeftButtonUp, MAKEDWORD(cx, cy), NULL);
 
     // repost_messages processes the queue.  The is_valid_window_ptr guard
     // ensures any stale messages (if any leaked through) are dropped safely.
@@ -118,12 +118,12 @@ static int g_cmd_count = 0;
 static result_t regular_parent_proc(window_t *win, uint32_t msg,
                                     uint32_t wparam, void *lparam) {
     (void)win; (void)lparam;
-    if (msg == kWindowMessageCommand &&
+    if (msg == evCommand &&
         HIWORD(wparam) == kButtonNotificationClicked) {
         g_cmd_count++;
         return 1;
     }
-    return msg == kWindowMessageCreate || msg == kWindowMessageDestroy;
+    return msg == evCreate || msg == evDestroy;
 }
 
 // Test: normal button click (no dialog close) still fires correctly.
@@ -146,8 +146,8 @@ void test_regular_button_click_unaffected(void) {
     int cx = btn_frame.x + btn_frame.w / 2;
     int cy = btn_frame.y + btn_frame.h / 2;
 
-    post_message(btn, kWindowMessageLeftButtonDown, MAKEDWORD(cx, cy), NULL);
-    post_message(btn, kWindowMessageLeftButtonUp,   MAKEDWORD(cx, cy), NULL);
+    post_message(btn, evLeftButtonDown, MAKEDWORD(cx, cy), NULL);
+    post_message(btn, evLeftButtonUp,   MAKEDWORD(cx, cy), NULL);
     repost_messages();
 
     ASSERT_EQUAL(g_cmd_count, 1);

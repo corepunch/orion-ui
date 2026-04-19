@@ -6,7 +6,7 @@
  * Requests are queued onto an internal linked list protected by a mutex.  A
  * single persistent worker thread drains the queue, performs the blocking
  * connect/TLS-handshake/send/recv cycle using the platform axNet* / axTls*
- * primitives, then posts a kWindowMessageHttpDone Orion message back to the
+ * primitives, then posts a evHttpDone Orion message back to the
  * caller's window via post_message().
  *
  * The worker thread signals the Orion event loop via axPostMessageW so that
@@ -61,7 +61,7 @@
 /* Chunk size for axNetRecv / axTlsRecv calls. */
 #define HTTP_CHUNK_SIZE    4096
 
-/* Progress notification interval (bytes between kWindowMessageHttpProgress). */
+/* Progress notification interval (bytes between evHttpProgress). */
 #define HTTP_PROGRESS_INTERVAL  (64 * 1024)
 
 /* Maximum number of HTTP redirects followed before giving up. */
@@ -313,7 +313,7 @@ send_all(int sock, AXtlsctx *tls, const void *buf, int len)
 
 /* Receive bytes, growing the output buffer as needed.
  * When notify_win is non-NULL and content_length is known (>= 0), posts
- * kWindowMessageHttpProgress messages periodically during the body download.
+ * evHttpProgress messages periodically during the body download.
  * Returns a heap-allocated buffer (caller frees) and sets *out_len.
  * On error returns NULL. */
 static char *
@@ -380,7 +380,7 @@ recv_response(int sock, AXtlsctx *tls, size_t *out_len,
           prog->bytes_received = body_received;
           prog->bytes_total    = content_length;
           prog->request_id     = req_id;
-          post_message(notify_win, kWindowMessageHttpProgress,
+          post_message(notify_win, evHttpProgress,
                        (uint32_t)req_id, prog);
         }
       }
@@ -687,7 +687,7 @@ worker_thread(void *arg)
       http_response_free(resp);
     } else if (req->notify_win) {
       /* Transfer ownership of resp to the window proc via post_message. */
-      post_message(req->notify_win, kWindowMessageHttpDone,
+      post_message(req->notify_win, evHttpDone,
                    (uint32_t)req->id, resp);
     } else {
       http_response_free(resp);

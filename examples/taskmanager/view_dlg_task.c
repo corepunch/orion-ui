@@ -67,19 +67,19 @@ static const ctrl_binding_t k_task_bindings[] = {
 static void populate_priority_combo(window_t *win) {
   window_t *cb = get_window_item(win, ID_TASK_PRIORITY_CTRL);
   if (!cb) return;
-  send_message(cb, kComboBoxMessageAddString, 0, (void *)"Low");
-  send_message(cb, kComboBoxMessageAddString, 0, (void *)"Normal");
-  send_message(cb, kComboBoxMessageAddString, 0, (void *)"High");
-  send_message(cb, kComboBoxMessageAddString, 0, (void *)"Urgent");
+  send_message(cb, cbAddString, 0, (void *)"Low");
+  send_message(cb, cbAddString, 0, (void *)"Normal");
+  send_message(cb, cbAddString, 0, (void *)"High");
+  send_message(cb, cbAddString, 0, (void *)"Urgent");
 }
 
 static void populate_status_combo(window_t *win) {
   window_t *cb = get_window_item(win, ID_TASK_STATUS_CTRL);
   if (!cb) return;
-  send_message(cb, kComboBoxMessageAddString, 0, (void *)"Todo");
-  send_message(cb, kComboBoxMessageAddString, 0, (void *)"In Progress");
-  send_message(cb, kComboBoxMessageAddString, 0, (void *)"Completed");
-  send_message(cb, kComboBoxMessageAddString, 0, (void *)"Cancelled");
+  send_message(cb, cbAddString, 0, (void *)"Todo");
+  send_message(cb, cbAddString, 0, (void *)"In Progress");
+  send_message(cb, cbAddString, 0, (void *)"Completed");
+  send_message(cb, cbAddString, 0, (void *)"Cancelled");
 }
 
 // ============================================================
@@ -91,7 +91,7 @@ static result_t task_dlg_proc(window_t *win, uint32_t msg,
   task_dlg_state_t *s = (task_dlg_state_t *)win->userdata;
 
   switch (msg) {
-    case kWindowMessageCreate: {
+    case evCreate: {
       win->userdata = lparam;
       s = (task_dlg_state_t *)lparam;
 
@@ -118,7 +118,7 @@ static result_t task_dlg_proc(window_t *win, uint32_t msg,
       return true;
     }
 
-    case kWindowMessageCommand:
+    case evCommand:
       if (HIWORD(wparam) == kButtonNotificationClicked) {
         window_t *src = (window_t *)lparam;
 

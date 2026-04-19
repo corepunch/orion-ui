@@ -17,19 +17,19 @@ static uint32_t test_last_button_id = 0;
 // Window procedure that mimics the hello world example
 result_t test_hello_window_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
-    case kWindowMessageCreate: {
+    case evCreate: {
       // Create a button and assign it an ID
       window_t *button = create_window("Click Me!", WINDOW_NOTITLE, MAKERECT(20, 50, 100, 0), win, win_button, 0, NULL);
       button->id = ID_BUTTON_CLICKME;
       return true;
     }
       
-    case kWindowMessagePaint: {
+    case evPaint: {
       // We won't actually render but we can test the logic
       return false;
     }
     
-    case kWindowMessageCommand:
+    case evCommand:
       // Handle button click
       if (HIWORD(wparam) == kButtonNotificationClicked && LOWORD(wparam) == ID_BUTTON_CLICKME) {
         test_click_count++;
@@ -39,7 +39,7 @@ result_t test_hello_window_proc(window_t *win, uint32_t msg, uint32_t wparam, vo
       }
       return false;
     
-    case kWindowMessageDestroy:
+    case evDestroy:
       return true;
       
     default:
@@ -105,10 +105,10 @@ void test_button_click_increments_counter(void) {
     int button_center_x, button_center_y;
     get_button_center(button, &button_center_x, &button_center_y);
     
-    test_env_post_message(button, kWindowMessageLeftButtonDown, MAKEDWORD(button_center_x, button_center_y), NULL);
+    test_env_post_message(button, evLeftButtonDown, MAKEDWORD(button_center_x, button_center_y), NULL);
     repost_messages();
     
-    test_env_post_message(button, kWindowMessageLeftButtonUp, MAKEDWORD(button_center_x, button_center_y), NULL);
+    test_env_post_message(button, evLeftButtonUp, MAKEDWORD(button_center_x, button_center_y), NULL);
     repost_messages();
     
     // Verify click was registered
@@ -145,10 +145,10 @@ void test_multiple_button_clicks(void) {
     
     // Click button 5 times
     for (int i = 1; i <= 5; i++) {
-        test_env_post_message(button, kWindowMessageLeftButtonDown, MAKEDWORD(button_center_x, button_center_y), NULL);
+        test_env_post_message(button, evLeftButtonDown, MAKEDWORD(button_center_x, button_center_y), NULL);
         repost_messages();
         
-        test_env_post_message(button, kWindowMessageLeftButtonUp, MAKEDWORD(button_center_x, button_center_y), NULL);
+        test_env_post_message(button, evLeftButtonUp, MAKEDWORD(button_center_x, button_center_y), NULL);
         repost_messages();
         
         // Verify counter incremented correctly

@@ -127,14 +127,14 @@ result_t main_win_proc(window_t *win, uint32_t msg,
   task_doc_t *doc = (task_doc_t *)win->userdata;
 
   switch (msg) {
-    case kWindowMessageCreate:
+    case evCreate:
       doc = (task_doc_t *)lparam;
       win->userdata = doc;
       if (!doc) return false;
       doc->win = win;
       g_app->active_doc = doc;
       // Install toolbar buttons (New / Edit / Delete).
-      send_message(win, kToolBarMessageSetItems,
+      send_message(win, tbSetItems,
                    sizeof(kMainToolbar) / sizeof(kMainToolbar[0]),
                    (void *)kMainToolbar);
       // The list view is created as a child that fills the client area.
@@ -147,22 +147,22 @@ result_t main_win_proc(window_t *win, uint32_t msg,
       app_update_status(doc);
       return true;
 
-    case kWindowMessageResize:
+    case evResize:
       if (doc && doc->list_win) {
         rect_t cr = get_client_rect(win);
         resize_window(doc->list_win, cr.w, cr.h);
       }
       return false;
 
-    case kWindowMessageSetFocus:
+    case evSetFocus:
       if (g_app && doc) g_app->active_doc = doc;
       return false;
 
-    case kToolBarMessageButtonClick:
+    case tbButtonClick:
       handle_menu_command((uint16_t)wparam);
       return true;
 
-    case kWindowMessageCommand: {
+    case evCommand: {
       // Forward menu commands and list notifications to menu handler.
       switch (HIWORD(wparam)) {
         case kMenuBarNotificationItemClick:
@@ -192,7 +192,7 @@ result_t main_win_proc(window_t *win, uint32_t msg,
       }
     }
 
-    case kWindowMessageClose:
+    case evClose:
       if (!doc) return false;
       doc_confirm_close(doc, win);
       return true;

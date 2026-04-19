@@ -33,7 +33,7 @@ KEY IMPROVEMENTS:
 ✓ Cleaner separation of concerns
 ✓ Path doesn't overlap with file list
 ✓ Consistent with standard UI patterns
-✓ Easy to update via kWindowMessageStatusBar message
+✓ Easy to update via evStatusBar message
 ✓ Reusable across different windows
 
 CODE EXAMPLE:
@@ -45,5 +45,5 @@ window_t *win = create_window("File Manager",
     NULL, window_proc, NULL);
 
 // Update status bar text
-send_message(win, kWindowMessageStatusBar, 0, "/home/user/workspace");
+send_message(win, evStatusBar, 0, "/home/user/workspace");
 

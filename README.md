@@ -21,7 +21,7 @@ Handles window creation, destruction, message passing, and basic rendering primi
 - Window creation and lifecycle management
 - Message queue and dispatch
 - Drawing primitives (rectangles, text, icons)
-- Window messages (kWindowMessageCreate, kWindowMessagePaint, kWindowMessageLeftButtonUp, etc.)
+- Window messages (evCreate, evPaint, evLeftButtonUp, etc.)
 
 ### ui/kernel/ - Event Management Layer
 Manages the platform (corepunch/platform) event loop and translates platform events into window messages. Also provides the Renderer API for OpenGL abstraction.
@@ -151,7 +151,7 @@ static result_t win_main(window_t *win, uint32_t msg,
   app_state_t *st = (app_state_t *)win->userdata;
 
   switch (msg) {
-    case kWindowMessageCreate:
+    case evCreate:
       st = calloc(1, sizeof(*st));
       win->userdata = st;
       st->request_id = http_request_async(win,
@@ -159,7 +159,7 @@ static result_t win_main(window_t *win, uint32_t msg,
                                           NULL, NULL);
       return true;
 
-    case kWindowMessageHttpProgress: {
+    case evHttpProgress: {
       http_progress_t *p = (http_progress_t *)lparam;
       // p is framework-owned; valid only for this handler call.
       printf("request %u: %zu/%zd bytes\n",
@@ -167,7 +167,7 @@ static result_t win_main(window_t *win, uint32_t msg,
       return true;
     }
 
-    case kWindowMessageHttpDone: {
+    case evHttpDone: {
       http_response_t *resp = (http_response_t *)lparam;
       if (resp && resp->status == 200) {
         printf("HTTP %d, body bytes: %zu\n", resp->status, resp->body_len);
@@ -178,7 +178,7 @@ static result_t win_main(window_t *win, uint32_t msg,
       return true;
     }
 
-    case kWindowMessageDestroy:
+    case evDestroy:
       free(st);
       win->userdata = NULL;
       return true;
@@ -213,7 +213,7 @@ Full reference and limitations: [docs/http.md](docs/http.md)
 
 Dialogs and panels with multiple standard controls should be described using
 `form_def_t` and `form_ctrl_def_t` rather than imperatively calling
-`create_window()` inside `kWindowMessageCreate`.  This mirrors the WinAPI
+`create_window()` inside `evCreate`.  This mirrors the WinAPI
 `DLGTEMPLATE` / `CreateDialogIndirect` pattern.
 
 ```c
@@ -242,22 +242,22 @@ static const form_def_t kMyDialogForm = {
 };
 
 // ── Window procedure ──────────────────────────────────────────────
-// Children already exist when kWindowMessageCreate fires.
+// Children already exist when evCreate fires.
 static result_t my_dlg_proc(window_t *win, uint32_t msg,
                              uint32_t wparam, void *lparam) {
   switch (msg) {
-    case kWindowMessageCreate:
+    case evCreate:
       // lparam is the caller-supplied state, NOT used to create children here.
       win->userdata = lparam;
       // Set initial text / values from state:
       set_window_item_text(win, 1, "default");
       return true;
 
-    case kWindowMessagePaint:
+    case evPaint:
       draw_text_small("Name:", 4, 11, get_sys_color(kColorTextDisabled));
       return false;
 
-    case kWindowMessageCommand:
+    case evCommand:
       if (HIWORD(wparam) == kButtonNotificationClicked) {
         window_t *src = (window_t *)lparam;
         if (src->id == 2) { end_dialog(win, 1); return true; }
@@ -287,9 +287,9 @@ void create_my_panel(window_t *parent, int x, int y) {
 
 - Always define a static `form_ctrl_def_t[]` + `form_def_t` for any dialog with
   two or more standard controls.
-- Never create child controls imperatively inside `kWindowMessageCreate` when a
+- Never create child controls imperatively inside `evCreate` when a
   `form_def_t` can express the same layout statically.
-- Use `set_window_item_text(win, id, ...)` in `kWindowMessageCreate` to set
+- Use `set_window_item_text(win, id, ...)` in `evCreate` to set
   runtime-determined initial values (edit box contents, etc.).
 - Use `show_dialog_from_form()` for modal dialogs — it handles centering, dialog
   flags, and the modal loop automatically.
@@ -313,7 +313,7 @@ static const ctrl_binding_t k_bindings[] = {
   { ID_SIZE_EDIT,     BIND_INT_EDIT,  offsetof(my_state_t, size),     0 },
 };
 
-// kWindowMessageCreate — push state into controls:
+// evCreate — push state into controls:
 dialog_push(win, s, k_bindings, ARRAY_LEN(k_bindings));
 
 // OK handler — pull controls back into state:
@@ -351,7 +351,7 @@ send_message(cv, RVM_ADDITEM, 0, &item);
 send_message(cv, RVM_SETCOLUMNWIDTH, 180, NULL);
 
 // Handle notifications in parent window procedure
-case kWindowMessageCommand: {
+case evCommand: {
   uint16_t id = LOWORD(wparam);
   uint16_t code = HIWORD(wparam);
   
@@ -392,7 +392,7 @@ conprintf("Player health: %d", player_health);
 
 // Messages automatically fade after 5 seconds
 // Draw the console overlay (called from your render loop or window procedure)
-// draw_console() is called automatically by win_console in kWindowMessagePaint
+// draw_console() is called automatically by win_console in evPaint
 
 // Toggle console visibility
 toggle_console();
@@ -408,7 +408,7 @@ The terminal control supports two modes:
 #### Lua Script Mode
 ```c
 // Create a terminal window that runs a Lua script
-// The script path is passed as lparam in kWindowMessageCreate
+// The script path is passed as lparam in evCreate
 window_t *terminal = create_window("Terminal", 0, &term_frame, parent, win_terminal, "/path/to/script.lua");
 show_window(terminal, true);
 
@@ -447,14 +447,14 @@ show_window(terminal, true);
 
 The framework uses a message-based architecture. Common messages include:
 
-- `kWindowMessageCreate` - Window is being created
-- `kWindowMessageDestroy` - Window is being destroyed
-- `kWindowMessagePaint` - Window needs to be redrawn
-- `kWindowMessageLeftButtonDown` - Left mouse button pressed
-- `kWindowMessageLeftButtonUp` - Left mouse button released
-- `kWindowMessageKeyDown` - Key pressed
-- `kWindowMessageKeyUp` - Key released
-- `kWindowMessageCommand` - Control notification
+- `evCreate` - Window is being created
+- `evDestroy` - Window is being destroyed
+- `evPaint` - Window needs to be redrawn
+- `evLeftButtonDown` - Left mouse button pressed
+- `evLeftButtonUp` - Left mouse button released
+- `evKeyDown` - Key pressed
+- `evKeyUp` - Key released
+- `evCommand` - Control notification
 
 ## Control-Specific Messages
 
@@ -462,13 +462,13 @@ The framework uses a message-based architecture. Common messages include:
 - `kButtonNotificationClicked` - Button was clicked
 
 ### Checkbox Messages
-- `kButtonMessageSetCheck` - Set checkbox state
-- `kButtonMessageGetCheck` - Get checkbox state
+- `btnSetCheck` - Set checkbox state
+- `btnGetCheck` - Get checkbox state
 
 ### Combobox Messages
-- `kComboBoxMessageAddString` - Add item to combobox
-- `kComboBoxMessageGetCurrentSelection` - Get currently selected item
-- `kComboBoxMessageSetCurrentSelection` - Set currently selected item
+- `cbAddString` - Add item to combobox
+- `cbGetCurrentSelection` - Get currently selected item
+- `cbSetCurrentSelection` - Set currently selected item
 - `kComboBoxNotificationSelectionChange` - Selection changed notification
 
 ### Edit Box Messages
@@ -500,7 +500,7 @@ icons.  All icon names are defined as an enum in `user/icons.h`.
 
 Every `sysicon_*` value starts at `SYSICON_BASE` (`0x10000`).  When the
 framework sees a toolbar-button icon value `>= SYSICON_BASE` it draws the icon
-from the built-in sheet automatically — no `kToolBarMessageLoadStrip` call is
+from the built-in sheet automatically — no `tbLoadStrip` call is
 required.
 
 ### Using sysicons in a WINDOW_TOOLBAR
@@ -512,7 +512,7 @@ static const toolbar_button_t kMyToolbar[] = {
   { sysicon_add,    ID_NEW,  0 },
   { sysicon_accept, ID_SAVE, 0 },
 };
-send_message(win, kToolBarMessageAddButtons,
+send_message(win, tbAddButtons,
              sizeof(kMyToolbar) / sizeof(kMyToolbar[0]),
              (void *)kMyToolbar);
 ```
@@ -522,13 +522,13 @@ The engine draws the correct icon from the sheet without any extra setup.
 ### Using sysicons in a standalone win_toolbar_button
 
 For `win_toolbar_button` windows you pass the strip explicitly via
-`kButtonMessageSetImage`.  Use `ui_get_sysicon_strip()` to obtain the
+`btnSetImage`.  Use `ui_get_sysicon_strip()` to obtain the
 pre-loaded strip and subtract `SYSICON_BASE` to get the strip-local index:
 
 ```c
 bitmap_strip_t *strip = ui_get_sysicon_strip();
 if (strip) {
-  send_message(btn, kButtonMessageSetImage,
+  send_message(btn, btnSetImage,
                (uint32_t)(sysicon_add - SYSICON_BASE), strip);
 }
 ```

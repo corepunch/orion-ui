@@ -1,7 +1,7 @@
 // commctl/scrollbar.c — scrollbar control
 //
 // win_scrollbar is a thin, interactive scrollbar that mirrors WinAPI scrollbar
-// behaviour.  Orientation is set via the lparam passed to kWindowMessageCreate:
+// behaviour.  Orientation is set via the lparam passed to evCreate:
 //   (void *)0 → horizontal bar   (SB_HORZ)
 //   (void *)1 → vertical bar     (SB_VERT)
 //
@@ -21,7 +21,7 @@
 //
 // Notification
 // ------------
-// When the scroll position changes the control sends kWindowMessageCommand to
+// When the scroll position changes the control sends evCommand to
 // its parent window:
 //   wparam = MAKEDWORD(win->id, kScrollBarNotificationChanged)
 //   lparam = (void *)(intptr_t)new_pos
@@ -40,7 +40,7 @@ typedef struct {
   int min_val, max_val; // content range
   int page;             // viewport size (= visible portion of content)
   int pos;              // current scroll position [min_val .. max_val-page]
-  bool is_vertical;     // orientation: set from lparam at kWindowMessageCreate
+  bool is_vertical;     // orientation: set from lparam at evCreate
   bool dragging;
   int drag_start_mouse; // scrollbar-local axis coord when drag began
   int drag_start_pos;   // pos value when drag began
@@ -88,7 +88,7 @@ static int sb_clamp(scrollbar_state_t *s, int pos) {
 // Notify parent that position changed
 static void sb_notify(window_t *win, int pos) {
   if (win->parent) {
-    send_message(win->parent, kWindowMessageCommand,
+    send_message(win->parent, evCommand,
                  MAKEDWORD(win->id, kScrollBarNotificationChanged),
                  (void *)(intptr_t)pos);
   }
@@ -112,7 +112,7 @@ result_t win_scrollbar(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
   scrollbar_state_t *s = (scrollbar_state_t *)win->userdata;
 
   switch (msg) {
-    case kWindowMessageCreate: {
+    case evCreate: {
       scrollbar_state_t *ns = allocate_window_data(win, sizeof(scrollbar_state_t));
       ns->min_val    = 0;
       ns->max_val    = 100;
@@ -126,7 +126,7 @@ result_t win_scrollbar(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       return true;
     }
 
-    case kWindowMessagePaint: {
+    case evPaint: {
       if (!s) return true;
       bool vert = sb_vertical(win);
       int track = sb_track(win);
@@ -142,7 +142,7 @@ result_t win_scrollbar(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       return true;
     }
 
-    case kScrollBarMessageSetInfo: {
+    case sbSetInfo: {
       if (!s || !lparam) return false;
       scrollbar_info_t *info = (scrollbar_info_t *)lparam;
       s->min_val = info->min_val;
@@ -153,10 +153,10 @@ result_t win_scrollbar(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       return true;
     }
 
-    case kScrollBarMessageGetPos:
+    case sbGetPos:
       return s ? (result_t)(uint32_t)s->pos : 0;
 
-    case kWindowMessageLeftButtonDown: {
+    case evLeftButtonDown: {
       if (!s) return false;
       int mouse = sb_axis(win, wparam);
       int track = sb_track(win);
@@ -181,7 +181,7 @@ result_t win_scrollbar(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       return true;
     }
 
-    case kWindowMessageMouseMove: {
+    case evMouseMove: {
       if (!s || !s->dragging) return false;
       int mouse = sb_axis(win, wparam);
       int track = sb_track(win);
@@ -200,7 +200,7 @@ result_t win_scrollbar(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       return true;
     }
 
-    case kWindowMessageLeftButtonUp:
+    case evLeftButtonUp:
       if (s && s->dragging) {
         s->dragging = false;
         set_capture(NULL);

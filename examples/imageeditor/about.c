@@ -89,7 +89,7 @@ static result_t about_proc(window_t *win, uint32_t msg,
   about_state_t *st = (about_state_t *)win->userdata;
 
   switch (msg) {
-    case kWindowMessageCreate: {
+    case evCreate: {
       about_state_t *s = allocate_window_data(win, sizeof(about_state_t));
       s->banner_tex = load_banner_texture();
 
@@ -115,7 +115,7 @@ static result_t about_proc(window_t *win, uint32_t msg,
       return true;
     }
 
-    case kWindowMessageCommand: {
+    case evCommand: {
       if (HIWORD(wparam) == kButtonNotificationClicked) {
         end_dialog(win, 1);
         return true;
@@ -123,7 +123,7 @@ static result_t about_proc(window_t *win, uint32_t msg,
       return false;
     }
 
-    case kWindowMessageDestroy: {
+    case evDestroy: {
       if (st && st->banner_tex) {
         glDeleteTextures(1, &st->banner_tex);
         st->banner_tex = 0;

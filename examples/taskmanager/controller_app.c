@@ -111,7 +111,7 @@ void app_update_status(task_doc_t *doc) {
   char buf[64];
   snprintf(buf, sizeof(buf), "%d task%s",
            doc->task_count, doc->task_count == 1 ? "" : "s");
-  send_message(doc->win, kWindowMessageStatusBar, 0, buf);
+  send_message(doc->win, evStatusBar, 0, buf);
 }
 
 task_doc_t *doc_from_window(window_t *win) {

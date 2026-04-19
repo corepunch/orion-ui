@@ -17,8 +17,8 @@ static int  g_last_index        = -1;
 static result_t cmd_capture_proc(window_t *win, uint32_t msg,
                                   uint32_t wparam, void *lparam) {
     (void)lparam;
-    if (msg == kWindowMessageCreate || msg == kWindowMessageDestroy) return 1;
-    if (msg == kWindowMessageCommand) {
+    if (msg == evCreate || msg == evDestroy) return 1;
+    if (msg == evCommand) {
         int notif = (int)HIWORD(wparam);
         if (notif == RVN_SELCHANGE || notif == RVN_DBLCLK || notif == RVN_DELETE) {
             g_cmd_count++;
@@ -75,7 +75,7 @@ void test_cv_down_from_no_selection(void) {
     ASSERT_NOT_NULL(cv);
     add_items(cv, 3);
 
-    result_t r = send_message(cv, kWindowMessageKeyDown, AX_KEY_DOWNARROW, NULL);
+    result_t r = send_message(cv, evKeyDown, AX_KEY_DOWNARROW, NULL);
 
     ASSERT_TRUE(r);
     ASSERT_EQUAL(g_cmd_count, 1);
@@ -105,7 +105,7 @@ void test_cv_down_advances_selection(void) {
     send_message(cv, RVM_SETSELECTION, 0, NULL);
     reset_cmd_state();
 
-    send_message(cv, kWindowMessageKeyDown, AX_KEY_DOWNARROW, NULL);
+    send_message(cv, evKeyDown, AX_KEY_DOWNARROW, NULL);
 
     ASSERT_EQUAL(g_cmd_count, 1);
     ASSERT_EQUAL(g_last_notification, RVN_SELCHANGE);
@@ -135,7 +135,7 @@ void test_cv_down_at_last_item_stays(void) {
     send_message(cv, RVM_SETSELECTION, 2, NULL);
     reset_cmd_state();
 
-    send_message(cv, kWindowMessageKeyDown, AX_KEY_DOWNARROW, NULL);
+    send_message(cv, evKeyDown, AX_KEY_DOWNARROW, NULL);
 
     ASSERT_EQUAL(g_cmd_count, 0);
     ASSERT_EQUAL((int)send_message(cv, RVM_GETSELECTION, 0, NULL), 2);
@@ -162,7 +162,7 @@ void test_cv_up_moves_selection(void) {
     send_message(cv, RVM_SETSELECTION, 1, NULL);
     reset_cmd_state();
 
-    send_message(cv, kWindowMessageKeyDown, AX_KEY_UPARROW, NULL);
+    send_message(cv, evKeyDown, AX_KEY_UPARROW, NULL);
 
     ASSERT_EQUAL(g_cmd_count, 1);
     ASSERT_EQUAL(g_last_notification, RVN_SELCHANGE);
@@ -190,7 +190,7 @@ void test_cv_up_at_first_item_stays(void) {
     send_message(cv, RVM_SETSELECTION, 0, NULL);
     reset_cmd_state();
 
-    send_message(cv, kWindowMessageKeyDown, AX_KEY_UPARROW, NULL);
+    send_message(cv, evKeyDown, AX_KEY_UPARROW, NULL);
 
     ASSERT_EQUAL(g_cmd_count, 0);
     ASSERT_EQUAL((int)send_message(cv, RVM_GETSELECTION, 0, NULL), 0);
@@ -214,7 +214,7 @@ void test_cv_right_from_no_selection(void) {
     ASSERT_NOT_NULL(cv);
     add_items(cv, 3);
 
-    result_t r = send_message(cv, kWindowMessageKeyDown, AX_KEY_RIGHTARROW, NULL);
+    result_t r = send_message(cv, evKeyDown, AX_KEY_RIGHTARROW, NULL);
 
     ASSERT_TRUE(r);
     ASSERT_EQUAL(g_cmd_count, 1);
@@ -243,7 +243,7 @@ void test_cv_left_moves_selection(void) {
     send_message(cv, RVM_SETSELECTION, 2, NULL);
     reset_cmd_state();
 
-    send_message(cv, kWindowMessageKeyDown, AX_KEY_LEFTARROW, NULL);
+    send_message(cv, evKeyDown, AX_KEY_LEFTARROW, NULL);
 
     ASSERT_EQUAL(g_cmd_count, 1);
     ASSERT_EQUAL(g_last_notification, RVN_SELCHANGE);
@@ -271,7 +271,7 @@ void test_cv_enter_fires_dblclk(void) {
     send_message(cv, RVM_SETSELECTION, 1, NULL);
     reset_cmd_state();
 
-    result_t r = send_message(cv, kWindowMessageKeyDown, AX_KEY_ENTER, NULL);
+    result_t r = send_message(cv, evKeyDown, AX_KEY_ENTER, NULL);
 
     ASSERT_TRUE(r);
     ASSERT_EQUAL(g_cmd_count, 1);
@@ -300,7 +300,7 @@ void test_cv_delete_fires_cvn_delete(void) {
     send_message(cv, RVM_SETSELECTION, 0, NULL);
     reset_cmd_state();
 
-    result_t r = send_message(cv, kWindowMessageKeyDown, AX_KEY_DEL, NULL);
+    result_t r = send_message(cv, evKeyDown, AX_KEY_DEL, NULL);
 
     ASSERT_TRUE(r);
     ASSERT_EQUAL(g_cmd_count, 1);
@@ -327,7 +327,7 @@ void test_cv_enter_no_selection_returns_false(void) {
     add_items(cv, 3);
     // No RVM_SETSELECTION call — selection remains -1.
 
-    result_t r = send_message(cv, kWindowMessageKeyDown, AX_KEY_ENTER, NULL);
+    result_t r = send_message(cv, evKeyDown, AX_KEY_ENTER, NULL);
 
     ASSERT_FALSE(r);
     ASSERT_EQUAL(g_cmd_count, 0);
@@ -352,7 +352,7 @@ void test_cv_delete_no_selection_returns_false(void) {
     add_items(cv, 3);
     // No RVM_SETSELECTION call — selection remains -1.
 
-    result_t r = send_message(cv, kWindowMessageKeyDown, AX_KEY_DEL, NULL);
+    result_t r = send_message(cv, evKeyDown, AX_KEY_DEL, NULL);
 
     ASSERT_FALSE(r);
     ASSERT_EQUAL(g_cmd_count, 0);
@@ -376,8 +376,8 @@ void test_cv_keys_on_empty_list_return_false(void) {
     ASSERT_NOT_NULL(cv);
     // No items added.
 
-    ASSERT_FALSE(send_message(cv, kWindowMessageKeyDown, AX_KEY_DOWNARROW, NULL));
-    ASSERT_FALSE(send_message(cv, kWindowMessageKeyDown, AX_KEY_UPARROW,   NULL));
+    ASSERT_FALSE(send_message(cv, evKeyDown, AX_KEY_DOWNARROW, NULL));
+    ASSERT_FALSE(send_message(cv, evKeyDown, AX_KEY_UPARROW,   NULL));
     ASSERT_EQUAL(g_cmd_count, 0);
 
     destroy_window(parent);
@@ -404,9 +404,9 @@ void test_cv_down_scrolls_selection_into_view(void) {
     add_items(cv, 5);
 
     // Navigate down to item 2 (3 key presses from no selection).
-    send_message(cv, kWindowMessageKeyDown, AX_KEY_DOWNARROW, NULL); // → 0
-    send_message(cv, kWindowMessageKeyDown, AX_KEY_DOWNARROW, NULL); // → 1
-    send_message(cv, kWindowMessageKeyDown, AX_KEY_DOWNARROW, NULL); // → 2
+    send_message(cv, evKeyDown, AX_KEY_DOWNARROW, NULL); // → 0
+    send_message(cv, evKeyDown, AX_KEY_DOWNARROW, NULL); // → 1
+    send_message(cv, evKeyDown, AX_KEY_DOWNARROW, NULL); // → 2
 
     ASSERT_EQUAL((int)send_message(cv, RVM_GETSELECTION, 0, NULL), 2);
     // Scroll must have advanced so item 2 is visible.

@@ -7,12 +7,12 @@ nav_order: 6
 # Drawing & Rendering
 
 All drawing is hardware-accelerated via **OpenGL 3.2+**.  Drawing calls are
-only valid inside a `kWindowMessagePaint` handler; the framework sets the
+only valid inside a `evPaint` handler; the framework sets the
 correct viewport and projection before calling your proc.
 
 ## Coordinate System
 
-Inside `kWindowMessagePaint` the coordinate origin **(0, 0)** is the
+Inside `evPaint` the coordinate origin **(0, 0)** is the
 **top-left corner of the window's content area**.  Positive Y goes
 **downward**.  Units are logical pixels (screen pixels ÷ `UI_WINDOW_SCALE`).
 
@@ -115,7 +115,7 @@ buffer is dirty:
 GLuint tex = 0;
 bool dirty = true;
 
-// In kWindowMessagePaint:
+// In evPaint:
 if (!tex) {
     glGenTextures(1, &tex);
     glBindTexture(GL_TEXTURE_2D, tex);
@@ -136,5 +136,5 @@ draw_rect(tex, 0, 0, W * SCALE, H * SCALE);
 
 ```c
 // Update the status bar string (triggers a repaint)
-send_message(win, kWindowMessageStatusBar, 0, (void *)"File saved");
+send_message(win, evStatusBar, 0, (void *)"File saved");
 ```

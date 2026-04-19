@@ -1,6 +1,6 @@
 // Accelerator table implementation.
 // Maps keyboard shortcuts (key + modifiers) to command IDs and delivers them
-// as kWindowMessageCommand events, mirroring WinAPI TranslateAccelerator.
+// as evCommand events, mirroring WinAPI TranslateAccelerator.
 
 #include <stdlib.h>
 #include <string.h>
@@ -61,7 +61,7 @@ bool translate_accelerator(window_t *win, ui_event_t *evt,
       // Suppress accelerators that require no Ctrl or Alt while a text-editing
       // control has keyboard focus, mirroring WinAPI TranslateAccelerator.
       if (!want_ctrl && !want_alt && g_ui_runtime.focused && g_ui_runtime.focused->editing) continue;
-      send_message(win, kWindowMessageCommand,
+      send_message(win, evCommand,
                    MAKEDWORD(a->cmd, kAcceleratorNotification), NULL);
       return true;
     }

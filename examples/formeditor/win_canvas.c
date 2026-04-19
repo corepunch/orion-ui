@@ -383,7 +383,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
   form_doc_t *doc = s ? s->doc : NULL;
 
   switch (msg) {
-    case kWindowMessageCreate: {
+    case evCreate: {
       canvas_state_t *st = allocate_window_data(win, sizeof(canvas_state_t));
       st->doc          = (form_doc_t *)lparam;
       st->selected_idx = -1;
@@ -395,21 +395,21 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       return true;
     }
 
-    case kWindowMessageDestroy:
+    case evDestroy:
       // win->userdata freed by the framework via allocate_window_data.
       return false;
 
-    case kWindowMessageSetFocus:
+    case evSetFocus:
       return false;
 
-    case kWindowMessageResize: {
+    case evResize: {
       if (!s) return false;
       canvas_clamp_pan(s, win->frame.w, win->frame.h);
       canvas_sync_scrollbars(win, s);
       return false;
     }
 
-    case kWindowMessageHScroll: {
+    case evHScroll: {
       if (!s) return false;
       s->pan_x = (int)wparam;
       canvas_clamp_pan(s, win->frame.w, win->frame.h);
@@ -418,7 +418,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       return true;
     }
 
-    case kWindowMessageVScroll: {
+    case evVScroll: {
       if (!s) return false;
       s->pan_y = (int)wparam;
       canvas_clamp_pan(s, win->frame.w, win->frame.h);
@@ -427,7 +427,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       return true;
     }
 
-    case kWindowMessagePaint: {
+    case evPaint: {
       if (!s || !doc) return true;
 
       // Dark workspace background
@@ -458,7 +458,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       return true;
     }
 
-    case kWindowMessageLeftButtonDown: {
+    case evLeftButtonDown: {
       if (!s || !doc) return false;
       int lx = (int16_t)LOWORD(wparam);
       int ly = (int16_t)HIWORD(wparam);
@@ -518,7 +518,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       return false;
     }
 
-    case kWindowMessageMouseMove: {
+    case evMouseMove: {
       if (!s) return false;
       int lx = (int16_t)LOWORD(wparam);
       int ly = (int16_t)HIWORD(wparam);
@@ -564,7 +564,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       return false;
     }
 
-    case kWindowMessageLeftButtonUp: {
+    case evLeftButtonUp: {
       if (!s) return false;
       int lx = (int16_t)LOWORD(wparam);
       int ly = (int16_t)HIWORD(wparam);
@@ -599,7 +599,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         if (g_app) {
           g_app->current_tool = ID_TOOL_SELECT;
           if (g_app->tool_win)
-            send_message(g_app->tool_win, kToolBarMessageSetActiveButton,
+            send_message(g_app->tool_win, tbSetActiveButton,
                          (uint32_t)ID_TOOL_SELECT, NULL);
         }
       }
@@ -611,7 +611,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       return true;
     }
 
-    case kWindowMessageKeyDown: {
+    case evKeyDown: {
       if (!s) return false;
       // Del key deletes the selected element (redundant with accelerator,
       // but handles canvas-focused case when menubar proc isn't active).
@@ -623,7 +623,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       return false;
     }
 
-    case kWindowMessageWheel: {
+    case evWheel: {
       if (!s) return false;
       int delta = (int)(int16_t)LOWORD(wparam);
       s->pan_y -= delta * SCROLL_SENSITIVITY;

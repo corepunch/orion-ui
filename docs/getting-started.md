@@ -76,7 +76,7 @@ Orion includes a message-driven HTTP/HTTPS client in the kernel layer.
 
 static result_t my_proc(window_t *win, uint32_t msg,
                         uint32_t wparam, void *lparam) {
-  if (msg == kWindowMessagePaint) {
+  if (msg == evPaint) {
     fill_rect(0xff202020, 0, 0, win->frame.w, win->frame.h);
     draw_text_small("Hello, Orion!", 10, 10, 0xffffffff);
     return true;

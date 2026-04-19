@@ -20,33 +20,33 @@ void post_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 
 | Constant | When sent | wparam / lparam |
 |---|---|---|
-| `kWindowMessageCreate` | Window just created | `lparam` = value from `create_window` |
-| `kWindowMessageDestroy` | Window about to be freed | – |
-| `kWindowMessagePaint` | Repaint requested | – |
-| `kWindowMessageNonClientPaint` | Non-client area repaint | – |
-| `kWindowMessageSetFocus` | Window gains focus | – |
-| `kWindowMessageKillFocus` | Window loses focus | – |
-| `kWindowMessageLeftButtonDown` | LMB pressed | `LOWORD`=x, `HIWORD`=y (window-local) |
-| `kWindowMessageLeftButtonUp` | LMB released | same |
-| `kWindowMessageRightButtonDown` | RMB pressed | same |
-| `kWindowMessageMouseMove` | Mouse moved | same |
-| `kWindowMessageMouseLeave` | Mouse left window | – |
-| `kWindowMessageKeyDown` | Key pressed | SDL scancode |
-| `kWindowMessageKeyUp` | Key released | SDL scancode |
-| `kWindowMessageTextInput` | Text character input | `lparam` = `const char *` UTF-8 |
-| `kWindowMessageWheel` | Mouse wheel | `LOWORD`=dx, `HIWORD`=dy |
-| `kWindowMessageCommand` | Control notification | `LOWORD`=id, `HIWORD`=notification code |
-| `kWindowMessageResize` | Window resized / moved | – |
-| `kWindowMessageStatusBar` | Update status bar text | `lparam` = `(void *)const char *` |
-| `kWindowMessageHScroll` | Built-in H scrollbar moved | `wparam` = new scroll position |
-| `kWindowMessageVScroll` | Built-in V scrollbar moved | `wparam` = new scroll position |
-| `kWindowMessageHitTest` | Find child at point | `lparam` = `window_t **` |
-| `kWindowMessageRefreshStencil` | Stencil buffer needs update | – |
-| `kWindowMessageUser` (1000) | First app-defined message | – |
+| `evCreate` | Window just created | `lparam` = value from `create_window` |
+| `evDestroy` | Window about to be freed | – |
+| `evPaint` | Repaint requested | – |
+| `evNonClientPaint` | Non-client area repaint | – |
+| `evSetFocus` | Window gains focus | – |
+| `evKillFocus` | Window loses focus | – |
+| `evLeftButtonDown` | LMB pressed | `LOWORD`=x, `HIWORD`=y (window-local) |
+| `evLeftButtonUp` | LMB released | same |
+| `evRightButtonDown` | RMB pressed | same |
+| `evMouseMove` | Mouse moved | same |
+| `evMouseLeave` | Mouse left window | – |
+| `evKeyDown` | Key pressed | SDL scancode |
+| `evKeyUp` | Key released | SDL scancode |
+| `evTextInput` | Text character input | `lparam` = `const char *` UTF-8 |
+| `evWheel` | Mouse wheel | `LOWORD`=dx, `HIWORD`=dy |
+| `evCommand` | Control notification | `LOWORD`=id, `HIWORD`=notification code |
+| `evResize` | Window resized / moved | – |
+| `evStatusBar` | Update status bar text | `lparam` = `(void *)const char *` |
+| `evHScroll` | Built-in H scrollbar moved | `wparam` = new scroll position |
+| `evVScroll` | Built-in V scrollbar moved | `wparam` = new scroll position |
+| `evHitTest` | Find child at point | `lparam` = `window_t **` |
+| `evRefreshStencil` | Stencil buffer needs update | – |
+| `evUser` (1000) | First app-defined message | – |
 
 ## Control Notification Codes
 
-Sent to the **root window** via `kWindowMessageCommand`:
+Sent to the **root window** via `evCommand`:
 
 | Code | Control | Meaning |
 |---|---|---|
@@ -60,7 +60,7 @@ Sent to the **root window** via `kWindowMessageCommand`:
 Decoding in the parent window procedure:
 
 ```c
-case kWindowMessageCommand: {
+case evCommand: {
     uint16_t notif = HIWORD(wparam);  // notification code
     uint16_t id    = LOWORD(wparam);  // item ID
     window_t *ctrl = (window_t *)lparam;
@@ -81,16 +81,16 @@ case kWindowMessageCommand: {
 ## Toolbar Button Clicks
 
 ```c
-// Set up toolbar buttons once in kWindowMessageCreate
+// Set up toolbar buttons once in evCreate
 toolbar_button_t buttons[] = {
     { .icon = icon16_folder, .ident = ID_OPEN, .flags = 0 },
     { .icon = icon16_save,   .ident = ID_SAVE, .flags = 0 },
 };
-send_message(win, kToolBarMessageAddButtons,
+send_message(win, tbAddButtons,
              sizeof(buttons)/sizeof(buttons[0]), buttons);
 
 // In window proc – receive toolbar click
-case kToolBarMessageButtonClick:
+case tbButtonClick:
     switch (wparam) {  // ident
         case ID_OPEN: open_file(); break;
         case ID_SAVE: save_file(); break;
@@ -101,14 +101,14 @@ case kToolBarMessageButtonClick:
 ## Keyboard Input
 
 ```c
-case kWindowMessageKeyDown:
+case evKeyDown:
     switch (wparam) {
         case SDL_SCANCODE_ESCAPE: running = false; break;
         case SDL_SCANCODE_S:     save_file();     break;
     }
     return true;
 
-case kWindowMessageTextInput:
+case evTextInput:
     append_char(win, (const char *)lparam);
     return true;
 ```

@@ -23,7 +23,7 @@ uint32_t show_dialog(
     rect_t const *frame, // MAKERECT(x, y, w, h) – logical pixels
     window_t    *parent, // owner, or NULL
     winproc_t    proc,   // dialog window procedure
-    void        *param   // forwarded as lparam to kWindowMessageCreate
+    void        *param   // forwarded as lparam to evCreate
 );
 ```
 
@@ -43,7 +43,7 @@ uint32_t show_dialog_from_form(
 ```
 
 Auto-centers the dialog, adds the `WINDOW_DIALOG` flag, instantiates all child
-controls from `def->children` **before** `kWindowMessageCreate` fires, then
+controls from `def->children` **before** `evCreate` fires, then
 runs the modal loop.  This is the preferred way to build any dialog with two
 or more standard controls.
 
@@ -73,10 +73,10 @@ static result_t open_proc(window_t *win, uint32_t msg,
                            uint32_t wparam, void *lparam) {
   open_dlg_t *s = (open_dlg_t *)win->userdata;
   switch (msg) {
-    case kWindowMessageCreate:
+    case evCreate:
       win->userdata = lparam;
       return true;
-    case kWindowMessageCommand:
+    case evCommand:
       if (HIWORD(wparam) == kButtonNotificationClicked) {
         window_t *btn = (window_t *)lparam;
         if (btn->id == ID_OK) {
@@ -162,7 +162,7 @@ static const form_def_t kMyForm = {
 
 ### Window procedure
 
-Children are already created when `kWindowMessageCreate` fires; use
+Children are already created when `evCreate` fires; use
 `get_window_item` / `set_window_item_text` to initialise them at runtime.
 
 ```c
@@ -170,12 +170,12 @@ static result_t my_proc(window_t *win, uint32_t msg,
                         uint32_t wparam, void *lparam) {
   my_state_t *s = (my_state_t *)win->userdata;
   switch (msg) {
-    case kWindowMessageCreate:
+    case evCreate:
       win->userdata = lparam;
       s = (my_state_t *)lparam;
       set_window_item_text(win, ID_NAME_EDIT, "%s", s->name); // pre-fill
       return true;
-    case kWindowMessageCommand:
+    case evCommand:
       if (HIWORD(wparam) == kButtonNotificationClicked) {
         window_t *src = (window_t *)lparam;
         if (src->id == ID_OK_BTN) {
@@ -193,7 +193,7 @@ static result_t my_proc(window_t *win, uint32_t msg,
 **Key rules:**
 
 - Do **not** call `create_window(…, win_button, …)` inside a form's
-  `kWindowMessageCreate` when a `form_ctrl_def_t` entry can describe the same
+  `evCreate` when a `form_ctrl_def_t` entry can describe the same
   control.  Children declared in the form already exist when the message fires.
 - Use `show_dialog_from_form()` for modal dialogs (handles centering +
   `WINDOW_DIALOG` flag automatically).
@@ -204,7 +204,7 @@ static result_t my_proc(window_t *win, uint32_t msg,
 ## 3. Dialog Data Exchange (DDX)
 
 Reading every control individually in the OK handler and writing them back in
-`kWindowMessageCreate` produces identical boilerplate for every dialog.  DDX
+`evCreate` produces identical boilerplate for every dialog.  DDX
 replaces this with a **static binding table** that maps control IDs to struct
 fields by offset, analogous to MFC's `DoDataExchange`.
 
@@ -226,7 +226,7 @@ typedef struct {
   size_t      size;    // for BIND_STRING: sizeof the char[] field; else 0
 } ctrl_binding_t;
 
-// Populate controls from state (call from kWindowMessageCreate).
+// Populate controls from state (call from evCreate).
 void dialog_push(window_t *win, const void *state,
                  const ctrl_binding_t *b, int n);
 
@@ -279,7 +279,7 @@ static result_t task_proc(window_t *win, uint32_t msg,
                           uint32_t wparam, void *lparam) {
   task_dlg_t *s = (task_dlg_t *)win->userdata;
   switch (msg) {
-    case kWindowMessageCreate:
+    case evCreate:
       win->userdata = s = (task_dlg_t *)lparam;
       populate_combo(win, ID_PRIORITY_COMBO);  // add combo items first
       populate_combo(win, ID_STATUS_COMBO);
@@ -292,7 +292,7 @@ static result_t task_proc(window_t *win, uint32_t msg,
       dialog_push(win, s, k_bindings, ARRAY_LEN(k_bindings));
       return true;
 
-    case kWindowMessageCommand:
+    case evCommand:
       if (HIWORD(wparam) == kButtonNotificationClicked) {
         window_t *src = (window_t *)lparam;
         if (src->id == ID_OK) {
@@ -326,7 +326,7 @@ static result_t task_proc(window_t *win, uint32_t msg,
 | Custom validation before accepting (e.g. range checks, format checks) | Validate manually **after** `dialog_pull` |
 | Fields that need computed / formatted values (e.g. `uint32_t` as decimal string) | Handle manually; omit from the binding table |
 | Checkboxes (bool field from `win->value`) | Handle manually (`aa->value = st->flag`) |
-| Read-only info labels | No binding needed; set text in `kWindowMessageCreate` directly |
+| Read-only info labels | No binding needed; set text in `evCreate` directly |
 
 ### Mixing DDX with manual handling
 
@@ -335,7 +335,7 @@ transfer types are simply omitted from the binding table and handled the
 traditional way.  The binding table and manual code can coexist freely:
 
 ```c
-case kWindowMessageCreate:
+case evCreate:
   // ... populate combos, etc. ...
   dialog_push(win, s, k_bindings, ARRAY_LEN(k_bindings));  // handles title/desc/combos
   if (s->due_date) {                                        // manual: uint32_t → string
@@ -345,7 +345,7 @@ case kWindowMessageCreate:
   }
   return true;
 
-case kWindowMessageCommand:
+case evCommand:
   if (src->id == ID_OK) {
     dialog_pull(win, s, k_bindings, ARRAY_LEN(k_bindings));  // handles title/desc/combos
     // Manual: parse uint32_t from the due-date field

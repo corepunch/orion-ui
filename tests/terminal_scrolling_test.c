@@ -15,7 +15,7 @@ void test_terminal_has_vscroll_flag(void) {
   ASSERT_NOT_NULL(terminal);
   
   // The terminal does not implement a scrollback buffer so it does NOT set
-  // WINDOW_VSCROLL (see commctl/terminal.c kWindowMessageCreate comment).
+  // WINDOW_VSCROLL (see commctl/terminal.c evCreate comment).
   ASSERT_FALSE(terminal->flags & WINDOW_VSCROLL);
   
   destroy_window(terminal);

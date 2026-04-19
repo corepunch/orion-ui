@@ -33,7 +33,7 @@ typedef struct {
 enum {
   // Navigate to a directory.
   // wparam: unused   lparam: const char* absolute path
-  FLM_SETPATH = kWindowMessageUser + 200,
+  FLM_SETPATH = evUser + 200,
 
   // Copy the current directory path into a caller buffer.
   // wparam: buffer size (incl. NUL)   lparam: char* destination
@@ -57,7 +57,7 @@ enum {
 };
 
 // ---------------------------------------------------------------------------
-// Notification codes emitted by win_filelist via kWindowMessageCommand to
+// Notification codes emitted by win_filelist via evCommand to
 // get_root_window(win).  HIWORD(wparam) = code, LOWORD(wparam) = item index.
 // ---------------------------------------------------------------------------
 enum {

@@ -42,7 +42,7 @@ static void shell_rebuild_menubar(void) {
 
 static result_t shell_menubar_proc(window_t *win, uint32_t msg,
                                     uint32_t wparam, void *lparam) {
-    if (msg == kWindowMessageCommand) {
+    if (msg == evCommand) {
         uint16_t notif = HIWORD(wparam);
         if (notif == kMenuBarNotificationItemClick) {
             uint16_t id = LOWORD(wparam);
@@ -132,7 +132,7 @@ int main(int argc, char *argv[]) {
     //    (e.g. imageeditor deletes OpenGL textures in its shutdown).
     shell_notify_gem_shutdown();
     // 2. Destroy all windows while gem code is still mapped in memory, so
-    //    any kWindowMessageDestroy handlers owned by a gem remain valid.
+    //    any evDestroy handlers owned by a gem remain valid.
     ui_shutdown_graphics();
     // 3. Now it is safe to axDynlibClose() — no more window proc calls will be made.
     shell_cleanup_all_gems();

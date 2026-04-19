@@ -22,8 +22,8 @@ Key patterns shown:
 - `ui_init_graphics` / `ui_shutdown_graphics`
 - `create_window` + `show_window`
 - `get_message` / `dispatch_message` / `repost_messages` loop
-- `kWindowMessagePaint` → `fill_rect` + `draw_text_small`
-- `kWindowMessageCommand` → button click handling
+- `evPaint` → `fill_rect` + `draw_text_small`
+- `evCommand` → button click handling
 
 ## File Manager (`filemanager.c`)
 
@@ -36,7 +36,7 @@ A two-pane file browser using `win_reportview`.
 Key patterns shown:
 - `win_reportview` with `RVM_ADDITEM` / `RVM_CLEAR`
 - `RVN_SELCHANGE` / `RVN_DBLCLK` notifications
-- `kWindowMessageStatusBar` for path display
+- `evStatusBar` for path display
 - Directory traversal with `opendir` / `readdir` / `stat`
 
 ## Image Editor (`imageeditor.c`)
@@ -72,7 +72,7 @@ make examples CFLAGS="-DUI_WINDOW_SCALE=1"
 
 ### Mouse coordinate note for canvas children
 
-Child windows discovered via `kWindowMessageHitTest` receive absolute
+Child windows discovered via `evHitTest` receive absolute
 logical coordinates in `wparam`.  Convert to child-local coords with:
 
 ```c

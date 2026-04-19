@@ -17,8 +17,8 @@ Orion supports scrollbars in two ways, mirroring WinAPI's own split between
 Add scrollbars to any window by setting `WINDOW_HSCROLL` and/or
 `WINDOW_VSCROLL` at creation time.  The framework paints and drives the bars
 automatically; the window procedure only needs to call `set_scroll_info()` to
-describe the content range and handle `kWindowMessageHScroll` /
-`kWindowMessageVScroll` when the position changes.
+describe the content range and handle `evHScroll` /
+`evVScroll` when the position changes.
 
 This is the WinAPI equivalent of creating a window with `WS_HSCROLL` /
 `WS_VSCROLL` and calling `SetScrollInfo` / handling `WM_HSCROLL` /
@@ -51,13 +51,13 @@ the normal case.
 ### Handling scroll notifications (`WM_HSCROLL` / `WM_VSCROLL` equivalent)
 
 ```c
-case kWindowMessageHScroll:
+case evHScroll:
     state->pan_x = (int)wparam;   // wparam = new scroll position
     canvas_sync_scrollbars(win, state);
     invalidate_window(win);
     return true;
 
-case kWindowMessageVScroll:
+case evVScroll:
     state->pan_y = (int)wparam;
     canvas_sync_scrollbars(win, state);
     invalidate_window(win);
@@ -170,10 +170,10 @@ window_t *vsb = create_window("", WINDOW_NOTITLE | WINDOW_NOFILL,
 
 // Set info
 scrollbar_info_t info = { .min_val = 0, .max_val = 200, .page = 50, .pos = 0 };
-send_message(hsb, kScrollBarMessageSetInfo, 0, &info);
+send_message(hsb, sbSetInfo, 0, &info);
 
 // Receive notification in parent proc:
-case kWindowMessageCommand:
+case evCommand:
     if (HIWORD(wparam) == kScrollBarNotificationChanged) {
         int new_pos = (int)(intptr_t)lparam;
         // use new_pos ...
@@ -195,4 +195,4 @@ case kWindowMessageCommand:
 | Creating `win_scrollbar` children when you want built-in scrollbars | Add `WINDOW_HSCROLL \| WINDOW_VSCROLL` to the parent and call `set_scroll_info()` |
 | Manually painting scrollbar children from the parent proc | Let the framework draw via `WINDOW_HSCROLL \| WINDOW_VSCROLL`; it paints on top automatically |
 | Forwarding mouse events to scrollbar children | Not needed; the framework intercepts clicks in the scrollbar area before calling `win->proc` |
-| Handling `kScrollBarNotificationChanged` for built-in scrollbars | Handle `kWindowMessageHScroll` / `kWindowMessageVScroll` instead |
+| Handling `kScrollBarNotificationChanged` for built-in scrollbars | Handle `evHScroll` / `evVScroll` instead |

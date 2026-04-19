@@ -187,7 +187,7 @@ void shell_dispatch_gem_command(uint16_t id) {
     }
 }
 // Does NOT axDynlibClose(): gem procs must remain valid so that window
-// kWindowMessageDestroy handlers work when ui_shutdown_graphics() later
+// evDestroy handlers work when ui_shutdown_graphics() later
 // tears down the gem windows.  Call before ui_shutdown_graphics().
 void shell_notify_gem_shutdown(void) {
     for (loaded_gem_t *lg = gems_head; lg; lg = lg->next) {

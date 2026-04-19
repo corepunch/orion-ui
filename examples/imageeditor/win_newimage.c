@@ -94,7 +94,7 @@ static result_t ni_proc(window_t *win, uint32_t msg,
   ni_state_t *st = (ni_state_t *)win->userdata;
 
   switch (msg) {
-    case kWindowMessageCreate: {
+    case evCreate: {
       // Children were already created by create_window_from_form() before this
       // message fired.  Store state and push the caller-supplied dimensions
       // into the edit boxes via DDX.
@@ -106,14 +106,14 @@ static result_t ni_proc(window_t *win, uint32_t msg,
       return true;
     }
 
-    case kWindowMessagePaint: {
+    case evPaint: {
       // Draw field labels manually (same pattern as win_textdialog.c)
       draw_text_small("Width:",  NI_LBL_X, NI_ROW1_Y + 3, get_sys_color(kColorTextDisabled));
       draw_text_small("Height:", NI_LBL_X, NI_ROW2_Y + 3, get_sys_color(kColorTextDisabled));
       return false;  // let child controls paint themselves
     }
 
-    case kWindowMessageCommand: {
+    case evCommand: {
       uint16_t notif = HIWORD(wparam);
 
       // When the user presses Enter inside either edit box, win_textedit fires

@@ -177,7 +177,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
   canvas_win_state_t *state = (canvas_win_state_t *)win->userdata;
   canvas_doc_t *doc = state ? state->doc : NULL;
   switch (msg) {
-    case kWindowMessageCreate: {
+    case evCreate: {
       canvas_win_state_t *s = allocate_window_data(win, sizeof(canvas_win_state_t));
       s->doc = (canvas_doc_t *)lparam;
       s->doc->canvas_win = win;
@@ -189,7 +189,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       return true;
     }
 
-    case kWindowMessageDestroy: {
+    case evDestroy: {
       if (state && state->mag_tex) {
         glDeleteTextures(1, &state->mag_tex);
         state->mag_tex = 0;
@@ -197,11 +197,11 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       return false;
     }
 
-    case kWindowMessageSetFocus:
+    case evSetFocus:
       if (g_app && doc) g_app->active_doc = doc;
       return false;
 
-    case kWindowMessagePaint: {
+    case evPaint: {
       if (!state || !doc) return true;
       canvas_upload(doc);
 
@@ -292,7 +292,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       return true;
     }
 
-    case kWindowMessageHScroll:
+    case evHScroll:
       if (state) {
         state->pan_x = (int)wparam;
         clamp_pan(state, win->frame.w, win->frame.h);
@@ -301,7 +301,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       }
       return true;
 
-    case kWindowMessageVScroll:
+    case evVScroll:
       if (state) {
         state->pan_y = (int)wparam;
         clamp_pan(state, win->frame.w, win->frame.h);
@@ -310,12 +310,12 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       }
       return true;
 
-    case kWindowMessageCommand: {
+    case evCommand: {
       if (!state) return false;
       return false;
     }
 
-    case kWindowMessageWheel: {
+    case evWheel: {
       if (!state) return false;
       // Never scroll while a drawing stroke is in progress – changing pan
       // mid-stroke would invalidate doc->last (stored in pre-pan pixel coords)
@@ -342,7 +342,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       return false;
     }
 
-    case kWindowMessageLeftButtonDown: {
+    case evLeftButtonDown: {
       if (!state) return true;
       int lx = (int16_t)LOWORD(wparam);
       int ly = (int16_t)HIWORD(wparam);
@@ -501,7 +501,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       return true;
     }
 
-    case kWindowMessageRightButtonDown: {
+    case evRightButtonDown: {
       // Right-click while polygon is active: commit the polygon
       if (!doc || !g_app) return true;
 
@@ -557,7 +557,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       return false;
     }
 
-    case kWindowMessageMouseMove: {
+    case evMouseMove: {
       if (!state || !g_app) return true;
 
       // Hand tool: update pan while dragging
@@ -598,7 +598,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         if (strcmp(sb, state->last_sb) != 0) {
           strncpy(state->last_sb, sb, sizeof(state->last_sb) - 1);
           state->last_sb[sizeof(state->last_sb) - 1] = '\0';
-          send_message(doc->win, kWindowMessageStatusBar, 0, sb);
+          send_message(doc->win, evStatusBar, 0, sb);
         }
       }
 
@@ -671,7 +671,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       return true;
     }
 
-    case kWindowMessageLeftButtonUp: {
+    case evLeftButtonUp: {
       if (state && state->panning) {
         IE_DEBUG("pan_end doc=%p", (void *)doc);
         state->panning = false;
@@ -718,7 +718,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       return true;
     }
 
-    case kWindowMessageKeyDown: {
+    case evKeyDown: {
       if (!doc || !g_app) return false;
       int tool = g_app->current_tool;
       // Escape cancels an in-progress polygon or shape drag
@@ -748,7 +748,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       return false;
     }
 
-    case kWindowMessageResize: {
+    case evResize: {
       if (state) {
         clamp_pan(state, win->frame.w, win->frame.h);
         canvas_sync_scrollbars(win, state);

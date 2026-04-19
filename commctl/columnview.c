@@ -60,7 +60,7 @@ static inline bool rv_valid_index(const reportview_data_t *data, int index) {
 static void rv_notify(window_t *win, reportview_data_t *data, int index, uint16_t code) {
   if (!rv_valid_index(data, index))
     return;
-  send_message(get_root_window(win), kWindowMessageCommand,
+  send_message(get_root_window(win), evCommand,
                MAKEDWORD(index, code), &data->items[index]);
 }
 
@@ -359,7 +359,7 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
   reportview_data_t *data = (reportview_data_t *)win->userdata2;
 
   switch (msg) {
-    case kWindowMessageCreate: {
+    case evCreate: {
       data = calloc(1, sizeof(reportview_data_t));
       if (!data) return false;
 
@@ -378,14 +378,14 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       return true;
     }
 
-    case kWindowMessagePaint:
+    case evPaint:
       if (data->view_mode == RVM_VIEW_REPORT)
         rv_paint_report_view(win, data);
       else
         rv_paint_icon_view(win, data);
       return false;
 
-    case kWindowMessageLeftButtonDown: {
+    case evLeftButtonDown: {
       int index = rv_hit_index(win, data, wparam);
       if (rv_valid_index(data, index)) {
         uint32_t now = axGetMilliseconds();
@@ -407,7 +407,7 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       return true;
     }
 
-    case kWindowMessageLeftButtonDoubleClick: {
+    case evLeftButtonDoubleClick: {
       int index = rv_hit_index(win, data, wparam);
       if (rv_valid_index(data, index)) {
         rv_reset_click_state(data);
@@ -559,7 +559,7 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       return true;
     }
 
-    case kWindowMessageVScroll: {
+    case evVScroll: {
       int total_h = rv_content_height(win, data);
       int max_scroll_px = total_h - win->frame.h;
       if (max_scroll_px < 0) max_scroll_px = 0;
@@ -573,11 +573,11 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       return true;
     }
 
-    case kWindowMessageResize:
+    case evResize:
       rv_sync_scroll(win, data);
       return false;
 
-    case kWindowMessageKeyDown: {
+    case evKeyDown: {
       if (!data || data->count == 0)
         return false;
 
@@ -644,7 +644,7 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       return true;
     }
 
-    case kWindowMessageDestroy:
+    case evDestroy:
       free(data);
       win->userdata2 = NULL;
       return true;

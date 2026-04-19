@@ -22,16 +22,16 @@ typedef struct {
 // Send to a menu-bar window to configure its menus.
 //   wparam = number of menu_def_t entries
 //   lparam = const menu_def_t *  (caller owns; structs are shallow-copied)
-#define kMenuBarMessageSetMenus (kWindowMessageUser + 200)
+#define kMenuBarMessageSetMenus (evUser + 200)
 
 // Send to a menu-bar window to associate an accelerator table for hotkey hints.
 // The menu bar stores a reference (not a copy); the caller must keep the table
 // alive at least as long as the menu-bar window.
 //   wparam = 0 (unused)
 //   lparam = const accel_table_t *  (pass NULL to clear)
-#define kMenuBarMessageSetAccelerators (kWindowMessageUser + 201)
+#define kMenuBarMessageSetAccelerators (evUser + 201)
 
-// Notification code placed in HIWORD(wparam) of kWindowMessageCommand that
+// Notification code placed in HIWORD(wparam) of evCommand that
 // win_menubar sends to *itself* when the user selects an item.
 //   LOWORD(wparam) = the selected item's id field
 #define kMenuBarNotificationItemClick 300

@@ -12,7 +12,7 @@ You are now working on **Orion**, a lightweight WinAPI-style UI framework writte
 |-----------------------|-----------------------------------------------|
 | `HWND`                | `window_t *`                                  |
 | `WNDPROC`             | `winproc_t` — `result_t fn(window_t*, uint32_t msg, uint32_t wparam, void *lparam)` |
-| `WM_*` messages       | `kWindowMessage*` constants (e.g. `kWindowMessageCreate`, `kWindowMessagePaint`) |
+| `WM_*` messages       | `kWindowMessage*` constants (e.g. `evCreate`, `evPaint`) |
 | `CreateWindow`        | `create_window(title, flags, rect, parent, proc, userdata)` |
 | `DestroyWindow`       | `destroy_window(win)`                         |
 | `ShowWindow`          | `show_window(win, visible)`                   |
@@ -29,8 +29,8 @@ You are now working on **Orion**, a lightweight WinAPI-style UI framework writte
 ## How you approach every task
 
 1. **Think WinAPI first.** Before writing any code ask: "How would I do this in WinAPI?" Then map the answer onto Orion's equivalents above.
-2. **Use framework mechanisms, never workarounds.** If you need keyboard shortcuts, use accelerator tables (`load_accelerators` / `translate_accelerator`) — not raw `kWindowMessageKeyDown` checks. If you need a timer, add it to `kernel/`. If you need the clipboard, add it to `user/`. Do not bolt things onto app code that belong in the framework.
-3. **Handle the standard message set.** Every window proc handles at minimum `kWindowMessageCreate`, `kWindowMessagePaint`, and `kWindowMessageDestroy`. Notifications always travel as `kWindowMessageCommand` to the parent.
+2. **Use framework mechanisms, never workarounds.** If you need keyboard shortcuts, use accelerator tables (`load_accelerators` / `translate_accelerator`) — not raw `evKeyDown` checks. If you need a timer, add it to `kernel/`. If you need the clipboard, add it to `user/`. Do not bolt things onto app code that belong in the framework.
+3. **Handle the standard message set.** Every window proc handles at minimum `evCreate`, `evPaint`, and `evDestroy`. Notifications always travel as `evCommand` to the parent.
 4. **Pack notification data the WinAPI way.** Control IDs go in `LOWORD(wparam)`, notification codes in `HIWORD(wparam)`.
 5. **Return `true` if you handled a message, `false` if you did not** — just like returning 0 vs. calling `DefWindowProc`.
 
@@ -62,8 +62,8 @@ samples/          ← sample applications that demonstrate and exercise the fram
 
 ## What you never do
 
-- Handle `kWindowMessageKeyDown` directly when an accelerator table would be the right tool.
+- Handle `evKeyDown` directly when an accelerator table would be the right tool.
 - Put framework-level functionality (timers, clipboard, drag-and-drop) into application code.
 - Use raw OpenGL calls outside of `kernel/renderer.c` / `kernel/renderer_impl.c`.
-- Skip `kWindowMessageDestroy` handling — always clean up resources the window owns.
+- Skip `evDestroy` handling — always clean up resources the window owns.
 - Forget to call `invalidate_window` after state changes that affect painting.

@@ -123,7 +123,7 @@ static result_t td_proc(window_t *win, uint32_t msg,
   td_state_t *st = (td_state_t *)win->userdata;
 
   switch (msg) {
-    case kWindowMessageCreate: {
+    case evCreate: {
       st = (td_state_t *)lparam;
       win->userdata = st;
 
@@ -162,11 +162,11 @@ static result_t td_proc(window_t *win, uint32_t msg,
       return true;
     }
 
-    case kWindowMessagePaint:
+    case evPaint:
       paint_td(win, st);
       return false;  // let child controls paint themselves
 
-    case kWindowMessageCommand: {
+    case evCommand: {
       if (HIWORD(wparam) != kButtonNotificationClicked) return false;
       window_t *src = (window_t *)lparam;
       if (!src) return false;
@@ -208,7 +208,7 @@ static result_t td_proc(window_t *win, uint32_t msg,
       return false;
     }
 
-    case kWindowMessageLeftButtonDown: {
+    case evLeftButtonDown: {
       int lx = (int16_t)LOWORD(wparam);
       int ly = (int16_t)HIWORD(wparam);
       // Check if click is on the size slider
@@ -223,7 +223,7 @@ static result_t td_proc(window_t *win, uint32_t msg,
       return false;
     }
 
-    case kWindowMessageMouseMove: {
+    case evMouseMove: {
       if (st->dragging_size) {
         int lx = (int16_t)LOWORD(wparam);
         st->opts->font_size = slider_x_to_size(lx);
@@ -233,7 +233,7 @@ static result_t td_proc(window_t *win, uint32_t msg,
       return false;
     }
 
-    case kWindowMessageLeftButtonUp: {
+    case evLeftButtonUp: {
       if (st->dragging_size) {
         int lx = (int16_t)LOWORD(wparam);
         st->opts->font_size = slider_x_to_size(lx);

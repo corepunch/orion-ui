@@ -253,7 +253,7 @@ void handle_menu_command(uint16_t id) {
 result_t app_menubar_proc(window_t *win, uint32_t msg,
                           uint32_t wparam, void *lparam) {
   switch (msg) {
-    case kWindowMessageCommand:
+    case evCommand:
       if (HIWORD(wparam) == kMenuBarNotificationItemClick ||
           HIWORD(wparam) == kAcceleratorNotification) {
         handle_menu_command((uint16_t)LOWORD(wparam));

@@ -10,28 +10,28 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
                               uint32_t wparam, void *lparam) {
   canvas_doc_t *doc = (canvas_doc_t *)win->userdata;
   switch (msg) {
-    case kWindowMessageHScroll:
+    case evHScroll:
       // Forward horizontal-scroll notifications from the doc window's built-in
       // hscroll (which is merged with the status bar) to the canvas child.
       if (doc && doc->canvas_win)
-        send_message(doc->canvas_win, kWindowMessageHScroll, wparam, lparam);
+        send_message(doc->canvas_win, evHScroll, wparam, lparam);
       return true;
-    case kWindowMessageCreate:
+    case evCreate:
       return true;
-    case kWindowMessagePaint:
+    case evPaint:
       fill_rect(get_sys_color(kColorWindowDarkBg), 0, 0, win->frame.w, win->frame.h);
       return false;
-    case kWindowMessageResize: {
+    case evResize: {
       // Keep the canvas child window in sync with the document window's client area.
       rect_t cr = get_client_rect(win);
       if (doc && doc->canvas_win)
         resize_window(doc->canvas_win, cr.w, cr.h);
       return false;
     }
-    case kWindowMessageSetFocus:
+    case evSetFocus:
       if (g_app && doc) g_app->active_doc = doc;
       return false;
-    case kWindowMessageClose: {
+    case evClose: {
       // WM_CLOSE analogue: give the user a chance to save before closing.
       // doc_confirm_close() shows a dialog if modified and calls close_document().
       // Return true in all cases — we have handled the close ourselves.
@@ -168,7 +168,7 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
   g_app->active_doc = doc;
 
   doc_update_title(doc);
-  send_message(dwin, kWindowMessageStatusBar, 0,
+  send_message(dwin, evStatusBar, 0,
                (void *)(filename ? filename : "New image"));
 
   // Rebuild the Window menu so the new document appears in the list.

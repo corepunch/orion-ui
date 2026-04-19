@@ -179,7 +179,7 @@ void test_item_y_decreases_with_scroll(void) {
 // recover truly child-local coordinates before calling filelist_hit_row().
 // ---------------------------------------------------------------------------
 
-// Mirrors the coordinate translation in win_filelist's kWindowMessageLeftButtonDown:
+// Mirrors the coordinate translation in win_filelist's evLeftButtonDown:
 //   my_corrected = LOCAL_Y_delivered - parent_frame_y
 //   (When used as root window parent_frame_y = 0, no correction needed.)
 static int fl_child_local_y(int local_y_delivered, int parent_frame_y) {
@@ -237,7 +237,7 @@ void test_root_filelist_click_no_correction_needed(void) {
 // Tests: columnview background clearing for non-selected items
 //
 // When win_reportview is used as a child window (e.g. embedded in a picker
-// dialog), invalidate_window does NOT post kWindowMessageNonClientPaint, so
+// dialog), invalidate_window does NOT post evNonClientPaint, so
 // draw_panel never clears the background.  Every item must therefore clear its
 // own background on each paint so that a previously-selected item's highlight
 // rectangle does not persist after a new item is selected.
@@ -293,7 +293,7 @@ void test_selection_clear_on_new_click(void) {
 //
 // When win_filelist is a child window, `invalidate_window(child)` must cause
 // the ROOT window to be repainted (not just the child).  Only the root-level
-// kWindowMessageNonClientPaint calls draw_panel(), which fills the background
+// evNonClientPaint calls draw_panel(), which fills the background
 // with COLOR_PANEL_BG and erases stale selection-highlight pixels from the
 // previous selection.  Without this, clicking a new item draws the new
 // highlight on top of the old one, leaving both visible simultaneously.
@@ -329,8 +329,8 @@ void test_invalidate_child_window_targets_root(void) {
   TEST("invalidate_window: child window routes to root (fixes stale selection)");
   fake_win_t root  = { .parent = NULL };
   fake_win_t child = { .parent = &root };
-  // Before the fix, invalidate_window would only post kWindowMessagePaint to
-  // &child, never sending kWindowMessageNonClientPaint to &root.  After the
+  // Before the fix, invalidate_window would only post evPaint to
+  // &child, never sending evNonClientPaint to &root.  After the
   // fix both messages go to &root, clearing the panel background first.
   ASSERT_TRUE(fake_invalidate_target(&child) == &root);
   PASS();

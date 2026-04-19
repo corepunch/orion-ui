@@ -70,11 +70,11 @@ void test_message_constants(void) {
     TEST("Window message constants");
     
     // Verify message constants are defined
-    ASSERT_TRUE(kWindowMessageCreate >= 0);
-    ASSERT_TRUE(kWindowMessageDestroy > kWindowMessageCreate);
-    ASSERT_TRUE(kWindowMessagePaint > 0);
-    ASSERT_TRUE(kWindowMessageCommand > 0);
-    ASSERT_TRUE(kWindowMessageUser == 1000);
+    ASSERT_TRUE(evCreate >= 0);
+    ASSERT_TRUE(evDestroy > evCreate);
+    ASSERT_TRUE(evPaint > 0);
+    ASSERT_TRUE(evCommand > 0);
+    ASSERT_TRUE(evUser == 1000);
     
     PASS();
 }
@@ -84,11 +84,11 @@ void test_control_message_constants(void) {
     TEST("Control message constants");
     
     // Verify control message constants
-    ASSERT_TRUE(kButtonMessageSetCheck >= kWindowMessageUser);
-    ASSERT_TRUE(kButtonMessageGetCheck > kButtonMessageSetCheck);
-    ASSERT_TRUE(kComboBoxMessageAddString > 0);
-    ASSERT_TRUE(kComboBoxMessageGetCurrentSelection > 0);
-    ASSERT_TRUE(kComboBoxMessageSetCurrentSelection > 0);
+    ASSERT_TRUE(btnSetCheck >= evUser);
+    ASSERT_TRUE(btnGetCheck > btnSetCheck);
+    ASSERT_TRUE(cbAddString > 0);
+    ASSERT_TRUE(cbGetCurrentSelection > 0);
+    ASSERT_TRUE(cbSetCurrentSelection > 0);
     
     PASS();
 }

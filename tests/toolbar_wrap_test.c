@@ -2,7 +2,7 @@
 //
 // These tests are headless (no SDL/OpenGL rendering). The new toolbar
 // creates real child windows in parent->toolbar_children using
-// toolbar_item_t and kToolBarMessageSetItems.
+// toolbar_item_t and tbSetItems.
 
 #include "test_framework.h"
 #include "test_env.h"
@@ -14,18 +14,18 @@
 static result_t noop_proc(window_t *win, uint32_t msg,
                            uint32_t wparam, void *lparam) {
     (void)win; (void)wparam; (void)lparam;
-    if (msg == kWindowMessageCreate || msg == kWindowMessageDestroy) return 1;
+    if (msg == evCreate || msg == evDestroy) return 1;
     return 0;
 }
 
-// Window proc that records the last kToolBarMessageButtonClick ident.
+// Window proc that records the last tbButtonClick ident.
 static int g_last_click_ident = -1;
 static int g_click_count = 0;
 static result_t click_capture_proc(window_t *win, uint32_t msg,
                                     uint32_t wparam, void *lparam) {
     (void)win; (void)lparam;
-    if (msg == kWindowMessageCreate || msg == kWindowMessageDestroy) return 1;
-    if (msg == kToolBarMessageButtonClick) {
+    if (msg == evCreate || msg == evDestroy) return 1;
+    if (msg == tbButtonClick) {
         g_last_click_ident = (int)wparam;
         g_click_count++;
         return 1;
@@ -50,7 +50,7 @@ static window_t *find_toolbar_child(window_t *win, uint32_t id) {
 // ---- tests ------------------------------------------------------------------
 
 void test_toolbar_set_items_creates_children(void) {
-    TEST("kToolBarMessageSetItems creates one toolbar child per real button");
+    TEST("tbSetItems creates one toolbar child per real button");
 
     test_env_init();
 
@@ -64,7 +64,7 @@ void test_toolbar_set_items_creates_children(void) {
         {TOOLBAR_ITEM_BUTTON, 11, 1, 0, 0, NULL},
         {TOOLBAR_ITEM_BUTTON, 12, 2, 0, 0, NULL},
     };
-    send_message(win, kToolBarMessageSetItems, 3, items);
+    send_message(win, tbSetItems, 3, items);
 
     // Must have exactly 3 toolbar children.
     ASSERT_EQUAL(count_toolbar_children(win), 3);
@@ -83,7 +83,7 @@ void test_toolbar_set_items_creates_children(void) {
 }
 
 void test_toolbar_spacer_skipped(void) {
-    TEST("kToolBarMessageSetItems: TOOLBAR_ITEM_SPACER does not create a child");
+    TEST("tbSetItems: TOOLBAR_ITEM_SPACER does not create a child");
 
     test_env_init();
 
@@ -98,7 +98,7 @@ void test_toolbar_spacer_skipped(void) {
         {TOOLBAR_ITEM_SPACER, 0, 0, 0, 0, NULL},
         {TOOLBAR_ITEM_BUTTON, 3, 2, 0, 0, NULL},
     };
-    send_message(win, kToolBarMessageSetItems, 4, items);
+    send_message(win, tbSetItems, 4, items);
 
     // 4 entries, but the spacer does not create a child.
     ASSERT_EQUAL(count_toolbar_children(win), 3);
@@ -109,7 +109,7 @@ void test_toolbar_spacer_skipped(void) {
 }
 
 void test_toolbar_set_items_replaces(void) {
-    TEST("kToolBarMessageSetItems replaces existing toolbar children");
+    TEST("tbSetItems replaces existing toolbar children");
 
     test_env_init();
 
@@ -119,14 +119,14 @@ void test_toolbar_set_items_replaces(void) {
     ASSERT_NOT_NULL(win);
 
     toolbar_item_t first[] = {{TOOLBAR_ITEM_BUTTON, 1, 0, 0, 0, NULL}};
-    send_message(win, kToolBarMessageSetItems, 1, first);
+    send_message(win, tbSetItems, 1, first);
     ASSERT_EQUAL(count_toolbar_children(win), 1);
 
     toolbar_item_t second[] = {
         {TOOLBAR_ITEM_BUTTON, 10, 0, 0, 0, NULL},
         {TOOLBAR_ITEM_BUTTON, 11, 1, 0, 0, NULL},
     };
-    send_message(win, kToolBarMessageSetItems, 2, second);
+    send_message(win, tbSetItems, 2, second);
 
     // Old children are gone, new ones are present.
     ASSERT_EQUAL(count_toolbar_children(win), 2);
@@ -140,7 +140,7 @@ void test_toolbar_set_items_replaces(void) {
 }
 
 void test_toolbar_set_active_button(void) {
-    TEST("kToolBarMessageSetActiveButton sets value on correct child");
+    TEST("tbSetActiveButton sets value on correct child");
 
     test_env_init();
 
@@ -154,7 +154,7 @@ void test_toolbar_set_active_button(void) {
         {TOOLBAR_ITEM_BUTTON, 11, 1, 0, 0,                          NULL},
         {TOOLBAR_ITEM_BUTTON, 12, 2, 0, 0,                          NULL},
     };
-    send_message(win, kToolBarMessageSetItems, 3, items);
+    send_message(win, tbSetItems, 3, items);
 
     window_t *btn10 = find_toolbar_child(win, 10);
     window_t *btn11 = find_toolbar_child(win, 11);
@@ -169,21 +169,21 @@ void test_toolbar_set_active_button(void) {
     ASSERT_FALSE(btn12->value);
 
     // Activate ident 11.
-    send_message(win, kToolBarMessageSetActiveButton, 11, NULL);
+    send_message(win, tbSetActiveButton, 11, NULL);
 
     ASSERT_FALSE(btn10->value);
     ASSERT_TRUE(btn11->value);
     ASSERT_FALSE(btn12->value);
 
     // Activate ident 12.
-    send_message(win, kToolBarMessageSetActiveButton, 12, NULL);
+    send_message(win, tbSetActiveButton, 12, NULL);
 
     ASSERT_FALSE(btn10->value);
     ASSERT_FALSE(btn11->value);
     ASSERT_TRUE(btn12->value);
 
     // Unknown ident clears all.
-    send_message(win, kToolBarMessageSetActiveButton, 99, NULL);
+    send_message(win, tbSetActiveButton, 99, NULL);
 
     ASSERT_FALSE(btn10->value);
     ASSERT_FALSE(btn11->value);
@@ -195,7 +195,7 @@ void test_toolbar_set_active_button(void) {
 }
 
 void test_toolbar_set_strip(void) {
-    TEST("kToolBarMessageSetStrip stores strip in window");
+    TEST("tbSetStrip stores strip in window");
 
     test_env_init();
 
@@ -209,14 +209,14 @@ void test_toolbar_set_strip(void) {
         .tex=42, .icon_w=16, .icon_h=16,
         .cols=2, .sheet_w=32, .sheet_h=160,
     };
-    send_message(win, kToolBarMessageSetStrip, 0, &strip);
+    send_message(win, tbSetStrip, 0, &strip);
     ASSERT_EQUAL((int)win->toolbar_strip.tex, 42);
     ASSERT_EQUAL(win->toolbar_strip.icon_w, 16);
     ASSERT_EQUAL(win->toolbar_strip.cols, 2);
     ASSERT_EQUAL(win->toolbar_strip.sheet_w, 32);
     ASSERT_EQUAL(win->toolbar_strip.sheet_h, 160);
 
-    send_message(win, kToolBarMessageSetStrip, 0, NULL);
+    send_message(win, tbSetStrip, 0, NULL);
     ASSERT_EQUAL((int)win->toolbar_strip.tex, 0);
 
     destroy_window(win);
@@ -225,7 +225,7 @@ void test_toolbar_set_strip(void) {
 }
 
 void test_toolbar_set_items_button(void) {
-    TEST("kToolBarMessageSetItems: TOOLBAR_ITEM_BUTTON creates button child");
+    TEST("tbSetItems: TOOLBAR_ITEM_BUTTON creates button child");
 
     test_env_init();
 
@@ -238,7 +238,7 @@ void test_toolbar_set_items_button(void) {
         {TOOLBAR_ITEM_BUTTON, 20, -1, 0, 0, "New"},
         {TOOLBAR_ITEM_BUTTON, 21, -1, 0, 0, "Open"},
     };
-    send_message(win, kToolBarMessageSetItems, 2, items);
+    send_message(win, tbSetItems, 2, items);
 
     ASSERT_EQUAL(count_toolbar_children(win), 2);
     ASSERT_NOT_NULL(find_toolbar_child(win, 20));
@@ -250,7 +250,7 @@ void test_toolbar_set_items_button(void) {
 }
 
 void test_toolbar_set_items_label(void) {
-    TEST("kToolBarMessageSetItems: TOOLBAR_ITEM_LABEL creates label child");
+    TEST("tbSetItems: TOOLBAR_ITEM_LABEL creates label child");
 
     test_env_init();
 
@@ -262,7 +262,7 @@ void test_toolbar_set_items_label(void) {
     toolbar_item_t items[] = {
         {TOOLBAR_ITEM_LABEL, 30, -1, 40, 0, "Filter:"},
     };
-    send_message(win, kToolBarMessageSetItems, 1, items);
+    send_message(win, tbSetItems, 1, items);
 
     ASSERT_EQUAL(count_toolbar_children(win), 1);
     window_t *lbl = find_toolbar_child(win, 30);
@@ -278,7 +278,7 @@ void test_toolbar_set_items_label(void) {
 }
 
 void test_toolbar_set_items_combobox(void) {
-    TEST("kToolBarMessageSetItems: TOOLBAR_ITEM_COMBOBOX creates combobox child");
+    TEST("tbSetItems: TOOLBAR_ITEM_COMBOBOX creates combobox child");
 
     test_env_init();
 
@@ -290,7 +290,7 @@ void test_toolbar_set_items_combobox(void) {
     toolbar_item_t items[] = {
         {TOOLBAR_ITEM_COMBOBOX, 40, -1, 80, 0, NULL},
     };
-    send_message(win, kToolBarMessageSetItems, 1, items);
+    send_message(win, tbSetItems, 1, items);
 
     ASSERT_EQUAL(count_toolbar_children(win), 1);
     window_t *cb = find_toolbar_child(win, 40);
@@ -303,7 +303,7 @@ void test_toolbar_set_items_combobox(void) {
 }
 
 void test_toolbar_set_items_separator(void) {
-    TEST("kToolBarMessageSetItems: TOOLBAR_ITEM_SEPARATOR creates narrow child");
+    TEST("tbSetItems: TOOLBAR_ITEM_SEPARATOR creates narrow child");
 
     test_env_init();
 
@@ -317,7 +317,7 @@ void test_toolbar_set_items_separator(void) {
         {TOOLBAR_ITEM_SEPARATOR, 0, -1, 0, 0, NULL},
         {TOOLBAR_ITEM_BUTTON,    2, -1, 0, 0, "B"},
     };
-    send_message(win, kToolBarMessageSetItems, 3, items);
+    send_message(win, tbSetItems, 3, items);
 
     // Separator creates a child; total = 3.
     ASSERT_EQUAL(count_toolbar_children(win), 3);
@@ -328,7 +328,7 @@ void test_toolbar_set_items_separator(void) {
 }
 
 void test_toolbar_set_items_spacer(void) {
-    TEST("kToolBarMessageSetItems: TOOLBAR_ITEM_SPACER does NOT create a child");
+    TEST("tbSetItems: TOOLBAR_ITEM_SPACER does NOT create a child");
 
     test_env_init();
 
@@ -342,7 +342,7 @@ void test_toolbar_set_items_spacer(void) {
         {TOOLBAR_ITEM_SPACER, 0, -1, 8, 0, NULL},
         {TOOLBAR_ITEM_BUTTON, 2, -1, 0, 0, "B"},
     };
-    send_message(win, kToolBarMessageSetItems, 3, items);
+    send_message(win, tbSetItems, 3, items);
 
     // Spacer does not create a child; total = 2.
     ASSERT_EQUAL(count_toolbar_children(win), 2);
@@ -353,7 +353,7 @@ void test_toolbar_set_items_spacer(void) {
 }
 
 void test_toolbar_button_click_fires_command(void) {
-    TEST("Clicking a toolbar child fires kToolBarMessageButtonClick on parent");
+    TEST("Clicking a toolbar child fires tbButtonClick on parent");
 
     test_env_init();
 
@@ -366,17 +366,17 @@ void test_toolbar_button_click_fires_command(void) {
     ASSERT_NOT_NULL(win);
 
     toolbar_item_t items[] = {{TOOLBAR_ITEM_BUTTON, 55, 0, 0, 0, NULL}};
-    send_message(win, kToolBarMessageSetItems, 1, items);
+    send_message(win, tbSetItems, 1, items);
 
     window_t *btn = find_toolbar_child(win, 55);
     ASSERT_NOT_NULL(btn);
 
     // Simulate a complete left-button click on the toolbar child.
-    send_message(btn, kWindowMessageLeftButtonDown, MAKEDWORD(4, 4), NULL);
-    send_message(btn, kWindowMessageLeftButtonUp,   MAKEDWORD(4, 4), NULL);
+    send_message(btn, evLeftButtonDown, MAKEDWORD(4, 4), NULL);
+    send_message(btn, evLeftButtonUp,   MAKEDWORD(4, 4), NULL);
 
-    // kWindowMessageCommand (kButtonNotificationClicked) should have been
-    // forwarded by the default handler as kToolBarMessageButtonClick.
+    // evCommand (kButtonNotificationClicked) should have been
+    // forwarded by the default handler as tbButtonClick.
     ASSERT_EQUAL(g_click_count, 1);
     ASSERT_EQUAL(g_last_click_ident, 55);
 
@@ -401,7 +401,7 @@ void test_toolbar_notitle_nonclient_mouseup_fires(void) {
     ASSERT_NOT_NULL(win);
 
     toolbar_item_t items[] = {{TOOLBAR_ITEM_BUTTON, 77, 0, 0, 0, NULL}};
-    send_message(win, kToolBarMessageSetItems, 1, items);
+    send_message(win, tbSetItems, 1, items);
 
     window_t *btn = find_toolbar_child(win, 77);
     ASSERT_NOT_NULL(btn);
@@ -415,9 +415,9 @@ void test_toolbar_notitle_nonclient_mouseup_fires(void) {
 
     // For WINDOW_NOTITLE windows the toolbar band is the drag area, so
     // LeftButtonDown goes through _dragging.  On release the framework sends
-    // kWindowMessageNonClientLeftButtonUp to the parent with screen coords.
+    // evNonClientLeftButtonUp to the parent with screen coords.
     // The default handler must then activate the toolbar child.
-    send_message(win, kWindowMessageNonClientLeftButtonUp,
+    send_message(win, evNonClientLeftButtonUp,
                  MAKEDWORD(hit_x, hit_y), NULL);
 
     ASSERT_EQUAL(g_click_count, 1);
@@ -442,7 +442,7 @@ void test_toolbar_destroy_clears_children(void) {
         {TOOLBAR_ITEM_BUTTON, 1, 0, 0, 0, NULL},
         {TOOLBAR_ITEM_BUTTON, 2, 1, 0, 0, NULL},
     };
-    send_message(win, kToolBarMessageSetItems, 2, items);
+    send_message(win, tbSetItems, 2, items);
     ASSERT_EQUAL(count_toolbar_children(win), 2);
 
     // After destroy the window is freed; if toolbar_children were not freed
@@ -465,7 +465,7 @@ void test_toolbar_move_shifts_children(void) {
     ASSERT_NOT_NULL(win);
 
     toolbar_item_t items[] = {{TOOLBAR_ITEM_BUTTON, 1, 0, 0, 0, NULL}};
-    send_message(win, kToolBarMessageSetItems, 1, items);
+    send_message(win, tbSetItems, 1, items);
 
     window_t *btn = find_toolbar_child(win, 1);
     ASSERT_NOT_NULL(btn);
@@ -504,7 +504,7 @@ void test_titlebar_height_single_row(void) {
     toolbar_item_t items[10];
     for (int i = 0; i < 10; i++)
         items[i] = (toolbar_item_t){TOOLBAR_ITEM_BUTTON, i, 0, 0, 0, NULL};
-    send_message(win, kToolBarMessageSetItems, 10, items);
+    send_message(win, tbSetItems, 10, items);
 
     ASSERT_EQUAL(titlebar_height(win), expected);
 
@@ -529,7 +529,7 @@ void test_toolbar_button_click_cancelled_if_released_outside(void) {
     ASSERT_NOT_NULL(win);
 
     toolbar_item_t items[] = {{TOOLBAR_ITEM_BUTTON, 88, 0, 0, 0, NULL}};
-    send_message(win, kToolBarMessageSetItems, 1, items);
+    send_message(win, tbSetItems, 1, items);
 
     window_t *btn = find_toolbar_child(win, 88);
     ASSERT_NOT_NULL(btn);
@@ -569,7 +569,7 @@ void test_toolbar_button_click_cancelled_if_released_outside(void) {
 }
 
 void test_toolbar_item_button_frame_clamped(void) {
-    TEST("kToolBarMessageSetItems: text button frame is clamped to requested size");
+    TEST("tbSetItems: text button frame is clamped to requested size");
 
     test_env_init();
 
@@ -582,7 +582,7 @@ void test_toolbar_item_button_frame_clamped(void) {
     toolbar_item_t items[] = {
         { TOOLBAR_ITEM_BUTTON, 50, -1, 40, 0, "A very long label that would overflow" },
     };
-    send_message(win, kToolBarMessageSetItems, 1, items);
+    send_message(win, tbSetItems, 1, items);
 
     window_t *btn = find_toolbar_child(win, 50);
     ASSERT_NOT_NULL(btn);

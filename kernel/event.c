@@ -61,8 +61,8 @@ uint32_t ui_get_mod_state(void) {
 static int drag_anchor[2];
 static int resize_anchor[2];
 
-// Window that received kWindowMessageNonClientLeftButtonDown (toolbar press).
-// Always delivered kWindowMessageNonClientLeftButtonUp on the next left-up,
+// Window that received evNonClientLeftButtonDown (toolbar press).
+// Always delivered evNonClientLeftButtonUp on the next left-up,
 // regardless of release position, so pressed state is cleared deterministically.
 // Shared with user/window.c for destroy_window cleanup (stored in g_ui_runtime).
 
@@ -115,7 +115,7 @@ void move_to_top(window_t* _win) {
   extern window_t *get_root_window(window_t *window);
 
   window_t *win = get_root_window(_win);
-  post_message(win, kWindowMessageRefreshStencil, 0, NULL);
+  post_message(win, evRefreshStencil, 0, NULL);
   invalidate_window(win);
 
   if (win->flags & WINDOW_ALWAYSINBACK)
@@ -264,11 +264,11 @@ void dispatch_message(ui_event_t *msg) {
           if (win->flags & WINDOW_ALWAYSINBACK) {
             resize_window(win, sw, sh);
           } else {
-            send_message(win, kWindowMessageDisplayChange, MAKEDWORD(sw, sh), NULL);
+            send_message(win, evDisplayChange, MAKEDWORD(sw, sh), NULL);
           }
         }
       }
-      post_message((window_t *)1, kWindowMessageRefreshStencil, 0, NULL);
+      post_message((window_t *)1, evRefreshStencil, 0, NULL);
       for (win = g_ui_runtime.windows; win; win = win->next) {
         if (win->visible) {
           invalidate_window(win);
@@ -282,7 +282,7 @@ void dispatch_message(ui_event_t *msg) {
       char ch = *(char*)&msg->lParam;
       if (ch != '\0') {
         char buf[2] = { ch, '\0' };
-        send_message(g_ui_runtime.focused, kWindowMessageTextInput, 0, buf);
+        send_message(g_ui_runtime.focused, evTextInput, 0, buf);
       }
       break;
     }
@@ -296,9 +296,9 @@ void dispatch_message(ui_event_t *msg) {
       char text_ch = *(char*)&msg->lParam;
       if (text_ch >= 0x20 && text_ch != 0x7f) {
         char buf[2] = { text_ch, '\0' };
-        send_message(g_ui_runtime.focused, kWindowMessageTextInput, 0, buf);
+        send_message(g_ui_runtime.focused, evTextInput, 0, buf);
       }
-      if (g_ui_runtime.focused && !send_message(g_ui_runtime.focused, kWindowMessageKeyDown, key, NULL)) {
+      if (g_ui_runtime.focused && !send_message(g_ui_runtime.focused, evKeyDown, key, NULL)) {
         if (key == AX_KEY_TAB) {
           if (msg->modflags & (AX_MOD_SHIFT >> 16)) {
             set_focus(find_prev_tab_stop(g_ui_runtime.focused));
@@ -308,8 +308,8 @@ void dispatch_message(ui_event_t *msg) {
         } else if (key == AX_KEY_ENTER) {
           window_t *def = find_default_button(get_root_window(g_ui_runtime.focused));
           if (def) {
-            send_message(def, kWindowMessageLeftButtonDown, 0, NULL);
-            send_message(def, kWindowMessageLeftButtonUp, 0, NULL);
+            send_message(def, evLeftButtonDown, 0, NULL);
+            send_message(def, evLeftButtonUp, 0, NULL);
           }
         }
       }
@@ -318,16 +318,16 @@ void dispatch_message(ui_event_t *msg) {
 
     case kEventKeyUp:
       g_mod_state = (uint32_t)msg->wParam & 0xFFFF0000u;
-      send_message(g_ui_runtime.focused, kWindowMessageKeyUp, (uint32_t)msg->keyCode, NULL);
+      send_message(g_ui_runtime.focused, evKeyUp, (uint32_t)msg->keyCode, NULL);
       break;
 
     case kEventJoyAxisMotion:
-      send_message(g_ui_runtime.focused, kWindowMessageJoyAxisMotion,
+      send_message(g_ui_runtime.focused, evJoyAxisMotion,
                    MAKEDWORD(msg->wParam & 0xFF, (uint16_t)(intptr_t)msg->lParam), NULL);
       break;
 
     case kEventJoyButtonDown:
-      send_message(g_ui_runtime.focused, kWindowMessageJoyButtonDown, msg->wParam, NULL);
+      send_message(g_ui_runtime.focused, evJoyButtonDown, msg->wParam, NULL);
       break;
 
     case kEventMouseMoved:
@@ -353,7 +353,7 @@ void dispatch_message(ui_event_t *msg) {
         int16_t lx = (int16_t)LOCAL_X(px, py, win);
         int16_t ly = (int16_t)LOCAL_Y(px, py, win);
         if (win == g_ui_runtime.captured || (ly >= 0 && win == g_ui_runtime.focused)) {
-          send_message(win, kWindowMessageMouseMove, MAKEDWORD(lx, ly),
+          send_message(win, evMouseMove, MAKEDWORD(lx, ly),
                        (void*)(intptr_t)MAKEDWORD(rdx, rdy));
         }
       }
@@ -375,7 +375,7 @@ void dispatch_message(ui_event_t *msg) {
         if (win->disabled) return;
         int16_t dx = msg->dx;
         int16_t dy = msg->dy;
-        send_message(win, kWindowMessageWheel,
+        send_message(win, evWheel,
                      MAKEDWORD((uint16_t)(-dx * SCROLL_SENSITIVITY),
                                (uint16_t)(dy * SCROLL_SENSITIVITY)), NULL);
       }
@@ -396,9 +396,9 @@ void dispatch_message(ui_event_t *msg) {
         window_t *new_root = click_root;
         bool root_changing = activating && (new_root != old_root);
         if (activating) {
-          send_message(win, kWindowMessageMouseActivate, 0, NULL);
+          send_message(win, evMouseActivate, 0, NULL);
           if (root_changing && old_root)
-            send_message(old_root, kWindowMessageActivate, WA_INACTIVE, new_root);
+            send_message(old_root, evActivate, WA_INACTIVE, new_root);
         }
         if (click_root && !click_root->parent && win != g_ui_runtime.captured) {
           move_to_top(click_root);
@@ -406,7 +406,7 @@ void dispatch_message(ui_event_t *msg) {
         if (activating) {
           set_focus(win);
           if (root_changing)
-            send_message(new_root, kWindowMessageActivate, WA_CLICKACTIVE, old_root);
+            send_message(new_root, evActivate, WA_CLICKACTIVE, old_root);
         }
         int lx = LOCAL_X(px, py, win);
         int ly = LOCAL_Y(px, py, win);
@@ -440,7 +440,7 @@ void dispatch_message(ui_event_t *msg) {
             for (window_t *tc = win->toolbar_children; tc; tc = tc->next) {
               if (CONTAINS(tb_x, tb_y, tc->frame.x, tc->frame.y, tc->frame.w, tc->frame.h)) {
                 g_ui_runtime.toolbar_down_win = tc;
-                send_message(tc, kWindowMessageLeftButtonDown,
+                send_message(tc, evLeftButtonDown,
                              MAKEDWORD(tb_x - tc->frame.x, tb_y - tc->frame.y), NULL);
                 break;
               }
@@ -448,8 +448,8 @@ void dispatch_message(ui_event_t *msg) {
             // No hit (click in gap): no action needed.
           } else {
             int wmsg = (msg->message == kEventLeftButtonDown)
-                       ? kWindowMessageLeftButtonDown
-                       : kWindowMessageRightButtonDown;
+                       ? evLeftButtonDown
+                       : evRightButtonDown;
             if (!handle_mouse(wmsg, win, lx, ly)) {
               send_message(win, wmsg, MAKEDWORD(lx, ly), NULL);
             }
@@ -468,8 +468,8 @@ void dispatch_message(ui_event_t *msg) {
         if (win->disabled) return;
         int lx = LOCAL_X(px, py, win);
         int ly = LOCAL_Y(px, py, win);
-        if (!handle_mouse(kWindowMessageLeftButtonDoubleClick, win, lx, ly)) {
-          send_message(win, kWindowMessageLeftButtonDoubleClick,
+        if (!handle_mouse(evLeftButtonDoubleClick, win, lx, ly)) {
+          send_message(win, evLeftButtonDoubleClick,
                        MAKEDWORD(lx, ly), NULL);
         }
       }
@@ -502,7 +502,7 @@ void dispatch_message(ui_event_t *msg) {
         if (hit) {
           // Release inside the button: let win_toolbar_button/win_button fire
           // the click notification normally via LeftButtonUp.
-          send_message(tc, kWindowMessageLeftButtonUp,
+          send_message(tc, evLeftButtonUp,
                        MAKEDWORD(tb_x - tc->frame.x, tb_y - tc->frame.y), NULL);
         } else {
           // Release outside: clear the pressed visual without firing a click.
@@ -523,7 +523,7 @@ void dispatch_message(ui_event_t *msg) {
                         && sx >= close_x && sx < close_x + CONTROL_BUTTON_WIDTH
                         && sy >= title_y && sy < title_y + TITLEBAR_HEIGHT;
         if (on_close) {
-          // Clear dragging BEFORE the send: kWindowMessageClose may open a modal
+          // Clear dragging BEFORE the send: evClose may open a modal
           // dialog that pumps events, and a live dragging pointer would cause the
           // window to follow the mouse during that dialog.  Same pattern as
           // toolbar_down_win which is cleared before its send above.
@@ -532,13 +532,13 @@ void dispatch_message(ui_event_t *msg) {
           if (closing->flags & WINDOW_DIALOG) {
             end_dialog(closing, -1);
           } else {
-            if (!send_message(closing, kWindowMessageClose, 0, NULL)) {
+            if (!send_message(closing, evClose, 0, NULL)) {
               show_window(closing, false);
             }
           }
         } else {
           if (msg->message == kEventLeftButtonUp)
-            send_message(g_ui_runtime.dragging, kWindowMessageNonClientLeftButtonUp,
+            send_message(g_ui_runtime.dragging, evNonClientLeftButtonUp,
                          MAKEDWORD(sx, sy), NULL);
           g_ui_runtime.dragging = NULL;
         }
@@ -553,8 +553,8 @@ void dispatch_message(ui_event_t *msg) {
           int lx = LOCAL_X(px, py, win);
           int ly = LOCAL_Y(px, py, win);
           int wmsg = (msg->message == kEventLeftButtonUp)
-                     ? kWindowMessageLeftButtonUp
-                     : kWindowMessageRightButtonUp;
+                     ? evLeftButtonUp
+                     : evRightButtonUp;
           if (!handle_mouse(wmsg, win, lx, ly)) {
             send_message(win, wmsg, MAKEDWORD(lx, ly), NULL);
           }
@@ -562,7 +562,7 @@ void dispatch_message(ui_event_t *msg) {
           int sx = SCALE_POINT(px);
           int sy = SCALE_POINT(py);
           if (msg->message == kEventLeftButtonUp)
-            send_message(win, kWindowMessageNonClientLeftButtonUp,
+            send_message(win, evNonClientLeftButtonUp,
                          MAKEDWORD(sx, sy), NULL);
         }
       }

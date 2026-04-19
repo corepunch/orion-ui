@@ -2,7 +2,7 @@
 // Tests for the popup dismissal behavior introduced in the menu-fix PR:
 //   1. Popup opens when a top-level label is clicked.
 //   2. Popup closes immediately when a click lands outside its bounds.
-//   3. Popup is destroyed BEFORE the kWindowMessageCommand notification is
+//   3. Popup is destroyed BEFORE the evCommand notification is
 //      dispatched, so that e.g. a modal dialog opened from a menu item
 //      does not render on top of the still-visible popup.
 
@@ -46,7 +46,7 @@ static void reset_counters(void) {
 // Basic proc: just counts received item-click commands.
 static result_t menubar_proc_basic(window_t *win, uint32_t msg,
                                    uint32_t wparam, void *lparam) {
-    if (msg == kWindowMessageCommand &&
+    if (msg == evCommand &&
         HIWORD(wparam) == kMenuBarNotificationItemClick) {
         g_cmd_count++;
         g_cmd_last_id = LOWORD(wparam);
@@ -59,7 +59,7 @@ static result_t menubar_proc_basic(window_t *win, uint32_t msg,
 // the command arrives.
 static result_t menubar_proc_order_check(window_t *win, uint32_t msg,
                                          uint32_t wparam, void *lparam) {
-    if (msg == kWindowMessageCommand &&
+    if (msg == evCommand &&
         HIWORD(wparam) == kMenuBarNotificationItemClick) {
         g_cmd_count++;
         g_cmd_last_id = LOWORD(wparam);
@@ -98,7 +98,7 @@ static window_t *make_menubar(winproc_t proc) {
 // menu_x[0] = 4, label_w = MENU_LABEL_PAD (12) when font not initialised.
 // Clicking at (x=6, y=4) lands inside the label hit-region [2, 14).
 static void open_popup(window_t *mb) {
-    send_message(mb, kWindowMessageLeftButtonDown, MAKEDWORD(6, 4), NULL);
+    send_message(mb, evLeftButtonDown, MAKEDWORD(6, 4), NULL);
 }
 
 // ---- tests ------------------------------------------------------------------
@@ -143,7 +143,7 @@ void test_popup_closes_on_outside_click(void) {
     // Simulate click at coordinates outside the popup bounds.
     // MAKEDWORD casts its args to uint16_t, so passing -10 yields 0xFFF6,
     // which the popup proc reads back as int16_t -10 — outside [0, w).
-    send_message(popup, kWindowMessageLeftButtonDown,
+    send_message(popup, evLeftButtonDown,
                  MAKEDWORD(-10, -10), NULL);
 
     // Popup must be gone and capture released.
@@ -156,7 +156,7 @@ void test_popup_closes_on_outside_click(void) {
 }
 
 void test_popup_closes_before_command_on_item_click(void) {
-    TEST("Menubar popup is destroyed before kWindowMessageCommand fires");
+    TEST("Menubar popup is destroyed before evCommand fires");
 
     test_env_init();
     reset_counters();
@@ -174,7 +174,7 @@ void test_popup_closes_before_command_on_item_click(void) {
     // Press on the first item "Open" (id=1): highlights item, does NOT fire yet.
     // Items start at y=2; first item occupies y in [2, 14) (MENU_ITEM_H=12).
     // x=10 is inside popup width (MENU_MIN_W=90).
-    send_message(popup, kWindowMessageLeftButtonDown,
+    send_message(popup, evLeftButtonDown,
                  MAKEDWORD(10, 5), NULL);
 
     // Popup must still be open after mouse-down (action fires on mouse-up).
@@ -183,7 +183,7 @@ void test_popup_closes_before_command_on_item_click(void) {
     ASSERT_EQUAL(g_cmd_count, 0);
 
     // Release on the same item – popup closes and command fires.
-    send_message(popup, kWindowMessageLeftButtonUp,
+    send_message(popup, evLeftButtonUp,
                  MAKEDWORD(10, 5), NULL);
 
     // The popup must have been destroyed.
@@ -216,11 +216,11 @@ void test_popup_cancel_on_different_item_release(void) {
     ASSERT_NOT_NULL(popup);
 
     // Press on "Open" (y=5, item index 0).
-    send_message(popup, kWindowMessageLeftButtonDown, MAKEDWORD(10, 5), NULL);
+    send_message(popup, evLeftButtonDown, MAKEDWORD(10, 5), NULL);
     ASSERT_EQUAL(count_windows(), 2);   // popup still open
 
     // Release on "Save" (y=17, item index 1) – different item, must cancel.
-    send_message(popup, kWindowMessageLeftButtonUp, MAKEDWORD(10, 17), NULL);
+    send_message(popup, evLeftButtonUp, MAKEDWORD(10, 17), NULL);
     ASSERT_EQUAL(g_cmd_count, 0);       // no command fired
     ASSERT_EQUAL(count_windows(), 1);   // popup closed
 
@@ -244,8 +244,8 @@ void test_popup_command_delivered_for_each_item(void) {
     window_t *popup = find_other_window(mb);
     ASSERT_NOT_NULL(popup);
 
-    send_message(popup, kWindowMessageLeftButtonDown, MAKEDWORD(10, 17), NULL);
-    send_message(popup, kWindowMessageLeftButtonUp,   MAKEDWORD(10, 17), NULL);
+    send_message(popup, evLeftButtonDown, MAKEDWORD(10, 17), NULL);
+    send_message(popup, evLeftButtonUp,   MAKEDWORD(10, 17), NULL);
 
     ASSERT_EQUAL(g_cmd_count, 1);
     ASSERT_EQUAL(g_cmd_last_id, 2);
@@ -257,8 +257,8 @@ void test_popup_command_delivered_for_each_item(void) {
     popup = find_other_window(mb);
     ASSERT_NOT_NULL(popup);
 
-    send_message(popup, kWindowMessageLeftButtonDown, MAKEDWORD(10, 33), NULL);
-    send_message(popup, kWindowMessageLeftButtonUp,   MAKEDWORD(10, 33), NULL);
+    send_message(popup, evLeftButtonDown, MAKEDWORD(10, 33), NULL);
+    send_message(popup, evLeftButtonUp,   MAKEDWORD(10, 33), NULL);
 
     ASSERT_EQUAL(g_cmd_count, 2);
     ASSERT_EQUAL(g_cmd_last_id, 3);
@@ -269,7 +269,7 @@ void test_popup_command_delivered_for_each_item(void) {
 }
 
 void test_nonclient_buttonup_closes_popup(void) {
-    TEST("Menubar popup closes on kWindowMessageNonClientLeftButtonUp");
+    TEST("Menubar popup closes on evNonClientLeftButtonUp");
 
     test_env_init();
     reset_counters();
@@ -283,7 +283,7 @@ void test_nonclient_buttonup_closes_popup(void) {
     window_t *popup = find_other_window(mb);
     ASSERT_NOT_NULL(popup);
 
-    send_message(popup, kWindowMessageNonClientLeftButtonUp,
+    send_message(popup, evNonClientLeftButtonUp,
                  MAKEDWORD(0, 0), NULL);
 
     ASSERT_EQUAL(count_windows(), 1);
@@ -312,7 +312,7 @@ void test_popup_no_action_on_mouseup_without_press(void) {
     // Send mouse-up on a valid item without a prior mouse-down inside popup.
     // This simulates the case where the popup opens from a menubar click
     // and the mouse-up of that click arrives in the popup.
-    send_message(popup, kWindowMessageLeftButtonUp, MAKEDWORD(10, 5), NULL);
+    send_message(popup, evLeftButtonUp, MAKEDWORD(10, 5), NULL);
 
     // Popup must still be open (no action, no close).
     ASSERT_EQUAL(count_windows(), 2);

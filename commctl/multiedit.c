@@ -4,8 +4,8 @@
 // Text lives in buf[ME_BUF_SIZE]; win->title is not used for content.
 //
 // Messages handled in addition to the standard window messages:
-//   kMultiEditMessageGetText  wparam=buf_size, lparam=char* → copies text, returns byte count
-//   kMultiEditMessageSetText  wparam=0, lparam=const char* → replaces text, resets cursor/scroll
+//   edGetText  wparam=buf_size, lparam=char* → copies text, returns byte count
+//   edSetText  wparam=0, lparam=const char* → replaces text, resets cursor/scroll
 
 #include <string.h>
 #include <stdlib.h>
@@ -125,7 +125,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
 
   switch (msg) {
     // ── Create ─────────────────────────────────────────────────────────────
-    case kWindowMessageCreate: {
+    case evCreate: {
       s = (me_state_t *)allocate_window_data(win, sizeof(me_state_t));
       if (!s) return true;
       strncpy(s->buf, win->title, ME_BUF_SIZE - 1);
@@ -137,19 +137,19 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
     }
 
     // ── Destroy ────────────────────────────────────────────────────────────
-    case kWindowMessageDestroy:
+    case evDestroy:
       free(s);
       win->userdata = NULL;
       return false;
 
     // ── Focus / blur ───────────────────────────────────────────────────────
-    case kWindowMessageSetFocus:
-    case kWindowMessageKillFocus:
+    case evSetFocus:
+    case evKillFocus:
       invalidate_window(win);
       return false;
 
     // ── Paint ──────────────────────────────────────────────────────────────
-    case kWindowMessagePaint: {
+    case evPaint: {
       if (!s) return true;
       bool focused = (g_ui_runtime.focused == win);
 
@@ -197,7 +197,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
     }
 
     // ── Mouse click to position ────────────────────────────────────────────
-    case kWindowMessageLeftButtonUp: {
+    case evLeftButtonUp: {
       if (!s) return true;
       int tw = win->frame.w - ME_PADDING * 2;
       int th = win->frame.h - ME_PADDING * 2;
@@ -213,7 +213,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
     }
 
     // ── Mouse-wheel scroll ─────────────────────────────────────────────────
-    case kWindowMessageWheel: {
+    case evWheel: {
       if (!s) return true;
       int th = win->frame.h - ME_PADDING * 2;
       int tw = win->frame.w - ME_PADDING * 2;
@@ -229,7 +229,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
     }
 
     // ── Text input ─────────────────────────────────────────────────────────
-    case kWindowMessageTextInput: {
+    case evTextInput: {
       if (!s || !lparam) return true;
       char c = *(const char *)lparam;
       // Accept only printable ASCII; newlines are handled via AX_KEY_ENTER.
@@ -249,7 +249,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
     }
 
     // ── Key navigation and editing ─────────────────────────────────────────
-    case kWindowMessageKeyDown: {
+    case evKeyDown: {
       if (!s) return true;
       int tw = win->frame.w - ME_PADDING * 2;
       int th = win->frame.h - ME_PADDING * 2;
@@ -354,7 +354,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
 
         case AX_KEY_TAB:
           // Notify parent and yield focus so Tab advances to next control.
-          send_message(get_root_window(win), kWindowMessageCommand,
+          send_message(get_root_window(win), evCommand,
                        MAKEDWORD(win->id, kEditNotificationUpdate), win);
           return false;
 
@@ -366,8 +366,8 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       }
     }
 
-    // ── kMultiEditMessageSetText ───────────────────────────────────────────
-    case kMultiEditMessageSetText: {
+    // ── edSetText ───────────────────────────────────────────
+    case edSetText: {
       if (!s || !lparam) return true;
       const char *src = (const char *)lparam;
       strncpy(s->buf, src, ME_BUF_SIZE - 1);
@@ -379,8 +379,8 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       return true;
     }
 
-    // ── kMultiEditMessageGetText ───────────────────────────────────────────
-    case kMultiEditMessageGetText: {
+    // ── edGetText ───────────────────────────────────────────
+    case edGetText: {
       if (!s || !lparam) return 0;
       int maxlen = (int)wparam;
       char *dst  = (char *)lparam;

@@ -46,7 +46,7 @@ const uint32_t kPalette[NUM_COLORS] = {
 result_t win_color_palette_proc(window_t *win, uint32_t msg,
                                  uint32_t wparam, void *lparam) {
   switch (msg) {
-    case kWindowMessagePaint: {
+    case evPaint: {
       fill_rect(get_sys_color(kColorWindowDarkBg), 0, 0, win->frame.w, win->frame.h);
       fill_rect(get_sys_color(kColorDarkEdge), win->frame.w - 1, 0, 1, win->frame.h);
 
@@ -63,7 +63,7 @@ result_t win_color_palette_proc(window_t *win, uint32_t msg,
       return true;
     }
 
-    case kWindowMessageLeftButtonDown: {
+    case evLeftButtonDown: {
       if (!g_app) return true;
       int lx = (int16_t)LOWORD(wparam);
       int ly = (int16_t)HIWORD(wparam);
@@ -78,7 +78,7 @@ result_t win_color_palette_proc(window_t *win, uint32_t msg,
       return true;
     }
 
-    case kWindowMessageRightButtonDown: {
+    case evRightButtonDown: {
       if (!g_app) return true;
       int lx = (int16_t)LOWORD(wparam);
       int ly = (int16_t)HIWORD(wparam);

@@ -59,24 +59,24 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
                               uint32_t wparam, void *lparam) {
   form_doc_t *doc = (form_doc_t *)win->userdata;
   switch (msg) {
-    case kWindowMessageCreate:
+    case evCreate:
       return true;
-    case kWindowMessagePaint:
+    case evPaint:
       fill_rect(get_sys_color(kColorWorkspaceBg), 0, 0, win->frame.w, win->frame.h);
       return false;
-    case kWindowMessageHScroll:
+    case evHScroll:
       // Forward the built-in hscroll notification to the canvas child.
       if (doc && doc->canvas_win)
-        send_message(doc->canvas_win, kWindowMessageHScroll, wparam, lparam);
+        send_message(doc->canvas_win, evHScroll, wparam, lparam);
       return true;
-    case kWindowMessageResize: {
+    case evResize: {
       if (doc && doc->canvas_win) {
         rect_t cr = get_client_rect(win);
         resize_window(doc->canvas_win, cr.w, cr.h);
       }
       return false;
     }
-    case kWindowMessageClose: {
+    case evClose: {
       if (!doc) return false;
       if (doc->modified) {
         int res = message_box(win,
@@ -137,7 +137,7 @@ form_doc_t *create_form_doc(int w, int h) {
 
   show_window(dwin, true);
   form_doc_update_title(doc);
-  send_message(dwin, kWindowMessageStatusBar, 0, (void *)"New form");
+  send_message(dwin, evStatusBar, 0, (void *)"New form");
   return doc;
 }
 
@@ -424,7 +424,7 @@ static result_t about_proc(window_t *win, uint32_t msg,
                             uint32_t wparam, void *lparam) {
   (void)lparam;
   switch (msg) {
-    case kWindowMessageCreate: {
+    case evCreate: {
       // Info labels
       create_window("Orion Form Editor", WINDOW_NOTITLE | WINDOW_NOFILL,
           MAKERECT(8, 8, ABOUT_W - 16, CONTROL_HEIGHT),
@@ -441,7 +441,7 @@ static result_t about_proc(window_t *win, uint32_t msg,
           win, win_button, 0, NULL);
       return true;
     }
-    case kWindowMessageCommand:
+    case evCommand:
       if (HIWORD(wparam) == kButtonNotificationClicked) {
         end_dialog(win, 1);
         return true;
@@ -513,7 +513,7 @@ static result_t props_proc(window_t *win, uint32_t msg,
                             uint32_t wparam, void *lparam) {
   props_state_t *ps = (props_state_t *)win->userdata;
   switch (msg) {
-    case kWindowMessageCreate: {
+    case evCreate: {
       ps = (props_state_t *)lparam;
       win->userdata = ps;
 
@@ -531,7 +531,7 @@ static result_t props_proc(window_t *win, uint32_t msg,
       return true;
     }
 
-    case kWindowMessageCommand: {
+    case evCommand: {
       if (HIWORD(wparam) != kButtonNotificationClicked) return false;
       window_t *src = (window_t *)lparam;
       if (!src) return false;
@@ -603,9 +603,9 @@ void handle_menu_command(uint16_t id) {
             ndoc->modified = false;
             form_doc_update_title(ndoc);
             if (ndoc->canvas_win) invalidate_window(ndoc->canvas_win);
-            send_message(ndoc->doc_win, kWindowMessageStatusBar, 0, path);
+            send_message(ndoc->doc_win, evStatusBar, 0, path);
           } else {
-            send_message(ndoc->doc_win, kWindowMessageStatusBar, 0,
+            send_message(ndoc->doc_win, evStatusBar, 0,
                          (void *)"Failed to load form");
           }
         }
@@ -619,9 +619,9 @@ void handle_menu_command(uint16_t id) {
       if (form_save(doc, doc->filename)) {
         doc->modified = false;
         form_doc_update_title(doc);
-        send_message(doc->doc_win, kWindowMessageStatusBar, 0, (void *)"Saved");
+        send_message(doc->doc_win, evStatusBar, 0, (void *)"Saved");
       } else {
-        send_message(doc->doc_win, kWindowMessageStatusBar, 0, (void *)"Save failed");
+        send_message(doc->doc_win, evStatusBar, 0, (void *)"Save failed");
       }
       break;
 
@@ -635,9 +635,9 @@ void handle_menu_command(uint16_t id) {
         if (form_save(doc, path)) {
           doc->modified = false;
           form_doc_update_title(doc);
-          send_message(doc->doc_win, kWindowMessageStatusBar, 0, path);
+          send_message(doc->doc_win, evStatusBar, 0, path);
         } else {
-          send_message(doc->doc_win, kWindowMessageStatusBar, 0, (void *)"Save failed");
+          send_message(doc->doc_win, evStatusBar, 0, (void *)"Save failed");
         }
       }
       break;
@@ -716,7 +716,7 @@ void handle_menu_command(uint16_t id) {
 
 result_t editor_menubar_proc(window_t *win, uint32_t msg,
                               uint32_t wparam, void *lparam) {
-  if (msg == kWindowMessageCommand) {
+  if (msg == evCommand) {
     uint16_t notif = HIWORD(wparam);
     if (notif == kMenuBarNotificationItemClick ||
         notif == kAcceleratorNotification      ||

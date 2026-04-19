@@ -7,7 +7,7 @@
  *
  * Provides a Win32-style message-based interface for non-blocking HTTP and
  * HTTPS requests.  Callers issue a request with http_request_async() and
- * receive kWindowMessageHttpDone (and optionally kWindowMessageHttpProgress)
+ * receive evHttpDone (and optionally evHttpProgress)
  * Orion messages on the registered window when the request completes.
  *
  * The underlying transport (TCP sockets + TLS via the platform layer) is
@@ -16,12 +16,12 @@
  * ### Typical usage
  * @code
  *   // In your window proc:
- *   case kWindowMessageCreate:
+ *   case evCreate:
  *     http_request_async(win, "https://api.example.com/data",
  *                        NULL, NULL);
  *     return true;
  *
- *   case kWindowMessageHttpDone: {
+ *   case evHttpDone: {
  *     http_request_id_t id   = (http_request_id_t)wparam;
  *     http_response_t  *resp = (http_response_t *)lparam;
  *     if (resp->status == 200) {
@@ -112,7 +112,7 @@ typedef struct {
  * ---------------------------------------------------------------------- */
 
 /**
- * @brief HTTP response delivered via kWindowMessageHttpDone.
+ * @brief HTTP response delivered via evHttpDone.
  *
  * Ownership is transferred to the window proc; call http_response_free()
  * exactly once after processing the message.
@@ -152,7 +152,7 @@ typedef struct {
  * ---------------------------------------------------------------------- */
 
 /**
- * @brief Download progress snapshot delivered via kWindowMessageHttpProgress.
+ * @brief Download progress snapshot delivered via evHttpProgress.
  *
  * The pointer is framework-owned and only valid for the duration of the
  * message handler — do NOT retain or free it.
@@ -190,7 +190,7 @@ bool http_init(void);
  * @brief Shut down the async HTTP subsystem.
  *
  * Cancels all in-flight requests and joins the worker thread.  After this
- * call no further kWindowMessageHttpDone messages will be posted.
+ * call no further evHttpDone messages will be posted.
  */
 void http_shutdown(void);
 
@@ -198,14 +198,14 @@ void http_shutdown(void);
  * @brief Issue an asynchronous HTTP or HTTPS request.
  *
  * The request is executed on a background thread.  On completion (or error)
- * a kWindowMessageHttpDone message is posted to @p notify_win:
+ * a evHttpDone message is posted to @p notify_win:
  *   - wparam = request handle (http_request_id_t)
  *   - lparam = heap-allocated http_response_t*
  *
  * Ownership of the http_response_t* is transferred to the window proc; the
  * caller must free it with http_response_free() when done.
  *
- * If the response body is large a kWindowMessageHttpProgress message is
+ * If the response body is large a evHttpProgress message is
  * also posted periodically (only when Content-Length is known).
  *
  * @param notify_win  Window that receives the completion message.
@@ -227,7 +227,7 @@ http_request_id_t http_request_async(window_t       *notify_win,
  * @brief Cancel a pending request.
  *
  * If the request is still running it is abandoned; no
- * kWindowMessageHttpDone will be posted for it.  Safe to call after the
+ * evHttpDone will be posted for it.  Safe to call after the
  * request has already completed (no-op in that case).
  *
  * @param id  Handle returned by http_request_async().
@@ -238,7 +238,7 @@ void http_cancel(http_request_id_t id);
  * @brief Free a response object.
  *
  * Must be called exactly once for every http_response_t* received via
- * kWindowMessageHttpDone.  Passing NULL is safe.
+ * evHttpDone.  Passing NULL is safe.
  *
  * @param resp  Response to free.
  */

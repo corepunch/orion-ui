@@ -6,7 +6,7 @@
 //      (usually WINDOW_NOTITLE | WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON |
 //       WINDOW_NORESIZE, full screen width, height = MENUBAR_HEIGHT).
 //   2. Send kMenuBarMessageSetMenus with your menu_def_t array.
-//   3. Handle kWindowMessageCommand in the same proc (chain with win_menubar)
+//   3. Handle evCommand in the same proc (chain with win_menubar)
 //      checking HIWORD(wparam) == kMenuBarNotificationItemClick.
 
 #include <stdlib.h>
@@ -106,7 +106,7 @@ static result_t popup_proc(window_t *win, uint32_t msg,
                             uint32_t wparam, void *lparam) {
   popup_data_t *pd = (popup_data_t *)win->userdata;
   switch (msg) {
-    case kWindowMessageCreate:
+    case evCreate:
       pd = (popup_data_t *)lparam;
       win->userdata = pd;
       pd->hovered = -1;
@@ -114,7 +114,7 @@ static result_t popup_proc(window_t *win, uint32_t msg,
       set_capture(win);    // receive ALL mouse events, even outside our bounds
       return true;
 
-    case kWindowMessagePaint: {
+    case evPaint: {
       // Background
       fill_rect(get_sys_color(kColorWindowBg), 0, 0, win->frame.w, win->frame.h);
       // Border
@@ -155,7 +155,7 @@ static result_t popup_proc(window_t *win, uint32_t msg,
       return true;
     }
 
-    case kWindowMessageMouseMove: {
+    case evMouseMove: {
       int lx = (int16_t)LOWORD(wparam);
       int ly = (int16_t)HIWORD(wparam);
       int new_hovered = -1;
@@ -178,7 +178,7 @@ static result_t popup_proc(window_t *win, uint32_t msg,
       return true;
     }
 
-    case kWindowMessageLeftButtonDown: {
+    case evLeftButtonDown: {
       // Coords are popup-window-local (set_capture ensures we get them)
       int lx = (int16_t)LOWORD(wparam);
       int ly = (int16_t)HIWORD(wparam);
@@ -213,7 +213,7 @@ static result_t popup_proc(window_t *win, uint32_t msg,
       return true;
     }
 
-    case kWindowMessageLeftButtonUp: {
+    case evLeftButtonUp: {
       // Only act if user pressed inside the popup first
       if (pd->pressed < 0) return true;
       int lx = (int16_t)LOWORD(wparam);
@@ -244,7 +244,7 @@ static result_t popup_proc(window_t *win, uint32_t msg,
         destroy_window(win);  // close popup before command runs (e.g. dialogs)
         if (mb) {
           invalidate_window(mb);
-          send_message(mb, kWindowMessageCommand,
+          send_message(mb, evCommand,
                        MAKEDWORD(item_id, kMenuBarNotificationItemClick),
                        NULL);
         }
@@ -257,7 +257,7 @@ static result_t popup_proc(window_t *win, uint32_t msg,
     }
 
     // Fallback: non-client mouse-up (should not fire with set_capture, kept for safety)
-    case kWindowMessageNonClientLeftButtonUp: {
+    case evNonClientLeftButtonUp: {
       window_t *mb = pd->menubar;
       menubar_data_t *mbd = mb ? (menubar_data_t *)mb->userdata : NULL;
       if (mbd) {
@@ -269,7 +269,7 @@ static result_t popup_proc(window_t *win, uint32_t msg,
       return true;
     }
 
-    case kWindowMessageDestroy:
+    case evDestroy:
       free(win->userdata);
       win->userdata = NULL;
       set_capture(NULL);
@@ -336,7 +336,7 @@ static void open_popup(window_t *mb_win, menubar_data_t *data, int idx) {
 result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   menubar_data_t *data = (menubar_data_t *)win->userdata;
   switch (msg) {
-    case kWindowMessageCreate: {
+    case evCreate: {
       menubar_data_t *d = malloc(sizeof(menubar_data_t));
       memset(d, 0, sizeof(menubar_data_t));
       d->active_idx = -1;
@@ -369,7 +369,7 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       if (data) data->accel = (accel_table_t *)lparam;
       return true;
 
-    case kWindowMessagePaint: {
+    case evPaint: {
       fill_rect(get_sys_color(kColorWindowDarkBg), 0, 0, win->frame.w, win->frame.h);
       // Bottom border
       fill_rect(get_sys_color(kColorDarkEdge), 0, win->frame.h - 1, win->frame.w, 1);
@@ -388,7 +388,7 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       return true;
     }
 
-    case kWindowMessageLeftButtonDown: {
+    case evLeftButtonDown: {
       if (!data || !data->menus) return true;
       int lx = (int16_t)LOWORD(wparam);
       for (int i = 0; i < data->count; i++) {
@@ -406,12 +406,12 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       return true;
     }
 
-    case kWindowMessageDisplayChange: {
+    case evDisplayChange: {
       win->frame.w = LOWORD(wparam);
       return false;
     }
 
-    case kWindowMessageDestroy: {
+    case evDestroy: {
       if (data) {
         close_popup(win, data);
         free(data->menus);

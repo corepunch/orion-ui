@@ -38,7 +38,7 @@ struct rect_s {
 
 // A fixed-size-tile bitmap strip, analogous to WinAPI HIMAGELIST / TB_ADDBITMAP.
 // Icons are indexed 0..N left-to-right then top-to-bottom.
-// Used with kButtonMessageSetImage and kToolBarMessageSetStrip.
+// Used with btnSetImage and tbSetStrip.
 typedef struct bitmap_strip_s {
   uint32_t tex;     // OpenGL texture ID of the strip texture
   int      icon_w;  // pixel width of each icon tile
@@ -123,7 +123,7 @@ struct window_s {
   uint32_t cursor_pos;
   window_t *toolbar_children; // real child windows in the toolbar band (toolbar-band-relative frames)
   bitmap_strip_t toolbar_strip;
-  uint32_t toolbar_strip_tex;  // GL texture owned by kToolBarMessageLoadStrip (freed on destroy)
+  uint32_t toolbar_strip_tex;  // GL texture owned by tbLoadStrip (freed on destroy)
   int    toolbar_btn_size;   // 0 = use TB_SPACING default; >0 = custom square button size in pixels
   void *userdata;
   void *userdata2;
@@ -274,7 +274,7 @@ typedef struct {
                        // BIND_INT_COMBO: default index (used when pull returns < 0)
 } ctrl_binding_t;
 
-// dialog_push: write state fields → controls (call from kWindowMessageCreate).
+// dialog_push: write state fields → controls (call from evCreate).
 void dialog_push(window_t *win, const void *state,
                  const ctrl_binding_t *b, int n);
 

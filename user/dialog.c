@@ -17,7 +17,7 @@
 // Shared modal message loop.  Runs until the dialog window is destroyed or the
 // application exits.  Forces a full repaint after the dialog is gone.
 static uint32_t run_dialog_loop(window_t *dlg, window_t *parent) {
-  // Guard against the window being destroyed during kWindowMessageCreate
+  // Guard against the window being destroyed during evCreate
   // (e.g. end_dialog called from the window proc's create handler).
   if (!is_window(dlg)) return 0;
   uint32_t result = 0;
@@ -34,12 +34,12 @@ static uint32_t run_dialog_loop(window_t *dlg, window_t *parent) {
   if (parent) enable_window(parent, true);
   // Force a clean stencil rebuild + full repaint to clear the area the dialog
   // occupied.  destroy_window's recursive child teardown re-queues
-  // kWindowMessageRefreshStencil *after* any already-pending paint messages
+  // evRefreshStencil *after* any already-pending paint messages
   // (a dedup side-effect), so the repaint inside the loop above may paint
   // against a stale stencil, leaving a ghost.  Posting a fresh RefreshStencil
   // here, after all dialog windows are gone, guarantees correct ordering.
   if (g_ui_runtime.running) {
-    post_message((window_t*)1, kWindowMessageRefreshStencil, 0, NULL);
+    post_message((window_t*)1, evRefreshStencil, 0, NULL);
     for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
       if (w->visible) invalidate_window(w);
     }
@@ -75,7 +75,7 @@ uint32_t show_dialog(char const *title,
 
 // Show a modal dialog whose layout is described by a form_def_t.
 // Children are instantiated (via create_window_from_form) before
-// kWindowMessageCreate fires, so the window proc can find them already in
+// evCreate fires, so the window proc can find them already in
 // place — analogous to WinAPI DialogBoxIndirectParam.
 // title overrides def->name when non-NULL.  The dialog is centered on screen.
 uint32_t show_dialog_from_form_ex(form_def_t const *def, char const *title,
@@ -144,7 +144,7 @@ void dialog_push(window_t *win, const void *state,
       case BIND_MLSTRING: {
         window_t *ctrl = get_window_item(win, b[i].ctrl_id);
         if (ctrl)
-          send_message(ctrl, kMultiEditMessageSetText, 0,
+          send_message(ctrl, edSetText, 0,
                        (void *)(base + b[i].offset));
         break;
       }
@@ -153,7 +153,7 @@ void dialog_push(window_t *win, const void *state,
         if (ctrl) {
           int v = *(const int *)(base + b[i].offset);
           if (v < 0) v = (int)b[i].size;
-          send_message(ctrl, kComboBoxMessageSetCurrentSelection,
+          send_message(ctrl, cbSetCurrentSelection,
                        (uint32_t)v, NULL);
         }
         break;
@@ -188,11 +188,11 @@ void dialog_pull(window_t *win, void *state,
         char  *dst = base + b[i].offset;
         size_t sz  = b[i].size;
         if (sz > 0)
-          send_message(ctrl, kMultiEditMessageGetText, (uint32_t)sz, dst);
+          send_message(ctrl, edGetText, (uint32_t)sz, dst);
         break;
       }
       case BIND_INT_COMBO: {
-        int v = (int)send_message(ctrl, kComboBoxMessageGetCurrentSelection, 0, NULL);
+        int v = (int)send_message(ctrl, cbGetCurrentSelection, 0, NULL);
         *(int *)(base + b[i].offset) = (v >= 0) ? v : (int)b[i].size;
         break;
       }

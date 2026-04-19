@@ -66,7 +66,7 @@ Handles window creation, destruction, message passing, and basic rendering primi
 - Window creation and lifecycle management
 - Message queue and dispatch
 - Drawing primitives (rectangles, text, icons)
-- Window messages (kWindowMessageCreate, kWindowMessagePaint, kWindowMessageLeftButtonUp, etc.)
+- Window messages (evCreate, evPaint, evLeftButtonUp, etc.)
 
 ### ui/kernel/ - Event Management Layer
 
@@ -142,11 +142,11 @@ make clean
 
 The framework uses a message-based architecture. Common messages include:
 
-- `kWindowMessageCreate` - Window is being created
-- `kWindowMessageDestroy` - Window is being destroyed
-- `kWindowMessagePaint` - Window needs to be redrawn
-- `kWindowMessageLeftButtonDown` - Left mouse button pressed
-- `kWindowMessageLeftButtonUp` - Left mouse button released
-- `kWindowMessageKeyDown` - Key pressed
-- `kWindowMessageKeyUp` - Key released
-- `kWindowMessageCommand` - Control notification
+- `evCreate` - Window is being created
+- `evDestroy` - Window is being destroyed
+- `evPaint` - Window needs to be redrawn
+- `evLeftButtonDown` - Left mouse button pressed
+- `evLeftButtonUp` - Left mouse button released
+- `evKeyDown` - Key pressed
+- `evKeyUp` - Key released
+- `evCommand` - Control notification

@@ -65,7 +65,7 @@ static const int k_tool_icon_idx[NUM_TOOLS] = {
 result_t win_tool_palette_proc(window_t *win, uint32_t msg,
                                 uint32_t wparam, void *lparam) {
   switch (msg) {
-    case kWindowMessageCreate: {
+    case evCreate: {
       // First let win_toolbox initialise its state.
       win_toolbox(win, msg, wparam, lparam);
 
@@ -73,7 +73,7 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
 #ifdef SHAREDIR
       char path[4096];
       snprintf(path, sizeof(path), "%s/" SHAREDIR "/tools.png", ui_get_exe_dir());
-      send_message(win, kToolboxMessageLoadStrip, ICON_W, path);
+      send_message(win, toolLoadStrip, ICON_W, path);
 #endif
 
       // Build item list in display order.
@@ -82,12 +82,12 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
         items[i].ident = k_tool_order[i];
         items[i].icon  = k_tool_icon_idx[i];
       }
-      send_message(win, kToolboxMessageSetItems, NUM_TOOLS, items);
-      send_message(win, kToolboxMessageSetActiveItem, ID_TOOL_SELECT, NULL);
+      send_message(win, toolSetItems, NUM_TOOLS, items);
+      send_message(win, toolSetActiveItem, ID_TOOL_SELECT, NULL);
       return true;
     }
 
-    case kWindowMessagePaint: {
+    case evPaint: {
       // Let win_toolbox paint the button grid (also fills the background).
       win_toolbox(win, msg, wparam, lparam);
 
@@ -130,7 +130,7 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       return true;
     }
 
-    case kWindowMessageLeftButtonDown: {
+    case evLeftButtonDown: {
       int mx = (int)(int16_t)LOWORD(wparam);
       int my = (int)(int16_t)HIWORD(wparam);
       int gy = toolbox_grid_height(win);
@@ -150,13 +150,13 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       return win_toolbox(win, msg, wparam, lparam);
     }
 
-    case kWindowMessageCommand:
+    case evCommand:
       // kToolboxNotificationClicked: a tool button was pressed.
       if (HIWORD(wparam) == kToolboxNotificationClicked) {
         int clicked_ident = (int)(int16_t)LOWORD(wparam);
         if (g_app) {
           if (g_app->menubar_win) {
-            send_message(g_app->menubar_win, kWindowMessageCommand,
+            send_message(g_app->menubar_win, evCommand,
                          MAKEDWORD((uint16_t)clicked_ident,
                                    kButtonNotificationClicked),
                          lparam);

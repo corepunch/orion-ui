@@ -15,7 +15,7 @@ result_t tasklist_proc(window_t *win, uint32_t msg,
                        uint32_t wparam, void *lparam) {
   result_t r = win_reportview(win, msg, wparam, lparam);
 
-  if (msg == kWindowMessageResize) {
+  if (msg == evResize) {
     send_message(win, RVM_SETREPORTCOLUMNWIDTH, 0,
                  (void *)(uintptr_t)tasklist_title_width(win));
   }

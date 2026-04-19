@@ -40,13 +40,13 @@ extern bool running;
 
 result_t main_wnd_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
-    case kWindowMessageCreate:
+    case evCreate:
       /* create child controls here */
       return true;
-    case kWindowMessagePaint:
+    case evPaint:
       /* draw here */
       return false;
-    case kWindowMessageDestroy:
+    case evDestroy:
       running = false;
       return true;
     default:

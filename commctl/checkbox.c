@@ -13,11 +13,11 @@ extern window_t *get_root_window(window_t *window);
 // Checkbox control window procedure
 result_t win_checkbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
-    case kWindowMessageCreate:
+    case evCreate:
       win->frame.w = MAX(win->frame.w, strwidth(win->title)+16);
       win->frame.h = MAX(win->frame.h, BUTTON_HEIGHT);
       return true;
-    case kWindowMessagePaint: {
+    case evPaint: {
       rect_t rem = win->frame;
       rect_t box = rect_split_left(&rem, CHECKBOX_BOX_SIZE);
       box.h = CHECKBOX_BOX_SIZE;
@@ -35,33 +35,33 @@ result_t win_checkbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       }
       return true;
     }
-    case kWindowMessageLeftButtonDown:
+    case evLeftButtonDown:
       win->pressed = true;
       invalidate_window(win);
       return true;
-    case kWindowMessageLeftButtonUp:
+    case evLeftButtonUp:
       win->pressed = false;
-      send_message(win, kButtonMessageSetCheck, !send_message(win, kButtonMessageGetCheck, 0, NULL), NULL);
-      send_message(get_root_window(win), kWindowMessageCommand, MAKEDWORD(win->id, kButtonNotificationClicked), win);
+      send_message(win, btnSetCheck, !send_message(win, btnGetCheck, 0, NULL), NULL);
+      send_message(get_root_window(win), evCommand, MAKEDWORD(win->id, kButtonNotificationClicked), win);
       invalidate_window(win);
       return true;
-    case kButtonMessageSetCheck:
-      win->value = (wparam != kButtonStateUnchecked);
+    case btnSetCheck:
+      win->value = (wparam != btnStateUnchecked);
       return true;
-    case kButtonMessageGetCheck:
-      return win->value ? kButtonStateChecked : kButtonStateUnchecked;
-    case kWindowMessageKeyDown:
+    case btnGetCheck:
+      return win->value ? btnStateChecked : btnStateUnchecked;
+    case evKeyDown:
       if (wparam == AX_KEY_ENTER || wparam == AX_KEY_SPACE) {
         win->pressed = true;
         invalidate_window(win);
         return true;
       }
       return false;
-    case kWindowMessageKeyUp:
+    case evKeyUp:
       if (wparam == AX_KEY_ENTER || wparam == AX_KEY_SPACE) {
         win->pressed = false;
-        send_message(win, kButtonMessageSetCheck, !send_message(win, kButtonMessageGetCheck, 0, NULL), NULL);
-        send_message(get_root_window(win), kWindowMessageCommand, MAKEDWORD(win->id, kButtonNotificationClicked), win);
+        send_message(win, btnSetCheck, !send_message(win, btnGetCheck, 0, NULL), NULL);
+        send_message(get_root_window(win), evCommand, MAKEDWORD(win->id, kButtonNotificationClicked), win);
         invalidate_window(win);
         return true;
       } else {

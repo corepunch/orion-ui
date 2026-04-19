@@ -39,7 +39,7 @@ Current toolbar item support in `user/messages.h` and creation path in `user/mes
 
 1. Use the async API documented in `docs/http.md`:
    - `http_request_async` on navigate
-   - `kWindowMessageHttpDone` to receive full HTML
+   - `evHttpDone` to receive full HTML
 2. Ignore CSS, JS, and resources; only process the returned HTML body.
 3. On back and forward:
    - load URL from history

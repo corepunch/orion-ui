@@ -8,7 +8,7 @@ nav_order: 8
 
 All controls are window procedures registered with `commctl.h`.  Create them
 as child windows of a parent; notifications are sent to the **root window**
-via `kWindowMessageCommand`.
+via `evCommand`.
 
 ## Scrollbar
 
@@ -21,10 +21,10 @@ window_t *vsb = create_window("", WINDOW_NOTITLE | WINDOW_NOFILL,
     parent, win_scrollbar, (void *)1 /* SB_VERT */);
 
 scrollbar_info_t info = { .min_val = 0, .max_val = 200, .page = 50, .pos = 0 };
-send_message(vsb, kScrollBarMessageSetInfo, 0, &info);
+send_message(vsb, sbSetInfo, 0, &info);
 
 // Receive position-change notification in the parent proc:
-case kWindowMessageCommand:
+case evCommand:
     if (HIWORD(wparam) == kScrollBarNotificationChanged) {
         int new_pos = (int)(intptr_t)lparam;
     }
@@ -44,7 +44,7 @@ window_t *btn = create_window("Click Me", 0,
     parent, win_button, NULL);
 
 // Receive click in parent's proc:
-case kWindowMessageCommand:
+case evCommand:
     if (HIWORD(wparam) == kButtonNotificationClicked)
         handle_click((window_t *)lparam);
 ```
@@ -57,9 +57,9 @@ window_t *chk = create_window("Enable fog", 0,
     parent, win_checkbox, NULL);
 
 // Query / set checked state
-send_message(chk, kButtonMessageSetCheck, kButtonStateChecked, NULL);
-int state = send_message(chk, kButtonMessageGetCheck, 0, NULL);
-// state == kButtonStateChecked or kButtonStateUnchecked
+send_message(chk, btnSetCheck, btnStateChecked, NULL);
+int state = send_message(chk, btnGetCheck, 0, NULL);
+// state == btnStateChecked or btnStateUnchecked
 ```
 
 ## Text Edit
@@ -73,7 +73,7 @@ window_t *ed = create_window("", WINDOW_NOTITLE,
 const char *text = ed->title;
 
 // Notification when text changes
-case kWindowMessageCommand:
+case evCommand:
     if (HIWORD(wparam) == kEditNotificationUpdate)
         on_text_changed(((window_t *)lparam)->title);
 ```
@@ -93,13 +93,13 @@ window_t *cb = create_window("", 0,
     MAKERECT(10, 70, 150, BUTTON_HEIGHT),
     parent, win_combobox, NULL);
 
-send_message(cb, kComboBoxMessageAddString, 0, (void *)"Option A");
-send_message(cb, kComboBoxMessageAddString, 0, (void *)"Option B");
+send_message(cb, cbAddString, 0, (void *)"Option A");
+send_message(cb, cbAddString, 0, (void *)"Option B");
 
-int sel = send_message(cb, kComboBoxMessageGetCurrentSelection, 0, NULL);
+int sel = send_message(cb, cbGetCurrentSelection, 0, NULL);
 
 // Selection-change notification:
-case kWindowMessageCommand:
+case evCommand:
     if (HIWORD(wparam) == kComboBoxNotificationSelectionChange) { … }
 ```
 
@@ -129,7 +129,7 @@ send_message(cv, RVM_CLEAR, 0, NULL);
 cv->scroll[0] = cv->scroll[1] = 0;
 
 // Selection notification in root proc:
-case kWindowMessageCommand:
+case evCommand:
     if (HIWORD(wparam) == RVN_SELCHANGE || HIWORD(wparam) == RVN_DBLCLK) {
         reportview_item_t *it = (reportview_item_t *)lparam;
         printf("Selected: %s\n", it->text);
@@ -176,7 +176,7 @@ show_window(mb, true);
 // In my_menubar_proc – chain to win_menubar then handle selection:
 static result_t my_menubar_proc(window_t *win, uint32_t msg,
                                  uint32_t wparam, void *lparam) {
-    if (msg == kWindowMessageCommand &&
+    if (msg == evCommand &&
         HIWORD(wparam) == kMenuBarNotificationItemClick) {
         switch (LOWORD(wparam)) {
             case ID_NEW:  new_file();    break;

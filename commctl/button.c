@@ -34,11 +34,11 @@ static void autoradio_select(window_t *win) {
 // Button control window procedure (text label buttons).
 result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
-    case kWindowMessageCreate:
+    case evCreate:
       win->frame.w = MAX(win->frame.w, strwidth(win->title)+6);
       win->frame.h = MAX(win->frame.h, BUTTON_HEIGHT);
       return true;
-    case kWindowMessagePaint: {
+    case evPaint: {
       // BUTTON_PUSHLIKE: render as pressed whenever the button is checked (value==true)
       bool show_pressed = win->pressed ||
                           ((win->flags & BUTTON_PUSHLIKE) && win->value);
@@ -57,11 +57,11 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
       draw_text_small(win->title, label_draw.x, label_draw.y, get_sys_color(kColorTextNormal));
       return true;
     }
-    case kWindowMessageLeftButtonDown:
+    case evLeftButtonDown:
       win->pressed = true;
       invalidate_window(win);
       return true;
-    case kWindowMessageLeftButtonUp:
+    case evLeftButtonUp:
       win->pressed = false;
       if (win->flags & BUTTON_AUTORADIO)
         autoradio_select(win);
@@ -69,29 +69,29 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
       // end_dialog → destroy_window(win), freeing 'win'. Reading win->parent
       // in get_root_window() on freed memory causes SIGSEGV on macOS.
       invalidate_window(win);
-      send_message(get_root_window(win), kWindowMessageCommand, MAKEDWORD(win->id, kButtonNotificationClicked), win);
+      send_message(get_root_window(win), evCommand, MAKEDWORD(win->id, kButtonNotificationClicked), win);
       return true;
-    case kWindowMessageKeyDown:
+    case evKeyDown:
       if (wparam == AX_KEY_ENTER || wparam == AX_KEY_SPACE) {
         win->pressed = true;
         invalidate_window(win);
         return true;
       }
       return false;
-    case kWindowMessageKeyUp:
+    case evKeyUp:
       if (wparam == AX_KEY_ENTER || wparam == AX_KEY_SPACE) {
         win->pressed = false;
         if (win->flags & BUTTON_AUTORADIO)
           autoradio_select(win);
-        // Same ordering fix as kWindowMessageLeftButtonUp.
+        // Same ordering fix as evLeftButtonUp.
         invalidate_window(win);
-        send_message(get_root_window(win), kWindowMessageCommand, MAKEDWORD(win->id, kButtonNotificationClicked), win);
+        send_message(get_root_window(win), evCommand, MAKEDWORD(win->id, kButtonNotificationClicked), win);
         return true;
       } else {
         return false;
       }
-    case kButtonMessageSetCheck: {
-      bool checked = (wparam == kButtonStateChecked);
+    case btnSetCheck: {
+      bool checked = (wparam == btnStateChecked);
       if ((win->flags & BUTTON_AUTORADIO) && checked)
         autoradio_select(win);
       else {
@@ -100,8 +100,8 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
       }
       return true;
     }
-    case kButtonMessageGetCheck:
-      return win->value ? kButtonStateChecked : kButtonStateUnchecked;
+    case btnGetCheck:
+      return win->value ? btnStateChecked : btnStateUnchecked;
   }
   return false;
 }
@@ -119,16 +119,16 @@ typedef struct {
 
 // Toolbar button window procedure.
 // Renders an icon from a bitmap_strip_t at a given index.
-// Set via kButtonMessageSetImage: wparam = icon index; lparam = bitmap_strip_t*.
+// Set via btnSetImage: wparam = icon index; lparam = bitmap_strip_t*.
 result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
-    case kWindowMessageDestroy:
+    case evDestroy:
       if (win->userdata) {
         free(win->userdata);
         win->userdata = NULL;
       }
       return true;
-    case kWindowMessagePaint: {
+    case evPaint: {
       bool show_pressed = win->pressed ||
                           ((win->flags & BUTTON_PUSHLIKE) && win->value);
       rect_t focus_outer = rect_inset(win->frame, -2);
@@ -159,11 +159,11 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
       }
       return true;
     }
-    case kWindowMessageLeftButtonDown:
+    case evLeftButtonDown:
       win->pressed = true;
       invalidate_window(win);
       return true;
-    case kWindowMessageLeftButtonUp:
+    case evLeftButtonUp:
       win->pressed = false;
       if (win->flags & BUTTON_AUTORADIO)
         autoradio_select(win);
@@ -171,30 +171,30 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
       // end_dialog → destroy_window(win), freeing 'win'. Reading win->parent
       // in get_root_window() on freed memory causes SIGSEGV on macOS.
       invalidate_window(win);
-      send_message(get_root_window(win), kWindowMessageCommand,
+      send_message(get_root_window(win), evCommand,
                    MAKEDWORD(win->id, kButtonNotificationClicked), win);
       return true;
-    case kWindowMessageKeyDown:
+    case evKeyDown:
       if (wparam == AX_KEY_ENTER || wparam == AX_KEY_SPACE) {
         win->pressed = true;
         invalidate_window(win);
         return true;
       }
       return false;
-    case kWindowMessageKeyUp:
+    case evKeyUp:
       if (wparam == AX_KEY_ENTER || wparam == AX_KEY_SPACE) {
         win->pressed = false;
         if (win->flags & BUTTON_AUTORADIO)
           autoradio_select(win);
-        // Same ordering fix as kWindowMessageLeftButtonUp.
+        // Same ordering fix as evLeftButtonUp.
         invalidate_window(win);
-        send_message(get_root_window(win), kWindowMessageCommand,
+        send_message(get_root_window(win), evCommand,
                      MAKEDWORD(win->id, kButtonNotificationClicked), win);
         return true;
       }
       return false;
-    case kButtonMessageSetCheck: {
-      bool checked = (wparam == kButtonStateChecked);
+    case btnSetCheck: {
+      bool checked = (wparam == btnStateChecked);
       if ((win->flags & BUTTON_AUTORADIO) && checked)
         autoradio_select(win);
       else {
@@ -203,9 +203,9 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
       }
       return true;
     }
-    case kButtonMessageGetCheck:
-      return win->value ? kButtonStateChecked : kButtonStateUnchecked;
-    case kButtonMessageSetImage: {
+    case btnGetCheck:
+      return win->value ? btnStateChecked : btnStateUnchecked;
+    case btnSetImage: {
       // Analogous to WinAPI TBBUTTON.iBitmap: store a private copy of the
       // bitmap_strip_t descriptor and the icon index.
       // wparam = icon index; lparam = bitmap_strip_t*

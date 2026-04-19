@@ -25,7 +25,7 @@ void shell_cleanup_all_gems(void);
 
 // Call every loaded gem's shutdown() function while the GL context is still
 // active.  Does NOT axDynlibClose() — gem procs remain valid so that window
-// kWindowMessageDestroy handlers work correctly when ui_shutdown_graphics()
+// evDestroy handlers work correctly when ui_shutdown_graphics()
 // later destroys the gem windows.  Call this before ui_shutdown_graphics().
 void shell_notify_gem_shutdown(void);
 

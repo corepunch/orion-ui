@@ -21,22 +21,22 @@ typedef struct {
 static result_t splash_proc(window_t *win, uint32_t msg,
                              uint32_t wparam, void *lparam) {
   switch (msg) {
-    case kWindowMessageCreate: {
+    case evCreate: {
       splash_state_t *s = allocate_window_data(win, sizeof(splash_state_t));
       s->tex = (uint32_t)(uintptr_t)lparam;
       win->notabstop = true;
       return true;
     }
-    case kWindowMessagePaint: {
+    case evPaint: {
       splash_state_t *s = (splash_state_t *)win->userdata;
       if (s && s->tex)
         draw_rect((int)s->tex, 0, 0, win->frame.w, win->frame.h);
       return true;
     }
-    case kWindowMessageLeftButtonDown:
+    case evLeftButtonDown:
       destroy_window(win);
       return true;
-    case kWindowMessageDestroy: {
+    case evDestroy: {
       splash_state_t *s = (splash_state_t *)win->userdata;
       if (s) {
         if (s->tex) {

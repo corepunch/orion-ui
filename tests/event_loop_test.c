@@ -204,7 +204,7 @@ static uint32_t msg_sink_last = 0;
 
 static result_t noop_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   (void)win; (void)wparam; (void)lparam;
-  if (msg == kWindowMessagePaint || msg == kWindowMessageNonClientPaint) {
+  if (msg == evPaint || msg == evNonClientPaint) {
     msg_sink_count++;
     msg_sink_last = msg;
   }
@@ -216,12 +216,12 @@ static int count_proc_a = 0, count_proc_b = 0;
 
 static result_t proc_a(window_t *w, uint32_t msg, uint32_t wp, void *lp) {
   (void)w; (void)wp; (void)lp;
-  if (msg == kWindowMessagePaint) count_proc_a++;
+  if (msg == evPaint) count_proc_a++;
   return 1;
 }
 static result_t proc_b(window_t *w, uint32_t msg, uint32_t wp, void *lp) {
   (void)w; (void)wp; (void)lp;
-  if (msg == kWindowMessagePaint) count_proc_b++;
+  if (msg == evPaint) count_proc_b++;
   return 1;
 }
 
@@ -254,13 +254,13 @@ void test_post_message_deduplication(void) {
 
   // Post the same message twice.  The second post should nullify the first
   // entry in the queue so that only one delivery happens.
-  post_message(win, kWindowMessagePaint, 0, NULL);
-  post_message(win, kWindowMessagePaint, 0, NULL);
+  post_message(win, evPaint, 0, NULL);
+  post_message(win, evPaint, 0, NULL);
 
   msg_sink_count = 0;
   repost_messages();
 
-  // Because running==false the OpenGL calls inside kWindowMessagePaint are
+  // Because running==false the OpenGL calls inside evPaint are
   // skipped, but the window proc IS still called.  Only one call should occur
   // because duplicates are deduplicated by post_message().
   ASSERT_EQUAL(msg_sink_count, 1);
@@ -281,8 +281,8 @@ void test_post_message_different_targets_both_delivered(void) {
   ASSERT_NOT_NULL(a);
   ASSERT_NOT_NULL(b);
 
-  post_message(a, kWindowMessagePaint, 0, NULL);
-  post_message(b, kWindowMessagePaint, 0, NULL);
+  post_message(a, evPaint, 0, NULL);
+  post_message(b, evPaint, 0, NULL);
   repost_messages();
 
   ASSERT_EQUAL(count_proc_a, 1);
@@ -306,8 +306,8 @@ void test_invalidate_window_enqueues_paint(void) {
   hook_nc_paint_count = 0;
   hook_paint_count    = 0;
 
-  register_window_hook(kWindowMessageNonClientPaint, hook_nc, NULL);
-  register_window_hook(kWindowMessagePaint,          hook_p,  NULL);
+  register_window_hook(evNonClientPaint, hook_nc, NULL);
+  register_window_hook(evPaint,          hook_p,  NULL);
 
   window_t *win = test_env_create_window("inv-test", 5, 5, 80, 60, noop_proc, NULL);
   ASSERT_NOT_NULL(win);
@@ -324,8 +324,8 @@ void test_invalidate_window_enqueues_paint(void) {
   ASSERT_TRUE(hook_nc_paint_count >= 1);
   ASSERT_TRUE(hook_paint_count    >= 1);
 
-  deregister_window_hook(kWindowMessageNonClientPaint, hook_nc, NULL);
-  deregister_window_hook(kWindowMessagePaint,          hook_p,  NULL);
+  deregister_window_hook(evNonClientPaint, hook_nc, NULL);
+  deregister_window_hook(evPaint,          hook_p,  NULL);
 
   destroy_window(win);
   test_env_shutdown();
@@ -338,7 +338,7 @@ void test_invalidate_routes_to_root(void) {
 
   last_nc_paint_target = NULL;
 
-  register_window_hook(kWindowMessageNonClientPaint, hook_nc_root, NULL);
+  register_window_hook(evNonClientPaint, hook_nc_root, NULL);
 
   rect_t parent_frame = {10, 10, 200, 150};
   window_t *parent = create_window("Parent", 0, &parent_frame, NULL, noop_proc, 0, NULL);
@@ -356,7 +356,7 @@ void test_invalidate_routes_to_root(void) {
 
   ASSERT_EQUAL(last_nc_paint_target, parent);
 
-  deregister_window_hook(kWindowMessageNonClientPaint, hook_nc_root, NULL);
+  deregister_window_hook(evNonClientPaint, hook_nc_root, NULL);
 
   destroy_window(parent);
   test_env_shutdown();

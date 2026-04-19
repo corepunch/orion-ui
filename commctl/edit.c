@@ -15,11 +15,11 @@ extern window_t *get_root_window(window_t *window);
 // Text edit control window procedure
 result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
-    case kWindowMessageCreate:
+    case evCreate:
       win->frame.w = MAX(win->frame.w, strwidth(win->title)+PADDING*2);
       win->frame.h = MAX(win->frame.h, 13);
       return true;
-    case kWindowMessagePaint:
+    case evPaint:
       fill_rect(g_ui_runtime.focused == win?get_sys_color(kColorFocusRing):get_sys_color(kColorWindowBg), win->frame.x-1, win->frame.y-1, win->frame.w+2, win->frame.h+2);
       draw_button(&win->frame, 1, 1, true);
       draw_text_small(win->title, win->frame.x+PADDING, win->frame.y+PADDING, get_sys_color(kColorTextNormal));
@@ -30,7 +30,7 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
                   2, 8);
       }
       return true;
-    case kWindowMessageLeftButtonUp:
+    case evLeftButtonUp:
       if (g_ui_runtime.focused == win) {
         invalidate_window(win);
         win->editing = true;
@@ -44,7 +44,7 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         }
       }
       return true;
-    case kWindowMessageTextInput:
+    case evTextInput:
       if (strlen(win->title) + strlen(lparam) < BUFFER_SIZE - 1) {
         memmove(win->title + win->cursor_pos + 1,
                 win->title + win->cursor_pos,
@@ -54,11 +54,11 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       }
       invalidate_window(win);
       return true;
-    case kWindowMessageKeyDown:
+    case evKeyDown:
       switch (wparam) {
         case AX_KEY_TAB:
           if (win->editing) {
-            send_message(get_root_window(win), kWindowMessageCommand, MAKEDWORD(win->id, kEditNotificationUpdate), win);
+            send_message(get_root_window(win), evCommand, MAKEDWORD(win->id, kEditNotificationUpdate), win);
             win->editing = false;
           }
           return false;
@@ -67,7 +67,7 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
             win->cursor_pos = (int)strlen(win->title);
             win->editing = true;
           } else {
-            send_message(get_root_window(win), kWindowMessageCommand, MAKEDWORD(win->id, kEditNotificationUpdate), win);
+            send_message(get_root_window(win), evCommand, MAKEDWORD(win->id, kEditNotificationUpdate), win);
             win->editing = false;
           }
           break;

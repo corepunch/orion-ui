@@ -10,10 +10,10 @@
 
 // bitmap_strip_t is defined in user/user.h and available via the include above.
 // Kept here as a comment for documentation purposes:
-// A fixed-size-tile bitmap strip used with kButtonMessageSetImage (wparam=index, lparam=bitmap_strip_t*).
+// A fixed-size-tile bitmap strip used with btnSetImage (wparam=index, lparam=bitmap_strip_t*).
 
 // Scrollbar info structure (WinAPI SCROLLINFO analogue).
-// Used with kScrollBarMessageSetInfo.
+// Used with sbSetInfo.
 typedef struct {
   int min_val; // minimum scroll position
   int max_val; // maximum scroll position (content size)

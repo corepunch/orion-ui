@@ -18,7 +18,7 @@
 //          if (!translate_accelerator(win, &e, hAccel))
 //            dispatch_message(&e);
 //        }
-//   4. Handle kWindowMessageCommand as usual (accelerators and menu items share
+//   4. Handle evCommand as usual (accelerators and menu items share
 //      the same command-ID space; accelerator commands arrive with
 //      HIWORD(wparam) == kAcceleratorNotification).
 //   5. Free the table on shutdown:
@@ -48,13 +48,13 @@
 typedef struct {
   uint8_t  fVirt;  // FVIRTKEY combined with zero or more of FSHIFT/FCONTROL/FALT
   uint16_t key;    // AX_KEY_* constant for the accelerator key
-  uint16_t cmd;    // command ID sent as LOWORD(wparam) in kWindowMessageCommand
+  uint16_t cmd;    // command ID sent as LOWORD(wparam) in evCommand
 } accel_t;
 
 // Opaque handle returned by load_accelerators().
 typedef struct accel_table_s accel_table_t;
 
-// Notification code placed in HIWORD(wparam) of kWindowMessageCommand when
+// Notification code placed in HIWORD(wparam) of evCommand when
 // fired by translate_accelerator (analogous to WinAPI's value of 1).
 #define kAcceleratorNotification 1
 
@@ -67,7 +67,7 @@ accel_table_t *load_accelerators(const accel_t *entries, int count);
 void free_accelerators(accel_table_t *table);
 
 // Test whether evt matches any entry in table.
-// On a match, sends kWindowMessageCommand with
+// On a match, sends evCommand with
 //   MAKEDWORD(cmd, kAcceleratorNotification)
 // to win and returns true.  Returns false for any other event.
 // Call this in your event loop before dispatch_message().

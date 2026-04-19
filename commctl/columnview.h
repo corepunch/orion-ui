@@ -11,7 +11,7 @@
 
 // ReportView messages (WinAPI-style report/list view naming).
 enum {
-  RVM_ADDITEM = kWindowMessageUser + 100,
+  RVM_ADDITEM = evUser + 100,
   RVM_DELETEITEM,
   RVM_GETITEMCOUNT,
   RVM_GETSELECTION,

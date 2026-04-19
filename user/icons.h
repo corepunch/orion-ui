@@ -4,7 +4,7 @@
 // Base value for all built-in system icons drawn from icon_sheet_16x16.png.
 // When a toolbar button's icon value is >= SYSICON_BASE the framework
 // automatically sources the icon from the built-in PNG strip rather than
-// from the bitmap font, so no per-window kToolBarMessageLoadStrip call is
+// from the bitmap font, so no per-window tbLoadStrip call is
 // needed.
 #define SYSICON_BASE 0x10000
 

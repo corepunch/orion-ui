@@ -65,25 +65,25 @@ static void on_win_destroyed(window_t *win, uint32_t msg, uint32_t wparam, void 
 
 result_t win_tray(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
-    case kWindowMessageCreate:
+    case evCreate:
       win->cursor_pos = 22;
       win->frame = (rect_t){0,ui_get_system_metrics(kSystemMetricScreenHeight)-TRAY_HEIGHT,ui_get_system_metrics(kSystemMetricScreenWidth),TRAY_HEIGHT};
-      register_window_hook(kWindowMessageCreate, on_win_created, win);
-      register_window_hook(kWindowMessageDestroy, on_win_destroyed, win);
+      register_window_hook(evCreate, on_win_created, win);
+      register_window_hook(evDestroy, on_win_destroyed, win);
       return true;
-    case kWindowMessagePaint:
+    case evPaint:
       draw_icon16(icon16_appicon, 4, 1, get_sys_color(kColorDarkEdge));
       draw_icon16(icon16_appicon, 3, 0, get_sys_color(kColorTextNormal));
       return false;
-    case kWindowMessageCommand:
+    case evCommand:
       if (HIWORD(wparam) == kButtonNotificationClicked) {
         window_t *button = lparam;
         show_window(button->userdata, !((window_t *)button->userdata)->visible);
       }
       return true;
-    case kWindowMessageDestroy:
-      deregister_window_hook(kWindowMessageCreate, on_win_created, win);
-      deregister_window_hook(kWindowMessageDestroy, on_win_destroyed, win);
+    case evDestroy:
+      deregister_window_hook(evCreate, on_win_created, win);
+      deregister_window_hook(evDestroy, on_win_destroyed, win);
       return true;
     default:
       break;

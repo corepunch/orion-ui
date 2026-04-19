@@ -22,7 +22,7 @@ result_t win_list(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   window_t *cb = win->userdata;
   combobox_string_t const *texts = cb?cb->userdata:NULL;
   switch (msg) {
-    case kWindowMessageCreate:
+    case evCreate:
       win->userdata = lparam;
       if (lparam) {
         window_t *owner = (window_t *)lparam;
@@ -34,11 +34,11 @@ result_t win_list(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
           memcpy(win->userdata2, owner->title, sizeof(owner->title));
       }
       return true;
-    case kWindowMessageDestroy:
+    case evDestroy:
       free(win->userdata2);
       win->userdata2 = NULL;
       return true;
-    case kWindowMessagePaint:
+    case evPaint:
       for (uint32_t i = 0; i < cb->cursor_pos; i++) {
         rect_t item = { 0, (int)(i * LIST_HEIGHT), win->frame.w, LIST_HEIGHT };
         rect_t text_pos = rect_inset_xy(item, LIST_X, LIST_Y);
@@ -50,19 +50,19 @@ result_t win_list(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         }
       }
       return true;
-    case kWindowMessageLeftButtonDown:
+    case evLeftButtonDown:
       win->cursor_pos = HIWORD(wparam)/LIST_HEIGHT;
       if (win->cursor_pos < cb->cursor_pos) {
         strncpy(cb->title, texts[win->cursor_pos], sizeof(cb->title));
       }
       invalidate_window(win);
       return true;
-    case kWindowMessageLeftButtonUp:
+    case evLeftButtonUp:
       if (cb) set_focus(cb);
-      send_message(get_root_window(cb), kWindowMessageCommand, MAKEDWORD(cb->id, kComboBoxNotificationSelectionChange), cb);
+      send_message(get_root_window(cb), evCommand, MAKEDWORD(cb->id, kComboBoxNotificationSelectionChange), cb);
       destroy_window(win);
       return true;
-    case kWindowMessageKeyDown: {
+    case evKeyDown: {
       uint32_t key = wparam;
       uint32_t count = cb ? cb->cursor_pos : 0;
       if (key == AX_KEY_UPARROW) {
@@ -89,7 +89,7 @@ result_t win_list(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         if (cb) {
           if (win->cursor_pos < cb->cursor_pos) {
             strncpy(cb->title, texts[win->cursor_pos], sizeof(cb->title));
-            send_message(get_root_window(cb), kWindowMessageCommand, MAKEDWORD(cb->id, kComboBoxNotificationSelectionChange), cb);
+            send_message(get_root_window(cb), evCommand, MAKEDWORD(cb->id, kComboBoxNotificationSelectionChange), cb);
           }
           set_focus(cb);
         }
@@ -108,7 +108,7 @@ result_t win_list(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       }
       return false;
     }
-    case kListMessageSetItem:
+    case lstSetItem:
       win->cursor_pos = (cb && wparam < cb->cursor_pos) ? wparam : 0;
       return true;
   }

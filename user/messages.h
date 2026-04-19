@@ -3,90 +3,90 @@
 
 // Window messages
 enum {
-  kWindowMessageCreate,
-  kWindowMessageDestroy,
-  kWindowMessageShowWindow,
-  kWindowMessageNonClientPaint,
-  kWindowMessageNonClientLeftButtonDown,
-  kWindowMessageNonClientLeftButtonUp,
-  kWindowMessagePaint,
-  kWindowMessageRefreshStencil,
-  kWindowMessagePaintStencil,
-  kWindowMessageMouseActivate,
-  kWindowMessageActivate,
-  kWindowMessageSetFocus,
-  kWindowMessageKillFocus,
-  kWindowMessageHitTest,
-  kWindowMessageCommand,
-  kWindowMessageTextInput,
-  kWindowMessageWheel,
-  kWindowMessageMouseMove,
-  kWindowMessageMouseLeave,
-  kWindowMessageLeftButtonDown,
-  kWindowMessageLeftButtonUp,
-  kWindowMessageLeftButtonDoubleClick,
-  kWindowMessageRightButtonDown,
-  kWindowMessageRightButtonUp,
-  kWindowMessageResize,
-  kWindowMessageDisplayChange,
-  kWindowMessageKeyDown,
-  kWindowMessageKeyUp,
-  kWindowMessageJoyButtonDown,
-  kWindowMessageJoyButtonUp,
-  kWindowMessageJoyAxisMotion,
-  kWindowMessageStatusBar,
+  evCreate,
+  evDestroy,
+  evShowWindow,
+  evNonClientPaint,
+  evNonClientLeftButtonDown,
+  evNonClientLeftButtonUp,
+  evPaint,
+  evRefreshStencil,
+  evPaintStencil,
+  evMouseActivate,
+  evActivate,
+  evSetFocus,
+  evKillFocus,
+  evHitTest,
+  evCommand,
+  evTextInput,
+  evWheel,
+  evMouseMove,
+  evMouseLeave,
+  evLeftButtonDown,
+  evLeftButtonUp,
+  evLeftButtonDoubleClick,
+  evRightButtonDown,
+  evRightButtonUp,
+  evResize,
+  evDisplayChange,
+  evKeyDown,
+  evKeyUp,
+  evJoyButtonDown,
+  evJoyButtonUp,
+  evJoyAxisMotion,
+  evStatusBar,
   // Sent to a window when its built-in horizontal/vertical scrollbar position
   // changes (analogous to WinAPI WM_HSCROLL / WM_VSCROLL).
   // wparam = new scroll position; lparam = NULL.
-  kWindowMessageHScroll,
-  kWindowMessageVScroll,
+  evHScroll,
+  evVScroll,
   // Sent when the user clicks the close (X) button on a non-dialog window.
   // Analogous to WM_CLOSE in WinAPI.
   // Return true  to cancel the close (e.g. show "unsaved changes?" dialog).
   // Return false to allow the default action (hide the window).
-  kWindowMessageClose,
-  kWindowMessageUser = 1000
+  evClose,
+  evUser = 1000
 };
 
 // Control messages
 enum {
-  kButtonMessageSetCheck = kWindowMessageUser,
-  kButtonMessageGetCheck,
-  kButtonMessageSetImage,       // wparam = icon index (iBitmap); lparam = bitmap_strip_t*
-  kComboBoxMessageAddString,
-  kComboBoxMessageGetCurrentSelection,
-  kComboBoxMessageSetCurrentSelection,
-  kComboBoxMessageGetListBoxText,
-  kComboBoxMessageClear,            // clear all items and reset title
-  kStatusBarMessageAddWindow,
-  kToolBarMessageButtonClick,
-  kToolBarMessageSetStrip,         // wparam=0, lparam=bitmap_strip_t* (or NULL to clear)
-  kToolBarMessageSetActiveButton,  // wparam=ident of button to mark active
-  kScrollBarMessageSetInfo,        // lparam = scrollbar_info_t*
-  kScrollBarMessageGetPos,         // returns current scroll position
-  kToolBarMessageSetButtonSize,    // wparam=square button size in pixels (0 resets to TB_SPACING)
-  kToolBarMessageLoadStrip,        // wparam=icon tile size in px (square); lparam=const char* path to PNG
-  kToolBarMessageSetItems,         // wparam=count; lparam=toolbar_item_t* — create real child windows
+  btnSetCheck = evUser,
+  btnGetCheck,
+  btnSetImage,       // wparam = icon index (iBitmap); lparam = bitmap_strip_t*
+  cbAddString,
+  cbGetCurrentSelection,
+  cbSetCurrentSelection,
+  cbGetListBoxText,
+  cbClear,            // clear all items and reset title
+  sbAddWindow,
+  tbButtonClick,
+  tbSetStrip,         // wparam=0, lparam=bitmap_strip_t* (or NULL to clear)
+  tbSetActiveButton,  // wparam=ident of button to mark active
+  sbSetInfo,        // lparam = scrollbar_info_t*
+  sbGetPos,         // returns current scroll position
+  tbSetButtonSize,    // wparam=square button size in pixels (0 resets to TB_SPACING)
+  tbLoadStrip,        // wparam=icon tile size in px (square); lparam=const char* path to PNG
+  tbSetItems,         // wparam=count; lparam=toolbar_item_t* — create real child windows
   // Multiline text edit messages (analogous to WM_GETTEXT / WM_SETTEXT)
-  kMultiEditMessageGetText,        // wparam=buf_size; lparam=char* dst → copies text, returns length
-  kMultiEditMessageSetText,        // wparam=0; lparam=const char* src → replaces text
+  edGetText,        // wparam=buf_size; lparam=char* dst → copies text, returns length
+  edSetText,        // wparam=0; lparam=const char* src → replaces text
   // List (popup) messages
-  kListMessageSetItem,             // wparam=item index to pre-select in the dropdown list
+  lstSetItem,             // wparam=item index to pre-select in the dropdown list
   // Toolbox control messages (commctl/toolbox.c)
-  kToolboxMessageSetItems,         // wparam=count; lparam=toolbox_item_t[] — copy item list
-  kToolboxMessageSetActiveItem,    // wparam=ident (-1 = clear active)
-  kToolboxMessageSetStrip,         // wparam=0; lparam=bitmap_strip_t* (NULL=clear) — external strip
-  kToolboxMessageSetButtonSize,    // wparam=size in px (0 = reset to TOOLBOX_BTN_SIZE)
-  kToolboxMessageLoadStrip,        // wparam=icon_w (square tiles); lparam=const char* path — load PNG
+  toolSetItems,         // wparam=count; lparam=toolbox_item_t[] — copy item list
+  toolSetActiveItem,    // wparam=ident (-1 = clear active)
+  toolSetStrip,         // wparam=0; lparam=bitmap_strip_t* (NULL=clear) — external strip
+  toolSetButtonSize,    // wparam=size in px (0 = reset to TOOLBOX_BTN_SIZE)
+  toolLoadStrip,        // wparam=icon_w (square tiles); lparam=const char* path — load PNG
   // Async HTTP messages (analogous to WinInet/WinHTTP notifications).
   // Delivered to the window_t* registered with http_request_async() when the
   // request transitions through the following states:
   //
-  //   kWindowMessageHttpDone     — request completed (success or failure).
+  //   evHttpDone     — request completed (success or failure).
   //     wparam = http_request_id_t (request handle).
   //     lparam = http_response_t*  (caller owns; free with http_response_free).
   //
-  //   kWindowMessageHttpProgress — download progress update (optional, posted
+  //   evHttpProgress — download progress update (optional, posted
   //     only when Content-Length is known).
   //     wparam = http_request_id_t.
   //     lparam = http_progress_t*  (framework-owned; valid only during
@@ -94,8 +94,8 @@ enum {
   //
   // The request handle is returned by http_request_async().  A return value of
   // HTTP_INVALID_REQUEST indicates an immediate error (bad URL, OOM, etc.).
-  kWindowMessageHttpDone,
-  kWindowMessageHttpProgress,
+  evHttpDone,
+  evHttpProgress,
 };
 
 // Control notification messages
@@ -104,16 +104,16 @@ enum {
   kButtonNotificationClicked,
   kComboBoxNotificationSelectionChange,
   kScrollBarNotificationChanged,  // wparam: MAKEDWORD(scrollbar_id, kScrollBarNotificationChanged); lparam: (void*)(intptr_t)new_pos
-  kToolboxNotificationClicked,    // sent via kWindowMessageCommand: MAKEDWORD(ident, kToolboxNotificationClicked)
+  kToolboxNotificationClicked,    // sent via evCommand: MAKEDWORD(ident, kToolboxNotificationClicked)
 };
 
 // Button state
 enum {
-  kButtonStateUnchecked,
-  kButtonStateChecked
+  btnStateUnchecked,
+  btnStateChecked
 };
 
-// WM_ACTIVATE state codes (wparam for kWindowMessageActivate)
+// WM_ACTIVATE state codes (wparam for evActivate)
 #define WA_INACTIVE    0
 #define WA_ACTIVE      1
 #define WA_CLICKACTIVE 2
@@ -122,9 +122,9 @@ enum {
 #define kComboBoxError -1
 
 // Toolbox item descriptor — one button in a win_toolbox 2-column grid.
-// Set via kToolboxMessageSetItems.  icon is a sysicon_* value (>= SYSICON_BASE)
-// or a tile index into the strip set with kToolboxMessageSetStrip /
-// kToolboxMessageLoadStrip.
+// Set via toolSetItems.  icon is a sysicon_* value (>= SYSICON_BASE)
+// or a tile index into the strip set with toolSetStrip /
+// toolLoadStrip.
 typedef struct {
   int ident;  // command identifier echoed in kToolboxNotificationClicked
   int icon;   // strip tile index (0-based), or sysicon_* value (>= SYSICON_BASE)
@@ -134,7 +134,7 @@ typedef struct {
 // TOOLBOX_COLS is always 2 — toolboxes are a fixed-width 2-column grid.
 // TOOLBOX_BTN_SIZE is intentionally set equal to TB_SPACING (22 px) so that
 // toolbox buttons have the same square size as toolbar buttons.  If you need
-// a different size, override per-window with kToolboxMessageSetButtonSize.
+// a different size, override per-window with toolSetButtonSize.
 // Window width  = TOOLBOX_COLS * TOOLBOX_BTN_SIZE = 44 px.
 // Window height = TITLEBAR_HEIGHT + ceil(n/2) * TOOLBOX_BTN_SIZE.
 #define TOOLBOX_COLS      2
@@ -160,7 +160,7 @@ typedef struct {
 // BUTTON_AUTORADIO: clicking auto-clears all sibling AUTORADIO buttons and sets this one checked
 // BUTTON_DEFAULT: analogous to BS_DEFPUSHBUTTON — drawn with a black outline; triggered by Enter
 // Bitmap/image buttons are a separate window class (win_toolbar_button), not a flag on win_button.
-// Use kButtonMessageSetImage on a win_toolbar_button window to assign an icon from a bitmap_strip_t.
+// Use btnSetImage on a win_toolbar_button window to assign an icon from a bitmap_strip_t.
 #define BUTTON_PUSHLIKE     (1 << 13)
 #define BUTTON_AUTORADIO    (1 << 14)
 #define BUTTON_DEFAULT      (1 << 15)
@@ -232,7 +232,7 @@ typedef struct {
 #define TOOLBAR_BUTTON_FLAG_ACTIVE   (1u << 0)
 #define TOOLBAR_BUTTON_FLAG_PRESSED  (1u << 1)
 
-// Toolbar item types used with kToolBarMessageSetItems.
+// Toolbar item types used with tbSetItems.
 typedef enum {
   TOOLBAR_ITEM_BUTTON    = 0,  // icon or text button (win_toolbar_button / win_button)
   TOOLBAR_ITEM_LABEL     = 1,  // static text label (win_label)
@@ -241,7 +241,7 @@ typedef enum {
   TOOLBAR_ITEM_SPACER    = 4,  // invisible gap (no child window created)
 } toolbar_item_type_t;
 
-// Descriptor for a single toolbar item (used with kToolBarMessageSetItems).
+// Descriptor for a single toolbar item (used with tbSetItems).
 typedef struct {
   toolbar_item_type_t type;   // item type
   int                 ident;  // command ID / button identifier

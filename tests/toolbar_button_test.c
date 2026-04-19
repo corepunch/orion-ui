@@ -1,6 +1,6 @@
 // Tests for win_toolbar_button
 // Covers: mouse click, keyboard activation (RETURN/SPACE), BUTTON_AUTORADIO
-// selection, and kButtonMessageSetImage sanity (doesn't break click behavior).
+// selection, and btnSetImage sanity (doesn't break click behavior).
 
 #include "test_framework.h"
 #include "test_env.h"
@@ -18,9 +18,9 @@ static window_t *g_last_sender = NULL;
 static result_t cmd_parent_proc(window_t *win, uint32_t msg,
                                 uint32_t wparam, void *lparam) {
     (void)win;
-    if (msg == kWindowMessageCreate)  return 1;
-    if (msg == kWindowMessageDestroy) return 1;
-    if (msg == kWindowMessageCommand &&
+    if (msg == evCreate)  return 1;
+    if (msg == evDestroy) return 1;
+    if (msg == evCommand &&
         HIWORD(wparam) == kButtonNotificationClicked) {
         g_click_count++;
         g_last_cmd_id  = (int)LOWORD(wparam);
@@ -38,9 +38,9 @@ static void reset_state(void) {
 static void simulate_click(window_t *btn) {
     int cx = btn->frame.x + btn->frame.w / 2;
     int cy = btn->frame.y + btn->frame.h / 2;
-    test_env_post_message(btn, kWindowMessageLeftButtonDown, MAKEDWORD(cx, cy), NULL);
+    test_env_post_message(btn, evLeftButtonDown, MAKEDWORD(cx, cy), NULL);
     repost_messages();
-    test_env_post_message(btn, kWindowMessageLeftButtonUp, MAKEDWORD(cx, cy), NULL);
+    test_env_post_message(btn, evLeftButtonUp, MAKEDWORD(cx, cy), NULL);
     repost_messages();
 }
 
@@ -93,9 +93,9 @@ void test_toolbar_button_keyboard_return(void) {
     ASSERT_NOT_NULL(btn);
     btn->id = 201;
 
-    test_env_post_message(btn, kWindowMessageKeyDown, AX_KEY_ENTER, NULL);
+    test_env_post_message(btn, evKeyDown, AX_KEY_ENTER, NULL);
     repost_messages();
-    test_env_post_message(btn, kWindowMessageKeyUp,   AX_KEY_ENTER, NULL);
+    test_env_post_message(btn, evKeyUp,   AX_KEY_ENTER, NULL);
     repost_messages();
 
     ASSERT_EQUAL(g_click_count, 1);
@@ -124,9 +124,9 @@ void test_toolbar_button_keyboard_space(void) {
     ASSERT_NOT_NULL(btn);
     btn->id = 202;
 
-    test_env_post_message(btn, kWindowMessageKeyDown, AX_KEY_SPACE, NULL);
+    test_env_post_message(btn, evKeyDown, AX_KEY_SPACE, NULL);
     repost_messages();
-    test_env_post_message(btn, kWindowMessageKeyUp,   AX_KEY_SPACE, NULL);
+    test_env_post_message(btn, evKeyUp,   AX_KEY_SPACE, NULL);
     repost_messages();
 
     ASSERT_EQUAL(g_click_count, 1);
@@ -184,7 +184,7 @@ void test_toolbar_button_autoradio(void) {
 }
 
 void test_toolbar_button_set_image_sanity(void) {
-    TEST("win_toolbar_button: kButtonMessageSetImage doesn't break click behavior");
+    TEST("win_toolbar_button: btnSetImage doesn't break click behavior");
 
     test_env_init();
     test_env_enable_tracking(true);
@@ -211,8 +211,8 @@ void test_toolbar_button_set_image_sanity(void) {
         .sheet_w = 32,
         .sheet_h = 160,
     };
-    printf("Sending kButtonMessageSetImage with dummy strip...\n");
-    result_t r = send_message(btn, kButtonMessageSetImage, 5, &strip);
+    printf("Sending btnSetImage with dummy strip...\n");
+    result_t r = send_message(btn, btnSetImage, 5, &strip);
     ASSERT_TRUE(r); // message was accepted
 
     printf("Checking that strip data was stored in button...\n");
@@ -225,9 +225,9 @@ void test_toolbar_button_set_image_sanity(void) {
     ASSERT_EQUAL(g_click_count, 1);
     ASSERT_EQUAL(g_last_cmd_id, 203);   
 
-    printf("Clearing image with kButtonMessageSetImage and NULL lparam...\n");
+    printf("Clearing image with btnSetImage and NULL lparam...\n");
     // Clearing the image (lparam=NULL) should also work and release userdata.
-    r = send_message(btn, kButtonMessageSetImage, 0, NULL);
+    r = send_message(btn, btnSetImage, 0, NULL);
     ASSERT_TRUE(r);
     ASSERT_NULL(btn->userdata);
     printf("Simulating click after clearing image...\n");
@@ -259,7 +259,7 @@ void test_toolbar_button_set_image_zero_cols_no_crash(void) {
     ASSERT_NOT_NULL(btn);
     btn->id = 204;
 
-    // A strip with cols=0 is invalid geometry but must not cause kButtonMessageSetImage
+    // A strip with cols=0 is invalid geometry but must not cause btnSetImage
     // to crash or reject the call.  The paint handler guards against cols==0 before
     // computing index%cols, so no division-by-zero occurs when the button is drawn.
     bitmap_strip_t bad_strip = {
@@ -270,7 +270,7 @@ void test_toolbar_button_set_image_zero_cols_no_crash(void) {
         .sheet_w = 0,
         .sheet_h = 0,
     };
-    result_t r = send_message(btn, kButtonMessageSetImage, 0, &bad_strip);
+    result_t r = send_message(btn, btnSetImage, 0, &bad_strip);
     ASSERT_TRUE(r);
     ASSERT_NOT_NULL(btn->userdata);
 

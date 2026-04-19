@@ -102,7 +102,7 @@ void ui_update_screen_size(int width, int height);
 // Returns a pointer to the global bitmap_strip_t for icon_sheet_16x16.png,
 // or NULL if the sheet was not found at startup.  Icon values from icons.h
 // (sysicon_*) start at SYSICON_BASE (0x10000); subtract SYSICON_BASE to get
-// the strip index when calling kButtonMessageSetImage.
+// the strip index when calling btnSetImage.
 //
 // Most callers do not need this: toolbar buttons whose icon field is
 // >= SYSICON_BASE are drawn from the sheet automatically.
@@ -110,7 +110,7 @@ void ui_update_screen_size(int width, int height);
 // Example:
 //   bitmap_strip_t *s = ui_get_sysicon_strip();
 //   if (s)
-//     send_message(btn, kButtonMessageSetImage, sysicon_add - SYSICON_BASE, s);
+//     send_message(btn, btnSetImage, sysicon_add - SYSICON_BASE, s);
 bitmap_strip_t *ui_get_sysicon_strip(void);
 
 #endif

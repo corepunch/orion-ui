@@ -211,7 +211,7 @@ void handle_menu_command(uint16_t id) {
           ndoc->canvas_dirty = true;
           ndoc->modified = false;
           doc_update_title(ndoc);
-          send_message(ndoc->win, kWindowMessageStatusBar, 0, path);
+          send_message(ndoc->win, evStatusBar, 0, path);
           invalidate_window(ndoc->canvas_win);
         } else {
           image_free(px);
@@ -226,9 +226,9 @@ void handle_menu_command(uint16_t id) {
       if (png_save(doc->filename, doc)) {
         doc->modified = false;
         doc_update_title(doc);
-        send_message(doc->win, kWindowMessageStatusBar, 0, (void *)"Saved");
+        send_message(doc->win, evStatusBar, 0, (void *)"Saved");
       } else {
-        send_message(doc->win, kWindowMessageStatusBar, 0, (void *)"Save failed");
+        send_message(doc->win, evStatusBar, 0, (void *)"Save failed");
       }
       break;
 
@@ -242,9 +242,9 @@ void handle_menu_command(uint16_t id) {
         if (png_save(path, doc)) {
           doc->modified = false;
           doc_update_title(doc);
-          send_message(doc->win, kWindowMessageStatusBar, 0, path);
+          send_message(doc->win, evStatusBar, 0, path);
         } else {
-          send_message(doc->win, kWindowMessageStatusBar, 0, (void *)"Save failed");
+          send_message(doc->win, evStatusBar, 0, (void *)"Save failed");
         }
       }
       break;
@@ -384,7 +384,7 @@ void handle_menu_command(uint16_t id) {
           doc_update_title(doc);
           char sb[32];
           snprintf(sb, sizeof(sb), "%dx%d", doc->canvas_w, doc->canvas_h);
-          send_message(doc->win, kWindowMessageStatusBar, 0, sb);
+          send_message(doc->win, evStatusBar, 0, sb);
         }
       }
       break;
@@ -426,7 +426,7 @@ void handle_menu_command(uint16_t id) {
       // Update status bar with current zoom
       char zoom_msg[32];
       snprintf(zoom_msg, sizeof(zoom_msg), "Zoom: %dx", new_scale);
-      send_message(doc->win, kWindowMessageStatusBar, 0, zoom_msg);
+      send_message(doc->win, evStatusBar, 0, zoom_msg);
       break;
     }
 
@@ -457,7 +457,7 @@ void handle_menu_command(uint16_t id) {
                tool_id_name((int)id));
       // Update the active tool button in the tool palette (win_toolbox).
       if (g_app->tool_win) {
-        send_message(g_app->tool_win, kToolboxMessageSetActiveItem, (uint32_t)id, NULL);
+        send_message(g_app->tool_win, toolSetActiveItem, (uint32_t)id, NULL);
       }
       break;
     }
@@ -491,7 +491,7 @@ void handle_menu_command(uint16_t id) {
 
 result_t editor_menubar_proc(window_t *win, uint32_t msg,
                               uint32_t wparam, void *lparam) {
-  if (msg == kWindowMessageCommand) {
+  if (msg == evCommand) {
     uint16_t notif = HIWORD(wparam);
     if (notif == kMenuBarNotificationItemClick ||
         notif == kAcceleratorNotification      ||
@@ -502,7 +502,7 @@ result_t editor_menubar_proc(window_t *win, uint32_t msg,
   }
   // Rebuild the Window menu just before a popup opens so it always reflects
   // the current set of open documents and palette visibility.
-  if (msg == kWindowMessageLeftButtonDown) {
+  if (msg == evLeftButtonDown) {
     window_menu_rebuild();
   }
   return win_menubar(win, msg, wparam, lparam);
