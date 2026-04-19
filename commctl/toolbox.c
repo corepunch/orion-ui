@@ -55,6 +55,10 @@
 #include "../user/icons.h"
 #include "../kernel/renderer.h"
 
+// Inactive: just the dark background from the global fill; no bevel.
+// This matches the classic Photoshop / MS Paint toolbox look.  
+// #define TOOLBOX_FLAT
+
 // Private state owned by each win_toolbox instance.
 typedef struct {
   toolbox_item_t *items;       // heap-allocated copy of the item list
@@ -105,8 +109,10 @@ static void draw_toolbox_button(toolbox_state_t *st, int idx,
   if (depressed) {
     draw_button(&cell, 1, 1, true);   // inset / pressed look
   } else {
-    // Inactive: just the dark background from the global fill; no bevel.
-    // This matches the classic Photoshop / MS Paint toolbox look.
+#ifndef TOOLBOX_FLAT
+    // Unpressed tools still draw as raised buttons.
+    draw_button(&cell, 1, 1, false);
+#endif
   }
 
   // Draw icon centred in the cell (shifted 1px when depressed).
