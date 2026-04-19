@@ -47,8 +47,8 @@ result_t win_color_palette_proc(window_t *win, uint32_t msg,
                                  uint32_t wparam, void *lparam) {
   switch (msg) {
     case evPaint: {
-      fill_rect(get_sys_color(kColorWindowDarkBg), 0, 0, win->frame.w, win->frame.h);
-      fill_rect(get_sys_color(kColorDarkEdge), win->frame.w - 1, 0, 1, win->frame.h);
+      fill_rect(get_sys_color(brWindowDarkBg), 0, 0, win->frame.w, win->frame.h);
+      fill_rect(get_sys_color(brDarkEdge), win->frame.w - 1, 0, 1, win->frame.h);
 
       for (int i = 0; i < NUM_COLORS; i++) {
         int col = i % SWATCH_COLS;
@@ -58,7 +58,7 @@ result_t win_color_palette_proc(window_t *win, uint32_t msg,
         fill_rect(kPalette[i], sx, sy, SWATCH_W - 2, SWATCH_ROW_H - 2);
 
         if (g_app && g_app->fg_color == kPalette[i])
-          fill_rect(get_sys_color(kColorFocusRing), sx, sy, SWATCH_W - 2, 2);
+          fill_rect(get_sys_color(brFocusRing), sx, sy, SWATCH_W - 2, 2);
       }
       return true;
     }

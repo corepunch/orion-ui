@@ -277,37 +277,37 @@ typedef enum {
 } icon8_t;
 
 // System color indices — analogous to WinAPI GetSysColor(nIndex).
-// Access via get_sys_color(kColorXxx); change via set_sys_colors().
+// Access via get_sys_color(brXxx); change via set_sys_colors().
 typedef enum {
-  kColorWindowBg             = 0,   // general panel / dialog background
-  kColorWindowDarkBg         = 1,   // dark secondary panel background
-  kColorWorkspaceBg          = 2,   // document / canvas workspace area
-  kColorActiveTitlebar       = 3,   // focused window title bar background
-  kColorActiveTitlebarText   = 4,   // focused window title bar text
-  kColorInactiveTitlebar     = 5,   // unfocused window title bar background
-  kColorInactiveTitlebarText = 6,   // unfocused window title bar text
-  kColorStatusbarBg          = 7,   // status bar background
-  kColorLightEdge            = 8,   // highlight edge of beveled elements
-  kColorDarkEdge             = 9,   // shadow edge of beveled elements
-  kColorFlare                = 10,  // corner flare of beveled elements
-  kColorFocusRing            = 11,  // keyboard focus highlight ring
-  kColorButtonBg             = 12,  // button background (unpressed)
-  kColorButtonInner          = 13,  // inner fill of button
-  kColorButtonHover          = 14,  // button hover state
-  kColorTextNormal           = 15,  // standard text
-  kColorTextDisabled         = 16,  // disabled / inactive text
-  kColorTextError            = 17,  // error message text
-  kColorTextSuccess          = 18,  // success message text
-  kColorBorderFocus          = 19,  // focused item dark outline
-  kColorBorderActive         = 20,  // active item border
-  kColorFolderText           = 21,  // folder entry text in file lists
-  kColorColumnViewBg         = 22,  // report/icon column view background
-  kColorModalOverlay         = 23,  // modal owner dimming overlay (ARGB with alpha)
-  kColorCount                = 24
+  brWindowBg             = 0,   // general panel / dialog background
+  brWindowDarkBg         = 1,   // dark secondary panel background
+  brWorkspaceBg          = 2,   // document / canvas workspace area
+  brActiveTitlebar       = 3,   // focused window title bar background
+  brActiveTitlebarText   = 4,   // focused window title bar text
+  brInactiveTitlebar     = 5,   // unfocused window title bar background
+  brInactiveTitlebarText = 6,   // unfocused window title bar text
+  brStatusbarBg          = 7,   // status bar background
+  brLightEdge            = 8,   // highlight edge of beveled elements
+  brDarkEdge             = 9,   // shadow edge of beveled elements
+  brFlare                = 10,  // corner flare of beveled elements
+  brFocusRing            = 11,  // keyboard focus highlight ring
+  brButtonBg             = 12,  // button background (unpressed)
+  brButtonInner          = 13,  // inner fill of button
+  brButtonHover          = 14,  // button hover state
+  brTextNormal           = 15,  // standard text
+  brTextDisabled         = 16,  // disabled / inactive text
+  brTextError            = 17,  // error message text
+  brTextSuccess          = 18,  // success message text
+  brBorderFocus          = 19,  // focused item dark outline
+  brBorderActive         = 20,  // active item border
+  brFolderText           = 21,  // folder entry text in file lists
+  brColumnViewBg         = 22,  // report/icon column view background
+  brModalOverlay         = 23,  // modal owner dimming overlay (ARGB with alpha)
+  brCount                = 24
 } sys_color_idx_t;
 
 // Runtime-accessible theme table (defined in user/theme.c).
-extern uint32_t g_sys_colors[kColorCount];
+extern uint32_t g_sys_colors[brCount];
 
 // Inline color lookup — equivalent to WinAPI GetSysColor(nIndex).
 static inline uint32_t get_sys_color(sys_color_idx_t idx) {

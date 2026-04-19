@@ -158,10 +158,14 @@ for (int i = 0; i < NUM_TOOLS; i++) {
 - Use snake_case for function names (e.g., `create_window`, `draw_text_small`)
 - Use snake_case with _t suffix for type names (e.g., `window_t`, `rect_t`, `winproc_t`)
 - Use SCREAMING_SNAKE_CASE for constants and macros (e.g., `WM_CREATE`, `SCREEN_WIDTH`)
-- Window message constants start with `WM_` (e.g., `WM_PAINT`, `WM_LBUTTONDOWN`)
-- Button messages start with `BN_` (e.g., `kButtonNotificationClicked`)
-- Combobox messages start with `CB_` or `CBN_` (e.g., `CB_ADDSTRING`, `CBN_SELCHANGE`)
-- Edit box messages start with `EN_` (e.g., `kEditNotificationUpdate`)
+
+### TurboVision-Inspired Enum Style (Preferred)
+- Prefer short event/message enums with `ev` prefix (e.g., `evCreate`, `evPaint`, `evLeftButtonDown`, `evCommand`) instead of introducing new `WM_*` names.
+- Prefer brush/theme color enums with `br` prefix ("brush"), e.g., `brWindowBg`, `brTextDisabled`, when adding or renaming public color identifiers.
+- Keep control command enums short and verb-oriented (e.g., `btnSetImage`, `cbAddString`, `tbSetItems`) rather than long WinAPI-style all-caps names.
+- For control notifications, keep existing notification enums consistent with the local subsystem style (e.g., `kButtonNotificationClicked`, `kEditNotificationUpdate`).
+- Do not mix naming families inside a single touched module: if a file is already in `ev*` / `br*` style, continue that style.
+- If compatibility aliases are needed for legacy or external code, add thin aliases/wrappers instead of changing runtime behavior.
 
 ### Code Style
 - Use K&R-style bracing with opening brace on same line
@@ -233,7 +237,7 @@ static result_t my_dlg_proc(window_t *win, uint32_t msg,
       set_window_item_text(win, 1, "default value"); // populate at runtime
       return true;
     case evPaint:
-      draw_text_small("Name:", 4, 11, get_sys_color(kColorTextDisabled));
+      draw_text_small("Name:", 4, 11, get_sys_color(brTextDisabled));
       return false;
     case evCommand:
       if (HIWORD(wparam) == kButtonNotificationClicked) {

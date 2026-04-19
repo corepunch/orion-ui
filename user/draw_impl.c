@@ -99,38 +99,38 @@ void draw_wire_rect(rect_t const *r, int expand, uint32_t col) {
 
 // Draw focused border
 void draw_focused(rect_t const *r) {
-  draw_wire_rect(r, 1, get_sys_color(kColorFocusRing));
+  draw_wire_rect(r, 1, get_sys_color(brFocusRing));
 }
 
 // Draw a softer single-colour outline for a window that contains focused
 // controls but is not itself the focused widget.
 static void draw_active_frame(rect_t const *r) {
-  draw_wire_rect(r, 1, get_sys_color(kColorBorderActive));
+  draw_wire_rect(r, 1, get_sys_color(brBorderActive));
 }
 
 // Draw bevel border
 void draw_bevel(rect_t const *r) {
-  fill_rect(get_sys_color(kColorLightEdge), r->x-1, r->y-1, r->w+2, 1);
-  fill_rect(get_sys_color(kColorLightEdge), r->x-1, r->y-1, 1, r->h+2);
-  fill_rect(get_sys_color(kColorDarkEdge),  r->x+r->w, r->y, 1, r->h+1);
-  fill_rect(get_sys_color(kColorDarkEdge),  r->x, r->y+r->h, r->w+1, 1);
-  fill_rect(get_sys_color(kColorFlare),     r->x-1, r->y-1, 1, 1);
+  fill_rect(get_sys_color(brLightEdge), r->x-1, r->y-1, r->w+2, 1);
+  fill_rect(get_sys_color(brLightEdge), r->x-1, r->y-1, 1, r->h+2);
+  fill_rect(get_sys_color(brDarkEdge),  r->x+r->w, r->y, 1, r->h+1);
+  fill_rect(get_sys_color(brDarkEdge),  r->x, r->y+r->h, r->w+1, 1);
+  fill_rect(get_sys_color(brFlare),     r->x-1, r->y-1, 1, 1);
 }
 
 // Draw button
 void draw_button(rect_t const *r, int dx, int dy, bool pressed) {
   if (pressed) {
-    fill_rect(get_sys_color(kColorDarkEdge), r->x, r->y, r->w, r->h);
-    fill_rect(get_sys_color(kColorLightEdge), r->x+1, r->y+1, r->w-1, r->h-1);
-    fill_rect(get_sys_color(kColorDarkEdge), r->x+1, r->y+1, r->w-2, r->h-2);
-    fill_rect(get_sys_color(kColorWindowDarkBg), r->x+2, r->y+2, r->w-3, r->h-3);
-    fill_rect(get_sys_color(kColorFlare), r->x+r->w-1, r->y+r->h-1, 1, 1);
+    fill_rect(get_sys_color(brDarkEdge), r->x, r->y, r->w, r->h);
+    fill_rect(get_sys_color(brLightEdge), r->x+1, r->y+1, r->w-1, r->h-1);
+    fill_rect(get_sys_color(brDarkEdge), r->x+1, r->y+1, r->w-2, r->h-2);
+    fill_rect(get_sys_color(brWindowDarkBg), r->x+2, r->y+2, r->w-3, r->h-3);
+    fill_rect(get_sys_color(brFlare), r->x+r->w-1, r->y+r->h-1, 1, 1);
   } else {
-    fill_rect(get_sys_color(kColorDarkEdge), r->x, r->y, r->w, r->h);
-    fill_rect(get_sys_color(kColorLightEdge), r->x, r->y, r->w-1, r->h-1);
-    fill_rect(get_sys_color(kColorDarkEdge), r->x+1, r->y+1, r->w-2, r->h-2);
-    fill_rect(get_sys_color(kColorWindowBg), r->x+1, r->y+1, r->w-3, r->h-3);
-    fill_rect(get_sys_color(kColorFlare), r->x, r->y, 1, 1);
+    fill_rect(get_sys_color(brDarkEdge), r->x, r->y, r->w, r->h);
+    fill_rect(get_sys_color(brLightEdge), r->x, r->y, r->w-1, r->h-1);
+    fill_rect(get_sys_color(brDarkEdge), r->x+1, r->y+1, r->w-2, r->h-2);
+    fill_rect(get_sys_color(brWindowBg), r->x+1, r->y+1, r->w-3, r->h-3);
+    fill_rect(get_sys_color(brFlare), r->x, r->y, 1, 1);
   }
 }
 
@@ -147,11 +147,11 @@ void draw_panel(window_t const *win) {
   }
   if (!(win->flags & WINDOW_NORESIZE)) {
     int r = RESIZE_HANDLE;
-    fill_rect(get_sys_color(kColorLightEdge), x+w, y+h-r+1, 1, r);
-    fill_rect(get_sys_color(kColorLightEdge), x+w-r+1, y+h, r, 1);
+    fill_rect(get_sys_color(brLightEdge), x+w, y+h-r+1, 1, r);
+    fill_rect(get_sys_color(brLightEdge), x+w-r+1, y+h, r, 1);
   }
   if (!(win->flags&WINDOW_NOFILL)) {
-    fill_rect(get_sys_color(kColorWindowBg), x, y, w, h);
+    fill_rect(get_sys_color(brWindowBg), x, y, w, h);
   }
 }
 
@@ -159,13 +159,13 @@ void draw_panel(window_t const *win) {
 void draw_window_controls(window_t *win) {
   rect_t r = win->frame;
   int t = titlebar_height(win);
-  fill_rect(get_sys_color(window_has_focus(win) ? kColorActiveTitlebar : kColorInactiveTitlebar), r.x, r.y, r.w, t);
+  fill_rect(get_sys_color(window_has_focus(win) ? brActiveTitlebar : brInactiveTitlebar), r.x, r.y, r.w, t);
   set_fullscreen();
   
   for (int i = 0; i < 1; i++) {
     int x = win->frame.x + win->frame.w - (i+1)*CONTROL_BUTTON_WIDTH - CONTROL_BUTTON_PADDING;
     int y = window_title_bar_y(win);
-    draw_icon8(icon8_minus + i, x, y, get_sys_color(kColorTextNormal));
+    draw_icon8(icon8_minus + i, x, y, get_sys_color(brTextNormal));
   }
 }
 
@@ -182,11 +182,11 @@ void draw_statusbar(window_t *win, const char *text) {
   bool has_h = (win->flags & WINDOW_HSCROLL) && win->hscroll.visible;
   int split_x = has_h ? SB_STATUS_SPLIT_X(r.w) : r.w;
 
-  fill_rect(get_sys_color(kColorStatusbarBg), r.x, y, split_x, s);
+  fill_rect(get_sys_color(brStatusbarBg), r.x, y, split_x, s);
   set_fullscreen();
 
   if (text) {
-    draw_text_small(text, r.x + 2, y + 2, get_sys_color(kColorTextNormal));
+    draw_text_small(text, r.x + 2, y + 2, get_sys_color(brTextNormal));
   }
 
   if (has_h) {
@@ -195,27 +195,27 @@ void draw_statusbar(window_t *win, const char *text) {
     // Always reserve the rightmost SCROLLBAR_WIDTH cell for the resize corner.
     int bw = (r.w - split_x) - SCROLLBAR_WIDTH;
     if (bw > 0) {
-      fill_rect(get_sys_color(kColorWindowDarkBg), r.x + split_x, y, bw, s);
+      fill_rect(get_sys_color(brWindowDarkBg), r.x + split_x, y, bw, s);
       // Arrow buttons (each SCROLLBAR_WIDTH wide)
       if (bw >= 2 * SCROLLBAR_WIDTH) {
         int icon_off = (SCROLLBAR_WIDTH - ICON8_SIZE) / 2;
-        fill_rect(get_sys_color(kColorWindowBg), r.x + split_x, y, SCROLLBAR_WIDTH, s);
-        draw_icon8(icon8_scroll_left,  r.x + split_x + icon_off, y + icon_off, get_sys_color(kColorTextNormal));
-        fill_rect(get_sys_color(kColorWindowBg), r.x + split_x + bw - SCROLLBAR_WIDTH, y, SCROLLBAR_WIDTH, s);
-        draw_icon8(icon8_scroll_right, r.x + split_x + bw - SCROLLBAR_WIDTH + icon_off, y + icon_off, get_sys_color(kColorTextNormal));
+        fill_rect(get_sys_color(brWindowBg), r.x + split_x, y, SCROLLBAR_WIDTH, s);
+        draw_icon8(icon8_scroll_left,  r.x + split_x + icon_off, y + icon_off, get_sys_color(brTextNormal));
+        fill_rect(get_sys_color(brWindowBg), r.x + split_x + bw - SCROLLBAR_WIDTH, y, SCROLLBAR_WIDTH, s);
+        draw_icon8(icon8_scroll_right, r.x + split_x + bw - SCROLLBAR_WIDTH + icon_off, y + icon_off, get_sys_color(brTextNormal));
         // Thumb in effective track between buttons
         int eff_track = bw - 2 * SCROLLBAR_WIDTH;
         if (eff_track > 0) {
           int tl = builtin_sb_thumb_len(sb, eff_track);
           int to = builtin_sb_thumb_off(sb, eff_track, tl);
-          uint32_t thumb_col = sb->enabled ? get_sys_color(kColorLightEdge) : get_sys_color(kColorDarkEdge);
+          uint32_t thumb_col = sb->enabled ? get_sys_color(brLightEdge) : get_sys_color(brDarkEdge);
           fill_rect(thumb_col, r.x + split_x + SCROLLBAR_WIDTH + to, y, tl, s);
         }
       } else {
         // Not enough room for buttons — draw plain thumb
         int tl = builtin_sb_thumb_len(sb, bw);
         int to = builtin_sb_thumb_off(sb, bw, tl);
-        uint32_t thumb_col = sb->enabled ? get_sys_color(kColorLightEdge) : get_sys_color(kColorDarkEdge);
+        uint32_t thumb_col = sb->enabled ? get_sys_color(brLightEdge) : get_sys_color(brDarkEdge);
         fill_rect(thumb_col, r.x + split_x + to, y, tl, s);
       }
     }
@@ -223,8 +223,8 @@ void draw_statusbar(window_t *win, const char *text) {
     {
       int cx = r.x + r.w - SCROLLBAR_WIDTH;
       int icon_off = (SCROLLBAR_WIDTH - ICON8_SIZE) / 2;
-      fill_rect(get_sys_color(kColorWindowDarkBg), cx, y, SCROLLBAR_WIDTH, s);
-      draw_icon8(icon8_resize_br, cx + icon_off, y + icon_off, get_sys_color(kColorTextNormal));
+      fill_rect(get_sys_color(brWindowDarkBg), cx, y, SCROLLBAR_WIDTH, s);
+      draw_icon8(icon8_resize_br, cx + icon_off, y + icon_off, get_sys_color(brTextNormal));
     }
   }
 }
@@ -406,26 +406,26 @@ void draw_builtin_scrollbars(window_t *win) {
     int y  = base_y + content_h - SCROLLBAR_WIDTH;
     int bw = win->frame.w - (has_v ? SCROLLBAR_WIDTH : 0);
     // Track background
-    fill_rect(get_sys_color(kColorWindowDarkBg), x, y, bw, SCROLLBAR_WIDTH);
+    fill_rect(get_sys_color(brWindowDarkBg), x, y, bw, SCROLLBAR_WIDTH);
     // Arrow buttons
     if (bw >= 2 * SCROLLBAR_WIDTH) {
-      fill_rect(get_sys_color(kColorWindowBg), x, y, SCROLLBAR_WIDTH, SCROLLBAR_WIDTH);
-      draw_icon8(icon8_scroll_left,  x + icon_off, y + icon_off, get_sys_color(kColorTextNormal));
-      fill_rect(get_sys_color(kColorWindowBg), x + bw - SCROLLBAR_WIDTH, y, SCROLLBAR_WIDTH, SCROLLBAR_WIDTH);
-      draw_icon8(icon8_scroll_right, x + bw - SCROLLBAR_WIDTH + icon_off, y + icon_off, get_sys_color(kColorTextNormal));
+      fill_rect(get_sys_color(brWindowBg), x, y, SCROLLBAR_WIDTH, SCROLLBAR_WIDTH);
+      draw_icon8(icon8_scroll_left,  x + icon_off, y + icon_off, get_sys_color(brTextNormal));
+      fill_rect(get_sys_color(brWindowBg), x + bw - SCROLLBAR_WIDTH, y, SCROLLBAR_WIDTH, SCROLLBAR_WIDTH);
+      draw_icon8(icon8_scroll_right, x + bw - SCROLLBAR_WIDTH + icon_off, y + icon_off, get_sys_color(brTextNormal));
       // Thumb in effective track between buttons
       int eff_track = bw - 2 * SCROLLBAR_WIDTH;
       if (eff_track > 0) {
         int tl = builtin_sb_thumb_len(sb, eff_track);
         int to = builtin_sb_thumb_off(sb, eff_track, tl);
-        uint32_t thumb_col = sb->enabled ? get_sys_color(kColorLightEdge) : get_sys_color(kColorDarkEdge);
+        uint32_t thumb_col = sb->enabled ? get_sys_color(brLightEdge) : get_sys_color(brDarkEdge);
         fill_rect(thumb_col, x + SCROLLBAR_WIDTH + to, y, tl, SCROLLBAR_WIDTH);
       }
     } else {
       // Not enough room for buttons — plain thumb
       int tl = builtin_sb_thumb_len(sb, bw);
       int to = builtin_sb_thumb_off(sb, bw, tl);
-      uint32_t thumb_col = sb->enabled ? get_sys_color(kColorLightEdge) : get_sys_color(kColorDarkEdge);
+      uint32_t thumb_col = sb->enabled ? get_sys_color(brLightEdge) : get_sys_color(brDarkEdge);
       fill_rect(thumb_col, x + to, y, tl, SCROLLBAR_WIDTH);
     }
   }
@@ -438,26 +438,26 @@ void draw_builtin_scrollbars(window_t *win) {
     // content area, so the vertical bar spans the full content height.
     int bh = content_h - (has_h && !h_merged ? SCROLLBAR_WIDTH : 0);
     // Track background
-    fill_rect(get_sys_color(kColorWindowDarkBg), x, y, SCROLLBAR_WIDTH, bh);
+    fill_rect(get_sys_color(brWindowDarkBg), x, y, SCROLLBAR_WIDTH, bh);
     // Arrow buttons
     if (bh >= 2 * SCROLLBAR_WIDTH) {
-      fill_rect(get_sys_color(kColorWindowBg), x, y, SCROLLBAR_WIDTH, SCROLLBAR_WIDTH);
-      draw_icon8(icon8_scroll_up,   x + icon_off, y + icon_off, get_sys_color(kColorTextNormal));
-      fill_rect(get_sys_color(kColorWindowBg), x, y + bh - SCROLLBAR_WIDTH, SCROLLBAR_WIDTH, SCROLLBAR_WIDTH);
-      draw_icon8(icon8_scroll_down, x + icon_off, y + bh - SCROLLBAR_WIDTH + icon_off, get_sys_color(kColorTextNormal));
+      fill_rect(get_sys_color(brWindowBg), x, y, SCROLLBAR_WIDTH, SCROLLBAR_WIDTH);
+      draw_icon8(icon8_scroll_up,   x + icon_off, y + icon_off, get_sys_color(brTextNormal));
+      fill_rect(get_sys_color(brWindowBg), x, y + bh - SCROLLBAR_WIDTH, SCROLLBAR_WIDTH, SCROLLBAR_WIDTH);
+      draw_icon8(icon8_scroll_down, x + icon_off, y + bh - SCROLLBAR_WIDTH + icon_off, get_sys_color(brTextNormal));
       // Thumb in effective track between buttons
       int eff_track = bh - 2 * SCROLLBAR_WIDTH;
       if (eff_track > 0) {
         int tl = builtin_sb_thumb_len(sb, eff_track);
         int to = builtin_sb_thumb_off(sb, eff_track, tl);
-        uint32_t thumb_col = sb->enabled ? get_sys_color(kColorLightEdge) : get_sys_color(kColorDarkEdge);
+        uint32_t thumb_col = sb->enabled ? get_sys_color(brLightEdge) : get_sys_color(brDarkEdge);
         fill_rect(thumb_col, x, y + SCROLLBAR_WIDTH + to, SCROLLBAR_WIDTH, tl);
       }
     } else {
       // Not enough room for buttons — plain thumb
       int tl = builtin_sb_thumb_len(sb, bh);
       int to = builtin_sb_thumb_off(sb, bh, tl);
-      uint32_t thumb_col = sb->enabled ? get_sys_color(kColorLightEdge) : get_sys_color(kColorDarkEdge);
+      uint32_t thumb_col = sb->enabled ? get_sys_color(brLightEdge) : get_sys_color(brDarkEdge);
       fill_rect(thumb_col, x, y + to, SCROLLBAR_WIDTH, tl);
     }
   }
@@ -466,7 +466,7 @@ void draw_builtin_scrollbars(window_t *win) {
   if (has_h && !h_merged && has_v) {
     int cx = base_x + win->frame.w - SCROLLBAR_WIDTH;
     int cy = base_y + content_h - SCROLLBAR_WIDTH;
-    fill_rect(get_sys_color(kColorWindowDarkBg), cx, cy, SCROLLBAR_WIDTH, SCROLLBAR_WIDTH);
-    draw_icon8(icon8_resize_br, cx + icon_off, cy + icon_off, get_sys_color(kColorTextNormal));
+    fill_rect(get_sys_color(brWindowDarkBg), cx, cy, SCROLLBAR_WIDTH, SCROLLBAR_WIDTH);
+    draw_icon8(icon8_resize_br, cx + icon_off, cy + icon_off, get_sys_color(brTextNormal));
   }
 }

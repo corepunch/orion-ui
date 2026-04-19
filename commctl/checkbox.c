@@ -22,16 +22,16 @@ result_t win_checkbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       rect_t box = rect_split_left(&rem, CHECKBOX_BOX_SIZE);
       box.h = CHECKBOX_BOX_SIZE;
       rect_t focus_bg = rect_inset(box, -CHECKBOX_FOCUS_PAD);
-      fill_rect(g_ui_runtime.focused == win ? get_sys_color(kColorFocusRing) : get_sys_color(kColorWindowBg),
+      fill_rect(g_ui_runtime.focused == win ? get_sys_color(brFocusRing) : get_sys_color(brWindowBg),
                 focus_bg.x, focus_bg.y, focus_bg.w, focus_bg.h);
       draw_button(&box, 1, 1, win->pressed);
       int lx = rem.x + CHECKBOX_GAP;
       int ly = win->frame.y + CHECKBOX_TEXT_Y;
-      draw_text_small(win->title, lx + TEXT_SHADOW_OFFSET, ly + TEXT_SHADOW_OFFSET, get_sys_color(kColorDarkEdge));
-      draw_text_small(win->title, lx, ly, get_sys_color(kColorTextNormal));
+      draw_text_small(win->title, lx + TEXT_SHADOW_OFFSET, ly + TEXT_SHADOW_OFFSET, get_sys_color(brDarkEdge));
+      draw_text_small(win->title, lx, ly, get_sys_color(brTextNormal));
       if (win->value) {
         rect_t checkmark = rect_offset(box, TEXT_SHADOW_OFFSET, TEXT_SHADOW_OFFSET);
-        draw_icon8(icon8_checkbox, checkmark.x, checkmark.y, get_sys_color(kColorTextNormal));
+        draw_icon8(icon8_checkbox, checkmark.x, checkmark.y, get_sys_color(brTextNormal));
       }
       return true;
     }

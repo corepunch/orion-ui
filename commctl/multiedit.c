@@ -154,8 +154,8 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       bool focused = (g_ui_runtime.focused == win);
 
       // Focus ring (matches win_textedit style).
-      fill_rect(focused ? get_sys_color(kColorFocusRing)
-                        : get_sys_color(kColorWindowBg),
+      fill_rect(focused ? get_sys_color(brFocusRing)
+                        : get_sys_color(brWindowBg),
                 win->frame.x - 1, win->frame.y - 1,
                 win->frame.w + 2, win->frame.h + 2);
 
@@ -174,7 +174,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
 
       // Draw wrapped text, offset upward by scroll_y.
       rect_t vp = { tx, ty - s->scroll_y, tw, th + s->scroll_y };
-      draw_text_wrapped(s->buf, &vp, get_sys_color(kColorTextNormal));
+      draw_text_wrapped(s->buf, &vp, get_sys_color(brTextNormal));
 
       // Draw caret when focused.
       if (focused) {
@@ -182,7 +182,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
         me_cursor_xy(s->buf, s->cursor, tw, &cx, &cy);
         int cur_y = ty + cy - s->scroll_y;
         if (cur_y >= ty - SMALL_LINE_HEIGHT && cur_y < ty + th) {
-          fill_rect(get_sys_color(kColorTextNormal),
+          fill_rect(get_sys_color(brTextNormal),
                     tx + cx, cur_y, 2, CHAR_HEIGHT);
         }
       }

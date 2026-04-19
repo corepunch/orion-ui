@@ -108,8 +108,8 @@ static result_t ni_proc(window_t *win, uint32_t msg,
 
     case evPaint: {
       // Draw field labels manually (same pattern as win_textdialog.c)
-      draw_text_small("Width:",  NI_LBL_X, NI_ROW1_Y + 3, get_sys_color(kColorTextDisabled));
-      draw_text_small("Height:", NI_LBL_X, NI_ROW2_Y + 3, get_sys_color(kColorTextDisabled));
+      draw_text_small("Width:",  NI_LBL_X, NI_ROW1_Y + 3, get_sys_color(brTextDisabled));
+      draw_text_small("Height:", NI_LBL_X, NI_ROW2_Y + 3, get_sys_color(brTextDisabled));
       return false;  // let child controls paint themselves
     }
 

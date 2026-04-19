@@ -161,10 +161,10 @@ static void clamp_to_form(form_doc_t *doc, int *x, int *y, int *w, int *h) {
 // Draw a sunken (inset) box at absolute screen coords.
 static void draw_sunken_box(int sx, int sy, int sw, int sh) {
   fill_rect(0xFFFFFFFF, sx, sy, sw, sh);
-  fill_rect(get_sys_color(kColorDarkEdge),  sx, sy, sw, 1);
-  fill_rect(get_sys_color(kColorDarkEdge),  sx, sy, 1, sh);
-  fill_rect(get_sys_color(kColorLightEdge), sx, sy + sh, sw, 1);
-  fill_rect(get_sys_color(kColorLightEdge), sx + sw, sy, 1, sh);
+  fill_rect(get_sys_color(brDarkEdge),  sx, sy, sw, 1);
+  fill_rect(get_sys_color(brDarkEdge),  sx, sy, 1, sh);
+  fill_rect(get_sys_color(brLightEdge), sx, sy + sh, sw, 1);
+  fill_rect(get_sys_color(brLightEdge), sx + sw, sy, 1, sh);
 }
 
 // Draw a control element at its form-space position translated to screen.
@@ -173,7 +173,7 @@ static void draw_element(window_t *win, canvas_state_t *s, form_element_t *el) {
   int sy = form_to_sy(win, s, el->y);
   int sw = el->w;
   int sh = el->h;
-  uint32_t text_col = get_sys_color(kColorTextNormal);
+  uint32_t text_col = get_sys_color(brTextNormal);
 
   switch (el->type) {
     case CTRL_BUTTON: {
@@ -192,10 +192,10 @@ static void draw_element(window_t *win, canvas_state_t *s, form_element_t *el) {
       int by = sy + (sh - 8) / 2;
       if (by < sy) by = sy;
       fill_rect(0xFFFFFFFF, bx, by, 8, 8);
-      fill_rect(get_sys_color(kColorDarkEdge), bx, by, 8, 1);
-      fill_rect(get_sys_color(kColorDarkEdge), bx, by, 1, 8);
-      fill_rect(get_sys_color(kColorLightEdge), bx, by+8, 8, 1);
-      fill_rect(get_sys_color(kColorLightEdge), bx+8, by, 1, 8);
+      fill_rect(get_sys_color(brDarkEdge), bx, by, 8, 1);
+      fill_rect(get_sys_color(brDarkEdge), bx, by, 1, 8);
+      fill_rect(get_sys_color(brLightEdge), bx, by+8, 8, 1);
+      fill_rect(get_sys_color(brLightEdge), bx+8, by, 1, 8);
       draw_text_small(el->text, bx + 12, by, text_col);
       break;
     }
@@ -209,7 +209,7 @@ static void draw_element(window_t *win, canvas_state_t *s, form_element_t *el) {
     case CTRL_LIST:
       draw_sunken_box(sx, sy, sw, sh);
       for (int row = 0; row + 10 < sh; row += 10)
-        fill_rect(get_sys_color(kColorWindowDarkBg), sx + 1, sy + row + 9, sw - 2, 1);
+        fill_rect(get_sys_color(brWindowDarkBg), sx + 1, sy + row + 9, sw - 2, 1);
       break;
     case CTRL_COMBOBOX: {
       draw_sunken_box(sx, sy, sw, sh);
@@ -220,7 +220,7 @@ static void draw_element(window_t *win, canvas_state_t *s, form_element_t *el) {
       break;
     }
     default:
-      fill_rect(get_sys_color(kColorWindowBg), sx, sy, sw, sh);
+      fill_rect(get_sys_color(brWindowBg), sx, sy, sw, sh);
       break;
   }
 }
@@ -431,7 +431,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       if (!s || !doc) return true;
 
       // Dark workspace background
-      fill_rect(get_sys_color(kColorWorkspaceBg),
+      fill_rect(get_sys_color(brWorkspaceBg),
                 win->frame.x, win->frame.y, win->frame.w, win->frame.h);
 
       // Form surface (window-colored rectangle with a 1px dark border)
@@ -439,11 +439,11 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       int fy = win->frame.y + CANVAS_PADDING - s->pan_y;
       int fw = doc->form_w;
       int fh = doc->form_h;
-      fill_rect(get_sys_color(kColorWindowBg), fx, fy, fw, fh);
-      fill_rect(get_sys_color(kColorDarkEdge), fx - 1, fy - 1, fw + 2, 1);
-      fill_rect(get_sys_color(kColorDarkEdge), fx - 1, fy - 1, 1, fh + 2);
-      fill_rect(get_sys_color(kColorDarkEdge), fx - 1, fy + fh, fw + 2, 1);
-      fill_rect(get_sys_color(kColorDarkEdge), fx + fw, fy - 1, 1, fh + 2);
+      fill_rect(get_sys_color(brWindowBg), fx, fy, fw, fh);
+      fill_rect(get_sys_color(brDarkEdge), fx - 1, fy - 1, fw + 2, 1);
+      fill_rect(get_sys_color(brDarkEdge), fx - 1, fy - 1, 1, fh + 2);
+      fill_rect(get_sys_color(brDarkEdge), fx - 1, fy + fh, fw + 2, 1);
+      fill_rect(get_sys_color(brDarkEdge), fx + fw, fy - 1, 1, fh + 2);
 
       // Draw all elements
       for (int i = 0; i < doc->element_count; i++)

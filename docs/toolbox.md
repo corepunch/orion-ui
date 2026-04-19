@@ -176,8 +176,8 @@ case evPaint: {
 
     // 2. Paint your content at y = grid_bottom.
     int gy = toolbox_grid_height(win);   // y where the grid ends
-    fill_rect(get_sys_color(kColorWindowDarkBg), 0, gy, win->frame.w, EXTRA_H);
-    draw_text_small("FG", 2, gy + 4, get_sys_color(kColorTextDisabled));
+    fill_rect(get_sys_color(brWindowDarkBg), 0, gy, win->frame.w, EXTRA_H);
+    draw_text_small("FG", 2, gy + 4, get_sys_color(brTextDisabled));
     // ... draw swatches, sliders, etc.
     return true;
 }

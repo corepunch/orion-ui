@@ -155,7 +155,7 @@ static void draw_slider(int idx, const cp_state_t *st) {
   int ty = kSliderY[idx];
 
   // 1-char label
-  draw_text_small(kSliderLbl[idx], CP_LBL_X, ty, get_sys_color(kColorTextNormal));
+  draw_text_small(kSliderLbl[idx], CP_LBL_X, ty, get_sys_color(brTextNormal));
 
   // Gradient track
   const int SEGS = (idx == 3) ? 36 : 16;
@@ -171,12 +171,12 @@ static void draw_slider(int idx, const cp_state_t *st) {
   // Thumb — bright vertical bar at the current value position
   int val = slider_int_val(st, idx);
   int tx  = CP_TRK_X + val * CP_TRK_W / kSliderMax[idx];
-  fill_rect(get_sys_color(kColorFlare), tx - 1, ty - 1, 3, CP_TRK_H + 2);
+  fill_rect(get_sys_color(brFlare), tx - 1, ty - 1, 3, CP_TRK_H + 2);
 
   // Numeric value
   char buf[8];
   snprintf(buf, sizeof(buf), "%d", val);
-  draw_text_small(buf, CP_VAL_X, ty, get_sys_color(kColorTextNormal));
+  draw_text_small(buf, CP_VAL_X, ty, get_sys_color(brTextNormal));
 }
 
 // ──────────────────────────────────────────────────────────────────
@@ -222,21 +222,21 @@ static void drag_slider(cp_state_t *st, int idx, int lx) {
 
 static void paint_cp(const cp_state_t *st) {
   // "New" colour preview
-  draw_text_small("New", CP_PREV_X + 2, CP_NEW_LBL_Y, get_sys_color(kColorTextDisabled));
-  fill_rect(get_sys_color(kColorDarkEdge),      CP_PREV_X - 1, CP_NEW_Y - 1,
+  draw_text_small("New", CP_PREV_X + 2, CP_NEW_LBL_Y, get_sys_color(brTextDisabled));
+  fill_rect(get_sys_color(brDarkEdge),      CP_PREV_X - 1, CP_NEW_Y - 1,
                                        CP_PREV_W + 2,  CP_NEW_H + 2);
   fill_rect(st->cur,  CP_PREV_X,     CP_NEW_Y,
                            CP_PREV_W,      CP_NEW_H);
 
   // "Old" colour preview
-  draw_text_small("Old", CP_PREV_X + 2, CP_OLD_LBL_Y, get_sys_color(kColorTextDisabled));
-  fill_rect(get_sys_color(kColorDarkEdge),       CP_PREV_X - 1, CP_OLD_Y - 1,
+  draw_text_small("Old", CP_PREV_X + 2, CP_OLD_LBL_Y, get_sys_color(brTextDisabled));
+  fill_rect(get_sys_color(brDarkEdge),       CP_PREV_X - 1, CP_OLD_Y - 1,
                                         CP_PREV_W + 2,  CP_OLD_H + 2);
   fill_rect(st->orig, CP_PREV_X,     CP_OLD_Y,
                            CP_PREV_W,      CP_OLD_H);
 
   // Separator between RGB and HSV groups
-  fill_rect(get_sys_color(kColorDarkEdge),
+  fill_rect(get_sys_color(brDarkEdge),
             CP_LBL_X, (CP_Y_B + CP_Y_H) / 2 + 2,
             CP_TRK_W + (CP_TRK_X - CP_LBL_X), 1);
 
@@ -245,15 +245,15 @@ static void paint_cp(const cp_state_t *st) {
     draw_slider(i, st);
 
   // User palette
-  draw_text_small("Palette:", CP_PREV_X, CP_PAL_LBL_Y, get_sys_color(kColorTextDisabled));
+  draw_text_small("Palette:", CP_PREV_X, CP_PAL_LBL_Y, get_sys_color(brTextDisabled));
   for (int i = 0; i < NUM_USER_COLORS; i++) {
     int px = CP_PREV_X + i * CP_PAL_SW;
     bool has = (g_app && i < g_app->num_user_colors);
-    fill_rect(get_sys_color(kColorDarkEdge), px - 1, CP_PAL_Y - 1, CP_PAL_SW + 1, CP_PAL_SH + 2);
-    fill_rect(has ? g_app->user_palette[i] : get_sys_color(kColorWindowDarkBg),
+    fill_rect(get_sys_color(brDarkEdge), px - 1, CP_PAL_Y - 1, CP_PAL_SW + 1, CP_PAL_SH + 2);
+    fill_rect(has ? g_app->user_palette[i] : get_sys_color(brWindowDarkBg),
               px, CP_PAL_Y, CP_PAL_SW - 1, CP_PAL_SH);
     if (has && i == st->hover_pal)
-      fill_rect(get_sys_color(kColorFocusRing), px, CP_PAL_Y, CP_PAL_SW - 1, 1);
+      fill_rect(get_sys_color(brFocusRing), px, CP_PAL_Y, CP_PAL_SW - 1, 1);
   }
 }
 

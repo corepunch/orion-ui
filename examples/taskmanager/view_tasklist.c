@@ -52,7 +52,7 @@ void tasklist_refresh(window_t *list_win) {
     reportview_item_t item = {
       .text = t->title,
       .icon = icon8_editor_helmet,
-      .color = get_sys_color(kColorTextNormal),
+      .color = get_sys_color(brTextNormal),
       .userdata = (uint32_t)i,
       .subitems = { prio, status },
       .subitem_count = 2,

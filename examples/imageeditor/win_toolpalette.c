@@ -95,37 +95,37 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       int gy = toolbox_grid_height(win);  // y offset where our content starts
       int sy = gy + SWATCH_LABEL_Y;
 
-      draw_text_small("FG", 2, sy, get_sys_color(kColorTextDisabled));
-      draw_text_small("BG", TB_SPACING + 2, sy, get_sys_color(kColorTextDisabled));
+      draw_text_small("FG", 2, sy, get_sys_color(brTextDisabled));
+      draw_text_small("BG", TB_SPACING + 2, sy, get_sys_color(brTextDisabled));
       sy += SWATCH_LABEL_H;
 
       if (g_app) {
 #define DrawSwatch(border_col, x, color) \
         fill_rect((border_col), (x) + 1, sy - 1, TB_SPACING - 2, SWATCH_BOX_H); \
         fill_rect((color),      (x) + 2, sy,     TB_SPACING - 4, SWATCH_BOX_H - 2);
-        DrawSwatch(get_sys_color(kColorDarkEdge), 0,          g_app->fg_color);
-        DrawSwatch(get_sys_color(kColorDarkEdge), TB_SPACING, g_app->bg_color);
+        DrawSwatch(get_sys_color(brDarkEdge), 0,          g_app->fg_color);
+        DrawSwatch(get_sys_color(brDarkEdge), TB_SPACING, g_app->bg_color);
 #undef DrawSwatch
 
         // Shape-mode row.
         int fy = sy + SWATCH_BOX_H;
-        draw_text_small("Fill:", 2, fy, get_sys_color(kColorTextDisabled));
+        draw_text_small("Fill:", 2, fy, get_sys_color(brTextDisabled));
         fy += FILL_LABEL_H;
 
         uint32_t outline_col = g_app->shape_filled
-            ? get_sys_color(kColorButtonBg) : get_sys_color(kColorFocusRing);
-        fill_rect(get_sys_color(kColorDarkEdge),
+            ? get_sys_color(brButtonBg) : get_sys_color(brFocusRing);
+        fill_rect(get_sys_color(brDarkEdge),
                   1,           fy,     TB_SPACING - 2, FILL_ROW_H);
         fill_rect(outline_col, 2,           fy + 1, TB_SPACING - 4, FILL_ROW_H - 2);
-        draw_text_small("O", 5, fy + 2, get_sys_color(kColorTextNormal));
+        draw_text_small("O", 5, fy + 2, get_sys_color(brTextNormal));
 
         uint32_t filled_col = g_app->shape_filled
-            ? get_sys_color(kColorFocusRing) : get_sys_color(kColorButtonBg);
-        fill_rect(get_sys_color(kColorDarkEdge),
+            ? get_sys_color(brFocusRing) : get_sys_color(brButtonBg);
+        fill_rect(get_sys_color(brDarkEdge),
                   TB_SPACING + 1, fy,     TB_SPACING - 2, FILL_ROW_H);
         fill_rect(filled_col,
                   TB_SPACING + 2, fy + 1, TB_SPACING - 4, FILL_ROW_H - 2);
-        draw_text_small("F", TB_SPACING + 5, fy + 2, get_sys_color(kColorTextNormal));
+        draw_text_small("F", TB_SPACING + 5, fy + 2, get_sys_color(brTextNormal));
       }
       return true;
     }

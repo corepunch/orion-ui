@@ -43,10 +43,10 @@ result_t win_list(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         rect_t item = { 0, (int)(i * LIST_HEIGHT), win->frame.w, LIST_HEIGHT };
         rect_t text_pos = rect_inset_xy(item, LIST_X, LIST_Y);
         if (i == win->cursor_pos) {
-          fill_rect(get_sys_color(kColorTextNormal), item.x, item.y, item.w, item.h);
-          draw_text_small(texts[i], text_pos.x, text_pos.y, get_sys_color(kColorWindowBg));
+          fill_rect(get_sys_color(brTextNormal), item.x, item.y, item.w, item.h);
+          draw_text_small(texts[i], text_pos.x, text_pos.y, get_sys_color(brWindowBg));
         } else {
-          draw_text_small(texts[i], text_pos.x, text_pos.y, get_sys_color(kColorTextNormal));
+          draw_text_small(texts[i], text_pos.x, text_pos.y, get_sys_color(brTextNormal));
         }
       }
       return true;

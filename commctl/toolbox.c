@@ -134,7 +134,7 @@ static void draw_toolbox_button(toolbox_state_t *st, int idx,
     char buf[8];
     snprintf(buf, sizeof(buf), "%d", idx);
     draw_text_small(buf, bx + px + 4, by + px + (bsz - 8) / 2,
-                    get_sys_color(kColorTextNormal));
+                    get_sys_color(brTextNormal));
   }
 }
 
@@ -170,7 +170,7 @@ result_t win_toolbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       // Fill the entire client area with the dark panel background so that
       // inactive buttons look flat (icon on plain dark surface) and any area
       // below the grid (extra client content in wrapping procs) starts clean.
-      fill_rect(get_sys_color(kColorWindowDarkBg), 0, 0, win->frame.w, win->frame.h);
+      fill_rect(get_sys_color(brWindowDarkBg), 0, 0, win->frame.w, win->frame.h);
 
       for (int i = 0; i < st->count; i++) {
         int col = i % TOOLBOX_COLS;

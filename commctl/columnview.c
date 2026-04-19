@@ -267,7 +267,7 @@ static void rv_paint_icon_view(window_t *win, reportview_data_t *data) {
   int eff_w = rv_content_width(win);
   int ncol = get_column_count(eff_w, data->column_width);
   int scroll_y = (int)win->scroll[1];
-  uint32_t bg_col = get_sys_color(kColorColumnViewBg);
+  uint32_t bg_col = get_sys_color(brColumnViewBg);
 
   fill_rect(bg_col, 0, 0, win->frame.w, win->frame.h);
 
@@ -283,10 +283,10 @@ static void rv_paint_icon_view(window_t *win, reportview_data_t *data) {
     if (y >= clip_bottom) break;
 
     if ((int)i == data->selected) {
-      fill_rect(get_sys_color(kColorTextNormal), x - 2, y - 2,
+      fill_rect(get_sys_color(brTextNormal), x - 2, y - 2,
                 data->column_width - 6, ENTRY_HEIGHT - 2);
-      draw_icon8(data->items[i].icon, x, y - ICON_DODGE, get_sys_color(kColorWindowBg));
-      draw_text_small(data->items[i].text, x + ICON_OFFSET, y, get_sys_color(kColorWindowBg));
+      draw_icon8(data->items[i].icon, x, y - ICON_DODGE, get_sys_color(brWindowBg));
+      draw_text_small(data->items[i].text, x + ICON_OFFSET, y, get_sys_color(brWindowBg));
     } else {
       fill_rect(bg_col, x - 2, y - 2,
                 data->column_width - 6, ENTRY_HEIGHT - 2);
@@ -301,27 +301,27 @@ static void rv_paint_report_view(window_t *win, reportview_data_t *data) {
   int row_w = rv_report_total_width(data, eff_w);
   int body_h = win->frame.h - HEADER_HEIGHT;
   int scroll_y = (int)win->scroll[1];
-  uint32_t bg_col = get_sys_color(kColorColumnViewBg);
+  uint32_t bg_col = get_sys_color(brColumnViewBg);
 
   int first_row = (body_h > 0) ? (scroll_y / ENTRY_HEIGHT) : 0;
   int last_row = (body_h > 0) ? ((scroll_y + body_h + ENTRY_HEIGHT - 1) / ENTRY_HEIGHT) : 0;
   if (first_row < 0) first_row = 0;
   if (last_row > (int)data->count) last_row = (int)data->count;
 
-  uint32_t hdr_fg = get_sys_color(kColorTextNormal);
-  uint32_t sep_col = get_sys_color(kColorDarkEdge);
+  uint32_t hdr_fg = get_sys_color(brTextNormal);
+  uint32_t sep_col = get_sys_color(brDarkEdge);
 
   fill_rect(bg_col, 0, HEADER_HEIGHT, row_w, body_h);
 
   if (data->selected >= first_row && data->selected < last_row) {
     int y = HEADER_HEIGHT + data->selected * ENTRY_HEIGHT - scroll_y;
-    fill_rect(get_sys_color(kColorTextNormal), 0, y, row_w, ENTRY_HEIGHT - 1);
+    fill_rect(get_sys_color(brTextNormal), 0, y, row_w, ENTRY_HEIGHT - 1);
   }
 
   char clipped[MAX_COLUMNVIEW_ITEM_NAME];
   for (int row = first_row; row < last_row; row++) {
     reportview_item_t *it = &data->items[row];
-    uint32_t fg = (row == data->selected) ? get_sys_color(kColorWindowBg) : it->color;
+    uint32_t fg = (row == data->selected) ? get_sys_color(brWindowBg) : it->color;
     int y = HEADER_HEIGHT + row * ENTRY_HEIGHT - scroll_y;
     int x = 0;
 

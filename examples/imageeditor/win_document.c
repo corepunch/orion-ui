@@ -19,7 +19,7 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
     case evCreate:
       return true;
     case evPaint:
-      fill_rect(get_sys_color(kColorWindowDarkBg), 0, 0, win->frame.w, win->frame.h);
+      fill_rect(get_sys_color(brWindowDarkBg), 0, 0, win->frame.w, win->frame.h);
       return false;
     case evResize: {
       // Keep the canvas child window in sync with the document window's client area.

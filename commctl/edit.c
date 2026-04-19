@@ -20,11 +20,11 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       win->frame.h = MAX(win->frame.h, 13);
       return true;
     case evPaint:
-      fill_rect(g_ui_runtime.focused == win?get_sys_color(kColorFocusRing):get_sys_color(kColorWindowBg), win->frame.x-1, win->frame.y-1, win->frame.w+2, win->frame.h+2);
+      fill_rect(g_ui_runtime.focused == win?get_sys_color(brFocusRing):get_sys_color(brWindowBg), win->frame.x-1, win->frame.y-1, win->frame.w+2, win->frame.h+2);
       draw_button(&win->frame, 1, 1, true);
-      draw_text_small(win->title, win->frame.x+PADDING, win->frame.y+PADDING, get_sys_color(kColorTextNormal));
+      draw_text_small(win->title, win->frame.x+PADDING, win->frame.y+PADDING, get_sys_color(brTextNormal));
       if (g_ui_runtime.focused == win && win->editing) {
-        fill_rect(get_sys_color(kColorTextNormal),
+        fill_rect(get_sys_color(brTextNormal),
                   win->frame.x+PADDING+strnwidth(win->title, win->cursor_pos),
                   win->frame.y+PADDING,
                   2, 8);

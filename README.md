@@ -254,7 +254,7 @@ static result_t my_dlg_proc(window_t *win, uint32_t msg,
       return true;
 
     case evPaint:
-      draw_text_small("Name:", 4, 11, get_sys_color(kColorTextDisabled));
+      draw_text_small("Name:", 4, 11, get_sys_color(brTextDisabled));
       return false;
 
     case evCommand:

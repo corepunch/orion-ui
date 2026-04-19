@@ -62,7 +62,7 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
     case evCreate:
       return true;
     case evPaint:
-      fill_rect(get_sys_color(kColorWorkspaceBg), 0, 0, win->frame.w, win->frame.h);
+      fill_rect(get_sys_color(brWorkspaceBg), 0, 0, win->frame.w, win->frame.h);
       return false;
     case evHScroll:
       // Forward the built-in hscroll notification to the canvas child.
@@ -431,10 +431,10 @@ static result_t about_proc(window_t *win, uint32_t msg,
           win, win_label, 0, NULL);
       create_window("Version 1.0", WINDOW_NOTITLE | WINDOW_NOFILL,
           MAKERECT(8, 22, ABOUT_W - 16, CONTROL_HEIGHT),
-          win, win_label, 0, (void *)(uintptr_t)kColorTextDisabled);
+          win, win_label, 0, (void *)(uintptr_t)brTextDisabled);
       create_window("VB3-inspired form designer", WINDOW_NOTITLE | WINDOW_NOFILL,
           MAKERECT(8, 36, ABOUT_W - 16, CONTROL_HEIGHT),
-          win, win_label, 0, (void *)(uintptr_t)kColorTextDisabled);
+          win, win_label, 0, (void *)(uintptr_t)brTextDisabled);
       // OK button
       create_window("OK", BUTTON_DEFAULT,
           MAKERECT(ABOUT_W - 54, ABOUT_H - BUTTON_HEIGHT - 4, 50, BUTTON_HEIGHT),
@@ -521,7 +521,7 @@ static result_t props_proc(window_t *win, uint32_t msg,
                ps->el->x, ps->el->y, ps->el->w, ps->el->h);
       create_window(info, WINDOW_NOTITLE | WINDOW_NOFILL,
           MAKERECT(4, PROPS_INFO_Y, PROPS_W - 8, CONTROL_HEIGHT),
-          win, win_label, 0, (void *)(uintptr_t)kColorTextDisabled);
+          win, win_label, 0, (void *)(uintptr_t)brTextDisabled);
 
       // Pre-populate caption/name edits from the element.
       dialog_push(win, ps->el, k_props_bindings, ARRAY_LEN(k_props_bindings));
