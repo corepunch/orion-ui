@@ -1,101 +1,94 @@
-# Browser Example Implementation Plan
+# Browser Example MVP Plan
 
-## Plan Overview
+## Goal
 
-1. Add a new browser example module under `examples/` that uses:
-   - `WINDOW_TOOLBAR` for navigation UI
-   - Orion async HTTP API for fetch
-   - `libxml2` HTML parser for text and links extraction
-   - Custom text renderer (no CSS, plain text flow only)
-2. Support:
-   - Address textbox in toolbar
-   - Back and forward buttons
-   - Clickable links (blue and underlined)
-   - New top-level windows instead of tabs
+Get to a usable MVP as fast as possible:
 
-## Phase 1: Example Skeleton and Window Model
+1. Type a URL in an address field.
+2. Fetch the page HTML.
+3. Parse HTML with libxml2.
+4. Render readable plain text blocks (no tags, no CSS, no JS).
 
-1. Use the structure and pattern from `examples/taskmanager/view_main.c` as the base for a document-style top-level window.
-2. Define a per-window browser state:
+Everything else is explicitly deferred until after this works.
+
+## MVP Scope (Must-Have)
+
+1. One browser window.
+2. One address input.
+3. One load action (Enter key in address field).
+4. Async fetch via Orion HTTP.
+5. HTML to plain text-block conversion via libxml2.
+6. Text output area with basic wrapping/scroll.
+
+## MVP Phase 1: Minimal Skeleton
+
+1. Add `examples/browser/` with one main window proc.
+2. Keep state minimal:
    - `current_url`
-   - history array and `history_index`
-   - parsed text runs (plain and link runs)
-   - clickable link hit regions
-   - fetch request id and loading flag
-3. On create:
-   - Create browser top-level window with toolbar enabled.
-   - Build toolbar controls (back, forward, address).
-   - Navigate to an initial URL.
+   - `loading` flag
+   - `request_id`
+   - `html_raw` buffer
+   - `render_text` buffer
+3. Create window and child controls:
+   - top address `win_textedit`
+   - content view area for rendered text
 
-## Phase 2: Toolbar Address Textbox
+Note: for MVP speed, create controls directly as child windows. Do not block on extending `WINDOW_TOOLBAR` item types first.
 
-Current toolbar item support in `user/messages.h` and creation path in `user/message.c` do not include a text edit item.
+## MVP Phase 2: URL Entry and Fetch
 
-1. Extend toolbar item model with a text edit type (small framework change, clean WinAPI-style).
-2. Implement toolbar child creation for that type in `user/message.c`, using existing `win_textedit` control from `commctl/edit.c`.
-3. Wire command handling so Enter in address bar triggers navigation.
+1. On Enter in address field:
+   - normalize URL (prepend `https://` if missing scheme)
+   - set `loading = true`
+   - call `http_request_async`
+2. On `evHttpDone`:
+   - store response body in `html_raw`
+   - clear `loading`
+   - trigger parse step
 
-## Phase 3: HTTP Fetch Integration
+## MVP Phase 3: libxml2 Parse to Text Blocks
 
-1. Use the async API documented in `docs/http.md`:
-   - `http_request_async` on navigate
-   - `evHttpDone` to receive full HTML
-2. Ignore CSS, JS, and resources; only process the returned HTML body.
-3. On back and forward:
-   - load URL from history
-   - optionally fetch again (simple behavior)
-   - keep no cache initially
+1. Parse with `htmlReadMemory`.
+2. Traverse DOM and emit plain text only:
+   - text nodes -> append normalized text
+   - block elements (`p`, `div`, `li`, `h1..h6`, etc.) -> add `\n\n`
+   - `br` -> add `\n`
+3. Drop scripts/styles entirely.
+4. Output goes to `render_text`.
 
-## Phase 4: HTML to Plain Text and Links (`libxml2`)
+Definition of done for parser MVP:
 
-1. Parse with `htmlReadMemory` (libxml2 HTML parser mode).
-2. Traverse DOM and emit a simple stream of runs:
-   - plain text runs
-   - link runs (`href`, blue, underlined)
-   - block separators (`\n\n` for `p/div/li/h1...`, `\n` for `br`)
-3. No CSS/layout engine; use semantic block breaks and inline text only.
-4. Resolve relative links against current URL (simple URL-join helper).
+1. Visible text is readable.
+2. No raw tags shown.
+3. Paragraphs are separated as text blocks.
 
-## Phase 5: Layout, Paint, and Hit-Testing
+## MVP Phase 4: Paint and Scroll
 
-1. Build a tiny layout pass in the browser view:
-   - wrap text to viewport width
-   - track run positions
-   - store hit rectangles for link runs
-2. Paint rules:
-   - normal text: default color
-   - links: blue and underlined
-   - selection and focus optional later
-3. Mouse handling:
-   - click in link rect navigates to link URL
-   - add to history correctly
-   - repaint
+1. Render `render_text` with existing small-font draw APIs.
+2. Basic line-wrap to viewport width.
+3. Use built-in vertical scroll support for long pages.
+4. Show a simple loading message while request is in flight.
 
-## Phase 6: New Window Instead of Tabs
+## MVP Build and Dependency
 
-1. Add a New Window action (menu or toolbar button).
-2. Action creates another top-level browser window with independent state and history.
-3. No shared tabs state.
+1. Wire libxml2 only for the browser example target (prefer `pkg-config --cflags --libs libxml-2.0`).
+2. If libxml2 is missing:
+   - browser example fails with clear message
+   - rest of project still builds.
 
-## Phase 7: Build System and Docs
+## Post-MVP (Deferred)
 
-1. Add `libxml2` compile and link flags for this example path in `Makefile` (prefer `pkg-config`).
-2. If `libxml2` is missing:
-   - fail browser example build with clear message
-   - keep other examples unaffected
-3. Update docs:
-   - add browser example run and build notes in `examples/README.md`
-   - mention `libxml2` dependency and no-CSS limitation
+1. Back/forward history.
+2. Link extraction and clickable links.
+3. Opening links in new windows.
+4. Toolbar integration via `WINDOW_TOOLBAR` item extensions.
+5. Relative URL resolution.
+6. Any styling beyond plain text.
 
-## Phase 8: Verification
+## Fast Validation Checklist
 
-1. Manual checks:
-   - Enter URL and load
-   - back and forward navigation
-   - link clicks navigate
-   - links render blue and underlined
-   - open multiple windows with independent history
-2. Basic test target (headless logic):
-   - HTML parse-to-runs for links and text
-   - history push/back/forward behavior
-   - relative URL resolution
+1. Launch browser example.
+2. Type URL and press Enter.
+3. Request completes without crash.
+4. Content area shows parsed text blocks (not HTML tags).
+5. Long pages can be scrolled.
