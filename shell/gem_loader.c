@@ -72,9 +72,8 @@ bool shell_load_gem(const char *gem_path, int argc, char *argv[]) {
     // Snapshot the tail of the window list so we can identify the first window
     // the gem creates.  create_window() appends to the tail, so we need to
     // find the node just after the current tail after init() returns.
-    extern window_t *windows;
     window_t *tail_before = NULL;
-    for (window_t *w = windows; w; w = w->next)
+    for (window_t *w = g_ui_runtime.windows; w; w = w->next)
         if (!w->next) { tail_before = w; break; }
 
     if (!iface->init(argc, argv, hinstance)) {
@@ -85,7 +84,7 @@ bool shell_load_gem(const char *gem_path, int argc, char *argv[]) {
 
     // The first window appended by init() is now tail_before->next (or
     // windows itself if the list was empty before).
-    window_t *main_win = tail_before ? tail_before->next : windows;
+    window_t *main_win = tail_before ? tail_before->next : g_ui_runtime.windows;
 
     loaded_gem_t *lg = calloc(1, sizeof(loaded_gem_t));
     if (!lg) {

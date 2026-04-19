@@ -60,7 +60,7 @@ bool translate_accelerator(window_t *win, ui_event_t *evt,
     if (has_ctrl == want_ctrl && has_shift == want_shift && has_alt == want_alt) {
       // Suppress accelerators that require no Ctrl or Alt while a text-editing
       // control has keyboard focus, mirroring WinAPI TranslateAccelerator.
-      if (!want_ctrl && !want_alt && _focused && _focused->editing) continue;
+      if (!want_ctrl && !want_alt && g_ui_runtime.focused && g_ui_runtime.focused->editing) continue;
       send_message(win, kWindowMessageCommand,
                    MAKEDWORD(a->cmd, kAcceleratorNotification), NULL);
       return true;

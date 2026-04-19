@@ -182,10 +182,8 @@ bool ui_init_graphics(int flags, const char *title, int width, int height) {
 
 // Cleanup all windows
 static void cleanup_all_windows(void) {
-  extern window_t *windows;
-
-  while (windows) {
-    destroy_window(windows);
+  while (g_ui_runtime.windows) {
+    destroy_window(g_ui_runtime.windows);
   }
 }
 

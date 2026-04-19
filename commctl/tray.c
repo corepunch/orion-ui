@@ -16,8 +16,6 @@ typedef enum {
   icon16_count,
 } ed_icon16_t;
 
-extern window_t *windows;
-
 result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 
 void create_button(window_t *tray, window_t *window) {

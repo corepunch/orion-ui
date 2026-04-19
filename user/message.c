@@ -220,8 +220,6 @@ typedef struct winhook_s {
 static winhook_t *g_hooks = NULL;
 
 // External references
-extern window_t *windows;
-extern window_t *_focused;
 
 // Forward declaration for kernel/event.c wake-up helper.
 extern void wake_event_loop(void);
@@ -855,7 +853,7 @@ void repost_messages(void) {
       }
       continue;
     }
-    if (!is_valid_window_ptr(m->target, windows)) {
+    if (!is_valid_window_ptr(m->target, g_ui_runtime.windows)) {
       free_posted_lparam(m->msg, m->lparam);
       continue;
     }

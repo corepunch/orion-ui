@@ -156,23 +156,39 @@ static void http_thread_join(http_thread_t t) {
  * Global state
  * ====================================================================== */
 
-static bool              g_initialized  = false;
-static bool              g_sync_ready   = false;
-static http_thread_t     g_worker;
-static http_mutex_t      g_mutex;
-static http_cond_t       g_cond;
-static http_pending_t   *g_queue_head   = NULL;
-static http_pending_t   *g_queue_tail   = NULL;
-static bool              g_worker_quit  = false;
-static http_request_id_t g_next_id      = 1; /* starts at 1; 0 = invalid */
+typedef struct {
+  bool              initialized;
+  bool              sync_ready;
+  bool              net_ready;
+  http_thread_t     worker;
+  http_mutex_t      mutex;
+  http_cond_t       cond;
+  http_pending_t   *queue_head;
+  http_pending_t   *queue_tail;
+  bool              worker_quit;
+  http_request_id_t next_id;   /* starts at 1; 0 = invalid */
+} http_state_t;
+
+static http_state_t g_http = {
+  .next_id = 1,
+};
 
 static bool
 http_sync_init(void)
 {
-  if (g_sync_ready) return true;
-  http_mutex_init(&g_mutex);
-  http_cond_init(&g_cond);
-  g_sync_ready = true;
+  if (g_http.sync_ready) return true;
+  http_mutex_init(&g_http.mutex);
+  http_cond_init(&g_http.cond);
+  g_http.sync_ready = true;
+  return true;
+}
+
+static bool
+http_net_init_once(void)
+{
+  if (g_http.net_ready) return true;
+  if (!axNetInit()) return false;
+  g_http.net_ready = true;
   return true;
 }
 
@@ -621,18 +637,18 @@ worker_thread(void *arg)
   (void)arg;
 
   for (;;) {
-    http_mutex_lock(&g_mutex);
-    while (!g_queue_head && !g_worker_quit)
-      http_cond_wait(&g_cond, &g_mutex);
+    http_mutex_lock(&g_http.mutex);
+    while (!g_http.queue_head && !g_http.worker_quit)
+      http_cond_wait(&g_http.cond, &g_http.mutex);
 
-    if (g_worker_quit && !g_queue_head) {
-      http_mutex_unlock(&g_mutex);
+    if (g_http.worker_quit && !g_http.queue_head) {
+      http_mutex_unlock(&g_http.mutex);
       break;
     }
 
     /* Dequeue the oldest pending (non-cancelled) request. */
     http_pending_t *req = NULL;
-    for (http_pending_t *it = g_queue_head; it; it = it->next) {
+    for (http_pending_t *it = g_http.queue_head; it; it = it->next) {
       if (it->state == HTTP_STATE_PENDING) {
         req = it;
         break;
@@ -641,30 +657,30 @@ worker_thread(void *arg)
 
     if (!req) {
       /* All remaining items are cancelled / done — drain them. */
-      while (g_queue_head) {
-        http_pending_t *next = g_queue_head->next;
-        free(g_queue_head->url);
-        free(g_queue_head->body);
-        free(g_queue_head->headers);
-        free(g_queue_head);
-        g_queue_head = next;
+      while (g_http.queue_head) {
+        http_pending_t *next = g_http.queue_head->next;
+        free(g_http.queue_head->url);
+        free(g_http.queue_head->body);
+        free(g_http.queue_head->headers);
+        free(g_http.queue_head);
+        g_http.queue_head = next;
       }
-      g_queue_tail = NULL;
-      http_mutex_unlock(&g_mutex);
+      g_http.queue_tail = NULL;
+      http_mutex_unlock(&g_http.mutex);
       continue;
     }
 
     req->state = HTTP_STATE_RUNNING;
-    http_mutex_unlock(&g_mutex);
+    http_mutex_unlock(&g_http.mutex);
 
     /* Execute outside the lock so the main thread can cancel / enqueue. */
     http_response_t *resp = execute_request(req);
 
-    http_mutex_lock(&g_mutex);
+    http_mutex_lock(&g_http.mutex);
     bool cancelled = (req->state == HTTP_STATE_CANCELLED);
-    bool shutting_down = g_worker_quit;
+    bool shutting_down = g_http.worker_quit;
     req->state = HTTP_STATE_DONE;
-    http_mutex_unlock(&g_mutex);
+    http_mutex_unlock(&g_http.mutex);
 
     if (cancelled || shutting_down) {
       /* Discard result; don't post a message. */
@@ -678,16 +694,16 @@ worker_thread(void *arg)
     }
 
     /* Remove the completed request from the queue. */
-    http_mutex_lock(&g_mutex);
-    http_pending_t *cur = g_queue_head;
+    http_mutex_lock(&g_http.mutex);
+    http_pending_t *cur = g_http.queue_head;
     http_pending_t *p   = NULL;
     while (cur && cur != req) { p = cur; cur = cur->next; }
     if (cur) {
       if (p) p->next = cur->next;
-      else   g_queue_head = cur->next;
-      if (g_queue_tail == cur) g_queue_tail = p;
+      else   g_http.queue_head = cur->next;
+      if (g_http.queue_tail == cur) g_http.queue_tail = p;
     }
-    http_mutex_unlock(&g_mutex);
+    http_mutex_unlock(&g_http.mutex);
 
     free(req->url);
     free(req->body);
@@ -709,55 +725,55 @@ worker_thread(void *arg)
 bool
 http_init(void)
 {
-  if (g_initialized) return true;
+  if (g_http.initialized) return true;
   if (!http_sync_init()) return false;
+  if (!http_net_init_once()) return false;
 
-  if (!axNetInit()) return false;
+  g_http.worker_quit = false;
+  g_http.queue_head  = NULL;
+  g_http.queue_tail  = NULL;
 
-  g_worker_quit = false;
-  g_queue_head  = NULL;
-  g_queue_tail  = NULL;
-
-  if (!http_thread_create(&g_worker, worker_thread, NULL)) {
-    axNetShutdown();
+  if (!http_thread_create(&g_http.worker, worker_thread, NULL)) {
     return false;
   }
 
-  g_initialized = true;
+  g_http.initialized = true;
   return true;
 }
 
 void
 http_shutdown(void)
 {
-  if (!g_initialized) return;
+  if (!g_http.initialized) return;
 
-  http_mutex_lock(&g_mutex);
-  g_worker_quit = true;
+  http_mutex_lock(&g_http.mutex);
+  g_http.worker_quit = true;
   /* Cancel all pending requests so the worker stops quickly. */
-  for (http_pending_t *it = g_queue_head; it; it = it->next)
+  for (http_pending_t *it = g_http.queue_head; it; it = it->next)
     if (it->state == HTTP_STATE_PENDING || it->state == HTTP_STATE_RUNNING)
       it->state = HTTP_STATE_CANCELLED;
-  http_cond_signal(&g_cond);
-  http_mutex_unlock(&g_mutex);
+  http_cond_signal(&g_http.cond);
+  http_mutex_unlock(&g_http.mutex);
 
-  http_thread_join(g_worker);
+  http_thread_join(g_http.worker);
 
   /* Free anything left in the queue (worker drained its own items). */
-  http_mutex_lock(&g_mutex);
-  while (g_queue_head) {
-    http_pending_t *next = g_queue_head->next;
-    free(g_queue_head->url);
-    free(g_queue_head->body);
-    free(g_queue_head->headers);
-    free(g_queue_head);
-    g_queue_head = next;
+  http_mutex_lock(&g_http.mutex);
+  while (g_http.queue_head) {
+    http_pending_t *next = g_http.queue_head->next;
+    free(g_http.queue_head->url);
+    free(g_http.queue_head->body);
+    free(g_http.queue_head->headers);
+    free(g_http.queue_head);
+    g_http.queue_head = next;
   }
-  g_queue_tail = NULL;
-  http_mutex_unlock(&g_mutex);
+  g_http.queue_tail = NULL;
+  http_mutex_unlock(&g_http.mutex);
 
-  axNetShutdown();
-  g_initialized = false;
+  // Keep axNet initialized for process lifetime. Repeated init/shutdown cycles
+  // can be unstable on some backends; http_init/http_shutdown therefore only
+  // manage the worker thread and request queue lifecycle.
+  g_http.initialized = false;
 }
 
 http_request_id_t
@@ -768,7 +784,7 @@ http_request_async(window_t           *notify_win,
 {
   (void)userdata; /* reserved for future use */
 
-  if (!g_initialized || !url) return HTTP_INVALID_REQUEST;
+  if (!g_http.initialized || !url) return HTTP_INVALID_REQUEST;
 
   /* Validate the URL before queueing. */
   parsed_url_t pu;
@@ -808,19 +824,19 @@ http_request_async(window_t           *notify_win,
   req->notify_win = notify_win;
   req->state      = HTTP_STATE_PENDING;
 
-  http_mutex_lock(&g_mutex);
-  req->id = g_next_id++;
-  if (g_next_id == HTTP_INVALID_REQUEST) g_next_id = 1; /* wrap, skip 0 */
+  http_mutex_lock(&g_http.mutex);
+  req->id = g_http.next_id++;
+  if (g_http.next_id == HTTP_INVALID_REQUEST) g_http.next_id = 1; /* wrap, skip 0 */
 
   /* Append to the tail of the queue. */
-  if (g_queue_tail) {
-    g_queue_tail->next = req;
-    g_queue_tail       = req;
+  if (g_http.queue_tail) {
+    g_http.queue_tail->next = req;
+    g_http.queue_tail       = req;
   } else {
-    g_queue_head = g_queue_tail = req;
+    g_http.queue_head = g_http.queue_tail = req;
   }
-  http_cond_signal(&g_cond);
-  http_mutex_unlock(&g_mutex);
+  http_cond_signal(&g_http.cond);
+  http_mutex_unlock(&g_http.mutex);
 
   return req->id;
 }
@@ -830,15 +846,15 @@ http_cancel(http_request_id_t id)
 {
   if (id == HTTP_INVALID_REQUEST) return;
 
-  http_mutex_lock(&g_mutex);
-  for (http_pending_t *it = g_queue_head; it; it = it->next) {
+  http_mutex_lock(&g_http.mutex);
+  for (http_pending_t *it = g_http.queue_head; it; it = it->next) {
     if (it->id == id) {
       if (it->state == HTTP_STATE_PENDING || it->state == HTTP_STATE_RUNNING)
         it->state = HTTP_STATE_CANCELLED;
       break;
     }
   }
-  http_mutex_unlock(&g_mutex);
+  http_mutex_unlock(&g_http.mutex);
 }
 
 void

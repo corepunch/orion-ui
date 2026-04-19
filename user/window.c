@@ -12,15 +12,16 @@
 #include "draw.h"
 
 // Global window state
-window_t *windows = NULL;
-window_t *_focused = NULL;
-window_t *_tracked = NULL;
-window_t *_captured = NULL;
-ui_runtime_state_t g_ui_runtime = { false };
-
-extern window_t *_dragging;
-extern window_t *_resizing;
-extern window_t *_toolbar_down_win;
+ui_runtime_state_t g_ui_runtime = {
+  .running = false,
+  .windows = NULL,
+  .focused = NULL,
+  .tracked = NULL,
+  .captured = NULL,
+  .dragging = NULL,
+  .resizing = NULL,
+  .toolbar_down_win = NULL,
+};
 
 // Forward declarations
 extern void post_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
@@ -55,7 +56,7 @@ static window_t *alloc_window(char const *title, flags_t flags, rect_t const *fr
     win->id = ++parent->child_id;
   } else {
     bool used[256]={0};
-    for (window_t *w = windows; w; w = w->next) {
+    for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
       used[w->id] = true;
     }
     for (int i = 1; i < 256; i++) {
@@ -74,8 +75,8 @@ static window_t *alloc_window(char const *title, flags_t flags, rect_t const *fr
   // visible_mode == SB_VIS_HIDE and the bars would never appear.
   if (flags & WINDOW_HSCROLL) win->hscroll.visible_mode = SB_VIS_AUTO;
   if (flags & WINDOW_VSCROLL) win->vscroll.visible_mode = SB_VIS_AUTO;
-  _focused = win;
-  push_window(win, parent ? &parent->children : &windows);
+  g_ui_runtime.focused = win;
+  push_window(win, parent ? &parent->children : &g_ui_runtime.windows);
   return win;
 }
 
@@ -128,7 +129,7 @@ bool do_windows_overlap(const window_t *a, const window_t *b) {
 
 // Invalidate overlapping windows
 static void invalidate_overlaps(window_t *win) {
-  for (window_t *t = windows; t; t = t->next) {
+  for (window_t *t = g_ui_runtime.windows; t; t = t->next) {
     if (t != win && do_windows_overlap(t, win)) {
       invalidate_window(t);
     }
@@ -171,10 +172,10 @@ void resize_window(window_t *win, int new_w, int new_h) {
 
 // Remove window from global window list
 static void remove_from_global_list(window_t *win) {
-  if (win == windows) {
-    windows = win->next;
-  } else if (windows) {
-    for (window_t *w=windows->next,*p=windows;w;p=w,w=w->next) {
+  if (win == g_ui_runtime.windows) {
+    g_ui_runtime.windows = win->next;
+  } else if (g_ui_runtime.windows) {
+    for (window_t *w=g_ui_runtime.windows->next,*p=g_ui_runtime.windows;w;p=w,w=w->next) {
       if (w == win) {
         p->next = w->next;
         break;
@@ -216,12 +217,12 @@ void destroy_window(window_t *win) {
   post_message((window_t*)1, kWindowMessageRefreshStencil, 0, NULL);
   invalidate_overlaps(win);
   send_message(win, kWindowMessageDestroy, 0, NULL);
-  if (_focused == win) set_focus(NULL);
-  if (_captured == win) set_capture(NULL);
-  if (_tracked == win) track_mouse(NULL);
-  if (_dragging == win) _dragging = NULL;
-  if (_resizing == win) _resizing = NULL;
-  if (_toolbar_down_win == win) _toolbar_down_win = NULL;
+  if (g_ui_runtime.focused == win) set_focus(NULL);
+  if (g_ui_runtime.captured == win) set_capture(NULL);
+  if (g_ui_runtime.tracked == win) track_mouse(NULL);
+  if (g_ui_runtime.dragging == win) g_ui_runtime.dragging = NULL;
+  if (g_ui_runtime.resizing == win) g_ui_runtime.resizing = NULL;
+  if (g_ui_runtime.toolbar_down_win == win) g_ui_runtime.toolbar_down_win = NULL;
   if (win->toolbar_strip_tex) {
     R_DeleteTexture(win->toolbar_strip_tex);
     win->toolbar_strip_tex = 0;
@@ -243,7 +244,7 @@ extern int statusbar_height(window_t const *win);
 
 window_t *find_window(int x, int y) {
   window_t *last = NULL;
-  for (window_t *win = windows; win; win = win->next) {
+  for (window_t *win = g_ui_runtime.windows; win; win = win->next) {
     if (!win->visible) continue;
     if (CONTAINS(x, y, win->frame.x, win->frame.y, win->frame.w, win->frame.h)) {
       last = win;
@@ -274,34 +275,34 @@ window_t *find_default_button(window_t *win) {
 
 // Track mouse over window
 void track_mouse(window_t *win) {
-  if (_tracked == win)
+  if (g_ui_runtime.tracked == win)
     return;
-  if (_tracked) {
-    send_message(_tracked, kWindowMessageMouseLeave, 0, win);
-    invalidate_window(_tracked);
+  if (g_ui_runtime.tracked) {
+    send_message(g_ui_runtime.tracked, kWindowMessageMouseLeave, 0, win);
+    invalidate_window(g_ui_runtime.tracked);
   }
-  _tracked = win;
+  g_ui_runtime.tracked = win;
 }
 
 // Set window capture
 void set_capture(window_t *win) {
-  _captured = win;
+  g_ui_runtime.captured = win;
 }
 
 // Set focused window
 void set_focus(window_t* win) {
-  if (win == _focused)
+  if (win == g_ui_runtime.focused)
     return;
-  if (_focused) {
-    _focused->editing = false;
-    post_message(_focused, kWindowMessageKillFocus, 0, win);
-    invalidate_window(_focused);
+  if (g_ui_runtime.focused) {
+    g_ui_runtime.focused->editing = false;
+    post_message(g_ui_runtime.focused, kWindowMessageKillFocus, 0, win);
+    invalidate_window(g_ui_runtime.focused);
   }
   if (win) {
-    post_message(win, kWindowMessageSetFocus, 0, _focused);
+    post_message(win, kWindowMessageSetFocus, 0, g_ui_runtime.focused);
     invalidate_window(win);
   }
-  _focused = win;
+  g_ui_runtime.focused = win;
 }
 
 // Invalidate window (request repaint).
@@ -493,7 +494,7 @@ window_t *create_window_from_form(form_def_t const *def, int x, int y,
     bool occupied = true;
     while (occupied) {
       occupied = false;
-      for (window_t *w = windows; w; w = w->next) {
+      for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
         if (!w->parent && w->frame.x == nx && w->frame.y == ny) {
           occupied = true;
           nx += cascade_step;
@@ -541,9 +542,9 @@ void show_window(window_t *win, bool visible) {
   post_message(win, kWindowMessageRefreshStencil, 0, NULL);
   if (!visible) {
     invalidate_overlaps(win);
-    if (_focused == win) set_focus(NULL);
-    if (_captured == win) set_capture(NULL);
-    if (_tracked == win) track_mouse(NULL);
+    if (g_ui_runtime.focused == win) set_focus(NULL);
+    if (g_ui_runtime.captured == win) set_capture(NULL);
+    if (g_ui_runtime.tracked == win) track_mouse(NULL);
   } else {
     move_to_top(win);
     set_focus(win);
@@ -554,7 +555,7 @@ void show_window(window_t *win, bool visible) {
 
 // Check if pointer is a valid window
 bool is_window(window_t *win) {
-  for (window_t *w = windows; w; w = w->next) {
+  for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
     if (w == win) return true;
   }
   return false;
@@ -562,7 +563,7 @@ bool is_window(window_t *win) {
 
 // Enable or disable window
 void enable_window(window_t *win, bool enable) {
-  if (!enable && _focused == win) {
+  if (!enable && g_ui_runtime.focused == win) {
     set_focus(NULL);
   }
   win->disabled = !enable;

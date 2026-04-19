@@ -19,7 +19,6 @@
 // Maximum number of characters that can be stored (leave room for the NUL).
 #define ME_MAX_LEN  (ME_BUF_SIZE - 2)
 
-extern window_t *_focused;
 extern window_t *get_root_window(window_t *window);
 extern int titlebar_height(window_t const *win);
 
@@ -152,7 +151,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
     // ── Paint ──────────────────────────────────────────────────────────────
     case kWindowMessagePaint: {
       if (!s) return true;
-      bool focused = (_focused == win);
+      bool focused = (g_ui_runtime.focused == win);
 
       // Focus ring (matches win_textedit style).
       fill_rect(focused ? get_sys_color(kColorFocusRing)

@@ -7,7 +7,6 @@
 
 // Helper function (will be moved to ui/user/window.c later)
 extern window_t *get_root_window(window_t *window);
-extern window_t *_focused;
 
 // Checkbox control window procedure
 result_t win_checkbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
@@ -17,7 +16,7 @@ result_t win_checkbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       win->frame.h = MAX(win->frame.h, BUTTON_HEIGHT);
       return true;
     case kWindowMessagePaint:
-      fill_rect(_focused == win?get_sys_color(kColorFocusRing):get_sys_color(kColorWindowBg), win->frame.x-2, win->frame.y-2, 14, 14);
+      fill_rect(g_ui_runtime.focused == win?get_sys_color(kColorFocusRing):get_sys_color(kColorWindowBg), win->frame.x-2, win->frame.y-2, 14, 14);
       draw_button(MAKERECT(win->frame.x, win->frame.y, 10, 10), 1, 1, win->pressed);
       draw_text_small(win->title, win->frame.x + 17, win->frame.y + 3, get_sys_color(kColorDarkEdge));
       draw_text_small(win->title, win->frame.x + 16, win->frame.y + 2, get_sys_color(kColorTextNormal));

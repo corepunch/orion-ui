@@ -11,19 +11,16 @@
 #include "../ui.h"
 #include "../commctl/menubar.h"
 
-extern window_t *windows;
-extern window_t *_captured;
-
 // Count the number of top-level (non-child) windows.
 static int count_windows(void) {
     int n = 0;
-    for (window_t *w = windows; w; w = w->next) n++;
+    for (window_t *w = g_ui_runtime.windows; w; w = w->next) n++;
     return n;
 }
 
 // Return the first top-level window that is NOT `exclude`.
 static window_t *find_other_window(window_t *exclude) {
-    for (window_t *w = windows; w; w = w->next) {
+    for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
         if (w != exclude) return w;
     }
     return NULL;
@@ -121,7 +118,7 @@ void test_popup_opens_on_label_click(void) {
     // A second top-level window (the popup) should now exist.
     ASSERT_EQUAL(count_windows(), 2);
     // The popup should have grabbed mouse capture.
-    ASSERT_NOT_NULL(_captured);
+    ASSERT_NOT_NULL(g_ui_runtime.captured);
 
     destroy_window(mb);
     test_env_shutdown();
@@ -151,7 +148,7 @@ void test_popup_closes_on_outside_click(void) {
 
     // Popup must be gone and capture released.
     ASSERT_EQUAL(count_windows(), 1);
-    ASSERT_NULL(_captured);
+    ASSERT_NULL(g_ui_runtime.captured);
 
     destroy_window(mb);
     test_env_shutdown();
@@ -290,7 +287,7 @@ void test_nonclient_buttonup_closes_popup(void) {
                  MAKEDWORD(0, 0), NULL);
 
     ASSERT_EQUAL(count_windows(), 1);
-    ASSERT_NULL(_captured);
+    ASSERT_NULL(g_ui_runtime.captured);
 
     destroy_window(mb);
     test_env_shutdown();

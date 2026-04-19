@@ -40,7 +40,7 @@ static uint32_t run_dialog_loop(window_t *dlg, window_t *parent) {
   // here, after all dialog windows are gone, guarantees correct ordering.
   if (g_ui_runtime.running) {
     post_message((window_t*)1, kWindowMessageRefreshStencil, 0, NULL);
-    for (window_t *w = windows; w; w = w->next) {
+    for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
       if (w->visible) invalidate_window(w);
     }
     repost_messages();
