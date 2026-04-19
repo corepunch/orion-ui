@@ -156,8 +156,8 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       // Focus ring (matches win_textedit style).
       fill_rect(focused ? get_sys_color(brFocusRing)
                         : get_sys_color(brWindowBg),
-                win->frame.x - 1, win->frame.y - 1,
-                win->frame.w + 2, win->frame.h + 2);
+                R(win->frame.x - 1, win->frame.y - 1,
+                  win->frame.w + 2, win->frame.h + 2));
 
       // Inset bevel border.
       draw_button(&win->frame, 1, 1, true);
@@ -183,7 +183,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
         int cur_y = ty + cy - s->scroll_y;
         if (cur_y >= ty - SMALL_LINE_HEIGHT && cur_y < ty + th) {
           fill_rect(get_sys_color(brTextNormal),
-                    tx + cx, cur_y, 2, CHAR_HEIGHT);
+                    R(tx + cx, cur_y, 2, CHAR_HEIGHT));
         }
       }
 

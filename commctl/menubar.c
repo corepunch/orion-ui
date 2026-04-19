@@ -116,24 +116,24 @@ static result_t popup_proc(window_t *win, uint32_t msg,
 
     case evPaint: {
       // Background
-      fill_rect(get_sys_color(brWindowBg), 0, 0, win->frame.w, win->frame.h);
+      fill_rect(get_sys_color(brWindowBg), R(0, 0, win->frame.w, win->frame.h));
       // Border
-      fill_rect(get_sys_color(brDarkEdge), 0,               0,               win->frame.w, 1);
-      fill_rect(get_sys_color(brDarkEdge), 0,               win->frame.h - 1, win->frame.w, 1);
-      fill_rect(get_sys_color(brDarkEdge), 0,               0,               1, win->frame.h);
-      fill_rect(get_sys_color(brDarkEdge), win->frame.w - 1, 0,               1, win->frame.h);
+      fill_rect(get_sys_color(brDarkEdge), R(0,               0,               win->frame.w, 1));
+      fill_rect(get_sys_color(brDarkEdge), R(0,               win->frame.h - 1, win->frame.w, 1));
+      fill_rect(get_sys_color(brDarkEdge), R(0,               0,               1, win->frame.h));
+      fill_rect(get_sys_color(brDarkEdge), R(win->frame.w - 1, 0,               1, win->frame.h));
       // Items
       int y = MENU_START_Y;
       for (int i = 0; i < pd->item_count; i++) {
         const menu_item_t *it = &pd->items[i];
         if (!it->id) {
           // separator
-          fill_rect(get_sys_color(brDarkEdge), MENU_SIDE_PAD, y + 2,
-                    win->frame.w - MENU_SIDE_PAD * 2, 1);
+          fill_rect(get_sys_color(brDarkEdge), R(MENU_SIDE_PAD, y + 2,
+                    win->frame.w - MENU_SIDE_PAD * 2, 1));
           y += MENU_SEP_H;
         } else {
           if (i == pd->hovered) {
-            fill_rect(get_sys_color(brFocusRing), 1, y, win->frame.w - 2, MENU_ITEM_H);
+            fill_rect(get_sys_color(brFocusRing), R(1, y, win->frame.w - 2, MENU_ITEM_H));
           }
           bool hov = (i == pd->hovered);
           uint32_t label_col  = hov ? get_sys_color(brWindowBg)  : get_sys_color(brTextNormal);
@@ -370,16 +370,16 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       return true;
 
     case evPaint: {
-      fill_rect(get_sys_color(brWindowDarkBg), 0, 0, win->frame.w, win->frame.h);
+      fill_rect(get_sys_color(brWindowDarkBg), R(0, 0, win->frame.w, win->frame.h));
       // Bottom border
-      fill_rect(get_sys_color(brDarkEdge), 0, win->frame.h - 1, win->frame.w, 1);
+      fill_rect(get_sys_color(brDarkEdge), R(0, win->frame.h - 1, win->frame.w, 1));
       if (!data || !data->menus) return true;
       for (int i = 0; i < data->count; i++) {
         bool active = (i == data->active_idx);
         int label_w = strwidth(data->menus[i].label) + MENU_LABEL_PAD;
         int label_x0 = data->menu_x[i] - 2;
         if (active) {
-          fill_rect(get_sys_color(brFocusRing), label_x0, 0, label_w, win->frame.h - 1);
+          fill_rect(get_sys_color(brFocusRing), R(label_x0, 0, label_w, win->frame.h - 1));
         }
         draw_text_small(data->menus[i].label,
                         data->menu_x[i], 2,

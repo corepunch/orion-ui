@@ -160,11 +160,11 @@ static void clamp_to_form(form_doc_t *doc, int *x, int *y, int *w, int *h) {
 
 // Draw a sunken (inset) box at absolute screen coords.
 static void draw_sunken_box(int sx, int sy, int sw, int sh) {
-  fill_rect(0xFFFFFFFF, sx, sy, sw, sh);
-  fill_rect(get_sys_color(brDarkEdge),  sx, sy, sw, 1);
-  fill_rect(get_sys_color(brDarkEdge),  sx, sy, 1, sh);
-  fill_rect(get_sys_color(brLightEdge), sx, sy + sh, sw, 1);
-  fill_rect(get_sys_color(brLightEdge), sx + sw, sy, 1, sh);
+  fill_rect(0xFFFFFFFF, R(sx, sy, sw, sh));
+  fill_rect(get_sys_color(brDarkEdge),  R(sx, sy, sw, 1));
+  fill_rect(get_sys_color(brDarkEdge),  R(sx, sy, 1, sh));
+  fill_rect(get_sys_color(brLightEdge), R(sx, sy + sh, sw, 1));
+  fill_rect(get_sys_color(brLightEdge), R(sx + sw, sy, 1, sh));
 }
 
 // Draw a control element at its form-space position translated to screen.
@@ -191,11 +191,11 @@ static void draw_element(window_t *win, canvas_state_t *s, form_element_t *el) {
       int bx = sx + 1;
       int by = sy + (sh - 8) / 2;
       if (by < sy) by = sy;
-      fill_rect(0xFFFFFFFF, bx, by, 8, 8);
-      fill_rect(get_sys_color(brDarkEdge), bx, by, 8, 1);
-      fill_rect(get_sys_color(brDarkEdge), bx, by, 1, 8);
-      fill_rect(get_sys_color(brLightEdge), bx, by+8, 8, 1);
-      fill_rect(get_sys_color(brLightEdge), bx+8, by, 1, 8);
+      fill_rect(0xFFFFFFFF, R(bx, by, 8, 8));
+      fill_rect(get_sys_color(brDarkEdge), R(bx, by, 8, 1));
+      fill_rect(get_sys_color(brDarkEdge), R(bx, by, 1, 8));
+      fill_rect(get_sys_color(brLightEdge), R(bx, by + 8, 8, 1));
+      fill_rect(get_sys_color(brLightEdge), R(bx + 8, by, 1, 8));
       draw_text_small(el->text, bx + 12, by, text_col);
       break;
     }
@@ -209,7 +209,7 @@ static void draw_element(window_t *win, canvas_state_t *s, form_element_t *el) {
     case CTRL_LIST:
       draw_sunken_box(sx, sy, sw, sh);
       for (int row = 0; row + 10 < sh; row += 10)
-        fill_rect(get_sys_color(brWindowDarkBg), sx + 1, sy + row + 9, sw - 2, 1);
+        fill_rect(get_sys_color(brWindowDarkBg), R(sx + 1, sy + row + 9, sw - 2, 1));
       break;
     case CTRL_COMBOBOX: {
       draw_sunken_box(sx, sy, sw, sh);
@@ -220,7 +220,7 @@ static void draw_element(window_t *win, canvas_state_t *s, form_element_t *el) {
       break;
     }
     default:
-      fill_rect(get_sys_color(brWindowBg), sx, sy, sw, sh);
+      fill_rect(get_sys_color(brWindowBg), R(sx, sy, sw, sh));
       break;
   }
 }
@@ -237,12 +237,12 @@ static void draw_handles(window_t *win, canvas_state_t *s) {
   int by = form_to_sy(win, s, el->y) - 1;
   int bw = el->w + 2;
   int bh = el->h + 2;
-  draw_sel_rect(bx, by, bw, bh);
+  draw_sel_rect(R(bx, by, bw, bh));
 
   // Solid handle squares
   uint32_t hcol = 0xFF000000;
   for (int i = 0; i < HANDLE_COUNT; i++)
-    fill_rect(hcol, hx[i] + win->frame.x, hy[i] + win->frame.y, HANDLE_SIZE, HANDLE_SIZE);
+    fill_rect(hcol, R(hx[i] + win->frame.x, hy[i] + win->frame.y, HANDLE_SIZE, HANDLE_SIZE));
 }
 
 // Draw a rubber-band rectangle (for placement drag) in form coords.
@@ -257,7 +257,7 @@ static void draw_rubber_band(window_t *win, canvas_state_t *s) {
   if (x1 <= x0 || y1 <= y0) return;
   int sx = form_to_sx(win, s, x0);
   int sy = form_to_sy(win, s, y0);
-  draw_sel_rect(sx, sy, x1 - x0, y1 - y0);
+  draw_sel_rect(R(sx, sy, x1 - x0, y1 - y0));
 }
 
 // ============================================================
@@ -432,18 +432,18 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       // Dark workspace background
       fill_rect(get_sys_color(brWorkspaceBg),
-                win->frame.x, win->frame.y, win->frame.w, win->frame.h);
+                R(win->frame.x, win->frame.y, win->frame.w, win->frame.h));
 
       // Form surface (window-colored rectangle with a 1px dark border)
       int fx = win->frame.x + CANVAS_PADDING - s->pan_x;
       int fy = win->frame.y + CANVAS_PADDING - s->pan_y;
       int fw = doc->form_w;
       int fh = doc->form_h;
-      fill_rect(get_sys_color(brWindowBg), fx, fy, fw, fh);
-      fill_rect(get_sys_color(brDarkEdge), fx - 1, fy - 1, fw + 2, 1);
-      fill_rect(get_sys_color(brDarkEdge), fx - 1, fy - 1, 1, fh + 2);
-      fill_rect(get_sys_color(brDarkEdge), fx - 1, fy + fh, fw + 2, 1);
-      fill_rect(get_sys_color(brDarkEdge), fx + fw, fy - 1, 1, fh + 2);
+      fill_rect(get_sys_color(brWindowBg), R(fx, fy, fw, fh));
+      fill_rect(get_sys_color(brDarkEdge), R(fx - 1, fy - 1, fw + 2, 1));
+      fill_rect(get_sys_color(brDarkEdge), R(fx - 1, fy - 1, 1, fh + 2));
+      fill_rect(get_sys_color(brDarkEdge), R(fx - 1, fy + fh, fw + 2, 1));
+      fill_rect(get_sys_color(brDarkEdge), R(fx + fw, fy - 1, 1, fh + 2));
 
       // Draw all elements
       for (int i = 0; i < doc->element_count; i++)

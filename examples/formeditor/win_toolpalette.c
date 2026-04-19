@@ -50,6 +50,7 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
         items[i].icon  = k_tool_icon[i];
       }
       send_message(win, toolSetItems, NUM_TOOLS, items);
+      send_message(win, toolSetIconTintBrush, brTextNormal, NULL);
       send_message(win, toolSetActiveItem, ID_TOOL_SELECT, NULL);
       return true;
     }

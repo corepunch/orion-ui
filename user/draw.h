@@ -3,16 +3,18 @@
 
 #include <stdint.h>
 #include "../user/user.h"
+#include "rect.h"
 #include "text.h"
 
 // Rectangle drawing functions
-void fill_rect(uint32_t color, int x, int y, int w, int h);
-void draw_rect(int tex, int x, int y, int w, int h);
-void draw_rect_ex(int tex, int x, int y, int w, int h, int type, float alpha);
-void draw_sprite_region(int tex, int x, int y, int w, int h,
-                        float u0, float v0, float u1, float v1, float alpha);
+void fill_rect(uint32_t color, rect_t const *r);
+void draw_rect(int tex, rect_t const *r);
+void draw_rect_ex(int tex, rect_t const *r, int type, float alpha);
+void draw_sprite_region(int tex, rect_t const *r,
+                        float u0, float v0, float u1, float v1,
+                        uint32_t color);
 // Draw a dashed selection-outline rectangle (2–4 GL draw calls depending on dimensions, O(1) regardless of size)
-void draw_sel_rect(int x, int y, int w, int h);
+void draw_sel_rect(rect_t const *r);
 
 // Icon drawing functions
 void draw_icon8(int icon, int x, int y, uint32_t col);

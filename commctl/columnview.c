@@ -269,7 +269,7 @@ static void rv_paint_icon_view(window_t *win, reportview_data_t *data) {
   int scroll_y = (int)win->scroll[1];
   uint32_t bg_col = get_sys_color(brColumnViewBg);
 
-  fill_rect(bg_col, 0, 0, win->frame.w, win->frame.h);
+  fill_rect(bg_col, R(0, 0, win->frame.w, win->frame.h));
 
   int clip_top = win->parent ? win->frame.y : 0;
   int clip_bottom = win->parent ? win->frame.y + win->frame.h : win->frame.h;
@@ -283,13 +283,11 @@ static void rv_paint_icon_view(window_t *win, reportview_data_t *data) {
     if (y >= clip_bottom) break;
 
     if ((int)i == data->selected) {
-      fill_rect(get_sys_color(brTextNormal), x - 2, y - 2,
-                data->column_width - 6, ENTRY_HEIGHT - 2);
+      fill_rect(get_sys_color(brTextNormal), R(x - 2, y - 2, data->column_width - 6, ENTRY_HEIGHT - 2));
       draw_icon8(data->items[i].icon, x, y - ICON_DODGE, get_sys_color(brWindowBg));
       draw_text_small(data->items[i].text, x + ICON_OFFSET, y, get_sys_color(brWindowBg));
     } else {
-      fill_rect(bg_col, x - 2, y - 2,
-                data->column_width - 6, ENTRY_HEIGHT - 2);
+      fill_rect(bg_col, R(x - 2, y - 2, data->column_width - 6, ENTRY_HEIGHT - 2));
       draw_icon8(data->items[i].icon, x, y - ICON_DODGE, data->items[i].color);
       draw_text_small(data->items[i].text, x + ICON_OFFSET, y, data->items[i].color);
     }
@@ -311,11 +309,11 @@ static void rv_paint_report_view(window_t *win, reportview_data_t *data) {
   uint32_t hdr_fg = get_sys_color(brTextNormal);
   uint32_t sep_col = get_sys_color(brDarkEdge);
 
-  fill_rect(bg_col, 0, HEADER_HEIGHT, row_w, body_h);
+  fill_rect(bg_col, R(0, HEADER_HEIGHT, row_w, body_h));
 
   if (data->selected >= first_row && data->selected < last_row) {
     int y = HEADER_HEIGHT + data->selected * ENTRY_HEIGHT - scroll_y;
-    fill_rect(get_sys_color(brTextNormal), 0, y, row_w, ENTRY_HEIGHT - 1);
+    fill_rect(get_sys_color(brTextNormal), R(0, y, row_w, ENTRY_HEIGHT - 1));
   }
 
   char clipped[MAX_COLUMNVIEW_ITEM_NAME];
@@ -343,16 +341,16 @@ static void rv_paint_report_view(window_t *win, reportview_data_t *data) {
   }
 
   // Paint report header separately from row height; HEADER_HEIGHT can differ.
-  // fill_rect(hdr_bg, 0, 0, row_w, HEADER_HEIGHT);
+  // fill_rect(hdr_bg, R(0, 0, row_w, HEADER_HEIGHT));
   int x = 0;
   for (uint32_t col = 0; col < data->column_count; col++) {
     int col_w = rv_get_report_column_width(data, (int)col, eff_w);
     draw_button(&(rect_t){x, 0, col_w, HEADER_HEIGHT}, 1, 1, false);
     draw_text_small(data->columns[col].title, x + WIN_PADDING, 3, hdr_fg);
     x += col_w;
-    fill_rect(sep_col, x, HEADER_HEIGHT, 1, win->frame.h - HEADER_HEIGHT);
+    fill_rect(sep_col, R(x, HEADER_HEIGHT, 1, win->frame.h - HEADER_HEIGHT));
   }
-  // fill_rect(sep_col, 0, HEADER_HEIGHT - 1, row_w, 1);
+  // fill_rect(sep_col, R(0, HEADER_HEIGHT - 1, row_w, 1));
 }
 
 result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {

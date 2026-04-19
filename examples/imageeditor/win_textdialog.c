@@ -95,21 +95,21 @@ static void paint_td(window_t *win, const td_state_t *st) {
   for (int seg = 0; seg < SEGS; seg++) {
     int x0 = TD_SLIDER_X + seg       * TD_SLIDER_W / SEGS;
     int x1 = TD_SLIDER_X + (seg + 1) * TD_SLIDER_W / SEGS;
-    fill_rect(get_sys_color(brButtonBg), x0, TD_SLIDER_Y, x1 - x0, TD_SLIDER_H);
+    fill_rect(get_sys_color(brButtonBg), R(x0, TD_SLIDER_Y, x1 - x0, TD_SLIDER_H));
   }
-  fill_rect(get_sys_color(brDarkEdge), TD_SLIDER_X, TD_SLIDER_Y, TD_SLIDER_W, 1);
+  fill_rect(get_sys_color(brDarkEdge), R(TD_SLIDER_X, TD_SLIDER_Y, TD_SLIDER_W, 1));
 
   // Slider thumb
   int tx = size_to_slider_x(opts->font_size);
-  fill_rect(get_sys_color(brFlare), tx - 1, TD_SLIDER_Y - 1, 3, TD_SLIDER_H + 2);
+  fill_rect(get_sys_color(brFlare), R(tx - 1, TD_SLIDER_Y - 1, 3, TD_SLIDER_H + 2));
 
   // Color label + swatch
   draw_text_small("Color:", TD_LBL_X, TD_COLOR_Y + 2, get_sys_color(brTextDisabled));
   int sw_x = TD_LBL_X + 6 * 6 + 2; // after "Color:" text
-  fill_rect(get_sys_color(brDarkEdge), sw_x - 1, TD_COLOR_Y - 1,
-            TD_SWATCH_W + 2, TD_SWATCH_H + 2);
-  fill_rect(opts->color, sw_x, TD_COLOR_Y,
-            TD_SWATCH_W, TD_SWATCH_H);
+  fill_rect(get_sys_color(brDarkEdge), R(sw_x - 1, TD_COLOR_Y - 1,
+            TD_SWATCH_W + 2, TD_SWATCH_H + 2));
+  fill_rect(opts->color, R(sw_x, TD_COLOR_Y,
+            TD_SWATCH_W, TD_SWATCH_H));
 
   (void)win;
 }

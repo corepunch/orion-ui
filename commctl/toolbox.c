@@ -30,6 +30,7 @@
 //       };
 //       send_message(win, toolSetItems, 3, items);
 //       send_message(win, toolSetActiveItem, ID_TOOL_SELECT, NULL);
+//       send_message(win, toolSetIconTintBrush, brTextNormal, NULL);
 //       return true;
 //   }
 //   case evCommand:
@@ -61,6 +62,7 @@ typedef struct {
   int             btn_size;    // 0 = use TOOLBOX_BTN_SIZE default
   int             active_ident; // ident of active item (-1 = none)
   int             pressed_idx; // index of currently pressed item (-1 = none)
+  int             icon_tint_brush; // br* index for icon tint, -1 = disabled
   bitmap_strip_t  strip;       // icon strip (may point to own_strip_tex or external tex)
   uint32_t        own_strip_tex; // GL texture owned by toolLoadStrip (0 = none)
 } toolbox_state_t;
@@ -110,14 +112,17 @@ static void draw_toolbox_button(toolbox_state_t *st, int idx,
   // Draw icon centred in the cell (shifted 1px when depressed).
   int px = depressed ? 1 : 0;
   int icon = st->items[idx].icon;
+  uint32_t tint = 0xFFFFFFFF;
+  if (st->icon_tint_brush >= 0 && st->icon_tint_brush < brCount)
+    tint = get_sys_color((sys_color_idx_t)st->icon_tint_brush);
 
   if (icon >= SYSICON_BASE) {
-    // Built-in 16×16 sysicon sheet — drawn at full colour.
+    // Built-in 16×16 sysicon sheet (optionally tinted).
     int ix = bx + (bsz - 16) / 2 + px;
     int iy = by + (bsz - 16) / 2 + px;
-    draw_icon16(icon, ix, iy, 0xFFFFFFFF);
+    draw_icon16(icon, ix, iy, tint);
   } else if (st->strip.tex && st->strip.cols > 0) {
-    // Custom sprite-sheet strip.
+    // Custom sprite-sheet strip (optionally tinted).
     bitmap_strip_t *s = &st->strip;
     int col_idx = icon % s->cols;
     int row_idx = icon / s->cols;
@@ -127,8 +132,7 @@ static void draw_toolbox_button(toolbox_state_t *st, int idx,
     float v1 = v0 + (float)s->icon_h / (float)s->sheet_h;
     int ix = bx + (bsz - s->icon_w) / 2 + px;
     int iy = by + (bsz - s->icon_h) / 2 + px;
-    draw_sprite_region((int)s->tex, ix, iy, s->icon_w, s->icon_h,
-                       u0, v0, u1, v1, 1.0f);
+    draw_sprite_region((int)s->tex, R(ix, iy, s->icon_w, s->icon_h), u0, v0, u1, v1, tint);
   } else {
     // Text fallback: draw item index as a number.
     char buf[8];
@@ -147,6 +151,7 @@ result_t win_toolbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       st->btn_size     = 0;
       st->active_ident = -1;
       st->pressed_idx  = -1;
+      st->icon_tint_brush = -1;
       return true;
     }
     case evDestroy: {
@@ -170,7 +175,7 @@ result_t win_toolbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       // Fill the entire client area with the dark panel background so that
       // inactive buttons look flat (icon on plain dark surface) and any area
       // below the grid (extra client content in wrapping procs) starts clean.
-      fill_rect(get_sys_color(brWindowDarkBg), 0, 0, win->frame.w, win->frame.h);
+      fill_rect(get_sys_color(brWindowDarkBg), R(0, 0, win->frame.w, win->frame.h));
 
       for (int i = 0; i < st->count; i++) {
         int col = i % TOOLBOX_COLS;
@@ -303,6 +308,14 @@ result_t win_toolbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       st->strip.cols     = w / icon_w;
       st->strip.sheet_w  = w;
       st->strip.sheet_h  = h;
+      invalidate_window(win);
+      return true;
+    }
+    case toolSetIconTintBrush: {
+      toolbox_state_t *st = (toolbox_state_t *)win->userdata;
+      if (!st) return false;
+      int brush = (int)(int32_t)wparam;
+      st->icon_tint_brush = (brush >= 0 && brush < brCount) ? brush : -1;
       invalidate_window(win);
       return true;
     }

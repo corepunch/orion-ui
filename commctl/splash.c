@@ -30,7 +30,7 @@ static result_t splash_proc(window_t *win, uint32_t msg,
     case evPaint: {
       splash_state_t *s = (splash_state_t *)win->userdata;
       if (s && s->tex)
-        draw_rect((int)s->tex, 0, 0, win->frame.w, win->frame.h);
+        draw_rect((int)s->tex, R(0, 0, win->frame.w, win->frame.h));
       return true;
     }
     case evLeftButtonDown:

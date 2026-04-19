@@ -62,9 +62,10 @@ const char* sprite_fs_src = "#version 150 core\n"
 "in vec4 col;\n"
 "out vec4 outColor;\n"
 "uniform sampler2D tex0;\n"
+"uniform vec4 tint;\n"
 "uniform float alpha;\n"
 "void main() {\n"
-"  outColor = texture(tex0, tex) * col;\n"
+"  outColor = texture(tex0, tex) * col * tint;\n"
 "  outColor.a *= alpha;\n"
 "  if(outColor.a < 0.1) discard;\n"
 "}";
@@ -160,6 +161,7 @@ void push_sprite_args(int tex, int x, int y, int w, int h, float alpha) {
   glUniform1f(glGetUniformLocation(g_ref.program, "alpha"), alpha);
   glUniform2f(glGetUniformLocation(g_ref.program, "uv_offset"), 0.0f, 0.0f);
   glUniform2f(glGetUniformLocation(g_ref.program, "uv_scale"), 1.0f, 1.0f);
+  glUniform4f(glGetUniformLocation(g_ref.program, "tint"), 1.0f, 1.0f, 1.0f, 1.0f);
 }
 
 void set_projection(int x, int y, int w, int h) {
@@ -175,9 +177,9 @@ float *get_sprite_matrix(void) {
 }
 
 // Draw a sprite at the specified screen position
-void draw_rect_ex(int tex, int x, int y, int w, int h, int type, float alpha) {
-  if (!g_ui_runtime.running) return;
-  push_sprite_args(tex, x, y, w, h, alpha);
+void draw_rect_ex(int tex, rect_t const *r, int type, float alpha) {
+  if (!g_ui_runtime.running || !r) return;
+  push_sprite_args(tex, r->x, r->y, r->w, r->h, alpha);
   
   // Enable blending for transparency
   glEnable(GL_BLEND);
@@ -195,16 +197,25 @@ void draw_rect_ex(int tex, int x, int y, int w, int h, int type, float alpha) {
 }
 
 // Draw a sprite at the specified screen position
-void draw_rect(int tex, int x, int y, int w, int h) {
-  draw_rect_ex(tex, x, y, w, h, false, 1);
+void draw_rect(int tex, rect_t const *r) {
+  draw_rect_ex(tex, r, false, 1);
 }
 
 // Draw a sub-region of a sprite sheet at the specified screen position.
 // (u0,v0)-(u1,v1) are normalized texture coordinates selecting the icon.
-void draw_sprite_region(int tex, int x, int y, int w, int h,
-                        float u0, float v0, float u1, float v1, float alpha) {
-  if (!g_ui_runtime.running) return;
-  push_sprite_args(tex, x, y, w, h, alpha);
+void draw_sprite_region(int tex, rect_t const *r,
+                        float u0, float v0, float u1, float v1,
+                        uint32_t color) {
+  if (!g_ui_runtime.running || !r) return;
+  float alpha = ((color >> 24) & 0xFF) / 255.0f;
+  push_sprite_args(tex, r->x, r->y, r->w, r->h, alpha);
+
+  float tr = ((color >> 16) & 0xFF) / 255.0f;
+  float tg = ((color >> 8) & 0xFF) / 255.0f;
+  float tb = (color & 0xFF) / 255.0f;
+  float ta = 1.0f;
+  glUniform4f(glGetUniformLocation(g_ref.program, "tint"), tr, tg, tb, ta);
+
   glUniform2f(glGetUniformLocation(g_ref.program, "uv_offset"), u0, v0);
   glUniform2f(glGetUniformLocation(g_ref.program, "uv_scale"), u1 - u0, v1 - v0);
   glEnable(GL_BLEND);

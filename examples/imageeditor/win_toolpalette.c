@@ -83,6 +83,7 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
         items[i].icon  = k_tool_icon_idx[i];
       }
       send_message(win, toolSetItems, NUM_TOOLS, items);
+      send_message(win, toolSetIconTintBrush, brTextNormal, NULL);
       send_message(win, toolSetActiveItem, ID_TOOL_SELECT, NULL);
       return true;
     }
@@ -101,8 +102,8 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
 
       if (g_app) {
 #define DrawSwatch(border_col, x, color) \
-        fill_rect((border_col), (x) + 1, sy - 1, TB_SPACING - 2, SWATCH_BOX_H); \
-        fill_rect((color),      (x) + 2, sy,     TB_SPACING - 4, SWATCH_BOX_H - 2);
+  fill_rect((border_col), R((x) + 1, sy - 1, TB_SPACING - 2, SWATCH_BOX_H)); \
+  fill_rect((color),      R((x) + 2, sy,     TB_SPACING - 4, SWATCH_BOX_H - 2));
         DrawSwatch(get_sys_color(brDarkEdge), 0,          g_app->fg_color);
         DrawSwatch(get_sys_color(brDarkEdge), TB_SPACING, g_app->bg_color);
 #undef DrawSwatch
@@ -115,16 +116,16 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
         uint32_t outline_col = g_app->shape_filled
             ? get_sys_color(brButtonBg) : get_sys_color(brFocusRing);
         fill_rect(get_sys_color(brDarkEdge),
-                  1,           fy,     TB_SPACING - 2, FILL_ROW_H);
-        fill_rect(outline_col, 2,           fy + 1, TB_SPACING - 4, FILL_ROW_H - 2);
+              R(1,           fy,     TB_SPACING - 2, FILL_ROW_H));
+        fill_rect(outline_col, R(2,           fy + 1, TB_SPACING - 4, FILL_ROW_H - 2));
         draw_text_small("O", 5, fy + 2, get_sys_color(brTextNormal));
 
         uint32_t filled_col = g_app->shape_filled
             ? get_sys_color(brFocusRing) : get_sys_color(brButtonBg);
         fill_rect(get_sys_color(brDarkEdge),
-                  TB_SPACING + 1, fy,     TB_SPACING - 2, FILL_ROW_H);
+              R(TB_SPACING + 1, fy,     TB_SPACING - 2, FILL_ROW_H));
         fill_rect(filled_col,
-                  TB_SPACING + 2, fy + 1, TB_SPACING - 4, FILL_ROW_H - 2);
+              R(TB_SPACING + 2, fy + 1, TB_SPACING - 4, FILL_ROW_H - 2));
         draw_text_small("F", TB_SPACING + 5, fy + 2, get_sys_color(brTextNormal));
       }
       return true;

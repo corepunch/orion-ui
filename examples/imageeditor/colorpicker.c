@@ -165,13 +165,13 @@ static void draw_slider(int idx, const cp_state_t *st) {
     int   x0 = CP_TRK_X + (int)(t0 * CP_TRK_W);
     int   x1 = CP_TRK_X + (int)(t1 * CP_TRK_W);
     fill_rect((int)slider_grad_col(st, idx, (t0+t1)*0.5f),
-              x0, ty, x1 - x0, CP_TRK_H);
+              R(x0, ty, x1 - x0, CP_TRK_H));
   }
 
   // Thumb — bright vertical bar at the current value position
   int val = slider_int_val(st, idx);
   int tx  = CP_TRK_X + val * CP_TRK_W / kSliderMax[idx];
-  fill_rect(get_sys_color(brFlare), tx - 1, ty - 1, 3, CP_TRK_H + 2);
+  fill_rect(get_sys_color(brFlare), R(tx - 1, ty - 1, 3, CP_TRK_H + 2));
 
   // Numeric value
   char buf[8];
@@ -223,22 +223,22 @@ static void drag_slider(cp_state_t *st, int idx, int lx) {
 static void paint_cp(const cp_state_t *st) {
   // "New" colour preview
   draw_text_small("New", CP_PREV_X + 2, CP_NEW_LBL_Y, get_sys_color(brTextDisabled));
-  fill_rect(get_sys_color(brDarkEdge),      CP_PREV_X - 1, CP_NEW_Y - 1,
-                                       CP_PREV_W + 2,  CP_NEW_H + 2);
-  fill_rect(st->cur,  CP_PREV_X,     CP_NEW_Y,
-                           CP_PREV_W,      CP_NEW_H);
+  fill_rect(get_sys_color(brDarkEdge),
+            R(CP_PREV_X - 1, CP_NEW_Y - 1, CP_PREV_W + 2, CP_NEW_H + 2));
+  fill_rect(st->cur, R(CP_PREV_X,     CP_NEW_Y,
+                           CP_PREV_W,      CP_NEW_H));
 
   // "Old" colour preview
   draw_text_small("Old", CP_PREV_X + 2, CP_OLD_LBL_Y, get_sys_color(brTextDisabled));
-  fill_rect(get_sys_color(brDarkEdge),       CP_PREV_X - 1, CP_OLD_Y - 1,
-                                        CP_PREV_W + 2,  CP_OLD_H + 2);
-  fill_rect(st->orig, CP_PREV_X,     CP_OLD_Y,
-                           CP_PREV_W,      CP_OLD_H);
+  fill_rect(get_sys_color(brDarkEdge),
+            R(CP_PREV_X - 1, CP_OLD_Y - 1, CP_PREV_W + 2, CP_OLD_H + 2));
+  fill_rect(st->orig, R(CP_PREV_X,     CP_OLD_Y,
+                           CP_PREV_W,      CP_OLD_H));
 
   // Separator between RGB and HSV groups
   fill_rect(get_sys_color(brDarkEdge),
-            CP_LBL_X, (CP_Y_B + CP_Y_H) / 2 + 2,
-            CP_TRK_W + (CP_TRK_X - CP_LBL_X), 1);
+            R(CP_LBL_X, (CP_Y_B + CP_Y_H) / 2 + 2,
+              CP_TRK_W + (CP_TRK_X - CP_LBL_X), 1));
 
   // Six sliders
   for (int i = 0; i < 6; i++)
@@ -249,11 +249,11 @@ static void paint_cp(const cp_state_t *st) {
   for (int i = 0; i < NUM_USER_COLORS; i++) {
     int px = CP_PREV_X + i * CP_PAL_SW;
     bool has = (g_app && i < g_app->num_user_colors);
-    fill_rect(get_sys_color(brDarkEdge), px - 1, CP_PAL_Y - 1, CP_PAL_SW + 1, CP_PAL_SH + 2);
+    fill_rect(get_sys_color(brDarkEdge), R(px - 1, CP_PAL_Y - 1, CP_PAL_SW + 1, CP_PAL_SH + 2));
     fill_rect(has ? g_app->user_palette[i] : get_sys_color(brWindowDarkBg),
-              px, CP_PAL_Y, CP_PAL_SW - 1, CP_PAL_SH);
+              R(px, CP_PAL_Y, CP_PAL_SW - 1, CP_PAL_SH));
     if (has && i == st->hover_pal)
-      fill_rect(get_sys_color(brFocusRing), px, CP_PAL_Y, CP_PAL_SW - 1, 1);
+      fill_rect(get_sys_color(brFocusRing), R(px, CP_PAL_Y, CP_PAL_SW - 1, 1));
   }
 }
 

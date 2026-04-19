@@ -62,7 +62,7 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
     case evCreate:
       return true;
     case evPaint:
-      fill_rect(get_sys_color(brWorkspaceBg), 0, 0, win->frame.w, win->frame.h);
+      fill_rect(get_sys_color(brWorkspaceBg), R(0, 0, win->frame.w, win->frame.h));
       return false;
     case evHScroll:
       // Forward the built-in hscroll notification to the canvas child.

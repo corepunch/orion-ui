@@ -10,6 +10,11 @@
 
 #include "user.h"
 
+// Convenience literal rectangle pointer, analogous to MAKERECT.
+#ifndef R
+#define R(X, Y, W, H) (&(rect_t){ (X), (Y), (W), (H) })
+#endif
+
 // ── Inflation / deflation ─────────────────────────────────────────────────
 
 // Shrink all four sides by d (negative d expands).

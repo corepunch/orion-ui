@@ -57,9 +57,7 @@ static result_t win_toolbar_sep(window_t *win, uint32_t msg,
   (void)wparam; (void)lparam;
   if (msg == evCreate || msg == evDestroy) return 1;
   if (msg == evPaint) {
-    fill_rect(get_sys_color(brDarkEdge),
-              win->frame.x + win->frame.w / 2, win->frame.y + 2,
-              1, win->frame.h - 4);
+    fill_rect(get_sys_color(brDarkEdge), R(win->frame.x + win->frame.w / 2, win->frame.y + 2, 1, win->frame.h - 4));
     return 1;
   }
   return 0;
@@ -240,8 +238,6 @@ extern void draw_window_controls(window_t *win);
 extern void draw_statusbar(window_t *win, const char *text);
 extern void draw_bevel(rect_t const *r);
 extern void draw_button(rect_t const *r, int dx, int dy, bool pressed);
-extern void draw_sprite_region(int tex, int x, int y, int w, int h,
-                               float u0, float v0, float u1, float v1, float alpha);
 extern void paint_window_stencil(window_t const *w);
 extern void repaint_stencil(void);
 extern void set_fullscreen(void);
@@ -550,7 +546,7 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
                           win->frame.w - 2 * TOOLBAR_BEVEL_WIDTH,
                           total_h - 2 * TOOLBAR_BEVEL_WIDTH};
           draw_bevel(&rect);
-          fill_rect(get_sys_color(brWindowBg), rect.x, rect.y, rect.w, rect.h);
+          fill_rect(get_sys_color(brWindowBg), R(rect.x, rect.y, rect.w, rect.h));
           // Paint each toolbar child. tc->frame.x/y are toolbar-band-relative,
           // so set up a viewport with (0,0) = toolbar band top-left so each
           // child can draw at its stored coordinates without knowing the parent's
@@ -774,14 +770,14 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     rect_t wf = win_frame_in_screen(win, root, root_t);
     set_viewport(&(rect_t){ 0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight)});
     set_projection(0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight));
-    fill_rect(col, wf.x, wf.y, wf.w, wf.h);
+    fill_rect(col, R(wf.x, wf.y, wf.w, wf.h));
   }
   if (msg == evPaint && win == g_ui_runtime.modal_overlay_parent) {
     int root_t = titlebar_height(root);
     rect_t wf = win_frame_in_screen(win, root, root_t);
     set_viewport(&(rect_t){ 0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight)});
     set_projection(0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight));
-    fill_rect(get_sys_color(brModalOverlay), wf.x, wf.y, wf.w, wf.h);
+    fill_rect(get_sys_color(brModalOverlay), R(wf.x, wf.y, wf.w, wf.h));
   }
   // Draw built-in scrollbars on top of window content.
   // Restore the window/root paint state first: the disabled overlay above

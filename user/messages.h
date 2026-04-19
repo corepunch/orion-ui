@@ -78,6 +78,7 @@ enum {
   toolSetStrip,         // wparam=0; lparam=bitmap_strip_t* (NULL=clear) — external strip
   toolSetButtonSize,    // wparam=size in px (0 = reset to TOOLBOX_BTN_SIZE)
   toolLoadStrip,        // wparam=icon_w (square tiles); lparam=const char* path — load PNG
+  toolSetIconTintBrush, // wparam=br* index (e.g., brTextNormal), -1 disables tint
   // Async HTTP messages (analogous to WinInet/WinHTTP notifications).
   // Delivered to the window_t* registered with http_request_async() when the
   // request transitions through the following states:

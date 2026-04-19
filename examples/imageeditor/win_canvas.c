@@ -209,8 +209,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       int cx = win->frame.x - state->pan_x;
       int cy = win->frame.y - state->pan_y;
       draw_rect(doc->canvas_tex,
-                cx, cy,
-                doc->canvas_w * state->scale, doc->canvas_h * state->scale);
+                R(cx, cy,
+                  doc->canvas_w * state->scale, doc->canvas_h * state->scale));
 
       if (doc->sel_moving && doc->float_tex) {
         // Draw the floating selection at its current position
@@ -218,14 +218,14 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         int sy = win->frame.y + doc->float_pos.y * state->scale;
         int sw = doc->float_w * state->scale;
         int sh = doc->float_h * state->scale;
-        draw_rect(doc->float_tex, sx, sy, sw, sh);
-        draw_sel_rect(sx, sy, sw, sh);
+        draw_rect(doc->float_tex, R(sx, sy, sw, sh));
+        draw_sel_rect(R(sx, sy, sw, sh));
       } else if (doc->sel_active) {
         int x0 = MIN(doc->sel_start.x, doc->sel_end.x) * state->scale - state->pan_x;
         int y0 = MIN(doc->sel_start.y, doc->sel_end.y) * state->scale - state->pan_y;
         int x1 = (MAX(doc->sel_start.x, doc->sel_end.x) + 1) * state->scale - state->pan_x;
         int y1 = (MAX(doc->sel_start.y, doc->sel_end.y) + 1) * state->scale - state->pan_y;
-        draw_sel_rect(win->frame.x + x0, win->frame.y + y0, x1 - x0, y1 - y0);
+        draw_sel_rect(R(win->frame.x + x0, win->frame.y + y0, x1 - x0, y1 - y0));
       }
       // Polygon in-progress: draw a sel_rect bounding the rubber-band edge
       // from the last committed vertex to the current mouse position.
@@ -236,7 +236,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         int py0 = MIN(v0.y, v1.y) * state->scale - state->pan_y;
         int px1 = (MAX(v0.x, v1.x) + 1) * state->scale - state->pan_x;
         int py1 = (MAX(v0.y, v1.y) + 1) * state->scale - state->pan_y;
-        draw_sel_rect(win->frame.x + px0, win->frame.y + py0, px1 - px0, py1 - py0);
+        draw_sel_rect(R(win->frame.x + px0, win->frame.y + py0, px1 - px0, py1 - py0));
       }
 
       // Magnifier tool: draw a loupe overlay in the top-right corner of the canvas
@@ -250,7 +250,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         int lox = win->frame.x + win->frame.w - MAG_SIZE - MAG_MARGIN - 2;
         int loy = win->frame.y + MAG_MARGIN;
         // Border
-        fill_rect(0xFF808080, lox - 1, loy - 1, MAG_SIZE + 2, MAG_SIZE + 2);
+        fill_rect(0xFF808080, R(lox - 1, loy - 1, MAG_SIZE + 2, MAG_SIZE + 2));
         // Build a 16×16 RGBA pixel buffer from the canvas region around hover
         uint8_t mag_buf[MAG_PIXELS * MAG_PIXELS * 4];
         int hx = state->hover.x - MAG_PIXELS / 2;
@@ -280,14 +280,14 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, MAG_PIXELS, MAG_PIXELS,
                           GL_RGBA, GL_UNSIGNED_BYTE, mag_buf);
         }
-        draw_rect(state->mag_tex, lox, loy, MAG_SIZE, MAG_SIZE);
+        draw_rect(state->mag_tex, R(lox, loy, MAG_SIZE, MAG_SIZE));
         // Crosshair at loupe center
         int lcx = lox + MAG_SIZE / 2;
         int lcy = loy + MAG_SIZE / 2;
-        fill_rect(0xFF000000, lcx - 3, lcy, 3, 1);
-        fill_rect(0xFF000000, lcx + 1, lcy, 3, 1);
-        fill_rect(0xFF000000, lcx, lcy - 3, 1, 3);
-        fill_rect(0xFF000000, lcx, lcy + 1, 1, 3);
+        fill_rect(0xFF000000, R(lcx - 3, lcy, 3, 1));
+        fill_rect(0xFF000000, R(lcx + 1, lcy, 3, 1));
+        fill_rect(0xFF000000, R(lcx, lcy - 3, 1, 3));
+        fill_rect(0xFF000000, R(lcx, lcy + 1, 1, 3));
       }
       return true;
     }
