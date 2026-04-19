@@ -399,11 +399,13 @@ static int
 parse_http_response(const char *raw, size_t raw_len,
                     int *status_out,
                     size_t *content_length_out,  /* may be NULL */
-                    char **location_out)
+                    char **location_out,
+                    bool *chunked_out)
 {
   *status_out         = 0;
   if (content_length_out) *content_length_out = (size_t)-1;
   if (location_out) *location_out = NULL;
+  if (chunked_out) *chunked_out = false;
 
   /* Status line: "HTTP/1.x NNN ..." */
   if (raw_len < 12) return -1;
@@ -428,6 +430,11 @@ parse_http_response(const char *raw, size_t raw_len,
 
     if (content_length_out && strncasecmp(p, "Content-Length:", 15) == 0) {
       *content_length_out = (size_t)atol(p + 15);
+    } else if (chunked_out && strncasecmp(p, "Transfer-Encoding:", 18) == 0) {
+      const char *v = p + 18;
+      while (v < eol && isspace((unsigned char)*v)) v++;
+      if (v < eol && strcasestr(v, "chunked"))
+        *chunked_out = true;
     } else if (location_out && strncasecmp(p, "Location:", 9) == 0) {
       const char *loc = p + 9;
       while (*loc == ' ') loc++;
@@ -443,6 +450,67 @@ parse_http_response(const char *raw, size_t raw_len,
   }
 
   return (int)((body + 4) - raw);
+}
+
+static int hex_val(char c) {
+  if (c >= '0' && c <= '9') return c - '0';
+  if (c >= 'a' && c <= 'f') return 10 + (c - 'a');
+  if (c >= 'A' && c <= 'F') return 10 + (c - 'A');
+  return -1;
+}
+
+static char *decode_chunked_body(const char *in, size_t in_len, size_t *out_len) {
+  if (!in || !out_len) return NULL;
+
+  size_t i = 0;
+  size_t cap = in_len + 1;
+  size_t used = 0;
+  char *out = (char *)malloc(cap);
+  if (!out) return NULL;
+
+  while (i < in_len) {
+    size_t line_start = i;
+    while (i + 1 < in_len && !(in[i] == '\r' && in[i + 1] == '\n')) i++;
+    if (i + 1 >= in_len) { free(out); return NULL; }
+
+    size_t line_end = i;
+    i += 2; /* skip CRLF */
+
+    size_t chunk_sz = 0;
+    bool have_hex = false;
+    for (size_t p = line_start; p < line_end; p++) {
+      if (in[p] == ';') break; /* chunk extension */
+      int hv = hex_val(in[p]);
+      if (hv < 0) { free(out); return NULL; }
+      have_hex = true;
+      chunk_sz = (chunk_sz << 4) | (size_t)hv;
+    }
+    if (!have_hex) { free(out); return NULL; }
+
+    if (chunk_sz == 0) {
+      out[used] = '\0';
+      *out_len = used;
+      return out;
+    }
+
+    if (i + chunk_sz + 2 > in_len) { free(out); return NULL; }
+    if (used + chunk_sz + 1 > cap) {
+      while (used + chunk_sz + 1 > cap) cap *= 2;
+      char *nb = (char *)realloc(out, cap);
+      if (!nb) { free(out); return NULL; }
+      out = nb;
+    }
+
+    memcpy(out + used, in + i, chunk_sz);
+    used += chunk_sz;
+    i += chunk_sz;
+
+    if (!(in[i] == '\r' && in[i + 1] == '\n')) { free(out); return NULL; }
+    i += 2;
+  }
+
+  free(out);
+  return NULL;
 }
 
 /* =========================================================================
@@ -571,8 +639,9 @@ execute_request(http_pending_t *req)
 
     int    status = 0;
     char  *location = NULL;
+    bool   chunked = false;
     int    body_offset = parse_http_response(raw, raw_len, &status,
-                                              NULL, &location);
+                          NULL, &location, &chunked);
 
     if (body_offset < 0) {
       free(raw);
@@ -610,13 +679,25 @@ execute_request(http_pending_t *req)
 
     /* Extract body. */
     size_t body_len  = raw_len - (size_t)body_offset;
-    char  *body_copy = (char *)malloc(body_len + 1);
-    if (body_copy) {
-      memcpy(body_copy, raw + body_offset, body_len);
-      body_copy[body_len] = '\0';
+    char  *body_copy = NULL;
+    if (chunked) {
+      body_copy = decode_chunked_body(raw + body_offset, body_len, &body_len);
+    } else {
+      body_copy = (char *)malloc(body_len + 1);
+      if (body_copy) {
+        memcpy(body_copy, raw + body_offset, body_len);
+        body_copy[body_len] = '\0';
+      }
     }
     free(raw);
     free(current_url);
+
+    if (!body_copy) {
+      resp->status = 0;
+      resp->error  = "failed to decode response body";
+      free(headers_copy);
+      return resp;
+    }
 
     resp->status   = status;
     resp->body     = body_copy;

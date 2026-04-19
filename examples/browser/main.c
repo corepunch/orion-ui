@@ -9,6 +9,7 @@
 
 static window_t *g_browser_win = NULL;
 static window_t *g_menubar_win = NULL;
+static bool g_http_ready = false;
 
 static const menu_item_t kBrowserSettingsItems[] = {
   {"Preferences...", ID_MENU_BROWSER_SETTINGS},
@@ -163,6 +164,10 @@ static result_t browser_proc(window_t *win, uint32_t msg, uint32_t wparam, void 
         free(st);
         win->userdata = NULL;
       }
+      if (g_http_ready) {
+        http_shutdown();
+        g_http_ready = false;
+      }
       if (g_menubar_win) {
         destroy_window(g_menubar_win);
         g_menubar_win = NULL;
@@ -176,6 +181,13 @@ static result_t browser_proc(window_t *win, uint32_t msg, uint32_t wparam, void 
 }
 
 static bool browser_open(hinstance_t hinstance) {
+  if (!g_http_ready) {
+    if (!http_init()) {
+      return false;
+    }
+    g_http_ready = true;
+  }
+
   rect_t wr = center_window_rect((rect_t){0, 0, 720, 500 + TITLEBAR_HEIGHT}, NULL);
   window_t *win = create_window(
     "Browser (MVP)",
@@ -186,7 +198,13 @@ static bool browser_open(hinstance_t hinstance) {
     hinstance,
     NULL
   );
-  if (!win) return false;
+  if (!win) {
+    if (g_http_ready) {
+      http_shutdown();
+      g_http_ready = false;
+    }
+    return false;
+  }
   g_browser_win = win;
 
   g_menubar_win = set_app_menu(
