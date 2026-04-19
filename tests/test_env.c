@@ -5,19 +5,18 @@
 #include <string.h>
 #include <stdlib.h>
 
-extern window_t *_focused;
-extern window_t *_tracked;
-extern window_t *_captured;
-
 static void test_env_reset_ui_state(void) {
-    while (windows) {
-        destroy_window(windows);
+    while (g_ui_runtime.windows) {
+        destroy_window(g_ui_runtime.windows);
     }
     cleanup_all_hooks();
     reset_message_queue();
-    _focused = NULL;
-    _tracked = NULL;
-    _captured = NULL;
+    g_ui_runtime.focused = NULL;
+    g_ui_runtime.tracked = NULL;
+    g_ui_runtime.captured = NULL;
+    g_ui_runtime.dragging = NULL;
+    g_ui_runtime.resizing = NULL;
+    g_ui_runtime.toolbar_down_win = NULL;
     g_ui_runtime.running = false;
 }
 

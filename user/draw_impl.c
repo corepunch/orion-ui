@@ -14,8 +14,6 @@
 #include "icons.h"
 
 // External references
-extern window_t *windows;
-extern window_t *_focused;
 extern window_t *get_root_window(window_t *window);
 
 static bool g_scissor_valid = false;
@@ -37,7 +35,7 @@ static void set_scissor_cached(rect_t const *r) {
 // Returns true if win is the root window that currently "owns" keyboard focus
 // (either win itself is focused, or one of its descendants is focused).
 bool window_has_focus(const window_t *win) {
-  return _focused && get_root_window(_focused) == (window_t *)win;
+  return g_ui_runtime.focused && get_root_window(g_ui_runtime.focused) == (window_t *)win;
 }
 
 // Forward declarations
@@ -264,7 +262,7 @@ void repaint_stencil(void) {
   glClearStencil(0);
   glClear(GL_STENCIL_BUFFER_BIT);
   glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-  for (window_t *w = windows; w; w = w->next) {
+  for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
     if (!w->visible)
       continue;
     send_message(w, kWindowMessagePaintStencil, 0, NULL);

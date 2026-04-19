@@ -188,14 +188,16 @@ rect_t get_client_rect(window_t const *win);
 //   create_window(title, flags, MAKERECT(win_x + r.x, win_y + r.y, r.w, r.h), ...);
 void adjust_window_rect(rect_t *r, flags_t flags);
 
-// Global window focus/tracking state
-extern window_t *_focused;
-extern window_t *_tracked;
-extern window_t *_captured;
-
 // Global runtime state shared across UI subsystems.
 typedef struct {
-  bool running;
+  bool      running;
+  window_t *windows;
+  window_t *focused;
+  window_t *tracked;
+  window_t *captured;
+  window_t *dragging;
+  window_t *resizing;
+  window_t *toolbar_down_win;
 } ui_runtime_state_t;
 
 extern ui_runtime_state_t g_ui_runtime;
@@ -244,8 +246,6 @@ void enable_scroll_bar(window_t *win, int bar, bool enable);
 void show_scroll_bar(window_t *win, int bar, bool show);
 void reset_scroll_bar_auto(window_t *win, int bar);
 
-// Global window list
-extern window_t *windows;
 extern window_t *g_inspector;
 
 // ── Dialog Data Exchange (DDX) ──────────────────────────────────────────────

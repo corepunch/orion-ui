@@ -8,9 +8,6 @@
 #include "../user/rect.h"
 #include "../user/theme.h"
 
-// Helper function (will be moved to ui/user/window.c later)
-extern window_t *_focused;
-
 // Label control window procedure.
 // lparam in kWindowMessageCreate is an optional RGBA color (void*)(uintptr_t)col.
 // When lparam is NULL the default kColorTextNormal is used.

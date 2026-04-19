@@ -87,6 +87,9 @@ bool ui_open_file(const char *path);
 extern bool mode;
 extern unsigned frame;
 
+/* Async HTTP/HTTPS client (kernel/http.h). */
+#include "http.h"
+
 typedef enum {
 	kSystemMetricScreenWidth,
 	kSystemMetricScreenHeight,

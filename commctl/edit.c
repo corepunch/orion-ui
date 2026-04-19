@@ -11,7 +11,6 @@
 
 // Helper function (will be moved to ui/user/window.c later)
 extern window_t *get_root_window(window_t *window);
-extern window_t *_focused;
 
 // Text edit control window procedure
 result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
@@ -21,10 +20,10 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       win->frame.h = MAX(win->frame.h, 13);
       return true;
     case kWindowMessagePaint:
-      fill_rect(_focused == win?get_sys_color(kColorFocusRing):get_sys_color(kColorWindowBg), win->frame.x-1, win->frame.y-1, win->frame.w+2, win->frame.h+2);
+      fill_rect(g_ui_runtime.focused == win?get_sys_color(kColorFocusRing):get_sys_color(kColorWindowBg), win->frame.x-1, win->frame.y-1, win->frame.w+2, win->frame.h+2);
       draw_button(&win->frame, 1, 1, true);
       draw_text_small(win->title, win->frame.x+PADDING, win->frame.y+PADDING, get_sys_color(kColorTextNormal));
-      if (_focused == win && win->editing) {
+      if (g_ui_runtime.focused == win && win->editing) {
         fill_rect(get_sys_color(kColorTextNormal),
                   win->frame.x+PADDING+strnwidth(win->title, win->cursor_pos),
                   win->frame.y+PADDING,
@@ -32,7 +31,7 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       }
       return true;
     case kWindowMessageLeftButtonUp:
-      if (_focused == win) {
+      if (g_ui_runtime.focused == win) {
         invalidate_window(win);
         win->editing = true;
         win->cursor_pos = 0;

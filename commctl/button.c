@@ -45,7 +45,7 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
       // BUTTON_DEFAULT (BS_DEFPUSHBUTTON analogue): use black for the outer 1-px
       // gap so a thin black outline is visible around the button bevel.
       // When the button has keyboard focus kColorFocusRing takes precedence.
-      uint32_t bg = (_focused == win) ? get_sys_color(kColorFocusRing) :
+      uint32_t bg = (g_ui_runtime.focused == win) ? get_sys_color(kColorFocusRing) :
                     (win->flags & BUTTON_DEFAULT) ? 0xff000000 : get_sys_color(kColorWindowBg);
       rect_t outer = rect_inset(win->frame, -1);
       fill_rect(bg, outer.x, outer.y, outer.w, outer.h);
@@ -132,7 +132,7 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
       bool show_pressed = win->pressed ||
                           ((win->flags & BUTTON_PUSHLIKE) && win->value);
       rect_t focus_outer = rect_inset(win->frame, -2);
-      fill_rect(_focused == win ? get_sys_color(kColorFocusRing) : get_sys_color(kColorWindowBg),
+      fill_rect(g_ui_runtime.focused == win ? get_sys_color(kColorFocusRing) : get_sys_color(kColorWindowBg),
                 focus_outer.x, focus_outer.y, focus_outer.w, focus_outer.h);
       draw_button(&win->frame, 1, 1, show_pressed);
       int px = show_pressed ? 1 : 0;

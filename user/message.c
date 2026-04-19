@@ -43,6 +43,14 @@ static struct {
   msg_t messages[0x100];
 } queue = {0};
 
+// Free framework-owned asynchronous payloads attached to queue messages.
+// Currently only HTTP progress snapshots are queue-owned.
+static void free_posted_lparam(uint32_t msg, void *lparam) {
+  if (!lparam) return;
+  if (msg == kWindowMessageHttpProgress)
+    free(lparam);
+}
+
 // Separator pseudo-proc: draws a 1-pixel vertical divider line.
 static result_t win_toolbar_sep(window_t *win, uint32_t msg,
                                  uint32_t wparam, void *lparam) {
@@ -212,8 +220,6 @@ typedef struct winhook_s {
 static winhook_t *g_hooks = NULL;
 
 // External references
-extern window_t *windows;
-extern window_t *_focused;
 
 // Forward declaration for kernel/event.c wake-up helper.
 extern void wake_event_loop(void);
@@ -792,6 +798,14 @@ void post_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     if (queue.messages[r].target == win &&
         queue.messages[r].msg == msg)
     {
+      // HTTP progress updates are coalesced: keep only the latest payload.
+      if (msg == kWindowMessageHttpProgress) {
+        free_posted_lparam(msg, queue.messages[r].lparam);
+        queue.messages[r].wparam = wparam;
+        queue.messages[r].lparam = lparam;
+      } else {
+        free_posted_lparam(msg, lparam);
+      }
       return;
     }
   }
@@ -828,15 +842,23 @@ void repost_messages(void) {
   }
   for (uint8_t write = queue.write; queue.read != write;) {
     msg_t *m = &queue.messages[queue.read++];
-    if (m->target == NULL) continue;
+    if (m->target == NULL) {
+      free_posted_lparam(m->msg, m->lparam);
+      continue;
+    }
     if (m->msg == kWindowMessageRefreshStencil) {
+      free_posted_lparam(m->msg, m->lparam);
       if (g_ui_runtime.running) {
         repaint_stencil();
       }
       continue;
     }
-    if (!is_valid_window_ptr(m->target, windows)) continue;
+    if (!is_valid_window_ptr(m->target, g_ui_runtime.windows)) {
+      free_posted_lparam(m->msg, m->lparam);
+      continue;
+    }
     send_message(m->target, m->msg, m->wparam, m->lparam);
+    free_posted_lparam(m->msg, m->lparam);
   }
   if (g_ui_runtime.running) {
     ui_end_frame();     // present frame (swap buffers / flushBuffer)

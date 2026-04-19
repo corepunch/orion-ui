@@ -78,6 +78,24 @@ enum {
   kToolboxMessageSetStrip,         // wparam=0; lparam=bitmap_strip_t* (NULL=clear) — external strip
   kToolboxMessageSetButtonSize,    // wparam=size in px (0 = reset to TOOLBOX_BTN_SIZE)
   kToolboxMessageLoadStrip,        // wparam=icon_w (square tiles); lparam=const char* path — load PNG
+  // Async HTTP messages (analogous to WinInet/WinHTTP notifications).
+  // Delivered to the window_t* registered with http_request_async() when the
+  // request transitions through the following states:
+  //
+  //   kWindowMessageHttpDone     — request completed (success or failure).
+  //     wparam = http_request_id_t (request handle).
+  //     lparam = http_response_t*  (caller owns; free with http_response_free).
+  //
+  //   kWindowMessageHttpProgress — download progress update (optional, posted
+  //     only when Content-Length is known).
+  //     wparam = http_request_id_t.
+  //     lparam = http_progress_t*  (framework-owned; valid only during
+  //              message processing; do NOT retain or free).
+  //
+  // The request handle is returned by http_request_async().  A return value of
+  // HTTP_INVALID_REQUEST indicates an immediate error (bad URL, OOM, etc.).
+  kWindowMessageHttpDone,
+  kWindowMessageHttpProgress,
 };
 
 // Control notification messages

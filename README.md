@@ -134,6 +134,81 @@ window_t *console = create_window("Console", 0, &console_frame, parent, win_cons
 window_t *columnview = create_window("", WINDOW_NOTITLE | WINDOW_TRANSPARENT, &cv_frame, parent, win_reportview, NULL);
 ```
 
+### Async HTTP/HTTPS
+
+Orion includes a message-driven async HTTP client in the kernel layer.
+Requests run on a worker thread and report back to your window procedure.
+
+```c
+#include "ui.h"
+
+typedef struct {
+  http_request_id_t request_id;
+} app_state_t;
+
+static result_t win_main(window_t *win, uint32_t msg,
+                         uint32_t wparam, void *lparam) {
+  app_state_t *st = (app_state_t *)win->userdata;
+
+  switch (msg) {
+    case kWindowMessageCreate:
+      st = calloc(1, sizeof(*st));
+      win->userdata = st;
+      st->request_id = http_request_async(win,
+                                          "https://httpbin.org/get",
+                                          NULL, NULL);
+      return true;
+
+    case kWindowMessageHttpProgress: {
+      http_progress_t *p = (http_progress_t *)lparam;
+      // p is framework-owned; valid only for this handler call.
+      printf("request %u: %zu/%zd bytes\n",
+             p->request_id, p->bytes_received, p->bytes_total);
+      return true;
+    }
+
+    case kWindowMessageHttpDone: {
+      http_response_t *resp = (http_response_t *)lparam;
+      if (resp && resp->status == 200) {
+        printf("HTTP %d, body bytes: %zu\n", resp->status, resp->body_len);
+      } else if (resp && resp->error) {
+        printf("HTTP error: %s\n", resp->error);
+      }
+      http_response_free(resp);
+      return true;
+    }
+
+    case kWindowMessageDestroy:
+      free(st);
+      win->userdata = NULL;
+      return true;
+  }
+  return false;
+}
+```
+
+POST with custom headers:
+
+```c
+http_options_t opts = {
+  .method  = HTTP_POST,
+  .body    = "{\"name\":\"Orion\"}",
+  .headers = "Content-Type: application/json\r\n",
+};
+
+http_request_id_t id = http_request_async(win,
+                                          "https://api.example.com/items",
+                                          &opts, NULL);
+```
+
+Cancel a request:
+
+```c
+http_cancel(id);
+```
+
+Full reference and limitations: [docs/http.md](docs/http.md)
+
 ### Declarative Forms (create_window_from_form / show_dialog_from_form)
 
 Dialogs and panels with multiple standard controls should be described using

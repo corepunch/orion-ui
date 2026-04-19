@@ -9,7 +9,6 @@
 
 // Helper function (will be moved to ui/user/window.c later)
 extern window_t *get_root_window(window_t *window);
-extern window_t *_focused;
 
 // Checkbox control window procedure
 result_t win_checkbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
@@ -23,7 +22,7 @@ result_t win_checkbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       rect_t box = rect_split_left(&rem, CHECKBOX_BOX_SIZE);
       box.h = CHECKBOX_BOX_SIZE;
       rect_t focus_bg = rect_inset(box, -CHECKBOX_FOCUS_PAD);
-      fill_rect(_focused == win ? get_sys_color(kColorFocusRing) : get_sys_color(kColorWindowBg),
+      fill_rect(g_ui_runtime.focused == win ? get_sys_color(kColorFocusRing) : get_sys_color(kColorWindowBg),
                 focus_bg.x, focus_bg.y, focus_bg.w, focus_bg.h);
       draw_button(&box, 1, 1, win->pressed);
       int lx = rem.x + CHECKBOX_GAP;
