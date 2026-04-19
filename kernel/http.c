@@ -134,12 +134,10 @@ typedef pthread_mutex_t http_mutex_t;
 typedef pthread_cond_t  http_cond_t;
 
 static void http_mutex_init(http_mutex_t *m)   { pthread_mutex_init(m, NULL); }
-static void http_mutex_destroy(http_mutex_t *m){ pthread_mutex_destroy(m); }
 static void http_mutex_lock(http_mutex_t *m)   { pthread_mutex_lock(m); }
 static void http_mutex_unlock(http_mutex_t *m) { pthread_mutex_unlock(m); }
 
 static void http_cond_init(http_cond_t *c)     { pthread_cond_init(c, NULL); }
-static void http_cond_destroy(http_cond_t *c)  { pthread_cond_destroy(c); }
 static void http_cond_wait(http_cond_t *c, http_mutex_t *m) {
   pthread_cond_wait(c, m);
 }
@@ -176,15 +174,6 @@ http_sync_init(void)
   http_cond_init(&g_cond);
   g_sync_ready = true;
   return true;
-}
-
-static void
-http_sync_shutdown(void)
-{
-  if (!g_sync_ready) return;
-  http_cond_destroy(&g_cond);
-  http_mutex_destroy(&g_mutex);
-  g_sync_ready = false;
 }
 
 /* =========================================================================
@@ -769,7 +758,6 @@ http_shutdown(void)
 
   axNetShutdown();
   g_initialized = false;
-  http_sync_shutdown();
 }
 
 http_request_id_t
