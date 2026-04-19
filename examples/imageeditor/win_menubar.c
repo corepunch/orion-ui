@@ -495,7 +495,7 @@ result_t editor_menubar_proc(window_t *win, uint32_t msg,
     uint16_t notif = HIWORD(wparam);
     if (notif == kMenuBarNotificationItemClick ||
         notif == kAcceleratorNotification      ||
-        notif == kButtonNotificationClicked) {
+        notif == btnClicked) {
       handle_menu_command(LOWORD(wparam));
       return true;
     }

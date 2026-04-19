@@ -25,7 +25,7 @@ send_message(vsb, sbSetInfo, 0, &info);
 
 // Receive position-change notification in the parent proc:
 case evCommand:
-    if (HIWORD(wparam) == kScrollBarNotificationChanged) {
+    if (HIWORD(wparam) == sbChanged) {
         int new_pos = (int)(intptr_t)lparam;
     }
 ```
@@ -45,7 +45,7 @@ window_t *btn = create_window("Click Me", 0,
 
 // Receive click in parent's proc:
 case evCommand:
-    if (HIWORD(wparam) == kButtonNotificationClicked)
+    if (HIWORD(wparam) == btnClicked)
         handle_click((window_t *)lparam);
 ```
 
@@ -74,7 +74,7 @@ const char *text = ed->title;
 
 // Notification when text changes
 case evCommand:
-    if (HIWORD(wparam) == kEditNotificationUpdate)
+    if (HIWORD(wparam) == edUpdate)
         on_text_changed(((window_t *)lparam)->title);
 ```
 
@@ -100,7 +100,7 @@ int sel = send_message(cb, cbGetCurrentSelection, 0, NULL);
 
 // Selection-change notification:
 case evCommand:
-    if (HIWORD(wparam) == kComboBoxNotificationSelectionChange) { … }
+    if (HIWORD(wparam) == cbSelectionChange) { … }
 ```
 
 ## ColumnView

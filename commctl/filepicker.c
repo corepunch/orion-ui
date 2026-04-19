@@ -183,7 +183,7 @@ static result_t fp_newfolder_proc(window_t *win, uint32_t msg,
     }
 
     case evCommand:
-      if (HIWORD(wparam) == kButtonNotificationClicked) {
+      if (HIWORD(wparam) == btnClicked) {
         window_t *src = (window_t *)lparam;
         if (!src) return true;
         if (src->id == FP_ID_NEWFOLDER_OK) {
@@ -633,7 +633,7 @@ static result_t fp_proc(window_t *win, uint32_t msg,
       }
 
       // Location combobox selection — navigate to chosen breadcrumb.
-      if (code == kComboBoxNotificationSelectionChange && ps->location_combo &&
+      if (code == cbSelectionChange && ps->location_combo &&
           (window_t *)lparam == ps->location_combo) {
         int sel = (int)send_message(ps->location_combo,
                                     cbGetCurrentSelection, 0, NULL);
@@ -645,7 +645,7 @@ static result_t fp_proc(window_t *win, uint32_t msg,
       }
 
       // Filter combobox selection changed
-      if (code == kComboBoxNotificationSelectionChange && ps->filter_combo &&
+      if (code == cbSelectionChange && ps->filter_combo &&
           (window_t *)lparam == ps->filter_combo) {
         int sel = (int)send_message(ps->filter_combo,
                                     cbGetCurrentSelection, 0, NULL);
@@ -656,14 +656,14 @@ static result_t fp_proc(window_t *win, uint32_t msg,
         return true;
       }
 
-      if (code == kEditNotificationUpdate && ps->edit_win &&
+      if (code == edUpdate && ps->edit_win &&
           (window_t *)lparam == ps->edit_win) {
         fp_sync_accept_button(ps);
         return false;
       }
 
       // Button click
-      if (code == kButtonNotificationClicked) {
+      if (code == btnClicked) {
         window_t *btn = (window_t *)lparam;
         if (!btn) return true;
 

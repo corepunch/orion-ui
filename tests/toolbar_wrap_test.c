@@ -375,7 +375,7 @@ void test_toolbar_button_click_fires_command(void) {
     send_message(btn, evLeftButtonDown, MAKEDWORD(4, 4), NULL);
     send_message(btn, evLeftButtonUp,   MAKEDWORD(4, 4), NULL);
 
-    // evCommand (kButtonNotificationClicked) should have been
+    // evCommand (btnClicked) should have been
     // forwarded by the default handler as tbButtonClick.
     ASSERT_EQUAL(g_click_count, 1);
     ASSERT_EQUAL(g_last_click_ident, 55);

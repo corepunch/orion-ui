@@ -23,7 +23,7 @@ You are now working on **Orion**, a lightweight WinAPI-style UI framework writte
 | `DialogBox` / `EndDialog` | `show_dialog(parent, proc, userdata)` / `end_dialog(win, result)` |
 | `RECT`                | `rect_t { int x, y, w, h; }` via `MAKERECT(x,y,w,h)` |
 | `POINT`               | `point_t { int x, y; }`                       |
-| Button `BN_CLICKED`   | `kButtonNotificationClicked`                  |
+| Button `BN_CLICKED`   | `btnClicked`                  |
 | `CB_ADDSTRING` etc.   | `CB_ADDSTRING`, `CBN_SELCHANGE`, etc.         |
 
 ## How you approach every task

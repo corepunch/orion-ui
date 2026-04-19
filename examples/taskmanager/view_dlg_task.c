@@ -119,7 +119,7 @@ static result_t task_dlg_proc(window_t *win, uint32_t msg,
     }
 
     case evCommand:
-      if (HIWORD(wparam) == kButtonNotificationClicked) {
+      if (HIWORD(wparam) == btnClicked) {
         window_t *src = (window_t *)lparam;
 
         if (src->id == ID_OK) {

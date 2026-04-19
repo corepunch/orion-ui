@@ -166,7 +166,7 @@ static result_t open_proc(window_t *win, uint32_t msg,
       return true;
 
     case evCommand:
-      if (HIWORD(wparam) == kButtonNotificationClicked) {
+      if (HIWORD(wparam) == btnClicked) {
         window_t *btn = (window_t *)lparam;
         if (strcmp(btn->title, "OK") == 0) {
           strncpy(s->path, "chosen.png", sizeof(s->path) - 1);

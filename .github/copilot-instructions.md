@@ -88,7 +88,7 @@ send_message(vsb, sbSetInfo, 0, &info);
 | Creating `win_scrollbar` children when you want built-in scrollbars | Add `WINDOW_HSCROLL`/`WINDOW_VSCROLL` to the scrollable window and call `set_scroll_info()` |
 | Manually painting scrollbar children from the parent `evPaint` | The framework paints built-in bars automatically after calling `win->proc` |
 | Forwarding mouse events to scrollbar children | Not needed; the framework intercepts clicks in the bar area before `win->proc` |
-| Handling `kScrollBarNotificationChanged` for built-in scrollbars | Handle `evHScroll` / `evVScroll` |
+| Handling `sbChanged` for built-in scrollbars | Handle `evHScroll` / `evVScroll` |
 | Forgetting scrollbar interdependence | If one bar appears it shrinks the viewport on the other axis — re-check both `need_h` / `need_v` after setting either |
 
 ### Toolbars and Bitmap-Strip Icon Buttons
@@ -163,7 +163,7 @@ for (int i = 0; i < NUM_TOOLS; i++) {
 - Prefer short event/message enums with `ev` prefix (e.g., `evCreate`, `evPaint`, `evLeftButtonDown`, `evCommand`) instead of introducing new `WM_*` names.
 - Prefer brush/theme color enums with `br` prefix ("brush"), e.g., `brWindowBg`, `brTextDisabled`, when adding or renaming public color identifiers.
 - Keep control command enums short and verb-oriented (e.g., `btnSetImage`, `cbAddString`, `tbSetItems`) rather than long WinAPI-style all-caps names.
-- For control notifications, keep existing notification enums consistent with the local subsystem style (e.g., `kButtonNotificationClicked`, `kEditNotificationUpdate`).
+- For control notifications, keep existing notification enums consistent with the local subsystem style (e.g., `btnClicked`, `edUpdate`).
 - Do not mix naming families inside a single touched module: if a file is already in `ev*` / `br*` style, continue that style.
 - If compatibility aliases are needed for legacy or external code, add thin aliases/wrappers instead of changing runtime behavior.
 
@@ -240,7 +240,7 @@ static result_t my_dlg_proc(window_t *win, uint32_t msg,
       draw_text_small("Name:", 4, 11, get_sys_color(brTextDisabled));
       return false;
     case evCommand:
-      if (HIWORD(wparam) == kButtonNotificationClicked) {
+      if (HIWORD(wparam) == btnClicked) {
         window_t *src = (window_t *)lparam;
         if (src->id == 2) { end_dialog(win, 1); return true; }
         if (src->id == 3) { end_dialog(win, 0); return true; }

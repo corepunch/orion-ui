@@ -96,7 +96,7 @@ static result_t mb_proc(window_t *win, uint32_t msg,
     }
 
     case evCommand: {
-      if (HIWORD(wparam) != kButtonNotificationClicked) return false;
+      if (HIWORD(wparam) != btnClicked) return false;
       window_t *btn = (window_t *)lparam;
       if (!btn) return true;
 

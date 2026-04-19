@@ -116,7 +116,7 @@ static result_t about_proc(window_t *win, uint32_t msg,
     }
 
     case evCommand: {
-      if (HIWORD(wparam) == kButtonNotificationClicked) {
+      if (HIWORD(wparam) == btnClicked) {
         end_dialog(win, 1);
         return true;
       }

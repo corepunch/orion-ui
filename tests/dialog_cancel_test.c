@@ -28,7 +28,7 @@ extern void end_dialog(window_t *win, uint32_t code);
 // Tracks whether the dialog's Cancel command was received.
 static bool g_cancel_received = false;
 
-// Minimal dialog window procedure.  When it sees a kButtonNotificationClicked
+// Minimal dialog window procedure.  When it sees a btnClicked
 // command from a "Cancel" child it calls end_dialog, which destroys the
 // dialog window (and all its children, including the button that is still
 // on the call stack).
@@ -39,7 +39,7 @@ static result_t dialog_proc(window_t *win, uint32_t msg,
             return 1;
         case evCommand: {
             uint16_t code = HIWORD(wparam);
-            if (code == kButtonNotificationClicked) {
+            if (code == btnClicked) {
                 window_t *btn = (window_t *)lparam;
                 if (btn && strcmp(btn->title, "Cancel") == 0) {
                     g_cancel_received = true;
@@ -119,7 +119,7 @@ static result_t regular_parent_proc(window_t *win, uint32_t msg,
                                     uint32_t wparam, void *lparam) {
     (void)win; (void)lparam;
     if (msg == evCommand &&
-        HIWORD(wparam) == kButtonNotificationClicked) {
+        HIWORD(wparam) == btnClicked) {
         g_cmd_count++;
         return 1;
     }

@@ -34,14 +34,14 @@
 //       return true;
 //   }
 //   case evCommand:
-//       if (HIWORD(wparam) == kToolboxNotificationClicked)
+//       if (HIWORD(wparam) == bxClicked)
 //           handle_tool_selected(LOWORD(wparam));
 //       return false;
 //   default:
 //       return win_toolbox(win, msg, wparam, lparam);
 //
 // Notifications: clicking a button sends evCommand to the toolbox
-// window itself with wparam = MAKEDWORD(ident, kToolboxNotificationClicked) and
+// window itself with wparam = MAKEDWORD(ident, bxClicked) and
 // lparam = the toolbox window.  The wrapping proc intercepts this command.
 
 #include <stdlib.h>
@@ -218,7 +218,7 @@ result_t win_toolbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
         // A wrapping proc intercepts this before it reaches win_toolbox again.
         send_message(win, evCommand,
                      MAKEDWORD((uint16_t)st->items[idx].ident,
-                               kToolboxNotificationClicked),
+                               bxClicked),
                      win);
         return true;
       }

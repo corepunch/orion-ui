@@ -65,7 +65,7 @@ window_t *tool_win = create_window(
 ## Window procedure wrapper
 
 Every app that uses `win_toolbox` must provide a **wrapper proc** that handles
-at minimum the `kToolboxNotificationClicked` command.  All other messages are
+at minimum the `bxClicked` command.  All other messages are
 forwarded to `win_toolbox`:
 
 ```c
@@ -89,12 +89,12 @@ static result_t my_toolbox_proc(window_t *win, uint32_t msg,
     }
 
     case evCommand:
-      if (HIWORD(wparam) == kToolboxNotificationClicked) {
+      if (HIWORD(wparam) == bxClicked) {
         int tool_id = (int)(int16_t)LOWORD(wparam);
         // Forward to the app's root window / menubar.
         if (app->menubar_win)
           send_message(app->menubar_win, evCommand,
-                       MAKEDWORD((uint16_t)tool_id, kButtonNotificationClicked),
+                       MAKEDWORD((uint16_t)tool_id, btnClicked),
                        lparam);
         return true;
       }
@@ -213,7 +213,7 @@ grid (= `ceil(n/2) * btn_size`).  It is declared in `commctl/commctl.h`.
 
 ```c
 typedef struct {
-    int ident;  // command ID echoed in kToolboxNotificationClicked
+    int ident;  // command ID echoed in bxClicked
     int icon;   // strip tile index, or sysicon_* value (>= SYSICON_BASE)
 } toolbox_item_t;
 ```
@@ -224,7 +224,7 @@ When the user clicks a button the toolbox sends `evCommand` to
 itself:
 
 ```c
-wparam = MAKEDWORD(ident, kToolboxNotificationClicked);
+wparam = MAKEDWORD(ident, bxClicked);
 lparam = win;  // the toolbox window
 ```
 

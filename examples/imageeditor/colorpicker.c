@@ -293,7 +293,7 @@ static result_t cp_proc(window_t *win, uint32_t msg,
       return false;  // returning false lets child buttons paint themselves
 
     case evCommand: {
-      if (HIWORD(wparam) != kButtonNotificationClicked) return false;
+      if (HIWORD(wparam) != btnClicked) return false;
       window_t *btn = (window_t *)lparam;
       if (!btn) return false;
       if (btn->id == CP_ID_OK) {

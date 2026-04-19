@@ -112,7 +112,7 @@ The test suite follows the Windows 1.0 testing philosophy:
 - Rectangle structures
 - Window message constants (evCreate, evDestroy, evPaint, etc.)
 - Control message constants (btnSetCheck, cbAddString, etc.)
-- Notification constants (kButtonNotificationClicked, kEditNotificationUpdate, etc.)
+- Notification constants (btnClicked, edUpdate, etc.)
 - Window flags (WINDOW_NOTITLE, WINDOW_TRANSPARENT, etc.)
 
 ### Window and Message Tracking
@@ -129,7 +129,7 @@ The test suite follows the Windows 1.0 testing philosophy:
 - Mouse event simulation with proper in-window scaling (scale factor = 2)
 - Asynchronous message posting using `post_message` instead of `send_message`
 - Message queue processing with `repost_messages(-1)`
-- kButtonNotificationClicked notification verification sent to parent window
+- btnClicked notification verification sent to parent window
 - Multiple button clicks handling
 - Button clicks at different positions within button bounds
 - Verification of async behavior (messages queued before processing)

@@ -77,7 +77,7 @@ static result_t open_proc(window_t *win, uint32_t msg,
       win->userdata = lparam;
       return true;
     case evCommand:
-      if (HIWORD(wparam) == kButtonNotificationClicked) {
+      if (HIWORD(wparam) == btnClicked) {
         window_t *btn = (window_t *)lparam;
         if (btn->id == ID_OK) {
           s->accepted = true;
@@ -176,7 +176,7 @@ static result_t my_proc(window_t *win, uint32_t msg,
       set_window_item_text(win, ID_NAME_EDIT, "%s", s->name); // pre-fill
       return true;
     case evCommand:
-      if (HIWORD(wparam) == kButtonNotificationClicked) {
+      if (HIWORD(wparam) == btnClicked) {
         window_t *src = (window_t *)lparam;
         if (src->id == ID_OK_BTN) {
           /* read controls, validate, call end_dialog(win, 1) */
@@ -293,7 +293,7 @@ static result_t task_proc(window_t *win, uint32_t msg,
       return true;
 
     case evCommand:
-      if (HIWORD(wparam) == kButtonNotificationClicked) {
+      if (HIWORD(wparam) == btnClicked) {
         window_t *src = (window_t *)lparam;
         if (src->id == ID_OK) {
           // Validate first

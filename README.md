@@ -258,7 +258,7 @@ static result_t my_dlg_proc(window_t *win, uint32_t msg,
       return false;
 
     case evCommand:
-      if (HIWORD(wparam) == kButtonNotificationClicked) {
+      if (HIWORD(wparam) == btnClicked) {
         window_t *src = (window_t *)lparam;
         if (src->id == 2) { end_dialog(win, 1); return true; }
         if (src->id == 3) { end_dialog(win, 0); return true; }
@@ -459,7 +459,7 @@ The framework uses a message-based architecture. Common messages include:
 ## Control-Specific Messages
 
 ### Button Messages
-- `kButtonNotificationClicked` - Button was clicked
+- `btnClicked` - Button was clicked
 
 ### Checkbox Messages
 - `btnSetCheck` - Set checkbox state
@@ -469,10 +469,10 @@ The framework uses a message-based architecture. Common messages include:
 - `cbAddString` - Add item to combobox
 - `cbGetCurrentSelection` - Get currently selected item
 - `cbSetCurrentSelection` - Set currently selected item
-- `kComboBoxNotificationSelectionChange` - Selection changed notification
+- `cbSelectionChange` - Selection changed notification
 
 ### Edit Box Messages
-- `kEditNotificationUpdate` - Text was modified
+- `edUpdate` - Text was modified
 
 ### ColumnView Messages
 - `RVM_ADDITEM` - Add item with icon, color, text, and userdata

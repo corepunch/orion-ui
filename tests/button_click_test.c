@@ -20,7 +20,7 @@ static result_t test_parent_proc(window_t *win, uint32_t msg, uint32_t wparam, v
             return 1;
         case evCommand:
             // Extract notification code and control ID
-            if (HIWORD(wparam) == kButtonNotificationClicked) {
+            if (HIWORD(wparam) == btnClicked) {
                 test_kButtonNotificationClicked_count++;
                 test_last_button_id = LOWORD(wparam);
                 test_last_button_sender = (window_t *)lparam;
@@ -92,7 +92,7 @@ void test_button_click_with_scaling(void) {
     // Verify LBUTTONUP was tracked
     ASSERT_TRUE(test_env_was_message_sent(evLeftButtonUp));
     
-    // Verify evCommand with kButtonNotificationClicked was sent to parent
+    // Verify evCommand with btnClicked was sent to parent
     ASSERT_TRUE(test_env_was_message_sent(evCommand));
     ASSERT_EQUAL(test_kButtonNotificationClicked_count, 1);
     ASSERT_EQUAL(test_last_button_id, 101);

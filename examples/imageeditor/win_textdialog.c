@@ -167,7 +167,7 @@ static result_t td_proc(window_t *win, uint32_t msg,
       return false;  // let child controls paint themselves
 
     case evCommand: {
-      if (HIWORD(wparam) != kButtonNotificationClicked) return false;
+      if (HIWORD(wparam) != btnClicked) return false;
       window_t *src = (window_t *)lparam;
       if (!src) return false;
 

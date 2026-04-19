@@ -59,7 +59,7 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       switch (wparam) {
         case AX_KEY_TAB:
           if (win->editing) {
-            send_message(get_root_window(win), evCommand, MAKEDWORD(win->id, kEditNotificationUpdate), win);
+            send_message(get_root_window(win), evCommand, MAKEDWORD(win->id, edUpdate), win);
             win->editing = false;
           }
           return false;
@@ -68,7 +68,7 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
             win->cursor_pos = (int)strlen(win->title);
             win->editing = true;
           } else {
-            send_message(get_root_window(win), evCommand, MAKEDWORD(win->id, kEditNotificationUpdate), win);
+            send_message(get_root_window(win), evCommand, MAKEDWORD(win->id, edUpdate), win);
             win->editing = false;
           }
           break;

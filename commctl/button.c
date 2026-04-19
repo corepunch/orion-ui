@@ -69,7 +69,7 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
       // end_dialog → destroy_window(win), freeing 'win'. Reading win->parent
       // in get_root_window() on freed memory causes SIGSEGV on macOS.
       invalidate_window(win);
-      send_message(get_root_window(win), evCommand, MAKEDWORD(win->id, kButtonNotificationClicked), win);
+      send_message(get_root_window(win), evCommand, MAKEDWORD(win->id, btnClicked), win);
       return true;
     case evKeyDown:
       if (wparam == AX_KEY_ENTER || wparam == AX_KEY_SPACE) {
@@ -85,7 +85,7 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
           autoradio_select(win);
         // Same ordering fix as evLeftButtonUp.
         invalidate_window(win);
-        send_message(get_root_window(win), evCommand, MAKEDWORD(win->id, kButtonNotificationClicked), win);
+        send_message(get_root_window(win), evCommand, MAKEDWORD(win->id, btnClicked), win);
         return true;
       } else {
         return false;
@@ -170,7 +170,7 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
       // in get_root_window() on freed memory causes SIGSEGV on macOS.
       invalidate_window(win);
       send_message(get_root_window(win), evCommand,
-                   MAKEDWORD(win->id, kButtonNotificationClicked), win);
+                   MAKEDWORD(win->id, btnClicked), win);
       return true;
     case evKeyDown:
       if (wparam == AX_KEY_ENTER || wparam == AX_KEY_SPACE) {
@@ -187,7 +187,7 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
         // Same ordering fix as evLeftButtonUp.
         invalidate_window(win);
         send_message(get_root_window(win), evCommand,
-                     MAKEDWORD(win->id, kButtonNotificationClicked), win);
+                     MAKEDWORD(win->id, btnClicked), win);
         return true;
       }
       return false;

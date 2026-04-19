@@ -98,9 +98,9 @@ void test_notification_constants(void) {
     TEST("Notification message constants");
     
     // Verify notification constants
-    ASSERT_TRUE(kEditNotificationUpdate == 100);
-    ASSERT_TRUE(kButtonNotificationClicked > kEditNotificationUpdate);
-    ASSERT_TRUE(kComboBoxNotificationSelectionChange > kButtonNotificationClicked);
+    ASSERT_TRUE(edUpdate == 100);
+    ASSERT_TRUE(btnClicked > edUpdate);
+    ASSERT_TRUE(cbSelectionChange > btnClicked);
     
     PASS();
 }

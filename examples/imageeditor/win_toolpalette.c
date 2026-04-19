@@ -152,14 +152,14 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
     }
 
     case evCommand:
-      // kToolboxNotificationClicked: a tool button was pressed.
-      if (HIWORD(wparam) == kToolboxNotificationClicked) {
+      // bxClicked: a tool button was pressed.
+      if (HIWORD(wparam) == bxClicked) {
         int clicked_ident = (int)(int16_t)LOWORD(wparam);
         if (g_app) {
           if (g_app->menubar_win) {
             send_message(g_app->menubar_win, evCommand,
                          MAKEDWORD((uint16_t)clicked_ident,
-                                   kButtonNotificationClicked),
+                                   btnClicked),
                          lparam);
           } else {
             handle_menu_command((uint16_t)clicked_ident);

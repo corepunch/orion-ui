@@ -117,14 +117,14 @@ static result_t ni_proc(window_t *win, uint32_t msg,
       uint16_t notif = HIWORD(wparam);
 
       // When the user presses Enter inside either edit box, win_textedit fires
-      // kEditNotificationUpdate. Treat that as clicking OK so Enter accepts
+      // edUpdate. Treat that as clicking OK so Enter accepts
       // the dialog while focus is in a text field.
-      if (notif == kEditNotificationUpdate) {
+      if (notif == edUpdate) {
         ni_accept(win, st);
         return true;
       }
 
-      if (notif != kButtonNotificationClicked) return false;
+      if (notif != btnClicked) return false;
       window_t *src = (window_t *)lparam;
       if (!src) return false;
 

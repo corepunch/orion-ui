@@ -747,10 +747,10 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         }
         break;
       case evCommand:
-        // When a toolbar child button fires kButtonNotificationClicked,
+        // When a toolbar child button fires btnClicked,
         // translate it to tbButtonClick for backward compatibility
         // with existing callers (taskmanager, formeditor, filepicker, …).
-        if (HIWORD(wparam) == kButtonNotificationClicked && lparam) {
+        if (HIWORD(wparam) == btnClicked && lparam) {
           window_t *sender = (window_t *)lparam;
           for (window_t *tc = win->toolbar_children; tc; tc = tc->next) {
             if (tc == sender) {

@@ -53,7 +53,7 @@ result_t hello_window_proc(window_t *win, uint32_t msg, uint32_t wparam, void *l
     
      case evCommand:
        // Handle button click
-       if (HIWORD(wparam) == kButtonNotificationClicked && LOWORD(wparam) == ID_BUTTON_CLICKME) {
+       if (HIWORD(wparam) == btnClicked && LOWORD(wparam) == ID_BUTTON_CLICKME) {
          click_count++;
          invalidate_window(win);  // Request repaint to show new count
          return true;

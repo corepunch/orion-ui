@@ -101,11 +101,11 @@ enum {
 
 // Control notification messages
 enum {
-  kEditNotificationUpdate = 100,
-  kButtonNotificationClicked,
-  kComboBoxNotificationSelectionChange,
-  kScrollBarNotificationChanged,  // wparam: MAKEDWORD(scrollbar_id, kScrollBarNotificationChanged); lparam: (void*)(intptr_t)new_pos
-  kToolboxNotificationClicked,    // sent via evCommand: MAKEDWORD(ident, kToolboxNotificationClicked)
+  edUpdate = 100,
+  btnClicked,
+  cbSelectionChange,
+  sbChanged,  // wparam: MAKEDWORD(scrollbar_id, sbChanged); lparam: (void*)(intptr_t)new_pos
+  bxClicked,    // sent via evCommand: MAKEDWORD(ident, bxClicked)
 };
 
 // Button state
@@ -127,7 +127,7 @@ enum {
 // or a tile index into the strip set with bxSetStrip /
 // bxLoadStrip.
 typedef struct {
-  int ident;  // command identifier echoed in kToolboxNotificationClicked
+  int ident;  // command identifier echoed in bxClicked
   int icon;   // strip tile index (0-based), or sysicon_* value (>= SYSICON_BASE)
 } toolbox_item_t;
 

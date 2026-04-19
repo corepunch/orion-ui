@@ -442,7 +442,7 @@ static result_t about_proc(window_t *win, uint32_t msg,
       return true;
     }
     case evCommand:
-      if (HIWORD(wparam) == kButtonNotificationClicked) {
+      if (HIWORD(wparam) == btnClicked) {
         end_dialog(win, 1);
         return true;
       }
@@ -529,7 +529,7 @@ static result_t props_proc(window_t *win, uint32_t msg,
     }
 
     case evCommand: {
-      if (HIWORD(wparam) != kButtonNotificationClicked) return false;
+      if (HIWORD(wparam) != btnClicked) return false;
       window_t *src = (window_t *)lparam;
       if (!src) return false;
 
@@ -717,7 +717,7 @@ result_t editor_menubar_proc(window_t *win, uint32_t msg,
     uint16_t notif = HIWORD(wparam);
     if (notif == kMenuBarNotificationItemClick ||
         notif == kAcceleratorNotification      ||
-        notif == kButtonNotificationClicked) {
+        notif == btnClicked) {
       handle_menu_command(LOWORD(wparam));
       return true;
     }

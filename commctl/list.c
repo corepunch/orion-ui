@@ -59,7 +59,7 @@ result_t win_list(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       return true;
     case evLeftButtonUp:
       if (cb) set_focus(cb);
-      send_message(get_root_window(cb), evCommand, MAKEDWORD(cb->id, kComboBoxNotificationSelectionChange), cb);
+      send_message(get_root_window(cb), evCommand, MAKEDWORD(cb->id, cbSelectionChange), cb);
       destroy_window(win);
       return true;
     case evKeyDown: {
@@ -89,7 +89,7 @@ result_t win_list(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         if (cb) {
           if (win->cursor_pos < cb->cursor_pos) {
             strncpy(cb->title, texts[win->cursor_pos], sizeof(cb->title));
-            send_message(get_root_window(cb), evCommand, MAKEDWORD(cb->id, kComboBoxNotificationSelectionChange), cb);
+            send_message(get_root_window(cb), evCommand, MAKEDWORD(cb->id, cbSelectionChange), cb);
           }
           set_focus(cb);
         }

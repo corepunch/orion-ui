@@ -23,7 +23,7 @@
 // ------------
 // When the scroll position changes the control sends evCommand to
 // its parent window:
-//   wparam = MAKEDWORD(win->id, kScrollBarNotificationChanged)
+//   wparam = MAKEDWORD(win->id, sbChanged)
 //   lparam = (void *)(intptr_t)new_pos
 
 #include <stdlib.h>
@@ -89,7 +89,7 @@ static int sb_clamp(scrollbar_state_t *s, int pos) {
 static void sb_notify(window_t *win, int pos) {
   if (win->parent) {
     send_message(win->parent, evCommand,
-                 MAKEDWORD(win->id, kScrollBarNotificationChanged),
+                 MAKEDWORD(win->id, sbChanged),
                  (void *)(intptr_t)pos);
   }
 }

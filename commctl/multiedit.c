@@ -355,7 +355,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
         case AX_KEY_TAB:
           // Notify parent and yield focus so Tab advances to next control.
           send_message(get_root_window(win), evCommand,
-                       MAKEDWORD(win->id, kEditNotificationUpdate), win);
+                       MAKEDWORD(win->id, edUpdate), win);
           return false;
 
         case AX_KEY_ESCAPE:

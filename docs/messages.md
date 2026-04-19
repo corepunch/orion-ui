@@ -50,9 +50,9 @@ Sent to the **root window** via `evCommand`:
 
 | Code | Control | Meaning |
 |---|---|---|
-| `kButtonNotificationClicked` | Button / Checkbox | Button was clicked |
-| `kEditNotificationUpdate` | Text edit | Text content changed |
-| `kComboBoxNotificationSelectionChange` | Combobox | Selected item changed |
+| `btnClicked` | Button / Checkbox | Button was clicked |
+| `edUpdate` | Text edit | Text content changed |
+| `cbSelectionChange` | Combobox | Selected item changed |
 | `RVN_SELCHANGE` | ColumnView | Single-click selection change |
 | `RVN_DBLCLK` | ColumnView | Double-click on item |
 | `kMenuBarNotificationItemClick` | MenuBar | Menu item selected |
@@ -65,7 +65,7 @@ case evCommand: {
     uint16_t id    = LOWORD(wparam);  // item ID
     window_t *ctrl = (window_t *)lparam;
 
-    if (notif == kButtonNotificationClicked) {
+    if (notif == btnClicked) {
         if (strcmp(ctrl->title, "OK") == 0) { /* … */ }
     }
     if (notif == kMenuBarNotificationItemClick) {

@@ -174,7 +174,7 @@ send_message(hsb, sbSetInfo, 0, &info);
 
 // Receive notification in parent proc:
 case evCommand:
-    if (HIWORD(wparam) == kScrollBarNotificationChanged) {
+    if (HIWORD(wparam) == sbChanged) {
         int new_pos = (int)(intptr_t)lparam;
         // use new_pos ...
     }
@@ -195,4 +195,4 @@ case evCommand:
 | Creating `win_scrollbar` children when you want built-in scrollbars | Add `WINDOW_HSCROLL \| WINDOW_VSCROLL` to the parent and call `set_scroll_info()` |
 | Manually painting scrollbar children from the parent proc | Let the framework draw via `WINDOW_HSCROLL \| WINDOW_VSCROLL`; it paints on top automatically |
 | Forwarding mouse events to scrollbar children | Not needed; the framework intercepts clicks in the scrollbar area before calling `win->proc` |
-| Handling `kScrollBarNotificationChanged` for built-in scrollbars | Handle `evHScroll` / `evVScroll` instead |
+| Handling `sbChanged` for built-in scrollbars | Handle `evHScroll` / `evVScroll` instead |

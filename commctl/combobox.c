@@ -82,7 +82,7 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         if (sel != (result_t)kComboBoxError && sel > 0) {
           send_message(win, cbSetCurrentSelection, (uint32_t)(sel - 1), NULL);
           invalidate_window(win);
-          send_message(get_root_window(win), evCommand, MAKEDWORD(win->id, kComboBoxNotificationSelectionChange), win);
+          send_message(get_root_window(win), evCommand, MAKEDWORD(win->id, cbSelectionChange), win);
         }
         return true;
       }
@@ -91,11 +91,11 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         if (sel == (result_t)kComboBoxError && win->cursor_pos > 0) {
           send_message(win, cbSetCurrentSelection, 0, NULL);
           invalidate_window(win);
-          send_message(get_root_window(win), evCommand, MAKEDWORD(win->id, kComboBoxNotificationSelectionChange), win);
+          send_message(get_root_window(win), evCommand, MAKEDWORD(win->id, cbSelectionChange), win);
         } else if (sel != (result_t)kComboBoxError && (uint32_t)(sel + 1) < win->cursor_pos) {
           send_message(win, cbSetCurrentSelection, (uint32_t)(sel + 1), NULL);
           invalidate_window(win);
-          send_message(get_root_window(win), evCommand, MAKEDWORD(win->id, kComboBoxNotificationSelectionChange), win);
+          send_message(get_root_window(win), evCommand, MAKEDWORD(win->id, cbSelectionChange), win);
         }
         return true;
       }
@@ -103,7 +103,7 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
     }
     case evKeyUp:
       /* Consume Space/Enter key-up to prevent win_button's handler from
-         sending a spurious kButtonNotificationClicked to the parent. */
+         sending a spurious btnClicked to the parent. */
       if (wparam == AX_KEY_SPACE || wparam == AX_KEY_ENTER || wparam == AX_KEY_KP_ENTER)
         return true;
       return win_button(win, msg, wparam, lparam);

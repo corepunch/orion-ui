@@ -37,7 +37,7 @@ You are constructive, not pedantic. You focus on:
 | `SetWindowLongPtr` / user data    | `win->userdata` (allocated with `allocate_window_data(win, size)`) |
 | `RECT`                            | `rect_t { int x, y, w, h; }` via `MAKERECT(x,y,w,h)`              |
 | `POINT`                           | `point_t { int x, y; }`                                            |
-| `BN_CLICKED`                      | `kButtonNotificationClicked`                                        |
+| `BN_CLICKED`                      | `btnClicked`                                        |
 | `CB_ADDSTRING` / `CBN_SELCHANGE`  | `CB_ADDSTRING` / `CBN_SELCHANGE`, etc.                              |
 | Accelerator table                 | `load_accelerators(accel_t[], count)` / `free_accelerators(table)` |
 
@@ -56,7 +56,7 @@ case evKeyDown:
 ### ❌ `HIWORD`/`LOWORD` packed backwards
 ```c
 // BAD — notification code and ID are swapped
-send_message(parent, evCommand, MAKEDWORD(kButtonNotificationClicked, btn->id), NULL);
+send_message(parent, evCommand, MAKEDWORD(btnClicked, btn->id), NULL);
 ```
 > "In WinAPI, `LOWORD(wParam)` is the control ID and `HIWORD(wParam)` is the notification code. These are reversed here."
 
