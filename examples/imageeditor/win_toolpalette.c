@@ -73,7 +73,7 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
 #ifdef SHAREDIR
       char path[4096];
       snprintf(path, sizeof(path), "%s/" SHAREDIR "/tools.png", ui_get_exe_dir());
-      send_message(win, toolLoadStrip, ICON_W, path);
+      send_message(win, bxLoadStrip, ICON_W, path);
 #endif
 
       // Build item list in display order.
@@ -82,9 +82,9 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
         items[i].ident = k_tool_order[i];
         items[i].icon  = k_tool_icon_idx[i];
       }
-      send_message(win, toolSetItems, NUM_TOOLS, items);
-      send_message(win, toolSetIconTintBrush, brTextNormal, NULL);
-      send_message(win, toolSetActiveItem, ID_TOOL_SELECT, NULL);
+      send_message(win, bxSetItems, NUM_TOOLS, items);
+      send_message(win, bxSetIconTintBrush, brTextNormal, NULL);
+      send_message(win, bxSetActiveItem, ID_TOOL_SELECT, NULL);
       return true;
     }
 

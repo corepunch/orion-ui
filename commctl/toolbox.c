@@ -21,16 +21,16 @@
 //       char path[512];
 //       snprintf(path, sizeof(path), "%s/" SHAREDIR "/tools.png",
 //                ui_get_exe_dir());
-//       send_message(win, toolLoadStrip, 16, path);
+//       send_message(win, bxLoadStrip, 16, path);
 //
 //       toolbox_item_t items[] = {
 //           { ID_TOOL_SELECT, 0 },
 //           { ID_TOOL_PENCIL, 1 },
 //           { ID_TOOL_BRUSH,  2 },
 //       };
-//       send_message(win, toolSetItems, 3, items);
-//       send_message(win, toolSetActiveItem, ID_TOOL_SELECT, NULL);
-//       send_message(win, toolSetIconTintBrush, brTextNormal, NULL);
+//       send_message(win, bxSetItems, 3, items);
+//       send_message(win, bxSetActiveItem, ID_TOOL_SELECT, NULL);
+//       send_message(win, bxSetIconTintBrush, brTextNormal, NULL);
 //       return true;
 //   }
 //   case evCommand:
@@ -64,7 +64,7 @@ typedef struct {
   int             pressed_idx; // index of currently pressed item (-1 = none)
   int             icon_tint_brush; // br* index for icon tint, -1 = disabled
   bitmap_strip_t  strip;       // icon strip (may point to own_strip_tex or external tex)
-  uint32_t        own_strip_tex; // GL texture owned by toolLoadStrip (0 = none)
+  uint32_t        own_strip_tex; // GL texture owned by bxLoadStrip (0 = none)
 } toolbox_state_t;
 
 static int effective_bsz(const toolbox_state_t *st) {
@@ -228,7 +228,7 @@ result_t win_toolbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
     }
 
     // ── Toolbox messages ─────────────────────────────────────────────────
-    case toolSetItems: {
+    case bxSetItems: {
       toolbox_state_t *st = (toolbox_state_t *)win->userdata;
       if (!st) return false;
       free(st->items);
@@ -246,14 +246,14 @@ result_t win_toolbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       invalidate_window(win);
       return true;
     }
-    case toolSetActiveItem: {
+    case bxSetActiveItem: {
       toolbox_state_t *st = (toolbox_state_t *)win->userdata;
       if (!st) return false;
       st->active_ident = (int)(int32_t)wparam;
       invalidate_window(win);
       return true;
     }
-    case toolSetStrip: {
+    case bxSetStrip: {
       toolbox_state_t *st = (toolbox_state_t *)win->userdata;
       if (!st) return false;
       // Switching to an external strip: release any previously owned texture,
@@ -270,7 +270,7 @@ result_t win_toolbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       invalidate_window(win);
       return true;
     }
-    case toolSetButtonSize: {
+    case bxSetButtonSize: {
       toolbox_state_t *st = (toolbox_state_t *)win->userdata;
       if (!st) return false;
       int sz = (int)wparam;
@@ -278,7 +278,7 @@ result_t win_toolbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       invalidate_window(win);
       return true;
     }
-    case toolLoadStrip: {
+    case bxLoadStrip: {
       // Load a PNG sprite sheet and own the resulting GL texture.
       // wparam = square icon tile size in pixels; lparam = const char* path.
       toolbox_state_t *st = (toolbox_state_t *)win->userdata;
@@ -311,7 +311,7 @@ result_t win_toolbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       invalidate_window(win);
       return true;
     }
-    case toolSetIconTintBrush: {
+    case bxSetIconTintBrush: {
       toolbox_state_t *st = (toolbox_state_t *)win->userdata;
       if (!st) return false;
       int brush = (int)(int32_t)wparam;

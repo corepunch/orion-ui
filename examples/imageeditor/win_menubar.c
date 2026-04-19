@@ -457,7 +457,7 @@ void handle_menu_command(uint16_t id) {
                tool_id_name((int)id));
       // Update the active tool button in the tool palette (win_toolbox).
       if (g_app->tool_win) {
-        send_message(g_app->tool_win, toolSetActiveItem, (uint32_t)id, NULL);
+        send_message(g_app->tool_win, bxSetActiveItem, (uint32_t)id, NULL);
       }
       break;
     }

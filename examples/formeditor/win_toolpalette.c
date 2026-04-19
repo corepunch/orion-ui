@@ -35,13 +35,13 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       win_toolbox(win, msg, wparam, lparam);
 
       // Use a larger button size to fit the 21px icons with comfortable margin.
-      send_message(win, toolSetButtonSize, FE_TOOLBOX_BTN_SIZE, NULL);
+      send_message(win, bxSetButtonSize, FE_TOOLBOX_BTN_SIZE, NULL);
 
       // Load the VB3-style icon strip.
 #ifdef SHAREDIR
       char path[4096];
       snprintf(path, sizeof(path), "%s/" SHAREDIR "/toolbox.png", ui_get_exe_dir());
-      send_message(win, toolLoadStrip, FE_TOOLBOX_ICON_W, path);
+      send_message(win, bxLoadStrip, FE_TOOLBOX_ICON_W, path);
 #endif
 
       toolbox_item_t items[NUM_TOOLS];
@@ -49,9 +49,9 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
         items[i].ident = k_tool_order[i];
         items[i].icon  = k_tool_icon[i];
       }
-      send_message(win, toolSetItems, NUM_TOOLS, items);
-      send_message(win, toolSetIconTintBrush, brTextNormal, NULL);
-      send_message(win, toolSetActiveItem, ID_TOOL_SELECT, NULL);
+      send_message(win, bxSetItems, NUM_TOOLS, items);
+      send_message(win, bxSetIconTintBrush, brTextNormal, NULL);
+      send_message(win, bxSetActiveItem, ID_TOOL_SELECT, NULL);
       return true;
     }
 

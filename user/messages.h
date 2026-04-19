@@ -73,12 +73,12 @@ enum {
   // List (popup) messages
   lstSetItem,             // wparam=item index to pre-select in the dropdown list
   // Toolbox control messages (commctl/toolbox.c)
-  toolSetItems,         // wparam=count; lparam=toolbox_item_t[] — copy item list
-  toolSetActiveItem,    // wparam=ident (-1 = clear active)
-  toolSetStrip,         // wparam=0; lparam=bitmap_strip_t* (NULL=clear) — external strip
-  toolSetButtonSize,    // wparam=size in px (0 = reset to TOOLBOX_BTN_SIZE)
-  toolLoadStrip,        // wparam=icon_w (square tiles); lparam=const char* path — load PNG
-  toolSetIconTintBrush, // wparam=br* index (e.g., brTextNormal), -1 disables tint
+  bxSetItems,         // wparam=count; lparam=toolbox_item_t[] — copy item list
+  bxSetActiveItem,    // wparam=ident (-1 = clear active)
+  bxSetStrip,         // wparam=0; lparam=bitmap_strip_t* (NULL=clear) — external strip
+  bxSetButtonSize,    // wparam=size in px (0 = reset to TOOLBOX_BTN_SIZE)
+  bxLoadStrip,        // wparam=icon_w (square tiles); lparam=const char* path — load PNG
+  bxSetIconTintBrush, // wparam=br* index (e.g., brTextNormal), -1 disables tint
   // Async HTTP messages (analogous to WinInet/WinHTTP notifications).
   // Delivered to the window_t* registered with http_request_async() when the
   // request transitions through the following states:
@@ -123,9 +123,9 @@ enum {
 #define kComboBoxError -1
 
 // Toolbox item descriptor — one button in a win_toolbox 2-column grid.
-// Set via toolSetItems.  icon is a sysicon_* value (>= SYSICON_BASE)
-// or a tile index into the strip set with toolSetStrip /
-// toolLoadStrip.
+// Set via bxSetItems.  icon is a sysicon_* value (>= SYSICON_BASE)
+// or a tile index into the strip set with bxSetStrip /
+// bxLoadStrip.
 typedef struct {
   int ident;  // command identifier echoed in kToolboxNotificationClicked
   int icon;   // strip tile index (0-based), or sysicon_* value (>= SYSICON_BASE)
@@ -135,7 +135,7 @@ typedef struct {
 // TOOLBOX_COLS is always 2 — toolboxes are a fixed-width 2-column grid.
 // TOOLBOX_BTN_SIZE is intentionally set equal to TB_SPACING (22 px) so that
 // toolbox buttons have the same square size as toolbar buttons.  If you need
-// a different size, override per-window with toolSetButtonSize.
+// a different size, override per-window with bxSetButtonSize.
 // Window width  = TOOLBOX_COLS * TOOLBOX_BTN_SIZE = 44 px.
 // Window height = TITLEBAR_HEIGHT + ceil(n/2) * TOOLBOX_BTN_SIZE.
 #define TOOLBOX_COLS      2

@@ -80,11 +80,11 @@ static result_t my_toolbox_proc(window_t *win, uint32_t msg,
       char path[512];
       snprintf(path, sizeof(path), "%s/" SHAREDIR "/tools.png",
                ui_get_exe_dir());
-      send_message(win, toolLoadStrip, 16 /* tile px */, path);
+      send_message(win, bxLoadStrip, 16 /* tile px */, path);
 
       // 3. Set items and mark the default active tool.
-      send_message(win, toolSetItems, MY_TOOL_COUNT, kMyTools);
-      send_message(win, toolSetActiveItem, ID_TOOL_SELECT, NULL);
+      send_message(win, bxSetItems, MY_TOOL_COUNT, kMyTools);
+      send_message(win, bxSetActiveItem, ID_TOOL_SELECT, NULL);
       return true;
     }
 
@@ -115,7 +115,7 @@ lifecycle automatically.  You only need to intercept the messages you care about
 
 If you don't have a custom sprite sheet, use `sysicon_*` values from
 `user/icons.h`.  Any `icon >= SYSICON_BASE` is drawn from the built-in 16×16
-icon sheet — **no `toolLoadStrip` call needed**:
+icon sheet — **no `bxLoadStrip` call needed**:
 
 ```c
 static const toolbox_item_t kSysTools[] = {
@@ -124,7 +124,7 @@ static const toolbox_item_t kSysTools[] = {
     { ID_TOOL_BRUSH,   sysicon_brush    },
     { ID_TOOL_FILL,    sysicon_bucket   },
 };
-send_message(win, toolSetItems, 4, kSysTools);
+send_message(win, bxSetItems, 4, kSysTools);
 ```
 
 ---
@@ -135,15 +135,15 @@ The default button size is `TOOLBOX_BTN_SIZE` (= `TB_SPACING` = 22 px), which
 fits a 16×16 icon with 3 px of margin on the left/right and 3 px on top/bottom
 (total button interior = 16 + 6 = 22 px).
 
-If your icons are larger (e.g., 21 px), call `toolSetButtonSize`
-**before** `toolSetItems` so the grid height is computed correctly:
+If your icons are larger (e.g., 21 px), call `bxSetButtonSize`
+**before** `bxSetItems` so the grid height is computed correctly:
 
 ```c
 case evCreate: {
     win_toolbox(win, msg, wparam, lparam);
-    send_message(win, toolSetButtonSize, 26, NULL); // 21px icon + margin
-    send_message(win, toolLoadStrip, 21, path);
-    send_message(win, toolSetItems, count, items);
+    send_message(win, bxSetButtonSize, 26, NULL); // 21px icon + margin
+    send_message(win, bxLoadStrip, 21, path);
+    send_message(win, bxSetItems, count, items);
     return true;
 }
 ```
@@ -203,11 +203,11 @@ grid (= `ceil(n/2) * btn_size`).  It is declared in `commctl/commctl.h`.
 
 | Message | wparam | lparam | Effect |
 |---|---|---|---|
-| `toolSetItems` | count | `toolbox_item_t[]` | Replace item list |
-| `toolSetActiveItem` | ident (or -1) | — | Mark active button |
-| `toolSetStrip` | 0 | `bitmap_strip_t*` or NULL | Set external sprite strip |
-| `toolLoadStrip` | tile_size_px | `const char*` path | Load PNG and own the texture |
-| `toolSetButtonSize` | size_px (0=default) | — | Override button size |
+| `bxSetItems` | count | `toolbox_item_t[]` | Replace item list |
+| `bxSetActiveItem` | ident (or -1) | — | Mark active button |
+| `bxSetStrip` | 0 | `bitmap_strip_t*` or NULL | Set external sprite strip |
+| `bxLoadStrip` | tile_size_px | `const char*` path | Load PNG and own the texture |
+| `bxSetButtonSize` | size_px (0=default) | — | Override button size |
 
 ### `toolbox_item_t`
 
