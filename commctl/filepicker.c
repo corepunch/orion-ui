@@ -12,8 +12,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include <errno.h>
-#include <sys/stat.h>
 
 #include "filepicker.h"
 #include "filelist.h"
@@ -389,9 +387,9 @@ static void fp_create_folder(window_t *win, fp_state_t *ps) {
   else
     snprintf(full, sizeof(full), "%s/%s", curpath, name);
 
-  if (mkdir(full, 0777) != 0) {
-    char text[256];
-    snprintf(text, sizeof(text), "Could not create folder:\n%s", strerror(errno));
+  if (!axMkDir(full)) {
+    char text[320];
+    snprintf(text, sizeof(text), "Could not create folder:\n%s", full);
     message_box(win, text, "Create Folder", MB_OK);
     return;
   }
@@ -448,10 +446,9 @@ static bool fp_normalize_save_path(fp_state_t *ps, char *path, size_t path_sz) {
 }
 
 static bool fp_confirm_overwrite(window_t *win, const char *path) {
-  struct stat st;
   char text[320];
 
-  if (!path || stat(path, &st) != 0) return true;
+  if (!path || !axPathExists(path)) return true;
 
   snprintf(text, sizeof(text), "File already exists:\n%s\n\nWant to replace it?", path);
   return message_box(win, text, "Confirm Save As", MB_YESNO) == IDYES;

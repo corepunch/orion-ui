@@ -15,9 +15,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include <dirent.h>
-#include <sys/stat.h>
-#include <unistd.h>
 
 #include "filelist.h"
 #include "columnview.h"
@@ -66,6 +63,15 @@ typedef struct {
   time_t modified;
 } fl_sort_entry_t;
 
+typedef struct {
+  filelist_data_t *data;
+  fl_sort_entry_t *entries;
+  int              count;
+  int              cap;
+} fl_collect_ctx_t;
+
+static bool fl_matches_filter(const filelist_data_t *data, const char *name);
+
 static int fl_sort_compare(const void *a, const void *b) {
   const fl_sort_entry_t *ea = (const fl_sort_entry_t *)a;
   const fl_sort_entry_t *eb = (const fl_sort_entry_t *)b;
@@ -74,6 +80,36 @@ static int fl_sort_compare(const void *a, const void *b) {
   const char *na = strrchr(ea->path, '/'); na = na ? na + 1 : ea->path;
   const char *nb = strrchr(eb->path, '/'); nb = nb ? nb + 1 : eb->path;
   return strcasecmp(na, nb);
+}
+
+static bool_t fl_collect_dir_entry(AXdirent const *entry, void *userdata) {
+  fl_collect_ctx_t *ctx = (fl_collect_ctx_t *)userdata;
+  if (!ctx || !ctx->data || !entry) return TRUE;
+
+  // Apply caller-supplied extension filter (directories always pass).
+  if (!entry->is_directory && !fl_matches_filter(ctx->data, entry->name))
+    return TRUE;
+
+  if (ctx->count >= ctx->cap) {
+    int nc = ctx->cap ? ctx->cap * 2 : 32;
+    fl_sort_entry_t *tmp = realloc(ctx->entries,
+                                   (size_t)nc * sizeof(fl_sort_entry_t));
+    if (!tmp)
+      return FALSE;
+    ctx->entries = tmp;
+    ctx->cap = nc;
+  }
+
+  fl_sort_entry_t *dst = &ctx->entries[ctx->count++];
+  if (strcmp(ctx->data->curpath, "/") == 0)
+    snprintf(dst->path, sizeof(dst->path), "/%s", entry->name);
+  else
+    snprintf(dst->path, sizeof(dst->path), "%s/%s", ctx->data->curpath, entry->name);
+  dst->is_dir    = entry->is_directory ? true : false;
+  dst->is_hidden = entry->is_hidden ? true : false;
+  dst->size      = entry->size;
+  dst->modified  = entry->modified;
+  return TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -165,66 +201,27 @@ static void fl_load_directory(window_t *win, filelist_data_t *data) {
   char *parent_path = strdup("..");
   if (parent_path) fl_push_item(data, parent_path, true, false, 0, 0);
 
-  DIR *dir = opendir(data->curpath);
-  if (dir) {
-    // Collect entries that pass the optional extension filter.
-    fl_sort_entry_t *entries = NULL;
-    int  count = 0, cap = 0;
-
-    struct dirent *ent;
-    while ((ent = readdir(dir)) != NULL) {
-      // Skip only the self-reference "." and parent-reference ".."; all other
-      // entries (including hidden files/directories that start with '.') are
-      // shown — mirroring the original filemanager behaviour.
-      if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
-        continue;
-
-      char full[768];
-      snprintf(full, sizeof(full), "%s/%s", data->curpath, ent->d_name);
-      struct stat st;
-      if (stat(full, &st) != 0) continue;
-
-      bool is_dir    = S_ISDIR(st.st_mode);
-      bool is_hidden = (ent->d_name[0] == '.');
-
-      // Apply caller-supplied extension filter (directories always pass).
-      if (!is_dir && !fl_matches_filter(data, ent->d_name)) continue;
-
-      if (count >= cap) {
-        int nc = cap ? cap * 2 : 32;
-        fl_sort_entry_t *tmp = realloc(entries,
-                                        (size_t)nc * sizeof(fl_sort_entry_t));
-        if (!tmp) {
-          // Allocation failed; keep existing entries and stop collecting more.
-          break;
-        }
-        entries = tmp;
-        cap = nc;
-      }
-      strncpy(entries[count].path, full, sizeof(entries[count].path) - 1);
-      entries[count].path[sizeof(entries[count].path) - 1] = '\0';
-      entries[count].is_dir   = is_dir;
-      entries[count].is_hidden = is_hidden;
-      entries[count].size     = is_dir ? 0 : (size_t)st.st_size;
-      entries[count].modified = st.st_mtime;
-      count++;
-    }
-    closedir(dir);
-
-    if (count > 0) {
-      qsort(entries, (size_t)count, sizeof(fl_sort_entry_t), fl_sort_compare);
-      for (int i = 0; i < count; i++) {
-        char *path = strdup(entries[i].path);
-        if (!path) continue; // skip on allocation failure
-        fl_push_item(data, path,
-                     entries[i].is_dir,
-                     entries[i].is_hidden,
-                     entries[i].size,
-                     entries[i].modified);
-      }
-      free(entries);
+  // Collect entries through the platform abstraction (axListDir) instead of
+  // direct POSIX opendir/readdir/stat calls.
+  fl_collect_ctx_t ctx = {
+    .data = data,
+    .entries = NULL,
+    .count = 0,
+    .cap = 0,
+  };
+  if (axListDir(data->curpath, fl_collect_dir_entry, &ctx) && ctx.count > 0) {
+    qsort(ctx.entries, (size_t)ctx.count, sizeof(fl_sort_entry_t), fl_sort_compare);
+    for (int i = 0; i < ctx.count; i++) {
+      char *path = strdup(ctx.entries[i].path);
+      if (!path) continue; // skip on allocation failure
+      fl_push_item(data, path,
+                   ctx.entries[i].is_dir,
+                   ctx.entries[i].is_hidden,
+                   ctx.entries[i].size,
+                   ctx.entries[i].modified);
     }
   }
+  free(ctx.entries);
 
   // Populate columnview — display the basename of each item.
   // For the ".." sentinel the basename IS ".." (no '/' in the string).
@@ -328,7 +325,7 @@ result_t win_filelist(window_t *win, uint32_t msg,
       const char *init = (const char *)lparam;
       if (init && init[0])
         strncpy(data->curpath, init, sizeof(data->curpath) - 1);
-      else if (!getcwd(data->curpath, sizeof(data->curpath)))
+      else if (!axGetCwd(data->curpath, sizeof(data->curpath)))
         strncpy(data->curpath, "/", sizeof(data->curpath) - 1);
 
       fl_load_directory(win, data);
