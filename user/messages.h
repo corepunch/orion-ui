@@ -224,7 +224,7 @@ typedef struct {
 #define CONTROL_BUTTON_PADDING  2
 #define TB_SPACING              TOOLBAR_HEIGHT  // equals TOOLBAR_HEIGHT so toolbar buttons are square
 #define TOOLBAR_PADDING         2               // pixels of margin between toolbar border and button area (all sides)
-#define TOOLBAR_SPACING         4               // pixels of gap between consecutive buttons in a toolbar row
+#define TOOLBAR_SPACING         1               // minimal pixel gap between consecutive toolbar elements
 #define TOOLBAR_SPACING_GAP_WIDTH  4            // pixels of gap inserted by a TOOLBAR_ITEM_SPACER entry
 #define TOOLBAR_BEVEL_WIDTH     1               // width of the bevel border drawn around the toolbar button area (each side)
 #define TOOLBAR_LABEL_PADDING           8       // horizontal padding added to auto-computed label width (left+right)

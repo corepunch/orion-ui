@@ -147,10 +147,13 @@ static void layout_toolbar_items(window_t *parent,
   int base_x  = TOOLBAR_BEVEL_WIDTH + TOOLBAR_PADDING;
   int base_y  = TOOLBAR_BEVEL_WIDTH + TOOLBAR_PADDING;
   int cur_x   = 0;
+  bool placed_visual_item = false;
   window_t **tail = &parent->toolbar_children;
   while (*tail) tail = &(*tail)->next;
   for (uint32_t i = 0; i < n; i++) {
     const toolbar_item_t *item = &items[i];
+    if (item->type != TOOLBAR_ITEM_SPACER && placed_visual_item)
+      cur_x += TOOLBAR_SPACING;
     switch (item->type) {
       case TOOLBAR_ITEM_SPACER:
         cur_x += item->w > 0 ? item->w : TOOLBAR_SPACING_GAP_WIDTH;
@@ -163,6 +166,7 @@ static void layout_toolbar_items(window_t *parent,
         if (!tc) { cur_x += sw; break; }
         *tail = tc; tail = &tc->next;
         cur_x += sw;
+        placed_visual_item = true;
         break;
       }
       case TOOLBAR_ITEM_BUTTON: {
@@ -179,6 +183,7 @@ static void layout_toolbar_items(window_t *parent,
         if (item->flags & TOOLBAR_BUTTON_FLAG_ACTIVE) tc->value = true;
         *tail = tc; tail = &tc->next;
         cur_x += w;
+        placed_visual_item = true;
         break;
       }
       case TOOLBAR_ITEM_LABEL: {
@@ -191,6 +196,7 @@ static void layout_toolbar_items(window_t *parent,
         if (!tc) { cur_x += w; break; }
         *tail = tc; tail = &tc->next;
         cur_x += w;
+        placed_visual_item = true;
         break;
       }
       case TOOLBAR_ITEM_COMBOBOX: {
@@ -203,6 +209,7 @@ static void layout_toolbar_items(window_t *parent,
         if (!tc) { cur_x += w; break; }
         *tail = tc; tail = &tc->next;
         cur_x += w;
+        placed_visual_item = true;
         break;
       }
     }

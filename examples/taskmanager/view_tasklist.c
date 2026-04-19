@@ -27,6 +27,8 @@ void tasklist_refresh(window_t *list_win) {
   task_doc_t *doc = doc_from_window(list_win);
   if (!list_win || !doc) return;
 
+  send_message(list_win, RVM_SETREDRAW, 0, NULL);
+
   send_message(list_win, RVM_SETVIEWMODE, RVM_VIEW_REPORT, NULL);
   send_message(list_win, RVM_CLEARCOLUMNS, 0, NULL);
 
@@ -66,4 +68,6 @@ void tasklist_refresh(window_t *list_win) {
   // Apply width after rows are known so scrollbar-dependent width is stable.
   send_message(list_win, RVM_SETREPORTCOLUMNWIDTH, 0,
                (void *)(uintptr_t)tasklist_title_width(list_win));
+
+  send_message(list_win, RVM_SETREDRAW, 1, NULL);
 }

@@ -26,6 +26,7 @@ enum {
   RVM_CLEARCOLUMNS,
   RVM_GETCOLUMNCOUNT,
   RVM_SETREPORTCOLUMNWIDTH, // wparam = col_index; lparam = (void*)(uintptr_t)new_width (0 = auto)
+  RVM_SETREDRAW,            // wparam = 0 suspend redraw; non-zero resume and repaint if dirty
 };
 
 enum {

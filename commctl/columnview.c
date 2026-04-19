@@ -38,7 +38,19 @@ typedef struct {
 
   uint32_t view_mode;
   uint32_t column_count;
+  bool redraw_enabled;
+  bool redraw_dirty;
 } reportview_data_t;
+
+static inline void rv_invalidate(window_t *win, reportview_data_t *data) {
+  if (!win || !data)
+    return;
+  if (data->redraw_enabled) {
+    invalidate_window(win);
+  } else {
+    data->redraw_dirty = true;
+  }
+}
 
 static inline bool rv_valid_index(const reportview_data_t *data, int index) {
   return data && index >= 0 && index < (int)data->count;
@@ -359,6 +371,8 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       data->last_click_index = RV_INVALID_SELECTION;
       data->column_width = DEFAULT_COLUMN_WIDTH;
       data->view_mode = RVM_VIEW_ICON;
+      data->redraw_enabled = true;
+      data->redraw_dirty = false;
 
       rv_sync_scroll(win, data);
       return true;
@@ -387,7 +401,7 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
           if (old_selection != data->selected) {
             rv_notify(win, data, index, RVN_SELCHANGE);
           }
-          invalidate_window(win);
+          rv_invalidate(win, data);
         }
       }
       return true;
@@ -412,7 +426,7 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
         return -1;
       data->count++;
       rv_sync_scroll(win, data);
-      invalidate_window(win);
+      rv_invalidate(win, data);
       return (result_t)i;
     }
 
@@ -434,7 +448,7 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       }
 
       rv_sync_scroll(win, data);
-      invalidate_window(win);
+      rv_invalidate(win, data);
       return true;
     }
 
@@ -449,7 +463,7 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
         data->selected = (int)wparam;
         rv_scroll_to_item(win, data, data->selected);
         rv_sync_scroll(win, data);
-        invalidate_window(win);
+        rv_invalidate(win, data);
         return true;
       }
       return false;
@@ -458,14 +472,14 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       data->count = 0;
       rv_reset_view_state(win, data);
       rv_sync_scroll(win, data);
-      invalidate_window(win);
+      rv_invalidate(win, data);
       return true;
 
     case RVM_SETCOLUMNWIDTH:
       if (wparam > 0) {
         data->column_width = (int)wparam;
         rv_sync_scroll(win, data);
-        invalidate_window(win);
+        rv_invalidate(win, data);
         return true;
       }
       return false;
@@ -488,7 +502,7 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       uint32_t i = (uint32_t)wparam;
       if (!rv_store_item(data, i, item))
         return false;
-      invalidate_window(win);
+      rv_invalidate(win, data);
       return true;
     }
 
@@ -497,7 +511,7 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
         data->view_mode = wparam;
         rv_reset_view_state(win, data);
         rv_sync_scroll(win, data);
-        invalidate_window(win);
+        rv_invalidate(win, data);
         return true;
       }
       return false;
@@ -512,13 +526,13 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       data->columns[i].title[MAX_REPORTVIEW_TITLE - 1] = '\0';
       data->columns[i].width = col->width;
       data->column_count++;
-      invalidate_window(win);
+      rv_invalidate(win, data);
       return (result_t)i;
     }
 
     case RVM_CLEARCOLUMNS:
       data->column_count = 0;
-      invalidate_window(win);
+      rv_invalidate(win, data);
       return true;
 
     case RVM_GETCOLUMNCOUNT:
@@ -529,7 +543,19 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       if (ci >= data->column_count)
         return false;
       data->columns[ci].width = (uint32_t)(uintptr_t)lparam;
-      invalidate_window(win);
+      rv_invalidate(win, data);
+      return true;
+
+    case RVM_SETREDRAW:
+      if (wparam) {
+        data->redraw_enabled = true;
+        if (data->redraw_dirty) {
+          data->redraw_dirty = false;
+          invalidate_window(win);
+        }
+      } else {
+        data->redraw_enabled = false;
+      }
       return true;
     }
 
@@ -543,7 +569,7 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       win->scroll[1] = (uint32_t)new_scroll;
 
       rv_sync_scroll(win, data);
-      invalidate_window(win);
+      rv_invalidate(win, data);
       return true;
     }
 
@@ -613,7 +639,7 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
         rv_scroll_to_item(win, data, next);
         rv_sync_scroll(win, data);
         rv_notify(win, data, next, RVN_SELCHANGE);
-        invalidate_window(win);
+        rv_invalidate(win, data);
       }
       return true;
     }
