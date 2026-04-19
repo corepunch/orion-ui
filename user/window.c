@@ -21,6 +21,7 @@ ui_runtime_state_t g_ui_runtime = {
   .dragging = NULL,
   .resizing = NULL,
   .toolbar_down_win = NULL,
+  .modal_overlay_parent = NULL,
 };
 
 // Forward declarations

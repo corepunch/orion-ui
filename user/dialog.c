@@ -14,6 +14,32 @@
 #include <string.h>
 #include "../ui.h"
 
+static rect_t center_modal_rect(rect_t rect, window_t *parent) {
+  int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
+  int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
+  window_t *owner = parent ? get_root_window(parent) : NULL;
+
+  if (owner) {
+    rect.x = owner->frame.x + (owner->frame.w - rect.w) / 2;
+    rect.y = owner->frame.y + (owner->frame.h - rect.h) / 2;
+  } else {
+    rect.x = (sw - rect.w) / 2;
+    rect.y = (sh - rect.h) / 2;
+  }
+
+  if (rect.w >= sw)
+    rect.x = 0;
+  else
+    rect.x = MAX(0, MIN(rect.x, sw - rect.w));
+
+  if (rect.h >= sh)
+    rect.y = 0;
+  else
+    rect.y = MAX(0, MIN(rect.y, sh - rect.h));
+
+  return rect;
+}
+
 // Shared modal message loop.  Runs until the dialog window is destroyed or the
 // application exits.  Forces a full repaint after the dialog is gone.
 static uint32_t run_dialog_loop(window_t *dlg, window_t *parent) {
@@ -22,8 +48,13 @@ static uint32_t run_dialog_loop(window_t *dlg, window_t *parent) {
   if (!is_window(dlg)) return 0;
   uint32_t result = 0;
   ui_event_t event;
+  window_t *modal_parent = parent ? get_root_window(parent) : NULL;
+  window_t *prev_modal_overlay_parent = g_ui_runtime.modal_overlay_parent;
   dlg->userdata2 = &result;
-  if (parent) enable_window(parent, false);
+  if (modal_parent) {
+    g_ui_runtime.modal_overlay_parent = modal_parent;
+    enable_window(modal_parent, false);
+  }
   show_window(dlg, true);
   while (g_ui_runtime.running && is_window(dlg)) {
     while (get_message(&event)) {
@@ -31,7 +62,11 @@ static uint32_t run_dialog_loop(window_t *dlg, window_t *parent) {
     }
     repost_messages();
   }
-  if (parent) enable_window(parent, true);
+  if (modal_parent) {
+    enable_window(modal_parent, true);
+    set_focus(modal_parent);
+    g_ui_runtime.modal_overlay_parent = prev_modal_overlay_parent;
+  }
   // Force a clean stencil rebuild + full repaint to clear the area the dialog
   // occupied.  destroy_window's recursive child teardown re-queues
   // evRefreshStencil *after* any already-pending paint messages
@@ -56,9 +91,11 @@ uint32_t show_dialog_ex(char const *title,
                         void *param)
 {
   const char *dialog_title = title ? title : "";
+  rect_t dlg_frame = frame ? *frame : (rect_t){0, 0, 0, 0};
+  dlg_frame = center_modal_rect(dlg_frame, parent);
   // Dialogs inherit their owner's hinstance so they belong to the same app.
   hinstance_t hinstance = parent ? get_root_window(parent)->hinstance : 0;
-  window_t *dlg = create_window(dialog_title, flags, frame, NULL, proc, hinstance, param);
+  window_t *dlg = create_window(dialog_title, flags, &dlg_frame, NULL, proc, hinstance, param);
   return run_dialog_loop(dlg, parent);
 }
 
@@ -94,15 +131,12 @@ uint32_t show_dialog_from_form_ex(form_def_t const *def, char const *title,
   dlg_def.width = wr.w;
   dlg_def.height = wr.h;
 
-  // Center on screen.
-  int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
-  int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
-  int x = (sw - wr.w) / 2;
-  int y = (sh - wr.h) / 2;
+  rect_t dlg_rect = center_modal_rect((rect_t){0, 0, wr.w, wr.h}, parent);
 
   // Dialogs inherit their owner's hinstance so they belong to the same app.
   hinstance_t hinstance = parent ? get_root_window(parent)->hinstance : 0;
-  window_t *dlg = create_window_from_form(&dlg_def, x, y, NULL, proc, hinstance, param);
+  window_t *dlg = create_window_from_form(&dlg_def, dlg_rect.x, dlg_rect.y,
+                                          NULL, proc, hinstance, param);
   if (!dlg) return 0;
   return run_dialog_loop(dlg, parent);
 }

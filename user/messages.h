@@ -302,7 +302,8 @@ typedef enum {
   kColorBorderActive         = 20,  // active item border
   kColorFolderText           = 21,  // folder entry text in file lists
   kColorColumnViewBg         = 22,  // report/icon column view background
-  kColorCount                = 23
+  kColorModalOverlay         = 23,  // modal owner dimming overlay (ARGB with alpha)
+  kColorCount                = 24
 } sys_color_idx_t;
 
 // Runtime-accessible theme table (defined in user/theme.c).

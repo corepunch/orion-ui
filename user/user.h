@@ -198,6 +198,7 @@ typedef struct {
   window_t *dragging;
   window_t *resizing;
   window_t *toolbar_down_win;
+  window_t *modal_overlay_parent;
 } ui_runtime_state_t;
 
 extern ui_runtime_state_t g_ui_runtime;

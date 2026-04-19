@@ -30,6 +30,7 @@ uint32_t g_sys_colors[kColorCount] = {
   [kColorBorderActive]         = 0xff808080,   // light gray for active border
   [kColorFolderText]           = 0xffa0d000,   // folder entry text in file lists
   [kColorColumnViewBg]         = 0xff544e47,   // blue-gray for report/icon column views
+  [kColorModalOverlay]         = 0x40402000,   // modal owner dim overlay (semi-transparent)
 };
 
 void set_sys_colors(int count, const int *indices, const uint32_t *colors) {

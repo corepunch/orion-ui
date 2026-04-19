@@ -768,13 +768,20 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     }
   }
   // Draw disabled overlay
-  if (win->disabled && msg == evPaint) {
+  if (win->disabled && msg == evPaint && win != g_ui_runtime.modal_overlay_parent) {
     uint32_t col = (get_sys_color(kColorWindowBg) & 0x00FFFFFF) | 0x80000000;
     int root_t = titlebar_height(root);
     rect_t wf = win_frame_in_screen(win, root, root_t);
     set_viewport(&(rect_t){ 0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight)});
     set_projection(0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight));
     fill_rect(col, wf.x, wf.y, wf.w, wf.h);
+  }
+  if (msg == evPaint && win == g_ui_runtime.modal_overlay_parent) {
+    int root_t = titlebar_height(root);
+    rect_t wf = win_frame_in_screen(win, root, root_t);
+    set_viewport(&(rect_t){ 0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight)});
+    set_projection(0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight));
+    fill_rect(get_sys_color(kColorModalOverlay), wf.x, wf.y, wf.w, wf.h);
   }
   // Draw built-in scrollbars on top of window content.
   // Restore the window/root paint state first: the disabled overlay above
