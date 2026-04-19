@@ -8,6 +8,8 @@
 #include "user/messages.h"
 #include "user/text.h"
 #include "user/draw.h"
+#include "user/rect.h"
+#include "user/theme.h"
 #include "user/accel.h"
 #include "user/image.h"
 
