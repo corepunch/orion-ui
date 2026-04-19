@@ -25,6 +25,7 @@ typedef struct {
   int history_count;
   int history_cap;
   int history_index;
+  window_t *settings_win;
 } browser_state_t;
 
 char *browser_html_to_plain_text(const char *html, size_t len);
@@ -41,6 +42,6 @@ void browser_navigate(window_t *win, const char *typed_url, bool push_history);
 void browser_settings_init(browser_state_t *st);
 bool browser_settings_load(browser_state_t *st);
 bool browser_settings_save(const browser_state_t *st);
-bool browser_show_settings_dialog(window_t *parent, browser_state_t *st);
+bool browser_show_settings_window(window_t *parent, browser_state_t *st);
 
 #endif

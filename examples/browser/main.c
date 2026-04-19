@@ -74,11 +74,7 @@ static result_t browser_proc(window_t *win, uint32_t msg, uint32_t wparam, void 
     case evCommand:
       if (HIWORD(wparam) == kMenuBarNotificationItemClick &&
           LOWORD(wparam) == ID_MENU_BROWSER_SETTINGS) {
-        if (st && browser_show_settings_dialog(g_menubar_win ? g_menubar_win : win, st)) {
-          browser_settings_save(st);
-          if (!st->current_url[0])
-            browser_navigate(win, st->home_url, true);
-        }
+        if (st) browser_show_settings_window(win, st);
         return true;
       }
       if (HIWORD(wparam) == edUpdate && LOWORD(wparam) == ID_TB_ADDR) {
@@ -157,6 +153,8 @@ static result_t browser_proc(window_t *win, uint32_t msg, uint32_t wparam, void 
 
     case evDestroy:
       if (st) {
+        if (st->settings_win && is_window(st->settings_win))
+          destroy_window(st->settings_win);
         if (st->request_id != HTTP_INVALID_REQUEST)
           http_cancel(st->request_id);
         browser_history_free(st);
@@ -178,10 +176,11 @@ static result_t browser_proc(window_t *win, uint32_t msg, uint32_t wparam, void 
 }
 
 static bool browser_open(hinstance_t hinstance) {
+  rect_t wr = center_window_rect((rect_t){0, 0, 720, 500 + TITLEBAR_HEIGHT}, NULL);
   window_t *win = create_window(
     "Browser (MVP)",
     WINDOW_TOOLBAR,
-    MAKERECT(40, 40, 720, 500 + TITLEBAR_HEIGHT),
+    &wr,
     NULL,
     browser_proc,
     hinstance,

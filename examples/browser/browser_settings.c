@@ -30,6 +30,14 @@ static const form_def_t kSettingsForm = {
   .child_count = (int)(sizeof(kSettingsChildren) / sizeof(kSettingsChildren[0])),
 };
 
+static rect_t browser_centered_settings_rect(window_t *parent) {
+  flags_t flags = WINDOW_DIALOG | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE;
+  rect_t wr = {0, 0, kSettingsForm.width, kSettingsForm.height};
+
+  adjust_window_rect(&wr, flags);
+  return center_window_rect(wr, parent);
+}
+
 static void trim_copy_url(char *dst, size_t dst_sz, const char *src) {
   if (!dst || dst_sz == 0) return;
   dst[0] = '\0';
@@ -132,14 +140,20 @@ static result_t browser_settings_proc(window_t *win, uint32_t msg, uint32_t wpar
     case evCreate:
       win->userdata = lparam;
       ds = (browser_settings_dialog_state_t *)win->userdata;
-      if (ds && ds->st)
+      if (ds && ds->st) {
+        ds->st->settings_win = win;
         set_window_item_text(win, ID_DLG_HOME_EDIT, "%s", ds->st->home_url);
+      }
+      return true;
+
+    case evClose:
+      destroy_window(win);
       return true;
 
     case evCommand:
       if (HIWORD(wparam) != btnClicked) return false;
       if (LOWORD(wparam) == ID_DLG_CANCEL) {
-        end_dialog(win, 0);
+        destroy_window(win);
         return true;
       }
       if (LOWORD(wparam) == ID_DLG_SAVE) {
@@ -149,19 +163,55 @@ static result_t browser_settings_proc(window_t *win, uint32_t msg, uint32_t wpar
           trim_copy_url(trimmed, sizeof(trimmed), home->title);
           if (trimmed[0])
             snprintf(ds->st->home_url, sizeof(ds->st->home_url), "%s", trimmed);
+          browser_settings_save(ds->st);
         }
-        end_dialog(win, 1);
+        destroy_window(win);
         return true;
       }
       return false;
+
+    case evDestroy:
+      if (ds && ds->st && ds->st->settings_win == win)
+        ds->st->settings_win = NULL;
+      free(ds);
+      win->userdata = NULL;
+      return true;
 
     default:
       return false;
   }
 }
 
-bool browser_show_settings_dialog(window_t *parent, browser_state_t *st) {
+bool browser_show_settings_window(window_t *parent, browser_state_t *st) {
   if (!st) return false;
-  browser_settings_dialog_state_t ds = { st };
-  return show_dialog_from_form(&kSettingsForm, "Browser Settings", parent, browser_settings_proc, &ds) ? true : false;
+  if (st->settings_win && is_window(st->settings_win)) {
+    move_to_top(st->settings_win);
+    set_focus(st->settings_win);
+    return true;
+  }
+
+  browser_settings_dialog_state_t *ds = malloc(sizeof(*ds));
+  if (!ds) return false;
+  ds->st = st;
+
+  form_def_t settings_def = kSettingsForm;
+  rect_t wr = browser_centered_settings_rect(parent);
+
+  settings_def.flags |= WINDOW_DIALOG | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE;
+  settings_def.width = wr.w;
+  settings_def.height = wr.h;
+
+  window_t *win = create_window_from_form(&settings_def, wr.x, wr.y,
+                                          NULL, browser_settings_proc,
+                                          parent ? get_root_window(parent)->hinstance : 0,
+                                          ds);
+  if (!win) {
+    free(ds);
+    return false;
+  }
+
+  show_window(win, true);
+  move_to_top(win);
+  set_focus(win);
+  return true;
 }

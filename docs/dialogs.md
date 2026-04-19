@@ -198,6 +198,18 @@ static result_t my_proc(window_t *win, uint32_t msg,
 - Use `show_dialog_from_form()` for modal dialogs (handles centering +
   `WINDOW_DIALOG` flag automatically).
 - Use `create_window_from_form()` for modeless panels / embedded sub-forms.
+- When a modeless top-level form should open centered over another window,
+  compute a frame rect and pass it through `center_window_rect()` instead of
+  duplicating centering math locally.
+
+```c
+rect_t wr = {0, 0, kMyForm.width, kMyForm.height};
+adjust_window_rect(&wr, WINDOW_DIALOG | WINDOW_NORESIZE);
+wr = center_window_rect(wr, parent);
+
+window_t *win = create_window_from_form(&kMyForm, wr.x, wr.y,
+                                        NULL, my_proc, 0, state);
+```
 
 ---
 

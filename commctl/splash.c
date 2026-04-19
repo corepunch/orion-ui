@@ -83,14 +83,13 @@ window_t *show_splash_screen(const char *path, hinstance_t hinstance) {
   // Clamp to screen size so an oversized image does not overflow.
   if (w > sw) w = sw;
   if (h > sh) h = sh;
-  int x = (sw - w) / 2;
-  int y = (sh - h) / 2;
+    rect_t wr = center_window_rect((rect_t){0, 0, w, h}, NULL);
 
   window_t *win = create_window(
       "",
       WINDOW_NOTITLE | WINDOW_NORESIZE | WINDOW_ALWAYSONTOP |
       WINDOW_NOTRAYBUTTON | WINDOW_NOFILL | WINDOW_TRANSPARENT,
-      MAKERECT(x, y, w, h),
+      MAKERECT(wr.x, wr.y, wr.w, wr.h),
       NULL, splash_proc, hinstance, (void *)(uintptr_t)tex);
 
   if (!win) {
