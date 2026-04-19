@@ -5,6 +5,7 @@
 #include "../user/user.h"
 #include "../user/messages.h"
 #include "../user/draw.h"
+#include "../user/rect.h"
 
 #define LIST_HEIGHT     13
 #define LIST_X          3
@@ -39,11 +40,13 @@ result_t win_list(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       return true;
     case kWindowMessagePaint:
       for (uint32_t i = 0; i < cb->cursor_pos; i++) {
+        rect_t item = { 0, (int)(i * LIST_HEIGHT), win->frame.w, LIST_HEIGHT };
+        rect_t text_pos = rect_inset_xy(item, LIST_X, LIST_Y);
         if (i == win->cursor_pos) {
-          fill_rect(get_sys_color(kColorTextNormal), 0, i*LIST_HEIGHT, win->frame.w, LIST_HEIGHT);
-          draw_text_small(texts[i], LIST_X, i*LIST_HEIGHT+LIST_Y, get_sys_color(kColorWindowBg));
+          fill_rect(get_sys_color(kColorTextNormal), item.x, item.y, item.w, item.h);
+          draw_text_small(texts[i], text_pos.x, text_pos.y, get_sys_color(kColorWindowBg));
         } else {
-          draw_text_small(texts[i], LIST_X, i*LIST_HEIGHT+LIST_Y, get_sys_color(kColorTextNormal));
+          draw_text_small(texts[i], text_pos.x, text_pos.y, get_sys_color(kColorTextNormal));
         }
       }
       return true;
