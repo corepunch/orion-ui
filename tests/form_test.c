@@ -178,9 +178,8 @@ void test_show_dialog_from_form_flags(void) {
   g_dlg_flags = 0;
   memset(g_dlg_title, 0, sizeof(g_dlg_title));
 
-  // running must be true for show_dialog_from_form to enter its loop.
-  extern bool running;
-  running = true;
+  // UI runtime state must be running for show_dialog_from_form to enter its loop.
+  g_ui_runtime.running = true;
 
   show_dialog_from_form(&kTestForm, "Override Title", NULL, dialog_flag_proc, NULL);
 

@@ -214,7 +214,6 @@ static winhook_t *g_hooks = NULL;
 // External references
 extern window_t *windows;
 extern window_t *_focused;
-extern bool running;  // Set to true when graphics are initialized
 
 // Forward declaration for kernel/event.c wake-up helper.
 extern void wake_event_loop(void);
@@ -518,7 +517,7 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
     case kWindowMessageNonClientPaint:
       // Skip OpenGL calls if graphics aren't initialized (e.g., in tests)
-      if (running) {
+      if (g_ui_runtime.running) {
         ui_set_stencil_for_window(win->id);
         set_fullscreen();
         if (!(win->flags&WINDOW_TRANSPARENT)) {
@@ -559,7 +558,7 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       break;
     case kWindowMessagePaint:
       // Skip OpenGL calls if graphics aren't initialized (e.g., in tests)
-      if (running) {
+      if (g_ui_runtime.running) {
         int t = titlebar_height(root);
         ui_set_stencil_for_root_window(get_root_window(win)->id);
         set_viewport(&root->frame);
@@ -632,10 +631,10 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       // wparam = icon tile size (square, pixels); lparam = const char* path
       // Loads a PNG (with native RGBA transparency) and stores it as a GL
       // texture in win->toolbar_strip.  The window owns the texture; freed on
-      // destroy.  Requires graphics to be initialized (running == true).
+      // destroy.  Requires graphics to be initialized.
       const char *path = (const char *)lparam;
       int tile_sz = (int)wparam;
-      if (!path || tile_sz <= 0 || !running) break;
+      if (!path || tile_sz <= 0 || !g_ui_runtime.running) break;
       int w = 0, h = 0;
       uint8_t *src = load_image(path, &w, &h);
       if (!src) break;
@@ -770,7 +769,7 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   // drawn in the root-relative coordinate space established by paint setup.
   // Also restore the scissor to the window's full frame: the bars live in
   // the non-client area outside the client rect that was scissored above.
-  if (msg == kWindowMessagePaint && running &&
+  if (msg == kWindowMessagePaint && g_ui_runtime.running &&
       (win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL))) {
     int root_t = titlebar_height(root);
     rect_t wf = win_frame_in_screen(win, root, root_t);
@@ -824,14 +823,14 @@ static bool is_valid_window_ptr(window_t *target, window_t *list) {
 }
 
 void repost_messages(void) {
-  if (running) {
+  if (g_ui_runtime.running) {
     ui_begin_frame();   // make GL context current, bind platform framebuffer
   }
   for (uint8_t write = queue.write; queue.read != write;) {
     msg_t *m = &queue.messages[queue.read++];
     if (m->target == NULL) continue;
     if (m->msg == kWindowMessageRefreshStencil) {
-      if (running) {
+      if (g_ui_runtime.running) {
         repaint_stencil();
       }
       continue;
@@ -839,7 +838,7 @@ void repost_messages(void) {
     if (!is_valid_window_ptr(m->target, windows)) continue;
     send_message(m->target, m->msg, m->wparam, m->lparam);
   }
-  if (running) {
+  if (g_ui_runtime.running) {
     ui_end_frame();     // present frame (swap buffers / flushBuffer)
   }
 }

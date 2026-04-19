@@ -54,8 +54,6 @@
 #include "../user/icons.h"
 #include "../kernel/renderer.h"
 
-extern bool running;  // Set to true when graphics are initialized
-
 // Private state owned by each win_toolbox instance.
 typedef struct {
   toolbox_item_t *items;       // heap-allocated copy of the item list
@@ -280,7 +278,7 @@ result_t win_toolbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       // wparam = square icon tile size in pixels; lparam = const char* path.
       toolbox_state_t *st = (toolbox_state_t *)win->userdata;
       if (!st || !lparam) return false;
-      if (!running) return false;
+      if (!g_ui_runtime.running) return false;
       int icon_w = (int)wparam;
       if (icon_w <= 0) return false;
       const char *path = (const char *)lparam;

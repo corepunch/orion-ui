@@ -163,12 +163,10 @@ int strwidth(const char* text) {
 
 // Draw text using small bitmap font
 void draw_text_small(const char* text, int x, int y, uint32_t col) {
-  extern bool running;
-  
   if (!text || !*text) return; // Early return for empty strings
   
   // Skip drawing if graphics aren't initialized (e.g., in tests)
-  if (!running) return;
+  if (!g_ui_runtime.running) return;
   
   int text_length = (int)strlen(text);
   if (text_length > MAX_TEXT_LENGTH) text_length = MAX_TEXT_LENGTH;
@@ -270,8 +268,7 @@ int calc_text_height(const char* text, int width) {
 
 // Draw text with wrapping and viewport clipping
 void draw_text_wrapped(const char* text, rect_t const *viewport, uint32_t col) {
-  extern bool running;
-  if (!text || !*text || !running || !viewport) return;
+  if (!text || !*text || !g_ui_runtime.running || !viewport) return;
   
   // Check if text_state is initialized
   if (text_state.small_font.char_height == 0) return;

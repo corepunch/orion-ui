@@ -16,6 +16,7 @@ window_t *windows = NULL;
 window_t *_focused = NULL;
 window_t *_tracked = NULL;
 window_t *_captured = NULL;
+ui_runtime_state_t g_ui_runtime = { false };
 
 extern window_t *_dragging;
 extern window_t *_resizing;

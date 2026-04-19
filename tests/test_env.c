@@ -8,7 +8,6 @@
 extern window_t *_focused;
 extern window_t *_tracked;
 extern window_t *_captured;
-extern bool running;
 
 static void test_env_reset_ui_state(void) {
     while (windows) {
@@ -19,7 +18,7 @@ static void test_env_reset_ui_state(void) {
     _focused = NULL;
     _tracked = NULL;
     _captured = NULL;
-    running = false;
+    g_ui_runtime.running = false;
 }
 
 // Global test environment

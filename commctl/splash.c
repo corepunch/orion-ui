@@ -60,8 +60,7 @@ static result_t splash_proc(window_t *win, uint32_t msg,
 // It is destroyed when the user clicks anywhere on it.
 // Returns the window pointer, or NULL if the image could not be loaded.
 window_t *show_splash_screen(const char *path, hinstance_t hinstance) {
-  extern bool running;
-  if (!path || !running) return NULL;
+  if (!path || !g_ui_runtime.running) return NULL;
 
   int w = 0, h = 0;
   uint8_t *pixels = load_image(path, &w, &h);
@@ -74,6 +73,11 @@ window_t *show_splash_screen(const char *path, hinstance_t hinstance) {
   image_free(pixels);
   if (!tex) return NULL;
 
+  // Scale down large images to a maximum of 1/4 screen size, preserving aspect ratio.
+  w /= 4;
+  h /= 4;
+
+  // Center the window on screen, clamping to screen size if the image is oversized.
   int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
   int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
   // Clamp to screen size so an oversized image does not overflow.
