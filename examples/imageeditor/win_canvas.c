@@ -358,6 +358,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         state->panning = true;
         state->pan_start.x = lx;
         state->pan_start.y = ly;
+        IE_DEBUG("pan_begin doc=%p at=(%d,%d)", (void *)doc, lx, ly);
         return true;
       }
 
@@ -398,6 +399,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       // Text tool: record position and show text options dialog
       if (tool == ID_TOOL_TEXT) {
         if (!canvas_in_bounds(doc, px, py)) return true;
+        IE_DEBUG("text_dialog_open doc=%p at=(%d,%d)", (void *)doc, px, py);
         text_options_t opts;
         memset(&opts, 0, sizeof(opts));
         opts.font_size = g_app->text_font_size;
@@ -426,9 +428,12 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           canvas_shape_begin(doc, px, py);  // snapshot for cancel/undo
           doc->poly_active = true;
           doc->poly_count  = 0;
+          IE_DEBUG("polygon_begin doc=%p at=(%d,%d)", (void *)doc, px, py);
         }
         if (doc->poly_count < (int)(sizeof(doc->poly_pts)/sizeof(doc->poly_pts[0]))) {
           doc->poly_pts[doc->poly_count++] = (point_t){px, py};
+          IE_DEBUG("polygon_point doc=%p count=%d at=(%d,%d)",
+                   (void *)doc, doc->poly_count, px, py);
         }
         doc->last.x = px;
         doc->last.y = py;
@@ -439,6 +444,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       doc->drawing   = true;
       doc->last.x    = px;
       doc->last.y    = py;
+      IE_DEBUG("draw_begin doc=%p tool=%s at=(%d,%d)",
+           (void *)doc, tool_id_name(tool), px, py);
 
       if (canvas_is_shape_tool(tool)) {
         // Shape tools: take snapshot then preview – undo is pushed on mouse-up
@@ -474,6 +481,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
             float_tex_upload(doc);
             doc->move_origin.x = px;
             doc->move_origin.y = py;
+            IE_DEBUG("selection_move_begin doc=%p at=(%d,%d)", (void *)doc, px, py);
           } else {
             // Start a new selection; commit any in-progress move first.
             if (doc->sel_moving) canvas_commit_move(doc);
@@ -481,6 +489,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
             doc->sel_start.x = doc->sel_end.x = px;
             doc->sel_start.y = doc->sel_end.y = py;
             doc->sel_active = true;
+            IE_DEBUG("selection_begin doc=%p anchor=(%d,%d)", (void *)doc, px, py);
           }
           break;
         default:
@@ -526,6 +535,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           apply_zoom_centered(win, state, new_scale, cx, cy, mx, my);
         return true;
       } else if (g_app->current_tool == ID_TOOL_POLYGON && doc->poly_active && doc->poly_count >= 2) {
+        int point_count = doc->poly_count;
         if (g_app->shape_filled)
           canvas_draw_polygon_filled(doc, doc->poly_pts, doc->poly_count, g_app->fg_color, g_app->bg_color);
         else
@@ -539,6 +549,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         doc->poly_active = false;
         doc->poly_count  = 0;
         doc->modified = true;
+        IE_DEBUG("polygon_commit doc=%p points=%d", (void *)doc, point_count);
         doc_update_title(doc);
         invalidate_window(win);
         return true;
@@ -661,7 +672,10 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
     }
 
     case kWindowMessageLeftButtonUp: {
-      if (state) state->panning = false;
+      if (state && state->panning) {
+        IE_DEBUG("pan_end doc=%p", (void *)doc);
+        state->panning = false;
+      }
       if (!doc || !g_app) return true;
       int tool = g_app->current_tool;
 
@@ -679,12 +693,25 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         }
         doc->drawing  = false;
         doc->modified = true;
+        IE_DEBUG("shape_commit doc=%p tool=%s",
+                 (void *)doc, tool_id_name(tool));
         doc_update_title(doc);
         invalidate_window(win);
       } else {
         if (doc->sel_moving) {
           canvas_commit_move(doc);
+          IE_DEBUG("selection_move_commit doc=%p", (void *)doc);
           doc_update_title(doc);
+        }
+        if (tool == ID_TOOL_SELECT && doc->sel_active) {
+          IE_DEBUG("selection_end doc=%p from=(%d,%d) to=(%d,%d)",
+                   (void *)doc,
+                   doc->sel_start.x, doc->sel_start.y,
+                   doc->sel_end.x, doc->sel_end.y);
+        }
+        if (doc->drawing) {
+          IE_DEBUG("draw_end doc=%p tool=%s",
+                   (void *)doc, tool_id_name(tool));
         }
         doc->drawing = false;
       }
@@ -704,6 +731,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           doc_discard_undo(doc);  // drop the no-op undo entry pushed at polygon start
           doc->poly_active = false;
           doc->poly_count  = 0;
+          IE_DEBUG("polygon_cancel doc=%p", (void *)doc);
           invalidate_window(win);
           return true;
         }
@@ -711,6 +739,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           memcpy(doc->pixels, doc->shape_snapshot, (size_t)doc->canvas_w * doc->canvas_h * 4);
           doc->canvas_dirty = true;
           doc->drawing = false;
+          IE_DEBUG("shape_cancel doc=%p tool=%s",
+                   (void *)doc, tool_id_name(tool));
           invalidate_window(win);
           return true;
         }

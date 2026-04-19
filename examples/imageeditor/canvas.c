@@ -657,7 +657,7 @@ bool png_save(const char *path, const canvas_doc_t *doc) {
 // Canvas GL texture
 // ============================================================
 
-static void canvas_upload(canvas_doc_t *doc) {
+void canvas_upload(canvas_doc_t *doc) {
   if (!doc->canvas_tex) {
     GLuint tex;
     glGenTextures(1, &tex);

@@ -97,9 +97,16 @@ static bool cancel_active_canvas_interaction(canvas_doc_t *doc, int old_tool) {
   if (!doc) return false;
 
   state = doc->canvas_win ? (canvas_win_state_t *)doc->canvas_win->userdata : NULL;
-  if (state) state->panning = false;
+  if (state && state->panning) {
+    IE_DEBUG("cancel_interaction pan doc=%p old_tool=%s",
+             (void *)doc, tool_id_name(old_tool));
+    state->panning = false;
+    changed = true;
+  }
 
   if (old_tool == ID_TOOL_POLYGON && doc->poly_active) {
+    IE_DEBUG("cancel_interaction polygon doc=%p points=%d",
+             (void *)doc, doc->poly_count);
     if (doc->shape_snapshot) {
       memcpy(doc->pixels, doc->shape_snapshot,
              (size_t)doc->canvas_w * doc->canvas_h * 4);
@@ -112,6 +119,10 @@ static bool cancel_active_canvas_interaction(canvas_doc_t *doc, int old_tool) {
   }
 
   if (canvas_is_shape_tool(old_tool) && doc->drawing && doc->shape_snapshot) {
+    IE_DEBUG("cancel_interaction shape doc=%p tool=%s start=(%d,%d) last=(%d,%d)",
+             (void *)doc, tool_id_name(old_tool),
+             doc->shape_start.x, doc->shape_start.y,
+             doc->last.x, doc->last.y);
     memcpy(doc->pixels, doc->shape_snapshot,
            (size_t)doc->canvas_w * doc->canvas_h * 4);
     doc->canvas_dirty = true;
@@ -119,11 +130,15 @@ static bool cancel_active_canvas_interaction(canvas_doc_t *doc, int old_tool) {
   }
 
   if (doc->sel_moving) {
+    IE_DEBUG("cancel_interaction selection_move doc=%p float_pos=(%d,%d)",
+             (void *)doc, doc->float_pos.x, doc->float_pos.y);
     canvas_commit_move(doc);
     changed = true;
   }
 
   if (doc->drawing) {
+    IE_DEBUG("cancel_interaction drawing doc=%p old_tool=%s",
+             (void *)doc, tool_id_name(old_tool));
     doc->drawing = false;
     changed = true;
   }
@@ -436,6 +451,10 @@ void handle_menu_command(uint16_t id) {
         invalidate_window(doc->canvas_win);
       }
       g_app->current_tool = id;
+      IE_DEBUG("tool_switch doc=%p %s -> %s",
+               (void *)doc,
+               tool_id_name(old_tool),
+               tool_id_name((int)id));
       // Update the active tool button in the tool palette (win_toolbox).
       if (g_app->tool_win) {
         send_message(g_app->tool_win, kToolboxMessageSetActiveItem, (uint32_t)id, NULL);

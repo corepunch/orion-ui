@@ -36,6 +36,7 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
       // doc_confirm_close() shows a dialog if modified and calls close_document().
       // Return true in all cases — we have handled the close ourselves.
       if (!doc) return false;
+      debug_log_doc_state("wm_close", doc);
       doc_confirm_close(doc, win);
       return true;  // prevent the default show_window(win, false)
     }
@@ -70,19 +71,26 @@ void doc_update_title(canvas_doc_t *doc) {
 // Otherwise calls close_document() and returns true.
 bool doc_confirm_close(canvas_doc_t *doc, window_t *parent_win) {
   if (!doc) return true;
-  if (doc->close_prompt_open) return false;
+  if (doc->close_prompt_open) {
+    debug_log_doc_state("close_confirm_reentered", doc);
+    return false;
+  }
   if (doc->modified) {
+    debug_log_doc_state("close_confirm_open", doc);
     doc->close_prompt_open = true;
     int res = message_box(parent_win,
                           "This image has unsaved changes.\nDo you want to close it?",
                           "Unsaved Changes",
                           MB_YESNOCANCEL);
     doc->close_prompt_open = false;
+    IE_DEBUG("close_confirm_result doc=%p result=%d filename_set=%d",
+             (void *)doc, res, doc->filename[0] != '\0');
     if (res == IDCANCEL) return false;
     if (res == IDYES && doc->filename[0])
       png_save(doc->filename, doc);
     // IDNO or IDYES-with-save: fall through to close_document
   }
+  debug_log_doc_state("close_confirm_accept", doc);
   close_document(doc);
   return true;
 }
