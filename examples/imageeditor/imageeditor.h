@@ -15,6 +15,20 @@
 
 #include "../../ui.h"
 
+#ifndef IMAGEEDITOR_DEBUG
+#define IMAGEEDITOR_DEBUG 1
+#endif
+
+#if IMAGEEDITOR_DEBUG
+#define IE_DEBUG(...) do { \
+  fprintf(stderr, "[imageeditor] "); \
+  fprintf(stderr, __VA_ARGS__); \
+  fputc('\n', stderr); \
+} while (0)
+#else
+#define IE_DEBUG(...) ((void)0)
+#endif
+
 // ============================================================
 // Constants
 // ============================================================
@@ -151,6 +165,7 @@ typedef struct canvas_doc_s {
   GLuint   canvas_tex;
   bool     canvas_dirty;
   bool     drawing;
+  bool     close_prompt_open;
   point_t  last;
   bool     modified;
   char     filename[512];
@@ -232,6 +247,45 @@ extern const uint32_t kPalette[NUM_COLORS];
 // Tool display names (in ID_TOOL_PENCIL..ID_TOOL_SELECT order; index with tool - ID_TOOL_PENCIL)
 extern const char *tool_names[NUM_TOOLS];
 
+static inline const char *tool_id_name(int tool_id) {
+  switch (tool_id) {
+    case ID_TOOL_PENCIL:       return "PENCIL";
+    case ID_TOOL_BRUSH:        return "BRUSH";
+    case ID_TOOL_ERASER:       return "ERASER";
+    case ID_TOOL_FILL:         return "FILL";
+    case ID_TOOL_SELECT:       return "SELECT";
+    case ID_TOOL_HAND:         return "HAND";
+    case ID_TOOL_ZOOM:         return "ZOOM";
+    case ID_TOOL_LINE:         return "LINE";
+    case ID_TOOL_RECT:         return "RECT";
+    case ID_TOOL_ELLIPSE:      return "ELLIPSE";
+    case ID_TOOL_ROUNDED_RECT: return "ROUNDED_RECT";
+    case ID_TOOL_POLYGON:      return "POLYGON";
+    case ID_TOOL_SPRAY:        return "SPRAY";
+    case ID_TOOL_EYEDROPPER:   return "EYEDROPPER";
+    case ID_TOOL_MAGNIFIER:    return "MAGNIFIER";
+    case ID_TOOL_TEXT:         return "TEXT";
+    default:                   return "UNKNOWN";
+  }
+}
+
+static inline void debug_log_doc_state(const char *tag, const canvas_doc_t *doc) {
+  if (!doc) {
+    IE_DEBUG("%s doc=NULL", tag);
+    return;
+  }
+  IE_DEBUG("%s doc=%p tool=%s modified=%d drawing=%d sel_active=%d sel_moving=%d poly_active=%d close_prompt_open=%d",
+           tag,
+           (void *)doc,
+           g_app ? tool_id_name(g_app->current_tool) : "<no-app>",
+           doc->modified,
+           doc->drawing,
+           doc->sel_active,
+           doc->sel_moving,
+           doc->poly_active,
+           doc->close_prompt_open);
+}
+
 // ============================================================
 // Canvas helpers (used across files)
 // ============================================================
@@ -259,6 +313,7 @@ bool canvas_resize(canvas_doc_t *doc, int new_w, int new_h);
 void canvas_set_pixel(canvas_doc_t *doc, int x, int y, uint32_t c);
 uint32_t canvas_get_pixel(const canvas_doc_t *doc, int x, int y);
 void canvas_clear(canvas_doc_t *doc);
+void canvas_upload(canvas_doc_t *doc);
 void canvas_draw_circle(canvas_doc_t *doc, int cx, int cy, int r, uint32_t c);
 void canvas_draw_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1, int radius, uint32_t c);
 void canvas_flood_fill(canvas_doc_t *doc, int sx, int sy, uint32_t fill);
@@ -298,6 +353,9 @@ void doc_discard_undo(canvas_doc_t *doc);
 
 // PNG I/O
 bool png_save(const char *path, const canvas_doc_t *doc);
+
+// Native file picker wrapper used by the menu commands.
+bool show_file_picker(window_t *parent, bool save_mode, char *out_path, size_t out_sz);
 
 // Forward declarations for document management
 canvas_doc_t *create_document(const char *filename, int w, int h);

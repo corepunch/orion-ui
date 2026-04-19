@@ -4,8 +4,8 @@
 #include "imageeditor.h"
 
 // Wrapper kept for backward compatibility with win_menubar.c.
-static bool show_file_picker(window_t *parent, bool save_mode,
-                              char *out_path, size_t out_sz) {
+bool show_file_picker(window_t *parent, bool save_mode,
+                      char *out_path, size_t out_sz) {
   openfilename_t ofn = {0};
   ofn.lStructSize  = sizeof(ofn);
   ofn.hwndOwner    = parent;
