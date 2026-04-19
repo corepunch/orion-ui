@@ -547,14 +547,14 @@ void test_toolbar_button_click_cancelled_if_released_outside(void) {
     // release outside so the event layer clears pressed state without firing
     // a click notification — matching the previous hit-tested behavior.
     ui_event_t ev = {0};
-    ev.message = kEventLeftMouseDown;
+    ev.message = kEventLeftButtonDown;
     ev.x = (uint16_t)((win->frame.x + btn->frame.x + 4) * UI_WINDOW_SCALE);
     ev.y = (uint16_t)((win->frame.y + title_h + btn->frame.y + 4) * UI_WINDOW_SCALE);
     dispatch_message(&ev);
     ASSERT_TRUE(btn->pressed);
 
     // Release well outside the button (to the right of it, same toolbar row).
-    ev.message = kEventLeftMouseUp;
+    ev.message = kEventLeftButtonUp;
     ev.x = (uint16_t)((win->frame.x + btn->frame.x + btn->frame.w + 10) * UI_WINDOW_SCALE);
     ev.y = (uint16_t)((win->frame.y + title_h + btn->frame.y + 4) * UI_WINDOW_SCALE);
     dispatch_message(&ev);

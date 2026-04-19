@@ -331,9 +331,9 @@ void dispatch_message(ui_event_t *msg) {
       break;
 
     case kEventMouseMoved:
-    case kEventLeftMouseDragged:
-    case kEventRightMouseDragged:
-    case kEventOtherMouseDragged: {
+    case kEventLeftButtonDragged:
+    case kEventRightButtonDragged:
+    case kEventOtherButtonDragged: {
       px = (int)msg->x;
       py = (int)msg->y;
       int16_t rdx = msg->dx;
@@ -382,8 +382,8 @@ void dispatch_message(ui_event_t *msg) {
       break;
     }
 
-    case kEventLeftMouseDown:
-    case kEventRightMouseDown: {
+    case kEventLeftButtonDown:
+    case kEventRightButtonDown: {
       px = (int)msg->x;
       py = (int)msg->y;
         if ((win = g_ui_runtime.captured) ||
@@ -429,7 +429,7 @@ void dispatch_message(ui_event_t *msg) {
         } else {
           int sx = SCALE_POINT(px);
           int sy = SCALE_POINT(py);
-          if (msg->message == kEventLeftMouseDown &&
+          if (msg->message == kEventLeftButtonDown &&
               (win->flags & WINDOW_TOOLBAR) && sy < win->frame.y + titlebar_height(win)) {
             // Toolbar band click: convert screen coords to toolbar-band-relative
             // (tc->frame.x/y are relative to toolbar band top-left) before hit
@@ -447,7 +447,7 @@ void dispatch_message(ui_event_t *msg) {
             }
             // No hit (click in gap): no action needed.
           } else {
-            int wmsg = (msg->message == kEventLeftMouseDown)
+            int wmsg = (msg->message == kEventLeftButtonDown)
                        ? kWindowMessageLeftButtonDown
                        : kWindowMessageRightButtonDown;
             if (!handle_mouse(wmsg, win, lx, ly)) {
@@ -476,8 +476,8 @@ void dispatch_message(ui_event_t *msg) {
       break;
     }
 
-    case kEventLeftMouseUp:
-    case kEventRightMouseUp: {
+    case kEventLeftButtonUp:
+    case kEventRightButtonUp: {
       px = (int)msg->x;
       py = (int)msg->y;
       // Always deliver NonClientLeftButtonUp to any window that received a
@@ -487,7 +487,7 @@ void dispatch_message(ui_event_t *msg) {
       // NonClientLeftButtonDown/Up pair (analogous to WM_NCLBUTTONDOWN/UP),
       // so no client LeftButtonDown/Up is sent for this click sequence.
       // Focus changes already occurred on mouse-down, so no focus work is needed here.
-      if (g_ui_runtime.toolbar_down_win && msg->message == kEventLeftMouseUp) {
+      if (g_ui_runtime.toolbar_down_win && msg->message == kEventLeftButtonUp) {
         int sx = SCALE_POINT(px);
         int sy = SCALE_POINT(py);
         window_t *tc = g_ui_runtime.toolbar_down_win;
@@ -537,7 +537,7 @@ void dispatch_message(ui_event_t *msg) {
             }
           }
         } else {
-          if (msg->message == kEventLeftMouseUp)
+          if (msg->message == kEventLeftButtonUp)
             send_message(g_ui_runtime.dragging, kWindowMessageNonClientLeftButtonUp,
                          MAKEDWORD(sx, sy), NULL);
           g_ui_runtime.dragging = NULL;
@@ -552,7 +552,7 @@ void dispatch_message(ui_event_t *msg) {
         if (SCALE_POINT(py) >= win->frame.y + titlebar_height(win) || win == g_ui_runtime.captured) {
           int lx = LOCAL_X(px, py, win);
           int ly = LOCAL_Y(px, py, win);
-          int wmsg = (msg->message == kEventLeftMouseUp)
+          int wmsg = (msg->message == kEventLeftButtonUp)
                      ? kWindowMessageLeftButtonUp
                      : kWindowMessageRightButtonUp;
           if (!handle_mouse(wmsg, win, lx, ly)) {
@@ -561,7 +561,7 @@ void dispatch_message(ui_event_t *msg) {
         } else {
           int sx = SCALE_POINT(px);
           int sy = SCALE_POINT(py);
-          if (msg->message == kEventLeftMouseUp)
+          if (msg->message == kEventLeftButtonUp)
             send_message(win, kWindowMessageNonClientLeftButtonUp,
                          MAKEDWORD(sx, sy), NULL);
         }
