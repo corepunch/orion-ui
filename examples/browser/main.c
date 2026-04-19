@@ -7,6 +7,32 @@
 
 #include "browser.h"
 
+static window_t *g_browser_win = NULL;
+static window_t *g_menubar_win = NULL;
+
+static const menu_item_t kBrowserSettingsItems[] = {
+  {"Preferences...", ID_MENU_BROWSER_SETTINGS},
+};
+
+static const menu_def_t kBrowserMenus[] = {
+  {"Settings", kBrowserSettingsItems, 1},
+};
+
+static void browser_handle_menu_command(uint16_t id) {
+  if (!g_browser_win) return;
+  if (id == ID_MENU_BROWSER_SETTINGS) {
+    send_message(g_browser_win, evCommand, MAKEDWORD(id, kMenuBarNotificationItemClick), NULL);
+  }
+}
+
+static result_t browser_menubar_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  if (msg == evCommand && HIWORD(wparam) == kMenuBarNotificationItemClick) {
+    browser_handle_menu_command(LOWORD(wparam));
+    return true;
+  }
+  return win_menubar(win, msg, wparam, lparam);
+}
+
 static result_t browser_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   browser_state_t *st = (browser_state_t *)win->userdata;
 
@@ -17,6 +43,9 @@ static result_t browser_proc(window_t *win, uint32_t msg, uint32_t wparam, void 
       st->request_id = HTTP_INVALID_REQUEST;
       st->history_index = -1;
       win->userdata = st;
+
+      browser_settings_init(st);
+      browser_settings_load(st);
 
       browser_rebuild_toolbar(win);
 
@@ -33,7 +62,7 @@ static result_t browser_proc(window_t *win, uint32_t msg, uint32_t wparam, void 
 
       browser_update_layout(win);
       browser_set_body_text(win, "Type a URL and press Enter.");
-      browser_navigate(win, "https://example.com", true);
+      browser_navigate(win, st->home_url, true);
       return true;
     }
 
@@ -43,6 +72,15 @@ static result_t browser_proc(window_t *win, uint32_t msg, uint32_t wparam, void 
       return false;
 
     case evCommand:
+      if (HIWORD(wparam) == kMenuBarNotificationItemClick &&
+          LOWORD(wparam) == ID_MENU_BROWSER_SETTINGS) {
+        if (st && browser_show_settings_dialog(g_menubar_win ? g_menubar_win : win, st)) {
+          browser_settings_save(st);
+          if (!st->current_url[0])
+            browser_navigate(win, st->home_url, true);
+        }
+        return true;
+      }
       if (HIWORD(wparam) == edUpdate && LOWORD(wparam) == ID_TB_ADDR) {
         window_t *src = (window_t *)lparam;
         browser_navigate(win, src ? src->title : "", true);
@@ -60,6 +98,10 @@ static result_t browser_proc(window_t *win, uint32_t msg, uint32_t wparam, void 
       if ((int)wparam == ID_TB_FWD && st->history_index + 1 < st->history_count) {
         st->history_index++;
         browser_navigate(win, st->history[st->history_index], false);
+        return true;
+      }
+      if ((int)wparam == ID_TB_HOME) {
+        browser_navigate(win, st->home_url, true);
         return true;
       }
       return false;
@@ -123,6 +165,11 @@ static result_t browser_proc(window_t *win, uint32_t msg, uint32_t wparam, void 
         free(st);
         win->userdata = NULL;
       }
+      if (g_menubar_win) {
+        destroy_window(g_menubar_win);
+        g_menubar_win = NULL;
+      }
+      g_browser_win = NULL;
       return true;
 
     default:
@@ -141,6 +188,16 @@ static bool browser_open(hinstance_t hinstance) {
     NULL
   );
   if (!win) return false;
+  g_browser_win = win;
+
+  g_menubar_win = set_app_menu(
+    browser_menubar_proc,
+    kBrowserMenus,
+    (int)(sizeof(kBrowserMenus) / sizeof(kBrowserMenus[0])),
+    browser_handle_menu_command,
+    hinstance
+  );
+
   show_window(win, true);
   return true;
 }

@@ -1,4 +1,5 @@
 #include "browser.h"
+#include "../../user/icons.h"
 
 void browser_set_body_text(window_t *win, const char *text) {
   window_t *body = get_window_item(win, ID_BODY_VIEW);
@@ -18,10 +19,11 @@ void browser_sync_nav_buttons(window_t *win) {
 void browser_rebuild_toolbar(window_t *win) {
   browser_state_t *st = (browser_state_t *)win->userdata;
   const int btn_w = TB_SPACING;
-  const int addr_w = MAX(140, win->frame.w - (btn_w * 2) - 20);
+  const int addr_w = MAX(120, win->frame.w - (btn_w * 3) - 24);
   const toolbar_item_t items[] = {
-    { TOOLBAR_ITEM_BUTTON, ID_TB_BACK, -1, btn_w, 0, "<" },
-    { TOOLBAR_ITEM_BUTTON, ID_TB_FWD, -1, btn_w, 0, ">" },
+    { TOOLBAR_ITEM_BUTTON, ID_TB_BACK, sysicon_arrow_left, btn_w, 0, NULL },
+    { TOOLBAR_ITEM_BUTTON, ID_TB_FWD, sysicon_arrow_right, btn_w, 0, NULL },
+    { TOOLBAR_ITEM_BUTTON, ID_TB_HOME, sysicon_world_page, btn_w, 0, NULL },
     { TOOLBAR_ITEM_SPACER, 0, -1, 4, 0, NULL },
     { TOOLBAR_ITEM_TEXTEDIT, ID_TB_ADDR, -1, addr_w, 0,
       (st && st->current_url[0]) ? st->current_url : "https://example.com" },

@@ -47,6 +47,14 @@ static window_t *find_toolbar_child(window_t *win, uint32_t id) {
     return NULL;
 }
 
+static void dispatch_left_mouse_at(int x, int y, uint32_t msg) {
+    ui_event_t ev = {0};
+    ev.message = msg;
+    ev.x = (uint16_t)(x * UI_WINDOW_SCALE);
+    ev.y = (uint16_t)(y * UI_WINDOW_SCALE);
+    dispatch_message(&ev);
+}
+
 // ---- tests ------------------------------------------------------------------
 
 void test_toolbar_set_items_creates_children(void) {
@@ -277,6 +285,106 @@ void test_toolbar_set_items_label(void) {
     PASS();
 }
 
+void test_toolbar_set_items_textedit_geometry(void) {
+    TEST("tbSetItems: TOOLBAR_ITEM_TEXTEDIT gets 2px top/bottom inset");
+
+    test_env_init();
+
+    rect_t frame = {0, 0, 300, 60};
+    window_t *win = create_window("W", WINDOW_TOOLBAR | WINDOW_NORESIZE,
+                                  &frame, NULL, noop_proc, 0, NULL);
+    ASSERT_NOT_NULL(win);
+
+    toolbar_item_t items[] = {
+        {TOOLBAR_ITEM_TEXTEDIT, 41, -1, 120, 0, "https://example.com"},
+    };
+    send_message(win, tbSetItems, 1, items);
+
+    ASSERT_EQUAL(count_toolbar_children(win), 1);
+    window_t *edit = find_toolbar_child(win, 41);
+    ASSERT_NOT_NULL(edit);
+    ASSERT_EQUAL(edit->frame.w, 120);
+    ASSERT_EQUAL(edit->frame.y, TOOLBAR_BEVEL_WIDTH + TOOLBAR_PADDING + 2);
+    ASSERT_EQUAL(edit->frame.h, TB_SPACING - 4);
+
+    destroy_window(win);
+    test_env_shutdown();
+    PASS();
+}
+
+void test_toolbar_textedit_click_focuses_and_enters_editing(void) {
+    TEST("Toolbar textedit click focuses control and enters editing mode");
+
+    test_env_init();
+
+    rect_t frame = {20, 30, 320, 80};
+    window_t *win = create_window("W", WINDOW_TOOLBAR | WINDOW_NORESIZE,
+                                  &frame, NULL, noop_proc, 0, NULL);
+    ASSERT_NOT_NULL(win);
+
+    toolbar_item_t items[] = {
+        {TOOLBAR_ITEM_TEXTEDIT, 42, -1, 150, 0, "https://example.com"},
+    };
+    send_message(win, tbSetItems, 1, items);
+
+    window_t *edit = find_toolbar_child(win, 42);
+    ASSERT_NOT_NULL(edit);
+
+    win->visible = true;
+    set_focus(NULL);
+    ASSERT_NULL(g_ui_runtime.focused);
+    ASSERT_FALSE(edit->editing);
+
+    int hit_x = win->frame.x + edit->frame.x + 6;
+    int hit_y = win->frame.y + TITLEBAR_HEIGHT + edit->frame.y + edit->frame.h / 2;
+
+    dispatch_left_mouse_at(hit_x, hit_y, kEventLeftButtonDown);
+    ASSERT_EQUAL(g_ui_runtime.focused, edit);
+
+    dispatch_left_mouse_at(hit_x, hit_y, kEventLeftButtonUp);
+    ASSERT_EQUAL(g_ui_runtime.focused, edit);
+    ASSERT_TRUE(edit->editing);
+
+    destroy_window(win);
+    test_env_shutdown();
+    PASS();
+}
+
+void test_titlebar_click_does_not_focus_toolbar_textedit(void) {
+    TEST("Titlebar click does not focus toolbar textedit on titled windows");
+
+    test_env_init();
+
+    rect_t frame = {20, 30, 320, 80};
+    window_t *win = create_window("W", WINDOW_TOOLBAR | WINDOW_NORESIZE,
+                                  &frame, NULL, noop_proc, 0, NULL);
+    ASSERT_NOT_NULL(win);
+
+    toolbar_item_t items[] = {
+        {TOOLBAR_ITEM_TEXTEDIT, 43, -1, 150, 0, "https://example.com"},
+    };
+    send_message(win, tbSetItems, 1, items);
+
+    window_t *edit = find_toolbar_child(win, 43);
+    ASSERT_NOT_NULL(edit);
+
+    win->visible = true;
+
+    int hit_x = win->frame.x + 10;
+    int hit_y = win->frame.y + 4;
+
+    dispatch_left_mouse_at(hit_x, hit_y, kEventLeftButtonDown);
+    dispatch_left_mouse_at(hit_x, hit_y, kEventLeftButtonUp);
+
+    ASSERT_EQUAL(g_ui_runtime.focused, win);
+    ASSERT_NOT_EQUAL(g_ui_runtime.focused, edit);
+    ASSERT_FALSE(edit->editing);
+
+    destroy_window(win);
+    test_env_shutdown();
+    PASS();
+}
+
 void test_toolbar_set_items_combobox(void) {
     TEST("tbSetItems: TOOLBAR_ITEM_COMBOBOX creates combobox child");
 
@@ -296,6 +404,8 @@ void test_toolbar_set_items_combobox(void) {
     window_t *cb = find_toolbar_child(win, 40);
     ASSERT_NOT_NULL(cb);
     ASSERT_EQUAL(cb->frame.w, 80);
+    ASSERT_EQUAL(cb->frame.y, TOOLBAR_BEVEL_WIDTH + TOOLBAR_PADDING + 2);
+    ASSERT_EQUAL(cb->frame.h, TB_SPACING - 4);
 
     destroy_window(win);
     test_env_shutdown();
@@ -612,10 +722,13 @@ int main(int argc, char *argv[]) {
     test_toolbar_set_items_button();
     test_toolbar_set_items_label();
     test_toolbar_set_items_combobox();
+    test_toolbar_set_items_textedit_geometry();
     test_toolbar_set_items_separator();
     test_toolbar_set_items_spacer();
     test_toolbar_button_click_fires_command();
     test_toolbar_notitle_nonclient_mouseup_fires();
+    test_toolbar_textedit_click_focuses_and_enters_editing();
+    test_titlebar_click_does_not_focus_toolbar_textedit();
     test_toolbar_destroy_clears_children();
     test_toolbar_move_shifts_children();
     test_titlebar_height_single_row();
