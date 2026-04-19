@@ -46,12 +46,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #include "../user/user.h"
 #include "../user/draw.h"
 #include "../user/image.h"
 #include "../user/icons.h"
 #include "../kernel/renderer.h"
+
+extern bool running;  // Set to true when graphics are initialized
 
 // Private state owned by each win_toolbox instance.
 typedef struct {
@@ -188,6 +191,7 @@ result_t win_toolbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       int idx = toolbox_hit(st, mx, my);
       if (idx >= 0) {
         st->pressed_idx = idx;
+        set_capture(win);
         invalidate_window(win);
         return true;
       }
@@ -201,6 +205,7 @@ result_t win_toolbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       int idx   = toolbox_hit(st, mx, my);
       int prev  = st->pressed_idx;
       st->pressed_idx = -1;
+      set_capture(NULL);
 
       if (prev >= 0 && prev == idx) {
         // Confirmed click: update active tool and fire notification.
@@ -248,12 +253,17 @@ result_t win_toolbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
     case kToolboxMessageSetStrip: {
       toolbox_state_t *st = (toolbox_state_t *)win->userdata;
       if (!st) return false;
-      // External strip: we copy the descriptor but do NOT own the GL texture.
+      // Switching to an external strip: release any previously owned texture,
+      // then copy the descriptor without taking ownership of its GL texture.
+      if (st->own_strip_tex) {
+        R_DeleteTexture(st->own_strip_tex);
+        st->own_strip_tex = 0;
+      }
       if (lparam)
         memcpy(&st->strip, lparam, sizeof(bitmap_strip_t));
       else
         memset(&st->strip, 0, sizeof(bitmap_strip_t));
-      // own_strip_tex remains 0 — caller owns the texture lifetime.
+      // Caller owns the external texture lifetime.
       invalidate_window(win);
       return true;
     }
@@ -270,12 +280,18 @@ result_t win_toolbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       // wparam = square icon tile size in pixels; lparam = const char* path.
       toolbox_state_t *st = (toolbox_state_t *)win->userdata;
       if (!st || !lparam) return false;
+      if (!running) return false;
       int icon_w = (int)wparam;
       if (icon_w <= 0) return false;
       const char *path = (const char *)lparam;
       int w = 0, h = 0;
       uint8_t *pixels = load_image(path, &w, &h);
       if (!pixels) return false;
+      if (w < icon_w || h < icon_w ||
+          (w % icon_w) != 0 || (h % icon_w) != 0) {
+        image_free(pixels);
+        return false;
+      }
       uint32_t tex = R_CreateTextureRGBA(w, h, pixels,
                                          R_FILTER_NEAREST, R_WRAP_CLAMP);
       image_free(pixels);
