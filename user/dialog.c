@@ -84,14 +84,15 @@ static uint32_t run_dialog_loop(window_t *dlg, window_t *parent) {
 }
 
 uint32_t show_dialog_ex(char const *title,
-                        const rect_t* frame,
+                        int width,
+                        int height,
                         window_t *parent,
                         uint32_t flags,
                         winproc_t proc,
                         void *param)
 {
   const char *dialog_title = title ? title : "";
-  rect_t dlg_frame = frame ? *frame : (rect_t){0, 0, 0, 0};
+  rect_t dlg_frame = {0, 0, width, height};
   dlg_frame = center_modal_rect(dlg_frame, parent);
   // Dialogs inherit their owner's hinstance so they belong to the same app.
   hinstance_t hinstance = parent ? get_root_window(parent)->hinstance : 0;
@@ -100,12 +101,13 @@ uint32_t show_dialog_ex(char const *title,
 }
 
 uint32_t show_dialog(char const *title,
-                     const rect_t* frame,
+                     int width,
+                     int height,
                      window_t *parent,
                      winproc_t proc,
                      void *param)
 {
-  return show_dialog_ex(title, frame, parent,
+  return show_dialog_ex(title, width, height, parent,
                         WINDOW_VSCROLL | WINDOW_DIALOG | WINDOW_NOTRAYBUTTON,
                         proc, param);
 }
@@ -114,7 +116,7 @@ uint32_t show_dialog(char const *title,
 // Children are instantiated (via create_window_from_form) before
 // evCreate fires, so the window proc can find them already in
 // place — analogous to WinAPI DialogBoxIndirectParam.
-// title overrides def->name when non-NULL.  The dialog is centered on screen.
+// title overrides def->name when non-NULL.  The dialog is centered on owner.
 uint32_t show_dialog_from_form_ex(form_def_t const *def, char const *title,
                                   window_t *parent, uint32_t flags,
                                   winproc_t proc, void *param)

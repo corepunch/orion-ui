@@ -453,11 +453,8 @@ static result_t about_proc(window_t *win, uint32_t msg,
 }
 
 void show_about_dialog(window_t *parent) {
-  int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
-  int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
   show_dialog("About Orion Form Editor",
-              MAKERECT((sw - ABOUT_W) / 2, (sh - (ABOUT_H + TITLEBAR_HEIGHT)) / 2,
-                       ABOUT_W, ABOUT_H + TITLEBAR_HEIGHT),
+              ABOUT_W, ABOUT_H + TITLEBAR_HEIGHT,
               parent, about_proc, NULL);
 }
 

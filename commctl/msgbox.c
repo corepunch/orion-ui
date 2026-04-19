@@ -129,7 +129,7 @@ int message_box(window_t *parent, const char *text,
 
   const char *title = caption ? caption : "Message";
   show_dialog(title,
-              MAKERECT(80, 60, MB_WIN_W, MB_WIN_H),
+              MB_WIN_W, MB_WIN_H,
               parent, mb_proc, &ms);
   return ms.result;
 }

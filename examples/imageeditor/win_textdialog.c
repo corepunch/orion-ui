@@ -259,13 +259,8 @@ bool show_text_dialog(window_t *parent, text_options_t *opts) {
   st.opts     = opts;
   st.accepted = false;
 
-  int sx = ui_get_system_metrics(kSystemMetricScreenWidth);
-  int sy = ui_get_system_metrics(kSystemMetricScreenHeight);
-  int dx = (sx - TD_W) / 2;
-  int dy = (sy - (TD_H + TITLEBAR_HEIGHT)) / 2;
-
   show_dialog("Insert Text",
-              MAKERECT(dx, dy, TD_W, TD_H + TITLEBAR_HEIGHT),
+              TD_W, TD_H + TITLEBAR_HEIGHT,
               parent, td_proc, &st);
 
   return st.accepted && opts->text[0] != '\0';
