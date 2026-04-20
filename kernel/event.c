@@ -80,6 +80,27 @@ static int handle_mouse(int msg, window_t *win, int x, int y) {
   return false;
 }
 
+// Hit-test a toolbar child using screen-space coordinates.
+// Returns NULL when the point is outside the toolbar band or in a gap.
+static window_t *find_toolbar_child_at(window_t *parent, int sx, int sy,
+                                       int *tb_x_out, int *tb_y_out) {
+  if (!parent || !(parent->flags & WINDOW_TOOLBAR)) return NULL;
+  if (sy >= parent->frame.y + titlebar_height(parent)) return NULL;
+
+  int title_h = (parent->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
+  int tb_x = sx - parent->frame.x;
+  int tb_y = sy - (parent->frame.y + title_h);
+  if (tb_x_out) *tb_x_out = tb_x;
+  if (tb_y_out) *tb_y_out = tb_y;
+
+  for (window_t *tc = parent->toolbar_children; tc; tc = tc->next) {
+    if (CONTAINS(tb_x, tb_y, tc->frame.x, tc->frame.y, tc->frame.w, tc->frame.h)) {
+      return tc;
+    }
+  }
+  return NULL;
+}
+
 // Find next tab stop
 window_t* find_next_tab_stop(window_t *win, bool allow_current) {
   if (!win) return false;
@@ -391,12 +412,27 @@ void dispatch_message(ui_event_t *msg) {
       {
         window_t *click_root = get_root_window(win);
         if (win->disabled) return;
-        bool activating = (win != g_ui_runtime.focused);
+
+        int sx = SCALE_POINT(px);
+        int sy = SCALE_POINT(py);
+        int tb_x = 0;
+        int tb_y = 0;
+        window_t *toolbar_hit = NULL;
+        if (msg->message == kEventLeftButtonDown &&
+            win != g_ui_runtime.captured)
+        {
+          toolbar_hit = find_toolbar_child_at(win, sx, sy, &tb_x, &tb_y);
+        }
+
+        // Unify activation focus target with normal child hit-testing: when the
+        // click lands on a toolbar child, focus that child directly.
+        window_t *focus_target = toolbar_hit ? toolbar_hit : win;
+        bool activating = (focus_target != g_ui_runtime.focused);
         window_t *old_root = g_ui_runtime.focused ? get_root_window(g_ui_runtime.focused) : NULL;
         window_t *new_root = click_root;
         bool root_changing = activating && (new_root != old_root);
         if (activating) {
-          send_message(win, evMouseActivate, 0, NULL);
+          send_message(focus_target, evMouseActivate, 0, NULL);
           if (root_changing && old_root)
             send_message(old_root, evActivate, WA_INACTIVE, new_root);
         }
@@ -404,7 +440,7 @@ void dispatch_message(ui_event_t *msg) {
           move_to_top(click_root);
         }
         if (activating) {
-          set_focus(win);
+          set_focus(focus_target);
           if (root_changing)
             send_message(new_root, evActivate, WA_CLICKACTIVE, old_root);
         }
@@ -427,25 +463,12 @@ void dispatch_message(ui_event_t *msg) {
           drag_anchor[0] = SCALE_POINT(px) - win->frame.x;
           drag_anchor[1] = SCALE_POINT(py) - win->frame.y;
         } else {
-          int sx = SCALE_POINT(px);
-          int sy = SCALE_POINT(py);
           if (msg->message == kEventLeftButtonDown &&
               (win->flags & WINDOW_TOOLBAR) && sy < win->frame.y + titlebar_height(win)) {
-            // Toolbar band click: convert screen coords to toolbar-band-relative
-            // (tc->frame.x/y are relative to toolbar band top-left) before hit
-            // testing, so the parent's screen position does not affect the result.
-            int title_h_val = (win->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
-            int tb_x = sx - win->frame.x;
-            int tb_y = sy - (win->frame.y + title_h_val);
-            for (window_t *tc = win->toolbar_children; tc; tc = tc->next) {
-              if (CONTAINS(tb_x, tb_y, tc->frame.x, tc->frame.y, tc->frame.w, tc->frame.h)) {
-                if (!tc->notabstop)
-                  set_focus(tc);
-                g_ui_runtime.toolbar_down_win = tc;
-                send_message(tc, evLeftButtonDown,
-                             MAKEDWORD(tb_x - tc->frame.x, tb_y - tc->frame.y), NULL);
-                break;
-              }
+            if (toolbar_hit) {
+              g_ui_runtime.toolbar_down_win = toolbar_hit;
+              send_message(toolbar_hit, evLeftButtonDown,
+                           MAKEDWORD(tb_x - toolbar_hit->frame.x, tb_y - toolbar_hit->frame.y), NULL);
             }
             // No hit (click in gap): no action needed.
           } else {
@@ -494,13 +517,12 @@ void dispatch_message(ui_event_t *msg) {
         int sy = SCALE_POINT(py);
         window_t *tc = g_ui_runtime.toolbar_down_win;
         g_ui_runtime.toolbar_down_win = NULL;  // clear before send: handler may open a modal loop
-        // Convert screen coords to toolbar-band-relative for hit testing.
         // tc->parent is always non-NULL (toolbar children always have a parent).
         window_t *parent = tc->parent;
-        int title_h_val = (parent->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
-        int tb_x = sx - parent->frame.x;
-        int tb_y = sy - (parent->frame.y + title_h_val);
-        bool hit = CONTAINS(tb_x, tb_y, tc->frame.x, tc->frame.y, tc->frame.w, tc->frame.h);
+        int tb_x = 0;
+        int tb_y = 0;
+        window_t *hit_tc = find_toolbar_child_at(parent, sx, sy, &tb_x, &tb_y);
+        bool hit = (hit_tc == tc);
         if (hit) {
           // Release inside the button: let win_toolbar_button/win_button fire
           // the click notification normally via LeftButtonUp.

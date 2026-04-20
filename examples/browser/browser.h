@@ -30,6 +30,7 @@ typedef struct {
 } browser_state_t;
 
 char *browser_html_to_plain_text(const char *html, size_t len);
+char *browser_html_extract_title(const char *html, size_t len);
 
 bool browser_history_push(browser_state_t *st, const char *url);
 void browser_history_free(browser_state_t *st);

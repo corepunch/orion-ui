@@ -87,6 +87,37 @@ static void append_text_normalized(strbuf_t *out, const char *text) {
   }
 }
 
+static void trim_in_place(char *s) {
+  if (!s) return;
+  size_t start = 0;
+  size_t len = strlen(s);
+  while (start < len && isspace((unsigned char)s[start])) start++;
+  size_t end = len;
+  while (end > start && isspace((unsigned char)s[end - 1])) end--;
+  if (start > 0) memmove(s, s + start, end - start);
+  s[end - start] = '\0';
+}
+
+static void collapse_spaces_in_place(char *s) {
+  if (!s) return;
+  size_t r = 0;
+  size_t w = 0;
+  bool prev_space = false;
+  while (s[r]) {
+    unsigned char ch = (unsigned char)s[r++];
+    if (isspace(ch)) {
+      if (!prev_space) {
+        s[w++] = ' ';
+        prev_space = true;
+      }
+    } else {
+      s[w++] = (char)ch;
+      prev_space = false;
+    }
+  }
+  s[w] = '\0';
+}
+
 static void html_to_text_walk(xmlNode *node, strbuf_t *out) {
   for (xmlNode *n = node; n; n = n->next) {
     if (n->type == XML_TEXT_NODE) {
@@ -139,4 +170,49 @@ char *browser_html_to_plain_text(const char *html, size_t len) {
   while (out.len > 0 && isspace((unsigned char)out.buf[out.len - 1])) out.len--;
   out.buf[out.len] = '\0';
   return out.buf;
+}
+
+char *browser_html_extract_title(const char *html, size_t len) {
+  if (!html) return NULL;
+
+  htmlDocPtr doc = htmlReadMemory(
+    html,
+    (int)len,
+    NULL,
+    NULL,
+    HTML_PARSE_RECOVER | HTML_PARSE_NOERROR | HTML_PARSE_NOWARNING
+  );
+  if (!doc) return NULL;
+
+  char *title = NULL;
+  xmlNode *root = xmlDocGetRootElement(doc);
+  if (root) {
+    for (xmlNode *n = root->children; n; n = n->next) {
+      if (n->type != XML_ELEMENT_NODE || strcmp((const char *)n->name, "head") != 0)
+        continue;
+
+      for (xmlNode *h = n->children; h; h = h->next) {
+        if (h->type == XML_ELEMENT_NODE && strcmp((const char *)h->name, "title") == 0) {
+          xmlChar *txt = xmlNodeGetContent(h);
+          if (txt) {
+            title = strdup((const char *)txt);
+            xmlFree(txt);
+          }
+          break;
+        }
+      }
+      break;
+    }
+  }
+
+  xmlFreeDoc(doc);
+
+  if (!title) return NULL;
+  collapse_spaces_in_place(title);
+  trim_in_place(title);
+  if (!title[0]) {
+    free(title);
+    return NULL;
+  }
+  return title;
 }
