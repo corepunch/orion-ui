@@ -134,6 +134,42 @@ select a file (or type a filename for Save), then press **Open**/**Save** to con
 
 Only PNG files are supported.
 
+## Browser MVP Example
+
+**Files:** `browser/main.c` + `browser/*.c`
+
+A minimal browser-style example focused on fast HTML-to-text viewing:
+
+- Toolbar with Back / Forward / Home buttons
+- Address input field (press Enter to load)
+- Settings dialog from menu path: **Settings -> Preferences...**
+- Async HTTP/HTTPS fetch via Orion (`http_request_async`)
+- HTML parsing via libxml2 (`htmlReadMemory`)
+- Plain text block rendering (tags removed; no CSS/JS execution)
+- INI-style persisted home URL in platform settings directory (`browser.ini`)
+
+### Building
+
+```bash
+make examples
+```
+
+The browser target requires `libxml2` discoverable via `pkg-config`.
+If missing, only the browser example fails with a clear error; other examples
+remain buildable.
+
+### Running
+
+```bash
+./build/bin/browser
+```
+
+### Notes
+
+- MVP behavior intentionally ignores CSS, JavaScript, and external resources.
+- Output is readable text blocks extracted from HTML content.
+- Home URL is loaded/saved through platform APIs (`axSettingsLoad` / `axSettingsSave`).
+
 ## Future Examples
 
 Additional examples to be added:

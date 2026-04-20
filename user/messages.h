@@ -235,21 +235,22 @@ typedef struct {
 
 // Toolbar item types used with tbSetItems.
 typedef enum {
-  TOOLBAR_ITEM_BUTTON    = 0,  // icon or text button (win_toolbar_button / win_button)
+  TOOLBAR_ITEM_BUTTON    = 0,  // icon-only button (win_toolbar_button)
   TOOLBAR_ITEM_LABEL     = 1,  // static text label (win_label)
   TOOLBAR_ITEM_COMBOBOX  = 2,  // drop-down combobox (win_combobox)
-  TOOLBAR_ITEM_SEPARATOR = 3,  // narrow visual separator (no interaction)
-  TOOLBAR_ITEM_SPACER    = 4,  // invisible gap (no child window created)
+  TOOLBAR_ITEM_TEXTEDIT  = 3,  // single-line text input (win_textedit)
+  TOOLBAR_ITEM_SEPARATOR = 4,  // narrow visual separator (no interaction)
+  TOOLBAR_ITEM_SPACER    = 5,  // invisible gap (no child window created)
 } toolbar_item_type_t;
 
 // Descriptor for a single toolbar item (used with tbSetItems).
 typedef struct {
   toolbar_item_type_t type;   // item type
   int                 ident;  // command ID / button identifier
-  int                 icon;   // BUTTON: sysicon_* value or custom strip index; -1 = text-only
+  int                 icon;   // BUTTON: sysicon_* value or custom strip index; -1 = uses sysicon_missing
   int                 w;      // explicit width in pixels (0 = automatic)
   uint32_t            flags;  // extra style flags (BUTTON_PUSHLIKE, BUTTON_AUTORADIO, …)
-  const char         *text;   // button caption, label text, or combobox placeholder
+  const char         *text;   // label text, or combobox/textedit initial text
 } toolbar_item_t;
 
 // Analogous to WinAPI CW_USEDEFAULT: pass as x or y to create_window() /

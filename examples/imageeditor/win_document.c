@@ -51,13 +51,11 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
 
 void doc_update_title(canvas_doc_t *doc) {
   if (!doc->win) return;
-  char title[64];
   const char *name = doc->filename[0] ? doc->filename : "Untitled";
   const char *slash = strrchr(name, '/');
   if (slash) name = slash + 1;
-  snprintf(title, sizeof(title), "%s%s", name, doc->modified ? " *" : "");
-  strncpy(doc->win->title, title, sizeof(doc->win->title) - 1);
-  doc->win->title[sizeof(doc->win->title) - 1] = '\0';
+  snprintf(doc->win->title, sizeof(doc->win->title), "%s%s",
+           name, doc->modified ? " *" : "");
   invalidate_window(doc->win);
 }
 

@@ -439,6 +439,8 @@ void dispatch_message(ui_event_t *msg) {
             int tb_y = sy - (win->frame.y + title_h_val);
             for (window_t *tc = win->toolbar_children; tc; tc = tc->next) {
               if (CONTAINS(tb_x, tb_y, tc->frame.x, tc->frame.y, tc->frame.w, tc->frame.h)) {
+                if (!tc->notabstop)
+                  set_focus(tc);
                 g_ui_runtime.toolbar_down_win = tc;
                 send_message(tc, evLeftButtonDown,
                              MAKEDWORD(tb_x - tc->frame.x, tb_y - tc->frame.y), NULL);

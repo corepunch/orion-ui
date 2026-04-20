@@ -21,14 +21,11 @@
  * Public API: see kernel/http.h
  */
 
-/* Enable POSIX extensions (strdup, strncasecmp) without pulling in the full
- * GNU namespace.  Must come before any system header. */
-#define _POSIX_C_SOURCE 200809L
-
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <strings.h>   /* strncasecmp */
+#include <strings.h>   /* strncasecmp, strcasecmp */
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdarg.h>
@@ -399,11 +396,13 @@ static int
 parse_http_response(const char *raw, size_t raw_len,
                     int *status_out,
                     size_t *content_length_out,  /* may be NULL */
-                    char **location_out)
+                    char **location_out,
+                    bool *chunked_out)
 {
   *status_out         = 0;
   if (content_length_out) *content_length_out = (size_t)-1;
   if (location_out) *location_out = NULL;
+  if (chunked_out) *chunked_out = false;
 
   /* Status line: "HTTP/1.x NNN ..." */
   if (raw_len < 12) return -1;
@@ -428,6 +427,28 @@ parse_http_response(const char *raw, size_t raw_len,
 
     if (content_length_out && strncasecmp(p, "Content-Length:", 15) == 0) {
       *content_length_out = (size_t)atol(p + 15);
+    } else if (chunked_out && strncasecmp(p, "Transfer-Encoding:", 18) == 0) {
+      const char *v = p + 18;
+      while (v < eol && isspace((unsigned char)*v)) v++;
+      /* Bounded token search within the header value [v, eol) only.
+       * Per RFC 7230 §4, transfer-codings are comma-separated tokens;
+       * verify "chunked" appears as a complete token (not a substring). */
+      size_t val_len = (size_t)(eol - v);
+      if (val_len >= 7) {
+        for (size_t off = 0; off <= val_len - 7; off++) {
+          if (strncasecmp(v + off, "chunked", 7) == 0) {
+            bool at_start = (off == 0 || v[off - 1] == ','
+                             || isspace((unsigned char)v[off - 1]));
+            bool at_end   = (off + 7 == val_len || v[off + 7] == ','
+                             || v[off + 7] == ';'
+                             || isspace((unsigned char)v[off + 7]));
+            if (at_start && at_end) {
+              *chunked_out = true;
+              break;
+            }
+          }
+        }
+      }
     } else if (location_out && strncasecmp(p, "Location:", 9) == 0) {
       const char *loc = p + 9;
       while (*loc == ' ') loc++;
@@ -443,6 +464,100 @@ parse_http_response(const char *raw, size_t raw_len,
   }
 
   return (int)((body + 4) - raw);
+}
+
+static int hex_val(char c) {
+  if (c >= '0' && c <= '9') return c - '0';
+  if (c >= 'a' && c <= 'f') return 10 + (c - 'a');
+  if (c >= 'A' && c <= 'F') return 10 + (c - 'A');
+  return -1;
+}
+
+static char *decode_chunked_body(const char *in, size_t in_len, size_t *out_len) {
+  if (!in || !out_len) return NULL;
+
+  size_t i = 0;
+  size_t cap = in_len + 1;
+  size_t used = 0;
+  bool decoded_any = false;
+  char *out = (char *)malloc(cap);
+  if (!out) return NULL;
+
+  while (i < in_len) {
+    size_t line_start = i;
+    while (i + 1 < in_len && !(in[i] == '\r' && in[i + 1] == '\n')) i++;
+    if (i + 1 >= in_len) break;
+
+    size_t line_end = i;
+    i += 2; /* skip CRLF */
+
+    size_t chunk_sz = 0;
+    bool have_hex = false;
+    size_t p = line_start;
+    while (p < line_end && isspace((unsigned char)in[p])) p++;
+    for (; p < line_end; p++) {
+      if (in[p] == ';') break; /* chunk extension */
+      if (isspace((unsigned char)in[p])) {
+        while (p < line_end && isspace((unsigned char)in[p])) p++;
+        if (p < line_end && in[p] != ';') {
+          goto partial;
+        }
+        break;
+      }
+      int hv = hex_val(in[p]);
+      if (hv < 0) goto partial;
+      have_hex = true;
+      /* Guard against chunk_sz overflow when accumulating hex digits. */
+      if (chunk_sz > (SIZE_MAX >> 4)) goto partial;
+      chunk_sz = (chunk_sz << 4) | (size_t)hv;
+    }
+    if (!have_hex) break;
+
+    if (chunk_sz == 0) {
+      while (i + 1 < in_len) {
+        if (in[i] == '\r' && in[i + 1] == '\n') {
+          i += 2;
+          break;
+        }
+        while (i + 1 < in_len && !(in[i] == '\r' && in[i + 1] == '\n')) i++;
+        if (i + 1 >= in_len) break;
+        i += 2;
+      }
+      out[used] = '\0';
+      *out_len = used;
+      return out;
+    }
+
+    /* Overflow-safe bounds check: verify chunk_sz bytes + trailing CRLF fit in [i, in_len).
+     * Loop invariant guarantees i <= in_len; the explicit check makes this self-documenting. */
+    if (chunk_sz > in_len - i || in_len - i - chunk_sz < 2) break;
+    /* Overflow-safe growth: verify used + chunk_sz + 1 does not wrap size_t. */
+    if (chunk_sz > SIZE_MAX - used - 1) { free(out); return NULL; }
+    if (used + chunk_sz + 1 > cap) {
+      while (used + chunk_sz + 1 > cap) cap *= 2;
+      char *nb = (char *)realloc(out, cap);
+      if (!nb) { free(out); return NULL; }
+      out = nb;
+    }
+
+    memcpy(out + used, in + i, chunk_sz);
+    used += chunk_sz;
+    decoded_any = true;
+    i += chunk_sz;
+
+    if (!(in[i] == '\r' && in[i + 1] == '\n')) break;
+    i += 2;
+  }
+
+partial:
+  if (decoded_any) {
+    out[used] = '\0';
+    *out_len = used;
+    return out;
+  }
+
+  free(out);
+  return NULL;
 }
 
 /* =========================================================================
@@ -571,8 +686,9 @@ execute_request(http_pending_t *req)
 
     int    status = 0;
     char  *location = NULL;
+    bool   chunked = false;
     int    body_offset = parse_http_response(raw, raw_len, &status,
-                                              NULL, &location);
+                          NULL, &location, &chunked);
 
     if (body_offset < 0) {
       free(raw);
@@ -610,13 +726,33 @@ execute_request(http_pending_t *req)
 
     /* Extract body. */
     size_t body_len  = raw_len - (size_t)body_offset;
-    char  *body_copy = (char *)malloc(body_len + 1);
-    if (body_copy) {
-      memcpy(body_copy, raw + body_offset, body_len);
-      body_copy[body_len] = '\0';
+    char  *body_copy = NULL;
+    if (chunked) {
+      body_copy = decode_chunked_body(raw + body_offset, body_len, &body_len);
+      if (!body_copy) {
+        body_len = raw_len - (size_t)body_offset;
+        body_copy = (char *)malloc(body_len + 1);
+        if (body_copy) {
+          memcpy(body_copy, raw + body_offset, body_len);
+          body_copy[body_len] = '\0';
+        }
+      }
+    } else {
+      body_copy = (char *)malloc(body_len + 1);
+      if (body_copy) {
+        memcpy(body_copy, raw + body_offset, body_len);
+        body_copy[body_len] = '\0';
+      }
     }
     free(raw);
     free(current_url);
+
+    if (!body_copy) {
+      resp->status = 0;
+      resp->error  = "out of memory while storing response body";
+      free(headers_copy);
+      return resp;
+    }
 
     resp->status   = status;
     resp->body     = body_copy;

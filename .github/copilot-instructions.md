@@ -266,6 +266,9 @@ create_window_from_form(&kMyDlg, x, y, parent, my_dlg_proc, NULL);
 - Runtime values (initial edit text, checkbox states) are set inside
   `evCreate` via `set_window_item_text()` / `get_window_item()` —
   the children are already present when that message fires.
+- For modeless top-level windows or custom form instantiation, use
+  `center_window_rect()` after `adjust_window_rect()` instead of duplicating
+  screen/owner centering logic locally.
 - The form editor (see `examples/formeditor/`) can generate the struct literals
   directly in its saved `.h` output.
 

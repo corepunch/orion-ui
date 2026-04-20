@@ -14,32 +14,6 @@
 #include <string.h>
 #include "../ui.h"
 
-static rect_t center_modal_rect(rect_t rect, window_t *parent) {
-  int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
-  int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
-  window_t *owner = parent ? get_root_window(parent) : NULL;
-
-  if (owner) {
-    rect.x = owner->frame.x + (owner->frame.w - rect.w) / 2;
-    rect.y = owner->frame.y + (owner->frame.h - rect.h) / 2;
-  } else {
-    rect.x = (sw - rect.w) / 2;
-    rect.y = (sh - rect.h) / 2;
-  }
-
-  if (rect.w >= sw)
-    rect.x = 0;
-  else
-    rect.x = MAX(0, MIN(rect.x, sw - rect.w));
-
-  if (rect.h >= sh)
-    rect.y = 0;
-  else
-    rect.y = MAX(0, MIN(rect.y, sh - rect.h));
-
-  return rect;
-}
-
 // Shared modal message loop.  Runs until the dialog window is destroyed or the
 // application exits.  Forces a full repaint after the dialog is gone.
 static uint32_t run_dialog_loop(window_t *dlg, window_t *parent) {
@@ -93,7 +67,7 @@ uint32_t show_dialog_ex(char const *title,
 {
   const char *dialog_title = title ? title : "";
   rect_t dlg_frame = {0, 0, width, height};
-  dlg_frame = center_modal_rect(dlg_frame, parent);
+  dlg_frame = center_window_rect(dlg_frame, parent);
   // Dialogs inherit their owner's hinstance so they belong to the same app.
   hinstance_t hinstance = parent ? get_root_window(parent)->hinstance : 0;
   window_t *dlg = create_window(dialog_title, flags, &dlg_frame, NULL, proc, hinstance, param);
@@ -133,7 +107,7 @@ uint32_t show_dialog_from_form_ex(form_def_t const *def, char const *title,
   dlg_def.width = wr.w;
   dlg_def.height = wr.h;
 
-  rect_t dlg_rect = center_modal_rect((rect_t){0, 0, wr.w, wr.h}, parent);
+  rect_t dlg_rect = center_window_rect((rect_t){0, 0, wr.w, wr.h}, parent);
 
   // Dialogs inherit their owner's hinstance so they belong to the same app.
   hinstance_t hinstance = parent ? get_root_window(parent)->hinstance : 0;

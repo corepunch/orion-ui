@@ -18,6 +18,7 @@
 extern result_t win_toolbar_button(window_t *, uint32_t, uint32_t, void *);
 extern result_t win_label(window_t *, uint32_t, uint32_t, void *);
 extern result_t win_combobox(window_t *, uint32_t, uint32_t, void *);
+extern result_t win_textedit(window_t *, uint32_t, uint32_t, void *);
 extern result_t win_button(window_t *, uint32_t, uint32_t, void *);
 extern bitmap_strip_t *ui_get_sysicon_strip(void);
 
@@ -144,6 +145,8 @@ static void layout_toolbar_items(window_t *parent,
   int bsz     = toolbar_effective_bsz(parent);
   int base_x  = TOOLBAR_BEVEL_WIDTH + TOOLBAR_PADDING;
   int base_y  = TOOLBAR_BEVEL_WIDTH + TOOLBAR_PADDING;
+  int field_y = base_y + 2;
+  int field_h = bsz > 4 ? (bsz - 4) : bsz;
   int cur_x   = 0;
   bool placed_visual_item = false;
   window_t **tail = &parent->toolbar_children;
@@ -169,14 +172,14 @@ static void layout_toolbar_items(window_t *parent,
       }
       case TOOLBAR_ITEM_BUTTON: {
         int w = item->w > 0 ? item->w : bsz;
-        winproc_t proc = (item->icon >= 0) ? win_toolbar_button : win_button;
+        int icon = item->icon >= 0 ? item->icon : sysicon_missing;
         flags_t extra = item->flags & ~(TOOLBAR_BUTTON_FLAG_ACTIVE | TOOLBAR_BUTTON_FLAG_PRESSED);
-        window_t *tc = create_toolbar_child(parent, proc,
+        window_t *tc = create_toolbar_child(parent, win_toolbar_button,
                                              (uint32_t)item->ident,
                                              extra,
-                                             item->text,
+                                             NULL,
                                              base_x + cur_x, base_y,
-                                             w, bsz, item->icon);
+                                             w, bsz, icon);
         if (!tc) { cur_x += w; break; }
         if (item->flags & TOOLBAR_BUTTON_FLAG_ACTIVE) tc->value = true;
         *tail = tc; tail = &tc->next;
@@ -202,8 +205,21 @@ static void layout_toolbar_items(window_t *parent,
         window_t *tc = create_toolbar_child(parent, win_combobox,
                                              (uint32_t)item->ident, 0,
                                              item->text,
-                                             base_x + cur_x, base_y,
-                                             w, bsz, -1);
+                                             base_x + cur_x, field_y,
+                                             w, field_h, -1);
+        if (!tc) { cur_x += w; break; }
+        *tail = tc; tail = &tc->next;
+        cur_x += w;
+        placed_visual_item = true;
+        break;
+      }
+      case TOOLBAR_ITEM_TEXTEDIT: {
+        int w = item->w > 0 ? item->w : (bsz * 8);
+        window_t *tc = create_toolbar_child(parent, win_textedit,
+                                             (uint32_t)item->ident, 0,
+                                             item->text,
+                                             base_x + cur_x, field_y,
+                                             w, field_h, -1);
         if (!tc) { cur_x += w; break; }
         *tail = tc; tail = &tc->next;
         cur_x += w;
@@ -728,7 +744,7 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         // never routed to toolbar children.  Instead the toolbar fires on
         // release: find the child under the cursor, pre-set pressed, and send
         // LeftButtonUp so win_toolbar_button fires its command normally.
-        if (win->flags & WINDOW_TOOLBAR) {
+        if ((win->flags & WINDOW_TOOLBAR) && (win->flags & WINDOW_NOTITLE)) {
           int sx = (int)(int16_t)LOWORD(wparam);
           int sy = (int)(int16_t)HIWORD(wparam);
           // Convert screen-absolute coords to toolbar-band-relative.

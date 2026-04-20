@@ -191,6 +191,44 @@ void test_show_dialog_from_form_flags(void) {
   PASS();
 }
 
+void test_center_window_rect_owner(void) {
+  TEST("center_window_rect: centers inside owner frame");
+
+  test_env_init();
+
+  int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
+  int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
+  window_t owner = {0};
+  owner.frame = (rect_t){20, 20, MIN(200, sw - 40), MIN(120, sh - 40)};
+
+  rect_t centered = center_window_rect((rect_t){0, 0, 120, 60}, &owner);
+  ASSERT_EQUAL(centered.x, owner.frame.x + (owner.frame.w - 120) / 2);
+  ASSERT_EQUAL(centered.y, owner.frame.y + (owner.frame.h - 60) / 2);
+  ASSERT_EQUAL(centered.w, 120);
+  ASSERT_EQUAL(centered.h, 60);
+
+  test_env_shutdown();
+  PASS();
+}
+
+void test_center_window_rect_screen_clamp(void) {
+  TEST("center_window_rect: clamps oversized frame to screen origin");
+
+  test_env_init();
+
+  int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
+  int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
+  rect_t centered = center_window_rect((rect_t){0, 0, sw + 50, sh + 20}, NULL);
+
+  ASSERT_EQUAL(centered.x, 0);
+  ASSERT_EQUAL(centered.y, 0);
+  ASSERT_EQUAL(centered.w, sw + 50);
+  ASSERT_EQUAL(centered.h, sh + 20);
+
+  test_env_shutdown();
+  PASS();
+}
+
 // ──────────────────────────────────────────────────────────────────────────
 // main
 // ──────────────────────────────────────────────────────────────────────────
@@ -204,6 +242,8 @@ int main(int argc, char *argv[]) {
   test_form_child_flags();
   test_form_child_text();
   test_show_dialog_from_form_flags();
+  test_center_window_rect_owner();
+  test_center_window_rect_screen_clamp();
 
   TEST_END();
 }

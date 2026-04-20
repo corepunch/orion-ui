@@ -263,6 +263,35 @@ window_t *get_root_window(window_t *window) {
   return window->parent ? get_root_window(window->parent) : window;
 }
 
+rect_t center_window_rect(rect_t frame_rect, window_t const *owner) {
+  int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
+  int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
+  window_t *root = owner ? get_root_window((window_t *)owner) : NULL;
+
+  if (root) {
+    frame_rect.x = root->frame.x + (root->frame.w - frame_rect.w) / 2;
+    frame_rect.y = root->frame.y + (root->frame.h - frame_rect.h) / 2;
+  } else if (sw > 0 && sh > 0) {
+    frame_rect.x = (sw - frame_rect.w) / 2;
+    frame_rect.y = (sh - frame_rect.h) / 2;
+  } else {
+    frame_rect.x = 0;
+    frame_rect.y = 0;
+  }
+
+  if (sw > 0 && frame_rect.w >= sw)
+    frame_rect.x = 0;
+  else if (sw > 0)
+    frame_rect.x = MAX(0, MIN(frame_rect.x, sw - frame_rect.w));
+
+  if (sh > 0 && frame_rect.h >= sh)
+    frame_rect.y = 0;
+  else if (sh > 0)
+    frame_rect.y = MAX(0, MIN(frame_rect.y, sh - frame_rect.h));
+
+  return frame_rect;
+}
+
 // Find the first descendant (depth-first) with BUTTON_DEFAULT set.
 // Analogous to DM_GETDEFID in WinAPI dialog management.
 window_t *find_default_button(window_t *win) {

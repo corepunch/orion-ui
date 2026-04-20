@@ -118,7 +118,7 @@ struct window_s {
   bool value;
   bool visible;
   bool disabled;
-  char title[64];
+  char title[512];
   char statusbar_text[64];
   uint32_t cursor_pos;
   window_t *toolbar_children; // real child windows in the toolbar band (toolbar-band-relative frames)
@@ -169,6 +169,12 @@ window_t *get_root_window(window_t *window);
 window_t *find_window(int x, int y);
 window_t *find_default_button(window_t *win);
 bool window_has_focus(const window_t *win);
+
+// Returns a copy of frame_rect centered within the owner window's root window
+// frame, or centered on screen when owner is NULL. The input rect is treated as
+// a full window-frame rect (top-left of title bar, full width/height), not a
+// client rect. The result is clamped to the visible screen bounds.
+rect_t center_window_rect(rect_t frame_rect, window_t const *owner);
 
 // Returns the client area of win in client coordinates {0, 0, client_w, client_h}.
 // The client area excludes the title bar, toolbar, status bar, and any visible

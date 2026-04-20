@@ -249,9 +249,26 @@ void  set_focus(window_t *win);
 void  set_capture(window_t *win);         // capture all mouse events
 bool  is_window(window_t *win);           // safe existence check
 window_t *get_root_window(window_t *win);
+rect_t center_window_rect(rect_t frame_rect, window_t const *owner);
 
 // Allocate and zero window userdata (freed automatically on destroy)
 void *allocate_window_data(window_t *win, size_t size);
+```
+
+`center_window_rect()` centers a full window-frame rect inside an owner window's
+frame, or on the screen when `owner == NULL`. The input rect is treated as the
+actual top-left/titlebar origin and full frame size, not as a client rect.
+This is the preferred helper for centering modeless windows and any custom
+window created with `create_window()` / `create_window_from_form()`.
+
+```c
+rect_t wr = {0, 0, 320, 120};
+adjust_window_rect(&wr, WINDOW_DIALOG | WINDOW_NORESIZE);
+wr = center_window_rect(wr, owner_win);
+
+window_t *dlg = create_window("Options",
+  WINDOW_DIALOG | WINDOW_NORESIZE,
+  &wr, NULL, options_proc, 0, state);
 ```
 
 ## Built-in Scrollbars
