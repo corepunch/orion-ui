@@ -120,6 +120,10 @@ gem_interface_t *gem_get_interface(void);
 //   }
 // -----------------------------------------------------------------------
 
+// GEM_STANDALONE_MAIN is a no-op in gem mode; the shell owns the event loop.
+#define GEM_STANDALONE_MAIN(title_, flags_, w_, h_, menubar_, accel_) \
+    /* no-op: standalone main() not needed when loaded as a .gem */
+
 // Rename main() → gem_main() so it can be invoked as the gem's init fn.
 // (No declaration headers use the identifier 'main', so this is safe.)
 #define main  gem_main
@@ -145,6 +149,45 @@ extern hinstance_t g_gem_hinstance;
 // a macro constant so GEM_MAIN-style code can still reference it.
 #define g_gem_hinstance ((hinstance_t)0)
 #define GEM_MAIN(n_, v_, t_)            /* no-op */
+
+// ---------------------------------------------------------------------------
+// GEM_STANDALONE_MAIN — standard standalone entry point for MDI applications.
+//
+// Generates the canonical int main() for an MDI app that uses gem_init /
+// gem_shutdown and an accelerator-aware event loop.  The macro expands to a
+// no-op in BUILD_AS_GEM mode so it can be placed outside any #ifndef guard.
+//
+// Parameters:
+//   title_   - window title string passed to ui_init_graphics().
+//   flags_   - init flags (e.g. UI_INIT_DESKTOP).
+//   w_, h_   - logical screen dimensions passed to ui_init_graphics().
+//   menubar_ - expression that yields the menubar window_t * (e.g. g_app->menubar_win).
+//   accel_   - expression that yields the accel_table_t * (e.g. g_app->accel).
+//
+// Example usage (at file scope, after GEM_DEFINE):
+//   GEM_STANDALONE_MAIN("Orion My App", UI_INIT_DESKTOP, SCREEN_W, SCREEN_H,
+//                        g_app->menubar_win, g_app->accel)
+// ---------------------------------------------------------------------------
+#define GEM_STANDALONE_MAIN(title_, flags_, w_, h_, menubar_, accel_)     \
+  int main(int argc, char *argv[]) {                                        \
+    if (!ui_init_graphics((flags_), (title_), (w_), (h_)))                 \
+      return 1;                                                             \
+    if (!gem_init(argc, argv, 0)) {                                        \
+      ui_shutdown_graphics();                                               \
+      return 1;                                                             \
+    }                                                                       \
+    while (ui_is_running()) {                                               \
+      ui_event_t e;                                                         \
+      while (get_message(&e)) {                                             \
+        if (!translate_accelerator((menubar_), &e, (accel_)))              \
+          dispatch_message(&e);                                             \
+      }                                                                     \
+      repost_messages();                                                    \
+    }                                                                       \
+    gem_shutdown();                                                         \
+    ui_shutdown_graphics();                                                 \
+    return 0;                                                               \
+  }
 
 #endif  /* BUILD_AS_GEM */
 
