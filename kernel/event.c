@@ -50,6 +50,11 @@ static inline int win_abs_y(window_t *w) {
 // and should be silently discarded by dispatch_message.
 static int g_wakeup_sentinel;
 
+// Coalescing flag: true while a sentinel is already queued in the platform
+// event queue so that wake_event_loop() does not post a second one.
+// Cleared when get_message() consumes the sentinel.
+static bool g_wakeup_pending = false;
+
 // Current modifier state (updated on every key event)
 static uint32_t g_mod_state = 0;
 
@@ -581,17 +586,27 @@ void dispatch_message(ui_event_t *msg) {
 // a sentinel (wakeup-only) event is received; the sentinel case causes the
 // caller's while-loop to exit so that repost_messages() can process queued
 // internal (paint/async) messages before the loop resumes.
+// Multiple sentinels coalesce into a single wakeup via g_wakeup_pending.
 int get_message(ui_event_t *evt) {
   int r = axGetMessage(evt);
   // Sentinel events only wake the loop to trigger repost_messages(); they
-  // carry no UI data.  Return 0 so the caller exits the while-loop.
-  if (r && evt->target == (void *)&g_wakeup_sentinel)
+  // carry no UI data.  Clear the pending flag and return 0 so the caller
+  // exits the while-loop.  The pending flag is what keeps wake_event_loop()
+  // from posting multiple sentinels for a single burst of post_message() calls.
+  if (r && evt->target == (void *)&g_wakeup_sentinel) {
+    g_wakeup_pending = false;
     return 0;
+  }
   return r;
 }
 
 // Post a sentinel event to the platform queue to wake get_message().
 // Called by post_message() whenever a new Orion internal message is enqueued.
+// The g_wakeup_pending flag ensures at most one sentinel is queued at a time,
+// preventing redundant repost_messages() cycles when post_message() is called
+// in rapid succession (e.g., invalidate_window() posts three messages at once).
 void wake_event_loop(void) {
+  if (g_wakeup_pending) return;
+  g_wakeup_pending = true;
   axPostMessageW(&g_wakeup_sentinel, kEventWindowPaint, 0, NULL);
 }

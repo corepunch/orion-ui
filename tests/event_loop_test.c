@@ -24,25 +24,47 @@
 #include <string.h>
 
 // =============================================================================
-// Part 1: get_message() sentinel-filter logic (inlined, no SDL dependency)
+// Part 1: get_message() sentinel-filter and wakeup coalescing
+//         (inlined, no SDL dependency)
 //
 // get_message() calls axGetMessage() and returns 0 when the received event is
-// a sentinel, so that the outer while-loop exits and repost_messages() runs.
+// a sentinel, clearing the wakeup-pending flag so the outer while-loop exits
+// and repost_messages() runs.  wake_event_loop() only posts a sentinel when
+// the pending flag is clear, preventing redundant repost_messages() cycles
+// when post_message() is called in rapid succession.
 // =============================================================================
 
-static int sm_sentinel_obj;  // test-local sentinel (mirrors g_wakeup_sentinel)
+static int  sm_sentinel_obj;         // test-local sentinel (mirrors g_wakeup_sentinel)
+static bool sm_wakeup_pending;       // test-local pending flag (mirrors g_wakeup_pending)
+static int  sm_ax_post_call_count;   // number of sentinel posts via wake_event_loop()
 
-// Inline replica of the sentinel-filter in get_message().
+// Inline replica of the sentinel-filter+flag-clear in get_message().
 static int sm_apply_sentinel_filter(int ax_result, void *target) {
-  if (ax_result && target == (void *)&sm_sentinel_obj)
+  if (ax_result && target == (void *)&sm_sentinel_obj) {
+    sm_wakeup_pending = false;
     return 0;
+  }
   return ax_result;
+}
+
+// Inline replica of wake_event_loop() with coalescing.
+static void sm_wake_event_loop(void) {
+  if (sm_wakeup_pending) return;
+  sm_wakeup_pending = true;
+  sm_ax_post_call_count++;
+}
+
+static void sm_reset_wakeup(void) {
+  sm_wakeup_pending    = false;
+  sm_ax_post_call_count = 0;
 }
 
 void test_sentinel_returns_zero(void) {
   TEST("get_message: sentinel event returns 0 (loop exits for repost_messages)");
   // axGetMessage returned 1 but the event is a sentinel.
+  sm_wakeup_pending = true;  // was set by wake_event_loop()
   ASSERT_EQUAL(sm_apply_sentinel_filter(1, &sm_sentinel_obj), 0);
+  ASSERT_FALSE(sm_wakeup_pending);  // must be cleared
   PASS();
 }
 
@@ -56,6 +78,7 @@ void test_real_event_passes_through(void) {
 void test_quit_zero_passes_through(void) {
   TEST("get_message: axGetMessage returning 0 (quit) is passed through unchanged");
   // Even a sentinel target must not turn a quit signal into 1.
+  sm_wakeup_pending = true;
   ASSERT_EQUAL(sm_apply_sentinel_filter(0, &sm_sentinel_obj), 0);
   ASSERT_EQUAL(sm_apply_sentinel_filter(0, NULL), 0);
   PASS();
@@ -64,6 +87,38 @@ void test_quit_zero_passes_through(void) {
 void test_null_target_not_treated_as_sentinel(void) {
   TEST("get_message: NULL target is not confused with sentinel");
   ASSERT_EQUAL(sm_apply_sentinel_filter(1, NULL), 1);
+  PASS();
+}
+
+void test_wakeup_coalescing_single_post(void) {
+  TEST("wake_event_loop: multiple calls post only one sentinel");
+  sm_reset_wakeup();
+
+  sm_wake_event_loop();  // first call: not pending, should post
+  sm_wake_event_loop();  // already pending, must be skipped
+  sm_wake_event_loop();  // already pending, must be skipped
+
+  ASSERT_EQUAL(sm_ax_post_call_count, 1);  // only one sentinel in queue
+  ASSERT_TRUE(sm_wakeup_pending);
+  PASS();
+}
+
+void test_wakeup_coalescing_rearms_after_consume(void) {
+  TEST("wake_event_loop: re-arms correctly after sentinel is consumed");
+  sm_reset_wakeup();
+
+  sm_wake_event_loop();  // post sentinel, pending=true
+  ASSERT_EQUAL(sm_ax_post_call_count, 1);
+
+  // get_message() consumes the sentinel, clearing pending
+  sm_apply_sentinel_filter(1, &sm_sentinel_obj);
+  ASSERT_FALSE(sm_wakeup_pending);
+
+  // A new batch of post_message() calls should post one fresh sentinel
+  sm_wake_event_loop();
+  sm_wake_event_loop();
+  ASSERT_EQUAL(sm_ax_post_call_count, 2);  // exactly one new post
+  ASSERT_TRUE(sm_wakeup_pending);
   PASS();
 }
 
@@ -244,11 +299,13 @@ int main(int argc, char *argv[]) {
   (void)argc; (void)argv;
   TEST_START("event-driven main loop");
 
-  // Part 1: get_message sentinel-filter
+  // Part 1: get_message sentinel-filter and wakeup coalescing
   test_sentinel_returns_zero();
   test_real_event_passes_through();
   test_quit_zero_passes_through();
   test_null_target_not_treated_as_sentinel();
+  test_wakeup_coalescing_single_post();
+  test_wakeup_coalescing_rearms_after_consume();
 
   // Part 2: post_message deduplication
   test_post_message_deduplication();
