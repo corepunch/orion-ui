@@ -7,9 +7,13 @@
 
 #include "browser.h"
 
-static window_t *g_browser_win = NULL;
-static window_t *g_menubar_win = NULL;
-static bool g_http_ready = false;
+typedef struct {
+  window_t *browser_win;
+  window_t *menubar_win;
+  bool http_ready;
+} app_state_t;
+
+static app_state_t g_app = {0};
 
 static const menu_item_t kBrowserSettingsItems[] = {
   {"Preferences...", ID_MENU_BROWSER_SETTINGS},
@@ -20,9 +24,9 @@ static const menu_def_t kBrowserMenus[] = {
 };
 
 static void browser_handle_menu_command(uint16_t id) {
-  if (!g_browser_win) return;
+  if (!g_app.browser_win) return;
   if (id == ID_MENU_BROWSER_SETTINGS) {
-    send_message(g_browser_win, evCommand, MAKEDWORD(id, kMenuBarNotificationItemClick), NULL);
+    send_message(g_app.browser_win, evCommand, MAKEDWORD(id, kMenuBarNotificationItemClick), NULL);
   }
 }
 
@@ -164,15 +168,15 @@ static result_t browser_proc(window_t *win, uint32_t msg, uint32_t wparam, void 
         free(st);
         win->userdata = NULL;
       }
-      if (g_http_ready) {
+      if (g_app.http_ready) {
         http_shutdown();
-        g_http_ready = false;
+        g_app.http_ready = false;
       }
-      if (g_menubar_win) {
-        destroy_window(g_menubar_win);
-        g_menubar_win = NULL;
+      if (g_app.menubar_win) {
+        destroy_window(g_app.menubar_win);
+        g_app.menubar_win = NULL;
       }
-      g_browser_win = NULL;
+      g_app.browser_win = NULL;
       return true;
 
     default:
@@ -181,11 +185,11 @@ static result_t browser_proc(window_t *win, uint32_t msg, uint32_t wparam, void 
 }
 
 static bool browser_open(hinstance_t hinstance) {
-  if (!g_http_ready) {
+  if (!g_app.http_ready) {
     if (!http_init()) {
       return false;
     }
-    g_http_ready = true;
+    g_app.http_ready = true;
   }
 
   rect_t wr = center_window_rect((rect_t){0, 0, 480, 320 + TITLEBAR_HEIGHT}, NULL);
@@ -199,15 +203,15 @@ static bool browser_open(hinstance_t hinstance) {
     NULL
   );
   if (!win) {
-    if (g_http_ready) {
+    if (g_app.http_ready) {
       http_shutdown();
-      g_http_ready = false;
+      g_app.http_ready = false;
     }
     return false;
   }
-  g_browser_win = win;
+  g_app.browser_win = win;
 
-  g_menubar_win = set_app_menu(
+  g_app.menubar_win = set_app_menu(
     browser_menubar_proc,
     kBrowserMenus,
     (int)(sizeof(kBrowserMenus) / sizeof(kBrowserMenus[0])),

@@ -17,7 +17,7 @@ typedef struct {
 
 static const form_ctrl_def_t kSettingsChildren[] = {
   { FORM_CTRL_LABEL,    -1,              {8,   9, 80, 13},   0,              "Home URL:", "lbl_home"   },
-  { FORM_CTRL_TEXTEDIT, ID_DLG_HOME_EDIT,{68,  7, 260, 16},  0,              "",          "edit_home"  },
+  { FORM_CTRL_TEXTEDIT, ID_DLG_HOME_EDIT,{68,  7, 268, 16},  0,              "",          "edit_home"  },
   { FORM_CTRL_BUTTON,   ID_DLG_SAVE,     {218, 34, 50, 18},  BUTTON_DEFAULT, "Save",      "btn_save"   },
   { FORM_CTRL_BUTTON,   ID_DLG_CANCEL,   {276, 34, 60, 18},  0,              "Cancel",    "btn_cancel" },
 };
