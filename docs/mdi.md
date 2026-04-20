@@ -44,8 +44,9 @@ generate this boilerplate automatically.
 #define ID_FILE_QUIT  4
 #define ID_HELP_ABOUT 100
 
-// Application state — always starts with menubar_win and accel
-// so GEM_STANDALONE_MAIN can reach them uniformly.
+// Application state — contains menubar_win, accel, and hinstance along with
+// app-specific fields.  The GEM_STANDALONE_MAIN macro takes these as explicit
+// expressions, so no particular field ordering is required.
 typedef struct {
   window_t      *menubar_win;
   accel_table_t *accel;
@@ -256,7 +257,7 @@ doc_t *create_document(const char *path) {
       path ? path : "Untitled",
       WINDOW_STATUSBAR | WINDOW_TOOLBAR,
       MAKERECT(g_app->next_x, g_app->next_y, DOC_WIN_W, DOC_WIN_H),
-      NULL, doc_win_proc, 0, doc);
+      NULL, doc_win_proc, g_app->hinstance, doc);
   if (!doc->win) { free(doc); return NULL; }
 
   doc->next   = g_app->docs;
@@ -269,9 +270,8 @@ doc_t *create_document(const char *path) {
 // Refresh the title bar after rename or modification flag change
 void doc_update_title(doc_t *doc) {
   const char *name = doc->filename[0] ? doc->filename : "Untitled";
-  char title[512];
-  snprintf(title, sizeof(title), "%s%s", name, doc->modified ? " *" : "");
-  strncpy(doc->win->title, title, sizeof(doc->win->title) - 1);
+  snprintf(doc->win->title, sizeof(doc->win->title),
+           "%s%s", name, doc->modified ? " *" : "");
   invalidate_window(doc->win);
 }
 ```
@@ -282,8 +282,8 @@ void doc_update_title(doc_t *doc) {
 bool doc_confirm_close(doc_t *doc, window_t *parent_win) {
   if (!doc->modified) { close_document(doc); return true; }
   // show a modal "Save changes?" dialog...
-  uint32_t r = show_dialog("Unsaved Changes",
-      MAKERECT(100, 80, 200, 80), parent_win, confirm_proc, NULL);
+  uint32_t r = show_dialog("Unsaved Changes", 200, 80,
+                            parent_win, confirm_proc, NULL);
   if (r == 1) { /* save */ }
   if (r != 0) { close_document(doc); return true; }
   return false;  // user pressed Cancel
