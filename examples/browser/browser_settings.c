@@ -11,6 +11,8 @@
 #define ID_DLG_SAVE        3102
 #define ID_DLG_CANCEL      3103
 
+#define ID_ABOUT_OK        3201
+
 typedef struct {
   browser_state_t *st;
 } browser_settings_dialog_state_t;
@@ -28,6 +30,21 @@ static const form_def_t kSettingsForm = {
   .height = 62,
   .children = kSettingsChildren,
   .child_count = (int)(sizeof(kSettingsChildren) / sizeof(kSettingsChildren[0])),
+};
+
+static const form_ctrl_def_t kAboutChildren[] = {
+  { FORM_CTRL_LABEL,  -1,          {8,  8, 210, 13},  0,              "Orion Browser",            "lbl_title" },
+  { FORM_CTRL_LABEL,  -1,          {8, 24, 210, 13},  0,              "Version 0.2",              "lbl_version" },
+  { FORM_CTRL_LABEL,  -1,          {8, 40, 220, 26},  0,              "Minimal HTML browser with local file support.", "lbl_desc" },
+  { FORM_CTRL_BUTTON, ID_ABOUT_OK, {84, 72, 60, 18},  BUTTON_DEFAULT, "OK",                       "btn_ok" },
+};
+
+static const form_def_t kAboutForm = {
+  .name = "About Browser",
+  .width = 236,
+  .height = 98,
+  .children = kAboutChildren,
+  .child_count = (int)(sizeof(kAboutChildren) / sizeof(kAboutChildren[0])),
 };
 
 static rect_t browser_centered_settings_rect(window_t *parent) {
@@ -182,6 +199,23 @@ static result_t browser_settings_proc(window_t *win, uint32_t msg, uint32_t wpar
   }
 }
 
+static result_t browser_about_proc(window_t *win, uint32_t msg,
+                                   uint32_t wparam, void *lparam) {
+  (void)lparam;
+
+  switch (msg) {
+    case evCommand:
+      if (HIWORD(wparam) == btnClicked) {
+        end_dialog(win, 1);
+        return true;
+      }
+      return false;
+
+    default:
+      return false;
+  }
+}
+
 bool browser_show_settings_window(window_t *parent, browser_state_t *st) {
   if (!st) return false;
   if (st->settings_win && is_window(st->settings_win)) {
@@ -214,4 +248,37 @@ bool browser_show_settings_window(window_t *parent, browser_state_t *st) {
   move_to_top(win);
   set_focus(win);
   return true;
+}
+
+bool browser_pick_open_path(window_t *parent, char *out_path, size_t out_sz) {
+  openfilename_t ofn = {0};
+
+  ofn.lStructSize = sizeof(ofn);
+  ofn.hwndOwner = parent;
+  ofn.lpstrFile = out_path;
+  ofn.nMaxFile = (uint32_t)out_sz;
+  ofn.lpstrFilter = "HTML Files\0*.html;*.htm\0All Files\0*.*\0";
+  ofn.nFilterIndex = 1;
+  ofn.Flags = OFN_FILEMUSTEXIST;
+
+  return get_open_filename(&ofn);
+}
+
+bool browser_pick_save_path(window_t *parent, char *out_path, size_t out_sz) {
+  openfilename_t ofn = {0};
+
+  ofn.lStructSize = sizeof(ofn);
+  ofn.hwndOwner = parent;
+  ofn.lpstrFile = out_path;
+  ofn.nMaxFile = (uint32_t)out_sz;
+  ofn.lpstrFilter = "HTML Files\0*.html;*.htm\0All Files\0*.*\0";
+  ofn.nFilterIndex = 1;
+  ofn.Flags = OFN_OVERWRITEPROMPT;
+
+  return get_save_filename(&ofn);
+}
+
+void browser_show_about_dialog(window_t *parent) {
+  show_dialog_from_form(&kAboutForm, "About Browser",
+                        parent, browser_about_proc, NULL);
 }
