@@ -31,26 +31,7 @@ extern bitmap_strip_t *ui_get_sysicon_strip(void);
   (float)((scol) * (strip)->icon_w + (strip)->icon_w) / (float)(strip)->sheet_w, \
   (float)((srow) * (strip)->icon_h + (strip)->icon_h) / (float)(strip)->sheet_h
 
-// Message queue structure
-typedef struct {
-  window_t *target;
-  uint32_t msg;
-  uint32_t wparam;
-  void *lparam;
-} msg_t;
 
-static struct {
-  uint8_t read, write;
-  msg_t messages[0x100];
-} queue = {0};
-
-// Free framework-owned asynchronous payloads attached to queue messages.
-// Currently only HTTP progress snapshots are queue-owned.
-static void free_posted_lparam(uint32_t msg, void *lparam) {
-  if (!lparam) return;
-  if (msg == evHttpProgress)
-    free(lparam);
-}
 
 // Separator pseudo-proc: draws a 1-pixel vertical divider line.
 static result_t win_toolbar_sep(window_t *win, uint32_t msg,
@@ -242,8 +223,11 @@ static winhook_t *g_hooks = NULL;
 
 // External references
 
-// Forward declaration for kernel/event.c wake-up helper.
+// Forward declarations for kernel/event.c helpers.
+// wake_event_loop() posts a sentinel to make get_message() return 0 (loop exit).
 extern void wake_event_loop(void);
+// dispatch_message() routes a platform or Orion event to its target window proc.
+void dispatch_message(ui_event_t *evt);
 // Forward declarations for kernel/init.c per-frame rendering.
 extern void ui_begin_frame(void);
 extern void ui_end_frame(void);
@@ -329,16 +313,14 @@ void cleanup_all_hooks(void) {
 }
 
 void reset_message_queue(void) {
-  memset(&queue, 0, sizeof(queue));
+  // Drain any stale Orion events left in the platform queue (e.g. between tests).
+  ui_event_t e;
+  while (axPeekMessage(&e)) {}
 }
 
 // Remove window from message queue
 void remove_from_global_queue(window_t *win) {
-  for (uint8_t w = queue.write, r = queue.read; r != w; r++) {
-    if (queue.messages[r].target == win) {
-      queue.messages[r].target = NULL;
-    }
-  }
+  axRemoveFromQueue(win);
 }
 
 // ---- Built-in scrollbar mouse handling --------------------------------------
@@ -817,43 +799,24 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   return value;
 }
 
-// Post message to window queue (asynchronous)
+// Post message to window queue (asynchronous).
+// Posts directly to the platform event queue via axPostMessageW, then wakes
+// get_message() with a sentinel so the main loop exits and repost_messages()
+// runs.  This matches WinAPI PostMessage semantics: a single OS queue carries
+// both hardware events and application-posted messages.
 void post_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
-  // Keep at most one queued instance per (target, msg) pair.
-  for (uint8_t w = queue.write, r = queue.read; r != w; r++) {
-    if (queue.messages[r].target == win &&
-        queue.messages[r].msg == msg)
-    {
-      // HTTP progress updates are coalesced: keep only the latest payload.
-      if (msg == evHttpProgress) {
-        free_posted_lparam(msg, queue.messages[r].lparam);
-        queue.messages[r].wparam = wparam;
-        queue.messages[r].lparam = lparam;
-      } else {
-        free_posted_lparam(msg, lparam);
-      }
-      return;
-    }
-  }
-  // Add new message
-  queue.messages[queue.write++] = (msg_t) {
-    .target = win,
-    .msg = msg,
-    .wparam = wparam,
-    .lparam = lparam,
-  };
-  // Wake up axWaitMessage in get_message() so the main loop calls
-  // repost_messages() and processes this newly-queued message.
+  axPostMessageW(win, msg, wparam, lparam);
+  // Wake get_message() so the caller's while-loop exits and repost_messages()
+  // can process the newly-queued message this iteration.
   wake_event_loop();
 }
 
-// Check whether 'target' is still a live window (root or descendant).
-// This guards against dispatching messages to windows that were destroyed
-// after the message was posted (e.g. a button posting invalidate_window on
-// itself after end_dialog has already freed it).
-// Complexity is O(queue_len * window_count) per repost_messages call; both
-// counts are small in practice (queue ≤ 256, windows typically < 50).
-static bool is_valid_window_ptr(window_t *target, window_t *list) {
+// Check whether 'target' is still a live window reachable from 'list'.
+// Called by dispatch_message() before routing a posted Orion event to guard
+// against dispatching to a window that was destroyed after post_message()
+// was called.  O(window_count) per call; window counts are small in practice
+// (typically < 50).
+bool is_valid_window_ptr(window_t *target, window_t *list) {
   for (window_t *w = list; w; w = w->next) {
     if (w == target) return true;
     if (is_valid_window_ptr(target, w->children)) return true;
@@ -866,25 +829,11 @@ void repost_messages(void) {
   if (g_ui_runtime.running) {
     ui_begin_frame();   // make GL context current, bind platform framebuffer
   }
-  for (uint8_t write = queue.write; queue.read != write;) {
-    msg_t *m = &queue.messages[queue.read++];
-    if (m->target == NULL) {
-      free_posted_lparam(m->msg, m->lparam);
-      continue;
-    }
-    if (m->msg == evRefreshStencil) {
-      free_posted_lparam(m->msg, m->lparam);
-      if (g_ui_runtime.running) {
-        repaint_stencil();
-      }
-      continue;
-    }
-    if (!is_valid_window_ptr(m->target, g_ui_runtime.windows)) {
-      free_posted_lparam(m->msg, m->lparam);
-      continue;
-    }
-    send_message(m->target, m->msg, m->wparam, m->lparam);
-    free_posted_lparam(m->msg, m->lparam);
+  // Drain any Orion events that were posted during the inner while-loop
+  // dispatch (e.g. invalidations triggered by a paint handler).
+  ui_event_t e;
+  while (axPeekMessage(&e)) {
+    dispatch_message(&e);
   }
   if (g_ui_runtime.running) {
     ui_end_frame();     // present frame (swap buffers / flushBuffer)

@@ -1,21 +1,19 @@
 // Event loop tests — headless, no SDL/OpenGL required.
 //
-// Covers the key behavioural changes introduced by the event-driven main loop:
+// Covers the key behavioural properties of the event-driven main loop:
 //
-//   1. dispatch_message() ignores the wakeup event type.
-//   2. get_message() enters wait-mode on the first call per cycle, then
-//      switches to poll-mode to drain remaining events, and resets to
-//      wait-mode when the queue is empty.
-//   3. post_message() deduplication still works after the wakeup push was
-//      added (no internal messages are lost or duplicated).
-//   4. invalidate_window() still enqueues both NonClientPaint and Paint
+//   1. get_message() filters sentinel (wakeup-only) events: returns 0 so the
+//      outer while-loop exits and repost_messages() is called.
+//   2. get_message() passes real events through unchanged (returns 1).
+//   3. post_message() routes events through the platform queue (axPostMessageW);
+//      repost_messages() drains that queue and dispatches each event.
+//   4. invalidate_window() enqueues RefreshStencil, NonClientPaint, and Paint
 //      messages via post_message().
 //
 // Tests in groups 1-2 are pure-C with no link-time dependencies on SDL or
 // OpenGL; groups 3-4 use test_env so that the real post_message /
 // repost_messages / invalidate_window implementation is exercised (running is
-// false, so all OpenGL calls are no-ops and SDL push is skipped because
-// g_ui_repaint_event remains at its sentinel value).
+// false, so all OpenGL calls are no-ops).
 
 #include "test_framework.h"
 #include "test_env.h"
@@ -25,177 +23,106 @@
 #include <string.h>
 
 // =============================================================================
-// Part 1: dispatch_message wakeup-guard logic (inlined, no SDL dependency)
+// Part 1: get_message() sentinel-filter and wakeup coalescing
+//         (inlined, no SDL dependency)
+//
+// get_message() calls axGetMessage() and returns 0 when the received event is
+// a sentinel, clearing the wakeup-pending flag so the outer while-loop exits
+// and repost_messages() runs.  wake_event_loop() only posts a sentinel when
+// the pending flag is clear, preventing redundant repost_messages() cycles
+// when post_message() is called in rapid succession.
 // =============================================================================
 
-// Sentinel value used in the real code to indicate "event type not yet
-// registered".  Must match the definition of g_ui_repaint_event in
-// kernel/event.c.  If that sentinel ever changes, update this too.
-#define UI_REPAINT_SENTINEL ((uint32_t)-1)
+static int  sm_sentinel_obj;         // test-local sentinel (mirrors g_wakeup_sentinel)
+static bool sm_wakeup_pending;       // test-local pending flag (mirrors g_wakeup_pending)
+static int  sm_ax_post_call_count;   // number of sentinel posts via wake_event_loop()
 
-// Inline replica of the guard at the top of dispatch_message().
-// Returns true when the event should be silently ignored (it is a wakeup).
-static bool should_ignore_event(uint32_t repaint_event, uint32_t evt_type) {
-  return repaint_event != UI_REPAINT_SENTINEL && evt_type == repaint_event;
-}
-
-void test_sentinel_does_not_ignore_any_event(void) {
-  TEST("dispatch guard: sentinel value never ignores any event type");
-  // When g_ui_repaint_event == sentinel, the guard must be inactive.
-  // No event type — not even one whose numeric value equals the sentinel —
-  // should be silently dropped.
-  ASSERT_FALSE(should_ignore_event(UI_REPAINT_SENTINEL, 0));
-  ASSERT_FALSE(should_ignore_event(UI_REPAINT_SENTINEL, 1));
-  ASSERT_FALSE(should_ignore_event(UI_REPAINT_SENTINEL, UI_REPAINT_SENTINEL));
-  PASS();
-}
-
-void test_registered_event_is_ignored(void) {
-  TEST("dispatch guard: registered wakeup event type is ignored");
-  uint32_t repaint_event = 0x8000u; // arbitrary registered value
-  ASSERT_TRUE(should_ignore_event(repaint_event, repaint_event));
-  PASS();
-}
-
-void test_other_events_are_not_ignored(void) {
-  TEST("dispatch guard: non-wakeup events are not ignored");
-  uint32_t repaint_event = 0x8000u;
-  ASSERT_FALSE(should_ignore_event(repaint_event, 0u));
-  ASSERT_FALSE(should_ignore_event(repaint_event, 1u));
-  ASSERT_FALSE(should_ignore_event(repaint_event, repaint_event - 1));
-  ASSERT_FALSE(should_ignore_event(repaint_event, repaint_event + 1));
-  PASS();
-}
-
-// =============================================================================
-// Part 2: get_message() wait→poll state machine (inlined, no SDL dependency)
-// =============================================================================
-
-// Inline replica of the get_message() state machine from kernel/event.c.
-// Instead of calling SDL, it invokes user-supplied fake functions so we can
-// control return values and observe which path was taken.
-
-static int sm_wait_return = 0;
-static int sm_poll_return = 0;
-static int sm_wait_call_count = 0;
-static int sm_poll_call_count = 0;
-static bool sm_draining = false;  // mirrors s_draining_queue in get_message()
-
-static void sm_reset(void) {
-  sm_wait_return    = 0;
-  sm_poll_return    = 0;
-  sm_wait_call_count = 0;
-  sm_poll_call_count = 0;
-  sm_draining        = false;
-}
-
-static int sm_fake_wait(void) { sm_wait_call_count++; return sm_wait_return; }
-static int sm_fake_poll(void) { sm_poll_call_count++; return sm_poll_return; }
-
-// Mirrors the get_message() body but uses the fake functions above.
-static int sm_get_message(void) {
-  if (sm_draining) {
-    int r = sm_fake_poll();
-    if (!r) sm_draining = false;
-    return r;
+// Inline replica of the sentinel-filter+flag-clear in get_message().
+static int sm_apply_sentinel_filter(int ax_result, void *target) {
+  if (ax_result && target == (void *)&sm_sentinel_obj) {
+    sm_wakeup_pending = false;
+    return 0;
   }
-  sm_draining = true;
-  return sm_fake_wait();
+  return ax_result;
 }
 
-void test_first_call_uses_wait(void) {
-  TEST("get_message: first call per cycle uses wait (not poll)");
-  sm_reset();
-  sm_wait_return = 1;  // simulated: an event arrived
+// Inline replica of wake_event_loop() with coalescing.
+static void sm_wake_event_loop(void) {
+  if (sm_wakeup_pending) return;
+  sm_wakeup_pending = true;
+  sm_ax_post_call_count++;
+}
 
-  int r = sm_get_message();
+static void sm_reset_wakeup(void) {
+  sm_wakeup_pending    = false;
+  sm_ax_post_call_count = 0;
+}
 
-  ASSERT_EQUAL(r, 1);
-  ASSERT_EQUAL(sm_wait_call_count, 1);
-  ASSERT_EQUAL(sm_poll_call_count, 0);
-  ASSERT_TRUE(sm_draining);  // switched to drain mode
+void test_sentinel_returns_zero(void) {
+  TEST("get_message: sentinel event returns 0 (loop exits for repost_messages)");
+  // axGetMessage returned 1 but the event is a sentinel.
+  sm_wakeup_pending = true;  // was set by wake_event_loop()
+  ASSERT_EQUAL(sm_apply_sentinel_filter(1, &sm_sentinel_obj), 0);
+  ASSERT_FALSE(sm_wakeup_pending);  // must be cleared
   PASS();
 }
 
-void test_subsequent_calls_use_poll(void) {
-  TEST("get_message: subsequent calls in drain mode use poll");
-  sm_reset();
-  sm_wait_return = 1;
-  sm_poll_return = 1;
-
-  sm_get_message();  // first call → wait, enters drain mode
-  sm_wait_call_count = 0;  // reset counters to check the second call only
-
-  int r = sm_get_message();
-
-  ASSERT_EQUAL(r, 1);
-  ASSERT_EQUAL(sm_wait_call_count, 0);
-  ASSERT_EQUAL(sm_poll_call_count, 1);
-  ASSERT_TRUE(sm_draining);  // still draining
+void test_real_event_passes_through(void) {
+  TEST("get_message: real event (non-sentinel target) returns 1");
+  int other_target = 0;
+  ASSERT_EQUAL(sm_apply_sentinel_filter(1, &other_target), 1);
   PASS();
 }
 
-void test_empty_poll_resets_to_wait_mode(void) {
-  TEST("get_message: poll returning 0 resets to wait mode");
-  sm_reset();
-  sm_wait_return = 1;
-  sm_poll_return = 0;  // queue empty
-
-  sm_get_message();  // first call → wait, enters drain mode
-
-  int r = sm_get_message();  // second call → poll returns 0
-
-  ASSERT_EQUAL(r, 0);
-  ASSERT_FALSE(sm_draining);  // reset back to wait mode
-
-  // Third call must use wait again (not poll).
-  sm_wait_call_count = 0;
-  sm_poll_call_count = 0;
-  sm_wait_return = 1;
-  sm_get_message();
-  ASSERT_EQUAL(sm_wait_call_count, 1);
-  ASSERT_EQUAL(sm_poll_call_count, 0);
+void test_quit_zero_passes_through(void) {
+  TEST("get_message: axGetMessage returning 0 (quit) is passed through unchanged");
+  // Even a sentinel target must not turn a quit signal into 1.
+  sm_wakeup_pending = true;
+  ASSERT_EQUAL(sm_apply_sentinel_filter(0, &sm_sentinel_obj), 0);
+  ASSERT_EQUAL(sm_apply_sentinel_filter(0, NULL), 0);
   PASS();
 }
 
-void test_full_cycle_wait_then_drain_then_reset(void) {
-  TEST("get_message: full cycle — wait, drain 2 events, empty, reset to wait");
-  sm_reset();
-  sm_wait_return = 1;
-  sm_poll_return = 1;
+void test_null_target_not_treated_as_sentinel(void) {
+  TEST("get_message: NULL target is not confused with sentinel");
+  ASSERT_EQUAL(sm_apply_sentinel_filter(1, NULL), 1);
+  PASS();
+}
 
-  // Simulate: queue has 3 events — wait returns the first, poll returns 2 more,
-  // then poll returns 0 (empty).
-  int call = 0;
-  int results[5] = {0};
+void test_wakeup_coalescing_single_post(void) {
+  TEST("wake_event_loop: multiple calls post only one sentinel");
+  sm_reset_wakeup();
 
-  // call 0: wait → 1
-  sm_wait_return = 1; sm_poll_return = 1;
-  results[call++] = sm_get_message();  // wait, draining=true
+  sm_wake_event_loop();  // first call: not pending, should post
+  sm_wake_event_loop();  // already pending, must be skipped
+  sm_wake_event_loop();  // already pending, must be skipped
 
-  // call 1: poll → 1
-  results[call++] = sm_get_message();  // poll
+  ASSERT_EQUAL(sm_ax_post_call_count, 1);  // only one sentinel in queue
+  ASSERT_TRUE(sm_wakeup_pending);
+  PASS();
+}
 
-  // call 2: poll → 0 (empty), draining resets to false
-  sm_poll_return = 0;
-  results[call++] = sm_get_message();  // poll returns 0
+void test_wakeup_coalescing_rearms_after_consume(void) {
+  TEST("wake_event_loop: re-arms correctly after sentinel is consumed");
+  sm_reset_wakeup();
 
-  // call 3: wait again (new cycle starts)
-  sm_wait_return = 1; sm_poll_return = 0;
-  sm_wait_call_count = 0; sm_poll_call_count = 0;
-  results[call++] = sm_get_message();  // must use wait
+  sm_wake_event_loop();  // post sentinel, pending=true
+  ASSERT_EQUAL(sm_ax_post_call_count, 1);
 
-  ASSERT_EQUAL(results[0], 1);
-  ASSERT_EQUAL(results[1], 1);
-  ASSERT_EQUAL(results[2], 0);
-  ASSERT_EQUAL(results[3], 1);
-  ASSERT_EQUAL(sm_wait_call_count, 1);  // call 3 used wait
-  ASSERT_EQUAL(sm_poll_call_count, 0);
+  // get_message() consumes the sentinel, clearing pending
+  sm_apply_sentinel_filter(1, &sm_sentinel_obj);
+  ASSERT_FALSE(sm_wakeup_pending);
+
+  // A new batch of post_message() calls should post one fresh sentinel
+  sm_wake_event_loop();
+  sm_wake_event_loop();
+  ASSERT_EQUAL(sm_ax_post_call_count, 2);  // exactly one new post
+  ASSERT_TRUE(sm_wakeup_pending);
   PASS();
 }
 
 // =============================================================================
-// Part 3: post_message deduplication still works (integration, running=false)
+// Part 2: post_message deduplication still works (integration, running=false)
 // =============================================================================
 
 // No-op window procedure used as a message sink.
@@ -245,15 +172,17 @@ static void hook_nc_root(window_t *w, uint32_t msg, uint32_t wp, void *lp, void 
 }
 
 void test_post_message_deduplication(void) {
-  TEST("post_message: duplicate msg+target is dropped from internal queue");
+  TEST("post_message: messages are routed through axPostMessageW and dispatched");
   test_env_init();
 
   window_t *win = test_env_create_window("dup-test", 10, 10, 100, 100,
                                           noop_proc, NULL);
   ASSERT_NOT_NULL(win);
 
-  // Post the same message twice.  The second post should nullify the first
-  // entry in the queue so that only one delivery happens.
+  // Post the same message twice.  Both go into the platform queue; both are
+  // dispatched when repost_messages() drains the queue.  The ring-buffer
+  // deduplication was removed when post_message() was changed to call
+  // axPostMessageW directly — the platform queue carries all posted events.
   post_message(win, evPaint, 0, NULL);
   post_message(win, evPaint, 0, NULL);
 
@@ -261,9 +190,9 @@ void test_post_message_deduplication(void) {
   repost_messages();
 
   // Because running==false the OpenGL calls inside evPaint are
-  // skipped, but the window proc IS still called.  Only one call should occur
-  // because duplicates are deduplicated by post_message().
-  ASSERT_EQUAL(msg_sink_count, 1);
+  // skipped, but the window proc IS still called.  Two events were posted
+  // so two calls are expected.
+  ASSERT_EQUAL(msg_sink_count, 2);
 
   destroy_window(win);
   test_env_shutdown();
@@ -295,7 +224,7 @@ void test_post_message_different_targets_both_delivered(void) {
 }
 
 // =============================================================================
-// Part 4: invalidate_window() enqueues paint messages (integration)
+// Part 3: invalidate_window() enqueues paint messages (integration)
 // =============================================================================
 
 void test_invalidate_window_enqueues_paint(void) {
@@ -371,22 +300,19 @@ int main(int argc, char *argv[]) {
   (void)argc; (void)argv;
   TEST_START("event-driven main loop");
 
-  // Part 1: dispatch_message guard
-  test_sentinel_does_not_ignore_any_event();
-  test_registered_event_is_ignored();
-  test_other_events_are_not_ignored();
+  // Part 1: get_message sentinel-filter and wakeup coalescing
+  test_sentinel_returns_zero();
+  test_real_event_passes_through();
+  test_quit_zero_passes_through();
+  test_null_target_not_treated_as_sentinel();
+  test_wakeup_coalescing_single_post();
+  test_wakeup_coalescing_rearms_after_consume();
 
-  // Part 2: get_message state machine
-  test_first_call_uses_wait();
-  test_subsequent_calls_use_poll();
-  test_empty_poll_resets_to_wait_mode();
-  test_full_cycle_wait_then_drain_then_reset();
-
-  // Part 3: post_message deduplication
+  // Part 2: post_message deduplication
   test_post_message_deduplication();
   test_post_message_different_targets_both_delivered();
 
-  // Part 4: invalidate_window
+  // Part 3: invalidate_window
   test_invalidate_window_enqueues_paint();
   test_invalidate_routes_to_root();
 
