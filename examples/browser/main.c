@@ -188,7 +188,7 @@ static bool browser_open(hinstance_t hinstance) {
     g_http_ready = true;
   }
 
-  rect_t wr = center_window_rect((rect_t){0, 0, 720, 500 + TITLEBAR_HEIGHT}, NULL);
+  rect_t wr = center_window_rect((rect_t){0, 0, 480, 320 + TITLEBAR_HEIGHT}, NULL);
   window_t *win = create_window(
     "Browser (MVP)",
     WINDOW_TOOLBAR,
@@ -229,7 +229,7 @@ GEM_DEFINE("Browser", "0.1", gem_init, NULL, NULL)
 
 #ifndef BUILD_AS_GEM
 int main(void) {
-  if (!ui_init_graphics(UI_INIT_DESKTOP, "Browser", 760, 560)) {
+  if (!ui_init_graphics(UI_INIT_DESKTOP, "Browser", 640, 480)) {
     fprintf(stderr, "Failed to initialize graphics.\n");
     return 1;
   }
