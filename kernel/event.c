@@ -240,7 +240,7 @@ void move_to_top(window_t* _win) {
 
 // Dispatch a platform AXmessage to the Orion window system.
 void dispatch_message(ui_event_t *msg) {
-  // Wakeup events are used only to unblock axWaitEvent; discard them.
+  // Wakeup events are used only to unblock axWaitMessage; discard them.
   if (msg->target == &g_wakeup_sentinel)
     return;
 
@@ -577,23 +577,23 @@ void dispatch_message(ui_event_t *msg) {
 }
 
 // Get next platform event.
-// Blocks with axWaitEvent on the first call per cycle (saving CPU), then
-// drains any additional queued events with axPollEvent.  Returns 0 when the
+// Blocks with axWaitMessage on the first call per cycle (saving CPU), then
+// drains any additional queued events with axPeekMessage.  Returns 0 when the
 // platform queue is empty, which causes the caller's while-loop to exit and
 // call repost_messages() to process internal (paint/async) messages.
 int get_message(ui_event_t *evt) {
   static bool s_draining_queue = false;
   if (s_draining_queue) {
-    int r = axPollEvent(evt);
+    int r = axPeekMessage(evt);
     if (!r) s_draining_queue = false;
     return r;
   }
   s_draining_queue = true;
-  axWaitEvent(0);
-  return axPollEvent(evt);
+  axWaitMessage(0);
+  return axPeekMessage(evt);
 }
 
-// Wake up axWaitEvent by posting a sentinel event to the platform queue.
+// Wake up axWaitMessage by posting a sentinel event to the platform queue.
 // Called by post_message() whenever a new Orion internal message is enqueued.
 void wake_event_loop(void) {
   axPostMessageW(&g_wakeup_sentinel, kEventWindowPaint, 0, NULL);

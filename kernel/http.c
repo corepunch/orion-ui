@@ -10,7 +10,7 @@
  * caller's window via post_message().
  *
  * The worker thread signals the Orion event loop via axPostMessageW so that
- * axWaitEvent() wakes up and the message is dispatched without polling delay.
+ * axWaitMessage() wakes up and the message is dispatched without polling delay.
  *
  * Threading model
  * ---------------
