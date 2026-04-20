@@ -5,16 +5,15 @@
 //   1. get_message() filters sentinel (wakeup-only) events: returns 0 so the
 //      outer while-loop exits and repost_messages() is called.
 //   2. get_message() passes real events through unchanged (returns 1).
-//   3. post_message() deduplication still works (no internal messages lost
-//      or duplicated).
-//   4. invalidate_window() still enqueues both NonClientPaint and Paint
+//   3. post_message() routes events through the platform queue (axPostMessageW);
+//      repost_messages() drains that queue and dispatches each event.
+//   4. invalidate_window() enqueues RefreshStencil, NonClientPaint, and Paint
 //      messages via post_message().
 //
 // Tests in groups 1-2 are pure-C with no link-time dependencies on SDL or
 // OpenGL; groups 3-4 use test_env so that the real post_message /
 // repost_messages / invalidate_window implementation is exercised (running is
-// false, so all OpenGL calls are no-ops and SDL push is skipped because
-// g_ui_repaint_event remains at its sentinel value).
+// false, so all OpenGL calls are no-ops).
 
 #include "test_framework.h"
 #include "test_env.h"
@@ -173,15 +172,17 @@ static void hook_nc_root(window_t *w, uint32_t msg, uint32_t wp, void *lp, void 
 }
 
 void test_post_message_deduplication(void) {
-  TEST("post_message: duplicate msg+target is dropped from internal queue");
+  TEST("post_message: messages are routed through axPostMessageW and dispatched");
   test_env_init();
 
   window_t *win = test_env_create_window("dup-test", 10, 10, 100, 100,
                                           noop_proc, NULL);
   ASSERT_NOT_NULL(win);
 
-  // Post the same message twice.  The second post should nullify the first
-  // entry in the queue so that only one delivery happens.
+  // Post the same message twice.  Both go into the platform queue; both are
+  // dispatched when repost_messages() drains the queue.  The ring-buffer
+  // deduplication was removed when post_message() was changed to call
+  // axPostMessageW directly — the platform queue carries all posted events.
   post_message(win, evPaint, 0, NULL);
   post_message(win, evPaint, 0, NULL);
 
@@ -189,9 +190,9 @@ void test_post_message_deduplication(void) {
   repost_messages();
 
   // Because running==false the OpenGL calls inside evPaint are
-  // skipped, but the window proc IS still called.  Only one call should occur
-  // because duplicates are deduplicated by post_message().
-  ASSERT_EQUAL(msg_sink_count, 1);
+  // skipped, but the window proc IS still called.  Two events were posted
+  // so two calls are expected.
+  ASSERT_EQUAL(msg_sink_count, 2);
 
   destroy_window(win);
   test_env_shutdown();

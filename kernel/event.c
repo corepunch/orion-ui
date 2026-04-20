@@ -22,6 +22,10 @@ extern void show_window(window_t *win, bool visible);
 extern void end_dialog(window_t *win, uint32_t code);
 extern void invalidate_window(window_t *win);
 extern int titlebar_height(window_t const *win);
+// Window-liveness check — defined in user/message.c; used to guard posted events.
+extern bool is_valid_window_ptr(window_t *target, window_t *list);
+// repaint_stencil() is called when evRefreshStencil is dispatched.
+extern void repaint_stencil(void);
 
 // Macros for coordinate conversion (platform logical → Orion logical)
 #define SCALE_POINT(x) ((x)/UI_WINDOW_SCALE)
@@ -245,9 +249,13 @@ void move_to_top(window_t* _win) {
 
 // Dispatch a platform AXmessage to the Orion window system.
 void dispatch_message(ui_event_t *msg) {
-  // Sentinel events are filtered by get_message(); guard here as a safety net.
-  if (msg->target == (void *)&g_wakeup_sentinel)
+  // Sentinel events are wakeup-only — clear the pending flag and skip.
+  // get_message() already filters sentinels (returning 0); this guard handles
+  // sentinels that arrive via the repost_messages() drain loop.
+  if (msg->target == (void *)&g_wakeup_sentinel) {
+    g_wakeup_pending = false;
     return;
+  }
 
   window_t *win;
   int px, py; // platform logical coordinates
@@ -576,17 +584,43 @@ void dispatch_message(ui_event_t *msg) {
       break;
     }
 
-    default:
+    case evRefreshStencil:
+      // evRefreshStencil rebuilds the compositing stencil for all windows.
+      // The target may be the dummy value (window_t*)1 used by show_window and
+      // theme-change callers, so it has its own case rather than going through
+      // the window-validity check in the default branch.
+      if (g_ui_runtime.running) repaint_stencil();
       break;
+
+    default: {
+      // All other posted Orion events (evPaint, evNCPaint, evResize, evSetFocus,
+      // evHttpDone, evHttpProgress, …) are routed directly to the target window.
+      // Validate the pointer first: the window may have been destroyed between
+      // the post_message() call and now.  O(window_count) per call; window
+      // counts are small in practice (typically < 50).
+      if (msg->target &&
+          is_valid_window_ptr(msg->target, g_ui_runtime.windows)) {
+        send_message(msg->target, msg->message, msg->wParam, msg->lParam);
+        // evHttpProgress lparam is a framework-owned malloc'd snapshot; free
+        // it here after the window proc has had a chance to read it.
+        if (msg->message == evHttpProgress && msg->lParam) {
+          free(msg->lParam);
+        }
+      }
+      break;
+    }
   }
 }
 
-// Get next platform event — canonical WinAPI GetMessage equivalent.
-// Blocks until an event arrives, then returns 1.  Returns 0 on quit or when
-// a sentinel (wakeup-only) event is received; the sentinel case causes the
-// caller's while-loop to exit so that repost_messages() can process queued
-// internal (paint/async) messages before the loop resumes.
-// Multiple sentinels coalesce into a single wakeup via g_wakeup_pending.
+// Get next event from the unified platform queue — canonical WinAPI GetMessage
+// equivalent.  post_message() now routes Orion events (evPaint, evNCPaint, …)
+// through axPostMessageW into the same platform queue as hardware events, so
+// both kinds are returned here.
+//
+// Blocks until an event arrives (returns 1).  Returns 0 on quit or when a
+// sentinel (wakeup-only) event is received; the sentinel case causes the
+// caller's while-loop to exit so that repost_messages() can flush any events
+// that were posted during the inner loop before resuming.
 int get_message(ui_event_t *evt) {
   int r = axGetMessage(evt);
   // Sentinel events only wake the loop to trigger repost_messages(); they
@@ -601,7 +635,8 @@ int get_message(ui_event_t *evt) {
 }
 
 // Post a sentinel event to the platform queue to wake get_message().
-// Called by post_message() whenever a new Orion internal message is enqueued.
+// Called by post_message() whenever a new Orion message is enqueued so that
+// the main loop's inner while exits and repost_messages() runs this cycle.
 // The g_wakeup_pending flag ensures at most one sentinel is queued at a time,
 // preventing redundant repost_messages() cycles when post_message() is called
 // in rapid succession (e.g., invalidate_window() posts three messages at once).
