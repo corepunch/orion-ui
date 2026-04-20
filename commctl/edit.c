@@ -6,7 +6,7 @@
 #include "../user/messages.h"
 #include "../user/draw.h"
 
-#define BUFFER_SIZE 64
+#define BUFFER_SIZE 512
 #define PADDING 3
 
 // Helper function (will be moved to ui/user/window.c later)

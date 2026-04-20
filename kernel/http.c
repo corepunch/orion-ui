@@ -21,6 +21,7 @@
  * Public API: see kernel/http.h
  */
 
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -62,27 +63,6 @@
 
 /* Maximum number of HTTP redirects followed before giving up. */
 #define HTTP_MAX_REDIRECTS  8
-
-/* =========================================================================
- * Portable helpers
- * ====================================================================== */
-
-/* Case-insensitive substring search (strcasestr is GNU-only; not on Windows). */
-static const char *
-http_strcasestr(const char *haystack, const char *needle)
-{
-  if (!needle) return NULL;
-  size_t nlen = strlen(needle);
-  if (nlen == 0) return haystack; /* empty needle matches at start, per POSIX */
-  if (!haystack) return NULL;
-  size_t hlen = strlen(haystack);
-  if (nlen > hlen) return NULL;
-  for (size_t i = 0; i <= hlen - nlen; i++) {
-    if (strncasecmp(haystack + i, needle, nlen) == 0)
-      return haystack + i;
-  }
-  return NULL;
-}
 
 /* =========================================================================
  * Internal types
@@ -450,8 +430,25 @@ parse_http_response(const char *raw, size_t raw_len,
     } else if (chunked_out && strncasecmp(p, "Transfer-Encoding:", 18) == 0) {
       const char *v = p + 18;
       while (v < eol && isspace((unsigned char)*v)) v++;
-      if (v < eol && http_strcasestr(v, "chunked"))
-        *chunked_out = true;
+      /* Bounded token search within the header value [v, eol) only.
+       * Per RFC 7230 §4, transfer-codings are comma-separated tokens;
+       * verify "chunked" appears as a complete token (not a substring). */
+      size_t val_len = (size_t)(eol - v);
+      if (val_len >= 7) {
+        for (size_t off = 0; off <= val_len - 7; off++) {
+          if (strncasecmp(v + off, "chunked", 7) == 0) {
+            bool at_start = (off == 0 || v[off - 1] == ','
+                             || isspace((unsigned char)v[off - 1]));
+            bool at_end   = (off + 7 == val_len || v[off + 7] == ','
+                             || v[off + 7] == ';'
+                             || isspace((unsigned char)v[off + 7]));
+            if (at_start && at_end) {
+              *chunked_out = true;
+              break;
+            }
+          }
+        }
+      }
     } else if (location_out && strncasecmp(p, "Location:", 9) == 0) {
       const char *loc = p + 9;
       while (*loc == ' ') loc++;
@@ -510,6 +507,8 @@ static char *decode_chunked_body(const char *in, size_t in_len, size_t *out_len)
       int hv = hex_val(in[p]);
       if (hv < 0) goto partial;
       have_hex = true;
+      /* Guard against chunk_sz overflow when accumulating hex digits. */
+      if (chunk_sz > (SIZE_MAX >> 4)) goto partial;
       chunk_sz = (chunk_sz << 4) | (size_t)hv;
     }
     if (!have_hex) break;
@@ -529,7 +528,11 @@ static char *decode_chunked_body(const char *in, size_t in_len, size_t *out_len)
       return out;
     }
 
-    if (i + chunk_sz + 2 > in_len) break;
+    /* Overflow-safe bounds check: verify chunk_sz bytes + trailing CRLF fit in [i, in_len).
+     * Loop invariant guarantees i <= in_len; the explicit check makes this self-documenting. */
+    if (chunk_sz > in_len - i || in_len - i - chunk_sz < 2) break;
+    /* Overflow-safe growth: verify used + chunk_sz + 1 does not wrap size_t. */
+    if (chunk_sz > SIZE_MAX - used - 1) { free(out); return NULL; }
     if (used + chunk_sz + 1 > cap) {
       while (used + chunk_sz + 1 > cap) cap *= 2;
       char *nb = (char *)realloc(out, cap);
