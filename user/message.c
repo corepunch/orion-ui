@@ -32,6 +32,28 @@ extern bitmap_strip_t *ui_get_sysicon_strip(void);
   (float)((srow) * (strip)->icon_h + (strip)->icon_h) / (float)(strip)->sheet_h
 
 
+// Message queue structure for Orion-posted messages only.
+typedef struct {
+  window_t *target;
+  uint32_t msg;
+  uint32_t wparam;
+  void *lparam;
+} msg_t;
+
+static struct {
+  uint8_t read, write;
+  msg_t messages[0x100];
+} queue = {0};
+
+// Free framework-owned asynchronous payloads attached to queue messages.
+// Currently only HTTP progress snapshots are queue-owned.
+static void free_posted_lparam(uint32_t msg, void *lparam) {
+  if (!lparam) return;
+  if (msg == evHttpProgress)
+    free(lparam);
+}
+
+
 
 // Separator pseudo-proc: draws a 1-pixel vertical divider line.
 static result_t win_toolbar_sep(window_t *win, uint32_t msg,
@@ -313,14 +335,16 @@ void cleanup_all_hooks(void) {
 }
 
 void reset_message_queue(void) {
-  // Drain any stale Orion events left in the platform queue (e.g. between tests).
-  ui_event_t e;
-  while (axPeekMessage(&e)) {}
+  memset(&queue, 0, sizeof(queue));
 }
 
 // Remove window from message queue
 void remove_from_global_queue(window_t *win) {
-  axRemoveFromQueue(win);
+  for (uint8_t w = queue.write, r = queue.read; r != w; r++) {
+    if (queue.messages[r].target == win) {
+      queue.messages[r].target = NULL;
+    }
+  }
 }
 
 // ---- Built-in scrollbar mouse handling --------------------------------------
@@ -800,12 +824,32 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
 }
 
 // Post message to window queue (asynchronous).
-// Posts directly to the platform event queue via axPostMessageW, then wakes
-// get_message() with a sentinel so the main loop exits and repost_messages()
-// runs.  This matches WinAPI PostMessage semantics: a single OS queue carries
-// both hardware events and application-posted messages.
+// Keeps Orion-posted lifecycle/repaint work separate from the platform's live
+// input queue so repost_messages() cannot accidentally consume fresh mouse/
+// keyboard events while flushing paints.
 void post_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
-  axPostMessageW(win, msg, wparam, lparam);
+  for (uint8_t w = queue.write, r = queue.read; r != w; r++) {
+    if (queue.messages[r].target == win &&
+        queue.messages[r].msg == msg)
+    {
+      if (msg == evHttpProgress) {
+        free_posted_lparam(msg, queue.messages[r].lparam);
+        queue.messages[r].wparam = wparam;
+        queue.messages[r].lparam = lparam;
+      } else {
+        free_posted_lparam(msg, lparam);
+      }
+      return;
+    }
+  }
+
+  queue.messages[queue.write++] = (msg_t) {
+    .target = win,
+    .msg = msg,
+    .wparam = wparam,
+    .lparam = lparam,
+  };
+
   // Wake get_message() so the caller's while-loop exits and repost_messages()
   // can process the newly-queued message this iteration.
   wake_event_loop();
@@ -829,11 +873,25 @@ void repost_messages(void) {
   if (g_ui_runtime.running) {
     ui_begin_frame();   // make GL context current, bind platform framebuffer
   }
-  // Drain any Orion events that were posted during the inner while-loop
-  // dispatch (e.g. invalidations triggered by a paint handler).
-  ui_event_t e;
-  while (axPeekMessage(&e)) {
-    dispatch_message(&e);
+  for (uint8_t write = queue.write; queue.read != write;) {
+    msg_t *m = &queue.messages[queue.read++];
+    if (m->target == NULL) {
+      free_posted_lparam(m->msg, m->lparam);
+      continue;
+    }
+    if (m->msg == evRefreshStencil) {
+      free_posted_lparam(m->msg, m->lparam);
+      if (g_ui_runtime.running) {
+        repaint_stencil();
+      }
+      continue;
+    }
+    if (!is_valid_window_ptr(m->target, g_ui_runtime.windows)) {
+      free_posted_lparam(m->msg, m->lparam);
+      continue;
+    }
+    send_message(m->target, m->msg, m->wparam, m->lparam);
+    free_posted_lparam(m->msg, m->lparam);
   }
   if (g_ui_runtime.running) {
     ui_end_frame();     // present frame (swap buffers / flushBuffer)

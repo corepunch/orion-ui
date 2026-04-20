@@ -215,6 +215,7 @@ void clear_window_children(window_t *win) {
 
 // Destroy a window
 void destroy_window(window_t *win) {
+  window_t *root = get_root_window(win);
   post_message((window_t*)1, evRefreshStencil, 0, NULL);
   invalidate_overlaps(win);
   send_message(win, evDestroy, 0, NULL);
@@ -234,6 +235,15 @@ void destroy_window(window_t *win) {
   clear_toolbar_children(win);
   clear_window_children(win);
   free(win);
+
+  post_message((window_t*)1, evRefreshStencil, 0, NULL);
+  if (root && root != win && is_window(root) && root->visible) {
+    invalidate_window(root);
+  }
+  for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
+    if (w->visible)
+      invalidate_window(w);
+  }
 }
 
 // Find window at coordinates

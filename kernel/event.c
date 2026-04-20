@@ -21,6 +21,7 @@ extern void track_mouse(window_t *win);
 extern void show_window(window_t *win, bool visible);
 extern void end_dialog(window_t *win, uint32_t code);
 extern void invalidate_window(window_t *win);
+extern void destroy_window(window_t *win);
 extern int titlebar_height(window_t const *win);
 // Window-liveness check — defined in user/message.c; used to guard posted events.
 extern bool is_valid_window_ptr(window_t *target, window_t *list);
@@ -376,10 +377,12 @@ void dispatch_message(ui_event_t *msg) {
         move_window(g_ui_runtime.dragging,
                     SCALE_POINT(px) - drag_anchor[0],
                     SCALE_POINT(py) - drag_anchor[1]);
+        repost_messages();
       } else if (g_ui_runtime.resizing) {
         int new_w = SCALE_POINT(px) - resize_anchor[0] - g_ui_runtime.resizing->frame.x;
         int new_h = SCALE_POINT(py) - resize_anchor[1] - g_ui_runtime.resizing->frame.y;
         resize_window(g_ui_runtime.resizing, new_w, new_h);
+        repost_messages();
       } else if (((win = g_ui_runtime.captured) ||
                   (win = find_window(SCALE_POINT(px), SCALE_POINT(py)))))
       {
@@ -570,7 +573,7 @@ void dispatch_message(ui_event_t *msg) {
             end_dialog(closing, -1);
           } else {
             if (!send_message(closing, evClose, 0, NULL)) {
-              show_window(closing, false);
+              destroy_window(closing);
             }
           }
         } else {
@@ -644,16 +647,32 @@ void dispatch_message(ui_event_t *msg) {
 // caller's while-loop to exit so that repost_messages() can flush any events
 // that were posted during the inner loop before resuming.
 int get_message(ui_event_t *evt) {
-  int r = axGetMessage(evt);
+  static bool s_draining_queue = false;
+  int r;
+
+  if (s_draining_queue) {
+    r = axPeekMessage(evt);
+    if (!r) {
+      s_draining_queue = false;
+      return 0;
+    }
+  } else {
+    r = axGetMessage(evt);
+    if (!r) return 0;
+    s_draining_queue = true;
+  }
+
   // Sentinel events only wake the loop to trigger repost_messages(); they
   // carry no UI data.  Clear the pending flag and return 0 so the caller
   // exits the while-loop.  The pending flag is what keeps wake_event_loop()
   // from posting multiple sentinels for a single burst of post_message() calls.
-  if (r && evt->target == (void *)&g_wakeup_sentinel) {
+  if (evt->target == (void *)&g_wakeup_sentinel) {
     g_wakeup_pending = false;
+    s_draining_queue = false;
     return 0;
   }
-  return r;
+
+  return 1;
 }
 
 // Post a sentinel event to the platform queue to wake get_message().
