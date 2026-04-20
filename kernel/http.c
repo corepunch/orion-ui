@@ -21,14 +21,10 @@
  * Public API: see kernel/http.h
  */
 
-/* Enable POSIX extensions (strdup, strncasecmp) without pulling in the full
- * GNU namespace.  Must come before any system header. */
-#define _POSIX_C_SOURCE 200809L
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <strings.h>   /* strncasecmp */
+#include <strings.h>   /* strncasecmp, strcasecmp */
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdarg.h>
@@ -66,6 +62,27 @@
 
 /* Maximum number of HTTP redirects followed before giving up. */
 #define HTTP_MAX_REDIRECTS  8
+
+/* =========================================================================
+ * Portable helpers
+ * ====================================================================== */
+
+/* Case-insensitive substring search (strcasestr is GNU-only; not on Windows). */
+static const char *
+http_strcasestr(const char *haystack, const char *needle)
+{
+  if (!needle) return NULL;
+  size_t nlen = strlen(needle);
+  if (nlen == 0) return haystack; /* empty needle matches at start, per POSIX */
+  if (!haystack) return NULL;
+  size_t hlen = strlen(haystack);
+  if (nlen > hlen) return NULL;
+  for (size_t i = 0; i <= hlen - nlen; i++) {
+    if (strncasecmp(haystack + i, needle, nlen) == 0)
+      return haystack + i;
+  }
+  return NULL;
+}
 
 /* =========================================================================
  * Internal types
@@ -433,7 +450,7 @@ parse_http_response(const char *raw, size_t raw_len,
     } else if (chunked_out && strncasecmp(p, "Transfer-Encoding:", 18) == 0) {
       const char *v = p + 18;
       while (v < eol && isspace((unsigned char)*v)) v++;
-      if (v < eol && strcasestr(v, "chunked"))
+      if (v < eol && http_strcasestr(v, "chunked"))
         *chunked_out = true;
     } else if (location_out && strncasecmp(p, "Location:", 9) == 0) {
       const char *loc = p + 9;
