@@ -240,8 +240,8 @@ void move_to_top(window_t* _win) {
 
 // Dispatch a platform AXmessage to the Orion window system.
 void dispatch_message(ui_event_t *msg) {
-  // Wakeup events are used only to unblock axWaitMessage; discard them.
-  if (msg->target == &g_wakeup_sentinel)
+  // Sentinel events are filtered by get_message(); guard here as a safety net.
+  if (msg->target == (void *)&g_wakeup_sentinel)
     return;
 
   window_t *win;
@@ -576,24 +576,21 @@ void dispatch_message(ui_event_t *msg) {
   }
 }
 
-// Get next platform event.
-// Blocks with axWaitMessage on the first call per cycle (saving CPU), then
-// drains any additional queued events with axPeekMessage.  Returns 0 when the
-// platform queue is empty, which causes the caller's while-loop to exit and
-// call repost_messages() to process internal (paint/async) messages.
+// Get next platform event — canonical WinAPI GetMessage equivalent.
+// Blocks until an event arrives, then returns 1.  Returns 0 on quit or when
+// a sentinel (wakeup-only) event is received; the sentinel case causes the
+// caller's while-loop to exit so that repost_messages() can process queued
+// internal (paint/async) messages before the loop resumes.
 int get_message(ui_event_t *evt) {
-  static bool s_draining_queue = false;
-  if (s_draining_queue) {
-    int r = axPeekMessage(evt);
-    if (!r) s_draining_queue = false;
-    return r;
-  }
-  s_draining_queue = true;
-  axWaitMessage(0);
-  return axPeekMessage(evt);
+  int r = axGetMessage(evt);
+  // Sentinel events only wake the loop to trigger repost_messages(); they
+  // carry no UI data.  Return 0 so the caller exits the while-loop.
+  if (r && evt->target == (void *)&g_wakeup_sentinel)
+    return 0;
+  return r;
 }
 
-// Wake up axWaitMessage by posting a sentinel event to the platform queue.
+// Post a sentinel event to the platform queue to wake get_message().
 // Called by post_message() whenever a new Orion internal message is enqueued.
 void wake_event_loop(void) {
   axPostMessageW(&g_wakeup_sentinel, kEventWindowPaint, 0, NULL);
