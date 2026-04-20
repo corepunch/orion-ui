@@ -105,6 +105,11 @@ static result_t browser_proc(window_t *win, uint32_t msg, uint32_t wparam, void 
         browser_navigate(win, st->home_url, true);
         return true;
       }
+      if ((int)wparam == ID_TB_REFRESH) {
+        if (st->current_url[0])
+          browser_navigate(win, st->current_url, false);
+        return true;
+      }
       return false;
 
     case evHttpDone: {

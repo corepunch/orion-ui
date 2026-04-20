@@ -9,6 +9,7 @@
 #define ID_TB_BACK    1001
 #define ID_TB_FWD     1002
 #define ID_TB_HOME    1003
+#define ID_TB_REFRESH 1006
 #define ID_TB_ADDR    1004
 #define ID_BODY_VIEW  1005
 

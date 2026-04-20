@@ -132,7 +132,8 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
       bool show_pressed = win->pressed ||
                           ((win->flags & BUTTON_PUSHLIKE) && win->value);
       rect_t focus_outer = rect_inset(win->frame, -1);
-      fill_rect(g_ui_runtime.focused == win ? get_sys_color(brFocusRing) : get_sys_color(brWindowBg), R(focus_outer.x, focus_outer.y, focus_outer.w, focus_outer.h));
+      // we don't need to show focus rings on toolbar buttons, but if we did, this would be the place to do it:
+      // fill_rect(g_ui_runtime.focused == win ? get_sys_color(brFocusRing) : get_sys_color(brWindowBg), R(focus_outer.x, focus_outer.y, focus_outer.w, focus_outer.h));
       draw_button(&win->frame, 1, 1, show_pressed);
       int px = show_pressed ? 1 : 0;
       toolbar_button_data_t *bd = (toolbar_button_data_t *)win->userdata;
