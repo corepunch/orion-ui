@@ -97,32 +97,5 @@ void gem_shutdown(void) {
 
 GEM_DEFINE("Task Manager", "1.0", gem_init, gem_shutdown, NULL)
 
-// ============================================================
-// Standalone main
-// ============================================================
-
-#ifndef BUILD_AS_GEM
-int main(int argc, char *argv[]) {
-  if (!ui_init_graphics(UI_INIT_DESKTOP, "Orion Task Manager",
-                        SCREEN_W, SCREEN_H))
-    return 1;
-
-  if (!gem_init(argc, argv, 0)) {
-    ui_shutdown_graphics();
-    return 1;
-  }
-
-  while (ui_is_running()) {
-    ui_event_t e;
-    while (get_message(&e)) {
-      if (!translate_accelerator(g_app->menubar_win, &e, g_app->accel))
-        dispatch_message(&e);
-    }
-    repost_messages();
-  }
-
-  gem_shutdown();
-  ui_shutdown_graphics();
-  return 0;
-}
-#endif
+GEM_STANDALONE_MAIN("Orion Task Manager", UI_INIT_DESKTOP, SCREEN_W, SCREEN_H,
+                    g_app->menubar_win, g_app->accel)

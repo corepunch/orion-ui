@@ -69,6 +69,13 @@ Orion includes a message-driven HTTP/HTTPS client in the kernel layer.
 - API reference and examples: [Async HTTP/HTTPS Client](http.md)
 - Main README quick-start snippet: [README.md](../README.md)
 
+## Building a Full Application
+
+For applications with menus, multiple documents, and keyboard shortcuts,
+use the MDI pattern. See [MDI Application Architecture](mdi.md) for the
+complete guide, including `GEM_STANDALONE_MAIN`, accelerator tables, and
+document management.
+
 ## Minimal Program
 
 ```c

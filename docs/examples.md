@@ -10,6 +10,10 @@ All examples live in `examples/` and can be built with `make examples`.
 Each example also compiles as a loadable `.gem` (`make gems`) and can be
 run under `orion-shell`. See [Gem Plugin System](gems.md) for details.
 
+The imageeditor, taskmanager, and formeditor examples all follow the
+**MDI application pattern** — the recommended architecture for full Orion
+apps. See [MDI Application Architecture](mdi.md) for the complete guide.
+
 ## Hello World (`helloworld.c`)
 
 The minimal Orion program: one window, one label, one button.
