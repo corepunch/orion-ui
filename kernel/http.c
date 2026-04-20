@@ -465,35 +465,54 @@ static char *decode_chunked_body(const char *in, size_t in_len, size_t *out_len)
   size_t i = 0;
   size_t cap = in_len + 1;
   size_t used = 0;
+  bool decoded_any = false;
   char *out = (char *)malloc(cap);
   if (!out) return NULL;
 
   while (i < in_len) {
     size_t line_start = i;
     while (i + 1 < in_len && !(in[i] == '\r' && in[i + 1] == '\n')) i++;
-    if (i + 1 >= in_len) { free(out); return NULL; }
+    if (i + 1 >= in_len) break;
 
     size_t line_end = i;
     i += 2; /* skip CRLF */
 
     size_t chunk_sz = 0;
     bool have_hex = false;
-    for (size_t p = line_start; p < line_end; p++) {
+    size_t p = line_start;
+    while (p < line_end && isspace((unsigned char)in[p])) p++;
+    for (; p < line_end; p++) {
       if (in[p] == ';') break; /* chunk extension */
+      if (isspace((unsigned char)in[p])) {
+        while (p < line_end && isspace((unsigned char)in[p])) p++;
+        if (p < line_end && in[p] != ';') {
+          goto partial;
+        }
+        break;
+      }
       int hv = hex_val(in[p]);
-      if (hv < 0) { free(out); return NULL; }
+      if (hv < 0) goto partial;
       have_hex = true;
       chunk_sz = (chunk_sz << 4) | (size_t)hv;
     }
-    if (!have_hex) { free(out); return NULL; }
+    if (!have_hex) break;
 
     if (chunk_sz == 0) {
+      while (i + 1 < in_len) {
+        if (in[i] == '\r' && in[i + 1] == '\n') {
+          i += 2;
+          break;
+        }
+        while (i + 1 < in_len && !(in[i] == '\r' && in[i + 1] == '\n')) i++;
+        if (i + 1 >= in_len) break;
+        i += 2;
+      }
       out[used] = '\0';
       *out_len = used;
       return out;
     }
 
-    if (i + chunk_sz + 2 > in_len) { free(out); return NULL; }
+    if (i + chunk_sz + 2 > in_len) break;
     if (used + chunk_sz + 1 > cap) {
       while (used + chunk_sz + 1 > cap) cap *= 2;
       char *nb = (char *)realloc(out, cap);
@@ -503,10 +522,18 @@ static char *decode_chunked_body(const char *in, size_t in_len, size_t *out_len)
 
     memcpy(out + used, in + i, chunk_sz);
     used += chunk_sz;
+    decoded_any = true;
     i += chunk_sz;
 
-    if (!(in[i] == '\r' && in[i + 1] == '\n')) { free(out); return NULL; }
+    if (!(in[i] == '\r' && in[i + 1] == '\n')) break;
     i += 2;
+  }
+
+partial:
+  if (decoded_any) {
+    out[used] = '\0';
+    *out_len = used;
+    return out;
   }
 
   free(out);
@@ -682,6 +709,14 @@ execute_request(http_pending_t *req)
     char  *body_copy = NULL;
     if (chunked) {
       body_copy = decode_chunked_body(raw + body_offset, body_len, &body_len);
+      if (!body_copy) {
+        body_len = raw_len - (size_t)body_offset;
+        body_copy = (char *)malloc(body_len + 1);
+        if (body_copy) {
+          memcpy(body_copy, raw + body_offset, body_len);
+          body_copy[body_len] = '\0';
+        }
+      }
     } else {
       body_copy = (char *)malloc(body_len + 1);
       if (body_copy) {
@@ -694,7 +729,7 @@ execute_request(http_pending_t *req)
 
     if (!body_copy) {
       resp->status = 0;
-      resp->error  = "failed to decode response body";
+      resp->error  = "out of memory while storing response body";
       free(headers_copy);
       return resp;
     }
