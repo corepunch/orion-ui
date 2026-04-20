@@ -154,7 +154,19 @@ static result_t browser_proc(window_t *win, uint32_t msg, uint32_t wparam, void 
 
       st->render_text = browser_html_to_plain_text(st->html_raw, resp->body_len);
       if (!st->render_text) st->render_text = strdup("(failed to render text)");
+
+      char *page_title = browser_html_extract_title(st->html_raw, resp->body_len);
+      if (page_title) {
+        snprintf(win->title, sizeof(win->title), "%s - Browser", page_title);
+        free(page_title);
+      } else if (st->current_url[0]) {
+        snprintf(win->title, sizeof(win->title), "%s - Browser", st->current_url);
+      } else {
+        snprintf(win->title, sizeof(win->title), "Browser (MVP)");
+      }
+
       browser_set_body_text(win, st->render_text);
+      invalidate_window(win);
       browser_sync_nav_buttons(win);
 
       http_response_free(resp);
