@@ -154,12 +154,7 @@ SHELL_SRCS = $(wildcard shell/*.c)
 EXAMPLE_DIRS = $(filter-out examples/browser/main.c,$(wildcard examples/*/main.c))
 EXAMPLE_BINS = $(patsubst examples/%/main.c,$(BIN_DIR)/%$(EXE_EXT),$(EXAMPLE_DIRS))
 
-BROWSER_MAIN = examples/browser/main.c
-BROWSER_BIN = $(BIN_DIR)/browser$(EXE_EXT)
-ifneq ($(wildcard $(BROWSER_MAIN)),)
-EXTRA_EXAMPLE_BINS = $(BROWSER_BIN)
-endif
-
+# Detect libxml2 before deciding whether to include the browser target.
 LIBXML2_CFLAGS = $(shell pkg-config --cflags libxml-2.0 2>/dev/null)
 LIBXML2_LIBS = $(shell pkg-config --libs libxml-2.0 2>/dev/null)
 LIBXML2_PREFIX = $(shell brew --prefix libxml2 2>/dev/null)
@@ -171,6 +166,17 @@ endif
 ifeq ($(strip $(LIBXML2_LIBS)),)
 ifneq ($(strip $(LIBXML2_PREFIX)),)
 LIBXML2_LIBS = -L$(LIBXML2_PREFIX)/lib -lxml2
+endif
+endif
+
+# Include the browser example only when its source exists AND libxml2 is available.
+BROWSER_MAIN = examples/browser/main.c
+BROWSER_BIN = $(BIN_DIR)/browser$(EXE_EXT)
+ifneq ($(wildcard $(BROWSER_MAIN)),)
+ifneq ($(strip $(LIBXML2_LIBS)),)
+EXTRA_EXAMPLE_BINS = $(BROWSER_BIN)
+else
+$(info NOTE: libxml2 not found; skipping browser example. Install libxml2 + pkg-config to enable.)
 endif
 endif
 
@@ -264,10 +270,6 @@ $(EXAMPLE_BINS): $(BIN_DIR)/%$(EXE_EXT): $$(wildcard examples/%/*.c) $(SHARED_LI
 
 # Browser example (MVP) - requires libxml2.
 $(BROWSER_BIN): $(wildcard examples/browser/*.c) $(SHARED_LIB) | $(BIN_DIR)
-	@if [ -z "$(LIBXML2_LIBS)" ]; then \
-		echo "ERROR: libxml2 is required for browser example (install libxml2 + pkg-config)."; \
-		exit 1; \
-	fi
 	@echo "Building example: $@"
 	@(find examples/browser -name "*.c" ! -name "main.c" | sort | sed 's/.*/#include "&"/'; \
 	 echo '#include "examples/browser/main.c"') | \

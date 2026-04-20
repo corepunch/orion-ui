@@ -18,7 +18,6 @@ static const toolbar_item_t kMainToolbar[] = {
 // ============================================================
 
 void doc_update_title(task_doc_t *doc) {
-  char title[128];
   const char *name;
   const char *slash;
 
@@ -28,9 +27,8 @@ void doc_update_title(task_doc_t *doc) {
   slash = strrchr(name, '/');
   if (slash) name = slash + 1;
 
-  snprintf(title, sizeof(title), "%s%s", name, doc->modified ? " *" : "");
-  strncpy(doc->win->title, title, sizeof(doc->win->title) - 1);
-  doc->win->title[sizeof(doc->win->title) - 1] = '\0';
+  snprintf(doc->win->title, sizeof(doc->win->title), "%s%s",
+           name, doc->modified ? " *" : "");
   invalidate_window(doc->win);
 }
 

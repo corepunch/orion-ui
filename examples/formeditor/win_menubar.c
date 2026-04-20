@@ -44,10 +44,8 @@ void form_doc_update_title(form_doc_t *doc) {
   const char *name = doc->filename[0] ? doc->filename : "Untitled";
   const char *slash = strrchr(name, '/');
   if (slash) name = slash + 1;
-  char title[64];
-  snprintf(title, sizeof(title), "%s%s", name, doc->modified ? " *" : "");
-  strncpy(doc->doc_win->title, title, sizeof(doc->doc_win->title) - 1);
-  doc->doc_win->title[sizeof(doc->doc_win->title) - 1] = '\0';
+  snprintf(doc->doc_win->title, sizeof(doc->doc_win->title), "%s%s",
+           name, doc->modified ? " *" : "");
   invalidate_window(doc->doc_win);
 }
 
