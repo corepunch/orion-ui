@@ -128,8 +128,8 @@ void gc_handle_command(uint16_t id) {
       ofn.lStructSize = sizeof(ofn);
       ofn.lpstrFile   = path;
       ofn.nMaxFile    = sizeof(path);
-      ofn.Flags       = OFN_PATHMUSTEXIST;
-      if (get_open_filename(&ofn))
+      ofn.Flags       = OFN_PICKFOLDER;
+      if (get_folder_name(&ofn))
         gc_open_repo(path);
       break;
     }

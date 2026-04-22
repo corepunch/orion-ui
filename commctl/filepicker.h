@@ -27,6 +27,7 @@
 #define OFN_PATHMUSTEXIST   (1u << 0)  // the directory part must exist
 #define OFN_FILEMUSTEXIST   (1u << 1)  // the file must already exist (open)
 #define OFN_OVERWRITEPROMPT (1u << 2)  // prompt before overwriting (save)
+#define OFN_PICKFOLDER      (1u << 3)  // pick a directory instead of a file
 
 // ---------------------------------------------------------------------------
 // OPENFILENAME structure (WinAPI analogue)
@@ -56,5 +57,10 @@ bool get_open_filename(openfilename_t *ofn);
 // Writes the selected/entered absolute path into ofn->lpstrFile on success.
 // Returns true when the user confirms, false when cancelled.
 bool get_save_filename(openfilename_t *ofn);
+
+// Show a modal "Select Folder" dialog (set OFN_PICKFOLDER in Flags).
+// Writes the chosen directory's absolute path into ofn->lpstrFile on success.
+// Returns true when the user confirms, false when cancelled.
+bool get_folder_name(openfilename_t *ofn);
 
 #endif

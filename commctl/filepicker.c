@@ -120,6 +120,7 @@ typedef struct {
 
 typedef struct {
   bool            save_mode;
+  bool            pick_folder;  // OFN_PICKFOLDER: select a directory, not a file
   bool            accepted;
   window_t       *list_win;
   window_t       *edit_win;
@@ -137,9 +138,15 @@ typedef struct {
 static void fp_sync_accept_button(fp_state_t *ps) {
   bool enable;
 
-  if (!ps || !ps->ok_win || !ps->edit_win) return;
+  if (!ps || !ps->ok_win) return;
 
-  enable = ps->edit_win->title[0] != '\0';
+  if (ps->pick_folder) {
+    // In folder-pick mode the current directory is always a valid selection.
+    enable = true;
+  } else {
+    if (!ps->edit_win) return;
+    enable = ps->edit_win->title[0] != '\0';
+  }
   enable_window(ps->ok_win, enable);
   if (enable)
     ps->ok_win->flags |= BUTTON_DEFAULT;
@@ -455,8 +462,14 @@ static bool fp_confirm_overwrite(window_t *win, const char *path) {
 }
 
 // Build the full path from the selected filelist item or the edit box + cwd.
-// Returns false when the edit box is empty.
+// In folder-pick mode returns the current directory.
+// Returns false when the result would be empty.
 static bool fp_build_path(fp_state_t *ps, char *out, size_t out_sz) {
+  if (ps->pick_folder) {
+    fp_get_current_dir(ps, out, out_sz);
+    return out[0] != '\0';
+  }
+
   const char *fname = ps->edit_win ? ps->edit_win->title : NULL;
   if (!fname || !fname[0]) return false;
 
@@ -504,6 +517,7 @@ static result_t fp_proc(window_t *win, uint32_t msg,
     case evCreate: {
       ps = (fp_state_t *)lparam;
       win->userdata = ps;
+      ps->pick_folder = !!(ps->ofn->Flags & OFN_PICKFOLDER);
       send_message(win, tbSetItems,
                    sizeof(kFilePickerItems) / sizeof(kFilePickerItems[0]),
                    (void *)kFilePickerItems);
@@ -563,7 +577,8 @@ static result_t fp_proc(window_t *win, uint32_t msg,
         }
       }
 
-      set_window_item_text(win, FP_ID_OK, "%s", ps->save_mode ? "Save" : "Open");
+      set_window_item_text(win, FP_ID_OK, "%s",
+          ps->pick_folder ? "Select" : (ps->save_mode ? "Save" : "Open"));
       register_window_hook(evTextInput, fp_edit_watch_hook, ps);
       register_window_hook(evKeyDown, fp_edit_watch_hook, ps);
       fp_sync_accept_button(ps);
@@ -725,4 +740,9 @@ bool get_open_filename(openfilename_t *ofn) {
 
 bool get_save_filename(openfilename_t *ofn) {
   return fp_run(ofn, true, "Save File");
+}
+
+bool get_folder_name(openfilename_t *ofn) {
+  if (ofn) ofn->Flags |= OFN_PICKFOLDER;
+  return fp_run(ofn, false, "Select Folder");
 }

@@ -275,6 +275,18 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
       if (gc) gc_layout_panels(win);
       return false;
 
+    // ── Screen/platform-window resize (macOS / resize handle) ─
+    // kEventWindowResized in the kernel sends evDisplayChange (not
+    // evResize) to non-ALWAYSINBACK root windows.  We just resize
+    // ourselves to the new screen dimensions; resize_window() then
+    // delivers evResize synchronously which calls gc_layout_panels.
+    case evDisplayChange: {
+      int sw = (int)LOWORD(wparam);
+      int sh = (int)HIWORD(wparam);
+      resize_window(win, sw, sh);
+      return false;
+    }
+
     // ── Draw splitter dividers ────────────────────────────────
     case evPaint: {
       if (!gc) return false;
