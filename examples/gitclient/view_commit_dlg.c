@@ -64,7 +64,6 @@ static result_t commit_dlg_proc(window_t *win, uint32_t msg,
                        edSetText, 0, prev_msg);
         }
       }
-      draw_text_small("Message:", 4, 8, get_sys_color(brTextDisabled));
       return true;
 
     case evPaint:

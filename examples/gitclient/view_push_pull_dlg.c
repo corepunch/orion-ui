@@ -59,7 +59,7 @@ static result_t ppf_dlg_proc(window_t *win, uint32_t msg,
       for (int i = 0; i < n; i++)
         send_message(remote_cb, cbAddString, 0, remotes[i]);
       if (n > 0)
-        set_window_item_text(win, CTL_REMOTE, remotes[0]);
+        set_window_item_text(win, CTL_REMOTE, "%s", remotes[0]);
 
       // Populate branches (local).
       window_t *branch_cb = get_window_item(win, CTL_BRANCH);
@@ -69,7 +69,7 @@ static result_t ppf_dlg_proc(window_t *win, uint32_t msg,
       }
       char cur[256] = {0};
       git_current_branch(gc->repo, cur, sizeof(cur));
-      if (cur[0]) set_window_item_text(win, CTL_BRANCH, cur);
+      if (cur[0]) set_window_item_text(win, CTL_BRANCH, "%s", cur);
 
       return true;
     }

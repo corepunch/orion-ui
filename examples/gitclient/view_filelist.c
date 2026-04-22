@@ -37,7 +37,7 @@ void gc_files_refresh(void) {
   for (int i = 0; i < gc->file_count; i++) {
     git_file_status_t *f = &gc->files[i];
 
-        char st[3] = { f->status, '\0', '\0' };
+        char st[2] = { f->status, '\0' };
 
     // Colour based on status.
     uint32_t color;

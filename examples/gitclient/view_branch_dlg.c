@@ -50,7 +50,7 @@ static result_t new_branch_proc(window_t *win, uint32_t msg,
         // Set current branch as default.
         char cur[256] = {0};
         git_current_branch(gc->repo, cur, sizeof(cur));
-        set_window_item_text(win, CTL_FROM, cur);
+        set_window_item_text(win, CTL_FROM, "%s", cur);
       }
       return true;
     }
