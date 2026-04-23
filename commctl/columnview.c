@@ -56,12 +56,21 @@ static inline bool rv_valid_index(const reportview_data_t *data, int index) {
   return data && index >= 0 && index < (int)data->count;
 }
 
-// Centralized command notification helper (WM_COMMAND with RVN_* code).
+// Centralized command notification helper.
+//
+// Follows WinAPI WM_COMMAND convention for control notifications:
+//   wparam LOWORD = item index (row that triggered the notification)
+//   wparam HIWORD = notification code (RVN_SELCHANGE, RVN_DBLCLK, …)
+//   lparam        = source control window  ← WinAPI: lParam = hWnd of control
+//
+// Sending to get_root_window() mirrors how win_reportview is typically used:
+// the control is a child of the root (or a child of a child), and root-window
+// procs handle RVN_* by examining lparam to identify the source control.
 static void rv_notify(window_t *win, reportview_data_t *data, int index, uint16_t code) {
   if (!rv_valid_index(data, index))
     return;
   send_message(get_root_window(win), evCommand,
-               MAKEDWORD(index, code), &data->items[index]);
+               MAKEDWORD(index, code), (void *)win);
 }
 
 static inline void rv_reset_click_state(reportview_data_t *data) {

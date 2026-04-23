@@ -7,8 +7,8 @@
 //   └─────────────║──────────────────────────────┴────────────┘
 //
 // The branches panel is the WINDOW_SIDEBAR child (fixed width, no drag).
-// The right (diff) and centre horizontal splitters remain user-draggable.
-// Splitter dividers are 4-pixel-wide strips between panels.
+// The right (diff) and centre horizontal splitters are win_splitter children
+// that notify gc_main_proc via spnDragStart when the user clicks them.
 //
 // The main window carries:
 //   • WINDOW_TOOLBAR   → fetch / pull / push / commit toolbar
@@ -96,27 +96,27 @@ void gc_layout_panels(window_t *win) {
     move_window(gc->diff_win, rd.x, rd.y);
     resize_window(gc->diff_win, rd.w, rd.h);
   }
-}
 
-// ============================================================
-// Splitter hit-test — returns 0=none,1=left,2=right,3=centre
-// ============================================================
+  // Keep the win_splitter bar windows in sync with the layout.
+  // vsplitter_win is the right vertical bar; hsplitter_win is the centre
+  // horizontal bar.  Their frame positions are the ground truth used by the
+  // drag handler in evMouseMove.
+  int lw = PANEL_LEFT_W_DEFAULT + PANEL_SPLITTER;
+  int center_w = cr.w - lw - gc->right_w - PANEL_SPLITTER;
+  if (center_w < 20) center_w = 20;
 
-static int splitter_at(gc_state_t *gc, rect_t *cr, int mx, int my) {
-  (void)my;
-  int lx = cr->x + PANEL_LEFT_W_DEFAULT + PANEL_SPLITTER;  // content starts here
-  int rx = cr->x + cr->w - gc->right_w - PANEL_SPLITTER;
-
-  // Right vertical splitter.
-  if (mx >= rx && mx < rx + PANEL_SPLITTER) return 2;
-  // Centre horizontal splitter (only in the centre column).
-  int center_r = rx;
-  if (mx >= lx && mx <= center_r) {
-    int sy = cr->y + gc->vsplit_y;
-    if (my >= sy && my < sy + PANEL_SPLITTER) return 3;
+  if (gc->vsplitter_win) {
+    int spl_x = cr.x + lw + center_w;
+    move_window(gc->vsplitter_win, spl_x, cr.y);
+    resize_window(gc->vsplitter_win, PANEL_SPLITTER, cr.h);
   }
-  return 0;
+  if (gc->hsplitter_win) {
+    int spl_x = cr.x + lw;
+    move_window(gc->hsplitter_win, spl_x, cr.y + gc->vsplit_y);
+    resize_window(gc->hsplitter_win, center_w, PANEL_SPLITTER);
+  }
 }
+
 
 // ============================================================
 // Open / refresh
@@ -215,14 +215,14 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
       // Status bar.
       send_message(win, evStatusBar, 0, "No repository");
 
-      // Sidebar (branches / tags / stashes) — replaces the old manual branches_win.
+      // Sidebar (branches / tags / stashes).
       send_message(win, sbSetContent,
                    (uint32_t)PANEL_LEFT_W_DEFAULT,
                    gc_branches_proc);
       gc->branches_win = win->sidebar_child;
 
       rect_t cr = get_client_rect(win);
-      int lx = PANEL_LEFT_W_DEFAULT + PANEL_SPLITTER;  // content starts after sidebar
+      int lx = PANEL_LEFT_W_DEFAULT + PANEL_SPLITTER;
 
       gc->log_win = create_window("Log",
           WINDOW_NOTITLE | WINDOW_NORESIZE | WINDOW_VSCROLL | WINDOW_NOTRAYBUTTON,
@@ -245,9 +245,24 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
                    gc->right_w, cr.h),
           win, gc_diff_proc, gc->hinstance, NULL);
 
-      show_window(gc->log_win,      true);
-      show_window(gc->files_win,    true);
-      show_window(gc->diff_win,     true);
+      // win_splitter children for the two divider bars.
+      // They paint themselves and send spnDragStart to this proc on click.
+      int center_w = cr.w - lx - gc->right_w - PANEL_SPLITTER;
+      gc->vsplitter_win = create_window("",
+          WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOTRAYBUTTON,
+          MAKERECT(lx + center_w, cr.y, PANEL_SPLITTER, cr.h),
+          win, win_splitter, gc->hinstance, (void *)SPLIT_VERT);
+
+      gc->hsplitter_win = create_window("",
+          WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOTRAYBUTTON,
+          MAKERECT(lx, cr.y + gc->vsplit_y, center_w, PANEL_SPLITTER),
+          win, win_splitter, gc->hinstance, (void *)SPLIT_HORZ);
+
+      show_window(gc->log_win,        true);
+      show_window(gc->files_win,      true);
+      show_window(gc->diff_win,       true);
+      show_window(gc->vsplitter_win,  true);
+      show_window(gc->hsplitter_win,  true);
 
       // Load VGA font for the diff viewer.
       char font_path[600];
@@ -271,59 +286,25 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
       if (gc) gc_layout_panels(win);
       return false;
 
-    // ── Draw splitter dividers ────────────────────────────────
-    case evPaint: {
-      if (!gc) return false;
-      rect_t cr = get_client_rect(win);
-      uint32_t split_col = get_sys_color(brBorderFocus);
-
-      // Right vertical splitter.
-      fill_rect(split_col,
-                R(cr.x + cr.w - gc->right_w - PANEL_SPLITTER, cr.y,
-                  PANEL_SPLITTER, cr.h));
-
-      // Centre horizontal splitter.
-      int cx = cr.x + PANEL_LEFT_W_DEFAULT + PANEL_SPLITTER;
-      int cw = cr.w - PANEL_LEFT_W_DEFAULT - gc->right_w - 2 * PANEL_SPLITTER;
-      fill_rect(split_col,
-                R(cx, cr.y + gc->vsplit_y, cw, PANEL_SPLITTER));
+    // ── evPaint: nothing extra — splitter bars paint themselves ─
+    case evPaint:
       return false;
-    }
 
-    // ── Splitter drag — mouse down ────────────────────────────
-    case evLeftButtonDown: {
-      if (!gc) return false;
-      rect_t cr = get_client_rect(win);
-      int mx = (int)LOWORD(wparam);
-      int my = (int)HIWORD(wparam);
-      int spl = splitter_at(gc, &cr, mx, my);
-      if (spl) {
-        gc->drag_splitter   = spl;
-        gc->drag_start_mouse = (spl == 3) ? my : mx;
-        gc->drag_start_val   = (spl == 2) ? gc->right_w
-                             :               gc->vsplit_y;
-        set_capture(win);
-        return true;
-      }
-      return false;
-    }
-
-    // ── Splitter drag — mouse move ────────────────────────────
+    // ── Splitter drag — mouse move (after set_capture in spnDragStart) ──
     case evMouseMove: {
-      if (!gc || !gc->drag_splitter) return false;
-      rect_t cr = get_client_rect(win);
+      if (!gc || !gc->dragging_splitter) return false;
       int mx = (int)LOWORD(wparam);
       int my = (int)HIWORD(wparam);
-      int delta = (gc->drag_splitter == 3)
-                  ? my - gc->drag_start_mouse
-                  : mx - gc->drag_start_mouse;
+      int orient = win_splitter_orientation(gc->dragging_splitter);
+      int delta  = (orient == SPLIT_HORZ)
+                   ? my - gc->drag_start_mouse
+                   : mx - gc->drag_start_mouse;
 
-      if (gc->drag_splitter == 2) {
+      if (orient == SPLIT_VERT) {
         gc->right_w = gc->drag_start_val - delta;
       } else {
         gc->vsplit_y = gc->drag_start_val + delta;
       }
-      (void)cr;
       gc_layout_panels(win);
       invalidate_window(win);
       return true;
@@ -331,58 +312,85 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
 
     // ── Splitter drag — mouse up ──────────────────────────────
     case evLeftButtonUp:
-      if (gc && gc->drag_splitter) {
-        gc->drag_splitter = 0;
+      if (gc && gc->dragging_splitter) {
+        gc->dragging_splitter = NULL;
         set_capture(NULL);
         return true;
       }
       return false;
 
-    // ── Menu / toolbar / accelerator commands ─────────────────
+    // ── Commands and control notifications ────────────────────
     case evCommand: {
-      if (HIWORD(wparam) == btnClicked || HIWORD(wparam) == 0) {
+      uint16_t code = (uint16_t)HIWORD(wparam);
+
+      // ── Toolbar / menu / accelerator ────────────────────────
+      if (code == btnClicked || code == 0) {
         gc_handle_command((uint16_t)LOWORD(wparam));
         return true;
       }
 
-      // rv_notify() always sends evCommand to the root window (here), so
-      // we dispatch RVN_* notifications from child reportview windows.
-      // For RVN_SELCHANGE: identify the source by checking which window's
-      // selection changed vs the last known state.
-      if (HIWORD(wparam) == RVN_SELCHANGE) {
-        int log_sel = gc->log_win
-                      ? (int)send_message(gc->log_win, RVM_GETSELECTION, 0, NULL)
-                      : -1;
-        if (log_sel >= 0 && log_sel != gc->selected_commit) {
-          gc->selected_commit = log_sel;
-          gc->selected_file   = -1;
-          gc_files_refresh();
-          gc_diff_refresh();
-          return true;
-        }
-        int files_sel = gc->files_win
-                        ? (int)send_message(gc->files_win, RVM_GETSELECTION, 0, NULL)
-                        : -1;
-        if (files_sel != gc->selected_file) {
-          gc->selected_file = files_sel;
-          gc_diff_refresh();
-          return true;
-        }
-        // Must be a branches selection change — refresh the log.
-        if (gc->branches_win)
-          gc_log_refresh();
+      // ── Splitter drag start ──────────────────────────────────
+      // win_splitter sends spnDragStart with the hit point packed in lparam
+      // (as MAKEDWORD(parent_local_x, parent_local_y)).  We capture the main
+      // window so subsequent evMouseMove arrives here with stable parent coords.
+      if (code == spnDragStart) {
+        if (!gc) return false;
+        uint32_t pos  = (uint32_t)(uintptr_t)lparam;
+        int px = (int)(int16_t)LOWORD(pos);
+        int py = (int)(int16_t)HIWORD(pos);
+        // Find which splitter sent the notification by its id.
+        uint16_t spl_id = (uint16_t)LOWORD(wparam);
+        window_t *spl = NULL;
+        if (gc->vsplitter_win && gc->vsplitter_win->id == spl_id)
+          spl = gc->vsplitter_win;
+        else if (gc->hsplitter_win && gc->hsplitter_win->id == spl_id)
+          spl = gc->hsplitter_win;
+        if (!spl) return false;
+
+        gc->dragging_splitter = spl;
+        int orient = win_splitter_orientation(spl);
+        gc->drag_start_mouse = (orient == SPLIT_HORZ) ? py : px;
+        gc->drag_start_val   = (orient == SPLIT_VERT) ? gc->right_w
+                                                       : gc->vsplit_y;
+        set_capture(win);
         return true;
       }
 
-      // For RVN_DBLCLK: LOWORD(wparam) is the row index in the source window.
-      // Files are identified by index matching gc->selected_file (kept current by
-      // RVN_SELCHANGE).  Branches are confirmed by checking branches_win's current
-      // selection and the item's userdata sentinel.
-      if (HIWORD(wparam) == RVN_DBLCLK) {
-        int idx = (int)(uint16_t)LOWORD(wparam);
+      // ── ReportView selection change ──────────────────────────
+      // rv_notify sends lparam = source window (WinAPI WM_COMMAND convention),
+      // so we can identify the control directly without probing all views.
+      if (code == RVN_SELCHANGE) {
+        if (!gc) return true;
+        int sel   = (int)(int16_t)LOWORD(wparam);
+        window_t *src = (window_t *)lparam;
+
+        if (src == gc->log_win) {
+          if (sel != gc->selected_commit) {
+            gc->selected_commit = sel;
+            gc->selected_file   = -1;
+            gc_files_refresh();
+            gc_diff_refresh();
+          }
+        } else if (src == gc->files_win) {
+          if (sel != gc->selected_file) {
+            gc->selected_file = sel;
+            gc_diff_refresh();
+          }
+        } else if (src == gc->branches_win) {
+          gc_log_refresh();
+        }
+        return true;
+      }
+
+      // ── ReportView double-click ──────────────────────────────
+      if (code == RVN_DBLCLK) {
+        if (!gc) return false;
+        int idx       = (int)(int16_t)LOWORD(wparam);
+        window_t *src = (window_t *)lparam;
+
         // Files double-click → stage / unstage.
-        if (gc->repo && idx >= 0 && idx < gc->file_count &&
-            idx == gc->selected_file) {
+        if (src == gc->files_win &&
+            gc->repo && idx >= 0 && idx < gc->file_count) {
           git_file_status_t *f = &gc->files[idx];
           char buf[512] = {0};
           if (f->staged) {
@@ -396,26 +404,24 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
           gc_diff_refresh();
           return true;
         }
+
         // Branches double-click → checkout.
-        if (gc->repo && gc->branches_win) {
-          int br_sel = (int)send_message(gc->branches_win, RVM_GETSELECTION, 0, NULL);
-          if (br_sel == idx && br_sel >= 0) {
-            reportview_item_t item = {0};
-            send_message(gc->branches_win, RVM_GETITEMDATA, (uint32_t)idx, &item);
-            uint32_t ud = item.userdata;
-            if (ud < 0xFF00u && (int)ud < gc->branch_count) {
-              git_branch_t *b = &gc->branches[(int)ud];
-              if (!b->is_remote && !b->is_current) {
-                const char *args[] = { "git", "checkout", b->name, NULL };
-                char buf[512] = {0};
-                if (!git_run_sync(gc->repo, args, buf, sizeof(buf)))
-                  message_box(win, buf, "Checkout failed", MB_OK);
-                else
-                  gc_refresh_all();
-              }
+        if (src == gc->branches_win && gc->repo && idx >= 0) {
+          reportview_item_t item = {0};
+          send_message(gc->branches_win, RVM_GETITEMDATA, (uint32_t)idx, &item);
+          uint32_t ud = item.userdata;
+          if (ud < 0xFF00u && (int)ud < gc->branch_count) {
+            git_branch_t *b = &gc->branches[(int)ud];
+            if (!b->is_remote && !b->is_current) {
+              const char *args[] = { "git", "checkout", b->name, NULL };
+              char buf[512] = {0};
+              if (!git_run_sync(gc->repo, args, buf, sizeof(buf)))
+                message_box(win, buf, "Checkout failed", MB_OK);
+              else
+                gc_refresh_all();
             }
-            return true;
           }
+          return true;
         }
         return false;
       }

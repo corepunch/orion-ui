@@ -167,7 +167,9 @@ result_t main_win_proc(window_t *win, uint32_t msg,
           handle_menu_command((uint16_t)LOWORD(wparam));
           return true;
         
-        // ReportView notifications: LOWORD(wparam) = row index, lparam = reportview_item_t*.
+        // ReportView notifications.
+        // lparam = source control window (window_t*) — WinAPI WM_COMMAND convention.
+        // LOWORD(wparam) = row index; HIWORD(wparam) = notification code.
         case RVN_SELCHANGE: {
           int sel = (int)(int16_t)LOWORD(wparam);
           if (g_app && doc) {

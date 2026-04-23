@@ -43,6 +43,23 @@ result_t win_scrollbar(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
 // See commctl/toolbox.c for the full API and usage examples.
 result_t win_toolbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 
+// Splitter — thin draggable divider bar between two sibling panels.
+// Orientation is set via lparam at create time:
+//   (void *)SPLIT_VERT  → vertical bar (narrow column, drag left/right)
+//   (void *)SPLIT_HORZ  → horizontal bar (narrow row, drag up/down)
+//
+// On left-click the splitter sends evCommand(MAKEDWORD(id, spnDragStart)) to
+// its parent.  lparam packs the hit point in parent-local coordinates
+// as MAKEDWORD(uint16_t px, uint16_t py).  The parent should:
+//   1. Call set_capture(parent_win) to receive subsequent mouse events.
+//   2. Track evMouseMove to recompute the layout.
+//   3. Call set_capture(NULL) + stop tracking on evLeftButtonUp.
+// See examples/gitclient/view_main.c for the canonical usage pattern.
+#define SPLIT_VERT 0
+#define SPLIT_HORZ 1
+result_t win_splitter(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+int      win_splitter_orientation(window_t *win);
+
 // Returns the height (in client pixels) that win_toolbox occupies for its
 // button grid.  Call from a wrapping proc to find where custom content starts.
 int toolbox_grid_height(window_t *win);

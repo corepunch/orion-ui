@@ -170,14 +170,22 @@ typedef struct {
   window_t      *files_win;
   window_t      *diff_win;
 
-  // Splitter positions (in main client-area pixels)
+  // Splitter panel dimensions (in main client-area pixels).
+  // These are the authoritative values; gc_layout_panels() derives all child
+  // rects from them and also repositions the splitter bar windows.
   int           right_w;        // width of right (diff) panel
-  int           vsplit_y;       // y that separates log (top) from files (bottom)
+  int           vsplit_y;       // y separating log (top) from files (bottom)
 
-  // Splitter drag state
-  int           drag_splitter;  // 0=none, 1=left vert, 2=right vert, 3=centre horiz
-  int           drag_start_mouse;
-  int           drag_start_val;
+  // win_splitter child windows for the two divider bars.
+  // The framework hit-tests and routes mouse events to them automatically;
+  // they send spnDragStart to gc_main_proc on left-click.
+  window_t      *vsplitter_win; // right vertical bar
+  window_t      *hsplitter_win; // centre horizontal bar
+
+  // Drag state — populated in the spnDragStart handler, cleared on mouseup.
+  window_t      *dragging_splitter;  // which splitter is currently dragged
+  int            drag_start_mouse;   // mouse coord (x or y) in parent space at drag start
+  int            drag_start_val;     // right_w or vsplit_y at drag start
 
   accel_table_t *accel;
   hinstance_t    hinstance;

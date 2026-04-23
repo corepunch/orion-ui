@@ -112,6 +112,17 @@ enum {
   cbSelectionChange,
   sbChanged,  // wparam: MAKEDWORD(scrollbar_id, sbChanged); lparam: (void*)(intptr_t)new_pos
   bxClicked,    // sent via evCommand: MAKEDWORD(ident, bxClicked)
+
+  // Splitter notifications (win_splitter → parent via evCommand).
+  //
+  // spnDragStart — user pressed the mouse button on a splitter bar.
+  //   wparam = MAKEDWORD(win->id, spnDragStart)
+  //   lparam = MAKEDWORD(parent_local_x, parent_local_y)  (packed uint16_t coords)
+  //
+  // spnMoved — splitter position changed (sent on every mouse-move while dragging).
+  //   Not sent by win_splitter itself; parent may use it to notify grandparents.
+  spnDragStart,
+  spnMoved,
 };
 
 // Button state
