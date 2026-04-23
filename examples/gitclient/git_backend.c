@@ -5,6 +5,25 @@
 // Async operations fire a detached POSIX/Win32 thread and post evGitOpDone
 // back to the caller's window via post_message(), mirroring the pattern used
 // by kernel/http.c.
+//
+// TODO(platform): The three pieces of OS-level functionality used here should
+// eventually be provided by the Orion platform layer (platform/platform.h) so
+// that applications do not need conditional compilation or raw POSIX/Win32
+// calls.  Specifically:
+//
+//   (A) Thread creation / detach — equivalent to axThread(fn, arg) /
+//       axThreadDetach(t) — mirrors kernel/http.c's internal thread helpers.
+//       Once the platform exposes axThread*, remove the #ifdef _WIN32 block
+//       under "Cross-platform thread helpers" below.
+//
+//   (B) Subprocess execution (popen + output capture + exit code) —
+//       equivalent to axRunCommand(cmd, out_buf, out_sz) → int exit_code.
+//       Once the platform exposes axRunCommand, replace gc_popen_read() with
+//       a thin wrapper and remove the gc_build_cmd / gc_popen_read helpers.
+//
+//   (C) Async subprocess — equivalent to axRunCommandAsync(cmd, op,
+//       notify_win, post_msg) — mirrors http_request_async().  Once the
+//       platform exposes this, git_run_async() reduces to a single call.
 
 #include "gitclient.h"
 
@@ -23,7 +42,9 @@ struct git_repo_s {
 };
 
 // ============================================================
-// Cross-platform thread helpers (same pattern as kernel/http.c)
+// Cross-platform thread helpers
+// TODO(platform-A): replace with axThread* once the platform layer exposes
+// a portable thread-creation / detach API (see file-level TODO above).
 // ============================================================
 
 #ifdef _WIN32
@@ -49,6 +70,9 @@ static void git_thread_detach(git_thread_t t) { (void)t; /* already detached */ 
 
 // ============================================================
 // Low-level helpers
+// TODO(platform-B): gc_build_cmd + gc_popen_read should be replaced by
+// axRunCommand(cmd, buf, buf_sz) → int exit_code once the platform layer
+// provides a portable subprocess API (see file-level TODO above).
 // ============================================================
 
 // Build "cd <path> && git <args…>" into buf.
@@ -394,6 +418,11 @@ int git_get_remotes(git_repo_t *repo, char (*out)[256], int max) {
 
 // ============================================================
 // Async thread
+// TODO(platform-C): git_run_async() should be replaced by
+// axRunCommandAsync(cmd, op, notify_win, post_msg_id) once the platform
+// layer provides a portable async-subprocess API (see file-level TODO
+// above).  The git_async_args_t struct and git_async_worker thread function
+// below would then be removed entirely.
 // ============================================================
 
 typedef struct {

@@ -294,13 +294,15 @@ void dispatch_message(ui_event_t *msg) {
       ui_update_screen_size(new_w, new_h);
       int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
       int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
+      // Resize every root window to match the new platform-window dimensions.
+      // ALWAYSINBACK windows are backdrop / desktop fills and have always been
+      // auto-resized here.  Normal root windows receive the same treatment so
+      // that applications do not need to handle evDisplayChange just to resize
+      // themselves; their evResize handler is responsible for re-laying out
+      // children.  evDisplayChange is no longer sent.
       for (win = g_ui_runtime.windows; win; win = win->next) {
         if (!win->parent) {
-          if (win->flags & WINDOW_ALWAYSINBACK) {
-            resize_window(win, sw, sh);
-          } else {
-            send_message(win, evDisplayChange, MAKEDWORD(sw, sh), NULL);
-          }
+          resize_window(win, sw, sh);
         }
       }
       post_message((window_t *)1, evRefreshStencil, 0, NULL);
