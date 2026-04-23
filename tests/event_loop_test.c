@@ -5,8 +5,9 @@
 //   1. get_message() filters sentinel (wakeup-only) events: returns 0 so the
 //      outer while-loop exits and repost_messages() is called.
 //   2. get_message() passes real events through unchanged (returns 1).
-//   3. post_message() routes events through the platform queue (axPostMessageW);
-//      repost_messages() drains that queue and dispatches each event.
+//   3. post_message() enqueues events into an internal ring-buffer with
+//      per-(target,msg) deduplication; repost_messages() drains it and
+//      dispatches each event.
 //   4. invalidate_window() enqueues RefreshStencil, NonClientPaint, and Paint
 //      messages via post_message().
 //
@@ -172,17 +173,17 @@ static void hook_nc_root(window_t *w, uint32_t msg, uint32_t wp, void *lp, void 
 }
 
 void test_post_message_deduplication(void) {
-  TEST("post_message: messages are routed through axPostMessageW and dispatched");
+  TEST("post_message: duplicate (target,msg) pairs are coalesced to one delivery");
   test_env_init();
 
   window_t *win = test_env_create_window("dup-test", 10, 10, 100, 100,
                                           noop_proc, NULL);
   ASSERT_NOT_NULL(win);
 
-  // Post the same message twice.  Both go into the platform queue; both are
-  // dispatched when repost_messages() drains the queue.  The ring-buffer
-  // deduplication was removed when post_message() was changed to call
-  // axPostMessageW directly — the platform queue carries all posted events.
+  // Post the same message twice to the same window.  post_message() keeps a
+  // per-(target,msg) deduplication ring-buffer: the second post is coalesced
+  // into the first, so only one event ends up in the queue and repost_messages()
+  // dispatches it once.
   post_message(win, evPaint, 0, NULL);
   post_message(win, evPaint, 0, NULL);
 
@@ -190,9 +191,9 @@ void test_post_message_deduplication(void) {
   repost_messages();
 
   // Because running==false the OpenGL calls inside evPaint are
-  // skipped, but the window proc IS still called.  Two events were posted
-  // so two calls are expected.
-  ASSERT_EQUAL(msg_sink_count, 2);
+  // skipped, but the window proc IS still called.  Deduplication keeps only
+  // one copy, so exactly one call is expected.
+  ASSERT_EQUAL(msg_sink_count, 1);
 
   destroy_window(win);
   test_env_shutdown();

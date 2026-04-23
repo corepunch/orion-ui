@@ -294,12 +294,16 @@ void dispatch_message(ui_event_t *msg) {
       ui_update_screen_size(new_w, new_h);
       int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
       int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
+      // ALWAYSINBACK windows (backdrop/desktop fills) are auto-resized to the
+      // new screen size.  All other root windows receive evDisplayChange so they
+      // can adjust their own layout/geometry without being force-resized.
       for (win = g_ui_runtime.windows; win; win = win->next) {
         if (!win->parent) {
           if (win->flags & WINDOW_ALWAYSINBACK) {
             resize_window(win, sw, sh);
           } else {
-            send_message(win, evDisplayChange, MAKEDWORD(sw, sh), NULL);
+            send_message(win, evDisplayChange,
+                         MAKEDWORD(sw, sh), NULL);
           }
         }
       }
