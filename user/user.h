@@ -125,6 +125,8 @@ struct window_s {
   bitmap_strip_t toolbar_strip;
   uint32_t toolbar_strip_tex;  // GL texture owned by tbLoadStrip (freed on destroy)
   int    toolbar_btn_size;   // 0 = use TB_SPACING default; >0 = custom square button size in pixels
+  window_t *sidebar_child;  // WINDOW_SIDEBAR: the single child that fills the left panel
+  int       sidebar_width;  // WINDOW_SIDEBAR: width of the sidebar panel (0 = SIDEBAR_DEFAULT_WIDTH)
   void *userdata;
   void *userdata2;
   win_sb_t hscroll;   // built-in horizontal scrollbar state (WINDOW_HSCROLL)

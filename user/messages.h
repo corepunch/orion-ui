@@ -97,6 +97,12 @@ enum {
   // HTTP_INVALID_REQUEST indicates an immediate error (bad URL, OOM, etc.).
   evHttpDone,
   evHttpProgress,
+  // Create or replace the sidebar child window for a WINDOW_SIDEBAR window.
+  // wparam = sidebar width in pixels (0 uses SIDEBAR_DEFAULT_WIDTH).
+  // lparam = winproc_t — the window procedure for the sidebar content window.
+  // The framework creates a WINDOW_NOTITLE | WINDOW_NORESIZE | WINDOW_VSCROLL |
+  // WINDOW_NOTRAYBUTTON child at (0, 0) and stores it in win->sidebar_child.
+  sbSetContent,
 };
 
 // Control notification messages
@@ -165,6 +171,11 @@ typedef struct {
 #define BUTTON_PUSHLIKE     (1 << 13)
 #define BUTTON_AUTORADIO    (1 << 14)
 #define BUTTON_DEFAULT      (1 << 15)
+// A window with WINDOW_SIDEBAR has a fixed-width panel anchored to the left of
+// its client area.  The panel is created via sbSetContent and participates in
+// the normal child-window paint/event dispatch.  A 1-pixel vertical separator
+// is drawn between the sidebar and the content area during evNCPaint.
+#define WINDOW_SIDEBAR      (1 << 16)
 
 // Scroll bar constants (WinAPI-style, used with set_scroll_info / get_scroll_info)
 #define SB_HORZ  0   // horizontal scroll bar
@@ -212,6 +223,8 @@ typedef struct {
 #define TITLEBAR_HEIGHT   12
 #define TOOLBAR_HEIGHT    22
 #define STATUSBAR_HEIGHT  12
+// Default width of a WINDOW_SIDEBAR panel in logical pixels.
+#define SIDEBAR_DEFAULT_WIDTH  180
 // Resize handle matches SCROLLBAR_WIDTH so the scrollbar corner cell is fully
 // interactive as a resize drag grip (same as Windows 1.0/2.0 behaviour).
 #define RESIZE_HANDLE     SCROLLBAR_WIDTH

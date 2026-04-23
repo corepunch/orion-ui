@@ -271,8 +271,11 @@ static void rv_paint_icon_view(window_t *win, reportview_data_t *data) {
 
   fill_rect(bg_col, R(0, 0, win->frame.w, win->frame.h));
 
-  int clip_top = win->parent ? win->frame.y : 0;
-  int clip_bottom = win->parent ? win->frame.y + win->frame.h : win->frame.h;
+  // With the child-relative projection applied by send_message before evPaint,
+  // y=0 in draw space is always the window's own client top regardless of whether
+  // this is a root or child window.  Clip items to [0, frame.h].
+  int clip_top = 0;
+  int clip_bottom = win->frame.h;
 
   for (uint32_t i = 0; i < data->count; i++) {
     int col = i % ncol;
