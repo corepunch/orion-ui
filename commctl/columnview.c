@@ -191,10 +191,15 @@ static int rv_hit_index(window_t *win, reportview_data_t *data, uint32_t wparam)
   int mx = (int)(int16_t)LOWORD(wparam);
   int my = (int)(int16_t)HIWORD(wparam);
 
-  // Mouse coordinates arrive in the target window's local client space and
-  // already include this window's scroll offset. Using them directly avoids
-  // double-counting scroll when hit-testing in child windows.
-  (void)win;
+  // For root windows LOCAL_X/LOCAL_Y already include the window's scroll via
+  // the LOCAL_X/LOCAL_Y macros in event.c.  For child windows handle_mouse
+  // delivers (LOCAL_root − c→frame), which does NOT include the child's own
+  // scroll.  Add child scroll here so hit-testing stays in sync with the
+  // (0,0)-based draw coordinates used by both view modes.
+  if (win->parent) {
+    mx += (int)win->scroll[0];
+    my += (int)win->scroll[1];
+  }
 
   if (data->view_mode == RVM_VIEW_REPORT) {
     (void)mx;

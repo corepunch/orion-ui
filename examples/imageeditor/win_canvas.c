@@ -206,16 +206,16 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       canvas_upload(doc);
 
       // Draw canvas offset by pan so zoomed content scrolls correctly
-      int cx = win->frame.x - state->pan_x;
-      int cy = win->frame.y - state->pan_y;
+      int cx = -state->pan_x;
+      int cy = -state->pan_y;
       draw_rect(doc->canvas_tex,
                 R(cx, cy,
                   doc->canvas_w * state->scale, doc->canvas_h * state->scale));
 
       if (doc->sel_moving && doc->float_tex) {
         // Draw the floating selection at its current position
-        int sx = win->frame.x + doc->float_pos.x * state->scale;
-        int sy = win->frame.y + doc->float_pos.y * state->scale;
+        int sx = doc->float_pos.x * state->scale;
+        int sy = doc->float_pos.y * state->scale;
         int sw = doc->float_w * state->scale;
         int sh = doc->float_h * state->scale;
         draw_rect(doc->float_tex, R(sx, sy, sw, sh));
@@ -225,7 +225,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         int y0 = MIN(doc->sel_start.y, doc->sel_end.y) * state->scale - state->pan_y;
         int x1 = (MAX(doc->sel_start.x, doc->sel_end.x) + 1) * state->scale - state->pan_x;
         int y1 = (MAX(doc->sel_start.y, doc->sel_end.y) + 1) * state->scale - state->pan_y;
-        draw_sel_rect(R(win->frame.x + x0, win->frame.y + y0, x1 - x0, y1 - y0));
+        draw_sel_rect(R(x0, y0, x1 - x0, y1 - y0));
       }
       // Polygon in-progress: draw a sel_rect bounding the rubber-band edge
       // from the last committed vertex to the current mouse position.
@@ -236,7 +236,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         int py0 = MIN(v0.y, v1.y) * state->scale - state->pan_y;
         int px1 = (MAX(v0.x, v1.x) + 1) * state->scale - state->pan_x;
         int py1 = (MAX(v0.y, v1.y) + 1) * state->scale - state->pan_y;
-        draw_sel_rect(R(win->frame.x + px0, win->frame.y + py0, px1 - px0, py1 - py0));
+        draw_sel_rect(R(px0, py0, px1 - px0, py1 - py0));
       }
 
       // Magnifier tool: draw a loupe overlay in the top-right corner of the canvas
@@ -247,8 +247,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           state->hover_valid &&
           win->frame.w  >= MAG_SIZE + MAG_MARGIN * 2 + 4 &&
           win->frame.h  >= MAG_SIZE + MAG_MARGIN * 2 + 4) {
-        int lox = win->frame.x + win->frame.w - MAG_SIZE - MAG_MARGIN - 2;
-        int loy = win->frame.y + MAG_MARGIN;
+        int lox = win->frame.w - MAG_SIZE - MAG_MARGIN - 2;
+        int loy = MAG_MARGIN;
         // Border
         fill_rect(0xFF808080, R(lox - 1, loy - 1, MAG_SIZE + 2, MAG_SIZE + 2));
         // Build a 16×16 RGBA pixel buffer from the canvas region around hover

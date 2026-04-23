@@ -132,7 +132,7 @@ result_t win_scrollbar(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       int track = sb_track(win);
       int tl    = sb_thumb_len(s, track);
       int to    = sb_thumb_off(s, track);
-      int x = win->frame.x, y = win->frame.y;
+      int x = 0, y = 0;
       int w = win->frame.w, h = win->frame.h;
       fill_rect(get_sys_color(brWindowDarkBg), R(x, y, w, h));
       if (vert)

@@ -21,13 +21,13 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       return true;
     case evPaint:
       fill_rect(g_ui_runtime.focused == win?get_sys_color(brFocusRing):get_sys_color(brWindowBg),
-                R(win->frame.x-1, win->frame.y-1, win->frame.w+2, win->frame.h+2));
-      draw_button(&win->frame, 1, 1, true);
-      draw_text_small(win->title, win->frame.x+PADDING, win->frame.y+PADDING, get_sys_color(brTextNormal));
+                R(-1, -1, win->frame.w+2, win->frame.h+2));
+      draw_button(&(rect_t){0, 0, win->frame.w, win->frame.h}, 1, 1, true);
+      draw_text_small(win->title, PADDING, PADDING, get_sys_color(brTextNormal));
       if (g_ui_runtime.focused == win && win->editing) {
         fill_rect(get_sys_color(brTextNormal),
-                  R(win->frame.x+PADDING+strnwidth(win->title, win->cursor_pos),
-                    win->frame.y+PADDING,
+                  R(PADDING+strnwidth(win->title, win->cursor_pos),
+                    PADDING,
                     2, 8));
       }
       return true;

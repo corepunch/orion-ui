@@ -18,7 +18,8 @@ result_t win_checkbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       win->frame.h = MAX(win->frame.h, BUTTON_HEIGHT);
       return true;
     case evPaint: {
-      rect_t rem = win->frame;
+      rect_t local = {0, 0, win->frame.w, win->frame.h};
+      rect_t rem = local;
       rect_t box = rect_split_left(&rem, CHECKBOX_BOX_SIZE);
       box.h = CHECKBOX_BOX_SIZE;
       rect_t focus_bg = rect_inset(box, -CHECKBOX_FOCUS_PAD);
@@ -26,7 +27,7 @@ result_t win_checkbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
                 R(focus_bg.x, focus_bg.y, focus_bg.w, focus_bg.h));
       draw_button(&box, 1, 1, win->pressed);
       int lx = rem.x + CHECKBOX_GAP;
-      int ly = win->frame.y + CHECKBOX_TEXT_Y;
+      int ly = CHECKBOX_TEXT_Y;
       draw_text_small(win->title, lx + TEXT_SHADOW_OFFSET, ly + TEXT_SHADOW_OFFSET, get_sys_color(brDarkEdge));
       draw_text_small(win->title, lx, ly, get_sys_color(brTextNormal));
       if (win->value) {
