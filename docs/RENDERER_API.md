@@ -64,6 +64,22 @@ typedef struct {
 } R_Texture;
 ```
 
+### R_VgaBuffer
+
+Describes a character-cell buffer texture for VGA text composition:
+
+```c
+typedef struct {
+  uint32_t vga_buffer;
+  int width;    // character columns
+  int height;   // character rows
+} R_VgaBuffer;
+```
+
+The underlying texture is expected to be `RG8`:
+- `R` = character index (0..255)
+- `G` = packed color nibble (`bg << 4 | fg`)
+
 ## API Functions
 
 ### Mesh Management
@@ -155,6 +171,38 @@ void R_TextureUnbind(void);
 ```
 
 Unbinds the current texture (binds texture 0).
+
+#### R_CreateTextureRG8
+```c
+uint32_t R_CreateTextureRG8(int w, int h, const void *rg,
+                             R_TextureFilter filter, R_TextureWrap wrap);
+```
+
+Creates an `RG8` texture for text-cell or other packed two-channel data.
+
+#### R_UpdateTextureRG8
+```c
+bool R_UpdateTextureRG8(uint32_t tex, int x, int y, int w, int h,
+                        const void *rg);
+```
+
+Uploads a sub-region into an existing `RG8` texture.
+
+#### R_DrawVGABuffer
+```c
+bool R_DrawVGABuffer(const R_VgaBuffer *buf,
+                     int x, int y,
+                     int dst_w_px, int dst_h_px,
+                     uint32_t font_tex,
+                     const uint32_t palette16[16]);
+```
+
+Draws a VGA text buffer using:
+- `buf->vga_buffer` as RG8 character/attribute data
+- `font_tex` as 16x16 glyph atlas (8x16 cells)
+- `palette16` as 16 ARGB colors
+
+This keeps all OpenGL state setup and shader composition in the renderer.
 
 ### Low-Level Helpers
 

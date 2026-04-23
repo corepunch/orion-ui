@@ -38,6 +38,20 @@ typedef struct {
 } renderer_system_t;
 
 renderer_system_t g_ref = {0};
+static mat4 g_active_projection;
+
+typedef struct {
+  GLuint program;
+  GLint projection;
+  GLint offset;
+  GLint scale;
+  GLint grid_size;
+  GLint cell_tex;
+  GLint font_tex;
+  GLint ega_palette;
+} vga_renderer_t;
+
+static vga_renderer_t g_vga = {0};
 
 // Sprite shader sources
 const char* sprite_vs_src = "#version 150 core\n"
@@ -70,6 +84,45 @@ const char* sprite_fs_src = "#version 150 core\n"
 "  if(outColor.a < 0.1) discard;\n"
 "}";
 
+const char* vga_vs_src = "#version 150 core\n"
+"in vec2 position;\n"
+"in vec2 texcoord;\n"
+"uniform mat4 projection;\n"
+"uniform vec2 offset;\n"
+"uniform vec2 scale;\n"
+"out vec2 uv;\n"
+"void main() {\n"
+"  uv = texcoord;\n"
+"  gl_Position = projection * vec4(position * scale + offset, 0.0, 1.0);\n"
+"}";
+
+const char* vga_fs_src = "#version 150 core\n"
+"in vec2 uv;\n"
+"out vec4 outColor;\n"
+"uniform sampler2D cellTex;\n"
+"uniform sampler2D fontTex;\n"
+"uniform vec2 gridSize;\n"
+"uniform vec4 egaPalette[16];\n"
+"void main() {\n"
+"  vec2 g = uv * gridSize;\n"
+"  vec2 cell = floor(g);\n"
+"  vec2 fracCell = fract(g);\n"
+"  vec2 cellUv = (cell + vec2(0.5)) / gridSize;\n"
+"  vec2 packed = texture(cellTex, cellUv).rg;\n"
+"  float ch = floor(packed.r * 255.0 + 0.5);\n"
+"  float c = floor(packed.g * 255.0 + 0.5);\n"
+"  int fg = int(mod(c, 16.0));\n"
+"  int bg = int(floor(c / 16.0));\n"
+"  float col = mod(ch, 16.0);\n"
+"  float row = floor(ch / 16.0);\n"
+"  float px = floor(fracCell.x * 8.0);\n"
+"  float py = floor(fracCell.y * 8.0) * 2.0;\n"
+"  vec2 fuv = vec2((col * 8.0 + px + 0.5) / 128.0,\n"
+"                  (row * 16.0 + py + 0.5) / 256.0);\n"
+"  float a = texture(fontTex, fuv).a;\n"
+"  outColor = mix(egaPalette[bg], egaPalette[fg], a);\n"
+"}";
+
 // Compile a shader
 GLuint compile_shader(GLenum type, const char* src) {
   GLuint shader = glCreateShader(type);
@@ -97,6 +150,61 @@ int get_sprite_prog(void) {
 
 int get_sprite_vao(void) {
   return g_ref.mesh.vao;
+}
+
+static bool ensure_vga_program(void) {
+  if (g_vga.program)
+    return true;
+
+  GLuint vs = compile_shader(GL_VERTEX_SHADER, vga_vs_src);
+  GLuint fs = compile_shader(GL_FRAGMENT_SHADER, vga_fs_src);
+  if (!vs || !fs) {
+    if (vs) glDeleteShader(vs);
+    if (fs) glDeleteShader(fs);
+    return false;
+  }
+
+  g_vga.program = glCreateProgram();
+  if (!g_vga.program) {
+    glDeleteShader(vs);
+    glDeleteShader(fs);
+    return false;
+  }
+
+  glAttachShader(g_vga.program, vs);
+  glAttachShader(g_vga.program, fs);
+  glBindAttribLocation(g_vga.program, 0, "position");
+  glBindAttribLocation(g_vga.program, 1, "texcoord");
+  glLinkProgram(g_vga.program);
+  glDeleteShader(vs);
+  glDeleteShader(fs);
+
+  GLint linked = GL_FALSE;
+  glGetProgramiv(g_vga.program, GL_LINK_STATUS, &linked);
+  if (linked != GL_TRUE) {
+    GLint n = 0;
+    glGetProgramiv(g_vga.program, GL_INFO_LOG_LENGTH, &n);
+    if (n > 1) {
+      char *log = malloc((size_t)n);
+      if (log) {
+        glGetProgramInfoLog(g_vga.program, n, NULL, log);
+        printf("VGA shader link error: %s\n", log);
+        free(log);
+      }
+    }
+    glDeleteProgram(g_vga.program);
+    g_vga.program = 0;
+    return false;
+  }
+
+  g_vga.projection  = glGetUniformLocation(g_vga.program, "projection");
+  g_vga.offset      = glGetUniformLocation(g_vga.program, "offset");
+  g_vga.scale       = glGetUniformLocation(g_vga.program, "scale");
+  g_vga.grid_size   = glGetUniformLocation(g_vga.program, "gridSize");
+  g_vga.cell_tex    = glGetUniformLocation(g_vga.program, "cellTex");
+  g_vga.font_tex    = glGetUniformLocation(g_vga.program, "fontTex");
+  g_vga.ega_palette = glGetUniformLocation(g_vga.program, "egaPalette[0]");
+  return true;
 }
 
 // Initialize the sprite system
@@ -137,6 +245,7 @@ bool ui_init_prog(void) {
   screen_width = width / UI_WINDOW_SCALE;
   screen_height = height / UI_WINDOW_SCALE;
   glm_ortho(0, screen_width, ui_get_system_metrics(kSystemMetricScreenHeight), 0, -1, 1, g_ref.projection);
+  glm_mat4_copy(g_ref.projection, g_active_projection);
     
   glDeleteShader(vertex_shader);
   glDeleteShader(fragment_shader);
@@ -146,6 +255,7 @@ bool ui_init_prog(void) {
 
 void ui_shutdown_prog(void) {
   // Delete shader program and buffers
+  SAFE_DELETE(g_vga.program, glDeleteProgram);
   SAFE_DELETE(g_ref.program, glDeleteProgram);
   R_MeshDestroy(&g_ref.mesh);
 }
@@ -168,6 +278,7 @@ void set_projection(int x, int y, int w, int h) {
   if (!g_ui_runtime.running) return;
   mat4 projection;
   glm_ortho(x, w, h, y, -1, 1, projection);
+  glm_mat4_copy(projection, g_active_projection);
   glUseProgram(get_sprite_prog());
   glUniformMatrix4fv(glGetUniformLocation(g_ref.program, "projection"), 1, GL_FALSE, projection[0]);
 }
@@ -242,6 +353,7 @@ void ui_update_screen_size(int width, int height) {
   screen_width = width / UI_WINDOW_SCALE;
   screen_height = height / UI_WINDOW_SCALE;
   glm_ortho(0, screen_width, screen_height, 0, -1, 1, g_ref.projection);
+  glm_mat4_copy(g_ref.projection, g_active_projection);
   glUseProgram(g_ref.program);
   glUniformMatrix4fv(glGetUniformLocation(g_ref.program, "projection"), 1, GL_FALSE, g_ref.projection[0]);
 }
@@ -260,6 +372,32 @@ uint32_t R_CreateTextureRGBA(int w, int h, const void *rgba,
   return (uint32_t)tex;
 }
 
+uint32_t R_CreateTextureRG8(int w, int h, const void *rg,
+                             R_TextureFilter filter, R_TextureWrap wrap) {
+  GLuint tex = 0;
+  glGenTextures(1, &tex);
+  glBindTexture(GL_TEXTURE_2D, tex);
+  GLenum gl_filter = (filter == R_FILTER_LINEAR) ? GL_LINEAR : GL_NEAREST;
+  GLenum gl_wrap   = (wrap   == R_WRAP_REPEAT)   ? GL_REPEAT : GL_CLAMP_TO_EDGE;
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, gl_wrap);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, gl_wrap);
+  glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RG8, w, h, 0, GL_RG, GL_UNSIGNED_BYTE, rg);
+  return (uint32_t)tex;
+}
+
+bool R_UpdateTextureRG8(uint32_t tex, int x, int y, int w, int h,
+                        const void *rg) {
+  if (!tex || !rg || w <= 0 || h <= 0)
+    return false;
+  glBindTexture(GL_TEXTURE_2D, (GLuint)tex);
+  glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+  glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, w, h, GL_RG, GL_UNSIGNED_BYTE, rg);
+  return true;
+}
+
 void R_DeleteTexture(uint32_t id) {
   if (id == 0) return;
   GLuint tex = (GLuint)id;
@@ -275,4 +413,47 @@ void R_SetBlendMode(bool enabled) {
     glDisable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
   }
+}
+
+bool R_DrawVGABuffer(const R_VgaBuffer *buf,
+                     int x, int y,
+                     int dst_w_px, int dst_h_px,
+                     uint32_t font_tex,
+                     const uint32_t palette16[16]) {
+  if (!g_ui_runtime.running || !buf || !buf->vga_buffer || !font_tex ||
+      !palette16 || buf->width <= 0 || buf->height <= 0 ||
+      dst_w_px <= 0 || dst_h_px <= 0)
+    return false;
+  if (!ensure_vga_program())
+    return false;
+
+  float pal[16 * 4];
+  for (int i = 0; i < 16; i++) {
+    pal[i * 4 + 0] = ((palette16[i] >> 16) & 0xFF) / 255.0f;
+    pal[i * 4 + 1] = ((palette16[i] >> 8) & 0xFF) / 255.0f;
+    pal[i * 4 + 2] = (palette16[i] & 0xFF) / 255.0f;
+    pal[i * 4 + 3] = ((palette16[i] >> 24) & 0xFF) / 255.0f;
+  }
+
+  glUseProgram(g_vga.program);
+  glUniformMatrix4fv(g_vga.projection, 1, GL_FALSE, g_active_projection[0]);
+  glUniform2f(g_vga.offset, (float)x, (float)y);
+  glUniform2f(g_vga.scale, (float)dst_w_px, (float)dst_h_px);
+  glUniform2f(g_vga.grid_size, (float)buf->width, (float)buf->height);
+  glUniform4fv(g_vga.ega_palette, 16, pal);
+  glUniform1i(g_vga.cell_tex, 0);
+  glUniform1i(g_vga.font_tex, 1);
+
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, (GLuint)buf->vga_buffer);
+  glActiveTexture(GL_TEXTURE1);
+  glBindTexture(GL_TEXTURE_2D, (GLuint)font_tex);
+
+  glDisable(GL_DEPTH_TEST);
+  glDisable(GL_BLEND);
+  glBindVertexArray(g_ref.mesh.vao);
+  glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+  glBindVertexArray(0);
+  glEnable(GL_DEPTH_TEST);
+  return true;
 }

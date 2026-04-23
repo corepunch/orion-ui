@@ -48,6 +48,16 @@ typedef struct {
   GLenum format;          // Texture format (GL_RGBA, GL_RED, etc.)
 } R_Texture;
 
+// VGA text buffer descriptor (one texel per character cell).
+// Texture format is expected to be RG8:
+//   R = character index (0..255)
+//   G = packed color nibble (bg<<4 | fg)
+typedef struct {
+  uint32_t vga_buffer;
+  int width;    // character columns
+  int height;   // character rows
+} R_VgaBuffer;
+
 // Mesh management functions
 // Initialize a mesh with vertex attributes and drawing mode
 void R_MeshInit(R_Mesh* mesh, const R_VertexAttrib* attribs, size_t attrib_count, 
@@ -87,6 +97,12 @@ GLuint R_AllocateFontTexture(R_Texture* texture, void *data);
 uint32_t R_CreateTextureRGBA(int w, int h, const void *rgba,
                               R_TextureFilter filter, R_TextureWrap wrap);
 
+// Create/update RG8 textures for text-cell buffers.
+uint32_t R_CreateTextureRG8(int w, int h, const void *rg,
+                             R_TextureFilter filter, R_TextureWrap wrap);
+bool R_UpdateTextureRG8(uint32_t tex, int x, int y, int w, int h,
+                        const void *rg);
+
 // Delete a texture by its ID (no-op when id == 0).
 void R_DeleteTexture(uint32_t id);
 
@@ -94,5 +110,16 @@ void R_DeleteTexture(uint32_t id);
 // Enable/disable standard alpha blending (SRC_ALPHA / ONE_MINUS_SRC_ALPHA)
 // and pair it with depth-test disable/enable for 2-D UI rendering.
 void R_SetBlendMode(bool enabled);
+
+// Draw a VGA text buffer using 3 sources:
+//   - buf->vga_buffer : RG8 cell buffer (char + packed colors)
+//   - font_tex        : 16x16 atlas of 8x16 glyphs
+//   - palette16       : EGA-like 16-color palette (0xAARRGGBB)
+// dst_w_px/dst_h_px are output size in screen pixels.
+bool R_DrawVGABuffer(const R_VgaBuffer *buf,
+                     int x, int y,
+                     int dst_w_px, int dst_h_px,
+                     uint32_t font_tex,
+                     const uint32_t palette16[16]);
 
 #endif /* __UI_RENDERER_H__ */
