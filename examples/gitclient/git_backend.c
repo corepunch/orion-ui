@@ -180,6 +180,8 @@ int git_get_log(git_repo_t *repo, git_commit_t *out, int max) {
   // Format: hash<US>author<US>date<US>subject<RS>
   // Route through gc_build_cmd so that stderr is redirected portably (2>&1).
   char fmt_arg[256];
+  // %% in the snprintf format string produces a single %, giving git the
+  // literal %H %an %ad %s format placeholders it expects.
   snprintf(fmt_arg, sizeof(fmt_arg),
            "--format=%%H\x1f%%an\x1f%%ad\x1f%%s\x1e");
   char count_arg[32];
@@ -188,6 +190,7 @@ int git_get_log(git_repo_t *repo, git_commit_t *out, int max) {
   const char *args[] = {
     "git", "log", count_arg,
     fmt_arg,
+    // String literal — not passed through snprintf, so % is verbatim for git.
     "--date=format:%Y-%m-%d",
     NULL
   };
