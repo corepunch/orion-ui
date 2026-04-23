@@ -56,12 +56,21 @@ static inline bool rv_valid_index(const reportview_data_t *data, int index) {
   return data && index >= 0 && index < (int)data->count;
 }
 
-// Centralized command notification helper (WM_COMMAND with RVN_* code).
+// Centralized command notification helper.
+//
+// Follows WinAPI WM_COMMAND convention for control notifications:
+//   wparam LOWORD = item index (row that triggered the notification)
+//   wparam HIWORD = notification code (RVN_SELCHANGE, RVN_DBLCLK, …)
+//   lparam        = source control window  ← WinAPI: lParam = hWnd of control
+//
+// Sending to get_root_window() mirrors how win_reportview is typically used:
+// the control is a child of the root (or a child of a child), and root-window
+// procs handle RVN_* by examining lparam to identify the source control.
 static void rv_notify(window_t *win, reportview_data_t *data, int index, uint16_t code) {
   if (!rv_valid_index(data, index))
     return;
   send_message(get_root_window(win), evCommand,
-               MAKEDWORD(index, code), &data->items[index]);
+               MAKEDWORD(index, code), (void *)win);
 }
 
 static inline void rv_reset_click_state(reportview_data_t *data) {
@@ -159,47 +168,21 @@ static int rv_content_height(window_t *win, reportview_data_t *data) {
   return total_rows * ENTRY_HEIGHT;
 }
 
-static void rv_make_clipped_text(char *dst, size_t dst_sz, const char *src, int max_w) {
-  if (!dst || dst_sz == 0) return;
-  dst[0] = '\0';
-  if (!src || !src[0] || max_w <= 0) return;
-
-  if (strwidth(src) <= max_w) {
-    strncpy(dst, src, dst_sz - 1);
-    dst[dst_sz - 1] = '\0';
-    return;
-  }
-
-  int dots_w = strwidth("...");
-  int avail = max_w - dots_w;
-  if (avail <= 0) return;
-
-  int n = 0;
-  int w = 0;
-  while (src[n] && n < (int)(dst_sz - 4)) {
-    int cw = char_width((unsigned char)src[n]);
-    if (w + cw > avail)
-      break;
-    dst[n] = src[n];
-    w += cw;
-    n++;
-  }
-  memcpy(dst + n, "...", 4);
-}
-
+// Coordinate space notes:
+//   event.c computes LOCAL_X/LOCAL_Y using the active window's scroll and
+//   absolute position.  For the active (root) window those coords are in
+//   content space already.  For child windows event.c adds the child's own
+//   scroll before calling send_message, so the wparam received here is also
+//   in content space.  Draw code uses content-space coords with the same
+//   origin, so no further adjustment is needed.
+//
+// Common mistake (historical): an older version added win->scroll[] inside
+// this function, which caused double-counting when event.c already included
+// the scroll.  The fix is to use wparam directly.
+//   See tests/columnview_keyboard_test.c for regression tests.
 static int rv_hit_index(window_t *win, reportview_data_t *data, uint32_t wparam) {
   int mx = (int)(int16_t)LOWORD(wparam);
   int my = (int)(int16_t)HIWORD(wparam);
-
-  // For root windows LOCAL_X/LOCAL_Y already include the window's scroll via
-  // the LOCAL_X/LOCAL_Y macros in event.c.  For child windows handle_mouse
-  // delivers (LOCAL_root − c→frame), which does NOT include the child's own
-  // scroll.  Add child scroll here so hit-testing stays in sync with the
-  // (0,0)-based draw coordinates used by both view modes.
-  if (win->parent) {
-    mx += (int)win->scroll[0];
-    my += (int)win->scroll[1];
-  }
 
   if (data->view_mode == RVM_VIEW_REPORT) {
     (void)mx;
@@ -317,24 +300,45 @@ static void rv_paint_report_view(window_t *win, reportview_data_t *data) {
   uint32_t hdr_fg = get_sys_color(brTextNormal);
   uint32_t sep_col = get_sys_color(brDarkEdge);
 
+  // Background and full-row selection highlight painted once (no per-column clip).
   fill_rect(bg_col, R(0, HEADER_HEIGHT, row_w, body_h));
 
   if (data->selected >= first_row && data->selected < last_row) {
     int y = HEADER_HEIGHT + data->selected * ENTRY_HEIGHT - scroll_y;
+    if (y < HEADER_HEIGHT) y = HEADER_HEIGHT;
     fill_rect(get_sys_color(brTextNormal), R(0, y, row_w, ENTRY_HEIGHT - 1));
   }
 
-  char clipped[MAX_COLUMNVIEW_ITEM_NAME];
-  for (int row = first_row; row < last_row; row++) {
-    reportview_item_t *it = &data->items[row];
-    uint32_t fg = (row == data->selected) ? get_sys_color(brWindowBg)
-                : it->color              ? it->color
-                                         : get_sys_color(brTextNormal);
-    int y = HEADER_HEIGHT + row * ENTRY_HEIGHT - scroll_y;
-    int x = 0;
+  // Compute screen-space origin of this window's client top-left.
+  // Needed so we can pass screen-absolute rects to set_clip_rect(NULL, ...).
+  // win_frame_in_screen returns win->frame directly for root windows.
+  window_t *root = get_root_window(win);
+  int root_t = titlebar_height(root);
+  int scr_x = (win == root) ? win->frame.x : root->frame.x + win->frame.x;
+  int scr_y = (win == root) ? win->frame.y : root->frame.y + root_t + win->frame.y;
 
-    for (uint32_t col = 0; col < data->column_count; col++) {
-      int col_w = rv_get_report_column_width(data, (int)col, eff_w);
+  // Draw per-column: use two scissor rects per column — one for the header
+  // band and one for the body — so that scrolled row text cannot overdraw
+  // the header and text cannot bleed into adjacent columns.
+  int col_x = 0;
+  for (uint32_t col = 0; col < data->column_count; col++) {
+    int col_w = rv_get_report_column_width(data, (int)col, eff_w);
+
+    // Header scissor: column width, header height only.
+    set_clip_rect(NULL, &(rect_t){scr_x + col_x, scr_y, col_w, HEADER_HEIGHT});
+    draw_button(&(rect_t){col_x, 0, col_w, HEADER_HEIGHT}, 1, 1, false);
+    draw_text_small(data->columns[col].title, col_x + WIN_PADDING, 3, hdr_fg);
+
+    // Body scissor: column width, everything below the header.
+    int body_h = win->frame.h - HEADER_HEIGHT;
+    set_clip_rect(NULL, &(rect_t){scr_x + col_x, scr_y + HEADER_HEIGHT, col_w, body_h});
+
+    for (int row = first_row; row < last_row; row++) {
+      reportview_item_t *it = &data->items[row];
+      uint32_t fg = (row == data->selected) ? get_sys_color(brWindowBg)
+                  : it->color              ? it->color
+                                           : get_sys_color(brTextNormal);
+      int y = HEADER_HEIGHT + row * ENTRY_HEIGHT - scroll_y;
       const char *src = "";
 
       if (col == 0) {
@@ -344,23 +348,23 @@ static void rv_paint_report_view(window_t *win, reportview_data_t *data) {
         src = (idx < it->subitem_count && it->subitems[idx]) ? it->subitems[idx] : "";
       }
 
-      rv_make_clipped_text(clipped, sizeof(clipped), src, col_w - 2 * WIN_PADDING);
-      draw_text_small(clipped, x + WIN_PADDING, y + 2, fg);
-      x += col_w;
+      draw_text_small(src, col_x + WIN_PADDING, y + 2, fg);
     }
+
+    col_x += col_w;
   }
 
-  // Paint report header separately from row height; HEADER_HEIGHT can differ.
-  // fill_rect(hdr_bg, R(0, 0, row_w, HEADER_HEIGHT));
-  int x = 0;
+  // Restore scissor to the window client area before drawing separators,
+  // which span the full column height and must not be column-clipped.
+  set_clip_rect(NULL, &(rect_t){scr_x, scr_y, eff_w, win->frame.h});
+
+  // Column separator lines.
+  col_x = 0;
   for (uint32_t col = 0; col < data->column_count; col++) {
     int col_w = rv_get_report_column_width(data, (int)col, eff_w);
-    draw_button(&(rect_t){x, 0, col_w, HEADER_HEIGHT}, 1, 1, false);
-    draw_text_small(data->columns[col].title, x + WIN_PADDING, 3, hdr_fg);
-    x += col_w;
-    fill_rect(sep_col, R(x, HEADER_HEIGHT, 1, win->frame.h - HEADER_HEIGHT));
+    col_x += col_w;
+    fill_rect(sep_col, R(col_x, HEADER_HEIGHT, 1, win->frame.h - HEADER_HEIGHT));
   }
-  // fill_rect(sep_col, R(0, HEADER_HEIGHT - 1, row_w, 1));
 }
 
 result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {

@@ -91,16 +91,5 @@ result_t gc_log_proc(window_t *win, uint32_t msg,
     return r;
   }
 
-  // Selection changed → refresh file list and diff for the chosen commit.
-  if (msg == evCommand && HIWORD(wparam) == RVN_SELCHANGE) {
-    gc_state_t *gc = g_gc;
-    if (!gc) return r;
-    gc->selected_commit = (int)send_message(win, RVM_GETSELECTION, 0, NULL);
-    gc->selected_file   = -1;
-    gc_files_refresh();
-    gc_diff_refresh();
-    return r;
-  }
-
   return r;
 }

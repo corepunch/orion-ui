@@ -417,6 +417,113 @@ void test_cv_down_scrolls_selection_into_view(void) {
     PASS();
 }
 
+// ---- click-after-scroll tests ---------------------------------------------- //
+// Coordinate system note
+// ----------------------
+// Mouse events arrive at win_reportview in **viewport-local** coordinates:
+//   (0,0) = child window top-left corner, independent of scroll position.
+//
+// For ROOT windows event.c's LOCAL_X/LOCAL_Y already adds win->scroll[] so
+// coords are already in content space.  For CHILD windows handle_mouse
+// subtracts only c->frame.{x,y}, leaving scroll out.
+//
+// Consequence: rv_hit_index must add win->scroll[] for child windows so that
+// "viewport y + scroll = content y" and the hit row matches the drawn row.
+// If that addition is accidentally removed, clicks after scrolling will land
+// on a row offset by the scroll distance.
+//
+// These tests guard against that regression: they set cv->scroll[1] directly
+// and simulate a left-button click at a known viewport position, then assert
+// that the selected index matches the item that is VISUALLY at that position,
+// not the item whose natural (unscrolled) position is there.
+
+// HEADER_HEIGHT and ENTRY_HEIGHT are internal to columnview.c; mirror them here.
+#define TEST_RV_HEADER_HEIGHT 14
+#define TEST_RV_ENTRY_HEIGHT  COLUMNVIEW_ENTRY_HEIGHT  /* 13 */
+
+// ---- helpers for report mode ------------------------------------------------ //
+
+static window_t *make_report_columnview(window_t *parent, int w, int h) {
+    rect_t fr = {0, 0, w, h};
+    window_t *cv = create_window("rv", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL,
+                                 &fr, parent, win_reportview, 0, NULL);
+    if (!cv) return NULL;
+    send_message(cv, RVM_SETVIEWMODE, RVM_VIEW_REPORT, NULL);
+    reportview_column_t col = { "Name", 0 };
+    send_message(cv, RVM_ADDCOLUMN, 0, &col);
+    return cv;
+}
+
+// Click after scroll — child window, report mode.
+// rv_hit_index uses the raw wparam coordinates directly (event.c already
+// delivers content-space y to child windows, accounting for the child's
+// scroll before the message is sent).  So clicking at content y =
+// HEADER_HEIGHT + N*ENTRY_HEIGHT must select item N regardless of the
+// current scroll position.
+void test_cv_report_click_after_scroll_child(void) {
+    TEST("win_reportview report child: click after scroll selects visual item");
+
+    test_env_init();
+    reset_cmd_state();
+
+    window_t *parent = test_env_create_window("P", 0, 0, 300, 200,
+                                               cmd_capture_proc, NULL);
+    ASSERT_NOT_NULL(parent);
+    window_t *cv = make_report_columnview(parent, 300, 200);
+    ASSERT_NOT_NULL(cv);
+    add_items(cv, 10);
+
+    // Simulate a scrolled state (item K is at the top of the visible area).
+    const int K = 3;
+    cv->scroll[1] = (uint32_t)(K * TEST_RV_ENTRY_HEIGHT);
+
+    // event.c delivers content-space y, so pass y = HEADER_HEIGHT + K*ENTRY_HEIGHT
+    // to select item K.
+    send_message(cv, evLeftButtonDown,
+                 MAKEDWORD(5, TEST_RV_HEADER_HEIGHT + K * TEST_RV_ENTRY_HEIGHT), NULL);
+
+    ASSERT_EQUAL(g_last_notification, RVN_SELCHANGE);
+    ASSERT_EQUAL(g_last_index, K);
+
+    // A content-space click one row lower selects K+1.
+    reset_cmd_state();
+    send_message(cv, evLeftButtonDown,
+                 MAKEDWORD(5, TEST_RV_HEADER_HEIGHT + (K + 1) * TEST_RV_ENTRY_HEIGHT), NULL);
+
+    ASSERT_EQUAL(g_last_notification, RVN_SELCHANGE);
+    ASSERT_EQUAL(g_last_index, K + 1);
+
+    destroy_window(parent);
+    test_env_shutdown();
+    PASS();
+}
+
+// Click with no scroll still selects item 0 at the first body row.
+void test_cv_report_click_no_scroll_child(void) {
+    TEST("win_reportview report child: click with no scroll selects item 0");
+
+    test_env_init();
+    reset_cmd_state();
+
+    window_t *parent = test_env_create_window("P", 0, 0, 300, 200,
+                                               cmd_capture_proc, NULL);
+    ASSERT_NOT_NULL(parent);
+    window_t *cv = make_report_columnview(parent, 300, 200);
+    ASSERT_NOT_NULL(cv);
+    add_items(cv, 5);
+
+    // No scroll — click first body row.
+    send_message(cv, evLeftButtonDown,
+                 MAKEDWORD(5, TEST_RV_HEADER_HEIGHT), NULL);
+
+    ASSERT_EQUAL(g_last_notification, RVN_SELCHANGE);
+    ASSERT_EQUAL(g_last_index, 0);
+
+    destroy_window(parent);
+    test_env_shutdown();
+    PASS();
+}
+
 // ---- main ------------------------------------------------------------------ //
 
 int main(int argc, char *argv[]) {
@@ -436,6 +543,8 @@ int main(int argc, char *argv[]) {
     test_cv_delete_no_selection_returns_false();
     test_cv_keys_on_empty_list_return_false();
     test_cv_down_scrolls_selection_into_view();
+    test_cv_report_click_no_scroll_child();
+    test_cv_report_click_after_scroll_child();
 
     TEST_END();
 }

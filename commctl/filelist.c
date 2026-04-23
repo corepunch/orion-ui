@@ -277,23 +277,13 @@ static void fl_navigate(window_t *win, filelist_data_t *data, int index) {
 // Convert packed wparam coordinates to a filelist item index.
 // Returns -1 when the position is outside the item grid.
 //
-// Coordinate space notes:
-//   Root window  — wparam carries LOCAL_X/LOCAL_Y directly from kernel/event.c,
-//                  which already adds win->scroll[].  The draw code subtracts
-//                  the same scroll, so the two cancel and items map to the
-//                  correct row with no further adjustment.
-//   Child window — handle_mouse delivers (LOCAL_X_root − c→frame.x,
-//                  LOCAL_Y_root − c→frame.y).  The child's own scroll is NOT
-//                  included.  evPaint uses a child-local projection, so the
-//                  draw code also uses child-local (0,0)-relative coords.
-//                  Only scroll[] needs to be added — NOT frame.x/y.
+// Coordinate space note:
+//   event.c delivers content-space coordinates (scroll already included) to
+//   both root and child windows, so wparam can be used directly.  No further
+//   adjustment is needed.
 static int fl_hit_index(window_t *win, filelist_data_t *data, uint32_t wparam) {
   int mx = (int)(int16_t)LOWORD(wparam);
   int my = (int)(int16_t)HIWORD(wparam);
-  if (win->parent) {
-    mx += (int)win->scroll[0];
-    my += (int)win->scroll[1];
-  }
   int col_w = (int)(uint32_t)send_message(win, RVM_GETCOLUMNWIDTH, 0, NULL);
   int eff_w = win->frame.w - (win->vscroll.visible ? SCROLLBAR_WIDTH : 0);
   int ncol  = (col_w > 0 && eff_w > 0) ? (eff_w / col_w) : 1;
