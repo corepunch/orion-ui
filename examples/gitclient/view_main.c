@@ -347,7 +347,8 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
 
       // rv_notify() always sends evCommand to the root window (here), so
       // we dispatch RVN_* notifications from child reportview windows.
-      // Identify the source by checking which window's selection changed.
+      // For RVN_SELCHANGE: identify the source by checking which window's
+      // selection changed vs the last known state.
       if (HIWORD(wparam) == RVN_SELCHANGE) {
         int log_sel = gc->log_win
                       ? (int)send_message(gc->log_win, RVM_GETSELECTION, 0, NULL)
@@ -367,18 +368,22 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
           gc_diff_refresh();
           return true;
         }
-        // Must be a branches selection change.
-        gc_log_refresh();
+        // Must be a branches selection change — refresh the log.
+        if (gc->branches_win)
+          gc_log_refresh();
         return true;
       }
 
+      // For RVN_DBLCLK: LOWORD(wparam) is the row index in the source window.
+      // Files are identified by index matching gc->selected_file (kept current by
+      // RVN_SELCHANGE).  Branches are confirmed by checking branches_win's current
+      // selection and the item's userdata sentinel.
       if (HIWORD(wparam) == RVN_DBLCLK) {
         int idx = (int)(uint16_t)LOWORD(wparam);
         // Files double-click → stage / unstage.
-        // gc->selected_file is kept in sync with the files view by RVN_SELCHANGE.
-        if (gc->repo && gc->selected_file == idx &&
-            gc->selected_file >= 0 && gc->selected_file < gc->file_count) {
-          git_file_status_t *f = &gc->files[gc->selected_file];
+        if (gc->repo && idx >= 0 && idx < gc->file_count &&
+            idx == gc->selected_file) {
+          git_file_status_t *f = &gc->files[idx];
           char buf[512] = {0};
           if (f->staged) {
             const char *args[] = { "git", "restore", "--staged", f->path, NULL };
