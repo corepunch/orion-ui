@@ -335,6 +335,9 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
       // window so subsequent evMouseMove arrives here with stable parent coords.
       if (code == spnDragStart) {
         if (!gc) return false;
+        // win_splitter packed the parent-local hit point into lparam via
+        // (void*)(uintptr_t)MAKEDWORD(px,py).  The intermediate uintptr_t cast
+        // is required on 64-bit platforms where sizeof(void*)>sizeof(uint32_t).
         uint32_t pos  = (uint32_t)(uintptr_t)lparam;
         int px = (int)(int16_t)LOWORD(pos);
         int py = (int)(int16_t)HIWORD(pos);

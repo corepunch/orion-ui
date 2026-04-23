@@ -20,10 +20,7 @@
 
 #include "../user/user.h"
 #include "../user/messages.h"
-
-// Orientation constants (passed as lparam to create_window).
-#define SPLIT_VERT 0   // vertical bar — occupies a narrow column
-#define SPLIT_HORZ 1   // horizontal bar — occupies a narrow row
+#include "commctl.h"   // SPLIT_VERT / SPLIT_HORZ
 
 typedef struct {
   int orientation;  // SPLIT_VERT or SPLIT_HORZ
@@ -56,18 +53,22 @@ result_t win_splitter(window_t *win, uint32_t msg,
     }
 
     // On left-button press, notify the parent so it can take over the drag.
-    // Convert the hit point from splitter-local space to parent-local space
-    // so the parent can compute accurate deltas in its own coordinate system.
+    // win->frame.{x,y} holds the splitter's top-left in parent-local space
+    // (Orion child frames are always parent-relative), so adding the local hit
+    // point directly gives parent-local coordinates without any further
+    // conversion.
     case evLeftButtonDown: {
       if (!win->parent) return false;
       // local hit point inside splitter
       int local_x = (int)LOWORD(wparam);
       int local_y = (int)HIWORD(wparam);
-      // parent-local coords: add our own frame position
+      // parent-local coords: add our own frame position (which is in parent space)
       int px = local_x + win->frame.x;
       int py = local_y + win->frame.y;
       send_message(win->parent, evCommand,
                    MAKEDWORD((uint16_t)win->id, (uint16_t)spnDragStart),
+                   // Pack the parent-local hit point into a void* via uintptr_t.
+                   // The parent unpacks with LOWORD/HIWORD after casting to uint32_t.
                    (void *)(uintptr_t)MAKEDWORD((uint16_t)px, (uint16_t)py));
       return true;
     }
