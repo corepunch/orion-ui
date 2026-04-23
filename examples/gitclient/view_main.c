@@ -218,7 +218,7 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
       // Sidebar (branches / tags / stashes) — replaces the old manual branches_win.
       send_message(win, sbSetContent,
                    (uint32_t)PANEL_LEFT_W_DEFAULT,
-                   (void *)(winproc_t)gc_branches_proc);
+                   gc_branches_proc);
       gc->branches_win = win->sidebar_child;
 
       rect_t cr = get_client_rect(win);

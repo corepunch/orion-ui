@@ -604,10 +604,11 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         ui_set_stencil_for_root_window(get_root_window(win)->id);
         set_viewport(&root->frame);
         // Shift projection so that (0,0) in drawing space maps to the top-left
-        // of the window's own client area.  For child windows this means
-        // offsetting by the child's frame.x/y so that drawing at (0,0) appears
-        // at the child's screen position rather than at the root's client origin.
-        // Root windows: cx=cy=0, so the projection is unchanged (backward compat).
+        // of the window's own client area.  For root windows (no parent),
+        // cx=cy=0 and the projection is unchanged (backward compat).  For child
+        // windows, cx/cy equal the child's frame.x/y so that drawing at (0,0)
+        // appears at the child's screen position rather than at the root's
+        // client origin.
         int cx = win->parent ? win->frame.x : 0;
         int cy = win->parent ? win->frame.y : 0;
         set_projection(root->scroll[0] - cx,
