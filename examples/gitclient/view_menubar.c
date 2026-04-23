@@ -78,7 +78,8 @@ static const int kAccelCount =
 result_t gc_menubar_proc(window_t *win, uint32_t msg,
                          uint32_t wparam, void *lparam) {
   if (msg == evCommand &&
-      HIWORD(wparam) == kMenuBarNotificationItemClick) {
+      (HIWORD(wparam) == kMenuBarNotificationItemClick ||
+       HIWORD(wparam) == kAcceleratorNotification)) {
     gc_handle_command(LOWORD(wparam));
     return true;
   }

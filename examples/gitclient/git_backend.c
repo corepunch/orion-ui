@@ -31,6 +31,8 @@
 #  include <windows.h>
 #else
 #  include <pthread.h>
+#  include <sys/stat.h>
+#  include <sys/wait.h>
 #endif
 
 // ============================================================
@@ -127,7 +129,6 @@ git_repo_t *git_repo_open(const char *path) {
   // Use access() on POSIX; on Win32, use PathFileExists or just try.
 #ifndef _WIN32
   {
-#include <sys/stat.h>
     struct stat st;
     if (stat(check, &st) != 0) {
       GC_LOG("git_repo_open: no .git at %s", path);
@@ -177,15 +178,21 @@ int git_get_log(git_repo_t *repo, git_commit_t *out, int max) {
   if (!repo || !out || max <= 0) return 0;
 
   // Format: hash<US>author<US>date<US>subject<RS>
-  char cmd[1024];
-  snprintf(cmd, sizeof(cmd),
-    "cd \"%s\" && git log --max-count=%d "
-    "--format=\"%%H\x1f%%an\x1f%%ad\x1f%%s\x1e\" "
-    "--date=format:\"%%Y-%%m-%%d %%H:%%M\" 2>/dev/null",
-    repo->path, max);
+  // Route through gc_build_cmd so that stderr is redirected portably (2>&1).
+  char fmt_arg[256];
+  snprintf(fmt_arg, sizeof(fmt_arg),
+           "--format=%%H\x1f%%an\x1f%%ad\x1f%%s\x1e");
+  char count_arg[32];
+  snprintf(count_arg, sizeof(count_arg), "--max-count=%d", max);
 
+  const char *args[] = {
+    "git", "log", count_arg,
+    fmt_arg,
+    "--date=format:%Y-%m-%d",
+    NULL
+  };
   char buf[64 * 1024];
-  gc_popen_read(cmd, buf, sizeof(buf));
+  git_run_sync(repo, args, buf, sizeof(buf));
 
   int count = 0;
   char *p = buf;
@@ -305,22 +312,18 @@ bool git_get_diff(git_repo_t *repo, const char *path,
                   bool staged, char *buf, int buf_sz) {
   if (!repo || !buf || buf_sz <= 0) return false;
 
-  char cmd[2048];
+  // Route through gc_build_cmd so stderr is redirected portably.
   if (staged) {
-    snprintf(cmd, sizeof(cmd),
-             "cd \"%s\" && git diff --cached -- \"%s\" 2>/dev/null",
-             repo->path, path ? path : "");
+    const char *args[] = { "git", "diff", "--cached", "--",
+                           path ? path : "", NULL };
+    git_run_sync(repo, args, buf, buf_sz);
   } else if (path && path[0]) {
-    snprintf(cmd, sizeof(cmd),
-             "cd \"%s\" && git diff HEAD -- \"%s\" 2>/dev/null",
-             repo->path, path);
+    const char *args[] = { "git", "diff", "HEAD", "--", path, NULL };
+    git_run_sync(repo, args, buf, buf_sz);
   } else {
-    snprintf(cmd, sizeof(cmd),
-             "cd \"%s\" && git diff HEAD 2>/dev/null",
-             repo->path);
+    const char *args[] = { "git", "diff", "HEAD", NULL };
+    git_run_sync(repo, args, buf, buf_sz);
   }
-
-  gc_popen_read(cmd, buf, buf_sz);
   return true;
 }
 

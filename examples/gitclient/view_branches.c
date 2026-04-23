@@ -79,7 +79,7 @@ void gc_branches_refresh(void) {
       .text     = "LOCAL BRANCHES",
       .icon     = sysicon_arrow_branch,
       .color    = get_sys_color(brTextDisabled),
-      .userdata = 0,
+      .userdata = 0xFFFC,  // sentinel: not a branch index
     };
     send_message(win, RVM_ADDITEM, 0, &hdr);
   }
@@ -201,9 +201,19 @@ result_t gc_branches_proc(window_t *win, uint32_t msg,
     if (!gc || !gc->repo) return r;
 
     int sel = (int)send_message(win, RVM_GETSELECTION, 0, NULL);
-    if (sel < 0 || sel >= gc->branch_count) return r;
+    if (sel < 0) return r;
 
-    git_branch_t *b = &gc->branches[sel];
+    // Use the row's stored userdata to find the branch index.
+    // Sentinel values (0xFFFF, 0xFFFE, 0xFFFD, 0xFFF0+, 0xFFE0+) indicate
+    // header / tag / stash rows — skip them.
+    reportview_item_t item = {0};
+    send_message(win, RVM_GETITEMDATA, (uint32_t)sel, &item);
+    uint32_t ud = item.userdata;
+    if (ud >= 0xFF00u) return r;   // header or non-branch sentinel
+    int bi = (int)ud;
+    if (bi < 0 || bi >= gc->branch_count) return r;
+
+    git_branch_t *b = &gc->branches[bi];
     if (b->is_remote) return r;  // skip remote-only rows
     if (b->is_current) return r; // already on this branch
 

@@ -217,13 +217,14 @@ $(PLATFORM_LIB): | $(LIB_DIR)
 
 # VGA font sheet — generated from the built-in 6×8 bitmap font by doubling
 # each glyph to 8×16.  The tool links against liborion so it is built after
-# the shared library.  The generated PNG lives in the source share/ tree so
-# that the copy loop below picks it up for build/share/orion/.
-VGA_FONT_PNG = share/vga-rom-font-8x16.png
+# the shared library.  The generated PNG is written directly into the build
+# output share directory so the source tree stays clean.
+VGA_FONT_PNG = $(SHARE_DIR)/orion/vga-rom-font-8x16.png
 GEN_VGA_FONT_BIN = $(BIN_DIR)/gen_vga_font$(EXE_EXT)
 
-$(VGA_FONT_PNG): $(GEN_VGA_FONT_BIN)
+$(VGA_FONT_PNG): $(GEN_VGA_FONT_BIN) | $(SHARE_DIR)
 	@echo "Generating VGA font sheet: $@"
+	@mkdir -p $(SHARE_DIR)/orion
 	$(GEN_VGA_FONT_BIN) $@
 
 # Shared data assets — copy per-example resources into build/share/<example>/
@@ -232,7 +233,6 @@ $(VGA_FONT_PNG): $(GEN_VGA_FONT_BIN)
 share: $(VGA_FONT_PNG) | $(SHARE_DIR)
 	@mkdir -p $(SHARE_DIR)/orion
 	@cp share/icon_sheet_16x16.png $(SHARE_DIR)/orion/
-	@cp $(VGA_FONT_PNG) $(SHARE_DIR)/orion/
 	@for dir in examples/*/; do \
 	  name=$$(basename "$$dir"); \
 	  assets=$$(find "$$dir" -maxdepth 1 \( -name "*.png" -o -name "*.ttf" -o -name "*.jpg" -o -name "*.jpeg" \) 2>/dev/null); \

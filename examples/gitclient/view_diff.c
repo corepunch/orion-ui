@@ -106,7 +106,7 @@ void gc_diff_refresh(void) {
   scroll_info_t si = {
     .fMask = SIF_RANGE | SIF_PAGE | SIF_POS,
     .nMin  = 0,
-    .nMax  = MAX(0, st->line_count - 1),
+    .nMax  = st->line_count,   // content length; valid pos = [0 .. nMax-nPage]
     .nPage = (uint32_t)visible_lines(win),
     .nPos  = 0,
   };
@@ -165,7 +165,8 @@ result_t gc_diff_proc(window_t *win, uint32_t msg,
       if (!st || !st->line_count) return false;
       int delta = (int)(int16_t)HIWORD(wparam);  // positive = scroll up
       int lines = delta < 0 ? 3 : -3;
-      int new_pos = CLAMP(st->scroll_y + lines, 0, st->line_count - 1);
+      int max_start = MAX(0, st->line_count - visible_lines(win));
+      int new_pos = CLAMP(st->scroll_y + lines, 0, max_start);
       if (new_pos != st->scroll_y) {
         st->scroll_y = new_pos;
         scroll_info_t si = { .fMask = SIF_POS, .nPos = st->scroll_y };
