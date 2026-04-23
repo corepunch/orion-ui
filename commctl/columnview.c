@@ -294,6 +294,7 @@ static void rv_paint_report_view(window_t *win, reportview_data_t *data) {
 
   if (data->selected >= first_row && data->selected < last_row) {
     int y = HEADER_HEIGHT + data->selected * ENTRY_HEIGHT - scroll_y;
+    if (y < HEADER_HEIGHT) y = HEADER_HEIGHT;
     fill_rect(get_sys_color(brTextNormal), R(0, y, row_w, ENTRY_HEIGHT - 1));
   }
 
@@ -305,20 +306,22 @@ static void rv_paint_report_view(window_t *win, reportview_data_t *data) {
   int scr_x = (win == root) ? win->frame.x : root->frame.x + win->frame.x;
   int scr_y = (win == root) ? win->frame.y : root->frame.y + root_t + win->frame.y;
 
-  // Draw per-column: set one GL scissor per column so text cannot bleed
-  // into adjacent columns.
+  // Draw per-column: use two scissor rects per column — one for the header
+  // band and one for the body — so that scrolled row text cannot overdraw
+  // the header and text cannot bleed into adjacent columns.
   int col_x = 0;
   for (uint32_t col = 0; col < data->column_count; col++) {
     int col_w = rv_get_report_column_width(data, (int)col, eff_w);
 
-    // Scissor: full column height (header + body).
-    set_clip_rect(NULL, &(rect_t){scr_x + col_x, scr_y, col_w, win->frame.h});
-
-    // Header cell.
+    // Header scissor: column width, header height only.
+    set_clip_rect(NULL, &(rect_t){scr_x + col_x, scr_y, col_w, HEADER_HEIGHT});
     draw_button(&(rect_t){col_x, 0, col_w, HEADER_HEIGHT}, 1, 1, false);
     draw_text_small(data->columns[col].title, col_x + WIN_PADDING, 3, hdr_fg);
 
-    // Row cells for this column.
+    // Body scissor: column width, everything below the header.
+    int body_h = win->frame.h - HEADER_HEIGHT;
+    set_clip_rect(NULL, &(rect_t){scr_x + col_x, scr_y + HEADER_HEIGHT, col_w, body_h});
+
     for (int row = first_row; row < last_row; row++) {
       reportview_item_t *it = &data->items[row];
       uint32_t fg = (row == data->selected) ? get_sys_color(brWindowBg)
