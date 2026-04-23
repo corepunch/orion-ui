@@ -327,7 +327,9 @@ static void rv_paint_report_view(window_t *win, reportview_data_t *data) {
   char clipped[MAX_COLUMNVIEW_ITEM_NAME];
   for (int row = first_row; row < last_row; row++) {
     reportview_item_t *it = &data->items[row];
-    uint32_t fg = (row == data->selected) ? get_sys_color(brWindowBg) : it->color;
+    uint32_t fg = (row == data->selected) ? get_sys_color(brWindowBg)
+                : it->color              ? it->color
+                                         : get_sys_color(brTextNormal);
     int y = HEADER_HEIGHT + row * ENTRY_HEIGHT - scroll_y;
     int x = 0;
 
