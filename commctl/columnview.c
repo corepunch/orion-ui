@@ -159,15 +159,27 @@ static int rv_content_height(window_t *win, reportview_data_t *data) {
   return total_rows * ENTRY_HEIGHT;
 }
 
+// Coordinate space notes:
+//   Root window  — wparam carries LOCAL_X/LOCAL_Y from kernel/event.c, which
+//                  already adds win->scroll[] so coords are in content space.
+//                  Draw code subtracts win->scroll[] explicitly, so both cancel
+//                  and items map to the correct row with no further adjustment.
+//   Child window — handle_mouse delivers (LOCAL_X_root − c→frame.x,
+//                  LOCAL_Y_root − c→frame.y).  The child's own scroll is NOT
+//                  included (only the root's frame is subtracted).  The evPaint
+//                  projection is also child-local, so draw code also uses
+//                  child-local (0,0)-relative coords.
+//                  Rule: add win->scroll[] here, NOT win->frame.{x,y}.
+//
+// Common mistake: forgetting to add win->scroll[] for child windows causes
+// clicks after scrolling to select the item at the raw viewport row rather
+// than the item that is visually under the cursor.  The offset equals the
+// current scroll distance.  See tests/columnview_keyboard_test.c for a
+// regression test that guards this invariant.
 static int rv_hit_index(window_t *win, reportview_data_t *data, uint32_t wparam) {
   int mx = (int)(int16_t)LOWORD(wparam);
   int my = (int)(int16_t)HIWORD(wparam);
 
-  // For root windows LOCAL_X/LOCAL_Y already include the window's scroll via
-  // the LOCAL_X/LOCAL_Y macros in event.c.  For child windows handle_mouse
-  // delivers (LOCAL_root − c→frame), which does NOT include the child's own
-  // scroll.  Add child scroll here so hit-testing stays in sync with the
-  // (0,0)-based draw coordinates used by both view modes.
   if (win->parent) {
     mx += (int)win->scroll[0];
     my += (int)win->scroll[1];
