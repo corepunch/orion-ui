@@ -79,34 +79,5 @@ result_t gc_files_proc(window_t *win, uint32_t msg,
     return r;
   }
 
-  // Row selection → update diff.
-  if (msg == evCommand && HIWORD(wparam) == RVN_SELCHANGE) {
-    gc_state_t *gc = g_gc;
-    if (!gc) return r;
-    gc->selected_file = (int)send_message(win, RVM_GETSELECTION, 0, NULL);
-    gc_diff_refresh();
-    return r;
-  }
-
-  // Space / double-click → stage or unstage the file.
-  if (msg == evCommand && HIWORD(wparam) == RVN_DBLCLK) {
-    gc_state_t *gc = g_gc;
-    if (!gc || !gc->repo) return r;
-    int sel = gc->selected_file;
-    if (sel < 0 || sel >= gc->file_count) return r;
-    git_file_status_t *f = &gc->files[sel];
-    char buf[512] = {0};
-    if (f->staged) {
-      const char *args[] = { "git", "restore", "--staged", f->path, NULL };
-      git_run_sync(gc->repo, args, buf, sizeof(buf));
-    } else {
-      const char *args[] = { "git", "add", f->path, NULL };
-      git_run_sync(gc->repo, args, buf, sizeof(buf));
-    }
-    gc_files_refresh();
-    gc_diff_refresh();
-    return true;
-  }
-
   return r;
 }

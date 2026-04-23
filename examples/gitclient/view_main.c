@@ -344,6 +344,77 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
         gc_handle_command((uint16_t)LOWORD(wparam));
         return true;
       }
+
+      // rv_notify() always sends evCommand to the root window (here), so
+      // we dispatch RVN_* notifications from child reportview windows.
+      // Identify the source by checking which window's selection changed.
+      if (HIWORD(wparam) == RVN_SELCHANGE) {
+        int log_sel = gc->log_win
+                      ? (int)send_message(gc->log_win, RVM_GETSELECTION, 0, NULL)
+                      : -1;
+        if (log_sel >= 0 && log_sel != gc->selected_commit) {
+          gc->selected_commit = log_sel;
+          gc->selected_file   = -1;
+          gc_files_refresh();
+          gc_diff_refresh();
+          return true;
+        }
+        int files_sel = gc->files_win
+                        ? (int)send_message(gc->files_win, RVM_GETSELECTION, 0, NULL)
+                        : -1;
+        if (files_sel != gc->selected_file) {
+          gc->selected_file = files_sel;
+          gc_diff_refresh();
+          return true;
+        }
+        // Must be a branches selection change.
+        gc_log_refresh();
+        return true;
+      }
+
+      if (HIWORD(wparam) == RVN_DBLCLK) {
+        int idx = (int)(uint16_t)LOWORD(wparam);
+        // Files double-click → stage / unstage.
+        // gc->selected_file is kept in sync with the files view by RVN_SELCHANGE.
+        if (gc->repo && gc->selected_file == idx &&
+            gc->selected_file >= 0 && gc->selected_file < gc->file_count) {
+          git_file_status_t *f = &gc->files[gc->selected_file];
+          char buf[512] = {0};
+          if (f->staged) {
+            const char *args[] = { "git", "restore", "--staged", f->path, NULL };
+            git_run_sync(gc->repo, args, buf, sizeof(buf));
+          } else {
+            const char *args[] = { "git", "add", f->path, NULL };
+            git_run_sync(gc->repo, args, buf, sizeof(buf));
+          }
+          gc_files_refresh();
+          gc_diff_refresh();
+          return true;
+        }
+        // Branches double-click → checkout.
+        if (gc->repo && gc->branches_win) {
+          int br_sel = (int)send_message(gc->branches_win, RVM_GETSELECTION, 0, NULL);
+          if (br_sel == idx && br_sel >= 0) {
+            reportview_item_t item = {0};
+            send_message(gc->branches_win, RVM_GETITEMDATA, (uint32_t)idx, &item);
+            uint32_t ud = item.userdata;
+            if (ud < 0xFF00u && (int)ud < gc->branch_count) {
+              git_branch_t *b = &gc->branches[(int)ud];
+              if (!b->is_remote && !b->is_current) {
+                const char *args[] = { "git", "checkout", b->name, NULL };
+                char buf[512] = {0};
+                if (!git_run_sync(gc->repo, args, buf, sizeof(buf)))
+                  message_box(win, buf, "Checkout failed", MB_OK);
+                else
+                  gc_refresh_all();
+              }
+            }
+            return true;
+          }
+        }
+        return false;
+      }
+
       return false;
     }
 

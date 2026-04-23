@@ -195,44 +195,5 @@ result_t gc_branches_proc(window_t *win, uint32_t msg,
     return r;
   }
 
-  // Row activated (double-click) → checkout the selected branch.
-  if (msg == evCommand && HIWORD(wparam) == RVN_DBLCLK) {
-    gc_state_t *gc = g_gc;
-    if (!gc || !gc->repo) return r;
-
-    int sel = (int)send_message(win, RVM_GETSELECTION, 0, NULL);
-    if (sel < 0) return r;
-
-    // Use the row's stored userdata to find the branch index.
-    // Sentinel values (0xFFFF, 0xFFFE, 0xFFFD, 0xFFF0+, 0xFFE0+) indicate
-    // header / tag / stash rows — skip them.
-    reportview_item_t item = {0};
-    send_message(win, RVM_GETITEMDATA, (uint32_t)sel, &item);
-    uint32_t ud = item.userdata;
-    if (ud >= 0xFF00u) return r;   // header or non-branch sentinel
-    int bi = (int)ud;
-    if (bi < 0 || bi >= gc->branch_count) return r;
-
-    git_branch_t *b = &gc->branches[bi];
-    if (b->is_remote) return r;  // skip remote-only rows
-    if (b->is_current) return r; // already on this branch
-
-    const char *args[] = { "git", "checkout", b->name, NULL };
-    char buf[512] = {0};
-    bool ok = git_run_sync(gc->repo, args, buf, sizeof(buf));
-    if (!ok) {
-      message_box(win, buf, "Checkout failed", MB_OK);
-    } else {
-      gc_refresh_all();
-    }
-    return true;
-  }
-
-  // Row selection changed → refresh the log for this branch if needed.
-  if (msg == evCommand && HIWORD(wparam) == RVN_SELCHANGE) {
-    gc_log_refresh();
-    return r;
-  }
-
   return r;
 }
