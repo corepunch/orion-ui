@@ -5,7 +5,6 @@
 #include "../user/user.h"
 #include "../user/messages.h"
 #include "../user/draw.h"
-#include "../user/text.h"
 
 #define MAX_COLUMNVIEW_ITEM_NAME 256
 #define MAX_COLUMNVIEW_ITEMS 256
@@ -160,39 +159,6 @@ static int rv_content_height(window_t *win, reportview_data_t *data) {
   return total_rows * ENTRY_HEIGHT;
 }
 
-static void rv_make_clipped_text(char *dst, size_t dst_sz, const char *src, int max_w) {
-  if (!dst || dst_sz == 0) return;
-  dst[0] = '\0';
-  if (!src || !src[0] || max_w <= 0) return;
-
-  if (strwidth(src) <= max_w) {
-    strncpy(dst, src, dst_sz - 1);
-    dst[dst_sz - 1] = '\0';
-    return;
-  }
-
-  int dots_w = strwidth("...");
-  int avail = max_w - dots_w;
-  if (avail <= 0) return;
-
-  int n = 0;
-  int w = 0;
-  while (src[n] && n < (int)(dst_sz - 4)) {
-    /* Use SPACE_WIDTH for spaces, matching strnwidth().
-       char_width(' ') returns a garbage value because the space glyph
-       has no set pixels (char_from=' '=0xFF, char_to=' '=0), so the
-       uint8_t subtraction underflows to −255 in int, which disables
-       truncation for any text that contains spaces. */
-    int cw = (src[n] == ' ') ? SPACE_WIDTH : char_width((unsigned char)src[n]);
-    if (w + cw > avail)
-      break;
-    dst[n] = src[n];
-    w += cw;
-    n++;
-  }
-  memcpy(dst + n, "...", 4);
-}
-
 static int rv_hit_index(window_t *win, reportview_data_t *data, uint32_t wparam) {
   int mx = (int)(int16_t)LOWORD(wparam);
   int my = (int)(int16_t)HIWORD(wparam);
@@ -340,8 +306,7 @@ static void rv_paint_report_view(window_t *win, reportview_data_t *data) {
   int scr_y = (win == root) ? win->frame.y : root->frame.y + root_t + win->frame.y;
 
   // Draw per-column: set one GL scissor per column so text cannot bleed
-  // into adjacent columns regardless of font-measurement accuracy.
-  char clipped[MAX_COLUMNVIEW_ITEM_NAME];
+  // into adjacent columns.
   int col_x = 0;
   for (uint32_t col = 0; col < data->column_count; col++) {
     int col_w = rv_get_report_column_width(data, (int)col, eff_w);
@@ -369,8 +334,7 @@ static void rv_paint_report_view(window_t *win, reportview_data_t *data) {
         src = (idx < it->subitem_count && it->subitems[idx]) ? it->subitems[idx] : "";
       }
 
-      rv_make_clipped_text(clipped, sizeof(clipped), src, col_w - 2 * WIN_PADDING);
-      draw_text_small(clipped, col_x + WIN_PADDING, y + 2, fg);
+      draw_text_small(src, col_x + WIN_PADDING, y + 2, fg);
     }
 
     col_x += col_w;
