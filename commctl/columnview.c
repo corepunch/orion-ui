@@ -189,11 +189,6 @@ static int rv_hit_index(window_t *win, reportview_data_t *data, uint32_t wparam)
   int mx = (int)(int16_t)LOWORD(wparam);
   int my = (int)(int16_t)HIWORD(wparam);
 
-  if (win->parent) {
-    mx += (int)win->scroll[0];
-    my += (int)win->scroll[1];
-  }
-
   if (data->view_mode == RVM_VIEW_REPORT) {
     (void)mx;
     if (my < HEADER_HEIGHT)

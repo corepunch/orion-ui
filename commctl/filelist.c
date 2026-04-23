@@ -290,10 +290,6 @@ static void fl_navigate(window_t *win, filelist_data_t *data, int index) {
 static int fl_hit_index(window_t *win, filelist_data_t *data, uint32_t wparam) {
   int mx = (int)(int16_t)LOWORD(wparam);
   int my = (int)(int16_t)HIWORD(wparam);
-  if (win->parent) {
-    mx += (int)win->scroll[0];
-    my += (int)win->scroll[1];
-  }
   int col_w = (int)(uint32_t)send_message(win, RVM_GETCOLUMNWIDTH, 0, NULL);
   int eff_w = win->frame.w - (win->vscroll.visible ? SCROLLBAR_WIDTH : 0);
   int ncol  = (col_w > 0 && eff_w > 0) ? (eff_w / col_w) : 1;
