@@ -205,7 +205,11 @@ fonts: tools
 $(BIN_DIR)/%$(EXE_EXT): tools/%.c $(SHARED_LIB) | $(BIN_DIR)
 	@echo "Building tool: $@"
 	$(CC) $(CFLAGS) -I. -Itools -o $@ $< \
-		$(LDFLAGS) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS) 
+		$(LDFLAGS) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
+ifeq ($(OS),Windows_NT)
+	@cp -f $(LIB_DIR)/libplatform.dll $(BIN_DIR)/
+	@cp -f $(LIB_DIR)/liborion.dll $(BIN_DIR)/
+endif
 
 # Build the platform submodule shared library
 .PHONY: platform
