@@ -31,8 +31,8 @@
 // Layout constants
 // ============================================================
 
-#define SCREEN_W         920
-#define SCREEN_H         600
+#define SCREEN_W         800
+#define SCREEN_H         480
 
 #define PANEL_SPLITTER   4      // px width/height of a splitter divider
 #define PANEL_LEFT_W_DEFAULT   180
