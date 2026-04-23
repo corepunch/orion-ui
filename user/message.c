@@ -569,21 +569,31 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
                           total_h - 2 * TOOLBAR_BEVEL_WIDTH};
           draw_bevel(&rect);
           fill_rect(get_sys_color(brWindowBg), R(rect.x, rect.y, rect.w, rect.h));
-          // Paint each toolbar child. tc->frame.x/y are toolbar-band-relative,
-          // so set up a viewport with (0,0) = toolbar band top-left so each
-          // child can draw at its stored coordinates without knowing the parent's
-          // screen position.  Restore fullscreen projection afterwards so the
-          // status bar and any subsequent code use screen-absolute coordinates.
+          // Paint each toolbar child with a per-button projection so that
+          // drawing at (0,0) inside the child proc maps to the button's
+          // top-left corner (consistent with how send_message dispatches evPaint
+          // for regular child windows).  tc->frame.x/y are toolbar-band-relative.
           rect_t tb_rect = {win->frame.x, win->frame.y + title_h, win->frame.w, total_h};
           set_viewport(&tb_rect);
-          set_projection(0, 0, win->frame.w, total_h);
           for (window_t *tc = win->toolbar_children; tc; tc = tc->next) {
+            set_projection(-tc->frame.x, -tc->frame.y,
+                           win->frame.w - tc->frame.x, total_h - tc->frame.y);
             tc->proc(tc, evPaint, 0, NULL);
           }
           set_fullscreen();
         }
         if (win->flags&WINDOW_STATUSBAR) {
           draw_statusbar(win, win->statusbar_text);
+        }
+        if ((win->flags & WINDOW_SIDEBAR) && win->sidebar_child && win->sidebar_width > 0) {
+          // Draw a 1-pixel vertical separator between the sidebar and the content area.
+          // Uses screen-absolute coordinates (set_fullscreen projection is active).
+          int t_bar = titlebar_height(win);
+          int s_bar = statusbar_height(win);
+          int sb_x  = win->frame.x + win->sidebar_width;
+          int sb_y  = win->frame.y + t_bar;
+          int sb_h  = win->frame.h - t_bar - s_bar;
+          fill_rect(get_sys_color(brBorderFocus), R(sb_x, sb_y, 1, sb_h));
         }
       }
       break;
@@ -593,14 +603,18 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         int t = titlebar_height(root);
         ui_set_stencil_for_root_window(get_root_window(win)->id);
         set_viewport(&root->frame);
-        // Shift projection so that y=0 maps to the client area top-left
-        // (i.e. below the title bar / toolbar).  This makes the window proc
-        // coordinate system purely client-relative while allowing scrollbar
-        // drawing code (draw_builtin_scrollbars) to address the full frame.
-        set_projection(root->scroll[0],
-                       -t + root->scroll[1],
-                       root->frame.w + root->scroll[0],
-                       root->frame.h - t + root->scroll[1]);
+        // Shift projection so that (0,0) in drawing space maps to the top-left
+        // of the window's own client area.  For root windows (no parent),
+        // cx=cy=0 and the projection is unchanged (backward compat).  For child
+        // windows, cx/cy equal the child's frame.x/y so that drawing at (0,0)
+        // appears at the child's screen position rather than at the root's
+        // client origin.
+        int cx = win->parent ? win->frame.x : 0;
+        int cy = win->parent ? win->frame.y : 0;
+        set_projection(root->scroll[0] - cx,
+                       -t - cy + root->scroll[1],
+                       root->frame.w + root->scroll[0] - cx,
+                       root->frame.h - t - cy + root->scroll[1]);
         // For scrollable windows, tighten the scissor to the client area so
         // that scrolled content cannot bleed into non-client areas (title bar,
         // toolbar, status bar).  Only applied when a window actually has
@@ -622,6 +636,22 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       }
       invalidate_window(win);
       break;
+    case sbSetContent: {
+      // Create (or replace) the sidebar child window for a WINDOW_SIDEBAR window.
+      // wparam = desired sidebar width in pixels (0 → use SIDEBAR_DEFAULT_WIDTH).
+      // lparam = winproc_t for the sidebar content window.
+      if (!lparam) break;
+      winproc_t proc = (winproc_t)lparam;
+      int sb_w = (int)wparam > 0 ? (int)wparam : SIDEBAR_DEFAULT_WIDTH;
+      win->sidebar_width = sb_w;
+      rect_t cr = get_client_rect(win);
+      win->sidebar_child = create_window("",
+          WINDOW_NOTITLE | WINDOW_NORESIZE | WINDOW_VSCROLL | WINDOW_NOTRAYBUTTON,
+          MAKERECT(0, 0, sb_w, cr.h),
+          win, proc, win->hinstance, NULL);
+      invalidate_window(win);
+      break;
+    }
     case tbSetStrip:
       if (lparam) {
         memcpy(&win->toolbar_strip, lparam, sizeof(bitmap_strip_t));

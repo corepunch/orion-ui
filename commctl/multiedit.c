@@ -156,16 +156,15 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       // Focus ring (matches win_textedit style).
       fill_rect(focused ? get_sys_color(brFocusRing)
                         : get_sys_color(brWindowBg),
-                R(win->frame.x - 1, win->frame.y - 1,
-                  win->frame.w + 2, win->frame.h + 2));
+                R(-1, -1, win->frame.w + 2, win->frame.h + 2));
 
       // Inset bevel border.
-      draw_button(&win->frame, 1, 1, true);
+      draw_button(&(rect_t){0, 0, win->frame.w, win->frame.h}, 1, 1, true);
 
       int tw = win->frame.w - ME_PADDING * 2;
       int th = win->frame.h - ME_PADDING * 2;
-      int tx = win->frame.x + ME_PADDING;
-      int ty = win->frame.y + ME_PADDING;
+      int tx = ME_PADDING;
+      int ty = ME_PADDING;
 
       // Clip to text area (scissor uses absolute screen coordinates).
       window_t *root = get_root_window(win);

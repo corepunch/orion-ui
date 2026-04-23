@@ -25,7 +25,6 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   g_gc->hinstance     = hinstance;
   g_gc->selected_commit = -1;
   g_gc->selected_file   = -1;
-  g_gc->left_w          = PANEL_LEFT_W_DEFAULT;
   g_gc->right_w         = PANEL_RIGHT_W_DEFAULT;
 
   // Menubar + accelerators must be wired before the main window is shown.
@@ -39,7 +38,7 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
 
   // Create the main application window.
   g_gc->main_win = create_window("Git Client",
-      WINDOW_TOOLBAR | WINDOW_STATUSBAR,
+      WINDOW_TOOLBAR | WINDOW_STATUSBAR | WINDOW_SIDEBAR,
       MAKERECT(0, 0, SCREEN_W, SCREEN_H),
       NULL,   // no parent → root window
       gc_main_proc, hinstance, NULL);

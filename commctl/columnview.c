@@ -191,10 +191,15 @@ static int rv_hit_index(window_t *win, reportview_data_t *data, uint32_t wparam)
   int mx = (int)(int16_t)LOWORD(wparam);
   int my = (int)(int16_t)HIWORD(wparam);
 
-  // Mouse coordinates arrive in the target window's local client space and
-  // already include this window's scroll offset. Using them directly avoids
-  // double-counting scroll when hit-testing in child windows.
-  (void)win;
+  // For root windows LOCAL_X/LOCAL_Y already include the window's scroll via
+  // the LOCAL_X/LOCAL_Y macros in event.c.  For child windows handle_mouse
+  // delivers (LOCAL_root − c→frame), which does NOT include the child's own
+  // scroll.  Add child scroll here so hit-testing stays in sync with the
+  // (0,0)-based draw coordinates used by both view modes.
+  if (win->parent) {
+    mx += (int)win->scroll[0];
+    my += (int)win->scroll[1];
+  }
 
   if (data->view_mode == RVM_VIEW_REPORT) {
     (void)mx;
@@ -271,8 +276,11 @@ static void rv_paint_icon_view(window_t *win, reportview_data_t *data) {
 
   fill_rect(bg_col, R(0, 0, win->frame.w, win->frame.h));
 
-  int clip_top = win->parent ? win->frame.y : 0;
-  int clip_bottom = win->parent ? win->frame.y + win->frame.h : win->frame.h;
+  // With the child-relative projection applied by send_message before evPaint,
+  // y=0 in draw space is always the window's own client top regardless of whether
+  // this is a root or child window.  Clip items to [0, frame.h].
+  int clip_top = 0;
+  int clip_bottom = win->frame.h;
 
   for (uint32_t i = 0; i < data->count; i++) {
     int col = i % ncol;
@@ -319,7 +327,9 @@ static void rv_paint_report_view(window_t *win, reportview_data_t *data) {
   char clipped[MAX_COLUMNVIEW_ITEM_NAME];
   for (int row = first_row; row < last_row; row++) {
     reportview_item_t *it = &data->items[row];
-    uint32_t fg = (row == data->selected) ? get_sys_color(brWindowBg) : it->color;
+    uint32_t fg = (row == data->selected) ? get_sys_color(brWindowBg)
+                : it->color              ? it->color
+                                         : get_sys_color(brTextNormal);
     int y = HEADER_HEIGHT + row * ENTRY_HEIGHT - scroll_y;
     int x = 0;
 

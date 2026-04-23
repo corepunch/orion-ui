@@ -1,18 +1,20 @@
-// Main window — three-panel splitter layout:
+// Main window — two-panel splitter layout inside a WINDOW_SIDEBAR:
 //
-//   ┌─────────────┬──────────────────────────────┬────────────┐
-//   │             │   Commit Log (win_reportview) │            │
-//   │  Branches   ├──────────────────────────────┤  Diff      │
-//   │  (left)     │   Changed Files (reportview)  │  (right)   │
-//   └─────────────┴──────────────────────────────┴────────────┘
+//   ┌─────────────║──────────────────────────────┬────────────┐
+//   │             ║   Commit Log (win_reportview) │            │
+//   │  Branches   ║──────────────────────────────┤  Diff      │
+//   │  (sidebar)  ║   Changed Files (reportview)  │  (right)   │
+//   └─────────────║──────────────────────────────┴────────────┘
 //
+// The branches panel is the WINDOW_SIDEBAR child (fixed width, no drag).
+// The right (diff) and centre horizontal splitters remain user-draggable.
 // Splitter dividers are 4-pixel-wide strips between panels.
-// Mouse dragging on those strips resizes the panels.
 //
 // The main window carries:
-//   • WINDOW_TOOLBAR  → fetch / pull / push / commit toolbar
+//   • WINDOW_TOOLBAR   → fetch / pull / push / commit toolbar
 //   • WINDOW_STATUSBAR → branch name + ahead/behind counts
-//   • win_menubar     → created by view_menubar.c
+//   • WINDOW_SIDEBAR   → branches/tags/stashes panel
+//   • win_menubar      → created by view_menubar.c
 
 #include "gitclient.h"
 
@@ -39,35 +41,31 @@ static const int kMainToolbarCount =
 // ============================================================
 
 // Compute child window frames from current splitter positions.
-// cr is the main window's client rect.
+// cr is the main window's client rect.  The sidebar occupies the first
+// PANEL_LEFT_W_DEFAULT pixels and is managed by the framework (WINDOW_SIDEBAR);
+// this function only lays out the centre and right content panels.
 static void compute_layout(gc_state_t *gc, rect_t *cr,
-                            rect_t *r_branches,
                             rect_t *r_log,
                             rect_t *r_files,
                             rect_t *r_diff) {
-  int lw = gc->left_w;
+  int lw = PANEL_LEFT_W_DEFAULT + PANEL_SPLITTER;  // fixed sidebar + separator gap
   int rw = gc->right_w;
   int total_w = cr->w;
   int total_h = cr->h;
 
-  // Clamp splitter positions.
-  lw = CLAMP(lw, 60, total_w - rw - 80);
+  // Clamp right splitter.
   rw = CLAMP(rw, 80, total_w - lw - 80);
-  gc->left_w  = lw;
   gc->right_w = rw;
 
-  int center_x = cr->x + lw + PANEL_SPLITTER;
-  int center_w = total_w - lw - rw - 2 * PANEL_SPLITTER;
+  int center_x = cr->x + lw;
+  int center_w = total_w - lw - rw - PANEL_SPLITTER;
   if (center_w < 20) center_w = 20;
 
   int vs = CLAMP(gc->vsplit_y, 40, total_h - 40);
   gc->vsplit_y = vs;
 
-  *r_branches = (rect_t){ cr->x, cr->y, lw, total_h };
-  *r_diff     = (rect_t){ cr->x + total_w - rw, cr->y, rw, total_h };
-
-  *r_log   = (rect_t){ center_x, cr->y,
-                        center_w, vs };
+  *r_diff  = (rect_t){ cr->x + total_w - rw, cr->y, rw, total_h };
+  *r_log   = (rect_t){ center_x, cr->y, center_w, vs };
   *r_files = (rect_t){ center_x, cr->y + vs + PANEL_SPLITTER,
                         center_w, total_h - vs - PANEL_SPLITTER };
 }
@@ -78,12 +76,13 @@ void gc_layout_panels(window_t *win) {
 
   rect_t cr = get_client_rect(win);
 
-  rect_t rb, rl, rf, rd;
-  compute_layout(gc, &cr, &rb, &rl, &rf, &rd);
+  rect_t rl, rf, rd;
+  compute_layout(gc, &cr, &rl, &rf, &rd);
 
-  if (gc->branches_win) {
-    move_window(gc->branches_win, rb.x, rb.y);
-    resize_window(gc->branches_win, rb.w, rb.h);
+  // Resize sidebar child to fill the full client height.
+  if (win->sidebar_child) {
+    move_window(win->sidebar_child, 0, 0);
+    resize_window(win->sidebar_child, win->sidebar_width, cr.h);
   }
   if (gc->log_win) {
     move_window(gc->log_win, rl.x, rl.y);
@@ -105,17 +104,14 @@ void gc_layout_panels(window_t *win) {
 
 static int splitter_at(gc_state_t *gc, rect_t *cr, int mx, int my) {
   (void)my;
-  int lx = cr->x + gc->left_w;
+  int lx = cr->x + PANEL_LEFT_W_DEFAULT + PANEL_SPLITTER;  // content starts here
   int rx = cr->x + cr->w - gc->right_w - PANEL_SPLITTER;
 
-  // Left vertical splitter.
-  if (mx >= lx && mx < lx + PANEL_SPLITTER) return 1;
   // Right vertical splitter.
   if (mx >= rx && mx < rx + PANEL_SPLITTER) return 2;
   // Centre horizontal splitter (only in the centre column).
-  int center_x = lx + PANEL_SPLITTER;
   int center_r = rx;
-  if (mx >= center_x && mx <= center_r) {
+  if (mx >= lx && mx <= center_r) {
     int sy = cr->y + gc->vsplit_y;
     if (my >= sy && my < sy + PANEL_SPLITTER) return 3;
   }
@@ -219,26 +215,27 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
       // Status bar.
       send_message(win, evStatusBar, 0, "No repository");
 
-      rect_t cr = get_client_rect(win);
+      // Sidebar (branches / tags / stashes) — replaces the old manual branches_win.
+      send_message(win, sbSetContent,
+                   (uint32_t)PANEL_LEFT_W_DEFAULT,
+                   gc_branches_proc);
+      gc->branches_win = win->sidebar_child;
 
-      // Create child panels.
-      gc->branches_win = create_window("Branches",
-          WINDOW_NOTITLE | WINDOW_NORESIZE | WINDOW_VSCROLL | WINDOW_NOTRAYBUTTON,
-          MAKERECT(cr.x, cr.y, gc->left_w, cr.h),
-          win, gc_branches_proc, gc->hinstance, NULL);
+      rect_t cr = get_client_rect(win);
+      int lx = PANEL_LEFT_W_DEFAULT + PANEL_SPLITTER;  // content starts after sidebar
 
       gc->log_win = create_window("Log",
           WINDOW_NOTITLE | WINDOW_NORESIZE | WINDOW_VSCROLL | WINDOW_NOTRAYBUTTON,
-          MAKERECT(cr.x + gc->left_w + PANEL_SPLITTER, cr.y,
-                   cr.w - gc->left_w - gc->right_w - 2 * PANEL_SPLITTER,
+          MAKERECT(lx, cr.y,
+                   cr.w - lx - gc->right_w - PANEL_SPLITTER,
                    gc->vsplit_y),
           win, gc_log_proc, gc->hinstance, NULL);
 
       gc->files_win = create_window("Files",
           WINDOW_NOTITLE | WINDOW_NORESIZE | WINDOW_VSCROLL | WINDOW_NOTRAYBUTTON,
-          MAKERECT(cr.x + gc->left_w + PANEL_SPLITTER,
+          MAKERECT(lx,
                    cr.y + gc->vsplit_y + PANEL_SPLITTER,
-                   cr.w - gc->left_w - gc->right_w - 2 * PANEL_SPLITTER,
+                   cr.w - lx - gc->right_w - PANEL_SPLITTER,
                    cr.h - gc->vsplit_y - PANEL_SPLITTER),
           win, gc_files_proc, gc->hinstance, NULL);
 
@@ -248,7 +245,6 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
                    gc->right_w, cr.h),
           win, gc_diff_proc, gc->hinstance, NULL);
 
-      show_window(gc->branches_win, true);
       show_window(gc->log_win,      true);
       show_window(gc->files_win,    true);
       show_window(gc->diff_win,     true);
@@ -281,19 +277,14 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
       rect_t cr = get_client_rect(win);
       uint32_t split_col = get_sys_color(brBorderFocus);
 
-      // Left vertical splitter.
-      fill_rect(split_col,
-                R(cr.x + gc->left_w, cr.y,
-                  PANEL_SPLITTER, cr.h));
-
       // Right vertical splitter.
       fill_rect(split_col,
                 R(cr.x + cr.w - gc->right_w - PANEL_SPLITTER, cr.y,
                   PANEL_SPLITTER, cr.h));
 
       // Centre horizontal splitter.
-      int cx = cr.x + gc->left_w + PANEL_SPLITTER;
-      int cw = cr.w - gc->left_w - gc->right_w - 2 * PANEL_SPLITTER;
+      int cx = cr.x + PANEL_LEFT_W_DEFAULT + PANEL_SPLITTER;
+      int cw = cr.w - PANEL_LEFT_W_DEFAULT - gc->right_w - 2 * PANEL_SPLITTER;
       fill_rect(split_col,
                 R(cx, cr.y + gc->vsplit_y, cw, PANEL_SPLITTER));
       return false;
@@ -309,8 +300,7 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
       if (spl) {
         gc->drag_splitter   = spl;
         gc->drag_start_mouse = (spl == 3) ? my : mx;
-        gc->drag_start_val   = (spl == 1) ? gc->left_w
-                             : (spl == 2) ? gc->right_w
+        gc->drag_start_val   = (spl == 2) ? gc->right_w
                              :               gc->vsplit_y;
         set_capture(win);
         return true;
@@ -328,9 +318,7 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
                   ? my - gc->drag_start_mouse
                   : mx - gc->drag_start_mouse;
 
-      if (gc->drag_splitter == 1) {
-        gc->left_w = gc->drag_start_val + delta;
-      } else if (gc->drag_splitter == 2) {
+      if (gc->drag_splitter == 2) {
         gc->right_w = gc->drag_start_val - delta;
       } else {
         gc->vsplit_y = gc->drag_start_val + delta;

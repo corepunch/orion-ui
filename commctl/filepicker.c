@@ -558,6 +558,10 @@ static result_t fp_proc(window_t *win, uint32_t msg,
       ps->list_win = create_window("", WINDOW_NOTITLE | WINDOW_VSCROLL,
           MAKERECT(0, 0, FP_LIST_W + FP_PAD * 2, FP_LIST_H + FP_PAD),
           win, win_filelist, 0, NULL);
+      // Set column width so exactly 2 icon-view columns fit within the list
+      // width minus the vertical scrollbar strip.
+      send_message(ps->list_win, RVM_SETCOLUMNWIDTH,
+                   (FP_LIST_W + FP_PAD * 2 - SCROLLBAR_WIDTH) / 2, NULL);
 
       // Apply the initial filter
       fp_apply_filter(ps);

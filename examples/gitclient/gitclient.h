@@ -171,7 +171,6 @@ typedef struct {
   window_t      *diff_win;
 
   // Splitter positions (in main client-area pixels)
-  int           left_w;         // width of left (branches) panel
   int           right_w;        // width of right (diff) panel
   int           vsplit_y;       // y that separates log (top) from files (bottom)
 

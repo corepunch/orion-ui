@@ -37,12 +37,13 @@
 // Coordinate helpers
 // ============================================================
 
-// Convert form-local to absolute screen X for a canvas window.
-static inline int form_to_sx(window_t *win, canvas_state_t *s, int fx) {
-  return win->frame.x + CANVAS_PADDING - s->pan_x + fx;
+// Convert form-local to canvas-local screen X for a canvas window.
+// With child-local evPaint projection (0,0) = canvas window top-left.
+static inline int form_to_sx(canvas_state_t *s, int fx) {
+  return CANVAS_PADDING - s->pan_x + fx;
 }
-static inline int form_to_sy(window_t *win, canvas_state_t *s, int fy) {
-  return win->frame.y + CANVAS_PADDING - s->pan_y + fy;
+static inline int form_to_sy(canvas_state_t *s, int fy) {
+  return CANVAS_PADDING - s->pan_y + fy;
 }
 
 // Convert window-local mouse X to form-local.
@@ -169,8 +170,8 @@ static void draw_sunken_box(int sx, int sy, int sw, int sh) {
 
 // Draw a control element at its form-space position translated to screen.
 static void draw_element(window_t *win, canvas_state_t *s, form_element_t *el) {
-  int sx = form_to_sx(win, s, el->x);
-  int sy = form_to_sy(win, s, el->y);
+  int sx = form_to_sx(s, el->x);
+  int sy = form_to_sy(s, el->y);
   int sw = el->w;
   int sh = el->h;
   uint32_t text_col = get_sys_color(brTextNormal);
@@ -233,8 +234,8 @@ static void draw_handles(window_t *win, canvas_state_t *s) {
   get_handle_rects(s, el, hx, hy);
 
   // Dotted selection border (4-pixel segments, screen coords)
-  int bx = form_to_sx(win, s, el->x) - 1;
-  int by = form_to_sy(win, s, el->y) - 1;
+  int bx = form_to_sx(s, el->x) - 1;
+  int by = form_to_sy(s, el->y) - 1;
   int bw = el->w + 2;
   int bh = el->h + 2;
   draw_sel_rect(R(bx, by, bw, bh));
@@ -242,7 +243,7 @@ static void draw_handles(window_t *win, canvas_state_t *s) {
   // Solid handle squares
   uint32_t hcol = 0xFF000000;
   for (int i = 0; i < HANDLE_COUNT; i++)
-    fill_rect(hcol, R(hx[i] + win->frame.x, hy[i] + win->frame.y, HANDLE_SIZE, HANDLE_SIZE));
+    fill_rect(hcol, R(hx[i], hy[i], HANDLE_SIZE, HANDLE_SIZE));
 }
 
 // Draw a rubber-band rectangle (for placement drag) in form coords.
@@ -255,8 +256,8 @@ static void draw_rubber_band(window_t *win, canvas_state_t *s) {
   if (x1 > s->doc->form_w) x1 = s->doc->form_w;
   if (y1 > s->doc->form_h) y1 = s->doc->form_h;
   if (x1 <= x0 || y1 <= y0) return;
-  int sx = form_to_sx(win, s, x0);
-  int sy = form_to_sy(win, s, y0);
+  int sx = form_to_sx(s, x0);
+  int sy = form_to_sy(s, y0);
   draw_sel_rect(R(sx, sy, x1 - x0, y1 - y0));
 }
 
@@ -432,11 +433,11 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       // Dark workspace background
       fill_rect(get_sys_color(brWorkspaceBg),
-                R(win->frame.x, win->frame.y, win->frame.w, win->frame.h));
+                R(0, 0, win->frame.w, win->frame.h));
 
       // Form surface (window-colored rectangle with a 1px dark border)
-      int fx = win->frame.x + CANVAS_PADDING - s->pan_x;
-      int fy = win->frame.y + CANVAS_PADDING - s->pan_y;
+      int fx = CANVAS_PADDING - s->pan_x;
+      int fy = CANVAS_PADDING - s->pan_y;
       int fw = doc->form_w;
       int fh = doc->form_h;
       fill_rect(get_sys_color(brWindowBg), R(fx, fy, fw, fh));

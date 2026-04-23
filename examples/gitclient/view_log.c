@@ -64,6 +64,7 @@ void gc_log_refresh(void) {
     item.subitems[1]   = c->date;
     item.subitems[2]   = short_hash;
     item.subitem_count = 3;
+    item.color         = get_sys_color(brTextNormal);
     item.userdata      = (uint32_t)i;
     send_message(win, RVM_ADDITEM, 0, &item);
   }
