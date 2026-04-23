@@ -76,7 +76,22 @@ void gc_diff_refresh(void) {
     path   = gc->files[fsel].path;
   }
 
-  git_get_diff(gc->repo, path, staged, gc->diff_buf, GC_MAX_DIFF_SIZE);
+  if (gc->selected_commit >= 0 && gc->selected_commit < gc->commit_count) {
+    const char *hash = gc->commits[gc->selected_commit].hash;
+    if (path && path[0]) {
+      const char *args[] = {
+        "git", "show", "--pretty=format:", hash, "--", path, NULL
+      };
+      git_run_sync(gc->repo, args, gc->diff_buf, GC_MAX_DIFF_SIZE);
+    } else {
+      const char *args[] = {
+        "git", "show", "--pretty=format:", hash, NULL
+      };
+      git_run_sync(gc->repo, args, gc->diff_buf, GC_MAX_DIFF_SIZE);
+    }
+  } else {
+    git_get_diff(gc->repo, path, staged, gc->diff_buf, GC_MAX_DIFF_SIZE);
+  }
 
   if (!gc->diff_buf[0]) {
     invalidate_window(win);

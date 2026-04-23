@@ -18,8 +18,10 @@
 #include <stdint.h>
 
 // Physical dimensions of one character cell in screen pixels.
+// The atlas stores 8x16 cells, but rows are duplicated from a 6x8 source;
+// rendering at 8px height restores the intended 1x vertical appearance.
 #define VGA_CHAR_W   8
-#define VGA_CHAR_H   16
+#define VGA_CHAR_H   8
 
 // Initialise the VGA font renderer by loading the sheet from sheet_path.
 // Must be called after ui_init_graphics().

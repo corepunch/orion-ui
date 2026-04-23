@@ -15,6 +15,42 @@ static void files_setup_columns(window_t *win) {
   send_message(win, RVM_ADDCOLUMN, 0, &c1);
 }
 
+static int files_get_commit_changed(gc_state_t *gc, const char *hash,
+                                    git_file_status_t *out, int max) {
+  if (!gc || !gc->repo || !hash || !hash[0] || !out || max <= 0)
+    return 0;
+
+  char buf[64 * 1024] = {0};
+  const char *args[] = {
+    "git", "show", "--name-status", "--pretty=format:",
+    "--no-renames", hash, NULL
+  };
+  if (!git_run_sync(gc->repo, args, buf, sizeof(buf)))
+    return 0;
+
+  int count = 0;
+  char *line = buf;
+  while (*line && count < max) {
+    char *nl = strchr(line, '\n');
+    if (nl) *nl = '\0';
+
+    // Expected format: "M\tpath" / "A\tpath" / "D\tpath".
+    if (line[0] && line[1] == '\t' && line[2]) {
+      git_file_status_t *f = &out[count];
+      f->status = line[0];
+      f->staged = false;
+      strncpy(f->path, line + 2, sizeof(f->path) - 1);
+      f->path[sizeof(f->path) - 1] = '\0';
+      count++;
+    }
+
+    if (!nl) break;
+    line = nl + 1;
+  }
+
+  return count;
+}
+
 // ============================================================
 // Populate
 // ============================================================
@@ -32,12 +68,17 @@ void gc_files_refresh(void) {
     return;
   }
 
-  gc->file_count = git_get_status(gc->repo, gc->files, GC_MAX_FILES);
+  if (gc->selected_commit >= 0 && gc->selected_commit < gc->commit_count) {
+    const char *hash = gc->commits[gc->selected_commit].hash;
+    gc->file_count = files_get_commit_changed(gc, hash, gc->files, GC_MAX_FILES);
+  } else {
+    gc->file_count = git_get_status(gc->repo, gc->files, GC_MAX_FILES);
+  }
 
   for (int i = 0; i < gc->file_count; i++) {
     git_file_status_t *f = &gc->files[i];
 
-        char st[2] = { f->status, '\0' };
+      char st[2] = { f->status, '\0' };
 
     // Colour based on status.
     uint32_t color;

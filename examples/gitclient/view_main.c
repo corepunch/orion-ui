@@ -392,7 +392,7 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
         window_t *src = (window_t *)lparam;
 
         // Files double-click → stage / unstage.
-        if (src == gc->files_win &&
+        if (src == gc->files_win && gc->selected_commit < 0 &&
             gc->repo && idx >= 0 && idx < gc->file_count) {
           git_file_status_t *f = &gc->files[idx];
           char buf[512] = {0};
