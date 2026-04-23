@@ -219,17 +219,16 @@ $(PLATFORM_LIB): | $(LIB_DIR)
 	@echo "Building platform library..."
 	$(MAKE) -C $(PLATFORM_DIR) OUTDIR=$(abspath $(LIB_DIR))
 
-# VGA font sheet — generated from the built-in 6×8 bitmap font by doubling
-# each glyph to 8×16.  The tool links against liborion so it is built after
-# the shared library.  The generated PNG is written directly into the build
-# output share directory so the source tree stays clean.
+# VGA font sheet — copied from the source tree into build/share/orion.
+# Place your custom font at share/vga-rom-font-8x16.png and it will be used
+# by gitclient at runtime.
 VGA_FONT_PNG = $(SHARE_DIR)/orion/vga-rom-font-8x16.png
-GEN_VGA_FONT_BIN = $(BIN_DIR)/gen_vga_font$(EXE_EXT)
+VGA_FONT_SRC = share/vga-rom-font-8x16.png
 
-$(VGA_FONT_PNG): $(GEN_VGA_FONT_BIN) | $(SHARE_DIR)
-	@echo "Generating VGA font sheet: $@"
+$(VGA_FONT_PNG): $(VGA_FONT_SRC) | $(SHARE_DIR)
+	@echo "Copying VGA font sheet: $@"
 	@mkdir -p $(SHARE_DIR)/orion
-	$(GEN_VGA_FONT_BIN) $@
+	cp $(VGA_FONT_SRC) $@
 
 # Shared data assets — copy per-example resources into build/share/<example>/
 # and copy the framework's own icon sheet into build/share/orion/.

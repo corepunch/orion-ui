@@ -317,14 +317,14 @@ bool git_get_diff(git_repo_t *repo, const char *path,
 
   // Route through gc_build_cmd so stderr is redirected portably.
   if (staged) {
-    const char *args[] = { "git", "diff", "--cached", "--",
+    const char *args[] = { "git", "diff", "--color=always", "--cached", "--",
                            path ? path : "", NULL };
     git_run_sync(repo, args, buf, buf_sz);
   } else if (path && path[0]) {
-    const char *args[] = { "git", "diff", "HEAD", "--", path, NULL };
+    const char *args[] = { "git", "diff", "--color=always", "HEAD", "--", path, NULL };
     git_run_sync(repo, args, buf, buf_sz);
   } else {
-    const char *args[] = { "git", "diff", "HEAD", NULL };
+    const char *args[] = { "git", "diff", "--color=always", "HEAD", NULL };
     git_run_sync(repo, args, buf, buf_sz);
   }
   return true;

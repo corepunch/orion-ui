@@ -125,6 +125,10 @@ bool vga_font_loaded(void) {
   return g_vga_tex != 0;
 }
 
+uint32_t vga_font_texture_id(void) {
+  return g_vga_tex;
+}
+
 // ============================================================
 // Internal: UV coordinates for a glyph
 // ============================================================

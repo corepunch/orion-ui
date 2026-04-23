@@ -18,9 +18,9 @@
 #include <stdint.h>
 
 // Physical dimensions of one character cell in screen pixels.
-// The atlas stores 8x16 cells, but rows are duplicated from a 6x8 source;
-// rendering at 8px height restores the intended 1x vertical appearance.
-#define VGA_CHAR_W   8
+// These values control on-screen character size; increase them (for example
+// to 128x128) to render larger glyphs while preserving font texture detail.
+#define VGA_CHAR_W   4
 #define VGA_CHAR_H   8
 
 // Initialise the VGA font renderer by loading the sheet from sheet_path.
@@ -34,6 +34,9 @@ void vga_font_shutdown(void);
 
 // Returns true when the font sheet was successfully loaded.
 bool vga_font_loaded(void);
+
+// Returns the renderer texture ID for the loaded VGA sheet, or 0 if not loaded.
+uint32_t vga_font_texture_id(void);
 
 // Draw a single character cell at screen position (x, y).
 // fg / bg are 0xAARRGGBB; bg is drawn as a solid filled rectangle.

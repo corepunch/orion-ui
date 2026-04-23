@@ -10,6 +10,8 @@
 
 #include "gitclient.h"
 #include "vga_font.h"
+#include "vga_text.h"
+#include "../../kernel/renderer.h"
 
 // ============================================================
 // Colours (0xAARRGGBB)
@@ -38,7 +40,10 @@ typedef struct {
   char  **lines;      // pointers into diff_buf (not owned, gc->diff_buf is)
   int     line_count;
   int     scroll_y;   // first visible line index
+  vga_text_grid_t grid;  // VGA text buffer for rendering
 } diff_state_t;
+
+
 
 static int visible_lines(window_t *win) {
   return MAX(1, win->frame.h / VGA_CHAR_H);
@@ -80,12 +85,13 @@ void gc_diff_refresh(void) {
     const char *hash = gc->commits[gc->selected_commit].hash;
     if (path && path[0]) {
       const char *args[] = {
-        "git", "show", "--pretty=format:", hash, "--", path, NULL
+        "git", "show", "--color=always", "--pretty=format:", hash,
+        "--", path, NULL
       };
       git_run_sync(gc->repo, args, gc->diff_buf, GC_MAX_DIFF_SIZE);
     } else {
       const char *args[] = {
-        "git", "show", "--pretty=format:", hash, NULL
+        "git", "show", "--color=always", "--pretty=format:", hash, NULL
       };
       git_run_sync(gc->repo, args, gc->diff_buf, GC_MAX_DIFF_SIZE);
     }
@@ -147,6 +153,7 @@ result_t gc_diff_proc(window_t *win, uint32_t msg,
       diff_state_t *st = (diff_state_t *)win->userdata;
       if (st) {
         free(st->lines);
+        vga_text_free_grid(&st->grid);
         free(st);
         win->userdata = NULL;
       }
@@ -215,15 +222,30 @@ result_t gc_diff_proc(window_t *win, uint32_t msg,
       int end   = MIN(start + vis, st->line_count);
 
       // Determine available width for the text content.
-      int text_x = cr.x + LINE_NUM_W;
+      // int text_x = cr.x + LINE_NUM_W;
       int text_w = cr.w - LINE_NUM_W;
       if (text_w < 8) text_w = 8;
 
       int max_cols = text_w / VGA_CHAR_W;
+      int gutter_cols = LINE_NUM_W / VGA_CHAR_W;
+      int total_cols = gutter_cols + max_cols;
+
+      if (total_cols <= 0 || vis <= 0)
+        return true;
+
+      if (!vga_text_ensure_grid(&st->grid, total_cols, vis))
+        return true;
+
+      int def_fg_idx = nearest_ansi_index(CLR_CTX_FG);
+      int def_bg_idx = nearest_ansi_index(CLR_CTX_BG);
+      vga_text_clear_grid(&st->grid, def_fg_idx, def_bg_idx);
+
+      int lnum_fg_idx = nearest_ansi_index(CLR_LNUM_FG);
+      int lnum_bg_idx = nearest_ansi_index(CLR_LNUM_BG);
 
       for (int li = start; li < end; li++) {
         const char *line = st->lines[li];
-        int y = cr.y + (li - start) * VGA_CHAR_H;
+        int row = li - start;
 
         // Colour based on first character.
         uint32_t fg, bg;
@@ -245,10 +267,32 @@ result_t gc_diff_proc(window_t *win, uint32_t msg,
         // Line-number gutter.
         char lnum[16];
         snprintf(lnum, sizeof(lnum), "%4d ", li + 1);
-        vga_draw_text(lnum, cr.x, y, CLR_LNUM_FG, CLR_LNUM_BG);
+        for (int c = 0; c < gutter_cols; c++) {
+          unsigned char ch = (unsigned char)(lnum[c] ? lnum[c] : ' ');
+          vga_text_set_cell(&st->grid, c, row, ch, lnum_fg_idx, lnum_bg_idx);
+        }
 
-        // Content (clipped to visible columns).
-        vga_draw_textn(line, max_cols, text_x, y, fg, bg);
+        // Content (clipped to visible columns), honoring ANSI SGR colors.
+        vga_text_write_ansi_line(line,
+                                 &st->grid,
+                                 row,
+                                 gutter_cols,
+                                 max_cols,
+                                 fg, bg);
+      }
+
+      if (R_UpdateTextureRG8(st->grid.cells_tex, 0, 0, st->grid.cells_w, st->grid.cells_h, st->grid.cells)) {
+        R_VgaBuffer buf = {
+          .vga_buffer = st->grid.cells_tex,
+          .width = st->grid.cells_w,
+          .height = st->grid.cells_h,
+        };
+        R_DrawVGABuffer(&buf,
+                        cr.x, cr.y,
+                        st->grid.cells_w * VGA_CHAR_W,
+                        st->grid.cells_h * VGA_CHAR_H,
+                        vga_font_texture_id(),
+                        kAnsi16);
       }
 
       return true;
