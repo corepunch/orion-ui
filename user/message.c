@@ -569,15 +569,15 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
                           total_h - 2 * TOOLBAR_BEVEL_WIDTH};
           draw_bevel(&rect);
           fill_rect(get_sys_color(brWindowBg), R(rect.x, rect.y, rect.w, rect.h));
-          // Paint each toolbar child. tc->frame.x/y are toolbar-band-relative,
-          // so set up a viewport with (0,0) = toolbar band top-left so each
-          // child can draw at its stored coordinates without knowing the parent's
-          // screen position.  Restore fullscreen projection afterwards so the
-          // status bar and any subsequent code use screen-absolute coordinates.
+          // Paint each toolbar child with a per-button projection so that
+          // drawing at (0,0) inside the child proc maps to the button's
+          // top-left corner (consistent with how send_message dispatches evPaint
+          // for regular child windows).  tc->frame.x/y are toolbar-band-relative.
           rect_t tb_rect = {win->frame.x, win->frame.y + title_h, win->frame.w, total_h};
           set_viewport(&tb_rect);
-          set_projection(0, 0, win->frame.w, total_h);
           for (window_t *tc = win->toolbar_children; tc; tc = tc->next) {
+            set_projection(-tc->frame.x, -tc->frame.y,
+                           win->frame.w - tc->frame.x, total_h - tc->frame.y);
             tc->proc(tc, evPaint, 0, NULL);
           }
           set_fullscreen();
