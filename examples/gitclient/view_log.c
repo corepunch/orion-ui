@@ -59,13 +59,12 @@ void gc_log_refresh(void) {
     short_hash[7] = '\0';
 
     reportview_item_t item = {0};
-    item.text             = c->subject;
-    item.subitems[0]      = c->subject;
-    item.subitems[1]      = c->author;
-    item.subitems[2]      = c->date;
-    item.subitems[3]      = short_hash;
-    item.subitem_count    = 4;
-    item.userdata         = (uint32_t)i;
+    item.text          = c->subject;
+    item.subitems[0]   = c->author;
+    item.subitems[1]   = c->date;
+    item.subitems[2]   = short_hash;
+    item.subitem_count = 3;
+    item.userdata      = (uint32_t)i;
     send_message(win, RVM_ADDITEM, 0, &item);
   }
 

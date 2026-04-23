@@ -42,6 +42,16 @@ static int count_stashes(git_repo_t *repo, char (*out)[256], int max) {
 }
 
 // ============================================================
+// Column setup — single full-width column (no header title)
+// ============================================================
+
+static void branches_setup_column(window_t *win) {
+  send_message(win, RVM_CLEARCOLUMNS, 0, NULL);
+  reportview_column_t col = { "", 0 };  /* width=0 → auto-fill available width */
+  send_message(win, RVM_ADDCOLUMN, 0, &col);
+}
+
+// ============================================================
 // Populate
 // ============================================================
 
@@ -176,6 +186,12 @@ result_t gc_branches_proc(window_t *win, uint32_t msg,
 
   if (msg == evCreate) {
     send_message(win, RVM_SETVIEWMODE, RVM_VIEW_REPORT, NULL);
+    branches_setup_column(win);
+    return r;
+  }
+
+  if (msg == evResize) {
+    branches_setup_column(win);
     return r;
   }
 

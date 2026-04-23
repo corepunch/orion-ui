@@ -49,10 +49,9 @@ void gc_files_refresh(void) {
     }
 
     reportview_item_t item = {0};
-    item.text          = f->path;
-    item.subitems[0]   = st;
-    item.subitems[1]   = f->path;
-    item.subitem_count = 2;
+    item.text          = st;       // col 0 ("St"): status character
+    item.subitems[0]   = f->path;  // col 1 ("File"): file path
+    item.subitem_count = 1;
     item.color         = color;
     item.userdata      = (uint32_t)i;
     send_message(win, RVM_ADDITEM, 0, &item);
