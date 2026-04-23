@@ -455,8 +455,11 @@ static window_t *make_report_columnview(window_t *parent, int w, int h) {
 }
 
 // Click after scroll — child window, report mode.
-// After scrolling K rows, clicking at viewport y = HEADER_HEIGHT + n*ENTRY_HEIGHT
-// must select item (K + n), not item n.
+// rv_hit_index uses the raw wparam coordinates directly (event.c already
+// delivers content-space y to child windows, accounting for the child's
+// scroll before the message is sent).  So clicking at content y =
+// HEADER_HEIGHT + N*ENTRY_HEIGHT must select item N regardless of the
+// current scroll position.
 void test_cv_report_click_after_scroll_child(void) {
     TEST("win_reportview report child: click after scroll selects visual item");
 
@@ -470,22 +473,22 @@ void test_cv_report_click_after_scroll_child(void) {
     ASSERT_NOT_NULL(cv);
     add_items(cv, 10);
 
-    // Scroll so that item 3 is at the top of the visible body area.
+    // Simulate a scrolled state (item K is at the top of the visible area).
     const int K = 3;
     cv->scroll[1] = (uint32_t)(K * TEST_RV_ENTRY_HEIGHT);
 
-    // Click at first visible body row: viewport y = HEADER_HEIGHT.
-    // Visually item K is there; the hit test must return K, not 0.
+    // event.c delivers content-space y, so pass y = HEADER_HEIGHT + K*ENTRY_HEIGHT
+    // to select item K.
     send_message(cv, evLeftButtonDown,
-                 MAKEDWORD(5, TEST_RV_HEADER_HEIGHT), NULL);
+                 MAKEDWORD(5, TEST_RV_HEADER_HEIGHT + K * TEST_RV_ENTRY_HEIGHT), NULL);
 
     ASSERT_EQUAL(g_last_notification, RVN_SELCHANGE);
     ASSERT_EQUAL(g_last_index, K);
 
-    // Also verify a click on the second body row selects K+1.
+    // A content-space click one row lower selects K+1.
     reset_cmd_state();
     send_message(cv, evLeftButtonDown,
-                 MAKEDWORD(5, TEST_RV_HEADER_HEIGHT + TEST_RV_ENTRY_HEIGHT), NULL);
+                 MAKEDWORD(5, TEST_RV_HEADER_HEIGHT + (K + 1) * TEST_RV_ENTRY_HEIGHT), NULL);
 
     ASSERT_EQUAL(g_last_notification, RVN_SELCHANGE);
     ASSERT_EQUAL(g_last_index, K + 1);

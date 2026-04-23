@@ -169,22 +169,17 @@ static int rv_content_height(window_t *win, reportview_data_t *data) {
 }
 
 // Coordinate space notes:
-//   Root window  — wparam carries LOCAL_X/LOCAL_Y from kernel/event.c, which
-//                  already adds win->scroll[] so coords are in content space.
-//                  Draw code subtracts win->scroll[] explicitly, so both cancel
-//                  and items map to the correct row with no further adjustment.
-//   Child window — handle_mouse delivers (LOCAL_X_root − c→frame.x,
-//                  LOCAL_Y_root − c→frame.y).  The child's own scroll is NOT
-//                  included (only the root's frame is subtracted).  The evPaint
-//                  projection is also child-local, so draw code also uses
-//                  child-local (0,0)-relative coords.
-//                  Rule: add win->scroll[] here, NOT win->frame.{x,y}.
+//   event.c computes LOCAL_X/LOCAL_Y using the active window's scroll and
+//   absolute position.  For the active (root) window those coords are in
+//   content space already.  For child windows event.c adds the child's own
+//   scroll before calling send_message, so the wparam received here is also
+//   in content space.  Draw code uses content-space coords with the same
+//   origin, so no further adjustment is needed.
 //
-// Common mistake: forgetting to add win->scroll[] for child windows causes
-// clicks after scrolling to select the item at the raw viewport row rather
-// than the item that is visually under the cursor.  The offset equals the
-// current scroll distance.  See tests/columnview_keyboard_test.c for a
-// regression test that guards this invariant.
+// Common mistake (historical): an older version added win->scroll[] inside
+// this function, which caused double-counting when event.c already included
+// the scroll.  The fix is to use wparam directly.
+//   See tests/columnview_keyboard_test.c for regression tests.
 static int rv_hit_index(window_t *win, reportview_data_t *data, uint32_t wparam) {
   int mx = (int)(int16_t)LOWORD(wparam);
   int my = (int)(int16_t)HIWORD(wparam);
