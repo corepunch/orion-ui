@@ -64,7 +64,7 @@ static void print_help(const char* prog)
         "  -smooth                 Keep anti-aliased output (default)\n"
         "\n"
         "  Layout\n"
-        "  -nocenter               Don't centre glyph horizontally in cell\n"
+        "  -center                 Centre glyph horizontally in cell (default: left-aligned)\n"
         "  -nobaseline             Top-align instead of baseline-align\n"
         "  -first=N                First codepoint to rasterise (default %d)\n"
         "  -num=N                  Number of codepoints (default %d)\n"
@@ -176,7 +176,7 @@ int main(int argc, char** argv)
         .sharp        = 0,
         .threshold    = DEFAULT_THRESHOLD,
         .em_scale     = 0,
-        .center_x     = 1,
+        .center_x     = 0,
         .baseline_align = 1,
         .first_char   = DEFAULT_FIRST_CHAR,
         .num_chars    = DEFAULT_NUM_CHARS,
@@ -193,7 +193,7 @@ int main(int argc, char** argv)
         else if (!strcmp(a,"-sharp"))        o.sharp = 1;
         else if (!strcmp(a,"-smooth"))       o.sharp = 0;
         else if (!strcmp(a,"-em"))           o.em_scale = 1;
-        else if (!strcmp(a,"-nocenter"))     o.center_x = 0;
+        else if (!strcmp(a,"-center"))       o.center_x = 1;
         else if (!strcmp(a,"-nobaseline"))   o.baseline_align = 0;
         else if (!strcmp(a,"-invert"))       o.invert = 1;
         else if (!strcmp(a,"-rgba"))         o.rgba = 1;
@@ -305,7 +305,7 @@ int main(int argc, char** argv)
 
         int cell_x = cell_col * o.cell_w;
         int cell_y = cell_row * o.cell_h;
-        int draw_x = o.center_x     ? cell_x + (o.cell_w - bw) / 2 : cell_x + x0;
+        int draw_x = o.center_x ? cell_x + (o.cell_w - bw) / 2 : cell_x;
         int draw_y = o.baseline_align ? cell_y + baseline + y0      : cell_y;
 
         for (int y = 0; y < bh; y++) {

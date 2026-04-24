@@ -184,9 +184,11 @@ static bool load_atlas(font_atlas_t *atlas, glyph_metrics_t *met,
       int idx = c - fi.first_char;
       uint8_t adv = glyphs[idx].advance;   // use local var; same ptr as fi.glyphs
       if (full_cell) {
-        met->x0[c]     = 0;
-        met->draw_w[c] = (uint8_t)cell_w;
-        met->advance[c] = adv ? adv : (uint8_t)cell_w;
+        // Glyphs are left-aligned in their cells; draw quad is advance-wide so
+        // characters don't overlap, and we only sample the glyph's own pixels.
+        met->x0[c]      = 0;
+        met->draw_w[c]  = adv ? adv : (uint8_t)cell_w;
+        met->advance[c] = met->draw_w[c];
       } else {
         scan_cell_metrics(red, img_w, cx0, cy0, cell_w, cell_h,
                           &met->x0[c], &met->draw_w[c], &met->advance[c]);
@@ -195,7 +197,6 @@ static bool load_atlas(font_atlas_t *atlas, glyph_metrics_t *met,
     } else {
       // No foNT — scan pixels
       if (full_cell) {
-        // For full-cell mode without metadata, use fixed cell width
         met->x0[c]      = 0;
         met->draw_w[c]  = (uint8_t)cell_w;
         met->advance[c] = (uint8_t)cell_w;
