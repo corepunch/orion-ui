@@ -135,11 +135,13 @@ static bool load_atlas(font_atlas_t *atlas, glyph_metrics_t *met,
   }
 
   // ── Detect cell layout from image dimensions ──────────────────────────────
-  // Expect cell_w × cell_h consistent with the file; default to 8×8 for
-  // SmallFont and 16×16 for ChiKareGo2. We detect by examining the foNT chunk.
+  // Default cell size for each known font: SmallFont=8×8 (128px atlas),
+  // ChiKareGo2=16×16 (256px atlas).  The foNT chunk always takes precedence
+  // and overrides these defaults when present.
   int cell_w = (img_w >= 256) ? 16 : 8;
   int cell_h = (img_h >= 256) ? 16 : 8;
   int chars_per_row = img_w / cell_w;
+  // TODO: use baseline for sub-pixel vertical alignment when supported.
   int baseline = cell_h;
 
   // ── Try to read foNT chunk ────────────────────────────────────────────────
@@ -180,7 +182,7 @@ static bool load_atlas(font_atlas_t *atlas, glyph_metrics_t *met,
 
     if (has_font_meta && c < fi.first_char + fi.num_chars) {
       int idx = c - fi.first_char;
-      uint8_t adv = fi.glyphs[idx].advance;
+      uint8_t adv = glyphs[idx].advance;   // use local var; same ptr as fi.glyphs
       if (full_cell) {
         met->x0[c]     = 0;
         met->draw_w[c] = (uint8_t)cell_w;
@@ -220,7 +222,7 @@ static bool load_atlas(font_atlas_t *atlas, glyph_metrics_t *met,
   // ── Initialise vertex mesh ────────────────────────────────────────────────
   init_atlas_mesh(atlas);
 
-  (void)baseline;
+  (void)baseline; /* reserved: used for vertical alignment once baseline rendering is added */
   return true;
 }
 
@@ -340,7 +342,9 @@ static inline font_atlas_t *atlas_for(unsigned char c, glyph_metrics_t **met_out
 }
 
 static inline int char_advance(unsigned char c) {
-  glyph_metrics_t *m; atlas_for(c, &m); return m->advance[c];
+  glyph_metrics_t *m;
+  atlas_for(c, &m);
+  return m->advance[c];
 }
 
 // Public API: pixel width of one glyph.
