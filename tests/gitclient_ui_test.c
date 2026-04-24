@@ -1,8 +1,8 @@
 // tests/gitclient_ui_test.c — integration tests for the git client UI layer.
 //
-// Creates a real git repository in /tmp and drives the gitclient view layer
-// (branches panel, log panel, files panel, diff buffer, evCommand navigation)
-// headlessly — no display or OpenGL context required.
+// Creates a real git repository in a temporary directory and drives the
+// gitclient view layer (branches panel, log panel, files panel, diff buffer,
+// evCommand navigation) headlessly — no display or OpenGL context required.
 //
 // Each test creates a minimal window hierarchy through the panel procs
 // (gc_branches_proc, gc_log_proc, gc_files_proc, gc_diff_proc), calls the
@@ -14,13 +14,13 @@
 
 #include "test_framework.h"
 #include "test_env.h"
+#include "gitclient_test_helpers.h"
 #include "../examples/gitclient/gitclient.h"
 #include "../commctl/columnview.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
 
 // ── Application state ─────────────────────────────────────────────────────────
 // All gitclient view_*.c translation units resolve the extern gc_state_t *g_gc
@@ -40,34 +40,60 @@ static const char *detect_default_branch(void) {
 }
 
 static bool setup_repo(void) {
-    strncpy(s_repo, "/tmp/orion_gcui_XXXXXX", sizeof(s_repo) - 1);
-    if (!mkdtemp(s_repo)) {
-        printf("[setup] mkdtemp failed\n");
+    if (!gct_make_temp_dir(s_repo, sizeof(s_repo), "orion_gcui")) {
+        printf("[setup] failed to create temp dir\n");
         return false;
     }
 
-    char cmd[4096];
-    snprintf(cmd, sizeof(cmd),
-        "set -e;"
-        "cd '%s';"
-        "git init -b main 2>/dev/null || (git init && git checkout -b main 2>/dev/null || true);"
-        "git config user.email 'ci@test';"
-        "git config user.name 'CI';"
-        "echo hello > file1.txt;"
-        "git add file1.txt;"
-        "git commit -m 'Initial commit';"
-        "echo world > file2.txt;"
-        "git add file2.txt;"
-        "git commit -m 'Add file2';"
-        "git checkout -b feature;"
-        "echo feat > feature.txt;"
-        "git add feature.txt;"
-        "git commit -m 'Feature commit';"
-        "git checkout main 2>/dev/null || git checkout master",
-        s_repo);
+    // git init — prefer -b main (git >= 2.28); fall back to plain init.
+    if (!gct_git(s_repo, "init -b main")) {
+        if (!gct_git(s_repo, "init")) {
+            printf("[setup] git init failed — is git in PATH?\n");
+            return false;
+        }
+        // Create 'main' on older git; ignore failure (may already be named main).
+        gct_git(s_repo, "checkout -b main");
+    }
 
-    if (system(cmd) != 0) {
-        printf("[setup] git repo creation failed — is git in PATH?\n");
+    if (!gct_git(s_repo, "config user.email ci@test") ||
+        !gct_git(s_repo, "config user.name CI")) {
+        printf("[setup] git config failed\n");
+        return false;
+    }
+
+    // First commit: file1.txt
+    char file_path[512];
+    snprintf(file_path, sizeof(file_path), "%s/file1.txt", s_repo);
+    if (!gct_write_file(file_path, "hello\n") ||
+        !gct_git(s_repo, "add file1.txt") ||
+        !gct_git(s_repo, "commit -m \"Initial commit\"")) {
+        printf("[setup] first commit failed\n");
+        return false;
+    }
+
+    // Second commit: file2.txt
+    snprintf(file_path, sizeof(file_path), "%s/file2.txt", s_repo);
+    if (!gct_write_file(file_path, "world\n") ||
+        !gct_git(s_repo, "add file2.txt") ||
+        !gct_git(s_repo, "commit -m \"Add file2\"")) {
+        printf("[setup] second commit failed\n");
+        return false;
+    }
+
+    // Feature branch: feature.txt
+    snprintf(file_path, sizeof(file_path), "%s/feature.txt", s_repo);
+    if (!gct_git(s_repo, "checkout -b feature") ||
+        !gct_write_file(file_path, "feat\n") ||
+        !gct_git(s_repo, "add feature.txt") ||
+        !gct_git(s_repo, "commit -m \"Feature commit\"")) {
+        printf("[setup] feature branch failed\n");
+        return false;
+    }
+
+    // Return to the default branch (main or master).
+    if (!gct_git(s_repo, "checkout main") &&
+        !gct_git(s_repo, "checkout master")) {
+        printf("[setup] failed to checkout default branch\n");
         return false;
     }
     return true;
@@ -75,9 +101,7 @@ static bool setup_repo(void) {
 
 static void teardown_repo(void) {
     if (s_repo[0]) {
-        char cmd[512];
-        snprintf(cmd, sizeof(cmd), "rm -rf '%s'", s_repo);
-        system(cmd);
+        gct_remove_dir(s_repo);
         s_repo[0] = '\0';
     }
 }
@@ -298,9 +322,9 @@ void test_gc_files_panel_shows_modified_file(void) {
 
     gc_test_setup();
 
-    char cmd[512];
-    snprintf(cmd, sizeof(cmd), "echo extra >> '%s/file1.txt'", s_repo);
-    system(cmd);
+    char file_path[512];
+    snprintf(file_path, sizeof(file_path), "%s/file1.txt", s_repo);
+    ASSERT_TRUE(gct_append_file(file_path, "extra\n"));
 
     g_gc->selected_commit = -1;
     gc_files_refresh();
@@ -319,8 +343,7 @@ void test_gc_files_panel_shows_modified_file(void) {
     ASSERT_TRUE(found);
 
     // Restore.
-    snprintf(cmd, sizeof(cmd), "cd '%s' && git checkout -- file1.txt", s_repo);
-    system(cmd);
+    ASSERT_TRUE(gct_git(s_repo, "checkout -- file1.txt"));
 
     gc_test_teardown();
     PASS();
@@ -625,10 +648,7 @@ void test_gc_feature_branch_has_three_commits(void) {
     TEST("feature branch: log has 3 commits (Feature + Add file2 + Initial)");
 
     gc_test_setup();
-
-    char cmd[512];
-    snprintf(cmd, sizeof(cmd), "cd '%s' && git checkout feature", s_repo);
-    system(cmd);
+    ASSERT_TRUE(gct_git(s_repo, "checkout feature"));
 
     git_repo_close(g_gc->repo);
     g_gc->repo = git_repo_open(s_repo);
@@ -640,10 +660,11 @@ void test_gc_feature_branch_has_three_commits(void) {
     ASSERT_STR_EQUAL(g_gc->commits[1].subject, "Add file2");
     ASSERT_STR_EQUAL(g_gc->commits[2].subject, "Initial commit");
 
-    // Restore.
+    // Restore default branch.
     const char *def = detect_default_branch();
-    snprintf(cmd, sizeof(cmd), "cd '%s' && git checkout %s", s_repo, def);
-    system(cmd);
+    char restore_cmd[64];
+    snprintf(restore_cmd, sizeof(restore_cmd), "checkout %s", def);
+    ASSERT_TRUE(gct_git(s_repo, restore_cmd));
 
     gc_test_teardown();
     PASS();
@@ -653,10 +674,7 @@ void test_gc_feature_branch_commit_shows_feature_file(void) {
     TEST("feature branch: selecting the feature commit shows feature.txt");
 
     gc_test_setup();
-
-    char cmd[512];
-    snprintf(cmd, sizeof(cmd), "cd '%s' && git checkout feature", s_repo);
-    system(cmd);
+    ASSERT_TRUE(gct_git(s_repo, "checkout feature"));
 
     git_repo_close(g_gc->repo);
     g_gc->repo = git_repo_open(s_repo);
@@ -678,10 +696,11 @@ void test_gc_feature_branch_commit_shows_feature_file(void) {
     }
     ASSERT_TRUE(found);
 
-    // Restore.
+    // Restore default branch.
     const char *def = detect_default_branch();
-    snprintf(cmd, sizeof(cmd), "cd '%s' && git checkout %s", s_repo, def);
-    system(cmd);
+    char restore_cmd[64];
+    snprintf(restore_cmd, sizeof(restore_cmd), "checkout %s", def);
+    ASSERT_TRUE(gct_git(s_repo, restore_cmd));
 
     gc_test_teardown();
     PASS();

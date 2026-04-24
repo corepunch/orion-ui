@@ -1,19 +1,19 @@
 // tests/gitclient_backend_test.c — headless unit tests for the git client
 // backend (examples/gitclient/git_backend.c).
 //
-// Creates a real git repository in /tmp, makes commits and branches, then
-// exercises every public git_* API without touching any UI code.
+// Creates a real git repository in a temporary directory, makes commits and
+// branches, then exercises every public git_* API without touching any UI code.
 //
 // Build: see Makefile (GITCLIENT_TEST_BINS target).
 // Run:   build/bin/test_gitclient_backend_test
 
 #include "test_framework.h"
+#include "gitclient_test_helpers.h"
 #include "../examples/gitclient/gitclient.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
 
 // ── Application state stub ────────────────────────────────────────────────────
 // gitclient.h declares g_gc as extern.  The async worker calls post_message
@@ -37,35 +37,60 @@ static const char *detect_default_branch(void) {
 }
 
 static bool setup_test_repo(void) {
-    strncpy(s_repo, "/tmp/orion_gcbe_XXXXXX", sizeof(s_repo) - 1);
-    if (!mkdtemp(s_repo)) {
-        printf("[setup] mkdtemp failed\n");
+    if (!gct_make_temp_dir(s_repo, sizeof(s_repo), "orion_gcbe")) {
+        printf("[setup] failed to create temp dir\n");
         return false;
     }
 
-    char cmd[4096];
-    // Initialise, configure, two commits on main, then a feature branch.
-    snprintf(cmd, sizeof(cmd),
-        "set -e;"
-        "cd '%s';"
-        "git init -b main 2>/dev/null || (git init && git checkout -b main 2>/dev/null || true);"
-        "git config user.email 'ci@test';"
-        "git config user.name 'CI';"
-        "echo hello > file1.txt;"
-        "git add file1.txt;"
-        "git commit -m 'Initial commit';"
-        "echo world > file2.txt;"
-        "git add file2.txt;"
-        "git commit -m 'Add file2';"
-        "git checkout -b feature;"
-        "echo feat > feature.txt;"
-        "git add feature.txt;"
-        "git commit -m 'Feature commit';"
-        "git checkout main 2>/dev/null || git checkout master",
-        s_repo);
+    // git init — prefer -b main (git >= 2.28); fall back to plain init.
+    if (!gct_git(s_repo, "init -b main")) {
+        if (!gct_git(s_repo, "init")) {
+            printf("[setup] git init failed — is git in PATH?\n");
+            return false;
+        }
+        // Create 'main' on older git; ignore failure (may already be named main).
+        gct_git(s_repo, "checkout -b main");
+    }
 
-    if (system(cmd) != 0) {
-        printf("[setup] git repo creation failed — is git in PATH?\n");
+    if (!gct_git(s_repo, "config user.email ci@test") ||
+        !gct_git(s_repo, "config user.name CI")) {
+        printf("[setup] git config failed\n");
+        return false;
+    }
+
+    // First commit: file1.txt
+    char file_path[512];
+    snprintf(file_path, sizeof(file_path), "%s/file1.txt", s_repo);
+    if (!gct_write_file(file_path, "hello\n") ||
+        !gct_git(s_repo, "add file1.txt") ||
+        !gct_git(s_repo, "commit -m \"Initial commit\"")) {
+        printf("[setup] first commit failed\n");
+        return false;
+    }
+
+    // Second commit: file2.txt
+    snprintf(file_path, sizeof(file_path), "%s/file2.txt", s_repo);
+    if (!gct_write_file(file_path, "world\n") ||
+        !gct_git(s_repo, "add file2.txt") ||
+        !gct_git(s_repo, "commit -m \"Add file2\"")) {
+        printf("[setup] second commit failed\n");
+        return false;
+    }
+
+    // Feature branch: feature.txt
+    snprintf(file_path, sizeof(file_path), "%s/feature.txt", s_repo);
+    if (!gct_git(s_repo, "checkout -b feature") ||
+        !gct_write_file(file_path, "feat\n") ||
+        !gct_git(s_repo, "add feature.txt") ||
+        !gct_git(s_repo, "commit -m \"Feature commit\"")) {
+        printf("[setup] feature branch failed\n");
+        return false;
+    }
+
+    // Return to the default branch (main or master).
+    if (!gct_git(s_repo, "checkout main") &&
+        !gct_git(s_repo, "checkout master")) {
+        printf("[setup] failed to checkout default branch\n");
         return false;
     }
     return true;
@@ -73,9 +98,7 @@ static bool setup_test_repo(void) {
 
 static void teardown_test_repo(void) {
     if (s_repo[0]) {
-        char cmd[512];
-        snprintf(cmd, sizeof(cmd), "rm -rf '%s'", s_repo);
-        system(cmd);
+        gct_remove_dir(s_repo);
         s_repo[0] = '\0';
     }
 }
@@ -262,9 +285,7 @@ void test_gc_log_hash_format(void) {
 
 void test_gc_log_feature_branch(void) {
     TEST("git_get_log: feature branch has 3 commits (inherits from main)");
-    char cmd[512];
-    snprintf(cmd, sizeof(cmd), "cd '%s' && git checkout feature", s_repo);
-    system(cmd);
+    ASSERT_TRUE(gct_git(s_repo, "checkout feature"));
 
     git_repo_t *r = git_repo_open(s_repo);
     ASSERT_NOT_NULL(r);
@@ -276,10 +297,11 @@ void test_gc_log_feature_branch(void) {
 
     git_repo_close(r);
 
-    // Restore main.
+    // Restore default branch.
     const char *def = detect_default_branch();
-    snprintf(cmd, sizeof(cmd), "cd '%s' && git checkout %s", s_repo, def);
-    system(cmd);
+    char restore_cmd[64];
+    snprintf(restore_cmd, sizeof(restore_cmd), "checkout %s", def);
+    ASSERT_TRUE(gct_git(s_repo, restore_cmd));
 
     PASS();
 }
@@ -299,9 +321,10 @@ void test_gc_status_clean(void) {
 
 void test_gc_status_modified_file(void) {
     TEST("git_get_status: modified unstaged file appears with status 'M'");
-    char cmd[512];
-    snprintf(cmd, sizeof(cmd), "echo modified >> '%s/file1.txt'", s_repo);
-    system(cmd);
+
+    char file_path[512];
+    snprintf(file_path, sizeof(file_path), "%s/file1.txt", s_repo);
+    ASSERT_TRUE(gct_append_file(file_path, "modified\n"));
 
     git_repo_t *r = git_repo_open(s_repo);
     ASSERT_NOT_NULL(r);
@@ -324,19 +347,18 @@ void test_gc_status_modified_file(void) {
     git_repo_close(r);
 
     // Restore.
-    snprintf(cmd, sizeof(cmd), "cd '%s' && git checkout -- file1.txt", s_repo);
-    system(cmd);
+    ASSERT_TRUE(gct_git(s_repo, "checkout -- file1.txt"));
 
     PASS();
 }
 
 void test_gc_status_staged_file(void) {
     TEST("git_get_status: staged new file has staged == true");
-    char cmd[512];
-    snprintf(cmd, sizeof(cmd),
-        "cd '%s' && echo staged > staged_file.txt && git add staged_file.txt",
-        s_repo);
-    system(cmd);
+
+    char staged_path[512];
+    snprintf(staged_path, sizeof(staged_path), "%s/staged_file.txt", s_repo);
+    ASSERT_TRUE(gct_write_file(staged_path, "staged\n"));
+    ASSERT_TRUE(gct_git(s_repo, "add staged_file.txt"));
 
     git_repo_t *r = git_repo_open(s_repo);
     ASSERT_NOT_NULL(r);
@@ -357,20 +379,19 @@ void test_gc_status_staged_file(void) {
 
     git_repo_close(r);
 
-    // Restore.
-    snprintf(cmd, sizeof(cmd),
-        "cd '%s' && git restore --staged staged_file.txt && rm staged_file.txt",
-        s_repo);
-    system(cmd);
+    // Restore: unstage and delete the temporary file.
+    ASSERT_TRUE(gct_git(s_repo, "restore --staged staged_file.txt"));
+    (void)remove(staged_path);
 
     PASS();
 }
 
 void test_gc_get_diff_modified(void) {
     TEST("git_get_diff: non-empty output for modified unstaged file");
-    char cmd[512];
-    snprintf(cmd, sizeof(cmd), "echo extra >> '%s/file1.txt'", s_repo);
-    system(cmd);
+
+    char file_path[512];
+    snprintf(file_path, sizeof(file_path), "%s/file1.txt", s_repo);
+    ASSERT_TRUE(gct_append_file(file_path, "extra\n"));
 
     git_repo_t *r = git_repo_open(s_repo);
     ASSERT_NOT_NULL(r);
@@ -384,8 +405,8 @@ void test_gc_get_diff_modified(void) {
 
     git_repo_close(r);
 
-    snprintf(cmd, sizeof(cmd), "cd '%s' && git checkout -- file1.txt", s_repo);
-    system(cmd);
+    // Restore.
+    ASSERT_TRUE(gct_git(s_repo, "checkout -- file1.txt"));
 
     PASS();
 }

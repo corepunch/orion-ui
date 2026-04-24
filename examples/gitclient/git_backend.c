@@ -29,6 +29,7 @@
 
 #ifdef _WIN32
 #  include <windows.h>
+#  include <io.h>    // _access()
 #else
 #  include <pthread.h>
 #  include <sys/stat.h>
@@ -126,8 +127,15 @@ git_repo_t *git_repo_open(const char *path) {
   char check[640];
   snprintf(check, sizeof(check), "%s/.git", path);
 
-  // Use access() on POSIX; on Win32, use PathFileExists or just try.
-#ifndef _WIN32
+  // Use access() on POSIX; _access() on Win32 (both check path existence).
+#ifdef _WIN32
+  {
+    if (_access(check, 0) != 0) {
+      GC_LOG("git_repo_open: no .git at %s", path);
+      return NULL;
+    }
+  }
+#else
   {
     struct stat st;
     if (stat(check, &st) != 0) {
