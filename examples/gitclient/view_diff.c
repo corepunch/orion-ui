@@ -58,6 +58,12 @@ static int visible_lines(window_t *win) {
   return MAX(1, win->frame.h / VGA_CHAR_H);
 }
 
+static int max_scroll_start(window_t *win, const diff_state_t *st) {
+  if (!win || !st)
+    return 0;
+  return MAX(0, st->line_count - visible_lines(win));
+}
+
 // ============================================================
 // Refresh: parse diff lines
 // ============================================================
@@ -172,9 +178,11 @@ result_t gc_diff_proc(window_t *win, uint32_t msg,
     case evResize: {
       diff_state_t *st = (diff_state_t *)win->userdata;
       if (!st) return false;
+      st->scroll_y = CLAMP(st->scroll_y, 0, max_scroll_start(win, st));
       scroll_info_t si = {
-        .fMask = SIF_PAGE,
+        .fMask = SIF_PAGE | SIF_POS,
         .nPage = (uint32_t)visible_lines(win),
+        .nPos = st->scroll_y,
       };
       set_scroll_info(win, SB_VERT, &si, true);
       invalidate_window(win);
@@ -184,7 +192,7 @@ result_t gc_diff_proc(window_t *win, uint32_t msg,
     case evVScroll: {
       diff_state_t *st = (diff_state_t *)win->userdata;
       if (!st) return false;
-      st->scroll_y = (int)wparam;
+      st->scroll_y = CLAMP((int)wparam, 0, max_scroll_start(win, st));
       scroll_info_t si = { .fMask = SIF_POS, .nPos = st->scroll_y };
       set_scroll_info(win, SB_VERT, &si, false);
       invalidate_window(win);
@@ -196,7 +204,7 @@ result_t gc_diff_proc(window_t *win, uint32_t msg,
       if (!st || !st->line_count) return false;
       int delta = (int)(int16_t)HIWORD(wparam);  // positive = scroll up
       int lines = delta < 0 ? 3 : -3;
-      int max_start = MAX(0, st->line_count - visible_lines(win));
+      int max_start = max_scroll_start(win, st);
       int new_pos = CLAMP(st->scroll_y + lines, 0, max_start);
       if (new_pos != st->scroll_y) {
         st->scroll_y = new_pos;
@@ -227,7 +235,7 @@ result_t gc_diff_proc(window_t *win, uint32_t msg,
       }
 
       int vis   = visible_lines(win);
-      int start = st->scroll_y;
+      int start = CLAMP(st->scroll_y, 0, max_scroll_start(win, st));
       int end   = MIN(start + vis, st->line_count);
 
       // Determine available width for the text content.

@@ -20,6 +20,13 @@ extern void show_window(window_t *win, bool visible);
 
 // Open the dropdown list popup for 'win' (combobox).
 static void open_dropdown(window_t *win) {
+  if (!win)
+    return;
+
+  combobox_string_t *texts = (combobox_string_t *)win->userdata;
+  if (!texts || win->cursor_pos == 0)
+    return;
+
   // Determine the screen-absolute position of the combobox bottom edge.
   // Toolbar children have toolbar-band-relative frame.x/y; regular body
   // children have root-client-relative frames.
@@ -43,6 +50,9 @@ static void open_dropdown(window_t *win) {
   }
   rect_t rect = {abs_x, abs_y, win->frame.w, 100};
   window_t *list = create_window("", WINDOW_NOTITLE|WINDOW_NORESIZE|WINDOW_VSCROLL|WINDOW_ALWAYSONTOP|WINDOW_NOTRAYBUTTON, &rect, NULL, win_list, win->hinstance, win);
+  if (!list)
+    return;
+
   result_t sel = send_message(win, cbGetCurrentSelection, 0, NULL);
   if (sel != (result_t)kComboBoxError)
     send_message(list, lstSetItem, (uint32_t)sel, NULL);
@@ -68,7 +78,10 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       draw_icon8(icon8_maximize, win->frame.w-10, (win->frame.h-8)/2, get_sys_color(brTextNormal));
       return true;
     case evLeftButtonUp:
-      win_button(win, msg, wparam, lparam);
+      // Do not forward button-up to win_button() to avoid sending btnClicked
+      // to the parent when opening a dropdown.
+      win->pressed = false;
+      invalidate_window(win);
       open_dropdown(win);
       return true;
     case evKeyDown: {

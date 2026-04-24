@@ -39,6 +39,8 @@ result_t win_list(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       win->userdata2 = NULL;
       return true;
     case evPaint:
+      if (!cb || !texts)
+        return true;
       for (uint32_t i = 0; i < cb->cursor_pos; i++) {
         rect_t item = { 0, (int)(i * LIST_HEIGHT), win->frame.w, LIST_HEIGHT };
         rect_t text_pos = rect_inset_xy(item, LIST_X, LIST_Y);
@@ -51,6 +53,8 @@ result_t win_list(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       }
       return true;
     case evLeftButtonDown:
+      if (!cb || !texts)
+        return true;
       win->cursor_pos = HIWORD(wparam)/LIST_HEIGHT;
       if (win->cursor_pos < cb->cursor_pos) {
         strncpy(cb->title, texts[win->cursor_pos], sizeof(cb->title));
@@ -58,8 +62,11 @@ result_t win_list(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       invalidate_window(win);
       return true;
     case evLeftButtonUp:
-      if (cb) set_focus(cb);
-      send_message(get_root_window(cb), evCommand, MAKEDWORD(cb->id, cbSelectionChange), cb);
+      if (cb) {
+        set_focus(cb);
+        send_message(get_root_window(cb), evCommand,
+                     MAKEDWORD(cb->id, cbSelectionChange), cb);
+      }
       destroy_window(win);
       return true;
     case evKeyDown: {

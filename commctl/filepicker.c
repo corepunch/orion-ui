@@ -691,6 +691,9 @@ static result_t fp_proc(window_t *win, uint32_t msg,
           return true;
         }
 
+        if (btn->id != FP_ID_OK)
+          return true;
+
         // OK / Open / Save
         char full[600] = {0};
         if (!fp_build_path(ps, full, sizeof(full))) return true;
