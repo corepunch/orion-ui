@@ -3,9 +3,9 @@
 
 #include "../user/user.h"
 
-// Height of the menu bar strip — matches TITLEBAR_HEIGHT and scales with font.
-extern int get_titlebar_height(void);
-#define MENUBAR_HEIGHT (get_titlebar_height())
+// Height of the menu bar strip — same formula as TITLEBAR_HEIGHT.
+// FONT_SIZE is a compile-time constant from kernel/kernel.h (included via user/user.h).
+#define MENUBAR_HEIGHT (FONT_SIZE + 4)
 
 // One item inside a dropdown menu.  id == 0 means a horizontal separator.
 typedef struct {

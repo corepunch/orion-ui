@@ -438,9 +438,9 @@ void test_cv_down_scrolls_selection_into_view(void) {
 // not the item whose natural (unscrolled) position is there.
 
 // HEADER_HEIGHT and ENTRY_HEIGHT are internal to columnview.c; mirror them here.
-// Use the dynamic getters so the values stay consistent if the active font changes.
-#define TEST_RV_HEADER_HEIGHT get_header_height()
-#define TEST_RV_ENTRY_HEIGHT  get_item_height()
+// These match COLUMNVIEW_HEADER_HEIGHT / COLUMNVIEW_ENTRY_HEIGHT (FONT_SIZE + 6/5).
+#define TEST_RV_HEADER_HEIGHT COLUMNVIEW_HEADER_HEIGHT
+#define TEST_RV_ENTRY_HEIGHT  COLUMNVIEW_ENTRY_HEIGHT
 
 // ---- helpers for report mode ------------------------------------------------ //
 

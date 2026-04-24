@@ -7,8 +7,7 @@
 #include "../user/draw.h"
 #include "../user/rect.h"
 
-extern int get_item_height(void);
-#define LIST_HEIGHT     (get_item_height())
+#define LIST_HEIGHT     (FONT_SIZE + 5)
 #define LIST_X          3
 #define LIST_Y          3
 

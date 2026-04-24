@@ -59,10 +59,6 @@ int get_char_height(void) { return text_state.char_height ? text_state.char_heig
 int get_line_height(void) { return text_state.line_height ? text_state.line_height : 12; }
 int get_space_width(void) { return text_state.space_width ? text_state.space_width : 3;  }
 
-int get_titlebar_height(void) { return get_char_height() + 4; }
-int get_item_height(void)     { return get_char_height() + 5; }
-int get_header_height(void)   { return get_char_height() + 6; }
-
 // ── Helper: read a raw file into a heap buffer ────────────────────────────────
 
 static unsigned char *read_file(const char *path, size_t *out_size) {

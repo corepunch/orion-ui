@@ -230,15 +230,13 @@ typedef struct {
   int      nPos;   // current scroll position
 } scroll_info_t;
 
-// Forward declarations for dynamic UI layout metrics (defined in user/text.c).
-// These derive from the active font's character height and return stable
-// SmallFont-compatible defaults before init_text_rendering() is called.
-extern int get_titlebar_height(void);
-
-// Titlebar and toolbar dimensions
-#define TITLEBAR_HEIGHT   (get_titlebar_height())
+// Chrome height constants — derived from FONT_SIZE (defined in kernel/kernel.h).
+// FONT_SIZE is a compile-time constant: 12 at UI_WINDOW_SCALE==1 (ChiKareGo2),
+// 8 at UI_WINDOW_SCALE>=2 (SmallFont).  All values are usable in static
+// initializers (no function-call overhead).
+#define TITLEBAR_HEIGHT   (FONT_SIZE + 4)
 #define TOOLBAR_HEIGHT    22
-#define STATUSBAR_HEIGHT  (get_titlebar_height())
+#define STATUSBAR_HEIGHT  (FONT_SIZE + 4)
 // Default width of a WINDOW_SIDEBAR panel in logical pixels.
 #define SIDEBAR_DEFAULT_WIDTH  180
 // Resize handle matches SCROLLBAR_WIDTH so the scrollbar corner cell is fully

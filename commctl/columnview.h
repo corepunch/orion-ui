@@ -4,11 +4,10 @@
 #include <stdint.h>
 #include "../user/user.h"
 
-// Layout constants (exported for controls that extend win_reportview)
-extern int get_item_height(void);
-extern int get_header_height(void);
-#define COLUMNVIEW_ENTRY_HEIGHT (get_item_height())
-#define COLUMNVIEW_HEADER_HEIGHT (get_header_height())
+// Layout constants (exported for controls that extend win_reportview).
+// FONT_SIZE is a compile-time constant from kernel/kernel.h (via user/user.h).
+#define COLUMNVIEW_ENTRY_HEIGHT  (FONT_SIZE + 5)
+#define COLUMNVIEW_HEADER_HEIGHT (FONT_SIZE + 6)
 #define COLUMNVIEW_WIN_PADDING   4
 #define REPORTVIEW_MAX_SUBITEMS  8
 
