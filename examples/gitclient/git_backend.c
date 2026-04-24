@@ -29,6 +29,7 @@
 
 #ifdef _WIN32
 #  include <windows.h>
+#  include <io.h>    // _access()
 #else
 #  include <pthread.h>
 #  include <sys/stat.h>
@@ -78,9 +79,24 @@ static void git_thread_detach(git_thread_t t) { (void)t; /* already detached */ 
 // ============================================================
 
 // Build "cd <path> && git <args…>" into buf.
+//
+// Windows note: when the gitclient binary is compiled with MinGW and launched
+// from an MSYS2 shell, the inherited PATH is in Unix format which cmd.exe
+// cannot parse, so git.exe is not found.  We prepend the two standard Git for
+// Windows directories to PATH inside every cmd.exe invocation so that git is
+// always reachable regardless of the launch environment.
 static void gc_build_cmd(const char *path, const char *args[],
                          char *buf, int buf_sz) {
+#ifdef _WIN32
+  int n = snprintf(buf, (size_t)buf_sz,
+      "set \"PATH=C:\\Program Files\\Git\\cmd;"
+            "C:\\Program Files\\Git\\bin;"
+            "%%PATH%%\" "
+      "&& cd \"%s\" && git",
+      path);
+#else
   int n = snprintf(buf, (size_t)buf_sz, "cd \"%s\" && git", path);
+#endif
   for (int i = 1; args[i] && n < buf_sz - 2; i++) {
     n += snprintf(buf + n, (size_t)(buf_sz - n), " %s", args[i]);
   }
@@ -126,8 +142,15 @@ git_repo_t *git_repo_open(const char *path) {
   char check[640];
   snprintf(check, sizeof(check), "%s/.git", path);
 
-  // Use access() on POSIX; on Win32, use PathFileExists or just try.
-#ifndef _WIN32
+  // Use access() on POSIX; _access() on Win32 (both check path existence).
+#ifdef _WIN32
+  {
+    if (_access(check, 0) != 0) {
+      GC_LOG("git_repo_open: no .git at %s", path);
+      return NULL;
+    }
+  }
+#else
   {
     struct stat st;
     if (stat(check, &st) != 0) {
