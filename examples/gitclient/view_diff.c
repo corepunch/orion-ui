@@ -6,10 +6,15 @@
 //   '@'  → dark blue background,   cyan text
 //   ' '  → default background,     normal text
 //
+// By default this viewer uses ANSI colors from git output directly.
+// Define GC_DIFF_USE_PREFIX_COLORS to 1 to enable legacy fallback tinting
+// based on line prefix characters (+/-/@/headers).
+//
 // The window has WINDOW_VSCROLL for scrolling through the output.
 
 #include "gitclient.h"
 #include "vga_font.h"
+#include "ansi.h"
 #include "vga_text.h"
 #include "../../kernel/renderer.h"
 
@@ -31,6 +36,10 @@
 #define CLR_HEADER_FG 0xFFAAAAAA
 
 #define LINE_NUM_W    (5 * VGA_CHAR_W)  /* "12345" */
+
+#ifndef GC_DIFF_USE_PREFIX_COLORS
+#define GC_DIFF_USE_PREFIX_COLORS 0
+#endif
 
 // ============================================================
 // Per-window state
@@ -247,8 +256,10 @@ result_t gc_diff_proc(window_t *win, uint32_t msg,
         const char *line = st->lines[li];
         int row = li - start;
 
-        // Colour based on first character.
-        uint32_t fg, bg;
+        uint32_t fg = CLR_CTX_FG;
+        uint32_t bg = CLR_CTX_BG;
+#if GC_DIFF_USE_PREFIX_COLORS
+        // Legacy fallback tinting by first character.
         char first = line[0];
         if (first == '+') {
           fg = CLR_ADD_FG;  bg = CLR_ADD_BG;
@@ -260,9 +271,8 @@ result_t gc_diff_proc(window_t *win, uint32_t msg,
                    first == 'B') {
           // diff/index/new/Binary headers
           fg = CLR_HEADER_FG; bg = CLR_HEADER_BG;
-        } else {
-          fg = CLR_CTX_FG;  bg = CLR_CTX_BG;
         }
+#endif
 
         // Line-number gutter.
         char lnum[16];
@@ -273,12 +283,7 @@ result_t gc_diff_proc(window_t *win, uint32_t msg,
         }
 
         // Content (clipped to visible columns), honoring ANSI SGR colors.
-        vga_text_write_ansi_line(line,
-                                 &st->grid,
-                                 row,
-                                 gutter_cols,
-                                 max_cols,
-                                 fg, bg);
+        vga_text_write_ansi_line(line, &st->grid, row, gutter_cols, max_cols, fg, bg);
       }
 
       if (R_UpdateTextureRG8(st->grid.cells_tex, 0, 0, st->grid.cells_w, st->grid.cells_h, st->grid.cells)) {
