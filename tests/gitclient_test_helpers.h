@@ -94,10 +94,21 @@ static inline bool gct_append_file(const char *path, const char *text) {
 //
 // NOTE: dir must not contain single quotes (POSIX) or double quotes (Windows).
 // Temp directory paths created by gct_make_temp_dir() satisfy this constraint.
+//
+// Windows note: when the test binary is compiled with MinGW and spawned from
+// an MSYS2 make, the inherited PATH is in Unix format (/usr/bin:...) which
+// cmd.exe cannot parse.  We prepend the two well-known Git for Windows
+// installation directories at the front of PATH inside the cmd.exe command so
+// that git.exe is always found regardless of how the test was launched.
 static inline bool gct_git(const char *dir, const char *subcmd) {
     char cmd[4096];
 #ifdef _WIN32
-    snprintf(cmd, sizeof(cmd), "cd /d \"%s\" && git %s", dir, subcmd);
+    snprintf(cmd, sizeof(cmd),
+        "set \"PATH=C:\\Program Files\\Git\\cmd;"
+              "C:\\Program Files\\Git\\bin;"
+              "%%PATH%%\" "
+        "&& cd /d \"%s\" && git %s",
+        dir, subcmd);
 #else
     snprintf(cmd, sizeof(cmd), "cd '%s' && git %s", dir, subcmd);
 #endif
