@@ -4,6 +4,11 @@
 // All helpers use only standard C (file I/O) and the platform's native shell
 // command processor so they compile cleanly on Windows (cmd.exe) and POSIX.
 //
+// IMPORTANT: Do NOT include <windows.h> here.  Including it before Orion's
+// ui.h / platform.h causes macro redefinition conflicts (OFN_FILEMUSTEXIST,
+// SIF_ALL, CW_USEDEFAULT, etc.).  We use only standard-C or CRT headers on
+// Windows: <direct.h> for _mkdir, <process.h> for _getpid().
+//
 // Constraints on directory paths used with these helpers:
 //   • POSIX: paths must not contain single-quote characters.
 //   • Windows: paths must not contain double-quote characters.
@@ -19,8 +24,8 @@
 #include <sys/stat.h>  // stat() available on both POSIX and Windows CRT
 
 #ifdef _WIN32
-#  include <windows.h>
 #  include <direct.h>   // _mkdir
+#  include <process.h>  // _getpid
 #else
 #  include <unistd.h>   // mkdtemp
 #endif
@@ -28,14 +33,15 @@
 // ── Portable temporary directory creation ────────────────────────────────────
 // On POSIX: creates /tmp/<prefix>_XXXXXX via mkdtemp().
 // On Windows: creates %TEMP%\<prefix>_<PID> via _mkdir().
+//   Uses getenv("TEMP") (standard C, no windows.h) to locate the system temp
+//   directory, falling back to "C:\\Temp" if the variable is not set.
 // Returns true and writes the path into buf (up to sz bytes) on success.
 static inline bool gct_make_temp_dir(char *buf, size_t sz, const char *prefix) {
 #ifdef _WIN32
-    char tmp[MAX_PATH];
-    if (!GetTempPathA((DWORD)sizeof(tmp), tmp))
-        return false;
-    snprintf(buf, sz, "%s%s_%lu", tmp, prefix,
-             (unsigned long)GetCurrentProcessId());
+    const char *tmp = getenv("TEMP");
+    if (!tmp || !tmp[0]) tmp = getenv("TMP");
+    if (!tmp || !tmp[0]) tmp = "C:\\Temp";
+    snprintf(buf, sz, "%s\\%s_%d", tmp, prefix, (int)_getpid());
     return _mkdir(buf) == 0;
 #else
     snprintf(buf, sz, "/tmp/%s_XXXXXX", prefix);
