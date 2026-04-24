@@ -16,9 +16,9 @@
 #include <sys/stat.h>
 
 // ── Application state stub ────────────────────────────────────────────────────
-// gitclient.h declares g_gc as extern; git_backend.c never dereferences it
-// directly (only the async worker uses post_message, which we don't exercise
-// in these synchronous tests).
+// gitclient.h declares g_gc as extern.  The async worker calls post_message
+// which references g_gc, but these synchronous tests never exercise async
+// operations so the stub is never dereferenced through that path.
 static gc_state_t g_stub_state;
 gc_state_t *g_gc = &g_stub_state;
 

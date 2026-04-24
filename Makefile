@@ -180,9 +180,11 @@ $(info NOTE: libxml2 not found; skipping browser example. Install libxml2 + pkg-
 endif
 endif
 
-# Gitclient tests need all gitclient sources (except main.c) plus test_env.
-# They are excluded from the generic TEST_SRCS/TEST_BINS so that their custom
-# build rules below take effect without interference from the pattern rules.
+# Gitclient tests require custom build rules because they compile gitclient
+# source files alongside the test.  The UI test also needs test_env.c; the
+# backend test uses only test_framework.h (header-only).  Both are excluded
+# from the generic TEST_SRCS/TEST_BINS so that the explicit rules below are
+# used without interference from the pattern rules.
 GITCLIENT_TEST_SRCS = $(TEST_DIR)/gitclient_backend_test.c \
                       $(TEST_DIR)/gitclient_ui_test.c
 GITCLIENT_TEST_BINS = $(patsubst $(TEST_DIR)/%.c,$(BIN_DIR)/test_%$(EXE_EXT),$(GITCLIENT_TEST_SRCS))
