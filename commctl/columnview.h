@@ -5,7 +5,10 @@
 #include "../user/user.h"
 
 // Layout constants (exported for controls that extend win_reportview)
-#define COLUMNVIEW_ENTRY_HEIGHT 13
+extern int get_item_height(void);
+extern int get_header_height(void);
+#define COLUMNVIEW_ENTRY_HEIGHT (get_item_height())
+#define COLUMNVIEW_HEADER_HEIGHT (get_header_height())
 #define COLUMNVIEW_WIN_PADDING   4
 #define REPORTVIEW_MAX_SUBITEMS  8
 

@@ -230,10 +230,15 @@ typedef struct {
   int      nPos;   // current scroll position
 } scroll_info_t;
 
+// Forward declarations for dynamic UI layout metrics (defined in user/text.c).
+// These derive from the active font's character height and return stable
+// SmallFont-compatible defaults before init_text_rendering() is called.
+extern int get_titlebar_height(void);
+
 // Titlebar and toolbar dimensions
-#define TITLEBAR_HEIGHT   12
+#define TITLEBAR_HEIGHT   (get_titlebar_height())
 #define TOOLBAR_HEIGHT    22
-#define STATUSBAR_HEIGHT  12
+#define STATUSBAR_HEIGHT  (get_titlebar_height())
 // Default width of a WINDOW_SIDEBAR panel in logical pixels.
 #define SIDEBAR_DEFAULT_WIDTH  180
 // Resize handle matches SCROLLBAR_WIDTH so the scrollbar corner cell is fully

@@ -12,6 +12,13 @@ int get_char_height(void);
 int get_line_height(void);
 int get_space_width(void);
 
+// Dynamic UI layout metrics — derived from the active font's character height.
+// SmallFont defaults (before init): titlebar=12, item=13, header=14.
+// ChiKareGo2 values:               titlebar=20, item=21, header=22.
+int get_titlebar_height(void);  // CHAR_HEIGHT + 4  (titlebar, menubar, statusbar)
+int get_item_height(void);      // CHAR_HEIGHT + 5  (list / column-view rows)
+int get_header_height(void);    // CHAR_HEIGHT + 6  (column-view header strip)
+
 #define CHAR_HEIGHT       (get_char_height())
 #define SMALL_LINE_HEIGHT (get_line_height())
 #define SPACE_WIDTH       (get_space_width())
