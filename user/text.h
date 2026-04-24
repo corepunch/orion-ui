@@ -4,9 +4,17 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define CHAR_HEIGHT       8
-#define SMALL_LINE_HEIGHT 12   // vertical advance per line (font height + leading)
-#define SPACE_WIDTH       3    // pixel width of a space character
+// Dynamic font metrics — actual values depend on which font is active.
+// SmallFont (WINDOW_SCALE > 1): char_height=8, line_height=12, space_width=3.
+// ChiKareGo2 (WINDOW_SCALE == 1): char_height=16, line_height=20, space_width=5.
+// Return SmallFont defaults before init_text_rendering() is called.
+int get_char_height(void);
+int get_line_height(void);
+int get_space_width(void);
+
+#define CHAR_HEIGHT       (get_char_height())
+#define SMALL_LINE_HEIGHT (get_line_height())
+#define SPACE_WIDTH       (get_space_width())
 
 // Forward declaration
 typedef struct rect_s rect_t;
@@ -17,11 +25,11 @@ void init_text_rendering(void);
 // Clean up text rendering resources
 void shutdown_text_rendering(void);
 
-// Returns the pixel width of a single glyph from the small bitmap font.
+// Returns the pixel width of a single glyph from the active UI font.
 // Returns 0 when the text system is not yet initialized.
 int char_width(unsigned char c);
 
-// Small bitmap font rendering (6x8 font)
+// Small bitmap font rendering
 void draw_text_small(const char* text, int x, int y, uint32_t col);
 int strwidth(const char* text);
 int strnwidth(const char* text, int text_length);
