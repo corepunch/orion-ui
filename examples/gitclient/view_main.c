@@ -17,6 +17,7 @@
 //   • win_menubar      → created by view_menubar.c
 
 #include "gitclient.h"
+#include "vga_font.h"
 
 // ============================================================
 // Toolbar definition
@@ -136,12 +137,14 @@ void gc_open_repo(const char *path) {
 
   strncpy(gc->repo_path, path, sizeof(gc->repo_path) - 1);
 
-  // Update window title.
-  char title[600];
-  snprintf(title, sizeof(title), "Git Client — %s", path);
-  strncpy(gc->main_win->title, title, sizeof(gc->main_win->title) - 1);
-  gc->main_win->title[sizeof(gc->main_win->title) - 1] = '\0';
-  invalidate_window(gc->main_win);
+  // Update window title (only when the main window exists).
+  if (gc->main_win) {
+    char title[600];
+    snprintf(title, sizeof(title), "Git Client — %s", path);
+    strncpy(gc->main_win->title, title, sizeof(gc->main_win->title) - 1);
+    gc->main_win->title[sizeof(gc->main_win->title) - 1] = '\0';
+    invalidate_window(gc->main_win);
+  }
 
   gc_refresh_all();
 }
@@ -445,6 +448,12 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
       }
       return true;
     }
+
+    // ── Open repository via message (for programmatic / test use) ─
+    case evOpenRepo:
+      if (lparam)
+        gc_open_repo((const char *)lparam);
+      return true;
 
     default:
       return false;

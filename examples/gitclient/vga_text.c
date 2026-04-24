@@ -1,6 +1,7 @@
 #include "vga_text.h"
 #include "ansi.h"
 #include "../../kernel/renderer.h"
+#include <stdlib.h>
 
 // Placeholder character for UTF-8/UTF-16 multibyte sequences
 #define UTF8_REPLACEMENT_CHAR 0xB7

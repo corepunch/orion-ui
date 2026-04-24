@@ -90,6 +90,13 @@
 //            git_async_result_free())
 #define evGitOpDone     (evUser + 500)
 
+// Sent to the main window to open a repository programmatically.
+// Allows external code (tests, scripts, command-line args) to open a repo
+// without going through the native folder-picker dialog.
+//   wparam = 0
+//   lparam = const char *  (absolute path to the repository root)
+#define evOpenRepo      (evUser + 501)
+
 // ============================================================
 // Git data types
 // ============================================================
