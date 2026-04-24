@@ -45,7 +45,7 @@ static inline bool gct_make_temp_dir(char *buf, size_t sz, const char *prefix) {
 
 // ── Portable recursive directory removal ─────────────────────────────────────
 // Uses `rmdir /s /q` on Windows and `rm -rf` on POSIX.
-// Errors are silently ignored (best-effort cleanup).
+// Logs to stderr if the removal command fails.
 static inline void gct_remove_dir(const char *path) {
     if (!path || !path[0]) return;
     char cmd[1024];
@@ -54,7 +54,8 @@ static inline void gct_remove_dir(const char *path) {
 #else
     snprintf(cmd, sizeof(cmd), "rm -rf '%s'", path);
 #endif
-    (void)system(cmd);
+    if (system(cmd) != 0)
+        fprintf(stderr, "[gct] WARNING: cleanup failed: %s\n", cmd);
 }
 
 // ── Portable file write / append ─────────────────────────────────────────────
@@ -79,10 +80,14 @@ static inline bool gct_append_file(const char *path, const char *text) {
 // ── Portable git command helper ───────────────────────────────────────────────
 // Runs `git <subcmd>` with dir as the working directory, using the platform's
 // native shell (sh on POSIX, cmd.exe on Windows).
-// Returns true if the git process exits with code 0.
+// Returns true if the git process exits with code 0; logs the command to
+// stderr on failure to aid debugging.
 //
 // subcmd is appended verbatim; use double-quoted strings for values that
 // contain spaces — both sh and cmd.exe accept double-quoted arguments.
+//
+// NOTE: dir must not contain single quotes (POSIX) or double quotes (Windows).
+// Temp directory paths created by gct_make_temp_dir() satisfy this constraint.
 static inline bool gct_git(const char *dir, const char *subcmd) {
     char cmd[4096];
 #ifdef _WIN32
@@ -90,7 +95,11 @@ static inline bool gct_git(const char *dir, const char *subcmd) {
 #else
     snprintf(cmd, sizeof(cmd), "cd '%s' && git %s", dir, subcmd);
 #endif
-    return system(cmd) == 0;
+    if (system(cmd) != 0) {
+        fprintf(stderr, "[gct] git command failed: %s\n", cmd);
+        return false;
+    }
+    return true;
 }
 
 #endif // __GITCLIENT_TEST_HELPERS_H__

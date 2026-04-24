@@ -71,9 +71,10 @@ else
         CFLAGS += -fPIC
         # cglm detection — link against libcglm when installed as a shared library
         # (renderer.c uses cglm for matrix math; falls back to cglm_compat.h when absent).
-        CGLM_LIBS := $(shell pkg-config --libs cglm 2>/dev/null)
+        CGLM_CFLAGS := $(shell pkg-config --cflags cglm 2>/dev/null)
+        CGLM_LIBS   := $(shell pkg-config --libs   cglm 2>/dev/null)
         ifneq ($(CGLM_LIBS),)
-            CFLAGS += $(shell pkg-config --cflags cglm 2>/dev/null)
+            CFLAGS += $(CGLM_CFLAGS)
             LIBS   += $(CGLM_LIBS)
         endif
         # Lua detection on Linux via pkg-config (lua5.4-dev / liblua5.4-dev)
