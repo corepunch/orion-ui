@@ -23,8 +23,10 @@ typedef struct bitmap_strip_s bitmap_strip_t;
 //   UI_WINDOW_SCALE >= 2  → SmallFont  ( 8× 8 cells, cell  h = 8  px)
 #if UI_WINDOW_SCALE == 1
 #  define FONT_SIZE 12
+#  define FONT_PIXEL_SIZE 16
 #else
 #  define FONT_SIZE 8
+#  define FONT_PIXEL_SIZE 8
 #endif
 
 // Event type abstraction — maps to the platform AXmessage struct

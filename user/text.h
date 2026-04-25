@@ -29,8 +29,11 @@ void shutdown_text_rendering(void);
 // Returns 0 when the text system is not yet initialized.
 int char_width(unsigned char c);
 
+#define TEXT_PADDING_LEFT 1
+
 // Small bitmap font rendering
 void draw_text_small(const char* text, int x, int y, uint32_t col);
+void draw_text_small_clipped(const char* text, rect_t const *viewport, uint32_t col, uint32_t flags);
 int strwidth(const char* text);
 int strnwidth(const char* text, int text_length);
 

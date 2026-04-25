@@ -20,6 +20,8 @@
 #define MAX_TEXT_LENGTH   4096
 #define VERTICES_PER_CHAR 6
 
+#define WIN_PADDING 4
+
 typedef struct {
   int16_t  x, y;
   float    u, v;
@@ -453,6 +455,15 @@ void draw_text_small(const char *text, int x, int y, uint32_t col) {
   flush_batch(&text_state.text,  buf_text,  vc_text);
   if (text_state.has_icons)
     flush_batch(&text_state.icons, buf_icons, vc_icons);
+}
+
+void draw_text_small_clipped(const char *text, rect_t const *viewport, uint32_t col, uint32_t flags) {
+  if (!text || !*text || !g_ui_runtime.running || !viewport) return;
+  // set_clip_rect(NULL, viewport);
+  int x = viewport->x;
+  int y = viewport->y + (viewport->h - FONT_PIXEL_SIZE) / 2;
+  if(flags&TEXT_PADDING_LEFT) x += WIN_PADDING;
+  draw_text_small(text, x, y, col);
 }
 
 // ── calc_text_height ──────────────────────────────────────────────────────────
