@@ -232,7 +232,7 @@ typedef struct {
 
 // Chrome height constants — derived from FONT_SIZE (defined in kernel/kernel.h).
 // FONT_SIZE (FONT_SYSTEM/ChiKareGo2): 12 at UI_WINDOW_SCALE==1, 8 at scale>=2.
-// FONT_SIZE_SMALL (FONT_SMALL/Geneva9): 8 at all scales.
+// FONT_SIZE_SMALL (FONT_SMALL/Geneva9): 12 at UI_WINDOW_SCALE==1, 8 at scale>=2.
 // Content heights (list rows, column-view entries) use FONT_SIZE_SMALL;
 // see commctl/columnview.h.  All values are usable in static initializers.
 #define TITLEBAR_HEIGHT   (FONT_SIZE + 4)

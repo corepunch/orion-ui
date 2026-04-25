@@ -265,6 +265,11 @@ static void rv_paint_icon_view(window_t *win, reportview_data_t *data) {
   int clip_top = 0;
   int clip_bottom = win->frame.h;
 
+  // Vertically center the icon and text label within ENTRY_HEIGHT.
+  // Mirrors the centering in draw_text_clipped (report view).
+  int cell_h = text_char_height(FONT_SMALL);
+  int vc = (ENTRY_HEIGHT - cell_h) / 2;
+
   for (uint32_t i = 0; i < data->count; i++) {
     int col = i % ncol;
     int x = col * data->column_width + WIN_PADDING;
@@ -275,12 +280,12 @@ static void rv_paint_icon_view(window_t *win, reportview_data_t *data) {
 
     if ((int)i == data->selected) {
       fill_rect(get_sys_color(brTextNormal), R(x - 2, y - 2, data->column_width - 6, ENTRY_HEIGHT - 2));
-      draw_icon8(data->items[i].icon, x, y - ICON_DODGE, get_sys_color(brWindowBg));
-      draw_text(FONT_SMALL, data->items[i].text, x + ICON_OFFSET, y, get_sys_color(brWindowBg));
+      draw_icon8(data->items[i].icon, x, y + vc - ICON_DODGE, get_sys_color(brWindowBg));
+      draw_text(FONT_SMALL, data->items[i].text, x + ICON_OFFSET, y + vc, get_sys_color(brWindowBg));
     } else {
       fill_rect(bg_col, R(x - 2, y - 2, data->column_width - 6, ENTRY_HEIGHT - 2));
-      draw_icon8(data->items[i].icon, x, y - ICON_DODGE, data->items[i].color);
-      draw_text(FONT_SMALL, data->items[i].text, x + ICON_OFFSET, y, data->items[i].color);
+      draw_icon8(data->items[i].icon, x, y + vc - ICON_DODGE, data->items[i].color);
+      draw_text(FONT_SMALL, data->items[i].text, x + ICON_OFFSET, y + vc, data->items[i].color);
     }
   }
 }
