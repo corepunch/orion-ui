@@ -438,7 +438,8 @@ void test_cv_down_scrolls_selection_into_view(void) {
 // not the item whose natural (unscrolled) position is there.
 
 // HEADER_HEIGHT and ENTRY_HEIGHT are internal to columnview.c; mirror them here.
-// These match COLUMNVIEW_HEADER_HEIGHT / COLUMNVIEW_ENTRY_HEIGHT (FONT_SIZE + 6/5).
+// These match COLUMNVIEW_HEADER_HEIGHT (FONT_SIZE + 6) and
+// COLUMNVIEW_ENTRY_HEIGHT (FONT_SIZE_SMALL + 5).
 #define TEST_RV_HEADER_HEIGHT COLUMNVIEW_HEADER_HEIGHT
 #define TEST_RV_ENTRY_HEIGHT  COLUMNVIEW_ENTRY_HEIGHT
 

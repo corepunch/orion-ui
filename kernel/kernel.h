@@ -21,12 +21,18 @@ typedef struct bitmap_strip_s bitmap_strip_t;
 // Measured glyph heights:
 //   UI_WINDOW_SCALE == 1  → ChiKareGo2 (16×16 cells, max glyph h = 12 px)
 //   UI_WINDOW_SCALE >= 2  → SmallFont  ( 8× 8 cells, cell  h = 8  px)
+//
+// FONT_SIZE       — system (chrome) font: ChiKareGo2/Chicago12 at scale=1
+// FONT_SIZE_SMALL — small (content) font: Geneva9/SmallFont at all scales
+// FONT_PIXEL_SIZE — cell height of the system font (for vertical centering)
 #if UI_WINDOW_SCALE == 1
-#  define FONT_SIZE 12
-#  define FONT_PIXEL_SIZE 16
+#  define FONT_SIZE        12
+#  define FONT_PIXEL_SIZE  16
+#  define FONT_SIZE_SMALL   8   // Geneva9 / SmallFont cell height at scale=1
 #else
-#  define FONT_SIZE 8
-#  define FONT_PIXEL_SIZE 8
+#  define FONT_SIZE        8
+#  define FONT_PIXEL_SIZE  8
+#  define FONT_SIZE_SMALL  8   // same as FONT_SIZE at scale>=2 (single font)
 #endif
 
 // Event type abstraction — maps to the platform AXmessage struct

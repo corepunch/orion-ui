@@ -276,11 +276,11 @@ static void rv_paint_icon_view(window_t *win, reportview_data_t *data) {
     if ((int)i == data->selected) {
       fill_rect(get_sys_color(brTextNormal), R(x - 2, y - 2, data->column_width - 6, ENTRY_HEIGHT - 2));
       draw_icon8(data->items[i].icon, x, y - ICON_DODGE, get_sys_color(brWindowBg));
-      draw_text_small(data->items[i].text, x + ICON_OFFSET, y, get_sys_color(brWindowBg));
+      draw_text(FONT_SMALL, data->items[i].text, x + ICON_OFFSET, y, get_sys_color(brWindowBg));
     } else {
       fill_rect(bg_col, R(x - 2, y - 2, data->column_width - 6, ENTRY_HEIGHT - 2));
       draw_icon8(data->items[i].icon, x, y - ICON_DODGE, data->items[i].color);
-      draw_text_small(data->items[i].text, x + ICON_OFFSET, y, data->items[i].color);
+      draw_text(FONT_SMALL, data->items[i].text, x + ICON_OFFSET, y, data->items[i].color);
     }
   }
 }
@@ -348,7 +348,7 @@ static void rv_paint_report_view(window_t *win, reportview_data_t *data) {
         src = (idx < it->subitem_count && it->subitems[idx]) ? it->subitems[idx] : "";
       }
 
-      draw_text_small_clipped(src, &(rect_t){col_x, y, col_w, ENTRY_HEIGHT}, fg, TEXT_PADDING_LEFT);
+      draw_text_clipped(FONT_SMALL, src, &(rect_t){col_x, y, col_w, ENTRY_HEIGHT}, fg, TEXT_PADDING_LEFT);
     }
 
     col_x += col_w;

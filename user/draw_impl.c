@@ -39,7 +39,9 @@ bool window_has_focus(const window_t *win) {
 }
 
 // Forward declarations
+extern void draw_text(ui_font_t font, const char* text, int x, int y, uint32_t col);
 extern void draw_text_small(const char* text, int x, int y, uint32_t col);
+extern void draw_text_clipped(ui_font_t font, const char* text, rect_t const *viewport, uint32_t col, uint32_t flags);
 extern void draw_icon8(int icon, int x, int y, uint32_t col);
 extern void draw_icon16(int icon, int x, int y, uint32_t col);
 extern int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
@@ -186,8 +188,8 @@ void draw_statusbar(window_t *win, const char *text) {
   set_fullscreen();
 
   if (text) {
-    draw_text_small_clipped(text, &(rect_t){r.x, y, split_x, s},
-                            get_sys_color(brTextNormal), TEXT_PADDING_LEFT);
+    draw_text_clipped(FONT_SMALL, text, &(rect_t){r.x, y, split_x, s},
+                      get_sys_color(brTextNormal), TEXT_PADDING_LEFT);
   }
 
   if (has_h) {
