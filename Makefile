@@ -224,13 +224,13 @@ fonts: tools
 # font_atlas.c only needs libc + stb_truetype; no OpenGL required.
 # Requires: Python 3 + Pillow (pip install Pillow)
 .PHONY: Geneva9
-FONT_ATLAS_STANDALONE = /tmp/orion_font_atlas
-Geneva9:
+FONT_ATLAS_STANDALONE = $(BIN_DIR)/font_atlas$(EXE_EXT)
+Geneva9: | $(BIN_DIR)
 	@echo "Building standalone font_atlas..."
 	$(CC) $(CFLAGS) -I. -Itools tools/font_atlas.c -lm -o $(FONT_ATLAS_STANDALONE)
-	@echo "Generating share/Geneva9.png (Silkscreen text + SmallFont icons)..."
+	@echo "Generating share/Geneva9.png (FindersKeepers text + SmallFont icons)..."
 	python3 tools/gen_small_font.py \
-		fonts/Silkscreen-Regular.ttf \
+		fonts/FindersKeepers.ttf \
 		share/SmallFont.png \
 		share/Geneva9.png \
 		$(FONT_ATLAS_STANDALONE)
