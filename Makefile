@@ -219,6 +219,7 @@ tools: $(TOOLS_BINS)
 fonts: tools
 	$(BIN_DIR)/font_atlas fonts/ChiKareGo2.ttf share/ChiKareGo2.png -pixelsize=16 -em -sharp -cellw=16 -cellh=16 -v
 	$(BIN_DIR)/font_atlas fonts/FindersKeepers.ttf share/FindersKeepers.png -pixelsize=16 -em -sharp -cellw=8 -cellh=9 -v
+	$(BIN_DIR)/font_atlas fonts/geneva_9.ttf share/Geneva-9.png -pixelsize=16 -em -sharp -cellw=8 -cellh=10 -v
 
 # Geneva9.png — standalone target; does not depend on the full Orion shared lib.
 # font_atlas.c only needs libc + stb_truetype; no OpenGL required.
