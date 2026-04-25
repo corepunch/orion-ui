@@ -9,10 +9,14 @@
 /* ------------------------------------------------------------------ */
 /*  Defaults                                                            */
 /* ------------------------------------------------------------------ */
-#define DEFAULT_ATLAS_W      256
-#define DEFAULT_ATLAS_H      256
+#define DEFAULT_ATLAS_COLS   16   // glyphs per row in the atlas
+#define DEFAULT_ATLAS_ROWS   16   // glyph rows in the atlas
 #define DEFAULT_CELL_W        16
 #define DEFAULT_CELL_H        16
+// Atlas dimensions are derived: cols * cell_w × rows * cell_h.
+// DEFAULT_ATLAS_W / DEFAULT_ATLAS_H kept as helpers for the help text.
+#define DEFAULT_ATLAS_W      (DEFAULT_ATLAS_COLS * DEFAULT_CELL_W)
+#define DEFAULT_ATLAS_H      (DEFAULT_ATLAS_ROWS * DEFAULT_CELL_H)
 #define DEFAULT_PIXEL_HEIGHT  16.0f
 #define DEFAULT_THRESHOLD     128
 #define DEFAULT_FIRST_CHAR      0
@@ -168,8 +172,8 @@ static char* get_font_name(const stbtt_fontinfo* font, int nameID)
 int main(int argc, char** argv)
 {
     Opts o = {
-        .atlas_w      = DEFAULT_ATLAS_W,
-        .atlas_h      = DEFAULT_ATLAS_H,
+        .atlas_w      = -1,   // computed from cell size after arg parsing
+        .atlas_h      = -1,
         .cell_w       = DEFAULT_CELL_W,
         .cell_h       = DEFAULT_CELL_H,
         .pixel_height = DEFAULT_PIXEL_HEIGHT,
@@ -220,6 +224,10 @@ int main(int argc, char** argv)
         fprintf(stderr, "Usage: %s font.ttf out.png [options]  (-? for help)\n", argv[0]);
         return 1;
     }
+
+    /* ---- derive atlas size from cell grid if not set explicitly --- */
+    if (o.atlas_w < 0) o.atlas_w = DEFAULT_ATLAS_COLS * o.cell_w;
+    if (o.atlas_h < 0) o.atlas_h = DEFAULT_ATLAS_ROWS * o.cell_h;
 
     /* ---- load font -------------------------------------------- */
     int ttf_size = 0;
