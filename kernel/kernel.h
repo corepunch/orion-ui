@@ -11,7 +11,22 @@ typedef struct bitmap_strip_s bitmap_strip_t;
 #define UI_INIT_TRAY 0x02000000u
 
 #ifndef UI_WINDOW_SCALE
-#define UI_WINDOW_SCALE 2
+#define UI_WINDOW_SCALE 1
+#endif
+
+// Logical font-pixel height used to derive chrome dimensions (titlebar,
+// menubar, list row heights, etc.).  This is a compile-time constant tied to
+// the scale factor rather than the runtime-loaded font's cell height.
+//
+// Measured glyph heights:
+//   UI_WINDOW_SCALE == 1  → ChiKareGo2 (16×16 cells, max glyph h = 12 px)
+//   UI_WINDOW_SCALE >= 2  → SmallFont  ( 8× 8 cells, cell  h = 8  px)
+#if UI_WINDOW_SCALE == 1
+#  define FONT_SIZE 12
+#  define FONT_PIXEL_SIZE 16
+#else
+#  define FONT_SIZE 8
+#  define FONT_PIXEL_SIZE 8
 #endif
 
 // Event type abstraction — maps to the platform AXmessage struct

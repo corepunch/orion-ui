@@ -218,6 +218,7 @@ tools: $(TOOLS_BINS)
 
 fonts: tools
 	$(BIN_DIR)/font_atlas fonts/ChiKareGo2.ttf share/ChiKareGo2.png -pixelsize=16 -em -sharp -cellw=16 -cellh=16 -v
+	$(BIN_DIR)/font_atlas fonts/FindersKeepers.ttf share/FindersKeepers.png -pixelsize=16 -em -sharp -cellw=8 -cellh=9 -v
 
 
 $(BIN_DIR)/%$(EXE_EXT): tools/%.c $(SHARED_LIB) | $(BIN_DIR)
@@ -254,6 +255,8 @@ $(VGA_FONT_PNG): $(VGA_FONT_SRC) | $(SHARE_DIR)
 share: $(VGA_FONT_PNG) | $(SHARE_DIR)
 	@mkdir -p $(SHARE_DIR)/orion
 	@cp share/icon_sheet_16x16.png $(SHARE_DIR)/orion/
+	@cp share/SmallFont.png $(SHARE_DIR)/orion/
+	@cp share/ChiKareGo2.png $(SHARE_DIR)/orion/
 	@for dir in examples/*/; do \
 	  name=$$(basename "$$dir"); \
 	  assets=$$(find "$$dir" -maxdepth 1 \( -name "*.png" -o -name "*.ttf" -o -name "*.jpg" -o -name "*.jpeg" \) 2>/dev/null); \

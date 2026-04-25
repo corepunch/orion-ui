@@ -10,8 +10,8 @@
 #define MAX_COLUMNVIEW_ITEMS 256
 #define MAX_REPORTVIEW_COLUMNS 16
 #define MAX_REPORTVIEW_TITLE 64
-#define ENTRY_HEIGHT 13
-#define HEADER_HEIGHT 14
+#define ENTRY_HEIGHT  COLUMNVIEW_ENTRY_HEIGHT
+#define HEADER_HEIGHT COLUMNVIEW_HEADER_HEIGHT
 #define DEFAULT_COLUMN_WIDTH 160
 #define ICON_OFFSET 12
 #define ICON_DODGE 1
@@ -327,7 +327,7 @@ static void rv_paint_report_view(window_t *win, reportview_data_t *data) {
     // Header scissor: column width, header height only.
     set_clip_rect(NULL, &(rect_t){scr_x + col_x, scr_y, col_w, HEADER_HEIGHT});
     draw_button(&(rect_t){col_x, 0, col_w, HEADER_HEIGHT}, 1, 1, false);
-    draw_text_small(data->columns[col].title, col_x + WIN_PADDING, 3, hdr_fg);
+    draw_text_small_clipped(data->columns[col].title, &(rect_t){col_x, 0, col_w, HEADER_HEIGHT}, hdr_fg, TEXT_PADDING_LEFT);
 
     // Body scissor: column width, everything below the header.
     int body_h = win->frame.h - HEADER_HEIGHT;
@@ -348,7 +348,7 @@ static void rv_paint_report_view(window_t *win, reportview_data_t *data) {
         src = (idx < it->subitem_count && it->subitems[idx]) ? it->subitems[idx] : "";
       }
 
-      draw_text_small(src, col_x + WIN_PADDING, y + 2, fg);
+      draw_text_small_clipped(src, &(rect_t){col_x, y, col_w, ENTRY_HEIGHT}, fg, TEXT_PADDING_LEFT);
     }
 
     col_x += col_w;

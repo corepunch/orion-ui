@@ -556,8 +556,10 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         }
         if (!(win->flags&WINDOW_NOTITLE)) {
           draw_window_controls(win);
-          draw_text_small(win->title, frame->x+2, window_title_bar_y(win),
-                          get_sys_color(window_has_focus(win) ? brActiveTitlebarText : brInactiveTitlebarText));
+          draw_text_small_clipped(win->title,
+                          &(rect_t){frame->x, frame->y, frame->w, TITLEBAR_HEIGHT},
+                          get_sys_color(window_has_focus(win) ? brActiveTitlebarText : brInactiveTitlebarText),
+                          TEXT_PADDING_LEFT);
         }
         if (win->flags&WINDOW_TOOLBAR) {
           int bsz      = toolbar_effective_bsz(win);
