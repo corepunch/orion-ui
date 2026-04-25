@@ -316,13 +316,13 @@ void init_text_rendering(void) {
 
     // Try Geneva9 first (Silkscreen text + SmallFont icons composite),
     // then fall back to SmallFont for the small atlas.
-    bool small_ok = load_atlas(&text_state.small, &text_state.small_met,
+    bool geneva_ok = load_atlas(&text_state.small, &text_state.small_met,
                                 geneva_path, 0, 255, /*full_cell=*/false);
-    if (!small_ok)
-      small_ok = load_atlas(&text_state.small, &text_state.small_met,
+    if (!geneva_ok)
+      geneva_ok = load_atlas(&text_state.small, &text_state.small_met,
                              small_path,   0, 255, /*full_cell=*/false);
-    text_state.has_small = small_ok;
-    if (small_ok) {
+    text_state.has_small = geneva_ok;
+    if (geneva_ok) {
       text_state.small_height = text_state.small.cell_h;
       text_state.small_line   = text_state.small.cell_h + 4;
       text_state.small_space  = text_state.small_met.advance[' ']
@@ -334,15 +334,15 @@ void init_text_rendering(void) {
     }
     printf("text: ChiKareGo2 (%dx%d)%s\n",
            text_state.big.cell_w, text_state.big.cell_h,
-           small_ok ? " + small atlas" : "");
+           geneva_ok ? " + small atlas" : "");
     return;
   }
 #endif
 
   // Default (scale>=2 or ChiKareGo2 unavailable): SmallFont for everything.
-  bool small_ok = load_atlas(&text_state.big, &text_state.big_met,
-                              small_path, 0, 255, /*full_cell=*/false);
-  if (small_ok) {
+  bool font_ok = load_atlas(&text_state.big, &text_state.big_met,
+                             small_path, 0, 255, /*full_cell=*/false);
+  if (font_ok) {
     text_state.has_small    = false;
     int h  = text_state.big.cell_h;
     int sp = text_state.big_met.advance[' '] ? text_state.big_met.advance[' '] : 3;
