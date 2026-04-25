@@ -14,7 +14,6 @@
 #define HEADER_HEIGHT COLUMNVIEW_HEADER_HEIGHT
 #define DEFAULT_COLUMN_WIDTH 160
 #define ICON_OFFSET 12
-#define ICON_DODGE 1
 #define WIN_PADDING 4
 #define RV_DOUBLE_CLICK_MS 500u
 #define RV_INVALID_SELECTION (-1)
@@ -265,16 +264,6 @@ static void rv_paint_icon_view(window_t *win, reportview_data_t *data) {
   int clip_top = 0;
   int clip_bottom = win->frame.h;
 
-  // Vertical offsets within each ENTRY_HEIGHT slot.
-  // Matches the geometry used in rv_paint_report_view:
-  //   selection rect: starts at y, height = ENTRY_HEIGHT-1 (same as report view)
-  //   text: y + (ENTRY_HEIGHT - cell_h) / 2  (same as draw_text_clipped)
-  //   icon: y + (ENTRY_HEIGHT - ICON8_SIZE) / 2  (centers 8px icon at the same
-  //         vertical midpoint as the text cell)
-  int cell_h  = text_char_height(FONT_SMALL);
-  int txt_vc  = (ENTRY_HEIGHT - cell_h)    / 2;
-  int ico_vc  = (ENTRY_HEIGHT - ICON8_SIZE) / 2;
-
   for (uint32_t i = 0; i < data->count; i++) {
     int col = i % ncol;
     int x = col * data->column_width + WIN_PADDING;
@@ -283,14 +272,19 @@ static void rv_paint_icon_view(window_t *win, reportview_data_t *data) {
     if (y + ENTRY_HEIGHT <= clip_top) continue;
     if (y >= clip_bottom) break;
 
+    int item_w  = data->column_width - 6;
+    int item_h  = ENTRY_HEIGHT - 1;
+    rect_t icon_rect = {x,               y, ICON_OFFSET,              item_h};
+    rect_t text_rect = {x + ICON_OFFSET, y, item_w - ICON_OFFSET - 2, item_h};
+
     if ((int)i == data->selected) {
-      fill_rect(get_sys_color(brTextNormal), R(x - 2, y, data->column_width - 6, ENTRY_HEIGHT - 1));
-      draw_icon8(data->items[i].icon, x, y + ico_vc, get_sys_color(brWindowBg));
-      draw_text(FONT_SMALL, data->items[i].text, x + ICON_OFFSET, y + txt_vc, get_sys_color(brWindowBg));
+      fill_rect(get_sys_color(brTextNormal), R(x - 2, y, item_w, item_h));
+      draw_icon8_clipped(data->items[i].icon, &icon_rect, get_sys_color(brWindowBg));
+      draw_text_clipped(FONT_SMALL, data->items[i].text, &text_rect, get_sys_color(brWindowBg), 0);
     } else {
-      fill_rect(bg_col, R(x - 2, y, data->column_width - 6, ENTRY_HEIGHT - 1));
-      draw_icon8(data->items[i].icon, x, y + ico_vc, data->items[i].color);
-      draw_text(FONT_SMALL, data->items[i].text, x + ICON_OFFSET, y + txt_vc, data->items[i].color);
+      fill_rect(bg_col, R(x - 2, y, item_w, item_h));
+      draw_icon8_clipped(data->items[i].icon, &icon_rect, data->items[i].color);
+      draw_text_clipped(FONT_SMALL, data->items[i].text, &text_rect, data->items[i].color, 0);
     }
   }
 }

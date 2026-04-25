@@ -330,6 +330,14 @@ void draw_icon8(int icon, int x, int y, uint32_t col) {
   draw_text_small(str, x, y, col);
 }
 
+void draw_icon8_clipped(int icon, rect_t const *rect, uint32_t col) {
+  int cell_h = text_char_height(FONT_SMALL);
+  draw_icon8(icon,
+             rect->x + (rect->w - ICON8_SIZE) / 2,
+             rect->y + (rect->h - cell_h)    / 2,
+             col);
+}
+
 void draw_icon16(int icon, int x, int y, uint32_t col) {
   if (icon >= SYSICON_BASE) {
     bitmap_strip_t *s = ui_get_sysicon_strip();
