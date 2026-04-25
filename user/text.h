@@ -29,7 +29,8 @@ void shutdown_text_rendering(void);
 // Returns 0 when the text system is not yet initialized.
 int char_width(unsigned char c);
 
-#define TEXT_PADDING_LEFT 1
+#define TEXT_PADDING_LEFT  (1u << 0)   // add WIN_PADDING (4px) to the left
+#define TEXT_ALIGN_RIGHT   (1u << 1)   // right-align to viewport's right edge (caller encodes margin in viewport width)
 
 // Small bitmap font rendering
 void draw_text_small(const char* text, int x, int y, uint32_t col);

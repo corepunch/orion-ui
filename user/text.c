@@ -459,10 +459,12 @@ void draw_text_small(const char *text, int x, int y, uint32_t col) {
 
 void draw_text_small_clipped(const char *text, rect_t const *viewport, uint32_t col, uint32_t flags) {
   if (!text || !*text || !g_ui_runtime.running || !viewport) return;
-  // set_clip_rect(NULL, viewport);
   int x = viewport->x;
   int y = viewport->y + (viewport->h - FONT_PIXEL_SIZE) / 2;
-  if(flags&TEXT_PADDING_LEFT) x += WIN_PADDING;
+  if (flags & TEXT_ALIGN_RIGHT)
+    x = viewport->x + viewport->w - strwidth(text);
+  else if (flags & TEXT_PADDING_LEFT)
+    x += WIN_PADDING;
   draw_text_small(text, x, y, col);
 }
 

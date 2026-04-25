@@ -19,7 +19,7 @@
 #include "../user/accel.h"
 #include "menubar.h"
 
-#define MENU_ITEM_H      12   // height of a normal dropdown row
+#define MENU_ITEM_H      TITLEBAR_HEIGHT  // height of a normal dropdown row (font-size dependent)
 #define MENU_SEP_H        5   // height of a separator row
 #define MENU_SIDE_PAD     4   // horizontal text padding inside dropdown
 #define MENU_MIN_W       90   // minimum popup width
@@ -59,7 +59,7 @@ static int item_label_width(const char *label) {
 }
 
 // Draw a menu item label, stopping at a '\t' character.
-static void draw_item_label(const char *label, int x, int y, uint32_t col) {
+static void draw_item_label(const char *label, rect_t const *rect, uint32_t col) {
   if (!label) return;
   const char *tab = strchr(label, '\t');
   if (tab) {
@@ -68,9 +68,9 @@ static void draw_item_label(const char *label, int x, int y, uint32_t col) {
     int n = len < (int)(sizeof(buf) - 1) ? len : (int)(sizeof(buf) - 1);
     memcpy(buf, label, (size_t)n);
     buf[n] = '\0';
-    draw_text_small(buf, x, y, col);
+    draw_text_small_clipped(buf, rect, col, 0);
   } else {
-    draw_text_small(label, x, y, col);
+    draw_text_small_clipped(label, rect, col, 0);
   }
 }
 
@@ -138,15 +138,15 @@ static result_t popup_proc(window_t *win, uint32_t msg,
           bool hov = (i == pd->hovered);
           uint32_t label_col  = hov ? get_sys_color(brWindowBg)  : get_sys_color(brTextNormal);
           uint32_t hotkey_col = hov ? get_sys_color(brWindowBg)  : get_sys_color(brTextDisabled);
-          draw_item_label(it->label, MENU_SIDE_PAD + 2, y + 2, label_col);
+          draw_item_label(it->label, &(rect_t){MENU_SIDE_PAD, y, win->frame.w - MENU_SIDE_PAD * 2, MENU_ITEM_H}, label_col);
           if (pd->accel) {
             const accel_t *a = accel_find_cmd(pd->accel, it->id);
             if (a) {
               char hkbuf[32];
               accel_format(a, hkbuf, sizeof(hkbuf));
-              int hw = strwidth(hkbuf);
-              draw_text_small(hkbuf, win->frame.w - MENU_SIDE_PAD - hw, y + 2,
-                              hotkey_col);
+              draw_text_small_clipped(hkbuf,
+                                     &(rect_t){0, y, win->frame.w - MENU_SIDE_PAD, MENU_ITEM_H},
+                                     hotkey_col, TEXT_ALIGN_RIGHT);
             }
           }
           y += MENU_ITEM_H;
@@ -381,9 +381,9 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
         if (active) {
           fill_rect(get_sys_color(brFocusRing), R(label_x0, 0, label_w, win->frame.h - 1));
         }
-        draw_text_small(data->menus[i].label,
-                        data->menu_x[i], 2,
-                        active ? get_sys_color(brWindowBg) : get_sys_color(brTextNormal));
+        draw_text_small_clipped(data->menus[i].label,
+                        &(rect_t){data->menu_x[i], 0, label_w, win->frame.h},
+                        active ? get_sys_color(brWindowBg) : get_sys_color(brTextNormal), 0);
       }
       return true;
     }

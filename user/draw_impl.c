@@ -186,7 +186,8 @@ void draw_statusbar(window_t *win, const char *text) {
   set_fullscreen();
 
   if (text) {
-    draw_text_small(text, r.x + 2, y + 2, get_sys_color(brTextNormal));
+    draw_text_small_clipped(text, &(rect_t){r.x, y, split_x, s},
+                            get_sys_color(brTextNormal), TEXT_PADDING_LEFT);
   }
 
   if (has_h) {
