@@ -221,7 +221,8 @@ fonts: tools
 	$(BIN_DIR)/font_atlas fonts/FindersKeepers.ttf share/FindersKeepers.png -pixelsize=16 -em -sharp -cellw=8 -cellh=9 -v
 # 	$(BIN_DIR)/font_atlas fonts/Pix32.ttf share/Geneva-12.png -pixelsize=12 -em -sharp -cellw=8 -cellh=16 -v
 	$(BIN_DIR)/font_atlas fonts/PixelOperator.ttf share/Geneva-12.png -pixelsize=16 -em -sharp -cellw=8 -cellh=16 -v
-
+	$(BIN_DIR)/font_atlas fonts/PixelOperatorMono.ttf share/Mono-12.png -pixelsize=16 -em -sharp -cellw=8 -cellh=16 -v
+	
 $(BIN_DIR)/%$(EXE_EXT): tools/%.c $(SHARED_LIB) | $(BIN_DIR)
 	@echo "Building tool: $@"
 	$(CC) $(CFLAGS) -I. -Itools -o $@ $< \
