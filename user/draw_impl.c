@@ -12,6 +12,7 @@
 #include "messages.h"
 #include "draw.h"
 #include "icons.h"
+#include "sysicons.h"
 
 // External references
 extern window_t *get_root_window(window_t *window);
@@ -39,8 +40,6 @@ bool window_has_focus(const window_t *win) {
 }
 
 // Forward declarations
-extern void draw_icon8(int icon, int x, int y, uint32_t col);
-extern void draw_icon16(int icon, int x, int y, uint32_t col);
 extern int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 extern void set_projection(int x, int y, int w, int h);
 
@@ -164,7 +163,7 @@ void draw_window_controls(window_t *win) {
   for (int i = 0; i < 1; i++) {
     int x = win->frame.x + win->frame.w - (i+1)*CONTROL_BUTTON_WIDTH - CONTROL_BUTTON_PADDING;
     int y = window_title_bar_y(win);
-    draw_icon8(icon8_minus + i, x, y, get_sys_color(brTextNormal));
+    draw_icon(ICON_EXIT, x, y, CONTROL_BUTTON_WIDTH, get_sys_color(brTextNormal));
   }
 }
 
@@ -198,11 +197,10 @@ void draw_statusbar(window_t *win, const char *text) {
       fill_rect(get_sys_color(brWindowDarkBg), R(r.x + split_x, y, bw, s));
       // Arrow buttons (each SCROLLBAR_WIDTH wide)
       if (bw >= 2 * SCROLLBAR_WIDTH) {
-        int icon_off = (SCROLLBAR_WIDTH - ICON8_SIZE) / 2;
         fill_rect(get_sys_color(brWindowBg), R(r.x + split_x, y, SCROLLBAR_WIDTH, s));
-        draw_icon8(icon8_scroll_left,  r.x + split_x + icon_off, y + icon_off, get_sys_color(brTextNormal));
+        draw_icon(ICON_BACK_ARROW,    r.x + split_x, y, SCROLLBAR_WIDTH, get_sys_color(brTextNormal));
         fill_rect(get_sys_color(brWindowBg), R(r.x + split_x + bw - SCROLLBAR_WIDTH, y, SCROLLBAR_WIDTH, s));
-        draw_icon8(icon8_scroll_right, r.x + split_x + bw - SCROLLBAR_WIDTH + icon_off, y + icon_off, get_sys_color(brTextNormal));
+        draw_icon(ICON_FORWARD_ARROW, r.x + split_x + bw - SCROLLBAR_WIDTH, y, SCROLLBAR_WIDTH, get_sys_color(brTextNormal));
         // Thumb in effective track between buttons
         int eff_track = bw - 2 * SCROLLBAR_WIDTH;
         if (eff_track > 0) {
@@ -222,9 +220,8 @@ void draw_statusbar(window_t *win, const char *text) {
     // Resize corner — always present at the far right of the status-bar row.
     {
       int cx = r.x + r.w - SCROLLBAR_WIDTH;
-      int icon_off = (SCROLLBAR_WIDTH - ICON8_SIZE) / 2;
       fill_rect(get_sys_color(brWindowDarkBg), R(cx, y, SCROLLBAR_WIDTH, s));
-      draw_icon8(icon8_resize_br, cx + icon_off, y + icon_off, get_sys_color(brTextNormal));
+      draw_icon(ICON_MOVE, cx, y, SCROLLBAR_WIDTH, get_sys_color(brTextNormal));
     }
   }
 }
@@ -325,16 +322,34 @@ void draw_sel_rect(rect_t const *r) {
   }
 }
 
+void draw_icon(int id, int x, int y, int size, uint32_t col) {
+  bitmap_strip_t *s = ui_get_icons_strip();
+  if (!s || s->tex == 0 || s->cols <= 0) return;
+  int scol = id % s->cols;
+  int srow = id / s->cols;
+  float u0 = (float)(scol * s->icon_w) / (float)s->sheet_w;
+  float v0 = (float)(srow * s->icon_h) / (float)s->sheet_h;
+  float u1 = u0 + (float)s->icon_w / (float)s->sheet_w;
+  float v1 = v0 + (float)s->icon_h / (float)s->sheet_h;
+  draw_sprite_region((int)s->tex, R(x, y, size, size), u0, v0, u1, v1, col);
+}
+
 void draw_icon8(int icon, int x, int y, uint32_t col) {
+#if UI_WINDOW_SCALE >= 2
+  // Fallback for scale≥2: render from SmallFont atlas (expects icon8_t values,
+  // not IconId — apps should guard with the same #if when choosing which to pass).
   char str[2] = { icon+128+6*16, 0 };
   draw_text_small(str, x, y, col);
+#else
+  // scale=1: render from icons.png (icon is an IconId value from sysicons.h).
+  draw_icon(icon, x, y, ICON8_SIZE, col);
+#endif
 }
 
 void draw_icon8_clipped(int icon, rect_t const *rect, uint32_t col) {
-  int cell_h = text_char_height(FONT_SMALL);
   draw_icon8(icon,
              rect->x + (rect->w - ICON8_SIZE) / 2,
-             rect->y + (rect->h - cell_h)    / 2,
+             rect->y + (rect->h - ICON8_SIZE) / 2,
              col);
 }
 
@@ -403,9 +418,6 @@ void draw_builtin_scrollbars(window_t *win) {
   // it isn't drawn twice, and don't subtract its height from the vscroll track.
   bool h_merged = has_h && (win->flags & WINDOW_STATUSBAR);
 
-  // Offset for centering 8×8 icons inside SCROLLBAR_WIDTH×SCROLLBAR_WIDTH buttons
-  int icon_off = (SCROLLBAR_WIDTH - ICON8_SIZE) / 2;
-
   // Content height (client area minus scrollbar strips).
   // For top-level windows t/s shift where the strips appear within the frame;
   // for child windows t=s=0 so the formula degenerates to the old behaviour.
@@ -421,9 +433,9 @@ void draw_builtin_scrollbars(window_t *win) {
     // Arrow buttons
     if (bw >= 2 * SCROLLBAR_WIDTH) {
       fill_rect(get_sys_color(brWindowBg), R(x, y, SCROLLBAR_WIDTH, SCROLLBAR_WIDTH));
-      draw_icon8(icon8_scroll_left,  x + icon_off, y + icon_off, get_sys_color(brTextNormal));
+      draw_icon(ICON_BACK_ARROW,    x, y, SCROLLBAR_WIDTH, get_sys_color(brTextNormal));
       fill_rect(get_sys_color(brWindowBg), R(x + bw - SCROLLBAR_WIDTH, y, SCROLLBAR_WIDTH, SCROLLBAR_WIDTH));
-      draw_icon8(icon8_scroll_right, x + bw - SCROLLBAR_WIDTH + icon_off, y + icon_off, get_sys_color(brTextNormal));
+      draw_icon(ICON_FORWARD_ARROW, x + bw - SCROLLBAR_WIDTH, y, SCROLLBAR_WIDTH, get_sys_color(brTextNormal));
       // Thumb in effective track between buttons
       int eff_track = bw - 2 * SCROLLBAR_WIDTH;
       if (eff_track > 0) {
@@ -453,9 +465,9 @@ void draw_builtin_scrollbars(window_t *win) {
     // Arrow buttons
     if (bh >= 2 * SCROLLBAR_WIDTH) {
       fill_rect(get_sys_color(brWindowBg), R(x, y, SCROLLBAR_WIDTH, SCROLLBAR_WIDTH));
-      draw_icon8(icon8_scroll_up,   x + icon_off, y + icon_off, get_sys_color(brTextNormal));
+      draw_icon(ICON_ARROW_UP,   x, y, SCROLLBAR_WIDTH, get_sys_color(brTextNormal));
       fill_rect(get_sys_color(brWindowBg), R(x, y + bh - SCROLLBAR_WIDTH, SCROLLBAR_WIDTH, SCROLLBAR_WIDTH));
-      draw_icon8(icon8_scroll_down, x + icon_off, y + bh - SCROLLBAR_WIDTH + icon_off, get_sys_color(brTextNormal));
+      draw_icon(ICON_ARROW_DOWN, x, y + bh - SCROLLBAR_WIDTH, SCROLLBAR_WIDTH, get_sys_color(brTextNormal));
       // Thumb in effective track between buttons
       int eff_track = bh - 2 * SCROLLBAR_WIDTH;
       if (eff_track > 0) {
@@ -478,6 +490,6 @@ void draw_builtin_scrollbars(window_t *win) {
     int cx = base_x + win->frame.w - SCROLLBAR_WIDTH;
     int cy = base_y + content_h - SCROLLBAR_WIDTH;
     fill_rect(get_sys_color(brWindowDarkBg), R(cx, cy, SCROLLBAR_WIDTH, SCROLLBAR_WIDTH));
-    draw_icon8(icon8_resize_br, cx + icon_off, cy + icon_off, get_sys_color(brTextNormal));
+    draw_icon(ICON_MOVE, cx, cy, SCROLLBAR_WIDTH, get_sys_color(brTextNormal));
   }
 }

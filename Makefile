@@ -260,6 +260,7 @@ share: $(VGA_FONT_PNG) | $(SHARE_DIR)
 	@cp share/SmallFont.png $(SHARE_DIR)/orion/
 	@cp share/ChiKareGo2.png $(SHARE_DIR)/orion/
 	@cp share/Geneva-12.png $(SHARE_DIR)/orion/
+	@[ ! -f share/icons.png ] || cp share/icons.png $(SHARE_DIR)/orion/
 	@[ ! -f share/Geneva9.png ] || cp share/Geneva9.png $(SHARE_DIR)/orion/
 	@for dir in examples/*/; do \
 	  name=$$(basename "$$dir"); \

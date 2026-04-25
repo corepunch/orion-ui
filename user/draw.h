@@ -17,6 +17,7 @@ void draw_sprite_region(int tex, rect_t const *r,
 void draw_sel_rect(rect_t const *r);
 
 // Icon drawing functions
+void draw_icon(int id, int x, int y, int size, uint32_t col);
 void draw_icon8(int icon, int x, int y, uint32_t col);
 void draw_icon8_clipped(int icon, rect_t const *rect, uint32_t col);
 void draw_icon16(int icon, int x, int y, uint32_t col);

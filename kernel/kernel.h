@@ -134,4 +134,9 @@ void ui_update_screen_size(int width, int height);
 //     send_message(btn, btnSetImage, sysicon_add - SYSICON_BASE, s);
 bitmap_strip_t *ui_get_sysicon_strip(void);
 
+// UI icon strip loaded from share/orion/icons.png.
+// Tiles are 16×16 RGBA; icons are indexed by IconId (user/sysicons.h).
+// Returns NULL if the sheet was not found at startup.
+bitmap_strip_t *ui_get_icons_strip(void);
+
 #endif

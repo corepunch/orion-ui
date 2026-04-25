@@ -6,6 +6,7 @@
 #include "../user/draw.h"
 #include "../user/rect.h"
 #include "../user/theme.h"
+#include "../user/sysicons.h"
 
 // Helper function (will be moved to ui/user/window.c later)
 extern window_t *get_root_window(window_t *window);
@@ -32,7 +33,7 @@ result_t win_checkbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       draw_text_small(win->title, lx, ly, get_sys_color(brTextNormal));
       if (win->value) {
         rect_t checkmark = rect_offset(box, TEXT_SHADOW_OFFSET, TEXT_SHADOW_OFFSET);
-        draw_icon8(icon8_checkbox, checkmark.x, checkmark.y, get_sys_color(brTextNormal));
+        draw_icon(ICON_FIND, checkmark.x, checkmark.y, CHECKBOX_BOX_SIZE, get_sys_color(brTextNormal));
       }
       return true;
     }

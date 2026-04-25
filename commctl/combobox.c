@@ -5,6 +5,7 @@
 #include "../user/user.h"
 #include "../user/messages.h"
 #include "../user/draw.h"
+#include "../user/sysicons.h"
 
 #define MAX_COMBOBOX_STRINGS 256
 typedef char combobox_string_t[64];
@@ -75,7 +76,7 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       return true;
     case evPaint:
       win_button(win, msg, wparam, lparam);
-      draw_icon8(icon8_maximize, win->frame.w-10, (win->frame.h-8)/2, get_sys_color(brTextNormal));
+      draw_icon(ICON_ARROW_DOWN, win->frame.w - SCROLLBAR_WIDTH, 0, SCROLLBAR_WIDTH, get_sys_color(brTextNormal));
       return true;
     case evLeftButtonUp:
       // Do not forward button-up to win_button() to avoid sending btnClicked
