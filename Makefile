@@ -219,23 +219,8 @@ tools: $(TOOLS_BINS)
 fonts: tools
 	$(BIN_DIR)/font_atlas fonts/ChiKareGo2.ttf share/ChiKareGo2.png -pixelsize=16 -em -sharp -cellw=16 -cellh=16 -v
 	$(BIN_DIR)/font_atlas fonts/FindersKeepers.ttf share/FindersKeepers.png -pixelsize=16 -em -sharp -cellw=8 -cellh=9 -v
-	$(BIN_DIR)/font_atlas fonts/geneva_9.ttf share/Geneva-9.png -pixelsize=16 -em -sharp -cellw=8 -cellh=10 -v
-
-# Geneva9.png — standalone target; does not depend on the full Orion shared lib.
-# font_atlas.c only needs libc + stb_truetype; no OpenGL required.
-# Requires: Python 3 + Pillow (pip install Pillow)
-.PHONY: Geneva9
-FONT_ATLAS_STANDALONE = $(BIN_DIR)/font_atlas$(EXE_EXT)
-Geneva9: | $(BIN_DIR)
-	@echo "Building standalone font_atlas..."
-	$(CC) $(CFLAGS) -I. -Itools tools/font_atlas.c -lm -o $(FONT_ATLAS_STANDALONE)
-	@echo "Generating share/Geneva9.png (FindersKeepers text + SmallFont icons)..."
-	python3 tools/gen_small_font.py \
-		fonts/FindersKeepers.ttf \
-		share/SmallFont.png \
-		share/Geneva9.png \
-		$(FONT_ATLAS_STANDALONE)
-
+# 	$(BIN_DIR)/font_atlas fonts/Pix32.ttf share/Geneva-12.png -pixelsize=12 -em -sharp -cellw=8 -cellh=16 -v
+	$(BIN_DIR)/font_atlas fonts/PixelOperator.ttf share/Geneva-12.png -pixelsize=16 -em -sharp -cellw=8 -cellh=16 -v
 
 $(BIN_DIR)/%$(EXE_EXT): tools/%.c $(SHARED_LIB) | $(BIN_DIR)
 	@echo "Building tool: $@"
@@ -273,6 +258,7 @@ share: $(VGA_FONT_PNG) | $(SHARE_DIR)
 	@cp share/icon_sheet_16x16.png $(SHARE_DIR)/orion/
 	@cp share/SmallFont.png $(SHARE_DIR)/orion/
 	@cp share/ChiKareGo2.png $(SHARE_DIR)/orion/
+	@cp share/Geneva-12.png $(SHARE_DIR)/orion/
 	@[ ! -f share/Geneva9.png ] || cp share/Geneva9.png $(SHARE_DIR)/orion/
 	@for dir in examples/*/; do \
 	  name=$$(basename "$$dir"); \

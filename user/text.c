@@ -301,7 +301,7 @@ void init_text_rendering(void) {
   char small_path[4096], chika_path[4096], geneva_path[4096];
   snprintf(small_path,  sizeof(small_path),  "%s/../share/orion/SmallFont.png",  exe);
   snprintf(chika_path,  sizeof(chika_path),  "%s/../share/orion/ChiKareGo2.png", exe);
-  snprintf(geneva_path, sizeof(geneva_path), "%s/../share/orion/Geneva9.png",    exe);
+  snprintf(geneva_path, sizeof(geneva_path), "%s/../share/orion/Geneva-12.png",    exe);
 
 #if UI_WINDOW_SCALE == 1
   // At native (1:1) scale: ChiKareGo2 for chrome (FONT_SYSTEM), Geneva9 /

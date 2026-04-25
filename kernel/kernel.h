@@ -28,7 +28,7 @@ typedef struct bitmap_strip_s bitmap_strip_t;
 #if UI_WINDOW_SCALE == 1
 #  define FONT_SIZE        12
 #  define FONT_PIXEL_SIZE  16
-#  define FONT_SIZE_SMALL   8   // Geneva9 / SmallFont cell height at scale=1
+#  define FONT_SIZE_SMALL   12   // Geneva12 / SmallFont cell height at scale=1
 #else
 #  define FONT_SIZE        8
 #  define FONT_PIXEL_SIZE  8
