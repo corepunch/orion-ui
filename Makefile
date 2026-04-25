@@ -217,7 +217,7 @@ tools: $(TOOLS_BINS)
 	@echo "All tools built"
 
 fonts: tools
-	$(BIN_DIR)/font_atlas fonts/ChiKareGo2.ttf share/ChiKareGo2.png -pixelsize=16 -em -sharp -cellw=16 -cellh=16 -v
+	$(BIN_DIR)/font_atlas fonts/ChiKareGo2.ttf share/ChiKareGo2.png -pixelsize=16 -em -sharp -cellw=10 -cellh=16 -v
 	$(BIN_DIR)/font_atlas fonts/FindersKeepers.ttf share/FindersKeepers.png -pixelsize=16 -em -sharp -cellw=8 -cellh=9 -v
 
 
