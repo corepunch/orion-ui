@@ -248,10 +248,6 @@ typedef struct {
 #define LINE_PADDING 5
 #define CONTROL_HEIGHT 14
 
-// Control button dimensions — 8 logical px, matching the native tile size of
-// theme icons (THEME_ICON_SIZE defined in user/theme.h).
-#define CONTROL_BUTTON_WIDTH    8
-#define CONTROL_BUTTON_PADDING  2
 #define TB_SPACING              TOOLBAR_HEIGHT  // equals TOOLBAR_HEIGHT so toolbar buttons are square
 #define TOOLBAR_PADDING         2               // pixels of margin between toolbar border and button area (all sides)
 #define TOOLBAR_SPACING         1               // minimal pixel gap between consecutive toolbar elements

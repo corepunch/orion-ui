@@ -562,7 +562,7 @@ void dispatch_message(ui_event_t *msg) {
         int sx = SCALE_POINT(px);
         int sy = SCALE_POINT(py);
         rect_t titlebar  = rect_split_top(g_ui_runtime.dragging->frame, TITLEBAR_HEIGHT);
-        rect_t close_btn = rect_split_right(titlebar, CONTROL_BUTTON_WIDTH + CONTROL_BUTTON_PADDING);
+        rect_t close_btn = rect_split_right(titlebar, TITLEBAR_HEIGHT);
         bool on_close = !(g_ui_runtime.dragging->flags & WINDOW_NOTITLE)
                         && sx >= close_btn.x && sx < close_btn.x + close_btn.w
                         && sy >= close_btn.y && sy < close_btn.y + close_btn.h;
