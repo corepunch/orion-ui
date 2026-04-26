@@ -8,7 +8,6 @@
 #include "../user/theme.h"
 
 #define MAX_COMBOBOX_STRINGS 256
-#define COMBOBOX_ICON_SIZE   (THEME_ICON_SIZE + 4)
 typedef char combobox_string_t[64];
 
 // Forward declare list control procedure  
@@ -79,7 +78,7 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       win_button(win, msg, wparam, lparam);
       {
         rect_t local = {0, 0, win->frame.w, win->frame.h};
-        rect_t arrow = rect_split_right(local, COMBOBOX_ICON_SIZE);
+        rect_t arrow = rect_split_right(local, win->frame.h);
         draw_theme_icon_in_rect(THEME_ICON_ARROW_UPDOWN, &arrow,
                                 get_sys_color(brTextNormal));
       }

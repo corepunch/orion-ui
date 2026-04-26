@@ -240,9 +240,6 @@ typedef struct {
 #define STATUSBAR_HEIGHT  (FONT_SIZE + 4)
 // Default width of a WINDOW_SIDEBAR panel in logical pixels.
 #define SIDEBAR_DEFAULT_WIDTH  180
-// Resize handle matches SCROLLBAR_WIDTH so the scrollbar corner cell is fully
-// interactive as a resize drag grip (same as Windows 1.0/2.0 behaviour).
-#define RESIZE_HANDLE     SCROLLBAR_WIDTH
 #define BUTTON_HEIGHT     18
 #define WINDOW_PADDING 4
 #define LINE_PADDING 5

@@ -45,9 +45,6 @@ typedef enum {
 
 // ── Checkboxes ────────────────────────────────────────────────────────────
 
-// Width and height of the hit-test box portion of a checkbox control.
-#define CHECKBOX_BOX_SIZE    10
-
 // Pixels by which the focus-ring background extends beyond the box on
 // each side (i.e. focus rect = box expanded by CHECKBOX_FOCUS_PAD).
 #define CHECKBOX_FOCUS_PAD   2

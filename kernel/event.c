@@ -470,8 +470,8 @@ void dispatch_message(ui_event_t *msg) {
         // Resize handle: use frame-relative y (from window top) so the check
         // naturally maps to the bottom-right corner of the total frame.
         int ly_frame = SCALE_POINT(py) - win->frame.y;
-        if (lx >= win->frame.w - RESIZE_HANDLE &&
-            ly_frame >= win->frame.h - RESIZE_HANDLE &&
+        if (lx >= win->frame.w - SCROLLBAR_WIDTH &&
+            ly_frame >= win->frame.h - SCROLLBAR_WIDTH &&
             !win->parent &&
             !(win->flags&WINDOW_NORESIZE) &&
             win != g_ui_runtime.captured)

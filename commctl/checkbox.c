@@ -19,8 +19,7 @@ result_t win_checkbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       return true;
     case evPaint: {
       rect_t local = {0, 0, win->frame.w, win->frame.h};
-      rect_t box = rect_split_left(local, CHECKBOX_BOX_SIZE);
-      box.h = CHECKBOX_BOX_SIZE;
+      rect_t box = rect_split_left(local, win->frame.h);
       rect_t focus_bg = rect_inset(box, -CHECKBOX_FOCUS_PAD);
       fill_rect(g_ui_runtime.focused == win ? get_sys_color(brFocusRing) : get_sys_color(brWindowBg),
                 R(focus_bg.x, focus_bg.y, focus_bg.w, focus_bg.h));

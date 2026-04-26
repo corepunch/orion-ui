@@ -145,7 +145,7 @@ void draw_panel(window_t const *win) {
     draw_bevel(MAKERECT(x, y, w, h));
   }
   if (!(win->flags & WINDOW_NORESIZE)) {
-    int r = RESIZE_HANDLE;
+    int r = SCROLLBAR_WIDTH;
     fill_rect(get_sys_color(brLightEdge), R(x+w, y+h-r+1, 1, r));
     fill_rect(get_sys_color(brLightEdge), R(x+w-r+1, y+h, r, 1));
   }
