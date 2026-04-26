@@ -8,6 +8,7 @@
 
 #include "../user/user.h"
 #include "../user/messages.h"
+#include "../user/rect.h"
 #include "kernel.h"
 
 // External functions
@@ -560,13 +561,9 @@ void dispatch_message(ui_event_t *msg) {
       if (g_ui_runtime.dragging) {
         int sx = SCALE_POINT(px);
         int sy = SCALE_POINT(py);
-        rect_t titlebar  = rect_split_top(&(rect_t){g_ui_runtime.dragging->frame.x,
-                                                     g_ui_runtime.dragging->frame.y,
-                                                     g_ui_runtime.dragging->frame.w,
-                                                     g_ui_runtime.dragging->frame.h},
-                                          TITLEBAR_HEIGHT);
+        rect_t titlebar  = rect_split_top(g_ui_runtime.dragging->frame, TITLEBAR_HEIGHT);
         rect_t close_btn = rect_center(
-                             rect_split_right(&titlebar, CONTROL_BUTTON_WIDTH + CONTROL_BUTTON_PADDING),
+                             rect_split_right(titlebar, CONTROL_BUTTON_WIDTH + CONTROL_BUTTON_PADDING),
                              CONTROL_BUTTON_WIDTH, CONTROL_BUTTON_WIDTH);
         bool on_close = !(g_ui_runtime.dragging->flags & WINDOW_NOTITLE)
                         && sx >= close_btn.x && sx < close_btn.x + close_btn.w

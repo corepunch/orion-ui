@@ -159,8 +159,8 @@ void draw_window_controls(window_t *win) {
   fill_rect(get_sys_color(window_has_focus(win) ? brActiveTitlebar : brInactiveTitlebar),
             R(r.x, r.y, r.w, titlebar_height(win)));
   set_fullscreen();
-  rect_t titlebar = rect_split_top(&(rect_t){r.x, r.y, r.w, r.h}, TITLEBAR_HEIGHT);
-  rect_t btn      = rect_split_right(&titlebar, CONTROL_BUTTON_WIDTH + CONTROL_BUTTON_PADDING);
+  rect_t titlebar = rect_split_top(r, TITLEBAR_HEIGHT);
+  rect_t btn      = rect_split_right(titlebar, CONTROL_BUTTON_WIDTH + CONTROL_BUTTON_PADDING);
   btn             = rect_center(btn, CONTROL_BUTTON_WIDTH, CONTROL_BUTTON_WIDTH);
   draw_icon(ICON_EXIT, btn.x, btn.y, btn.w, get_sys_color(brTextNormal));
 }
@@ -173,53 +173,54 @@ void draw_statusbar(window_t *win, const char *text) {
 
   rect_t r = win->frame;
   int s = statusbar_height(win);
-  int y = r.y + r.h - s;  // statusbar row is at bottom of the total window frame
+  rect_t row = rect_split_bottom(r, s);  // the statusbar row at the bottom of the frame
 
   bool has_h = (win->flags & WINDOW_HSCROLL) && win->hscroll.visible;
   int split_x = has_h ? SB_STATUS_SPLIT_X(r.w) : r.w;
 
-  fill_rect(get_sys_color(brStatusbarBg), R(r.x, y, split_x, s));
+  rect_t text_area = rect_split_left(row, split_x);
+  fill_rect(get_sys_color(brStatusbarBg), R(text_area.x, text_area.y, text_area.w, text_area.h));
   set_fullscreen();
 
   if (text) {
-    draw_text_clipped(FONT_SMALL, text, &(rect_t){r.x, y, split_x, s},
+    draw_text_clipped(FONT_SMALL, text, &text_area,
                       get_sys_color(brTextNormal), TEXT_PADDING_LEFT);
   }
 
   if (has_h) {
     win_sb_t *sb = &win->hscroll;
-    // Horizontal scrollbar fills the right portion of the status bar row.
-    // Always reserve the rightmost SCROLLBAR_WIDTH cell for the resize corner.
-    int bw = (r.w - split_x) - SCROLLBAR_WIDTH;
+    // Resize corner — always present at the far right of the status-bar row.
+    rect_t corner = rect_split_right(row, SCROLLBAR_WIDTH);
+    fill_rect(get_sys_color(brWindowDarkBg), R(corner.x, corner.y, corner.w, corner.h));
+    draw_icon(ICON_MOVE, corner.x, corner.y, SCROLLBAR_WIDTH, get_sys_color(brTextNormal));
+    // Horizontal scrollbar fills the remaining right portion of the status bar row.
+    int bw = row.w - split_x - SCROLLBAR_WIDTH;
     if (bw > 0) {
-      fill_rect(get_sys_color(brWindowDarkBg), R(r.x + split_x, y, bw, s));
+      int sx = row.x + split_x;
+      fill_rect(get_sys_color(brWindowDarkBg), R(sx, row.y, bw, row.h));
       // Arrow buttons (each SCROLLBAR_WIDTH wide)
       if (bw >= 2 * SCROLLBAR_WIDTH) {
-        fill_rect(get_sys_color(brWindowBg), R(r.x + split_x, y, SCROLLBAR_WIDTH, s));
-        draw_icon(ICON_BACK_ARROW,    r.x + split_x, y, SCROLLBAR_WIDTH, get_sys_color(brTextNormal));
-        fill_rect(get_sys_color(brWindowBg), R(r.x + split_x + bw - SCROLLBAR_WIDTH, y, SCROLLBAR_WIDTH, s));
-        draw_icon(ICON_FORWARD_ARROW, r.x + split_x + bw - SCROLLBAR_WIDTH, y, SCROLLBAR_WIDTH, get_sys_color(brTextNormal));
+        rect_t left_arr  = {sx,                        row.y, SCROLLBAR_WIDTH, row.h};
+        rect_t right_arr = {sx + bw - SCROLLBAR_WIDTH, row.y, SCROLLBAR_WIDTH, row.h};
+        fill_rect(get_sys_color(brWindowBg), R(left_arr.x,  left_arr.y,  left_arr.w,  left_arr.h));
+        draw_icon(ICON_BACK_ARROW,    left_arr.x,  left_arr.y,  SCROLLBAR_WIDTH, get_sys_color(brTextNormal));
+        fill_rect(get_sys_color(brWindowBg), R(right_arr.x, right_arr.y, right_arr.w, right_arr.h));
+        draw_icon(ICON_FORWARD_ARROW, right_arr.x, right_arr.y, SCROLLBAR_WIDTH, get_sys_color(brTextNormal));
         // Thumb in effective track between buttons
         int eff_track = bw - 2 * SCROLLBAR_WIDTH;
         if (eff_track > 0) {
           int tl = builtin_sb_thumb_len(sb, eff_track);
           int to = builtin_sb_thumb_off(sb, eff_track, tl);
           uint32_t thumb_col = sb->enabled ? get_sys_color(brLightEdge) : get_sys_color(brDarkEdge);
-          fill_rect(thumb_col, R(r.x + split_x + SCROLLBAR_WIDTH + to, y, tl, s));
+          fill_rect(thumb_col, R(left_arr.x + left_arr.w + to, row.y, tl, row.h));
         }
       } else {
         // Not enough room for buttons — draw plain thumb
         int tl = builtin_sb_thumb_len(sb, bw);
         int to = builtin_sb_thumb_off(sb, bw, tl);
         uint32_t thumb_col = sb->enabled ? get_sys_color(brLightEdge) : get_sys_color(brDarkEdge);
-        fill_rect(thumb_col, R(r.x + split_x + to, y, tl, s));
+        fill_rect(thumb_col, R(sx + to, row.y, tl, row.h));
       }
-    }
-    // Resize corner — always present at the far right of the status-bar row.
-    {
-      int cx = r.x + r.w - SCROLLBAR_WIDTH;
-      fill_rect(get_sys_color(brWindowDarkBg), R(cx, y, SCROLLBAR_WIDTH, s));
-      draw_icon(ICON_MOVE, cx, y, SCROLLBAR_WIDTH, get_sys_color(brTextNormal));
     }
   }
 }
@@ -432,71 +433,72 @@ void draw_builtin_scrollbars(window_t *win) {
 
   if (has_h && !h_merged) {
     win_sb_t *sb = &win->hscroll;
-    int x  = base_x;
-    int y  = base_y + content_h - SCROLLBAR_WIDTH;
     int bw = win->frame.w - (has_v ? SCROLLBAR_WIDTH : 0);
+    rect_t hbar = {base_x, base_y + content_h - SCROLLBAR_WIDTH, bw, SCROLLBAR_WIDTH};
     // Track background
-    fill_rect(get_sys_color(brWindowDarkBg), R(x, y, bw, SCROLLBAR_WIDTH));
+    fill_rect(get_sys_color(brWindowDarkBg), R(hbar.x, hbar.y, hbar.w, hbar.h));
     // Arrow buttons
     if (bw >= 2 * SCROLLBAR_WIDTH) {
-      fill_rect(get_sys_color(brWindowBg), R(x, y, SCROLLBAR_WIDTH, SCROLLBAR_WIDTH));
-      draw_icon(ICON_BACK_ARROW,    x, y, SCROLLBAR_WIDTH, get_sys_color(brTextNormal));
-      fill_rect(get_sys_color(brWindowBg), R(x + bw - SCROLLBAR_WIDTH, y, SCROLLBAR_WIDTH, SCROLLBAR_WIDTH));
-      draw_icon(ICON_FORWARD_ARROW, x + bw - SCROLLBAR_WIDTH, y, SCROLLBAR_WIDTH, get_sys_color(brTextNormal));
+      rect_t left_arr  = rect_split_left(hbar, SCROLLBAR_WIDTH);
+      rect_t right_arr = rect_split_right(hbar, SCROLLBAR_WIDTH);
+      fill_rect(get_sys_color(brWindowBg), R(left_arr.x,  left_arr.y,  left_arr.w,  left_arr.h));
+      draw_icon(ICON_BACK_ARROW,    left_arr.x,  left_arr.y,  SCROLLBAR_WIDTH, get_sys_color(brTextNormal));
+      fill_rect(get_sys_color(brWindowBg), R(right_arr.x, right_arr.y, right_arr.w, right_arr.h));
+      draw_icon(ICON_FORWARD_ARROW, right_arr.x, right_arr.y, SCROLLBAR_WIDTH, get_sys_color(brTextNormal));
       // Thumb in effective track between buttons
       int eff_track = bw - 2 * SCROLLBAR_WIDTH;
       if (eff_track > 0) {
         int tl = builtin_sb_thumb_len(sb, eff_track);
         int to = builtin_sb_thumb_off(sb, eff_track, tl);
         uint32_t thumb_col = sb->enabled ? get_sys_color(brLightEdge) : get_sys_color(brDarkEdge);
-        fill_rect(thumb_col, R(x + SCROLLBAR_WIDTH + to, y, tl, SCROLLBAR_WIDTH));
+        fill_rect(thumb_col, R(left_arr.x + left_arr.w + to, hbar.y, tl, SCROLLBAR_WIDTH));
       }
     } else {
       // Not enough room for buttons — plain thumb
       int tl = builtin_sb_thumb_len(sb, bw);
       int to = builtin_sb_thumb_off(sb, bw, tl);
       uint32_t thumb_col = sb->enabled ? get_sys_color(brLightEdge) : get_sys_color(brDarkEdge);
-      fill_rect(thumb_col, R(x + to, y, tl, SCROLLBAR_WIDTH));
+      fill_rect(thumb_col, R(hbar.x + to, hbar.y, tl, SCROLLBAR_WIDTH));
     }
   }
 
   if (has_v) {
     win_sb_t *sb = &win->vscroll;
-    int x  = base_x + win->frame.w - SCROLLBAR_WIDTH;
-    int y  = base_y;
-    // In merged mode the horizontal bar lives in the status-bar row below the
-    // content area, so the vertical bar spans the full content height.
     int bh = content_h - (has_h && !h_merged ? SCROLLBAR_WIDTH : 0);
+    rect_t vbar = {base_x + win->frame.w - SCROLLBAR_WIDTH, base_y, SCROLLBAR_WIDTH, bh};
     // Track background
-    fill_rect(get_sys_color(brWindowDarkBg), R(x, y, SCROLLBAR_WIDTH, bh));
+    fill_rect(get_sys_color(brWindowDarkBg), R(vbar.x, vbar.y, vbar.w, vbar.h));
     // Arrow buttons
     if (bh >= 2 * SCROLLBAR_WIDTH) {
-      fill_rect(get_sys_color(brWindowBg), R(x, y, SCROLLBAR_WIDTH, SCROLLBAR_WIDTH));
-      draw_icon(ICON_ARROW_UP,   x, y, SCROLLBAR_WIDTH, get_sys_color(brTextNormal));
-      fill_rect(get_sys_color(brWindowBg), R(x, y + bh - SCROLLBAR_WIDTH, SCROLLBAR_WIDTH, SCROLLBAR_WIDTH));
-      draw_icon(ICON_ARROW_DOWN, x, y + bh - SCROLLBAR_WIDTH, SCROLLBAR_WIDTH, get_sys_color(brTextNormal));
+      rect_t top_arr = rect_split_top(vbar, SCROLLBAR_WIDTH);
+      rect_t bot_arr = rect_split_bottom(vbar, SCROLLBAR_WIDTH);
+      fill_rect(get_sys_color(brWindowBg), R(top_arr.x, top_arr.y, top_arr.w, top_arr.h));
+      draw_icon(ICON_ARROW_UP,   top_arr.x, top_arr.y, SCROLLBAR_WIDTH, get_sys_color(brTextNormal));
+      fill_rect(get_sys_color(brWindowBg), R(bot_arr.x, bot_arr.y, bot_arr.w, bot_arr.h));
+      draw_icon(ICON_ARROW_DOWN, bot_arr.x, bot_arr.y, SCROLLBAR_WIDTH, get_sys_color(brTextNormal));
       // Thumb in effective track between buttons
       int eff_track = bh - 2 * SCROLLBAR_WIDTH;
       if (eff_track > 0) {
         int tl = builtin_sb_thumb_len(sb, eff_track);
         int to = builtin_sb_thumb_off(sb, eff_track, tl);
         uint32_t thumb_col = sb->enabled ? get_sys_color(brLightEdge) : get_sys_color(brDarkEdge);
-        fill_rect(thumb_col, R(x, y + SCROLLBAR_WIDTH + to, SCROLLBAR_WIDTH, tl));
+        fill_rect(thumb_col, R(vbar.x, top_arr.y + top_arr.h + to, SCROLLBAR_WIDTH, tl));
       }
     } else {
       // Not enough room for buttons — plain thumb
       int tl = builtin_sb_thumb_len(sb, bh);
       int to = builtin_sb_thumb_off(sb, bh, tl);
       uint32_t thumb_col = sb->enabled ? get_sys_color(brLightEdge) : get_sys_color(brDarkEdge);
-      fill_rect(thumb_col, R(x, y + to, SCROLLBAR_WIDTH, tl));
+      fill_rect(thumb_col, R(vbar.x, vbar.y + to, SCROLLBAR_WIDTH, tl));
     }
   }
 
   // Bottom-right corner: resize icon when both scrollbars are visible.
   if (has_h && !h_merged && has_v) {
-    int cx = base_x + win->frame.w - SCROLLBAR_WIDTH;
-    int cy = base_y + content_h - SCROLLBAR_WIDTH;
-    fill_rect(get_sys_color(brWindowDarkBg), R(cx, cy, SCROLLBAR_WIDTH, SCROLLBAR_WIDTH));
-    draw_icon(ICON_MOVE, cx, cy, SCROLLBAR_WIDTH, get_sys_color(brTextNormal));
+    rect_t corner = {base_x + win->frame.w - SCROLLBAR_WIDTH,
+                     base_y + content_h - SCROLLBAR_WIDTH,
+                     SCROLLBAR_WIDTH, SCROLLBAR_WIDTH};
+    fill_rect(get_sys_color(brWindowDarkBg), R(corner.x, corner.y, corner.w, corner.h));
+    draw_icon(ICON_MOVE, corner.x, corner.y, SCROLLBAR_WIDTH, get_sys_color(brTextNormal));
   }
 }

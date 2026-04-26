@@ -77,7 +77,11 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       return true;
     case evPaint:
       win_button(win, msg, wparam, lparam);
-      draw_icon(ICON_ARROW_DOWN, win->frame.w - COMBOBOX_ICON_SIZE, 0, COMBOBOX_ICON_SIZE, get_sys_color(brTextNormal));
+      {
+        rect_t local = {0, 0, win->frame.w, win->frame.h};
+        rect_t arrow = rect_split_right(local, COMBOBOX_ICON_SIZE);
+        draw_icon(ICON_ARROW_DOWN, arrow.x, arrow.y, COMBOBOX_ICON_SIZE, get_sys_color(brTextNormal));
+      }
       return true;
     case evLeftButtonUp:
       // Do not forward button-up to win_button() to avoid sending btnClicked

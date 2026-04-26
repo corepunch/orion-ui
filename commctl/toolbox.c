@@ -124,7 +124,8 @@ static void draw_toolbox_button(toolbox_state_t *st, int idx,
 
   if (icon >= SYSICON_BASE) {
     // Built-in 16×16 sysicon sheet (optionally tinted).
-    draw_icon16(icon, bx + (bsz - 16) / 2 + px, by + (bsz - 16) / 2 + px, tint);
+    rect_t icon_dst = rect_offset(rect_center(cell, 16, 16), px, px);
+    draw_icon16(icon, icon_dst.x, icon_dst.y, tint);
   } else if (st->strip.tex && st->strip.cols > 0) {
     // Custom sprite-sheet strip (optionally tinted).
     bitmap_strip_t *s = &st->strip;
@@ -134,10 +135,9 @@ static void draw_toolbox_button(toolbox_state_t *st, int idx,
     float v0 = (float)(row_idx * s->icon_h) / (float)s->sheet_h;
     float u1 = u0 + (float)s->icon_w / (float)s->sheet_w;
     float v1 = v0 + (float)s->icon_h / (float)s->sheet_h;
+    rect_t icon_dst = rect_offset(rect_center(cell, s->icon_w, s->icon_h), px, px);
     draw_sprite_region((int)s->tex,
-                       R(bx + (bsz - s->icon_w) / 2 + px,
-                         by + (bsz - s->icon_h) / 2 + px,
-                         s->icon_w, s->icon_h),
+                       R(icon_dst.x, icon_dst.y, s->icon_w, s->icon_h),
                        u0, v0, u1, v1, tint);
   } else {
     // Text fallback: draw item index as a number.

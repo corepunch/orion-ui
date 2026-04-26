@@ -5,8 +5,9 @@
 // IntersectRect, but oriented around the split-and-slice idiom used by
 // toolbar and widget layout code.
 //
-// All helpers work on value copies unless the function signature takes
-// rect_t * (the split variants, which shrink the remainder in place).
+// All helpers work on value copies and return a new rect_t.  The split
+// variants return only the sliced strip; the caller retains the original
+// rect and may compute the remainder with a complementary trim if needed.
 
 #include "user.h"
 
@@ -41,38 +42,30 @@ static inline rect_t rect_center(rect_t r, int w, int h) {
   return (rect_t){ r.x + (r.w - w) / 2, r.y + (r.h - h) / 2, w, h };
 }
 
-// ── Edge splits (shrink remainder in place) ───────────────────────────────
+// ── Edge splits (return sliced strip; original rect is unchanged) ─────────
 
-// Slice a strip of width w off the left edge of *r.
-// Returns the sliced strip; *r is updated to the remaining area.
-static inline rect_t rect_split_left(rect_t *r, int w) {
-  rect_t left = { r->x, r->y, w, r->h };
-  r->x += w;
-  r->w -= w;
-  return left;
+// Slice a strip of width w off the left edge of r.
+// Returns the sliced strip.
+static inline rect_t rect_split_left(rect_t r, int w) {
+  return (rect_t){ r.x, r.y, w, r.h };
 }
 
-// Slice a strip of height h off the top edge of *r.
-// Returns the sliced strip; *r is updated to the remaining area.
-static inline rect_t rect_split_top(rect_t *r, int h) {
-  rect_t top = { r->x, r->y, r->w, h };
-  r->y += h;
-  r->h -= h;
-  return top;
+// Slice a strip of height h off the top edge of r.
+// Returns the sliced strip.
+static inline rect_t rect_split_top(rect_t r, int h) {
+  return (rect_t){ r.x, r.y, r.w, h };
 }
 
-// Slice a strip of width w off the right edge of *r.
-// Returns the sliced strip; *r is updated to the remaining area.
-static inline rect_t rect_split_right(rect_t *r, int w) {
-  r->w -= w;
-  return (rect_t){ r->x + r->w, r->y, w, r->h };
+// Slice a strip of width w off the right edge of r.
+// Returns the sliced strip.
+static inline rect_t rect_split_right(rect_t r, int w) {
+  return (rect_t){ r.x + r.w - w, r.y, w, r.h };
 }
 
-// Slice a strip of height h off the bottom edge of *r.
-// Returns the sliced strip; *r is updated to the remaining area.
-static inline rect_t rect_split_bottom(rect_t *r, int h) {
-  r->h -= h;
-  return (rect_t){ r->x, r->y + r->h, r->w, h };
+// Slice a strip of height h off the bottom edge of r.
+// Returns the sliced strip.
+static inline rect_t rect_split_bottom(rect_t r, int h) {
+  return (rect_t){ r.x, r.y + r.h - h, r.w, h };
 }
 
 #endif /* __UI_RECT_H__ */
