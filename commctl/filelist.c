@@ -33,7 +33,7 @@
 // ---------------------------------------------------------------------------
 // Icons — indices into the filepicker.png strip (icon_id_t from sysicons.h).
 // ---------------------------------------------------------------------------
-#define FL_ICON_UP      ICON_BACK_ARROW    // ".." parent-directory entry
+#define FL_ICON_PARENT  ICON_BACK_ARROW    // ".." navigate-up entry
 #define FL_ICON_FOLDER  ICON_FOLDER_CLOSE  // directory
 #define FL_ICON_FILE    ICON_PAPER_BLANK   // regular file
 #define FL_COLOR_FOLDER 0xffa0d000u
@@ -183,7 +183,7 @@ static bool fl_push_item(filelist_data_t *data,
   it->size         = size;
   it->modified     = modified;
   bool is_parent   = fl_is_parent_sentinel(path_heap);
-  it->icon  = is_parent ? FL_ICON_UP : (is_dir ? FL_ICON_FOLDER : FL_ICON_FILE);
+  it->icon  = is_parent ? FL_ICON_PARENT : (is_dir ? FL_ICON_FOLDER : FL_ICON_FILE);
   return true;
 }
 

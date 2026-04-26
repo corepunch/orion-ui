@@ -256,6 +256,30 @@ static void rv_sync_scroll(window_t *win, reportview_data_t *data) {
   set_scroll_info(win, SB_VERT, &si, false);
 }
 
+// Draw one icon from the per-instance strip (or fall back to draw_icon8_clipped)
+// centred inside icon_rect.
+static void rv_draw_item_icon(bitmap_strip_t *strip, int icon_id,
+                              rect_t const *icon_rect, uint32_t col) {
+  if (strip && strip->tex != 0 && strip->cols > 0) {
+    int total = strip->cols * (strip->sheet_h / strip->icon_h);
+    if (icon_id >= 0 && icon_id < total) {
+      int scol   = icon_id % strip->cols;
+      int srow   = icon_id / strip->cols;
+      int icon_sz = strip->icon_w;
+      int ix = icon_rect->x + (icon_rect->w - icon_sz) / 2;
+      int iy = icon_rect->y + (icon_rect->h - icon_sz) / 2;
+      float u0 = (float)(scol * strip->icon_w) / (float)strip->sheet_w;
+      float v0 = (float)(srow * strip->icon_h) / (float)strip->sheet_h;
+      float u1 = u0 + (float)strip->icon_w / (float)strip->sheet_w;
+      float v1 = v0 + (float)strip->icon_h / (float)strip->sheet_h;
+      draw_sprite_region((int)strip->tex, R(ix, iy, icon_sz, icon_sz),
+                         u0, v0, u1, v1, col);
+    }
+  } else {
+    draw_icon8_clipped(icon_id, icon_rect, col);
+  }
+}
+
 static void rv_paint_icon_view(window_t *win, reportview_data_t *data) {
   int eff_w = rv_content_width(win);
   int ncol = get_column_count(eff_w, data->column_width);
@@ -286,51 +310,17 @@ static void rv_paint_icon_view(window_t *win, reportview_data_t *data) {
     rect_t text_rect = {x + ICON_OFFSET, y, item_w - ICON_OFFSET - 2, item_h};
 
     int icon_id = data->items[i].icon;
-    uint32_t icon_col_sel  = get_sys_color(brWindowBg);
-    uint32_t icon_col_norm = data->items[i].color;
 
     if ((int)i == data->selected) {
+      uint32_t icon_col = get_sys_color(brWindowBg);
       fill_rect(get_sys_color(brTextNormal), R(x - 2, y, item_w, item_h));
-      if (strip && strip->tex != 0 && strip->cols > 0) {
-        int total = strip->cols * (strip->sheet_h / strip->icon_h);
-        if (icon_id >= 0 && icon_id < total) {
-          int scol = icon_id % strip->cols;
-          int srow = icon_id / strip->cols;
-          int icon_sz = strip->icon_w;
-          int ix = icon_rect.x + (icon_rect.w - icon_sz) / 2;
-          int iy = icon_rect.y + (icon_rect.h - icon_sz) / 2;
-          float u0 = (float)(scol * strip->icon_w) / (float)strip->sheet_w;
-          float v0 = (float)(srow * strip->icon_h) / (float)strip->sheet_h;
-          float u1 = u0 + (float)strip->icon_w / (float)strip->sheet_w;
-          float v1 = v0 + (float)strip->icon_h / (float)strip->sheet_h;
-          draw_sprite_region((int)strip->tex, R(ix, iy, icon_sz, icon_sz),
-                             u0, v0, u1, v1, icon_col_sel);
-        }
-      } else {
-        draw_icon8_clipped(icon_id, &icon_rect, icon_col_sel);
-      }
-      draw_text_clipped(FONT_SMALL, data->items[i].text, &text_rect, icon_col_sel, 0);
+      rv_draw_item_icon(strip, icon_id, &icon_rect, icon_col);
+      draw_text_clipped(FONT_SMALL, data->items[i].text, &text_rect, icon_col, 0);
     } else {
+      uint32_t icon_col = data->items[i].color;
       fill_rect(bg_col, R(x - 2, y, item_w, item_h));
-      if (strip && strip->tex != 0 && strip->cols > 0) {
-        int total = strip->cols * (strip->sheet_h / strip->icon_h);
-        if (icon_id >= 0 && icon_id < total) {
-          int scol = icon_id % strip->cols;
-          int srow = icon_id / strip->cols;
-          int icon_sz = strip->icon_w;
-          int ix = icon_rect.x + (icon_rect.w - icon_sz) / 2;
-          int iy = icon_rect.y + (icon_rect.h - icon_sz) / 2;
-          float u0 = (float)(scol * strip->icon_w) / (float)strip->sheet_w;
-          float v0 = (float)(srow * strip->icon_h) / (float)strip->sheet_h;
-          float u1 = u0 + (float)strip->icon_w / (float)strip->sheet_w;
-          float v1 = v0 + (float)strip->icon_h / (float)strip->sheet_h;
-          draw_sprite_region((int)strip->tex, R(ix, iy, icon_sz, icon_sz),
-                             u0, v0, u1, v1, icon_col_norm);
-        }
-      } else {
-        draw_icon8_clipped(icon_id, &icon_rect, icon_col_norm);
-      }
-      draw_text_clipped(FONT_SMALL, data->items[i].text, &text_rect, icon_col_norm, 0);
+      rv_draw_item_icon(strip, icon_id, &icon_rect, icon_col);
+      draw_text_clipped(FONT_SMALL, data->items[i].text, &text_rect, icon_col, 0);
     }
   }
 }
