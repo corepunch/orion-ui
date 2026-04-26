@@ -5,9 +5,12 @@
 // IntersectRect, but oriented around the split-and-slice idiom used by
 // toolbar and widget layout code.
 //
-// All helpers work on value copies and return a new rect_t.  The split
-// variants return only the sliced strip; the caller retains the original
-// rect and may compute the remainder with a complementary trim if needed.
+// All helpers work on value copies and return a new rect_t.
+//
+// Split/trim pairs: rect_split_* returns the sliced strip; rect_trim_*
+// returns the complementary remainder (i.e. r minus the same strip).
+// Together they cover the common "take N pixels from one edge, use both
+// parts" pattern without pointer mutation.
 
 #include "user.h"
 
@@ -66,6 +69,28 @@ static inline rect_t rect_split_right(rect_t r, int w) {
 // Returns the sliced strip.
 static inline rect_t rect_split_bottom(rect_t r, int h) {
   return (rect_t){ r.x, r.y + r.h - h, r.w, h };
+}
+
+// ── Edge trims (return remainder; original rect is unchanged) ────────────
+
+// Return r with w pixels removed from the left edge (complement of rect_split_left).
+static inline rect_t rect_trim_left(rect_t r, int w) {
+  return (rect_t){ r.x + w, r.y, r.w - w, r.h };
+}
+
+// Return r with h pixels removed from the top edge (complement of rect_split_top).
+static inline rect_t rect_trim_top(rect_t r, int h) {
+  return (rect_t){ r.x, r.y + h, r.w, r.h - h };
+}
+
+// Return r with w pixels removed from the right edge (complement of rect_split_right).
+static inline rect_t rect_trim_right(rect_t r, int w) {
+  return (rect_t){ r.x, r.y, r.w - w, r.h };
+}
+
+// Return r with h pixels removed from the bottom edge (complement of rect_split_bottom).
+static inline rect_t rect_trim_bottom(rect_t r, int h) {
+  return (rect_t){ r.x, r.y, r.w, r.h - h };
 }
 
 #endif /* __UI_RECT_H__ */
