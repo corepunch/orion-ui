@@ -5,7 +5,8 @@
 
 // Height of the menu bar strip — same formula as TITLEBAR_HEIGHT.
 // FONT_SIZE is a compile-time constant from kernel/kernel.h (included via user/user.h).
-#define MENUBAR_HEIGHT (FONT_SIZE + 4)
+// +5 keeps the height odd so 9×9 theme icons centre with equal padding.
+#define MENUBAR_HEIGHT (FONT_SIZE + 5)
 
 // One item inside a dropdown menu.  id == 0 means a horizontal separator.
 typedef struct {

@@ -134,7 +134,7 @@ void ui_update_screen_size(int width, int height);
 //     send_message(btn, btnSetImage, sysicon_add - SYSICON_BASE, s);
 bitmap_strip_t *ui_get_sysicon_strip(void);
 
-// Theme icon strip (theme.png, 128×16 grayscale, 8×8 tiles).
+// Theme icon strip (theme.png, 144×18 grayscale, 9×9 tiles).
 // Icons are indexed by theme_icon_t (user/theme.h).
 // Used by draw_theme_icon() for all chrome icons (close, scrollbar arrows,
 // checkmark, combobox arrow, resize grip).

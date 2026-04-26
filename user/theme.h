@@ -9,7 +9,7 @@
 
 // ── Theme icons ───────────────────────────────────────────────────────────
 //
-// Indices into share/orion/theme.png (128×16 px grayscale, 8×8 tiles).
+// Indices into share/orion/theme.png (144×18 px grayscale, 9×9 tiles).
 // The sheet contains 16 columns × 2 rows; only the first THEME_ICON_COUNT
 // entries are defined.  Use draw_theme_icon() to render them.
 typedef enum {
@@ -27,7 +27,7 @@ typedef enum {
 } theme_icon_t;
 
 // Native tile size of theme icons in logical pixels.
-#define THEME_ICON_SIZE  8
+#define THEME_ICON_SIZE  9
 
 // ── Text rendering ────────────────────────────────────────────────────────
 

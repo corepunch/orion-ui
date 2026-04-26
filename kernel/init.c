@@ -41,8 +41,8 @@ uint32_t ui_checker_texture = 0;
 bitmap_strip_t g_sysicon_strip = {0};
 static uint32_t g_sysicon_tex = 0;
 
-// Theme icon strip loaded from share/orion/theme.png (128×16 px grayscale,
-// 8×8 tiles).  Indexed by theme_icon_t (user/theme.h).
+// Theme icon strip loaded from share/orion/theme.png (144×18 px grayscale,
+// 9×9 tiles).  Indexed by theme_icon_t (user/theme.h).
 static bitmap_strip_t g_theme_strip = {0};
 static uint32_t g_theme_tex = 0;
 
