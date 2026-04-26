@@ -1,6 +1,8 @@
 #ifndef __UI_MESSAGES_H__
 #define __UI_MESSAGES_H__
 
+#include "theme.h"
+
 // Window messages
 enum {
   evCreate,
@@ -248,12 +250,8 @@ typedef struct {
 #define LINE_PADDING 5
 #define CONTROL_HEIGHT 14
 
-// Control button dimensions
-#if WINDOW_SCALE >= 2
-#define CONTROL_BUTTON_WIDTH 8
-#else
-#define CONTROL_BUTTON_WIDTH    16
-#endif
+// Control button dimensions — 8 logical px (native theme icon size) at all scales.
+#define CONTROL_BUTTON_WIDTH    THEME_ICON_SIZE
 #define CONTROL_BUTTON_PADDING  2
 #define TB_SPACING              TOOLBAR_HEIGHT  // equals TOOLBAR_HEIGHT so toolbar buttons are square
 #define TOOLBAR_PADDING         2               // pixels of margin between toolbar border and button area (all sides)

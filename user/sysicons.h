@@ -1,6 +1,7 @@
-#pragma once
+#ifndef __UI_SYSICONS_H__
+#define __UI_SYSICONS_H__
 
-typedef enum IconId {
+typedef enum icon_id_t {
     ICON_ADD_ELEMENT = 0,
     ICON_ARROW = 1,
     ICON_ARROW_DOWN = 2,
@@ -90,4 +91,6 @@ typedef enum IconId {
     ICON_ZOOM_IN = 86,
     ICON_ZOOM_OUT = 87,
     ICON_COUNT = 88
-} IconId;
+} icon_id_t;
+
+#endif /* __UI_SYSICONS_H__ */

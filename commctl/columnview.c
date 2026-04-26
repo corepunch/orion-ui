@@ -5,6 +5,7 @@
 #include "../user/user.h"
 #include "../user/messages.h"
 #include "../user/draw.h"
+#include "../user/theme.h"
 
 #define MAX_COLUMNVIEW_ITEM_NAME 256
 #define MAX_COLUMNVIEW_ITEMS 256
@@ -39,6 +40,11 @@ typedef struct {
   uint32_t column_count;
   bool redraw_enabled;
   bool redraw_dirty;
+
+  // Per-instance icon strip for icon-view rendering.
+  // Set via RVM_SETICONSTRIP (lparam = bitmap_strip_t*; NULL to clear).
+  // The strip is owned by the caller — win_reportview never frees it.
+  bitmap_strip_t *icon_strip;
 } reportview_data_t;
 
 static inline void rv_invalidate(window_t *win, reportview_data_t *data) {
@@ -264,6 +270,8 @@ static void rv_paint_icon_view(window_t *win, reportview_data_t *data) {
   int clip_top = 0;
   int clip_bottom = win->frame.h;
 
+  bitmap_strip_t *strip = data->icon_strip;
+
   for (uint32_t i = 0; i < data->count; i++) {
     int col = i % ncol;
     int x = col * data->column_width + WIN_PADDING;
@@ -277,14 +285,52 @@ static void rv_paint_icon_view(window_t *win, reportview_data_t *data) {
     rect_t icon_rect = {x,               y, ICON_OFFSET,              item_h};
     rect_t text_rect = {x + ICON_OFFSET, y, item_w - ICON_OFFSET - 2, item_h};
 
+    int icon_id = data->items[i].icon;
+    uint32_t icon_col_sel  = get_sys_color(brWindowBg);
+    uint32_t icon_col_norm = data->items[i].color;
+
     if ((int)i == data->selected) {
       fill_rect(get_sys_color(brTextNormal), R(x - 2, y, item_w, item_h));
-      draw_icon8_clipped(data->items[i].icon, &icon_rect, get_sys_color(brWindowBg));
-      draw_text_clipped(FONT_SMALL, data->items[i].text, &text_rect, get_sys_color(brWindowBg), 0);
+      if (strip && strip->tex != 0 && strip->cols > 0) {
+        int total = strip->cols * (strip->sheet_h / strip->icon_h);
+        if (icon_id >= 0 && icon_id < total) {
+          int scol = icon_id % strip->cols;
+          int srow = icon_id / strip->cols;
+          int icon_sz = strip->icon_w;
+          int ix = icon_rect.x + (icon_rect.w - icon_sz) / 2;
+          int iy = icon_rect.y + (icon_rect.h - icon_sz) / 2;
+          float u0 = (float)(scol * strip->icon_w) / (float)strip->sheet_w;
+          float v0 = (float)(srow * strip->icon_h) / (float)strip->sheet_h;
+          float u1 = u0 + (float)strip->icon_w / (float)strip->sheet_w;
+          float v1 = v0 + (float)strip->icon_h / (float)strip->sheet_h;
+          draw_sprite_region((int)strip->tex, R(ix, iy, icon_sz, icon_sz),
+                             u0, v0, u1, v1, icon_col_sel);
+        }
+      } else {
+        draw_icon8_clipped(icon_id, &icon_rect, icon_col_sel);
+      }
+      draw_text_clipped(FONT_SMALL, data->items[i].text, &text_rect, icon_col_sel, 0);
     } else {
       fill_rect(bg_col, R(x - 2, y, item_w, item_h));
-      draw_icon8_clipped(data->items[i].icon, &icon_rect, data->items[i].color);
-      draw_text_clipped(FONT_SMALL, data->items[i].text, &text_rect, data->items[i].color, 0);
+      if (strip && strip->tex != 0 && strip->cols > 0) {
+        int total = strip->cols * (strip->sheet_h / strip->icon_h);
+        if (icon_id >= 0 && icon_id < total) {
+          int scol = icon_id % strip->cols;
+          int srow = icon_id / strip->cols;
+          int icon_sz = strip->icon_w;
+          int ix = icon_rect.x + (icon_rect.w - icon_sz) / 2;
+          int iy = icon_rect.y + (icon_rect.h - icon_sz) / 2;
+          float u0 = (float)(scol * strip->icon_w) / (float)strip->sheet_w;
+          float v0 = (float)(srow * strip->icon_h) / (float)strip->sheet_h;
+          float u1 = u0 + (float)strip->icon_w / (float)strip->sheet_w;
+          float v1 = v0 + (float)strip->icon_h / (float)strip->sheet_h;
+          draw_sprite_region((int)strip->tex, R(ix, iy, icon_sz, icon_sz),
+                             u0, v0, u1, v1, icon_col_norm);
+        }
+      } else {
+        draw_icon8_clipped(icon_id, &icon_rect, icon_col_norm);
+      }
+      draw_text_clipped(FONT_SMALL, data->items[i].text, &text_rect, icon_col_norm, 0);
     }
   }
 }
@@ -574,6 +620,11 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       }
       return true;
     }
+
+    case RVM_SETICONSTRIP:
+      data->icon_strip = (bitmap_strip_t *)lparam;
+      rv_invalidate(win, data);
+      return true;
 
     case evVScroll: {
       int total_h = rv_content_height(win, data);

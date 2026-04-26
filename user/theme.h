@@ -7,6 +7,28 @@
 // covers the per-widget magic numbers that would otherwise appear as
 // bare integer literals inside paint handlers.
 
+// ── Theme icons ───────────────────────────────────────────────────────────
+//
+// Indices into share/orion/theme.png (128×16 px grayscale, 8×8 tiles).
+// The sheet contains 16 columns × 2 rows; only the first THEME_ICON_COUNT
+// entries are defined.  Use draw_theme_icon() to render them.
+typedef enum {
+  THEME_ICON_CLOSE        = 0,   // window close (×)
+  THEME_ICON_ARROW_UP     = 1,   // up arrow, no tail (e.g. scroll-up button)
+  THEME_ICON_ARROW_DOWN   = 2,   // down arrow, no tail
+  THEME_ICON_ARROW_UPDOWN = 3,   // up-and-down arrow (combobox)
+  THEME_ICON_CHECKMARK    = 4,   // checkmark (checkbox)
+  THEME_ICON_SCROLL_UP    = 5,   // scroll-bar up
+  THEME_ICON_SCROLL_RIGHT = 6,   // scroll-bar right
+  THEME_ICON_SCROLL_DOWN  = 7,   // scroll-bar down
+  THEME_ICON_SCROLL_LEFT  = 8,   // scroll-bar left
+  THEME_ICON_RESIZE       = 9,   // resize grip (bottom-right window corner)
+  THEME_ICON_COUNT        = 10,
+} theme_icon_t;
+
+// Native tile size of theme icons in logical pixels.
+#define THEME_ICON_SIZE  8
+
 // ── Text rendering ────────────────────────────────────────────────────────
 
 // Standard 1-pixel drop-shadow offset used for all text labels.

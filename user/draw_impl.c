@@ -13,6 +13,7 @@
 #include "draw.h"
 #include "icons.h"
 #include "sysicons.h"
+#include "theme.h"
 
 // External references
 extern window_t *get_root_window(window_t *window);
@@ -162,7 +163,18 @@ void draw_window_controls(window_t *win) {
   rect_t titlebar = rect_split_top(r, TITLEBAR_HEIGHT);
   rect_t btn      = rect_split_right(titlebar, CONTROL_BUTTON_WIDTH + CONTROL_BUTTON_PADDING);
   btn             = rect_center(btn, CONTROL_BUTTON_WIDTH, CONTROL_BUTTON_WIDTH);
-  draw_icon(ICON_EXIT, btn.x, btn.y, btn.w, get_sys_color(brTextNormal));
+  draw_theme_icon(THEME_ICON_CLOSE,
+                  btn.x + (btn.w - THEME_ICON_SIZE) / 2,
+                  btn.y + (btn.h - THEME_ICON_SIZE) / 2,
+                  THEME_ICON_SIZE, get_sys_color(brTextNormal));
+}
+
+// Helper: draw a theme icon centred inside rect.
+static inline void draw_theme_icon_in_rect(int id, rect_t const *r, uint32_t col) {
+  draw_theme_icon(id,
+                  r->x + (r->w - THEME_ICON_SIZE) / 2,
+                  r->y + (r->h - THEME_ICON_SIZE) / 2,
+                  THEME_ICON_SIZE, col);
 }
 
 // Draw status bar
@@ -192,7 +204,7 @@ void draw_statusbar(window_t *win, const char *text) {
     // Resize corner — always present at the far right of the status-bar row.
     rect_t corner = rect_split_right(row, SCROLLBAR_WIDTH);
     fill_rect(get_sys_color(brWindowDarkBg), R(corner.x, corner.y, corner.w, corner.h));
-    draw_icon(ICON_MOVE, corner.x, corner.y, SCROLLBAR_WIDTH, get_sys_color(brTextNormal));
+    draw_theme_icon_in_rect(THEME_ICON_RESIZE, &corner, get_sys_color(brTextNormal));
     // Horizontal scrollbar fills the remaining right portion of the status bar row.
     int bw = row.w - split_x - SCROLLBAR_WIDTH;
     if (bw > 0) {
@@ -203,9 +215,9 @@ void draw_statusbar(window_t *win, const char *text) {
         rect_t left_arr  = {sx,                        row.y, SCROLLBAR_WIDTH, row.h};
         rect_t right_arr = {sx + bw - SCROLLBAR_WIDTH, row.y, SCROLLBAR_WIDTH, row.h};
         fill_rect(get_sys_color(brWindowBg), R(left_arr.x,  left_arr.y,  left_arr.w,  left_arr.h));
-        draw_icon(ICON_BACK_ARROW,    left_arr.x,  left_arr.y,  SCROLLBAR_WIDTH, get_sys_color(brTextNormal));
+        draw_theme_icon_in_rect(THEME_ICON_SCROLL_LEFT,  &left_arr,  get_sys_color(brTextNormal));
         fill_rect(get_sys_color(brWindowBg), R(right_arr.x, right_arr.y, right_arr.w, right_arr.h));
-        draw_icon(ICON_FORWARD_ARROW, right_arr.x, right_arr.y, SCROLLBAR_WIDTH, get_sys_color(brTextNormal));
+        draw_theme_icon_in_rect(THEME_ICON_SCROLL_RIGHT, &right_arr, get_sys_color(brTextNormal));
         // Thumb in effective track between buttons
         int eff_track = bw - 2 * SCROLLBAR_WIDTH;
         if (eff_track > 0) {
@@ -321,9 +333,25 @@ void draw_sel_rect(rect_t const *r) {
   }
 }
 
+void draw_theme_icon(int id, int x, int y, int size, uint32_t col) {
+  bitmap_strip_t *s = ui_get_theme_strip();
+  if (!s || s->tex == 0 || s->cols <= 0) return;
+  int total = s->cols * (s->sheet_h / s->icon_h);
+  if (id < 0 || id >= total) return;
+  int scol = id % s->cols;
+  int srow = id / s->cols;
+  float u0 = (float)(scol * s->icon_w) / (float)s->sheet_w;
+  float v0 = (float)(srow * s->icon_h) / (float)s->sheet_h;
+  float u1 = u0 + (float)s->icon_w / (float)s->sheet_w;
+  float v1 = v0 + (float)s->icon_h / (float)s->sheet_h;
+  draw_sprite_region((int)s->tex, R(x, y, size, size), u0, v0, u1, v1, col);
+}
+
 void draw_icon(int id, int x, int y, int size, uint32_t col) {
   bitmap_strip_t *s = ui_get_icons_strip();
   if (!s || s->tex == 0 || s->cols <= 0) return;
+  int total = s->cols * (s->sheet_h / s->icon_h);
+  if (id < 0 || id >= total) return;
   int scol = id % s->cols;
   int srow = id / s->cols;
   float u0 = (float)(scol * s->icon_w) / (float)s->sheet_w;
@@ -334,31 +362,14 @@ void draw_icon(int id, int x, int y, int size, uint32_t col) {
 }
 
 void draw_icon8(int icon, int x, int y, uint32_t col) {
-#if UI_WINDOW_SCALE >= 2
-  // Fallback for scale≥2: render from SmallFont atlas (expects icon8_t values,
-  // not IconId — apps should guard with the same #if when choosing which to pass).
-  char str[2] = { icon+128+6*16, 0 };
-  draw_text_small(str, x, y, col);
-#else
-  // scale=1: render from icons.png (icon is an IconId value from sysicons.h)
-  // at the strip's native tile size (typically 16x16).
-  bitmap_strip_t *s = ui_get_icons_strip();
-  int sz = (s && s->icon_w > 0) ? s->icon_w : ICON8_SIZE;
-  draw_icon(icon, x, y, sz, col);
-#endif
+  draw_theme_icon(icon, x, y, THEME_ICON_SIZE, col);
 }
 
 void draw_icon8_clipped(int icon, rect_t const *rect, uint32_t col) {
-#if UI_WINDOW_SCALE >= 2
-  int sz = ICON8_SIZE;
-#else
-  bitmap_strip_t *s = ui_get_icons_strip();
-  int sz = (s && s->icon_w > 0) ? s->icon_w : ICON8_SIZE;
-#endif
-  draw_icon8(icon,
-             rect->x + (rect->w - sz) / 2,
-             rect->y + (rect->h - sz) / 2,
-             col);
+  draw_theme_icon(icon,
+                  rect->x + (rect->w - THEME_ICON_SIZE) / 2,
+                  rect->y + (rect->h - THEME_ICON_SIZE) / 2,
+                  THEME_ICON_SIZE, col);
 }
 
 void draw_icon16(int icon, int x, int y, uint32_t col) {
@@ -442,9 +453,9 @@ void draw_builtin_scrollbars(window_t *win) {
       rect_t left_arr  = rect_split_left(hbar, SCROLLBAR_WIDTH);
       rect_t right_arr = rect_split_right(hbar, SCROLLBAR_WIDTH);
       fill_rect(get_sys_color(brWindowBg), R(left_arr.x,  left_arr.y,  left_arr.w,  left_arr.h));
-      draw_icon(ICON_BACK_ARROW,    left_arr.x,  left_arr.y,  SCROLLBAR_WIDTH, get_sys_color(brTextNormal));
+      draw_theme_icon_in_rect(THEME_ICON_SCROLL_LEFT,  &left_arr,  get_sys_color(brTextNormal));
       fill_rect(get_sys_color(brWindowBg), R(right_arr.x, right_arr.y, right_arr.w, right_arr.h));
-      draw_icon(ICON_FORWARD_ARROW, right_arr.x, right_arr.y, SCROLLBAR_WIDTH, get_sys_color(brTextNormal));
+      draw_theme_icon_in_rect(THEME_ICON_SCROLL_RIGHT, &right_arr, get_sys_color(brTextNormal));
       // Thumb in effective track between buttons
       int eff_track = bw - 2 * SCROLLBAR_WIDTH;
       if (eff_track > 0) {
@@ -473,9 +484,9 @@ void draw_builtin_scrollbars(window_t *win) {
       rect_t top_arr = rect_split_top(vbar, SCROLLBAR_WIDTH);
       rect_t bot_arr = rect_split_bottom(vbar, SCROLLBAR_WIDTH);
       fill_rect(get_sys_color(brWindowBg), R(top_arr.x, top_arr.y, top_arr.w, top_arr.h));
-      draw_icon(ICON_ARROW_UP,   top_arr.x, top_arr.y, SCROLLBAR_WIDTH, get_sys_color(brTextNormal));
+      draw_theme_icon_in_rect(THEME_ICON_SCROLL_UP,   &top_arr, get_sys_color(brTextNormal));
       fill_rect(get_sys_color(brWindowBg), R(bot_arr.x, bot_arr.y, bot_arr.w, bot_arr.h));
-      draw_icon(ICON_ARROW_DOWN, bot_arr.x, bot_arr.y, SCROLLBAR_WIDTH, get_sys_color(brTextNormal));
+      draw_theme_icon_in_rect(THEME_ICON_SCROLL_DOWN, &bot_arr, get_sys_color(brTextNormal));
       // Thumb in effective track between buttons
       int eff_track = bh - 2 * SCROLLBAR_WIDTH;
       if (eff_track > 0) {
@@ -499,6 +510,6 @@ void draw_builtin_scrollbars(window_t *win) {
                      base_y + content_h - SCROLLBAR_WIDTH,
                      SCROLLBAR_WIDTH, SCROLLBAR_WIDTH};
     fill_rect(get_sys_color(brWindowDarkBg), R(corner.x, corner.y, corner.w, corner.h));
-    draw_icon(ICON_MOVE, corner.x, corner.y, SCROLLBAR_WIDTH, get_sys_color(brTextNormal));
+    draw_theme_icon_in_rect(THEME_ICON_RESIZE, &corner, get_sys_color(brTextNormal));
   }
 }

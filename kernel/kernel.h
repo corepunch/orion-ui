@@ -134,8 +134,16 @@ void ui_update_screen_size(int width, int height);
 //     send_message(btn, btnSetImage, sysicon_add - SYSICON_BASE, s);
 bitmap_strip_t *ui_get_sysicon_strip(void);
 
-// UI icon strip loaded from share/orion/icons.png.
-// Tiles are 16×16 RGBA; icons are indexed by IconId (user/sysicons.h).
+// Theme icon strip (theme.png, 128×16 grayscale, 8×8 tiles).
+// Icons are indexed by theme_icon_t (user/theme.h).
+// Used by draw_theme_icon() for all chrome icons (close, scrollbar arrows,
+// checkmark, combobox arrow, resize grip).
+// Returns NULL if the sheet was not found at startup.
+bitmap_strip_t *ui_get_theme_strip(void);
+
+// File-picker icon strip (filepicker.png, 16×16 RGBA tiles).
+// Icons are indexed by icon_id_t (user/sysicons.h).
+// Used exclusively by win_filelist via RVM_SETICONSTRIP.
 // Returns NULL if the sheet was not found at startup.
 bitmap_strip_t *ui_get_icons_strip(void);
 

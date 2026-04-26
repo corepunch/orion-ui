@@ -44,8 +44,6 @@
 #define TEXTBUF(L) ((text_buffer_t**)lua_getextraspace(L))
 #endif
 
-#define ICON_CURSOR 8
-
 typedef struct text_buffer_s {
   size_t size;
   size_t capacity;
@@ -77,8 +75,6 @@ typedef struct terminal_state_s {
   bool process_finished;
   bool command_mode;     // True if running in command mode (no Lua script)
 } terminal_state_t;
-
-extern void draw_icon8(int icon, int x, int y, uint32_t col);
 
 // Forward declaration of utility function
 static void f_strcat(text_buffer_t **b, const char *s);
@@ -464,7 +460,9 @@ result_t win_terminal(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       if (s->waiting_for_input && !s->process_finished) {
         int y = win->frame.h - WINDOW_PADDING - CHAR_HEIGHT;
         draw_text_small(s->input_buffer, WINDOW_PADDING, y, get_sys_color(brTextNormal));
-        draw_icon8(ICON_CURSOR, WINDOW_PADDING + strwidth(s->input_buffer), y, get_sys_color(brTextNormal));
+        // Draw a simple block cursor after the input text.
+        int cx = WINDOW_PADDING + strwidth(s->input_buffer);
+        fill_rect(get_sys_color(brTextNormal), R(cx, y, 2, CHAR_HEIGHT));
       }
       
       return true;

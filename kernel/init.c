@@ -19,6 +19,7 @@
 #include "../user/draw.h"
 #include "../user/image.h"
 #include "../user/icons.h"
+#include "../user/theme.h"
 #include "../commctl/commctl.h"
 #include "kernel.h"
 
@@ -40,7 +41,14 @@ uint32_t ui_checker_texture = 0;
 bitmap_strip_t g_sysicon_strip = {0};
 static uint32_t g_sysicon_tex = 0;
 
-// UI icon strip loaded from share/orion/icons.png (16×16 RGBA tiles, IconId indices).
+// Theme icon strip loaded from share/orion/theme.png (128×16 px grayscale,
+// 8×8 tiles).  Indexed by theme_icon_t (user/theme.h).
+static bitmap_strip_t g_theme_strip = {0};
+static uint32_t g_theme_tex = 0;
+
+// File-picker icon strip loaded from share/orion/filepicker.png (16×16 RGBA
+// tiles, icon_id_t indices from user/sysicons.h).  Used exclusively by
+// win_filelist via RVM_SETICONSTRIP.
 static bitmap_strip_t g_icons_strip = {0};
 static uint32_t g_icons_tex = 0;
 
@@ -97,12 +105,54 @@ static void shutdown_sysicon_strip(void) {
   g_sysicon_strip = (bitmap_strip_t){0};
 }
 
-// Load the UI icon sheet from <exe_dir>/../share/orion/icons.png.
-// Tiles are 16×16 RGBA; icons are indexed by IconId (user/sysicons.h).
+// Load the theme icon sheet from <exe_dir>/../share/orion/theme.png.
+// theme.png is a grayscale PNG.  load_image() expands it to RGBA with
+// R=G=B=gray, A=255.  We convert in-place to R=G=B=255, A=gray so
+// the icons can be tinted at draw time (white pixels opaque, black transparent).
+static void init_theme_strip(void) {
+  if (g_theme_tex != 0) return;
+  char path[4096];
+  snprintf(path, sizeof(path), "%s/../share/orion/theme.png",
+           ui_get_exe_dir());
+  int w = 0, h = 0;
+  uint8_t *src = load_image(path, &w, &h);
+  if (!src) return;
+  if (w < THEME_ICON_SIZE || h < THEME_ICON_SIZE ||
+      (w % THEME_ICON_SIZE) != 0 || (h % THEME_ICON_SIZE) != 0) {
+    image_free(src);
+    return;
+  }
+  // Convert in-place: use the red channel (= grayscale) as alpha, set RGB=255.
+  int n = w * h;
+  for (int i = 0; i < n; i++) {
+    uint8_t gray = src[i * 4];   // R == G == B for grayscale images
+    src[i * 4 + 0] = 255;
+    src[i * 4 + 1] = 255;
+    src[i * 4 + 2] = 255;
+    src[i * 4 + 3] = gray;
+  }
+  g_theme_tex = R_CreateTextureRGBA(w, h, src, R_FILTER_NEAREST, R_WRAP_CLAMP);
+  image_free(src);
+  g_theme_strip.tex     = g_theme_tex;
+  g_theme_strip.icon_w  = THEME_ICON_SIZE;
+  g_theme_strip.icon_h  = THEME_ICON_SIZE;
+  g_theme_strip.cols    = w / THEME_ICON_SIZE;
+  g_theme_strip.sheet_w = w;
+  g_theme_strip.sheet_h = h;
+}
+
+static void shutdown_theme_strip(void) {
+  R_DeleteTexture(g_theme_tex);
+  g_theme_tex = 0;
+  g_theme_strip = (bitmap_strip_t){0};
+}
+
+// Load the file-picker icon sheet from <exe_dir>/../share/orion/filepicker.png.
+// Tiles are 16×16 RGBA; icons are indexed by icon_id_t (user/sysicons.h).
 static void init_icons_strip(void) {
   if (g_icons_tex != 0) return;
   char path[4096];
-  snprintf(path, sizeof(path), "%s/../share/orion/icons.png",
+  snprintf(path, sizeof(path), "%s/../share/orion/filepicker.png",
            ui_get_exe_dir());
   int w = 0, h = 0;
   uint8_t *src = load_image(path, &w, &h);
@@ -127,9 +177,15 @@ static void shutdown_icons_strip(void) {
   g_icons_strip = (bitmap_strip_t){0};
 }
 
-// Return the UI icon strip (icons.png), or NULL if not loaded.
+// Return the file-picker icon strip (filepicker.png), or NULL if not loaded.
+// Used exclusively by win_filelist via RVM_SETICONSTRIP.
 bitmap_strip_t *ui_get_icons_strip(void) {
   return (g_icons_strip.tex != 0) ? &g_icons_strip : NULL;
+}
+
+// Return the theme icon strip (theme.png), or NULL if not loaded.
+bitmap_strip_t *ui_get_theme_strip(void) {
+  return (g_theme_strip.tex != 0) ? &g_theme_strip : NULL;
 }
 
 void shutdown_ui_textures(void) {
@@ -199,6 +255,7 @@ bool ui_init_graphics(int flags, const char *title, int width, int height) {
   init_ui_white_texture();
   init_ui_checker_texture();
   init_sysicon_strip();
+  init_theme_strip();
   init_icons_strip();
 
   init_console();
@@ -244,6 +301,7 @@ void ui_shutdown_graphics(void) {
   ui_shutdown_prog();
 
   shutdown_sysicon_strip();
+  shutdown_theme_strip();
   shutdown_icons_strip();
   shutdown_white_texture();
 

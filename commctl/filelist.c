@@ -22,6 +22,7 @@
 #include "../user/messages.h"
 #include "../user/draw.h"
 #include "../user/sysicons.h"
+#include "../kernel/kernel.h"
 
 // ---------------------------------------------------------------------------
 // Layout constants — mirror columnview.c (exported via columnview.h)
@@ -30,9 +31,9 @@
 #define FL_WIN_PADDING   COLUMNVIEW_WIN_PADDING
 
 // ---------------------------------------------------------------------------
-// Icons and colours — use sysicon constants for consistent icon display.
+// Icons — indices into the filepicker.png strip (icon_id_t from sysicons.h).
 // ---------------------------------------------------------------------------
-#define FL_ICON_UP      7   // "." parent-directory entry (legacy, kept for parent)
+#define FL_ICON_UP      ICON_BACK_ARROW    // ".." parent-directory entry
 #define FL_ICON_FOLDER  ICON_FOLDER_CLOSE  // directory
 #define FL_ICON_FILE    ICON_PAPER_BLANK   // regular file
 #define FL_COLOR_FOLDER 0xffa0d000u
@@ -309,6 +310,12 @@ result_t win_filelist(window_t *win, uint32_t msg,
       memset(data, 0, sizeof(*data));
       win->userdata  = data;
       data->selected = -1;
+
+      // Assign the file-picker icon strip so icons are drawn from filepicker.png.
+      bitmap_strip_t *strip = ui_get_icons_strip();
+      if (strip) {
+        send_message(win, RVM_SETICONSTRIP, 0, strip);
+      }
 
       // Initial path: lparam if provided, else cwd.
       const char *init = (const char *)lparam;
