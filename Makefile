@@ -144,6 +144,7 @@ ORION_LDFLAGS = -L$(LIB_DIR) -lorion
 # Tools directory
 TOOLS_SRCS = $(wildcard tools/*.c)
 TOOLS_BINS = $(patsubst tools/%.c,$(BIN_DIR)/%$(EXE_EXT),$(TOOLS_SRCS))
+TOOLS_CFLAGS = $(CFLAGS) -Wno-unused-function
 
 # .gem output directory and target list
 GEM_DIR  = $(BUILD_DIR)/gem
@@ -225,7 +226,7 @@ fonts: tools
 	
 $(BIN_DIR)/%$(EXE_EXT): tools/%.c $(SHARED_LIB) | $(BIN_DIR)
 	@echo "Building tool: $@"
-	$(CC) $(CFLAGS) -I. -Itools -o $@ $< \
+	$(CC) $(TOOLS_CFLAGS) -I. -Itools -o $@ $< \
 		$(LDFLAGS) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
 ifeq ($(OS),Windows_NT)
 	@cp -f $(LIB_DIR)/libplatform.dll $(BIN_DIR)/

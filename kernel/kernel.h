@@ -11,7 +11,7 @@ typedef struct bitmap_strip_s bitmap_strip_t;
 #define UI_INIT_TRAY 0x02000000u
 
 #ifndef UI_WINDOW_SCALE
-#define UI_WINDOW_SCALE 1
+#define UI_WINDOW_SCALE 2
 #endif
 
 // Logical font-pixel height used to derive chrome dimensions (titlebar,
