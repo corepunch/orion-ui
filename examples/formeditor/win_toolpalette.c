@@ -1,12 +1,12 @@
 // Tool palette for the form editor.
 // Uses win_toolbox directly — no extra client content below the grid.
-// toolbox.png is a 21×21-px-per-tile sprite sheet in VB3 toolbox order.
+// toolbox.png is a 21x21-px-per-tile sprite sheet in VB3 toolbox order.
 
 #include "formeditor.h"
 #include "../../commctl/commctl.h"
 
 // Icon indices in toolbox.png for each tool, in display order.
-// Strip layout: 3 columns × N rows of 21×21 tiles.
+// Strip layout: 3 columns x N rows of 21x21 tiles.
 static const int k_tool_order[NUM_TOOLS] = {
   ID_TOOL_SELECT,
   ID_TOOL_LABEL,

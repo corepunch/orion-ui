@@ -556,24 +556,23 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         }
         if (!(win->flags&WINDOW_NOTITLE)) {
           draw_window_controls(win);
-          draw_text_small(win->title, frame->x+2, window_title_bar_y(win),
-                          get_sys_color(window_has_focus(win) ? brActiveTitlebarText : brInactiveTitlebarText));
+          draw_text_small_clipped(win->title,
+                          &(rect_t){frame->x, frame->y, frame->w, TITLEBAR_HEIGHT},
+                          get_sys_color(window_has_focus(win) ? brActiveTitlebarText : brInactiveTitlebarText),
+                          TEXT_PADDING_LEFT);
         }
         if (win->flags&WINDOW_TOOLBAR) {
           int bsz      = toolbar_effective_bsz(win);
           int title_h  = (win->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
           int total_h  = bsz + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH);
-          rect_t rect  = {win->frame.x + TOOLBAR_BEVEL_WIDTH,
-                          win->frame.y + title_h + TOOLBAR_BEVEL_WIDTH,
-                          win->frame.w - 2 * TOOLBAR_BEVEL_WIDTH,
-                          total_h - 2 * TOOLBAR_BEVEL_WIDTH};
+          rect_t tb_rect = {win->frame.x, win->frame.y + title_h, win->frame.w, total_h};
+          rect_t rect    = rect_inset(tb_rect, TOOLBAR_BEVEL_WIDTH);
           draw_bevel(&rect);
           fill_rect(get_sys_color(brWindowBg), R(rect.x, rect.y, rect.w, rect.h));
           // Paint each toolbar child with a per-button projection so that
           // drawing at (0,0) inside the child proc maps to the button's
           // top-left corner (consistent with how send_message dispatches evPaint
           // for regular child windows).  tc->frame.x/y are toolbar-band-relative.
-          rect_t tb_rect = {win->frame.x, win->frame.y + title_h, win->frame.w, total_h};
           set_viewport(&tb_rect);
           for (window_t *tc = win->toolbar_children; tc; tc = tc->next) {
             set_projection(-tc->frame.x, -tc->frame.y,
@@ -590,10 +589,11 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
           // Uses screen-absolute coordinates (set_fullscreen projection is active).
           int t_bar = titlebar_height(win);
           int s_bar = statusbar_height(win);
-          int sb_x  = win->frame.x + win->sidebar_width;
-          int sb_y  = win->frame.y + t_bar;
-          int sb_h  = win->frame.h - t_bar - s_bar;
-          fill_rect(get_sys_color(brBorderFocus), R(sb_x, sb_y, 1, sb_h));
+          rect_t sep = {win->frame.x + win->sidebar_width,
+                        win->frame.y + t_bar,
+                        1,
+                        win->frame.h - t_bar - s_bar};
+          fill_rect(get_sys_color(brBorderFocus), &sep);
         }
       }
       break;

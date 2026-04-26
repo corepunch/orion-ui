@@ -66,7 +66,7 @@ Demonstrates the full framework surface:
 
 ### Running at larger size
 
-By default Orion uses 2× window scaling.  Build without it for a larger
+By default Orion uses 2x window scaling.  Build without it for a larger
 logical canvas:
 
 ```bash

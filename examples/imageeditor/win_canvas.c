@@ -240,7 +240,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       }
 
       // Magnifier tool: draw a loupe overlay in the top-right corner of the canvas
-      // showing a 16×16 canvas-pixel region centered on the cursor at 4× zoom.
+      // showing a 16x16 canvas-pixel region centered on the cursor at 4x zoom.
       // Rendered as a single textured quad to avoid 256 fill_rect() calls.
       enum { MAG_PIXELS = 16, MAG_ZOOM = 4, MAG_SIZE = MAG_PIXELS * MAG_ZOOM, MAG_MARGIN = 4 };
       if (g_app && g_app->current_tool == ID_TOOL_MAGNIFIER &&
@@ -251,7 +251,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         int loy = MAG_MARGIN;
         // Border
         fill_rect(0xFF808080, R(lox - 1, loy - 1, MAG_SIZE + 2, MAG_SIZE + 2));
-        // Build a 16×16 RGBA pixel buffer from the canvas region around hover
+        // Build a 16x16 RGBA pixel buffer from the canvas region around hover
         uint8_t mag_buf[MAG_PIXELS * MAG_PIXELS * 4];
         int hx = state->hover.x - MAG_PIXELS / 2;
         int hy = state->hover.y - MAG_PIXELS / 2;

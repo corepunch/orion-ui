@@ -7,9 +7,7 @@
 #include "../user/draw.h"
 #include "../user/rect.h"
 
-#define LIST_HEIGHT     13
-#define LIST_X          3
-#define LIST_Y          3
+#define LIST_HEIGHT     (FONT_SIZE_SMALL + 5)
 
 #define MAX_COMBOBOX_STRINGS 256
 typedef char combobox_string_t[64];
@@ -43,12 +41,11 @@ result_t win_list(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         return true;
       for (uint32_t i = 0; i < cb->cursor_pos; i++) {
         rect_t item = { 0, (int)(i * LIST_HEIGHT), win->frame.w, LIST_HEIGHT };
-        rect_t text_pos = rect_inset_xy(item, LIST_X, LIST_Y);
         if (i == win->cursor_pos) {
           fill_rect(get_sys_color(brTextNormal), R(item.x, item.y, item.w, item.h));
-          draw_text_small(texts[i], text_pos.x, text_pos.y, get_sys_color(brWindowBg));
+          draw_text_clipped(FONT_SMALL, texts[i], &item, get_sys_color(brWindowBg), TEXT_PADDING_LEFT);
         } else {
-          draw_text_small(texts[i], text_pos.x, text_pos.y, get_sys_color(brTextNormal));
+          draw_text_clipped(FONT_SMALL, texts[i], &item, get_sys_color(brTextNormal), TEXT_PADDING_LEFT);
         }
       }
       return true;

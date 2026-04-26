@@ -74,7 +74,7 @@ compile time:
 
 ```c
 #ifndef UI_WINDOW_SCALE
-#define UI_WINDOW_SCALE 2   // default: SDL window is 2× the logical size
+#define UI_WINDOW_SCALE 2   // default: SDL window is 2x the logical size
 #endif
 ```
 

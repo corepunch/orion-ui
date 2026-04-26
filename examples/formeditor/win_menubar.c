@@ -487,7 +487,7 @@ static const form_ctrl_def_t kPropsChildren[] = {
 static const form_def_t kPropsForm = {
   .name        = "Element Properties",
   .width       = PROPS_W,
-  .height      = PROPS_H + TITLEBAR_HEIGHT,
+  .height      = PROPS_H,
   .flags       = 0,
   .children    = kPropsChildren,
   .child_count = ARRAY_LEN(kPropsChildren),
@@ -514,7 +514,7 @@ static result_t props_proc(window_t *win, uint32_t msg,
 
       // Dynamic type-info label (content is computed at runtime).
       char info[64];
-      snprintf(info, sizeof(info), "Type: %s  ID: %d  (%d, %d)  %d × %d",
+      snprintf(info, sizeof(info), "Type: %s  ID: %d  (%d, %d)  %d x %d",
                ctrl_type_token(ps->el->type), ps->el->id,
                ps->el->x, ps->el->y, ps->el->w, ps->el->h);
       create_window(info, WINDOW_NOTITLE | WINDOW_NOFILL,

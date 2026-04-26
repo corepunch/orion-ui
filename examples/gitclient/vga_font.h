@@ -3,8 +3,8 @@
 
 // VGA-style monospace font renderer.
 //
-// Loads a 128×256 RGBA PNG character sheet (16 columns × 16 rows, each
-// cell 8×16 pixels, white glyphs on transparent background) and exposes a
+// Loads a 128x256 RGBA PNG character sheet (16 columns x 16 rows, each
+// cell 8x16 pixels, white glyphs on transparent background) and exposes a
 // simple API for rendering fixed-width text with independent foreground and
 // background colours.
 //
@@ -20,8 +20,8 @@
 // Physical dimensions of one character cell in screen pixels.
 // These values control on-screen character size; increase them (for example
 // to 128x128) to render larger glyphs while preserving font texture detail.
-#define VGA_CHAR_W   4
-#define VGA_CHAR_H   8
+#define VGA_CHAR_W   8
+#define VGA_CHAR_H   16
 
 // Initialise the VGA font renderer by loading the sheet from sheet_path.
 // Must be called after ui_init_graphics().

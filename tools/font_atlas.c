@@ -9,10 +9,14 @@
 /* ------------------------------------------------------------------ */
 /*  Defaults                                                            */
 /* ------------------------------------------------------------------ */
-#define DEFAULT_ATLAS_W      256
-#define DEFAULT_ATLAS_H      256
+#define DEFAULT_ATLAS_COLS   16   // glyphs per row in the atlas
+#define DEFAULT_ATLAS_ROWS   16   // glyph rows in the atlas
 #define DEFAULT_CELL_W        16
 #define DEFAULT_CELL_H        16
+// Atlas dimensions are derived: cols * cell_w x rows * cell_h.
+// DEFAULT_ATLAS_W / DEFAULT_ATLAS_H kept as helpers for the help text.
+#define DEFAULT_ATLAS_W      (DEFAULT_ATLAS_COLS * DEFAULT_CELL_W)
+#define DEFAULT_ATLAS_H      (DEFAULT_ATLAS_ROWS * DEFAULT_CELL_H)
 #define DEFAULT_PIXEL_HEIGHT  16.0f
 #define DEFAULT_THRESHOLD     128
 #define DEFAULT_FIRST_CHAR      0
@@ -31,6 +35,8 @@ typedef struct {
     int   center_x, baseline_align;
     int   first_char, num_chars;
     int   invert, rgba, verbose;
+    int   scan_width;           // if true, compute advance from bitmap width
+    int   letter_spacing;       // pixels to add to advance
 } Opts;
 
 /* ------------------------------------------------------------------ */
@@ -64,7 +70,7 @@ static void print_help(const char* prog)
         "  -smooth                 Keep anti-aliased output (default)\n"
         "\n"
         "  Layout\n"
-        "  -nocenter               Don't centre glyph horizontally in cell\n"
+        "  -center                 Centre glyph horizontally in cell (default: left-aligned)\n"
         "  -nobaseline             Top-align instead of baseline-align\n"
         "  -first=N                First codepoint to rasterise (default %d)\n"
         "  -num=N                  Number of codepoints (default %d)\n"
@@ -73,6 +79,10 @@ static void print_help(const char* prog)
         "  -invert                 Invert bitmap (black glyphs on white bg)\n"
         "  -rgba                   Write RGBA PNG (white glyph + alpha channel)\n"
         "  -v                      Verbose output\n"
+        "\n"
+        "  Metrics\n"
+        "  -scan-width             Compute advance from actual bitmap width (proportional)\n"
+        "  -letter-spacing=N       Add N pixels to advance (for letter spacing)\n"
         "\n"
         "Embedded foNT chunk fields\n"
         "  Header  version, first_char, num_chars, cell_w/h, atlas_w/h,\n"
@@ -168,21 +178,23 @@ static char* get_font_name(const stbtt_fontinfo* font, int nameID)
 int main(int argc, char** argv)
 {
     Opts o = {
-        .atlas_w      = DEFAULT_ATLAS_W,
-        .atlas_h      = DEFAULT_ATLAS_H,
+        .atlas_w      = -1,   // computed from cell size after arg parsing
+        .atlas_h      = -1,
         .cell_w       = DEFAULT_CELL_W,
         .cell_h       = DEFAULT_CELL_H,
         .pixel_height = DEFAULT_PIXEL_HEIGHT,
         .sharp        = 0,
         .threshold    = DEFAULT_THRESHOLD,
         .em_scale     = 0,
-        .center_x     = 1,
+        .center_x     = 0,
         .baseline_align = 1,
         .first_char   = DEFAULT_FIRST_CHAR,
         .num_chars    = DEFAULT_NUM_CHARS,
         .invert       = 0,
         .rgba         = 0,
         .verbose      = 0,
+        .scan_width   = 0,
+        .letter_spacing = 0,
     };
 
     int positional = 0;
@@ -193,11 +205,13 @@ int main(int argc, char** argv)
         else if (!strcmp(a,"-sharp"))        o.sharp = 1;
         else if (!strcmp(a,"-smooth"))       o.sharp = 0;
         else if (!strcmp(a,"-em"))           o.em_scale = 1;
-        else if (!strcmp(a,"-nocenter"))     o.center_x = 0;
+        else if (!strcmp(a,"-center"))       o.center_x = 1;
         else if (!strcmp(a,"-nobaseline"))   o.baseline_align = 0;
         else if (!strcmp(a,"-invert"))       o.invert = 1;
         else if (!strcmp(a,"-rgba"))         o.rgba = 1;
         else if (!strcmp(a,"-v"))            o.verbose = 1;
+        else if (!strcmp(a,"-scan-width"))   o.scan_width = 1;
+        else if (parse_int_arg(a, "-letter-spacing=", &o.letter_spacing)) {}
         else if (parse_float_arg(a, "-pixelsize=", &o.pixel_height)) {}
         else if (parse_int_arg(a, "-threshold=",   &o.threshold))    {}
         else if (parse_int_arg(a, "-cellw=",       &o.cell_w))       {}
@@ -220,6 +234,10 @@ int main(int argc, char** argv)
         fprintf(stderr, "Usage: %s font.ttf out.png [options]  (-? for help)\n", argv[0]);
         return 1;
     }
+
+    /* ---- derive atlas size from cell grid if not set explicitly --- */
+    if (o.atlas_w < 0) o.atlas_w = DEFAULT_ATLAS_COLS * o.cell_w;
+    if (o.atlas_h < 0) o.atlas_h = DEFAULT_ATLAS_ROWS * o.cell_h;
 
     /* ---- load font -------------------------------------------- */
     int ttf_size = 0;
@@ -289,7 +307,11 @@ int main(int argc, char** argv)
         glyphs[ci].y0       = (int8_t)(y0 < -128 ? -128 : y0 > 127 ? 127 : y0);
         glyphs[ci].w        = (uint8_t)(gw < 0 ? 0 : gw > 255 ? 255 : gw);
         glyphs[ci].h        = (uint8_t)(gh < 0 ? 0 : gh > 255 ? 255 : gh);
-        glyphs[ci].advance  = (uint8_t)adv_px;
+        // Compute advance: use bitmap width if scan_width, else stbtt metrics
+        int adv_final = o.scan_width ? (gw > 0 ? gw : 0) : adv_px;
+        adv_final += o.letter_spacing;   // add letter spacing
+        if (adv_final > 255) adv_final = 255;
+        glyphs[ci].advance  = (uint8_t)adv_final;
         glyphs[ci].cell_col = (uint8_t)cell_col;
         glyphs[ci].cell_row = (uint8_t)cell_row;
 
@@ -305,7 +327,7 @@ int main(int argc, char** argv)
 
         int cell_x = cell_col * o.cell_w;
         int cell_y = cell_row * o.cell_h;
-        int draw_x = o.center_x     ? cell_x + (o.cell_w - bw) / 2 : cell_x + x0;
+        int draw_x = o.center_x ? cell_x + (o.cell_w - bw) / 2 : cell_x;
         int draw_y = o.baseline_align ? cell_y + baseline + y0      : cell_y;
 
         for (int y = 0; y < bh; y++) {

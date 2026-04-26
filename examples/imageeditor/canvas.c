@@ -605,7 +605,7 @@ void canvas_invert_colors(canvas_doc_t *doc) {
   doc->modified     = true;
 }
 
-// Resize the canvas to new_w × new_h.
+// Resize the canvas to new_w x new_h.
 // Existing pixels are preserved at the top-left corner; any new area is
 // filled with opaque white.  The GL texture is invalidated so it will be
 // re-created on the next paint.

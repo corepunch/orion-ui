@@ -207,7 +207,7 @@ typedef struct {
 #define SB_VIS_SHOW  ((int8_t) 1)
 
 // Width of a built-in scrollbar strip in logical pixels (also height of arrow buttons)
-#define SCROLLBAR_WIDTH  12
+#define SCROLLBAR_WIDTH  13
 // Scroll distance applied per arrow-button click (one logical unit).
 #define SB_ARROW_STEP    1
 // Pixel size (width and height) of an icon8 glyph
@@ -230,23 +230,23 @@ typedef struct {
   int      nPos;   // current scroll position
 } scroll_info_t;
 
-// Titlebar and toolbar dimensions
-#define TITLEBAR_HEIGHT   12
+// Chrome height constants — derived from FONT_SIZE (defined in kernel/kernel.h).
+// FONT_SIZE (FONT_SYSTEM/ChiKareGo2): 12 at UI_WINDOW_SCALE==1, 8 at scale>=2.
+// FONT_SIZE_SMALL (FONT_SMALL/Geneva9): 12 at UI_WINDOW_SCALE==1, 8 at scale>=2.
+// Content heights (list rows, column-view entries) use FONT_SIZE_SMALL;
+// see commctl/columnview.h.  All values are usable in static initializers.
+// +5 instead of +4 keeps the height odd at both scales so that 9x9 theme
+// icons centre with equal integer padding on every side.
+#define TITLEBAR_HEIGHT   (FONT_SIZE + 5)
 #define TOOLBAR_HEIGHT    22
-#define STATUSBAR_HEIGHT  12
+#define STATUSBAR_HEIGHT  (FONT_SIZE + 5)
 // Default width of a WINDOW_SIDEBAR panel in logical pixels.
 #define SIDEBAR_DEFAULT_WIDTH  180
-// Resize handle matches SCROLLBAR_WIDTH so the scrollbar corner cell is fully
-// interactive as a resize drag grip (same as Windows 1.0/2.0 behaviour).
-#define RESIZE_HANDLE     SCROLLBAR_WIDTH
-#define BUTTON_HEIGHT     18
+#define BUTTON_HEIGHT     19
 #define WINDOW_PADDING 4
 #define LINE_PADDING 5
 #define CONTROL_HEIGHT 14
 
-// Control button dimensions
-#define CONTROL_BUTTON_WIDTH    8
-#define CONTROL_BUTTON_PADDING  2
 #define TB_SPACING              TOOLBAR_HEIGHT  // equals TOOLBAR_HEIGHT so toolbar buttons are square
 #define TOOLBAR_PADDING         2               // pixels of margin between toolbar border and button area (all sides)
 #define TOOLBAR_SPACING         1               // minimal pixel gap between consecutive toolbar elements

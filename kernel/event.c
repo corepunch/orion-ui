@@ -8,6 +8,7 @@
 
 #include "../user/user.h"
 #include "../user/messages.h"
+#include "../user/rect.h"
 #include "kernel.h"
 
 // External functions
@@ -469,8 +470,8 @@ void dispatch_message(ui_event_t *msg) {
         // Resize handle: use frame-relative y (from window top) so the check
         // naturally maps to the bottom-right corner of the total frame.
         int ly_frame = SCALE_POINT(py) - win->frame.y;
-        if (lx >= win->frame.w - RESIZE_HANDLE &&
-            ly_frame >= win->frame.h - RESIZE_HANDLE &&
+        if (lx >= win->frame.w - SCROLLBAR_WIDTH &&
+            ly_frame >= win->frame.h - SCROLLBAR_WIDTH &&
             !win->parent &&
             !(win->flags&WINDOW_NORESIZE) &&
             win != g_ui_runtime.captured)
@@ -560,12 +561,11 @@ void dispatch_message(ui_event_t *msg) {
       if (g_ui_runtime.dragging) {
         int sx = SCALE_POINT(px);
         int sy = SCALE_POINT(py);
-        int close_x = g_ui_runtime.dragging->frame.x + g_ui_runtime.dragging->frame.w
-                      - CONTROL_BUTTON_WIDTH - CONTROL_BUTTON_PADDING;
-        int title_y  = window_title_bar_y(g_ui_runtime.dragging) - 2;
+        rect_t titlebar  = rect_split_top(g_ui_runtime.dragging->frame, TITLEBAR_HEIGHT);
+        rect_t close_btn = rect_split_right(titlebar, TITLEBAR_HEIGHT);
         bool on_close = !(g_ui_runtime.dragging->flags & WINDOW_NOTITLE)
-                        && sx >= close_x && sx < close_x + CONTROL_BUTTON_WIDTH
-                        && sy >= title_y && sy < title_y + TITLEBAR_HEIGHT;
+                        && sx >= close_btn.x && sx < close_btn.x + close_btn.w
+                        && sy >= close_btn.y && sy < close_btn.y + close_btn.h;
         if (on_close) {
           // Clear dragging BEFORE the send: evClose may open a modal
           // dialog that pumps events, and a live dragging pointer would cause the

@@ -5,16 +5,16 @@
 #include "../user/user.h"
 #include "../user/messages.h"
 #include "../user/draw.h"
+#include "../user/theme.h"
 
 #define MAX_COLUMNVIEW_ITEM_NAME 256
 #define MAX_COLUMNVIEW_ITEMS 256
 #define MAX_REPORTVIEW_COLUMNS 16
 #define MAX_REPORTVIEW_TITLE 64
-#define ENTRY_HEIGHT 13
-#define HEADER_HEIGHT 14
+#define ENTRY_HEIGHT  COLUMNVIEW_ENTRY_HEIGHT
+#define HEADER_HEIGHT COLUMNVIEW_HEADER_HEIGHT
 #define DEFAULT_COLUMN_WIDTH 160
-#define ICON_OFFSET 12
-#define ICON_DODGE 1
+#define ICON_OFFSET 16
 #define WIN_PADDING 4
 #define RV_DOUBLE_CLICK_MS 500u
 #define RV_INVALID_SELECTION (-1)
@@ -40,6 +40,11 @@ typedef struct {
   uint32_t column_count;
   bool redraw_enabled;
   bool redraw_dirty;
+
+  // Per-instance icon strip for icon-view rendering.
+  // Set via RVM_SETICONSTRIP (lparam = bitmap_strip_t*; NULL to clear).
+  // The strip is owned by the caller — win_reportview never frees it.
+  bitmap_strip_t *icon_strip;
 } reportview_data_t;
 
 static inline void rv_invalidate(window_t *win, reportview_data_t *data) {
@@ -251,6 +256,43 @@ static void rv_sync_scroll(window_t *win, reportview_data_t *data) {
   set_scroll_info(win, SB_VERT, &si, false);
 }
 
+// Draw one icon from the per-instance strip centred inside icon_rect.
+// If no strip is assigned (or icon_id is out of range) a small placeholder
+// rectangle is drawn so the icon slot is always visually occupied.
+static void rv_draw_item_icon(bitmap_strip_t *strip, int icon_id,
+                              rect_t const *icon_rect, uint32_t col) {
+  if (strip && strip->tex != 0 && strip->cols > 0) {
+    int total = strip->cols * (strip->sheet_h / strip->icon_h);
+    if (icon_id >= 0 && icon_id < total) {
+      int scol   = icon_id % strip->cols;
+      int srow   = icon_id / strip->cols;
+      int icon_sz = strip->icon_w;
+      int ix = icon_rect->x + (icon_rect->w - icon_sz) / 2;
+      int iy = icon_rect->y + (icon_rect->h - icon_sz) / 2;
+      float u0 = (float)(scol * strip->icon_w) / (float)strip->sheet_w;
+      float v0 = (float)(srow * strip->icon_h) / (float)strip->sheet_h;
+      float u1 = u0 + (float)strip->icon_w / (float)strip->sheet_w;
+      float v1 = v0 + (float)strip->icon_h / (float)strip->sheet_h;
+      draw_sprite_region((int)strip->tex, R(ix, iy, icon_sz, icon_sz),
+                         u0, v0, u1, v1, col);
+      return;
+    }
+  }
+  // Fallback: draw a small placeholder square so the icon slot is not blank.
+  // (draw_icon8_clipped is not used here because it renders theme icons, which
+  // use a different index space than file-picker / custom icon_id_t values.)
+  {
+    const int ph = THEME_ICON_SIZE;  // 8 px — matches the smallest tile unit
+    int px = icon_rect->x + (icon_rect->w - ph) / 2;
+    int py = icon_rect->y + (icon_rect->h - ph) / 2;
+    uint32_t dim = (col & 0x00FFFFFFu) | 0x60000000u;  // 38% opacity
+    fill_rect(dim, R(px,        py,        ph, 1));
+    fill_rect(dim, R(px,        py + ph-1, ph, 1));
+    fill_rect(dim, R(px,        py + 1,    1,  ph - 2));
+    fill_rect(dim, R(px + ph-1, py + 1,    1,  ph - 2));
+  }
+}
+
 static void rv_paint_icon_view(window_t *win, reportview_data_t *data) {
   int eff_w = rv_content_width(win);
   int ncol = get_column_count(eff_w, data->column_width);
@@ -265,6 +307,8 @@ static void rv_paint_icon_view(window_t *win, reportview_data_t *data) {
   int clip_top = 0;
   int clip_bottom = win->frame.h;
 
+  bitmap_strip_t *strip = data->icon_strip;
+
   for (uint32_t i = 0; i < data->count; i++) {
     int col = i % ncol;
     int x = col * data->column_width + WIN_PADDING;
@@ -273,14 +317,23 @@ static void rv_paint_icon_view(window_t *win, reportview_data_t *data) {
     if (y + ENTRY_HEIGHT <= clip_top) continue;
     if (y >= clip_bottom) break;
 
+    int item_w  = data->column_width - 6;
+    int item_h  = ENTRY_HEIGHT - 1;
+    rect_t icon_rect = {x,               y, ICON_OFFSET,              item_h};
+    rect_t text_rect = {x + ICON_OFFSET, y, item_w - ICON_OFFSET - 2, item_h};
+
+    int icon_id = data->items[i].icon;
+
     if ((int)i == data->selected) {
-      fill_rect(get_sys_color(brTextNormal), R(x - 2, y - 2, data->column_width - 6, ENTRY_HEIGHT - 2));
-      draw_icon8(data->items[i].icon, x, y - ICON_DODGE, get_sys_color(brWindowBg));
-      draw_text_small(data->items[i].text, x + ICON_OFFSET, y, get_sys_color(brWindowBg));
+      uint32_t icon_col = get_sys_color(brWindowBg);
+      fill_rect(get_sys_color(brTextNormal), R(x - 2, y, item_w, item_h));
+      rv_draw_item_icon(strip, icon_id, &icon_rect, icon_col);
+      draw_text_clipped(FONT_SMALL, data->items[i].text, &text_rect, icon_col, 0);
     } else {
-      fill_rect(bg_col, R(x - 2, y - 2, data->column_width - 6, ENTRY_HEIGHT - 2));
-      draw_icon8(data->items[i].icon, x, y - ICON_DODGE, data->items[i].color);
-      draw_text_small(data->items[i].text, x + ICON_OFFSET, y, data->items[i].color);
+      uint32_t icon_col = data->items[i].color;
+      fill_rect(bg_col, R(x - 2, y, item_w, item_h));
+      rv_draw_item_icon(strip, icon_id, &icon_rect, icon_col);
+      draw_text_clipped(FONT_SMALL, data->items[i].text, &text_rect, icon_col, 0);
     }
   }
 }
@@ -327,7 +380,7 @@ static void rv_paint_report_view(window_t *win, reportview_data_t *data) {
     // Header scissor: column width, header height only.
     set_clip_rect(NULL, &(rect_t){scr_x + col_x, scr_y, col_w, HEADER_HEIGHT});
     draw_button(&(rect_t){col_x, 0, col_w, HEADER_HEIGHT}, 1, 1, false);
-    draw_text_small(data->columns[col].title, col_x + WIN_PADDING, 3, hdr_fg);
+    draw_text_small_clipped(data->columns[col].title, &(rect_t){col_x, 0, col_w, HEADER_HEIGHT}, hdr_fg, TEXT_PADDING_LEFT);
 
     // Body scissor: column width, everything below the header.
     int body_h = win->frame.h - HEADER_HEIGHT;
@@ -348,7 +401,7 @@ static void rv_paint_report_view(window_t *win, reportview_data_t *data) {
         src = (idx < it->subitem_count && it->subitems[idx]) ? it->subitems[idx] : "";
       }
 
-      draw_text_small(src, col_x + WIN_PADDING, y + 2, fg);
+      draw_text_clipped(FONT_SMALL, src, &(rect_t){col_x, y, col_w, ENTRY_HEIGHT}, fg, TEXT_PADDING_LEFT);
     }
 
     col_x += col_w;
@@ -570,6 +623,11 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       }
       return true;
     }
+
+    case RVM_SETICONSTRIP:
+      data->icon_strip = (bitmap_strip_t *)lparam;
+      rv_invalidate(win, data);
+      return true;
 
     case evVScroll: {
       int total_h = rv_content_height(win, data);

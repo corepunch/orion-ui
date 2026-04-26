@@ -36,7 +36,7 @@
     u8      name_version_len followed by bytes
     (empty strings are encoded as a single 0x00 length byte)
 
-  Glyph table  (num_chars × 8 bytes, fixed stride):
+  Glyph table  (num_chars x 8 bytes, fixed stride):
     per entry, in codepoint order starting at first_char:
       i8    x0       bitmap-box left offset from pen (may be negative)
       i8    y0       bitmap-box top  offset from baseline (negative = above)

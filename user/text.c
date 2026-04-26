@@ -1,6 +1,10 @@
-// Text rendering implementation
-// Extracted from mapview/windows/console.c
-// Contains only the small embedded font rendering (console_font_6x8: 6-bit wide, 8 pixels tall)
+// Text rendering implementation — dual-font design.
+//
+// Two named atlases at UI_WINDOW_SCALE == 1:
+//   big   = ChiKareGo2 (16x16 cells, foNT metrics) — FONT_SYSTEM chrome
+//   small = Geneva9 / SmallFont (8x8 cells)        — FONT_SMALL content + icons
+//
+// At UI_WINDOW_SCALE >= 2 both atlases map to the same SmallFont data.
 
 #include <stdarg.h>
 #include <stdbool.h>
@@ -9,330 +13,558 @@
 #include <string.h>
 #include "text.h"
 #include "user.h"
+#include "image.h"
+#include "../kernel/kernel.h"
 
-#define FONT_TEX_SIZE 128
-#define MAX_TEXT_LENGTH 4096  // Increased for terminal output
-#define SMALL_FONT_WIDTH 8
-#define SMALL_FONT_HEIGHT 8
-#define VERTICES_PER_CHAR 6  // 2 triangles = 6 vertices
+// foNT chunk reader — no writer/stbtt deps needed.
+#include "../tools/tiny_png.h"
+
+#define MAX_TEXT_LENGTH   4096
+#define VERTICES_PER_CHAR 6
+
+#define WIN_PADDING 4
 
 typedef struct {
-  int16_t x, y;
-  float u, v;
+  int16_t  x, y;
+  float    u, v;
   uint32_t col;
 } text_vertex_t;
 
-// Font atlas structure
+// Per-character rendering metrics, indexed by the full char code (0-255).
 typedef struct {
-  R_Mesh mesh;       // Mesh for rendering text
-  R_Texture texture; // Atlas texture
-  uint8_t char_from[256];    // Start position of each character in pixels
-  uint8_t char_to[256];      // End position of each character in pixels
-  uint8_t char_height;       // Height of each character in pixels
-  uint8_t chars_per_row;     // Number of characters per row in atlas
-  uint8_t total_chars;       // Total number of characters in atlas
+  uint8_t advance[256];  // cursor advance in pixels
+  int8_t  x0[256];       // bitmap box left offset (can be negative)
+  uint8_t draw_w[256];   // bitmap width in pixels
+} glyph_metrics_t;
+
+// One font atlas: a GL_RED texture + mesh + glyph metrics.
+typedef struct {
+  R_Mesh          mesh;
+  R_Texture       texture;   // GL_RED with swizzle: R→alpha
+  int             cell_w;
+  int             cell_h;
+  int             chars_per_row;
 } font_atlas_t;
 
-// Text rendering state
 static struct {
-  font_atlas_t small_font;   // Small 6x8 font atlas
+  font_atlas_t    big;          // FONT_SYSTEM: ChiKareGo2 at scale=1, SmallFont at scale>=2
+  font_atlas_t    small;        // FONT_SMALL: Geneva9/SmallFont 0-255 at scale=1
+  glyph_metrics_t big_met;      // glyph metrics for big atlas (FONT_SYSTEM)
+  glyph_metrics_t small_met;    // glyph metrics for small atlas (FONT_SMALL)
+  bool            has_small;    // true when small is a distinct second atlas
+  int             big_height;   // cell pixel height — FONT_SYSTEM
+  int             big_line;     // line height — FONT_SYSTEM
+  int             big_space;    // space advance — FONT_SYSTEM
+  int             small_height; // cell pixel height — FONT_SMALL
+  int             small_line;   // line height — FONT_SMALL
+  int             small_space;  // space advance — FONT_SMALL
 } text_state = {0};
 
-// Helper to get character width (internal fast path)
-static inline int get_char_width(unsigned char c) {
-  return text_state.small_font.char_to[c] - text_state.small_font.char_from[c];
+// ── Dynamic metric accessors ──────────────────────────────────────────────────
+// Legacy getters: return FONT_SYSTEM (big atlas) metrics.
+
+int get_char_height(void) { return text_state.big_height ? text_state.big_height : 8;  }
+int get_line_height(void) { return text_state.big_line   ? text_state.big_line   : 12; }
+int get_space_width(void) { return text_state.big_space  ? text_state.big_space  : 3;  }
+
+// ── Helper: read a raw file into a heap buffer ────────────────────────────────
+
+static unsigned char *read_file(const char *path, size_t *out_size) {
+  FILE *f = fopen(path, "rb");
+  if (!f) { *out_size = 0; return NULL; }
+  fseek(f, 0, SEEK_END);
+  long sz = ftell(f);
+  rewind(f);
+  if (sz <= 0) { fclose(f); *out_size = 0; return NULL; }
+  unsigned char *buf = (unsigned char *)malloc((size_t)sz);
+  if (!buf) { fclose(f); *out_size = 0; return NULL; }
+  if (fread(buf, 1, (size_t)sz, f) != (size_t)sz) {
+    free(buf); fclose(f); *out_size = 0; return NULL;
+  }
+  fclose(f);
+  *out_size = (size_t)sz;
+  return buf;
 }
 
-// Public API: pixel width of one glyph (0 when text system not initialized).
-int char_width(unsigned char c) {
-  if (text_state.small_font.char_height == 0) return 0;
-  return get_char_width(c);
+// ── Initialise a mesh for the given atlas ─────────────────────────────────────
+
+static void init_atlas_mesh(font_atlas_t *atlas) {
+  R_VertexAttrib attribs[] = {
+    {0, 2, GL_SHORT,         GL_FALSE, offsetof(text_vertex_t, x)},
+    {1, 2, GL_FLOAT,         GL_FALSE, offsetof(text_vertex_t, u)},
+    {2, 4, GL_UNSIGNED_BYTE, GL_TRUE,  offsetof(text_vertex_t, col)},
+  };
+  R_MeshInit(&atlas->mesh, attribs, 3, sizeof(text_vertex_t), GL_TRIANGLES);
 }
 
-// Forward declarations for external functions
-extern void push_sprite_args(int tex, int x, int y, int w, int h, float alpha);
+// ── Load one atlas from a PNG file ───────────────────────────────────────────
+//
+// first_char/last_char: range of char codes to populate metrics for.
+// Requires foNT metadata chunk in PNG; fails if not present.
 
-// Create texture atlas for the small 6x8 font
-static bool create_font_atlas(void) {
-  extern unsigned char console_font_6x8[];
-  // Font atlas dimensions
-  const int glyph_w = SMALL_FONT_WIDTH;
-  const int glyph_h = SMALL_FONT_HEIGHT;
-  const int chars_per_row = 16;
-  const int rows = 8;      // 16 * 8 = 128 ASCII characters (0-127)
-  
-  // Create a buffer for the atlas texture
-  unsigned char* atlas_data = (unsigned char*)calloc(FONT_TEX_SIZE * FONT_TEX_SIZE, sizeof(unsigned char));
-  if (!atlas_data) {
-    printf("Error: Could not allocate memory for font atlas\n");
+static bool load_atlas(font_atlas_t *atlas, glyph_metrics_t *met,
+                       const char *path,
+                       int first_char, int last_char) {
+  // ── Load pixel data ───────────────────────────────────────────────────────
+  int img_w = 0, img_h = 0;
+  uint8_t *rgba = load_image(path, &img_w, &img_h);
+  if (!rgba) {
+    printf("text: failed to load font image: %s\n", path);
     return false;
   }
-  
-  // Fill the atlas with character data from the font_6x8 array
-  for (int c = 0; c < 128; c++) {
-    int atlas_x = (c % chars_per_row) * glyph_w;
-    int atlas_y = (c / chars_per_row) * glyph_h;
-    // Copy character bits from font data to atlas
-    text_state.small_font.char_to[c] = 0;
-    text_state.small_font.char_from[c] = 0xff;
-    for (int y = 0; y < glyph_h; y++) {
-      for (int x = 0; x < glyph_w; x++) {
-        // Get bit from font data (assuming 1 byte per row, 8 rows per character)
-        int bit_pos = x;
-        int font_byte = console_font_6x8[c * glyph_h + y];
-        int bit_value = ((font_byte >> (glyph_w - 1 - bit_pos)) & 1);
-        // Set corresponding pixel in atlas (convert 1-bit to 8-bit)
-        atlas_data[(atlas_y + y) * FONT_TEX_SIZE + atlas_x + x] = bit_value ? 255 : 0;
-        if (bit_value) {
-          text_state.small_font.char_from[c] = (x < text_state.small_font.char_from[c]) ? x : text_state.small_font.char_from[c];
-          text_state.small_font.char_to[c] = ((x+2) > text_state.small_font.char_to[c]) ? (x+2) : text_state.small_font.char_to[c];
-        }
-      }
+
+  // ── Cell layout will come from foNT chunk ─────────────────────────────────
+  int cell_w = 16, cell_h = 16;      // placeholder; will be set from foNT
+  int chars_per_row = img_w / cell_w;
+  int baseline = cell_h;
+
+  // ── Read foNT chunk (required) ─────────────────────────────────────────────
+  TinyPngFontInfo fi = {0};
+  TinyPngGlyph *glyphs = NULL;
+  size_t raw_sz = 0;
+  unsigned char *raw = read_file(path, &raw_sz);
+  if (!raw || tiny_png_read_font_chunk(raw, raw_sz, &fi, &glyphs) != 1) {
+    printf("text: font %s missing required foNT chunk\n", path);
+    image_free(rgba);
+    if (raw) free(raw);
+    return false;
+  }
+  free(raw);
+  cell_w        = fi.cell_w;
+  cell_h        = fi.cell_h;
+  if (cell_w <= 0 || cell_h <= 0 || (img_w % cell_w) != 0 || (img_h % cell_h) != 0) {
+    printf("text: font %s has invalid cell dimensions (%dx%d) for image (%dx%d)\n",
+           path, cell_w, cell_h, img_w, img_h);
+    if (glyphs) free(glyphs);
+    image_free(rgba);
+    return false;
+  }
+  chars_per_row = img_w / cell_w;
+  baseline      = fi.baseline;
+
+  // ── Extract R channel → single-byte GL_RED buffer ────────────────────────
+  size_t npx = (size_t)(img_w * img_h);
+  unsigned char *red = (unsigned char *)malloc(npx);
+  if (!red) {
+    image_free(rgba);
+    if (glyphs) free(glyphs);
+    return false;
+  }
+  for (size_t i = 0; i < npx; i++)
+    red[i] = rgba[i * 4];   // R channel; for greyscale PNG loaded as RGBA this is the grayval
+  image_free(rgba);
+
+  // ── Populate glyph metrics from foNT ──────────────────────────────────────
+  for (int c = first_char; c <= last_char; c++) {
+    if (c >= fi.first_char && c < fi.first_char + fi.num_chars) {
+      int idx = c - fi.first_char;
+      met->x0[c]      = glyphs[idx].x0;
+      met->draw_w[c]  = glyphs[idx].w;
+      met->advance[c] = glyphs[idx].advance;
+    } else {
+      // Char outside foNT range — use defaults
+      met->x0[c]      = 0;
+      met->draw_w[c]  = (uint8_t)cell_w;
+      met->advance[c] = (uint8_t)cell_w;
     }
   }
-  
-  extern unsigned char icons_bits[];
-  size_t half = FONT_TEX_SIZE * FONT_TEX_SIZE / 2;
-  memcpy(atlas_data + half, icons_bits, half);
-  
-  for (int i = 128; i < 256; i++) {
-    text_state.small_font.char_to[i] = 8;
-    text_state.small_font.char_from[i] = 0;
-  }
-  
-  // Store atlas information
-  text_state.small_font.texture.width = FONT_TEX_SIZE;
-  text_state.small_font.texture.height = FONT_TEX_SIZE;
-  text_state.small_font.texture.format = GL_RED;
-  text_state.small_font.char_height = glyph_h;
-  text_state.small_font.chars_per_row = chars_per_row;
-  text_state.small_font.total_chars = chars_per_row * rows;
 
-  // Create OpenGL texture for the atlas
-  R_AllocateFontTexture(&text_state.small_font.texture, atlas_data);  
-  
-  // Free temporary buffer
-  free(atlas_data);
-  
-  printf("Small font atlas created successfully\n");
-  
-  // Initialize mesh for text rendering
-  // Vertex attribute layout: 0 = Position, 1 = UV, 2 = Color
-  R_VertexAttrib attribs[] = {
-    {0, 2, GL_SHORT, GL_FALSE, offsetof(text_vertex_t, x)},  // Position
-    {1, 2, GL_FLOAT, GL_FALSE, offsetof(text_vertex_t, u)},  // UV
-    {2, 4, GL_UNSIGNED_BYTE, GL_TRUE, offsetof(text_vertex_t, col)} // Color
-  };
-  R_MeshInit(&text_state.small_font.mesh, attribs, 3, sizeof(text_vertex_t), GL_TRIANGLES);
+  // ── Upload GL_RED texture ─────────────────────────────────────────────────
+  atlas->texture.width  = img_w;
+  atlas->texture.height = img_h;
+  atlas->texture.format = GL_RED;
+  R_AllocateFontTexture(&atlas->texture, red);
+  free(red);
 
+  if (glyphs) free(glyphs);
+
+  atlas->cell_w       = cell_w;
+  atlas->cell_h       = cell_h;
+  atlas->chars_per_row = chars_per_row;
+
+  // ── Initialise vertex mesh ────────────────────────────────────────────────
+  init_atlas_mesh(atlas);
+
+  (void)baseline; /* reserved: used for vertical alignment once baseline rendering is added */
   return true;
 }
 
-// Initialize text rendering system
-void init_text_rendering(void) {
-  memset(&text_state, 0, sizeof(text_state));
-  create_font_atlas();
-}
+// ── Legacy fallback: build atlas from hardcoded font_6x8 + icons_bits ────────
 
-// Get width of text substring with small font
-int strnwidth(const char* text, int text_length) {
-  if (!text || !*text) return 0; // Early return for empty strings
-  
-  if (text_length > MAX_TEXT_LENGTH) text_length = MAX_TEXT_LENGTH;
-  
-  int cursor_x = 0;
-  
-  // Pre-calculate all vertices for the entire string
-  for (int i = 0; i < text_length; i++) {
-    unsigned char c = text[i];
-    if (c == ' ') {
-      cursor_x += SPACE_WIDTH;
-      continue;
-    }
-    // Advance cursor position
-    cursor_x += text_state.small_font.char_to[c] - text_state.small_font.char_from[c];
-  }
-  return cursor_x;
-}
+static void create_legacy_atlas(void) {
+  extern unsigned char console_font_6x8[];
+  extern unsigned char icons_bits[];
 
-// Get width of text with small font
-int strwidth(const char* text) {
-  if (!text || !*text) return 0; // Early return for empty strings
-  return strnwidth(text, (int)strlen(text));
-}
+  const int tex_sz = 128, gw = 8, gh = 8, cpr = 16;
+  unsigned char *buf = (unsigned char *)calloc((size_t)(tex_sz * tex_sz), 1);
+  if (!buf) return;
 
-// Draw text using small bitmap font
-void draw_text_small(const char* text, int x, int y, uint32_t col) {
-  if (!text || !*text) return; // Early return for empty strings
-  
-  // Skip drawing if graphics aren't initialized (e.g., in tests)
-  if (!g_ui_runtime.running) return;
-  
-  int text_length = (int)strlen(text);
-  if (text_length > MAX_TEXT_LENGTH) text_length = MAX_TEXT_LENGTH;
-  
-  static text_vertex_t buffer[MAX_TEXT_LENGTH * VERTICES_PER_CHAR];
-  int vertex_count = 0;
-  
-  int cursor_x = x;
-  
-  // Pre-calculate all vertices for the entire string
-  for (int i = 0; i < text_length; i++) {
-    unsigned char c = text[i];
-    
-    if (c == ' ') {
-      cursor_x += SPACE_WIDTH;
-      continue;
-    }
-    if (c == '\n') {
-      cursor_x = x;
-      y += SMALL_LINE_HEIGHT;
-      continue;
-    }
-    
-    // Calculate texture coordinates
-    int atlas_x = (c % text_state.small_font.chars_per_row) * SMALL_FONT_WIDTH;
-    int atlas_y = (c / text_state.small_font.chars_per_row) * SMALL_FONT_HEIGHT;
-    
-    // Convert to normalized UV coordinates (0-255 range for uint8_t)
-    float u1 = (atlas_x + text_state.small_font.char_from[c])/(float)FONT_TEX_SIZE;
-    float v1 = (atlas_y)/(float)FONT_TEX_SIZE;
-    float u2 = (atlas_x + text_state.small_font.char_to[c])/(float)FONT_TEX_SIZE;
-    float v2 = (atlas_y + SMALL_FONT_HEIGHT)/(float)FONT_TEX_SIZE;
-    
-    uint8_t w = text_state.small_font.char_to[c] - text_state.small_font.char_from[c];
-    uint8_t h = SMALL_FONT_HEIGHT;
-    
-    // Skip spaces to save rendering effort
-    if (c != ' ') {
-      // First triangle (bottom-left, top-left, bottom-right)
-      buffer[vertex_count++] = (text_vertex_t) { cursor_x, y, u1, v1, col };
-      buffer[vertex_count++] = (text_vertex_t) { cursor_x, y + h, u1, v2, col };
-      buffer[vertex_count++] = (text_vertex_t) { cursor_x + w, y, u2, v1, col };
-      
-      // Second triangle (top-left, top-right, bottom-right)
-      buffer[vertex_count++] = (text_vertex_t) { cursor_x, y + h, u1, v2, col };
-      buffer[vertex_count++] = (text_vertex_t) { cursor_x + w, y + h, u2, v2, col };
-      buffer[vertex_count++] = (text_vertex_t) { cursor_x + w, y, u2, v1, col };
-    }
-    
-    // Advance cursor position
-    cursor_x += w;
-  }
-  
-  // Early return if nothing to draw
-  if (vertex_count == 0) return;
-  
-  // Set up blend state for 2-D UI text rendering.
-  R_SetBlendMode(true);
-  
-  // Get locations for shader uniforms
-  push_sprite_args(text_state.small_font.texture.id, 0, 0, 1, 1, 1);
-  
-  // Bind font texture and draw
-  R_TextureBind(&text_state.small_font.texture);
-  R_MeshDrawDynamic(&text_state.small_font.mesh, buffer, vertex_count);
-  
-  // Restore GL state
-  // Note: Commented out to match original behavior
-  // glEnable(GL_DEPTH_TEST);
-  // glDisable(GL_BLEND);
-}
-
-// Calculate total height of text with wrapping
-int calc_text_height(const char* text, int width) {
-  if (!text || !*text || width <= 0) return 0;
-  
-  // Check if text_state is initialized
-  if (text_state.small_font.char_height == 0) return 0;
-  
-  int lines = 1, x = 0;
-  for (const char* p = text; *p; p++) {
-    if (*p == '\n') {
-      lines++;
-      x = 0;
-    } else if (*p == ' ') {
-      x += SPACE_WIDTH;
-    } else {
-      int cw = get_char_width((unsigned char)*p);
-      if (x + cw > width) {
-        lines++;
-        x = cw;
-      } else {
-        x += cw;
+  for (int c = 0; c < 128; c++) {
+    int ax = (c % cpr) * gw, ay = (c / cpr) * gh;
+    text_state.big_met.advance[c] = 0;
+    text_state.big_met.x0[c]      = 127;  // sentinel: INT8_MAX, updated by min-x scan below
+    uint8_t hi = 0;
+    for (int y = 0; y < gh; y++) {
+      int byte = console_font_6x8[c * gh + y];
+      for (int x = 0; x < 6; x++) {
+        if ((byte >> (5 - x)) & 1) {
+          buf[(ay + y) * tex_sz + ax + x] = 255;
+          if (x < text_state.big_met.x0[c]) text_state.big_met.x0[c] = (uint8_t)x;
+          if (x + 2 > hi) hi = (uint8_t)(x + 2);
+        }
       }
     }
+    if (hi == 0) { text_state.big_met.x0[c] = 0; hi = 3; } // space
+    text_state.big_met.draw_w[c]  = hi - text_state.big_met.x0[c];
+    text_state.big_met.advance[c] = text_state.big_met.draw_w[c];
   }
-  return lines * SMALL_LINE_HEIGHT;
+  memcpy(buf + tex_sz * tex_sz / 2, icons_bits, (size_t)(tex_sz * tex_sz / 2));
+  for (int i = 128; i < 256; i++) {
+    text_state.big_met.x0[i]      = 0;
+    text_state.big_met.draw_w[i]  = 8;
+    text_state.big_met.advance[i] = 8;
+  }
+
+  text_state.big.texture.width  = tex_sz;
+  text_state.big.texture.height = tex_sz;
+  text_state.big.texture.format = GL_RED;
+  R_AllocateFontTexture(&text_state.big.texture, buf);
+  free(buf);
+
+  text_state.big.cell_w        = gw;
+  text_state.big.cell_h        = gh;
+  text_state.big.chars_per_row = cpr;
+  init_atlas_mesh(&text_state.big);
+
+  text_state.big_height   = gh;
+  text_state.big_line     = gh + 4;
+  text_state.big_space    = 3;
+  // No separate small atlas in legacy mode — small metrics mirror big.
+  text_state.small_height = gh;
+  text_state.small_line   = gh + 4;
+  text_state.small_space  = 3;
+  text_state.has_small    = false;
 }
 
-// Draw text with wrapping and viewport clipping
-void draw_text_wrapped(const char* text, rect_t const *viewport, uint32_t col) {
+// ── init_text_rendering ───────────────────────────────────────────────────────
+
+void init_text_rendering(void) {
+  memset(&text_state, 0, sizeof(text_state));
+
+  const char *exe = ui_get_exe_dir();
+  char small_path[4096], chicago_path[4096], geneva_path[4096];
+  snprintf(small_path,  sizeof(small_path),  "%s/../share/orion/SmallFont.png",  exe);
+  snprintf(chicago_path,  sizeof(chicago_path),  "%s/../share/orion/Chicago-12.png", exe);
+  snprintf(geneva_path, sizeof(geneva_path), "%s/../share/orion/Geneva-12.png",    exe);
+
+#if UI_WINDOW_SCALE == 1
+  // At native (1:1) scale: ChiKareGo2 for chrome (FONT_SYSTEM), Geneva9 /
+  // SmallFont for content (FONT_SMALL) plus icon chars (128-255).
+  bool chicago_ok = load_atlas(&text_state.big, &text_state.big_met,
+                              chicago_path, 0, 255);
+  if (chicago_ok) {
+    text_state.big_height = text_state.big.cell_h;
+    text_state.big_line   = text_state.big.cell_h + 4;
+    text_state.big_space  = text_state.big_met.advance[' ']
+                            ? text_state.big_met.advance[' '] : 5;
+
+    // Try Geneva-12 first, then fall back to SmallFont for the small atlas.
+    bool geneva_ok = load_atlas(&text_state.small, &text_state.small_met,
+                                geneva_path, 0, 255);
+    if (!geneva_ok)
+      geneva_ok = load_atlas(&text_state.small, &text_state.small_met,
+                             small_path,   0, 255);
+    text_state.has_small = geneva_ok;
+    if (geneva_ok) {
+      text_state.small_height = text_state.small.cell_h;
+      text_state.small_line   = text_state.small.cell_h + 4;
+      text_state.small_space  = text_state.small_met.advance[' ']
+                                ? text_state.small_met.advance[' '] : 3;
+    } else {
+      text_state.small_height = text_state.big_height;
+      text_state.small_line   = text_state.big_line;
+      text_state.small_space  = text_state.big_space;
+    }
+    printf("text: ChiKareGo2 (%dx%d)%s\n",
+           text_state.big.cell_w, text_state.big.cell_h,
+           geneva_ok ? " + small atlas" : "");
+    return;
+  }
+#endif
+
+  // Default (scale>=2 or ChiKareGo2 unavailable): SmallFont for everything.
+  bool font_ok = load_atlas(&text_state.big, &text_state.big_met,
+                             small_path, 0, 255);
+  if (font_ok) {
+    text_state.has_small    = false;
+    int h  = text_state.big.cell_h;
+    int sp = text_state.big_met.advance[' '] ? text_state.big_met.advance[' '] : 3;
+    text_state.big_height   = text_state.small_height = h;
+    text_state.big_line     = text_state.small_line   = h + 4;
+    text_state.big_space    = text_state.small_space  = sp;
+    printf("text: SmallFont (%dx%d)\n", text_state.big.cell_w, h);
+    return;
+  }
+
+  // Final fallback: generate atlas from hardcoded font_6x8 data.
+  printf("text: PNG fonts unavailable, using built-in font_6x8\n");
+  create_legacy_atlas();
+}
+
+// ── Internal helpers ──────────────────────────────────────────────────────────
+
+// Return the atlas + metrics for the given font role and char code.
+// For FONT_SYSTEM: c < 128 → big atlas (ChiKareGo2); c >= 128 → small (icons).
+// For FONT_SMALL:  all chars → small atlas.
+// When has_small is false both roles use big.
+static inline font_atlas_t *atlas_for_font(ui_font_t font, unsigned char c,
+                                           glyph_metrics_t **met_out) {
+  if (text_state.has_small && (font == FONT_SMALL || c >= 128)) {
+    *met_out = &text_state.small_met;
+    return &text_state.small;
+  }
+  *met_out = &text_state.big_met;
+  return &text_state.big;
+}
+
+static inline int char_advance(unsigned char c) {
+  glyph_metrics_t *m;
+  atlas_for_font(FONT_SYSTEM, c, &m);
+  return m->advance[c];
+}
+
+// Public API: pixel width of one glyph from the FONT_SYSTEM atlas.
+int char_width(unsigned char c) {
+  if (!text_state.big_height) return 0;
+  return char_advance(c);
+}
+
+// ── Render a filled vertex batch for one atlas ────────────────────────────────
+
+extern void push_sprite_args(int tex, int x, int y, int w, int h, float alpha);
+
+static void flush_batch(font_atlas_t *atlas, text_vertex_t *buf, int count) {
+  if (count == 0) return;
+  R_SetBlendMode(true);
+  push_sprite_args((int)atlas->texture.id, 0, 0, 1, 1, 1.0f);
+  R_TextureBind(&atlas->texture);
+  R_MeshDrawDynamic(&atlas->mesh, buf, (size_t)count);
+}
+
+// ── Build vertices for one character ─────────────────────────────────────────
+
+static int emit_char_verts(text_vertex_t *buf, int cursor_x, int y,
+                           unsigned char c, uint32_t col,
+                           font_atlas_t *atlas, glyph_metrics_t *met) {
+  int cell_col = c % atlas->chars_per_row;
+  int cell_row = c / atlas->chars_per_row;
+  int cx0      = cell_col * atlas->cell_w;
+  int cy0      = cell_row * atlas->cell_h;
+  int dw       = met->draw_w[c];
+  int dh       = atlas->cell_h;
+  if (dw == 0) return 0;
+
+  float tw = (float)atlas->texture.width;
+  float th = (float)atlas->texture.height;
+  // Glyphs are stored left-aligned in cells; x0 is a pen offset for rendering, not texture coords.
+  float u1 = cx0                 / tw;
+  float v1 = cy0                 / th;
+  float u2 = (cx0 + dw)          / tw;
+  float v2 = (cy0 + dh)          / th;
+
+  int x = cursor_x;
+  buf[0] = (text_vertex_t){ (int16_t)x,      (int16_t)y,      u1, v1, col };
+  buf[1] = (text_vertex_t){ (int16_t)x,      (int16_t)(y+dh), u1, v2, col };
+  buf[2] = (text_vertex_t){ (int16_t)(x+dw), (int16_t)y,      u2, v1, col };
+  buf[3] = (text_vertex_t){ (int16_t)x,      (int16_t)(y+dh), u1, v2, col };
+  buf[4] = (text_vertex_t){ (int16_t)(x+dw), (int16_t)(y+dh), u2, v2, col };
+  buf[5] = (text_vertex_t){ (int16_t)(x+dw), (int16_t)y,      u2, v1, col };
+  return VERTICES_PER_CHAR;
+}
+
+// ── strwidth / strnwidth ──────────────────────────────────────────────────────
+
+// Internal font-parameterised width measurement.
+static int strnwidth_impl(ui_font_t font, const char *text, int len) {
+  if (!text || !*text) return 0;
+  if (len > MAX_TEXT_LENGTH) len = MAX_TEXT_LENGTH;
+  int sw = (font == FONT_SMALL && text_state.has_small && text_state.small_space)
+           ? text_state.small_space
+           : (text_state.big_space ? text_state.big_space : 3);
+  int w = 0;
+  for (int i = 0; i < len; i++) {
+    unsigned char c = (unsigned char)text[i];
+    if (c == ' ') { w += sw; continue; }
+    if (c == '\n') continue;
+    glyph_metrics_t *met;
+    atlas_for_font(font, c, &met);
+    w += met->advance[c];
+  }
+  return w;
+}
+
+int strnwidth(const char *text, int text_length) {
+  return strnwidth_impl(FONT_SYSTEM, text, text_length);
+}
+
+int strwidth(const char *text) {
+  if (!text || !*text) return 0;
+  return strnwidth_impl(FONT_SYSTEM, text, (int)strlen(text));
+}
+
+// ── New explicit-font metric API ──────────────────────────────────────────────
+
+int text_char_height(ui_font_t font) {
+  if (font == FONT_SMALL)
+    return text_state.small_height ? text_state.small_height : 8;
+  return text_state.big_height ? text_state.big_height : 8;
+}
+
+int text_strwidth(ui_font_t font, const char *text) {
+  if (!text || !*text) return 0;
+  return strnwidth_impl(font, text, (int)strlen(text));
+}
+
+// ── draw_text / draw_text_small ───────────────────────────────────────────────
+
+void draw_text(ui_font_t font, const char *text, int x, int y, uint32_t col) {
+  if (!text || !*text || !g_ui_runtime.running) return;
+
+  int text_length = (int)strlen(text);
+  if (text_length > MAX_TEXT_LENGTH) text_length = MAX_TEXT_LENGTH;
+
+  // Two static vertex buffers — one per atlas.
+  // For FONT_SMALL (has_small): all chars go to buf_small.
+  // For FONT_SYSTEM (has_small): chars 0-127 → buf_big, 128-255 → buf_small.
+  // Without has_small: all chars go to buf_big.
+  static text_vertex_t buf_big  [MAX_TEXT_LENGTH * VERTICES_PER_CHAR];
+  static text_vertex_t buf_small[MAX_TEXT_LENGTH * VERTICES_PER_CHAR];
+  int vc_big = 0, vc_small = 0;
+
+  int sw = (font == FONT_SMALL && text_state.has_small && text_state.small_space)
+           ? text_state.small_space
+           : (text_state.big_space ? text_state.big_space : 3);
+  int lh = (font == FONT_SMALL && text_state.has_small && text_state.small_line)
+           ? text_state.small_line
+           : (text_state.big_line ? text_state.big_line : 12);
+
+  int cursor_x = x;
+  for (int i = 0; i < text_length; i++) {
+    unsigned char c = (unsigned char)text[i];
+    if (c == ' ')  { cursor_x += sw; continue; }
+    if (c == '\n') { cursor_x = x; y += lh; continue; }
+
+    glyph_metrics_t *met;
+    font_atlas_t    *atlas = atlas_for_font(font, c, &met);
+
+    bool use_small = (text_state.has_small && atlas == &text_state.small);
+    text_vertex_t *buf = use_small ? buf_small : buf_big;
+    int           *vc  = use_small ? &vc_small  : &vc_big;
+
+    *vc += emit_char_verts(buf + *vc, cursor_x, y, c, col, atlas, met);
+    cursor_x += met->advance[c];
+  }
+
+  if (vc_big > 0)
+    flush_batch(&text_state.big,   buf_big,   vc_big);
+  if (vc_small > 0)
+    flush_batch(&text_state.small, buf_small, vc_small);
+}
+
+void draw_text_clipped(ui_font_t font, const char *text,
+                       rect_t const *viewport, uint32_t col, uint32_t flags) {
   if (!text || !*text || !g_ui_runtime.running || !viewport) return;
-  
-  // Check if text_state is initialized
-  if (text_state.small_font.char_height == 0) return;
-  
+  int cell_h = text_char_height(font);
   int x = viewport->x;
-  int y = viewport->y;
-  int width = viewport->w;
-  // int height = viewport->h; // Currently not used since we skip per-character visibility checks for performance
-  
-  static text_vertex_t buffer[MAX_TEXT_LENGTH * VERTICES_PER_CHAR];
-  int vertex_count = 0, cx = x, cy = y;
-  
-  for (const char* p = text; *p && vertex_count < MAX_TEXT_LENGTH * VERTICES_PER_CHAR - VERTICES_PER_CHAR; p++) {
-    unsigned char c = *p;
-    if (c == '\n') {
-      cx = x;
-      cy += SMALL_LINE_HEIGHT;
-      continue;
-    }
-    if (c == ' ') {
-      cx += 3;
-      continue;
-    }
-    
-    int cw = get_char_width(c);
-    if (cx + cw > x + width) {
-      cx = x;
-      cy += SMALL_LINE_HEIGHT;
-    }
-    
-    // Show character if any part of it is visible in viewport
-    // if (cy + SMALL_FONT_HEIGHT > y && cy < y + height) {
-      int ax = (c % text_state.small_font.chars_per_row) * SMALL_FONT_WIDTH;
-      int ay = (c / text_state.small_font.chars_per_row) * SMALL_FONT_HEIGHT;
-      float u1 = (ax + text_state.small_font.char_from[c]) / (float)FONT_TEX_SIZE;
-      float v1 = ay / (float)FONT_TEX_SIZE;
-      float u2 = (ax + text_state.small_font.char_to[c]) / (float)FONT_TEX_SIZE;
-      float v2 = (ay + SMALL_FONT_HEIGHT) / (float)FONT_TEX_SIZE;
-      
-      buffer[vertex_count++] = (text_vertex_t){cx, cy, u1, v1, col};
-      buffer[vertex_count++] = (text_vertex_t){cx, cy + SMALL_FONT_HEIGHT, u1, v2, col};
-      buffer[vertex_count++] = (text_vertex_t){cx + cw, cy, u2, v1, col};
-      buffer[vertex_count++] = (text_vertex_t){cx, cy + SMALL_FONT_HEIGHT, u1, v2, col};
-      buffer[vertex_count++] = (text_vertex_t){cx + cw, cy + SMALL_FONT_HEIGHT, u2, v2, col};
-      buffer[vertex_count++] = (text_vertex_t){cx + cw, cy, u2, v1, col};
-    // }
+  int y = viewport->y + (viewport->h - cell_h) / 2;
+  if (flags & TEXT_ALIGN_RIGHT)
+    x = viewport->x + viewport->w - text_strwidth(font, text);
+  else if (flags & TEXT_PADDING_LEFT)
+    x += WIN_PADDING;
+  draw_text(font, text, x, y, col);
+}
+
+// ── Legacy FONT_SYSTEM wrappers ───────────────────────────────────────────────
+
+void draw_text_small(const char *text, int x, int y, uint32_t col) {
+  draw_text(FONT_SYSTEM, text, x, y, col);
+}
+
+void draw_text_small_clipped(const char *text, rect_t const *viewport,
+                              uint32_t col, uint32_t flags) {
+  draw_text_clipped(FONT_SYSTEM, text, viewport, col, flags);
+}
+
+// ── calc_text_height ──────────────────────────────────────────────────────────
+
+int calc_text_height(const char *text, int width) {
+  if (!text || !*text || width <= 0 || !text_state.big_height) return 0;
+  int lines = 1, cx = 0;
+  for (const char *p = text; *p; p++) {
+    unsigned char c = (unsigned char)*p;
+    if (c == '\n') { lines++; cx = 0; continue; }
+    if (c == ' ')  { cx += get_space_width(); continue; }
+    int cw = char_advance(c);
+    if (cx + cw > width) { lines++; cx = cw; }
+    else                 { cx += cw; }
+  }
+  return lines * get_line_height();
+}
+
+// ── draw_text_wrapped ─────────────────────────────────────────────────────────
+
+void draw_text_wrapped(const char *text, rect_t const *viewport, uint32_t col) {
+  if (!text || !*text || !g_ui_runtime.running || !viewport) return;
+  if (!text_state.big_height) return;
+
+  static text_vertex_t buf_big  [MAX_TEXT_LENGTH * VERTICES_PER_CHAR];
+  static text_vertex_t buf_small[MAX_TEXT_LENGTH * VERTICES_PER_CHAR];
+  int vc_big = 0, vc_small = 0;
+  int lh = get_line_height(), sw = get_space_width();
+
+  int x = viewport->x, y = viewport->y, w = viewport->w;
+  int cx = x, cy = y;
+
+  for (const char *p = text;
+       *p && vc_big   < MAX_TEXT_LENGTH * VERTICES_PER_CHAR - VERTICES_PER_CHAR
+          && vc_small < MAX_TEXT_LENGTH * VERTICES_PER_CHAR - VERTICES_PER_CHAR;
+       p++) {
+    unsigned char c = (unsigned char)*p;
+    if (c == '\n') { cx = x; cy += lh; continue; }
+    if (c == ' ')  { cx += sw; continue; }
+
+    int cw = char_advance(c);
+    if (cx + cw > x + w) { cx = x; cy += lh; }
+
+    glyph_metrics_t *met;
+    font_atlas_t    *atlas = atlas_for_font(FONT_SYSTEM, c, &met);
+
+    bool use_small = (text_state.has_small && atlas == &text_state.small);
+    text_vertex_t *buf = use_small ? buf_small : buf_big;
+    int           *vc  = use_small ? &vc_small  : &vc_big;
+
+    *vc += emit_char_verts(buf + *vc, cx, cy, c, col, atlas, met);
     cx += cw;
   }
-  
-  if (vertex_count == 0) return;
-  
-  R_SetBlendMode(true);
-  push_sprite_args(text_state.small_font.texture.id, 0, 0, 1, 1, 1);
-  R_TextureBind(&text_state.small_font.texture);
-  R_MeshDrawDynamic(&text_state.small_font.mesh, buffer, vertex_count);
+
+  if (vc_big > 0)
+    flush_batch(&text_state.big,   buf_big,   vc_big);
+  if (vc_small > 0)
+    flush_batch(&text_state.small, buf_small, vc_small);
 }
 
-// Clean up text rendering resources
+// ── shutdown_text_rendering ───────────────────────────────────────────────────
+
 void shutdown_text_rendering(void) {
-  // Delete small font resources
-  R_DeleteTexture((uint32_t)text_state.small_font.texture.id);
-  text_state.small_font.texture.id = 0;
-  R_MeshDestroy(&text_state.small_font.mesh);
-  
-  // Clear the entire state
+  R_DeleteTexture((uint32_t)text_state.big.texture.id);
+  text_state.big.texture.id = 0;
+  R_MeshDestroy(&text_state.big.mesh);
+
+  if (text_state.has_small) {
+    R_DeleteTexture((uint32_t)text_state.small.texture.id);
+    text_state.small.texture.id = 0;
+    R_MeshDestroy(&text_state.small.mesh);
+  }
+
   memset(&text_state, 0, sizeof(text_state));
 }
