@@ -33,8 +33,8 @@ typedef struct {
 // Per-character rendering metrics, indexed by the full char code (0-255).
 typedef struct {
   uint8_t advance[256];  // cursor advance in pixels
-  uint8_t x0[256];       // UV left offset within cell (proportional trim)
-  uint8_t draw_w[256];   // quad draw width in pixels
+  int8_t  x0[256];       // bitmap box left offset (can be negative)
+  uint8_t draw_w[256];   // bitmap width in pixels
 } glyph_metrics_t;
 
 // One font atlas: a GL_RED texture + mesh + glyph metrics.
@@ -97,43 +97,14 @@ static void init_atlas_mesh(font_atlas_t *atlas) {
   R_MeshInit(&atlas->mesh, attribs, 3, sizeof(text_vertex_t), GL_TRIANGLES);
 }
 
-// ── Scan pixel columns of one 8-bit R-channel cell to find advance metrics ───
-
-static void scan_cell_metrics(const unsigned char *red_buf, int tex_w,
-                               int cell_x, int cell_y, int cell_w, int cell_h,
-                               uint8_t *out_x0, uint8_t *out_draw_w, uint8_t *out_advance) {
-  int lo = cell_w, hi = -1;
-  for (int cy = 0; cy < cell_h; cy++) {
-    for (int cx = 0; cx < cell_w; cx++) {
-      if (red_buf[(cell_y + cy) * tex_w + (cell_x + cx)] > 0) {
-        if (cx < lo) lo = cx;
-        if (cx > hi) hi = cx;
-      }
-    }
-  }
-  if (hi < 0) {
-    // Empty cell (e.g. space char) — advance=0 signals "use default space width"
-    *out_x0      = 0;
-    *out_draw_w  = 0;
-    *out_advance = 0;
-  } else {
-    *out_x0     = (uint8_t)lo;
-    *out_draw_w = (uint8_t)(hi - lo + 2); // +1 for pixel itself, +1 inter-char gap
-    *out_advance = *out_draw_w;
-  }
-}
-
 // ── Load one atlas from a PNG file ───────────────────────────────────────────
 //
 // first_char/last_char: range of char codes to populate metrics for.
-// full_cell: if true, each char is drawn as a full cell_w×cell_h quad (ChiKareGo2);
-//            if false, each char is trimmed proportionally by pixel scanning (SmallFont).
-// foNT_data/foNT_size: raw PNG bytes already read (may be NULL to skip foNT parsing).
+// Requires foNT metadata chunk in PNG; fails if not present.
 
 static bool load_atlas(font_atlas_t *atlas, glyph_metrics_t *met,
                        const char *path,
-                       int first_char, int last_char,
-                       bool full_cell) {
+                       int first_char, int last_char) {
   // ── Load pixel data ───────────────────────────────────────────────────────
   int img_w = 0, img_h = 0;
   uint8_t *rgba = load_image(path, &img_w, &img_h);
@@ -142,32 +113,27 @@ static bool load_atlas(font_atlas_t *atlas, glyph_metrics_t *met,
     return false;
   }
 
-  // ── Detect cell layout from image dimensions ──────────────────────────────
-  // Default cell size for each known font: SmallFont=8×8 (128px atlas),
-  // ChiKareGo2=16×16 (256px atlas).  The foNT chunk always takes precedence
-  // and overrides these defaults when present.
-  int cell_w = (img_w >= 256) ? 16 : 8;
-  int cell_h = (img_h >= 256) ? 16 : 8;
+  // ── Cell layout will come from foNT chunk ─────────────────────────────────
+  int cell_w = 16, cell_h = 16;      // placeholder; will be set from foNT
   int chars_per_row = img_w / cell_w;
-  // TODO: use baseline for sub-pixel vertical alignment when supported.
   int baseline = cell_h;
 
-  // ── Try to read foNT chunk ────────────────────────────────────────────────
+  // ── Read foNT chunk (required) ─────────────────────────────────────────────
   TinyPngFontInfo fi = {0};
   TinyPngGlyph *glyphs = NULL;
   size_t raw_sz = 0;
   unsigned char *raw = read_file(path, &raw_sz);
-  bool has_font_meta = false;
-  if (raw) {
-    has_font_meta = (tiny_png_read_font_chunk(raw, raw_sz, &fi, &glyphs) == 1);
-    free(raw);
+  if (!raw || tiny_png_read_font_chunk(raw, raw_sz, &fi, &glyphs) != 1) {
+    printf("text: font %s missing required foNT chunk\n", path);
+    image_free(rgba);
+    if (raw) free(raw);
+    return false;
   }
-  if (has_font_meta) {
-    cell_w        = fi.cell_w;
-    cell_h        = fi.cell_h;
-    chars_per_row = img_w / cell_w;
-    baseline      = fi.baseline;
-  }
+  free(raw);
+  cell_w        = fi.cell_w;
+  cell_h        = fi.cell_h;
+  chars_per_row = img_w / cell_w;
+  baseline      = fi.baseline;
 
   // ── Extract R channel → single-byte GL_RED buffer ────────────────────────
   size_t npx = (size_t)(img_w * img_h);
@@ -181,37 +147,18 @@ static bool load_atlas(font_atlas_t *atlas, glyph_metrics_t *met,
     red[i] = rgba[i * 4];   // R channel; for greyscale PNG loaded as RGBA this is the grayval
   image_free(rgba);
 
-  // ── Populate glyph metrics ────────────────────────────────────────────────
+  // ── Populate glyph metrics from foNT ──────────────────────────────────────
   for (int c = first_char; c <= last_char; c++) {
-    int cell_col = c % chars_per_row;
-    int cell_row = c / chars_per_row;
-    int cx0      = cell_col * cell_w;
-    int cy0      = cell_row * cell_h;
-
-    if (has_font_meta && c < fi.first_char + fi.num_chars) {
+    if (c >= fi.first_char && c < fi.first_char + fi.num_chars) {
       int idx = c - fi.first_char;
-      uint8_t adv = glyphs[idx].advance;   // use local var; same ptr as fi.glyphs
-      if (full_cell) {
-        // Glyphs are left-aligned in their cells; draw quad is advance-wide so
-        // characters don't overlap, and we only sample the glyph's own pixels.
-        met->x0[c]      = 0;
-        met->draw_w[c]  = adv ? adv : (uint8_t)cell_w;
-        met->advance[c] = met->draw_w[c];
-      } else {
-        scan_cell_metrics(red, img_w, cx0, cy0, cell_w, cell_h,
-                          &met->x0[c], &met->draw_w[c], &met->advance[c]);
-        if (!met->advance[c] && adv) met->advance[c] = adv;
-      }
+      met->x0[c]      = glyphs[idx].x0;
+      met->draw_w[c]  = glyphs[idx].w;
+      met->advance[c] = glyphs[idx].advance;
     } else {
-      // No foNT — scan pixels
-      if (full_cell) {
-        met->x0[c]      = 0;
-        met->draw_w[c]  = (uint8_t)cell_w;
-        met->advance[c] = (uint8_t)cell_w;
-      } else {
-        scan_cell_metrics(red, img_w, cx0, cy0, cell_w, cell_h,
-                          &met->x0[c], &met->draw_w[c], &met->advance[c]);
-      }
+      // Char outside foNT range — use defaults
+      met->x0[c]      = 0;
+      met->draw_w[c]  = (uint8_t)cell_w;
+      met->advance[c] = (uint8_t)cell_w;
     }
   }
 
@@ -307,20 +254,19 @@ void init_text_rendering(void) {
   // At native (1:1) scale: ChiKareGo2 for chrome (FONT_SYSTEM), Geneva9 /
   // SmallFont for content (FONT_SMALL) plus icon chars (128-255).
   bool chika_ok = load_atlas(&text_state.big, &text_state.big_met,
-                              chika_path, 0, 255, /*full_cell=*/true);
+                              chika_path, 0, 255);
   if (chika_ok) {
     text_state.big_height = text_state.big.cell_h;
     text_state.big_line   = text_state.big.cell_h + 4;
     text_state.big_space  = text_state.big_met.advance[' ']
                             ? text_state.big_met.advance[' '] : 5;
 
-    // Try Geneva9 first (Silkscreen text + SmallFont icons composite),
-    // then fall back to SmallFont for the small atlas.
+    // Try Geneva-12 first, then fall back to SmallFont for the small atlas.
     bool geneva_ok = load_atlas(&text_state.small, &text_state.small_met,
-                                geneva_path, 0, 255, /*full_cell=*/false);
+                                geneva_path, 0, 255);
     if (!geneva_ok)
       geneva_ok = load_atlas(&text_state.small, &text_state.small_met,
-                             small_path,   0, 255, /*full_cell=*/false);
+                             small_path,   0, 255);
     text_state.has_small = geneva_ok;
     if (geneva_ok) {
       text_state.small_height = text_state.small.cell_h;
@@ -341,7 +287,7 @@ void init_text_rendering(void) {
 
   // Default (scale>=2 or ChiKareGo2 unavailable): SmallFont for everything.
   bool font_ok = load_atlas(&text_state.big, &text_state.big_met,
-                             small_path, 0, 255, /*full_cell=*/false);
+                             small_path, 0, 255);
   if (font_ok) {
     text_state.has_small    = false;
     int h  = text_state.big.cell_h;
@@ -413,10 +359,11 @@ static int emit_char_verts(text_vertex_t *buf, int cursor_x, int y,
 
   float tw = (float)atlas->texture.width;
   float th = (float)atlas->texture.height;
-  float u1 = (cx0 + met->x0[c])        / tw;
-  float v1 = cy0                        / th;
-  float u2 = (cx0 + met->x0[c] + dw)   / tw;
-  float v2 = (cy0 + dh)                 / th;
+  // Glyphs are stored left-aligned in cells; x0 is a pen offset for rendering, not texture coords.
+  float u1 = cx0                 / tw;
+  float v1 = cy0                 / th;
+  float u2 = (cx0 + dw)          / tw;
+  float v2 = (cy0 + dh)          / th;
 
   int x = cursor_x;
   buf[0] = (text_vertex_t){ (int16_t)x,      (int16_t)y,      u1, v1, col };
