@@ -301,7 +301,7 @@ void fill_rect(uint32_t color, rect_t const *r) {
 }
 
 // Draw a dashed selection-outline rectangle using 4 tiled draw calls instead of
-// one fill_rect per dash segment.  The 4×4 checker texture is sampled with tiled
+// one fill_rect per dash segment.  The 4x4 checker texture is sampled with tiled
 // UVs so that the first row/column produces a B,B,W,W repeating dash regardless
 // of the selection size, keeping the GL call count constant (O(1)).
 void draw_sel_rect(rect_t const *r) {

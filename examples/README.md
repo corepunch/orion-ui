@@ -84,7 +84,7 @@ A MacPaint-inspired raster image editor with a 16-color palette, demonstrating:
 
 ### Canvas
 
-The editable canvas is **320 × 200 pixels** displayed at 2× (640 × 400 logical pixels),
+The editable canvas is **320 x 200 pixels** displayed at 2x (640 x 400 logical pixels),
 matching the classic MacPaint resolution.
 
 ### Building
@@ -120,7 +120,7 @@ No additional library installation is required.
 | Polygon     | Click to add vertices; right-click to close and commit         |
 | Spray       | Airbrush: scatters random pixels within an 8-pixel radius      |
 | Eyedropper  | Left-click to pick foreground color; right-click for background|
-| Magnifier   | Shows a 16×16 pixel loupe at 4× zoom in the canvas top-right, centered on the hovered pixel |
+| Magnifier   | Shows a 16x16 pixel loupe at 4x zoom in the canvas top-right, centered on the hovered pixel |
 
 Click a tool name in the left panel to activate it.
 Click a color swatch to set the foreground color.

@@ -44,7 +44,7 @@
 #define TOOL_ICON_W    16
 #define TOOL_ICON_H    16
 
-// Toolbox grid rows and height: ceil(NUM_TOOLS / 2) rows × button size.
+// Toolbox grid rows and height: ceil(NUM_TOOLS / 2) rows x button size.
 #define TOOL_TOOLBAR_ROWS (((NUM_TOOLS) + TOOLBOX_COLS - 1) / TOOLBOX_COLS)
 #define TOOL_TOOLBAR_H    ((TOOL_TOOLBAR_ROWS) * TOOLBOX_BTN_SIZE)
 

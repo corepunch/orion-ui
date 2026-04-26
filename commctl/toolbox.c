@@ -123,7 +123,7 @@ static void draw_toolbox_button(toolbox_state_t *st, int idx,
     tint = get_sys_color((sys_color_idx_t)st->icon_tint_brush);
 
   if (icon >= SYSICON_BASE) {
-    // Built-in 16×16 sysicon sheet (optionally tinted).
+    // Built-in 16x16 sysicon sheet (optionally tinted).
     rect_t icon_dst = rect_offset(rect_center(cell, 16, 16), px, px);
     draw_icon16(icon, icon_dst.x, icon_dst.y, tint);
   } else if (st->strip.tex && st->strip.cols > 0) {

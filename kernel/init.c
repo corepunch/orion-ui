@@ -32,7 +32,7 @@ static bool g_graphics_initialized = false;
 // Internal white texture for drawing solid colors
 uint32_t ui_white_texture = 0;
 
-// Internal 4×4 checker texture for drawing selection outlines
+// Internal 4x4 checker texture for drawing selection outlines
 uint32_t ui_checker_texture = 0;
 
 // Built-in system icon strip loaded from share/orion/icon_sheet_16x16.png.
@@ -41,12 +41,12 @@ uint32_t ui_checker_texture = 0;
 bitmap_strip_t g_sysicon_strip = {0};
 static uint32_t g_sysicon_tex = 0;
 
-// Theme icon strip loaded from share/orion/theme.png (144×18 px grayscale,
-// 9×9 tiles).  Indexed by theme_icon_t (user/theme.h).
+// Theme icon strip loaded from share/orion/theme.png (144x18 px grayscale,
+// 9x9 tiles).  Indexed by theme_icon_t (user/theme.h).
 static bitmap_strip_t g_theme_strip = {0};
 static uint32_t g_theme_tex = 0;
 
-// File-picker icon strip loaded from share/orion/filepicker.png (16×16 RGBA
+// File-picker icon strip loaded from share/orion/filepicker.png (16x16 RGBA
 // tiles, icon_id_t indices from user/sysicons.h).  Used exclusively by
 // win_filelist via RVM_SETICONSTRIP.
 static bitmap_strip_t g_icons_strip = {0};
@@ -61,7 +61,7 @@ void init_ui_white_texture(void) {
   }
 }
 
-// Initialize the 4×4 checker texture used for dashed selection outlines.
+// Initialize the 4x4 checker texture used for dashed selection outlines.
 void init_ui_checker_texture(void) {
   if (ui_checker_texture == 0) {
     static const uint8_t pixels[4 * 4 * 4] = {
@@ -148,7 +148,7 @@ static void shutdown_theme_strip(void) {
 }
 
 // Load the file-picker icon sheet from <exe_dir>/../share/orion/filepicker.png.
-// Tiles are 16×16 RGBA; icons are indexed by icon_id_t (user/sysicons.h).
+// Tiles are 16x16 RGBA; icons are indexed by icon_id_t (user/sysicons.h).
 static void init_icons_strip(void) {
   if (g_icons_tex != 0) return;
   char path[4096];

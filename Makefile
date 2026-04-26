@@ -218,7 +218,7 @@ tools: $(TOOLS_BINS)
 	@echo "All tools built"
 
 fonts: tools
-	$(BIN_DIR)/font_atlas fonts/ChiKareGo2.ttf share/ChiKareGo2.png -pixelsize=16 -em -sharp -cellw=10 -cellh=16 -v
+	$(BIN_DIR)/font_atlas fonts/ChiKareGo2.ttf share/Chicago-12.png -pixelsize=16 -em -sharp -cellw=10 -cellh=15 -v
 	$(BIN_DIR)/font_atlas fonts/FindersKeepers.ttf share/FindersKeepers.png -pixelsize=16 -em -sharp -cellw=8 -cellh=9 -v
 # 	$(BIN_DIR)/font_atlas fonts/Pix32.ttf share/Geneva-12.png -pixelsize=12 -em -sharp -cellw=8 -cellh=16 -v
 	$(BIN_DIR)/font_atlas fonts/PixelOperator.ttf share/Geneva-12.png -pixelsize=16 -em -sharp -cellw=8 -cellh=16 -v -scan-width -letter-spacing=2
@@ -259,7 +259,7 @@ share: $(VGA_FONT_PNG) | $(SHARE_DIR)
 	@mkdir -p $(SHARE_DIR)/orion
 	@cp share/icon_sheet_16x16.png $(SHARE_DIR)/orion/
 	@cp share/SmallFont.png $(SHARE_DIR)/orion/
-	@cp share/ChiKareGo2.png $(SHARE_DIR)/orion/
+	@cp share/Chicago-12.png $(SHARE_DIR)/orion/
 	@cp share/Geneva-12.png $(SHARE_DIR)/orion/
 	@cp share/theme.png $(SHARE_DIR)/orion/
 	@cp share/filepicker.png $(SHARE_DIR)/orion/

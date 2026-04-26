@@ -1,17 +1,17 @@
 // tools/gen_vga_font.c
 //
-// Headless tool that generates share/vga-rom-font-8x16.png — a 128×256 RGBA
-// monospace character sheet with 256 glyphs arranged in a 16-column × 16-row
-// grid (each cell is 8×16 pixels, white glyphs on transparent background).
+// Headless tool that generates share/vga-rom-font-8x16.png — a 128x256 RGBA
+// monospace character sheet with 256 glyphs arranged in a 16-column x 16-row
+// grid (each cell is 8x16 pixels, white glyphs on transparent background).
 //
-// The source bitmap is the Orion built-in 6×8 console font
+// The source bitmap is the Orion built-in 6x8 console font
 // (user/font_6x8.c, exported as console_font_6x8[]).  Each glyph is scaled
-// to 8×16 by:
+// to 8x16 by:
 //   - Using all 8 bits of each row byte as-is (6 significant bits, 2 trailing
 //     zeros → glyph left-aligned in the 8-pixel-wide cell).
 //   - Doubling each of the 8 source rows → 16 destination rows.
 //
-// Glyphs 128-255 are left blank (the 6×8 font only covers 0-127).
+// Glyphs 128-255 are left blank (the 6x8 font only covers 0-127).
 //
 // Usage:
 //   gen_vga_font [output_path]
@@ -37,7 +37,7 @@ extern unsigned char console_font_6x8[];
 #define GRID_ROWS   16
 #define SHEET_W     (GRID_COLS * GLYPH_W)   /* 128 */
 #define SHEET_H     (GRID_ROWS * GLYPH_H)   /* 256 */
-#define SRC_ROWS    8   /* rows in the 6×8 source glyph */
+#define SRC_ROWS    8   /* rows in the 6x8 source glyph */
 
 int main(int argc, char *argv[]) {
   const char *out_path = (argc > 1) ? argv[1] : "share/vga-rom-font-8x16.png";
@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
     for (int src_row = 0; src_row < SRC_ROWS; src_row++) {
       uint8_t row_bits = console_font_6x8[ch * SRC_ROWS + src_row];
 
-      // Emit this row twice (vertical 2× scale).
+      // Emit this row twice (vertical 2x scale).
       for (int dup = 0; dup < 2; dup++) {
         int dst_y = base_y + src_row * 2 + dup;
 

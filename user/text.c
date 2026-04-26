@@ -1,8 +1,8 @@
 // Text rendering implementation — dual-font design.
 //
 // Two named atlases at UI_WINDOW_SCALE == 1:
-//   big   = ChiKareGo2 (16×16 cells, foNT metrics) — FONT_SYSTEM chrome
-//   small = Geneva9 / SmallFont (8×8 cells)        — FONT_SMALL content + icons
+//   big   = ChiKareGo2 (16x16 cells, foNT metrics) — FONT_SYSTEM chrome
+//   small = Geneva9 / SmallFont (8x8 cells)        — FONT_SMALL content + icons
 //
 // At UI_WINDOW_SCALE >= 2 both atlases map to the same SmallFont data.
 
@@ -252,17 +252,17 @@ void init_text_rendering(void) {
   memset(&text_state, 0, sizeof(text_state));
 
   const char *exe = ui_get_exe_dir();
-  char small_path[4096], chika_path[4096], geneva_path[4096];
+  char small_path[4096], chicago_path[4096], geneva_path[4096];
   snprintf(small_path,  sizeof(small_path),  "%s/../share/orion/SmallFont.png",  exe);
-  snprintf(chika_path,  sizeof(chika_path),  "%s/../share/orion/ChiKareGo2.png", exe);
+  snprintf(chicago_path,  sizeof(chicago_path),  "%s/../share/orion/Chicago-12.png", exe);
   snprintf(geneva_path, sizeof(geneva_path), "%s/../share/orion/Geneva-12.png",    exe);
 
 #if UI_WINDOW_SCALE == 1
   // At native (1:1) scale: ChiKareGo2 for chrome (FONT_SYSTEM), Geneva9 /
   // SmallFont for content (FONT_SMALL) plus icon chars (128-255).
-  bool chika_ok = load_atlas(&text_state.big, &text_state.big_met,
-                              chika_path, 0, 255);
-  if (chika_ok) {
+  bool chicago_ok = load_atlas(&text_state.big, &text_state.big_met,
+                              chicago_path, 0, 255);
+  if (chicago_ok) {
     text_state.big_height = text_state.big.cell_h;
     text_state.big_line   = text_state.big.cell_h + 4;
     text_state.big_space  = text_state.big_met.advance[' ']

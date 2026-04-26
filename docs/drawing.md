@@ -55,7 +55,7 @@ Render a textured quad (OpenGL texture).
 ```c
 void draw_rect(GLuint texture, int x, int y, int w, int h);
 
-// Example: canvas texture displayed at 2× scale
+// Example: canvas texture displayed at 2x scale
 draw_rect(my_tex, 0, 0, CANVAS_W * 2, CANVAS_H * 2);
 ```
 
@@ -70,10 +70,10 @@ void draw_bevel(rect_t const *r);
 ### Icons
 
 ```c
-// 8×8 icon from the built-in icon sheet
+// 8x8 icon from the built-in icon sheet
 void draw_icon8(int icon_id, int x, int y, uint32_t color);
 
-// 16×16 icon
+// 16x16 icon
 void draw_icon16(int icon_id, int x, int y, uint32_t color);
 ```
 
@@ -81,7 +81,7 @@ Icon IDs are defined in the `icon8_t` / `icon16_t` enums in `messages.h`.
 
 ## Text Rendering
 
-### Small Bitmap Font (6×8 pixels)
+### Small Bitmap Font (6x8 pixels)
 
 ```c
 // Draw a string; color = -1 uses default text colour

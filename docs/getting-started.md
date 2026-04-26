@@ -52,10 +52,10 @@ To run examples as gems under the shell:
                          build/gem/filemanager.gem
 ```
 
-## Running at 1× Scale
+## Running at 1x Scale
 
-Orion defaults to 2× window scaling (`UI_WINDOW_SCALE=2`).  To run at native
-1× resolution (useful on high-DPI monitors or for larger logical canvas sizes):
+Orion defaults to 2x window scaling (`UI_WINDOW_SCALE=2`).  To run at native
+1x resolution (useful on high-DPI monitors or for larger logical canvas sizes):
 
 ```bash
 make examples CFLAGS="-DUI_WINDOW_SCALE=1"

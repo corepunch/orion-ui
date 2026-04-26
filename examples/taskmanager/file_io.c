@@ -2,7 +2,7 @@
 //
 // File format:
 //   [file_header_t]
-//   [task_entry_t] × task_count
+//   [task_entry_t] x task_count
 //   [string data block: title\0 desc\0 for each task in order]
 
 #include "taskmanager.h"

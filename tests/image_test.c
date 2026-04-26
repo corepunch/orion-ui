@@ -28,7 +28,7 @@ static const char *temp_dir(void) {
 }
 
 // ============================================================
-// Minimal 1×1 red RGBA PNG used for embedded-data tests.
+// Minimal 1x1 red RGBA PNG used for embedded-data tests.
 // Generated with: python3 -c "
 //   import zlib, struct
 //   def chunk(t, d): return struct.pack('>I',len(d))+t+d+struct.pack('>I',zlib.crc32(t+d)&0xFFFFFFFF)
@@ -114,9 +114,9 @@ void test_load_image_missing_file(void) {
 }
 
 void test_save_and_reload(void) {
-  TEST("save_image_png + load_image: round-trip 2×2 RGBA");
+  TEST("save_image_png + load_image: round-trip 2x2 RGBA");
 
-  // Build a 2×2 RGBA image: red, green, blue, white
+  // Build a 2x2 RGBA image: red, green, blue, white
   uint8_t src[2 * 2 * 4] = {
     0xFF, 0x00, 0x00, 0xFF,   // red
     0x00, 0xFF, 0x00, 0xFF,   // green

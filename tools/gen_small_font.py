@@ -2,12 +2,12 @@
 """
 gen_small_font.py — generate share/Geneva9.png for Orion.
 
-Geneva9.png is a composite 128×128 greyscale font atlas:
-  Chars   0–127: FindersKeepers (bundled in fonts/) rasterised at 8×8 cells.
+Geneva9.png is a composite 128x128 greyscale font atlas:
+  Chars   0–127: FindersKeepers (bundled in fonts/) rasterised at 8x8 cells.
                  FindersKeepers is a pixel font that recreates the Geneva 9
                  look from Mac System 1–7.
   Chars 128–255: Original SmallFont.png icon glyphs (bottom half preserved).
-                 These are the 8×8 UI icons used by draw_icon8() / draw_icon16().
+                 These are the 8x8 UI icons used by draw_icon8() / draw_icon16().
 
 The file is loaded at runtime as the FONT_SMALL atlas (Geneva9 / SmallFont).
 
@@ -54,7 +54,7 @@ def main():
     except ImportError:
         sys.exit('ERROR: Pillow is required.  Install with:  pip install Pillow')
 
-    # ── Step 1: rasterise FindersKeepers into a temp 128×128 greyscale atlas ──
+    # ── Step 1: rasterise FindersKeepers into a temp 128x128 greyscale atlas ──
     with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tf:
         temp_atlas = tf.name
     try:
@@ -74,12 +74,12 @@ def main():
             pass
 
     if fk.size != (128, 128):
-        sys.exit(f'ERROR: expected FindersKeepers atlas 128×128, got {fk.size}')
+        sys.exit(f'ERROR: expected FindersKeepers atlas 128x128, got {fk.size}')
 
     # ── Step 2: extract icon chars (rows 8–15, y=64..127) from SmallFont ──────
     small = Image.open(smallfont_png).convert('RGBA')
     if small.size != (128, 128):
-        sys.exit(f'ERROR: expected SmallFont 128×128, got {small.size}')
+        sys.exit(f'ERROR: expected SmallFont 128x128, got {small.size}')
     # The R channel carries glyph brightness (white glyphs on black background).
     r_channel, _, _, _ = small.split()
     icons_half = r_channel.crop((0, 64, 128, 128))   # chars 128–255
@@ -91,7 +91,7 @@ def main():
 
     os.makedirs(os.path.dirname(output_png), exist_ok=True)
     out.save(output_png)
-    print(f'Wrote {output_png}  (128×128 greyscale, FindersKeepers text + SmallFont icons)')
+    print(f'Wrote {output_png}  (128x128 greyscale, FindersKeepers text + SmallFont icons)')
 
 
 if __name__ == '__main__':

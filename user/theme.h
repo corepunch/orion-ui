@@ -9,11 +9,11 @@
 
 // ── Theme icons ───────────────────────────────────────────────────────────
 //
-// Indices into share/orion/theme.png (144×18 px grayscale, 9×9 tiles).
-// The sheet contains 16 columns × 2 rows; only the first THEME_ICON_COUNT
+// Indices into share/orion/theme.png (144x18 px grayscale, 9x9 tiles).
+// The sheet contains 16 columns x 2 rows; only the first THEME_ICON_COUNT
 // entries are defined.  Use draw_theme_icon() to render them.
 typedef enum {
-  THEME_ICON_CLOSE        = 0,   // window close (×)
+  THEME_ICON_CLOSE        = 0,   // window close (x)
   THEME_ICON_ARROW_UP     = 1,   // up arrow, no tail (e.g. scroll-up button)
   THEME_ICON_ARROW_DOWN   = 2,   // down arrow, no tail
   THEME_ICON_ARROW_UPDOWN = 3,   // up-and-down arrow (combobox)

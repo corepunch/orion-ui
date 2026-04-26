@@ -134,7 +134,7 @@ uint32_t vga_font_texture_id(void) {
 // ============================================================
 
 static void glyph_uv(int ch, float *u0, float *v0, float *u1, float *v1) {
-  // Sheet: 16 cols × 16 rows of GLYPH_W×GLYPH_H cells.
+  // Sheet: 16 cols x 16 rows of GLYPH_WxGLYPH_H cells.
   // Character N: col = N & 0xF, row = N >> 4.
   int col = ch & 0xF;
   int row = ch >> 4;

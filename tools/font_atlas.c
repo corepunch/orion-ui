@@ -13,7 +13,7 @@
 #define DEFAULT_ATLAS_ROWS   16   // glyph rows in the atlas
 #define DEFAULT_CELL_W        16
 #define DEFAULT_CELL_H        16
-// Atlas dimensions are derived: cols * cell_w × rows * cell_h.
+// Atlas dimensions are derived: cols * cell_w x rows * cell_h.
 // DEFAULT_ATLAS_W / DEFAULT_ATLAS_H kept as helpers for the help text.
 #define DEFAULT_ATLAS_W      (DEFAULT_ATLAS_COLS * DEFAULT_CELL_W)
 #define DEFAULT_ATLAS_H      (DEFAULT_ATLAS_ROWS * DEFAULT_CELL_H)

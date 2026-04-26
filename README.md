@@ -493,7 +493,7 @@ The framework uses a message-based architecture. Common messages include:
 Orion ships a PNG icon sheet whose source asset in the repository is
 `share/icon_sheet_16x16.png`. At runtime, the deployed path is typically
 `<exe_dir>/../share/orion/icon_sheet_16x16.png`, and it is loaded automatically
-at `ui_init_graphics()` time.  The sheet is a 20×20 grid of 16×16 pixel RGBA
+at `ui_init_graphics()` time.  The sheet is a 20x20 grid of 16x16 pixel RGBA
 icons.  All icon names are defined as an enum in `user/icons.h`.
 
 ### Icon index base

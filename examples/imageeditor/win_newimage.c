@@ -16,7 +16,7 @@
 
 // Label + edit-box rows
 #define NI_LBL_X        4
-#define NI_EDIT_X      62   // leave room for "Height: " (8 chars × ~6px + margin)
+#define NI_EDIT_X      62   // leave room for "Height: " (8 chars x ~6px + margin)
 #define NI_EDIT_W      56
 #define NI_EDIT_H      13
 #define NI_ROW1_Y       8

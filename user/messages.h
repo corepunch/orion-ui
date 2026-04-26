@@ -235,7 +235,7 @@ typedef struct {
 // FONT_SIZE_SMALL (FONT_SMALL/Geneva9): 12 at UI_WINDOW_SCALE==1, 8 at scale>=2.
 // Content heights (list rows, column-view entries) use FONT_SIZE_SMALL;
 // see commctl/columnview.h.  All values are usable in static initializers.
-// +5 instead of +4 keeps the height odd at both scales so that 9×9 theme
+// +5 instead of +4 keeps the height odd at both scales so that 9x9 theme
 // icons centre with equal integer padding on every side.
 #define TITLEBAR_HEIGHT   (FONT_SIZE + 5)
 #define TOOLBAR_HEIGHT    22

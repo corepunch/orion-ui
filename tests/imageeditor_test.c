@@ -450,7 +450,7 @@ void test_flood_fill_simple(void) {
   test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
   canvas_clear(c); // all white
 
-  // Draw a black border box 10×10 at (20,20)
+  // Draw a black border box 10x10 at (20,20)
   uint32_t blk = MAKE_COLOR(0,0,0,255);
   for (int x=20;x<30;x++) { canvas_set_pixel(c,x,20,blk); canvas_set_pixel(c,x,29,blk); }
   for (int y=20;y<30;y++) { canvas_set_pixel(c,20,y,blk); canvas_set_pixel(c,29,y,blk); }
@@ -525,7 +525,7 @@ void test_is_png_invalid(void) {
 }
 
 void test_canvas_pixel_count(void) {
-  TEST("canvas buffer size matches CANVAS_W × CANVAS_H × 4");
+  TEST("canvas buffer size matches CANVAS_W x CANVAS_H x 4");
   test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
   ASSERT_EQUAL((int)sizeof(c->pixels), CANVAS_W * CANVAS_H * 4);
   free(c);
@@ -916,7 +916,7 @@ void test_set_pixel_respects_reversed_selection(void) {
   uint32_t red = MAKE_COLOR(255, 0, 0, 255);
   uint32_t white = MAKE_COLOR(255, 255, 255, 255);
 
-  /* Inside the normalised [50,60]×[50,60] region */
+  /* Inside the normalised [50,60]x[50,60] region */
   canvas_set_pixel(c, 55, 55, red);
   ASSERT_TRUE(canvas_get_pixel(c, 55, 55) == red);
 
@@ -1049,7 +1049,7 @@ void test_draw_rect_outline(void) {
   test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
   canvas_clear(c);
   uint32_t red = MAKE_COLOR(255, 0, 0, 255);
-  /* 30×15 rect with top-left at (10, 20) */
+  /* 30x15 rect with top-left at (10, 20) */
   t_canvas_draw_rect_outline(c, 10, 20, 30, 15, red);
   /* All four corners must be red */
   ASSERT_TRUE(canvas_get_pixel(c, 10, 20) == red);  /* top-left */
@@ -1331,7 +1331,7 @@ void test_crop_to_selection_basic(void) {
   TEST("canvas_crop_to_selection – selected pixels appear at (0,0) after crop");
   test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
   canvas_clear(c);
-  /* Paint a distinct colour in a 10×10 block at (50,40) */
+  /* Paint a distinct colour in a 10x10 block at (50,40) */
   uint32_t red = MAKE_COLOR(255, 0, 0, 255);
   for (int dy = 0; dy < 10; dy++)
     for (int dx = 0; dx < 10; dx++)
@@ -1379,7 +1379,7 @@ void test_crop_to_selection_preserves_content(void) {
   uint32_t green = MAKE_COLOR(0, 255, 0, 255);
   canvas_set_pixel(c, 20, 20, red);    /* inside selection */
   canvas_set_pixel(c, 200, 100, green); /* outside selection */
-  /* Select a 30×30 area around (10,10)–(39,39) */
+  /* Select a 30x30 area around (10,10)–(39,39) */
   c->sel_active = true;
   c->sel_x0 = 10; c->sel_y0 = 10;
   c->sel_x1 = 39; c->sel_y1 = 39;
@@ -1389,7 +1389,7 @@ void test_crop_to_selection_preserves_content(void) {
   ASSERT_TRUE(canvas_get_pixel(c, 10, 10) == red);
   /* The green pixel at (200,100) was outside the selection and must have been
    * discarded (entire canvas filled white, only the cropped region placed at origin).
-   * Check a point well outside the 30×30 cropped area that must be white. */
+   * Check a point well outside the 30x30 cropped area that must be white. */
   uint32_t gone = canvas_get_pixel(c, 100, 80);
   ASSERT_EQUAL(COLOR_R(gone), 255);
   ASSERT_EQUAL(COLOR_G(gone), 255);
@@ -1716,7 +1716,7 @@ void test_copy_selection_content(void) {
   TEST("canvas_copy_selection – copies correct pixels into clipboard buffer");
   test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
   canvas_clear(c);  /* fill with white */
-  /* Paint a red 3×3 block at (10,10)..(12,12) */
+  /* Paint a red 3x3 block at (10,10)..(12,12) */
   uint32_t red = MAKE_COLOR(255, 0, 0, 255);
   for (int y = 10; y <= 12; y++)
     for (int x = 10; x <= 12; x++)
@@ -1770,7 +1770,7 @@ void test_paste_pixels_at_offset(void) {
   canvas_clear(c);  /* white */
   uint32_t green = MAKE_COLOR(0, 255, 0, 255);
   uint32_t white = MAKE_COLOR(255, 255, 255, 255);
-  /* Clipboard: 2×2 green block */
+  /* Clipboard: 2x2 green block */
   uint8_t src[16];
   for (int i = 0; i < 4; i++) {
     src[i*4+0]=COLOR_R(green); src[i*4+1]=COLOR_G(green);
@@ -1822,7 +1822,7 @@ void test_move_selection(void) {
   canvas_clear(c);  /* white */
   uint32_t red   = MAKE_COLOR(255, 0, 0, 255);
   uint32_t white = MAKE_COLOR(255, 255, 255, 255);
-  /* Place a red 3×3 block at (10,10) */
+  /* Place a red 3x3 block at (10,10) */
   for (int y = 10; y <= 12; y++)
     for (int x = 10; x <= 12; x++)
       t_set_pixel_direct(c, x, y, red);
@@ -1852,7 +1852,7 @@ void test_paste_respects_oob(void) {
   test_canvas_t *c = calloc(1, sizeof(test_canvas_t));
   canvas_clear(c);
   uint32_t red = MAKE_COLOR(255, 0, 0, 255);
-  /* 4×4 clipboard */
+  /* 4x4 clipboard */
   uint8_t src[64];
   for (int i = 0; i < 16; i++) {
     src[i*4+0]=COLOR_R(red); src[i*4+1]=COLOR_G(red); src[i*4+2]=COLOR_B(red); src[i*4+3]=COLOR_A(red);
@@ -2079,7 +2079,7 @@ void test_resize_shrink_preserves_content(void) {
 void test_resize_grow_fills_white(void) {
   TEST("canvas_resize – new area is filled with opaque white");
   dyn_canvas_t *c = dyn_canvas_create(2, 2);
-  /* Paint entire 2×2 red */
+  /* Paint entire 2x2 red */
   for (int y = 0; y < 2; y++)
     for (int x = 0; x < 2; x++)
       dyn_set_pixel(c, x, y, MAKE_COLOR(255, 0, 0, 255));

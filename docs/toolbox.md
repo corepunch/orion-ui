@@ -114,7 +114,7 @@ lifecycle automatically.  You only need to intercept the messages you care about
 ## Using system icons
 
 If you don't have a custom sprite sheet, use `sysicon_*` values from
-`user/icons.h`.  Any `icon >= SYSICON_BASE` is drawn from the built-in 16×16
+`user/icons.h`.  Any `icon >= SYSICON_BASE` is drawn from the built-in 16x16
 icon sheet — **no `bxLoadStrip` call needed**:
 
 ```c
@@ -132,7 +132,7 @@ send_message(win, bxSetItems, 4, kSysTools);
 ## Custom button size
 
 The default button size is `TOOLBOX_BTN_SIZE` (= `TB_SPACING` = 22 px), which
-fits a 16×16 icon with 3 px of margin on the left/right and 3 px on top/bottom
+fits a 16x16 icon with 3 px of margin on the left/right and 3 px on top/bottom
 (total button interior = 16 + 6 = 22 px).
 
 If your icons are larger (e.g., 21 px), call `bxSetButtonSize`

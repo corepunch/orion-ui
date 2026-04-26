@@ -11,7 +11,7 @@ typedef struct bitmap_strip_s bitmap_strip_t;
 #define UI_INIT_TRAY 0x02000000u
 
 #ifndef UI_WINDOW_SCALE
-#define UI_WINDOW_SCALE 2
+#define UI_WINDOW_SCALE 1
 #endif
 
 // Logical font-pixel height used to derive chrome dimensions (titlebar,
@@ -19,8 +19,8 @@ typedef struct bitmap_strip_s bitmap_strip_t;
 // the scale factor rather than the runtime-loaded font's cell height.
 //
 // Measured glyph heights:
-//   UI_WINDOW_SCALE == 1  → ChiKareGo2 (16×16 cells, max glyph h = 12 px)
-//   UI_WINDOW_SCALE >= 2  → SmallFont  ( 8× 8 cells, cell  h = 8  px)
+//   UI_WINDOW_SCALE == 1  → ChiKareGo2 (16x16 cells, max glyph h = 12 px)
+//   UI_WINDOW_SCALE >= 2  → SmallFont  ( 8x 8 cells, cell  h = 8  px)
 //
 // FONT_SIZE       — system (chrome) font: ChiKareGo2/Chicago12 at scale=1
 // FONT_SIZE_SMALL — small (content) font: Geneva9/SmallFont at all scales
@@ -134,14 +134,14 @@ void ui_update_screen_size(int width, int height);
 //     send_message(btn, btnSetImage, sysicon_add - SYSICON_BASE, s);
 bitmap_strip_t *ui_get_sysicon_strip(void);
 
-// Theme icon strip (theme.png, 144×18 grayscale, 9×9 tiles).
+// Theme icon strip (theme.png, 128x16 grayscale, 8x8 tiles).
 // Icons are indexed by theme_icon_t (user/theme.h).
 // Used by draw_theme_icon() for all chrome icons (close, scrollbar arrows,
 // checkmark, combobox arrow, resize grip).
 // Returns NULL if the sheet was not found at startup.
 bitmap_strip_t *ui_get_theme_strip(void);
 
-// File-picker icon strip (filepicker.png, 16×16 RGBA tiles).
+// File-picker icon strip (filepicker.png, 16x16 RGBA tiles).
 // Icons are indexed by icon_id_t (user/sysicons.h).
 // Used exclusively by win_filelist via RVM_SETICONSTRIP.
 // Returns NULL if the sheet was not found at startup.
