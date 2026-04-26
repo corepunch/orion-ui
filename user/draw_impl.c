@@ -170,7 +170,6 @@ void draw_window_controls(window_t *win) {
   set_fullscreen();
   rect_t titlebar = rect_split_top(r, TITLEBAR_HEIGHT);
   rect_t btn      = rect_split_right(titlebar, CONTROL_BUTTON_WIDTH + CONTROL_BUTTON_PADDING);
-  btn             = rect_center(btn, CONTROL_BUTTON_WIDTH, CONTROL_BUTTON_WIDTH);
   draw_theme_icon_in_rect(THEME_ICON_CLOSE, &btn, get_sys_color(brTextNormal));
 }
 
