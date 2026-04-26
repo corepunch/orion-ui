@@ -30,10 +30,7 @@ result_t win_checkbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       draw_text_small(win->title, lx + TEXT_SHADOW_OFFSET, ly + TEXT_SHADOW_OFFSET, get_sys_color(brDarkEdge));
       draw_text_small(win->title, lx, ly, get_sys_color(brTextNormal));
       if (win->value) {
-        draw_theme_icon(THEME_ICON_CHECKMARK,
-                        box.x + (box.w - THEME_ICON_SIZE) / 2 + TEXT_SHADOW_OFFSET,
-                        box.y + (box.h - THEME_ICON_SIZE) / 2 + TEXT_SHADOW_OFFSET,
-                        THEME_ICON_SIZE, get_sys_color(brTextNormal));
+        draw_theme_icon_in_rect(THEME_ICON_CHECKMARK, &box, get_sys_color(brTextNormal));
       }
       return true;
     }

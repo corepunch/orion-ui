@@ -80,10 +80,8 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       {
         rect_t local = {0, 0, win->frame.w, win->frame.h};
         rect_t arrow = rect_split_right(local, COMBOBOX_ICON_SIZE);
-        draw_theme_icon(THEME_ICON_ARROW_UPDOWN,
-                        arrow.x + (arrow.w - THEME_ICON_SIZE) / 2,
-                        arrow.y + (arrow.h - THEME_ICON_SIZE) / 2,
-                        THEME_ICON_SIZE, get_sys_color(brTextNormal));
+        draw_theme_icon_in_rect(THEME_ICON_ARROW_UPDOWN, &arrow,
+                                get_sys_color(brTextNormal));
       }
       return true;
     case evLeftButtonUp:

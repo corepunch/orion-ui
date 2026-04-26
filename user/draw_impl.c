@@ -154,6 +154,14 @@ void draw_panel(window_t const *win) {
   }
 }
 
+// Draw a theme icon centred inside rect r.
+void draw_theme_icon_in_rect(int id, rect_t const *r, uint32_t col) {
+  draw_theme_icon(id,
+                  r->x + (r->w - THEME_ICON_SIZE) / 2,
+                  r->y + (r->h - THEME_ICON_SIZE) / 2,
+                  THEME_ICON_SIZE, col);
+}
+
 // Draw window controls (close, minimize, etc.)
 void draw_window_controls(window_t *win) {
   rect_t r = win->frame;
@@ -163,18 +171,7 @@ void draw_window_controls(window_t *win) {
   rect_t titlebar = rect_split_top(r, TITLEBAR_HEIGHT);
   rect_t btn      = rect_split_right(titlebar, CONTROL_BUTTON_WIDTH + CONTROL_BUTTON_PADDING);
   btn             = rect_center(btn, CONTROL_BUTTON_WIDTH, CONTROL_BUTTON_WIDTH);
-  draw_theme_icon(THEME_ICON_CLOSE,
-                  btn.x + (btn.w - THEME_ICON_SIZE) / 2,
-                  btn.y + (btn.h - THEME_ICON_SIZE) / 2,
-                  THEME_ICON_SIZE, get_sys_color(brTextNormal));
-}
-
-// Helper: draw a theme icon centred inside rect.
-static inline void draw_theme_icon_in_rect(int id, rect_t const *r, uint32_t col) {
-  draw_theme_icon(id,
-                  r->x + (r->w - THEME_ICON_SIZE) / 2,
-                  r->y + (r->h - THEME_ICON_SIZE) / 2,
-                  THEME_ICON_SIZE, col);
+  draw_theme_icon_in_rect(THEME_ICON_CLOSE, &btn, get_sys_color(brTextNormal));
 }
 
 // Draw status bar
