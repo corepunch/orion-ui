@@ -341,15 +341,24 @@ void draw_icon8(int icon, int x, int y, uint32_t col) {
   char str[2] = { icon+128+6*16, 0 };
   draw_text_small(str, x, y, col);
 #else
-  // scale=1: render from icons.png (icon is an IconId value from sysicons.h).
-  draw_icon(icon, x, y, ICON8_SIZE, col);
+  // scale=1: render from icons.png (icon is an IconId value from sysicons.h)
+  // at the strip's native tile size (typically 16x16).
+  bitmap_strip_t *s = ui_get_icons_strip();
+  int sz = (s && s->icon_w > 0) ? s->icon_w : ICON8_SIZE;
+  draw_icon(icon, x, y, sz, col);
 #endif
 }
 
 void draw_icon8_clipped(int icon, rect_t const *rect, uint32_t col) {
+#if UI_WINDOW_SCALE >= 2
+  int sz = ICON8_SIZE;
+#else
+  bitmap_strip_t *s = ui_get_icons_strip();
+  int sz = (s && s->icon_w > 0) ? s->icon_w : ICON8_SIZE;
+#endif
   draw_icon8(icon,
-             rect->x + (rect->w - ICON8_SIZE) / 2,
-             rect->y + (rect->h - ICON8_SIZE) / 2,
+             rect->x + (rect->w - sz) / 2,
+             rect->y + (rect->h - sz) / 2,
              col);
 }
 

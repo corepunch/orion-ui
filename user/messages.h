@@ -249,7 +249,11 @@ typedef struct {
 #define CONTROL_HEIGHT 14
 
 // Control button dimensions
-#define CONTROL_BUTTON_WIDTH    8
+#if WINDOW_SCALE >= 2
+#define CONTROL_BUTTON_WIDTH 8
+#else
+#define CONTROL_BUTTON_WIDTH    16
+#endif
 #define CONTROL_BUTTON_PADDING  2
 #define TB_SPACING              TOOLBAR_HEIGHT  // equals TOOLBAR_HEIGHT so toolbar buttons are square
 #define TOOLBAR_PADDING         2               // pixels of margin between toolbar border and button area (all sides)

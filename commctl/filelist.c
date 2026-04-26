@@ -21,6 +21,7 @@
 #include "../user/user.h"
 #include "../user/messages.h"
 #include "../user/draw.h"
+#include "../user/sysicons.h"
 
 // ---------------------------------------------------------------------------
 // Layout constants — mirror columnview.c (exported via columnview.h)
@@ -29,13 +30,11 @@
 #define FL_WIN_PADDING   COLUMNVIEW_WIN_PADDING
 
 // ---------------------------------------------------------------------------
-// Icons and colours — match the values used by the original filemanager so
-// that the appearance is identical.  draw_icon8 renders icon N as character
-// (N + 128 + 6*16) in the bitmap font, so these are just font glyph indices.
+// Icons and colours — use sysicon constants for consistent icon display.
 // ---------------------------------------------------------------------------
-#define FL_ICON_UP      7   // ".." parent-directory entry
-#define FL_ICON_FOLDER  5   // directory
-#define FL_ICON_FILE    6   // regular file
+#define FL_ICON_UP      7   // "." parent-directory entry (legacy, kept for parent)
+#define FL_ICON_FOLDER  ICON_FOLDER_CLOSE  // directory
+#define FL_ICON_FILE    ICON_PAPER_BLANK   // regular file
 #define FL_COLOR_FOLDER 0xffa0d000u
 #define FL_COLOR_GEM    0xff50d050u  // bright green — executable .gem plugin
 

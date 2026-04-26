@@ -8,6 +8,7 @@
 #include "../user/sysicons.h"
 
 #define MAX_COMBOBOX_STRINGS 256
+#define COMBOBOX_ICON_SIZE 16
 typedef char combobox_string_t[64];
 
 // Forward declare list control procedure  
@@ -76,7 +77,7 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       return true;
     case evPaint:
       win_button(win, msg, wparam, lparam);
-      draw_icon(ICON_ARROW_DOWN, win->frame.w - SCROLLBAR_WIDTH, 0, SCROLLBAR_WIDTH, get_sys_color(brTextNormal));
+      draw_icon(ICON_ARROW_DOWN, win->frame.w - COMBOBOX_ICON_SIZE, 0, COMBOBOX_ICON_SIZE, get_sys_color(brTextNormal));
       return true;
     case evLeftButtonUp:
       // Do not forward button-up to win_button() to avoid sending btnClicked
