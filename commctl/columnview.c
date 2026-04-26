@@ -282,7 +282,7 @@ static void rv_draw_item_icon(bitmap_strip_t *strip, int icon_id,
   // (draw_icon8_clipped is not used here because it renders theme icons, which
   // use a different index space than file-picker / custom icon_id_t values.)
   {
-    int ph = 8;
+    const int ph = THEME_ICON_SIZE;  // 8 px — matches the smallest tile unit
     int px = icon_rect->x + (icon_rect->w - ph) / 2;
     int py = icon_rect->y + (icon_rect->h - ph) / 2;
     uint32_t dim = (col & 0x00FFFFFFu) | 0x60000000u;  // 38% opacity
