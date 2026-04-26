@@ -20,8 +20,8 @@
 // Physical dimensions of one character cell in screen pixels.
 // These values control on-screen character size; increase them (for example
 // to 128x128) to render larger glyphs while preserving font texture detail.
-#define VGA_CHAR_W   4
-#define VGA_CHAR_H   8
+#define VGA_CHAR_W   8
+#define VGA_CHAR_H   16
 
 // Initialise the VGA font renderer by loading the sheet from sheet_path.
 // Must be called after ui_init_graphics().

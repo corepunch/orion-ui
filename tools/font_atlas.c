@@ -35,6 +35,8 @@ typedef struct {
     int   center_x, baseline_align;
     int   first_char, num_chars;
     int   invert, rgba, verbose;
+    int   scan_width;           // if true, compute advance from bitmap width
+    int   letter_spacing;       // pixels to add to advance
 } Opts;
 
 /* ------------------------------------------------------------------ */
@@ -77,6 +79,10 @@ static void print_help(const char* prog)
         "  -invert                 Invert bitmap (black glyphs on white bg)\n"
         "  -rgba                   Write RGBA PNG (white glyph + alpha channel)\n"
         "  -v                      Verbose output\n"
+        "\n"
+        "  Metrics\n"
+        "  -scan-width             Compute advance from actual bitmap width (proportional)\n"
+        "  -letter-spacing=N       Add N pixels to advance (for letter spacing)\n"
         "\n"
         "Embedded foNT chunk fields\n"
         "  Header  version, first_char, num_chars, cell_w/h, atlas_w/h,\n"
@@ -187,6 +193,8 @@ int main(int argc, char** argv)
         .invert       = 0,
         .rgba         = 0,
         .verbose      = 0,
+        .scan_width   = 0,
+        .letter_spacing = 0,
     };
 
     int positional = 0;
@@ -202,6 +210,8 @@ int main(int argc, char** argv)
         else if (!strcmp(a,"-invert"))       o.invert = 1;
         else if (!strcmp(a,"-rgba"))         o.rgba = 1;
         else if (!strcmp(a,"-v"))            o.verbose = 1;
+        else if (!strcmp(a,"-scan-width"))   o.scan_width = 1;
+        else if (parse_int_arg(a, "-letter-spacing=", &o.letter_spacing)) {}
         else if (parse_float_arg(a, "-pixelsize=", &o.pixel_height)) {}
         else if (parse_int_arg(a, "-threshold=",   &o.threshold))    {}
         else if (parse_int_arg(a, "-cellw=",       &o.cell_w))       {}
@@ -297,7 +307,11 @@ int main(int argc, char** argv)
         glyphs[ci].y0       = (int8_t)(y0 < -128 ? -128 : y0 > 127 ? 127 : y0);
         glyphs[ci].w        = (uint8_t)(gw < 0 ? 0 : gw > 255 ? 255 : gw);
         glyphs[ci].h        = (uint8_t)(gh < 0 ? 0 : gh > 255 ? 255 : gh);
-        glyphs[ci].advance  = (uint8_t)adv_px;
+        // Compute advance: use bitmap width if scan_width, else stbtt metrics
+        int adv_final = o.scan_width ? (gw > 0 ? gw : 0) : adv_px;
+        adv_final += o.letter_spacing;   // add letter spacing
+        if (adv_final > 255) adv_final = 255;
+        glyphs[ci].advance  = (uint8_t)adv_final;
         glyphs[ci].cell_col = (uint8_t)cell_col;
         glyphs[ci].cell_row = (uint8_t)cell_row;
 

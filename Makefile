@@ -219,8 +219,10 @@ tools: $(TOOLS_BINS)
 fonts: tools
 	$(BIN_DIR)/font_atlas fonts/ChiKareGo2.ttf share/ChiKareGo2.png -pixelsize=16 -em -sharp -cellw=10 -cellh=16 -v
 	$(BIN_DIR)/font_atlas fonts/FindersKeepers.ttf share/FindersKeepers.png -pixelsize=16 -em -sharp -cellw=8 -cellh=9 -v
-
-
+# 	$(BIN_DIR)/font_atlas fonts/Pix32.ttf share/Geneva-12.png -pixelsize=12 -em -sharp -cellw=8 -cellh=16 -v
+	$(BIN_DIR)/font_atlas fonts/PixelOperator.ttf share/Geneva-12.png -pixelsize=16 -em -sharp -cellw=8 -cellh=16 -v -scan-width -letter-spacing=2
+	$(BIN_DIR)/font_atlas fonts/PixelOperatorMono.ttf share/Mono-12.png -pixelsize=16 -em -sharp -cellw=8 -cellh=16 -v
+	
 $(BIN_DIR)/%$(EXE_EXT): tools/%.c $(SHARED_LIB) | $(BIN_DIR)
 	@echo "Building tool: $@"
 	$(CC) $(CFLAGS) -I. -Itools -o $@ $< \
@@ -257,6 +259,9 @@ share: $(VGA_FONT_PNG) | $(SHARE_DIR)
 	@cp share/icon_sheet_16x16.png $(SHARE_DIR)/orion/
 	@cp share/SmallFont.png $(SHARE_DIR)/orion/
 	@cp share/ChiKareGo2.png $(SHARE_DIR)/orion/
+	@cp share/Geneva-12.png $(SHARE_DIR)/orion/
+	@[ ! -f share/icons.png ] || cp share/icons.png $(SHARE_DIR)/orion/
+	@[ ! -f share/Geneva9.png ] || cp share/Geneva9.png $(SHARE_DIR)/orion/
 	@for dir in examples/*/; do \
 	  name=$$(basename "$$dir"); \
 	  assets=$$(find "$$dir" -maxdepth 1 \( -name "*.png" -o -name "*.ttf" -o -name "*.jpg" -o -name "*.jpeg" \) 2>/dev/null); \

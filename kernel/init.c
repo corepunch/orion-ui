@@ -40,6 +40,10 @@ uint32_t ui_checker_texture = 0;
 bitmap_strip_t g_sysicon_strip = {0};
 static uint32_t g_sysicon_tex = 0;
 
+// UI icon strip loaded from share/orion/icons.png (16×16 RGBA tiles, IconId indices).
+static bitmap_strip_t g_icons_strip = {0};
+static uint32_t g_icons_tex = 0;
+
 // Initialize the internal white texture
 void init_ui_white_texture(void) {
   if (ui_white_texture == 0) {
@@ -91,6 +95,41 @@ static void shutdown_sysicon_strip(void) {
   R_DeleteTexture(g_sysicon_tex);
   g_sysicon_tex = 0;
   g_sysicon_strip = (bitmap_strip_t){0};
+}
+
+// Load the UI icon sheet from <exe_dir>/../share/orion/icons.png.
+// Tiles are 16×16 RGBA; icons are indexed by IconId (user/sysicons.h).
+static void init_icons_strip(void) {
+  if (g_icons_tex != 0) return;
+  char path[4096];
+  snprintf(path, sizeof(path), "%s/../share/orion/icons.png",
+           ui_get_exe_dir());
+  int w = 0, h = 0;
+  uint8_t *src = load_image(path, &w, &h);
+  if (!src) return;
+  if (w < 16 || h < 16 || (w % 16) != 0 || (h % 16) != 0) {
+    image_free(src);
+    return;
+  }
+  g_icons_tex = R_CreateTextureRGBA(w, h, src, R_FILTER_NEAREST, R_WRAP_CLAMP);
+  image_free(src);
+  g_icons_strip.tex     = g_icons_tex;
+  g_icons_strip.icon_w  = 16;
+  g_icons_strip.icon_h  = 16;
+  g_icons_strip.cols    = w / 16;
+  g_icons_strip.sheet_w = w;
+  g_icons_strip.sheet_h = h;
+}
+
+static void shutdown_icons_strip(void) {
+  R_DeleteTexture(g_icons_tex);
+  g_icons_tex = 0;
+  g_icons_strip = (bitmap_strip_t){0};
+}
+
+// Return the UI icon strip (icons.png), or NULL if not loaded.
+bitmap_strip_t *ui_get_icons_strip(void) {
+  return (g_icons_strip.tex != 0) ? &g_icons_strip : NULL;
 }
 
 void shutdown_ui_textures(void) {
@@ -160,6 +199,7 @@ bool ui_init_graphics(int flags, const char *title, int width, int height) {
   init_ui_white_texture();
   init_ui_checker_texture();
   init_sysicon_strip();
+  init_icons_strip();
 
   init_console();
 
@@ -204,6 +244,7 @@ void ui_shutdown_graphics(void) {
   ui_shutdown_prog();
 
   shutdown_sysicon_strip();
+  shutdown_icons_strip();
   shutdown_white_texture();
 
   shutdown_console();

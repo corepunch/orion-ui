@@ -231,9 +231,10 @@ typedef struct {
 } scroll_info_t;
 
 // Chrome height constants — derived from FONT_SIZE (defined in kernel/kernel.h).
-// FONT_SIZE is a compile-time constant: 12 at UI_WINDOW_SCALE==1 (ChiKareGo2),
-// 8 at UI_WINDOW_SCALE>=2 (SmallFont).  All values are usable in static
-// initializers (no function-call overhead).
+// FONT_SIZE (FONT_SYSTEM/ChiKareGo2): 12 at UI_WINDOW_SCALE==1, 8 at scale>=2.
+// FONT_SIZE_SMALL (FONT_SMALL/Geneva9): 12 at UI_WINDOW_SCALE==1, 8 at scale>=2.
+// Content heights (list rows, column-view entries) use FONT_SIZE_SMALL;
+// see commctl/columnview.h.  All values are usable in static initializers.
 #define TITLEBAR_HEIGHT   (FONT_SIZE + 4)
 #define TOOLBAR_HEIGHT    22
 #define STATUSBAR_HEIGHT  (FONT_SIZE + 4)
@@ -248,7 +249,11 @@ typedef struct {
 #define CONTROL_HEIGHT 14
 
 // Control button dimensions
-#define CONTROL_BUTTON_WIDTH    8
+#if WINDOW_SCALE >= 2
+#define CONTROL_BUTTON_WIDTH 8
+#else
+#define CONTROL_BUTTON_WIDTH    16
+#endif
 #define CONTROL_BUTTON_PADDING  2
 #define TB_SPACING              TOOLBAR_HEIGHT  // equals TOOLBAR_HEIGHT so toolbar buttons are square
 #define TOOLBAR_PADDING         2               // pixels of margin between toolbar border and button area (all sides)

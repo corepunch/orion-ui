@@ -13,8 +13,7 @@
 #define ENTRY_HEIGHT  COLUMNVIEW_ENTRY_HEIGHT
 #define HEADER_HEIGHT COLUMNVIEW_HEADER_HEIGHT
 #define DEFAULT_COLUMN_WIDTH 160
-#define ICON_OFFSET 12
-#define ICON_DODGE 1
+#define ICON_OFFSET 16
 #define WIN_PADDING 4
 #define RV_DOUBLE_CLICK_MS 500u
 #define RV_INVALID_SELECTION (-1)
@@ -273,14 +272,19 @@ static void rv_paint_icon_view(window_t *win, reportview_data_t *data) {
     if (y + ENTRY_HEIGHT <= clip_top) continue;
     if (y >= clip_bottom) break;
 
+    int item_w  = data->column_width - 6;
+    int item_h  = ENTRY_HEIGHT - 1;
+    rect_t icon_rect = {x,               y, ICON_OFFSET,              item_h};
+    rect_t text_rect = {x + ICON_OFFSET, y, item_w - ICON_OFFSET - 2, item_h};
+
     if ((int)i == data->selected) {
-      fill_rect(get_sys_color(brTextNormal), R(x - 2, y - 2, data->column_width - 6, ENTRY_HEIGHT - 2));
-      draw_icon8(data->items[i].icon, x, y - ICON_DODGE, get_sys_color(brWindowBg));
-      draw_text_small(data->items[i].text, x + ICON_OFFSET, y, get_sys_color(brWindowBg));
+      fill_rect(get_sys_color(brTextNormal), R(x - 2, y, item_w, item_h));
+      draw_icon8_clipped(data->items[i].icon, &icon_rect, get_sys_color(brWindowBg));
+      draw_text_clipped(FONT_SMALL, data->items[i].text, &text_rect, get_sys_color(brWindowBg), 0);
     } else {
-      fill_rect(bg_col, R(x - 2, y - 2, data->column_width - 6, ENTRY_HEIGHT - 2));
-      draw_icon8(data->items[i].icon, x, y - ICON_DODGE, data->items[i].color);
-      draw_text_small(data->items[i].text, x + ICON_OFFSET, y, data->items[i].color);
+      fill_rect(bg_col, R(x - 2, y, item_w, item_h));
+      draw_icon8_clipped(data->items[i].icon, &icon_rect, data->items[i].color);
+      draw_text_clipped(FONT_SMALL, data->items[i].text, &text_rect, data->items[i].color, 0);
     }
   }
 }
@@ -348,7 +352,7 @@ static void rv_paint_report_view(window_t *win, reportview_data_t *data) {
         src = (idx < it->subitem_count && it->subitems[idx]) ? it->subitems[idx] : "";
       }
 
-      draw_text_small_clipped(src, &(rect_t){col_x, y, col_w, ENTRY_HEIGHT}, fg, TEXT_PADDING_LEFT);
+      draw_text_clipped(FONT_SMALL, src, &(rect_t){col_x, y, col_w, ENTRY_HEIGHT}, fg, TEXT_PADDING_LEFT);
     }
 
     col_x += col_w;
