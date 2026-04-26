@@ -159,12 +159,10 @@ void draw_window_controls(window_t *win) {
   fill_rect(get_sys_color(window_has_focus(win) ? brActiveTitlebar : brInactiveTitlebar),
             R(r.x, r.y, r.w, titlebar_height(win)));
   set_fullscreen();
-  
-  for (int i = 0; i < 1; i++) {
-    int x = win->frame.x + win->frame.w - (i+1)*CONTROL_BUTTON_WIDTH - CONTROL_BUTTON_PADDING;
-    int y = window_title_bar_y(win);
-    draw_icon(ICON_EXIT, x, y, CONTROL_BUTTON_WIDTH, get_sys_color(brTextNormal));
-  }
+  rect_t titlebar = rect_split_top(&(rect_t){r.x, r.y, r.w, r.h}, TITLEBAR_HEIGHT);
+  rect_t btn      = rect_split_right(&titlebar, CONTROL_BUTTON_WIDTH + CONTROL_BUTTON_PADDING);
+  btn             = rect_center(btn, CONTROL_BUTTON_WIDTH, CONTROL_BUTTON_WIDTH);
+  draw_icon(ICON_EXIT, btn.x, btn.y, btn.w, get_sys_color(brTextNormal));
 }
 
 // Draw status bar

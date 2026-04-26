@@ -369,11 +369,6 @@ void invalidate_window(window_t *win) {
   post_message(root, evPaint, 0, NULL);
 }
 
-// Get titlebar Y position (top of the title text row within the window frame)
-int window_title_bar_y(window_t const *win) {
-  return win->frame.y + 2;
-}
-
 // Returns true when the absolute screen Y coordinate 'sy' falls within the
 // draggable title-bar row of 'win'.  For windows with WINDOW_TOOLBAR the
 // toolbar rows sit below the title bar and must NOT initiate a drag.
