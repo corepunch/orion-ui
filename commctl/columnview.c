@@ -256,8 +256,9 @@ static void rv_sync_scroll(window_t *win, reportview_data_t *data) {
   set_scroll_info(win, SB_VERT, &si, false);
 }
 
-// Draw one icon from the per-instance strip (or fall back to draw_icon8_clipped)
-// centred inside icon_rect.
+// Draw one icon from the per-instance strip centred inside icon_rect.
+// If no strip is assigned (or icon_id is out of range) a small placeholder
+// rectangle is drawn so the icon slot is always visually occupied.
 static void rv_draw_item_icon(bitmap_strip_t *strip, int icon_id,
                               rect_t const *icon_rect, uint32_t col) {
   if (strip && strip->tex != 0 && strip->cols > 0) {
@@ -274,9 +275,21 @@ static void rv_draw_item_icon(bitmap_strip_t *strip, int icon_id,
       float v1 = v0 + (float)strip->icon_h / (float)strip->sheet_h;
       draw_sprite_region((int)strip->tex, R(ix, iy, icon_sz, icon_sz),
                          u0, v0, u1, v1, col);
+      return;
     }
-  } else {
-    draw_icon8_clipped(icon_id, icon_rect, col);
+  }
+  // Fallback: draw a small placeholder square so the icon slot is not blank.
+  // (draw_icon8_clipped is not used here because it renders theme icons, which
+  // use a different index space than file-picker / custom icon_id_t values.)
+  {
+    int ph = 8;
+    int px = icon_rect->x + (icon_rect->w - ph) / 2;
+    int py = icon_rect->y + (icon_rect->h - ph) / 2;
+    uint32_t dim = (col & 0x00FFFFFFu) | 0x60000000u;  // 38% opacity
+    fill_rect(dim, R(px,        py,        ph, 1));
+    fill_rect(dim, R(px,        py + ph-1, ph, 1));
+    fill_rect(dim, R(px,        py + 1,    1,  ph - 2));
+    fill_rect(dim, R(px + ph-1, py + 1,    1,  ph - 2));
   }
 }
 

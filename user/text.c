@@ -132,6 +132,13 @@ static bool load_atlas(font_atlas_t *atlas, glyph_metrics_t *met,
   free(raw);
   cell_w        = fi.cell_w;
   cell_h        = fi.cell_h;
+  if (cell_w <= 0 || cell_h <= 0 || (img_w % cell_w) != 0 || (img_h % cell_h) != 0) {
+    printf("text: font %s has invalid cell dimensions (%dx%d) for image (%dx%d)\n",
+           path, cell_w, cell_h, img_w, img_h);
+    if (glyphs) free(glyphs);
+    image_free(rgba);
+    return false;
+  }
   chars_per_row = img_w / cell_w;
   baseline      = fi.baseline;
 
@@ -195,7 +202,7 @@ static void create_legacy_atlas(void) {
   for (int c = 0; c < 128; c++) {
     int ax = (c % cpr) * gw, ay = (c / cpr) * gh;
     text_state.big_met.advance[c] = 0;
-    text_state.big_met.x0[c]      = 0xff;
+    text_state.big_met.x0[c]      = 127;  // sentinel: INT8_MAX, updated by min-x scan below
     uint8_t hi = 0;
     for (int y = 0; y < gh; y++) {
       int byte = console_font_6x8[c * gh + y];
