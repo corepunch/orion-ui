@@ -297,7 +297,7 @@ rect_t center_window_rect(rect_t frame_rect, window_t const *owner) {
   if (sh > 0 && frame_rect.h >= sh)
     frame_rect.y = 0;
   else if (sh > 0)
-    frame_rect.y = MAX(0, MIN(frame_rect.y, sh - frame_rect.h));
+    frame_rect.y = MAX(TITLEBAR_HEIGHT, MIN(frame_rect.y, sh - frame_rect.h));
 
   return frame_rect;
 }

@@ -463,13 +463,37 @@ void handle_menu_command(uint16_t id) {
     }
 
     case ID_WINDOW_TOOLS:
-      // Show and bring the tool palette to front; if hidden, make it visible.
-      if (g_app->tool_win) show_window(g_app->tool_win, true);
+      if (g_app->tool_win) {
+        // Show and bring the tool palette to front; if hidden, make it visible.
+        show_window(g_app->tool_win, true);
+      } else {
+        // Window was closed by the user — recreate it.
+        window_t *tp = create_window(
+            "Tools",
+            WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
+            MAKERECT(PALETTE_WIN_X, PALETTE_WIN_Y, PALETTE_WIN_W, TOOL_WIN_H),
+            NULL, win_tool_palette_proc, g_app->hinstance, NULL);
+        show_window(tp, true);
+        g_app->tool_win = tp;
+        // Sync the active button to the currently selected tool.
+        send_message(tp, bxSetActiveItem, (uint32_t)g_app->current_tool, NULL);
+      }
       break;
 
     case ID_WINDOW_COLORS:
-      // Show and bring the color palette to front.
-      if (g_app->color_win) show_window(g_app->color_win, true);
+      if (g_app->color_win) {
+        // Show and bring the color palette to front.
+        show_window(g_app->color_win, true);
+      } else {
+        // Window was closed by the user — recreate it.
+        window_t *cp = create_window(
+            "Colors",
+            WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
+            MAKERECT(COLOR_WIN_X, COLOR_WIN_Y, COLOR_WIN_W, COLOR_WIN_H),
+            NULL, win_color_palette_proc, g_app->hinstance, NULL);
+        show_window(cp, true);
+        g_app->color_win = cp;
+      }
       break;
 
     default:
