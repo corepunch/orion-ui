@@ -1,4 +1,10 @@
-unsigned char console_font_6x8[] = {
+#ifndef __TOOLS_FONT_6X8_H__
+#define __TOOLS_FONT_6X8_H__
+
+// Embedded 6x8 console font data. Used only by tools (gen_vga_font).
+// Not part of the runtime library.
+
+static const unsigned char console_font_6x8[] = {
   
   /*
    * code=0, hex=0x00, ascii="^@"
@@ -3072,3 +3078,5 @@ unsigned char console_font_6x8[] = {
   0x00,  /* 000000 */
   0x00,  /* 000000 */
 };
+
+#endif /* __TOOLS_FONT_6X8_H__ */

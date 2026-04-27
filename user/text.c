@@ -189,63 +189,6 @@ static bool load_atlas(font_atlas_t *atlas, glyph_metrics_t *met,
   return true;
 }
 
-// ── Legacy fallback: build atlas from hardcoded font_6x8 + icons_bits ────────
-
-static void create_legacy_atlas(void) {
-  extern unsigned char console_font_6x8[];
-  extern unsigned char icons_bits[];
-
-  const int tex_sz = 128, gw = 8, gh = 8, cpr = 16;
-  unsigned char *buf = (unsigned char *)calloc((size_t)(tex_sz * tex_sz), 1);
-  if (!buf) return;
-
-  for (int c = 0; c < 128; c++) {
-    int ax = (c % cpr) * gw, ay = (c / cpr) * gh;
-    text_state.big_met.advance[c] = 0;
-    text_state.big_met.x0[c]      = 127;  // sentinel: INT8_MAX, updated by min-x scan below
-    uint8_t hi = 0;
-    for (int y = 0; y < gh; y++) {
-      int byte = console_font_6x8[c * gh + y];
-      for (int x = 0; x < 6; x++) {
-        if ((byte >> (5 - x)) & 1) {
-          buf[(ay + y) * tex_sz + ax + x] = 255;
-          if (x < text_state.big_met.x0[c]) text_state.big_met.x0[c] = (uint8_t)x;
-          if (x + 2 > hi) hi = (uint8_t)(x + 2);
-        }
-      }
-    }
-    if (hi == 0) { text_state.big_met.x0[c] = 0; hi = 3; } // space
-    text_state.big_met.draw_w[c]  = hi - text_state.big_met.x0[c];
-    text_state.big_met.advance[c] = text_state.big_met.draw_w[c];
-  }
-  memcpy(buf + tex_sz * tex_sz / 2, icons_bits, (size_t)(tex_sz * tex_sz / 2));
-  for (int i = 128; i < 256; i++) {
-    text_state.big_met.x0[i]      = 0;
-    text_state.big_met.draw_w[i]  = 8;
-    text_state.big_met.advance[i] = 8;
-  }
-
-  text_state.big.texture.width  = tex_sz;
-  text_state.big.texture.height = tex_sz;
-  text_state.big.texture.format = GL_RED;
-  R_AllocateFontTexture(&text_state.big.texture, buf);
-  free(buf);
-
-  text_state.big.cell_w        = gw;
-  text_state.big.cell_h        = gh;
-  text_state.big.chars_per_row = cpr;
-  init_atlas_mesh(&text_state.big);
-
-  text_state.big_height   = gh;
-  text_state.big_line     = gh + 4;
-  text_state.big_space    = 3;
-  // No separate small atlas in legacy mode — small metrics mirror big.
-  text_state.small_height = gh;
-  text_state.small_line   = gh + 4;
-  text_state.small_space  = 3;
-  text_state.has_small    = false;
-}
-
 // ── init_text_rendering ───────────────────────────────────────────────────────
 
 void init_text_rendering(void) {
@@ -306,9 +249,16 @@ void init_text_rendering(void) {
     return;
   }
 
-  // Final fallback: generate atlas from hardcoded font_6x8 data.
-  printf("text: PNG fonts unavailable, using built-in font_6x8\n");
-  create_legacy_atlas();
+  fprintf(stderr, "error: failed to load any usable share/orion font atlases.\n"
+                  "       Tried:\n"
+                  "         %s\n"
+                  "         %s\n"
+                  "         %s\n"
+                  "       Assets may be missing, corrupted, or invalid.\n"
+                  "       Please verify the share/orion directory next to the executable\n"
+                  "       (looked in %s/../share/orion/).\n",
+                  chicago_path, geneva_path, small_path, exe);
+  exit(1);
 }
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
