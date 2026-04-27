@@ -7,7 +7,6 @@
 #include "../user/draw.h"
 
 #define BUFFER_SIZE 512
-#define PADDING 3
 
 // Helper function (will be moved to ui/user/window.c later)
 extern window_t *get_root_window(window_t *window);
@@ -16,29 +15,35 @@ extern window_t *get_root_window(window_t *window);
 result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
     case evCreate:
-      win->frame.w = MAX(win->frame.w, strwidth(win->title)+PADDING*2);
+      win->frame.w = MAX(win->frame.w, text_strwidth(FONT_SMALL, win->title) + 6);
       win->frame.h = MAX(win->frame.h, 13);
       return true;
-    case evPaint:
+    case evPaint: {
+      rect_t local = {0, 0, win->frame.w, win->frame.h};
       fill_rect(g_ui_runtime.focused == win?get_sys_color(brFocusRing):get_sys_color(brWindowBg),
                 R(-1, -1, win->frame.w+2, win->frame.h+2));
-      draw_button(&(rect_t){0, 0, win->frame.w, win->frame.h}, 1, 1, true);
-      draw_text_small(win->title, PADDING, PADDING, get_sys_color(brTextNormal));
+      draw_button(&local, 1, 1, true);
+      int tw = text_strwidth(FONT_SMALL, win->title);
+      int th = text_char_height(FONT_SMALL);
+      rect_t label = rect_center(local, tw, th);
+      draw_text(FONT_SMALL, win->title, label.x, label.y, get_sys_color(brTextNormal));
       if (g_ui_runtime.focused == win && win->editing) {
         fill_rect(get_sys_color(brTextNormal),
-                  R(PADDING+strnwidth(win->title, win->cursor_pos),
-                    PADDING,
-                    2, 8));
+                  R(label.x + text_strnwidth(FONT_SMALL, win->title, win->cursor_pos),
+                    label.y,
+                    2, th));
       }
       return true;
+    }
     case evLeftButtonUp:
       if (g_ui_runtime.focused == win) {
         invalidate_window(win);
         win->editing = true;
+        int text_x = (win->frame.w - text_strwidth(FONT_SMALL, win->title)) / 2;
         win->cursor_pos = 0;
         for (int i = 0; i <= (int)strlen(win->title); i++) {
-          int x1 = PADDING+strnwidth(win->title, i);
-          int x2 = PADDING+strnwidth(win->title, win->cursor_pos);
+          int x1 = text_x + text_strnwidth(FONT_SMALL, win->title, i);
+          int x2 = text_x + text_strnwidth(FONT_SMALL, win->title, win->cursor_pos);
           if (abs((int)LOWORD(wparam) - x1) < abs((int)LOWORD(wparam) - x2)) {
             win->cursor_pos = i;
           }

@@ -375,6 +375,10 @@ int text_strwidth(ui_font_t font, const char *text) {
   return strnwidth_impl(font, text, (int)strlen(text));
 }
 
+int text_strnwidth(ui_font_t font, const char *text, int len) {
+  return strnwidth_impl(font, text, len);
+}
+
 // ── draw_text / draw_text_small ───────────────────────────────────────────────
 
 void draw_text(ui_font_t font, const char *text, int x, int y, uint32_t col) {

@@ -49,6 +49,7 @@ void draw_text_clipped(ui_font_t font, const char *text,
                        rect_t const *viewport, uint32_t col, uint32_t flags);
 int  text_char_height(ui_font_t font);   // cell pixel height for the given font
 int  text_strwidth(ui_font_t font, const char *text);  // pixel width of string
+int  text_strnwidth(ui_font_t font, const char *text, int len); // pixel width of first len chars
 
 // ── Legacy FONT_SYSTEM aliases (backward-compatible) ─────────────────────────
 // These remain as real callable functions so existing extern declarations and
