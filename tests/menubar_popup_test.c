@@ -219,8 +219,10 @@ void test_popup_cancel_on_different_item_release(void) {
     send_message(popup, evLeftButtonDown, MAKEDWORD(10, 5), NULL);
     ASSERT_EQUAL(count_windows(), 2);   // popup still open
 
-    // Release on "Save" (y=17, item index 1) – different item, must cancel.
-    send_message(popup, evLeftButtonUp, MAKEDWORD(10, 17), NULL);
+    // Release on "Save" (y=22, item index 1) – different item, must cancel.
+    // MENU_ITEM_H=TITLEBAR_HEIGHT=17, MENU_START_Y=1:
+    //   "Open" [1,18), "Save" [18,35) — y=22 is inside "Save".
+    send_message(popup, evLeftButtonUp, MAKEDWORD(10, 22), NULL);
     ASSERT_EQUAL(g_cmd_count, 0);       // no command fired
     ASSERT_EQUAL(count_windows(), 1);   // popup closed
 
@@ -239,26 +241,27 @@ void test_popup_command_delivered_for_each_item(void) {
     ASSERT_NOT_NULL(mb);
 
     // Press and release on "Save" (id=2).
-    // "Open" occupies y in [2, 14), "Save" in [14, 26).
+    // MENU_ITEM_H=TITLEBAR_HEIGHT=17, MENU_START_Y=1:
+    // "Open" occupies y in [1, 18), "Save" in [18, 35).
     open_popup(mb);
     window_t *popup = find_other_window(mb);
     ASSERT_NOT_NULL(popup);
 
-    send_message(popup, evLeftButtonDown, MAKEDWORD(10, 17), NULL);
-    send_message(popup, evLeftButtonUp,   MAKEDWORD(10, 17), NULL);
+    send_message(popup, evLeftButtonDown, MAKEDWORD(10, 22), NULL);
+    send_message(popup, evLeftButtonUp,   MAKEDWORD(10, 22), NULL);
 
     ASSERT_EQUAL(g_cmd_count, 1);
     ASSERT_EQUAL(g_cmd_last_id, 2);
     ASSERT_EQUAL(count_windows(), 1); // popup is gone
 
     // Now open again and press/release on "Quit" (id=3).
-    // "Open" [2,14), "Save" [14,26), sep [26,31), "Quit" [31,43)
+    // "Open" [1,18), "Save" [18,35), sep [35,40), "Quit" [40,57)
     open_popup(mb);
     popup = find_other_window(mb);
     ASSERT_NOT_NULL(popup);
 
-    send_message(popup, evLeftButtonDown, MAKEDWORD(10, 33), NULL);
-    send_message(popup, evLeftButtonUp,   MAKEDWORD(10, 33), NULL);
+    send_message(popup, evLeftButtonDown, MAKEDWORD(10, 43), NULL);
+    send_message(popup, evLeftButtonUp,   MAKEDWORD(10, 43), NULL);
 
     ASSERT_EQUAL(g_cmd_count, 2);
     ASSERT_EQUAL(g_cmd_last_id, 3);
