@@ -170,7 +170,7 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       return false;
 
     case evDestroy:
-      if (g_app) g_app->tool_win = NULL;
+      g_app->tool_win = NULL;
       return win_toolbox(win, msg, wparam, lparam);
 
     default:

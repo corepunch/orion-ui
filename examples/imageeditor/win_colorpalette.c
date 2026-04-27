@@ -97,7 +97,7 @@ result_t win_color_palette_proc(window_t *win, uint32_t msg,
     }
 
     case evDestroy:
-      if (g_app) g_app->color_win = NULL;
+      g_app->color_win = NULL;
       return false;
 
     default:

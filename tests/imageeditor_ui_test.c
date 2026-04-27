@@ -41,6 +41,16 @@ static void ie_teardown(void) {
         test_env_shutdown();
         return;
     }
+    // Destroy palette windows first so their evDestroy handlers can safely
+    // null out g_app->tool_win / g_app->color_win while g_app is still valid.
+    if (g_app->tool_win) {
+        destroy_window(g_app->tool_win);
+        g_app->tool_win = NULL;
+    }
+    if (g_app->color_win) {
+        destroy_window(g_app->color_win);
+        g_app->color_win = NULL;
+    }
     // close_document properly unlinks, frees undo stack, and destroys the
     // window.  It is safe headlessly because canvas_tex / float_tex stay 0.
     while (g_app->docs)
@@ -49,29 +59,16 @@ static void ie_teardown(void) {
     free(g_app->clipboard);
     free(g_app);
     g_app = NULL;
-    // test_env_shutdown destroys any remaining windows (palette windows,
-    // orphaned dialogs left from message_box in headless mode).
+    // test_env_shutdown destroys any remaining windows (orphaned dialogs left
+    // from message_box in headless mode).
     test_env_shutdown();
 }
 
 // Convenience: create the tool palette and color palette windows exactly as
 // gem_init does, but without the PNG icon strip (SHAREDIR not defined here).
 static void ie_create_palette_windows(void) {
-    window_t *tp = create_window(
-        "Tools",
-        WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
-        MAKERECT(PALETTE_WIN_X, PALETTE_WIN_Y, PALETTE_WIN_W, TOOL_WIN_H),
-        NULL, win_tool_palette_proc, g_app->hinstance, NULL);
-    show_window(tp, true);
-    g_app->tool_win = tp;
-
-    window_t *cp = create_window(
-        "Colors",
-        WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
-        MAKERECT(COLOR_WIN_X, COLOR_WIN_Y, COLOR_WIN_W, COLOR_WIN_H),
-        NULL, win_color_palette_proc, g_app->hinstance, NULL);
-    show_window(cp, true);
-    g_app->color_win = cp;
+    create_tool_palette_window();
+    create_color_palette_window();
 }
 
 // ── Window counting helper ─────────────────────────────────────────────────────
