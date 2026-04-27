@@ -413,6 +413,11 @@ void window_menu_rebuild(void);
 // by the shell (gem mode) when the user selects a menu item.
 void handle_menu_command(uint16_t id);
 
+// Palette window factory helpers — create, show, register and return the window.
+// Also used by handle_menu_command to recreate closed palette windows.
+window_t *create_tool_palette_window(void);
+window_t *create_color_palette_window(void);
+
 // New Image / Canvas Size dialog
 bool show_size_dialog(window_t *parent, const char *title, int *out_w, int *out_h);
 

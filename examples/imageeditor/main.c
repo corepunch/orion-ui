@@ -62,21 +62,8 @@ static void create_app_windows(hinstance_t hinstance) {
   g_app->menubar_win = set_app_menu(editor_menubar_proc, kMenus, kNumMenus,
                                     handle_menu_command, hinstance);
 
-  window_t *tp = create_window(
-      "Tools",
-      WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
-      MAKERECT(PALETTE_WIN_X, PALETTE_WIN_Y, PALETTE_WIN_W, TOOL_WIN_H),
-      NULL, win_tool_palette_proc, hinstance, NULL);
-  show_window(tp, true);
-  g_app->tool_win = tp;
-
-  window_t *cp = create_window(
-      "Colors",
-      WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
-      MAKERECT(COLOR_WIN_X, COLOR_WIN_Y, COLOR_WIN_W, COLOR_WIN_H),
-      NULL, win_color_palette_proc, hinstance, NULL);
-  show_window(cp, true);
-  g_app->color_win = cp;
+  create_tool_palette_window();
+  create_color_palette_window();
 }
 
 // ============================================================

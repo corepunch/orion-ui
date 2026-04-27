@@ -146,6 +146,32 @@ static bool cancel_active_canvas_interaction(canvas_doc_t *doc, int old_tool) {
   return changed;
 }
 
+// ============================================================
+// Palette window helpers (shared by gem_init / handle_menu_command)
+// ============================================================
+
+window_t *create_tool_palette_window(void) {
+  window_t *tp = create_window(
+      "Tools",
+      WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
+      MAKERECT(PALETTE_WIN_X, PALETTE_WIN_Y, PALETTE_WIN_W, TOOL_WIN_H),
+      NULL, win_tool_palette_proc, g_app->hinstance, NULL);
+  show_window(tp, true);
+  g_app->tool_win = tp;
+  return tp;
+}
+
+window_t *create_color_palette_window(void) {
+  window_t *cp = create_window(
+      "Colors",
+      WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
+      MAKERECT(COLOR_WIN_X, COLOR_WIN_Y, COLOR_WIN_W, COLOR_WIN_H),
+      NULL, win_color_palette_proc, g_app->hinstance, NULL);
+  show_window(cp, true);
+  g_app->color_win = cp;
+  return cp;
+}
+
 // Rebuild the Window menu items and re-push the full menu definition to the
 // menu-bar window.  Extensibility: add more fixed entries to kWindowPrefix, or
 // register new document classes in the loop below.
@@ -463,13 +489,24 @@ void handle_menu_command(uint16_t id) {
     }
 
     case ID_WINDOW_TOOLS:
-      // Show and bring the tool palette to front; if hidden, make it visible.
-      if (g_app->tool_win) show_window(g_app->tool_win, true);
+      if (g_app->tool_win) {
+        // Show and bring the tool palette to front; if hidden, make it visible.
+        show_window(g_app->tool_win, true);
+      } else {
+        // Window was closed by the user — recreate it and sync the active tool.
+        window_t *tp = create_tool_palette_window();
+        send_message(tp, bxSetActiveItem, (uint32_t)g_app->current_tool, NULL);
+      }
       break;
 
     case ID_WINDOW_COLORS:
-      // Show and bring the color palette to front.
-      if (g_app->color_win) show_window(g_app->color_win, true);
+      if (g_app->color_win) {
+        // Show and bring the color palette to front.
+        show_window(g_app->color_win, true);
+      } else {
+        // Window was closed by the user — recreate it.
+        create_color_palette_window();
+      }
       break;
 
     default:

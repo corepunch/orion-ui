@@ -49,7 +49,8 @@ int main(int argc, char *argv[]) {
     TEST_PASS("evStatusBar message is defined");
     
     // Test 3: STATUSBAR_HEIGHT constant is defined
-    TEST_ASSERT(STATUSBAR_HEIGHT == 12, "STATUSBAR_HEIGHT has correct value");
+    // STATUSBAR_HEIGHT = FONT_SIZE + 5; FONT_SIZE=12 at scale=1, 8 at scale>=2.
+    TEST_ASSERT(STATUSBAR_HEIGHT == FONT_SIZE + 5, "STATUSBAR_HEIGHT has correct value");
     TEST_PASS("STATUSBAR_HEIGHT constant is correct");
     
     // Test 4: brStatusbarBg default value is correct
