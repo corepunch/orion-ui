@@ -34,8 +34,13 @@
 #define CANVAS_W      320
 #define CANVAS_H      200
 
+#if UI_WINDOW_SCALE > 1
 #define SCREEN_W      512
 #define SCREEN_H      342
+#else
+#define SCREEN_W      1024
+#define SCREEN_H      768
+#endif
 
 #define PALETTE_WIN_X   4
 // Tool palette window width: always 2 toolbox columns wide.
