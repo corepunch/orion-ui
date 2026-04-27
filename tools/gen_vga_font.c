@@ -4,8 +4,8 @@
 // monospace character sheet with 256 glyphs arranged in a 16-column x 16-row
 // grid (each cell is 8x16 pixels, white glyphs on transparent background).
 //
-// The source bitmap is the Orion built-in 6x8 console font
-// (user/font_6x8.c, exported as console_font_6x8[]).  Each glyph is scaled
+// The source bitmap is the 6x8 console font stored in tools/font_6x8.h
+// (static array console_font_6x8[]).  Each glyph is scaled
 // to 8x16 by:
 //   - Using all 8 bits of each row byte as-is (6 significant bits, 2 trailing
 //     zeros → glyph left-aligned in the 8-pixel-wide cell).
@@ -17,9 +17,10 @@
 //   gen_vga_font [output_path]
 //   (default output path: share/vga-rom-font-8x16.png)
 //
-// Build: this tool is compiled by the standard Makefile tools rule and links
-// against liborion.so.  It calls save_image_png() (user/image.h) which is a
-// pure stb_image_write wrapper — no GL context required.
+// Build: this tool is compiled by the standard Makefile tools rule.  It is
+// self-contained — the font data lives in tools/font_6x8.h and the only
+// liborion dependency is save_image_png() (user/image.h, pure stb_image_write
+// wrapper, no GL context required).
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,9 +28,7 @@
 #include <stdint.h>
 
 #include "../user/image.h"
-
-// Declared in user/font_6x8.c; available via liborion.so.
-extern unsigned char console_font_6x8[];
+#include "font_6x8.h"
 
 #define GLYPH_W     8
 #define GLYPH_H     16

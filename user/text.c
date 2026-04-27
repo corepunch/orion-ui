@@ -249,8 +249,15 @@ void init_text_rendering(void) {
     return;
   }
 
-  fprintf(stderr, "error: share/orion font files not found (looked in %s/../share/orion/)\n"
-                  "       Please copy the share/orion directory next to the executable.\n", exe);
+  fprintf(stderr, "error: failed to load any usable share/orion font atlases.\n"
+                  "       Tried:\n"
+                  "         %s\n"
+                  "         %s\n"
+                  "         %s\n"
+                  "       Assets may be missing, corrupted, or invalid.\n"
+                  "       Please verify the share/orion directory next to the executable\n"
+                  "       (looked in %s/../share/orion/).\n",
+                  chicago_path, geneva_path, small_path, exe);
   exit(1);
 }
 
