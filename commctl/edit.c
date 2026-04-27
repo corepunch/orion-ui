@@ -39,11 +39,13 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       if (g_ui_runtime.focused == win) {
         invalidate_window(win);
         win->editing = true;
-        int text_x = (win->frame.w - text_strwidth(FONT_SMALL, win->title)) / 2;
+        rect_t local = {0, 0, win->frame.w, win->frame.h};
+        rect_t label = rect_center(local, text_strwidth(FONT_SMALL, win->title),
+                                   text_char_height(FONT_SMALL));
         win->cursor_pos = 0;
         for (int i = 0; i <= (int)strlen(win->title); i++) {
-          int x1 = text_x + text_strnwidth(FONT_SMALL, win->title, i);
-          int x2 = text_x + text_strnwidth(FONT_SMALL, win->title, win->cursor_pos);
+          int x1 = label.x + text_strnwidth(FONT_SMALL, win->title, i);
+          int x2 = label.x + text_strnwidth(FONT_SMALL, win->title, win->cursor_pos);
           if (abs((int)LOWORD(wparam) - x1) < abs((int)LOWORD(wparam) - x2)) {
             win->cursor_pos = i;
           }
