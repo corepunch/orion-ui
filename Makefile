@@ -199,10 +199,19 @@ GITCLIENT_TEST_SRCS = $(TEST_DIR)/gitclient_backend_test.c \
 GITCLIENT_TEST_BINS = $(patsubst $(TEST_DIR)/%.c,$(BIN_DIR)/test_%$(EXE_EXT),$(GITCLIENT_TEST_SRCS))
 GITCLIENT_SRCS_NO_MAIN = $(filter-out examples/gitclient/main.c,$(wildcard examples/gitclient/*.c))
 
-# Test sources (gitclient tests excluded — they use their own build rules)
-TEST_SRCS = $(filter-out $(TEST_DIR)/test_env.c $(GITCLIENT_TEST_SRCS),$(wildcard $(TEST_DIR)/*.c))
+# Imageeditor UI test — links imageeditor sources (no main.c) + test_env.c.
+IMAGEEDITOR_UI_TEST_SRC  = $(TEST_DIR)/imageeditor_ui_test.c
+IMAGEEDITOR_UI_TEST_BIN  = $(BIN_DIR)/test_imageeditor_ui_test$(EXE_EXT)
+IMAGEEDITOR_SRCS_NO_MAIN = $(filter-out examples/imageeditor/main.c,$(wildcard examples/imageeditor/*.c))
+
+# Tests with custom build rules — excluded from the generic pattern rules.
+APP_UI_TEST_SRCS = $(GITCLIENT_TEST_SRCS) $(IMAGEEDITOR_UI_TEST_SRC)
+APP_UI_TEST_BINS = $(GITCLIENT_TEST_BINS) $(IMAGEEDITOR_UI_TEST_BIN)
+
+# Test sources (app UI tests excluded — they use their own build rules)
+TEST_SRCS = $(filter-out $(TEST_DIR)/test_env.c $(APP_UI_TEST_SRCS),$(wildcard $(TEST_DIR)/*.c))
 TEST_BINS = $(patsubst $(TEST_DIR)/%.c,$(BIN_DIR)/test_%$(EXE_EXT),$(TEST_SRCS))
-TEST_ENV_SRCS = $(filter-out $(TEST_DIR)/test_env.c $(GITCLIENT_TEST_SRCS),$(shell grep -l '"test_env.h"' $(TEST_DIR)/*.c 2>/dev/null))
+TEST_ENV_SRCS = $(filter-out $(TEST_DIR)/test_env.c $(APP_UI_TEST_SRCS),$(shell grep -l '"test_env.h"' $(TEST_DIR)/*.c 2>/dev/null))
 TEST_ENV_BINS = $(patsubst $(TEST_DIR)/%.c,$(BIN_DIR)/test_%$(EXE_EXT),$(TEST_ENV_SRCS))
 
 # Default target
@@ -378,13 +387,13 @@ $(SHELL_BIN): $(SHELL_SRCS) $(SHARED_LIB) | $(BIN_DIR)
 
 # Tests
 .PHONY: test
-test: $(TEST_BINS) $(GITCLIENT_TEST_BINS)
+test: $(TEST_BINS) $(APP_UI_TEST_BINS)
 	@echo "Running tests..."
 ifeq ($(OS),Windows_NT)
 	@cp -f $(LIB_DIR)/libplatform.dll $(BIN_DIR)/
 	@cp -f $(LIB_DIR)/liborion.dll $(BIN_DIR)/
 endif
-	@for test in $(TEST_BINS) $(GITCLIENT_TEST_BINS); do \
+	@for test in $(TEST_BINS) $(APP_UI_TEST_BINS); do \
 		echo "Running $$test..."; \
 		$$test || exit 1; \
 	done
@@ -404,6 +413,14 @@ $(BIN_DIR)/test_gitclient_ui_test$(EXE_EXT): $(TEST_DIR)/gitclient_ui_test.c $(T
 	$(CC) $(CFLAGS) -I. -Iexamples/gitclient -o $@ \
 		$(TEST_DIR)/gitclient_ui_test.c $(TEST_DIR)/test_env.c \
 		$(GITCLIENT_SRCS_NO_MAIN) \
+		$(LDFLAGS) $(LDFLAGS_TEST) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
+
+# Imageeditor UI test — needs all imageeditor sources except main.c + test_env.c.
+$(IMAGEEDITOR_UI_TEST_BIN): $(IMAGEEDITOR_UI_TEST_SRC) $(TEST_DIR)/test_env.c $(IMAGEEDITOR_SRCS_NO_MAIN) $(SHARED_LIB) | $(BIN_DIR)
+	@echo "Building imageeditor UI test: $@"
+	$(CC) $(CFLAGS) -I. -Iexamples/imageeditor -DIMAGEEDITOR_DEBUG=0 -o $@ \
+		$(IMAGEEDITOR_UI_TEST_SRC) $(TEST_DIR)/test_env.c \
+		$(IMAGEEDITOR_SRCS_NO_MAIN) \
 		$(LDFLAGS) $(LDFLAGS_TEST) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
 
 # Build tests that need test_env (auto-detected by include)
