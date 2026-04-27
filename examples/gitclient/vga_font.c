@@ -161,7 +161,7 @@ static void vga_draw_char_fallback(int ch, int x, int y, uint32_t fg, uint32_t b
 
   float u0, v0, u1, v1;
   glyph_uv(ch, &u0, &v0, &u1, &v1);
-  draw_sprite_region((int)g_vga_tex, &cell, u0, v0, u1, v1, fg);
+  draw_sprite_region((int)g_vga_tex, &cell, UV_RECT(u0, v0, u1, v1), fg, 0);
 }
 
 void vga_draw_char(int ch, int x, int y, uint32_t fg, uint32_t bg) {

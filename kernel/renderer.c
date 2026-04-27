@@ -313,12 +313,19 @@ void draw_rect(int tex, rect_t const *r) {
 }
 
 // Draw a sub-region of a sprite sheet at the specified screen position.
-// (u0,v0)-(u1,v1) are normalized texture coordinates selecting the icon.
+// uv packs normalized texture coordinates as floats: x=u0, y=v0, w=u1, h=v1.
 void draw_sprite_region(int tex, rect_t const *r,
-                        float u0, float v0, float u1, float v1,
-                        uint32_t color) {
+                        frect_t const *uv,
+                        uint32_t color, uint32_t flags) {
   if (!g_ui_runtime.running || !r) return;
+  float u0 = uv ? uv->x : 0.0f;
+  float v0 = uv ? uv->y : 0.0f;
+  float u1 = uv ? uv->w : 1.0f;
+  float v1 = uv ? uv->h : 1.0f;
+
   float alpha = ((color >> 24) & 0xFF) / 255.0f;
+  if (flags & DRAW_SPRITE_NO_ALPHA)
+    alpha = 1.0f;
   push_sprite_args(tex, r->x, r->y, r->w, r->h, alpha);
 
   float tr = ((color >> 16) & 0xFF) / 255.0f;
@@ -329,13 +336,18 @@ void draw_sprite_region(int tex, rect_t const *r,
 
   glUniform2f(glGetUniformLocation(g_ref.program, "uv_offset"), u0, v0);
   glUniform2f(glGetUniformLocation(g_ref.program, "uv_scale"), u1 - u0, v1 - v0);
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  if (flags & DRAW_SPRITE_NO_ALPHA) {
+    glDisable(GL_BLEND);
+  } else {
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  }
   glDisable(GL_DEPTH_TEST);
   g_ref.mesh.draw_mode = GL_TRIANGLE_FAN;
   R_MeshDraw(&g_ref.mesh);
   glEnable(GL_DEPTH_TEST);
-  glDisable(GL_BLEND);
+  if (!(flags & DRAW_SPRITE_NO_ALPHA))
+    glDisable(GL_BLEND);
 }
 
 int ui_get_system_metrics(ui_system_metrics_t metric) {

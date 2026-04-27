@@ -10,9 +10,22 @@
 void fill_rect(uint32_t color, rect_t const *r);
 void draw_rect(int tex, rect_t const *r);
 void draw_rect_ex(int tex, rect_t const *r, int type, float alpha);
+
+// UVs for draw_sprite_region() are packed into frect_t as normalized floats:
+// x=u0, y=v0, w=u1, h=v1.
+#define UV_RECT(U0, V0, U1, V1) \
+    (&(frect_t){ (U0), (V0), (U1), (V1) })
+
+enum {
+    DRAW_SPRITE_NO_ALPHA = 1u << 0
+};
+
+// Short alias for callers that prefer terse draw flags.
+#define NO_ALPHA DRAW_SPRITE_NO_ALPHA
+
 void draw_sprite_region(int tex, rect_t const *r,
-                        float u0, float v0, float u1, float v1,
-                        uint32_t color);
+                        frect_t const *uv,
+                        uint32_t color, uint32_t flags);
 // Draw a dashed selection-outline rectangle (2–4 GL draw calls depending on dimensions, O(1) regardless of size)
 void draw_sel_rect(rect_t const *r);
 

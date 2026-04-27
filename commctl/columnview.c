@@ -274,7 +274,7 @@ static void rv_draw_item_icon(bitmap_strip_t *strip, int icon_id,
       float u1 = u0 + (float)strip->icon_w / (float)strip->sheet_w;
       float v1 = v0 + (float)strip->icon_h / (float)strip->sheet_h;
       draw_sprite_region((int)strip->tex, R(ix, iy, icon_sz, icon_sz),
-                         u0, v0, u1, v1, col);
+                         UV_RECT(u0, v0, u1, v1), col, 0);
       return;
     }
   }

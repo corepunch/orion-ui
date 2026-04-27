@@ -138,7 +138,7 @@ static void draw_toolbox_button(toolbox_state_t *st, int idx,
     rect_t icon_dst = rect_offset(rect_center(cell, s->icon_w, s->icon_h), px, px);
     draw_sprite_region((int)s->tex,
                        R(icon_dst.x, icon_dst.y, s->icon_w, s->icon_h),
-                       u0, v0, u1, v1, tint);
+                       UV_RECT(u0, v0, u1, v1), tint, 0);
   } else {
     // Text fallback: draw item index as a number.
     char buf[8];

@@ -146,7 +146,8 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
         float u1 = u0 + (float)s->icon_w / (float)s->sheet_w;
         float v1 = v0 + (float)s->icon_h / (float)s->sheet_h;
         rect_t icon = rect_offset(rect_center(local, s->icon_w, s->icon_h), px, px);
-        draw_sprite_region((int)s->tex, R(icon.x, icon.y, s->icon_w, s->icon_h), u0, v0, u1, v1, 0xFFFFFFFF);
+        draw_sprite_region((int)s->tex, R(icon.x, icon.y, s->icon_w, s->icon_h),
+                           UV_RECT(u0, v0, u1, v1), 0xFFFFFFFF, 0);
       } else {
         // Fallback: draw text label when no image has been set.
         rect_t inner = rect_inset(local, BUTTON_TEXT_INSET);

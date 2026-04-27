@@ -315,17 +315,21 @@ void draw_sel_rect(rect_t const *r) {
 
   // Top edge: tile along U, sample only the first texture row (v 0..0.25)
   draw_sprite_region(ui_checker_texture, R(x, y, w, 1),
-                     0.0f, 0.0f, (float)w / 4.0f, 0.25f, 0xFFFFFFFF);
+                     UV_RECT(0.0f, 0.0f, (float)w / 4.0f, 0.25f),
+                     0xFFFFFFFF, 0);
   // Bottom edge
   draw_sprite_region(ui_checker_texture, R(x, y + h - 1, w, 1),
-                     0.0f, 0.0f, (float)w / 4.0f, 0.25f, 0xFFFFFFFF);
+                     UV_RECT(0.0f, 0.0f, (float)w / 4.0f, 0.25f),
+                     0xFFFFFFFF, 0);
   if (h > 2) {
     // Left edge (skip corners already drawn above): tile along V, sample col 0 (u 0..0.25)
     draw_sprite_region(ui_checker_texture, R(x, y + 1, 1, h - 2),
-                       0.0f, 0.0f, 0.25f, (float)(h - 2) / 4.0f, 0xFFFFFFFF);
+                       UV_RECT(0.0f, 0.0f, 0.25f, (float)(h - 2) / 4.0f),
+                       0xFFFFFFFF, 0);
     // Right edge
     draw_sprite_region(ui_checker_texture, R(x + w - 1, y + 1, 1, h - 2),
-                       0.0f, 0.0f, 0.25f, (float)(h - 2) / 4.0f, 0xFFFFFFFF);
+                       UV_RECT(0.0f, 0.0f, 0.25f, (float)(h - 2) / 4.0f),
+                       0xFFFFFFFF, 0);
   }
 }
 
@@ -340,7 +344,7 @@ void draw_theme_icon(int id, int x, int y, int size, uint32_t col) {
   float v0 = (float)(srow * s->icon_h) / (float)s->sheet_h;
   float u1 = u0 + (float)s->icon_w / (float)s->sheet_w;
   float v1 = v0 + (float)s->icon_h / (float)s->sheet_h;
-  draw_sprite_region((int)s->tex, R(x, y, size, size), u0, v0, u1, v1, col);
+  draw_sprite_region((int)s->tex, R(x, y, size, size), UV_RECT(u0, v0, u1, v1), col, 0);
 }
 
 void draw_icon(int id, int x, int y, int size, uint32_t col) {
@@ -354,7 +358,7 @@ void draw_icon(int id, int x, int y, int size, uint32_t col) {
   float v0 = (float)(srow * s->icon_h) / (float)s->sheet_h;
   float u1 = u0 + (float)s->icon_w / (float)s->sheet_w;
   float v1 = v0 + (float)s->icon_h / (float)s->sheet_h;
-  draw_sprite_region((int)s->tex, R(x, y, size, size), u0, v0, u1, v1, col);
+  draw_sprite_region((int)s->tex, R(x, y, size, size), UV_RECT(u0, v0, u1, v1), col, 0);
 }
 
 void draw_icon8(int icon, int x, int y, uint32_t col) {
@@ -380,7 +384,7 @@ void draw_icon16(int icon, int x, int y, uint32_t col) {
       float u1 = u0 + (float)s->icon_w / (float)s->sheet_w;
       float v1 = v0 + (float)s->icon_h / (float)s->sheet_h;
       draw_sprite_region((int)s->tex, R(x, y, s->icon_w, s->icon_h),
-                         u0, v0, u1, v1, col);
+                         UV_RECT(u0, v0, u1, v1), col, 0);
     }
     return;
   }

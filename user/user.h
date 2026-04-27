@@ -31,6 +31,11 @@ typedef struct {
   int x, y;
 } point_t;
 
+// Float rectangle structure (used for normalized UVs and other float-space rects).
+typedef struct {
+  float x, y, w, h;
+} frect_t;
+
 // Rectangle structure
 struct rect_s {
   int x, y, w, h;
