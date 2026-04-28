@@ -20,14 +20,17 @@ const int kZoomMenuIDs[NUM_ZOOM_LEVELS] = {
 // disappears; only the thumb rendering and mouse interaction change between modes.
 #define CANVAS_SB_ALWAYS_VISIBLE
 
+// Round v to the nearest multiple of step (snap-to-grid helper).
+#define SNAP_AXIS(v, step) (((v) + (step) / 2) / (step) * (step))
+
 // Apply snap-to-grid to a canvas pixel position if the grid snap option is
 // enabled.  Rounds px/py to the nearest grid intersection.
 static void snap_canvas_pos(int *px, int *py) {
   if (!g_app || !g_app->grid_snap) return;
   int gx = g_app->grid_spacing_x;
   int gy = g_app->grid_spacing_y;
-  if (gx > 1) *px = ((*px + gx / 2) / gx) * gx;
-  if (gy > 1) *py = ((*py + gy / 2) / gy) * gy;
+  if (gx > 1) *px = SNAP_AXIS(*px, gx);
+  if (gy > 1) *py = SNAP_AXIS(*py, gy);
 }
 
 // ---- scrollbar helpers -------------------------------------------------------

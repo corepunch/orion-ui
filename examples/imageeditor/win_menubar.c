@@ -30,19 +30,19 @@ static const menu_item_t kEditItems[] = {
 };
 
 static menu_item_t s_view_items[] = {
-  {"Zoom In",          ID_VIEW_ZOOM_IN},
-  {"Zoom Out",         ID_VIEW_ZOOM_OUT},
-  {NULL,               0},
-  {"1x",               ID_VIEW_ZOOM_1X},
-  {"2x",               ID_VIEW_ZOOM_2X},
-  {"4x",               ID_VIEW_ZOOM_4X},
-  {"6x",               ID_VIEW_ZOOM_6X},
-  {"8x",               ID_VIEW_ZOOM_8X},
-  {NULL,               0},
-  {"[ ] Show Grid",    ID_VIEW_SHOW_GRID},
-  {"[ ] Snap to Grid", ID_VIEW_SNAP_GRID},
-  {NULL,               0},
-  {"Grid Options...",  ID_VIEW_GRID_OPTIONS},
+  {"Zoom In",                  ID_VIEW_ZOOM_IN},
+  {"Zoom Out",                 ID_VIEW_ZOOM_OUT},
+  {NULL,                       0},
+  {"1x",                       ID_VIEW_ZOOM_1X},
+  {"2x",                       ID_VIEW_ZOOM_2X},
+  {"4x",                       ID_VIEW_ZOOM_4X},
+  {"6x",                       ID_VIEW_ZOOM_6X},
+  {"8x",                       ID_VIEW_ZOOM_8X},
+  {NULL,                       0},
+  {"[ ] Show Grid",            ID_VIEW_SHOW_GRID},
+  {"[ ] Snap to Grid",         ID_VIEW_SNAP_GRID},
+  {NULL,                       0},
+  {"Grid Options...",          ID_VIEW_GRID_OPTIONS},
 };
 
 static const menu_item_t kImageItems[] = {
@@ -177,6 +177,11 @@ window_t *create_color_palette_window(void) {
   return cp;
 }
 
+// Prefix strings for toggleable menu items.
+// [x] = currently enabled, [ ] = currently disabled.
+#define MENU_CHECK_ON  "[x] "
+#define MENU_CHECK_OFF "[ ] "
+
 // Update the View menu's toggleable items to reflect the current grid state.
 // Called before each popup open so the labels always show current state.
 static void view_menu_rebuild(void) {
@@ -184,9 +189,13 @@ static void view_menu_rebuild(void) {
   int n = (int)(sizeof(s_view_items) / sizeof(s_view_items[0]));
   for (int i = 0; i < n; i++) {
     if (s_view_items[i].id == ID_VIEW_SHOW_GRID)
-      s_view_items[i].label = g_app->grid_visible ? "[x] Show Grid"    : "[ ] Show Grid";
+      s_view_items[i].label = g_app->grid_visible
+                              ? MENU_CHECK_ON "Show Grid"
+                              : MENU_CHECK_OFF "Show Grid";
     if (s_view_items[i].id == ID_VIEW_SNAP_GRID)
-      s_view_items[i].label = g_app->grid_snap    ? "[x] Snap to Grid" : "[ ] Snap to Grid";
+      s_view_items[i].label = g_app->grid_snap
+                              ? MENU_CHECK_ON "Snap to Grid"
+                              : MENU_CHECK_OFF "Snap to Grid";
   }
 }
 

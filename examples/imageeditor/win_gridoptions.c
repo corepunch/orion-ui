@@ -50,7 +50,7 @@ static const form_ctrl_def_t kGoChildren[] = {
 };
 
 static const form_def_t kGoForm = {
-  .name        = "",
+  .name        = "Grid Options",
   .width       = GO_W,
   .height      = GO_H,
   .flags       = 0,
