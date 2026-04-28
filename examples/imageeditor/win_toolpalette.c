@@ -22,44 +22,24 @@
 #define FILL_LABEL_H     9   // height of "Fill:" label row
 #define FILL_ROW_H      12   // height of Outline/Filled toggle buttons
 
-// Display order for the tool palette – mirrors the Photoshop 1.0 toolbox layout.
-static const int k_tool_order[NUM_TOOLS] = {
-  ID_TOOL_SELECT,
-  ID_TOOL_HAND,
-  ID_TOOL_EYEDROPPER,
-  ID_TOOL_ZOOM,
-  ID_TOOL_PENCIL,
-  ID_TOOL_BRUSH,
-  ID_TOOL_SPRAY,
-  ID_TOOL_FILL,
-  ID_TOOL_ERASER,
-  ID_TOOL_LINE,
-  ID_TOOL_TEXT,
-  ID_TOOL_RECT,
-  ID_TOOL_ELLIPSE,
-  ID_TOOL_ROUNDED_RECT,
-  ID_TOOL_POLYGON,
-  ID_TOOL_MAGNIFIER,
-};
-
-// Icon index in tools.png for each tool in k_tool_order.
-static const int k_tool_icon_idx[NUM_TOOLS] = {
-  0,    // Select
-  4,    // Hand
-  11,   // Eyedropper
-  5,    // Zoom
-  13,   // Pencil
-  15,   // Brush
-  18,   // Spray
-  8,    // Fill
-  12,   // Eraser
-  10,   // Line
-  7,    // Text
-  21,   // Rect
-  23,   // Ellipse
-  22,   // Rounded Rect
-  24,   // Polygon
-  6,    // Magnifier
+// Tool palette layout with ident and icon index.
+static const toolbox_item_t k_tools[NUM_TOOLS] = {
+  { ID_TOOL_SELECT,        0 },      // Select
+  { ID_TOOL_HAND,          4 },      // Hand
+  { ID_TOOL_EYEDROPPER,   11 },      // Eyedropper
+  { ID_TOOL_ZOOM,          5 },      // Zoom
+  { ID_TOOL_PENCIL,       13 },      // Pencil
+  { ID_TOOL_BRUSH,        15 },      // Brush
+  { ID_TOOL_SPRAY,        18 },      // Spray
+  { ID_TOOL_FILL,          8 },      // Fill
+  { ID_TOOL_ERASER,       12 },      // Eraser
+  { ID_TOOL_LINE,         10 },      // Line
+  { ID_TOOL_TEXT,          7 },      // Text
+  { ID_TOOL_RECT,         21 },      // Rect
+  { ID_TOOL_ELLIPSE,      23 },      // Ellipse
+  { ID_TOOL_ROUNDED_RECT, 22 },      // Rounded Rect
+  { ID_TOOL_POLYGON,      24 },      // Polygon
+  { ID_TOOL_MAGNIFIER,     6 },      // Magnifier
 };
 
 result_t win_tool_palette_proc(window_t *win, uint32_t msg,
@@ -76,13 +56,8 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       send_message(win, bxLoadStrip, ICON_W, path);
 #endif
 
-      // Build item list in display order.
-      toolbox_item_t items[NUM_TOOLS];
-      for (int i = 0; i < NUM_TOOLS; i++) {
-        items[i].ident = k_tool_order[i];
-        items[i].icon  = k_tool_icon_idx[i];
-      }
-      send_message(win, bxSetItems, NUM_TOOLS, items);
+      // Set tools from unified array.
+      send_message(win, bxSetItems, NUM_TOOLS, (void *)k_tools);
       send_message(win, bxSetIconTintBrush, brTextNormal, NULL);
       send_message(win, bxSetActiveItem, ID_TOOL_SELECT, NULL);
       return true;

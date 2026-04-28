@@ -5,26 +5,16 @@
 #include "formeditor.h"
 #include "../../commctl/commctl.h"
 
-// Icon indices in toolbox.png for each tool, in display order.
+// Tool palette definition: ident and icon index pairs in display order.
 // Strip layout: 3 columns x N rows of 21x21 tiles.
-static const int k_tool_order[NUM_TOOLS] = {
-  ID_TOOL_SELECT,
-  ID_TOOL_LABEL,
-  ID_TOOL_TEXTEDIT,
-  ID_TOOL_BUTTON,
-  ID_TOOL_CHECKBOX,
-  ID_TOOL_COMBOBOX,
-  ID_TOOL_LIST,
-};
-
-static const int k_tool_icon[NUM_TOOLS] = {
-  0,   // Pointer / Select
-  2,   // Label
-  3,   // TextBox
-  5,   // CommandButton
-  6,   // CheckBox
-  8,   // ComboBox
-  9,   // ListBox
+static const toolbox_item_t k_tools[NUM_TOOLS] = {
+  { ID_TOOL_SELECT,    0 },   // Pointer / Select
+  { ID_TOOL_LABEL,     2 },   // Label
+  { ID_TOOL_TEXTEDIT,  3 },   // TextBox
+  { ID_TOOL_BUTTON,    5 },   // CommandButton
+  { ID_TOOL_CHECKBOX,  6 },   // CheckBox
+  { ID_TOOL_COMBOBOX,  8 },   // ComboBox
+  { ID_TOOL_LIST,      9 },   // ListBox
 };
 
 result_t win_tool_palette_proc(window_t *win, uint32_t msg,
@@ -44,12 +34,8 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       send_message(win, bxLoadStrip, FE_TOOLBOX_ICON_W, path);
 #endif
 
-      toolbox_item_t items[NUM_TOOLS];
-      for (int i = 0; i < NUM_TOOLS; i++) {
-        items[i].ident = k_tool_order[i];
-        items[i].icon  = k_tool_icon[i];
-      }
-      send_message(win, bxSetItems, NUM_TOOLS, items);
+      // Set tools from unified array.
+      send_message(win, bxSetItems, NUM_TOOLS, (void *)k_tools);
       send_message(win, bxSetIconTintBrush, brTextNormal, NULL);
       send_message(win, bxSetActiveItem, ID_TOOL_SELECT, NULL);
       return true;
