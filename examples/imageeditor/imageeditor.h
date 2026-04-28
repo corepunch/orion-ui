@@ -81,17 +81,19 @@
 extern const int kBrushSizes[NUM_BRUSH_SIZES];
 
 #define SWATCH_ROW_H    16
+#define COLOR_SWATCH_COLS 4
+#define COLOR_SWATCH_ROWS ((NUM_COLORS + COLOR_SWATCH_COLS - 1) / COLOR_SWATCH_COLS)
 // COLOR_WIN_Y: window top sits 4px below the menu bar (frame.y = window top).
-#define COLOR_WIN_H   (TITLEBAR_HEIGHT + 4 * SWATCH_ROW_H)
+#define COLOR_WIN_H   (TITLEBAR_HEIGHT + COLOR_SWATCH_ROWS * SWATCH_ROW_H)
 #define COLOR_WIN_X   (SCREEN_W - COLOR_WIN_W - 4)
-#define COLOR_WIN_W   SWATCH_ROW_H * 4
+#define COLOR_WIN_W   (SWATCH_ROW_H * COLOR_SWATCH_COLS)
 #define COLOR_WIN_Y   (MENUBAR_HEIGHT + 4)
 
 #define DOC_START_X   76
 #define DOC_START_Y   60
 #define DOC_CASCADE   20
 
-#define NUM_COLORS 16
+#define NUM_COLORS 64
 #define NUM_TOOLS  16
 #define NUM_USER_COLORS  8
 
@@ -240,6 +242,7 @@ typedef struct {
   window_t      *color_win;
   hinstance_t    hinstance;  // owning app instance
   int            current_tool;
+  uint32_t       palette[NUM_COLORS];
   uint32_t       fg_color;
   uint32_t       bg_color;
   int            next_x;
@@ -268,9 +271,6 @@ typedef struct {
 // ============================================================
 
 extern app_state_t *g_app;
-
-// Color palette
-extern const uint32_t kPalette[NUM_COLORS];
 
 // Tool display names (in ID_TOOL_PENCIL..ID_TOOL_SELECT order; index with tool - ID_TOOL_PENCIL)
 extern const char *tool_names[NUM_TOOLS];
