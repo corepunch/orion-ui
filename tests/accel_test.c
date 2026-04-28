@@ -63,10 +63,19 @@ static ui_event_t make_keydown(uint16_t keyCode, uint16_t modflags) {
 // ── load_accelerators / free_accelerators ────────────────────────────────
 
 void test_load_accelerators_valid(void) {
-    TEST("load_accelerators: valid table is created and has correct count");
+    TEST("load_accelerators: valid table is created and all entries are retrievable");
 
     accel_table_t *tbl = load_accelerators(kTestAccels, NUM_TEST_ACCELS);
     ASSERT_NOT_NULL(tbl);
+
+    // Every entry in kTestAccels must be findable by its cmd ID.
+    for (int i = 0; i < NUM_TEST_ACCELS; i++) {
+        const accel_t *a = accel_find_cmd(tbl, kTestAccels[i].cmd);
+        ASSERT_NOT_NULL(a);
+        ASSERT_EQUAL((int)a->cmd, (int)kTestAccels[i].cmd);
+        ASSERT_EQUAL((int)a->key, (int)kTestAccels[i].key);
+    }
+
     free_accelerators(tbl);
     PASS();
 }

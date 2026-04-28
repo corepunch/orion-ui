@@ -259,8 +259,8 @@ void test_sb_horizontal_track_click(void) {
     PASS();
 }
 
-void test_sb_get_pos_no_info(void) {
-    TEST("win_scrollbar: sbGetPos returns 0 with default settings");
+void test_sb_set_info_non_zero_min(void) {
+    TEST("win_scrollbar: sbSetInfo with non-zero min_val and pos at min is reported correctly");
 
     test_env_init();
     window_t *parent = test_env_create_window("P", 0, 0, 200, 300,
@@ -269,7 +269,13 @@ void test_sb_get_pos_no_info(void) {
     window_t *sb = make_vscrollbar(parent, 10, 100);
     ASSERT_NOT_NULL(sb);
 
-    ASSERT_EQUAL((int)send_message(sb, sbGetPos, 0, NULL), 0);
+    // min=50, max=150, page=20, pos=50 → effective max pos = 130
+    set_info(sb, 50, 150, 20, 50);
+    ASSERT_EQUAL((int)send_message(sb, sbGetPos, 0, NULL), 50);
+
+    // Move to the effective maximum
+    set_info(sb, 50, 150, 20, 200); // clamped to 130
+    ASSERT_EQUAL((int)send_message(sb, sbGetPos, 0, NULL), 130);
 
     destroy_window(parent);
     test_env_shutdown();
@@ -291,7 +297,7 @@ int main(int argc, char *argv[]) {
     test_sb_track_click_scrolls_backward();
     test_sb_track_click_at_max_no_overflow();
     test_sb_horizontal_track_click();
-    test_sb_get_pos_no_info();
+    test_sb_set_info_non_zero_min();
 
     TEST_END();
 }

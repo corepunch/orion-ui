@@ -9,8 +9,6 @@
 #include "../ui.h"
 #include "../commctl/commctl.h"
 
-extern void repost_messages(void);
-
 // ── shared notification capture ───────────────────────────────────────────
 
 static int      g_cmd_count    = 0;

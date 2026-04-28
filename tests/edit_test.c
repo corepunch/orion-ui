@@ -76,15 +76,15 @@ void test_edit_text_input_inserts_char(void) {
     window_t *ed = make_edit(parent, 2, "ab");
     ASSERT_NOT_NULL(ed);
 
-    // Start editing, cursor at end (pos = len("ab") = 2 via click near x=0 → pos=0)
+    // Start editing with the cursor near the start (click near x=0 sets pos=0).
     begin_editing(ed);
-    // Move cursor to end
+    // Move cursor to the end of "ab".
     send_message(ed, evKeyDown, AX_KEY_RIGHTARROW, NULL);
     send_message(ed, evKeyDown, AX_KEY_RIGHTARROW, NULL);
 
     // Insert 'c'
-    char ch = 'c';
-    send_message(ed, evTextInput, 0, &ch);
+    char ch[2] = {'c', '\0'};
+    send_message(ed, evTextInput, 0, ch);
     ASSERT_STR_EQUAL(ed->title, "abc");
 
     destroy_window(parent);
@@ -108,8 +108,8 @@ void test_edit_text_input_at_cursor(void) {
     send_message(ed, evKeyDown, AX_KEY_RIGHTARROW, NULL);
     ASSERT_EQUAL(ed->cursor_pos, 1);
 
-    char ch = 'b';
-    send_message(ed, evTextInput, 0, &ch);
+    char ch[2] = {'b', '\0'};
+    send_message(ed, evTextInput, 0, ch);
     ASSERT_STR_EQUAL(ed->title, "abc");
     ASSERT_EQUAL(ed->cursor_pos, 2);
 
@@ -313,6 +313,59 @@ void test_edit_escape_exits_editing(void) {
     PASS();
 }
 
+void test_edit_tab_commits_editing(void) {
+    TEST("win_textedit: Tab commits editing and sends edUpdate to parent");
+
+    test_env_init();
+    reset_state();
+    window_t *parent = test_env_create_window("P", 0, 0, 200, 100,
+                                               edit_parent_proc, NULL);
+    ASSERT_NOT_NULL(parent);
+
+    window_t *ed = make_edit(parent, 12, "tab");
+    ASSERT_NOT_NULL(ed);
+
+    begin_editing(ed);
+    ASSERT_TRUE(ed->editing);
+
+    // Tab while editing: must commit (editing=false) and fire edUpdate.
+    // Note: win_textedit returns false for Tab even when it handles it,
+    // so we only verify the side-effects, not the return value.
+    send_message(ed, evKeyDown, AX_KEY_TAB, NULL);
+
+    ASSERT_FALSE(ed->editing);
+    ASSERT_EQUAL(g_update_count, 1);
+    ASSERT_EQUAL(g_last_edit, ed);
+
+    destroy_window(parent);
+    test_env_shutdown();
+    PASS();
+}
+
+void test_edit_tab_noop_when_not_editing(void) {
+    TEST("win_textedit: Tab when not editing does not fire edUpdate");
+
+    test_env_init();
+    reset_state();
+    window_t *parent = test_env_create_window("P", 0, 0, 200, 100,
+                                               edit_parent_proc, NULL);
+    ASSERT_NOT_NULL(parent);
+
+    window_t *ed = make_edit(parent, 13, "noedit");
+    ASSERT_NOT_NULL(ed);
+
+    ASSERT_FALSE(ed->editing);
+
+    send_message(ed, evKeyDown, AX_KEY_TAB, NULL);
+
+    ASSERT_FALSE(ed->editing);
+    ASSERT_EQUAL(g_update_count, 0);
+
+    destroy_window(parent);
+    test_env_shutdown();
+    PASS();
+}
+
 // ── main ──────────────────────────────────────────────────────────────────
 
 int main(int argc, char *argv[]) {
@@ -330,6 +383,8 @@ int main(int argc, char *argv[]) {
     test_edit_enter_commits_editing();
     test_edit_enter_starts_editing_if_not_editing();
     test_edit_escape_exits_editing();
+    test_edit_tab_commits_editing();
+    test_edit_tab_noop_when_not_editing();
 
     TEST_END();
 }
