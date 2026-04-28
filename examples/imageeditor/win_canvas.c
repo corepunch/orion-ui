@@ -784,6 +784,12 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
                    (void *)doc,
                    doc->sel_start.x, doc->sel_start.y,
                    doc->sel_end.x, doc->sel_end.y);
+          // A zero-area selection (click without drag) counts as "select nothing".
+          if (doc->sel_start.x == doc->sel_end.x &&
+              doc->sel_start.y == doc->sel_end.y) {
+            canvas_deselect(doc);
+            IE_DEBUG("selection_deselect_zero_area doc=%p", (void *)doc);
+          }
         }
         if (doc->drawing) {
           IE_DEBUG("draw_end doc=%p tool=%s",

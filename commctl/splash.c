@@ -5,8 +5,8 @@
 //   window_t *sp = show_splash_screen(path_to_image, hinstance);
 //
 // The window is non-modal: the caller's event loop renders it normally.
-// The window captures the mouse on creation so that any click — inside or
-// outside its bounds — destroys it.  Moving the mouse away also destroys it.
+// Moving the mouse over the splash screen and then away from it destroys it,
+// as does clicking anywhere on the window.
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,6 +17,7 @@
 
 typedef struct {
   uint32_t tex;
+  bool mouse_entered;
 } splash_state_t;
 
 static result_t splash_proc(window_t *win, uint32_t msg,
@@ -25,16 +26,24 @@ static result_t splash_proc(window_t *win, uint32_t msg,
     case evCreate: {
       splash_state_t *s = allocate_window_data(win, sizeof(splash_state_t));
       s->tex = (uint32_t)(uintptr_t)lparam;
+      s->mouse_entered = false;
       win->notabstop = true;
-      set_capture(win);
       return true;
     }
-    case evMouseMove:
-      track_mouse(win);
+    case evMouseMove: {
+      splash_state_t *s = (splash_state_t *)win->userdata;
+      if (s && !s->mouse_entered) {
+        s->mouse_entered = true;
+        track_mouse(win);
+      }
       return false;
-    case evMouseLeave:
-      destroy_window(win);
+    }
+    case evMouseLeave: {
+      splash_state_t *s = (splash_state_t *)win->userdata;
+      if (s && s->mouse_entered)
+        destroy_window(win);
       return true;
+    }
     case evPaint: {
       splash_state_t *s = (splash_state_t *)win->userdata;
       if (s && s->tex)
@@ -65,8 +74,8 @@ static result_t splash_proc(window_t *win, uint32_t msg,
 // The image type is determined by its content (magic bytes), not its extension,
 // so both .jpg and .jpeg files are accepted alongside .png and .bmp.
 // The window is centered on screen, borderless, and always on top.
-// It is destroyed when the user clicks anywhere (inside or outside) or moves
-// the mouse away from it.
+// It is destroyed when the user clicks anywhere on it or moves the mouse
+// into it and then away.
 // Returns the window pointer, or NULL if the image could not be loaded.
 window_t *show_splash_screen(const char *path, hinstance_t hinstance) {
   if (!path || !g_ui_runtime.running) return NULL;
