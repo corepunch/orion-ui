@@ -320,11 +320,13 @@ window_t *find_default_button(window_t *win) {
 void track_mouse(window_t *win) {
   if (g_ui_runtime.tracked == win)
     return;
-  if (g_ui_runtime.tracked) {
-    send_message(g_ui_runtime.tracked, evMouseLeave, 0, win);
-    invalidate_window(g_ui_runtime.tracked);
-  }
+  window_t *prev = g_ui_runtime.tracked;
   g_ui_runtime.tracked = win;
+  if (prev) {
+    send_message(prev, evMouseLeave, 0, win);
+    if (is_window(prev))
+      invalidate_window(prev);
+  }
 }
 
 // Set window capture
