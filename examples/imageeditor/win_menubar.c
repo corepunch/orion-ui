@@ -29,15 +29,20 @@ static const menu_item_t kEditItems[] = {
   {"Crop to Selection", ID_EDIT_CROP},
 };
 
-static const menu_item_t kViewItems[] = {
-  {"Zoom In",   ID_VIEW_ZOOM_IN},
-  {"Zoom Out",  ID_VIEW_ZOOM_OUT},
-  {NULL, 0},
-  {"1x",               ID_VIEW_ZOOM_1X},
-  {"2x",               ID_VIEW_ZOOM_2X},
-  {"4x",               ID_VIEW_ZOOM_4X},
-  {"6x",               ID_VIEW_ZOOM_6X},
-  {"8x",               ID_VIEW_ZOOM_8X},
+static menu_item_t s_view_items[] = {
+  {"Zoom In",                  ID_VIEW_ZOOM_IN},
+  {"Zoom Out",                 ID_VIEW_ZOOM_OUT},
+  {NULL,                       0},
+  {"1x",                       ID_VIEW_ZOOM_1X},
+  {"2x",                       ID_VIEW_ZOOM_2X},
+  {"4x",                       ID_VIEW_ZOOM_4X},
+  {"6x",                       ID_VIEW_ZOOM_6X},
+  {"8x",                       ID_VIEW_ZOOM_8X},
+  {NULL,                       0},
+  {"[ ] Show Grid",            ID_VIEW_SHOW_GRID},
+  {"[ ] Snap to Grid",         ID_VIEW_SNAP_GRID},
+  {NULL,                       0},
+  {"Grid Options...",          ID_VIEW_GRID_OPTIONS},
 };
 
 static const menu_item_t kImageItems[] = {
@@ -84,7 +89,7 @@ menu_def_t kMenus[] = {
   /* kMenuIdxFile   */ {"File",   kFileItems,      (int)(sizeof(kFileItems)/sizeof(kFileItems[0]))},
   /* kMenuIdxEdit   */ {"Edit",   kEditItems,      (int)(sizeof(kEditItems)/sizeof(kEditItems[0]))},
   /* kMenuIdxImage  */ {"Image",  kImageItems,     (int)(sizeof(kImageItems)/sizeof(kImageItems[0]))},
-  /* kMenuIdxView   */ {"View",   kViewItems,      (int)(sizeof(kViewItems)/sizeof(kViewItems[0]))},
+  /* kMenuIdxView   */ {"View",   s_view_items,      (int)(sizeof(s_view_items)/sizeof(s_view_items[0]))},
   /* kMenuIdxWindow */ {"Window", s_window_items,  WINDOW_PREFIX_COUNT},
   /* kMenuIdxHelp   */ {"Help",   kHelpItems,      (int)(sizeof(kHelpItems)/sizeof(kHelpItems[0]))},
 };
@@ -170,6 +175,28 @@ window_t *create_color_palette_window(void) {
   show_window(cp, true);
   g_app->color_win = cp;
   return cp;
+}
+
+// Prefix strings for toggleable menu items.
+// [x] = currently enabled, [ ] = currently disabled.
+#define MENU_CHECK_ON  "[x] "
+#define MENU_CHECK_OFF "[ ] "
+
+// Update the View menu's toggleable items to reflect the current grid state.
+// Called before each popup open so the labels always show current state.
+static void view_menu_rebuild(void) {
+  if (!g_app) return;
+  int n = (int)(sizeof(s_view_items) / sizeof(s_view_items[0]));
+  for (int i = 0; i < n; i++) {
+    if (s_view_items[i].id == ID_VIEW_SHOW_GRID)
+      s_view_items[i].label = g_app->grid_visible
+                              ? MENU_CHECK_ON "Show Grid"
+                              : MENU_CHECK_OFF "Show Grid";
+    if (s_view_items[i].id == ID_VIEW_SNAP_GRID)
+      s_view_items[i].label = g_app->grid_snap
+                              ? MENU_CHECK_ON "Snap to Grid"
+                              : MENU_CHECK_OFF "Snap to Grid";
+  }
 }
 
 // Rebuild the Window menu items and re-push the full menu definition to the
@@ -456,6 +483,27 @@ void handle_menu_command(uint16_t id) {
       break;
     }
 
+    case ID_VIEW_SHOW_GRID:
+      g_app->grid_visible = !g_app->grid_visible;
+      if (doc && doc->canvas_win) invalidate_window(doc->canvas_win);
+      break;
+
+    case ID_VIEW_SNAP_GRID:
+      g_app->grid_snap = !g_app->grid_snap;
+      break;
+
+    case ID_VIEW_GRID_OPTIONS: {
+      int gx = g_app->grid_spacing_x > 0 ? g_app->grid_spacing_x : 8;
+      int gy = g_app->grid_spacing_y > 0 ? g_app->grid_spacing_y : 8;
+      if (show_grid_options_dialog(g_app->menubar_win, &gx, &gy)) {
+        g_app->grid_spacing_x = gx;
+        g_app->grid_spacing_y = gy;
+        if (doc && doc->canvas_win && g_app->grid_visible)
+          invalidate_window(doc->canvas_win);
+      }
+      break;
+    }
+
     case ID_TOOL_PENCIL:
     case ID_TOOL_BRUSH:
     case ID_TOOL_ERASER:
@@ -537,10 +585,11 @@ result_t editor_menubar_proc(window_t *win, uint32_t msg,
       return true;
     }
   }
-  // Rebuild the Window menu just before a popup opens so it always reflects
-  // the current set of open documents and palette visibility.
+  // Rebuild dynamic menus just before a popup opens so they always reflect
+  // the current state (open documents, grid toggle states, etc.).
   if (msg == evLeftButtonDown) {
     window_menu_rebuild();
+    view_menu_rebuild();
   }
   return win_menubar(win, msg, wparam, lparam);
 }
