@@ -35,6 +35,8 @@ static const form_def_t kPPFForm = {
   .height      = 104,
   .children    = kPPFCtrls,
   .child_count = 6,
+  .ok_id       = CTL_OK,
+  .cancel_id   = CTL_CANCEL,
 };
 
 typedef struct {

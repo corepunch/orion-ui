@@ -125,7 +125,75 @@ uint32_t show_dialog_from_form(form_def_t const *def, char const *title,
                                   proc, param);
 }
 
-// Store the result code and destroy the dialog.
+// ── Generic DDX dialog proc ───────────────────────────────────────────────
+// Used by show_ddx_dialog().  The lparam passed to evCreate is a pointer to a
+// ddx_dlg_ctx_t that lives on show_ddx_dialog()'s stack for the lifetime of
+// the modal loop (safe because show_dialog_from_form_ex blocks until close).
+
+typedef struct {
+  form_def_t const *def;   // form definition carrying bindings + ok/cancel IDs
+  void             *state; // caller-supplied state for push/pull
+} ddx_dlg_ctx_t;
+
+static result_t dialog_ddx_proc(window_t *win, uint32_t msg,
+                                 uint32_t wparam, void *lparam) {
+  ddx_dlg_ctx_t *ctx = (ddx_dlg_ctx_t *)win->userdata;
+
+  switch (msg) {
+    case evCreate: {
+      ctx = (ddx_dlg_ctx_t *)lparam;
+      win->userdata = ctx;
+      if (ctx->def->bindings && ctx->def->binding_count > 0)
+        dialog_push(win, ctx->state,
+                    ctx->def->bindings, ctx->def->binding_count);
+      return true;
+    }
+
+    case evCommand: {
+      if (!ctx) return false;
+      uint16_t notif = HIWORD(wparam);
+
+      // Pressing Enter (or Tab) in a single-line edit box fires edUpdate.
+      // Treat this as equivalent to clicking the OK button.
+      if (notif == edUpdate) {
+        if (ctx->def->bindings)
+          dialog_pull(win, ctx->state,
+                      ctx->def->bindings, ctx->def->binding_count);
+        end_dialog(win, 1);
+        return true;
+      }
+
+      if (notif != btnClicked) return false;
+      window_t *src = (window_t *)lparam;
+      if (!src) return false;
+
+      if (ctx->def->ok_id && src->id == ctx->def->ok_id) {
+        if (ctx->def->bindings)
+          dialog_pull(win, ctx->state,
+                      ctx->def->bindings, ctx->def->binding_count);
+        end_dialog(win, 1);
+        return true;
+      }
+      if (ctx->def->cancel_id && src->id == ctx->def->cancel_id) {
+        end_dialog(win, 0);
+        return true;
+      }
+      return false;
+    }
+
+    default:
+      return false;
+  }
+}
+
+uint32_t show_ddx_dialog(form_def_t const *def, const char *title,
+                         window_t *parent, void *state) {
+  if (!def) return 0;
+  ddx_dlg_ctx_t ctx = { .def = def, .state = state };
+  return show_dialog_from_form_ex(def, title, parent,
+                                  WINDOW_VSCROLL | WINDOW_DIALOG | WINDOW_NOTRAYBUTTON,
+                                  dialog_ddx_proc, &ctx);
+}
 // win may be any window inside the dialog (e.g. a button); get_root_window
 // walks up to the dialog window that owns the result pointer.
 void end_dialog(window_t *win, uint32_t code) {

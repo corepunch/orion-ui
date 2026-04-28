@@ -30,6 +30,8 @@ static const form_def_t kCommitForm = {
   .height      = 128,
   .children    = kCommitCtrls,
   .child_count = 4,
+  .ok_id       = CTL_COMMIT,
+  .cancel_id   = CTL_CANCEL,
 };
 
 // Dialog state passed via lparam.

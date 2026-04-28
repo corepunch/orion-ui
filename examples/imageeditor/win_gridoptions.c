@@ -3,7 +3,7 @@
 // Call show_grid_options_dialog() with the current spacing; returns true if
 // accepted.
 //
-// Uses show_dialog_from_form() so all children are defined declaratively.
+// Uses show_ddx_dialog() — no custom window proc is needed.
 
 #include "imageeditor.h"
 
@@ -41,7 +41,22 @@
 #define GO_MAX_SPACING 1024
 
 // ──────────────────────────────────────────────────────────────────
-// Declarative form definition
+// State
+// ──────────────────────────────────────────────────────────────────
+
+typedef struct { int x, y; } go_state_t;
+
+// ──────────────────────────────────────────────────────────────────
+// DDX binding table
+// ──────────────────────────────────────────────────────────────────
+
+static const ctrl_binding_t k_go_bindings[] = {
+  { GO_ID_GRIDX, BIND_INT_EDIT, offsetof(go_state_t, x), 0 },
+  { GO_ID_GRIDY, BIND_INT_EDIT, offsetof(go_state_t, y), 0 },
+};
+
+// ──────────────────────────────────────────────────────────────────
+// Declarative form definition (includes DDX bindings + button IDs)
 // ──────────────────────────────────────────────────────────────────
 
 static const form_ctrl_def_t kGoChildren[] = {
@@ -54,93 +69,26 @@ static const form_ctrl_def_t kGoChildren[] = {
 };
 
 static const form_def_t kGoForm = {
-  .name        = "Grid Options",
-  .width       = GO_W,
-  .height      = GO_H,
-  .flags       = 0,
-  .children    = kGoChildren,
-  .child_count = ARRAY_LEN(kGoChildren),
+  .name          = "Grid Options",
+  .width         = GO_W,
+  .height        = GO_H,
+  .flags         = 0,
+  .children      = kGoChildren,
+  .child_count   = ARRAY_LEN(kGoChildren),
+  .bindings      = k_go_bindings,
+  .binding_count = ARRAY_LEN(k_go_bindings),
+  .ok_id         = GO_ID_OK,
+  .cancel_id     = GO_ID_CANCEL,
 };
-
-// ──────────────────────────────────────────────────────────────────
-// State
-// ──────────────────────────────────────────────────────────────────
-
-typedef struct {
-  int  *out_x;
-  int  *out_y;
-  int   x, y;       // embedded copies for DDX
-  bool  accepted;
-} go_state_t;
-
-static const ctrl_binding_t k_go_bindings[] = {
-  { GO_ID_GRIDX, BIND_INT_EDIT, offsetof(go_state_t, x), 0 },
-  { GO_ID_GRIDY, BIND_INT_EDIT, offsetof(go_state_t, y), 0 },
-};
-
-static void go_accept(window_t *win, go_state_t *st) {
-  dialog_pull(win, st, k_go_bindings, ARRAY_LEN(k_go_bindings));
-  if (st->x >= GO_MIN_SPACING && st->x <= GO_MAX_SPACING) *st->out_x = st->x;
-  if (st->y >= GO_MIN_SPACING && st->y <= GO_MAX_SPACING) *st->out_y = st->y;
-  st->accepted = true;
-  end_dialog(win, 1);
-}
-
-// ──────────────────────────────────────────────────────────────────
-// Dialog window procedure
-// ──────────────────────────────────────────────────────────────────
-
-static result_t go_proc(window_t *win, uint32_t msg,
-                        uint32_t wparam, void *lparam) {
-  go_state_t *st = (go_state_t *)win->userdata;
-
-  switch (msg) {
-    case evCreate: {
-      st = (go_state_t *)lparam;
-      win->userdata = st;
-      st->x = *st->out_x;
-      st->y = *st->out_y;
-      dialog_push(win, st, k_go_bindings, ARRAY_LEN(k_go_bindings));
-      return true;
-    }
-
-    case evCommand: {
-      uint16_t notif = HIWORD(wparam);
-
-      if (notif == edUpdate) {
-        go_accept(win, st);
-        return true;
-      }
-
-      if (notif != btnClicked) return false;
-      window_t *src = (window_t *)lparam;
-      if (!src) return false;
-
-      if (src->id == GO_ID_OK) {
-        go_accept(win, st);
-        return true;
-      }
-
-      if (src->id == GO_ID_CANCEL) {
-        end_dialog(win, 0);
-        return true;
-      }
-      return false;
-    }
-
-    default:
-      return false;
-  }
-}
 
 // ──────────────────────────────────────────────────────────────────
 // Public API
 // ──────────────────────────────────────────────────────────────────
 
 bool show_grid_options_dialog(window_t *parent, int *out_x, int *out_y) {
-  go_state_t st = {0};
-  st.out_x = out_x;
-  st.out_y = out_y;
-  show_dialog_from_form(&kGoForm, "Grid Options", parent, go_proc, &st);
-  return st.accepted;
+  go_state_t st = { .x = *out_x, .y = *out_y };
+  if (!show_ddx_dialog(&kGoForm, "Grid Options", parent, &st)) return false;
+  if (st.x >= GO_MIN_SPACING && st.x <= GO_MAX_SPACING) *out_x = st.x;
+  if (st.y >= GO_MIN_SPACING && st.y <= GO_MAX_SPACING) *out_y = st.y;
+  return true;
 }

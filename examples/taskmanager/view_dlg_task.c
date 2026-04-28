@@ -26,15 +26,6 @@ static const form_ctrl_def_t kTaskEditChildren[] = {
   { FORM_CTRL_BUTTON,   ID_CANCEL,             {150, 170, 60, 18}, 0,              "Cancel", "btn_cancel" },
 };
 
-static const form_def_t kTaskEditForm = {
-  .name        = "Task",
-  .width       = 280,
-  .height      = 208,
-  .flags       = 0,
-  .children    = kTaskEditChildren,
-  .child_count = (int)(sizeof(kTaskEditChildren)/sizeof(kTaskEditChildren[0])),
-};
-
 // ============================================================
 // Dialog state
 // ============================================================
@@ -58,6 +49,19 @@ static const ctrl_binding_t k_task_bindings[] = {
   { ID_TASK_DESC_CTRL,     BIND_MLSTRING,  offsetof(task_dlg_state_t, desc),     sizeof_field(task_dlg_state_t, desc)  },
   { ID_TASK_PRIORITY_CTRL, BIND_INT_COMBO, offsetof(task_dlg_state_t, priority), PRIORITY_NORMAL },
   { ID_TASK_STATUS_CTRL,   BIND_INT_COMBO, offsetof(task_dlg_state_t, status),   STATUS_TODO },
+};
+
+static const form_def_t kTaskEditForm = {
+  .name          = "Task",
+  .width         = 280,
+  .height        = 208,
+  .flags         = 0,
+  .children      = kTaskEditChildren,
+  .child_count   = (int)(sizeof(kTaskEditChildren)/sizeof(kTaskEditChildren[0])),
+  .bindings      = k_task_bindings,
+  .binding_count = ARRAY_LEN(k_task_bindings),
+  .ok_id         = ID_OK,
+  .cancel_id     = ID_CANCEL,
 };
 
 // ============================================================

@@ -484,19 +484,23 @@ static const form_ctrl_def_t kPropsChildren[] = {
   { FORM_CTRL_BUTTON,   PROPS_ID_CANCEL, {PROPS_W-54,  PROPS_BTN_Y, 50,           BUTTON_HEIGHT},  0,             "Cancel",   "btn_cancel"  },
 };
 
-static const form_def_t kPropsForm = {
-  .name        = "Element Properties",
-  .width       = PROPS_W,
-  .height      = PROPS_H,
-  .flags       = 0,
-  .children    = kPropsChildren,
-  .child_count = ARRAY_LEN(kPropsChildren),
-};
-
 // DDX bindings: caption and name edits ↔ form_element_t.text / .name
 static const ctrl_binding_t k_props_bindings[] = {
   { PROPS_ID_CAPTION, BIND_STRING, offsetof(form_element_t, text), sizeof_field(form_element_t, text) },
   { PROPS_ID_NAME,    BIND_STRING, offsetof(form_element_t, name), sizeof_field(form_element_t, name) },
+};
+
+static const form_def_t kPropsForm = {
+  .name          = "Element Properties",
+  .width         = PROPS_W,
+  .height        = PROPS_H,
+  .flags         = 0,
+  .children      = kPropsChildren,
+  .child_count   = ARRAY_LEN(kPropsChildren),
+  .bindings      = k_props_bindings,
+  .binding_count = ARRAY_LEN(k_props_bindings),
+  .ok_id         = PROPS_ID_OK,
+  .cancel_id     = PROPS_ID_CANCEL,
 };
 
 typedef struct {

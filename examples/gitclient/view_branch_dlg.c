@@ -28,6 +28,8 @@ static const form_def_t kNewBranchForm = {
   .height      = 86,
   .children    = kNewBranchCtrls,
   .child_count = 5,
+  .ok_id       = CTL_CREATE,
+  .cancel_id   = CTL_CANCEL,
 };
 
 typedef struct {

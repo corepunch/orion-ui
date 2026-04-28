@@ -1,4 +1,4 @@
-// VIEW: About dialog (form-based).
+// VIEW: About dialog (form-based, DDX-driven).
 
 #include "taskmanager.h"
 
@@ -20,34 +20,13 @@ static const form_def_t kAboutForm = {
   .flags       = 0,
   .children    = kAboutChildren,
   .child_count = (int)(sizeof(kAboutChildren)/sizeof(kAboutChildren[0])),
+  .ok_id       = ID_OK,
 };
-
-// ============================================================
-// Window procedure
-// ============================================================
-
-static result_t about_dlg_proc(window_t *win, uint32_t msg,
-                                uint32_t wparam, void *lparam) {
-  (void)lparam;
-  switch (msg) {
-    case evCreate:
-      return true;
-    case evCommand:
-      if (HIWORD(wparam) == btnClicked) {
-        end_dialog(win, 1);
-        return true;
-      }
-      return false;
-    default:
-      return false;
-  }
-}
 
 // ============================================================
 // Public entry point
 // ============================================================
 
 void show_about_dialog(window_t *parent) {
-  show_dialog_from_form(&kAboutForm, "About Task Manager",
-                        parent, about_dlg_proc, NULL);
+  show_ddx_dialog(&kAboutForm, "About Task Manager", parent, NULL);
 }
