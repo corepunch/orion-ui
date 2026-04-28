@@ -276,6 +276,7 @@ window_t *get_root_window(window_t *window) {
 rect_t center_window_rect(rect_t frame_rect, window_t const *owner) {
   int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
   int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
+  int top_padding = 40; // Minimum padding from the top of the screen to avoid overlapping with system UI elements
   window_t *root = owner ? get_root_window((window_t *)owner) : NULL;
 
   if (root) {
@@ -289,16 +290,16 @@ rect_t center_window_rect(rect_t frame_rect, window_t const *owner) {
     frame_rect.y = 0;
   }
 
-  if (sw > 0 && frame_rect.w >= sw)
-    frame_rect.x = 0;
-  else if (sw > 0)
-    frame_rect.x = MAX(0, MIN(frame_rect.x, sw - frame_rect.w));
+  if (sw > 0) {
+    int max_x = MAX(0, sw - frame_rect.w);
+    frame_rect.x = MAX(0, MIN(frame_rect.x, max_x));
+  }
 
-  if (sh > 0 && frame_rect.h >= sh)
-    frame_rect.y = 0;
-  else if (sh > 0) {
-    int min_y = (sh - frame_rect.h >= TITLEBAR_HEIGHT) ? TITLEBAR_HEIGHT : 0;
-    frame_rect.y = MAX(min_y, MIN(frame_rect.y, sh - frame_rect.h));
+  if (sh > 0) {
+    int min_y = (sh - frame_rect.h >= top_padding) ? top_padding : 0;
+    int max_y = MAX(0, sh - frame_rect.h);
+    if (min_y > max_y) min_y = max_y;
+    frame_rect.y = MAX(min_y, MIN(frame_rect.y, max_y));
   }
 
   return frame_rect;

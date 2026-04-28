@@ -20,10 +20,10 @@
 #define NI_EDIT_W      56
 #define NI_EDIT_H      13
 #define NI_ROW1_Y       8
-#define NI_ROW2_Y      (NI_ROW1_Y + NI_EDIT_H + 4)
+#define NI_ROW2_Y      (NI_ROW1_Y + NI_EDIT_H + 8)
 
 // Buttons
-#define NI_BTN_Y       (NI_ROW2_Y + NI_EDIT_H + 6)
+#define NI_BTN_Y       (NI_ROW2_Y + NI_EDIT_H + 12)
 #define NI_BTN_H       BUTTON_HEIGHT
 #define NI_BTN_W       40
 #define NI_BTN_GAP      4
@@ -44,6 +44,8 @@
 // ──────────────────────────────────────────────────────────────────
 
 static const form_ctrl_def_t kSizeDialogChildren[] = {
+  { FORM_CTRL_LABEL,    -1,           {NI_LBL_X,  NI_ROW1_Y, NI_EDIT_X - NI_LBL_X - 2, NI_EDIT_H}, 0,              "Width:",  "lbl_width"  },
+  { FORM_CTRL_LABEL,    -1,           {NI_LBL_X,  NI_ROW2_Y, NI_EDIT_X - NI_LBL_X - 2, NI_EDIT_H}, 0,              "Height:", "lbl_height" },
   { FORM_CTRL_TEXTEDIT, NI_ID_WIDTH,  {NI_EDIT_X, NI_ROW1_Y, NI_EDIT_W, NI_EDIT_H}, 0,              "",       "width"  },
   { FORM_CTRL_TEXTEDIT, NI_ID_HEIGHT, {NI_EDIT_X, NI_ROW2_Y, NI_EDIT_W, NI_EDIT_H}, 0,              "",       "height" },
   { FORM_CTRL_BUTTON,   NI_ID_OK,     {NI_OK_X,   NI_BTN_Y,  NI_BTN_W,  NI_BTN_H},  BUTTON_DEFAULT, "OK",     "ok"     },
@@ -56,7 +58,7 @@ static const form_def_t kSizeDialogForm = {
   .height      = NI_H,
   .flags       = 0,
   .children    = kSizeDialogChildren,
-  .child_count = 4,
+  .child_count = 6,
 };
 
 // ──────────────────────────────────────────────────────────────────
@@ -104,13 +106,6 @@ static result_t ni_proc(window_t *win, uint32_t msg,
       st->h = *st->out_h;
       dialog_push(win, st, k_ni_bindings, ARRAY_LEN(k_ni_bindings));
       return true;
-    }
-
-    case evPaint: {
-      // Draw field labels manually (same pattern as win_textdialog.c)
-      draw_text_small("Width:",  NI_LBL_X, NI_ROW1_Y + 3, get_sys_color(brTextDisabled));
-      draw_text_small("Height:", NI_LBL_X, NI_ROW2_Y + 3, get_sys_color(brTextDisabled));
-      return false;  // let child controls paint themselves
     }
 
     case evCommand: {

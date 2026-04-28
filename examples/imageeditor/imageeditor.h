@@ -43,29 +43,34 @@
 #endif
 
 #define PALETTE_WIN_X   4
+#define TOOL_PALETTE_BTN_SIZE (TOOLBOX_BTN_SIZE + 2)
 // Tool palette window width: always 2 toolbox columns wide.
-#define PALETTE_WIN_W   (TOOLBOX_COLS * TOOLBOX_BTN_SIZE)
+#define PALETTE_WIN_W   (TOOLBOX_COLS * TOOL_PALETTE_BTN_SIZE)
 
 #define TOOL_ICON_W    16
 #define TOOL_ICON_H    16
 
 // Toolbox grid rows and height: ceil(NUM_TOOLS / 2) rows x button size.
 #define TOOL_TOOLBAR_ROWS (((NUM_TOOLS) + TOOLBOX_COLS - 1) / TOOLBOX_COLS)
-#define TOOL_TOOLBAR_H    ((TOOL_TOOLBAR_ROWS) * TOOLBOX_BTN_SIZE)
+#define TOOL_TOOLBAR_H    ((TOOL_TOOLBAR_ROWS) * TOOL_PALETTE_BTN_SIZE)
 
 // PALETTE_WIN_Y is now the window top (title bar top) of the tool palette.
 // frame.y = window top = MENUBAR_HEIGHT + 4 (title bar sits 4px below the menu bar)
 #define PALETTE_WIN_Y  (MENUBAR_HEIGHT + 4)
+
+#define TOOL_SWATCH_BOX_H    PALETTE_WIN_W
+#define TOOL_FILL_LABEL_H    9
+#define TOOL_FILL_ROW_H      12
+#define TOOL_FILL_GAP_H      2
 
 // Total frame height for the tool palette:
 //   title bar + toolbar rows (non-client) + client content
 #define TOOL_WIN_H    (TITLEBAR_HEIGHT + TOOL_TOOLBAR_H + SWATCH_CLIENT_H + FILL_MODE_H)
 
 // Client area of the tool palette shows FG/BG swatches + fill mode selector.
-//   FG/BG swatches: 2px label + 8px text + 14px swatch + 2px gap = 26px
-//   Fill mode row: 2px gap + 8px text + 14px icons = 24px
-#define SWATCH_CLIENT_H 26
-#define FILL_MODE_H     24
+//   FG/BG area: a square swatch area that matches the toolbox width.
+#define SWATCH_CLIENT_H TOOL_SWATCH_BOX_H
+#define FILL_MODE_H     (TOOL_FILL_LABEL_H + TOOL_FILL_GAP_H + TOOL_FILL_ROW_H)
 #define SWATCH_ROW_H    16
 // COLOR_WIN_Y: window top sits 4px below the menu bar (frame.y = window top).
 #define COLOR_WIN_H   (TITLEBAR_HEIGHT + 4 * SWATCH_ROW_H)

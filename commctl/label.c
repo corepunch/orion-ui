@@ -14,7 +14,7 @@
 result_t win_label(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
     case evCreate:
-      win->frame.w = MAX(win->frame.w, strwidth(win->title));
+      win->frame.w = MAX(win->frame.w, text_strwidth(FONT_SMALL, win->title) + TEXT_SHADOW_OFFSET);
       win->notabstop = true;
       if (lparam) win->userdata = lparam;
       return true;
@@ -31,8 +31,8 @@ result_t win_label(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       else
         col = (uint32_t)ud;
       rect_t text_pos = {0, LABEL_TEXT_PADDING, win->frame.w, win->frame.h};
-      draw_text_small(win->title, text_pos.x + TEXT_SHADOW_OFFSET, text_pos.y + TEXT_SHADOW_OFFSET, get_sys_color(brDarkEdge));
-      draw_text_small(win->title, text_pos.x, text_pos.y, col);
+      draw_text(FONT_SMALL, win->title, text_pos.x + TEXT_SHADOW_OFFSET, text_pos.y + TEXT_SHADOW_OFFSET, get_sys_color(brDarkEdge));
+      draw_text(FONT_SMALL, win->title, text_pos.x, text_pos.y, col);
       return true;
     }
   }

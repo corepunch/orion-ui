@@ -1,6 +1,7 @@
 // Text Tool Dialog
 // Shown when the user clicks the canvas with the Text tool.
 // Provides: text input, font size slider, color selector, anti-alias toggle.
+// Uses show_dialog_from_form() so all standard controls are declarative.
 
 #include "imageeditor.h"
 
@@ -13,6 +14,8 @@
 
 // Row 1: text label + edit box
 #define TD_LBL_X        2
+#define TD_TEXT_LBL_Y   3
+#define TD_TEXT_LBL_W   36
 #define TD_EDIT_X       2
 #define TD_EDIT_Y      12
 #define TD_EDIT_W     (TD_W - 4)
@@ -29,9 +32,13 @@
 
 // Row 3: color + anti-alias
 #define TD_COLOR_Y     53
+#define TD_COLOR_LBL_W 36
 #define TD_SWATCH_W    14
 #define TD_SWATCH_H    11
-#define TD_AA_X        (TD_SWATCH_W + 62 + 6)  // after [Change...] button
+#define TD_SWATCH_X    (TD_LBL_X + TD_COLOR_LBL_W + 2)
+#define TD_COLOR_BTN_X (TD_SWATCH_X + TD_SWATCH_W + 4)
+#define TD_COLOR_BTN_W 54
+#define TD_AA_X        (TD_COLOR_BTN_X + TD_COLOR_BTN_W + 6)
 #define TD_AA_Y        TD_COLOR_Y
 
 // Row 4: OK / Cancel
@@ -48,6 +55,26 @@
 #define TD_ID_CANCEL    3
 #define TD_ID_COLOR     4
 #define TD_ID_AA        5
+
+// Declarative form controls (labels + standard controls).
+static const form_ctrl_def_t kTextDialogChildren[] = {
+  { FORM_CTRL_LABEL,    -1,           {TD_LBL_X,      TD_TEXT_LBL_Y, TD_TEXT_LBL_W, 13}, 0,              "Text:",      "lbl_text"  },
+  { FORM_CTRL_TEXTEDIT, TD_ID_EDIT,   {TD_EDIT_X,     TD_EDIT_Y,     TD_EDIT_W,     TD_EDIT_H}, 0,       "",           "edit_text" },
+  { FORM_CTRL_LABEL,    -1,           {TD_LBL_X,      TD_COLOR_Y + 2, TD_COLOR_LBL_W, 13}, 0,            "Color:",     "lbl_color" },
+  { FORM_CTRL_BUTTON,   TD_ID_COLOR,  {TD_COLOR_BTN_X, TD_COLOR_Y - 1, TD_COLOR_BTN_W, TD_BTN_H}, 0,     "Change...",  "btn_color" },
+  { FORM_CTRL_CHECKBOX, TD_ID_AA,     {TD_AA_X,       TD_AA_Y,       74,            12}, 0,               "Anti-alias", "chk_aa"    },
+  { FORM_CTRL_BUTTON,   TD_ID_OK,     {TD_BTN_OK_X,   TD_BTN_Y,      TD_BTN_OK_W,   TD_BTN_H}, 0,        "OK",         "btn_ok"    },
+  { FORM_CTRL_BUTTON,   TD_ID_CANCEL, {TD_BTN_CA_X,   TD_BTN_Y,      TD_BTN_CA_W,   TD_BTN_H}, 0,        "Cancel",     "btn_cancel" },
+};
+
+static const form_def_t kTextDialogForm = {
+  .name = "Text Dialog",
+  .width = TD_W,
+  .height = TD_H,
+  .flags = 0,
+  .children = kTextDialogChildren,
+  .child_count = sizeof(kTextDialogChildren) / sizeof(kTextDialogChildren[0]),
+};
 
 // ──────────────────────────────────────────────────────────────────
 // Dialog state
@@ -82,9 +109,6 @@ static int size_to_slider_x(int sz) {
 static void paint_td(window_t *win, const td_state_t *st) {
   text_options_t *opts = st->opts;
 
-  // "Text:" label
-  draw_text_small("Text:", TD_LBL_X, 3, get_sys_color(brTextDisabled));
-
   // Size label
   char size_buf[32];
   snprintf(size_buf, sizeof(size_buf), "Size: %dpx", opts->font_size);
@@ -104,12 +128,10 @@ static void paint_td(window_t *win, const td_state_t *st) {
             R(size_to_slider_x(opts->font_size) - 1,
               TD_SLIDER_Y - 1, 3, TD_SLIDER_H + 2));
 
-  // Color label + swatch
-  draw_text_small("Color:", TD_LBL_X, TD_COLOR_Y + 2, get_sys_color(brTextDisabled));
-  int sw_x = TD_LBL_X + 6 * 6 + 2; // after "Color:" text
-  fill_rect(get_sys_color(brDarkEdge), R(sw_x - 1, TD_COLOR_Y - 1,
+  // Color swatch
+  fill_rect(get_sys_color(brDarkEdge), R(TD_SWATCH_X - 1, TD_COLOR_Y - 1,
             TD_SWATCH_W + 2, TD_SWATCH_H + 2));
-  fill_rect(opts->color, R(sw_x, TD_COLOR_Y,
+  fill_rect(opts->color, R(TD_SWATCH_X, TD_COLOR_Y,
             TD_SWATCH_W, TD_SWATCH_H));
 
   (void)win;
@@ -128,37 +150,11 @@ static result_t td_proc(window_t *win, uint32_t msg,
       st = (td_state_t *)lparam;
       win->userdata = st;
 
-      // Edit box for text input
-      window_t *ed = create_window(st->opts->text, 0,
-          MAKERECT(TD_EDIT_X, TD_EDIT_Y, TD_EDIT_W, TD_EDIT_H),
-          win, win_textedit, 0, NULL);
-      ed->id = TD_ID_EDIT;
-
-      // "Change..." color button
-      int change_x = TD_LBL_X + 6 * 6 + 2 + TD_SWATCH_W + 4;
-      window_t *cb = create_window("Change...", 0,
-          MAKERECT(change_x, TD_COLOR_Y - 1, 54, TD_BTN_H),
-          win, win_button, 0, NULL);
-      cb->id = TD_ID_COLOR;
-
-      // Anti-alias checkbox
-      window_t *aa = create_window("Anti-alias", 0,
-          MAKERECT(TD_AA_X, TD_AA_Y, 74, 12),
-          win, win_checkbox, 0, NULL);
-      aa->id = TD_ID_AA;
-      aa->value = st->opts->antialias;
-
-      // OK button
-      window_t *ok = create_window("OK", 0,
-          MAKERECT(TD_BTN_OK_X, TD_BTN_Y, TD_BTN_OK_W, TD_BTN_H),
-          win, win_button, 0, NULL);
-      ok->id = TD_ID_OK;
-
-      // Cancel button
-      window_t *ca = create_window("Cancel", 0,
-          MAKERECT(TD_BTN_CA_X, TD_BTN_Y, TD_BTN_CA_W, TD_BTN_H),
-          win, win_button, 0, NULL);
-      ca->id = TD_ID_CANCEL;
+      set_window_item_text(win, TD_ID_EDIT, "%s", st->opts->text);
+      window_t *aa = get_window_item(win, TD_ID_AA);
+      if (aa) aa->value = st->opts->antialias;
+      window_t *ed = get_window_item(win, TD_ID_EDIT);
+      if (ed) set_focus(ed);
 
       return true;
     }
@@ -260,9 +256,7 @@ bool show_text_dialog(window_t *parent, text_options_t *opts) {
   st.opts     = opts;
   st.accepted = false;
 
-  show_dialog("Insert Text",
-              TD_W, TD_H + TITLEBAR_HEIGHT,
-              parent, td_proc, &st);
+  show_dialog_from_form(&kTextDialogForm, "Insert Text", parent, td_proc, &st);
 
   return st.accepted && opts->text[0] != '\0';
 }
