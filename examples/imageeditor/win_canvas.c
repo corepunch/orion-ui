@@ -23,6 +23,15 @@ const int kZoomMenuIDs[NUM_ZOOM_LEVELS] = {
 // Round v to the nearest multiple of step (snap-to-grid helper).
 #define SNAP_AXIS(v, step) (((v) + (step) / 2) / (step) * (step))
 
+// Return the brush radius (pixels) for the current brush_size, clamping any
+// out-of-range value to the nearest valid index to prevent OOB reads.
+static int brush_radius(void) {
+  int idx = g_app ? g_app->brush_size : 0;
+  if (idx < 0) idx = 0;
+  if (idx >= NUM_BRUSH_SIZES) idx = NUM_BRUSH_SIZES - 1;
+  return kBrushSizes[idx];
+}
+
 // Apply snap-to-grid to a canvas pixel position if the grid snap option is
 // enabled.  Rounds px/py to the nearest grid intersection.
 static void snap_canvas_pos(int *px, int *py) {
@@ -524,10 +533,10 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           canvas_draw_circle(doc, px, py, 0, g_app->fg_color);
           break;
         case ID_TOOL_BRUSH:
-          canvas_draw_circle(doc, px, py, kBrushSizes[g_app->brush_size], g_app->fg_color);
+          canvas_draw_circle(doc, px, py, brush_radius(), g_app->fg_color);
           break;
         case ID_TOOL_ERASER:
-          canvas_draw_circle(doc, px, py, kBrushSizes[g_app->brush_size], g_app->bg_color);
+          canvas_draw_circle(doc, px, py, brush_radius(), g_app->bg_color);
           break;
         case ID_TOOL_FILL:
           canvas_flood_fill(doc, px, py, g_app->fg_color);
@@ -704,11 +713,11 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           break;
         case ID_TOOL_BRUSH:
           canvas_draw_line(doc, doc->last.x, doc->last.y, px, py,
-                           kBrushSizes[g_app->brush_size], g_app->fg_color);
+                           brush_radius(), g_app->fg_color);
           break;
         case ID_TOOL_ERASER:
           canvas_draw_line(doc, doc->last.x, doc->last.y, px, py,
-                           kBrushSizes[g_app->brush_size], g_app->bg_color);
+                           brush_radius(), g_app->bg_color);
           break;
         case ID_TOOL_FILL:
           break;

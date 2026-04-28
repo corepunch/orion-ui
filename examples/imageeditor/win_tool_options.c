@@ -164,6 +164,8 @@ result_t win_tool_options_proc(window_t *win, uint32_t msg,
       return true;
 
     case evPaint: {
+      rect_t cr = get_client_rect(win);
+      fill_rect(get_sys_color(brWindowBg), &cr);
       if (!g_app) return true;
       tool_opts_panel_t panel = panel_for_tool(g_app->current_tool);
       if (panel == OPTS_BRUSH) {
