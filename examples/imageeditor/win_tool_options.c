@@ -46,20 +46,14 @@ static tool_opts_panel_t panel_for_tool(int tool) {
 
 // ── Layout helpers ──────────────────────────────────────────────────────────
 
-// Label row at the top of the panel (y=1, h=9).
-#define OPTS_LABEL_H  9
 // Gap between label and content rows.
 #define OPTS_GAP_H    2
 // Height of the shape-mode toggle row (shorter than the brush list).
-#define OPTS_ROW_H    14
-
-static rect_t opts_label_rect(void) {
-  return (rect_t){ 2, 1, TOOL_OPTIONS_WIN_W - 4, OPTS_LABEL_H };
-}
+#define OPTS_ROW_H    18
 
 // The first content row starts just below the label + gap.
 static int opts_content_y(void) {
-  return OPTS_LABEL_H + OPTS_GAP_H;
+  return OPTS_GAP_H;
 }
 
 // Returns the rect for brush-size row i in the vertical list.
@@ -76,9 +70,6 @@ static rect_t shape_row_rect(void) {
 // ── Brush-size panel ────────────────────────────────────────────────────────
 
 static void draw_brush_panel(int selected_idx) {
-  rect_t lbl = opts_label_rect();
-  draw_text_small("Size:", lbl.x, lbl.y, get_sys_color(brTextDisabled));
-
   for (int i = 0; i < NUM_BRUSH_SIZES; i++) {
     rect_t cell = brush_cell_rect(i);
     bool active = (i == selected_idx);
@@ -86,7 +77,7 @@ static void draw_brush_panel(int selected_idx) {
     rect_t outer = rect_inset_xy(cell, 1, 0);
     rect_t inner = rect_inset(outer, 1);
 
-    fill_rect(get_sys_color(brDarkEdge), &outer);
+    // fill_rect(get_sys_color(brDarkEdge), &outer);
     fill_rect(bg, &inner);
 
     // Horizontal stroke centred in the cell; thickness = 2*radius+1, clamped.
@@ -105,27 +96,24 @@ static void draw_brush_panel(int selected_idx) {
 // ── Shape-mode panel ────────────────────────────────────────────────────────
 
 static void draw_shape_panel(bool filled) {
-  rect_t lbl = opts_label_rect();
-  draw_text_small("Fill:", lbl.x, lbl.y, get_sys_color(brTextDisabled));
-
   rect_t row = shape_row_rect();
   rect_t outline_outer = rect_inset_xy(rect_split_left(row, row.w / 2), 1, 0);
   rect_t filled_outer  = rect_inset_xy(rect_split_right(row, row.w / 2), 1, 0);
   rect_t outline_inner = rect_inset(outline_outer, 1);
   rect_t filled_inner  = rect_inset(filled_outer, 1);
-  rect_t outline_text  = rect_center(outline_inner, strwidth("O"), 8);
-  rect_t filled_text   = rect_center(filled_inner,  strwidth("F"), 8);
+  // rect_t outline_text  = rect_center(outline_inner, strwidth("O"), 8);
+  // rect_t filled_text   = rect_center(filled_inner,  strwidth("F"), 8);
 
   uint32_t outline_col = filled ? get_sys_color(brButtonBg) : get_sys_color(brFocusRing);
   uint32_t filled_col  = filled ? get_sys_color(brFocusRing) : get_sys_color(brButtonBg);
 
   fill_rect(get_sys_color(brDarkEdge), &outline_outer);
   fill_rect(outline_col, &outline_inner);
-  draw_text_small("O", outline_text.x, outline_text.y, get_sys_color(brTextNormal));
+  draw_text_small_clipped("O", &outline_inner, get_sys_color(brTextNormal), TEXT_ALIGN_CENTER);
 
   fill_rect(get_sys_color(brDarkEdge), &filled_outer);
   fill_rect(filled_col, &filled_inner);
-  draw_text_small("F", filled_text.x, filled_text.y, get_sys_color(brTextNormal));
+  draw_text_small_clipped("F", &filled_inner, get_sys_color(brTextNormal), TEXT_ALIGN_CENTER);
 }
 
 // ── Hit-testing ─────────────────────────────────────────────────────────────

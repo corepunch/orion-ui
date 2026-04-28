@@ -157,7 +157,7 @@ static bool cancel_active_canvas_interaction(canvas_doc_t *doc, int old_tool) {
 
 window_t *create_tool_palette_window(void) {
   window_t *tp = create_window(
-      "Tools",
+      "", // "Tools",
       WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
       MAKERECT(PALETTE_WIN_X, PALETTE_WIN_Y, PALETTE_WIN_W, TOOL_WIN_H),
       NULL, win_tool_palette_proc, g_app->hinstance, NULL);
@@ -168,7 +168,7 @@ window_t *create_tool_palette_window(void) {
 
 window_t *create_tool_options_window(void) {
   window_t *tw = create_window(
-      "Options",
+      "", // "Options",
       WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
       MAKERECT(TOOL_OPTIONS_WIN_X, TOOL_OPTIONS_WIN_Y,
                TOOL_OPTIONS_WIN_W, TOOL_OPTIONS_WIN_H),

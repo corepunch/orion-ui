@@ -41,6 +41,7 @@ int char_width(unsigned char c);
 
 #define TEXT_PADDING_LEFT  (1u << 0)   // add WIN_PADDING (4px) to the left
 #define TEXT_ALIGN_RIGHT   (1u << 1)   // right-align to viewport's right edge
+#define TEXT_ALIGN_CENTER   (1u << 2)   // center-align within the viewport (ignores TEXT_PADDING_LEFT)
 
 // ── New explicit-font API ─────────────────────────────────────────────────────
 // Pass font role at every call site — no hidden global state.
