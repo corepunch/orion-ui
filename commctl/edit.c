@@ -24,14 +24,14 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       fill_rect(g_ui_runtime.focused == win?get_sys_color(brFocusRing):get_sys_color(brWindowBg),
                 R(-1, -1, win->frame.w+2, win->frame.h+2));
       draw_button(&local, 1, 1, true);
-      int tw = text_strwidth(FONT_SMALL, win->title);
       int th = text_char_height(FONT_SMALL);
-      rect_t label = rect_center(local, tw, th);
-      draw_text(FONT_SMALL, win->title, label.x, label.y, get_sys_color(brTextNormal));
+      int text_x = BUTTON_TEXT_INSET;
+      int text_y = (win->frame.h - th) / 2;
+      draw_text(FONT_SMALL, win->title, text_x, text_y, get_sys_color(brTextNormal));
       if (g_ui_runtime.focused == win && win->editing) {
         fill_rect(get_sys_color(brTextNormal),
-                  R(label.x + text_strnwidth(FONT_SMALL, win->title, win->cursor_pos),
-                    label.y,
+                  R(text_x + text_strnwidth(FONT_SMALL, win->title, win->cursor_pos),
+                    text_y,
                     2, th));
       }
       return true;
@@ -40,13 +40,11 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       if (g_ui_runtime.focused == win) {
         invalidate_window(win);
         win->editing = true;
-        rect_t local = {0, 0, win->frame.w, win->frame.h};
-        rect_t label = rect_center(local, text_strwidth(FONT_SMALL, win->title),
-                                   text_char_height(FONT_SMALL));
+        int text_x = BUTTON_TEXT_INSET;
         win->cursor_pos = 0;
         for (int i = 0; i <= (int)strlen(win->title); i++) {
-          int x1 = label.x + text_strnwidth(FONT_SMALL, win->title, i);
-          int x2 = label.x + text_strnwidth(FONT_SMALL, win->title, win->cursor_pos);
+          int x1 = text_x + text_strnwidth(FONT_SMALL, win->title, i);
+          int x2 = text_x + text_strnwidth(FONT_SMALL, win->title, win->cursor_pos);
           if (abs((int)LOWORD(wparam) - x1) < abs((int)LOWORD(wparam) - x2)) {
             win->cursor_pos = i;
           }
