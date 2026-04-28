@@ -598,7 +598,9 @@ void test_ie_brush_size_valid_range(void) {
     TEST("brush_size: accepts valid indices 0..NUM_BRUSH_SIZES-1");
 
     ie_setup();
-    ASSERT_EQUAL(g_app->brush_size, 0);  // calloc default
+    // ie_setup uses calloc so brush_size starts at 0.
+    // (gem_init initializes it to 1, but tests use calloc directly.)
+    ASSERT_EQUAL(g_app->brush_size, 0);
 
     for (int i = 0; i < NUM_BRUSH_SIZES; i++) {
         g_app->brush_size = i;
