@@ -16,8 +16,8 @@ extern window_t *get_root_window(window_t *window);
 result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
     case evCreate:
-      win->frame.w = MAX(win->frame.w, text_strwidth(FONT_SMALL, win->title) + BUTTON_TEXT_INSET * 2);
-      win->frame.h = MAX(win->frame.h, text_char_height(FONT_SMALL) + BUTTON_TEXT_INSET * 2);
+      win->frame.w = MAX(win->frame.w, text_strwidth(FONT_SMALL, win->title) + TEXTEDIT_PADDING_HORZ* 2);
+      win->frame.h = MAX(win->frame.h, text_char_height(FONT_SMALL) + TEXTEDIT_PADDING_VERT* 2);
       return true;
     case evPaint: {
       rect_t local = {0, 0, win->frame.w, win->frame.h};
@@ -25,7 +25,7 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
                 R(-1, -1, win->frame.w+2, win->frame.h+2));
       draw_button(&local, 1, 1, true);
       int th = text_char_height(FONT_SMALL);
-      int text_x = BUTTON_TEXT_INSET;
+      int text_x = TEXTEDIT_PADDING_HORZ;
       int text_y = (win->frame.h - th) / 2;
       draw_text(FONT_SMALL, win->title, text_x, text_y, get_sys_color(brTextNormal));
       if (g_ui_runtime.focused == win && win->editing) {
@@ -40,7 +40,7 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       if (g_ui_runtime.focused == win) {
         invalidate_window(win);
         win->editing = true;
-        int text_x = BUTTON_TEXT_INSET;
+        int text_x = TEXTEDIT_PADDING_HORZ;
         win->cursor_pos = 0;
         for (int i = 0; i <= (int)strlen(win->title); i++) {
           int x1 = text_x + text_strnwidth(FONT_SMALL, win->title, i);
