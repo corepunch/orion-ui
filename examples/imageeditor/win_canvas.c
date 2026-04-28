@@ -524,10 +524,10 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           canvas_draw_circle(doc, px, py, 0, g_app->fg_color);
           break;
         case ID_TOOL_BRUSH:
-          canvas_draw_circle(doc, px, py, 2, g_app->fg_color);
+          canvas_draw_circle(doc, px, py, kBrushSizes[g_app->brush_size], g_app->fg_color);
           break;
         case ID_TOOL_ERASER:
-          canvas_draw_circle(doc, px, py, 3, g_app->bg_color);
+          canvas_draw_circle(doc, px, py, kBrushSizes[g_app->brush_size], g_app->bg_color);
           break;
         case ID_TOOL_FILL:
           canvas_flood_fill(doc, px, py, g_app->fg_color);
@@ -703,10 +703,12 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           canvas_draw_line(doc, doc->last.x, doc->last.y, px, py, 0, g_app->fg_color);
           break;
         case ID_TOOL_BRUSH:
-          canvas_draw_line(doc, doc->last.x, doc->last.y, px, py, 2, g_app->fg_color);
+          canvas_draw_line(doc, doc->last.x, doc->last.y, px, py,
+                           kBrushSizes[g_app->brush_size], g_app->fg_color);
           break;
         case ID_TOOL_ERASER:
-          canvas_draw_line(doc, doc->last.x, doc->last.y, px, py, 3, g_app->bg_color);
+          canvas_draw_line(doc, doc->last.x, doc->last.y, px, py,
+                           kBrushSizes[g_app->brush_size], g_app->bg_color);
           break;
         case ID_TOOL_FILL:
           break;

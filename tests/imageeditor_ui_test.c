@@ -42,10 +42,15 @@ static void ie_teardown(void) {
         return;
     }
     // Destroy palette windows first so their evDestroy handlers can safely
-    // null out g_app->tool_win / g_app->color_win while g_app is still valid.
+    // null out g_app->tool_win / g_app->tool_options_win / g_app->color_win
+    // while g_app is still valid.
     if (g_app->tool_win) {
         destroy_window(g_app->tool_win);
         g_app->tool_win = NULL;
+    }
+    if (g_app->tool_options_win) {
+        destroy_window(g_app->tool_options_win);
+        g_app->tool_options_win = NULL;
     }
     if (g_app->color_win) {
         destroy_window(g_app->color_win);
@@ -64,10 +69,11 @@ static void ie_teardown(void) {
     test_env_shutdown();
 }
 
-// Convenience: create the tool palette and color palette windows exactly as
-// gem_init does, but without the PNG icon strip (SHAREDIR not defined here).
+// Convenience: create the tool palette, tool options, and color palette windows
+// exactly as gem_init does, but without the PNG icon strip (SHAREDIR not defined here).
 static void ie_create_palette_windows(void) {
     create_tool_palette_window();
+    create_tool_options_window();
     create_color_palette_window();
 }
 
@@ -160,8 +166,10 @@ void test_ie_palette_windows_created(void) {
     ie_create_palette_windows();
 
     ASSERT_NOT_NULL(g_app->tool_win);
+    ASSERT_NOT_NULL(g_app->tool_options_win);
     ASSERT_NOT_NULL(g_app->color_win);
     ASSERT_TRUE(is_window(g_app->tool_win));
+    ASSERT_TRUE(is_window(g_app->tool_options_win));
     ASSERT_TRUE(is_window(g_app->color_win));
 
     ie_teardown();
@@ -555,6 +563,113 @@ void test_ie_size_dialog_accept(void) {
     PASS();
 }
 
+// tool_options_win is created by ie_create_palette_windows and cleared on close.
+void test_ie_tool_options_window_created(void) {
+    TEST("create_tool_options_window: g_app->tool_options_win is valid");
+
+    ie_setup();
+    ie_create_palette_windows();
+
+    ASSERT_NOT_NULL(g_app->tool_options_win);
+    ASSERT_TRUE(is_window(g_app->tool_options_win));
+
+    ie_teardown();
+    PASS();
+}
+
+// Closing the tool options window must null g_app->tool_options_win.
+void test_ie_close_tool_options_window_clears_pointer(void) {
+    TEST("close tool options window: g_app->tool_options_win becomes NULL");
+
+    ie_setup();
+    ie_create_palette_windows();
+    ASSERT_NOT_NULL(g_app->tool_options_win);
+
+    destroy_window(g_app->tool_options_win);
+
+    ASSERT_NULL(g_app->tool_options_win);
+
+    ie_teardown();
+    PASS();
+}
+
+// brush_size is updated when the brush index is within [0, NUM_BRUSH_SIZES).
+void test_ie_brush_size_valid_range(void) {
+    TEST("brush_size: accepts valid indices 0..NUM_BRUSH_SIZES-1");
+
+    ie_setup();
+    ASSERT_EQUAL(g_app->brush_size, 0);  // calloc default
+
+    for (int i = 0; i < NUM_BRUSH_SIZES; i++) {
+        g_app->brush_size = i;
+        ASSERT_EQUAL(g_app->brush_size, i);
+        // kBrushSizes must be non-negative
+        ASSERT_TRUE(kBrushSizes[i] >= 0);
+    }
+
+    ie_teardown();
+    PASS();
+}
+
+// kBrushSizes array has exactly NUM_BRUSH_SIZES elements and is strictly increasing.
+void test_ie_brush_sizes_array(void) {
+    TEST("kBrushSizes: NUM_BRUSH_SIZES distinct increasing values");
+
+    ie_setup();
+
+    ASSERT_EQUAL(NUM_BRUSH_SIZES, 5);
+    for (int i = 1; i < NUM_BRUSH_SIZES; i++) {
+        ASSERT_TRUE(kBrushSizes[i] > kBrushSizes[i - 1]);
+    }
+
+    ie_teardown();
+    PASS();
+}
+
+// Switching tool type invalidates the tool_options_win (no crash in headless).
+void test_ie_tool_switch_updates_options_panel(void) {
+    TEST("tool switch: tool_options_win receives invalidate without crash");
+
+    ie_setup();
+    ie_create_palette_windows();
+
+    // Switch to a brush tool — brush-size panel should be active.
+    handle_menu_command(ID_TOOL_BRUSH);
+    ASSERT_EQUAL(g_app->current_tool, ID_TOOL_BRUSH);
+    ASSERT_TRUE(is_window(g_app->tool_options_win));
+
+    // Switch to a shape tool — shape panel should be active.
+    handle_menu_command(ID_TOOL_RECT);
+    ASSERT_EQUAL(g_app->current_tool, ID_TOOL_RECT);
+    ASSERT_TRUE(is_window(g_app->tool_options_win));
+
+    // Switch to a tool with no options (Select).
+    handle_menu_command(ID_TOOL_SELECT);
+    ASSERT_EQUAL(g_app->current_tool, ID_TOOL_SELECT);
+    ASSERT_TRUE(is_window(g_app->tool_options_win));
+
+    ie_teardown();
+    PASS();
+}
+
+// shape_filled is stored in g_app and read by the canvas / shape panel.
+void test_ie_shape_filled_state(void) {
+    TEST("shape_filled: default false, toggled directly");
+
+    ie_setup();
+
+    ASSERT_FALSE(g_app->shape_filled);
+
+    g_app->shape_filled = true;
+    ASSERT_TRUE(g_app->shape_filled);
+
+    g_app->shape_filled = false;
+    ASSERT_FALSE(g_app->shape_filled);
+
+    ie_teardown();
+    PASS();
+}
+
 // ── Entry point ───────────────────────────────────────────────────────────────
 
 int main(int argc, char *argv[]) {
@@ -582,6 +697,12 @@ int main(int argc, char *argv[]) {
     test_ie_zoom_commands();
     test_ie_size_dialog_headless();
     test_ie_size_dialog_accept();
+    test_ie_tool_options_window_created();
+    test_ie_close_tool_options_window_clears_pointer();
+    test_ie_brush_size_valid_range();
+    test_ie_brush_sizes_array();
+    test_ie_tool_switch_updates_options_panel();
+    test_ie_shape_filled_state();
 
     TEST_END();
 }

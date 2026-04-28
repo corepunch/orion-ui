@@ -59,18 +59,25 @@
 #define PALETTE_WIN_Y  (MENUBAR_HEIGHT + 4)
 
 #define TOOL_SWATCH_BOX_H    PALETTE_WIN_W
-#define TOOL_FILL_LABEL_H    9
-#define TOOL_FILL_ROW_H      12
-#define TOOL_FILL_GAP_H      2
 
 // Total frame height for the tool palette:
-//   title bar + toolbar rows (non-client) + client content
-#define TOOL_WIN_H    (TITLEBAR_HEIGHT + TOOL_TOOLBAR_H + SWATCH_CLIENT_H + FILL_MODE_H)
-
-// Client area of the tool palette shows FG/BG swatches + fill mode selector.
-//   FG/BG area: a square swatch area that matches the toolbox width.
+//   title bar + toolbar rows (non-client) + client content (swatches only)
+//   The fill/outline toggle has moved to the tool options palette.
 #define SWATCH_CLIENT_H TOOL_SWATCH_BOX_H
-#define FILL_MODE_H     (TOOL_FILL_LABEL_H + TOOL_FILL_GAP_H + TOOL_FILL_ROW_H)
+#define TOOL_WIN_H    (TITLEBAR_HEIGHT + TOOL_TOOLBAR_H + SWATCH_CLIENT_H)
+
+// Tool options palette — sits below the tool palette.
+// Content height accommodates both the brush-size panel and the shape-mode panel.
+#define TOOL_OPTIONS_PANEL_H   28
+#define TOOL_OPTIONS_WIN_W     PALETTE_WIN_W
+#define TOOL_OPTIONS_WIN_H     (TITLEBAR_HEIGHT + TOOL_OPTIONS_PANEL_H)
+#define TOOL_OPTIONS_WIN_X     PALETTE_WIN_X
+#define TOOL_OPTIONS_WIN_Y     (PALETTE_WIN_Y + TOOL_WIN_H + 4)
+
+// Brush size selector: 5 MacPaint-style sizes (radii: 0, 1, 2, 3, 4).
+#define NUM_BRUSH_SIZES   5
+extern const int kBrushSizes[NUM_BRUSH_SIZES];
+
 #define SWATCH_ROW_H    16
 // COLOR_WIN_Y: window top sits 4px below the menu bar (frame.y = window top).
 #define COLOR_WIN_H   (TITLEBAR_HEIGHT + 4 * SWATCH_ROW_H)
@@ -227,6 +234,7 @@ typedef struct {
   canvas_doc_t  *docs;
   window_t      *menubar_win;
   window_t      *tool_win;
+  window_t      *tool_options_win;
   window_t      *color_win;
   hinstance_t    hinstance;  // owning app instance
   int            current_tool;
@@ -237,6 +245,7 @@ typedef struct {
   accel_table_t *accel;
   uint32_t       user_palette[NUM_USER_COLORS];
   int            num_user_colors;
+  int            brush_size;    // current brush radius (index into kBrushSizes)
   bool           shape_filled;  // true = shapes draw filled, false = outline only
   // Text tool persistent settings
   int            text_font_size;  // pixel height, default 16
@@ -388,6 +397,7 @@ bool doc_confirm_close(canvas_doc_t *doc, window_t *parent_win);
 result_t editor_menubar_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_canvas_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_tool_palette_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+result_t win_tool_options_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_color_palette_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 
 // Zoom support
@@ -430,6 +440,7 @@ void handle_menu_command(uint16_t id);
 // Palette window factory helpers — create, show, register and return the window.
 // Also used by handle_menu_command to recreate closed palette windows.
 window_t *create_tool_palette_window(void);
+window_t *create_tool_options_window(void);
 window_t *create_color_palette_window(void);
 
 // New Image / Canvas Size dialog

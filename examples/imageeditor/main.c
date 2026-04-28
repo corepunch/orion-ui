@@ -63,6 +63,7 @@ static void create_app_windows(hinstance_t hinstance) {
                                     handle_menu_command, hinstance);
 
   create_tool_palette_window();
+  create_tool_options_window();
   create_color_palette_window();
 }
 
@@ -95,6 +96,7 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   g_app->bg_color = kPalette[0];
   g_app->next_x   = DOC_START_X;
   g_app->next_y   = DOC_START_Y;
+  g_app->brush_size = 1;  // default: radius 1 (3px diameter)
   g_app->text_font_size = 16;
   g_app->text_antialias = true;
   g_app->grid_spacing_x = 16;
