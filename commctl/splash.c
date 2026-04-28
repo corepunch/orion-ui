@@ -5,7 +5,8 @@
 //   window_t *sp = show_splash_screen(path_to_image, hinstance);
 //
 // The window is non-modal: the caller's event loop renders it normally.
-// A left-click anywhere on the window destroys it.
+// The window captures the mouse on creation so that any click — inside or
+// outside its bounds — destroys it.  Moving the mouse away also destroys it.
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,8 +26,15 @@ static result_t splash_proc(window_t *win, uint32_t msg,
       splash_state_t *s = allocate_window_data(win, sizeof(splash_state_t));
       s->tex = (uint32_t)(uintptr_t)lparam;
       win->notabstop = true;
+      set_capture(win);
       return true;
     }
+    case evMouseMove:
+      track_mouse(win);
+      return false;
+    case evMouseLeave:
+      destroy_window(win);
+      return true;
     case evPaint: {
       splash_state_t *s = (splash_state_t *)win->userdata;
       if (s && s->tex)
@@ -57,7 +65,8 @@ static result_t splash_proc(window_t *win, uint32_t msg,
 // The image type is determined by its content (magic bytes), not its extension,
 // so both .jpg and .jpeg files are accepted alongside .png and .bmp.
 // The window is centered on screen, borderless, and always on top.
-// It is destroyed when the user clicks anywhere on it.
+// It is destroyed when the user clicks anywhere (inside or outside) or moves
+// the mouse away from it.
 // Returns the window pointer, or NULL if the image could not be loaded.
 window_t *show_splash_screen(const char *path, hinstance_t hinstance) {
   if (!path || !g_ui_runtime.running) return NULL;
