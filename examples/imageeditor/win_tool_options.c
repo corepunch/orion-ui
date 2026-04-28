@@ -3,8 +3,8 @@
 //
 // Three panels (selected by current tool):
 //   OPTS_BRUSH  — pencil / brush / spray / eraser:
-//                 a row of 5 MacPaint-style horizontal stroke previews used
-//                 to pick the brush radius (0, 1, 2, 3, 4).
+//                 a vertical list of 5 MacPaint-style horizontal stroke previews
+//                 used to pick the brush radius (0, 1, 2, 3, 4).
 //   OPTS_SHAPE  — line / rect / ellipse / rounded rect / polygon:
 //                 an Outline / Filled toggle matching the old toolbox widget.
 //   OPTS_NONE   — all other tools: empty / blank panel.
@@ -48,26 +48,32 @@ static tool_opts_panel_t panel_for_tool(int tool) {
 
 // Label row at the top of the panel (y=1, h=9).
 #define OPTS_LABEL_H  9
-// Main content row below the label (gap=2, h=14).
+// Gap between label and content rows.
 #define OPTS_GAP_H    2
+// Height of the shape-mode toggle row (shorter than the brush list).
 #define OPTS_ROW_H    14
 
 static rect_t opts_label_rect(void) {
   return (rect_t){ 2, 1, TOOL_OPTIONS_WIN_W - 4, OPTS_LABEL_H };
 }
 
-static rect_t opts_content_rect(void) {
-  int y = OPTS_LABEL_H + OPTS_GAP_H;
-  return (rect_t){ 1, y, TOOL_OPTIONS_WIN_W - 2, OPTS_ROW_H };
+// The first content row starts just below the label + gap.
+static int opts_content_y(void) {
+  return OPTS_LABEL_H + OPTS_GAP_H;
+}
+
+// Returns the rect for brush-size row i in the vertical list.
+static rect_t brush_cell_rect(int idx) {
+  return (rect_t){ 1, opts_content_y() + idx * OPTS_BRUSH_CELL_H,
+                   TOOL_OPTIONS_WIN_W - 2, OPTS_BRUSH_CELL_H };
+}
+
+// Returns the single-row rect used by the shape-mode toggle.
+static rect_t shape_row_rect(void) {
+  return (rect_t){ 1, opts_content_y(), TOOL_OPTIONS_WIN_W - 2, OPTS_ROW_H };
 }
 
 // ── Brush-size panel ────────────────────────────────────────────────────────
-
-static rect_t brush_cell_rect(int idx) {
-  rect_t row = opts_content_rect();
-  int cell_w = row.w / NUM_BRUSH_SIZES;
-  return (rect_t){ row.x + idx * cell_w, row.y, cell_w, row.h };
-}
 
 static void draw_brush_panel(int selected_idx) {
   rect_t lbl = opts_label_rect();
@@ -102,7 +108,7 @@ static void draw_shape_panel(bool filled) {
   rect_t lbl = opts_label_rect();
   draw_text_small("Fill:", lbl.x, lbl.y, get_sys_color(brTextDisabled));
 
-  rect_t row = opts_content_rect();
+  rect_t row = shape_row_rect();
   rect_t outline_outer = rect_inset_xy(rect_split_left(row, row.w / 2), 1, 0);
   rect_t filled_outer  = rect_inset_xy(rect_split_right(row, row.w / 2), 1, 0);
   rect_t outline_inner = rect_inset(outline_outer, 1);
@@ -137,13 +143,13 @@ static int brush_hit(int mx, int my) {
 
 // Returns true if the click lands in the "Filled" (right) half of the row.
 static bool shape_filled_hit(int mx) {
-  rect_t row = opts_content_rect();
+  rect_t row = shape_row_rect();
   rect_t filled_half = rect_split_right(row, row.w / 2);
   return mx >= filled_half.x;
 }
 
 static bool shape_row_hit(int mx, int my) {
-  rect_t row = opts_content_rect();
+  rect_t row = shape_row_rect();
   return mx >= row.x && mx < row.x + row.w &&
          my >= row.y && my < row.y + row.h;
 }

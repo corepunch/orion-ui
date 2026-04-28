@@ -68,7 +68,9 @@
 
 // Tool options palette — sits below the tool palette.
 // Content height accommodates both the brush-size panel and the shape-mode panel.
-#define TOOL_OPTIONS_PANEL_H   28
+// Brush panel: label(9) + gap(2) + NUM_BRUSH_SIZES rows × OPTS_BRUSH_CELL_H each.
+#define OPTS_BRUSH_CELL_H      12
+#define TOOL_OPTIONS_PANEL_H   (9 + 2 + NUM_BRUSH_SIZES * OPTS_BRUSH_CELL_H)
 #define TOOL_OPTIONS_WIN_W     PALETTE_WIN_W
 #define TOOL_OPTIONS_WIN_H     (TITLEBAR_HEIGHT + TOOL_OPTIONS_PANEL_H)
 #define TOOL_OPTIONS_WIN_X     PALETTE_WIN_X
