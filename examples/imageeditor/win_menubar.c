@@ -166,6 +166,18 @@ window_t *create_tool_palette_window(void) {
   return tp;
 }
 
+window_t *create_tool_options_window(void) {
+  window_t *tw = create_window(
+      "Options",
+      WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
+      MAKERECT(TOOL_OPTIONS_WIN_X, TOOL_OPTIONS_WIN_Y,
+               TOOL_OPTIONS_WIN_W, TOOL_OPTIONS_WIN_H),
+      NULL, win_tool_options_proc, g_app->hinstance, NULL);
+  show_window(tw, true);
+  g_app->tool_options_win = tw;
+  return tw;
+}
+
 window_t *create_color_palette_window(void) {
   window_t *cp = create_window(
       "Colors",
@@ -532,6 +544,10 @@ void handle_menu_command(uint16_t id) {
       // Update the active tool button in the tool palette (win_toolbox).
       if (g_app->tool_win) {
         send_message(g_app->tool_win, bxSetActiveItem, (uint32_t)id, NULL);
+      }
+      // Refresh the tool options panel (panel type may have changed).
+      if (g_app->tool_options_win) {
+        invalidate_window(g_app->tool_options_win);
       }
       break;
     }
