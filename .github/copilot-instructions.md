@@ -329,6 +329,35 @@ create_window_from_form(&kMyDlg, x, y, parent, my_dlg_proc, NULL);
 - Add documentation to README.md for new public APIs
 - Consider adding examples for non-trivial new functionality
 
+### Function-First, High-Level Code (Required)
+
+Apply this to **all Orion code**, not only palettes/widgets.
+
+1. **Extract intent into named functions early.**
+  If logic does more than one thing (layout + draw, parse + validate, dispatch + mutate),
+  split it into focused helpers.
+2. **Prefer high-level composition over inline micromanagement.**
+  Build behavior from existing abstractions (framework APIs, helpers, typed structs,
+  message handlers) instead of long local blocks with ad-hoc step-by-step manipulation.
+3. **Use domain helpers instead of manual low-level math.**
+  For geometry use `rect_*` operations; for UI use existing control/message patterns;
+  for resources use existing framework loading and ownership conventions.
+4. **Keep state at the right granularity.**
+  Store coarse, meaningful state (regions, modes, selections) and derive ephemeral
+  details locally where they are used.
+5. **Single-source behavior for each concern.**
+  Paint, hit-test, and state transitions should share the same derived logic to avoid drift.
+
+Why this is now the standard:
+- Improves readability by making control flow and intent obvious from function names.
+- Improves structure by separating responsibilities and reducing cross-coupled code.
+- Makes changes safer: edit one helper/constant instead of many duplicated pixel offsets.
+- Reduces regressions caused by hidden side effects and repeated low-level logic.
+
+UI-specific application of the same rule:
+- For custom drawing/layout, define an outer `rect_t` region per widget and derive internals
+  with `rect_*` helpers inside dedicated draw/hit helpers rather than pixel-pushing inline.
+
 ### Anti-Patterns (learned from real mistakes)
 
 1. **Don't store per-icon `{col, row}` in each button.** A sprite sheet is a strip of fixed-size tiles. Load it once, derive `cols = texture_w / icon_w`, and give each button only an integer index. WinAPI's `TBBUTTON.iBitmap` is the canonical model — follow it exactly.

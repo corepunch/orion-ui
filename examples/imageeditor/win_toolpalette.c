@@ -35,8 +35,7 @@ static const toolbox_item_t k_tools[NUM_TOOLS] = {
 
 typedef struct {
   rect_t swatch_box;
-  rect_t fill_label;
-  rect_t fill_row;
+  rect_t fill_box;
 } tool_palette_layout_t;
 
 static tool_palette_layout_t tool_palette_layout(window_t *win) {
@@ -45,9 +44,7 @@ static tool_palette_layout_t tool_palette_layout(window_t *win) {
                    SWATCH_CLIENT_H + FILL_MODE_H };
   layout.swatch_box = rect_split_top(panel, TOOL_SWATCH_BOX_H);
   panel = rect_trim_top(panel, TOOL_SWATCH_BOX_H);
-  layout.fill_label = rect_split_top(panel, TOOL_FILL_LABEL_H);
-  panel = rect_trim_top(panel, TOOL_FILL_LABEL_H);
-  layout.fill_row = rect_split_top(panel, TOOL_FILL_ROW_H);
+  layout.fill_box = rect_split_top(panel, FILL_MODE_H);
   return layout;
 }
 
@@ -76,12 +73,36 @@ static void draw_palette_swatch(const tool_palette_layout_t *layout,
   fill_rect(0xFF000000, &reset_black);
 }
 
+static void draw_fill_widget(const tool_palette_layout_t *layout, bool filled) {
+  rect_t fill_label = rect_split_top(layout->fill_box, TOOL_FILL_LABEL_H);
+  rect_t fill_row = rect_split_bottom(layout->fill_box, TOOL_FILL_ROW_H);
+  rect_t outline_outer = rect_inset_xy(rect_split_left(fill_row, fill_row.w / 2), 1, 0);
+  rect_t filled_outer = rect_inset_xy(rect_split_right(fill_row, fill_row.w / 2), 1, 0);
+  rect_t outline_inner = rect_inset(outline_outer, 1);
+  rect_t filled_inner = rect_inset(filled_outer, 1);
+  rect_t outline_text = rect_center(outline_inner, strwidth("O"), 8);
+  rect_t filled_text = rect_center(filled_inner, strwidth("F"), 8);
+  uint32_t outline_col = filled ? get_sys_color(brButtonBg) : get_sys_color(brFocusRing);
+  uint32_t filled_col = filled ? get_sys_color(brFocusRing) : get_sys_color(brButtonBg);
+
+  draw_text_small("Fill:", fill_label.x + 2, fill_label.y, get_sys_color(brTextDisabled));
+
+  fill_rect(get_sys_color(brDarkEdge), &outline_outer);
+  fill_rect(outline_col, &outline_inner);
+  draw_text_small("O", outline_text.x, outline_text.y, get_sys_color(brTextNormal));
+
+  fill_rect(get_sys_color(brDarkEdge), &filled_outer);
+  fill_rect(filled_col, &filled_inner);
+  draw_text_small("F", filled_text.x, filled_text.y, get_sys_color(brTextNormal));
+}
+
 result_t win_tool_palette_proc(window_t *win, uint32_t msg,
                                 uint32_t wparam, void *lparam) {
   switch (msg) {
     case evCreate: {
       // First let win_toolbox initialise its state.
       win_toolbox(win, msg, wparam, lparam);
+      send_message(win, bxSetButtonSize, TOOL_PALETTE_BTN_SIZE, NULL);
 
       // Load tools.png icon strip.
 #ifdef SHAREDIR
@@ -105,32 +126,8 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       tool_palette_layout_t layout = tool_palette_layout(win);
 
       if (g_app) {
-        rect_t outline_outer = rect_inset_xy(
-            rect_split_left(layout.fill_row, layout.fill_row.w / 2), 1, 0);
-        rect_t filled_outer = rect_inset_xy(
-            rect_split_right(layout.fill_row, layout.fill_row.w / 2), 1, 0);
-        rect_t outline_inner = rect_inset(outline_outer, 1);
-        rect_t filled_inner = rect_inset(filled_outer, 1);
-        rect_t outline_text = rect_center(outline_inner, strwidth("O"), 8);
-        rect_t filled_text = rect_center(filled_inner, strwidth("F"), 8);
-
         draw_palette_swatch(&layout, g_app->fg_color, g_app->bg_color);
-        draw_text_small("Fill:", layout.fill_label.x + 2, layout.fill_label.y,
-                        get_sys_color(brTextDisabled));
-
-        uint32_t outline_col = g_app->shape_filled
-            ? get_sys_color(brButtonBg) : get_sys_color(brFocusRing);
-        fill_rect(get_sys_color(brDarkEdge), &outline_outer);
-        fill_rect(outline_col, &outline_inner);
-        draw_text_small("O", outline_text.x, outline_text.y,
-                        get_sys_color(brTextNormal));
-
-        uint32_t filled_col = g_app->shape_filled
-            ? get_sys_color(brFocusRing) : get_sys_color(brButtonBg);
-        fill_rect(get_sys_color(brDarkEdge), &filled_outer);
-        fill_rect(filled_col, &filled_inner);
-        draw_text_small("F", filled_text.x, filled_text.y,
-                        get_sys_color(brTextNormal));
+        draw_fill_widget(&layout, g_app->shape_filled);
       }
       return true;
     }
@@ -139,15 +136,16 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       int mx = (int)(int16_t)LOWORD(wparam);
       int my = (int)(int16_t)HIWORD(wparam);
       tool_palette_layout_t layout = tool_palette_layout(win);
+      rect_t fill_row = rect_split_bottom(layout.fill_box, TOOL_FILL_ROW_H);
 
       // Check if the click is in the shape-mode toggle row.
       if (g_app
-          && mx >= layout.fill_row.x
-          && mx < layout.fill_row.x + layout.fill_row.w
-          && my >= layout.fill_row.y
-          && my < layout.fill_row.y + layout.fill_row.h) {
+          && mx >= fill_row.x
+          && mx < fill_row.x + fill_row.w
+          && my >= fill_row.y
+          && my < fill_row.y + fill_row.h) {
         bool was_filled = g_app->shape_filled;
-        rect_t filled_half = rect_split_right(layout.fill_row, layout.fill_row.w / 2);
+        rect_t filled_half = rect_split_right(fill_row, fill_row.w / 2);
         g_app->shape_filled = (mx >= filled_half.x);
         if (g_app->shape_filled != was_filled)
           invalidate_window(win);
