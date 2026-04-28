@@ -20,6 +20,16 @@ const int kZoomMenuIDs[NUM_ZOOM_LEVELS] = {
 // disappears; only the thumb rendering and mouse interaction change between modes.
 #define CANVAS_SB_ALWAYS_VISIBLE
 
+// Apply snap-to-grid to a canvas pixel position if the grid snap option is
+// enabled.  Rounds px/py to the nearest grid intersection.
+static void snap_canvas_pos(int *px, int *py) {
+  if (!g_app || !g_app->grid_snap) return;
+  int gx = g_app->grid_spacing_x;
+  int gy = g_app->grid_spacing_y;
+  if (gx > 1) *px = ((*px + gx / 2) / gx) * gx;
+  if (gy > 1) *py = ((*py + gy / 2) / gy) * gy;
+}
+
 // ---- scrollbar helpers -------------------------------------------------------
 
 // Update built-in scrollbar info to match the current zoom/pan state.
@@ -172,6 +182,50 @@ static void apply_zoom_centered(window_t *win, canvas_win_state_t *state,
   canvas_win_set_zoom(win, new_scale);
 }
 
+// Draw the grid overlay using the same checker-texture mechanism as
+// draw_sel_rect.  Each grid line is drawn as a 1-pixel-wide dashed line
+// spanning the full visible canvas width (horizontal) or height (vertical).
+// Only lines inside the viewport are submitted to the GPU.
+static void canvas_draw_grid(canvas_win_state_t *state, int win_w, int win_h) {
+  if (!g_app || !g_app->grid_visible) return;
+  canvas_doc_t *doc = state->doc;
+  int gx = g_app->grid_spacing_x;
+  int gy = g_app->grid_spacing_y;
+  if (gx < 1) gx = 1;
+  if (gy < 1) gy = 1;
+
+  // Canvas rect in screen-local coordinates (may extend outside the window)
+  int cx0 = -state->pan_x;
+  int cy0 = -state->pan_y;
+  int cw  = doc->canvas_w * state->scale;
+  int ch  = doc->canvas_h * state->scale;
+
+  // Intersection of canvas rect and window rect (visible canvas area)
+  int clip_x0 = MAX(0, cx0);
+  int clip_y0 = MAX(0, cy0);
+  int clip_x1 = MIN(win_w, cx0 + cw);
+  int clip_y1 = MIN(win_h, cy0 + ch);
+  if (clip_x1 <= clip_x0 || clip_y1 <= clip_y0) return;
+  int clip_w = clip_x1 - clip_x0;
+  int clip_h = clip_y1 - clip_y0;
+
+  // Horizontal lines at canvas y = gy, 2*gy, ...
+  for (int row = gy; row < doc->canvas_h; row += gy) {
+    int sy = row * state->scale - state->pan_y;
+    if (sy >= clip_y1) break;
+    if (sy < clip_y0) continue;
+    draw_sel_rect(R(clip_x0, sy, clip_w, 1));
+  }
+
+  // Vertical lines at canvas x = gx, 2*gx, ...
+  for (int col = gx; col < doc->canvas_w; col += gx) {
+    int sx = col * state->scale - state->pan_x;
+    if (sx >= clip_x1) break;
+    if (sx < clip_x0) continue;
+    draw_sel_rect(R(sx, clip_y0, 1, clip_h));
+  }
+}
+
 result_t win_canvas_proc(window_t *win, uint32_t msg,
                           uint32_t wparam, void *lparam) {
   canvas_win_state_t *state = (canvas_win_state_t *)win->userdata;
@@ -211,6 +265,9 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       draw_rect(doc->canvas_tex,
                 R(cx, cy,
                   doc->canvas_w * state->scale, doc->canvas_h * state->scale));
+
+      // Draw grid overlay (same checker-texture mechanism as selection)
+      canvas_draw_grid(state, win->frame.w, win->frame.h);
 
       if (doc->sel_moving && doc->float_tex) {
         // Draw the floating selection at its current position
@@ -394,6 +451,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       int px = (lx + state->pan_x) / state->scale;
       int py = (ly + state->pan_y) / state->scale;
+      snap_canvas_pos(&px, &py);
       int tool = g_app->current_tool;
 
       // Text tool: record position and show text options dialog
@@ -585,6 +643,10 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       state->hover.x    = px;
       state->hover.y    = py;
       state->hover_valid = canvas_in_bounds(doc, px, py);
+
+      // Apply snap for all drawing operations (after hover update so the
+      // magnifier loupe always shows the actual pixel under the cursor).
+      snap_canvas_pos(&px, &py);
 
       // Update status bar with cursor position (Windows Me / MS Paint style).
       // Only send when the text changes to avoid redundant full-window repaints.
