@@ -114,6 +114,10 @@
 #define ID_VIEW_ZOOM_6X   45
 #define ID_VIEW_ZOOM_8X   46
 
+#define ID_VIEW_SHOW_GRID    47
+#define ID_VIEW_SNAP_GRID    48
+#define ID_VIEW_GRID_OPTIONS 49
+
 // Supported zoom levels and their corresponding View menu IDs.
 // These are the single source of truth used by win_canvas.c and win_menubar.c.
 #define NUM_ZOOM_LEVELS 5
@@ -241,6 +245,11 @@ typedef struct {
   uint8_t       *clipboard;
   int            clipboard_w;
   int            clipboard_h;
+  // Grid
+  bool           grid_visible;
+  bool           grid_snap;
+  int            grid_spacing_x;   // horizontal grid cell size in canvas pixels
+  int            grid_spacing_y;   // vertical grid cell size in canvas pixels
 } app_state_t;
 
 // ============================================================
@@ -425,5 +434,8 @@ window_t *create_color_palette_window(void);
 
 // New Image / Canvas Size dialog
 bool show_size_dialog(window_t *parent, const char *title, int *out_w, int *out_h);
+
+// Grid Options dialog – returns true if accepted.
+bool show_grid_options_dialog(window_t *parent, int *out_x, int *out_y);
 
 #endif // __IMAGEEDITOR_H__

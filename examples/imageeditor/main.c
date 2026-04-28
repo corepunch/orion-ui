@@ -97,6 +97,8 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   g_app->next_y   = DOC_START_Y;
   g_app->text_font_size = 16;
   g_app->text_antialias = true;
+  g_app->grid_spacing_x = 16;
+  g_app->grid_spacing_y = 16;
 
   srand((unsigned int)time(NULL));
 
