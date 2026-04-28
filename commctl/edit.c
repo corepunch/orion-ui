@@ -5,6 +5,7 @@
 #include "../user/user.h"
 #include "../user/messages.h"
 #include "../user/draw.h"
+#include "../user/theme.h"
 
 #define BUFFER_SIZE 512
 
@@ -15,8 +16,8 @@ extern window_t *get_root_window(window_t *window);
 result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
     case evCreate:
-      win->frame.w = MAX(win->frame.w, text_strwidth(FONT_SMALL, win->title) + 6);
-      win->frame.h = MAX(win->frame.h, 13);
+      win->frame.w = MAX(win->frame.w, text_strwidth(FONT_SMALL, win->title) + BUTTON_TEXT_INSET * 2);
+      win->frame.h = MAX(win->frame.h, text_char_height(FONT_SMALL) + BUTTON_TEXT_INSET * 2);
       return true;
     case evPaint: {
       rect_t local = {0, 0, win->frame.w, win->frame.h};

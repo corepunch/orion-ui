@@ -376,6 +376,9 @@ int text_strwidth(ui_font_t font, const char *text) {
 }
 
 int text_strnwidth(ui_font_t font, const char *text, int len) {
+  if (!text) return 0;
+  int slen = (int)strlen(text);
+  if (len > slen) len = slen;
   return strnwidth_impl(font, text, len);
 }
 
