@@ -43,7 +43,7 @@
 #endif
 
 #define PALETTE_WIN_X   4
-#define TOOL_PALETTE_BTN_SIZE (TOOLBOX_BTN_SIZE + 2)
+#define TOOL_PALETTE_BTN_SIZE (TOOLBOX_BTN_SIZE + 4)
 // Tool palette window width: always 2 toolbox columns wide.
 #define PALETTE_WIN_W   (TOOLBOX_COLS * TOOL_PALETTE_BTN_SIZE)
 
