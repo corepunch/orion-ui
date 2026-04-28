@@ -33,6 +33,8 @@
 #define GO_ID_GRIDY    2
 #define GO_ID_OK       3
 #define GO_ID_CANCEL   4
+#define GO_ID_LBL_H    5
+#define GO_ID_LBL_V    6
 
 // Accepted range for grid spacing (1..1024 canvas pixels)
 #define GO_MIN_SPACING   1
@@ -43,6 +45,8 @@
 // ──────────────────────────────────────────────────────────────────
 
 static const form_ctrl_def_t kGoChildren[] = {
+  { FORM_CTRL_LABEL,    GO_ID_LBL_H, {GO_LBL_X,  GO_ROW1_Y + 1, GO_EDIT_X - GO_LBL_X - 4, GO_EDIT_H}, 0, "Horizontal:", "lbl_h" },
+  { FORM_CTRL_LABEL,    GO_ID_LBL_V, {GO_LBL_X,  GO_ROW2_Y + 1, GO_EDIT_X - GO_LBL_X - 4, GO_EDIT_H}, 0, "Vertical:",   "lbl_v" },
   { FORM_CTRL_TEXTEDIT, GO_ID_GRIDX, {GO_EDIT_X, GO_ROW1_Y, GO_EDIT_W, GO_EDIT_H}, 0,              "",       "gridx"  },
   { FORM_CTRL_TEXTEDIT, GO_ID_GRIDY, {GO_EDIT_X, GO_ROW2_Y, GO_EDIT_W, GO_EDIT_H}, 0,              "",       "gridy"  },
   { FORM_CTRL_BUTTON,   GO_ID_OK,    {GO_OK_X,   GO_BTN_Y,  GO_BTN_W,  GO_BTN_H},  BUTTON_DEFAULT, "OK",     "ok"     },
@@ -55,7 +59,7 @@ static const form_def_t kGoForm = {
   .height      = GO_H,
   .flags       = 0,
   .children    = kGoChildren,
-  .child_count = 4,
+  .child_count = ARRAY_LEN(kGoChildren),
 };
 
 // ──────────────────────────────────────────────────────────────────
@@ -98,12 +102,6 @@ static result_t go_proc(window_t *win, uint32_t msg,
       st->y = *st->out_y;
       dialog_push(win, st, k_go_bindings, ARRAY_LEN(k_go_bindings));
       return true;
-    }
-
-    case evPaint: {
-      draw_text_small("Horizontal:", GO_LBL_X, GO_ROW1_Y + 3, get_sys_color(brTextDisabled));
-      draw_text_small("Vertical:",   GO_LBL_X, GO_ROW2_Y + 3, get_sys_color(brTextDisabled));
-      return false;
     }
 
     case evCommand: {
