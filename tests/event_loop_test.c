@@ -325,10 +325,8 @@ void test_drag_drop_handler_invoked(void) {
   ui_register_open_file_handler(dd_open_file_handler);
 
   // Allocate path on the heap — dispatch_message owns and frees it.
-  const char *src = "/tmp/test_image.png";
-  char *heap_path = malloc(strlen(src) + 1);
+  char *heap_path = strdup("/tmp/test_image.png");
   ASSERT_NOT_NULL(heap_path);
-  strcpy(heap_path, src);
 
   ui_event_t evt = {0};
   evt.message = kEventDragDrop;
@@ -337,7 +335,7 @@ void test_drag_drop_handler_invoked(void) {
   dispatch_message(&evt);
 
   ASSERT_EQUAL(dd_handler_call_count, 1);
-  ASSERT_TRUE(strcmp(dd_handler_last_path, src) == 0);
+  ASSERT_TRUE(strcmp(dd_handler_last_path, "/tmp/test_image.png") == 0);
 
   // Deregister handler so it does not affect other tests.
   ui_register_open_file_handler(NULL);
@@ -403,10 +401,8 @@ void test_drag_drop_no_handler(void) {
   // Ensure no handler is registered.
   ui_register_open_file_handler(NULL);
 
-  const char *src = "/tmp/no_handler.png";
-  char *heap_path = malloc(strlen(src) + 1);
+  char *heap_path = strdup("/tmp/no_handler.png");
   ASSERT_NOT_NULL(heap_path);
-  strcpy(heap_path, src);
 
   ui_event_t evt = {0};
   evt.message = kEventDragDrop;

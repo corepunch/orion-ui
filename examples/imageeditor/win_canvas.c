@@ -165,6 +165,8 @@ void canvas_win_fit_zoom(window_t *win) {
   if (view_w <= 0 || view_h <= 0) return;
 
   // Find the largest zoom level where the whole image fits (Photoshop style).
+  // fit_scale is initialised to kZoomLevels[0] (1x) as a fallback: if no level
+  // satisfies the constraint the image is shown at minimum zoom.
   int fit_scale = kZoomLevels[0];
   for (int i = NUM_ZOOM_LEVELS - 1; i >= 0; i--) {
     if (doc->canvas_w * kZoomLevels[i] <= view_w &&
@@ -174,7 +176,8 @@ void canvas_win_fit_zoom(window_t *win) {
     }
   }
 
-  // Center the canvas within the viewport at the chosen zoom level.
+  // Center the canvas within the viewport when it overflows; leave pan at 0
+  // when the image fits entirely (drawn from the top-left corner).
   int scaled_w = doc->canvas_w * fit_scale;
   int scaled_h = doc->canvas_h * fit_scale;
   state->pan_x = (scaled_w > view_w) ? (scaled_w - view_w) / 2 : 0;
