@@ -32,6 +32,7 @@ static const menu_item_t kEditItems[] = {
 static menu_item_t s_view_items[] = {
   {"Zoom In",                  ID_VIEW_ZOOM_IN},
   {"Zoom Out",                 ID_VIEW_ZOOM_OUT},
+  {"Fit on Screen",            ID_VIEW_ZOOM_FIT},
   {NULL,                       0},
   {"1x",                       ID_VIEW_ZOOM_1X},
   {"2x",                       ID_VIEW_ZOOM_2X},
@@ -274,6 +275,8 @@ bool imageeditor_open_file_path(const char *path) {
   ndoc->modified = false;
   doc_update_title(ndoc);
   send_message(ndoc->win, evStatusBar, 0, (void *)path);
+  // Open at bird's-eye view so the whole image is visible immediately.
+  canvas_win_fit_zoom(ndoc->canvas_win);
   invalidate_window(ndoc->canvas_win);
   return true;
 }
@@ -474,6 +477,7 @@ void handle_menu_command(uint16_t id) {
 
     case ID_VIEW_ZOOM_IN:
     case ID_VIEW_ZOOM_OUT:
+    case ID_VIEW_ZOOM_FIT:
     case ID_VIEW_ZOOM_1X:
     case ID_VIEW_ZOOM_2X:
     case ID_VIEW_ZOOM_4X:
@@ -485,7 +489,13 @@ void handle_menu_command(uint16_t id) {
 
       int new_scale = state->scale;
 
-      if (id == ID_VIEW_ZOOM_IN) {
+      if (id == ID_VIEW_ZOOM_FIT) {
+        canvas_win_fit_zoom(doc->canvas_win);
+        char zoom_msg[32];
+        snprintf(zoom_msg, sizeof(zoom_msg), "Zoom: %dx", state->scale);
+        send_message(doc->win, evStatusBar, 0, zoom_msg);
+        break;
+      } else if (id == ID_VIEW_ZOOM_IN) {
         for (int i = 0; i < NUM_ZOOM_LEVELS; i++) {
           if (kZoomLevels[i] > state->scale) { new_scale = kZoomLevels[i]; break; }
         }

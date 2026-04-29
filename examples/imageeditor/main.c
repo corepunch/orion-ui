@@ -32,6 +32,8 @@ static const accel_t kAccelEntries[] = {
   { FCONTROL|FVIRTKEY, AX_KEY_EQUALS,  ID_VIEW_ZOOM_IN  },
   { FCONTROL|FSHIFT|FVIRTKEY, AX_KEY_EQUALS,  ID_VIEW_ZOOM_IN  },
   { FCONTROL|FVIRTKEY, AX_KEY_MINUS,  ID_VIEW_ZOOM_OUT },
+  // Ctrl+0 — Fit on Screen (Photoshop convention)
+  { FCONTROL|FVIRTKEY, AX_KEY_0,      ID_VIEW_ZOOM_FIT },
   // Tool hotkeys – same as MS Paint
   { FVIRTKEY,          AX_KEY_P, ID_TOOL_PENCIL },
   { FVIRTKEY,          AX_KEY_B, ID_TOOL_BRUSH  },

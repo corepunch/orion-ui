@@ -151,6 +151,37 @@ void canvas_win_set_zoom(window_t *win, int new_scale) {
   invalidate_window(win);
 }
 
+// Fit the canvas to the viewport at the largest integer zoom where the entire
+// image is visible — equivalent to Photoshop's "Fit on Screen" (Ctrl+0).
+// Falls back to 1x when no zoom level fits (image larger than viewport).
+// Centers the canvas in the viewport after zooming.
+void canvas_win_fit_zoom(window_t *win) {
+  canvas_win_state_t *state = (canvas_win_state_t *)win->userdata;
+  if (!state || !state->doc) return;
+  canvas_doc_t *doc = state->doc;
+
+  int view_w = win->frame.w - SCROLLBAR_WIDTH;
+  int view_h = win->frame.h;
+  if (view_w <= 0 || view_h <= 0) return;
+
+  // Find the largest zoom level where the whole image fits (Photoshop style).
+  int fit_scale = kZoomLevels[0];
+  for (int i = NUM_ZOOM_LEVELS - 1; i >= 0; i--) {
+    if (doc->canvas_w * kZoomLevels[i] <= view_w &&
+        doc->canvas_h * kZoomLevels[i] <= view_h) {
+      fit_scale = kZoomLevels[i];
+      break;
+    }
+  }
+
+  // Center the canvas within the viewport at the chosen zoom level.
+  int scaled_w = doc->canvas_w * fit_scale;
+  int scaled_h = doc->canvas_h * fit_scale;
+  state->pan_x = (scaled_w > view_w) ? (scaled_w - view_w) / 2 : 0;
+  state->pan_y = (scaled_h > view_h) ? (scaled_h - view_h) / 2 : 0;
+  canvas_win_set_zoom(win, fit_scale);
+}
+
 // Public helper: re-clamp pan and update scrollbars without changing zoom.
 // Call this after canvas_resize() to keep scrollbar state consistent.
 void canvas_win_sync_scrollbars(window_t *win) {
