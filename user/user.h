@@ -62,6 +62,32 @@ typedef struct {
   flags_t flags;
 } windef_t;
 
+// ── Dialog Data Exchange (DDX) ──────────────────────────────────────────────
+// Analogous to MFC DDX / WinAPI dialog-data routines.
+// Describe each control-to-field mapping in a static ctrl_binding_t array,
+// then call dialog_push() on create and dialog_pull() on accept.
+
+// Returns the number of elements in a statically-sized array.
+#define ARRAY_LEN(a) ((int)(sizeof(a) / sizeof((a)[0])))
+
+// Returns sizeof(((type *)0)->field) — the byte size of a struct field.
+#define sizeof_field(type, field) ((size_t)(sizeof(((type *)0)->field)))
+
+typedef enum {
+  BIND_STRING,    // char[] field: text-edit text ↔ char array (size = sizeof field)
+  BIND_INT_COMBO, // int   field: combo-box selection index ↔ int  (size = default index)
+  BIND_INT_EDIT,  // int   field: text-edit decimal text    ↔ int  (size = unused)
+  BIND_MLSTRING,  // char[] field: multi-line text edit ↔ char array (size = sizeof field)
+} bind_type_t;
+
+typedef struct ctrl_binding_s {
+  uint32_t    ctrl_id; // numeric child control ID
+  bind_type_t type;    // BIND_* transfer type
+  size_t      offset;  // offsetof(state_t, field)
+  size_t      size;    // BIND_STRING: sizeof char[] field;
+                       // BIND_INT_COMBO: default index (used when pull returns < 0)
+} ctrl_binding_t;
+
 // Control type codes used in form_ctrl_def_t (analogous to WinAPI dialog-template atom IDs).
 typedef enum {
   FORM_CTRL_BUTTON    = 0,
@@ -86,12 +112,22 @@ typedef struct {
 
 // Describes a complete form (window + children) as a serializable definition
 // (analogous to DLGTEMPLATE).  Pass to create_window_from_form() to instantiate.
+//
+// DDX fields (bindings, binding_count, ok_id, cancel_id) are optional.
+// When provided and show_ddx_dialog() is used instead of show_dialog_from_form(),
+// no custom window proc is required: controls are populated on create, and the
+// OK / Cancel buttons end the dialog automatically.
 typedef struct {
   const char             *name;        // window title
   int                     width, height; // client area dimensions
   flags_t                 flags;       // window flags
   const form_ctrl_def_t  *children;    // array of child control definitions (may be NULL)
   int                     child_count; // number of entries in children[]
+  // ── DDX (Dialog Data Exchange) fields ───────────────────────────────────
+  const ctrl_binding_t   *bindings;      // data-exchange table (may be NULL)
+  int                     binding_count;   // number of entries in bindings[]
+  uint32_t                ok_id;           // child ID of the Accept / OK button
+  uint32_t                cancel_id;       // child ID of the Cancel button (0 = none)
 } form_def_t;
 
 // Internal state for one built-in scrollbar (horizontal or vertical).
@@ -244,6 +280,15 @@ uint32_t show_dialog_from_form_ex(form_def_t const *def, char const *title,
 uint32_t show_dialog_from_form(form_def_t const *def, char const *title,
                                window_t *parent, winproc_t proc, void *param);
 
+// Show a modal dialog driven entirely by form DDX bindings.
+// No custom proc is needed: evCreate pushes state → controls,
+// the ok_id button pulls controls → state and ends with code 1,
+// the cancel_id button (if set) ends with code 0.
+// Pressing Enter in any edit box is equivalent to clicking the OK button.
+// Returns the dialog end code (1 = accepted, 0 = cancelled).
+uint32_t show_ddx_dialog(form_def_t const *def, const char *title,
+                         window_t *parent, void *state);
+
 // Theme functions (analogous to WinAPI SetSysColors / GetSysColor)
 void set_sys_colors(int count, const int *indices, const uint32_t *colors);
 
@@ -261,32 +306,6 @@ void show_scroll_bar(window_t *win, int bar, bool show);
 void reset_scroll_bar_auto(window_t *win, int bar);
 
 extern window_t *g_inspector;
-
-// ── Dialog Data Exchange (DDX) ──────────────────────────────────────────────
-// Analogous to MFC DDX / WinAPI dialog-data routines.
-// Describe each control-to-field mapping in a static ctrl_binding_t array,
-// then call dialog_push() on create and dialog_pull() on accept.
-
-// Returns the number of elements in a statically-sized array.
-#define ARRAY_LEN(a) ((int)(sizeof(a) / sizeof((a)[0])))
-
-// Returns sizeof(((type *)0)->field) — the byte size of a struct field.
-#define sizeof_field(type, field) ((size_t)(sizeof(((type *)0)->field)))
-
-typedef enum {
-  BIND_STRING,    // char[] field: text-edit text ↔ char array (size = sizeof field)
-  BIND_INT_COMBO, // int   field: combo-box selection index ↔ int  (size = default index)
-  BIND_INT_EDIT,  // int   field: text-edit decimal text    ↔ int  (size = unused)
-  BIND_MLSTRING,  // char[] field: multi-line text edit ↔ char array (size = sizeof field)
-} bind_type_t;
-
-typedef struct {
-  uint32_t    ctrl_id; // numeric child control ID
-  bind_type_t type;    // BIND_* transfer type
-  size_t      offset;  // offsetof(state_t, field)
-  size_t      size;    // BIND_STRING: sizeof char[] field;
-                       // BIND_INT_COMBO: default index (used when pull returns < 0)
-} ctrl_binding_t;
 
 // dialog_push: write state fields → controls (call from evCreate).
 void dialog_push(window_t *win, const void *state,

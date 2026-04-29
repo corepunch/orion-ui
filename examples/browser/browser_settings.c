@@ -45,6 +45,7 @@ static const form_def_t kAboutForm = {
   .height = 98,
   .children = kAboutChildren,
   .child_count = (int)(sizeof(kAboutChildren) / sizeof(kAboutChildren[0])),
+  .ok_id = ID_ABOUT_OK,
 };
 
 static rect_t browser_centered_settings_rect(window_t *parent) {
@@ -199,23 +200,6 @@ static result_t browser_settings_proc(window_t *win, uint32_t msg, uint32_t wpar
   }
 }
 
-static result_t browser_about_proc(window_t *win, uint32_t msg,
-                                   uint32_t wparam, void *lparam) {
-  (void)lparam;
-
-  switch (msg) {
-    case evCommand:
-      if (HIWORD(wparam) == btnClicked) {
-        end_dialog(win, 1);
-        return true;
-      }
-      return false;
-
-    default:
-      return false;
-  }
-}
-
 bool browser_show_settings_window(window_t *parent, browser_state_t *st) {
   if (!st) return false;
   if (st->settings_win && is_window(st->settings_win)) {
@@ -279,6 +263,5 @@ bool browser_pick_save_path(window_t *parent, char *out_path, size_t out_sz) {
 }
 
 void browser_show_about_dialog(window_t *parent) {
-  show_dialog_from_form(&kAboutForm, "About Browser",
-                        parent, browser_about_proc, NULL);
+  show_ddx_dialog(&kAboutForm, "About Browser", parent, NULL);
 }
