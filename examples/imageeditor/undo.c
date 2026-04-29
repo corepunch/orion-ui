@@ -1,8 +1,33 @@
 // Undo/redo history for canvas documents.
-// Each history entry is a heap-allocated full pixel snapshot.
-// Up to UNDO_MAX entries are kept per stack; the oldest is dropped when full.
+// Each history entry is a heap-allocated blob that serializes the full layer
+// stack so that undo/redo restores layers, masks, opacity, visibility, etc.
+//
+// Blob layout:
+//   [snap_header_t]
+//   for each layer:
+//     [snap_layer_hdr_t]
+//     [canvas_w * canvas_h * 4]  pixel data (RGBA)
+//     if has_mask: [canvas_w * canvas_h]  mask data (grayscale)
 
 #include "imageeditor.h"
+
+#define SNAP_MAGIC 0x4C595253u  // 'LYRS'
+
+typedef struct {
+  uint32_t magic;
+  int32_t  layer_count;
+  int32_t  active_layer;
+  int32_t  canvas_w;
+  int32_t  canvas_h;
+} snap_header_t;
+
+typedef struct {
+  char    name[64];
+  uint8_t visible;
+  uint8_t opacity;
+  uint8_t has_mask;
+  uint8_t _pad;
+} snap_layer_hdr_t;
 
 // Free all entries on one stack and reset its count to zero.
 static void clear_stack(uint8_t **states, int *count) {
@@ -13,12 +38,128 @@ static void clear_stack(uint8_t **states, int *count) {
   *count = 0;
 }
 
-// Allocate and return a snapshot of doc->pixels, or NULL on OOM.
+// Serialize the full layer stack into a heap blob; returns NULL on OOM.
 static uint8_t *make_snapshot(const canvas_doc_t *doc) {
-  size_t sz = (size_t)doc->canvas_w * doc->canvas_h * 4;
-  uint8_t *snap = malloc(sz);
-  if (snap) memcpy(snap, doc->pixels, sz);
-  return snap;
+  if (!doc || doc->layer_count == 0) return NULL;
+  size_t px_sz = (size_t)doc->canvas_w * doc->canvas_h * 4;
+  size_t mk_sz = (size_t)doc->canvas_w * doc->canvas_h;
+
+  size_t total = sizeof(snap_header_t);
+  for (int i = 0; i < doc->layer_count; i++) {
+    total += sizeof(snap_layer_hdr_t) + px_sz;
+    if (doc->layers[i]->mask) total += mk_sz;
+  }
+
+  uint8_t *blob = malloc(total);
+  if (!blob) return NULL;
+  uint8_t *p = blob;
+
+  snap_header_t *hdr = (snap_header_t *)p;
+  hdr->magic        = SNAP_MAGIC;
+  hdr->layer_count  = doc->layer_count;
+  hdr->active_layer = doc->active_layer;
+  hdr->canvas_w     = doc->canvas_w;
+  hdr->canvas_h     = doc->canvas_h;
+  p += sizeof(snap_header_t);
+
+  for (int i = 0; i < doc->layer_count; i++) {
+    const layer_t *lay = doc->layers[i];
+    snap_layer_hdr_t *lhdr = (snap_layer_hdr_t *)p;
+    memcpy(lhdr->name, lay->name, 64);
+    lhdr->visible  = lay->visible;
+    lhdr->opacity  = lay->opacity;
+    lhdr->has_mask = lay->mask ? 1 : 0;
+    lhdr->_pad     = 0;
+    p += sizeof(snap_layer_hdr_t);
+
+    memcpy(p, lay->pixels, px_sz);
+    p += px_sz;
+
+    if (lay->mask) {
+      memcpy(p, lay->mask, mk_sz);
+      p += mk_sz;
+    }
+  }
+  return blob;
+}
+
+// Restore the layer stack from a blob produced by make_snapshot.
+// Also restores canvas dimensions (needed for undo of canvas_resize).
+static bool restore_snapshot(canvas_doc_t *doc, const uint8_t *blob) {
+  if (!blob) return false;
+  const snap_header_t *hdr = (const snap_header_t *)blob;
+  if (hdr->magic != SNAP_MAGIC || hdr->layer_count <= 0) return false;
+
+  int      n     = hdr->layer_count;
+  int      new_w = hdr->canvas_w;
+  int      new_h = hdr->canvas_h;
+  size_t   px_sz = (size_t)new_w * new_h * 4;
+  size_t   mk_sz = (size_t)new_w * new_h;
+  const uint8_t *p = blob + sizeof(snap_header_t);
+
+  layer_t **nl = malloc(sizeof(layer_t *) * n);
+  if (!nl) return false;
+
+  for (int i = 0; i < n; i++) {
+    const snap_layer_hdr_t *lhdr = (const snap_layer_hdr_t *)p;
+    p += sizeof(snap_layer_hdr_t);
+
+    layer_t *lay = calloc(1, sizeof(layer_t));
+    if (!lay) {
+      for (int j = 0; j < i; j++) { free(nl[j]->pixels); free(nl[j]->mask); free(nl[j]); }
+      free(nl);
+      return false;
+    }
+    lay->pixels = malloc(px_sz);
+    if (!lay->pixels) {
+      free(lay);
+      for (int j = 0; j < i; j++) { free(nl[j]->pixels); free(nl[j]->mask); free(nl[j]); }
+      free(nl);
+      return false;
+    }
+    memcpy(lay->name, lhdr->name, 64);
+    lay->visible = lhdr->visible;
+    lay->opacity = lhdr->opacity;
+    memcpy(lay->pixels, p, px_sz);
+    p += px_sz;
+
+    if (lhdr->has_mask) {
+      lay->mask = malloc(mk_sz);
+      if (lay->mask) { memcpy(lay->mask, p, mk_sz); }
+      p += mk_sz;
+    }
+    nl[i] = lay;
+  }
+
+  // Replace old layer stack.
+  for (int i = 0; i < doc->layer_count; i++) {
+    free(doc->layers[i]->pixels);
+    free(doc->layers[i]->mask);
+    free(doc->layers[i]);
+  }
+  free(doc->layers);
+
+  doc->layers      = nl;
+  doc->layer_count = n;
+  doc->active_layer = hdr->active_layer < n ? hdr->active_layer : n - 1;
+  doc->pixels       = doc->layers[doc->active_layer]->pixels;
+
+  // Restore canvas dimensions if they changed (e.g. after resize).
+  if (new_w != doc->canvas_w || new_h != doc->canvas_h) {
+    free(doc->composite_buf);
+    doc->composite_buf = malloc(px_sz);
+    if (doc->canvas_tex) {
+      glDeleteTextures(1, &doc->canvas_tex);
+      doc->canvas_tex = 0;
+    }
+    doc->canvas_w = new_w;
+    doc->canvas_h = new_h;
+  }
+
+  doc->editing_mask = false;
+  doc->canvas_dirty = true;
+  doc->modified     = true;
+  return true;
 }
 
 // Push a snapshot onto a stack, dropping the oldest entry when the stack is
@@ -32,60 +173,46 @@ static void stack_push(uint8_t **states, int *count, uint8_t *snap) {
   states[(*count)++] = snap;
 }
 
-// Save the current canvas pixels as a new undo state.
-// Any existing redo history is discarded if the new undo snapshot is
-// successfully created.
+// Save the current layer stack as a new undo state.
+// Any existing redo history is discarded if the snapshot is successfully created.
 void doc_push_undo(canvas_doc_t *doc) {
   if (!doc) return;
-
   uint8_t *snap = make_snapshot(doc);
-  if (!snap) {
-    // Allocation failed; leave existing undo/redo history intact.
-    return;
-  }
-
+  if (!snap) return;
   clear_stack(doc->redo_states, &doc->redo_count);
   stack_push(doc->undo_states, &doc->undo_count, snap);
 }
 
 // Restore the most recent undo state.
-// The current pixels are pushed onto the redo stack first.
+// The current state is pushed onto the redo stack first.
 // Returns true if an undo was performed.
 bool doc_undo(canvas_doc_t *doc) {
   if (!doc || doc->undo_count == 0) return false;
-
   uint8_t *current = make_snapshot(doc);
   if (!current) return false;
   stack_push(doc->redo_states, &doc->redo_count, current);
 
   doc->undo_count--;
-  memcpy(doc->pixels, doc->undo_states[doc->undo_count], (size_t)doc->canvas_w * doc->canvas_h * 4);
+  bool ok = restore_snapshot(doc, doc->undo_states[doc->undo_count]);
   free(doc->undo_states[doc->undo_count]);
   doc->undo_states[doc->undo_count] = NULL;
-
-  doc->canvas_dirty = true;
-  doc->modified     = true;
-  return true;
+  return ok;
 }
 
 // Restore the most recently undone state.
-// The current pixels are pushed onto the undo stack first.
+// The current state is pushed onto the undo stack first.
 // Returns true if a redo was performed.
 bool doc_redo(canvas_doc_t *doc) {
   if (!doc || doc->redo_count == 0) return false;
-
   uint8_t *current = make_snapshot(doc);
   if (!current) return false;
   stack_push(doc->undo_states, &doc->undo_count, current);
 
   doc->redo_count--;
-  memcpy(doc->pixels, doc->redo_states[doc->redo_count], (size_t)doc->canvas_w * doc->canvas_h * 4);
+  bool ok = restore_snapshot(doc, doc->redo_states[doc->redo_count]);
   free(doc->redo_states[doc->redo_count]);
   doc->redo_states[doc->redo_count] = NULL;
-
-  doc->canvas_dirty = true;
-  doc->modified     = true;
-  return true;
+  return ok;
 }
 
 // Release all undo/redo memory (call when closing a document).

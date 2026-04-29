@@ -56,6 +56,10 @@ static void ie_teardown(void) {
         destroy_window(g_app->color_win);
         g_app->color_win = NULL;
     }
+    if (g_app->layers_win) {
+        destroy_window(g_app->layers_win);
+        g_app->layers_win = NULL;
+    }
     // close_document properly unlinks, frees undo stack, and destroys the
     // window.  It is safe headlessly because canvas_tex / float_tex stay 0.
     while (g_app->docs)
@@ -700,6 +704,320 @@ void test_ie_brush_size_oob_clamp(void) {
     PASS();
 }
 
+// ── Layer management tests ────────────────────────────────────────────────────
+
+// A newly created document has exactly 1 layer named "Background".
+void test_ie_layer_initial_state(void) {
+    TEST("create_document: initial layer stack has 1 background layer");
+
+    ie_setup();
+    canvas_doc_t *doc = create_document(NULL, 32, 32);
+    ASSERT_NOT_NULL(doc);
+
+    ASSERT_EQUAL(doc->layer_count, 1);
+    ASSERT_EQUAL(doc->active_layer, 0);
+    ASSERT_NOT_NULL(doc->layers);
+    ASSERT_NOT_NULL(doc->layers[0]);
+    ASSERT_NOT_NULL(doc->layers[0]->pixels);
+    ASSERT_TRUE(doc->layers[0]->visible);
+    ASSERT_EQUAL(doc->layers[0]->opacity, 255);
+    // doc->pixels must alias the active layer's pixel buffer.
+    ASSERT_TRUE(doc->pixels == doc->layers[0]->pixels);
+
+    ie_teardown();
+    PASS();
+}
+
+// Adding a layer increments layer_count and makes the new layer active.
+void test_ie_layer_add(void) {
+    TEST("doc_add_layer: layer_count increases and new layer is active");
+
+    ie_setup();
+    canvas_doc_t *doc = create_document(NULL, 8, 8);
+    ASSERT_NOT_NULL(doc);
+    ASSERT_EQUAL(doc->layer_count, 1);
+
+    bool ok = doc_add_layer(doc);
+    ASSERT_TRUE(ok);
+    ASSERT_EQUAL(doc->layer_count, 2);
+    ASSERT_EQUAL(doc->active_layer, 1);
+    ASSERT_TRUE(doc->pixels == doc->layers[1]->pixels);
+
+    ie_teardown();
+    PASS();
+}
+
+// Deleting a layer reduces layer_count.  Cannot delete the last layer.
+void test_ie_layer_delete(void) {
+    TEST("doc_delete_layer: layer_count decreases; last layer cannot be deleted");
+
+    ie_setup();
+    canvas_doc_t *doc = create_document(NULL, 8, 8);
+    ASSERT_NOT_NULL(doc);
+    doc_add_layer(doc);
+    ASSERT_EQUAL(doc->layer_count, 2);
+
+    bool ok = doc_delete_layer(doc);
+    ASSERT_TRUE(ok);
+    ASSERT_EQUAL(doc->layer_count, 1);
+    ASSERT_EQUAL(doc->active_layer, 0);
+
+    // Cannot delete the last remaining layer.
+    ok = doc_delete_layer(doc);
+    ASSERT_FALSE(ok);
+    ASSERT_EQUAL(doc->layer_count, 1);
+
+    ie_teardown();
+    PASS();
+}
+
+// Duplicating a layer inserts a copy above the active one.
+void test_ie_layer_duplicate(void) {
+    TEST("doc_duplicate_layer: inserts copy above active layer");
+
+    ie_setup();
+    canvas_doc_t *doc = create_document(NULL, 4, 4);
+    ASSERT_NOT_NULL(doc);
+
+    // Paint a recognizable pixel on layer 0.
+    canvas_set_pixel(doc, 0, 0, MAKE_COLOR(0xFF, 0, 0, 0xFF));
+
+    bool ok = doc_duplicate_layer(doc);
+    ASSERT_TRUE(ok);
+    ASSERT_EQUAL(doc->layer_count, 2);
+    ASSERT_EQUAL(doc->active_layer, 1);
+
+    // Both layers should have the same pixel at (0,0).
+    doc_set_active_layer(doc, 0);
+    uint32_t p0 = canvas_get_pixel(doc, 0, 0);
+    doc_set_active_layer(doc, 1);
+    uint32_t p1 = canvas_get_pixel(doc, 0, 0);
+    ASSERT_EQUAL(COLOR_R(p0), COLOR_R(p1));
+
+    ie_teardown();
+    PASS();
+}
+
+// doc_set_active_layer switches doc->pixels to the correct layer buffer.
+void test_ie_layer_set_active(void) {
+    TEST("doc_set_active_layer: doc->pixels points to selected layer's pixels");
+
+    ie_setup();
+    canvas_doc_t *doc = create_document(NULL, 8, 8);
+    ASSERT_NOT_NULL(doc);
+    doc_add_layer(doc);
+
+    doc_set_active_layer(doc, 0);
+    ASSERT_EQUAL(doc->active_layer, 0);
+    ASSERT_TRUE(doc->pixels == doc->layers[0]->pixels);
+
+    doc_set_active_layer(doc, 1);
+    ASSERT_EQUAL(doc->active_layer, 1);
+    ASSERT_TRUE(doc->pixels == doc->layers[1]->pixels);
+
+    ie_teardown();
+    PASS();
+}
+
+// Move layer up / down reorders the stack correctly.
+void test_ie_layer_move(void) {
+    TEST("doc_move_layer_up/down: layer order and active_layer index updated");
+
+    ie_setup();
+    canvas_doc_t *doc = create_document(NULL, 4, 4);
+    ASSERT_NOT_NULL(doc);
+    doc_add_layer(doc);
+    doc_add_layer(doc);
+    ASSERT_EQUAL(doc->layer_count, 3);
+    ASSERT_EQUAL(doc->active_layer, 2);
+
+    doc_move_layer_down(doc);
+    ASSERT_EQUAL(doc->active_layer, 1);
+
+    doc_move_layer_up(doc);
+    ASSERT_EQUAL(doc->active_layer, 2);
+
+    // Moving the bottom layer down does nothing.
+    doc_set_active_layer(doc, 0);
+    doc_move_layer_down(doc);
+    ASSERT_EQUAL(doc->active_layer, 0);
+
+    // Moving the top layer up does nothing.
+    doc_set_active_layer(doc, 2);
+    doc_move_layer_up(doc);
+    ASSERT_EQUAL(doc->active_layer, 2);
+
+    ie_teardown();
+    PASS();
+}
+
+// Flatten reduces any number of layers to a single background layer.
+void test_ie_layer_flatten(void) {
+    TEST("doc_flatten: reduces layer stack to a single layer");
+
+    ie_setup();
+    canvas_doc_t *doc = create_document(NULL, 4, 4);
+    ASSERT_NOT_NULL(doc);
+    doc_add_layer(doc);
+    doc_add_layer(doc);
+    ASSERT_EQUAL(doc->layer_count, 3);
+
+    doc_flatten(doc);
+    ASSERT_EQUAL(doc->layer_count, 1);
+    ASSERT_EQUAL(doc->active_layer, 0);
+    ASSERT_NOT_NULL(doc->pixels);
+    ASSERT_TRUE(doc->pixels == doc->layers[0]->pixels);
+
+    ie_teardown();
+    PASS();
+}
+
+// Merge-down blends the active layer onto the one below it.
+void test_ie_layer_merge_down(void) {
+    TEST("doc_merge_down: merges active layer onto layer below");
+
+    ie_setup();
+    canvas_doc_t *doc = create_document(NULL, 4, 4);
+    ASSERT_NOT_NULL(doc);
+
+    // Layer 0 (background): opaque white via canvas_clear (already done).
+    doc_add_layer(doc);  // layer 1
+    // Paint an opaque red pixel on layer 1 at (0,0).
+    canvas_set_pixel(doc, 0, 0, MAKE_COLOR(0xFF, 0, 0, 0xFF));
+
+    ASSERT_EQUAL(doc->active_layer, 1);
+    doc_merge_down(doc);
+    ASSERT_EQUAL(doc->layer_count, 1);
+    ASSERT_EQUAL(doc->active_layer, 0);
+
+    // The merged pixel at (0,0) should be red.
+    uint32_t px = canvas_get_pixel(doc, 0, 0);
+    ASSERT_EQUAL(COLOR_R(px), 0xFF);
+    ASSERT_EQUAL(COLOR_G(px), 0x00);
+
+    ie_teardown();
+    PASS();
+}
+
+// ── Mask tests ─────────────────────────────────────────────────────────────────
+
+// layer_add_mask allocates a fully-visible (0xFF) mask.
+void test_ie_mask_add(void) {
+    TEST("layer_add_mask: mask allocated and initialized to 0xFF");
+
+    ie_setup();
+    canvas_doc_t *doc = create_document(NULL, 4, 4);
+    ASSERT_NOT_NULL(doc);
+    ASSERT_NULL(doc->layers[0]->mask);
+
+    bool ok = layer_add_mask(doc, 0);
+    ASSERT_TRUE(ok);
+    ASSERT_NOT_NULL(doc->layers[0]->mask);
+    // Every mask byte should be 0xFF (fully visible).
+    for (int i = 0; i < 4 * 4; i++)
+        ASSERT_EQUAL(doc->layers[0]->mask[i], 0xFF);
+
+    ie_teardown();
+    PASS();
+}
+
+// layer_remove_mask discards the mask without modifying pixel alpha.
+void test_ie_mask_remove(void) {
+    TEST("layer_remove_mask: mask freed without touching pixel data");
+
+    ie_setup();
+    canvas_doc_t *doc = create_document(NULL, 4, 4);
+    ASSERT_NOT_NULL(doc);
+    layer_add_mask(doc, 0);
+    ASSERT_NOT_NULL(doc->layers[0]->mask);
+
+    layer_remove_mask(doc, 0);
+    ASSERT_NULL(doc->layers[0]->mask);
+
+    ie_teardown();
+    PASS();
+}
+
+// layer_apply_mask multiplies pixel alpha by mask value.
+void test_ie_mask_apply(void) {
+    TEST("layer_apply_mask: pixel alpha multiplied by mask value");
+
+    ie_setup();
+    canvas_doc_t *doc = create_document(NULL, 1, 1);
+    ASSERT_NOT_NULL(doc);
+
+    // Paint an opaque pixel.
+    canvas_set_pixel(doc, 0, 0, MAKE_COLOR(0xFF, 0x00, 0x00, 0xFF));
+    layer_add_mask(doc, 0);
+    ASSERT_NOT_NULL(doc->layers[0]->mask);
+
+    // Set mask to half-visible.
+    doc->layers[0]->mask[0] = 128;
+    layer_apply_mask(doc, 0);
+
+    ASSERT_NULL(doc->layers[0]->mask);
+    // Alpha should now be ≈ 128 (0xFF * 128 / 255 = 128).
+    uint32_t px = canvas_get_pixel(doc, 0, 0);
+    ASSERT_EQUAL(COLOR_A(px), 128);
+
+    ie_teardown();
+    PASS();
+}
+
+// canvas_extract_mask creates a new greyscale document from the active layer's mask.
+void test_ie_mask_extract(void) {
+    TEST("canvas_extract_mask: new document created from alpha channel");
+
+    ie_setup();
+    canvas_doc_t *doc = create_document(NULL, 2, 2);
+    ASSERT_NOT_NULL(doc);
+
+    // Set a distinct alpha value at (0,0).
+    canvas_set_pixel(doc, 0, 0, MAKE_COLOR(0xFF, 0, 0, 200));
+
+    canvas_doc_t *mask_doc = canvas_extract_mask(doc);
+    ASSERT_NOT_NULL(mask_doc);
+    ASSERT_EQUAL(mask_doc->canvas_w, 2);
+    ASSERT_EQUAL(mask_doc->canvas_h, 2);
+
+    // Pixel at (0,0) should be grey with value = alpha (200).
+    uint32_t px = canvas_get_pixel(mask_doc, 0, 0);
+    ASSERT_EQUAL(COLOR_R(px), 200);
+    ASSERT_EQUAL(COLOR_G(px), 200);
+    ASSERT_EQUAL(COLOR_B(px), 200);
+
+    ie_teardown();
+    PASS();
+}
+
+// Undo / redo round-trips across a multi-layer edit.
+void test_ie_layer_undo_redo(void) {
+    TEST("undo/redo: restores layer stack across add/delete");
+
+    ie_setup();
+    canvas_doc_t *doc = create_document(NULL, 4, 4);
+    ASSERT_NOT_NULL(doc);
+    ASSERT_EQUAL(doc->layer_count, 1);
+
+    // Push undo, then add a layer.
+    doc_push_undo(doc);
+    doc_add_layer(doc);
+    ASSERT_EQUAL(doc->layer_count, 2);
+
+    // Undo should restore to 1 layer.
+    bool ok = doc_undo(doc);
+    ASSERT_TRUE(ok);
+    ASSERT_EQUAL(doc->layer_count, 1);
+
+    // Redo should bring back 2 layers.
+    ok = doc_redo(doc);
+    ASSERT_TRUE(ok);
+    ASSERT_EQUAL(doc->layer_count, 2);
+
+    ie_teardown();
+    PASS();
+}
+
 // ── Entry point ───────────────────────────────────────────────────────────────
 
 int main(int argc, char *argv[]) {
@@ -734,6 +1052,22 @@ int main(int argc, char *argv[]) {
     test_ie_tool_switch_updates_options_panel();
     test_ie_shape_filled_state();
     test_ie_brush_size_oob_clamp();
+    // Layer management tests
+    test_ie_layer_initial_state();
+    test_ie_layer_add();
+    test_ie_layer_delete();
+    test_ie_layer_duplicate();
+    test_ie_layer_set_active();
+    test_ie_layer_move();
+    test_ie_layer_flatten();
+    test_ie_layer_merge_down();
+    // Mask tests
+    test_ie_mask_add();
+    test_ie_mask_remove();
+    test_ie_mask_apply();
+    test_ie_mask_extract();
+    // Undo/redo with layers
+    test_ie_layer_undo_redo();
 
     TEST_END();
 }

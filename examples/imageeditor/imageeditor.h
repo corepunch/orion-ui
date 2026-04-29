@@ -34,6 +34,9 @@
 #define CANVAS_W      320
 #define CANVAS_H      200
 
+// Maximum number of layers per document.
+#define LAYER_MAX     32
+
 #if UI_WINDOW_SCALE > 1
 #define SCREEN_W      512
 #define SCREEN_H      342
@@ -142,10 +145,25 @@ extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 
 #define ID_WINDOW_TOOLS    200
 #define ID_WINDOW_COLORS   201
+#define ID_WINDOW_LAYERS   202
 #define ID_WINDOW_DOC_BASE 300  // IDs 300..315 reserved for open documents
 #define WINDOW_MENU_MAX_DOCS 16
 
 #define ID_HELP_ABOUT  100
+
+// Layer menu command IDs
+#define ID_LAYER_NEW          60
+#define ID_LAYER_DUPLICATE    61
+#define ID_LAYER_DELETE       62
+#define ID_LAYER_MOVE_UP      63
+#define ID_LAYER_MOVE_DOWN    64
+#define ID_LAYER_MERGE_DOWN   65
+#define ID_LAYER_FLATTEN      66
+#define ID_LAYER_ADD_MASK     67
+#define ID_LAYER_APPLY_MASK   68
+#define ID_LAYER_REMOVE_MASK  69
+#define ID_LAYER_EXTRACT_MASK 70
+#define ID_LAYER_EDIT_MASK    71
 
 // Tool command IDs – these are the authoritative tool identifiers used everywhere
 #define ID_TOOL_PENCIL        20
@@ -182,8 +200,17 @@ extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 // Types
 // ============================================================
 
+// A single layer within a canvas document.
+typedef struct {
+  uint8_t *pixels;      // RGBA pixel buffer (canvas_w * canvas_h * 4 bytes)
+  uint8_t *mask;        // grayscale mask buffer (canvas_w * canvas_h), NULL = no mask
+  char     name[64];
+  bool     visible;
+  uint8_t  opacity;     // 0 = transparent, 255 = fully opaque
+} layer_t;
+
 typedef struct canvas_doc_s {
-  uint8_t *pixels;           // heap-allocated RGBA buffer (canvas_w * canvas_h * 4 bytes)
+  uint8_t *pixels;           // convenience alias → layers[active_layer]->pixels
   int      canvas_w;         // image width in pixels
   int      canvas_h;         // image height in pixels
   GLuint   canvas_tex;
@@ -196,7 +223,13 @@ typedef struct canvas_doc_s {
   window_t *win;
   window_t *canvas_win;
   struct canvas_doc_s *next;
-  // Undo/redo history (heap-allocated pixel snapshots)
+  // Layer stack
+  layer_t **layers;          // heap array, index 0=bottom … layer_count-1=top
+  int       layer_count;
+  int       active_layer;    // index of the active layer
+  bool      editing_mask;    // true → drawing ops paint the active layer's mask
+  uint8_t  *composite_buf;   // canvas_w * canvas_h * 4 scratch buffer for compositing
+  // Undo/redo history (heap-allocated layer-stack snapshots)
   uint8_t *undo_states[UNDO_MAX];
   int      undo_count;
   uint8_t *redo_states[UNDO_MAX];
@@ -241,6 +274,7 @@ typedef struct {
   window_t      *tool_win;
   window_t      *tool_options_win;
   window_t      *color_win;
+  window_t      *layers_win;
   hinstance_t    hinstance;  // owning app instance
   int            current_tool;
   uint32_t       palette[NUM_COLORS];
@@ -456,7 +490,78 @@ window_t *create_color_palette_window(void);
 // New Image / Canvas Size dialog
 bool show_size_dialog(window_t *parent, const char *title, int *out_w, int *out_h);
 
-// Grid Options dialog – returns true if accepted.
-bool show_grid_options_dialog(window_t *parent, int *out_x, int *out_y);
+// Layers palette window geometry.
+// Positioned on the right side of the screen, below the color palette.
+#define LAYERS_WIN_W          120
+#define LAYERS_ROW_H           18   // height of each layer row in the panel
+#define LAYERS_MAX_VIS_ROWS     5   // visible rows before scrolling
+#define LAYERS_LIST_H         (LAYERS_ROW_H * LAYERS_MAX_VIS_ROWS)
+#define LAYERS_BTN_STRIP_H    (BUTTON_HEIGHT + 4)
+#define LAYERS_WIN_H          (TITLEBAR_HEIGHT + LAYERS_LIST_H + LAYERS_BTN_STRIP_H)
+#define LAYERS_WIN_X          (SCREEN_W - LAYERS_WIN_W - 4)
+#define LAYERS_WIN_Y          (COLOR_WIN_Y + COLOR_WIN_H + 4)
+
+// Hit-test zones within a layer row (x offsets)
+#define LAYERS_EYE_W           14   // eye-icon click area width
+#define LAYERS_CHIP_W          14   // mask chip click area width
+#define LAYERS_NAME_X          (1 + LAYERS_EYE_W + 2 + LAYERS_CHIP_W + 3)  // start of name text
+
+// ============================================================
+// Layer management (canvas.c)
+// ============================================================
+
+// Add a new empty layer above the current active layer.
+bool doc_add_layer(canvas_doc_t *doc);
+
+// Delete the active layer (minimum 1 layer always kept).
+bool doc_delete_layer(canvas_doc_t *doc);
+
+// Duplicate the active layer and insert the copy above it.
+bool doc_duplicate_layer(canvas_doc_t *doc);
+
+// Change the active layer, updating doc->pixels and resetting editing_mask.
+void doc_set_active_layer(canvas_doc_t *doc, int idx);
+
+// Move the active layer up (towards the top of the stack).
+void doc_move_layer_up(canvas_doc_t *doc);
+
+// Move the active layer down (towards the bottom of the stack).
+void doc_move_layer_down(canvas_doc_t *doc);
+
+// Flatten the active layer onto the one below it.
+void doc_merge_down(canvas_doc_t *doc);
+
+// Flatten all layers into a single background layer.
+void doc_flatten(canvas_doc_t *doc);
+
+// Free all layers (called by close_document).
+void doc_free_layers(canvas_doc_t *doc);
+
+// ============================================================
+// Mask operations (canvas.c)
+// ============================================================
+
+// Add a white (fully-visible) mask to the layer at index idx.
+bool layer_add_mask(canvas_doc_t *doc, int idx);
+
+// Multiply each pixel's alpha by the mask value, then remove the mask.
+void layer_apply_mask(canvas_doc_t *doc, int idx);
+
+// Discard the mask without applying it.
+void layer_remove_mask(canvas_doc_t *doc, int idx);
+
+// Open the active layer's mask (or its alpha channel if no mask exists) as
+// a new greyscale document.  Returns the new document, or NULL on failure.
+canvas_doc_t *canvas_extract_mask(canvas_doc_t *doc);
+
+// ============================================================
+// Layers palette (win_layers.c)
+// ============================================================
+
+result_t win_layers_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+window_t *create_layers_window(void);
+
+// Refresh the Layers palette after layer changes.
+void layers_win_refresh(void);
 
 #endif // __IMAGEEDITOR_H__
