@@ -85,6 +85,7 @@ static void create_app_windows(hinstance_t hinstance) {
   create_tool_palette_window();
   create_tool_options_window();
   create_color_palette_window();
+  create_layers_window();
 }
 
 // ============================================================

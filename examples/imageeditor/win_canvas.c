@@ -708,14 +708,19 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       snap_canvas_pos(&px, &py);
 
       // Update status bar with cursor position (Windows Me / MS Paint style).
+      // Append "[Mask]" when the user is editing the active layer's mask.
       // Only send when the text changes to avoid redundant full-window repaints.
       {
-        char sb[48];
+        char sb[64];
+        const char *mask_suffix = (doc->editing_mask && doc->layer_count > 0 &&
+                                   doc->layers[doc->active_layer]->mask)
+                                  ? "  [Mask]" : "";
         if (state->hover_valid)
-          snprintf(sb, sizeof(sb), "x=%d, y=%d  |  %dx%d",
-                   px, py, doc->canvas_w, doc->canvas_h);
+          snprintf(sb, sizeof(sb), "x=%d, y=%d  |  %dx%d%s",
+                   px, py, doc->canvas_w, doc->canvas_h, mask_suffix);
         else
-          snprintf(sb, sizeof(sb), "%dx%d", doc->canvas_w, doc->canvas_h);
+          snprintf(sb, sizeof(sb), "%dx%d%s",
+                   doc->canvas_w, doc->canvas_h, mask_suffix);
         if (strcmp(sb, state->last_sb) != 0) {
           strncpy(state->last_sb, sb, sizeof(state->last_sb) - 1);
           state->last_sb[sizeof(state->last_sb) - 1] = '\0';

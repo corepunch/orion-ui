@@ -55,6 +55,25 @@ static const menu_item_t kImageItems[] = {
   {"Invert Colors",   ID_IMAGE_INVERT},
 };
 
+static const menu_item_t kLayerItems[] = {
+  {"New Layer",          ID_LAYER_NEW},
+  {"Duplicate Layer",    ID_LAYER_DUPLICATE},
+  {"Delete Layer",       ID_LAYER_DELETE},
+  {NULL, 0},
+  {"Move Layer Up",      ID_LAYER_MOVE_UP},
+  {"Move Layer Down",    ID_LAYER_MOVE_DOWN},
+  {NULL, 0},
+  {"Merge Down",         ID_LAYER_MERGE_DOWN},
+  {"Flatten Image",      ID_LAYER_FLATTEN},
+  {NULL, 0},
+  {"Add Mask",           ID_LAYER_ADD_MASK},
+  {"Apply Mask",         ID_LAYER_APPLY_MASK},
+  {"Remove Mask",        ID_LAYER_REMOVE_MASK},
+  {"Extract Mask",       ID_LAYER_EXTRACT_MASK},
+  {NULL, 0},
+  {"[ ] Edit Mask",      ID_LAYER_EDIT_MASK},
+};
+
 static const menu_item_t kHelpItems[] = {
   {"About...", ID_HELP_ABOUT},
 };
@@ -63,9 +82,10 @@ static const menu_item_t kHelpItems[] = {
 // Fixed prefix entries come first; document entries follow the separator.
 
 static const menu_item_t kWindowPrefix[] = {
-  {"Tools",  ID_WINDOW_TOOLS},
-  {"Colors", ID_WINDOW_COLORS},
-  {NULL,     0},   // separator before document list
+  {"Tools",   ID_WINDOW_TOOLS},
+  {"Colors",  ID_WINDOW_COLORS},
+  {"Layers",  ID_WINDOW_LAYERS},
+  {NULL,      0},   // separator before document list
 };
 #define WINDOW_PREFIX_COUNT ((int)(sizeof(kWindowPrefix)/sizeof(kWindowPrefix[0])))
 
@@ -80,6 +100,7 @@ enum {
   kMenuIdxFile = 0,
   kMenuIdxEdit,
   kMenuIdxImage,
+  kMenuIdxLayer,
   kMenuIdxView,
   kMenuIdxWindow,
   kMenuIdxHelp,
@@ -90,7 +111,8 @@ menu_def_t kMenus[] = {
   /* kMenuIdxFile   */ {"File",   kFileItems,      (int)(sizeof(kFileItems)/sizeof(kFileItems[0]))},
   /* kMenuIdxEdit   */ {"Edit",   kEditItems,      (int)(sizeof(kEditItems)/sizeof(kEditItems[0]))},
   /* kMenuIdxImage  */ {"Image",  kImageItems,     (int)(sizeof(kImageItems)/sizeof(kImageItems[0]))},
-  /* kMenuIdxView   */ {"View",   s_view_items,      (int)(sizeof(s_view_items)/sizeof(s_view_items[0]))},
+  /* kMenuIdxLayer  */ {"Layer",  kLayerItems,     (int)(sizeof(kLayerItems)/sizeof(kLayerItems[0]))},
+  /* kMenuIdxView   */ {"View",   s_view_items,    (int)(sizeof(s_view_items)/sizeof(s_view_items[0]))},
   /* kMenuIdxWindow */ {"Window", s_window_items,  WINDOW_PREFIX_COUNT},
   /* kMenuIdxHelp   */ {"Help",   kHelpItems,      (int)(sizeof(kHelpItems)/sizeof(kHelpItems[0]))},
 };
@@ -269,7 +291,9 @@ bool imageeditor_open_file_path(const char *path) {
   }
 
   // Swap the white placeholder pixels for the actual loaded image.
-  image_free(ndoc->pixels);
+  // Update both the layer buffer and the convenience alias.
+  image_free(ndoc->layers[0]->pixels);
+  ndoc->layers[0]->pixels = px;
   ndoc->pixels = px;
   ndoc->canvas_dirty = true;
   ndoc->modified = false;
@@ -594,6 +618,132 @@ void handle_menu_command(uint16_t id) {
       } else {
         // Window was closed by the user — recreate it.
         create_color_palette_window();
+      }
+      break;
+
+    case ID_WINDOW_LAYERS:
+      if (g_app->layers_win) {
+        show_window(g_app->layers_win, true);
+      } else {
+        create_layers_window();
+      }
+      break;
+
+    // ── Layer menu ─────────────────────────────────────────────────────────
+    case ID_LAYER_NEW:
+      if (doc) {
+        uint32_t fill;
+        if (!show_new_layer_dialog(doc->canvas_win, &fill)) break;
+        doc_push_undo(doc);
+        if (!doc_add_layer_filled(doc, fill)) { doc_discard_undo(doc); break; }
+        doc->canvas_dirty = true;
+        invalidate_window(doc->canvas_win);
+        layers_win_refresh();
+      }
+      break;
+
+    case ID_LAYER_DUPLICATE:
+      if (doc) {
+        doc_push_undo(doc);
+        if (!doc_duplicate_layer(doc)) { doc_discard_undo(doc); break; }
+        invalidate_window(doc->canvas_win);
+        layers_win_refresh();
+      }
+      break;
+
+    case ID_LAYER_DELETE:
+      if (doc) {
+        doc_push_undo(doc);
+        if (!doc_delete_layer(doc)) { doc_discard_undo(doc); break; }
+        invalidate_window(doc->canvas_win);
+        layers_win_refresh();
+      }
+      break;
+
+    case ID_LAYER_MOVE_UP:
+      if (doc) {
+        doc_push_undo(doc);
+        doc_move_layer_up(doc);
+        invalidate_window(doc->canvas_win);
+        layers_win_refresh();
+      }
+      break;
+
+    case ID_LAYER_MOVE_DOWN:
+      if (doc) {
+        doc_push_undo(doc);
+        doc_move_layer_down(doc);
+        invalidate_window(doc->canvas_win);
+        layers_win_refresh();
+      }
+      break;
+
+    case ID_LAYER_MERGE_DOWN:
+      if (doc) {
+        doc_push_undo(doc);
+        doc_merge_down(doc);
+        invalidate_window(doc->canvas_win);
+        layers_win_refresh();
+      }
+      break;
+
+    case ID_LAYER_FLATTEN:
+      if (doc) {
+        doc_push_undo(doc);
+        doc_flatten(doc);
+        invalidate_window(doc->canvas_win);
+        layers_win_refresh();
+      }
+      break;
+
+    case ID_LAYER_ADD_MASK:
+      if (doc) {
+        doc_push_undo(doc);
+        if (!layer_add_mask(doc, doc->active_layer)) { doc_discard_undo(doc); break; }
+        invalidate_window(doc->canvas_win);
+        layers_win_refresh();
+      }
+      break;
+
+    case ID_LAYER_APPLY_MASK:
+      if (doc) {
+        doc_push_undo(doc);
+        layer_apply_mask(doc, doc->active_layer);
+        invalidate_window(doc->canvas_win);
+        layers_win_refresh();
+      }
+      break;
+
+    case ID_LAYER_REMOVE_MASK:
+      if (doc) {
+        doc_push_undo(doc);
+        layer_remove_mask(doc, doc->active_layer);
+        invalidate_window(doc->canvas_win);
+        layers_win_refresh();
+      }
+      break;
+
+    case ID_LAYER_EXTRACT_MASK:
+      if (doc) canvas_extract_mask(doc);
+      break;
+
+    case ID_LAYER_EDIT_MASK:
+      if (doc && doc->layer_count > 0) {
+        layer_t *lay = doc->layers[doc->active_layer];
+        if (!lay->mask) {
+          // Auto-add a mask so the user can start painting; push undo first.
+          doc_push_undo(doc);
+          if (!layer_add_mask(doc, doc->active_layer)) {
+            doc_discard_undo(doc);
+            break;
+          }
+        }
+        // Only toggle if the mask now exists.
+        if (doc->layers[doc->active_layer]->mask) {
+          doc->editing_mask = !doc->editing_mask;
+          layers_win_refresh();
+          if (doc->canvas_win) invalidate_window(doc->canvas_win);
+        }
       }
       break;
 

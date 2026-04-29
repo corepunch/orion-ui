@@ -106,8 +106,17 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
       (size_t)w * (size_t)h > (size_t)16384 * 16384) {
     free(doc); return NULL;
   }
-  doc->pixels = malloc((size_t)w * (size_t)h * 4);
-  if (!doc->pixels) { free(doc); return NULL; }
+
+  // Allocate the composite scratch buffer.
+  doc->composite_buf = malloc((size_t)w * (size_t)h * 4);
+  if (!doc->composite_buf) { free(doc); return NULL; }
+
+  // Add the initial background layer (doc_add_layer also sets doc->pixels).
+  if (!doc_add_layer(doc)) {
+    free(doc->composite_buf);
+    free(doc);
+    return NULL;
+  }
 
   canvas_clear(doc);
   doc->modified = false;
@@ -200,8 +209,9 @@ void close_document(canvas_doc_t *doc) {
   if (doc->canvas_tex)
     glDeleteTextures(1, &doc->canvas_tex);
 
-  image_free(doc->pixels);
-  doc->pixels = NULL;
+  doc_free_layers(doc);
+  free(doc->composite_buf);
+  doc->composite_buf = NULL;
 
   if (doc->win && is_window(doc->win))
     destroy_window(doc->win);
