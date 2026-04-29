@@ -50,20 +50,20 @@ static int builtin_sb_thumb_off(win_sb_t const *sb, int track, int tl);
 void set_fullscreen(void) {
   int w = ui_get_system_metrics(kSystemMetricScreenWidth);
   int h = ui_get_system_metrics(kSystemMetricScreenHeight);
-  set_viewport(&(rect_t){0, 0, w, h});
+  set_viewport((rect_t){0, 0, w, h});
   set_projection(0, 0, w, h);
 }
 
-rect_t get_opengl_rect(rect_t const *r) {
+rect_t get_opengl_rect(rect_t r) {
   uint32_t ws = axGetSize(NULL);
   float scale_x = (float)LOWORD(ws) * axGetScaling() / (float)MAX(1,ui_get_system_metrics(kSystemMetricScreenWidth));
   float scale_y = (float)HIWORD(ws) * axGetScaling() / (float)MAX(1,ui_get_system_metrics(kSystemMetricScreenHeight));
   
   return (rect_t){
-    (int)(r->x * scale_x),
-    (int)((ui_get_system_metrics(kSystemMetricScreenHeight) - r->y - r->h) * scale_y), // flip Y
-    (int)(r->w * scale_x),
-    (int)(r->h * scale_y)
+    (int)(r.x * scale_x),
+    (int)((ui_get_system_metrics(kSystemMetricScreenHeight) - r.y - r.h) * scale_y), // flip Y
+    (int)(r.w * scale_x),
+    (int)(r.h * scale_y)
   };
 }
 
@@ -89,76 +89,75 @@ int statusbar_height(window_t const *win) {
   return s;
 }
 
-void draw_wire_rect(rect_t const *r, int expand, uint32_t col) {
-  fill_rect(col, R(r->x-expand, r->y-expand, r->w+2*expand, 1));
-  fill_rect(col, R(r->x-expand, r->y-expand, 1, r->h+2*expand));
-  fill_rect(col, R(r->x + r->w - 1 + expand, r->y-expand, 1, r->h+2*expand));
-  fill_rect(col, R(r->x-expand, r->y + r->h - 1 + expand, r->w+2*expand, 1));
+void draw_wire_rect(rect_t r, int expand, uint32_t col) {
+  fill_rect(col, R(r.x-expand, r.y-expand, r.w+2*expand, 1));
+  fill_rect(col, R(r.x-expand, r.y-expand, 1, r.h+2*expand));
+  fill_rect(col, R(r.x + r.w - 1 + expand, r.y-expand, 1, r.h+2*expand));
+  fill_rect(col, R(r.x-expand, r.y + r.h - 1 + expand, r.w+2*expand, 1));
 }
 
 // Draw focused border
-void draw_focused(rect_t const *r) {
+void draw_focused(rect_t r) {
   draw_wire_rect(r, 1, get_sys_color(brFocusRing));
 }
 
 // Draw a softer single-colour outline for a window that contains focused
 // controls but is not itself the focused widget.
-static void draw_active_frame(rect_t const *r) {
+static void draw_active_frame(rect_t r) {
   draw_wire_rect(r, 1, get_sys_color(brBorderActive));
 }
 
 // Draw bevel border
-void draw_bevel(rect_t const *r) {
-  fill_rect(get_sys_color(brLightEdge), R(r->x-1, r->y-1, r->w+2, 1));
-  fill_rect(get_sys_color(brLightEdge), R(r->x-1, r->y-1, 1, r->h+2));
-  fill_rect(get_sys_color(brDarkEdge), R(r->x+r->w, r->y, 1, r->h+1));
-  fill_rect(get_sys_color(brDarkEdge), R(r->x, r->y+r->h, r->w+1, 1));
-  fill_rect(get_sys_color(brFlare), R(r->x-1, r->y-1, 1, 1));
+void draw_bevel(rect_t r) {
+  fill_rect(get_sys_color(brLightEdge), R(r.x-1, r.y-1, r.w+2, 1));
+  fill_rect(get_sys_color(brLightEdge), R(r.x-1, r.y-1, 1, r.h+2));
+  fill_rect(get_sys_color(brDarkEdge), R(r.x+r.w, r.y, 1, r.h+1));
+  fill_rect(get_sys_color(brDarkEdge), R(r.x, r.y+r.h, r.w+1, 1));
+  fill_rect(get_sys_color(brFlare), R(r.x-1, r.y-1, 1, 1));
 }
 
 // Draw button
-void draw_button(rect_t const *r, int dx, int dy, bool pressed) {
+void draw_button(rect_t r, int dx, int dy, bool pressed) {
+  (void)dx; (void)dy;
   if (pressed) {
-    fill_rect(get_sys_color(brDarkEdge), R(r->x, r->y, r->w, r->h));
-    fill_rect(get_sys_color(brLightEdge), R(r->x+1, r->y+1, r->w-1, r->h-1));
-    fill_rect(get_sys_color(brDarkEdge), R(r->x+1, r->y+1, r->w-2, r->h-2));
-    fill_rect(get_sys_color(brWindowDarkBg), R(r->x+2, r->y+2, r->w-3, r->h-3));
-    fill_rect(get_sys_color(brFlare), R(r->x+r->w-1, r->y+r->h-1, 1, 1));
+    fill_rect(get_sys_color(brDarkEdge), r);
+    fill_rect(get_sys_color(brLightEdge), R(r.x+1, r.y+1, r.w-1, r.h-1));
+    fill_rect(get_sys_color(brDarkEdge), R(r.x+1, r.y+1, r.w-2, r.h-2));
+    fill_rect(get_sys_color(brWindowDarkBg), R(r.x+2, r.y+2, r.w-3, r.h-3));
+    fill_rect(get_sys_color(brFlare), R(r.x+r.w-1, r.y+r.h-1, 1, 1));
   } else {
-    fill_rect(get_sys_color(brDarkEdge), R(r->x, r->y, r->w, r->h));
-    fill_rect(get_sys_color(brLightEdge), R(r->x, r->y, r->w-1, r->h-1));
-    fill_rect(get_sys_color(brDarkEdge), R(r->x+1, r->y+1, r->w-2, r->h-2));
-    fill_rect(get_sys_color(brWindowBg), R(r->x+1, r->y+1, r->w-3, r->h-3));
-    fill_rect(get_sys_color(brFlare), R(r->x, r->y, 1, 1));
+    fill_rect(get_sys_color(brDarkEdge), r);
+    fill_rect(get_sys_color(brLightEdge), R(r.x, r.y, r.w-1, r.h-1));
+    fill_rect(get_sys_color(brDarkEdge), R(r.x+1, r.y+1, r.w-2, r.h-2));
+    fill_rect(get_sys_color(brWindowBg), R(r.x+1, r.y+1, r.w-3, r.h-3));
+    fill_rect(get_sys_color(brFlare), R(r.x, r.y, 1, 1));
   }
 }
 
 // Draw window panel
 void draw_panel(window_t const *win) {
-  int x = win->frame.x, y = win->frame.y;
-  int w = win->frame.w, h = win->frame.h;
-  if (window_has_focus(win)) {
-    draw_focused(MAKERECT(x, y, w, h));
-  } else if (window_has_focus(win)) {
-    draw_active_frame(MAKERECT(x, y, w, h));
-  } else {
-    draw_bevel(MAKERECT(x, y, w, h));
-  }
+  rect_t r = win->frame;
+  if (g_ui_runtime.focused == win)
+    draw_focused(r);
+  else if (window_has_focus(win))
+    draw_active_frame(r);
+  else
+    draw_bevel(r);
   if (!(win->flags & WINDOW_NORESIZE)) {
-    int r = SCROLLBAR_WIDTH;
-    fill_rect(get_sys_color(brLightEdge), R(x+w, y+h-r+1, 1, r));
-    fill_rect(get_sys_color(brLightEdge), R(x+w-r+1, y+h, r, 1));
+    int sb = SCROLLBAR_WIDTH;
+    fill_rect(get_sys_color(brLightEdge), R(r.x+r.w, r.y+r.h-sb+1, 1, sb));
+    fill_rect(get_sys_color(brLightEdge), R(r.x+r.w-sb+1, r.y+r.h, sb, 1));
   }
   if (!(win->flags&WINDOW_NOFILL)) {
-    fill_rect(get_sys_color(brWindowBg), R(x, y, w, h));
+    fill_rect(get_sys_color(brWindowBg), r);
   }
 }
 
 // Draw a theme icon centred inside rect r.
-void draw_theme_icon_in_rect(int id, rect_t const *r, uint32_t col) {
+void draw_theme_icon_in_rect(int id, rect_t r, uint32_t col) {
   draw_theme_icon(id,
-                  r->x + (r->w - THEME_ICON_SIZE) / 2,
-                  r->y + (r->h - THEME_ICON_SIZE) / 2,
+                  r.x + (r.w - THEME_ICON_SIZE) / 2,
+                  r.y + (r.h - THEME_ICON_SIZE) / 2,
                   THEME_ICON_SIZE, col);
 }
 
@@ -166,11 +165,11 @@ void draw_theme_icon_in_rect(int id, rect_t const *r, uint32_t col) {
 void draw_window_controls(window_t *win) {
   rect_t r = win->frame;
   fill_rect(get_sys_color(window_has_focus(win) ? brActiveTitlebar : brInactiveTitlebar),
-            R(r.x, r.y, r.w, titlebar_height(win)));
+            rect_split_top(r, titlebar_height(win)));
   set_fullscreen();
-  rect_t titlebar = rect_split_top(r, TITLEBAR_HEIGHT);
-  rect_t btn      = rect_split_right(titlebar, TITLEBAR_HEIGHT);
-  draw_theme_icon_in_rect(THEME_ICON_CLOSE, &btn, get_sys_color(brTextNormal));
+  draw_theme_icon_in_rect(THEME_ICON_CLOSE,
+                          rect_split_right(rect_split_top(r, TITLEBAR_HEIGHT), TITLEBAR_HEIGHT),
+                          get_sys_color(brTextNormal));
 }
 
 // Draw status bar
@@ -187,7 +186,7 @@ void draw_statusbar(window_t *win, const char *text) {
   int split_x = has_h ? SB_STATUS_SPLIT_X(r.w) : r.w;
 
   rect_t text_area = rect_split_left(row, split_x);
-  fill_rect(get_sys_color(brStatusbarBg), R(text_area.x, text_area.y, text_area.w, text_area.h));
+  fill_rect(get_sys_color(brStatusbarBg), text_area);
   set_fullscreen();
 
   if (text) {
@@ -199,8 +198,8 @@ void draw_statusbar(window_t *win, const char *text) {
     win_sb_t *sb = &win->hscroll;
     // Resize corner — always present at the far right of the status-bar row.
     rect_t corner = rect_split_right(row, SCROLLBAR_WIDTH);
-    fill_rect(get_sys_color(brWindowDarkBg), R(corner.x, corner.y, corner.w, corner.h));
-    draw_theme_icon_in_rect(THEME_ICON_RESIZE, &corner, get_sys_color(brTextNormal));
+    fill_rect(get_sys_color(brWindowDarkBg), corner);
+    draw_theme_icon_in_rect(THEME_ICON_RESIZE, corner, get_sys_color(brTextNormal));
     // Horizontal scrollbar fills the remaining right portion of the status bar row.
     int bw = row.w - split_x - SCROLLBAR_WIDTH;
     if (bw > 0) {
@@ -210,10 +209,10 @@ void draw_statusbar(window_t *win, const char *text) {
       if (bw >= 2 * SCROLLBAR_WIDTH) {
         rect_t left_arr  = {sx,                        row.y, SCROLLBAR_WIDTH, row.h};
         rect_t right_arr = {sx + bw - SCROLLBAR_WIDTH, row.y, SCROLLBAR_WIDTH, row.h};
-        fill_rect(get_sys_color(brWindowBg), R(left_arr.x,  left_arr.y,  left_arr.w,  left_arr.h));
-        draw_theme_icon_in_rect(THEME_ICON_SCROLL_LEFT,  &left_arr,  get_sys_color(brTextNormal));
-        fill_rect(get_sys_color(brWindowBg), R(right_arr.x, right_arr.y, right_arr.w, right_arr.h));
-        draw_theme_icon_in_rect(THEME_ICON_SCROLL_RIGHT, &right_arr, get_sys_color(brTextNormal));
+        fill_rect(get_sys_color(brWindowBg), left_arr);
+        draw_theme_icon_in_rect(THEME_ICON_SCROLL_LEFT,  left_arr,  get_sys_color(brTextNormal));
+        fill_rect(get_sys_color(brWindowBg), right_arr);
+        draw_theme_icon_in_rect(THEME_ICON_SCROLL_RIGHT, right_arr, get_sys_color(brTextNormal));
         // Thumb in effective track between buttons
         int eff_track = bw - 2 * SCROLLBAR_WIDTH;
         if (eff_track > 0) {
@@ -234,7 +233,7 @@ void draw_statusbar(window_t *win, const char *text) {
 }
 
 // Set OpenGL viewport for window
-void set_viewport(rect_t const *frame) {
+void set_viewport(rect_t frame) {
   if (!g_ui_runtime.running) return;
   rect_t ogl_rect = get_opengl_rect(frame);
   
@@ -242,11 +241,9 @@ void set_viewport(rect_t const *frame) {
   set_scissor_cached(&ogl_rect);
 }
 
-void set_clip_rect(window_t const *win, rect_t const *r) {
+void set_clip_rect(window_t const *win, rect_t r) {
   if (!g_ui_runtime.running) return;
-  rect_t ogl_rect = get_opengl_rect(win?&(rect_t){
-    win->frame.x + r->x, win->frame.y + r->y, r->w, r->h
-  }:r);
+  rect_t ogl_rect = get_opengl_rect(win ? rect_offset(r, win->frame.x, win->frame.y) : r);
   set_scissor_cached(&ogl_rect);
 }
 
@@ -286,11 +283,11 @@ void ui_set_stencil_for_root_window(uint32_t window_id) {
 }
 
 // Fill a rectangle with a solid color
-void fill_rect(uint32_t color, rect_t const *r) {
+void fill_rect(uint32_t color, rect_t r) {
   extern uint32_t ui_white_texture;
   
   // Skip drawing if graphics aren't initialized (e.g., in tests)
-  if (!g_ui_runtime.running || !r) return;
+  if (!g_ui_runtime.running) return;
   
   // Update the white texture with the desired color
   glBindTexture(GL_TEXTURE_2D, ui_white_texture);
@@ -304,14 +301,14 @@ void fill_rect(uint32_t color, rect_t const *r) {
 // one fill_rect per dash segment.  The 4x4 checker texture is sampled with tiled
 // UVs so that the first row/column produces a B,B,W,W repeating dash regardless
 // of the selection size, keeping the GL call count constant (O(1)).
-void draw_sel_rect(rect_t const *r) {
+void draw_sel_rect(rect_t r) {
   extern uint32_t ui_checker_texture;
 
-  if (!g_ui_runtime.running || !r || r->w < 1 || r->h < 1) return;
-  int x = r->x;
-  int y = r->y;
-  int w = r->w;
-  int h = r->h;
+  if (!g_ui_runtime.running || r.w < 1 || r.h < 1) return;
+  int x = r.x;
+  int y = r.y;
+  int w = r.w;
+  int h = r.h;
 
   // Top edge: tile along U, sample only the first texture row (v 0..0.25)
   draw_sprite_region(ui_checker_texture, R(x, y, w, 1),
@@ -365,10 +362,10 @@ void draw_icon8(int icon, int x, int y, uint32_t col) {
   draw_theme_icon(icon, x, y, THEME_ICON_SIZE, col);
 }
 
-void draw_icon8_clipped(int icon, rect_t const *rect, uint32_t col) {
+void draw_icon8_clipped(int icon, rect_t rect, uint32_t col) {
   draw_theme_icon(icon,
-                  rect->x + (rect->w - THEME_ICON_SIZE) / 2,
-                  rect->y + (rect->h - THEME_ICON_SIZE) / 2,
+                  rect.x + (rect.w - THEME_ICON_SIZE) / 2,
+                  rect.y + (rect.h - THEME_ICON_SIZE) / 2,
                   THEME_ICON_SIZE, col);
 }
 
@@ -447,15 +444,15 @@ void draw_builtin_scrollbars(window_t *win) {
     int bw = win->frame.w - (has_v ? SCROLLBAR_WIDTH : 0);
     rect_t hbar = {base_x, base_y + content_h - SCROLLBAR_WIDTH, bw, SCROLLBAR_WIDTH};
     // Track background
-    fill_rect(get_sys_color(brWindowDarkBg), R(hbar.x, hbar.y, hbar.w, hbar.h));
+    fill_rect(get_sys_color(brWindowDarkBg), hbar);
     // Arrow buttons
     if (bw >= 2 * SCROLLBAR_WIDTH) {
       rect_t left_arr  = rect_split_left(hbar, SCROLLBAR_WIDTH);
       rect_t right_arr = rect_split_right(hbar, SCROLLBAR_WIDTH);
-      fill_rect(get_sys_color(brWindowBg), R(left_arr.x,  left_arr.y,  left_arr.w,  left_arr.h));
-      draw_theme_icon_in_rect(THEME_ICON_SCROLL_LEFT,  &left_arr,  get_sys_color(brTextNormal));
-      fill_rect(get_sys_color(brWindowBg), R(right_arr.x, right_arr.y, right_arr.w, right_arr.h));
-      draw_theme_icon_in_rect(THEME_ICON_SCROLL_RIGHT, &right_arr, get_sys_color(brTextNormal));
+      fill_rect(get_sys_color(brWindowBg), left_arr);
+      draw_theme_icon_in_rect(THEME_ICON_SCROLL_LEFT,  left_arr,  get_sys_color(brTextNormal));
+      fill_rect(get_sys_color(brWindowBg), right_arr);
+      draw_theme_icon_in_rect(THEME_ICON_SCROLL_RIGHT, right_arr, get_sys_color(brTextNormal));
       // Thumb in effective track between buttons
       int eff_track = bw - 2 * SCROLLBAR_WIDTH;
       if (eff_track > 0) {
@@ -478,15 +475,15 @@ void draw_builtin_scrollbars(window_t *win) {
     int bh = content_h - (has_h && !h_merged ? SCROLLBAR_WIDTH : 0);
     rect_t vbar = {base_x + win->frame.w - SCROLLBAR_WIDTH, base_y, SCROLLBAR_WIDTH, bh};
     // Track background
-    fill_rect(get_sys_color(brWindowDarkBg), R(vbar.x, vbar.y, vbar.w, vbar.h));
+    fill_rect(get_sys_color(brWindowDarkBg), vbar);
     // Arrow buttons
     if (bh >= 2 * SCROLLBAR_WIDTH) {
       rect_t top_arr = rect_split_top(vbar, SCROLLBAR_WIDTH);
       rect_t bot_arr = rect_split_bottom(vbar, SCROLLBAR_WIDTH);
-      fill_rect(get_sys_color(brWindowBg), R(top_arr.x, top_arr.y, top_arr.w, top_arr.h));
-      draw_theme_icon_in_rect(THEME_ICON_SCROLL_UP,   &top_arr, get_sys_color(brTextNormal));
-      fill_rect(get_sys_color(brWindowBg), R(bot_arr.x, bot_arr.y, bot_arr.w, bot_arr.h));
-      draw_theme_icon_in_rect(THEME_ICON_SCROLL_DOWN, &bot_arr, get_sys_color(brTextNormal));
+      fill_rect(get_sys_color(brWindowBg), top_arr);
+      draw_theme_icon_in_rect(THEME_ICON_SCROLL_UP,   top_arr, get_sys_color(brTextNormal));
+      fill_rect(get_sys_color(brWindowBg), bot_arr);
+      draw_theme_icon_in_rect(THEME_ICON_SCROLL_DOWN, bot_arr, get_sys_color(brTextNormal));
       // Thumb in effective track between buttons
       int eff_track = bh - 2 * SCROLLBAR_WIDTH;
       if (eff_track > 0) {
@@ -509,7 +506,7 @@ void draw_builtin_scrollbars(window_t *win) {
     rect_t corner = {base_x + win->frame.w - SCROLLBAR_WIDTH,
                      base_y + content_h - SCROLLBAR_WIDTH,
                      SCROLLBAR_WIDTH, SCROLLBAR_WIDTH};
-    fill_rect(get_sys_color(brWindowDarkBg), R(corner.x, corner.y, corner.w, corner.h));
-    draw_theme_icon_in_rect(THEME_ICON_RESIZE, &corner, get_sys_color(brTextNormal));
+    fill_rect(get_sys_color(brWindowDarkBg), corner);
+    draw_theme_icon_in_rect(THEME_ICON_RESIZE, corner, get_sys_color(brTextNormal));
   }
 }

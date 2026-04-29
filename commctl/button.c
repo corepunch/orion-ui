@@ -49,8 +49,8 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
                     (win->flags & BUTTON_DEFAULT) ? 0xff000000 : get_sys_color(brWindowBg);
       rect_t local = {0, 0, win->frame.w, win->frame.h};
       rect_t outer = rect_inset(local, -1);
-      fill_rect(bg, R(outer.x, outer.y, outer.w, outer.h));
-      draw_button(&local, 1, 1, show_pressed);
+      fill_rect(bg, outer);
+      draw_button(local, 1, 1, show_pressed);
       rect_t label = rect_center(local, strwidth(win->title), CHAR_HEIGHT);
       if (!show_pressed)
         draw_text_small(win->title, label.x + TEXT_SHADOW_OFFSET, label.y + TEXT_SHADOW_OFFSET, get_sys_color(brDarkEdge));
@@ -133,7 +133,7 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
       bool show_pressed = win->pressed ||
                           ((win->flags & BUTTON_PUSHLIKE) && win->value);
       rect_t local = {0, 0, win->frame.w, win->frame.h};
-      draw_button(&local, 1, 1, show_pressed);
+      draw_button(local, 1, 1, show_pressed);
       int px = show_pressed ? 1 : 0;
       toolbar_button_data_t *bd = (toolbar_button_data_t *)win->userdata;
       if (bd && bd->strip.cols > 0) {

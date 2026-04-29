@@ -159,7 +159,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
                 R(-1, -1, win->frame.w + 2, win->frame.h + 2));
 
       // Inset bevel border.
-      draw_button(&(rect_t){0, 0, win->frame.w, win->frame.h}, 1, 1, true);
+      draw_button((rect_t){0, 0, win->frame.w, win->frame.h}, 1, 1, true);
 
       int tw = win->frame.w - ME_PADDING * 2;
       int th = win->frame.h - ME_PADDING * 2;
@@ -169,7 +169,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       // Clip to text area (scissor uses absolute screen coordinates).
       window_t *root = get_root_window(win);
       rect_t tr = me_text_screen_rect(win, root);
-      set_clip_rect(NULL, &tr);
+      set_clip_rect(NULL, tr);
 
       // Draw wrapped text, offset upward by scroll_y.
       rect_t vp = { tx, ty - s->scroll_y, tw, th + s->scroll_y };
@@ -187,7 +187,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       }
 
       // Reset scissor to full control frame so subsequent rendering is unclipped.
-      set_clip_rect(NULL, &(rect_t){
+      set_clip_rect(NULL, (rect_t){
         tr.x - ME_PADDING, tr.y - ME_PADDING,
         win->frame.w, win->frame.h,
       });

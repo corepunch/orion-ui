@@ -22,14 +22,14 @@ result_t win_checkbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       rect_t box = rect_split_left(local, win->frame.h);
       rect_t focus_bg = rect_inset(box, -CHECKBOX_FOCUS_PAD);
       fill_rect(g_ui_runtime.focused == win ? get_sys_color(brFocusRing) : get_sys_color(brWindowBg),
-                R(focus_bg.x, focus_bg.y, focus_bg.w, focus_bg.h));
-      draw_button(&box, 1, 1, win->pressed);
+                focus_bg);
+      draw_button(box, 1, 1, win->pressed);
       int lx = box.x + box.w + CHECKBOX_GAP;
       int ly = CHECKBOX_TEXT_Y;
       draw_text_small(win->title, lx + TEXT_SHADOW_OFFSET, ly + TEXT_SHADOW_OFFSET, get_sys_color(brDarkEdge));
       draw_text_small(win->title, lx, ly, get_sys_color(brTextNormal));
       if (win->value) {
-        draw_theme_icon_in_rect(THEME_ICON_CHECKMARK, &box, get_sys_color(brTextNormal));
+        draw_theme_icon_in_rect(THEME_ICON_CHECKMARK, box, get_sys_color(brTextNormal));
       }
       return true;
     }

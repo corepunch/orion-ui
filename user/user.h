@@ -293,7 +293,7 @@ uint32_t show_ddx_dialog(form_def_t const *def, const char *title,
 void set_sys_colors(int count, const int *indices, const uint32_t *colors);
 
 // Drawing functions
-void draw_button(rect_t const *r, int dx, int dy, bool pressed);
+void draw_button(rect_t r, int dx, int dy, bool pressed);
 
 // Built-in scrollbar API (analogous to WinAPI SetScrollInfo / GetScrollInfo).
 // These operate on the WINDOW_HSCROLL / WINDOW_VSCROLL built-in bars, not on

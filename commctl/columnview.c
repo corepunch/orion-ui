@@ -378,13 +378,13 @@ static void rv_paint_report_view(window_t *win, reportview_data_t *data) {
     int col_w = rv_get_report_column_width(data, (int)col, eff_w);
 
     // Header scissor: column width, header height only.
-    set_clip_rect(NULL, &(rect_t){scr_x + col_x, scr_y, col_w, HEADER_HEIGHT});
-    draw_button(&(rect_t){col_x, 0, col_w, HEADER_HEIGHT}, 1, 1, false);
+    set_clip_rect(NULL, (rect_t){scr_x + col_x, scr_y, col_w, HEADER_HEIGHT});
+    draw_button((rect_t){col_x, 0, col_w, HEADER_HEIGHT}, 1, 1, false);
     draw_text_small_clipped(data->columns[col].title, &(rect_t){col_x, 0, col_w, HEADER_HEIGHT}, hdr_fg, TEXT_PADDING_LEFT);
 
     // Body scissor: column width, everything below the header.
     int body_h = win->frame.h - HEADER_HEIGHT;
-    set_clip_rect(NULL, &(rect_t){scr_x + col_x, scr_y + HEADER_HEIGHT, col_w, body_h});
+    set_clip_rect(NULL, (rect_t){scr_x + col_x, scr_y + HEADER_HEIGHT, col_w, body_h});
 
     for (int row = first_row; row < last_row; row++) {
       reportview_item_t *it = &data->items[row];
@@ -409,7 +409,7 @@ static void rv_paint_report_view(window_t *win, reportview_data_t *data) {
 
   // Restore scissor to the window client area before drawing separators,
   // which span the full column height and must not be column-clipped.
-  set_clip_rect(NULL, &(rect_t){scr_x, scr_y, eff_w, win->frame.h});
+  set_clip_rect(NULL, (rect_t){scr_x, scr_y, eff_w, win->frame.h});
 
   // Column separator lines.
   col_x = 0;

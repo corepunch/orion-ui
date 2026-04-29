@@ -78,7 +78,7 @@ static void draw_brush_panel(int selected_idx) {
     rect_t inner = rect_inset(outer, 1);
 
     // fill_rect(get_sys_color(brDarkEdge), &outer);
-    fill_rect(bg, &inner);
+    fill_rect(bg, inner);
 
     // Horizontal stroke centred in the cell; thickness = 2*radius+1, clamped.
     int radius = kBrushSizes[i];
@@ -89,7 +89,7 @@ static void draw_brush_panel(int selected_idx) {
         ? get_sys_color(brWindowBg)
         : get_sys_color(brTextNormal);
     rect_t stroke = { inner.x + 2, stroke_y, inner.w - 4, thickness };
-    fill_rect(stroke_col, &stroke);
+    fill_rect(stroke_col, stroke);
   }
 }
 
@@ -107,12 +107,12 @@ static void draw_shape_panel(bool filled) {
   uint32_t outline_col = filled ? get_sys_color(brButtonBg) : get_sys_color(brFocusRing);
   uint32_t filled_col  = filled ? get_sys_color(brFocusRing) : get_sys_color(brButtonBg);
 
-  fill_rect(get_sys_color(brDarkEdge), &outline_outer);
-  fill_rect(outline_col, &outline_inner);
+  fill_rect(get_sys_color(brDarkEdge), outline_outer);
+  fill_rect(outline_col, outline_inner);
   draw_text_small_clipped("O", &outline_inner, get_sys_color(brTextNormal), TEXT_ALIGN_CENTER);
 
-  fill_rect(get_sys_color(brDarkEdge), &filled_outer);
-  fill_rect(filled_col, &filled_inner);
+  fill_rect(get_sys_color(brDarkEdge), filled_outer);
+  fill_rect(filled_col, filled_inner);
   draw_text_small_clipped("F", &filled_inner, get_sys_color(brTextNormal), TEXT_ALIGN_CENTER);
 }
 
@@ -153,7 +153,7 @@ result_t win_tool_options_proc(window_t *win, uint32_t msg,
 
     case evPaint: {
       rect_t cr = get_client_rect(win);
-      fill_rect(get_sys_color(brWindowBg), &cr);
+      fill_rect(get_sys_color(brWindowBg), cr);
       if (!g_app) return true;
       tool_opts_panel_t panel = panel_for_tool(g_app->current_tool);
       if (panel == OPTS_BRUSH) {

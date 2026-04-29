@@ -107,11 +107,11 @@ static void draw_toolbox_button(toolbox_state_t *st, int idx,
   bool depressed  = is_pressed || is_active;
 
   if (depressed) {
-    draw_button(&cell, 1, 1, true);   // inset / pressed look
+    draw_button(cell, 1, 1, true);   // inset / pressed look
   } else {
 #ifndef TOOLBOX_FLAT
     // Unpressed tools still draw as raised buttons.
-    draw_button(&cell, 1, 1, false);
+    draw_button(cell, 1, 1, false);
 #endif
   }
 

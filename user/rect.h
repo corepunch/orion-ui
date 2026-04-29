@@ -14,9 +14,9 @@
 
 #include "user.h"
 
-// Convenience literal rectangle pointer, analogous to MAKERECT.
+// Convenience literal rectangle value (pass-by-value counterpart to MAKERECT).
 #ifndef R
-#define R(X, Y, W, H) (&(rect_t){ (X), (Y), (W), (H) })
+#define R(X, Y, W, H) ((rect_t){ (X), (Y), (W), (H) })
 #endif
 
 // ── Inflation / deflation ─────────────────────────────────────────────────

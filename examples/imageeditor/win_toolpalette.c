@@ -50,16 +50,16 @@ static void draw_palette_swatch(window_t *win,
   rect_t reset_inner = rect_inset(reset_outer, 1);
   rect_t reset_black = rect_inset(rect_offset(reset_inner, 1, 1), 1);
 
-  fill_rect(get_sys_color(brDarkEdge), &bg_outer);
-  fill_rect(bg_color, &bg_inner);
+  fill_rect(get_sys_color(brDarkEdge), bg_outer);
+  fill_rect(bg_color, bg_inner);
 
-  fill_rect(get_sys_color(brDarkEdge), &fg_outer);
-  fill_rect(fg_color, &fg_inner);
+  fill_rect(get_sys_color(brDarkEdge), fg_outer);
+  fill_rect(fg_color, fg_inner);
 
   // Small black/white reset chip in the lower-left corner, like classic editors.
-  fill_rect(get_sys_color(brDarkEdge), &reset_outer);
-  fill_rect(0xFFFFFFFF, &reset_inner);
-  fill_rect(0xFF000000, &reset_black);
+  fill_rect(get_sys_color(brDarkEdge), reset_outer);
+  fill_rect(0xFFFFFFFF, reset_inner);
+  fill_rect(0xFF000000, reset_black);
 }
 
 result_t win_tool_palette_proc(window_t *win, uint32_t msg,
