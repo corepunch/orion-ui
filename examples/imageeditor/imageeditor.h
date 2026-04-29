@@ -273,7 +273,7 @@ typedef struct {
 
 extern app_state_t *g_app;
 
-// Tool display names (in ID_TOOL_PENCIL..ID_TOOL_SELECT order; index with tool - ID_TOOL_PENCIL)
+// Tool display names (in ID_TOOL_PENCIL..ID_TOOL_CROP order; index with tool - ID_TOOL_PENCIL)
 extern const char *tool_names[NUM_TOOLS];
 
 static inline const char *tool_id_name(int tool_id) {
@@ -372,7 +372,9 @@ void canvas_crop_to_selection(canvas_doc_t *doc);
 // Crop or expand the canvas to the active selection.
 // If the selection extends outside the canvas the canvas grows (new areas filled
 // with opaque white); if it is smaller the canvas shrinks.
-void canvas_crop_or_expand_to_selection(canvas_doc_t *doc);
+// Returns true on success, false if the operation could not be performed
+// (invalid state, oversized selection, or allocation failure — canvas unchanged).
+bool canvas_crop_or_expand_to_selection(canvas_doc_t *doc);
 
 // Move-selection helpers (called from win_canvas.c)
 void canvas_begin_move(canvas_doc_t *doc, uint32_t bg);

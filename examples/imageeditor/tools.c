@@ -1,4 +1,4 @@
-// Tool display names – in ID_TOOL_PENCIL..ID_TOOL_TEXT order; index with (tool - ID_TOOL_PENCIL)
+// Tool display names – in ID_TOOL_PENCIL..ID_TOOL_CROP order; index with (tool - ID_TOOL_PENCIL)
 
 #include "imageeditor.h"
 

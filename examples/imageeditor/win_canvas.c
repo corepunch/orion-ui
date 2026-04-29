@@ -526,6 +526,19 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         return true;
       }
 
+      // Crop tool: only rubber-band the selection — no pixel changes on mouse-down,
+      // so no undo snapshot needed here (undo is pushed only on Enter commit).
+      if (tool == ID_TOOL_CROP) {
+        doc->drawing = true;
+        doc->sel_active = false;
+        doc->sel_start.x = doc->sel_end.x = px;
+        doc->sel_start.y = doc->sel_end.y = py;
+        doc->sel_active = true;
+        IE_DEBUG("crop_begin doc=%p anchor=(%d,%d)", (void *)doc, px, py);
+        invalidate_window(win);
+        return true;
+      }
+
       doc_push_undo(doc);
 
       switch (tool) {
@@ -561,15 +574,6 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
             doc->sel_active = true;
             IE_DEBUG("selection_begin doc=%p anchor=(%d,%d)", (void *)doc, px, py);
           }
-          break;
-        case ID_TOOL_CROP:
-          // Crop tool: begin rubber-band selection (coordinates may extend
-          // outside canvas bounds to allow canvas expansion on commit).
-          doc->sel_active = false;
-          doc->sel_start.x = doc->sel_end.x = px;
-          doc->sel_start.y = doc->sel_end.y = py;
-          doc->sel_active = true;
-          IE_DEBUG("crop_begin doc=%p anchor=(%d,%d)", (void *)doc, px, py);
           break;
         default:
           break;
@@ -838,12 +842,15 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
                  doc->sel_start.x, doc->sel_start.y,
                  doc->sel_end.x,   doc->sel_end.y);
         doc_push_undo(doc);
-        canvas_crop_or_expand_to_selection(doc);
-        canvas_win_sync_scrollbars(win);
-        doc_update_title(doc);
-        char sb[32];
-        snprintf(sb, sizeof(sb), "%dx%d", doc->canvas_w, doc->canvas_h);
-        send_message(doc->win, evStatusBar, 0, sb);
+        if (canvas_crop_or_expand_to_selection(doc)) {
+          canvas_win_sync_scrollbars(win);
+          doc_update_title(doc);
+          char sb[32];
+          snprintf(sb, sizeof(sb), "%dx%d", doc->canvas_w, doc->canvas_h);
+          send_message(doc->win, evStatusBar, 0, sb);
+        } else {
+          doc_discard_undo(doc);  // crop failed — drop the no-op undo entry
+        }
         invalidate_window(win);
         return true;
       }
