@@ -19,6 +19,16 @@
 #include "test_env.h"
 #include "../examples/imageeditor/imageeditor.h"
 #include <unistd.h>
+#include <stdlib.h>
+
+// ── Cross-platform temp directory helper (same pattern as image_test.c) ─────────
+static const char *ie_temp_dir(void) {
+    const char *d = getenv("TEMP");
+    if (!d) d = getenv("TMP");
+    if (!d) d = getenv("TMPDIR");
+    if (!d) d = "/tmp";
+    return d;
+}
 
 // ── Application global – defined in main.c (excluded from this build) ─────────
 app_state_t *g_app = NULL;
@@ -1071,7 +1081,8 @@ void test_ie_open_file_path_success(void) {
     uint8_t pixels[4 * 3 * 4];
     for (int i = 0; i < W * H * 4; i++) pixels[i] = (uint8_t)(i & 0xFF);
 
-    const char *tmp = "/tmp/orion_test_open_file.png";
+    char tmp[512];
+    snprintf(tmp, sizeof(tmp), "%s/orion_test_open_file.png", ie_temp_dir());
     bool saved = save_image_png(tmp, pixels, W, H);
     ASSERT_TRUE(saved);
 
@@ -1086,7 +1097,7 @@ void test_ie_open_file_path_success(void) {
     ASSERT_FALSE(doc->modified);
 
     ie_teardown();
-    unlink(tmp);
+    remove(tmp);
     PASS();
 }
 
@@ -1097,8 +1108,9 @@ void test_ie_open_file_path_multiple(void) {
 
     ie_setup();
 
-    const char *tmp1 = "/tmp/orion_test_open1.png";
-    const char *tmp2 = "/tmp/orion_test_open2.png";
+    char tmp1[512], tmp2[512];
+    snprintf(tmp1, sizeof(tmp1), "%s/orion_test_open1.png", ie_temp_dir());
+    snprintf(tmp2, sizeof(tmp2), "%s/orion_test_open2.png", ie_temp_dir());
     uint8_t px1[8 * 6 * 4]; memset(px1, 0xFF, sizeof(px1));
     uint8_t px2[5 * 5 * 4]; memset(px2, 0x80, sizeof(px2));
     ASSERT_TRUE(save_image_png(tmp1, px1, 8, 6));
@@ -1117,8 +1129,8 @@ void test_ie_open_file_path_multiple(void) {
     ASSERT_EQUAL(g_app->docs->next->canvas_w, 8);
 
     ie_teardown();
-    unlink(tmp1);
-    unlink(tmp2);
+    remove(tmp1);
+    remove(tmp2);
     PASS();
 }
 
@@ -1282,20 +1294,6 @@ int main(int argc, char *argv[]) {
     test_ie_mask_extract();
     // Undo/redo with layers
     test_ie_layer_undo_redo();
-
-    // imageeditor_open_file_path tests (from PR #154 review)
-    test_ie_open_file_path_nonexistent();
-    test_ie_open_file_path_empty();
-    test_ie_open_file_path_null();
-    test_ie_open_file_path_success();
-    test_ie_open_file_path_multiple();
-
-    // canvas_win_fit_zoom / bird's-eye view tests
-    test_ie_fit_zoom_zero_viewport();
-    test_ie_fit_zoom_selects_best_scale();
-    test_ie_fit_zoom_fallback_to_1x();
-    test_ie_zoom_fit_no_doc();
-    test_ie_zoom_fit_command();
 
     // imageeditor_open_file_path tests (from PR #154 review)
     test_ie_open_file_path_nonexistent();
