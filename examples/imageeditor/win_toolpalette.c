@@ -18,7 +18,7 @@
 // Tool palette layout with ident and icon index.
 static const toolbox_item_t k_tools[NUM_TOOLS] = {
   { ID_TOOL_SELECT,        0 },      // Select
-  { ID_TOOL_CROP,          2 },      // Crop
+  { ID_TOOL_CROP,          6 },      // Crop
   { ID_TOOL_HAND,          4 },      // Hand
   { ID_TOOL_EYEDROPPER,   11 },      // Eyedropper
   { ID_TOOL_ZOOM,          5 },      // Zoom
@@ -33,7 +33,7 @@ static const toolbox_item_t k_tools[NUM_TOOLS] = {
   { ID_TOOL_ELLIPSE,      23 },      // Ellipse
   { ID_TOOL_ROUNDED_RECT, 22 },      // Rounded Rect
   { ID_TOOL_POLYGON,      24 },      // Polygon
-  { ID_TOOL_MAGNIFIER,     6 },      // Magnifier
+  { ID_TOOL_MAGNIFIER,     5 },      // Magnifier
 };
 
 static void draw_palette_swatch(window_t *win,
