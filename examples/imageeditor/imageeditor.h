@@ -128,6 +128,8 @@ extern const int kBrushSizes[NUM_BRUSH_SIZES];
 #define ID_VIEW_ZOOM_6X   45
 #define ID_VIEW_ZOOM_8X   46
 
+#define ID_VIEW_ZOOM_FIT  55   // Fit on Screen (Ctrl+0, like Photoshop)
+
 #define ID_VIEW_SHOW_GRID    47
 #define ID_VIEW_SNAP_GRID    48
 #define ID_VIEW_GRID_OPTIONS 49
@@ -447,6 +449,10 @@ result_t win_color_palette_proc(window_t *win, uint32_t msg, uint32_t wparam, vo
 // Zoom support
 void canvas_win_set_zoom(window_t *canvas_win, int new_scale);
 
+// Fit the canvas to the viewport at the largest integer zoom that shows the
+// whole image — equivalent to Photoshop's "Fit on Screen" (Ctrl+0).
+void canvas_win_fit_zoom(window_t *canvas_win);
+
 // Sync canvas scrollbars after content size changes (e.g. after canvas_resize)
 void canvas_win_sync_scrollbars(window_t *canvas_win);
 
@@ -481,6 +487,10 @@ void window_menu_rebuild(void);
 // by the shell (gem mode) when the user selects a menu item.
 void handle_menu_command(uint16_t id);
 
+// Open an image file path and create a new document from it.
+// Returns true on success, false on load/create failure.
+bool imageeditor_open_file_path(const char *path);
+
 // Palette window factory helpers — create, show, register and return the window.
 // Also used by handle_menu_command to recreate closed palette windows.
 window_t *create_tool_palette_window(void);
@@ -489,6 +499,9 @@ window_t *create_color_palette_window(void);
 
 // New Image / Canvas Size dialog
 bool show_size_dialog(window_t *parent, const char *title, int *out_w, int *out_h);
+
+// Grid Options dialog – returns true if accepted.
+bool show_grid_options_dialog(window_t *parent, int *out_x, int *out_y);
 
 // Layers palette window geometry.
 // Positioned on the right side of the screen, below the color palette.

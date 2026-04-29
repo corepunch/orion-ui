@@ -22,6 +22,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
+#include <stdlib.h>
 
 // =============================================================================
 // Part 1: get_message() sentinel-filter and wakeup coalescing
@@ -294,6 +295,128 @@ void test_invalidate_routes_to_root(void) {
 }
 
 // =============================================================================
+// Part 4: kEventDragDrop — dispatch_message invokes ui_open_file handler
+// =============================================================================
+
+// Track calls from the open-file handler registered for drag-drop tests.
+static int    dd_handler_call_count = 0;
+static char   dd_handler_last_path[512];
+
+static bool dd_open_file_handler(const char *path) {
+  dd_handler_call_count++;
+  if (path)
+    snprintf(dd_handler_last_path, sizeof(dd_handler_last_path), "%s", path);
+  return true;
+}
+
+static void dd_reset(void) {
+  dd_handler_call_count = 0;
+  dd_handler_last_path[0] = '\0';
+}
+
+// dispatch_message(kEventDragDrop, heap-path) must call the registered
+// ui_open_file handler exactly once with the correct path.  The path must
+// be freed by dispatch_message so callers do not own it.
+void test_drag_drop_handler_invoked(void) {
+  TEST("kEventDragDrop: registered ui_open_file handler is called once with correct path");
+  test_env_init();
+  dd_reset();
+
+  ui_register_open_file_handler(dd_open_file_handler);
+
+  // Allocate path on the heap — dispatch_message owns and frees it.
+  char *heap_path = strdup("/tmp/test_image.png");
+  ASSERT_NOT_NULL(heap_path);
+
+  ui_event_t evt = {0};
+  evt.message = kEventDragDrop;
+  evt.lParam  = (lParam_t)heap_path;
+
+  dispatch_message(&evt);
+
+  ASSERT_EQUAL(dd_handler_call_count, 1);
+  ASSERT_TRUE(strcmp(dd_handler_last_path, "/tmp/test_image.png") == 0);
+
+  // Deregister handler so it does not affect other tests.
+  ui_register_open_file_handler(NULL);
+  test_env_shutdown();
+  PASS();
+}
+
+// dispatch_message(kEventDragDrop, NULL) must not crash and must not call
+// the handler (NULL/empty path is silently skipped per the implementation).
+void test_drag_drop_null_lParam(void) {
+  TEST("kEventDragDrop: NULL lParam does not crash and handler is not called");
+  test_env_init();
+  dd_reset();
+
+  ui_register_open_file_handler(dd_open_file_handler);
+
+  ui_event_t evt = {0};
+  evt.message = kEventDragDrop;
+  evt.lParam  = (lParam_t)NULL;
+
+  dispatch_message(&evt);
+
+  ASSERT_EQUAL(dd_handler_call_count, 0);
+
+  ui_register_open_file_handler(NULL);
+  test_env_shutdown();
+  PASS();
+}
+
+// dispatch_message(kEventDragDrop, heap-empty-string) must free the buffer
+// and not call the handler — an empty path is not a valid file path.
+void test_drag_drop_empty_path(void) {
+  TEST("kEventDragDrop: empty path does not call handler but buffer is freed");
+  test_env_init();
+  dd_reset();
+
+  ui_register_open_file_handler(dd_open_file_handler);
+
+  char *heap_empty = malloc(1);
+  ASSERT_NOT_NULL(heap_empty);
+  heap_empty[0] = '\0';
+
+  ui_event_t evt = {0};
+  evt.message = kEventDragDrop;
+  evt.lParam  = (lParam_t)heap_empty;
+
+  dispatch_message(&evt);
+
+  ASSERT_EQUAL(dd_handler_call_count, 0);
+
+  ui_register_open_file_handler(NULL);
+  test_env_shutdown();
+  PASS();
+}
+
+// When no handler is registered, dispatch_message(kEventDragDrop) must not
+// crash and ui_open_file must silently return false.
+void test_drag_drop_no_handler(void) {
+  TEST("kEventDragDrop: no registered handler — no crash, returns false");
+  test_env_init();
+  dd_reset();
+
+  // Ensure no handler is registered.
+  ui_register_open_file_handler(NULL);
+
+  char *heap_path = strdup("/tmp/no_handler.png");
+  ASSERT_NOT_NULL(heap_path);
+
+  ui_event_t evt = {0};
+  evt.message = kEventDragDrop;
+  evt.lParam  = (lParam_t)heap_path;
+
+  dispatch_message(&evt);  // must not crash
+
+  ASSERT_EQUAL(dd_handler_call_count, 0);
+
+  test_env_shutdown();
+  PASS();
+}
+
+// =============================================================================
 // main
 // =============================================================================
 
@@ -316,6 +439,12 @@ int main(int argc, char *argv[]) {
   // Part 3: invalidate_window
   test_invalidate_window_enqueues_paint();
   test_invalidate_routes_to_root();
+
+  // Part 4: kEventDragDrop dispatch
+  test_drag_drop_handler_invoked();
+  test_drag_drop_null_lParam();
+  test_drag_drop_empty_path();
+  test_drag_drop_no_handler();
 
   TEST_END();
 }

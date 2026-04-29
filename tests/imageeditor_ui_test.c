@@ -18,6 +18,7 @@
 #include "test_framework.h"
 #include "test_env.h"
 #include "../examples/imageeditor/imageeditor.h"
+#include <unistd.h>
 
 // ── Application global – defined in main.c (excluded from this build) ─────────
 app_state_t *g_app = NULL;
@@ -55,10 +56,6 @@ static void ie_teardown(void) {
     if (g_app->color_win) {
         destroy_window(g_app->color_win);
         g_app->color_win = NULL;
-    }
-    if (g_app->layers_win) {
-        destroy_window(g_app->layers_win);
-        g_app->layers_win = NULL;
     }
     // close_document properly unlinks, frees undo stack, and destroys the
     // window.  It is safe headlessly because canvas_tex / float_tex stay 0.
@@ -956,7 +953,7 @@ void test_ie_mask_apply(void) {
     layer_apply_mask(doc, 0);
 
     ASSERT_NULL(doc->layers[0]->mask);
-    // Alpha should now be ≈ 128 (0xFF * 128 / 255 = 128).
+    // Alpha should now be ~128 (0xFF * 128 / 255 = 128).
     uint32_t px = canvas_get_pixel(doc, 0, 0);
     ASSERT_EQUAL(COLOR_A(px), 128);
 
@@ -1018,6 +1015,223 @@ void test_ie_layer_undo_redo(void) {
     PASS();
 }
 
+// ── imageeditor_open_file_path tests ──────────────────────────────────────────
+
+// imageeditor_open_file_path() returns false and leaves g_app->docs unchanged
+// when given a path that does not exist.
+void test_ie_open_file_path_nonexistent(void) {
+    TEST("imageeditor_open_file_path: returns false for a nonexistent file");
+
+    ie_setup();
+
+    ASSERT_NULL(g_app->docs);
+    bool ok = imageeditor_open_file_path("/tmp/orion_no_such_file_abcxyz.png");
+    ASSERT_FALSE(ok);
+    ASSERT_NULL(g_app->docs);
+
+    ie_teardown();
+    PASS();
+}
+
+// imageeditor_open_file_path() returns false for an empty path.
+void test_ie_open_file_path_empty(void) {
+    TEST("imageeditor_open_file_path: returns false for empty path");
+
+    ie_setup();
+
+    ASSERT_FALSE(imageeditor_open_file_path(""));
+    ASSERT_NULL(g_app->docs);
+
+    ie_teardown();
+    PASS();
+}
+
+// imageeditor_open_file_path() returns false for a NULL path.
+void test_ie_open_file_path_null(void) {
+    TEST("imageeditor_open_file_path: returns false for NULL path");
+
+    ie_setup();
+
+    ASSERT_FALSE(imageeditor_open_file_path(NULL));
+    ASSERT_NULL(g_app->docs);
+
+    ie_teardown();
+    PASS();
+}
+
+// imageeditor_open_file_path() succeeds for a valid PNG: a new document is
+// added to g_app->docs with the image dimensions and unmodified state.
+void test_ie_open_file_path_success(void) {
+    TEST("imageeditor_open_file_path: opens PNG and creates document with matching dimensions");
+
+    ie_setup();
+
+    // Write a minimal 4×3 RGBA PNG to a temp file.
+    const int W = 4, H = 3;
+    uint8_t pixels[4 * 3 * 4];
+    for (int i = 0; i < W * H * 4; i++) pixels[i] = (uint8_t)(i & 0xFF);
+
+    const char *tmp = "/tmp/orion_test_open_file.png";
+    bool saved = save_image_png(tmp, pixels, W, H);
+    ASSERT_TRUE(saved);
+
+    bool ok = imageeditor_open_file_path(tmp);
+    ASSERT_TRUE(ok);
+    ASSERT_NOT_NULL(g_app->docs);
+
+    canvas_doc_t *doc = g_app->docs;
+    ASSERT_EQUAL(doc->canvas_w, W);
+    ASSERT_EQUAL(doc->canvas_h, H);
+    ASSERT_NOT_NULL(doc->pixels);
+    ASSERT_FALSE(doc->modified);
+
+    ie_teardown();
+    unlink(tmp);
+    PASS();
+}
+
+// imageeditor_open_file_path() loading a second file adds a second document
+// in front of the list without closing the first.
+void test_ie_open_file_path_multiple(void) {
+    TEST("imageeditor_open_file_path: second open adds second document to list");
+
+    ie_setup();
+
+    const char *tmp1 = "/tmp/orion_test_open1.png";
+    const char *tmp2 = "/tmp/orion_test_open2.png";
+    uint8_t px1[8 * 6 * 4]; memset(px1, 0xFF, sizeof(px1));
+    uint8_t px2[5 * 5 * 4]; memset(px2, 0x80, sizeof(px2));
+    ASSERT_TRUE(save_image_png(tmp1, px1, 8, 6));
+    ASSERT_TRUE(save_image_png(tmp2, px2, 5, 5));
+
+    ASSERT_TRUE(imageeditor_open_file_path(tmp1));
+    ASSERT_NOT_NULL(g_app->docs);
+    ASSERT_EQUAL(g_app->docs->canvas_w, 8);
+    ASSERT_EQUAL(g_app->docs->canvas_h, 6);
+
+    ASSERT_TRUE(imageeditor_open_file_path(tmp2));
+    // Second open is prepended — it becomes the new head.
+    ASSERT_EQUAL(g_app->docs->canvas_w, 5);
+    ASSERT_EQUAL(g_app->docs->canvas_h, 5);
+    ASSERT_NOT_NULL(g_app->docs->next);
+    ASSERT_EQUAL(g_app->docs->next->canvas_w, 8);
+
+    ie_teardown();
+    unlink(tmp1);
+    unlink(tmp2);
+    PASS();
+}
+
+// ── canvas_win_fit_zoom (bird's-eye view) tests ───────────────────────────────
+
+// canvas_win_fit_zoom on a canvas window with zero dimensions is a no-op —
+// no crash and scale stays at the default.
+void test_ie_fit_zoom_zero_viewport(void) {
+    TEST("canvas_win_fit_zoom: zero-size viewport is a no-op, no crash");
+
+    ie_setup();
+    canvas_doc_t *doc = create_document(NULL, 320, 200);
+    ASSERT_NOT_NULL(doc);
+
+    // canvas_win frame is 0×0 in headless mode — fit zoom must not crash.
+    canvas_win_fit_zoom(doc->canvas_win);
+
+    canvas_win_state_t *state = (canvas_win_state_t *)doc->canvas_win->userdata;
+    ASSERT_NOT_NULL(state);
+    // Scale must remain at its initial value (1).
+    ASSERT_EQUAL(state->scale, 1);
+
+    ie_teardown();
+    PASS();
+}
+
+// canvas_win_fit_zoom picks the largest zoom where the image fits entirely
+// in the viewport, then centers the image.
+void test_ie_fit_zoom_selects_best_scale(void) {
+    TEST("canvas_win_fit_zoom: selects largest integer zoom that fits viewport");
+
+    ie_setup();
+    // 32×20 canvas, 200×150 viewport → 4x fits (32*4=128≤200, 20*4=80≤150)
+    //                                   8x does not (32*8=256>200)
+    canvas_doc_t *doc = create_document(NULL, 32, 20);
+    ASSERT_NOT_NULL(doc);
+
+    // Manually set the canvas window frame to simulate a real viewport.
+    doc->canvas_win->frame.w = 200;
+    doc->canvas_win->frame.h = 150;
+
+    canvas_win_fit_zoom(doc->canvas_win);
+
+    canvas_win_state_t *state = (canvas_win_state_t *)doc->canvas_win->userdata;
+    ASSERT_NOT_NULL(state);
+    // Expected fit scale: 4 (32*4=128 ≤ 200-SCROLLBAR_WIDTH; 20*4=80 ≤ 150)
+    ASSERT_EQUAL(state->scale, 4);
+
+    ie_teardown();
+    PASS();
+}
+
+// When the image is larger than the viewport at every zoom level, fit zoom
+// must fall back to 1x (the minimum).
+void test_ie_fit_zoom_fallback_to_1x(void) {
+    TEST("canvas_win_fit_zoom: falls back to 1x when image exceeds viewport at all zoom levels");
+
+    ie_setup();
+    // 1000×800 canvas in a 200×150 viewport — even 1x doesn't fit, stays at 1.
+    canvas_doc_t *doc = create_document(NULL, 1000, 800);
+    ASSERT_NOT_NULL(doc);
+
+    doc->canvas_win->frame.w = 200;
+    doc->canvas_win->frame.h = 150;
+
+    canvas_win_fit_zoom(doc->canvas_win);
+
+    canvas_win_state_t *state = (canvas_win_state_t *)doc->canvas_win->userdata;
+    ASSERT_NOT_NULL(state);
+    ASSERT_EQUAL(state->scale, 1);
+
+    ie_teardown();
+    PASS();
+}
+
+// handle_menu_command(ID_VIEW_ZOOM_FIT) must not crash when there is no active
+// document.
+void test_ie_zoom_fit_no_doc(void) {
+    TEST("ID_VIEW_ZOOM_FIT: no active document — no crash");
+
+    ie_setup();
+    g_app->active_doc = NULL;
+
+    handle_menu_command(ID_VIEW_ZOOM_FIT);  // must not crash
+
+    ie_teardown();
+    PASS();
+}
+
+// handle_menu_command(ID_VIEW_ZOOM_FIT) calls canvas_win_fit_zoom on the
+// active document's canvas window.
+void test_ie_zoom_fit_command(void) {
+    TEST("ID_VIEW_ZOOM_FIT: applies fit zoom to active document canvas");
+
+    ie_setup();
+    canvas_doc_t *doc = create_document(NULL, 32, 20);
+    ASSERT_NOT_NULL(doc);
+    g_app->active_doc = doc;
+
+    doc->canvas_win->frame.w = 200;
+    doc->canvas_win->frame.h = 150;
+
+    handle_menu_command(ID_VIEW_ZOOM_FIT);
+
+    canvas_win_state_t *state = (canvas_win_state_t *)doc->canvas_win->userdata;
+    ASSERT_NOT_NULL(state);
+    // 32*4=128 ≤ 200-SCROLLBAR_WIDTH; 20*4=80 ≤ 150 → expect 4x
+    ASSERT_EQUAL(state->scale, 4);
+
+    ie_teardown();
+    PASS();
+}
+
 // ── Entry point ───────────────────────────────────────────────────────────────
 
 int main(int argc, char *argv[]) {
@@ -1068,6 +1282,20 @@ int main(int argc, char *argv[]) {
     test_ie_mask_extract();
     // Undo/redo with layers
     test_ie_layer_undo_redo();
+
+    // imageeditor_open_file_path tests (from PR #154 review)
+    test_ie_open_file_path_nonexistent();
+    test_ie_open_file_path_empty();
+    test_ie_open_file_path_null();
+    test_ie_open_file_path_success();
+    test_ie_open_file_path_multiple();
+
+    // canvas_win_fit_zoom / bird's-eye view tests
+    test_ie_fit_zoom_zero_viewport();
+    test_ie_fit_zoom_selects_best_scale();
+    test_ie_fit_zoom_fallback_to_1x();
+    test_ie_zoom_fit_no_doc();
+    test_ie_zoom_fit_command();
 
     TEST_END();
 }

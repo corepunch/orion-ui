@@ -32,6 +32,7 @@ static const menu_item_t kEditItems[] = {
 static menu_item_t s_view_items[] = {
   {"Zoom In",                  ID_VIEW_ZOOM_IN},
   {"Zoom Out",                 ID_VIEW_ZOOM_OUT},
+  {"Fit on Screen",            ID_VIEW_ZOOM_FIT},
   {NULL,                       0},
   {"1x",                       ID_VIEW_ZOOM_1X},
   {"2x",                       ID_VIEW_ZOOM_2X},
@@ -273,6 +274,37 @@ void window_menu_rebuild(void) {
                  (uint32_t)kNumMenus, kMenus);
 }
 
+bool imageeditor_open_file_path(const char *path) {
+  if (!g_app || !path || !path[0]) return false;
+
+  int img_w = 0, img_h = 0;
+  uint8_t *px = load_image(path, &img_w, &img_h);
+  if (!px || img_w <= 0 || img_h <= 0) {
+    if (px) image_free(px);
+    return false;
+  }
+
+  canvas_doc_t *ndoc = create_document(path, img_w, img_h);
+  if (!ndoc) {
+    image_free(px);
+    return false;
+  }
+
+  // Swap the white placeholder pixels for the actual loaded image.
+  // Update both the layer buffer and the convenience alias.
+  image_free(ndoc->layers[0]->pixels);
+  ndoc->layers[0]->pixels = px;
+  ndoc->pixels = px;
+  ndoc->canvas_dirty = true;
+  ndoc->modified = false;
+  doc_update_title(ndoc);
+  send_message(ndoc->win, evStatusBar, 0, (void *)path);
+  // Open at bird's-eye view so the whole image is visible immediately.
+  canvas_win_fit_zoom(ndoc->canvas_win);
+  invalidate_window(ndoc->canvas_win);
+  return true;
+}
+
 void handle_menu_command(uint16_t id) {
   if (!g_app) return;
   canvas_doc_t *doc = g_app->active_doc;
@@ -288,27 +320,7 @@ void handle_menu_command(uint16_t id) {
     case ID_FILE_OPEN: {
       char path[512] = {0};
       if (show_file_picker(g_app->menubar_win, false, path, sizeof(path))) {
-        int img_w = 0, img_h = 0;
-        uint8_t *px = load_image(path, &img_w, &img_h);
-        if (!px || img_w <= 0 || img_h <= 0) {
-          if (px) image_free(px);
-          break;
-        }
-        canvas_doc_t *ndoc = create_document(path, img_w, img_h);
-        if (ndoc) {
-          // Swap the white placeholder pixels for the actual loaded image.
-          // Use image_free() so the allocator always matches regardless of
-          // which allocation path (malloc vs stb) produced the buffer.
-          image_free(ndoc->pixels);
-          ndoc->pixels = px;
-          ndoc->canvas_dirty = true;
-          ndoc->modified = false;
-          doc_update_title(ndoc);
-          send_message(ndoc->win, evStatusBar, 0, path);
-          invalidate_window(ndoc->canvas_win);
-        } else {
-          image_free(px);
-        }
+        imageeditor_open_file_path(path);
       }
       break;
     }
@@ -489,6 +501,7 @@ void handle_menu_command(uint16_t id) {
 
     case ID_VIEW_ZOOM_IN:
     case ID_VIEW_ZOOM_OUT:
+    case ID_VIEW_ZOOM_FIT:
     case ID_VIEW_ZOOM_1X:
     case ID_VIEW_ZOOM_2X:
     case ID_VIEW_ZOOM_4X:
@@ -500,7 +513,13 @@ void handle_menu_command(uint16_t id) {
 
       int new_scale = state->scale;
 
-      if (id == ID_VIEW_ZOOM_IN) {
+      if (id == ID_VIEW_ZOOM_FIT) {
+        canvas_win_fit_zoom(doc->canvas_win);
+        char zoom_msg[32];
+        snprintf(zoom_msg, sizeof(zoom_msg), "Zoom: %dx", state->scale);
+        send_message(doc->win, evStatusBar, 0, zoom_msg);
+        break;
+      } else if (id == ID_VIEW_ZOOM_IN) {
         for (int i = 0; i < NUM_ZOOM_LEVELS; i++) {
           if (kZoomLevels[i] > state->scale) { new_scale = kZoomLevels[i]; break; }
         }
