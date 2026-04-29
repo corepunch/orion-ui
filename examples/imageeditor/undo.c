@@ -100,23 +100,21 @@ static bool restore_snapshot(canvas_doc_t *doc, const uint8_t *blob) {
   layer_t **nl = malloc(sizeof(layer_t *) * n);
   if (!nl) return false;
 
+  // Local helper: free the first `count` partially-constructed layers.
+  // We use a labelled goto because C doesn't support local lambdas.
+  int built = 0;  // number of successfully allocated layers so far
+
   for (int i = 0; i < n; i++) {
     const snap_layer_hdr_t *lhdr = (const snap_layer_hdr_t *)p;
     p += sizeof(snap_layer_hdr_t);
 
     layer_t *lay = calloc(1, sizeof(layer_t));
-    if (!lay) {
-      for (int j = 0; j < i; j++) { free(nl[j]->pixels); free(nl[j]->mask); free(nl[j]); }
-      free(nl);
-      return false;
-    }
+    if (!lay) goto cleanup;
     lay->pixels = malloc(px_sz);
-    if (!lay->pixels) {
-      free(lay);
-      for (int j = 0; j < i; j++) { free(nl[j]->pixels); free(nl[j]->mask); free(nl[j]); }
-      free(nl);
-      return false;
-    }
+    if (!lay->pixels) { free(lay); goto cleanup; }
+    nl[i] = lay;
+    built = i + 1;  // lay is now owned by nl[i]
+
     memcpy(lay->name, lhdr->name, 64);
     lay->visible = lhdr->visible;
     lay->opacity = lhdr->opacity;
@@ -128,8 +126,15 @@ static bool restore_snapshot(canvas_doc_t *doc, const uint8_t *blob) {
       if (lay->mask) { memcpy(lay->mask, p, mk_sz); }
       p += mk_sz;
     }
-    nl[i] = lay;
   }
+  goto restore;
+
+cleanup:
+  for (int j = 0; j < built; j++) { free(nl[j]->pixels); free(nl[j]->mask); free(nl[j]); }
+  free(nl);
+  return false;
+
+restore:
 
   // Replace old layer stack.
   for (int i = 0; i < doc->layer_count; i++) {

@@ -1055,7 +1055,8 @@ bool canvas_resize(canvas_doc_t *doc, int new_w, int new_h) {
 
   free(doc->composite_buf);
   doc->composite_buf = malloc((size_t)new_w * new_h * 4);
-  // Lazily re-allocated in canvas_upload if this failed.
+  // If this allocation fails, canvas_upload will retry and skip rendering
+  // until it succeeds.  The document's layer data is already valid.
 
   if (doc->canvas_tex) {
     glDeleteTextures(1, &doc->canvas_tex);

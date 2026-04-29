@@ -354,6 +354,8 @@ result_t win_layers_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
       invalidate_window(win);
       return true;
     }
+
+    case evResize:
       if (st) {
         st->hover_row = -1;
         st->hover_btn = -1;
