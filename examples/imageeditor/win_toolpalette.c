@@ -18,6 +18,7 @@
 // Tool palette layout with ident and icon index.
 static const toolbox_item_t k_tools[NUM_TOOLS] = {
   { ID_TOOL_SELECT,        0 },      // Select
+  { ID_TOOL_CROP,          2 },      // Crop
   { ID_TOOL_HAND,          4 },      // Hand
   { ID_TOOL_EYEDROPPER,   11 },      // Eyedropper
   { ID_TOOL_ZOOM,          5 },      // Zoom

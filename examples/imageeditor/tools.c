@@ -19,4 +19,5 @@ const char *tool_names[NUM_TOOLS] = {
   "Eyedropper",
   "Magnifier",
   "Text",
+  "Crop",
 };
