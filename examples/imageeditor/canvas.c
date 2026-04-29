@@ -491,6 +491,70 @@ void canvas_crop_to_selection(canvas_doc_t *doc) {
   doc->canvas_dirty = true;
 }
 
+// Crop or expand the canvas to the active selection rectangle.
+// Unlike canvas_crop_to_selection(), the selection may extend outside the
+// current canvas bounds — in that case the canvas grows to fit, with the new
+// areas filled with opaque white.  If the selection is entirely inside the
+// canvas the canvas shrinks (crop).  The existing pixels within the
+// intersection of old and new bounds are preserved in place.
+// Returns true on success, false if the state is invalid, the requested size
+// exceeds the maximum, or memory allocation fails (canvas is unchanged).
+bool canvas_crop_or_expand_to_selection(canvas_doc_t *doc) {
+  if (!doc || !doc->sel_active) return false;
+  int x0 = MIN(doc->sel_start.x, doc->sel_end.x);
+  int y0 = MIN(doc->sel_start.y, doc->sel_end.y);
+  int x1 = MAX(doc->sel_start.x, doc->sel_end.x);
+  int y1 = MAX(doc->sel_start.y, doc->sel_end.y);
+  int new_w = x1 - x0 + 1;
+  int new_h = y1 - y0 + 1;
+
+  if (new_w <= 0 || new_h <= 0) return false;
+  if ((size_t)new_w > 16384 || (size_t)new_h > 16384) return false;
+
+  uint8_t *buf = malloc((size_t)new_w * new_h * 4);
+  if (!buf) return false;
+
+  // Fill with opaque white (expanded areas default to white).
+  memset(buf, 0xFF, (size_t)new_w * new_h * 4);
+
+  // Compute the intersection of the old canvas rect and the selection rect.
+  // isect_* are in old-canvas pixel coordinates.
+  int isect_x0 = MAX(x0, 0);
+  int isect_y0 = MAX(y0, 0);
+  int isect_x1 = MIN(x0 + new_w, doc->canvas_w);  // exclusive
+  int isect_y1 = MIN(y0 + new_h, doc->canvas_h);  // exclusive
+  int isect_w  = isect_x1 - isect_x0;
+  int isect_h  = isect_y1 - isect_y0;
+
+  if (isect_w > 0 && isect_h > 0) {
+    // Copy only the intersecting rows — one memcpy per row, O(intersection_area).
+    int dst_col = isect_x0 - x0;  // column in the new buffer
+    int dst_row0 = isect_y0 - y0; // first row in the new buffer
+    for (int row = 0; row < isect_h; row++) {
+      const uint8_t *src = doc->pixels +
+                           ((size_t)(isect_y0 + row) * doc->canvas_w + isect_x0) * 4;
+      uint8_t *dst = buf +
+                     ((size_t)(dst_row0 + row) * new_w + dst_col) * 4;
+      memcpy(dst, src, (size_t)isect_w * 4);
+    }
+  }
+
+  // Release the old GL texture (re-created on next canvas_upload).
+  if (doc->canvas_tex) {
+    glDeleteTextures(1, &doc->canvas_tex);
+    doc->canvas_tex = 0;
+  }
+
+  image_free(doc->pixels);
+  doc->pixels    = buf;
+  doc->canvas_w  = new_w;
+  doc->canvas_h  = new_h;
+  doc->canvas_dirty = true;
+  doc->modified     = true;
+  doc->sel_active   = false;
+  return true;
+}
+
 // Extract the current selection into a float buffer and clear that region.
 // Enters "move mode": the caller should track float_pos deltas and call
 // canvas_commit_move() when the drag ends.

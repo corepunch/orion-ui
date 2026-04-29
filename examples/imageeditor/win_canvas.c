@@ -526,6 +526,19 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         return true;
       }
 
+      // Crop tool: only rubber-band the selection — no pixel changes on mouse-down,
+      // so no undo snapshot needed here (undo is pushed only on Enter commit).
+      if (tool == ID_TOOL_CROP) {
+        doc->drawing = true;
+        doc->sel_active = false;
+        doc->sel_start.x = doc->sel_end.x = px;
+        doc->sel_start.y = doc->sel_end.y = py;
+        doc->sel_active = true;
+        IE_DEBUG("crop_begin doc=%p anchor=(%d,%d)", (void *)doc, px, py);
+        invalidate_window(win);
+        return true;
+      }
+
       doc_push_undo(doc);
 
       switch (tool) {
@@ -737,6 +750,12 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
             doc->sel_end.y = py;
           }
           break;
+        case ID_TOOL_CROP:
+          // Update crop rubber-band end; allow coordinates outside canvas bounds
+          // so the user can drag beyond the edge to expand.
+          doc->sel_end.x = px;
+          doc->sel_end.y = py;
+          break;
         default:
           break;
       }
@@ -791,6 +810,18 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
             IE_DEBUG("selection_deselect_zero_area doc=%p", (void *)doc);
           }
         }
+        if (tool == ID_TOOL_CROP && doc->sel_active) {
+          IE_DEBUG("crop_end doc=%p from=(%d,%d) to=(%d,%d)",
+                   (void *)doc,
+                   doc->sel_start.x, doc->sel_start.y,
+                   doc->sel_end.x, doc->sel_end.y);
+          // Zero-area crop: cancel selection.
+          if (doc->sel_start.x == doc->sel_end.x &&
+              doc->sel_start.y == doc->sel_end.y) {
+            canvas_deselect(doc);
+            IE_DEBUG("crop_deselect_zero_area doc=%p", (void *)doc);
+          }
+        }
         if (doc->drawing) {
           IE_DEBUG("draw_end doc=%p tool=%s",
                    (void *)doc, tool_id_name(tool));
@@ -803,8 +834,34 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
     case evKeyDown: {
       if (!doc || !g_app) return false;
       int tool = g_app->current_tool;
+      // Enter commits the crop tool selection (crop or expand canvas).
+      if ((wparam == AX_KEY_ENTER || wparam == AX_KEY_KP_ENTER) &&
+          tool == ID_TOOL_CROP && doc->sel_active) {
+        IE_DEBUG("crop_commit doc=%p sel=(%d,%d)-(%d,%d)",
+                 (void *)doc,
+                 doc->sel_start.x, doc->sel_start.y,
+                 doc->sel_end.x,   doc->sel_end.y);
+        doc_push_undo(doc);
+        if (canvas_crop_or_expand_to_selection(doc)) {
+          canvas_win_sync_scrollbars(win);
+          doc_update_title(doc);
+          char sb[32];
+          snprintf(sb, sizeof(sb), "%dx%d", doc->canvas_w, doc->canvas_h);
+          send_message(doc->win, evStatusBar, 0, sb);
+        } else {
+          doc_discard_undo(doc);  // crop failed — drop the no-op undo entry
+        }
+        invalidate_window(win);
+        return true;
+      }
       // Escape cancels an in-progress polygon or shape drag
       if (wparam == AX_KEY_ESCAPE) {
+        if (tool == ID_TOOL_CROP && doc->sel_active) {
+          canvas_deselect(doc);
+          IE_DEBUG("crop_cancel doc=%p", (void *)doc);
+          invalidate_window(win);
+          return true;
+        }
         if (tool == ID_TOOL_POLYGON && doc->poly_active) {
           if (doc->shape_snapshot) {
             memcpy(doc->pixels, doc->shape_snapshot, (size_t)doc->canvas_w * doc->canvas_h * 4);

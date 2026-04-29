@@ -94,7 +94,7 @@ extern const int kBrushSizes[NUM_BRUSH_SIZES];
 #define DOC_CASCADE   20
 
 #define NUM_COLORS 64
-#define NUM_TOOLS  16
+#define NUM_TOOLS  17
 #define NUM_USER_COLORS  8
 
 #define UNDO_MAX   20
@@ -164,6 +164,7 @@ extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 #define ID_TOOL_EYEDROPPER    33
 #define ID_TOOL_MAGNIFIER     34
 #define ID_TOOL_TEXT          35
+#define ID_TOOL_CROP          36
 
 // ============================================================
 // Color helpers
@@ -272,7 +273,7 @@ typedef struct {
 
 extern app_state_t *g_app;
 
-// Tool display names (in ID_TOOL_PENCIL..ID_TOOL_SELECT order; index with tool - ID_TOOL_PENCIL)
+// Tool display names (in ID_TOOL_PENCIL..ID_TOOL_CROP order; index with tool - ID_TOOL_PENCIL)
 extern const char *tool_names[NUM_TOOLS];
 
 static inline const char *tool_id_name(int tool_id) {
@@ -293,6 +294,7 @@ static inline const char *tool_id_name(int tool_id) {
     case ID_TOOL_EYEDROPPER:   return "EYEDROPPER";
     case ID_TOOL_MAGNIFIER:    return "MAGNIFIER";
     case ID_TOOL_TEXT:         return "TEXT";
+    case ID_TOOL_CROP:         return "CROP";
     default:                   return "UNKNOWN";
   }
 }
@@ -367,6 +369,12 @@ void canvas_paste_clipboard(canvas_doc_t *doc);
 void canvas_select_all(canvas_doc_t *doc);
 void canvas_deselect(canvas_doc_t *doc);
 void canvas_crop_to_selection(canvas_doc_t *doc);
+// Crop or expand the canvas to the active selection.
+// If the selection extends outside the canvas the canvas grows (new areas filled
+// with opaque white); if it is smaller the canvas shrinks.
+// Returns true on success, false if the operation could not be performed
+// (invalid state, oversized selection, or allocation failure — canvas unchanged).
+bool canvas_crop_or_expand_to_selection(canvas_doc_t *doc);
 
 // Move-selection helpers (called from win_canvas.c)
 void canvas_begin_move(canvas_doc_t *doc, uint32_t bg);

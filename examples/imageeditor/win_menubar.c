@@ -141,6 +141,12 @@ static bool cancel_active_canvas_interaction(canvas_doc_t *doc, int old_tool) {
     changed = true;
   }
 
+  if (old_tool == ID_TOOL_CROP && doc->sel_active) {
+    IE_DEBUG("cancel_interaction crop doc=%p", (void *)doc);
+    canvas_deselect(doc);
+    changed = true;
+  }
+
   if (doc->drawing) {
     IE_DEBUG("cancel_interaction drawing doc=%p old_tool=%s",
              (void *)doc, tool_id_name(old_tool));
@@ -521,6 +527,7 @@ void handle_menu_command(uint16_t id) {
     case ID_TOOL_ERASER:
     case ID_TOOL_FILL:
     case ID_TOOL_SELECT:
+    case ID_TOOL_CROP:
     case ID_TOOL_HAND:
     case ID_TOOL_ZOOM:
     case ID_TOOL_LINE:
