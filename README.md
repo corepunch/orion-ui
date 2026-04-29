@@ -1,5 +1,6 @@
-<img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/793ada60-d34d-4dfa-ac3a-688c1d70f67b" />
+<img width="1536" height="1024" alt="539931522-793ada60-d34d-4dfa-ac3a-688c1d70f67b" src="https://github.com/user-attachments/assets/272c216a-520f-42b8-a8ce-0baa1bbbacf2" />
 
+---
 
 Orion is a retro-styled UI framework written in C that brings the familiar Windows API message-based architecture to modern cross-platform development. Extracted from DOOM-ED, it features a clean three-layer design modeled after classic Windows DLLs (USER, KERNEL, COMCTL), making it instantly recognizable to developers who've worked with Win32. Built on the [corepunch/platform](https://github.com/corepunch/platform) layer and OpenGL 3.2+, Orion delivers hardware-accelerated rendering with a nostalgic bitmap font aesthetic reminiscent of DOS and early Windows interfaces. The framework provides a complete set of common controls (buttons, checkboxes, edit boxes, lists, combo boxes, and a console) all following message-driven patterns that feel both vintage and powerful. Perfect for game tools, retro-style applications, or anyone who misses the simplicity and directness of classic GUI programming.
 
