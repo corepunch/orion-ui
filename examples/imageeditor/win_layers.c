@@ -50,9 +50,14 @@ typedef struct {
 // Layout helpers
 // ============================================================
 
+static rect_t layers_client_rect(window_t *win) {
+  return get_client_rect(win);
+}
+
 // Number of rows that fit in the current window height.
 static int visible_rows(window_t *win) {
-  int list_h = win->frame.h - LAYERS_BTN_STRIP_H;
+  rect_t cr = layers_client_rect(win);
+  int list_h = cr.h - LAYERS_BTN_STRIP_H;
   if (list_h < 0) list_h = 0;
   return list_h / LAYERS_ROW_H;
 }
@@ -73,14 +78,16 @@ static int layer_idx_to_row(const canvas_doc_t *doc, int idx) {
 
 // The button strip occupies the bottom LAYERS_BTN_STRIP_H pixels.
 static int btn_strip_y(window_t *win) {
-  return win->frame.h - LAYERS_BTN_STRIP_H;
+  rect_t cr = layers_client_rect(win);
+  return cr.h - LAYERS_BTN_STRIP_H;
 }
 
 // Hit-test: returns button index or -1.
 static int hit_btn(window_t *win, int mx, int my) {
+  rect_t cr = layers_client_rect(win);
   int by = btn_strip_y(win);
   if (my < by || my >= by + LAYERS_BTN_STRIP_H) return -1;
-  int bw = win->frame.w / LBTN_COUNT;
+  int bw = cr.w / LBTN_COUNT;
   if (bw < 1) return -1;
   int i = mx / bw;
   if (i < 0) i = 0;
@@ -111,7 +118,8 @@ static int hit_zone(int mx) {
 
 static void paint_layers(window_t *win, layers_win_state_t *st) {
   canvas_doc_t *doc = g_app ? g_app->active_doc : NULL;
-  int w = win->frame.w;
+  rect_t cr = layers_client_rect(win);
+  int w = cr.w;
   int strip_y = btn_strip_y(win);
 
   // Background of the list area.
