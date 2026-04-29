@@ -258,8 +258,8 @@ extern void ui_end_frame(void);
 extern void draw_panel(window_t const *win);
 extern void draw_window_controls(window_t *win);
 extern void draw_statusbar(window_t *win, const char *text);
-extern void draw_bevel(rect_t const *r);
-extern void draw_button(rect_t const *r, int dx, int dy, bool pressed);
+extern void draw_bevel(rect_t r);
+extern void draw_button(rect_t r, int dx, int dy, bool pressed);
 extern void paint_window_stencil(window_t const *w);
 extern void repaint_stencil(void);
 extern void set_fullscreen(void);
@@ -567,13 +567,13 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
           int total_h  = bsz + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH);
           rect_t tb_rect = {win->frame.x, win->frame.y + title_h, win->frame.w, total_h};
           rect_t rect    = rect_inset(tb_rect, TOOLBAR_BEVEL_WIDTH);
-          draw_bevel(&rect);
-          fill_rect(get_sys_color(brWindowBg), R(rect.x, rect.y, rect.w, rect.h));
+          draw_bevel(rect);
+          fill_rect(get_sys_color(brWindowBg), rect);
           // Paint each toolbar child with a per-button projection so that
           // drawing at (0,0) inside the child proc maps to the button's
           // top-left corner (consistent with how send_message dispatches evPaint
           // for regular child windows).  tc->frame.x/y are toolbar-band-relative.
-          set_viewport(&tb_rect);
+          set_viewport(tb_rect);
           for (window_t *tc = win->toolbar_children; tc; tc = tc->next) {
             set_projection(-tc->frame.x, -tc->frame.y,
                            win->frame.w - tc->frame.x, total_h - tc->frame.y);
@@ -593,7 +593,7 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
                         win->frame.y + t_bar,
                         1,
                         win->frame.h - t_bar - s_bar};
-          fill_rect(get_sys_color(brBorderFocus), &sep);
+          fill_rect(get_sys_color(brBorderFocus), sep);
         }
       }
       break;
@@ -602,7 +602,7 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       if (g_ui_runtime.running) {
         int t = titlebar_height(root);
         ui_set_stencil_for_root_window(get_root_window(win)->id);
-        set_viewport(&root->frame);
+        set_viewport(root->frame);
         // Shift projection so that (0,0) in drawing space maps to the top-left
         // of the window's own client area.  For root windows (no parent),
         // cx=cy=0 and the projection is unchanged (backward compat).  For child
@@ -624,7 +624,7 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
           int t_win = titlebar_height(win);   /* win's own non-client height */
           rect_t cr = get_client_rect(win);
           rect_t wf = win_frame_in_screen(win, root, t);
-          set_clip_rect(NULL, &(rect_t){wf.x, wf.y + t_win, cr.w, cr.h});
+          set_clip_rect(NULL, (rect_t){wf.x, wf.y + t_win, cr.w, cr.h});
         }
       }
       break;
@@ -820,14 +820,14 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     uint32_t col = (get_sys_color(brWindowBg) & 0x00FFFFFF) | 0x80000000;
     int root_t = titlebar_height(root);
     rect_t wf = win_frame_in_screen(win, root, root_t);
-    set_viewport(&(rect_t){ 0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight)});
+    set_viewport((rect_t){ 0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight)});
     set_projection(0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight));
     fill_rect(col, R(wf.x, wf.y, wf.w, wf.h));
   }
   if (msg == evPaint && win == g_ui_runtime.modal_overlay_parent) {
     int root_t = titlebar_height(root);
     rect_t wf = win_frame_in_screen(win, root, root_t);
-    set_viewport(&(rect_t){ 0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight)});
+    set_viewport((rect_t){ 0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight)});
     set_projection(0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight));
     fill_rect(get_sys_color(brModalOverlay), R(wf.x, wf.y, wf.w, wf.h));
   }
@@ -842,12 +842,12 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     int root_t = titlebar_height(root);
     rect_t wf = win_frame_in_screen(win, root, root_t);
     rect_t rootf = root->frame;
-    set_viewport(&rootf);
+    set_viewport(rootf);
     set_projection(root->scroll[0],
                    -root_t + root->scroll[1],
                    root->frame.w + root->scroll[0],
                    root->frame.h - root_t + root->scroll[1]);
-    set_clip_rect(NULL, &wf);
+    set_clip_rect(NULL, wf);
     draw_builtin_scrollbars(win);
   }
   return value;

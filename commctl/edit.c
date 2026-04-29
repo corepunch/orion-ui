@@ -23,7 +23,7 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       rect_t local = {0, 0, win->frame.w, win->frame.h};
       fill_rect(g_ui_runtime.focused == win?get_sys_color(brFocusRing):get_sys_color(brWindowBg),
                 R(-1, -1, win->frame.w+2, win->frame.h+2));
-      draw_button(&local, 1, 1, true);
+      draw_button(local, 1, 1, true);
       int th = text_char_height(FONT_SMALL);
       int text_x = TEXTEDIT_PADDING_HORZ;
       int text_y = (win->frame.h - th) / 2;

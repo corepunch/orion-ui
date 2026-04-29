@@ -48,7 +48,7 @@ result_t win_splitter(window_t *win, uint32_t msg,
 
     case evPaint: {
       rect_t cr = get_client_rect(win);
-      fill_rect(get_sys_color(brBorderFocus), &cr);
+      fill_rect(get_sys_color(brBorderFocus), cr);
       return true;
     }
 

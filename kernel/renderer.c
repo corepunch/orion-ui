@@ -288,9 +288,9 @@ float *get_sprite_matrix(void) {
 }
 
 // Draw a sprite at the specified screen position
-void draw_rect_ex(int tex, rect_t const *r, int type, float alpha) {
-  if (!g_ui_runtime.running || !r) return;
-  push_sprite_args(tex, r->x, r->y, r->w, r->h, alpha);
+void draw_rect_ex(int tex, rect_t r, int type, float alpha) {
+  if (!g_ui_runtime.running) return;
+  push_sprite_args(tex, r.x, r.y, r.w, r.h, alpha);
   
   // Enable blending for transparency
   glEnable(GL_BLEND);
@@ -308,16 +308,16 @@ void draw_rect_ex(int tex, rect_t const *r, int type, float alpha) {
 }
 
 // Draw a sprite at the specified screen position
-void draw_rect(int tex, rect_t const *r) {
+void draw_rect(int tex, rect_t r) {
   draw_rect_ex(tex, r, false, 1);
 }
 
 // Draw a sub-region of a sprite sheet at the specified screen position.
 // uv packs normalized texture coordinates as floats: x=u0, y=v0, w=u1, h=v1.
-void draw_sprite_region(int tex, rect_t const *r,
+void draw_sprite_region(int tex, rect_t r,
                         frect_t const *uv,
                         uint32_t color, uint32_t flags) {
-  if (!g_ui_runtime.running || !r) return;
+  if (!g_ui_runtime.running) return;
   float u0 = uv ? uv->x : 0.0f;
   float v0 = uv ? uv->y : 0.0f;
   float u1 = uv ? uv->w : 1.0f;
@@ -326,7 +326,7 @@ void draw_sprite_region(int tex, rect_t const *r,
   float alpha = ((color >> 24) & 0xFF) / 255.0f;
   if (flags & DRAW_SPRITE_NO_ALPHA)
     alpha = 1.0f;
-  push_sprite_args(tex, r->x, r->y, r->w, r->h, alpha);
+  push_sprite_args(tex, r.x, r.y, r.w, r.h, alpha);
 
   float tr = ((color >> 16) & 0xFF) / 255.0f;
   float tg = ((color >> 8) & 0xFF) / 255.0f;

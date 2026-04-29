@@ -220,7 +220,7 @@ result_t gc_diff_proc(window_t *win, uint32_t msg,
       rect_t cr = get_client_rect(win);
 
       // Dark overall background.
-      fill_rect(CLR_CTX_BG, &cr);
+      fill_rect(CLR_CTX_BG, cr);
 
       if (!st || !st->lines) {
         if (!g_gc || !g_gc->repo) {

@@ -79,7 +79,7 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       {
         rect_t local = {0, 0, win->frame.w, win->frame.h};
         rect_t arrow = rect_split_right(local, win->frame.h);
-        draw_theme_icon_in_rect(THEME_ICON_ARROW_UPDOWN, &arrow,
+        draw_theme_icon_in_rect(THEME_ICON_ARROW_UPDOWN, arrow,
                                 get_sys_color(brTextNormal));
       }
       return true;
