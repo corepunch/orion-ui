@@ -137,8 +137,10 @@ void draw_button(rect_t r, int dx, int dy, bool pressed) {
 // Draw window panel
 void draw_panel(window_t const *win) {
   rect_t r = win->frame;
-  if (window_has_focus(win))
+  if (g_ui_runtime.focused == win)
     draw_focused(r);
+  else if (window_has_focus(win))
+    draw_active_frame(r);
   else
     draw_bevel(r);
   if (!(win->flags & WINDOW_NORESIZE)) {
