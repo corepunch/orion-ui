@@ -731,12 +731,19 @@ void handle_menu_command(uint16_t id) {
       if (doc && doc->layer_count > 0) {
         layer_t *lay = doc->layers[doc->active_layer];
         if (!lay->mask) {
-          // Auto-add a mask so the user can start painting.
-          layer_add_mask(doc, doc->active_layer);
+          // Auto-add a mask so the user can start painting; push undo first.
+          doc_push_undo(doc);
+          if (!layer_add_mask(doc, doc->active_layer)) {
+            doc_discard_undo(doc);
+            break;
+          }
         }
-        doc->editing_mask = !doc->editing_mask;
-        layers_win_refresh();
-        if (doc->canvas_win) invalidate_window(doc->canvas_win);
+        // Only toggle if the mask now exists.
+        if (doc->layers[doc->active_layer]->mask) {
+          doc->editing_mask = !doc->editing_mask;
+          layers_win_refresh();
+          if (doc->canvas_win) invalidate_window(doc->canvas_win);
+        }
       }
       break;
 

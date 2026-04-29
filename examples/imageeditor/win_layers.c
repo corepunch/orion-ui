@@ -121,7 +121,7 @@ static void paint_layers(window_t *win, layers_win_state_t *st) {
       uint32_t bg;
       if (li == doc->active_layer)
         bg = COL_ROW_ACTIVE;
-      else if (row + st->scroll_top == st->hover_row)
+      else if (row == st->hover_row)
         bg = COL_ROW_HOVER;
       else
         bg = get_sys_color(brWindowBg);

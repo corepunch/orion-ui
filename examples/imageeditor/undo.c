@@ -115,7 +115,8 @@ static bool restore_snapshot(canvas_doc_t *doc, const uint8_t *blob) {
     nl[i] = lay;
     built = i + 1;  // lay is now owned by nl[i]
 
-    memcpy(lay->name, lhdr->name, 64);
+    memcpy(lay->name, lhdr->name, sizeof(lay->name) - 1);
+    lay->name[sizeof(lay->name) - 1] = '\0';
     lay->visible = lhdr->visible;
     lay->opacity = lhdr->opacity;
     memcpy(lay->pixels, p, px_sz);
@@ -123,7 +124,8 @@ static bool restore_snapshot(canvas_doc_t *doc, const uint8_t *blob) {
 
     if (lhdr->has_mask) {
       lay->mask = malloc(mk_sz);
-      if (lay->mask) { memcpy(lay->mask, p, mk_sz); }
+      if (!lay->mask) goto cleanup;
+      memcpy(lay->mask, p, mk_sz);
       p += mk_sz;
     }
   }

@@ -56,23 +56,19 @@ static bool layer_crop_expand(layer_t *lay, int old_w, int old_h,
 
   if (lay->mask) {
     uint8_t *mbuf = malloc((size_t)new_w * new_h);
-    if (mbuf) {
-      memset(mbuf, 0xFF, (size_t)new_w * new_h);
-      if (iw > 0 && ih > 0) {
-        int dcol = ix0 - src_x;
-        int drow = iy0 - src_y;
-        for (int r = 0; r < ih; r++) {
-          const uint8_t *sm = lay->mask + (size_t)(iy0 + r) * old_w + ix0;
-          uint8_t       *dm = mbuf + (size_t)(drow + r) * new_w + dcol;
-          memcpy(dm, sm, (size_t)iw);
-        }
+    if (!mbuf) return false;  // keep old mask intact; caller treats resize as failed
+    memset(mbuf, 0xFF, (size_t)new_w * new_h);
+    if (iw > 0 && ih > 0) {
+      int dcol = ix0 - src_x;
+      int drow = iy0 - src_y;
+      for (int r = 0; r < ih; r++) {
+        const uint8_t *sm = lay->mask + (size_t)(iy0 + r) * old_w + ix0;
+        uint8_t       *dm = mbuf + (size_t)(drow + r) * new_w + dcol;
+        memcpy(dm, sm, (size_t)iw);
       }
-      free(lay->mask);
-      lay->mask = mbuf;
-    } else {
-      free(lay->mask);
-      lay->mask = NULL;
     }
+    free(lay->mask);
+    lay->mask = mbuf;
   }
   return true;
 }
@@ -277,20 +273,24 @@ void doc_flatten(canvas_doc_t *doc) {
   if (!flat) return;
   canvas_composite(doc, flat);
 
-  for (int i = 0; i < doc->layer_count; i++)
-    layer_free_one(doc->layers[i]);
-  free(doc->layers);
-
-  doc->layers = malloc(sizeof(layer_t *));
-  if (!doc->layers) { free(flat); doc->layer_count = 0; doc->pixels = NULL; return; }
+  // Allocate the result layer BEFORE tearing down the old stack so that
+  // a subsequent OOM does not leave the document in an invalid state.
+  layer_t **nl = malloc(sizeof(layer_t *));
+  if (!nl) { free(flat); return; }
 
   layer_t *bg = calloc(1, sizeof(layer_t));
-  if (!bg) { free(flat); free(doc->layers); doc->layers = NULL; doc->layer_count = 0; doc->pixels = NULL; return; }
+  if (!bg) { free(flat); free(nl); return; }
   bg->pixels  = flat;
   bg->visible = true;
   bg->opacity = 255;
   strncpy(bg->name, "Background", sizeof(bg->name) - 1);
 
+  // All allocations succeeded — now free the old stack.
+  for (int i = 0; i < doc->layer_count; i++)
+    layer_free_one(doc->layers[i]);
+  free(doc->layers);
+
+  doc->layers       = nl;
   doc->layers[0]    = bg;
   doc->layer_count  = 1;
   doc->active_layer = 0;
