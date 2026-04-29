@@ -285,6 +285,17 @@ void dispatch_message(ui_event_t *msg) {
 
   switch (msg->message) {
 
+    case kEventDragDrop: {
+      const char *path = (const char *)msg->lParam;
+      if (path && path[0]) {
+        ui_open_file(path);
+      }
+      if (msg->lParam) {
+        free(msg->lParam);
+      }
+      break;
+    }
+
     case kEventWindowClosed:
       g_ui_runtime.running = false;
       break;
