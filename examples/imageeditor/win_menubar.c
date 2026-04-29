@@ -251,6 +251,33 @@ void window_menu_rebuild(void) {
                  (uint32_t)kNumMenus, kMenus);
 }
 
+bool imageeditor_open_file_path(const char *path) {
+  if (!g_app || !path || !path[0]) return false;
+
+  int img_w = 0, img_h = 0;
+  uint8_t *px = load_image(path, &img_w, &img_h);
+  if (!px || img_w <= 0 || img_h <= 0) {
+    if (px) image_free(px);
+    return false;
+  }
+
+  canvas_doc_t *ndoc = create_document(path, img_w, img_h);
+  if (!ndoc) {
+    image_free(px);
+    return false;
+  }
+
+  // Swap the white placeholder pixels for the actual loaded image.
+  image_free(ndoc->pixels);
+  ndoc->pixels = px;
+  ndoc->canvas_dirty = true;
+  ndoc->modified = false;
+  doc_update_title(ndoc);
+  send_message(ndoc->win, evStatusBar, 0, (void *)path);
+  invalidate_window(ndoc->canvas_win);
+  return true;
+}
+
 void handle_menu_command(uint16_t id) {
   if (!g_app) return;
   canvas_doc_t *doc = g_app->active_doc;
@@ -266,27 +293,7 @@ void handle_menu_command(uint16_t id) {
     case ID_FILE_OPEN: {
       char path[512] = {0};
       if (show_file_picker(g_app->menubar_win, false, path, sizeof(path))) {
-        int img_w = 0, img_h = 0;
-        uint8_t *px = load_image(path, &img_w, &img_h);
-        if (!px || img_w <= 0 || img_h <= 0) {
-          if (px) image_free(px);
-          break;
-        }
-        canvas_doc_t *ndoc = create_document(path, img_w, img_h);
-        if (ndoc) {
-          // Swap the white placeholder pixels for the actual loaded image.
-          // Use image_free() so the allocator always matches regardless of
-          // which allocation path (malloc vs stb) produced the buffer.
-          image_free(ndoc->pixels);
-          ndoc->pixels = px;
-          ndoc->canvas_dirty = true;
-          ndoc->modified = false;
-          doc_update_title(ndoc);
-          send_message(ndoc->win, evStatusBar, 0, path);
-          invalidate_window(ndoc->canvas_win);
-        } else {
-          image_free(px);
-        }
+        imageeditor_open_file_path(path);
       }
       break;
     }

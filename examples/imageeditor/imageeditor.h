@@ -447,6 +447,10 @@ void window_menu_rebuild(void);
 // by the shell (gem mode) when the user selects a menu item.
 void handle_menu_command(uint16_t id);
 
+// Open an image file path and create a new document from it.
+// Returns true on success, false on load/create failure.
+bool imageeditor_open_file_path(const char *path);
+
 // Palette window factory helpers — create, show, register and return the window.
 // Also used by handle_menu_command to recreate closed palette windows.
 window_t *create_tool_palette_window(void);
