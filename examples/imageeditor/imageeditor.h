@@ -125,6 +125,8 @@ extern const int kBrushSizes[NUM_BRUSH_SIZES];
 #define ID_VIEW_ZOOM_6X   45
 #define ID_VIEW_ZOOM_8X   46
 
+#define ID_VIEW_ZOOM_FIT  55   // Fit on Screen (Ctrl+0, like Photoshop)
+
 #define ID_VIEW_SHOW_GRID    47
 #define ID_VIEW_SNAP_GRID    48
 #define ID_VIEW_GRID_OPTIONS 49
@@ -412,6 +414,10 @@ result_t win_color_palette_proc(window_t *win, uint32_t msg, uint32_t wparam, vo
 
 // Zoom support
 void canvas_win_set_zoom(window_t *canvas_win, int new_scale);
+
+// Fit the canvas to the viewport at the largest integer zoom that shows the
+// whole image — equivalent to Photoshop's "Fit on Screen" (Ctrl+0).
+void canvas_win_fit_zoom(window_t *canvas_win);
 
 // Sync canvas scrollbars after content size changes (e.g. after canvas_resize)
 void canvas_win_sync_scrollbars(window_t *canvas_win);
