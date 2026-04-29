@@ -1297,5 +1297,19 @@ int main(int argc, char *argv[]) {
     test_ie_zoom_fit_no_doc();
     test_ie_zoom_fit_command();
 
+    // imageeditor_open_file_path tests (from PR #154 review)
+    test_ie_open_file_path_nonexistent();
+    test_ie_open_file_path_empty();
+    test_ie_open_file_path_null();
+    test_ie_open_file_path_success();
+    test_ie_open_file_path_multiple();
+
+    // canvas_win_fit_zoom / bird's-eye view tests
+    test_ie_fit_zoom_zero_viewport();
+    test_ie_fit_zoom_selects_best_scale();
+    test_ie_fit_zoom_fallback_to_1x();
+    test_ie_zoom_fit_no_doc();
+    test_ie_zoom_fit_command();
+
     TEST_END();
 }

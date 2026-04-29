@@ -68,6 +68,12 @@ static const uint32_t kDefaultPalette[NUM_COLORS] = {
   0xff7f65cf, 0xff9980ed, 0xff5d1c83, 0xff5424c3, 0xff784ff0, 0xff8181f6, 0xff90a7fc, 0xffb0cbfd,
 };
 
+#ifndef BUILD_AS_GEM
+static bool image_editor_open_file_handler(const char *path) {
+  return imageeditor_open_file_path(path);
+}
+#endif
+
 // ============================================================
 // Application init
 // ============================================================
@@ -117,6 +123,10 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   g_app->text_antialias = true;
   g_app->grid_spacing_x = 16;
   g_app->grid_spacing_y = 16;
+
+#ifndef BUILD_AS_GEM
+  ui_register_open_file_handler(image_editor_open_file_handler);
+#endif
 
   srand((unsigned int)time(NULL));
 
