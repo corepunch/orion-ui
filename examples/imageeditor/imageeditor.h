@@ -14,6 +14,7 @@
 #include <unistd.h>
 
 #include "../../ui.h"
+#include "../../user/icons.h"
 
 #ifndef IMAGEEDITOR_DEBUG
 #define IMAGEEDITOR_DEBUG 1
@@ -509,8 +510,9 @@ bool show_grid_options_dialog(window_t *parent, int *out_x, int *out_y);
 #define LAYERS_ROW_H           18   // height of each layer row in the panel
 #define LAYERS_MAX_VIS_ROWS     5   // visible rows before scrolling
 #define LAYERS_LIST_H         (LAYERS_ROW_H * LAYERS_MAX_VIS_ROWS)
-#define LAYERS_BTN_STRIP_H    (BUTTON_HEIGHT + 4)
-#define LAYERS_WIN_H          (TITLEBAR_HEIGHT + LAYERS_LIST_H + LAYERS_BTN_STRIP_H)
+// Toolbar band height: button size + top/bottom bevel + top/bottom padding.
+#define LAYERS_TOOLBAR_H      (TB_SPACING + 2*(TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH))
+#define LAYERS_WIN_H          (TITLEBAR_HEIGHT + LAYERS_TOOLBAR_H + LAYERS_LIST_H)
 #define LAYERS_WIN_X          (SCREEN_W - LAYERS_WIN_W - 4)
 #define LAYERS_WIN_Y          (COLOR_WIN_Y + COLOR_WIN_H + 4)
 

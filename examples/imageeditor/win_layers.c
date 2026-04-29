@@ -6,7 +6,10 @@
 //   - Mask chip indicator / mask-editing toggle
 //   - Layer name
 //
-// A button strip at the bottom provides: New, Dup, Del, Move Up, Move Down.
+// A WINDOW_TOOLBAR at the top provides: New, Duplicate, Delete, Move Up,
+// Move Down via sysicon_* icons.  The toolbar fires tbButtonClick with the
+// corresponding ID_LAYER_* command ident, which is forwarded to
+// handle_menu_command() — the same handler used by the Layer menu.
 //
 // The palette calls layer management APIs directly (via g_app->active_doc)
 // and refreshes itself after each change.
@@ -23,17 +26,19 @@
 #define COL_MASK_ON     MAKE_COLOR(0x40, 0x40, 0x40, 0xFF)  // dark text when mask
 #define COL_MASK_EDIT   MAKE_COLOR(0xE0, 0x40, 0x00, 0xFF)  // orange = editing mask
 
-// Indices of the 5 bottom buttons (New, Duplicate, Delete, Up, Down).
-enum {
-  LBTN_NEW = 0,
-  LBTN_DUP,
-  LBTN_DEL,
-  LBTN_UP,
-  LBTN_DOWN,
-  LBTN_COUNT
-};
+// ============================================================
+// Toolbar definition
+// ============================================================
 
-static const char *const kBtnLabels[LBTN_COUNT] = { "+", "Dup", "-", "Up", "Dn" };
+// Toolbar definition: { type, ident, icon, w, flags, tooltip }
+static const toolbar_item_t kLayersToolbar[] = {
+  { TOOLBAR_ITEM_BUTTON, ID_LAYER_NEW,       sysicon_image_add,  0, 0, "New"     },
+  { TOOLBAR_ITEM_BUTTON, ID_LAYER_DUPLICATE, sysicon_page_copy,  0, 0, "Dup"     },
+  { TOOLBAR_ITEM_BUTTON, ID_LAYER_DELETE,    sysicon_delete,     0, 0, "Delete"  },
+  { TOOLBAR_ITEM_SPACER, 0, 0, 0, 0, NULL },
+  { TOOLBAR_ITEM_BUTTON, ID_LAYER_MOVE_UP,   sysicon_arrow_up,   0, 0, "Up"      },
+  { TOOLBAR_ITEM_BUTTON, ID_LAYER_MOVE_DOWN, sysicon_arrow_down, 0, 0, "Down"    },
+};
 
 // ============================================================
 // State
@@ -41,8 +46,6 @@ static const char *const kBtnLabels[LBTN_COUNT] = { "+", "Dup", "-", "Up", "Dn" 
 
 typedef struct {
   int hover_row;    // visual row under cursor (-1 = none)
-  int hover_btn;    // button index under cursor (-1 = none)
-  int press_btn;    // button currently held (-1 = none)
   int scroll_top;   // first visible row (for >LAYERS_MAX_VIS_ROWS layers)
 } layers_win_state_t;
 
@@ -50,9 +53,12 @@ typedef struct {
 // Layout helpers
 // ============================================================
 
-// Number of rows that fit in the current window height.
+// Number of rows that fit in the current client height.
+// get_client_rect() already subtracts the toolbar band from win->frame.h
+// (via titlebar_height which includes the WINDOW_TOOLBAR band), so the
+// returned height is purely the list area.
 static int visible_rows(window_t *win) {
-  int list_h = win->frame.h - LAYERS_BTN_STRIP_H;
+  int list_h = get_client_rect(win).h;
   if (list_h < 0) list_h = 0;
   return list_h / LAYERS_ROW_H;
 }
@@ -71,28 +77,11 @@ static int layer_idx_to_row(const canvas_doc_t *doc, int idx) {
   return doc->layer_count - 1 - idx;
 }
 
-// The button strip occupies the bottom LAYERS_BTN_STRIP_H pixels.
-static int btn_strip_y(window_t *win) {
-  return win->frame.h - LAYERS_BTN_STRIP_H;
-}
-
-// Hit-test: returns button index or -1.
-static int hit_btn(window_t *win, int mx, int my) {
-  int by = btn_strip_y(win);
-  if (my < by || my >= by + LAYERS_BTN_STRIP_H) return -1;
-  int bw = win->frame.w / LBTN_COUNT;
-  if (bw < 1) return -1;
-  int i = mx / bw;
-  if (i < 0) i = 0;
-  if (i >= LBTN_COUNT) i = LBTN_COUNT - 1;
-  return i;
-}
-
 // Hit-test: returns visual row index or -1.
 static int hit_row(window_t *win, int mx, int my) {
   (void)mx;
-  int strip = btn_strip_y(win);
-  if (my < 0 || my >= strip) return -1;
+  int client_h = get_client_rect(win).h;
+  if (my < 0 || my >= client_h) return -1;
   return my / LAYERS_ROW_H;
 }
 
@@ -112,10 +101,10 @@ static int hit_zone(int mx) {
 static void paint_layers(window_t *win, layers_win_state_t *st) {
   canvas_doc_t *doc = g_app ? g_app->active_doc : NULL;
   int w = win->frame.w;
-  int strip_y = btn_strip_y(win);
+  int client_h = get_client_rect(win).h;
 
   // Background of the list area.
-  fill_rect(get_sys_color(brWindowBg), R(0, 0, w, strip_y));
+  fill_rect(get_sys_color(brWindowBg), R(0, 0, w, client_h));
 
   if (doc && doc->layer_count > 0) {
     int nvis = visible_rows(win);
@@ -155,7 +144,7 @@ static void paint_layers(window_t *win, layers_win_state_t *st) {
                         ry + (LAYERS_ROW_H - FONT_SIZE_SMALL) / 2, label_col);
       }
 
-      // Layer name (truncate if too wide).
+      // Layer name.
       uint32_t name_col = (li == doc->active_layer)
                           ? MAKE_COLOR(0xFF,0xFF,0xFF,0xFF)
                           : get_sys_color(brTextNormal);
@@ -171,68 +160,6 @@ static void paint_layers(window_t *win, layers_win_state_t *st) {
     draw_text_small("(no document)",
                     4, 4 + (LAYERS_ROW_H - FONT_SIZE_SMALL) / 2, hint);
   }
-
-  // Separator between list and button strip.
-  fill_rect(get_sys_color(brWindowDarkBg), R(0, strip_y, w, 1));
-
-  // Button strip background.
-  fill_rect(get_sys_color(brWindowBg), R(0, strip_y + 1, w, LAYERS_BTN_STRIP_H - 1));
-
-  // Draw buttons.
-  int bw = w / LBTN_COUNT;
-  for (int i = 0; i < LBTN_COUNT; i++) {
-    int bx = i * bw;
-    int by = strip_y + 2;
-    int bh = LAYERS_BTN_STRIP_H - 4;
-    bool pressed = (st->press_btn == i);
-    bool hovering = (st->hover_btn == i && st->press_btn < 0);
-    uint32_t btn_bg = pressed    ? get_sys_color(brWindowDarkBg)
-                    : hovering   ? COL_ROW_HOVER
-                                 : get_sys_color(brWindowBg);
-    fill_rect(btn_bg, R(bx, by, bw, bh));
-    // Simple 1px border using four fill_rect calls.
-    uint32_t border = get_sys_color(brDarkEdge);
-    fill_rect(border, R(bx, by, bw, 1));
-    fill_rect(border, R(bx, by + bh - 1, bw, 1));
-    fill_rect(border, R(bx, by, 1, bh));
-    fill_rect(border, R(bx + bw - 1, by, 1, bh));
-    int tx = bx + (bw - text_strwidth(FONT_SMALL, kBtnLabels[i])) / 2;
-    int ty = by + (bh - FONT_SIZE_SMALL) / 2;
-    draw_text_small(kBtnLabels[i], tx, ty, get_sys_color(brTextNormal));
-  }
-}
-
-// ============================================================
-// Action dispatch
-// ============================================================
-
-static void layers_do_btn(int btn_idx) {
-  if (!g_app || !g_app->active_doc) return;
-  canvas_doc_t *doc = g_app->active_doc;
-  switch (btn_idx) {
-    case LBTN_NEW:
-      doc_push_undo(doc);
-      if (!doc_add_layer(doc)) { doc_discard_undo(doc); return; }
-      break;
-    case LBTN_DUP:
-      doc_push_undo(doc);
-      if (!doc_duplicate_layer(doc)) { doc_discard_undo(doc); return; }
-      break;
-    case LBTN_DEL:
-      doc_push_undo(doc);
-      if (!doc_delete_layer(doc)) { doc_discard_undo(doc); return; }
-      break;
-    case LBTN_UP:
-      doc_push_undo(doc);
-      doc_move_layer_up(doc);
-      break;
-    case LBTN_DOWN:
-      doc_push_undo(doc);
-      doc_move_layer_down(doc);
-      break;
-  }
-  invalidate_window(doc->canvas_win);
-  layers_win_refresh();
 }
 
 // ============================================================
@@ -245,9 +172,10 @@ result_t win_layers_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
     case evCreate: {
       layers_win_state_t *s = allocate_window_data(win, sizeof(layers_win_state_t));
       s->hover_row = -1;
-      s->hover_btn = -1;
-      s->press_btn = -1;
       s->scroll_top = 0;
+      send_message(win, tbSetItems,
+                   sizeof(kLayersToolbar) / sizeof(kLayersToolbar[0]),
+                   (void *)kLayersToolbar);
       return true;
     }
 
@@ -259,24 +187,25 @@ result_t win_layers_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
       if (st) paint_layers(win, st);
       return true;
 
+    case tbButtonClick:
+      handle_menu_command((uint16_t)wparam);
+      return true;
+
     case evMouseMove: {
       if (!st) return false;
       int mx = LOWORD(wparam);
       int my = HIWORD(wparam);
       int new_row = hit_row(win, mx, my);
-      int new_btn = hit_btn(win, mx, my);
-      if (new_row != st->hover_row || new_btn != st->hover_btn) {
+      if (new_row != st->hover_row) {
         st->hover_row = new_row;
-        st->hover_btn = new_btn;
         invalidate_window(win);
       }
       return true;
     }
 
     case evMouseLeave:
-      if (st && (st->hover_row >= 0 || st->hover_btn >= 0)) {
+      if (st && st->hover_row >= 0) {
         st->hover_row = -1;
-        st->hover_btn = -1;
         invalidate_window(win);
       }
       return false;
@@ -287,19 +216,13 @@ result_t win_layers_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
       int mx = LOWORD(wparam);
       int my = HIWORD(wparam);
 
-      int btn = hit_btn(win, mx, my);
-      if (btn >= 0) {
-        st->press_btn = btn;
-        invalidate_window(win);
-        return true;
-      }
-
       int row = hit_row(win, mx, my);
       if (row >= 0) {
         int li = row_to_layer_idx(doc, row + st->scroll_top);
         if (li < 0 || li >= doc->layer_count) return true;
         int zone = hit_zone(mx);
         if (zone == ZONE_EYE) {
+          doc_push_undo(doc);
           doc->layers[li]->visible = !doc->layers[li]->visible;
           doc->canvas_dirty = true;
           doc->modified = true;
@@ -326,22 +249,6 @@ result_t win_layers_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
       return false;
     }
 
-    case evLeftButtonUp: {
-      if (!st) return false;
-      if (st->press_btn >= 0) {
-        int btn = st->press_btn;
-        st->press_btn = -1;
-        // Only fire if cursor is still over the same button.
-        int mx = LOWORD(wparam);
-        int my = HIWORD(wparam);
-        if (hit_btn(win, mx, my) == btn)
-          layers_do_btn(btn);
-        invalidate_window(win);
-        return true;
-      }
-      return false;
-    }
-
     case evWheel: {
       if (!st || !g_app || !g_app->active_doc) return false;
       canvas_doc_t *doc = g_app->active_doc;
@@ -356,10 +263,7 @@ result_t win_layers_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
     }
 
     case evResize:
-      if (st) {
-        st->hover_row = -1;
-        st->hover_btn = -1;
-      }
+      if (st) st->hover_row = -1;
       return false;
 
     default:
@@ -373,11 +277,10 @@ result_t win_layers_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
 
 window_t *create_layers_window(void) {
   if (!g_app) return NULL;
-  int win_h = LAYERS_WIN_H;
   window_t *win = create_window(
       "Layers",
-      WINDOW_ALWAYSONTOP | WINDOW_NORESIZE | WINDOW_NOTRAYBUTTON,
-      MAKERECT(LAYERS_WIN_X, LAYERS_WIN_Y, LAYERS_WIN_W, win_h),
+      WINDOW_TOOLBAR | WINDOW_ALWAYSONTOP | WINDOW_NORESIZE | WINDOW_NOTRAYBUTTON,
+      MAKERECT(LAYERS_WIN_X, LAYERS_WIN_Y, LAYERS_WIN_W, LAYERS_WIN_H),
       NULL, win_layers_proc, 0, NULL);
   if (!win) return NULL;
   show_window(win, true);
