@@ -81,7 +81,7 @@
 extern const int kBrushSizes[NUM_BRUSH_SIZES];
 
 #define SWATCH_ROW_H    16
-#define COLOR_SWATCH_COLS 4
+#define COLOR_SWATCH_COLS 8
 #define COLOR_SWATCH_ROWS ((NUM_COLORS + COLOR_SWATCH_COLS - 1) / COLOR_SWATCH_COLS)
 // COLOR_WIN_Y: window top sits 4px below the menu bar (frame.y = window top).
 #define COLOR_WIN_H   (TITLEBAR_HEIGHT + COLOR_SWATCH_ROWS * SWATCH_ROW_H)
