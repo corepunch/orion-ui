@@ -632,8 +632,10 @@ void handle_menu_command(uint16_t id) {
     // ── Layer menu ─────────────────────────────────────────────────────────
     case ID_LAYER_NEW:
       if (doc) {
+        uint32_t fill;
+        if (!show_new_layer_dialog(doc->canvas_win, &fill)) break;
         doc_push_undo(doc);
-        if (!doc_add_layer(doc)) { doc_discard_undo(doc); break; }
+        if (!doc_add_layer_filled(doc, fill)) { doc_discard_undo(doc); break; }
         doc->canvas_dirty = true;
         invalidate_window(doc->canvas_win);
         layers_win_refresh();

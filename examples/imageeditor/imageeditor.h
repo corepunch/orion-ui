@@ -498,6 +498,10 @@ window_t *create_tool_palette_window(void);
 window_t *create_tool_options_window(void);
 window_t *create_color_palette_window(void);
 
+// New Layer dialog – lets the user pick a fill type (transparent/white/fg/bg).
+// Returns true and writes the chosen fill color into *out_color if accepted.
+bool show_new_layer_dialog(window_t *parent, uint32_t *out_color);
+
 // New Image / Canvas Size dialog
 bool show_size_dialog(window_t *parent, const char *title, int *out_w, int *out_h);
 
@@ -525,8 +529,13 @@ bool show_grid_options_dialog(window_t *parent, int *out_x, int *out_y);
 // Layer management (canvas.c)
 // ============================================================
 
-// Add a new empty layer above the current active layer.
+// Add a new empty layer above the current active layer (filled with opaque white).
 bool doc_add_layer(canvas_doc_t *doc);
+
+// Add a new layer filled with the given RGBA color (0x00000000 = transparent,
+// 0xFFFFFFFF = opaque white, etc.).  Convenience variant used by the New Layer
+// dialog so the caller picks the fill without a second memset pass.
+bool doc_add_layer_filled(canvas_doc_t *doc, uint32_t fill_color);
 
 // Delete the active layer (minimum 1 layer always kept).
 bool doc_delete_layer(canvas_doc_t *doc);

@@ -113,7 +113,7 @@ static void canvas_composite(const canvas_doc_t *doc, uint8_t *dst) {
 // Public layer management API
 // ============================================================
 
-bool doc_add_layer(canvas_doc_t *doc) {
+bool doc_add_layer_filled(canvas_doc_t *doc, uint32_t fill_color) {
   if (!doc || doc->layer_count >= LAYER_MAX) return false;
 
   char name[64];
@@ -124,6 +124,13 @@ bool doc_add_layer(canvas_doc_t *doc) {
 
   layer_t *lay = layer_new(doc->canvas_w, doc->canvas_h, name);
   if (!lay) return false;
+
+  // Fill with the requested color using 4-byte writes for efficiency.
+  // malloc() returns sufficiently aligned memory for uint32_t access.
+  size_t npx = (size_t)doc->canvas_w * doc->canvas_h;
+  uint32_t *dst = (uint32_t *)lay->pixels;
+  for (size_t i = 0; i < npx; i++)
+    dst[i] = fill_color;
 
   layer_t **nl = realloc(doc->layers, sizeof(layer_t *) * (doc->layer_count + 1));
   if (!nl) { layer_free_one(lay); return false; }
@@ -137,6 +144,11 @@ bool doc_add_layer(canvas_doc_t *doc) {
     doc->modified = true;
   }
   return true;
+}
+
+bool doc_add_layer(canvas_doc_t *doc) {
+  // Default fill: opaque white (matches the original layer_new() behaviour).
+  return doc_add_layer_filled(doc, MAKE_COLOR(0xFF, 0xFF, 0xFF, 0xFF));
 }
 
 bool doc_delete_layer(canvas_doc_t *doc) {
