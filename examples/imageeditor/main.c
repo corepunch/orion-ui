@@ -222,6 +222,7 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   srand((unsigned int)time(NULL));
 
   create_app_windows(hinstance);
+  imageeditor_load_filters();
 
   g_app->accel = load_accelerators(kAccelEntries,
                                    (int)(sizeof(kAccelEntries)/sizeof(kAccelEntries[0])));
@@ -259,6 +260,8 @@ void gem_shutdown(void) {
 
   free(g_app->clipboard);
   g_app->clipboard = NULL;
+
+  imageeditor_free_filters();
 
   while (g_app->docs) {
     canvas_doc_t *next = g_app->docs->next;

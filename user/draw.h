@@ -11,6 +11,7 @@ void fill_rect(uint32_t color, rect_t r);
 void draw_gradient_rect(rect_t r, uint32_t left_color, uint32_t right_color);
 void draw_rect(int tex, rect_t r);
 void draw_rect_ex(int tex, rect_t r, int type, float alpha);
+void draw_program_rect(int tex, rect_t r, uint32_t program, float mix_amount);
 
 // UVs for draw_sprite_region() are packed into frect_t as normalized floats:
 // x=u0, y=v0, w=u1, h=v1.

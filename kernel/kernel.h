@@ -104,14 +104,25 @@ void draw_rect_effect_blend(int tex, int x, int y, int w, int h, float alpha,
                             ui_layer_blend_t blend,
                             ui_render_effect_t effect,
                             const ui_render_effect_params_t *params);
+void draw_rect_program_blend(int tex, int x, int y, int w, int h, float alpha,
+                             ui_layer_blend_t blend, uint32_t program,
+                             float mix_amount);
 void draw_rect_effect(int tex, int x, int y, int w, int h,
                       ui_render_effect_t effect,
                       const ui_render_effect_params_t *params);
+void draw_rect_program(int tex, int x, int y, int w, int h, uint32_t program,
+                       float mix_amount);
 bool bake_texture_effect(int src_tex, int w, int h,
                          ui_render_effect_t effect,
                          const ui_render_effect_params_t *params,
                          uint32_t *out_tex);
+bool bake_texture_program(int src_tex, int w, int h, uint32_t program,
+                          float mix_amount, uint32_t *out_tex);
 bool read_texture_rgba(int src_tex, int w, int h, uint8_t *out_rgba);
+bool ui_load_program_from_source(const char *vs_src, const char *fs_src,
+                                 const char *attrib0, const char *attrib1,
+                                 const char *attrib2, uint32_t *out_program);
+void ui_delete_program(uint32_t program);
 void set_projection(int x, int y, int w, int h);
 float *get_sprite_matrix(void);
 

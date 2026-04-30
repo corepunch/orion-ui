@@ -57,6 +57,13 @@ static const menu_item_t kImageItems[] = {
   {"Levels...",       ID_IMAGE_LEVELS},
 };
 
+static const menu_item_t kInstagramPrefix[] = {
+  {"Reload Filters", ID_FILTER_RELOAD},
+};
+
+static menu_item_t s_instagram_items[1 + 1 + IMAGEEDITOR_MAX_FILTERS];
+static int         s_instagram_item_count = 1;
+
 static const menu_item_t kLayerItems[] = {
   {"New Layer",          ID_LAYER_NEW},
   {"Duplicate Layer",    ID_LAYER_DUPLICATE},
@@ -104,6 +111,7 @@ enum {
   kMenuIdxFile = 0,
   kMenuIdxEdit,
   kMenuIdxImage,
+  kMenuIdxInstagram,
   kMenuIdxLayer,
   kMenuIdxView,
   kMenuIdxWindow,
@@ -115,6 +123,7 @@ menu_def_t kMenus[] = {
   /* kMenuIdxFile   */ {"File",   kFileItems,      (int)(sizeof(kFileItems)/sizeof(kFileItems[0]))},
   /* kMenuIdxEdit   */ {"Edit",   kEditItems,      (int)(sizeof(kEditItems)/sizeof(kEditItems[0]))},
   /* kMenuIdxImage  */ {"Image",  kImageItems,     (int)(sizeof(kImageItems)/sizeof(kImageItems[0]))},
+  /* kMenuIdxInstagram */ {"Photo", s_instagram_items, 1},
   /* kMenuIdxLayer  */ {"Layer",  kLayerItems,     (int)(sizeof(kLayerItems)/sizeof(kLayerItems[0]))},
   /* kMenuIdxView   */ {"View",   s_view_items,    (int)(sizeof(s_view_items)/sizeof(s_view_items[0]))},
   /* kMenuIdxWindow */ {"Window", s_window_items,  WINDOW_PREFIX_COUNT},
@@ -503,6 +512,10 @@ void handle_menu_command(uint16_t id) {
       }
       break;
 
+    case ID_FILTER_RELOAD:
+      imageeditor_load_filters();
+      break;
+
     case ID_IMAGE_RESIZE: {
       if (!doc) break;
       int new_w = doc->canvas_w, new_h = doc->canvas_h;
@@ -510,8 +523,6 @@ void handle_menu_command(uint16_t id) {
           (new_w != doc->canvas_w || new_h != doc->canvas_h)) {
         doc_push_undo(doc);
         if (canvas_resize(doc, new_w, new_h)) {
-          // Only update UI when resize succeeded; read actual dims from doc
-          // in case the alloc partially failed (shouldn't happen, but be safe).
           canvas_deselect(doc);
           if (doc->canvas_win) {
             canvas_win_sync_scrollbars(doc->canvas_win);
@@ -537,10 +548,9 @@ void handle_menu_command(uint16_t id) {
     case ID_VIEW_ZOOM_2X:
     case ID_VIEW_ZOOM_4X:
     case ID_VIEW_ZOOM_6X:
-    case ID_VIEW_ZOOM_8X: {
-      if (!imageeditor_handle_zoom_command(doc, id)) break;
+    case ID_VIEW_ZOOM_8X:
+      imageeditor_handle_zoom_command(doc, id);
       break;
-    }
 
     case ID_VIEW_SHOW_GRID:
       g_app->grid_visible = !g_app->grid_visible;
@@ -598,23 +608,17 @@ void handle_menu_command(uint16_t id) {
                (void *)doc,
                tool_id_name(old_tool),
                tool_id_name((int)id));
-      // Update the active tool button in the tool palette (win_toolbox).
-      if (g_app->tool_win) {
+      if (g_app->tool_win)
         send_message(g_app->tool_win, bxSetActiveItem, (uint32_t)id, NULL);
-      }
-      // Refresh the tool options panel (panel type may have changed).
-      if (g_app->tool_options_win) {
+      if (g_app->tool_options_win)
         invalidate_window(g_app->tool_options_win);
-      }
       break;
     }
 
     case ID_WINDOW_TOOLS:
       if (g_app->tool_win) {
-        // Show and bring the tool palette to front; if hidden, make it visible.
         show_window(g_app->tool_win, true);
       } else {
-        // Window was closed by the user — recreate it and sync the active tool.
         window_t *tp = create_tool_palette_window();
         send_message(tp, bxSetActiveItem, (uint32_t)g_app->current_tool, NULL);
       }
@@ -622,10 +626,8 @@ void handle_menu_command(uint16_t id) {
 
     case ID_WINDOW_COLORS:
       if (g_app->color_win) {
-        // Show and bring the color palette to front.
         show_window(g_app->color_win, true);
       } else {
-        // Window was closed by the user — recreate it.
         create_color_palette_window();
       }
       break;
@@ -640,7 +642,6 @@ void handle_menu_command(uint16_t id) {
       break;
 #endif
 
-    // ── Layer menu ─────────────────────────────────────────────────────────
     case ID_LAYER_NEW:
       if (doc) {
         uint32_t fill;
@@ -711,8 +712,7 @@ void handle_menu_command(uint16_t id) {
       if (doc) {
         doc_push_undo(doc);
         int fill_mode = MASK_EXTRACT_WHITE;
-        if (show_add_mask_dialog(doc->win ? doc->win : g_app->menubar_win,
-                                 &fill_mode)) {
+        if (show_add_mask_dialog(doc->win ? doc->win : g_app->menubar_win, &fill_mode)) {
           if (!layer_add_mask_ex(doc, doc->active_layer, fill_mode)) {
             doc_discard_undo(doc);
             break;
@@ -767,9 +767,7 @@ void handle_menu_command(uint16_t id) {
       break;
 
     case ID_LAYER_EXTRACT_MASK:
-      if (doc) {
-        canvas_extract_mask(doc);
-      }
+      if (doc) canvas_extract_mask(doc);
       break;
 
     case ID_COLOR_SWAP:
@@ -792,7 +790,26 @@ void handle_menu_command(uint16_t id) {
       break;
 
     default:
-      // Window > document entries: activate the n-th open document.
+      if (id >= ID_FILTER_BASE && id < ID_FILTER_BASE + IMAGEEDITOR_MAX_FILTERS) {
+        if (doc) {
+          int filter_idx = (int)id - ID_FILTER_BASE;
+          if (filter_idx >= 0 && filter_idx < g_app->filter_count) {
+            doc_push_undo(doc);
+            if (!imageeditor_apply_filter(doc, filter_idx)) {
+              doc_discard_undo(doc);
+              break;
+            }
+            doc_update_title(doc);
+            if (doc->canvas_win)
+              invalidate_window(doc->canvas_win);
+            if (doc->win)
+              send_message(doc->win, evStatusBar, 0,
+                           (void *)g_app->filters[filter_idx].name);
+          }
+        }
+        break;
+      }
+
       if (id >= ID_WINDOW_DOC_BASE &&
           id < ID_WINDOW_DOC_BASE + WINDOW_MENU_MAX_DOCS) {
         int target = id - ID_WINDOW_DOC_BASE;
@@ -805,6 +822,33 @@ void handle_menu_command(uint16_t id) {
         }
       }
       break;
+  }
+}
+
+void imageeditor_sync_filter_menu(void) {
+  if (!g_app) return;
+
+  int n = 0;
+  s_instagram_items[n++] = kInstagramPrefix[0];
+  if (g_app->filter_count > 0) {
+    s_instagram_items[n++] = (menu_item_t){NULL, 0};
+    for (int i = 0; i < g_app->filter_count &&
+                    n < (int)(sizeof(s_instagram_items) / sizeof(s_instagram_items[0]));
+         i++) {
+      s_instagram_items[n++] = (menu_item_t){
+        g_app->filters[i].name,
+        (uint16_t)(ID_FILTER_BASE + i)
+      };
+    }
+  }
+
+  s_instagram_item_count = n;
+  kMenus[kMenuIdxInstagram].items = s_instagram_items;
+  kMenus[kMenuIdxInstagram].item_count = s_instagram_item_count;
+
+  if (g_app->menubar_win) {
+    send_message(g_app->menubar_win, kMenuBarMessageSetMenus,
+                 (uint32_t)kNumMenus, kMenus);
   }
 }
 
