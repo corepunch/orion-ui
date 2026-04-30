@@ -94,8 +94,34 @@ static void create_app_windows(hinstance_t hinstance) {
 
 static const char *image_editor_types[] = { ".png", ".bmp", ".jpg", ".jpeg", NULL };
 
+static bool has_ext(const char *path, const char *ext) {
+  if (!path || !ext) return false;
+  size_t path_len = strlen(path);
+  size_t ext_len = strlen(ext);
+  if (path_len < ext_len) return false;
+  return strcmp(path + path_len - ext_len, ext) == 0;
+}
+
+static bool is_gem_module_path(const char *path) {
+  return has_ext(path, ".gem");
+}
+
+static int open_startup_documents(int argc, char *argv[]) {
+  int opened = 0;
+  for (int i = 1; i < argc; i++) {
+    const char *path = argv[i];
+    if (!path || !path[0]) continue;
+    // In gem mode argv[0] is the gem itself and argv[1..] are payload files.
+    // In standalone mode argv[0] is the executable, but callers may still
+    // pass image paths on the command line. Skip any .gem module paths.
+    if (is_gem_module_path(path)) continue;
+    if (imageeditor_open_file_path(path))
+      opened++;
+  }
+  return opened;
+}
+
 bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
-  (void)argc; (void)argv;
   g_app = calloc(1, sizeof(app_state_t));
   if (!g_app) return false;
 
@@ -137,7 +163,8 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   if (g_app->menubar_win)
     send_message(g_app->menubar_win, kMenuBarMessageSetAccelerators, 0, g_app->accel);
 
-  create_document(NULL, CANVAS_W, CANVAS_H);
+  if (open_startup_documents(argc, argv) == 0)
+    create_document(NULL, CANVAS_W, CANVAS_H);
 
   // Show splash screen if the image is available.
 #ifdef SHAREDIR
