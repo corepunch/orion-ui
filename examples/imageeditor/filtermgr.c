@@ -167,7 +167,7 @@ bool imageeditor_load_filters(void) {
   snprintf(dir, sizeof(dir), "%s/../share/imageeditor/filters", ui_get_exe_dir());
 
   char vs_path[4096];
-  snprintf(vs_path, sizeof(vs_path), "%s/../share/imageeditor/shaders/fullscreen.vert.glsl",
+  snprintf(vs_path, sizeof(vs_path), "%s/../share/imageeditor/shaders/common.vert.glsl",
            ui_get_exe_dir());
   char *vs_src = read_text_file(vs_path);
   if (!vs_src) {

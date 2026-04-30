@@ -663,6 +663,8 @@ bool bake_texture_program(int src_tex, int w, int h, uint32_t program,
   GLint prev_view[4] = {0};
   GLint prev_scissor[4] = {0};
   GLint prev_prog = 0;
+  mat4 prev_proj;
+  memcpy(prev_proj, get_sprite_matrix(), sizeof(prev_proj));
   glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prev_fbo);
   glGetIntegerv(GL_VIEWPORT, prev_view);
   glGetIntegerv(GL_SCISSOR_BOX, prev_scissor);
@@ -681,12 +683,14 @@ bool bake_texture_program(int src_tex, int w, int h, uint32_t program,
   glDrawBuffer(GL_COLOR_ATTACHMENT0);
   glViewport(0, 0, w, h);
   glScissor(0, 0, w, h);
+  set_projection(0, 0, w, h);
   draw_rect_program_common(src_tex, 0, 0, w, h, 1.0f, program, mix_amount);
   glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)prev_fbo);
   glDeleteFramebuffers(1, &fbo);
   glUseProgram((GLuint)prev_prog);
   glViewport(prev_view[0], prev_view[1], prev_view[2], prev_view[3]);
   glScissor(prev_scissor[0], prev_scissor[1], prev_scissor[2], prev_scissor[3]);
+  update_sprite_projection_uniforms(prev_proj);
   *out_tex = tex;
   return true;
 }
