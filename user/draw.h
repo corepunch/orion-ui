@@ -36,6 +36,7 @@ void draw_icon(int id, int x, int y, int size, uint32_t col);
 void draw_icon8(int icon, int x, int y, uint32_t col);
 void draw_icon8_clipped(int icon, rect_t rect, uint32_t col);
 void draw_icon16(int icon, int x, int y, uint32_t col);
+void draw_checkerboard(rect_t r, int square_px);
 
 // Viewport and projection
 void set_viewport(rect_t frame);

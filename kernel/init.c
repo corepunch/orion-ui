@@ -35,6 +35,9 @@ uint32_t ui_white_texture = 0;
 // Internal 4x4 checker texture for drawing selection outlines
 uint32_t ui_checker_texture = 0;
 
+// Internal 2x2 checker texture for transparency backgrounds.
+uint32_t ui_transparency_checker_texture = 0;
+
 // Built-in system icon strip loaded from share/orion/icon_sheet_16x16.png.
 // Accessible from draw_impl.c via extern.  Icons are indexed starting at
 // SYSICON_BASE (0x10000); subtract SYSICON_BASE to get the strip index.
@@ -72,6 +75,19 @@ void init_ui_checker_texture(void) {
     };
     ui_checker_texture = R_CreateTextureRGBA(4, 4, pixels,
                                              R_FILTER_NEAREST, R_WRAP_REPEAT);
+  }
+}
+
+// Initialize the 2x2 checker texture used for transparency backgrounds.
+void init_ui_transparency_checker_texture(void) {
+  if (ui_transparency_checker_texture == 0) {
+    static const uint8_t pixels[2 * 2 * 4] = {
+      /* row 0 */ 208, 208, 208, 255, 176, 176, 176, 255,
+      /* row 1 */ 176, 176, 176, 255, 208, 208, 208, 255,
+    };
+    ui_transparency_checker_texture = R_CreateTextureRGBA(2, 2, pixels,
+                                                          R_FILTER_NEAREST,
+                                                          R_WRAP_REPEAT);
   }
 }
 
@@ -193,6 +209,8 @@ void shutdown_ui_textures(void) {
   ui_white_texture = 0;
   R_DeleteTexture(ui_checker_texture);
   ui_checker_texture = 0;
+  R_DeleteTexture(ui_transparency_checker_texture);
+  ui_transparency_checker_texture = 0;
 }
 
 void shutdown_white_texture(void) {
@@ -205,6 +223,9 @@ bitmap_strip_t *ui_get_sysicon_strip(void) {
 }
 
 static result_t win_desktop(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  (void)win;
+  (void)wparam;
+  (void)lparam;
   switch (msg) {
     case evPaint:
       fill_rect(0xff6B3529,
@@ -254,6 +275,7 @@ bool ui_init_graphics(int flags, const char *title, int width, int height) {
 
   init_ui_white_texture();
   init_ui_checker_texture();
+  init_ui_transparency_checker_texture();
   init_sysicon_strip();
   init_theme_strip();
   init_icons_strip();
@@ -381,4 +403,3 @@ const char *ui_get_exe_dir(void) {
 
   return buf;
 }
-

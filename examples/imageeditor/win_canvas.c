@@ -352,6 +352,10 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       // Draw canvas offset by pan so zoomed content scrolls correctly
       int cx = -state->pan_x;
       int cy = -state->pan_y;
+      draw_checkerboard(R(cx, cy,
+                          scaled_px(doc->canvas_w, state->scale),
+                          scaled_px(doc->canvas_h, state->scale)),
+                        32);
       draw_rect(doc->canvas_tex,
                 R(cx, cy,
                   scaled_px(doc->canvas_w, state->scale),

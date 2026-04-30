@@ -134,6 +134,10 @@ void ui_update_screen_size(int width, int height);
 //     send_message(btn, btnSetImage, sysicon_add - SYSICON_BASE, s);
 bitmap_strip_t *ui_get_sysicon_strip(void);
 
+// Transparency checkerboard texture used by apps that need a visible alpha
+// background.  This is a 2x2 RGBA texture intended for repeated tiling.
+extern uint32_t ui_transparency_checker_texture;
+
 // Theme icon strip (theme.png, 128x16 grayscale, 8x8 tiles).
 // Icons are indexed by theme_icon_t (user/theme.h).
 // Used by draw_theme_icon() for all chrome icons (close, scrollbar arrows,

@@ -390,6 +390,17 @@ void draw_icon16(int icon, int x, int y, uint32_t col) {
   draw_text_small((char[]) { icon+144, icon+145, 0 }, x, y+8, col);
 }
 
+void draw_checkerboard(rect_t r, int square_px) {
+  extern uint32_t ui_transparency_checker_texture;
+  if (!g_ui_runtime.running || r.w < 1 || r.h < 1 || square_px < 1) return;
+  if (ui_transparency_checker_texture == 0) return;
+  float uv_x = (float)r.w / (float)(square_px * 2);
+  float uv_y = (float)r.h / (float)(square_px * 2);
+  draw_sprite_region(ui_transparency_checker_texture, r,
+                     UV_RECT(0.0f, 0.0f, uv_x, uv_y),
+                     0xFFFFFFFF, 0);
+}
+
 // ---- Built-in scrollbar rendering -------------------------------------------
 //
 // Called from send_message() after evPaint when a window has

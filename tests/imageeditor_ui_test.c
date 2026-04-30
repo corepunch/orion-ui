@@ -879,6 +879,28 @@ void test_ie_layer_flatten(void) {
     PASS();
 }
 
+// Flatten should preserve transparency now that the canvas composite keeps alpha.
+void test_ie_flatten_preserves_alpha(void) {
+    TEST("doc_flatten: preserves layer alpha in the flattened result");
+
+    ie_setup();
+    canvas_doc_t *doc = create_document(NULL, 1, 1);
+    ASSERT_NOT_NULL(doc);
+
+    canvas_set_pixel(doc, 0, 0, MAKE_COLOR(0x00, 0x00, 0x00, 0x00));
+    doc_add_layer(doc);
+    doc_set_active_layer(doc, 1);
+    canvas_set_pixel(doc, 0, 0, MAKE_COLOR(0xFF, 0x00, 0x00, 0x80));
+
+    doc_flatten(doc);
+    ASSERT_EQUAL(doc->layer_count, 1);
+    ASSERT_EQUAL(COLOR_R(canvas_get_pixel(doc, 0, 0)), 0xFF);
+    ASSERT_EQUAL(COLOR_A(canvas_get_pixel(doc, 0, 0)), 0x80);
+
+    ie_teardown();
+    PASS();
+}
+
 // Merge-down blends the active layer onto the one below it.
 void test_ie_layer_merge_down(void) {
     TEST("doc_merge_down: merges active layer onto layer below");
@@ -1341,6 +1363,7 @@ int main(int argc, char *argv[]) {
     test_ie_layer_set_active();
     test_ie_layer_move();
     test_ie_layer_flatten();
+    test_ie_flatten_preserves_alpha();
     test_ie_layer_merge_down();
     // Alpha-edit tests
     test_ie_mask_add();

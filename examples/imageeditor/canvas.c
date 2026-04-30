@@ -55,10 +55,10 @@ static bool layer_crop_expand(layer_t *lay, int old_w, int old_h,
 }
 
 // Composite all visible layers into dst (canvas_w * canvas_h * 4 RGBA).
-// Uses normal alpha blending over an opaque white background.
+// The result preserves alpha so the canvas can be drawn over a checkerboard.
 static void canvas_composite(const canvas_doc_t *doc, uint8_t *dst) {
   size_t n = (size_t)doc->canvas_w * doc->canvas_h;
-  memset(dst, 0xFF, n * 4);
+  memset(dst, 0x00, n * 4);
 
   for (int li = 0; li < doc->layer_count; li++) {
     const layer_t *lay = doc->layers[li];
@@ -68,19 +68,26 @@ static void canvas_composite(const canvas_doc_t *doc, uint8_t *dst) {
       const uint8_t *src = lay->pixels + i * 4;
       uint8_t       *d   = dst + i * 4;
 
-      uint32_t a = src[3];
-      a = (a * lay->opacity + 127) / 255;
+      uint32_t sa = (src[3] * lay->opacity + 127) / 255;
+      if (sa == 0) continue;
 
-      if (a == 0) continue;
-      if (a >= 255) {
-        d[0] = src[0]; d[1] = src[1]; d[2] = src[2]; d[3] = 255;
-      } else {
-        uint32_t inv = 255 - a;
-        d[0] = (uint8_t)((src[0] * a + d[0] * inv + 127) / 255);
-        d[1] = (uint8_t)((src[1] * a + d[1] * inv + 127) / 255);
-        d[2] = (uint8_t)((src[2] * a + d[2] * inv + 127) / 255);
-        d[3] = 255;
-      }
+      uint32_t da = d[3];
+      uint32_t inv = 255 - sa;
+      uint32_t out_a = sa + (da * inv + 127) / 255;
+      if (out_a == 0) continue;
+
+      uint64_t out_r = (uint64_t)src[0] * sa * 255 +
+                       (uint64_t)d[0] * da * inv;
+      uint64_t out_g = (uint64_t)src[1] * sa * 255 +
+                       (uint64_t)d[1] * da * inv;
+      uint64_t out_b = (uint64_t)src[2] * sa * 255 +
+                       (uint64_t)d[2] * da * inv;
+      uint64_t denom = (uint64_t)out_a * 255;
+
+      d[0] = (uint8_t)((out_r + denom / 2) / denom);
+      d[1] = (uint8_t)((out_g + denom / 2) / denom);
+      d[2] = (uint8_t)((out_b + denom / 2) / denom);
+      d[3] = (uint8_t)out_a;
     }
   }
 }
