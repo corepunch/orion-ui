@@ -85,12 +85,13 @@
 extern const int kBrushSizes[NUM_BRUSH_SIZES];
 
 #define SWATCH_ROW_H    16
-#define COLOR_SWATCH_COLS 4
+#define RIGHT_PANE_WIN_W 160
+#define COLOR_SWATCH_COLS (RIGHT_PANE_WIN_W / SWATCH_ROW_H)
 #define COLOR_SWATCH_ROWS ((NUM_COLORS + COLOR_SWATCH_COLS - 1) / COLOR_SWATCH_COLS)
 // COLOR_WIN_Y: window top sits 4px below the menu bar (frame.y = window top).
 #define COLOR_WIN_H   (TITLEBAR_HEIGHT + COLOR_SWATCH_ROWS * SWATCH_ROW_H)
 #define COLOR_WIN_X   (SCREEN_W - COLOR_WIN_W - 4)
-#define COLOR_WIN_W   (SWATCH_ROW_H * COLOR_SWATCH_COLS)
+#define COLOR_WIN_W   RIGHT_PANE_WIN_W
 #define COLOR_WIN_Y   (MENUBAR_HEIGHT + 4)
 
 #define DOC_START_X   76
@@ -525,7 +526,7 @@ bool show_grid_options_dialog(window_t *parent, int *out_x, int *out_y);
 
 // Layers palette window geometry.
 // Positioned on the right side of the screen, below the color palette.
-#define LAYERS_WIN_W          120
+#define LAYERS_WIN_W          RIGHT_PANE_WIN_W
 #define LAYERS_ROW_H           18   // height of each layer row in the panel
 #define LAYERS_MAX_VIS_ROWS     5   // visible rows before scrolling
 #define LAYERS_LIST_H         (LAYERS_ROW_H * LAYERS_MAX_VIS_ROWS)

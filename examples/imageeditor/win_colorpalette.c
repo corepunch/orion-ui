@@ -15,6 +15,7 @@ void swap_foreground_background_colors(void) {
 
 result_t win_color_palette_proc(window_t *win, uint32_t msg,
                                  uint32_t wparam, void *lparam) {
+  (void)lparam;
   switch (msg) {
     case evPaint: {
       fill_rect(get_sys_color(brWindowDarkBg), R(0, 0, win->frame.w, win->frame.h));
