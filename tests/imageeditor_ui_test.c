@@ -906,81 +906,69 @@ void test_ie_layer_merge_down(void) {
     PASS();
 }
 
-// ── Mask tests ─────────────────────────────────────────────────────────────────
+// ── Alpha-edit tests ───────────────────────────────────────────────────────────
 
-// layer_add_mask allocates a fully-visible (0xFF) mask.
 void test_ie_mask_add(void) {
-    TEST("layer_add_mask: mask allocated and initialized to 0xFF");
+    TEST("layer_add_mask: alpha channel initialized to 0xFF");
 
     ie_setup();
     canvas_doc_t *doc = create_document(NULL, 4, 4);
     ASSERT_NOT_NULL(doc);
-    ASSERT_NULL(doc->layers[0]->mask);
+
+    canvas_set_pixel(doc, 0, 0, MAKE_COLOR(0x10, 0x20, 0x30, 0x00));
 
     bool ok = layer_add_mask(doc, 0);
     ASSERT_TRUE(ok);
-    ASSERT_NOT_NULL(doc->layers[0]->mask);
-    // Every mask byte should be 0xFF (fully visible).
-    for (int i = 0; i < 4 * 4; i++)
-        ASSERT_EQUAL(doc->layers[0]->mask[i], 0xFF);
+    ASSERT_EQUAL(COLOR_A(canvas_get_pixel(doc, 0, 0)), 0xFF);
+    ASSERT_TRUE(doc->editing_mask);
 
     ie_teardown();
     PASS();
 }
 
-// layer_remove_mask discards the mask without modifying pixel alpha.
 void test_ie_mask_remove(void) {
-    TEST("layer_remove_mask: mask freed without touching pixel data");
+    TEST("layer_remove_mask: alpha restored to opaque");
 
     ie_setup();
     canvas_doc_t *doc = create_document(NULL, 4, 4);
     ASSERT_NOT_NULL(doc);
-    layer_add_mask(doc, 0);
-    ASSERT_NOT_NULL(doc->layers[0]->mask);
+
+    canvas_set_pixel(doc, 0, 0, MAKE_COLOR(0xFF, 0x00, 0x00, 0x80));
+    doc->editing_mask = true;
 
     layer_remove_mask(doc, 0);
-    ASSERT_NULL(doc->layers[0]->mask);
+    ASSERT_EQUAL(COLOR_A(canvas_get_pixel(doc, 0, 0)), 0xFF);
+    ASSERT_FALSE(doc->editing_mask);
 
     ie_teardown();
     PASS();
 }
 
-// layer_apply_mask multiplies pixel alpha by mask value.
 void test_ie_mask_apply(void) {
-    TEST("layer_apply_mask: pixel alpha multiplied by mask value");
+    TEST("layer_apply_mask: exits alpha-edit mode without changing pixels");
 
     ie_setup();
     canvas_doc_t *doc = create_document(NULL, 1, 1);
     ASSERT_NOT_NULL(doc);
 
-    // Paint an opaque pixel.
-    canvas_set_pixel(doc, 0, 0, MAKE_COLOR(0xFF, 0x00, 0x00, 0xFF));
-    layer_add_mask(doc, 0);
-    ASSERT_NOT_NULL(doc->layers[0]->mask);
-
-    // Set mask to half-visible.
-    doc->layers[0]->mask[0] = 128;
+    canvas_set_pixel(doc, 0, 0, MAKE_COLOR(0xFF, 0x00, 0x00, 0x80));
+    doc->editing_mask = true;
     layer_apply_mask(doc, 0);
-
-    ASSERT_NULL(doc->layers[0]->mask);
-    // Alpha should now be ~128 (0xFF * 128 / 255 = 128).
-    uint32_t px = canvas_get_pixel(doc, 0, 0);
-    ASSERT_EQUAL(COLOR_A(px), 128);
+    ASSERT_FALSE(doc->editing_mask);
+    ASSERT_EQUAL(COLOR_A(canvas_get_pixel(doc, 0, 0)), 0x80);
 
     ie_teardown();
     PASS();
 }
 
-// canvas_extract_mask creates a new greyscale document from the active layer's mask.
 void test_ie_mask_extract(void) {
-    TEST("canvas_extract_mask: new document created from existing mask");
+    TEST("canvas_extract_mask: new document created from alpha channel");
 
     ie_setup();
     canvas_doc_t *doc = create_document(NULL, 2, 2);
     ASSERT_NOT_NULL(doc);
 
-    ASSERT_TRUE(layer_add_mask_ex(doc, doc->active_layer, MASK_EXTRACT_WHITE));
-    doc->layers[doc->active_layer]->mask[0] = 200;
+    canvas_set_pixel(doc, 0, 0, MAKE_COLOR(0xFF, 0, 0, 200));
 
     canvas_doc_t *mask_doc = canvas_extract_mask(doc);
     ASSERT_NOT_NULL(mask_doc);
@@ -998,7 +986,7 @@ void test_ie_mask_extract(void) {
 }
 
 void test_ie_mask_add_fill_modes(void) {
-    TEST("layer_add_mask_ex: fill modes map to grayscale/white/bg/fg");
+    TEST("layer_add_mask_ex: fill modes map to alpha values");
 
     ie_setup();
     g_app->fg_color = MAKE_COLOR(0x11, 0x22, 0x33, 0xFF);
@@ -1010,37 +998,31 @@ void test_ie_mask_add_fill_modes(void) {
 
     ASSERT_TRUE(layer_add_mask_ex(doc, doc->active_layer, MASK_EXTRACT_GRAYSCALE));
     uint8_t expected_gray = (uint8_t)((0xAA * 77 + 0x40 * 150 + 0x20 * 29) >> 8);
-    ASSERT_EQUAL(doc->layers[doc->active_layer]->mask[0], expected_gray);
-    layer_remove_mask(doc, doc->active_layer);
+    ASSERT_EQUAL(COLOR_A(canvas_get_pixel(doc, 0, 0)), expected_gray);
 
     ASSERT_TRUE(layer_add_mask_ex(doc, doc->active_layer, MASK_EXTRACT_WHITE));
-    ASSERT_EQUAL(doc->layers[doc->active_layer]->mask[0], 255);
-    layer_remove_mask(doc, doc->active_layer);
+    ASSERT_EQUAL(COLOR_A(canvas_get_pixel(doc, 0, 0)), 255);
 
     ASSERT_TRUE(layer_add_mask_ex(doc, doc->active_layer, MASK_EXTRACT_BACKGROUND));
     uint8_t expected_bg = (uint8_t)((0x44 * 77 + 0x55 * 150 + 0x66 * 29) >> 8);
-    ASSERT_EQUAL(doc->layers[doc->active_layer]->mask[0], expected_bg);
-    layer_remove_mask(doc, doc->active_layer);
+    ASSERT_EQUAL(COLOR_A(canvas_get_pixel(doc, 0, 0)), expected_bg);
 
     ASSERT_TRUE(layer_add_mask_ex(doc, doc->active_layer, MASK_EXTRACT_FOREGROUND));
     uint8_t expected_fg = (uint8_t)((0x11 * 77 + 0x22 * 150 + 0x33 * 29) >> 8);
-    ASSERT_EQUAL(doc->layers[doc->active_layer]->mask[0], expected_fg);
+    ASSERT_EQUAL(COLOR_A(canvas_get_pixel(doc, 0, 0)), expected_fg);
 
     ie_teardown();
     PASS();
 }
 
-void test_ie_extract_mask_requires_existing_mask(void) {
-    TEST("canvas_extract_mask: requires an existing layer mask");
+void test_ie_extract_mask_exports_alpha(void) {
+    TEST("canvas_extract_mask: exports the layer alpha channel");
 
     ie_setup();
 
     canvas_doc_t *doc = create_document(NULL, 1, 1);
     ASSERT_NOT_NULL(doc);
-    ASSERT_NULL(canvas_extract_mask(doc));
-
-    ASSERT_TRUE(layer_add_mask_ex(doc, doc->active_layer, MASK_EXTRACT_WHITE));
-    doc->layers[doc->active_layer]->mask[0] = 123;
+    canvas_set_pixel(doc, 0, 0, MAKE_COLOR(0x12, 0x34, 0x56, 123));
 
     canvas_doc_t *mask_doc = canvas_extract_mask(doc);
     ASSERT_NOT_NULL(mask_doc);
@@ -1360,13 +1342,13 @@ int main(int argc, char *argv[]) {
     test_ie_layer_move();
     test_ie_layer_flatten();
     test_ie_layer_merge_down();
-    // Mask tests
+    // Alpha-edit tests
     test_ie_mask_add();
     test_ie_mask_remove();
     test_ie_mask_apply();
     test_ie_mask_extract();
     test_ie_mask_add_fill_modes();
-    test_ie_extract_mask_requires_existing_mask();
+    test_ie_extract_mask_exports_alpha();
     test_ie_swap_fg_bg();
     // Undo/redo with layers
     test_ie_layer_undo_redo();

@@ -22,13 +22,11 @@ static layer_t *layer_new(int w, int h, const char *name) {
 static void layer_free_one(layer_t *lay) {
   if (!lay) return;
   free(lay->pixels);
-  free(lay->mask);
   free(lay);
 }
 
-// Crop or expand a single layer's pixel (and optional mask) buffer.
+// Crop or expand a single layer's pixel buffer.
 // src_x / src_y is the top-left corner of the selection in old-canvas coords.
-// New areas are filled with opaque white (pixels) or fully-visible (mask).
 static bool layer_crop_expand(layer_t *lay, int old_w, int old_h,
                                int src_x, int src_y, int new_w, int new_h) {
   uint8_t *buf = malloc((size_t)new_w * new_h * 4);
@@ -53,23 +51,6 @@ static bool layer_crop_expand(layer_t *lay, int old_w, int old_h,
   }
   free(lay->pixels);
   lay->pixels = buf;
-
-  if (lay->mask) {
-    uint8_t *mbuf = malloc((size_t)new_w * new_h);
-    if (!mbuf) return false;  // keep old mask intact; caller treats resize as failed
-    memset(mbuf, 0xFF, (size_t)new_w * new_h);
-    if (iw > 0 && ih > 0) {
-      int dcol = ix0 - src_x;
-      int drow = iy0 - src_y;
-      for (int r = 0; r < ih; r++) {
-        const uint8_t *sm = lay->mask + (size_t)(iy0 + r) * old_w + ix0;
-        uint8_t       *dm = mbuf + (size_t)(drow + r) * new_w + dcol;
-        memcpy(dm, sm, (size_t)iw);
-      }
-    }
-    free(lay->mask);
-    lay->mask = mbuf;
-  }
   return true;
 }
 
@@ -88,7 +69,6 @@ static void canvas_composite(const canvas_doc_t *doc, uint8_t *dst) {
       uint8_t       *d   = dst + i * 4;
 
       uint32_t a = src[3];
-      if (lay->mask) a = (a * lay->mask[i] + 127) / 255;
       a = (a * lay->opacity + 127) / 255;
 
       if (a == 0) continue;
@@ -177,16 +157,9 @@ bool doc_duplicate_layer(canvas_doc_t *doc) {
   dup->opacity = src->opacity;
   snprintf(dup->name, sizeof(dup->name), "%s copy", src->name);
 
-  if (src->mask) {
-    size_t mk_sz = (size_t)doc->canvas_w * doc->canvas_h;
-    dup->mask = malloc(mk_sz);
-    if (!dup->mask) { free(dup->pixels); free(dup); return false; }
-    memcpy(dup->mask, src->mask, mk_sz);
-  }
-
   int ins = doc->active_layer + 1;
   layer_t **nl = realloc(doc->layers, sizeof(layer_t *) * (doc->layer_count + 1));
-  if (!nl) { free(dup->pixels); free(dup->mask); free(dup); return false; }
+  if (!nl) { free(dup->pixels); free(dup); return false; }
   doc->layers = nl;
   memmove(&doc->layers[ins + 1], &doc->layers[ins],
           sizeof(layer_t *) * (doc->layer_count - ins));
@@ -240,7 +213,6 @@ void doc_merge_down(canvas_doc_t *doc) {
     const uint8_t *s = top->pixels + i * 4;
     uint8_t       *d = bot->pixels + i * 4;
     uint32_t sa = s[3];
-    if (top->mask) sa = (sa * top->mask[i] + 127) / 255;
     sa = (sa * top->opacity + 127) / 255;
     if (sa == 0) continue;
     uint32_t inv = 255 - sa;
@@ -263,8 +235,7 @@ void doc_merge_down(canvas_doc_t *doc) {
 void doc_flatten(canvas_doc_t *doc) {
   if (!doc || doc->layer_count < 1) return;
   if (doc->layer_count == 1) {
-    // Nothing to flatten — but apply the single layer's mask if present.
-    layer_apply_mask(doc, 0);
+    // Nothing to flatten.
     return;
   }
 
@@ -312,7 +283,7 @@ void doc_free_layers(canvas_doc_t *doc) {
 }
 
 // ============================================================
-// Mask operations
+// Alpha editing / mask operations
 // ============================================================
 
 bool layer_add_mask_ex(canvas_doc_t *doc, int idx, int fill_mode);
@@ -325,19 +296,20 @@ static uint8_t color_to_gray(uint32_t c) {
   return (uint8_t)((COLOR_R(c) * 77 + COLOR_G(c) * 150 + COLOR_B(c) * 29) >> 8);
 }
 
-static void fill_mask_from_layer_gray(canvas_doc_t *doc, layer_t *lay) {
+static void fill_alpha_from_layer_gray(canvas_doc_t *doc, layer_t *lay) {
   size_t n = (size_t)doc->canvas_w * doc->canvas_h;
   for (size_t i = 0; i < n; i++) {
     const uint8_t *px = lay->pixels + i * 4;
-    lay->mask[i] = (uint8_t)((px[0] * 77 + px[1] * 150 + px[2] * 29) >> 8);
+    lay->pixels[i * 4 + 3] = (uint8_t)((px[0] * 77 + px[1] * 150 + px[2] * 29) >> 8);
   }
 }
 
-static void fill_mask_gray_value(uint8_t *mask, size_t n, uint8_t v) {
-  memset(mask, v, n);
+static void fill_alpha_gray_value(uint8_t *pixels, size_t n, uint8_t v) {
+  for (size_t i = 0; i < n; i++)
+    pixels[i * 4 + 3] = v;
 }
 
-static uint8_t fill_mode_to_gray(int fill_mode) {
+static uint8_t fill_mode_to_alpha(int fill_mode) {
   switch (fill_mode) {
     case MASK_EXTRACT_BACKGROUND:
       return g_app ? color_to_gray(g_app->bg_color) : 0xFF;
@@ -354,15 +326,13 @@ static uint8_t fill_mode_to_gray(int fill_mode) {
 bool layer_add_mask_ex(canvas_doc_t *doc, int idx, int fill_mode) {
   if (!doc || idx < 0 || idx >= doc->layer_count) return false;
   layer_t *lay = doc->layers[idx];
-  if (lay->mask) return true;
-  lay->mask = malloc((size_t)doc->canvas_w * doc->canvas_h);
-  if (!lay->mask) return false;
+  size_t n = (size_t)doc->canvas_w * doc->canvas_h;
   if (fill_mode == MASK_EXTRACT_GRAYSCALE) {
-    fill_mask_from_layer_gray(doc, lay);
+    fill_alpha_from_layer_gray(doc, lay);
   } else {
-    fill_mask_gray_value(lay->mask, (size_t)doc->canvas_w * doc->canvas_h,
-                         fill_mode_to_gray(fill_mode));
+    fill_alpha_gray_value(lay->pixels, n, fill_mode_to_alpha(fill_mode));
   }
+  doc->editing_mask = true;
   doc->canvas_dirty = true;
   doc->modified     = true;
   return true;
@@ -370,33 +340,26 @@ bool layer_add_mask_ex(canvas_doc_t *doc, int idx, int fill_mode) {
 
 void layer_apply_mask(canvas_doc_t *doc, int idx) {
   if (!doc || idx < 0 || idx >= doc->layer_count) return;
-  layer_t *lay = doc->layers[idx];
-  if (!lay->mask) return;
-  size_t n = (size_t)doc->canvas_w * doc->canvas_h;
-  for (size_t i = 0; i < n; i++) {
-    uint8_t *px = lay->pixels + i * 4;
-    px[3] = (uint8_t)((uint32_t)px[3] * lay->mask[i] / 255);
-  }
-  free(lay->mask);
-  lay->mask = NULL;
   doc->canvas_dirty = true;
   doc->modified     = true;
+  doc->editing_mask = false;
 }
 
 void layer_remove_mask(canvas_doc_t *doc, int idx) {
   if (!doc || idx < 0 || idx >= doc->layer_count) return;
   layer_t *lay = doc->layers[idx];
-  free(lay->mask);
-  lay->mask = NULL;
+  size_t n = (size_t)doc->canvas_w * doc->canvas_h;
+  for (size_t i = 0; i < n; i++)
+    lay->pixels[i * 4 + 3] = 255;
   doc->canvas_dirty = true;
   doc->modified     = true;
+  doc->editing_mask = false;
 }
 
-// Open the active layer's existing mask as a new document.
+// Open the active layer's alpha channel as a new document.
 canvas_doc_t *canvas_extract_mask(canvas_doc_t *doc) {
   if (!doc || !g_app || doc->layer_count == 0) return NULL;
   layer_t *lay = doc->layers[doc->active_layer];
-  if (!lay->mask) return NULL;
   size_t n = (size_t)doc->canvas_w * doc->canvas_h;
 
   canvas_doc_t *new_doc = create_document(NULL, doc->canvas_w, doc->canvas_h);
@@ -404,7 +367,7 @@ canvas_doc_t *canvas_extract_mask(canvas_doc_t *doc) {
 
   uint8_t *dst = new_doc->pixels;
   for (size_t i = 0; i < n; i++) {
-    uint8_t v = lay->mask[i];
+    uint8_t v = lay->pixels[i * 4 + 3];
     dst[i * 4 + 0] = v;
     dst[i * 4 + 1] = v;
     dst[i * 4 + 2] = v;
@@ -434,20 +397,14 @@ void canvas_set_pixel(canvas_doc_t *doc, int x, int y, uint32_t c) {
   if (!canvas_in_bounds(doc, x, y)) return;
   if (!canvas_in_selection(doc, x, y)) return;
 
-  if (doc->editing_mask && doc->layer_count > 0) {
-    layer_t *lay = doc->layers[doc->active_layer];
-    if (lay->mask) {
-      // Convert color to luminance and write to the mask buffer.
-      uint8_t gray = (uint8_t)((COLOR_R(c) * 77 + COLOR_G(c) * 150 + COLOR_B(c) * 29) >> 8);
-      lay->mask[(size_t)y * doc->canvas_w + x] = gray;
-      doc->canvas_dirty = true;
-      doc->modified     = true;
-      return;
-    }
-  }
-
   uint8_t *p = doc->pixels + ((size_t)y * doc->canvas_w + x) * 4;
-  p[0]=COLOR_R(c); p[1]=COLOR_G(c); p[2]=COLOR_B(c); p[3]=COLOR_A(c);
+  if (doc->editing_mask) {
+    // Mask edits affect only alpha, while the RGB content stays intact.
+    uint8_t gray = (uint8_t)((COLOR_R(c) * 77 + COLOR_G(c) * 150 + COLOR_B(c) * 29) >> 8);
+    p[3] = gray;
+  } else {
+    p[0]=COLOR_R(c); p[1]=COLOR_G(c); p[2]=COLOR_B(c); p[3]=COLOR_A(c);
+  }
   doc->canvas_dirty = true;
   doc->modified     = true;
 }
@@ -1077,7 +1034,7 @@ void canvas_invert_colors(canvas_doc_t *doc) {
 }
 
 // Resize the canvas to new_w x new_h.
-// All layer pixel and mask buffers are resized. Existing pixels are preserved
+// All layer pixel buffers are resized. Existing pixels are preserved
 // at the top-left corner; any new area is filled with opaque white.
 // The GL texture is invalidated so it will be re-created on the next paint.
 // Returns true on success, false if an allocation fails (canvas may be partially

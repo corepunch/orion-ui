@@ -717,19 +717,18 @@ void handle_menu_command(uint16_t id) {
 
     case ID_LAYER_ADD_MASK:
       if (doc) {
-        if (!doc->layers[doc->active_layer]->mask) {
-          doc_push_undo(doc);
-          int fill_mode = MASK_EXTRACT_WHITE;
-          if (show_add_mask_dialog(doc->win ? doc->win : g_app->menubar_win,
-                                   &fill_mode)) {
-            if (!layer_add_mask_ex(doc, doc->active_layer, fill_mode)) {
-              doc_discard_undo(doc);
-              break;
-            }
-          } else {
+        doc_push_undo(doc);
+        int fill_mode = MASK_EXTRACT_WHITE;
+        if (show_add_mask_dialog(doc->win ? doc->win : g_app->menubar_win,
+                                 &fill_mode)) {
+          if (!layer_add_mask_ex(doc, doc->active_layer, fill_mode)) {
             doc_discard_undo(doc);
             break;
           }
+          doc->editing_mask = true;
+        } else {
+          doc_discard_undo(doc);
+          break;
         }
         invalidate_window(doc->canvas_win);
         layers_win_refresh();
@@ -756,7 +755,6 @@ void handle_menu_command(uint16_t id) {
 
     case ID_LAYER_EXTRACT_MASK:
       if (doc) {
-        if (!doc->layers[doc->active_layer]->mask) break;
         canvas_extract_mask(doc);
       }
       break;
@@ -767,21 +765,9 @@ void handle_menu_command(uint16_t id) {
 
     case ID_LAYER_EDIT_MASK:
       if (doc && doc->layer_count > 0) {
-        layer_t *lay = doc->layers[doc->active_layer];
-        if (!lay->mask) {
-          // Auto-add a mask so the user can start painting; push undo first.
-          doc_push_undo(doc);
-          if (!layer_add_mask(doc, doc->active_layer)) {
-            doc_discard_undo(doc);
-            break;
-          }
-        }
-        // Only toggle if the mask now exists.
-        if (doc->layers[doc->active_layer]->mask) {
-          doc->editing_mask = !doc->editing_mask;
-          layers_win_refresh();
-          if (doc->canvas_win) invalidate_window(doc->canvas_win);
-        }
+        doc->editing_mask = !doc->editing_mask;
+        layers_win_refresh();
+        if (doc->canvas_win) invalidate_window(doc->canvas_win);
       }
       break;
 

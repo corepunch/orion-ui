@@ -1,13 +1,12 @@
 // Undo/redo history for canvas documents.
 // Each history entry is a heap-allocated blob that serializes the full layer
-// stack so that undo/redo restores layers, masks, opacity, visibility, etc.
+// stack so that undo/redo restores layers, alpha, opacity, visibility, etc.
 //
 // Blob layout:
 //   [snap_header_t]
 //   for each layer:
 //     [snap_layer_hdr_t]
 //     [canvas_w * canvas_h * 4]  pixel data (RGBA)
-//     if has_mask: [canvas_w * canvas_h]  mask data (grayscale)
 
 #include "imageeditor.h"
 
@@ -25,8 +24,7 @@ typedef struct {
   char    name[64];
   uint8_t visible;
   uint8_t opacity;
-  uint8_t has_mask;
-  uint8_t _pad;
+  uint8_t _pad[2];
 } snap_layer_hdr_t;
 
 // Free all entries on one stack and reset its count to zero.
@@ -42,12 +40,10 @@ static void clear_stack(uint8_t **states, int *count) {
 static uint8_t *make_snapshot(const canvas_doc_t *doc) {
   if (!doc || doc->layer_count == 0) return NULL;
   size_t px_sz = (size_t)doc->canvas_w * doc->canvas_h * 4;
-  size_t mk_sz = (size_t)doc->canvas_w * doc->canvas_h;
 
   size_t total = sizeof(snap_header_t);
   for (int i = 0; i < doc->layer_count; i++) {
     total += sizeof(snap_layer_hdr_t) + px_sz;
-    if (doc->layers[i]->mask) total += mk_sz;
   }
 
   uint8_t *blob = malloc(total);
@@ -68,17 +64,12 @@ static uint8_t *make_snapshot(const canvas_doc_t *doc) {
     memcpy(lhdr->name, lay->name, 64);
     lhdr->visible  = lay->visible;
     lhdr->opacity  = lay->opacity;
-    lhdr->has_mask = lay->mask ? 1 : 0;
-    lhdr->_pad     = 0;
+    lhdr->_pad[0]  = 0;
+    lhdr->_pad[1]  = 0;
     p += sizeof(snap_layer_hdr_t);
 
     memcpy(p, lay->pixels, px_sz);
     p += px_sz;
-
-    if (lay->mask) {
-      memcpy(p, lay->mask, mk_sz);
-      p += mk_sz;
-    }
   }
   return blob;
 }
@@ -94,7 +85,6 @@ static bool restore_snapshot(canvas_doc_t *doc, const uint8_t *blob) {
   int      new_w = hdr->canvas_w;
   int      new_h = hdr->canvas_h;
   size_t   px_sz = (size_t)new_w * new_h * 4;
-  size_t   mk_sz = (size_t)new_w * new_h;
   const uint8_t *p = blob + sizeof(snap_header_t);
 
   layer_t **nl = malloc(sizeof(layer_t *) * n);
@@ -121,18 +111,11 @@ static bool restore_snapshot(canvas_doc_t *doc, const uint8_t *blob) {
     lay->opacity = lhdr->opacity;
     memcpy(lay->pixels, p, px_sz);
     p += px_sz;
-
-    if (lhdr->has_mask) {
-      lay->mask = malloc(mk_sz);
-      if (!lay->mask) goto cleanup;
-      memcpy(lay->mask, p, mk_sz);
-      p += mk_sz;
-    }
   }
   goto restore;
 
 cleanup:
-  for (int j = 0; j < built; j++) { free(nl[j]->pixels); free(nl[j]->mask); free(nl[j]); }
+  for (int j = 0; j < built; j++) { free(nl[j]->pixels); free(nl[j]); }
   free(nl);
   return false;
 
@@ -141,7 +124,6 @@ restore:
   // Replace old layer stack.
   for (int i = 0; i < doc->layer_count; i++) {
     free(doc->layers[i]->pixels);
-    free(doc->layers[i]->mask);
     free(doc->layers[i]);
   }
   free(doc->layers);

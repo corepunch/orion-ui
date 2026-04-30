@@ -208,7 +208,6 @@ extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 // A single layer within a canvas document.
 typedef struct {
   uint8_t *pixels;      // RGBA pixel buffer (canvas_w * canvas_h * 4 bytes)
-  uint8_t *mask;        // grayscale mask buffer (canvas_w * canvas_h), NULL = no mask
   char     name[64];
   bool     visible;
   uint8_t  opacity;     // 0 = transparent, 255 = fully opaque
@@ -232,7 +231,7 @@ typedef struct canvas_doc_s {
   layer_t **layers;          // heap array, index 0=bottom … layer_count-1=top
   int       layer_count;
   int       active_layer;    // index of the active layer
-  bool      editing_mask;    // true → drawing ops paint the active layer's mask
+  bool      editing_mask;    // true → drawing ops paint the active layer's alpha
   uint8_t  *composite_buf;   // canvas_w * canvas_h * 4 scratch buffer for compositing
   // Undo/redo history (heap-allocated layer-stack snapshots)
   uint8_t *undo_states[UNDO_MAX];
@@ -514,7 +513,7 @@ window_t *create_color_palette_window(void);
 // Returns true and writes the chosen fill color into *out_color if accepted.
 bool show_new_layer_dialog(window_t *parent, uint32_t *out_color);
 
-// Add Mask dialog – lets the user choose how the new mask should be filled.
+// Add Mask dialog – lets the user choose how the layer alpha should be filled.
 // Returns true and writes the chosen fill mode into *out_fill_mode if accepted.
 bool show_add_mask_dialog(window_t *parent, int *out_fill_mode);
 
@@ -538,7 +537,7 @@ bool show_grid_options_dialog(window_t *parent, int *out_x, int *out_y);
 
 // Hit-test zones within a layer row (x offsets)
 #define LAYERS_EYE_W           14   // eye-icon click area width
-#define LAYERS_CHIP_W          14   // mask chip click area width
+#define LAYERS_CHIP_W          14   // alpha-edit icon click area width
 #define LAYERS_NAME_X          (1 + LAYERS_EYE_W + 2 + LAYERS_CHIP_W + 3)  // start of name text
 
 // ============================================================
@@ -578,7 +577,7 @@ void doc_flatten(canvas_doc_t *doc);
 void doc_free_layers(canvas_doc_t *doc);
 
 // ============================================================
-// Mask operations (canvas.c)
+// Alpha editing / mask operations (canvas.c)
 // ============================================================
 
 typedef enum {
@@ -588,18 +587,17 @@ typedef enum {
   MASK_EXTRACT_FOREGROUND = 3,
 } mask_extract_fill_t;
 
-// Add a new mask to the layer at index idx.  The default wrapper fills it white.
+// Initialize the layer alpha at index idx. The default wrapper fills it white.
 bool layer_add_mask_ex(canvas_doc_t *doc, int idx, int fill_mode);
 bool layer_add_mask(canvas_doc_t *doc, int idx);
 
-// Multiply each pixel's alpha by the mask value, then remove the mask.
+// Commit the currently edited alpha channel and exit mask-edit mode.
 void layer_apply_mask(canvas_doc_t *doc, int idx);
 
-// Discard the mask without applying it.
+// Discard the alpha edits by restoring the layer to opaque.
 void layer_remove_mask(canvas_doc_t *doc, int idx);
 
-// Open the active layer's existing mask as a new document.
-// Returns NULL if the layer has no mask.
+// Open the active layer's alpha channel as a new document.
 canvas_doc_t *canvas_extract_mask(canvas_doc_t *doc);
 
 // ============================================================

@@ -3,7 +3,7 @@
 // Shows the document's layer stack (topmost layer at the top of the list).
 // Each row exposes:
 //   - Eye icon toggle (visibility)
-//   - Mask chip indicator / mask-editing toggle
+//   - Alpha edit icon toggle
 //   - Layer name
 //
 // A WINDOW_TOOLBAR at the top provides: New, Duplicate, Delete, Move Up,
@@ -23,8 +23,7 @@
 // Color palette used by the layers panel.
 #define COL_ROW_ACTIVE  MAKE_COLOR(0x00, 0x78, 0xD7, 0xFF)  // blue highlight
 #define COL_ROW_HOVER   MAKE_COLOR(0xCC, 0xE4, 0xF7, 0xFF)  // light hover
-#define COL_MASK_ON     MAKE_COLOR(0x40, 0x40, 0x40, 0xFF)  // dark text when mask
-#define COL_MASK_EDIT   MAKE_COLOR(0xE0, 0x40, 0x00, 0xFF)  // orange = editing mask
+#define COL_ALPHA_EDIT  MAKE_COLOR(0xE0, 0x40, 0x00, 0xFF)  // orange = editing alpha
 
 // ============================================================
 // Toolbar definition
@@ -127,25 +126,20 @@ static void paint_layers(window_t *win, layers_win_state_t *st) {
         bg = get_sys_color(brWindowBg);
       fill_rect(bg, R(0, ry, w, LAYERS_ROW_H));
 
-      // Eye icon: small "E" or "-" character.
+      // Eye icon: visibility toggle.
       uint32_t eye_col = (li == doc->active_layer)
                          ? MAKE_COLOR(0xFF,0xFF,0xFF,0xFF)
                          : get_sys_color(brTextNormal);
-      draw_text_small(lay->visible ? "E" : "-",
-                      1 + (LAYERS_EYE_W - text_strwidth(FONT_SMALL, "E")) / 2,
-                      ry + (LAYERS_ROW_H - FONT_SIZE_SMALL) / 2, eye_col);
+      draw_icon16(lay->visible ? sysicon_eye_show : sysicon_eye_hide,
+                  1, ry + 1, eye_col);
 
-      // Mask chip: show "M" if layer has a mask; orange if currently editing.
-      if (lay->mask) {
-        uint32_t chip_col = (doc->editing_mask && li == doc->active_layer)
-                            ? COL_MASK_EDIT : COL_MASK_ON;
-        int chip_x = 1 + LAYERS_EYE_W + 2;
-        fill_rect(chip_col, R(chip_x, ry + 3, LAYERS_CHIP_W, LAYERS_ROW_H - 6));
-        uint32_t label_col = MAKE_COLOR(0xFF,0xFF,0xFF,0xFF);
-        draw_text_small("M",
-                        chip_x + (LAYERS_CHIP_W - text_strwidth(FONT_SMALL, "M")) / 2,
-                        ry + (LAYERS_ROW_H - FONT_SIZE_SMALL) / 2, label_col);
-      }
+      // Alpha edit icon: pencil when editing, transparency icon when viewing.
+      uint32_t chip_col = (doc->editing_mask && li == doc->active_layer)
+                          ? COL_ALPHA_EDIT : get_sys_color(brTextNormal);
+      int chip_x = 1 + LAYERS_EYE_W + 2;
+      draw_icon16((doc->editing_mask && li == doc->active_layer)
+                  ? sysicon_pencil : sysicon_transparency,
+                  chip_x, ry + 1, chip_col);
 
       // Layer name.
       uint32_t name_col = (li == doc->active_layer)
@@ -171,6 +165,7 @@ static void paint_layers(window_t *win, layers_win_state_t *st) {
 
 result_t win_layers_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   layers_win_state_t *st = (layers_win_state_t *)win->userdata;
+  (void)lparam;
   switch (msg) {
     case evCreate: {
       layers_win_state_t *s = allocate_window_data(win, sizeof(layers_win_state_t));
@@ -231,12 +226,14 @@ result_t win_layers_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
           doc->modified = true;
           invalidate_window(doc->canvas_win);
           invalidate_window(win);
-        } else if (zone == ZONE_CHIP && doc->layers[li]->mask) {
+        } else if (zone == ZONE_CHIP) {
           if (li == doc->active_layer) {
             doc->editing_mask = !doc->editing_mask;
+            if (doc->canvas_win) invalidate_window(doc->canvas_win);
           } else {
             doc_set_active_layer(doc, li);
             doc->editing_mask = true;
+            if (doc->canvas_win) invalidate_window(doc->canvas_win);
           }
           invalidate_window(win);
         } else {
