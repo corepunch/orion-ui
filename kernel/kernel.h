@@ -79,6 +79,7 @@ typedef enum {
 	UI_RENDER_EFFECT_LEVELS = 2,
 	UI_RENDER_EFFECT_INVERT = 3,
 	UI_RENDER_EFFECT_THRESHOLD = 4,
+	UI_RENDER_EFFECT_GRADIENT = 5,
 	UI_RENDER_EFFECT_COUNT
 } ui_render_effect_t;
 
@@ -99,6 +100,10 @@ void push_sprite_effect_args(int tex, int x, int y, int w, int h, float alpha,
                              const ui_render_effect_params_t *params);
 void draw_rect_blend(int tex, int x, int y, int w, int h, float alpha,
                      ui_layer_blend_t blend);
+void draw_rect_effect_blend(int tex, int x, int y, int w, int h, float alpha,
+                            ui_layer_blend_t blend,
+                            ui_render_effect_t effect,
+                            const ui_render_effect_params_t *params);
 void draw_rect_effect(int tex, int x, int y, int w, int h,
                       ui_render_effect_t effect,
                       const ui_render_effect_params_t *params);
@@ -106,6 +111,7 @@ bool bake_texture_effect(int src_tex, int w, int h,
                          ui_render_effect_t effect,
                          const ui_render_effect_params_t *params,
                          uint32_t *out_tex);
+bool read_texture_rgba(int src_tex, int w, int h, uint8_t *out_rgba);
 void set_projection(int x, int y, int w, int h);
 float *get_sprite_matrix(void);
 

@@ -161,6 +161,7 @@ extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 #define ID_IMAGE_INVERT   52
 #define ID_IMAGE_RESIZE   53
 #define ID_COLOR_SWAP     54
+#define ID_IMAGE_LEVELS   57
 
 #define ID_WINDOW_TOOLS    200
 #define ID_WINDOW_COLORS   201
@@ -235,6 +236,9 @@ typedef struct {
   bool     visible;
   uint8_t  opacity;     // 0 = transparent, 255 = fully opaque
   uint8_t  blend_mode;  // layer_blend_mode_t
+  bool     preview_active;
+  ui_render_effect_t preview_effect;
+  ui_render_effect_params_t preview_params;
 } layer_t;
 
 typedef struct canvas_doc_s {
@@ -595,6 +599,11 @@ bool doc_duplicate_layer(canvas_doc_t *doc);
 void doc_set_active_layer(canvas_doc_t *doc, int idx);
 void doc_set_mask_only_view(canvas_doc_t *doc, bool enabled);
 void doc_set_layer_blend_mode(canvas_doc_t *doc, int idx, layer_blend_mode_t mode);
+void layer_clear_preview_effect(canvas_doc_t *doc, int idx);
+bool layer_set_preview_effect(canvas_doc_t *doc, int idx,
+                              ui_render_effect_t effect,
+                              const ui_render_effect_params_t *params);
+bool layer_commit_preview_effect(canvas_doc_t *doc, int idx);
 const char *layer_blend_mode_name(layer_blend_mode_t mode);
 
 // Move the active layer up (towards the top of the stack).
@@ -645,6 +654,7 @@ window_t *create_layers_window(void);
 
 // Refresh the Layers palette after layer changes.
 void layers_win_refresh(void);
+bool show_levels_dialog(window_t *parent);
 
 // Swap the active foreground/background colors.
 void swap_foreground_background_colors(void);

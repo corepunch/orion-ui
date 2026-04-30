@@ -420,16 +420,33 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         draw_checkerboard(R(cx, cy, cw, ch), CANVAS_CHECKER_SQUARE_PX);
         for (int li = 0; li < doc->layer_count; li++) {
           const layer_t *lay = doc->layers[li];
-          if (!lay || !lay->visible || !lay->tex) continue;
-          draw_rect_blend(lay->tex, cx, cy, cw, ch,
-                          lay->opacity / 255.0f,
-                          (ui_layer_blend_t)lay->blend_mode);
+          if (!lay || !lay->visible) continue;
+          if (!lay->tex) continue;
+          if (lay->preview_active) {
+            draw_rect_effect_blend(lay->tex, cx, cy, cw, ch,
+                                   lay->opacity / 255.0f,
+                                   (ui_layer_blend_t)lay->blend_mode,
+                                   lay->preview_effect,
+                                   &lay->preview_params);
+          } else {
+            draw_rect_blend(lay->tex, cx, cy, cw, ch,
+                            lay->opacity / 255.0f,
+                            (ui_layer_blend_t)lay->blend_mode);
+          }
         }
       } else if (doc->active_layer >= 0 && doc->active_layer < doc->layer_count) {
         const layer_t *lay = doc->layers[doc->active_layer];
         if (lay && lay->tex) {
-          draw_rect_effect(lay->tex, cx, cy, cw, ch,
-                           UI_RENDER_EFFECT_MASK_GRAYSCALE, NULL);
+          if (lay->preview_active) {
+            draw_rect_effect_blend(lay->tex, cx, cy, cw, ch,
+                                   lay->opacity / 255.0f,
+                                   UI_LAYER_BLEND_NORMAL,
+                                   lay->preview_effect,
+                                   &lay->preview_params);
+          } else {
+            draw_rect_effect(lay->tex, cx, cy, cw, ch,
+                             UI_RENDER_EFFECT_MASK_GRAYSCALE, NULL);
+          }
         }
       }
 

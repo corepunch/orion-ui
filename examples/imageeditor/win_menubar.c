@@ -54,6 +54,7 @@ static const menu_item_t kImageItems[] = {
   {"Flip Vertical",   ID_IMAGE_FLIP_V},
   {NULL, 0},
   {"Invert Colors",   ID_IMAGE_INVERT},
+  {"Levels...",       ID_IMAGE_LEVELS},
 };
 
 static const menu_item_t kLayerItems[] = {
@@ -491,6 +492,14 @@ void handle_menu_command(uint16_t id) {
         canvas_invert_colors(doc);
         doc_update_title(doc);
         invalidate_window(doc->canvas_win);
+      }
+      break;
+
+    case ID_IMAGE_LEVELS:
+      if (doc && doc->active_layer >= 0 && doc->active_layer < doc->layer_count) {
+        doc_push_undo(doc);
+        if (!show_levels_dialog(doc->win ? doc->win : g_app->menubar_win))
+          doc_discard_undo(doc);
       }
       break;
 

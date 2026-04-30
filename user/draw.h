@@ -8,6 +8,7 @@
 
 // Rectangle drawing functions
 void fill_rect(uint32_t color, rect_t r);
+void draw_gradient_rect(rect_t r, uint32_t left_color, uint32_t right_color);
 void draw_rect(int tex, rect_t r);
 void draw_rect_ex(int tex, rect_t r, int type, float alpha);
 

@@ -253,6 +253,7 @@ bool ui_init_prog(void) {
     "sprite_levels.frag.glsl",
     "sprite_invert.frag.glsl",
     "sprite_threshold.frag.glsl",
+    "sprite_gradient.frag.glsl",
   };
 
   for (int i = 0; i < UI_RENDER_EFFECT_COUNT; i++) {
@@ -432,6 +433,36 @@ void draw_rect_effect(int tex, int x, int y, int w, int h,
   glDisable(GL_BLEND);
 }
 
+void draw_rect_effect_blend(int tex, int x, int y, int w, int h, float alpha,
+                            ui_layer_blend_t blend,
+                            ui_render_effect_t effect,
+                            const ui_render_effect_params_t *params) {
+  if (!g_ui_runtime.running) return;
+  push_sprite_effect_args(tex, x, y, w, h, alpha, effect, params);
+  glEnable(GL_BLEND);
+  glBlendEquation(GL_FUNC_ADD);
+  switch (blend) {
+    case UI_LAYER_BLEND_MULTIPLY:
+      glBlendFunc(GL_DST_COLOR, GL_ONE_MINUS_SRC_ALPHA);
+      break;
+    case UI_LAYER_BLEND_SCREEN:
+      glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_COLOR);
+      break;
+    case UI_LAYER_BLEND_ADD:
+      glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+      break;
+    case UI_LAYER_BLEND_NORMAL:
+    default:
+      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+      break;
+  }
+  glDisable(GL_DEPTH_TEST);
+  g_ref.mesh.draw_mode = GL_TRIANGLE_FAN;
+  R_MeshDraw(&g_ref.mesh);
+  glEnable(GL_DEPTH_TEST);
+  glDisable(GL_BLEND);
+}
+
 void draw_rect_blend(int tex, int x, int y, int w, int h, float alpha,
                      ui_layer_blend_t blend) {
   if (!g_ui_runtime.running) return;
@@ -518,6 +549,58 @@ bool bake_texture_effect(int src_tex, int w, int h,
   glUseProgram((GLuint)prev_prog);
 
   *out_tex = tex;
+  return true;
+}
+
+bool read_texture_rgba(int src_tex, int w, int h, uint8_t *out_rgba) {
+  if (!g_ui_runtime.running || src_tex == 0 || w <= 0 || h <= 0 || !out_rgba)
+    return false;
+
+  GLuint fbo = 0;
+  GLint prev_fbo = 0;
+  GLint prev_view[4] = {0};
+  GLint prev_scissor[4] = {0};
+
+  glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prev_fbo);
+  glGetIntegerv(GL_VIEWPORT, prev_view);
+  glGetIntegerv(GL_SCISSOR_BOX, prev_scissor);
+
+  glGenFramebuffers(1, &fbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                         GL_TEXTURE_2D, (GLuint)src_tex, 0);
+  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+    glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)prev_fbo);
+    glDeleteFramebuffers(1, &fbo);
+    glViewport(prev_view[0], prev_view[1], prev_view[2], prev_view[3]);
+    glScissor(prev_scissor[0], prev_scissor[1], prev_scissor[2], prev_scissor[3]);
+    return false;
+  }
+
+  glDrawBuffer(GL_COLOR_ATTACHMENT0);
+  glReadBuffer(GL_COLOR_ATTACHMENT0);
+  glPixelStorei(GL_PACK_ALIGNMENT, 1);
+  size_t row_sz = (size_t)w * 4;
+  uint8_t *tmp = malloc((size_t)h * row_sz);
+  if (!tmp) {
+    glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)prev_fbo);
+    glDeleteFramebuffers(1, &fbo);
+    glViewport(prev_view[0], prev_view[1], prev_view[2], prev_view[3]);
+    glScissor(prev_scissor[0], prev_scissor[1], prev_scissor[2], prev_scissor[3]);
+    return false;
+  }
+  glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, tmp);
+  for (int y = 0; y < h; y++) {
+    memcpy(out_rgba + (size_t)y * row_sz,
+           tmp + (size_t)(h - 1 - y) * row_sz,
+           row_sz);
+  }
+  free(tmp);
+
+  glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)prev_fbo);
+  glDeleteFramebuffers(1, &fbo);
+  glViewport(prev_view[0], prev_view[1], prev_view[2], prev_view[3]);
+  glScissor(prev_scissor[0], prev_scissor[1], prev_scissor[2], prev_scissor[3]);
   return true;
 }
 

@@ -59,6 +59,7 @@ static bool layer_crop_expand(layer_t *lay, int old_w, int old_h,
     glDeleteTextures(1, &lay->tex);
     lay->tex = 0;
   }
+  lay->preview_active = false;
   return true;
 }
 
@@ -140,6 +141,13 @@ static void layer_upload_texture(canvas_doc_t *doc, layer_t *lay) {
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, doc->canvas_w, doc->canvas_h,
                     GL_RGBA, GL_UNSIGNED_BYTE, lay->pixels);
   }
+}
+
+static void layer_clear_preview_one(layer_t *lay) {
+  if (!lay) return;
+  lay->preview_active = false;
+  lay->preview_effect = UI_RENDER_EFFECT_COPY;
+  memset(&lay->preview_params, 0, sizeof(lay->preview_params));
 }
 
 // ============================================================
@@ -426,6 +434,62 @@ void doc_set_layer_blend_mode(canvas_doc_t *doc, int idx, layer_blend_mode_t mod
   doc->modified = true;
   if (doc->canvas_win)
     invalidate_window(doc->canvas_win);
+}
+
+void layer_clear_preview_effect(canvas_doc_t *doc, int idx) {
+  if (!doc || idx < 0 || idx >= doc->layer_count) return;
+  layer_clear_preview_one(doc->layers[idx]);
+  if (doc->canvas_win)
+    invalidate_window(doc->canvas_win);
+}
+
+bool layer_set_preview_effect(canvas_doc_t *doc, int idx,
+                              ui_render_effect_t effect,
+                              const ui_render_effect_params_t *params) {
+  if (!doc || idx < 0 || idx >= doc->layer_count) return false;
+  layer_t *lay = doc->layers[idx];
+  if (!lay) return false;
+  lay->preview_effect = effect;
+  if (params)
+    lay->preview_params = *params;
+  else
+    memset(&lay->preview_params, 0, sizeof(lay->preview_params));
+  lay->preview_active = true;
+  if (doc->canvas_win)
+    invalidate_window(doc->canvas_win);
+  return true;
+}
+
+bool layer_commit_preview_effect(canvas_doc_t *doc, int idx) {
+  if (!doc || idx < 0 || idx >= doc->layer_count) return false;
+  layer_t *lay = doc->layers[idx];
+  if (!lay) return false;
+  if (!lay->preview_active) return true;
+
+  size_t sz = (size_t)doc->canvas_w * doc->canvas_h * 4;
+  uint8_t *buf = malloc(sz);
+  if (!buf) return false;
+  uint32_t baked_tex = 0;
+  if (!bake_texture_effect((int)lay->tex, doc->canvas_w, doc->canvas_h,
+                           lay->preview_effect, &lay->preview_params, &baked_tex)) {
+    free(buf);
+    return false;
+  }
+  if (!read_texture_rgba((int)baked_tex, doc->canvas_w, doc->canvas_h, buf)) {
+    R_DeleteTexture(baked_tex);
+    free(buf);
+    return false;
+  }
+  R_DeleteTexture(baked_tex);
+  memcpy(lay->pixels, buf, sz);
+  free(buf);
+  layer_clear_preview_one(lay);
+  doc->canvas_dirty = true;
+  doc->modified = true;
+  doc_update_title(doc);
+  if (doc->canvas_win)
+    invalidate_window(doc->canvas_win);
+  return true;
 }
 
 bool layer_add_mask_ex(canvas_doc_t *doc, int idx, int fill_mode) {

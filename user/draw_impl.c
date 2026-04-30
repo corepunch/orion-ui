@@ -297,6 +297,25 @@ void fill_rect(uint32_t color, rect_t r) {
   draw_rect_ex(ui_white_texture, r, false, 1);
 }
 
+static void color_to_params(uint32_t color, ui_render_effect_params_t *params, int base) {
+  if (!params) return;
+  params->f[base + 0] = (float)((color      ) & 0xFF) / 255.0f;
+  params->f[base + 1] = (float)((color >>  8) & 0xFF) / 255.0f;
+  params->f[base + 2] = (float)((color >> 16) & 0xFF) / 255.0f;
+  params->f[base + 3] = (float)((color >> 24) & 0xFF) / 255.0f;
+}
+
+void draw_gradient_rect(rect_t r, uint32_t left_color, uint32_t right_color) {
+  extern uint32_t ui_white_texture;
+  if (!g_ui_runtime.running || r.w < 1 || r.h < 1) return;
+
+  ui_render_effect_params_t params = {{0}};
+  color_to_params(left_color, &params, 0);
+  color_to_params(right_color, &params, 4);
+  draw_rect_effect(ui_white_texture, r.x, r.y, r.w, r.h,
+                   UI_RENDER_EFFECT_GRADIENT, &params);
+}
+
 // Draw a dashed selection-outline rectangle using 4 tiled draw calls instead of
 // one fill_rect per dash segment.  The 4x4 checker texture is sampled with tiled
 // UVs so that the first row/column produces a B,B,W,W repeating dash regardless
