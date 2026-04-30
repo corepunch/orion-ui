@@ -24,7 +24,8 @@ typedef struct {
   char    name[64];
   uint8_t visible;
   uint8_t opacity;
-  uint8_t _pad[2];
+  uint8_t blend_mode;
+  uint8_t _pad;
 } snap_layer_hdr_t;
 
 // Free all entries on one stack and reset its count to zero.
@@ -64,8 +65,8 @@ static uint8_t *make_snapshot(const canvas_doc_t *doc) {
     memcpy(lhdr->name, lay->name, 64);
     lhdr->visible  = lay->visible;
     lhdr->opacity  = lay->opacity;
-    lhdr->_pad[0]  = 0;
-    lhdr->_pad[1]  = 0;
+    lhdr->blend_mode = lay->blend_mode;
+    lhdr->_pad      = 0;
     p += sizeof(snap_layer_hdr_t);
 
     memcpy(p, lay->pixels, px_sz);
@@ -109,6 +110,7 @@ static bool restore_snapshot(canvas_doc_t *doc, const uint8_t *blob) {
     lay->name[sizeof(lay->name) - 1] = '\0';
     lay->visible = lhdr->visible;
     lay->opacity = lhdr->opacity;
+    lay->blend_mode = lhdr->blend_mode < LAYER_BLEND_COUNT ? lhdr->blend_mode : LAYER_BLEND_NORMAL;
     memcpy(lay->pixels, p, px_sz);
     p += px_sz;
   }
@@ -137,10 +139,6 @@ restore:
   if (new_w != doc->canvas_w || new_h != doc->canvas_h) {
     free(doc->composite_buf);
     doc->composite_buf = malloc(px_sz);
-    if (doc->canvas_tex) {
-      glDeleteTextures(1, &doc->canvas_tex);
-      doc->canvas_tex = 0;
-    }
     doc->canvas_w = new_w;
     doc->canvas_h = new_h;
   }

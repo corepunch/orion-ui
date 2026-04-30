@@ -13,14 +13,18 @@ static layer_t *layer_new(int w, int h, const char *name) {
   lay->pixels = malloc((size_t)w * h * 4);
   if (!lay->pixels) { free(lay); return NULL; }
   memset(lay->pixels, 0xFF, (size_t)w * h * 4);
+  lay->tex = 0;
   strncpy(lay->name, name, sizeof(lay->name) - 1);
   lay->visible = true;
   lay->opacity = 255;
+  lay->blend_mode = LAYER_BLEND_NORMAL;
   return lay;
 }
 
 static void layer_free_one(layer_t *lay) {
   if (!lay) return;
+  if (lay->tex)
+    glDeleteTextures(1, &lay->tex);
   free(lay->pixels);
   free(lay);
 }
@@ -51,6 +55,10 @@ static bool layer_crop_expand(layer_t *lay, int old_w, int old_h,
   }
   free(lay->pixels);
   lay->pixels = buf;
+  if (lay->tex) {
+    glDeleteTextures(1, &lay->tex);
+    lay->tex = 0;
+  }
   return true;
 }
 
@@ -76,11 +84,33 @@ static void canvas_composite(const canvas_doc_t *doc, uint8_t *dst) {
       uint32_t out_a = sa + (da * inv + 127) / 255;
       if (out_a == 0) continue;
 
-      uint64_t out_r = (uint64_t)src[0] * sa * 255 +
+      uint8_t br = src[0], bg = src[1], bb = src[2];
+      switch (lay->blend_mode) {
+        case LAYER_BLEND_MULTIPLY:
+          br = (uint8_t)((uint32_t)src[0] * d[0] / 255);
+          bg = (uint8_t)((uint32_t)src[1] * d[1] / 255);
+          bb = (uint8_t)((uint32_t)src[2] * d[2] / 255);
+          break;
+        case LAYER_BLEND_SCREEN:
+          br = (uint8_t)(255 - ((uint32_t)(255 - src[0]) * (255 - d[0]) / 255));
+          bg = (uint8_t)(255 - ((uint32_t)(255 - src[1]) * (255 - d[1]) / 255));
+          bb = (uint8_t)(255 - ((uint32_t)(255 - src[2]) * (255 - d[2]) / 255));
+          break;
+        case LAYER_BLEND_ADD:
+          br = (uint8_t)MIN(255, (int)src[0] + (int)d[0]);
+          bg = (uint8_t)MIN(255, (int)src[1] + (int)d[1]);
+          bb = (uint8_t)MIN(255, (int)src[2] + (int)d[2]);
+          break;
+        case LAYER_BLEND_NORMAL:
+        default:
+          break;
+      }
+
+      uint64_t out_r = (uint64_t)br * sa * 255 +
                        (uint64_t)d[0] * da * inv;
-      uint64_t out_g = (uint64_t)src[1] * sa * 255 +
+      uint64_t out_g = (uint64_t)bg * sa * 255 +
                        (uint64_t)d[1] * da * inv;
-      uint64_t out_b = (uint64_t)src[2] * sa * 255 +
+      uint64_t out_b = (uint64_t)bb * sa * 255 +
                        (uint64_t)d[2] * da * inv;
       uint64_t denom = (uint64_t)out_a * 255;
 
@@ -92,21 +122,23 @@ static void canvas_composite(const canvas_doc_t *doc, uint8_t *dst) {
   }
 }
 
-// Render the active layer's alpha channel as a solid black/white image.
-static void canvas_render_mask_only(const canvas_doc_t *doc, uint8_t *dst) {
-  if (!doc) return;
-  size_t n = (size_t)doc->canvas_w * doc->canvas_h;
-  memset(dst, 0x00, n * 4);
-  if (doc->active_layer < 0 || doc->active_layer >= doc->layer_count)
-    return;
-
-  const layer_t *lay = doc->layers[doc->active_layer];
-  for (size_t i = 0; i < n; i++) {
-    uint8_t a = lay->pixels[i * 4 + 3];
-    dst[i * 4 + 0] = a;
-    dst[i * 4 + 1] = a;
-    dst[i * 4 + 2] = a;
-    dst[i * 4 + 3] = 255;
+static void layer_upload_texture(canvas_doc_t *doc, layer_t *lay) {
+  if (!doc || !lay || !lay->pixels) return;
+  if (!lay->tex) {
+    GLuint tex;
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, doc->canvas_w, doc->canvas_h, 0,
+                 GL_RGBA, GL_UNSIGNED_BYTE, lay->pixels);
+    lay->tex = tex;
+  } else {
+    glBindTexture(GL_TEXTURE_2D, lay->tex);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, doc->canvas_w, doc->canvas_h,
+                    GL_RGBA, GL_UNSIGNED_BYTE, lay->pixels);
   }
 }
 
@@ -180,6 +212,7 @@ bool doc_duplicate_layer(canvas_doc_t *doc) {
   memcpy(dup->pixels, src->pixels, px_sz);
   dup->visible = src->visible;
   dup->opacity = src->opacity;
+  dup->blend_mode = src->blend_mode;
   snprintf(dup->name, sizeof(dup->name), "%s copy", src->name);
 
   int ins = doc->active_layer + 1;
@@ -372,6 +405,27 @@ static uint8_t fill_mode_to_alpha(int fill_mode) {
     default:
       return 0x00; // handled separately
   }
+}
+
+const char *layer_blend_mode_name(layer_blend_mode_t mode) {
+  switch (mode) {
+    case LAYER_BLEND_MULTIPLY: return "Multiply";
+    case LAYER_BLEND_SCREEN:    return "Screen";
+    case LAYER_BLEND_ADD:       return "Add";
+    case LAYER_BLEND_NORMAL:
+    default:                    return "Normal";
+  }
+}
+
+void doc_set_layer_blend_mode(canvas_doc_t *doc, int idx, layer_blend_mode_t mode) {
+  if (!doc || idx < 0 || idx >= doc->layer_count) return;
+  layer_t *lay = doc->layers[idx];
+  if (!lay) return;
+  lay->blend_mode = (uint8_t)CLAMP((int)mode, 0, (int)LAYER_BLEND_COUNT - 1);
+  doc->canvas_dirty = true;
+  doc->modified = true;
+  if (doc->canvas_win)
+    invalidate_window(doc->canvas_win);
 }
 
 bool layer_add_mask_ex(canvas_doc_t *doc, int idx, int fill_mode) {
@@ -956,11 +1010,6 @@ bool canvas_crop_or_expand_to_selection(canvas_doc_t *doc) {
   free(doc->composite_buf);
   doc->composite_buf = malloc((size_t)new_w * new_h * 4);
 
-  if (doc->canvas_tex) {
-    glDeleteTextures(1, &doc->canvas_tex);
-    doc->canvas_tex = 0;
-  }
-
   doc->canvas_w     = new_w;
   doc->canvas_h     = new_h;
   doc->pixels       = doc->layers[doc->active_layer]->pixels;
@@ -1106,11 +1155,6 @@ bool canvas_resize(canvas_doc_t *doc, int new_w, int new_h) {
   // If this allocation fails, canvas_upload will retry and skip rendering
   // until it succeeds.  The document's layer data is already valid.
 
-  if (doc->canvas_tex) {
-    glDeleteTextures(1, &doc->canvas_tex);
-    doc->canvas_tex = 0;
-  }
-
   doc->canvas_w     = new_w;
   doc->canvas_h     = new_h;
   doc->pixels       = doc->layers[doc->active_layer]->pixels;
@@ -1139,35 +1183,16 @@ bool png_save(const char *path, const canvas_doc_t *doc) {
 // ============================================================
 
 void canvas_upload(canvas_doc_t *doc) {
-  // Ensure the composite scratch buffer exists.
-  if (!doc->composite_buf) {
-    doc->composite_buf = malloc((size_t)doc->canvas_w * doc->canvas_h * 4);
-    if (!doc->composite_buf) return;
-    doc->canvas_dirty = true;
+  if (!doc) return;
+  bool need_upload = doc->canvas_dirty;
+  for (int i = 0; i < doc->layer_count && !need_upload; i++) {
+    if (!doc->layers[i]->tex)
+      need_upload = true;
   }
 
-  if (doc->canvas_dirty) {
-    if (doc->mask_only_view)
-      canvas_render_mask_only(doc, doc->composite_buf);
-    else
-      canvas_composite(doc, doc->composite_buf);
+  if (need_upload) {
+    for (int i = 0; i < doc->layer_count; i++)
+      layer_upload_texture(doc, doc->layers[i]);
+    doc->canvas_dirty = false;
   }
-
-  if (!doc->canvas_tex) {
-    GLuint tex;
-    glGenTextures(1, &tex);
-    glBindTexture(GL_TEXTURE_2D, tex);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, doc->canvas_w, doc->canvas_h, 0,
-                 GL_RGBA, GL_UNSIGNED_BYTE, doc->composite_buf);
-    doc->canvas_tex = tex;
-  } else if (doc->canvas_dirty) {
-    glBindTexture(GL_TEXTURE_2D, doc->canvas_tex);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, doc->canvas_w, doc->canvas_h,
-                    GL_RGBA, GL_UNSIGNED_BYTE, doc->composite_buf);
-  }
-  doc->canvas_dirty = false;
 }

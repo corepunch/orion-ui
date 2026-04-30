@@ -271,7 +271,10 @@ bool ui_init_graphics(int flags, const char *title, int width, int height) {
 
   axSetSwapInterval(1);
 
-  ui_init_prog();
+  if (!ui_init_prog()) {
+    axShutdown();
+    return false;
+  }
 
   init_ui_white_texture();
   init_ui_checker_texture();

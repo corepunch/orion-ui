@@ -73,7 +73,39 @@ uint32_t ui_get_mod_state(void);
 int get_sprite_prog(void);
 int get_sprite_vao(void);
 
+typedef enum {
+	UI_RENDER_EFFECT_COPY = 0,
+	UI_RENDER_EFFECT_MASK_GRAYSCALE = 1,
+	UI_RENDER_EFFECT_LEVELS = 2,
+	UI_RENDER_EFFECT_INVERT = 3,
+	UI_RENDER_EFFECT_THRESHOLD = 4,
+	UI_RENDER_EFFECT_COUNT
+} ui_render_effect_t;
+
+typedef struct {
+	float f[8];
+} ui_render_effect_params_t;
+
+typedef enum {
+	UI_LAYER_BLEND_NORMAL = 0,
+	UI_LAYER_BLEND_MULTIPLY = 1,
+	UI_LAYER_BLEND_SCREEN = 2,
+	UI_LAYER_BLEND_ADD = 3,
+} ui_layer_blend_t;
+
 void push_sprite_args(int tex, int x, int y, int w, int h, float alpha);
+void push_sprite_effect_args(int tex, int x, int y, int w, int h, float alpha,
+                             ui_render_effect_t effect,
+                             const ui_render_effect_params_t *params);
+void draw_rect_blend(int tex, int x, int y, int w, int h, float alpha,
+                     ui_layer_blend_t blend);
+void draw_rect_effect(int tex, int x, int y, int w, int h,
+                      ui_render_effect_t effect,
+                      const ui_render_effect_params_t *params);
+bool bake_texture_effect(int src_tex, int w, int h,
+                         ui_render_effect_t effect,
+                         const ui_render_effect_params_t *params,
+                         uint32_t *out_tex);
 void set_projection(int x, int y, int w, int h);
 float *get_sprite_matrix(void);
 

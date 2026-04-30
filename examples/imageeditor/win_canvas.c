@@ -414,16 +414,24 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       // Draw canvas offset by pan so zoomed content scrolls correctly
       int cx = -state->pan_x;
       int cy = -state->pan_y;
+      int cw = scaled_px(doc->canvas_w, state->scale);
+      int ch = scaled_px(doc->canvas_h, state->scale);
       if (!doc->mask_only_view) {
-        draw_checkerboard(R(cx, cy,
-                            scaled_px(doc->canvas_w, state->scale),
-                            scaled_px(doc->canvas_h, state->scale)),
-                          CANVAS_CHECKER_SQUARE_PX);
+        draw_checkerboard(R(cx, cy, cw, ch), CANVAS_CHECKER_SQUARE_PX);
+        for (int li = 0; li < doc->layer_count; li++) {
+          const layer_t *lay = doc->layers[li];
+          if (!lay || !lay->visible || !lay->tex) continue;
+          draw_rect_blend(lay->tex, cx, cy, cw, ch,
+                          lay->opacity / 255.0f,
+                          (ui_layer_blend_t)lay->blend_mode);
+        }
+      } else if (doc->active_layer >= 0 && doc->active_layer < doc->layer_count) {
+        const layer_t *lay = doc->layers[doc->active_layer];
+        if (lay && lay->tex) {
+          draw_rect_effect(lay->tex, cx, cy, cw, ch,
+                           UI_RENDER_EFFECT_MASK_GRAYSCALE, NULL);
+        }
       }
-      draw_rect(doc->canvas_tex,
-                R(cx, cy,
-                  scaled_px(doc->canvas_w, state->scale),
-                  scaled_px(doc->canvas_h, state->scale)));
 
       // Draw grid overlay (same checker-texture mechanism as selection)
       canvas_draw_grid(state, win->frame.w, win->frame.h);

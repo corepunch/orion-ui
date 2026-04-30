@@ -264,8 +264,6 @@ void gem_shutdown(void) {
     if (g_app->docs->float_tex)
       glDeleteTextures(1, &g_app->docs->float_tex);
     image_free(g_app->docs->float_pixels);
-    if (g_app->docs->canvas_tex)
-      glDeleteTextures(1, &g_app->docs->canvas_tex);
     image_free(g_app->docs->pixels);
     free(g_app->docs);
     g_app->docs = next;

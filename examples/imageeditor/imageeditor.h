@@ -216,18 +216,27 @@ extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 // ============================================================
 
 // A single layer within a canvas document.
+typedef enum {
+  LAYER_BLEND_NORMAL = 0,
+  LAYER_BLEND_MULTIPLY,
+  LAYER_BLEND_SCREEN,
+  LAYER_BLEND_ADD,
+  LAYER_BLEND_COUNT
+} layer_blend_mode_t;
+
 typedef struct {
   uint8_t *pixels;      // RGBA pixel buffer (canvas_w * canvas_h * 4 bytes)
+  GLuint   tex;         // GPU texture for realtime compositing
   char     name[64];
   bool     visible;
   uint8_t  opacity;     // 0 = transparent, 255 = fully opaque
+  uint8_t  blend_mode;  // layer_blend_mode_t
 } layer_t;
 
 typedef struct canvas_doc_s {
   uint8_t *pixels;           // convenience alias → layers[active_layer]->pixels
   int      canvas_w;         // image width in pixels
   int      canvas_h;         // image height in pixels
-  GLuint   canvas_tex;
   bool     canvas_dirty;
   bool     drawing;
   bool     close_prompt_open;
@@ -554,7 +563,12 @@ bool show_grid_options_dialog(window_t *parent, int *out_x, int *out_y);
 // Hit-test zones within a layer row (x offsets)
 #define LAYERS_EYE_W           16   // eye-icon click area width
 #define LAYERS_CHIP_W          16   // alpha-edit icon click area width
+#define LAYERS_BLEND_W         54
+#define LAYERS_BLEND_X         (LAYERS_WIN_W - LAYERS_BLEND_W - 4)
 #define LAYERS_NAME_X          (1 + LAYERS_EYE_W + 2 + LAYERS_CHIP_W + 3)  // start of name text
+#define LAYERS_NAME_W          (LAYERS_BLEND_X - LAYERS_NAME_X - 4)
+
+#define ID_LAYER_BLEND_BASE     80
 
 // ============================================================
 // Layer management (canvas.c)
@@ -577,6 +591,8 @@ bool doc_duplicate_layer(canvas_doc_t *doc);
 // Change the active layer, updating doc->pixels and resetting editing_mask.
 void doc_set_active_layer(canvas_doc_t *doc, int idx);
 void doc_set_mask_only_view(canvas_doc_t *doc, bool enabled);
+void doc_set_layer_blend_mode(canvas_doc_t *doc, int idx, layer_blend_mode_t mode);
+const char *layer_blend_mode_name(layer_blend_mode_t mode);
 
 // Move the active layer up (towards the top of the stack).
 void doc_move_layer_up(canvas_doc_t *doc);

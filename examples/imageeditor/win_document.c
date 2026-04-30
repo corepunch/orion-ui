@@ -255,9 +255,6 @@ void close_document(canvas_doc_t *doc) {
     glDeleteTextures(1, &doc->float_tex);
   free(doc->float_pixels);
 
-  if (doc->canvas_tex)
-    glDeleteTextures(1, &doc->canvas_tex);
-
   doc_free_layers(doc);
   free(doc->composite_buf);
   doc->composite_buf = NULL;

@@ -272,6 +272,8 @@ share: $(VGA_FONT_PNG) | $(SHARE_DIR)
 	@cp share/Geneva-12.png $(SHARE_DIR)/orion/
 	@cp share/theme.png $(SHARE_DIR)/orion/
 	@cp share/filepicker.png $(SHARE_DIR)/orion/
+	@mkdir -p $(SHARE_DIR)/orion/shaders
+	@cp share/orion/shaders/*.glsl $(SHARE_DIR)/orion/shaders/
 	@[ ! -f share/Geneva9.png ] || cp share/Geneva9.png $(SHARE_DIR)/orion/
 	@for dir in examples/*/; do \
 	  name=$$(basename "$$dir"); \
