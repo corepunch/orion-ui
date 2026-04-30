@@ -307,6 +307,13 @@ bool imageeditor_open_file_path(const char *path) {
   float open_scale = imageeditor_fit_scale_for_viewport(img_w, img_h,
                                                         max_view_w, max_view_h,
                                                         false);
+  int wrapped_view_w = MAX(1, (int)lroundf((float)img_w * open_scale));
+  int wrapped_view_h = MAX(1, (int)lroundf((float)img_h * open_scale));
+  int wrapped_frame_w = 1;
+  int wrapped_frame_h = 1;
+  imageeditor_document_frame_for_viewport(wrapped_view_w, wrapped_view_h,
+                                          &wrapped_frame_w, &wrapped_frame_h);
+  resize_window(ndoc->win, wrapped_frame_w, wrapped_frame_h);
   canvas_win_set_scale(ndoc->canvas_win, open_scale);
   invalidate_window(ndoc->canvas_win);
   return true;

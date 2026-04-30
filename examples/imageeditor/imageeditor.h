@@ -462,6 +462,8 @@ void imageeditor_format_zoom(char *buf, size_t buf_sz, float scale);
 rect_t imageeditor_document_workspace_rect(void);
 void imageeditor_max_document_frame_size(int *out_w, int *out_h);
 void imageeditor_max_canvas_viewport_size(int *out_w, int *out_h);
+void imageeditor_document_frame_for_viewport(int viewport_w, int viewport_h,
+                                             int *out_w, int *out_h);
 
 // Sync canvas scrollbars after content size changes (e.g. after canvas_resize)
 void canvas_win_sync_scrollbars(window_t *canvas_win);

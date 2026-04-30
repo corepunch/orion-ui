@@ -38,6 +38,19 @@ void imageeditor_max_canvas_viewport_size(int *out_w, int *out_h) {
   if (out_h) *out_h = MAX(1, frame_h - TITLEBAR_HEIGHT - STATUSBAR_HEIGHT);
 }
 
+void imageeditor_document_frame_for_viewport(int viewport_w, int viewport_h,
+                                             int *out_w, int *out_h) {
+  int max_frame_w = 1;
+  int max_frame_h = 1;
+  imageeditor_max_document_frame_size(&max_frame_w, &max_frame_h);
+
+  int frame_w = MAX(1, viewport_w) + SCROLLBAR_WIDTH;
+  int frame_h = MAX(1, viewport_h) + TITLEBAR_HEIGHT + STATUSBAR_HEIGHT;
+
+  if (out_w) *out_w = MIN(frame_w, max_frame_w);
+  if (out_h) *out_h = MIN(frame_h, max_frame_h);
+}
+
 // ============================================================
 // Document window proc
 // ============================================================
