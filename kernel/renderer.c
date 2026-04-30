@@ -70,13 +70,6 @@ typedef struct {
 
 static vga_renderer_t g_vga = {0};
 
-static const char *shader_path(const char *name) {
-  static char path[4096];
-  snprintf(path, sizeof(path), "%s/../share/orion/shaders/%s",
-           ui_get_exe_dir(), name);
-  return path;
-}
-
 static char *read_text_file(const char *path) {
   FILE *fp = fopen(path, "rb");
   if (!fp) return NULL;
@@ -102,7 +95,10 @@ static char *read_text_file(const char *path) {
 }
 
 static char *read_shader_file(const char *name) {
-  return read_text_file(shader_path(name));
+  char path[4096];
+  snprintf(path, sizeof(path), "%s/../share/imageeditor/filters/%s",
+           ui_get_exe_dir(), name);
+  return read_text_file(path);
 }
 
 // Compile a shader
