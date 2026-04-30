@@ -717,8 +717,20 @@ void handle_menu_command(uint16_t id) {
 
     case ID_LAYER_ADD_MASK:
       if (doc) {
-        doc_push_undo(doc);
-        if (!layer_add_mask(doc, doc->active_layer)) { doc_discard_undo(doc); break; }
+        if (!doc->layers[doc->active_layer]->mask) {
+          doc_push_undo(doc);
+          int fill_mode = MASK_EXTRACT_WHITE;
+          if (show_add_mask_dialog(doc->win ? doc->win : g_app->menubar_win,
+                                   &fill_mode)) {
+            if (!layer_add_mask_ex(doc, doc->active_layer, fill_mode)) {
+              doc_discard_undo(doc);
+              break;
+            }
+          } else {
+            doc_discard_undo(doc);
+            break;
+          }
+        }
         invalidate_window(doc->canvas_win);
         layers_win_refresh();
       }
@@ -743,7 +755,14 @@ void handle_menu_command(uint16_t id) {
       break;
 
     case ID_LAYER_EXTRACT_MASK:
-      if (doc) canvas_extract_mask(doc);
+      if (doc) {
+        if (!doc->layers[doc->active_layer]->mask) break;
+        canvas_extract_mask(doc);
+      }
+      break;
+
+    case ID_COLOR_SWAP:
+      swap_foreground_background_colors();
       break;
 
     case ID_LAYER_EDIT_MASK:

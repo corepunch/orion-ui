@@ -146,6 +146,7 @@ extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 #define ID_IMAGE_FLIP_V   51
 #define ID_IMAGE_INVERT   52
 #define ID_IMAGE_RESIZE   53
+#define ID_COLOR_SWAP     54
 
 #define ID_WINDOW_TOOLS    200
 #define ID_WINDOW_COLORS   201
@@ -513,6 +514,10 @@ window_t *create_color_palette_window(void);
 // Returns true and writes the chosen fill color into *out_color if accepted.
 bool show_new_layer_dialog(window_t *parent, uint32_t *out_color);
 
+// Add Mask dialog – lets the user choose how the new mask should be filled.
+// Returns true and writes the chosen fill mode into *out_fill_mode if accepted.
+bool show_add_mask_dialog(window_t *parent, int *out_fill_mode);
+
 // New Image / Canvas Size dialog
 bool show_size_dialog(window_t *parent, const char *title, int *out_w, int *out_h);
 
@@ -576,7 +581,15 @@ void doc_free_layers(canvas_doc_t *doc);
 // Mask operations (canvas.c)
 // ============================================================
 
-// Add a white (fully-visible) mask to the layer at index idx.
+typedef enum {
+  MASK_EXTRACT_GRAYSCALE = 0,
+  MASK_EXTRACT_WHITE     = 1,
+  MASK_EXTRACT_BACKGROUND = 2,
+  MASK_EXTRACT_FOREGROUND = 3,
+} mask_extract_fill_t;
+
+// Add a new mask to the layer at index idx.  The default wrapper fills it white.
+bool layer_add_mask_ex(canvas_doc_t *doc, int idx, int fill_mode);
 bool layer_add_mask(canvas_doc_t *doc, int idx);
 
 // Multiply each pixel's alpha by the mask value, then remove the mask.
@@ -585,8 +598,8 @@ void layer_apply_mask(canvas_doc_t *doc, int idx);
 // Discard the mask without applying it.
 void layer_remove_mask(canvas_doc_t *doc, int idx);
 
-// Open the active layer's mask (or its alpha channel if no mask exists) as
-// a new greyscale document.  Returns the new document, or NULL on failure.
+// Open the active layer's existing mask as a new document.
+// Returns NULL if the layer has no mask.
 canvas_doc_t *canvas_extract_mask(canvas_doc_t *doc);
 
 // ============================================================
@@ -598,5 +611,8 @@ window_t *create_layers_window(void);
 
 // Refresh the Layers palette after layer changes.
 void layers_win_refresh(void);
+
+// Swap the active foreground/background colors.
+void swap_foreground_background_colors(void);
 
 #endif // __IMAGEEDITOR_H__

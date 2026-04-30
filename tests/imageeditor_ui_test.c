@@ -973,14 +973,14 @@ void test_ie_mask_apply(void) {
 
 // canvas_extract_mask creates a new greyscale document from the active layer's mask.
 void test_ie_mask_extract(void) {
-    TEST("canvas_extract_mask: new document created from alpha channel");
+    TEST("canvas_extract_mask: new document created from existing mask");
 
     ie_setup();
     canvas_doc_t *doc = create_document(NULL, 2, 2);
     ASSERT_NOT_NULL(doc);
 
-    // Set a distinct alpha value at (0,0).
-    canvas_set_pixel(doc, 0, 0, MAKE_COLOR(0xFF, 0, 0, 200));
+    ASSERT_TRUE(layer_add_mask_ex(doc, doc->active_layer, MASK_EXTRACT_WHITE));
+    doc->layers[doc->active_layer]->mask[0] = 200;
 
     canvas_doc_t *mask_doc = canvas_extract_mask(doc);
     ASSERT_NOT_NULL(mask_doc);
@@ -992,6 +992,79 @@ void test_ie_mask_extract(void) {
     ASSERT_EQUAL(COLOR_R(px), 200);
     ASSERT_EQUAL(COLOR_G(px), 200);
     ASSERT_EQUAL(COLOR_B(px), 200);
+
+    ie_teardown();
+    PASS();
+}
+
+void test_ie_mask_add_fill_modes(void) {
+    TEST("layer_add_mask_ex: fill modes map to grayscale/white/bg/fg");
+
+    ie_setup();
+    g_app->fg_color = MAKE_COLOR(0x11, 0x22, 0x33, 0xFF);
+    g_app->bg_color = MAKE_COLOR(0x44, 0x55, 0x66, 0xFF);
+
+    canvas_doc_t *doc = create_document(NULL, 1, 1);
+    ASSERT_NOT_NULL(doc);
+    canvas_set_pixel(doc, 0, 0, MAKE_COLOR(0xAA, 0x40, 0x20, 0xFF));
+
+    ASSERT_TRUE(layer_add_mask_ex(doc, doc->active_layer, MASK_EXTRACT_GRAYSCALE));
+    uint8_t expected_gray = (uint8_t)((0xAA * 77 + 0x40 * 150 + 0x20 * 29) >> 8);
+    ASSERT_EQUAL(doc->layers[doc->active_layer]->mask[0], expected_gray);
+    layer_remove_mask(doc, doc->active_layer);
+
+    ASSERT_TRUE(layer_add_mask_ex(doc, doc->active_layer, MASK_EXTRACT_WHITE));
+    ASSERT_EQUAL(doc->layers[doc->active_layer]->mask[0], 255);
+    layer_remove_mask(doc, doc->active_layer);
+
+    ASSERT_TRUE(layer_add_mask_ex(doc, doc->active_layer, MASK_EXTRACT_BACKGROUND));
+    uint8_t expected_bg = (uint8_t)((0x44 * 77 + 0x55 * 150 + 0x66 * 29) >> 8);
+    ASSERT_EQUAL(doc->layers[doc->active_layer]->mask[0], expected_bg);
+    layer_remove_mask(doc, doc->active_layer);
+
+    ASSERT_TRUE(layer_add_mask_ex(doc, doc->active_layer, MASK_EXTRACT_FOREGROUND));
+    uint8_t expected_fg = (uint8_t)((0x11 * 77 + 0x22 * 150 + 0x33 * 29) >> 8);
+    ASSERT_EQUAL(doc->layers[doc->active_layer]->mask[0], expected_fg);
+
+    ie_teardown();
+    PASS();
+}
+
+void test_ie_extract_mask_requires_existing_mask(void) {
+    TEST("canvas_extract_mask: requires an existing layer mask");
+
+    ie_setup();
+
+    canvas_doc_t *doc = create_document(NULL, 1, 1);
+    ASSERT_NOT_NULL(doc);
+    ASSERT_NULL(canvas_extract_mask(doc));
+
+    ASSERT_TRUE(layer_add_mask_ex(doc, doc->active_layer, MASK_EXTRACT_WHITE));
+    doc->layers[doc->active_layer]->mask[0] = 123;
+
+    canvas_doc_t *mask_doc = canvas_extract_mask(doc);
+    ASSERT_NOT_NULL(mask_doc);
+    uint32_t px = canvas_get_pixel(mask_doc, 0, 0);
+    ASSERT_EQUAL(COLOR_R(px), 123);
+    ASSERT_EQUAL(COLOR_G(px), 123);
+    ASSERT_EQUAL(COLOR_B(px), 123);
+    close_document(mask_doc);
+
+    ie_teardown();
+    PASS();
+}
+
+void test_ie_swap_fg_bg(void) {
+    TEST("swap_foreground_background_colors swaps swatches");
+
+    ie_setup();
+    g_app->fg_color = MAKE_COLOR(0x10, 0x20, 0x30, 0xFF);
+    g_app->bg_color = MAKE_COLOR(0xA0, 0xB0, 0xC0, 0xFF);
+
+    swap_foreground_background_colors();
+
+    ASSERT_EQUAL(g_app->fg_color, MAKE_COLOR(0xA0, 0xB0, 0xC0, 0xFF));
+    ASSERT_EQUAL(g_app->bg_color, MAKE_COLOR(0x10, 0x20, 0x30, 0xFF));
 
     ie_teardown();
     PASS();
@@ -1292,6 +1365,9 @@ int main(int argc, char *argv[]) {
     test_ie_mask_remove();
     test_ie_mask_apply();
     test_ie_mask_extract();
+    test_ie_mask_add_fill_modes();
+    test_ie_extract_mask_requires_existing_mask();
+    test_ie_swap_fg_bg();
     // Undo/redo with layers
     test_ie_layer_undo_redo();
 

@@ -4,6 +4,15 @@
 
 #define SWATCH_W        (COLOR_WIN_W / COLOR_SWATCH_COLS)
 
+void swap_foreground_background_colors(void) {
+  if (!g_app) return;
+  uint32_t tmp = g_app->fg_color;
+  g_app->fg_color = g_app->bg_color;
+  g_app->bg_color = tmp;
+  if (g_app->tool_win)  invalidate_window(g_app->tool_win);
+  if (g_app->color_win) invalidate_window(g_app->color_win);
+}
+
 result_t win_color_palette_proc(window_t *win, uint32_t msg,
                                  uint32_t wparam, void *lparam) {
   switch (msg) {

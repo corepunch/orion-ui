@@ -315,13 +315,54 @@ void doc_free_layers(canvas_doc_t *doc) {
 // Mask operations
 // ============================================================
 
+bool layer_add_mask_ex(canvas_doc_t *doc, int idx, int fill_mode);
+
 bool layer_add_mask(canvas_doc_t *doc, int idx) {
+  return layer_add_mask_ex(doc, idx, MASK_EXTRACT_WHITE);
+}
+
+static uint8_t color_to_gray(uint32_t c) {
+  return (uint8_t)((COLOR_R(c) * 77 + COLOR_G(c) * 150 + COLOR_B(c) * 29) >> 8);
+}
+
+static void fill_mask_from_layer_gray(canvas_doc_t *doc, layer_t *lay) {
+  size_t n = (size_t)doc->canvas_w * doc->canvas_h;
+  for (size_t i = 0; i < n; i++) {
+    const uint8_t *px = lay->pixels + i * 4;
+    lay->mask[i] = (uint8_t)((px[0] * 77 + px[1] * 150 + px[2] * 29) >> 8);
+  }
+}
+
+static void fill_mask_gray_value(uint8_t *mask, size_t n, uint8_t v) {
+  memset(mask, v, n);
+}
+
+static uint8_t fill_mode_to_gray(int fill_mode) {
+  switch (fill_mode) {
+    case MASK_EXTRACT_BACKGROUND:
+      return g_app ? color_to_gray(g_app->bg_color) : 0xFF;
+    case MASK_EXTRACT_FOREGROUND:
+      return g_app ? color_to_gray(g_app->fg_color) : 0x00;
+    case MASK_EXTRACT_WHITE:
+      return 0xFF;
+    case MASK_EXTRACT_GRAYSCALE:
+    default:
+      return 0x00; // handled separately
+  }
+}
+
+bool layer_add_mask_ex(canvas_doc_t *doc, int idx, int fill_mode) {
   if (!doc || idx < 0 || idx >= doc->layer_count) return false;
   layer_t *lay = doc->layers[idx];
   if (lay->mask) return true;
   lay->mask = malloc((size_t)doc->canvas_w * doc->canvas_h);
   if (!lay->mask) return false;
-  memset(lay->mask, 0xFF, (size_t)doc->canvas_w * doc->canvas_h);
+  if (fill_mode == MASK_EXTRACT_GRAYSCALE) {
+    fill_mask_from_layer_gray(doc, lay);
+  } else {
+    fill_mask_gray_value(lay->mask, (size_t)doc->canvas_w * doc->canvas_h,
+                         fill_mode_to_gray(fill_mode));
+  }
   doc->canvas_dirty = true;
   doc->modified     = true;
   return true;
@@ -351,30 +392,19 @@ void layer_remove_mask(canvas_doc_t *doc, int idx) {
   doc->modified     = true;
 }
 
-// Open the active layer's mask (or alpha channel if no mask) as a new doc.
+// Open the active layer's existing mask as a new document.
 canvas_doc_t *canvas_extract_mask(canvas_doc_t *doc) {
   if (!doc || !g_app || doc->layer_count == 0) return NULL;
   layer_t *lay = doc->layers[doc->active_layer];
+  if (!lay->mask) return NULL;
   size_t n = (size_t)doc->canvas_w * doc->canvas_h;
 
-  uint8_t *mask_data;
-  bool temp_mask = false;
-  if (lay->mask) {
-    mask_data = lay->mask;
-  } else {
-    mask_data = malloc(n);
-    if (!mask_data) return NULL;
-    for (size_t i = 0; i < n; i++)
-      mask_data[i] = lay->pixels[i * 4 + 3];
-    temp_mask = true;
-  }
-
   canvas_doc_t *new_doc = create_document(NULL, doc->canvas_w, doc->canvas_h);
-  if (!new_doc) { if (temp_mask) free(mask_data); return NULL; }
+  if (!new_doc) return NULL;
 
   uint8_t *dst = new_doc->pixels;
   for (size_t i = 0; i < n; i++) {
-    uint8_t v = mask_data[i];
+    uint8_t v = lay->mask[i];
     dst[i * 4 + 0] = v;
     dst[i * 4 + 1] = v;
     dst[i * 4 + 2] = v;
@@ -384,8 +414,6 @@ canvas_doc_t *canvas_extract_mask(canvas_doc_t *doc) {
   new_doc->modified     = false;
   doc_update_title(new_doc);
   invalidate_window(new_doc->canvas_win);
-
-  if (temp_mask) free(mask_data);
   return new_doc;
 }
 
