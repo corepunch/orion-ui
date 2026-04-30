@@ -135,6 +135,7 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       if (win->cursor_pos < MAX_COMBOBOX_STRINGS) {
         strncpy(texts[win->cursor_pos++], lparam, sizeof(combobox_string_t));
         strncpy(win->title, lparam, sizeof(win->title));
+        win->title[sizeof(win->title) - 1] = '\0';
         return true;
       } else {
         return false;
@@ -149,6 +150,7 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
     case cbSetCurrentSelection:
       if (wparam < win->cursor_pos) {
         strncpy(win->title, texts[wparam], sizeof(win->title));
+        win->title[sizeof(win->title) - 1] = '\0';
         return true;
       } else {
         return false;

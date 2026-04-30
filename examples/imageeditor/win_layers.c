@@ -36,6 +36,8 @@ static const toolbar_item_t kLayersToolbar[] = {
   { TOOLBAR_ITEM_SPACER, 0, 0, 0, 0, NULL },
   { TOOLBAR_ITEM_BUTTON, ID_LAYER_MOVE_UP,   sysicon_arrow_up,   0, 0, "Up"      },
   { TOOLBAR_ITEM_BUTTON, ID_LAYER_MOVE_DOWN, sysicon_arrow_down, 0, 0, "Down"    },
+  { TOOLBAR_ITEM_SPACER, 0, 0, 8, 0, NULL },
+  { TOOLBAR_ITEM_COMBOBOX, ID_LAYER_BLEND_COMBO, -1, 120, 0, "Normal" },
 };
 
 // ============================================================
@@ -44,7 +46,7 @@ static const toolbar_item_t kLayersToolbar[] = {
 
 typedef struct {
   int scroll_top;   // first visible row (for >LAYERS_MAX_VIS_ROWS layers)
-  window_t *blend_cb[LAYERS_MAX_VIS_ROWS];
+  window_t *blend_cb;
 } layers_win_state_t;
 
 static const char *kBlendNames[LAYER_BLEND_COUNT] = {
@@ -108,44 +110,23 @@ static void blend_combo_fill(window_t *cb) {
     send_message(cb, cbAddString, 0, (void *)kBlendNames[i]);
 }
 
-static void sync_blend_combo(window_t *win, layers_win_state_t *st, int row) {
-  if (!win || !st || row < 0 || row >= LAYERS_MAX_VIS_ROWS) return;
-  window_t *cb = st->blend_cb[row];
-  if (!cb) return;
+static void sync_blend_combo(window_t *win, layers_win_state_t *st) {
+  if (!win || !st || !st->blend_cb) return;
   canvas_doc_t *doc = g_app ? g_app->active_doc : NULL;
   if (!doc) {
-    cb->visible = false;
+    st->blend_cb->disabled = true;
     return;
   }
-
-  int li = row_to_layer_idx(doc, row + st->scroll_top);
-  if (li < 0 || li >= doc->layer_count) {
-    cb->visible = false;
+  if (doc->active_layer < 0 || doc->active_layer >= doc->layer_count) {
+    st->blend_cb->disabled = true;
     return;
   }
+  const layer_t *lay = doc->layers[doc->active_layer];
+  if (!lay) return;
 
-  const layer_t *lay = doc->layers[li];
-  if (!lay) {
-    cb->visible = false;
-    return;
-  }
-
-  int nvis = visible_rows(win);
-  if (row >= nvis) {
-    cb->visible = false;
-    return;
-  }
-
-  rect_t frame = R(LAYERS_BLEND_X, row_y(row) + 3, LAYERS_BLEND_W, LAYERS_ROW_H - 6);
-  cb->frame = frame;
-  cb->visible = true;
-  send_message(cb, cbSetCurrentSelection, lay->blend_mode, NULL);
-  invalidate_window(cb);
-}
-
-static void sync_all_blend_combos(window_t *win, layers_win_state_t *st) {
-  for (int row = 0; row < LAYERS_MAX_VIS_ROWS; row++)
-    sync_blend_combo(win, st, row);
+  st->blend_cb->disabled = false;
+  send_message(st->blend_cb, cbSetCurrentSelection, lay->blend_mode, NULL);
+  invalidate_window(st->blend_cb);
 }
 
 // ============================================================
@@ -200,9 +181,6 @@ static void paint_layers(window_t *win, layers_win_state_t *st) {
       rect_t name_rect = R(LAYERS_NAME_X, ry, LAYERS_NAME_W, LAYERS_ROW_H);
       draw_text_clipped(FONT_SMALL, lay->name, &name_rect, name_col, TEXT_PADDING_LEFT);
 
-      // Blend selector for this row.
-      sync_blend_combo(win, st, row);
-
       // Separator line.
       fill_rect(get_sys_color(brWindowDarkBg), R(0, ry + LAYERS_ROW_H - 1, w, 1));
     }
@@ -225,20 +203,14 @@ result_t win_layers_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
     case evCreate: {
       layers_win_state_t *s = allocate_window_data(win, sizeof(layers_win_state_t));
       s->scroll_top = 0;
-      for (int i = 0; i < LAYERS_MAX_VIS_ROWS; i++) {
-        s->blend_cb[i] = create_window("Normal", 0,
-                                       MAKERECT(LAYERS_BLEND_X, i * LAYERS_ROW_H + 3,
-                                                LAYERS_BLEND_W, LAYERS_ROW_H - 6),
-                                       win, win_combobox, 0, NULL);
-        if (s->blend_cb[i]) {
-          s->blend_cb[i]->id = ID_LAYER_BLEND_BASE + i;
-          blend_combo_fill(s->blend_cb[i]);
-          show_window(s->blend_cb[i], false);
-        }
-      }
       send_message(win, tbSetItems,
                    sizeof(kLayersToolbar) / sizeof(kLayersToolbar[0]),
                    (void *)kLayersToolbar);
+      s->blend_cb = get_window_item(win, ID_LAYER_BLEND_COMBO);
+      if (s->blend_cb) {
+        blend_combo_fill(s->blend_cb);
+        s->blend_cb->visible = true;
+      }
       return true;
     }
 
@@ -249,7 +221,7 @@ result_t win_layers_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
     case evPaint:
       if (st) {
         paint_layers(win, st);
-        sync_all_blend_combos(win, st);
+        sync_blend_combo(win, st);
       }
       return true;
 
@@ -284,6 +256,8 @@ result_t win_layers_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
             doc->editing_mask = true;
             if (doc->canvas_win) invalidate_window(doc->canvas_win);
           }
+          invalidate_window(win);
+          sync_blend_combo(win, st);
           if (doc->canvas_win) {
             canvas_win_state_t *state = (canvas_win_state_t *)doc->canvas_win->userdata;
             if (state) {
@@ -291,13 +265,13 @@ result_t win_layers_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
                                        state->hover_valid);
             }
           }
-          invalidate_window(win);
         } else {
           // Select layer.
           if (li != doc->active_layer) {
             doc_set_active_layer(doc, li);
             invalidate_window(doc->canvas_win);
             invalidate_window(win);
+            sync_blend_combo(win, st);
           }
         }
         return true;
@@ -310,18 +284,15 @@ result_t win_layers_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
       uint16_t id = LOWORD(wparam);
       if (code == cbSelectionChange && st && g_app && g_app->active_doc) {
         canvas_doc_t *doc = g_app->active_doc;
-        int row = id - ID_LAYER_BLEND_BASE;
-        if (row >= 0 && row < LAYERS_MAX_VIS_ROWS) {
-          int li = row_to_layer_idx(doc, row + st->scroll_top);
-          if (li >= 0 && li < doc->layer_count && lparam) {
-            result_t sel = send_message((window_t *)lparam, cbGetCurrentSelection, 0, NULL);
-            if (sel != (result_t)kComboBoxError) {
-              doc_push_undo(doc);
-              doc_set_layer_blend_mode(doc, li, (layer_blend_mode_t)sel);
-              invalidate_window(win);
-              if (doc->canvas_win) invalidate_window(doc->canvas_win);
-              return true;
-            }
+        if (id == ID_LAYER_BLEND_COMBO && lparam && doc->active_layer >= 0 &&
+            doc->active_layer < doc->layer_count) {
+          result_t sel = send_message((window_t *)lparam, cbGetCurrentSelection, 0, NULL);
+          if (sel != (result_t)kComboBoxError) {
+            doc_push_undo(doc);
+            doc_set_layer_blend_mode(doc, doc->active_layer, (layer_blend_mode_t)sel);
+            invalidate_window(win);
+            if (doc->canvas_win) invalidate_window(doc->canvas_win);
+            return true;
           }
         }
       }
@@ -338,12 +309,11 @@ result_t win_layers_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
       if (st->scroll_top < 0) st->scroll_top = 0;
       if (st->scroll_top > max_scroll) st->scroll_top = max_scroll;
       invalidate_window(win);
-      sync_all_blend_combos(win, st);
       return true;
     }
 
     case evResize:
-      if (st) sync_all_blend_combos(win, st);
+      if (st) sync_blend_combo(win, st);
       return false;
 
     default:
@@ -384,6 +354,6 @@ void layers_win_refresh(void) {
     if (st->scroll_top < 0) st->scroll_top = 0;
   }
   if (st)
-    sync_all_blend_combos(g_app->layers_win, st);
+    sync_blend_combo(g_app->layers_win, st);
   invalidate_window(g_app->layers_win);
 }

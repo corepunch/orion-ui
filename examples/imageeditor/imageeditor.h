@@ -563,12 +563,11 @@ bool show_grid_options_dialog(window_t *parent, int *out_x, int *out_y);
 // Hit-test zones within a layer row (x offsets)
 #define LAYERS_EYE_W           16   // eye-icon click area width
 #define LAYERS_CHIP_W          16   // alpha-edit icon click area width
-#define LAYERS_BLEND_W         54
-#define LAYERS_BLEND_X         (LAYERS_WIN_W - LAYERS_BLEND_W - 4)
 #define LAYERS_NAME_X          (1 + LAYERS_EYE_W + 2 + LAYERS_CHIP_W + 3)  // start of name text
-#define LAYERS_NAME_W          (LAYERS_BLEND_X - LAYERS_NAME_X - 4)
+#define LAYERS_NAME_W          (LAYERS_WIN_W - LAYERS_NAME_X - 4)
 
 #define ID_LAYER_BLEND_BASE     80
+#define ID_LAYER_BLEND_COMBO    72
 
 // ============================================================
 // Layer management (canvas.c)
