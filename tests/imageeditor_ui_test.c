@@ -55,6 +55,10 @@ static void ie_teardown(void) {
     // Destroy palette windows first so their evDestroy handlers can safely
     // null out g_app->tool_win / g_app->tool_options_win / g_app->color_win
     // while g_app is still valid.
+    if (g_app->main_toolbar_win) {
+        destroy_window(g_app->main_toolbar_win);
+        g_app->main_toolbar_win = NULL;
+    }
     if (g_app->tool_win) {
         destroy_window(g_app->tool_win);
         g_app->tool_win = NULL;
@@ -83,6 +87,7 @@ static void ie_teardown(void) {
 // Convenience: create the tool palette, tool options, and color palette windows
 // exactly as gem_init does, but without the PNG icon strip (SHAREDIR not defined here).
 static void ie_create_palette_windows(void) {
+    create_main_toolbar_window();
     create_tool_palette_window();
     create_tool_options_window();
     create_color_palette_window();
@@ -117,6 +122,8 @@ void test_ie_create_document(void) {
     ASSERT_NOT_NULL(doc->pixels);
     ASSERT_FALSE(doc->modified);
     ASSERT_TRUE(is_window(doc->win));
+    ASSERT_NOT_NULL(g_app->main_toolbar_win);
+    ASSERT_NOT_NULL(get_window_item(g_app->main_toolbar_win, ID_FILE_NEW));
 
     ie_teardown();
     PASS();
@@ -821,6 +828,13 @@ void test_ie_layer_set_active(void) {
     doc_set_active_layer(doc, 1);
     ASSERT_EQUAL(doc->active_layer, 1);
     ASSERT_TRUE(doc->pixels == doc->layers[1]->pixels);
+
+    doc_set_mask_only_view(doc, true);
+    ASSERT_TRUE(doc->mask_only_view);
+    doc->canvas_dirty = false;
+    doc_set_active_layer(doc, 0);
+    ASSERT_TRUE(doc->canvas_dirty);
+    ASSERT_EQUAL(doc->active_layer, 0);
 
     ie_teardown();
     PASS();

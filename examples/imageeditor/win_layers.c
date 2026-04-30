@@ -212,6 +212,13 @@ result_t win_layers_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
             doc->editing_mask = true;
             if (doc->canvas_win) invalidate_window(doc->canvas_win);
           }
+          if (doc->canvas_win) {
+            canvas_win_state_t *state = (canvas_win_state_t *)doc->canvas_win->userdata;
+            if (state) {
+              canvas_win_update_status(doc->canvas_win, state->hover.x, state->hover.y,
+                                       state->hover_valid);
+            }
+          }
           invalidate_window(win);
         } else {
           // Select layer.

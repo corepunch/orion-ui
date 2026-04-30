@@ -15,7 +15,7 @@ rect_t imageeditor_document_workspace_rect(void) {
   int right = MIN(screen_w - DOC_WORKSPACE_MARGIN,
                   right_palette_left - DOC_WORKSPACE_MARGIN);
 
-  int top = MAX(DOC_START_Y, MENUBAR_HEIGHT + DOC_WORKSPACE_MARGIN);
+  int top = MAX(DOC_START_Y, APP_TOOLBAR_Y + APP_TOOLBAR_H + DOC_WORKSPACE_MARGIN);
   int bottom = screen_h - DOC_WORKSPACE_MARGIN;
 
   if (right <= left) right = left + 1;
@@ -180,11 +180,14 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
   g_app->next_x += DOC_CASCADE;
   g_app->next_y += DOC_CASCADE;
 
-  int max_win_w = MAX(1, ws.w);
-  int max_win_h = MAX(1, ws.h);
-  int max_canvas_h = MAX(1, max_win_h - TITLEBAR_HEIGHT - STATUSBAR_HEIGHT);
-  int win_w = MIN(w, max_win_w);
-  int win_h = MIN(h, max_canvas_h) + TITLEBAR_HEIGHT + STATUSBAR_HEIGHT;
+  int max_view_w = 1;
+  int max_view_h = 1;
+  imageeditor_max_canvas_viewport_size(&max_view_w, &max_view_h);
+  int viewport_w = MIN(w, max_view_w);
+  int viewport_h = MIN(h, max_view_h);
+  int win_w = 1;
+  int win_h = 1;
+  imageeditor_document_frame_for_viewport(viewport_w, viewport_h, &win_w, &win_h);
 
   // Keep the cascade inside the usable center workspace.
   if (wx < ws.x || wy < ws.y || wx + win_w > ws.x + ws.w || wy + win_h > ws.y + ws.h) {
@@ -198,7 +201,7 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
 
   window_t *dwin = create_window(
       filename ? filename : "Untitled",
-      /* WINDOW_TOOLBAR |*/ WINDOW_STATUSBAR | WINDOW_HSCROLL,
+      WINDOW_STATUSBAR | WINDOW_HSCROLL,
       MAKERECT(wx, wy, win_w, win_h),
       NULL, doc_win_proc, g_app->hinstance, NULL);
   dwin->userdata = doc;
@@ -218,6 +221,7 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
   doc->next   = g_app->docs;
   g_app->docs = doc;
   g_app->active_doc = doc;
+  imageeditor_sync_main_toolbar();
 
   doc_update_title(doc);
   send_message(dwin, evStatusBar, 0,

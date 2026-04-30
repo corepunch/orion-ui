@@ -92,6 +92,24 @@ static void canvas_composite(const canvas_doc_t *doc, uint8_t *dst) {
   }
 }
 
+// Render the active layer's alpha channel as a solid black/white image.
+static void canvas_render_mask_only(const canvas_doc_t *doc, uint8_t *dst) {
+  if (!doc) return;
+  size_t n = (size_t)doc->canvas_w * doc->canvas_h;
+  memset(dst, 0x00, n * 4);
+  if (doc->active_layer < 0 || doc->active_layer >= doc->layer_count)
+    return;
+
+  const layer_t *lay = doc->layers[doc->active_layer];
+  for (size_t i = 0; i < n; i++) {
+    uint8_t a = lay->pixels[i * 4 + 3];
+    dst[i * 4 + 0] = a;
+    dst[i * 4 + 1] = a;
+    dst[i * 4 + 2] = a;
+    dst[i * 4 + 3] = 255;
+  }
+}
+
 // ============================================================
 // Public layer management API
 // ============================================================
@@ -184,6 +202,32 @@ void doc_set_active_layer(canvas_doc_t *doc, int idx) {
   doc->active_layer = idx;
   doc->pixels = doc->layers[idx]->pixels;
   doc->editing_mask = false;
+  doc->canvas_dirty = true;
+  if (doc->canvas_win)
+    invalidate_window(doc->canvas_win);
+  if (doc->canvas_win) {
+    canvas_win_state_t *state = (canvas_win_state_t *)doc->canvas_win->userdata;
+    if (state) {
+      canvas_win_update_status(doc->canvas_win, state->hover.x, state->hover.y,
+                               state->hover_valid);
+    }
+  }
+}
+
+void doc_set_mask_only_view(canvas_doc_t *doc, bool enabled) {
+  if (!doc) return;
+  if (doc->mask_only_view == enabled) return;
+  doc->mask_only_view = enabled;
+  doc->canvas_dirty = true;
+  if (doc->canvas_win) {
+    invalidate_window(doc->canvas_win);
+    canvas_win_state_t *state = (canvas_win_state_t *)doc->canvas_win->userdata;
+    if (state) {
+      canvas_win_update_status(doc->canvas_win, state->hover.x, state->hover.y,
+                               state->hover_valid);
+    }
+  }
+  imageeditor_sync_main_toolbar();
 }
 
 void doc_move_layer_up(canvas_doc_t *doc) {
@@ -1102,8 +1146,12 @@ void canvas_upload(canvas_doc_t *doc) {
     doc->canvas_dirty = true;
   }
 
-  if (doc->canvas_dirty)
-    canvas_composite(doc, doc->composite_buf);
+  if (doc->canvas_dirty) {
+    if (doc->mask_only_view)
+      canvas_render_mask_only(doc, doc->composite_buf);
+    else
+      canvas_composite(doc, doc->composite_buf);
+  }
 
   if (!doc->canvas_tex) {
     GLuint tex;

@@ -42,6 +42,7 @@ static menu_item_t s_view_items[] = {
   {NULL,                       0},
   {"[ ] Show Grid",            ID_VIEW_SHOW_GRID},
   {"[ ] Snap to Grid",         ID_VIEW_SNAP_GRID},
+  {"[ ] Mask Only View",       ID_VIEW_MASK_ONLY},
   {NULL,                       0},
   {"Grid Options...",          ID_VIEW_GRID_OPTIONS},
 };
@@ -227,6 +228,7 @@ window_t *create_color_palette_window(void) {
 // Called before each popup open so the labels always show current state.
 static void view_menu_rebuild(void) {
   if (!g_app) return;
+  canvas_doc_t *doc = g_app->active_doc;
   int n = (int)(sizeof(s_view_items) / sizeof(s_view_items[0]));
   for (int i = 0; i < n; i++) {
     if (s_view_items[i].id == ID_VIEW_SHOW_GRID)
@@ -237,6 +239,10 @@ static void view_menu_rebuild(void) {
       s_view_items[i].label = g_app->grid_snap
                               ? MENU_CHECK_ON "Snap to Grid"
                               : MENU_CHECK_OFF "Snap to Grid";
+    if (s_view_items[i].id == ID_VIEW_MASK_ONLY)
+      s_view_items[i].label = (doc && doc->mask_only_view)
+                              ? MENU_CHECK_ON "Mask Only View"
+                              : MENU_CHECK_OFF "Mask Only View";
   }
 }
 
@@ -521,43 +527,7 @@ void handle_menu_command(uint16_t id) {
     case ID_VIEW_ZOOM_4X:
     case ID_VIEW_ZOOM_6X:
     case ID_VIEW_ZOOM_8X: {
-      if (!doc || !doc->canvas_win) break;
-      canvas_win_state_t *state = (canvas_win_state_t *)doc->canvas_win->userdata;
-      if (!state) break;
-
-      int new_scale = -1;
-
-      if (id == ID_VIEW_ZOOM_FIT) {
-        canvas_win_fit_zoom(doc->canvas_win);
-        char zoom_msg[32];
-        char zoom_text[16];
-        imageeditor_format_zoom(zoom_text, sizeof(zoom_text), state->scale);
-        snprintf(zoom_msg, sizeof(zoom_msg), "Zoom: %s", zoom_text);
-        send_message(doc->win, evStatusBar, 0, zoom_msg);
-        break;
-      } else if (id == ID_VIEW_ZOOM_IN) {
-        for (int i = 0; i < NUM_ZOOM_LEVELS; i++) {
-          if (kZoomLevels[i] > state->scale) { new_scale = kZoomLevels[i]; break; }
-        }
-      } else if (id == ID_VIEW_ZOOM_OUT) {
-        for (int i = NUM_ZOOM_LEVELS - 1; i >= 0; i--) {
-          if (kZoomLevels[i] < state->scale) { new_scale = kZoomLevels[i]; break; }
-        }
-      } else {
-        for (int i = 0; i < NUM_ZOOM_LEVELS; i++) {
-          if (kZoomMenuIDs[i] == (int)id) { new_scale = kZoomLevels[i]; break; }
-        }
-      }
-
-      if (new_scale < 0) break;
-      canvas_win_set_zoom(doc->canvas_win, new_scale);
-
-      // Update status bar with current zoom
-      char zoom_msg[32];
-      char zoom_text[16];
-      imageeditor_format_zoom(zoom_text, sizeof(zoom_text), state->scale);
-      snprintf(zoom_msg, sizeof(zoom_msg), "Zoom: %s", zoom_text);
-      send_message(doc->win, evStatusBar, 0, zoom_msg);
+      if (!imageeditor_handle_zoom_command(doc, id)) break;
       break;
     }
 
@@ -581,6 +551,15 @@ void handle_menu_command(uint16_t id) {
       }
       break;
     }
+
+    case ID_VIEW_MASK_ONLY:
+      if (doc) {
+        doc_set_mask_only_view(doc, !doc->mask_only_view);
+        if (doc->canvas_win)
+          invalidate_window(doc->canvas_win);
+        view_menu_rebuild();
+      }
+      break;
 
     case ID_TOOL_PENCIL:
     case ID_TOOL_BRUSH:
@@ -726,6 +705,13 @@ void handle_menu_command(uint16_t id) {
             break;
           }
           doc->editing_mask = true;
+          if (doc->canvas_win) {
+            canvas_win_state_t *state = (canvas_win_state_t *)doc->canvas_win->userdata;
+            if (state) {
+              canvas_win_update_status(doc->canvas_win, state->hover.x, state->hover.y,
+                                       state->hover_valid);
+            }
+          }
         } else {
           doc_discard_undo(doc);
           break;
@@ -739,6 +725,13 @@ void handle_menu_command(uint16_t id) {
       if (doc) {
         doc_push_undo(doc);
         layer_apply_mask(doc, doc->active_layer);
+        if (doc->canvas_win) {
+          canvas_win_state_t *state = (canvas_win_state_t *)doc->canvas_win->userdata;
+          if (state) {
+            canvas_win_update_status(doc->canvas_win, state->hover.x, state->hover.y,
+                                     state->hover_valid);
+          }
+        }
         invalidate_window(doc->canvas_win);
         layers_win_refresh();
       }
@@ -748,6 +741,13 @@ void handle_menu_command(uint16_t id) {
       if (doc) {
         doc_push_undo(doc);
         layer_remove_mask(doc, doc->active_layer);
+        if (doc->canvas_win) {
+          canvas_win_state_t *state = (canvas_win_state_t *)doc->canvas_win->userdata;
+          if (state) {
+            canvas_win_update_status(doc->canvas_win, state->hover.x, state->hover.y,
+                                     state->hover_valid);
+          }
+        }
         invalidate_window(doc->canvas_win);
         layers_win_refresh();
       }
@@ -767,6 +767,13 @@ void handle_menu_command(uint16_t id) {
       if (doc && doc->layer_count > 0) {
         doc->editing_mask = !doc->editing_mask;
         layers_win_refresh();
+        if (doc->canvas_win) {
+          canvas_win_state_t *state = (canvas_win_state_t *)doc->canvas_win->userdata;
+          if (state) {
+            canvas_win_update_status(doc->canvas_win, state->hover.x, state->hover.y,
+                                     state->hover_valid);
+          }
+        }
         if (doc->canvas_win) invalidate_window(doc->canvas_win);
       }
       break;

@@ -46,6 +46,10 @@
 #define SCREEN_H      768
 #endif
 
+#define APP_TOOLBAR_Y   (MENUBAR_HEIGHT + 4)
+// App toolbar band height: button size + top/bottom bevel + top/bottom padding.
+#define APP_TOOLBAR_H   (TB_SPACING + 2*(TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH))
+
 #define PALETTE_WIN_X   4
 #define TOOL_PALETTE_BTN_SIZE (TOOLBOX_BTN_SIZE + 4)
 // Tool palette window width: always 2 toolbox columns wide.
@@ -58,9 +62,9 @@
 #define TOOL_TOOLBAR_ROWS (((NUM_TOOLS) + TOOLBOX_COLS - 1) / TOOLBOX_COLS)
 #define TOOL_TOOLBAR_H    ((TOOL_TOOLBAR_ROWS) * TOOL_PALETTE_BTN_SIZE)
 
-// PALETTE_WIN_Y is now the window top (title bar top) of the tool palette.
-// frame.y = window top = MENUBAR_HEIGHT + 4 (title bar sits 4px below the menu bar)
-#define PALETTE_WIN_Y  (MENUBAR_HEIGHT + 4)
+// PALETTE_WIN_Y is the window top (title bar top) of the tool palette.
+// It sits below the app toolbar, with a 4px gap.
+#define PALETTE_WIN_Y  (APP_TOOLBAR_Y + APP_TOOLBAR_H + 4)
 
 #define TOOL_SWATCH_BOX_H    PALETTE_WIN_W
 
@@ -92,7 +96,7 @@ extern const int kBrushSizes[NUM_BRUSH_SIZES];
 #define COLOR_WIN_H   (TITLEBAR_HEIGHT + COLOR_SWATCH_ROWS * SWATCH_ROW_H)
 #define COLOR_WIN_X   (SCREEN_W - COLOR_WIN_W - 4)
 #define COLOR_WIN_W   RIGHT_PANE_WIN_W
-#define COLOR_WIN_Y   (MENUBAR_HEIGHT + 4)
+#define COLOR_WIN_Y   (APP_TOOLBAR_Y + APP_TOOLBAR_H + 4)
 
 // Canvas transparency checkerboard. 16 px squares are a good middle ground
 // between readable and subtle in the image editor.
@@ -136,6 +140,7 @@ extern const int kBrushSizes[NUM_BRUSH_SIZES];
 #define ID_VIEW_ZOOM_8X   46
 
 #define ID_VIEW_ZOOM_FIT  55   // Fit on Screen (Ctrl+0, like Photoshop)
+#define ID_VIEW_MASK_ONLY 56   // Show the active layer's alpha channel
 
 #define ID_VIEW_SHOW_GRID    47
 #define ID_VIEW_SNAP_GRID    48
@@ -237,6 +242,7 @@ typedef struct canvas_doc_s {
   int       layer_count;
   int       active_layer;    // index of the active layer
   bool      editing_mask;    // true → drawing ops paint the active layer's alpha
+  bool      mask_only_view;  // true → canvas shows the active layer alpha only
   uint8_t  *composite_buf;   // canvas_w * canvas_h * 4 scratch buffer for compositing
   // Undo/redo history (heap-allocated layer-stack snapshots)
   uint8_t *undo_states[UNDO_MAX];
@@ -280,6 +286,7 @@ typedef struct {
   canvas_doc_t  *active_doc;
   canvas_doc_t  *docs;
   window_t      *menubar_win;
+  window_t      *main_toolbar_win;
   window_t      *tool_win;
   window_t      *tool_options_win;
   window_t      *color_win;
@@ -460,15 +467,17 @@ void canvas_win_set_scale(window_t *canvas_win, float new_scale);
 // Fit the canvas to the viewport at the largest integer zoom that shows the
 // whole image — equivalent to Photoshop's "Fit on Screen" (Ctrl+0).
 void canvas_win_fit_zoom(window_t *canvas_win);
+void imageeditor_format_zoom(char *buf, size_t buf_sz, float scale);
 float imageeditor_fit_scale_for_viewport(int content_w, int content_h,
                                          int viewport_w, int viewport_h,
                                          bool allow_zoom_in);
-void imageeditor_format_zoom(char *buf, size_t buf_sz, float scale);
 rect_t imageeditor_document_workspace_rect(void);
 void imageeditor_max_document_frame_size(int *out_w, int *out_h);
 void imageeditor_max_canvas_viewport_size(int *out_w, int *out_h);
 void imageeditor_document_frame_for_viewport(int viewport_w, int viewport_h,
                                              int *out_w, int *out_h);
+bool imageeditor_handle_zoom_command(canvas_doc_t *doc, uint32_t id);
+void canvas_win_update_status(window_t *win, int px, int py, bool hover_valid);
 
 // Sync canvas scrollbars after content size changes (e.g. after canvas_resize)
 void canvas_win_sync_scrollbars(window_t *canvas_win);
@@ -511,6 +520,8 @@ bool imageeditor_open_file_path(const char *path);
 // Palette window factory helpers — create, show, register and return the window.
 // Also used by handle_menu_command to recreate closed palette windows.
 window_t *create_tool_palette_window(void);
+window_t *create_main_toolbar_window(void);
+void imageeditor_sync_main_toolbar(void);
 window_t *create_tool_options_window(void);
 window_t *create_color_palette_window(void);
 
@@ -565,6 +576,7 @@ bool doc_duplicate_layer(canvas_doc_t *doc);
 
 // Change the active layer, updating doc->pixels and resetting editing_mask.
 void doc_set_active_layer(canvas_doc_t *doc, int idx);
+void doc_set_mask_only_view(canvas_doc_t *doc, bool enabled);
 
 // Move the active layer up (towards the top of the stack).
 void doc_move_layer_up(canvas_doc_t *doc);

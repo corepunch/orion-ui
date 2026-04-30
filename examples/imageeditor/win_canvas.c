@@ -66,6 +66,65 @@ void imageeditor_format_zoom(char *buf, size_t buf_sz, float scale) {
   }
 }
 
+bool imageeditor_handle_zoom_command(canvas_doc_t *doc, uint32_t id) {
+  if (!doc || !doc->canvas_win) return false;
+  canvas_win_state_t *state = (canvas_win_state_t *)doc->canvas_win->userdata;
+  if (!state) return false;
+
+  int new_scale = -1;
+
+  if (id == ID_VIEW_ZOOM_FIT) {
+    canvas_win_fit_zoom(doc->canvas_win);
+  } else if (id == ID_VIEW_ZOOM_IN) {
+    for (int i = 0; i < NUM_ZOOM_LEVELS; i++) {
+      if (kZoomLevels[i] > state->scale) { new_scale = kZoomLevels[i]; break; }
+    }
+  } else if (id == ID_VIEW_ZOOM_OUT) {
+    for (int i = NUM_ZOOM_LEVELS - 1; i >= 0; i--) {
+      if (kZoomLevels[i] < state->scale) { new_scale = kZoomLevels[i]; break; }
+    }
+  } else {
+    for (int i = 0; i < NUM_ZOOM_LEVELS; i++) {
+      if (kZoomMenuIDs[i] == (int)id) { new_scale = kZoomLevels[i]; break; }
+    }
+  }
+
+  if (id != ID_VIEW_ZOOM_FIT && new_scale < 0) return false;
+  if (new_scale >= 0)
+    canvas_win_set_zoom(doc->canvas_win, new_scale);
+
+  char zoom_msg[32];
+  char zoom_text[16];
+  imageeditor_format_zoom(zoom_text, sizeof(zoom_text), state->scale);
+  snprintf(zoom_msg, sizeof(zoom_msg), "Zoom: %s", zoom_text);
+  send_message(doc->win, evStatusBar, 0, zoom_msg);
+  return true;
+}
+
+void canvas_win_update_status(window_t *win, int px, int py, bool hover_valid) {
+  if (!win) return;
+  canvas_win_state_t *state = (canvas_win_state_t *)win->userdata;
+  canvas_doc_t *doc = state ? state->doc : NULL;
+  if (!state || !doc || !doc->win) return;
+
+  char sb[64];
+  const char *view_suffix = doc->mask_only_view ? "  [Mask Only]" : "";
+  const char *edit_suffix = (doc->editing_mask && doc->layer_count > 0) ? "  [Mask]" : "";
+  if (hover_valid)
+    snprintf(sb, sizeof(sb), "x=%d, y=%d  |  %dx%d%s%s",
+             px, py, doc->canvas_w, doc->canvas_h,
+             view_suffix, edit_suffix);
+  else
+    snprintf(sb, sizeof(sb), "%dx%d%s%s",
+             doc->canvas_w, doc->canvas_h, view_suffix, edit_suffix);
+
+  if (strcmp(sb, state->last_sb) != 0) {
+    strncpy(state->last_sb, sb, sizeof(state->last_sb) - 1);
+    state->last_sb[sizeof(state->last_sb) - 1] = '\0';
+    send_message(doc->win, evStatusBar, 0, sb);
+  }
+}
+
 // Return the brush radius (pixels) for the current brush_size, clamping any
 // out-of-range value to the nearest valid index to prevent OOB reads.
 static int brush_radius(void) {
@@ -342,7 +401,10 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
     }
 
     case evSetFocus:
-      if (g_app && doc) g_app->active_doc = doc;
+      if (g_app && doc) {
+        g_app->active_doc = doc;
+        imageeditor_sync_main_toolbar();
+      }
       return false;
 
     case evPaint: {
@@ -352,10 +414,12 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       // Draw canvas offset by pan so zoomed content scrolls correctly
       int cx = -state->pan_x;
       int cy = -state->pan_y;
-      draw_checkerboard(R(cx, cy,
-                          scaled_px(doc->canvas_w, state->scale),
-                          scaled_px(doc->canvas_h, state->scale)),
-                        CANVAS_CHECKER_SQUARE_PX);
+      if (!doc->mask_only_view) {
+        draw_checkerboard(R(cx, cy,
+                            scaled_px(doc->canvas_w, state->scale),
+                            scaled_px(doc->canvas_h, state->scale)),
+                          CANVAS_CHECKER_SQUARE_PX);
+      }
       draw_rect(doc->canvas_tex,
                 R(cx, cy,
                   scaled_px(doc->canvas_w, state->scale),
@@ -756,25 +820,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       // magnifier loupe always shows the actual pixel under the cursor).
       snap_canvas_pos(&px, &py);
 
-      // Update status bar with cursor position (Windows Me / MS Paint style).
-      // Append "[Mask]" while the user is editing the active layer's alpha.
-      // Only send when the text changes to avoid redundant full-window repaints.
-      {
-        char sb[64];
-        const char *mask_suffix = (doc->editing_mask && doc->layer_count > 0)
-                                  ? "  [Mask]" : "";
-        if (state->hover_valid)
-          snprintf(sb, sizeof(sb), "x=%d, y=%d  |  %dx%d%s",
-                   px, py, doc->canvas_w, doc->canvas_h, mask_suffix);
-        else
-          snprintf(sb, sizeof(sb), "%dx%d%s",
-                   doc->canvas_w, doc->canvas_h, mask_suffix);
-        if (strcmp(sb, state->last_sb) != 0) {
-          strncpy(state->last_sb, sb, sizeof(state->last_sb) - 1);
-          state->last_sb[sizeof(state->last_sb) - 1] = '\0';
-          send_message(doc->win, evStatusBar, 0, sb);
-        }
-      }
+      canvas_win_update_status(win, px, py, state->hover_valid);
 
       int tool = g_app->current_tool;
       bool shift = (ui_get_mod_state() & AX_MOD_SHIFT) != 0;

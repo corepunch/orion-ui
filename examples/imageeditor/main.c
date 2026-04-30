@@ -57,6 +57,42 @@ static const accel_t kAccelEntries[] = {
   { FSHIFT|FVIRTKEY,   AX_KEY_T, ID_TOOL_TEXT   },
 };
 
+static const toolbar_item_t kMainToolbar[] = {
+  { TOOLBAR_ITEM_BUTTON, ID_FILE_NEW,     sysicon_page_add,     0, 0, "New"     },
+  { TOOLBAR_ITEM_BUTTON, ID_FILE_OPEN,    sysicon_folder_page,  0, 0, "Open"    },
+  { TOOLBAR_ITEM_BUTTON, ID_FILE_SAVE,    sysicon_disk_save,    0, 0, "Save"    },
+  { TOOLBAR_ITEM_BUTTON, ID_FILE_SAVEAS,  sysicon_disk_multiple,0, 0, "Save As" },
+  { TOOLBAR_ITEM_SPACER, 0, 0, 10, 0, NULL },
+  { TOOLBAR_ITEM_BUTTON, ID_VIEW_ZOOM_OUT,  sysicon_magnifier_zoom_out, 0, 0, "Zoom Out" },
+  { TOOLBAR_ITEM_BUTTON, ID_VIEW_ZOOM_IN,   sysicon_magnifier_zoom_in,  0, 0, "Zoom In"  },
+  { TOOLBAR_ITEM_BUTTON, ID_VIEW_ZOOM_1X,   sysicon_image_dimensions,    0, 0, "1x"       },
+  { TOOLBAR_ITEM_BUTTON, ID_VIEW_ZOOM_FIT,  sysicon_expand,              0, 0, "Fit"      },
+  { TOOLBAR_ITEM_SPACER, 0, 0, 10, 0, NULL },
+  { TOOLBAR_ITEM_BUTTON, ID_VIEW_MASK_ONLY, sysicon_transparency,        0, BUTTON_PUSHLIKE, "Mask" },
+};
+
+static result_t main_toolbar_proc(window_t *win, uint32_t msg,
+                                  uint32_t wparam, void *lparam) {
+  (void)lparam;
+  switch (msg) {
+    case evCreate:
+      send_message(win, tbSetItems,
+                   (uint32_t)(sizeof(kMainToolbar) / sizeof(kMainToolbar[0])),
+                   (void *)kMainToolbar);
+      imageeditor_sync_main_toolbar();
+      return true;
+    case tbButtonClick:
+      handle_menu_command((uint16_t)wparam);
+      imageeditor_sync_main_toolbar();
+      return true;
+    case evDestroy:
+      if (g_app && g_app->main_toolbar_win == win) g_app->main_toolbar_win = NULL;
+      return false;
+    default:
+      return false;
+  }
+}
+
 // Resurrect 64 palette from LoSpec.com
 static const uint32_t kDefaultPalette[NUM_COLORS] = {
   0xff2f222e, 0xff46353e, 0xff655562, 0xff624f69, 0xff8a707f, 0xffb2ab9b, 0xffd0dcc7, 0xffffffff,
@@ -82,11 +118,37 @@ static bool image_editor_open_file_handler(const char *path) {
 static void create_app_windows(hinstance_t hinstance) {
   g_app->menubar_win = set_app_menu(editor_menubar_proc, kMenus, kNumMenus,
                                     handle_menu_command, hinstance);
+  create_main_toolbar_window();
 
   create_tool_palette_window();
   create_tool_options_window();
   create_color_palette_window();
   create_layers_window();
+}
+
+window_t *create_main_toolbar_window(void) {
+  if (!g_app) return NULL;
+  int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
+  window_t *win = create_window(
+      "Toolbar",
+      WINDOW_TOOLBAR | WINDOW_NOTITLE | WINDOW_ALWAYSONTOP |
+      WINDOW_NORESIZE | WINDOW_NOTRAYBUTTON,
+      MAKERECT(0, APP_TOOLBAR_Y, sw, APP_TOOLBAR_H),
+      NULL, main_toolbar_proc,
+      g_app->hinstance, NULL);
+  if (!win) return NULL;
+  show_window(win, true);
+  g_app->main_toolbar_win = win;
+  imageeditor_sync_main_toolbar();
+  return win;
+}
+
+void imageeditor_sync_main_toolbar(void) {
+  if (!g_app || !g_app->main_toolbar_win) return;
+  window_t *btn = get_window_item(g_app->main_toolbar_win, ID_VIEW_MASK_ONLY);
+  if (!btn) return;
+  bool checked = g_app->active_doc && g_app->active_doc->mask_only_view;
+  send_message(btn, btnSetCheck, checked ? btnStateChecked : btnStateUnchecked, NULL);
 }
 
 // ============================================================
