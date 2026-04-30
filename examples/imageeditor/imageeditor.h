@@ -527,7 +527,7 @@ bool show_grid_options_dialog(window_t *parent, int *out_x, int *out_y);
 // Layers palette window geometry.
 // Positioned on the right side of the screen, below the color palette.
 #define LAYERS_WIN_W          RIGHT_PANE_WIN_W
-#define LAYERS_ROW_H           18   // height of each layer row in the panel
+#define LAYERS_ROW_H           24   // height of each layer row in the panel
 #define LAYERS_MAX_VIS_ROWS     5   // visible rows before scrolling
 #define LAYERS_LIST_H         (LAYERS_ROW_H * LAYERS_MAX_VIS_ROWS)
 // Toolbar band height: button size + top/bottom bevel + top/bottom padding.
@@ -537,8 +537,8 @@ bool show_grid_options_dialog(window_t *parent, int *out_x, int *out_y);
 #define LAYERS_WIN_Y          (COLOR_WIN_Y + COLOR_WIN_H + 4)
 
 // Hit-test zones within a layer row (x offsets)
-#define LAYERS_EYE_W           14   // eye-icon click area width
-#define LAYERS_CHIP_W          14   // alpha-edit icon click area width
+#define LAYERS_EYE_W           16   // eye-icon click area width
+#define LAYERS_CHIP_W          16   // alpha-edit icon click area width
 #define LAYERS_NAME_X          (1 + LAYERS_EYE_W + 2 + LAYERS_CHIP_W + 3)  // start of name text
 
 // ============================================================

@@ -127,11 +127,12 @@ static void paint_layers(window_t *win, layers_win_state_t *st) {
       fill_rect(bg, R(0, ry, w, LAYERS_ROW_H));
 
       // Eye icon: visibility toggle.
+      int icon_y = ry + (LAYERS_ROW_H - 16) / 2;
       uint32_t eye_col = (li == doc->active_layer)
                          ? MAKE_COLOR(0xFF,0xFF,0xFF,0xFF)
                          : get_sys_color(brTextNormal);
       draw_icon16(lay->visible ? sysicon_eye_show : sysicon_eye_hide,
-                  1, ry + 1, eye_col);
+                  1, icon_y, eye_col);
 
       // Alpha edit icon: pencil when editing, transparency icon when viewing.
       uint32_t chip_col = (doc->editing_mask && li == doc->active_layer)
@@ -139,14 +140,14 @@ static void paint_layers(window_t *win, layers_win_state_t *st) {
       int chip_x = 1 + LAYERS_EYE_W + 2;
       draw_icon16((doc->editing_mask && li == doc->active_layer)
                   ? sysicon_pencil : sysicon_transparency,
-                  chip_x, ry + 1, chip_col);
+                  chip_x, icon_y, chip_col);
 
       // Layer name.
       uint32_t name_col = (li == doc->active_layer)
                           ? MAKE_COLOR(0xFF,0xFF,0xFF,0xFF)
                           : get_sys_color(brTextNormal);
-      draw_text_small(lay->name, LAYERS_NAME_X,
-                      ry + (LAYERS_ROW_H - FONT_SIZE_SMALL) / 2, name_col);
+      rect_t name_rect = R(LAYERS_NAME_X, ry, w - LAYERS_NAME_X - 4, LAYERS_ROW_H);
+      draw_text_clipped(FONT_SMALL, lay->name, &name_rect, name_col, TEXT_PADDING_LEFT);
 
       // Separator line.
       fill_rect(get_sys_color(brWindowDarkBg), R(0, ry + LAYERS_ROW_H - 1, w, 1));
@@ -154,8 +155,8 @@ static void paint_layers(window_t *win, layers_win_state_t *st) {
   } else {
     // No document open.
     uint32_t hint = get_sys_color(brTextDisabled);
-    draw_text_small("(no document)",
-                    4, 4 + (LAYERS_ROW_H - FONT_SIZE_SMALL) / 2, hint);
+    draw_text_clipped(FONT_SMALL, "(no document)",
+                      &R(4, 0, w - 8, client_h), hint, TEXT_PADDING_LEFT);
   }
 }
 
