@@ -203,6 +203,7 @@ GITCLIENT_SRCS_NO_MAIN = $(filter-out examples/gitclient/main.c,$(wildcard examp
 IMAGEEDITOR_UI_TEST_SRC  = $(TEST_DIR)/imageeditor_ui_test.c
 IMAGEEDITOR_UI_TEST_BIN  = $(BIN_DIR)/test_imageeditor_ui_test$(EXE_EXT)
 IMAGEEDITOR_SRCS_NO_MAIN = $(filter-out examples/imageeditor/main.c,$(wildcard examples/imageeditor/*.c))
+IMAGELITE_BIN = $(BIN_DIR)/imagelite$(EXE_EXT)
 
 # Tests with custom build rules — excluded from the generic pattern rules.
 APP_UI_TEST_SRCS = $(GITCLIENT_TEST_SRCS) $(IMAGEEDITOR_UI_TEST_SRC)
@@ -308,6 +309,17 @@ $(SHARED_LIB): $(USER_SRCS) $(KERNEL_SRCS) $(COMMCTL_SRCS) $(PLATFORM_LIB) | $(L
 # Examples
 .PHONY: examples
 examples: share $(EXAMPLE_BINS) $(EXTRA_EXAMPLE_BINS)
+
+.PHONY: imagelite
+imagelite: share $(IMAGELITE_BIN)
+	@echo "Single-layer image editor built"
+
+$(IMAGELITE_BIN): $(wildcard examples/imageeditor/*.c) $(SHARED_LIB) | $(BIN_DIR)
+	@echo "Building single-layer image editor: $@"
+	@(find examples/imageeditor -name "*.c" ! -name "main.c" | sort | sed 's/.*/#include "&"/'; \
+	 echo '#include "examples/imageeditor/main.c"') | \
+		$(CC) $(CFLAGS) -DIMAGEEDITOR_SINGLE_LAYER -I. -Iexamples/imageeditor -DSHAREDIR='"../share/imageeditor"' -x c -o $@ - \
+		$(LDFLAGS) $(LDFLAGS_EXAMPLE) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
 
 # Static unity-build rule for all examples.
 # The target list is scoped to $(EXAMPLE_BINS) so this rule never fires for
@@ -462,6 +474,7 @@ help:
 	@echo "  all       - Build library, examples, gems, and shell"
 	@echo "  library   - Build static and shared libraries"
 	@echo "  examples  - Build example applications"
+	@echo "  imagelite - Build the single-layer image editor"
 	@echo "  gems      - Build all .gem shared libraries"
 	@echo "  shell     - Build the Orion shell"
 	@echo "  test      - Build and run tests"

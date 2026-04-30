@@ -20,6 +20,10 @@
 #define IMAGEEDITOR_DEBUG 1
 #endif
 
+#ifndef IMAGEEDITOR_SINGLE_LAYER
+#define IMAGEEDITOR_SINGLE_LAYER 0
+#endif
+
 #if IMAGEEDITOR_DEBUG
 #define IE_DEBUG(...) do { \
   axLog("[imageeditor] " __VA_ARGS__); \

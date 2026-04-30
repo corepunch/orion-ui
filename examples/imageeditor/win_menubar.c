@@ -85,7 +85,9 @@ static const menu_item_t kHelpItems[] = {
 static const menu_item_t kWindowPrefix[] = {
   {"Tools",   ID_WINDOW_TOOLS},
   {"Colors",  ID_WINDOW_COLORS},
+#if !IMAGEEDITOR_SINGLE_LAYER
   {"Layers",  ID_WINDOW_LAYERS},
+#endif
   {NULL,      0},   // separator before document list
 };
 #define WINDOW_PREFIX_COUNT ((int)(sizeof(kWindowPrefix)/sizeof(kWindowPrefix[0])))
@@ -619,6 +621,7 @@ void handle_menu_command(uint16_t id) {
       }
       break;
 
+#if !IMAGEEDITOR_SINGLE_LAYER
     case ID_WINDOW_LAYERS:
       if (g_app->layers_win) {
         show_window(g_app->layers_win, true);
@@ -626,6 +629,7 @@ void handle_menu_command(uint16_t id) {
         create_layers_window();
       }
       break;
+#endif
 
     // ── Layer menu ─────────────────────────────────────────────────────────
     case ID_LAYER_NEW:
