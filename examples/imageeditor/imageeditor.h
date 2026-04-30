@@ -164,6 +164,7 @@ extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 #define ID_IMAGE_LEVELS   57
 
 #define ID_FILTER_RELOAD   90
+#define ID_FILTER_GALLERY  91
 #define ID_FILTER_BASE   1000
 #define IMAGEEDITOR_MAX_FILTERS 64
 
@@ -511,6 +512,7 @@ void imageeditor_sync_filter_menu(void);
 bool imageeditor_load_filters(void);
 void imageeditor_free_filters(void);
 bool imageeditor_apply_filter(canvas_doc_t *doc, int filter_idx);
+bool show_filter_gallery_dialog(window_t *parent);
 
 // Sync canvas scrollbars after content size changes (e.g. after canvas_resize)
 void canvas_win_sync_scrollbars(window_t *canvas_win);

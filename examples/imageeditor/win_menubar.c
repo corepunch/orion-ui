@@ -59,10 +59,11 @@ static const menu_item_t kImageItems[] = {
 
 static const menu_item_t kInstagramPrefix[] = {
   {"Reload Filters", ID_FILTER_RELOAD},
+  {"Filter Gallery...", ID_FILTER_GALLERY},
 };
 
-static menu_item_t s_instagram_items[1 + 1 + IMAGEEDITOR_MAX_FILTERS];
-static int         s_instagram_item_count = 1;
+static menu_item_t s_instagram_items[2 + 1 + IMAGEEDITOR_MAX_FILTERS];
+static int         s_instagram_item_count = 2;
 
 static const menu_item_t kLayerItems[] = {
   {"New Layer",          ID_LAYER_NEW},
@@ -516,6 +517,14 @@ void handle_menu_command(uint16_t id) {
       imageeditor_load_filters();
       break;
 
+    case ID_FILTER_GALLERY:
+      if (doc && show_filter_gallery_dialog(doc->win ? doc->win : g_app->menubar_win)) {
+        doc_update_title(doc);
+        if (doc->canvas_win)
+          invalidate_window(doc->canvas_win);
+      }
+      break;
+
     case ID_IMAGE_RESIZE: {
       if (!doc) break;
       int new_w = doc->canvas_w, new_h = doc->canvas_h;
@@ -830,6 +839,7 @@ void imageeditor_sync_filter_menu(void) {
 
   int n = 0;
   s_instagram_items[n++] = kInstagramPrefix[0];
+  s_instagram_items[n++] = kInstagramPrefix[1];
   if (g_app->filter_count > 0) {
     s_instagram_items[n++] = (menu_item_t){NULL, 0};
     for (int i = 0; i < g_app->filter_count &&
