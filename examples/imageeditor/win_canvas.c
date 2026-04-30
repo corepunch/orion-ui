@@ -355,7 +355,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       draw_checkerboard(R(cx, cy,
                           scaled_px(doc->canvas_w, state->scale),
                           scaled_px(doc->canvas_h, state->scale)),
-                        32);
+                        CANVAS_CHECKER_SQUARE_PX);
       draw_rect(doc->canvas_tex,
                 R(cx, cy,
                   scaled_px(doc->canvas_w, state->scale),

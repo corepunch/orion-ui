@@ -94,6 +94,10 @@ extern const int kBrushSizes[NUM_BRUSH_SIZES];
 #define COLOR_WIN_W   RIGHT_PANE_WIN_W
 #define COLOR_WIN_Y   (MENUBAR_HEIGHT + 4)
 
+// Canvas transparency checkerboard. 16 px squares are a good middle ground
+// between readable and subtle in the image editor.
+#define CANVAS_CHECKER_SQUARE_PX 16
+
 #define DOC_START_X   76
 #define DOC_START_Y   60
 #define DOC_CASCADE   20
