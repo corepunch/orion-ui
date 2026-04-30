@@ -22,7 +22,6 @@
 
 // Color palette used by the layers panel.
 #define COL_ROW_ACTIVE  MAKE_COLOR(0x00, 0x78, 0xD7, 0xFF)  // blue highlight
-#define COL_ROW_HOVER   MAKE_COLOR(0xCC, 0xE4, 0xF7, 0xFF)  // light hover
 #define COL_ALPHA_EDIT  MAKE_COLOR(0xE0, 0x40, 0x00, 0xFF)  // orange = editing alpha
 
 // ============================================================
@@ -44,7 +43,6 @@ static const toolbar_item_t kLayersToolbar[] = {
 // ============================================================
 
 typedef struct {
-  int hover_row;    // visual row under cursor (-1 = none)
   int scroll_top;   // first visible row (for >LAYERS_MAX_VIS_ROWS layers)
 } layers_win_state_t;
 
@@ -120,19 +118,17 @@ static void paint_layers(window_t *win, layers_win_state_t *st) {
       uint32_t bg;
       if (li == doc->active_layer)
         bg = COL_ROW_ACTIVE;
-      else if (row == st->hover_row)
-        bg = COL_ROW_HOVER;
       else
         bg = get_sys_color(brWindowBg);
       fill_rect(bg, R(0, ry, w, LAYERS_ROW_H));
 
       // Eye icon: visibility toggle.
       int icon_y = ry + (LAYERS_ROW_H - 16) / 2;
-      uint32_t eye_col = (li == doc->active_layer)
-                         ? MAKE_COLOR(0xFF,0xFF,0xFF,0xFF)
-                         : get_sys_color(brTextNormal);
+      // uint32_t eye_col = (li == doc->active_layer)
+      //                    ? MAKE_COLOR(0xFF,0xFF,0xFF,0xFF)
+      //                    : get_sys_color(brTextNormal);
       draw_icon16(lay->visible ? sysicon_eye_show : sysicon_eye_hide,
-                  1, icon_y, eye_col);
+                  1, icon_y, lay->visible ? 0xffffffff : 0x40ffffff); //eye_col);
 
       // Alpha edit icon: pencil when editing, transparency icon when viewing.
       uint32_t chip_col = (doc->editing_mask && li == doc->active_layer)
@@ -170,7 +166,6 @@ result_t win_layers_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
   switch (msg) {
     case evCreate: {
       layers_win_state_t *s = allocate_window_data(win, sizeof(layers_win_state_t));
-      s->hover_row = -1;
       s->scroll_top = 0;
       send_message(win, tbSetItems,
                    sizeof(kLayersToolbar) / sizeof(kLayersToolbar[0]),
@@ -189,25 +184,6 @@ result_t win_layers_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
     case tbButtonClick:
       handle_menu_command((uint16_t)wparam);
       return true;
-
-    case evMouseMove: {
-      if (!st) return false;
-      int mx = LOWORD(wparam);
-      int my = HIWORD(wparam);
-      int new_row = hit_row(win, mx, my);
-      if (new_row != st->hover_row) {
-        st->hover_row = new_row;
-        invalidate_window(win);
-      }
-      return true;
-    }
-
-    case evMouseLeave:
-      if (st && st->hover_row >= 0) {
-        st->hover_row = -1;
-        invalidate_window(win);
-      }
-      return false;
 
     case evLeftButtonDown: {
       if (!st || !g_app || !g_app->active_doc) return false;
@@ -264,7 +240,6 @@ result_t win_layers_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
     }
 
     case evResize:
-      if (st) st->hover_row = -1;
       return false;
 
     default:
