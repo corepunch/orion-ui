@@ -15,7 +15,7 @@
 #define FG_ICON_SIZE       64
 #define FG_ICON_CELL_W     74
 #else
-#define FG_ICON_SIZE       32
+#define FG_ICON_SIZE       64
 #define FG_ICON_CELL_W     72
 #endif
 #define FG_ICON_PAD         8
