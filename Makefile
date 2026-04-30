@@ -270,6 +270,7 @@ share: $(VGA_FONT_PNG) | $(SHARE_DIR)
 	@cp share/icon_sheet_16x16.png $(SHARE_DIR)/orion/
 	@cp share/SmallFont.png $(SHARE_DIR)/orion/
 	@cp share/Chicago-12.png $(SHARE_DIR)/orion/
+	@cp share/Geneva-9.png $(SHARE_DIR)/orion/
 	@cp share/Geneva-12.png $(SHARE_DIR)/orion/
 	@cp share/theme.png $(SHARE_DIR)/orion/
 	@cp share/filepicker.png $(SHARE_DIR)/orion/

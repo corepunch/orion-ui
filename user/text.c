@@ -195,10 +195,11 @@ void init_text_rendering(void) {
   memset(&text_state, 0, sizeof(text_state));
 
   const char *exe = ui_get_exe_dir();
-  char small_path[4096], chicago_path[4096], geneva_path[4096];
+  char small_path[4096], chicago_path[4096], geneva9_path[4096], geneva12_path[4096];
   snprintf(small_path,  sizeof(small_path),  "%s/../share/orion/SmallFont.png",  exe);
   snprintf(chicago_path,  sizeof(chicago_path),  "%s/../share/orion/Chicago-12.png", exe);
-  snprintf(geneva_path, sizeof(geneva_path), "%s/../share/orion/Geneva-12.png",    exe);
+  snprintf(geneva9_path, sizeof(geneva9_path), "%s/../share/orion/Geneva-9.png", exe);
+  snprintf(geneva12_path, sizeof(geneva12_path), "%s/../share/orion/Geneva-12.png", exe);
 
 #if UI_WINDOW_SCALE == 1
   // At native (1:1) scale: ChiKareGo2 for chrome (FONT_SYSTEM), Geneva9 /
@@ -211,9 +212,12 @@ void init_text_rendering(void) {
     text_state.big_space  = text_state.big_met.advance[' ']
                             ? text_state.big_met.advance[' '] : 5;
 
-    // Try Geneva-12 first, then fall back to SmallFont for the small atlas.
+    // Try Geneva-9 first, then fall back to the older Geneva-12/SmallFont atlases.
     bool geneva_ok = load_atlas(&text_state.small, &text_state.small_met,
-                                geneva_path, 0, 255);
+                                geneva9_path, 0, 255);
+    if (!geneva_ok)
+      geneva_ok = load_atlas(&text_state.small, &text_state.small_met,
+                             geneva12_path, 0, 255);
     if (!geneva_ok)
       geneva_ok = load_atlas(&text_state.small, &text_state.small_met,
                              small_path,   0, 255);
@@ -235,17 +239,30 @@ void init_text_rendering(void) {
   }
 #endif
 
-  // Default (scale>=2 or ChiKareGo2 unavailable): SmallFont for everything.
+  // Default (scale>=2 or ChiKareGo2 unavailable): SmallFont for chrome, with
+  // Geneva-9 still preferred for FONT_SMALL content when the atlas exists.
   bool font_ok = load_atlas(&text_state.big, &text_state.big_met,
                              small_path, 0, 255);
   if (font_ok) {
-    text_state.has_small    = false;
     int h  = text_state.big.cell_h;
     int sp = text_state.big_met.advance[' '] ? text_state.big_met.advance[' '] : 3;
-    text_state.big_height   = text_state.small_height = h;
-    text_state.big_line     = text_state.small_line   = h + 4;
-    text_state.big_space    = text_state.small_space  = sp;
-    printf("text: SmallFont (%dx%d)\n", text_state.big.cell_w, h);
+    text_state.big_height = text_state.small_height = h;
+    text_state.big_line   = text_state.small_line   = h + 4;
+    text_state.big_space  = text_state.small_space  = sp;
+
+    bool geneva_ok = load_atlas(&text_state.small, &text_state.small_met,
+                                geneva9_path, 0, 255);
+    if (geneva_ok) {
+      text_state.has_small = true;
+      text_state.small_height = text_state.small.cell_h;
+      text_state.small_line   = text_state.small.cell_h + 4;
+      text_state.small_space  = text_state.small_met.advance[' ']
+                                ? text_state.small_met.advance[' '] : 3;
+    } else {
+      text_state.has_small = false;
+    }
+    printf("text: SmallFont (%dx%d)%s\n", text_state.big.cell_w, h,
+           geneva_ok ? " + Geneva-9" : "");
     return;
   }
 
@@ -254,10 +271,11 @@ void init_text_rendering(void) {
                   "         %s\n"
                   "         %s\n"
                   "         %s\n"
+                  "         %s\n"
                   "       Assets may be missing, corrupted, or invalid.\n"
                   "       Please verify the share/orion directory next to the executable\n"
                   "       (looked in %s/../share/orion/).\n",
-                  chicago_path, geneva_path, small_path, exe);
+                  chicago_path, geneva9_path, geneva12_path, small_path, exe);
   exit(1);
 }
 

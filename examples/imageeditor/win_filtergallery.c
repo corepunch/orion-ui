@@ -11,8 +11,20 @@
 #define FG_LIST_Y          18
 #define FG_LIST_W         256
 #define FG_LIST_H         290
-#define FG_ROW_H           70
-#define FG_THUMB_SIZE      54
+#if UI_WINDOW_SCALE > 1
+#define FG_ICON_SIZE       64
+#define FG_ICON_CELL_W     74
+#else
+#define FG_ICON_SIZE       32
+#define FG_ICON_CELL_W     72
+#endif
+#define FG_ICON_PAD         8
+#define FG_ICON_LABEL_GAP   4
+#if UI_WINDOW_SCALE > 1
+#define FG_WHEEL_MULT      16
+#else
+#define FG_WHEEL_MULT       8
+#endif
 #define FG_BUTTON_W        66
 #define FG_BUTTON_GAP       8
 #define FG_BUTTON_Y       326
@@ -28,6 +40,16 @@ typedef struct {
   bool accepted;
 } filter_gallery_state_t;
 
+typedef struct {
+  int view_w;
+  int icon_size;
+  int cell_w;
+  int cell_h;
+  int cols;
+  int rows;
+  int content_h;
+} icon_grid_layout_t;
+
 static result_t filter_gallery_list_proc(window_t *win, uint32_t msg,
                                          uint32_t wparam, void *lparam);
 
@@ -36,6 +58,42 @@ static void draw_outline(rect_t r, uint32_t col) {
   fill_rect(col, R(r.x, r.y, 1, r.h));
   fill_rect(col, R(r.x, r.y + r.h - 1, r.w, 1));
   fill_rect(col, R(r.x + r.w - 1, r.y, 1, r.h));
+}
+
+static icon_grid_layout_t icon_grid_layout(int view_w, int item_count) {
+  icon_grid_layout_t g;
+  memset(&g, 0, sizeof(g));
+  g.view_w = view_w;
+  g.icon_size = FG_ICON_SIZE;
+  g.cell_w = FG_ICON_CELL_W;
+  g.cell_h = FG_ICON_SIZE + FG_ICON_LABEL_GAP + text_char_height(FONT_SMALL) + 10;
+  int usable_w = MAX(1, view_w - FG_ICON_PAD * 2);
+  g.cols = MAX(1, usable_w / g.cell_w);
+  g.rows = item_count > 0 ? (item_count + g.cols - 1) / g.cols : 0;
+  g.content_h = FG_ICON_PAD * 2 + g.rows * g.cell_h;
+  return g;
+}
+
+static rect_t icon_grid_cell_rect(const icon_grid_layout_t *g, int index, int scroll_y) {
+  int col = index % g->cols;
+  int row = index / g->cols;
+  int grid_w = g->cols * g->cell_w;
+  int x0 = FG_ICON_PAD + MAX(0, (g->view_w - FG_ICON_PAD * 2 - grid_w) / 2);
+  return R(x0 + col * g->cell_w, FG_ICON_PAD + row * g->cell_h - scroll_y,
+           g->cell_w, g->cell_h);
+}
+
+static int icon_grid_hit_test(const icon_grid_layout_t *g, int x, int y, int item_count) {
+  int grid_w = g->cols * g->cell_w;
+  int x0 = FG_ICON_PAD + MAX(0, (g->view_w - FG_ICON_PAD * 2 - grid_w) / 2);
+  int local_x = x - x0;
+  int local_y = y - FG_ICON_PAD;
+  if (local_x < 0 || local_y < 0) return -1;
+  int col = local_x / g->cell_w;
+  int row = local_y / g->cell_h;
+  if (col < 0 || col >= g->cols || row < 0) return -1;
+  int idx = row * g->cols + col;
+  return (idx >= 0 && idx < item_count) ? idx : -1;
 }
 
 static uint32_t filter_gallery_make_preview_tex(canvas_doc_t *doc) {
@@ -76,13 +134,29 @@ static uint32_t filter_gallery_make_preview_tex(canvas_doc_t *doc) {
 
 static void filter_gallery_sync_scrollbar(window_t *list) {
   if (!list || !g_app) return;
+  int view_w = list->frame.w - SCROLLBAR_WIDTH;
+  icon_grid_layout_t grid = icon_grid_layout(view_w, g_app->filter_count);
   scroll_info_t si;
   si.fMask = SIF_RANGE | SIF_PAGE | SIF_POS;
   si.nMin = 0;
-  si.nMax = MAX(FG_LIST_H, g_app->filter_count * FG_ROW_H);
+  si.nMax = MAX(FG_LIST_H, grid.content_h);
   si.nPage = FG_LIST_H;
   si.nPos = ((filter_gallery_state_t *)list->userdata)->scroll_y;
   set_scroll_info(list, SB_VERT, &si, false);
+}
+
+static void filter_gallery_scroll_to(window_t *list, int scroll_y) {
+  if (!list || !g_app) return;
+  filter_gallery_state_t *st = (filter_gallery_state_t *)list->userdata;
+  if (!st) return;
+  int view_w = list->frame.w - (list->vscroll.visible ? SCROLLBAR_WIDTH : 0);
+  icon_grid_layout_t grid = icon_grid_layout(view_w, g_app->filter_count);
+  int max_scroll = MAX(0, grid.content_h - FG_LIST_H);
+  st->scroll_y = MIN(MAX(scroll_y, 0), max_scroll);
+  list->scroll[1] = (uint16_t)st->scroll_y;
+  scroll_info_t si = { .fMask = SIF_POS, .nPos = st->scroll_y };
+  set_scroll_info(list, SB_VERT, &si, false);
+  invalidate_window(list);
 }
 
 static void draw_filter_preview(filter_gallery_state_t *st, int filter_idx, rect_t r) {
@@ -193,42 +267,48 @@ static result_t filter_gallery_list_proc(window_t *win, uint32_t msg,
       return true;
 
     case evVScroll:
-      if (st) {
-        st->scroll_y = (int)wparam;
-        win->scroll[1] = (uint16_t)st->scroll_y;
-        invalidate_window(win);
-      }
+      filter_gallery_scroll_to(win, (int)wparam);
+      return true;
+
+    case evWheel:
+      if (!st) return false;
+      filter_gallery_scroll_to(win, st->scroll_y - (int)(int16_t)HIWORD(wparam) * FG_WHEEL_MULT);
       return true;
 
     case evPaint: {
       int count = g_app ? g_app->filter_count : 0;
       int view_w = win->frame.w - (win->vscroll.visible ? SCROLLBAR_WIDTH : 0);
+      icon_grid_layout_t grid = icon_grid_layout(view_w, count);
       fill_rect(get_sys_color(brWindowBg), R(0, 0, view_w, win->frame.h));
       for (int i = 0; i < count; i++) {
-        int y = i * FG_ROW_H - (st ? st->scroll_y : 0);
-        if (y + FG_ROW_H < 0 || y >= win->frame.h) continue;
-        rect_t row = R(0, y, view_w, FG_ROW_H);
+        rect_t cell = icon_grid_cell_rect(&grid, i, st ? st->scroll_y : 0);
+        if (cell.y + cell.h < 0 || cell.y >= win->frame.h) continue;
         bool selected = st && i == st->selected;
-        fill_rect(get_sys_color(selected ? brActiveTitlebar : brWindowBg), row);
-        draw_text_clipped(FONT_SMALL, g_app->filters[i].name,
-                          &(rect_t){8, y + (FG_ROW_H - CONTROL_HEIGHT) / 2,
-                                    view_w - FG_THUMB_SIZE - 18, CONTROL_HEIGHT},
+        rect_t icon = R(cell.x + (cell.w - grid.icon_size) / 2, cell.y + 4,
+                        grid.icon_size, grid.icon_size);
+        rect_t label = R(cell.x + 2, icon.y + icon.h + FG_ICON_LABEL_GAP,
+                         cell.w - 4, text_char_height(FONT_SMALL) + 2);
+        if (selected)
+          fill_rect(get_sys_color(brActiveTitlebar),
+                    rect_inset(R(cell.x + 2, icon.y - 2,
+                                 cell.w - 4, icon.h + FG_ICON_LABEL_GAP + label.h + 4), -1));
+        draw_filter_preview(st, i, icon);
+        draw_text_clipped(FONT_SMALL, g_app->filters[i].name, &label,
                           get_sys_color(selected ? brActiveTitlebarText : brTextNormal),
-                          TEXT_PADDING_LEFT);
-        rect_t thumb = R(view_w - FG_THUMB_SIZE - 8,
-                         y + (FG_ROW_H - FG_THUMB_SIZE) / 2,
-                         FG_THUMB_SIZE, FG_THUMB_SIZE);
-        draw_filter_preview(st, i, thumb);
-        fill_rect(get_sys_color(brDarkEdge), R(0, y + FG_ROW_H - 1, view_w, 1));
+                          TEXT_ALIGN_CENTER);
       }
       return true;
     }
 
     case evLeftButtonDown: {
       if (!st || !g_app) return true;
-      int y = (int)(int16_t)HIWORD(wparam);
-      int idx = y / FG_ROW_H;
-      if (idx >= 0 && idx < g_app->filter_count) {
+      int view_w = win->frame.w - (win->vscroll.visible ? SCROLLBAR_WIDTH : 0);
+      icon_grid_layout_t grid = icon_grid_layout(view_w, g_app->filter_count);
+      int idx = icon_grid_hit_test(&grid,
+                                   (int)(int16_t)LOWORD(wparam),
+                                   (int)(int16_t)HIWORD(wparam),
+                                   g_app->filter_count);
+      if (idx >= 0) {
         st->selected = idx;
         invalidate_window(win);
         if (win->parent) invalidate_window(win->parent);
