@@ -163,6 +163,10 @@ extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 #define ID_COLOR_SWAP     54
 #define ID_IMAGE_LEVELS   57
 
+#define ID_FILTER_RELOAD   90
+#define ID_FILTER_BASE   1000
+#define IMAGEEDITOR_MAX_FILTERS 64
+
 #define ID_WINDOW_TOOLS    200
 #define ID_WINDOW_COLORS   201
 #define ID_WINDOW_LAYERS   202
@@ -300,6 +304,11 @@ typedef struct {
 } canvas_win_state_t;
 
 typedef struct {
+  char     name[64];
+  uint32_t program;
+} image_filter_t;
+
+typedef struct {
   canvas_doc_t  *active_doc;
   canvas_doc_t  *docs;
   window_t      *menubar_win;
@@ -323,6 +332,9 @@ typedef struct {
   // Text tool persistent settings
   int            text_font_size;  // pixel height, default 16
   bool           text_antialias;  // default true
+  // Instagram-style filter presets loaded from share/filters.
+  image_filter_t filters[IMAGEEDITOR_MAX_FILTERS];
+  int            filter_count;
   // Clipboard (shared across documents)
   uint8_t       *clipboard;
   int            clipboard_w;
@@ -495,6 +507,10 @@ void imageeditor_document_frame_for_viewport(int viewport_w, int viewport_h,
                                              int *out_w, int *out_h);
 bool imageeditor_handle_zoom_command(canvas_doc_t *doc, uint32_t id);
 void canvas_win_update_status(window_t *win, int px, int py, bool hover_valid);
+void imageeditor_sync_filter_menu(void);
+bool imageeditor_load_filters(void);
+void imageeditor_free_filters(void);
+bool imageeditor_apply_filter(canvas_doc_t *doc, int filter_idx);
 
 // Sync canvas scrollbars after content size changes (e.g. after canvas_resize)
 void canvas_win_sync_scrollbars(window_t *canvas_win);

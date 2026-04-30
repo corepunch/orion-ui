@@ -1,10 +1,13 @@
-precision mediump float;
-uniform sampler2D u_tex;
+#version 150 core
+
+out vec4 outColor;
+
+uniform sampler2D tex0;
 uniform float u_mix;
-varying vec2 v_uv;
+in vec2 tex;
 
 void main(){
-  vec4 c = texture2D(u_tex, v_uv);
+  vec4 c = texture(tex0, tex);
   vec3 col = c.rgb;
   col *= vec3(1.04, 1.0, 0.9);
   float lum = dot(col, vec3(0.299,0.587,0.114));
@@ -12,5 +15,5 @@ void main(){
   col = clamp(col, 0.0, 1.0);
   col = pow(col, vec3(0.95));
   col = mix(c.rgb, col, u_mix);
-  gl_FragColor = vec4(col, c.a);
+  outColor = vec4(col, c.a);
 }
