@@ -299,8 +299,15 @@ bool imageeditor_open_file_path(const char *path) {
   ndoc->modified = false;
   doc_update_title(ndoc);
   send_message(ndoc->win, evStatusBar, 0, (void *)path);
-  // Open at bird's-eye view so the whole image is visible immediately.
-  canvas_win_fit_zoom(ndoc->canvas_win);
+  // Large images open in a bird's-eye view using the maximum reasonable
+  // center workspace, but small images stay at 1x instead of being enlarged.
+  int max_view_w = 1;
+  int max_view_h = 1;
+  imageeditor_max_canvas_viewport_size(&max_view_w, &max_view_h);
+  float open_scale = imageeditor_fit_scale_for_viewport(img_w, img_h,
+                                                        max_view_w, max_view_h,
+                                                        false);
+  canvas_win_set_scale(ndoc->canvas_win, open_scale);
   invalidate_window(ndoc->canvas_win);
   return true;
 }
@@ -511,12 +518,14 @@ void handle_menu_command(uint16_t id) {
       canvas_win_state_t *state = (canvas_win_state_t *)doc->canvas_win->userdata;
       if (!state) break;
 
-      int new_scale = state->scale;
+      int new_scale = -1;
 
       if (id == ID_VIEW_ZOOM_FIT) {
         canvas_win_fit_zoom(doc->canvas_win);
         char zoom_msg[32];
-        snprintf(zoom_msg, sizeof(zoom_msg), "Zoom: %dx", state->scale);
+        char zoom_text[16];
+        imageeditor_format_zoom(zoom_text, sizeof(zoom_text), state->scale);
+        snprintf(zoom_msg, sizeof(zoom_msg), "Zoom: %s", zoom_text);
         send_message(doc->win, evStatusBar, 0, zoom_msg);
         break;
       } else if (id == ID_VIEW_ZOOM_IN) {
@@ -533,11 +542,14 @@ void handle_menu_command(uint16_t id) {
         }
       }
 
+      if (new_scale < 0) break;
       canvas_win_set_zoom(doc->canvas_win, new_scale);
 
       // Update status bar with current zoom
       char zoom_msg[32];
-      snprintf(zoom_msg, sizeof(zoom_msg), "Zoom: %dx", new_scale);
+      char zoom_text[16];
+      imageeditor_format_zoom(zoom_text, sizeof(zoom_text), state->scale);
+      snprintf(zoom_msg, sizeof(zoom_msg), "Zoom: %s", zoom_text);
       send_message(doc->win, evStatusBar, 0, zoom_msg);
       break;
     }

@@ -96,6 +96,7 @@ extern const int kBrushSizes[NUM_BRUSH_SIZES];
 #define DOC_START_X   76
 #define DOC_START_Y   60
 #define DOC_CASCADE   20
+#define DOC_WORKSPACE_MARGIN 40
 
 #define NUM_COLORS 64
 #define NUM_TOOLS  17
@@ -259,7 +260,7 @@ typedef struct canvas_doc_s {
 
 typedef struct {
   canvas_doc_t *doc;
-  int           scale;
+  float         scale;
   int           pan_x;      // horizontal pan offset in screen pixels
   int           pan_y;      // vertical pan offset in screen pixels
   bool          panning;    // true while hand-tool drag is in progress
@@ -449,10 +450,18 @@ result_t win_color_palette_proc(window_t *win, uint32_t msg, uint32_t wparam, vo
 
 // Zoom support
 void canvas_win_set_zoom(window_t *canvas_win, int new_scale);
+void canvas_win_set_scale(window_t *canvas_win, float new_scale);
 
 // Fit the canvas to the viewport at the largest integer zoom that shows the
 // whole image — equivalent to Photoshop's "Fit on Screen" (Ctrl+0).
 void canvas_win_fit_zoom(window_t *canvas_win);
+float imageeditor_fit_scale_for_viewport(int content_w, int content_h,
+                                         int viewport_w, int viewport_h,
+                                         bool allow_zoom_in);
+void imageeditor_format_zoom(char *buf, size_t buf_sz, float scale);
+rect_t imageeditor_document_workspace_rect(void);
+void imageeditor_max_document_frame_size(int *out_w, int *out_h);
+void imageeditor_max_canvas_viewport_size(int *out_w, int *out_h);
 
 // Sync canvas scrollbars after content size changes (e.g. after canvas_resize)
 void canvas_win_sync_scrollbars(window_t *canvas_win);

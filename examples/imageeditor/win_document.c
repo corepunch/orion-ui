@@ -2,6 +2,42 @@
 
 #include "imageeditor.h"
 
+rect_t imageeditor_document_workspace_rect(void) {
+  int screen_w = ui_get_system_metrics(kSystemMetricScreenWidth);
+  int screen_h = ui_get_system_metrics(kSystemMetricScreenHeight);
+
+  int left_palette_right = PALETTE_WIN_X + PALETTE_WIN_W;
+  int tool_opts_right = TOOL_OPTIONS_WIN_X + TOOL_OPTIONS_WIN_W;
+  int left = MAX(DOC_START_X,
+                 MAX(left_palette_right, tool_opts_right) + DOC_WORKSPACE_MARGIN);
+
+  int right_palette_left = MIN(COLOR_WIN_X, LAYERS_WIN_X);
+  int right = MIN(screen_w - DOC_WORKSPACE_MARGIN,
+                  right_palette_left - DOC_WORKSPACE_MARGIN);
+
+  int top = MAX(DOC_START_Y, MENUBAR_HEIGHT + DOC_WORKSPACE_MARGIN);
+  int bottom = screen_h - DOC_WORKSPACE_MARGIN;
+
+  if (right <= left) right = left + 1;
+  if (bottom <= top) bottom = top + 1;
+
+  return (rect_t){ left, top, right - left, bottom - top };
+}
+
+void imageeditor_max_document_frame_size(int *out_w, int *out_h) {
+  rect_t ws = imageeditor_document_workspace_rect();
+  if (out_w) *out_w = MAX(1, ws.w);
+  if (out_h) *out_h = MAX(1, ws.h);
+}
+
+void imageeditor_max_canvas_viewport_size(int *out_w, int *out_h) {
+  int frame_w = 1;
+  int frame_h = 1;
+  imageeditor_max_document_frame_size(&frame_w, &frame_h);
+  if (out_w) *out_w = MAX(1, frame_w - SCROLLBAR_WIDTH);
+  if (out_h) *out_h = MAX(1, frame_h - TITLEBAR_HEIGHT - STATUSBAR_HEIGHT);
+}
+
 // ============================================================
 // Document window proc
 // ============================================================
@@ -125,30 +161,26 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
     doc->filename[sizeof(doc->filename) - 1] = '\0';
   }
 
+  rect_t ws = imageeditor_document_workspace_rect();
   int wx = g_app->next_x;
   int wy = g_app->next_y;
   g_app->next_x += DOC_CASCADE;
   g_app->next_y += DOC_CASCADE;
 
-  // Compute maximum window size: available screen area to the right of the
-  // tool palette and below the menu bar.  Cap the document window so that
-  // small images open at their natural size while large images get scrollbars.
-  int screen_w = ui_get_system_metrics(kSystemMetricScreenWidth);
-  int screen_h = ui_get_system_metrics(kSystemMetricScreenHeight);
-  int max_win_w = screen_w - DOC_START_X;
-  int max_win_h = screen_h - DOC_START_Y;
-  if (max_win_w < 1) max_win_w = 1;
-  if (max_win_h < 1) max_win_h = 1;
-  int win_w = w < max_win_w ? w : max_win_w;
-  // frame.h is the total window height (includes title bar + status bar).
-  // Compute non-client overhead for WINDOW_STATUSBAR to get correct total.
-  int nca_h = TITLEBAR_HEIGHT + STATUSBAR_HEIGHT;
-  int win_h = (h + nca_h) < max_win_h ? (h + nca_h) : max_win_h;
+  int max_win_w = MAX(1, ws.w);
+  int max_win_h = MAX(1, ws.h);
+  int max_canvas_h = MAX(1, max_win_h - TITLEBAR_HEIGHT - STATUSBAR_HEIGHT);
+  int win_w = MIN(w, max_win_w);
+  int win_h = MIN(h, max_canvas_h) + TITLEBAR_HEIGHT + STATUSBAR_HEIGHT;
 
-  // Wrap cascade position when we'd overflow the right edge
-  if (g_app->next_x + win_w > screen_w) {
-    g_app->next_x = DOC_START_X;
-    g_app->next_y = DOC_START_Y;
+  // Keep the cascade inside the usable center workspace.
+  if (wx < ws.x || wy < ws.y || wx + win_w > ws.x + ws.w || wy + win_h > ws.y + ws.h) {
+    wx = ws.x;
+    wy = ws.y;
+  }
+  if (g_app->next_x + win_w > ws.x + ws.w || g_app->next_y + win_h > ws.y + ws.h) {
+    g_app->next_x = ws.x;
+    g_app->next_y = ws.y;
   }
 
   window_t *dwin = create_window(
