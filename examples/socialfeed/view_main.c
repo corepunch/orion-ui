@@ -22,7 +22,8 @@ static const toolbar_item_t kFeedToolbar[] = {
 static int feed_title_width(window_t *win) {
   int fixed = FEED_AUTHOR_W + FEED_LIKES_W + FEED_COMMENTS_W;
   int sb    = SCROLLBAR_WIDTH;
-  int avail = win->frame.w - sb - fixed;
+  rect_t cr = get_client_rect(win);
+  int avail = cr.w - sb - fixed;
   return (avail < 20) ? 20 : avail;
 }
 

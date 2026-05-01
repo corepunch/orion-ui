@@ -90,7 +90,8 @@ static void refresh_comments(post_detail_t *s) {
   send_message(cv, RVM_SETVIEWMODE, RVM_VIEW_REPORT, NULL);
   send_message(cv, RVM_CLEARCOLUMNS, 0, NULL);
 
-  int cv_w   = cv->frame.w - SCROLLBAR_WIDTH;
+  rect_t cr  = get_client_rect(cv);
+  int cv_w   = cr.w - SCROLLBAR_WIDTH;
   int auth_w = 70;
   int like_w = 45;
   int text_w = cv_w - auth_w - like_w;
@@ -189,6 +190,10 @@ static result_t post_detail_proc(window_t *win, uint32_t msg,
 
   switch (msg) {
     case evCreate: {
+      // This dialog mixes a custom-drawn post-header section with a
+      // win_reportview comment list (not a standard FORM_CTRL_* type).
+      // Because win_reportview cannot be expressed in a form_def_t, all
+      // child windows are created imperatively here rather than via a form.
       s = (post_detail_t *)lparam;
       win->userdata    = s;
       s->selected_flat = -1;

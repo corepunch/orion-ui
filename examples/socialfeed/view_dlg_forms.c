@@ -51,8 +51,8 @@ static result_t new_post_proc(window_t *win, uint32_t msg,
 
   switch (msg) {
     case evCreate:
-      win->userdata = lparam;
       s = (new_post_state_t *)lparam;
+      win->userdata = s;
       dialog_push(win, s, kNewPostBindings,
                   (int)(sizeof(kNewPostBindings)/sizeof(kNewPostBindings[0])));
       return true;
