@@ -288,9 +288,9 @@ static void draw_grid(canvas_state_t *s, int fx, int fy, int fw, int fh) {
   form_doc_t *doc = s->doc;
   if (!doc->show_grid) return;
   int grid = doc->grid_size;
-  if (grid <= 0) return;
-  for (int gx = 0; gx <= fw; gx += grid)
-    for (int gy = 0; gy <= fh; gy += grid)
+  if (grid <= 1) return;  // grid=1 would paint every pixel; skip for performance
+  for (int gx = 0; gx < fw; gx += grid)
+    for (int gy = 0; gy < fh; gy += grid)
       fill_rect(GRID_DOT_COLOR, R(fx + gx, fy + gy, 1, 1));
 }
 

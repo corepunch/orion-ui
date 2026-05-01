@@ -3,6 +3,7 @@
 
 #include "formeditor.h"
 #include "../../commctl/commctl.h"
+#include <inttypes.h>
 
 // ============================================================
 // Menu definitions
@@ -290,7 +291,7 @@ bool form_save(form_doc_t *doc, const char *path) {
       char safe_name[sizeof(el->name) * 2];
       sanitize_c_str_literal(el->text, safe_text, sizeof(safe_text));
       sanitize_c_str_literal(el->name, safe_name, sizeof(safe_name));
-      fprintf(f, "  { FORM_CTRL_%s, %d, {%d, %d, %d, %d}, %u, \"%s\", \"%s\" },\n",
+      fprintf(f, "  { FORM_CTRL_%s, %d, {%d, %d, %d, %d}, %" PRIu32 ", \"%s\", \"%s\" },\n",
               ctrl_type_form_token(el->type), el->id,
               el->x, el->y, el->w, el->h, el->flags,
               safe_text, safe_name);
@@ -329,6 +330,34 @@ static int ctrl_type_from_form_token(const char *tok) {
   if (strcmp(tok, "LIST")     == 0) return CTRL_LIST;
   if (strcmp(tok, "COMBOBOX") == 0) return CTRL_COMBOBOX;
   return -1;
+}
+
+// Parse a C string literal starting at *p (pointing at the opening '"').
+// Decodes escape sequences produced by sanitize_c_str_literal().
+// Advances *p past the closing '"'.  Returns number of chars written (not NUL).
+static int parse_c_str_literal(const char **p, char *dst, size_t dst_sz) {
+  if (**p != '"') return -1;
+  (*p)++;  // skip opening quote
+  size_t n = 0;
+  while (**p && **p != '"' && n < dst_sz - 1) {
+    if (**p == '\\') {
+      (*p)++;
+      switch (**p) {
+        case '"':  dst[n++] = '"';  break;
+        case '\\': dst[n++] = '\\'; break;
+        case 'n':  dst[n++] = '\n'; break;
+        case 'r':  dst[n++] = '\r'; break;
+        case 't':  dst[n++] = '\t'; break;
+        default:   dst[n++] = **p;  break;  // unknown escape, copy verbatim
+      }
+    } else {
+      dst[n++] = **p;
+    }
+    (*p)++;
+  }
+  dst[n] = '\0';
+  if (**p == '"') (*p)++;  // skip closing quote
+  return (int)n;
 }
 
 // Legacy loader: parses the comment-based format produced by older saves.
@@ -417,23 +446,37 @@ bool form_load(form_doc_t *doc, const char *path) {
       in_children = true;
       continue;
     }
-    // Detect end of children array (standalone "};").
-    if (in_children && strstr(line, "};")) {
-      in_children = false;
-      continue;
+    // Detect end of children array: first non-space chars must be "};" so that
+    // control captions containing "};" don't prematurely terminate the block.
+    if (in_children) {
+      const char *t = line;
+      while (*t == ' ' || *t == '\t') t++;
+      if (t[0] == '}' && t[1] == ';') {
+        in_children = false;
+        continue;
+      }
     }
     // Parse a child control entry:
     //   { FORM_CTRL_BUTTON, 1001, {10, 10, 75, 23}, 0, "Button1", "IDC_BTN1" },
     if (in_children && doc->element_count < MAX_ELEMENTS) {
       char type_tok[32] = {0};
       int id = 0, x = 0, y = 0, w = 0, h = 0;
-      unsigned int flags = 0;
-      char text[64] = {0};
-      char name[32] = {0};
+      uint32_t flags = 0;
+      char text[sizeof(((form_element_t*)0)->text)] = {0};
+      char name[sizeof(((form_element_t*)0)->name)] = {0};
+      int consumed = 0;
+      // Parse the non-string fields; %n records the number of chars consumed.
       int n = sscanf(line,
-          " { FORM_CTRL_%31[^,], %d, {%d, %d, %d, %d}, %u, \"%63[^\"]\", \"%31[^\"]",
-          type_tok, &id, &x, &y, &w, &h, &flags, text, name);
-      if (n >= 6) {
+          " { FORM_CTRL_%31[^,], %d, {%d, %d, %d, %d}, %" SCNu32 "%n",
+          type_tok, &id, &x, &y, &w, &h, &flags, &consumed);
+      if (n >= 7) {
+        // Parse text and name string literals using the full escape decoder.
+        const char *p = line + consumed;
+        while (*p && *p != '"') p++;
+        bool has_text = (*p == '"') && (parse_c_str_literal(&p, text, sizeof(text)) >= 0);
+        while (*p && *p != '"') p++;
+        bool has_name = (*p == '"') && (parse_c_str_literal(&p, name, sizeof(name)) >= 0);
+
         int type = ctrl_type_from_form_token(type_tok);
         if (type >= 0 && type < CTRL_TYPE_COUNT) {
           form_element_t *el = &doc->elements[doc->element_count];
@@ -443,12 +486,12 @@ bool form_load(form_doc_t *doc, const char *path) {
           el->y     = y;
           el->w     = w > 0 ? w : 10;
           el->h     = h > 0 ? h : 8;
-          el->flags = (n >= 7) ? (uint32_t)flags : 0;
-          if (n >= 8) {
+          el->flags = flags;
+          if (has_text) {
             strncpy(el->text, text, sizeof(el->text) - 1);
             el->text[sizeof(el->text) - 1] = '\0';
           }
-          if (n >= 9) {
+          if (has_name) {
             strncpy(el->name, name, sizeof(el->name) - 1);
             el->name[sizeof(el->name) - 1] = '\0';
           }
