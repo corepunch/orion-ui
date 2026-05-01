@@ -53,6 +53,18 @@ typedef struct {
 static result_t filter_gallery_list_proc(window_t *win, uint32_t msg,
                                          uint32_t wparam, void *lparam);
 
+static int filter_gallery_list_hit_test(window_t *win, uint32_t wparam,
+                                        filter_gallery_state_t *st) {
+  if (!st || !g_app) return -1;
+  int view_w = get_client_rect(win).w;
+  icon_grid_layout_t grid = icon_grid_layout(view_w, g_app->filter_count);
+  return icon_grid_hit_test(&grid,
+                            (int)(int16_t)LOWORD(wparam),
+                            (int)(int16_t)HIWORD(wparam),
+                            st->scroll_y,
+                            g_app->filter_count);
+}
+
 static void draw_outline(rect_t r, uint32_t col) {
   fill_rect(col, R(r.x, r.y, r.w, 1));
   fill_rect(col, R(r.x, r.y, 1, r.h));
@@ -303,14 +315,7 @@ static result_t filter_gallery_list_proc(window_t *win, uint32_t msg,
     }
 
     case evLeftButtonDown: {
-      if (!st || !g_app) return true;
-      int view_w = get_client_rect(win).w;
-      icon_grid_layout_t grid = icon_grid_layout(view_w, g_app->filter_count);
-      int idx = icon_grid_hit_test(&grid,
-                                   (int)(int16_t)LOWORD(wparam),
-                                   (int)(int16_t)HIWORD(wparam),
-                                   st->scroll_y,
-                                   g_app->filter_count);
+      int idx = filter_gallery_list_hit_test(win, wparam, st);
       if (idx >= 0) {
         st->selected = idx;
         invalidate_window(win);
@@ -320,14 +325,7 @@ static result_t filter_gallery_list_proc(window_t *win, uint32_t msg,
     }
 
     case evLeftButtonDoubleClick: {
-      if (!st || !g_app) return true;
-      int view_w = get_client_rect(win).w;
-      icon_grid_layout_t grid = icon_grid_layout(view_w, g_app->filter_count);
-      int idx = icon_grid_hit_test(&grid,
-                                   (int)(int16_t)LOWORD(wparam),
-                                   (int)(int16_t)HIWORD(wparam),
-                                   st->scroll_y,
-                                   g_app->filter_count);
+      int idx = filter_gallery_list_hit_test(win, wparam, st);
       if (idx >= 0 && win->parent) {
         st->selected = idx;
         send_message(win->parent, evCommand,
