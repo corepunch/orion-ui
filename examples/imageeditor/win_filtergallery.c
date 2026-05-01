@@ -315,6 +315,7 @@ static result_t filter_gallery_list_proc(window_t *win, uint32_t msg,
     }
 
     case evLeftButtonDown: {
+      if (!st) return true;
       int idx = filter_gallery_list_hit_test(win, wparam, st);
       if (idx >= 0) {
         st->selected = idx;
@@ -325,6 +326,7 @@ static result_t filter_gallery_list_proc(window_t *win, uint32_t msg,
     }
 
     case evLeftButtonDoubleClick: {
+      if (!st) return true;
       int idx = filter_gallery_list_hit_test(win, wparam, st);
       if (idx >= 0 && win->parent) {
         st->selected = idx;
