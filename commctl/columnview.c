@@ -176,7 +176,7 @@ static inline int rv_large_icon_cell_h(const reportview_data_t *data) {
   return data->icon_size
        + RV_LARGE_ICON_TOP_PAD
        + RV_LARGE_ICON_LABEL_GAP
-       + text_char_height(FONT_SMALL)
+       + text_char_height(FONT_ICON)
        + RV_LARGE_ICON_BOT_PAD;
 }
 
@@ -394,12 +394,12 @@ static void rv_paint_icon_view(window_t *win, reportview_data_t *data) {
       uint32_t icon_col = get_sys_color(brWindowBg);
       fill_rect(get_sys_color(brTextNormal), R(x - 2, y, item_w, item_h));
       rv_draw_item_icon(strip, icon_id, &icon_rect, icon_col);
-      draw_text_clipped(FONT_SMALL, data->items[i].text, &text_rect, icon_col, 0);
+      draw_text_clipped(FONT_ICON, data->items[i].text, &text_rect, icon_col, 0);
     } else {
       uint32_t icon_col = data->items[i].color;
       fill_rect(bg_col, R(x - 2, y, item_w, item_h));
       rv_draw_item_icon(strip, icon_id, &icon_rect, icon_col);
-      draw_text_clipped(FONT_SMALL, data->items[i].text, &text_rect, icon_col, 0);
+      draw_text_clipped(FONT_ICON, data->items[i].text, &text_rect, icon_col, 0);
     }
   }
 }
@@ -416,7 +416,7 @@ static void rv_paint_large_icon_view(window_t *win, reportview_data_t *data) {
   int cell_h   = rv_large_icon_cell_h(data);
   int icon_sz  = data->icon_size;
   int x0       = rv_large_icon_x0(eff_w, ncol, cell_w);
-  int label_h  = text_char_height(FONT_SMALL) + 2;
+  int label_h  = text_char_height(FONT_ICON) + 2;
   int clip_bot = win->frame.h;
   bitmap_strip_t *strip = data->icon_strip;
   uint32_t bg_col = get_sys_color(brColumnViewBg);
@@ -452,7 +452,7 @@ static void rv_paint_large_icon_view(window_t *win, reportview_data_t *data) {
 
     uint32_t txt_col = selected ? get_sys_color(brActiveTitlebarText)
                                 : get_sys_color(brTextNormal);
-    draw_text_clipped(FONT_SMALL, data->items[i].text, &label_r,
+    draw_text_clipped(FONT_ICON, data->items[i].text, &label_r,
                       txt_col, TEXT_ALIGN_CENTER);
   }
 }

@@ -1,10 +1,12 @@
-// Text rendering implementation — dual-font design.
+// Text rendering implementation — multi-font design.
 //
-// Two named atlases at UI_WINDOW_SCALE == 1:
+// Named atlases at UI_WINDOW_SCALE == 1:
 //   big   = ChiKareGo2 (16x16 cells, foNT metrics) — FONT_SYSTEM chrome
-//   small = Geneva9 / SmallFont (8x8 cells)        — FONT_SMALL content + icons
+//   small = Geneva12 / SmallFont                   — FONT_SMALL content
+//   icon  = Geneva9 / SmallFont                    — FONT_ICON report icon labels
 //
-// At UI_WINDOW_SCALE >= 2 both atlases map to the same SmallFont data.
+// At UI_WINDOW_SCALE >= 2 atlases fall back to SmallFont data unless the
+// explicit icon atlas is available.
 
 #include <stdarg.h>
 #include <stdbool.h>
@@ -48,16 +50,22 @@ typedef struct {
 
 static struct {
   font_atlas_t    big;          // FONT_SYSTEM: ChiKareGo2 at scale=1, SmallFont at scale>=2
-  font_atlas_t    small;        // FONT_SMALL: Geneva9/SmallFont 0-255 at scale=1
+  font_atlas_t    small;        // FONT_SMALL: Geneva12/SmallFont 0-255 at scale=1
+  font_atlas_t    icon;         // FONT_ICON: Geneva9/SmallFont 0-255 at scale=1
   glyph_metrics_t big_met;      // glyph metrics for big atlas (FONT_SYSTEM)
   glyph_metrics_t small_met;    // glyph metrics for small atlas (FONT_SMALL)
-  bool            has_small;    // true when small is a distinct second atlas
+  glyph_metrics_t icon_met;     // glyph metrics for icon atlas (FONT_ICON)
+  bool            has_small;    // true when small is a distinct atlas
+  bool            has_icon;     // true when icon is a distinct atlas
   int             big_height;   // cell pixel height — FONT_SYSTEM
   int             big_line;     // line height — FONT_SYSTEM
   int             big_space;    // space advance — FONT_SYSTEM
   int             small_height; // cell pixel height — FONT_SMALL
   int             small_line;   // line height — FONT_SMALL
   int             small_space;  // space advance — FONT_SMALL
+  int             icon_height;  // cell pixel height — FONT_ICON
+  int             icon_line;    // line height — FONT_ICON
+  int             icon_space;   // space advance — FONT_ICON
 } text_state = {0};
 
 // ── Dynamic metric accessors ──────────────────────────────────────────────────
@@ -202,8 +210,8 @@ void init_text_rendering(void) {
   snprintf(geneva12_path, sizeof(geneva12_path), "%s/../share/orion/Geneva-12.png", exe);
 
 #if UI_WINDOW_SCALE == 1
-  // At native (1:1) scale: ChiKareGo2 for chrome (FONT_SYSTEM), Geneva9 /
-  // SmallFont for content (FONT_SMALL) plus icon chars (128-255).
+  // At native (1:1) scale: ChiKareGo2 for chrome (FONT_SYSTEM), Geneva-12
+  // for content (FONT_SMALL), and Geneva-9 only for compact icon labels.
   bool chicago_ok = load_atlas(&text_state.big, &text_state.big_met,
                               chicago_path, 0, 255);
   if (chicago_ok) {
@@ -212,12 +220,9 @@ void init_text_rendering(void) {
     text_state.big_space  = text_state.big_met.advance[' ']
                             ? text_state.big_met.advance[' '] : 5;
 
-    // Try Geneva-9 first, then fall back to the older Geneva-12/SmallFont atlases.
+    // Restore the content font to Geneva-12; Geneva-9 is a separate icon role.
     bool geneva_ok = load_atlas(&text_state.small, &text_state.small_met,
-                                geneva9_path, 0, 255);
-    if (!geneva_ok)
-      geneva_ok = load_atlas(&text_state.small, &text_state.small_met,
-                             geneva12_path, 0, 255);
+                                geneva12_path, 0, 255);
     if (!geneva_ok)
       geneva_ok = load_atlas(&text_state.small, &text_state.small_met,
                              small_path,   0, 255);
@@ -232,15 +237,29 @@ void init_text_rendering(void) {
       text_state.small_line   = text_state.big_line;
       text_state.small_space  = text_state.big_space;
     }
-    printf("text: ChiKareGo2 (%dx%d)%s\n",
+    bool icon_ok = load_atlas(&text_state.icon, &text_state.icon_met,
+                              geneva9_path, 0, 255);
+    text_state.has_icon = icon_ok;
+    if (icon_ok) {
+      text_state.icon_height = text_state.icon.cell_h;
+      text_state.icon_line   = text_state.icon.cell_h + 4;
+      text_state.icon_space  = text_state.icon_met.advance[' ']
+                               ? text_state.icon_met.advance[' '] : 3;
+    } else {
+      text_state.icon_height = text_state.small_height;
+      text_state.icon_line   = text_state.small_line;
+      text_state.icon_space  = text_state.small_space;
+    }
+    printf("text: ChiKareGo2 (%dx%d)%s%s\n",
            text_state.big.cell_w, text_state.big.cell_h,
-           geneva_ok ? " + small atlas" : "");
+           geneva_ok ? " + small atlas" : "",
+           icon_ok ? " + icon atlas" : "");
     return;
   }
 #endif
 
-  // Default (scale>=2 or ChiKareGo2 unavailable): SmallFont for chrome, with
-  // Geneva-9 still preferred for FONT_SMALL content when the atlas exists.
+  // Default (scale>=2 or ChiKareGo2 unavailable): SmallFont for chrome/content,
+  // with Geneva-9 available only through FONT_ICON when the atlas exists.
   bool font_ok = load_atlas(&text_state.big, &text_state.big_met,
                              small_path, 0, 255);
   if (font_ok) {
@@ -250,19 +269,23 @@ void init_text_rendering(void) {
     text_state.big_line   = text_state.small_line   = h + 4;
     text_state.big_space  = text_state.small_space  = sp;
 
-    bool geneva_ok = load_atlas(&text_state.small, &text_state.small_met,
-                                geneva9_path, 0, 255);
-    if (geneva_ok) {
-      text_state.has_small = true;
-      text_state.small_height = text_state.small.cell_h;
-      text_state.small_line   = text_state.small.cell_h + 4;
-      text_state.small_space  = text_state.small_met.advance[' ']
-                                ? text_state.small_met.advance[' '] : 3;
+    text_state.icon_height = h;
+    text_state.icon_line   = h + 4;
+    text_state.icon_space  = sp;
+
+    bool icon_ok = load_atlas(&text_state.icon, &text_state.icon_met,
+                              geneva9_path, 0, 255);
+    if (icon_ok) {
+      text_state.has_icon = true;
+      text_state.icon_height = text_state.icon.cell_h;
+      text_state.icon_line   = text_state.icon.cell_h + 4;
+      text_state.icon_space  = text_state.icon_met.advance[' ']
+                               ? text_state.icon_met.advance[' '] : 3;
     } else {
-      text_state.has_small = false;
+      text_state.has_icon = false;
     }
     printf("text: SmallFont (%dx%d)%s\n", text_state.big.cell_w, h,
-           geneva_ok ? " + Geneva-9" : "");
+           icon_ok ? " + icon atlas" : "");
     return;
   }
 
@@ -284,10 +307,15 @@ void init_text_rendering(void) {
 // Return the atlas + metrics for the given font role and char code.
 // For FONT_SYSTEM: c < 128 → big atlas (ChiKareGo2); c >= 128 → small (icons).
 // For FONT_SMALL:  all chars → small atlas.
-// When has_small is false both roles use big.
+// For FONT_ICON:   all chars → icon atlas, falling back to FONT_SMALL.
+// When optional atlases are unavailable, roles fall back to big.
 static inline font_atlas_t *atlas_for_font(ui_font_t font, unsigned char c,
                                            glyph_metrics_t **met_out) {
-  if (text_state.has_small && (font == FONT_SMALL || c >= 128)) {
+  if (font == FONT_ICON && text_state.has_icon) {
+    *met_out = &text_state.icon_met;
+    return &text_state.icon;
+  }
+  if (text_state.has_small && (font == FONT_SMALL || font == FONT_ICON || c >= 128)) {
     *met_out = &text_state.small_met;
     return &text_state.small;
   }
@@ -356,9 +384,11 @@ static int emit_char_verts(text_vertex_t *buf, int cursor_x, int y,
 static int strnwidth_impl(ui_font_t font, const char *text, int len) {
   if (!text || !*text) return 0;
   if (len > MAX_TEXT_LENGTH) len = MAX_TEXT_LENGTH;
-  int sw = (font == FONT_SMALL && text_state.has_small && text_state.small_space)
-           ? text_state.small_space
-           : (text_state.big_space ? text_state.big_space : 3);
+  int sw = text_state.big_space ? text_state.big_space : 3;
+  if (font == FONT_ICON && text_state.has_icon && text_state.icon_space)
+    sw = text_state.icon_space;
+  else if (font == FONT_SMALL && text_state.has_small && text_state.small_space)
+    sw = text_state.small_space;
   int w = 0;
   for (int i = 0; i < len; i++) {
     unsigned char c = (unsigned char)text[i];
@@ -383,6 +413,8 @@ int strwidth(const char *text) {
 // ── New explicit-font metric API ──────────────────────────────────────────────
 
 int text_char_height(ui_font_t font) {
+  if (font == FONT_ICON)
+    return text_state.icon_height ? text_state.icon_height : 8;
   if (font == FONT_SMALL)
     return text_state.small_height ? text_state.small_height : 8;
   return text_state.big_height ? text_state.big_height : 8;
@@ -408,20 +440,25 @@ void draw_text(ui_font_t font, const char *text, int x, int y, uint32_t col) {
   int text_length = (int)strlen(text);
   if (text_length > MAX_TEXT_LENGTH) text_length = MAX_TEXT_LENGTH;
 
-  // Two static vertex buffers — one per atlas.
+  // Static vertex buffers — one per atlas.
   // For FONT_SMALL (has_small): all chars go to buf_small.
+  // For FONT_ICON  (has_icon):  all chars go to buf_icon.
   // For FONT_SYSTEM (has_small): chars 0-127 → buf_big, 128-255 → buf_small.
   // Without has_small: all chars go to buf_big.
   static text_vertex_t buf_big  [MAX_TEXT_LENGTH * VERTICES_PER_CHAR];
   static text_vertex_t buf_small[MAX_TEXT_LENGTH * VERTICES_PER_CHAR];
-  int vc_big = 0, vc_small = 0;
+  static text_vertex_t buf_icon [MAX_TEXT_LENGTH * VERTICES_PER_CHAR];
+  int vc_big = 0, vc_small = 0, vc_icon = 0;
 
-  int sw = (font == FONT_SMALL && text_state.has_small && text_state.small_space)
-           ? text_state.small_space
-           : (text_state.big_space ? text_state.big_space : 3);
-  int lh = (font == FONT_SMALL && text_state.has_small && text_state.small_line)
-           ? text_state.small_line
-           : (text_state.big_line ? text_state.big_line : 12);
+  int sw = text_state.big_space ? text_state.big_space : 3;
+  int lh = text_state.big_line ? text_state.big_line : 12;
+  if (font == FONT_ICON && text_state.has_icon) {
+    sw = text_state.icon_space ? text_state.icon_space : sw;
+    lh = text_state.icon_line ? text_state.icon_line : lh;
+  } else if (font == FONT_SMALL && text_state.has_small) {
+    sw = text_state.small_space ? text_state.small_space : sw;
+    lh = text_state.small_line ? text_state.small_line : lh;
+  }
 
   int cursor_x = x;
   for (int i = 0; i < text_length; i++) {
@@ -432,9 +469,10 @@ void draw_text(ui_font_t font, const char *text, int x, int y, uint32_t col) {
     glyph_metrics_t *met;
     font_atlas_t    *atlas = atlas_for_font(font, c, &met);
 
+    bool use_icon  = (text_state.has_icon && atlas == &text_state.icon);
     bool use_small = (text_state.has_small && atlas == &text_state.small);
-    text_vertex_t *buf = use_small ? buf_small : buf_big;
-    int           *vc  = use_small ? &vc_small  : &vc_big;
+    text_vertex_t *buf = use_icon ? buf_icon : (use_small ? buf_small : buf_big);
+    int           *vc  = use_icon ? &vc_icon : (use_small ? &vc_small : &vc_big);
 
     *vc += emit_char_verts(buf + *vc, cursor_x, y, c, col, atlas, met);
     cursor_x += met->advance[c];
@@ -444,6 +482,8 @@ void draw_text(ui_font_t font, const char *text, int x, int y, uint32_t col) {
     flush_batch(&text_state.big,   buf_big,   vc_big);
   if (vc_small > 0)
     flush_batch(&text_state.small, buf_small, vc_small);
+  if (vc_icon > 0)
+    flush_batch(&text_state.icon,  buf_icon,  vc_icon);
 }
 
 void draw_text_clipped(ui_font_t font, const char *text,
@@ -541,6 +581,12 @@ void shutdown_text_rendering(void) {
     R_DeleteTexture((uint32_t)text_state.small.texture.id);
     text_state.small.texture.id = 0;
     R_MeshDestroy(&text_state.small.mesh);
+  }
+
+  if (text_state.has_icon) {
+    R_DeleteTexture((uint32_t)text_state.icon.texture.id);
+    text_state.icon.texture.id = 0;
+    R_MeshDestroy(&text_state.icon.mesh);
   }
 
   memset(&text_state, 0, sizeof(text_state));

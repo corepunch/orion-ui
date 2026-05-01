@@ -23,7 +23,7 @@ typedef struct bitmap_strip_s bitmap_strip_t;
 //   UI_WINDOW_SCALE >= 2  → SmallFont  ( 8x 8 cells, cell  h = 8  px)
 //
 // FONT_SIZE       — system (chrome) font: ChiKareGo2/Chicago12 at scale=1
-// FONT_SIZE_SMALL — small (content) font: Geneva9/SmallFont at all scales
+// FONT_SIZE_SMALL — small (content) font: Geneva12/SmallFont at all scales
 // FONT_PIXEL_SIZE — cell height of the system font (for vertical centering)
 #if UI_WINDOW_SCALE == 1
 #  define FONT_SIZE        12
