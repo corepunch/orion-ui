@@ -20,12 +20,9 @@ static const toolbar_item_t kFeedToolbar[] = {
 // ============================================================
 
 static int feed_title_width(window_t *win) {
-  int count   = (int)send_message(win, RVM_GETITEMCOUNT, 0, NULL);
-  int total_h = COLUMNVIEW_ENTRY_HEIGHT * (1 + count);
-  rect_t cr   = get_client_rect(win);
-  int sb      = (total_h > cr.h) ? SCROLLBAR_WIDTH : 0;
-  int fixed   = FEED_AUTHOR_W + FEED_LIKES_W + FEED_COMMENTS_W;
-  int avail   = cr.w - sb - fixed;
+  rect_t cr  = get_client_rect(win);
+  int fixed  = FEED_AUTHOR_W + FEED_LIKES_W + FEED_COMMENTS_W;
+  int avail  = cr.w - fixed;
   return (avail < 20) ? 20 : avail;
 }
 

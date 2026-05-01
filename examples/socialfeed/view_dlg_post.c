@@ -56,17 +56,25 @@ typedef struct {
 } flat_item_t;
 
 // ============================================================
-// Post-detail dialog state
+// Stable selection identity — survives flat-list rebuilds
 // ============================================================
 
-#define MAX_FLAT_ITEMS 128
+typedef struct {
+  int comment_idx;  // index into post->comments[], or -1 for no selection
+  int reply_idx;    // index into comment->replies[], or -1 for top-level
+} flat_sel_t;
+
+// ============================================================
+// Post-detail dialog state
+// ============================================================
 
 typedef struct {
   post_t      *post;
   int          post_idx;
-  flat_item_t  flat[MAX_FLAT_ITEMS];
+  flat_item_t *flat;        // dynamically allocated; freed in evDestroy
   int          flat_count;
-  int          selected_flat;       // index into flat[], or -1
+  int          flat_cap;
+  flat_sel_t   selection;   // stable identity; resolved to flat index on demand
   window_t    *comments_win;
 } post_detail_t;
 
@@ -80,20 +88,42 @@ static void build_flat(post_detail_t *s) {
     comment_t *c = s->post->comments[ci];
     if (!c) continue;
 
-    if (s->flat_count < MAX_FLAT_ITEMS) {
-      s->flat[s->flat_count].is_reply     = false;
-      s->flat[s->flat_count].comment_idx  = ci;
-      s->flat[s->flat_count].reply_idx    = -1;
-      s->flat_count++;
+    int need = s->flat_count + 1 + c->reply_count;
+    if (need > s->flat_cap) {
+      int new_cap = need + 32;
+      flat_item_t *p = realloc(s->flat, (size_t)new_cap * sizeof(flat_item_t));
+      if (!p) continue;
+      s->flat     = p;
+      s->flat_cap = new_cap;
     }
 
-    for (int ri = 0; ri < c->reply_count && s->flat_count < MAX_FLAT_ITEMS; ri++) {
-      s->flat[s->flat_count].is_reply     = true;
-      s->flat[s->flat_count].comment_idx  = ci;
-      s->flat[s->flat_count].reply_idx    = ri;
+    s->flat[s->flat_count].is_reply    = false;
+    s->flat[s->flat_count].comment_idx = ci;
+    s->flat[s->flat_count].reply_idx   = -1;
+    s->flat_count++;
+
+    for (int ri = 0; ri < c->reply_count; ri++) {
+      s->flat[s->flat_count].is_reply    = true;
+      s->flat[s->flat_count].comment_idx = ci;
+      s->flat[s->flat_count].reply_idx   = ri;
       s->flat_count++;
     }
   }
+}
+
+// ============================================================
+// selection_to_flat — resolve stable identity → current flat index
+// ============================================================
+
+static int selection_to_flat(post_detail_t *s) {
+  if (s->selection.comment_idx < 0) return -1;
+  for (int i = 0; i < s->flat_count; i++) {
+    flat_item_t *f = &s->flat[i];
+    if (f->comment_idx == s->selection.comment_idx &&
+        f->reply_idx   == s->selection.reply_idx)
+      return i;
+  }
+  return -1;
 }
 
 // ============================================================
@@ -122,10 +152,8 @@ static void refresh_comments(post_detail_t *s) {
   send_message(cv, RVM_SETVIEWMODE, RVM_VIEW_REPORT, NULL);
   send_message(cv, RVM_CLEARCOLUMNS, 0, NULL);
 
-  rect_t cr   = get_client_rect(cv);
-  int total_h = COLUMNVIEW_ENTRY_HEIGHT * (1 + s->flat_count);
-  int sb      = (total_h > cr.h) ? SCROLLBAR_WIDTH : 0;
-  int cv_w    = cr.w - sb;
+  rect_t cr  = get_client_rect(cv);
+  int cv_w   = cr.w;
   int auth_w  = 70;
   int like_w  = 45;
   int text_w  = cv_w - auth_w - like_w;
@@ -169,8 +197,9 @@ static void refresh_comments(post_detail_t *s) {
     send_message(cv, RVM_ADDITEM, 0, &row);
   }
 
-  if (s->selected_flat >= 0 && s->selected_flat < s->flat_count)
-    send_message(cv, RVM_SETSELECTION, (uint32_t)s->selected_flat, NULL);
+  int sel = selection_to_flat(s);
+  if (sel >= 0 && sel < s->flat_count)
+    send_message(cv, RVM_SETSELECTION, (uint32_t)sel, NULL);
 
   send_message(cv, RVM_SETREDRAW, 1, NULL);
 }
@@ -229,7 +258,7 @@ static result_t post_detail_proc(window_t *win, uint32_t msg,
       // win_reportview has no FORM_CTRL_* equivalent.
       s = (post_detail_t *)lparam;
       win->userdata    = s;
-      s->selected_flat = -1;
+      s->selection     = (flat_sel_t){ -1, -1 };
 
       s->comments_win = create_window("comments",
           WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL,
@@ -244,18 +273,28 @@ static result_t post_detail_proc(window_t *win, uint32_t msg,
       draw_post_header(s);
       return false;
 
+    case evDestroy:
+      if (s) { free(s->flat); s->flat = NULL; s->flat_cap = 0; }
+      return false;
+
     case evCommand: {
       uint16_t notif  = (uint16_t)HIWORD(wparam);
       window_t *src   = (window_t *)lparam;
 
       // ---- Reportview notifications ----
       if (notif == RVN_SELCHANGE) {
-        s->selected_flat = (int)(int16_t)LOWORD(wparam);
+        int fi = (int)(int16_t)LOWORD(wparam);
+        if (fi >= 0 && fi < s->flat_count) {
+          s->selection.comment_idx = s->flat[fi].comment_idx;
+          s->selection.reply_idx   = s->flat[fi].reply_idx;
+        } else {
+          s->selection = (flat_sel_t){ -1, -1 };
+        }
         return true;
       }
       if (notif == RVN_DBLCLK) {
         // Double-click: treat as "like comment"
-        comment_t *c = flat_to_comment(s, s->selected_flat);
+        comment_t *c = flat_to_comment(s, selection_to_flat(s));
         if (c) {
           comment_like(c);
           refresh_comments(s);
@@ -294,7 +333,7 @@ static result_t post_detail_proc(window_t *win, uint32_t msg,
 
         // ---- Add Reply ----
         case ID_BTN_ADD_REPLY: {
-          int fi = s->selected_flat;
+          int fi = selection_to_flat(s);
           if (fi < 0 || fi >= s->flat_count) {
             message_box(win, "Select a comment to reply to.",
                         "Add Reply", MB_OK);
@@ -327,7 +366,8 @@ static result_t post_detail_proc(window_t *win, uint32_t msg,
 
         // ---- Like Comment ----
         case ID_BTN_LIKE_COMMENT: {
-          comment_t *c = flat_to_comment(s, s->selected_flat);
+          int fi = selection_to_flat(s);
+          comment_t *c = flat_to_comment(s, fi);
           if (!c) {
             message_box(win, "Select a comment to like.",
                         "Like Comment", MB_OK);
@@ -335,7 +375,7 @@ static result_t post_detail_proc(window_t *win, uint32_t msg,
           }
           comment_like(c);
           refresh_comments(s);
-          SF_DEBUG("liked comment idx=%d likes=%d", s->selected_flat, c->like_count);
+          SF_DEBUG("liked comment idx=%d likes=%d", fi, c->like_count);
           return true;
         }
 
@@ -367,10 +407,12 @@ void show_post_detail(window_t *parent, int post_idx) {
   if (!p) return;
 
   post_detail_t state = {
-    .post        = p,
-    .post_idx    = post_idx,
-    .flat_count  = 0,
-    .selected_flat = -1,
+    .post          = p,
+    .post_idx      = post_idx,
+    .flat          = NULL,
+    .flat_count    = 0,
+    .flat_cap      = 0,
+    .selection     = { -1, -1 },
     .comments_win  = NULL,
   };
 

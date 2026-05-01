@@ -151,6 +151,10 @@ static result_t new_comment_proc(window_t *win, uint32_t msg,
             return true;
           }
 
+          if (s->author_sz < 2 || s->text_sz < 2) {
+            end_dialog(win, 0);
+            return true;
+          }
           strncpy(s->author_buf, ea->title, s->author_sz - 1);
           s->author_buf[s->author_sz - 1] = '\0';
           strncpy(s->text_buf,   et->title, s->text_sz - 1);

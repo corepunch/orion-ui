@@ -223,10 +223,6 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
 
   create_main_window();
 
-  if (g_app->menubar_win && g_app->accel)
-    send_message(g_app->menubar_win, kMenuBarMessageSetAccelerators,
-                 0, g_app->accel);
-
   SF_DEBUG("gem_init complete: %d posts seeded (next_comment_id=%d)",
            g_app->post_count, g_app->next_comment_id);
   return true;
@@ -241,6 +237,9 @@ void gem_shutdown(void) {
   SF_DEBUG("gem_shutdown");
   app_shutdown(g_app);
   g_app = NULL;
+#if SOCIALFEED_DEBUG
+  axSetLogFile(NULL);
+#endif
 }
 
 GEM_DEFINE("Social Feed", "1.0", gem_init, gem_shutdown, NULL)
