@@ -278,6 +278,7 @@ void canvas_win_fit_zoom(window_t *win) {
 
   float fit_scale = imageeditor_fit_scale_for_viewport(doc->canvas_w, doc->canvas_h,
                                                        view_w, view_h, true);
+  if (fit_scale < 1.0f) fit_scale = 1.0f;
 
   // Center the canvas within the viewport when it overflows; leave pan at 0
   // when the image fits entirely (drawn from the top-left corner).

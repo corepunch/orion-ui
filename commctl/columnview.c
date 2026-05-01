@@ -14,10 +14,17 @@
 #define ENTRY_HEIGHT  COLUMNVIEW_ENTRY_HEIGHT
 #define HEADER_HEIGHT COLUMNVIEW_HEADER_HEIGHT
 #define DEFAULT_COLUMN_WIDTH 160
+#define DEFAULT_ICON_SIZE     32
 #define ICON_OFFSET 16
 #define WIN_PADDING 4
 #define RV_DOUBLE_CLICK_MS 500u
 #define RV_INVALID_SELECTION (-1)
+
+// Large-icon view geometry constants (WinAPI LVS_ICON style).
+#define RV_LARGE_ICON_PAD       8   // outer grid margin (left/top/right/bottom)
+#define RV_LARGE_ICON_TOP_PAD   4   // space above the icon inside a cell
+#define RV_LARGE_ICON_LABEL_GAP 4   // gap between icon bottom and label top
+#define RV_LARGE_ICON_BOT_PAD   6   // space below label inside a cell
 
 // ReportView/ListView/ColumnView shared data structure.
 typedef struct {
@@ -38,6 +45,7 @@ typedef struct {
 
   uint32_t view_mode;
   uint32_t column_count;
+  int icon_size;    // tile size (px) used in RVM_VIEW_LARGE_ICON mode
   bool redraw_enabled;
   bool redraw_dirty;
 
@@ -161,10 +169,41 @@ static int rv_report_total_width(reportview_data_t *data, int avail_w) {
   return total;
 }
 
+// Large-icon geometry helpers.
+// cell_h is derived from the icon size and font height so that the label
+// always fits neatly below the thumbnail.
+static inline int rv_large_icon_cell_h(const reportview_data_t *data) {
+  return data->icon_size
+       + RV_LARGE_ICON_TOP_PAD
+       + RV_LARGE_ICON_LABEL_GAP
+       + text_char_height(FONT_SMALL)
+       + RV_LARGE_ICON_BOT_PAD;
+}
+
+// Number of columns that fit in the available width (outer padding excluded).
+static inline int rv_large_icon_ncol(int eff_w, int cell_w) {
+  int usable = MAX(1, eff_w - 2 * RV_LARGE_ICON_PAD);
+  return MAX(1, usable / cell_w);
+}
+
+// Left-edge x for the first column, centred within eff_w.
+static inline int rv_large_icon_x0(int eff_w, int ncol, int cell_w) {
+  int grid_w = ncol * cell_w;
+  return RV_LARGE_ICON_PAD
+       + MAX(0, (eff_w - 2 * RV_LARGE_ICON_PAD - grid_w) / 2);
+}
+
 static int rv_content_height(window_t *win, reportview_data_t *data) {
   int eff_w = rv_content_width(win);
   if (data->view_mode == RVM_VIEW_REPORT) {
     return HEADER_HEIGHT + (int)data->count * ENTRY_HEIGHT;
+  }
+
+  if (data->view_mode == RVM_VIEW_LARGE_ICON) {
+    int ncol = rv_large_icon_ncol(eff_w, data->column_width);
+    int rows = (data->count == 0) ? 0
+             : ((int)data->count + ncol - 1) / ncol;
+    return 2 * RV_LARGE_ICON_PAD + rows * rv_large_icon_cell_h(data);
   }
 
   int ncol = get_column_count(eff_w, data->column_width);
@@ -198,6 +237,21 @@ static int rv_hit_index(window_t *win, reportview_data_t *data, uint32_t wparam)
   }
 
   int eff_w = rv_content_width(win);
+
+  if (data->view_mode == RVM_VIEW_LARGE_ICON) {
+    int ncol   = rv_large_icon_ncol(eff_w, data->column_width);
+    int cell_h = rv_large_icon_cell_h(data);
+    int x0     = rv_large_icon_x0(eff_w, ncol, data->column_width);
+    int local_x = mx - x0;
+    int local_y = my - RV_LARGE_ICON_PAD;  // content-space coords; no scroll adjustment
+    if (local_x < 0 || local_y < 0) return RV_INVALID_SELECTION;
+    int col = local_x / data->column_width;
+    int row = local_y / cell_h;
+    if (col >= ncol) return RV_INVALID_SELECTION;
+    int index = row * ncol + col;
+    return rv_valid_index(data, index) ? index : RV_INVALID_SELECTION;
+  }
+
   int ncol = get_column_count(eff_w, data->column_width);
   int col = mx / data->column_width;
   int row = (my - WIN_PADDING) / ENTRY_HEIGHT;
@@ -225,6 +279,21 @@ static void rv_scroll_to_item(window_t *win, reportview_data_t *data, int index)
   }
 
   int eff_w = rv_content_width(win);
+
+  if (data->view_mode == RVM_VIEW_LARGE_ICON) {
+    int ncol   = rv_large_icon_ncol(eff_w, data->column_width);
+    int cell_h = rv_large_icon_cell_h(data);
+    int row    = index / ncol;
+    int item_y_top    = RV_LARGE_ICON_PAD + row * cell_h;
+    int item_y_bottom = item_y_top + cell_h;
+
+    if (item_y_top - scroll_y < 0)
+      win->scroll[1] = (uint32_t)(item_y_top > 0 ? item_y_top : 0);
+    else if (item_y_bottom - scroll_y > visible_h)
+      win->scroll[1] = (uint32_t)(item_y_bottom - visible_h);
+    return;
+  }
+
   int ncol = get_column_count(eff_w, data->column_width);
   int row = index / ncol;
   int item_y_top = row * ENTRY_HEIGHT + WIN_PADDING;
@@ -264,16 +333,13 @@ static void rv_draw_item_icon(bitmap_strip_t *strip, int icon_id,
   if (strip && strip->tex != 0 && strip->cols > 0) {
     int total = strip->cols * (strip->sheet_h / strip->icon_h);
     if (icon_id >= 0 && icon_id < total) {
-      int scol   = icon_id % strip->cols;
-      int srow   = icon_id / strip->cols;
-      int icon_sz = strip->icon_w;
-      int ix = icon_rect->x + (icon_rect->w - icon_sz) / 2;
-      int iy = icon_rect->y + (icon_rect->h - icon_sz) / 2;
+      int scol = icon_id % strip->cols;
+      int srow = icon_id / strip->cols;
       float u0 = (float)(scol * strip->icon_w) / (float)strip->sheet_w;
       float v0 = (float)(srow * strip->icon_h) / (float)strip->sheet_h;
       float u1 = u0 + (float)strip->icon_w / (float)strip->sheet_w;
       float v1 = v0 + (float)strip->icon_h / (float)strip->sheet_h;
-      draw_sprite_region((int)strip->tex, R(ix, iy, icon_sz, icon_sz),
+      draw_sprite_region((int)strip->tex, *icon_rect,
                          UV_RECT(u0, v0, u1, v1), col, 0);
       return;
     }
@@ -335,6 +401,59 @@ static void rv_paint_icon_view(window_t *win, reportview_data_t *data) {
       rv_draw_item_icon(strip, icon_id, &icon_rect, icon_col);
       draw_text_clipped(FONT_SMALL, data->items[i].text, &text_rect, icon_col, 0);
     }
+  }
+}
+
+// Large-icon view (WinAPI LVS_ICON): thumbnail above, label below, grid layout.
+// Icons come from data->icon_strip; the fallback placeholder is drawn when the
+// strip is absent.  Selection is highlighted with brActiveTitlebar, matching
+// the macOS Finder / Explorer LVS_ICON style.
+static void rv_paint_large_icon_view(window_t *win, reportview_data_t *data) {
+  int eff_w    = rv_content_width(win);
+  int scroll_y = (int)win->scroll[1];
+  int ncol     = rv_large_icon_ncol(eff_w, data->column_width);
+  int cell_w   = data->column_width;
+  int cell_h   = rv_large_icon_cell_h(data);
+  int icon_sz  = data->icon_size;
+  int x0       = rv_large_icon_x0(eff_w, ncol, cell_w);
+  int label_h  = text_char_height(FONT_SMALL) + 2;
+  int clip_bot = win->frame.h;
+  bitmap_strip_t *strip = data->icon_strip;
+  uint32_t bg_col = get_sys_color(brColumnViewBg);
+
+  fill_rect(bg_col, R(0, 0, win->frame.w, win->frame.h));
+
+  for (uint32_t i = 0; i < data->count; i++) {
+    int icol = (int)i % ncol;
+    int irow = (int)i / ncol;
+    int cx   = x0 + icol * cell_w;
+    int cy   = RV_LARGE_ICON_PAD + irow * cell_h - scroll_y;
+
+    if (cy + cell_h <= 0) continue;
+    if (cy >= clip_bot) break;
+
+    bool selected = (int)i == data->selected;
+
+    rect_t icon_r  = R(cx + (cell_w - icon_sz) / 2,
+                       cy + RV_LARGE_ICON_TOP_PAD,
+                       icon_sz, icon_sz);
+    rect_t label_r = R(cx + 2,
+                       icon_r.y + icon_r.h + RV_LARGE_ICON_LABEL_GAP,
+                       cell_w - 4, label_h);
+
+    if (selected) {
+      int sel_h = icon_sz + RV_LARGE_ICON_LABEL_GAP + label_h + 4;
+      fill_rect(get_sys_color(brActiveTitlebar),
+                rect_inset(R(cx + 2, icon_r.y - 2, cell_w - 4, sel_h), -1));
+    }
+
+    rv_draw_item_icon(strip, data->items[i].icon, &icon_r,
+                      selected ? 0xffffffff : data->items[i].color);
+
+    uint32_t txt_col = selected ? get_sys_color(brActiveTitlebarText)
+                                : get_sys_color(brTextNormal);
+    draw_text_clipped(FONT_SMALL, data->items[i].text, &label_r,
+                      txt_col, TEXT_ALIGN_CENTER);
   }
 }
 
@@ -435,6 +554,7 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       data->selected = -1;
       data->last_click_index = RV_INVALID_SELECTION;
       data->column_width = DEFAULT_COLUMN_WIDTH;
+      data->icon_size    = DEFAULT_ICON_SIZE;
       data->view_mode = RVM_VIEW_ICON;
       data->redraw_enabled = true;
       data->redraw_dirty = false;
@@ -446,6 +566,8 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
     case evPaint:
       if (data->view_mode == RVM_VIEW_REPORT)
         rv_paint_report_view(win, data);
+      else if (data->view_mode == RVM_VIEW_LARGE_ICON)
+        rv_paint_large_icon_view(win, data);
       else
         rv_paint_icon_view(win, data);
       return false;
@@ -572,7 +694,8 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
     }
 
     case RVM_SETVIEWMODE:
-      if (wparam == RVM_VIEW_ICON || wparam == RVM_VIEW_REPORT) {
+      if (wparam == RVM_VIEW_ICON || wparam == RVM_VIEW_REPORT
+                                  || wparam == RVM_VIEW_LARGE_ICON) {
         data->view_mode = wparam;
         rv_reset_view_state(win, data);
         rv_sync_scroll(win, data);
@@ -629,6 +752,15 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       rv_invalidate(win, data);
       return true;
 
+    case RVM_SETICONSIZE:
+      if ((int)wparam > 0) {
+        data->icon_size = (int)wparam;
+        rv_sync_scroll(win, data);
+        rv_invalidate(win, data);
+        return true;
+      }
+      return false;
+
     case evVScroll: {
       int total_h = rv_content_height(win, data);
       int max_scroll_px = total_h - win->frame.h;
@@ -676,7 +808,9 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
         }
       } else {
         int eff_w = rv_content_width(win);
-        int ncol = get_column_count(eff_w, data->column_width);
+        int ncol = (data->view_mode == RVM_VIEW_LARGE_ICON)
+                 ? rv_large_icon_ncol(eff_w, data->column_width)
+                 : get_column_count(eff_w, data->column_width);
 
         switch (wparam) {
           case AX_KEY_UPARROW:

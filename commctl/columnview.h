@@ -31,11 +31,13 @@ enum {
   RVM_SETREPORTCOLUMNWIDTH, // wparam = col_index; lparam = (void*)(uintptr_t)new_width (0 = auto)
   RVM_SETREDRAW,            // wparam = 0 suspend redraw; non-zero resume and repaint if dirty
   RVM_SETICONSTRIP,         // lparam = bitmap_strip_t* (NULL to clear); strip owned by caller
+  RVM_SETICONSIZE,          // wparam = icon pixel size for RVM_VIEW_LARGE_ICON mode
 };
 
 enum {
-  RVM_VIEW_ICON = 0,
-  RVM_VIEW_REPORT = 1,
+  RVM_VIEW_ICON = 0,        // Small-icon list (icon-left, label-right, one row per item)
+  RVM_VIEW_REPORT = 1,      // Multi-column report with sortable header
+  RVM_VIEW_LARGE_ICON = 2,  // Large-thumbnail grid (icon-above, label-below) — WinAPI LVS_ICON
 };
 
 typedef struct {
