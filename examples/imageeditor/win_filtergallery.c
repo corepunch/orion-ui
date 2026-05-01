@@ -83,11 +83,12 @@ static rect_t icon_grid_cell_rect(const icon_grid_layout_t *g, int index, int sc
            g->cell_w, g->cell_h);
 }
 
-static int icon_grid_hit_test(const icon_grid_layout_t *g, int x, int y, int item_count) {
+static int icon_grid_hit_test(const icon_grid_layout_t *g, int x, int y,
+                              int scroll_y, int item_count) {
   int grid_w = g->cols * g->cell_w;
   int x0 = FG_ICON_PAD + MAX(0, (g->view_w - FG_ICON_PAD * 2 - grid_w) / 2);
   int local_x = x - x0;
-  int local_y = y - FG_ICON_PAD;
+  int local_y = y + scroll_y - FG_ICON_PAD;
   if (local_x < 0 || local_y < 0) return -1;
   int col = local_x / g->cell_w;
   int row = local_y / g->cell_h;
@@ -134,7 +135,7 @@ static uint32_t filter_gallery_make_preview_tex(canvas_doc_t *doc) {
 
 static void filter_gallery_sync_scrollbar(window_t *list) {
   if (!list || !g_app) return;
-  int view_w = list->frame.w - SCROLLBAR_WIDTH;
+  int view_w = get_client_rect(list).w;
   icon_grid_layout_t grid = icon_grid_layout(view_w, g_app->filter_count);
   scroll_info_t si;
   si.fMask = SIF_RANGE | SIF_PAGE | SIF_POS;
@@ -149,7 +150,7 @@ static void filter_gallery_scroll_to(window_t *list, int scroll_y) {
   if (!list || !g_app) return;
   filter_gallery_state_t *st = (filter_gallery_state_t *)list->userdata;
   if (!st) return;
-  int view_w = list->frame.w - (list->vscroll.visible ? SCROLLBAR_WIDTH : 0);
+  int view_w = get_client_rect(list).w;
   icon_grid_layout_t grid = icon_grid_layout(view_w, g_app->filter_count);
   int max_scroll = MAX(0, grid.content_h - FG_LIST_H);
   st->scroll_y = MIN(MAX(scroll_y, 0), max_scroll);
@@ -277,12 +278,13 @@ static result_t filter_gallery_list_proc(window_t *win, uint32_t msg,
 
     case evPaint: {
       int count = g_app ? g_app->filter_count : 0;
-      int view_w = win->frame.w - (win->vscroll.visible ? SCROLLBAR_WIDTH : 0);
+      rect_t cr = get_client_rect(win);
+      int view_w = cr.w;
       icon_grid_layout_t grid = icon_grid_layout(view_w, count);
-      fill_rect(get_sys_color(brWindowBg), R(0, 0, view_w, win->frame.h));
+      fill_rect(get_sys_color(brWindowBg), R(0, 0, view_w, cr.h));
       for (int i = 0; i < count; i++) {
         rect_t cell = icon_grid_cell_rect(&grid, i, st ? st->scroll_y : 0);
-        if (cell.y + cell.h < 0 || cell.y >= win->frame.h) continue;
+        if (cell.y + cell.h < 0 || cell.y >= cr.h) continue;
         bool selected = st && i == st->selected;
         rect_t icon = R(cell.x + (cell.w - grid.icon_size) / 2, cell.y + 4,
                         grid.icon_size, grid.icon_size);
@@ -302,16 +304,34 @@ static result_t filter_gallery_list_proc(window_t *win, uint32_t msg,
 
     case evLeftButtonDown: {
       if (!st || !g_app) return true;
-      int view_w = win->frame.w - (win->vscroll.visible ? SCROLLBAR_WIDTH : 0);
+      int view_w = get_client_rect(win).w;
       icon_grid_layout_t grid = icon_grid_layout(view_w, g_app->filter_count);
       int idx = icon_grid_hit_test(&grid,
                                    (int)(int16_t)LOWORD(wparam),
                                    (int)(int16_t)HIWORD(wparam),
+                                   st->scroll_y,
                                    g_app->filter_count);
       if (idx >= 0) {
         st->selected = idx;
         invalidate_window(win);
         if (win->parent) invalidate_window(win->parent);
+      }
+      return true;
+    }
+
+    case evLeftButtonDoubleClick: {
+      if (!st || !g_app) return true;
+      int view_w = get_client_rect(win).w;
+      icon_grid_layout_t grid = icon_grid_layout(view_w, g_app->filter_count);
+      int idx = icon_grid_hit_test(&grid,
+                                   (int)(int16_t)LOWORD(wparam),
+                                   (int)(int16_t)HIWORD(wparam),
+                                   st->scroll_y,
+                                   g_app->filter_count);
+      if (idx >= 0 && win->parent) {
+        st->selected = idx;
+        send_message(win->parent, evCommand,
+                     MAKEWPARAM(FG_BTN_OK, btnClicked), win);
       }
       return true;
     }
