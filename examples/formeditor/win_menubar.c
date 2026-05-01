@@ -897,7 +897,7 @@ void handle_menu_command(uint16_t id) {
       canvas_state_t *cs = (canvas_state_t *)cwin->userdata;
       if (!cs || cs->selected_idx < 0) break;
       int idx = cs->selected_idx;
-      if (doc->elements[idx].live_win && is_window(doc->elements[idx].live_win))
+      if (doc->elements[idx].live_win)
         destroy_window(doc->elements[idx].live_win);
       // Remove element by shifting the array
       for (int i = idx; i < doc->element_count - 1; i++)

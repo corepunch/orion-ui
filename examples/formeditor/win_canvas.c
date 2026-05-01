@@ -250,15 +250,33 @@ static form_element_t *canvas_find_element_for_live_window(window_t *win) {
   return NULL;
 }
 
+static bool canvas_child_window_alive(window_t *root, window_t *target) {
+  if (!root || !target) return false;
+  if (root == target) return true;
+  for (window_t *child = root->children; child; child = child->next) {
+    if (canvas_child_window_alive(child, target))
+      return true;
+  }
+  for (window_t *child = root->toolbar_children; child; child = child->next) {
+    if (canvas_child_window_alive(child, target))
+      return true;
+  }
+  return false;
+}
+
 static result_t design_live_ctrl_proc(window_t *win, uint32_t msg,
                                       uint32_t wparam, void *lparam) {
   form_element_t *el = canvas_find_element_for_live_window(win);
   winproc_t real_proc = el ? ctrl_type_to_proc(el->type) : NULL;
 
   switch (msg) {
-    case evCreate:
+    case evCreate: {
+      form_element_t *creating_el = (form_element_t *)lparam;
+      if (!real_proc && creating_el)
+        real_proc = ctrl_type_to_proc(creating_el->type);
       win->notabstop = true;
-      return real_proc ? real_proc(win, msg, wparam, lparam) : true;
+      return real_proc ? real_proc(win, msg, wparam, NULL) : true;
+    }
     case evDestroy:
     case evPaint:
     case evResize:
@@ -268,7 +286,16 @@ static result_t design_live_ctrl_proc(window_t *win, uint32_t msg,
     case evLeftButtonUp:
     case evRightButtonDown:
     case evRightButtonUp:
-    case evMouseMove:
+    case evMouseMove: {
+      if (win->parent) {
+        int lx = (int16_t)LOWORD(wparam);
+        int ly = (int16_t)HIWORD(wparam);
+        return send_message(win->parent, msg,
+                            MAKEDWORD(win->frame.x + lx, win->frame.y + ly),
+                            lparam);
+      }
+      return true;
+    }
     case evKeyDown:
     case evKeyUp:
     case evCommand:
@@ -283,14 +310,15 @@ static void canvas_sync_overlay_frame(form_doc_t *doc) {
   canvas_state_t *s;
   if (!doc || !doc->canvas_win) return;
   s = (canvas_state_t *)doc->canvas_win->userdata;
-  if (!s || !s->overlay_win || !is_window(s->overlay_win)) return;
+  if (!s || !canvas_child_window_alive(doc->canvas_win, s->overlay_win)) return;
   move_window(s->overlay_win, 0, 0);
   resize_window(s->overlay_win, doc->canvas_win->frame.w, doc->canvas_win->frame.h);
 }
 
 static void canvas_destroy_preview(canvas_state_t *s) {
   if (!s) return;
-  if (s->preview_win && is_window(s->preview_win))
+  if (s->doc && s->doc->canvas_win &&
+      canvas_child_window_alive(s->doc->canvas_win, s->preview_win))
     destroy_window(s->preview_win);
   s->preview_win = NULL;
   s->preview_type = -1;
@@ -303,11 +331,12 @@ static void canvas_update_preview(canvas_state_t *s, int type, int x, int y, int
   doc = s->doc;
   if (type < 0 || !ctrl_type_to_proc(type)) return;
 
-  if (!s->preview_win || !is_window(s->preview_win) || s->preview_type != type) {
+  if (!canvas_child_window_alive(doc->canvas_win, s->preview_win) ||
+      s->preview_type != type) {
     canvas_destroy_preview(s);
     s->preview_win = create_window(text ? text : "", flags,
                                    MAKERECT(0, 0, MAX(w, 1), MAX(h, 1)),
-                                   doc->canvas_win, design_live_ctrl_proc, 0, NULL);
+                                   doc->canvas_win, ctrl_type_to_proc(type), 0, NULL);
     if (!s->preview_win) return;
     s->preview_win->notabstop = true;
     s->preview_type = type;
@@ -323,7 +352,7 @@ static void canvas_update_preview(canvas_state_t *s, int type, int x, int y, int
 
 static void canvas_create_overlay(window_t *canvas_win, canvas_state_t *s) {
   if (!canvas_win || !s) return;
-  if (s->overlay_win && is_window(s->overlay_win))
+  if (canvas_child_window_alive(canvas_win, s->overlay_win))
     destroy_window(s->overlay_win);
   s->overlay_win = create_window("", WINDOW_NOTITLE | WINDOW_NOFILL,
                                  MAKERECT(0, 0, canvas_win->frame.w, canvas_win->frame.h),
@@ -333,7 +362,8 @@ static void canvas_create_overlay(window_t *canvas_win, canvas_state_t *s) {
 
 static void canvas_sync_live_element_window(form_doc_t *doc, form_element_t *el) {
   canvas_state_t *s;
-  if (!doc || !doc->canvas_win || !el || !el->live_win || !is_window(el->live_win))
+  if (!doc || !doc->canvas_win || !el ||
+      !canvas_child_window_alive(doc->canvas_win, el->live_win))
     return;
   s = (canvas_state_t *)doc->canvas_win->userdata;
   if (!s) return;
@@ -354,7 +384,7 @@ static void canvas_create_live_element_window(form_doc_t *doc, form_element_t *e
   el->live_win = create_window(el->text, el->flags,
                                MAKERECT(form_to_sx(s, el->x), form_to_sy(s, el->y),
                                         el->w, el->h),
-                               doc->canvas_win, design_live_ctrl_proc, 0, NULL);
+                               doc->canvas_win, design_live_ctrl_proc, 0, el);
   if (!el->live_win) return;
   el->live_win->id = el->id;
   el->live_win->notabstop = true;
@@ -860,7 +890,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         if (g_app) {
           g_app->current_tool = ID_TOOL_SELECT;
           if (g_app->tool_win)
-            send_message(g_app->tool_win, tbSetActiveButton,
+            send_message(g_app->tool_win, bxSetActiveItem,
                          (uint32_t)ID_TOOL_SELECT, NULL);
         }
       }

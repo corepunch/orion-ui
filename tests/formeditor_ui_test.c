@@ -82,6 +82,20 @@ static void fe_place_ctrl(form_doc_t *doc, int tool,
     // evLeftButtonUp reverts current_tool to ID_TOOL_SELECT after placement.
 }
 
+// Start a placement drag and leave it active so tests can inspect the live
+// preview before mouse release commits the control.
+static void fe_begin_place_drag(form_doc_t *doc, int tool,
+                                int fx, int fy, int fw, int fh) {
+    window_t *cwin = doc->canvas_win;
+    int sx0 = CANVAS_PADDING + fx;
+    int sy0 = CANVAS_PADDING + fy;
+    int sx1 = CANVAS_PADDING + fx + fw;
+    int sy1 = CANVAS_PADDING + fy + fh;
+    g_app->current_tool = tool;
+    send_message(cwin, evLeftButtonDown, MAKEDWORD(sx0, sy0), NULL);
+    send_message(cwin, evMouseMove,      MAKEDWORD(sx1, sy1), NULL);
+}
+
 // Click on an element to select it (DOWN then UP with ID_TOOL_SELECT).
 static void fe_select(form_doc_t *doc, int elem_idx) {
     form_element_t *el = &doc->elements[elem_idx];
@@ -113,6 +127,15 @@ static void fe_resize_br(form_doc_t *doc, int dw, int dh) {
 // Return a pointer to the canvas state for the given document.
 static canvas_state_t *fe_state(form_doc_t *doc) {
     return (canvas_state_t *)doc->canvas_win->userdata;
+}
+
+static int fe_count_canvas_children_with_proc(form_doc_t *doc, winproc_t proc) {
+    int count = 0;
+    for (window_t *child = doc->canvas_win->children; child; child = child->next) {
+        if (child->proc == proc)
+            count++;
+    }
+    return count;
 }
 
 // ── Tests ──────────────────────────────────────────────────────────────────
@@ -173,6 +196,44 @@ void test_fe_place_button(void) {
     ASSERT_EQUAL(doc->elements[0].w, 80);
     ASSERT_EQUAL(doc->elements[0].h, 30);
     ASSERT_TRUE(doc->modified);
+
+    fe_teardown();
+    PASS();
+}
+
+// Dragging a new button shows a live command-button preview before release,
+// matching the VB designer behavior instead of drawing only a rubber band.
+void test_fe_button_preview_visible_while_dragging(void) {
+    TEST("place button drag: preview is a live button before mouse release");
+
+    fe_setup();
+    form_doc_t *doc = g_app->doc;
+    doc->snap_to_grid = false;
+
+    fe_begin_place_drag(doc, ID_TOOL_BUTTON, 20, 20, 80, 30);
+
+    canvas_state_t *s = fe_state(doc);
+    window_t *first_preview = s->preview_win;
+    ASSERT_EQUAL(doc->element_count, 0);
+    ASSERT_NOT_NULL(s->preview_win);
+    ASSERT_TRUE(s->preview_win->proc == win_button);
+    ASSERT_EQUAL(s->preview_win->frame.x, CANVAS_PADDING + 20);
+    ASSERT_EQUAL(s->preview_win->frame.y, CANVAS_PADDING + 20);
+    ASSERT_EQUAL(s->preview_win->frame.w, 80);
+    ASSERT_EQUAL(s->preview_win->frame.h, 30);
+
+    send_message(doc->canvas_win, evMouseMove,
+                 MAKEDWORD(CANVAS_PADDING + 120, CANVAS_PADDING + 60), NULL);
+    send_message(doc->canvas_win, evMouseMove,
+                 MAKEDWORD(CANVAS_PADDING + 140, CANVAS_PADDING + 70), NULL);
+
+    ASSERT_TRUE(s->preview_win == first_preview);
+    ASSERT_EQUAL(fe_count_canvas_children_with_proc(doc, win_button), 1);
+    ASSERT_EQUAL(s->preview_win->frame.w, 120);
+    ASSERT_EQUAL(s->preview_win->frame.h, 50);
+
+    send_message(doc->canvas_win, evLeftButtonUp,
+                 MAKEDWORD(CANVAS_PADDING + 140, CANVAS_PADDING + 70), NULL);
 
     fe_teardown();
     PASS();
@@ -248,6 +309,27 @@ void test_fe_select_element(void) {
     PASS();
 }
 
+// If the live design-time control receives the click first, it must forward
+// the translated coordinates to the canvas so selection still works.
+void test_fe_live_button_forwards_click_to_canvas_selection(void) {
+    TEST("live button design wrapper: forwards click for canvas selection");
+
+    fe_setup();
+    form_doc_t *doc = g_app->doc;
+    doc->snap_to_grid = false;
+
+    fe_place_ctrl(doc, ID_TOOL_BUTTON, 30, 30, 80, 24);
+    fe_state(doc)->selected_idx = -1;
+
+    send_message(doc->elements[0].live_win, evLeftButtonDown, MAKEDWORD(4, 4), NULL);
+    send_message(doc->elements[0].live_win, evLeftButtonUp,   MAKEDWORD(4, 4), NULL);
+
+    ASSERT_EQUAL(fe_state(doc)->selected_idx, 0);
+
+    fe_teardown();
+    PASS();
+}
+
 // Clicking an empty area of the canvas clears the selection.
 void test_fe_deselect_on_empty_click(void) {
     TEST("click empty area: selected_idx becomes -1");
@@ -291,6 +373,8 @@ void test_fe_resize_element(void) {
 
     ASSERT_EQUAL(doc->elements[0].w, 120);
     ASSERT_EQUAL(doc->elements[0].h, 50);
+    ASSERT_EQUAL(doc->elements[0].live_win->frame.w, 120);
+    ASSERT_EQUAL(doc->elements[0].live_win->frame.h, 50);
     // Position must not change for a BR drag.
     ASSERT_EQUAL(doc->elements[0].x, 20);
     ASSERT_EQUAL(doc->elements[0].y, 20);
@@ -547,9 +631,11 @@ int main(void) {
     test_fe_create_doc();
     test_fe_close_doc();
     test_fe_place_button();
+    test_fe_button_preview_visible_while_dragging();
     test_fe_place_all_types();
     test_fe_live_windows_created();
     test_fe_select_element();
+    test_fe_live_button_forwards_click_to_canvas_selection();
     test_fe_deselect_on_empty_click();
     test_fe_resize_element();
     test_fe_resize_clamped_to_minimum();
