@@ -45,6 +45,16 @@ enum {
   // Return true  to cancel the close (e.g. show "unsaved changes?" dialog).
   // Return false to allow the default action (hide the window).
   evClose,
+  // Delivered to a window when a timer registered with axSetTimer fires.
+  // wparam = timer ID returned by axSetTimer.  lparam = userdata.
+  // Analogous to WM_TIMER in WinAPI.
+  evTimer,
+  // Query a window for tooltip text at a given client position.
+  // wparam = MAKEDWORD(client_x, client_y) — position inside the window's
+  //          client area (same coordinate system as evMouseMove).
+  // lparam = char[256] output buffer — write the NUL-terminated tooltip text
+  //          here and return true; return false if no tooltip at that position.
+  evGetTooltipText,
   evUser = 1000
 };
 
@@ -144,8 +154,9 @@ enum {
 // or a tile index into the strip set with bxSetStrip /
 // bxLoadStrip.
 typedef struct {
-  int ident;  // command identifier echoed in bxClicked
-  int icon;   // strip tile index (0-based), or sysicon_* value (>= SYSICON_BASE)
+  int         ident;    // command identifier echoed in bxClicked
+  int         icon;     // strip tile index (0-based), or sysicon_* value (>= SYSICON_BASE)
+  const char *tooltip;  // tooltip text shown on hover, e.g. "Pencil (P)"; NULL = none
 } toolbox_item_t;
 
 // Toolbox layout constants.

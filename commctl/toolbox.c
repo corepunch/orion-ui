@@ -321,6 +321,17 @@ result_t win_toolbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       invalidate_window(win);
       return true;
     }
+    case evGetTooltipText: {
+      toolbox_state_t *st = (toolbox_state_t *)win->userdata;
+      if (!st || !lparam) return false;
+      int idx = toolbox_hit(st, LOWORD(wparam), HIWORD(wparam));
+      if (idx < 0 || !st->items[idx].tooltip || !st->items[idx].tooltip[0])
+        return false;
+      char *buf = (char *)lparam;
+      strncpy(buf, st->items[idx].tooltip, 255);
+      buf[255] = '\0';
+      return true;
+    }
   }
   return false;
 }

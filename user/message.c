@@ -180,7 +180,7 @@ static void layout_toolbar_items(window_t *parent,
         window_t *tc = create_toolbar_child(parent, win_toolbar_button,
                                              (uint32_t)item->ident,
                                              extra,
-                                             NULL,
+                                             item->text,
                                              base_x + cur_x, base_y,
                                              w, bsz, icon);
         if (!tc) { cur_x += w; break; }
