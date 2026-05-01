@@ -141,12 +141,23 @@ Only PNG files are supported.
 A minimal browser-style example focused on fast HTML-to-text viewing:
 
 - Toolbar with Back / Forward / Home buttons
+- Toolbar refresh button
 - Address input field (press Enter to load)
+- File menu: New Window, Save Page HTML, Load Page HTML, Quit
+- Help menu: About
 - Settings dialog from menu path: **Settings -> Preferences...**
 - Async HTTP/HTTPS fetch via Orion (`http_request_async`)
 - HTML parsing via libxml2 (`htmlReadMemory`)
 - Plain text block rendering (tags removed; no CSS/JS execution)
+- Local page loading via `file://` URL support
 - INI-style persisted home URL in platform settings directory (`browser.ini`)
+
+Keyboard shortcuts:
+
+- Ctrl+N: New Window
+- Ctrl+S: Save Page HTML
+- Ctrl+O: Load Page HTML
+- Ctrl+Q: Quit
 
 ### Building
 

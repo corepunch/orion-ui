@@ -350,6 +350,8 @@ examples/socialfeed/
 - Maintain compatibility with the existing message-based architecture
 - Follow Windows API patterns where applicable (familiar to many developers)
 - Keep the layered architecture clean (user/kernel/commctl separation)
+- **Required for menu actions**: when adding any File/Edit/View/Help command, also add an accelerator (`accel_t` + `load_accelerators` + `translate_accelerator`) that dispatches the same command id through `evCommand`.
+- **Required for documentation**: when adding/changing menu actions or shortcuts in examples/apps, update the relevant README/docs section in the same change.
 - **Extend the framework rather than making workarounds**: if something logically belongs in the framework (e.g., timers, clipboard, accelerators, drag-and-drop), add it to the appropriate layer (`user/`, `kernel/`, or `commctl/`) and expose a clean API
 - **Search existing framework before implementing anything new**: grep the codebase for the concept first (e.g., "toolbar", "bitmap", "strip"). Orion already ships toolbars, toolbar buttons, bitmap strips, accelerators, dialogs, status bars, and form-based window creation. Reimplementing these as custom structs or flags is always wrong.
 - **Use `form_def_t` + `show_dialog_from_form()` for all dialogs/panels**: any window with two or more standard child controls must be expressed as a static `form_ctrl_def_t[]` + `form_def_t` and instantiated with `create_window_from_form()` or `show_dialog_from_form()`. Never build children imperatively inside `evCreate` — children defined in a form already exist when that message fires.

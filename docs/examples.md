@@ -85,6 +85,24 @@ int lx = (int16_t)LOWORD(wparam) - root->frame.x - win->frame.x;
 int ly = (int16_t)HIWORD(wparam) - root->frame.y - win->frame.y;
 ```
 
+## Browser MVP (`browser/main.c`)
+
+A minimal browser-style example focused on fast HTML-to-text viewing.
+
+Key patterns shown:
+- Toolbar navigation (`Back`, `Forward`, `Home`, `Refresh`) + address bar
+- File menu actions (`New Window`, `Save Page HTML`, `Load Page HTML`, `Quit`)
+- Help menu `About` action
+- Async HTTP fetching and completion handling (`evHttpDone`)
+- HTML-to-text conversion via libxml2
+- Local HTML loading via `file://` URL support
+
+Keyboard shortcuts:
+- `Ctrl+N` new window
+- `Ctrl+S` save page HTML
+- `Ctrl+O` load page HTML
+- `Ctrl+Q` quit
+
 ## Writing Your Own Example
 
 1. Create `examples/myapp.c` and `#include "../ui.h"`
