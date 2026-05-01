@@ -71,10 +71,10 @@ static void fe_teardown(void) {
 static void fe_place_ctrl(form_doc_t *doc, int tool,
                            int fx, int fy, int fw, int fh) {
     window_t *cwin = doc->canvas_win;
-    int sx0 = CANVAS_PADDING + fx;
-    int sy0 = CANVAS_PADDING + fy;
-    int sx1 = CANVAS_PADDING + fx + fw;
-    int sy1 = CANVAS_PADDING + fy + fh;
+    int sx0 = fx;
+    int sy0 = fy;
+    int sx1 = fx + fw;
+    int sy1 = fy + fh;
     g_app->current_tool = tool;
     send_message(cwin, evLeftButtonDown, MAKEDWORD(sx0, sy0), NULL);
     send_message(cwin, evMouseMove,      MAKEDWORD(sx1, sy1), NULL);
@@ -87,10 +87,10 @@ static void fe_place_ctrl(form_doc_t *doc, int tool,
 static void fe_begin_place_drag(form_doc_t *doc, int tool,
                                 int fx, int fy, int fw, int fh) {
     window_t *cwin = doc->canvas_win;
-    int sx0 = CANVAS_PADDING + fx;
-    int sy0 = CANVAS_PADDING + fy;
-    int sx1 = CANVAS_PADDING + fx + fw;
-    int sy1 = CANVAS_PADDING + fy + fh;
+    int sx0 = fx;
+    int sy0 = fy;
+    int sx1 = fx + fw;
+    int sy1 = fy + fh;
     g_app->current_tool = tool;
     send_message(cwin, evLeftButtonDown, MAKEDWORD(sx0, sy0), NULL);
     send_message(cwin, evMouseMove,      MAKEDWORD(sx1, sy1), NULL);
@@ -101,8 +101,8 @@ static void fe_select(form_doc_t *doc, int elem_idx) {
     form_element_t *el = &doc->elements[elem_idx];
     window_t *cwin = doc->canvas_win;
     // Click one pixel inside the element's top-left corner.
-    int sx = CANVAS_PADDING + el->x + 1;
-    int sy = CANVAS_PADDING + el->y + 1;
+    int sx = el->frame.x + 1;
+    int sy = el->frame.y + 1;
     g_app->current_tool = ID_TOOL_SELECT;
     send_message(cwin, evLeftButtonDown, MAKEDWORD(sx, sy), NULL);
     send_message(cwin, evLeftButtonUp,   MAKEDWORD(sx, sy), NULL);
@@ -114,11 +114,11 @@ static void fe_resize_br(form_doc_t *doc, int dw, int dh) {
     form_element_t *el = &doc->elements[
         ((canvas_state_t *)doc->canvas_win->userdata)->selected_idx];
     window_t *cwin = doc->canvas_win;
-    // BR handle top-left: (CANVAS_PADDING + el->x + el->w - HANDLE_HALF,
-    //                       CANVAS_PADDING + el->y + el->h - HANDLE_HALF)
+    // BR handle top-left: (el->frame.x + el->frame.w - HANDLE_HALF,
+    //                       el->frame.y + el->frame.h - HANDLE_HALF)
     // HANDLE_HALF = HANDLE_SIZE/2 = 5/2 = 2
-    int hx = CANVAS_PADDING + el->x + el->w - 2;
-    int hy = CANVAS_PADDING + el->y + el->h - 2;
+    int hx = el->frame.x + el->frame.w - 2;
+    int hy = el->frame.y + el->frame.h - 2;
     send_message(cwin, evLeftButtonDown, MAKEDWORD(hx,      hy),      NULL);
     send_message(cwin, evMouseMove,      MAKEDWORD(hx + dw, hy + dh), NULL);
     send_message(cwin, evLeftButtonUp,   MAKEDWORD(hx + dw, hy + dh), NULL);
@@ -152,10 +152,53 @@ void test_fe_create_doc(void) {
     ASSERT_NOT_NULL(doc->canvas_win);          // child window — use ptr check
     ASSERT_TRUE(doc->canvas_win->parent == doc->doc_win);
     ASSERT_EQUAL(doc->element_count, 0);
-    ASSERT_EQUAL(doc->form_w, FORM_DEFAULT_W);
-    ASSERT_EQUAL(doc->form_h, FORM_DEFAULT_H);
+    ASSERT_EQUAL(doc->form_size.w, FORM_DEFAULT_W);
+    ASSERT_EQUAL(doc->form_size.h, FORM_DEFAULT_H);
     ASSERT_FALSE(doc->modified);
     ASSERT_EQUAL(doc->next_id, CTRL_ID_BASE);
+
+    fe_teardown();
+    PASS();
+}
+
+// The document window should hug the form when it fits, so the canvas does
+// not show workspace outside the form surface.
+void test_fe_create_doc_sizes_canvas_to_form(void) {
+    TEST("create_form_doc: canvas is exact form size when it fits");
+
+    fe_setup();
+    form_doc_t *doc = g_app->doc;
+
+    ASSERT_EQUAL(doc->doc_win->frame.w, FORM_DEFAULT_W);
+    ASSERT_EQUAL(doc->doc_win->frame.h,
+                 TITLEBAR_HEIGHT + FORM_DEFAULT_H + STATUSBAR_HEIGHT);
+    ASSERT_EQUAL(doc->canvas_win->frame.w, FORM_DEFAULT_W);
+    ASSERT_EQUAL(doc->canvas_win->frame.h, FORM_DEFAULT_H);
+    ASSERT_FALSE(doc->doc_win->hscroll.visible);
+    ASSERT_FALSE(doc->canvas_win->vscroll.visible);
+
+    fe_teardown();
+    PASS();
+}
+
+// Oversized forms clamp the document window to the desktop and expose only the
+// needed scrollbars.
+void test_fe_create_large_doc_adds_needed_scrollbars(void) {
+    TEST("create_form_doc: large forms fit desktop and scroll");
+
+    fe_setup();
+    form_doc_t *doc = create_form_doc(1000, 1000);
+    int max_w = SCREEN_W - DOC_START_X - 4;
+    int max_h = SCREEN_H - DOC_START_Y - 4;
+
+    ASSERT_NOT_NULL(doc);
+    ASSERT_EQUAL(doc->doc_win->frame.w, max_w);
+    ASSERT_EQUAL(doc->doc_win->frame.h, max_h);
+    ASSERT_EQUAL(doc->canvas_win->frame.w, max_w);
+    ASSERT_EQUAL(doc->canvas_win->frame.h,
+                 max_h - TITLEBAR_HEIGHT - STATUSBAR_HEIGHT);
+    ASSERT_TRUE(doc->doc_win->hscroll.visible);
+    ASSERT_TRUE(doc->canvas_win->vscroll.visible);
 
     fe_teardown();
     PASS();
@@ -191,10 +234,10 @@ void test_fe_place_button(void) {
 
     ASSERT_EQUAL(doc->element_count, 1);
     ASSERT_EQUAL(doc->elements[0].type, CTRL_BUTTON);
-    ASSERT_EQUAL(doc->elements[0].x, 20);
-    ASSERT_EQUAL(doc->elements[0].y, 20);
-    ASSERT_EQUAL(doc->elements[0].w, 80);
-    ASSERT_EQUAL(doc->elements[0].h, 30);
+    ASSERT_EQUAL(doc->elements[0].frame.x, 20);
+    ASSERT_EQUAL(doc->elements[0].frame.y, 20);
+    ASSERT_EQUAL(doc->elements[0].frame.w, 80);
+    ASSERT_EQUAL(doc->elements[0].frame.h, 30);
     ASSERT_TRUE(doc->modified);
 
     fe_teardown();
@@ -217,15 +260,15 @@ void test_fe_button_preview_visible_while_dragging(void) {
     ASSERT_EQUAL(doc->element_count, 0);
     ASSERT_NOT_NULL(s->preview_win);
     ASSERT_TRUE(s->preview_win->proc == win_button);
-    ASSERT_EQUAL(s->preview_win->frame.x, CANVAS_PADDING + 20);
-    ASSERT_EQUAL(s->preview_win->frame.y, CANVAS_PADDING + 20);
+    ASSERT_EQUAL(s->preview_win->frame.x, 20);
+    ASSERT_EQUAL(s->preview_win->frame.y, 20);
     ASSERT_EQUAL(s->preview_win->frame.w, 80);
     ASSERT_EQUAL(s->preview_win->frame.h, 30);
 
     send_message(doc->canvas_win, evMouseMove,
-                 MAKEDWORD(CANVAS_PADDING + 120, CANVAS_PADDING + 60), NULL);
+                 MAKEDWORD(120, 60), NULL);
     send_message(doc->canvas_win, evMouseMove,
-                 MAKEDWORD(CANVAS_PADDING + 140, CANVAS_PADDING + 70), NULL);
+                 MAKEDWORD(140, 70), NULL);
 
     ASSERT_TRUE(s->preview_win == first_preview);
     ASSERT_EQUAL(fe_count_canvas_children_with_proc(doc, win_button), 1);
@@ -233,7 +276,7 @@ void test_fe_button_preview_visible_while_dragging(void) {
     ASSERT_EQUAL(s->preview_win->frame.h, 50);
 
     send_message(doc->canvas_win, evLeftButtonUp,
-                 MAKEDWORD(CANVAS_PADDING + 140, CANVAS_PADDING + 70), NULL);
+                 MAKEDWORD(140, 70), NULL);
 
     fe_teardown();
     PASS();
@@ -364,20 +407,20 @@ void test_fe_resize_element(void) {
     fe_place_ctrl(doc, ID_TOOL_BUTTON, 20, 20, 80, 30);
     fe_select(doc, 0);
 
-    int orig_w = doc->elements[0].w;
-    int orig_h = doc->elements[0].h;
+    int orig_w = doc->elements[0].frame.w;
+    int orig_h = doc->elements[0].frame.h;
     ASSERT_EQUAL(orig_w, 80);
     ASSERT_EQUAL(orig_h, 30);
 
     fe_resize_br(doc, 40, 20);
 
-    ASSERT_EQUAL(doc->elements[0].w, 120);
-    ASSERT_EQUAL(doc->elements[0].h, 50);
+    ASSERT_EQUAL(doc->elements[0].frame.w, 120);
+    ASSERT_EQUAL(doc->elements[0].frame.h, 50);
     ASSERT_EQUAL(doc->elements[0].live_win->frame.w, 120);
     ASSERT_EQUAL(doc->elements[0].live_win->frame.h, 50);
     // Position must not change for a BR drag.
-    ASSERT_EQUAL(doc->elements[0].x, 20);
-    ASSERT_EQUAL(doc->elements[0].y, 20);
+    ASSERT_EQUAL(doc->elements[0].frame.x, 20);
+    ASSERT_EQUAL(doc->elements[0].frame.y, 20);
     ASSERT_TRUE(doc->modified);
 
     fe_teardown();
@@ -399,8 +442,8 @@ void test_fe_resize_clamped_to_minimum(void) {
     fe_resize_br(doc, -200, -200);
 
     // MIN_ELEM_W=10, MIN_ELEM_H=8 (defined privately in win_canvas.c)
-    ASSERT_TRUE(doc->elements[0].w >= 10);
-    ASSERT_TRUE(doc->elements[0].h >= 8);
+    ASSERT_TRUE(doc->elements[0].frame.w >= 10);
+    ASSERT_TRUE(doc->elements[0].frame.h >= 8);
 
     fe_teardown();
     PASS();
@@ -557,10 +600,10 @@ void test_fe_save_load_roundtrip(void) {
     ASSERT_EQUAL(ndoc->element_count, 3);
     for (int i = 0; i < 3; i++) {
         ASSERT_EQUAL(ndoc->elements[i].type, orig[i].type);
-        ASSERT_EQUAL(ndoc->elements[i].x,    orig[i].x);
-        ASSERT_EQUAL(ndoc->elements[i].y,    orig[i].y);
-        ASSERT_EQUAL(ndoc->elements[i].w,    orig[i].w);
-        ASSERT_EQUAL(ndoc->elements[i].h,    orig[i].h);
+        ASSERT_EQUAL(ndoc->elements[i].frame.x,    orig[i].frame.x);
+        ASSERT_EQUAL(ndoc->elements[i].frame.y,    orig[i].frame.y);
+        ASSERT_EQUAL(ndoc->elements[i].frame.w,    orig[i].frame.w);
+        ASSERT_EQUAL(ndoc->elements[i].frame.h,    orig[i].frame.h);
         ASSERT_STR_EQUAL(ndoc->elements[i].text, orig[i].text);
         ASSERT_STR_EQUAL(ndoc->elements[i].name, orig[i].name);
     }
@@ -574,7 +617,7 @@ void test_fe_save_load_roundtrip(void) {
 
 // form_load preserves form dimensions stored in the .h file.
 void test_fe_save_load_form_dimensions(void) {
-    TEST("save/load: form_w and form_h round-trip correctly");
+    TEST("save/load: form_size round-trips correctly");
 
     char path[512];
     snprintf(path, sizeof(path), "%s/orion_fe_dims_%d.h",
@@ -582,8 +625,8 @@ void test_fe_save_load_form_dimensions(void) {
 
     fe_setup();
     form_doc_t *doc = g_app->doc;
-    doc->form_w = 400;
-    doc->form_h = 300;
+    doc->form_size.w = 400;
+    doc->form_size.h = 300;
 
     bool saved = form_save(doc, path);
     ASSERT_TRUE(saved);
@@ -593,8 +636,8 @@ void test_fe_save_load_form_dimensions(void) {
     bool loaded = form_load(ndoc, path);
     ASSERT_TRUE(loaded);
 
-    ASSERT_EQUAL(ndoc->form_w, 400);
-    ASSERT_EQUAL(ndoc->form_h, 300);
+    ASSERT_EQUAL(ndoc->form_size.w, 400);
+    ASSERT_EQUAL(ndoc->form_size.h, 300);
 
     unlink(path);
     fe_teardown();
@@ -629,6 +672,8 @@ int main(void) {
     TEST_START("Form Editor CRUD");
 
     test_fe_create_doc();
+    test_fe_create_doc_sizes_canvas_to_form();
+    test_fe_create_large_doc_adds_needed_scrollbars();
     test_fe_close_doc();
     test_fe_place_button();
     test_fe_button_preview_visible_while_dragging();

@@ -176,10 +176,11 @@ for (int i = 0; i < NUM_TOOLS; i++) {
 - Use forward declarations to minimize header dependencies
 
 ### Struct Design
-- Always prefer named structs over loose coordinate pairs: use `point_t { int x, y; }` instead of `int x, int y` pairs, and `irect16_t { int x, y, w, h; }` instead of `int x1, y1, x2, y2`
-- `point_t` and `irect16_t` are defined in `user/user.h` and available everywhere via `ui.h`
-- When a concept naturally groups two or more related values, define a struct for it (e.g., `size_t` for `w, h`; `point_t` for `x, y`)
-- Do not scatter parallel `_x` / `_y` (or `_start` / `_end`) fields across a struct when a `point_t` member would be cleaner
+- Prefer geometry structs wherever possible instead of loose coordinate fields: use `ipoint16_t { x, y }` for positions/deltas, `isize16_t { w, h }` for sizes, and `irect16_t { x, y, w, h }` for rectangles.
+- `ipoint16_t`, `isize16_t`, and `irect16_t` are defined in `user/user.h` and available everywhere via `ui.h`.
+- Do not scatter parallel `_x` / `_y`, `_w` / `_h`, or `_start` / `_end` fields across a struct when a point, size, or rect member would be cleaner.
+- Prefer existing rectangle/geometry helper functions from `user/rect.h` (`rect_offset`, `rect_inset`, `rect_center`, `rect_split_*`, `rect_trim_*`, etc.) over open-coded coordinate math.
+- If a needed geometry helper is missing, add a small reusable helper to the framework (usually `user/rect.h`) instead of duplicating ad hoc math in application code.
 
 ### Message-Based Architecture
 - All UI interaction uses a Windows-style message system

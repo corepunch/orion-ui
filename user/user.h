@@ -10,7 +10,7 @@
 
 // Forward declarations
 typedef struct window_s window_t;
-typedef struct rect_s irect16_t;
+typedef struct irect16_s irect16_t;
 typedef uint32_t flags_t;
 typedef uint32_t result_t;
 
@@ -28,8 +28,13 @@ typedef void (*winhook_func_t)(window_t *win, uint32_t msg, uint32_t wparam, voi
 
 // Point structure
 typedef struct {
-  int x, y;
-} point_t;
+  int16_t x, y;
+} ipoint16_t;
+
+// Size structure
+typedef struct {
+  int16_t w, h;
+} isize16_t;
 
 // Float rectangle structure (used for normalized UVs and other float-space rects).
 typedef struct {
@@ -37,8 +42,8 @@ typedef struct {
 } frect_t;
 
 // Rectangle structure
-struct rect_s {
-  int x, y, w, h;
+struct irect16_s {
+  int16_t x, y, w, h;
 };
 
 // A fixed-size-tile bitmap strip, analogous to WinAPI HIMAGELIST / TB_ADDBITMAP.

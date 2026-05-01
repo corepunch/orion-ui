@@ -103,9 +103,30 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
 // create_form_doc / close_form_doc
 // ============================================================
 
+static irect16_t form_doc_frame_for_size(int form_w, int form_h) {
+  int max_w = SCREEN_W - DOC_START_X - 4;
+  int max_h = SCREEN_H - DOC_START_Y - 4;
+  int max_canvas_h = max_h - TITLEBAR_HEIGHT - STATUSBAR_HEIGHT;
+  bool needs_vscroll;
+  int frame_w;
+  int frame_h;
+
+  if (max_w < 1) max_w = 1;
+  if (max_canvas_h < 1) max_canvas_h = 1;
+
+  needs_vscroll = form_h > max_canvas_h;
+  frame_w = form_w + (needs_vscroll ? SCROLLBAR_WIDTH : 0);
+  if (frame_w > max_w) frame_w = max_w;
+
+  frame_h = TITLEBAR_HEIGHT + STATUSBAR_HEIGHT + form_h;
+  if (frame_h > max_h) frame_h = max_h;
+
+  return (irect16_t){DOC_START_X, DOC_START_Y, frame_w, frame_h};
+}
+
 form_doc_t *create_form_doc(int w, int h) {
   if (!g_app) return NULL;
-  if (w <= 0 || h <= 0) return NULL;
+  if (w <= 0 || h <= 0 || w > INT16_MAX || h > INT16_MAX) return NULL;
 
   // Close existing document first (single-document editor).
   if (g_app->doc)
@@ -114,8 +135,8 @@ form_doc_t *create_form_doc(int w, int h) {
   form_doc_t *doc = (form_doc_t *)calloc(1, sizeof(form_doc_t));
   if (!doc) return NULL;
 
-  doc->form_w    = w;
-  doc->form_h    = h;
+  doc->form_size.w    = w;
+  doc->form_size.h    = h;
   doc->modified  = false;
   doc->next_id   = CTRL_ID_BASE;
   doc->grid_size    = 8;
@@ -123,10 +144,11 @@ form_doc_t *create_form_doc(int w, int h) {
   doc->snap_to_grid = true;
 
   // Document window
+  irect16_t doc_frame = form_doc_frame_for_size(w, h);
   window_t *dwin = create_window(
       "Untitled",
       WINDOW_STATUSBAR | WINDOW_HSCROLL,
-      MAKERECT(DOC_START_X, DOC_START_Y, DOC_WIN_W, DOC_WIN_H),
+      &doc_frame,
       NULL, doc_win_proc, g_app->hinstance, NULL);
   dwin->userdata = doc;
   doc->doc_win   = dwin;
@@ -293,14 +315,14 @@ bool form_save(form_doc_t *doc, const char *path) {
       sanitize_c_str_literal(el->name, safe_name, sizeof(safe_name));
       fprintf(f, "  { FORM_CTRL_%s, %d, {%d, %d, %d, %d}, %" PRIu32 ", \"%s\", \"%s\" },\n",
               ctrl_type_form_token(el->type), el->id,
-              el->x, el->y, el->w, el->h, el->flags,
+              el->frame.x, el->frame.y, el->frame.w, el->frame.h, el->flags,
               safe_text, safe_name);
     }
     fprintf(f, "};\n");
     fprintf(f, "static const form_def_t k%s = {\n", ident);
         fprintf(f, "  .name        = \"%s\",\n", ident);
-        fprintf(f, "  .width       = %d,\n", doc->form_w);
-        fprintf(f, "  .height      = %d,\n", doc->form_h);
+        fprintf(f, "  .width       = %d,\n", doc->form_size.w);
+        fprintf(f, "  .height      = %d,\n", doc->form_size.h);
         fprintf(f, "  .flags       = 0,\n");
         fprintf(f, "  .children    = k%s_children,\n", ident);
         fprintf(f, "  .child_count = (int)(sizeof(k%s_children) / sizeof(k%s_children[0]))\n",
@@ -309,8 +331,8 @@ bool form_save(form_doc_t *doc, const char *path) {
   } else {
     fprintf(f, "static const form_def_t k%s = {\n", ident);
         fprintf(f, "  .name        = \"%s\",\n", ident);
-        fprintf(f, "  .width       = %d,\n", doc->form_w);
-        fprintf(f, "  .height      = %d,\n", doc->form_h);
+        fprintf(f, "  .width       = %d,\n", doc->form_size.w);
+        fprintf(f, "  .height      = %d,\n", doc->form_size.h);
         fprintf(f, "  .flags       = 0,\n");
         fprintf(f, "  .children    = NULL,\n");
         fprintf(f, "  .child_count = 0\n");
@@ -378,9 +400,10 @@ static bool form_load_legacy(form_doc_t *doc, const char *path) {
     // /* form W H */
     {
       int fw = 0, fh = 0;
-      if (sscanf(line, " /* form %d %d", &fw, &fh) == 2 && fw > 0 && fh > 0) {
-        doc->form_w = fw;
-        doc->form_h = fh;
+      if (sscanf(line, " /* form %d %d", &fw, &fh) == 2 &&
+          fw > 0 && fh > 0 && fw <= INT16_MAX && fh <= INT16_MAX) {
+        doc->form_size.w = fw;
+        doc->form_size.h = fh;
         continue;
       }
     }
@@ -399,10 +422,7 @@ static bool form_load_legacy(form_doc_t *doc, const char *path) {
           form_element_t *el = &doc->elements[doc->element_count];
           el->type  = type;
           el->id    = id;
-          el->x     = x;
-          el->y     = y;
-          el->w     = w > 0 ? w : 10;
-          el->h     = h > 0 ? h : 8;
+          el->frame = (irect16_t){x, y, w > 0 ? w : 10, h > 0 ? h : 8};
           el->flags = 0;
           strncpy(el->text, text, sizeof(el->text) - 1);
           el->text[sizeof(el->text) - 1] = '\0';
@@ -427,8 +447,8 @@ bool form_load(form_doc_t *doc, const char *path) {
 
   // Reset document content.
   doc->element_count = 0;
-  doc->form_w        = FORM_DEFAULT_W;
-  doc->form_h        = FORM_DEFAULT_H;
+  doc->form_size.w        = FORM_DEFAULT_W;
+  doc->form_size.h        = FORM_DEFAULT_H;
   memset(doc->type_counters, 0, sizeof(doc->type_counters));
   doc->next_id = CTRL_ID_BASE;
 
@@ -482,10 +502,7 @@ bool form_load(form_doc_t *doc, const char *path) {
           form_element_t *el = &doc->elements[doc->element_count];
           el->type  = type;
           el->id    = id;
-          el->x     = x;
-          el->y     = y;
-          el->w     = w > 0 ? w : 10;
-          el->h     = h > 0 ? h : 8;
+          el->frame = (irect16_t){x, y, w > 0 ? w : 10, h > 0 ? h : 8};
           el->flags = flags;
           if (has_text) {
             strncpy(el->text, text, sizeof(el->text) - 1);
@@ -504,12 +521,14 @@ bool form_load(form_doc_t *doc, const char *path) {
     }
     // Parse form dimensions from the form_def_t block.
     int val;
-    if (sscanf(line, " .width = %d", &val) == 1 && val > 0) {
-      doc->form_w = val;
+    if (sscanf(line, " .width = %d", &val) == 1 &&
+        val > 0 && val <= INT16_MAX) {
+      doc->form_size.w = val;
       found_def = true;
     }
-    if (sscanf(line, " .height = %d", &val) == 1 && val > 0) {
-      doc->form_h = val;
+    if (sscanf(line, " .height = %d", &val) == 1 &&
+        val > 0 && val <= INT16_MAX) {
+      doc->form_size.h = val;
       found_def = true;
     }
   }
@@ -518,8 +537,8 @@ bool form_load(form_doc_t *doc, const char *path) {
   // If no struct-based data was found, fall back to the old comment format.
   if (!found_def) {
     doc->element_count = 0;
-    doc->form_w        = FORM_DEFAULT_W;
-    doc->form_h        = FORM_DEFAULT_H;
+    doc->form_size.w        = FORM_DEFAULT_W;
+    doc->form_size.h        = FORM_DEFAULT_H;
     memset(doc->type_counters, 0, sizeof(doc->type_counters));
     doc->next_id = CTRL_ID_BASE;
     return form_load_legacy(doc, path);
@@ -756,7 +775,7 @@ static result_t props_proc(window_t *win, uint32_t msg,
       char info[64];
       snprintf(info, sizeof(info), "Type: %s  ID: %d  (%d, %d)  %d x %d",
                ctrl_type_token(ps->el->type), ps->el->id,
-               ps->el->x, ps->el->y, ps->el->w, ps->el->h);
+               ps->el->frame.x, ps->el->frame.y, ps->el->frame.w, ps->el->frame.h);
       create_window(info, WINDOW_NOTITLE | WINDOW_NOFILL,
           MAKERECT(4, PROPS_INFO_Y, PROPS_W - 8, CONTROL_HEIGHT),
           win, win_label, 0, (void *)(uintptr_t)brTextDisabled);

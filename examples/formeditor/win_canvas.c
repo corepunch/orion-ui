@@ -43,18 +43,18 @@
 // Convert form-local to canvas-local screen X for a canvas window.
 // With child-local evPaint projection (0,0) = canvas window top-left.
 static inline int form_to_sx(canvas_state_t *s, int fx) {
-  return CANVAS_PADDING - s->pan_x + fx;
+  return fx - s->pan.x;
 }
 static inline int form_to_sy(canvas_state_t *s, int fy) {
-  return CANVAS_PADDING - s->pan_y + fy;
+  return fy - s->pan.y;
 }
 
 // Convert window-local mouse X to form-local.
 static inline int local_to_form_x(canvas_state_t *s, int lx) {
-  return lx - CANVAS_PADDING + s->pan_x;
+  return lx + s->pan.x;
 }
 static inline int local_to_form_y(canvas_state_t *s, int ly) {
-  return ly - CANVAS_PADDING + s->pan_y;
+  return ly + s->pan.y;
 }
 
 // ============================================================
@@ -62,11 +62,14 @@ static inline int local_to_form_y(canvas_state_t *s, int ly) {
 // ============================================================
 static void canvas_sync_scrollbars(window_t *win, canvas_state_t *s) {
   form_doc_t *doc = s->doc;
-  int content_w = doc->form_w + CANVAS_PADDING * 2;
-  int content_h = doc->form_h + CANVAS_PADDING * 2;
-  // vscroll strip occupies the rightmost SCROLLBAR_WIDTH pixels of the canvas.
-  int view_w = win->frame.w - SCROLLBAR_WIDTH;
+  int content_w = doc->form_size.w;
+  int content_h = doc->form_size.h;
+  // vscroll strip occupies the rightmost SCROLLBAR_WIDTH pixels only when the
+  // form is taller than the canvas viewport.
+  bool has_vscroll = content_h > win->frame.h;
+  int view_w = win->frame.w - (has_vscroll ? SCROLLBAR_WIDTH : 0);
   int view_h = win->frame.h;
+  if (view_w < 0) view_w = 0;
 
   scroll_info_t si;
   si.fMask = SIF_RANGE | SIF_PAGE | SIF_POS;
@@ -75,24 +78,26 @@ static void canvas_sync_scrollbars(window_t *win, canvas_state_t *s) {
   // Horizontal: owned by doc_win (merged with status bar).
   si.nMax  = content_w;
   si.nPage = view_w;
-  si.nPos  = s->pan_x;
+  si.nPos  = s->pan.x;
   set_scroll_info(doc->doc_win, SB_HORZ, &si, false);
 
   // Vertical: owned by this canvas window.
   si.nMax  = content_h;
   si.nPage = view_h;
-  si.nPos  = s->pan_y;
+  si.nPos  = s->pan.y;
   set_scroll_info(win, SB_VERT, &si, false);
 }
 
 static void canvas_clamp_pan(canvas_state_t *s, int win_w, int win_h) {
   form_doc_t *doc = s->doc;
-  int max_x = MAX(0, doc->form_w + CANVAS_PADDING * 2 - (win_w - SCROLLBAR_WIDTH));
-  int max_y = MAX(0, doc->form_h + CANVAS_PADDING * 2 - win_h);
-  if (s->pan_x < 0) s->pan_x = 0;
-  if (s->pan_y < 0) s->pan_y = 0;
-  if (s->pan_x > max_x) s->pan_x = max_x;
-  if (s->pan_y > max_y) s->pan_y = max_y;
+  bool has_vscroll = doc->form_size.h > win_h;
+  int view_w = win_w - (has_vscroll ? SCROLLBAR_WIDTH : 0);
+  int max_x = MAX(0, doc->form_size.w - view_w);
+  int max_y = MAX(0, doc->form_size.h - win_h);
+  if (s->pan.x < 0) s->pan.x = 0;
+  if (s->pan.y < 0) s->pan.y = 0;
+  if (s->pan.x > max_x) s->pan.x = max_x;
+  if (s->pan.y > max_y) s->pan.y = max_y;
 }
 
 // ============================================================
@@ -105,9 +110,9 @@ static int hit_test_elements(canvas_state_t *s, int lx, int ly) {
   form_doc_t *doc = s->doc;
   for (int i = doc->element_count - 1; i >= 0; i--) {
     form_element_t *el = &doc->elements[i];
-    int ex = CANVAS_PADDING - s->pan_x + el->x;
-    int ey = CANVAS_PADDING - s->pan_y + el->y;
-    if (lx >= ex && lx < ex + el->w && ly >= ey && ly < ey + el->h)
+    int ex = form_to_sx(s, el->frame.x);
+    int ey = form_to_sy(s, el->frame.y);
+    if (lx >= ex && lx < ex + el->frame.w && ly >= ey && ly < ey + el->frame.h)
       return i;
   }
   return -1;
@@ -117,10 +122,10 @@ static int hit_test_elements(canvas_state_t *s, int lx, int ly) {
 // for the selected element, stored into out[HANDLE_COUNT].
 static void get_handle_rects(canvas_state_t *s, form_element_t *el,
                               int out_x[HANDLE_COUNT], int out_y[HANDLE_COUNT]) {
-  int ex = CANVAS_PADDING - s->pan_x + el->x;
-  int ey = CANVAS_PADDING - s->pan_y + el->y;
-  int ew = el->w;
-  int eh = el->h;
+  int ex = form_to_sx(s, el->frame.x);
+  int ey = form_to_sy(s, el->frame.y);
+  int ew = el->frame.w;
+  int eh = el->frame.h;
   int cx = ex + ew / 2 - HANDLE_HALF;
   int cy = ey + eh / 2 - HANDLE_HALF;
 
@@ -171,13 +176,14 @@ static inline int snap(form_doc_t *doc, int v) {
 // ============================================================
 
 // Clamp a rectangle to stay within the form surface bounds.
-static void clamp_to_form(form_doc_t *doc, int *x, int *y, int *w, int *h) {
-  if (*x < 0) { *w += *x; *x = 0; }
-  if (*y < 0) { *h += *y; *y = 0; }
-  if (*x + *w > doc->form_w) *w = doc->form_w - *x;
-  if (*y + *h > doc->form_h) *h = doc->form_h - *y;
-  if (*w < 1) *w = 1;
-  if (*h < 1) *h = 1;
+static irect16_t clamp_to_form(form_doc_t *doc, irect16_t r) {
+  if (r.x < 0) { r.w += r.x; r.x = 0; }
+  if (r.y < 0) { r.h += r.y; r.y = 0; }
+  if (r.x + r.w > doc->form_size.w) r.w = doc->form_size.w - r.x;
+  if (r.y + r.h > doc->form_size.h) r.h = doc->form_size.h - r.y;
+  if (r.w < 1) r.w = 1;
+  if (r.h < 1) r.h = 1;
+  return r;
 }
 
 static void draw_handles(window_t *win, canvas_state_t *s);
@@ -367,8 +373,8 @@ static void canvas_sync_live_element_window(form_doc_t *doc, form_element_t *el)
     return;
   s = (canvas_state_t *)doc->canvas_win->userdata;
   if (!s) return;
-  move_window(el->live_win, form_to_sx(s, el->x), form_to_sy(s, el->y));
-  resize_window(el->live_win, el->w, el->h);
+  move_window(el->live_win, form_to_sx(s, el->frame.x), form_to_sy(s, el->frame.y));
+  resize_window(el->live_win, el->frame.w, el->frame.h);
   if (strcmp(el->live_win->title, el->text) != 0) {
     snprintf(el->live_win->title, sizeof(el->live_win->title), "%s", el->text);
     invalidate_window(el->live_win);
@@ -382,8 +388,8 @@ static void canvas_create_live_element_window(form_doc_t *doc, form_element_t *e
   if (!s) return;
   if (!ctrl_type_to_proc(el->type)) return;
   el->live_win = create_window(el->text, el->flags,
-                               MAKERECT(form_to_sx(s, el->x), form_to_sy(s, el->y),
-                                        el->w, el->h),
+                               MAKERECT(form_to_sx(s, el->frame.x), form_to_sy(s, el->frame.y),
+                                        el->frame.w, el->frame.h),
                                doc->canvas_win, design_live_ctrl_proc, 0, el);
   if (!el->live_win) return;
   el->live_win->id = el->id;
@@ -425,10 +431,10 @@ static void draw_handles(window_t *win, canvas_state_t *s) {
   get_handle_rects(s, el, hx, hy);
 
   // Dotted selection border (4-pixel segments, screen coords)
-  int bx = form_to_sx(s, el->x) - 1;
-  int by = form_to_sy(s, el->y) - 1;
-  int bw = el->w + 2;
-  int bh = el->h + 2;
+  int bx = form_to_sx(s, el->frame.x) - 1;
+  int by = form_to_sy(s, el->frame.y) - 1;
+  int bw = el->frame.w + 2;
+  int bh = el->frame.h + 2;
   draw_sel_rect(R(bx, by, bw, bh));
 
   // Solid handle squares
@@ -441,12 +447,12 @@ static void draw_handles(window_t *win, canvas_state_t *s) {
 static void draw_rubber_band(window_t *win, canvas_state_t *s) {
   (void)win;
   if (s->drag_mode != DRAG_RUBBERBND) return;
-  int x0 = s->rb_x < 0 ? 0 : s->rb_x;
-  int y0 = s->rb_y < 0 ? 0 : s->rb_y;
-  int x1 = x0 + s->rb_w;
-  int y1 = y0 + s->rb_h;
-  if (x1 > s->doc->form_w) x1 = s->doc->form_w;
-  if (y1 > s->doc->form_h) y1 = s->doc->form_h;
+  int x0 = s->rb.x < 0 ? 0 : s->rb.x;
+  int y0 = s->rb.y < 0 ? 0 : s->rb.y;
+  int x1 = x0 + s->rb.w;
+  int y1 = y0 + s->rb.h;
+  if (x1 > s->doc->form_size.w) x1 = s->doc->form_size.w;
+  if (y1 > s->doc->form_size.h) y1 = s->doc->form_size.h;
   if (x1 <= x0 || y1 <= y0) return;
   int sx = form_to_sx(s, x0);
   int sy = form_to_sy(s, y0);
@@ -523,16 +529,18 @@ static int tool_to_ctrl_type(int tool) {
 }
 
 // Default dimensions for newly placed controls.
-static void default_ctrl_size(int type, int *w, int *h) {
+static isize16_t default_ctrl_size(int type) {
+  isize16_t size;
   switch (type) {
-    case CTRL_BUTTON:   *w = 75;  *h = 23; break;
-    case CTRL_CHECKBOX: *w = 97;  *h = 17; break;
-    case CTRL_LABEL:    *w = 65;  *h = 13; break;
-    case CTRL_TEXTEDIT: *w = 121; *h = 20; break;
-    case CTRL_LIST:     *w = 121; *h = 60; break;
-    case CTRL_COMBOBOX: *w = 121; *h = 20; break;
-    default:            *w = 80;  *h = 20; break;
+    case CTRL_BUTTON:   size = (isize16_t){75, 23};  break;
+    case CTRL_CHECKBOX: size = (isize16_t){97, 17};  break;
+    case CTRL_LABEL:    size = (isize16_t){65, 13};  break;
+    case CTRL_TEXTEDIT: size = (isize16_t){121, 20}; break;
+    case CTRL_LIST:     size = (isize16_t){121, 60}; break;
+    case CTRL_COMBOBOX: size = (isize16_t){121, 20}; break;
+    default:            size = (isize16_t){80, 20};  break;
   }
+  return size;
 }
 
 // Control type display names for use in caption and name generation.
@@ -551,19 +559,16 @@ static const char *ctrl_type_name(int type) {
 // ============================================================
 // Add a new element to the document
 // ============================================================
-static void canvas_add_element(form_doc_t *doc, int type, int x, int y, int w, int h) {
+static void canvas_add_element(form_doc_t *doc, int type, irect16_t frame) {
   if (doc->element_count >= MAX_ELEMENTS) return;
   if (type < 0 || type >= CTRL_TYPE_COUNT) return;
-  if (w < MIN_ELEM_W) w = MIN_ELEM_W;
-  if (h < MIN_ELEM_H) h = MIN_ELEM_H;
+  if (frame.w < MIN_ELEM_W) frame.w = MIN_ELEM_W;
+  if (frame.h < MIN_ELEM_H) frame.h = MIN_ELEM_H;
 
   form_element_t *el = &doc->elements[doc->element_count];
   el->type  = type;
   el->id    = doc->next_id++;
-  el->x     = x;
-  el->y     = y;
-  el->w     = w;
-  el->h     = h;
+  el->frame = frame;
   el->flags = 0;
 
   int n = ++doc->type_counters[type];
@@ -603,7 +608,7 @@ static void canvas_preview_label(int type, int index, char *text, size_t text_sz
 static void canvas_apply_resize(canvas_state_t *s, int dx, int dy) {
   form_doc_t     *doc = s->doc;
   form_element_t *el  = &doc->elements[s->selected_idx];
-  int x = s->snap_x, y = s->snap_y, w = s->snap_w, h = s->snap_h;
+  int x = s->snap_rect.x, y = s->snap_rect.y, w = s->snap_rect.w, h = s->snap_rect.h;
 
   switch (s->drag_handle) {
     case HANDLE_TL: x += dx; y += dy; w -= dx; h -= dy; break;
@@ -634,17 +639,17 @@ static void canvas_apply_resize(canvas_state_t *s, int dx, int dy) {
 
   if (w < MIN_ELEM_W) {
     if (s->drag_handle == HANDLE_TL || s->drag_handle == HANDLE_ML ||
-        s->drag_handle == HANDLE_BL) x = s->snap_x + s->snap_w - MIN_ELEM_W;
+        s->drag_handle == HANDLE_BL) x = s->snap_rect.x + s->snap_rect.w - MIN_ELEM_W;
     w = MIN_ELEM_W;
   }
   if (h < MIN_ELEM_H) {
     if (s->drag_handle == HANDLE_TL || s->drag_handle == HANDLE_TC ||
-        s->drag_handle == HANDLE_TR) y = s->snap_y + s->snap_h - MIN_ELEM_H;
+        s->drag_handle == HANDLE_TR) y = s->snap_rect.y + s->snap_rect.h - MIN_ELEM_H;
     h = MIN_ELEM_H;
   }
   if (x < 0) x = 0;
   if (y < 0) y = 0;
-  el->x = x; el->y = y; el->w = w; el->h = h;
+  el->frame.x = x; el->frame.y = y; el->frame.w = w; el->frame.h = h;
 }
 
 // ============================================================
@@ -661,8 +666,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       st->doc          = (form_doc_t *)lparam;
       st->preview_type = -1;
       st->selected_idx = -1;
-      st->pan_x        = 0;
-      st->pan_y        = 0;
+      st->pan          = (ipoint16_t){0, 0};
       st->drag_mode    = DRAG_NONE;
       st->drag_handle  = -1;
       canvas_sync_scrollbars(win, st);
@@ -689,7 +693,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
     case evHScroll: {
       if (!s) return false;
-      s->pan_x = (int)wparam;
+      s->pan.x = (int)wparam;
       canvas_clamp_pan(s, win->frame.w, win->frame.h);
       canvas_sync_scrollbars(win, s);
       canvas_sync_live_controls(doc);
@@ -698,7 +702,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
     case evVScroll: {
       if (!s) return false;
-      s->pan_y = (int)wparam;
+      s->pan.y = (int)wparam;
       canvas_clamp_pan(s, win->frame.w, win->frame.h);
       canvas_sync_scrollbars(win, s);
       canvas_sync_live_controls(doc);
@@ -713,10 +717,10 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
                 R(0, 0, win->frame.w, win->frame.h));
 
       // Form surface (window-colored rectangle with a 1px dark border)
-      int fx = CANVAS_PADDING - s->pan_x;
-      int fy = CANVAS_PADDING - s->pan_y;
-      int fw = doc->form_w;
-      int fh = doc->form_h;
+      int fx = form_to_sx(s, 0);
+      int fy = form_to_sy(s, 0);
+      int fw = doc->form_size.w;
+      int fh = doc->form_size.h;
       fill_rect(get_sys_color(brWindowBg), R(fx, fy, fw, fh));
       fill_rect(get_sys_color(brDarkEdge), R(fx - 1, fy - 1, fw + 2, 1));
       fill_rect(get_sys_color(brDarkEdge), R(fx - 1, fy - 1, 1, fh + 2));
@@ -742,11 +746,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           form_element_t *el = &doc->elements[s->selected_idx];
           s->drag_mode       = DRAG_RESIZE;
           s->drag_handle     = handle;
-          s->drag_start      = (point_t){lx, ly};
-          s->snap_x          = el->x;
-          s->snap_y          = el->y;
-          s->snap_w          = el->w;
-          s->snap_h          = el->h;
+          s->drag_start      = (ipoint16_t){lx, ly};
+          s->snap_rect       = el->frame;
           set_capture(win);
           return true;
         }
@@ -756,9 +757,9 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         if (hit >= 0) {
           form_element_t *el = &doc->elements[hit];
           s->drag_mode   = DRAG_MOVE;
-          s->drag_start  = (point_t){lx, ly};
-          s->snap_x      = el->x;
-          s->snap_y      = el->y;
+          s->drag_start      = (ipoint16_t){lx, ly};
+          s->snap_rect.x    = el->frame.x;
+          s->snap_rect.y    = el->frame.y;
           set_capture(win);
         } else {
           s->drag_mode = DRAG_NONE;
@@ -776,14 +777,11 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         // Clamp to form surface
         if (fx < 0) fx = 0;
         if (fy < 0) fy = 0;
-        if (fx > doc->form_w) fx = doc->form_w;
-        if (fy > doc->form_h) fy = doc->form_h;
+        if (fx > doc->form_size.w) fx = doc->form_size.w;
+        if (fy > doc->form_size.h) fy = doc->form_size.h;
         s->drag_mode   = DRAG_RUBBERBND;
-        s->drag_start  = (point_t){lx, ly};
-        s->rb_x        = fx;
-        s->rb_y        = fy;
-        s->rb_w        = 0;
-        s->rb_h        = 0;
+        s->drag_start  = (ipoint16_t){lx, ly};
+        s->rb          = (irect16_t){fx, fy, 0, 0};
         canvas_preview_label(ctrl_type, doc->type_counters[ctrl_type] + 1,
                              preview_text, sizeof(preview_text));
         canvas_update_preview(s, ctrl_type, fx, fy, 1, 1,
@@ -801,15 +799,16 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       if (s->drag_mode == DRAG_MOVE && s->selected_idx >= 0) {
         form_element_t *el = &doc->elements[s->selected_idx];
-        int nx = snap(doc, s->snap_x + (lx - s->drag_start.x));
-        int ny = snap(doc, s->snap_y + (ly - s->drag_start.y));
+        int nx = snap(doc, s->snap_rect.x + (lx - s->drag_start.x));
+        int ny = snap(doc, s->snap_rect.y + (ly - s->drag_start.y));
         if (nx < 0) nx = 0;
         if (ny < 0) ny = 0;
-        if (nx + el->w > doc->form_w) nx = doc->form_w - el->w;
-        if (ny + el->h > doc->form_h) ny = doc->form_h - el->h;
-        el->x = nx;
-        el->y = ny;
+        if (nx + el->frame.w > doc->form_size.w) nx = doc->form_size.w - el->frame.w;
+        if (ny + el->frame.h > doc->form_size.h) ny = doc->form_size.h - el->frame.h;
+        el->frame.x = nx;
+        el->frame.y = ny;
         canvas_sync_live_controls(doc);
+        invalidate_window(win);
         return true;
       }
 
@@ -819,6 +818,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         canvas_apply_resize(s, dx, dy);
         doc->modified = true;
         canvas_sync_live_controls(doc);
+        invalidate_window(win);
         return true;
       }
 
@@ -835,23 +835,24 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         int y0 = snap(doc, oy < fy ? oy : fy);
         int x1 = snap(doc, ox < fx ? fx : ox);
         int y1 = snap(doc, oy < fy ? fy : oy);
-        s->rb_x = x0;
-        s->rb_y = y0;
-        s->rb_w = x1 - x0;
-        s->rb_h = y1 - y0;
+        s->rb = (irect16_t){x0, y0, x1 - x0, y1 - y0};
         if (ctrl_type >= 0) {
-          int pw = s->rb_w;
-          int ph = s->rb_h;
-          if (pw < MIN_ELEM_W || ph < MIN_ELEM_H)
-            default_ctrl_size(ctrl_type, &pw, &ph);
+          irect16_t preview = s->rb;
+          if (preview.w < MIN_ELEM_W || preview.h < MIN_ELEM_H) {
+            isize16_t size = default_ctrl_size(ctrl_type);
+            preview.w = size.w;
+            preview.h = size.h;
+          }
           canvas_preview_label(ctrl_type, doc->type_counters[ctrl_type] + 1,
                                preview_text, sizeof(preview_text));
-          canvas_update_preview(s, ctrl_type, s->rb_x, s->rb_y, pw, ph,
-                                preview_text, 0);
+          canvas_update_preview(s, ctrl_type, preview.x, preview.y,
+                                preview.w, preview.h, preview_text, 0);
         }
         canvas_sync_live_controls(doc);
+        invalidate_window(win);
         return true;
       }
+      invalidate_window(win);
       return false;
     }
 
@@ -874,16 +875,16 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       if (s->drag_mode == DRAG_RUBBERBND) {
         int tool = g_app ? g_app->current_tool : ID_TOOL_SELECT;
         int ctrl_type = tool_to_ctrl_type(tool);
-        int w = s->rb_w;
-        int h = s->rb_h;
         if (ctrl_type >= 0) {
+          irect16_t frame = s->rb;
           // If no drag (click only), use the default size for the control.
-          if (w < MIN_ELEM_W || h < MIN_ELEM_H)
-            default_ctrl_size(ctrl_type, &w, &h);
-          int x = s->rb_x;
-          int y = s->rb_y;
-          clamp_to_form(doc, &x, &y, &w, &h);
-          canvas_add_element(doc, ctrl_type, x, y, w, h);
+          if (frame.w < MIN_ELEM_W || frame.h < MIN_ELEM_H) {
+            isize16_t size = default_ctrl_size(ctrl_type);
+            frame.w = size.w;
+            frame.h = size.h;
+          }
+          frame = clamp_to_form(doc, frame);
+          canvas_add_element(doc, ctrl_type, frame);
           s->selected_idx = doc->element_count - 1;
         }
         // Revert to Select tool after placing
@@ -918,7 +919,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
     case evWheel: {
       if (!s) return false;
       int delta = (int)(int16_t)LOWORD(wparam);
-      s->pan_y -= delta * SCROLL_SENSITIVITY;
+      s->pan.y -= delta * SCROLL_SENSITIVITY;
       canvas_clamp_pan(s, win->frame.w, win->frame.h);
       canvas_sync_scrollbars(win, s);
       canvas_sync_live_controls(doc);

@@ -20,9 +20,6 @@
 #define FORM_DEFAULT_W    320
 #define FORM_DEFAULT_H    200
 
-// Padding around the form inside the canvas window
-#define CANVAS_PADDING    10
-
 // Tool palette — formeditor uses 21px icons inside 26px square buttons.
 // toolbox.png: 63x299 pixels = 3 cols x N rows of 21x21 px icons
 // (3 icon columns in the sprite sheet; display layout is always 2 button columns).
@@ -39,11 +36,6 @@
 // frame.y is the window top; place it 8px below the menu bar.
 #define DOC_START_X       (PALETTE_WIN_X + PALETTE_WIN_W + 10)
 #define DOC_START_Y       (MENUBAR_HEIGHT + 8)
-#define DOC_WIN_W         320//(SCREEN_W - DOC_START_X - 4)
-// frame.h is the total window height (non-client + client).
-// The doc window uses WINDOW_STATUSBAR | WINDOW_HSCROLL; HSCROLL is merged
-// into the status bar row so no extra height is needed for HSCROLL.
-#define DOC_WIN_H         (240 + TITLEBAR_HEIGHT + STATUSBAR_HEIGHT)
 
 // ============================================================
 // Control types  (VB3 toolbox order, skipping unsupported)
@@ -108,7 +100,7 @@
 typedef struct {
   int      type;        // CTRL_* constant
   int      id;          // numeric control ID (e.g. 1001)
-  int      x, y, w, h;  // position and size in form coordinates
+  irect16_t frame;      // position and size in form coordinates
   uint32_t flags;        // reserved for future style flags
   char     text[64];     // control caption / label text
   char     name[32];     // identifier name (e.g. "IDC_BUTTON1")
@@ -118,7 +110,7 @@ typedef struct {
 typedef struct {
   form_element_t elements[MAX_ELEMENTS];
   int    element_count;
-  int    form_w, form_h;
+  isize16_t form_size;
   bool   modified;
   char   filename[512];
   int    next_id;                      // next numeric control ID
@@ -160,13 +152,13 @@ typedef struct {
   window_t   *overlay_win;
   window_t   *preview_win;
   int         preview_type;
-  int         pan_x, pan_y;
+  ipoint16_t  pan;
   int         selected_idx;   // -1 = no selection
   drag_mode_t drag_mode;
   int         drag_handle;    // resize handle index, or -1
-  point_t     drag_start;     // window-local mouse pos at drag start
-  int         snap_x, snap_y, snap_w, snap_h; // element state at drag start
-  int         rb_x, rb_y, rb_w, rb_h;         // rubber-band in form coords
+  ipoint16_t  drag_start;     // window-local mouse pos at drag start
+  irect16_t   snap_rect;      // element geometry at drag start
+  irect16_t   rb;             // rubber-band in form coords
 } canvas_state_t;
 
 // ============================================================
