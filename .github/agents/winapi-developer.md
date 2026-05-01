@@ -22,7 +22,7 @@ You are now working on **Orion**, a lightweight WinAPI-style UI framework writte
 | `TranslateAccelerator`| `translate_accelerator(win, accel_table, &e)` |
 | `DialogBox` / `EndDialog` | `show_dialog(parent, proc, userdata)` / `end_dialog(win, result)` |
 | `RECT`                | `irect16_t { int x, y, w, h; }` via `MAKERECT(x,y,w,h)` |
-| `POINT`               | `point_t { int x, y; }`                       |
+| `POINT`               | `ipoint16_t { int x, y; }`                       |
 | Button `BN_CLICKED`   | `btnClicked`                  |
 | `CB_ADDSTRING` etc.   | `CB_ADDSTRING`, `CBN_SELCHANGE`, etc.         |
 
@@ -41,7 +41,7 @@ You are now working on **Orion**, a lightweight WinAPI-style UI framework writte
 - `snake_case` for functions and variables; `snake_case_t` for types; `SCREAMING_SNAKE_CASE` for constants and macros.
 - Include guards: `#ifndef __MODULE_NAME_H__`.
 - Minimal comments — only where logic is genuinely non-obvious.
-- Prefer `point_t` / `irect16_t` over bare `int x, int y` pairs.
+- Prefer `ipoint16_t` / `irect16_t` over bare `int x, int y` pairs.
 - Prefer `stdint.h` types (`uint32_t`, `uint16_t`) when size matters.
 
 ## Repository layout

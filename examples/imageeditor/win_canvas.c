@@ -472,8 +472,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       // Polygon in-progress: draw a sel_rect bounding the rubber-band edge
       // from the last committed vertex to the current mouse position.
       if (doc->poly_active && doc->poly_count > 0) {
-        point_t v0 = doc->poly_pts[doc->poly_count - 1];
-        point_t v1 = doc->last;
+        ipoint16_t v0 = doc->poly_pts[doc->poly_count - 1];
+        ipoint16_t v1 = doc->last;
         int px0 = scaled_px(MIN(v0.x, v1.x), state->scale) - state->pan_x;
         int py0 = scaled_px(MIN(v0.y, v1.y), state->scale) - state->pan_y;
         int px1 = scaled_px(MAX(v0.x, v1.x) + 1, state->scale) - state->pan_x;
@@ -674,7 +674,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           IE_DEBUG("polygon_begin doc=%p at=(%d,%d)", (void *)doc, px, py);
         }
         if (doc->poly_count < (int)(sizeof(doc->poly_pts)/sizeof(doc->poly_pts[0]))) {
-          doc->poly_pts[doc->poly_count++] = (point_t){px, py};
+          doc->poly_pts[doc->poly_count++] = (ipoint16_t){px, py};
           IE_DEBUG("polygon_point doc=%p count=%d at=(%d,%d)",
                    (void *)doc, doc->poly_count, px, py);
         }

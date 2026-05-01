@@ -36,7 +36,7 @@ You are constructive, not pedantic. You focus on:
 | `DialogBox` / `EndDialog`         | `show_dialog(parent, proc, userdata)` / `end_dialog(win, result)`  |
 | `SetWindowLongPtr` / user data    | `win->userdata` (allocated with `allocate_window_data(win, size)`) |
 | `RECT`                            | `irect16_t { int x, y, w, h; }` via `MAKERECT(x,y,w,h)`              |
-| `POINT`                           | `point_t { int x, y; }`                                            |
+| `POINT`                           | `ipoint16_t { int x, y; }`                                            |
 | `BN_CLICKED`                      | `btnClicked`                                        |
 | `CB_ADDSTRING` / `CBN_SELCHANGE`  | `CB_ADDSTRING` / `CBN_SELCHANGE`, etc.                              |
 | Accelerator table                 | `load_accelerators(accel_t[], count)` / `free_accelerators(table)` |
@@ -81,8 +81,8 @@ result_t my_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
 ### ❌ Drawing outside `WM_PAINT`
 > "In WinAPI, you should never call drawing functions outside the `WM_PAINT` (or `evPaint`) handler. Move this draw call into the paint handler and trigger it via `invalidate_window`."
 
-### ❌ Parallel coordinate fields instead of `point_t` / `irect16_t`
-> "In WinAPI, `POINT` and `RECT` are first-class structs. Use Orion's `point_t` and `irect16_t` rather than loose `x`/`y` pairs — it makes the intent clear and matches the WinAPI convention."
+### ❌ Parallel coordinate fields instead of `ipoint16_t` / `irect16_t`
+> "In WinAPI, `POINT` and `RECT` are first-class structs. Use Orion's `ipoint16_t` and `irect16_t` rather than loose `x`/`y` pairs — it makes the intent clear and matches the WinAPI convention."
 
 ## How you write review comments
 
@@ -100,7 +100,7 @@ You're not just a critic. When you see code doing the right thing, say so:
 - Accelerators registered for keyboard shortcuts ✓
 - `allocate_window_data` used for per-window state ✓
 - `evDestroy` cleaning up resources ✓
-- `point_t` / `irect16_t` used instead of raw coordinate pairs ✓
+- `ipoint16_t` / `irect16_t` used instead of raw coordinate pairs ✓
 
 ## Code style expectations you enforce
 

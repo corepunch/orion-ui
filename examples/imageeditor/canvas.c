@@ -781,7 +781,7 @@ void canvas_draw_rounded_rect_filled(canvas_doc_t *doc, int x, int y, int w, int
 }
 
 // Polygon: draw edges between consecutive vertices and close the last to first
-void canvas_draw_polygon_outline(canvas_doc_t *doc, const point_t *pts, int count, uint32_t c) {
+void canvas_draw_polygon_outline(canvas_doc_t *doc, const ipoint16_t *pts, int count, uint32_t c) {
   if (count < 2) return;
   for (int i = 0; i < count - 1; i++)
     canvas_draw_line(doc, pts[i].x, pts[i].y, pts[i+1].x, pts[i+1].y, 0, c);
@@ -789,7 +789,7 @@ void canvas_draw_polygon_outline(canvas_doc_t *doc, const point_t *pts, int coun
 }
 
 // Scanline fill for a closed polygon using the ray-casting / edge table approach
-void canvas_draw_polygon_filled(canvas_doc_t *doc, const point_t *pts, int count, uint32_t outline, uint32_t fill) {
+void canvas_draw_polygon_filled(canvas_doc_t *doc, const ipoint16_t *pts, int count, uint32_t outline, uint32_t fill) {
   if (count < 3) { canvas_draw_polygon_outline(doc, pts, count, outline); return; }
   // Find bounding box
   int y_min = pts[0].y, y_max = pts[0].y;
@@ -987,20 +987,20 @@ void canvas_paste_clipboard(canvas_doc_t *doc) {
   }
   // Select the pasted region (clamped to canvas bounds)
   doc->sel_active   = true;
-  doc->sel_start    = (point_t){0, 0};
+  doc->sel_start    = (ipoint16_t){0, 0};
   int sel_x1 = w - 1;
   int sel_y1 = h - 1;
   if (sel_x1 >= doc->canvas_w) sel_x1 = doc->canvas_w - 1;
   if (sel_y1 >= doc->canvas_h) sel_y1 = doc->canvas_h - 1;
-  doc->sel_end      = (point_t){sel_x1, sel_y1};
+  doc->sel_end      = (ipoint16_t){sel_x1, sel_y1};
 }
 
 // Select the entire canvas.
 void canvas_select_all(canvas_doc_t *doc) {
   if (!doc) return;
   doc->sel_active   = true;
-  doc->sel_start    = (point_t){0, 0};
-  doc->sel_end      = (point_t){doc->canvas_w - 1, doc->canvas_h - 1};
+  doc->sel_start    = (ipoint16_t){0, 0};
+  doc->sel_end      = (ipoint16_t){doc->canvas_w - 1, doc->canvas_h - 1};
 }
 
 // Clear selection (no-op on pixels).
@@ -1109,7 +1109,7 @@ void canvas_begin_move(canvas_doc_t *doc, uint32_t bg) {
   doc->float_pixels  = buf;
   doc->float_w       = w;
   doc->float_h       = h;
-  doc->float_pos     = (point_t){x0, y0};
+  doc->float_pos     = (ipoint16_t){x0, y0};
   doc->sel_moving    = true;
 }
 
@@ -1127,8 +1127,8 @@ void canvas_commit_move(canvas_doc_t *doc) {
     }
   }
   // Update selection to the new position
-  doc->sel_start  = (point_t){dx, dy};
-  doc->sel_end    = (point_t){dx + w - 1, dy + h - 1};
+  doc->sel_start  = (ipoint16_t){dx, dy};
+  doc->sel_end    = (ipoint16_t){dx + w - 1, dy + h - 1};
   // Release float resources including the GL texture overlay.
   if (doc->float_tex) {
     glDeleteTextures(1, &doc->float_tex);

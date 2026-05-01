@@ -254,7 +254,7 @@ typedef struct canvas_doc_s {
   bool     canvas_dirty;
   bool     drawing;
   bool     close_prompt_open;
-  point_t  last;
+  ipoint16_t  last;
   bool     modified;
   char     filename[512];
   window_t *win;
@@ -273,19 +273,19 @@ typedef struct canvas_doc_s {
   uint8_t *redo_states[UNDO_MAX];
   int      redo_count;
   bool     sel_active;
-  point_t  sel_start;
-  point_t  sel_end;
+  ipoint16_t  sel_start;
+  ipoint16_t  sel_end;
   // Shape tool rubber-band preview state
   uint8_t *shape_snapshot;  // pixel backup taken when shape drag starts
-  point_t  shape_start;     // canvas coords where the shape drag began
+  ipoint16_t  shape_start;     // canvas coords where the shape drag began
   // Polygon tool in-progress vertices
-  point_t  poly_pts[256];
+  ipoint16_t  poly_pts[256];
   int      poly_count;
   bool     poly_active;     // true while accumulating polygon vertices
   // Floating selection state (during move drag)
   bool     sel_moving;
-  point_t  move_origin;    // canvas pixel where drag began
-  point_t  float_pos;      // current top-left of floating selection
+  ipoint16_t  move_origin;    // canvas pixel where drag began
+  ipoint16_t  float_pos;      // current top-left of floating selection
   int      float_w;
   int      float_h;
   uint8_t *float_pixels;   // RGBA data extracted from canvas
@@ -298,8 +298,8 @@ typedef struct {
   int           pan_x;      // horizontal pan offset in screen pixels
   int           pan_y;      // vertical pan offset in screen pixels
   bool          panning;    // true while hand-tool drag is in progress
-  point_t       pan_start;  // screen-local coords where hand drag began
-  point_t       hover;      // canvas pixel coords under the cursor
+  ipoint16_t       pan_start;  // screen-local coords where hand drag began
+  ipoint16_t       hover;      // canvas pixel coords under the cursor
   bool          hover_valid; // true when hover is on the canvas (for magnifier overlay)
   GLuint        mag_tex;    // GL texture for magnifier loupe (created once, updated each paint)
   char          last_sb[48]; // last text sent to status bar — avoids redundant updates
@@ -435,8 +435,8 @@ void canvas_draw_ellipse_outline(canvas_doc_t *doc, int cx, int cy, int rx, int 
 void canvas_draw_ellipse_filled(canvas_doc_t *doc, int cx, int cy, int rx, int ry, uint32_t outline, uint32_t fill);
 void canvas_draw_rounded_rect_outline(canvas_doc_t *doc, int x, int y, int w, int h, int r, uint32_t c);
 void canvas_draw_rounded_rect_filled(canvas_doc_t *doc, int x, int y, int w, int h, int r, uint32_t outline, uint32_t fill);
-void canvas_draw_polygon_outline(canvas_doc_t *doc, const point_t *pts, int count, uint32_t c);
-void canvas_draw_polygon_filled(canvas_doc_t *doc, const point_t *pts, int count, uint32_t outline, uint32_t fill);
+void canvas_draw_polygon_outline(canvas_doc_t *doc, const ipoint16_t *pts, int count, uint32_t c);
+void canvas_draw_polygon_filled(canvas_doc_t *doc, const ipoint16_t *pts, int count, uint32_t outline, uint32_t fill);
 bool canvas_is_shape_tool(int tool_id);
 void canvas_shape_begin(canvas_doc_t *doc, int cx, int cy);
 void canvas_shape_preview(canvas_doc_t *doc, int x0, int y0, int x1, int y1, int tool, bool filled, uint32_t fg, uint32_t bg, bool shift_held);
