@@ -152,7 +152,7 @@ static void refresh_comments(post_detail_t *s) {
   send_message(cv, RVM_SETVIEWMODE, RVM_VIEW_REPORT, NULL);
   send_message(cv, RVM_CLEARCOLUMNS, 0, NULL);
 
-  rect_t cr  = get_client_rect(cv);
+  irect16_t cr  = get_client_rect(cv);
   int cv_w   = cr.w;
   int auth_w  = 70;
   int like_w  = 45;
@@ -223,7 +223,7 @@ static void draw_post_header(post_detail_t *s) {
   draw_text_small(by_buf, 4, 18, col_disabled);
 
   // Body (wrapped in a rect; reserve right side for the like button)
-  rect_t body_rect = { 4, 32, POST_DLG_W - 110, 50 };
+  irect16_t body_rect = { 4, 32, POST_DLG_W - 110, 50 };
   draw_text_wrapped(p->body, &body_rect, col_normal);
 
   // Like count

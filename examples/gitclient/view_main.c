@@ -45,10 +45,10 @@ static const int kMainToolbarCount =
 // cr is the main window's client rect.  The sidebar occupies the first
 // PANEL_LEFT_W_DEFAULT pixels and is managed by the framework (WINDOW_SIDEBAR);
 // this function only lays out the centre and right content panels.
-static void compute_layout(gc_state_t *gc, rect_t *cr,
-                            rect_t *r_log,
-                            rect_t *r_files,
-                            rect_t *r_diff) {
+static void compute_layout(gc_state_t *gc, irect16_t *cr,
+                            irect16_t *r_log,
+                            irect16_t *r_files,
+                            irect16_t *r_diff) {
   int lw = PANEL_LEFT_W_DEFAULT + PANEL_SPLITTER;  // fixed sidebar + separator gap
   int rw = gc->right_w;
   int total_w = cr->w;
@@ -65,9 +65,9 @@ static void compute_layout(gc_state_t *gc, rect_t *cr,
   int vs = CLAMP(gc->vsplit_y, 40, total_h - 40);
   gc->vsplit_y = vs;
 
-  *r_diff  = (rect_t){ cr->x + total_w - rw, cr->y, rw, total_h };
-  *r_log   = (rect_t){ center_x, cr->y, center_w, vs };
-  *r_files = (rect_t){ center_x, cr->y + vs + PANEL_SPLITTER,
+  *r_diff  = (irect16_t){ cr->x + total_w - rw, cr->y, rw, total_h };
+  *r_log   = (irect16_t){ center_x, cr->y, center_w, vs };
+  *r_files = (irect16_t){ center_x, cr->y + vs + PANEL_SPLITTER,
                         center_w, total_h - vs - PANEL_SPLITTER };
 }
 
@@ -75,9 +75,9 @@ void gc_layout_panels(window_t *win) {
   gc_state_t *gc = (gc_state_t *)win->userdata;
   if (!gc) return;
 
-  rect_t cr = get_client_rect(win);
+  irect16_t cr = get_client_rect(win);
 
-  rect_t rl, rf, rd;
+  irect16_t rl, rf, rd;
   compute_layout(gc, &cr, &rl, &rf, &rd);
 
   // Resize sidebar child to fill the full client height.
@@ -224,7 +224,7 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
                    gc_branches_proc);
       gc->branches_win = win->sidebar_child;
 
-      rect_t cr = get_client_rect(win);
+      irect16_t cr = get_client_rect(win);
       int lx = PANEL_LEFT_W_DEFAULT + PANEL_SPLITTER;
 
       gc->log_win = create_window("Log",

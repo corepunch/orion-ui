@@ -20,7 +20,7 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       win->frame.h = MAX(win->frame.h, text_char_height(FONT_SMALL) + TEXTEDIT_PADDING_VERT* 2);
       return true;
     case evPaint: {
-      rect_t local = {0, 0, win->frame.w, win->frame.h};
+      irect16_t local = {0, 0, win->frame.w, win->frame.h};
       fill_rect(g_ui_runtime.focused == win?get_sys_color(brFocusRing):get_sys_color(brWindowBg),
                 R(-1, -1, win->frame.w+2, win->frame.h+2));
       draw_button(local, 1, 1, true);

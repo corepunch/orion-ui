@@ -87,7 +87,7 @@ static window_t *create_toolbar_child(window_t *parent, winproc_t proc,
                                        const char *title,
                                        int rel_x, int rel_y, int w, int h,
                                        int icon) {
-  rect_t r = {rel_x, rel_y, w, h};
+  irect16_t r = {rel_x, rel_y, w, h};
   // Toolbar children use toolbar-band-relative frames and WINDOW_NOTITLE | WINDOW_NOFILL
   // so the framework neither draws a title bar nor fills their background.
   window_t *tc = create_window(title ? title : "",
@@ -258,8 +258,8 @@ extern void ui_end_frame(void);
 extern void draw_panel(window_t const *win);
 extern void draw_window_controls(window_t *win);
 extern void draw_statusbar(window_t *win, const char *text);
-extern void draw_bevel(rect_t r);
-extern void draw_button(rect_t r, int dx, int dy, bool pressed);
+extern void draw_bevel(irect16_t r);
+extern void draw_button(irect16_t r, int dx, int dy, bool pressed);
 extern void paint_window_stencil(window_t const *w);
 extern void repaint_stencil(void);
 extern void set_fullscreen(void);
@@ -273,9 +273,9 @@ extern int statusbar_height(window_t const *win);
 // to screen by adding the root's screen origin and the root's non-client height.
 // root_titlebar_h should be titlebar_height(root) — callers that already have
 // it pass it in to avoid recomputing.
-static rect_t win_frame_in_screen(window_t *win, window_t *root, int root_titlebar_h) {
+static irect16_t win_frame_in_screen(window_t *win, window_t *root, int root_titlebar_h) {
   if (win == root) return win->frame;
-  return (rect_t){root->frame.x + win->frame.x,
+  return (irect16_t){root->frame.x + win->frame.x,
                   root->frame.y + root_titlebar_h + win->frame.y,
                   win->frame.w, win->frame.h};
 }
@@ -535,7 +535,7 @@ static bool handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wpar
 // Send message to window (synchronous)
 int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   if (!win) return false;
-  rect_t const *frame = &win->frame;
+  irect16_t const *frame = &win->frame;
   window_t *root = get_root_window(win);
   int value = 0;
   // Call registered hooks
@@ -557,7 +557,7 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         if (!(win->flags&WINDOW_NOTITLE)) {
           draw_window_controls(win);
           draw_text_small_clipped(win->title,
-                          &(rect_t){frame->x, frame->y, frame->w, TITLEBAR_HEIGHT},
+                          &(irect16_t){frame->x, frame->y, frame->w, TITLEBAR_HEIGHT},
                           get_sys_color(window_has_focus(win) ? brActiveTitlebarText : brInactiveTitlebarText),
                           TEXT_PADDING_LEFT);
         }
@@ -565,8 +565,8 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
           int bsz      = toolbar_effective_bsz(win);
           int title_h  = (win->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
           int total_h  = bsz + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH);
-          rect_t tb_rect = {win->frame.x, win->frame.y + title_h, win->frame.w, total_h};
-          rect_t rect    = rect_inset(tb_rect, TOOLBAR_BEVEL_WIDTH);
+          irect16_t tb_rect = {win->frame.x, win->frame.y + title_h, win->frame.w, total_h};
+          irect16_t rect    = rect_inset(tb_rect, TOOLBAR_BEVEL_WIDTH);
           draw_bevel(rect);
           fill_rect(get_sys_color(brWindowBg), rect);
           // Paint each toolbar child with a per-button projection so that
@@ -589,7 +589,7 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
           // Uses screen-absolute coordinates (set_fullscreen projection is active).
           int t_bar = titlebar_height(win);
           int s_bar = statusbar_height(win);
-          rect_t sep = {win->frame.x + win->sidebar_width,
+          irect16_t sep = {win->frame.x + win->sidebar_width,
                         win->frame.y + t_bar,
                         1,
                         win->frame.h - t_bar - s_bar};
@@ -622,9 +622,9 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         // windows, and the stencil buffer is not touched at all for this.
         if (win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL)) {
           int t_win = titlebar_height(win);   /* win's own non-client height */
-          rect_t cr = get_client_rect(win);
-          rect_t wf = win_frame_in_screen(win, root, t);
-          set_clip_rect(NULL, (rect_t){wf.x, wf.y + t_win, cr.w, cr.h});
+          irect16_t cr = get_client_rect(win);
+          irect16_t wf = win_frame_in_screen(win, root, t);
+          set_clip_rect(NULL, (irect16_t){wf.x, wf.y + t_win, cr.w, cr.h});
         }
       }
       break;
@@ -644,7 +644,7 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       winproc_t proc = (winproc_t)lparam;
       int sb_w = (int)wparam > 0 ? (int)wparam : SIDEBAR_DEFAULT_WIDTH;
       win->sidebar_width = sb_w;
-      rect_t cr = get_client_rect(win);
+      irect16_t cr = get_client_rect(win);
       win->sidebar_child = create_window("",
           WINDOW_NOTITLE | WINDOW_NORESIZE | WINDOW_VSCROLL | WINDOW_NOTRAYBUTTON,
           MAKERECT(0, 0, sb_w, cr.h),
@@ -767,7 +767,7 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         break;
       case evHitTest:
         for (window_t *item = win->children; item; item = item->next) {
-          rect_t r = item->frame;
+          irect16_t r = item->frame;
           uint16_t x = LOWORD(wparam), y = HIWORD(wparam);
           if (!item->notabstop && CONTAINS(x, y, r.x, r.y, r.w, r.h)) {
             *(window_t **)lparam = item;
@@ -819,15 +819,15 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   if (win->disabled && msg == evPaint && win != g_ui_runtime.modal_overlay_parent) {
     uint32_t col = (get_sys_color(brWindowBg) & 0x00FFFFFF) | 0x80000000;
     int root_t = titlebar_height(root);
-    rect_t wf = win_frame_in_screen(win, root, root_t);
-    set_viewport((rect_t){ 0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight)});
+    irect16_t wf = win_frame_in_screen(win, root, root_t);
+    set_viewport((irect16_t){ 0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight)});
     set_projection(0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight));
     fill_rect(col, R(wf.x, wf.y, wf.w, wf.h));
   }
   if (msg == evPaint && win == g_ui_runtime.modal_overlay_parent) {
     int root_t = titlebar_height(root);
-    rect_t wf = win_frame_in_screen(win, root, root_t);
-    set_viewport((rect_t){ 0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight)});
+    irect16_t wf = win_frame_in_screen(win, root, root_t);
+    set_viewport((irect16_t){ 0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight)});
     set_projection(0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight));
     fill_rect(get_sys_color(brModalOverlay), R(wf.x, wf.y, wf.w, wf.h));
   }
@@ -840,8 +840,8 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   if (msg == evPaint && g_ui_runtime.running &&
       (win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL))) {
     int root_t = titlebar_height(root);
-    rect_t wf = win_frame_in_screen(win, root, root_t);
-    rect_t rootf = root->frame;
+    irect16_t wf = win_frame_in_screen(win, root, root_t);
+    irect16_t rootf = root->frame;
     set_viewport(rootf);
     set_projection(root->scroll[0],
                    -root_t + root->scroll[1],

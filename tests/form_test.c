@@ -233,9 +233,9 @@ void test_center_window_rect_owner(void) {
   int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
   int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
   window_t owner = {0};
-  owner.frame = (rect_t){20, 20, MIN(200, sw - 40), MIN(120, sh - 40)};
+  owner.frame = (irect16_t){20, 20, MIN(200, sw - 40), MIN(120, sh - 40)};
 
-  rect_t centered = center_window_rect((rect_t){0, 0, 120, 60}, &owner);
+  irect16_t centered = center_window_rect((irect16_t){0, 0, 120, 60}, &owner);
   ASSERT_EQUAL(centered.x, owner.frame.x + (owner.frame.w - 120) / 2);
   ASSERT_EQUAL(centered.y, owner.frame.y + (owner.frame.h - 60) / 2);
   ASSERT_EQUAL(centered.w, 120);
@@ -252,7 +252,7 @@ void test_center_window_rect_screen_clamp(void) {
 
   int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
   int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
-  rect_t centered = center_window_rect((rect_t){0, 0, sw + 50, sh + 20}, NULL);
+  irect16_t centered = center_window_rect((irect16_t){0, 0, sw + 50, sh + 20}, NULL);
 
   ASSERT_EQUAL(centered.x, 0);
   ASSERT_EQUAL(centered.y, 0);

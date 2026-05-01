@@ -18,9 +18,9 @@ result_t win_checkbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       win->frame.h = MAX(win->frame.h, BUTTON_HEIGHT);
       return true;
     case evPaint: {
-      rect_t local = {0, 0, win->frame.w, win->frame.h};
-      rect_t box = rect_split_left(local, win->frame.h);
-      rect_t focus_bg = rect_inset(box, -CHECKBOX_FOCUS_PAD);
+      irect16_t local = {0, 0, win->frame.w, win->frame.h};
+      irect16_t box = rect_split_left(local, win->frame.h);
+      irect16_t focus_bg = rect_inset(box, -CHECKBOX_FOCUS_PAD);
       fill_rect(g_ui_runtime.focused == win ? get_sys_color(brFocusRing) : get_sys_color(brWindowBg),
                 focus_bg);
       draw_button(box, 1, 1, win->pressed);

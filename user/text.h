@@ -27,7 +27,7 @@ int get_space_width(void);
 #define SPACE_WIDTH       (get_space_width())
 
 // Forward declaration
-typedef struct rect_s rect_t;
+typedef struct rect_s irect16_t;
 
 // Initialize the text rendering system
 void init_text_rendering(void);
@@ -47,7 +47,7 @@ int char_width(unsigned char c);
 // Pass font role at every call site — no hidden global state.
 void draw_text(ui_font_t font, const char *text, int x, int y, uint32_t col);
 void draw_text_clipped(ui_font_t font, const char *text,
-                       rect_t const *viewport, uint32_t col, uint32_t flags);
+                       irect16_t const *viewport, uint32_t col, uint32_t flags);
 int  text_char_height(ui_font_t font);   // cell pixel height for the given font
 int  text_strwidth(ui_font_t font, const char *text);  // pixel width of string
 int  text_strnwidth(ui_font_t font, const char *text, int len); // pixel width of first len chars
@@ -56,13 +56,13 @@ int  text_strnwidth(ui_font_t font, const char *text, int len); // pixel width o
 // These remain as real callable functions so existing extern declarations and
 // call sites compile without change.
 void draw_text_small(const char* text, int x, int y, uint32_t col);
-void draw_text_small_clipped(const char* text, rect_t const *viewport,
+void draw_text_small_clipped(const char* text, irect16_t const *viewport,
                               uint32_t col, uint32_t flags);
 int strwidth(const char* text);
 int strnwidth(const char* text, int text_length);
 
 // ── Advanced text rendering ───────────────────────────────────────────────────
 int calc_text_height(const char* text, int width);
-void draw_text_wrapped(const char* text, rect_t const *viewport, uint32_t col);
+void draw_text_wrapped(const char* text, irect16_t const *viewport, uint32_t col);
 
 #endif // __UI_TEXT_H__

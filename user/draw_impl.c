@@ -19,9 +19,9 @@
 extern window_t *get_root_window(window_t *window);
 
 static bool g_scissor_valid = false;
-static rect_t g_scissor_rect = {0};
+static irect16_t g_scissor_rect = {0};
 
-static void set_scissor_cached(rect_t const *r) {
+static void set_scissor_cached(irect16_t const *r) {
   if (!r) return;
   glEnable(GL_SCISSOR_TEST);
   if (g_scissor_valid &&
@@ -50,16 +50,16 @@ static int builtin_sb_thumb_off(win_sb_t const *sb, int track, int tl);
 void set_fullscreen(void) {
   int w = ui_get_system_metrics(kSystemMetricScreenWidth);
   int h = ui_get_system_metrics(kSystemMetricScreenHeight);
-  set_viewport((rect_t){0, 0, w, h});
+  set_viewport((irect16_t){0, 0, w, h});
   set_projection(0, 0, w, h);
 }
 
-rect_t get_opengl_rect(rect_t r) {
+irect16_t get_opengl_rect(irect16_t r) {
   uint32_t ws = axGetSize(NULL);
   float scale_x = (float)LOWORD(ws) * axGetScaling() / (float)MAX(1,ui_get_system_metrics(kSystemMetricScreenWidth));
   float scale_y = (float)HIWORD(ws) * axGetScaling() / (float)MAX(1,ui_get_system_metrics(kSystemMetricScreenHeight));
   
-  return (rect_t){
+  return (irect16_t){
     (int)(r.x * scale_x),
     (int)((ui_get_system_metrics(kSystemMetricScreenHeight) - r.y - r.h) * scale_y), // flip Y
     (int)(r.w * scale_x),
@@ -89,7 +89,7 @@ int statusbar_height(window_t const *win) {
   return s;
 }
 
-void draw_wire_rect(rect_t r, int expand, uint32_t col) {
+void draw_wire_rect(irect16_t r, int expand, uint32_t col) {
   fill_rect(col, R(r.x-expand, r.y-expand, r.w+2*expand, 1));
   fill_rect(col, R(r.x-expand, r.y-expand, 1, r.h+2*expand));
   fill_rect(col, R(r.x + r.w - 1 + expand, r.y-expand, 1, r.h+2*expand));
@@ -97,18 +97,18 @@ void draw_wire_rect(rect_t r, int expand, uint32_t col) {
 }
 
 // Draw focused border
-void draw_focused(rect_t r) {
+void draw_focused(irect16_t r) {
   draw_wire_rect(r, 1, get_sys_color(brFocusRing));
 }
 
 // Draw a softer single-colour outline for a window that contains focused
 // controls but is not itself the focused widget.
-static void draw_active_frame(rect_t r) {
+static void draw_active_frame(irect16_t r) {
   draw_wire_rect(r, 1, get_sys_color(brBorderActive));
 }
 
 // Draw bevel border
-void draw_bevel(rect_t r) {
+void draw_bevel(irect16_t r) {
   fill_rect(get_sys_color(brLightEdge), R(r.x-1, r.y-1, r.w+2, 1));
   fill_rect(get_sys_color(brLightEdge), R(r.x-1, r.y-1, 1, r.h+2));
   fill_rect(get_sys_color(brDarkEdge), R(r.x+r.w, r.y, 1, r.h+1));
@@ -117,7 +117,7 @@ void draw_bevel(rect_t r) {
 }
 
 // Draw button
-void draw_button(rect_t r, int dx, int dy, bool pressed) {
+void draw_button(irect16_t r, int dx, int dy, bool pressed) {
   (void)dx; (void)dy;
   if (pressed) {
     fill_rect(get_sys_color(brDarkEdge), r);
@@ -136,7 +136,7 @@ void draw_button(rect_t r, int dx, int dy, bool pressed) {
 
 // Draw window panel
 void draw_panel(window_t const *win) {
-  rect_t r = win->frame;
+  irect16_t r = win->frame;
   if (g_ui_runtime.focused == win)
     draw_focused(r);
   else if (window_has_focus(win))
@@ -154,7 +154,7 @@ void draw_panel(window_t const *win) {
 }
 
 // Draw a theme icon centred inside rect r.
-void draw_theme_icon_in_rect(int id, rect_t r, uint32_t col) {
+void draw_theme_icon_in_rect(int id, irect16_t r, uint32_t col) {
   draw_theme_icon(id,
                   r.x + (r.w - THEME_ICON_SIZE) / 2,
                   r.y + (r.h - THEME_ICON_SIZE) / 2,
@@ -163,7 +163,7 @@ void draw_theme_icon_in_rect(int id, rect_t r, uint32_t col) {
 
 // Draw window controls (close, minimize, etc.)
 void draw_window_controls(window_t *win) {
-  rect_t r = win->frame;
+  irect16_t r = win->frame;
   fill_rect(get_sys_color(window_has_focus(win) ? brActiveTitlebar : brInactiveTitlebar),
             rect_split_top(r, titlebar_height(win)));
   set_fullscreen();
@@ -178,14 +178,14 @@ void draw_window_controls(window_t *win) {
 void draw_statusbar(window_t *win, const char *text) {
   if (!(win->flags&WINDOW_STATUSBAR)) return;
 
-  rect_t r = win->frame;
+  irect16_t r = win->frame;
   int s = statusbar_height(win);
-  rect_t row = rect_split_bottom(r, s);  // the statusbar row at the bottom of the frame
+  irect16_t row = rect_split_bottom(r, s);  // the statusbar row at the bottom of the frame
 
   bool has_h = (win->flags & WINDOW_HSCROLL) && win->hscroll.visible;
   int split_x = has_h ? SB_STATUS_SPLIT_X(r.w) : r.w;
 
-  rect_t text_area = rect_split_left(row, split_x);
+  irect16_t text_area = rect_split_left(row, split_x);
   fill_rect(get_sys_color(brStatusbarBg), text_area);
   set_fullscreen();
 
@@ -197,7 +197,7 @@ void draw_statusbar(window_t *win, const char *text) {
   if (has_h) {
     win_sb_t *sb = &win->hscroll;
     // Resize corner — always present at the far right of the status-bar row.
-    rect_t corner = rect_split_right(row, SCROLLBAR_WIDTH);
+    irect16_t corner = rect_split_right(row, SCROLLBAR_WIDTH);
     fill_rect(get_sys_color(brWindowDarkBg), corner);
     draw_theme_icon_in_rect(THEME_ICON_RESIZE, corner, get_sys_color(brTextNormal));
     // Horizontal scrollbar fills the remaining right portion of the status bar row.
@@ -207,8 +207,8 @@ void draw_statusbar(window_t *win, const char *text) {
       fill_rect(get_sys_color(brWindowDarkBg), R(sx, row.y, bw, row.h));
       // Arrow buttons (each SCROLLBAR_WIDTH wide)
       if (bw >= 2 * SCROLLBAR_WIDTH) {
-        rect_t left_arr  = {sx,                        row.y, SCROLLBAR_WIDTH, row.h};
-        rect_t right_arr = {sx + bw - SCROLLBAR_WIDTH, row.y, SCROLLBAR_WIDTH, row.h};
+        irect16_t left_arr  = {sx,                        row.y, SCROLLBAR_WIDTH, row.h};
+        irect16_t right_arr = {sx + bw - SCROLLBAR_WIDTH, row.y, SCROLLBAR_WIDTH, row.h};
         fill_rect(get_sys_color(brWindowBg), left_arr);
         draw_theme_icon_in_rect(THEME_ICON_SCROLL_LEFT,  left_arr,  get_sys_color(brTextNormal));
         fill_rect(get_sys_color(brWindowBg), right_arr);
@@ -233,17 +233,17 @@ void draw_statusbar(window_t *win, const char *text) {
 }
 
 // Set OpenGL viewport for window
-void set_viewport(rect_t frame) {
+void set_viewport(irect16_t frame) {
   if (!g_ui_runtime.running) return;
-  rect_t ogl_rect = get_opengl_rect(frame);
+  irect16_t ogl_rect = get_opengl_rect(frame);
   
   glViewport(ogl_rect.x, ogl_rect.y, ogl_rect.w, ogl_rect.h);
   set_scissor_cached(&ogl_rect);
 }
 
-void set_clip_rect(window_t const *win, rect_t r) {
+void set_clip_rect(window_t const *win, irect16_t r) {
   if (!g_ui_runtime.running) return;
-  rect_t ogl_rect = get_opengl_rect(win ? rect_offset(r, win->frame.x, win->frame.y) : r);
+  irect16_t ogl_rect = get_opengl_rect(win ? rect_offset(r, win->frame.x, win->frame.y) : r);
   set_scissor_cached(&ogl_rect);
 }
 
@@ -283,7 +283,7 @@ void ui_set_stencil_for_root_window(uint32_t window_id) {
 }
 
 // Fill a rectangle with a solid color
-void fill_rect(uint32_t color, rect_t r) {
+void fill_rect(uint32_t color, irect16_t r) {
   extern uint32_t ui_white_texture;
   
   // Skip drawing if graphics aren't initialized (e.g., in tests)
@@ -305,7 +305,7 @@ static void color_to_params(uint32_t color, ui_render_effect_params_t *params, i
   params->f[base + 3] = (float)((color >> 24) & 0xFF) / 255.0f;
 }
 
-void draw_gradient_rect(rect_t r, uint32_t left_color, uint32_t right_color) {
+void draw_gradient_rect(irect16_t r, uint32_t left_color, uint32_t right_color) {
   extern uint32_t ui_white_texture;
   if (!g_ui_runtime.running || r.w < 1 || r.h < 1) return;
 
@@ -320,7 +320,7 @@ void draw_gradient_rect(rect_t r, uint32_t left_color, uint32_t right_color) {
 // one fill_rect per dash segment.  The 4x4 checker texture is sampled with tiled
 // UVs so that the first row/column produces a B,B,W,W repeating dash regardless
 // of the selection size, keeping the GL call count constant (O(1)).
-void draw_sel_rect(rect_t r) {
+void draw_sel_rect(irect16_t r) {
   extern uint32_t ui_checker_texture;
 
   if (!g_ui_runtime.running || r.w < 1 || r.h < 1) return;
@@ -381,7 +381,7 @@ void draw_icon8(int icon, int x, int y, uint32_t col) {
   draw_theme_icon(icon, x, y, THEME_ICON_SIZE, col);
 }
 
-void draw_icon8_clipped(int icon, rect_t rect, uint32_t col) {
+void draw_icon8_clipped(int icon, irect16_t rect, uint32_t col) {
   draw_theme_icon(icon,
                   rect.x + (rect.w - THEME_ICON_SIZE) / 2,
                   rect.y + (rect.h - THEME_ICON_SIZE) / 2,
@@ -409,7 +409,7 @@ void draw_icon16(int icon, int x, int y, uint32_t col) {
   draw_text_small((char[]) { icon+144, icon+145, 0 }, x, y+8, col);
 }
 
-void draw_checkerboard(rect_t r, int square_px) {
+void draw_checkerboard(irect16_t r, int square_px) {
   extern uint32_t ui_transparency_checker_texture;
   if (!g_ui_runtime.running || r.w < 1 || r.h < 1 || square_px < 1) return;
   if (ui_transparency_checker_texture == 0) return;
@@ -472,13 +472,13 @@ void draw_builtin_scrollbars(window_t *win) {
   if (has_h && !h_merged) {
     win_sb_t *sb = &win->hscroll;
     int bw = win->frame.w - (has_v ? SCROLLBAR_WIDTH : 0);
-    rect_t hbar = {base_x, base_y + content_h - SCROLLBAR_WIDTH, bw, SCROLLBAR_WIDTH};
+    irect16_t hbar = {base_x, base_y + content_h - SCROLLBAR_WIDTH, bw, SCROLLBAR_WIDTH};
     // Track background
     fill_rect(get_sys_color(brWindowDarkBg), hbar);
     // Arrow buttons
     if (bw >= 2 * SCROLLBAR_WIDTH) {
-      rect_t left_arr  = rect_split_left(hbar, SCROLLBAR_WIDTH);
-      rect_t right_arr = rect_split_right(hbar, SCROLLBAR_WIDTH);
+      irect16_t left_arr  = rect_split_left(hbar, SCROLLBAR_WIDTH);
+      irect16_t right_arr = rect_split_right(hbar, SCROLLBAR_WIDTH);
       fill_rect(get_sys_color(brWindowBg), left_arr);
       draw_theme_icon_in_rect(THEME_ICON_SCROLL_LEFT,  left_arr,  get_sys_color(brTextNormal));
       fill_rect(get_sys_color(brWindowBg), right_arr);
@@ -503,13 +503,13 @@ void draw_builtin_scrollbars(window_t *win) {
   if (has_v) {
     win_sb_t *sb = &win->vscroll;
     int bh = content_h - (has_h && !h_merged ? SCROLLBAR_WIDTH : 0);
-    rect_t vbar = {base_x + win->frame.w - SCROLLBAR_WIDTH, base_y, SCROLLBAR_WIDTH, bh};
+    irect16_t vbar = {base_x + win->frame.w - SCROLLBAR_WIDTH, base_y, SCROLLBAR_WIDTH, bh};
     // Track background
     fill_rect(get_sys_color(brWindowDarkBg), vbar);
     // Arrow buttons
     if (bh >= 2 * SCROLLBAR_WIDTH) {
-      rect_t top_arr = rect_split_top(vbar, SCROLLBAR_WIDTH);
-      rect_t bot_arr = rect_split_bottom(vbar, SCROLLBAR_WIDTH);
+      irect16_t top_arr = rect_split_top(vbar, SCROLLBAR_WIDTH);
+      irect16_t bot_arr = rect_split_bottom(vbar, SCROLLBAR_WIDTH);
       fill_rect(get_sys_color(brWindowBg), top_arr);
       draw_theme_icon_in_rect(THEME_ICON_SCROLL_UP,   top_arr, get_sys_color(brTextNormal));
       fill_rect(get_sys_color(brWindowBg), bot_arr);
@@ -533,7 +533,7 @@ void draw_builtin_scrollbars(window_t *win) {
 
   // Bottom-right corner: resize icon when both scrollbars are visible.
   if (has_h && !h_merged && has_v) {
-    rect_t corner = {base_x + win->frame.w - SCROLLBAR_WIDTH,
+    irect16_t corner = {base_x + win->frame.w - SCROLLBAR_WIDTH,
                      base_y + content_h - SCROLLBAR_WIDTH,
                      SCROLLBAR_WIDTH, SCROLLBAR_WIDTH};
     fill_rect(get_sys_color(brWindowDarkBg), corner);

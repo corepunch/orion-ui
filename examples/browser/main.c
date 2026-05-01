@@ -175,7 +175,7 @@ static void browser_run_save(window_t *parent) {
 }
 
 static bool browser_open_window(const char *initial_url) {
-  rect_t wr;
+  irect16_t wr;
   window_t *win;
 
   if (!g_app.http_ready) {

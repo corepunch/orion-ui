@@ -20,7 +20,7 @@ boilerplate when reading from and writing to dialog controls.
 ```c
 uint32_t show_dialog(
     const char  *title,  // title-bar text
-    rect_t const *frame, // MAKERECT(x, y, w, h) – logical pixels
+    irect16_t const *frame, // MAKERECT(x, y, w, h) – logical pixels
     window_t    *parent, // owner, or NULL
     winproc_t    proc,   // dialog window procedure
     void        *param   // forwarded as lparam to evCreate
@@ -121,7 +121,7 @@ using `form_ctrl_def_t` + `form_def_t`, analogous to WinAPI's `DLGTEMPLATE`.
 typedef struct {
   form_ctrl_type_t  type;   // FORM_CTRL_*
   uint32_t          id;     // numeric control ID; -1 for decorative controls
-  rect_t            frame;  // {x, y, w, h} in parent-client coordinates
+  irect16_t            frame;  // {x, y, w, h} in parent-client coordinates
   flags_t           flags;  // style flags (e.g. BUTTON_DEFAULT)
   const char       *text;   // initial caption / label text
   const char       *name;   // informational identifier (e.g. "edit_title")
@@ -203,7 +203,7 @@ static result_t my_proc(window_t *win, uint32_t msg,
   duplicating centering math locally.
 
 ```c
-rect_t wr = {0, 0, kMyForm.width, kMyForm.height};
+irect16_t wr = {0, 0, kMyForm.width, kMyForm.height};
 adjust_window_rect(&wr, WINDOW_DIALOG | WINDOW_NORESIZE);
 wr = center_window_rect(wr, parent);
 

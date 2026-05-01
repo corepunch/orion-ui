@@ -111,7 +111,7 @@ Or include specific subsystems:
 ### Creating a Window
 
 ```c
-rect_t frame = {100, 100, 200, 150};
+irect16_t frame = {100, 100, 200, 150};
 window_t *win = create_window("My Window", 0, &frame, NULL, my_window_proc, NULL);
 show_window(win, true);
 ```
@@ -335,7 +335,7 @@ See [Dialogs & DDX](docs/dialogs.md) for the full API reference.
 #include "ui/commctl/columnview.h"
 
 // Create a columnview control
-rect_t cv_rect = {0, 0, 400, 300};
+irect16_t cv_rect = {0, 0, 400, 300};
 window_t *cv = create_window("", WINDOW_NOTITLE | WINDOW_TRANSPARENT, &cv_rect, parent, win_reportview, NULL);
 show_window(cv, true);
 

@@ -271,11 +271,11 @@ void test_invalidate_routes_to_root(void) {
 
   register_window_hook(evNCPaint, hook_nc_root, NULL);
 
-  rect_t parent_frame = {10, 10, 200, 150};
+  irect16_t parent_frame = {10, 10, 200, 150};
   window_t *parent = create_window("Parent", 0, &parent_frame, NULL, noop_proc, 0, NULL);
   ASSERT_NOT_NULL(parent);
 
-  rect_t child_frame  = {5, 5, 50, 30};
+  irect16_t child_frame  = {5, 5, 50, 30};
   window_t *child = create_window("Child", 0, &child_frame, parent, noop_proc, 0, NULL);
   ASSERT_NOT_NULL(child);
 

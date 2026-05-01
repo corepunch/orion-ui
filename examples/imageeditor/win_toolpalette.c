@@ -38,17 +38,17 @@ static const toolbox_item_t k_tools[NUM_TOOLS] = {
 
 static void draw_palette_swatch(window_t *win,
                                 uint32_t fg_color, uint32_t bg_color) {
-  rect_t swatch_box = { 0, toolbox_grid_height(win), PALETTE_WIN_W, SWATCH_CLIENT_H };
-  rect_t inner_box = rect_inset(swatch_box, 2);
+  irect16_t swatch_box = { 0, toolbox_grid_height(win), PALETTE_WIN_W, SWATCH_CLIENT_H };
+  irect16_t inner_box = rect_inset(swatch_box, 2);
   int chip_side = inner_box.w - inner_box.w / 3;
   int reset_side = inner_box.w / 3;
-  rect_t fg_outer = rect_split_left(rect_split_top(inner_box, chip_side), chip_side);
-  rect_t bg_outer = rect_split_right(rect_split_bottom(inner_box, chip_side), chip_side);
-  rect_t reset_outer = rect_split_left(rect_split_bottom(inner_box, reset_side), reset_side);
-  rect_t bg_inner = rect_inset(bg_outer, 1);
-  rect_t fg_inner = rect_inset(fg_outer, 1);
-  rect_t reset_inner = rect_inset(reset_outer, 1);
-  rect_t reset_black = rect_inset(rect_offset(reset_inner, 1, 1), 1);
+  irect16_t fg_outer = rect_split_left(rect_split_top(inner_box, chip_side), chip_side);
+  irect16_t bg_outer = rect_split_right(rect_split_bottom(inner_box, chip_side), chip_side);
+  irect16_t reset_outer = rect_split_left(rect_split_bottom(inner_box, reset_side), reset_side);
+  irect16_t bg_inner = rect_inset(bg_outer, 1);
+  irect16_t fg_inner = rect_inset(fg_outer, 1);
+  irect16_t reset_inner = rect_inset(reset_outer, 1);
+  irect16_t reset_black = rect_inset(rect_offset(reset_inner, 1, 1), 1);
 
   fill_rect(get_sys_color(brDarkEdge), bg_outer);
   fill_rect(bg_color, bg_inner);

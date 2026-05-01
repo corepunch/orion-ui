@@ -447,7 +447,7 @@ void draw_text(ui_font_t font, const char *text, int x, int y, uint32_t col) {
 }
 
 void draw_text_clipped(ui_font_t font, const char *text,
-                       rect_t const *viewport, uint32_t col, uint32_t flags) {
+                       irect16_t const *viewport, uint32_t col, uint32_t flags) {
   if (!text || !*text || !g_ui_runtime.running || !viewport) return;
   int cell_h = text_char_height(font);
   int x = viewport->x;
@@ -467,7 +467,7 @@ void draw_text_small(const char *text, int x, int y, uint32_t col) {
   draw_text(FONT_SYSTEM, text, x, y, col);
 }
 
-void draw_text_small_clipped(const char *text, rect_t const *viewport,
+void draw_text_small_clipped(const char *text, irect16_t const *viewport,
                               uint32_t col, uint32_t flags) {
   draw_text_clipped(FONT_SYSTEM, text, viewport, col, flags);
 }
@@ -490,7 +490,7 @@ int calc_text_height(const char *text, int width) {
 
 // ── draw_text_wrapped ─────────────────────────────────────────────────────────
 
-void draw_text_wrapped(const char *text, rect_t const *viewport, uint32_t col) {
+void draw_text_wrapped(const char *text, irect16_t const *viewport, uint32_t col) {
   if (!text || !*text || !g_ui_runtime.running || !viewport) return;
   if (!text_state.big_height) return;
 

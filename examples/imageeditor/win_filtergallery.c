@@ -38,7 +38,7 @@ typedef struct {
   bool accepted;
 } filter_gallery_state_t;
 
-static void draw_outline(rect_t r, uint32_t col) {
+static void draw_outline(irect16_t r, uint32_t col) {
   fill_rect(col, R(r.x, r.y, r.w, 1));
   fill_rect(col, R(r.x, r.y, 1, r.h));
   fill_rect(col, R(r.x, r.y + r.h - 1, r.w, 1));
@@ -117,7 +117,7 @@ static void filter_gallery_bake_thumbnails(filter_gallery_state_t *st) {
   st->thumb_strip.sheet_h = sz * count;
 }
 
-static void draw_filter_preview(filter_gallery_state_t *st, int filter_idx, rect_t r) {
+static void draw_filter_preview(filter_gallery_state_t *st, int filter_idx, irect16_t r) {
   draw_checkerboard(r, 8);
   if (!st || !st->preview_tex) {
     fill_rect(get_sys_color(brWorkspaceBg), r);
@@ -196,16 +196,16 @@ static result_t filter_gallery_proc(window_t *win, uint32_t msg,
     }
 
     case evPaint: {
-      rect_t preview = R(FG_LEFT_X, FG_LEFT_Y, FG_MAIN_SIZE, FG_MAIN_SIZE);
+      irect16_t preview = R(FG_LEFT_X, FG_LEFT_Y, FG_MAIN_SIZE, FG_MAIN_SIZE);
       fill_rect(get_sys_color(brWindowDarkBg), rect_inset(preview, -2));
       draw_filter_preview(st, st ? st->selected : -1, preview);
       if (st && st->selected >= 0 && g_app && st->selected < g_app->filter_count) {
-        rect_t name_r = R(FG_LEFT_X, FG_LEFT_Y + FG_MAIN_SIZE + 10,
+        irect16_t name_r = R(FG_LEFT_X, FG_LEFT_Y + FG_MAIN_SIZE + 10,
                           FG_MAIN_SIZE, CONTROL_HEIGHT);
         draw_text_clipped(FONT_SMALL, g_app->filters[st->selected].name, &name_r,
                           get_sys_color(brTextNormal), TEXT_ALIGN_CENTER);
       } else {
-        rect_t msg_r = R(FG_LEFT_X, FG_LEFT_Y + FG_MAIN_SIZE + 10,
+        irect16_t msg_r = R(FG_LEFT_X, FG_LEFT_Y + FG_MAIN_SIZE + 10,
                          FG_MAIN_SIZE, CONTROL_HEIGHT);
         draw_text_clipped(FONT_SMALL, "No filters loaded", &msg_r,
                           get_sys_color(brTextDisabled), TEXT_ALIGN_CENTER);
@@ -273,7 +273,7 @@ bool show_filter_gallery_dialog(window_t *parent) {
   st.doc = doc;
   st.selected = -1;
 
-  rect_t wr = {0, 0, FG_CLIENT_W, FG_CLIENT_H};
+  irect16_t wr = {0, 0, FG_CLIENT_W, FG_CLIENT_H};
   adjust_window_rect(&wr, WINDOW_DIALOG | WINDOW_NOTRAYBUTTON);
   uint32_t res = show_dialog_ex("Filter Gallery", wr.w, wr.h, parent,
                                 WINDOW_DIALOG | WINDOW_NOTRAYBUTTON,

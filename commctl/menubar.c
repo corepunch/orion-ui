@@ -59,7 +59,7 @@ static int item_label_width(const char *label) {
 }
 
 // Draw a menu item label, stopping at a '\t' character.
-static void draw_item_label(const char *label, rect_t const *rect, uint32_t col) {
+static void draw_item_label(const char *label, irect16_t const *rect, uint32_t col) {
   if (!label) return;
   const char *tab = strchr(label, '\t');
   if (tab) {
@@ -138,14 +138,14 @@ static result_t popup_proc(window_t *win, uint32_t msg,
           bool hov = (i == pd->hovered);
           uint32_t label_col  = hov ? get_sys_color(brWindowBg)  : get_sys_color(brTextNormal);
           uint32_t hotkey_col = hov ? get_sys_color(brWindowBg)  : get_sys_color(brTextDisabled);
-          draw_item_label(it->label, &(rect_t){MENU_SIDE_PAD, y, win->frame.w - MENU_SIDE_PAD * 2, MENU_ITEM_H}, label_col);
+          draw_item_label(it->label, &(irect16_t){MENU_SIDE_PAD, y, win->frame.w - MENU_SIDE_PAD * 2, MENU_ITEM_H}, label_col);
           if (pd->accel) {
             const accel_t *a = accel_find_cmd(pd->accel, it->id);
             if (a) {
               char hkbuf[32];
               accel_format(a, hkbuf, sizeof(hkbuf));
               draw_text_small_clipped(hkbuf,
-                                     &(rect_t){0, y, win->frame.w - MENU_SIDE_PAD, MENU_ITEM_H},
+                                     &(irect16_t){0, y, win->frame.w - MENU_SIDE_PAD, MENU_ITEM_H},
                                      hotkey_col, TEXT_ALIGN_RIGHT);
             }
           }
@@ -382,7 +382,7 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
           fill_rect(get_sys_color(brFocusRing), R(label_x0, 0, label_w, win->frame.h - 1));
         }
         draw_text_small_clipped(data->menus[i].label,
-                        &(rect_t){data->menu_x[i], 0, label_w, win->frame.h},
+                        &(irect16_t){data->menu_x[i], 0, label_w, win->frame.h},
                         active ? get_sys_color(brWindowBg) : get_sys_color(brTextNormal), 0);
       }
       return true;

@@ -147,7 +147,7 @@ result_t main_win_proc(window_t *win, uint32_t msg,
 
     case evResize:
       if (doc && doc->list_win) {
-        rect_t cr = get_client_rect(win);
+        irect16_t cr = get_client_rect(win);
         resize_window(doc->list_win, cr.w, cr.h);
       }
       return false;

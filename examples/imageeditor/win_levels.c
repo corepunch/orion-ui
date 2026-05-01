@@ -496,13 +496,13 @@ static result_t levels_dlg_proc(window_t *win, uint32_t msg,
       st = (lv_state_t *)lparam;
       win->userdata = st;
 
-      rect_t in_lbl_r = { LV_IN_LBL_X, LV_IN_LBL_Y, 0, LV_IN_EDIT_H };
-      rect_t in_black_r = { LV_IN_BLACK_X, LV_IN_EDIT_Y, LV_IN_EDIT_W, LV_IN_EDIT_H };
-      rect_t in_gamma_r = { LV_IN_GAMMA_X, LV_IN_EDIT_Y, LV_IN_EDIT_W, LV_IN_EDIT_H };
-      rect_t in_white_r = { LV_IN_WHITE_X, LV_IN_EDIT_Y, LV_IN_EDIT_W, LV_IN_EDIT_H };
-      rect_t out_lbl_r = { LV_OUT_LBL_X, LV_OUT_LBL_Y, 0, LV_IN_EDIT_H };
-      rect_t out_black_r = { LV_OUT_BLACK_X, LV_OUT_EDIT_Y, LV_OUT_EDIT_W, LV_IN_EDIT_H };
-      rect_t out_white_r = { LV_OUT_WHITE_X, LV_OUT_EDIT_Y, LV_OUT_EDIT_W, LV_IN_EDIT_H };
+      irect16_t in_lbl_r = { LV_IN_LBL_X, LV_IN_LBL_Y, 0, LV_IN_EDIT_H };
+      irect16_t in_black_r = { LV_IN_BLACK_X, LV_IN_EDIT_Y, LV_IN_EDIT_W, LV_IN_EDIT_H };
+      irect16_t in_gamma_r = { LV_IN_GAMMA_X, LV_IN_EDIT_Y, LV_IN_EDIT_W, LV_IN_EDIT_H };
+      irect16_t in_white_r = { LV_IN_WHITE_X, LV_IN_EDIT_Y, LV_IN_EDIT_W, LV_IN_EDIT_H };
+      irect16_t out_lbl_r = { LV_OUT_LBL_X, LV_OUT_LBL_Y, 0, LV_IN_EDIT_H };
+      irect16_t out_black_r = { LV_OUT_BLACK_X, LV_OUT_EDIT_Y, LV_OUT_EDIT_W, LV_IN_EDIT_H };
+      irect16_t out_white_r = { LV_OUT_WHITE_X, LV_OUT_EDIT_Y, LV_OUT_EDIT_W, LV_IN_EDIT_H };
 
       create_window("Input Levels:", WINDOW_NOTITLE | WINDOW_NOFILL,
                     &in_lbl_r, win, win_label, 0, NULL);
@@ -520,7 +520,7 @@ static result_t levels_dlg_proc(window_t *win, uint32_t msg,
                                         win, win_textedit, 0, NULL);
       if (st->in_white_edit) st->in_white_edit->id = LV_ID_IN_WHITE;
 
-      rect_t graph_r = R(LV_GRAPH_X, LV_GRAPH_Y, LV_GRAPH_W, LV_GRAPH_H);
+      irect16_t graph_r = R(LV_GRAPH_X, LV_GRAPH_Y, LV_GRAPH_W, LV_GRAPH_H);
       window_t *graph = create_window("", WINDOW_NOTITLE | WINDOW_NOFILL,
                                       &graph_r, win, lv_graph_proc, 0, st);
       if (graph) {
@@ -529,7 +529,7 @@ static result_t levels_dlg_proc(window_t *win, uint32_t msg,
         st->graph_win = graph;
       }
 
-      rect_t in_strip_r = { LV_GRAPH_X, LV_GRAPH_Y + LV_GRAPH_H + 4, LV_GRAPH_W, LV_STRIP_H };
+      irect16_t in_strip_r = { LV_GRAPH_X, LV_GRAPH_Y + LV_GRAPH_H + 4, LV_GRAPH_W, LV_STRIP_H };
       window_t *in_strip = create_window("", WINDOW_NOTITLE | WINDOW_NOFILL,
                                          &in_strip_r, win, lv_strip_proc, 0, st);
       if (in_strip) {
@@ -550,7 +550,7 @@ static result_t levels_dlg_proc(window_t *win, uint32_t msg,
                                          win, win_textedit, 0, NULL);
       if (st->out_white_edit) st->out_white_edit->id = LV_ID_OUT_WHITE;
 
-      rect_t out_strip_r = { LV_GRAPH_X, LV_OUT_EDIT_Y + LV_IN_EDIT_H + 4, LV_GRAPH_W, LV_STRIP_H };
+      irect16_t out_strip_r = { LV_GRAPH_X, LV_OUT_EDIT_Y + LV_IN_EDIT_H + 4, LV_GRAPH_W, LV_STRIP_H };
       window_t *out_strip = create_window("", WINDOW_NOTITLE | WINDOW_NOFILL,
                                           &out_strip_r, win, lv_strip_proc, 0, st);
       if (out_strip) {
@@ -667,7 +667,7 @@ bool show_levels_dialog(window_t *parent) {
   st.dragging = -1;
   lv_rebuild_histogram(&st);
 
-  rect_t wr = {0, 0, LV_CLIENT_W, LV_CLIENT_H};
+  irect16_t wr = {0, 0, LV_CLIENT_W, LV_CLIENT_H};
   adjust_window_rect(&wr, WINDOW_DIALOG | WINDOW_NOTRAYBUTTON);
   uint32_t res = show_dialog_ex("Levels", wr.w, wr.h, parent,
                                 WINDOW_DIALOG | WINDOW_NOTRAYBUTTON,

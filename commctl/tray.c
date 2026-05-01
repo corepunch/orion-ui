@@ -19,7 +19,7 @@ typedef enum {
 result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 
 void create_button(window_t *tray, window_t *window) {
-  rect_t r = { tray->cursor_pos, 2, 0, 12 };
+  irect16_t r = { tray->cursor_pos, 2, 0, 12 };
   window_t *button = create_window(window->title, 0, &r, tray, win_button, 0, window);
   tray->cursor_pos += button->frame.w + SPACING;
   button->userdata = window;
@@ -67,7 +67,7 @@ result_t win_tray(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
     case evCreate:
       win->cursor_pos = 22;
-      win->frame = (rect_t){0,ui_get_system_metrics(kSystemMetricScreenHeight)-TRAY_HEIGHT,ui_get_system_metrics(kSystemMetricScreenWidth),TRAY_HEIGHT};
+      win->frame = (irect16_t){0,ui_get_system_metrics(kSystemMetricScreenHeight)-TRAY_HEIGHT,ui_get_system_metrics(kSystemMetricScreenWidth),TRAY_HEIGHT};
       register_window_hook(evCreate, on_win_created, win);
       register_window_hook(evDestroy, on_win_destroyed, win);
       return true;

@@ -55,7 +55,7 @@ void test_min_max_macros(void) {
 void test_rect_structure(void) {
     TEST("Rectangle structure");
     
-    rect_t rect = {10, 20, 100, 50};
+    irect16_t rect = {10, 20, 100, 50};
     
     ASSERT_EQUAL(rect.x, 10);
     ASSERT_EQUAL(rect.y, 20);
@@ -122,7 +122,7 @@ void test_window_flags(void) {
 void test_zero_rect(void) {
     TEST("Zero-sized rectangle");
     
-    rect_t rect = {10, 10, 0, 0};
+    irect16_t rect = {10, 10, 0, 0};
     
     ASSERT_EQUAL(rect.w, 0);
     ASSERT_EQUAL(rect.h, 0);
@@ -134,7 +134,7 @@ void test_zero_rect(void) {
 void test_negative_coords(void) {
     TEST("Negative coordinates");
     
-    rect_t rect = {-10, -10, 100, 100};
+    irect16_t rect = {-10, -10, 100, 100};
     
     ASSERT_EQUAL(rect.x, -10);
     ASSERT_EQUAL(rect.y, -10);

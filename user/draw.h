@@ -7,11 +7,11 @@
 #include "text.h"
 
 // Rectangle drawing functions
-void fill_rect(uint32_t color, rect_t r);
-void draw_gradient_rect(rect_t r, uint32_t left_color, uint32_t right_color);
-void draw_rect(int tex, rect_t r);
-void draw_rect_ex(int tex, rect_t r, int type, float alpha);
-void draw_program_rect(int tex, rect_t r, uint32_t program, float mix_amount);
+void fill_rect(uint32_t color, irect16_t r);
+void draw_gradient_rect(irect16_t r, uint32_t left_color, uint32_t right_color);
+void draw_rect(int tex, irect16_t r);
+void draw_rect_ex(int tex, irect16_t r, int type, float alpha);
+void draw_program_rect(int tex, irect16_t r, uint32_t program, float mix_amount);
 
 // UVs for draw_sprite_region() are packed into frect_t as normalized floats:
 // x=u0, y=v0, w=u1, h=v1.
@@ -25,25 +25,25 @@ enum {
 // Short alias for callers that prefer terse draw flags.
 #define NO_ALPHA DRAW_SPRITE_NO_ALPHA
 
-void draw_sprite_region(int tex, rect_t r,
+void draw_sprite_region(int tex, irect16_t r,
                         frect_t const *uv,
                         uint32_t color, uint32_t flags);
 // Draw a dashed selection-outline rectangle (2–4 GL draw calls depending on dimensions, O(1) regardless of size)
-void draw_sel_rect(rect_t r);
+void draw_sel_rect(irect16_t r);
 
 // Icon drawing functions
 void draw_theme_icon(int id, int x, int y, int size, uint32_t col);
-void draw_theme_icon_in_rect(int id, rect_t r, uint32_t col);
+void draw_theme_icon_in_rect(int id, irect16_t r, uint32_t col);
 void draw_icon(int id, int x, int y, int size, uint32_t col);
 void draw_icon8(int icon, int x, int y, uint32_t col);
-void draw_icon8_clipped(int icon, rect_t rect, uint32_t col);
+void draw_icon8_clipped(int icon, irect16_t rect, uint32_t col);
 void draw_icon16(int icon, int x, int y, uint32_t col);
-void draw_checkerboard(rect_t r, int square_px);
+void draw_checkerboard(irect16_t r, int square_px);
 
 // Viewport and projection
-void set_viewport(rect_t frame);
+void set_viewport(irect16_t frame);
 void set_projection(int x, int y, int w, int h);
-void set_clip_rect(window_t const *, rect_t r);
+void set_clip_rect(window_t const *, irect16_t r);
 
 // Stencil management (internal use)
 void ui_set_stencil_for_window(uint32_t window_id);

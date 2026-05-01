@@ -21,7 +21,7 @@ text rendering.
 
 | File | Purpose |
 |---|---|
-| `user.h` | `window_t`, `rect_t`, public API |
+| `user.h` | `window_t`, `irect16_t`, public API |
 | `messages.h` | Message constants (`kWindowMessage*`), window flags, colours |
 | `window.c` | `create_window`, `destroy_window`, `move_window`, `find_window` |
 | `message.c` | `send_message`, `post_message`, `get_root_window` |

@@ -149,7 +149,7 @@ static void glyph_uv(int ch, float *u0, float *v0, float *u1, float *v1) {
 // ============================================================
 
 static void vga_draw_char_fallback(int ch, int x, int y, uint32_t fg, uint32_t bg) {
-  rect_t cell = { x, y, VGA_CHAR_W, VGA_CHAR_H };
+  irect16_t cell = { x, y, VGA_CHAR_W, VGA_CHAR_H };
 
   // 1. Background (always, even when font not loaded).
   fill_rect(bg, cell);

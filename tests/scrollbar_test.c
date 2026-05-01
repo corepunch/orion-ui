@@ -35,7 +35,7 @@ static void reset_state(void) {
 // ── helpers ───────────────────────────────────────────────────────────────
 
 static window_t *make_vscrollbar(window_t *parent, int id, int h) {
-    rect_t fr = {0, 0, 13, h};
+    irect16_t fr = {0, 0, 13, h};
     window_t *sb = create_window("", WINDOW_NOTITLE | WINDOW_NOFILL,
                                  &fr, parent, win_scrollbar,
                                  0, (void *)1 /* SB_VERT */);
@@ -44,7 +44,7 @@ static window_t *make_vscrollbar(window_t *parent, int id, int h) {
 }
 
 static window_t *make_hscrollbar(window_t *parent, int id, int w) {
-    rect_t fr = {0, 0, w, 13};
+    irect16_t fr = {0, 0, w, 13};
     window_t *sb = create_window("", WINDOW_NOTITLE | WINDOW_NOFILL,
                                  &fr, parent, win_scrollbar,
                                  0, (void *)0 /* SB_HORZ */);

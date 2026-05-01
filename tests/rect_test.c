@@ -13,8 +13,8 @@
 
 void test_rect_inset_shrinks(void) {
     TEST("rect_inset: positive d shrinks all four sides");
-    rect_t r = {10, 20, 100, 80};
-    rect_t i = rect_inset(r, 5);
+    irect16_t r = {10, 20, 100, 80};
+    irect16_t i = rect_inset(r, 5);
     ASSERT_EQUAL(i.x, 15);
     ASSERT_EQUAL(i.y, 25);
     ASSERT_EQUAL(i.w, 90);
@@ -24,8 +24,8 @@ void test_rect_inset_shrinks(void) {
 
 void test_rect_inset_expands(void) {
     TEST("rect_inset: negative d expands all four sides");
-    rect_t r = {10, 20, 100, 80};
-    rect_t i = rect_inset(r, -5);
+    irect16_t r = {10, 20, 100, 80};
+    irect16_t i = rect_inset(r, -5);
     ASSERT_EQUAL(i.x, 5);
     ASSERT_EQUAL(i.y, 15);
     ASSERT_EQUAL(i.w, 110);
@@ -35,8 +35,8 @@ void test_rect_inset_expands(void) {
 
 void test_rect_inset_zero(void) {
     TEST("rect_inset: d=0 leaves rect unchanged");
-    rect_t r = {10, 20, 100, 80};
-    rect_t i = rect_inset(r, 0);
+    irect16_t r = {10, 20, 100, 80};
+    irect16_t i = rect_inset(r, 0);
     ASSERT_EQUAL(i.x, 10);
     ASSERT_EQUAL(i.y, 20);
     ASSERT_EQUAL(i.w, 100);
@@ -48,8 +48,8 @@ void test_rect_inset_zero(void) {
 
 void test_rect_inset_xy(void) {
     TEST("rect_inset_xy: independent horizontal and vertical insets");
-    rect_t r = {0, 0, 100, 60};
-    rect_t i = rect_inset_xy(r, 4, 2);
+    irect16_t r = {0, 0, 100, 60};
+    irect16_t i = rect_inset_xy(r, 4, 2);
     ASSERT_EQUAL(i.x, 4);
     ASSERT_EQUAL(i.y, 2);
     ASSERT_EQUAL(i.w, 92);
@@ -61,8 +61,8 @@ void test_rect_inset_xy(void) {
 
 void test_rect_offset(void) {
     TEST("rect_offset: translates x/y without changing size");
-    rect_t r = {5, 10, 200, 150};
-    rect_t o = rect_offset(r, 3, -4);
+    irect16_t r = {5, 10, 200, 150};
+    irect16_t o = rect_offset(r, 3, -4);
     ASSERT_EQUAL(o.x, 8);
     ASSERT_EQUAL(o.y, 6);
     ASSERT_EQUAL(o.w, 200);
@@ -74,8 +74,8 @@ void test_rect_offset(void) {
 
 void test_rect_center(void) {
     TEST("rect_center: centers w×h inside parent rect");
-    rect_t parent = {10, 20, 200, 100};
-    rect_t c = rect_center(parent, 40, 20);
+    irect16_t parent = {10, 20, 200, 100};
+    irect16_t c = rect_center(parent, 40, 20);
     ASSERT_EQUAL(c.x, 10 + (200 - 40) / 2);
     ASSERT_EQUAL(c.y, 20 + (100 - 20) / 2);
     ASSERT_EQUAL(c.w, 40);
@@ -85,8 +85,8 @@ void test_rect_center(void) {
 
 void test_rect_center_at_origin(void) {
     TEST("rect_center: centering inside a zero-origin rect");
-    rect_t parent = {0, 0, 100, 60};
-    rect_t c = rect_center(parent, 20, 10);
+    irect16_t parent = {0, 0, 100, 60};
+    irect16_t c = rect_center(parent, 20, 10);
     ASSERT_EQUAL(c.x, 40);
     ASSERT_EQUAL(c.y, 25);
     ASSERT_EQUAL(c.w, 20);
@@ -98,8 +98,8 @@ void test_rect_center_at_origin(void) {
 
 void test_rect_split_left(void) {
     TEST("rect_split_left: returns left strip of given width");
-    rect_t r = {10, 20, 100, 50};
-    rect_t s = rect_split_left(r, 30);
+    irect16_t r = {10, 20, 100, 50};
+    irect16_t s = rect_split_left(r, 30);
     ASSERT_EQUAL(s.x, 10);
     ASSERT_EQUAL(s.y, 20);
     ASSERT_EQUAL(s.w, 30);
@@ -111,8 +111,8 @@ void test_rect_split_left(void) {
 
 void test_rect_split_top(void) {
     TEST("rect_split_top: returns top strip of given height");
-    rect_t r = {10, 20, 100, 50};
-    rect_t s = rect_split_top(r, 15);
+    irect16_t r = {10, 20, 100, 50};
+    irect16_t s = rect_split_top(r, 15);
     ASSERT_EQUAL(s.x, 10);
     ASSERT_EQUAL(s.y, 20);
     ASSERT_EQUAL(s.w, 100);
@@ -124,8 +124,8 @@ void test_rect_split_top(void) {
 
 void test_rect_split_right(void) {
     TEST("rect_split_right: returns right strip of given width");
-    rect_t r = {10, 20, 100, 50};
-    rect_t s = rect_split_right(r, 25);
+    irect16_t r = {10, 20, 100, 50};
+    irect16_t s = rect_split_right(r, 25);
     ASSERT_EQUAL(s.x, 10 + 100 - 25); // 85
     ASSERT_EQUAL(s.y, 20);
     ASSERT_EQUAL(s.w, 25);
@@ -137,8 +137,8 @@ void test_rect_split_right(void) {
 
 void test_rect_split_bottom(void) {
     TEST("rect_split_bottom: returns bottom strip of given height");
-    rect_t r = {10, 20, 100, 50};
-    rect_t s = rect_split_bottom(r, 12);
+    irect16_t r = {10, 20, 100, 50};
+    irect16_t s = rect_split_bottom(r, 12);
     ASSERT_EQUAL(s.x, 10);
     ASSERT_EQUAL(s.y, 20 + 50 - 12); // 58
     ASSERT_EQUAL(s.w, 100);
@@ -150,8 +150,8 @@ void test_rect_split_bottom(void) {
 
 void test_rect_trim_left(void) {
     TEST("rect_trim_left: removes left strip, returns remainder");
-    rect_t r = {10, 20, 100, 50};
-    rect_t t = rect_trim_left(r, 30);
+    irect16_t r = {10, 20, 100, 50};
+    irect16_t t = rect_trim_left(r, 30);
     ASSERT_EQUAL(t.x, 40);
     ASSERT_EQUAL(t.y, 20);
     ASSERT_EQUAL(t.w, 70);
@@ -163,8 +163,8 @@ void test_rect_trim_left(void) {
 
 void test_rect_trim_top(void) {
     TEST("rect_trim_top: removes top strip, returns remainder");
-    rect_t r = {10, 20, 100, 50};
-    rect_t t = rect_trim_top(r, 15);
+    irect16_t r = {10, 20, 100, 50};
+    irect16_t t = rect_trim_top(r, 15);
     ASSERT_EQUAL(t.x, 10);
     ASSERT_EQUAL(t.y, 35);
     ASSERT_EQUAL(t.w, 100);
@@ -176,8 +176,8 @@ void test_rect_trim_top(void) {
 
 void test_rect_trim_right(void) {
     TEST("rect_trim_right: removes right strip, returns remainder");
-    rect_t r = {10, 20, 100, 50};
-    rect_t t = rect_trim_right(r, 25);
+    irect16_t r = {10, 20, 100, 50};
+    irect16_t t = rect_trim_right(r, 25);
     ASSERT_EQUAL(t.x, 10);
     ASSERT_EQUAL(t.y, 20);
     ASSERT_EQUAL(t.w, 75);
@@ -189,8 +189,8 @@ void test_rect_trim_right(void) {
 
 void test_rect_trim_bottom(void) {
     TEST("rect_trim_bottom: removes bottom strip, returns remainder");
-    rect_t r = {10, 20, 100, 50};
-    rect_t t = rect_trim_bottom(r, 12);
+    irect16_t r = {10, 20, 100, 50};
+    irect16_t t = rect_trim_bottom(r, 12);
     ASSERT_EQUAL(t.x, 10);
     ASSERT_EQUAL(t.y, 20);
     ASSERT_EQUAL(t.w, 100);
@@ -202,10 +202,10 @@ void test_rect_trim_bottom(void) {
 
 void test_split_trim_left_complement(void) {
     TEST("rect_split_left + rect_trim_left cover the full rect");
-    rect_t r = {0, 0, 200, 80};
+    irect16_t r = {0, 0, 200, 80};
     int n = 60;
-    rect_t s = rect_split_left(r, n);
-    rect_t t = rect_trim_left(r, n);
+    irect16_t s = rect_split_left(r, n);
+    irect16_t t = rect_trim_left(r, n);
     // Together they must span the original width
     ASSERT_EQUAL(s.w + t.w, r.w);
     ASSERT_EQUAL(s.x, r.x);
@@ -215,10 +215,10 @@ void test_split_trim_left_complement(void) {
 
 void test_split_trim_top_complement(void) {
     TEST("rect_split_top + rect_trim_top cover the full rect");
-    rect_t r = {5, 5, 200, 80};
+    irect16_t r = {5, 5, 200, 80};
     int n = 20;
-    rect_t s = rect_split_top(r, n);
-    rect_t t = rect_trim_top(r, n);
+    irect16_t s = rect_split_top(r, n);
+    irect16_t t = rect_trim_top(r, n);
     ASSERT_EQUAL(s.h + t.h, r.h);
     ASSERT_EQUAL(s.y, r.y);
     ASSERT_EQUAL(t.y, r.y + n);
@@ -227,10 +227,10 @@ void test_split_trim_top_complement(void) {
 
 void test_split_trim_right_complement(void) {
     TEST("rect_split_right + rect_trim_right cover the full rect");
-    rect_t r = {0, 0, 200, 80};
+    irect16_t r = {0, 0, 200, 80};
     int n = 50;
-    rect_t s = rect_split_right(r, n);
-    rect_t t = rect_trim_right(r, n);
+    irect16_t s = rect_split_right(r, n);
+    irect16_t t = rect_trim_right(r, n);
     ASSERT_EQUAL(s.w + t.w, r.w);
     ASSERT_EQUAL(t.x, r.x);
     ASSERT_EQUAL(t.w, r.w - n);
@@ -239,10 +239,10 @@ void test_split_trim_right_complement(void) {
 
 void test_split_trim_bottom_complement(void) {
     TEST("rect_split_bottom + rect_trim_bottom cover the full rect");
-    rect_t r = {0, 0, 200, 80};
+    irect16_t r = {0, 0, 200, 80};
     int n = 30;
-    rect_t s = rect_split_bottom(r, n);
-    rect_t t = rect_trim_bottom(r, n);
+    irect16_t s = rect_split_bottom(r, n);
+    irect16_t t = rect_trim_bottom(r, n);
     ASSERT_EQUAL(s.h + t.h, r.h);
     ASSERT_EQUAL(t.y, r.y);
     ASSERT_EQUAL(t.h, r.h - n);

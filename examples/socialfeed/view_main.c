@@ -20,7 +20,7 @@ static const toolbar_item_t kFeedToolbar[] = {
 // ============================================================
 
 static int feed_title_width(window_t *win) {
-  rect_t cr  = get_client_rect(win);
+  irect16_t cr  = get_client_rect(win);
   int fixed  = FEED_AUTHOR_W + FEED_LIKES_W + FEED_COMMENTS_W;
   int avail  = cr.w - fixed;
   return (avail < 20) ? 20 : avail;
@@ -117,7 +117,7 @@ result_t main_win_proc(window_t *win, uint32_t msg,
 
     case evResize:
       if (g_app && g_app->feed_win) {
-        rect_t cr = get_client_rect(win);
+        irect16_t cr = get_client_rect(win);
         resize_window(g_app->feed_win, cr.w, cr.h);
       }
       return false;

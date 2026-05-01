@@ -55,7 +55,7 @@ void test_button_click_with_scaling(void) {
     ASSERT_NOT_NULL(parent);
     
     // Create button as child of parent with ID 101
-    rect_t button_frame = {10, 10, 80, 20};
+    irect16_t button_frame = {10, 10, 80, 20};
     window_t *button = create_window("Click Me", 0, &button_frame, parent, win_button, 0, NULL);
     ASSERT_NOT_NULL(button);
     button->id = 101;
@@ -118,7 +118,7 @@ void test_multiple_button_clicks(void) {
     ASSERT_NOT_NULL(parent);
     
     // Create button
-    rect_t button_frame = {10, 10, 80, 20};
+    irect16_t button_frame = {10, 10, 80, 20};
     window_t *button = create_window("Click Me", 0, &button_frame, parent, win_button, 0, NULL);
     ASSERT_NOT_NULL(button);
     button->id = 102;
@@ -161,7 +161,7 @@ void test_button_click_positions(void) {
     ASSERT_NOT_NULL(parent);
     
     // Create button
-    rect_t button_frame = {10, 10, 80, 20};
+    irect16_t button_frame = {10, 10, 80, 20};
     window_t *button = create_window("Click Me", 0, &button_frame, parent, win_button, 0, NULL);
     ASSERT_NOT_NULL(button);
     button->id = 103;
@@ -213,7 +213,7 @@ void test_post_message_async_behavior(void) {
     ASSERT_NOT_NULL(parent);
     
     // Create button
-    rect_t button_frame = {10, 10, 80, 20};
+    irect16_t button_frame = {10, 10, 80, 20};
     window_t *button = create_window("Click Me", 0, &button_frame, parent, win_button, 0, NULL);
     ASSERT_NOT_NULL(button);
     button->id = 104;

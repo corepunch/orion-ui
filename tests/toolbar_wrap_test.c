@@ -62,7 +62,7 @@ void test_toolbar_set_items_creates_children(void) {
 
     test_env_init();
 
-    rect_t frame = {0, 0, 200, 60};
+    irect16_t frame = {0, 0, 200, 60};
     window_t *win = create_window("W", WINDOW_TOOLBAR | WINDOW_NORESIZE,
                                   &frame, NULL, noop_proc, 0, NULL);
     ASSERT_NOT_NULL(win);
@@ -95,7 +95,7 @@ void test_toolbar_spacer_skipped(void) {
 
     test_env_init();
 
-    rect_t frame = {0, 0, 200, 60};
+    irect16_t frame = {0, 0, 200, 60};
     window_t *win = create_window("W", WINDOW_TOOLBAR | WINDOW_NORESIZE,
                                   &frame, NULL, noop_proc, 0, NULL);
     ASSERT_NOT_NULL(win);
@@ -121,7 +121,7 @@ void test_toolbar_set_items_replaces(void) {
 
     test_env_init();
 
-    rect_t frame = {0, 0, 200, 60};
+    irect16_t frame = {0, 0, 200, 60};
     window_t *win = create_window("W", WINDOW_TOOLBAR | WINDOW_NORESIZE,
                                   &frame, NULL, noop_proc, 0, NULL);
     ASSERT_NOT_NULL(win);
@@ -152,7 +152,7 @@ void test_toolbar_set_active_button(void) {
 
     test_env_init();
 
-    rect_t frame = {0, 0, 200, 60};
+    irect16_t frame = {0, 0, 200, 60};
     window_t *win = create_window("W", WINDOW_TOOLBAR | WINDOW_NORESIZE,
                                   &frame, NULL, noop_proc, 0, NULL);
     ASSERT_NOT_NULL(win);
@@ -207,7 +207,7 @@ void test_toolbar_set_strip(void) {
 
     test_env_init();
 
-    rect_t frame = {0, 0, 200, 60};
+    irect16_t frame = {0, 0, 200, 60};
     window_t *win = create_window("W", 0, &frame, NULL, noop_proc, 0, NULL);
     ASSERT_NOT_NULL(win);
 
@@ -237,7 +237,7 @@ void test_toolbar_set_items_button(void) {
 
     test_env_init();
 
-    rect_t frame = {0, 0, 200, 60};
+    irect16_t frame = {0, 0, 200, 60};
     window_t *win = create_window("W", WINDOW_TOOLBAR | WINDOW_NORESIZE,
                                   &frame, NULL, noop_proc, 0, NULL);
     ASSERT_NOT_NULL(win);
@@ -262,7 +262,7 @@ void test_toolbar_set_items_label(void) {
 
     test_env_init();
 
-    rect_t frame = {0, 0, 200, 60};
+    irect16_t frame = {0, 0, 200, 60};
     window_t *win = create_window("W", WINDOW_TOOLBAR | WINDOW_NORESIZE,
                                   &frame, NULL, noop_proc, 0, NULL);
     ASSERT_NOT_NULL(win);
@@ -290,7 +290,7 @@ void test_toolbar_set_items_textedit_geometry(void) {
 
     test_env_init();
 
-    rect_t frame = {0, 0, 300, 60};
+    irect16_t frame = {0, 0, 300, 60};
     window_t *win = create_window("W", WINDOW_TOOLBAR | WINDOW_NORESIZE,
                                   &frame, NULL, noop_proc, 0, NULL);
     ASSERT_NOT_NULL(win);
@@ -317,7 +317,7 @@ void test_toolbar_textedit_click_focuses_and_enters_editing(void) {
 
     test_env_init();
 
-    rect_t frame = {20, 30, 320, 80};
+    irect16_t frame = {20, 30, 320, 80};
     window_t *win = create_window("W", WINDOW_TOOLBAR | WINDOW_NORESIZE,
                                   &frame, NULL, noop_proc, 0, NULL);
     ASSERT_NOT_NULL(win);
@@ -355,7 +355,7 @@ void test_titlebar_click_does_not_focus_toolbar_textedit(void) {
 
     test_env_init();
 
-    rect_t frame = {20, 30, 320, 80};
+    irect16_t frame = {20, 30, 320, 80};
     window_t *win = create_window("W", WINDOW_TOOLBAR | WINDOW_NORESIZE,
                                   &frame, NULL, noop_proc, 0, NULL);
     ASSERT_NOT_NULL(win);
@@ -390,7 +390,7 @@ void test_toolbar_set_items_combobox(void) {
 
     test_env_init();
 
-    rect_t frame = {0, 0, 300, 60};
+    irect16_t frame = {0, 0, 300, 60};
     window_t *win = create_window("W", WINDOW_TOOLBAR | WINDOW_NORESIZE,
                                   &frame, NULL, noop_proc, 0, NULL);
     ASSERT_NOT_NULL(win);
@@ -417,7 +417,7 @@ void test_toolbar_set_items_separator(void) {
 
     test_env_init();
 
-    rect_t frame = {0, 0, 200, 60};
+    irect16_t frame = {0, 0, 200, 60};
     window_t *win = create_window("W", WINDOW_TOOLBAR | WINDOW_NORESIZE,
                                   &frame, NULL, noop_proc, 0, NULL);
     ASSERT_NOT_NULL(win);
@@ -442,7 +442,7 @@ void test_toolbar_set_items_spacer(void) {
 
     test_env_init();
 
-    rect_t frame = {0, 0, 200, 60};
+    irect16_t frame = {0, 0, 200, 60};
     window_t *win = create_window("W", WINDOW_TOOLBAR | WINDOW_NORESIZE,
                                   &frame, NULL, noop_proc, 0, NULL);
     ASSERT_NOT_NULL(win);
@@ -470,7 +470,7 @@ void test_toolbar_button_click_fires_command(void) {
     g_last_click_ident = -1;
     g_click_count = 0;
 
-    rect_t frame = {0, 0, 200, 60};
+    irect16_t frame = {0, 0, 200, 60};
     window_t *win = create_window("W", WINDOW_TOOLBAR | WINDOW_NORESIZE,
                                   &frame, NULL, click_capture_proc, 0, NULL);
     ASSERT_NOT_NULL(win);
@@ -504,7 +504,7 @@ void test_toolbar_notitle_nonclient_mouseup_fires(void) {
     g_click_count = 0;
 
     // A title-less tool palette window (all toolbar, no title bar).
-    rect_t frame = {10, 20, 80, 30};
+    irect16_t frame = {10, 20, 80, 30};
     window_t *win = create_window("Palette",
                                   WINDOW_TOOLBAR | WINDOW_NOTITLE | WINDOW_NORESIZE,
                                   &frame, NULL, click_capture_proc, 0, NULL);
@@ -543,7 +543,7 @@ void test_toolbar_destroy_clears_children(void) {
 
     test_env_init();
 
-    rect_t frame = {0, 0, 200, 60};
+    irect16_t frame = {0, 0, 200, 60};
     window_t *win = create_window("W", WINDOW_TOOLBAR | WINDOW_NORESIZE,
                                   &frame, NULL, noop_proc, 0, NULL);
     ASSERT_NOT_NULL(win);
@@ -569,7 +569,7 @@ void test_toolbar_move_shifts_children(void) {
 
     test_env_init();
 
-    rect_t frame = {50, 50, 200, 60};
+    irect16_t frame = {50, 50, 200, 60};
     window_t *win = create_window("W", WINDOW_TOOLBAR | WINDOW_NORESIZE,
                                   &frame, NULL, noop_proc, 0, NULL);
     ASSERT_NOT_NULL(win);
@@ -601,7 +601,7 @@ void test_titlebar_height_single_row(void) {
 
     test_env_init();
 
-    rect_t frame = {0, 0, 40, 60};  // narrow: would have wrapped with old code
+    irect16_t frame = {0, 0, 40, 60};  // narrow: would have wrapped with old code
     window_t *win = create_window("W", WINDOW_TOOLBAR | WINDOW_NORESIZE,
                                   &frame, NULL, noop_proc, 0, NULL);
     ASSERT_NOT_NULL(win);
@@ -633,7 +633,7 @@ void test_toolbar_button_click_cancelled_if_released_outside(void) {
     g_last_click_ident = -1;
     g_click_count = 0;
 
-    rect_t frame = {0, 0, 200, 60};
+    irect16_t frame = {0, 0, 200, 60};
     window_t *win = create_window("W", WINDOW_TOOLBAR | WINDOW_NORESIZE,
                                   &frame, NULL, click_capture_proc, 0, NULL);
     ASSERT_NOT_NULL(win);
@@ -683,7 +683,7 @@ void test_toolbar_item_button_frame_clamped(void) {
 
     test_env_init();
 
-    rect_t frame = {0, 0, 300, 60};
+    irect16_t frame = {0, 0, 300, 60};
     window_t *win = create_window("W", WINDOW_TOOLBAR | WINDOW_NORESIZE,
                                   &frame, NULL, noop_proc, 0, NULL);
     ASSERT_NOT_NULL(win);

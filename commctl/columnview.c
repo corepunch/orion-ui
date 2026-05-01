@@ -329,7 +329,7 @@ static void rv_sync_scroll(window_t *win, reportview_data_t *data) {
 // If no strip is assigned (or icon_id is out of range) a small placeholder
 // rectangle is drawn so the icon slot is always visually occupied.
 static void rv_draw_item_icon(bitmap_strip_t *strip, int icon_id,
-                              rect_t const *icon_rect, uint32_t col) {
+                              irect16_t const *icon_rect, uint32_t col) {
   if (strip && strip->tex != 0 && strip->cols > 0) {
     int total = strip->cols * (strip->sheet_h / strip->icon_h);
     if (icon_id >= 0 && icon_id < total) {
@@ -385,8 +385,8 @@ static void rv_paint_icon_view(window_t *win, reportview_data_t *data) {
 
     int item_w  = data->column_width - 6;
     int item_h  = ENTRY_HEIGHT - 1;
-    rect_t icon_rect = {x,               y, ICON_OFFSET,              item_h};
-    rect_t text_rect = {x + ICON_OFFSET, y, item_w - ICON_OFFSET - 2, item_h};
+    irect16_t icon_rect = {x,               y, ICON_OFFSET,              item_h};
+    irect16_t text_rect = {x + ICON_OFFSET, y, item_w - ICON_OFFSET - 2, item_h};
 
     int icon_id = data->items[i].icon;
 
@@ -434,10 +434,10 @@ static void rv_paint_large_icon_view(window_t *win, reportview_data_t *data) {
 
     bool selected = (int)i == data->selected;
 
-    rect_t icon_r  = R(cx + (cell_w - icon_sz) / 2,
+    irect16_t icon_r  = R(cx + (cell_w - icon_sz) / 2,
                        cy + RV_LARGE_ICON_TOP_PAD,
                        icon_sz, icon_sz);
-    rect_t label_r = R(cx + 2,
+    irect16_t label_r = R(cx + 2,
                        icon_r.y + icon_r.h + RV_LARGE_ICON_LABEL_GAP,
                        cell_w - 4, label_h);
 
@@ -497,13 +497,13 @@ static void rv_paint_report_view(window_t *win, reportview_data_t *data) {
     int col_w = rv_get_report_column_width(data, (int)col, eff_w);
 
     // Header scissor: column width, header height only.
-    set_clip_rect(NULL, (rect_t){scr_x + col_x, scr_y, col_w, HEADER_HEIGHT});
-    draw_button((rect_t){col_x, 0, col_w, HEADER_HEIGHT}, 1, 1, false);
-    draw_text_small_clipped(data->columns[col].title, &(rect_t){col_x, 0, col_w, HEADER_HEIGHT}, hdr_fg, TEXT_PADDING_LEFT);
+    set_clip_rect(NULL, (irect16_t){scr_x + col_x, scr_y, col_w, HEADER_HEIGHT});
+    draw_button((irect16_t){col_x, 0, col_w, HEADER_HEIGHT}, 1, 1, false);
+    draw_text_small_clipped(data->columns[col].title, &(irect16_t){col_x, 0, col_w, HEADER_HEIGHT}, hdr_fg, TEXT_PADDING_LEFT);
 
     // Body scissor: column width, everything below the header.
     int body_h = win->frame.h - HEADER_HEIGHT;
-    set_clip_rect(NULL, (rect_t){scr_x + col_x, scr_y + HEADER_HEIGHT, col_w, body_h});
+    set_clip_rect(NULL, (irect16_t){scr_x + col_x, scr_y + HEADER_HEIGHT, col_w, body_h});
 
     for (int row = first_row; row < last_row; row++) {
       reportview_item_t *it = &data->items[row];
@@ -520,7 +520,7 @@ static void rv_paint_report_view(window_t *win, reportview_data_t *data) {
         src = (idx < it->subitem_count && it->subitems[idx]) ? it->subitems[idx] : "";
       }
 
-      draw_text_clipped(FONT_SMALL, src, &(rect_t){col_x, y, col_w, ENTRY_HEIGHT}, fg, TEXT_PADDING_LEFT);
+      draw_text_clipped(FONT_SMALL, src, &(irect16_t){col_x, y, col_w, ENTRY_HEIGHT}, fg, TEXT_PADDING_LEFT);
     }
 
     col_x += col_w;
@@ -528,7 +528,7 @@ static void rv_paint_report_view(window_t *win, reportview_data_t *data) {
 
   // Restore scissor to the window client area before drawing separators,
   // which span the full column height and must not be column-clipped.
-  set_clip_rect(NULL, (rect_t){scr_x, scr_y, eff_w, win->frame.h});
+  set_clip_rect(NULL, (irect16_t){scr_x, scr_y, eff_w, win->frame.h});
 
   // Column separator lines.
   col_x = 0;

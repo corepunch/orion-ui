@@ -57,25 +57,25 @@ static int opts_content_y(void) {
 }
 
 // Returns the rect for brush-size row i in the vertical list.
-static rect_t brush_cell_rect(int idx) {
-  return (rect_t){ 1, opts_content_y() + idx * OPTS_BRUSH_CELL_H,
+static irect16_t brush_cell_rect(int idx) {
+  return (irect16_t){ 1, opts_content_y() + idx * OPTS_BRUSH_CELL_H,
                    TOOL_OPTIONS_WIN_W - 2, OPTS_BRUSH_CELL_H };
 }
 
 // Returns the single-row rect used by the shape-mode toggle.
-static rect_t shape_row_rect(void) {
-  return (rect_t){ 1, opts_content_y(), TOOL_OPTIONS_WIN_W - 2, OPTS_ROW_H };
+static irect16_t shape_row_rect(void) {
+  return (irect16_t){ 1, opts_content_y(), TOOL_OPTIONS_WIN_W - 2, OPTS_ROW_H };
 }
 
 // ── Brush-size panel ────────────────────────────────────────────────────────
 
 static void draw_brush_panel(int selected_idx) {
   for (int i = 0; i < NUM_BRUSH_SIZES; i++) {
-    rect_t cell = brush_cell_rect(i);
+    irect16_t cell = brush_cell_rect(i);
     bool active = (i == selected_idx);
     uint32_t bg = active ? get_sys_color(brFocusRing) : get_sys_color(brButtonBg);
-    rect_t outer = rect_inset_xy(cell, 1, 0);
-    rect_t inner = rect_inset(outer, 1);
+    irect16_t outer = rect_inset_xy(cell, 1, 0);
+    irect16_t inner = rect_inset(outer, 1);
 
     // fill_rect(get_sys_color(brDarkEdge), &outer);
     fill_rect(bg, inner);
@@ -88,7 +88,7 @@ static void draw_brush_panel(int selected_idx) {
     uint32_t stroke_col = active
         ? get_sys_color(brWindowBg)
         : get_sys_color(brTextNormal);
-    rect_t stroke = { inner.x + 2, stroke_y, inner.w - 4, thickness };
+    irect16_t stroke = { inner.x + 2, stroke_y, inner.w - 4, thickness };
     fill_rect(stroke_col, stroke);
   }
 }
@@ -96,13 +96,13 @@ static void draw_brush_panel(int selected_idx) {
 // ── Shape-mode panel ────────────────────────────────────────────────────────
 
 static void draw_shape_panel(bool filled) {
-  rect_t row = shape_row_rect();
-  rect_t outline_outer = rect_inset_xy(rect_split_left(row, row.w / 2), 1, 0);
-  rect_t filled_outer  = rect_inset_xy(rect_split_right(row, row.w / 2), 1, 0);
-  rect_t outline_inner = rect_inset(outline_outer, 1);
-  rect_t filled_inner  = rect_inset(filled_outer, 1);
-  // rect_t outline_text  = rect_center(outline_inner, strwidth("O"), 8);
-  // rect_t filled_text   = rect_center(filled_inner,  strwidth("F"), 8);
+  irect16_t row = shape_row_rect();
+  irect16_t outline_outer = rect_inset_xy(rect_split_left(row, row.w / 2), 1, 0);
+  irect16_t filled_outer  = rect_inset_xy(rect_split_right(row, row.w / 2), 1, 0);
+  irect16_t outline_inner = rect_inset(outline_outer, 1);
+  irect16_t filled_inner  = rect_inset(filled_outer, 1);
+  // irect16_t outline_text  = rect_center(outline_inner, strwidth("O"), 8);
+  // irect16_t filled_text   = rect_center(filled_inner,  strwidth("F"), 8);
 
   uint32_t outline_col = filled ? get_sys_color(brButtonBg) : get_sys_color(brFocusRing);
   uint32_t filled_col  = filled ? get_sys_color(brFocusRing) : get_sys_color(brButtonBg);
@@ -121,7 +121,7 @@ static void draw_shape_panel(bool filled) {
 // Returns the brush-size index at client position (mx, my), or -1 if outside.
 static int brush_hit(int mx, int my) {
   for (int i = 0; i < NUM_BRUSH_SIZES; i++) {
-    rect_t cell = brush_cell_rect(i);
+    irect16_t cell = brush_cell_rect(i);
     if (mx >= cell.x && mx < cell.x + cell.w &&
         my >= cell.y && my < cell.y + cell.h)
       return i;
@@ -131,13 +131,13 @@ static int brush_hit(int mx, int my) {
 
 // Returns true if the click lands in the "Filled" (right) half of the row.
 static bool shape_filled_hit(int mx) {
-  rect_t row = shape_row_rect();
-  rect_t filled_half = rect_split_right(row, row.w / 2);
+  irect16_t row = shape_row_rect();
+  irect16_t filled_half = rect_split_right(row, row.w / 2);
   return mx >= filled_half.x;
 }
 
 static bool shape_row_hit(int mx, int my) {
-  rect_t row = shape_row_rect();
+  irect16_t row = shape_row_rect();
   return mx >= row.x && mx < row.x + row.w &&
          my >= row.y && my < row.y + row.h;
 }
@@ -152,7 +152,7 @@ result_t win_tool_options_proc(window_t *win, uint32_t msg,
       return true;
 
     case evPaint: {
-      rect_t cr = get_client_rect(win);
+      irect16_t cr = get_client_rect(win);
       fill_rect(get_sys_color(brWindowBg), cr);
       if (!g_app) return true;
       tool_opts_panel_t panel = panel_for_tool(g_app->current_tool);

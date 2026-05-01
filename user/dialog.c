@@ -66,7 +66,7 @@ uint32_t show_dialog_ex(char const *title,
                         void *param)
 {
   const char *dialog_title = title ? title : "";
-  rect_t dlg_frame = {0, 0, width, height};
+  irect16_t dlg_frame = {0, 0, width, height};
   dlg_frame = center_window_rect(dlg_frame, parent);
   // Dialogs inherit their owner's hinstance so they belong to the same app.
   hinstance_t hinstance = parent ? get_root_window(parent)->hinstance : 0;
@@ -102,12 +102,12 @@ uint32_t show_dialog_from_form_ex(form_def_t const *def, char const *title,
   dlg_def.flags |= flags;
   if (title) dlg_def.name = title;
 
-  rect_t wr = {0, 0, def->width, def->height};
+  irect16_t wr = {0, 0, def->width, def->height};
   adjust_window_rect(&wr, dlg_def.flags);
   dlg_def.width = wr.w;
   dlg_def.height = wr.h;
 
-  rect_t dlg_rect = center_window_rect((rect_t){0, 0, wr.w, wr.h}, parent);
+  irect16_t dlg_rect = center_window_rect((irect16_t){0, 0, wr.w, wr.h}, parent);
 
   // Dialogs inherit their owner's hinstance so they belong to the same app.
   hinstance_t hinstance = parent ? get_root_window(parent)->hinstance : 0;

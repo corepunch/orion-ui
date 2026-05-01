@@ -43,7 +43,7 @@ void push_window(window_t *win, window_t **windows) {
 
 // Internal: allocate and register a window without sending evCreate.
 // Callers are responsible for sending evCreate (and invalidating if needed).
-static window_t *alloc_window(char const *title, flags_t flags, rect_t const *frame,
+static window_t *alloc_window(char const *title, flags_t flags, irect16_t const *frame,
                                window_t *parent, winproc_t proc, hinstance_t hinstance) {
   window_t *win = malloc(sizeof(window_t));
   if (!win) return NULL;
@@ -87,7 +87,7 @@ static window_t *alloc_window(char const *title, flags_t flags, rect_t const *fr
 // defined later in this file; the declaration makes the call valid here.
 window_t* create_window(char const *title,
                         flags_t flags,
-                        rect_t const *frame,
+                        irect16_t const *frame,
                         window_t *parent,
                         winproc_t proc,
                         hinstance_t hinstance,
@@ -273,7 +273,7 @@ window_t *get_root_window(window_t *window) {
   return window->parent ? get_root_window(window->parent) : window;
 }
 
-rect_t center_window_rect(rect_t frame_rect, window_t const *owner) {
+irect16_t center_window_rect(irect16_t frame_rect, window_t const *owner) {
   int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
   int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
   int top_padding = 40; // Minimum padding from the top of the screen to avoid overlapping with system UI elements
@@ -417,7 +417,7 @@ void set_window_item_text(window_t *win, uint32_t id, const char *fmt, ...) {
 
 // Returns the client area of win in client coordinates {0, 0, client_w, client_h}.
 // Analogous to WinAPI GetClientRect.
-rect_t get_client_rect(window_t const *win) {
+irect16_t get_client_rect(window_t const *win) {
   int t = titlebar_height(win);
   int s = statusbar_height(win);
   bool has_h = (win->flags & WINDOW_HSCROLL) && win->hscroll.visible;
@@ -429,7 +429,7 @@ rect_t get_client_rect(window_t const *win) {
   int ch = win->frame.h - t - s - hstrip;
   if (cw < 0) cw = 0;
   if (ch < 0) ch = 0;
-  return (rect_t){0, 0, cw, ch};
+  return (irect16_t){0, 0, cw, ch};
 }
 
 // Adjusts *r (initially a desired client rect) to include the non-client area.
@@ -441,7 +441,7 @@ rect_t get_client_rect(window_t const *win) {
 // scrollbar strips indicated by WINDOW_HSCROLL / WINDOW_VSCROLL.
 // Note: WINDOW_HSCROLL merged with WINDOW_STATUSBAR does not add extra height
 // (the bar is drawn inside the status-bar row in that case).
-void adjust_window_rect(rect_t *r, flags_t flags) {
+void adjust_window_rect(irect16_t *r, flags_t flags) {
   if (!r) return;
   // Compute non-client heights for the given flags.
   int t = 0;
@@ -467,8 +467,8 @@ void adjust_window_rect(rect_t *r, flags_t flags) {
 //extern result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 extern result_t win_space(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 
-window_t *create_window2(windef_t const *def, rect_t const *r, window_t *parent) {
-  rect_t rect = {r->x, r->y, def->w, def->h};
+window_t *create_window2(windef_t const *def, irect16_t const *r, window_t *parent) {
+  irect16_t rect = {r->x, r->y, def->w, def->h};
   window_t *win = create_window(def->text, def->flags, &rect, parent, def->proc, 0, NULL);
   win->id = def->id;
   return win;
@@ -547,7 +547,7 @@ window_t *create_window_from_form(form_def_t const *def, int x, int y,
     if (y == CW_USEDEFAULT) y = ny;
   }
 
-  rect_t r = {x, y, def->width, def->height};
+  irect16_t r = {x, y, def->width, def->height};
 
   // Allocate the parent window without sending evCreate yet.
   window_t *win = alloc_window(def->name ? def->name : "", def->flags, &r, parent, proc, hinstance);

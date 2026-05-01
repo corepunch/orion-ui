@@ -10,7 +10,7 @@ void test_terminal_has_vscroll_flag(void) {
   test_env_init();
   
   // Create terminal
-  rect_t frame = {10, 10, 300, 150};
+  irect16_t frame = {10, 10, 300, 150};
   window_t *terminal = create_window("Terminal Scroll Test", 0, &frame, NULL, win_terminal, 0, NULL);
   ASSERT_NOT_NULL(terminal);
   

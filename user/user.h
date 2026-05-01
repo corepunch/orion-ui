@@ -10,7 +10,7 @@
 
 // Forward declarations
 typedef struct window_s window_t;
-typedef struct rect_s rect_t;
+typedef struct rect_s irect16_t;
 typedef uint32_t flags_t;
 typedef uint32_t result_t;
 
@@ -104,7 +104,7 @@ typedef enum {
 typedef struct {
   form_ctrl_type_t  type;   // control class (FORM_CTRL_*)
   uint32_t          id;     // numeric control ID
-  rect_t            frame;  // position and dimensions in parent client coordinates
+  irect16_t            frame;  // position and dimensions in parent client coordinates
   flags_t           flags;  // style flags passed to create_window
   const char       *text;   // initial caption / label text
   const char       *name;   // identifier name (informational)
@@ -145,7 +145,7 @@ typedef struct {
 
 // Window structure
 struct window_s {
-  rect_t frame;
+  irect16_t frame;
   uint32_t id;
   uint16_t scroll[2];
   uint32_t flags;
@@ -183,10 +183,10 @@ int titlebar_height(window_t const *win);
 int statusbar_height(window_t const *win);
 
 // Window management functions
-window_t *create_window(char const *title, flags_t flags, const rect_t* frame, 
+window_t *create_window(char const *title, flags_t flags, const irect16_t* frame, 
                         window_t *parent, winproc_t proc, hinstance_t hinstance,
                         void *param);
-window_t *create_window2(windef_t const *def, rect_t const *r, window_t *parent);
+window_t *create_window2(windef_t const *def, irect16_t const *r, window_t *parent);
 window_t *create_window_from_form(form_def_t const *def, int x, int y,
                                   window_t *parent, winproc_t proc,
                                   hinstance_t hinstance, void *lparam);
@@ -216,12 +216,12 @@ bool window_has_focus(const window_t *win);
 // frame, or centered on screen when owner is NULL. The input rect is treated as
 // a full window-frame rect (top-left of title bar, full width/height), not a
 // client rect. The result is clamped to the visible screen bounds.
-rect_t center_window_rect(rect_t frame_rect, window_t const *owner);
+irect16_t center_window_rect(irect16_t frame_rect, window_t const *owner);
 
 // Returns the client area of win in client coordinates {0, 0, client_w, client_h}.
 // The client area excludes the title bar, toolbar, status bar, and any visible
 // built-in scrollbar strips.  Analogous to WinAPI GetClientRect.
-rect_t get_client_rect(window_t const *win);
+irect16_t get_client_rect(window_t const *win);
 
 // Adjusts *r (initially a desired client rect) to include the non-client area
 // (title bar, toolbar, status bar, and scrollbar strips) for a window with the
@@ -231,10 +231,10 @@ rect_t get_client_rect(window_t const *win);
 // WINDOW_HSCROLL adds SCROLLBAR_WIDTH to height unless merged with WINDOW_STATUSBAR.
 // WINDOW_VSCROLL adds SCROLLBAR_WIDTH to width.
 // Usage:
-//   rect_t r = {0, 0, client_w, client_h};
+//   irect16_t r = {0, 0, client_w, client_h};
 //   adjust_window_rect(&r, flags);
 //   create_window(title, flags, MAKERECT(win_x + r.x, win_y + r.y, r.w, r.h), ...);
-void adjust_window_rect(rect_t *r, flags_t flags);
+void adjust_window_rect(irect16_t *r, flags_t flags);
 
 // Global runtime state shared across UI subsystems.
 typedef struct {
@@ -293,7 +293,7 @@ uint32_t show_ddx_dialog(form_def_t const *def, const char *title,
 void set_sys_colors(int count, const int *indices, const uint32_t *colors);
 
 // Drawing functions
-void draw_button(rect_t r, int dx, int dy, bool pressed);
+void draw_button(irect16_t r, int dx, int dy, bool pressed);
 
 // Built-in scrollbar API (analogous to WinAPI SetScrollInfo / GetScrollInfo).
 // These operate on the WINDOW_HSCROLL / WINDOW_VSCROLL built-in bars, not on

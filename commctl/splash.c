@@ -101,7 +101,7 @@ window_t *show_splash_screen(const char *path, hinstance_t hinstance) {
   // Clamp to screen size so an oversized image does not overflow.
   if (w > sw) w = sw;
   if (h > sh) h = sh;
-    rect_t wr = center_window_rect((rect_t){0, 0, w, h}, NULL);
+    irect16_t wr = center_window_rect((irect16_t){0, 0, w, h}, NULL);
 
   window_t *win = create_window(
       "",

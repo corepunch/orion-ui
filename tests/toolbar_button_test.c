@@ -58,7 +58,7 @@ void test_toolbar_button_click(void) {
                                                cmd_parent_proc, NULL);
     ASSERT_NOT_NULL(parent);
 
-    rect_t fr = {10, 10, 20, 20};
+    irect16_t fr = {10, 10, 20, 20};
     window_t *btn = create_window("T", WINDOW_NOTITLE | WINDOW_NOFILL,
                                   &fr, parent, win_toolbar_button, 0, NULL);
     ASSERT_NOT_NULL(btn);
@@ -87,7 +87,7 @@ void test_toolbar_button_keyboard_return(void) {
                                                cmd_parent_proc, NULL);
     ASSERT_NOT_NULL(parent);
 
-    rect_t fr = {10, 10, 20, 20};
+    irect16_t fr = {10, 10, 20, 20};
     window_t *btn = create_window("T", WINDOW_NOTITLE | WINDOW_NOFILL,
                                   &fr, parent, win_toolbar_button, 0, NULL);
     ASSERT_NOT_NULL(btn);
@@ -118,7 +118,7 @@ void test_toolbar_button_keyboard_space(void) {
                                                cmd_parent_proc, NULL);
     ASSERT_NOT_NULL(parent);
 
-    rect_t fr = {10, 10, 20, 20};
+    irect16_t fr = {10, 10, 20, 20};
     window_t *btn = create_window("T", WINDOW_NOTITLE | WINDOW_NOFILL,
                                   &fr, parent, win_toolbar_button, 0, NULL);
     ASSERT_NOT_NULL(btn);
@@ -151,11 +151,11 @@ void test_toolbar_button_autoradio(void) {
 
     uint32_t flags = WINDOW_NOTITLE | WINDOW_NOFILL | BUTTON_AUTORADIO;
 
-    rect_t fr0 = {0, 0, 20, 20};
+    irect16_t fr0 = {0, 0, 20, 20};
     window_t *b0 = create_window("A", flags, &fr0, parent, win_toolbar_button, 0, NULL);
-    rect_t fr1 = {25, 0, 20, 20};
+    irect16_t fr1 = {25, 0, 20, 20};
     window_t *b1 = create_window("B", flags, &fr1, parent, win_toolbar_button, 0, NULL);
-    rect_t fr2 = {50, 0, 20, 20};
+    irect16_t fr2 = {50, 0, 20, 20};
     window_t *b2 = create_window("C", flags, &fr2, parent, win_toolbar_button, 0, NULL);
     ASSERT_NOT_NULL(b0);
     ASSERT_NOT_NULL(b1);
@@ -195,7 +195,7 @@ void test_toolbar_button_set_image_sanity(void) {
                                                cmd_parent_proc, NULL);
     ASSERT_NOT_NULL(parent);
 
-    rect_t fr = {10, 10, 20, 20};
+    irect16_t fr = {10, 10, 20, 20};
     window_t *btn = create_window("T", WINDOW_NOTITLE | WINDOW_NOFILL,
                                   &fr, parent, win_toolbar_button, 0, NULL);
     ASSERT_NOT_NULL(btn);
@@ -253,7 +253,7 @@ void test_toolbar_button_set_image_zero_cols_no_crash(void) {
                                                cmd_parent_proc, NULL);
     ASSERT_NOT_NULL(parent);
 
-    rect_t fr = {10, 10, 20, 20};
+    irect16_t fr = {10, 10, 20, 20};
     window_t *btn = create_window("T", WINDOW_NOTITLE | WINDOW_NOFILL,
                                   &fr, parent, win_toolbar_button, 0, NULL);
     ASSERT_NOT_NULL(btn);

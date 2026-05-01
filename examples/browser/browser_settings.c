@@ -48,9 +48,9 @@ static const form_def_t kAboutForm = {
   .ok_id = ID_ABOUT_OK,
 };
 
-static rect_t browser_centered_settings_rect(window_t *parent) {
+static irect16_t browser_centered_settings_rect(window_t *parent) {
   flags_t flags = WINDOW_DIALOG | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE;
-  rect_t wr = {0, 0, kSettingsForm.width, kSettingsForm.height};
+  irect16_t wr = {0, 0, kSettingsForm.width, kSettingsForm.height};
 
   adjust_window_rect(&wr, flags);
   return center_window_rect(wr, parent);
@@ -213,7 +213,7 @@ bool browser_show_settings_window(window_t *parent, browser_state_t *st) {
   ds->st = st;
 
   form_def_t settings_def = kSettingsForm;
-  rect_t wr = browser_centered_settings_rect(parent);
+  irect16_t wr = browser_centered_settings_rect(parent);
 
   settings_def.flags |= WINDOW_DIALOG | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE;
   settings_def.width = wr.w;

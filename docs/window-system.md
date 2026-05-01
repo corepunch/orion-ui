@@ -10,7 +10,7 @@ nav_order: 4
 
 ```c
 typedef struct window_s {
-  rect_t      frame;          // content-area position and size (logical px)
+  irect16_t      frame;          // content-area position and size (logical px)
   char        title[64];
   flags_t     flags;          // WINDOW_NOTITLE | WINDOW_TOOLBAR | …
   winproc_t   proc;           // window procedure
@@ -31,7 +31,7 @@ typedef struct window_s {
 window_t *create_window(
     const char *title,
     flags_t     flags,
-    rect_t const *frame,     // MAKERECT(x, y, w, h)
+    irect16_t const *frame,     // MAKERECT(x, y, w, h)
     window_t   *parent,      // NULL = top-level
     winproc_t   proc,
     void       *lparam       // forwarded to evCreate
@@ -119,7 +119,7 @@ Modal dialogs follow the same pattern as Win32 `DialogBoxParam` / `EndDialog`:
 // Returns the code passed to end_dialog() (0 on X-button close).
 uint32_t show_dialog(
     const char  *title,    // title bar text
-    rect_t const *frame,   // MAKERECT(x, y, w, h) – logical pixels
+    irect16_t const *frame,   // MAKERECT(x, y, w, h) – logical pixels
     window_t    *parent,   // owner window, or NULL
     winproc_t    proc,     // dialog window procedure
     void        *param     // forwarded as lparam to evCreate
@@ -249,7 +249,7 @@ void  set_focus(window_t *win);
 void  set_capture(window_t *win);         // capture all mouse events
 bool  is_window(window_t *win);           // safe existence check
 window_t *get_root_window(window_t *win);
-rect_t center_window_rect(rect_t frame_rect, window_t const *owner);
+irect16_t center_window_rect(irect16_t frame_rect, window_t const *owner);
 
 // Allocate and zero window userdata (freed automatically on destroy)
 void *allocate_window_data(window_t *win, size_t size);
@@ -262,7 +262,7 @@ This is the preferred helper for centering modeless windows and any custom
 window created with `create_window()` / `create_window_from_form()`.
 
 ```c
-rect_t wr = {0, 0, 320, 120};
+irect16_t wr = {0, 0, 320, 120};
 adjust_window_rect(&wr, WINDOW_DIALOG | WINDOW_NORESIZE);
 wr = center_window_rect(wr, owner_win);
 

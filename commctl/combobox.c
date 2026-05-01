@@ -49,7 +49,7 @@ static void open_dropdown(window_t *win) {
     abs_x = root->frame.x + win->frame.x;
     abs_y = root->frame.y + root_t + win->frame.y + win->frame.h + 2;
   }
-  rect_t rect = {abs_x, abs_y, win->frame.w, 100};
+  irect16_t rect = {abs_x, abs_y, win->frame.w, 100};
   window_t *list = create_window("", WINDOW_NOTITLE|WINDOW_NORESIZE|WINDOW_VSCROLL|WINDOW_ALWAYSONTOP|WINDOW_NOTRAYBUTTON, &rect, NULL, win_list, win->hinstance, win);
   if (!list)
     return;
@@ -77,8 +77,8 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
     case evPaint:
       win_button(win, msg, wparam, lparam);
       {
-        rect_t local = {0, 0, win->frame.w, win->frame.h};
-        rect_t arrow = rect_split_right(local, win->frame.h);
+        irect16_t local = {0, 0, win->frame.w, win->frame.h};
+        irect16_t arrow = rect_split_right(local, win->frame.h);
         draw_theme_icon_in_rect(THEME_ICON_ARROW_UPDOWN, arrow,
                                 get_sys_color(brTextNormal));
       }

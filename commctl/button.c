@@ -47,14 +47,14 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
       // When the button has keyboard focus brFocusRing takes precedence.
       uint32_t bg = (g_ui_runtime.focused == win) ? get_sys_color(brFocusRing) :
                     (win->flags & BUTTON_DEFAULT) ? 0xff000000 : get_sys_color(brWindowBg);
-      rect_t local = {0, 0, win->frame.w, win->frame.h};
-      rect_t outer = rect_inset(local, -1);
+      irect16_t local = {0, 0, win->frame.w, win->frame.h};
+      irect16_t outer = rect_inset(local, -1);
       fill_rect(bg, outer);
       draw_button(local, 1, 1, show_pressed);
-      rect_t label = rect_center(local, strwidth(win->title), CHAR_HEIGHT);
+      irect16_t label = rect_center(local, strwidth(win->title), CHAR_HEIGHT);
       if (!show_pressed)
         draw_text_small(win->title, label.x + TEXT_SHADOW_OFFSET, label.y + TEXT_SHADOW_OFFSET, get_sys_color(brDarkEdge));
-      rect_t label_draw = rect_offset(label, show_pressed ? 1 : 0, show_pressed ? 1 : 0);
+      irect16_t label_draw = rect_offset(label, show_pressed ? 1 : 0, show_pressed ? 1 : 0);
       draw_text_small(win->title, label_draw.x, label_draw.y, get_sys_color(brTextNormal));
       return true;
     }
@@ -132,7 +132,7 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
     case evPaint: {
       bool show_pressed = win->pressed ||
                           ((win->flags & BUTTON_PUSHLIKE) && win->value);
-      rect_t local = {0, 0, win->frame.w, win->frame.h};
+      irect16_t local = {0, 0, win->frame.w, win->frame.h};
       draw_button(local, 1, 1, show_pressed);
       int px = show_pressed ? 1 : 0;
       toolbar_button_data_t *bd = (toolbar_button_data_t *)win->userdata;
@@ -145,15 +145,15 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
         float v0 = (float)(row * s->icon_h) / (float)s->sheet_h;
         float u1 = u0 + (float)s->icon_w / (float)s->sheet_w;
         float v1 = v0 + (float)s->icon_h / (float)s->sheet_h;
-        rect_t icon = rect_offset(rect_center(local, s->icon_w, s->icon_h), px, px);
+        irect16_t icon = rect_offset(rect_center(local, s->icon_w, s->icon_h), px, px);
         draw_sprite_region((int)s->tex, R(icon.x, icon.y, s->icon_w, s->icon_h),
                            UV_RECT(u0, v0, u1, v1), 0xFFFFFFFF, 0);
       } else {
         // Fallback: draw text label when no image has been set.
-        rect_t inner = rect_inset(local, BUTTON_TEXT_INSET);
+        irect16_t inner = rect_inset(local, BUTTON_TEXT_INSET);
         if (!show_pressed)
           draw_text_small(win->title, inner.x + TEXT_SHADOW_OFFSET, inner.y + TEXT_SHADOW_OFFSET, get_sys_color(brDarkEdge));
-        rect_t inner_draw = rect_offset(inner, px, px);
+        irect16_t inner_draw = rect_offset(inner, px, px);
         draw_text_small(win->title, inner_draw.x, inner_draw.y, get_sys_color(brTextNormal));
       }
       return true;

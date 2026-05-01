@@ -2,7 +2,7 @@
 
 #include "imageeditor.h"
 
-rect_t imageeditor_document_workspace_rect(void) {
+irect16_t imageeditor_document_workspace_rect(void) {
   int screen_w = ui_get_system_metrics(kSystemMetricScreenWidth);
   int screen_h = ui_get_system_metrics(kSystemMetricScreenHeight);
 
@@ -21,11 +21,11 @@ rect_t imageeditor_document_workspace_rect(void) {
   if (right <= left) right = left + 1;
   if (bottom <= top) bottom = top + 1;
 
-  return (rect_t){ left, top, right - left, bottom - top };
+  return (irect16_t){ left, top, right - left, bottom - top };
 }
 
 void imageeditor_max_document_frame_size(int *out_w, int *out_h) {
-  rect_t ws = imageeditor_document_workspace_rect();
+  irect16_t ws = imageeditor_document_workspace_rect();
   if (out_w) *out_w = MAX(1, ws.w);
   if (out_h) *out_h = MAX(1, ws.h);
 }
@@ -72,7 +72,7 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
       return false;
     case evResize: {
       // Keep the canvas child window in sync with the document window's client area.
-      rect_t cr = get_client_rect(win);
+      irect16_t cr = get_client_rect(win);
       if (doc && doc->canvas_win)
         resize_window(doc->canvas_win, cr.w, cr.h);
       return false;
@@ -174,7 +174,7 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
     doc->filename[sizeof(doc->filename) - 1] = '\0';
   }
 
-  rect_t ws = imageeditor_document_workspace_rect();
+  irect16_t ws = imageeditor_document_workspace_rect();
   int wx = g_app->next_x;
   int wy = g_app->next_y;
   g_app->next_x += DOC_CASCADE;
@@ -208,7 +208,7 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
   doc->win = dwin;
 
   // Canvas child fills the document window's client area.
-  rect_t cr = get_client_rect(dwin);
+  irect16_t cr = get_client_rect(dwin);
   window_t *cwin = create_window(
       "", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL,
       MAKERECT(0, 0, cr.w, cr.h),

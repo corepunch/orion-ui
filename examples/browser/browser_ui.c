@@ -34,7 +34,7 @@ void browser_rebuild_toolbar(window_t *win) {
 }
 
 void browser_update_layout(window_t *win) {
-  rect_t cr = get_client_rect(win);
+  irect16_t cr = get_client_rect(win);
   window_t *body = get_window_item(win, ID_BODY_VIEW);
   if (body) {
     move_window(body, cr.x, cr.y);

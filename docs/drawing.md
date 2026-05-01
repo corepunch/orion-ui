@@ -64,7 +64,7 @@ draw_rect(my_tex, 0, 0, CANVAS_W * 2, CANVAS_H * 2);
 Draw a 3-D bevelled border around a rect.
 
 ```c
-void draw_bevel(rect_t const *r);
+void draw_bevel(irect16_t const *r);
 ```
 
 ### Icons

@@ -389,7 +389,7 @@ float *get_sprite_matrix(void) {
 }
 
 // Draw a sprite at the specified screen position
-void draw_rect_ex(int tex, rect_t r, int type, float alpha) {
+void draw_rect_ex(int tex, irect16_t r, int type, float alpha) {
   if (!g_ui_runtime.running) return;
   push_sprite_args(tex, r.x, r.y, r.w, r.h, alpha);
   
@@ -409,13 +409,13 @@ void draw_rect_ex(int tex, rect_t r, int type, float alpha) {
 }
 
 // Draw a sprite at the specified screen position
-void draw_rect(int tex, rect_t r) {
+void draw_rect(int tex, irect16_t r) {
   draw_rect_ex(tex, r, false, 1);
 }
 
 // Draw a sub-region of a sprite sheet at the specified screen position.
 // uv packs normalized texture coordinates as floats: x=u0, y=v0, w=u1, h=v1.
-void draw_sprite_region(int tex, rect_t r,
+void draw_sprite_region(int tex, irect16_t r,
                         frect_t const *uv,
                         uint32_t color, uint32_t flags) {
   if (!g_ui_runtime.running) return;
@@ -695,7 +695,7 @@ bool bake_texture_program(int src_tex, int w, int h, uint32_t program,
   return true;
 }
 
-void draw_program_rect(int tex, rect_t r, uint32_t program, float mix_amount) {
+void draw_program_rect(int tex, irect16_t r, uint32_t program, float mix_amount) {
   draw_rect_program(tex, r.x, r.y, r.w, r.h, program, mix_amount);
 }
 

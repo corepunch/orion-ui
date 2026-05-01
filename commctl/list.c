@@ -40,7 +40,7 @@ result_t win_list(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       if (!cb || !texts)
         return true;
       for (uint32_t i = 0; i < cb->cursor_pos; i++) {
-        rect_t item = { 0, (int)(i * LIST_HEIGHT), win->frame.w, LIST_HEIGHT };
+        irect16_t item = { 0, (int)(i * LIST_HEIGHT), win->frame.w, LIST_HEIGHT };
         if (i == win->cursor_pos) {
           fill_rect(get_sys_color(brTextNormal), R(item.x, item.y, item.w, item.h));
           draw_text_clipped(FONT_SMALL, texts[i], &item, get_sys_color(brWindowBg), TEXT_PADDING_LEFT);

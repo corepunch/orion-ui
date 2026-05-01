@@ -156,7 +156,7 @@ for (int i = 0; i < NUM_TOOLS; i++) {
 
 ### Naming Conventions
 - Use snake_case for function names (e.g., `create_window`, `draw_text_small`)
-- Use snake_case with _t suffix for type names (e.g., `window_t`, `rect_t`, `winproc_t`)
+- Use snake_case with _t suffix for type names (e.g., `window_t`, `irect16_t`, `winproc_t`)
 - Use SCREAMING_SNAKE_CASE for constants and macros (e.g., `WM_CREATE`, `SCREEN_WIDTH`)
 
 ### TurboVision-Inspired Enum Style (Preferred)
@@ -176,8 +176,8 @@ for (int i = 0; i < NUM_TOOLS; i++) {
 - Use forward declarations to minimize header dependencies
 
 ### Struct Design
-- Always prefer named structs over loose coordinate pairs: use `point_t { int x, y; }` instead of `int x, int y` pairs, and `rect_t { int x, y, w, h; }` instead of `int x1, y1, x2, y2`
-- `point_t` and `rect_t` are defined in `user/user.h` and available everywhere via `ui.h`
+- Always prefer named structs over loose coordinate pairs: use `point_t { int x, y; }` instead of `int x, int y` pairs, and `irect16_t { int x, y, w, h; }` instead of `int x1, y1, x2, y2`
+- `point_t` and `irect16_t` are defined in `user/user.h` and available everywhere via `ui.h`
 - When a concept naturally groups two or more related values, define a struct for it (e.g., `size_t` for `w, h`; `point_t` for `x, y`)
 - Do not scatter parallel `_x` / `_y` (or `_start` / `_end`) fields across a struct when a `point_t` member would be cleaner
 
@@ -382,7 +382,7 @@ Why this is now the standard:
 - Reduces regressions caused by hidden side effects and repeated low-level logic.
 
 UI-specific application of the same rule:
-- For custom drawing/layout, define an outer `rect_t` region per widget and derive internals
+- For custom drawing/layout, define an outer `irect16_t` region per widget and derive internals
   with `rect_*` helpers inside dedicated draw/hit helpers rather than pixel-pushing inline.
 
 ### Anti-Patterns (learned from real mistakes)
@@ -399,4 +399,4 @@ UI-specific application of the same rule:
 
 6. **Don't create child controls imperatively in `evCreate` when a `form_def_t` can do it declaratively.** Dialogs and panels with standard controls (buttons, edit boxes, labels, checkboxes, lists, comboboxes) must use `form_ctrl_def_t[]` + `form_def_t`, passed to `create_window_from_form()` or `show_dialog_from_form()`. Writing `create_window(…, win_button, …)` inside a window proc is wrong. The form's children already exist when `evCreate` fires — use `get_window_item()` / `set_window_item_text()` to read or initialise them.
 
-7. **Don't use `win->frame` dimensions for client-space paint/layout/hit-testing.** `win->frame` includes non-client chrome (title/borders), so using it for client math pushes rows and button strips into clipped areas. For widget geometry, always derive from `rect_t cr = get_client_rect(win)` and use `cr.w` / `cr.h` (plus `rect_*` helpers) in both paint and hit paths. Use `win->frame` only for operations that explicitly need outer-frame metrics.
+7. **Don't use `win->frame` dimensions for client-space paint/layout/hit-testing.** `win->frame` includes non-client chrome (title/borders), so using it for client math pushes rows and button strips into clipped areas. For widget geometry, always derive from `irect16_t cr = get_client_rect(win)` and use `cr.w` / `cr.h` (plus `rect_*` helpers) in both paint and hit paths. Use `win->frame` only for operations that explicitly need outer-frame metrics.

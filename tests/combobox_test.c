@@ -32,7 +32,7 @@ static void reset_state(void) {
 // ── helpers ───────────────────────────────────────────────────────────────
 
 static window_t *make_combobox(window_t *parent, int id) {
-    rect_t fr = {10, 10, 100, 20};
+    irect16_t fr = {10, 10, 100, 20};
     window_t *cb = create_window("", 0, &fr, parent, win_combobox, 0, NULL);
     if (cb) cb->id = (uint32_t)id;
     return cb;

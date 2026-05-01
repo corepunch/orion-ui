@@ -119,25 +119,25 @@ static void gc_test_setup(void) {
     g_gc->right_w         = PANEL_RIGHT_W_DEFAULT;
 
     // Branches panel — single full-width column.
-    rect_t frame = {0, 0, 200, 400};
+    irect16_t frame = {0, 0, 200, 400};
     g_gc->branches_win = create_window("Branches",
         WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOTRAYBUTTON,
         &frame, NULL, gc_branches_proc, 0, NULL);
 
     // Log panel — Subject / Author / Date / Hash columns.
-    frame = (rect_t){0, 0, 600, 200};
+    frame = (irect16_t){0, 0, 600, 200};
     g_gc->log_win = create_window("Log",
         WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOTRAYBUTTON,
         &frame, NULL, gc_log_proc, 0, NULL);
 
     // Files panel — Status / Path columns.
-    frame = (rect_t){0, 0, 400, 200};
+    frame = (irect16_t){0, 0, 400, 200};
     g_gc->files_win = create_window("Files",
         WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOTRAYBUTTON,
         &frame, NULL, gc_files_proc, 0, NULL);
 
     // Diff panel — gc_diff_proc allocates diff_state_t in evCreate.
-    frame = (rect_t){0, 0, 400, 400};
+    frame = (irect16_t){0, 0, 400, 400};
     g_gc->diff_win = create_window("Diff",
         WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOTRAYBUTTON,
         &frame, NULL, gc_diff_proc, 0, NULL);
@@ -548,7 +548,7 @@ void test_gc_evcommand_selchange_log_triggers_files_refresh(void) {
 
     // Create a thin main window that wires win->userdata = g_gc and forwards
     // all messages (except evCreate) to gc_main_proc.
-    rect_t frame = {0, 0, 10, 10};
+    irect16_t frame = {0, 0, 10, 10};
     window_t *main_win = create_window("TestMain",
         WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOTRAYBUTTON,
         &frame, NULL, test_main_proc, 0, NULL);
@@ -577,7 +577,7 @@ void test_gc_evcommand_selchange_branches_triggers_log_refresh(void) {
     send_message(g_gc->log_win, RVM_CLEAR, 0, NULL);
     ASSERT_EQUAL((int)send_message(g_gc->log_win, RVM_GETITEMCOUNT, 0, NULL), 0);
 
-    rect_t frame = {0, 0, 10, 10};
+    irect16_t frame = {0, 0, 10, 10};
     window_t *main_win = create_window("TestMain",
         WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOTRAYBUTTON,
         &frame, NULL, test_main_proc, 0, NULL);
@@ -605,7 +605,7 @@ void test_gc_evopenmsg_opens_repository(void) {
     g_gc->commit_count = 0;
     g_gc->branch_count = 0;
 
-    rect_t frame = {0, 0, 10, 10};
+    irect16_t frame = {0, 0, 10, 10};
     window_t *main_win = create_window("TestMain",
         WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOTRAYBUTTON,
         &frame, NULL, test_main_proc, 0, NULL);
@@ -628,7 +628,7 @@ void test_gc_evopenmsg_invalid_path_leaves_repo_null(void) {
     gc_test_setup();
     if (g_gc->repo) { git_repo_close(g_gc->repo); g_gc->repo = NULL; }
 
-    rect_t frame = {0, 0, 10, 10};
+    irect16_t frame = {0, 0, 10, 10};
     window_t *main_win = create_window("TestMain",
         WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOTRAYBUTTON,
         &frame, NULL, test_main_proc, 0, NULL);

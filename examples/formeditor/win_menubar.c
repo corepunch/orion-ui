@@ -75,7 +75,7 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
       return true;
     case evResize: {
       if (doc && doc->canvas_win) {
-        rect_t cr = get_client_rect(win);
+        irect16_t cr = get_client_rect(win);
         resize_window(doc->canvas_win, cr.w, cr.h);
       }
       return false;
@@ -132,7 +132,7 @@ form_doc_t *create_form_doc(int w, int h) {
   doc->doc_win   = dwin;
 
   // Canvas child window (owns the VSCROLL) — sized to the document window's client area
-  rect_t cr = get_client_rect(dwin);
+  irect16_t cr = get_client_rect(dwin);
   window_t *cwin = create_window(
       "", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL,
       MAKERECT(0, 0, cr.w, cr.h),

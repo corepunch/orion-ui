@@ -40,7 +40,7 @@ static void reset_cmd_state(void) {
 // ---- helpers --------------------------------------------------------------- //
 
 static window_t *make_columnview(window_t *parent, int w, int h) {
-    rect_t fr = {0, 0, w, h};
+    irect16_t fr = {0, 0, w, h};
     return create_window("cv", WINDOW_NOTITLE | WINDOW_NOFILL,
                          &fr, parent, win_reportview, 0, NULL);
 }
@@ -446,7 +446,7 @@ void test_cv_down_scrolls_selection_into_view(void) {
 // ---- helpers for report mode ------------------------------------------------ //
 
 static window_t *make_report_columnview(window_t *parent, int w, int h) {
-    rect_t fr = {0, 0, w, h};
+    irect16_t fr = {0, 0, w, h};
     window_t *cv = create_window("rv", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL,
                                  &fr, parent, win_reportview, 0, NULL);
     if (!cv) return NULL;
@@ -534,7 +534,7 @@ void test_cv_report_click_no_scroll_child(void) {
 // cell width so ncol is predictable.
 static window_t *make_large_icon_columnview(window_t *parent, int w, int h,
                                              int cell_w, int icon_sz) {
-    rect_t fr = {0, 0, w, h};
+    irect16_t fr = {0, 0, w, h};
     window_t *cv = create_window("li", WINDOW_NOTITLE | WINDOW_NOFILL,
                                  &fr, parent, win_reportview, 0, NULL);
     if (!cv) return NULL;
@@ -578,7 +578,7 @@ void test_cv_large_icon_setviewmode(void) {
     window_t *parent = test_env_create_window("P", 0, 0, 300, 200,
                                                cmd_capture_proc, NULL);
     ASSERT_NOT_NULL(parent);
-    rect_t fr = {0, 0, 300, 200};
+    irect16_t fr = {0, 0, 300, 200};
     window_t *cv = create_window("cv", WINDOW_NOTITLE | WINDOW_NOFILL,
                                  &fr, parent, win_reportview, 0, NULL);
     ASSERT_NOT_NULL(cv);

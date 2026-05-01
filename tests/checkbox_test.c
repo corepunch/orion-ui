@@ -34,7 +34,7 @@ static void reset_state(void) {
 }
 
 static window_t *make_checkbox(window_t *parent, int id) {
-    rect_t fr = {10, 10, 80, 20};
+    irect16_t fr = {10, 10, 80, 20};
     window_t *cb = create_window("Check", 0, &fr, parent, win_checkbox, 0, NULL);
     if (cb) cb->id = (uint32_t)id;
     return cb;

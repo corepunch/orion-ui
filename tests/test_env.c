@@ -137,7 +137,7 @@ void test_env_hook_callback(window_t *win, uint32_t msg, uint32_t wparam,
 // Helper: Create a test window with tracking
 window_t* test_env_create_window(const char *title, int x, int y, int w, int h,
                                   winproc_t proc, void *userdata) {
-    rect_t frame = {x, y, w, h};
+    irect16_t frame = {x, y, w, h};
     return create_window(title, 0, &frame, NULL, proc, 0, userdata);
 }
 

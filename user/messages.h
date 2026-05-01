@@ -341,7 +341,7 @@ static inline uint32_t get_sys_color(sys_color_idx_t idx) {
 }
 
 // Macros for creating rectangles
-#define MAKERECT(X, Y, W, H) (&(rect_t){X, Y, W, H})
+#define MAKERECT(X, Y, W, H) (&(irect16_t){X, Y, W, H})
 
 // Macros for extracting DWORD parts
 #ifndef LOWORD

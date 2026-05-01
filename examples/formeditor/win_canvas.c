@@ -199,7 +199,7 @@ static void draw_element(window_t *win, canvas_state_t *s, form_element_t *el) {
 
   switch (el->type) {
     case CTRL_BUTTON: {
-      rect_t r = {sx, sy, sw, sh};
+      irect16_t r = {sx, sy, sw, sh};
       draw_button(r, 1, 1, false);
       int tw = strwidth(el->text);
       int tx = sx + (sw - tw) / 2;
@@ -236,7 +236,7 @@ static void draw_element(window_t *win, canvas_state_t *s, form_element_t *el) {
     case CTRL_COMBOBOX: {
       draw_sunken_box(sx, sy, sw, sh);
       int aw = 10;
-      rect_t btn = {sx + sw - aw, sy, aw, sh};
+      irect16_t btn = {sx + sw - aw, sy, aw, sh};
       draw_button(btn, 1, 1, false);
       draw_text_small(el->text, sx + 2, sy + (sh - 8) / 2, text_col);
       break;

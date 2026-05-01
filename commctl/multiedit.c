@@ -101,14 +101,14 @@ static void me_ensure_visible(me_state_t *s, int max_w, int vis_h) {
 // Compute the absolute screen rect of win's text area.
 // Walks the parent chain so the result is correct even when win is nested
 // inside an intermediate container window (not a direct child of root).
-static rect_t me_text_screen_rect(window_t *win, window_t *root) {
+static irect16_t me_text_screen_rect(window_t *win, window_t *root) {
   int x = win->frame.x + ME_PADDING;
   int y = win->frame.y + ME_PADDING;
   for (window_t *p = win->parent; p && p != root; p = p->parent) {
     x += p->frame.x;
     y += p->frame.y;
   }
-  return (rect_t){
+  return (irect16_t){
     root->frame.x + x,
     root->frame.y + titlebar_height(root) + y,
     win->frame.w - ME_PADDING * 2,
@@ -159,7 +159,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
                 R(-1, -1, win->frame.w + 2, win->frame.h + 2));
 
       // Inset bevel border.
-      draw_button((rect_t){0, 0, win->frame.w, win->frame.h}, 1, 1, true);
+      draw_button((irect16_t){0, 0, win->frame.w, win->frame.h}, 1, 1, true);
 
       int tw = win->frame.w - ME_PADDING * 2;
       int th = win->frame.h - ME_PADDING * 2;
@@ -168,11 +168,11 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
 
       // Clip to text area (scissor uses absolute screen coordinates).
       window_t *root = get_root_window(win);
-      rect_t tr = me_text_screen_rect(win, root);
+      irect16_t tr = me_text_screen_rect(win, root);
       set_clip_rect(NULL, tr);
 
       // Draw wrapped text, offset upward by scroll_y.
-      rect_t vp = { tx, ty - s->scroll_y, tw, th + s->scroll_y };
+      irect16_t vp = { tx, ty - s->scroll_y, tw, th + s->scroll_y };
       draw_text_wrapped(s->buf, &vp, get_sys_color(brTextNormal));
 
       // Draw caret when focused.
@@ -187,7 +187,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       }
 
       // Reset scissor to full control frame so subsequent rendering is unclipped.
-      set_clip_rect(NULL, (rect_t){
+      set_clip_rect(NULL, (irect16_t){
         tr.x - ME_PADDING, tr.y - ME_PADDING,
         win->frame.w, win->frame.h,
       });

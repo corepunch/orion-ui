@@ -60,14 +60,14 @@ static const char *kBlendNames[LAYER_BLEND_COUNT] = {
 // Layout helpers
 // ============================================================
 
-static rect_t layers_client_rect(window_t *win) {
+static irect16_t layers_client_rect(window_t *win) {
   return get_client_rect(win);
 }
 
 // Number of rows that fit in the current client height.
 // get_client_rect() already subtracts non-client chrome and toolbar band.
 static int visible_rows(window_t *win) {
-  rect_t cr = layers_client_rect(win);
+  irect16_t cr = layers_client_rect(win);
   int list_h = cr.h;
   if (list_h < 0) list_h = 0;
   return list_h / LAYERS_ROW_H;
@@ -135,7 +135,7 @@ static void sync_blend_combo(window_t *win, layers_win_state_t *st) {
 
 static void paint_layers(window_t *win, layers_win_state_t *st) {
   canvas_doc_t *doc = g_app ? g_app->active_doc : NULL;
-  rect_t cr = layers_client_rect(win);
+  irect16_t cr = layers_client_rect(win);
   int w = cr.w;
   int client_h = cr.h;
 
@@ -178,7 +178,7 @@ static void paint_layers(window_t *win, layers_win_state_t *st) {
       uint32_t name_col = (li == doc->active_layer)
                           ? MAKE_COLOR(0xFF,0xFF,0xFF,0xFF)
                           : get_sys_color(brTextNormal);
-      rect_t name_rect = R(LAYERS_NAME_X, ry, LAYERS_NAME_W, LAYERS_ROW_H);
+      irect16_t name_rect = R(LAYERS_NAME_X, ry, LAYERS_NAME_W, LAYERS_ROW_H);
       draw_text_clipped(FONT_SMALL, lay->name, &name_rect, name_col, TEXT_PADDING_LEFT);
 
       // Separator line.

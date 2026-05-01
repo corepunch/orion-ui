@@ -100,7 +100,7 @@ static int toolbox_hit(const toolbox_state_t *st, int mx, int my) {
 static void draw_toolbox_button(toolbox_state_t *st, int idx,
                                 int bx, int by) {
   int bsz = effective_bsz(st);
-  rect_t cell = { bx, by, bsz, bsz };
+  irect16_t cell = { bx, by, bsz, bsz };
 
   bool is_active  = (st->items[idx].ident == st->active_ident);
   bool is_pressed = (idx == st->pressed_idx);
@@ -124,7 +124,7 @@ static void draw_toolbox_button(toolbox_state_t *st, int idx,
 
   if (icon >= SYSICON_BASE) {
     // Built-in 16x16 sysicon sheet (optionally tinted).
-    rect_t icon_dst = rect_offset(rect_center(cell, 16, 16), px, px);
+    irect16_t icon_dst = rect_offset(rect_center(cell, 16, 16), px, px);
     draw_icon16(icon, icon_dst.x, icon_dst.y, tint);
   } else if (st->strip.tex && st->strip.cols > 0) {
     // Custom sprite-sheet strip (optionally tinted).
@@ -135,7 +135,7 @@ static void draw_toolbox_button(toolbox_state_t *st, int idx,
     float v0 = (float)(row_idx * s->icon_h) / (float)s->sheet_h;
     float u1 = u0 + (float)s->icon_w / (float)s->sheet_w;
     float v1 = v0 + (float)s->icon_h / (float)s->sheet_h;
-    rect_t icon_dst = rect_offset(rect_center(cell, s->icon_w, s->icon_h), px, px);
+    irect16_t icon_dst = rect_offset(rect_center(cell, s->icon_w, s->icon_h), px, px);
     draw_sprite_region((int)s->tex,
                        R(icon_dst.x, icon_dst.y, s->icon_w, s->icon_h),
                        UV_RECT(u0, v0, u1, v1), tint, 0);

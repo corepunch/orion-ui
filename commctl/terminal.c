@@ -449,7 +449,7 @@ result_t win_terminal(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
     case evPaint: {
       if (!s) return false;
       
-      rect_t viewport = {
+      irect16_t viewport = {
         WINDOW_PADDING, 
         WINDOW_PADDING,
         win->frame.w - WINDOW_PADDING * 2,

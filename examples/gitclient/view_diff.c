@@ -217,7 +217,7 @@ result_t gc_diff_proc(window_t *win, uint32_t msg,
 
     case evPaint: {
       diff_state_t *st = (diff_state_t *)win->userdata;
-      rect_t cr = get_client_rect(win);
+      irect16_t cr = get_client_rect(win);
 
       // Dark overall background.
       fill_rect(CLR_CTX_BG, cr);

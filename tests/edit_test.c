@@ -33,7 +33,7 @@ static void reset_state(void) {
 // ── helpers ───────────────────────────────────────────────────────────────
 
 static window_t *make_edit(window_t *parent, int id, const char *initial) {
-    rect_t fr = {10, 10, 120, 16};
+    irect16_t fr = {10, 10, 120, 16};
     window_t *ed = create_window(initial ? initial : "",
                                   0, &fr, parent, win_textedit, 0, NULL);
     if (ed) ed->id = (uint32_t)id;
