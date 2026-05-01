@@ -354,6 +354,9 @@ void test_fe_delete_with_no_selection(void) {
 
     fe_place_ctrl(doc, ID_TOOL_BUTTON, 20, 20, 80, 30);
     ASSERT_EQUAL(doc->element_count, 1);
+    g_app->current_tool = ID_TOOL_SELECT;
+    send_message(doc->canvas_win, evLeftButtonDown, MAKEDWORD(1, 1), NULL);
+    send_message(doc->canvas_win, evLeftButtonUp,   MAKEDWORD(1, 1), NULL);
     ASSERT_EQUAL(fe_state(doc)->selected_idx, -1);
 
     handle_menu_command(ID_EDIT_DELETE);
