@@ -167,6 +167,7 @@ form_doc_t *create_form_doc(int w, int h) {
   show_window(dwin, true);
   form_doc_update_title(doc);
   send_message(dwin, evStatusBar, 0, (void *)"New form");
+  property_browser_refresh(doc);
   return doc;
 }
 
@@ -176,6 +177,7 @@ void close_form_doc(form_doc_t *doc) {
     g_app->doc = NULL;
   if (doc->doc_win && is_window(doc->doc_win))
     destroy_window(doc->doc_win);
+  property_browser_refresh(NULL);
   free(doc);
 }
 
@@ -857,6 +859,7 @@ void handle_menu_command(uint16_t id) {
             ndoc->modified = false;
             form_doc_update_title(ndoc);
             canvas_rebuild_live_controls(ndoc);
+            property_browser_refresh(ndoc);
             send_message(ndoc->doc_win, evStatusBar, 0, path);
           } else {
             send_message(ndoc->doc_win, evStatusBar, 0,
@@ -941,6 +944,7 @@ void handle_menu_command(uint16_t id) {
         doc->modified = true;
         form_doc_update_title(doc);
         canvas_sync_live_controls(doc);
+        property_browser_refresh(doc);
       }
       break;
     }

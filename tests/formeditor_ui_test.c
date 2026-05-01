@@ -14,6 +14,7 @@
 #include "test_framework.h"
 #include "test_env.h"
 #include "../examples/formeditor/formeditor.h"
+#include "../commctl/commctl.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -58,6 +59,8 @@ static void fe_teardown(void) {
     // close_form_doc destroys the window tree and frees the doc struct.
     if (g_app->doc)
         close_form_doc(g_app->doc);
+    if (g_app->prop_win)
+        destroy_window(g_app->prop_win);
     free(g_app);
     g_app = NULL;
     test_env_shutdown();
@@ -127,6 +130,11 @@ static void fe_resize_br(form_doc_t *doc, int dw, int dh) {
 // Return a pointer to the canvas state for the given document.
 static canvas_state_t *fe_state(form_doc_t *doc) {
     return (canvas_state_t *)doc->canvas_win->userdata;
+}
+
+static window_t *fe_create_property_browser(void) {
+    g_app->prop_win = property_browser_create(0);
+    return g_app->prop_win ? g_app->prop_win->children : NULL;
 }
 
 // ── Tests ──────────────────────────────────────────────────────────────────
@@ -625,6 +633,117 @@ void test_fe_element_names_generated(void) {
     PASS();
 }
 
+// The property browser is a reportview-backed two-column list, refreshed from
+// the current canvas selection.
+void test_fe_property_browser_uses_reportview_for_selection(void) {
+    TEST("property browser: reportview shows selected element basics");
+
+    fe_setup();
+    form_doc_t *doc = g_app->doc;
+    doc->snap_to_grid = false;
+    window_t *list = fe_create_property_browser();
+    ASSERT_NOT_NULL(g_app->prop_win);
+    ASSERT_NOT_NULL(list);
+    ASSERT_FALSE(send_message(list, RVM_GETCOLUMNTITLESVISIBLE, 0, NULL));
+
+    fe_place_ctrl(doc, ID_TOOL_BUTTON, 20, 30, 80, 24);
+    fe_select(doc, 0);
+
+    int prop_count = (int)send_message(list, RVM_GETITEMCOUNT, 0, NULL);
+    ASSERT_EQUAL(prop_count, 8);
+
+    reportview_item_t item = {0};
+    ASSERT_TRUE(send_message(list, RVM_GETITEMDATA, 0, &item));
+    ASSERT_STR_EQUAL(item.text, "(Name)");
+    ASSERT_STR_EQUAL(item.subitems[0], "IDC_BTN1");
+
+    ASSERT_TRUE(send_message(list, RVM_GETITEMDATA, 1, &item));
+    ASSERT_STR_EQUAL(item.text, "Caption");
+    ASSERT_STR_EQUAL(item.subitems[0], "Button1");
+
+    ASSERT_TRUE(send_message(list, RVM_GETITEMDATA, 4, &item));
+    ASSERT_STR_EQUAL(item.text, "Left");
+    ASSERT_STR_EQUAL(item.subitems[0], "20");
+
+    fe_teardown();
+    PASS();
+}
+
+// Clicking a value cell creates an in-place text edit over that report
+// cell; Enter commits back into the selected element and refreshes the grid.
+void test_fe_property_browser_edits_caption_in_place(void) {
+    TEST("property browser: in-place edit commits caption");
+
+    fe_setup();
+    form_doc_t *doc = g_app->doc;
+    doc->snap_to_grid = false;
+    window_t *list = fe_create_property_browser();
+    ASSERT_NOT_NULL(g_app->prop_win);
+    ASSERT_NOT_NULL(list);
+
+    fe_place_ctrl(doc, ID_TOOL_BUTTON, 20, 30, 80, 24);
+    fe_select(doc, 0);
+
+    int y = 1 * COLUMNVIEW_ENTRY_HEIGHT + 1;
+    send_message(list, evLeftButtonDown, MAKEDWORD(80, y), NULL);
+
+    window_t *edit = list->children;
+    ASSERT_NOT_NULL(edit);
+    ASSERT_STR_EQUAL(edit->title, "Button1");
+
+    for (int i = 0; i < 7; i++)
+        send_message(edit, evKeyDown, AX_KEY_BACKSPACE, NULL);
+    const char *new_caption = "OK";
+    for (const char *p = new_caption; *p; p++) {
+        char ch = *p;
+        send_message(edit, evTextInput, 0, &ch);
+    }
+    send_message(edit, evKeyDown, AX_KEY_ENTER, NULL);
+
+    ASSERT_STR_EQUAL(doc->elements[0].text, "OK");
+    ASSERT_STR_EQUAL(doc->elements[0].live_win->title, "OK");
+    ASSERT_NULL(list->children);
+
+    reportview_item_t item = {0};
+    ASSERT_TRUE(send_message(list, RVM_GETITEMDATA, 1, &item));
+    ASSERT_STR_EQUAL(item.text, "Caption");
+    ASSERT_STR_EQUAL(item.subitems[0], "OK");
+
+    fe_teardown();
+    PASS();
+}
+
+// When the property reportview has a vertical scrollbar, the in-place editor
+// must stay inside the value column and not cover the scrollbar strip.
+void test_fe_property_browser_edit_respects_vertical_scrollbar(void) {
+    TEST("property browser: in-place edit avoids vertical scrollbar");
+
+    fe_setup();
+    form_doc_t *doc = g_app->doc;
+    doc->snap_to_grid = false;
+    window_t *list = fe_create_property_browser();
+    ASSERT_NOT_NULL(g_app->prop_win);
+    ASSERT_NOT_NULL(list);
+
+    fe_place_ctrl(doc, ID_TOOL_BUTTON, 20, 30, 80, 24);
+    fe_select(doc, 0);
+
+    show_scroll_bar(list, SB_VERT, true);
+    int y = 1 * COLUMNVIEW_ENTRY_HEIGHT + 1;
+    send_message(list, evLeftButtonDown, MAKEDWORD(80, y), NULL);
+
+    window_t *edit = list->children;
+    ASSERT_NOT_NULL(edit);
+    ASSERT_EQUAL(edit->frame.x, 72);
+    ASSERT_EQUAL(edit->frame.w, list->frame.w - 72 - SCROLLBAR_WIDTH);
+    ASSERT_TRUE(edit->frame.x + edit->frame.w <= list->frame.w - SCROLLBAR_WIDTH);
+
+    send_message(edit, evKeyDown, AX_KEY_ESCAPE, NULL);
+
+    fe_teardown();
+    PASS();
+}
+
 // form_save + form_load round-trips all element fields correctly.
 void test_fe_save_load_roundtrip(void) {
     TEST("save/load roundtrip: element count, type, geometry, text, name preserved");
@@ -753,6 +872,9 @@ int main(void) {
     test_fe_delete_middle_element();
     test_fe_element_ids_sequential();
     test_fe_element_names_generated();
+    test_fe_property_browser_uses_reportview_for_selection();
+    test_fe_property_browser_edits_caption_in_place();
+    test_fe_property_browser_edit_respects_vertical_scrollbar();
     test_fe_save_load_roundtrip();
     test_fe_save_load_form_dimensions();
     test_fe_file_new_resets_doc();

@@ -32,6 +32,8 @@ enum {
   RVM_SETREDRAW,            // wparam = 0 suspend redraw; non-zero resume and repaint if dirty
   RVM_SETICONSTRIP,         // lparam = bitmap_strip_t* (NULL to clear); strip owned by caller
   RVM_SETICONSIZE,          // wparam = icon pixel size for RVM_VIEW_LARGE_ICON mode
+  RVM_SETCOLUMNTITLESVISIBLE, // wparam = 0 hide report headers; non-zero show
+  RVM_GETCOLUMNTITLESVISIBLE,
 };
 
 enum {

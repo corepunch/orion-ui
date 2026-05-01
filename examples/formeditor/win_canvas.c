@@ -394,6 +394,7 @@ void canvas_sync_live_controls(form_doc_t *doc) {
   for (int i = 0; i < doc->element_count; i++)
     canvas_sync_live_element_window(doc, &doc->elements[i]);
   invalidate_window(doc->canvas_win);
+  property_browser_refresh(doc);
 }
 
 void canvas_rebuild_live_controls(form_doc_t *doc) {
@@ -829,6 +830,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         // Hit test elements
         int hit = hit_test_elements(s, lx, ly);
         s->selected_idx = hit;
+        property_browser_refresh(doc);
         if (hit >= 0) {
           form_element_t *el = &doc->elements[hit];
           s->drag = (drag_state_t){
@@ -865,6 +867,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           },
         };
         s->selected_idx = -1;
+        property_browser_refresh(doc);
         ctrl_make_caption(ctrl_type, doc->type_counters[ctrl_type] + 1,
                           preview_text, sizeof(preview_text));
         canvas_update_preview(s, ctrl_type, R(fp.x, fp.y, 1, 1), preview_text, 0);

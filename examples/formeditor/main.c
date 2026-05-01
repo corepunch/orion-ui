@@ -28,6 +28,8 @@ static void create_app_windows(hinstance_t hinstance) {
       NULL, win_tool_palette_proc, hinstance, NULL);
   show_window(tp, true);
   g_app->tool_win = tp;
+
+  g_app->prop_win = property_browser_create(hinstance);
 }
 
 bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
@@ -66,6 +68,8 @@ void gem_shutdown(void) {
   g_app->accel = NULL;
   if (g_app->doc)
     close_form_doc(g_app->doc);
+  if (g_app->prop_win)
+    destroy_window(g_app->prop_win);
   free(g_app);
   g_app = NULL;
 }

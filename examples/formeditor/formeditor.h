@@ -32,6 +32,13 @@
 #define PALETTE_GRID_ROWS ((NUM_TOOLS + TOOLBOX_COLS - 1) / TOOLBOX_COLS)
 #define PALETTE_WIN_H     (TITLEBAR_HEIGHT + PALETTE_GRID_ROWS * FE_TOOLBOX_BTN_SIZE + 4)
 
+// Property browser window.  This is intentionally a reportview-backed
+// inspector: close to VB1's simple property sheet, without inline editing yet.
+#define PROPBROWSER_WIN_X (SCREEN_W - 184)
+#define PROPBROWSER_WIN_Y (MENUBAR_HEIGHT + 4)
+#define PROPBROWSER_WIN_W 180
+#define PROPBROWSER_WIN_H 180
+
 // Document window initial position
 // frame.y is the window top; place it 8px below the menu bar.
 #define DOC_START_X       (PALETTE_WIN_X + PALETTE_WIN_W + 10)
@@ -127,6 +134,7 @@ typedef struct {
   form_doc_t  *doc;
   window_t    *menubar_win;
   window_t    *tool_win;
+  window_t    *prop_win;
   hinstance_t  hinstance;  // owning app instance
   int          current_tool;
   accel_table_t *accel;
@@ -200,8 +208,12 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
                           uint32_t wparam, void *lparam);
 result_t win_tool_palette_proc(window_t *win, uint32_t msg,
                                 uint32_t wparam, void *lparam);
+result_t win_property_browser_proc(window_t *win, uint32_t msg,
+                                    uint32_t wparam, void *lparam);
 void canvas_rebuild_live_controls(form_doc_t *doc);
 void canvas_sync_live_controls(form_doc_t *doc);
+window_t *property_browser_create(hinstance_t hinstance);
+void property_browser_refresh(form_doc_t *doc);
 
 // ============================================================
 // Document helpers
