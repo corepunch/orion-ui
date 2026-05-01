@@ -84,7 +84,7 @@ void test_control_message_constants(void) {
     TEST("Control message constants");
     
     // Verify control message constants
-    ASSERT_TRUE(btnSetCheck >= evUser);
+    ASSERT_TRUE((int)btnSetCheck >= (int)evUser);
     ASSERT_TRUE(btnGetCheck > btnSetCheck);
     ASSERT_TRUE(cbAddString > 0);
     ASSERT_TRUE(cbGetCurrentSelection > 0);
