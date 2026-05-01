@@ -23,8 +23,9 @@ app_state_t *app_init(void) {
     return NULL;
   }
 
-  app->next_id      = 1;
-  app->selected_idx = -1;
+  app->next_id         = 1;
+  app->next_comment_id = 1;
+  app->selected_idx    = -1;
   return app;
 }
 
@@ -95,4 +96,24 @@ void app_update_status(void) {
   snprintf(buf, sizeof(buf), "%d post%s",
            g_app->post_count, g_app->post_count == 1 ? "" : "s");
   send_message(g_app->main_win, evStatusBar, 0, buf);
+}
+
+// ============================================================
+// app_add_comment — assign an ID then add to the post
+// ============================================================
+
+bool app_add_comment(post_t *post, comment_t *c) {
+  if (!g_app || !post || !c) return false;
+  c->id = g_app->next_comment_id++;
+  return post_add_comment(post, c);
+}
+
+// ============================================================
+// app_add_reply — assign an ID then add to the parent comment
+// ============================================================
+
+bool app_add_reply(comment_t *parent, comment_t *reply) {
+  if (!g_app || !parent || !reply) return false;
+  reply->id = g_app->next_comment_id++;
+  return comment_add_reply(parent, reply);
 }

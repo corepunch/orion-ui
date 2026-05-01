@@ -121,7 +121,8 @@ typedef struct {
   post_t     **posts;
   int          post_count;
   int          post_cap;
-  int          next_id;
+  int          next_id;          // next post ID (Appwrite document ID)
+  int          next_comment_id;  // next comment / reply ID
   int          selected_idx;
   window_t    *menubar_win;
   window_t    *main_win;
@@ -158,6 +159,14 @@ bool         app_add_post(post_t *post);
 bool         app_delete_post(int index);
 post_t      *app_get_post(int index);
 void         app_update_status(void);
+
+// Append a comment to a post, assigning it a unique document ID.
+// Mirrors app_add_post — callers must use this instead of post_add_comment()
+// directly so that all comments are assigned monotonically increasing IDs.
+bool         app_add_comment(post_t *post, comment_t *c);
+
+// Append a reply to a comment, assigning it a unique document ID.
+bool         app_add_reply(comment_t *parent, comment_t *reply);
 
 // ============================================================
 // View — menu bar (view_menubar.c)

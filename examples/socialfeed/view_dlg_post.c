@@ -279,9 +279,9 @@ static result_t post_detail_proc(window_t *win, uint32_t msg,
                                       text,   sizeof(text))) {
             comment_t *c = comment_create(author, text);
             if (c) {
-              post_add_comment(s->post, c);
+              app_add_comment(s->post, c);
               refresh_comments(s);
-              SF_DEBUG("comment added post_id=%d", s->post->id);
+              SF_DEBUG("comment added post_id=%d comment_id=%d", s->post->id, c->id);
             }
           }
           return true;
@@ -311,9 +311,9 @@ static result_t post_detail_proc(window_t *win, uint32_t msg,
                                       text,   sizeof(text))) {
             comment_t *reply = comment_create(author, text);
             if (reply) {
-              comment_add_reply(parent_c, reply);
+              app_add_reply(parent_c, reply);
               refresh_comments(s);
-              SF_DEBUG("reply added comment_idx=%d", ci);
+              SF_DEBUG("reply added comment_idx=%d reply_id=%d", ci, reply->id);
             }
           }
           return true;
