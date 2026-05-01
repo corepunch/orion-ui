@@ -78,6 +78,8 @@
 #define ID_EDIT_DELETE  10
 #define ID_EDIT_PROPS   11
 
+#define ID_VIEW_GRID    20
+
 #define ID_HELP_ABOUT   100
 
 // Tool command IDs (VB3 toolbox slot numbers map to strip indices)
@@ -122,6 +124,10 @@ typedef struct {
   int    type_counters[CTRL_TYPE_COUNT]; // per-type name counter
   window_t *canvas_win;
   window_t *doc_win;
+  // Grid settings
+  int    grid_size;       // dot spacing in form pixels (default 8)
+  bool   show_grid;       // paint grid dots on the form surface
+  bool   snap_to_grid;    // snap moves/resizes to grid
 } form_doc_t;
 
 typedef struct {
