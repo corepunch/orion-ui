@@ -528,6 +528,163 @@ void test_cv_report_click_no_scroll_child(void) {
 
 // ---- main ------------------------------------------------------------------ //
 
+// ---- large-icon view tests ------------------------------------------------- //
+
+// Helper: create a win_reportview in RVM_VIEW_LARGE_ICON mode with a fixed
+// cell width so ncol is predictable.
+static window_t *make_large_icon_columnview(window_t *parent, int w, int h,
+                                             int cell_w, int icon_sz) {
+    rect_t fr = {0, 0, w, h};
+    window_t *cv = create_window("li", WINDOW_NOTITLE | WINDOW_NOFILL,
+                                 &fr, parent, win_reportview, 0, NULL);
+    if (!cv) return NULL;
+    send_message(cv, RVM_SETVIEWMODE,   RVM_VIEW_LARGE_ICON, NULL);
+    send_message(cv, RVM_SETCOLUMNWIDTH, (uint32_t)cell_w,   NULL);
+    send_message(cv, RVM_SETICONSIZE,   (uint32_t)icon_sz,   NULL);
+    return cv;
+}
+
+// RVM_SETICONSIZE accepts a positive value and rejects zero.
+void test_cv_large_icon_seticonsize(void) {
+    TEST("win_reportview large-icon: RVM_SETICONSIZE accepts positive, rejects zero");
+
+    test_env_init();
+
+    window_t *parent = test_env_create_window("P", 0, 0, 300, 200,
+                                               cmd_capture_proc, NULL);
+    ASSERT_NOT_NULL(parent);
+    window_t *cv = make_large_icon_columnview(parent, 300, 200, 72, 32);
+    ASSERT_NOT_NULL(cv);
+
+    // Valid size should succeed.
+    result_t r = send_message(cv, RVM_SETICONSIZE, 64, NULL);
+    ASSERT_TRUE(r);
+
+    // Zero should fail.
+    r = send_message(cv, RVM_SETICONSIZE, 0, NULL);
+    ASSERT_FALSE(r);
+
+    destroy_window(parent);
+    test_env_shutdown();
+    PASS();
+}
+
+// RVM_SETVIEWMODE accepts RVM_VIEW_LARGE_ICON and rejects invalid values.
+void test_cv_large_icon_setviewmode(void) {
+    TEST("win_reportview large-icon: RVM_SETVIEWMODE accepts large-icon mode");
+
+    test_env_init();
+
+    window_t *parent = test_env_create_window("P", 0, 0, 300, 200,
+                                               cmd_capture_proc, NULL);
+    ASSERT_NOT_NULL(parent);
+    rect_t fr = {0, 0, 300, 200};
+    window_t *cv = create_window("cv", WINDOW_NOTITLE | WINDOW_NOFILL,
+                                 &fr, parent, win_reportview, 0, NULL);
+    ASSERT_NOT_NULL(cv);
+
+    result_t r = send_message(cv, RVM_SETVIEWMODE, RVM_VIEW_LARGE_ICON, NULL);
+    ASSERT_TRUE(r);
+
+    // An out-of-range mode value should fail.
+    r = send_message(cv, RVM_SETVIEWMODE, 99, NULL);
+    ASSERT_FALSE(r);
+
+    destroy_window(parent);
+    test_env_shutdown();
+    PASS();
+}
+
+// In large-icon mode, Down from no selection selects item 0 and notifies.
+void test_cv_large_icon_down_from_no_selection(void) {
+    TEST("win_reportview large-icon: Down with no selection selects item 0");
+
+    test_env_init();
+    reset_cmd_state();
+
+    window_t *parent = test_env_create_window("P", 0, 0, 300, 200,
+                                               cmd_capture_proc, NULL);
+    ASSERT_NOT_NULL(parent);
+    // cell_w=72, icon_sz=64 → ncol = MAX(1,(300-16)/72) = 3 columns
+    window_t *cv = make_large_icon_columnview(parent, 300, 200, 72, 64);
+    ASSERT_NOT_NULL(cv);
+    add_items(cv, 6);
+
+    result_t r = send_message(cv, evKeyDown, AX_KEY_DOWNARROW, NULL);
+
+    ASSERT_TRUE(r);
+    ASSERT_EQUAL(g_cmd_count, 1);
+    ASSERT_EQUAL(g_last_notification, RVN_SELCHANGE);
+    ASSERT_EQUAL(g_last_index, 0);
+
+    destroy_window(parent);
+    test_env_shutdown();
+    PASS();
+}
+
+// In large-icon mode, Down from item 0 jumps an entire row (ncol items).
+void test_cv_large_icon_down_advances_row(void) {
+    TEST("win_reportview large-icon: Down advances by ncol items");
+
+    test_env_init();
+    reset_cmd_state();
+
+    window_t *parent = test_env_create_window("P", 0, 0, 300, 200,
+                                               cmd_capture_proc, NULL);
+    ASSERT_NOT_NULL(parent);
+    // cell_w=72, icon_sz=64, window_w=300
+    // ncol = MAX(1, (300 - 2*8) / 72) = MAX(1, 284/72) = 3
+    window_t *cv = make_large_icon_columnview(parent, 300, 200, 72, 64);
+    ASSERT_NOT_NULL(cv);
+    add_items(cv, 9);
+
+    send_message(cv, RVM_SETSELECTION, 0, NULL);
+    reset_cmd_state();
+
+    send_message(cv, evKeyDown, AX_KEY_DOWNARROW, NULL);
+
+    // ncol=3, so item 0 + 3 = item 3
+    ASSERT_EQUAL(g_cmd_count, 1);
+    ASSERT_EQUAL(g_last_notification, RVN_SELCHANGE);
+    ASSERT_EQUAL(g_last_index, 3);
+    ASSERT_EQUAL((int)send_message(cv, RVM_GETSELECTION, 0, NULL), 3);
+
+    destroy_window(parent);
+    test_env_shutdown();
+    PASS();
+}
+
+// In large-icon mode, Left and Right move within the same row by one cell.
+void test_cv_large_icon_left_right(void) {
+    TEST("win_reportview large-icon: Left/Right move within row");
+
+    test_env_init();
+    reset_cmd_state();
+
+    window_t *parent = test_env_create_window("P", 0, 0, 300, 200,
+                                               cmd_capture_proc, NULL);
+    ASSERT_NOT_NULL(parent);
+    window_t *cv = make_large_icon_columnview(parent, 300, 200, 72, 64);
+    ASSERT_NOT_NULL(cv);
+    add_items(cv, 6);
+
+    send_message(cv, RVM_SETSELECTION, 1, NULL);
+    reset_cmd_state();
+
+    // Right → item 2
+    send_message(cv, evKeyDown, AX_KEY_RIGHTARROW, NULL);
+    ASSERT_EQUAL(g_last_index, 2);
+
+    // Left back → item 1
+    reset_cmd_state();
+    send_message(cv, evKeyDown, AX_KEY_LEFTARROW, NULL);
+    ASSERT_EQUAL(g_last_index, 1);
+
+    destroy_window(parent);
+    test_env_shutdown();
+    PASS();
+}
+
 int main(int argc, char *argv[]) {
     (void)argc; (void)argv;
     TEST_START("win_reportview keyboard navigation");
@@ -547,6 +704,11 @@ int main(int argc, char *argv[]) {
     test_cv_down_scrolls_selection_into_view();
     test_cv_report_click_no_scroll_child();
     test_cv_report_click_after_scroll_child();
+    test_cv_large_icon_seticonsize();
+    test_cv_large_icon_setviewmode();
+    test_cv_large_icon_down_from_no_selection();
+    test_cv_large_icon_down_advances_row();
+    test_cv_large_icon_left_right();
 
     TEST_END();
 }
