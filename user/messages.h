@@ -17,6 +17,10 @@ enum {
   evSetFocus,
   evKillFocus,
   evHitTest,
+  // Sent to a parent before selected mouse/key events are delivered to a
+  // child window, analogous to WinAPI WM_PARENTNOTIFY but consumable.
+  // wparam = 0; lparam = parent_notify_t*. Return true to consume the event.
+  evParentNotify,
   evCommand,
   evTextInput,
   evWheel,

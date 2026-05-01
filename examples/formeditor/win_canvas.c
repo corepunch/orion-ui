@@ -57,6 +57,19 @@ static inline int local_to_form_y(canvas_state_t *s, int ly) {
   return ly + s->pan.y;
 }
 
+static void canvas_set_draw_space(window_t *win) {
+  window_t *root = get_root_window(win);
+  int t = titlebar_height(root);
+  int cx = win->parent ? win->frame.x : 0;
+  int cy = win->parent ? win->frame.y : 0;
+
+  set_viewport(root->frame);
+  set_projection(root->scroll[0] - cx,
+                 -t - cy + root->scroll[1],
+                 root->frame.w + root->scroll[0] - cx,
+                 root->frame.h - t - cy + root->scroll[1]);
+}
+
 // ============================================================
 // Scrollbar helpers  (hscroll on doc_win, vscroll on canvas_win)
 // ============================================================
@@ -188,47 +201,6 @@ static irect16_t clamp_to_form(form_doc_t *doc, irect16_t r) {
 
 static void draw_handles(window_t *win, canvas_state_t *s);
 static void draw_rubber_band(window_t *win, canvas_state_t *s);
-static void canvas_create_overlay(window_t *canvas_win, canvas_state_t *s);
-
-// Design-time interaction layer.
-//
-// Classic VB/ActiveX designers treated hosted controls as components inside a
-// container-managed design surface: the IDE/container owned selection,
-// drag/resize handles, and design-mode mouse interaction, while the control
-// mostly contributed its visual representation and used container/ambient
-// state (for example UserMode) to distinguish design-time from runtime.
-//
-// We mirror that approach here by placing a transparent overlay above all live
-// controls. The real controls still paint themselves underneath, but the
-// overlay is the only child that participates in hit-testing, so design-time
-// input is handled consistently by the form editor rather than by each control.
-static result_t live_overlay_proc(window_t *win, uint32_t msg,
-                                  uint32_t wparam, void *lparam) {
-  switch (msg) {
-    case evCreate:
-      win->userdata = lparam;
-      win->notabstop = false;
-      return true;
-    case evPaint: {
-      canvas_state_t *s = (canvas_state_t *)win->userdata;
-      if (!s) return true;
-      draw_handles(win, s);
-      draw_rubber_band(win, s);
-      return true;
-    }
-    case evLeftButtonDown:
-    case evLeftButtonDoubleClick:
-    case evLeftButtonUp:
-    case evMouseMove:
-    case evWheel:
-    case evKeyDown:
-    case evKeyUp:
-    case evSetFocus:
-      return send_message(win->parent, msg, wparam, lparam);
-    default:
-      return false;
-  }
-}
 
 static winproc_t ctrl_type_to_proc(int type) {
   switch (type) {
@@ -293,16 +265,8 @@ static result_t design_live_ctrl_proc(window_t *win, uint32_t msg,
     case evLeftButtonUp:
     case evRightButtonDown:
     case evRightButtonUp:
-    case evMouseMove: {
-      if (win->parent) {
-        int lx = (int16_t)LOWORD(wparam);
-        int ly = (int16_t)HIWORD(wparam);
-        return send_message(win->parent, msg,
-                            MAKEDWORD(win->frame.x + lx, win->frame.y + ly),
-                            lparam);
-      }
+    case evMouseMove:
       return true;
-    }
     case evKeyDown:
     case evKeyUp:
     case evCommand:
@@ -333,13 +297,6 @@ static result_t preview_ctrl_proc(window_t *win, uint32_t msg,
     case evRightButtonDown:
     case evRightButtonUp:
     case evMouseMove:
-      if (win->parent) {
-        int lx = (int16_t)LOWORD(wparam);
-        int ly = (int16_t)HIWORD(wparam);
-        return send_message(win->parent, msg,
-                            MAKEDWORD(win->frame.x + lx, win->frame.y + ly),
-                            lparam);
-      }
       return true;
     case evKeyDown:
     case evKeyUp:
@@ -349,15 +306,6 @@ static result_t preview_ctrl_proc(window_t *win, uint32_t msg,
     default:
       return false;
   }
-}
-
-static void canvas_sync_overlay_frame(form_doc_t *doc) {
-  canvas_state_t *s;
-  if (!doc || !doc->canvas_win) return;
-  s = (canvas_state_t *)doc->canvas_win->userdata;
-  if (!s || !canvas_child_window_alive(doc->canvas_win, s->overlay_win)) return;
-  move_window(s->overlay_win, 0, 0);
-  resize_window(s->overlay_win, doc->canvas_win->frame.w, doc->canvas_win->frame.h);
 }
 
 static void canvas_destroy_preview(canvas_state_t *s) {
@@ -409,7 +357,6 @@ static void canvas_update_preview(canvas_state_t *s, int type, int x, int y, int
                                    doc->canvas_win, preview_ctrl_proc, 0, NULL);
     if (!s->preview_win) return;
     s->preview_win->notabstop = true;
-    canvas_create_overlay(doc->canvas_win, s);
   }
 
   move_window(s->preview_win, form_to_sx(s, x), form_to_sy(s, y));
@@ -418,16 +365,6 @@ static void canvas_update_preview(canvas_state_t *s, int type, int x, int y, int
     snprintf(s->preview_win->title, sizeof(s->preview_win->title), "%s", text);
     invalidate_window(s->preview_win);
   }
-}
-
-static void canvas_create_overlay(window_t *canvas_win, canvas_state_t *s) {
-  if (!canvas_win || !s) return;
-  if (canvas_child_window_alive(canvas_win, s->overlay_win))
-    destroy_window(s->overlay_win);
-  s->overlay_win = create_window("", WINDOW_NOTITLE | WINDOW_NOFILL,
-                                 MAKERECT(0, 0, canvas_win->frame.w, canvas_win->frame.h),
-                                 canvas_win, live_overlay_proc, 0, s);
-  if (s->overlay_win) s->overlay_win->notabstop = false;
 }
 
 static void canvas_sync_live_element_window(form_doc_t *doc, form_element_t *el) {
@@ -464,7 +401,6 @@ void canvas_sync_live_controls(form_doc_t *doc) {
   if (!doc || !doc->canvas_win) return;
   for (int i = 0; i < doc->element_count; i++)
     canvas_sync_live_element_window(doc, &doc->elements[i]);
-  canvas_sync_overlay_frame(doc);
   invalidate_window(doc->canvas_win);
 }
 
@@ -482,7 +418,6 @@ void canvas_rebuild_live_controls(form_doc_t *doc) {
     canvas_create_live_element_window(doc, &doc->elements[i]);
   }
 
-  canvas_create_overlay(doc->canvas_win, s);
   canvas_sync_live_controls(doc);
 }
 
@@ -658,7 +593,6 @@ static int canvas_add_element(form_doc_t *doc, int type, irect16_t frame) {
   if (s)
     s->selected_idx = index;
   canvas_create_live_element_window(doc, el);
-  canvas_create_overlay(doc->canvas_win, (canvas_state_t *)doc->canvas_win->userdata);
   canvas_sync_live_controls(doc);
   doc->modified = true;
   form_doc_update_title(doc);
@@ -830,7 +764,44 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       // Dot grid on the form surface
       draw_grid(s, fx, fy, fw, fh);
 
-      return false;
+      for (window_t *child = win->children; child; child = child->next)
+        send_message(child, evPaint, 0, NULL);
+      canvas_set_draw_space(win);
+      draw_handles(win, s);
+      draw_rubber_band(win, s);
+
+      return true;
+    }
+
+    case evParentNotify: {
+      if (!s || !doc || !lparam) return false;
+      parent_notify_t *pn = (parent_notify_t *)lparam;
+      if (!pn->child || pn->child->parent != win)
+        return false;
+
+      uint32_t child_msg = pn->child_msg;
+      uint32_t child_wp = pn->child_wparam;
+      switch (child_msg) {
+        case evLeftButtonDown:
+        case evLeftButtonDoubleClick:
+        case evLeftButtonUp:
+        case evRightButtonDown:
+        case evRightButtonUp:
+        case evMouseMove: {
+          int lx = (int16_t)LOWORD(child_wp);
+          int ly = (int16_t)HIWORD(child_wp);
+          uint32_t parent_wp = MAKEDWORD(pn->child->frame.x + lx,
+                                         pn->child->frame.y + ly);
+          return win_canvas_proc(win, child_msg, parent_wp, pn->child_lparam);
+        }
+        case evWheel:
+        case evKeyDown:
+        case evKeyUp:
+        case evTextInput:
+          return win_canvas_proc(win, child_msg, child_wp, pn->child_lparam);
+        default:
+          return false;
+      }
     }
 
     case evLeftButtonDown: {

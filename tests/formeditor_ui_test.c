@@ -129,13 +129,6 @@ static canvas_state_t *fe_state(form_doc_t *doc) {
     return (canvas_state_t *)doc->canvas_win->userdata;
 }
 
-static window_t *fe_last_canvas_child(form_doc_t *doc) {
-    window_t *last = NULL;
-    for (window_t *child = doc->canvas_win->children; child; child = child->next)
-        last = child;
-    return last;
-}
-
 // ── Tests ──────────────────────────────────────────────────────────────────
 
 // A freshly created document has the expected defaults and no elements.
@@ -261,7 +254,6 @@ void test_fe_button_preview_visible_while_dragging(void) {
     ASSERT_EQUAL(s->preview_win->frame.y, 20);
     ASSERT_EQUAL(s->preview_win->frame.w, 80);
     ASSERT_EQUAL(s->preview_win->frame.h, 30);
-    ASSERT_TRUE(fe_last_canvas_child(doc) == s->overlay_win);
 
     send_message(doc->canvas_win, evMouseMove,
                  MAKEDWORD(120, 60), NULL);
@@ -294,7 +286,6 @@ void test_fe_begin_place_drag_deselects_previous_element(void) {
     fe_begin_place_drag(doc, ID_TOOL_LABEL, 40, 50, 60, 16);
 
     ASSERT_EQUAL(fe_state(doc)->selected_idx, -1);
-    ASSERT_TRUE(fe_last_canvas_child(doc) == fe_state(doc)->overlay_win);
 
     send_message(doc->canvas_win, evLeftButtonUp, MAKEDWORD(100, 66), NULL);
 
@@ -302,10 +293,10 @@ void test_fe_begin_place_drag_deselects_previous_element(void) {
     PASS();
 }
 
-// If a live preview receives mouse-up directly, it must forward to the canvas
-// so placement is finalized and capture/state are released.
-void test_fe_preview_forwards_mouseup_to_finish_placement(void) {
-    TEST("place button drag: preview mouse-up finalizes placement");
+// If a live preview receives mouse-up directly, parent notification lets the
+// canvas finalize placement before the preview control can handle the event.
+void test_fe_preview_parent_notify_finishes_placement(void) {
+    TEST("place button drag: preview parent notify finalizes placement");
 
     fe_setup();
     form_doc_t *doc = g_app->doc;
@@ -385,7 +376,7 @@ void test_fe_place_all_types(void) {
     PASS();
 }
 
-// Placing a control creates a live_win child and an overlay on the canvas.
+// Placing a control creates a live_win child on the canvas.
 void test_fe_live_windows_created(void) {
     TEST("place button: live_win created and is_window");
 
@@ -398,10 +389,6 @@ void test_fe_live_windows_created(void) {
     ASSERT_EQUAL(doc->element_count, 1);
     ASSERT_NOT_NULL(doc->elements[0].live_win);          // child window
     ASSERT_TRUE(doc->elements[0].live_win->parent == doc->canvas_win);
-    // The overlay must also exist on the canvas.
-    canvas_state_t *s = fe_state(doc);
-    ASSERT_NOT_NULL(s->overlay_win);                     // child window
-    ASSERT_TRUE(s->overlay_win->parent == doc->canvas_win);
 
     fe_teardown();
     PASS();
@@ -426,10 +413,10 @@ void test_fe_select_element(void) {
     PASS();
 }
 
-// If the live design-time control receives the click first, it must forward
-// the translated coordinates to the canvas so selection still works.
-void test_fe_live_button_forwards_click_to_canvas_selection(void) {
-    TEST("live button design wrapper: forwards click for canvas selection");
+// If the live design-time control receives the click first, parent notification
+// lets the canvas select it before the control can handle the event.
+void test_fe_live_button_parent_notify_selects_on_click(void) {
+    TEST("live button parent notify selects on click");
 
     fe_setup();
     form_doc_t *doc = g_app->doc;
@@ -752,12 +739,12 @@ int main(void) {
     test_fe_place_button();
     test_fe_button_preview_visible_while_dragging();
     test_fe_begin_place_drag_deselects_previous_element();
-    test_fe_preview_forwards_mouseup_to_finish_placement();
+    test_fe_preview_parent_notify_finishes_placement();
     test_fe_placement_type_latched_on_mousedown();
     test_fe_place_all_types();
     test_fe_live_windows_created();
     test_fe_select_element();
-    test_fe_live_button_forwards_click_to_canvas_selection();
+    test_fe_live_button_parent_notify_selects_on_click();
     test_fe_deselect_on_empty_click();
     test_fe_resize_element();
     test_fe_resize_clamped_to_minimum();

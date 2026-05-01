@@ -83,7 +83,7 @@ static int resize_anchor[2];
 static int handle_mouse(int msg, window_t *win, int x, int y) {
   for (window_t *c = win->children; c; c = c->next) {
     if (CONTAINS(x, y, c->frame.x, c->frame.y, c->frame.w, c->frame.h) &&
-        c->proc(c, msg, MAKEDWORD(x - c->frame.x, y - c->frame.y), NULL))
+        send_message(c, msg, MAKEDWORD(x - c->frame.x, y - c->frame.y), NULL))
     {
       return true;
     }

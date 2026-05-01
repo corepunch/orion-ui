@@ -23,6 +23,13 @@ typedef uint32_t hinstance_t;
 // Window procedure callback type
 typedef result_t (*winproc_t)(window_t *, uint32_t, uint32_t, void *);
 
+typedef struct {
+  window_t *child;       // child about to receive the event
+  uint32_t  child_msg;   // original event message
+  uint32_t  child_wparam;
+  void     *child_lparam;
+} parent_notify_t;
+
 // Window hook callback type
 typedef void (*winhook_func_t)(window_t *win, uint32_t msg, uint32_t wparam, void *lparam, void *userdata);
 

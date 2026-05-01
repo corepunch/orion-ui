@@ -149,7 +149,6 @@ typedef enum {
 
 typedef struct {
   form_doc_t *doc;
-  window_t   *overlay_win;
   window_t   *preview_win;
   int         preview_type;
   int         placing_type;    // CTRL_* being placed, or -1 when not placing
