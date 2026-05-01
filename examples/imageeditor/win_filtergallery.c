@@ -4,7 +4,6 @@
 // texture strip so no shader runs per frame during display.
 
 #include "imageeditor.h"
-#include "../../commctl/columnview.h"
 
 #define FG_CLIENT_W       560
 #define FG_CLIENT_H       360
@@ -168,6 +167,7 @@ static result_t filter_gallery_proc(window_t *win, uint32_t msg,
         send_message(list, RVM_SETCOLUMNWIDTH, FG_ICON_CELL_W, NULL);
         send_message(list, RVM_SETICONSIZE,  FG_ICON_SIZE, NULL);
         send_message(list, RVM_SETICONSTRIP, 0, &st->thumb_strip);
+        send_message(list, RVM_SETREDRAW, 0, NULL);
         int count = g_app ? g_app->filter_count : 0;
         for (int i = 0; i < count; i++) {
           reportview_item_t item = {
@@ -177,6 +177,7 @@ static result_t filter_gallery_proc(window_t *win, uint32_t msg,
           };
           send_message(list, RVM_ADDITEM, 0, &item);
         }
+        send_message(list, RVM_SETREDRAW, 1, NULL);
         if (st->selected >= 0)
           send_message(list, RVM_SETSELECTION, (uint32_t)st->selected, NULL);
       }

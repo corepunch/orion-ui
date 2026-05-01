@@ -333,16 +333,13 @@ static void rv_draw_item_icon(bitmap_strip_t *strip, int icon_id,
   if (strip && strip->tex != 0 && strip->cols > 0) {
     int total = strip->cols * (strip->sheet_h / strip->icon_h);
     if (icon_id >= 0 && icon_id < total) {
-      int scol   = icon_id % strip->cols;
-      int srow   = icon_id / strip->cols;
-      int icon_sz = strip->icon_w;
-      int ix = icon_rect->x + (icon_rect->w - icon_sz) / 2;
-      int iy = icon_rect->y + (icon_rect->h - icon_sz) / 2;
+      int scol = icon_id % strip->cols;
+      int srow = icon_id / strip->cols;
       float u0 = (float)(scol * strip->icon_w) / (float)strip->sheet_w;
       float v0 = (float)(srow * strip->icon_h) / (float)strip->sheet_h;
       float u1 = u0 + (float)strip->icon_w / (float)strip->sheet_w;
       float v1 = v0 + (float)strip->icon_h / (float)strip->sheet_h;
-      draw_sprite_region((int)strip->tex, R(ix, iy, icon_sz, icon_sz),
+      draw_sprite_region((int)strip->tex, *icon_rect,
                          UV_RECT(u0, v0, u1, v1), col, 0);
       return;
     }
@@ -450,7 +447,8 @@ static void rv_paint_large_icon_view(window_t *win, reportview_data_t *data) {
                 rect_inset(R(cx + 2, icon_r.y - 2, cell_w - 4, sel_h), -1));
     }
 
-    rv_draw_item_icon(strip, data->items[i].icon, &icon_r, 0xffffffff);
+    rv_draw_item_icon(strip, data->items[i].icon, &icon_r,
+                      selected ? 0xffffffff : data->items[i].color);
 
     uint32_t txt_col = selected ? get_sys_color(brActiveTitlebarText)
                                 : get_sys_color(brTextNormal);
