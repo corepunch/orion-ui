@@ -282,16 +282,58 @@ static void draw_rubber_band(window_t *win, canvas_state_t *s) {
   draw_sel_rect(R(sx, sy, x1 - x0, y1 - y0));
 }
 
-// Draw the design-time dot grid on the form surface.
-// Dots are drawn at every (n*grid, m*grid) intersection in form coordinates.
+static uint32_t g_grid_dot_tex = 0;
+static int      g_grid_dot_tex_size = 0;
+
+static uint32_t ensure_grid_dot_texture(int grid) {
+  if (g_grid_dot_tex != 0 && g_grid_dot_tex_size == grid)
+    return g_grid_dot_tex;
+
+  if (g_grid_dot_tex != 0) {
+    R_DeleteTexture(g_grid_dot_tex);
+    g_grid_dot_tex = 0;
+    g_grid_dot_tex_size = 0;
+  }
+
+  size_t pixel_count = (size_t)grid * (size_t)grid;
+  uint8_t *pixels = (uint8_t *)calloc(pixel_count, 4);
+  if (!pixels)
+    return 0;
+
+  pixels[0] = 255;
+  pixels[1] = 255;
+  pixels[2] = 255;
+  pixels[3] = 255;
+  g_grid_dot_tex = R_CreateTextureRGBA(grid, grid, pixels,
+                                       R_FILTER_NEAREST, R_WRAP_REPEAT);
+  free(pixels);
+  if (g_grid_dot_tex != 0)
+    g_grid_dot_tex_size = grid;
+  return g_grid_dot_tex;
+}
+
+static void free_grid_dot_texture(void) {
+  if (g_grid_dot_tex == 0)
+    return;
+  R_DeleteTexture(g_grid_dot_tex);
+  g_grid_dot_tex = 0;
+  g_grid_dot_tex_size = 0;
+}
+
+// Draw the design-time dot grid with one repeat-wrapped texture draw.
+// The texture is grid x grid pixels with a single opaque dot at (0,0).
 static void draw_grid(canvas_state_t *s, int fx, int fy, int fw, int fh) {
   form_doc_t *doc = s->doc;
   if (!doc->show_grid) return;
   int grid = doc->grid_size;
   if (grid <= 1) return;  // grid=1 would paint every pixel; skip for performance
-  for (int gx = 0; gx < fw; gx += grid)
-    for (int gy = 0; gy < fh; gy += grid)
-      fill_rect(GRID_DOT_COLOR, R(fx + gx, fy + gy, 1, 1));
+  uint32_t tex = ensure_grid_dot_texture(grid);
+  if (tex == 0) return;
+  draw_sprite_region((int)tex, R(fx, fy, fw, fh),
+                     UV_RECT(0.0f, 0.0f,
+                             (float)fw / (float)grid,
+                             (float)fh / (float)grid),
+                     GRID_DOT_COLOR, 0);
 }
 
 // ============================================================
@@ -447,6 +489,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
     }
 
     case evDestroy:
+      free_grid_dot_texture();
       // win->userdata freed by the framework via allocate_window_data.
       return false;
 
