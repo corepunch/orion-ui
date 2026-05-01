@@ -180,75 +180,164 @@ static void clamp_to_form(form_doc_t *doc, int *x, int *y, int *w, int *h) {
   if (*h < 1) *h = 1;
 }
 
-// Draw a sunken (inset) box at absolute screen coords.
-static void draw_sunken_box(int sx, int sy, int sw, int sh) {
-  fill_rect(0xFFFFFFFF, R(sx, sy, sw, sh));
-  fill_rect(get_sys_color(brDarkEdge),  R(sx, sy, sw, 1));
-  fill_rect(get_sys_color(brDarkEdge),  R(sx, sy, 1, sh));
-  fill_rect(get_sys_color(brLightEdge), R(sx, sy + sh, sw, 1));
-  fill_rect(get_sys_color(brLightEdge), R(sx + sw, sy, 1, sh));
-}
+static void draw_handles(window_t *win, canvas_state_t *s);
+static void draw_rubber_band(window_t *win, canvas_state_t *s);
 
-// Draw a control element at its form-space position translated to screen.
-static void draw_element(window_t *win, canvas_state_t *s, form_element_t *el) {
-  int sx = form_to_sx(s, el->x);
-  int sy = form_to_sy(s, el->y);
-  int sw = el->w;
-  int sh = el->h;
-  uint32_t text_col = get_sys_color(brTextNormal);
-
-  switch (el->type) {
-    case CTRL_BUTTON: {
-      irect16_t r = {sx, sy, sw, sh};
-      draw_button(r, 1, 1, false);
-      int tw = strwidth(el->text);
-      int tx = sx + (sw - tw) / 2;
-      int ty = sy + (sh - 8) / 2;
-      if (tx < sx) tx = sx + 2;
-      if (ty < sy) ty = sy + 1;
-      draw_text_small(el->text, tx, ty, text_col);
-      break;
-    }
-    case CTRL_CHECKBOX: {
-      int bx = sx + 1;
-      int by = sy + (sh - 8) / 2;
-      if (by < sy) by = sy;
-      fill_rect(0xFFFFFFFF, R(bx, by, 8, 8));
-      fill_rect(get_sys_color(brDarkEdge), R(bx, by, 8, 1));
-      fill_rect(get_sys_color(brDarkEdge), R(bx, by, 1, 8));
-      fill_rect(get_sys_color(brLightEdge), R(bx, by + 8, 8, 1));
-      fill_rect(get_sys_color(brLightEdge), R(bx + 8, by, 1, 8));
-      draw_text_small(el->text, bx + 12, by, text_col);
-      break;
-    }
-    case CTRL_LABEL:
-      draw_text_small(el->text, sx + 1, sy + (sh - 8) / 2, text_col);
-      break;
-    case CTRL_TEXTEDIT:
-      draw_sunken_box(sx, sy, sw, sh);
-      draw_text_small(el->text, sx + 2, sy + (sh - 8) / 2, text_col);
-      break;
-    case CTRL_LIST:
-      draw_sunken_box(sx, sy, sw, sh);
-      for (int row = 0; row + 10 < sh; row += 10)
-        fill_rect(get_sys_color(brWindowDarkBg), R(sx + 1, sy + row + 9, sw - 2, 1));
-      break;
-    case CTRL_COMBOBOX: {
-      draw_sunken_box(sx, sy, sw, sh);
-      int aw = 10;
-      irect16_t btn = {sx + sw - aw, sy, aw, sh};
-      draw_button(btn, 1, 1, false);
-      draw_text_small(el->text, sx + 2, sy + (sh - 8) / 2, text_col);
-      break;
+static result_t live_overlay_proc(window_t *win, uint32_t msg,
+                                  uint32_t wparam, void *lparam) {
+  (void)wparam;
+  switch (msg) {
+    case evCreate:
+      win->userdata = lparam;
+      win->notabstop = true;
+      return true;
+    case evPaint: {
+      canvas_state_t *s = (canvas_state_t *)win->userdata;
+      if (!s) return true;
+      draw_handles(win, s);
+      draw_rubber_band(win, s);
+      return true;
     }
     default:
-      fill_rect(get_sys_color(brWindowBg), R(sx, sy, sw, sh));
-      break;
+      return false;
   }
+}
+
+static winproc_t ctrl_type_to_proc(int type) {
+  switch (type) {
+    case CTRL_BUTTON:   return win_button;
+    case CTRL_CHECKBOX: return win_checkbox;
+    case CTRL_LABEL:    return win_label;
+    case CTRL_TEXTEDIT: return win_textedit;
+    case CTRL_LIST:     return win_list;
+    case CTRL_COMBOBOX: return win_combobox;
+    default:            return NULL;
+  }
+}
+
+static form_element_t *canvas_find_element_for_live_window(window_t *win) {
+  canvas_state_t *s;
+  form_doc_t *doc;
+  if (!win || !win->parent) return NULL;
+  s = (canvas_state_t *)win->parent->userdata;
+  if (!s) return NULL;
+  doc = s->doc;
+  if (!doc) return NULL;
+  for (int i = 0; i < doc->element_count; i++) {
+    if (doc->elements[i].live_win == win)
+      return &doc->elements[i];
+  }
+  return NULL;
+}
+
+static result_t design_live_ctrl_proc(window_t *win, uint32_t msg,
+                                      uint32_t wparam, void *lparam) {
+  form_element_t *el = canvas_find_element_for_live_window(win);
+  winproc_t real_proc = el ? ctrl_type_to_proc(el->type) : NULL;
+
+  switch (msg) {
+    case evCreate:
+      win->notabstop = true;
+      win->disabled = true;
+      return real_proc ? real_proc(win, msg, wparam, lparam) : true;
+    case evDestroy:
+    case evPaint:
+    case evResize:
+      return real_proc ? real_proc(win, msg, wparam, lparam) : false;
+    case evLeftButtonDown:
+    case evLeftButtonDoubleClick:
+    case evLeftButtonUp:
+    case evRightButtonDown:
+    case evRightButtonUp:
+    case evMouseMove:
+    case evKeyDown:
+    case evKeyUp:
+    case evCommand:
+    case evSetFocus:
+      return true;
+    default:
+      return false;
+  }
+}
+
+static void canvas_sync_overlay_frame(form_doc_t *doc) {
+  canvas_state_t *s;
+  if (!doc || !doc->canvas_win) return;
+  s = (canvas_state_t *)doc->canvas_win->userdata;
+  if (!s || !s->overlay_win || !is_window(s->overlay_win)) return;
+  move_window(s->overlay_win, 0, 0);
+  resize_window(s->overlay_win, doc->canvas_win->frame.w, doc->canvas_win->frame.h);
+}
+
+static void canvas_create_overlay(window_t *canvas_win, canvas_state_t *s) {
+  if (!canvas_win || !s) return;
+  if (s->overlay_win && is_window(s->overlay_win))
+    destroy_window(s->overlay_win);
+  s->overlay_win = create_window("", WINDOW_NOTITLE | WINDOW_NOFILL,
+                                 MAKERECT(0, 0, canvas_win->frame.w, canvas_win->frame.h),
+                                 canvas_win, live_overlay_proc, 0, s);
+  if (s->overlay_win) s->overlay_win->notabstop = true;
+}
+
+static void canvas_sync_live_element_window(form_doc_t *doc, form_element_t *el) {
+  canvas_state_t *s;
+  if (!doc || !doc->canvas_win || !el || !el->live_win || !is_window(el->live_win))
+    return;
+  s = (canvas_state_t *)doc->canvas_win->userdata;
+  if (!s) return;
+  move_window(el->live_win, form_to_sx(s, el->x), form_to_sy(s, el->y));
+  resize_window(el->live_win, el->w, el->h);
+  if (strcmp(el->live_win->title, el->text) != 0) {
+    snprintf(el->live_win->title, sizeof(el->live_win->title), "%s", el->text);
+    invalidate_window(el->live_win);
+  }
+}
+
+static void canvas_create_live_element_window(form_doc_t *doc, form_element_t *el) {
+  canvas_state_t *s;
+  if (!doc || !doc->canvas_win || !el) return;
+  s = (canvas_state_t *)doc->canvas_win->userdata;
+  if (!s) return;
+  if (!ctrl_type_to_proc(el->type)) return;
+  el->live_win = create_window(el->text, el->flags,
+                               MAKERECT(form_to_sx(s, el->x), form_to_sy(s, el->y),
+                                        el->w, el->h),
+                               doc->canvas_win, design_live_ctrl_proc, 0, NULL);
+  if (!el->live_win) return;
+  el->live_win->id = el->id;
+  el->live_win->notabstop = true;
+  el->live_win->disabled = true;
+}
+
+void canvas_sync_live_controls(form_doc_t *doc) {
+  if (!doc || !doc->canvas_win) return;
+  for (int i = 0; i < doc->element_count; i++)
+    canvas_sync_live_element_window(doc, &doc->elements[i]);
+  canvas_sync_overlay_frame(doc);
+  invalidate_window(doc->canvas_win);
+}
+
+void canvas_rebuild_live_controls(form_doc_t *doc) {
+  canvas_state_t *s;
+  if (!doc || !doc->canvas_win) return;
+  s = (canvas_state_t *)doc->canvas_win->userdata;
+  if (!s) return;
+
+  while (doc->canvas_win->children)
+    destroy_window(doc->canvas_win->children);
+
+  for (int i = 0; i < doc->element_count; i++) {
+    doc->elements[i].live_win = NULL;
+    canvas_create_live_element_window(doc, &doc->elements[i]);
+  }
+
+  canvas_create_overlay(doc->canvas_win, s);
+  canvas_sync_live_controls(doc);
 }
 
 // Draw the 8 resize handles around the selected element.
 static void draw_handles(window_t *win, canvas_state_t *s) {
+  (void)win;
   if (s->selected_idx < 0) return;
   form_element_t *el = &s->doc->elements[s->selected_idx];
   int hx[HANDLE_COUNT], hy[HANDLE_COUNT];
@@ -269,6 +358,7 @@ static void draw_handles(window_t *win, canvas_state_t *s) {
 
 // Draw a rubber-band rectangle (for placement drag) in form coords.
 static void draw_rubber_band(window_t *win, canvas_state_t *s) {
+  (void)win;
   if (s->drag_mode != DRAG_RUBBERBND) return;
   int x0 = s->rb_x < 0 ? 0 : s->rb_x;
   int y0 = s->rb_y < 0 ? 0 : s->rb_y;
@@ -413,6 +503,9 @@ static void canvas_add_element(form_doc_t *doc, int type, int x, int y, int w, i
   snprintf(el->name, sizeof(el->name), "%s%d", pfx, n);
 
   doc->element_count++;
+  canvas_create_live_element_window(doc, el);
+  canvas_create_overlay(doc->canvas_win, (canvas_state_t *)doc->canvas_win->userdata);
+  canvas_sync_live_controls(doc);
   doc->modified = true;
   form_doc_update_title(doc);
 }
@@ -485,6 +578,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       st->drag_mode    = DRAG_NONE;
       st->drag_handle  = -1;
       canvas_sync_scrollbars(win, st);
+      canvas_rebuild_live_controls(st->doc);
       return true;
     }
 
@@ -500,6 +594,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       if (!s) return false;
       canvas_clamp_pan(s, win->frame.w, win->frame.h);
       canvas_sync_scrollbars(win, s);
+      canvas_sync_live_controls(doc);
       return false;
     }
 
@@ -508,7 +603,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       s->pan_x = (int)wparam;
       canvas_clamp_pan(s, win->frame.w, win->frame.h);
       canvas_sync_scrollbars(win, s);
-      invalidate_window(win);
+      canvas_sync_live_controls(doc);
       return true;
     }
 
@@ -517,7 +612,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       s->pan_y = (int)wparam;
       canvas_clamp_pan(s, win->frame.w, win->frame.h);
       canvas_sync_scrollbars(win, s);
-      invalidate_window(win);
+      canvas_sync_live_controls(doc);
       return true;
     }
 
@@ -542,17 +637,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       // Dot grid on the form surface
       draw_grid(s, fx, fy, fw, fh);
 
-      // Draw all elements
-      for (int i = 0; i < doc->element_count; i++)
-        draw_element(win, s, &doc->elements[i]);
-
-      // Selection handles
-      draw_handles(win, s);
-
-      // Rubber-band rectangle
-      draw_rubber_band(win, s);
-
-      return true;
+      return false;
     }
 
     case evLeftButtonDown: {
@@ -630,7 +715,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         if (ny + el->h > doc->form_h) ny = doc->form_h - el->h;
         el->x = nx;
         el->y = ny;
-        invalidate_window(win);
+        canvas_sync_live_controls(doc);
         return true;
       }
 
@@ -639,7 +724,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         int dy = ly - s->drag_start.y;
         canvas_apply_resize(s, dx, dy);
         doc->modified = true;
-        invalidate_window(win);
+        canvas_sync_live_controls(doc);
         return true;
       }
 
@@ -657,7 +742,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         s->rb_y = y0;
         s->rb_w = x1 - x0;
         s->rb_h = y1 - y0;
-        invalidate_window(win);
+        canvas_sync_live_controls(doc);
         return true;
       }
       return false;
@@ -706,7 +791,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       s->drag_mode = DRAG_NONE;
       s->drag_handle = -1;
       set_capture(NULL);
-      invalidate_window(win);
+      canvas_sync_live_controls(doc);
       return true;
     }
 
@@ -728,7 +813,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       s->pan_y -= delta * SCROLL_SENSITIVITY;
       canvas_clamp_pan(s, win->frame.w, win->frame.h);
       canvas_sync_scrollbars(win, s);
-      invalidate_window(win);
+      canvas_sync_live_controls(doc);
       return true;
     }
 

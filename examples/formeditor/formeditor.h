@@ -112,6 +112,7 @@ typedef struct {
   uint32_t flags;        // reserved for future style flags
   char     text[64];     // control caption / label text
   char     name[32];     // identifier name (e.g. "IDC_BUTTON1")
+  window_t *live_win;    // design-time live control hosted on the canvas
 } form_element_t;
 
 typedef struct {
@@ -156,6 +157,7 @@ typedef enum {
 
 typedef struct {
   form_doc_t *doc;
+  window_t   *overlay_win;
   int         pan_x, pan_y;
   int         selected_idx;   // -1 = no selection
   drag_mode_t drag_mode;
@@ -181,6 +183,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
                           uint32_t wparam, void *lparam);
 result_t win_tool_palette_proc(window_t *win, uint32_t msg,
                                 uint32_t wparam, void *lparam);
+void canvas_rebuild_live_controls(form_doc_t *doc);
+void canvas_sync_live_controls(form_doc_t *doc);
 
 // ============================================================
 // Document helpers

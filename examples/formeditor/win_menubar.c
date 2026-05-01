@@ -837,7 +837,7 @@ void handle_menu_command(uint16_t id) {
             ndoc->filename[sizeof(ndoc->filename) - 1] = '\0';
             ndoc->modified = false;
             form_doc_update_title(ndoc);
-            if (ndoc->canvas_win) invalidate_window(ndoc->canvas_win);
+            canvas_rebuild_live_controls(ndoc);
             send_message(ndoc->doc_win, evStatusBar, 0, path);
           } else {
             send_message(ndoc->doc_win, evStatusBar, 0,
@@ -897,6 +897,8 @@ void handle_menu_command(uint16_t id) {
       canvas_state_t *cs = (canvas_state_t *)cwin->userdata;
       if (!cs || cs->selected_idx < 0) break;
       int idx = cs->selected_idx;
+      if (doc->elements[idx].live_win && is_window(doc->elements[idx].live_win))
+        destroy_window(doc->elements[idx].live_win);
       // Remove element by shifting the array
       for (int i = idx; i < doc->element_count - 1; i++)
         doc->elements[i] = doc->elements[i + 1];
@@ -904,7 +906,7 @@ void handle_menu_command(uint16_t id) {
       cs->selected_idx = -1;
       doc->modified = true;
       form_doc_update_title(doc);
-      invalidate_window(cwin);
+      canvas_rebuild_live_controls(doc);
       break;
     }
 
@@ -919,7 +921,7 @@ void handle_menu_command(uint16_t id) {
       if (show_props_dialog(owner, el)) {
         doc->modified = true;
         form_doc_update_title(doc);
-        invalidate_window(cwin);
+        canvas_sync_live_controls(doc);
       }
       break;
     }
