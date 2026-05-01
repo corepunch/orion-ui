@@ -152,6 +152,7 @@ typedef struct {
   window_t   *overlay_win;
   window_t   *preview_win;
   int         preview_type;
+  int         placing_type;    // CTRL_* being placed, or -1 when not placing
   ipoint16_t  pan;
   int         selected_idx;   // -1 = no selection
   drag_mode_t drag_mode;

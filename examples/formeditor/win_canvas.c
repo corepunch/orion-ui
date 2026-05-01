@@ -312,6 +312,44 @@ static result_t design_live_ctrl_proc(window_t *win, uint32_t msg,
   }
 }
 
+static result_t preview_ctrl_proc(window_t *win, uint32_t msg,
+                                  uint32_t wparam, void *lparam) {
+  canvas_state_t *s = (win && win->parent) ? (canvas_state_t *)win->parent->userdata : NULL;
+  int type = s ? s->preview_type : -1;
+  winproc_t real_proc = ctrl_type_to_proc(type);
+
+  switch (msg) {
+    case evCreate:
+      win->notabstop = true;
+      return real_proc ? real_proc(win, msg, wparam, NULL) : true;
+    case evDestroy:
+    case evPaint:
+    case evResize:
+      return real_proc ? real_proc(win, msg, wparam, lparam) : false;
+    case evLeftButtonDown:
+    case evLeftButtonDoubleClick:
+    case evLeftButtonUp:
+    case evRightButtonDown:
+    case evRightButtonUp:
+    case evMouseMove:
+      if (win->parent) {
+        int lx = (int16_t)LOWORD(wparam);
+        int ly = (int16_t)HIWORD(wparam);
+        return send_message(win->parent, msg,
+                            MAKEDWORD(win->frame.x + lx, win->frame.y + ly),
+                            lparam);
+      }
+      return true;
+    case evKeyDown:
+    case evKeyUp:
+    case evCommand:
+    case evSetFocus:
+      return true;
+    default:
+      return false;
+  }
+}
+
 static void canvas_sync_overlay_frame(form_doc_t *doc) {
   canvas_state_t *s;
   if (!doc || !doc->canvas_win) return;
@@ -330,6 +368,30 @@ static void canvas_destroy_preview(canvas_state_t *s) {
   s->preview_type = -1;
 }
 
+static void canvas_reset_drag(canvas_state_t *s) {
+  if (!s) return;
+  canvas_destroy_preview(s);
+  s->drag_mode = DRAG_NONE;
+  s->drag_handle = -1;
+  s->placing_type = -1;
+  set_capture(NULL);
+}
+
+static void canvas_set_select_tool(void) {
+  if (!g_app) return;
+  g_app->current_tool = ID_TOOL_SELECT;
+  if (g_app->tool_win)
+    send_message(g_app->tool_win, bxSetActiveItem,
+                 (uint32_t)ID_TOOL_SELECT, NULL);
+}
+
+static void canvas_cancel_drag(canvas_state_t *s) {
+  bool was_placing = s && s->drag_mode == DRAG_RUBBERBND;
+  canvas_reset_drag(s);
+  if (was_placing)
+    canvas_set_select_tool();
+}
+
 static void canvas_update_preview(canvas_state_t *s, int type, int x, int y, int w, int h,
                                   const char *text, uint32_t flags) {
   form_doc_t *doc;
@@ -340,12 +402,12 @@ static void canvas_update_preview(canvas_state_t *s, int type, int x, int y, int
   if (!canvas_child_window_alive(doc->canvas_win, s->preview_win) ||
       s->preview_type != type) {
     canvas_destroy_preview(s);
+    s->preview_type = type;
     s->preview_win = create_window(text ? text : "", flags,
                                    MAKERECT(0, 0, MAX(w, 1), MAX(h, 1)),
-                                   doc->canvas_win, ctrl_type_to_proc(type), 0, NULL);
+                                   doc->canvas_win, preview_ctrl_proc, 0, NULL);
     if (!s->preview_win) return;
     s->preview_win->notabstop = true;
-    s->preview_type = type;
   }
 
   move_window(s->preview_win, form_to_sx(s, x), form_to_sy(s, y));
@@ -602,6 +664,36 @@ static void canvas_preview_label(int type, int index, char *text, size_t text_sz
   snprintf(text, text_sz, "%s%d", base, index);
 }
 
+static void canvas_update_rubber_band(canvas_state_t *s, int lx, int ly) {
+  form_doc_t *doc = s->doc;
+  int fx = local_to_form_x(s, lx);
+  int fy = local_to_form_y(s, ly);
+  int ox = local_to_form_x(s, s->drag_start.x);
+  int oy = local_to_form_y(s, s->drag_start.y);
+  int x0 = snap(doc, ox < fx ? ox : fx);
+  int y0 = snap(doc, oy < fy ? oy : fy);
+  int x1 = snap(doc, ox < fx ? fx : ox);
+  int y1 = snap(doc, oy < fy ? fy : oy);
+  s->rb = (irect16_t){x0, y0, x1 - x0, y1 - y0};
+}
+
+static void canvas_update_placement_preview(canvas_state_t *s) {
+  form_doc_t *doc = s->doc;
+  int ctrl_type = s->placing_type;
+  char preview_text[64];
+  if (ctrl_type < 0) return;
+  irect16_t preview = s->rb;
+  if (preview.w < MIN_ELEM_W || preview.h < MIN_ELEM_H) {
+    isize16_t size = default_ctrl_size(ctrl_type);
+    preview.w = size.w;
+    preview.h = size.h;
+  }
+  canvas_preview_label(ctrl_type, doc->type_counters[ctrl_type] + 1,
+                       preview_text, sizeof(preview_text));
+  canvas_update_preview(s, ctrl_type, preview.x, preview.y,
+                        preview.w, preview.h, preview_text, 0);
+}
+
 // ============================================================
 // Apply resize delta to the selected element
 // ============================================================
@@ -665,6 +757,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       canvas_state_t *st = allocate_window_data(win, sizeof(canvas_state_t));
       st->doc          = (form_doc_t *)lparam;
       st->preview_type = -1;
+      st->placing_type = -1;
       st->selected_idx = -1;
       st->pan          = (ipoint16_t){0, 0};
       st->drag_mode    = DRAG_NONE;
@@ -739,6 +832,12 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       int ly = (int16_t)HIWORD(wparam);
       int tool = g_app ? g_app->current_tool : ID_TOOL_SELECT;
 
+      if (s->drag_mode != DRAG_NONE) {
+        canvas_cancel_drag(s);
+        canvas_sync_live_controls(doc);
+        return true;
+      }
+
       if (tool == ID_TOOL_SELECT) {
         // Check resize handles first
         int handle = hit_test_handles(s, lx, ly);
@@ -782,6 +881,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         s->drag_mode   = DRAG_RUBBERBND;
         s->drag_start  = (ipoint16_t){lx, ly};
         s->rb          = (irect16_t){fx, fy, 0, 0};
+        s->placing_type = ctrl_type;
         canvas_preview_label(ctrl_type, doc->type_counters[ctrl_type] + 1,
                              preview_text, sizeof(preview_text));
         canvas_update_preview(s, ctrl_type, fx, fy, 1, 1,
@@ -823,31 +923,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       }
 
       if (s->drag_mode == DRAG_RUBBERBND) {
-        int fx = local_to_form_x(s, lx);
-        int fy = local_to_form_y(s, ly);
-        int ox = local_to_form_x(s, s->drag_start.x);
-        int oy = local_to_form_y(s, s->drag_start.y);
-        int tool = g_app ? g_app->current_tool : ID_TOOL_SELECT;
-        int ctrl_type = tool_to_ctrl_type(tool);
-        char preview_text[64];
-        // Snap both endpoints then derive top-left + positive size.
-        int x0 = snap(doc, ox < fx ? ox : fx);
-        int y0 = snap(doc, oy < fy ? oy : fy);
-        int x1 = snap(doc, ox < fx ? fx : ox);
-        int y1 = snap(doc, oy < fy ? fy : oy);
-        s->rb = (irect16_t){x0, y0, x1 - x0, y1 - y0};
-        if (ctrl_type >= 0) {
-          irect16_t preview = s->rb;
-          if (preview.w < MIN_ELEM_W || preview.h < MIN_ELEM_H) {
-            isize16_t size = default_ctrl_size(ctrl_type);
-            preview.w = size.w;
-            preview.h = size.h;
-          }
-          canvas_preview_label(ctrl_type, doc->type_counters[ctrl_type] + 1,
-                               preview_text, sizeof(preview_text));
-          canvas_update_preview(s, ctrl_type, preview.x, preview.y,
-                                preview.w, preview.h, preview_text, 0);
-        }
+        canvas_update_rubber_band(s, lx, ly);
+        canvas_update_placement_preview(s);
         canvas_sync_live_controls(doc);
         invalidate_window(win);
         return true;
@@ -873,9 +950,9 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       }
 
       if (s->drag_mode == DRAG_RUBBERBND) {
-        int tool = g_app ? g_app->current_tool : ID_TOOL_SELECT;
-        int ctrl_type = tool_to_ctrl_type(tool);
+        int ctrl_type = s->placing_type;
         if (ctrl_type >= 0) {
+          canvas_update_rubber_band(s, lx, ly);
           irect16_t frame = s->rb;
           // If no drag (click only), use the default size for the control.
           if (frame.w < MIN_ELEM_W || frame.h < MIN_ELEM_H) {
@@ -888,18 +965,10 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           s->selected_idx = doc->element_count - 1;
         }
         // Revert to Select tool after placing
-        if (g_app) {
-          g_app->current_tool = ID_TOOL_SELECT;
-          if (g_app->tool_win)
-            send_message(g_app->tool_win, bxSetActiveItem,
-                         (uint32_t)ID_TOOL_SELECT, NULL);
-        }
+        canvas_set_select_tool();
       }
 
-      canvas_destroy_preview(s);
-      s->drag_mode = DRAG_NONE;
-      s->drag_handle = -1;
-      set_capture(NULL);
+      canvas_reset_drag(s);
       canvas_sync_live_controls(doc);
       return true;
     }

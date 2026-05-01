@@ -129,15 +129,6 @@ static canvas_state_t *fe_state(form_doc_t *doc) {
     return (canvas_state_t *)doc->canvas_win->userdata;
 }
 
-static int fe_count_canvas_children_with_proc(form_doc_t *doc, winproc_t proc) {
-    int count = 0;
-    for (window_t *child = doc->canvas_win->children; child; child = child->next) {
-        if (child->proc == proc)
-            count++;
-    }
-    return count;
-}
-
 // ── Tests ──────────────────────────────────────────────────────────────────
 
 // A freshly created document has the expected defaults and no elements.
@@ -259,7 +250,6 @@ void test_fe_button_preview_visible_while_dragging(void) {
     window_t *first_preview = s->preview_win;
     ASSERT_EQUAL(doc->element_count, 0);
     ASSERT_NOT_NULL(s->preview_win);
-    ASSERT_TRUE(s->preview_win->proc == win_button);
     ASSERT_EQUAL(s->preview_win->frame.x, 20);
     ASSERT_EQUAL(s->preview_win->frame.y, 20);
     ASSERT_EQUAL(s->preview_win->frame.w, 80);
@@ -271,12 +261,65 @@ void test_fe_button_preview_visible_while_dragging(void) {
                  MAKEDWORD(140, 70), NULL);
 
     ASSERT_TRUE(s->preview_win == first_preview);
-    ASSERT_EQUAL(fe_count_canvas_children_with_proc(doc, win_button), 1);
     ASSERT_EQUAL(s->preview_win->frame.w, 120);
     ASSERT_EQUAL(s->preview_win->frame.h, 50);
 
     send_message(doc->canvas_win, evLeftButtonUp,
                  MAKEDWORD(140, 70), NULL);
+
+    fe_teardown();
+    PASS();
+}
+
+// If a live preview receives mouse-up directly, it must forward to the canvas
+// so placement is finalized and capture/state are released.
+void test_fe_preview_forwards_mouseup_to_finish_placement(void) {
+    TEST("place button drag: preview mouse-up finalizes placement");
+
+    fe_setup();
+    form_doc_t *doc = g_app->doc;
+    doc->snap_to_grid = false;
+
+    fe_begin_place_drag(doc, ID_TOOL_BUTTON, 20, 20, 80, 30);
+
+    canvas_state_t *s = fe_state(doc);
+    ASSERT_NOT_NULL(s->preview_win);
+    send_message(s->preview_win, evLeftButtonUp, MAKEDWORD(80, 30), NULL);
+
+    ASSERT_EQUAL(doc->element_count, 1);
+    ASSERT_EQUAL(doc->elements[0].frame.x, 20);
+    ASSERT_EQUAL(doc->elements[0].frame.y, 20);
+    ASSERT_EQUAL(doc->elements[0].frame.w, 80);
+    ASSERT_EQUAL(doc->elements[0].frame.h, 30);
+    ASSERT_EQUAL(s->drag_mode, DRAG_NONE);
+    ASSERT_NULL(g_ui_runtime.captured);
+    ASSERT_EQUAL(g_app->current_tool, ID_TOOL_SELECT);
+
+    fe_teardown();
+    PASS();
+}
+
+// Placement remembers the control type selected at mouse-down.  A toolbar
+// state change before mouse-up must not strand the drag or prevent commit.
+void test_fe_placement_type_latched_on_mousedown(void) {
+    TEST("place button drag: control type is latched at mouse-down");
+
+    fe_setup();
+    form_doc_t *doc = g_app->doc;
+    doc->snap_to_grid = false;
+
+    fe_begin_place_drag(doc, ID_TOOL_BUTTON, 20, 20, 80, 30);
+    g_app->current_tool = ID_TOOL_SELECT;
+    send_message(doc->canvas_win, evLeftButtonUp, MAKEDWORD(100, 50), NULL);
+
+    ASSERT_EQUAL(doc->element_count, 1);
+    ASSERT_EQUAL(doc->elements[0].type, CTRL_BUTTON);
+    ASSERT_EQUAL(doc->elements[0].frame.x, 20);
+    ASSERT_EQUAL(doc->elements[0].frame.y, 20);
+    ASSERT_EQUAL(doc->elements[0].frame.w, 80);
+    ASSERT_EQUAL(doc->elements[0].frame.h, 30);
+    ASSERT_EQUAL(fe_state(doc)->drag_mode, DRAG_NONE);
+    ASSERT_NULL(g_ui_runtime.captured);
 
     fe_teardown();
     PASS();
@@ -677,6 +720,8 @@ int main(void) {
     test_fe_close_doc();
     test_fe_place_button();
     test_fe_button_preview_visible_while_dragging();
+    test_fe_preview_forwards_mouseup_to_finish_placement();
+    test_fe_placement_type_latched_on_mousedown();
     test_fe_place_all_types();
     test_fe_live_windows_created();
     test_fe_select_element();

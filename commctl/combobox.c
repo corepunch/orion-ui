@@ -75,10 +75,15 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       free(win->userdata);
       return true;
     case evPaint:
-      win_button(win, msg, wparam, lparam);
       {
         irect16_t local = {0, 0, win->frame.w, win->frame.h};
-        irect16_t arrow = rect_split_right(local, win->frame.h);
+        irect16_t arrow = rect_split_right(local, MIN(win->frame.h, 16));
+        irect16_t text_rect = {2, 0, arrow.x - 4, win->frame.h};
+        bool show_pressed = win->pressed ||
+                            ((win->flags & BUTTON_PUSHLIKE) && win->value);
+        draw_button(local, 1, 1, show_pressed);
+        draw_text_clipped(FONT_SYSTEM, win->title, &text_rect,
+                          get_sys_color(brTextNormal), TEXT_PADDING_LEFT);
         draw_theme_icon_in_rect(THEME_ICON_ARROW_UPDOWN, arrow,
                                 get_sys_color(brTextNormal));
       }
