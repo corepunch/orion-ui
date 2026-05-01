@@ -182,6 +182,17 @@ for (int i = 0; i < NUM_TOOLS; i++) {
 - Prefer existing rectangle/geometry helper functions from `user/rect.h` (`rect_offset`, `rect_inset`, `rect_center`, `rect_split_*`, `rect_trim_*`, etc.) over open-coded coordinate math.
 - If a needed geometry helper is missing, add a small reusable helper to the framework (usually `user/rect.h`) instead of duplicating ad hoc math in application code.
 
+### State, Geometry, and Coordinate-Space Discipline
+- Prefer tagged state over flat "all fields are live" structs.  If behavior has modes (`none`, `move`, `resize`, `place`, etc.), store a mode plus a union whose members contain only the fields valid for that mode.  Avoid parallel fields like `drag_mode`, `drag_handle`, `drag_start`, `snap_rect`, `rb`, and `placing_type` all living side-by-side.
+- Make invalid states hard to represent.  Reset mode state with one aggregate assignment such as `state->drag = (drag_state_t){.mode = DRAG_NONE};` instead of clearing unrelated fields one by one.
+- Use typed points for distinct coordinate spaces when a module mixes them.  For example, a design surface may define `canvas_pt_t` and `form_pt_t` even if both are `{x, y}`.  Convert through a small pair of helpers (`form_to_canvas_pt`, `canvas_to_form_pt`) and derive rect conversion from those helpers.
+- Keep drawing and hit-testing in explicit coordinate spaces.  If child paints alter viewport/projection state, restore the parent/window draw space before drawing parent-owned adornments such as selection outlines, handles, grids, or rubber bands.
+- Prefer rect-valued APIs over long coordinate parameter lists.  A helper like `canvas_update_preview(state, type, form_rc, text, flags)` is preferred over `canvas_update_preview(state, type, x, y, w, h, text, flags)`.
+- Prefer a single conversion for a shape.  Compute one `irect16_t canvas_rc = form_to_canvas_rect(state, form_rc)` and pass it through drawing helpers; do not pass `fx, fy, fw, fh` as separate values unless the callee truly needs independent scalars.
+- For resize handles or edge-affecting logic, use a small table describing which edges move (`left`, `top`, `right`, `bottom`) rather than repeating boolean chains and duplicated snap/clamp logic.
+- Shared text/name generation should live in one helper.  For example, use `ctrl_make_caption(type, index, buf, len)` for both stored captions and previews instead of separate "preview label" functions with subtly duplicated rules.
+- When finalizing mouse drags, derive the final rectangle from the actual mouse-up point.  Do not compute `lx`/`ly` and then suppress them with `(void)lx; (void)ly`; that is usually a sign the state machine is too implicit.
+
 ### Message-Based Architecture
 - All UI interaction uses a Windows-style message system
 - Window procedures follow the signature: `result_t (*winproc_t)(window_t *, uint32_t msg, uint32_t wparam, void *lparam)`
