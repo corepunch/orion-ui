@@ -454,7 +454,7 @@ void draw_text_clipped(ui_font_t font, const char *text,
   int y = viewport->y + (viewport->h - cell_h) / 2;
   if (flags & TEXT_ALIGN_RIGHT)
     x = viewport->x + viewport->w - text_strwidth(font, text);
-  if (flags & TEXT_ALIGN_CENTER)
+  else if (flags & TEXT_ALIGN_CENTER)
     x = viewport->x + (viewport->w - text_strwidth(font, text)) / 2;
   else if (flags & TEXT_PADDING_LEFT)
     x += WIN_PADDING;
