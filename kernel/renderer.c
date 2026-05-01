@@ -599,7 +599,7 @@ bool bake_texture_effect(int src_tex, int w, int h,
   GLint prev_fbo = 0, prev_prog = 0;
   GLint prev_view[4] = {0};
   GLint prev_scissor[4] = {0};
-  float prev_proj[16];
+  mat4 prev_proj;
   memcpy(prev_proj, get_sprite_matrix(), sizeof(prev_proj));
 
   glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prev_fbo);
