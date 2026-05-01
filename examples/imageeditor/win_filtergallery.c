@@ -131,6 +131,21 @@ static void draw_filter_preview(filter_gallery_state_t *st, int filter_idx, rect
   draw_outline(r, get_sys_color(brBorderActive));
 }
 
+// Apply the currently-selected filter and close the dialog with success.
+// Extracted so both the OK button and the double-click path share the same logic.
+static void filter_gallery_accept(window_t *win, filter_gallery_state_t *st) {
+  if (st && st->doc && st->selected >= 0) {
+    doc_push_undo(st->doc);
+    if (!imageeditor_apply_filter(st->doc, st->selected)) {
+      doc_discard_undo(st->doc);
+      end_dialog(win, 0);
+      return;
+    }
+    st->accepted = true;
+  }
+  end_dialog(win, 1);
+}
+
 static result_t filter_gallery_proc(window_t *win, uint32_t msg,
                                     uint32_t wparam, void *lparam) {
   filter_gallery_state_t *st = (filter_gallery_state_t *)win->userdata;
@@ -205,31 +220,21 @@ static result_t filter_gallery_proc(window_t *win, uint32_t msg,
           st->selected = (int)(uint16_t)LOWORD(wparam);
           invalidate_window(win);
         }
-        return false;
+        return true;
       }
       if (HIWORD(wparam) == RVN_DBLCLK) {
         // Double-click in the list acts like pressing OK.
         window_t *src = (window_t *)lparam;
         if (st && src && src->id == FG_LIST_ID) {
           st->selected = (int)(uint16_t)LOWORD(wparam);
-          send_message(win, evCommand,
-                       MAKEDWORD(FG_BTN_OK, btnClicked), win);
+          filter_gallery_accept(win, st);
         }
         return true;
       }
       if (HIWORD(wparam) == btnClicked) {
         uint16_t id = LOWORD(wparam);
         if (id == FG_BTN_OK) {
-          if (st && st->doc && st->selected >= 0) {
-            doc_push_undo(st->doc);
-            if (!imageeditor_apply_filter(st->doc, st->selected)) {
-              doc_discard_undo(st->doc);
-              end_dialog(win, 0);
-              return true;
-            }
-            st->accepted = true;
-          }
-          end_dialog(win, 1);
+          filter_gallery_accept(win, st);
           return true;
         }
         if (id == FG_BTN_CANCEL) {
