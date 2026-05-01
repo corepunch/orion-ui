@@ -183,13 +183,24 @@ static void clamp_to_form(form_doc_t *doc, int *x, int *y, int *w, int *h) {
 static void draw_handles(window_t *win, canvas_state_t *s);
 static void draw_rubber_band(window_t *win, canvas_state_t *s);
 
+// Design-time interaction layer.
+//
+// Classic VB/ActiveX designers treated hosted controls as components inside a
+// container-managed design surface: the IDE/container owned selection,
+// drag/resize handles, and design-mode mouse interaction, while the control
+// mostly contributed its visual representation and used container/ambient
+// state (for example UserMode) to distinguish design-time from runtime.
+//
+// We mirror that approach here by placing a transparent overlay above all live
+// controls. The real controls still paint themselves underneath, but the
+// overlay is the only child that participates in hit-testing, so design-time
+// input is handled consistently by the form editor rather than by each control.
 static result_t live_overlay_proc(window_t *win, uint32_t msg,
                                   uint32_t wparam, void *lparam) {
-  (void)wparam;
   switch (msg) {
     case evCreate:
       win->userdata = lparam;
-      win->notabstop = true;
+      win->notabstop = false;
       return true;
     case evPaint: {
       canvas_state_t *s = (canvas_state_t *)win->userdata;
@@ -198,6 +209,15 @@ static result_t live_overlay_proc(window_t *win, uint32_t msg,
       draw_rubber_band(win, s);
       return true;
     }
+    case evLeftButtonDown:
+    case evLeftButtonDoubleClick:
+    case evLeftButtonUp:
+    case evMouseMove:
+    case evWheel:
+    case evKeyDown:
+    case evKeyUp:
+    case evSetFocus:
+      return send_message(win->parent, msg, wparam, lparam);
     default:
       return false;
   }
@@ -238,7 +258,6 @@ static result_t design_live_ctrl_proc(window_t *win, uint32_t msg,
   switch (msg) {
     case evCreate:
       win->notabstop = true;
-      win->disabled = true;
       return real_proc ? real_proc(win, msg, wparam, lparam) : true;
     case evDestroy:
     case evPaint:
@@ -269,6 +288,39 @@ static void canvas_sync_overlay_frame(form_doc_t *doc) {
   resize_window(s->overlay_win, doc->canvas_win->frame.w, doc->canvas_win->frame.h);
 }
 
+static void canvas_destroy_preview(canvas_state_t *s) {
+  if (!s) return;
+  if (s->preview_win && is_window(s->preview_win))
+    destroy_window(s->preview_win);
+  s->preview_win = NULL;
+  s->preview_type = -1;
+}
+
+static void canvas_update_preview(canvas_state_t *s, int type, int x, int y, int w, int h,
+                                  const char *text, uint32_t flags) {
+  form_doc_t *doc;
+  if (!s || !s->doc || !s->doc->canvas_win) return;
+  doc = s->doc;
+  if (type < 0 || !ctrl_type_to_proc(type)) return;
+
+  if (!s->preview_win || !is_window(s->preview_win) || s->preview_type != type) {
+    canvas_destroy_preview(s);
+    s->preview_win = create_window(text ? text : "", flags,
+                                   MAKERECT(0, 0, MAX(w, 1), MAX(h, 1)),
+                                   doc->canvas_win, design_live_ctrl_proc, 0, NULL);
+    if (!s->preview_win) return;
+    s->preview_win->notabstop = true;
+    s->preview_type = type;
+  }
+
+  move_window(s->preview_win, form_to_sx(s, x), form_to_sy(s, y));
+  resize_window(s->preview_win, MAX(w, 1), MAX(h, 1));
+  if (text && strcmp(s->preview_win->title, text) != 0) {
+    snprintf(s->preview_win->title, sizeof(s->preview_win->title), "%s", text);
+    invalidate_window(s->preview_win);
+  }
+}
+
 static void canvas_create_overlay(window_t *canvas_win, canvas_state_t *s) {
   if (!canvas_win || !s) return;
   if (s->overlay_win && is_window(s->overlay_win))
@@ -276,7 +328,7 @@ static void canvas_create_overlay(window_t *canvas_win, canvas_state_t *s) {
   s->overlay_win = create_window("", WINDOW_NOTITLE | WINDOW_NOFILL,
                                  MAKERECT(0, 0, canvas_win->frame.w, canvas_win->frame.h),
                                  canvas_win, live_overlay_proc, 0, s);
-  if (s->overlay_win) s->overlay_win->notabstop = true;
+  if (s->overlay_win) s->overlay_win->notabstop = false;
 }
 
 static void canvas_sync_live_element_window(form_doc_t *doc, form_element_t *el) {
@@ -306,7 +358,6 @@ static void canvas_create_live_element_window(form_doc_t *doc, form_element_t *e
   if (!el->live_win) return;
   el->live_win->id = el->id;
   el->live_win->notabstop = true;
-  el->live_win->disabled = true;
 }
 
 void canvas_sync_live_controls(form_doc_t *doc) {
@@ -510,6 +561,12 @@ static void canvas_add_element(form_doc_t *doc, int type, int x, int y, int w, i
   form_doc_update_title(doc);
 }
 
+static void canvas_preview_label(int type, int index, char *text, size_t text_sz) {
+  const char *base = ctrl_type_name(type);
+  if (!text || text_sz == 0) return;
+  snprintf(text, text_sz, "%s%d", base, index);
+}
+
 // ============================================================
 // Apply resize delta to the selected element
 // ============================================================
@@ -572,6 +629,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
     case evCreate: {
       canvas_state_t *st = allocate_window_data(win, sizeof(canvas_state_t));
       st->doc          = (form_doc_t *)lparam;
+      st->preview_type = -1;
       st->selected_idx = -1;
       st->pan_x        = 0;
       st->pan_y        = 0;
@@ -583,6 +641,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
     }
 
     case evDestroy:
+      canvas_destroy_preview(s);
       free_grid_dot_texture();
       // win->userdata freed by the framework via allocate_window_data.
       return false;
@@ -683,6 +742,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       if (ctrl_type >= 0) {
         int fx = local_to_form_x(s, lx);
         int fy = local_to_form_y(s, ly);
+        char preview_text[64];
         // Clamp to form surface
         if (fx < 0) fx = 0;
         if (fy < 0) fy = 0;
@@ -694,6 +754,10 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         s->rb_y        = fy;
         s->rb_w        = 0;
         s->rb_h        = 0;
+        canvas_preview_label(ctrl_type, doc->type_counters[ctrl_type] + 1,
+                             preview_text, sizeof(preview_text));
+        canvas_update_preview(s, ctrl_type, fx, fy, 1, 1,
+                              preview_text, 0);
         set_capture(win);
         return true;
       }
@@ -733,6 +797,9 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         int fy = local_to_form_y(s, ly);
         int ox = local_to_form_x(s, s->drag_start.x);
         int oy = local_to_form_y(s, s->drag_start.y);
+        int tool = g_app ? g_app->current_tool : ID_TOOL_SELECT;
+        int ctrl_type = tool_to_ctrl_type(tool);
+        char preview_text[64];
         // Snap both endpoints then derive top-left + positive size.
         int x0 = snap(doc, ox < fx ? ox : fx);
         int y0 = snap(doc, oy < fy ? oy : fy);
@@ -742,6 +809,16 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         s->rb_y = y0;
         s->rb_w = x1 - x0;
         s->rb_h = y1 - y0;
+        if (ctrl_type >= 0) {
+          int pw = s->rb_w;
+          int ph = s->rb_h;
+          if (pw < MIN_ELEM_W || ph < MIN_ELEM_H)
+            default_ctrl_size(ctrl_type, &pw, &ph);
+          canvas_preview_label(ctrl_type, doc->type_counters[ctrl_type] + 1,
+                               preview_text, sizeof(preview_text));
+          canvas_update_preview(s, ctrl_type, s->rb_x, s->rb_y, pw, ph,
+                                preview_text, 0);
+        }
         canvas_sync_live_controls(doc);
         return true;
       }
@@ -788,6 +865,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         }
       }
 
+      canvas_destroy_preview(s);
       s->drag_mode = DRAG_NONE;
       s->drag_handle = -1;
       set_capture(NULL);

@@ -158,6 +158,8 @@ typedef enum {
 typedef struct {
   form_doc_t *doc;
   window_t   *overlay_win;
+  window_t   *preview_win;
+  int         preview_type;
   int         pan_x, pan_y;
   int         selected_idx;   // -1 = no selection
   drag_mode_t drag_mode;
