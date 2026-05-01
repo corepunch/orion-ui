@@ -176,6 +176,42 @@ void test_ie_close_multiple_documents(void) {
     PASS();
 }
 
+// New document windows should cascade from the actual clamped workspace
+// position, matching the familiar Windows down/right behavior.
+void test_ie_document_windows_cascade(void) {
+    TEST("create_document: second document opens down and right from first");
+
+    ie_setup();
+    canvas_doc_t *d1 = create_document(NULL, 100, 100);
+    canvas_doc_t *d2 = create_document(NULL, 100, 100);
+    ASSERT_NOT_NULL(d1);
+    ASSERT_NOT_NULL(d2);
+
+    ASSERT_EQUAL(d2->win->frame.x, d1->win->frame.x + DOC_CASCADE);
+    ASSERT_EQUAL(d2->win->frame.y, d1->win->frame.y + DOC_CASCADE);
+
+    ie_teardown();
+    PASS();
+}
+
+// Full-workspace documents should still cascade instead of being forced back
+// to the workspace origin.
+void test_ie_large_document_windows_cascade(void) {
+    TEST("create_document: large documents still cascade down and right");
+
+    ie_setup();
+    canvas_doc_t *d1 = create_document(NULL, 2000, 1600);
+    canvas_doc_t *d2 = create_document(NULL, 2000, 1600);
+    ASSERT_NOT_NULL(d1);
+    ASSERT_NOT_NULL(d2);
+
+    ASSERT_EQUAL(d2->win->frame.x, d1->win->frame.x + DOC_CASCADE);
+    ASSERT_EQUAL(d2->win->frame.y, d1->win->frame.y + DOC_CASCADE);
+
+    ie_teardown();
+    PASS();
+}
+
 // Palette windows are created correctly and their pointers are stored.
 void test_ie_palette_windows_created(void) {
     TEST("create palette windows: g_app->tool_win and g_app->color_win are valid");
@@ -1225,6 +1261,35 @@ void test_ie_open_file_path_multiple(void) {
     PASS();
 }
 
+// Large images opened from disk should get the bird's-eye view scale restored:
+// the document fits the workspace by scaling below 1x instead of opening at 1x.
+void test_ie_open_file_path_large_uses_birdeye_scale(void) {
+    TEST("imageeditor_open_file_path: large PNG opens with bird's-eye scale");
+
+    ie_setup();
+
+    const int W = 1000, H = 800;
+    uint8_t *pixels = calloc((size_t)W * (size_t)H * 4, 1);
+    ASSERT_NOT_NULL(pixels);
+
+    char tmp[512];
+    snprintf(tmp, sizeof(tmp), "%s/orion_test_open_large.png", ie_temp_dir());
+    ASSERT_TRUE(save_image_png(tmp, pixels, W, H));
+    free(pixels);
+
+    ASSERT_TRUE(imageeditor_open_file_path(tmp));
+    ASSERT_NOT_NULL(g_app->docs);
+    ASSERT_NOT_NULL(g_app->docs->canvas_win);
+
+    canvas_win_state_t *state = (canvas_win_state_t *)g_app->docs->canvas_win->userdata;
+    ASSERT_NOT_NULL(state);
+    ASSERT_TRUE(state->scale < 1.0f);
+
+    ie_teardown();
+    remove(tmp);
+    PASS();
+}
+
 // ── canvas_win_fit_zoom (bird's-eye view) tests ───────────────────────────────
 
 // canvas_win_fit_zoom on a canvas window with zero dimensions is a no-op —
@@ -1344,6 +1409,8 @@ int main(int argc, char *argv[]) {
     test_ie_create_document();
     test_ie_close_document();
     test_ie_close_multiple_documents();
+    test_ie_document_windows_cascade();
+    test_ie_large_document_windows_cascade();
     test_ie_palette_windows_created();
     test_ie_close_tool_window_clears_pointer();
     test_ie_reopen_tool_window();
@@ -1396,6 +1463,7 @@ int main(int argc, char *argv[]) {
     test_ie_open_file_path_null();
     test_ie_open_file_path_success();
     test_ie_open_file_path_multiple();
+    test_ie_open_file_path_large_uses_birdeye_scale();
 
     // canvas_win_fit_zoom / bird's-eye view tests
     test_ie_fit_zoom_zero_viewport();

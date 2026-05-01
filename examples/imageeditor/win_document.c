@@ -5,17 +5,19 @@
 irect16_t imageeditor_document_workspace_rect(void) {
   int screen_w = ui_get_system_metrics(kSystemMetricScreenWidth);
   int screen_h = ui_get_system_metrics(kSystemMetricScreenHeight);
+  if (screen_w <= 0) screen_w = SCREEN_W;
+  if (screen_h <= 0) screen_h = SCREEN_H;
 
   int left_palette_right = PALETTE_WIN_X + PALETTE_WIN_W;
   int tool_opts_right = TOOL_OPTIONS_WIN_X + TOOL_OPTIONS_WIN_W;
   int left = MAX(DOC_START_X,
-                 MAX(left_palette_right, tool_opts_right) + DOC_WORKSPACE_MARGIN);
+                 MAX(left_palette_right, tool_opts_right) + DOC_PALETTE_GAP);
 
   int right_palette_left = MIN(COLOR_WIN_X, LAYERS_WIN_X);
   int right = MIN(screen_w - DOC_WORKSPACE_MARGIN,
                   right_palette_left - DOC_WORKSPACE_MARGIN);
 
-  int top = MAX(DOC_START_Y, APP_TOOLBAR_Y + APP_TOOLBAR_H + DOC_WORKSPACE_MARGIN);
+  int top = MAX(DOC_START_Y, APP_TOOLBAR_Y + APP_TOOLBAR_H + DOC_PALETTE_GAP);
   int bottom = screen_h - DOC_WORKSPACE_MARGIN;
 
   if (right <= left) right = left + 1;
@@ -177,8 +179,6 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
   irect16_t ws = imageeditor_document_workspace_rect();
   int wx = g_app->next_x;
   int wy = g_app->next_y;
-  g_app->next_x += DOC_CASCADE;
-  g_app->next_y += DOC_CASCADE;
 
   int max_view_w = 1;
   int max_view_h = 1;
@@ -189,12 +189,17 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
   int win_h = 1;
   imageeditor_document_frame_for_viewport(viewport_w, viewport_h, &win_w, &win_h);
 
-  // Keep the cascade inside the usable center workspace.
-  if (wx < ws.x || wy < ws.y || wx + win_w > ws.x + ws.w || wy + win_h > ws.y + ws.h) {
+  // Match Windows-style cascading: keep stepping the origin down/right even
+  // when a large document extends past the workspace edge.
+  if (wx < ws.x || wy < ws.y) {
     wx = ws.x;
     wy = ws.y;
   }
-  if (g_app->next_x + win_w > ws.x + ws.w || g_app->next_y + win_h > ws.y + ws.h) {
+  g_app->next_x = wx + DOC_CASCADE;
+  g_app->next_y = wy + DOC_CASCADE;
+  int max_origin_x = ws.x + MAX(DOC_CASCADE, MIN(ws.w / 3, DOC_CASCADE * 8));
+  int max_origin_y = ws.y + MAX(DOC_CASCADE, MIN(ws.h / 3, DOC_CASCADE * 8));
+  if (g_app->next_x > max_origin_x || g_app->next_y > max_origin_y) {
     g_app->next_x = ws.x;
     g_app->next_y = ws.y;
   }

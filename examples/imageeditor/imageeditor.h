@@ -106,10 +106,11 @@ extern const int kBrushSizes[NUM_BRUSH_SIZES];
 // between readable and subtle in the image editor.
 #define CANVAS_CHECKER_SQUARE_PX 16
 
-#define DOC_START_X   76
-#define DOC_START_Y   60
+#define DOC_PALETTE_GAP 8
+#define DOC_START_X   (PALETTE_WIN_X + PALETTE_WIN_W + DOC_PALETTE_GAP)
+#define DOC_START_Y   (APP_TOOLBAR_Y + APP_TOOLBAR_H + DOC_PALETTE_GAP)
 #define DOC_CASCADE   20
-#define DOC_WORKSPACE_MARGIN 40
+#define DOC_WORKSPACE_MARGIN 16
 
 #define NUM_COLORS 64
 #define NUM_TOOLS  17
