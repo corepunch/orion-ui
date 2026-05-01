@@ -356,6 +356,10 @@ static inline uint32_t get_sys_color(sys_color_idx_t idx) {
 # define MAKEDWORD(low, high) ((uint32_t)(((uint16_t)(low)) | ((uint32_t)((uint16_t)(high))) << 16))
 #endif
 
+#ifndef MAKEWPARAM
+# define MAKEWPARAM(lo, hi) MAKEDWORD(lo, hi)
+#endif
+
 // Helper macros
 #ifndef MAX
 # define MAX(a, b) ((a) > (b) ? (a) : (b))

@@ -57,7 +57,6 @@ static const accel_t kAccelEntries[] = {
   { FSHIFT|FVIRTKEY,   AX_KEY_T, ID_TOOL_TEXT   },
 };
 
-
 // Resurrect 64 palette from LoSpec.com
 static const uint32_t kDefaultPalette[NUM_COLORS] = {
   0xff2f222e, 0xff46353e, 0xff655562, 0xff624f69, 0xff8a707f, 0xffb2ab9b, 0xffd0dcc7, 0xffffffff,
@@ -92,7 +91,6 @@ static void create_app_windows(hinstance_t hinstance) {
   create_layers_window();
 #endif
 }
-
 
 // ============================================================
 // .gem entry points

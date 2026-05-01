@@ -17,6 +17,9 @@
 #define MIN_ELEM_W  10
 #define MIN_ELEM_H   8
 
+// Colour of the design-time dot grid.
+#define GRID_DOT_COLOR  0xFFA0A0A0
+
 // ============================================================
 // Handle indices
 //   0=TL  1=TC  2=TR
@@ -146,6 +149,24 @@ static int hit_test_handles(canvas_state_t *s, int lx, int ly) {
 }
 
 // ============================================================
+// Snap helpers
+// ============================================================
+
+// Round v to the nearest multiple of grid.
+static inline int snap_val(int v, int grid) {
+  if (grid <= 1) return v;
+  // Correct round-to-nearest for both positive and negative v.
+  int half = grid / 2;
+  return ((v >= 0) ? (v + half) : (v - half)) / grid * grid;
+}
+
+// Snap a form-space coordinate to the document grid (if enabled).
+static inline int snap(form_doc_t *doc, int v) {
+  return (doc->snap_to_grid && doc->grid_size > 1)
+             ? snap_val(v, doc->grid_size) : v;
+}
+
+// ============================================================
 // Drawing helpers
 // ============================================================
 
@@ -261,6 +282,18 @@ static void draw_rubber_band(window_t *win, canvas_state_t *s) {
   draw_sel_rect(R(sx, sy, x1 - x0, y1 - y0));
 }
 
+// Draw the design-time dot grid on the form surface.
+// Dots are drawn at every (n*grid, m*grid) intersection in form coordinates.
+static void draw_grid(canvas_state_t *s, int fx, int fy, int fw, int fh) {
+  form_doc_t *doc = s->doc;
+  if (!doc->show_grid) return;
+  int grid = doc->grid_size;
+  if (grid <= 1) return;  // grid=1 would paint every pixel; skip for performance
+  for (int gx = 0; gx < fw; gx += grid)
+    for (int gy = 0; gy < fh; gy += grid)
+      fill_rect(GRID_DOT_COLOR, R(fx + gx, fy + gy, 1, 1));
+}
+
 // ============================================================
 // Tool -> control type mapping
 // ============================================================
@@ -346,7 +379,8 @@ static void canvas_add_element(form_doc_t *doc, int type, int x, int y, int w, i
 // Apply resize delta to the selected element
 // ============================================================
 static void canvas_apply_resize(canvas_state_t *s, int dx, int dy) {
-  form_element_t *el = &s->doc->elements[s->selected_idx];
+  form_doc_t     *doc = s->doc;
+  form_element_t *el  = &doc->elements[s->selected_idx];
   int x = s->snap_x, y = s->snap_y, w = s->snap_w, h = s->snap_h;
 
   switch (s->drag_handle) {
@@ -360,6 +394,22 @@ static void canvas_apply_resize(canvas_state_t *s, int dx, int dy) {
     case HANDLE_BR:           w += dx;           h += dy;  break;
     default: break;
   }
+
+  // Snap the resulting geometry to the grid.
+  if (doc->snap_to_grid && doc->grid_size > 1) {
+    int g = doc->grid_size;
+    // Snap each edge that the handle touches; keep the opposite edge fixed.
+    bool moves_left  = (s->drag_handle == HANDLE_TL || s->drag_handle == HANDLE_ML || s->drag_handle == HANDLE_BL);
+    bool moves_top   = (s->drag_handle == HANDLE_TL || s->drag_handle == HANDLE_TC || s->drag_handle == HANDLE_TR);
+    bool moves_right = (s->drag_handle == HANDLE_TR || s->drag_handle == HANDLE_MR || s->drag_handle == HANDLE_BR);
+    bool moves_bot   = (s->drag_handle == HANDLE_BL || s->drag_handle == HANDLE_BC || s->drag_handle == HANDLE_BR);
+    int sx = moves_left  ? snap_val(x, g)     : x;
+    int sy = moves_top   ? snap_val(y, g)     : y;
+    int rx = moves_right ? snap_val(x + w, g) : x + w;
+    int by = moves_bot   ? snap_val(y + h, g) : y + h;
+    x = sx; y = sy; w = rx - sx; h = by - sy;
+  }
+
   if (w < MIN_ELEM_W) {
     if (s->drag_handle == HANDLE_TL || s->drag_handle == HANDLE_ML ||
         s->drag_handle == HANDLE_BL) x = s->snap_x + s->snap_w - MIN_ELEM_W;
@@ -446,6 +496,9 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       fill_rect(get_sys_color(brDarkEdge), R(fx - 1, fy + fh, fw + 2, 1));
       fill_rect(get_sys_color(brDarkEdge), R(fx + fw, fy - 1, 1, fh + 2));
 
+      // Dot grid on the form surface
+      draw_grid(s, fx, fy, fw, fh);
+
       // Draw all elements
       for (int i = 0; i < doc->element_count; i++)
         draw_element(win, s, &doc->elements[i]);
@@ -526,8 +579,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       if (s->drag_mode == DRAG_MOVE && s->selected_idx >= 0) {
         form_element_t *el = &doc->elements[s->selected_idx];
-        int nx = s->snap_x + (lx - s->drag_start.x);
-        int ny = s->snap_y + (ly - s->drag_start.y);
+        int nx = snap(doc, s->snap_x + (lx - s->drag_start.x));
+        int ny = snap(doc, s->snap_y + (ly - s->drag_start.y));
         if (nx < 0) nx = 0;
         if (ny < 0) ny = 0;
         if (nx + el->w > doc->form_w) nx = doc->form_w - el->w;
@@ -552,13 +605,15 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         int fy = local_to_form_y(s, ly);
         int ox = local_to_form_x(s, s->drag_start.x);
         int oy = local_to_form_y(s, s->drag_start.y);
-        // Derive top-left + positive size
-        int x0 = ox < fx ? ox : fx;
-        int y0 = oy < fy ? oy : fy;
+        // Snap both endpoints then derive top-left + positive size.
+        int x0 = snap(doc, ox < fx ? ox : fx);
+        int y0 = snap(doc, oy < fy ? oy : fy);
+        int x1 = snap(doc, ox < fx ? fx : ox);
+        int y1 = snap(doc, oy < fy ? fy : oy);
         s->rb_x = x0;
         s->rb_y = y0;
-        s->rb_w = (ox < fx ? fx - ox : ox - fx);
-        s->rb_h = (oy < fy ? fy - oy : oy - fy);
+        s->rb_w = x1 - x0;
+        s->rb_h = y1 - y0;
         invalidate_window(win);
         return true;
       }

@@ -223,8 +223,7 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
   g_app->active_doc = doc;
   if (!g_app->main_toolbar_win)
     create_main_toolbar_window();
-  else
-    imageeditor_sync_main_toolbar();
+  imageeditor_sync_main_toolbar();
 
   doc_update_title(doc);
   send_message(dwin, evStatusBar, 0,

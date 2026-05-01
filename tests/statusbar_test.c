@@ -67,6 +67,13 @@ int main(int argc, char *argv[]) {
 #endif
     
     // Test 5: Initialize graphics (headless mode)
+#ifdef __linux__
+    // On the Wayland/EGL platform backend, axInit() calls wl_display_connect()
+    // and will segfault if no compositor is running (headless CI environment).
+    if (!getenv("WAYLAND_DISPLAY") && !getenv("DISPLAY")) {
+        printf("SKIP: Graphics initialization (headless Linux — no display server)\n");
+    } else
+#endif
     if (!ui_init_graphics(UI_INIT_DESKTOP|UI_INIT_TRAY, "StatusBar Test", 320, 240)) {
         printf("SKIP: Graphics initialization (requires display)\n");
     } else {

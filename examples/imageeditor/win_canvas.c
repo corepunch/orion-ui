@@ -54,7 +54,8 @@ float imageeditor_fit_scale_for_viewport(int content_w, int content_h,
     return fit;
   }
 
-  return raw;
+  // Image is larger than viewport even at 1x -- return minimum zoom level (1x).
+  return 1.0f;
 }
 
 void imageeditor_format_zoom(char *buf, size_t buf_sz, float scale) {
