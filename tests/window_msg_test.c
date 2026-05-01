@@ -391,6 +391,30 @@ void test_clear_events(void) {
     PASS();
 }
 
+void test_cw_usedefault_uses_configured_origin(void) {
+    TEST("CW_USEDEFAULT: uses configured default window origin");
+
+    test_env_init();
+    set_default_window_position(72, 44);
+
+    window_t *first = create_window("First", 0,
+                                    MAKERECT(CW_USEDEFAULT, CW_USEDEFAULT, 100, 80),
+                                    NULL, test_window_proc, 0, NULL);
+    window_t *second = create_window("Second", 0,
+                                     MAKERECT(CW_USEDEFAULT, CW_USEDEFAULT, 100, 80),
+                                     NULL, test_window_proc, 0, NULL);
+
+    ASSERT_NOT_NULL(first);
+    ASSERT_NOT_NULL(second);
+    ASSERT_EQUAL(first->frame.x, 72);
+    ASSERT_EQUAL(first->frame.y, 44);
+    ASSERT_EQUAL(second->frame.x, 80);
+    ASSERT_EQUAL(second->frame.y, 68);
+
+    test_env_shutdown();
+    PASS();
+}
+
 int main(int argc, char *argv[]) {
     (void)argc;
     (void)argv;
@@ -405,6 +429,7 @@ int main(int argc, char *argv[]) {
     test_parent_notify_can_consume_child_input();
     test_parent_notify_can_allow_child_input();
     test_clear_events();
+    test_cw_usedefault_uses_configured_origin();
     
     TEST_END();
 }

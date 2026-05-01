@@ -22,6 +22,8 @@ ui_runtime_state_t g_ui_runtime = {
   .resizing = NULL,
   .toolbar_down_win = NULL,
   .modal_overlay_parent = NULL,
+  .default_window_x = 20,
+  .default_window_y = 20,
 };
 
 // Forward declarations
@@ -169,6 +171,11 @@ void resize_window(window_t *win, int new_w, int new_h) {
 
   invalidate_overlaps(win);
   invalidate_window(win);
+}
+
+void set_default_window_position(int x, int y) {
+  g_ui_runtime.default_window_x = x;
+  g_ui_runtime.default_window_y = y;
 }
 
 // Remove window from global window list
@@ -549,20 +556,23 @@ window_t *create_window_from_form(form_def_t const *def, int x, int y,
                                   hinstance_t hinstance, void *lparam) {
   if (!def || !proc) return NULL;
 
-  // Resolve CW_USEDEFAULT for root windows: cascade down from (20, 20).
+  // Resolve CW_USEDEFAULT for root windows: cascade down from the configured
+  // default origin.
   // Loop until we find a position not already occupied by another root window,
   // so that windows always cascade rather than stacking on top of each other.
   if (!parent && (x == CW_USEDEFAULT || y == CW_USEDEFAULT)) {
-    int cascade_step = 20;
-    int nx = 20, ny = 20;
+    int cascade_step_x = 8;
+    int cascade_step_y = 24;
+    int nx = g_ui_runtime.default_window_x;
+    int ny = g_ui_runtime.default_window_y;
     bool occupied = true;
     while (occupied) {
       occupied = false;
       for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
         if (!w->parent && w->frame.x == nx && w->frame.y == ny) {
           occupied = true;
-          nx += cascade_step;
-          ny += cascade_step;
+          nx += cascade_step_x;
+          ny += cascade_step_y;
           break;
         }
       }

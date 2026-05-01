@@ -146,8 +146,6 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   memcpy(g_app->palette, kDefaultPalette, sizeof(kDefaultPalette));
   g_app->fg_color = g_app->palette[4];
   g_app->bg_color = g_app->palette[0];
-  g_app->next_x   = DOC_START_X;
-  g_app->next_y   = DOC_START_Y;
   g_app->brush_size = 1;  // default: radius 1 (3px diameter)
   g_app->text_font_size = 16;
   g_app->text_antialias = true;

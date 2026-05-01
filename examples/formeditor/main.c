@@ -66,8 +66,8 @@ void gem_shutdown(void) {
   if (!g_app) return;
   free_accelerators(g_app->accel);
   g_app->accel = NULL;
-  if (g_app->doc)
-    close_form_doc(g_app->doc);
+  while (g_app->docs)
+    close_form_doc(g_app->docs);
   if (g_app->prop_win)
     destroy_window(g_app->prop_win);
   free(g_app);

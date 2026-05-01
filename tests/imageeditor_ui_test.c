@@ -41,8 +41,6 @@ static void ie_setup(void) {
     g_app->current_tool = ID_TOOL_SELECT;
     g_app->fg_color     = MAKE_COLOR(0xFF,0x00,0x00,0xFF);
     g_app->bg_color     = MAKE_COLOR(0xFF,0xFF,0xFF,0xFF);
-    g_app->next_x       = DOC_START_X;
-    g_app->next_y       = DOC_START_Y;
     // menubar_win left NULL: window_menu_rebuild guards against it.
     // tool_win / color_win created per-test as needed.
 }
@@ -176,8 +174,7 @@ void test_ie_close_multiple_documents(void) {
     PASS();
 }
 
-// New document windows should cascade from the actual clamped workspace
-// position, matching the familiar Windows down/right behavior.
+// New document windows should let Orion choose the default MDI cascade.
 void test_ie_document_windows_cascade(void) {
     TEST("create_document: second document opens down and right from first");
 
@@ -187,15 +184,14 @@ void test_ie_document_windows_cascade(void) {
     ASSERT_NOT_NULL(d1);
     ASSERT_NOT_NULL(d2);
 
-    ASSERT_EQUAL(d2->win->frame.x, d1->win->frame.x + DOC_CASCADE);
-    ASSERT_EQUAL(d2->win->frame.y, d1->win->frame.y + DOC_CASCADE);
+    ASSERT_EQUAL(d2->win->frame.x, d1->win->frame.x + DOC_CASCADE_X);
+    ASSERT_EQUAL(d2->win->frame.y, d1->win->frame.y + DOC_CASCADE_Y);
 
     ie_teardown();
     PASS();
 }
 
-// Full-workspace documents should still cascade instead of being forced back
-// to the workspace origin.
+// Full-workspace documents should still receive Orion's default cascade.
 void test_ie_large_document_windows_cascade(void) {
     TEST("create_document: large documents still cascade down and right");
 
@@ -205,8 +201,8 @@ void test_ie_large_document_windows_cascade(void) {
     ASSERT_NOT_NULL(d1);
     ASSERT_NOT_NULL(d2);
 
-    ASSERT_EQUAL(d2->win->frame.x, d1->win->frame.x + DOC_CASCADE);
-    ASSERT_EQUAL(d2->win->frame.y, d1->win->frame.y + DOC_CASCADE);
+    ASSERT_EQUAL(d2->win->frame.x, d1->win->frame.x + DOC_CASCADE_X);
+    ASSERT_EQUAL(d2->win->frame.y, d1->win->frame.y + DOC_CASCADE_Y);
 
     ie_teardown();
     PASS();

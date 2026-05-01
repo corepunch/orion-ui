@@ -34,13 +34,18 @@ static const char *fe_temp_dir(void) {
 
 // ── Setup / teardown ───────────────────────────────────────────────────────
 
+static void fe_close_all_docs(void) {
+    if (!g_app) return;
+    while (g_app->docs)
+        close_form_doc(g_app->docs);
+}
+
 static void fe_setup(void) {
     // If a previous test exited via FAIL() without reaching fe_teardown(), the
     // global g_app and its document window are still alive.  Clean them up
     // explicitly so test_env_init() finds a consistent state.
     if (g_app) {
-        if (g_app->doc)
-            close_form_doc(g_app->doc);
+        fe_close_all_docs();
         free(g_app);
         g_app = NULL;
     }
@@ -56,9 +61,8 @@ static void fe_teardown(void) {
         test_env_shutdown();
         return;
     }
-    // close_form_doc destroys the window tree and frees the doc struct.
-    if (g_app->doc)
-        close_form_doc(g_app->doc);
+    // close_form_doc destroys each document window tree and frees its struct.
+    fe_close_all_docs();
     if (g_app->prop_win)
         destroy_window(g_app->prop_win);
     free(g_app);
@@ -203,8 +207,8 @@ void test_fe_create_large_doc_adds_needed_scrollbars(void) {
 
     fe_setup();
     form_doc_t *doc = create_form_doc(1000, 1000);
-    int max_w = SCREEN_W - DOC_START_X - 4;
-    int max_h = SCREEN_H - DOC_START_Y - 4;
+    int max_w = SCREEN_W - 4;
+    int max_h = SCREEN_H - MENUBAR_HEIGHT - 4;
 
     ASSERT_NOT_NULL(doc);
     ASSERT_EQUAL(doc->doc_win->frame.w, max_w);
@@ -255,6 +259,29 @@ void test_fe_close_doc(void) {
     ASSERT_FALSE(is_window(dwin));
 
     // Prevent double-free in teardown.
+    fe_teardown();
+    PASS();
+}
+
+// Creating another document adds a new window and keeps the existing document
+// alive; opening/new must not discard work without explicit user consent.
+void test_fe_create_doc_keeps_existing_doc(void) {
+    TEST("create_form_doc: adds document without closing existing one");
+
+    fe_setup();
+    form_doc_t *first = g_app->doc;
+    window_t *first_win = first->doc_win;
+    first->snap_to_grid = false;
+    fe_place_ctrl(first, ID_TOOL_BUTTON, 10, 10, 60, 20);
+
+    form_doc_t *second = create_form_doc(FORM_DEFAULT_W, FORM_DEFAULT_H);
+
+    ASSERT_NOT_NULL(second);
+    ASSERT_TRUE(g_app->doc == second);
+    ASSERT_TRUE(is_window(first_win));
+    ASSERT_EQUAL(first->element_count, 1);
+    ASSERT_EQUAL(second->element_count, 0);
+
     fe_teardown();
     PASS();
 }
@@ -910,12 +937,13 @@ void test_fe_save_load_form_flags(void) {
     PASS();
 }
 
-// ID_FILE_NEW replaces the current document with an empty one.
-void test_fe_file_new_resets_doc(void) {
-    TEST("ID_FILE_NEW: replaces doc with empty form");
+// ID_FILE_NEW adds an empty document without closing the current one.
+void test_fe_file_new_adds_doc_without_dropping_current(void) {
+    TEST("ID_FILE_NEW: adds empty form and keeps current document");
 
     fe_setup();
     form_doc_t *doc = g_app->doc;
+    window_t *doc_win = doc->doc_win;
     doc->snap_to_grid = false;
 
     fe_place_ctrl(doc, ID_TOOL_BUTTON, 10, 10, 60, 20);
@@ -923,10 +951,12 @@ void test_fe_file_new_resets_doc(void) {
 
     handle_menu_command(ID_FILE_NEW);
 
-    // g_app->doc must be a fresh, empty document now.
     ASSERT_NOT_NULL(g_app->doc);
+    ASSERT_TRUE(g_app->doc != doc);
     ASSERT_EQUAL(g_app->doc->element_count, 0);
     ASSERT_FALSE(g_app->doc->modified);
+    ASSERT_TRUE(is_window(doc_win));
+    ASSERT_EQUAL(doc->element_count, 1);
 
     fe_teardown();
     PASS();
@@ -942,6 +972,7 @@ int main(void) {
     test_fe_create_large_doc_adds_needed_scrollbars();
     test_fe_doc_resize_updates_form_size();
     test_fe_close_doc();
+    test_fe_create_doc_keeps_existing_doc();
     test_fe_place_button();
     test_fe_button_preview_visible_while_dragging();
     test_fe_begin_place_drag_deselects_previous_element();
@@ -966,7 +997,7 @@ int main(void) {
     test_fe_save_load_roundtrip();
     test_fe_save_load_form_dimensions();
     test_fe_save_load_form_flags();
-    test_fe_file_new_resets_doc();
+    test_fe_file_new_adds_doc_without_dropping_current();
 
     TEST_END();
 }

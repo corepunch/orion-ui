@@ -114,7 +114,7 @@ typedef struct {
   window_t *live_win;    // design-time live control hosted on the canvas
 } form_element_t;
 
-typedef struct {
+typedef struct form_doc_t {
   form_element_t elements[MAX_ELEMENTS];
   int    element_count;
   isize16_t form_size;
@@ -125,6 +125,7 @@ typedef struct {
   int    type_counters[CTRL_TYPE_COUNT]; // per-type name counter
   window_t *canvas_win;
   window_t *doc_win;
+  struct form_doc_t *next;
   // Grid settings
   int    grid_size;       // dot spacing in form pixels (default 8)
   bool   show_grid;       // paint grid dots on the form surface
@@ -133,6 +134,7 @@ typedef struct {
 
 typedef struct {
   form_doc_t  *doc;
+  form_doc_t  *docs;
   window_t    *menubar_win;
   window_t    *tool_win;
   window_t    *prop_win;
@@ -223,6 +225,7 @@ void property_browser_refresh(form_doc_t *doc);
 form_doc_t *create_form_doc(int w, int h);
 void        close_form_doc(form_doc_t *doc);
 void        form_doc_update_title(form_doc_t *doc);
+void        form_doc_activate(form_doc_t *doc);
 
 // ============================================================
 // Form I/O

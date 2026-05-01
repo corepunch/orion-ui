@@ -55,6 +55,13 @@ void form_doc_update_title(form_doc_t *doc) {
   invalidate_window(doc->doc_win);
 }
 
+void form_doc_activate(form_doc_t *doc) {
+  if (!g_app || !doc) return;
+  if (g_app->doc == doc) return;
+  g_app->doc = doc;
+  property_browser_refresh(doc);
+}
+
 // ============================================================
 // Document window procedure
 // ============================================================
@@ -65,6 +72,9 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
   switch (msg) {
     case evCreate:
       return true;
+    case evSetFocus:
+      if (doc) form_doc_activate(doc);
+      return false;
     case evPaint:
       fill_rect(get_sys_color(brWorkspaceBg), R(0, 0, win->frame.w, win->frame.h));
       return false;
@@ -108,8 +118,8 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
 // ============================================================
 
 static irect16_t form_doc_frame_for_size(int form_w, int form_h, uint32_t form_flags) {
-  int max_w = SCREEN_W - DOC_START_X - 4;
-  int max_h = SCREEN_H - DOC_START_Y - 4;
+  int max_w = SCREEN_W - 4;
+  int max_h = SCREEN_H - MENUBAR_HEIGHT - 4;
   bool has_status = (form_flags & WINDOW_STATUSBAR) != 0;
   int status_h = has_status ? STATUSBAR_HEIGHT : 0;
   bool needs_hscroll = form_w > max_w;
@@ -129,16 +139,24 @@ static irect16_t form_doc_frame_for_size(int form_w, int form_h, uint32_t form_f
   frame_h = TITLEBAR_HEIGHT + status_h + hstrip + form_h;
   if (frame_h > max_h) frame_h = max_h;
 
-  return (irect16_t){DOC_START_X, DOC_START_Y, frame_w, frame_h};
+  return (irect16_t){CW_USEDEFAULT, CW_USEDEFAULT, frame_w, frame_h};
+}
+
+static void form_doc_apply_window_flags_and_size(form_doc_t *doc) {
+  if (!doc || !doc->doc_win) return;
+  doc->doc_win->flags &= ~WINDOW_STATUSBAR;
+  doc->doc_win->flags |= (doc->flags & WINDOW_STATUSBAR);
+  irect16_t frame = form_doc_frame_for_size(doc->form_size.w, doc->form_size.h, doc->flags);
+  resize_window(doc->doc_win, frame.w, frame.h);
+  if (doc->canvas_win) {
+    irect16_t cr = get_client_rect(doc->doc_win);
+    resize_window(doc->canvas_win, cr.w, cr.h);
+  }
 }
 
 form_doc_t *create_form_doc(int w, int h) {
   if (!g_app) return NULL;
   if (w <= 0 || h <= 0 || w > INT16_MAX || h > INT16_MAX) return NULL;
-
-  // Close existing document first (single-document editor).
-  if (g_app->doc)
-    close_form_doc(g_app->doc);
 
   form_doc_t *doc = (form_doc_t *)calloc(1, sizeof(form_doc_t));
   if (!doc) return NULL;
@@ -154,6 +172,7 @@ form_doc_t *create_form_doc(int w, int h) {
 
   // Document window
   irect16_t doc_frame = form_doc_frame_for_size(w, h, doc->flags);
+  set_default_window_position(DOC_START_X, DOC_START_Y);
   window_t *dwin = create_window(
       "Untitled",
       WINDOW_HSCROLL | (doc->flags & WINDOW_STATUSBAR),
@@ -173,6 +192,8 @@ form_doc_t *create_form_doc(int w, int h) {
   cr = get_client_rect(dwin);
   resize_window(cwin, cr.w, cr.h);
 
+  doc->next = g_app->docs;
+  g_app->docs = doc;
   g_app->doc = doc;
 
   show_window(dwin, true);
@@ -184,11 +205,18 @@ form_doc_t *create_form_doc(int w, int h) {
 
 void close_form_doc(form_doc_t *doc) {
   if (!doc) return;
-  if (g_app && g_app->doc == doc)
-    g_app->doc = NULL;
+  if (g_app) {
+    form_doc_t **link = &g_app->docs;
+    while (*link && *link != doc)
+      link = &(*link)->next;
+    if (*link == doc)
+      *link = doc->next;
+    if (g_app->doc == doc)
+      g_app->doc = g_app->docs;
+  }
   if (doc->doc_win && is_window(doc->doc_win))
     destroy_window(doc->doc_win);
-  property_browser_refresh(NULL);
+  property_browser_refresh(g_app ? g_app->doc : NULL);
   free(doc);
 }
 
@@ -874,10 +902,7 @@ void handle_menu_command(uint16_t id) {
           if (form_load(ndoc, path)) {
             strncpy(ndoc->filename, path, sizeof(ndoc->filename) - 1);
             ndoc->filename[sizeof(ndoc->filename) - 1] = '\0';
-            ndoc->doc_win->flags &= ~WINDOW_STATUSBAR;
-            ndoc->doc_win->flags |= (ndoc->flags & WINDOW_STATUSBAR);
-            irect16_t cr = get_client_rect(ndoc->doc_win);
-            resize_window(ndoc->canvas_win, cr.w, cr.h);
+            form_doc_apply_window_flags_and_size(ndoc);
             ndoc->modified = false;
             form_doc_update_title(ndoc);
             canvas_rebuild_live_controls(ndoc);
@@ -925,7 +950,8 @@ void handle_menu_command(uint16_t id) {
     case ID_FILE_QUIT:
 #ifdef BUILD_AS_GEM
       if (g_app) {
-        if (doc && doc->doc_win) destroy_window(doc->doc_win);
+        while (g_app->docs)
+          close_form_doc(g_app->docs);
         if (g_app->tool_win)    destroy_window(g_app->tool_win);
         if (g_app->menubar_win) destroy_window(g_app->menubar_win);
       }

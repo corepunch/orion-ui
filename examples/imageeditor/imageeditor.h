@@ -109,7 +109,8 @@ extern const int kBrushSizes[NUM_BRUSH_SIZES];
 #define DOC_PALETTE_GAP 8
 #define DOC_START_X   (PALETTE_WIN_X + PALETTE_WIN_W + DOC_PALETTE_GAP)
 #define DOC_START_Y   (APP_TOOLBAR_Y + APP_TOOLBAR_H + DOC_PALETTE_GAP)
-#define DOC_CASCADE   20
+#define DOC_CASCADE_X 8
+#define DOC_CASCADE_Y 24
 #define DOC_WORKSPACE_MARGIN 16
 
 #define NUM_COLORS 64
@@ -324,8 +325,6 @@ typedef struct {
   uint32_t       palette[NUM_COLORS];
   uint32_t       fg_color;
   uint32_t       bg_color;
-  int            next_x;
-  int            next_y;
   accel_table_t *accel;
   uint32_t       user_palette[NUM_USER_COLORS];
   int            num_user_colors;

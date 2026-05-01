@@ -209,6 +209,7 @@ void clear_window_children(window_t *win);
 void clear_toolbar_children(window_t *win);
 void move_window(window_t *win, int x, int y);
 void resize_window(window_t *win, int new_w, int new_h);
+void set_default_window_position(int x, int y);
 
 // Window message functions
 int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
@@ -259,6 +260,8 @@ typedef struct {
   window_t *resizing;
   window_t *toolbar_down_win;
   window_t *modal_overlay_parent;
+  int       default_window_x;
+  int       default_window_y;
 } ui_runtime_state_t;
 
 extern ui_runtime_state_t g_ui_runtime;

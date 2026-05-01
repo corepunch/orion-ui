@@ -176,10 +176,6 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
     doc->filename[sizeof(doc->filename) - 1] = '\0';
   }
 
-  irect16_t ws = imageeditor_document_workspace_rect();
-  int wx = g_app->next_x;
-  int wy = g_app->next_y;
-
   int max_view_w = 1;
   int max_view_h = 1;
   imageeditor_max_canvas_viewport_size(&max_view_w, &max_view_h);
@@ -188,26 +184,13 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
   int win_w = 1;
   int win_h = 1;
   imageeditor_document_frame_for_viewport(viewport_w, viewport_h, &win_w, &win_h);
-
-  // Match Windows-style cascading: keep stepping the origin down/right even
-  // when a large document extends past the workspace edge.
-  if (wx < ws.x || wy < ws.y) {
-    wx = ws.x;
-    wy = ws.y;
-  }
-  g_app->next_x = wx + DOC_CASCADE;
-  g_app->next_y = wy + DOC_CASCADE;
-  int max_origin_x = ws.x + MAX(DOC_CASCADE, MIN(ws.w / 3, DOC_CASCADE * 8));
-  int max_origin_y = ws.y + MAX(DOC_CASCADE, MIN(ws.h / 3, DOC_CASCADE * 8));
-  if (g_app->next_x > max_origin_x || g_app->next_y > max_origin_y) {
-    g_app->next_x = ws.x;
-    g_app->next_y = ws.y;
-  }
+  irect16_t ws = imageeditor_document_workspace_rect();
+  set_default_window_position(ws.x, ws.y);
 
   window_t *dwin = create_window(
       filename ? filename : "Untitled",
       WINDOW_STATUSBAR | WINDOW_HSCROLL,
-      MAKERECT(wx, wy, win_w, win_h),
+      MAKERECT(CW_USEDEFAULT, CW_USEDEFAULT, win_w, win_h),
       NULL, doc_win_proc, g_app->hinstance, NULL);
   dwin->userdata = doc;
   doc->win = dwin;

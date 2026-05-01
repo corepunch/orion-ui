@@ -805,6 +805,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
     case evLeftButtonDown: {
       if (!s || !doc) return false;
+      form_doc_activate(doc);
       int lx = (int16_t)LOWORD(wparam);
       int ly = (int16_t)HIWORD(wparam);
       int tool = g_app ? g_app->current_tool : ID_TOOL_SELECT;
