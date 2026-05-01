@@ -9,8 +9,40 @@
 //   y=108  "Comments (N):" label
 //   y=122  Comments reportview (fills to y=272)
 //   y=278  [Add Comment] [Add Reply] [Like Comment]  [Close]
+//
+// Standard button controls are declared in a static form_def_t so their
+// layout is declarative.  Only the win_reportview — which has no
+// FORM_CTRL_* equivalent — is created imperatively in evCreate.
 
 #include "socialfeed.h"
+
+// ============================================================
+// Static form definition — declares the 5 standard buttons.
+// win_reportview is not a FORM_CTRL_* type so it is still
+// created imperatively in evCreate below.
+// ============================================================
+
+static const form_ctrl_def_t kPostDetailButtons[] = {
+  { FORM_CTRL_BUTTON, ID_BTN_LIKE_POST,
+    {POST_DLG_W - 100, 82, 96, 18}, 0,              "Like Post",     "like_post"    },
+  { FORM_CTRL_BUTTON, ID_BTN_ADD_COMMENT,
+    {2,               280, 90, 18}, 0,              "Add Comment",   "add_comment"  },
+  { FORM_CTRL_BUTTON, ID_BTN_ADD_REPLY,
+    {96,              280, 74, 18}, 0,              "Add Reply",     "add_reply"    },
+  { FORM_CTRL_BUTTON, ID_BTN_LIKE_COMMENT,
+    {174,             280, 90, 18}, 0,              "Like Comment",  "like_comment" },
+  { FORM_CTRL_BUTTON, ID_BTN_CLOSE,
+    {POST_DLG_W -  76, 280, 74, 18}, BUTTON_DEFAULT, "Close",        "close"        },
+};
+
+static const form_def_t kPostDetailForm = {
+  .name        = "Post Detail",
+  .width       = POST_DLG_W,
+  .height      = POST_DLG_H,
+  .flags       = 0,
+  .children    = kPostDetailButtons,
+  .child_count = ARRAY_LEN(kPostDetailButtons),
+};
 
 // ============================================================
 // Flat comment item — represents one row in the comment list
@@ -90,11 +122,13 @@ static void refresh_comments(post_detail_t *s) {
   send_message(cv, RVM_SETVIEWMODE, RVM_VIEW_REPORT, NULL);
   send_message(cv, RVM_CLEARCOLUMNS, 0, NULL);
 
-  rect_t cr  = get_client_rect(cv);
-  int cv_w   = cr.w - SCROLLBAR_WIDTH;
-  int auth_w = 70;
-  int like_w = 45;
-  int text_w = cv_w - auth_w - like_w;
+  rect_t cr   = get_client_rect(cv);
+  int total_h = COLUMNVIEW_ENTRY_HEIGHT * (1 + s->flat_count);
+  int sb      = (total_h > cr.h) ? SCROLLBAR_WIDTH : 0;
+  int cv_w    = cr.w - sb;
+  int auth_w  = 70;
+  int like_w  = 45;
+  int text_w  = cv_w - auth_w - like_w;
   if (text_w < 20) text_w = 20;
 
   reportview_column_t col_author = { "Author",  (uint32_t)auth_w };
@@ -118,7 +152,7 @@ static void refresh_comments(post_detail_t *s) {
     snprintf(likes_buf, sizeof(likes_buf), "%d", item->like_count);
 
     if (f->is_reply) {
-      snprintf(author_buf, sizeof(author_buf), "  -> %s", item->author);
+      snprintf(author_buf, sizeof(author_buf), "→ %s", item->author);
     } else {
       strncpy(author_buf, item->author, sizeof(author_buf) - 1);
       author_buf[sizeof(author_buf) - 1] = '\0';
@@ -190,47 +224,17 @@ static result_t post_detail_proc(window_t *win, uint32_t msg,
 
   switch (msg) {
     case evCreate: {
-      // This dialog mixes a custom-drawn post-header section with a
-      // win_reportview comment list (not a standard FORM_CTRL_* type).
-      // Because win_reportview cannot be expressed in a form_def_t, all
-      // child windows are created imperatively here rather than via a form.
+      // Standard button children were created by the form before evCreate fired.
+      // Only the win_reportview must be created imperatively here, since
+      // win_reportview has no FORM_CTRL_* equivalent.
       s = (post_detail_t *)lparam;
       win->userdata    = s;
       s->selected_flat = -1;
 
-      // ---- Like Post button ----
-      window_t *btn_like_post = create_window("Like Post", WINDOW_NOTITLE,
-          MAKERECT(POST_DLG_W - 100, 82, 96, 18),
-          win, win_button, 0, NULL);
-      if (btn_like_post) btn_like_post->id = ID_BTN_LIKE_POST;
-
-      // ---- Comments reportview ----
       s->comments_win = create_window("comments",
           WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL,
           MAKERECT(2, 122, POST_DLG_W - 4, 150),
           win, win_reportview, 0, NULL);
-
-      // ---- Action buttons ----
-      window_t *btn_add_cmt = create_window("Add Comment", WINDOW_NOTITLE,
-          MAKERECT(2, 280, 90, 18),
-          win, win_button, 0, NULL);
-      if (btn_add_cmt) btn_add_cmt->id = ID_BTN_ADD_COMMENT;
-
-      window_t *btn_add_rep = create_window("Add Reply", WINDOW_NOTITLE,
-          MAKERECT(96, 280, 74, 18),
-          win, win_button, 0, NULL);
-      if (btn_add_rep) btn_add_rep->id = ID_BTN_ADD_REPLY;
-
-      window_t *btn_like_cmt = create_window("Like Comment", WINDOW_NOTITLE,
-          MAKERECT(174, 280, 90, 18),
-          win, win_button, 0, NULL);
-      if (btn_like_cmt) btn_like_cmt->id = ID_BTN_LIKE_COMMENT;
-
-      window_t *btn_close = create_window("Close",
-          WINDOW_NOTITLE | BUTTON_DEFAULT,
-          MAKERECT(POST_DLG_W - 76, 280, 74, 18),
-          win, win_button, 0, NULL);
-      if (btn_close) btn_close->id = ID_BTN_CLOSE;
 
       refresh_comments(s);
       return true;
@@ -281,6 +285,7 @@ static result_t post_detail_proc(window_t *win, uint32_t msg,
             if (c) {
               app_add_comment(s->post, c);
               refresh_comments(s);
+              invalidate_window(win);
               SF_DEBUG("comment added post_id=%d comment_id=%d", s->post->id, c->id);
             }
           }
@@ -313,6 +318,7 @@ static result_t post_detail_proc(window_t *win, uint32_t msg,
             if (reply) {
               app_add_reply(parent_c, reply);
               refresh_comments(s);
+              invalidate_window(win);
               SF_DEBUG("reply added comment_idx=%d reply_id=%d", ci, reply->id);
             }
           }
@@ -368,6 +374,6 @@ void show_post_detail(window_t *parent, int post_idx) {
     .comments_win  = NULL,
   };
 
-  show_dialog("Post Detail", POST_DLG_W, POST_DLG_H,
-              parent, post_detail_proc, &state);
+  show_dialog_from_form(&kPostDetailForm, "Post Detail",
+                        parent, post_detail_proc, &state);
 }

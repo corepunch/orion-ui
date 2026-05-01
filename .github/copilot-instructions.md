@@ -279,6 +279,33 @@ create_window_from_form(&kMyDlg, x, y, parent, my_dlg_proc, NULL);
 4. Document build and run instructions in `examples/README.md`
 5. Always initialize with `ui_init_graphics()` and cleanup with `ui_shutdown_graphics()`
 
+### MVC Split for Example Applications
+
+Orion example apps use a **Model–View–Controller** split inspired by PHP backend patterns (Laravel / Symfony style), mapped onto the Orion message-loop frontend.
+
+| Layer | PHP analogy | Orion convention |
+|---|---|---|
+| **Model** | Eloquent model / database layer | `model_*.c` — data structs + CRUD; no window handles, no draw calls |
+| **View** | Blade template / response renderer | `view_*.c` — window procedures, dialog procs, `evPaint` handlers |
+| **Controller** | HTTP controller / route handler | `controller_*.c` — `app_state_t`, command dispatch, glue between model and view |
+
+**Rules:**
+- Models own allocation, mutation, and free. They must not touch any window or draw API.
+- Views own all window procedures (`evCreate`, `evPaint`, `evCommand`…). They read from the model through the controller; they never mutate model state directly — they call a controller function or a model CRUD function.
+- The controller holds the single `app_state_t *g_app` global, assigns document IDs (analogous to Appwrite/database auto-increment), dispatches menu and toolbar commands, and manages global view references (`main_win`, `feed_win`, etc.).
+- The entry-point file (`main.c` / `gem_init`) seeds initial data by calling the model's create functions through the controller's `app_add_*` helpers, then creates the top-level view windows.
+
+```
+examples/socialfeed/
+  model_feed.c        ← post_t / comment_t CRUD (no UI)
+  controller_app.c    ← app_state_t, app_add_post/comment/reply, handle_menu_command
+  view_main.c         ← main window + feed list proc
+  view_dlg_post.c     ← post detail dialog proc
+  view_dlg_forms.c    ← new-post / new-comment dialog procs
+  view_menubar.c      ← menu bar proc
+  main.c              ← gem_init: seed data, wire up windows
+```
+
 ### Working with Text Rendering
 - For small fixed-width text: use `draw_text_small()` with `strwidth()` for measurements
 - Font rendering is OpenGL-based using texture atlases for efficiency
