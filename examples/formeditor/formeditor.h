@@ -118,6 +118,7 @@ typedef struct {
   form_element_t elements[MAX_ELEMENTS];
   int    element_count;
   isize16_t form_size;
+  uint32_t flags;       // form/window flags exported in form_def_t
   bool   modified;
   char   filename[512];
   int    next_id;                      // next numeric control ID

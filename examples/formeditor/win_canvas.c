@@ -12,6 +12,7 @@
 // Size of each resize-handle square drawn around the selection.
 #define HANDLE_SIZE  5
 #define HANDLE_HALF  (HANDLE_SIZE / 2)
+#define HANDLE_HIT_OUTSET 3
 
 // Minimum element dimensions after a resize drag.
 #define MIN_ELEM_W  10
@@ -151,8 +152,11 @@ static int hit_test_handles(canvas_state_t *s, int lx, int ly) {
   int hx[HANDLE_COUNT], hy[HANDLE_COUNT];
   get_handle_rects(s, el, hx, hy);
   for (int i = 0; i < HANDLE_COUNT; i++) {
-    if (lx >= hx[i] && lx < hx[i] + HANDLE_SIZE &&
-        ly >= hy[i] && ly < hy[i] + HANDLE_SIZE)
+    int hit_x = hx[i] - HANDLE_HIT_OUTSET;
+    int hit_y = hy[i] - HANDLE_HIT_OUTSET;
+    int hit_size = HANDLE_SIZE + HANDLE_HIT_OUTSET * 2;
+    if (lx >= hit_x && lx < hit_x + hit_size &&
+        ly >= hit_y && ly < hit_y + hit_size)
       return i;
   }
   return -1;
@@ -427,7 +431,7 @@ static void draw_handles(window_t *win, canvas_state_t *s) {
   draw_sel_rect(R(r.x - 1, r.y - 1, r.w + 2, r.h + 2));
 
   // Solid handle squares
-  uint32_t hcol = 0xFF000000;
+  uint32_t hcol = 0xFFFFFFFF;
   for (int i = 0; i < HANDLE_COUNT; i++)
     fill_rect(hcol, R(hx[i], hy[i], HANDLE_SIZE, HANDLE_SIZE));
 }

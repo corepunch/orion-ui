@@ -127,6 +127,21 @@ static void fe_resize_br(form_doc_t *doc, int dw, int dh) {
     send_message(cwin, evLeftButtonUp,   MAKEDWORD(hx + dw, hy + dh), NULL);
 }
 
+// Simulate a BR resize drag starting just outside the visible 5x5 handle.
+// The canvas keeps the drawn handle small but accepts a larger hit target.
+static void fe_resize_br_from_hit_margin(form_doc_t *doc, int dw, int dh) {
+    form_element_t *el = &doc->elements[
+        ((canvas_state_t *)doc->canvas_win->userdata)->selected_idx];
+    window_t *cwin = doc->canvas_win;
+    int hx = el->frame.x + el->frame.w - 2;
+    int hy = el->frame.y + el->frame.h - 2;
+    int sx = hx + 6;
+    int sy = hy + 6;
+    send_message(cwin, evLeftButtonDown, MAKEDWORD(sx,      sy),      NULL);
+    send_message(cwin, evMouseMove,      MAKEDWORD(sx + dw, sy + dh), NULL);
+    send_message(cwin, evLeftButtonUp,   MAKEDWORD(sx + dw, sy + dh), NULL);
+}
+
 // Return a pointer to the canvas state for the given document.
 static canvas_state_t *fe_state(form_doc_t *doc) {
     return (canvas_state_t *)doc->canvas_win->userdata;
@@ -153,6 +168,8 @@ void test_fe_create_doc(void) {
     ASSERT_EQUAL(doc->element_count, 0);
     ASSERT_EQUAL(doc->form_size.w, FORM_DEFAULT_W);
     ASSERT_EQUAL(doc->form_size.h, FORM_DEFAULT_H);
+    ASSERT_EQUAL(doc->flags, 0);
+    ASSERT_FALSE((doc->doc_win->flags & WINDOW_STATUSBAR) != 0);
     ASSERT_FALSE(doc->modified);
     ASSERT_EQUAL(doc->next_id, CTRL_ID_BASE);
 
@@ -169,8 +186,7 @@ void test_fe_create_doc_sizes_canvas_to_form(void) {
     form_doc_t *doc = g_app->doc;
 
     ASSERT_EQUAL(doc->doc_win->frame.w, FORM_DEFAULT_W);
-    ASSERT_EQUAL(doc->doc_win->frame.h,
-                 TITLEBAR_HEIGHT + FORM_DEFAULT_H + STATUSBAR_HEIGHT);
+    ASSERT_EQUAL(doc->doc_win->frame.h, TITLEBAR_HEIGHT + FORM_DEFAULT_H);
     ASSERT_EQUAL(doc->canvas_win->frame.w, FORM_DEFAULT_W);
     ASSERT_EQUAL(doc->canvas_win->frame.h, FORM_DEFAULT_H);
     ASSERT_FALSE(doc->doc_win->hscroll.visible);
@@ -195,9 +211,31 @@ void test_fe_create_large_doc_adds_needed_scrollbars(void) {
     ASSERT_EQUAL(doc->doc_win->frame.h, max_h);
     ASSERT_EQUAL(doc->canvas_win->frame.w, max_w);
     ASSERT_EQUAL(doc->canvas_win->frame.h,
-                 max_h - TITLEBAR_HEIGHT - STATUSBAR_HEIGHT);
+                 max_h - TITLEBAR_HEIGHT - SCROLLBAR_WIDTH);
     ASSERT_TRUE(doc->doc_win->hscroll.visible);
     ASSERT_TRUE(doc->canvas_win->vscroll.visible);
+
+    fe_teardown();
+    PASS();
+}
+
+// Resizing the document window changes the designed form size itself.  The
+// form editor is not a scrollable image canvas; the window client is the form.
+void test_fe_doc_resize_updates_form_size(void) {
+    TEST("document resize: updates form_size and canvas size");
+
+    fe_setup();
+    form_doc_t *doc = g_app->doc;
+
+    int new_w = 380;
+    int new_h = 260;
+    resize_window(doc->doc_win, new_w, TITLEBAR_HEIGHT + new_h);
+
+    ASSERT_EQUAL(doc->form_size.w, new_w);
+    ASSERT_EQUAL(doc->form_size.h, new_h);
+    ASSERT_EQUAL(doc->canvas_win->frame.w, new_w);
+    ASSERT_EQUAL(doc->canvas_win->frame.h, new_h);
+    ASSERT_TRUE(doc->modified);
 
     fe_teardown();
     PASS();
@@ -518,6 +556,27 @@ void test_fe_resize_clamped_to_minimum(void) {
     PASS();
 }
 
+// Resize handles draw as small squares, but the mouse hit target is larger
+// so users do not have to land exactly on a 5x5 pixel handle.
+void test_fe_resize_handle_has_larger_hit_area(void) {
+    TEST("resize handle: hit target extends beyond visible square");
+
+    fe_setup();
+    form_doc_t *doc = g_app->doc;
+    doc->snap_to_grid = false;
+
+    fe_place_ctrl(doc, ID_TOOL_BUTTON, 20, 20, 80, 30);
+    fe_select(doc, 0);
+
+    fe_resize_br_from_hit_margin(doc, 12, 8);
+
+    ASSERT_EQUAL(doc->elements[0].frame.w, 92);
+    ASSERT_EQUAL(doc->elements[0].frame.h, 38);
+
+    fe_teardown();
+    PASS();
+}
+
 // handle_menu_command(ID_EDIT_DELETE) removes the selected element.
 void test_fe_delete_element(void) {
     TEST("delete selected element: element_count decreases to 0");
@@ -824,6 +883,33 @@ void test_fe_save_load_form_dimensions(void) {
     PASS();
 }
 
+// form_save + form_load preserve form/window flags such as WINDOW_STATUSBAR.
+void test_fe_save_load_form_flags(void) {
+    TEST("save/load: form flags round-trip correctly");
+
+    char path[512];
+    snprintf(path, sizeof(path), "%s/orion_fe_flags_%d.h",
+             fe_temp_dir(), (int)getpid());
+
+    fe_setup();
+    form_doc_t *doc = g_app->doc;
+    doc->flags = WINDOW_STATUSBAR;
+
+    bool saved = form_save(doc, path);
+    ASSERT_TRUE(saved);
+
+    form_doc_t *ndoc = create_form_doc(FORM_DEFAULT_W, FORM_DEFAULT_H);
+    ASSERT_NOT_NULL(ndoc);
+    bool loaded = form_load(ndoc, path);
+    ASSERT_TRUE(loaded);
+
+    ASSERT_EQUAL(ndoc->flags, WINDOW_STATUSBAR);
+
+    unlink(path);
+    fe_teardown();
+    PASS();
+}
+
 // ID_FILE_NEW replaces the current document with an empty one.
 void test_fe_file_new_resets_doc(void) {
     TEST("ID_FILE_NEW: replaces doc with empty form");
@@ -854,6 +940,7 @@ int main(void) {
     test_fe_create_doc();
     test_fe_create_doc_sizes_canvas_to_form();
     test_fe_create_large_doc_adds_needed_scrollbars();
+    test_fe_doc_resize_updates_form_size();
     test_fe_close_doc();
     test_fe_place_button();
     test_fe_button_preview_visible_while_dragging();
@@ -867,6 +954,7 @@ int main(void) {
     test_fe_deselect_on_empty_click();
     test_fe_resize_element();
     test_fe_resize_clamped_to_minimum();
+    test_fe_resize_handle_has_larger_hit_area();
     test_fe_delete_element();
     test_fe_delete_with_no_selection();
     test_fe_delete_middle_element();
@@ -877,6 +965,7 @@ int main(void) {
     test_fe_property_browser_edit_respects_vertical_scrollbar();
     test_fe_save_load_roundtrip();
     test_fe_save_load_form_dimensions();
+    test_fe_save_load_form_flags();
     test_fe_file_new_resets_doc();
 
     TEST_END();
