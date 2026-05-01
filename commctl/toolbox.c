@@ -59,10 +59,13 @@
 // This matches the classic Photoshop / MS Paint toolbox look.  
 // #define TOOLBOX_FLAT
 
+// Maximum length of a copied tooltip string (including NUL terminator).
+#define TOOLBOX_TOOLTIP_MAX 256
+
 // Private state owned by each win_toolbox instance.
 typedef struct {
   toolbox_item_t *items;       // heap-allocated copy of the item list
-  char          (*item_tooltips)[256]; // owned tooltip string copies (parallel to items)
+  char          (*item_tooltips)[TOOLBOX_TOOLTIP_MAX]; // owned tooltip string copies (parallel to items)
   int             count;       // number of items
   int             btn_size;    // 0 = use TOOLBOX_BTN_SIZE default
   int             active_ident; // ident of active item (-1 = none)
@@ -244,13 +247,13 @@ result_t win_toolbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       int count = (int)wparam;
       if (count > 0 && lparam) {
         st->items = malloc((size_t)count * sizeof(toolbox_item_t));
-        st->item_tooltips = calloc((size_t)count, 256);
+        st->item_tooltips = calloc((size_t)count, TOOLBOX_TOOLTIP_MAX);
         if (st->items && st->item_tooltips) {
           memcpy(st->items, lparam, (size_t)count * sizeof(toolbox_item_t));
           for (int i = 0; i < count; i++) {
             if (st->items[i].tooltip && st->items[i].tooltip[0]) {
-              strncpy(st->item_tooltips[i], st->items[i].tooltip, 255);
-              st->item_tooltips[i][255] = '\0';
+              strncpy(st->item_tooltips[i], st->items[i].tooltip, TOOLBOX_TOOLTIP_MAX - 1);
+              st->item_tooltips[i][TOOLBOX_TOOLTIP_MAX - 1] = '\0';
               st->items[i].tooltip = st->item_tooltips[i];
             } else {
               st->item_tooltips[i][0] = '\0';
@@ -348,8 +351,8 @@ result_t win_toolbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       if (idx < 0 || !st->items[idx].tooltip || !st->items[idx].tooltip[0])
         return false;
       char *buf = (char *)lparam;
-      strncpy(buf, st->items[idx].tooltip, 255);
-      buf[255] = '\0';
+      strncpy(buf, st->items[idx].tooltip, TOOLBOX_TOOLTIP_MAX - 1);
+      buf[TOOLBOX_TOOLTIP_MAX - 1] = '\0';
       return true;
     }
   }
