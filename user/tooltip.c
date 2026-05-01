@@ -35,6 +35,7 @@ static char      g_tooltip_pending[256] = {0};  // text waiting to be shown
 static int       g_tooltip_sx          = 0;    // cursor screen-x when delay started
 static int       g_tooltip_sy          = 0;    // cursor screen-y when delay started
 static uint32_t  g_tooltip_timer_id    = 0;    // axSetTimer handle (0 = none)
+static window_t *g_tooltip_src         = NULL; // window that triggered the pending tooltip
 
 // ── Tooltip window procedure ─────────────────────────────────────────────────
 
@@ -60,7 +61,8 @@ static result_t tooltip_win_proc(window_t *win, uint32_t msg,
     }
 
     case evTimer: {
-      // One-shot timer fired — show the tooltip at the stored position.
+      // One-shot timer fired — validate it is our pending timer before showing.
+      if ((uint32_t)wparam != g_tooltip_timer_id) return true;
       g_tooltip_timer_id = 0;
       if (!win->visible && g_tooltip_pending[0]) {
         int tw = strwidth(g_tooltip_pending);
@@ -99,7 +101,7 @@ static void ensure_tooltip_win(void) {
   if (g_tooltip_win) return;
   g_tooltip_win = create_window("",
       WINDOW_NOTITLE | WINDOW_NORESIZE | WINDOW_ALWAYSONTOP |
-      WINDOW_NOTRAYBUTTON | WINDOW_NOFILL,
+      WINDOW_NOTRAYBUTTON | WINDOW_NOFILL | WINDOW_NOACTIVATE,
       MAKERECT(0, 0, 10, 10),
       NULL, tooltip_win_proc, 0, NULL);
   if (g_tooltip_win)
@@ -117,6 +119,7 @@ void tooltip_cancel(void) {
   if (g_tooltip_win && g_tooltip_win->visible)
     show_window(g_tooltip_win, false);
   g_tooltip_pending[0] = '\0';
+  g_tooltip_src = NULL;
 }
 
 // Update the tooltip for the currently hovered control.
@@ -128,31 +131,35 @@ void tooltip_cancel(void) {
 //
 // Rules:
 //   • If text is NULL/"": cancel any pending/visible tooltip and return.
-//   • If the same text is already pending or visible: no-op (prevents
-//     restarting the timer every mouse-move while hovering a button).
+//   • If the same source window and text are already pending or visible:
+//     update cursor pos but keep the running timer (prevents restarting the
+//     timer on every mouse-move while hovering the same button).
+//   • If source window changed (even with identical text): treat as a new
+//     hover — cancel previous and arm a fresh delay timer.
 //   • Otherwise: cancel previous, arm a new TOOLTIP_DELAY_MS one-shot timer.
 void tooltip_update(window_t *src_win, const char *text, int sx, int sy) {
-  (void)src_win;
-
   if (!text || !text[0]) {
     tooltip_cancel();
     return;
   }
 
-  // Same text is already pending or visible — update cursor pos but keep timer.
-  if (g_tooltip_timer_id && strcmp(g_tooltip_pending, text) == 0) {
-    g_tooltip_sx = sx;
-    g_tooltip_sy = sy;
-    return;
-  }
-  if (g_tooltip_win && g_tooltip_win->visible &&
-      strcmp(g_tooltip_win->title, text) == 0) {
-    return;
+  // Same source window and same text: keep the running timer, just update pos.
+  if (g_tooltip_src == src_win) {
+    if (g_tooltip_timer_id && strcmp(g_tooltip_pending, text) == 0) {
+      g_tooltip_sx = sx;
+      g_tooltip_sy = sy;
+      return;
+    }
+    if (g_tooltip_win && g_tooltip_win->visible &&
+        strcmp(g_tooltip_win->title, text) == 0) {
+      return;
+    }
   }
 
-  // New tooltip: restart the delay timer.
+  // New source or new text: restart the delay timer.
   tooltip_cancel();
 
+  g_tooltip_src = src_win;
   strncpy(g_tooltip_pending, text, sizeof(g_tooltip_pending) - 1);
   g_tooltip_pending[sizeof(g_tooltip_pending) - 1] = '\0';
   g_tooltip_sx = sx;

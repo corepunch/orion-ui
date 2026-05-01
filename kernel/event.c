@@ -28,9 +28,6 @@ extern int titlebar_height(window_t const *win);
 extern bool is_valid_window_ptr(window_t *target, window_t *list);
 // repaint_stencil() is called when evRefreshStencil is dispatched.
 extern void repaint_stencil(void);
-// Tooltip API — defined in user/tooltip.c.
-extern void tooltip_update(window_t *src_win, const char *text, int sx, int sy);
-extern void tooltip_cancel(void);
 
 // Macros for coordinate conversion (platform logical → Orion logical)
 #define SCALE_POINT(x) ((x)/UI_WINDOW_SCALE)

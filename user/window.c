@@ -587,7 +587,8 @@ void show_window(window_t *win, bool visible) {
     if (g_ui_runtime.tracked == win) track_mouse(NULL);
   } else {
     move_to_top(win);
-    set_focus(win);
+    if (!(win->flags & WINDOW_NOACTIVATE))
+      set_focus(win);
   }
   win->visible = visible;
   post_message(win, evShowWindow, visible, NULL);
