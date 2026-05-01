@@ -11,6 +11,9 @@
 #include "messages.h"
 #include "draw.h"
 
+#define DEFAULT_WINDOW_CASCADE_X 10
+#define DEFAULT_WINDOW_CASCADE_Y 20
+
 // Global window state
 ui_runtime_state_t g_ui_runtime = {
   .running = false,
@@ -561,8 +564,6 @@ window_t *create_window_from_form(form_def_t const *def, int x, int y,
   // Loop until we find a position not already occupied by another root window,
   // so that windows always cascade rather than stacking on top of each other.
   if (!parent && (x == CW_USEDEFAULT || y == CW_USEDEFAULT)) {
-    int cascade_step_x = 8;
-    int cascade_step_y = 24;
     int nx = g_ui_runtime.default_window_x;
     int ny = g_ui_runtime.default_window_y;
     bool occupied = true;
@@ -571,8 +572,8 @@ window_t *create_window_from_form(form_def_t const *def, int x, int y,
       for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
         if (!w->parent && w->frame.x == nx && w->frame.y == ny) {
           occupied = true;
-          nx += cascade_step_x;
-          ny += cascade_step_y;
+          nx += DEFAULT_WINDOW_CASCADE_X;
+          ny += DEFAULT_WINDOW_CASCADE_Y;
           break;
         }
       }
