@@ -185,6 +185,27 @@ static void remove_from_global_list(window_t *win) {
   }
 }
 
+static void remove_from_parent_child_list(window_t *win) {
+  if (!win || !win->parent) return;
+
+  window_t **lists[] = {
+    &win->parent->children,
+    &win->parent->toolbar_children,
+  };
+
+  for (size_t i = 0; i < sizeof(lists) / sizeof(lists[0]); i++) {
+    window_t **link = lists[i];
+    while (*link) {
+      if (*link == win) {
+        *link = win->next;
+        win->next = NULL;
+        return;
+      }
+      link = &(*link)->next;
+    }
+  }
+}
+
 // Remove window hooks
 extern void remove_from_global_hooks(window_t *win);
 
@@ -229,7 +250,10 @@ void destroy_window(window_t *win) {
     R_DeleteTexture(win->toolbar_strip_tex);
     win->toolbar_strip_tex = 0;
   }
-  remove_from_global_list(win);
+  if (win->parent)
+    remove_from_parent_child_list(win);
+  else
+    remove_from_global_list(win);
   remove_from_global_hooks(win);
   remove_from_global_queue(win);
   clear_toolbar_children(win);
