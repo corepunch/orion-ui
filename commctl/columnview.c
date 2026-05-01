@@ -401,12 +401,12 @@ static void rv_paint_icon_view(window_t *win, reportview_data_t *data) {
       uint32_t icon_col = get_sys_color(brWindowBg);
       fill_rect(get_sys_color(brTextNormal), R(x - 2, y, item_w, item_h));
       rv_draw_item_icon(strip, icon_id, &icon_rect, icon_col);
-      draw_text_clipped(FONT_ICON, data->items[i].text, &text_rect, icon_col, 0);
+      draw_text_clipped(FONT_SMALL, data->items[i].text, &text_rect, icon_col, 0);
     } else {
       uint32_t icon_col = data->items[i].color;
       fill_rect(bg_col, R(x - 2, y, item_w, item_h));
       rv_draw_item_icon(strip, icon_id, &icon_rect, icon_col);
-      draw_text_clipped(FONT_ICON, data->items[i].text, &text_rect, icon_col, 0);
+      draw_text_clipped(FONT_SMALL, data->items[i].text, &text_rect, icon_col, 0);
     }
   }
 }

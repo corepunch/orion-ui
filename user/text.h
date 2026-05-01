@@ -11,7 +11,7 @@
 typedef enum {
   FONT_SYSTEM = 0,  // Chrome: titlebars, menus, buttons, dialogs (ChiKareGo2)
   FONT_SMALL  = 1,  // Content: list items, column rows, status bar (Geneva12)
-  FONT_ICON   = 2,  // Compact icon labels in report/list icon views (Geneva9)
+  FONT_ICON   = 2,  // Compact labels in large icon/grid views (Geneva9)
 } ui_font_t;
 
 // ── Dynamic metric accessors ─────────────────────────────────────────────────

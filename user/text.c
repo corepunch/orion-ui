@@ -3,7 +3,7 @@
 // Named atlases at UI_WINDOW_SCALE == 1:
 //   big   = ChiKareGo2 (16x16 cells, foNT metrics) — FONT_SYSTEM chrome
 //   small = Geneva12 / SmallFont                   — FONT_SMALL content
-//   icon  = Geneva9 / SmallFont                    — FONT_ICON report icon labels
+//   icon  = Geneva9 / SmallFont                    — FONT_ICON large icon labels
 //
 // At UI_WINDOW_SCALE >= 2 atlases fall back to SmallFont data unless the
 // explicit icon atlas is available.
