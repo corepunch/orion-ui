@@ -205,9 +205,14 @@ IMAGEEDITOR_UI_TEST_BIN  = $(BIN_DIR)/test_imageeditor_ui_test$(EXE_EXT)
 IMAGEEDITOR_SRCS_NO_MAIN = $(filter-out examples/imageeditor/main.c,$(wildcard examples/imageeditor/*.c))
 IMAGELITE_BIN = $(BIN_DIR)/imagelite$(EXE_EXT)
 
+# Formeditor UI test — links formeditor sources (no main.c) + test_env.c.
+FORMEDITOR_UI_TEST_SRC  = $(TEST_DIR)/formeditor_ui_test.c
+FORMEDITOR_UI_TEST_BIN  = $(BIN_DIR)/test_formeditor_ui_test$(EXE_EXT)
+FORMEDITOR_SRCS_NO_MAIN = $(filter-out examples/formeditor/main.c,$(wildcard examples/formeditor/*.c))
+
 # Tests with custom build rules — excluded from the generic pattern rules.
-APP_UI_TEST_SRCS = $(GITCLIENT_TEST_SRCS) $(IMAGEEDITOR_UI_TEST_SRC)
-APP_UI_TEST_BINS = $(GITCLIENT_TEST_BINS) $(IMAGEEDITOR_UI_TEST_BIN)
+APP_UI_TEST_SRCS = $(GITCLIENT_TEST_SRCS) $(IMAGEEDITOR_UI_TEST_SRC) $(FORMEDITOR_UI_TEST_SRC)
+APP_UI_TEST_BINS = $(GITCLIENT_TEST_BINS) $(IMAGEEDITOR_UI_TEST_BIN) $(FORMEDITOR_UI_TEST_BIN)
 
 # Test sources (app UI tests excluded — they use their own build rules)
 TEST_SRCS = $(filter-out $(TEST_DIR)/test_env.c $(APP_UI_TEST_SRCS),$(wildcard $(TEST_DIR)/*.c))
@@ -440,6 +445,14 @@ $(IMAGEEDITOR_UI_TEST_BIN): $(IMAGEEDITOR_UI_TEST_SRC) $(TEST_DIR)/test_env.c $(
 	$(CC) $(CFLAGS) -I. -Iexamples/imageeditor -DIMAGEEDITOR_DEBUG=0 -o $@ \
 		$(IMAGEEDITOR_UI_TEST_SRC) $(TEST_DIR)/test_env.c \
 		$(IMAGEEDITOR_SRCS_NO_MAIN) \
+		$(LDFLAGS) $(LDFLAGS_TEST) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
+
+# Formeditor UI test — needs all formeditor sources except main.c + test_env.c.
+$(FORMEDITOR_UI_TEST_BIN): $(FORMEDITOR_UI_TEST_SRC) $(TEST_DIR)/test_env.c $(FORMEDITOR_SRCS_NO_MAIN) $(SHARED_LIB) | $(BIN_DIR)
+	@echo "Building formeditor UI test: $@"
+	$(CC) $(CFLAGS) -I. -Iexamples/formeditor -o $@ \
+		$(FORMEDITOR_UI_TEST_SRC) $(TEST_DIR)/test_env.c \
+		$(FORMEDITOR_SRCS_NO_MAIN) \
 		$(LDFLAGS) $(LDFLAGS_TEST) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
 
 # Build tests that need test_env (auto-detected by include)
