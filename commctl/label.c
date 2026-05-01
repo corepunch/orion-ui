@@ -30,9 +30,10 @@ result_t win_label(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         col = get_sys_color((sys_color_idx_t)ud);
       else
         col = (uint32_t)ud;
-      irect16_t text_pos = {0, LABEL_TEXT_PADDING, win->frame.w, win->frame.h};
-      draw_text(FONT_SMALL, win->title, text_pos.x + TEXT_SHADOW_OFFSET, text_pos.y + TEXT_SHADOW_OFFSET, get_sys_color(brDarkEdge));
-      draw_text(FONT_SMALL, win->title, text_pos.x, text_pos.y, col);
+      irect16_t text_pos = {0, 0, win->frame.w, win->frame.h};
+      irect16_t shadow_pos = rect_offset(text_pos, TEXT_SHADOW_OFFSET, TEXT_SHADOW_OFFSET);
+      draw_text_clipped(FONT_SMALL, win->title, &shadow_pos, get_sys_color(brDarkEdge), 0);
+      draw_text_clipped(FONT_SMALL, win->title, &text_pos, col, 0);
       return true;
     }
   }

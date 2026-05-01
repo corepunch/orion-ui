@@ -129,6 +129,13 @@ static canvas_state_t *fe_state(form_doc_t *doc) {
     return (canvas_state_t *)doc->canvas_win->userdata;
 }
 
+static window_t *fe_last_canvas_child(form_doc_t *doc) {
+    window_t *last = NULL;
+    for (window_t *child = doc->canvas_win->children; child; child = child->next)
+        last = child;
+    return last;
+}
+
 // ── Tests ──────────────────────────────────────────────────────────────────
 
 // A freshly created document has the expected defaults and no elements.
@@ -254,6 +261,7 @@ void test_fe_button_preview_visible_while_dragging(void) {
     ASSERT_EQUAL(s->preview_win->frame.y, 20);
     ASSERT_EQUAL(s->preview_win->frame.w, 80);
     ASSERT_EQUAL(s->preview_win->frame.h, 30);
+    ASSERT_TRUE(fe_last_canvas_child(doc) == s->overlay_win);
 
     send_message(doc->canvas_win, evMouseMove,
                  MAKEDWORD(120, 60), NULL);
@@ -266,6 +274,29 @@ void test_fe_button_preview_visible_while_dragging(void) {
 
     send_message(doc->canvas_win, evLeftButtonUp,
                  MAKEDWORD(140, 70), NULL);
+
+    fe_teardown();
+    PASS();
+}
+
+// Starting a new placement clears the old selection.  The rubber-band for the
+// control being drawn is the only outline shown during placement.
+void test_fe_begin_place_drag_deselects_previous_element(void) {
+    TEST("place drag: starting new placement clears selection");
+
+    fe_setup();
+    form_doc_t *doc = g_app->doc;
+    doc->snap_to_grid = false;
+
+    fe_place_ctrl(doc, ID_TOOL_BUTTON, 20, 20, 80, 30);
+    ASSERT_EQUAL(fe_state(doc)->selected_idx, 0);
+
+    fe_begin_place_drag(doc, ID_TOOL_LABEL, 40, 50, 60, 16);
+
+    ASSERT_EQUAL(fe_state(doc)->selected_idx, -1);
+    ASSERT_TRUE(fe_last_canvas_child(doc) == fe_state(doc)->overlay_win);
+
+    send_message(doc->canvas_win, evLeftButtonUp, MAKEDWORD(100, 66), NULL);
 
     fe_teardown();
     PASS();
@@ -720,6 +751,7 @@ int main(void) {
     test_fe_close_doc();
     test_fe_place_button();
     test_fe_button_preview_visible_while_dragging();
+    test_fe_begin_place_drag_deselects_previous_element();
     test_fe_preview_forwards_mouseup_to_finish_placement();
     test_fe_placement_type_latched_on_mousedown();
     test_fe_place_all_types();

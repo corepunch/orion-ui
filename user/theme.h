@@ -56,10 +56,4 @@ typedef enum {
 // the label text.
 #define CHECKBOX_GAP         6
 
-// ── Labels ────────────────────────────────────────────────────────────────
-
-// Vertical padding applied at the top of a label control before drawing
-// its text (keeps text away from the window border).
-#define LABEL_TEXT_PADDING   3
-
 #endif /* __UI_THEME_H__ */

@@ -188,6 +188,7 @@ static irect16_t clamp_to_form(form_doc_t *doc, irect16_t r) {
 
 static void draw_handles(window_t *win, canvas_state_t *s);
 static void draw_rubber_band(window_t *win, canvas_state_t *s);
+static void canvas_create_overlay(window_t *canvas_win, canvas_state_t *s);
 
 // Design-time interaction layer.
 //
@@ -408,6 +409,7 @@ static void canvas_update_preview(canvas_state_t *s, int type, int x, int y, int
                                    doc->canvas_win, preview_ctrl_proc, 0, NULL);
     if (!s->preview_win) return;
     s->preview_win->notabstop = true;
+    canvas_create_overlay(doc->canvas_win, s);
   }
 
   move_window(s->preview_win, form_to_sx(s, x), form_to_sy(s, y));
@@ -621,13 +623,14 @@ static const char *ctrl_type_name(int type) {
 // ============================================================
 // Add a new element to the document
 // ============================================================
-static void canvas_add_element(form_doc_t *doc, int type, irect16_t frame) {
-  if (doc->element_count >= MAX_ELEMENTS) return;
-  if (type < 0 || type >= CTRL_TYPE_COUNT) return;
+static int canvas_add_element(form_doc_t *doc, int type, irect16_t frame) {
+  if (doc->element_count >= MAX_ELEMENTS) return -1;
+  if (type < 0 || type >= CTRL_TYPE_COUNT) return -1;
   if (frame.w < MIN_ELEM_W) frame.w = MIN_ELEM_W;
   if (frame.h < MIN_ELEM_H) frame.h = MIN_ELEM_H;
 
-  form_element_t *el = &doc->elements[doc->element_count];
+  int index = doc->element_count;
+  form_element_t *el = &doc->elements[index];
   el->type  = type;
   el->id    = doc->next_id++;
   el->frame = frame;
@@ -651,11 +654,15 @@ static void canvas_add_element(form_doc_t *doc, int type, irect16_t frame) {
   snprintf(el->name, sizeof(el->name), "%s%d", pfx, n);
 
   doc->element_count++;
+  canvas_state_t *s = doc->canvas_win ? (canvas_state_t *)doc->canvas_win->userdata : NULL;
+  if (s)
+    s->selected_idx = index;
   canvas_create_live_element_window(doc, el);
   canvas_create_overlay(doc->canvas_win, (canvas_state_t *)doc->canvas_win->userdata);
   canvas_sync_live_controls(doc);
   doc->modified = true;
   form_doc_update_title(doc);
+  return index;
 }
 
 static void canvas_preview_label(int type, int index, char *text, size_t text_sz) {
@@ -882,6 +889,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         s->drag_start  = (ipoint16_t){lx, ly};
         s->rb          = (irect16_t){fx, fy, 0, 0};
         s->placing_type = ctrl_type;
+        s->selected_idx = -1;
         canvas_preview_label(ctrl_type, doc->type_counters[ctrl_type] + 1,
                              preview_text, sizeof(preview_text));
         canvas_update_preview(s, ctrl_type, fx, fy, 1, 1,
@@ -962,7 +970,6 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           }
           frame = clamp_to_form(doc, frame);
           canvas_add_element(doc, ctrl_type, frame);
-          s->selected_idx = doc->element_count - 1;
         }
         // Revert to Select tool after placing
         canvas_set_select_tool();
