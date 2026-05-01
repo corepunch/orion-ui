@@ -155,7 +155,9 @@ static int hit_test_handles(canvas_state_t *s, int lx, int ly) {
 // Round v to the nearest multiple of grid.
 static inline int snap_val(int v, int grid) {
   if (grid <= 1) return v;
-  return ((v + grid / 2) / grid) * grid;
+  // Correct round-to-nearest for both positive and negative v.
+  int half = grid / 2;
+  return ((v >= 0) ? (v + half) : (v - half)) / grid * grid;
 }
 
 // Snap a form-space coordinate to the document grid (if enabled).

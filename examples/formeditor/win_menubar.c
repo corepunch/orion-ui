@@ -460,16 +460,14 @@ bool form_load(form_doc_t *doc, const char *path) {
       }
     }
     // Parse form dimensions from the form_def_t block.
-    {
-      int val;
-      if (sscanf(line, " .width = %d", &val) == 1 && val > 0) {
-        doc->form_w = val;
-        found_def = true;
-      }
-      if (sscanf(line, " .height = %d", &val) == 1 && val > 0) {
-        doc->form_h = val;
-        found_def = true;
-      }
+    int val;
+    if (sscanf(line, " .width = %d", &val) == 1 && val > 0) {
+      doc->form_w = val;
+      found_def = true;
+    }
+    if (sscanf(line, " .height = %d", &val) == 1 && val > 0) {
+      doc->form_h = val;
+      found_def = true;
     }
   }
   fclose(f);
@@ -549,6 +547,9 @@ void show_about_dialog(window_t *parent) {
 #define GRID_ID_OK     4
 #define GRID_ID_CANCEL 5
 
+#define GRID_SIZE_MIN  1
+#define GRID_SIZE_MAX  64
+
 // grid_size is bound via BIND_INT_EDIT; checkboxes are handled manually.
 typedef struct {
   int  grid_size;
@@ -616,8 +617,8 @@ static result_t grid_dlg_proc(window_t *win, uint32_t msg,
         // Pull grid_size via DDX.
         grid_size_data_t gsd = { doc->grid_size };
         dialog_pull(win, &gsd, k_grid_bindings, ARRAY_LEN(k_grid_bindings));
-        if (gsd.grid_size < 1)  gsd.grid_size = 1;
-        if (gsd.grid_size > 64) gsd.grid_size = 64;
+        if (gsd.grid_size < GRID_SIZE_MIN) gsd.grid_size = GRID_SIZE_MIN;
+        if (gsd.grid_size > GRID_SIZE_MAX) gsd.grid_size = GRID_SIZE_MAX;
         doc->grid_size = gsd.grid_size;
         // Pull checkboxes manually.
         window_t *chk_show = get_window_item(win, GRID_ID_SHOW);
