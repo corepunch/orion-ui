@@ -416,6 +416,34 @@ void dispatch_message(ui_event_t *msg) {
       {
         track_mouse(NULL);
       }
+      // Tooltip update: only on plain mouse movement (not drag / resize / capture).
+      if (msg->message == kEventMouseMoved &&
+          !g_ui_runtime.dragging && !g_ui_runtime.resizing &&
+          !g_ui_runtime.captured)
+      {
+        int sx = SCALE_POINT(px), sy = SCALE_POINT(py);
+        window_t *hover = find_window(sx, sy);
+        if (hover && !hover->disabled) {
+          int tb_x, tb_y;
+          window_t *tc = find_toolbar_child_at(hover, sx, sy, &tb_x, &tb_y);
+          if (tc && tc->title[0]) {
+            tooltip_update(tc, tc->title, sx, sy);
+          } else {
+            char tip_buf[256] = {0};
+            int lx_h = (int16_t)LOCAL_X(px, py, hover);
+            int ly_h = (int16_t)LOCAL_Y(px, py, hover);
+            if (send_message(hover, evGetTooltipText,
+                             MAKEDWORD((uint16_t)lx_h, (uint16_t)ly_h),
+                             tip_buf) && tip_buf[0]) {
+              tooltip_update(hover, tip_buf, sx, sy);
+            } else {
+              tooltip_update(NULL, NULL, sx, sy);
+            }
+          }
+        } else {
+          tooltip_update(NULL, NULL, sx, sy);
+        }
+      }
       break;
     }
 
@@ -439,6 +467,7 @@ void dispatch_message(ui_event_t *msg) {
     case kEventRightButtonDown: {
       px = (int)msg->x;
       py = (int)msg->y;
+      tooltip_cancel();
         if ((win = g_ui_runtime.captured) ||
           (win = find_window(SCALE_POINT(px), SCALE_POINT(py))))
       {
@@ -630,6 +659,16 @@ void dispatch_message(ui_event_t *msg) {
       // theme-change callers, so it has its own case rather than going through
       // the window-validity check in the default branch.
       if (g_ui_runtime.running) repaint_stencil();
+      break;
+
+    case kEventTimer:
+      // Translate platform timer events to the Orion evTimer message and route
+      // to the target window.  axSetTimer's obj becomes msg->target; guard with
+      // is_valid_window_ptr to skip events for already-destroyed windows.
+      if (msg->target &&
+          is_valid_window_ptr(msg->target, g_ui_runtime.windows)) {
+        send_message(msg->target, evTimer, msg->wParam, msg->lParam);
+      }
       break;
 
     default: {

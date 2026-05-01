@@ -315,4 +315,23 @@ void dialog_push(window_t *win, const void *state,
 void dialog_pull(window_t *win, void *state,
                  const ctrl_binding_t *b, int n);
 
+// ── Tooltip API ───────────────────────────────────────────────────────────────
+// Tooltips are shown after a short hover delay for toolbar and toolbox buttons.
+// The tooltip text follows the "Name (Hotkey)" convention used by WinAPI apps.
+//
+// tooltip_update() is called from event.c on every kEventMouseMoved; callers
+// do not need to call it directly.
+//
+// tooltip_cancel() can be called by any code that needs to hide the tooltip
+// immediately (e.g. on button click or window close).
+
+// Update the tooltip for the currently hovered control.
+// src_win — the window acting as source (NULL = no tooltip).
+// text    — text to show; NULL or "" cancels any pending tooltip.
+// sx, sy  — current cursor screen coordinates (used to position the popup).
+void tooltip_update(window_t *src_win, const char *text, int sx, int sy);
+
+// Immediately hide any visible tooltip and disarm the pending show-timer.
+void tooltip_cancel(void);
+
 #endif

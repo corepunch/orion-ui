@@ -15,25 +15,25 @@
 // tools.png tile size (all icons are square).
 #define ICON_W  16
 
-// Tool palette layout with ident and icon index.
+// Tool palette layout with ident, icon index, and tooltip text (hotkey in parentheses).
 static const toolbox_item_t k_tools[NUM_TOOLS] = {
-  { ID_TOOL_SELECT,        0 },      // Select
-  { ID_TOOL_CROP,          6 },      // Crop
-  { ID_TOOL_HAND,          4 },      // Hand
-  { ID_TOOL_EYEDROPPER,   11 },      // Eyedropper
-  { ID_TOOL_ZOOM,          5 },      // Zoom
-  { ID_TOOL_PENCIL,       13 },      // Pencil
-  { ID_TOOL_BRUSH,        15 },      // Brush
-  { ID_TOOL_SPRAY,        18 },      // Spray
-  { ID_TOOL_FILL,          8 },      // Fill
-  { ID_TOOL_ERASER,       12 },      // Eraser
-  { ID_TOOL_LINE,         10 },      // Line
-  { ID_TOOL_TEXT,          7 },      // Text
-  { ID_TOOL_RECT,         21 },      // Rect
-  { ID_TOOL_ELLIPSE,      23 },      // Ellipse
-  { ID_TOOL_ROUNDED_RECT, 22 },      // Rounded Rect
-  { ID_TOOL_POLYGON,      24 },      // Polygon
-  { ID_TOOL_MAGNIFIER,     5 },      // Magnifier
+  { ID_TOOL_SELECT,        0, "Select (S)"        },
+  { ID_TOOL_CROP,          6, "Crop"               },
+  { ID_TOOL_HAND,          4, "Hand"               },
+  { ID_TOOL_EYEDROPPER,   11, "Eyedropper (I)"     },
+  { ID_TOOL_ZOOM,          5, "Zoom"               },
+  { ID_TOOL_PENCIL,       13, "Pencil (P)"         },
+  { ID_TOOL_BRUSH,        15, "Brush (B)"          },
+  { ID_TOOL_SPRAY,        18, "Spray (A)"          },
+  { ID_TOOL_FILL,          8, "Fill (K)"           },
+  { ID_TOOL_ERASER,       12, "Eraser (E)"         },
+  { ID_TOOL_LINE,         10, "Line"               },
+  { ID_TOOL_TEXT,          7, "Text (T)"           },
+  { ID_TOOL_RECT,         21, "Rectangle"          },
+  { ID_TOOL_ELLIPSE,      23, "Ellipse"            },
+  { ID_TOOL_ROUNDED_RECT, 22, "Rounded Rect"       },
+  { ID_TOOL_POLYGON,      24, "Polygon"            },
+  { ID_TOOL_MAGNIFIER,     5, "Magnifier (G)"      },
 };
 
 static void draw_palette_swatch(window_t *win,
