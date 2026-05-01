@@ -5,16 +5,16 @@
 #include "formeditor.h"
 #include "../../commctl/commctl.h"
 
-// Tool palette definition: ident and icon index pairs in display order.
+// Tool palette definition: ident, icon index, and tooltip text in display order.
 // Strip layout: 3 columns x N rows of 21x21 tiles.
 static const toolbox_item_t k_tools[NUM_TOOLS] = {
-  { ID_TOOL_SELECT,    0 },   // Pointer / Select
-  { ID_TOOL_LABEL,     2 },   // Label
-  { ID_TOOL_TEXTEDIT,  3 },   // TextBox
-  { ID_TOOL_BUTTON,    5 },   // CommandButton
-  { ID_TOOL_CHECKBOX,  6 },   // CheckBox
-  { ID_TOOL_COMBOBOX,  8 },   // ComboBox
-  { ID_TOOL_LIST,      9 },   // ListBox
+  { ID_TOOL_SELECT,    0, "Select"          },   // Pointer / Select
+  { ID_TOOL_LABEL,     2, "Label"           },   // Label
+  { ID_TOOL_TEXTEDIT,  3, "TextBox"         },   // TextBox
+  { ID_TOOL_BUTTON,    5, "CommandButton"   },   // CommandButton
+  { ID_TOOL_CHECKBOX,  6, "CheckBox"        },   // CheckBox
+  { ID_TOOL_COMBOBOX,  8, "ComboBox"        },   // ComboBox
+  { ID_TOOL_LIST,      9, "ListBox"         },   // ListBox
 };
 
 result_t win_tool_palette_proc(window_t *win, uint32_t msg,

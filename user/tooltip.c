@@ -36,21 +36,6 @@ static int       g_tooltip_sx          = 0;    // cursor screen-x when delay sta
 static int       g_tooltip_sy          = 0;    // cursor screen-y when delay started
 static uint32_t  g_tooltip_timer_id    = 0;    // axSetTimer handle (0 = none)
 
-// ── Forward declarations ─────────────────────────────────────────────────────
-
-extern int send_message(window_t *, uint32_t, uint32_t, void *);
-extern void show_window(window_t *, bool);
-extern void invalidate_window(window_t *);
-extern void create_window(const char *, flags_t, const rect_t *,
-                          window_t *, winproc_t, hinstance_t, void *);
-extern int strwidth(const char *);
-extern int get_char_height(void);
-extern int ui_get_system_metrics(ui_system_metrics_t);
-extern void fill_rect(uint32_t, rect_t);
-extern void draw_text_small(const char *, int, int, uint32_t);
-extern void set_viewport(rect_t);
-extern void set_projection(int, int, int, int);
-
 // ── Tooltip window procedure ─────────────────────────────────────────────────
 
 static result_t tooltip_win_proc(window_t *win, uint32_t msg,
