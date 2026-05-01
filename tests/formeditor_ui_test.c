@@ -313,7 +313,7 @@ void test_fe_preview_parent_notify_finishes_placement(void) {
     ASSERT_EQUAL(doc->elements[0].frame.y, 20);
     ASSERT_EQUAL(doc->elements[0].frame.w, 80);
     ASSERT_EQUAL(doc->elements[0].frame.h, 30);
-    ASSERT_EQUAL(s->drag_mode, DRAG_NONE);
+    ASSERT_EQUAL(s->drag.mode, DRAG_NONE);
     ASSERT_NULL(g_ui_runtime.captured);
     ASSERT_EQUAL(g_app->current_tool, ID_TOOL_SELECT);
 
@@ -340,7 +340,7 @@ void test_fe_placement_type_latched_on_mousedown(void) {
     ASSERT_EQUAL(doc->elements[0].frame.y, 20);
     ASSERT_EQUAL(doc->elements[0].frame.w, 80);
     ASSERT_EQUAL(doc->elements[0].frame.h, 30);
-    ASSERT_EQUAL(fe_state(doc)->drag_mode, DRAG_NONE);
+    ASSERT_EQUAL(fe_state(doc)->drag.mode, DRAG_NONE);
     ASSERT_NULL(g_ui_runtime.captured);
 
     fe_teardown();

@@ -143,6 +143,34 @@ typedef enum {
   DRAG_RUBBERBND,
 } drag_mode_t;
 
+typedef struct {
+  int16_t x, y;
+} canvas_pt_t;
+
+typedef struct {
+  int16_t x, y;
+} form_pt_t;
+
+typedef struct {
+  drag_mode_t mode;
+  union {
+    struct {
+      canvas_pt_t start;
+      irect16_t   frame;
+    } move;
+    struct {
+      canvas_pt_t start;
+      irect16_t   frame;
+      int         handle;
+    } resize;
+    struct {
+      canvas_pt_t start;
+      irect16_t   band;       // rubber-band in form coords
+      int         ctrl_type;  // CTRL_* being placed
+    } place;
+  };
+} drag_state_t;
+
 // ============================================================
 // Canvas window state (stored in canvas_win->userdata)
 // ============================================================
@@ -151,14 +179,9 @@ typedef struct {
   form_doc_t *doc;
   window_t   *preview_win;
   int         preview_type;
-  int         placing_type;    // CTRL_* being placed, or -1 when not placing
   ipoint16_t  pan;
   int         selected_idx;   // -1 = no selection
-  drag_mode_t drag_mode;
-  int         drag_handle;    // resize handle index, or -1
-  ipoint16_t  drag_start;     // window-local mouse pos at drag start
-  irect16_t   snap_rect;      // element geometry at drag start
-  irect16_t   rb;             // rubber-band in form coords
+  drag_state_t drag;
 } canvas_state_t;
 
 // ============================================================
