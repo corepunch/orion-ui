@@ -56,9 +56,6 @@ typedef enum {
 // the label text.
 #define CHECKBOX_GAP         6
 
-// Vertical offset of the label text baseline from the top of the frame.
-#define CHECKBOX_TEXT_Y      2
-
 // ── Labels ────────────────────────────────────────────────────────────────
 
 // Vertical padding applied at the top of a label control before drawing

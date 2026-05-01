@@ -23,8 +23,11 @@
 
 // Delay in milliseconds before the tooltip appears (matches WinAPI default).
 #define TOOLTIP_DELAY_MS  600
-// Inner padding between tooltip border and text (horizontal and vertical).
-#define TOOLTIP_PAD       4
+// Inner padding between tooltip border and text. The right side is kept a bit
+// tighter because bitmap glyph advances already include trailing side bearing.
+#define TOOLTIP_PAD_L     4
+#define TOOLTIP_PAD_R     2
+#define TOOLTIP_PAD_Y     1
 // Offset of the tooltip below the cursor hot-spot.
 #define TOOLTIP_Y_OFFSET  18
 
@@ -56,7 +59,7 @@ static result_t tooltip_win_proc(window_t *win, uint32_t msg,
       fill_rect(0xFF000000, R(0,     h - 1, w, 1));
       fill_rect(0xFF000000, R(0,     0,     1, h));
       fill_rect(0xFF000000, R(w - 1, 0,     1, h));
-      draw_text_small(win->title, TOOLTIP_PAD, TOOLTIP_PAD, 0xFF000000);
+      draw_text(FONT_SMALL, win->title, TOOLTIP_PAD_L, TOOLTIP_PAD_Y, 0xFF000000);
       return true;
     }
 
@@ -65,10 +68,10 @@ static result_t tooltip_win_proc(window_t *win, uint32_t msg,
       if ((uint32_t)wparam != g_tooltip_timer_id) return true;
       g_tooltip_timer_id = 0;
       if (!win->visible && g_tooltip_pending[0]) {
-        int tw = strwidth(g_tooltip_pending);
-        int th = get_char_height();
-        int w  = tw + TOOLTIP_PAD * 2;
-        int h  = th + TOOLTIP_PAD * 2;
+        int tw = text_strwidth(FONT_SMALL, g_tooltip_pending);
+        int th = text_char_height(FONT_SMALL);
+        int w  = tw + TOOLTIP_PAD_L + TOOLTIP_PAD_R;
+        int h  = th + TOOLTIP_PAD_Y * 2;
         int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
         int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
         int x  = g_tooltip_sx;
@@ -101,7 +104,8 @@ static void ensure_tooltip_win(void) {
   if (g_tooltip_win) return;
   g_tooltip_win = create_window("",
       WINDOW_NOTITLE | WINDOW_NORESIZE | WINDOW_ALWAYSONTOP |
-      WINDOW_NOTRAYBUTTON | WINDOW_NOFILL | WINDOW_NOACTIVATE,
+      WINDOW_NOTRAYBUTTON | WINDOW_NOFILL | WINDOW_NOACTIVATE |
+      WINDOW_TRANSPARENT,
       MAKERECT(0, 0, 10, 10),
       NULL, tooltip_win_proc, 0, NULL);
   if (g_tooltip_win)
