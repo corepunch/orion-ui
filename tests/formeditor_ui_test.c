@@ -34,6 +34,15 @@ static const char *fe_temp_dir(void) {
 // ── Setup / teardown ───────────────────────────────────────────────────────
 
 static void fe_setup(void) {
+    // If a previous test exited via FAIL() without reaching fe_teardown(), the
+    // global g_app and its document window are still alive.  Clean them up
+    // explicitly so test_env_init() finds a consistent state.
+    if (g_app) {
+        if (g_app->doc)
+            close_form_doc(g_app->doc);
+        free(g_app);
+        g_app = NULL;
+    }
     test_env_init();
     g_app = calloc(1, sizeof(app_state_t));
     g_app->current_tool = ID_TOOL_SELECT;
@@ -116,8 +125,9 @@ void test_fe_create_doc(void) {
     form_doc_t *doc = g_app->doc;
 
     ASSERT_NOT_NULL(doc);
-    ASSERT_TRUE(is_window(doc->doc_win));
-    ASSERT_TRUE(is_window(doc->canvas_win));
+    ASSERT_TRUE(is_window(doc->doc_win));     // root window — is_window works
+    ASSERT_NOT_NULL(doc->canvas_win);          // child window — use ptr check
+    ASSERT_TRUE(doc->canvas_win->parent == doc->doc_win);
     ASSERT_EQUAL(doc->element_count, 0);
     ASSERT_EQUAL(doc->form_w, FORM_DEFAULT_W);
     ASSERT_EQUAL(doc->form_h, FORM_DEFAULT_H);
@@ -208,12 +218,12 @@ void test_fe_live_windows_created(void) {
     fe_place_ctrl(doc, ID_TOOL_BUTTON, 10, 10, 60, 20);
 
     ASSERT_EQUAL(doc->element_count, 1);
-    ASSERT_NOT_NULL(doc->elements[0].live_win);
-    ASSERT_TRUE(is_window(doc->elements[0].live_win));
+    ASSERT_NOT_NULL(doc->elements[0].live_win);          // child window
+    ASSERT_TRUE(doc->elements[0].live_win->parent == doc->canvas_win);
     // The overlay must also exist on the canvas.
     canvas_state_t *s = fe_state(doc);
-    ASSERT_NOT_NULL(s->overlay_win);
-    ASSERT_TRUE(is_window(s->overlay_win));
+    ASSERT_NOT_NULL(s->overlay_win);                     // child window
+    ASSERT_TRUE(s->overlay_win->parent == doc->canvas_win);
 
     fe_teardown();
     PASS();
