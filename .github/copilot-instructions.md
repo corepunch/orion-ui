@@ -200,6 +200,18 @@ for (int i = 0; i < NUM_TOOLS; i++) {
 - Common messages include WM_CREATE, WM_DESTROY, WM_PAINT, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_KEYDOWN, WM_KEYUP, WM_COMMAND
 - Return true from window proc if message was handled, false otherwise
 
+### Confirmation Dialogs
+- Match the button set to the question being asked. A two-choice question such
+  as "Close without saving?", "Discard changes?", or "Delete selected item?"
+  must use `MB_YESNO`, where `IDYES` performs the destructive/continuing action
+  and `IDNO` leaves state unchanged.
+- Use `MB_YESNOCANCEL` only for a genuine three-way decision, such as
+  "Save changes before closing?" where `IDYES` saves, `IDNO` discards, and
+  `IDCANCEL` aborts the close.
+- For window `evClose` handlers, return true to cancel/consume the close when
+  the user chooses `IDNO` or `IDCANCEL`; only proceed with closing after the
+  explicit affirmative action for the dialog wording.
+
 ### Drawing and Rendering
 - Use OpenGL for all rendering (hardware accelerated)
 - Text rendering uses small bitmap font (6x8 pixels)

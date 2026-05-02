@@ -24,13 +24,14 @@
 app_state_t *g_app = NULL;
 
 static int fe_next_message_box_result = IDCANCEL;
+static uint32_t fe_last_message_box_type = 0;
 
 int message_box(window_t *parent, const char *text,
                 const char *caption, uint32_t type) {
     (void)parent;
     (void)text;
     (void)caption;
-    (void)type;
+    fe_last_message_box_type = type;
     return fe_next_message_box_result;
 }
 
@@ -290,8 +291,10 @@ void test_fe_close_modified_doc_no_keeps_window(void) {
     doc->modified = true;
 
     fe_next_message_box_result = IDNO;
+    fe_last_message_box_type = 0;
     ASSERT_TRUE(send_message(dwin, evClose, 0, NULL));
 
+    ASSERT_EQUAL(fe_last_message_box_type, MB_YESNO);
     ASSERT_TRUE(g_app->doc == doc);
     ASSERT_TRUE(is_window(dwin));
 

@@ -103,7 +103,7 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
       if (doc->modified) {
         int res = message_box(win,
                               "This form has unsaved changes.\nClose without saving?",
-                              "Unsaved Changes", MB_YESNOCANCEL);
+                              "Unsaved Changes", MB_YESNO);
         if (res != IDYES) return true;  // keep form open unless discard is confirmed
       }
       close_form_doc(doc);
