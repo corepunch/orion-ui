@@ -966,6 +966,35 @@ void test_fe_file_new_adds_doc_without_dropping_current(void) {
     PASS();
 }
 
+// The Forms toolbar "New form" command creates a normal cascaded document.
+void test_fe_forms_toolbar_new_creates_cascaded_doc(void) {
+    TEST("Forms toolbar New form: creates cascaded document window");
+
+    fe_setup();
+    g_app->forms_win = forms_browser_create(0);
+    ASSERT_NOT_NULL(g_app->forms_win);
+
+    form_doc_t *first = g_app->doc;
+    window_t *first_win = first->doc_win;
+    int first_x = first_win->frame.x;
+    int first_y = first_win->frame.y;
+
+    window_t *new_btn = g_app->forms_win->toolbar_children;
+    ASSERT_NOT_NULL(new_btn);
+    send_message(new_btn, evLeftButtonUp, 0, NULL);
+
+    ASSERT_NOT_NULL(g_app->doc);
+    ASSERT_TRUE(g_app->doc != first);
+    ASSERT_NOT_NULL(g_app->doc->doc_win);
+    ASSERT_EQUAL(g_app->doc->element_count, 0);
+    ASSERT_EQUAL(g_app->doc->doc_win->frame.x, first_x + DEFAULT_WINDOW_CASCADE_X);
+    ASSERT_EQUAL(g_app->doc->doc_win->frame.y, first_y + DEFAULT_WINDOW_CASCADE_Y);
+    ASSERT_TRUE(is_window(first_win));
+
+    fe_teardown();
+    PASS();
+}
+
 // ── main ──────────────────────────────────────────────────────────────────
 
 int main(void) {
@@ -1002,6 +1031,7 @@ int main(void) {
     test_fe_save_load_form_dimensions();
     test_fe_save_load_form_flags();
     test_fe_file_new_adds_doc_without_dropping_current();
+    test_fe_forms_toolbar_new_creates_cascaded_doc();
 
     TEST_END();
 }

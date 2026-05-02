@@ -1,17 +1,20 @@
 // Project forms browser for the Orion Form Editor.
 //
-// Shows the forms loaded from a .orion project and provides tiny project-level
-// commands for adding/removing forms.
+// Shows the forms loaded from a .orion project.
 
 #include "formeditor.h"
 #include "../../commctl/commctl.h"
+#include "../../user/icons.h"
 
 #define FORMS_ID_NEW     1
 #define FORMS_ID_DELETE  2
-#define FORMS_BTN_Y      4
-#define FORMS_BTN_H      BUTTON_HEIGHT
-#define FORMS_ROW_Y      (FORMS_BTN_Y + FORMS_BTN_H + 6)
+#define FORMS_ROW_Y      4
 #define FORMS_ROW_H      18
+
+static const toolbar_item_t kFormsToolbar[] = {
+  { TOOLBAR_ITEM_BUTTON, FORMS_ID_NEW,    sysicon_add,    0, 0, "New form" },
+  { TOOLBAR_ITEM_BUTTON, FORMS_ID_DELETE, sysicon_delete, 0, 0, "Delete form" },
+};
 
 static int forms_doc_count(void) {
   int n = 0;
@@ -45,7 +48,7 @@ void forms_browser_refresh(void) {
 
 window_t *forms_browser_create(hinstance_t hinstance) {
   window_t *win = create_window("Forms",
-      WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
+      WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE | WINDOW_TOOLBAR,
       MAKERECT(FORMS_WIN_X, FORMS_WIN_Y, FORMS_WIN_W, FORMS_WIN_H),
       NULL, win_forms_browser_proc, hinstance, NULL);
   if (win) show_window(win, true);
@@ -78,32 +81,21 @@ result_t win_forms_browser_proc(window_t *win, uint32_t msg,
   (void)lparam;
   switch (msg) {
     case evCreate:
-      {
-      window_t *btn = create_window("New", 0,
-          MAKERECT(4, FORMS_BTN_Y, 48, FORMS_BTN_H),
-          win, "button", 0, NULL);
-      if (btn) btn->id = FORMS_ID_NEW;
-      btn = create_window("Delete", 0,
-          MAKERECT(56, FORMS_BTN_Y, 62, FORMS_BTN_H),
-          win, "button", 0, NULL);
-      if (btn) btn->id = FORMS_ID_DELETE;
+      send_message(win, tbSetItems, ARRAY_LEN(kFormsToolbar),
+                   (void *)kFormsToolbar);
       return true;
-      }
 
-    case evCommand:
-      if (HIWORD(wparam) == btnClicked) {
-        window_t *src = (window_t *)lparam;
-        if (!src) return false;
-        if (src->id == FORMS_ID_NEW) {
+    case tbButtonClick:
+      switch ((uint16_t)wparam) {
+        case FORMS_ID_NEW:
           forms_add_new();
           return true;
-        }
-        if (src->id == FORMS_ID_DELETE) {
+        case FORMS_ID_DELETE:
           forms_delete_active();
           return true;
-        }
+        default:
+          return false;
       }
-      return false;
 
     case evPaint: {
       fill_rect(get_sys_color(brWindowBg), R(0, 0, win->frame.w, win->frame.h));
@@ -114,10 +106,10 @@ result_t win_forms_browser_proc(window_t *win, uint32_t msg,
         if (doc == g_app->doc) {
           fill_rect(get_sys_color(brTextNormal), row);
           draw_text_clipped(FONT_SMALL, forms_doc_label(doc), &row,
-                            get_sys_color(brWindowBg), 3);
+                            get_sys_color(brWindowBg), TEXT_PADDING_LEFT);
         } else {
           draw_text_clipped(FONT_SMALL, forms_doc_label(doc), &row,
-                            get_sys_color(brTextNormal), 3);
+                            get_sys_color(brTextNormal), TEXT_PADDING_LEFT);
         }
       }
       return true;

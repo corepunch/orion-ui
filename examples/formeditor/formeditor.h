@@ -33,15 +33,16 @@
 // Property browser window.  This is intentionally a reportview-backed
 // inspector: close to VB1's simple property sheet, without inline editing yet.
 #define PROPBROWSER_WIN_X (SCREEN_W - 184)
-#define PROPBROWSER_WIN_Y (MENUBAR_HEIGHT + 4)
 #define PROPBROWSER_WIN_W 180
 #define PROPBROWSER_WIN_H 180
 
 // Project forms browser.
-#define FORMS_WIN_X       PALETTE_WIN_X
-#define FORMS_WIN_Y       (MENUBAR_HEIGHT + 126)
-#define FORMS_WIN_W       150
-#define FORMS_WIN_H       210
+#define FORMS_WIN_X       PROPBROWSER_WIN_X
+#define FORMS_WIN_Y       (MENUBAR_HEIGHT + 4)
+#define FORMS_WIN_W       PROPBROWSER_WIN_W
+#define FORMS_WIN_H       180
+
+#define PROPBROWSER_WIN_Y (FORMS_WIN_Y + FORMS_WIN_H + 4)
 
 // Document window initial position
 // frame.y is the window top; place it 8px below the menu bar.
