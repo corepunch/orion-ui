@@ -10,17 +10,21 @@
 #include "commctl.h"
 #include "../user/user.h"
 #include "../user/messages.h"
+#include "../user/text.h"
+#include "../user/theme.h"
 
 // ---------------------------------------------------------------------------
 // Layout
 // ---------------------------------------------------------------------------
 
 #define MB_WIN_W   240
-#define MB_TEXT_H   30   // room for two lines of text
+#define MB_TEXT_Y    8
+#define MB_TEXT_H   34   // room for two lines of text without touching buttons
 #define MB_PAD       8
+#define MB_BTN_GAP  10
 #define MB_BTN_W    50
 #define MB_BTN_H   BUTTON_HEIGHT
-#define MB_WIN_H   (TITLEBAR_HEIGHT + MB_PAD + MB_TEXT_H + MB_PAD + MB_BTN_H + MB_PAD)
+#define MB_WIN_H   (TITLEBAR_HEIGHT + MB_TEXT_Y + MB_TEXT_H + MB_BTN_GAP + MB_BTN_H + MB_PAD)
 
 // ---------------------------------------------------------------------------
 // Internal state
@@ -45,14 +49,9 @@ static result_t mb_proc(window_t *win, uint32_t msg,
       ms = (mb_state_t *)lparam;
       win->userdata = ms;
 
-      // Text label
-      create_window(ms->text ? ms->text : "", WINDOW_NOTITLE,
-          MAKERECT(MB_PAD, MB_PAD, MB_WIN_W - MB_PAD * 2, MB_TEXT_H),
-          win, win_label, 0, NULL);
-
       // Buttons — positioned flush with the right edge, same style as the
       // imageeditor's about-dialog and file-picker.
-      int btn_y = MB_PAD + MB_TEXT_H + MB_PAD;
+      int btn_y = MB_TEXT_Y + MB_TEXT_H + MB_BTN_GAP;
       uint32_t btype = ms->type & 0x0F;
 
       if (btype == MB_YESNOCANCEL) {
@@ -94,6 +93,11 @@ static result_t mb_proc(window_t *win, uint32_t msg,
       }
       return true;
     }
+
+    case evPaint:
+      draw_text(FONT_SMALL, ms->text ? ms->text : "",
+                MB_PAD, MB_TEXT_Y, get_sys_color(brTextNormal));
+      return false;
 
     case evCommand: {
       if (HIWORD(wparam) != btnClicked) return false;
