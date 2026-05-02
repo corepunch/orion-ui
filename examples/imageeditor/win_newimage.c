@@ -49,8 +49,8 @@ typedef struct { int w, h; } ni_state_t;
 // ──────────────────────────────────────────────────────────────────
 
 static const ctrl_binding_t k_ni_bindings[] = {
-  { NI_ID_WIDTH,  BIND_INT_EDIT, offsetof(ni_state_t, w), 0 },
-  { NI_ID_HEIGHT, BIND_INT_EDIT, offsetof(ni_state_t, h), 0 },
+  DDX_TEXT(NI_ID_WIDTH, ni_state_t, w),
+  DDX_TEXT(NI_ID_HEIGHT, ni_state_t, h),
 };
 
 // ──────────────────────────────────────────────────────────────────
@@ -58,12 +58,12 @@ static const ctrl_binding_t k_ni_bindings[] = {
 // ──────────────────────────────────────────────────────────────────
 
 static const form_ctrl_def_t kSizeDialogChildren[] = {
-  { FORM_CTRL_LABEL,    -1,           {NI_LBL_X,  NI_ROW1_Y, NI_EDIT_X - NI_LBL_X - 2, NI_EDIT_H}, 0,              "Width:",  "lbl_width"  },
-  { FORM_CTRL_LABEL,    -1,           {NI_LBL_X,  NI_ROW2_Y, NI_EDIT_X - NI_LBL_X - 2, NI_EDIT_H}, 0,              "Height:", "lbl_height" },
-  { FORM_CTRL_TEXTEDIT, NI_ID_WIDTH,  {NI_EDIT_X, NI_ROW1_Y, NI_EDIT_W, NI_EDIT_H}, 0,              "",       "width"  },
-  { FORM_CTRL_TEXTEDIT, NI_ID_HEIGHT, {NI_EDIT_X, NI_ROW2_Y, NI_EDIT_W, NI_EDIT_H}, 0,              "",       "height" },
-  { FORM_CTRL_BUTTON,   NI_ID_OK,     {NI_OK_X,   NI_BTN_Y,  NI_BTN_W,  NI_BTN_H},  BUTTON_DEFAULT, "OK",     "ok"     },
-  { FORM_CTRL_BUTTON,   NI_ID_CANCEL, {NI_CA_X,   NI_BTN_Y,  NI_BTN_W,  NI_BTN_H},  0,              "Cancel", "cancel" },
+  { "label",    -1,           {NI_LBL_X,  NI_ROW1_Y, NI_EDIT_X - NI_LBL_X - 2, NI_EDIT_H}, 0,              "Width:",  "lbl_width"  },
+  { "label",    -1,           {NI_LBL_X,  NI_ROW2_Y, NI_EDIT_X - NI_LBL_X - 2, NI_EDIT_H}, 0,              "Height:", "lbl_height" },
+  { "textedit", NI_ID_WIDTH,  {NI_EDIT_X, NI_ROW1_Y, NI_EDIT_W, NI_EDIT_H}, 0,              "",       "width"  },
+  { "textedit", NI_ID_HEIGHT, {NI_EDIT_X, NI_ROW2_Y, NI_EDIT_W, NI_EDIT_H}, 0,              "",       "height" },
+  { "button",   NI_ID_OK,     {NI_OK_X,   NI_BTN_Y,  NI_BTN_W,  NI_BTN_H},  BUTTON_DEFAULT, "OK",     "ok"     },
+  { "button",   NI_ID_CANCEL, {NI_CA_X,   NI_BTN_Y,  NI_BTN_W,  NI_BTN_H},  0,              "Cancel", "cancel" },
 };
 
 static const form_def_t kSizeDialogForm = {

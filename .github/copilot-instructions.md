@@ -23,6 +23,7 @@ The framework is written in C and uses SDL2 for windowing/input and OpenGL 3.2+ 
 - When implementing new features, think "how would this be done in WinAPI?" and follow those patterns
 - If a required feature is missing from the core framework (e.g., hotkeys/accelerators, timers, clipboard), **add it to the framework** — do not implement workarounds in application code (e.g., do not handle `WM_KEYDOWN` manually where `WM_COMMAND` from an accelerator is the correct mechanism)
 - Common WinAPI patterns to follow: message loops, window procedures, control notifications via `WM_COMMAND`, `HIWORD`/`LOWORD` packing, resource tables (menus, accelerators), dialog modal loops
+- For plugin-provided **UI controls/windows**, use WinAPI-style integration only: register classes, instantiate by class name (`create_window(..., "class_name", ...)`), pass creation state via `lparam`, and communicate through messages/notifications (`evCommand`, control-specific messages). Do **not** design C function-table APIs for window controls unless the feature is explicitly non-window service logic.
 - **Always search the existing framework before inventing new mechanisms.** Orion already has toolbars (`WINDOW_TOOLBAR`), toolbar buttons (`tbAddButtons`), bitmap strips (`bitmap_strip_t`), accelerators, dialogs, status bars, etc. If you need something that sounds like it belongs in a UI framework, look for it first.
 
 ### Scrollbars — Built-in vs. Standalone
@@ -369,6 +370,14 @@ examples/socialfeed/
 - **Use `form_def_t` + `show_dialog_from_form()` for all dialogs/panels**: any window with two or more standard child controls must be expressed as a static `form_ctrl_def_t[]` + `form_def_t` and instantiated with `create_window_from_form()` or `show_dialog_from_form()`. Never build children imperatively inside `evCreate` — children defined in a form already exist when that message fires.
 - Add documentation to README.md for new public APIs
 - Consider adding examples for non-trivial new functionality
+
+### FormEditor Component Registration Policy
+
+- FormEditor control exposure must be registry-driven, not switch-driven. Do not hardcode toolbox/component lists in `tool_to_ctrl_type`, `ctrl_type_name`, property-browser type tables, or save/load type switches.
+- **No backward compatibility shims for the registry migration**: when moving a path to the component registry, remove legacy fallback code in the same change rather than keeping dual paths.
+- Distinguish runtime windows from design-time toolbox components using explicit component metadata flags/role fields.
+- A component is shown in the toolbox only when its metadata explicitly marks it as design-placeable (for example, `COMPONENT_PLACEABLE` / `show_in_toolbox=true`).
+- Non-placeable windows (dialogs, palettes, color pickers, inspectors, transient popups) may still be registered for runtime/factory use, but must be hidden from the toolbox.
 
 ### Function-First, High-Level Code (Required)
 

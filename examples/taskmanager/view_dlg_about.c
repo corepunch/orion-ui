@@ -7,10 +7,10 @@
 // ============================================================
 
 static const form_ctrl_def_t kAboutChildren[] = {
-  { FORM_CTRL_LABEL,  -1,    {8,  8, 200, 13}, 0,             "Orion Task Manager", "lbl_title"   },
-  { FORM_CTRL_LABEL,  -1,    {8, 24, 200, 13}, 0,             "Version 1.0",        "lbl_version" },
-  { FORM_CTRL_LABEL,  -1,    {8, 40, 200, 13}, 0,             "CRUD demo using Orion framework.", "lbl_desc" },
-  { FORM_CTRL_BUTTON, ID_OK, {80, 60, 60, 18}, BUTTON_DEFAULT, "OK",                "btn_ok"      },
+  { "label",  -1,    {8,  8, 200, 13}, 0,             "Orion Task Manager", "lbl_title"   },
+  { "label",  -1,    {8, 24, 200, 13}, 0,             "Version 1.0",        "lbl_version" },
+  { "label",  -1,    {8, 40, 200, 13}, 0,             "CRUD demo using Orion framework.", "lbl_desc" },
+  { "button", ID_OK, {80, 60, 60, 18}, BUTTON_DEFAULT, "OK",                "btn_ok"      },
 };
 
 static const form_def_t kAboutForm = {

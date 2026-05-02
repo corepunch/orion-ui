@@ -110,6 +110,13 @@ endif
 # Compile flags for .gem shared libraries
 GEM_CFLAGS = $(CFLAGS) -DBUILD_AS_GEM
 
+# Link flags for FormEditor component plugins.
+ifeq ($(UNAME_S),Darwin)
+	FE_PLUGIN_LFLAGS = $(LIB_FLAGS) -undefined dynamic_lookup
+else
+	FE_PLUGIN_LFLAGS = $(LIB_FLAGS)
+endif
+
 # Build directories
 BUILD_DIR = build
 LIB_DIR = $(BUILD_DIR)/lib
@@ -160,7 +167,7 @@ SHELL_SRCS = $(wildcard shell/*.c)
 
 # Example sources - each example lives in its own subdirectory with a main.c.
 # Browser is built with a dedicated rule because it needs libxml2 flags.
-EXAMPLE_DIRS = $(filter-out examples/browser/main.c,$(wildcard examples/*/main.c))
+EXAMPLE_DIRS = $(filter-out examples/browser/main.c examples/formeditor/main.c examples/imageeditor/main.c,$(wildcard examples/*/main.c))
 EXAMPLE_BINS = $(patsubst examples/%/main.c,$(BIN_DIR)/%$(EXE_EXT),$(EXAMPLE_DIRS))
 
 # Detect libxml2 before deciding whether to include the browser target.
@@ -209,6 +216,14 @@ IMAGELITE_BIN = $(BIN_DIR)/imagelite$(EXE_EXT)
 FORMEDITOR_UI_TEST_SRC  = $(TEST_DIR)/formeditor_ui_test.c
 FORMEDITOR_UI_TEST_BIN  = $(BIN_DIR)/test_formeditor_ui_test$(EXE_EXT)
 FORMEDITOR_SRCS_NO_MAIN = $(filter-out examples/formeditor/main.c,$(wildcard examples/formeditor/*.c))
+FORMEDITOR_COMPONENT_PLUGIN_SRC = commctl/formeditor_components_plugin.c
+FORMEDITOR_COMPONENT_PLUGIN = $(LIB_DIR)/formeditor_components$(LIB_EXT)
+
+IE_COMPONENTS_PLUGIN_SRCS = \
+	examples/imageeditor/components/lv_plug.c \
+	examples/imageeditor/components/lv_hist.c \
+	examples/imageeditor/components/lv_strip.c
+IE_COMPONENTS_PLUGIN = $(LIB_DIR)/imageeditor_components$(LIB_EXT)
 
 # Tests with custom build rules — excluded from the generic pattern rules.
 APP_UI_TEST_SRCS = $(GITCLIENT_TEST_SRCS) $(IMAGEEDITOR_UI_TEST_SRC) $(FORMEDITOR_UI_TEST_SRC)
@@ -318,7 +333,20 @@ $(SHARED_LIB): $(USER_SRCS) $(KERNEL_SRCS) $(COMMCTL_SRCS) $(PLATFORM_LIB) | $(L
 
 # Examples
 .PHONY: examples
-examples: share $(EXAMPLE_BINS) $(EXTRA_EXAMPLE_BINS)
+examples: share $(EXAMPLE_BINS) $(EXTRA_EXAMPLE_BINS) $(FORMEDITOR_COMPONENT_PLUGIN) $(IE_COMPONENTS_PLUGIN) $(BIN_DIR)/formeditor$(EXE_EXT) $(BIN_DIR)/imageeditor$(EXE_EXT)
+
+.PHONY: plugins
+plugins: $(FORMEDITOR_COMPONENT_PLUGIN) $(IE_COMPONENTS_PLUGIN)
+
+$(FORMEDITOR_COMPONENT_PLUGIN): $(FORMEDITOR_COMPONENT_PLUGIN_SRC) $(SHARED_LIB) | $(LIB_DIR)
+	@echo "Building FormEditor component plugin: $@"
+	$(CC) $(CFLAGS) $(FE_PLUGIN_LFLAGS) -I. -o $@ $< \
+		$(LDFLAGS)
+
+$(IE_COMPONENTS_PLUGIN): $(IE_COMPONENTS_PLUGIN_SRCS) $(SHARED_LIB) | $(LIB_DIR)
+	@echo "Building ImageEditor components plugin: $@"
+	$(CC) $(CFLAGS) $(FE_PLUGIN_LFLAGS) -I. -Iexamples/imageeditor -o $@ $(IE_COMPONENTS_PLUGIN_SRCS) \
+		$(LDFLAGS)
 
 .PHONY: imagelite
 imagelite: share $(IMAGELITE_BIN)
@@ -329,6 +357,20 @@ $(IMAGELITE_BIN): $(wildcard examples/imageeditor/*.c) $(SHARED_LIB) | $(BIN_DIR
 	@(find examples/imageeditor -name "*.c" ! -name "main.c" | sort | sed 's/.*/#include "&"/'; \
 	 echo '#include "examples/imageeditor/main.c"') | \
 		$(CC) $(CFLAGS) -DIMAGEEDITOR_SINGLE_LAYER -I. -Iexamples/imageeditor -DSHAREDIR='"../share/imageeditor"' -x c -o $@ - \
+		$(LDFLAGS) $(LDFLAGS_EXAMPLE) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
+
+$(BIN_DIR)/formeditor$(EXE_EXT): $(wildcard examples/formeditor/*.c) $(SHARED_LIB) $(FORMEDITOR_COMPONENT_PLUGIN) | $(BIN_DIR)
+	@echo "Building example: $@"
+	@(find examples/formeditor -maxdepth 1 -name "*.c" ! -name "main.c" | sort | sed 's/.*/#include "&"/'; \
+	 echo '#include "examples/formeditor/main.c"') | \
+		$(CC) $(CFLAGS) -I. -Iexamples/formeditor -DSHAREDIR='"../share/formeditor"' -x c -o $@ - \
+		$(LDFLAGS) $(LDFLAGS_EXAMPLE) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
+
+$(BIN_DIR)/imageeditor$(EXE_EXT): $(wildcard examples/imageeditor/*.c) $(SHARED_LIB) $(IE_COMPONENTS_PLUGIN) | $(BIN_DIR)
+	@echo "Building example: $@"
+	@(find examples/imageeditor -maxdepth 1 -name "*.c" ! -name "main.c" | sort | sed 's/.*/#include "&"/'; \
+	 echo '#include "examples/imageeditor/main.c"') | \
+		$(CC) $(CFLAGS) -I. -Iexamples/imageeditor -DSHAREDIR='"../share/imageeditor"' -x c -o $@ - \
 		$(LDFLAGS) $(LDFLAGS_EXAMPLE) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
 
 # Static unity-build rule for all examples.
@@ -374,6 +416,24 @@ $(GEM_DIR)/%.gem: $$(wildcard examples/%/*.c) $(SHARED_LIB) | $(GEM_DIR)
 	 find examples/$* -name "*.c" ! -name "main.c" | sort | sed 's/.*/#include "&"/'; \
 	 echo '#include "examples/$*/main.c"') | \
 		$(CC) $(GEM_CFLAGS) $(GEM_LFLAGS) -I. -Iexamples/$* -DSHAREDIR='"../share/$*"' -x c -o $@ - \
+		$(LDFLAGS) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
+	@$(MAKE) --no-print-directory validate-gem GEM=$@
+
+$(GEM_DIR)/formeditor.gem: $(wildcard examples/formeditor/*.c) $(SHARED_LIB) $(FORMEDITOR_COMPONENT_PLUGIN) | $(GEM_DIR)
+	@echo "Building .gem: $@"
+	@(echo '#include "gem_magic.h"'; \
+	 find examples/formeditor -maxdepth 1 -name "*.c" ! -name "main.c" | sort | sed 's/.*/#include "&"/'; \
+	 echo '#include "examples/formeditor/main.c"') | \
+		$(CC) $(GEM_CFLAGS) $(GEM_LFLAGS) -I. -Iexamples/formeditor -DSHAREDIR='"../share/formeditor"' -x c -o $@ - \
+		$(LDFLAGS) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
+	@$(MAKE) --no-print-directory validate-gem GEM=$@
+
+$(GEM_DIR)/imageeditor.gem: $(wildcard examples/imageeditor/*.c) $(SHARED_LIB) $(IE_COMPONENTS_PLUGIN) | $(GEM_DIR)
+	@echo "Building .gem: $@"
+	@(echo '#include "gem_magic.h"'; \
+	 find examples/imageeditor -maxdepth 1 -name "*.c" ! -name "main.c" | sort | sed 's/.*/#include "&"/'; \
+	 echo '#include "examples/imageeditor/main.c"') | \
+		$(CC) $(GEM_CFLAGS) $(GEM_LFLAGS) -I. -Iexamples/imageeditor -DSHAREDIR='"../share/imageeditor"' -x c -o $@ - \
 		$(LDFLAGS) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
 	@$(MAKE) --no-print-directory validate-gem GEM=$@
 

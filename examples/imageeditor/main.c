@@ -8,6 +8,7 @@
 
 // Global application state
 app_state_t *g_app = NULL;
+static bool g_loaded_component_plugins = false;
 
 // ============================================================
 // Keyboard accelerators
@@ -161,6 +162,19 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   create_app_windows(hinstance);
   imageeditor_load_filters();
 
+  {
+    char path[4096];
+    int n = snprintf(path, sizeof(path), "%s/../lib/imageeditor_components%s",
+                     ui_get_exe_dir(), AX_DYNLIB_EXT);
+    if (n > 0 && (size_t)n < sizeof(path)) {
+      g_loaded_component_plugins = fe_load_component_plugin(path);
+      if (!g_loaded_component_plugins)
+        IE_DEBUG("failed to load component plugin: %s", path);
+    } else {
+      IE_DEBUG("component plugin path was truncated");
+    }
+  }
+
   g_app->accel = load_accelerators(kAccelEntries,
                                    (int)(sizeof(kAccelEntries)/sizeof(kAccelEntries[0])));
   if (g_app->menubar_win)
@@ -199,6 +213,11 @@ void gem_shutdown(void) {
   g_app->clipboard = NULL;
 
   imageeditor_free_filters();
+
+  if (g_loaded_component_plugins) {
+    fe_unload_component_plugins();
+    g_loaded_component_plugins = false;
+  }
 
   while (g_app->docs) {
     canvas_doc_t *next = g_app->docs->next;

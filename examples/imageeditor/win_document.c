@@ -201,7 +201,7 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
       "", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL,
       MAKERECT(0, 0, cr.w, cr.h),
       dwin, win_canvas_proc, 0, doc);
-  cwin->notabstop = false;
+  cwin->flags &= ~WINDOW_NOTABSTOP;
   doc->canvas_win = cwin;
 
   show_window(dwin, true);

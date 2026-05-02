@@ -51,14 +51,14 @@ typedef struct {
 // ──────────────────────────────────────────────────────────────────
 
 static const form_ctrl_def_t kAddMaskChildren[] = {
-  { FORM_CTRL_LABEL,    -1,           {EM_LBL_X, EM_ROW_Y, EM_COMBO_X - EM_LBL_X - 2, EM_CTRL_H}, 0, "Fill with:", "lbl_fill" },
-  { FORM_CTRL_COMBOBOX,  EM_ID_FILL,   {EM_COMBO_X, EM_ROW_Y, EM_COMBO_W, EM_CTRL_H}, 0, "", "combo_fill" },
-  { FORM_CTRL_BUTTON,    EM_ID_OK,     {EM_OK_X, EM_BTN_Y, EM_BTN_W, EM_BTN_H}, BUTTON_DEFAULT, "OK", "ok" },
-  { FORM_CTRL_BUTTON,    EM_ID_CANCEL, {EM_CA_X, EM_BTN_Y, EM_BTN_W, EM_BTN_H}, 0, "Cancel", "cancel" },
+  { "label",    -1,           {EM_LBL_X, EM_ROW_Y, EM_COMBO_X - EM_LBL_X - 2, EM_CTRL_H}, 0, "Fill with:", "lbl_fill" },
+  { "combobox",  EM_ID_FILL,   {EM_COMBO_X, EM_ROW_Y, EM_COMBO_W, EM_CTRL_H}, 0, "", "combo_fill" },
+  { "button",    EM_ID_OK,     {EM_OK_X, EM_BTN_Y, EM_BTN_W, EM_BTN_H}, BUTTON_DEFAULT, "OK", "ok" },
+  { "button",    EM_ID_CANCEL, {EM_CA_X, EM_BTN_Y, EM_BTN_W, EM_BTN_H}, 0, "Cancel", "cancel" },
 };
 
 static const ctrl_binding_t kAddMaskBindings[] = {
-  { EM_ID_FILL, BIND_INT_COMBO, offsetof(em_state_t, fill_mode), MASK_EXTRACT_GRAYSCALE },
+  DDX_COMBO(EM_ID_FILL, em_state_t, fill_mode, MASK_EXTRACT_GRAYSCALE),
 };
 
 static const form_def_t kAddMaskForm = {

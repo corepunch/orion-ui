@@ -51,8 +51,8 @@ typedef struct { int x, y; } go_state_t;
 // ──────────────────────────────────────────────────────────────────
 
 static const ctrl_binding_t k_go_bindings[] = {
-  { GO_ID_GRIDX, BIND_INT_EDIT, offsetof(go_state_t, x), 0 },
-  { GO_ID_GRIDY, BIND_INT_EDIT, offsetof(go_state_t, y), 0 },
+  DDX_TEXT(GO_ID_GRIDX, go_state_t, x),
+  DDX_TEXT(GO_ID_GRIDY, go_state_t, y),
 };
 
 // ──────────────────────────────────────────────────────────────────
@@ -60,12 +60,12 @@ static const ctrl_binding_t k_go_bindings[] = {
 // ──────────────────────────────────────────────────────────────────
 
 static const form_ctrl_def_t kGoChildren[] = {
-  { FORM_CTRL_LABEL,    GO_ID_LBL_H, {GO_LBL_X,  GO_ROW1_Y + 1, GO_EDIT_X - GO_LBL_X - 4, GO_EDIT_H}, 0, "Horizontal:", "lbl_h" },
-  { FORM_CTRL_LABEL,    GO_ID_LBL_V, {GO_LBL_X,  GO_ROW2_Y + 1, GO_EDIT_X - GO_LBL_X - 4, GO_EDIT_H}, 0, "Vertical:",   "lbl_v" },
-  { FORM_CTRL_TEXTEDIT, GO_ID_GRIDX, {GO_EDIT_X, GO_ROW1_Y, GO_EDIT_W, GO_EDIT_H}, 0,              "",       "gridx"  },
-  { FORM_CTRL_TEXTEDIT, GO_ID_GRIDY, {GO_EDIT_X, GO_ROW2_Y, GO_EDIT_W, GO_EDIT_H}, 0,              "",       "gridy"  },
-  { FORM_CTRL_BUTTON,   GO_ID_OK,    {GO_OK_X,   GO_BTN_Y,  GO_BTN_W,  GO_BTN_H},  BUTTON_DEFAULT, "OK",     "ok"     },
-  { FORM_CTRL_BUTTON,   GO_ID_CANCEL,{GO_CA_X,   GO_BTN_Y,  GO_BTN_W,  GO_BTN_H},  0,              "Cancel", "cancel" },
+  { "label",    GO_ID_LBL_H, {GO_LBL_X,  GO_ROW1_Y + 1, GO_EDIT_X - GO_LBL_X - 4, GO_EDIT_H}, 0, "Horizontal:", "lbl_h" },
+  { "label",    GO_ID_LBL_V, {GO_LBL_X,  GO_ROW2_Y + 1, GO_EDIT_X - GO_LBL_X - 4, GO_EDIT_H}, 0, "Vertical:",   "lbl_v" },
+  { "textedit", GO_ID_GRIDX, {GO_EDIT_X, GO_ROW1_Y, GO_EDIT_W, GO_EDIT_H}, 0,              "",       "gridx"  },
+  { "textedit", GO_ID_GRIDY, {GO_EDIT_X, GO_ROW2_Y, GO_EDIT_W, GO_EDIT_H}, 0,              "",       "gridy"  },
+  { "button",   GO_ID_OK,    {GO_OK_X,   GO_BTN_Y,  GO_BTN_W,  GO_BTN_H},  BUTTON_DEFAULT, "OK",     "ok"     },
+  { "button",   GO_ID_CANCEL,{GO_CA_X,   GO_BTN_Y,  GO_BTN_W,  GO_BTN_H},  0,              "Cancel", "cancel" },
 };
 
 static const form_def_t kGoForm = {

@@ -54,14 +54,14 @@ typedef struct {
 // ──────────────────────────────────────────────────────────────────
 
 static const form_ctrl_def_t kNewLayerChildren[] = {
-  { FORM_CTRL_LABEL,    -1,         {NL_LBL_X,   NL_ROW_Y, NL_COMBO_X - NL_LBL_X - NL_LBL_COMBO_GAP, NL_CTRL_H}, 0, "Fill with:", "lbl_fill"   },
-  { FORM_CTRL_COMBOBOX, NL_ID_FILL, {NL_COMBO_X, NL_ROW_Y, NL_COMBO_W, NL_CTRL_H}, 0,              "",             "combo_fill" },
-  { FORM_CTRL_BUTTON,   NL_ID_OK,   {NL_OK_X, NL_BTN_Y, NL_BTN_W, NL_BTN_H}, BUTTON_DEFAULT, "OK",     "ok"     },
-  { FORM_CTRL_BUTTON,   NL_ID_CANCEL, {NL_CA_X, NL_BTN_Y, NL_BTN_W, NL_BTN_H}, 0,              "Cancel", "cancel" },
+  { "label",    -1,         {NL_LBL_X,   NL_ROW_Y, NL_COMBO_X - NL_LBL_X - NL_LBL_COMBO_GAP, NL_CTRL_H}, 0, "Fill with:", "lbl_fill"   },
+  { "combobox", NL_ID_FILL, {NL_COMBO_X, NL_ROW_Y, NL_COMBO_W, NL_CTRL_H}, 0,              "",             "combo_fill" },
+  { "button",   NL_ID_OK,   {NL_OK_X, NL_BTN_Y, NL_BTN_W, NL_BTN_H}, BUTTON_DEFAULT, "OK",     "ok"     },
+  { "button",   NL_ID_CANCEL, {NL_CA_X, NL_BTN_Y, NL_BTN_W, NL_BTN_H}, 0,              "Cancel", "cancel" },
 };
 
 static const ctrl_binding_t kNewLayerBindings[] = {
-  { NL_ID_FILL, BIND_INT_COMBO, offsetof(nl_state_t, fill_index), 1 /* default: white */ },
+  DDX_COMBO(NL_ID_FILL, nl_state_t, fill_index, 1 /* default: white */),
 };
 
 static const form_def_t kNewLayerForm = {

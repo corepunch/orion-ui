@@ -18,10 +18,10 @@ typedef struct {
 } browser_settings_dialog_state_t;
 
 static const form_ctrl_def_t kSettingsChildren[] = {
-  { FORM_CTRL_LABEL,    -1,              {8,   9, 80, 13},   0,              "Home URL:", "lbl_home"   },
-  { FORM_CTRL_TEXTEDIT, ID_DLG_HOME_EDIT,{68,  7, 268, 16},  0,              "",          "edit_home"  },
-  { FORM_CTRL_BUTTON,   ID_DLG_SAVE,     {218, 34, 50, 18},  BUTTON_DEFAULT, "Save",      "btn_save"   },
-  { FORM_CTRL_BUTTON,   ID_DLG_CANCEL,   {276, 34, 60, 18},  0,              "Cancel",    "btn_cancel" },
+  { "label",    -1,              {8,   9, 80, 13},   0,              "Home URL:", "lbl_home"   },
+  { "textedit", ID_DLG_HOME_EDIT,{68,  7, 268, 16},  0,              "",          "edit_home"  },
+  { "button",   ID_DLG_SAVE,     {218, 34, 50, 18},  BUTTON_DEFAULT, "Save",      "btn_save"   },
+  { "button",   ID_DLG_CANCEL,   {276, 34, 60, 18},  0,              "Cancel",    "btn_cancel" },
 };
 
 static const form_def_t kSettingsForm = {
@@ -33,10 +33,10 @@ static const form_def_t kSettingsForm = {
 };
 
 static const form_ctrl_def_t kAboutChildren[] = {
-  { FORM_CTRL_LABEL,  -1,          {8,  8, 210, 13},  0,              "Orion Browser",            "lbl_title" },
-  { FORM_CTRL_LABEL,  -1,          {8, 24, 210, 13},  0,              "Version 0.2",              "lbl_version" },
-  { FORM_CTRL_LABEL,  -1,          {8, 40, 220, 26},  0,              "Minimal HTML browser with local file support.", "lbl_desc" },
-  { FORM_CTRL_BUTTON, ID_ABOUT_OK, {84, 72, 60, 18},  BUTTON_DEFAULT, "OK",                       "btn_ok" },
+  { "label",  -1,          {8,  8, 210, 13},  0,              "Orion Browser",            "lbl_title" },
+  { "label",  -1,          {8, 24, 210, 13},  0,              "Version 0.2",              "lbl_version" },
+  { "label",  -1,          {8, 40, 220, 26},  0,              "Minimal HTML browser with local file support.", "lbl_desc" },
+  { "button", ID_ABOUT_OK, {84, 72, 60, 18},  BUTTON_DEFAULT, "OK",                       "btn_ok" },
 };
 
 static const form_def_t kAboutForm = {

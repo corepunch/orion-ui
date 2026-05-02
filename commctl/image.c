@@ -11,7 +11,7 @@ result_t win_image(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
     case evCreate:
       win->userdata = lparam;
-      win->notabstop = true;
+      win->flags |= WINDOW_NOTABSTOP;
       return true;
     case evPaint: {
       int tex = (int)(uintptr_t)win->userdata;

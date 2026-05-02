@@ -26,11 +26,9 @@
 #define FE_TOOLBOX_ICON_W   21   // icon tile size in toolbox.png
 #define FE_TOOLBOX_BTN_SIZE 26   // square button size used for the formeditor
 
-// Palette window dimensions — 2 button columns, rows computed from NUM_TOOLS.
+// Palette window dimensions.
 #define PALETTE_WIN_X     4
 #define PALETTE_WIN_W     (TOOLBOX_COLS * FE_TOOLBOX_BTN_SIZE)
-#define PALETTE_GRID_ROWS ((NUM_TOOLS + TOOLBOX_COLS - 1) / TOOLBOX_COLS)
-#define PALETTE_WIN_H     (TITLEBAR_HEIGHT + PALETTE_GRID_ROWS * FE_TOOLBOX_BTN_SIZE + 4)
 
 // Property browser window.  This is intentionally a reportview-backed
 // inspector: close to VB1's simple property sheet, without inline editing yet.
@@ -43,26 +41,6 @@
 // frame.y is the window top; place it 8px below the menu bar.
 #define DOC_START_X       (PALETTE_WIN_X + PALETTE_WIN_W + 10)
 #define DOC_START_Y       (MENUBAR_HEIGHT + 8)
-
-// ============================================================
-// Control types  (VB3 toolbox order, skipping unsupported)
-// Aliased to the framework's FORM_CTRL_* enum so that form_element_t.type
-// values are directly usable with create_window_from_form().
-// ============================================================
-
-#define CTRL_BUTTON    FORM_CTRL_BUTTON
-#define CTRL_CHECKBOX  FORM_CTRL_CHECKBOX
-#define CTRL_LABEL     FORM_CTRL_LABEL
-#define CTRL_TEXTEDIT  FORM_CTRL_TEXTEDIT
-#define CTRL_LIST      FORM_CTRL_LIST
-#define CTRL_COMBOBOX  FORM_CTRL_COMBOBOX
-#define CTRL_TYPE_COUNT FORM_CTRL_COUNT
-
-// ============================================================
-// Number of tools
-// ============================================================
-
-#define NUM_TOOLS  7
 
 // ============================================================
 // Menu item IDs
@@ -105,7 +83,7 @@
 // ============================================================
 
 typedef struct {
-  int      type;        // CTRL_* constant
+  int      type;        // registered component ID
   int      id;          // numeric control ID (e.g. 1001)
   irect16_t frame;      // position and size in form coordinates
   uint32_t flags;        // reserved for future style flags
@@ -122,7 +100,7 @@ typedef struct form_doc_t {
   bool   modified;
   char   filename[512];
   int    next_id;                      // next numeric control ID
-  int    type_counters[CTRL_TYPE_COUNT]; // per-type name counter
+  int    type_counters[FE_MAX_COMPONENTS]; // per-component name counter
   window_t *canvas_win;
   window_t *doc_win;
   struct form_doc_t *next;

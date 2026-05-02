@@ -15,7 +15,7 @@ result_t win_label(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
     case evCreate:
       win->frame.w = MAX(win->frame.w, text_strwidth(FONT_SMALL, win->title) + TEXT_SHADOW_OFFSET);
-      win->notabstop = true;
+      win->flags |= WINDOW_NOTABSTOP;
       if (lparam) win->userdata = lparam;
       return true;
     case evPaint: {

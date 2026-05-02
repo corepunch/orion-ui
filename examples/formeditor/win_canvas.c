@@ -203,15 +203,8 @@ static void draw_handles(window_t *win, canvas_state_t *s);
 static void draw_rubber_band(window_t *win, canvas_state_t *s);
 
 static winproc_t ctrl_type_to_proc(int type) {
-  switch (type) {
-    case CTRL_BUTTON:   return win_button;
-    case CTRL_CHECKBOX: return win_checkbox;
-    case CTRL_LABEL:    return win_label;
-    case CTRL_TEXTEDIT: return win_textedit;
-    case CTRL_LIST:     return win_list;
-    case CTRL_COMBOBOX: return win_combobox;
-    default:            return NULL;
-  }
+  const fe_component_desc_t *c = fe_component_by_id(type);
+  return c ? c->proc : NULL;
 }
 
 static form_element_t *canvas_find_element_for_live_window(window_t *win) {
@@ -253,7 +246,7 @@ static result_t design_live_ctrl_proc(window_t *win, uint32_t msg,
       form_element_t *creating_el = (form_element_t *)lparam;
       if (!real_proc && creating_el)
         real_proc = ctrl_type_to_proc(creating_el->type);
-      win->notabstop = true;
+      win->flags |= WINDOW_NOTABSTOP;
       return real_proc ? real_proc(win, msg, wparam, NULL) : true;
     }
     case evDestroy:
@@ -285,7 +278,7 @@ static result_t preview_ctrl_proc(window_t *win, uint32_t msg,
 
   switch (msg) {
     case evCreate:
-      win->notabstop = true;
+      win->flags |= WINDOW_NOTABSTOP;
       return real_proc ? real_proc(win, msg, wparam, NULL) : true;
     case evDestroy:
     case evPaint:
@@ -355,7 +348,7 @@ static void canvas_update_preview(canvas_state_t *s, int type, irect16_t form_rc
                                    MAKERECT(0, 0, MAX(form_rc.w, 1), MAX(form_rc.h, 1)),
                                    doc->canvas_win, preview_ctrl_proc, 0, NULL);
     if (!s->preview_win) return;
-    s->preview_win->notabstop = true;
+    s->preview_win->flags |= WINDOW_NOTABSTOP;
   }
 
   move_window(s->preview_win, canvas_rc.x, canvas_rc.y);
@@ -394,7 +387,7 @@ static void canvas_create_live_element_window(form_doc_t *doc, form_element_t *e
                                doc->canvas_win, design_live_ctrl_proc, 0, el);
   if (!el->live_win) return;
   el->live_win->id = el->id;
-  el->live_win->notabstop = true;
+  el->live_win->flags |= WINDOW_NOTABSTOP;
 }
 
 void canvas_sync_live_controls(form_doc_t *doc) {
@@ -513,43 +506,25 @@ static void draw_grid(canvas_state_t *s, irect16_t canvas_rc) {
 // Tool -> control type mapping
 // ============================================================
 static int tool_to_ctrl_type(int tool) {
-  switch (tool) {
-    case ID_TOOL_BUTTON:   return CTRL_BUTTON;
-    case ID_TOOL_CHECKBOX: return CTRL_CHECKBOX;
-    case ID_TOOL_LABEL:    return CTRL_LABEL;
-    case ID_TOOL_TEXTEDIT: return CTRL_TEXTEDIT;
-    case ID_TOOL_LIST:     return CTRL_LIST;
-    case ID_TOOL_COMBOBOX: return CTRL_COMBOBOX;
-    default:               return -1;
+  for (int i = 0; i < fe_component_count(); i++) {
+    const fe_component_desc_t *c = fe_component_at(i);
+    if (!c) continue;
+    if (c->toolbox_ident == tool && (c->capabilities & FE_COMPONENT_PLACEABLE))
+      return i;
   }
+  return -1;
 }
 
 // Default dimensions for newly placed controls.
 static isize16_t default_ctrl_size(int type) {
-  isize16_t size;
-  switch (type) {
-    case CTRL_BUTTON:   size = (isize16_t){75, 23};  break;
-    case CTRL_CHECKBOX: size = (isize16_t){97, 17};  break;
-    case CTRL_LABEL:    size = (isize16_t){65, 13};  break;
-    case CTRL_TEXTEDIT: size = (isize16_t){121, 20}; break;
-    case CTRL_LIST:     size = (isize16_t){121, 60}; break;
-    case CTRL_COMBOBOX: size = (isize16_t){121, 20}; break;
-    default:            size = (isize16_t){80, 20};  break;
-  }
-  return size;
+  const fe_component_desc_t *c = fe_component_by_id(type);
+  return c ? c->default_size : (isize16_t){80, 20};
 }
 
 // Control type display names for use in caption and name generation.
 static const char *ctrl_type_name(int type) {
-  switch (type) {
-    case CTRL_BUTTON:   return "Button";
-    case CTRL_CHECKBOX: return "CheckBox";
-    case CTRL_LABEL:    return "Label";
-    case CTRL_TEXTEDIT: return "TextBox";
-    case CTRL_LIST:     return "ListBox";
-    case CTRL_COMBOBOX: return "ComboBox";
-    default:            return "Control";
-  }
+  const fe_component_desc_t *c = fe_component_by_id(type);
+  return c ? c->display_name : "Control";
 }
 
 static void ctrl_make_caption(int type, int index, char *text, size_t text_sz) {
@@ -561,8 +536,9 @@ static void ctrl_make_caption(int type, int index, char *text, size_t text_sz) {
 // Add a new element to the document
 // ============================================================
 static int canvas_add_element(form_doc_t *doc, int type, irect16_t frame) {
+  const fe_component_desc_t *c = fe_component_by_id(type);
   if (doc->element_count >= MAX_ELEMENTS) return -1;
-  if (type < 0 || type >= CTRL_TYPE_COUNT) return -1;
+  if (!c || type < 0 || type >= FE_MAX_COMPONENTS) return -1;
   if (frame.w < MIN_ELEM_W) frame.w = MIN_ELEM_W;
   if (frame.h < MIN_ELEM_H) frame.h = MIN_ELEM_H;
 
@@ -578,15 +554,7 @@ static int canvas_add_element(form_doc_t *doc, int type, irect16_t frame) {
   ctrl_make_caption(type, n, el->text, sizeof(el->text));
   // Identifier name (used in .h file)
   char pfx[8];
-  switch (type) {
-    case CTRL_BUTTON:   strncpy(pfx, "IDC_BTN",  sizeof(pfx) - 1); break;
-    case CTRL_CHECKBOX: strncpy(pfx, "IDC_CHK",  sizeof(pfx) - 1); break;
-    case CTRL_LABEL:    strncpy(pfx, "IDC_LBL",  sizeof(pfx) - 1); break;
-    case CTRL_TEXTEDIT: strncpy(pfx, "IDC_EDT",  sizeof(pfx) - 1); break;
-    case CTRL_LIST:     strncpy(pfx, "IDC_LST",  sizeof(pfx) - 1); break;
-    case CTRL_COMBOBOX: strncpy(pfx, "IDC_CMB",  sizeof(pfx) - 1); break;
-    default:            strncpy(pfx, "IDC_CTRL", sizeof(pfx) - 1); break;
-  }
+  strncpy(pfx, c->name_prefix, sizeof(pfx) - 1);
   pfx[sizeof(pfx)-1] = '\0';
   snprintf(el->name, sizeof(el->name), "%s%d", pfx, n);
 

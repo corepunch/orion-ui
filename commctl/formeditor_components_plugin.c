@@ -1,0 +1,73 @@
+#include "../ui.h"
+#include "commctl.h"
+
+static const fe_component_desc_t k_components[] = {
+  {
+    .class_name = "button",
+    .display_name = "CommandButton",
+    .token = "button",
+    .name_prefix = "IDC_BTN",
+    .toolbox_ident = 205,
+    .toolbox_icon = 5,
+    .default_size = {75, 23},
+    .capabilities = FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX,
+    .proc = win_button,
+  },
+  {
+    .class_name = "checkbox",
+    .display_name = "CheckBox",
+    .token = "checkbox",
+    .name_prefix = "IDC_CHK",
+    .toolbox_ident = 206,
+    .toolbox_icon = 6,
+    .default_size = {97, 17},
+    .capabilities = FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX,
+    .proc = win_checkbox,
+  },
+  {
+    .class_name = "label",
+    .display_name = "Label",
+    .token = "label",
+    .name_prefix = "IDC_LBL",
+    .toolbox_ident = 202,
+    .toolbox_icon = 2,
+    .default_size = {65, 13},
+    .capabilities = FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX,
+    .proc = win_label,
+  },
+  {
+    .class_name = "textedit",
+    .display_name = "TextBox",
+    .token = "textedit",
+    .name_prefix = "IDC_EDT",
+    .toolbox_ident = 203,
+    .toolbox_icon = 3,
+    .default_size = {121, 20},
+    .capabilities = FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX,
+    .proc = win_textedit,
+  },
+  {
+    .class_name = "list",
+    .display_name = "ListBox",
+    .token = "list",
+    .name_prefix = "IDC_LST",
+    .toolbox_ident = 209,
+    .toolbox_icon = 9,
+    .default_size = {121, 60},
+    .capabilities = FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX,
+    .proc = win_list,
+  },
+  {
+    .class_name = "combobox",
+    .display_name = "ComboBox",
+    .token = "combobox",
+    .name_prefix = "IDC_CMB",
+    .toolbox_ident = 208,
+    .toolbox_icon = 8,
+    .default_size = {121, 20},
+    .capabilities = FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX,
+    .proc = win_combobox,
+  },
+};
+
+GEM_CLASSES(k_components, "Orion built-in commctl components", FE_PLUGIN_VERSION)

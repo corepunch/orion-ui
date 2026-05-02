@@ -19,10 +19,10 @@
 #define CTL_CANCEL  4
 
 static const form_ctrl_def_t kCommitCtrls[] = {
-  { FORM_CTRL_MULTIEDIT, CTL_MSG,    {8,   20, 300, 60}, 0,              "",                 "msg"    },
-  { FORM_CTRL_CHECKBOX,  CTL_AMEND,  {8,   86,  120, 13}, 0,              "Amend last commit","amend"  },
-  { FORM_CTRL_BUTTON,    CTL_COMMIT, {220, 106,  45, 14}, BUTTON_DEFAULT, "Commit",           "ok"     },
-  { FORM_CTRL_BUTTON,    CTL_CANCEL, {269, 106,  45, 14}, 0,              "Cancel",           "cancel" },
+  { "multiedit", CTL_MSG,    {8,   20, 300, 60}, 0,              "",                 "msg"    },
+  { "checkbox",  CTL_AMEND,  {8,   86,  120, 13}, 0,              "Amend last commit","amend"  },
+  { "button",    CTL_COMMIT, {220, 106,  45, 14}, BUTTON_DEFAULT, "Commit",           "ok"     },
+  { "button",    CTL_CANCEL, {269, 106,  45, 14}, 0,              "Cancel",           "cancel" },
 };
 static const form_def_t kCommitForm = {
   .name        = "Commit",

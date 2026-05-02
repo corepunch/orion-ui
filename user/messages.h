@@ -68,7 +68,7 @@ enum {
   btnGetCheck,
   btnSetImage,       // wparam = icon index (iBitmap); lparam = bitmap_strip_t*
   cbAddString,
-  cbGetCurrentSelection,
+  cbGetCurrentSelection, // returns index; if lparam=int* also writes index (or kComboBoxError)
   cbSetCurrentSelection,
   cbGetListBoxText,
   cbClear,            // clear all items and reset title
@@ -78,10 +78,17 @@ enum {
   tbSetActiveButton,  // wparam=ident of button to mark active
   sbSetInfo,        // lparam = scrollbar_info_t*
   sbGetPos,         // returns current scroll position
+  slSetRange,       // lparam = slider_range_t* (min/max)
+  slGetRange,       // lparam = slider_range_t* out (optional)
+  slSetCount,       // wparam = handle count (1..4)
+  slSetPos,         // wparam = handle index (0..3), lparam=(void*)(intptr_t)pos
+  slGetPos,         // wparam = handle index (0..3), lparam=int* out(optional)
   tbSetButtonSize,    // wparam=square button size in pixels (0 resets to TB_SPACING)
   tbLoadStrip,        // wparam=icon tile size in px (square); lparam=const char* path to PNG
   tbSetItems,         // wparam=count; lparam=toolbar_item_t* — create real child windows
-  // Multiline text edit messages (analogous to WM_GETTEXT / WM_SETTEXT)
+  // Text edit getter/setter messages (single-line and multiline controls).
+  // Getter pattern is WinAPI-like: return value in result_t and optionally
+  // mirror it to lparam when non-NULL.
   edGetText,        // wparam=buf_size; lparam=char* dst → copies text, returns length
   edSetText,        // wparam=0; lparam=const char* src → replaces text
   // List (popup) messages
@@ -93,6 +100,8 @@ enum {
   bxSetButtonSize,    // wparam=size in px (0 = reset to TOOLBOX_BTN_SIZE)
   bxLoadStrip,        // wparam=icon_w (square tiles); lparam=const char* path — load PNG
   bxSetIconTintBrush, // wparam=br* index (e.g., brTextNormal), -1 disables tint
+  // Gradient bar control (commctl/gradient.c)
+  grSetColors,        // wparam=left_rgba; lparam=(void*)(uintptr_t)right_rgba
   // Async HTTP messages (analogous to WinInet/WinHTTP notifications).
   // Delivered to the window_t* registered with http_request_async() when the
   // request transitions through the following states:
@@ -124,8 +133,22 @@ enum {
   edUpdate = 100,
   btnClicked,
   cbSelectionChange,
+  // Dialog Data Exchange normalized data-change notification.
+  // Sent via evCommand when dialog state was updated regardless of the
+  // originating control type. LOWORD(wparam)=source control id (if known),
+  // HIWORD(wparam)=ddxDataChanged, lparam=pointer to dialog state/model.
+  ddxDataChanged,
   sbChanged,  // wparam: MAKEDWORD(scrollbar_id, sbChanged); lparam: (void*)(intptr_t)new_pos
   bxClicked,    // sent via evCommand: MAKEDWORD(ident, bxClicked)
+  // Slider notifications sent via evCommand from win_slider.
+  // LOWORD(wparam)=control id, HIWORD(wparam)=sliderValueChanged + handle_index.
+  // handle 0 => sliderValueChanged, handle 1 => sliderValueChanged1, etc.
+  // lparam = (void *)(intptr_t)new_value for the changed handle.
+  sliderValueChanged,
+  sliderValueChanged1,
+  sliderValueChanged2,
+  sliderValueChanged3,
+  sliderValueChanged4,
 
   // Splitter notifications (win_splitter → parent via evCommand).
   //
@@ -187,8 +210,6 @@ typedef struct {
 #define WINDOW_DIALOG       (1 << 10)
 #define WINDOW_TOOLBAR      (1 << 11)
 #define WINDOW_STATUSBAR    (1 << 12)
-#define WINDOW_NOACTIVATE   (1 << 17)  // do not steal keyboard focus when shown
-
 // Button style flags (analogous to WinAPI BS_* styles)
 // BUTTON_PUSHLIKE: button stays visually pressed while win->value == true (like a toggle/check button)
 // BUTTON_AUTORADIO: clicking auto-clears all sibling AUTORADIO buttons and sets this one checked
@@ -203,6 +224,8 @@ typedef struct {
 // the normal child-window paint/event dispatch.  A 1-pixel vertical separator
 // is drawn between the sidebar and the content area during evNCPaint.
 #define WINDOW_SIDEBAR      (1 << 16)
+#define WINDOW_NOACTIVATE   (1 << 17)  // do not steal keyboard focus when shown
+#define WINDOW_NOTABSTOP    (1 << 18)  // exclude from Tab-key focus cycle (WS_TABSTOP equivalent)
 
 // Scroll bar constants (WinAPI-style, used with set_scroll_info / get_scroll_info)
 #define SB_HORZ  0   // horizontal scroll bar

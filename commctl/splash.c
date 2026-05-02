@@ -27,7 +27,7 @@ static result_t splash_proc(window_t *win, uint32_t msg,
       splash_state_t *s = allocate_window_data(win, sizeof(splash_state_t));
       s->tex = (uint32_t)(uintptr_t)lparam;
       s->mouse_entered = false;
-      win->notabstop = true;
+      win->flags |= WINDOW_NOTABSTOP;
       return true;
     }
     case evMouseMove: {

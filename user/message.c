@@ -797,7 +797,7 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         for (window_t *item = win->children; item; item = item->next) {
           irect16_t r = item->frame;
           uint16_t x = LOWORD(wparam), y = HIWORD(wparam);
-          if (!item->notabstop && CONTAINS(x, y, r.x, r.y, r.w, r.h)) {
+          if (!(item->flags & WINDOW_NOTABSTOP) && CONTAINS(x, y, r.x, r.y, r.w, r.h)) {
             *(window_t **)lparam = item;
           }
         }

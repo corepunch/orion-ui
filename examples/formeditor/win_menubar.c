@@ -187,7 +187,7 @@ form_doc_t *create_form_doc(int w, int h) {
       "", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL,
       MAKERECT(0, 0, cr.w, cr.h),
       dwin, win_canvas_proc, 0, doc);
-  cwin->notabstop = false;
+  cwin->flags &= ~WINDOW_NOTABSTOP;
   doc->canvas_win = cwin;
   cr = get_client_rect(dwin);
   resize_window(cwin, cr.w, cr.h);
@@ -226,37 +226,18 @@ void close_form_doc(form_doc_t *doc) {
 
 // Map control type to a short keyword used in the file.
 static const char *ctrl_type_token(int type) {
-  switch (type) {
-    case CTRL_BUTTON:   return "button";
-    case CTRL_CHECKBOX: return "checkbox";
-    case CTRL_LABEL:    return "label";
-    case CTRL_TEXTEDIT: return "textedit";
-    case CTRL_LIST:     return "list";
-    case CTRL_COMBOBOX: return "combobox";
-    default:            return "control";
-  }
-}
-
-// Map control type to the FORM_CTRL_* enum name (uppercase suffix).
-static const char *ctrl_type_form_token(int type) {
-  switch (type) {
-    case CTRL_BUTTON:   return "BUTTON";
-    case CTRL_CHECKBOX: return "CHECKBOX";
-    case CTRL_LABEL:    return "LABEL";
-    case CTRL_TEXTEDIT: return "TEXTEDIT";
-    case CTRL_LIST:     return "LIST";
-    case CTRL_COMBOBOX: return "COMBOBOX";
-    default:            return "BUTTON";
-  }
+  const fe_component_desc_t *c = fe_component_by_id(type);
+  return c ? c->token : "control";
 }
 
 static int ctrl_type_from_token(const char *tok) {
-  if (strcmp(tok, "button")   == 0) return CTRL_BUTTON;
-  if (strcmp(tok, "checkbox") == 0) return CTRL_CHECKBOX;
-  if (strcmp(tok, "label")    == 0) return CTRL_LABEL;
-  if (strcmp(tok, "textedit") == 0) return CTRL_TEXTEDIT;
-  if (strcmp(tok, "list")     == 0) return CTRL_LIST;
-  if (strcmp(tok, "combobox") == 0) return CTRL_COMBOBOX;
+  const fe_component_desc_t *c = fe_component_by_token(tok);
+  if (!c) return -1;
+  for (int i = 0; i < fe_component_count(); i++) {
+    const fe_component_desc_t *it = fe_component_at(i);
+    if (it == c)
+      return i;
+  }
   return -1;
 }
 
@@ -288,33 +269,6 @@ static void sanitize_c_str_literal(const char *src, char *dst, size_t dst_sz) {
   dst[di] = '\0';
 }
 
-// Extract a C identifier from a file path: strips directory component and
-// extension, then replaces non-identifier characters with '_'.
-static void path_to_form_ident(const char *path, char *ident, size_t ident_sz) {
-  const char *base = strrchr(path, '/');
-  if (!base) base = strrchr(path, '\\');
-  base = base ? base + 1 : path;
-  size_t di = 0;
-  for (size_t si = 0; base[si] && base[si] != '.' && di < ident_sz - 1; si++) {
-    char ch = base[si];
-    if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') ||
-        (ch >= '0' && ch <= '9') || ch == '_')
-      ident[di++] = ch;
-    else
-      ident[di++] = '_';
-  }
-  if (di == 0) { ident[0] = 'f'; di = 1; }
-  // Ensure identifier doesn't start with a digit.
-  if (ident[0] >= '0' && ident[0] <= '9') {
-    if (di < ident_sz - 1) {
-      memmove(ident + 1, ident, di + 1);
-      ident[0] = 'f';
-      di++;
-      if (di >= ident_sz - 1) { ident[ident_sz - 1] = '\0'; return; }
-    }
-  }
-  ident[di] = '\0';
-}
 
 // Return true when s is a non-empty, valid C identifier.
 static bool is_c_identifier(const char *s) {
@@ -340,87 +294,23 @@ bool form_save(form_doc_t *doc, const char *path) {
       fprintf(f, "#define %-30s %d\n", el->name, el->id);
   }
 
-  // Emit a form_def_t struct literal that can be passed directly to
-  // create_window_from_form() at runtime.
-  char ident[64];
-  path_to_form_ident(path, ident, sizeof(ident));
-
-  fprintf(f, "\n");
-  if (doc->element_count > 0) {
-    fprintf(f, "static const form_ctrl_def_t k%s_children[] = {\n", ident);
-    for (int i = 0; i < doc->element_count; i++) {
-      form_element_t *el = &doc->elements[i];
-      char safe_text[sizeof(el->text) * 2];
-      char safe_name[sizeof(el->name) * 2];
-      sanitize_c_str_literal(el->text, safe_text, sizeof(safe_text));
-      sanitize_c_str_literal(el->name, safe_name, sizeof(safe_name));
-      fprintf(f, "  { FORM_CTRL_%s, %d, {%d, %d, %d, %d}, %" PRIu32 ", \"%s\", \"%s\" },\n",
-              ctrl_type_form_token(el->type), el->id,
-              el->frame.x, el->frame.y, el->frame.w, el->frame.h, el->flags,
-              safe_text, safe_name);
-    }
-    fprintf(f, "};\n");
-    fprintf(f, "static const form_def_t k%s = {\n", ident);
-        fprintf(f, "  .name        = \"%s\",\n", ident);
-        fprintf(f, "  .width       = %d,\n", doc->form_size.w);
-        fprintf(f, "  .height      = %d,\n", doc->form_size.h);
-        fprintf(f, "  .flags       = %" PRIu32 ",\n", doc->flags);
-        fprintf(f, "  .children    = k%s_children,\n", ident);
-        fprintf(f, "  .child_count = (int)(sizeof(k%s_children) / sizeof(k%s_children[0]))\n",
-          ident, ident);
-    fprintf(f, "};\n");
-  } else {
-    fprintf(f, "static const form_def_t k%s = {\n", ident);
-        fprintf(f, "  .name        = \"%s\",\n", ident);
-        fprintf(f, "  .width       = %d,\n", doc->form_size.w);
-        fprintf(f, "  .height      = %d,\n", doc->form_size.h);
-        fprintf(f, "  .flags       = %" PRIu32 ",\n", doc->flags);
-        fprintf(f, "  .children    = NULL,\n");
-        fprintf(f, "  .child_count = 0\n");
-    fprintf(f, "};\n");
+  fprintf(f, "\n/* ORION_FORM_BEGIN */\n");
+  fprintf(f, "/* form %d %d %" PRIu32 " */\n", doc->form_size.w, doc->form_size.h, doc->flags);
+  for (int i = 0; i < doc->element_count; i++) {
+    form_element_t *el = &doc->elements[i];
+    char safe_text[sizeof(el->text) * 2];
+    char safe_name[sizeof(el->name) * 2];
+    sanitize_c_str_literal(el->text, safe_text, sizeof(safe_text));
+    sanitize_c_str_literal(el->name, safe_name, sizeof(safe_name));
+    fprintf(f, "/* ctrl %s %d %d %d %d %d %" PRIu32 " \"%s\" \"%s\" */\n",
+            ctrl_type_token(el->type), el->id,
+            el->frame.x, el->frame.y, el->frame.w, el->frame.h, el->flags,
+            safe_text, safe_name);
   }
+  fprintf(f, "/* ORION_FORM_END */\n");
 
   fclose(f);
   return true;
-}
-
-// Map FORM_CTRL_XXX token (uppercase) to a ctrl type constant.
-static int ctrl_type_from_form_token(const char *tok) {
-  if (strcmp(tok, "BUTTON")   == 0) return CTRL_BUTTON;
-  if (strcmp(tok, "CHECKBOX") == 0) return CTRL_CHECKBOX;
-  if (strcmp(tok, "LABEL")    == 0) return CTRL_LABEL;
-  if (strcmp(tok, "TEXTEDIT") == 0) return CTRL_TEXTEDIT;
-  if (strcmp(tok, "LIST")     == 0) return CTRL_LIST;
-  if (strcmp(tok, "COMBOBOX") == 0) return CTRL_COMBOBOX;
-  return -1;
-}
-
-// Parse a C string literal starting at *p (pointing at the opening '"').
-// Decodes escape sequences produced by sanitize_c_str_literal().
-// Advances *p past the closing '"'.  Returns number of chars written (not NUL).
-static int parse_c_str_literal(const char **p, char *dst, size_t dst_sz) {
-  if (**p != '"') return -1;
-  (*p)++;  // skip opening quote
-  size_t n = 0;
-  while (**p && **p != '"' && n < dst_sz - 1) {
-    if (**p == '\\') {
-      (*p)++;
-      switch (**p) {
-        case '"':  dst[n++] = '"';  break;
-        case '\\': dst[n++] = '\\'; break;
-        case 'n':  dst[n++] = '\n'; break;
-        case 'r':  dst[n++] = '\r'; break;
-        case 't':  dst[n++] = '\t'; break;
-        default:   dst[n++] = **p;  break;  // unknown escape, copy verbatim
-      }
-    } else {
-      dst[n++] = **p;
-    }
-    (*p)++;
-  }
-  dst[n] = '\0';
-  if (**p == '"') (*p)++;  // skip closing quote
-  return (int)n;
 }
 
 // Legacy loader: parses the comment-based format produced by older saves.
@@ -438,40 +328,50 @@ static bool form_load_legacy(form_doc_t *doc, const char *path) {
     if (strstr(line, "ORION_FORM_END"))    { found_end   = true; break;    }
     if (!found_begin) continue;
 
-    // /* form W H */
+    // /* form W H [FLAGS] */
     {
       int fw = 0, fh = 0;
-      if (sscanf(line, " /* form %d %d", &fw, &fh) == 2 &&
-          fw > 0 && fh > 0 && fw <= INT16_MAX && fh <= INT16_MAX) {
+      uint32_t fflags = 0;
+      int n = sscanf(line, " /* form %d %d %" SCNu32, &fw, &fh, &fflags);
+      if (n >= 2 && fw > 0 && fh > 0 && fw <= INT16_MAX && fh <= INT16_MAX) {
         doc->form_size.w = fw;
         doc->form_size.h = fh;
+        if (n >= 3)
+          doc->flags = fflags;
         continue;
       }
     }
 
-    // /* ctrl TYPE ID X Y W H "text" "name" */
+    // /* ctrl TYPE ID X Y W H [FLAGS] "text" "name" */
     if (doc->element_count < MAX_ELEMENTS) {
       char type_tok[32] = {0};
       int id = 0, x = 0, y = 0, w = 0, h = 0;
+      uint32_t flags = 0;
       char text[64] = {0};
       char name[32] = {0};
-      int n = sscanf(line, " /* ctrl %31s %d %d %d %d %d \"%63[^\"]\" \"%31[^\"]",
-                     type_tok, &id, &x, &y, &w, &h, text, name);
+      int n = sscanf(line, " /* ctrl %31s %d %d %d %d %d %" SCNu32 " \"%63[^\"]\" \"%31[^\"]",
+                     type_tok, &id, &x, &y, &w, &h, &flags, text, name);
+      if (n < 7) {
+        n = sscanf(line, " /* ctrl %31s %d %d %d %d %d \"%63[^\"]\" \"%31[^\"]",
+                   type_tok, &id, &x, &y, &w, &h, text, name);
+        if (n >= 6)
+          flags = 0;
+      }
       if (n >= 6) {
         int type = ctrl_type_from_token(type_tok);
-        if (type >= 0 && type < CTRL_TYPE_COUNT) {
+        if (type >= 0 && type < FE_MAX_COMPONENTS) {
           form_element_t *el = &doc->elements[doc->element_count];
           el->type  = type;
           el->id    = id;
           el->frame = (irect16_t){x, y, w > 0 ? w : 10, h > 0 ? h : 8};
-          el->flags = 0;
+          el->flags = flags;
           strncpy(el->text, text, sizeof(el->text) - 1);
           el->text[sizeof(el->text) - 1] = '\0';
           strncpy(el->name, name, sizeof(el->name) - 1);
           el->name[sizeof(el->name) - 1] = '\0';
           doc->element_count++;
           if (id >= doc->next_id) doc->next_id = id + 1;
-          if (type >= 0 && type < CTRL_TYPE_COUNT)
+          if (type >= 0 && type < FE_MAX_COMPONENTS)
             doc->type_counters[type]++;
         }
       }
@@ -483,9 +383,6 @@ static bool form_load_legacy(form_doc_t *doc, const char *path) {
 }
 
 bool form_load(form_doc_t *doc, const char *path) {
-  FILE *f = fopen(path, "r");
-  if (!f) return false;
-
   // Reset document content.
   doc->element_count = 0;
   doc->form_size.w        = FORM_DEFAULT_W;
@@ -493,105 +390,7 @@ bool form_load(form_doc_t *doc, const char *path) {
   doc->flags              = 0;
   memset(doc->type_counters, 0, sizeof(doc->type_counters));
   doc->next_id = CTRL_ID_BASE;
-
-  // Single-pass struct-based parser.
-  // Recognises:
-  //   static const form_ctrl_def_t k<name>_children[] = { ... };
-  //   static const form_def_t k<name> = { .width = N, .height = N, ... };
-  bool in_children = false;
-  bool found_def   = false;
-  char line[512];
-
-  while (fgets(line, sizeof(line), f)) {
-    // Detect start of children array.
-    if (strstr(line, "form_ctrl_def_t k") && strstr(line, "_children[]")) {
-      in_children = true;
-      continue;
-    }
-    // Detect end of children array: first non-space chars must be "};" so that
-    // control captions containing "};" don't prematurely terminate the block.
-    if (in_children) {
-      const char *t = line;
-      while (*t == ' ' || *t == '\t') t++;
-      if (t[0] == '}' && t[1] == ';') {
-        in_children = false;
-        continue;
-      }
-    }
-    // Parse a child control entry:
-    //   { FORM_CTRL_BUTTON, 1001, {10, 10, 75, 23}, 0, "Button1", "IDC_BTN1" },
-    if (in_children && doc->element_count < MAX_ELEMENTS) {
-      char type_tok[32] = {0};
-      int id = 0, x = 0, y = 0, w = 0, h = 0;
-      uint32_t flags = 0;
-      char text[sizeof(((form_element_t*)0)->text)] = {0};
-      char name[sizeof(((form_element_t*)0)->name)] = {0};
-      int consumed = 0;
-      // Parse the non-string fields; %n records the number of chars consumed.
-      int n = sscanf(line,
-          " { FORM_CTRL_%31[^,], %d, {%d, %d, %d, %d}, %" SCNu32 "%n",
-          type_tok, &id, &x, &y, &w, &h, &flags, &consumed);
-      if (n >= 7) {
-        // Parse text and name string literals using the full escape decoder.
-        const char *p = line + consumed;
-        while (*p && *p != '"') p++;
-        bool has_text = (*p == '"') && (parse_c_str_literal(&p, text, sizeof(text)) >= 0);
-        while (*p && *p != '"') p++;
-        bool has_name = (*p == '"') && (parse_c_str_literal(&p, name, sizeof(name)) >= 0);
-
-        int type = ctrl_type_from_form_token(type_tok);
-        if (type >= 0 && type < CTRL_TYPE_COUNT) {
-          form_element_t *el = &doc->elements[doc->element_count];
-          el->type  = type;
-          el->id    = id;
-          el->frame = (irect16_t){x, y, w > 0 ? w : 10, h > 0 ? h : 8};
-          el->flags = flags;
-          if (has_text) {
-            strncpy(el->text, text, sizeof(el->text) - 1);
-            el->text[sizeof(el->text) - 1] = '\0';
-          }
-          if (has_name) {
-            strncpy(el->name, name, sizeof(el->name) - 1);
-            el->name[sizeof(el->name) - 1] = '\0';
-          }
-          doc->element_count++;
-          if (id >= doc->next_id) doc->next_id = id + 1;
-          doc->type_counters[type]++;
-          found_def = true;
-        }
-      }
-    }
-    // Parse form dimensions from the form_def_t block.
-    int val;
-    if (sscanf(line, " .width = %d", &val) == 1 &&
-        val > 0 && val <= INT16_MAX) {
-      doc->form_size.w = val;
-      found_def = true;
-    }
-    if (sscanf(line, " .height = %d", &val) == 1 &&
-        val > 0 && val <= INT16_MAX) {
-      doc->form_size.h = val;
-      found_def = true;
-    }
-    uint32_t flag_val = 0;
-    if (sscanf(line, " .flags = %" SCNu32, &flag_val) == 1) {
-      doc->flags = flag_val;
-      found_def = true;
-    }
-  }
-  fclose(f);
-
-  // If no struct-based data was found, fall back to the old comment format.
-  if (!found_def) {
-    doc->element_count = 0;
-    doc->form_size.w        = FORM_DEFAULT_W;
-    doc->form_size.h        = FORM_DEFAULT_H;
-    doc->flags              = 0;
-    memset(doc->type_counters, 0, sizeof(doc->type_counters));
-    doc->next_id = CTRL_ID_BASE;
-    return form_load_legacy(doc, path);
-  }
-  return true;
+  return form_load_legacy(doc, path);
 }
 
 // ============================================================
@@ -609,17 +408,17 @@ static result_t about_proc(window_t *win, uint32_t msg,
       // Info labels
       create_window("Orion Form Editor", WINDOW_NOTITLE | WINDOW_NOFILL,
           MAKERECT(8, 8, ABOUT_W - 16, CONTROL_HEIGHT),
-          win, win_label, 0, NULL);
+          win, "label", 0, NULL);
       create_window("Version 1.0", WINDOW_NOTITLE | WINDOW_NOFILL,
           MAKERECT(8, 22, ABOUT_W - 16, CONTROL_HEIGHT),
-          win, win_label, 0, (void *)(uintptr_t)brTextDisabled);
+          win, "label", 0, (void *)(uintptr_t)brTextDisabled);
       create_window("VB3-inspired form designer", WINDOW_NOTITLE | WINDOW_NOFILL,
           MAKERECT(8, 36, ABOUT_W - 16, CONTROL_HEIGHT),
-          win, win_label, 0, (void *)(uintptr_t)brTextDisabled);
+          win, "label", 0, (void *)(uintptr_t)brTextDisabled);
       // OK button
       create_window("OK", BUTTON_DEFAULT,
           MAKERECT(ABOUT_W - 54, ABOUT_H - BUTTON_HEIGHT - 4, 50, BUTTON_HEIGHT),
-          win, win_button, 0, NULL);
+          win, "button", 0, NULL);
       return true;
     }
     case evCommand:
@@ -660,22 +459,22 @@ void show_about_dialog(window_t *parent) {
 #define GRID_SIZE_MIN  1
 #define GRID_SIZE_MAX  64
 
-// grid_size is bound via BIND_INT_EDIT; checkboxes are handled manually.
+// grid_size is bound via DDX_TEXT; checkboxes are handled manually.
 typedef struct {
   int  grid_size;
 } grid_size_data_t;
 
 static const form_ctrl_def_t kGridChildren[] = {
-  { FORM_CTRL_CHECKBOX, GRID_ID_SHOW, {4,        GRID_ROW1_Y, GRID_W-8, BUTTON_HEIGHT}, 0,             "Show grid",    "chk_show"   },
-  { FORM_CTRL_CHECKBOX, GRID_ID_SNAP, {4,        GRID_ROW2_Y, GRID_W-8, BUTTON_HEIGHT}, 0,             "Snap to grid", "chk_snap"   },
-  { FORM_CTRL_LABEL,    -1,           {4,        GRID_ROW3_Y, 60,       CONTROL_HEIGHT}, 0,             "Grid size:",   "lbl_size"   },
-  { FORM_CTRL_TEXTEDIT, GRID_ID_SIZE, {68,       GRID_ROW3_Y, 40,       BUTTON_HEIGHT},  0,             "",             "edit_size"  },
-  { FORM_CTRL_BUTTON,   GRID_ID_OK,     {GRID_W-108, GRID_BTN_Y, 50, BUTTON_HEIGHT}, BUTTON_DEFAULT, "OK",     "btn_ok"     },
-  { FORM_CTRL_BUTTON,   GRID_ID_CANCEL, {GRID_W-54,  GRID_BTN_Y, 50, BUTTON_HEIGHT}, 0,             "Cancel", "btn_cancel" },
+  { "checkbox", GRID_ID_SHOW, {4,        GRID_ROW1_Y, GRID_W-8, BUTTON_HEIGHT}, 0,             "Show grid",    "chk_show"   },
+  { "checkbox", GRID_ID_SNAP, {4,        GRID_ROW2_Y, GRID_W-8, BUTTON_HEIGHT}, 0,             "Snap to grid", "chk_snap"   },
+  { "label",    -1,           {4,        GRID_ROW3_Y, 60,       CONTROL_HEIGHT}, 0,             "Grid size:",   "lbl_size"   },
+  { "textedit", GRID_ID_SIZE, {68,       GRID_ROW3_Y, 40,       BUTTON_HEIGHT},  0,             "",             "edit_size"  },
+  { "button",   GRID_ID_OK,     {GRID_W-108, GRID_BTN_Y, 50, BUTTON_HEIGHT}, BUTTON_DEFAULT, "OK",     "btn_ok"     },
+  { "button",   GRID_ID_CANCEL, {GRID_W-54,  GRID_BTN_Y, 50, BUTTON_HEIGHT}, 0,             "Cancel", "btn_cancel" },
 };
 
 static const ctrl_binding_t k_grid_bindings[] = {
-  { GRID_ID_SIZE, BIND_INT_EDIT, offsetof(grid_size_data_t, grid_size), 0 },
+  DDX_TEXT(GRID_ID_SIZE, grid_size_data_t, grid_size),
 };
 
 static const form_def_t kGridForm = {
@@ -704,7 +503,7 @@ static result_t grid_dlg_proc(window_t *win, uint32_t msg,
       gs = (grid_dlg_state_t *)lparam;
       win->userdata = gs;
       form_doc_t *doc = gs->doc;
-      // Set checkbox states manually (no BIND_BOOL).
+      // Set checkbox states manually (no checkbox DDX helper yet).
       window_t *chk_show = get_window_item(win, GRID_ID_SHOW);
       window_t *chk_snap = get_window_item(win, GRID_ID_SNAP);
       if (chk_show)
@@ -779,18 +578,18 @@ static void show_grid_settings_dialog(window_t *parent, form_doc_t *doc) {
 #define PROPS_BTN_Y        (PROPS_H - BUTTON_HEIGHT - 6)        // 86
 
 static const form_ctrl_def_t kPropsChildren[] = {
-  { FORM_CTRL_LABEL,    -1,              {4,          PROPS_ROW1_Y, 60,           CONTROL_HEIGHT}, 0,             "Caption:", "lbl_caption" },
-  { FORM_CTRL_TEXTEDIT, PROPS_ID_CAPTION,{68,         PROPS_ROW1_Y, PROPS_W - 72, BUTTON_HEIGHT},  0,             "",         "edit_caption"},
-  { FORM_CTRL_LABEL,    -1,              {4,          PROPS_ROW2_Y, 60,           CONTROL_HEIGHT}, 0,             "Name:",    "lbl_name"    },
-  { FORM_CTRL_TEXTEDIT, PROPS_ID_NAME,   {68,         PROPS_ROW2_Y, PROPS_W - 72, BUTTON_HEIGHT},  0,             "",         "edit_name"   },
-  { FORM_CTRL_BUTTON,   PROPS_ID_OK,     {PROPS_W-108, PROPS_BTN_Y, 50,           BUTTON_HEIGHT},  BUTTON_DEFAULT, "OK",      "btn_ok"      },
-  { FORM_CTRL_BUTTON,   PROPS_ID_CANCEL, {PROPS_W-54,  PROPS_BTN_Y, 50,           BUTTON_HEIGHT},  0,             "Cancel",   "btn_cancel"  },
+  { "label",    -1,              {4,          PROPS_ROW1_Y, 60,           CONTROL_HEIGHT}, 0,             "Caption:", "lbl_caption" },
+  { "textedit", PROPS_ID_CAPTION,{68,         PROPS_ROW1_Y, PROPS_W - 72, BUTTON_HEIGHT},  0,             "",         "edit_caption"},
+  { "label",    -1,              {4,          PROPS_ROW2_Y, 60,           CONTROL_HEIGHT}, 0,             "Name:",    "lbl_name"    },
+  { "textedit", PROPS_ID_NAME,   {68,         PROPS_ROW2_Y, PROPS_W - 72, BUTTON_HEIGHT},  0,             "",         "edit_name"   },
+  { "button",   PROPS_ID_OK,     {PROPS_W-108, PROPS_BTN_Y, 50,           BUTTON_HEIGHT},  BUTTON_DEFAULT, "OK",      "btn_ok"      },
+  { "button",   PROPS_ID_CANCEL, {PROPS_W-54,  PROPS_BTN_Y, 50,           BUTTON_HEIGHT},  0,             "Cancel",   "btn_cancel"  },
 };
 
 // DDX bindings: caption and name edits ↔ form_element_t.text / .name
 static const ctrl_binding_t k_props_bindings[] = {
-  { PROPS_ID_CAPTION, BIND_STRING, offsetof(form_element_t, text), sizeof_field(form_element_t, text) },
-  { PROPS_ID_NAME,    BIND_STRING, offsetof(form_element_t, name), sizeof_field(form_element_t, name) },
+  DDX_TEXT(PROPS_ID_CAPTION, form_element_t, text),
+  DDX_TEXT(PROPS_ID_NAME, form_element_t, name),
 };
 
 static const form_def_t kPropsForm = {
@@ -826,7 +625,7 @@ static result_t props_proc(window_t *win, uint32_t msg,
                ps->el->frame.x, ps->el->frame.y, ps->el->frame.w, ps->el->frame.h);
       create_window(info, WINDOW_NOTITLE | WINDOW_NOFILL,
           MAKERECT(4, PROPS_INFO_Y, PROPS_W - 8, CONTROL_HEIGHT),
-          win, win_label, 0, (void *)(uintptr_t)brTextDisabled);
+          win, "label", 0, (void *)(uintptr_t)brTextDisabled);
 
       // Pre-populate caption/name edits from the element.
       dialog_push(win, ps->el, k_props_bindings, ARRAY_LEN(k_props_bindings));
@@ -1010,17 +809,9 @@ void handle_menu_command(uint16_t id) {
       break;
     }
 
-    // Ignore tool IDs forwarded from the palette (handled in win_toolpalette.c)
-    case ID_TOOL_SELECT:
-    case ID_TOOL_LABEL:
-    case ID_TOOL_TEXTEDIT:
-    case ID_TOOL_BUTTON:
-    case ID_TOOL_CHECKBOX:
-    case ID_TOOL_COMBOBOX:
-    case ID_TOOL_LIST:
-      break;
-
     default:
+      if (id != ID_TOOL_SELECT && fe_component_by_tool_ident(id))
+        break;
       break;
   }
 }

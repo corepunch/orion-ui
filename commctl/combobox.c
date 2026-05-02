@@ -162,9 +162,14 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       }
     case cbGetCurrentSelection:
       for (uint32_t i = 0; i < win->cursor_pos; i++) {
-        if (!strncmp(texts[i], win->title, sizeof(win->title)))
+        if (!strncmp(texts[i], win->title, sizeof(win->title))) {
+          if (lparam)
+            *(int *)lparam = (int)i;
           return i;
+        }
       }
+      if (lparam)
+        *(int *)lparam = kComboBoxError;
       return kComboBoxError;
     default:
       return win_button(win, msg, wparam, lparam);

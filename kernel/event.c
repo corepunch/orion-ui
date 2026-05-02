@@ -117,7 +117,7 @@ window_t* find_next_tab_stop(window_t *win, bool allow_current) {
   if (!win) return false;
   window_t *next;
   if ((next = find_next_tab_stop(win->children, true))) return next;
-  if (!win->notabstop && (win->parent || win->visible) && allow_current) return win;
+  if (!(win->flags & WINDOW_NOTABSTOP) && (win->parent || win->visible) && allow_current) return win;
   if ((next = find_next_tab_stop(win->next, true))) return next;
   return allow_current ? NULL : find_next_tab_stop(win->parent, false);
 }

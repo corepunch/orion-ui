@@ -204,8 +204,8 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
       p->like_count = 6;
       app_add_post(p);
 
-      comment_t *c0 = seed_comment(p, "frank",
-          "The BIND_MLSTRING type for multiline edits is especially handy.");
+        comment_t *c0 = seed_comment(p, "frank",
+          "The edGetText binding style for multiline edits is especially handy.");
       comment_t *c1 = seed_comment(p, "alice",
           "Is there a way to add validation before the dialog closes?");
 

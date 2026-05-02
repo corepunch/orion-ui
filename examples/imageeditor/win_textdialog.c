@@ -58,13 +58,13 @@
 
 // Declarative form controls (labels + standard controls).
 static const form_ctrl_def_t kTextDialogChildren[] = {
-  { FORM_CTRL_LABEL,    -1,           {TD_LBL_X,      TD_TEXT_LBL_Y, TD_TEXT_LBL_W, 13}, 0,              "Text:",      "lbl_text"  },
-  { FORM_CTRL_TEXTEDIT, TD_ID_EDIT,   {TD_EDIT_X,     TD_EDIT_Y,     TD_EDIT_W,     TD_EDIT_H}, 0,       "",           "edit_text" },
-  { FORM_CTRL_LABEL,    -1,           {TD_LBL_X,      TD_COLOR_Y + 2, TD_COLOR_LBL_W, 13}, 0,            "Color:",     "lbl_color" },
-  { FORM_CTRL_BUTTON,   TD_ID_COLOR,  {TD_COLOR_BTN_X, TD_COLOR_Y - 1, TD_COLOR_BTN_W, TD_BTN_H}, 0,     "Change...",  "btn_color" },
-  { FORM_CTRL_CHECKBOX, TD_ID_AA,     {TD_AA_X,       TD_AA_Y,       74,            12}, 0,               "Anti-alias", "chk_aa"    },
-  { FORM_CTRL_BUTTON,   TD_ID_OK,     {TD_BTN_OK_X,   TD_BTN_Y,      TD_BTN_OK_W,   TD_BTN_H}, 0,        "OK",         "btn_ok"    },
-  { FORM_CTRL_BUTTON,   TD_ID_CANCEL, {TD_BTN_CA_X,   TD_BTN_Y,      TD_BTN_CA_W,   TD_BTN_H}, 0,        "Cancel",     "btn_cancel" },
+  { "label",    -1,           {TD_LBL_X,      TD_TEXT_LBL_Y, TD_TEXT_LBL_W, 13}, 0,              "Text:",      "lbl_text"  },
+  { "textedit", TD_ID_EDIT,   {TD_EDIT_X,     TD_EDIT_Y,     TD_EDIT_W,     TD_EDIT_H}, 0,       "",           "edit_text" },
+  { "label",    -1,           {TD_LBL_X,      TD_COLOR_Y + 2, TD_COLOR_LBL_W, 13}, 0,            "Color:",     "lbl_color" },
+  { "button",   TD_ID_COLOR,  {TD_COLOR_BTN_X, TD_COLOR_Y - 1, TD_COLOR_BTN_W, TD_BTN_H}, 0,     "Change...",  "btn_color" },
+  { "checkbox", TD_ID_AA,     {TD_AA_X,       TD_AA_Y,       74,            12}, 0,               "Anti-alias", "chk_aa"    },
+  { "button",   TD_ID_OK,     {TD_BTN_OK_X,   TD_BTN_Y,      TD_BTN_OK_W,   TD_BTN_H}, 0,        "OK",         "btn_ok"    },
+  { "button",   TD_ID_CANCEL, {TD_BTN_CA_X,   TD_BTN_Y,      TD_BTN_CA_W,   TD_BTN_H}, 0,        "Cancel",     "btn_cancel" },
 };
 
 static const form_def_t kTextDialogForm = {

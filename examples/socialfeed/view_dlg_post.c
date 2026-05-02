@@ -23,15 +23,15 @@
 // ============================================================
 
 static const form_ctrl_def_t kPostDetailButtons[] = {
-  { FORM_CTRL_BUTTON, ID_BTN_LIKE_POST,
+  { "button", ID_BTN_LIKE_POST,
     {POST_DLG_W - 100, 82, 96, 18}, 0,              "Like Post",     "like_post"    },
-  { FORM_CTRL_BUTTON, ID_BTN_ADD_COMMENT,
+  { "button", ID_BTN_ADD_COMMENT,
     {2,               280, 90, 18}, 0,              "Add Comment",   "add_comment"  },
-  { FORM_CTRL_BUTTON, ID_BTN_ADD_REPLY,
+  { "button", ID_BTN_ADD_REPLY,
     {96,              280, 74, 18}, 0,              "Add Reply",     "add_reply"    },
-  { FORM_CTRL_BUTTON, ID_BTN_LIKE_COMMENT,
+  { "button", ID_BTN_LIKE_COMMENT,
     {174,             280, 90, 18}, 0,              "Like Comment",  "like_comment" },
-  { FORM_CTRL_BUTTON, ID_BTN_CLOSE,
+  { "button", ID_BTN_CLOSE,
     {POST_DLG_W -  76, 280, 74, 18}, BUTTON_DEFAULT, "Close",        "close"        },
 };
 

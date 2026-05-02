@@ -32,15 +32,8 @@ static result_t prop_edit_proc(window_t *win, uint32_t msg,
                                uint32_t wparam, void *lparam);
 
 static const char *prop_ctrl_type_name(int type) {
-  switch (type) {
-    case CTRL_BUTTON:   return "CommandButton";
-    case CTRL_CHECKBOX: return "CheckBox";
-    case CTRL_LABEL:    return "Label";
-    case CTRL_TEXTEDIT: return "TextBox";
-    case CTRL_LIST:     return "ListBox";
-    case CTRL_COMBOBOX: return "ComboBox";
-    default:            return "Control";
-  }
+  const fe_component_desc_t *c = fe_component_by_id(type);
+  return c ? c->display_name : "Control";
 }
 
 static form_element_t *prop_selected_element(form_doc_t *doc) {
