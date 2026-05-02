@@ -830,18 +830,20 @@ void test_fe_property_browser_edit_respects_vertical_scrollbar(void) {
     PASS();
 }
 
-// form_save + form_load round-trips all element fields correctly.
+// form_project_save + form_project_load round-trips all element fields correctly.
 void test_fe_save_load_roundtrip(void) {
-    TEST("save/load roundtrip: element count, type, geometry, text, name preserved");
+    TEST("project save/load roundtrip: element count, type, geometry, text, name preserved");
 
     // Build the path in a temp directory.
     char path[512];
-    snprintf(path, sizeof(path), "%s/orion_fe_test_%d.h",
+    snprintf(path, sizeof(path), "%s/orion_fe_test_%d.orion",
              fe_temp_dir(), (int)getpid());
 
     fe_setup();
     form_doc_t *doc = g_app->doc;
     doc->snap_to_grid = false;
+    snprintf(doc->form_id, sizeof(doc->form_id), "%s", "roundtrip");
+    snprintf(doc->form_title, sizeof(doc->form_title), "%s", "Roundtrip");
 
     fe_place_ctrl(doc, ID_TOOL_BUTTON,   20, 20, 80, 24);
     fe_place_ctrl(doc, ID_TOOL_TEXTEDIT, 20, 56, 120, 18);
@@ -853,16 +855,16 @@ void test_fe_save_load_roundtrip(void) {
     form_element_t orig[3];
     memcpy(orig, doc->elements, 3 * sizeof(form_element_t));
 
-    bool saved = form_save(doc, path);
+    bool saved = form_project_save(path);
     ASSERT_TRUE(saved);
 
-    // Create a fresh doc and load the file into it.
-    form_doc_t *ndoc = create_form_doc(FORM_DEFAULT_W, FORM_DEFAULT_H);
-    ASSERT_NOT_NULL(ndoc);
-
-    bool loaded = form_load(ndoc, path);
+    bool loaded = form_project_load(path);
     ASSERT_TRUE(loaded);
 
+    form_doc_t *ndoc = g_app->docs;
+    ASSERT_NOT_NULL(ndoc);
+    ASSERT_STR_EQUAL(ndoc->form_id, "roundtrip");
+    ASSERT_STR_EQUAL(ndoc->form_title, "Roundtrip");
     ASSERT_EQUAL(ndoc->element_count, 3);
     for (int i = 0; i < 3; i++) {
         ASSERT_EQUAL(ndoc->elements[i].type, orig[i].type);
@@ -881,27 +883,28 @@ void test_fe_save_load_roundtrip(void) {
     PASS();
 }
 
-// form_load preserves form dimensions stored in the .h file.
+// form_project_load preserves form dimensions stored in the .orion file.
 void test_fe_save_load_form_dimensions(void) {
-    TEST("save/load: form_size round-trips correctly");
+    TEST("project save/load: form_size round-trips correctly");
 
     char path[512];
-    snprintf(path, sizeof(path), "%s/orion_fe_dims_%d.h",
+    snprintf(path, sizeof(path), "%s/orion_fe_dims_%d.orion",
              fe_temp_dir(), (int)getpid());
 
     fe_setup();
     form_doc_t *doc = g_app->doc;
+    snprintf(doc->form_id, sizeof(doc->form_id), "%s", "dimensions");
     doc->form_size.w = 400;
     doc->form_size.h = 300;
 
-    bool saved = form_save(doc, path);
+    bool saved = form_project_save(path);
     ASSERT_TRUE(saved);
 
-    form_doc_t *ndoc = create_form_doc(FORM_DEFAULT_W, FORM_DEFAULT_H);
-    ASSERT_NOT_NULL(ndoc);
-    bool loaded = form_load(ndoc, path);
+    bool loaded = form_project_load(path);
     ASSERT_TRUE(loaded);
 
+    form_doc_t *ndoc = g_app->docs;
+    ASSERT_NOT_NULL(ndoc);
     ASSERT_EQUAL(ndoc->form_size.w, 400);
     ASSERT_EQUAL(ndoc->form_size.h, 300);
 
@@ -910,26 +913,27 @@ void test_fe_save_load_form_dimensions(void) {
     PASS();
 }
 
-// form_save + form_load preserve form/window flags such as WINDOW_STATUSBAR.
+// form_project_save + form_project_load preserve form/window flags such as WINDOW_STATUSBAR.
 void test_fe_save_load_form_flags(void) {
-    TEST("save/load: form flags round-trip correctly");
+    TEST("project save/load: form flags round-trip correctly");
 
     char path[512];
-    snprintf(path, sizeof(path), "%s/orion_fe_flags_%d.h",
+    snprintf(path, sizeof(path), "%s/orion_fe_flags_%d.orion",
              fe_temp_dir(), (int)getpid());
 
     fe_setup();
     form_doc_t *doc = g_app->doc;
+    snprintf(doc->form_id, sizeof(doc->form_id), "%s", "flags");
     doc->flags = WINDOW_STATUSBAR;
 
-    bool saved = form_save(doc, path);
+    bool saved = form_project_save(path);
     ASSERT_TRUE(saved);
 
-    form_doc_t *ndoc = create_form_doc(FORM_DEFAULT_W, FORM_DEFAULT_H);
-    ASSERT_NOT_NULL(ndoc);
-    bool loaded = form_load(ndoc, path);
+    bool loaded = form_project_load(path);
     ASSERT_TRUE(loaded);
 
+    form_doc_t *ndoc = g_app->docs;
+    ASSERT_NOT_NULL(ndoc);
     ASSERT_EQUAL(ndoc->flags, WINDOW_STATUSBAR);
 
     unlink(path);

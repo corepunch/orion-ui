@@ -60,6 +60,7 @@ static void create_app_windows(hinstance_t hinstance) {
   g_app->tool_win = tp;
 
   g_app->prop_win = property_browser_create(hinstance);
+  g_app->forms_win = forms_browser_create(hinstance);
 }
 
 bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
@@ -67,9 +68,15 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   if (!g_app) return false;
 
   load_default_component_plugin();
+  const char *project_path = NULL;
   for (int i = 1; i < argc; i++) {
     if (has_dynlib_ext(argv[i]))
       fe_load_component_plugin(argv[i]);
+    else {
+      size_t n = strlen(argv[i]);
+      if (n >= 6 && strcmp(argv[i] + n - 6, ".orion") == 0)
+        project_path = argv[i];
+    }
   }
   if (fe_component_count() == 0) {
     free(g_app);
@@ -86,7 +93,8 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   if (g_app->menubar_win)
     send_message(g_app->menubar_win, kMenuBarMessageSetAccelerators, 0, g_app->accel);
 
-  create_form_doc(FORM_DEFAULT_W, FORM_DEFAULT_H);
+  if (!project_path || !form_project_load(project_path))
+    create_form_doc(FORM_DEFAULT_W, FORM_DEFAULT_H);
 
   // Show splash screen if the image is available.
 #ifdef SHAREDIR
@@ -111,6 +119,8 @@ void gem_shutdown(void) {
     close_form_doc(g_app->docs);
   if (g_app->prop_win)
     destroy_window(g_app->prop_win);
+  if (g_app->forms_win)
+    destroy_window(g_app->forms_win);
   free(g_app);
   g_app = NULL;
 }

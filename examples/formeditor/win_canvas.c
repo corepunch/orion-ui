@@ -524,6 +524,8 @@ static isize16_t default_ctrl_size(int type) {
 // Control type display names for use in caption and name generation.
 static const char *ctrl_type_name(int type) {
   const fe_component_desc_t *c = fe_component_by_id(type);
+  if (c && c->class_name && strcmp(c->class_name, "button") == 0)
+    return "Button";
   return c ? c->display_name : "Control";
 }
 
@@ -552,7 +554,7 @@ static int canvas_add_element(form_doc_t *doc, int type, irect16_t frame) {
   int n = ++doc->type_counters[type];
   // Caption (text shown inside the control)
   ctrl_make_caption(type, n, el->text, sizeof(el->text));
-  // Identifier name (used in .h file)
+  // Identifier name (used by the generated form resource).
   char pfx[8];
   strncpy(pfx, c->name_prefix, sizeof(pfx) - 1);
   pfx[sizeof(pfx)-1] = '\0';

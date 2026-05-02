@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<orion
+    version="1"
+    name="imageeditor"
+    title="Image Editor Dialogs"
+    root="examples/imageeditor">
+
+    <plugins>
+      <plugin name="formeditor_components" />
+      <plugin name="imageeditor_components" />
+    </plugins>
+
+    <forms>
+      <form id="new_image"
+            title="New Image"
+            width="180"
+            height="84"
+            flags="0"
+            owner="examples/imageeditor/win_newimage.c">
+        <controls>
+          <control class="label" id="-1" name="lbl_width" text="Width:"  x="4"  y="8"  w="56" h="13" flags="0" />
+          <control class="label" id="-1" name="lbl_height" text="Height:" x="4"  y="29" w="56" h="13" flags="0" />
+          <control class="textedit" id="NI_ID_WIDTH"  name="width"  text="" x="62" y="8"  w="56" h="13" flags="0" />
+          <control class="textedit" id="NI_ID_HEIGHT" name="height" text="" x="62" y="29" w="56" h="13" flags="0" />
+          <control class="button" id="NI_ID_OK"     name="ok"     text="OK"     x="92"  y="54" w="40" h="19" flags="BUTTON_DEFAULT" />
+          <control class="button" id="NI_ID_CANCEL" name="cancel" text="Cancel" x="136" y="54" w="40" h="19" flags="0" />
+        </controls>
+      </form>
+
+      <form id="grid_options"
+            title="Grid Options"
+            width="180"
+            height="84"
+            flags="0"
+            owner="examples/imageeditor/win_gridoptions.c">
+        <controls>
+          <control class="label" id="GO_ID_LBL_H" name="lbl_h" text="Horizontal:" x="4"  y="9"  w="66" h="13" flags="0" />
+          <control class="label" id="GO_ID_LBL_V" name="lbl_v" text="Vertical:"   x="4"  y="26" w="66" h="13" flags="0" />
+          <control class="textedit" id="GO_ID_GRIDX"  name="gridx" text="" x="74" y="8"  w="56" h="13" flags="0" />
+          <control class="textedit" id="GO_ID_GRIDY"  name="gridy" text="" x="74" y="25" w="56" h="13" flags="0" />
+          <control class="button" id="GO_ID_OK"     name="ok"     text="OK"     x="92"  y="44" w="40" h="19" flags="BUTTON_DEFAULT" />
+          <control class="button" id="GO_ID_CANCEL" name="cancel" text="Cancel" x="136" y="44" w="40" h="19" flags="0" />
+        </controls>
+      </form>
+
+      <form id="new_layer"
+            title="New Layer"
+            width="200"
+            height="68"
+            flags="0"
+            owner="examples/imageeditor/win_newlayer.c">
+        <controls>
+          <control class="label" id="-1" name="lbl_fill" text="Fill with:" x="4"  y="8"  w="48"  h="13" flags="0" />
+          <control class="combobox" id="NL_ID_FILL" name="combo_fill" text="" x="54" y="8" w="138" h="13" flags="0" />
+          <control class="button" id="NL_ID_OK"     name="ok"     text="OK"     x="104" y="33" w="44" h="19" flags="BUTTON_DEFAULT" />
+          <control class="button" id="NL_ID_CANCEL" name="cancel" text="Cancel" x="152" y="33" w="44" h="19" flags="0" />
+        </controls>
+      </form>
+
+      <form id="add_mask"
+            title="Add Mask"
+            width="220"
+            height="68"
+            flags="0"
+            owner="examples/imageeditor/win_extractmask.c">
+        <controls>
+          <control class="label" id="-1" name="lbl_fill" text="Fill with:" x="4"  y="10" w="64"  h="13" flags="0" />
+          <control class="combobox" id="EM_ID_FILL" name="combo_fill" text="" x="70" y="10" w="140" h="13" flags="0" />
+          <control class="button" id="EM_ID_OK"     name="ok"     text="OK"     x="124" y="35" w="44" h="19" flags="BUTTON_DEFAULT" />
+          <control class="button" id="EM_ID_CANCEL" name="cancel" text="Cancel" x="172" y="35" w="44" h="19" flags="0" />
+        </controls>
+      </form>
+
+      <form id="text_tool"
+            title="Insert Text"
+            width="220"
+            height="96"
+            flags="0"
+            owner="examples/imageeditor/win_textdialog.c">
+        <controls>
+          <control class="label" id="-1" name="lbl_text" text="Text:" x="2" y="3"  w="36"  h="13" flags="0" />
+          <control class="textedit" id="TD_ID_EDIT" name="edit_text" text="" x="2" y="12" w="216" h="13" flags="0" />
+          <control class="label" id="-1" name="lbl_color" text="Color:" x="2" y="55" w="36" h="13" flags="0" />
+          <control class="button" id="TD_ID_COLOR" name="btn_color" text="Change..." x="58" y="52" w="54" h="19" flags="0" />
+          <control class="checkbox" id="TD_ID_AA" name="chk_aa" text="Anti-alias" x="118" y="53" w="74" h="12" flags="0" />
+          <control class="button" id="TD_ID_OK" name="btn_ok" text="OK" x="2" y="71" w="38" h="19" flags="0" />
+          <control class="button" id="TD_ID_CANCEL" name="btn_cancel" text="Cancel" x="44" y="71" w="50" h="19" flags="0" />
+        </controls>
+      </form>
+
+      <form id="levels"
+            title="Levels"
+            width="280"
+            height="202"
+            flags="0"
+            owner="examples/imageeditor/win_levels.c">
+        <requires library="imageeditor_components" />
+        <controls>
+          <control class="label" id="0" name="in_label" text="Input Levels:" x="10" y="4" w="0" h="13" flags="WINDOW_NOTITLE | WINDOW_NOFILL" />
+          <control class="textedit" id="LV_ID_IN_BLACK" name="in_black" text="0" x="84" y="0" w="34" h="13" flags="0" />
+          <control class="textedit" id="LV_ID_IN_GAMMA" name="in_gamma" text="1.00" x="122" y="0" w="34" h="13" flags="0" />
+          <control class="textedit" id="LV_ID_IN_WHITE" name="in_white" text="255" x="160" y="0" w="34" h="13" flags="0" />
+          <control class="lv_histogram" id="LV_ID_GRAPH" name="graph" text="" x="10" y="21" w="260" h="84" flags="WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOTABSTOP" />
+          <control class="slider" id="LV_ID_IN_SLIDER" name="in_slider" text="" x="10" y="107" w="260" h="13" flags="WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOTABSTOP" />
+          <control class="label" id="0" name="out_label" text="Output Levels:" x="10" y="128" w="0" h="13" flags="WINDOW_NOTITLE | WINDOW_NOFILL" />
+          <control class="textedit" id="LV_ID_OUT_BLACK" name="out_black" text="0" x="84" y="128" w="34" h="13" flags="0" />
+          <control class="textedit" id="LV_ID_OUT_WHITE" name="out_white" text="255" x="160" y="128" w="34" h="13" flags="0" />
+          <control class="gradient" id="0" name="out_grad" text="" x="18" y="146" w="244" h="8" flags="WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOTABSTOP" />
+          <control class="slider" id="LV_ID_OUT_SLIDER" name="out_slider" text="" x="10" y="156" w="260" h="13" flags="WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOTABSTOP" />
+          <control class="button" id="LV_ID_OK" name="ok" text="OK" x="116" y="178" w="48" h="19" flags="0" />
+          <control class="button" id="LV_ID_RESET" name="reset" text="Reset" x="168" y="178" w="48" h="19" flags="0" />
+          <control class="button" id="LV_ID_CANCEL" name="cancel" text="Cancel" x="220" y="178" w="48" h="19" flags="0" />
+        </controls>
+      </form>
+    </forms>
+</orion>

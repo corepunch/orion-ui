@@ -37,6 +37,12 @@
 #define PROPBROWSER_WIN_W 180
 #define PROPBROWSER_WIN_H 180
 
+// Project forms browser.
+#define FORMS_WIN_X       PALETTE_WIN_X
+#define FORMS_WIN_Y       (MENUBAR_HEIGHT + 126)
+#define FORMS_WIN_W       150
+#define FORMS_WIN_H       210
+
 // Document window initial position
 // frame.y is the window top; place it 8px below the menu bar.
 #define DOC_START_X       (PALETTE_WIN_X + PALETTE_WIN_W + 10)
@@ -78,6 +84,16 @@
 #define MAX_ELEMENTS  256
 #define CTRL_ID_BASE  1001
 
+// Built-in component indices as registered by formeditor_components.
+// Kept as compatibility aliases for tests and older form editor code; project
+// files should use component tokens/class names instead.
+#define CTRL_BUTTON    0
+#define CTRL_CHECKBOX  1
+#define CTRL_LABEL     2
+#define CTRL_TEXTEDIT  3
+#define CTRL_LIST      4
+#define CTRL_COMBOBOX  5
+
 // ============================================================
 // Types
 // ============================================================
@@ -85,8 +101,10 @@
 typedef struct {
   int      type;        // registered component ID
   int      id;          // numeric control ID (e.g. 1001)
+  char     id_expr[32]; // original ID expression from project XML, if any
   irect16_t frame;      // position and size in form coordinates
   uint32_t flags;        // reserved for future style flags
+  char     flags_expr[128]; // original flags expression from project XML, if any
   char     text[64];     // control caption / label text
   char     name[32];     // identifier name (e.g. "IDC_BUTTON1")
   window_t *live_win;    // design-time live control hosted on the canvas
@@ -98,7 +116,10 @@ typedef struct form_doc_t {
   isize16_t form_size;
   uint32_t flags;       // form/window flags exported in form_def_t
   bool   modified;
-  char   filename[512];
+  char   form_id[64];
+  char   form_title[128];
+  char   owner[256];
+  char   required_plugin[64];
   int    next_id;                      // next numeric control ID
   int    type_counters[FE_MAX_COMPONENTS]; // per-component name counter
   window_t *canvas_win;
@@ -111,14 +132,33 @@ typedef struct form_doc_t {
 } form_doc_t;
 
 typedef struct {
+  char name[64];
+} form_plugin_ref_t;
+
+#define FE_MAX_PROJECT_PLUGINS 32
+
+typedef struct {
+  char filename[512];
+  char name[64];
+  char title[128];
+  char root[256];
+  form_plugin_ref_t plugins[FE_MAX_PROJECT_PLUGINS];
+  int plugin_count;
+  bool loaded;
+  bool modified;
+} form_project_t;
+
+typedef struct {
   form_doc_t  *doc;
   form_doc_t  *docs;
   window_t    *menubar_win;
   window_t    *tool_win;
   window_t    *prop_win;
+  window_t    *forms_win;
   hinstance_t  hinstance;  // owning app instance
   int          current_tool;
   accel_table_t *accel;
+  form_project_t project;
 } app_state_t;
 
 // ============================================================
@@ -191,10 +231,14 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
                                 uint32_t wparam, void *lparam);
 result_t win_property_browser_proc(window_t *win, uint32_t msg,
                                     uint32_t wparam, void *lparam);
+result_t win_forms_browser_proc(window_t *win, uint32_t msg,
+                                uint32_t wparam, void *lparam);
 void canvas_rebuild_live_controls(form_doc_t *doc);
 void canvas_sync_live_controls(form_doc_t *doc);
 window_t *property_browser_create(hinstance_t hinstance);
 void property_browser_refresh(form_doc_t *doc);
+window_t *forms_browser_create(hinstance_t hinstance);
+void forms_browser_refresh(void);
 
 // ============================================================
 // Document helpers
@@ -206,11 +250,11 @@ void        form_doc_update_title(form_doc_t *doc);
 void        form_doc_activate(form_doc_t *doc);
 
 // ============================================================
-// Form I/O
+// Project I/O
 // ============================================================
 
-bool form_save(form_doc_t *doc, const char *path);
-bool form_load(form_doc_t *doc, const char *path);
+bool form_project_load(const char *path);
+bool form_project_save(const char *path);
 
 // ============================================================
 // Menu dispatch

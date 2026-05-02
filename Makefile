@@ -363,8 +363,8 @@ $(BIN_DIR)/formeditor$(EXE_EXT): $(wildcard examples/formeditor/*.c) $(SHARED_LI
 	@echo "Building example: $@"
 	@(find examples/formeditor -maxdepth 1 -name "*.c" ! -name "main.c" | sort | sed 's/.*/#include "&"/'; \
 	 echo '#include "examples/formeditor/main.c"') | \
-		$(CC) $(CFLAGS) -I. -Iexamples/formeditor -DSHAREDIR='"../share/formeditor"' -x c -o $@ - \
-		$(LDFLAGS) $(LDFLAGS_EXAMPLE) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
+		$(CC) $(CFLAGS) $(LIBXML2_CFLAGS) -I. -Iexamples/formeditor -DSHAREDIR='"../share/formeditor"' -x c -o $@ - \
+		$(LDFLAGS) $(LDFLAGS_EXAMPLE) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBXML2_LIBS) $(LIBS)
 
 $(BIN_DIR)/imageeditor$(EXE_EXT): $(wildcard examples/imageeditor/*.c) $(SHARED_LIB) $(IE_COMPONENTS_PLUGIN) | $(BIN_DIR)
 	@echo "Building example: $@"
@@ -424,8 +424,8 @@ $(GEM_DIR)/formeditor.gem: $(wildcard examples/formeditor/*.c) $(SHARED_LIB) $(F
 	@(echo '#include "gem_magic.h"'; \
 	 find examples/formeditor -maxdepth 1 -name "*.c" ! -name "main.c" | sort | sed 's/.*/#include "&"/'; \
 	 echo '#include "examples/formeditor/main.c"') | \
-		$(CC) $(GEM_CFLAGS) $(GEM_LFLAGS) -I. -Iexamples/formeditor -DSHAREDIR='"../share/formeditor"' -x c -o $@ - \
-		$(LDFLAGS) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
+		$(CC) $(GEM_CFLAGS) $(LIBXML2_CFLAGS) $(GEM_LFLAGS) -I. -Iexamples/formeditor -DSHAREDIR='"../share/formeditor"' -x c -o $@ - \
+		$(LDFLAGS) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBXML2_LIBS) $(LIBS)
 	@$(MAKE) --no-print-directory validate-gem GEM=$@
 
 $(GEM_DIR)/imageeditor.gem: $(wildcard examples/imageeditor/*.c) $(SHARED_LIB) $(IE_COMPONENTS_PLUGIN) | $(GEM_DIR)
@@ -510,10 +510,10 @@ $(IMAGEEDITOR_UI_TEST_BIN): $(IMAGEEDITOR_UI_TEST_SRC) $(TEST_DIR)/test_env.c $(
 # Formeditor UI test — needs all formeditor sources except main.c + test_env.c.
 $(FORMEDITOR_UI_TEST_BIN): $(FORMEDITOR_UI_TEST_SRC) $(TEST_DIR)/test_env.c $(FORMEDITOR_SRCS_NO_MAIN) $(SHARED_LIB) | $(BIN_DIR)
 	@echo "Building formeditor UI test: $@"
-	$(CC) $(CFLAGS) -I. -Iexamples/formeditor -o $@ \
+	$(CC) $(CFLAGS) $(LIBXML2_CFLAGS) -I. -Iexamples/formeditor -o $@ \
 		$(FORMEDITOR_UI_TEST_SRC) $(TEST_DIR)/test_env.c \
 		$(FORMEDITOR_SRCS_NO_MAIN) \
-		$(LDFLAGS) $(LDFLAGS_TEST) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
+		$(LDFLAGS) $(LDFLAGS_TEST) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBXML2_LIBS) $(LIBS)
 
 # Build tests that need test_env (auto-detected by include)
 $(TEST_ENV_BINS): $(BIN_DIR)/test_%$(EXE_EXT): $(TEST_DIR)/%.c $(SHARED_LIB) | $(BIN_DIR)
