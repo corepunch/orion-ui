@@ -23,6 +23,17 @@
 // ── Application global – defined in main.c (excluded from this build) ─────
 app_state_t *g_app = NULL;
 
+static int fe_next_message_box_result = IDCANCEL;
+
+int message_box(window_t *parent, const char *text,
+                const char *caption, uint32_t type) {
+    (void)parent;
+    (void)text;
+    (void)caption;
+    (void)type;
+    return fe_next_message_box_result;
+}
+
 // ── Temp directory helper ──────────────────────────────────────────────────
 static const char *fe_temp_dir(void) {
     const char *d = getenv("TEMP");
@@ -50,6 +61,12 @@ static void fe_setup(void) {
         g_app = NULL;
     }
     test_env_init();
+    if (fe_component_count() == 0) {
+        char path[512];
+        snprintf(path, sizeof(path), "build/lib/formeditor_components%s",
+                 AX_DYNLIB_EXT);
+        fe_load_component_plugin(path);
+    }
     g_app = calloc(1, sizeof(app_state_t));
     g_app->current_tool = ID_TOOL_SELECT;
     // hinstance=0 is fine for headless tests; create_form_doc guards on g_app.
@@ -259,6 +276,32 @@ void test_fe_close_doc(void) {
     ASSERT_FALSE(is_window(dwin));
 
     // Prevent double-free in teardown.
+    fe_teardown();
+    PASS();
+}
+
+// Pressing No in the unsaved close prompt must keep the form open.
+void test_fe_close_modified_doc_no_keeps_window(void) {
+    TEST("modified doc close prompt: No keeps the form open");
+
+    fe_setup();
+    form_doc_t *doc = g_app->doc;
+    window_t *dwin = doc->doc_win;
+    doc->modified = true;
+
+    fe_next_message_box_result = IDNO;
+    ASSERT_TRUE(send_message(dwin, evClose, 0, NULL));
+
+    ASSERT_TRUE(g_app->doc == doc);
+    ASSERT_TRUE(is_window(dwin));
+
+    fe_next_message_box_result = IDYES;
+    ASSERT_TRUE(send_message(dwin, evClose, 0, NULL));
+
+    ASSERT_NULL(g_app->doc);
+    ASSERT_FALSE(is_window(dwin));
+
+    fe_next_message_box_result = IDCANCEL;
     fe_teardown();
     PASS();
 }
@@ -1005,6 +1048,7 @@ int main(void) {
     test_fe_create_large_doc_adds_needed_scrollbars();
     test_fe_doc_resize_updates_form_size();
     test_fe_close_doc();
+    test_fe_close_modified_doc_no_keeps_window();
     test_fe_create_doc_keeps_existing_doc();
     test_fe_place_button();
     test_fe_button_preview_visible_while_dragging();

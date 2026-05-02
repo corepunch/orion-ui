@@ -104,7 +104,7 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
         int res = message_box(win,
                               "This form has unsaved changes.\nClose without saving?",
                               "Unsaved Changes", MB_YESNOCANCEL);
-        if (res == IDCANCEL) return true;  // cancel close
+        if (res != IDYES) return true;  // keep form open unless discard is confirmed
       }
       close_form_doc(doc);
       return true;
@@ -117,62 +117,6 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
 // ============================================================
 // create_form_doc / close_form_doc
 // ============================================================
-
-static void ensure_builtin_form_components(void) {
-  if (fe_component_count() > 0) return;
-  static const fe_component_desc_t k_components[] = {
-    {
-      .class_name = "button", .display_name = "CommandButton",
-      .token = "button", .name_prefix = "IDC_BTN",
-      .toolbox_ident = ID_TOOL_BUTTON, .toolbox_icon = 5,
-      .default_size = {75, 23},
-      .capabilities = FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX,
-      .proc = win_button,
-    },
-    {
-      .class_name = "checkbox", .display_name = "CheckBox",
-      .token = "checkbox", .name_prefix = "IDC_CHK",
-      .toolbox_ident = ID_TOOL_CHECKBOX, .toolbox_icon = 6,
-      .default_size = {97, 17},
-      .capabilities = FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX,
-      .proc = win_checkbox,
-    },
-    {
-      .class_name = "label", .display_name = "Label",
-      .token = "label", .name_prefix = "IDC_LBL",
-      .toolbox_ident = ID_TOOL_LABEL, .toolbox_icon = 2,
-      .default_size = {65, 13},
-      .capabilities = FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX,
-      .proc = win_label,
-    },
-    {
-      .class_name = "textedit", .display_name = "TextBox",
-      .token = "textedit", .name_prefix = "IDC_EDT",
-      .toolbox_ident = ID_TOOL_TEXTEDIT, .toolbox_icon = 3,
-      .default_size = {121, 20},
-      .capabilities = FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX,
-      .proc = win_textedit,
-    },
-    {
-      .class_name = "list", .display_name = "ListBox",
-      .token = "list", .name_prefix = "IDC_LST",
-      .toolbox_ident = ID_TOOL_LIST, .toolbox_icon = 9,
-      .default_size = {121, 60},
-      .capabilities = FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX,
-      .proc = win_list,
-    },
-    {
-      .class_name = "combobox", .display_name = "ComboBox",
-      .token = "combobox", .name_prefix = "IDC_CMB",
-      .toolbox_ident = ID_TOOL_COMBOBOX, .toolbox_icon = 8,
-      .default_size = {121, 20},
-      .capabilities = FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX,
-      .proc = win_combobox,
-    },
-  };
-  for (int i = 0; i < (int)ARRAY_LEN(k_components); i++)
-    fe_register_component(&k_components[i]);
-}
 
 static irect16_t form_doc_frame_for_size(int form_w, int form_h, uint32_t form_flags) {
   int max_w = SCREEN_W - 4;
@@ -214,7 +158,6 @@ static void form_doc_apply_window_flags_and_size(form_doc_t *doc) {
 form_doc_t *create_form_doc(int w, int h) {
   if (!g_app) return NULL;
   if (w <= 0 || h <= 0 || w > INT16_MAX || h > INT16_MAX) return NULL;
-  ensure_builtin_form_components();
 
   form_doc_t *doc = (form_doc_t *)calloc(1, sizeof(form_doc_t));
   if (!doc) return NULL;
@@ -250,8 +193,15 @@ form_doc_t *create_form_doc(int w, int h) {
   cr = get_client_rect(dwin);
   resize_window(cwin, cr.w, cr.h);
 
-  doc->next = g_app->docs;
-  g_app->docs = doc;
+  doc->next = NULL;
+  if (!g_app->docs) {
+    g_app->docs = doc;
+  } else {
+    form_doc_t *tail = g_app->docs;
+    while (tail->next)
+      tail = tail->next;
+    tail->next = doc;
+  }
   g_app->doc = doc;
 
   show_window(dwin, true);
@@ -510,19 +460,6 @@ static void project_load_forms(xmlNodePtr root) {
   }
 }
 
-static void project_reverse_docs(void) {
-  if (!g_app) return;
-  form_doc_t *prev = NULL;
-  form_doc_t *cur = g_app->docs;
-  while (cur) {
-    form_doc_t *next = cur->next;
-    cur->next = prev;
-    prev = cur;
-    cur = next;
-  }
-  g_app->docs = prev;
-}
-
 bool form_project_load(const char *path) {
   xmlDocPtr xdoc = xmlReadFile(path, NULL, XML_PARSE_NONET);
   if (!xdoc) return false;
@@ -540,7 +477,6 @@ bool form_project_load(const char *path) {
 
   project_load_plugins(root);
   project_load_forms(root);
-  project_reverse_docs();
 
   g_app->project.loaded = true;
   g_app->project.modified = false;

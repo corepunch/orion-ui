@@ -8,8 +8,10 @@
 
 #define FORMS_ID_NEW     1
 #define FORMS_ID_DELETE  2
-#define FORMS_ROW_Y      4
-#define FORMS_ROW_H      18
+
+typedef struct {
+  window_t *list_win;
+} forms_browser_state_t;
 
 static const toolbar_item_t kFormsToolbar[] = {
   { TOOLBAR_ITEM_BUTTON, FORMS_ID_NEW,    sysicon_add,    0, 0, "New form" },
@@ -41,9 +43,33 @@ static const char *forms_doc_label(form_doc_t *doc) {
   return "Untitled";
 }
 
+static void forms_browser_rebuild(forms_browser_state_t *st) {
+  if (!st || !st->list_win) return;
+
+  send_message(st->list_win, RVM_SETREDRAW, 0, NULL);
+  send_message(st->list_win, RVM_CLEAR, 0, NULL);
+
+  int idx = 0;
+  int selected = -1;
+  for (form_doc_t *doc = g_app ? g_app->docs : NULL; doc; doc = doc->next, idx++) {
+    reportview_item_t item = {0};
+    item.text = forms_doc_label(doc);
+    item.color = get_sys_color(brTextNormal);
+    item.userdata = (uint32_t)idx;
+    send_message(st->list_win, RVM_ADDITEM, 0, &item);
+    if (g_app && doc == g_app->doc)
+      selected = idx;
+  }
+
+  send_message(st->list_win, RVM_SETREDRAW, 1, NULL);
+  if (selected >= 0)
+    send_message(st->list_win, RVM_SETSELECTION, (uint32_t)selected, NULL);
+}
+
 void forms_browser_refresh(void) {
-  if (g_app && g_app->forms_win)
-    invalidate_window(g_app->forms_win);
+  if (!g_app || !g_app->forms_win) return;
+  forms_browser_state_t *st = (forms_browser_state_t *)g_app->forms_win->userdata;
+  forms_browser_rebuild(st);
 }
 
 window_t *forms_browser_create(hinstance_t hinstance) {
@@ -78,12 +104,34 @@ static void forms_delete_active(void) {
 
 result_t win_forms_browser_proc(window_t *win, uint32_t msg,
                                 uint32_t wparam, void *lparam) {
+  forms_browser_state_t *st = (forms_browser_state_t *)win->userdata;
   (void)lparam;
   switch (msg) {
-    case evCreate:
+    case evCreate: {
+      st = allocate_window_data(win, sizeof(forms_browser_state_t));
+      if (!st)
+        return false;
+
+      irect16_t cr = get_client_rect(win);
+      st->list_win = create_window(
+          "", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL,
+          MAKERECT(0, 0, cr.w, cr.h),
+          win, win_reportview, 0, NULL);
+      if (!st->list_win)
+        return false;
+
+      send_message(st->list_win, RVM_SETVIEWMODE, RVM_VIEW_REPORT, NULL);
+      send_message(st->list_win, RVM_SETCOLUMNTITLESVISIBLE, 0, NULL);
+      {
+        reportview_column_t c0 = { "Form", 0 };
+        send_message(st->list_win, RVM_ADDCOLUMN, 0, &c0);
+      }
+
       send_message(win, tbSetItems, ARRAY_LEN(kFormsToolbar),
                    (void *)kFormsToolbar);
+      forms_browser_rebuild(st);
       return true;
+    }
 
     case tbButtonClick:
       switch ((uint16_t)wparam) {
@@ -97,37 +145,33 @@ result_t win_forms_browser_proc(window_t *win, uint32_t msg,
           return false;
       }
 
-    case evPaint: {
-      fill_rect(get_sys_color(brWindowBg), R(0, 0, win->frame.w, win->frame.h));
-      int idx = 0;
-      for (form_doc_t *doc = g_app ? g_app->docs : NULL; doc; doc = doc->next, idx++) {
-        irect16_t row = R(4, FORMS_ROW_Y + idx * FORMS_ROW_H,
-                          win->frame.w - 8, FORMS_ROW_H);
-        if (doc == g_app->doc) {
-          fill_rect(get_sys_color(brTextNormal), row);
-          draw_text_clipped(FONT_SMALL, forms_doc_label(doc), &row,
-                            get_sys_color(brWindowBg), TEXT_PADDING_LEFT);
-        } else {
-          draw_text_clipped(FONT_SMALL, forms_doc_label(doc), &row,
-                            get_sys_color(brTextNormal), TEXT_PADDING_LEFT);
-        }
+    case evResize:
+      if (st && st->list_win) {
+        irect16_t cr = get_client_rect(win);
+        resize_window(st->list_win, cr.w, cr.h);
       }
+      return false;
+
+    case evCommand: {
+      uint16_t notif = HIWORD(wparam);
+      if (!st || lparam != st->list_win)
+        return false;
+      if (notif != RVN_SELCHANGE && notif != RVN_DBLCLK)
+        return false;
+
+      form_doc_t *doc = forms_doc_at((int)LOWORD(wparam));
+      if (!doc)
+        return false;
+      form_doc_activate(doc);
+      if (doc->doc_win) show_window(doc->doc_win, true);
+      forms_browser_refresh();
       return true;
     }
 
-    case evLeftButtonDown: {
-      int y = (int16_t)HIWORD(wparam);
-      if (y < FORMS_ROW_Y) return false;
-      int idx = (y - FORMS_ROW_Y) / FORMS_ROW_H;
-      form_doc_t *doc = forms_doc_at(idx);
-      if (doc) {
-        form_doc_activate(doc);
-        if (doc->doc_win) show_window(doc->doc_win, true);
-        forms_browser_refresh();
-        return true;
-      }
+    case evDestroy:
+      if (g_app && g_app->forms_win == win)
+        g_app->forms_win = NULL;
       return false;
-    }
 
     default:
       return false;
