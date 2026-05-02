@@ -11,9 +11,6 @@
 #include "messages.h"
 #include "draw.h"
 
-#define DEFAULT_WINDOW_CASCADE_X 10
-#define DEFAULT_WINDOW_CASCADE_Y 20
-
 // Global window state
 ui_runtime_state_t g_ui_runtime = {
   .running = false,

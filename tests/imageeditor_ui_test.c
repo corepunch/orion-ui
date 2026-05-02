@@ -184,8 +184,8 @@ void test_ie_document_windows_cascade(void) {
     ASSERT_NOT_NULL(d1);
     ASSERT_NOT_NULL(d2);
 
-    ASSERT_EQUAL(d2->win->frame.x, d1->win->frame.x + DOC_CASCADE_X);
-    ASSERT_EQUAL(d2->win->frame.y, d1->win->frame.y + DOC_CASCADE_Y);
+    ASSERT_EQUAL(d2->win->frame.x, d1->win->frame.x + DEFAULT_WINDOW_CASCADE_X);
+    ASSERT_EQUAL(d2->win->frame.y, d1->win->frame.y + DEFAULT_WINDOW_CASCADE_Y);
 
     ie_teardown();
     PASS();
@@ -201,8 +201,8 @@ void test_ie_large_document_windows_cascade(void) {
     ASSERT_NOT_NULL(d1);
     ASSERT_NOT_NULL(d2);
 
-    ASSERT_EQUAL(d2->win->frame.x, d1->win->frame.x + DOC_CASCADE_X);
-    ASSERT_EQUAL(d2->win->frame.y, d1->win->frame.y + DOC_CASCADE_Y);
+    ASSERT_EQUAL(d2->win->frame.x, d1->win->frame.x + DEFAULT_WINDOW_CASCADE_X);
+    ASSERT_EQUAL(d2->win->frame.y, d1->win->frame.y + DEFAULT_WINDOW_CASCADE_Y);
 
     ie_teardown();
     PASS();

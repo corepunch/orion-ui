@@ -20,6 +20,9 @@ typedef uint32_t result_t;
 // hinstance == 0 means system/unowned (shell, framework, tests).
 typedef uint32_t hinstance_t;
 
+#define DEFAULT_WINDOW_CASCADE_X 10
+#define DEFAULT_WINDOW_CASCADE_Y 20
+
 // Window procedure callback type
 typedef result_t (*winproc_t)(window_t *, uint32_t, uint32_t, void *);
 

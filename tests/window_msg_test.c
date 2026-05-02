@@ -408,8 +408,8 @@ void test_cw_usedefault_uses_configured_origin(void) {
     ASSERT_NOT_NULL(second);
     ASSERT_EQUAL(first->frame.x, 72);
     ASSERT_EQUAL(first->frame.y, 44);
-    ASSERT_EQUAL(second->frame.x, 80);
-    ASSERT_EQUAL(second->frame.y, 68);
+    ASSERT_EQUAL(second->frame.x, 72 + DEFAULT_WINDOW_CASCADE_X);
+    ASSERT_EQUAL(second->frame.y, 44 + DEFAULT_WINDOW_CASCADE_Y);
 
     test_env_shutdown();
     PASS();

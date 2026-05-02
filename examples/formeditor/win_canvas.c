@@ -132,17 +132,21 @@ static int hit_test_elements(canvas_state_t *s, int lx, int ly) {
 static void get_handle_rects(canvas_state_t *s, form_element_t *el,
                               int out_x[HANDLE_COUNT], int out_y[HANDLE_COUNT]) {
   irect16_t r = form_to_canvas_rect(s, el->frame);
+  int left = r.x - 1;
+  int top = r.y - 1;
+  int right = r.x + r.w;
+  int bottom = r.y + r.h;
   int cx = r.x + r.w / 2 - HANDLE_HALF;
   int cy = r.y + r.h / 2 - HANDLE_HALF;
 
-  out_x[HANDLE_TL] = r.x - HANDLE_HALF;        out_y[HANDLE_TL] = r.y - HANDLE_HALF;
-  out_x[HANDLE_TC] = cx;                       out_y[HANDLE_TC] = r.y - HANDLE_HALF;
-  out_x[HANDLE_TR] = r.x + r.w - HANDLE_HALF;  out_y[HANDLE_TR] = r.y - HANDLE_HALF;
-  out_x[HANDLE_ML] = r.x - HANDLE_HALF;        out_y[HANDLE_ML] = cy;
-  out_x[HANDLE_MR] = r.x + r.w - HANDLE_HALF;  out_y[HANDLE_MR] = cy;
-  out_x[HANDLE_BL] = r.x - HANDLE_HALF;        out_y[HANDLE_BL] = r.y + r.h - HANDLE_HALF;
-  out_x[HANDLE_BC] = cx;                       out_y[HANDLE_BC] = r.y + r.h - HANDLE_HALF;
-  out_x[HANDLE_BR] = r.x + r.w - HANDLE_HALF;  out_y[HANDLE_BR] = r.y + r.h - HANDLE_HALF;
+  out_x[HANDLE_TL] = left - HANDLE_HALF;   out_y[HANDLE_TL] = top - HANDLE_HALF;
+  out_x[HANDLE_TC] = cx;                   out_y[HANDLE_TC] = top - HANDLE_HALF;
+  out_x[HANDLE_TR] = right - HANDLE_HALF;  out_y[HANDLE_TR] = top - HANDLE_HALF;
+  out_x[HANDLE_ML] = left - HANDLE_HALF;   out_y[HANDLE_ML] = cy;
+  out_x[HANDLE_MR] = right - HANDLE_HALF;  out_y[HANDLE_MR] = cy;
+  out_x[HANDLE_BL] = left - HANDLE_HALF;   out_y[HANDLE_BL] = bottom - HANDLE_HALF;
+  out_x[HANDLE_BC] = cx;                   out_y[HANDLE_BC] = bottom - HANDLE_HALF;
+  out_x[HANDLE_BR] = right - HANDLE_HALF;  out_y[HANDLE_BR] = bottom - HANDLE_HALF;
 }
 
 // Return which resize handle (0-7) is under (lx, ly), or -1 if none.
