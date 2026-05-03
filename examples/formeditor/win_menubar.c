@@ -61,7 +61,12 @@ void form_doc_update_title(form_doc_t *doc) {
 void form_doc_activate(form_doc_t *doc) {
   if (!g_app || !doc) return;
   if (g_app->doc == doc) return;
+  form_doc_t *prev = g_app->doc;
   g_app->doc = doc;
+  if (prev && prev->doc_win)
+    invalidate_window(prev->doc_win);
+  if (doc->doc_win)
+    invalidate_window(doc->doc_win);
   property_browser_refresh(doc);
   forms_browser_refresh();
 }
@@ -158,6 +163,7 @@ static void form_doc_apply_window_flags_and_size(form_doc_t *doc) {
 form_doc_t *create_form_doc(int w, int h) {
   if (!g_app) return NULL;
   if (w <= 0 || h <= 0 || w > INT16_MAX || h > INT16_MAX) return NULL;
+  form_doc_t *prev_doc = g_app->doc;
 
   form_doc_t *doc = (form_doc_t *)calloc(1, sizeof(form_doc_t));
   if (!doc) return NULL;
@@ -205,6 +211,8 @@ form_doc_t *create_form_doc(int w, int h) {
   g_app->doc = doc;
 
   show_window(dwin, true);
+  if (prev_doc && prev_doc->doc_win)
+    invalidate_window(prev_doc->doc_win);
   form_doc_update_title(doc);
   send_message(dwin, evStatusBar, 0, (void *)"New form");
   property_browser_refresh(doc);
