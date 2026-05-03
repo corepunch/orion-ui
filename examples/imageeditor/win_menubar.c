@@ -112,27 +112,13 @@ window_t *create_color_palette_window(void) {
   return cp;
 }
 
-static const toolbar_item_t kMainToolbar[] = {
-  { TOOLBAR_ITEM_BUTTON, ID_FILE_NEW,     sysicon_page_add,      0, 0, "New"     },
-  { TOOLBAR_ITEM_BUTTON, ID_FILE_OPEN,    sysicon_folder_page,   0, 0, "Open"    },
-  { TOOLBAR_ITEM_BUTTON, ID_FILE_SAVE,    sysicon_disk_save,     0, 0, "Save"    },
-  { TOOLBAR_ITEM_BUTTON, ID_FILE_SAVEAS,  sysicon_disk_multiple, 0, 0, "Save As" },
-  { TOOLBAR_ITEM_SPACER, 0, 0, 10, 0, NULL },
-  { TOOLBAR_ITEM_BUTTON, ID_VIEW_ZOOM_OUT,  sysicon_magnifier_zoom_out, 0, 0, "Zoom Out" },
-  { TOOLBAR_ITEM_BUTTON, ID_VIEW_ZOOM_IN,   sysicon_magnifier_zoom_in,  0, 0, "Zoom In"  },
-  { TOOLBAR_ITEM_BUTTON, ID_VIEW_ZOOM_1X,   sysicon_image_dimensions,   0, 0, "1x"       },
-  { TOOLBAR_ITEM_BUTTON, ID_VIEW_ZOOM_FIT,  sysicon_expand,             0, 0, "Fit"      },
-  { TOOLBAR_ITEM_SPACER, 0, 0, 10, 0, NULL },
-  { TOOLBAR_ITEM_BUTTON, ID_VIEW_MASK_ONLY, sysicon_transparency, 0, BUTTON_PUSHLIKE, "Mask" },
-};
-
 static result_t main_toolbar_proc(window_t *win, uint32_t msg,
                                   uint32_t wparam, void *lparam) {
   (void)lparam;
   switch (msg) {
     case evCreate:
       send_message(win, tbSetItems,
-                   (uint32_t)(sizeof(kMainToolbar) / sizeof(kMainToolbar[0])),
+                   (uint32_t)kMainToolbarCount,
                    (void *)kMainToolbar);
       imageeditor_sync_main_toolbar();
       return true;

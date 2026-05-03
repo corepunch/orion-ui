@@ -224,7 +224,8 @@ FORMEDITOR_COMPONENT_PLUGIN = $(LIB_DIR)/formeditor_components$(LIB_EXT)
 IE_COMPONENTS_PLUGIN_SRCS = \
 	examples/imageeditor/components/lv_plug.c \
 	examples/imageeditor/components/lv_hist.c \
-	examples/imageeditor/components/lv_strip.c
+	examples/imageeditor/components/lv_strip.c \
+	examples/imageeditor/components/fg_preview.c
 IE_COMPONENTS_PLUGIN = $(LIB_DIR)/imageeditor_components$(LIB_EXT)
 
 GENERATED_DIR = $(BUILD_DIR)/generated

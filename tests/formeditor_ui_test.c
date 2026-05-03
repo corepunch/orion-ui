@@ -45,6 +45,14 @@ static result_t fe_noop_proc(window_t *win, uint32_t msg,
     return false;
 }
 
+static void fe_dispatch_mouse_at(int x, int y, uint32_t msg) {
+    ui_event_t ev = {0};
+    ev.message = msg;
+    ev.x = (uint16_t)(x * UI_WINDOW_SCALE);
+    ev.y = (uint16_t)(y * UI_WINDOW_SCALE);
+    dispatch_message(&ev);
+}
+
 // ── Temp directory helper ──────────────────────────────────────────────────
 static const char *fe_temp_dir(void) {
     const char *d = getenv("TEMP");
@@ -302,6 +310,36 @@ void test_fe_doc_resize_updates_form_size(void) {
     ASSERT_EQUAL(doc->canvas_win->frame.w, new_w);
     ASSERT_EQUAL(doc->canvas_win->frame.h, new_h);
     ASSERT_TRUE(doc->modified);
+    ASSERT_TRUE(g_app->project.modified);
+
+    fe_teardown();
+    PASS();
+}
+
+void test_fe_doc_resize_by_dragging_bottom_right_corner(void) {
+    TEST("document resize: bottom-right drag resizes form even over canvas child");
+
+    fe_setup();
+    form_doc_t *doc = g_app->doc;
+    window_t *dwin = doc->doc_win;
+    doc->show_grid = false;
+    int old_w = doc->form_size.w;
+    int old_h = doc->form_size.h;
+    int sx = dwin->frame.x + dwin->frame.w - 2;
+    int sy = dwin->frame.y + dwin->frame.h - 2;
+
+    fe_dispatch_mouse_at(sx, sy, kEventLeftButtonDown);
+    ASSERT_TRUE(g_ui_runtime.resizing == dwin);
+    fe_dispatch_mouse_at(sx + 40, sy + 20, kEventLeftButtonDragged);
+    fe_dispatch_mouse_at(sx + 40, sy + 20, kEventLeftButtonUp);
+
+    ASSERT_NULL(g_ui_runtime.resizing);
+    ASSERT_EQUAL(doc->form_size.w, old_w + 40);
+    ASSERT_EQUAL(doc->form_size.h, old_h + 20);
+    ASSERT_EQUAL(doc->canvas_win->frame.w, old_w + 40);
+    ASSERT_EQUAL(doc->canvas_win->frame.h, old_h + 20);
+    ASSERT_TRUE(doc->modified);
+    ASSERT_TRUE(g_app->project.modified);
 
     fe_teardown();
     PASS();
@@ -1045,6 +1083,7 @@ void test_fe_load_imageeditor_levels_keeps_slider_and_gradient(void) {
     ASSERT_TRUE(form_project_load("examples/imageeditor/imageeditor.orion"));
 
     form_doc_t *levels = NULL;
+    form_doc_t *filter_gallery = NULL;
     int doc_count = 0;
     int visible_docs = 0;
     for (form_doc_t *doc = g_app->docs; doc; doc = doc->next) {
@@ -1054,14 +1093,18 @@ void test_fe_load_imageeditor_levels_keeps_slider_and_gradient(void) {
         if (strcmp(doc->form_id, "levels") == 0) {
             levels = doc;
         }
+        if (strcmp(doc->form_id, "filter_gallery") == 0) {
+            filter_gallery = doc;
+        }
     }
-    ASSERT_EQUAL(doc_count, 6);
+    ASSERT_EQUAL(doc_count, 7);
     ASSERT_EQUAL(visible_docs, 1);
     ASSERT_NOT_NULL(g_app->doc);
     ASSERT_STR_EQUAL(g_app->doc->form_id, "new_image");
     ASSERT_TRUE(g_app->doc->doc_win && g_app->doc->doc_win->visible);
     ASSERT_TRUE(!g_app->doc->modified);
     ASSERT_NOT_NULL(levels);
+    ASSERT_NOT_NULL(filter_gallery);
     ASSERT_TRUE(levels->doc_win && !levels->doc_win->visible);
 
     send_message(levels->doc_win, evSetFocus, 0, NULL);
@@ -1102,7 +1145,7 @@ void test_fe_load_imageeditor_levels_keeps_slider_and_gradient(void) {
     doc_count = 0;
     for (form_doc_t *doc = g_app->docs; doc; doc = doc->next)
         doc_count++;
-    ASSERT_EQUAL(doc_count, 6);
+    ASSERT_EQUAL(doc_count, 7);
     ASSERT_TRUE(g_app->doc && !g_app->doc->doc_win->visible);
 
     const fe_component_desc_t *slider = fe_component_by_token("slider");
@@ -1337,6 +1380,7 @@ int main(void) {
     test_fe_create_doc_sizes_canvas_to_form();
     test_fe_create_large_doc_adds_needed_scrollbars();
     test_fe_doc_resize_updates_form_size();
+    test_fe_doc_resize_by_dragging_bottom_right_corner();
     test_fe_close_doc();
     test_fe_close_modified_doc_no_keeps_window();
     test_fe_create_doc_keeps_existing_doc();

@@ -90,6 +90,28 @@ static const fe_component_desc_t k_components[] = {
     .capabilities = FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX,
     .proc = win_gradient,
   },
+  {
+    .class_name = "reportview",
+    .display_name = "ReportView",
+    .token = "reportview",
+    .name_prefix = "IDC_RVW",
+    .toolbox_ident = 212,
+    .toolbox_icon = 9,
+    .default_size = {160, 120},
+    .capabilities = FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX,
+    .proc = win_reportview,
+  },
+  {
+    .class_name = "space",
+    .display_name = "Space",
+    .token = "space",
+    .name_prefix = "IDC_SPC",
+    .toolbox_ident = 213,
+    .toolbox_icon = 0,
+    .default_size = {80, 40},
+    .capabilities = FE_COMPONENT_PLACEABLE,
+    .proc = win_space,
+  },
 };
 
 GEM_CLASSES(k_components, "Orion built-in commctl components", FE_PLUGIN_VERSION)

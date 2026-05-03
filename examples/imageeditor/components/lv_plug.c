@@ -1,6 +1,7 @@
 #include "../../../ui.h"
 
 #include "lv_cmpn.h"
+#include "fg_preview.h"
 #include "lv_plug.h"
 
 static const fe_component_desc_t k_levels_components[] = {
@@ -25,6 +26,17 @@ static const fe_component_desc_t k_levels_components[] = {
     .default_size = {260, 13},
     .capabilities = FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX,
     .proc         = lv_strip_component_proc,
+  },
+  {
+    .class_name   = FG_PREVIEW_CLASS_NAME,
+    .display_name = "Filter Preview",
+    .token        = "filter_preview",
+    .name_prefix  = "FG_PREV",
+    .toolbox_ident = 302,
+    .toolbox_icon = 10,
+    .default_size = {248, 248},
+    .capabilities = FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX,
+    .proc         = fg_preview_component_proc,
   },
 };
 

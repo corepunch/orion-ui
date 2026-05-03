@@ -519,18 +519,18 @@ void dispatch_message(ui_event_t *msg) {
         }
         int lx = LOCAL_X(px, py, win);
         int ly = LOCAL_Y(px, py, win);
-        // Resize handle: use frame-relative y (from window top) so the check
-        // naturally maps to the bottom-right corner of the total frame.
-        int ly_frame = SCALE_POINT(py) - win->frame.y;
-        if (lx >= win->frame.w - SCROLLBAR_WIDTH &&
-            ly_frame >= win->frame.h - SCROLLBAR_WIDTH &&
-            !win->parent &&
-            !(win->flags&WINDOW_NORESIZE) &&
+        window_t *resize_target = (win == click_root || win->parent) ? click_root : NULL;
+        int root_lx = resize_target ? sx - resize_target->frame.x : 0;
+        int root_ly = resize_target ? sy - resize_target->frame.y : 0;
+        if (resize_target &&
+            root_lx >= resize_target->frame.w - SCROLLBAR_WIDTH &&
+            root_ly >= resize_target->frame.h - SCROLLBAR_WIDTH &&
+            !(resize_target->flags&WINDOW_NORESIZE) &&
             win != g_ui_runtime.captured)
         {
-          g_ui_runtime.resizing = win;
-          resize_anchor[0] = SCALE_POINT(px) - (win->frame.x + win->frame.w);
-          resize_anchor[1] = SCALE_POINT(py) - (win->frame.y + win->frame.h);
+          g_ui_runtime.resizing = resize_target;
+          resize_anchor[0] = sx - (resize_target->frame.x + resize_target->frame.w);
+          resize_anchor[1] = sy - (resize_target->frame.y + resize_target->frame.h);
         } else if (window_in_drag_area(win, SCALE_POINT(py)) && win != g_ui_runtime.captured) {
           g_ui_runtime.dragging = win;
           drag_anchor[0] = SCALE_POINT(px) - win->frame.x;

@@ -115,6 +115,8 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
         resize_window(doc->canvas_win, cr.w, cr.h);
         if (changed) {
           doc->modified = true;
+          if (g_app)
+            g_app->project.modified = true;
           form_doc_update_title(doc);
         }
       }

@@ -791,7 +791,6 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           apply_zoom_centered(win, state, new_scale, cx, cy, mx, my);
         return true;
       } else if (g_app->current_tool == ID_TOOL_POLYGON && doc->poly_active && doc->poly_count >= 2) {
-        int point_count = doc->poly_count;
         if (g_app->shape_filled)
           canvas_draw_polygon_filled(doc, doc->poly_pts, doc->poly_count, g_app->fg_color, g_app->bg_color);
         else
@@ -802,10 +801,10 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         // in the polygon start handler; shape_snapshot holds the pre-draw state.
         // We need undo_states[top] = pre-draw, but it currently = pre-draw (correct!).
         // Nothing extra needed — doc_push_undo was called at polygon start.
+        IE_DEBUG("polygon_commit doc=%p points=%d", (void *)doc, doc->poly_count);
         doc->poly_active = false;
         doc->poly_count  = 0;
         doc->modified = true;
-        IE_DEBUG("polygon_commit doc=%p points=%d", (void *)doc, point_count);
         doc_update_title(doc);
         invalidate_window(win);
         return true;

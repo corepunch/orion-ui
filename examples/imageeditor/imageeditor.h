@@ -153,6 +153,7 @@ extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 #define ID_TOOL_CROP          36
 
 #include "components/lv_cmpn.h"
+#include "components/fg_preview.h"
 #include "build/generated/examples/imageeditor/imageeditor_forms.h"
 
 // ============================================================

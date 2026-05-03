@@ -199,6 +199,22 @@ static bool collect_menu_defines(define_list_t *defs, xmlNodePtr menus) {
   return true;
 }
 
+static bool collect_toolbar_defines(define_list_t *defs, xmlNodePtr toolbars) {
+  for (xmlNodePtr tb = toolbars ? toolbars->children : NULL; tb; tb = tb->next) {
+    if (!is_element(tb, "toolbar")) continue;
+    for (xmlNodePtr it = tb->children; it; it = it->next) {
+      if (!is_element(it, "button")) continue;
+      char *id = attr_dup(it, "id");
+      char *value = attr_dup(it, "value");
+      bool ok = collect_define(defs, id, value);
+      free(id);
+      free(value);
+      if (!ok) return false;
+    }
+  }
+  return true;
+}
+
 static void emit_defines(FILE *f, const define_list_t *defs) {
   if (!defs || defs->count <= 0) return;
   fputs("/* IDs generated from symbolic id/value pairs. */\n", f);
@@ -332,6 +348,82 @@ static bool emit_menu_resources(FILE *f, xmlNodePtr menus) {
   return true;
 }
 
+static const char *toolbar_item_type_for_node(xmlNodePtr node) {
+  if (is_element(node, "button")) return "TOOLBAR_ITEM_BUTTON";
+  if (is_element(node, "label")) return "TOOLBAR_ITEM_LABEL";
+  if (is_element(node, "combobox")) return "TOOLBAR_ITEM_COMBOBOX";
+  if (is_element(node, "textedit")) return "TOOLBAR_ITEM_TEXTEDIT";
+  if (is_element(node, "separator")) return "TOOLBAR_ITEM_SEPARATOR";
+  if (is_element(node, "spacer")) return "TOOLBAR_ITEM_SPACER";
+  return NULL;
+}
+
+static int count_toolbar_items(xmlNodePtr toolbar) {
+  int n = 0;
+  for (xmlNodePtr it = toolbar ? toolbar->children : NULL; it; it = it->next)
+    if (toolbar_item_type_for_node(it)) n++;
+  return n;
+}
+
+static bool emit_toolbar_resources(FILE *f, xmlNodePtr toolbars) {
+  if (!toolbars) return true;
+
+  for (xmlNodePtr tb = toolbars->children; tb; tb = tb->next) {
+    if (!is_element(tb, "toolbar")) continue;
+    char *var = attr_dup(tb, "var");
+    char *count = attr_dup(tb, "count");
+    int item_count = count_toolbar_items(tb);
+    if (item_count <= 0) {
+      free(var);
+      free(count);
+      continue;
+    }
+    if (!var || !*var) {
+      fprintf(stderr, "orionc: toolbar with items has no var\n");
+      free(var);
+      free(count);
+      return false;
+    }
+
+    fprintf(f, "static const toolbar_item_t %s[] = {\n", var);
+    for (xmlNodePtr it = tb->children; it; it = it->next) {
+      const char *type = toolbar_item_type_for_node(it);
+      if (!type) continue;
+
+      char *id = attr_dup(it, "id");
+      char *icon = attr_dup(it, "icon");
+      char *w = attr_dup(it, "w");
+      char *flags = attr_dup(it, "flags");
+      char *text = attr_dup(it, "text");
+      fprintf(f, "  { %s, %s, %s, %s, %s, ",
+              type,
+              nonempty(id, "0"),
+              nonempty(icon, "-1"),
+              nonempty(w, "0"),
+              nonempty(flags, "0"));
+      if (text && *text)
+        fprint_c_string(f, text);
+      else
+        fputs("NULL", f);
+      fputs(" },\n", f);
+      free(id);
+      free(icon);
+      free(w);
+      free(flags);
+      free(text);
+    }
+    fputs("};\n", f);
+    if (count && *count)
+      fprintf(f, "static const int %s = (int)(sizeof(%s) / sizeof(%s[0]));\n",
+              count, var, var);
+    fputc('\n', f);
+    free(var);
+    free(count);
+  }
+
+  return true;
+}
+
 static bool emit_form(FILE *f, xmlNodePtr form, const char *prefix) {
   char *id = attr_dup(form, "id");
   char *title = attr_dup(form, "title");
@@ -453,9 +545,15 @@ int main(int argc, char **argv) {
   int emitted = 0;
   define_list_t defines = {0};
   xmlNodePtr menus = first_child_element(root, "menus");
+  xmlNodePtr toolbars = first_child_element(root, "toolbars");
   xmlNodePtr forms = first_child_element(root, "forms");
 
   if (!collect_menu_defines(&defines, menus)) {
+    fclose(f);
+    xmlFreeDoc(doc);
+    return 1;
+  }
+  if (!collect_toolbar_defines(&defines, toolbars)) {
     fclose(f);
     xmlFreeDoc(doc);
     return 1;
@@ -476,6 +574,11 @@ int main(int argc, char **argv) {
   emit_defines(f, &defines);
   emit_menu_indices(f, menus);
   if (!emit_menu_resources(f, menus)) {
+    fclose(f);
+    xmlFreeDoc(doc);
+    return 1;
+  }
+  if (!emit_toolbar_resources(f, toolbars)) {
     fclose(f);
     xmlFreeDoc(doc);
     return 1;
