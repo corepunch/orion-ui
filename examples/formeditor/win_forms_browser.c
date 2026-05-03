@@ -156,14 +156,17 @@ result_t win_forms_browser_proc(window_t *win, uint32_t msg,
       uint16_t notif = HIWORD(wparam);
       if (!st || lparam != st->list_win)
         return false;
-      if (notif != RVN_SELCHANGE && notif != RVN_DBLCLK)
+      if (notif == RVN_SELCHANGE)
+        return true;
+      if (notif != RVN_DBLCLK)
         return false;
 
       form_doc_t *doc = forms_doc_at((int)LOWORD(wparam));
       if (!doc)
         return false;
       form_doc_activate(doc);
-      if (doc->doc_win) show_window(doc->doc_win, true);
+      if (doc->doc_win)
+        show_window(doc->doc_win, true);
       forms_browser_refresh();
       return true;
     }

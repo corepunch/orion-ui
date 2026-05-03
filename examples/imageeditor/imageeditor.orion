@@ -10,6 +10,98 @@
       <plugin name="imageeditor_components" />
     </plugins>
 
+    <menus var="kMenus" count="kNumMenus">
+      <menu id="file" label="File" var="kFileItems">
+        <item id="ID_FILE_NEW" value="1" label="New" />
+        <item id="ID_FILE_OPEN" value="2" label="Open..." />
+        <separator />
+        <item id="ID_FILE_SAVE" value="3" label="Save" />
+        <item id="ID_FILE_SAVEAS" value="4" label="Save As..." />
+        <separator />
+        <item id="ID_FILE_CLOSE" value="5" label="Close" />
+        <separator />
+        <item id="ID_FILE_QUIT" value="6" label="Quit" />
+      </menu>
+
+      <menu id="edit" label="Edit" var="kEditItems">
+        <item id="ID_EDIT_UNDO" value="10" label="Undo" />
+        <item id="ID_EDIT_REDO" value="11" label="Redo" />
+        <separator />
+        <item id="ID_EDIT_CUT" value="12" label="Cut" />
+        <item id="ID_EDIT_COPY" value="13" label="Copy" />
+        <item id="ID_EDIT_PASTE" value="14" label="Paste" />
+        <separator />
+        <item id="ID_EDIT_CLEAR_SEL" value="15" label="Clear Selection" />
+        <item id="ID_EDIT_SELECT_ALL" value="16" label="Select All" />
+        <item id="ID_EDIT_DESELECT" value="17" label="Deselect" />
+        <separator />
+        <item id="ID_EDIT_CROP" value="18" label="Crop to Selection" />
+      </menu>
+
+      <menu id="image" label="Image" var="kImageItems">
+        <item id="ID_IMAGE_RESIZE" value="53" label="Canvas Size..." />
+        <separator />
+        <item id="ID_IMAGE_FLIP_H" value="50" label="Flip Horizontal" />
+        <item id="ID_IMAGE_FLIP_V" value="51" label="Flip Vertical" />
+        <separator />
+        <item id="ID_IMAGE_INVERT" value="52" label="Invert Colors" />
+        <item id="ID_IMAGE_LEVELS" value="57" label="Levels..." />
+      </menu>
+
+      <menu id="photo" label="Photo" var="kPhotoItems" dynamic="true">
+        <item id="ID_FILTER_RELOAD" value="90" label="Reload Filters" />
+        <item id="ID_FILTER_GALLERY" value="91" label="Filter Gallery..." />
+      </menu>
+
+      <menu id="layer" label="Layer" var="kLayerItems">
+        <item id="ID_LAYER_NEW" value="60" label="New Layer" />
+        <item id="ID_LAYER_DUPLICATE" value="61" label="Duplicate Layer" />
+        <item id="ID_LAYER_DELETE" value="62" label="Delete Layer" />
+        <separator />
+        <item id="ID_LAYER_MOVE_UP" value="63" label="Move Layer Up" />
+        <item id="ID_LAYER_MOVE_DOWN" value="64" label="Move Layer Down" />
+        <separator />
+        <item id="ID_LAYER_MERGE_DOWN" value="65" label="Merge Down" />
+        <item id="ID_LAYER_FLATTEN" value="66" label="Flatten Image" />
+        <separator />
+        <item id="ID_LAYER_ADD_MASK" value="67" label="Add Mask" />
+        <item id="ID_LAYER_APPLY_MASK" value="68" label="Apply Mask" />
+        <item id="ID_LAYER_REMOVE_MASK" value="69" label="Remove Mask" />
+        <item id="ID_LAYER_EXTRACT_MASK" value="70" label="Extract Mask" />
+        <separator />
+        <item id="ID_LAYER_EDIT_MASK" value="71" label="[ ] Edit Mask" />
+      </menu>
+
+      <menu id="view" label="View" var="s_view_items" mutable="true">
+        <item id="ID_VIEW_ZOOM_IN" value="40" label="Zoom In" />
+        <item id="ID_VIEW_ZOOM_OUT" value="41" label="Zoom Out" />
+        <item id="ID_VIEW_ZOOM_FIT" value="55" label="Fit on Screen" />
+        <separator />
+        <item id="ID_VIEW_ZOOM_1X" value="42" label="1x" />
+        <item id="ID_VIEW_ZOOM_2X" value="43" label="2x" />
+        <item id="ID_VIEW_ZOOM_4X" value="44" label="4x" />
+        <item id="ID_VIEW_ZOOM_6X" value="45" label="6x" />
+        <item id="ID_VIEW_ZOOM_8X" value="46" label="8x" />
+        <separator />
+        <item id="ID_VIEW_SHOW_GRID" value="47" label="[ ] Show Grid" />
+        <item id="ID_VIEW_SNAP_GRID" value="48" label="[ ] Snap to Grid" />
+        <item id="ID_VIEW_MASK_ONLY" value="56" label="[ ] Mask Only View" />
+        <separator />
+        <item id="ID_VIEW_GRID_OPTIONS" value="49" label="Grid Options..." />
+      </menu>
+
+      <menu id="window" label="Window" var="kWindowItems" dynamic="true">
+        <item id="ID_WINDOW_TOOLS" value="200" label="Tools" />
+        <item id="ID_WINDOW_COLORS" value="201" label="Colors" />
+        <item id="ID_WINDOW_LAYERS" value="202" label="Layers" if="!IMAGEEDITOR_SINGLE_LAYER" />
+        <separator />
+      </menu>
+
+      <menu id="help" label="Help" var="kHelpItems">
+        <item id="ID_HELP_ABOUT" value="100" label="About..." />
+      </menu>
+    </menus>
+
     <forms>
       <form id="new_image"
             title="New Image"
@@ -19,10 +111,10 @@
         <controls>
           <control class="label" id="-1" name="lbl_width" text="Width:" frame="4 8 56 13" flags="0" />
           <control class="label" id="-1" name="lbl_height" text="Height:" frame="4 29 56 13" flags="0" />
-          <control class="textedit" id="NI_ID_WIDTH"  name="width"  text="" frame="62 8 56 13" flags="0" />
-          <control class="textedit" id="NI_ID_HEIGHT" name="height" text="" frame="62 29 56 13" flags="0" />
-          <control class="button" id="NI_ID_OK"     name="ok"     text="OK" frame="92 54 40 19" flags="BUTTON_DEFAULT" />
-          <control class="button" id="NI_ID_CANCEL" name="cancel" text="Cancel" frame="136 54 40 19" flags="0" />
+          <control class="textedit" id="NI_ID_WIDTH"  value="1" name="width"  text="" frame="62 8 56 13" flags="0" />
+          <control class="textedit" id="NI_ID_HEIGHT" value="2" name="height" text="" frame="62 29 56 13" flags="0" />
+          <control class="button" id="NI_ID_OK"     value="3" name="ok"     text="OK" frame="92 54 40 19" flags="BUTTON_DEFAULT" />
+          <control class="button" id="NI_ID_CANCEL" value="4" name="cancel" text="Cancel" frame="136 54 40 19" flags="0" />
         </controls>
       </form>
 
@@ -32,12 +124,12 @@
             flags="0"
             owner="examples/imageeditor/win_gridoptions.c">
         <controls>
-          <control class="label" id="GO_ID_LBL_H" name="lbl_h" text="Horizontal:" frame="4 9 66 13" flags="0" />
-          <control class="label" id="GO_ID_LBL_V" name="lbl_v" text="Vertical:" frame="4 26 66 13" flags="0" />
-          <control class="textedit" id="GO_ID_GRIDX"  name="gridx" text="" frame="74 8 56 13" flags="0" />
-          <control class="textedit" id="GO_ID_GRIDY"  name="gridy" text="" frame="74 25 56 13" flags="0" />
-          <control class="button" id="GO_ID_OK"     name="ok"     text="OK" frame="92 44 40 19" flags="BUTTON_DEFAULT" />
-          <control class="button" id="GO_ID_CANCEL" name="cancel" text="Cancel" frame="136 44 40 19" flags="0" />
+          <control class="label" id="GO_ID_LBL_H" value="5" name="lbl_h" text="Horizontal:" frame="4 9 66 13" flags="0" />
+          <control class="label" id="GO_ID_LBL_V" value="6" name="lbl_v" text="Vertical:" frame="4 26 66 13" flags="0" />
+          <control class="textedit" id="GO_ID_GRIDX"  value="1" name="gridx" text="" frame="74 8 56 13" flags="0" />
+          <control class="textedit" id="GO_ID_GRIDY"  value="2" name="gridy" text="" frame="74 25 56 13" flags="0" />
+          <control class="button" id="GO_ID_OK"     value="3" name="ok"     text="OK" frame="92 44 40 19" flags="BUTTON_DEFAULT" />
+          <control class="button" id="GO_ID_CANCEL" value="4" name="cancel" text="Cancel" frame="136 44 40 19" flags="0" />
         </controls>
       </form>
 
@@ -48,9 +140,9 @@
             owner="examples/imageeditor/win_newlayer.c">
         <controls>
           <control class="label" id="-1" name="lbl_fill" text="Fill with:" frame="4 8 48 13" flags="0" />
-          <control class="combobox" id="NL_ID_FILL" name="combo_fill" text="" frame="54 8 138 13" flags="0" />
-          <control class="button" id="NL_ID_OK"     name="ok"     text="OK" frame="104 33 44 19" flags="BUTTON_DEFAULT" />
-          <control class="button" id="NL_ID_CANCEL" name="cancel" text="Cancel" frame="152 33 44 19" flags="0" />
+          <control class="combobox" id="NL_ID_FILL" value="1" name="combo_fill" text="" frame="54 8 138 13" flags="0" />
+          <control class="button" id="NL_ID_OK"     value="2" name="ok"     text="OK" frame="104 33 44 19" flags="BUTTON_DEFAULT" />
+          <control class="button" id="NL_ID_CANCEL" value="3" name="cancel" text="Cancel" frame="152 33 44 19" flags="0" />
         </controls>
       </form>
 
@@ -61,9 +153,9 @@
             owner="examples/imageeditor/win_extractmask.c">
         <controls>
           <control class="label" id="-1" name="lbl_fill" text="Fill with:" frame="4 10 64 13" flags="0" />
-          <control class="combobox" id="EM_ID_FILL" name="combo_fill" text="" frame="70 10 140 13" flags="0" />
-          <control class="button" id="EM_ID_OK"     name="ok"     text="OK" frame="124 35 44 19" flags="BUTTON_DEFAULT" />
-          <control class="button" id="EM_ID_CANCEL" name="cancel" text="Cancel" frame="172 35 44 19" flags="0" />
+          <control class="combobox" id="EM_ID_FILL" value="1" name="combo_fill" text="" frame="70 10 140 13" flags="0" />
+          <control class="button" id="EM_ID_OK"     value="2" name="ok"     text="OK" frame="124 35 44 19" flags="BUTTON_DEFAULT" />
+          <control class="button" id="EM_ID_CANCEL" value="3" name="cancel" text="Cancel" frame="172 35 44 19" flags="0" />
         </controls>
       </form>
 
@@ -74,12 +166,15 @@
             owner="examples/imageeditor/win_textdialog.c">
         <controls>
           <control class="label" id="-1" name="lbl_text" text="Text:" frame="2 3 36 13" flags="0" />
-          <control class="textedit" id="TD_ID_EDIT" name="edit_text" text="" frame="2 12 216 13" flags="0" />
+          <control class="textedit" id="TD_ID_EDIT" value="1" name="edit_text" text="" frame="2 12 216 13" flags="0" />
+          <control class="label" id="TD_ID_SIZE_LBL" value="7" name="lbl_size" text="Size: 16px" frame="2 30 80 13" flags="0" />
+          <control class="slider" id="TD_ID_SIZE" value="8" name="size" text="" frame="2 36 216 17" flags="WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOTABSTOP" />
           <control class="label" id="-1" name="lbl_color" text="Color:" frame="2 55 36 13" flags="0" />
-          <control class="button" id="TD_ID_COLOR" name="btn_color" text="Change..." frame="58 52 54 19" flags="0" />
-          <control class="checkbox" id="TD_ID_AA" name="chk_aa" text="Anti-alias" frame="118 53 74 12" flags="0" />
-          <control class="button" id="TD_ID_OK" name="btn_ok" text="OK" frame="2 71 38 19" flags="0" />
-          <control class="button" id="TD_ID_CANCEL" name="btn_cancel" text="Cancel" frame="44 71 50 19" flags="0" />
+          <control class="space" id="TD_ID_SWATCH" value="6" name="swatch" text="" frame="40 53 14 11" flags="WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOTABSTOP" />
+          <control class="button" id="TD_ID_COLOR" value="4" name="btn_color" text="Change..." frame="58 52 54 19" flags="0" />
+          <control class="checkbox" id="TD_ID_AA" value="5" name="chk_aa" text="Anti-alias" frame="118 53 74 12" flags="0" />
+          <control class="button" id="TD_ID_OK" value="2" name="btn_ok" text="OK" frame="2 71 38 19" flags="0" />
+          <control class="button" id="TD_ID_CANCEL" value="3" name="btn_cancel" text="Cancel" frame="44 71 50 19" flags="0" />
         </controls>
       </form>
 

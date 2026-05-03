@@ -71,6 +71,18 @@ void form_doc_activate(form_doc_t *doc) {
   forms_browser_refresh();
 }
 
+void form_doc_show_only(form_doc_t *doc) {
+  if (!g_app || !doc) return;
+  for (form_doc_t *it = g_app->docs; it; it = it->next) {
+    if (it != doc && it->doc_win && is_window(it->doc_win))
+      show_window(it->doc_win, false);
+  }
+  form_doc_activate(doc);
+  if (doc->doc_win && is_window(doc->doc_win))
+    show_window(doc->doc_win, true);
+  forms_browser_refresh();
+}
+
 // ============================================================
 // Document window procedure
 // ============================================================
@@ -82,7 +94,7 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
     case evCreate:
       return true;
     case evSetFocus:
-      if (doc) form_doc_activate(doc);
+      if (doc && win->visible) form_doc_activate(doc);
       return false;
     case evPaint:
       fill_rect(get_sys_color(brWorkspaceBg), R(0, 0, win->frame.w, win->frame.h));
@@ -95,23 +107,23 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
     case evResize: {
       if (doc && doc->canvas_win) {
         irect16_t cr = get_client_rect(win);
-        doc->form_size.w = MAX(1, cr.w);
-        doc->form_size.h = MAX(1, cr.h);
+        int new_w = MAX(1, cr.w);
+        int new_h = MAX(1, cr.h);
+        bool changed = (doc->form_size.w != new_w || doc->form_size.h != new_h);
+        doc->form_size.w = new_w;
+        doc->form_size.h = new_h;
         resize_window(doc->canvas_win, cr.w, cr.h);
-        doc->modified = true;
-        form_doc_update_title(doc);
+        if (changed) {
+          doc->modified = true;
+          form_doc_update_title(doc);
+        }
       }
       return false;
     }
     case evClose: {
       if (!doc) return false;
-      if (doc->modified) {
-        int res = message_box(win,
-                              "This form has unsaved changes.\nClose without saving?",
-                              "Unsaved Changes", MB_YESNO);
-        if (res != IDYES) return true;  // keep form open unless discard is confirmed
-      }
-      close_form_doc(doc);
+      show_window(win, false);
+      forms_browser_refresh();
       return true;
     }
     default:
@@ -307,6 +319,11 @@ static bool parse_numeric_expr(const char *s, int *out) {
   return true;
 }
 
+static bool is_numeric_expr(const char *s) {
+  int ignored = 0;
+  return parse_numeric_expr(s, &ignored);
+}
+
 static uint32_t flag_value(const char *tok) {
   if (!tok || !*tok || strcmp(tok, "0") == 0) return 0;
   if (strcmp(tok, "BUTTON_DEFAULT") == 0) return BUTTON_DEFAULT;
@@ -356,9 +373,12 @@ static bool load_component_plugin_named(const char *name) {
   return fe_load_component_plugin(path);
 }
 
-static int project_resolve_control_id(form_doc_t *doc, const char *expr) {
+static int project_resolve_control_id(form_doc_t *doc, const char *expr,
+                                      const char *value_expr) {
   int id = 0;
   if (parse_numeric_expr(expr, &id))
+    return id;
+  if (parse_numeric_expr(value_expr, &id))
     return id;
   return doc ? doc->next_id++ : CTRL_ID_BASE;
 }
@@ -401,6 +421,24 @@ static void project_load_plugins(xmlNodePtr root) {
   }
 }
 
+static void project_load_menus(xmlDocPtr xdoc, xmlNodePtr root) {
+  if (!g_app) return;
+  g_app->project.menus_xml[0] = '\0';
+  for (xmlNodePtr n = root->children; n; n = n->next) {
+    if (n->type != XML_ELEMENT_NODE || xmlStrcmp(n->name, BAD_CAST "menus") != 0)
+      continue;
+    xmlBufferPtr buf = xmlBufferCreate();
+    if (!buf) return;
+    int ok = xmlNodeDump(buf, xdoc, n, 4, 1);
+    if (ok >= 0) {
+      snprintf(g_app->project.menus_xml, sizeof(g_app->project.menus_xml),
+               "%s", (const char *)xmlBufferContent(buf));
+    }
+    xmlBufferFree(buf);
+    return;
+  }
+}
+
 static void project_load_controls(form_doc_t *doc, xmlNodePtr form_node) {
   for (xmlNodePtr n = form_node->children; n; n = n->next) {
     if (n->type != XML_ELEMENT_NODE || xmlStrcmp(n->name, BAD_CAST "controls") != 0)
@@ -419,7 +457,9 @@ static void project_load_controls(form_doc_t *doc, xmlNodePtr form_node) {
       memset(el, 0, sizeof(*el));
       el->type = type;
       copy_attr(c, "id", el->id_expr, sizeof(el->id_expr));
-      el->id = project_resolve_control_id(doc, el->id_expr);
+      char value_expr[32] = {0};
+      copy_attr(c, "value", value_expr, sizeof(value_expr));
+      el->id = project_resolve_control_id(doc, el->id_expr, value_expr);
       if (!frame_attr(c, &el->frame)) {
         el->frame.x = int_attr(c, "x", 0);
         el->frame.y = int_attr(c, "y", 0);
@@ -505,12 +545,13 @@ bool form_project_load(const char *path) {
   copy_attr(root, "root", g_app->project.root, sizeof(g_app->project.root));
 
   project_load_plugins(root);
+  project_load_menus(xdoc, root);
   formeditor_rebuild_tool_palette();
   project_load_forms(root);
 
   g_app->project.loaded = true;
   g_app->project.modified = false;
-  if (g_app->docs) form_doc_activate(g_app->docs);
+  if (g_app->docs) form_doc_show_only(g_app->docs);
   forms_browser_refresh();
   plugins_browser_refresh();
   xmlFreeDoc(xdoc);
@@ -559,6 +600,8 @@ static void project_save_doc(FILE *f, form_doc_t *doc) {
     char id_buf[32];
     snprintf(id_buf, sizeof(id_buf), "%d", el->id);
     xml_attr(f, "id", el->id_expr[0] ? el->id_expr : id_buf);
+    if (el->id_expr[0] && !is_numeric_expr(el->id_expr))
+      xml_attr(f, "value", id_buf);
     xml_attr(f, "name", el->name);
     xml_attr(f, "text", el->text);
     fprintf(f, " frame=\"%d %d %d %d\"",
@@ -592,6 +635,10 @@ bool form_project_save(const char *path) {
     fprintf(f, " />\n");
   }
   fprintf(f, "    </plugins>\n\n");
+
+  if (p->menus_xml[0]) {
+    fprintf(f, "%s\n\n", p->menus_xml);
+  }
 
   fprintf(f, "    <forms>\n");
   for (form_doc_t *doc = g_app->docs; doc; doc = doc->next)

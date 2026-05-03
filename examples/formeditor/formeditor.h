@@ -149,6 +149,7 @@ typedef struct {
   char name[64];
   char title[128];
   char root[256];
+  char menus_xml[16384];
   form_plugin_ref_t plugins[FE_MAX_PROJECT_PLUGINS];
   int plugin_count;
   bool loaded;
@@ -261,6 +262,7 @@ form_doc_t *create_form_doc(int w, int h);
 void        close_form_doc(form_doc_t *doc);
 void        form_doc_update_title(form_doc_t *doc);
 void        form_doc_activate(form_doc_t *doc);
+void        form_doc_show_only(form_doc_t *doc);
 
 // ============================================================
 // Project I/O

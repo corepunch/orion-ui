@@ -7,70 +7,6 @@
 #include "imageeditor.h"
 #include "levels_private.h"
 
-// Dialog layout
-#define LV_CLIENT_W   280
-#define LV_CLIENT_H   202
-
-#define LV_PAD         10
-#define LV_GRAPH_X     10
-#define LV_GRAPH_Y     21
-
-#define LV_BTN_W       48
-#define LV_BTN_H     BUTTON_HEIGHT
-#define LV_BTN_GAP      6
-#define LV_BTN_Y     178
-#define LV_OK_X      116
-#define LV_RS_X      168
-#define LV_CA_X      220
-
-#define LV_IN_LBL_X    10
-#define LV_IN_LBL_Y     4
-#define LV_IN_EDIT_Y    0
-#define LV_IN_EDIT_H   13
-#define LV_IN_BLACK_X   84
-#define LV_IN_GAMMA_X  122
-#define LV_IN_WHITE_X  160
-#define LV_IN_EDIT_W    34
-#define LV_GRAD_PAD      8
-#define LV_GRAD_X      (LV_GRAPH_X + LV_GRAD_PAD)
-#define LV_GRAD_W      (LV_GRAPH_W - 2 * LV_GRAD_PAD)
-#define LV_IN_SLIDER_Y (LV_GRAPH_Y + LV_GRAPH_H + 2)
-
-#define LV_OUT_LBL_X    10
-#define LV_OUT_LBL_Y   128
-#define LV_OUT_EDIT_Y  128
-#define LV_OUT_BLACK_X  84
-#define LV_OUT_WHITE_X  160
-#define LV_OUT_EDIT_W   34
-#define LV_OUT_GRAD_Y  146
-#define LV_OUT_SLIDER_Y 156
-
-static const form_ctrl_def_t k_lv_form_children[] = {
-  { "label",           0,               { LV_IN_LBL_X,  LV_IN_LBL_Y,              0,          LV_IN_EDIT_H }, WINDOW_NOTITLE | WINDOW_NOFILL, "Input Levels:",  "in_label" },
-  { "textedit",        LV_ID_IN_BLACK,  { LV_IN_BLACK_X, LV_IN_EDIT_Y,             LV_IN_EDIT_W, LV_IN_EDIT_H }, 0,                             "0",              "in_black" },
-  { "textedit",        LV_ID_IN_GAMMA,  { LV_IN_GAMMA_X, LV_IN_EDIT_Y,             LV_IN_EDIT_W, LV_IN_EDIT_H }, 0,                             "1.00",           "in_gamma" },
-  { "textedit",        LV_ID_IN_WHITE,  { LV_IN_WHITE_X, LV_IN_EDIT_Y,             LV_IN_EDIT_W, LV_IN_EDIT_H }, 0,                             "255",            "in_white" },
-  { "lv_histogram",    LV_ID_GRAPH,    { LV_GRAPH_X,    LV_GRAPH_Y,               LV_GRAPH_W,   LV_GRAPH_H },   WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOTABSTOP, "",               "graph" },
-  { "slider",          LV_ID_IN_SLIDER, { LV_GRAPH_X,    LV_IN_SLIDER_Y,           LV_GRAPH_W,   LV_STRIP_H },   WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOTABSTOP, "",               "in_slider" },
-  { "label",           0,               { LV_OUT_LBL_X,  LV_OUT_LBL_Y,             0,            LV_IN_EDIT_H }, WINDOW_NOTITLE | WINDOW_NOFILL, "Output Levels:", "out_label" },
-  { "textedit",        LV_ID_OUT_BLACK, { LV_OUT_BLACK_X, LV_OUT_EDIT_Y,           LV_OUT_EDIT_W, LV_IN_EDIT_H }, 0,                             "0",              "out_black" },
-  { "textedit",        LV_ID_OUT_WHITE, { LV_OUT_WHITE_X, LV_OUT_EDIT_Y,           LV_OUT_EDIT_W, LV_IN_EDIT_H }, 0,                             "255",            "out_white" },
-  { "gradient",        0,               { LV_GRAD_X,     LV_OUT_GRAD_Y,            LV_GRAD_W,    LV_STRIP_BAR_H }, WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOTABSTOP, "",             "out_grad" },
-  { "slider",          LV_ID_OUT_SLIDER,{ LV_GRAPH_X,    LV_OUT_SLIDER_Y,          LV_GRAPH_W,   LV_STRIP_H },   WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOTABSTOP, "",               "out_slider" },
-  { "button",          LV_ID_OK,        { LV_OK_X,       LV_BTN_Y,                 LV_BTN_W,     LV_BTN_H },      0,                             "OK",             "ok" },
-  { "button",          LV_ID_RESET,     { LV_RS_X,       LV_BTN_Y,                 LV_BTN_W,     LV_BTN_H },      0,                             "Reset",          "reset" },
-  { "button",          LV_ID_CANCEL,    { LV_CA_X,       LV_BTN_Y,                 LV_BTN_W,     LV_BTN_H },      0,                             "Cancel",         "cancel" },
-};
-
-static const form_def_t k_lv_form = {
-  .name = "Levels",
-  .width = LV_CLIENT_W,
-  .height = LV_CLIENT_H,
-  .flags = 0,
-  .children = k_lv_form_children,
-  .child_count = ARRAY_LEN(k_lv_form_children),
-};
-
 typedef struct {
   int in_black;
   int in_mid_value;
@@ -408,7 +344,7 @@ bool show_levels_dialog(window_t *parent) {
   st.out_white = 255;
   lv_rebuild_histogram(&st);
 
-  uint32_t res = show_dialog_from_form_ex(&k_lv_form, "Levels", parent,
+  uint32_t res = show_dialog_from_form_ex(&imageeditor_levels_form, "Levels", parent,
                                           WINDOW_DIALOG | WINDOW_NOTRAYBUTTON,
                                           levels_dlg_proc, &st);
   if (!res || !st.accepted) return false;

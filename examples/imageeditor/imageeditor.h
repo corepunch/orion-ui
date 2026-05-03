@@ -117,38 +117,7 @@ extern const int kBrushSizes[NUM_BRUSH_SIZES];
 
 #define UNDO_MAX   20
 
-// Menu item IDs
-#define ID_FILE_NEW     1
-#define ID_FILE_OPEN    2
-#define ID_FILE_SAVE    3
-#define ID_FILE_SAVEAS  4
-#define ID_FILE_CLOSE   5
-#define ID_FILE_QUIT    6
-
-#define ID_EDIT_UNDO        10
-#define ID_EDIT_REDO        11
-#define ID_EDIT_CUT         12
-#define ID_EDIT_COPY        13
-#define ID_EDIT_PASTE       14
-#define ID_EDIT_CLEAR_SEL   15
-#define ID_EDIT_SELECT_ALL  16
-#define ID_EDIT_DESELECT    17
-#define ID_EDIT_CROP        18
-
-#define ID_VIEW_ZOOM_IN   40
-#define ID_VIEW_ZOOM_OUT  41
-#define ID_VIEW_ZOOM_1X   42
-#define ID_VIEW_ZOOM_2X   43
-#define ID_VIEW_ZOOM_4X   44
-#define ID_VIEW_ZOOM_6X   45
-#define ID_VIEW_ZOOM_8X   46
-
-#define ID_VIEW_ZOOM_FIT  55   // Fit on Screen (Ctrl+0, like Photoshop)
-#define ID_VIEW_MASK_ONLY 56   // Show the active layer's alpha channel
-
-#define ID_VIEW_SHOW_GRID    47
-#define ID_VIEW_SNAP_GRID    48
-#define ID_VIEW_GRID_OPTIONS 49
+// Menu command IDs and static menu resources are generated from imageeditor.orion.
 
 // Supported zoom levels and their corresponding View menu IDs.
 // These are the single source of truth used by win_canvas.c and win_menubar.c.
@@ -156,39 +125,13 @@ extern const int kBrushSizes[NUM_BRUSH_SIZES];
 extern const int kZoomLevels[NUM_ZOOM_LEVELS];
 extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 
-#define ID_IMAGE_FLIP_H   50
-#define ID_IMAGE_FLIP_V   51
-#define ID_IMAGE_INVERT   52
-#define ID_IMAGE_RESIZE   53
 #define ID_COLOR_SWAP     54
-#define ID_IMAGE_LEVELS   57
 
-#define ID_FILTER_RELOAD   90
-#define ID_FILTER_GALLERY  91
 #define ID_FILTER_BASE   1000
 #define IMAGEEDITOR_MAX_FILTERS 64
 
-#define ID_WINDOW_TOOLS    200
-#define ID_WINDOW_COLORS   201
-#define ID_WINDOW_LAYERS   202
 #define ID_WINDOW_DOC_BASE 300  // IDs 300..315 reserved for open documents
 #define WINDOW_MENU_MAX_DOCS 16
-
-#define ID_HELP_ABOUT  100
-
-// Layer menu command IDs
-#define ID_LAYER_NEW          60
-#define ID_LAYER_DUPLICATE    61
-#define ID_LAYER_DELETE       62
-#define ID_LAYER_MOVE_UP      63
-#define ID_LAYER_MOVE_DOWN    64
-#define ID_LAYER_MERGE_DOWN   65
-#define ID_LAYER_FLATTEN      66
-#define ID_LAYER_ADD_MASK     67
-#define ID_LAYER_APPLY_MASK   68
-#define ID_LAYER_REMOVE_MASK  69
-#define ID_LAYER_EXTRACT_MASK 70
-#define ID_LAYER_EDIT_MASK    71
 
 // Tool command IDs – these are the authoritative tool identifiers used everywhere
 #define ID_TOOL_PENCIL        20
@@ -208,6 +151,9 @@ extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 #define ID_TOOL_MAGNIFIER     34
 #define ID_TOOL_TEXT          35
 #define ID_TOOL_CROP          36
+
+#include "components/lv_cmpn.h"
+#include "build/generated/examples/imageeditor/imageeditor_forms.h"
 
 // ============================================================
 // Color helpers
@@ -534,10 +480,6 @@ bool canvas_draw_text_stb(canvas_doc_t *doc, int x, int y,
 
 // About dialog
 void show_about_dialog(window_t *parent);
-
-// Menu definitions
-extern menu_def_t kMenus[];  // non-const: Window menu is rebuilt dynamically
-extern const int  kNumMenus;
 
 // Rebuild the Window menu (call after create/close document).
 void window_menu_rebuild(void);

@@ -68,6 +68,28 @@ static const fe_component_desc_t k_components[] = {
     .capabilities = FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX,
     .proc = win_combobox,
   },
+  {
+    .class_name = "slider",
+    .display_name = "Slider",
+    .token = "slider",
+    .name_prefix = "IDC_SLD",
+    .toolbox_ident = 210,
+    .toolbox_icon = 10,
+    .default_size = {121, 17},
+    .capabilities = FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX,
+    .proc = win_slider,
+  },
+  {
+    .class_name = "gradient",
+    .display_name = "Gradient",
+    .token = "gradient",
+    .name_prefix = "IDC_GRD",
+    .toolbox_ident = 211,
+    .toolbox_icon = 10,
+    .default_size = {121, 8},
+    .capabilities = FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX,
+    .proc = win_gradient,
+  },
 };
 
 GEM_CLASSES(k_components, "Orion built-in commctl components", FE_PLUGIN_VERSION)

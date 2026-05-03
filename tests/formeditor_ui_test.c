@@ -325,9 +325,9 @@ void test_fe_close_doc(void) {
     PASS();
 }
 
-// Pressing No in the unsaved close prompt must keep the form open.
+// Closing the designer window hides the view but keeps the form in the project.
 void test_fe_close_modified_doc_no_keeps_window(void) {
-    TEST("modified doc close prompt: No keeps the form open");
+    TEST("form window close: hides view and keeps form");
 
     fe_setup();
     form_doc_t *doc = g_app->doc;
@@ -338,15 +338,11 @@ void test_fe_close_modified_doc_no_keeps_window(void) {
     fe_last_message_box_type = 0;
     ASSERT_TRUE(send_message(dwin, evClose, 0, NULL));
 
-    ASSERT_EQUAL(fe_last_message_box_type, MB_YESNO);
+    ASSERT_EQUAL(fe_last_message_box_type, 0);
     ASSERT_TRUE(g_app->doc == doc);
     ASSERT_TRUE(is_window(dwin));
-
-    fe_next_message_box_result = IDYES;
-    ASSERT_TRUE(send_message(dwin, evClose, 0, NULL));
-
-    ASSERT_NULL(g_app->doc);
-    ASSERT_FALSE(is_window(dwin));
+    ASSERT_TRUE(!dwin->visible);
+    ASSERT_TRUE(doc->modified);
 
     fe_next_message_box_result = IDCANCEL;
     fe_teardown();
@@ -1041,6 +1037,121 @@ void test_fe_save_load_form_flags(void) {
     PASS();
 }
 
+void test_fe_load_imageeditor_levels_keeps_slider_and_gradient(void) {
+    TEST("project load: ImageEditor levels keeps sliders and gradient");
+
+    fe_setup();
+
+    ASSERT_TRUE(form_project_load("examples/imageeditor/imageeditor.orion"));
+
+    form_doc_t *levels = NULL;
+    int doc_count = 0;
+    int visible_docs = 0;
+    for (form_doc_t *doc = g_app->docs; doc; doc = doc->next) {
+        doc_count++;
+        if (doc->doc_win && doc->doc_win->visible)
+            visible_docs++;
+        if (strcmp(doc->form_id, "levels") == 0) {
+            levels = doc;
+        }
+    }
+    ASSERT_EQUAL(doc_count, 6);
+    ASSERT_EQUAL(visible_docs, 1);
+    ASSERT_NOT_NULL(g_app->doc);
+    ASSERT_STR_EQUAL(g_app->doc->form_id, "new_image");
+    ASSERT_TRUE(g_app->doc->doc_win && g_app->doc->doc_win->visible);
+    ASSERT_TRUE(!g_app->doc->modified);
+    ASSERT_NOT_NULL(levels);
+    ASSERT_TRUE(levels->doc_win && !levels->doc_win->visible);
+
+    send_message(levels->doc_win, evSetFocus, 0, NULL);
+    ASSERT_STR_EQUAL(g_app->doc->form_id, "new_image");
+    ASSERT_TRUE(!g_app->doc->modified);
+    send_message(g_app->doc->doc_win, evResize, 0, NULL);
+    ASSERT_TRUE(!g_app->doc->modified);
+
+    g_app->forms_win = forms_browser_create(0);
+    ASSERT_NOT_NULL(g_app->forms_win);
+    window_t *forms_list = g_app->forms_win->children;
+    ASSERT_NOT_NULL(forms_list);
+
+    int levels_index = -1;
+    int idx = 0;
+    form_doc_t *new_image = NULL;
+    for (form_doc_t *doc = g_app->docs; doc; doc = doc->next, idx++) {
+        if (strcmp(doc->form_id, "new_image") == 0)
+            new_image = doc;
+        if (strcmp(doc->form_id, "levels") == 0)
+            levels_index = idx;
+    }
+    ASSERT_NOT_NULL(new_image);
+    ASSERT_TRUE(levels_index >= 0);
+
+    send_message(g_app->forms_win, evCommand,
+                 MAKEWPARAM(levels_index, RVN_SELCHANGE), forms_list);
+    ASSERT_STR_EQUAL(g_app->doc->form_id, "new_image");
+    ASSERT_TRUE(levels->doc_win && !levels->doc_win->visible);
+
+    send_message(g_app->forms_win, evCommand,
+                 MAKEWPARAM(levels_index, RVN_DBLCLK), forms_list);
+    ASSERT_STR_EQUAL(g_app->doc->form_id, "levels");
+    ASSERT_TRUE(levels->doc_win && levels->doc_win->visible);
+    ASSERT_TRUE(new_image->doc_win && new_image->doc_win->visible);
+
+    ASSERT_TRUE(send_message(g_app->doc->doc_win, evClose, 0, NULL));
+    doc_count = 0;
+    for (form_doc_t *doc = g_app->docs; doc; doc = doc->next)
+        doc_count++;
+    ASSERT_EQUAL(doc_count, 6);
+    ASSERT_TRUE(g_app->doc && !g_app->doc->doc_win->visible);
+
+    const fe_component_desc_t *slider = fe_component_by_token("slider");
+    const fe_component_desc_t *gradient = fe_component_by_token("gradient");
+    ASSERT_NOT_NULL(slider);
+    ASSERT_NOT_NULL(gradient);
+
+    int slider_type = -1;
+    int gradient_type = -1;
+    for (int i = 0; i < fe_component_count(); i++) {
+        const fe_component_desc_t *c = fe_component_at(i);
+        if (c == slider)
+            slider_type = i;
+        if (c == gradient)
+            gradient_type = i;
+    }
+    ASSERT_TRUE(slider_type >= 0);
+    ASSERT_TRUE(gradient_type >= 0);
+
+    int sliders = 0;
+    int gradients = 0;
+    for (int i = 0; i < levels->element_count; i++) {
+        if (levels->elements[i].type == slider_type)
+            sliders++;
+        if (levels->elements[i].type == gradient_type)
+            gradients++;
+    }
+
+    ASSERT_EQUAL(sliders, 2);
+    ASSERT_EQUAL(gradients, 1);
+
+    char path[512];
+    snprintf(path, sizeof(path), "%s/orion_fe_imageeditor_%d.orion",
+             fe_temp_dir(), (int)getpid());
+    ASSERT_TRUE(form_project_save(path));
+    char *xml = fe_read_file(path);
+    ASSERT_NOT_NULL(xml);
+    ASSERT_TRUE(strstr(xml, "<menus") != NULL);
+    ASSERT_TRUE(strstr(xml, "id=\"ID_FILE_NEW\" value=\"1\"") != NULL);
+    ASSERT_TRUE(strstr(xml, "var=\"s_view_items\" mutable=\"true\"") != NULL);
+    ASSERT_TRUE(strstr(xml, "id=\"NI_ID_WIDTH\" value=\"1\"") != NULL);
+    ASSERT_TRUE(strstr(xml, "id=\"TD_ID_SIZE\" value=\"8\"") != NULL);
+    free(xml);
+    unlink(path);
+
+    fe_teardown();
+    PASS();
+}
+
 // ID_FILE_NEW adds an empty document without closing the current one.
 void test_fe_file_new_adds_doc_without_dropping_current(void) {
     TEST("ID_FILE_NEW: adds empty form and keeps current document");
@@ -1253,6 +1364,7 @@ int main(void) {
     test_fe_save_load_roundtrip();
     test_fe_save_load_form_dimensions();
     test_fe_save_load_form_flags();
+    test_fe_load_imageeditor_levels_keeps_slider_and_gradient();
     test_fe_file_new_adds_doc_without_dropping_current();
     test_fe_forms_toolbar_new_creates_cascaded_doc();
     test_fe_plugins_browser_lists_project_plugins();
