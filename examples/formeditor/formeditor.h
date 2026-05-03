@@ -44,6 +44,12 @@
 
 #define PROPBROWSER_WIN_Y (FORMS_WIN_Y + FORMS_WIN_H + 4)
 
+// Project plugins browser.
+#define PLUGINS_WIN_X     PROPBROWSER_WIN_X
+#define PLUGINS_WIN_Y     (PROPBROWSER_WIN_Y + PROPBROWSER_WIN_H + 4)
+#define PLUGINS_WIN_W     PROPBROWSER_WIN_W
+#define PLUGINS_WIN_H     (SCREEN_H - PLUGINS_WIN_Y - 4)
+
 // Document window initial position
 // frame.y is the window top; place it 8px below the menu bar.
 #define DOC_START_X       (PALETTE_WIN_X + PALETTE_WIN_W + 10)
@@ -156,6 +162,7 @@ typedef struct {
   window_t    *tool_win;
   window_t    *prop_win;
   window_t    *forms_win;
+  window_t    *plugins_win;
   hinstance_t  hinstance;  // owning app instance
   int          current_tool;
   accel_table_t *accel;
@@ -234,12 +241,17 @@ result_t win_property_browser_proc(window_t *win, uint32_t msg,
                                     uint32_t wparam, void *lparam);
 result_t win_forms_browser_proc(window_t *win, uint32_t msg,
                                 uint32_t wparam, void *lparam);
+result_t win_plugins_browser_proc(window_t *win, uint32_t msg,
+                                  uint32_t wparam, void *lparam);
 void canvas_rebuild_live_controls(form_doc_t *doc);
 void canvas_sync_live_controls(form_doc_t *doc);
+void formeditor_rebuild_tool_palette(void);
 window_t *property_browser_create(hinstance_t hinstance);
 void property_browser_refresh(form_doc_t *doc);
 window_t *forms_browser_create(hinstance_t hinstance);
 void forms_browser_refresh(void);
+window_t *plugins_browser_create(hinstance_t hinstance);
+void plugins_browser_refresh(void);
 
 // ============================================================
 // Document helpers

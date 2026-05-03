@@ -82,6 +82,12 @@ static void fe_setup(void) {
     // explicitly so test_env_init() finds a consistent state.
     if (g_app) {
         fe_close_all_docs();
+        if (g_app->prop_win)
+            destroy_window(g_app->prop_win);
+        if (g_app->forms_win)
+            destroy_window(g_app->forms_win);
+        if (g_app->plugins_win)
+            destroy_window(g_app->plugins_win);
         free(g_app);
         g_app = NULL;
     }
@@ -107,6 +113,10 @@ static void fe_teardown(void) {
     fe_close_all_docs();
     if (g_app->prop_win)
         destroy_window(g_app->prop_win);
+    if (g_app->forms_win)
+        destroy_window(g_app->forms_win);
+    if (g_app->plugins_win)
+        destroy_window(g_app->plugins_win);
     free(g_app);
     g_app = NULL;
     test_env_shutdown();
@@ -1075,6 +1085,34 @@ void test_fe_forms_toolbar_new_creates_cascaded_doc(void) {
     PASS();
 }
 
+// The Plugins panel lists plugins stored in the in-memory project.
+void test_fe_plugins_browser_lists_project_plugins(void) {
+    TEST("Plugins browser: lists project plugin refs");
+
+    fe_setup();
+    snprintf(g_app->project.plugins[0].name,
+             sizeof(g_app->project.plugins[0].name), "%s", "formeditor_components");
+    snprintf(g_app->project.plugins[1].name,
+             sizeof(g_app->project.plugins[1].name), "%s", "imageeditor_components");
+    g_app->project.plugin_count = 2;
+
+    g_app->plugins_win = plugins_browser_create(0);
+    ASSERT_NOT_NULL(g_app->plugins_win);
+
+    window_t *list = g_app->plugins_win->children;
+    ASSERT_NOT_NULL(list);
+    ASSERT_EQUAL((int)send_message(list, RVM_GETITEMCOUNT, 0, NULL), 2);
+
+    reportview_item_t item = {0};
+    ASSERT_TRUE(send_message(list, RVM_GETITEMDATA, 0, &item));
+    ASSERT_STR_EQUAL(item.text, "formeditor_components");
+    ASSERT_TRUE(send_message(list, RVM_GETITEMDATA, 1, &item));
+    ASSERT_STR_EQUAL(item.text, "imageeditor_components");
+
+    fe_teardown();
+    PASS();
+}
+
 // ── main ──────────────────────────────────────────────────────────────────
 
 int main(void) {
@@ -1113,6 +1151,7 @@ int main(void) {
     test_fe_save_load_form_flags();
     test_fe_file_new_adds_doc_without_dropping_current();
     test_fe_forms_toolbar_new_creates_cascaded_doc();
+    test_fe_plugins_browser_lists_project_plugins();
 
     TEST_END();
 }

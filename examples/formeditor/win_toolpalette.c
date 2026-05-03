@@ -8,6 +8,43 @@
 static toolbox_item_t g_tools[FE_MAX_COMPONENTS + 1];
 static int g_tool_count = 0;
 
+static int palette_win_y(void) {
+  return MENUBAR_HEIGHT + 4;
+}
+
+static int palette_win_h(void) {
+  int items = 1;  // Select tool
+  for (int i = 0; i < fe_component_count(); i++) {
+    const fe_component_desc_t *c = fe_component_at(i);
+    if (!c) continue;
+    if ((c->capabilities & (FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX)) ==
+        (FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX))
+      items++;
+  }
+  int rows = (items + TOOLBOX_COLS - 1) / TOOLBOX_COLS;
+  return TITLEBAR_HEIGHT + rows * FE_TOOLBOX_BTN_SIZE + 4;
+}
+
+static window_t *create_tool_palette(hinstance_t hinstance) {
+  window_t *tp = create_window(
+      "Tools",
+      WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
+      MAKERECT(PALETTE_WIN_X, palette_win_y(), PALETTE_WIN_W, palette_win_h()),
+      NULL, win_tool_palette_proc, hinstance, NULL);
+  if (tp) show_window(tp, true);
+  return tp;
+}
+
+void formeditor_rebuild_tool_palette(void) {
+  if (!g_app) return;
+  if (g_app->tool_win) {
+    destroy_window(g_app->tool_win);
+    g_app->tool_win = NULL;
+  }
+  g_app->current_tool = ID_TOOL_SELECT;
+  g_app->tool_win = create_tool_palette(g_app->hinstance);
+}
+
 static void build_tool_items(void) {
   g_tool_count = 0;
   g_tools[g_tool_count++] = (toolbox_item_t){ ID_TOOL_SELECT, 0, "Select" };

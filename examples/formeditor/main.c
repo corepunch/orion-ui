@@ -11,25 +11,6 @@ static const accel_t kAccelEntries[] = {
   { FVIRTKEY,          AX_KEY_BACKSPACE, ID_EDIT_DELETE },
 };
 
-// frame.y is now the window top (title bar top), not the client area top.
-// Place the window so the title bar sits 4px below the menu bar.
-static int palette_win_y(void) {
-  return MENUBAR_HEIGHT + 4;
-}
-
-static int palette_win_h(void) {
-  int items = 1;  // Select tool
-  for (int i = 0; i < fe_component_count(); i++) {
-    const fe_component_desc_t *c = fe_component_at(i);
-    if (!c) continue;
-    if ((c->capabilities & (FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX)) ==
-        (FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX))
-      items++;
-  }
-  int rows = (items + TOOLBOX_COLS - 1) / TOOLBOX_COLS;
-  return TITLEBAR_HEIGHT + rows * FE_TOOLBOX_BTN_SIZE + 4;
-}
-
 static bool has_dynlib_ext(const char *path) {
   if (!path) return false;
   size_t n = strlen(path);
@@ -51,16 +32,11 @@ static void create_app_windows(hinstance_t hinstance) {
   g_app->menubar_win = set_app_menu(editor_menubar_proc, kMenus, kNumMenus,
                                     handle_menu_command, hinstance);
 
-  window_t *tp = create_window(
-      "Tools",
-      WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
-      MAKERECT(PALETTE_WIN_X, palette_win_y(), PALETTE_WIN_W, palette_win_h()),
-      NULL, win_tool_palette_proc, hinstance, NULL);
-  show_window(tp, true);
-  g_app->tool_win = tp;
+  formeditor_rebuild_tool_palette();
 
   g_app->prop_win = property_browser_create(hinstance);
   g_app->forms_win = forms_browser_create(hinstance);
+  g_app->plugins_win = plugins_browser_create(hinstance);
 }
 
 bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
@@ -121,6 +97,8 @@ void gem_shutdown(void) {
     destroy_window(g_app->prop_win);
   if (g_app->forms_win)
     destroy_window(g_app->forms_win);
+  if (g_app->plugins_win)
+    destroy_window(g_app->plugins_win);
   free(g_app);
   g_app = NULL;
 }

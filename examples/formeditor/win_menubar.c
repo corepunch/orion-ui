@@ -505,12 +505,14 @@ bool form_project_load(const char *path) {
   copy_attr(root, "root", g_app->project.root, sizeof(g_app->project.root));
 
   project_load_plugins(root);
+  formeditor_rebuild_tool_palette();
   project_load_forms(root);
 
   g_app->project.loaded = true;
   g_app->project.modified = false;
   if (g_app->docs) form_doc_activate(g_app->docs);
   forms_browser_refresh();
+  plugins_browser_refresh();
   xmlFreeDoc(xdoc);
   return true;
 }
