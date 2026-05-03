@@ -33,6 +33,26 @@ static bool plugin_ref_exists(const char *name) {
   return false;
 }
 
+static const char *plugin_display_name(const char *name) {
+  if (!name || !*name) return "";
+  const char *slash = strrchr(name, '/');
+  const char *base = slash ? slash + 1 : name;
+  size_t base_len = strlen(base);
+  static char buf[128];
+  const char *exts[] = { AX_DYNLIB_EXT, ".dylib", ".so", ".dll" };
+  for (int i = 0; i < (int)ARRAY_LEN(exts); i++) {
+    size_t ext_len = strlen(exts[i]);
+    if (ext_len > 0 && base_len > ext_len &&
+        strcmp(base + base_len - ext_len, exts[i]) == 0) {
+      size_t n = MIN(base_len - ext_len, sizeof(buf) - 1);
+      memcpy(buf, base, n);
+      buf[n] = '\0';
+      return buf;
+    }
+  }
+  return base;
+}
+
 static bool load_project_plugin(const char *name) {
   if (!name || !*name) return false;
   if (strchr(name, '/') || plugin_has_dynlib_ext(name))
@@ -54,7 +74,7 @@ static void plugins_browser_rebuild(plugins_browser_state_t *st) {
   if (g_app) {
     for (int i = 0; i < g_app->project.plugin_count; i++) {
       reportview_item_t item = {0};
-      item.text = g_app->project.plugins[i].name;
+      item.text = plugin_display_name(g_app->project.plugins[i].name);
       item.color = get_sys_color(brTextNormal);
       item.userdata = (uint32_t)i;
       send_message(st->list_win, RVM_ADDITEM, 0, &item);

@@ -1093,7 +1093,8 @@ void test_fe_plugins_browser_lists_project_plugins(void) {
     snprintf(g_app->project.plugins[0].name,
              sizeof(g_app->project.plugins[0].name), "%s", "formeditor_components");
     snprintf(g_app->project.plugins[1].name,
-             sizeof(g_app->project.plugins[1].name), "%s", "imageeditor_components");
+             sizeof(g_app->project.plugins[1].name), "%s",
+             "/tmp/orion/plugins/imageeditor_components.dylib");
     g_app->project.plugin_count = 2;
 
     g_app->plugins_win = plugins_browser_create(0);
@@ -1108,6 +1109,31 @@ void test_fe_plugins_browser_lists_project_plugins(void) {
     ASSERT_STR_EQUAL(item.text, "formeditor_components");
     ASSERT_TRUE(send_message(list, RVM_GETITEMDATA, 1, &item));
     ASSERT_STR_EQUAL(item.text, "imageeditor_components");
+
+    fe_teardown();
+    PASS();
+}
+
+// Component classes loaded from plugins should become placeable toolbox items.
+void test_fe_plugin_components_are_toolbox_placeable(void) {
+    TEST("Plugins: loaded component classes become toolbox-placeable");
+
+    fe_setup();
+    char path[512];
+    snprintf(path, sizeof(path), "build/lib/imageeditor_components%s",
+             AX_DYNLIB_EXT);
+    ASSERT_TRUE(fe_load_component_plugin(path));
+
+    const fe_component_desc_t *hist = fe_component_by_token("lv_histogram");
+    const fe_component_desc_t *strip = fe_component_by_token("lv_strip");
+    ASSERT_NOT_NULL(hist);
+    ASSERT_NOT_NULL(strip);
+    ASSERT_TRUE((hist->capabilities & FE_COMPONENT_PLACEABLE) != 0);
+    ASSERT_TRUE((hist->capabilities & FE_COMPONENT_SHOW_TOOLBOX) != 0);
+    ASSERT_TRUE((strip->capabilities & FE_COMPONENT_PLACEABLE) != 0);
+    ASSERT_TRUE((strip->capabilities & FE_COMPONENT_SHOW_TOOLBOX) != 0);
+    ASSERT_TRUE(fe_component_by_tool_ident(hist->toolbox_ident) == hist);
+    ASSERT_TRUE(fe_component_by_tool_ident(strip->toolbox_ident) == strip);
 
     fe_teardown();
     PASS();
@@ -1152,6 +1178,7 @@ int main(void) {
     test_fe_file_new_adds_doc_without_dropping_current();
     test_fe_forms_toolbar_new_creates_cascaded_doc();
     test_fe_plugins_browser_lists_project_plugins();
+    test_fe_plugin_components_are_toolbox_placeable();
 
     TEST_END();
 }
