@@ -468,6 +468,26 @@ void test_fe_button_preview_visible_while_dragging(void) {
     PASS();
 }
 
+void test_fe_button_preview_uses_runtime_minimum_height(void) {
+    TEST("place button drag: preview uses runtime minimum button height");
+
+    fe_setup();
+    form_doc_t *doc = g_app->doc;
+    doc->snap_to_grid = false;
+
+    fe_begin_place_drag(doc, ID_TOOL_BUTTON, 20, 20, 40, 8);
+
+    canvas_state_t *s = fe_state(doc);
+    ASSERT_NOT_NULL(s->preview_win);
+    ASSERT_EQUAL(s->preview_win->frame.x, 20);
+    ASSERT_EQUAL(s->preview_win->frame.y, 20);
+    ASSERT_EQUAL(s->preview_win->frame.w, 40);
+    ASSERT_EQUAL(s->preview_win->frame.h, BUTTON_HEIGHT);
+
+    fe_teardown();
+    PASS();
+}
+
 // Starting a new placement clears the old selection.  The rubber-band for the
 // control being drawn is the only outline shown during placement.
 void test_fe_begin_place_drag_deselects_previous_element(void) {
@@ -586,6 +606,24 @@ void test_fe_live_windows_created(void) {
     ASSERT_EQUAL(doc->element_count, 1);
     ASSERT_NOT_NULL(doc->elements[0].live_win);          // child window
     ASSERT_TRUE(doc->elements[0].live_win->parent == doc->canvas_win);
+
+    fe_teardown();
+    PASS();
+}
+
+void test_fe_live_button_uses_runtime_minimum_height(void) {
+    TEST("place button: live control and element use runtime minimum height");
+
+    fe_setup();
+    form_doc_t *doc = g_app->doc;
+    doc->snap_to_grid = false;
+
+    fe_place_ctrl(doc, ID_TOOL_BUTTON, 10, 10, 40, 8);
+
+    ASSERT_EQUAL(doc->element_count, 1);
+    ASSERT_EQUAL(doc->elements[0].frame.h, BUTTON_HEIGHT);
+    ASSERT_NOT_NULL(doc->elements[0].live_win);
+    ASSERT_EQUAL(doc->elements[0].live_win->frame.h, BUTTON_HEIGHT);
 
     fe_teardown();
     PASS();
@@ -1097,7 +1135,7 @@ void test_fe_load_imageeditor_levels_keeps_slider_and_gradient(void) {
             filter_gallery = doc;
         }
     }
-    ASSERT_EQUAL(doc_count, 7);
+    ASSERT_EQUAL(doc_count, 9);
     ASSERT_EQUAL(visible_docs, 1);
     ASSERT_NOT_NULL(g_app->doc);
     ASSERT_STR_EQUAL(g_app->doc->form_id, "new_image");
@@ -1145,7 +1183,7 @@ void test_fe_load_imageeditor_levels_keeps_slider_and_gradient(void) {
     doc_count = 0;
     for (form_doc_t *doc = g_app->docs; doc; doc = doc->next)
         doc_count++;
-    ASSERT_EQUAL(doc_count, 7);
+    ASSERT_EQUAL(doc_count, 9);
     ASSERT_TRUE(g_app->doc && !g_app->doc->doc_win->visible);
 
     const fe_component_desc_t *slider = fe_component_by_token("slider");
@@ -1386,11 +1424,13 @@ int main(void) {
     test_fe_create_doc_keeps_existing_doc();
     test_fe_place_button();
     test_fe_button_preview_visible_while_dragging();
+    test_fe_button_preview_uses_runtime_minimum_height();
     test_fe_begin_place_drag_deselects_previous_element();
     test_fe_preview_parent_notify_finishes_placement();
     test_fe_placement_type_latched_on_mousedown();
     test_fe_place_all_types();
     test_fe_live_windows_created();
+    test_fe_live_button_uses_runtime_minimum_height();
     test_fe_select_element();
     test_fe_live_button_parent_notify_selects_on_click();
     test_fe_deselect_on_empty_click();

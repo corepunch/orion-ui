@@ -339,20 +339,24 @@ static void canvas_update_preview(canvas_state_t *s, int type, irect16_t form_rc
   doc = s->doc;
   if (type < 0 || !ctrl_type_to_proc(type)) return;
   irect16_t canvas_rc = form_to_canvas_rect(s, form_rc);
+  int draw_w = MAX(form_rc.w, 1);
+  int draw_h = MAX(form_rc.h, 1);
 
   if (!canvas_child_window_alive(doc->canvas_win, s->preview_win) ||
       s->preview_type != type) {
     canvas_destroy_preview(s);
     s->preview_type = type;
     s->preview_win = create_window(text ? text : "", flags,
-                                   MAKERECT(0, 0, MAX(form_rc.w, 1), MAX(form_rc.h, 1)),
+                                   MAKERECT(0, 0, draw_w, draw_h),
                                    doc->canvas_win, preview_ctrl_proc, 0, NULL);
     if (!s->preview_win) return;
     s->preview_win->flags |= WINDOW_NOTABSTOP;
   }
 
+  draw_w = MAX(draw_w, s->preview_win->frame.w);
+  draw_h = MAX(draw_h, s->preview_win->frame.h);
   move_window(s->preview_win, canvas_rc.x, canvas_rc.y);
-  resize_window(s->preview_win, MAX(form_rc.w, 1), MAX(form_rc.h, 1));
+  resize_window(s->preview_win, draw_w, draw_h);
   if (text && strcmp(s->preview_win->title, text) != 0) {
     snprintf(s->preview_win->title, sizeof(s->preview_win->title), "%s", text);
     invalidate_window(s->preview_win);
@@ -388,6 +392,12 @@ static void canvas_create_live_element_window(form_doc_t *doc, form_element_t *e
   if (!el->live_win) return;
   el->live_win->id = el->id;
   el->live_win->flags |= WINDOW_NOTABSTOP;
+  if (el->live_win->frame.w > el->frame.w ||
+      el->live_win->frame.h > el->frame.h) {
+    el->frame.w = MAX(el->frame.w, el->live_win->frame.w);
+    el->frame.h = MAX(el->frame.h, el->live_win->frame.h);
+    canvas_sync_live_element_window(doc, el);
+  }
 }
 
 void canvas_sync_live_controls(form_doc_t *doc) {
