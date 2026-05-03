@@ -13,12 +13,12 @@
 // Layout constants
 // ============================================================
 
-#define SCREEN_W          640
-#define SCREEN_H          480
+#define SCREEN_W          800
+#define SCREEN_H          600
 
 // Default form dimensions
 #define FORM_DEFAULT_W    320
-#define FORM_DEFAULT_H    200
+#define FORM_DEFAULT_H    240
 
 // Tool palette — formeditor uses 21px icons inside 26px square buttons.
 // toolbox.png: 63x299 pixels = 3 cols x N rows of 21x21 px icons
