@@ -415,6 +415,45 @@ void test_cw_usedefault_uses_configured_origin(void) {
     PASS();
 }
 
+void test_dialog_z_order_above_same_app_topmost(void) {
+    TEST("move_to_top: dialog stays above same-app topmost palettes");
+
+    test_env_init();
+
+    window_t *doc = create_window("Doc", 0,
+                                  MAKERECT(10, 10, 120, 80),
+                                  NULL, test_window_proc, 42, NULL);
+    window_t *palette = create_window("Palette", WINDOW_ALWAYSONTOP,
+                                      MAKERECT(20, 20, 80, 80),
+                                      NULL, test_window_proc, 42, NULL);
+    window_t *dialog = create_window("Dialog", WINDOW_DIALOG,
+                                     MAKERECT(30, 30, 90, 70),
+                                     NULL, test_window_proc, 42, NULL);
+
+    ASSERT_NOT_NULL(doc);
+    ASSERT_NOT_NULL(palette);
+    ASSERT_NOT_NULL(dialog);
+
+    show_window(doc, true);
+    show_window(palette, true);
+    show_window(dialog, true);
+
+    window_t *last_app = NULL;
+    window_t *prev_to_dialog = NULL;
+    for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
+        if (w->hinstance == 42) {
+            if (w == dialog) prev_to_dialog = last_app;
+            last_app = w;
+        }
+    }
+
+    ASSERT_TRUE(prev_to_dialog == palette);
+    ASSERT_TRUE(last_app == dialog);
+
+    test_env_shutdown();
+    PASS();
+}
+
 int main(int argc, char *argv[]) {
     (void)argc;
     (void)argv;
@@ -430,6 +469,7 @@ int main(int argc, char *argv[]) {
     test_parent_notify_can_allow_child_input();
     test_clear_events();
     test_cw_usedefault_uses_configured_origin();
+    test_dialog_z_order_above_same_app_topmost();
     
     TEST_END();
 }
