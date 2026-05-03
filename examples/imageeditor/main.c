@@ -47,6 +47,8 @@ static const accel_t kAccelEntries[] = {
   { FVIRTKEY,          AX_KEY_G, ID_TOOL_MAGNIFIER   },
   { FVIRTKEY,          AX_KEY_W, ID_TOOL_MAGIC_WAND  },
   { FVIRTKEY,          AX_KEY_T, ID_TOOL_TEXT   },
+  { FVIRTKEY,          AX_KEY_V, ID_TOOL_MOVE   },
+  { FVIRTKEY,          AX_KEY_C, ID_TOOL_CROP   },
   // Allow tool hotkeys to work even when Shift is held
   { FSHIFT|FVIRTKEY,   AX_KEY_P, ID_TOOL_PENCIL },
   { FSHIFT|FVIRTKEY,   AX_KEY_B, ID_TOOL_BRUSH  },
@@ -58,6 +60,8 @@ static const accel_t kAccelEntries[] = {
   { FSHIFT|FVIRTKEY,   AX_KEY_G, ID_TOOL_MAGNIFIER   },
   { FSHIFT|FVIRTKEY,   AX_KEY_W, ID_TOOL_MAGIC_WAND  },
   { FSHIFT|FVIRTKEY,   AX_KEY_T, ID_TOOL_TEXT   },
+  { FSHIFT|FVIRTKEY,   AX_KEY_V, ID_TOOL_MOVE   },
+  { FSHIFT|FVIRTKEY,   AX_KEY_C, ID_TOOL_CROP   },
 };
 
 // Resurrect 64 palette from LoSpec.com

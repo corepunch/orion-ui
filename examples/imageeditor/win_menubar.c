@@ -61,6 +61,12 @@ static bool cancel_active_canvas_interaction(canvas_doc_t *doc, int old_tool) {
     changed = true;
   }
 
+  if (doc->sel_mask_moving) {
+    IE_DEBUG("cancel_interaction selection_mask_move doc=%p", (void *)doc);
+    doc->sel_mask_moving = false;
+    changed = true;
+  }
+
   if (old_tool == ID_TOOL_CROP && doc->sel_active) {
     IE_DEBUG("cancel_interaction crop doc=%p", (void *)doc);
     canvas_deselect(doc);
@@ -416,12 +422,13 @@ void handle_menu_command(uint16_t id) {
       }
       break;
 
-    case ID_SELECT_CROP:
+    case ID_IMAGE_CROP:
       if (doc && doc->sel_active) {
         doc_push_undo(doc);
-        canvas_crop_to_selection(doc);
-        doc_update_title(doc);
-        invalidate_window(doc->canvas_win);
+        if (canvas_crop_or_expand_to_selection(doc)) {
+          doc_update_title(doc);
+          invalidate_window(doc->canvas_win);
+        }
       }
       break;
 
@@ -570,7 +577,8 @@ void handle_menu_command(uint16_t id) {
     case ID_TOOL_EYEDROPPER:
     case ID_TOOL_MAGNIFIER:
     case ID_TOOL_TEXT:
-    case ID_TOOL_MAGIC_WAND: {
+    case ID_TOOL_MAGIC_WAND:
+    case ID_TOOL_MOVE: {
       int old_tool = g_app->current_tool;
       if (doc && old_tool != (int)id && cancel_active_canvas_interaction(doc, old_tool)) {
         invalidate_window(doc->canvas_win);

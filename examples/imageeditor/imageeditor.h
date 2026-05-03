@@ -115,7 +115,7 @@ extern const int kBrushSizes[NUM_BRUSH_SIZES];
 #define DOC_WORKSPACE_MARGIN 16
 
 #define NUM_COLORS 64
-#define NUM_TOOLS  18
+#define NUM_TOOLS  19
 #define NUM_USER_COLORS  8
 
 #define UNDO_MAX   20
@@ -155,6 +155,7 @@ extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 #define ID_TOOL_TEXT          35
 #define ID_TOOL_CROP          36
 #define ID_TOOL_MAGIC_WAND    37
+#define ID_TOOL_MOVE          38
 
 #include "components/lv_cmpn.h"
 #include "components/fg_preview.h"
@@ -240,6 +241,7 @@ typedef struct canvas_doc_s {
   bool     poly_active;     // true while accumulating polygon vertices
   // Floating selection state (during move drag)
   bool     sel_moving;
+  bool     sel_mask_moving;
   ipoint16_t  move_origin;    // canvas pixel where drag began
   ipoint16_t  float_pos;      // current top-left of floating selection
   int      float_w;
@@ -335,6 +337,7 @@ static inline const char *tool_id_name(int tool_id) {
     case ID_TOOL_TEXT:         return "TEXT";
     case ID_TOOL_CROP:         return "CROP";
     case ID_TOOL_MAGIC_WAND:   return "MAGIC_WAND";
+    case ID_TOOL_MOVE:         return "MOVE";
     default:                   return "UNKNOWN";
   }
 }
@@ -434,6 +437,7 @@ bool canvas_crop_or_expand_to_selection(canvas_doc_t *doc);
 // Move-selection helpers (called from win_canvas.c)
 void canvas_begin_move(canvas_doc_t *doc, uint32_t bg);
 void canvas_commit_move(canvas_doc_t *doc);
+bool canvas_translate_selection_mask(canvas_doc_t *doc, int dx, int dy);
 
 // Undo/redo
 void doc_push_undo(canvas_doc_t *doc);

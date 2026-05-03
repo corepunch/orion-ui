@@ -106,6 +106,32 @@ static void fprint_c_string(FILE *f, const char *s) {
   fputc('"', f);
 }
 
+static void fprint_c_string_with_shortcut(FILE *f, const char *label,
+                                          const char *shortcut) {
+  fputc('"', f);
+  const char *parts[3] = { label, (shortcut && *shortcut) ? "\t" : NULL, shortcut };
+  for (int i = 0; i < 3; i++) {
+    const char *s = parts[i];
+    if (!s) continue;
+    for (const unsigned char *p = (const unsigned char *)s; *p; p++) {
+      switch (*p) {
+        case '\\': fputs("\\\\", f); break;
+        case '"':  fputs("\\\"", f); break;
+        case '\n': fputs("\\n", f); break;
+        case '\r': fputs("\\r", f); break;
+        case '\t': fputs("\\t", f); break;
+        default:
+          if (*p < 0x20)
+            fprintf(f, "\\x%02x", *p);
+          else
+            fputc(*p, f);
+          break;
+      }
+    }
+  }
+  fputc('"', f);
+}
+
 static void make_ident(char *out, size_t out_sz, const char *s) {
   size_t n = 0;
   if (!out || out_sz == 0) return;
@@ -360,11 +386,13 @@ static bool emit_menu_item_array(FILE *f, xmlNodePtr menu,
     }
     char *id = attr_dup(it, "id");
     char *label = attr_dup(it, "label");
+    char *shortcut = attr_dup(it, "shortcut");
     fputs("  { ", f);
-    fprint_c_string(f, nonempty(label, ""));
+    fprint_c_string_with_shortcut(f, nonempty(label, ""), shortcut);
     fprintf(f, ", %s, NULL, 0 },\n", nonempty(id, "0"));
     free(id);
     free(label);
+    free(shortcut);
     emit_optional_endif(f, it);
   }
   fputs("};\n\n", f);

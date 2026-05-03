@@ -40,11 +40,11 @@
         <separator />
         <item id="ID_SELECT_EXPAND" value="83" label="Expand..." />
         <item id="ID_SELECT_CONTRACT" value="84" label="Contract..." />
-        <separator />
-        <item id="ID_SELECT_CROP" value="85" label="Crop to Selection" />
       </menu>
 
       <menu id="image" label="Image" var="kImageItems">
+        <item id="ID_IMAGE_CROP" value="58" label="Crop" shortcut="C" />
+        <separator />
         <item id="ID_IMAGE_RESIZE" value="53" label="Canvas Size..." />
         <separator />
         <item id="ID_IMAGE_FLIP_H" value="50" label="Flip Horizontal" />

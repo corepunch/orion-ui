@@ -72,6 +72,12 @@ static int item_label_width(const char *label) {
   return tab ? strnwidth(label, (int)(tab - label)) : strwidth(label);
 }
 
+static const char *item_label_shortcut(const char *label) {
+  if (!label) return NULL;
+  const char *tab = strchr(label, '\t');
+  return (tab && tab[1]) ? tab + 1 : NULL;
+}
+
 // Draw a menu item label, stopping at a '\t' character.
 static void draw_item_label(const char *label, irect16_t const *rect, uint32_t col) {
   if (!label) return;
@@ -104,6 +110,8 @@ static int popup_items_width(const menu_item_t *items, int item_count,
       int lw = item_label_width(it->label) + MENU_SIDE_PAD * 2;
       if (menu_item_has_submenu(it)) {
         lw += strwidth(">") + MENU_HOTKEY_GAP;
+      } else if (item_label_shortcut(it->label)) {
+        lw += MENU_HOTKEY_GAP + strwidth(item_label_shortcut(it->label)) + MENU_SIDE_PAD;
       } else if (accel) {
         const accel_t *a = accel_find_cmd(accel, it->id);
         if (a) {
@@ -183,6 +191,10 @@ static result_t popup_proc(window_t *win, uint32_t msg,
           draw_item_label(it->label, &(irect16_t){MENU_SIDE_PAD, y, win->frame.w - MENU_SIDE_PAD * 2, MENU_ITEM_H}, label_col);
           if (menu_item_has_submenu(it)) {
             draw_text_small_clipped(">",
+                                   &(irect16_t){0, y, win->frame.w - MENU_SIDE_PAD, MENU_ITEM_H},
+                                   hotkey_col, TEXT_ALIGN_RIGHT);
+          } else if (item_label_shortcut(it->label)) {
+            draw_text_small_clipped(item_label_shortcut(it->label),
                                    &(irect16_t){0, y, win->frame.w - MENU_SIDE_PAD, MENU_ITEM_H},
                                    hotkey_col, TEXT_ALIGN_RIGHT);
           } else if (pd->accel) {

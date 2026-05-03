@@ -317,6 +317,7 @@ static void float_tex_free(canvas_doc_t *doc) {
 // Upload float_pixels into a (re)created float_tex.
 static void float_tex_upload(canvas_doc_t *doc) {
   float_tex_free(doc);
+  if (!g_ui_runtime.running) return;
   if (!doc->float_pixels || doc->float_w <= 0 || doc->float_h <= 0) return;
   glGenTextures(1, &doc->float_tex);
   glBindTexture(GL_TEXTURE_2D, doc->float_tex);
@@ -327,6 +328,13 @@ static void float_tex_upload(canvas_doc_t *doc) {
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
                doc->float_w, doc->float_h, 0,
                GL_RGBA, GL_UNSIGNED_BYTE, doc->float_pixels);
+}
+
+static bool selection_move_hit(const canvas_doc_t *doc, int x, int y) {
+  if (!doc || !doc->sel_active || !canvas_in_bounds(doc, x, y)) return false;
+  if (doc->sel_mask)
+    return doc->sel_mask[(size_t)y * doc->canvas_w + x] < 128;
+  return canvas_in_selection(doc, x, y);
 }
 
 // Apply a new zoom level centered on the canvas pixel (cx, cy) currently
@@ -798,14 +806,21 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         case ID_TOOL_SPRAY:
           canvas_spray(doc, px, py, 8, g_app->fg_color);
           break;
-        case ID_TOOL_SELECT:
-          // If clicking inside the existing selection → move mode
-          if (!shift && doc->sel_active && canvas_in_selection(doc, px, py)) {
-            canvas_begin_move(doc, g_app->bg_color);
+        case ID_TOOL_MOVE:
+          if (selection_move_hit(doc, px, py)) {
+            canvas_begin_move(doc, MAKE_COLOR(0, 0, 0, 0));
             float_tex_upload(doc);
             doc->move_origin.x = px;
             doc->move_origin.y = py;
-            IE_DEBUG("selection_move_begin doc=%p at=(%d,%d)", (void *)doc, px, py);
+            IE_DEBUG("pixel_move_begin doc=%p at=(%d,%d)", (void *)doc, px, py);
+          }
+          break;
+        case ID_TOOL_SELECT:
+          if (!shift && selection_move_hit(doc, px, py)) {
+            doc->sel_mask_moving = true;
+            doc->move_origin.x = px;
+            doc->move_origin.y = py;
+            IE_DEBUG("selection_mask_move_begin doc=%p at=(%d,%d)", (void *)doc, px, py);
           } else {
             // Start a new selection; commit any in-progress move first.
             if (doc->sel_moving) canvas_commit_move(doc);
@@ -973,6 +988,16 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         case ID_TOOL_SPRAY:
           canvas_spray(doc, px, py, 8, g_app->fg_color);
           break;
+        case ID_TOOL_MOVE:
+          if (doc->sel_moving) {
+            int dx = px - doc->move_origin.x;
+            int dy = py - doc->move_origin.y;
+            doc->float_pos.x += dx;
+            doc->float_pos.y += dy;
+            doc->move_origin.x = px;
+            doc->move_origin.y = py;
+          }
+          break;
         case ID_TOOL_SELECT:
           if (doc->sel_moving) {
             int dx = px - doc->move_origin.x;
@@ -981,6 +1006,13 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
             doc->float_pos.y += dy;
             doc->move_origin.x = px;
             doc->move_origin.y = py;
+          } else if (doc->sel_mask_moving) {
+            int dx = px - doc->move_origin.x;
+            int dy = py - doc->move_origin.y;
+            if (canvas_translate_selection_mask(doc, dx, dy)) {
+              doc->move_origin.x = px;
+              doc->move_origin.y = py;
+            }
           } else {
             canvas_constrain_tool_drag(tool, shift ? AX_MOD_SHIFT : 0,
                                        doc->sel_start.x, doc->sel_start.y,
@@ -1032,12 +1064,17 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         doc_update_title(doc);
         invalidate_window(win);
       } else {
+        bool was_sel_mask_moving = doc->sel_mask_moving;
         if (doc->sel_moving) {
           canvas_commit_move(doc);
           IE_DEBUG("selection_move_commit doc=%p", (void *)doc);
           doc_update_title(doc);
         }
-        if (tool == ID_TOOL_SELECT && doc->sel_active) {
+        if (doc->sel_mask_moving) {
+          IE_DEBUG("selection_mask_move_commit doc=%p", (void *)doc);
+          doc->sel_mask_moving = false;
+        }
+        if (tool == ID_TOOL_SELECT && doc->sel_active && !was_sel_mask_moving) {
           IE_DEBUG("selection_end doc=%p from=(%d,%d) to=(%d,%d)",
                    (void *)doc,
                    doc->sel_start.x, doc->sel_start.y,

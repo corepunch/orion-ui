@@ -1627,6 +1627,63 @@ void canvas_commit_move(canvas_doc_t *doc) {
   doc->sel_moving   = false;
 }
 
+bool canvas_translate_selection_mask(canvas_doc_t *doc, int dx, int dy) {
+  if (!doc || !doc->sel_active || (dx == 0 && dy == 0)) return false;
+
+  size_t count = (size_t)doc->canvas_w * doc->canvas_h;
+  uint8_t *src = doc->sel_mask;
+  uint8_t *owned_src = NULL;
+  if (!src) {
+    int x0, y0, x1, y1;
+    if (!selection_bounds(doc, &x0, &y0, &x1, &y1)) return false;
+    owned_src = malloc(count);
+    if (!owned_src) return false;
+    memset(owned_src, 255, count);
+    for (int y = y0; y <= y1; y++)
+      memset(owned_src + (size_t)y * doc->canvas_w + x0, 0,
+             (size_t)(x1 - x0 + 1));
+    src = owned_src;
+  }
+
+  uint8_t *dst = malloc(count);
+  if (!dst) {
+    free(owned_src);
+    return false;
+  }
+  memset(dst, 255, count);
+
+  bool any = false;
+  for (int y = 0; y < doc->canvas_h; y++) {
+    for (int x = 0; x < doc->canvas_w; x++) {
+      uint8_t v = src[(size_t)y * doc->canvas_w + x];
+      if (v == 255) continue;
+      int nx = x + dx;
+      int ny = y + dy;
+      if (!canvas_in_bounds(doc, nx, ny)) continue;
+      uint8_t *d = dst + (size_t)ny * doc->canvas_w + nx;
+      *d = MIN(*d, v);
+      any = true;
+    }
+  }
+
+  free(owned_src);
+  canvas_clear_selection_mask(doc);
+  if (!any) {
+    free(dst);
+    doc->sel_active = false;
+    return true;
+  }
+
+  doc->sel_mask = dst;
+  doc->sel_mask_dirty = true;
+  int x0, y0, x1, y1;
+  selection_bounds(doc, &x0, &y0, &x1, &y1);
+  doc->sel_start = (ipoint16_t){x0, y0};
+  doc->sel_end = (ipoint16_t){x1, y1};
+  doc->sel_active = true;
+  return true;
+}
+
 // ============================================================
 // Image operations: flip, invert, resize
 // ============================================================

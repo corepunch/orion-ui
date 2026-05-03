@@ -345,6 +345,12 @@ void test_ie_tool_selection_via_command(void) {
     handle_menu_command(ID_TOOL_MAGIC_WAND);
     ASSERT_EQUAL(g_app->current_tool, ID_TOOL_MAGIC_WAND);
 
+    handle_menu_command(ID_TOOL_CROP);
+    ASSERT_EQUAL(g_app->current_tool, ID_TOOL_CROP);
+
+    handle_menu_command(ID_TOOL_MOVE);
+    ASSERT_EQUAL(g_app->current_tool, ID_TOOL_MOVE);
+
     ie_teardown();
     PASS();
 }
@@ -898,6 +904,93 @@ void test_ie_shift_rect_selection_is_square(void) {
     PASS();
 }
 
+void test_ie_select_tool_moves_selection_mask_only(void) {
+    TEST("selection: Select tool drags the mask without moving pixels");
+
+    ie_setup();
+    canvas_doc_t *doc = create_document(NULL, 4, 3);
+    ASSERT_NOT_NULL(doc);
+    g_app->active_doc = doc;
+    g_app->current_tool = ID_TOOL_SELECT;
+
+    uint32_t red = MAKE_COLOR(0xE0, 0x10, 0x10, 0xFF);
+    canvas_set_pixel(doc, 1, 1, red);
+    ASSERT_TRUE(canvas_select_rect(doc, 1, 1, 1, 1));
+
+    send_message(doc->canvas_win, evLeftButtonDown, MAKEDWORD(1, 1), NULL);
+    send_message(doc->canvas_win, evMouseMove, MAKEDWORD(2, 1), NULL);
+    send_message(doc->canvas_win, evLeftButtonUp, MAKEDWORD(2, 1), NULL);
+
+    ASSERT_EQUAL(canvas_get_pixel(doc, 1, 1), red);
+    ASSERT_FALSE(canvas_in_selection(doc, 1, 1));
+    ASSERT_TRUE(canvas_in_selection(doc, 2, 1));
+
+    ie_teardown();
+    PASS();
+}
+
+void test_ie_select_soft_edge_starts_new_selection(void) {
+    TEST("selection: clicking mask value >=128 starts a new selection");
+
+    ie_setup();
+    canvas_doc_t *doc = create_document(NULL, 4, 3);
+    ASSERT_NOT_NULL(doc);
+    g_app->active_doc = doc;
+    g_app->current_tool = ID_TOOL_SELECT;
+
+    doc->sel_mask = malloc((size_t)doc->canvas_w * doc->canvas_h);
+    ASSERT_NOT_NULL(doc->sel_mask);
+    memset(doc->sel_mask, 255, (size_t)doc->canvas_w * doc->canvas_h);
+    doc->sel_mask[(size_t)1 * doc->canvas_w + 1] = 128;
+    doc->sel_active = true;
+    doc->sel_start = (ipoint16_t){1, 1};
+    doc->sel_end = (ipoint16_t){1, 1};
+    doc->sel_mask_dirty = true;
+
+    send_message(doc->canvas_win, evLeftButtonDown, MAKEDWORD(1, 1), NULL);
+    send_message(doc->canvas_win, evMouseMove, MAKEDWORD(2, 1), NULL);
+    send_message(doc->canvas_win, evLeftButtonUp, MAKEDWORD(2, 1), NULL);
+
+    ASSERT_FALSE(doc->sel_mask_moving);
+    ASSERT_TRUE(doc->sel_active);
+    ASSERT_TRUE(canvas_in_selection(doc, 1, 1));
+    ASSERT_TRUE(canvas_in_selection(doc, 2, 1));
+    ASSERT_FALSE(canvas_in_selection(doc, 0, 1));
+    ASSERT_EQUAL(doc->sel_start.x, 1);
+    ASSERT_EQUAL(doc->sel_start.y, 1);
+    ASSERT_EQUAL(doc->sel_end.x, 2);
+    ASSERT_EQUAL(doc->sel_end.y, 1);
+
+    ie_teardown();
+    PASS();
+}
+
+void test_ie_move_tool_moves_selected_pixels(void) {
+    TEST("move tool: drags selected pixels and leaves transparency behind");
+
+    ie_setup();
+    canvas_doc_t *doc = create_document(NULL, 4, 3);
+    ASSERT_NOT_NULL(doc);
+    g_app->active_doc = doc;
+    g_app->current_tool = ID_TOOL_MOVE;
+
+    uint32_t red = MAKE_COLOR(0xE0, 0x10, 0x10, 0xFF);
+    canvas_set_pixel(doc, 1, 1, red);
+    ASSERT_TRUE(canvas_select_rect(doc, 1, 1, 1, 1));
+
+    send_message(doc->canvas_win, evLeftButtonDown, MAKEDWORD(1, 1), NULL);
+    send_message(doc->canvas_win, evMouseMove, MAKEDWORD(2, 1), NULL);
+    send_message(doc->canvas_win, evLeftButtonUp, MAKEDWORD(2, 1), NULL);
+
+    ASSERT_EQUAL(COLOR_A(canvas_get_pixel(doc, 1, 1)), 0);
+    ASSERT_EQUAL(canvas_get_pixel(doc, 2, 1), red);
+    ASSERT_FALSE(canvas_in_selection(doc, 1, 1));
+    ASSERT_TRUE(canvas_in_selection(doc, 2, 1));
+
+    ie_teardown();
+    PASS();
+}
+
 void test_ie_move_masked_selection_preserves_shape(void) {
     TEST("selection move: per-pixel mask shape moves without clearing bounding box");
 
@@ -963,6 +1056,37 @@ void test_ie_clear_selection_makes_pixels_transparent(void) {
     ASSERT_EQUAL(COLOR_A(canvas_get_pixel(doc, 1, 1)), 0);
     ASSERT_EQUAL(COLOR_A(canvas_get_pixel(doc, 2, 1)), 0);
     ASSERT_EQUAL(canvas_get_pixel(doc, 0, 0), green);
+
+    ie_teardown();
+    PASS();
+}
+
+void test_ie_image_crop_command_crops_to_selection(void) {
+    TEST("Image > Crop: crops canvas to active selection bounds");
+
+    ie_setup();
+    canvas_doc_t *doc = create_document(NULL, 4, 3);
+    ASSERT_NOT_NULL(doc);
+    g_app->active_doc = doc;
+
+    uint32_t green = MAKE_COLOR(0x20, 0xA0, 0x20, 0xFF);
+    uint32_t red = MAKE_COLOR(0xE0, 0x10, 0x10, 0xFF);
+    uint32_t blue = MAKE_COLOR(0x20, 0x20, 0xD0, 0xFF);
+    for (int y = 0; y < doc->canvas_h; y++)
+        for (int x = 0; x < doc->canvas_w; x++)
+            canvas_set_pixel(doc, x, y, green);
+    canvas_set_pixel(doc, 2, 1, red);
+    canvas_set_pixel(doc, 3, 2, blue);
+
+    ASSERT_TRUE(canvas_select_rect(doc, 2, 1, 3, 2));
+    handle_menu_command(ID_IMAGE_CROP);
+
+    ASSERT_EQUAL(doc->canvas_w, 2);
+    ASSERT_EQUAL(doc->canvas_h, 2);
+    ASSERT_EQUAL(canvas_get_pixel(doc, 0, 0), red);
+    ASSERT_EQUAL(canvas_get_pixel(doc, 1, 1), blue);
+    ASSERT_FALSE(doc->sel_active);
+    ASSERT_TRUE(doc->modified);
 
     ie_teardown();
     PASS();
@@ -1733,8 +1857,12 @@ int main(int argc, char *argv[]) {
     test_ie_shift_adds_to_selection_mask();
     test_ie_shift_wand_adds_from_canvas_window();
     test_ie_shift_rect_selection_is_square();
+    test_ie_select_tool_moves_selection_mask_only();
+    test_ie_select_soft_edge_starts_new_selection();
+    test_ie_move_tool_moves_selected_pixels();
     test_ie_move_masked_selection_preserves_shape();
     test_ie_clear_selection_makes_pixels_transparent();
+    test_ie_image_crop_command_crops_to_selection();
     test_ie_selection_expand_contract_mask();
     test_ie_selection_expand_preserves_soft_mask();
     test_ie_brush_size_oob_clamp();
