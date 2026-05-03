@@ -399,7 +399,68 @@ void canvas_clear_selection_mask(canvas_doc_t *doc) {
   doc->sel_mask_dirty = false;
 }
 
-bool canvas_select_rect(canvas_doc_t *doc, int x0, int y0, int x1, int y1) {
+static bool selection_mask_bounds_for(const canvas_doc_t *doc, const uint8_t *mask,
+                                      int *out_x0, int *out_y0,
+                                      int *out_x1, int *out_y1) {
+  if (!doc || !mask) return false;
+  int x0 = doc->canvas_w, y0 = doc->canvas_h, x1 = -1, y1 = -1;
+  for (int y = 0; y < doc->canvas_h; y++) {
+    for (int x = 0; x < doc->canvas_w; x++) {
+      if (mask[(size_t)y * doc->canvas_w + x] == 255) continue;
+      if (x < x0) x0 = x;
+      if (y < y0) y0 = y;
+      if (x > x1) x1 = x;
+      if (y > y1) y1 = y;
+    }
+  }
+  if (x1 < x0 || y1 < y0) return false;
+  if (out_x0) *out_x0 = x0;
+  if (out_y0) *out_y0 = y0;
+  if (out_x1) *out_x1 = x1;
+  if (out_y1) *out_y1 = y1;
+  return true;
+}
+
+static bool canvas_apply_selection_mask(canvas_doc_t *doc, uint8_t *mask,
+                                        bool add_to_selection) {
+  if (!doc || !mask) {
+    free(mask);
+    return false;
+  }
+
+  if (add_to_selection && doc->sel_active) {
+    if (doc->sel_mask) {
+      for (size_t i = 0, count = (size_t)doc->canvas_w * doc->canvas_h; i < count; i++)
+        mask[i] = MIN(mask[i], doc->sel_mask[i]);
+    } else {
+      for (int y = 0; y < doc->canvas_h; y++) {
+        for (int x = 0; x < doc->canvas_w; x++) {
+          if (canvas_in_selection(doc, x, y))
+            mask[(size_t)y * doc->canvas_w + x] = 0;
+        }
+      }
+    }
+  }
+
+  int x0, y0, x1, y1;
+  if (!selection_mask_bounds_for(doc, mask, &x0, &y0, &x1, &y1)) {
+    free(mask);
+    doc->sel_active = false;
+    canvas_clear_selection_mask(doc);
+    return false;
+  }
+
+  canvas_clear_selection_mask(doc);
+  doc->sel_mask = mask;
+  doc->sel_mask_dirty = true;
+  doc->sel_active = true;
+  doc->sel_start = (ipoint16_t){x0, y0};
+  doc->sel_end = (ipoint16_t){x1, y1};
+  return true;
+}
+
+static bool canvas_select_rect_ex(canvas_doc_t *doc, int x0, int y0, int x1, int y1,
+                                  bool add_to_selection) {
   if (!doc) return false;
   int left = MIN(x0, x1);
   int top = MIN(y0, y1);
@@ -427,13 +488,15 @@ bool canvas_select_rect(canvas_doc_t *doc, int x0, int y0, int x1, int y1) {
            (size_t)(right - left + 1));
   }
 
-  canvas_clear_selection_mask(doc);
-  doc->sel_mask = mask;
-  doc->sel_mask_dirty = true;
-  doc->sel_active = true;
-  doc->sel_start = (ipoint16_t){left, top};
-  doc->sel_end = (ipoint16_t){right, bottom};
-  return true;
+  return canvas_apply_selection_mask(doc, mask, add_to_selection);
+}
+
+bool canvas_select_rect(canvas_doc_t *doc, int x0, int y0, int x1, int y1) {
+  return canvas_select_rect_ex(doc, x0, y0, x1, y1, false);
+}
+
+bool canvas_select_rect_add(canvas_doc_t *doc, int x0, int y0, int x1, int y1) {
+  return canvas_select_rect_ex(doc, x0, y0, x1, y1, true);
 }
 
 static void fill_alpha_from_layer_gray(canvas_doc_t *doc, layer_t *lay) {
@@ -701,8 +764,9 @@ static int color_spread_distance(uint32_t a, uint32_t b) {
   return MAX(MAX(dr, dg), MAX(db, da));
 }
 
-bool canvas_magic_wand_select(canvas_doc_t *doc, int sx, int sy,
-                              int spread, bool antialias) {
+static bool canvas_magic_wand_select_ex(canvas_doc_t *doc, int sx, int sy,
+                                        int spread, bool antialias,
+                                        bool add_to_selection) {
   if (!doc || !canvas_in_bounds(doc, sx, sy)) return false;
 
   size_t count = (size_t)doc->canvas_w * (size_t)doc->canvas_h;
@@ -757,9 +821,9 @@ bool canvas_magic_wand_select(canvas_doc_t *doc, int sx, int sy,
               int xx = x + ox, yy = y + oy;
               if (!canvas_in_bounds(doc, xx, yy)) continue;
               size_t nidx = (size_t)yy * doc->canvas_w + xx;
-              if (soft[nidx] != 0 &&
-                  color_spread_distance(canvas_get_pixel(doc, xx, yy), target) <= spread + 12) {
-                soft[nidx] = 0;
+              int dist = color_spread_distance(canvas_get_pixel(doc, xx, yy), target);
+              if (soft[nidx] != 0 && dist <= spread + 12) {
+                soft[nidx] = (dist <= spread) ? 0 : 128;
                 if (xx < x0) x0 = xx;
                 if (yy < y0) y0 = yy;
                 if (xx > x1) x1 = xx;
@@ -775,13 +839,17 @@ bool canvas_magic_wand_select(canvas_doc_t *doc, int sx, int sy,
   }
 
   free(queue);
-  canvas_clear_selection_mask(doc);
-  doc->sel_mask = mask;
-  doc->sel_mask_dirty = true;
-  doc->sel_active = true;
-  doc->sel_start = (ipoint16_t){x0, y0};
-  doc->sel_end = (ipoint16_t){x1, y1};
-  return true;
+  return canvas_apply_selection_mask(doc, mask, add_to_selection);
+}
+
+bool canvas_magic_wand_select(canvas_doc_t *doc, int sx, int sy,
+                              int spread, bool antialias) {
+  return canvas_magic_wand_select_ex(doc, sx, sy, spread, antialias, false);
+}
+
+bool canvas_magic_wand_select_add(canvas_doc_t *doc, int sx, int sy,
+                                  int spread, bool antialias) {
+  return canvas_magic_wand_select_ex(doc, sx, sy, spread, antialias, true);
 }
 
 // Airbrush/spray: scatter random pixels within radius around (cx, cy).
@@ -971,6 +1039,67 @@ bool canvas_is_shape_tool(int tool_id) {
   }
 }
 
+typedef enum {
+  DRAG_ALIAS_NONE = 0,
+  DRAG_ALIAS_45_DEGREES,
+  DRAG_ALIAS_SQUARE,
+} drag_alias_t;
+
+typedef struct {
+  int          tool_id;
+  uint32_t     mods;
+  drag_alias_t alias;
+} tool_drag_alias_t;
+
+static const tool_drag_alias_t kToolDragAliases[] = {
+  { ID_TOOL_LINE,         AX_MOD_SHIFT, DRAG_ALIAS_45_DEGREES },
+  { ID_TOOL_RECT,         AX_MOD_SHIFT, DRAG_ALIAS_SQUARE },
+  { ID_TOOL_ELLIPSE,      AX_MOD_SHIFT, DRAG_ALIAS_SQUARE },
+  { ID_TOOL_ROUNDED_RECT, AX_MOD_SHIFT, DRAG_ALIAS_SQUARE },
+  { ID_TOOL_SELECT,       AX_MOD_SHIFT, DRAG_ALIAS_SQUARE },
+};
+
+static drag_alias_t tool_drag_alias_for(int tool_id, uint32_t mods) {
+  for (size_t i = 0; i < sizeof(kToolDragAliases) / sizeof(kToolDragAliases[0]); i++) {
+    const tool_drag_alias_t *a = &kToolDragAliases[i];
+    if (a->tool_id == tool_id && (mods & a->mods) == a->mods)
+      return a->alias;
+  }
+  return DRAG_ALIAS_NONE;
+}
+
+void canvas_constrain_tool_drag(int tool_id, uint32_t mods,
+                                int x0, int y0, int *x1, int *y1) {
+  if (!x1 || !y1) return;
+  int dx = *x1 - x0;
+  int dy = *y1 - y0;
+
+  switch (tool_drag_alias_for(tool_id, mods)) {
+    case DRAG_ALIAS_45_DEGREES:
+      if (abs(dx) > abs(dy) * 2) {
+        dy = 0;
+      } else if (abs(dy) > abs(dx) * 2) {
+        dx = 0;
+      } else {
+        int s = MAX(abs(dx), abs(dy));
+        dx = (dx < 0) ? -s : s;
+        dy = (dy < 0) ? -s : s;
+      }
+      *x1 = x0 + dx;
+      *y1 = y0 + dy;
+      break;
+    case DRAG_ALIAS_SQUARE: {
+      int s = MIN(abs(dx), abs(dy));
+      *x1 = x0 + ((dx < 0) ? -s : s);
+      *y1 = y0 + ((dy < 0) ? -s : s);
+      break;
+    }
+    case DRAG_ALIAS_NONE:
+    default:
+      break;
+  }
+}
+
 // Save pixel snapshot before starting a shape drag (no undo push yet)
 void canvas_shape_begin(canvas_doc_t *doc, int cx, int cy) {
   size_t sz = (size_t)doc->canvas_w * doc->canvas_h * 4;
@@ -993,34 +1122,7 @@ void canvas_shape_preview(canvas_doc_t *doc, int x0, int y0, int x1, int y1,
     memcpy(doc->pixels, doc->shape_snapshot, (size_t)doc->canvas_w * doc->canvas_h * 4);
     doc->canvas_dirty = true;
   }
-  if (shift_held) {
-    int dx = x1 - x0, dy = y1 - y0;
-    switch (tool) {
-      case ID_TOOL_LINE: {
-        // Snap to nearest 45° increment
-        if (abs(dx) > abs(dy) * 2) { dy = 0; }
-        else if (abs(dy) > abs(dx) * 2) { dx = 0; }
-        else { int s = MAX(abs(dx), abs(dy)); dx = (dx<0?-s:s); dy = (dy<0?-s:s); }
-        x1 = x0 + dx; y1 = y0 + dy;
-        break;
-      }
-      case ID_TOOL_RECT:
-      case ID_TOOL_ROUNDED_RECT: {
-        // Make square: use shorter dimension
-        int s = MIN(abs(dx), abs(dy));
-        x1 = x0 + (dx < 0 ? -s : s);
-        y1 = y0 + (dy < 0 ? -s : s);
-        break;
-      }
-      case ID_TOOL_ELLIPSE: {
-        // Make circle
-        int s = MIN(abs(dx), abs(dy));
-        x1 = x0 + (dx < 0 ? -s : s);
-        y1 = y0 + (dy < 0 ? -s : s);
-        break;
-      }
-    }
-  }
+  canvas_constrain_tool_drag(tool, shift_held ? AX_MOD_SHIFT : 0, x0, y0, &x1, &y1);
   int lx = MIN(x0, x1), rx = MAX(x0, x1);
   int ty = MIN(y0, y1), by = MAX(y0, y1);
   int w = rx - lx + 1, h = by - ty + 1;
@@ -1068,7 +1170,7 @@ static bool selection_bounds(const canvas_doc_t *doc,
     *y1 = -1;
     for (int y = 0; y < doc->canvas_h; y++) {
       for (int x = 0; x < doc->canvas_w; x++) {
-        if (doc->sel_mask[(size_t)y * doc->canvas_w + x] != 0) continue;
+        if (doc->sel_mask[(size_t)y * doc->canvas_w + x] == 255) continue;
         if (x < *x0) *x0 = x;
         if (y < *y0) *y0 = y;
         if (x > *x1) *x1 = x;
@@ -1198,7 +1300,7 @@ static bool selection_modify_mask_gpu(canvas_doc_t *doc, int amount, bool expand
     rgba[i * 4 + 0] = 255;
     rgba[i * 4 + 1] = 255;
     rgba[i * 4 + 2] = 255;
-    rgba[i * 4 + 3] = (src[i] == 0) ? 255 : 0;
+    rgba[i * 4 + 3] = 255 - src[i];
   }
 
   uint32_t src_tex = R_CreateTextureRGBA(doc->canvas_w, doc->canvas_h, rgba,
@@ -1217,7 +1319,7 @@ static bool selection_modify_mask_gpu(canvas_doc_t *doc, int amount, bool expand
 
   ui_render_effect_params_t p = {{0}};
   p.f[0] = expand ? 0.02f : 0.98f;
-  p.f[1] = 0.001f;
+  p.f[1] = 0.08f;
   uint32_t thresh_tex = 0;
   if (!bake_texture_effect((int)blur_tex, doc->canvas_w, doc->canvas_h,
                            UI_RENDER_EFFECT_ALPHA_THRESHOLD, &p, &thresh_tex)) {
@@ -1246,8 +1348,9 @@ static bool selection_modify_mask_gpu(canvas_doc_t *doc, int amount, bool expand
   memset(dst, 255, count);
   bool any = false;
   for (size_t i = 0; i < count; i++) {
-    if (out[i * 4 + 3] >= 128 || out[i * 4] >= 128) {
-      dst[i] = 0;
+    uint8_t selected = MAX(out[i * 4 + 3], out[i * 4]);
+    if (selected > 0) {
+      dst[i] = 255 - selected;
       any = true;
     }
   }
@@ -1303,26 +1406,18 @@ static bool selection_modify_mask(canvas_doc_t *doc, int amount, bool expand) {
   bool any = false;
   for (int y = 0; y < doc->canvas_h; y++) {
     for (int x = 0; x < doc->canvas_w; x++) {
-      bool selected = expand ? false : true;
+      uint8_t v = expand ? 255 : 0;
       for (int yy = y - amount; yy <= y + amount; yy++) {
         for (int xx = x - amount; xx <= x + amount; xx++) {
-          bool inside = xx >= 0 && xx < doc->canvas_w &&
-                        yy >= 0 && yy < doc->canvas_h &&
-                        src[(size_t)yy * doc->canvas_w + xx] == 0;
-          if (expand && inside) {
-            selected = true;
-            yy = y + amount + 1;
-            break;
-          }
-          if (!expand && !inside) {
-            selected = false;
-            yy = y + amount + 1;
-            break;
-          }
+          uint8_t sample = 255;
+          if (xx >= 0 && xx < doc->canvas_w &&
+              yy >= 0 && yy < doc->canvas_h)
+            sample = src[(size_t)yy * doc->canvas_w + xx];
+          v = expand ? MIN(v, sample) : MAX(v, sample);
         }
       }
-      if (selected) {
-        dst[(size_t)y * doc->canvas_w + x] = 0;
+      if (v < 255) {
+        dst[(size_t)y * doc->canvas_w + x] = v;
         any = true;
       }
     }

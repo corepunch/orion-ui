@@ -7,6 +7,8 @@ AR = ar
 CFLAGS = -Wall -Wextra -std=c11 -I. -DGL_SILENCE_DEPRECATION -D_DEFAULT_SOURCE
 # silence unused parameter warnings
 CFLAGS += -Wno-unused-parameter
+# silence partial struct initializers where trailing fields intentionally default
+CFLAGS += -Wno-missing-field-initializers
 LDFLAGS = 
 LIBS = -lm
 

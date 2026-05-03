@@ -225,6 +225,7 @@ typedef struct canvas_doc_s {
   bool     sel_active;
   ipoint16_t  sel_start;
   ipoint16_t  sel_end;
+  bool     sel_add_mode;    // true while Shift-dragging to add to selection
   // Optional canvas_w * canvas_h edit mask: 0 = selected/editable,
   // 255 = protected/unselected. NULL means the whole canvas is editable.
   uint8_t *sel_mask;
@@ -258,7 +259,7 @@ typedef struct {
   ipoint16_t       hover;      // canvas pixel coords under the cursor
   bool          hover_valid; // true when hover is on the canvas (for magnifier overlay)
   GLuint        mag_tex;    // GL texture for magnifier loupe (created once, updated each paint)
-  char          last_sb[48]; // last text sent to status bar — avoids redundant updates
+  char          last_sb[64]; // last text sent to status bar — avoids redundant updates
 } canvas_win_state_t;
 
 typedef struct {
@@ -392,6 +393,8 @@ void canvas_draw_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1, int rad
 void canvas_flood_fill(canvas_doc_t *doc, int sx, int sy, uint32_t fill);
 bool canvas_magic_wand_select(canvas_doc_t *doc, int sx, int sy,
                               int spread, bool antialias);
+bool canvas_magic_wand_select_add(canvas_doc_t *doc, int sx, int sy,
+                                  int spread, bool antialias);
 void canvas_spray(canvas_doc_t *doc, int cx, int cy, int radius, uint32_t c);
 void canvas_draw_rect_outline(canvas_doc_t *doc, int x, int y, int w, int h, uint32_t c);
 void canvas_draw_rect_filled(canvas_doc_t *doc, int x, int y, int w, int h, uint32_t outline, uint32_t fill);
@@ -402,6 +405,8 @@ void canvas_draw_rounded_rect_filled(canvas_doc_t *doc, int x, int y, int w, int
 void canvas_draw_polygon_outline(canvas_doc_t *doc, const ipoint16_t *pts, int count, uint32_t c);
 void canvas_draw_polygon_filled(canvas_doc_t *doc, const ipoint16_t *pts, int count, uint32_t outline, uint32_t fill);
 bool canvas_is_shape_tool(int tool_id);
+void canvas_constrain_tool_drag(int tool_id, uint32_t mods,
+                                int x0, int y0, int *x1, int *y1);
 void canvas_shape_begin(canvas_doc_t *doc, int cx, int cy);
 void canvas_shape_preview(canvas_doc_t *doc, int x0, int y0, int x1, int y1, int tool, bool filled, uint32_t fg, uint32_t bg, bool shift_held);
 void canvas_shape_commit(canvas_doc_t *doc);
@@ -412,6 +417,7 @@ void canvas_cut_selection(canvas_doc_t *doc, uint32_t fill);
 void canvas_clear_selection(canvas_doc_t *doc, uint32_t fill);
 void canvas_paste_clipboard(canvas_doc_t *doc);
 bool canvas_select_rect(canvas_doc_t *doc, int x0, int y0, int x1, int y1);
+bool canvas_select_rect_add(canvas_doc_t *doc, int x0, int y0, int x1, int y1);
 void canvas_select_all(canvas_doc_t *doc);
 void canvas_deselect(canvas_doc_t *doc);
 void canvas_clear_selection_mask(canvas_doc_t *doc);

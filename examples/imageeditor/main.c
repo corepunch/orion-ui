@@ -23,7 +23,7 @@ static const accel_t kAccelEntries[] = {
   { FVIRTKEY,          AX_KEY_X, ID_COLOR_SWAP },
   { FCONTROL|FVIRTKEY, AX_KEY_A, ID_SELECT_ALL},
   { FVIRTKEY,          AX_KEY_ESCAPE, ID_SELECT_DESELECT},
-  // Delete / Backspace clears the active selection (fill with bg color)
+  // Delete / Backspace clears the active selection to transparency.
   { FVIRTKEY,          AX_KEY_DEL,       ID_SELECT_CLEAR },
   { FVIRTKEY,          AX_KEY_BACKSPACE, ID_SELECT_CLEAR },
   { FCONTROL|FVIRTKEY, AX_KEY_N, ID_FILE_NEW  },

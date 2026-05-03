@@ -110,13 +110,21 @@ void canvas_win_update_status(window_t *win, int px, int py, bool hover_valid) {
   char sb[64];
   const char *view_suffix = doc->mask_only_view ? "  [Mask Only]" : "";
   const char *edit_suffix = (doc->editing_mask && doc->layer_count > 0) ? "  [Mask]" : "";
-  if (hover_valid)
+  if (hover_valid && g_app && g_app->current_tool == ID_TOOL_SELECT &&
+      doc->drawing && doc->sel_active && !doc->sel_moving) {
+    int sel_w = abs(px - doc->sel_start.x) + 1;
+    int sel_h = abs(py - doc->sel_start.y) + 1;
+    snprintf(sb, sizeof(sb), "Selection: %dx%d  |  %dx%d%s%s",
+             sel_w, sel_h, doc->canvas_w, doc->canvas_h,
+             view_suffix, edit_suffix);
+  } else if (hover_valid) {
     snprintf(sb, sizeof(sb), "x=%d, y=%d  |  %dx%d%s%s",
              px, py, doc->canvas_w, doc->canvas_h,
              view_suffix, edit_suffix);
-  else
+  } else {
     snprintf(sb, sizeof(sb), "%dx%d%s%s",
              doc->canvas_w, doc->canvas_h, view_suffix, edit_suffix);
+  }
 
   if (strcmp(sb, state->last_sb) != 0) {
     strncpy(state->last_sb, sb, sizeof(state->last_sb) - 1);
@@ -676,6 +684,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       int py = canvas_px_from_view(ly, state->pan_y, state->scale);
       snap_canvas_pos(&px, &py);
       int tool = g_app->current_tool;
+      bool shift = (ui_get_mod_state() & AX_MOD_SHIFT) != 0;
 
       // Text tool: record position and show text options dialog
       if (tool == ID_TOOL_TEXT) {
@@ -705,9 +714,14 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       if (tool == ID_TOOL_MAGIC_WAND) {
         if (!canvas_in_bounds(doc, px, py)) return true;
         if (doc->sel_moving) canvas_commit_move(doc);
-        if (canvas_magic_wand_select(doc, px, py,
+        bool selected = shift
+          ? canvas_magic_wand_select_add(doc, px, py,
+                                         g_app->wand_spread,
+                                         g_app->wand_antialias)
+          : canvas_magic_wand_select(doc, px, py,
                                      g_app->wand_spread,
-                                     g_app->wand_antialias)) {
+                                     g_app->wand_antialias);
+        if (selected) {
           IE_DEBUG("magic_wand_select doc=%p at=(%d,%d) spread=%d aa=%d",
                    (void *)doc, px, py,
                    g_app->wand_spread, g_app->wand_antialias);
@@ -755,6 +769,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       // so no undo snapshot needed here (undo is pushed only on Enter commit).
       if (tool == ID_TOOL_CROP) {
         doc->drawing = true;
+        doc->sel_add_mode = false;
         doc->sel_active = false;
         canvas_clear_selection_mask(doc);
         doc->sel_start.x = doc->sel_end.x = px;
@@ -785,7 +800,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           break;
         case ID_TOOL_SELECT:
           // If clicking inside the existing selection → move mode
-          if (doc->sel_active && canvas_in_selection(doc, px, py)) {
+          if (!shift && doc->sel_active && canvas_in_selection(doc, px, py)) {
             canvas_begin_move(doc, g_app->bg_color);
             float_tex_upload(doc);
             doc->move_origin.x = px;
@@ -794,8 +809,11 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           } else {
             // Start a new selection; commit any in-progress move first.
             if (doc->sel_moving) canvas_commit_move(doc);
-            doc->sel_active = false;
-            canvas_clear_selection_mask(doc);
+            doc->sel_add_mode = shift;
+            if (!doc->sel_add_mode) {
+              doc->sel_active = false;
+              canvas_clear_selection_mask(doc);
+            }
             doc->sel_start.x = doc->sel_end.x = px;
             doc->sel_start.y = doc->sel_end.y = py;
             doc->sel_active = true;
@@ -899,10 +917,16 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       // magnifier loupe always shows the actual pixel under the cursor).
       snap_canvas_pos(&px, &py);
 
-      canvas_win_update_status(win, px, py, state->hover_valid);
-
       int tool = g_app->current_tool;
       bool shift = (ui_get_mod_state() & AX_MOD_SHIFT) != 0;
+      int status_px = px;
+      int status_py = py;
+      if (tool == ID_TOOL_SELECT && doc->drawing && doc->sel_active && !doc->sel_moving) {
+        canvas_constrain_tool_drag(tool, shift ? AX_MOD_SHIFT : 0,
+                                   doc->sel_start.x, doc->sel_start.y,
+                                   &status_px, &status_py);
+      }
+      canvas_win_update_status(win, status_px, status_py, state->hover_valid);
 
       // Magnifier: repaint to update the loupe overlay; nothing else to do
       if (tool == ID_TOOL_MAGNIFIER) {
@@ -958,6 +982,9 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
             doc->move_origin.x = px;
             doc->move_origin.y = py;
           } else {
+            canvas_constrain_tool_drag(tool, shift ? AX_MOD_SHIFT : 0,
+                                       doc->sel_start.x, doc->sel_start.y,
+                                       &px, &py);
             doc->sel_end.x = px;
             doc->sel_end.y = py;
           }
@@ -1018,13 +1045,22 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           // A zero-area selection (click without drag) counts as "select nothing".
           if (doc->sel_start.x == doc->sel_end.x &&
               doc->sel_start.y == doc->sel_end.y) {
-            canvas_deselect(doc);
-            IE_DEBUG("selection_deselect_zero_area doc=%p", (void *)doc);
+            if (!doc->sel_add_mode) {
+              canvas_deselect(doc);
+              IE_DEBUG("selection_deselect_zero_area doc=%p", (void *)doc);
+            }
           } else {
-            canvas_select_rect(doc,
-                               doc->sel_start.x, doc->sel_start.y,
-                               doc->sel_end.x, doc->sel_end.y);
+            if (doc->sel_add_mode) {
+              canvas_select_rect_add(doc,
+                                     doc->sel_start.x, doc->sel_start.y,
+                                     doc->sel_end.x, doc->sel_end.y);
+            } else {
+              canvas_select_rect(doc,
+                                 doc->sel_start.x, doc->sel_start.y,
+                                 doc->sel_end.x, doc->sel_end.y);
+            }
           }
+          doc->sel_add_mode = false;
         }
         if (tool == ID_TOOL_CROP && doc->sel_active) {
           IE_DEBUG("crop_end doc=%p from=(%d,%d) to=(%d,%d)",

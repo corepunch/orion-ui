@@ -786,6 +786,118 @@ void test_ie_rect_selection_uses_mask(void) {
     PASS();
 }
 
+void test_ie_shift_adds_to_selection_mask(void) {
+    TEST("selection: Shift-add combines rectangle and wand selections");
+
+    ie_setup();
+    canvas_doc_t *doc = create_document(NULL, 5, 4);
+    ASSERT_NOT_NULL(doc);
+
+    uint32_t green = MAKE_COLOR(0x20, 0xA0, 0x20, 0xFF);
+    uint32_t red = MAKE_COLOR(0xE0, 0x10, 0x10, 0xFF);
+    for (int y = 0; y < doc->canvas_h; y++)
+        for (int x = 0; x < doc->canvas_w; x++)
+            canvas_set_pixel(doc, x, y, green);
+    canvas_set_pixel(doc, 2, 1, red);
+
+    ASSERT_TRUE(canvas_select_rect(doc, 0, 0, 1, 0));
+    ASSERT_TRUE(canvas_select_rect_add(doc, 3, 2, 4, 3));
+    ASSERT_TRUE(canvas_in_selection(doc, 0, 0));
+    ASSERT_TRUE(canvas_in_selection(doc, 1, 0));
+    ASSERT_FALSE(canvas_in_selection(doc, 2, 1));
+    ASSERT_TRUE(canvas_in_selection(doc, 3, 2));
+    ASSERT_TRUE(canvas_in_selection(doc, 4, 3));
+    ASSERT_EQUAL(doc->sel_start.x, 0);
+    ASSERT_EQUAL(doc->sel_start.y, 0);
+    ASSERT_EQUAL(doc->sel_end.x, 4);
+    ASSERT_EQUAL(doc->sel_end.y, 3);
+
+    ASSERT_TRUE(canvas_magic_wand_select_add(doc, 2, 1, 0, false));
+    ASSERT_TRUE(canvas_in_selection(doc, 0, 0));
+    ASSERT_TRUE(canvas_in_selection(doc, 2, 1));
+    ASSERT_TRUE(canvas_in_selection(doc, 4, 3));
+    ASSERT_FALSE(canvas_in_selection(doc, 2, 2));
+
+    ie_teardown();
+    PASS();
+}
+
+void test_ie_shift_wand_adds_from_canvas_window(void) {
+    TEST("selection: Shift+wand click adds through canvas window handler");
+
+    ie_setup();
+    canvas_doc_t *doc = create_document(NULL, 5, 4);
+    ASSERT_NOT_NULL(doc);
+    g_app->active_doc = doc;
+    g_app->current_tool = ID_TOOL_MAGIC_WAND;
+    g_app->wand_spread = 0;
+    g_app->wand_antialias = false;
+
+    uint32_t green = MAKE_COLOR(0x20, 0xA0, 0x20, 0xFF);
+    uint32_t red = MAKE_COLOR(0xE0, 0x10, 0x10, 0xFF);
+    for (int y = 0; y < doc->canvas_h; y++)
+        for (int x = 0; x < doc->canvas_w; x++)
+            canvas_set_pixel(doc, x, y, green);
+    canvas_set_pixel(doc, 0, 0, red);
+    canvas_set_pixel(doc, 3, 2, red);
+
+    send_message(doc->canvas_win, evLeftButtonDown, MAKEDWORD(0, 0), NULL);
+    ASSERT_TRUE(canvas_in_selection(doc, 0, 0));
+    ASSERT_FALSE(canvas_in_selection(doc, 3, 2));
+
+    ui_event_t evt = {0};
+    evt.message = kEventModifiersChanged;
+    evt.wParam = AX_MOD_SHIFT;
+    dispatch_message(&evt);
+
+    send_message(doc->canvas_win, evLeftButtonDown, MAKEDWORD(3, 2), NULL);
+    ASSERT_TRUE(canvas_in_selection(doc, 0, 0));
+    ASSERT_TRUE(canvas_in_selection(doc, 3, 2));
+    ASSERT_FALSE(canvas_in_selection(doc, 1, 1));
+
+    evt.wParam = 0;
+    dispatch_message(&evt);
+
+    ie_teardown();
+    PASS();
+}
+
+void test_ie_shift_rect_selection_is_square(void) {
+    TEST("selection: Shift-drag rectangle constrains to a square");
+
+    ie_setup();
+    canvas_doc_t *doc = create_document(NULL, 6, 6);
+    ASSERT_NOT_NULL(doc);
+    g_app->active_doc = doc;
+    g_app->current_tool = ID_TOOL_SELECT;
+
+    send_message(doc->canvas_win, evLeftButtonDown, MAKEDWORD(0, 0), NULL);
+
+    ui_event_t evt = {0};
+    evt.message = kEventModifiersChanged;
+    evt.wParam = AX_MOD_SHIFT;
+    dispatch_message(&evt);
+
+    send_message(doc->canvas_win, evMouseMove, MAKEDWORD(3, 1), NULL);
+    send_message(doc->canvas_win, evLeftButtonUp, MAKEDWORD(3, 1), NULL);
+
+    ASSERT_TRUE(doc->sel_active);
+    ASSERT_TRUE(canvas_in_selection(doc, 0, 0));
+    ASSERT_TRUE(canvas_in_selection(doc, 1, 1));
+    ASSERT_FALSE(canvas_in_selection(doc, 2, 1));
+    ASSERT_FALSE(canvas_in_selection(doc, 0, 2));
+    ASSERT_EQUAL(doc->sel_start.x, 0);
+    ASSERT_EQUAL(doc->sel_start.y, 0);
+    ASSERT_EQUAL(doc->sel_end.x, 1);
+    ASSERT_EQUAL(doc->sel_end.y, 1);
+
+    evt.wParam = 0;
+    dispatch_message(&evt);
+
+    ie_teardown();
+    PASS();
+}
+
 void test_ie_move_masked_selection_preserves_shape(void) {
     TEST("selection move: per-pixel mask shape moves without clearing bounding box");
 
@@ -829,6 +941,33 @@ void test_ie_move_masked_selection_preserves_shape(void) {
     PASS();
 }
 
+void test_ie_clear_selection_makes_pixels_transparent(void) {
+    TEST("selection clear: command clears selected pixels to transparency");
+
+    ie_setup();
+    canvas_doc_t *doc = create_document(NULL, 4, 4);
+    ASSERT_NOT_NULL(doc);
+    g_app->active_doc = doc;
+
+    uint32_t red = MAKE_COLOR(0xE0, 0x10, 0x10, 0xFF);
+    uint32_t green = MAKE_COLOR(0x20, 0xA0, 0x20, 0xFF);
+    for (int y = 0; y < doc->canvas_h; y++)
+        for (int x = 0; x < doc->canvas_w; x++)
+            canvas_set_pixel(doc, x, y, green);
+    canvas_set_pixel(doc, 1, 1, red);
+    canvas_set_pixel(doc, 2, 1, red);
+
+    ASSERT_TRUE(canvas_select_rect(doc, 1, 1, 2, 1));
+    handle_menu_command(ID_SELECT_CLEAR);
+
+    ASSERT_EQUAL(COLOR_A(canvas_get_pixel(doc, 1, 1)), 0);
+    ASSERT_EQUAL(COLOR_A(canvas_get_pixel(doc, 2, 1)), 0);
+    ASSERT_EQUAL(canvas_get_pixel(doc, 0, 0), green);
+
+    ie_teardown();
+    PASS();
+}
+
 void test_ie_selection_expand_contract_mask(void) {
     TEST("selection: expand and contract operate on per-pixel mask");
 
@@ -847,6 +986,34 @@ void test_ie_selection_expand_contract_mask(void) {
     ASSERT_FALSE(canvas_in_selection(doc, 1, 1));
     ASSERT_TRUE(canvas_in_selection(doc, 2, 2));
     ASSERT_FALSE(canvas_in_selection(doc, 3, 3));
+
+    ie_teardown();
+    PASS();
+}
+
+void test_ie_selection_expand_preserves_soft_mask(void) {
+    TEST("selection: expand preserves antialiased mask values");
+
+    ie_setup();
+    canvas_doc_t *doc = create_document(NULL, 3, 3);
+    ASSERT_NOT_NULL(doc);
+
+    doc->sel_mask = malloc(9);
+    ASSERT_NOT_NULL(doc->sel_mask);
+    memset(doc->sel_mask, 255, 9);
+    doc->sel_mask[4] = 128;
+    doc->sel_active = true;
+    doc->sel_mask_dirty = true;
+    doc->sel_start = (ipoint16_t){1, 1};
+    doc->sel_end = (ipoint16_t){1, 1};
+
+    ASSERT_TRUE(canvas_expand_selection(doc, 1));
+    ASSERT_EQUAL(doc->sel_mask[0], 128);
+    ASSERT_EQUAL(doc->sel_mask[4], 128);
+    ASSERT_EQUAL(doc->sel_start.x, 0);
+    ASSERT_EQUAL(doc->sel_start.y, 0);
+    ASSERT_EQUAL(doc->sel_end.x, 2);
+    ASSERT_EQUAL(doc->sel_end.y, 2);
 
     ie_teardown();
     PASS();
@@ -1563,8 +1730,13 @@ int main(int argc, char *argv[]) {
     test_ie_shape_filled_state();
     test_ie_magic_wand_selects_contiguous_color_region();
     test_ie_rect_selection_uses_mask();
+    test_ie_shift_adds_to_selection_mask();
+    test_ie_shift_wand_adds_from_canvas_window();
+    test_ie_shift_rect_selection_is_square();
     test_ie_move_masked_selection_preserves_shape();
+    test_ie_clear_selection_makes_pixels_transparent();
     test_ie_selection_expand_contract_mask();
+    test_ie_selection_expand_preserves_soft_mask();
     test_ie_brush_size_oob_clamp();
     // Layer management tests
     test_ie_layer_initial_state();

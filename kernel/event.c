@@ -61,7 +61,7 @@ static int g_wakeup_sentinel;
 // Cleared when get_message() consumes the sentinel.
 static bool g_wakeup_pending = false;
 
-// Current modifier state (updated on every key event)
+// Current modifier state (updated on key and modifier-only events)
 static uint32_t g_mod_state = 0;
 
 uint32_t ui_get_mod_state(void) {
@@ -382,6 +382,10 @@ void dispatch_message(ui_event_t *msg) {
     case kEventKeyUp:
       g_mod_state = (uint32_t)msg->wParam & 0xFFFF0000u;
       send_message(g_ui_runtime.focused, evKeyUp, (uint32_t)msg->keyCode, NULL);
+      break;
+
+    case kEventModifiersChanged:
+      g_mod_state = (uint32_t)msg->wParam & 0xFFFF0000u;
       break;
 
     case kEventJoyAxisMotion:

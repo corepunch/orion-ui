@@ -352,7 +352,7 @@ void handle_menu_command(uint16_t id) {
     case ID_EDIT_CUT:
       if (doc && doc->sel_active) {
         doc_push_undo(doc);
-        canvas_cut_selection(doc, g_app->bg_color);
+        canvas_cut_selection(doc, MAKE_COLOR(0, 0, 0, 0));
         doc_update_title(doc);
         invalidate_window(doc->canvas_win);
       }
@@ -374,7 +374,7 @@ void handle_menu_command(uint16_t id) {
     case ID_SELECT_CLEAR:
       if (doc && doc->sel_active) {
         doc_push_undo(doc);
-        canvas_clear_selection(doc, g_app->bg_color);
+        canvas_clear_selection(doc, MAKE_COLOR(0, 0, 0, 0));
         doc_update_title(doc);
         invalidate_window(doc->canvas_win);
       }
