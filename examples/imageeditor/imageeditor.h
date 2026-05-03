@@ -79,11 +79,10 @@
 #define TOOL_WIN_H    (TITLEBAR_HEIGHT + TOOL_TOOLBAR_H + SWATCH_CLIENT_H)
 
 // Tool options palette — sits below the tool palette.
-// Content height accommodates both the brush-size panel and the shape-mode panel.
-// Brush panel: label(9) + gap(2) + NUM_BRUSH_SIZES rows × OPTS_BRUSH_CELL_H each.
+// Content height accommodates brush, shape, and magic-wand option panels.
 #define OPTS_BRUSH_CELL_H      12
-#define TOOL_OPTIONS_PANEL_H   (9 + 2 + NUM_BRUSH_SIZES * OPTS_BRUSH_CELL_H)
-#define TOOL_OPTIONS_WIN_W     PALETTE_WIN_W
+#define TOOL_OPTIONS_PANEL_H   76
+#define TOOL_OPTIONS_WIN_W     112
 #define TOOL_OPTIONS_WIN_H     (TITLEBAR_HEIGHT + TOOL_OPTIONS_PANEL_H)
 #define TOOL_OPTIONS_WIN_X     PALETTE_WIN_X
 #define TOOL_OPTIONS_WIN_Y     (PALETTE_WIN_Y + TOOL_WIN_H + 4)
@@ -112,7 +111,7 @@ extern const int kBrushSizes[NUM_BRUSH_SIZES];
 #define DOC_WORKSPACE_MARGIN 16
 
 #define NUM_COLORS 64
-#define NUM_TOOLS  17
+#define NUM_TOOLS  18
 #define NUM_USER_COLORS  8
 
 #define UNDO_MAX   20
@@ -151,6 +150,7 @@ extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 #define ID_TOOL_MAGNIFIER     34
 #define ID_TOOL_TEXT          35
 #define ID_TOOL_CROP          36
+#define ID_TOOL_MAGIC_WAND    37
 
 #include "components/lv_cmpn.h"
 #include "components/fg_preview.h"
@@ -221,6 +221,11 @@ typedef struct canvas_doc_s {
   bool     sel_active;
   ipoint16_t  sel_start;
   ipoint16_t  sel_end;
+  // Optional canvas_w * canvas_h edit mask: 0 = selected/editable,
+  // 255 = protected/unselected. NULL means the whole canvas is editable.
+  uint8_t *sel_mask;
+  GLuint   sel_mask_tex;  // GL_RED texture cache for protected-area overlay
+  bool     sel_mask_dirty;
   // Shape tool rubber-band preview state
   uint8_t *shape_snapshot;  // pixel backup taken when shape drag starts
   ipoint16_t  shape_start;     // canvas coords where the shape drag began
@@ -235,6 +240,7 @@ typedef struct canvas_doc_s {
   int      float_w;
   int      float_h;
   uint8_t *float_pixels;   // RGBA data extracted from canvas
+  uint8_t *float_mask;     // float_w * float_h edit mask, same semantics as sel_mask
   GLuint   float_tex;      // cached GL texture for float_pixels (0 = none)
 } canvas_doc_t;
 
@@ -278,6 +284,9 @@ typedef struct {
   // Text tool persistent settings
   int            text_font_size;  // pixel height, default 16
   bool           text_antialias;  // default true
+  bool           wand_antialias;
+  int            wand_spread;      // RGB tolerance, 0..255
+  uint32_t       wand_overlay_color;
   // Instagram-style filter presets loaded from share/filters.
   image_filter_t filters[IMAGEEDITOR_MAX_FILTERS];
   int            filter_count;
@@ -320,6 +329,7 @@ static inline const char *tool_id_name(int tool_id) {
     case ID_TOOL_MAGNIFIER:    return "MAGNIFIER";
     case ID_TOOL_TEXT:         return "TEXT";
     case ID_TOOL_CROP:         return "CROP";
+    case ID_TOOL_MAGIC_WAND:   return "MAGIC_WAND";
     default:                   return "UNKNOWN";
   }
 }
@@ -351,6 +361,10 @@ static inline bool canvas_in_bounds(const canvas_doc_t *doc, int x, int y) {
 
 static inline bool canvas_in_selection(const canvas_doc_t *doc, int x, int y) {
   if (!doc->sel_active) return true;
+  if (doc->sel_mask) {
+    if (!canvas_in_bounds(doc, x, y)) return false;
+    return doc->sel_mask[(size_t)y * doc->canvas_w + x] == 0;
+  }
   int x0 = MIN(doc->sel_start.x, doc->sel_end.x);
   int y0 = MIN(doc->sel_start.y, doc->sel_end.y);
   int x1 = MAX(doc->sel_start.x, doc->sel_end.x);
@@ -372,6 +386,8 @@ void canvas_upload(canvas_doc_t *doc);
 void canvas_draw_circle(canvas_doc_t *doc, int cx, int cy, int r, uint32_t c);
 void canvas_draw_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1, int radius, uint32_t c);
 void canvas_flood_fill(canvas_doc_t *doc, int sx, int sy, uint32_t fill);
+bool canvas_magic_wand_select(canvas_doc_t *doc, int sx, int sy,
+                              int spread, bool antialias);
 void canvas_spray(canvas_doc_t *doc, int cx, int cy, int radius, uint32_t c);
 void canvas_draw_rect_outline(canvas_doc_t *doc, int x, int y, int w, int h, uint32_t c);
 void canvas_draw_rect_filled(canvas_doc_t *doc, int x, int y, int w, int h, uint32_t outline, uint32_t fill);
@@ -391,8 +407,12 @@ void canvas_copy_selection(canvas_doc_t *doc);
 void canvas_cut_selection(canvas_doc_t *doc, uint32_t fill);
 void canvas_clear_selection(canvas_doc_t *doc, uint32_t fill);
 void canvas_paste_clipboard(canvas_doc_t *doc);
+bool canvas_select_rect(canvas_doc_t *doc, int x0, int y0, int x1, int y1);
 void canvas_select_all(canvas_doc_t *doc);
 void canvas_deselect(canvas_doc_t *doc);
+void canvas_clear_selection_mask(canvas_doc_t *doc);
+bool canvas_expand_selection(canvas_doc_t *doc, int amount);
+bool canvas_contract_selection(canvas_doc_t *doc, int amount);
 void canvas_crop_to_selection(canvas_doc_t *doc);
 // Crop or expand the canvas to the active selection.
 // If the selection extends outside the canvas the canvas grows (new areas filled
@@ -457,6 +477,7 @@ void imageeditor_sync_filter_menu(void);
 bool imageeditor_load_filters(void);
 void imageeditor_free_filters(void);
 bool imageeditor_apply_filter(canvas_doc_t *doc, int filter_idx);
+bool imageeditor_apply_builtin_filter(canvas_doc_t *doc, uint16_t id);
 bool show_filter_gallery_dialog(window_t *parent);
 
 // Sync canvas scrollbars after content size changes (e.g. after canvas_resize)
@@ -514,6 +535,9 @@ bool show_size_dialog(window_t *parent, const char *title, int *out_w, int *out_
 
 // Grid Options dialog – returns true if accepted.
 bool show_grid_options_dialog(window_t *parent, int *out_x, int *out_y);
+
+// Selection Modify dialog – returns true if accepted.
+bool show_selection_modify_dialog(window_t *parent, const char *title, int *out_amount);
 
 // Layers palette window geometry.
 // Positioned on the right side of the screen, below the color palette.

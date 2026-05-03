@@ -18,6 +18,7 @@
 // Tool palette layout with ident, icon index, and tooltip text (hotkey in parentheses).
 static const toolbox_item_t k_tools[NUM_TOOLS] = {
   { ID_TOOL_SELECT,        0, "Select (S)"        },
+  { ID_TOOL_MAGIC_WAND,    3, "Magic Wand (W)"     },
   { ID_TOOL_CROP,          6, "Crop"               },
   { ID_TOOL_HAND,          4, "Hand"               },
   { ID_TOOL_EYEDROPPER,   11, "Eyedropper (I)"     },

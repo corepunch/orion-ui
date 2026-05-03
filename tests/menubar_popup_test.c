@@ -26,6 +26,13 @@ static window_t *find_other_window(window_t *exclude) {
     return NULL;
 }
 
+static window_t *find_window_not(window_t *a, window_t *b) {
+    for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
+        if (w != a && w != b) return w;
+    }
+    return NULL;
+}
+
 // ---- shared test state ------------------------------------------------------
 
 static int   g_cmd_count         = 0;
@@ -73,11 +80,16 @@ static result_t menubar_proc_order_check(window_t *win, uint32_t msg,
 
 // ---- menu definition used by all tests --------------------------------------
 
+static const menu_item_t kSubItems[] = {
+    {"Advanced", 4, NULL, 0},
+};
+
 static const menu_item_t kTestItems[] = {
-    {"Open", 1},
-    {"Save", 2},
-    {NULL,   0},   // separator
-    {"Quit", 3},
+    {"Open", 1, NULL, 0},
+    {"Save", 2, NULL, 0},
+    {NULL,   0, NULL, 0},   // separator
+    {"Quit", 3, NULL, 0},
+    {"More", 0, kSubItems, (int)(sizeof(kSubItems)/sizeof(kSubItems[0]))},
 };
 
 static const menu_def_t kTestMenus[] = {
@@ -328,6 +340,41 @@ void test_popup_no_action_on_mouseup_without_press(void) {
     PASS();
 }
 
+void test_submenu_opens_and_dispatches_child_item(void) {
+    TEST("Menubar submenu opens and dispatches child item");
+
+    test_env_init();
+    reset_counters();
+
+    window_t *mb = make_menubar(menubar_proc_basic);
+    ASSERT_NOT_NULL(mb);
+
+    open_popup(mb);
+    ASSERT_EQUAL(count_windows(), 2);
+
+    window_t *popup = find_other_window(mb);
+    ASSERT_NOT_NULL(popup);
+
+    // "More" is after Open, Save, separator, Quit:
+    // [1,18), [18,35), [35,40), [40,57), so y=62 is inside More.
+    send_message(popup, evMouseMove, MAKEDWORD(10, 62), NULL);
+    ASSERT_EQUAL(count_windows(), 3);
+
+    window_t *submenu = find_window_not(mb, popup);
+    ASSERT_NOT_NULL(submenu);
+
+    send_message(submenu, evLeftButtonDown, MAKEDWORD(10, 5), NULL);
+    send_message(submenu, evLeftButtonUp, MAKEDWORD(10, 5), NULL);
+
+    ASSERT_EQUAL(g_cmd_count, 1);
+    ASSERT_EQUAL(g_cmd_last_id, 4);
+    ASSERT_EQUAL(count_windows(), 1);
+
+    destroy_window(mb);
+    test_env_shutdown();
+    PASS();
+}
+
 // ---- main -------------------------------------------------------------------
 
 int main(int argc, char *argv[]) {
@@ -341,6 +388,7 @@ int main(int argc, char *argv[]) {
     test_popup_command_delivered_for_each_item();
     test_nonclient_buttonup_closes_popup();
     test_popup_no_action_on_mouseup_without_press();
+    test_submenu_opens_and_dispatches_child_item();
 
     TEST_END();
 }

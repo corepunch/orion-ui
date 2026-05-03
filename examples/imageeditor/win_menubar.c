@@ -2,11 +2,14 @@
 
 #include "imageeditor.h"
 
-#define PHOTO_PREFIX_COUNT  ((int)(sizeof(kPhotoItems) / sizeof(kPhotoItems[0])))
+#define FILTER_PREFIX_COUNT ((int)(sizeof(kFilterItems) / sizeof(kFilterItems[0])))
 #define WINDOW_PREFIX_COUNT ((int)(sizeof(kWindowItems) / sizeof(kWindowItems[0])))
 
-static menu_item_t s_photo_items[PHOTO_PREFIX_COUNT + 1 + IMAGEEDITOR_MAX_FILTERS];
-static int         s_photo_item_count = PHOTO_PREFIX_COUNT;
+static menu_item_t s_filter_items[FILTER_PREFIX_COUNT + 1 + IMAGEEDITOR_MAX_FILTERS];
+static int         s_filter_item_count = FILTER_PREFIX_COUNT;
+static menu_item_t s_filter_photo_items[IMAGEEDITOR_MAX_FILTERS];
+static int         s_filter_photo_item_count = 0;
+static char        s_filter_photo_labels[IMAGEEDITOR_MAX_FILTERS][64];
 
 // Persistent storage for dynamically built items and document title strings.
 static menu_item_t s_window_items[WINDOW_PREFIX_COUNT + WINDOW_MENU_MAX_DOCS];
@@ -200,7 +203,7 @@ void window_menu_rebuild(void) {
     // The window title is kept up-to-date by doc_update_title(); it outlives
     // this menu as long as the document is open.
     const char *label = (d->win && d->win->title[0]) ? d->win->title : "Untitled";
-    s_window_items[n++] = (menu_item_t){ label, (uint16_t)(ID_WINDOW_DOC_BASE + doc_idx) };
+    s_window_items[n++] = (menu_item_t){ label, (uint16_t)(ID_WINDOW_DOC_BASE + doc_idx), NULL, 0 };
   }
 
   s_window_item_count = n;
@@ -368,7 +371,7 @@ void handle_menu_command(uint16_t id) {
       }
       break;
 
-    case ID_EDIT_CLEAR_SEL:
+    case ID_SELECT_CLEAR:
       if (doc && doc->sel_active) {
         doc_push_undo(doc);
         canvas_clear_selection(doc, g_app->bg_color);
@@ -377,21 +380,43 @@ void handle_menu_command(uint16_t id) {
       }
       break;
 
-    case ID_EDIT_SELECT_ALL:
+    case ID_SELECT_ALL:
       if (doc) {
         canvas_select_all(doc);
         invalidate_window(doc->canvas_win);
       }
       break;
 
-    case ID_EDIT_DESELECT:
+    case ID_SELECT_DESELECT:
       if (doc) {
         canvas_deselect(doc);
         invalidate_window(doc->canvas_win);
       }
       break;
 
-    case ID_EDIT_CROP:
+    case ID_SELECT_EXPAND:
+      if (doc && doc->sel_active) {
+        int amount = 1;
+        if (show_selection_modify_dialog(doc->win ? doc->win : g_app->menubar_win,
+                                         "Expand Selection", &amount) &&
+            canvas_expand_selection(doc, amount)) {
+          invalidate_window(doc->canvas_win);
+        }
+      }
+      break;
+
+    case ID_SELECT_CONTRACT:
+      if (doc && doc->sel_active) {
+        int amount = 1;
+        if (show_selection_modify_dialog(doc->win ? doc->win : g_app->menubar_win,
+                                         "Contract Selection", &amount) &&
+            canvas_contract_selection(doc, amount)) {
+          invalidate_window(doc->canvas_win);
+        }
+      }
+      break;
+
+    case ID_SELECT_CROP:
       if (doc && doc->sel_active) {
         doc_push_undo(doc);
         canvas_crop_to_selection(doc);
@@ -441,6 +466,21 @@ void handle_menu_command(uint16_t id) {
 
     case ID_FILTER_GALLERY:
       if (doc && show_filter_gallery_dialog(doc->win ? doc->win : g_app->menubar_win)) {
+        doc_update_title(doc);
+        if (doc->canvas_win)
+          invalidate_window(doc->canvas_win);
+      }
+      break;
+
+    case ID_FILTER_BLUR:
+    case ID_FILTER_SHARPEN:
+    case ID_FILTER_EDGE:
+      if (doc) {
+        doc_push_undo(doc);
+        if (!imageeditor_apply_builtin_filter(doc, id)) {
+          doc_discard_undo(doc);
+          break;
+        }
         doc_update_title(doc);
         if (doc->canvas_win)
           invalidate_window(doc->canvas_win);
@@ -529,7 +569,8 @@ void handle_menu_command(uint16_t id) {
     case ID_TOOL_SPRAY:
     case ID_TOOL_EYEDROPPER:
     case ID_TOOL_MAGNIFIER:
-    case ID_TOOL_TEXT: {
+    case ID_TOOL_TEXT:
+    case ID_TOOL_MAGIC_WAND: {
       int old_tool = g_app->current_tool;
       if (doc && old_tool != (int)id && cancel_active_canvas_interaction(doc, old_tool)) {
         invalidate_window(doc->canvas_win);
@@ -760,23 +801,35 @@ void imageeditor_sync_filter_menu(void) {
   if (!g_app) return;
 
   int n = 0;
-  for (int i = 0; i < PHOTO_PREFIX_COUNT; i++)
-    s_photo_items[n++] = kPhotoItems[i];
-  if (g_app->filter_count > 0) {
-    s_photo_items[n++] = (menu_item_t){NULL, 0};
-    for (int i = 0; i < g_app->filter_count &&
-                    n < (int)(sizeof(s_photo_items) / sizeof(s_photo_items[0]));
-         i++) {
-      s_photo_items[n++] = (menu_item_t){
-        g_app->filters[i].name,
-        (uint16_t)(ID_FILTER_BASE + i)
-      };
+  for (int i = 0; i < FILTER_PREFIX_COUNT; i++)
+    s_filter_items[n++] = kFilterItems[i];
+
+  s_filter_photo_item_count = 0;
+  for (int i = 0; i < g_app->filter_count &&
+                  i < (int)(sizeof(s_filter_photo_items) / sizeof(s_filter_photo_items[0]));
+       i++) {
+    snprintf(s_filter_photo_labels[i], sizeof(s_filter_photo_labels[i]),
+             "%s", g_app->filters[i].name);
+    s_filter_photo_items[s_filter_photo_item_count++] = (menu_item_t){
+      s_filter_photo_labels[i],
+      (uint16_t)(ID_FILTER_BASE + i),
+      NULL,
+      0
+    };
+  }
+
+  for (int i = 0; i < n; i++) {
+    if (s_filter_items[i].label &&
+        strcmp(s_filter_items[i].label, "Photo") == 0) {
+      s_filter_items[i].submenu_items = s_filter_photo_items;
+      s_filter_items[i].submenu_count = s_filter_photo_item_count;
+      break;
     }
   }
 
-  s_photo_item_count = n;
-  kMenus[MENU_PHOTO_INDEX].items = s_photo_items;
-  kMenus[MENU_PHOTO_INDEX].item_count = s_photo_item_count;
+  s_filter_item_count = n;
+  kMenus[MENU_FILTER_INDEX].items = s_filter_items;
+  kMenus[MENU_FILTER_INDEX].item_count = s_filter_item_count;
 
   if (g_app->menubar_win) {
     send_message(g_app->menubar_win, kMenuBarMessageSetMenus,

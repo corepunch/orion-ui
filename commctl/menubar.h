@@ -8,10 +8,13 @@
 // +5 keeps the height odd so 9x9 theme icons centre with equal padding.
 #define MENUBAR_HEIGHT (FONT_SIZE + 5)
 
-// One item inside a dropdown menu.  id == 0 means a horizontal separator.
-typedef struct {
-  const char *label;
-  uint16_t    id;
+// One item inside a dropdown menu.  label == NULL && id == 0 means separator.
+// Submenus use id == 0 with a non-NULL label and submenu_items/submenu_count.
+typedef struct menu_item_s {
+  const char        *label;
+  uint16_t           id;
+  const struct menu_item_s *submenu_items;
+  int                submenu_count;
 } menu_item_t;
 
 // A top-level menu entry, e.g. "File" with its list of dropdown items.

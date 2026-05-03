@@ -376,6 +376,40 @@ static void canvas_draw_grid(canvas_win_state_t *state, int win_w, int win_h) {
   }
 }
 
+static void canvas_draw_selection_mask_overlay(canvas_doc_t *doc,
+                                               canvas_win_state_t *state) {
+  if (!doc || !state || !doc->sel_active || !doc->sel_mask || !g_app) return;
+  if (!g_ui_runtime.running) return;
+
+  if (!doc->sel_mask_tex) {
+    glGenTextures(1, &doc->sel_mask_tex);
+    glBindTexture(GL_TEXTURE_2D, doc->sel_mask_tex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    GLint swizzle[] = { GL_ONE, GL_ONE, GL_ONE, GL_RED };
+    glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzle);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, doc->canvas_w, doc->canvas_h, 0,
+                 GL_RED, GL_UNSIGNED_BYTE, doc->sel_mask);
+    doc->sel_mask_dirty = false;
+  } else if (doc->sel_mask_dirty) {
+    glBindTexture(GL_TEXTURE_2D, doc->sel_mask_tex);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, doc->canvas_w, doc->canvas_h,
+                    GL_RED, GL_UNSIGNED_BYTE, doc->sel_mask);
+    doc->sel_mask_dirty = false;
+  }
+
+  int cx = -state->pan_x;
+  int cy = -state->pan_y;
+  int cw = scaled_px(doc->canvas_w, state->scale);
+  int ch = scaled_px(doc->canvas_h, state->scale);
+  draw_sprite_region((int)doc->sel_mask_tex, R(cx, cy, cw, ch),
+                     NULL, g_app->wand_overlay_color, 0);
+}
+
 result_t win_canvas_proc(window_t *win, uint32_t msg,
                           uint32_t wparam, void *lparam) {
   canvas_win_state_t *state = (canvas_win_state_t *)win->userdata;
@@ -453,6 +487,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       // Draw grid overlay (same checker-texture mechanism as selection)
       canvas_draw_grid(state, win->frame.w, win->frame.h);
+
+      canvas_draw_selection_mask_overlay(doc, state);
 
       if (doc->sel_moving && doc->float_tex) {
         // Draw the floating selection at its current position
@@ -664,6 +700,20 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         return true;
       }
 
+      if (tool == ID_TOOL_MAGIC_WAND) {
+        if (!canvas_in_bounds(doc, px, py)) return true;
+        if (doc->sel_moving) canvas_commit_move(doc);
+        if (canvas_magic_wand_select(doc, px, py,
+                                     g_app->wand_spread,
+                                     g_app->wand_antialias)) {
+          IE_DEBUG("magic_wand_select doc=%p at=(%d,%d) spread=%d aa=%d",
+                   (void *)doc, px, py,
+                   g_app->wand_spread, g_app->wand_antialias);
+          invalidate_window(win);
+        }
+        return true;
+      }
+
       // Polygon: accumulate vertices on each click; commit on right-click
       if (tool == ID_TOOL_POLYGON) {
         if (!doc->poly_active) {
@@ -704,6 +754,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       if (tool == ID_TOOL_CROP) {
         doc->drawing = true;
         doc->sel_active = false;
+        canvas_clear_selection_mask(doc);
         doc->sel_start.x = doc->sel_end.x = px;
         doc->sel_start.y = doc->sel_end.y = py;
         doc->sel_active = true;
@@ -742,6 +793,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
             // Start a new selection; commit any in-progress move first.
             if (doc->sel_moving) canvas_commit_move(doc);
             doc->sel_active = false;
+            canvas_clear_selection_mask(doc);
             doc->sel_start.x = doc->sel_end.x = px;
             doc->sel_start.y = doc->sel_end.y = py;
             doc->sel_active = true;
@@ -966,6 +1018,10 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
               doc->sel_start.y == doc->sel_end.y) {
             canvas_deselect(doc);
             IE_DEBUG("selection_deselect_zero_area doc=%p", (void *)doc);
+          } else {
+            canvas_select_rect(doc,
+                               doc->sel_start.x, doc->sel_start.y,
+                               doc->sel_end.x, doc->sel_end.y);
           }
         }
         if (tool == ID_TOOL_CROP && doc->sel_active) {

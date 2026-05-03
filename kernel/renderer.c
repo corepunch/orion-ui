@@ -288,6 +288,10 @@ bool ui_init_prog(void) {
     "sprite_invert.frag.glsl",
     "sprite_threshold.frag.glsl",
     "sprite_gradient.frag.glsl",
+    "sprite_blur.frag.glsl",
+    "sprite_sharpen.frag.glsl",
+    "sprite_edge.frag.glsl",
+    "sprite_alpha_threshold.frag.glsl",
   };
 
   for (int i = 0; i < UI_RENDER_EFFECT_COUNT; i++) {
@@ -431,9 +435,9 @@ void draw_sprite_region(int tex, irect16_t r,
     alpha = 1.0f;
   push_sprite_args(tex, r.x, r.y, r.w, r.h, alpha);
 
-  float tr = ((color >> 16) & 0xFF) / 255.0f;
-  float tg = ((color >> 8) & 0xFF) / 255.0f;
-  float tb = (color & 0xFF) / 255.0f;
+  float tr = ((color      ) & 0xFF) / 255.0f;
+  float tg = ((color >>  8) & 0xFF) / 255.0f;
+  float tb = ((color >> 16) & 0xFF) / 255.0f;
   float ta = 1.0f;
   glUniform4f(prog->tint_u, tr, tg, tb, ta);
 
@@ -648,6 +652,30 @@ bool bake_texture_effect(int src_tex, int w, int h,
 
   *out_tex = tex;
   return true;
+}
+
+bool bake_texture_blur(int src_tex, int w, int h, int radius,
+                       uint32_t *out_tex) {
+  if (!out_tex) return false;
+  *out_tex = 0;
+  if (!g_ui_runtime.running || src_tex == 0 || w <= 0 || h <= 0)
+    return false;
+
+  radius = CLAMP(radius, 1, 16);
+  ui_render_effect_params_t p = {{0}};
+  uint32_t tmp = 0;
+  p.f[0] = 1.0f / (float)w;
+  p.f[1] = 0.0f;
+  p.f[2] = (float)radius;
+  if (!bake_texture_effect(src_tex, w, h, UI_RENDER_EFFECT_BLUR, &p, &tmp))
+    return false;
+
+  p.f[0] = 0.0f;
+  p.f[1] = 1.0f / (float)h;
+  p.f[2] = (float)radius;
+  bool ok = bake_texture_effect((int)tmp, w, h, UI_RENDER_EFFECT_BLUR, &p, out_tex);
+  R_DeleteTexture(tmp);
+  return ok;
 }
 
 bool bake_texture_program(int src_tex, int w, int h, uint32_t program,

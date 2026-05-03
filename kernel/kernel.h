@@ -80,6 +80,10 @@ typedef enum {
 	UI_RENDER_EFFECT_INVERT = 3,
 	UI_RENDER_EFFECT_THRESHOLD = 4,
 	UI_RENDER_EFFECT_GRADIENT = 5,
+	UI_RENDER_EFFECT_BLUR = 6,
+	UI_RENDER_EFFECT_SHARPEN = 7,
+	UI_RENDER_EFFECT_EDGE = 8,
+	UI_RENDER_EFFECT_ALPHA_THRESHOLD = 9,
 	UI_RENDER_EFFECT_COUNT
 } ui_render_effect_t;
 
@@ -116,6 +120,8 @@ bool bake_texture_effect(int src_tex, int w, int h,
                          ui_render_effect_t effect,
                          const ui_render_effect_params_t *params,
                          uint32_t *out_tex);
+bool bake_texture_blur(int src_tex, int w, int h, int radius,
+                       uint32_t *out_tex);
 bool bake_texture_program(int src_tex, int w, int h, uint32_t program,
                           float mix_amount, uint32_t *out_tex);
 bool read_texture_rgba(int src_tex, int w, int h, uint8_t *out_rgba);

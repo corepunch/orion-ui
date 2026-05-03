@@ -21,11 +21,11 @@ static const accel_t kAccelEntries[] = {
   { FCONTROL|FVIRTKEY, AX_KEY_C, ID_EDIT_COPY },
   { FCONTROL|FVIRTKEY, AX_KEY_V, ID_EDIT_PASTE},
   { FVIRTKEY,          AX_KEY_X, ID_COLOR_SWAP },
-  { FCONTROL|FVIRTKEY, AX_KEY_A, ID_EDIT_SELECT_ALL},
-  { FVIRTKEY,          AX_KEY_ESCAPE, ID_EDIT_DESELECT},
+  { FCONTROL|FVIRTKEY, AX_KEY_A, ID_SELECT_ALL},
+  { FVIRTKEY,          AX_KEY_ESCAPE, ID_SELECT_DESELECT},
   // Delete / Backspace clears the active selection (fill with bg color)
-  { FVIRTKEY,          AX_KEY_DEL,       ID_EDIT_CLEAR_SEL },
-  { FVIRTKEY,          AX_KEY_BACKSPACE, ID_EDIT_CLEAR_SEL },
+  { FVIRTKEY,          AX_KEY_DEL,       ID_SELECT_CLEAR },
+  { FVIRTKEY,          AX_KEY_BACKSPACE, ID_SELECT_CLEAR },
   { FCONTROL|FVIRTKEY, AX_KEY_N, ID_FILE_NEW  },
   { FCONTROL|FVIRTKEY, AX_KEY_O, ID_FILE_OPEN },
   { FCONTROL|FVIRTKEY, AX_KEY_S, ID_FILE_SAVE },
@@ -45,6 +45,7 @@ static const accel_t kAccelEntries[] = {
   { FVIRTKEY,          AX_KEY_A, ID_TOOL_SPRAY       },
   { FVIRTKEY,          AX_KEY_I, ID_TOOL_EYEDROPPER  },
   { FVIRTKEY,          AX_KEY_G, ID_TOOL_MAGNIFIER   },
+  { FVIRTKEY,          AX_KEY_W, ID_TOOL_MAGIC_WAND  },
   { FVIRTKEY,          AX_KEY_T, ID_TOOL_TEXT   },
   // Allow tool hotkeys to work even when Shift is held
   { FSHIFT|FVIRTKEY,   AX_KEY_P, ID_TOOL_PENCIL },
@@ -55,6 +56,7 @@ static const accel_t kAccelEntries[] = {
   { FSHIFT|FVIRTKEY,   AX_KEY_A, ID_TOOL_SPRAY       },
   { FSHIFT|FVIRTKEY,   AX_KEY_I, ID_TOOL_EYEDROPPER  },
   { FSHIFT|FVIRTKEY,   AX_KEY_G, ID_TOOL_MAGNIFIER   },
+  { FSHIFT|FVIRTKEY,   AX_KEY_W, ID_TOOL_MAGIC_WAND  },
   { FSHIFT|FVIRTKEY,   AX_KEY_T, ID_TOOL_TEXT   },
 };
 
@@ -150,6 +152,9 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   g_app->brush_size = 1;  // default: radius 1 (3px diameter)
   g_app->text_font_size = 16;
   g_app->text_antialias = true;
+  g_app->wand_antialias = true;
+  g_app->wand_spread = 24;
+  g_app->wand_overlay_color = MAKE_COLOR(0x40, 0xA0, 0xFF, 0x55);
   g_app->grid_spacing_x = 16;
   g_app->grid_spacing_y = 16;
 
@@ -225,6 +230,8 @@ void gem_shutdown(void) {
     if (g_app->docs->float_tex)
       glDeleteTextures(1, &g_app->docs->float_tex);
     image_free(g_app->docs->float_pixels);
+    image_free(g_app->docs->float_mask);
+    canvas_clear_selection_mask(g_app->docs);
     image_free(g_app->docs->pixels);
     free(g_app->docs);
     g_app->docs = next;

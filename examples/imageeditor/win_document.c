@@ -244,6 +244,8 @@ void close_document(canvas_doc_t *doc) {
   if (doc->float_tex)
     glDeleteTextures(1, &doc->float_tex);
   free(doc->float_pixels);
+  free(doc->float_mask);
+  canvas_clear_selection_mask(doc);
 
   doc_free_layers(doc);
   free(doc->composite_buf);

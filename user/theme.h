@@ -50,6 +50,7 @@ typedef enum {
 
 // Pixels by which the focus-ring background extends beyond the box on
 // each side (i.e. focus rect = box expanded by CHECKBOX_FOCUS_PAD).
+#define CHECKBOX_BOX_SIZE    13
 #define CHECKBOX_FOCUS_PAD   2
 
 // Horizontal gap between the right edge of the box and the left edge of

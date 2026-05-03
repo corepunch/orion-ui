@@ -183,18 +183,27 @@ static bool collect_form_defines(define_list_t *defs, xmlNodePtr form) {
   return true;
 }
 
+static bool collect_menu_node_defines(define_list_t *defs, xmlNodePtr menu) {
+  for (xmlNodePtr it = menu ? menu->children : NULL; it; it = it->next) {
+    if (is_element(it, "submenu")) {
+      if (!collect_menu_node_defines(defs, it)) return false;
+      continue;
+    }
+    if (!is_element(it, "item")) continue;
+    char *id = attr_dup(it, "id");
+    char *value = attr_dup(it, "value");
+    bool ok = collect_define(defs, id, value);
+    free(id);
+    free(value);
+    if (!ok) return false;
+  }
+  return true;
+}
+
 static bool collect_menu_defines(define_list_t *defs, xmlNodePtr menus) {
   for (xmlNodePtr m = menus ? menus->children : NULL; m; m = m->next) {
     if (!is_element(m, "menu")) continue;
-    for (xmlNodePtr it = m->children; it; it = it->next) {
-      if (!is_element(it, "item")) continue;
-      char *id = attr_dup(it, "id");
-      char *value = attr_dup(it, "value");
-      bool ok = collect_define(defs, id, value);
-      free(id);
-      free(value);
-      if (!ok) return false;
-    }
+    if (!collect_menu_node_defines(defs, m)) return false;
   }
   return true;
 }
@@ -228,7 +237,8 @@ static void emit_defines(FILE *f, const define_list_t *defs) {
 static int count_menu_items(xmlNodePtr menu) {
   int n = 0;
   for (xmlNodePtr it = menu ? menu->children : NULL; it; it = it->next)
-    if (is_element(it, "item") || is_element(it, "separator")) n++;
+    if (is_element(it, "item") || is_element(it, "separator") ||
+        is_element(it, "submenu")) n++;
   return n;
 }
 
@@ -271,6 +281,96 @@ static void emit_menu_indices(FILE *f, xmlNodePtr menus) {
     fputc('\n', f);
 }
 
+static void menu_child_var(char *out, size_t out_sz,
+                           const char *parent_var, xmlNodePtr node) {
+  char *var = attr_dup(node, "var");
+  if (var && *var) {
+    snprintf(out, out_sz, "%s", var);
+    free(var);
+    return;
+  }
+  free(var);
+
+  char *id = attr_dup(node, "id");
+  char *label = attr_dup(node, "label");
+  char ident[128];
+  make_ident(ident, sizeof(ident), nonempty(id, nonempty(label, "submenu")));
+  snprintf(out, out_sz, "%s_%s", nonempty(parent_var, "kMenu"), ident);
+  free(id);
+  free(label);
+}
+
+static bool emit_menu_item_array(FILE *f, xmlNodePtr menu,
+                                 const char *var, bool is_mutable);
+
+static bool emit_submenu_arrays(FILE *f, xmlNodePtr menu,
+                                const char *parent_var, bool is_mutable) {
+  for (xmlNodePtr it = menu ? menu->children : NULL; it; it = it->next) {
+    if (!is_element(it, "submenu")) continue;
+    char child_var[256];
+    menu_child_var(child_var, sizeof(child_var), parent_var, it);
+    if (!emit_submenu_arrays(f, it, child_var, is_mutable))
+      return false;
+    if (!emit_menu_item_array(f, it, child_var, is_mutable))
+      return false;
+  }
+  return true;
+}
+
+static bool emit_menu_item_array(FILE *f, xmlNodePtr menu,
+                                 const char *var, bool is_mutable) {
+  int item_count = count_menu_items(menu);
+  if (item_count <= 0) return true;
+  fprintf(f, "static %smenu_item_t %s[] = {\n",
+          is_mutable ? "" : "const ", var);
+  for (xmlNodePtr it = menu->children; it; it = it->next) {
+    emit_optional_if(f, it);
+    if (is_element(it, "separator")) {
+      fputs("  { NULL, 0, NULL, 0 },\n", f);
+      emit_optional_endif(f, it);
+      continue;
+    }
+    if (is_element(it, "submenu")) {
+      char child_var[256];
+      char *label = attr_dup(it, "label");
+      char *count = attr_dup(it, "count");
+      bool dynamic = attr_is_true(it, "dynamic");
+      int child_count = count_menu_items(it);
+      menu_child_var(child_var, sizeof(child_var), var, it);
+      fputs("  { ", f);
+      fprint_c_string(f, nonempty(label, ""));
+      if (dynamic && child_count <= 0) {
+        fprintf(f, ", 0, NULL, %s },\n", nonempty(count, "0"));
+      } else if (child_count <= 0) {
+        fputs(", 0, NULL, 0 },\n", f);
+      } else if (count && *count) {
+        fprintf(f, ", 0, %s, %s },\n", child_var, count);
+      } else {
+        fprintf(f, ", 0, %s, (int)(sizeof(%s) / sizeof(%s[0])) },\n",
+                child_var, child_var, child_var);
+      }
+      free(label);
+      free(count);
+      emit_optional_endif(f, it);
+      continue;
+    }
+    if (!is_element(it, "item")) {
+      emit_optional_endif(f, it);
+      continue;
+    }
+    char *id = attr_dup(it, "id");
+    char *label = attr_dup(it, "label");
+    fputs("  { ", f);
+    fprint_c_string(f, nonempty(label, ""));
+    fprintf(f, ", %s, NULL, 0 },\n", nonempty(id, "0"));
+    free(id);
+    free(label);
+    emit_optional_endif(f, it);
+  }
+  fputs("};\n\n", f);
+  return true;
+}
+
 static bool emit_menu_resources(FILE *f, xmlNodePtr menus) {
   if (!menus) return true;
   char *menus_var = attr_dup(menus, "var");
@@ -292,29 +392,11 @@ static bool emit_menu_resources(FILE *f, xmlNodePtr menus) {
       return false;
     }
     bool is_mutable = attr_is_true(m, "mutable");
-    fprintf(f, "static %smenu_item_t %s[] = {\n",
-            is_mutable ? "" : "const ", var);
-    for (xmlNodePtr it = m->children; it; it = it->next) {
-      emit_optional_if(f, it);
-      if (is_element(it, "separator")) {
-        fputs("  { NULL, 0 },\n", f);
-        emit_optional_endif(f, it);
-        continue;
-      }
-      if (!is_element(it, "item")) {
-        emit_optional_endif(f, it);
-        continue;
-      }
-      char *id = attr_dup(it, "id");
-      char *label = attr_dup(it, "label");
-      fputs("  { ", f);
-      fprint_c_string(f, nonempty(label, ""));
-      fprintf(f, ", %s },\n", nonempty(id, "0"));
-      free(id);
-      free(label);
-      emit_optional_endif(f, it);
+    if (!emit_submenu_arrays(f, m, var, is_mutable) ||
+        !emit_menu_item_array(f, m, var, is_mutable)) {
+      free(var); free(menus_var); free(count_var);
+      return false;
     }
-    fputs("};\n\n", f);
     free(var);
   }
 

@@ -273,3 +273,74 @@ bool imageeditor_apply_filter(canvas_doc_t *doc, int filter_idx) {
   doc->modified = true;
   return true;
 }
+
+bool imageeditor_apply_builtin_filter(canvas_doc_t *doc, uint16_t id) {
+  if (!g_app || !doc) return false;
+  if (doc->active_layer < 0 || doc->active_layer >= doc->layer_count)
+    return false;
+
+  layer_t *lay = doc->layers[doc->active_layer];
+  if (!lay || !lay->pixels) return false;
+
+  canvas_upload(doc);
+  if (!lay->tex) return false;
+
+  size_t px_count = (size_t)doc->canvas_w * doc->canvas_h;
+  uint8_t *alpha = malloc(px_count);
+  if (!alpha) return false;
+  for (size_t i = 0; i < px_count; i++)
+    alpha[i] = lay->pixels[i * 4 + 3];
+
+  uint32_t baked_tex = 0;
+  if (id == ID_FILTER_BLUR) {
+    if (!bake_texture_blur((int)lay->tex, doc->canvas_w, doc->canvas_h,
+                           4, &baked_tex)) {
+      free(alpha);
+      return false;
+    }
+  } else {
+    ui_render_effect_params_t p = {{0}};
+    p.f[0] = 1.0f / (float)doc->canvas_w;
+    p.f[1] = 1.0f / (float)doc->canvas_h;
+    ui_render_effect_t effect = UI_RENDER_EFFECT_COPY;
+    if (id == ID_FILTER_SHARPEN)
+      effect = UI_RENDER_EFFECT_SHARPEN;
+    else if (id == ID_FILTER_EDGE)
+      effect = UI_RENDER_EFFECT_EDGE;
+    else {
+      free(alpha);
+      return false;
+    }
+    if (!bake_texture_effect((int)lay->tex, doc->canvas_w, doc->canvas_h,
+                             effect, &p, &baked_tex)) {
+      free(alpha);
+      return false;
+    }
+  }
+
+  size_t sz = (size_t)doc->canvas_w * doc->canvas_h * 4;
+  uint8_t *buf = malloc(sz);
+  if (!buf) {
+    R_DeleteTexture(baked_tex);
+    free(alpha);
+    return false;
+  }
+  if (!read_texture_rgba((int)baked_tex, doc->canvas_w, doc->canvas_h, buf)) {
+    R_DeleteTexture(baked_tex);
+    free(buf);
+    free(alpha);
+    return false;
+  }
+  R_DeleteTexture(baked_tex);
+
+  for (size_t i = 0; i < px_count; i++)
+    buf[i * 4 + 3] = alpha[i];
+  free(alpha);
+
+  free(lay->pixels);
+  lay->pixels = buf;
+  doc->pixels = lay->pixels;
+  doc->canvas_dirty = true;
+  doc->modified = true;
+  return true;
+}

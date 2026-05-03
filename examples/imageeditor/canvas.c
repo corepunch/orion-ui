@@ -388,6 +388,54 @@ static uint8_t color_to_gray(uint32_t c) {
   return (uint8_t)((COLOR_R(c) * 77 + COLOR_G(c) * 150 + COLOR_B(c) * 29) >> 8);
 }
 
+void canvas_clear_selection_mask(canvas_doc_t *doc) {
+  if (!doc) return;
+  if (doc->sel_mask_tex) {
+    R_DeleteTexture(doc->sel_mask_tex);
+    doc->sel_mask_tex = 0;
+  }
+  free(doc->sel_mask);
+  doc->sel_mask = NULL;
+  doc->sel_mask_dirty = false;
+}
+
+bool canvas_select_rect(canvas_doc_t *doc, int x0, int y0, int x1, int y1) {
+  if (!doc) return false;
+  int left = MIN(x0, x1);
+  int top = MIN(y0, y1);
+  int right = MAX(x0, x1);
+  int bottom = MAX(y0, y1);
+
+  left = MAX(0, left);
+  top = MAX(0, top);
+  right = MIN(doc->canvas_w - 1, right);
+  bottom = MIN(doc->canvas_h - 1, bottom);
+
+  if (left > right || top > bottom) {
+    doc->sel_active = false;
+    canvas_clear_selection_mask(doc);
+    return false;
+  }
+
+  size_t count = (size_t)doc->canvas_w * doc->canvas_h;
+  uint8_t *mask = malloc(count);
+  if (!mask) return false;
+  memset(mask, 255, count);
+
+  for (int y = top; y <= bottom; y++) {
+    memset(mask + (size_t)y * doc->canvas_w + left, 0,
+           (size_t)(right - left + 1));
+  }
+
+  canvas_clear_selection_mask(doc);
+  doc->sel_mask = mask;
+  doc->sel_mask_dirty = true;
+  doc->sel_active = true;
+  doc->sel_start = (ipoint16_t){left, top};
+  doc->sel_end = (ipoint16_t){right, bottom};
+  return true;
+}
+
 static void fill_alpha_from_layer_gray(canvas_doc_t *doc, layer_t *lay) {
   size_t n = (size_t)doc->canvas_w * doc->canvas_h;
   for (size_t i = 0; i < n; i++) {
@@ -643,6 +691,97 @@ void canvas_flood_fill(canvas_doc_t *doc, int sx, int sy, uint32_t fill) {
     }
   }
   free(queue);
+}
+
+static int color_spread_distance(uint32_t a, uint32_t b) {
+  int dr = abs((int)COLOR_R(a) - (int)COLOR_R(b));
+  int dg = abs((int)COLOR_G(a) - (int)COLOR_G(b));
+  int db = abs((int)COLOR_B(a) - (int)COLOR_B(b));
+  int da = abs((int)COLOR_A(a) - (int)COLOR_A(b));
+  return MAX(MAX(dr, dg), MAX(db, da));
+}
+
+bool canvas_magic_wand_select(canvas_doc_t *doc, int sx, int sy,
+                              int spread, bool antialias) {
+  if (!doc || !canvas_in_bounds(doc, sx, sy)) return false;
+
+  size_t count = (size_t)doc->canvas_w * (size_t)doc->canvas_h;
+  if (count == 0 || count > 64 * 1024 * 1024) return false;
+
+  uint8_t *mask = malloc(count);
+  typedef struct { int x, y; } pt_t;
+  pt_t *queue = malloc(sizeof(pt_t) * count);
+  if (!mask || !queue) {
+    free(mask);
+    free(queue);
+    return false;
+  }
+  memset(mask, 255, count);
+
+  uint32_t target = canvas_get_pixel(doc, sx, sy);
+  spread = CLAMP(spread, 0, 255);
+  size_t head = 0, tail = 0;
+  mask[(size_t)sy * doc->canvas_w + sx] = 0;
+  queue[tail++] = (pt_t){sx, sy};
+  int x0 = sx, y0 = sy, x1 = sx, y1 = sy;
+
+  while (head < tail) {
+    pt_t cur = queue[head++];
+    int nx[4] = {cur.x + 1, cur.x - 1, cur.x,     cur.x};
+    int ny[4] = {cur.y,     cur.y,     cur.y + 1, cur.y - 1};
+    for (int i = 0; i < 4; i++) {
+      if (!canvas_in_bounds(doc, nx[i], ny[i])) continue;
+      size_t idx = (size_t)ny[i] * doc->canvas_w + nx[i];
+      if (mask[idx] == 0) continue;
+      if (color_spread_distance(canvas_get_pixel(doc, nx[i], ny[i]), target) > spread)
+        continue;
+      mask[idx] = 0;
+      queue[tail++] = (pt_t){nx[i], ny[i]};
+      if (nx[i] < x0) x0 = nx[i];
+      if (ny[i] < y0) y0 = ny[i];
+      if (nx[i] > x1) x1 = nx[i];
+      if (ny[i] > y1) y1 = ny[i];
+    }
+  }
+
+  if (antialias) {
+    uint8_t *soft = malloc(count);
+    if (soft) {
+      memcpy(soft, mask, count);
+      for (int y = y0; y <= y1; y++) {
+        for (int x = x0; x <= x1; x++) {
+          size_t idx = (size_t)y * doc->canvas_w + x;
+          if (mask[idx] != 0) continue;
+          for (int oy = -1; oy <= 1; oy++) {
+            for (int ox = -1; ox <= 1; ox++) {
+              int xx = x + ox, yy = y + oy;
+              if (!canvas_in_bounds(doc, xx, yy)) continue;
+              size_t nidx = (size_t)yy * doc->canvas_w + xx;
+              if (soft[nidx] != 0 &&
+                  color_spread_distance(canvas_get_pixel(doc, xx, yy), target) <= spread + 12) {
+                soft[nidx] = 0;
+                if (xx < x0) x0 = xx;
+                if (yy < y0) y0 = yy;
+                if (xx > x1) x1 = xx;
+                if (yy > y1) y1 = yy;
+              }
+            }
+          }
+        }
+      }
+      free(mask);
+      mask = soft;
+    }
+  }
+
+  free(queue);
+  canvas_clear_selection_mask(doc);
+  doc->sel_mask = mask;
+  doc->sel_mask_dirty = true;
+  doc->sel_active = true;
+  doc->sel_start = (ipoint16_t){x0, y0};
+  doc->sel_end = (ipoint16_t){x1, y1};
+  return true;
 }
 
 // Airbrush/spray: scatter random pixels within radius around (cx, cy).
@@ -921,6 +1060,24 @@ void canvas_shape_commit(canvas_doc_t *doc) {
 // Returns false when the clamped region is empty (no-op for callers).
 static bool selection_bounds(const canvas_doc_t *doc,
                              int *x0, int *y0, int *x1, int *y1) {
+  if (doc->sel_mask) {
+    bool any = false;
+    *x0 = doc->canvas_w;
+    *y0 = doc->canvas_h;
+    *x1 = -1;
+    *y1 = -1;
+    for (int y = 0; y < doc->canvas_h; y++) {
+      for (int x = 0; x < doc->canvas_w; x++) {
+        if (doc->sel_mask[(size_t)y * doc->canvas_w + x] != 0) continue;
+        if (x < *x0) *x0 = x;
+        if (y < *y0) *y0 = y;
+        if (x > *x1) *x1 = x;
+        if (y > *y1) *y1 = y;
+        any = true;
+      }
+    }
+    return any;
+  }
   *x0 = MIN(doc->sel_start.x, doc->sel_end.x);
   *y0 = MIN(doc->sel_start.y, doc->sel_end.y);
   *x1 = MAX(doc->sel_start.x, doc->sel_end.x);
@@ -946,7 +1103,11 @@ void canvas_copy_selection(canvas_doc_t *doc) {
     for (int col = 0; col < w; col++) {
       uint32_t c = canvas_get_pixel(doc, x0 + col, y0 + row);
       uint8_t *p = buf + ((size_t)row * w + col) * 4;
-      p[0]=COLOR_R(c); p[1]=COLOR_G(c); p[2]=COLOR_B(c); p[3]=COLOR_A(c);
+      if (canvas_in_selection(doc, x0 + col, y0 + row)) {
+        p[0]=COLOR_R(c); p[1]=COLOR_G(c); p[2]=COLOR_B(c); p[3]=COLOR_A(c);
+      } else {
+        memset(p, 0, 4);
+      }
     }
   }
   free(g_app->clipboard);
@@ -986,21 +1147,17 @@ void canvas_paste_clipboard(canvas_doc_t *doc) {
     }
   }
   // Select the pasted region (clamped to canvas bounds)
-  doc->sel_active   = true;
-  doc->sel_start    = (ipoint16_t){0, 0};
   int sel_x1 = w - 1;
   int sel_y1 = h - 1;
   if (sel_x1 >= doc->canvas_w) sel_x1 = doc->canvas_w - 1;
   if (sel_y1 >= doc->canvas_h) sel_y1 = doc->canvas_h - 1;
-  doc->sel_end      = (ipoint16_t){sel_x1, sel_y1};
+  canvas_select_rect(doc, 0, 0, sel_x1, sel_y1);
 }
 
 // Select the entire canvas.
 void canvas_select_all(canvas_doc_t *doc) {
   if (!doc) return;
-  doc->sel_active   = true;
-  doc->sel_start    = (ipoint16_t){0, 0};
-  doc->sel_end      = (ipoint16_t){doc->canvas_w - 1, doc->canvas_h - 1};
+  canvas_select_rect(doc, 0, 0, doc->canvas_w - 1, doc->canvas_h - 1);
 }
 
 // Clear selection (no-op on pixels).
@@ -1009,6 +1166,195 @@ void canvas_deselect(canvas_doc_t *doc) {
   // Commit any in-progress move before deselecting.
   if (doc->sel_moving) canvas_commit_move(doc);
   doc->sel_active = false;
+  canvas_clear_selection_mask(doc);
+}
+
+static bool selection_modify_mask_gpu(canvas_doc_t *doc, int amount, bool expand) {
+  if (!g_ui_runtime.running || !doc || !doc->sel_active || amount <= 0)
+    return false;
+
+  size_t count = (size_t)doc->canvas_w * doc->canvas_h;
+  uint8_t *src = doc->sel_mask;
+  uint8_t *owned_src = NULL;
+  if (!src) {
+    int x0, y0, x1, y1;
+    if (!selection_bounds(doc, &x0, &y0, &x1, &y1)) return false;
+    owned_src = malloc(count);
+    if (!owned_src) return false;
+    memset(owned_src, 255, count);
+    for (int y = y0; y <= y1; y++) {
+      memset(owned_src + (size_t)y * doc->canvas_w + x0, 0,
+             (size_t)(x1 - x0 + 1));
+    }
+    src = owned_src;
+  }
+
+  uint8_t *rgba = malloc(count * 4);
+  if (!rgba) {
+    free(owned_src);
+    return false;
+  }
+  for (size_t i = 0; i < count; i++) {
+    rgba[i * 4 + 0] = 255;
+    rgba[i * 4 + 1] = 255;
+    rgba[i * 4 + 2] = 255;
+    rgba[i * 4 + 3] = (src[i] == 0) ? 255 : 0;
+  }
+
+  uint32_t src_tex = R_CreateTextureRGBA(doc->canvas_w, doc->canvas_h, rgba,
+                                         R_FILTER_LINEAR, R_WRAP_CLAMP);
+  free(rgba);
+  free(owned_src);
+  if (!src_tex) return false;
+
+  uint32_t blur_tex = 0;
+  if (!bake_texture_blur((int)src_tex, doc->canvas_w, doc->canvas_h,
+                         amount, &blur_tex)) {
+    R_DeleteTexture(src_tex);
+    return false;
+  }
+  R_DeleteTexture(src_tex);
+
+  ui_render_effect_params_t p = {{0}};
+  p.f[0] = expand ? 0.02f : 0.98f;
+  p.f[1] = 0.001f;
+  uint32_t thresh_tex = 0;
+  if (!bake_texture_effect((int)blur_tex, doc->canvas_w, doc->canvas_h,
+                           UI_RENDER_EFFECT_ALPHA_THRESHOLD, &p, &thresh_tex)) {
+    R_DeleteTexture(blur_tex);
+    return false;
+  }
+  R_DeleteTexture(blur_tex);
+
+  uint8_t *out = malloc(count * 4);
+  if (!out) {
+    R_DeleteTexture(thresh_tex);
+    return false;
+  }
+  bool read_ok = read_texture_rgba((int)thresh_tex, doc->canvas_w, doc->canvas_h, out);
+  R_DeleteTexture(thresh_tex);
+  if (!read_ok) {
+    free(out);
+    return false;
+  }
+
+  uint8_t *dst = malloc(count);
+  if (!dst) {
+    free(out);
+    return false;
+  }
+  memset(dst, 255, count);
+  bool any = false;
+  for (size_t i = 0; i < count; i++) {
+    if (out[i * 4 + 3] >= 128 || out[i * 4] >= 128) {
+      dst[i] = 0;
+      any = true;
+    }
+  }
+  free(out);
+
+  canvas_clear_selection_mask(doc);
+  if (!any) {
+    free(dst);
+    doc->sel_active = false;
+    return true;
+  }
+
+  doc->sel_mask = dst;
+  doc->sel_mask_dirty = true;
+  int x0, y0, x1, y1;
+  selection_bounds(doc, &x0, &y0, &x1, &y1);
+  doc->sel_start = (ipoint16_t){x0, y0};
+  doc->sel_end = (ipoint16_t){x1, y1};
+  doc->sel_active = true;
+  return true;
+}
+
+static bool selection_modify_mask(canvas_doc_t *doc, int amount, bool expand) {
+  if (amount <= 16 && selection_modify_mask_gpu(doc, amount, expand))
+    return true;
+
+  size_t count = (size_t)doc->canvas_w * doc->canvas_h;
+  uint8_t *src = doc->sel_mask;
+  uint8_t *owned_src = NULL;
+  uint8_t *dst = malloc(count);
+  if (!dst) return false;
+  memset(dst, 255, count);
+
+  if (!src) {
+    int x0, y0, x1, y1;
+    if (!selection_bounds(doc, &x0, &y0, &x1, &y1)) {
+      free(dst);
+      return false;
+    }
+    owned_src = malloc(count);
+    if (!owned_src) {
+      free(dst);
+      return false;
+    }
+    memset(owned_src, 255, count);
+    for (int y = y0; y <= y1; y++) {
+      memset(owned_src + (size_t)y * doc->canvas_w + x0, 0,
+             (size_t)(x1 - x0 + 1));
+    }
+    src = owned_src;
+  }
+
+  bool any = false;
+  for (int y = 0; y < doc->canvas_h; y++) {
+    for (int x = 0; x < doc->canvas_w; x++) {
+      bool selected = expand ? false : true;
+      for (int yy = y - amount; yy <= y + amount; yy++) {
+        for (int xx = x - amount; xx <= x + amount; xx++) {
+          bool inside = xx >= 0 && xx < doc->canvas_w &&
+                        yy >= 0 && yy < doc->canvas_h &&
+                        src[(size_t)yy * doc->canvas_w + xx] == 0;
+          if (expand && inside) {
+            selected = true;
+            yy = y + amount + 1;
+            break;
+          }
+          if (!expand && !inside) {
+            selected = false;
+            yy = y + amount + 1;
+            break;
+          }
+        }
+      }
+      if (selected) {
+        dst[(size_t)y * doc->canvas_w + x] = 0;
+        any = true;
+      }
+    }
+  }
+
+  free(owned_src);
+  canvas_clear_selection_mask(doc);
+  if (!any) {
+    free(dst);
+    doc->sel_active = false;
+    return true;
+  }
+  doc->sel_mask = dst;
+  doc->sel_mask_dirty = true;
+  int x0, y0, x1, y1;
+  selection_bounds(doc, &x0, &y0, &x1, &y1);
+  doc->sel_start = (ipoint16_t){x0, y0};
+  doc->sel_end = (ipoint16_t){x1, y1};
+  doc->sel_active = true;
+  return true;
+}
+
+bool canvas_expand_selection(canvas_doc_t *doc, int amount) {
+  if (!doc || !doc->sel_active || amount <= 0) return false;
+  if (doc->sel_moving) canvas_commit_move(doc);
+  return selection_modify_mask(doc, amount, true);
+}
+
+bool canvas_contract_selection(canvas_doc_t *doc, int amount) {
+  if (!doc || !doc->sel_active || amount <= 0) return false;
+  if (doc->sel_moving) canvas_commit_move(doc);
+  return selection_modify_mask(doc, amount, false);
 }
 
 // Crop the canvas to the active selection: copy the selected pixels, fill the
@@ -1042,6 +1388,7 @@ void canvas_crop_to_selection(canvas_doc_t *doc) {
   }
   free(buf);
   doc->sel_active = false;
+  canvas_clear_selection_mask(doc);
   doc->canvas_dirty = true;
 }
 
@@ -1080,6 +1427,7 @@ bool canvas_crop_or_expand_to_selection(canvas_doc_t *doc) {
   doc->canvas_dirty = true;
   doc->modified     = true;
   doc->sel_active   = false;
+  canvas_clear_selection_mask(doc);
   return true;
 }
 
@@ -1093,24 +1441,39 @@ void canvas_begin_move(canvas_doc_t *doc, uint32_t bg) {
   int w = x1 - x0 + 1;
   int h = y1 - y0 + 1;
   uint8_t *buf = malloc((size_t)w * h * 4);
-  if (!buf) return;
+  uint8_t *mask = malloc((size_t)w * h);
+  if (!buf || !mask) {
+    free(buf);
+    free(mask);
+    return;
+  }
   // Extract pixels
   for (int row = 0; row < h; row++) {
     for (int col = 0; col < w; col++) {
       uint32_t c = canvas_get_pixel(doc, x0 + col, y0 + row);
       uint8_t *p = buf + ((size_t)row * w + col) * 4;
-      p[0]=COLOR_R(c); p[1]=COLOR_G(c); p[2]=COLOR_B(c); p[3]=COLOR_A(c);
+      uint8_t *m = mask + (size_t)row * w + col;
+      if (canvas_in_selection(doc, x0 + col, y0 + row)) {
+        p[0]=COLOR_R(c); p[1]=COLOR_G(c); p[2]=COLOR_B(c); p[3]=COLOR_A(c);
+        *m = 0;
+      } else {
+        memset(p, 0, 4);
+        *m = 255;
+      }
     }
   }
   // Clear the region from canvas
   for (int y = y0; y <= y1; y++)
     for (int x = x0; x <= x1; x++)
-      canvas_set_pixel_direct(doc, x, y, bg);
+      if (canvas_in_selection(doc, x, y))
+        canvas_set_pixel_direct(doc, x, y, bg);
   doc->float_pixels  = buf;
+  doc->float_mask    = mask;
   doc->float_w       = w;
   doc->float_h       = h;
   doc->float_pos     = (ipoint16_t){x0, y0};
   doc->sel_moving    = true;
+  canvas_clear_selection_mask(doc);
 }
 
 // Paste float_pixels back at float_pos, update selection bounds, end move.
@@ -1120,22 +1483,50 @@ void canvas_commit_move(canvas_doc_t *doc) {
   int dy = doc->float_pos.y;
   int w  = doc->float_w;
   int h  = doc->float_h;
+  size_t count = (size_t)doc->canvas_w * doc->canvas_h;
+  uint8_t *new_mask = malloc(count);
+  if (new_mask) memset(new_mask, 255, count);
+  bool any = false;
   for (int row = 0; row < h; row++) {
     for (int col = 0; col < w; col++) {
-      const uint8_t *p = doc->float_pixels + ((size_t)row * w + col) * 4;
-      canvas_set_pixel_direct(doc, dx + col, dy + row, MAKE_COLOR(p[0], p[1], p[2], p[3]));
+      size_t local_idx = (size_t)row * w + col;
+      if (doc->float_mask && doc->float_mask[local_idx] != 0)
+        continue;
+      int x = dx + col;
+      int y = dy + row;
+      if (!canvas_in_bounds(doc, x, y))
+        continue;
+      const uint8_t *p = doc->float_pixels + local_idx * 4;
+      canvas_set_pixel_direct(doc, x, y, MAKE_COLOR(p[0], p[1], p[2], p[3]));
+      if (new_mask) {
+        new_mask[(size_t)y * doc->canvas_w + x] = 0;
+        any = true;
+      }
     }
   }
   // Update selection to the new position
-  doc->sel_start  = (ipoint16_t){dx, dy};
-  doc->sel_end    = (ipoint16_t){dx + w - 1, dy + h - 1};
+  canvas_clear_selection_mask(doc);
+  if (new_mask && any) {
+    doc->sel_mask = new_mask;
+    doc->sel_mask_dirty = true;
+    int x0, y0, x1, y1;
+    selection_bounds(doc, &x0, &y0, &x1, &y1);
+    doc->sel_start = (ipoint16_t){x0, y0};
+    doc->sel_end = (ipoint16_t){x1, y1};
+    doc->sel_active = true;
+  } else {
+    free(new_mask);
+    doc->sel_active = false;
+  }
   // Release float resources including the GL texture overlay.
   if (doc->float_tex) {
     glDeleteTextures(1, &doc->float_tex);
     doc->float_tex = 0;
   }
   free(doc->float_pixels);
+  free(doc->float_mask);
   doc->float_pixels = NULL;
+  doc->float_mask   = NULL;
   doc->float_w      = 0;
   doc->float_h      = 0;
   doc->sel_moving   = false;
@@ -1224,6 +1615,8 @@ bool canvas_resize(canvas_doc_t *doc, int new_w, int new_h) {
   doc->pixels       = doc->layers[doc->active_layer]->pixels;
   doc->canvas_dirty = true;
   doc->modified     = true;
+  doc->sel_active   = false;
+  canvas_clear_selection_mask(doc);
   return true;
 }
 
