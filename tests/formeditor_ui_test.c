@@ -14,6 +14,7 @@
 #include "test_framework.h"
 #include "test_env.h"
 #include "../examples/formeditor/formeditor.h"
+#include "../examples/imageeditor/components/lv_cmpn.h"
 #include "../commctl/commctl.h"
 #include <stdlib.h>
 #include <string.h>
@@ -33,6 +34,15 @@ int message_box(window_t *parent, const char *text,
     (void)caption;
     fe_last_message_box_type = type;
     return fe_next_message_box_result;
+}
+
+static result_t fe_noop_proc(window_t *win, uint32_t msg,
+                             uint32_t wparam, void *lparam) {
+    (void)win;
+    (void)msg;
+    (void)wparam;
+    (void)lparam;
+    return false;
 }
 
 // ── Temp directory helper ──────────────────────────────────────────────────
@@ -1139,6 +1149,74 @@ void test_fe_plugin_components_are_toolbox_placeable(void) {
     PASS();
 }
 
+void test_fe_levels_strip_uses_window_width(void) {
+    TEST("Plugins: levels strip interaction uses actual window width");
+
+    fe_setup();
+    char path[512];
+    snprintf(path, sizeof(path), "build/lib/imageeditor_components%s",
+             AX_DYNLIB_EXT);
+    ASSERT_TRUE(fe_load_component_plugin(path));
+
+    window_t *parent = test_env_create_window("P", 0, 0, 600, 80,
+                                              fe_noop_proc, NULL);
+    irect16_t frame = {0, 0, 520, 13};
+    window_t *strip = create_window_class("", WINDOW_NOTITLE | WINDOW_NOFILL,
+                                          &frame, parent, LV_STRIP_CLASS_NAME,
+                                          0, NULL);
+    ASSERT_NOT_NULL(strip);
+    ASSERT_EQUAL((int)send_message(strip, lvStripGetValue,
+                                   LV_STRIP_INDEX_MAX, NULL), 255);
+
+    send_message(strip, evLeftButtonDown, MAKEWPARAM(260, 6), NULL);
+    send_message(strip, evLeftButtonUp, MAKEWPARAM(260, 6), NULL);
+
+    int min_value = (int)send_message(strip, lvStripGetValue,
+                                      LV_STRIP_INDEX_MIN, NULL);
+    ASSERT_TRUE(min_value >= 120 && min_value <= 136);
+
+    destroy_window(parent);
+    fe_teardown();
+    PASS();
+}
+
+void test_fe_sizeless_level_controls_use_full_frame(void) {
+    TEST("Plugins: levels controls without flags use full frame");
+
+    fe_setup();
+    char path[512];
+    snprintf(path, sizeof(path), "build/lib/imageeditor_components%s",
+             AX_DYNLIB_EXT);
+    ASSERT_TRUE(fe_load_component_plugin(path));
+
+    window_t *parent = test_env_create_window("P", 0, 0, 600, 120,
+                                              fe_noop_proc, NULL);
+    irect16_t frame = {0, 0, 260, 32};
+    window_t *hist = create_window_class("", 0, &frame, parent,
+                                         LV_GRAPH_CLASS_NAME, 0, NULL);
+    ASSERT_NOT_NULL(hist);
+    irect16_t cr = get_client_rect(hist);
+    ASSERT_EQUAL(cr.h, 32);
+
+    frame.y = 40;
+    window_t *strip = create_window_class("", 0, &frame, parent,
+                                          LV_STRIP_CLASS_NAME, 0, NULL);
+    ASSERT_NOT_NULL(strip);
+    cr = get_client_rect(strip);
+    ASSERT_EQUAL(cr.h, 32);
+
+    frame.y = 80;
+    window_t *grad = create_window_class("", 0, &frame, parent,
+                                         "gradient", 0, NULL);
+    ASSERT_NOT_NULL(grad);
+    cr = get_client_rect(grad);
+    ASSERT_EQUAL(cr.h, 32);
+
+    destroy_window(parent);
+    fe_teardown();
+    PASS();
+}
+
 // ── main ──────────────────────────────────────────────────────────────────
 
 int main(void) {
@@ -1179,6 +1257,8 @@ int main(void) {
     test_fe_forms_toolbar_new_creates_cascaded_doc();
     test_fe_plugins_browser_lists_project_plugins();
     test_fe_plugin_components_are_toolbox_placeable();
+    test_fe_levels_strip_uses_window_width();
+    test_fe_sizeless_level_controls_use_full_frame();
 
     TEST_END();
 }

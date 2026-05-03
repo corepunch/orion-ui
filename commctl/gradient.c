@@ -26,7 +26,7 @@ result_t win_gradient(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       gradient_state_t *ns = allocate_window_data(win, sizeof(gradient_state_t));
       ns->left_color  = 0xFF000000u;
       ns->right_color = 0xFFFFFFFFu;
-      win->flags |= WINDOW_NOTABSTOP;
+      win->flags |= WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOTABSTOP;
       return true;
     }
 

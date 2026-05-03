@@ -249,6 +249,13 @@ static void fl_navigate_parent(char *curpath) {
   }
 }
 
+static bool fl_duplicate_nav_double_click(uint32_t last_pos,
+                                          uint32_t last_time,
+                                          uint32_t pos,
+                                          uint32_t now) {
+  return last_pos == pos && last_time != 0 && now - last_time < 250u;
+}
+
 void test_navigate_parent_normal(void) {
   TEST("fl_navigate parent: /home/user/mapview/ui -> /home/user/mapview");
   char path[512] = "/home/user/mapview/ui";
@@ -270,6 +277,27 @@ void test_navigate_parent_stays_at_root(void) {
   char path[512] = "/";
   fl_navigate_parent(path);
   ASSERT_STR_EQUAL(path, "/");
+  PASS();
+}
+
+void test_duplicate_nav_double_click_same_pos_is_suppressed(void) {
+  TEST("fl_navigate double-click: duplicate same-position event is suppressed");
+  ASSERT_TRUE(fl_duplicate_nav_double_click(0x00100020u, 1000u,
+                                           0x00100020u, 1100u));
+  PASS();
+}
+
+void test_duplicate_nav_double_click_different_pos_is_allowed(void) {
+  TEST("fl_navigate double-click: different-position event is allowed");
+  ASSERT_FALSE(fl_duplicate_nav_double_click(0x00100020u, 1000u,
+                                            0x00110020u, 1100u));
+  PASS();
+}
+
+void test_duplicate_nav_double_click_after_window_is_allowed(void) {
+  TEST("fl_navigate double-click: same position after guard window is allowed");
+  ASSERT_FALSE(fl_duplicate_nav_double_click(0x00100020u, 1000u,
+                                            0x00100020u, 1300u));
   PASS();
 }
 
@@ -455,6 +483,9 @@ int main(int argc, char *argv[]) {
   test_navigate_parent_normal();
   test_navigate_parent_one_level();
   test_navigate_parent_stays_at_root();
+  test_duplicate_nav_double_click_same_pos_is_suppressed();
+  test_duplicate_nav_double_click_different_pos_is_allowed();
+  test_duplicate_nav_double_click_after_window_is_allowed();
 
   test_hidden_file_gets_disabled_color();
   test_hidden_dir_gets_disabled_color();
