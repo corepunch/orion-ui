@@ -27,9 +27,70 @@ static int scaled_px(int px, float scale) {
   return (int)lroundf((float)px * scale);
 }
 
-static int canvas_px_from_view(int view_px, int pan_px, float scale) {
+static int canvas_view_w(int win_w) {
+  return MAX(0, win_w - SCROLLBAR_WIDTH);
+}
+
+static int canvas_scaled_w(const canvas_doc_t *doc, float scale) {
+  return doc ? scaled_px(doc->canvas_w, scale) : 0;
+}
+
+static int canvas_scaled_h(const canvas_doc_t *doc, float scale) {
+  return doc ? scaled_px(doc->canvas_h, scale) : 0;
+}
+
+static int canvas_center_offset_x(const canvas_doc_t *doc, float scale, int win_w) {
+  if (!doc) return 0;
+  int view_w = canvas_view_w(win_w);
+  int doc_w = canvas_scaled_w(doc, scale);
+  return (doc_w < view_w) ? (view_w - doc_w) / 2 : 0;
+}
+
+static int canvas_center_offset_y(const canvas_doc_t *doc, float scale, int win_h) {
+  if (!doc) return 0;
+  int doc_h = canvas_scaled_h(doc, scale);
+  return (doc_h < win_h) ? (win_h - doc_h) / 2 : 0;
+}
+
+static int canvas_doc_origin_x(window_t *win, canvas_win_state_t *state) {
+  if (!win || !state) return 0;
+  return canvas_center_offset_x(state->doc, state->scale, win->frame.w) - state->pan_x;
+}
+
+static int canvas_doc_origin_y(window_t *win, canvas_win_state_t *state) {
+  if (!win || !state) return 0;
+  return canvas_center_offset_y(state->doc, state->scale, win->frame.h) - state->pan_y;
+}
+
+static int canvas_view_axis_to_doc(int view_px, int origin_px, float scale) {
   if (scale <= 0.0f) return 0;
-  return (int)((view_px + pan_px) / scale);
+  return (int)floorf((float)(view_px - origin_px) / scale);
+}
+
+static ipoint16_t canvas_view_to_doc_point(window_t *win,
+                                           canvas_win_state_t *state,
+                                           int view_x, int view_y) {
+  ipoint16_t pt;
+  pt.x = canvas_view_axis_to_doc(view_x, canvas_doc_origin_x(win, state), state->scale);
+  pt.y = canvas_view_axis_to_doc(view_y, canvas_doc_origin_y(win, state), state->scale);
+  return pt;
+}
+
+static ipoint16_t canvas_doc_to_view_point(window_t *win,
+                                           canvas_win_state_t *state,
+                                           int doc_x, int doc_y) {
+  ipoint16_t pt;
+  pt.x = canvas_doc_origin_x(win, state) + scaled_px(doc_x, state->scale);
+  pt.y = canvas_doc_origin_y(win, state) + scaled_px(doc_y, state->scale);
+  return pt;
+}
+
+static irect16_t canvas_doc_rect_to_view(window_t *win,
+                                         canvas_win_state_t *state,
+                                         int x0, int y0, int x1, int y1) {
+  ipoint16_t p0 = canvas_doc_to_view_point(win, state, x0, y0);
+  ipoint16_t p1 = canvas_doc_to_view_point(win, state, x1, y1);
+  return R(p0.x, p0.y, p1.x - p0.x, p1.y - p0.y);
 }
 
 float imageeditor_fit_scale_for_viewport(int content_w, int content_h,
@@ -170,7 +231,7 @@ static void canvas_sync_scrollbars(window_t *win, canvas_win_state_t *state) {
 
   // The vscroll always occupies the right SCROLLBAR_WIDTH pixels of the canvas.
   // The hscroll is hosted on the doc window and does NOT eat into canvas height.
-  int view_w = win_w - SCROLLBAR_WIDTH;
+  int view_w = canvas_view_w(win_w);
   int view_h = win_h;
   bool need_h = canvas_w > view_w;
   bool need_v = canvas_h > view_h;
@@ -220,7 +281,7 @@ static void clamp_pan(canvas_win_state_t *state, int win_w, int win_h) {
 
   // vscroll always occupies the right SCROLLBAR_WIDTH pixels; hscroll does not
   // reduce canvas height (it is rendered in the doc window's status bar row).
-  int view_w = win_w - SCROLLBAR_WIDTH;
+  int view_w = canvas_view_w(win_w);
   int view_h = win_h;
 
   int max_x = MAX(0, canvas_w - view_w);
@@ -280,7 +341,7 @@ void canvas_win_fit_zoom(window_t *win) {
   if (!state || !state->doc) return;
   canvas_doc_t *doc = state->doc;
 
-  int view_w = win->frame.w - SCROLLBAR_WIDTH;
+  int view_w = canvas_view_w(win->frame.w);
   int view_h = win->frame.h;
   if (view_w <= 0 || view_h <= 0) return;
 
@@ -288,10 +349,10 @@ void canvas_win_fit_zoom(window_t *win) {
                                                        view_w, view_h, true);
   if (fit_scale < 1.0f) fit_scale = 1.0f;
 
-  // Center the canvas within the viewport when it overflows; leave pan at 0
-  // when the image fits entirely (drawn from the top-left corner).
-  int scaled_w = scaled_px(doc->canvas_w, fit_scale);
-  int scaled_h = scaled_px(doc->canvas_h, fit_scale);
+  // Center the scroll position when it overflows; fitted images are centered
+  // visually by the document-to-view conversion while keeping pan at 0.
+  int scaled_w = canvas_scaled_w(doc, fit_scale);
+  int scaled_h = canvas_scaled_h(doc, fit_scale);
   state->pan_x = (scaled_w > view_w) ? (scaled_w - view_w) / 2 : 0;
   state->pan_y = (scaled_h > view_h) ? (scaled_h - view_h) / 2 : 0;
   canvas_win_set_scale(win, fit_scale);
@@ -347,8 +408,11 @@ static bool selection_move_hit(const canvas_doc_t *doc, int x, int y) {
 // pointed-at canvas pixel stays under the cursor after zooming.
 static void apply_zoom_centered(window_t *win, canvas_win_state_t *state,
                                 int new_scale, int cx, int cy, int mx, int my) {
-  state->pan_x = scaled_px(cx, (float)new_scale) - mx;
-  state->pan_y = scaled_px(cy, (float)new_scale) - my;
+  canvas_doc_t *doc = state->doc;
+  int center_x = canvas_center_offset_x(doc, (float)new_scale, win->frame.w);
+  int center_y = canvas_center_offset_y(doc, (float)new_scale, win->frame.h);
+  state->pan_x = scaled_px(cx, (float)new_scale) + center_x - mx;
+  state->pan_y = scaled_px(cy, (float)new_scale) + center_y - my;
   canvas_win_set_zoom(win, new_scale);
 }
 
@@ -356,7 +420,7 @@ static void apply_zoom_centered(window_t *win, canvas_win_state_t *state,
 // draw_sel_rect.  Each grid line is drawn as a 1-pixel-wide dashed line
 // spanning the full visible canvas width (horizontal) or height (vertical).
 // Only lines inside the viewport are submitted to the GPU.
-static void canvas_draw_grid(canvas_win_state_t *state, int win_w, int win_h) {
+static void canvas_draw_grid(window_t *win, canvas_win_state_t *state) {
   if (!g_app || !g_app->grid_visible) return;
   canvas_doc_t *doc = state->doc;
   int gx = g_app->grid_spacing_x;
@@ -365,23 +429,21 @@ static void canvas_draw_grid(canvas_win_state_t *state, int win_w, int win_h) {
   if (gy < 1) gy = 1;
 
   // Canvas rect in screen-local coordinates (may extend outside the window)
-  int cx0 = -state->pan_x;
-  int cy0 = -state->pan_y;
-  int cw  = scaled_px(doc->canvas_w, state->scale);
-  int ch  = scaled_px(doc->canvas_h, state->scale);
+  irect16_t canvas_rect = canvas_doc_rect_to_view(win, state, 0, 0,
+                                                  doc->canvas_w, doc->canvas_h);
 
   // Intersection of canvas rect and window rect (visible canvas area)
-  int clip_x0 = MAX(0, cx0);
-  int clip_y0 = MAX(0, cy0);
-  int clip_x1 = MIN(win_w, cx0 + cw);
-  int clip_y1 = MIN(win_h, cy0 + ch);
+  int clip_x0 = MAX(0, canvas_rect.x);
+  int clip_y0 = MAX(0, canvas_rect.y);
+  int clip_x1 = MIN(win->frame.w, canvas_rect.x + canvas_rect.w);
+  int clip_y1 = MIN(win->frame.h, canvas_rect.y + canvas_rect.h);
   if (clip_x1 <= clip_x0 || clip_y1 <= clip_y0) return;
   int clip_w = clip_x1 - clip_x0;
   int clip_h = clip_y1 - clip_y0;
 
   // Horizontal lines at canvas y = gy, 2*gy, ...
   for (int row = gy; row < doc->canvas_h; row += gy) {
-    int sy = scaled_px(row, state->scale) - state->pan_y;
+    int sy = canvas_doc_to_view_point(win, state, 0, row).y;
     if (sy >= clip_y1) break;
     if (sy < clip_y0) continue;
     draw_sel_rect(R(clip_x0, sy, clip_w, 1));
@@ -389,7 +451,7 @@ static void canvas_draw_grid(canvas_win_state_t *state, int win_w, int win_h) {
 
   // Vertical lines at canvas x = gx, 2*gx, ...
   for (int col = gx; col < doc->canvas_w; col += gx) {
-    int sx = scaled_px(col, state->scale) - state->pan_x;
+    int sx = canvas_doc_to_view_point(win, state, col, 0).x;
     if (sx >= clip_x1) break;
     if (sx < clip_x0) continue;
     draw_sel_rect(R(sx, clip_y0, 1, clip_h));
@@ -397,7 +459,8 @@ static void canvas_draw_grid(canvas_win_state_t *state, int win_w, int win_h) {
 }
 
 static void canvas_draw_selection_mask_overlay(canvas_doc_t *doc,
-                                               canvas_win_state_t *state) {
+                                               canvas_win_state_t *state,
+                                               window_t *win) {
   if (!doc || !state || !doc->sel_active || !doc->sel_mask || !g_app) return;
   if (!g_ui_runtime.running) return;
 
@@ -422,10 +485,8 @@ static void canvas_draw_selection_mask_overlay(canvas_doc_t *doc,
     doc->sel_mask_dirty = false;
   }
 
-  int cx = -state->pan_x;
-  int cy = -state->pan_y;
-  int cw = scaled_px(doc->canvas_w, state->scale);
-  int ch = scaled_px(doc->canvas_h, state->scale);
+  irect16_t canvas_rect = canvas_doc_rect_to_view(win, state, 0, 0,
+                                                  doc->canvas_w, doc->canvas_h);
   ui_render_effect_params_t params = {{0}};
   params.f[0] = (float)doc->sel_mask_offset.x / (float)doc->canvas_w;
   params.f[1] = (float)doc->sel_mask_offset.y / (float)doc->canvas_h;
@@ -433,7 +494,8 @@ static void canvas_draw_selection_mask_overlay(canvas_doc_t *doc,
   params.f[5] = (float)COLOR_G(g_app->wand_overlay_color) / 255.0f;
   params.f[6] = (float)COLOR_B(g_app->wand_overlay_color) / 255.0f;
   params.f[7] = (float)COLOR_A(g_app->wand_overlay_color) / 255.0f;
-  draw_rect_effect((int)doc->sel_mask_tex, cx, cy, cw, ch,
+  draw_rect_effect((int)doc->sel_mask_tex,
+                   canvas_rect.x, canvas_rect.y, canvas_rect.w, canvas_rect.h,
                    UI_RENDER_EFFECT_SELECTION_MASK, &params);
 }
 
@@ -473,25 +535,26 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       if (!state || !doc) return true;
       canvas_upload(doc);
 
-      // Draw canvas offset by pan so zoomed content scrolls correctly
-      int cx = -state->pan_x;
-      int cy = -state->pan_y;
-      int cw = scaled_px(doc->canvas_w, state->scale);
-      int ch = scaled_px(doc->canvas_h, state->scale);
+      irect16_t canvas_rect = canvas_doc_rect_to_view(win, state, 0, 0,
+                                                      doc->canvas_w, doc->canvas_h);
       if (!doc->mask_only_view) {
-        draw_checkerboard(R(cx, cy, cw, ch), CANVAS_CHECKER_SQUARE_PX);
+        draw_checkerboard(canvas_rect, CANVAS_CHECKER_SQUARE_PX);
         for (int li = 0; li < doc->layer_count; li++) {
           const layer_t *lay = doc->layers[li];
           if (!lay || !lay->visible) continue;
           if (!lay->tex) continue;
           if (lay->preview_active) {
-            draw_rect_effect_blend(lay->tex, cx, cy, cw, ch,
+            draw_rect_effect_blend(lay->tex,
+                                   canvas_rect.x, canvas_rect.y,
+                                   canvas_rect.w, canvas_rect.h,
                                    lay->opacity / 255.0f,
                                    (ui_layer_blend_t)lay->blend_mode,
                                    lay->preview_effect,
                                    &lay->preview_params);
           } else {
-            draw_rect_blend(lay->tex, cx, cy, cw, ch,
+            draw_rect_blend(lay->tex,
+                            canvas_rect.x, canvas_rect.y,
+                            canvas_rect.w, canvas_rect.h,
                             lay->opacity / 255.0f,
                             (ui_layer_blend_t)lay->blend_mode);
           }
@@ -500,50 +563,57 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         const layer_t *lay = doc->layers[doc->active_layer];
         if (lay && lay->tex) {
           if (lay->preview_active) {
-            draw_rect_effect_blend(lay->tex, cx, cy, cw, ch,
+            draw_rect_effect_blend(lay->tex,
+                                   canvas_rect.x, canvas_rect.y,
+                                   canvas_rect.w, canvas_rect.h,
                                    lay->opacity / 255.0f,
                                    UI_LAYER_BLEND_NORMAL,
                                    lay->preview_effect,
                                    &lay->preview_params);
           } else {
-            draw_rect_effect(lay->tex, cx, cy, cw, ch,
+            draw_rect_effect(lay->tex,
+                             canvas_rect.x, canvas_rect.y,
+                             canvas_rect.w, canvas_rect.h,
                              UI_RENDER_EFFECT_MASK_GRAYSCALE, NULL);
           }
         }
       }
 
       // Draw grid overlay (same checker-texture mechanism as selection)
-      canvas_draw_grid(state, win->frame.w, win->frame.h);
+      canvas_draw_grid(win, state);
 
-      canvas_draw_selection_mask_overlay(doc, state);
+      canvas_draw_selection_mask_overlay(doc, state, win);
 
       if (doc->sel_moving && doc->float_tex) {
         // Draw the floating selection at its current position
-        int sx = scaled_px(doc->float_pos.x, state->scale);
-        int sy = scaled_px(doc->float_pos.y, state->scale);
-        int sw = scaled_px(doc->float_w, state->scale);
-        int sh = scaled_px(doc->float_h, state->scale);
-        draw_rect(doc->float_tex, R(sx, sy, sw, sh));
-        draw_sel_rect(R(sx, sy, sw, sh));
+        irect16_t float_rect = canvas_doc_rect_to_view(win, state,
+                                                       doc->float_pos.x,
+                                                       doc->float_pos.y,
+                                                       doc->float_pos.x + doc->float_w,
+                                                       doc->float_pos.y + doc->float_h);
+        draw_rect(doc->float_tex, float_rect);
+        draw_sel_rect(float_rect);
       } else if (doc->sel_active &&
                  (IMAGEEDITOR_SHOW_SELECTION_BOUNDS ||
                   (g_app && g_app->current_tool == ID_TOOL_SELECT && doc->drawing))) {
-        int x0 = scaled_px(MIN(doc->sel_start.x, doc->sel_end.x), state->scale) - state->pan_x;
-        int y0 = scaled_px(MIN(doc->sel_start.y, doc->sel_end.y), state->scale) - state->pan_y;
-        int x1 = scaled_px(MAX(doc->sel_start.x, doc->sel_end.x) + 1, state->scale) - state->pan_x;
-        int y1 = scaled_px(MAX(doc->sel_start.y, doc->sel_end.y) + 1, state->scale) - state->pan_y;
-        draw_sel_rect(R(x0, y0, x1 - x0, y1 - y0));
+        irect16_t sel_rect = canvas_doc_rect_to_view(win, state,
+                                                     MIN(doc->sel_start.x, doc->sel_end.x),
+                                                     MIN(doc->sel_start.y, doc->sel_end.y),
+                                                     MAX(doc->sel_start.x, doc->sel_end.x) + 1,
+                                                     MAX(doc->sel_start.y, doc->sel_end.y) + 1);
+        draw_sel_rect(sel_rect);
       }
       // Polygon in-progress: draw a sel_rect bounding the rubber-band edge
       // from the last committed vertex to the current mouse position.
       if (doc->poly_active && doc->poly_count > 0) {
         ipoint16_t v0 = doc->poly_pts[doc->poly_count - 1];
         ipoint16_t v1 = doc->last;
-        int px0 = scaled_px(MIN(v0.x, v1.x), state->scale) - state->pan_x;
-        int py0 = scaled_px(MIN(v0.y, v1.y), state->scale) - state->pan_y;
-        int px1 = scaled_px(MAX(v0.x, v1.x) + 1, state->scale) - state->pan_x;
-        int py1 = scaled_px(MAX(v0.y, v1.y) + 1, state->scale) - state->pan_y;
-        draw_sel_rect(R(px0, py0, px1 - px0, py1 - py0));
+        irect16_t poly_rect = canvas_doc_rect_to_view(win, state,
+                                                      MIN(v0.x, v1.x),
+                                                      MIN(v0.y, v1.y),
+                                                      MAX(v0.x, v1.x) + 1,
+                                                      MAX(v0.y, v1.y) + 1);
+        draw_sel_rect(poly_rect);
       }
 
       // Magnifier tool: draw a loupe overlay in the top-right corner of the canvas
@@ -632,7 +702,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       int canvas_h  = scaled_px(doc->canvas_h, state->scale);
       // Only the vertical scrollbar lives inside the canvas; the horizontal one
       // is merged with the document-window status bar and does not eat height.
-      int view_w    = win->frame.w - SCROLLBAR_WIDTH;
+      int view_w    = canvas_view_w(win->frame.w);
       int view_h    = win->frame.h;
       int max_pan_x = MAX(0, canvas_w - view_w);
       int max_pan_y = MAX(0, canvas_h - view_h);
@@ -655,6 +725,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       int ly = (int16_t)HIWORD(wparam);
 
       if (!doc || !g_app) return true;
+      ipoint16_t doc_pt = canvas_view_to_doc_point(win, state, lx, ly);
 
       // Clear any stale panning state – if the user switched away from Hand
       // while holding the button, panning must not bleed into MouseMove.
@@ -673,21 +744,19 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       if (g_app->current_tool == ID_TOOL_ZOOM) {
         int mx = lx;
         int my = ly;
-        int cx = canvas_px_from_view(mx, state->pan_x, state->scale);
-        int cy = canvas_px_from_view(my, state->pan_y, state->scale);
         int new_scale = -1;
         for (int i = 0; i < NUM_ZOOM_LEVELS; i++) {
           if (kZoomLevels[i] > state->scale) { new_scale = kZoomLevels[i]; break; }
         }
         if (new_scale > 0)
-          apply_zoom_centered(win, state, new_scale, cx, cy, mx, my);
+          apply_zoom_centered(win, state, new_scale, doc_pt.x, doc_pt.y, mx, my);
         return true;
       }
 
       // Eyedropper (left click): pick foreground color from canvas pixel
       if (g_app->current_tool == ID_TOOL_EYEDROPPER) {
-        int px = canvas_px_from_view(lx, state->pan_x, state->scale);
-        int py = canvas_px_from_view(ly, state->pan_y, state->scale);
+        int px = doc_pt.x;
+        int py = doc_pt.y;
         if (canvas_in_bounds(doc, px, py)) {
           g_app->fg_color = canvas_get_pixel(doc, px, py);
           if (g_app->tool_win)  invalidate_window(g_app->tool_win);
@@ -699,8 +768,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       // Magnifier tool: the loupe is a passive overlay; clicks have no effect
       if (g_app->current_tool == ID_TOOL_MAGNIFIER) return true;
 
-      int px = canvas_px_from_view(lx, state->pan_x, state->scale);
-      int py = canvas_px_from_view(ly, state->pan_y, state->scale);
+      int px = doc_pt.x;
+      int py = doc_pt.y;
       snap_canvas_pos(&px, &py);
       int tool = g_app->current_tool;
       bool shift = (ui_get_mod_state() & AX_MOD_SHIFT) != 0;
@@ -863,8 +932,9 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       if (state && g_app->current_tool == ID_TOOL_EYEDROPPER) {
         int lx = (int16_t)LOWORD(wparam);
         int ly = (int16_t)HIWORD(wparam);
-        int px = canvas_px_from_view(lx, state->pan_x, state->scale);
-        int py = canvas_px_from_view(ly, state->pan_y, state->scale);
+        ipoint16_t doc_pt = canvas_view_to_doc_point(win, state, lx, ly);
+        int px = doc_pt.x;
+        int py = doc_pt.y;
         if (canvas_in_bounds(doc, px, py)) {
           g_app->bg_color = canvas_get_pixel(doc, px, py);
           if (g_app->tool_win)  invalidate_window(g_app->tool_win);
@@ -879,14 +949,13 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         int ly = (int16_t)HIWORD(wparam);
         int mx = lx;
         int my = ly;
-        int cx = canvas_px_from_view(mx, state->pan_x, state->scale);
-        int cy = canvas_px_from_view(my, state->pan_y, state->scale);
+        ipoint16_t doc_pt = canvas_view_to_doc_point(win, state, mx, my);
         int new_scale = -1;
         for (int i = NUM_ZOOM_LEVELS - 1; i >= 0; i--) {
           if (kZoomLevels[i] < state->scale) { new_scale = kZoomLevels[i]; break; }
         }
         if (new_scale > 0)
-          apply_zoom_centered(win, state, new_scale, cx, cy, mx, my);
+          apply_zoom_centered(win, state, new_scale, doc_pt.x, doc_pt.y, mx, my);
         return true;
       } else if (g_app->current_tool == ID_TOOL_POLYGON && doc->poly_active && doc->poly_count >= 2) {
         if (g_app->shape_filled)
@@ -931,8 +1000,9 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       int lx = (int16_t)LOWORD(wparam);
       int ly = (int16_t)HIWORD(wparam);
-      int px = canvas_px_from_view(lx, state->pan_x, state->scale);
-      int py = canvas_px_from_view(ly, state->pan_y, state->scale);
+      ipoint16_t doc_pt = canvas_view_to_doc_point(win, state, lx, ly);
+      int px = doc_pt.x;
+      int py = doc_pt.y;
 
       // Always track the hover position (used by the magnifier overlay)
       state->hover.x    = px;

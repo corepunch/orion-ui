@@ -1839,6 +1839,51 @@ void test_ie_fit_zoom_fallback_to_1x(void) {
     PASS();
 }
 
+// Small images should be centered inside a larger document window, and mouse
+// coordinates must follow that visual origin instead of treating the window's
+// top-left corner as canvas pixel (0,0).
+void test_ie_canvas_centers_small_image_hit_testing(void) {
+    TEST("canvas window: small image is centered for hit testing");
+
+    ie_setup();
+    canvas_doc_t *doc = create_document(NULL, 32, 20);
+    ASSERT_NOT_NULL(doc);
+
+    doc->canvas_win->frame.w = 200;
+    doc->canvas_win->frame.h = 150;
+    canvas_win_sync_scrollbars(doc->canvas_win);
+
+    canvas_win_state_t *state = (canvas_win_state_t *)doc->canvas_win->userdata;
+    ASSERT_NOT_NULL(state);
+    ASSERT_EQUAL(state->scale, 1);
+    ASSERT_EQUAL(state->pan_x, 0);
+    ASSERT_EQUAL(state->pan_y, 0);
+
+    int origin_x = ((200 - SCROLLBAR_WIDTH) - 32) / 2;
+    int origin_y = (150 - 20) / 2;
+
+    send_message(doc->canvas_win, evMouseMove, MAKEDWORD(0, 0), NULL);
+    ASSERT_FALSE(state->hover_valid);
+
+    send_message(doc->canvas_win, evMouseMove, MAKEDWORD(origin_x, origin_y), NULL);
+    ASSERT_TRUE(state->hover_valid);
+    ASSERT_EQUAL(state->hover.x, 0);
+    ASSERT_EQUAL(state->hover.y, 0);
+
+    send_message(doc->canvas_win, evMouseMove,
+                 MAKEDWORD(origin_x + 31, origin_y + 19), NULL);
+    ASSERT_TRUE(state->hover_valid);
+    ASSERT_EQUAL(state->hover.x, 31);
+    ASSERT_EQUAL(state->hover.y, 19);
+
+    send_message(doc->canvas_win, evMouseMove,
+                 MAKEDWORD(origin_x + 32, origin_y + 20), NULL);
+    ASSERT_FALSE(state->hover_valid);
+
+    ie_teardown();
+    PASS();
+}
+
 // handle_menu_command(ID_VIEW_ZOOM_FIT) must not crash when there is no active
 // document.
 void test_ie_zoom_fit_no_doc(void) {
@@ -1961,6 +2006,7 @@ int main(int argc, char *argv[]) {
     test_ie_fit_zoom_zero_viewport();
     test_ie_fit_zoom_selects_best_scale();
     test_ie_fit_zoom_fallback_to_1x();
+    test_ie_canvas_centers_small_image_hit_testing();
     test_ie_zoom_fit_no_doc();
     test_ie_zoom_fit_command();
 
