@@ -199,11 +199,13 @@ static bool collect_menu_defines(define_list_t *defs, xmlNodePtr menus) {
   return true;
 }
 
+static const char *toolbar_item_type_for_node(xmlNodePtr node);
+
 static bool collect_toolbar_defines(define_list_t *defs, xmlNodePtr toolbars) {
   for (xmlNodePtr tb = toolbars ? toolbars->children : NULL; tb; tb = tb->next) {
     if (!is_element(tb, "toolbar")) continue;
     for (xmlNodePtr it = tb->children; it; it = it->next) {
-      if (!is_element(it, "button")) continue;
+      if (!toolbar_item_type_for_node(it)) continue;
       char *id = attr_dup(it, "id");
       char *value = attr_dup(it, "value");
       bool ok = collect_define(defs, id, value);
