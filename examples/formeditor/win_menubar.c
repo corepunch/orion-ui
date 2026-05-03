@@ -363,6 +363,18 @@ static int project_resolve_control_id(form_doc_t *doc, const char *expr) {
   return doc ? doc->next_id++ : CTRL_ID_BASE;
 }
 
+static bool frame_attr(xmlNodePtr node, irect16_t *out) {
+  if (!out) return false;
+  char *v = xml_attr_dup(node, "frame");
+  if (!v) return false;
+  int x = 0, y = 0, w = 0, h = 0;
+  bool ok = sscanf(v, "%d %d %d %d", &x, &y, &w, &h) == 4;
+  free(v);
+  if (!ok) return false;
+  *out = (irect16_t){x, y, w, h};
+  return true;
+}
+
 static void project_reset(void) {
   if (!g_app) return;
   while (g_app->docs)
@@ -408,10 +420,14 @@ static void project_load_controls(form_doc_t *doc, xmlNodePtr form_node) {
       el->type = type;
       copy_attr(c, "id", el->id_expr, sizeof(el->id_expr));
       el->id = project_resolve_control_id(doc, el->id_expr);
-      el->frame.x = int_attr(c, "x", 0);
-      el->frame.y = int_attr(c, "y", 0);
-      el->frame.w = MAX(1, int_attr(c, "w", 10));
-      el->frame.h = MAX(1, int_attr(c, "h", 8));
+      if (!frame_attr(c, &el->frame)) {
+        el->frame.x = int_attr(c, "x", 0);
+        el->frame.y = int_attr(c, "y", 0);
+        el->frame.w = int_attr(c, "w", 10);
+        el->frame.h = int_attr(c, "h", 8);
+      }
+      el->frame.w = MAX(1, el->frame.w);
+      el->frame.h = MAX(1, el->frame.h);
       copy_attr(c, "flags", el->flags_expr, sizeof(el->flags_expr));
       el->flags = parse_flags_expr(el->flags_expr);
       copy_attr(c, "text", el->text, sizeof(el->text));
@@ -438,6 +454,11 @@ static void project_load_requires(form_doc_t *doc, xmlNodePtr form_node) {
 static bool project_load_form_node(xmlNodePtr form_node) {
   int w = int_attr(form_node, "width", FORM_DEFAULT_W);
   int h = int_attr(form_node, "height", FORM_DEFAULT_H);
+  irect16_t frame = {0};
+  if (frame_attr(form_node, &frame)) {
+    w = MAX(1, frame.w);
+    h = MAX(1, frame.h);
+  }
   form_doc_t *doc = create_form_doc(w, h);
   if (!doc) return false;
 
@@ -518,7 +539,7 @@ static void project_save_doc(FILE *f, form_doc_t *doc) {
   fprintf(f, "      <form");
   xml_attr(f, "id", doc->form_id[0] ? doc->form_id : "form");
   xml_attr(f, "title", label);
-  fprintf(f, "\n            width=\"%d\"\n            height=\"%d\"\n            flags=\"%" PRIu32 "\"",
+  fprintf(f, "\n            frame=\"0 0 %d %d\"\n            flags=\"%" PRIu32 "\"",
           doc->form_size.w, doc->form_size.h, doc->flags);
   if (doc->owner[0]) xml_attr(f, "owner", doc->owner);
   fprintf(f, ">\n");
@@ -538,7 +559,7 @@ static void project_save_doc(FILE *f, form_doc_t *doc) {
     xml_attr(f, "id", el->id_expr[0] ? el->id_expr : id_buf);
     xml_attr(f, "name", el->name);
     xml_attr(f, "text", el->text);
-    fprintf(f, " x=\"%d\" y=\"%d\" w=\"%d\" h=\"%d\"",
+    fprintf(f, " frame=\"%d %d %d %d\"",
             el->frame.x, el->frame.y, el->frame.w, el->frame.h);
     char flags_buf[32];
     snprintf(flags_buf, sizeof(flags_buf), "%" PRIu32, el->flags);

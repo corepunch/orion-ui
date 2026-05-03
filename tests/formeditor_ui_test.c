@@ -44,6 +44,30 @@ static const char *fe_temp_dir(void) {
     return d;
 }
 
+static char *fe_read_file(const char *path) {
+    FILE *f = fopen(path, "rb");
+    if (!f) return NULL;
+    if (fseek(f, 0, SEEK_END) != 0) {
+        fclose(f);
+        return NULL;
+    }
+    long n = ftell(f);
+    if (n < 0) {
+        fclose(f);
+        return NULL;
+    }
+    rewind(f);
+    char *buf = malloc((size_t)n + 1);
+    if (!buf) {
+        fclose(f);
+        return NULL;
+    }
+    size_t got = fread(buf, 1, (size_t)n, f);
+    fclose(f);
+    buf[got] = '\0';
+    return buf;
+}
+
 // ── Setup / teardown ───────────────────────────────────────────────────────
 
 static void fe_close_all_docs(void) {
@@ -903,6 +927,16 @@ void test_fe_save_load_roundtrip(void) {
 
     bool saved = form_project_save(path);
     ASSERT_TRUE(saved);
+
+    char *xml = fe_read_file(path);
+    ASSERT_NOT_NULL(xml);
+    ASSERT_TRUE(strstr(xml, "frame=\"0 0 ") != NULL);
+    ASSERT_TRUE(strstr(xml, "frame=\"20 20 80 24\"") != NULL);
+    ASSERT_TRUE(strstr(xml, " x=\"") == NULL);
+    ASSERT_TRUE(strstr(xml, " y=\"") == NULL);
+    ASSERT_TRUE(strstr(xml, " w=\"") == NULL);
+    ASSERT_TRUE(strstr(xml, " h=\"") == NULL);
+    free(xml);
 
     bool loaded = form_project_load(path);
     ASSERT_TRUE(loaded);
