@@ -1,11 +1,9 @@
-// About dialog – displays a banner image (conan.png) on the left
+// About dialog - displays a banner image (conan.png) on the left
 // and application info on the right, with an OK button to close.
 
 #include "imageeditor.h"
 
-// ──────────────────────────────────────────────────────────────────
 // Dialog geometry
-// ──────────────────────────────────────────────────────────────────
 
 #define ABOUT_WIN_W    270
 #define ABOUT_WIN_H    120
@@ -24,30 +22,27 @@
 // Width available for labels in the right column
 #define ABOUT_LABEL_W  (ABOUT_WIN_W - ABOUT_TEXT_X - 4)
 
-// ──────────────────────────────────────────────────────────────────
 // State
-// ──────────────────────────────────────────────────────────────────
 
 typedef struct {
   GLuint banner_tex;
 } about_state_t;
 
-// ──────────────────────────────────────────────────────────────────
-// Banner loader – searches several relative paths for conan.png
-// ──────────────────────────────────────────────────────────────────
-
-static const char *kBannerPaths[] = {
-  "examples/imageeditor/conan.png",       // run from repo root
-  "../../examples/imageeditor/conan.png", // run from build/bin/
-  "../examples/imageeditor/conan.png",    // run from build/
-  "conan.png",                            // same directory
-};
-
 static GLuint load_banner_texture(void) {
   const char *found = NULL;
-  for (int i = 0; i < (int)(sizeof(kBannerPaths)/sizeof(kBannerPaths[0])); i++) {
-    FILE *f = fopen(kBannerPaths[i], "rb");
-    if (f) { fclose(f); found = kBannerPaths[i]; break; }
+#ifdef SHAREDIR
+  char bundled[4096];
+  int n = snprintf(bundled, sizeof(bundled), "%s/" SHAREDIR "/conan.png",
+                   ui_get_exe_dir());
+  if (n >= 0 && (size_t)n < sizeof(bundled)) {
+    FILE *f = fopen(bundled, "rb");
+    if (f) { fclose(f); found = bundled; }
+  }
+#endif
+  if (!found) {
+    static const char *kSourceTreeBanner = "examples/imageeditor/share/conan.png";
+    FILE *f = fopen(kSourceTreeBanner, "rb");
+    if (f) { fclose(f); found = kSourceTreeBanner; }
   }
   if (!found) return 0;
 
@@ -68,9 +63,7 @@ static GLuint load_banner_texture(void) {
   return tex;
 }
 
-// ──────────────────────────────────────────────────────────────────
 // Helpers to create labeled sub-windows
-// ──────────────────────────────────────────────────────────────────
 
 #define DIM  ((void *)(uintptr_t)brTextDisabled)
 
@@ -80,9 +73,7 @@ static void make_label(window_t *parent, const char *text, int y, void *color) {
                 parent, win_label, 0, color);
 }
 
-// ──────────────────────────────────────────────────────────────────
 // Dialog window procedure
-// ──────────────────────────────────────────────────────────────────
 
 static result_t about_proc(window_t *win, uint32_t msg,
                             uint32_t wparam, void *lparam) {

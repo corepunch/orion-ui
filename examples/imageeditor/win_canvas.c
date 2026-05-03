@@ -498,7 +498,9 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         int sh = scaled_px(doc->float_h, state->scale);
         draw_rect(doc->float_tex, R(sx, sy, sw, sh));
         draw_sel_rect(R(sx, sy, sw, sh));
-      } else if (doc->sel_active) {
+      } else if (doc->sel_active &&
+                 (IMAGEEDITOR_SHOW_SELECTION_BOUNDS ||
+                  (g_app && g_app->current_tool == ID_TOOL_SELECT && doc->drawing))) {
         int x0 = scaled_px(MIN(doc->sel_start.x, doc->sel_end.x), state->scale) - state->pan_x;
         int y0 = scaled_px(MIN(doc->sel_start.y, doc->sel_end.y), state->scale) - state->pan_y;
         int x1 = scaled_px(MAX(doc->sel_start.x, doc->sel_end.x) + 1, state->scale) - state->pan_x;

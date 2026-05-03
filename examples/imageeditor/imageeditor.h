@@ -24,6 +24,10 @@
 #define IMAGEEDITOR_SINGLE_LAYER 0
 #endif
 
+#ifndef IMAGEEDITOR_SHOW_SELECTION_BOUNDS
+#define IMAGEEDITOR_SHOW_SELECTION_BOUNDS 0
+#endif
+
 #if IMAGEEDITOR_DEBUG
 #define IE_DEBUG(...) do { \
   axLog("[imageeditor] " __VA_ARGS__); \
