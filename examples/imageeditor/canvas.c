@@ -397,6 +397,7 @@ void canvas_clear_selection_mask(canvas_doc_t *doc) {
   free(doc->sel_mask);
   doc->sel_mask = NULL;
   doc->sel_mask_dirty = false;
+  doc->sel_mask_offset = (ipoint16_t){0, 0};
 }
 
 static bool selection_mask_bounds_for(const canvas_doc_t *doc, const uint8_t *mask,
@@ -1171,10 +1172,13 @@ static bool selection_bounds(const canvas_doc_t *doc,
     for (int y = 0; y < doc->canvas_h; y++) {
       for (int x = 0; x < doc->canvas_w; x++) {
         if (doc->sel_mask[(size_t)y * doc->canvas_w + x] == 255) continue;
-        if (x < *x0) *x0 = x;
-        if (y < *y0) *y0 = y;
-        if (x > *x1) *x1 = x;
-        if (y > *y1) *y1 = y;
+        int sx = x + doc->sel_mask_offset.x;
+        int sy = y + doc->sel_mask_offset.y;
+        if (!canvas_in_bounds(doc, sx, sy)) continue;
+        if (sx < *x0) *x0 = sx;
+        if (sy < *y0) *y0 = sy;
+        if (sx > *x1) *x1 = sx;
+        if (sy > *y1) *y1 = sy;
         any = true;
       }
     }
@@ -1628,7 +1632,11 @@ void canvas_commit_move(canvas_doc_t *doc) {
 }
 
 bool canvas_translate_selection_mask(canvas_doc_t *doc, int dx, int dy) {
-  if (!doc || !doc->sel_active || (dx == 0 && dy == 0)) return false;
+  if (!doc || !doc->sel_active) return false;
+  dx += doc->sel_mask_offset.x;
+  dy += doc->sel_mask_offset.y;
+  doc->sel_mask_offset = (ipoint16_t){0, 0};
+  if (dx == 0 && dy == 0) return true;
 
   size_t count = (size_t)doc->canvas_w * doc->canvas_h;
   uint8_t *src = doc->sel_mask;
@@ -1682,6 +1690,26 @@ bool canvas_translate_selection_mask(canvas_doc_t *doc, int dx, int dy) {
   doc->sel_end = (ipoint16_t){x1, y1};
   doc->sel_active = true;
   return true;
+}
+
+void canvas_set_selection_mask_offset(canvas_doc_t *doc, int dx, int dy) {
+  if (!doc) return;
+  doc->sel_mask_offset = (ipoint16_t){dx, dy};
+  if (doc->sel_active && doc->sel_mask) {
+    int x0, y0, x1, y1;
+    if (selection_bounds(doc, &x0, &y0, &x1, &y1)) {
+      doc->sel_start = (ipoint16_t){x0, y0};
+      doc->sel_end = (ipoint16_t){x1, y1};
+    }
+  }
+}
+
+bool canvas_commit_selection_mask_offset(canvas_doc_t *doc) {
+  if (!doc || !doc->sel_active) return false;
+  int dx = doc->sel_mask_offset.x;
+  int dy = doc->sel_mask_offset.y;
+  if (dx == 0 && dy == 0) return true;
+  return canvas_translate_selection_mask(doc, 0, 0);
 }
 
 // ============================================================
@@ -1738,6 +1766,133 @@ void canvas_invert_colors(canvas_doc_t *doc) {
   }
   doc->canvas_dirty = true;
   doc->modified     = true;
+}
+
+static inline uint8_t clamp_u8_float(float v) {
+  if (v <= 0.0f) return 0;
+  if (v >= 255.0f) return 255;
+  return (uint8_t)(v + 0.5f);
+}
+
+static void sample_layer_nearest(const layer_t *lay, int old_w, int old_h,
+                                 float sx, float sy, uint8_t out[4]) {
+  int ix = (int)floorf(sx + 0.5f);
+  int iy = (int)floorf(sy + 0.5f);
+  ix = MAX(0, MIN(old_w - 1, ix));
+  iy = MAX(0, MIN(old_h - 1, iy));
+  const uint8_t *p = lay->pixels + ((size_t)iy * old_w + ix) * 4;
+  memcpy(out, p, 4);
+}
+
+static void sample_layer_bilinear(const layer_t *lay, int old_w, int old_h,
+                                  float sx, float sy, uint8_t out[4]) {
+  int x0 = (int)floorf(sx);
+  int y0 = (int)floorf(sy);
+  float tx = sx - (float)x0;
+  float ty = sy - (float)y0;
+  int x1 = x0 + 1;
+  int y1 = y0 + 1;
+  x0 = MAX(0, MIN(old_w - 1, x0));
+  y0 = MAX(0, MIN(old_h - 1, y0));
+  x1 = MAX(0, MIN(old_w - 1, x1));
+  y1 = MAX(0, MIN(old_h - 1, y1));
+
+  float acc_r = 0.0f, acc_g = 0.0f, acc_b = 0.0f, acc_a = 0.0f;
+  const int xs[2] = { x0, x1 };
+  const int ys[2] = { y0, y1 };
+  const float wx[2] = { 1.0f - tx, tx };
+  const float wy[2] = { 1.0f - ty, ty };
+  for (int yy = 0; yy < 2; yy++) {
+    for (int xx = 0; xx < 2; xx++) {
+      float w = wx[xx] * wy[yy];
+      const uint8_t *p = lay->pixels + ((size_t)ys[yy] * old_w + xs[xx]) * 4;
+      float a = (float)p[3];
+      acc_r += (float)p[0] * a * w;
+      acc_g += (float)p[1] * a * w;
+      acc_b += (float)p[2] * a * w;
+      acc_a += a * w;
+    }
+  }
+
+  if (acc_a > 0.0f) {
+    out[0] = clamp_u8_float(acc_r / acc_a);
+    out[1] = clamp_u8_float(acc_g / acc_a);
+    out[2] = clamp_u8_float(acc_b / acc_a);
+  } else {
+    out[0] = out[1] = out[2] = 0;
+  }
+  out[3] = clamp_u8_float(acc_a);
+}
+
+static uint8_t *layer_resample_pixels(const layer_t *lay, int old_w, int old_h,
+                                      int new_w, int new_h,
+                                      image_resize_filter_t filter) {
+  uint8_t *buf = malloc((size_t)new_w * new_h * 4);
+  if (!buf) return NULL;
+  float sx_scale = (float)old_w / (float)new_w;
+  float sy_scale = (float)old_h / (float)new_h;
+  for (int y = 0; y < new_h; y++) {
+    for (int x = 0; x < new_w; x++) {
+      float sx = ((float)x + 0.5f) * sx_scale - 0.5f;
+      float sy = ((float)y + 0.5f) * sy_scale - 0.5f;
+      uint8_t *dst = buf + ((size_t)y * new_w + x) * 4;
+      if (filter == IMAGE_RESIZE_NEAREST)
+        sample_layer_nearest(lay, old_w, old_h, sx, sy, dst);
+      else
+        sample_layer_bilinear(lay, old_w, old_h, sx, sy, dst);
+    }
+  }
+  return buf;
+}
+
+static void layer_replace_pixels(layer_t *lay, uint8_t *pixels) {
+  if (!lay || !pixels) return;
+  free(lay->pixels);
+  lay->pixels = pixels;
+  if (lay->tex) {
+    glDeleteTextures(1, &lay->tex);
+    lay->tex = 0;
+  }
+  lay->preview_active = false;
+}
+
+// Resize the image contents to new_w x new_h.
+// All layer pixel buffers are resampled with the requested filter.
+bool canvas_resize_image(canvas_doc_t *doc, int new_w, int new_h,
+                         image_resize_filter_t filter) {
+  if (!doc || new_w <= 0 || new_h <= 0) return false;
+  if (new_w == doc->canvas_w && new_h == doc->canvas_h) return true;
+  if ((size_t)new_w > 16384 || (size_t)new_h > 16384) return false;
+  if (filter < 0 || filter >= IMAGE_RESIZE_FILTER_COUNT)
+    filter = IMAGE_RESIZE_BILINEAR;
+
+  uint8_t **new_pixels = calloc((size_t)doc->layer_count, sizeof(uint8_t *));
+  if (!new_pixels) return false;
+  for (int i = 0; i < doc->layer_count; i++) {
+    new_pixels[i] = layer_resample_pixels(doc->layers[i],
+                                          doc->canvas_w, doc->canvas_h,
+                                          new_w, new_h, filter);
+    if (!new_pixels[i]) {
+      for (int j = 0; j < i; j++) free(new_pixels[j]);
+      free(new_pixels);
+      return false;
+    }
+  }
+
+  for (int i = 0; i < doc->layer_count; i++)
+    layer_replace_pixels(doc->layers[i], new_pixels[i]);
+  free(new_pixels);
+
+  free(doc->composite_buf);
+  doc->composite_buf = malloc((size_t)new_w * new_h * 4);
+  doc->canvas_w     = new_w;
+  doc->canvas_h     = new_h;
+  doc->pixels       = doc->layers[doc->active_layer]->pixels;
+  doc->canvas_dirty = true;
+  doc->modified     = true;
+  doc->sel_active   = false;
+  canvas_clear_selection_mask(doc);
+  return true;
 }
 
 // Resize the canvas to new_w x new_h.

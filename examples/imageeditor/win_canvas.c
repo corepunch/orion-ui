@@ -332,8 +332,12 @@ static void float_tex_upload(canvas_doc_t *doc) {
 
 static bool selection_move_hit(const canvas_doc_t *doc, int x, int y) {
   if (!doc || !doc->sel_active || !canvas_in_bounds(doc, x, y)) return false;
-  if (doc->sel_mask)
-    return doc->sel_mask[(size_t)y * doc->canvas_w + x] < 128;
+  if (doc->sel_mask) {
+    int sx = x - doc->sel_mask_offset.x;
+    int sy = y - doc->sel_mask_offset.y;
+    if (!canvas_in_bounds(doc, sx, sy)) return false;
+    return doc->sel_mask[(size_t)sy * doc->canvas_w + sx] < 128;
+  }
   return canvas_in_selection(doc, x, y);
 }
 
@@ -422,8 +426,15 @@ static void canvas_draw_selection_mask_overlay(canvas_doc_t *doc,
   int cy = -state->pan_y;
   int cw = scaled_px(doc->canvas_w, state->scale);
   int ch = scaled_px(doc->canvas_h, state->scale);
-  draw_sprite_region((int)doc->sel_mask_tex, R(cx, cy, cw, ch),
-                     NULL, g_app->wand_overlay_color, 0);
+  ui_render_effect_params_t params = {{0}};
+  params.f[0] = (float)doc->sel_mask_offset.x / (float)doc->canvas_w;
+  params.f[1] = (float)doc->sel_mask_offset.y / (float)doc->canvas_h;
+  params.f[4] = (float)COLOR_R(g_app->wand_overlay_color) / 255.0f;
+  params.f[5] = (float)COLOR_G(g_app->wand_overlay_color) / 255.0f;
+  params.f[6] = (float)COLOR_B(g_app->wand_overlay_color) / 255.0f;
+  params.f[7] = (float)COLOR_A(g_app->wand_overlay_color) / 255.0f;
+  draw_rect_effect((int)doc->sel_mask_tex, cx, cy, cw, ch,
+                   UI_RENDER_EFFECT_SELECTION_MASK, &params);
 }
 
 result_t win_canvas_proc(window_t *win, uint32_t msg,
@@ -1009,10 +1020,12 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           } else if (doc->sel_mask_moving) {
             int dx = px - doc->move_origin.x;
             int dy = py - doc->move_origin.y;
-            if (canvas_translate_selection_mask(doc, dx, dy)) {
-              doc->move_origin.x = px;
-              doc->move_origin.y = py;
-            }
+            canvas_set_selection_mask_offset(doc,
+                                             doc->sel_mask_offset.x + dx,
+                                             doc->sel_mask_offset.y + dy);
+            doc->move_origin.x = px;
+            doc->move_origin.y = py;
+            invalidate_window(win);
           } else {
             canvas_constrain_tool_drag(tool, shift ? AX_MOD_SHIFT : 0,
                                        doc->sel_start.x, doc->sel_start.y,
@@ -1072,7 +1085,9 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         }
         if (doc->sel_mask_moving) {
           IE_DEBUG("selection_mask_move_commit doc=%p", (void *)doc);
+          canvas_commit_selection_mask_offset(doc);
           doc->sel_mask_moving = false;
+          invalidate_window(win);
         }
         if (tool == ID_TOOL_SELECT && doc->sel_active && !was_sel_mask_moving) {
           IE_DEBUG("selection_end doc=%p from=(%d,%d) to=(%d,%d)",

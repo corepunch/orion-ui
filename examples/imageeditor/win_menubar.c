@@ -63,6 +63,7 @@ static bool cancel_active_canvas_interaction(canvas_doc_t *doc, int old_tool) {
 
   if (doc->sel_mask_moving) {
     IE_DEBUG("cancel_interaction selection_mask_move doc=%p", (void *)doc);
+    canvas_commit_selection_mask_offset(doc);
     doc->sel_mask_moving = false;
     changed = true;
   }
@@ -497,7 +498,31 @@ void handle_menu_command(uint16_t id) {
     case ID_IMAGE_RESIZE: {
       if (!doc) break;
       int new_w = doc->canvas_w, new_h = doc->canvas_h;
-      if (show_size_dialog(g_app->menubar_win, "Canvas Size", &new_w, &new_h) &&
+      image_resize_filter_t filter = IMAGE_RESIZE_BILINEAR;
+      if (show_image_resize_dialog(doc->win ? doc->win : g_app->menubar_win,
+                                   &new_w, &new_h, &filter) &&
+          (new_w != doc->canvas_w || new_h != doc->canvas_h)) {
+        doc_push_undo(doc);
+        if (canvas_resize_image(doc, new_w, new_h, filter)) {
+          canvas_deselect(doc);
+          if (doc->canvas_win) {
+            canvas_win_sync_scrollbars(doc->canvas_win);
+            invalidate_window(doc->canvas_win);
+          }
+          doc_update_title(doc);
+          char sb[32];
+          snprintf(sb, sizeof(sb), "%dx%d", doc->canvas_w, doc->canvas_h);
+          send_message(doc->win, evStatusBar, 0, sb);
+        }
+      }
+      break;
+    }
+
+    case ID_IMAGE_CANVAS_SIZE: {
+      if (!doc) break;
+      int new_w = doc->canvas_w, new_h = doc->canvas_h;
+      if (show_size_dialog(doc->win ? doc->win : g_app->menubar_win,
+                           "Canvas Size", &new_w, &new_h) &&
           (new_w != doc->canvas_w || new_h != doc->canvas_h)) {
         doc_push_undo(doc);
         if (canvas_resize(doc, new_w, new_h)) {

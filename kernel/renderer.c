@@ -292,6 +292,7 @@ bool ui_init_prog(void) {
     "sprite_sharpen.frag.glsl",
     "sprite_edge.frag.glsl",
     "sprite_alpha_threshold.frag.glsl",
+    "sprite_selection_mask.frag.glsl",
   };
 
   for (int i = 0; i < UI_RENDER_EFFECT_COUNT; i++) {

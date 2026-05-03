@@ -625,6 +625,51 @@ void test_ie_size_dialog_accept(void) {
     PASS();
 }
 
+void test_ie_image_resize_dialog_headless(void) {
+    TEST("show_image_resize_dialog: returns false in headless mode");
+
+    ie_setup();
+    int w = 320, h = 200;
+    image_resize_filter_t filter = IMAGE_RESIZE_BILINEAR;
+
+    bool accepted = show_image_resize_dialog(NULL, &w, &h, &filter);
+    ASSERT_FALSE(accepted);
+    ASSERT_EQUAL(w, 320);
+    ASSERT_EQUAL(h, 200);
+    ASSERT_EQUAL(filter, IMAGE_RESIZE_BILINEAR);
+
+    ie_teardown();
+    PASS();
+}
+
+void test_ie_image_resize_bilinear_scales_pixels(void) {
+    TEST("canvas_resize_image: bilinear filter rescales pixels");
+
+    ie_setup();
+    canvas_doc_t *doc = create_document(NULL, 2, 2);
+    ASSERT_NOT_NULL(doc);
+
+    canvas_set_pixel(doc, 0, 0, MAKE_COLOR(255, 0, 0, 255));
+    canvas_set_pixel(doc, 1, 0, MAKE_COLOR(0, 255, 0, 255));
+    canvas_set_pixel(doc, 0, 1, MAKE_COLOR(0, 0, 255, 255));
+    canvas_set_pixel(doc, 1, 1, MAKE_COLOR(255, 255, 255, 255));
+
+    ASSERT_TRUE(canvas_resize_image(doc, 1, 1, IMAGE_RESIZE_BILINEAR));
+    ASSERT_EQUAL(doc->canvas_w, 1);
+    ASSERT_EQUAL(doc->canvas_h, 1);
+
+    uint32_t px = canvas_get_pixel(doc, 0, 0);
+    ASSERT_EQUAL(COLOR_R(px), 128);
+    ASSERT_EQUAL(COLOR_G(px), 128);
+    ASSERT_EQUAL(COLOR_B(px), 128);
+    ASSERT_EQUAL(COLOR_A(px), 255);
+    ASSERT_TRUE(doc->modified);
+    ASSERT_FALSE(doc->sel_active);
+
+    ie_teardown();
+    PASS();
+}
+
 // tool_options_win is created by ie_create_palette_windows and cleared on close.
 void test_ie_tool_options_window_created(void) {
     TEST("create_tool_options_window: g_app->tool_options_win is valid");
@@ -916,11 +961,26 @@ void test_ie_select_tool_moves_selection_mask_only(void) {
     uint32_t red = MAKE_COLOR(0xE0, 0x10, 0x10, 0xFF);
     canvas_set_pixel(doc, 1, 1, red);
     ASSERT_TRUE(canvas_select_rect(doc, 1, 1, 1, 1));
+    uint8_t *mask = doc->sel_mask;
+    ASSERT_NOT_NULL(mask);
+    doc->sel_mask_dirty = false;
 
     send_message(doc->canvas_win, evLeftButtonDown, MAKEDWORD(1, 1), NULL);
     send_message(doc->canvas_win, evMouseMove, MAKEDWORD(2, 1), NULL);
+
+    ASSERT_TRUE(doc->sel_mask_moving);
+    ASSERT_TRUE(doc->sel_mask == mask);
+    ASSERT_FALSE(doc->sel_mask_dirty);
+    ASSERT_EQUAL(doc->sel_mask_offset.x, 1);
+    ASSERT_EQUAL(doc->sel_mask_offset.y, 0);
+    ASSERT_FALSE(canvas_in_selection(doc, 1, 1));
+    ASSERT_TRUE(canvas_in_selection(doc, 2, 1));
+
     send_message(doc->canvas_win, evLeftButtonUp, MAKEDWORD(2, 1), NULL);
 
+    ASSERT_FALSE(doc->sel_mask_moving);
+    ASSERT_EQUAL(doc->sel_mask_offset.x, 0);
+    ASSERT_EQUAL(doc->sel_mask_offset.y, 0);
     ASSERT_EQUAL(canvas_get_pixel(doc, 1, 1), red);
     ASSERT_FALSE(canvas_in_selection(doc, 1, 1));
     ASSERT_TRUE(canvas_in_selection(doc, 2, 1));
@@ -1846,6 +1906,8 @@ int main(int argc, char *argv[]) {
     test_ie_zoom_commands();
     test_ie_size_dialog_headless();
     test_ie_size_dialog_accept();
+    test_ie_image_resize_dialog_headless();
+    test_ie_image_resize_bilinear_scales_pixels();
     test_ie_tool_options_window_created();
     test_ie_close_tool_options_window_clears_pointer();
     test_ie_brush_size_valid_range();

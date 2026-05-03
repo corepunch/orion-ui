@@ -45,7 +45,8 @@
       <menu id="image" label="Image" var="kImageItems">
         <item id="ID_IMAGE_CROP" value="58" label="Crop" shortcut="C" />
         <separator />
-        <item id="ID_IMAGE_RESIZE" value="53" label="Canvas Size..." />
+        <item id="ID_IMAGE_RESIZE" value="53" label="Image Size..." />
+        <item id="ID_IMAGE_CANVAS_SIZE" value="59" label="Canvas Size..." />
         <separator />
         <item id="ID_IMAGE_FLIP_H" value="50" label="Flip Horizontal" />
         <item id="ID_IMAGE_FLIP_V" value="51" label="Flip Vertical" />
@@ -148,6 +149,23 @@
           <control class="textedit" id="NI_ID_HEIGHT" value="2" name="height" text="" frame="62 29 56 13" flags="0" />
           <control class="button" id="NI_ID_OK"     value="3" name="ok"     text="OK" frame="92 54 40 19" flags="BUTTON_DEFAULT" />
           <control class="button" id="NI_ID_CANCEL" value="4" name="cancel" text="Cancel" frame="136 54 40 19" flags="0" />
+        </controls>
+      </form>
+
+      <form id="image_resize"
+            title="Image Size"
+            frame="0 0 210 104"
+            flags="0"
+            owner="examples/imageeditor/win_imageresize.c">
+        <controls>
+          <control class="label" id="-1" name="lbl_width" text="Width:" frame="4 8 44 13" flags="0" />
+          <control class="textedit" id="IR_ID_WIDTH" value="1" name="width" text="" frame="54 8 72 13" flags="0" />
+          <control class="label" id="-1" name="lbl_height" text="Height:" frame="4 29 44 13" flags="0" />
+          <control class="textedit" id="IR_ID_HEIGHT" value="2" name="height" text="" frame="54 29 72 13" flags="0" />
+          <control class="label" id="-1" name="lbl_filter" text="Filter:" frame="4 50 44 13" flags="0" />
+          <control class="combobox" id="IR_ID_FILTER" value="3" name="filter" text="" frame="54 50 150 13" flags="0" />
+          <control class="button" id="IR_ID_OK" value="4" name="ok" text="OK" frame="112 79 44 19" flags="BUTTON_DEFAULT" />
+          <control class="button" id="IR_ID_CANCEL" value="5" name="cancel" text="Cancel" frame="160 79 46 19" flags="0" />
         </controls>
       </form>
 

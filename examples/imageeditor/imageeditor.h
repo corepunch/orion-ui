@@ -186,6 +186,12 @@ typedef enum {
   LAYER_BLEND_COUNT
 } layer_blend_mode_t;
 
+typedef enum {
+  IMAGE_RESIZE_NEAREST = 0,
+  IMAGE_RESIZE_BILINEAR,
+  IMAGE_RESIZE_FILTER_COUNT
+} image_resize_filter_t;
+
 typedef struct {
   uint8_t *pixels;      // RGBA pixel buffer (canvas_w * canvas_h * 4 bytes)
   GLuint   tex;         // GPU texture for realtime compositing
@@ -232,6 +238,7 @@ typedef struct canvas_doc_s {
   uint8_t *sel_mask;
   GLuint   sel_mask_tex;  // GL_RED texture cache for protected-area overlay
   bool     sel_mask_dirty;
+  ipoint16_t  sel_mask_offset; // transient drag offset, committed on mouse-up
   // Shape tool rubber-band preview state
   uint8_t *shape_snapshot;  // pixel backup taken when shape drag starts
   ipoint16_t  shape_start;     // canvas coords where the shape drag began
@@ -370,8 +377,10 @@ static inline bool canvas_in_bounds(const canvas_doc_t *doc, int x, int y) {
 static inline bool canvas_in_selection(const canvas_doc_t *doc, int x, int y) {
   if (!doc->sel_active) return true;
   if (doc->sel_mask) {
-    if (!canvas_in_bounds(doc, x, y)) return false;
-    return doc->sel_mask[(size_t)y * doc->canvas_w + x] == 0;
+    int sx = x - doc->sel_mask_offset.x;
+    int sy = y - doc->sel_mask_offset.y;
+    if (!canvas_in_bounds(doc, sx, sy)) return false;
+    return doc->sel_mask[(size_t)sy * doc->canvas_w + sx] == 0;
   }
   int x0 = MIN(doc->sel_start.x, doc->sel_end.x);
   int y0 = MIN(doc->sel_start.y, doc->sel_end.y);
@@ -385,6 +394,8 @@ void canvas_flip_h(canvas_doc_t *doc);
 void canvas_flip_v(canvas_doc_t *doc);
 void canvas_invert_colors(canvas_doc_t *doc);
 bool canvas_resize(canvas_doc_t *doc, int new_w, int new_h);
+bool canvas_resize_image(canvas_doc_t *doc, int new_w, int new_h,
+                         image_resize_filter_t filter);
 
 // Forward declarations for canvas operations
 void canvas_set_pixel(canvas_doc_t *doc, int x, int y, uint32_t c);
@@ -433,6 +444,8 @@ void canvas_crop_to_selection(canvas_doc_t *doc);
 // Returns true on success, false if the operation could not be performed
 // (invalid state, oversized selection, or allocation failure — canvas unchanged).
 bool canvas_crop_or_expand_to_selection(canvas_doc_t *doc);
+void canvas_set_selection_mask_offset(canvas_doc_t *doc, int dx, int dy);
+bool canvas_commit_selection_mask_offset(canvas_doc_t *doc);
 
 // Move-selection helpers (called from win_canvas.c)
 void canvas_begin_move(canvas_doc_t *doc, uint32_t bg);
@@ -546,6 +559,8 @@ bool show_add_mask_dialog(window_t *parent, int *out_fill_mode);
 
 // New Image / Canvas Size dialog
 bool show_size_dialog(window_t *parent, const char *title, int *out_w, int *out_h);
+bool show_image_resize_dialog(window_t *parent, int *out_w, int *out_h,
+                              image_resize_filter_t *out_filter);
 
 // Grid Options dialog – returns true if accepted.
 bool show_grid_options_dialog(window_t *parent, int *out_x, int *out_y);
