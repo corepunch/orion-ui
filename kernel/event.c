@@ -175,8 +175,9 @@ void move_to_top(window_t* _win) {
       return;
     }
 
-    if (win->flags & WINDOW_ALWAYSONTOP) {
-      // Append to absolute tail — globally on top of everything.
+    if (win->flags & (WINDOW_ALWAYSONTOP | WINDOW_DIALOG)) {
+      // Append to absolute tail — globally on top of everything. Standalone
+      // apps use hinstance 0, so dialogs must also sort after their palettes.
       window_t *tail = *head;
       while (tail->next)
         tail = tail->next;

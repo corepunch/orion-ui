@@ -454,6 +454,39 @@ void test_dialog_z_order_above_same_app_topmost(void) {
     PASS();
 }
 
+void test_standalone_dialog_z_order_above_topmost(void) {
+    TEST("move_to_top: hinstance 0 dialog stays above topmost palettes");
+
+    test_env_init();
+
+    window_t *doc = create_window("Doc", 0,
+                                  MAKERECT(10, 10, 120, 80),
+                                  NULL, test_window_proc, 0, NULL);
+    window_t *palette = create_window("Palette", WINDOW_ALWAYSONTOP,
+                                      MAKERECT(20, 20, 80, 80),
+                                      NULL, test_window_proc, 0, NULL);
+    window_t *dialog = create_window("Dialog", WINDOW_DIALOG,
+                                     MAKERECT(30, 30, 90, 70),
+                                     NULL, test_window_proc, 0, NULL);
+
+    ASSERT_NOT_NULL(doc);
+    ASSERT_NOT_NULL(palette);
+    ASSERT_NOT_NULL(dialog);
+
+    show_window(doc, true);
+    show_window(palette, true);
+    show_window(dialog, true);
+
+    window_t *tail = g_ui_runtime.windows;
+    while (tail && tail->next)
+        tail = tail->next;
+
+    ASSERT_TRUE(tail == dialog);
+
+    test_env_shutdown();
+    PASS();
+}
+
 int main(int argc, char *argv[]) {
     (void)argc;
     (void)argv;
@@ -470,6 +503,7 @@ int main(int argc, char *argv[]) {
     test_clear_events();
     test_cw_usedefault_uses_configured_origin();
     test_dialog_z_order_above_same_app_topmost();
+    test_standalone_dialog_z_order_above_topmost();
     
     TEST_END();
 }
