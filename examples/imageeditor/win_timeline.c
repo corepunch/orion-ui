@@ -329,20 +329,6 @@ static result_t timeline_proc(window_t *win, uint32_t msg,
       }
       return true;
 
-    case evCommand:
-      // Forward toolbar clicks to handle_menu_command.
-      if (HIWORD(wparam) == btnClicked || HIWORD(wparam) == tbButtonClick) {
-        uint16_t id = (uint16_t)LOWORD(wparam);
-        if (id == ID_ANIM_PLAY) {
-          canvas_doc_t *doc = tl_doc();
-          handle_menu_command(doc && doc->anim && doc->anim->playing
-                              ? ID_ANIM_STOP : ID_ANIM_PLAY);
-        } else {
-          handle_menu_command(id);
-        }
-      }
-      return false;
-
     default:
       return false;
   }
@@ -421,4 +407,3 @@ void anim_tick(canvas_doc_t *doc) {
     timeline_win_refresh();
   }
 }
-
