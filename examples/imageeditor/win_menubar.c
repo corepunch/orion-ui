@@ -85,6 +85,40 @@ static bool cancel_active_canvas_interaction(canvas_doc_t *doc, int old_tool) {
   return changed;
 }
 
+#if IMAGEEDITOR_ANIMATIONS
+static void anim_stop_playback(canvas_doc_t *doc) {
+  if (!doc || !doc->anim) return;
+  doc->anim->playing = false;
+  if (g_app && g_app->anim_timer_id) {
+    axCancelTimer(g_app->anim_timer_id);
+    g_app->anim_timer_id = 0;
+  }
+  timeline_toolbar_sync();
+}
+
+static bool anim_step_frame(canvas_doc_t *doc, int delta) {
+  if (!doc || !doc->anim || delta == 0) return false;
+  anim_stop_playback(doc);
+  anim_timeline_t *tl = doc->anim;
+  int target = tl->active_frame + delta;
+  if (target < 0 || target >= tl->frame_count) return false;
+  doc_push_undo(doc);
+  if (!anim_timeline_switch_frame(tl, target, &doc->pixels,
+                                  doc->canvas_w, doc->canvas_h,
+                                  FRAME_FORMAT_INDEXED)) {
+    doc_discard_undo(doc);
+    return false;
+  }
+  if (doc->layer_count > 0)
+    doc->layers[doc->active_layer]->pixels = doc->pixels;
+  doc->canvas_dirty = true;
+  if (doc->canvas_win)
+    invalidate_window(doc->canvas_win);
+  timeline_win_refresh();
+  return true;
+}
+#endif
+
 // ============================================================
 // Palette window helpers (shared by gem_init / handle_menu_command)
 // ============================================================
@@ -798,6 +832,7 @@ void handle_menu_command(uint16_t id) {
 #if IMAGEEDITOR_ANIMATIONS
     case ID_ANIM_NEW_FRAME:
       if (doc) {
+        anim_stop_playback(doc);
         if (!doc->anim)
           doc->anim = anim_timeline_new(doc->canvas_w, doc->canvas_h);
         if (doc->anim) {
@@ -826,6 +861,7 @@ void handle_menu_command(uint16_t id) {
 
     case ID_ANIM_DUPLICATE_FRAME:
       if (doc && doc->anim) {
+        anim_stop_playback(doc);
         if (anim_frame_compress(doc->anim->frames[doc->anim->active_frame],
                                 doc->pixels, doc->canvas_w, doc->canvas_h,
                                 FRAME_FORMAT_INDEXED)) {
@@ -848,6 +884,7 @@ void handle_menu_command(uint16_t id) {
 
     case ID_ANIM_DELETE_FRAME:
       if (doc && doc->anim) {
+        anim_stop_playback(doc);
         if (anim_timeline_delete_frame(doc->anim, doc->anim->active_frame)) {
           // Load the new active frame; fall back to blank on expand failure.
           anim_frame_t *af = doc->anim->frames[doc->anim->active_frame];
@@ -864,6 +901,16 @@ void handle_menu_command(uint16_t id) {
           timeline_win_refresh();
         }
       }
+      break;
+
+    case ID_ANIM_PREV_FRAME:
+      if (doc)
+        anim_step_frame(doc, -1);
+      break;
+
+    case ID_ANIM_NEXT_FRAME:
+      if (doc)
+        anim_step_frame(doc, +1);
       break;
 
     case ID_ANIM_PLAY:
@@ -891,11 +938,7 @@ void handle_menu_command(uint16_t id) {
 
     case ID_ANIM_STOP:
       if (doc && doc->anim) {
-        doc->anim->playing = false;
-        if (g_app && g_app->anim_timer_id) {
-          axCancelTimer(g_app->anim_timer_id);
-          g_app->anim_timer_id = 0;
-        }
+        anim_stop_playback(doc);
         timeline_win_refresh();
       }
       break;
