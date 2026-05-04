@@ -133,7 +133,7 @@ PLATFORM_LIB = $(LIB_DIR)/libplatform.$(PLATFORM_LIB_EXT)
 # Source files
 USER_SRCS = $(wildcard user/*.c)
 KERNEL_SRCS = $(wildcard kernel/*.c)
-COMMCTL_SRCS = $(wildcard commctl/*.c)
+COMMCTL_SRCS = $(filter-out commctl/formeditor_components_plugin.c,$(wildcard commctl/*.c))
 
 # Library targets
 STATIC_LIB = $(LIB_DIR)/liborion.a
@@ -222,6 +222,10 @@ FORMEDITOR_UI_TEST_BIN  = $(BIN_DIR)/test_formeditor_ui_test$(EXE_EXT)
 FORMEDITOR_SRCS_NO_MAIN = $(filter-out examples/formeditor/main.c,$(wildcard examples/formeditor/*.c))
 FORMEDITOR_COMPONENT_PLUGIN_SRC = commctl/formeditor_components_plugin.c
 FORMEDITOR_COMPONENT_PLUGIN = $(LIB_DIR)/formeditor_components$(LIB_EXT)
+COMMCTL_ICON_EMBED_BIN = $(BIN_DIR)/embed_icon_strip$(EXE_EXT)
+COMMCTL_COMPONENT_ICON_PNGS = $(sort $(wildcard commctl/share/icons/[0-9][0-9]_*.png))
+COMMCTL_COMPONENT_ICONS_C = $(GENERATED_DIR)/commctl/commctl_component_icons.c
+COMMCTL_COMPONENT_ICONS_H = $(GENERATED_DIR)/commctl/commctl_component_icons.h
 
 IE_COMPONENTS_PLUGIN_SRCS = \
 	examples/imageeditor/components/lv_plug.c \
@@ -229,6 +233,9 @@ IE_COMPONENTS_PLUGIN_SRCS = \
 	examples/imageeditor/components/lv_strip.c \
 	examples/imageeditor/components/fg_preview.c
 IE_COMPONENTS_PLUGIN = $(LIB_DIR)/imageeditor_components$(LIB_EXT)
+IE_COMPONENT_ICON_PNGS = $(sort $(wildcard examples/imageeditor/components/share/icons/[0-9][0-9]_*.png))
+IE_COMPONENT_ICONS_C = $(GENERATED_DIR)/examples/imageeditor/components/imageeditor_component_icons.c
+IE_COMPONENT_ICONS_H = $(GENERATED_DIR)/examples/imageeditor/components/imageeditor_component_icons.h
 
 GENERATED_DIR = $(BUILD_DIR)/generated
 IMAGEEDITOR_ORION = examples/imageeditor/imageeditor.orion
@@ -340,14 +347,14 @@ library: $(STATIC_LIB) $(SHARED_LIB)
 
 $(STATIC_LIB): $(USER_SRCS) $(KERNEL_SRCS) $(COMMCTL_SRCS) $(PLATFORM_LIB) | $(LIB_DIR)
 	@echo "Creating static library: $@"
-	find user kernel commctl -name "*.c" | sort | sed 's/.*/#include "&"/' | \
+	find user kernel commctl -name "*.c" ! -name "formeditor_components_plugin.c" | sort | sed 's/.*/#include "&"/' | \
 		$(CC) $(CFLAGS) -x c -c -o $(BUILD_DIR)/liborion_unity.o - && \
 	$(AR) rcs $@ $(BUILD_DIR)/liborion_unity.o && \
 	rm -f $(BUILD_DIR)/liborion_unity.o
 
 $(SHARED_LIB): $(USER_SRCS) $(KERNEL_SRCS) $(COMMCTL_SRCS) $(PLATFORM_LIB) | $(LIB_DIR)
 	@echo "Creating shared library: $@"
-	find user kernel commctl -name "*.c" | sort | sed 's/.*/#include "&"/' | \
+	find user kernel commctl -name "*.c" ! -name "formeditor_components_plugin.c" | sort | sed 's/.*/#include "&"/' | \
 		$(CC) $(CFLAGS) $(LIB_FLAGS) -x c -o $@ - $(LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
 
 # Examples
@@ -357,14 +364,33 @@ examples: share $(EXAMPLE_BINS) $(EXTRA_EXAMPLE_BINS) $(FORMEDITOR_COMPONENT_PLU
 .PHONY: plugins
 plugins: $(FORMEDITOR_COMPONENT_PLUGIN) $(IE_COMPONENTS_PLUGIN)
 
-$(FORMEDITOR_COMPONENT_PLUGIN): $(FORMEDITOR_COMPONENT_PLUGIN_SRC) $(SHARED_LIB) | $(LIB_DIR)
+$(COMMCTL_COMPONENT_ICONS_C) $(COMMCTL_COMPONENT_ICONS_H): $(COMMCTL_ICON_EMBED_BIN) $(COMMCTL_COMPONENT_ICON_PNGS) | $(GENERATED_DIR)
+	@echo "Embedding commctl component icons"
+	@mkdir -p $(dir $(COMMCTL_COMPONENT_ICONS_C))
+	$(COMMCTL_ICON_EMBED_BIN) --tile 16 --cols 12 --symbol commctl_component_icons \
+		--header $(COMMCTL_COMPONENT_ICONS_H) \
+		--source $(COMMCTL_COMPONENT_ICONS_C) \
+		--mono-white $(COMMCTL_COMPONENT_ICON_PNGS)
+
+$(FORMEDITOR_COMPONENT_PLUGIN): $(FORMEDITOR_COMPONENT_PLUGIN_SRC) $(COMMCTL_COMPONENT_ICONS_C) $(COMMCTL_COMPONENT_ICONS_H) $(SHARED_LIB) | $(LIB_DIR)
 	@echo "Building FormEditor component plugin: $@"
-	$(CC) $(CFLAGS) $(FE_PLUGIN_LFLAGS) -I. -o $@ $< \
+	$(CC) $(CFLAGS) $(FE_PLUGIN_LFLAGS) -I. -I$(GENERATED_DIR)/commctl -o $@ \
+		$(FORMEDITOR_COMPONENT_PLUGIN_SRC) $(COMMCTL_COMPONENT_ICONS_C) \
 		$(LDFLAGS)
 
-$(IE_COMPONENTS_PLUGIN): $(IE_COMPONENTS_PLUGIN_SRCS) $(SHARED_LIB) | $(LIB_DIR)
+$(IE_COMPONENT_ICONS_C) $(IE_COMPONENT_ICONS_H): $(COMMCTL_ICON_EMBED_BIN) $(IE_COMPONENT_ICON_PNGS) | $(GENERATED_DIR)
+	@echo "Embedding ImageEditor component icons"
+	@mkdir -p $(dir $(IE_COMPONENT_ICONS_C))
+	$(COMMCTL_ICON_EMBED_BIN) --tile 16 --cols 3 --symbol imageeditor_component_icons \
+		--header $(IE_COMPONENT_ICONS_H) \
+		--source $(IE_COMPONENT_ICONS_C) \
+		--mono-white $(IE_COMPONENT_ICON_PNGS)
+
+$(IE_COMPONENTS_PLUGIN): $(IE_COMPONENTS_PLUGIN_SRCS) $(IE_COMPONENT_ICONS_C) $(IE_COMPONENT_ICONS_H) $(SHARED_LIB) | $(LIB_DIR)
 	@echo "Building ImageEditor components plugin: $@"
-	$(CC) $(CFLAGS) $(FE_PLUGIN_LFLAGS) -I. -Iexamples/imageeditor -o $@ $(IE_COMPONENTS_PLUGIN_SRCS) \
+	$(CC) $(CFLAGS) $(FE_PLUGIN_LFLAGS) -I. -Iexamples/imageeditor \
+		-I$(GENERATED_DIR)/examples/imageeditor/components \
+		-o $@ $(IE_COMPONENTS_PLUGIN_SRCS) $(IE_COMPONENT_ICONS_C) \
 		$(LDFLAGS)
 
 .PHONY: imagelite

@@ -71,6 +71,8 @@ int      win_splitter_orientation(window_t *win);
 // Returns the height (in client pixels) that win_toolbox occupies for its
 // button grid.  Call from a wrapping proc to find where custom content starts.
 int toolbox_grid_height(window_t *win);
+bool toolbox_load_strip_rgba(window_t *win, int icon_w,
+                             const uint8_t *pixels, int w, int h);
 
 // Splash screen — displays an image in a borderless, always-on-top window that
 // closes when clicked.  image_path is detected by content (magic bytes), so

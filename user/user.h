@@ -206,6 +206,14 @@ typedef struct {
 #define FE_COMPONENT_SHOW_TOOLBOX   0x0002u
 
 typedef struct {
+  const uint8_t *rgba;       // packed RGBA pixels owned by the provider
+  int            width;      // strip width in pixels
+  int            height;     // strip height in pixels
+  int            icon_size;  // square tile size in pixels
+  int            default_icon; // plugin-local fallback icon index, -1 if unset
+} fe_icon_strip_t;
+
+typedef struct {
   const char *class_name;     // stable runtime class key (e.g. "button")
   const char *display_name;   // UI/display caption base (e.g. "Button")
   const char *token;          // stable serialization token (e.g. "button")
@@ -224,6 +232,7 @@ typedef int                        (*fe_plugin_class_count_fn)(void);
 typedef const fe_component_desc_t *(*fe_plugin_class_desc_fn)(int i);
 typedef const char                *(*fe_plugin_description_fn)(void);
 typedef uint32_t                   (*fe_plugin_version_fn)(void);
+typedef bool                       (*fe_plugin_toolbox_icon_strip_fn)(fe_icon_strip_t *out);
 
 #define FE_PLUGIN_VERSION 1u
 
@@ -250,6 +259,7 @@ const fe_component_desc_t *fe_component_at(int index);
 const fe_component_desc_t *fe_component_by_id(int id);
 const fe_component_desc_t *fe_component_by_tool_ident(int ident);
 const fe_component_desc_t *fe_component_by_token(const char *token);
+bool fe_component_toolbox_icon_strip(fe_icon_strip_t *out);
 
 bool fe_load_component_plugin(const char *path);
 void fe_unload_component_plugins(void);

@@ -88,6 +88,29 @@ int toolbox_grid_height(window_t *win) {
   return rows * effective_bsz(st);
 }
 
+bool toolbox_load_strip_rgba(window_t *win, int icon_w,
+                             const uint8_t *pixels, int w, int h) {
+  if (!win || icon_w <= 0 || !pixels || w <= 0 || h <= 0) return false;
+  if (w < icon_w || h < icon_w || (w % icon_w) != 0 || (h % icon_w) != 0)
+    return false;
+  if (!g_ui_runtime.running) return false;
+  toolbox_state_t *st = (toolbox_state_t *)win->userdata;
+  if (!st) return false;
+  uint32_t tex = R_CreateTextureRGBA(w, h, pixels, R_FILTER_NEAREST, R_WRAP_CLAMP);
+  if (!tex) return false;
+  if (st->own_strip_tex)
+    R_DeleteTexture(st->own_strip_tex);
+  st->own_strip_tex  = tex;
+  st->strip.tex      = tex;
+  st->strip.icon_w   = icon_w;
+  st->strip.icon_h   = icon_w;
+  st->strip.cols     = w / icon_w;
+  st->strip.sheet_w  = w;
+  st->strip.sheet_h  = h;
+  invalidate_window(win);
+  return true;
+}
+
 // Hit-test: returns item index at client-local (mx, my), or -1 if none.
 static int toolbox_hit(const toolbox_state_t *st, int mx, int my) {
   if (mx < 0 || my < 0) return -1;
@@ -320,21 +343,9 @@ result_t win_toolbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
         image_free(pixels);
         return false;
       }
-      uint32_t tex = R_CreateTextureRGBA(w, h, pixels,
-                                         R_FILTER_NEAREST, R_WRAP_CLAMP);
+      bool loaded = toolbox_load_strip_rgba(win, icon_w, pixels, w, h);
       image_free(pixels);
-      if (!tex) return false;
-      if (st->own_strip_tex)
-        R_DeleteTexture(st->own_strip_tex);
-      st->own_strip_tex  = tex;
-      st->strip.tex      = tex;
-      st->strip.icon_w   = icon_w;
-      st->strip.icon_h   = icon_w;  // square tiles
-      st->strip.cols     = w / icon_w;
-      st->strip.sheet_w  = w;
-      st->strip.sheet_h  = h;
-      invalidate_window(win);
-      return true;
+      return loaded;
     }
     case bxSetIconTintBrush: {
       toolbox_state_t *st = (toolbox_state_t *)win->userdata;
