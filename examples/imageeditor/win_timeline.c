@@ -1,9 +1,6 @@
 // Timeline palette window — horizontal strip showing animation frames.
-// Compiled only when IMAGEEDITOR_ANIMATIONS == 1.
 
 #include "imageeditor.h"
-
-#if IMAGEEDITOR_ANIMATIONS
 
 // ============================================================
 // Layout constants
@@ -258,7 +255,7 @@ static result_t timeline_proc(window_t *win, uint32_t msg,
           if (anim_timeline_switch_frame(doc->anim, cell,
                                          &doc->pixels,
                                          doc->canvas_w, doc->canvas_h,
-                                         FRAME_FORMAT_INDEXED)) {
+                                         FRAME_FORMAT_RGBA)) {
             // Sync the active layer's pixel pointer.
             if (doc->layer_count > 0)
               doc->layers[doc->active_layer]->pixels = doc->pixels;
@@ -343,19 +340,6 @@ static result_t timeline_proc(window_t *win, uint32_t msg,
       return true;
     }
 
-    case evRightButtonDown: {
-      if (!st) return true;
-      // Right-click: new frame as a quick action (context menus not available).
-      handle_menu_command(ID_ANIM_NEW_FRAME);
-      return true;
-    }
-
-    case evCommand:
-      // Forward toolbar clicks to handle_menu_command.
-      if (HIWORD(wparam) == tbButtonClick)
-        handle_menu_command((uint16_t)LOWORD(wparam));
-      return false;
-
     default:
       return false;
   }
@@ -412,7 +396,7 @@ void anim_tick(canvas_doc_t *doc) {
 
   if (anim_timeline_switch_frame(tl, next, &doc->pixels,
                                   doc->canvas_w, doc->canvas_h,
-                                  FRAME_FORMAT_INDEXED)) {
+                                  FRAME_FORMAT_RGBA)) {
     if (doc->layer_count > 0)
       doc->layers[doc->active_layer]->pixels = doc->pixels;
     doc->canvas_dirty = true;
@@ -421,4 +405,3 @@ void anim_tick(canvas_doc_t *doc) {
   }
 }
 
-#endif // IMAGEEDITOR_ANIMATIONS

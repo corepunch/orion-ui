@@ -24,9 +24,7 @@
 #define IMAGEEDITOR_SINGLE_LAYER 0
 #endif
 
-#ifndef IMAGEEDITOR_ANIMATIONS
 #define IMAGEEDITOR_ANIMATIONS 1
-#endif
 
 #ifndef IMAGEEDITOR_SHOW_SELECTION_BOUNDS
 #define IMAGEEDITOR_SHOW_SELECTION_BOUNDS 0
@@ -209,10 +207,8 @@ typedef struct {
   ui_render_effect_params_t preview_params;
 } layer_t;
 
-#if IMAGEEDITOR_ANIMATIONS
 // Forward-declare anim_timeline_t so canvas_doc_t can hold a pointer.
 typedef struct anim_timeline_s anim_timeline_t;
-#endif
 
 typedef struct canvas_doc_s {
   uint8_t *pixels;           // convenience alias → layers[active_layer]->pixels
@@ -266,9 +262,7 @@ typedef struct canvas_doc_s {
   uint8_t *float_pixels;   // RGBA data extracted from canvas
   uint8_t *float_mask;     // float_w * float_h edit mask, same semantics as sel_mask
   GLuint   float_tex;      // cached GL texture for float_pixels (0 = none)
-#if IMAGEEDITOR_ANIMATIONS
-  anim_timeline_t *anim;   // animation timeline (NULL when not in animation mode)
-#endif
+  anim_timeline_t *anim;   // animation timeline (always present; one frame = no animation)
 } canvas_doc_t;
 
 typedef struct {
@@ -298,10 +292,8 @@ typedef struct {
   window_t      *tool_options_win;
   window_t      *color_win;
   window_t      *layers_win;
-#if IMAGEEDITOR_ANIMATIONS
   window_t      *timeline_win;
   uint32_t       anim_timer_id; // axSetTimer handle for playback; 0 = stopped
-#endif
   hinstance_t    hinstance;  // owning app instance
   int            current_tool;
   uint32_t       palette[NUM_COLORS];
@@ -690,10 +682,10 @@ void swap_foreground_background_colors(void);
 
 // ============================================================
 // Animation support (anim.c / win_timeline.c)
-// Only compiled when IMAGEEDITOR_ANIMATIONS == 1
+// Animation is always enabled: a single-frame timeline is the default
+// canvas state; additional frames enable sprite/animation workflows.
 // ============================================================
 
-#if IMAGEEDITOR_ANIMATIONS
 #include "anim.h"
 
 // Timeline window geometry — docked at the bottom of the screen.
@@ -714,6 +706,5 @@ void anim_tick(canvas_doc_t *doc);
 bool anim_export_gif(canvas_doc_t *doc, const char *path);
 bool anim_export_apng(canvas_doc_t *doc, const char *path);
 bool anim_export_spritesheet(canvas_doc_t *doc, const char *path);
-#endif // IMAGEEDITOR_ANIMATIONS
 
 #endif // __IMAGEEDITOR_H__

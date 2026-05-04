@@ -249,6 +249,11 @@ bool imageeditor_open_file_path(const char *path) {
   ndoc->pixels = px;
   ndoc->canvas_dirty = true;
   ndoc->modified = false;
+  // Sync the animation frame 0 with the loaded pixels so the thumbnail is
+  // accurate from the start.
+  if (ndoc->anim && ndoc->anim->frame_count > 0)
+    anim_frame_compress(ndoc->anim->frames[0], px, img_w, img_h,
+                        FRAME_FORMAT_RGBA);
   doc_update_title(ndoc);
   send_message(ndoc->win, evStatusBar, 0, (void *)path);
   // Large images open in a bird's-eye view using the maximum reasonable
@@ -795,31 +800,16 @@ void handle_menu_command(uint16_t id) {
       }
       break;
 
-#if IMAGEEDITOR_ANIMATIONS
     case ID_ANIM_NEW_FRAME:
-      if (doc) {
-        if (!doc->anim)
-          doc->anim = anim_timeline_new(doc->canvas_w, doc->canvas_h);
-        if (doc->anim) {
-          // Commit current pixels to active frame, then insert after it.
-          // Only proceed if compression succeeds (non-destructive on failure).
-          if (anim_frame_compress(doc->anim->frames[doc->anim->active_frame],
-                                  doc->pixels, doc->canvas_w, doc->canvas_h,
-                                  FRAME_FORMAT_INDEXED)) {
-            int new_idx = anim_timeline_insert_frame(doc->anim,
-                                                      doc->anim->active_frame);
-            if (new_idx >= 0) {
-              anim_timeline_switch_frame(doc->anim, new_idx,
-                                         &doc->pixels,
-                                         doc->canvas_w, doc->canvas_h,
-                                         FRAME_FORMAT_INDEXED);
-              if (doc->layer_count > 0)
-                doc->layers[doc->active_layer]->pixels = doc->pixels;
-              doc->canvas_dirty = true;
-              if (doc->canvas_win) invalidate_window(doc->canvas_win);
-              timeline_win_refresh();
-            }
-          }
+      if (doc && doc->anim) {
+        // Commit current pixels to the active frame, then insert a new blank
+        // frame after it.  The user stays on the current frame so their drawing
+        // is not lost; they can click the new frame in the timeline to switch.
+        if (anim_frame_compress(doc->anim->frames[doc->anim->active_frame],
+                                doc->pixels, doc->canvas_w, doc->canvas_h,
+                                FRAME_FORMAT_RGBA)) {
+          anim_timeline_insert_frame(doc->anim, doc->anim->active_frame);
+          timeline_win_refresh();
         }
       }
       break;
@@ -828,14 +818,14 @@ void handle_menu_command(uint16_t id) {
       if (doc && doc->anim) {
         if (anim_frame_compress(doc->anim->frames[doc->anim->active_frame],
                                 doc->pixels, doc->canvas_w, doc->canvas_h,
-                                FRAME_FORMAT_INDEXED)) {
+                                FRAME_FORMAT_RGBA)) {
           int dup_idx = anim_timeline_duplicate_frame(doc->anim,
                                                        doc->anim->active_frame);
           if (dup_idx >= 0) {
             anim_timeline_switch_frame(doc->anim, dup_idx,
                                        &doc->pixels,
                                        doc->canvas_w, doc->canvas_h,
-                                       FRAME_FORMAT_INDEXED);
+                                       FRAME_FORMAT_RGBA);
             if (doc->layer_count > 0)
               doc->layers[doc->active_layer]->pixels = doc->pixels;
             doc->canvas_dirty = true;
@@ -867,25 +857,21 @@ void handle_menu_command(uint16_t id) {
       break;
 
     case ID_ANIM_PLAY:
-      if (doc) {
-        if (!doc->anim)
-          doc->anim = anim_timeline_new(doc->canvas_w, doc->canvas_h);
-        if (doc->anim && !doc->anim->playing) {
-          doc->anim->playing = true;
-          // Start a repeating timer; interval = frame period at current FPS.
-          // Default to 12 fps (≈83 ms) if fps is 0 or unset.
-          static const uint32_t kDefaultFrameIntervalMs = 83u; // ≈12 fps
-          uint32_t interval = (doc->anim->fps > 0)
-                              ? (uint32_t)(1000 / doc->anim->fps)
-                              : kDefaultFrameIntervalMs;
-          if (g_app) {
-            if (g_app->anim_timer_id)
-              axCancelTimer(g_app->anim_timer_id);
-            g_app->anim_timer_id = axSetTimer(
-                g_app->timeline_win, interval, NULL, (bool_t)1);
-          }
-          timeline_win_refresh();
+      if (doc && doc->anim && !doc->anim->playing) {
+        doc->anim->playing = true;
+        // Start a repeating timer; interval = frame period at current FPS.
+        // Default to 12 fps (≈83 ms) if fps is 0 or unset.
+        static const uint32_t kDefaultFrameIntervalMs = 83u; // ≈12 fps
+        uint32_t interval = (doc->anim->fps > 0)
+                            ? (uint32_t)(1000 / doc->anim->fps)
+                            : kDefaultFrameIntervalMs;
+        if (g_app) {
+          if (g_app->anim_timer_id)
+            axCancelTimer(g_app->anim_timer_id);
+          g_app->anim_timer_id = axSetTimer(
+              g_app->timeline_win, interval, NULL, (bool_t)1);
         }
+        timeline_win_refresh();
       }
       break;
 
@@ -950,7 +936,6 @@ void handle_menu_command(uint16_t id) {
         create_timeline_window();
       }
       break;
-#endif // IMAGEEDITOR_ANIMATIONS
 
     default:
       if (id >= ID_FILTER_BASE && id < ID_FILTER_BASE + IMAGEEDITOR_MAX_FILTERS) {

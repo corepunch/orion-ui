@@ -171,6 +171,14 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
 
   canvas_clear(doc);
   doc->modified = false;
+
+  // Always initialize the animation timeline with one frame capturing the
+  // current canvas pixels.  Single-canvas workflows simply use frame 0.
+  doc->anim = anim_timeline_new(w, h);
+  if (doc->anim)
+    anim_frame_compress(doc->anim->frames[0], doc->pixels, w, h,
+                        FRAME_FORMAT_RGBA);
+
   if (filename) {
     strncpy(doc->filename, filename, sizeof(doc->filename) - 1);
     doc->filename[sizeof(doc->filename) - 1] = '\0';
@@ -251,12 +259,10 @@ void close_document(canvas_doc_t *doc) {
   free(doc->composite_buf);
   doc->composite_buf = NULL;
 
-#if IMAGEEDITOR_ANIMATIONS
   if (doc->anim) {
     anim_timeline_free(doc->anim);
     doc->anim = NULL;
   }
-#endif
 
   if (doc->win && is_window(doc->win))
     destroy_window(doc->win);
