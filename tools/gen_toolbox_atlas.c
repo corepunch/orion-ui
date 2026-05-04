@@ -1,4 +1,4 @@
-// gen_toolbox_atlas.c - pack downloaded Tabler PNGs into FormEditor toolbox.png.
+// gen_toolbox_atlas.c - render downloaded Tabler SVGs into FormEditor toolbox.png.
 
 #include <ctype.h>
 #include <stdint.h>
@@ -7,8 +7,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "../user/stb_image.h"
+#define NANOSVG_IMPLEMENTATION
+#include "../third_party/nanosvg/nanosvg.h"
+#define NANOSVGRAST_IMPLEMENTATION
+#include "../third_party/nanosvg/nanosvgrast.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../user/stb_image_write.h"
 
@@ -99,34 +101,77 @@ static bool read_manifest(const char *path, icon_def_t **out_defs, int *out_coun
   return true;
 }
 
-static void downsample_icon(uint8_t *dst, int tile,
-                            const uint8_t *src, int sw, int sh) {
+static char *read_file_text(const char *path) {
+  FILE *f = fopen(path, "rb");
+  if (!f) return NULL;
+  if (fseek(f, 0, SEEK_END) != 0) {
+    fclose(f);
+    return NULL;
+  }
+  long n = ftell(f);
+  if (n < 0) {
+    fclose(f);
+    return NULL;
+  }
+  rewind(f);
+  char *buf = malloc((size_t)n + 1);
+  if (!buf) {
+    fclose(f);
+    return NULL;
+  }
+  size_t got = fread(buf, 1, (size_t)n, f);
+  fclose(f);
+  buf[got] = '\0';
+  return buf;
+}
+
+static void replace_current_color(char *s) {
+  static const char kFrom[] = "currentColor";
+  static const char kTo[] = "#ffffff";
+  size_t from_len = strlen(kFrom);
+  size_t to_len = strlen(kTo);
+  for (char *p = strstr(s, kFrom); p; p = strstr(p + to_len, kFrom)) {
+    memcpy(p, kTo, to_len);
+    memmove(p + to_len, p + from_len, strlen(p + from_len) + 1);
+  }
+}
+
+static bool render_svg_icon(NSVGrasterizer *rast, uint8_t *dst, int tile,
+                            const char *path) {
+  char *svg = read_file_text(path);
+  if (!svg) return false;
+  replace_current_color(svg);
+
+  NSVGimage *img = nsvgParse(svg, "px", 96.0f);
+  free(svg);
+  if (!img || img->width <= 0.0f || img->height <= 0.0f) {
+    if (img) nsvgDelete(img);
+    return false;
+  }
+
+  memset(dst, 0, (size_t)tile * tile * 4);
+
+  // Tabler outline icons are authored for a 24x24 viewBox.  The toolbox uses
+  // the same 24px tile size so strokes keep their native proportions and the
+  // runtime draws the atlas 1:1.
+  float sx = (float)tile / img->width;
+  float sy = (float)tile / img->height;
+  float scale = sx < sy ? sx : sy;
+  float tx = ((float)tile - img->width * scale) * 0.5f;
+  float ty = ((float)tile - img->height * scale) * 0.5f;
+  nsvgRasterize(rast, img, tx, ty, scale, dst, tile, tile, tile * 4);
+  nsvgDelete(img);
+
   for (int y = 0; y < tile; y++) {
-    int sy0 = (y * sh) / tile;
-    int sy1 = ((y + 1) * sh) / tile;
-    if (sy1 <= sy0) sy1 = sy0 + 1;
     for (int x = 0; x < tile; x++) {
-      int sx0 = (x * sw) / tile;
-      int sx1 = ((x + 1) * sw) / tile;
-      if (sx1 <= sx0) sx1 = sx0 + 1;
-
-      uint64_t aa = 0;
-      int count = 0;
-      for (int sy = sy0; sy < sy1 && sy < sh; sy++) {
-        for (int sx = sx0; sx < sx1 && sx < sw; sx++) {
-          const uint8_t *p = src + ((size_t)sy * sw + sx) * 4;
-          aa += p[3];
-          count++;
-        }
-      }
-
-      uint8_t *d = dst + ((size_t)y * tile + x) * 4;
-      d[0] = 255;
-      d[1] = 255;
-      d[2] = 255;
-      d[3] = count > 0 ? (uint8_t)((aa + (uint64_t)count / 2) / (uint64_t)count) : 0;
+      uint8_t *p = dst + ((size_t)y * tile + x) * 4;
+      p[0] = 255;
+      p[1] = 255;
+      p[2] = 255;
     }
   }
+
+  return true;
 }
 
 static bool write_header(const char *path, const icon_def_t *defs, int count) {
@@ -147,7 +192,7 @@ static bool write_header(const char *path, const icon_def_t *defs, int count) {
 }
 
 int main(int argc, char **argv) {
-  enum { TILE = 16, COLS = 16 };
+  enum { TILE = 24, COLS = 16 };
   if (argc != 5) {
     usage(argv[0]);
     return 2;
@@ -165,27 +210,26 @@ int main(int argc, char **argv) {
   int h = rows * TILE;
   uint8_t *atlas = calloc((size_t)w * h * 4, 1);
   uint8_t *icon = malloc((size_t)TILE * TILE * 4);
-  if (!atlas || !icon) {
+  NSVGrasterizer *rast = nsvgCreateRasterizer();
+  if (!atlas || !icon || !rast) {
     free(defs);
     free(atlas);
     free(icon);
+    if (rast) nsvgDeleteRasterizer(rast);
     return 1;
   }
 
   for (int i = 0; i < count; i++) {
     char path[1024];
-    snprintf(path, sizeof(path), "%s/%s.png", argv[2], defs[i].icon_name);
-    int sw = 0, sh = 0, sc = 0;
-    uint8_t *src = stbi_load(path, &sw, &sh, &sc, 4);
-    if (!src) {
+    snprintf(path, sizeof(path), "%s/%s.svg", argv[2], defs[i].icon_name);
+    if (!render_svg_icon(rast, icon, TILE, path)) {
       fprintf(stderr, "gen_toolbox_atlas: missing icon %s\n", path);
       free(defs);
       free(atlas);
       free(icon);
+      nsvgDeleteRasterizer(rast);
       return 1;
     }
-    downsample_icon(icon, TILE, src, sw, sh);
-    stbi_image_free(src);
 
     int dx = (i % COLS) * TILE;
     int dy = (i / COLS) * TILE;
@@ -201,5 +245,6 @@ int main(int argc, char **argv) {
   free(defs);
   free(atlas);
   free(icon);
+  nsvgDeleteRasterizer(rast);
   return ok ? 0 : 1;
 }
