@@ -1,4 +1,4 @@
-# enum_name tabler_icon_name
+# enum_name source_icon_name
 select pointer
 component components
 box box

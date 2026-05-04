@@ -1,4 +1,4 @@
-// gen_toolbox_atlas.c - render downloaded Tabler SVGs into FormEditor toolbox.png.
+// gen_toolbox_atlas.c - render downloaded SVGs into FormEditor toolbox.png.
 
 #include <ctype.h>
 #include <stdint.h>
@@ -151,9 +151,8 @@ static bool render_svg_icon(NSVGrasterizer *rast, uint8_t *dst, int tile,
 
   memset(dst, 0, (size_t)tile * tile * 4);
 
-  // Tabler outline icons are authored for a 24x24 viewBox.  The toolbox uses
-  // the same 24px tile size so strokes keep their native proportions and the
-  // runtime draws the atlas 1:1.
+  // Icons are expected to be authored for their target tile size so the
+  // runtime draws the atlas 1:1 without scaling.
   float sx = (float)tile / img->width;
   float sy = (float)tile / img->height;
   float scale = sx < sy ? sx : sy;
@@ -192,7 +191,7 @@ static bool write_header(const char *path, const icon_def_t *defs, int count) {
 }
 
 int main(int argc, char **argv) {
-  enum { TILE = 24, COLS = 16 };
+  enum { TILE = 16, COLS = 16 };
   if (argc != 5) {
     usage(argv[0]);
     return 2;

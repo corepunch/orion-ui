@@ -1,6 +1,6 @@
 // Tool palette for the form editor.
 // Uses win_toolbox directly — no extra client content below the grid.
-// toolbox.png is a generated 24x24-px-per-tile shared component icon atlas.
+// toolbox.png is a generated 16x16-px-per-tile shared component icon atlas.
 
 #include "formeditor.h"
 #include "../../commctl/commctl.h"
@@ -65,7 +65,7 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       // Delegate to win_toolbox first so its state is ready.
       win_toolbox(win, msg, wparam, lparam);
 
-      // Use 32px buttons so native 24px Tabler icons have breathing room.
+      // Use 32px buttons so native 16px icons have breathing room.
       send_message(win, bxSetButtonSize, FE_TOOLBOX_BTN_SIZE, NULL);
 
 #ifdef SHAREDIR

@@ -20,9 +20,9 @@
 #define FORM_DEFAULT_W    320
 #define FORM_DEFAULT_H    240
 
-// Tool palette — formeditor uses 24px icons inside 32px square buttons.
-// toolbox.png is a generated 24x24-tile atlas; see user/toolbox_icons.h.
-#define FE_TOOLBOX_ICON_W   24   // icon tile size in toolbox.png
+// Tool palette — formeditor uses 16px icons inside 32px square buttons.
+// toolbox.png is a generated 16x16-tile atlas; see user/toolbox_icons.h.
+#define FE_TOOLBOX_ICON_W   16   // icon tile size in toolbox.png
 #define FE_TOOLBOX_BTN_SIZE 32   // square button size used for the formeditor
 
 // Palette window dimensions.
