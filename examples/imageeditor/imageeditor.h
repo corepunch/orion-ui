@@ -24,6 +24,10 @@
 #define IMAGEEDITOR_SINGLE_LAYER 0
 #endif
 
+#ifndef IMAGEEDITOR_ANIMATIONS
+#define IMAGEEDITOR_ANIMATIONS 1
+#endif
+
 #if IMAGEEDITOR_DEBUG
 #define IE_DEBUG(...) do { \
   axLog("[imageeditor] " __VA_ARGS__); \
@@ -169,6 +173,19 @@ extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 #define ID_FILTER_BASE   1000
 #define IMAGEEDITOR_MAX_FILTERS 64
 
+// Animation menu command IDs (400–449)
+#define ID_ANIM_NEW_FRAME         400
+#define ID_ANIM_DUPLICATE_FRAME   401
+#define ID_ANIM_DELETE_FRAME      402
+#define ID_ANIM_PLAY              403
+#define ID_ANIM_STOP              404
+#define ID_ANIM_LOOP              405
+#define ID_ANIM_SET_FPS           406
+#define ID_ANIM_EXPORT_GIF        410
+#define ID_ANIM_EXPORT_APNG       411
+#define ID_ANIM_EXPORT_SPRITESHEET 412
+#define ID_WINDOW_TIMELINE        203
+
 #define ID_WINDOW_TOOLS    200
 #define ID_WINDOW_COLORS   201
 #define ID_WINDOW_LAYERS   202
@@ -247,6 +264,11 @@ typedef struct {
   ui_render_effect_params_t preview_params;
 } layer_t;
 
+#if IMAGEEDITOR_ANIMATIONS
+// Forward-declare anim_timeline_t so canvas_doc_t can hold a pointer.
+typedef struct anim_timeline_s anim_timeline_t;
+#endif
+
 typedef struct canvas_doc_s {
   uint8_t *pixels;           // convenience alias → layers[active_layer]->pixels
   int      canvas_w;         // image width in pixels
@@ -290,6 +312,9 @@ typedef struct canvas_doc_s {
   int      float_h;
   uint8_t *float_pixels;   // RGBA data extracted from canvas
   GLuint   float_tex;      // cached GL texture for float_pixels (0 = none)
+#if IMAGEEDITOR_ANIMATIONS
+  anim_timeline_t *anim;   // animation timeline (NULL when not in animation mode)
+#endif
 } canvas_doc_t;
 
 typedef struct {
@@ -319,6 +344,9 @@ typedef struct {
   window_t      *tool_options_win;
   window_t      *color_win;
   window_t      *layers_win;
+#if IMAGEEDITOR_ANIMATIONS
+  window_t      *timeline_win;
+#endif
   hinstance_t    hinstance;  // owning app instance
   int            current_tool;
   uint32_t       palette[NUM_COLORS];
@@ -677,5 +705,33 @@ bool show_levels_dialog(window_t *parent);
 
 // Swap the active foreground/background colors.
 void swap_foreground_background_colors(void);
+
+// ============================================================
+// Animation support (anim.c / win_timeline.c)
+// Only compiled when IMAGEEDITOR_ANIMATIONS == 1
+// ============================================================
+
+#if IMAGEEDITOR_ANIMATIONS
+#include "anim.h"
+
+// Timeline window geometry — docked at the bottom of the screen.
+#define TIMELINE_WIN_H    72   // total frame height (incl. title bar)
+#define TIMELINE_THUMB_W  48   // thumbnail cell width
+#define TIMELINE_CTRL_W   52   // left control panel width (play button + FPS)
+
+// Factory helper: create, show, and register the timeline palette window.
+window_t *create_timeline_window(void);
+
+// Refresh the timeline palette after frame changes.
+void timeline_win_refresh(void);
+
+// Animation playback tick — called from evTimer to advance frames.
+void anim_tick(canvas_doc_t *doc);
+
+// Export helpers
+bool anim_export_gif(canvas_doc_t *doc, const char *path);
+bool anim_export_apng(canvas_doc_t *doc, const char *path);
+bool anim_export_spritesheet(canvas_doc_t *doc, const char *path);
+#endif // IMAGEEDITOR_ANIMATIONS
 
 #endif // __IMAGEEDITOR_H__

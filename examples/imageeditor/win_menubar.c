@@ -88,6 +88,22 @@ static const menu_item_t kHelpItems[] = {
   {"About...", ID_HELP_ABOUT},
 };
 
+#if IMAGEEDITOR_ANIMATIONS
+static const menu_item_t kAnimItems[] = {
+  {"New Frame",        ID_ANIM_NEW_FRAME},
+  {"Duplicate Frame",  ID_ANIM_DUPLICATE_FRAME},
+  {"Delete Frame",     ID_ANIM_DELETE_FRAME},
+  {NULL, 0},
+  {"Play",             ID_ANIM_PLAY},
+  {"Stop",             ID_ANIM_STOP},
+  {"[ ] Loop",         ID_ANIM_LOOP},
+  {NULL, 0},
+  {"Export GIF...",         ID_ANIM_EXPORT_GIF},
+  {"Export APNG...",        ID_ANIM_EXPORT_APNG},
+  {"Export Sprite Sheet...", ID_ANIM_EXPORT_SPRITESHEET},
+};
+#endif
+
 // ── Window menu (dynamic: rebuilt before each popup) ─────────────────────────
 // Fixed prefix entries come first; document entries follow the separator.
 
@@ -96,6 +112,9 @@ static const menu_item_t kWindowPrefix[] = {
   {"Colors",  ID_WINDOW_COLORS},
 #if !IMAGEEDITOR_SINGLE_LAYER
   {"Layers",  ID_WINDOW_LAYERS},
+#endif
+#if IMAGEEDITOR_ANIMATIONS
+  {"Timeline", ID_WINDOW_TIMELINE},
 #endif
   {NULL,      0},   // separator before document list
 };
@@ -114,6 +133,9 @@ enum {
   kMenuIdxImage,
   kMenuIdxInstagram,
   kMenuIdxLayer,
+#if IMAGEEDITOR_ANIMATIONS
+  kMenuIdxAnim,
+#endif
   kMenuIdxView,
   kMenuIdxWindow,
   kMenuIdxHelp,
@@ -126,6 +148,9 @@ menu_def_t kMenus[] = {
   /* kMenuIdxImage  */ {"Image",  kImageItems,     (int)(sizeof(kImageItems)/sizeof(kImageItems[0]))},
   /* kMenuIdxInstagram */ {"Photo", s_instagram_items, 1},
   /* kMenuIdxLayer  */ {"Layer",  kLayerItems,     (int)(sizeof(kLayerItems)/sizeof(kLayerItems[0]))},
+#if IMAGEEDITOR_ANIMATIONS
+  /* kMenuIdxAnim   */ {"Anim",   kAnimItems,      (int)(sizeof(kAnimItems)/sizeof(kAnimItems[0]))},
+#endif
   /* kMenuIdxView   */ {"View",   s_view_items,    (int)(sizeof(s_view_items)/sizeof(s_view_items[0]))},
   /* kMenuIdxWindow */ {"Window", s_window_items,  WINDOW_PREFIX_COUNT},
   /* kMenuIdxHelp   */ {"Help",   kHelpItems,      (int)(sizeof(kHelpItems)/sizeof(kHelpItems[0]))},
@@ -858,6 +883,142 @@ void handle_menu_command(uint16_t id) {
         if (doc->canvas_win) invalidate_window(doc->canvas_win);
       }
       break;
+
+#if IMAGEEDITOR_ANIMATIONS
+    case ID_ANIM_NEW_FRAME:
+      if (doc) {
+        if (!doc->anim)
+          doc->anim = anim_timeline_new(doc->canvas_w, doc->canvas_h);
+        if (doc->anim) {
+          // Commit current pixels to active frame, then insert after it.
+          anim_frame_compress(doc->anim->frames[doc->anim->active_frame],
+                              doc->pixels, doc->canvas_w, doc->canvas_h,
+                              FRAME_FORMAT_INDEXED);
+          int new_idx = anim_timeline_insert_frame(doc->anim,
+                                                    doc->anim->active_frame);
+          if (new_idx >= 0) {
+            anim_timeline_switch_frame(doc->anim, new_idx,
+                                       &doc->pixels,
+                                       doc->canvas_w, doc->canvas_h,
+                                       FRAME_FORMAT_INDEXED);
+            if (doc->layer_count > 0)
+              doc->layers[doc->active_layer]->pixels = doc->pixels;
+            doc->canvas_dirty = true;
+            if (doc->canvas_win) invalidate_window(doc->canvas_win);
+            timeline_win_refresh();
+          }
+        }
+      }
+      break;
+
+    case ID_ANIM_DUPLICATE_FRAME:
+      if (doc && doc->anim) {
+        anim_frame_compress(doc->anim->frames[doc->anim->active_frame],
+                            doc->pixels, doc->canvas_w, doc->canvas_h,
+                            FRAME_FORMAT_INDEXED);
+        int dup_idx = anim_timeline_duplicate_frame(doc->anim,
+                                                     doc->anim->active_frame);
+        if (dup_idx >= 0) {
+          anim_timeline_switch_frame(doc->anim, dup_idx,
+                                     &doc->pixels,
+                                     doc->canvas_w, doc->canvas_h,
+                                     FRAME_FORMAT_INDEXED);
+          if (doc->layer_count > 0)
+            doc->layers[doc->active_layer]->pixels = doc->pixels;
+          doc->canvas_dirty = true;
+          if (doc->canvas_win) invalidate_window(doc->canvas_win);
+          timeline_win_refresh();
+        }
+      }
+      break;
+
+    case ID_ANIM_DELETE_FRAME:
+      if (doc && doc->anim) {
+        if (anim_timeline_delete_frame(doc->anim, doc->anim->active_frame)) {
+          // Load the new active frame.
+          anim_frame_t *af = doc->anim->frames[doc->anim->active_frame];
+          if (af->data && af->data_size > 0)
+            anim_frame_expand(af, doc->pixels, doc->canvas_w, doc->canvas_h);
+          else
+            memset(doc->pixels, 0xFF, (size_t)doc->canvas_w * doc->canvas_h * 4);
+          if (doc->layer_count > 0)
+            doc->layers[doc->active_layer]->pixels = doc->pixels;
+          doc->canvas_dirty = true;
+          if (doc->canvas_win) invalidate_window(doc->canvas_win);
+          timeline_win_refresh();
+        }
+      }
+      break;
+
+    case ID_ANIM_PLAY:
+      if (doc) {
+        if (!doc->anim)
+          doc->anim = anim_timeline_new(doc->canvas_w, doc->canvas_h);
+        if (doc->anim) {
+          doc->anim->playing = true;
+          timeline_win_refresh();
+        }
+      }
+      break;
+
+    case ID_ANIM_STOP:
+      if (doc && doc->anim) {
+        doc->anim->playing = false;
+        timeline_win_refresh();
+      }
+      break;
+
+    case ID_ANIM_LOOP:
+      if (doc && doc->anim) {
+        doc->anim->loop = !doc->anim->loop;
+        timeline_win_refresh();
+      }
+      break;
+
+    case ID_ANIM_EXPORT_GIF: {
+      if (!doc || !doc->anim) break;
+      char path[512] = {0};
+      if (show_file_picker(g_app->menubar_win, true, path, sizeof(path))) {
+        if (anim_export_gif(doc, path))
+          send_message(doc->win, evStatusBar, 0, (void *)"GIF exported");
+        else
+          send_message(doc->win, evStatusBar, 0, (void *)"GIF export failed");
+      }
+      break;
+    }
+
+    case ID_ANIM_EXPORT_APNG: {
+      if (!doc || !doc->anim) break;
+      char path[512] = {0};
+      if (show_file_picker(g_app->menubar_win, true, path, sizeof(path))) {
+        if (anim_export_apng(doc, path))
+          send_message(doc->win, evStatusBar, 0, (void *)"APNG exported");
+        else
+          send_message(doc->win, evStatusBar, 0, (void *)"APNG export failed");
+      }
+      break;
+    }
+
+    case ID_ANIM_EXPORT_SPRITESHEET: {
+      if (!doc || !doc->anim) break;
+      char path[512] = {0};
+      if (show_file_picker(g_app->menubar_win, true, path, sizeof(path))) {
+        if (anim_export_spritesheet(doc, path))
+          send_message(doc->win, evStatusBar, 0, (void *)"Sprite sheet exported");
+        else
+          send_message(doc->win, evStatusBar, 0, (void *)"Sprite sheet export failed");
+      }
+      break;
+    }
+
+    case ID_WINDOW_TIMELINE:
+      if (g_app->timeline_win) {
+        show_window(g_app->timeline_win, true);
+      } else {
+        create_timeline_window();
+      }
+      break;
+#endif // IMAGEEDITOR_ANIMATIONS
 
     default:
       if (id >= ID_FILTER_BASE && id < ID_FILTER_BASE + IMAGEEDITOR_MAX_FILTERS) {
