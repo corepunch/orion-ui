@@ -113,7 +113,13 @@ endif
 GEM_CFLAGS = $(CFLAGS) -DBUILD_AS_GEM
 
 # Link flags for FormEditor component plugins.
-ifeq ($(UNAME_S),Darwin)
+# On macOS: -undefined dynamic_lookup defers symbol resolution to load time.
+# On Linux: -shared implicitly allows unresolved symbols in shared objects.
+# On Windows (MinGW): all symbols must be resolved at link time, so link
+# explicitly against liborion.dll via the import library.
+ifeq ($(OS),Windows_NT)
+	FE_PLUGIN_LFLAGS = $(LIB_FLAGS) -L$(LIB_DIR) -lorion
+else ifeq ($(UNAME_S),Darwin)
 	FE_PLUGIN_LFLAGS = $(LIB_FLAGS) -undefined dynamic_lookup
 else
 	FE_PLUGIN_LFLAGS = $(LIB_FLAGS)
