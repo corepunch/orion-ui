@@ -2124,6 +2124,325 @@ void test_resize_over_limit_is_rejected(void) {
 }
 
 
+// ============================================================
+// Inline replicas of filtermgr.c pure-C helpers
+// replace_all() and modernize_filter_source() are static and
+// cannot be linked directly, so we duplicate them here for testing.
+// ============================================================
+
+static char *t_replace_all(const char *src, const char *needle, const char *replacement) {
+  if (!src || !needle || !needle[0] || !replacement) return NULL;
+
+  size_t src_len = strlen(src);
+  size_t needle_len = strlen(needle);
+  size_t repl_len = strlen(replacement);
+
+  size_t count = 0;
+  for (const char *p = src; (p = strstr(p, needle)) != NULL; p += needle_len)
+    count++;
+
+  size_t out_len = src_len + count * (repl_len - needle_len);
+  char *out = malloc(out_len + 1);
+  if (!out) return NULL;
+
+  char *d = out;
+  const char *p = src;
+  while (*p) {
+    const char *m = strstr(p, needle);
+    if (!m) {
+      size_t tail = strlen(p);
+      memcpy(d, p, tail + 1);
+      d += tail;
+      break;
+    }
+    size_t head = (size_t)(m - p);
+    memcpy(d, p, head);
+    d += head;
+    memcpy(d, replacement, repl_len);
+    d += repl_len;
+    p = m + needle_len;
+  }
+  *d = '\0';
+  return out;
+}
+
+static char *t_modernize_filter_source(const char *legacy_src) {
+  if (!legacy_src) return NULL;
+
+  if (strstr(legacy_src, "#version 150 core")) {
+    char *copy = strdup(legacy_src);
+    return copy;
+  }
+
+  char *src = strdup(legacy_src);
+  if (!src) return NULL;
+
+  const char *remove_precision = "precision mediump float;\n";
+  const char *varying_old = "varying vec2 v_uv;\n";
+  const char *frag_old = "gl_FragColor";
+  const char *tex_old = "texture2D";
+
+  char *tmp = t_replace_all(src, remove_precision, "");
+  free(src); src = tmp; if (!src) return NULL;
+
+  tmp = t_replace_all(src, varying_old, "in vec2 v_uv;\n");
+  free(src); src = tmp; if (!src) return NULL;
+
+  tmp = t_replace_all(src, frag_old, "outColor");
+  free(src); src = tmp; if (!src) return NULL;
+
+  tmp = t_replace_all(src, tex_old, "texture");
+  free(src); src = tmp; if (!src) return NULL;
+
+  const char *header = "#version 150 core\nout vec4 outColor;\n\n";
+  size_t hdr_len = strlen(header);
+  size_t body_len = strlen(src);
+  char *modern = malloc(hdr_len + body_len + 1);
+  if (!modern) { free(src); return NULL; }
+  memcpy(modern, header, hdr_len);
+  memcpy(modern + hdr_len, src, body_len + 1);
+  free(src);
+  return modern;
+}
+
+// ============================================================
+// replace_all() tests
+// ============================================================
+
+void test_replace_all_basic(void) {
+  TEST("replace_all – single occurrence is replaced");
+  char *r = t_replace_all("hello world", "world", "earth");
+  ASSERT_NOT_NULL(r);
+  ASSERT_STR_EQUAL(r, "hello earth");
+  free(r);
+  PASS();
+}
+
+void test_replace_all_multiple(void) {
+  TEST("replace_all – all occurrences are replaced");
+  char *r = t_replace_all("aXbXcX", "X", "YY");
+  ASSERT_NOT_NULL(r);
+  ASSERT_STR_EQUAL(r, "aYYbYYcYY");
+  free(r);
+  PASS();
+}
+
+void test_replace_all_no_match(void) {
+  TEST("replace_all – no match returns copy of source unchanged");
+  char *r = t_replace_all("hello", "xyz", "abc");
+  ASSERT_NOT_NULL(r);
+  ASSERT_STR_EQUAL(r, "hello");
+  free(r);
+  PASS();
+}
+
+void test_replace_all_empty_needle_returns_null(void) {
+  TEST("replace_all – empty needle returns NULL (guard against infinite loop)");
+  char *r = t_replace_all("hello", "", "x");
+  ASSERT_NULL(r);
+  PASS();
+}
+
+void test_replace_all_null_src_returns_null(void) {
+  TEST("replace_all – NULL src returns NULL");
+  char *r = t_replace_all(NULL, "x", "y");
+  ASSERT_NULL(r);
+  PASS();
+}
+
+void test_replace_all_null_replacement_returns_null(void) {
+  TEST("replace_all – NULL replacement returns NULL");
+  char *r = t_replace_all("hello", "l", NULL);
+  ASSERT_NULL(r);
+  PASS();
+}
+
+void test_replace_all_empty_replacement(void) {
+  TEST("replace_all – empty replacement string deletes occurrences");
+  char *r = t_replace_all("aXbXc", "X", "");
+  ASSERT_NOT_NULL(r);
+  ASSERT_STR_EQUAL(r, "abc");
+  free(r);
+  PASS();
+}
+
+void test_replace_all_multichar_needle(void) {
+  TEST("replace_all – multi-character needle replaced correctly");
+  char *r = t_replace_all("texture2D(s, uv)", "texture2D", "texture");
+  ASSERT_NOT_NULL(r);
+  ASSERT_STR_EQUAL(r, "texture(s, uv)");
+  free(r);
+  PASS();
+}
+
+void test_replace_all_adjacent_occurrences(void) {
+  TEST("replace_all – adjacent (non-overlapping) occurrences all replaced");
+  char *r = t_replace_all("aabbaa", "aa", "X");
+  ASSERT_NOT_NULL(r);
+  ASSERT_STR_EQUAL(r, "XbbX");
+  free(r);
+  PASS();
+}
+
+// ============================================================
+// modernize_filter_source() tests
+// ============================================================
+
+void test_modernize_already_modern(void) {
+  TEST("modernize_filter_source – source with #version 150 core returned as-is");
+  const char *src = "#version 150 core\nout vec4 outColor;\nvoid main(){outColor=vec4(1.0);}";
+  char *out = t_modernize_filter_source(src);
+  ASSERT_NOT_NULL(out);
+  ASSERT_STR_EQUAL(out, src);
+  free(out);
+  PASS();
+}
+
+void test_modernize_null_returns_null(void) {
+  TEST("modernize_filter_source – NULL input returns NULL");
+  char *out = t_modernize_filter_source(NULL);
+  ASSERT_NULL(out);
+  PASS();
+}
+
+void test_modernize_prepends_version_header(void) {
+  TEST("modernize_filter_source – output starts with #version 150 core header");
+  const char *legacy = "void main(){gl_FragColor=vec4(1.0);}";
+  char *out = t_modernize_filter_source(legacy);
+  ASSERT_NOT_NULL(out);
+  ASSERT_TRUE(strncmp(out, "#version 150 core", 17) == 0);
+  free(out);
+  PASS();
+}
+
+void test_modernize_replaces_gl_fragcolor(void) {
+  TEST("modernize_filter_source – gl_FragColor replaced with outColor");
+  const char *legacy = "void main(){gl_FragColor=vec4(1.0);}";
+  char *out = t_modernize_filter_source(legacy);
+  ASSERT_NOT_NULL(out);
+  ASSERT_TRUE(strstr(out, "gl_FragColor") == NULL);
+  ASSERT_TRUE(strstr(out, "outColor") != NULL);
+  free(out);
+  PASS();
+}
+
+void test_modernize_replaces_texture2d(void) {
+  TEST("modernize_filter_source – texture2D replaced with texture");
+  const char *legacy = "void main(){vec4 c=texture2D(tex,uv);gl_FragColor=c;}";
+  char *out = t_modernize_filter_source(legacy);
+  ASSERT_NOT_NULL(out);
+  ASSERT_TRUE(strstr(out, "texture2D") == NULL);
+  ASSERT_TRUE(strstr(out, "texture(tex") != NULL);
+  free(out);
+  PASS();
+}
+
+void test_modernize_removes_precision_line(void) {
+  TEST("modernize_filter_source – 'precision mediump float;' line removed");
+  const char *legacy = "precision mediump float;\nvoid main(){gl_FragColor=vec4(1.0);}";
+  char *out = t_modernize_filter_source(legacy);
+  ASSERT_NOT_NULL(out);
+  ASSERT_TRUE(strstr(out, "precision mediump float;") == NULL);
+  free(out);
+  PASS();
+}
+
+void test_modernize_converts_varying(void) {
+  TEST("modernize_filter_source – 'varying vec2 v_uv;' converted to 'in vec2 v_uv;'");
+  const char *legacy = "varying vec2 v_uv;\nvoid main(){gl_FragColor=vec4(v_uv,0.0,1.0);}";
+  char *out = t_modernize_filter_source(legacy);
+  ASSERT_NOT_NULL(out);
+  ASSERT_TRUE(strstr(out, "varying") == NULL);
+  ASSERT_TRUE(strstr(out, "in vec2 v_uv;") != NULL);
+  free(out);
+  PASS();
+}
+
+void test_modernize_empty_input(void) {
+  TEST("modernize_filter_source – empty input string gets header prepended");
+  char *out = t_modernize_filter_source("");
+  ASSERT_NOT_NULL(out);
+  ASSERT_TRUE(strstr(out, "#version 150 core") != NULL);
+  free(out);
+  PASS();
+}
+
+// ============================================================
+// IMAGEEDITOR_SHOW_SELECTION_BOUNDS display gate logic tests
+//
+// The win_canvas.c condition is:
+//   doc->sel_active &&
+//     (IMAGEEDITOR_SHOW_SELECTION_BOUNDS ||
+//      (g_app && g_app->current_tool == ID_TOOL_SELECT && doc->drawing))
+//
+// We inline equivalent logic here to verify each combination.
+// ============================================================
+
+#define T_ID_TOOL_SELECT 1
+
+typedef struct {
+  bool sel_active;
+  bool drawing;
+} t_doc_t;
+
+typedef struct {
+  int current_tool;
+} t_app_t;
+
+static bool t_should_draw_sel_bounds(const t_doc_t *doc, const t_app_t *app,
+                                     bool show_flag) {
+  if (!doc->sel_active) return false;
+  if (show_flag) return true;
+  return app && app->current_tool == T_ID_TOOL_SELECT && doc->drawing;
+}
+
+void test_sel_bounds_hidden_when_no_selection(void) {
+  TEST("sel bounds gate – not drawn when sel_active is false");
+  t_doc_t doc = {.sel_active = false, .drawing = true};
+  t_app_t app = {.current_tool = T_ID_TOOL_SELECT};
+  ASSERT_FALSE(t_should_draw_sel_bounds(&doc, &app, 0));
+  PASS();
+}
+
+void test_sel_bounds_shown_when_flag_set(void) {
+  TEST("sel bounds gate – drawn regardless of tool/drawing when SHOW_SELECTION_BOUNDS=1");
+  t_doc_t doc = {.sel_active = true, .drawing = false};
+  t_app_t app = {.current_tool = 99 /* some other tool */};
+  ASSERT_TRUE(t_should_draw_sel_bounds(&doc, &app, 1));
+  PASS();
+}
+
+void test_sel_bounds_shown_select_tool_while_drawing(void) {
+  TEST("sel bounds gate – drawn when select tool active and drawing in progress");
+  t_doc_t doc = {.sel_active = true, .drawing = true};
+  t_app_t app = {.current_tool = T_ID_TOOL_SELECT};
+  ASSERT_TRUE(t_should_draw_sel_bounds(&doc, &app, 0));
+  PASS();
+}
+
+void test_sel_bounds_hidden_select_tool_not_drawing(void) {
+  TEST("sel bounds gate – not drawn when select tool active but not drawing");
+  t_doc_t doc = {.sel_active = true, .drawing = false};
+  t_app_t app = {.current_tool = T_ID_TOOL_SELECT};
+  ASSERT_FALSE(t_should_draw_sel_bounds(&doc, &app, 0));
+  PASS();
+}
+
+void test_sel_bounds_hidden_other_tool_drawing(void) {
+  TEST("sel bounds gate – not drawn when non-select tool active, even while drawing");
+  t_doc_t doc = {.sel_active = true, .drawing = true};
+  t_app_t app = {.current_tool = 5 /* e.g. pencil */};
+  ASSERT_FALSE(t_should_draw_sel_bounds(&doc, &app, 0));
+  PASS();
+}
+
+void test_sel_bounds_hidden_null_app(void) {
+  TEST("sel bounds gate – not drawn when app pointer is NULL");
+  t_doc_t doc = {.sel_active = true, .drawing = true};
+  ASSERT_FALSE(t_should_draw_sel_bounds(&doc, NULL, 0));
+  PASS();
+}
+
 int main(int argc, char *argv[]) {
   (void)argc; (void)argv;
   TEST_START("Image Editor Logic");
@@ -2230,6 +2549,32 @@ int main(int argc, char *argv[]) {
   test_resize_same_is_noop();
   test_resize_zero_is_rejected();
   test_resize_over_limit_is_rejected();
+
+  test_replace_all_basic();
+  test_replace_all_multiple();
+  test_replace_all_no_match();
+  test_replace_all_empty_needle_returns_null();
+  test_replace_all_null_src_returns_null();
+  test_replace_all_null_replacement_returns_null();
+  test_replace_all_empty_replacement();
+  test_replace_all_multichar_needle();
+  test_replace_all_adjacent_occurrences();
+
+  test_modernize_already_modern();
+  test_modernize_null_returns_null();
+  test_modernize_prepends_version_header();
+  test_modernize_replaces_gl_fragcolor();
+  test_modernize_replaces_texture2d();
+  test_modernize_removes_precision_line();
+  test_modernize_converts_varying();
+  test_modernize_empty_input();
+
+  test_sel_bounds_hidden_when_no_selection();
+  test_sel_bounds_shown_when_flag_set();
+  test_sel_bounds_shown_select_tool_while_drawing();
+  test_sel_bounds_hidden_select_tool_not_drawing();
+  test_sel_bounds_hidden_other_tool_drawing();
+  test_sel_bounds_hidden_null_app();
 
   TEST_END();
 }
