@@ -690,12 +690,16 @@ void swap_foreground_background_colors(void);
 #include "anim.h"
 
 // Timeline window geometry — docked at the bottom of the screen.
-#define TIMELINE_WIN_H    72   // total frame height (incl. title bar)
-#define TIMELINE_THUMB_W  48   // thumbnail cell width
-#define TIMELINE_CTRL_W   52   // left control panel width (play button + FPS)
+#define TIMELINE_THUMB_W   48   // thumbnail cell width
+#define TIMELINE_TOOLBAR_H (TB_SPACING + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH))
+#define TIMELINE_CLIENT_H   56   // visible frame strip height
+#define TIMELINE_WIN_H     (TITLEBAR_HEIGHT + TIMELINE_TOOLBAR_H + TIMELINE_CLIENT_H)
 
 // Factory helper: create, show, and register the timeline palette window.
 window_t *create_timeline_window(void);
+
+// Synchronize the timeline toolbar with the active playback state.
+void timeline_toolbar_sync(void);
 
 // Refresh the timeline palette after frame changes.
 void timeline_win_refresh(void);

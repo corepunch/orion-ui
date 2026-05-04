@@ -121,6 +121,9 @@
         <item id="ID_ANIM_DUPLICATE_FRAME" value="401" label="Duplicate Frame" if="IMAGEEDITOR_ANIMATIONS" />
         <item id="ID_ANIM_DELETE_FRAME" value="402" label="Delete Frame" if="IMAGEEDITOR_ANIMATIONS" />
         <separator if="IMAGEEDITOR_ANIMATIONS" />
+        <item id="ID_ANIM_PREV_FRAME" value="407" label="Previous Frame" shortcut="Page Up" if="IMAGEEDITOR_ANIMATIONS" />
+        <item id="ID_ANIM_NEXT_FRAME" value="408" label="Next Frame" shortcut="Page Down" if="IMAGEEDITOR_ANIMATIONS" />
+        <separator if="IMAGEEDITOR_ANIMATIONS" />
         <item id="ID_ANIM_PLAY" value="403" label="Play" if="IMAGEEDITOR_ANIMATIONS" />
         <item id="ID_ANIM_STOP" value="404" label="Stop" if="IMAGEEDITOR_ANIMATIONS" />
         <item id="ID_ANIM_LOOP" value="405" label="[ ] Loop" if="IMAGEEDITOR_ANIMATIONS" />

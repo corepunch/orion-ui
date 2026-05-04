@@ -6,16 +6,10 @@
 // Layout constants
 // ============================================================
 
-// Control panel on the left: play/stop button + FPS label.
-#define CTRL_BTN_W    40
-#define CTRL_BTN_H    20
-#define CTRL_FPS_H    14
-#define CTRL_PAD       4
-
 // Frame thumbnail cells.
 #define CELL_PAD       3     // padding inside each cell
 #define CELL_NAME_H   10     // height of the name label below the thumbnail
-#define CELL_H        (TIMELINE_WIN_H - TITLEBAR_HEIGHT)
+#define CELL_H        (TIMELINE_CLIENT_H)
 #define THUMB_H       (CELL_H - CELL_PAD*2 - CELL_NAME_H - 2)
 
 // Colours
@@ -23,8 +17,6 @@
 #define COL_TL_BORDER  MAKE_COLOR(0x44, 0x44, 0x44, 0xFF)
 #define COL_ACTIVE_BG  MAKE_COLOR(0x00, 0x78, 0xD7, 0xFF)
 #define COL_HOVER_BG   MAKE_COLOR(0x3A, 0x3A, 0x3A, 0xFF)
-#define COL_TEXT       MAKE_COLOR(0xDD, 0xDD, 0xDD, 0xFF)
-#define COL_TEXT_DIM   MAKE_COLOR(0x88, 0x88, 0x88, 0xFF)
 
 // ============================================================
 // Window state
@@ -42,6 +34,16 @@ typedef struct {
   bool     thumbs_dirty; // true = rebuild all thumbnails
 } timeline_state_t;
 
+// Toolbar ops shown in the timeline titlebar band.
+static const toolbar_item_t kTimelineToolbar[] = {
+  { TOOLBAR_ITEM_BUTTON, ID_ANIM_PREV_FRAME,  sysicon_anim_frame_move_left,  0, 0, "Previous Frame" },
+  { TOOLBAR_ITEM_BUTTON, ID_ANIM_NEXT_FRAME,  sysicon_anim_frame_move_right, 0, 0, "Next Frame" },
+  { TOOLBAR_ITEM_SPACER, 0, -1, 6, 0, NULL },
+  { TOOLBAR_ITEM_BUTTON, ID_ANIM_PLAY,        sysicon_clock_play,            0, 0, "Play" },
+  { TOOLBAR_ITEM_BUTTON, ID_ANIM_NEW_FRAME,   sysicon_anim_frame_add,       0, 0, "New Frame" },
+  { TOOLBAR_ITEM_BUTTON, ID_ANIM_DELETE_FRAME,sysicon_anim_frame_delete,    0, 0, "Delete Frame" },
+};
+
 // ============================================================
 // Helpers
 // ============================================================
@@ -50,15 +52,13 @@ static canvas_doc_t *tl_doc(void) {
   return g_app ? g_app->active_doc : NULL;
 }
 
-// x offset of cell `n` in client space, accounting for the control panel and
-// horizontal scroll.
+// x offset of cell `n` in client space, accounting for horizontal scroll.
 static int cell_x(const timeline_state_t *st, int n) {
-  return TIMELINE_CTRL_W + n * TIMELINE_THUMB_W - st->scroll_x;
+  return n * TIMELINE_THUMB_W - st->scroll_x;
 }
 
-// Hit-test: which frame cell is at client x?  Returns -1 if in control panel.
+// Hit-test: which frame cell is at client x?
 static int hit_cell(const timeline_state_t *st, int cx, int w) {
-  if (cx < TIMELINE_CTRL_W) return -1;
   canvas_doc_t *doc = tl_doc();
   if (!doc || !doc->anim) return -1;
   for (int i = 0; i < doc->anim->frame_count; i++) {
@@ -111,30 +111,17 @@ static void rebuild_thumbnails(timeline_state_t *st) {
   st->thumbs_dirty = false;
 }
 
-// Draw the left control panel (Play / Stop button and FPS display).
-static void draw_ctrl_panel(const canvas_doc_t *doc, int h) {
-  fill_rect(COL_TL_BG, R(0, 0, TIMELINE_CTRL_W, h));
-  fill_rect(COL_TL_BORDER, R(TIMELINE_CTRL_W - 1, 0, 1, h));
+static void update_play_button_icon(window_t *win) {
+  if (!win || !g_app) return;
+  window_t *btn = get_window_item(win, ID_ANIM_PLAY);
+  bitmap_strip_t *strip = ui_get_sysicon_strip();
+  if (!btn || !strip) return;
 
-  if (!doc || !doc->anim) return;
-  bool playing = doc->anim->playing;
-
-  // Play / Pause button.
-  int bx = CTRL_PAD;
-  int by = (h - CTRL_BTN_H) / 2 - CTRL_FPS_H / 2 - 2;
-  uint32_t btn_bg = playing ? MAKE_COLOR(0xE0, 0x60, 0x00, 0xFF)
-                             : MAKE_COLOR(0x00, 0x88, 0x00, 0xFF);
-  fill_rect(btn_bg, R(bx, by, CTRL_BTN_W, CTRL_BTN_H));
-  const char *label = playing ? "Stop" : "Play";
-  int lx = bx + (CTRL_BTN_W - (int)strlen(label) * 6) / 2;
-  draw_text_small(label, lx, by + (CTRL_BTN_H - 8) / 2, COL_TEXT);
-
-  // FPS display.
-  char fps_buf[16];
-  snprintf(fps_buf, sizeof(fps_buf), "%d fps", doc->anim->fps);
-  int fx = CTRL_PAD;
-  int fy = by + CTRL_BTN_H + 4;
-  draw_text_small(fps_buf, fx, fy, COL_TEXT_DIM);
+  canvas_doc_t *doc = tl_doc();
+  int icon = (doc && doc->anim && doc->anim->playing)
+           ? (sysicon_clock_stop - SYSICON_BASE)
+           : (sysicon_clock_play - SYSICON_BASE);
+  send_message(btn, btnSetImage, (uint32_t)icon, strip);
 }
 
 // Draw a single frame cell at position cx in client space.
@@ -162,7 +149,9 @@ static void draw_cell(const timeline_state_t *st, int idx,
   snprintf(num_buf, sizeof(num_buf), "%d", idx + 1);
   int nx = cx + cw / 2 - (int)strlen(num_buf) * 3;
   int ny = h - CELL_NAME_H - 1;
-  draw_text_small(num_buf, nx, ny, active ? MAKE_COLOR(0xFF,0xFF,0xFF,0xFF) : COL_TEXT_DIM);
+  draw_text_small(num_buf, nx, ny,
+                  active ? MAKE_COLOR(0xFF,0xFF,0xFF,0xFF)
+                         : MAKE_COLOR(0x88,0x88,0x88,0xFF));
 }
 
 // ============================================================
@@ -179,6 +168,10 @@ static result_t timeline_proc(window_t *win, uint32_t msg,
       s->hover_cell    = -1;
       s->drag_from     = -1;
       s->thumbs_dirty  = true;
+      send_message(win, tbSetItems,
+                   (uint32_t)(sizeof(kTimelineToolbar) / sizeof(kTimelineToolbar[0])),
+                   (void *)kTimelineToolbar);
+      update_play_button_icon(win);
       anim_render_init();
       return true;
     }
@@ -205,7 +198,6 @@ static result_t timeline_proc(window_t *win, uint32_t msg,
 
     case evPaint: {
       if (!st) return true;
-      canvas_doc_t *doc = tl_doc();
 
       irect16_t cr = get_client_rect(win);
       int h = cr.h;
@@ -215,8 +207,7 @@ static result_t timeline_proc(window_t *win, uint32_t msg,
       if (st->thumbs_dirty)
         rebuild_thumbnails(st);
 
-      draw_ctrl_panel(doc, h);
-
+      canvas_doc_t *doc = tl_doc();
       if (doc && doc->anim) {
         int active = doc->anim->active_frame;
         for (int i = 0; i < doc->anim->frame_count; i++) {
@@ -232,19 +223,7 @@ static result_t timeline_proc(window_t *win, uint32_t msg,
     case evLeftButtonDown: {
       if (!st) return true;
       int mx = (int)(wparam & 0xFFFF);
-      int my = (int)(wparam >> 16);
       irect16_t cr = get_client_rect(win);
-
-      // Play/stop button hit.
-      if (mx < TIMELINE_CTRL_W) {
-        canvas_doc_t *doc = tl_doc();
-        int h = cr.h;
-        int by = (h - CTRL_BTN_H) / 2 - CTRL_FPS_H / 2 - 2;
-        if (my >= by && my < by + CTRL_BTN_H)
-          handle_menu_command(doc && doc->anim && doc->anim->playing
-                              ? ID_ANIM_STOP : ID_ANIM_PLAY);
-        return true;
-      }
 
       int cell = hit_cell(st, mx, cr.w);
       if (cell >= 0) {
@@ -322,7 +301,7 @@ static result_t timeline_proc(window_t *win, uint32_t msg,
       int content_w = doc && doc->anim
                       ? doc->anim->frame_count * TIMELINE_THUMB_W
                       : 0;
-      int viewport_w = cr.w - TIMELINE_CTRL_W;
+      int viewport_w = cr.w;
       int max_scroll = content_w - viewport_w;
       if (max_scroll < 0) max_scroll = 0;
       st->scroll_x += delta;
@@ -339,6 +318,30 @@ static result_t timeline_proc(window_t *win, uint32_t msg,
         anim_tick(doc);
       return true;
     }
+
+    case tbButtonClick:
+      if (wparam == ID_ANIM_PLAY) {
+        canvas_doc_t *doc = tl_doc();
+        handle_menu_command(doc && doc->anim && doc->anim->playing
+                            ? ID_ANIM_STOP : ID_ANIM_PLAY);
+      } else {
+        handle_menu_command((uint16_t)wparam);
+      }
+      return true;
+
+    case evCommand:
+      // Forward toolbar clicks to handle_menu_command.
+      if (HIWORD(wparam) == btnClicked || HIWORD(wparam) == tbButtonClick) {
+        uint16_t id = (uint16_t)LOWORD(wparam);
+        if (id == ID_ANIM_PLAY) {
+          canvas_doc_t *doc = tl_doc();
+          handle_menu_command(doc && doc->anim && doc->anim->playing
+                              ? ID_ANIM_STOP : ID_ANIM_PLAY);
+        } else {
+          handle_menu_command(id);
+        }
+      }
+      return false;
 
     default:
       return false;
@@ -364,7 +367,7 @@ window_t *create_timeline_window(void) {
 
   window_t *tw = create_window(
       "Timeline",
-      WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
+      WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE | WINDOW_TOOLBAR,
       MAKERECT(tw_x, tw_y, tw_w, tw_h),
       NULL, timeline_proc, g_app->hinstance, NULL);
   show_window(tw, true);
@@ -372,10 +375,16 @@ window_t *create_timeline_window(void) {
   return tw;
 }
 
+void timeline_toolbar_sync(void) {
+  if (!g_app || !g_app->timeline_win) return;
+  update_play_button_icon(g_app->timeline_win);
+}
+
 void timeline_win_refresh(void) {
   if (!g_app || !g_app->timeline_win) return;
   timeline_state_t *st = (timeline_state_t *)g_app->timeline_win->userdata;
   if (st) st->thumbs_dirty = true;
+  timeline_toolbar_sync();
   invalidate_window(g_app->timeline_win);
 }
 
@@ -390,7 +399,15 @@ void anim_tick(canvas_doc_t *doc) {
 
   int next = tl->active_frame + 1;
   if (next >= tl->frame_count) {
-    if (!tl->loop) { tl->playing = false; timeline_win_refresh(); return; }
+    if (!tl->loop) {
+      tl->playing = false;
+      if (g_app && g_app->anim_timer_id) {
+        axCancelTimer(g_app->anim_timer_id);
+        g_app->anim_timer_id = 0;
+      }
+      timeline_win_refresh();
+      return;
+    }
     next = 0;
   }
 

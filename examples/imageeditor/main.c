@@ -36,6 +36,9 @@ static const accel_t kAccelEntries[] = {
   { FCONTROL|FVIRTKEY, AX_KEY_MINUS,  ID_VIEW_ZOOM_OUT },
   // Ctrl+0 — Fit on Screen (Photoshop convention)
   { FCONTROL|FVIRTKEY, AX_KEY_0,      ID_VIEW_ZOOM_FIT },
+  // Timeline navigation, matching common animation tools like After Effects.
+  { FVIRTKEY,          AX_KEY_PGUP,   ID_ANIM_PREV_FRAME },
+  { FVIRTKEY,          AX_KEY_PGDN,   ID_ANIM_NEXT_FRAME },
   // Tool hotkeys – same as MS Paint
   { FVIRTKEY,          AX_KEY_P, ID_TOOL_PENCIL },
   { FVIRTKEY,          AX_KEY_B, ID_TOOL_BRUSH  },
