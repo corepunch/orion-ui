@@ -396,6 +396,21 @@ void draw_icon16(int icon, int x, int y, uint32_t col) {
     }
     return;
   }
+  if (icon >= SILK_ICON_BASE) {
+    bitmap_strip_t *s = ui_get_silk_strip();
+    if (s && s->tex != 0 && s->cols > 0) {
+      int idx  = icon - SILK_ICON_BASE;
+      int scol = idx % s->cols;
+      int srow = idx / s->cols;
+      float u0 = (float)(scol * s->icon_w) / (float)s->sheet_w;
+      float v0 = (float)(srow * s->icon_h) / (float)s->sheet_h;
+      float u1 = u0 + (float)s->icon_w / (float)s->sheet_w;
+      float v1 = v0 + (float)s->icon_h / (float)s->sheet_h;
+      draw_sprite_region((int)s->tex, R(x, y, s->icon_w, s->icon_h),
+                         UV_RECT(u0, v0, u1, v1), col, 0);
+    }
+    return;
+  }
   icon*=2;
   draw_text_small((char[]) { icon+128, icon+129, 0 }, x, y, col);
   draw_text_small((char[]) { icon+144, icon+145, 0 }, x, y+8, col);

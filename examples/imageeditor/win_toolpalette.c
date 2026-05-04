@@ -12,7 +12,7 @@
 #include "imageeditor.h"
 #include "../../commctl/commctl.h"
 
-// Fugue atlas tile size (all icons are square).
+// Silk atlas tile size (all icons are square).
 #define ICON_W  16
 
 // Tool palette layout with ident, icon index, and tooltip text (hotkey in parentheses).
@@ -72,16 +72,8 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       win_toolbox(win, msg, wparam, lparam);
       send_message(win, bxSetButtonSize, TOOL_PALETTE_BTN_SIZE, NULL);
 
-      // Load the shared Fugue icon strip from the Orion share directory.
-#ifdef SHAREDIR
-      char path[4096];
-      snprintf(path, sizeof(path), "%s/../share/orion/fugue.png", ui_get_exe_dir());
-      send_message(win, bxLoadStrip, ICON_W, path);
-#endif
-
       // Set tools from unified array.
       send_message(win, bxSetItems, NUM_TOOLS, (void *)k_tools);
-      send_message(win, bxSetIconTintBrush, brTextNormal, NULL);
       send_message(win, bxSetActiveItem, ID_TOOL_SELECT, NULL);
       return true;
     }

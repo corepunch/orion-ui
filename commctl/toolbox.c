@@ -19,7 +19,7 @@
 //       // Optional: load a custom icon strip from a PNG sprite sheet.
 //       // Icon tiles are square; wparam = tile size in px.
 //       char path[512];
-//       snprintf(path, sizeof(path), "%s/../share/orion/fugue.png",
+//       snprintf(path, sizeof(path), "%s/../share/orion/silk.png",
 //                ui_get_exe_dir());
 //       send_message(win, bxLoadStrip, 16, path);
 //
@@ -122,14 +122,26 @@ static void draw_toolbox_button(toolbox_state_t *st, int idx,
   // Draw icon centred in the cell (shifted 1px when depressed).
   int px = depressed ? 1 : 0;
   int icon = st->items[idx].icon;
-  uint32_t sysicon_tint = 0xFFFFFFFF;
-  if (st->icon_tint_brush >= 0 && st->icon_tint_brush < brCount)
-    sysicon_tint = get_sys_color((sys_color_idx_t)st->icon_tint_brush);
-
   if (icon >= SYSICON_BASE) {
-    // Built-in 16x16 sysicon sheet (optionally tinted).
+    // Built-in 16x16 sysicon sheet.
     irect16_t icon_dst = rect_offset(rect_center(cell, 16, 16), px, px);
-    draw_icon16(icon, icon_dst.x, icon_dst.y, sysicon_tint);
+    draw_icon16(icon, icon_dst.x, icon_dst.y, 0xFFFFFFFF);
+  } else if (icon >= SILK_ICON_BASE) {
+    // Built-in Silk sheet.
+    irect16_t icon_dst = rect_offset(rect_center(cell, 16, 16), px, px);
+    bitmap_strip_t *silk = ui_get_silk_strip();
+    if (silk) {
+      int idx = icon - SILK_ICON_BASE;
+      int scol = idx % silk->cols;
+      int srow = idx / silk->cols;
+      float u0 = (float)(scol * silk->icon_w) / (float)silk->sheet_w;
+      float v0 = (float)(srow * silk->icon_h) / (float)silk->sheet_h;
+      float u1 = u0 + (float)silk->icon_w / (float)silk->sheet_w;
+      float v1 = v0 + (float)silk->icon_h / (float)silk->sheet_h;
+      draw_sprite_region((int)silk->tex,
+                         R(icon_dst.x, icon_dst.y, silk->icon_w, silk->icon_h),
+                         UV_RECT(u0, v0, u1, v1), 0xFFFFFFFF, 0);
+    }
   } else if (st->strip.tex && st->strip.cols > 0) {
     // Custom sprite-sheet strips carry their own colors.
     bitmap_strip_t *s = &st->strip;
@@ -339,9 +351,6 @@ result_t win_toolbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
     case bxSetIconTintBrush: {
       toolbox_state_t *st = (toolbox_state_t *)win->userdata;
       if (!st) return false;
-      int brush = (int)(int32_t)wparam;
-      st->icon_tint_brush = (brush >= 0 && brush < brCount) ? brush : -1;
-      invalidate_window(win);
       return true;
     }
     case evGetTooltipText: {
