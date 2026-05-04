@@ -1336,14 +1336,8 @@ void test_fe_plugin_components_are_toolbox_placeable(void) {
     ASSERT_TRUE((strip->capabilities & FE_COMPONENT_SHOW_TOOLBOX) != 0);
     ASSERT_TRUE(fe_component_by_tool_ident(hist->toolbox_ident) == hist);
     ASSERT_TRUE(fe_component_by_tool_ident(strip->toolbox_ident) == strip);
-    fe_icon_strip_t icons;
-    ASSERT_TRUE(fe_component_toolbox_icon_strip(&icons));
-    int icon_count = (icons.width / icons.icon_size) * (icons.height / icons.icon_size);
-    ASSERT_TRUE(icon_count >= 15);
-    ASSERT_TRUE(hist->toolbox_icon >= 12);
-    ASSERT_TRUE(hist->toolbox_icon < icon_count);
-    ASSERT_TRUE(strip->toolbox_icon >= 12);
-    ASSERT_TRUE(strip->toolbox_icon < icon_count);
+    ASSERT_EQUAL(hist->toolbox_icon, toolbox_icon_histogram);
+    ASSERT_EQUAL(strip->toolbox_icon, toolbox_icon_gradient);
 
     fe_teardown();
     PASS();

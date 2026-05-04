@@ -1,21 +1,5 @@
 #include "../ui.h"
 #include "commctl.h"
-#include "build/generated/commctl/commctl_component_icons.h"
-
-enum {
-  CC_ICON_SELECT = 0,
-  CC_ICON_LABEL,
-  CC_ICON_TEXTEDIT,
-  CC_ICON_BUTTON,
-  CC_ICON_CHECKBOX,
-  CC_ICON_COMBOBOX,
-  CC_ICON_LIST,
-  CC_ICON_SLIDER,
-  CC_ICON_GRADIENT,
-  CC_ICON_REPORTVIEW,
-  CC_ICON_SPACE,
-  CC_ICON_IMAGE,
-};
 
 static const fe_component_desc_t k_components[] = {
   {
@@ -24,7 +8,7 @@ static const fe_component_desc_t k_components[] = {
     .token = "button",
     .name_prefix = "IDC_BTN",
     .toolbox_ident = 205,
-    .toolbox_icon = CC_ICON_BUTTON,
+    .toolbox_icon = toolbox_icon_button,
     .default_size = {75, 23},
     .capabilities = FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX,
     .proc = win_button,
@@ -35,7 +19,7 @@ static const fe_component_desc_t k_components[] = {
     .token = "checkbox",
     .name_prefix = "IDC_CHK",
     .toolbox_ident = 206,
-    .toolbox_icon = CC_ICON_CHECKBOX,
+    .toolbox_icon = toolbox_icon_checkbox,
     .default_size = {97, 17},
     .capabilities = FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX,
     .proc = win_checkbox,
@@ -46,7 +30,7 @@ static const fe_component_desc_t k_components[] = {
     .token = "label",
     .name_prefix = "IDC_LBL",
     .toolbox_ident = 202,
-    .toolbox_icon = CC_ICON_LABEL,
+    .toolbox_icon = toolbox_icon_label,
     .default_size = {65, 13},
     .capabilities = FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX,
     .proc = win_label,
@@ -57,7 +41,7 @@ static const fe_component_desc_t k_components[] = {
     .token = "textedit",
     .name_prefix = "IDC_EDT",
     .toolbox_ident = 203,
-    .toolbox_icon = CC_ICON_TEXTEDIT,
+    .toolbox_icon = toolbox_icon_textbox,
     .default_size = {121, 20},
     .capabilities = FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX,
     .proc = win_textedit,
@@ -68,7 +52,7 @@ static const fe_component_desc_t k_components[] = {
     .token = "list",
     .name_prefix = "IDC_LST",
     .toolbox_ident = 209,
-    .toolbox_icon = CC_ICON_LIST,
+    .toolbox_icon = toolbox_icon_listbox,
     .default_size = {121, 60},
     .capabilities = FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX,
     .proc = win_list,
@@ -79,7 +63,7 @@ static const fe_component_desc_t k_components[] = {
     .token = "combobox",
     .name_prefix = "IDC_CMB",
     .toolbox_ident = 208,
-    .toolbox_icon = CC_ICON_COMBOBOX,
+    .toolbox_icon = toolbox_icon_combobox,
     .default_size = {121, 20},
     .capabilities = FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX,
     .proc = win_combobox,
@@ -90,7 +74,7 @@ static const fe_component_desc_t k_components[] = {
     .token = "slider",
     .name_prefix = "IDC_SLD",
     .toolbox_ident = 210,
-    .toolbox_icon = CC_ICON_SLIDER,
+    .toolbox_icon = toolbox_icon_slider,
     .default_size = {121, 17},
     .capabilities = FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX,
     .proc = win_slider,
@@ -101,7 +85,7 @@ static const fe_component_desc_t k_components[] = {
     .token = "gradient",
     .name_prefix = "IDC_GRD",
     .toolbox_ident = 211,
-    .toolbox_icon = CC_ICON_GRADIENT,
+    .toolbox_icon = toolbox_icon_gradient,
     .default_size = {121, 8},
     .capabilities = FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX,
     .proc = win_gradient,
@@ -112,7 +96,7 @@ static const fe_component_desc_t k_components[] = {
     .token = "reportview",
     .name_prefix = "IDC_RVW",
     .toolbox_ident = 212,
-    .toolbox_icon = CC_ICON_REPORTVIEW,
+    .toolbox_icon = toolbox_icon_reportview,
     .default_size = {160, 120},
     .capabilities = FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX,
     .proc = win_reportview,
@@ -123,7 +107,7 @@ static const fe_component_desc_t k_components[] = {
     .token = "space",
     .name_prefix = "IDC_SPC",
     .toolbox_ident = 213,
-    .toolbox_icon = CC_ICON_SPACE,
+    .toolbox_icon = toolbox_icon_spacer,
     .default_size = {80, 40},
     .capabilities = FE_COMPONENT_PLACEABLE,
     .proc = win_space,
@@ -131,15 +115,3 @@ static const fe_component_desc_t k_components[] = {
 };
 
 GEM_CLASSES(k_components, "Orion built-in commctl components", FE_PLUGIN_VERSION)
-
-bool fe_plugin_toolbox_icon_strip(fe_icon_strip_t *out) {
-  if (!out) return false;
-  *out = (fe_icon_strip_t){
-    .rgba = commctl_component_icons_rgba,
-    .width = commctl_component_icons_width,
-    .height = commctl_component_icons_height,
-    .icon_size = commctl_component_icons_tile,
-    .default_icon = CC_ICON_SPACE,
-  };
-  return true;
-}

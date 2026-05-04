@@ -1,6 +1,6 @@
 // Tool palette for the form editor.
 // Uses win_toolbox directly — no extra client content below the grid.
-// toolbox.png is a 21x21-px-per-tile sprite sheet in VB3 toolbox order.
+// toolbox.png is a generated 16x16-px-per-tile shared component icon atlas.
 
 #include "formeditor.h"
 #include "../../commctl/commctl.h"
@@ -65,21 +65,14 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       // Delegate to win_toolbox first so its state is ready.
       win_toolbox(win, msg, wparam, lparam);
 
-      // Use a larger button size to fit the 21px icons with comfortable margin.
+      // Use a larger button size to fit the 16px icons with comfortable margin.
       send_message(win, bxSetButtonSize, FE_TOOLBOX_BTN_SIZE, NULL);
 
-      // Prefer the loaded component plugin's embedded icon strip; fall back to
-      // the historical loose toolbox.png while developing old plugins.
-      fe_icon_strip_t strip;
-      if (fe_component_toolbox_icon_strip(&strip)) {
-        toolbox_load_strip_rgba(win, strip.icon_size, strip.rgba, strip.width, strip.height);
-      } else {
 #ifdef SHAREDIR
-        char path[4096];
-        snprintf(path, sizeof(path), "%s/" SHAREDIR "/toolbox.png", ui_get_exe_dir());
-        send_message(win, bxLoadStrip, FE_TOOLBOX_ICON_W, path);
+      char path[4096];
+      snprintf(path, sizeof(path), "%s/" SHAREDIR "/toolbox.png", ui_get_exe_dir());
+      send_message(win, bxLoadStrip, FE_TOOLBOX_ICON_W, path);
 #endif
-      }
 
       build_tool_items();
       send_message(win, bxSetItems, g_tool_count, (void *)g_tools);
