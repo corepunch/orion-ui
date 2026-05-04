@@ -97,6 +97,9 @@ static void create_app_windows(hinstance_t hinstance) {
 #if !IMAGEEDITOR_SINGLE_LAYER
   create_layers_window();
 #endif
+#if IMAGEEDITOR_ANIMATIONS
+  create_timeline_window();
+#endif
 }
 
 // ============================================================

@@ -251,6 +251,13 @@ void close_document(canvas_doc_t *doc) {
   free(doc->composite_buf);
   doc->composite_buf = NULL;
 
+#if IMAGEEDITOR_ANIMATIONS
+  if (doc->anim) {
+    anim_timeline_free(doc->anim);
+    doc->anim = NULL;
+  }
+#endif
+
   if (doc->win && is_window(doc->win))
     destroy_window(doc->win);
 
