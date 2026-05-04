@@ -324,9 +324,9 @@ share: $(VGA_FONT_PNG) | $(SHARE_DIR)
 	@cp share/Geneva-12.png $(SHARE_DIR)/orion/
 	@cp share/theme.png $(SHARE_DIR)/orion/
 	@cp share/filepicker.png $(SHARE_DIR)/orion/
-	@cp share/orion/fugue.png $(SHARE_DIR)/orion/
+	@cp share/fugue.png $(SHARE_DIR)/orion/
 	@mkdir -p $(SHARE_DIR)/orion/shaders
-	@cp share/orion/shaders/*.glsl $(SHARE_DIR)/orion/shaders/
+	@cp share/shaders/*.glsl $(SHARE_DIR)/orion/shaders/
 	@mkdir -p $(SHARE_DIR)/imageeditor/shaders
 	@cp examples/imageeditor/share/shaders/*.glsl $(SHARE_DIR)/imageeditor/shaders/
 	@mkdir -p $(SHARE_DIR)/imageeditor/filters
