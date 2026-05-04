@@ -264,11 +264,12 @@ tools: $(TOOLS_BINS)
 	@echo "All tools built"
 
 fonts: tools
-	$(BIN_DIR)/font_atlas fonts/ChiKareGo2.ttf share/Chicago-12.png -pixelsize=16 -em -sharp -cellw=10 -cellh=15 -v
-	$(BIN_DIR)/font_atlas fonts/FindersKeepers.ttf share/FindersKeepers.png -pixelsize=16 -em -sharp -cellw=8 -cellh=9 -v
-# 	$(BIN_DIR)/font_atlas fonts/Pix32.ttf share/Geneva-12.png -pixelsize=12 -em -sharp -cellw=8 -cellh=16 -v
-	$(BIN_DIR)/font_atlas fonts/PixelOperator.ttf share/Geneva-12.png -pixelsize=16 -em -sharp -cellw=8 -cellh=16 -v -scan-width -letter-spacing=2
-	$(BIN_DIR)/font_atlas fonts/PixelOperatorMono.ttf share/Mono-12.png -pixelsize=16 -em -sharp -cellw=8 -cellh=16 -v
+	@mkdir -p share/fonts
+	$(BIN_DIR)/font_atlas fonts/ChiKareGo2.ttf share/fonts/Chicago-12.png -pixelsize=16 -em -sharp -cellw=10 -cellh=15 -v
+	$(BIN_DIR)/font_atlas fonts/FindersKeepers.ttf share/fonts/FindersKeepers.png -pixelsize=16 -em -sharp -cellw=8 -cellh=9 -v
+# 	$(BIN_DIR)/font_atlas fonts/Pix32.ttf share/fonts/Geneva-12.png -pixelsize=12 -em -sharp -cellw=8 -cellh=16 -v
+	$(BIN_DIR)/font_atlas fonts/PixelOperator.ttf share/fonts/Geneva-12.png -pixelsize=16 -em -sharp -cellw=8 -cellh=16 -v -scan-width -letter-spacing=2
+	$(BIN_DIR)/font_atlas fonts/PixelOperatorMono.ttf share/fonts/Mono-12.png -pixelsize=16 -em -sharp -cellw=8 -cellh=16 -v
 	
 $(BIN_DIR)/%$(EXE_EXT): tools/%.c $(SHARED_LIB) | $(BIN_DIR)
 	@echo "Building tool: $@"
@@ -301,15 +302,15 @@ $(PLATFORM_LIB): | $(LIB_DIR)
 	@echo "Building platform library..."
 	$(MAKE) -C $(PLATFORM_DIR) OUTDIR=$(abspath $(LIB_DIR))
 
-# VGA font sheet — copied from the source tree into build/share/orion.
-# Place your custom font at share/vga-rom-font-8x16.png and it will be used
+# VGA font sheet — copied from the source tree into build/share/orion/fonts.
+# Place your custom font at share/fonts/vga-rom-font-8x16.png and it will be used
 # by gitclient at runtime.
-VGA_FONT_PNG = $(SHARE_DIR)/orion/vga-rom-font-8x16.png
-VGA_FONT_SRC = share/vga-rom-font-8x16.png
+VGA_FONT_PNG = $(SHARE_DIR)/orion/fonts/vga-rom-font-8x16.png
+VGA_FONT_SRC = share/fonts/vga-rom-font-8x16.png
 
 $(VGA_FONT_PNG): $(VGA_FONT_SRC) | $(SHARE_DIR)
 	@echo "Copying VGA font sheet: $@"
-	@mkdir -p $(SHARE_DIR)/orion
+	@mkdir -p $(dir $@)
 	cp $(VGA_FONT_SRC) $@
 
 # Shared data assets — copy per-example resources into build/share/<example>/
@@ -318,10 +319,11 @@ $(VGA_FONT_PNG): $(VGA_FONT_SRC) | $(SHARE_DIR)
 share: $(VGA_FONT_PNG) | $(SHARE_DIR)
 	@mkdir -p $(SHARE_DIR)/orion
 	@cp share/icon_sheet_16x16.png $(SHARE_DIR)/orion/
-	@cp share/SmallFont.png $(SHARE_DIR)/orion/
-	@cp share/Chicago-12.png $(SHARE_DIR)/orion/
-	@cp share/Geneva-9.png $(SHARE_DIR)/orion/
-	@cp share/Geneva-12.png $(SHARE_DIR)/orion/
+	@mkdir -p $(SHARE_DIR)/orion/fonts
+	@cp share/fonts/SmallFont.png $(SHARE_DIR)/orion/fonts/
+	@cp share/fonts/Chicago-12.png $(SHARE_DIR)/orion/fonts/
+	@cp share/fonts/Geneva-9.png $(SHARE_DIR)/orion/fonts/
+	@cp share/fonts/Geneva-12.png $(SHARE_DIR)/orion/fonts/
 	@cp share/theme.png $(SHARE_DIR)/orion/
 	@cp share/filepicker.png $(SHARE_DIR)/orion/
 	@cp share/fugue.png $(SHARE_DIR)/orion/
@@ -331,7 +333,7 @@ share: $(VGA_FONT_PNG) | $(SHARE_DIR)
 	@cp examples/imageeditor/share/shaders/*.glsl $(SHARE_DIR)/imageeditor/shaders/
 	@mkdir -p $(SHARE_DIR)/imageeditor/filters
 	@cp examples/imageeditor/share/filters/*.glsl $(SHARE_DIR)/imageeditor/filters/
-	@[ ! -f share/Geneva9.png ] || cp share/Geneva9.png $(SHARE_DIR)/orion/
+	@[ ! -f share/fonts/Geneva9.png ] || cp share/fonts/Geneva9.png $(SHARE_DIR)/orion/fonts/
 	@for dir in examples/*/; do \
 	  name=$$(basename "$$dir"); \
 	  assets=$$(find "$$dir" -maxdepth 1 \( -name "*.png" -o -name "*.ttf" -o -name "*.jpg" -o -name "*.jpeg" \) 2>/dev/null); \
