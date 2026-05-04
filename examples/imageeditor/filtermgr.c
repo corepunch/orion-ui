@@ -84,6 +84,7 @@ static char *replace_all(const char *src, const char *needle, const char *replac
     if (!m) {
       size_t tail = strlen(p);
       memcpy(d, p, tail + 1);
+      d += tail;
       break;
     }
     size_t head = (size_t)(m - p);
@@ -93,6 +94,7 @@ static char *replace_all(const char *src, const char *needle, const char *replac
     d += repl_len;
     p = m + needle_len;
   }
+  *d = '\0';
   return out;
 }
 
