@@ -19,7 +19,7 @@
 //       // Optional: load a custom icon strip from a PNG sprite sheet.
 //       // Icon tiles are square; wparam = tile size in px.
 //       char path[512];
-//       snprintf(path, sizeof(path), "%s/" SHAREDIR "/tools.png",
+//       snprintf(path, sizeof(path), "%s/../share/orion/fugue.png",
 //                ui_get_exe_dir());
 //       send_message(win, bxLoadStrip, 16, path);
 //

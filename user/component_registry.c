@@ -35,8 +35,8 @@ bool fe_register_component(const fe_component_desc_t *desc) {
     return false;
 
   fe_component_desc_t stored = *desc;
-  if (stored.toolbox_icon < 0 || stored.toolbox_icon >= toolbox_icon_count)
-    stored.toolbox_icon = toolbox_icon_default;
+  if (stored.toolbox_icon < 0 || stored.toolbox_icon >= FUGUE_ICON_COUNT)
+    stored.toolbox_icon = FUGUE_ICON_PLUG;
 
   g_components[g_component_count].desc = stored;
   g_component_count++;

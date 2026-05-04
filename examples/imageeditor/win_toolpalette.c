@@ -12,30 +12,30 @@
 #include "imageeditor.h"
 #include "../../commctl/commctl.h"
 
-// tools.png tile size (all icons are square).
+// Fugue atlas tile size (all icons are square).
 #define ICON_W  16
 
 // Tool palette layout with ident, icon index, and tooltip text (hotkey in parentheses).
 static const toolbox_item_t k_tools[NUM_TOOLS] = {
-  { ID_TOOL_SELECT,        0, "Select (S)"        },
-  { ID_TOOL_MOVE,          4, "Move (V)"          },
-  { ID_TOOL_MAGIC_WAND,    3, "Magic Wand (W)"     },
-  { ID_TOOL_CROP,          6, "Crop (C)"           },
-  { ID_TOOL_HAND,          4, "Hand"               },
-  { ID_TOOL_EYEDROPPER,   11, "Eyedropper (I)"     },
-  { ID_TOOL_ZOOM,          5, "Zoom"               },
-  { ID_TOOL_PENCIL,       13, "Pencil (P)"         },
-  { ID_TOOL_BRUSH,        15, "Brush (B)"          },
-  { ID_TOOL_SPRAY,        18, "Spray (A)"          },
-  { ID_TOOL_FILL,          8, "Fill (K)"           },
-  { ID_TOOL_ERASER,       12, "Eraser (E)"         },
-  { ID_TOOL_LINE,         10, "Line"               },
-  { ID_TOOL_TEXT,          7, "Text (T)"           },
-  { ID_TOOL_RECT,         21, "Rectangle"          },
-  { ID_TOOL_ELLIPSE,      23, "Ellipse"            },
-  { ID_TOOL_ROUNDED_RECT, 22, "Rounded Rect"       },
-  { ID_TOOL_POLYGON,      24, "Polygon"            },
-  { ID_TOOL_MAGNIFIER,     5, "Magnifier (G)"      },
+  { ID_TOOL_SELECT,        FUGUE_ICON_SELECTION_SELECT,      "Select (S)"        },
+  { ID_TOOL_MOVE,          FUGUE_ICON_ARROW_MOVE,            "Move (V)"          },
+  { ID_TOOL_MAGIC_WAND,    FUGUE_ICON_WAND_MAGIC,            "Magic Wand (W)"     },
+  { ID_TOOL_CROP,          FUGUE_ICON_IMAGE_CROP,            "Crop (C)"           },
+  { ID_TOOL_HAND,          FUGUE_ICON_HAND,                  "Hand"               },
+  { ID_TOOL_EYEDROPPER,    FUGUE_ICON_PIPETTE,               "Eyedropper (I)"     },
+  { ID_TOOL_ZOOM,          FUGUE_ICON_MAGNIFIER_ZOOM_IN,     "Zoom"               },
+  { ID_TOOL_PENCIL,        FUGUE_ICON_PENCIL,                "Pencil (P)"         },
+  { ID_TOOL_BRUSH,         FUGUE_ICON_PAINT_BRUSH,           "Brush (B)"          },
+  { ID_TOOL_SPRAY,         FUGUE_ICON_SPRAY,                 "Spray (A)"          },
+  { ID_TOOL_FILL,          FUGUE_ICON_FILL,                  "Fill (K)"           },
+  { ID_TOOL_ERASER,        FUGUE_ICON_ERASER,                "Eraser (E)"         },
+  { ID_TOOL_LINE,          FUGUE_ICON_LAYER_SHAPE_LINE,      "Line"               },
+  { ID_TOOL_TEXT,          FUGUE_ICON_LAYER_SHAPE_TEXT,      "Text (T)"           },
+  { ID_TOOL_RECT,          FUGUE_ICON_BOX,                   "Rectangle"          },
+  { ID_TOOL_ELLIPSE,       FUGUE_ICON_LAYER_SHAPE_ELLIPSE,   "Ellipse"            },
+  { ID_TOOL_ROUNDED_RECT,  FUGUE_ICON_LAYER_SHAPE_ROUND,     "Rounded Rect"       },
+  { ID_TOOL_POLYGON,       FUGUE_ICON_LAYER_SHAPE_POLYGON,   "Polygon"            },
+  { ID_TOOL_MAGNIFIER,     FUGUE_ICON_MAGNIFIER_ZOOM,        "Magnifier (G)"      },
 };
 
 static void draw_palette_swatch(window_t *win,
@@ -72,10 +72,10 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       win_toolbox(win, msg, wparam, lparam);
       send_message(win, bxSetButtonSize, TOOL_PALETTE_BTN_SIZE, NULL);
 
-      // Load tools.png icon strip.
+      // Load the shared Fugue icon strip from the Orion share directory.
 #ifdef SHAREDIR
       char path[4096];
-      snprintf(path, sizeof(path), "%s/" SHAREDIR "/tools.png", ui_get_exe_dir());
+      snprintf(path, sizeof(path), "%s/../share/orion/fugue.png", ui_get_exe_dir());
       send_message(win, bxLoadStrip, ICON_W, path);
 #endif
 

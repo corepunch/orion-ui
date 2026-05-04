@@ -2,7 +2,7 @@
 // Defaults to a reportview icon+name list, similar to later Visual Basic
 // toolbox versions. Define FE_TOOLBOX_USE_BUTTON_GRID to use the classic
 // compact button grid.
-// toolbox.png is a generated 16x16-px-per-tile shared component icon atlas.
+// fugue.png is a generated 16x16-px-per-tile shared Orion icon atlas.
 
 #include "formeditor.h"
 #include "../../commctl/commctl.h"
@@ -75,13 +75,13 @@ static void build_tool_items(void) {
 #ifdef FE_TOOLBOX_USE_BUTTON_GRID
   g_tools[g_tool_count++] = (toolbox_item_t){
       ID_TOOL_SELECT,
-      toolbox_icon_cursor,
+      FUGUE_ICON_CURSOR,
       "Select"
   };
 #else
   g_tools[g_tool_count++] = (reportview_item_t){
       .text = "Select",
-      .icon = toolbox_icon_cursor,
+      .icon = FUGUE_ICON_CURSOR,
       .color = get_sys_color(brTextNormal),
       .userdata = ID_TOOL_SELECT,
   };
@@ -193,7 +193,7 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
 
 #ifdef SHAREDIR
       char path[4096];
-      snprintf(path, sizeof(path), "%s/" SHAREDIR "/toolbox.png", ui_get_exe_dir());
+      snprintf(path, sizeof(path), "%s/../share/orion/fugue.png", ui_get_exe_dir());
       send_message(win, bxLoadStrip, FE_TOOLBOX_ICON_W, path);
 #endif
 
@@ -207,7 +207,7 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
 
 #ifdef SHAREDIR
       char path[4096];
-      snprintf(path, sizeof(path), "%s/" SHAREDIR "/toolbox.png", ui_get_exe_dir());
+      snprintf(path, sizeof(path), "%s/../share/orion/fugue.png", ui_get_exe_dir());
       if (load_toolbox_strip(st, path))
         send_message(win, RVM_SETICONSTRIP, 0, &st->strip);
 #else
