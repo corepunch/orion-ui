@@ -15,6 +15,7 @@
 #define HEADER_HEIGHT COLUMNVIEW_HEADER_HEIGHT
 #define DEFAULT_COLUMN_WIDTH 160
 #define DEFAULT_ICON_SIZE     32
+#define DEFAULT_ICON_TEXT_GAP  0
 #define ICON_OFFSET 16
 #define WIN_PADDING 4
 #define RV_DOUBLE_CLICK_MS 500u
@@ -46,9 +47,11 @@ typedef struct {
   uint32_t view_mode;
   uint32_t column_count;
   int icon_size;    // tile size (px) used in RVM_VIEW_LARGE_ICON mode
+  int icon_text_gap; // gap between icon slot and text in RVM_VIEW_ICON mode
   bool redraw_enabled;
   bool redraw_dirty;
   bool column_titles_visible;
+  bool preserve_icon_colors;
 
   // Per-instance icon strip for icon-view rendering.
   // Set via RVM_SETICONSTRIP (lparam = bitmap_strip_t*; NULL to clear).
@@ -392,20 +395,23 @@ static void rv_paint_icon_view(window_t *win, reportview_data_t *data) {
 
     int item_w  = data->column_width - 6;
     int item_h  = ENTRY_HEIGHT - 1;
-    irect16_t icon_rect = {x,               y, ICON_OFFSET,              item_h};
-    irect16_t text_rect = {x + ICON_OFFSET, y, item_w - ICON_OFFSET - 2, item_h};
+    int gap = data->icon_text_gap;
+    irect16_t icon_rect = {x,                     y, ICON_OFFSET,                    item_h};
+    irect16_t text_rect = {x + ICON_OFFSET + gap, y, item_w - ICON_OFFSET - gap - 2, item_h};
 
     int icon_id = data->items[i].icon;
 
     if ((int)i == data->selected) {
       uint32_t icon_col = get_sys_color(brWindowBg);
       fill_rect(get_sys_color(brTextNormal), R(x - 2, y, item_w, item_h));
-      rv_draw_item_icon(strip, icon_id, &icon_rect, icon_col);
+      rv_draw_item_icon(strip, icon_id, &icon_rect,
+                        data->preserve_icon_colors ? 0xFFFFFFFF : icon_col);
       draw_text_clipped(FONT_SMALL, data->items[i].text, &text_rect, icon_col, 0);
     } else {
       uint32_t icon_col = data->items[i].color;
       fill_rect(bg_col, R(x - 2, y, item_w, item_h));
-      rv_draw_item_icon(strip, icon_id, &icon_rect, icon_col);
+      rv_draw_item_icon(strip, icon_id, &icon_rect,
+                        data->preserve_icon_colors ? 0xFFFFFFFF : icon_col);
       draw_text_clipped(FONT_SMALL, data->items[i].text, &text_rect, icon_col, 0);
     }
   }
@@ -455,7 +461,8 @@ static void rv_paint_large_icon_view(window_t *win, reportview_data_t *data) {
     }
 
     rv_draw_item_icon(strip, data->items[i].icon, &icon_r,
-                      selected ? 0xffffffff : data->items[i].color);
+                      data->preserve_icon_colors ? 0xFFFFFFFF :
+                      selected ? 0xFFFFFFFF : data->items[i].color);
 
     uint32_t txt_col = selected ? get_sys_color(brActiveTitlebarText)
                                 : get_sys_color(brTextNormal);
@@ -563,10 +570,12 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       data->last_click_index = RV_INVALID_SELECTION;
       data->column_width = DEFAULT_COLUMN_WIDTH;
       data->icon_size    = DEFAULT_ICON_SIZE;
+      data->icon_text_gap = DEFAULT_ICON_TEXT_GAP;
       data->view_mode = RVM_VIEW_ICON;
       data->redraw_enabled = true;
       data->redraw_dirty = false;
       data->column_titles_visible = true;
+      data->preserve_icon_colors = false;
 
       rv_sync_scroll(win, data);
       return true;
@@ -778,6 +787,22 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
 
     case RVM_GETCOLUMNTITLESVISIBLE:
       return data->column_titles_visible ? true : false;
+
+    case RVM_SETPRESERVEICONCOLORS:
+      data->preserve_icon_colors = (wparam != 0);
+      rv_invalidate(win, data);
+      return true;
+
+    case RVM_SETICONTEXTGAP: {
+      int gap = (int)wparam;
+      if (gap < 0)
+        gap = 0;
+      if (gap > 64)
+        gap = 64;
+      data->icon_text_gap = gap;
+      rv_invalidate(win, data);
+      return true;
+    }
 
     case evVScroll: {
       int total_h = rv_content_height(win, data);

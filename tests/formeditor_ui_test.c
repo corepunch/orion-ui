@@ -1336,6 +1336,8 @@ void test_fe_plugin_components_are_toolbox_placeable(void) {
     ASSERT_TRUE((strip->capabilities & FE_COMPONENT_SHOW_TOOLBOX) != 0);
     ASSERT_TRUE(fe_component_by_tool_ident(hist->toolbox_ident) == hist);
     ASSERT_TRUE(fe_component_by_tool_ident(strip->toolbox_ident) == strip);
+    ASSERT_EQUAL(hist->toolbox_icon, toolbox_icon_chart_bar);
+    ASSERT_EQUAL(strip->toolbox_icon, toolbox_icon_color_swatch_1);
 
     fe_teardown();
     PASS();

@@ -133,7 +133,7 @@ PLATFORM_LIB = $(LIB_DIR)/libplatform.$(PLATFORM_LIB_EXT)
 # Source files
 USER_SRCS = $(wildcard user/*.c)
 KERNEL_SRCS = $(wildcard kernel/*.c)
-COMMCTL_SRCS = $(wildcard commctl/*.c)
+COMMCTL_SRCS = $(filter-out commctl/formeditor_components_plugin.c,$(wildcard commctl/*.c))
 
 # Library targets
 STATIC_LIB = $(LIB_DIR)/liborion.a
@@ -222,6 +222,7 @@ FORMEDITOR_UI_TEST_BIN  = $(BIN_DIR)/test_formeditor_ui_test$(EXE_EXT)
 FORMEDITOR_SRCS_NO_MAIN = $(filter-out examples/formeditor/main.c,$(wildcard examples/formeditor/*.c))
 FORMEDITOR_COMPONENT_PLUGIN_SRC = commctl/formeditor_components_plugin.c
 FORMEDITOR_COMPONENT_PLUGIN = $(LIB_DIR)/formeditor_components$(LIB_EXT)
+TOOLBOX_ICONS_H = user/toolbox_icons.h
 
 IE_COMPONENTS_PLUGIN_SRCS = \
 	examples/imageeditor/components/lv_plug.c \
@@ -271,6 +272,10 @@ ifeq ($(OS),Windows_NT)
 	@cp -f $(LIB_DIR)/libplatform.dll $(BIN_DIR)/
 	@cp -f $(LIB_DIR)/liborion.dll $(BIN_DIR)/
 endif
+
+$(BIN_DIR)/gen_toolbox_atlas$(EXE_EXT): tools/gen_toolbox_atlas.c | $(BIN_DIR)
+	@echo "Building toolbox atlas generator: $@"
+	$(CC) $(TOOLS_CFLAGS) -I. -Itools -o $@ $< -lm
 
 $(ORIONC_BIN): tools/orionc.c | $(BIN_DIR)
 	@echo "Building Orion compiler: $@"
@@ -340,14 +345,14 @@ library: $(STATIC_LIB) $(SHARED_LIB)
 
 $(STATIC_LIB): $(USER_SRCS) $(KERNEL_SRCS) $(COMMCTL_SRCS) $(PLATFORM_LIB) | $(LIB_DIR)
 	@echo "Creating static library: $@"
-	find user kernel commctl -name "*.c" | sort | sed 's/.*/#include "&"/' | \
+	find user kernel commctl -name "*.c" ! -name "formeditor_components_plugin.c" | sort | sed 's/.*/#include "&"/' | \
 		$(CC) $(CFLAGS) -x c -c -o $(BUILD_DIR)/liborion_unity.o - && \
 	$(AR) rcs $@ $(BUILD_DIR)/liborion_unity.o && \
 	rm -f $(BUILD_DIR)/liborion_unity.o
 
 $(SHARED_LIB): $(USER_SRCS) $(KERNEL_SRCS) $(COMMCTL_SRCS) $(PLATFORM_LIB) | $(LIB_DIR)
 	@echo "Creating shared library: $@"
-	find user kernel commctl -name "*.c" | sort | sed 's/.*/#include "&"/' | \
+	find user kernel commctl -name "*.c" ! -name "formeditor_components_plugin.c" | sort | sed 's/.*/#include "&"/' | \
 		$(CC) $(CFLAGS) $(LIB_FLAGS) -x c -o $@ - $(LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
 
 # Examples
@@ -357,12 +362,12 @@ examples: share $(EXAMPLE_BINS) $(EXTRA_EXAMPLE_BINS) $(FORMEDITOR_COMPONENT_PLU
 .PHONY: plugins
 plugins: $(FORMEDITOR_COMPONENT_PLUGIN) $(IE_COMPONENTS_PLUGIN)
 
-$(FORMEDITOR_COMPONENT_PLUGIN): $(FORMEDITOR_COMPONENT_PLUGIN_SRC) $(SHARED_LIB) | $(LIB_DIR)
+$(FORMEDITOR_COMPONENT_PLUGIN): $(FORMEDITOR_COMPONENT_PLUGIN_SRC) $(TOOLBOX_ICONS_H) $(SHARED_LIB) | $(LIB_DIR)
 	@echo "Building FormEditor component plugin: $@"
 	$(CC) $(CFLAGS) $(FE_PLUGIN_LFLAGS) -I. -o $@ $< \
 		$(LDFLAGS)
 
-$(IE_COMPONENTS_PLUGIN): $(IE_COMPONENTS_PLUGIN_SRCS) $(SHARED_LIB) | $(LIB_DIR)
+$(IE_COMPONENTS_PLUGIN): $(IE_COMPONENTS_PLUGIN_SRCS) $(TOOLBOX_ICONS_H) $(SHARED_LIB) | $(LIB_DIR)
 	@echo "Building ImageEditor components plugin: $@"
 	$(CC) $(CFLAGS) $(FE_PLUGIN_LFLAGS) -I. -Iexamples/imageeditor -o $@ $(IE_COMPONENTS_PLUGIN_SRCS) \
 		$(LDFLAGS)
@@ -378,7 +383,7 @@ $(IMAGELITE_BIN): $(wildcard examples/imageeditor/*.c) $(IMAGEEDITOR_FORMS_H) $(
 		$(CC) $(CFLAGS) -DIMAGEEDITOR_SINGLE_LAYER -I. -Iexamples/imageeditor -DSHAREDIR='"../share/imageeditor"' -x c -o $@ - \
 		$(LDFLAGS) $(LDFLAGS_EXAMPLE) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
 
-$(BIN_DIR)/formeditor$(EXE_EXT): $(wildcard examples/formeditor/*.c) $(SHARED_LIB) $(FORMEDITOR_COMPONENT_PLUGIN) | $(BIN_DIR) share
+$(BIN_DIR)/formeditor$(EXE_EXT): $(wildcard examples/formeditor/*.c) $(TOOLBOX_ICONS_H) $(SHARED_LIB) $(FORMEDITOR_COMPONENT_PLUGIN) | $(BIN_DIR) share
 	@echo "Building example: $@"
 	@(find examples/formeditor -maxdepth 1 -name "*.c" ! -name "main.c" | sort | sed 's/.*/#include "&"/'; \
 	 echo '#include "examples/formeditor/main.c"') | \
@@ -519,7 +524,7 @@ $(BIN_DIR)/test_gitclient_ui_test$(EXE_EXT): $(TEST_DIR)/gitclient_ui_test.c $(T
 		$(LDFLAGS) $(LDFLAGS_TEST) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
 
 # Imageeditor UI test — needs all imageeditor sources except main.c + test_env.c.
-$(IMAGEEDITOR_UI_TEST_BIN): $(IMAGEEDITOR_UI_TEST_SRC) $(TEST_DIR)/test_env.c $(IMAGEEDITOR_SRCS_NO_MAIN) $(IMAGEEDITOR_FORMS_H) $(SHARED_LIB) | $(BIN_DIR)
+$(IMAGEEDITOR_UI_TEST_BIN): $(IMAGEEDITOR_UI_TEST_SRC) $(TEST_DIR)/test_env.c $(IMAGEEDITOR_SRCS_NO_MAIN) $(IMAGEEDITOR_FORMS_H) $(TOOLBOX_ICONS_H) $(SHARED_LIB) | $(BIN_DIR)
 	@echo "Building imageeditor UI test: $@"
 	$(CC) $(CFLAGS) -I. -Iexamples/imageeditor -DIMAGEEDITOR_DEBUG=0 -o $@ \
 		$(IMAGEEDITOR_UI_TEST_SRC) $(TEST_DIR)/test_env.c \
@@ -527,7 +532,7 @@ $(IMAGEEDITOR_UI_TEST_BIN): $(IMAGEEDITOR_UI_TEST_SRC) $(TEST_DIR)/test_env.c $(
 		$(LDFLAGS) $(LDFLAGS_TEST) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
 
 # Formeditor UI test — needs all formeditor sources except main.c + test_env.c.
-$(FORMEDITOR_UI_TEST_BIN): $(FORMEDITOR_UI_TEST_SRC) $(TEST_DIR)/test_env.c $(FORMEDITOR_SRCS_NO_MAIN) $(SHARED_LIB) $(FORMEDITOR_COMPONENT_PLUGIN) $(IE_COMPONENTS_PLUGIN) | $(BIN_DIR)
+$(FORMEDITOR_UI_TEST_BIN): $(FORMEDITOR_UI_TEST_SRC) $(TEST_DIR)/test_env.c $(FORMEDITOR_SRCS_NO_MAIN) $(TOOLBOX_ICONS_H) $(SHARED_LIB) $(FORMEDITOR_COMPONENT_PLUGIN) $(IE_COMPONENTS_PLUGIN) | $(BIN_DIR)
 	@echo "Building formeditor UI test: $@"
 	$(CC) $(CFLAGS) $(LIBXML2_CFLAGS) -I. -Iexamples/formeditor -o $@ \
 		$(FORMEDITOR_UI_TEST_SRC) $(TEST_DIR)/test_env.c \

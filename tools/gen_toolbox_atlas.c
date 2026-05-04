@@ -1,0 +1,276 @@
+// gen_toolbox_atlas.c - pack downloaded icons into FormEditor toolbox.png.
+
+#include <ctype.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define NANOSVG_IMPLEMENTATION
+#include "../third_party/nanosvg/nanosvg.h"
+#define NANOSVGRAST_IMPLEMENTATION
+#include "../third_party/nanosvg/nanosvgrast.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "../user/stb_image.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "../user/stb_image_write.h"
+
+typedef struct {
+  char enum_name[96];
+  char icon_name[96];
+} icon_def_t;
+
+static void usage(const char *argv0) {
+  fprintf(stderr,
+          "usage: %s manifest.txt icon-dir out.png out.h\n",
+          argv0);
+}
+
+static char *trim(char *s) {
+  while (*s && isspace((unsigned char)*s)) s++;
+  char *e = s + strlen(s);
+  while (e > s && isspace((unsigned char)e[-1])) *--e = '\0';
+  return s;
+}
+
+static bool valid_enum_name(const char *s) {
+  if (!s || !*s) return false;
+  for (; *s; s++) {
+    if (!isalnum((unsigned char)*s) && *s != '_')
+      return false;
+  }
+  return true;
+}
+
+static bool duplicate_enum_name(const icon_def_t *defs, int count, const char *name) {
+  for (int i = 0; i < count; i++) {
+    if (strcmp(defs[i].enum_name, name) == 0)
+      return true;
+  }
+  return false;
+}
+
+static bool read_manifest(const char *path, icon_def_t **out_defs, int *out_count) {
+  FILE *f = fopen(path, "rb");
+  if (!f) return false;
+
+  int cap = 256;
+  int count = 0;
+  icon_def_t *defs = calloc((size_t)cap, sizeof(icon_def_t));
+  if (!defs) {
+    fclose(f);
+    return false;
+  }
+
+  char line[512];
+  while (fgets(line, sizeof(line), f)) {
+    char *s = trim(line);
+    if (!*s || *s == '#') continue;
+    char *name = strtok(s, " \t");
+    char *icon = strtok(NULL, " \t");
+    if (!name || !icon) {
+      free(defs);
+      fclose(f);
+      return false;
+    }
+    if (!valid_enum_name(name) || strcmp(name, "count") == 0 ||
+        strcmp(name, "default") == 0 ||
+        duplicate_enum_name(defs, count, name)) {
+      fprintf(stderr, "gen_toolbox_atlas: invalid enum name '%s'\n", name);
+      free(defs);
+      fclose(f);
+      return false;
+    }
+    if (count >= cap) {
+      cap *= 2;
+      icon_def_t *tmp = realloc(defs, (size_t)cap * sizeof(icon_def_t));
+      if (!tmp) {
+        free(defs);
+        fclose(f);
+        return false;
+      }
+      defs = tmp;
+    }
+    snprintf(defs[count].enum_name, sizeof(defs[count].enum_name), "%s", name);
+    snprintf(defs[count].icon_name, sizeof(defs[count].icon_name), "%s", icon);
+    count++;
+  }
+
+  fclose(f);
+  *out_defs = defs;
+  *out_count = count;
+  return true;
+}
+
+static char *read_file_text(const char *path) {
+  FILE *f = fopen(path, "rb");
+  if (!f) return NULL;
+  if (fseek(f, 0, SEEK_END) != 0) {
+    fclose(f);
+    return NULL;
+  }
+  long n = ftell(f);
+  if (n < 0) {
+    fclose(f);
+    return NULL;
+  }
+  rewind(f);
+  char *buf = malloc((size_t)n + 1);
+  if (!buf) {
+    fclose(f);
+    return NULL;
+  }
+  size_t got = fread(buf, 1, (size_t)n, f);
+  fclose(f);
+  buf[got] = '\0';
+  return buf;
+}
+
+static void replace_current_color(char *s) {
+  static const char kFrom[] = "currentColor";
+  static const char kTo[] = "#ffffff";
+  size_t from_len = strlen(kFrom);
+  size_t to_len = strlen(kTo);
+  for (char *p = strstr(s, kFrom); p; p = strstr(p + to_len, kFrom)) {
+    memcpy(p, kTo, to_len);
+    memmove(p + to_len, p + from_len, strlen(p + from_len) + 1);
+  }
+}
+
+static bool render_svg_icon(NSVGrasterizer *rast, uint8_t *dst, int tile,
+                            const char *path) {
+  char *svg = read_file_text(path);
+  if (!svg) return false;
+  replace_current_color(svg);
+
+  NSVGimage *img = nsvgParse(svg, "px", 96.0f);
+  free(svg);
+  if (!img || img->width <= 0.0f || img->height <= 0.0f) {
+    if (img) nsvgDelete(img);
+    return false;
+  }
+
+  memset(dst, 0, (size_t)tile * tile * 4);
+
+  // Icons are expected to be authored for their target tile size so the
+  // runtime draws the atlas 1:1 without scaling.
+  float sx = (float)tile / img->width;
+  float sy = (float)tile / img->height;
+  float scale = sx < sy ? sx : sy;
+  float tx = ((float)tile - img->width * scale) * 0.5f;
+  float ty = ((float)tile - img->height * scale) * 0.5f;
+  nsvgRasterize(rast, img, tx, ty, scale, dst, tile, tile, tile * 4);
+  nsvgDelete(img);
+
+  for (int y = 0; y < tile; y++) {
+    for (int x = 0; x < tile; x++) {
+      uint8_t *p = dst + ((size_t)y * tile + x) * 4;
+      p[0] = 255;
+      p[1] = 255;
+      p[2] = 255;
+    }
+  }
+
+  return true;
+}
+
+static bool render_png_icon(uint8_t *dst, int tile, const char *path) {
+  int w = 0;
+  int h = 0;
+  int comp = 0;
+  uint8_t *src = stbi_load(path, &w, &h, &comp, 4);
+  if (!src) return false;
+
+  memset(dst, 0, (size_t)tile * tile * 4);
+  int copy_w = w < tile ? w : tile;
+  int copy_h = h < tile ? h : tile;
+  int dx = (tile - copy_w) / 2;
+  int dy = (tile - copy_h) / 2;
+  for (int y = 0; y < copy_h; y++) {
+    memcpy(dst + ((size_t)(dy + y) * tile + dx) * 4,
+           src + (size_t)y * w * 4,
+           (size_t)copy_w * 4);
+  }
+
+  stbi_image_free(src);
+  return true;
+}
+
+static bool write_header(const char *path, const icon_def_t *defs, int count) {
+  FILE *f = fopen(path, "wb");
+  if (!f) return false;
+  fprintf(f, "// Generated by tools/update_toolbox_atlas.sh. Do not edit by hand.\n");
+  fprintf(f, "#ifndef __TOOLBOX_ICONS_H__\n");
+  fprintf(f, "#define __TOOLBOX_ICONS_H__\n\n");
+  fprintf(f, "typedef enum toolbox_icon_e {\n");
+  for (int i = 0; i < count; i++)
+    fprintf(f, "  toolbox_icon_%s = %d,\n", defs[i].enum_name, i);
+  fprintf(f, "  toolbox_icon_count = %d,\n", count);
+  fprintf(f, "  toolbox_icon_default = toolbox_icon_plugin,\n");
+  fprintf(f, "} toolbox_icon_t;\n\n");
+  fprintf(f, "#endif\n");
+  fclose(f);
+  return true;
+}
+
+int main(int argc, char **argv) {
+  enum { TILE = 16, COLS = 32 };
+  if (argc != 5) {
+    usage(argv[0]);
+    return 2;
+  }
+
+  icon_def_t *defs = NULL;
+  int count = 0;
+  if (!read_manifest(argv[1], &defs, &count) || count <= 0) {
+    fprintf(stderr, "gen_toolbox_atlas: failed to read manifest\n");
+    return 1;
+  }
+
+  int rows = (count + COLS - 1) / COLS;
+  int w = COLS * TILE;
+  int h = rows * TILE;
+  uint8_t *atlas = calloc((size_t)w * h * 4, 1);
+  uint8_t *icon = malloc((size_t)TILE * TILE * 4);
+  NSVGrasterizer *rast = nsvgCreateRasterizer();
+  if (!atlas || !icon || !rast) {
+    free(defs);
+    free(atlas);
+    free(icon);
+    if (rast) nsvgDeleteRasterizer(rast);
+    return 1;
+  }
+
+  for (int i = 0; i < count; i++) {
+    char path[1024];
+    snprintf(path, sizeof(path), "%s/%s.png", argv[2], defs[i].icon_name);
+    if (!render_png_icon(icon, TILE, path)) {
+      snprintf(path, sizeof(path), "%s/%s.svg", argv[2], defs[i].icon_name);
+      if (!render_svg_icon(rast, icon, TILE, path)) {
+        fprintf(stderr, "gen_toolbox_atlas: missing icon %s\n", path);
+        free(defs);
+        free(atlas);
+        free(icon);
+        nsvgDeleteRasterizer(rast);
+        return 1;
+      }
+    }
+
+    int dx = (i % COLS) * TILE;
+    int dy = (i / COLS) * TILE;
+    for (int y = 0; y < TILE; y++) {
+      memcpy(atlas + ((size_t)(dy + y) * w + dx) * 4,
+             icon + (size_t)y * TILE * 4,
+             (size_t)TILE * 4);
+    }
+  }
+
+  bool ok = stbi_write_png(argv[3], w, h, 4, atlas, w * 4) != 0 &&
+            write_header(argv[4], defs, count);
+  free(defs);
+  free(atlas);
+  free(icon);
+  nsvgDeleteRasterizer(rast);
+  return ok ? 0 : 1;
+}

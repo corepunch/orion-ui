@@ -205,13 +205,15 @@ typedef struct {
 #define FE_COMPONENT_PLACEABLE      0x0001u
 #define FE_COMPONENT_SHOW_TOOLBOX   0x0002u
 
+#include "toolbox_icons.h"
+
 typedef struct {
   const char *class_name;     // stable runtime class key (e.g. "button")
   const char *display_name;   // UI/display caption base (e.g. "Button")
   const char *token;          // stable serialization token (e.g. "button")
   const char *name_prefix;    // identifier prefix (e.g. "IDC_BTN")
   int         toolbox_ident;  // command ID sent by toolbox host
-  int         toolbox_icon;   // icon index in toolbox strip
+  toolbox_icon_t toolbox_icon;   // icon index in toolbox strip
   isize16_t   default_size;   // default size when click-placing
   uint32_t    capabilities;   // FE_COMPONENT_* flags
   winproc_t   proc;           // runtime window proc backing this component

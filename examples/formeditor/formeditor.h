@@ -13,6 +13,8 @@
 // Layout constants
 // ============================================================
 
+#define FE_TOOLBOX_USE_BUTTON_GRID
+
 #define SCREEN_W          800
 #define SCREEN_H          600
 
@@ -20,15 +22,18 @@
 #define FORM_DEFAULT_W    320
 #define FORM_DEFAULT_H    240
 
-// Tool palette — formeditor uses 21px icons inside 26px square buttons.
-// toolbox.png: 63x299 pixels = 3 cols x N rows of 21x21 px icons
-// (3 icon columns in the sprite sheet; display layout is always 2 button columns).
-#define FE_TOOLBOX_ICON_W   21   // icon tile size in toolbox.png
-#define FE_TOOLBOX_BTN_SIZE 26   // square button size used for the formeditor
+// Tool palette.
+// toolbox.png is a generated 16x16-tile atlas; see user/toolbox_icons.h.
+#define FE_TOOLBOX_ICON_W   16   // icon tile size in toolbox.png
+#define FE_TOOLBOX_BTN_SIZE 24   // square button size for classic grid mode
 
 // Palette window dimensions.
 #define PALETTE_WIN_X     4
+#ifdef FE_TOOLBOX_USE_BUTTON_GRID
 #define PALETTE_WIN_W     (TOOLBOX_COLS * FE_TOOLBOX_BTN_SIZE)
+#else
+#define PALETTE_WIN_W     144
+#endif
 
 // Property browser window.  This is intentionally a reportview-backed
 // inspector: close to VB1's simple property sheet, without inline editing yet.

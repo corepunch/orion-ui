@@ -33,7 +33,12 @@ bool fe_register_component(const fe_component_desc_t *desc) {
     return false;
   if (!register_window_class(desc))
     return false;
-  g_components[g_component_count].desc = *desc;
+
+  fe_component_desc_t stored = *desc;
+  if (stored.toolbox_icon < 0 || stored.toolbox_icon >= toolbox_icon_count)
+    stored.toolbox_icon = toolbox_icon_default;
+
+  g_components[g_component_count].desc = stored;
   g_component_count++;
   return true;
 }
