@@ -213,7 +213,7 @@ typedef struct {
   const char *token;          // stable serialization token (e.g. "button")
   const char *name_prefix;    // identifier prefix (e.g. "IDC_BTN")
   int         toolbox_ident;  // command ID sent by toolbox host
-  IconId        toolbox_icon;   // icon index in the Fugue strip
+  int           toolbox_icon;   // icon id from sysicon_* or SILK_ICON_*
   isize16_t   default_size;   // default size when click-placing
   uint32_t    capabilities;   // FE_COMPONENT_* flags
   winproc_t   proc;           // runtime window proc backing this component

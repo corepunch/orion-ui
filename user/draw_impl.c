@@ -380,6 +380,29 @@ void draw_icon8_clipped(int icon, irect16_t rect, uint32_t col) {
                   THEME_ICON_SIZE, col);
 }
 
+void draw_silk_icon16(int icon, int x, int y, uint32_t col) {
+  bitmap_strip_t *s = ui_get_silk_strip();
+  if (!s || s->tex == 0 || s->cols <= 0) return;
+  int idx  = icon - SILK_ICON_BASE;
+  int scol = idx % s->cols;
+  int srow = idx / s->cols;
+  float u0 = (float)(scol * s->icon_w) / (float)s->sheet_w;
+  float v0 = (float)(srow * s->icon_h) / (float)s->sheet_h;
+  float u1 = u0 + (float)s->icon_w / (float)s->sheet_w;
+  float v1 = v0 + (float)s->icon_h / (float)s->sheet_h;
+  irect16_t r = R(x, y, s->icon_w, s->icon_h);
+  static const int offsets[][2] = {
+    {-1,  0}, {1,  0}, {0, -1}, {0, 1},
+    {-1, -1}, {1, -1}, {-1, 1}, {1, 1},
+  };
+  for (size_t i = 0; i < sizeof(offsets) / sizeof(offsets[0]); i++) {
+    draw_sprite_region((int)s->tex,
+                       R(x + offsets[i][0], y + offsets[i][1], s->icon_w, s->icon_h),
+                       UV_RECT(u0, v0, u1, v1), 0xFF000000, 0);
+  }
+  draw_sprite_region((int)s->tex, r, UV_RECT(u0, v0, u1, v1), col, 0);
+}
+
 void draw_icon16(int icon, int x, int y, uint32_t col) {
   if (icon >= SYSICON_BASE) {
     bitmap_strip_t *s = ui_get_sysicon_strip();
@@ -397,18 +420,7 @@ void draw_icon16(int icon, int x, int y, uint32_t col) {
     return;
   }
   if (icon >= SILK_ICON_BASE) {
-    bitmap_strip_t *s = ui_get_silk_strip();
-    if (s && s->tex != 0 && s->cols > 0) {
-      int idx  = icon - SILK_ICON_BASE;
-      int scol = idx % s->cols;
-      int srow = idx / s->cols;
-      float u0 = (float)(scol * s->icon_w) / (float)s->sheet_w;
-      float v0 = (float)(srow * s->icon_h) / (float)s->sheet_h;
-      float u1 = u0 + (float)s->icon_w / (float)s->sheet_w;
-      float v1 = v0 + (float)s->icon_h / (float)s->sheet_h;
-      draw_sprite_region((int)s->tex, R(x, y, s->icon_w, s->icon_h),
-                         UV_RECT(u0, v0, u1, v1), col, 0);
-    }
+    draw_silk_icon16(icon, x, y, col);
     return;
   }
   icon*=2;

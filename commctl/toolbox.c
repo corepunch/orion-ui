@@ -129,19 +129,7 @@ static void draw_toolbox_button(toolbox_state_t *st, int idx,
   } else if (icon >= SILK_ICON_BASE) {
     // Built-in Silk sheet.
     irect16_t icon_dst = rect_offset(rect_center(cell, 16, 16), px, px);
-    bitmap_strip_t *silk = ui_get_silk_strip();
-    if (silk) {
-      int idx = icon - SILK_ICON_BASE;
-      int scol = idx % silk->cols;
-      int srow = idx / silk->cols;
-      float u0 = (float)(scol * silk->icon_w) / (float)silk->sheet_w;
-      float v0 = (float)(srow * silk->icon_h) / (float)silk->sheet_h;
-      float u1 = u0 + (float)silk->icon_w / (float)silk->sheet_w;
-      float v1 = v0 + (float)silk->icon_h / (float)silk->sheet_h;
-      draw_sprite_region((int)silk->tex,
-                         R(icon_dst.x, icon_dst.y, silk->icon_w, silk->icon_h),
-                         UV_RECT(u0, v0, u1, v1), 0xFFFFFFFF, 0);
-    }
+    draw_silk_icon16(icon, icon_dst.x, icon_dst.y, 0xFFFFFFFF);
   } else if (st->strip.tex && st->strip.cols > 0) {
     // Custom sprite-sheet strips carry their own colors.
     bitmap_strip_t *s = &st->strip;

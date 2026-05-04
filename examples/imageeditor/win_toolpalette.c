@@ -16,18 +16,20 @@
 #define ICON_W  16
 
 // Tool palette layout with ident, icon index, and tooltip text (hotkey in parentheses).
+// Mixes built-in sysicon_* ids with Silk-only fallbacks where the 16x16 sheet
+// does not have a strong match yet.
 static const toolbox_item_t k_tools[NUM_TOOLS] = {
-  { ID_TOOL_SELECT,        FUGUE_ICON_SELECTION_SELECT,      "Select (S)"        },
-  { ID_TOOL_MOVE,          FUGUE_ICON_ARROW_MOVE,            "Move (V)"          },
+  { ID_TOOL_SELECT,        sysicon_select_edit,              "Select (S)"         },
+  { ID_TOOL_MOVE,          sysicon_move_interact,            "Move (V)"           },
   { ID_TOOL_MAGIC_WAND,    FUGUE_ICON_WAND_MAGIC,            "Magic Wand (W)"     },
-  { ID_TOOL_CROP,          FUGUE_ICON_IMAGE_CROP,            "Crop (C)"           },
-  { ID_TOOL_HAND,          FUGUE_ICON_HAND,                  "Hand"               },
-  { ID_TOOL_EYEDROPPER,    FUGUE_ICON_PIPETTE,               "Eyedropper (I)"     },
-  { ID_TOOL_ZOOM,          FUGUE_ICON_MAGNIFIER_ZOOM_IN,     "Zoom"               },
-  { ID_TOOL_PENCIL,        FUGUE_ICON_PENCIL,                "Pencil (P)"         },
+  { ID_TOOL_CROP,          sysicon_scissors,                 "Crop (C)"           },
+  { ID_TOOL_HAND,          sysicon_hand,                     "Hand"               },
+  { ID_TOOL_EYEDROPPER,    sysicon_eyedropper,               "Eyedropper (I)"     },
+  { ID_TOOL_ZOOM,          sysicon_magnifier,                "Zoom"               },
+  { ID_TOOL_PENCIL,        sysicon_pencil,                   "Pencil (P)"         },
   { ID_TOOL_BRUSH,         FUGUE_ICON_PAINT_BRUSH,           "Brush (B)"          },
   { ID_TOOL_SPRAY,         FUGUE_ICON_SPRAY,                 "Spray (A)"          },
-  { ID_TOOL_FILL,          FUGUE_ICON_PAINT_CAN,             "Fill (K)"           },
+  { ID_TOOL_FILL,          sysicon_paint_can,                "Fill (K)"           },
   { ID_TOOL_ERASER,        FUGUE_ICON_ERASER,                "Eraser (E)"         },
   { ID_TOOL_LINE,          FUGUE_ICON_LAYER_SHAPE_LINE,      "Line"               },
   { ID_TOOL_TEXT,          FUGUE_ICON_LAYER_SHAPE_TEXT,      "Text (T)"           },
@@ -35,7 +37,7 @@ static const toolbox_item_t k_tools[NUM_TOOLS] = {
   { ID_TOOL_ELLIPSE,       FUGUE_ICON_LAYER_SHAPE_ELLIPSE,   "Ellipse"            },
   { ID_TOOL_ROUNDED_RECT,  FUGUE_ICON_LAYER_SHAPE_ROUND,     "Rounded Rect"       },
   { ID_TOOL_POLYGON,       FUGUE_ICON_LAYER_SHAPE_POLYGON,   "Polygon"            },
-  { ID_TOOL_MAGNIFIER,     FUGUE_ICON_MAGNIFIER_ZOOM,        "Magnifier (G)"      },
+  { ID_TOOL_MAGNIFIER,     sysicon_magnifier_zoom_in,        "Magnifier (G)"      },
 };
 
 static void draw_palette_swatch(window_t *win,
