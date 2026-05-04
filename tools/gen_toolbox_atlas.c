@@ -207,7 +207,7 @@ static bool write_header(const char *path, const icon_def_t *defs, int count) {
   for (int i = 0; i < count; i++)
     fprintf(f, "  toolbox_icon_%s = %d,\n", defs[i].enum_name, i);
   fprintf(f, "  toolbox_icon_count = %d,\n", count);
-  fprintf(f, "  toolbox_icon_default = toolbox_icon_component,\n");
+  fprintf(f, "  toolbox_icon_default = toolbox_icon_plugin,\n");
   fprintf(f, "} toolbox_icon_t;\n\n");
   fprintf(f, "#endif\n");
   fclose(f);
@@ -215,7 +215,7 @@ static bool write_header(const char *path, const icon_def_t *defs, int count) {
 }
 
 int main(int argc, char **argv) {
-  enum { TILE = 16, COLS = 16 };
+  enum { TILE = 16, COLS = 32 };
   if (argc != 5) {
     usage(argv[0]);
     return 2;
