@@ -65,7 +65,7 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       // Delegate to win_toolbox first so its state is ready.
       win_toolbox(win, msg, wparam, lparam);
 
-      // Use 26px buttons so native 24px Tabler icons have a 1px frame.
+      // Use 32px buttons so native 24px Tabler icons have breathing room.
       send_message(win, bxSetButtonSize, FE_TOOLBOX_BTN_SIZE, NULL);
 
 #ifdef SHAREDIR
