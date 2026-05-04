@@ -65,7 +65,7 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       // Delegate to win_toolbox first so its state is ready.
       win_toolbox(win, msg, wparam, lparam);
 
-      // Use 32px buttons so native 16px icons have breathing room.
+      // Use compact 20px buttons around native 16px bitmap icons.
       send_message(win, bxSetButtonSize, FE_TOOLBOX_BTN_SIZE, NULL);
 
 #ifdef SHAREDIR
@@ -76,7 +76,6 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
 
       build_tool_items();
       send_message(win, bxSetItems, g_tool_count, (void *)g_tools);
-      send_message(win, bxSetIconTintBrush, brTextNormal, NULL);
       send_message(win, bxSetActiveItem, ID_TOOL_SELECT, NULL);
       return true;
     }

@@ -1,4 +1,4 @@
-// gen_toolbox_atlas.c - render downloaded SVGs into FormEditor toolbox.png.
+// gen_toolbox_atlas.c - pack downloaded icons into FormEditor toolbox.png.
 
 #include <ctype.h>
 #include <stdint.h>
@@ -11,6 +11,8 @@
 #include "../third_party/nanosvg/nanosvg.h"
 #define NANOSVGRAST_IMPLEMENTATION
 #include "../third_party/nanosvg/nanosvgrast.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "../user/stb_image.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../user/stb_image_write.h"
 
@@ -173,6 +175,28 @@ static bool render_svg_icon(NSVGrasterizer *rast, uint8_t *dst, int tile,
   return true;
 }
 
+static bool render_png_icon(uint8_t *dst, int tile, const char *path) {
+  int w = 0;
+  int h = 0;
+  int comp = 0;
+  uint8_t *src = stbi_load(path, &w, &h, &comp, 4);
+  if (!src) return false;
+
+  memset(dst, 0, (size_t)tile * tile * 4);
+  int copy_w = w < tile ? w : tile;
+  int copy_h = h < tile ? h : tile;
+  int dx = (tile - copy_w) / 2;
+  int dy = (tile - copy_h) / 2;
+  for (int y = 0; y < copy_h; y++) {
+    memcpy(dst + ((size_t)(dy + y) * tile + dx) * 4,
+           src + (size_t)y * w * 4,
+           (size_t)copy_w * 4);
+  }
+
+  stbi_image_free(src);
+  return true;
+}
+
 static bool write_header(const char *path, const icon_def_t *defs, int count) {
   FILE *f = fopen(path, "wb");
   if (!f) return false;
@@ -220,14 +244,17 @@ int main(int argc, char **argv) {
 
   for (int i = 0; i < count; i++) {
     char path[1024];
-    snprintf(path, sizeof(path), "%s/%s.svg", argv[2], defs[i].icon_name);
-    if (!render_svg_icon(rast, icon, TILE, path)) {
-      fprintf(stderr, "gen_toolbox_atlas: missing icon %s\n", path);
-      free(defs);
-      free(atlas);
-      free(icon);
-      nsvgDeleteRasterizer(rast);
-      return 1;
+    snprintf(path, sizeof(path), "%s/%s.png", argv[2], defs[i].icon_name);
+    if (!render_png_icon(icon, TILE, path)) {
+      snprintf(path, sizeof(path), "%s/%s.svg", argv[2], defs[i].icon_name);
+      if (!render_svg_icon(rast, icon, TILE, path)) {
+        fprintf(stderr, "gen_toolbox_atlas: missing icon %s\n", path);
+        free(defs);
+        free(atlas);
+        free(icon);
+        nsvgDeleteRasterizer(rast);
+        return 1;
+      }
     }
 
     int dx = (i % COLS) * TILE;
