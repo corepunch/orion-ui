@@ -262,7 +262,8 @@ typedef struct canvas_doc_s {
   uint8_t *float_pixels;   // RGBA data extracted from canvas
   uint8_t *float_mask;     // float_w * float_h edit mask, same semantics as sel_mask
   GLuint   float_tex;      // cached GL texture for float_pixels (0 = none)
-  anim_timeline_t *anim;   // animation timeline (always present; one frame = no animation)
+  anim_timeline_t *anim;   // animation timeline; non-NULL after successful create_document(),
+                           // but may be NULL on allocation failure (OOM guard)
 } canvas_doc_t;
 
 typedef struct {

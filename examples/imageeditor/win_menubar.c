@@ -858,20 +858,24 @@ void handle_menu_command(uint16_t id) {
 
     case ID_ANIM_PLAY:
       if (doc && doc->anim && !doc->anim->playing) {
-        doc->anim->playing = true;
+        // Ensure the timeline window exists; recreate it if it was closed.
+        if (g_app && !g_app->timeline_win)
+          create_timeline_window();
+        if (!g_app || !g_app->timeline_win) break;
         // Start a repeating timer; interval = frame period at current FPS.
         // Default to 12 fps (≈83 ms) if fps is 0 or unset.
         static const uint32_t kDefaultFrameIntervalMs = 83u; // ≈12 fps
         uint32_t interval = (doc->anim->fps > 0)
                             ? (uint32_t)(1000 / doc->anim->fps)
                             : kDefaultFrameIntervalMs;
-        if (g_app) {
-          if (g_app->anim_timer_id)
-            axCancelTimer(g_app->anim_timer_id);
-          g_app->anim_timer_id = axSetTimer(
-              g_app->timeline_win, interval, NULL, (bool_t)1);
+        if (g_app->anim_timer_id)
+          axCancelTimer(g_app->anim_timer_id);
+        g_app->anim_timer_id = axSetTimer(
+            g_app->timeline_win, interval, NULL, (bool_t)1);
+        if (g_app->anim_timer_id) {
+          doc->anim->playing = true;
+          timeline_win_refresh();
         }
-        timeline_win_refresh();
       }
       break;
 
