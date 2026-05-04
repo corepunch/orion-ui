@@ -104,6 +104,26 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       }
       invalidate_window(win);
       return true;
+
+    case edGetText: {
+      if (!lparam || wparam == 0)
+        return (result_t)strlen(win->title);
+      size_t sz = (size_t)wparam;
+      strncpy((char *)lparam, win->title, sz - 1);
+      ((char *)lparam)[sz - 1] = '\0';
+      return (result_t)strlen((char *)lparam);
+    }
+
+    case edSetText:
+      if (lparam) {
+        strncpy(win->title, (const char *)lparam, BUFFER_SIZE - 1);
+        win->title[BUFFER_SIZE - 1] = '\0';
+        if ((size_t)win->cursor_pos > strlen(win->title))
+          win->cursor_pos = (uint32_t)strlen(win->title);
+        invalidate_window(win);
+      }
+      return true;
+
   }
   return false;
 }

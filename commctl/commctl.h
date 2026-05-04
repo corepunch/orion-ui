@@ -21,6 +21,12 @@ typedef struct {
   int pos;     // current scroll position
 } scrollbar_info_t;
 
+// Slider range structure (WinAPI trackbar style min/max range).
+typedef struct {
+  int min_val;
+  int max_val;
+} slider_range_t;
+
 // Common control window procedures
 result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
@@ -38,6 +44,8 @@ result_t win_filelist(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
 result_t win_terminal(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_scrollbar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+result_t win_slider(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+result_t win_gradient(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 
 // Toolbox — 2-column grid of icon buttons (Photoshop / VB3 / Paint style).
 // See commctl/toolbox.c for the full API and usage examples.

@@ -6,11 +6,12 @@
 
 // ── Font role identifiers ─────────────────────────────────────────────────────
 // Mirrors how Mac System 1–7 distinguished systemFont (Chicago 12) from
-// applFont/Geneva 9.  Role names, not size names.
+// application/content and compact icon-label fonts. Role names, not size names.
 // At UI_WINDOW_SCALE >= 2 both map to the same atlas (SmallFont).
 typedef enum {
   FONT_SYSTEM = 0,  // Chrome: titlebars, menus, buttons, dialogs (ChiKareGo2)
-  FONT_SMALL  = 1,  // Content: list items, column rows, status bar (Geneva9)
+  FONT_SMALL  = 1,  // Content: list items, column rows, status bar (Geneva12)
+  FONT_ICON   = 2,  // Compact labels in large icon/grid views (Geneva9)
 } ui_font_t;
 
 // ── Dynamic metric accessors ─────────────────────────────────────────────────
@@ -27,7 +28,7 @@ int get_space_width(void);
 #define SPACE_WIDTH       (get_space_width())
 
 // Forward declaration
-typedef struct rect_s irect16_t;
+typedef struct irect16_s irect16_t;
 
 // Initialize the text rendering system
 void init_text_rendering(void);

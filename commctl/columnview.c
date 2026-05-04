@@ -48,6 +48,7 @@ typedef struct {
   int icon_size;    // tile size (px) used in RVM_VIEW_LARGE_ICON mode
   bool redraw_enabled;
   bool redraw_dirty;
+  bool column_titles_visible;
 
   // Per-instance icon strip for icon-view rendering.
   // Set via RVM_SETICONSTRIP (lparam = bitmap_strip_t*; NULL to clear).
@@ -150,6 +151,10 @@ static inline int rv_content_width(window_t *win) {
   return win->frame.w - (win->vscroll.visible ? SCROLLBAR_WIDTH : 0);
 }
 
+static inline int rv_report_header_height(const reportview_data_t *data) {
+  return (!data || data->column_titles_visible) ? HEADER_HEIGHT : 0;
+}
+
 static int rv_get_report_column_width(reportview_data_t *data, int col, int avail_w) {
   if (!data || col < 0 || col >= (int)data->column_count)
     return 80;
@@ -176,7 +181,7 @@ static inline int rv_large_icon_cell_h(const reportview_data_t *data) {
   return data->icon_size
        + RV_LARGE_ICON_TOP_PAD
        + RV_LARGE_ICON_LABEL_GAP
-       + text_char_height(FONT_SMALL)
+       + text_char_height(FONT_ICON)
        + RV_LARGE_ICON_BOT_PAD;
 }
 
@@ -196,7 +201,7 @@ static inline int rv_large_icon_x0(int eff_w, int ncol, int cell_w) {
 static int rv_content_height(window_t *win, reportview_data_t *data) {
   int eff_w = rv_content_width(win);
   if (data->view_mode == RVM_VIEW_REPORT) {
-    return HEADER_HEIGHT + (int)data->count * ENTRY_HEIGHT;
+    return rv_report_header_height(data) + (int)data->count * ENTRY_HEIGHT;
   }
 
   if (data->view_mode == RVM_VIEW_LARGE_ICON) {
@@ -230,9 +235,10 @@ static int rv_hit_index(window_t *win, reportview_data_t *data, uint32_t wparam)
 
   if (data->view_mode == RVM_VIEW_REPORT) {
     (void)mx;
-    if (my < HEADER_HEIGHT)
+    int header_h = rv_report_header_height(data);
+    if (my < header_h)
       return -1;
-    int row = (my - HEADER_HEIGHT) / ENTRY_HEIGHT;
+    int row = (my - header_h) / ENTRY_HEIGHT;
     return rv_valid_index(data, row) ? row : RV_INVALID_SELECTION;
   }
 
@@ -267,11 +273,12 @@ static void rv_scroll_to_item(window_t *win, reportview_data_t *data, int index)
   int visible_h = win->frame.h;
 
   if (data->view_mode == RVM_VIEW_REPORT) {
-    int item_y_top = HEADER_HEIGHT + index * ENTRY_HEIGHT;
+    int header_h = rv_report_header_height(data);
+    int item_y_top = header_h + index * ENTRY_HEIGHT;
     int item_y_bottom = item_y_top + ENTRY_HEIGHT;
 
-    if (item_y_top - scroll_y < HEADER_HEIGHT) {
-      win->scroll[1] = (uint32_t)(item_y_top - HEADER_HEIGHT);
+    if (item_y_top - scroll_y < header_h) {
+      win->scroll[1] = (uint32_t)(item_y_top - header_h);
     } else if (item_y_bottom - scroll_y > visible_h) {
       win->scroll[1] = (uint32_t)(item_y_bottom - visible_h);
     }
@@ -416,7 +423,7 @@ static void rv_paint_large_icon_view(window_t *win, reportview_data_t *data) {
   int cell_h   = rv_large_icon_cell_h(data);
   int icon_sz  = data->icon_size;
   int x0       = rv_large_icon_x0(eff_w, ncol, cell_w);
-  int label_h  = text_char_height(FONT_SMALL) + 2;
+  int label_h  = text_char_height(FONT_ICON) + 2;
   int clip_bot = win->frame.h;
   bitmap_strip_t *strip = data->icon_strip;
   uint32_t bg_col = get_sys_color(brColumnViewBg);
@@ -452,7 +459,7 @@ static void rv_paint_large_icon_view(window_t *win, reportview_data_t *data) {
 
     uint32_t txt_col = selected ? get_sys_color(brActiveTitlebarText)
                                 : get_sys_color(brTextNormal);
-    draw_text_clipped(FONT_SMALL, data->items[i].text, &label_r,
+    draw_text_clipped(FONT_ICON, data->items[i].text, &label_r,
                       txt_col, TEXT_ALIGN_CENTER);
   }
 }
@@ -460,7 +467,8 @@ static void rv_paint_large_icon_view(window_t *win, reportview_data_t *data) {
 static void rv_paint_report_view(window_t *win, reportview_data_t *data) {
   int eff_w = rv_content_width(win);
   int row_w = rv_report_total_width(data, eff_w);
-  int body_h = win->frame.h - HEADER_HEIGHT;
+  int header_h = rv_report_header_height(data);
+  int body_h = win->frame.h - header_h;
   int scroll_y = (int)win->scroll[1];
   uint32_t bg_col = get_sys_color(brColumnViewBg);
 
@@ -473,11 +481,11 @@ static void rv_paint_report_view(window_t *win, reportview_data_t *data) {
   uint32_t sep_col = get_sys_color(brDarkEdge);
 
   // Background and full-row selection highlight painted once (no per-column clip).
-  fill_rect(bg_col, R(0, HEADER_HEIGHT, row_w, body_h));
+  fill_rect(bg_col, R(0, header_h, row_w, body_h));
 
   if (data->selected >= first_row && data->selected < last_row) {
-    int y = HEADER_HEIGHT + data->selected * ENTRY_HEIGHT - scroll_y;
-    if (y < HEADER_HEIGHT) y = HEADER_HEIGHT;
+    int y = header_h + data->selected * ENTRY_HEIGHT - scroll_y;
+    if (y < header_h) y = header_h;
     fill_rect(get_sys_color(brTextNormal), R(0, y, row_w, ENTRY_HEIGHT - 1));
   }
 
@@ -489,28 +497,28 @@ static void rv_paint_report_view(window_t *win, reportview_data_t *data) {
   int scr_x = (win == root) ? win->frame.x : root->frame.x + win->frame.x;
   int scr_y = (win == root) ? win->frame.y : root->frame.y + root_t + win->frame.y;
 
-  // Draw per-column: use two scissor rects per column — one for the header
-  // band and one for the body — so that scrolled row text cannot overdraw
-  // the header and text cannot bleed into adjacent columns.
+  // Draw per-column: use separate scissor rects for the optional header band
+  // and body so scrolled row text cannot overdraw chrome or adjacent columns.
   int col_x = 0;
   for (uint32_t col = 0; col < data->column_count; col++) {
     int col_w = rv_get_report_column_width(data, (int)col, eff_w);
 
-    // Header scissor: column width, header height only.
-    set_clip_rect(NULL, (irect16_t){scr_x + col_x, scr_y, col_w, HEADER_HEIGHT});
-    draw_button((irect16_t){col_x, 0, col_w, HEADER_HEIGHT}, 1, 1, false);
-    draw_text_small_clipped(data->columns[col].title, &(irect16_t){col_x, 0, col_w, HEADER_HEIGHT}, hdr_fg, TEXT_PADDING_LEFT);
+    if (header_h > 0) {
+      set_clip_rect(NULL, (irect16_t){scr_x + col_x, scr_y, col_w, header_h});
+      draw_button((irect16_t){col_x, 0, col_w, header_h}, 1, 1, false);
+      draw_text_small_clipped(data->columns[col].title, &(irect16_t){col_x, 0, col_w, header_h}, hdr_fg, TEXT_PADDING_LEFT);
+    }
 
     // Body scissor: column width, everything below the header.
-    int body_h = win->frame.h - HEADER_HEIGHT;
-    set_clip_rect(NULL, (irect16_t){scr_x + col_x, scr_y + HEADER_HEIGHT, col_w, body_h});
+    int body_h = win->frame.h - header_h;
+    set_clip_rect(NULL, (irect16_t){scr_x + col_x, scr_y + header_h, col_w, body_h});
 
     for (int row = first_row; row < last_row; row++) {
       reportview_item_t *it = &data->items[row];
       uint32_t fg = (row == data->selected) ? get_sys_color(brWindowBg)
                   : it->color              ? it->color
                                            : get_sys_color(brTextNormal);
-      int y = HEADER_HEIGHT + row * ENTRY_HEIGHT - scroll_y;
+      int y = header_h + row * ENTRY_HEIGHT - scroll_y;
       const char *src = "";
 
       if (col == 0) {
@@ -535,7 +543,7 @@ static void rv_paint_report_view(window_t *win, reportview_data_t *data) {
   for (uint32_t col = 0; col < data->column_count; col++) {
     int col_w = rv_get_report_column_width(data, (int)col, eff_w);
     col_x += col_w;
-    fill_rect(sep_col, R(col_x, HEADER_HEIGHT, 1, win->frame.h - HEADER_HEIGHT));
+    fill_rect(sep_col, R(col_x, header_h, 1, win->frame.h - header_h));
   }
 }
 
@@ -558,6 +566,7 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       data->view_mode = RVM_VIEW_ICON;
       data->redraw_enabled = true;
       data->redraw_dirty = false;
+      data->column_titles_visible = true;
 
       rv_sync_scroll(win, data);
       return true;
@@ -760,6 +769,15 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
         return true;
       }
       return false;
+
+    case RVM_SETCOLUMNTITLESVISIBLE:
+      data->column_titles_visible = (wparam != 0);
+      rv_sync_scroll(win, data);
+      rv_invalidate(win, data);
+      return true;
+
+    case RVM_GETCOLUMNTITLESVISIBLE:
+      return data->column_titles_visible ? true : false;
 
     case evVScroll: {
       int total_h = rv_content_height(win, data);

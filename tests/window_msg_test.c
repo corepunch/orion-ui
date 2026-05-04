@@ -11,6 +11,13 @@ static int test_wm_create_called = 0;
 static int test_wm_paint_called = 0;
 static int test_wm_command_called = 0;
 static uint32_t test_last_wparam = 0;
+static int test_parent_notify_called = 0;
+static int test_child_mouse_called = 0;
+static bool test_parent_notify_consume = false;
+static window_t *test_parent_notify_child = NULL;
+static uint32_t test_parent_notify_msg = 0;
+static uint32_t test_parent_notify_wparam = 0;
+static void *test_parent_notify_lparam = NULL;
 
 static result_t test_window_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     (void)win;
@@ -34,12 +41,58 @@ static result_t test_window_proc(window_t *win, uint32_t msg, uint32_t wparam, v
     }
 }
 
+static result_t parent_notify_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+    (void)win;
+    (void)wparam;
+
+    switch (msg) {
+        case evCreate:
+        case evDestroy:
+            return 1;
+        case evParentNotify: {
+            parent_notify_t *pn = (parent_notify_t *)lparam;
+            test_parent_notify_called++;
+            test_parent_notify_child = pn ? pn->child : NULL;
+            test_parent_notify_msg = pn ? pn->child_msg : 0;
+            test_parent_notify_wparam = pn ? pn->child_wparam : 0;
+            test_parent_notify_lparam = pn ? pn->child_lparam : NULL;
+            return test_parent_notify_consume;
+        }
+        default:
+            return 0;
+    }
+}
+
+static result_t child_mouse_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+    (void)win;
+    (void)wparam;
+    (void)lparam;
+
+    switch (msg) {
+        case evCreate:
+        case evDestroy:
+            return 1;
+        case evLeftButtonDown:
+            test_child_mouse_called++;
+            return 1;
+        default:
+            return 0;
+    }
+}
+
 // Reset test counters
 void reset_test_counters(void) {
     test_wm_create_called = 0;
     test_wm_paint_called = 0;
     test_wm_command_called = 0;
     test_last_wparam = 0;
+    test_parent_notify_called = 0;
+    test_child_mouse_called = 0;
+    test_parent_notify_consume = false;
+    test_parent_notify_child = NULL;
+    test_parent_notify_msg = 0;
+    test_parent_notify_wparam = 0;
+    test_parent_notify_lparam = NULL;
 }
 
 // Test window creation with event tracking
@@ -242,6 +295,72 @@ void test_parent_child_messages(void) {
     PASS();
 }
 
+// Test parent notification before child input delivery
+void test_parent_notify_can_consume_child_input(void) {
+    TEST("Parent notify can consume child input");
+
+    test_env_init();
+    reset_test_counters();
+
+    window_t *parent = test_env_create_window("Parent", 100, 100, 300, 200,
+                                               parent_notify_proc, NULL);
+    ASSERT_NOT_NULL(parent);
+
+    irect16_t child_frame = {10, 10, 80, 24};
+    window_t *child = create_window("Child", WINDOW_NOTITLE, &child_frame,
+                                    parent, child_mouse_proc, 0, NULL);
+    ASSERT_NOT_NULL(child);
+
+    int payload = 1234;
+    test_parent_notify_consume = true;
+
+    int result = send_message(child, evLeftButtonDown, MAKEDWORD(3, 4), &payload);
+
+    ASSERT_EQUAL(result, 1);
+    ASSERT_EQUAL(test_parent_notify_called, 1);
+    ASSERT_EQUAL(test_child_mouse_called, 0);
+    ASSERT_EQUAL(test_parent_notify_child, child);
+    ASSERT_EQUAL(test_parent_notify_msg, evLeftButtonDown);
+    ASSERT_EQUAL(test_parent_notify_wparam, MAKEDWORD(3, 4));
+    ASSERT_EQUAL(test_parent_notify_lparam, &payload);
+
+    destroy_window(parent);
+    test_env_shutdown();
+    PASS();
+}
+
+// Test child input still proceeds when parent notification is not consumed
+void test_parent_notify_can_allow_child_input(void) {
+    TEST("Parent notify can allow child input");
+
+    test_env_init();
+    reset_test_counters();
+
+    window_t *parent = test_env_create_window("Parent", 100, 100, 300, 200,
+                                               parent_notify_proc, NULL);
+    ASSERT_NOT_NULL(parent);
+
+    irect16_t child_frame = {10, 10, 80, 24};
+    window_t *child = create_window("Child", WINDOW_NOTITLE, &child_frame,
+                                    parent, child_mouse_proc, 0, NULL);
+    ASSERT_NOT_NULL(child);
+
+    test_parent_notify_consume = false;
+
+    int result = send_message(child, evLeftButtonDown, MAKEDWORD(5, 6), NULL);
+
+    ASSERT_EQUAL(result, 1);
+    ASSERT_EQUAL(test_parent_notify_called, 1);
+    ASSERT_EQUAL(test_child_mouse_called, 1);
+    ASSERT_EQUAL(test_parent_notify_child, child);
+    ASSERT_EQUAL(test_parent_notify_msg, evLeftButtonDown);
+    ASSERT_EQUAL(test_parent_notify_wparam, MAKEDWORD(5, 6));
+
+    destroy_window(parent);
+    test_env_shutdown();
+    PASS();
+}
+
 // Test clearing events
 void test_clear_events(void) {
     TEST("Clear tracked events");
@@ -272,6 +391,102 @@ void test_clear_events(void) {
     PASS();
 }
 
+void test_cw_usedefault_uses_configured_origin(void) {
+    TEST("CW_USEDEFAULT: uses configured default window origin");
+
+    test_env_init();
+    set_default_window_position(72, 44);
+
+    window_t *first = create_window("First", 0,
+                                    MAKERECT(CW_USEDEFAULT, CW_USEDEFAULT, 100, 80),
+                                    NULL, test_window_proc, 0, NULL);
+    window_t *second = create_window("Second", 0,
+                                     MAKERECT(CW_USEDEFAULT, CW_USEDEFAULT, 100, 80),
+                                     NULL, test_window_proc, 0, NULL);
+
+    ASSERT_NOT_NULL(first);
+    ASSERT_NOT_NULL(second);
+    ASSERT_EQUAL(first->frame.x, 72);
+    ASSERT_EQUAL(first->frame.y, 44);
+    ASSERT_EQUAL(second->frame.x, 72 + DEFAULT_WINDOW_CASCADE_X);
+    ASSERT_EQUAL(second->frame.y, 44 + DEFAULT_WINDOW_CASCADE_Y);
+
+    test_env_shutdown();
+    PASS();
+}
+
+void test_dialog_z_order_above_same_app_topmost(void) {
+    TEST("move_to_top: dialog stays above same-app topmost palettes");
+
+    test_env_init();
+
+    window_t *doc = create_window("Doc", 0,
+                                  MAKERECT(10, 10, 120, 80),
+                                  NULL, test_window_proc, 42, NULL);
+    window_t *palette = create_window("Palette", WINDOW_ALWAYSONTOP,
+                                      MAKERECT(20, 20, 80, 80),
+                                      NULL, test_window_proc, 42, NULL);
+    window_t *dialog = create_window("Dialog", WINDOW_DIALOG,
+                                     MAKERECT(30, 30, 90, 70),
+                                     NULL, test_window_proc, 42, NULL);
+
+    ASSERT_NOT_NULL(doc);
+    ASSERT_NOT_NULL(palette);
+    ASSERT_NOT_NULL(dialog);
+
+    show_window(doc, true);
+    show_window(palette, true);
+    show_window(dialog, true);
+
+    window_t *last_app = NULL;
+    window_t *prev_to_dialog = NULL;
+    for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
+        if (w->hinstance == 42) {
+            if (w == dialog) prev_to_dialog = last_app;
+            last_app = w;
+        }
+    }
+
+    ASSERT_TRUE(prev_to_dialog == palette);
+    ASSERT_TRUE(last_app == dialog);
+
+    test_env_shutdown();
+    PASS();
+}
+
+void test_standalone_dialog_z_order_above_topmost(void) {
+    TEST("move_to_top: hinstance 0 dialog stays above topmost palettes");
+
+    test_env_init();
+
+    window_t *doc = create_window("Doc", 0,
+                                  MAKERECT(10, 10, 120, 80),
+                                  NULL, test_window_proc, 0, NULL);
+    window_t *palette = create_window("Palette", WINDOW_ALWAYSONTOP,
+                                      MAKERECT(20, 20, 80, 80),
+                                      NULL, test_window_proc, 0, NULL);
+    window_t *dialog = create_window("Dialog", WINDOW_DIALOG,
+                                     MAKERECT(30, 30, 90, 70),
+                                     NULL, test_window_proc, 0, NULL);
+
+    ASSERT_NOT_NULL(doc);
+    ASSERT_NOT_NULL(palette);
+    ASSERT_NOT_NULL(dialog);
+
+    show_window(doc, true);
+    show_window(palette, true);
+    show_window(dialog, true);
+
+    window_t *tail = g_ui_runtime.windows;
+    while (tail && tail->next)
+        tail = tail->next;
+
+    ASSERT_TRUE(tail == dialog);
+
+    test_env_shutdown();
+    PASS();
+}
+
 int main(int argc, char *argv[]) {
     (void)argc;
     (void)argv;
@@ -283,7 +498,12 @@ int main(int argc, char *argv[]) {
     test_tracking_toggle();
     test_event_details();
     test_parent_child_messages();
+    test_parent_notify_can_consume_child_input();
+    test_parent_notify_can_allow_child_input();
     test_clear_events();
+    test_cw_usedefault_uses_configured_origin();
+    test_dialog_z_order_above_same_app_topmost();
+    test_standalone_dialog_z_order_above_topmost();
     
     TEST_END();
 }

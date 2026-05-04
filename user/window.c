@@ -10,6 +10,67 @@
 #include "user.h"
 #include "messages.h"
 #include "draw.h"
+#include "../commctl/commctl.h"
+
+#define MAX_WINDOW_CLASSES 256
+
+typedef struct {
+  fe_component_desc_t desc;
+} window_class_t;
+
+static window_class_t g_window_classes[MAX_WINDOW_CLASSES];
+static int g_window_class_count = 0;
+
+static bool streq(const char *a, const char *b) {
+  return a && b && strcmp(a, b) == 0;
+}
+
+bool register_window_class(const fe_component_desc_t *desc) {
+  if (!desc || !desc->class_name || !*desc->class_name || !desc->proc) return false;
+  for (int i = 0; i < g_window_class_count; i++) {
+    if (streq(g_window_classes[i].desc.class_name, desc->class_name))
+      return g_window_classes[i].desc.proc == desc->proc;
+  }
+  if (g_window_class_count >= MAX_WINDOW_CLASSES) return false;
+  g_window_classes[g_window_class_count++].desc = *desc;
+  return true;
+}
+
+bool register_window_class_once(const fe_component_desc_t *desc) {
+  return register_window_class(desc);
+}
+
+winproc_t find_window_class_proc(const char *class_name) {
+  if (!class_name || !*class_name) return NULL;
+  for (int i = 0; i < g_window_class_count; i++) {
+    if (streq(g_window_classes[i].desc.class_name, class_name))
+      return g_window_classes[i].desc.proc;
+  }
+
+  // Built-in control aliases, so most callers do not need explicit registration.
+  if (streq(class_name, "button") || streq(class_name, "win_button")) return win_button;
+  if (streq(class_name, "toolbar_button") || streq(class_name, "win_toolbar_button")) return win_toolbar_button;
+  if (streq(class_name, "checkbox") || streq(class_name, "win_checkbox")) return win_checkbox;
+  if (streq(class_name, "reportview") || streq(class_name, "win_reportview")) return win_reportview;
+  if (streq(class_name, "combobox") || streq(class_name, "win_combobox")) return win_combobox;
+  if (streq(class_name, "textedit") || streq(class_name, "win_textedit")) return win_textedit;
+  if (streq(class_name, "multiedit") || streq(class_name, "win_multiedit")) return win_multiedit;
+  if (streq(class_name, "label") || streq(class_name, "win_label")) return win_label;
+  if (streq(class_name, "image") || streq(class_name, "win_image")) return win_image;
+  if (streq(class_name, "list") || streq(class_name, "win_list")) return win_list;
+  if (streq(class_name, "console") || streq(class_name, "win_console")) return win_console;
+  if (streq(class_name, "space") || streq(class_name, "win_space")) return win_space;
+  if (streq(class_name, "filelist") || streq(class_name, "win_filelist")) return win_filelist;
+  if (streq(class_name, "terminal") || streq(class_name, "win_terminal")) return win_terminal;
+  if (streq(class_name, "menubar") || streq(class_name, "win_menubar")) return win_menubar;
+  if (streq(class_name, "scrollbar") || streq(class_name, "win_scrollbar")) return win_scrollbar;
+  if (streq(class_name, "slider") || streq(class_name, "win_slider")) return win_slider;
+  if (streq(class_name, "gradient") || streq(class_name, "win_gradient")) return win_gradient;
+  if (streq(class_name, "toolbox") || streq(class_name, "win_toolbox")) return win_toolbox;
+  if (streq(class_name, "splitter") || streq(class_name, "win_splitter")) return win_splitter;
+
+  return NULL;
+}
 
 // Global window state
 ui_runtime_state_t g_ui_runtime = {
@@ -22,6 +83,8 @@ ui_runtime_state_t g_ui_runtime = {
   .resizing = NULL,
   .toolbar_down_win = NULL,
   .modal_overlay_parent = NULL,
+  .default_window_x = 20,
+  .default_window_y = 20,
 };
 
 // Forward declarations
@@ -85,13 +148,13 @@ static window_t *alloc_window(char const *title, flags_t flags, irect16_t const 
 // Delegates to create_window_from_form() so that both creation paths share a
 // single implementation.  create_window_from_form() is declared in user.h and
 // defined later in this file; the declaration makes the call valid here.
-window_t* create_window(char const *title,
-                        flags_t flags,
-                        irect16_t const *frame,
-                        window_t *parent,
-                        winproc_t proc,
-                        hinstance_t hinstance,
-                        void *lparam)
+window_t* create_window_proc(char const *title,
+                             flags_t flags,
+                             irect16_t const *frame,
+                             window_t *parent,
+                             winproc_t proc,
+                             hinstance_t hinstance,
+                             void *lparam)
 {
   form_def_t def = {
     .name        = title,
@@ -104,6 +167,19 @@ window_t* create_window(char const *title,
   int x = frame ? frame->x : 0;
   int y = frame ? frame->y : 0;
   return create_window_from_form(&def, x, y, parent, proc, hinstance, lparam);
+}
+
+window_t* create_window_class(char const *title,
+                              flags_t flags,
+                              irect16_t const *frame,
+                              window_t *parent,
+                              const char *class_name,
+                              hinstance_t hinstance,
+                              void *lparam)
+{
+  winproc_t proc = find_window_class_proc(class_name);
+  if (!proc) return NULL;
+  return create_window_proc(title, flags, frame, parent, proc, hinstance, lparam);
 }
 
 void *allocate_window_data(window_t *win, size_t size) {
@@ -169,6 +245,11 @@ void resize_window(window_t *win, int new_w, int new_h) {
 
   invalidate_overlaps(win);
   invalidate_window(win);
+}
+
+void set_default_window_position(int x, int y) {
+  g_ui_runtime.default_window_x = x;
+  g_ui_runtime.default_window_y = y;
 }
 
 // Remove window from global window list
@@ -483,17 +564,9 @@ void adjust_window_rect(irect16_t *r, flags_t flags) {
   r->h += t + s + hstrip;
 }
 
-// Create window from definition
-//extern result_t win_label(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
-//extern result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
-//extern result_t win_checkbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
-//extern result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
-//extern result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
-extern result_t win_space(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
-
 window_t *create_window2(windef_t const *def, irect16_t const *r, window_t *parent) {
   irect16_t rect = {r->x, r->y, def->w, def->h};
-  window_t *win = create_window(def->text, def->flags, &rect, parent, def->proc, 0, NULL);
+  window_t *win = create_window(def->text, def->flags, &rect, parent, def->class_name, 0, NULL);
   win->id = def->id;
   return win;
 }
@@ -502,41 +575,22 @@ window_t *create_window2(windef_t const *def, irect16_t const *r, window_t *pare
 void load_window_children(window_t *win, windef_t const *def) {
   int x = WINDOW_PADDING;
   int y = WINDOW_PADDING;
-  for (; def->proc; def++) {
+  for (; def->class_name; def++) {
     int w = def->w == -1 ? win->frame.w - WINDOW_PADDING*2 : def->w;
     int h = def->h == 0 ? CONTROL_HEIGHT : def->h;
-    if (x + w > win->frame.w - WINDOW_PADDING || def->proc == win_space) {
+    if (x + w > win->frame.w - WINDOW_PADDING || streq(def->class_name, "space")) {
       x = WINDOW_PADDING;
       for (window_t *child = win->children; child; child = child->next) {
         y = MAX(y, child->frame.y + child->frame.h);
       }
       y += LINE_PADDING;
     }
-    if (def->proc == win_space)
+    if (streq(def->class_name, "space"))
       continue;
     window_t *item = create_window2(def, MAKERECT(x, y, w, h), win);
     if (item) {
       x += item->frame.w + LINE_PADDING;
     }
-  }
-}
-
-// Include commctl prototypes to get the window procedure declarations used by
-// form_ctrl_to_proc().  This avoids duplicating extern declarations that would
-// silently drift if a commctl signature changed.
-#include "../commctl/commctl.h"
-
-// Map a FORM_CTRL_* type code to the corresponding commctl window procedure.
-static winproc_t form_ctrl_to_proc(form_ctrl_type_t type) {
-  switch (type) {
-    case FORM_CTRL_BUTTON:   return win_button;
-    case FORM_CTRL_CHECKBOX: return win_checkbox;
-    case FORM_CTRL_LABEL:    return win_label;
-    case FORM_CTRL_TEXTEDIT: return win_textedit;
-    case FORM_CTRL_MULTIEDIT: return win_multiedit;
-    case FORM_CTRL_LIST:     return win_list;
-    case FORM_CTRL_COMBOBOX: return win_combobox;
-    default:                 return NULL;
   }
 }
 
@@ -549,20 +603,21 @@ window_t *create_window_from_form(form_def_t const *def, int x, int y,
                                   hinstance_t hinstance, void *lparam) {
   if (!def || !proc) return NULL;
 
-  // Resolve CW_USEDEFAULT for root windows: cascade down from (20, 20).
+  // Resolve CW_USEDEFAULT for root windows: cascade down from the configured
+  // default origin.
   // Loop until we find a position not already occupied by another root window,
   // so that windows always cascade rather than stacking on top of each other.
   if (!parent && (x == CW_USEDEFAULT || y == CW_USEDEFAULT)) {
-    int cascade_step = 20;
-    int nx = 20, ny = 20;
+    int nx = g_ui_runtime.default_window_x;
+    int ny = g_ui_runtime.default_window_y;
     bool occupied = true;
     while (occupied) {
       occupied = false;
       for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
         if (!w->parent && w->frame.x == nx && w->frame.y == ny) {
           occupied = true;
-          nx += cascade_step;
-          ny += cascade_step;
+          nx += DEFAULT_WINDOW_CASCADE_X;
+          ny += DEFAULT_WINDOW_CASCADE_Y;
           break;
         }
       }
@@ -582,7 +637,7 @@ window_t *create_window_from_form(form_def_t const *def, int x, int y,
   if (def->children && def->child_count > 0) {
     for (int i = 0; i < def->child_count; i++) {
       const form_ctrl_def_t *cd = &def->children[i];
-      winproc_t cp = form_ctrl_to_proc(cd->type);
+      winproc_t cp = find_window_class_proc(cd->class_name);
       if (!cp) continue;
       window_t *child = create_window(cd->text ? cd->text : "", cd->flags,
                                       &cd->frame, win, cp, 0, NULL);

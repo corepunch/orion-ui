@@ -28,6 +28,10 @@
 #define IMAGEEDITOR_ANIMATIONS 1
 #endif
 
+#ifndef IMAGEEDITOR_SHOW_SELECTION_BOUNDS
+#define IMAGEEDITOR_SHOW_SELECTION_BOUNDS 0
+#endif
+
 #if IMAGEEDITOR_DEBUG
 #define IE_DEBUG(...) do { \
   axLog("[imageeditor] " __VA_ARGS__); \
@@ -83,11 +87,10 @@
 #define TOOL_WIN_H    (TITLEBAR_HEIGHT + TOOL_TOOLBAR_H + SWATCH_CLIENT_H)
 
 // Tool options palette — sits below the tool palette.
-// Content height accommodates both the brush-size panel and the shape-mode panel.
-// Brush panel: label(9) + gap(2) + NUM_BRUSH_SIZES rows × OPTS_BRUSH_CELL_H each.
+// Content height accommodates brush, shape, and magic-wand option panels.
 #define OPTS_BRUSH_CELL_H      12
-#define TOOL_OPTIONS_PANEL_H   (9 + 2 + NUM_BRUSH_SIZES * OPTS_BRUSH_CELL_H)
-#define TOOL_OPTIONS_WIN_W     PALETTE_WIN_W
+#define TOOL_OPTIONS_PANEL_H   76
+#define TOOL_OPTIONS_WIN_W     112
 #define TOOL_OPTIONS_WIN_H     (TITLEBAR_HEIGHT + TOOL_OPTIONS_PANEL_H)
 #define TOOL_OPTIONS_WIN_X     PALETTE_WIN_X
 #define TOOL_OPTIONS_WIN_Y     (PALETTE_WIN_Y + TOOL_WIN_H + 4)
@@ -113,47 +116,15 @@ extern const int kBrushSizes[NUM_BRUSH_SIZES];
 #define DOC_PALETTE_GAP 8
 #define DOC_START_X   (PALETTE_WIN_X + PALETTE_WIN_W + DOC_PALETTE_GAP)
 #define DOC_START_Y   (APP_TOOLBAR_Y + APP_TOOLBAR_H + DOC_PALETTE_GAP)
-#define DOC_CASCADE   20
 #define DOC_WORKSPACE_MARGIN 16
 
 #define NUM_COLORS 64
-#define NUM_TOOLS  17
+#define NUM_TOOLS  18
 #define NUM_USER_COLORS  8
 
 #define UNDO_MAX   20
 
-// Menu item IDs
-#define ID_FILE_NEW     1
-#define ID_FILE_OPEN    2
-#define ID_FILE_SAVE    3
-#define ID_FILE_SAVEAS  4
-#define ID_FILE_CLOSE   5
-#define ID_FILE_QUIT    6
-
-#define ID_EDIT_UNDO        10
-#define ID_EDIT_REDO        11
-#define ID_EDIT_CUT         12
-#define ID_EDIT_COPY        13
-#define ID_EDIT_PASTE       14
-#define ID_EDIT_CLEAR_SEL   15
-#define ID_EDIT_SELECT_ALL  16
-#define ID_EDIT_DESELECT    17
-#define ID_EDIT_CROP        18
-
-#define ID_VIEW_ZOOM_IN   40
-#define ID_VIEW_ZOOM_OUT  41
-#define ID_VIEW_ZOOM_1X   42
-#define ID_VIEW_ZOOM_2X   43
-#define ID_VIEW_ZOOM_4X   44
-#define ID_VIEW_ZOOM_6X   45
-#define ID_VIEW_ZOOM_8X   46
-
-#define ID_VIEW_ZOOM_FIT  55   // Fit on Screen (Ctrl+0, like Photoshop)
-#define ID_VIEW_MASK_ONLY 56   // Show the active layer's alpha channel
-
-#define ID_VIEW_SHOW_GRID    47
-#define ID_VIEW_SNAP_GRID    48
-#define ID_VIEW_GRID_OPTIONS 49
+// Menu command IDs and static menu resources are generated from imageeditor.orion.
 
 // Supported zoom levels and their corresponding View menu IDs.
 // These are the single source of truth used by win_canvas.c and win_menubar.c.
@@ -161,52 +132,14 @@ extern const int kBrushSizes[NUM_BRUSH_SIZES];
 extern const int kZoomLevels[NUM_ZOOM_LEVELS];
 extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 
-#define ID_IMAGE_FLIP_H   50
-#define ID_IMAGE_FLIP_V   51
-#define ID_IMAGE_INVERT   52
-#define ID_IMAGE_RESIZE   53
 #define ID_COLOR_SWAP     54
-#define ID_IMAGE_LEVELS   57
 
-#define ID_FILTER_RELOAD   90
-#define ID_FILTER_GALLERY  91
 #define ID_FILTER_BASE   1000
 #define IMAGEEDITOR_MAX_FILTERS 64
 
-// Animation menu command IDs (400–449)
-#define ID_ANIM_NEW_FRAME         400
-#define ID_ANIM_DUPLICATE_FRAME   401
-#define ID_ANIM_DELETE_FRAME      402
-#define ID_ANIM_PLAY              403
-#define ID_ANIM_STOP              404
-#define ID_ANIM_LOOP              405
-#define ID_ANIM_SET_FPS           406
-#define ID_ANIM_EXPORT_GIF        410
-#define ID_ANIM_EXPORT_APNG       411
-#define ID_ANIM_EXPORT_SPRITESHEET 412
-#define ID_WINDOW_TIMELINE        203
 
-#define ID_WINDOW_TOOLS    200
-#define ID_WINDOW_COLORS   201
-#define ID_WINDOW_LAYERS   202
 #define ID_WINDOW_DOC_BASE 300  // IDs 300..315 reserved for open documents
 #define WINDOW_MENU_MAX_DOCS 16
-
-#define ID_HELP_ABOUT  100
-
-// Layer menu command IDs
-#define ID_LAYER_NEW          60
-#define ID_LAYER_DUPLICATE    61
-#define ID_LAYER_DELETE       62
-#define ID_LAYER_MOVE_UP      63
-#define ID_LAYER_MOVE_DOWN    64
-#define ID_LAYER_MERGE_DOWN   65
-#define ID_LAYER_FLATTEN      66
-#define ID_LAYER_ADD_MASK     67
-#define ID_LAYER_APPLY_MASK   68
-#define ID_LAYER_REMOVE_MASK  69
-#define ID_LAYER_EXTRACT_MASK 70
-#define ID_LAYER_EDIT_MASK    71
 
 // Tool command IDs – these are the authoritative tool identifiers used everywhere
 #define ID_TOOL_PENCIL        20
@@ -226,6 +159,11 @@ extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 #define ID_TOOL_MAGNIFIER     34
 #define ID_TOOL_TEXT          35
 #define ID_TOOL_CROP          36
+#define ID_TOOL_MAGIC_WAND    37
+
+#include "components/lv_cmpn.h"
+#include "components/fg_preview.h"
+#include "build/generated/examples/imageeditor/imageeditor_forms.h"
 
 // ============================================================
 // Color helpers
@@ -276,7 +214,7 @@ typedef struct canvas_doc_s {
   bool     canvas_dirty;
   bool     drawing;
   bool     close_prompt_open;
-  point_t  last;
+  ipoint16_t  last;
   bool     modified;
   char     filename[512];
   window_t *win;
@@ -295,22 +233,28 @@ typedef struct canvas_doc_s {
   uint8_t *redo_states[UNDO_MAX];
   int      redo_count;
   bool     sel_active;
-  point_t  sel_start;
-  point_t  sel_end;
+  ipoint16_t  sel_start;
+  ipoint16_t  sel_end;
+  // Optional canvas_w * canvas_h edit mask: 0 = selected/editable,
+  // 255 = protected/unselected. NULL means the whole canvas is editable.
+  uint8_t *sel_mask;
+  GLuint   sel_mask_tex;  // GL_RED texture cache for protected-area overlay
+  bool     sel_mask_dirty;
   // Shape tool rubber-band preview state
   uint8_t *shape_snapshot;  // pixel backup taken when shape drag starts
-  point_t  shape_start;     // canvas coords where the shape drag began
+  ipoint16_t  shape_start;     // canvas coords where the shape drag began
   // Polygon tool in-progress vertices
-  point_t  poly_pts[256];
+  ipoint16_t  poly_pts[256];
   int      poly_count;
   bool     poly_active;     // true while accumulating polygon vertices
   // Floating selection state (during move drag)
   bool     sel_moving;
-  point_t  move_origin;    // canvas pixel where drag began
-  point_t  float_pos;      // current top-left of floating selection
+  ipoint16_t  move_origin;    // canvas pixel where drag began
+  ipoint16_t  float_pos;      // current top-left of floating selection
   int      float_w;
   int      float_h;
   uint8_t *float_pixels;   // RGBA data extracted from canvas
+  uint8_t *float_mask;     // float_w * float_h edit mask, same semantics as sel_mask
   GLuint   float_tex;      // cached GL texture for float_pixels (0 = none)
 #if IMAGEEDITOR_ANIMATIONS
   anim_timeline_t *anim;   // animation timeline (NULL when not in animation mode)
@@ -323,8 +267,8 @@ typedef struct {
   int           pan_x;      // horizontal pan offset in screen pixels
   int           pan_y;      // vertical pan offset in screen pixels
   bool          panning;    // true while hand-tool drag is in progress
-  point_t       pan_start;  // screen-local coords where hand drag began
-  point_t       hover;      // canvas pixel coords under the cursor
+  ipoint16_t       pan_start;  // screen-local coords where hand drag began
+  ipoint16_t       hover;      // canvas pixel coords under the cursor
   bool          hover_valid; // true when hover is on the canvas (for magnifier overlay)
   GLuint        mag_tex;    // GL texture for magnifier loupe (created once, updated each paint)
   char          last_sb[48]; // last text sent to status bar — avoids redundant updates
@@ -352,8 +296,6 @@ typedef struct {
   uint32_t       palette[NUM_COLORS];
   uint32_t       fg_color;
   uint32_t       bg_color;
-  int            next_x;
-  int            next_y;
   accel_table_t *accel;
   uint32_t       user_palette[NUM_USER_COLORS];
   int            num_user_colors;
@@ -362,6 +304,9 @@ typedef struct {
   // Text tool persistent settings
   int            text_font_size;  // pixel height, default 16
   bool           text_antialias;  // default true
+  bool           wand_antialias;
+  int            wand_spread;      // RGB tolerance, 0..255
+  uint32_t       wand_overlay_color;
   // Instagram-style filter presets loaded from share/filters.
   image_filter_t filters[IMAGEEDITOR_MAX_FILTERS];
   int            filter_count;
@@ -404,6 +349,7 @@ static inline const char *tool_id_name(int tool_id) {
     case ID_TOOL_MAGNIFIER:    return "MAGNIFIER";
     case ID_TOOL_TEXT:         return "TEXT";
     case ID_TOOL_CROP:         return "CROP";
+    case ID_TOOL_MAGIC_WAND:   return "MAGIC_WAND";
     default:                   return "UNKNOWN";
   }
 }
@@ -435,6 +381,10 @@ static inline bool canvas_in_bounds(const canvas_doc_t *doc, int x, int y) {
 
 static inline bool canvas_in_selection(const canvas_doc_t *doc, int x, int y) {
   if (!doc->sel_active) return true;
+  if (doc->sel_mask) {
+    if (!canvas_in_bounds(doc, x, y)) return false;
+    return doc->sel_mask[(size_t)y * doc->canvas_w + x] == 0;
+  }
   int x0 = MIN(doc->sel_start.x, doc->sel_end.x);
   int y0 = MIN(doc->sel_start.y, doc->sel_end.y);
   int x1 = MAX(doc->sel_start.x, doc->sel_end.x);
@@ -456,6 +406,8 @@ void canvas_upload(canvas_doc_t *doc);
 void canvas_draw_circle(canvas_doc_t *doc, int cx, int cy, int r, uint32_t c);
 void canvas_draw_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1, int radius, uint32_t c);
 void canvas_flood_fill(canvas_doc_t *doc, int sx, int sy, uint32_t fill);
+bool canvas_magic_wand_select(canvas_doc_t *doc, int sx, int sy,
+                              int spread, bool antialias);
 void canvas_spray(canvas_doc_t *doc, int cx, int cy, int radius, uint32_t c);
 void canvas_draw_rect_outline(canvas_doc_t *doc, int x, int y, int w, int h, uint32_t c);
 void canvas_draw_rect_filled(canvas_doc_t *doc, int x, int y, int w, int h, uint32_t outline, uint32_t fill);
@@ -463,8 +415,8 @@ void canvas_draw_ellipse_outline(canvas_doc_t *doc, int cx, int cy, int rx, int 
 void canvas_draw_ellipse_filled(canvas_doc_t *doc, int cx, int cy, int rx, int ry, uint32_t outline, uint32_t fill);
 void canvas_draw_rounded_rect_outline(canvas_doc_t *doc, int x, int y, int w, int h, int r, uint32_t c);
 void canvas_draw_rounded_rect_filled(canvas_doc_t *doc, int x, int y, int w, int h, int r, uint32_t outline, uint32_t fill);
-void canvas_draw_polygon_outline(canvas_doc_t *doc, const point_t *pts, int count, uint32_t c);
-void canvas_draw_polygon_filled(canvas_doc_t *doc, const point_t *pts, int count, uint32_t outline, uint32_t fill);
+void canvas_draw_polygon_outline(canvas_doc_t *doc, const ipoint16_t *pts, int count, uint32_t c);
+void canvas_draw_polygon_filled(canvas_doc_t *doc, const ipoint16_t *pts, int count, uint32_t outline, uint32_t fill);
 bool canvas_is_shape_tool(int tool_id);
 void canvas_shape_begin(canvas_doc_t *doc, int cx, int cy);
 void canvas_shape_preview(canvas_doc_t *doc, int x0, int y0, int x1, int y1, int tool, bool filled, uint32_t fg, uint32_t bg, bool shift_held);
@@ -475,8 +427,12 @@ void canvas_copy_selection(canvas_doc_t *doc);
 void canvas_cut_selection(canvas_doc_t *doc, uint32_t fill);
 void canvas_clear_selection(canvas_doc_t *doc, uint32_t fill);
 void canvas_paste_clipboard(canvas_doc_t *doc);
+bool canvas_select_rect(canvas_doc_t *doc, int x0, int y0, int x1, int y1);
 void canvas_select_all(canvas_doc_t *doc);
 void canvas_deselect(canvas_doc_t *doc);
+void canvas_clear_selection_mask(canvas_doc_t *doc);
+bool canvas_expand_selection(canvas_doc_t *doc, int amount);
+bool canvas_contract_selection(canvas_doc_t *doc, int amount);
 void canvas_crop_to_selection(canvas_doc_t *doc);
 // Crop or expand the canvas to the active selection.
 // If the selection extends outside the canvas the canvas grows (new areas filled
@@ -541,6 +497,7 @@ void imageeditor_sync_filter_menu(void);
 bool imageeditor_load_filters(void);
 void imageeditor_free_filters(void);
 bool imageeditor_apply_filter(canvas_doc_t *doc, int filter_idx);
+bool imageeditor_apply_builtin_filter(canvas_doc_t *doc, uint16_t id);
 bool show_filter_gallery_dialog(window_t *parent);
 
 // Sync canvas scrollbars after content size changes (e.g. after canvas_resize)
@@ -565,10 +522,6 @@ bool canvas_draw_text_stb(canvas_doc_t *doc, int x, int y,
 
 // About dialog
 void show_about_dialog(window_t *parent);
-
-// Menu definitions
-extern menu_def_t kMenus[];  // non-const: Window menu is rebuilt dynamically
-extern const int  kNumMenus;
 
 // Rebuild the Window menu (call after create/close document).
 void window_menu_rebuild(void);
@@ -602,6 +555,9 @@ bool show_size_dialog(window_t *parent, const char *title, int *out_w, int *out_
 
 // Grid Options dialog – returns true if accepted.
 bool show_grid_options_dialog(window_t *parent, int *out_x, int *out_y);
+
+// Selection Modify dialog – returns true if accepted.
+bool show_selection_modify_dialog(window_t *parent, const char *title, int *out_amount);
 
 // Layers palette window geometry.
 // Positioned on the right side of the screen, below the color palette.

@@ -101,12 +101,6 @@ void draw_focused(irect16_t r) {
   draw_wire_rect(r, 1, get_sys_color(brFocusRing));
 }
 
-// Draw a softer single-colour outline for a window that contains focused
-// controls but is not itself the focused widget.
-static void draw_active_frame(irect16_t r) {
-  draw_wire_rect(r, 1, get_sys_color(brBorderActive));
-}
-
 // Draw bevel border
 void draw_bevel(irect16_t r) {
   fill_rect(get_sys_color(brLightEdge), R(r.x-1, r.y-1, r.w+2, 1));
@@ -137,10 +131,8 @@ void draw_button(irect16_t r, int dx, int dy, bool pressed) {
 // Draw window panel
 void draw_panel(window_t const *win) {
   irect16_t r = win->frame;
-  if (g_ui_runtime.focused == win)
+  if (window_has_focus(win))
     draw_focused(r);
-  else if (window_has_focus(win))
-    draw_active_frame(r);
   else
     draw_bevel(r);
   if (!(win->flags & WINDOW_NORESIZE)) {

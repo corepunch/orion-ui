@@ -38,9 +38,6 @@
 #define MAIN_WIN_Y  (MENUBAR_HEIGHT + 8)
 #define MAIN_WIN_W  (SCREEN_W - MAIN_WIN_X - 4)
 #define MAIN_WIN_H  (SCREEN_H - MAIN_WIN_Y - 4)
-#define DOC_START_X MAIN_WIN_X
-#define DOC_START_Y MAIN_WIN_Y
-#define DOC_CASCADE 20
 
 // ============================================================
 // Menu item IDs
@@ -141,8 +138,6 @@ typedef struct {
   task_doc_t    *active_doc;
   window_t      *menubar_win;
   hinstance_t    hinstance;  // owning app instance
-  int            next_x;
-  int            next_y;
 
   accel_table_t *accel;
 } app_state_t;

@@ -49,8 +49,6 @@ task_doc_t *create_document(const char *filename) {
   task_doc_t *doc;
   int sw;
   int sh;
-  int wx;
-  int wy;
   window_t *win;
 
   if (!g_app) return NULL;
@@ -65,18 +63,11 @@ task_doc_t *create_document(const char *filename) {
 
   sw = MIN(480, ui_get_system_metrics(kSystemMetricScreenWidth));
   sh = MIN(320, ui_get_system_metrics(kSystemMetricScreenHeight));
-  wx = g_app->next_x;
-  wy = g_app->next_y;
-  g_app->next_x += DOC_CASCADE;
-  g_app->next_y += DOC_CASCADE;
-  if (g_app->next_x + (sw - MAIN_WIN_X - 4) > SCREEN_W) {
-    g_app->next_x = DOC_START_X;
-    g_app->next_y = DOC_START_Y;
-  }
+  set_default_window_position(MAIN_WIN_X, MAIN_WIN_Y);
 
   win = create_window(filename ? filename : "Untitled",
                       WINDOW_STATUSBAR | WINDOW_TOOLBAR,
-                      MAKERECT(wx, wy,
+                      MAKERECT(CW_USEDEFAULT, CW_USEDEFAULT,
                                sw - MAIN_WIN_X - 4,
                                sh - MAIN_WIN_Y - 4),
                       NULL, main_win_proc, g_app->hinstance, doc);

@@ -532,6 +532,24 @@ static bool handle_builtin_scrollbars(window_t *win, uint32_t msg, uint32_t wpar
   return false;
 }
 
+static bool parent_notify_message(uint32_t msg) {
+  switch (msg) {
+    case evLeftButtonDown:
+    case evLeftButtonDoubleClick:
+    case evLeftButtonUp:
+    case evRightButtonDown:
+    case evRightButtonUp:
+    case evMouseMove:
+    case evWheel:
+    case evKeyDown:
+    case evKeyUp:
+    case evTextInput:
+      return true;
+    default:
+      return false;
+  }
+}
+
 // Send message to window (synchronous)
 int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   if (!win) return false;
@@ -735,6 +753,16 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
        msg == evLeftButtonUp)) {
     if (handle_builtin_scrollbars(win, msg, wparam)) return true;
   }
+  if (win->parent && parent_notify_message(msg)) {
+    parent_notify_t pn = {
+      .child = win,
+      .child_msg = msg,
+      .child_wparam = wparam,
+      .child_lparam = lparam,
+    };
+    if (send_message(win->parent, evParentNotify, 0, &pn))
+      return true;
+  }
   // Call window procedure
   if (!(value = win->proc(win, msg, wparam, lparam))) {
     switch (msg) {
@@ -769,7 +797,7 @@ int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         for (window_t *item = win->children; item; item = item->next) {
           irect16_t r = item->frame;
           uint16_t x = LOWORD(wparam), y = HIWORD(wparam);
-          if (!item->notabstop && CONTAINS(x, y, r.x, r.y, r.w, r.h)) {
+          if (!(item->flags & WINDOW_NOTABSTOP) && CONTAINS(x, y, r.x, r.y, r.w, r.h)) {
             *(window_t **)lparam = item;
           }
         }

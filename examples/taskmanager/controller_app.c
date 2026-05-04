@@ -15,8 +15,6 @@ app_state_t *g_app = NULL;
 app_state_t *app_init(void) {
   app_state_t *app = (app_state_t *)calloc(1, sizeof(app_state_t));
   if (!app) return NULL;
-  app->next_x = DOC_START_X;
-  app->next_y = DOC_START_Y;
   return app;
 }
 

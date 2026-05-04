@@ -22,12 +22,12 @@
 #define CTL_CANCEL   6
 
 static const form_ctrl_def_t kPPFCtrls[] = {
-  { FORM_CTRL_COMBOBOX, CTL_REMOTE, {60,  8, 130, 13}, 0, "", "remote" },
-  { FORM_CTRL_COMBOBOX, CTL_BRANCH, {60, 26, 130, 13}, 0, "", "branch" },
-  { FORM_CTRL_CHECKBOX, CTL_PRUNE,  {8,  46, 170, 13}, 0, "Prune deleted remote branches", "prune" },
-  { FORM_CTRL_CHECKBOX, CTL_FORCE,  {8,  62, 100, 13}, 0, "Force", "force" },
-  { FORM_CTRL_BUTTON,   CTL_OK,     {130,82,  60, 14}, BUTTON_DEFAULT, "OK",     "ok"    },
-  { FORM_CTRL_BUTTON,   CTL_CANCEL, {194,82,  60, 14}, 0, "Cancel", "cancel" },
+  { "combobox", CTL_REMOTE, {60,  8, 130, 13}, 0, "", "remote" },
+  { "combobox", CTL_BRANCH, {60, 26, 130, 13}, 0, "", "branch" },
+  { "checkbox", CTL_PRUNE,  {8,  46, 170, 13}, 0, "Prune deleted remote branches", "prune" },
+  { "checkbox", CTL_FORCE,  {8,  62, 100, 13}, 0, "Force", "force" },
+  { "button",   CTL_OK,     {130,82,  60, 14}, BUTTON_DEFAULT, "OK",     "ok"    },
+  { "button",   CTL_CANCEL, {194,82,  60, 14}, 0, "Cancel", "cancel" },
 };
 static const form_def_t kPPFForm = {
   .name        = "Remote Operation",

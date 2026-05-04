@@ -77,10 +77,10 @@ typedef struct {
 } fp_newfolder_state_t;
 
 static const form_ctrl_def_t kNewFolderChildren[] = {
-  { FORM_CTRL_LABEL, FP_ID_NEWFOLDER_EDIT + 1000, {8, 10, 72, CONTROL_HEIGHT}, 0, "Folder name:", "label_name" },
-  { FORM_CTRL_TEXTEDIT, FP_ID_NEWFOLDER_EDIT, {82, 8, 150, CONTROL_HEIGHT}, 0, "", "edit_name" },
-  { FORM_CTRL_BUTTON, FP_ID_NEWFOLDER_OK, {116, 32, 54, BUTTON_HEIGHT}, BUTTON_DEFAULT, "OK", "ok" },
-  { FORM_CTRL_BUTTON, FP_ID_NEWFOLDER_CANCEL, {176, 32, 60, BUTTON_HEIGHT}, 0, "Cancel", "cancel" },
+  { "label", FP_ID_NEWFOLDER_EDIT + 1000, {8, 10, 72, CONTROL_HEIGHT}, 0, "Folder name:", "label_name" },
+  { "textedit", FP_ID_NEWFOLDER_EDIT, {82, 8, 150, CONTROL_HEIGHT}, 0, "", "edit_name" },
+  { "button", FP_ID_NEWFOLDER_OK, {116, 32, 54, BUTTON_HEIGHT}, BUTTON_DEFAULT, "OK", "ok" },
+  { "button", FP_ID_NEWFOLDER_CANCEL, {176, 32, 60, BUTTON_HEIGHT}, 0, "Cancel", "cancel" },
 };
 
 static const form_def_t kNewFolderForm = {
@@ -92,12 +92,12 @@ static const form_def_t kNewFolderForm = {
 };
 
 static const form_ctrl_def_t kFilePickerChildren[] = {
-  { FORM_CTRL_LABEL, -1, { FP_PAD, FP_FILE_Y, FP_LABEL_W, FP_EDIT_H }, 0, "File:", "lbl_file" },
-  { FORM_CTRL_TEXTEDIT, FP_ID_FILE_EDIT, { FP_CTRL_X, FP_FILE_Y, FP_CTRL_W, FP_EDIT_H }, 0, "", "edit_file" },
-  { FORM_CTRL_LABEL, -1, { FP_PAD, FP_FILTER_Y + (FP_COMBO_H - CONTROL_HEIGHT) / 2, FP_LABEL_W, CONTROL_HEIGHT }, 0, "Filter:", "lbl_filter" },
-  { FORM_CTRL_COMBOBOX, FP_ID_FILTER_COMBO, { FP_CTRL_X, FP_FILTER_Y, FP_CTRL_W, FP_COMBO_H }, 0, "", "combo_filter" },
-  { FORM_CTRL_BUTTON, FP_ID_OK, { FP_WIN_W - (FP_BTN_W + FP_PAD) * 2, FP_BTN_Y, FP_BTN_W, FP_BTN_H }, BUTTON_DEFAULT, "Open", "btn_ok" },
-  { FORM_CTRL_BUTTON, FP_ID_CANCEL, { FP_WIN_W - (FP_BTN_W + FP_PAD), FP_BTN_Y, FP_BTN_W, FP_BTN_H }, 0, "Cancel", "btn_cancel" },
+  { "label", -1, { FP_PAD, FP_FILE_Y, FP_LABEL_W, FP_EDIT_H }, 0, "File:", "lbl_file" },
+  { "textedit", FP_ID_FILE_EDIT, { FP_CTRL_X, FP_FILE_Y, FP_CTRL_W, FP_EDIT_H }, 0, "", "edit_file" },
+  { "label", -1, { FP_PAD, FP_FILTER_Y + (FP_COMBO_H - CONTROL_HEIGHT) / 2, FP_LABEL_W, CONTROL_HEIGHT }, 0, "Filter:", "lbl_filter" },
+  { "combobox", FP_ID_FILTER_COMBO, { FP_CTRL_X, FP_FILTER_Y, FP_CTRL_W, FP_COMBO_H }, 0, "", "combo_filter" },
+  { "button", FP_ID_OK, { FP_WIN_W - (FP_BTN_W + FP_PAD) * 2, FP_BTN_Y, FP_BTN_W, FP_BTN_H }, BUTTON_DEFAULT, "Open", "btn_ok" },
+  { "button", FP_ID_CANCEL, { FP_WIN_W - (FP_BTN_W + FP_PAD), FP_BTN_Y, FP_BTN_W, FP_BTN_H }, 0, "Cancel", "btn_cancel" },
 };
 
 static const form_def_t kFilePickerForm = {
@@ -195,7 +195,13 @@ static result_t fp_newfolder_proc(window_t *win, uint32_t msg,
         if (!src) return true;
         if (src->id == FP_ID_NEWFOLDER_OK) {
           dialog_pull(win, st,
-                      &(ctrl_binding_t){ FP_ID_NEWFOLDER_EDIT, offsetof(fp_newfolder_state_t, name), sizeof(st->name), BIND_STRING },
+                      &(ctrl_binding_t){
+                        .ctrl_id = FP_ID_NEWFOLDER_EDIT,
+                        .command = 0,
+                        .getter = edGetText,
+                        .offset = offsetof(fp_newfolder_state_t, name),
+                        .wparam = sizeof(st->name),
+                      },
                       1);
           end_dialog(win, 1);
           return true;

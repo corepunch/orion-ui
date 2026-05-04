@@ -50,19 +50,11 @@ typedef enum {
 
 // Pixels by which the focus-ring background extends beyond the box on
 // each side (i.e. focus rect = box expanded by CHECKBOX_FOCUS_PAD).
+#define CHECKBOX_BOX_SIZE    13
 #define CHECKBOX_FOCUS_PAD   2
 
 // Horizontal gap between the right edge of the box and the left edge of
 // the label text.
 #define CHECKBOX_GAP         6
-
-// Vertical offset of the label text baseline from the top of the frame.
-#define CHECKBOX_TEXT_Y      2
-
-// ── Labels ────────────────────────────────────────────────────────────────
-
-// Vertical padding applied at the top of a label control before drawing
-// its text (keeps text away from the window border).
-#define LABEL_TEXT_PADDING   3
 
 #endif /* __UI_THEME_H__ */

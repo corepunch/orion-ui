@@ -4,6 +4,8 @@
 #include "formeditor.h"
 #include "../../commctl/commctl.h"
 #include <inttypes.h>
+#include <libxml/parser.h>
+#include <libxml/tree.h>
 
 // ============================================================
 // Menu definitions
@@ -47,12 +49,38 @@ const int kNumMenus = (int)(sizeof(kMenus)/sizeof(kMenus[0]));
 
 void form_doc_update_title(form_doc_t *doc) {
   if (!doc || !doc->doc_win) return;
-  const char *name = doc->filename[0] ? doc->filename : "Untitled";
+  const char *name = doc->form_title[0] ? doc->form_title :
+                     (doc->form_id[0] ? doc->form_id : "Untitled");
   const char *slash = strrchr(name, '/');
   if (slash) name = slash + 1;
   snprintf(doc->doc_win->title, sizeof(doc->doc_win->title), "%s%s",
            name, doc->modified ? " *" : "");
   invalidate_window(doc->doc_win);
+}
+
+void form_doc_activate(form_doc_t *doc) {
+  if (!g_app || !doc) return;
+  if (g_app->doc == doc) return;
+  form_doc_t *prev = g_app->doc;
+  g_app->doc = doc;
+  if (prev && prev->doc_win)
+    invalidate_window(prev->doc_win);
+  if (doc->doc_win)
+    invalidate_window(doc->doc_win);
+  property_browser_refresh(doc);
+  forms_browser_refresh();
+}
+
+void form_doc_show_only(form_doc_t *doc) {
+  if (!g_app || !doc) return;
+  for (form_doc_t *it = g_app->docs; it; it = it->next) {
+    if (it != doc && it->doc_win && is_window(it->doc_win))
+      show_window(it->doc_win, false);
+  }
+  form_doc_activate(doc);
+  if (doc->doc_win && is_window(doc->doc_win))
+    show_window(doc->doc_win, true);
+  forms_browser_refresh();
 }
 
 // ============================================================
@@ -65,6 +93,9 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
   switch (msg) {
     case evCreate:
       return true;
+    case evSetFocus:
+      if (doc && win->visible) form_doc_activate(doc);
+      return false;
     case evPaint:
       fill_rect(get_sys_color(brWorkspaceBg), R(0, 0, win->frame.w, win->frame.h));
       return false;
@@ -76,22 +107,25 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
     case evResize: {
       if (doc && doc->canvas_win) {
         irect16_t cr = get_client_rect(win);
+        int new_w = MAX(1, cr.w);
+        int new_h = MAX(1, cr.h);
+        bool changed = (doc->form_size.w != new_w || doc->form_size.h != new_h);
+        doc->form_size.w = new_w;
+        doc->form_size.h = new_h;
         resize_window(doc->canvas_win, cr.w, cr.h);
+        if (changed) {
+          doc->modified = true;
+          if (g_app)
+            g_app->project.modified = true;
+          form_doc_update_title(doc);
+        }
       }
       return false;
     }
     case evClose: {
       if (!doc) return false;
-      if (doc->modified) {
-        int res = message_box(win,
-                              "This form has unsaved changes.\nClose without saving?",
-                              "Unsaved Changes", MB_YESNOCANCEL);
-        if (res == IDCANCEL) return true;  // cancel close
-        // IDNO: discard. IDYES with no filename: also discard (no auto-save for .h).
-        if (res == IDYES && doc->filename[0])
-          form_save(doc, doc->filename);
-      }
-      close_form_doc(doc);
+      show_window(win, false);
+      forms_browser_refresh();
       return true;
     }
     default:
@@ -103,19 +137,54 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
 // create_form_doc / close_form_doc
 // ============================================================
 
+static irect16_t form_doc_frame_for_size(int form_w, int form_h, uint32_t form_flags) {
+  int max_w = SCREEN_W - 4;
+  int max_h = SCREEN_H - MENUBAR_HEIGHT - 4;
+  bool has_status = (form_flags & WINDOW_STATUSBAR) != 0;
+  int status_h = has_status ? STATUSBAR_HEIGHT : 0;
+  bool needs_hscroll = form_w > max_w;
+  int hstrip = (needs_hscroll && !has_status) ? SCROLLBAR_WIDTH : 0;
+  int max_canvas_h = max_h - TITLEBAR_HEIGHT - status_h - hstrip;
+  bool needs_vscroll;
+  int frame_w;
+  int frame_h;
+
+  if (max_w < 1) max_w = 1;
+  if (max_canvas_h < 1) max_canvas_h = 1;
+
+  needs_vscroll = form_h > max_canvas_h;
+  frame_w = form_w + (needs_vscroll ? SCROLLBAR_WIDTH : 0);
+  if (frame_w > max_w) frame_w = max_w;
+
+  frame_h = TITLEBAR_HEIGHT + status_h + hstrip + form_h;
+  if (frame_h > max_h) frame_h = max_h;
+
+  return (irect16_t){CW_USEDEFAULT, CW_USEDEFAULT, frame_w, frame_h};
+}
+
+static void form_doc_apply_window_flags_and_size(form_doc_t *doc) {
+  if (!doc || !doc->doc_win) return;
+  doc->doc_win->flags &= ~WINDOW_STATUSBAR;
+  doc->doc_win->flags |= (doc->flags & WINDOW_STATUSBAR);
+  irect16_t frame = form_doc_frame_for_size(doc->form_size.w, doc->form_size.h, doc->flags);
+  resize_window(doc->doc_win, frame.w, frame.h);
+  if (doc->canvas_win) {
+    irect16_t cr = get_client_rect(doc->doc_win);
+    resize_window(doc->canvas_win, cr.w, cr.h);
+  }
+}
+
 form_doc_t *create_form_doc(int w, int h) {
   if (!g_app) return NULL;
-  if (w <= 0 || h <= 0) return NULL;
-
-  // Close existing document first (single-document editor).
-  if (g_app->doc)
-    close_form_doc(g_app->doc);
+  if (w <= 0 || h <= 0 || w > INT16_MAX || h > INT16_MAX) return NULL;
+  form_doc_t *prev_doc = g_app->doc;
 
   form_doc_t *doc = (form_doc_t *)calloc(1, sizeof(form_doc_t));
   if (!doc) return NULL;
 
-  doc->form_w    = w;
-  doc->form_h    = h;
+  doc->form_size.w    = w;
+  doc->form_size.h    = h;
+  doc->flags     = 0;
   doc->modified  = false;
   doc->next_id   = CTRL_ID_BASE;
   doc->grid_size    = 8;
@@ -123,10 +192,12 @@ form_doc_t *create_form_doc(int w, int h) {
   doc->snap_to_grid = true;
 
   // Document window
+  irect16_t doc_frame = form_doc_frame_for_size(w, h, doc->flags);
+  set_default_window_position(DOC_START_X, DOC_START_Y);
   window_t *dwin = create_window(
       "Untitled",
-      WINDOW_STATUSBAR | WINDOW_HSCROLL,
-      MAKERECT(DOC_START_X, DOC_START_Y, DOC_WIN_W, DOC_WIN_H),
+      WINDOW_HSCROLL | (doc->flags & WINDOW_STATUSBAR),
+      &doc_frame,
       NULL, doc_win_proc, g_app->hinstance, NULL);
   dwin->userdata = doc;
   doc->doc_win   = dwin;
@@ -137,392 +208,453 @@ form_doc_t *create_form_doc(int w, int h) {
       "", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL,
       MAKERECT(0, 0, cr.w, cr.h),
       dwin, win_canvas_proc, 0, doc);
-  cwin->notabstop = false;
+  cwin->flags &= ~WINDOW_NOTABSTOP;
   doc->canvas_win = cwin;
+  cr = get_client_rect(dwin);
+  resize_window(cwin, cr.w, cr.h);
 
+  doc->next = NULL;
+  if (!g_app->docs) {
+    g_app->docs = doc;
+  } else {
+    form_doc_t *tail = g_app->docs;
+    while (tail->next)
+      tail = tail->next;
+    tail->next = doc;
+  }
   g_app->doc = doc;
 
   show_window(dwin, true);
+  if (prev_doc && prev_doc->doc_win)
+    invalidate_window(prev_doc->doc_win);
   form_doc_update_title(doc);
   send_message(dwin, evStatusBar, 0, (void *)"New form");
+  property_browser_refresh(doc);
+  forms_browser_refresh();
   return doc;
 }
 
 void close_form_doc(form_doc_t *doc) {
   if (!doc) return;
-  if (g_app && g_app->doc == doc)
-    g_app->doc = NULL;
+  if (g_app) {
+    form_doc_t **link = &g_app->docs;
+    while (*link && *link != doc)
+      link = &(*link)->next;
+    if (*link == doc)
+      *link = doc->next;
+    if (g_app->doc == doc)
+      g_app->doc = g_app->docs;
+  }
   if (doc->doc_win && is_window(doc->doc_win))
     destroy_window(doc->doc_win);
+  property_browser_refresh(g_app ? g_app->doc : NULL);
+  forms_browser_refresh();
   free(doc);
 }
 
 // ============================================================
-// File I/O — save/load as a C .h header
+// Project I/O — XML .orion files
 // ============================================================
 
 // Map control type to a short keyword used in the file.
 static const char *ctrl_type_token(int type) {
-  switch (type) {
-    case CTRL_BUTTON:   return "button";
-    case CTRL_CHECKBOX: return "checkbox";
-    case CTRL_LABEL:    return "label";
-    case CTRL_TEXTEDIT: return "textedit";
-    case CTRL_LIST:     return "list";
-    case CTRL_COMBOBOX: return "combobox";
-    default:            return "control";
-  }
-}
-
-// Map control type to the FORM_CTRL_* enum name (uppercase suffix).
-static const char *ctrl_type_form_token(int type) {
-  switch (type) {
-    case CTRL_BUTTON:   return "BUTTON";
-    case CTRL_CHECKBOX: return "CHECKBOX";
-    case CTRL_LABEL:    return "LABEL";
-    case CTRL_TEXTEDIT: return "TEXTEDIT";
-    case CTRL_LIST:     return "LIST";
-    case CTRL_COMBOBOX: return "COMBOBOX";
-    default:            return "BUTTON";
-  }
+  const fe_component_desc_t *c = fe_component_by_id(type);
+  return c ? c->token : "control";
 }
 
 static int ctrl_type_from_token(const char *tok) {
-  if (strcmp(tok, "button")   == 0) return CTRL_BUTTON;
-  if (strcmp(tok, "checkbox") == 0) return CTRL_CHECKBOX;
-  if (strcmp(tok, "label")    == 0) return CTRL_LABEL;
-  if (strcmp(tok, "textedit") == 0) return CTRL_TEXTEDIT;
-  if (strcmp(tok, "list")     == 0) return CTRL_LIST;
-  if (strcmp(tok, "combobox") == 0) return CTRL_COMBOBOX;
+  const fe_component_desc_t *c = fe_component_by_token(tok);
+  if (!c) return -1;
+  for (int i = 0; i < fe_component_count(); i++) {
+    const fe_component_desc_t *it = fe_component_at(i);
+    if (it == c)
+      return i;
+  }
   return -1;
 }
 
-// Sanitize a string for embedding in a C string literal: escapes '\\', '"',
-// '\n', '\r', and '\t' so round-tripping through the form editor is lossless.
-static void sanitize_c_str_literal(const char *src, char *dst, size_t dst_sz) {
-  size_t di = 0;
-  if (dst_sz == 0) return;
-  for (size_t si = 0; src[si]; si++) {
-    char ch = src[si];
-    const char *esc = NULL;
-    switch (ch) {
-      case '\\': esc = "\\\\"; break;
-      case '"':  esc = "\\\""; break;
-      case '\n': esc = "\\n";  break;
-      case '\r': esc = "\\r";  break;
-      case '\t': esc = "\\t";  break;
-      default:   break;
-    }
-    if (esc) {
-      if (di + 2 >= dst_sz) break;
-      dst[di++] = esc[0];
-      dst[di++] = esc[1];
-    } else {
-      if (di + 1 >= dst_sz) break;
-      dst[di++] = ch;
-    }
-  }
-  dst[di] = '\0';
+// ============================================================
+// XML project I/O (.orion)
+// ============================================================
+
+static bool has_ext(const char *path, const char *ext) {
+  if (!path || !ext) return false;
+  size_t n = strlen(path);
+  size_t e = strlen(ext);
+  if (n < e) return false;
+  return strcmp(path + n - e, ext) == 0;
 }
 
-// Extract a C identifier from a file path: strips directory component and
-// extension, then replaces non-identifier characters with '_'.
-static void path_to_form_ident(const char *path, char *ident, size_t ident_sz) {
-  const char *base = strrchr(path, '/');
-  if (!base) base = strrchr(path, '\\');
-  base = base ? base + 1 : path;
-  size_t di = 0;
-  for (size_t si = 0; base[si] && base[si] != '.' && di < ident_sz - 1; si++) {
-    char ch = base[si];
-    if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') ||
-        (ch >= '0' && ch <= '9') || ch == '_')
-      ident[di++] = ch;
-    else
-      ident[di++] = '_';
-  }
-  if (di == 0) { ident[0] = 'f'; di = 1; }
-  // Ensure identifier doesn't start with a digit.
-  if (ident[0] >= '0' && ident[0] <= '9') {
-    if (di < ident_sz - 1) {
-      memmove(ident + 1, ident, di + 1);
-      ident[0] = 'f';
-      di++;
-      if (di >= ident_sz - 1) { ident[ident_sz - 1] = '\0'; return; }
-    }
-  }
-  ident[di] = '\0';
+static char *xml_attr_dup(xmlNodePtr node, const char *name) {
+  xmlChar *v = xmlGetProp(node, BAD_CAST name);
+  if (!v) return NULL;
+  char *s = strdup((const char *)v);
+  xmlFree(v);
+  return s;
 }
 
-// Return true when s is a non-empty, valid C identifier.
-static bool is_c_identifier(const char *s) {
-  if (!s || !s[0]) return false;
-  if (!((*s >= 'A' && *s <= 'Z') || (*s >= 'a' && *s <= 'z') || *s == '_'))
-    return false;
-  for (const char *p = s + 1; *p; p++) {
-    if (!((*p >= 'A' && *p <= 'Z') || (*p >= 'a' && *p <= 'z') ||
-          (*p >= '0' && *p <= '9') || *p == '_'))
-      return false;
-  }
+static void copy_attr(xmlNodePtr node, const char *name, char *dst, size_t dst_sz) {
+  char *v;
+  if (!dst || dst_sz == 0) return;
+  v = xml_attr_dup(node, name);
+  if (!v) return;
+  snprintf(dst, dst_sz, "%s", v);
+  free(v);
+}
+
+static int int_attr(xmlNodePtr node, const char *name, int fallback) {
+  char *v = xml_attr_dup(node, name);
+  if (!v) return fallback;
+  char *end = NULL;
+  long n = strtol(v, &end, 0);
+  int out = (end && *end == '\0') ? (int)n : fallback;
+  free(v);
+  return out;
+}
+
+static bool parse_numeric_expr(const char *s, int *out) {
+  if (!s || !*s || !out) return false;
+  char *end = NULL;
+  long n = strtol(s, &end, 0);
+  if (!end || *end != '\0') return false;
+  *out = (int)n;
   return true;
 }
 
-bool form_save(form_doc_t *doc, const char *path) {
-  FILE *f = fopen(path, "w");
-  if (!f) return false;
+static bool is_numeric_expr(const char *s) {
+  int ignored = 0;
+  return parse_numeric_expr(s, &ignored);
+}
 
-  // Emit #defines for control IDs so the header is usable directly.
+static uint32_t flag_value(const char *tok) {
+  if (!tok || !*tok || strcmp(tok, "0") == 0) return 0;
+  if (strcmp(tok, "BUTTON_DEFAULT") == 0) return BUTTON_DEFAULT;
+  if (strcmp(tok, "WINDOW_NOTITLE") == 0) return WINDOW_NOTITLE;
+  if (strcmp(tok, "WINDOW_NOFILL") == 0) return WINDOW_NOFILL;
+  if (strcmp(tok, "WINDOW_NOTABSTOP") == 0) return WINDOW_NOTABSTOP;
+  if (strcmp(tok, "WINDOW_STATUSBAR") == 0) return WINDOW_STATUSBAR;
+  if (strcmp(tok, "WINDOW_DIALOG") == 0) return WINDOW_DIALOG;
+  if (strcmp(tok, "WINDOW_NOTRAYBUTTON") == 0) return WINDOW_NOTRAYBUTTON;
+  if (strcmp(tok, "WINDOW_NORESIZE") == 0) return WINDOW_NORESIZE;
+  if (strcmp(tok, "WINDOW_HSCROLL") == 0) return WINDOW_HSCROLL;
+  if (strcmp(tok, "WINDOW_VSCROLL") == 0) return WINDOW_VSCROLL;
+  char *end = NULL;
+  unsigned long n = strtoul(tok, &end, 0);
+  return (end && *end == '\0') ? (uint32_t)n : 0;
+}
+
+static uint32_t parse_flags_expr(const char *expr) {
+  if (!expr || !*expr) return 0;
+  char buf[256];
+  snprintf(buf, sizeof(buf), "%s", expr);
+  uint32_t flags = 0;
+  char *p = buf;
+  while (*p) {
+    while (*p == ' ' || *p == '\t' || *p == '|') p++;
+    char *start = p;
+    while (*p && *p != '|') p++;
+    char save = *p;
+    *p = '\0';
+    char *end = start + strlen(start);
+    while (end > start && (end[-1] == ' ' || end[-1] == '\t')) *--end = '\0';
+    flags |= flag_value(start);
+    if (!save) break;
+    p++;
+  }
+  return flags;
+}
+
+static bool load_component_plugin_named(const char *name) {
+  if (!name || !*name) return false;
+  if (strchr(name, '/') || has_ext(name, AX_DYNLIB_EXT))
+    return fe_load_component_plugin(name);
+  char path[4096];
+  int n = snprintf(path, sizeof(path), "%s/../lib/%s%s",
+                   ui_get_exe_dir(), name, AX_DYNLIB_EXT);
+  if (n <= 0 || (size_t)n >= sizeof(path)) return false;
+  return fe_load_component_plugin(path);
+}
+
+static int project_resolve_control_id(form_doc_t *doc, const char *expr,
+                                      const char *value_expr) {
+  int id = 0;
+  if (parse_numeric_expr(expr, &id))
+    return id;
+  if (parse_numeric_expr(value_expr, &id))
+    return id;
+  return doc ? doc->next_id++ : CTRL_ID_BASE;
+}
+
+static bool frame_attr(xmlNodePtr node, irect16_t *out) {
+  if (!out) return false;
+  char *v = xml_attr_dup(node, "frame");
+  if (!v) return false;
+  int x = 0, y = 0, w = 0, h = 0;
+  bool ok = sscanf(v, "%d %d %d %d", &x, &y, &w, &h) == 4;
+  free(v);
+  if (!ok) return false;
+  *out = (irect16_t){x, y, w, h};
+  return true;
+}
+
+static void project_reset(void) {
+  if (!g_app) return;
+  while (g_app->docs)
+    close_form_doc(g_app->docs);
+  memset(&g_app->project, 0, sizeof(g_app->project));
+}
+
+static void project_load_plugins(xmlNodePtr root) {
+  if (!g_app) return;
+  for (xmlNodePtr n = root->children; n; n = n->next) {
+    if (n->type != XML_ELEMENT_NODE || xmlStrcmp(n->name, BAD_CAST "plugins") != 0)
+      continue;
+    for (xmlNodePtr p = n->children; p; p = p->next) {
+      if (p->type != XML_ELEMENT_NODE || xmlStrcmp(p->name, BAD_CAST "plugin") != 0)
+        continue;
+      if (g_app->project.plugin_count >= FE_MAX_PROJECT_PLUGINS) continue;
+      form_plugin_ref_t *ref = &g_app->project.plugins[g_app->project.plugin_count];
+      copy_attr(p, "name", ref->name, sizeof(ref->name));
+      if (ref->name[0]) {
+        load_component_plugin_named(ref->name);
+        g_app->project.plugin_count++;
+      }
+    }
+  }
+}
+
+static void project_load_menus(xmlDocPtr xdoc, xmlNodePtr root) {
+  if (!g_app) return;
+  g_app->project.menus_xml[0] = '\0';
+  for (xmlNodePtr n = root->children; n; n = n->next) {
+    if (n->type != XML_ELEMENT_NODE || xmlStrcmp(n->name, BAD_CAST "menus") != 0)
+      continue;
+    xmlBufferPtr buf = xmlBufferCreate();
+    if (!buf) return;
+    int ok = xmlNodeDump(buf, xdoc, n, 4, 1);
+    if (ok >= 0) {
+      snprintf(g_app->project.menus_xml, sizeof(g_app->project.menus_xml),
+               "%s", (const char *)xmlBufferContent(buf));
+    }
+    xmlBufferFree(buf);
+    return;
+  }
+}
+
+static void project_load_controls(form_doc_t *doc, xmlNodePtr form_node) {
+  for (xmlNodePtr n = form_node->children; n; n = n->next) {
+    if (n->type != XML_ELEMENT_NODE || xmlStrcmp(n->name, BAD_CAST "controls") != 0)
+      continue;
+    for (xmlNodePtr c = n->children; c; c = c->next) {
+      if (c->type != XML_ELEMENT_NODE || xmlStrcmp(c->name, BAD_CAST "control") != 0)
+        continue;
+      if (doc->element_count >= MAX_ELEMENTS) break;
+
+      char *class_name = xml_attr_dup(c, "class");
+      int type = ctrl_type_from_token(class_name);
+      free(class_name);
+      if (type < 0 || type >= FE_MAX_COMPONENTS) continue;
+
+      form_element_t *el = &doc->elements[doc->element_count++];
+      memset(el, 0, sizeof(*el));
+      el->type = type;
+      copy_attr(c, "id", el->id_expr, sizeof(el->id_expr));
+      char value_expr[32] = {0};
+      copy_attr(c, "value", value_expr, sizeof(value_expr));
+      el->id = project_resolve_control_id(doc, el->id_expr, value_expr);
+      if (!frame_attr(c, &el->frame)) {
+        el->frame.x = int_attr(c, "x", 0);
+        el->frame.y = int_attr(c, "y", 0);
+        el->frame.w = int_attr(c, "w", 10);
+        el->frame.h = int_attr(c, "h", 8);
+      }
+      el->frame.w = MAX(1, el->frame.w);
+      el->frame.h = MAX(1, el->frame.h);
+      copy_attr(c, "flags", el->flags_expr, sizeof(el->flags_expr));
+      el->flags = parse_flags_expr(el->flags_expr);
+      copy_attr(c, "text", el->text, sizeof(el->text));
+      copy_attr(c, "name", el->name, sizeof(el->name));
+      if (!el->name[0])
+        snprintf(el->name, sizeof(el->name), "control%d", doc->element_count);
+      if (el->id >= doc->next_id)
+        doc->next_id = el->id + 1;
+      if (type >= 0 && type < FE_MAX_COMPONENTS)
+        doc->type_counters[type]++;
+    }
+  }
+}
+
+static void project_load_requires(form_doc_t *doc, xmlNodePtr form_node) {
+  for (xmlNodePtr n = form_node->children; n; n = n->next) {
+    if (n->type != XML_ELEMENT_NODE || xmlStrcmp(n->name, BAD_CAST "requires") != 0)
+      continue;
+    copy_attr(n, "library", doc->required_plugin, sizeof(doc->required_plugin));
+    return;
+  }
+}
+
+static bool project_load_form_node(xmlNodePtr form_node) {
+  int w = int_attr(form_node, "width", FORM_DEFAULT_W);
+  int h = int_attr(form_node, "height", FORM_DEFAULT_H);
+  irect16_t frame = {0};
+  if (frame_attr(form_node, &frame)) {
+    w = MAX(1, frame.w);
+    h = MAX(1, frame.h);
+  }
+  form_doc_t *doc = create_form_doc(w, h);
+  if (!doc) return false;
+
+  copy_attr(form_node, "id", doc->form_id, sizeof(doc->form_id));
+  copy_attr(form_node, "title", doc->form_title, sizeof(doc->form_title));
+  copy_attr(form_node, "owner", doc->owner, sizeof(doc->owner));
+  char flags_expr[128] = {0};
+  copy_attr(form_node, "flags", flags_expr, sizeof(flags_expr));
+  doc->flags = parse_flags_expr(flags_expr);
+  project_load_requires(doc, form_node);
+  project_load_controls(doc, form_node);
+
+  form_doc_apply_window_flags_and_size(doc);
+  canvas_rebuild_live_controls(doc);
+  doc->modified = false;
+  form_doc_update_title(doc);
+  return true;
+}
+
+static void project_load_forms(xmlNodePtr root) {
+  for (xmlNodePtr n = root->children; n; n = n->next) {
+    if (n->type != XML_ELEMENT_NODE || xmlStrcmp(n->name, BAD_CAST "forms") != 0)
+      continue;
+    for (xmlNodePtr f = n->children; f; f = f->next) {
+      if (f->type == XML_ELEMENT_NODE && xmlStrcmp(f->name, BAD_CAST "form") == 0)
+        project_load_form_node(f);
+    }
+  }
+}
+
+bool form_project_load(const char *path) {
+  xmlDocPtr xdoc = xmlReadFile(path, NULL, XML_PARSE_NONET);
+  if (!xdoc) return false;
+  xmlNodePtr root = xmlDocGetRootElement(xdoc);
+  if (!root || xmlStrcmp(root->name, BAD_CAST "orion") != 0) {
+    xmlFreeDoc(xdoc);
+    return false;
+  }
+
+  project_reset();
+  snprintf(g_app->project.filename, sizeof(g_app->project.filename), "%s", path);
+  copy_attr(root, "name", g_app->project.name, sizeof(g_app->project.name));
+  copy_attr(root, "title", g_app->project.title, sizeof(g_app->project.title));
+  copy_attr(root, "root", g_app->project.root, sizeof(g_app->project.root));
+
+  project_load_plugins(root);
+  project_load_menus(xdoc, root);
+  formeditor_rebuild_tool_palette();
+  project_load_forms(root);
+
+  g_app->project.loaded = true;
+  g_app->project.modified = false;
+  if (g_app->docs) form_doc_show_only(g_app->docs);
+  forms_browser_refresh();
+  plugins_browser_refresh();
+  xmlFreeDoc(xdoc);
+  return true;
+}
+
+static void xml_write_escaped(FILE *f, const char *s) {
+  for (const char *p = s ? s : ""; *p; p++) {
+    switch (*p) {
+      case '&':  fputs("&amp;", f); break;
+      case '<':  fputs("&lt;", f); break;
+      case '>':  fputs("&gt;", f); break;
+      case '"':  fputs("&quot;", f); break;
+      default:   fputc(*p, f); break;
+    }
+  }
+}
+
+static void xml_attr(FILE *f, const char *name, const char *value) {
+  fprintf(f, " %s=\"", name);
+  xml_write_escaped(f, value);
+  fputc('"', f);
+}
+
+static void project_save_doc(FILE *f, form_doc_t *doc) {
+  const char *label = doc->form_title[0] ? doc->form_title :
+                      (doc->form_id[0] ? doc->form_id : "Untitled");
+  fprintf(f, "      <form");
+  xml_attr(f, "id", doc->form_id[0] ? doc->form_id : "form");
+  xml_attr(f, "title", label);
+  fprintf(f, "\n            frame=\"0 0 %d %d\"\n            flags=\"%" PRIu32 "\"",
+          doc->form_size.w, doc->form_size.h, doc->flags);
+  if (doc->owner[0]) xml_attr(f, "owner", doc->owner);
+  fprintf(f, ">\n");
+
+  if (doc->required_plugin[0]) {
+    fprintf(f, "        <requires");
+    xml_attr(f, "library", doc->required_plugin);
+    fprintf(f, " />\n");
+  }
+  fprintf(f, "        <controls>\n");
   for (int i = 0; i < doc->element_count; i++) {
     form_element_t *el = &doc->elements[i];
-    if (is_c_identifier(el->name))
-      fprintf(f, "#define %-30s %d\n", el->name, el->id);
+    fprintf(f, "          <control");
+    xml_attr(f, "class", ctrl_type_token(el->type));
+    char id_buf[32];
+    snprintf(id_buf, sizeof(id_buf), "%d", el->id);
+    xml_attr(f, "id", el->id_expr[0] ? el->id_expr : id_buf);
+    if (el->id_expr[0] && !is_numeric_expr(el->id_expr))
+      xml_attr(f, "value", id_buf);
+    xml_attr(f, "name", el->name);
+    xml_attr(f, "text", el->text);
+    fprintf(f, " frame=\"%d %d %d %d\"",
+            el->frame.x, el->frame.y, el->frame.w, el->frame.h);
+    char flags_buf[32];
+    snprintf(flags_buf, sizeof(flags_buf), "%" PRIu32, el->flags);
+    xml_attr(f, "flags", el->flags_expr[0] ? el->flags_expr : flags_buf);
+    fprintf(f, " />\n");
   }
-
-  // Emit a form_def_t struct literal that can be passed directly to
-  // create_window_from_form() at runtime.
-  char ident[64];
-  path_to_form_ident(path, ident, sizeof(ident));
-
-  fprintf(f, "\n");
-  if (doc->element_count > 0) {
-    fprintf(f, "static const form_ctrl_def_t k%s_children[] = {\n", ident);
-    for (int i = 0; i < doc->element_count; i++) {
-      form_element_t *el = &doc->elements[i];
-      char safe_text[sizeof(el->text) * 2];
-      char safe_name[sizeof(el->name) * 2];
-      sanitize_c_str_literal(el->text, safe_text, sizeof(safe_text));
-      sanitize_c_str_literal(el->name, safe_name, sizeof(safe_name));
-      fprintf(f, "  { FORM_CTRL_%s, %d, {%d, %d, %d, %d}, %" PRIu32 ", \"%s\", \"%s\" },\n",
-              ctrl_type_form_token(el->type), el->id,
-              el->x, el->y, el->w, el->h, el->flags,
-              safe_text, safe_name);
-    }
-    fprintf(f, "};\n");
-    fprintf(f, "static const form_def_t k%s = {\n", ident);
-        fprintf(f, "  .name        = \"%s\",\n", ident);
-        fprintf(f, "  .width       = %d,\n", doc->form_w);
-        fprintf(f, "  .height      = %d,\n", doc->form_h);
-        fprintf(f, "  .flags       = 0,\n");
-        fprintf(f, "  .children    = k%s_children,\n", ident);
-        fprintf(f, "  .child_count = (int)(sizeof(k%s_children) / sizeof(k%s_children[0]))\n",
-          ident, ident);
-    fprintf(f, "};\n");
-  } else {
-    fprintf(f, "static const form_def_t k%s = {\n", ident);
-        fprintf(f, "  .name        = \"%s\",\n", ident);
-        fprintf(f, "  .width       = %d,\n", doc->form_w);
-        fprintf(f, "  .height      = %d,\n", doc->form_h);
-        fprintf(f, "  .flags       = 0,\n");
-        fprintf(f, "  .children    = NULL,\n");
-        fprintf(f, "  .child_count = 0\n");
-    fprintf(f, "};\n");
-  }
-
-  fclose(f);
-  return true;
+  fprintf(f, "        </controls>\n");
+  fprintf(f, "      </form>\n");
 }
 
-// Map FORM_CTRL_XXX token (uppercase) to a ctrl type constant.
-static int ctrl_type_from_form_token(const char *tok) {
-  if (strcmp(tok, "BUTTON")   == 0) return CTRL_BUTTON;
-  if (strcmp(tok, "CHECKBOX") == 0) return CTRL_CHECKBOX;
-  if (strcmp(tok, "LABEL")    == 0) return CTRL_LABEL;
-  if (strcmp(tok, "TEXTEDIT") == 0) return CTRL_TEXTEDIT;
-  if (strcmp(tok, "LIST")     == 0) return CTRL_LIST;
-  if (strcmp(tok, "COMBOBOX") == 0) return CTRL_COMBOBOX;
-  return -1;
-}
-
-// Parse a C string literal starting at *p (pointing at the opening '"').
-// Decodes escape sequences produced by sanitize_c_str_literal().
-// Advances *p past the closing '"'.  Returns number of chars written (not NUL).
-static int parse_c_str_literal(const char **p, char *dst, size_t dst_sz) {
-  if (**p != '"') return -1;
-  (*p)++;  // skip opening quote
-  size_t n = 0;
-  while (**p && **p != '"' && n < dst_sz - 1) {
-    if (**p == '\\') {
-      (*p)++;
-      switch (**p) {
-        case '"':  dst[n++] = '"';  break;
-        case '\\': dst[n++] = '\\'; break;
-        case 'n':  dst[n++] = '\n'; break;
-        case 'r':  dst[n++] = '\r'; break;
-        case 't':  dst[n++] = '\t'; break;
-        default:   dst[n++] = **p;  break;  // unknown escape, copy verbatim
-      }
-    } else {
-      dst[n++] = **p;
-    }
-    (*p)++;
-  }
-  dst[n] = '\0';
-  if (**p == '"') (*p)++;  // skip closing quote
-  return (int)n;
-}
-
-// Legacy loader: parses the comment-based format produced by older saves.
-//   /* ORION_FORM_BEGIN */ ... /* ctrl type id x y w h "text" "name" */ ... /* ORION_FORM_END */
-static bool form_load_legacy(form_doc_t *doc, const char *path) {
-  FILE *f = fopen(path, "r");
+bool form_project_save(const char *path) {
+  if (!g_app) return false;
+  FILE *f = fopen(path, "w");
   if (!f) return false;
+  form_project_t *p = &g_app->project;
 
-  bool found_begin = false;
-  bool found_end   = false;
-  char line[512];
+  fprintf(f, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+  fprintf(f, "<orion version=\"1\"");
+  if (p->name[0]) xml_attr(f, "name", p->name);
+  if (p->title[0]) xml_attr(f, "title", p->title);
+  if (p->root[0]) xml_attr(f, "root", p->root);
+  fprintf(f, ">\n\n");
 
-  while (fgets(line, sizeof(line), f)) {
-    if (strstr(line, "ORION_FORM_BEGIN"))  { found_begin = true; continue; }
-    if (strstr(line, "ORION_FORM_END"))    { found_end   = true; break;    }
-    if (!found_begin) continue;
+  fprintf(f, "    <plugins>\n");
+  for (int i = 0; i < p->plugin_count; i++) {
+    fprintf(f, "      <plugin");
+    xml_attr(f, "name", p->plugins[i].name);
+    fprintf(f, " />\n");
+  }
+  fprintf(f, "    </plugins>\n\n");
 
-    // /* form W H */
-    {
-      int fw = 0, fh = 0;
-      if (sscanf(line, " /* form %d %d", &fw, &fh) == 2 && fw > 0 && fh > 0) {
-        doc->form_w = fw;
-        doc->form_h = fh;
-        continue;
-      }
-    }
-
-    // /* ctrl TYPE ID X Y W H "text" "name" */
-    if (doc->element_count < MAX_ELEMENTS) {
-      char type_tok[32] = {0};
-      int id = 0, x = 0, y = 0, w = 0, h = 0;
-      char text[64] = {0};
-      char name[32] = {0};
-      int n = sscanf(line, " /* ctrl %31s %d %d %d %d %d \"%63[^\"]\" \"%31[^\"]",
-                     type_tok, &id, &x, &y, &w, &h, text, name);
-      if (n >= 6) {
-        int type = ctrl_type_from_token(type_tok);
-        if (type >= 0 && type < CTRL_TYPE_COUNT) {
-          form_element_t *el = &doc->elements[doc->element_count];
-          el->type  = type;
-          el->id    = id;
-          el->x     = x;
-          el->y     = y;
-          el->w     = w > 0 ? w : 10;
-          el->h     = h > 0 ? h : 8;
-          el->flags = 0;
-          strncpy(el->text, text, sizeof(el->text) - 1);
-          el->text[sizeof(el->text) - 1] = '\0';
-          strncpy(el->name, name, sizeof(el->name) - 1);
-          el->name[sizeof(el->name) - 1] = '\0';
-          doc->element_count++;
-          if (id >= doc->next_id) doc->next_id = id + 1;
-          if (type >= 0 && type < CTRL_TYPE_COUNT)
-            doc->type_counters[type]++;
-        }
-      }
-    }
+  if (p->menus_xml[0]) {
+    fprintf(f, "%s\n\n", p->menus_xml);
   }
 
+  fprintf(f, "    <forms>\n");
+  for (form_doc_t *doc = g_app->docs; doc; doc = doc->next)
+    project_save_doc(f, doc);
+  fprintf(f, "    </forms>\n");
+  fprintf(f, "</orion>\n");
+
   fclose(f);
-  return found_begin && found_end;
-}
-
-bool form_load(form_doc_t *doc, const char *path) {
-  FILE *f = fopen(path, "r");
-  if (!f) return false;
-
-  // Reset document content.
-  doc->element_count = 0;
-  doc->form_w        = FORM_DEFAULT_W;
-  doc->form_h        = FORM_DEFAULT_H;
-  memset(doc->type_counters, 0, sizeof(doc->type_counters));
-  doc->next_id = CTRL_ID_BASE;
-
-  // Single-pass struct-based parser.
-  // Recognises:
-  //   static const form_ctrl_def_t k<name>_children[] = { ... };
-  //   static const form_def_t k<name> = { .width = N, .height = N, ... };
-  bool in_children = false;
-  bool found_def   = false;
-  char line[512];
-
-  while (fgets(line, sizeof(line), f)) {
-    // Detect start of children array.
-    if (strstr(line, "form_ctrl_def_t k") && strstr(line, "_children[]")) {
-      in_children = true;
-      continue;
-    }
-    // Detect end of children array: first non-space chars must be "};" so that
-    // control captions containing "};" don't prematurely terminate the block.
-    if (in_children) {
-      const char *t = line;
-      while (*t == ' ' || *t == '\t') t++;
-      if (t[0] == '}' && t[1] == ';') {
-        in_children = false;
-        continue;
-      }
-    }
-    // Parse a child control entry:
-    //   { FORM_CTRL_BUTTON, 1001, {10, 10, 75, 23}, 0, "Button1", "IDC_BTN1" },
-    if (in_children && doc->element_count < MAX_ELEMENTS) {
-      char type_tok[32] = {0};
-      int id = 0, x = 0, y = 0, w = 0, h = 0;
-      uint32_t flags = 0;
-      char text[sizeof(((form_element_t*)0)->text)] = {0};
-      char name[sizeof(((form_element_t*)0)->name)] = {0};
-      int consumed = 0;
-      // Parse the non-string fields; %n records the number of chars consumed.
-      int n = sscanf(line,
-          " { FORM_CTRL_%31[^,], %d, {%d, %d, %d, %d}, %" SCNu32 "%n",
-          type_tok, &id, &x, &y, &w, &h, &flags, &consumed);
-      if (n >= 7) {
-        // Parse text and name string literals using the full escape decoder.
-        const char *p = line + consumed;
-        while (*p && *p != '"') p++;
-        bool has_text = (*p == '"') && (parse_c_str_literal(&p, text, sizeof(text)) >= 0);
-        while (*p && *p != '"') p++;
-        bool has_name = (*p == '"') && (parse_c_str_literal(&p, name, sizeof(name)) >= 0);
-
-        int type = ctrl_type_from_form_token(type_tok);
-        if (type >= 0 && type < CTRL_TYPE_COUNT) {
-          form_element_t *el = &doc->elements[doc->element_count];
-          el->type  = type;
-          el->id    = id;
-          el->x     = x;
-          el->y     = y;
-          el->w     = w > 0 ? w : 10;
-          el->h     = h > 0 ? h : 8;
-          el->flags = flags;
-          if (has_text) {
-            strncpy(el->text, text, sizeof(el->text) - 1);
-            el->text[sizeof(el->text) - 1] = '\0';
-          }
-          if (has_name) {
-            strncpy(el->name, name, sizeof(el->name) - 1);
-            el->name[sizeof(el->name) - 1] = '\0';
-          }
-          doc->element_count++;
-          if (id >= doc->next_id) doc->next_id = id + 1;
-          doc->type_counters[type]++;
-          found_def = true;
-        }
-      }
-    }
-    // Parse form dimensions from the form_def_t block.
-    int val;
-    if (sscanf(line, " .width = %d", &val) == 1 && val > 0) {
-      doc->form_w = val;
-      found_def = true;
-    }
-    if (sscanf(line, " .height = %d", &val) == 1 && val > 0) {
-      doc->form_h = val;
-      found_def = true;
-    }
-  }
-  fclose(f);
-
-  // If no struct-based data was found, fall back to the old comment format.
-  if (!found_def) {
-    doc->element_count = 0;
-    doc->form_w        = FORM_DEFAULT_W;
-    doc->form_h        = FORM_DEFAULT_H;
-    memset(doc->type_counters, 0, sizeof(doc->type_counters));
-    doc->next_id = CTRL_ID_BASE;
-    return form_load_legacy(doc, path);
+  snprintf(p->filename, sizeof(p->filename), "%s", path);
+  p->loaded = true;
+  p->modified = false;
+  for (form_doc_t *doc = g_app->docs; doc; doc = doc->next) {
+    doc->modified = false;
+    form_doc_update_title(doc);
   }
   return true;
 }
@@ -542,17 +674,17 @@ static result_t about_proc(window_t *win, uint32_t msg,
       // Info labels
       create_window("Orion Form Editor", WINDOW_NOTITLE | WINDOW_NOFILL,
           MAKERECT(8, 8, ABOUT_W - 16, CONTROL_HEIGHT),
-          win, win_label, 0, NULL);
+          win, "label", 0, NULL);
       create_window("Version 1.0", WINDOW_NOTITLE | WINDOW_NOFILL,
           MAKERECT(8, 22, ABOUT_W - 16, CONTROL_HEIGHT),
-          win, win_label, 0, (void *)(uintptr_t)brTextDisabled);
+          win, "label", 0, (void *)(uintptr_t)brTextDisabled);
       create_window("VB3-inspired form designer", WINDOW_NOTITLE | WINDOW_NOFILL,
           MAKERECT(8, 36, ABOUT_W - 16, CONTROL_HEIGHT),
-          win, win_label, 0, (void *)(uintptr_t)brTextDisabled);
+          win, "label", 0, (void *)(uintptr_t)brTextDisabled);
       // OK button
       create_window("OK", BUTTON_DEFAULT,
           MAKERECT(ABOUT_W - 54, ABOUT_H - BUTTON_HEIGHT - 4, 50, BUTTON_HEIGHT),
-          win, win_button, 0, NULL);
+          win, "button", 0, NULL);
       return true;
     }
     case evCommand:
@@ -593,22 +725,22 @@ void show_about_dialog(window_t *parent) {
 #define GRID_SIZE_MIN  1
 #define GRID_SIZE_MAX  64
 
-// grid_size is bound via BIND_INT_EDIT; checkboxes are handled manually.
+// grid_size is bound via DDX_TEXT; checkboxes are handled manually.
 typedef struct {
   int  grid_size;
 } grid_size_data_t;
 
 static const form_ctrl_def_t kGridChildren[] = {
-  { FORM_CTRL_CHECKBOX, GRID_ID_SHOW, {4,        GRID_ROW1_Y, GRID_W-8, BUTTON_HEIGHT}, 0,             "Show grid",    "chk_show"   },
-  { FORM_CTRL_CHECKBOX, GRID_ID_SNAP, {4,        GRID_ROW2_Y, GRID_W-8, BUTTON_HEIGHT}, 0,             "Snap to grid", "chk_snap"   },
-  { FORM_CTRL_LABEL,    -1,           {4,        GRID_ROW3_Y, 60,       CONTROL_HEIGHT}, 0,             "Grid size:",   "lbl_size"   },
-  { FORM_CTRL_TEXTEDIT, GRID_ID_SIZE, {68,       GRID_ROW3_Y, 40,       BUTTON_HEIGHT},  0,             "",             "edit_size"  },
-  { FORM_CTRL_BUTTON,   GRID_ID_OK,     {GRID_W-108, GRID_BTN_Y, 50, BUTTON_HEIGHT}, BUTTON_DEFAULT, "OK",     "btn_ok"     },
-  { FORM_CTRL_BUTTON,   GRID_ID_CANCEL, {GRID_W-54,  GRID_BTN_Y, 50, BUTTON_HEIGHT}, 0,             "Cancel", "btn_cancel" },
+  { "checkbox", GRID_ID_SHOW, {4,        GRID_ROW1_Y, GRID_W-8, BUTTON_HEIGHT}, 0,             "Show grid",    "chk_show"   },
+  { "checkbox", GRID_ID_SNAP, {4,        GRID_ROW2_Y, GRID_W-8, BUTTON_HEIGHT}, 0,             "Snap to grid", "chk_snap"   },
+  { "label",    -1,           {4,        GRID_ROW3_Y, 60,       CONTROL_HEIGHT}, 0,             "Grid size:",   "lbl_size"   },
+  { "textedit", GRID_ID_SIZE, {68,       GRID_ROW3_Y, 40,       BUTTON_HEIGHT},  0,             "",             "edit_size"  },
+  { "button",   GRID_ID_OK,     {GRID_W-108, GRID_BTN_Y, 50, BUTTON_HEIGHT}, BUTTON_DEFAULT, "OK",     "btn_ok"     },
+  { "button",   GRID_ID_CANCEL, {GRID_W-54,  GRID_BTN_Y, 50, BUTTON_HEIGHT}, 0,             "Cancel", "btn_cancel" },
 };
 
 static const ctrl_binding_t k_grid_bindings[] = {
-  { GRID_ID_SIZE, BIND_INT_EDIT, offsetof(grid_size_data_t, grid_size), 0 },
+  DDX_TEXT(GRID_ID_SIZE, grid_size_data_t, grid_size),
 };
 
 static const form_def_t kGridForm = {
@@ -637,7 +769,7 @@ static result_t grid_dlg_proc(window_t *win, uint32_t msg,
       gs = (grid_dlg_state_t *)lparam;
       win->userdata = gs;
       form_doc_t *doc = gs->doc;
-      // Set checkbox states manually (no BIND_BOOL).
+      // Set checkbox states manually (no checkbox DDX helper yet).
       window_t *chk_show = get_window_item(win, GRID_ID_SHOW);
       window_t *chk_snap = get_window_item(win, GRID_ID_SNAP);
       if (chk_show)
@@ -712,18 +844,18 @@ static void show_grid_settings_dialog(window_t *parent, form_doc_t *doc) {
 #define PROPS_BTN_Y        (PROPS_H - BUTTON_HEIGHT - 6)        // 86
 
 static const form_ctrl_def_t kPropsChildren[] = {
-  { FORM_CTRL_LABEL,    -1,              {4,          PROPS_ROW1_Y, 60,           CONTROL_HEIGHT}, 0,             "Caption:", "lbl_caption" },
-  { FORM_CTRL_TEXTEDIT, PROPS_ID_CAPTION,{68,         PROPS_ROW1_Y, PROPS_W - 72, BUTTON_HEIGHT},  0,             "",         "edit_caption"},
-  { FORM_CTRL_LABEL,    -1,              {4,          PROPS_ROW2_Y, 60,           CONTROL_HEIGHT}, 0,             "Name:",    "lbl_name"    },
-  { FORM_CTRL_TEXTEDIT, PROPS_ID_NAME,   {68,         PROPS_ROW2_Y, PROPS_W - 72, BUTTON_HEIGHT},  0,             "",         "edit_name"   },
-  { FORM_CTRL_BUTTON,   PROPS_ID_OK,     {PROPS_W-108, PROPS_BTN_Y, 50,           BUTTON_HEIGHT},  BUTTON_DEFAULT, "OK",      "btn_ok"      },
-  { FORM_CTRL_BUTTON,   PROPS_ID_CANCEL, {PROPS_W-54,  PROPS_BTN_Y, 50,           BUTTON_HEIGHT},  0,             "Cancel",   "btn_cancel"  },
+  { "label",    -1,              {4,          PROPS_ROW1_Y, 60,           CONTROL_HEIGHT}, 0,             "Caption:", "lbl_caption" },
+  { "textedit", PROPS_ID_CAPTION,{68,         PROPS_ROW1_Y, PROPS_W - 72, BUTTON_HEIGHT},  0,             "",         "edit_caption"},
+  { "label",    -1,              {4,          PROPS_ROW2_Y, 60,           CONTROL_HEIGHT}, 0,             "Name:",    "lbl_name"    },
+  { "textedit", PROPS_ID_NAME,   {68,         PROPS_ROW2_Y, PROPS_W - 72, BUTTON_HEIGHT},  0,             "",         "edit_name"   },
+  { "button",   PROPS_ID_OK,     {PROPS_W-108, PROPS_BTN_Y, 50,           BUTTON_HEIGHT},  BUTTON_DEFAULT, "OK",      "btn_ok"      },
+  { "button",   PROPS_ID_CANCEL, {PROPS_W-54,  PROPS_BTN_Y, 50,           BUTTON_HEIGHT},  0,             "Cancel",   "btn_cancel"  },
 };
 
 // DDX bindings: caption and name edits ↔ form_element_t.text / .name
 static const ctrl_binding_t k_props_bindings[] = {
-  { PROPS_ID_CAPTION, BIND_STRING, offsetof(form_element_t, text), sizeof_field(form_element_t, text) },
-  { PROPS_ID_NAME,    BIND_STRING, offsetof(form_element_t, name), sizeof_field(form_element_t, name) },
+  DDX_TEXT(PROPS_ID_CAPTION, form_element_t, text),
+  DDX_TEXT(PROPS_ID_NAME, form_element_t, name),
 };
 
 static const form_def_t kPropsForm = {
@@ -756,10 +888,10 @@ static result_t props_proc(window_t *win, uint32_t msg,
       char info[64];
       snprintf(info, sizeof(info), "Type: %s  ID: %d  (%d, %d)  %d x %d",
                ctrl_type_token(ps->el->type), ps->el->id,
-               ps->el->x, ps->el->y, ps->el->w, ps->el->h);
+               ps->el->frame.x, ps->el->frame.y, ps->el->frame.w, ps->el->frame.h);
       create_window(info, WINDOW_NOTITLE | WINDOW_NOFILL,
           MAKERECT(4, PROPS_INFO_Y, PROPS_W - 8, CONTROL_HEIGHT),
-          win, win_label, 0, (void *)(uintptr_t)brTextDisabled);
+          win, "label", 0, (void *)(uintptr_t)brTextDisabled);
 
       // Pre-populate caption/name edits from the element.
       dialog_push(win, ps->el, k_props_bindings, ARRAY_LEN(k_props_bindings));
@@ -807,7 +939,7 @@ static bool show_form_file_picker(window_t *parent, bool save_mode,
   ofn.hwndOwner    = parent;
   ofn.lpstrFile    = out_path;
   ofn.nMaxFile     = (uint32_t)out_sz;
-  ofn.lpstrFilter  = "Header Files\0*.h\0All Files\0*.*\0";
+  ofn.lpstrFilter  = "Orion Projects\0*.orion\0All Files\0*.*\0";
   ofn.nFilterIndex = 1;
   ofn.Flags        = save_mode ? OFN_OVERWRITEPROMPT : OFN_FILEMUSTEXIST;
   return save_mode ? get_save_filename(&ofn) : get_open_filename(&ofn);
@@ -830,49 +962,37 @@ void handle_menu_command(uint16_t id) {
       char path[512] = {0};
       window_t *owner = doc ? doc->doc_win : (g_app->menubar_win);
       if (show_form_file_picker(owner, false, path, sizeof(path))) {
-        form_doc_t *ndoc = create_form_doc(FORM_DEFAULT_W, FORM_DEFAULT_H);
-        if (ndoc) {
-          if (form_load(ndoc, path)) {
-            strncpy(ndoc->filename, path, sizeof(ndoc->filename) - 1);
-            ndoc->filename[sizeof(ndoc->filename) - 1] = '\0';
-            ndoc->modified = false;
-            form_doc_update_title(ndoc);
-            canvas_rebuild_live_controls(ndoc);
-            send_message(ndoc->doc_win, evStatusBar, 0, path);
-          } else {
-            send_message(ndoc->doc_win, evStatusBar, 0,
-                         (void *)"Failed to load form");
-          }
-        }
+        if (!form_project_load(path) && owner)
+          message_box(owner, "Failed to load Orion project.", "Open", MB_OK);
       }
       break;
     }
 
     case ID_FILE_SAVE:
-      if (!doc) break;
-      if (!doc->filename[0]) goto do_save_as;
-      if (form_save(doc, doc->filename)) {
-        doc->modified = false;
-        form_doc_update_title(doc);
-        send_message(doc->doc_win, evStatusBar, 0, (void *)"Saved");
+      if (g_app->project.loaded && g_app->project.filename[0]) {
+        if (form_project_save(g_app->project.filename)) {
+          if (doc && doc->doc_win)
+            send_message(doc->doc_win, evStatusBar, 0, (void *)"Project saved");
+        } else if (doc && doc->doc_win) {
+          send_message(doc->doc_win, evStatusBar, 0, (void *)"Project save failed");
+        }
       } else {
-        send_message(doc->doc_win, evStatusBar, 0, (void *)"Save failed");
+        goto do_save_as;
       }
       break;
 
     do_save_as:
     case ID_FILE_SAVEAS: {
-      if (!doc) break;
+      if (!doc && !g_app->docs) break;
       char path[512] = {0};
-      if (show_form_file_picker(doc->doc_win, true, path, sizeof(path))) {
-        strncpy(doc->filename, path, sizeof(doc->filename) - 1);
-        doc->filename[sizeof(doc->filename) - 1] = '\0';
-        if (form_save(doc, path)) {
-          doc->modified = false;
-          form_doc_update_title(doc);
-          send_message(doc->doc_win, evStatusBar, 0, path);
+      window_t *owner = doc ? doc->doc_win : g_app->menubar_win;
+      if (show_form_file_picker(owner, true, path, sizeof(path))) {
+        if (form_project_save(path)) {
+          if (doc && doc->doc_win)
+            send_message(doc->doc_win, evStatusBar, 0, path);
         } else {
-          send_message(doc->doc_win, evStatusBar, 0, (void *)"Save failed");
+          if (doc && doc->doc_win)
+            send_message(doc->doc_win, evStatusBar, 0, (void *)"Project save failed");
         }
       }
       break;
@@ -881,7 +1001,8 @@ void handle_menu_command(uint16_t id) {
     case ID_FILE_QUIT:
 #ifdef BUILD_AS_GEM
       if (g_app) {
-        if (doc && doc->doc_win) destroy_window(doc->doc_win);
+        while (g_app->docs)
+          close_form_doc(g_app->docs);
         if (g_app->tool_win)    destroy_window(g_app->tool_win);
         if (g_app->menubar_win) destroy_window(g_app->menubar_win);
       }
@@ -897,7 +1018,7 @@ void handle_menu_command(uint16_t id) {
       canvas_state_t *cs = (canvas_state_t *)cwin->userdata;
       if (!cs || cs->selected_idx < 0) break;
       int idx = cs->selected_idx;
-      if (doc->elements[idx].live_win && is_window(doc->elements[idx].live_win))
+      if (doc->elements[idx].live_win)
         destroy_window(doc->elements[idx].live_win);
       // Remove element by shifting the array
       for (int i = idx; i < doc->element_count - 1; i++)
@@ -922,6 +1043,7 @@ void handle_menu_command(uint16_t id) {
         doc->modified = true;
         form_doc_update_title(doc);
         canvas_sync_live_controls(doc);
+        property_browser_refresh(doc);
       }
       break;
     }
@@ -939,17 +1061,9 @@ void handle_menu_command(uint16_t id) {
       break;
     }
 
-    // Ignore tool IDs forwarded from the palette (handled in win_toolpalette.c)
-    case ID_TOOL_SELECT:
-    case ID_TOOL_LABEL:
-    case ID_TOOL_TEXTEDIT:
-    case ID_TOOL_BUTTON:
-    case ID_TOOL_CHECKBOX:
-    case ID_TOOL_COMBOBOX:
-    case ID_TOOL_LIST:
-      break;
-
     default:
+      if (id != ID_TOOL_SELECT && fe_component_by_tool_ident(id))
+        break;
       break;
   }
 }

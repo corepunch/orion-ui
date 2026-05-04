@@ -70,7 +70,7 @@ uint32_t show_dialog_ex(char const *title,
   dlg_frame = center_window_rect(dlg_frame, parent);
   // Dialogs inherit their owner's hinstance so they belong to the same app.
   hinstance_t hinstance = parent ? get_root_window(parent)->hinstance : 0;
-  window_t *dlg = create_window(dialog_title, flags, &dlg_frame, NULL, proc, hinstance, param);
+  window_t *dlg = create_window_proc(dialog_title, flags, &dlg_frame, NULL, proc, hinstance, param);
   return run_dialog_loop(dlg, parent);
 }
 
@@ -207,76 +207,180 @@ void end_dialog(window_t *win, uint32_t code) {
 // ── Dialog Data Exchange (DDX) ────────────────────────────────────────────
 // Push state → controls (populate on open); pull controls → state (read on OK).
 
+void ddx_push_int(window_t *dlg, const ctrl_binding_t *b, const void *state) {
+  const char *base = (const char *)state;
+  int v = *(const int *)(base + b->offset);
+  set_window_item_text(dlg, b->ctrl_id, "%d", v);
+}
+
+void ddx_pull_int(window_t *dlg, const ctrl_binding_t *b, void *state) {
+  char *base = (char *)state;
+  window_t *ctrl = get_window_item(dlg, b->ctrl_id);
+  int v;
+  if (!ctrl) return;
+  v = atoi(ctrl->title);
+  *(int *)(base + b->offset) = v;
+}
+
+void ddx_push_float(window_t *dlg, const ctrl_binding_t *b, const void *state) {
+  const char *base = (const char *)state;
+  float v = *(const float *)(base + b->offset);
+  set_window_item_text(dlg, b->ctrl_id, "%.2f", v);
+}
+
+void ddx_pull_float(window_t *dlg, const ctrl_binding_t *b, void *state) {
+  char *base = (char *)state;
+  window_t *ctrl = get_window_item(dlg, b->ctrl_id);
+  float v;
+  if (!ctrl) return;
+  v = strtof(ctrl->title, NULL);
+  *(float *)(base + b->offset) = v;
+}
+
+void ddx_push_u8(window_t *dlg, const ctrl_binding_t *b, const void *state) {
+  const char *base = (const char *)state;
+  uint8_t v = *(const uint8_t *)(base + b->offset);
+  set_window_item_text(dlg, b->ctrl_id, "%u", (unsigned)v);
+}
+
+void ddx_pull_u8(window_t *dlg, const ctrl_binding_t *b, void *state) {
+  char *base = (char *)state;
+  window_t *ctrl = get_window_item(dlg, b->ctrl_id);
+  int v;
+  if (!ctrl) return;
+  v = atoi(ctrl->title);
+  *(uint8_t *)(base + b->offset) = (uint8_t)CLAMP(v, 0, 255);
+}
+
+void ddx_push_text(window_t *dlg, const ctrl_binding_t *b, const void *state) {
+  const char *base = (const char *)state;
+  window_t *ctrl = get_window_item(dlg, b->ctrl_id);
+  if (!ctrl) return;
+  send_message(ctrl, edSetText, 0, (void *)(base + b->offset));
+}
+
+void ddx_pull_text(window_t *dlg, const ctrl_binding_t *b, void *state) {
+  char *base = (char *)state;
+  window_t *ctrl = get_window_item(dlg, b->ctrl_id);
+  if (!ctrl || b->wparam == 0) return;
+  send_message(ctrl, edGetText, (uint32_t)b->wparam, base + b->offset);
+}
+
+void ddx_push_combo(window_t *dlg, const ctrl_binding_t *b, const void *state) {
+  const char *base = (const char *)state;
+  window_t *ctrl = get_window_item(dlg, b->ctrl_id);
+  int v;
+  if (!ctrl) return;
+  v = *(const int *)(base + b->offset);
+  if (v < 0) v = (int)b->wparam;
+  send_message(ctrl, cbSetCurrentSelection, (uint32_t)v, NULL);
+}
+
+void ddx_pull_combo(window_t *dlg, const ctrl_binding_t *b, void *state) {
+  char *base = (char *)state;
+  window_t *ctrl = get_window_item(dlg, b->ctrl_id);
+  int v = kComboBoxError;
+  if (!ctrl) return;
+  (void)send_message(ctrl, cbGetCurrentSelection, 0, &v);
+  *(int *)(base + b->offset) = (v >= 0) ? v : (int)b->wparam;
+}
+
+void ddx_push_check(window_t *dlg, const ctrl_binding_t *b, const void *state) {
+  const char *base = (const char *)state;
+  window_t *ctrl = get_window_item(dlg, b->ctrl_id);
+  bool v;
+  if (!ctrl) return;
+  v = *(const bool *)(base + b->offset);
+  send_message(ctrl, btnSetCheck, v ? btnStateChecked : btnStateUnchecked, NULL);
+}
+
+void ddx_pull_check(window_t *dlg, const ctrl_binding_t *b, void *state) {
+  char *base = (char *)state;
+  window_t *ctrl = get_window_item(dlg, b->ctrl_id);
+  int v;
+  if (!ctrl) return;
+  v = (int)send_message(ctrl, btnGetCheck, 0, NULL);
+  *(bool *)(base + b->offset) = (v == btnStateChecked);
+}
+
 void dialog_push(window_t *win, const void *state,
                  const ctrl_binding_t *b, int n) {
   if (!win || !state || !b) return;
   const char *base = (const char *)state;
   for (int i = 0; i < n; i++) {
-    switch (b[i].type) {
-      case BIND_STRING: {
-        int max_len = b[i].size > 0 ? b[i].size - 1 : 0;
-        set_window_item_text(win, b[i].ctrl_id, "%.*s",
-                             max_len, base + b[i].offset);
+    if (b[i].push) {
+      b[i].push(win, &b[i], state);
+      continue;
+    }
+
+    window_t *ctrl = get_window_item(win, b[i].ctrl_id);
+    if (!ctrl) continue;
+    switch (b[i].getter) {
+      case 0:
         break;
-      }
-      case BIND_MLSTRING: {
-        window_t *ctrl = get_window_item(win, b[i].ctrl_id);
-        if (ctrl)
-          send_message(ctrl, edSetText, 0,
-                       (void *)(base + b[i].offset));
-        break;
-      }
-      case BIND_INT_COMBO: {
-        window_t *ctrl = get_window_item(win, b[i].ctrl_id);
-        if (ctrl) {
-          int v = *(const int *)(base + b[i].offset);
-          if (v < 0) v = (int)b[i].size;
-          send_message(ctrl, cbSetCurrentSelection,
-                       (uint32_t)v, NULL);
-        }
-        break;
-      }
-      case BIND_INT_EDIT: {
+      case cbGetCurrentSelection: {
         int v = *(const int *)(base + b[i].offset);
-        set_window_item_text(win, b[i].ctrl_id, "%d", v);
+        if (v < 0) v = (int)b[i].wparam;
+        send_message(ctrl, cbSetCurrentSelection, (uint32_t)v, NULL);
         break;
       }
+      case edGetText:
+        send_message(ctrl, edSetText, 0, (void *)(base + b[i].offset));
+        break;
+      default:
+        break;
     }
   }
 }
 
-void dialog_pull(window_t *win, void *state,
-                 const ctrl_binding_t *b, int n) {
-  if (!win || !state || !b) return;
+int dialog_pull_command(window_t *win, void *state,
+                        const ctrl_binding_t *b, int n,
+                        uint16_t command) {
+  if (!win || !state || !b) return 0;
   char *base = (char *)state;
+  int applied = 0;
   for (int i = 0; i < n; i++) {
+    if (command && b[i].command && b[i].command != command)
+      continue;
+
+    if (b[i].pull) {
+      b[i].pull(win, &b[i], state);
+      applied++;
+      continue;
+    }
+
     window_t *ctrl = get_window_item(win, b[i].ctrl_id);
     if (!ctrl) continue;
-    switch (b[i].type) {
-      case BIND_STRING: {
-        char  *dst = base + b[i].offset;
-        size_t sz  = b[i].size;
-        if (sz > 0) {
-          strncpy(dst, ctrl->title, sz - 1);
-          dst[sz - 1] = '\0';
-        }
+    switch (b[i].getter) {
+      case 0:
+        applied++;
+        break;
+      case cbGetCurrentSelection: {
+        int v = kComboBoxError;
+        (void)send_message(ctrl, cbGetCurrentSelection, 0, &v);
+        *(int *)(base + b[i].offset) = (v >= 0) ? v : (int)b[i].wparam;
+        applied++;
         break;
       }
-      case BIND_MLSTRING: {
+      case edGetText: {
         char  *dst = base + b[i].offset;
-        size_t sz  = b[i].size;
+        size_t sz  = b[i].wparam;
         if (sz > 0)
           send_message(ctrl, edGetText, (uint32_t)sz, dst);
+        applied++;
         break;
       }
-      case BIND_INT_COMBO: {
-        int v = (int)send_message(ctrl, cbGetCurrentSelection, 0, NULL);
-        *(int *)(base + b[i].offset) = (v >= 0) ? v : (int)b[i].size;
-        break;
-      }
-      case BIND_INT_EDIT:
-        *(int *)(base + b[i].offset) = atoi(ctrl->title);
+      default:
+        (void)send_message(ctrl, b[i].getter, (uint32_t)b[i].wparam,
+                           base + b[i].offset);
+        applied++;
         break;
     }
   }
+  return applied;
+}
+
+void dialog_pull(window_t *win, void *state,
+                 const ctrl_binding_t *b, int n) {
+  (void)dialog_pull_command(win, state, b, n, 0);
 }

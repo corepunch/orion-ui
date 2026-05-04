@@ -309,9 +309,9 @@ Declare a static `ctrl_binding_t[]` table and call `dialog_push()` on open and
 ```c
 // Binding table — one entry per control/field pair.
 static const ctrl_binding_t k_bindings[] = {
-  { ID_TITLE_EDIT,    BIND_STRING,    offsetof(my_state_t, title),    sizeof_field(my_state_t, title) },
-  { ID_PRIORITY_COMBO,BIND_INT_COMBO, offsetof(my_state_t, priority), 0 },
-  { ID_SIZE_EDIT,     BIND_INT_EDIT,  offsetof(my_state_t, size),     0 },
+  { ID_TITLE_EDIT,    BIND_STRING,    offsetof(my_state_t, title),    sizeof_field(my_state_t, title), 0 },
+  { ID_PRIORITY_COMBO,BIND_INT_COMBO, offsetof(my_state_t, priority), 0, 0 },
+  { ID_SIZE_EDIT,     BIND_INT,       offsetof(my_state_t, size),     0, 0 },
 };
 
 // evCreate — push state into controls:
@@ -319,13 +319,16 @@ dialog_push(win, s, k_bindings, ARRAY_LEN(k_bindings));
 
 // OK handler — pull controls back into state:
 dialog_pull(win, s, k_bindings, ARRAY_LEN(k_bindings));
+
+// Command-driven pull (evCommand notifications):
+// dialog_pull_command(win, s, k_bindings, ARRAY_LEN(k_bindings), HIWORD(wparam));
 ```
 
 | `bind_type_t` | Control | State field |
 |---|---|---|
 | `BIND_STRING` | `FORM_CTRL_TEXTEDIT` | `char[]` — `size` = `sizeof_field(…)` |
 | `BIND_INT_COMBO` | `FORM_CTRL_COMBOBOX` | `int` — selection index |
-| `BIND_INT_EDIT` | `FORM_CTRL_TEXTEDIT` | `int` — decimal text |
+| `BIND_INT` | `FORM_CTRL_TEXTEDIT` | `int` — decimal text |
 
 See [Dialogs & DDX](docs/dialogs.md) for the full API reference.
 

@@ -227,7 +227,7 @@ fields by offset, analogous to MFC's `DoDataExchange`.
 typedef enum {
   BIND_STRING,    // char[] field ↔ text-edit text
   BIND_INT_COMBO, // int field   ↔ combo-box selection index
-  BIND_INT_EDIT,  // int field   ↔ text-edit decimal number
+  BIND_INT,       // int field   ↔ text-edit decimal number
 } bind_type_t;
 
 // One entry in the binding table
@@ -236,6 +236,7 @@ typedef struct {
   bind_type_t type;    // transfer type (BIND_*)
   size_t      offset;  // offsetof(state_t, field)
   size_t      size;    // for BIND_STRING: sizeof the char[] field; else 0
+  uint16_t    command; // optional evCommand notification (HIWORD); 0 = any
 } ctrl_binding_t;
 
 // Populate controls from state (call from evCreate).
@@ -245,6 +246,11 @@ void dialog_push(window_t *win, const void *state,
 // Read controls into state (call before accept / end_dialog).
 void dialog_pull(window_t *win, void *state,
                  const ctrl_binding_t *b, int n);
+
+// Read only bindings listening to a specific evCommand notification.
+int dialog_pull_command(window_t *win, void *state,
+                        const ctrl_binding_t *b, int n,
+                        uint16_t command);
 ```
 
 ### Helper macros
@@ -263,7 +269,7 @@ sizeof_field(type, field)
 |---------------|---------|-------------|-------|
 | `BIND_STRING` | `FORM_CTRL_TEXTEDIT` | `char[]` | `size` must equal `sizeof` the array |
 | `BIND_INT_COMBO` | `FORM_CTRL_COMBOBOX` | `int` | Selection index (0-based); set `size = 0` |
-| `BIND_INT_EDIT` | `FORM_CTRL_TEXTEDIT` | `int` | Decimal text → `atoi`; set `size = 0` |
+| `BIND_INT` | `FORM_CTRL_TEXTEDIT` | `int` | Decimal text → `atoi`; set `size = 0` |
 
 ### Complete example — task edit dialog
 

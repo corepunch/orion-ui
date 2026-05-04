@@ -2,160 +2,19 @@
 
 #include "imageeditor.h"
 
-static const menu_item_t kFileItems[] = {
-  {"New",        ID_FILE_NEW},
-  {"Open...",    ID_FILE_OPEN},
-  {NULL,         0},
-  {"Save",       ID_FILE_SAVE},
-  {"Save As...", ID_FILE_SAVEAS},
-  {NULL,         0},
-  {"Close",      ID_FILE_CLOSE},
-  {NULL,         0},
-  {"Quit",       ID_FILE_QUIT},
-};
+#define FILTER_PREFIX_COUNT ((int)(sizeof(kFilterItems) / sizeof(kFilterItems[0])))
+#define WINDOW_PREFIX_COUNT ((int)(sizeof(kWindowItems) / sizeof(kWindowItems[0])))
 
-static const menu_item_t kEditItems[] = {
-  {"Undo", ID_EDIT_UNDO},
-  {"Redo", ID_EDIT_REDO},
-  {NULL, 0},
-  {"Cut", ID_EDIT_CUT},
-  {"Copy", ID_EDIT_COPY},
-  {"Paste", ID_EDIT_PASTE},
-  {NULL, 0},
-  {"Clear Selection", ID_EDIT_CLEAR_SEL},
-  {"Select All", ID_EDIT_SELECT_ALL},
-  {"Deselect", ID_EDIT_DESELECT},
-  {NULL, 0},
-  {"Crop to Selection", ID_EDIT_CROP},
-};
-
-static menu_item_t s_view_items[] = {
-  {"Zoom In",                  ID_VIEW_ZOOM_IN},
-  {"Zoom Out",                 ID_VIEW_ZOOM_OUT},
-  {"Fit on Screen",            ID_VIEW_ZOOM_FIT},
-  {NULL,                       0},
-  {"1x",                       ID_VIEW_ZOOM_1X},
-  {"2x",                       ID_VIEW_ZOOM_2X},
-  {"4x",                       ID_VIEW_ZOOM_4X},
-  {"6x",                       ID_VIEW_ZOOM_6X},
-  {"8x",                       ID_VIEW_ZOOM_8X},
-  {NULL,                       0},
-  {"[ ] Show Grid",            ID_VIEW_SHOW_GRID},
-  {"[ ] Snap to Grid",         ID_VIEW_SNAP_GRID},
-  {"[ ] Mask Only View",       ID_VIEW_MASK_ONLY},
-  {NULL,                       0},
-  {"Grid Options...",          ID_VIEW_GRID_OPTIONS},
-};
-
-static const menu_item_t kImageItems[] = {
-  {"Canvas Size...", ID_IMAGE_RESIZE},
-  {NULL, 0},
-  {"Flip Horizontal", ID_IMAGE_FLIP_H},
-  {"Flip Vertical",   ID_IMAGE_FLIP_V},
-  {NULL, 0},
-  {"Invert Colors",   ID_IMAGE_INVERT},
-  {"Levels...",       ID_IMAGE_LEVELS},
-};
-
-static const menu_item_t kInstagramPrefix[] = {
-  {"Reload Filters", ID_FILTER_RELOAD},
-  {"Filter Gallery...", ID_FILTER_GALLERY},
-};
-
-static menu_item_t s_instagram_items[2 + 1 + IMAGEEDITOR_MAX_FILTERS];
-static int         s_instagram_item_count = 2;
-
-static const menu_item_t kLayerItems[] = {
-  {"New Layer",          ID_LAYER_NEW},
-  {"Duplicate Layer",    ID_LAYER_DUPLICATE},
-  {"Delete Layer",       ID_LAYER_DELETE},
-  {NULL, 0},
-  {"Move Layer Up",      ID_LAYER_MOVE_UP},
-  {"Move Layer Down",    ID_LAYER_MOVE_DOWN},
-  {NULL, 0},
-  {"Merge Down",         ID_LAYER_MERGE_DOWN},
-  {"Flatten Image",      ID_LAYER_FLATTEN},
-  {NULL, 0},
-  {"Add Mask",           ID_LAYER_ADD_MASK},
-  {"Apply Mask",         ID_LAYER_APPLY_MASK},
-  {"Remove Mask",        ID_LAYER_REMOVE_MASK},
-  {"Extract Mask",       ID_LAYER_EXTRACT_MASK},
-  {NULL, 0},
-  {"[ ] Edit Mask",      ID_LAYER_EDIT_MASK},
-};
-
-static const menu_item_t kHelpItems[] = {
-  {"About...", ID_HELP_ABOUT},
-};
-
-#if IMAGEEDITOR_ANIMATIONS
-static const menu_item_t kAnimItems[] = {
-  {"New Frame",        ID_ANIM_NEW_FRAME},
-  {"Duplicate Frame",  ID_ANIM_DUPLICATE_FRAME},
-  {"Delete Frame",     ID_ANIM_DELETE_FRAME},
-  {NULL, 0},
-  {"Play",             ID_ANIM_PLAY},
-  {"Stop",             ID_ANIM_STOP},
-  {"[ ] Loop",         ID_ANIM_LOOP},
-  {NULL, 0},
-  {"Export GIF...",         ID_ANIM_EXPORT_GIF},
-  {"Export APNG...",        ID_ANIM_EXPORT_APNG},
-  {"Export Sprite Sheet...", ID_ANIM_EXPORT_SPRITESHEET},
-};
-#endif
-
-// ── Window menu (dynamic: rebuilt before each popup) ─────────────────────────
-// Fixed prefix entries come first; document entries follow the separator.
-
-static const menu_item_t kWindowPrefix[] = {
-  {"Tools",   ID_WINDOW_TOOLS},
-  {"Colors",  ID_WINDOW_COLORS},
-#if !IMAGEEDITOR_SINGLE_LAYER
-  {"Layers",  ID_WINDOW_LAYERS},
-#endif
-#if IMAGEEDITOR_ANIMATIONS
-  {"Timeline", ID_WINDOW_TIMELINE},
-#endif
-  {NULL,      0},   // separator before document list
-};
-#define WINDOW_PREFIX_COUNT ((int)(sizeof(kWindowPrefix)/sizeof(kWindowPrefix[0])))
+static menu_item_t s_filter_items[FILTER_PREFIX_COUNT + 1 + IMAGEEDITOR_MAX_FILTERS];
+static int         s_filter_item_count = FILTER_PREFIX_COUNT;
+static menu_item_t s_filter_photo_items[IMAGEEDITOR_MAX_FILTERS];
+static int         s_filter_photo_item_count = 0;
+static char        s_filter_photo_labels[IMAGEEDITOR_MAX_FILTERS][64];
 
 // Persistent storage for dynamically built items and document title strings.
 static menu_item_t s_window_items[WINDOW_PREFIX_COUNT + WINDOW_MENU_MAX_DOCS];
 static int         s_window_item_count = WINDOW_PREFIX_COUNT;
 
-// Enum keeps the menu-index constants in sync with the kMenus array order.
-// Add new menus here AND in kMenus (immediately below) — the enum prevents
-// the hardcoded index from getting out of step.
-enum {
-  kMenuIdxFile = 0,
-  kMenuIdxEdit,
-  kMenuIdxImage,
-  kMenuIdxInstagram,
-  kMenuIdxLayer,
-#if IMAGEEDITOR_ANIMATIONS
-  kMenuIdxAnim,
-#endif
-  kMenuIdxView,
-  kMenuIdxWindow,
-  kMenuIdxHelp,
-  kMenuIdxCount
-};
-
-menu_def_t kMenus[] = {
-  /* kMenuIdxFile   */ {"File",   kFileItems,      (int)(sizeof(kFileItems)/sizeof(kFileItems[0]))},
-  /* kMenuIdxEdit   */ {"Edit",   kEditItems,      (int)(sizeof(kEditItems)/sizeof(kEditItems[0]))},
-  /* kMenuIdxImage  */ {"Image",  kImageItems,     (int)(sizeof(kImageItems)/sizeof(kImageItems[0]))},
-  /* kMenuIdxInstagram */ {"Photo", s_instagram_items, 1},
-  /* kMenuIdxLayer  */ {"Layer",  kLayerItems,     (int)(sizeof(kLayerItems)/sizeof(kLayerItems[0]))},
-#if IMAGEEDITOR_ANIMATIONS
-  /* kMenuIdxAnim   */ {"Anim",   kAnimItems,      (int)(sizeof(kAnimItems)/sizeof(kAnimItems[0]))},
-#endif
-  /* kMenuIdxView   */ {"View",   s_view_items,    (int)(sizeof(s_view_items)/sizeof(s_view_items[0]))},
-  /* kMenuIdxWindow */ {"Window", s_window_items,  WINDOW_PREFIX_COUNT},
-  /* kMenuIdxHelp   */ {"Help",   kHelpItems,      (int)(sizeof(kHelpItems)/sizeof(kHelpItems[0]))},
-};
-const int kNumMenus = (int)(sizeof(kMenus)/sizeof(kMenus[0]));
 
 static bool cancel_active_canvas_interaction(canvas_doc_t *doc, int old_tool) {
   bool changed = false;
@@ -257,27 +116,13 @@ window_t *create_color_palette_window(void) {
   return cp;
 }
 
-static const toolbar_item_t kMainToolbar[] = {
-  { TOOLBAR_ITEM_BUTTON, ID_FILE_NEW,     sysicon_page_add,      0, 0, "New"     },
-  { TOOLBAR_ITEM_BUTTON, ID_FILE_OPEN,    sysicon_folder_page,   0, 0, "Open"    },
-  { TOOLBAR_ITEM_BUTTON, ID_FILE_SAVE,    sysicon_disk_save,     0, 0, "Save"    },
-  { TOOLBAR_ITEM_BUTTON, ID_FILE_SAVEAS,  sysicon_disk_multiple, 0, 0, "Save As" },
-  { TOOLBAR_ITEM_SPACER, 0, 0, 10, 0, NULL },
-  { TOOLBAR_ITEM_BUTTON, ID_VIEW_ZOOM_OUT,  sysicon_magnifier_zoom_out, 0, 0, "Zoom Out" },
-  { TOOLBAR_ITEM_BUTTON, ID_VIEW_ZOOM_IN,   sysicon_magnifier_zoom_in,  0, 0, "Zoom In"  },
-  { TOOLBAR_ITEM_BUTTON, ID_VIEW_ZOOM_1X,   sysicon_image_dimensions,   0, 0, "1x"       },
-  { TOOLBAR_ITEM_BUTTON, ID_VIEW_ZOOM_FIT,  sysicon_expand,             0, 0, "Fit"      },
-  { TOOLBAR_ITEM_SPACER, 0, 0, 10, 0, NULL },
-  { TOOLBAR_ITEM_BUTTON, ID_VIEW_MASK_ONLY, sysicon_transparency, 0, BUTTON_PUSHLIKE, "Mask" },
-};
-
 static result_t main_toolbar_proc(window_t *win, uint32_t msg,
                                   uint32_t wparam, void *lparam) {
   (void)lparam;
   switch (msg) {
     case evCreate:
       send_message(win, tbSetItems,
-                   (uint32_t)(sizeof(kMainToolbar) / sizeof(kMainToolbar[0])),
+                   (uint32_t)kMainToolbarCount,
                    (void *)kMainToolbar);
       imageeditor_sync_main_toolbar();
       return true;
@@ -345,18 +190,13 @@ static void view_menu_rebuild(void) {
   }
 }
 
-// Rebuild the Window menu items and re-push the full menu definition to the
-// menu-bar window.  Extensibility: add more fixed entries to kWindowPrefix, or
-// register new document classes in the loop below.
 void window_menu_rebuild(void) {
   if (!g_app) return;
 
-  // 1. Copy the fixed prefix entries.
   int n = 0;
   for (int i = 0; i < WINDOW_PREFIX_COUNT; i++)
-    s_window_items[n++] = kWindowPrefix[i];
+    s_window_items[n++] = kWindowItems[i];
 
-  // 2. One entry per open document, using the window title (filename-only).
   int doc_idx = 0;
   for (canvas_doc_t *d = g_app->docs;
        d && doc_idx < WINDOW_MENU_MAX_DOCS;
@@ -364,12 +204,12 @@ void window_menu_rebuild(void) {
     // The window title is kept up-to-date by doc_update_title(); it outlives
     // this menu as long as the document is open.
     const char *label = (d->win && d->win->title[0]) ? d->win->title : "Untitled";
-    s_window_items[n++] = (menu_item_t){ label, (uint16_t)(ID_WINDOW_DOC_BASE + doc_idx) };
+    s_window_items[n++] = (menu_item_t){ label, (uint16_t)(ID_WINDOW_DOC_BASE + doc_idx), NULL, 0 };
   }
 
   s_window_item_count = n;
-  kMenus[kMenuIdxWindow].items      = s_window_items;
-  kMenus[kMenuIdxWindow].item_count = s_window_item_count;
+  kMenus[MENU_WINDOW_INDEX].items      = s_window_items;
+  kMenus[MENU_WINDOW_INDEX].item_count = s_window_item_count;
 
   // In standalone mode push the updated menus to our local menubar window.
   // In gem mode menubar_win is NULL; the shell holds a pointer to kMenus
@@ -532,7 +372,7 @@ void handle_menu_command(uint16_t id) {
       }
       break;
 
-    case ID_EDIT_CLEAR_SEL:
+    case ID_SELECT_CLEAR:
       if (doc && doc->sel_active) {
         doc_push_undo(doc);
         canvas_clear_selection(doc, g_app->bg_color);
@@ -541,21 +381,43 @@ void handle_menu_command(uint16_t id) {
       }
       break;
 
-    case ID_EDIT_SELECT_ALL:
+    case ID_SELECT_ALL:
       if (doc) {
         canvas_select_all(doc);
         invalidate_window(doc->canvas_win);
       }
       break;
 
-    case ID_EDIT_DESELECT:
+    case ID_SELECT_DESELECT:
       if (doc) {
         canvas_deselect(doc);
         invalidate_window(doc->canvas_win);
       }
       break;
 
-    case ID_EDIT_CROP:
+    case ID_SELECT_EXPAND:
+      if (doc && doc->sel_active) {
+        int amount = 1;
+        if (show_selection_modify_dialog(doc->win ? doc->win : g_app->menubar_win,
+                                         "Expand Selection", &amount) &&
+            canvas_expand_selection(doc, amount)) {
+          invalidate_window(doc->canvas_win);
+        }
+      }
+      break;
+
+    case ID_SELECT_CONTRACT:
+      if (doc && doc->sel_active) {
+        int amount = 1;
+        if (show_selection_modify_dialog(doc->win ? doc->win : g_app->menubar_win,
+                                         "Contract Selection", &amount) &&
+            canvas_contract_selection(doc, amount)) {
+          invalidate_window(doc->canvas_win);
+        }
+      }
+      break;
+
+    case ID_SELECT_CROP:
       if (doc && doc->sel_active) {
         doc_push_undo(doc);
         canvas_crop_to_selection(doc);
@@ -605,6 +467,21 @@ void handle_menu_command(uint16_t id) {
 
     case ID_FILTER_GALLERY:
       if (doc && show_filter_gallery_dialog(doc->win ? doc->win : g_app->menubar_win)) {
+        doc_update_title(doc);
+        if (doc->canvas_win)
+          invalidate_window(doc->canvas_win);
+      }
+      break;
+
+    case ID_FILTER_BLUR:
+    case ID_FILTER_SHARPEN:
+    case ID_FILTER_EDGE:
+      if (doc) {
+        doc_push_undo(doc);
+        if (!imageeditor_apply_builtin_filter(doc, id)) {
+          doc_discard_undo(doc);
+          break;
+        }
         doc_update_title(doc);
         if (doc->canvas_win)
           invalidate_window(doc->canvas_win);
@@ -693,7 +570,8 @@ void handle_menu_command(uint16_t id) {
     case ID_TOOL_SPRAY:
     case ID_TOOL_EYEDROPPER:
     case ID_TOOL_MAGNIFIER:
-    case ID_TOOL_TEXT: {
+    case ID_TOOL_TEXT:
+    case ID_TOOL_MAGIC_WAND: {
       int old_tool = g_app->current_tool;
       if (doc && old_tool != (int)id && cancel_active_canvas_interaction(doc, old_tool)) {
         invalidate_window(doc->canvas_win);
@@ -1060,23 +938,35 @@ void imageeditor_sync_filter_menu(void) {
   if (!g_app) return;
 
   int n = 0;
-  s_instagram_items[n++] = kInstagramPrefix[0];
-  s_instagram_items[n++] = kInstagramPrefix[1];
-  if (g_app->filter_count > 0) {
-    s_instagram_items[n++] = (menu_item_t){NULL, 0};
-    for (int i = 0; i < g_app->filter_count &&
-                    n < (int)(sizeof(s_instagram_items) / sizeof(s_instagram_items[0]));
-         i++) {
-      s_instagram_items[n++] = (menu_item_t){
-        g_app->filters[i].name,
-        (uint16_t)(ID_FILTER_BASE + i)
-      };
+  for (int i = 0; i < FILTER_PREFIX_COUNT; i++)
+    s_filter_items[n++] = kFilterItems[i];
+
+  s_filter_photo_item_count = 0;
+  for (int i = 0; i < g_app->filter_count &&
+                  i < (int)(sizeof(s_filter_photo_items) / sizeof(s_filter_photo_items[0]));
+       i++) {
+    snprintf(s_filter_photo_labels[i], sizeof(s_filter_photo_labels[i]),
+             "%s", g_app->filters[i].name);
+    s_filter_photo_items[s_filter_photo_item_count++] = (menu_item_t){
+      s_filter_photo_labels[i],
+      (uint16_t)(ID_FILTER_BASE + i),
+      NULL,
+      0
+    };
+  }
+
+  for (int i = 0; i < n; i++) {
+    if (s_filter_items[i].label &&
+        strcmp(s_filter_items[i].label, "Photo") == 0) {
+      s_filter_items[i].submenu_items = s_filter_photo_items;
+      s_filter_items[i].submenu_count = s_filter_photo_item_count;
+      break;
     }
   }
 
-  s_instagram_item_count = n;
-  kMenus[kMenuIdxInstagram].items = s_instagram_items;
-  kMenus[kMenuIdxInstagram].item_count = s_instagram_item_count;
+  s_filter_item_count = n;
+  kMenus[MENU_FILTER_INDEX].items = s_filter_items;
+  kMenus[MENU_FILTER_INDEX].item_count = s_filter_item_count;
 
   if (g_app->menubar_win) {
     send_message(g_app->menubar_win, kMenuBarMessageSetMenus,

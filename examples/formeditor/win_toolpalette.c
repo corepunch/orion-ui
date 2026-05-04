@@ -5,17 +5,58 @@
 #include "formeditor.h"
 #include "../../commctl/commctl.h"
 
-// Tool palette definition: ident, icon index, and tooltip text in display order.
-// Strip layout: 3 columns x N rows of 21x21 tiles.
-static const toolbox_item_t k_tools[NUM_TOOLS] = {
-  { ID_TOOL_SELECT,    0, "Select"          },   // Pointer / Select
-  { ID_TOOL_LABEL,     2, "Label"           },   // Label
-  { ID_TOOL_TEXTEDIT,  3, "TextBox"         },   // TextBox
-  { ID_TOOL_BUTTON,    5, "CommandButton"   },   // CommandButton
-  { ID_TOOL_CHECKBOX,  6, "CheckBox"        },   // CheckBox
-  { ID_TOOL_COMBOBOX,  8, "ComboBox"        },   // ComboBox
-  { ID_TOOL_LIST,      9, "ListBox"         },   // ListBox
-};
+static toolbox_item_t g_tools[FE_MAX_COMPONENTS + 1];
+static int g_tool_count = 0;
+
+static int palette_win_y(void) {
+  return MENUBAR_HEIGHT + 4;
+}
+
+static int palette_win_h(void) {
+  int items = 1;  // Select tool
+  for (int i = 0; i < fe_component_count(); i++) {
+    const fe_component_desc_t *c = fe_component_at(i);
+    if (!c) continue;
+    if ((c->capabilities & (FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX)) ==
+        (FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX))
+      items++;
+  }
+  int rows = (items + TOOLBOX_COLS - 1) / TOOLBOX_COLS;
+  return TITLEBAR_HEIGHT + rows * FE_TOOLBOX_BTN_SIZE + 4;
+}
+
+static window_t *create_tool_palette(hinstance_t hinstance) {
+  window_t *tp = create_window(
+      "Tools",
+      WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
+      MAKERECT(PALETTE_WIN_X, palette_win_y(), PALETTE_WIN_W, palette_win_h()),
+      NULL, win_tool_palette_proc, hinstance, NULL);
+  if (tp) show_window(tp, true);
+  return tp;
+}
+
+void formeditor_rebuild_tool_palette(void) {
+  if (!g_app) return;
+  if (g_app->tool_win) {
+    destroy_window(g_app->tool_win);
+    g_app->tool_win = NULL;
+  }
+  g_app->current_tool = ID_TOOL_SELECT;
+  g_app->tool_win = create_tool_palette(g_app->hinstance);
+}
+
+static void build_tool_items(void) {
+  g_tool_count = 0;
+  g_tools[g_tool_count++] = (toolbox_item_t){ ID_TOOL_SELECT, 0, "Select" };
+  for (int i = 0; i < fe_component_count() && g_tool_count < FE_MAX_COMPONENTS + 1; i++) {
+    const fe_component_desc_t *c = fe_component_at(i);
+    if (!c) continue;
+    if ((c->capabilities & (FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX)) !=
+        (FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX))
+      continue;
+    g_tools[g_tool_count++] = (toolbox_item_t){ c->toolbox_ident, c->toolbox_icon, c->display_name };
+  }
+}
 
 result_t win_tool_palette_proc(window_t *win, uint32_t msg,
                                 uint32_t wparam, void *lparam) {
@@ -34,8 +75,8 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       send_message(win, bxLoadStrip, FE_TOOLBOX_ICON_W, path);
 #endif
 
-      // Set tools from unified array.
-      send_message(win, bxSetItems, NUM_TOOLS, (void *)k_tools);
+      build_tool_items();
+      send_message(win, bxSetItems, g_tool_count, (void *)g_tools);
       send_message(win, bxSetIconTintBrush, brTextNormal, NULL);
       send_message(win, bxSetActiveItem, ID_TOOL_SELECT, NULL);
       return true;

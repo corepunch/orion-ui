@@ -42,6 +42,8 @@ typedef struct {
 
 typedef struct {
   window_t      *menubar;
+  window_t      *parent_popup;
+  window_t      *child_popup;
   accel_table_t *accel;       // for hotkey lookup; not owned (may be NULL)
   int            item_count;
   int            hovered;    // index of the item under the mouse (-1 if none)
@@ -50,6 +52,18 @@ typedef struct {
 } popup_data_t;
 
 // ---- helpers -------------------------------------------------------------
+
+static bool menu_item_is_separator(const menu_item_t *it) {
+  return !it || (!it->label && it->id == 0);
+}
+
+static bool menu_item_has_submenu(const menu_item_t *it) {
+  return it && it->label && it->submenu_items && it->submenu_count > 0;
+}
+
+static bool menu_item_is_active(const menu_item_t *it) {
+  return it && !menu_item_is_separator(it) && (it->id || menu_item_has_submenu(it));
+}
 
 // Return the display width of a label, stopping at a '\t' character.
 static int item_label_width(const char *label) {
@@ -74,20 +88,24 @@ static void draw_item_label(const char *label, irect16_t const *rect, uint32_t c
   }
 }
 
-static int popup_height(const menu_def_t *m) {
+static int popup_items_height(const menu_item_t *items, int item_count) {
   int h = MENU_START_Y * 2; // top and bottom padding
-  for (int i = 0; i < m->item_count; i++)
-    h += m->items[i].id ? MENU_ITEM_H : MENU_SEP_H;
+  for (int i = 0; i < item_count; i++)
+    h += menu_item_is_separator(&items[i]) ? MENU_SEP_H : MENU_ITEM_H;
   return h;
 }
 
-static int popup_width(const menu_def_t *m, const accel_table_t *accel) {
+static int popup_items_width(const menu_item_t *items, int item_count,
+                             const accel_table_t *accel) {
   int w = MENU_MIN_W;
-  for (int i = 0; i < m->item_count; i++) {
-    if (m->items[i].id) {
-      int lw = item_label_width(m->items[i].label) + MENU_SIDE_PAD * 2;
-      if (accel) {
-        const accel_t *a = accel_find_cmd(accel, m->items[i].id);
+  for (int i = 0; i < item_count; i++) {
+    const menu_item_t *it = &items[i];
+    if (menu_item_is_active(it)) {
+      int lw = item_label_width(it->label) + MENU_SIDE_PAD * 2;
+      if (menu_item_has_submenu(it)) {
+        lw += strwidth(">") + MENU_HOTKEY_GAP;
+      } else if (accel) {
+        const accel_t *a = accel_find_cmd(accel, it->id);
         if (a) {
           char hkbuf[32];
           accel_format(a, hkbuf, sizeof(hkbuf));
@@ -99,6 +117,30 @@ static int popup_width(const menu_def_t *m, const accel_table_t *accel) {
   }
   return w;
 }
+
+static int popup_item_at(const popup_data_t *pd, int lx, int ly) {
+  if (!pd || lx < 0 || ly < 0) return -1;
+  int y = MENU_START_Y;
+  for (int i = 0; i < pd->item_count; i++) {
+    const menu_item_t *it = &pd->items[i];
+    int h = menu_item_is_separator(it) ? MENU_SEP_H : MENU_ITEM_H;
+    if (menu_item_is_active(it) && ly >= y && ly < y + h)
+      return i;
+    y += h;
+  }
+  return -1;
+}
+
+static int popup_item_y(const popup_data_t *pd, int index) {
+  int y = MENU_START_Y;
+  if (!pd) return y;
+  for (int i = 0; i < index && i < pd->item_count; i++)
+    y += menu_item_is_separator(&pd->items[i]) ? MENU_SEP_H : MENU_ITEM_H;
+  return y;
+}
+
+static void close_popup_tree(window_t *popup);
+static void open_submenu_popup(window_t *popup, popup_data_t *pd, int index);
 
 // ---- popup window proc ---------------------------------------------------
 
@@ -126,7 +168,7 @@ static result_t popup_proc(window_t *win, uint32_t msg,
       int y = MENU_START_Y;
       for (int i = 0; i < pd->item_count; i++) {
         const menu_item_t *it = &pd->items[i];
-        if (!it->id) {
+        if (menu_item_is_separator(it)) {
           // separator
           fill_rect(get_sys_color(brDarkEdge), R(MENU_SIDE_PAD, y + 2,
                     win->frame.w - MENU_SIDE_PAD * 2, 1));
@@ -139,7 +181,11 @@ static result_t popup_proc(window_t *win, uint32_t msg,
           uint32_t label_col  = hov ? get_sys_color(brWindowBg)  : get_sys_color(brTextNormal);
           uint32_t hotkey_col = hov ? get_sys_color(brWindowBg)  : get_sys_color(brTextDisabled);
           draw_item_label(it->label, &(irect16_t){MENU_SIDE_PAD, y, win->frame.w - MENU_SIDE_PAD * 2, MENU_ITEM_H}, label_col);
-          if (pd->accel) {
+          if (menu_item_has_submenu(it)) {
+            draw_text_small_clipped(">",
+                                   &(irect16_t){0, y, win->frame.w - MENU_SIDE_PAD, MENU_ITEM_H},
+                                   hotkey_col, TEXT_ALIGN_RIGHT);
+          } else if (pd->accel) {
             const accel_t *a = accel_find_cmd(pd->accel, it->id);
             if (a) {
               char hkbuf[32];
@@ -160,19 +206,16 @@ static result_t popup_proc(window_t *win, uint32_t msg,
       int ly = (int16_t)HIWORD(wparam);
       int new_hovered = -1;
       if (lx >= 0 && lx < win->frame.w && ly >= 0 && ly < win->frame.h) {
-        int y = MENU_START_Y;
-        for (int i = 0; i < pd->item_count; i++) {
-          const menu_item_t *it = &pd->items[i];
-          int h = it->id ? MENU_ITEM_H : MENU_SEP_H;
-          if (it->id && ly >= y && ly < y + h) {
-            new_hovered = i;
-            break;
-          }
-          y += h;
-        }
+        new_hovered = popup_item_at(pd, lx, ly);
       }
       if (new_hovered != pd->hovered) {
         pd->hovered = new_hovered;
+        if (pd->child_popup) {
+          close_popup_tree(pd->child_popup);
+          pd->child_popup = NULL;
+        }
+        if (new_hovered >= 0 && menu_item_has_submenu(&pd->items[new_hovered]))
+          open_submenu_popup(win, pd, new_hovered);
         invalidate_window(win);
       }
       return true;
@@ -184,30 +227,25 @@ static result_t popup_proc(window_t *win, uint32_t msg,
       int ly = (int16_t)HIWORD(wparam);
       // Click inside the popup – record which item was pressed
       if (lx >= 0 && lx < win->frame.w && ly >= 0 && ly < win->frame.h) {
-        int y = MENU_START_Y;
-        pd->pressed = -1;
-        for (int i = 0; i < pd->item_count; i++) {
-          const menu_item_t *it = &pd->items[i];
-          int h = it->id ? MENU_ITEM_H : MENU_SEP_H;
-          if (it->id && ly >= y && ly < y + h) {
-            pd->pressed = i;
-            pd->hovered = i;
-            invalidate_window(win);
-            break;
-          }
-          y += h;
+        pd->pressed = popup_item_at(pd, lx, ly);
+        pd->hovered = pd->pressed;
+        if (pd->pressed >= 0 && menu_item_has_submenu(&pd->items[pd->pressed])) {
+          open_submenu_popup(win, pd, pd->pressed);
+          pd->pressed = -1;
         }
+        invalidate_window(win);
         return true;
       }
       // Click outside popup bounds – close the popup
       {
         window_t *mb = pd->menubar;
         menubar_data_t *mbd = mb ? (menubar_data_t *)mb->userdata : NULL;
+        window_t *root_popup = (mbd && mbd->open_popup) ? mbd->open_popup : win;
         if (mbd) {
           mbd->open_popup = NULL;
           mbd->active_idx = -1;
         }
-        destroy_window(win);
+        close_popup_tree(root_popup);
         if (mb) invalidate_window(mb);
       }
       return true;
@@ -221,27 +259,20 @@ static result_t popup_proc(window_t *win, uint32_t msg,
       // Find which item the mouse was released on
       int release_item = -1;
       if (lx >= 0 && lx < win->frame.w && ly >= 0 && ly < win->frame.h) {
-        int y = MENU_START_Y;
-        for (int i = 0; i < pd->item_count; i++) {
-          const menu_item_t *it = &pd->items[i];
-          int h = it->id ? MENU_ITEM_H : MENU_SEP_H;
-          if (it->id && ly >= y && ly < y + h) {
-            release_item = i;
-            break;
-          }
-          y += h;
-        }
+        release_item = popup_item_at(pd, lx, ly);
       }
       window_t *mb = pd->menubar;
       menubar_data_t *mbd = mb ? (menubar_data_t *)mb->userdata : NULL;
+      window_t *root_popup = (mbd && mbd->open_popup) ? mbd->open_popup : win;
       if (mbd) {
         mbd->open_popup = NULL;
         mbd->active_idx = -1;
       }
-      if (release_item >= 0 && release_item == pd->pressed) {
+      if (release_item >= 0 && release_item == pd->pressed &&
+          !menu_item_has_submenu(&pd->items[release_item])) {
         // Released on the same item that was pressed – fire action
         uint16_t item_id = pd->items[release_item].id;
-        destroy_window(win);  // close popup before command runs (e.g. dialogs)
+        close_popup_tree(root_popup);  // close popup before command runs
         if (mb) {
           invalidate_window(mb);
           send_message(mb, evCommand,
@@ -250,7 +281,7 @@ static result_t popup_proc(window_t *win, uint32_t msg,
         }
       } else {
         // Released on a different item or outside – cancel, just close
-        destroy_window(win);
+        close_popup_tree(root_popup);
         if (mb) invalidate_window(mb);
       }
       return true;
@@ -270,9 +301,21 @@ static result_t popup_proc(window_t *win, uint32_t msg,
     }
 
     case evDestroy:
+      if (pd && pd->child_popup && is_window(pd->child_popup)) {
+        window_t *child = pd->child_popup;
+        pd->child_popup = NULL;
+        close_popup_tree(child);
+      }
+      if (pd && pd->parent_popup && is_window(pd->parent_popup)) {
+        popup_data_t *parent_pd = (popup_data_t *)pd->parent_popup->userdata;
+        if (parent_pd && parent_pd->child_popup == win)
+          parent_pd->child_popup = NULL;
+        set_capture(pd->parent_popup);
+      } else {
+        set_capture(NULL);
+      }
       free(win->userdata);
       win->userdata = NULL;
-      set_capture(NULL);
       return true;
 
     default:
@@ -285,49 +328,92 @@ static result_t popup_proc(window_t *win, uint32_t msg,
 static void close_popup(window_t *mb_win, menubar_data_t *data) {
   if (!data->open_popup) return;
   if (is_window(data->open_popup))
-    destroy_window(data->open_popup);
+    close_popup_tree(data->open_popup);
   data->open_popup = NULL;
   data->active_idx = -1;
   if (mb_win) invalidate_window(mb_win);
 }
 
-static void open_popup(window_t *mb_win, menubar_data_t *data, int idx) {
-  close_popup(mb_win, data);
-
-  const menu_def_t *menu = &data->menus[idx];
-
-  // Allocate popup data (flexible array)
+static window_t *create_popup_window(window_t *mb_win, window_t *parent_popup,
+                                     const menu_item_t *items, int item_count,
+                                     accel_table_t *accel, int px, int py) {
+  if (!mb_win || !items || item_count <= 0) return NULL;
   popup_data_t *pd = malloc(sizeof(popup_data_t) +
-                            sizeof(menu_item_t) * menu->item_count);
-  if (!pd) return;
-  pd->menubar    = mb_win;
-  pd->accel      = data->accel;
-  pd->item_count = menu->item_count;
-  pd->hovered    = -1;
-  pd->pressed    = -1;
-  for (int i = 0; i < menu->item_count; i++)
-    pd->items[i] = menu->items[i];
+                            sizeof(menu_item_t) * item_count);
+  if (!pd) return NULL;
+  pd->menubar = mb_win;
+  pd->parent_popup = parent_popup;
+  pd->child_popup = NULL;
+  pd->accel = accel;
+  pd->item_count = item_count;
+  pd->hovered = -1;
+  pd->pressed = -1;
+  for (int i = 0; i < item_count; i++)
+    pd->items[i] = items[i];
 
-  int pw = popup_width(menu, data->accel);
-  int ph = popup_height(menu);
-  int px = mb_win->frame.x + data->menu_x[idx] - 1; // TODO: why -1?
-  int py = mb_win->frame.y + MENUBAR_HEIGHT;
+  int pw = popup_items_width(items, item_count, accel);
+  int ph = popup_items_height(items, item_count);
 
-  // Clamp to screen
   int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
+  int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
   if (px + pw > sw) px = sw - pw;
-  if (px < 0)       px = 0;
+  if (py + ph > sh) py = sh - ph;
+  if (px < 0) px = 0;
+  if (py < 0) py = 0;
 
   window_t *popup = create_window(
       "",
       WINDOW_NOTITLE | WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
       MAKERECT(px, py, pw, ph),
       NULL, popup_proc, mb_win->hinstance, pd);
+  if (!popup) {
+    free(pd);
+    return NULL;
+  }
   popup->userdata = pd;
   show_window(popup, true);
+  invalidate_window(popup);
+  return popup;
+}
+
+static void close_popup_tree(window_t *popup) {
+  if (!popup || !is_window(popup)) return;
+  popup_data_t *pd = (popup_data_t *)popup->userdata;
+  if (pd && pd->child_popup && is_window(pd->child_popup)) {
+    window_t *child = pd->child_popup;
+    pd->child_popup = NULL;
+    close_popup_tree(child);
+  }
+  destroy_window(popup);
+}
+
+static void open_submenu_popup(window_t *popup, popup_data_t *pd, int index) {
+  if (!popup || !pd || index < 0 || index >= pd->item_count) return;
+  const menu_item_t *it = &pd->items[index];
+  if (!menu_item_has_submenu(it)) return;
+  if (pd->child_popup && is_window(pd->child_popup))
+    close_popup_tree(pd->child_popup);
+  pd->child_popup = NULL;
+  int px = popup->frame.x + popup->frame.w - 2;
+  int py = popup->frame.y + popup_item_y(pd, index);
+  pd->child_popup = create_popup_window(pd->menubar, popup,
+                                        it->submenu_items, it->submenu_count,
+                                        pd->accel, px, py);
+}
+
+static void open_popup(window_t *mb_win, menubar_data_t *data, int idx) {
+  close_popup(mb_win, data);
+
+  const menu_def_t *menu = &data->menus[idx];
+  int px = mb_win->frame.x + data->menu_x[idx] - 1; // TODO: why -1?
+  int py = mb_win->frame.y + MENUBAR_HEIGHT;
+
+  window_t *popup = create_popup_window(mb_win, NULL, menu->items,
+                                        menu->item_count, data->accel,
+                                        px, py);
+  if (!popup) return;
   data->open_popup = popup;
   data->active_idx = idx;
-  invalidate_window(popup);
   invalidate_window(mb_win);
 }
 

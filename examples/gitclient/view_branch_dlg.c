@@ -16,11 +16,11 @@
 #define CTL_CANCEL   5
 
 static const form_ctrl_def_t kNewBranchCtrls[] = {
-  { FORM_CTRL_TEXTEDIT,  CTL_NAME,     {50, 8,  170, 13}, 0, "",               "name"     },
-  { FORM_CTRL_COMBOBOX,  CTL_FROM,     {50, 26, 170, 13}, 0, "",               "from"     },
-  { FORM_CTRL_CHECKBOX,  CTL_CHECKOUT, {8,  46, 160, 13}, 0, "Checkout after creation","co"},
-  { FORM_CTRL_BUTTON,    CTL_CREATE,   {144,64,  60, 14}, BUTTON_DEFAULT, "Create",  "ok"  },
-  { FORM_CTRL_BUTTON,    CTL_CANCEL,   {208,64,  60, 14}, 0, "Cancel",          "cancel"  },
+  { "textedit",  CTL_NAME,     {50, 8,  170, 13}, 0, "",               "name"     },
+  { "combobox",  CTL_FROM,     {50, 26, 170, 13}, 0, "",               "from"     },
+  { "checkbox",  CTL_CHECKOUT, {8,  46, 160, 13}, 0, "Checkout after creation","co"},
+  { "button",    CTL_CREATE,   {144,64,  60, 14}, BUTTON_DEFAULT, "Create",  "ok"  },
+  { "button",    CTL_CANCEL,   {208,64,  60, 14}, 0, "Cancel",          "cancel"  },
 };
 static const form_def_t kNewBranchForm = {
   .name        = "New Branch",

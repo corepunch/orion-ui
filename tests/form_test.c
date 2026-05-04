@@ -21,9 +21,9 @@
 #define FORM_ID_CANCEL 3
 
 static const form_ctrl_def_t kTestFormChildren[] = {
-  { FORM_CTRL_TEXTEDIT, FORM_ID_NAME,   {60,  8, 80, 13}, 0,              "hello", "name"   },
-  { FORM_CTRL_BUTTON,   FORM_ID_OK,     {50, 30, 40, 13}, BUTTON_DEFAULT, "OK",    "ok"     },
-  { FORM_CTRL_BUTTON,   FORM_ID_CANCEL, {94, 30, 50, 13}, 0,              "Cancel","cancel" },
+  { "textedit", FORM_ID_NAME,   {60,  8, 80, 13}, 0,              "hello", "name"   },
+  { "button",   FORM_ID_OK,     {50, 30, 40, 13}, BUTTON_DEFAULT, "OK",    "ok"     },
+  { "button",   FORM_ID_CANCEL, {94, 30, 50, 13}, 0,              "Cancel","cancel" },
 };
 
 static const form_def_t kTestForm = {
@@ -46,13 +46,13 @@ static const form_def_t kTestForm = {
 typedef struct { char name[64]; } ddx_test_state_t;
 
 static const ctrl_binding_t kDdxTestBindings[] = {
-  { DDX_FORM_ID_NAME, BIND_STRING, offsetof(ddx_test_state_t, name), sizeof_field(ddx_test_state_t, name) },
+  DDX_TEXT(DDX_FORM_ID_NAME, ddx_test_state_t, name),
 };
 
 static const form_ctrl_def_t kDdxFormChildren[] = {
-  { FORM_CTRL_TEXTEDIT, DDX_FORM_ID_NAME,   {60,  8, 80, 13}, 0,              "",       "name"   },
-  { FORM_CTRL_BUTTON,   DDX_FORM_ID_OK,     {50, 30, 40, 13}, BUTTON_DEFAULT, "OK",     "ok"     },
-  { FORM_CTRL_BUTTON,   DDX_FORM_ID_CANCEL, {94, 30, 50, 13}, 0,              "Cancel", "cancel" },
+  { "textedit", DDX_FORM_ID_NAME,   {60,  8, 80, 13}, 0,              "",       "name"   },
+  { "button",   DDX_FORM_ID_OK,     {50, 30, 40, 13}, BUTTON_DEFAULT, "OK",     "ok"     },
+  { "button",   DDX_FORM_ID_CANCEL, {94, 30, 50, 13}, 0,              "Cancel", "cancel" },
 };
 
 static const form_def_t kDdxTestForm = {

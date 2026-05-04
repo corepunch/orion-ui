@@ -10,7 +10,7 @@
 
 // Forward declarations
 typedef struct window_s window_t;
-typedef struct rect_s irect16_t;
+typedef struct irect16_s irect16_t;
 typedef uint32_t flags_t;
 typedef uint32_t result_t;
 
@@ -20,16 +20,31 @@ typedef uint32_t result_t;
 // hinstance == 0 means system/unowned (shell, framework, tests).
 typedef uint32_t hinstance_t;
 
+#define DEFAULT_WINDOW_CASCADE_X 10
+#define DEFAULT_WINDOW_CASCADE_Y 20
+
 // Window procedure callback type
 typedef result_t (*winproc_t)(window_t *, uint32_t, uint32_t, void *);
+
+typedef struct {
+  window_t *child;       // child about to receive the event
+  uint32_t  child_msg;   // original event message
+  uint32_t  child_wparam;
+  void     *child_lparam;
+} parent_notify_t;
 
 // Window hook callback type
 typedef void (*winhook_func_t)(window_t *win, uint32_t msg, uint32_t wparam, void *lparam, void *userdata);
 
 // Point structure
 typedef struct {
-  int x, y;
-} point_t;
+  int16_t x, y;
+} ipoint16_t;
+
+// Size structure
+typedef struct {
+  int16_t w, h;
+} isize16_t;
 
 // Float rectangle structure (used for normalized UVs and other float-space rects).
 typedef struct {
@@ -37,8 +52,8 @@ typedef struct {
 } frect_t;
 
 // Rectangle structure
-struct rect_s {
-  int x, y, w, h;
+struct irect16_s {
+  int16_t x, y, w, h;
 };
 
 // A fixed-size-tile bitmap strip, analogous to WinAPI HIMAGELIST / TB_ADDBITMAP.
@@ -55,7 +70,7 @@ typedef struct bitmap_strip_s {
 
 // Window definition structure (for declarative window creation)
 typedef struct {
-  winproc_t proc;
+  const char *class_name;
   const char *text;
   uint32_t id;
   int w, h;
@@ -73,38 +88,90 @@ typedef struct {
 // Returns sizeof(((type *)0)->field) — the byte size of a struct field.
 #define sizeof_field(type, field) ((size_t)(sizeof(((type *)0)->field)))
 
-typedef enum {
-  BIND_STRING,    // char[] field: text-edit text ↔ char array (size = sizeof field)
-  BIND_INT_COMBO, // int   field: combo-box selection index ↔ int  (size = default index)
-  BIND_INT_EDIT,  // int   field: text-edit decimal text    ↔ int  (size = unused)
-  BIND_MLSTRING,  // char[] field: multi-line text edit ↔ char array (size = sizeof field)
-} bind_type_t;
+typedef struct ctrl_binding_s ctrl_binding_t;
+typedef void (*ddx_bind_push_fn)(window_t *dlg, const ctrl_binding_t *binding,
+                                 const void *state);
+typedef void (*ddx_bind_pull_fn)(window_t *dlg, const ctrl_binding_t *binding,
+                                 void *state);
 
 typedef struct ctrl_binding_s {
   uint32_t    ctrl_id; // numeric child control ID
-  bind_type_t type;    // BIND_* transfer type
+  uint16_t    command; // evCommand notification to listen for (HIWORD(wparam)); 0 = any
+  uint32_t    getter;  // control getter message for message-based bindings (edGetText, cbGetCurrentSelection, etc.)
   size_t      offset;  // offsetof(state_t, field)
-  size_t      size;    // BIND_STRING: sizeof char[] field;
-                       // BIND_INT_COMBO: default index (used when pull returns < 0)
+  size_t      wparam;  // getter message wparam (edGetText: buffer size; cbGetCurrentSelection: default index when selection < 0)
+  ddx_bind_push_fn push; // optional push callback (state -> control)
+  ddx_bind_pull_fn pull; // optional pull callback (control -> state)
 } ctrl_binding_t;
 
-// Control type codes used in form_ctrl_def_t (analogous to WinAPI dialog-template atom IDs).
-typedef enum {
-  FORM_CTRL_BUTTON    = 0,
-  FORM_CTRL_CHECKBOX  = 1,
-  FORM_CTRL_LABEL     = 2,
-  FORM_CTRL_TEXTEDIT  = 3,
-  FORM_CTRL_LIST      = 4,
-  FORM_CTRL_COMBOBOX  = 5,
-  FORM_CTRL_MULTIEDIT = 6,  // multi-line text edit (win_multiedit)
-  FORM_CTRL_COUNT     = 7,
-} form_ctrl_type_t;
+// Built-in DDX callbacks for common scalar/text fields.
+void ddx_push_int(window_t *dlg, const ctrl_binding_t *b, const void *state);
+void ddx_pull_int(window_t *dlg, const ctrl_binding_t *b, void *state);
+void ddx_push_float(window_t *dlg, const ctrl_binding_t *b, const void *state);
+void ddx_pull_float(window_t *dlg, const ctrl_binding_t *b, void *state);
+void ddx_push_u8(window_t *dlg, const ctrl_binding_t *b, const void *state);
+void ddx_pull_u8(window_t *dlg, const ctrl_binding_t *b, void *state);
+void ddx_push_text(window_t *dlg, const ctrl_binding_t *b, const void *state);
+void ddx_pull_text(window_t *dlg, const ctrl_binding_t *b, void *state);
+void ddx_push_combo(window_t *dlg, const ctrl_binding_t *b, const void *state);
+void ddx_pull_combo(window_t *dlg, const ctrl_binding_t *b, void *state);
+void ddx_push_check(window_t *dlg, const ctrl_binding_t *b, const void *state);
+void ddx_pull_check(window_t *dlg, const ctrl_binding_t *b, void *state);
+
+// DDX_TEXT — binds a textedit control; _Generic dispatches push/pull by field type.
+//   int field          -> ddx_push_int   / ddx_pull_int
+//   float field        -> ddx_push_float / ddx_pull_float
+//   unsigned char field-> ddx_push_u8    / ddx_pull_u8
+//   char[] / other     -> ddx_push_text  / ddx_pull_text
+#define DDX_TEXT(id_, state_type, field) \
+  (ctrl_binding_t){ \
+    .ctrl_id = (id_), \
+    .command = edUpdate, \
+    .getter  = 0, \
+    .offset  = offsetof(state_type, field), \
+    .wparam  = sizeof_field(state_type, field), \
+    .push = _Generic((((state_type *)0)->field), \
+      int: ddx_push_int, \
+      float: ddx_push_float, \
+      unsigned char: ddx_push_u8, \
+      default: ddx_push_text), \
+    .pull = _Generic((((state_type *)0)->field), \
+      int: ddx_pull_int, \
+      float: ddx_pull_float, \
+      unsigned char: ddx_pull_u8, \
+      default: ddx_pull_text), \
+  }
+
+// DDX_COMBO — binds a combobox control; field must be int (compile error otherwise).
+// default_idx is used when combobox has no valid current selection.
+#define DDX_COMBO(id_, state_type, field, default_idx) \
+  (ctrl_binding_t){ \
+    .ctrl_id = (id_), \
+    .command = cbSelectionChange, \
+    .getter  = 0, \
+    .offset  = offsetof(state_type, field), \
+    .wparam  = (default_idx), \
+    .push = _Generic((((state_type *)0)->field), int: ddx_push_combo), \
+    .pull = _Generic((((state_type *)0)->field), int: ddx_pull_combo), \
+  }
+
+// DDX_CHECK — binds a checkbox control; field must be bool or int (compile error otherwise).
+#define DDX_CHECK(id_, state_type, field) \
+  (ctrl_binding_t){ \
+    .ctrl_id = (id_), \
+    .command = btnClicked, \
+    .getter  = 0, \
+    .offset  = offsetof(state_type, field), \
+    .wparam  = 0, \
+    .push = _Generic((((state_type *)0)->field), bool: ddx_push_check, int: ddx_push_check), \
+    .pull = _Generic((((state_type *)0)->field), bool: ddx_pull_check, int: ddx_pull_check), \
+  }
 
 // Describes one child control in a form definition (analogous to DLGITEMTEMPLATE).
 typedef struct {
-  form_ctrl_type_t  type;   // control class (FORM_CTRL_*)
+  const char       *class_name; // control class name (e.g. "button")
   uint32_t          id;     // numeric control ID
-  irect16_t            frame;  // position and dimensions in parent client coordinates
+  irect16_t         frame;  // position and dimensions in parent client coordinates
   flags_t           flags;  // style flags passed to create_window
   const char       *text;   // initial caption / label text
   const char       *name;   // identifier name (informational)
@@ -130,6 +197,63 @@ typedef struct {
   uint32_t                cancel_id;       // child ID of the Cancel button (0 = none)
 } form_def_t;
 
+// FormEditor component registry metadata/API.
+// Runtime window classes and design-time components are registered through this
+// API and can be provided by loadable plugins.
+#define FE_MAX_COMPONENTS 128
+
+#define FE_COMPONENT_PLACEABLE      0x0001u
+#define FE_COMPONENT_SHOW_TOOLBOX   0x0002u
+
+typedef struct {
+  const char *class_name;     // stable runtime class key (e.g. "button")
+  const char *display_name;   // UI/display caption base (e.g. "Button")
+  const char *token;          // stable serialization token (e.g. "button")
+  const char *name_prefix;    // identifier prefix (e.g. "IDC_BTN")
+  int         toolbox_ident;  // command ID sent by toolbox host
+  int         toolbox_icon;   // icon index in toolbox strip
+  isize16_t   default_size;   // default size when click-placing
+  uint32_t    capabilities;   // FE_COMPONENT_* flags
+  winproc_t   proc;           // runtime window proc backing this component
+} fe_component_desc_t;
+
+// Plugin export function pointer types — 3ds Max-style pull model.
+// Plugins export these four functions; the loader queries them to register
+// descriptors rather than the plugin pushing through a callback API.
+typedef int                        (*fe_plugin_class_count_fn)(void);
+typedef const fe_component_desc_t *(*fe_plugin_class_desc_fn)(int i);
+typedef const char                *(*fe_plugin_description_fn)(void);
+typedef uint32_t                   (*fe_plugin_version_fn)(void);
+
+#define FE_PLUGIN_VERSION 1u
+
+// Declares the standard FormEditor plugin exports from a static descriptor
+// array, human-readable description, and ABI version value.
+#define GEM_CLASSES(ARRAY, NAME, VERSION) \
+  int fe_plugin_class_count(void) { \
+    return (int)ARRAY_LEN(ARRAY); \
+  } \
+  const fe_component_desc_t *fe_plugin_class_desc(int i) { \
+    if (i < 0 || i >= (int)ARRAY_LEN(ARRAY)) return NULL; \
+    return &(ARRAY)[i]; \
+  } \
+  const char *fe_plugin_description(void) { \
+    return (NAME); \
+  } \
+  uint32_t fe_plugin_version(void) { \
+    return (uint32_t)(VERSION); \
+  }
+
+bool fe_register_component(const fe_component_desc_t *desc);
+int fe_component_count(void);
+const fe_component_desc_t *fe_component_at(int index);
+const fe_component_desc_t *fe_component_by_id(int id);
+const fe_component_desc_t *fe_component_by_tool_ident(int ident);
+const fe_component_desc_t *fe_component_by_token(const char *token);
+
+bool fe_load_component_plugin(const char *path);
+void fe_unload_component_plugins(void);
+
 // Internal state for one built-in scrollbar (horizontal or vertical).
 // Two of these live inside window_t when WINDOW_HSCROLL / WINDOW_VSCROLL is set.
 typedef struct {
@@ -154,7 +278,6 @@ struct window_s {
   uint32_t child_id;
   bool hovered;
   bool editing;
-  bool notabstop;
   bool pressed;
   bool value;
   bool visible;
@@ -183,9 +306,35 @@ int titlebar_height(window_t const *win);
 int statusbar_height(window_t const *win);
 
 // Window management functions
-window_t *create_window(char const *title, flags_t flags, const irect16_t* frame, 
-                        window_t *parent, winproc_t proc, hinstance_t hinstance,
-                        void *param);
+// Class-based API (preferred): create by registered class name.
+window_t *create_window_class(char const *title, flags_t flags, const irect16_t* frame,
+                              window_t *parent, const char *class_name,
+                              hinstance_t hinstance, void *param);
+// Raw proc path: used by dialog/form internals and compatibility migration.
+window_t *create_window_proc(char const *title, flags_t flags, const irect16_t* frame,
+                             window_t *parent, winproc_t proc,
+                             hinstance_t hinstance, void *param);
+
+// Window class registry.
+bool register_window_class(const fe_component_desc_t *desc);
+bool register_window_class_once(const fe_component_desc_t *desc);
+winproc_t find_window_class_proc(const char *class_name);
+
+#define UI_WNDCLASS(name_sym, proc_sym) \
+  ((fe_component_desc_t){ .class_name = (name_sym), .proc = (proc_sym) })
+
+#define UI_CLASS(proc_sym) \
+  register_window_class_once(&(fe_component_desc_t){ .class_name = #proc_sym, .proc = (proc_sym) })
+
+// Migration bridge: `create_window` accepts either a class name string or a
+// winproc symbol and dispatches to the appropriate creation function.
+#define create_window(title, flags, frame, parent, class_or_proc, hinstance, param) \
+  _Generic((class_or_proc), \
+    const char *: create_window_class, \
+    char *:       create_window_class, \
+    default:      create_window_proc \
+  )((title), (flags), (frame), (parent), (class_or_proc), (hinstance), (param))
+
 window_t *create_window2(windef_t const *def, irect16_t const *r, window_t *parent);
 window_t *create_window_from_form(form_def_t const *def, int x, int y,
                                   window_t *parent, winproc_t proc,
@@ -197,6 +346,7 @@ void clear_window_children(window_t *win);
 void clear_toolbar_children(window_t *win);
 void move_window(window_t *win, int x, int y);
 void resize_window(window_t *win, int new_w, int new_h);
+void set_default_window_position(int x, int y);
 
 // Window message functions
 int send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
@@ -247,6 +397,8 @@ typedef struct {
   window_t *resizing;
   window_t *toolbar_down_win;
   window_t *modal_overlay_parent;
+  int       default_window_x;
+  int       default_window_y;
 } ui_runtime_state_t;
 
 extern ui_runtime_state_t g_ui_runtime;
@@ -314,6 +466,13 @@ void dialog_push(window_t *win, const void *state,
 // dialog_pull: read controls → state fields (call in OK handler before accept).
 void dialog_pull(window_t *win, void *state,
                  const ctrl_binding_t *b, int n);
+
+// dialog_pull_command: read controls → state for bindings that listen to the
+// specified evCommand notification (HIWORD(wparam)).
+// Returns number of bindings applied.
+int dialog_pull_command(window_t *win, void *state,
+                        const ctrl_binding_t *b, int n,
+                        uint16_t command);
 
 // ── Tooltip API ───────────────────────────────────────────────────────────────
 // Tooltips are shown after a short hover delay for toolbar and toolbox buttons.

@@ -17,6 +17,8 @@ static void test_env_reset_ui_state(void) {
     g_ui_runtime.dragging = NULL;
     g_ui_runtime.resizing = NULL;
     g_ui_runtime.toolbar_down_win = NULL;
+    g_ui_runtime.default_window_x = 20;
+    g_ui_runtime.default_window_y = 20;
     g_ui_runtime.running = false;
 }
 

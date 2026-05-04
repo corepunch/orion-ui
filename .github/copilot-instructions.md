@@ -23,6 +23,7 @@ The framework is written in C and uses SDL2 for windowing/input and OpenGL 3.2+ 
 - When implementing new features, think "how would this be done in WinAPI?" and follow those patterns
 - If a required feature is missing from the core framework (e.g., hotkeys/accelerators, timers, clipboard), **add it to the framework** — do not implement workarounds in application code (e.g., do not handle `WM_KEYDOWN` manually where `WM_COMMAND` from an accelerator is the correct mechanism)
 - Common WinAPI patterns to follow: message loops, window procedures, control notifications via `WM_COMMAND`, `HIWORD`/`LOWORD` packing, resource tables (menus, accelerators), dialog modal loops
+- For plugin-provided **UI controls/windows**, use WinAPI-style integration only: register classes, instantiate by class name (`create_window(..., "class_name", ...)`), pass creation state via `lparam`, and communicate through messages/notifications (`evCommand`, control-specific messages). Do **not** design C function-table APIs for window controls unless the feature is explicitly non-window service logic.
 - **Always search the existing framework before inventing new mechanisms.** Orion already has toolbars (`WINDOW_TOOLBAR`), toolbar buttons (`tbAddButtons`), bitmap strips (`bitmap_strip_t`), accelerators, dialogs, status bars, etc. If you need something that sounds like it belongs in a UI framework, look for it first.
 
 ### Scrollbars — Built-in vs. Standalone
@@ -176,16 +177,40 @@ for (int i = 0; i < NUM_TOOLS; i++) {
 - Use forward declarations to minimize header dependencies
 
 ### Struct Design
-- Always prefer named structs over loose coordinate pairs: use `point_t { int x, y; }` instead of `int x, int y` pairs, and `irect16_t { int x, y, w, h; }` instead of `int x1, y1, x2, y2`
-- `point_t` and `irect16_t` are defined in `user/user.h` and available everywhere via `ui.h`
-- When a concept naturally groups two or more related values, define a struct for it (e.g., `size_t` for `w, h`; `point_t` for `x, y`)
-- Do not scatter parallel `_x` / `_y` (or `_start` / `_end`) fields across a struct when a `point_t` member would be cleaner
+- Prefer geometry structs wherever possible instead of loose coordinate fields: use `ipoint16_t { x, y }` for positions/deltas, `isize16_t { w, h }` for sizes, and `irect16_t { x, y, w, h }` for rectangles.
+- `ipoint16_t`, `isize16_t`, and `irect16_t` are defined in `user/user.h` and available everywhere via `ui.h`.
+- Do not scatter parallel `_x` / `_y`, `_w` / `_h`, or `_start` / `_end` fields across a struct when a point, size, or rect member would be cleaner.
+- Prefer existing rectangle/geometry helper functions from `user/rect.h` (`rect_offset`, `rect_inset`, `rect_center`, `rect_split_*`, `rect_trim_*`, etc.) over open-coded coordinate math.
+- If a needed geometry helper is missing, add a small reusable helper to the framework (usually `user/rect.h`) instead of duplicating ad hoc math in application code.
+
+### State, Geometry, and Coordinate-Space Discipline
+- Prefer tagged state over flat "all fields are live" structs.  If behavior has modes (`none`, `move`, `resize`, `place`, etc.), store a mode plus a union whose members contain only the fields valid for that mode.  Avoid parallel fields like `drag_mode`, `drag_handle`, `drag_start`, `snap_rect`, `rb`, and `placing_type` all living side-by-side.
+- Make invalid states hard to represent.  Reset mode state with one aggregate assignment such as `state->drag = (drag_state_t){.mode = DRAG_NONE};` instead of clearing unrelated fields one by one.
+- Use typed points for distinct coordinate spaces when a module mixes them.  For example, a design surface may define `canvas_pt_t` and `form_pt_t` even if both are `{x, y}`.  Convert through a small pair of helpers (`form_to_canvas_pt`, `canvas_to_form_pt`) and derive rect conversion from those helpers.
+- Keep drawing and hit-testing in explicit coordinate spaces.  If child paints alter viewport/projection state, restore the parent/window draw space before drawing parent-owned adornments such as selection outlines, handles, grids, or rubber bands.
+- Prefer rect-valued APIs over long coordinate parameter lists.  A helper like `canvas_update_preview(state, type, form_rc, text, flags)` is preferred over `canvas_update_preview(state, type, x, y, w, h, text, flags)`.
+- Prefer a single conversion for a shape.  Compute one `irect16_t canvas_rc = form_to_canvas_rect(state, form_rc)` and pass it through drawing helpers; do not pass `fx, fy, fw, fh` as separate values unless the callee truly needs independent scalars.
+- For resize handles or edge-affecting logic, use a small table describing which edges move (`left`, `top`, `right`, `bottom`) rather than repeating boolean chains and duplicated snap/clamp logic.
+- Shared text/name generation should live in one helper.  For example, use `ctrl_make_caption(type, index, buf, len)` for both stored captions and previews instead of separate "preview label" functions with subtly duplicated rules.
+- When finalizing mouse drags, derive the final rectangle from the actual mouse-up point.  Do not compute `lx`/`ly` and then suppress them with `(void)lx; (void)ly`; that is usually a sign the state machine is too implicit.
 
 ### Message-Based Architecture
 - All UI interaction uses a Windows-style message system
 - Window procedures follow the signature: `result_t (*winproc_t)(window_t *, uint32_t msg, uint32_t wparam, void *lparam)`
 - Common messages include WM_CREATE, WM_DESTROY, WM_PAINT, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_KEYDOWN, WM_KEYUP, WM_COMMAND
 - Return true from window proc if message was handled, false otherwise
+
+### Confirmation Dialogs
+- Match the button set to the question being asked. A two-choice question such
+  as "Close without saving?", "Discard changes?", or "Delete selected item?"
+  must use `MB_YESNO`, where `IDYES` performs the destructive/continuing action
+  and `IDNO` leaves state unchanged.
+- Use `MB_YESNOCANCEL` only for a genuine three-way decision, such as
+  "Save changes before closing?" where `IDYES` saves, `IDNO` discards, and
+  `IDCANCEL` aborts the close.
+- For window `evClose` handlers, return true to cancel/consume the close when
+  the user chooses `IDNO` or `IDCANCEL`; only proceed with closing after the
+  explicit affirmative action for the dialog wording.
 
 ### Drawing and Rendering
 - Use OpenGL for all rendering (hardware accelerated)
@@ -357,6 +382,14 @@ examples/socialfeed/
 - **Use `form_def_t` + `show_dialog_from_form()` for all dialogs/panels**: any window with two or more standard child controls must be expressed as a static `form_ctrl_def_t[]` + `form_def_t` and instantiated with `create_window_from_form()` or `show_dialog_from_form()`. Never build children imperatively inside `evCreate` — children defined in a form already exist when that message fires.
 - Add documentation to README.md for new public APIs
 - Consider adding examples for non-trivial new functionality
+
+### FormEditor Component Registration Policy
+
+- FormEditor control exposure must be registry-driven, not switch-driven. Do not hardcode toolbox/component lists in `tool_to_ctrl_type`, `ctrl_type_name`, property-browser type tables, or save/load type switches.
+- **No backward compatibility shims for the registry migration**: when moving a path to the component registry, remove legacy fallback code in the same change rather than keeping dual paths.
+- Distinguish runtime windows from design-time toolbox components using explicit component metadata flags/role fields.
+- A component is shown in the toolbox only when its metadata explicitly marks it as design-placeable (for example, `COMPONENT_PLACEABLE` / `show_in_toolbox=true`).
+- Non-placeable windows (dialogs, palettes, color pickers, inspectors, transient popups) may still be registered for runtime/factory use, but must be hidden from the toolbox.
 
 ### Function-First, High-Level Code (Required)
 

@@ -288,6 +288,10 @@ bool ui_init_prog(void) {
     "sprite_invert.frag.glsl",
     "sprite_threshold.frag.glsl",
     "sprite_gradient.frag.glsl",
+    "sprite_blur.frag.glsl",
+    "sprite_sharpen.frag.glsl",
+    "sprite_edge.frag.glsl",
+    "sprite_alpha_threshold.frag.glsl",
   };
 
   for (int i = 0; i < UI_RENDER_EFFECT_COUNT; i++) {
@@ -431,9 +435,9 @@ void draw_sprite_region(int tex, irect16_t r,
     alpha = 1.0f;
   push_sprite_args(tex, r.x, r.y, r.w, r.h, alpha);
 
-  float tr = ((color >> 16) & 0xFF) / 255.0f;
-  float tg = ((color >> 8) & 0xFF) / 255.0f;
-  float tb = (color & 0xFF) / 255.0f;
+  float tr = ((color      ) & 0xFF) / 255.0f;
+  float tg = ((color >>  8) & 0xFF) / 255.0f;
+  float tb = ((color >> 16) & 0xFF) / 255.0f;
   float ta = 1.0f;
   glUniform4f(prog->tint_u, tr, tg, tb, ta);
 
@@ -599,6 +603,9 @@ bool bake_texture_effect(int src_tex, int w, int h,
   GLint prev_fbo = 0, prev_prog = 0;
   GLint prev_view[4] = {0};
   GLint prev_scissor[4] = {0};
+  GLfloat prev_clear[4] = {0};
+  GLboolean prev_blend = glIsEnabled(GL_BLEND);
+  GLboolean prev_depth = glIsEnabled(GL_DEPTH_TEST);
   mat4 prev_proj;
   memcpy(prev_proj, get_sprite_matrix(), sizeof(prev_proj));
 
@@ -606,6 +613,7 @@ bool bake_texture_effect(int src_tex, int w, int h,
   glGetIntegerv(GL_CURRENT_PROGRAM, &prev_prog);
   glGetIntegerv(GL_VIEWPORT, prev_view);
   glGetIntegerv(GL_SCISSOR_BOX, prev_scissor);
+  glGetFloatv(GL_COLOR_CLEAR_VALUE, prev_clear);
 
   glGenTextures(1, &tex);
   glBindTexture(GL_TEXTURE_2D, tex);
@@ -635,19 +643,53 @@ bool bake_texture_effect(int src_tex, int w, int h,
   glDrawBuffer(GL_COLOR_ATTACHMENT0);
   glViewport(0, 0, w, h);
   glScissor(0, 0, w, h);
+  glDisable(GL_BLEND);
+  glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+  glClear(GL_COLOR_BUFFER_BIT);
   set_projection(0, 0, w, h);
-  draw_rect_effect(src_tex, 0, 0, w, h, effect, params);
+  push_sprite_effect_args(src_tex, 0, 0, w, h, 1.0f, effect, params);
+  glDisable(GL_DEPTH_TEST);
+  g_ref.mesh.draw_mode = GL_TRIANGLE_FAN;
+  R_MeshDraw(&g_ref.mesh);
+  glEnable(GL_DEPTH_TEST);
 
   glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)prev_fbo);
   glDeleteFramebuffers(1, &fbo);
   glUseProgram((GLuint)prev_prog);
   glViewport(prev_view[0], prev_view[1], prev_view[2], prev_view[3]);
   glScissor(prev_scissor[0], prev_scissor[1], prev_scissor[2], prev_scissor[3]);
+  glClearColor(prev_clear[0], prev_clear[1], prev_clear[2], prev_clear[3]);
+  if (prev_blend) glEnable(GL_BLEND); else glDisable(GL_BLEND);
+  if (prev_depth) glEnable(GL_DEPTH_TEST); else glDisable(GL_DEPTH_TEST);
   update_sprite_projection_uniforms(prev_proj);
   glUseProgram((GLuint)prev_prog);
 
   *out_tex = tex;
   return true;
+}
+
+bool bake_texture_blur(int src_tex, int w, int h, int radius,
+                       uint32_t *out_tex) {
+  if (!out_tex) return false;
+  *out_tex = 0;
+  if (!g_ui_runtime.running || src_tex == 0 || w <= 0 || h <= 0)
+    return false;
+
+  radius = CLAMP(radius, 1, 16);
+  ui_render_effect_params_t p = {{0}};
+  uint32_t tmp = 0;
+  p.f[0] = 1.0f / (float)w;
+  p.f[1] = 0.0f;
+  p.f[2] = (float)radius;
+  if (!bake_texture_effect(src_tex, w, h, UI_RENDER_EFFECT_BLUR, &p, &tmp))
+    return false;
+
+  p.f[0] = 0.0f;
+  p.f[1] = 1.0f / (float)h;
+  p.f[2] = (float)radius;
+  bool ok = bake_texture_effect((int)tmp, w, h, UI_RENDER_EFFECT_BLUR, &p, out_tex);
+  R_DeleteTexture(tmp);
+  return ok;
 }
 
 bool bake_texture_program(int src_tex, int w, int h, uint32_t program,

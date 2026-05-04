@@ -376,6 +376,40 @@ static void canvas_draw_grid(canvas_win_state_t *state, int win_w, int win_h) {
   }
 }
 
+static void canvas_draw_selection_mask_overlay(canvas_doc_t *doc,
+                                               canvas_win_state_t *state) {
+  if (!doc || !state || !doc->sel_active || !doc->sel_mask || !g_app) return;
+  if (!g_ui_runtime.running) return;
+
+  if (!doc->sel_mask_tex) {
+    glGenTextures(1, &doc->sel_mask_tex);
+    glBindTexture(GL_TEXTURE_2D, doc->sel_mask_tex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    GLint swizzle[] = { GL_ONE, GL_ONE, GL_ONE, GL_RED };
+    glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzle);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, doc->canvas_w, doc->canvas_h, 0,
+                 GL_RED, GL_UNSIGNED_BYTE, doc->sel_mask);
+    doc->sel_mask_dirty = false;
+  } else if (doc->sel_mask_dirty) {
+    glBindTexture(GL_TEXTURE_2D, doc->sel_mask_tex);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, doc->canvas_w, doc->canvas_h,
+                    GL_RED, GL_UNSIGNED_BYTE, doc->sel_mask);
+    doc->sel_mask_dirty = false;
+  }
+
+  int cx = -state->pan_x;
+  int cy = -state->pan_y;
+  int cw = scaled_px(doc->canvas_w, state->scale);
+  int ch = scaled_px(doc->canvas_h, state->scale);
+  draw_sprite_region((int)doc->sel_mask_tex, R(cx, cy, cw, ch),
+                     NULL, g_app->wand_overlay_color, 0);
+}
+
 result_t win_canvas_proc(window_t *win, uint32_t msg,
                           uint32_t wparam, void *lparam) {
   canvas_win_state_t *state = (canvas_win_state_t *)win->userdata;
@@ -454,6 +488,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       // Draw grid overlay (same checker-texture mechanism as selection)
       canvas_draw_grid(state, win->frame.w, win->frame.h);
 
+      canvas_draw_selection_mask_overlay(doc, state);
+
       if (doc->sel_moving && doc->float_tex) {
         // Draw the floating selection at its current position
         int sx = scaled_px(doc->float_pos.x, state->scale);
@@ -462,7 +498,9 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         int sh = scaled_px(doc->float_h, state->scale);
         draw_rect(doc->float_tex, R(sx, sy, sw, sh));
         draw_sel_rect(R(sx, sy, sw, sh));
-      } else if (doc->sel_active) {
+      } else if (doc->sel_active &&
+                 (IMAGEEDITOR_SHOW_SELECTION_BOUNDS ||
+                  (g_app && g_app->current_tool == ID_TOOL_SELECT && doc->drawing))) {
         int x0 = scaled_px(MIN(doc->sel_start.x, doc->sel_end.x), state->scale) - state->pan_x;
         int y0 = scaled_px(MIN(doc->sel_start.y, doc->sel_end.y), state->scale) - state->pan_y;
         int x1 = scaled_px(MAX(doc->sel_start.x, doc->sel_end.x) + 1, state->scale) - state->pan_x;
@@ -472,8 +510,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       // Polygon in-progress: draw a sel_rect bounding the rubber-band edge
       // from the last committed vertex to the current mouse position.
       if (doc->poly_active && doc->poly_count > 0) {
-        point_t v0 = doc->poly_pts[doc->poly_count - 1];
-        point_t v1 = doc->last;
+        ipoint16_t v0 = doc->poly_pts[doc->poly_count - 1];
+        ipoint16_t v1 = doc->last;
         int px0 = scaled_px(MIN(v0.x, v1.x), state->scale) - state->pan_x;
         int py0 = scaled_px(MIN(v0.y, v1.y), state->scale) - state->pan_y;
         int px1 = scaled_px(MAX(v0.x, v1.x) + 1, state->scale) - state->pan_x;
@@ -664,6 +702,20 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         return true;
       }
 
+      if (tool == ID_TOOL_MAGIC_WAND) {
+        if (!canvas_in_bounds(doc, px, py)) return true;
+        if (doc->sel_moving) canvas_commit_move(doc);
+        if (canvas_magic_wand_select(doc, px, py,
+                                     g_app->wand_spread,
+                                     g_app->wand_antialias)) {
+          IE_DEBUG("magic_wand_select doc=%p at=(%d,%d) spread=%d aa=%d",
+                   (void *)doc, px, py,
+                   g_app->wand_spread, g_app->wand_antialias);
+          invalidate_window(win);
+        }
+        return true;
+      }
+
       // Polygon: accumulate vertices on each click; commit on right-click
       if (tool == ID_TOOL_POLYGON) {
         if (!doc->poly_active) {
@@ -674,7 +726,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           IE_DEBUG("polygon_begin doc=%p at=(%d,%d)", (void *)doc, px, py);
         }
         if (doc->poly_count < (int)(sizeof(doc->poly_pts)/sizeof(doc->poly_pts[0]))) {
-          doc->poly_pts[doc->poly_count++] = (point_t){px, py};
+          doc->poly_pts[doc->poly_count++] = (ipoint16_t){px, py};
           IE_DEBUG("polygon_point doc=%p count=%d at=(%d,%d)",
                    (void *)doc, doc->poly_count, px, py);
         }
@@ -704,6 +756,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       if (tool == ID_TOOL_CROP) {
         doc->drawing = true;
         doc->sel_active = false;
+        canvas_clear_selection_mask(doc);
         doc->sel_start.x = doc->sel_end.x = px;
         doc->sel_start.y = doc->sel_end.y = py;
         doc->sel_active = true;
@@ -742,6 +795,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
             // Start a new selection; commit any in-progress move first.
             if (doc->sel_moving) canvas_commit_move(doc);
             doc->sel_active = false;
+            canvas_clear_selection_mask(doc);
             doc->sel_start.x = doc->sel_end.x = px;
             doc->sel_start.y = doc->sel_end.y = py;
             doc->sel_active = true;
@@ -791,7 +845,6 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           apply_zoom_centered(win, state, new_scale, cx, cy, mx, my);
         return true;
       } else if (g_app->current_tool == ID_TOOL_POLYGON && doc->poly_active && doc->poly_count >= 2) {
-        int point_count = doc->poly_count;
         if (g_app->shape_filled)
           canvas_draw_polygon_filled(doc, doc->poly_pts, doc->poly_count, g_app->fg_color, g_app->bg_color);
         else
@@ -802,10 +855,10 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         // in the polygon start handler; shape_snapshot holds the pre-draw state.
         // We need undo_states[top] = pre-draw, but it currently = pre-draw (correct!).
         // Nothing extra needed — doc_push_undo was called at polygon start.
+        IE_DEBUG("polygon_commit doc=%p points=%d", (void *)doc, doc->poly_count);
         doc->poly_active = false;
         doc->poly_count  = 0;
         doc->modified = true;
-        IE_DEBUG("polygon_commit doc=%p points=%d", (void *)doc, point_count);
         doc_update_title(doc);
         invalidate_window(win);
         return true;
@@ -967,6 +1020,10 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
               doc->sel_start.y == doc->sel_end.y) {
             canvas_deselect(doc);
             IE_DEBUG("selection_deselect_zero_area doc=%p", (void *)doc);
+          } else {
+            canvas_select_rect(doc,
+                               doc->sel_start.x, doc->sel_start.y,
+                               doc->sel_end.x, doc->sel_end.y);
           }
         }
         if (tool == ID_TOOL_CROP && doc->sel_active) {

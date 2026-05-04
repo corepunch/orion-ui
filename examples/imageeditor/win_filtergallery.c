@@ -5,15 +5,6 @@
 
 #include "imageeditor.h"
 
-#define FG_CLIENT_W       560
-#define FG_CLIENT_H       360
-#define FG_LEFT_X          14
-#define FG_LEFT_Y          18
-#define FG_MAIN_SIZE      248
-#define FG_LIST_X         286
-#define FG_LIST_Y          18
-#define FG_LIST_W         256
-#define FG_LIST_H         290
 #if UI_WINDOW_SCALE > 1
 #define FG_ICON_SIZE       64
 #define FG_ICON_CELL_W     74
@@ -21,13 +12,7 @@
 #define FG_ICON_SIZE       64
 #define FG_ICON_CELL_W     72
 #endif
-#define FG_BUTTON_W        66
-#define FG_BUTTON_GAP       8
-#define FG_BUTTON_Y       326
-#define FG_BTN_OK        5001
-#define FG_BTN_CANCEL    5002
 #define FG_PREVIEW_TEX    384
-#define FG_LIST_ID       4001
 
 typedef struct {
   canvas_doc_t *doc;
@@ -37,13 +22,6 @@ typedef struct {
   bitmap_strip_t thumb_strip; // strip descriptor pointing at thumb_sheet_tex
   bool accepted;
 } filter_gallery_state_t;
-
-static void draw_outline(irect16_t r, uint32_t col) {
-  fill_rect(col, R(r.x, r.y, r.w, 1));
-  fill_rect(col, R(r.x, r.y, 1, r.h));
-  fill_rect(col, R(r.x, r.y + r.h - 1, r.w, 1));
-  fill_rect(col, R(r.x + r.w - 1, r.y, 1, r.h));
-}
 
 static uint32_t filter_gallery_make_preview_tex(canvas_doc_t *doc) {
   if (!doc || doc->active_layer < 0 || doc->active_layer >= doc->layer_count)
@@ -117,17 +95,26 @@ static void filter_gallery_bake_thumbnails(filter_gallery_state_t *st) {
   st->thumb_strip.sheet_h = sz * count;
 }
 
-static void draw_filter_preview(filter_gallery_state_t *st, int filter_idx, irect16_t r) {
-  draw_checkerboard(r, 8);
-  if (!st || !st->preview_tex) {
-    fill_rect(get_sys_color(brWorkspaceBg), r);
-    return;
+static void filter_gallery_sync_preview(window_t *win, filter_gallery_state_t *st) {
+  if (!win) return;
+  window_t *preview = get_window_item(win, FG_ID_PREVIEW);
+  window_t *label = get_window_item(win, FG_ID_LABEL);
+  if (label) {
+    const char *text = "No filters loaded";
+    if (st && st->selected >= 0 && g_app && st->selected < g_app->filter_count)
+      text = g_app->filters[st->selected].name;
+    snprintf(label->title, sizeof(label->title), "%s", text);
+    invalidate_window(label);
   }
-  if (filter_idx >= 0 && g_app && filter_idx < g_app->filter_count)
-    draw_program_rect((int)st->preview_tex, r, g_app->filters[filter_idx].program, 1.0f);
-  else
-    draw_rect((int)st->preview_tex, r);
-  draw_outline(r, get_sys_color(brBorderActive));
+  if (preview) {
+    fg_preview_data_t data = {
+      .texture = st ? st->preview_tex : 0,
+      .program = (st && st->selected >= 0 && g_app &&
+                  st->selected < g_app->filter_count)
+                 ? g_app->filters[st->selected].program : 0,
+    };
+    send_message(preview, fgPreviewSetData, 0, &data);
+  }
 }
 
 // Apply the currently-selected filter and close the dialog with success.
@@ -156,13 +143,10 @@ static result_t filter_gallery_proc(window_t *win, uint32_t msg,
       st->selected = (g_app && g_app->filter_count > 0) ? 0 : -1;
       st->preview_tex = filter_gallery_make_preview_tex(st->doc);
       filter_gallery_bake_thumbnails(st);
+      filter_gallery_sync_preview(win, st);
 
-      window_t *list = create_window("",
-                                     WINDOW_NOTITLE | WINDOW_NORESIZE,
-                                     MAKERECT(FG_LIST_X, FG_LIST_Y, FG_LIST_W, FG_LIST_H),
-                                     win, win_reportview, 0, NULL);
+      window_t *list = get_window_item(win, FG_ID_LIST);
       if (list) {
-        list->id = FG_LIST_ID;
         send_message(list, RVM_SETVIEWMODE,  RVM_VIEW_LARGE_ICON, NULL);
         send_message(list, RVM_SETCOLUMNWIDTH, FG_ICON_CELL_W, NULL);
         send_message(list, RVM_SETICONSIZE,  FG_ICON_SIZE, NULL);
@@ -181,52 +165,26 @@ static result_t filter_gallery_proc(window_t *win, uint32_t msg,
         if (st->selected >= 0)
           send_message(list, RVM_SETSELECTION, (uint32_t)st->selected, NULL);
       }
-
-      window_t *ok = create_window("OK", BUTTON_DEFAULT,
-                                   MAKERECT(FG_CLIENT_W - 2 * FG_BUTTON_W - FG_BUTTON_GAP - 16,
-                                            FG_BUTTON_Y, FG_BUTTON_W, BUTTON_HEIGHT),
-                                   win, win_button, 0, NULL);
-      if (ok) ok->id = FG_BTN_OK;
-      window_t *cancel = create_window("Cancel", 0,
-                                       MAKERECT(FG_CLIENT_W - FG_BUTTON_W - 16,
-                                                FG_BUTTON_Y, FG_BUTTON_W, BUTTON_HEIGHT),
-                                       win, win_button, 0, NULL);
-      if (cancel) cancel->id = FG_BTN_CANCEL;
       return true;
     }
 
-    case evPaint: {
-      irect16_t preview = R(FG_LEFT_X, FG_LEFT_Y, FG_MAIN_SIZE, FG_MAIN_SIZE);
-      fill_rect(get_sys_color(brWindowDarkBg), rect_inset(preview, -2));
-      draw_filter_preview(st, st ? st->selected : -1, preview);
-      if (st && st->selected >= 0 && g_app && st->selected < g_app->filter_count) {
-        irect16_t name_r = R(FG_LEFT_X, FG_LEFT_Y + FG_MAIN_SIZE + 10,
-                          FG_MAIN_SIZE, CONTROL_HEIGHT);
-        draw_text_clipped(FONT_SMALL, g_app->filters[st->selected].name, &name_r,
-                          get_sys_color(brTextNormal), TEXT_ALIGN_CENTER);
-      } else {
-        irect16_t msg_r = R(FG_LEFT_X, FG_LEFT_Y + FG_MAIN_SIZE + 10,
-                         FG_MAIN_SIZE, CONTROL_HEIGHT);
-        draw_text_clipped(FONT_SMALL, "No filters loaded", &msg_r,
-                          get_sys_color(brTextDisabled), TEXT_ALIGN_CENTER);
-      }
+    case evPaint:
       return false;
-    }
 
     case evCommand:
       if (HIWORD(wparam) == RVN_SELCHANGE) {
         // Selection changed in the thumbnail list — update the large preview.
         window_t *src = (window_t *)lparam;
-        if (st && src && src->id == FG_LIST_ID) {
+        if (st && src && src->id == FG_ID_LIST) {
           st->selected = (int)(uint16_t)LOWORD(wparam);
-          invalidate_window(win);
+          filter_gallery_sync_preview(win, st);
         }
         return true;
       }
       if (HIWORD(wparam) == RVN_DBLCLK) {
         // Double-click in the list acts like pressing OK.
         window_t *src = (window_t *)lparam;
-        if (st && src && src->id == FG_LIST_ID) {
+        if (st && src && src->id == FG_ID_LIST) {
           st->selected = (int)(uint16_t)LOWORD(wparam);
           filter_gallery_accept(win, st);
         }
@@ -234,11 +192,11 @@ static result_t filter_gallery_proc(window_t *win, uint32_t msg,
       }
       if (HIWORD(wparam) == btnClicked) {
         uint16_t id = LOWORD(wparam);
-        if (id == FG_BTN_OK) {
+        if (id == FG_ID_OK) {
           filter_gallery_accept(win, st);
           return true;
         }
-        if (id == FG_BTN_CANCEL) {
+        if (id == FG_ID_CANCEL) {
           end_dialog(win, 0);
           return true;
         }
@@ -264,6 +222,15 @@ static result_t filter_gallery_proc(window_t *win, uint32_t msg,
 
 bool show_filter_gallery_dialog(window_t *parent) {
   if (!g_app || !g_app->active_doc) return false;
+  if (!find_window_class_proc(FG_PREVIEW_CLASS_NAME)) {
+    IE_DEBUG("Filter Gallery unavailable: imageeditor_components plugin is not loaded");
+    if (parent)
+      message_box(parent,
+                  "Filter Gallery controls are unavailable because the image editor components plugin did not load.",
+                  "Filter Gallery",
+                  MB_OK);
+    return false;
+  }
   canvas_doc_t *doc = g_app->active_doc;
   if (doc->active_layer < 0 || doc->active_layer >= doc->layer_count)
     return false;
@@ -273,9 +240,8 @@ bool show_filter_gallery_dialog(window_t *parent) {
   st.doc = doc;
   st.selected = -1;
 
-  irect16_t wr = {0, 0, FG_CLIENT_W, FG_CLIENT_H};
-  adjust_window_rect(&wr, WINDOW_DIALOG | WINDOW_NOTRAYBUTTON);
-  uint32_t res = show_dialog_ex("Filter Gallery", wr.w, wr.h, parent,
+  uint32_t res = show_dialog_from_form_ex(&imageeditor_filter_gallery_form,
+                                "Filter Gallery", parent,
                                 WINDOW_DIALOG | WINDOW_NOTRAYBUTTON,
                                 filter_gallery_proc, &st);
   if (res && st.accepted && doc->win && st.selected >= 0 && st.selected < g_app->filter_count) {

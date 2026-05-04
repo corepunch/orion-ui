@@ -38,6 +38,7 @@
 #define FL_ICON_FILE    ICON_PAPER_BLANK   // regular file
 #define FL_COLOR_FOLDER 0xffa0d000u
 #define FL_COLOR_GEM    0xff50d050u  // bright green — executable .gem plugin
+#define FL_DUP_DBLCLICK_MS 250u
 
 // ---------------------------------------------------------------------------
 // Private state
@@ -49,6 +50,8 @@ typedef struct {
   int        count;
   int        cap;
   int        selected;          // index into items[], -1 when nothing selected
+  uint32_t   last_nav_dbl_time; // suppress duplicate platform double-clicks
+  uint32_t   last_nav_dbl_pos;
   fileitem_t notify_item;       // shallow copy used as lparam during send_message
 } filelist_data_t;
 
@@ -71,6 +74,8 @@ typedef struct {
 } fl_collect_ctx_t;
 
 static bool fl_matches_filter(const filelist_data_t *data, const char *name);
+static bool fl_duplicate_nav_double_click(filelist_data_t *data, uint32_t pos,
+                                          uint32_t now);
 
 static int fl_sort_compare(const void *a, const void *b) {
   const fl_sort_entry_t *ea = (const fl_sort_entry_t *)a;
@@ -270,6 +275,14 @@ static void fl_navigate(window_t *win, filelist_data_t *data, int index) {
                MAKEDWORD(0, FLN_NAVDIR), data->curpath);
 }
 
+static bool fl_duplicate_nav_double_click(filelist_data_t *data, uint32_t pos,
+                                          uint32_t now) {
+  return data &&
+         data->last_nav_dbl_pos == pos &&
+         data->last_nav_dbl_time != 0 &&
+         now - data->last_nav_dbl_time < FL_DUP_DBLCLICK_MS;
+}
+
 // ---------------------------------------------------------------------------
 // Window procedure
 // ---------------------------------------------------------------------------
@@ -367,10 +380,16 @@ result_t win_filelist(window_t *win, uint32_t msg,
     // double navigation bug where two evLeftButtonDown events arrive
     // before evLeftButtonDoubleClick.
     case evLeftButtonDoubleClick: {
+      uint32_t now = axGetMilliseconds();
+      if (fl_duplicate_nav_double_click(data, wparam, now))
+        return true;
+
       int index = fl_hit_index(win, data, wparam);
       if (index < 0) return true;
 
       if (data->items[index].is_directory) {
+        data->last_nav_dbl_pos = wparam;
+        data->last_nav_dbl_time = now ? now : 1;
         fl_navigate(win, data, index);
       } else {
         data->notify_item = data->items[index];

@@ -11,29 +11,54 @@ static const accel_t kAccelEntries[] = {
   { FVIRTKEY,          AX_KEY_BACKSPACE, ID_EDIT_DELETE },
 };
 
-// frame.y is now the window top (title bar top), not the client area top.
-// Place the window so the title bar sits 4px below the menu bar.
-static int palette_win_y(void) {
-  return MENUBAR_HEIGHT + 4;
+static bool has_dynlib_ext(const char *path) {
+  if (!path) return false;
+  size_t n = strlen(path);
+  size_t e = strlen(AX_DYNLIB_EXT);
+  if (n < e) return false;
+  return strcmp(path + n - e, AX_DYNLIB_EXT) == 0;
+}
+
+static bool load_default_component_plugin(void) {
+  char path[4096];
+  int n = snprintf(path, sizeof(path), "%s/../lib/formeditor_components%s",
+                   ui_get_exe_dir(), AX_DYNLIB_EXT);
+  if (n <= 0 || (size_t)n >= sizeof(path))
+    return false;
+  return fe_load_component_plugin(path);
 }
 
 static void create_app_windows(hinstance_t hinstance) {
   g_app->menubar_win = set_app_menu(editor_menubar_proc, kMenus, kNumMenus,
                                     handle_menu_command, hinstance);
 
-  window_t *tp = create_window(
-      "Tools",
-      WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
-      MAKERECT(PALETTE_WIN_X, palette_win_y(), PALETTE_WIN_W, PALETTE_WIN_H),
-      NULL, win_tool_palette_proc, hinstance, NULL);
-  show_window(tp, true);
-  g_app->tool_win = tp;
+  formeditor_rebuild_tool_palette();
+
+  g_app->prop_win = property_browser_create(hinstance);
+  g_app->forms_win = forms_browser_create(hinstance);
+  g_app->plugins_win = plugins_browser_create(hinstance);
 }
 
 bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
-  (void)argc; (void)argv;
   g_app = calloc(1, sizeof(app_state_t));
   if (!g_app) return false;
+
+  load_default_component_plugin();
+  const char *project_path = NULL;
+  for (int i = 1; i < argc; i++) {
+    if (has_dynlib_ext(argv[i]))
+      fe_load_component_plugin(argv[i]);
+    else {
+      size_t n = strlen(argv[i]);
+      if (n >= 6 && strcmp(argv[i] + n - 6, ".orion") == 0)
+        project_path = argv[i];
+    }
+  }
+  if (fe_component_count() == 0) {
+    free(g_app);
+    g_app = NULL;
+    return false;
+  }
 
   g_app->current_tool = ID_TOOL_SELECT;
   g_app->hinstance = hinstance;
@@ -44,7 +69,8 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   if (g_app->menubar_win)
     send_message(g_app->menubar_win, kMenuBarMessageSetAccelerators, 0, g_app->accel);
 
-  create_form_doc(FORM_DEFAULT_W, FORM_DEFAULT_H);
+  if (!project_path || !form_project_load(project_path))
+    create_form_doc(FORM_DEFAULT_W, FORM_DEFAULT_H);
 
   // Show splash screen if the image is available.
 #ifdef SHAREDIR
@@ -64,8 +90,15 @@ void gem_shutdown(void) {
   if (!g_app) return;
   free_accelerators(g_app->accel);
   g_app->accel = NULL;
-  if (g_app->doc)
-    close_form_doc(g_app->doc);
+  fe_unload_component_plugins();
+  while (g_app->docs)
+    close_form_doc(g_app->docs);
+  if (g_app->prop_win)
+    destroy_window(g_app->prop_win);
+  if (g_app->forms_win)
+    destroy_window(g_app->forms_win);
+  if (g_app->plugins_win)
+    destroy_window(g_app->plugins_win);
   free(g_app);
   g_app = NULL;
 }

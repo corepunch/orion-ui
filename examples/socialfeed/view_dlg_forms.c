@@ -7,17 +7,17 @@
 // ============================================================
 
 static const form_ctrl_def_t kNewPostChildren[] = {
-  { FORM_CTRL_LABEL,     -1,                  { 4,  8, 58, 13 }, 0,              "Author:",  "lbl_author" },
-  { FORM_CTRL_TEXTEDIT,  ID_POST_AUTHOR_CTRL, { 64, 6, 200, 16 }, 0,             "",         "edit_author"},
+  { "label",     -1,                  { 4,  8, 58, 13 }, 0,              "Author:",  "lbl_author" },
+  { "textedit",  ID_POST_AUTHOR_CTRL, { 64, 6, 200, 16 }, 0,             "",         "edit_author"},
 
-  { FORM_CTRL_LABEL,     -1,                  { 4, 28, 58, 13 }, 0,              "Title:",   "lbl_title"  },
-  { FORM_CTRL_TEXTEDIT,  ID_POST_TITLE_CTRL,  { 64, 26, 200, 16 }, 0,            "",         "edit_title" },
+  { "label",     -1,                  { 4, 28, 58, 13 }, 0,              "Title:",   "lbl_title"  },
+  { "textedit",  ID_POST_TITLE_CTRL,  { 64, 26, 200, 16 }, 0,            "",         "edit_title" },
 
-  { FORM_CTRL_LABEL,     -1,                  { 4, 48, 58, 13 }, 0,              "Body:",    "lbl_body"   },
-  { FORM_CTRL_MULTIEDIT, ID_POST_BODY_CTRL,   { 64, 46, 200, 60 }, 0,            "",         "edit_body"  },
+  { "label",     -1,                  { 4, 48, 58, 13 }, 0,              "Body:",    "lbl_body"   },
+  { "multiedit", ID_POST_BODY_CTRL,   { 64, 46, 200, 60 }, 0,            "",         "edit_body"  },
 
-  { FORM_CTRL_BUTTON, ID_OK,     { 72, 118, 60, 18 }, BUTTON_DEFAULT, "Post",   "btn_ok"     },
-  { FORM_CTRL_BUTTON, ID_CANCEL, { 136, 118, 60, 18 }, 0,             "Cancel", "btn_cancel" },
+  { "button", ID_OK,     { 72, 118, 60, 18 }, BUTTON_DEFAULT, "Post",   "btn_ok"     },
+  { "button", ID_CANCEL, { 136, 118, 60, 18 }, 0,             "Cancel", "btn_cancel" },
 };
 
 typedef struct {
@@ -28,9 +28,9 @@ typedef struct {
 } new_post_state_t;
 
 static const ctrl_binding_t kNewPostBindings[] = {
-  { ID_POST_AUTHOR_CTRL, BIND_STRING,   offsetof(new_post_state_t, author), sizeof_field(new_post_state_t, author) },
-  { ID_POST_TITLE_CTRL,  BIND_STRING,   offsetof(new_post_state_t, title),  sizeof_field(new_post_state_t, title)  },
-  { ID_POST_BODY_CTRL,   BIND_MLSTRING, offsetof(new_post_state_t, body),   sizeof_field(new_post_state_t, body)   },
+  DDX_TEXT(ID_POST_AUTHOR_CTRL, new_post_state_t, author),
+  DDX_TEXT(ID_POST_TITLE_CTRL, new_post_state_t, title),
+  DDX_TEXT(ID_POST_BODY_CTRL, new_post_state_t, body),
 };
 
 static const form_def_t kNewPostForm = {
@@ -106,14 +106,14 @@ bool show_new_post_dialog(window_t *parent) {
 // ============================================================
 
 static const form_ctrl_def_t kNewCommentChildren[] = {
-  { FORM_CTRL_LABEL,    -1,               { 4,  8, 58, 13 }, 0,              "Author:", "lbl_author" },
-  { FORM_CTRL_TEXTEDIT, ID_CMT_AUTHOR_CTRL, { 64, 6, 188, 16 }, 0,           "",        "edit_author"},
+  { "label",    -1,               { 4,  8, 58, 13 }, 0,              "Author:", "lbl_author" },
+  { "textedit", ID_CMT_AUTHOR_CTRL, { 64, 6, 188, 16 }, 0,           "",        "edit_author"},
 
-  { FORM_CTRL_LABEL,    -1,               { 4, 28, 58, 13 }, 0,              "Text:",   "lbl_text"   },
-  { FORM_CTRL_TEXTEDIT, ID_CMT_TEXT_CTRL, { 64, 26, 188, 16 }, 0,            "",        "edit_text"  },
+  { "label",    -1,               { 4, 28, 58, 13 }, 0,              "Text:",   "lbl_text"   },
+  { "textedit", ID_CMT_TEXT_CTRL, { 64, 26, 188, 16 }, 0,            "",        "edit_text"  },
 
-  { FORM_CTRL_BUTTON, ID_OK,     { 62, 54, 60, 18 }, BUTTON_DEFAULT, "Submit", "btn_ok"     },
-  { FORM_CTRL_BUTTON, ID_CANCEL, { 126, 54, 60, 18 }, 0,             "Cancel", "btn_cancel" },
+  { "button", ID_OK,     { 62, 54, 60, 18 }, BUTTON_DEFAULT, "Submit", "btn_ok"     },
+  { "button", ID_CANCEL, { 126, 54, 60, 18 }, 0,             "Cancel", "btn_cancel" },
 };
 
 typedef struct {

@@ -122,7 +122,7 @@ result_t win_scrollbar(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       ns->dragging   = false;
       // Scrollbar children are routed through their parent's proc; they must
       // not intercept find_window hit-testing on their own.
-      win->notabstop = true;
+      win->flags |= WINDOW_NOTABSTOP;
       return true;
     }
 

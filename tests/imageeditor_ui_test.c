@@ -41,8 +41,9 @@ static void ie_setup(void) {
     g_app->current_tool = ID_TOOL_SELECT;
     g_app->fg_color     = MAKE_COLOR(0xFF,0x00,0x00,0xFF);
     g_app->bg_color     = MAKE_COLOR(0xFF,0xFF,0xFF,0xFF);
-    g_app->next_x       = DOC_START_X;
-    g_app->next_y       = DOC_START_Y;
+    g_app->wand_antialias = true;
+    g_app->wand_spread = 24;
+    g_app->wand_overlay_color = MAKE_COLOR(0x40, 0xA0, 0xFF, 0x55);
     // menubar_win left NULL: window_menu_rebuild guards against it.
     // tool_win / color_win created per-test as needed.
 }
@@ -176,8 +177,7 @@ void test_ie_close_multiple_documents(void) {
     PASS();
 }
 
-// New document windows should cascade from the actual clamped workspace
-// position, matching the familiar Windows down/right behavior.
+// New document windows should let Orion choose the default MDI cascade.
 void test_ie_document_windows_cascade(void) {
     TEST("create_document: second document opens down and right from first");
 
@@ -187,15 +187,14 @@ void test_ie_document_windows_cascade(void) {
     ASSERT_NOT_NULL(d1);
     ASSERT_NOT_NULL(d2);
 
-    ASSERT_EQUAL(d2->win->frame.x, d1->win->frame.x + DOC_CASCADE);
-    ASSERT_EQUAL(d2->win->frame.y, d1->win->frame.y + DOC_CASCADE);
+    ASSERT_EQUAL(d2->win->frame.x, d1->win->frame.x + DEFAULT_WINDOW_CASCADE_X);
+    ASSERT_EQUAL(d2->win->frame.y, d1->win->frame.y + DEFAULT_WINDOW_CASCADE_Y);
 
     ie_teardown();
     PASS();
 }
 
-// Full-workspace documents should still cascade instead of being forced back
-// to the workspace origin.
+// Full-workspace documents should still receive Orion's default cascade.
 void test_ie_large_document_windows_cascade(void) {
     TEST("create_document: large documents still cascade down and right");
 
@@ -205,8 +204,8 @@ void test_ie_large_document_windows_cascade(void) {
     ASSERT_NOT_NULL(d1);
     ASSERT_NOT_NULL(d2);
 
-    ASSERT_EQUAL(d2->win->frame.x, d1->win->frame.x + DOC_CASCADE);
-    ASSERT_EQUAL(d2->win->frame.y, d1->win->frame.y + DOC_CASCADE);
+    ASSERT_EQUAL(d2->win->frame.x, d1->win->frame.x + DEFAULT_WINDOW_CASCADE_X);
+    ASSERT_EQUAL(d2->win->frame.y, d1->win->frame.y + DEFAULT_WINDOW_CASCADE_Y);
 
     ie_teardown();
     PASS();
@@ -342,6 +341,9 @@ void test_ie_tool_selection_via_command(void) {
 
     handle_menu_command(ID_TOOL_SELECT);
     ASSERT_EQUAL(g_app->current_tool, ID_TOOL_SELECT);
+
+    handle_menu_command(ID_TOOL_MAGIC_WAND);
+    ASSERT_EQUAL(g_app->current_tool, ID_TOOL_MAGIC_WAND);
 
     ie_teardown();
     PASS();
@@ -721,6 +723,130 @@ void test_ie_shape_filled_state(void) {
 
     g_app->shape_filled = false;
     ASSERT_FALSE(g_app->shape_filled);
+
+    ie_teardown();
+    PASS();
+}
+
+void test_ie_magic_wand_selects_contiguous_color_region(void) {
+    TEST("magic wand: selects contiguous pixels within spread tolerance");
+
+    ie_setup();
+    canvas_doc_t *doc = create_document(NULL, 4, 3);
+    ASSERT_NOT_NULL(doc);
+
+    uint32_t red = MAKE_COLOR(0xF0, 0x10, 0x10, 0xFF);
+    uint32_t near_red = MAKE_COLOR(0xE8, 0x18, 0x12, 0xFF);
+    uint32_t blue = MAKE_COLOR(0x20, 0x20, 0xD0, 0xFF);
+
+    for (int y = 0; y < doc->canvas_h; y++)
+        for (int x = 0; x < doc->canvas_w; x++)
+            canvas_set_pixel(doc, x, y, blue);
+
+    canvas_set_pixel(doc, 0, 0, red);
+    canvas_set_pixel(doc, 1, 0, near_red);
+    canvas_set_pixel(doc, 0, 1, near_red);
+    canvas_set_pixel(doc, 3, 2, red); // same color, but not contiguous
+
+    ASSERT_TRUE(canvas_magic_wand_select(doc, 0, 0, 16, false));
+    ASSERT_TRUE(doc->sel_active);
+    ASSERT_NOT_NULL(doc->sel_mask);
+    ASSERT_TRUE(canvas_in_selection(doc, 0, 0));
+    ASSERT_TRUE(canvas_in_selection(doc, 1, 0));
+    ASSERT_TRUE(canvas_in_selection(doc, 0, 1));
+    ASSERT_FALSE(canvas_in_selection(doc, 1, 1));
+    ASSERT_FALSE(canvas_in_selection(doc, 3, 2));
+    ASSERT_EQUAL(doc->sel_start.x, 0);
+    ASSERT_EQUAL(doc->sel_start.y, 0);
+    ASSERT_EQUAL(doc->sel_end.x, 1);
+    ASSERT_EQUAL(doc->sel_end.y, 1);
+
+    ie_teardown();
+    PASS();
+}
+
+void test_ie_rect_selection_uses_mask(void) {
+    TEST("selection: rectangular selection creates per-pixel mask");
+
+    ie_setup();
+    canvas_doc_t *doc = create_document(NULL, 5, 4);
+    ASSERT_NOT_NULL(doc);
+
+    ASSERT_TRUE(canvas_select_rect(doc, 1, 1, 3, 2));
+    ASSERT_TRUE(doc->sel_active);
+    ASSERT_NOT_NULL(doc->sel_mask);
+    ASSERT_EQUAL(doc->sel_mask[(size_t)1 * doc->canvas_w + 1], 0);
+    ASSERT_EQUAL(doc->sel_mask[(size_t)0 * doc->canvas_w + 0], 255);
+    ASSERT_FALSE(canvas_in_selection(doc, 0, 1));
+    ASSERT_TRUE(canvas_in_selection(doc, 1, 1));
+    ASSERT_TRUE(canvas_in_selection(doc, 3, 2));
+    ASSERT_FALSE(canvas_in_selection(doc, 4, 2));
+
+    ie_teardown();
+    PASS();
+}
+
+void test_ie_move_masked_selection_preserves_shape(void) {
+    TEST("selection move: per-pixel mask shape moves without clearing bounding box");
+
+    ie_setup();
+    canvas_doc_t *doc = create_document(NULL, 5, 5);
+    ASSERT_NOT_NULL(doc);
+
+    uint32_t bg = MAKE_COLOR(0x20, 0x80, 0x20, 0xFF);
+    uint32_t red = MAKE_COLOR(0xE0, 0x10, 0x10, 0xFF);
+    for (int y = 0; y < doc->canvas_h; y++)
+        for (int x = 0; x < doc->canvas_w; x++)
+            canvas_set_pixel(doc, x, y, bg);
+
+    canvas_set_pixel(doc, 1, 1, red);
+    canvas_set_pixel(doc, 2, 1, red);
+    canvas_set_pixel(doc, 1, 2, red);
+
+    ASSERT_TRUE(canvas_magic_wand_select(doc, 1, 1, 0, false));
+    ASSERT_TRUE(canvas_in_selection(doc, 1, 1));
+    ASSERT_FALSE(canvas_in_selection(doc, 2, 2));
+
+    canvas_begin_move(doc, bg);
+    ASSERT_TRUE(doc->sel_moving);
+    doc->float_pos = (ipoint16_t){2, 2};
+    canvas_commit_move(doc);
+
+    ASSERT_FALSE(doc->sel_moving);
+    ASSERT_EQUAL(canvas_get_pixel(doc, 1, 1), bg);
+    ASSERT_EQUAL(canvas_get_pixel(doc, 2, 1), bg);
+    ASSERT_EQUAL(canvas_get_pixel(doc, 1, 2), bg);
+    ASSERT_EQUAL(canvas_get_pixel(doc, 2, 2), red);
+    ASSERT_EQUAL(canvas_get_pixel(doc, 3, 2), red);
+    ASSERT_EQUAL(canvas_get_pixel(doc, 2, 3), red);
+    ASSERT_EQUAL(canvas_get_pixel(doc, 3, 3), bg);
+    ASSERT_TRUE(canvas_in_selection(doc, 2, 2));
+    ASSERT_TRUE(canvas_in_selection(doc, 3, 2));
+    ASSERT_TRUE(canvas_in_selection(doc, 2, 3));
+    ASSERT_FALSE(canvas_in_selection(doc, 3, 3));
+
+    ie_teardown();
+    PASS();
+}
+
+void test_ie_selection_expand_contract_mask(void) {
+    TEST("selection: expand and contract operate on per-pixel mask");
+
+    ie_setup();
+    canvas_doc_t *doc = create_document(NULL, 5, 5);
+    ASSERT_NOT_NULL(doc);
+
+    ASSERT_TRUE(canvas_select_rect(doc, 2, 2, 2, 2));
+    ASSERT_TRUE(canvas_expand_selection(doc, 1));
+    ASSERT_TRUE(canvas_in_selection(doc, 1, 1));
+    ASSERT_TRUE(canvas_in_selection(doc, 2, 2));
+    ASSERT_TRUE(canvas_in_selection(doc, 3, 3));
+    ASSERT_FALSE(canvas_in_selection(doc, 0, 0));
+
+    ASSERT_TRUE(canvas_contract_selection(doc, 1));
+    ASSERT_FALSE(canvas_in_selection(doc, 1, 1));
+    ASSERT_TRUE(canvas_in_selection(doc, 2, 2));
+    ASSERT_FALSE(canvas_in_selection(doc, 3, 3));
 
     ie_teardown();
     PASS();
@@ -1435,6 +1561,10 @@ int main(int argc, char *argv[]) {
     test_ie_brush_sizes_array();
     test_ie_tool_switch_updates_options_panel();
     test_ie_shape_filled_state();
+    test_ie_magic_wand_selects_contiguous_color_region();
+    test_ie_rect_selection_uses_mask();
+    test_ie_move_masked_selection_preserves_shape();
+    test_ie_selection_expand_contract_mask();
     test_ie_brush_size_oob_clamp();
     // Layer management tests
     test_ie_layer_initial_state();

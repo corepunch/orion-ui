@@ -83,7 +83,7 @@ static int resize_anchor[2];
 static int handle_mouse(int msg, window_t *win, int x, int y) {
   for (window_t *c = win->children; c; c = c->next) {
     if (CONTAINS(x, y, c->frame.x, c->frame.y, c->frame.w, c->frame.h) &&
-        c->proc(c, msg, MAKEDWORD(x - c->frame.x, y - c->frame.y), NULL))
+        send_message(c, msg, MAKEDWORD(x - c->frame.x, y - c->frame.y), NULL))
     {
       return true;
     }
@@ -117,7 +117,7 @@ window_t* find_next_tab_stop(window_t *win, bool allow_current) {
   if (!win) return false;
   window_t *next;
   if ((next = find_next_tab_stop(win->children, true))) return next;
-  if (!win->notabstop && (win->parent || win->visible) && allow_current) return win;
+  if (!(win->flags & WINDOW_NOTABSTOP) && (win->parent || win->visible) && allow_current) return win;
   if ((next = find_next_tab_stop(win->next, true))) return next;
   return allow_current ? NULL : find_next_tab_stop(win->parent, false);
 }
@@ -140,9 +140,10 @@ window_t* find_prev_tab_stop(window_t* win) {
 // For app windows (hinstance != 0) the clicked window's entire app group is
 // brought to front, but only up to just below any system (h==0) ALWAYSONTOP
 // windows (shell menu bar, popup menus, etc.).  Within the app group, normal
-// windows come first and WINDOW_ALWAYSONTOP windows come last, so a toolbox or
-// palette stays above its own document windows while remaining below the active
-// shell menus and below any other app's windows when that app is active.
+// windows come first, WINDOW_ALWAYSONTOP windows come next, and WINDOW_DIALOG
+// windows come last, so modal dialogs stay above their app's palettes while
+// remaining below active shell menus and below any other app's windows when
+// that app is active.
 void move_to_top(window_t* _win) {
   extern window_t *get_root_window(window_t *window);
 
@@ -174,8 +175,9 @@ void move_to_top(window_t* _win) {
       return;
     }
 
-    if (win->flags & WINDOW_ALWAYSONTOP) {
-      // Append to absolute tail — globally on top of everything.
+    if (win->flags & (WINDOW_ALWAYSONTOP | WINDOW_DIALOG)) {
+      // Append to absolute tail — globally on top of everything. Standalone
+      // apps use hinstance 0, so dialogs must also sort after their palettes.
       window_t *tail = *head;
       while (tail->next)
         tail = tail->next;
@@ -200,11 +202,13 @@ void move_to_top(window_t* _win) {
   // app-window section, which sits below system (h==0) ALWAYSONTOP windows.
   //
   // The group is ordered: normals first (clicked window last = on top),
-  // then ALWAYSONTOP windows (clicked window last = on top within group).
+  // then ALWAYSONTOP windows, then WINDOW_DIALOG windows. Dialogs are last so
+  // modal file/message pickers cover same-app floating palettes.
 
   // Step 1: Extract all windows of this app from the global list.
   window_t *n_head = NULL, *n_tail = NULL;  // normal windows sublist
   window_t *t_head = NULL, *t_tail = NULL;  // ALWAYSONTOP windows sublist
+  window_t *d_head = NULL, *d_tail = NULL;  // dialog windows sublist
 
   window_t *prev = NULL, *cur = g_ui_runtime.windows;
   while (cur) {
@@ -218,7 +222,10 @@ void move_to_top(window_t* _win) {
       if (cur != win) {
         // Append all other app windows to their respective sublists now;
         // win itself is appended last (after the loop) so it ends up on top.
-        if (cur->flags & WINDOW_ALWAYSONTOP) {
+        if (cur->flags & WINDOW_DIALOG) {
+          if (d_tail) d_tail->next = cur; else d_head = cur;
+          d_tail = cur;
+        } else if (cur->flags & WINDOW_ALWAYSONTOP) {
           if (t_tail) t_tail->next = cur; else t_head = cur;
           t_tail = cur;
         } else {
@@ -234,7 +241,10 @@ void move_to_top(window_t* _win) {
   }
 
   // Append win at the END of its sublist so it is topmost within the group.
-  if (win->flags & WINDOW_ALWAYSONTOP) {
+  if (win->flags & WINDOW_DIALOG) {
+    if (d_tail) d_tail->next = win; else d_head = win;
+    d_tail = win;
+  } else if (win->flags & WINDOW_ALWAYSONTOP) {
     if (t_tail) t_tail->next = win; else t_head = win;
     t_tail = win;
   } else {
@@ -243,10 +253,12 @@ void move_to_top(window_t* _win) {
   }
   win->next = NULL;
 
-  // Chain the two sublists: normals → topmost.
+  // Chain the sublists: normals -> topmost -> dialogs.
   if (n_tail) n_tail->next = t_head;
-  window_t *group_head = n_head ? n_head : t_head;
-  window_t *group_tail = t_tail ? t_tail : n_tail;
+  if (t_tail) t_tail->next = d_head;
+  else if (n_tail) n_tail->next = d_head;
+  window_t *group_head = n_head ? n_head : (t_head ? t_head : d_head);
+  window_t *group_tail = d_tail ? d_tail : (t_tail ? t_tail : n_tail);
 
   if (!group_head) return;
 
@@ -507,18 +519,18 @@ void dispatch_message(ui_event_t *msg) {
         }
         int lx = LOCAL_X(px, py, win);
         int ly = LOCAL_Y(px, py, win);
-        // Resize handle: use frame-relative y (from window top) so the check
-        // naturally maps to the bottom-right corner of the total frame.
-        int ly_frame = SCALE_POINT(py) - win->frame.y;
-        if (lx >= win->frame.w - SCROLLBAR_WIDTH &&
-            ly_frame >= win->frame.h - SCROLLBAR_WIDTH &&
-            !win->parent &&
-            !(win->flags&WINDOW_NORESIZE) &&
+        window_t *resize_target = (win == click_root || win->parent) ? click_root : NULL;
+        int root_lx = resize_target ? sx - resize_target->frame.x : 0;
+        int root_ly = resize_target ? sy - resize_target->frame.y : 0;
+        if (resize_target &&
+            root_lx >= resize_target->frame.w - SCROLLBAR_WIDTH &&
+            root_ly >= resize_target->frame.h - SCROLLBAR_WIDTH &&
+            !(resize_target->flags&WINDOW_NORESIZE) &&
             win != g_ui_runtime.captured)
         {
-          g_ui_runtime.resizing = win;
-          resize_anchor[0] = SCALE_POINT(px) - (win->frame.x + win->frame.w);
-          resize_anchor[1] = SCALE_POINT(py) - (win->frame.y + win->frame.h);
+          g_ui_runtime.resizing = resize_target;
+          resize_anchor[0] = sx - (resize_target->frame.x + resize_target->frame.w);
+          resize_anchor[1] = sy - (resize_target->frame.y + resize_target->frame.h);
         } else if (window_in_drag_area(win, SCALE_POINT(py)) && win != g_ui_runtime.captured) {
           g_ui_runtime.dragging = win;
           drag_anchor[0] = SCALE_POINT(px) - win->frame.x;

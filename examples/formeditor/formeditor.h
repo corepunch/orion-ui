@@ -13,15 +13,12 @@
 // Layout constants
 // ============================================================
 
-#define SCREEN_W          640
-#define SCREEN_H          480
+#define SCREEN_W          800
+#define SCREEN_H          600
 
 // Default form dimensions
 #define FORM_DEFAULT_W    320
-#define FORM_DEFAULT_H    200
-
-// Padding around the form inside the canvas window
-#define CANVAS_PADDING    10
+#define FORM_DEFAULT_H    240
 
 // Tool palette — formeditor uses 21px icons inside 26px square buttons.
 // toolbox.png: 63x299 pixels = 3 cols x N rows of 21x21 px icons
@@ -29,41 +26,34 @@
 #define FE_TOOLBOX_ICON_W   21   // icon tile size in toolbox.png
 #define FE_TOOLBOX_BTN_SIZE 26   // square button size used for the formeditor
 
-// Palette window dimensions — 2 button columns, rows computed from NUM_TOOLS.
+// Palette window dimensions.
 #define PALETTE_WIN_X     4
 #define PALETTE_WIN_W     (TOOLBOX_COLS * FE_TOOLBOX_BTN_SIZE)
-#define PALETTE_GRID_ROWS ((NUM_TOOLS + TOOLBOX_COLS - 1) / TOOLBOX_COLS)
-#define PALETTE_WIN_H     (TITLEBAR_HEIGHT + PALETTE_GRID_ROWS * FE_TOOLBOX_BTN_SIZE + 4)
+
+// Property browser window.  This is intentionally a reportview-backed
+// inspector: close to VB1's simple property sheet, without inline editing yet.
+#define PROPBROWSER_WIN_X (SCREEN_W - 184)
+#define PROPBROWSER_WIN_W 180
+#define PROPBROWSER_WIN_H 180
+
+// Project forms browser.
+#define FORMS_WIN_X       PROPBROWSER_WIN_X
+#define FORMS_WIN_Y       (MENUBAR_HEIGHT + 4)
+#define FORMS_WIN_W       PROPBROWSER_WIN_W
+#define FORMS_WIN_H       180
+
+#define PROPBROWSER_WIN_Y (FORMS_WIN_Y + FORMS_WIN_H + 4)
+
+// Project plugins browser.
+#define PLUGINS_WIN_X     PROPBROWSER_WIN_X
+#define PLUGINS_WIN_Y     (PROPBROWSER_WIN_Y + PROPBROWSER_WIN_H + 4)
+#define PLUGINS_WIN_W     PROPBROWSER_WIN_W
+#define PLUGINS_WIN_H     (SCREEN_H - PLUGINS_WIN_Y - 4)
 
 // Document window initial position
 // frame.y is the window top; place it 8px below the menu bar.
 #define DOC_START_X       (PALETTE_WIN_X + PALETTE_WIN_W + 10)
 #define DOC_START_Y       (MENUBAR_HEIGHT + 8)
-#define DOC_WIN_W         320//(SCREEN_W - DOC_START_X - 4)
-// frame.h is the total window height (non-client + client).
-// The doc window uses WINDOW_STATUSBAR | WINDOW_HSCROLL; HSCROLL is merged
-// into the status bar row so no extra height is needed for HSCROLL.
-#define DOC_WIN_H         (240 + TITLEBAR_HEIGHT + STATUSBAR_HEIGHT)
-
-// ============================================================
-// Control types  (VB3 toolbox order, skipping unsupported)
-// Aliased to the framework's FORM_CTRL_* enum so that form_element_t.type
-// values are directly usable with create_window_from_form().
-// ============================================================
-
-#define CTRL_BUTTON    FORM_CTRL_BUTTON
-#define CTRL_CHECKBOX  FORM_CTRL_CHECKBOX
-#define CTRL_LABEL     FORM_CTRL_LABEL
-#define CTRL_TEXTEDIT  FORM_CTRL_TEXTEDIT
-#define CTRL_LIST      FORM_CTRL_LIST
-#define CTRL_COMBOBOX  FORM_CTRL_COMBOBOX
-#define CTRL_TYPE_COUNT FORM_CTRL_COUNT
-
-// ============================================================
-// Number of tools
-// ============================================================
-
-#define NUM_TOOLS  7
 
 // ============================================================
 // Menu item IDs
@@ -101,30 +91,47 @@
 #define MAX_ELEMENTS  256
 #define CTRL_ID_BASE  1001
 
+// Built-in component indices as registered by formeditor_components.
+// Kept as compatibility aliases for tests and older form editor code; project
+// files should use component tokens/class names instead.
+#define CTRL_BUTTON    0
+#define CTRL_CHECKBOX  1
+#define CTRL_LABEL     2
+#define CTRL_TEXTEDIT  3
+#define CTRL_LIST      4
+#define CTRL_COMBOBOX  5
+
 // ============================================================
 // Types
 // ============================================================
 
 typedef struct {
-  int      type;        // CTRL_* constant
+  int      type;        // registered component ID
   int      id;          // numeric control ID (e.g. 1001)
-  int      x, y, w, h;  // position and size in form coordinates
+  char     id_expr[32]; // original ID expression from project XML, if any
+  irect16_t frame;      // position and size in form coordinates
   uint32_t flags;        // reserved for future style flags
+  char     flags_expr[128]; // original flags expression from project XML, if any
   char     text[64];     // control caption / label text
   char     name[32];     // identifier name (e.g. "IDC_BUTTON1")
   window_t *live_win;    // design-time live control hosted on the canvas
 } form_element_t;
 
-typedef struct {
+typedef struct form_doc_t {
   form_element_t elements[MAX_ELEMENTS];
   int    element_count;
-  int    form_w, form_h;
+  isize16_t form_size;
+  uint32_t flags;       // form/window flags exported in form_def_t
   bool   modified;
-  char   filename[512];
+  char   form_id[64];
+  char   form_title[128];
+  char   owner[256];
+  char   required_plugin[64];
   int    next_id;                      // next numeric control ID
-  int    type_counters[CTRL_TYPE_COUNT]; // per-type name counter
+  int    type_counters[FE_MAX_COMPONENTS]; // per-component name counter
   window_t *canvas_win;
   window_t *doc_win;
+  struct form_doc_t *next;
   // Grid settings
   int    grid_size;       // dot spacing in form pixels (default 8)
   bool   show_grid;       // paint grid dots on the form surface
@@ -132,12 +139,35 @@ typedef struct {
 } form_doc_t;
 
 typedef struct {
+  char name[64];
+} form_plugin_ref_t;
+
+#define FE_MAX_PROJECT_PLUGINS 32
+
+typedef struct {
+  char filename[512];
+  char name[64];
+  char title[128];
+  char root[256];
+  char menus_xml[16384];
+  form_plugin_ref_t plugins[FE_MAX_PROJECT_PLUGINS];
+  int plugin_count;
+  bool loaded;
+  bool modified;
+} form_project_t;
+
+typedef struct {
   form_doc_t  *doc;
+  form_doc_t  *docs;
   window_t    *menubar_win;
   window_t    *tool_win;
+  window_t    *prop_win;
+  window_t    *forms_win;
+  window_t    *plugins_win;
   hinstance_t  hinstance;  // owning app instance
   int          current_tool;
   accel_table_t *accel;
+  form_project_t project;
 } app_state_t;
 
 // ============================================================
@@ -151,22 +181,45 @@ typedef enum {
   DRAG_RUBBERBND,
 } drag_mode_t;
 
+typedef struct {
+  int16_t x, y;
+} canvas_pt_t;
+
+typedef struct {
+  int16_t x, y;
+} form_pt_t;
+
+typedef struct {
+  drag_mode_t mode;
+  union {
+    struct {
+      canvas_pt_t start;
+      irect16_t   frame;
+    } move;
+    struct {
+      canvas_pt_t start;
+      irect16_t   frame;
+      int         handle;
+    } resize;
+    struct {
+      canvas_pt_t start;
+      irect16_t   band;       // rubber-band in form coords
+      int         ctrl_type;  // CTRL_* being placed
+    } place;
+  };
+} drag_state_t;
+
 // ============================================================
 // Canvas window state (stored in canvas_win->userdata)
 // ============================================================
 
 typedef struct {
   form_doc_t *doc;
-  window_t   *overlay_win;
   window_t   *preview_win;
   int         preview_type;
-  int         pan_x, pan_y;
+  ipoint16_t  pan;
   int         selected_idx;   // -1 = no selection
-  drag_mode_t drag_mode;
-  int         drag_handle;    // resize handle index, or -1
-  point_t     drag_start;     // window-local mouse pos at drag start
-  int         snap_x, snap_y, snap_w, snap_h; // element state at drag start
-  int         rb_x, rb_y, rb_w, rb_h;         // rubber-band in form coords
+  drag_state_t drag;
 } canvas_state_t;
 
 // ============================================================
@@ -185,8 +238,21 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
                           uint32_t wparam, void *lparam);
 result_t win_tool_palette_proc(window_t *win, uint32_t msg,
                                 uint32_t wparam, void *lparam);
+result_t win_property_browser_proc(window_t *win, uint32_t msg,
+                                    uint32_t wparam, void *lparam);
+result_t win_forms_browser_proc(window_t *win, uint32_t msg,
+                                uint32_t wparam, void *lparam);
+result_t win_plugins_browser_proc(window_t *win, uint32_t msg,
+                                  uint32_t wparam, void *lparam);
 void canvas_rebuild_live_controls(form_doc_t *doc);
 void canvas_sync_live_controls(form_doc_t *doc);
+void formeditor_rebuild_tool_palette(void);
+window_t *property_browser_create(hinstance_t hinstance);
+void property_browser_refresh(form_doc_t *doc);
+window_t *forms_browser_create(hinstance_t hinstance);
+void forms_browser_refresh(void);
+window_t *plugins_browser_create(hinstance_t hinstance);
+void plugins_browser_refresh(void);
 
 // ============================================================
 // Document helpers
@@ -195,13 +261,15 @@ void canvas_sync_live_controls(form_doc_t *doc);
 form_doc_t *create_form_doc(int w, int h);
 void        close_form_doc(form_doc_t *doc);
 void        form_doc_update_title(form_doc_t *doc);
+void        form_doc_activate(form_doc_t *doc);
+void        form_doc_show_only(form_doc_t *doc);
 
 // ============================================================
-// Form I/O
+// Project I/O
 // ============================================================
 
-bool form_save(form_doc_t *doc, const char *path);
-bool form_load(form_doc_t *doc, const char *path);
+bool form_project_load(const char *path);
+bool form_project_save(const char *path);
 
 // ============================================================
 // Menu dispatch
