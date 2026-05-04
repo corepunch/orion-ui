@@ -75,6 +75,16 @@ static void oct_insert(octree_t *oc, uint8_t r, uint8_t g, uint8_t b, uint8_t a)
   }
 }
 
+// Count the number of leaf nodes in a subtree.
+static int oct_count_leaves(const oct_node_t *n) {
+  if (!n) return 0;
+  if (n->is_leaf) return 1;
+  int total = 0;
+  for (int i = 0; i < OCT_CHILDREN; i++)
+    total += oct_count_leaves(n->children[i]);
+  return total;
+}
+
 // Reduce the deepest reducible node.
 static void oct_reduce(octree_t *oc) {
   // Find deepest non-empty level
@@ -93,14 +103,16 @@ static void oct_reduce(octree_t *oc) {
       b += n->children[i]->b;
       a += n->children[i]->a;
       cnt += n->children[i]->count;
+      // Decrement by the actual number of leaves in this child subtree
+      // (the child may be an internal node with multiple leaf descendants).
+      oc->leaf_count -= oct_count_leaves(n->children[i]);
       oct_free(n->children[i]);
       n->children[i] = NULL;
-      oc->leaf_count--;
     }
   }
   n->r = r; n->g = g; n->b = b; n->a = a; n->count = cnt;
   n->is_leaf = true;
-  oc->leaf_count++;
+  oc->leaf_count++; // the merged node becomes one new leaf
 }
 
 // Walk the tree and collect up to 256 leaf colours.
@@ -145,7 +157,7 @@ static uint8_t find_palette_idx(const uint32_t *palette, int pal_size,
 // palette[] receives up to 256 packed RGBA entries.
 // indices[] receives w*h index bytes.
 // Returns the number of palette entries produced (<=256), or 0 on failure.
-static int quantize_rgba_indexed(const uint8_t *rgba, int w, int h,
+int quantize_rgba_indexed(const uint8_t *rgba, int w, int h,
                                   uint32_t *palette, uint8_t *indices) {
   int npx = w * h;
   octree_t oc = {0};
@@ -180,32 +192,30 @@ bool anim_frame_compress(anim_frame_t *frame, const uint8_t *rgba,
                          int w, int h, frame_format_t fmt) {
   if (!frame || !rgba || w <= 0 || h <= 0) return false;
 
-  free(frame->data);
-  frame->data      = NULL;
-  frame->data_size = 0;
-  frame->format    = fmt;
-
   size_t npx = (size_t)w * (size_t)h;
+  uint8_t *new_data = NULL;
+  size_t   new_size = 0;
+  uint32_t new_palette[256];
+  memset(new_palette, 0, sizeof(new_palette));
 
   switch (fmt) {
     case FRAME_FORMAT_RGBA: {
       size_t sz = npx * 4;
-      frame->data = malloc(sz);
-      if (!frame->data) return false;
-      memcpy(frame->data, rgba, sz);
-      frame->data_size = sz;
-      return true;
+      new_data = malloc(sz);
+      if (!new_data) return false;
+      memcpy(new_data, rgba, sz);
+      new_size = sz;
+      break;
     }
 
     case FRAME_FORMAT_INDEXED: {
       uint8_t *indices = malloc(npx);
       if (!indices) return false;
-      memset(frame->palette, 0, sizeof(frame->palette));
-      int pal_sz = quantize_rgba_indexed(rgba, w, h, frame->palette, indices);
+      int pal_sz = quantize_rgba_indexed(rgba, w, h, new_palette, indices);
       if (pal_sz == 0) { free(indices); return false; }
-      frame->data      = indices;
-      frame->data_size = npx;
-      return true;
+      new_data = indices;
+      new_size = npx;
+      break;
     }
 
     case FRAME_FORMAT_BITMAP_1BIT: {
@@ -217,14 +227,23 @@ bool anim_frame_compress(anim_frame_t *frame, const uint8_t *rgba,
         if (lum > 128)
           bits[i / 8] |= (uint8_t)(1u << (7 - (i & 7)));
       }
-      frame->data      = bits;
-      frame->data_size = byte_count;
-      return true;
+      new_data = bits;
+      new_size = byte_count;
+      break;
     }
 
     default:
       return false;
   }
+
+  // New data allocated successfully — replace the old frame contents.
+  free(frame->data);
+  frame->data      = new_data;
+  frame->data_size = new_size;
+  frame->format    = fmt;
+  if (fmt == FRAME_FORMAT_INDEXED)
+    memcpy(frame->palette, new_palette, sizeof(new_palette));
+  return true;
 }
 
 bool anim_frame_expand(const anim_frame_t *frame, uint8_t *rgba_out,

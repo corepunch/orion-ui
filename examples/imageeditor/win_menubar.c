@@ -769,13 +769,37 @@ void handle_menu_command(uint16_t id) {
           doc->anim = anim_timeline_new(doc->canvas_w, doc->canvas_h);
         if (doc->anim) {
           // Commit current pixels to active frame, then insert after it.
-          anim_frame_compress(doc->anim->frames[doc->anim->active_frame],
-                              doc->pixels, doc->canvas_w, doc->canvas_h,
-                              FRAME_FORMAT_INDEXED);
-          int new_idx = anim_timeline_insert_frame(doc->anim,
-                                                    doc->anim->active_frame);
-          if (new_idx >= 0) {
-            anim_timeline_switch_frame(doc->anim, new_idx,
+          // Only proceed if compression succeeds (non-destructive on failure).
+          if (anim_frame_compress(doc->anim->frames[doc->anim->active_frame],
+                                  doc->pixels, doc->canvas_w, doc->canvas_h,
+                                  FRAME_FORMAT_INDEXED)) {
+            int new_idx = anim_timeline_insert_frame(doc->anim,
+                                                      doc->anim->active_frame);
+            if (new_idx >= 0) {
+              anim_timeline_switch_frame(doc->anim, new_idx,
+                                         &doc->pixels,
+                                         doc->canvas_w, doc->canvas_h,
+                                         FRAME_FORMAT_INDEXED);
+              if (doc->layer_count > 0)
+                doc->layers[doc->active_layer]->pixels = doc->pixels;
+              doc->canvas_dirty = true;
+              if (doc->canvas_win) invalidate_window(doc->canvas_win);
+              timeline_win_refresh();
+            }
+          }
+        }
+      }
+      break;
+
+    case ID_ANIM_DUPLICATE_FRAME:
+      if (doc && doc->anim) {
+        if (anim_frame_compress(doc->anim->frames[doc->anim->active_frame],
+                                doc->pixels, doc->canvas_w, doc->canvas_h,
+                                FRAME_FORMAT_INDEXED)) {
+          int dup_idx = anim_timeline_duplicate_frame(doc->anim,
+                                                       doc->anim->active_frame);
+          if (dup_idx >= 0) {
+            anim_timeline_switch_frame(doc->anim, dup_idx,
                                        &doc->pixels,
                                        doc->canvas_w, doc->canvas_h,
                                        FRAME_FORMAT_INDEXED);
@@ -789,36 +813,17 @@ void handle_menu_command(uint16_t id) {
       }
       break;
 
-    case ID_ANIM_DUPLICATE_FRAME:
-      if (doc && doc->anim) {
-        anim_frame_compress(doc->anim->frames[doc->anim->active_frame],
-                            doc->pixels, doc->canvas_w, doc->canvas_h,
-                            FRAME_FORMAT_INDEXED);
-        int dup_idx = anim_timeline_duplicate_frame(doc->anim,
-                                                     doc->anim->active_frame);
-        if (dup_idx >= 0) {
-          anim_timeline_switch_frame(doc->anim, dup_idx,
-                                     &doc->pixels,
-                                     doc->canvas_w, doc->canvas_h,
-                                     FRAME_FORMAT_INDEXED);
-          if (doc->layer_count > 0)
-            doc->layers[doc->active_layer]->pixels = doc->pixels;
-          doc->canvas_dirty = true;
-          if (doc->canvas_win) invalidate_window(doc->canvas_win);
-          timeline_win_refresh();
-        }
-      }
-      break;
-
     case ID_ANIM_DELETE_FRAME:
       if (doc && doc->anim) {
         if (anim_timeline_delete_frame(doc->anim, doc->anim->active_frame)) {
-          // Load the new active frame.
+          // Load the new active frame; fall back to blank on expand failure.
           anim_frame_t *af = doc->anim->frames[doc->anim->active_frame];
-          if (af->data && af->data_size > 0)
-            anim_frame_expand(af, doc->pixels, doc->canvas_w, doc->canvas_h);
-          else
-            memset(doc->pixels, 0xFF, (size_t)doc->canvas_w * doc->canvas_h * 4);
+          if (af->data && af->data_size > 0) {
+            if (!anim_frame_expand(af, doc->pixels, doc->canvas_w, doc->canvas_h))
+              memset(doc->pixels, 0, (size_t)doc->canvas_w * doc->canvas_h * 4);
+          } else {
+            memset(doc->pixels, 0, (size_t)doc->canvas_w * doc->canvas_h * 4);
+          }
           if (doc->layer_count > 0)
             doc->layers[doc->active_layer]->pixels = doc->pixels;
           doc->canvas_dirty = true;
@@ -832,8 +837,20 @@ void handle_menu_command(uint16_t id) {
       if (doc) {
         if (!doc->anim)
           doc->anim = anim_timeline_new(doc->canvas_w, doc->canvas_h);
-        if (doc->anim) {
+        if (doc->anim && !doc->anim->playing) {
           doc->anim->playing = true;
+          // Start a repeating timer; interval = frame period at current FPS.
+          // Default to 12 fps (≈83 ms) if fps is 0 or unset.
+          static const uint32_t kDefaultFrameIntervalMs = 83u; // ≈12 fps
+          uint32_t interval = (doc->anim->fps > 0)
+                              ? (uint32_t)(1000 / doc->anim->fps)
+                              : kDefaultFrameIntervalMs;
+          if (g_app) {
+            if (g_app->anim_timer_id)
+              axCancelTimer(g_app->anim_timer_id);
+            g_app->anim_timer_id = axSetTimer(
+                g_app->timeline_win, interval, NULL, (bool_t)1);
+          }
           timeline_win_refresh();
         }
       }
@@ -842,6 +859,10 @@ void handle_menu_command(uint16_t id) {
     case ID_ANIM_STOP:
       if (doc && doc->anim) {
         doc->anim->playing = false;
+        if (g_app && g_app->anim_timer_id) {
+          axCancelTimer(g_app->anim_timer_id);
+          g_app->anim_timer_id = 0;
+        }
         timeline_win_refresh();
       }
       break;

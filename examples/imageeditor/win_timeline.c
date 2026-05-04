@@ -98,7 +98,12 @@ static void sync_thumb_array(timeline_state_t *st, int frame_count) {
 
 static void rebuild_thumbnails(timeline_state_t *st) {
   canvas_doc_t *doc = tl_doc();
-  if (!doc || !doc->anim) return;
+  if (!doc || !doc->anim) {
+    // No active animation — release any stale thumbnails and stop retrying.
+    sync_thumb_array(st, 0);
+    st->thumbs_dirty = false;
+    return;
+  }
   sync_thumb_array(st, doc->anim->frame_count);
   for (int i = 0; i < doc->anim->frame_count; i++) {
     if (i < st->thumb_count)
@@ -302,6 +307,39 @@ static result_t timeline_proc(window_t *win, uint32_t msg,
         st->hover_cell = cell;
         invalidate_window(win);
       }
+      return true;
+    }
+
+    case evWheel: {
+      // Scroll the timeline horizontally.  The wheel delta is packed as
+      // MAKEDWORD(dx * sensitivity, dy * sensitivity) by the platform layer.
+      // For a horizontal strip, treat vertical scroll (dy) as horizontal too.
+      // Wheel-up (dy > 0) decreases scroll_x (scrolls timeline left,
+      // revealing earlier frames); wheel-down increases it (later frames).
+      if (!st) return true;
+      int16_t dy = (int16_t)(wparam >> 16);
+      int delta = -(int)dy; // negate: wheel-up → scroll left (negative offset)
+      if (delta == 0) return true;
+      irect16_t cr = get_client_rect(win);
+      canvas_doc_t *doc = tl_doc();
+      int content_w = doc && doc->anim
+                      ? doc->anim->frame_count * TIMELINE_THUMB_W
+                      : 0;
+      int viewport_w = cr.w - TIMELINE_CTRL_W;
+      int max_scroll = content_w - viewport_w;
+      if (max_scroll < 0) max_scroll = 0;
+      st->scroll_x += delta;
+      if (st->scroll_x < 0) st->scroll_x = 0;
+      if (st->scroll_x > max_scroll) st->scroll_x = max_scroll;
+      invalidate_window(win);
+      return true;
+    }
+
+    case evTimer: {
+      // Advance playback by one frame.
+      canvas_doc_t *doc = tl_doc();
+      if (doc && doc->anim && doc->anim->playing)
+        anim_tick(doc);
       return true;
     }
 

@@ -290,6 +290,7 @@ typedef struct {
   window_t      *layers_win;
 #if IMAGEEDITOR_ANIMATIONS
   window_t      *timeline_win;
+  uint32_t       anim_timer_id; // axSetTimer handle for playback; 0 = stopped
 #endif
   hinstance_t    hinstance;  // owning app instance
   int            current_tool;

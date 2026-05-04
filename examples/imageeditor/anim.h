@@ -55,6 +55,14 @@ struct anim_timeline_s {
   bool           playing;      // true while animation is running
 };
 
+// Quantize raw RGBA pixels to a ≤256-entry palette + index map.
+// palette[] receives up to 256 packed RGBA entries (MAKE_COLOR format).
+// indices[] receives w*h palette index bytes.
+// Returns the number of palette entries produced (≤256), or 0 on failure.
+// Declared here so export helpers in separate translation units can call it.
+int quantize_rgba_indexed(const uint8_t *rgba, int w, int h,
+                          uint32_t *palette, uint8_t *indices);
+
 // ============================================================
 // Frame compress / expand
 // ============================================================

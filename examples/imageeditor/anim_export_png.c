@@ -91,6 +91,16 @@ static void build_actl(uint8_t out[8], uint32_t num_frames, uint32_t num_plays) 
 }
 
 // Build an fcTL chunk payload (26 bytes).
+// APNG fcTL layout:
+//   [0..3]   sequence_number (BE)
+//   [4..7]   width (BE)
+//   [8..11]  height (BE)
+//   [12..15] x_offset (BE)
+//   [16..19] y_offset (BE)
+//   [20..21] delay_num (BE)
+//   [22..23] delay_den (BE)
+//   [24]     dispose_op
+//   [25]     blend_op
 static void build_fctl(uint8_t out[26], uint32_t seq, uint32_t w, uint32_t h,
                        uint16_t delay_num, uint16_t delay_den) {
   out[ 0] = (uint8_t)(seq >> 24); out[ 1] = (uint8_t)(seq >> 16);
@@ -99,16 +109,17 @@ static void build_fctl(uint8_t out[26], uint32_t seq, uint32_t w, uint32_t h,
   out[ 6] = (uint8_t)(w   >>  8); out[ 7] = (uint8_t)(w);
   out[ 8] = (uint8_t)(h   >> 24); out[ 9] = (uint8_t)(h   >> 16);
   out[10] = (uint8_t)(h   >>  8); out[11] = (uint8_t)(h);
-  // x_offset, y_offset
+  // x_offset = 0
   out[12] = out[13] = out[14] = out[15] = 0;
-  // delay_num, delay_den
-  out[16] = (uint8_t)(delay_num >> 8); out[17] = (uint8_t)(delay_num);
-  out[18] = (uint8_t)(delay_den >> 8); out[19] = (uint8_t)(delay_den);
+  // y_offset = 0
+  out[16] = out[17] = out[18] = out[19] = 0;
+  // delay_num (BE 16-bit)
+  out[20] = (uint8_t)(delay_num >> 8); out[21] = (uint8_t)(delay_num);
+  // delay_den (BE 16-bit)
+  out[22] = (uint8_t)(delay_den >> 8); out[23] = (uint8_t)(delay_den);
   // dispose_op = 1 (APNG_DISPOSE_OP_BACKGROUND), blend_op = 0 (APNG_BLEND_OP_SOURCE)
-  out[20] = 1;
-  out[21] = 0;
-  // 4-byte padding to reach 26 bytes
-  out[22] = out[23] = out[24] = out[25] = 0;
+  out[24] = 1;
+  out[25] = 0;
 }
 
 // Encode a single RGBA frame as IDAT/fdAT PNG image data using a very simple
@@ -217,10 +228,12 @@ bool anim_export_apng(canvas_doc_t *doc, const char *path) {
   anim_timeline_t *tl = doc->anim;
   if (tl->frame_count == 0) return false;
 
-  // Commit the current working buffer.
-  anim_frame_compress(tl->frames[tl->active_frame],
-                      doc->pixels, doc->canvas_w, doc->canvas_h,
-                      FRAME_FORMAT_INDEXED);
+  // Commit the current working buffer; abort if compression fails to avoid
+  // silently wiping the active frame's stored data.
+  if (!anim_frame_compress(tl->frames[tl->active_frame],
+                           doc->pixels, doc->canvas_w, doc->canvas_h,
+                           FRAME_FORMAT_INDEXED))
+    return false;
 
   FILE *fp = fopen(path, "wb");
   if (!fp) return false;
@@ -307,10 +320,11 @@ bool anim_export_spritesheet(canvas_doc_t *doc, const char *path) {
   anim_timeline_t *tl = doc->anim;
   if (tl->frame_count == 0) return false;
 
-  // Commit the current working buffer.
-  anim_frame_compress(tl->frames[tl->active_frame],
-                      doc->pixels, doc->canvas_w, doc->canvas_h,
-                      FRAME_FORMAT_INDEXED);
+  // Commit the current working buffer; abort if compression fails.
+  if (!anim_frame_compress(tl->frames[tl->active_frame],
+                           doc->pixels, doc->canvas_w, doc->canvas_h,
+                           FRAME_FORMAT_INDEXED))
+    return false;
 
   int w = doc->canvas_w;
   int h = doc->canvas_h;
