@@ -205,7 +205,7 @@ typedef struct {
 #define FE_COMPONENT_PLACEABLE      0x0001u
 #define FE_COMPONENT_SHOW_TOOLBOX   0x0002u
 
-#include "fugue.h"
+#include "silk.h"
 
 typedef struct {
   const char *class_name;     // stable runtime class key (e.g. "button")

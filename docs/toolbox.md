@@ -78,7 +78,7 @@ static result_t my_toolbox_proc(window_t *win, uint32_t msg,
 
       // 2. Load a PNG sprite sheet (square tiles; wparam = tile size in px).
       char path[512];
-      snprintf(path, sizeof(path), "%s/../share/orion/fugue.png",
+      snprintf(path, sizeof(path), "%s/../share/orion/silk.png",
                ui_get_exe_dir());
       send_message(win, bxLoadStrip, 16 /* tile px */, path);
 

@@ -44,6 +44,12 @@ uint32_t ui_transparency_checker_texture = 0;
 bitmap_strip_t g_sysicon_strip = {0};
 static uint32_t g_sysicon_tex = 0;
 
+// Built-in Silk icon strip loaded from share/orion/silk.png.
+// Icons are indexed starting at SILK_ICON_BASE (1000); subtract SILK_ICON_BASE
+// to get the strip index.
+static bitmap_strip_t g_silk_strip = {0};
+static uint32_t g_silk_tex = 0;
+
 // Theme icon strip loaded from share/orion/theme.png (144x18 px grayscale,
 // 9x9 tiles).  Indexed by theme_icon_t (user/theme.h).
 static bitmap_strip_t g_theme_strip = {0};
@@ -119,6 +125,34 @@ static void shutdown_sysicon_strip(void) {
   R_DeleteTexture(g_sysicon_tex);
   g_sysicon_tex = 0;
   g_sysicon_strip = (bitmap_strip_t){0};
+}
+
+// Load the built-in Silk icon sheet from <exe_dir>/../share/orion/silk.png.
+static void init_silk_strip(void) {
+  if (g_silk_tex != 0) return;
+  char path[4096];
+  snprintf(path, sizeof(path), "%s/../share/orion/silk.png", ui_get_exe_dir());
+  int w = 0, h = 0;
+  uint8_t *src = load_image(path, &w, &h);
+  if (!src) return;
+  if (w < 16 || h < 16 || (w % 16) != 0 || (h % 16) != 0) {
+    image_free(src);
+    return;
+  }
+  g_silk_tex = R_CreateTextureRGBA(w, h, src, R_FILTER_NEAREST, R_WRAP_CLAMP);
+  image_free(src);
+  g_silk_strip.tex     = g_silk_tex;
+  g_silk_strip.icon_w  = 16;
+  g_silk_strip.icon_h  = 16;
+  g_silk_strip.cols    = w / 16;
+  g_silk_strip.sheet_w = w;
+  g_silk_strip.sheet_h = h;
+}
+
+static void shutdown_silk_strip(void) {
+  R_DeleteTexture(g_silk_tex);
+  g_silk_tex = 0;
+  g_silk_strip = (bitmap_strip_t){0};
 }
 
 // Load the theme icon sheet from <exe_dir>/../share/orion/theme.png.
@@ -222,6 +256,11 @@ bitmap_strip_t *ui_get_sysicon_strip(void) {
   return (g_sysicon_strip.tex != 0) ? &g_sysicon_strip : NULL;
 }
 
+// Return the built-in Silk icon strip (silk.png), or NULL if not loaded.
+bitmap_strip_t *ui_get_silk_strip(void) {
+  return (g_silk_strip.tex != 0) ? &g_silk_strip : NULL;
+}
+
 static result_t win_desktop(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   (void)win;
   (void)wparam;
@@ -280,6 +319,7 @@ bool ui_init_graphics(int flags, const char *title, int width, int height) {
   init_ui_checker_texture();
   init_ui_transparency_checker_texture();
   init_sysicon_strip();
+  init_silk_strip();
   init_theme_strip();
   init_icons_strip();
 
@@ -326,6 +366,7 @@ void ui_shutdown_graphics(void) {
   ui_shutdown_prog();
 
   shutdown_sysicon_strip();
+  shutdown_silk_strip();
   shutdown_theme_strip();
   shutdown_icons_strip();
   shutdown_white_texture();
