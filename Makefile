@@ -112,11 +112,20 @@ endif
 # Compile flags for .gem shared libraries
 GEM_CFLAGS = $(CFLAGS) -DBUILD_AS_GEM
 
+# On Windows (MinGW), generate an import library (.dll.a) alongside liborion.dll
+# so that plugin DLLs can resolve symbols via -lorion at link time.
+# On other platforms this is a no-op.
+ifeq ($(OS),Windows_NT)
+	IMPLIB_FLAGS = -Wl,--out-implib,$(LIB_DIR)/liborion.dll.a
+else
+	IMPLIB_FLAGS =
+endif
+
 # Link flags for FormEditor component plugins.
 # On macOS: -undefined dynamic_lookup defers symbol resolution to load time.
 # On Linux: -shared implicitly allows unresolved symbols in shared objects.
-# On Windows (MinGW): all symbols must be resolved at link time, so link
-# explicitly against liborion.dll via the import library.
+# On Windows (MinGW): all symbols must be resolved at link time; link against
+# the liborion.dll.a import library generated alongside liborion.dll.
 ifeq ($(OS),Windows_NT)
 	FE_PLUGIN_LFLAGS = $(LIB_FLAGS) -L$(LIB_DIR) -lorion
 else ifeq ($(UNAME_S),Darwin)
@@ -362,7 +371,7 @@ $(STATIC_LIB): $(USER_SRCS) $(KERNEL_SRCS) $(COMMCTL_SRCS) $(PLATFORM_LIB) | $(L
 $(SHARED_LIB): $(USER_SRCS) $(KERNEL_SRCS) $(COMMCTL_SRCS) $(PLATFORM_LIB) | $(LIB_DIR)
 	@echo "Creating shared library: $@"
 	find user kernel commctl -name "*.c" ! -name "formeditor_components_plugin.c" | sort | sed 's/.*/#include "&"/' | \
-		$(CC) $(CFLAGS) $(LIB_FLAGS) -x c -o $@ - $(LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
+		$(CC) $(CFLAGS) $(LIB_FLAGS) -x c -o $@ - $(LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS) $(IMPLIB_FLAGS)
 
 # Examples
 .PHONY: examples
