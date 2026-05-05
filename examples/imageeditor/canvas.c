@@ -1700,6 +1700,7 @@ bool canvas_crop_or_expand_to_selection(canvas_doc_t *doc) {
 }
 
 // Extract the current selection into a float buffer and clear that region.
+// Enters "move mode": the caller should track float_pos deltas and call
 // canvas_commit_move() when the drag ends.
 void canvas_begin_move(canvas_doc_t *doc, uint32_t bg) {
   if (!doc || !doc->sel.active || doc->sel.move.active) return;
