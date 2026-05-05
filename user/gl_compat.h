@@ -10,6 +10,12 @@
   #include <windows.h>
   #include <GL/glew.h>
   #include <GL/gl.h>
+  /* windows.h (via winuser.h) defines CW_USEDEFAULT as (int)0x80000000.
+   * Orion stores window coordinates in int16_t, so its sentinel must fit in
+   * 16 bits.  Restore Orion's value so that all files in this translation
+   * unit see a consistent definition. */
+  #undef CW_USEDEFAULT
+  #define CW_USEDEFAULT (-32768)
 #else
   /* Linux and other platforms */
   #include <GL/glcorearb.h>
