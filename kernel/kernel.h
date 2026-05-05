@@ -121,6 +121,10 @@ bool bake_texture_effect(int src_tex, int w, int h,
                          ui_render_effect_t effect,
                          const ui_render_effect_params_t *params,
                          uint32_t *out_tex);
+bool bake_texture_program_effect(int src_tex, int w, int h,
+                                 ui_render_effect_t effect,
+                                 const ui_render_effect_params_t *params,
+                                 uint32_t *out_tex);
 bool bake_texture_blur(int src_tex, int w, int h, int radius,
                        uint32_t *out_tex);
 bool bake_texture_program(int src_tex, int w, int h, uint32_t program,

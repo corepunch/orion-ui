@@ -144,7 +144,7 @@ static void lv_sync_component_views(lv_state_t *st) {
   }
 }
 
-static void lv_sync_preview(lv_state_t *st) {
+static void lv_apply_preview_effect(lv_state_t *st) {
   if (!st || !st->doc) return;
   ui_render_effect_params_t p = {{0}};
   p.f[0] = (float)st->black / 255.0f;
@@ -153,6 +153,12 @@ static void lv_sync_preview(lv_state_t *st) {
   p.f[3] = (float)st->out_black / 255.0f;
   p.f[4] = (float)st->out_white / 255.0f;
   layer_set_preview_effect(st->doc, st->layer_idx, UI_RENDER_EFFECT_LEVELS, &p);
+}
+
+static void lv_sync_preview(lv_state_t *st) {
+  if (!st || !st->doc) return;
+  if (st->preview_enabled)
+    lv_apply_preview_effect(st);
   lv_sync_component_views(st);
 }
 
@@ -231,6 +237,10 @@ static result_t levels_dlg_proc(window_t *win, uint32_t msg,
       st->graph_win = get_window_item(win, LV_ID_GRAPH);
       st->in_slider_win = get_window_item(win, LV_ID_IN_SLIDER);
       st->out_slider_win = get_window_item(win, LV_ID_OUT_SLIDER);
+      st->preview_win = get_window_item(win, LV_ID_PREVIEW);
+      st->preview_enabled = true;
+      if (st->preview_win)
+        send_message(st->preview_win, btnSetCheck, btnStateChecked, NULL);
 
       /* One-time slider setup: range and handle count are invariant. */
       if (st->in_slider_win) {
@@ -287,13 +297,21 @@ static result_t levels_dlg_proc(window_t *win, uint32_t msg,
 
         if (!src) return false;
         if (notif != btnClicked) return false;
+        if (src->id == LV_ID_PREVIEW) {
+          st->preview_enabled = (send_message(src, btnGetCheck, 0, NULL) == btnStateChecked);
+          if (st->preview_enabled)
+            lv_apply_preview_effect(st);
+          else
+            layer_clear_preview_effect(st->doc, st->layer_idx);
+          lv_sync_component_views(st);
+          return true;
+        }
         if (src->id == LV_ID_OK) {
           st->accepted = true;
           end_dialog(win, 1);
           return true;
         }
         if (src->id == LV_ID_CANCEL) {
-          layer_clear_preview_effect(st->doc, st->layer_idx);
           end_dialog(win, 0);
           return true;
         }
@@ -342,12 +360,15 @@ bool show_levels_dialog(window_t *parent) {
   st.white = 255;
   st.out_black = 0;
   st.out_white = 255;
+  st.preview_enabled = true;
   lv_rebuild_histogram(&st);
 
   uint32_t res = show_dialog_from_form_ex(&imageeditor_levels_form, "Levels", parent,
                                           WINDOW_DIALOG | WINDOW_NOTRAYBUTTON,
                                           levels_dlg_proc, &st);
   if (!res || !st.accepted) return false;
+  if (!st.preview_enabled)
+    lv_apply_preview_effect(&st);
   if (!layer_commit_preview_effect(doc, st.layer_idx)) {
     layer_clear_preview_effect(doc, st.layer_idx);
     return false;

@@ -532,7 +532,8 @@ void draw_rect_blend(int tex, int x, int y, int w, int h, float alpha,
 
 static void draw_rect_program_common(int tex, int x, int y, int w, int h,
                                      float alpha, uint32_t program,
-                                     float mix_amount) {
+                                     float mix_amount,
+                                     const ui_render_effect_params_t *params) {
   if (!g_ui_runtime.running || !program) return;
   glUseProgram(program);
   glActiveTexture(GL_TEXTURE0);
@@ -546,6 +547,8 @@ static void draw_rect_program_common(int tex, int x, int y, int w, int h,
   GLint scale_u = glGetUniformLocation(program, "scale");
   GLint uv_offset_u = glGetUniformLocation(program, "uv_offset");
   GLint uv_scale_u = glGetUniformLocation(program, "uv_scale");
+  GLint params0_u = glGetUniformLocation(program, "params0");
+  GLint params1_u = glGetUniformLocation(program, "params1");
   if (tex0_u >= 0) glUniform1i(tex0_u, 0);
   if (projection_u >= 0)
     glUniformMatrix4fv(projection_u, 1, GL_FALSE, get_sprite_matrix());
@@ -556,6 +559,12 @@ static void draw_rect_program_common(int tex, int x, int y, int w, int h,
   if (scale_u >= 0) glUniform2f(scale_u, (float)w, (float)h);
   if (uv_offset_u >= 0) glUniform2f(uv_offset_u, 0.0f, 0.0f);
   if (uv_scale_u >= 0) glUniform2f(uv_scale_u, 1.0f, 1.0f);
+  if (params) {
+    if (params0_u >= 0)
+      glUniform4f(params0_u, params->f[0], params->f[1], params->f[2], params->f[3]);
+    if (params1_u >= 0)
+      glUniform4f(params1_u, params->f[4], params->f[5], params->f[6], params->f[7]);
+  }
   glDisable(GL_DEPTH_TEST);
   g_ref.mesh.draw_mode = GL_TRIANGLE_FAN;
   R_MeshDraw(&g_ref.mesh);
@@ -583,7 +592,7 @@ void draw_rect_program_blend(int tex, int x, int y, int w, int h, float alpha,
       glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
       break;
   }
-  draw_rect_program_common(tex, x, y, w, h, alpha, program, mix_amount);
+  draw_rect_program_common(tex, x, y, w, h, alpha, program, mix_amount, NULL);
   glDisable(GL_BLEND);
 }
 
@@ -591,6 +600,82 @@ void draw_rect_program(int tex, int x, int y, int w, int h, uint32_t program,
                        float mix_amount) {
   draw_rect_program_blend(tex, x, y, w, h, 1.0f, UI_LAYER_BLEND_NORMAL,
                           program, mix_amount);
+}
+
+static bool bake_texture_program_common(int src_tex, int w, int h,
+                                        uint32_t program, float mix_amount,
+                                        const ui_render_effect_params_t *params,
+                                        uint32_t *out_tex) {
+  if (!g_ui_runtime.running || src_tex == 0 || w <= 0 || h <= 0 || !program || !out_tex)
+    return false;
+
+  GLuint tex = R_CreateTextureRGBA(w, h, NULL, R_FILTER_LINEAR, R_WRAP_CLAMP);
+  if (!tex) return false;
+
+  GLuint fbo = 0;
+  GLint prev_fbo = 0;
+  GLint prev_view[4] = {0};
+  GLint prev_scissor[4] = {0};
+  GLint prev_prog = 0;
+  mat4 prev_proj;
+  memcpy(prev_proj, get_sprite_matrix(), sizeof(prev_proj));
+  glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prev_fbo);
+  glGetIntegerv(GL_VIEWPORT, prev_view);
+  glGetIntegerv(GL_SCISSOR_BOX, prev_scissor);
+  glGetIntegerv(GL_CURRENT_PROGRAM, &prev_prog);
+
+  glGenFramebuffers(1, &fbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
+  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+    glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)prev_fbo);
+    glDeleteFramebuffers(1, &fbo);
+    R_DeleteTexture(tex);
+    return false;
+  }
+
+  glDrawBuffer(GL_COLOR_ATTACHMENT0);
+  glViewport(0, 0, w, h);
+  glScissor(0, 0, w, h);
+  set_projection(0, 0, w, h);
+  draw_rect_program_common(src_tex, 0, 0, w, h, 1.0f, program, mix_amount, params);
+  glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)prev_fbo);
+  glDeleteFramebuffers(1, &fbo);
+  glUseProgram((GLuint)prev_prog);
+  glViewport(prev_view[0], prev_view[1], prev_view[2], prev_view[3]);
+  glScissor(prev_scissor[0], prev_scissor[1], prev_scissor[2], prev_scissor[3]);
+  glm_mat4_copy(prev_proj, g_active_projection);
+  glm_mat4_copy(prev_proj, g_ref.projection);
+  update_sprite_projection_uniforms(prev_proj);
+  *out_tex = tex;
+  return true;
+}
+
+static bool roundtrip_texture_rgba(int src_tex, int w, int h, uint32_t *out_tex) {
+  if (!out_tex) return false;
+  *out_tex = 0;
+
+  size_t sz = (size_t)w * (size_t)h * 4;
+  uint8_t *buf = malloc(sz);
+  if (!buf) return false;
+
+  bool ok = read_texture_rgba(src_tex, w, h, buf);
+  if (ok) {
+    *out_tex = R_CreateTextureRGBA(w, h, buf, R_FILTER_LINEAR, R_WRAP_CLAMP);
+    ok = (*out_tex != 0);
+  }
+  free(buf);
+  return ok;
+}
+
+bool bake_texture_program_effect(int src_tex, int w, int h,
+                                 ui_render_effect_t effect,
+                                 const ui_render_effect_params_t *params,
+                                 uint32_t *out_tex) {
+  const sprite_program_t *prog = sprite_program_for_effect(effect);
+  if (!prog || !prog->program)
+    return false;
+  return bake_texture_program_common(src_tex, w, h, prog->program, 1.0f, params, out_tex);
 }
 
 bool bake_texture_effect(int src_tex, int w, int h,
@@ -662,6 +747,8 @@ bool bake_texture_effect(int src_tex, int w, int h,
   glClearColor(prev_clear[0], prev_clear[1], prev_clear[2], prev_clear[3]);
   if (prev_blend) glEnable(GL_BLEND); else glDisable(GL_BLEND);
   if (prev_depth) glEnable(GL_DEPTH_TEST); else glDisable(GL_DEPTH_TEST);
+  glm_mat4_copy(prev_proj, g_active_projection);
+  glm_mat4_copy(prev_proj, g_ref.projection);
   update_sprite_projection_uniforms(prev_proj);
   glUseProgram((GLuint)prev_prog);
 
@@ -677,65 +764,34 @@ bool bake_texture_blur(int src_tex, int w, int h, int radius,
     return false;
 
   radius = CLAMP(radius, 1, 16);
+  // Blur uses the same FBO/program bake path as photo filters; only the
+  // shader and its per-pass params differ, so texture orientation stays stable.
   ui_render_effect_params_t p = {{0}};
   uint32_t tmp = 0;
   p.f[0] = 1.0f / (float)w;
   p.f[1] = 0.0f;
   p.f[2] = (float)radius;
-  if (!bake_texture_effect(src_tex, w, h, UI_RENDER_EFFECT_BLUR, &p, &tmp))
+  if (!bake_texture_program_effect(src_tex, w, h, UI_RENDER_EFFECT_BLUR, &p, &tmp))
     return false;
+
+  uint32_t tmp_norm = 0;
+  if (!roundtrip_texture_rgba((int)tmp, w, h, &tmp_norm)) {
+    R_DeleteTexture(tmp);
+    return false;
+  }
 
   p.f[0] = 0.0f;
   p.f[1] = 1.0f / (float)h;
   p.f[2] = (float)radius;
-  bool ok = bake_texture_effect((int)tmp, w, h, UI_RENDER_EFFECT_BLUR, &p, out_tex);
+  bool ok = bake_texture_program_effect((int)tmp_norm, w, h, UI_RENDER_EFFECT_BLUR, &p, out_tex);
   R_DeleteTexture(tmp);
+  R_DeleteTexture(tmp_norm);
   return ok;
 }
 
 bool bake_texture_program(int src_tex, int w, int h, uint32_t program,
                           float mix_amount, uint32_t *out_tex) {
-  if (!g_ui_runtime.running || src_tex == 0 || w <= 0 || h <= 0 || !program || !out_tex)
-    return false;
-
-  GLuint tex = R_CreateTextureRGBA(w, h, NULL, R_FILTER_LINEAR, R_WRAP_CLAMP);
-  if (!tex) return false;
-
-  GLuint fbo = 0;
-  GLint prev_fbo = 0;
-  GLint prev_view[4] = {0};
-  GLint prev_scissor[4] = {0};
-  GLint prev_prog = 0;
-  mat4 prev_proj;
-  memcpy(prev_proj, get_sprite_matrix(), sizeof(prev_proj));
-  glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prev_fbo);
-  glGetIntegerv(GL_VIEWPORT, prev_view);
-  glGetIntegerv(GL_SCISSOR_BOX, prev_scissor);
-  glGetIntegerv(GL_CURRENT_PROGRAM, &prev_prog);
-
-  glGenFramebuffers(1, &fbo);
-  glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
-  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-    glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)prev_fbo);
-    glDeleteFramebuffers(1, &fbo);
-    R_DeleteTexture(tex);
-    return false;
-  }
-
-  glDrawBuffer(GL_COLOR_ATTACHMENT0);
-  glViewport(0, 0, w, h);
-  glScissor(0, 0, w, h);
-  set_projection(0, 0, w, h);
-  draw_rect_program_common(src_tex, 0, 0, w, h, 1.0f, program, mix_amount);
-  glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)prev_fbo);
-  glDeleteFramebuffers(1, &fbo);
-  glUseProgram((GLuint)prev_prog);
-  glViewport(prev_view[0], prev_view[1], prev_view[2], prev_view[3]);
-  glScissor(prev_scissor[0], prev_scissor[1], prev_scissor[2], prev_scissor[3]);
-  update_sprite_projection_uniforms(prev_proj);
-  *out_tex = tex;
-  return true;
+  return bake_texture_program_common(src_tex, w, h, program, mix_amount, NULL, out_tex);
 }
 
 void draw_program_rect(int tex, irect16_t r, uint32_t program, float mix_amount) {

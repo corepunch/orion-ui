@@ -266,7 +266,7 @@
 
       <form id="levels"
             title="Levels"
-            frame="0 0 280 202"
+            frame="0 0 280 222"
             flags="0"
             owner="examples/imageeditor/win_levels.c">
         <requires library="imageeditor_components" />
@@ -282,9 +282,10 @@
           <control class="textedit" id="LV_ID_OUT_WHITE" name="out_white" text="255" frame="160 128 34 13" flags="0" />
           <control class="gradient" id="0" name="out_grad" text="" frame="18 146 244 8" flags="WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOTABSTOP" />
           <control class="slider" id="LV_ID_OUT_SLIDER" name="out_slider" text="" frame="10 156 260 13" flags="WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOTABSTOP" />
-          <control class="button" id="LV_ID_OK" name="ok" text="OK" frame="116 178 48 19" flags="0" />
-          <control class="button" id="LV_ID_RESET" name="reset" text="Reset" frame="168 178 48 19" flags="0" />
-          <control class="button" id="LV_ID_CANCEL" name="cancel" text="Cancel" frame="220 178 48 19" flags="0" />
+          <control class="checkbox" id="LV_ID_PREVIEW" name="preview" text="Preview" frame="10 178 74 12" flags="0" />
+          <control class="button" id="LV_ID_OK" name="ok" text="OK" frame="116 198 48 19" flags="0" />
+          <control class="button" id="LV_ID_RESET" name="reset" text="Reset" frame="168 198 48 19" flags="0" />
+          <control class="button" id="LV_ID_CANCEL" name="cancel" text="Cancel" frame="220 198 48 19" flags="0" />
         </controls>
       </form>
 
@@ -300,6 +301,20 @@
           <control class="reportview" id="FG_ID_LIST" value="4001" name="filters" text="" frame="286 18 256 290" flags="WINDOW_NOTITLE | WINDOW_NORESIZE" />
           <control class="button" id="FG_ID_OK" value="5001" name="ok" text="OK" frame="404 326 66 19" flags="BUTTON_DEFAULT" />
           <control class="button" id="FG_ID_CANCEL" value="5002" name="cancel" text="Cancel" frame="478 326 66 19" flags="0" />
+        </controls>
+      </form>
+
+      <form id="blur_dialog"
+            title="Blur"
+            frame="0 0 240 96"
+            flags="WINDOW_DIALOG | WINDOW_NOTRAYBUTTON"
+            owner="examples/imageeditor/win_blur.c">
+        <controls>
+          <control class="label" id="BL_ID_AMOUNT_LBL" value="1" name="amount_label" text="Blur: 4px" frame="10 8 220 13" flags="WINDOW_NOTITLE | WINDOW_NOFILL" />
+          <control class="slider" id="BL_ID_AMOUNT" value="2" name="amount" text="" frame="10 26 220 13" flags="WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOTABSTOP" />
+          <control class="checkbox" id="BL_ID_PREVIEW" value="3" name="preview" text="Preview" frame="10 48 74 12" flags="0" />
+          <control class="button" id="BL_ID_OK" value="4" name="ok" text="OK" frame="92 68 44 19" flags="BUTTON_DEFAULT" />
+          <control class="button" id="BL_ID_CANCEL" value="5" name="cancel" text="Cancel" frame="140 68 56 19" flags="0" />
         </controls>
       </form>
     </forms>

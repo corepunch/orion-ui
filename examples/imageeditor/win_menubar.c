@@ -14,6 +14,7 @@ static char        s_filter_photo_labels[IMAGEEDITOR_MAX_FILTERS][64];
 // Persistent storage for dynamically built items and document title strings.
 static menu_item_t s_window_items[WINDOW_PREFIX_COUNT + WINDOW_MENU_MAX_DOCS];
 static int         s_window_item_count = WINDOW_PREFIX_COUNT;
+static int         s_last_blur_radius = 4;
 
 
 static bool cancel_active_canvas_interaction(canvas_doc_t *doc, int old_tool) {
@@ -539,6 +540,22 @@ void handle_menu_command(uint16_t id) {
       break;
 
     case ID_FILTER_BLUR:
+      if (doc && doc->layer.active >= 0 && doc->layer.active < doc->layer.count) {
+        int amount = s_last_blur_radius;
+        if (show_blur_dialog(doc->win ? doc->win : g_app->menubar_win, &amount)) {
+          s_last_blur_radius = amount;
+          doc_push_undo(doc);
+          if (!imageeditor_apply_builtin_blur(doc, amount)) {
+            doc_discard_undo(doc);
+            break;
+          }
+          doc_update_title(doc);
+          if (doc->canvas_win)
+            invalidate_window(doc->canvas_win);
+        }
+      }
+      break;
+
     case ID_FILTER_SHARPEN:
     case ID_FILTER_EDGE:
       if (doc) {

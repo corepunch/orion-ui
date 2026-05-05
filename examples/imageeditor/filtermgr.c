@@ -276,52 +276,39 @@ bool imageeditor_apply_filter(canvas_doc_t *doc, int filter_idx) {
   return true;
 }
 
-bool imageeditor_apply_builtin_filter(canvas_doc_t *doc, uint16_t id) {
-  if (!g_app || !doc) return false;
-  if (doc->layer.active < 0 || doc->layer.active >= doc->layer.count)
+static bool apply_baked_texture_to_active_layer(canvas_doc_t *doc, uint32_t baked_tex) {
+  layer_t *lay;
+  size_t px_count;
+  uint8_t *alpha;
+  size_t sz;
+  uint8_t *buf;
+
+  if (!g_app || !doc) {
+    R_DeleteTexture(baked_tex);
     return false;
+  }
+  if (doc->layer.active < 0 || doc->layer.active >= doc->layer.count) {
+    R_DeleteTexture(baked_tex);
+    return false;
+  }
 
-  layer_t *lay = doc->layer.stack[doc->layer.active];
-  if (!lay || !lay->pixels) return false;
+  lay = doc->layer.stack[doc->layer.active];
+  if (!lay || !lay->pixels) {
+    R_DeleteTexture(baked_tex);
+    return false;
+  }
 
-  canvas_upload(doc);
-  if (!lay->tex) return false;
-
-  size_t px_count = (size_t)doc->canvas_w * doc->canvas_h;
-  uint8_t *alpha = malloc(px_count);
-  if (!alpha) return false;
+  px_count = (size_t)doc->canvas_w * doc->canvas_h;
+  alpha = malloc(px_count);
+  if (!alpha) {
+    R_DeleteTexture(baked_tex);
+    return false;
+  }
   for (size_t i = 0; i < px_count; i++)
     alpha[i] = lay->pixels[i * 4 + 3];
 
-  uint32_t baked_tex = 0;
-  if (id == ID_FILTER_BLUR) {
-    if (!bake_texture_blur((int)lay->tex, doc->canvas_w, doc->canvas_h,
-                           4, &baked_tex)) {
-      free(alpha);
-      return false;
-    }
-  } else {
-    ui_render_effect_params_t p = {{0}};
-    p.f[0] = 1.0f / (float)doc->canvas_w;
-    p.f[1] = 1.0f / (float)doc->canvas_h;
-    ui_render_effect_t effect = UI_RENDER_EFFECT_COPY;
-    if (id == ID_FILTER_SHARPEN)
-      effect = UI_RENDER_EFFECT_SHARPEN;
-    else if (id == ID_FILTER_EDGE)
-      effect = UI_RENDER_EFFECT_EDGE;
-    else {
-      free(alpha);
-      return false;
-    }
-    if (!bake_texture_effect((int)lay->tex, doc->canvas_w, doc->canvas_h,
-                             effect, &p, &baked_tex)) {
-      free(alpha);
-      return false;
-    }
-  }
-
-  size_t sz = (size_t)doc->canvas_w * doc->canvas_h * 4;
-  uint8_t *buf = malloc(sz);
+  sz = (size_t)doc->canvas_w * doc->canvas_h * 4;
+  buf = malloc(sz);
   if (!buf) {
     R_DeleteTexture(baked_tex);
     free(alpha);
@@ -345,4 +332,61 @@ bool imageeditor_apply_builtin_filter(canvas_doc_t *doc, uint16_t id) {
   doc->canvas_dirty = true;
   doc->modified = true;
   return true;
+}
+
+bool imageeditor_apply_builtin_blur(canvas_doc_t *doc, int radius) {
+  layer_t *lay;
+  uint32_t baked_tex = 0;
+
+  if (!g_app || !doc) return false;
+  if (doc->layer.active < 0 || doc->layer.active >= doc->layer.count)
+    return false;
+
+  lay = doc->layer.stack[doc->layer.active];
+  if (!lay || !lay->pixels) return false;
+
+  canvas_upload(doc);
+  if (!lay->tex) return false;
+
+  if (!bake_texture_blur((int)lay->tex, doc->canvas_w, doc->canvas_h,
+                         radius, &baked_tex)) {
+    return false;
+  }
+  return apply_baked_texture_to_active_layer(doc, baked_tex);
+}
+
+bool imageeditor_apply_builtin_filter(canvas_doc_t *doc, uint16_t id) {
+  if (id == ID_FILTER_BLUR) {
+    return imageeditor_apply_builtin_blur(doc, 4);
+  } else {
+    layer_t *lay;
+    ui_render_effect_params_t p = {{0}};
+    uint32_t baked_tex = 0;
+
+    if (!g_app || !doc) return false;
+    if (doc->layer.active < 0 || doc->layer.active >= doc->layer.count)
+      return false;
+
+    lay = doc->layer.stack[doc->layer.active];
+    if (!lay || !lay->pixels) return false;
+
+    canvas_upload(doc);
+    if (!lay->tex) return false;
+
+    p.f[0] = 1.0f / (float)doc->canvas_w;
+    p.f[1] = 1.0f / (float)doc->canvas_h;
+    ui_render_effect_t effect = UI_RENDER_EFFECT_COPY;
+    if (id == ID_FILTER_SHARPEN)
+      effect = UI_RENDER_EFFECT_SHARPEN;
+    else if (id == ID_FILTER_EDGE)
+      effect = UI_RENDER_EFFECT_EDGE;
+    else {
+      return false;
+    }
+    if (!bake_texture_effect((int)lay->tex, doc->canvas_w, doc->canvas_h,
+                             effect, &p, &baked_tex)) {
+      return false;
+    }
+    return apply_baked_texture_to_active_layer(doc, baked_tex);
+  }
 }

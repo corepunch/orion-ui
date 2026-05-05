@@ -34,6 +34,7 @@
 #define LV_ID_IN_SLIDER 10
 #define LV_ID_OUT_SLIDER 11
 #define LV_ID_OUT_STRIP LV_ID_OUT_SLIDER
+#define LV_ID_PREVIEW   12
 
 // Notifications sent by levels controls to their parent with evCommand.
 // LOWORD(wparam) is the control id.

@@ -646,7 +646,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         draw_sel_rect(float_rect);
       } else if (doc->sel.active &&
                  (IMAGEEDITOR_SHOW_SELECTION_BOUNDS ||
-                  (g_app && g_app->current_tool == ID_TOOL_SELECT && doc->drawing))) {
+                  (g_app && ((g_app->current_tool == ID_TOOL_SELECT && doc->drawing) ||
+                             g_app->current_tool == ID_TOOL_CROP)))) {
         irect16_t sel_rect = canvas_doc_rect_to_view(win, state,
                                                      MIN(doc->sel.start.x, doc->sel.end.x),
                                                      MIN(doc->sel.start.y, doc->sel.end.y),

@@ -8,6 +8,7 @@ typedef struct {
   canvas_doc_t *doc;
   int           layer_idx;
   bool          accepted;
+  bool          preview_enabled;
   window_t     *dlg_win;
   uint8_t       black;
   uint8_t       white;
@@ -19,6 +20,7 @@ typedef struct {
   window_t     *graph_win;
   window_t     *in_slider_win;
   window_t     *out_slider_win;
+  window_t     *preview_win;
 } lv_state_t;
 
 #endif /* __IMAGEEDITOR_LEVELS_PRIVATE_H__ */

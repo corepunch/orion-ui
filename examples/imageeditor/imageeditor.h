@@ -559,6 +559,7 @@ bool imageeditor_load_filters(void);
 void imageeditor_free_filters(void);
 bool imageeditor_apply_filter(canvas_doc_t *doc, int filter_idx);
 bool imageeditor_apply_builtin_filter(canvas_doc_t *doc, uint16_t id);
+bool imageeditor_apply_builtin_blur(canvas_doc_t *doc, int radius);
 bool show_filter_gallery_dialog(window_t *parent);
 
 // Sync canvas scrollbars after content size changes (e.g. after canvas_resize)
@@ -621,6 +622,7 @@ bool show_grid_options_dialog(window_t *parent, int *out_x, int *out_y);
 
 // Selection Modify dialog – returns true if accepted.
 bool show_selection_modify_dialog(window_t *parent, const char *title, int *out_amount);
+bool show_blur_dialog(window_t *parent, int *out_amount);
 
 // Layers palette window geometry.
 // Positioned on the right side of the screen, below the color palette.

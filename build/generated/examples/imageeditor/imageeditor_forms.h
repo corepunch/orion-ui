@@ -112,6 +112,11 @@
 #define FG_ID_LIST           4001
 #define FG_ID_OK             5001
 #define FG_ID_CANCEL         5002
+#define BL_ID_AMOUNT_LBL     1
+#define BL_ID_AMOUNT         2
+#define BL_ID_PREVIEW        3
+#define BL_ID_OK             4
+#define BL_ID_CANCEL         5
 
 /* Top-level menu indices generated from <menu> order. */
 #define MENU_FILE_INDEX 0
@@ -462,18 +467,19 @@ static const form_ctrl_def_t imageeditor_levels_children[] = {
   { "textedit", LV_ID_OUT_WHITE, { 160, 128, 34, 13 }, 0, "255", "out_white" },
   { "gradient", 0, { 18, 146, 244, 8 }, WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOTABSTOP, "", "out_grad" },
   { "slider", LV_ID_OUT_SLIDER, { 10, 156, 260, 13 }, WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOTABSTOP, "", "out_slider" },
-  { "button", LV_ID_OK, { 116, 178, 48, 19 }, 0, "OK", "ok" },
-  { "button", LV_ID_RESET, { 168, 178, 48, 19 }, 0, "Reset", "reset" },
-  { "button", LV_ID_CANCEL, { 220, 178, 48, 19 }, 0, "Cancel", "cancel" },
+  { "checkbox", LV_ID_PREVIEW, { 10, 178, 74, 12 }, 0, "Preview", "preview" },
+  { "button", LV_ID_OK, { 116, 198, 48, 19 }, 0, "OK", "ok" },
+  { "button", LV_ID_RESET, { 168, 198, 48, 19 }, 0, "Reset", "reset" },
+  { "button", LV_ID_CANCEL, { 220, 198, 48, 19 }, 0, "Cancel", "cancel" },
 };
 
 static const form_def_t imageeditor_levels_form = {
   .name = "Levels",
   .width = 280,
-  .height = 202,
+  .height = 222,
   .flags = 0,
   .children = imageeditor_levels_children,
-  .child_count = 14,
+  .child_count = 15,
 };
 
 static const form_ctrl_def_t imageeditor_filter_gallery_children[] = {
@@ -490,6 +496,23 @@ static const form_def_t imageeditor_filter_gallery_form = {
   .height = 360,
   .flags = WINDOW_DIALOG | WINDOW_NOTRAYBUTTON,
   .children = imageeditor_filter_gallery_children,
+  .child_count = 5,
+};
+
+static const form_ctrl_def_t imageeditor_blur_dialog_children[] = {
+  { "label", BL_ID_AMOUNT_LBL, { 10, 8, 220, 13 }, WINDOW_NOTITLE | WINDOW_NOFILL, "Blur: 4px", "amount_label" },
+  { "slider", BL_ID_AMOUNT, { 10, 26, 220, 13 }, WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOTABSTOP, "", "amount" },
+  { "checkbox", BL_ID_PREVIEW, { 10, 48, 74, 12 }, 0, "Preview", "preview" },
+  { "button", BL_ID_OK, { 92, 68, 44, 19 }, BUTTON_DEFAULT, "OK", "ok" },
+  { "button", BL_ID_CANCEL, { 140, 68, 56, 19 }, 0, "Cancel", "cancel" },
+};
+
+static const form_def_t imageeditor_blur_dialog_form = {
+  .name = "Blur",
+  .width = 240,
+  .height = 96,
+  .flags = WINDOW_DIALOG | WINDOW_NOTRAYBUTTON,
+  .children = imageeditor_blur_dialog_children,
   .child_count = 5,
 };
 
