@@ -123,6 +123,7 @@ extern const int kBrushSizes[NUM_BRUSH_SIZES];
 #define NUM_USER_COLORS  8
 
 #define UNDO_MAX   20
+#define MAX_POLY_POINTS 256
 
 // Menu command IDs and static menu resources are generated from imageeditor.orion.
 
@@ -279,7 +280,7 @@ typedef struct canvas_doc_s {
   } shape;
   // Polygon tool in-progress vertices
   struct {
-    ipoint16_t  pts[256];
+    ipoint16_t  pts[MAX_POLY_POINTS];
     int         count;
     bool        active;     // true while accumulating polygon vertices
   } poly;
