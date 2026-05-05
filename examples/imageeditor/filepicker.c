@@ -1,5 +1,7 @@
-// File picker dialog (modal, PNG-filtered) — thin wrapper around the
-// framework's generic get_open_filename() / get_save_filename().
+// File picker dialog — thin wrapper around the framework's
+// get_open_filename() / get_save_filename().
+// In indexed (256-colour) mode only PCX and BMP are offered.
+// In 32-bit mode PNG, JPEG, and BMP are offered.
 
 #include "imageeditor.h"
 
@@ -11,7 +13,17 @@ bool show_file_picker(window_t *parent, bool save_mode,
   ofn.hwndOwner    = parent;
   ofn.lpstrFile    = out_path;
   ofn.nMaxFile     = (uint32_t)out_sz;
-  ofn.lpstrFilter  = "Image Files\0*.png;*.jpg;*.jpeg;*.bmp\0PNG Files\0*.png\0JPEG Files\0*.jpg;*.jpeg\0All Files\0*.*\0";
+#if IMAGEEDITOR_INDEXED
+  ofn.lpstrFilter  = "Image Files\0*.pcx;*.bmp\0"
+                     "PCX Files\0*.pcx\0"
+                     "BMP Files\0*.bmp\0"
+                     "All Files\0*.*\0";
+#else
+  ofn.lpstrFilter  = "Image Files\0*.png;*.jpg;*.jpeg;*.bmp\0"
+                     "PNG Files\0*.png\0"
+                     "JPEG Files\0*.jpg;*.jpeg\0"
+                     "All Files\0*.*\0";
+#endif
   ofn.nFilterIndex = 1;
   ofn.Flags        = save_mode ? OFN_OVERWRITEPROMPT : OFN_FILEMUSTEXIST;
 
@@ -20,5 +32,3 @@ bool show_file_picker(window_t *parent, bool save_mode,
   else
     return get_open_filename(&ofn);
 }
-
-

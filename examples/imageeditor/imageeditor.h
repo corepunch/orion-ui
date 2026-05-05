@@ -559,8 +559,16 @@ bool doc_redo(canvas_doc_t *doc);
 void doc_free_undo(canvas_doc_t *doc);
 void doc_discard_undo(canvas_doc_t *doc);
 
-// PNG I/O
-bool png_save(const char *path, const canvas_doc_t *doc);
+// Unified image I/O (image_io.c).
+// Indexed mode: PCX and BMP 8-bit indexed.
+// 32-bit mode:  PNG save; any format load via user/image.h.
+//
+// image_io_load: returns a malloc'd pixel buffer (1 bpp in indexed mode,
+//   4 bpp RGBA in 32-bit mode).  Caller must free() the result.
+//   out_pal[256] and *out_pal_count are only set in indexed mode.
+uint8_t *image_io_load(const char *path, int *out_w, int *out_h,
+                       uint32_t out_pal[256], int *out_pal_count);
+bool     image_io_save(const char *path, const canvas_doc_t *doc);
 
 // Native file picker wrapper used by the menu commands.
 bool show_file_picker(window_t *parent, bool save_mode, char *out_path, size_t out_sz);

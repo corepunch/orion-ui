@@ -285,25 +285,40 @@ bool imageeditor_open_file_path(const char *path) {
   if (!g_app || !path || !path[0]) return false;
 
   int img_w = 0, img_h = 0;
-  uint8_t *px = load_image(path, &img_w, &img_h);
+#if IMAGEEDITOR_INDEXED
+  uint32_t pal[256] = {0};
+  int pal_count = 0;
+  uint8_t *px = image_io_load(path, &img_w, &img_h, pal, &pal_count);
+#else
+  uint8_t *px = image_io_load(path, &img_w, &img_h, NULL, NULL);
+#endif
   if (!px || img_w <= 0 || img_h <= 0) {
-    if (px) image_free(px);
+    free(px);
     return false;
   }
 
   canvas_doc_t *ndoc = create_document(path, img_w, img_h);
   if (!ndoc) {
-    image_free(px);
+    free(px);
     return false;
   }
 
   // Swap the transparent placeholder pixels for the actual loaded image.
   // Update both the layer buffer and the convenience alias.
-  image_free(ndoc->layer.stack[0]->pixels);
+  free(ndoc->layer.stack[0]->pixels);
   ndoc->layer.stack[0]->pixels = px;
   ndoc->pixels = px;
   ndoc->canvas_dirty = true;
   ndoc->modified = false;
+
+#if IMAGEEDITOR_INDEXED
+  // Overwrite the default palette with the one embedded in the file.
+  if (pal_count > 0) {
+    memcpy(ndoc->ipal.entries, pal, (size_t)pal_count * sizeof(uint32_t));
+    ndoc->ipal.count = pal_count;
+  }
+#endif
+
   // Sync the animation frame 0 with the loaded pixels so the thumbnail is
   // accurate from the start.
   if (ndoc->anim && ndoc->anim->frame_count > 0)
@@ -354,7 +369,7 @@ void handle_menu_command(uint16_t id) {
     case ID_FILE_SAVE:
       if (!doc) break;
       if (!doc->filename[0]) goto do_save_as;
-      if (png_save(doc->filename, doc)) {
+      if (image_io_save(doc->filename, doc)) {
         doc->modified = false;
         doc_update_title(doc);
         send_message(doc->win, evStatusBar, 0, (void *)"Saved");
@@ -370,7 +385,7 @@ void handle_menu_command(uint16_t id) {
       if (show_file_picker(g_app->menubar_win, true, path, sizeof(path))) {
         strncpy(doc->filename, path, sizeof(doc->filename)-1);
         doc->filename[sizeof(doc->filename)-1] = '\0';
-        if (png_save(path, doc)) {
+        if (image_io_save(path, doc)) {
           doc->modified = false;
           doc_update_title(doc);
           send_message(doc->win, evStatusBar, 0, path);

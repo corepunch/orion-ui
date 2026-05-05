@@ -107,7 +107,11 @@ static void create_app_windows(hinstance_t hinstance) {
 // .gem entry points
 // ============================================================
 
+#if IMAGEEDITOR_INDEXED
+static const char *image_editor_types[] = { ".pcx", ".bmp", NULL };
+#else
 static const char *image_editor_types[] = { ".png", ".bmp", ".jpg", ".jpeg", NULL };
+#endif
 
 static bool has_ext(const char *path, const char *ext) {
   if (!path || !ext) return false;

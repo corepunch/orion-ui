@@ -2125,23 +2125,6 @@ bool canvas_resize(canvas_doc_t *doc, int new_w, int new_h) {
 }
 
 // ============================================================
-// PNG I/O (stb_image)
-// ============================================================
-
-bool png_save(const char *path, const canvas_doc_t *doc) {
-  // Composite all layers before saving.
-  // In indexed mode, composite() already expands palette indices to RGBA.
-  size_t sz = (size_t)doc->canvas_w * doc->canvas_h * 4;
-  uint8_t *comp = malloc(sz);
-  if (!comp) return false;
-  canvas_composite(doc, comp);
-  canvas_composite_over_bg(doc, comp);
-  bool ok = save_image_png(path, comp, doc->canvas_w, doc->canvas_h);
-  free(comp);
-  return ok;
-}
-
-// ============================================================
 // Canvas GL texture
 // ============================================================
 
