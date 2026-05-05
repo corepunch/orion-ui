@@ -84,6 +84,14 @@ static const menu_item_t kSubItems[] = {
     {"Advanced", 4, NULL, 0},
 };
 
+static const menu_item_t kBlurItems[] = {
+    {"Gaussian", 11, NULL, 0},
+};
+
+static const menu_item_t kSharpenItems[] = {
+    {"Strong", 12, NULL, 0},
+};
+
 static const menu_item_t kTestItems[] = {
     {"Open", 1, NULL, 0},
     {"Save", 2, NULL, 0},
@@ -96,6 +104,15 @@ static const menu_def_t kTestMenus[] = {
     {"File", kTestItems, (int)(sizeof(kTestItems)/sizeof(kTestItems[0]))},
 };
 
+static const menu_item_t kFilterItems[] = {
+    {"Blur", 0, kBlurItems, (int)(sizeof(kBlurItems)/sizeof(kBlurItems[0]))},
+    {"Sharpen", 0, kSharpenItems, (int)(sizeof(kSharpenItems)/sizeof(kSharpenItems[0]))},
+};
+
+static const menu_def_t kFilterMenus[] = {
+    {"Filter", kFilterItems, (int)(sizeof(kFilterItems)/sizeof(kFilterItems[0]))},
+};
+
 // Helper: create a configured menu-bar window.
 static window_t *make_menubar(winproc_t proc) {
     window_t *mb = test_env_create_window("mb", 0, 0, 400, 12, proc, NULL);
@@ -103,6 +120,15 @@ static window_t *make_menubar(winproc_t proc) {
     send_message(mb, kMenuBarMessageSetMenus,
                  (uint32_t)(sizeof(kTestMenus)/sizeof(kTestMenus[0])),
                  (void *)kTestMenus);
+    return mb;
+}
+
+static window_t *make_filter_menubar(winproc_t proc) {
+    window_t *mb = test_env_create_window("mb", 0, 0, 400, 12, proc, NULL);
+    if (!mb) return NULL;
+    send_message(mb, kMenuBarMessageSetMenus,
+                 (uint32_t)(sizeof(kFilterMenus)/sizeof(kFilterMenus[0])),
+                 (void *)kFilterMenus);
     return mb;
 }
 
@@ -375,6 +401,54 @@ void test_submenu_opens_and_dispatches_child_item(void) {
     PASS();
 }
 
+void test_submenu_click_transfers_to_sibling_item(void) {
+    TEST("Menubar submenu switches to sibling submenu on click");
+
+    test_env_init();
+    reset_counters();
+
+    window_t *mb = make_filter_menubar(menubar_proc_basic);
+    ASSERT_NOT_NULL(mb);
+
+    open_popup(mb);
+    ASSERT_EQUAL(count_windows(), 2);
+
+    window_t *popup = find_other_window(mb);
+    ASSERT_NOT_NULL(popup);
+
+    // Click "Blur" to open its submenu.
+    send_message(popup, evLeftButtonDown, MAKEDWORD(10, 5), NULL);
+    ASSERT_EQUAL(count_windows(), 3);
+
+    window_t *blur_submenu = find_window_not(mb, popup);
+    ASSERT_NOT_NULL(blur_submenu);
+
+    // While the Blur submenu is open, click the sibling "Sharpen" item on the
+    // parent popup.  The child submenu should forward the click to its parent
+    // so the menu switches instead of collapsing the whole tree.
+    int sharpen_x = popup->frame.x + 10 - blur_submenu->frame.x;
+    int sharpen_y = popup->frame.y + 22 - blur_submenu->frame.y;
+    send_message(blur_submenu, evLeftButtonDown,
+                 MAKEDWORD(sharpen_x, sharpen_y), NULL);
+
+    ASSERT_EQUAL(count_windows(), 3);
+
+    window_t *sharpen_submenu = find_window_not(mb, popup);
+    ASSERT_NOT_NULL(sharpen_submenu);
+
+    // Click the child item under Sharpen to confirm the switched submenu is active.
+    send_message(sharpen_submenu, evLeftButtonDown, MAKEDWORD(10, 5), NULL);
+    send_message(sharpen_submenu, evLeftButtonUp, MAKEDWORD(10, 5), NULL);
+
+    ASSERT_EQUAL(g_cmd_count, 1);
+    ASSERT_EQUAL(g_cmd_last_id, 12);
+    ASSERT_EQUAL(count_windows(), 1);
+
+    destroy_window(mb);
+    test_env_shutdown();
+    PASS();
+}
+
 // ---- main -------------------------------------------------------------------
 
 int main(int argc, char *argv[]) {
@@ -389,6 +463,7 @@ int main(int argc, char *argv[]) {
     test_nonclient_buttonup_closes_popup();
     test_popup_no_action_on_mouseup_without_press();
     test_submenu_opens_and_dispatches_child_item();
+    test_submenu_click_transfers_to_sibling_item();
 
     TEST_END();
 }

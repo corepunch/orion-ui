@@ -147,6 +147,32 @@ static int popup_item_y(const popup_data_t *pd, int index) {
   return y;
 }
 
+static bool popup_contains_screen_point(const window_t *popup, int sx, int sy) {
+  return popup && sx >= popup->frame.x && sy >= popup->frame.y &&
+         sx < popup->frame.x + popup->frame.w &&
+         sy < popup->frame.y + popup->frame.h;
+}
+
+static bool popup_forward_to_parent_if_inside(window_t *win, popup_data_t *pd,
+                                              uint32_t msg, int lx, int ly) {
+  window_t *parent;
+  if (!win || !pd || !pd->parent_popup || !is_window(pd->parent_popup))
+    return false;
+
+  parent = pd->parent_popup;
+  {
+    int sx = win->frame.x + lx;
+    int sy = win->frame.y + ly;
+    if (!popup_contains_screen_point(parent, sx, sy))
+      return false;
+    send_message(parent, msg,
+                 MAKEDWORD((uint16_t)(sx - parent->frame.x),
+                           (uint16_t)(sy - parent->frame.y)),
+                 NULL);
+    return true;
+  }
+}
+
 static void close_popup_tree(window_t *popup);
 static void open_submenu_popup(window_t *popup, popup_data_t *pd, int index);
 
@@ -216,6 +242,8 @@ static result_t popup_proc(window_t *win, uint32_t msg,
     case evMouseMove: {
       int lx = (int16_t)LOWORD(wparam);
       int ly = (int16_t)HIWORD(wparam);
+      if (popup_forward_to_parent_if_inside(win, pd, evMouseMove, lx, ly))
+        return true;
       int new_hovered = -1;
       if (lx >= 0 && lx < win->frame.w && ly >= 0 && ly < win->frame.h) {
         new_hovered = popup_item_at(pd, lx, ly);
@@ -237,6 +265,8 @@ static result_t popup_proc(window_t *win, uint32_t msg,
       // Coords are popup-window-local (set_capture ensures we get them)
       int lx = (int16_t)LOWORD(wparam);
       int ly = (int16_t)HIWORD(wparam);
+      if (popup_forward_to_parent_if_inside(win, pd, evLeftButtonDown, lx, ly))
+        return true;
       // Click inside the popup – record which item was pressed
       if (lx >= 0 && lx < win->frame.w && ly >= 0 && ly < win->frame.h) {
         pd->pressed = popup_item_at(pd, lx, ly);
@@ -268,6 +298,8 @@ static result_t popup_proc(window_t *win, uint32_t msg,
       if (pd->pressed < 0) return true;
       int lx = (int16_t)LOWORD(wparam);
       int ly = (int16_t)HIWORD(wparam);
+      if (popup_forward_to_parent_if_inside(win, pd, evLeftButtonUp, lx, ly))
+        return true;
       // Find which item the mouse was released on
       int release_item = -1;
       if (lx >= 0 && lx < win->frame.w && ly >= 0 && ly < win->frame.h) {
@@ -368,10 +400,12 @@ static window_t *create_popup_window(window_t *mb_win, window_t *parent_popup,
 
   int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
   int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
-  if (px + pw > sw) px = sw - pw;
-  if (py + ph > sh) py = sh - ph;
-  if (px < 0) px = 0;
-  if (py < 0) py = 0;
+  if (sw > 0 && sh > 0) {
+    if (px + pw > sw) px = sw - pw;
+    if (py + ph > sh) py = sh - ph;
+    if (px < 0) px = 0;
+    if (py < 0) py = 0;
+  }
 
   window_t *popup = create_window(
       "",
