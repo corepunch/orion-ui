@@ -28,14 +28,14 @@ static const toolbox_item_t k_tools[NUM_TOOLS] = {
   { ID_TOOL_PENCIL,        IE_PENCIL,                        "Pencil (P)"         },
   { ID_TOOL_BRUSH,         IE_BRUSH,                         "Brush (B)"          },
   { ID_TOOL_SPRAY,         IE_SPRAY_CAN,                     "Spray (A)"          },
-  { ID_TOOL_FILL,          IE_PAINT_BUCKET,                 "Fill (K)"           },
+  { ID_TOOL_FILL,          IE_PAINT_BUCKET,                  "Fill (K)"           },
   { ID_TOOL_ERASER,        IE_ERASER,                        "Eraser (E)"         },
   { ID_TOOL_LINE,          IE_LINE,                          "Line"               },
   { ID_TOOL_TEXT,          IE_TEXT,                          "Text (T)"           },
   { ID_TOOL_RECT,          IE_RECTANGLE,                     "Rectangle"          },
   { ID_TOOL_ELLIPSE,       IE_ELLIPSE,                       "Ellipse"            },
-  { ID_TOOL_ROUNDED_RECT,  IE_ROUNDED_RECTANGLE,            "Rounded Rect"       },
-  { ID_TOOL_POLYGON,       IE_POLYGON_LASSO,                "Polygon"            },
+  { ID_TOOL_ROUNDED_RECT,  IE_ROUNDED_RECTANGLE,             "Rounded Rect"       },
+  { ID_TOOL_POLYGON,       IE_POLYGON_LASSO,                 "Polygon"            },
   { ID_TOOL_MAGNIFIER,     IE_ZOOM_OUT,                      "Magnifier (G)"      },
 };
 
