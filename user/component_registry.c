@@ -1,8 +1,11 @@
 #include "user.h"
 #include "icons.h"
+#include "../examples/formeditor/controls-icons.h"
 
 static bool is_valid_toolbox_icon(int icon) {
   if (icon >= SYSICON_BASE && icon <= sysicon_yield_add)
+    return true;
+  if (icon >= 0 && icon < IC_ICON_COUNT)
     return true;
   return false;
 }

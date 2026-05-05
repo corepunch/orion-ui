@@ -2,12 +2,10 @@
 // Defaults to a reportview icon+name list, similar to later Visual Basic
 // toolbox versions. Define FE_TOOLBOX_USE_BUTTON_GRID to use the classic
 // compact button grid.
-// Shared icon atlas is loaded by the framework; use sysicon_* values here.
 
 #include "formeditor.h"
 #include "../../commctl/commctl.h"
 #include "../../commctl/columnview.h"
-#include "../../user/icons.h"
 
 #ifndef FE_TOOLBOX_USE_BUTTON_GRID
 static reportview_item_t g_tools[FE_MAX_COMPONENTS + 1];
@@ -69,7 +67,7 @@ static void build_tool_items(void) {
 #ifdef FE_TOOLBOX_USE_BUTTON_GRID
   g_tools[g_tool_count++] = (toolbox_item_t){
       ID_TOOL_SELECT,
-      sysicon_cursor,
+      IC_POINTER,
       "Select"
   };
 #else
@@ -145,6 +143,15 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
 #ifdef FE_TOOLBOX_USE_BUTTON_GRID
       win_toolbox(win, msg, wparam, lparam);
       send_message(win, bxSetButtonSize, FE_TOOLBOX_BTN_SIZE, NULL);
+
+#ifdef SHAREDIR
+      char icon_path[512];
+      int n = snprintf(icon_path, sizeof(icon_path), "%s/" SHAREDIR "/controls-icons.png",
+                       ui_get_exe_dir());
+      if (n > 0 && (size_t)n < sizeof(icon_path)) {
+        send_message(win, bxLoadStrip, FE_TOOLBOX_ICON_W, icon_path);
+      }
+#endif
 
       build_tool_items();
       send_message(win, bxSetItems, g_tool_count, (void *)g_tools);

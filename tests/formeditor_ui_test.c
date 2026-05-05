@@ -724,7 +724,7 @@ void test_fe_resize_element(void) {
     PASS();
 }
 
-// Resize is clamped to MIN_ELEM_W × MIN_ELEM_H; it never goes below that.
+// Resize is clamped to MIN_ELEM_W x MIN_ELEM_H; it never goes below that.
 void test_fe_resize_clamped_to_minimum(void) {
     TEST("resize to below minimum: clamped to MIN_ELEM_W x MIN_ELEM_H");
 

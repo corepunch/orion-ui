@@ -23,9 +23,11 @@
 #define FORM_DEFAULT_H    240
 
 // Tool palette.
-// The button-grid mode uses the shared 16x16 sysicon atlas.
-#define FE_TOOLBOX_ICON_W   16   // icon tile size in the shared strip
-#define FE_TOOLBOX_BTN_SIZE 24   // square button size for classic grid mode
+// The button-grid mode uses the shared controls-icons atlas.
+#define FE_TOOLBOX_ICON_W   24   // icon tile size in the shared strip
+#define FE_TOOLBOX_BTN_SIZE 30   // match imageeditor's roomier toolbox buttons
+
+#include "controls-icons.h"
 
 // Palette window dimensions.
 #define PALETTE_WIN_X     4
