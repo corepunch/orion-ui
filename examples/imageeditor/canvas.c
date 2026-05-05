@@ -123,6 +123,37 @@ static void canvas_composite(const canvas_doc_t *doc, uint8_t *dst) {
   }
 }
 
+static void canvas_composite_over_bg(const canvas_doc_t *doc, uint8_t *rgba) {
+  if (!doc || !rgba) return;
+  if (!doc->background.show) return;
+
+  uint8_t bg_r = COLOR_R(doc->background.color);
+  uint8_t bg_g = COLOR_G(doc->background.color);
+  uint8_t bg_b = COLOR_B(doc->background.color);
+  size_t n = (size_t)doc->canvas_w * doc->canvas_h;
+
+  for (size_t i = 0; i < n; i++) {
+    uint8_t *p = rgba + i * 4;
+    uint32_t sa = p[3];
+    if (sa == 0) {
+      p[0] = bg_r;
+      p[1] = bg_g;
+      p[2] = bg_b;
+      p[3] = 255;
+      continue;
+    }
+    if (sa == 255) {
+      continue;
+    }
+
+    uint32_t inv = 255 - sa;
+    p[0] = (uint8_t)((p[0] * sa + bg_r * inv + 127) / 255);
+    p[1] = (uint8_t)((p[1] * sa + bg_g * inv + 127) / 255);
+    p[2] = (uint8_t)((p[2] * sa + bg_b * inv + 127) / 255);
+    p[3] = 255;
+  }
+}
+
 static void layer_upload_texture(canvas_doc_t *doc, layer_t *lay) {
   if (!doc || !lay || !lay->pixels) return;
   if (!lay->tex) {
@@ -1935,6 +1966,7 @@ bool png_save(const char *path, const canvas_doc_t *doc) {
   uint8_t *comp = malloc(sz);
   if (!comp) return false;
   canvas_composite(doc, comp);
+  canvas_composite_over_bg(doc, comp);
   bool ok = save_image_png(path, comp, doc->canvas_w, doc->canvas_h);
   free(comp);
   return ok;
