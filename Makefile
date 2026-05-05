@@ -112,11 +112,31 @@ endif
 # Compile flags for .gem shared libraries
 GEM_CFLAGS = $(CFLAGS) -DBUILD_AS_GEM
 
+# On Windows (MinGW), generate an import library (.dll.a) alongside liborion.dll
+# so that plugin DLLs can resolve symbols via -lorion at link time.
+# On other platforms this is a no-op.
+ifeq ($(OS),Windows_NT)
+	IMPLIB_FLAGS = -Wl,--out-implib,$(LIB_DIR)/liborion.dll.a
+else
+	IMPLIB_FLAGS =
+endif
+
 # Link flags for FormEditor component plugins.
-ifeq ($(UNAME_S),Darwin)
+# On macOS: -undefined dynamic_lookup defers symbol resolution to load time.
+# On Linux: -shared implicitly allows unresolved symbols in shared objects.
+# On Windows (MinGW): all symbols must be resolved at link time; link against
+# the liborion.dll.a import library generated alongside liborion.dll.
+# IMPORTANT: FE_PLUGIN_LDLIBS must appear AFTER source files in the link
+# command (MinGW linker processes libraries left-to-right after objects).
+ifeq ($(OS),Windows_NT)
+	FE_PLUGIN_LFLAGS = $(LIB_FLAGS)
+	FE_PLUGIN_LDLIBS = -L$(LIB_DIR) -lorion
+else ifeq ($(UNAME_S),Darwin)
 	FE_PLUGIN_LFLAGS = $(LIB_FLAGS) -undefined dynamic_lookup
+	FE_PLUGIN_LDLIBS =
 else
 	FE_PLUGIN_LFLAGS = $(LIB_FLAGS)
+	FE_PLUGIN_LDLIBS =
 endif
 
 # Build directories
@@ -154,7 +174,7 @@ ORION_LDFLAGS = -L$(LIB_DIR) -lorion
 ORIONC_BIN = $(BIN_DIR)/orionc$(EXE_EXT)
 TOOLS_SRCS = $(filter-out tools/orionc.c,$(wildcard tools/*.c))
 TOOLS_BINS = $(patsubst tools/%.c,$(BIN_DIR)/%$(EXE_EXT),$(TOOLS_SRCS))
-TOOLS_BINS += $(ORIONC_BIN)
+# orionc requires libxml2; added to TOOLS_BINS only when libxml2 is available.
 TOOLS_CFLAGS = $(CFLAGS) -Wno-unused-function
 
 # .gem output directory and target list
@@ -200,6 +220,19 @@ $(info NOTE: libxml2 not found; skipping browser example. Install libxml2 + pkg-
 endif
 endif
 
+# orionc (Orion form compiler) and imageeditor.exe both require libxml2.
+# formeditor.exe also requires libxml2. Skip all three when libxml2 is absent.
+# The imageeditor and formeditor UI tests also need the generated forms header
+# (via imageeditor.h) and LIBXML2_CFLAGS respectively, so skip those too.
+ifneq ($(strip $(LIBXML2_LIBS)),)
+TOOLS_BINS += $(ORIONC_BIN)
+FORMEDITOR_EXAMPLE_BIN = $(BIN_DIR)/formeditor$(EXE_EXT)
+IMAGEEDITOR_EXAMPLE_BIN = $(BIN_DIR)/imageeditor$(EXE_EXT)
+LIBXML_UI_TEST_BINS = $(IMAGEEDITOR_UI_TEST_BIN) $(FORMEDITOR_UI_TEST_BIN)
+else
+$(info NOTE: libxml2 not found; skipping orionc, formeditor and imageeditor examples.)
+endif
+
 # Gitclient tests require custom build rules because they compile gitclient
 # source files alongside the test.  The UI test also needs test_env.c; the
 # backend test uses only test_framework.h (header-only).  Both are excluded
@@ -222,8 +255,6 @@ FORMEDITOR_UI_TEST_BIN  = $(BIN_DIR)/test_formeditor_ui_test$(EXE_EXT)
 FORMEDITOR_SRCS_NO_MAIN = $(filter-out examples/formeditor/main.c,$(wildcard examples/formeditor/*.c))
 FORMEDITOR_COMPONENT_PLUGIN_SRC = commctl/formeditor_components_plugin.c
 FORMEDITOR_COMPONENT_PLUGIN = $(LIB_DIR)/formeditor_components$(LIB_EXT)
-TOOLBOX_ICONS_H = user/toolbox_icons.h
-
 IE_COMPONENTS_PLUGIN_SRCS = \
 	examples/imageeditor/components/lv_plug.c \
 	examples/imageeditor/components/lv_hist.c \
@@ -237,7 +268,7 @@ IMAGEEDITOR_FORMS_H = $(GENERATED_DIR)/examples/imageeditor/imageeditor_forms.h
 
 # Tests with custom build rules — excluded from the generic pattern rules.
 APP_UI_TEST_SRCS = $(GITCLIENT_TEST_SRCS) $(IMAGEEDITOR_UI_TEST_SRC) $(FORMEDITOR_UI_TEST_SRC)
-APP_UI_TEST_BINS = $(GITCLIENT_TEST_BINS) $(IMAGEEDITOR_UI_TEST_BIN) $(FORMEDITOR_UI_TEST_BIN)
+APP_UI_TEST_BINS = $(GITCLIENT_TEST_BINS) $(LIBXML_UI_TEST_BINS)
 
 # Test sources (app UI tests excluded — they use their own build rules)
 TEST_SRCS = $(filter-out $(TEST_DIR)/test_env.c $(APP_UI_TEST_SRCS),$(wildcard $(TEST_DIR)/*.c))
@@ -258,11 +289,12 @@ tools: $(TOOLS_BINS)
 	@echo "All tools built"
 
 fonts: tools
-	$(BIN_DIR)/font_atlas fonts/ChiKareGo2.ttf share/Chicago-12.png -pixelsize=16 -em -sharp -cellw=10 -cellh=15 -v
-	$(BIN_DIR)/font_atlas fonts/FindersKeepers.ttf share/FindersKeepers.png -pixelsize=16 -em -sharp -cellw=8 -cellh=9 -v
-# 	$(BIN_DIR)/font_atlas fonts/Pix32.ttf share/Geneva-12.png -pixelsize=12 -em -sharp -cellw=8 -cellh=16 -v
-	$(BIN_DIR)/font_atlas fonts/PixelOperator.ttf share/Geneva-12.png -pixelsize=16 -em -sharp -cellw=8 -cellh=16 -v -scan-width -letter-spacing=2
-	$(BIN_DIR)/font_atlas fonts/PixelOperatorMono.ttf share/Mono-12.png -pixelsize=16 -em -sharp -cellw=8 -cellh=16 -v
+	@mkdir -p share/fonts
+	$(BIN_DIR)/font_atlas fonts/ChiKareGo2.ttf share/fonts/Chicago-12.png -pixelsize=16 -em -sharp -cellw=10 -cellh=15 -v
+	$(BIN_DIR)/font_atlas fonts/FindersKeepers.ttf share/fonts/FindersKeepers.png -pixelsize=16 -em -sharp -cellw=8 -cellh=9 -v
+# 	$(BIN_DIR)/font_atlas fonts/Pix32.ttf share/fonts/Geneva-12.png -pixelsize=12 -em -sharp -cellw=8 -cellh=16 -v
+	$(BIN_DIR)/font_atlas fonts/PixelOperator.ttf share/fonts/Geneva-12.png -pixelsize=16 -em -sharp -cellw=8 -cellh=16 -v -scan-width -letter-spacing=2
+	$(BIN_DIR)/font_atlas fonts/PixelOperatorMono.ttf share/fonts/Mono-12.png -pixelsize=16 -em -sharp -cellw=8 -cellh=16 -v
 	
 $(BIN_DIR)/%$(EXE_EXT): tools/%.c $(SHARED_LIB) | $(BIN_DIR)
 	@echo "Building tool: $@"
@@ -295,15 +327,15 @@ $(PLATFORM_LIB): | $(LIB_DIR)
 	@echo "Building platform library..."
 	$(MAKE) -C $(PLATFORM_DIR) OUTDIR=$(abspath $(LIB_DIR))
 
-# VGA font sheet — copied from the source tree into build/share/orion.
-# Place your custom font at share/vga-rom-font-8x16.png and it will be used
+# VGA font sheet — copied from the source tree into build/share/orion/fonts.
+# Place your custom font at share/fonts/vga-rom-font-8x16.png and it will be used
 # by gitclient at runtime.
-VGA_FONT_PNG = $(SHARE_DIR)/orion/vga-rom-font-8x16.png
-VGA_FONT_SRC = share/vga-rom-font-8x16.png
+VGA_FONT_PNG = $(SHARE_DIR)/orion/fonts/vga-rom-font-8x16.png
+VGA_FONT_SRC = share/fonts/vga-rom-font-8x16.png
 
 $(VGA_FONT_PNG): $(VGA_FONT_SRC) | $(SHARE_DIR)
 	@echo "Copying VGA font sheet: $@"
-	@mkdir -p $(SHARE_DIR)/orion
+	@mkdir -p $(dir $@)
 	cp $(VGA_FONT_SRC) $@
 
 # Shared data assets — copy per-example resources into build/share/<example>/
@@ -312,19 +344,18 @@ $(VGA_FONT_PNG): $(VGA_FONT_SRC) | $(SHARE_DIR)
 share: $(VGA_FONT_PNG) | $(SHARE_DIR)
 	@mkdir -p $(SHARE_DIR)/orion
 	@cp share/icon_sheet_16x16.png $(SHARE_DIR)/orion/
-	@cp share/SmallFont.png $(SHARE_DIR)/orion/
-	@cp share/Chicago-12.png $(SHARE_DIR)/orion/
-	@cp share/Geneva-9.png $(SHARE_DIR)/orion/
-	@cp share/Geneva-12.png $(SHARE_DIR)/orion/
+	@mkdir -p $(SHARE_DIR)/orion/fonts
+	@cp share/fonts/SmallFont.png $(SHARE_DIR)/orion/fonts/
+	@cp share/fonts/Chicago-12.png $(SHARE_DIR)/orion/fonts/
+	@cp share/fonts/Geneva-9.png $(SHARE_DIR)/orion/fonts/
+	@cp share/fonts/Geneva-12.png $(SHARE_DIR)/orion/fonts/
 	@cp share/theme.png $(SHARE_DIR)/orion/
 	@cp share/filepicker.png $(SHARE_DIR)/orion/
 	@mkdir -p $(SHARE_DIR)/orion/shaders
-	@cp share/orion/shaders/*.glsl $(SHARE_DIR)/orion/shaders/
-	@mkdir -p $(SHARE_DIR)/imageeditor/shaders
-	@cp examples/imageeditor/share/shaders/*.glsl $(SHARE_DIR)/imageeditor/shaders/
-	@mkdir -p $(SHARE_DIR)/imageeditor/filters
-	@cp examples/imageeditor/share/filters/*.glsl $(SHARE_DIR)/imageeditor/filters/
-	@[ ! -f share/Geneva9.png ] || cp share/Geneva9.png $(SHARE_DIR)/orion/
+	@cp share/shaders/*.glsl $(SHARE_DIR)/orion/shaders/
+	@mkdir -p $(SHARE_DIR)/imageeditor
+	@cp -R examples/imageeditor/share/. $(SHARE_DIR)/imageeditor/
+	@[ ! -f share/fonts/Geneva9.png ] || cp share/fonts/Geneva9.png $(SHARE_DIR)/orion/fonts/
 	@for dir in examples/*/; do \
 	  name=$$(basename "$$dir"); \
 	  assets=$$(find "$$dir" -maxdepth 1 \( -name "*.png" -o -name "*.ttf" -o -name "*.jpg" -o -name "*.jpeg" \) 2>/dev/null); \
@@ -353,24 +384,24 @@ $(STATIC_LIB): $(USER_SRCS) $(KERNEL_SRCS) $(COMMCTL_SRCS) $(PLATFORM_LIB) | $(L
 $(SHARED_LIB): $(USER_SRCS) $(KERNEL_SRCS) $(COMMCTL_SRCS) $(PLATFORM_LIB) | $(LIB_DIR)
 	@echo "Creating shared library: $@"
 	find user kernel commctl -name "*.c" ! -name "formeditor_components_plugin.c" | sort | sed 's/.*/#include "&"/' | \
-		$(CC) $(CFLAGS) $(LIB_FLAGS) -x c -o $@ - $(LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
+		$(CC) $(CFLAGS) $(LIB_FLAGS) -x c -o $@ - $(LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS) $(IMPLIB_FLAGS)
 
 # Examples
 .PHONY: examples
-examples: share $(EXAMPLE_BINS) $(EXTRA_EXAMPLE_BINS) $(FORMEDITOR_COMPONENT_PLUGIN) $(IE_COMPONENTS_PLUGIN) $(BIN_DIR)/formeditor$(EXE_EXT) $(BIN_DIR)/imageeditor$(EXE_EXT)
+examples: share $(EXAMPLE_BINS) $(EXTRA_EXAMPLE_BINS) $(FORMEDITOR_COMPONENT_PLUGIN) $(IE_COMPONENTS_PLUGIN) $(FORMEDITOR_EXAMPLE_BIN) $(IMAGEEDITOR_EXAMPLE_BIN)
 
 .PHONY: plugins
 plugins: $(FORMEDITOR_COMPONENT_PLUGIN) $(IE_COMPONENTS_PLUGIN)
 
-$(FORMEDITOR_COMPONENT_PLUGIN): $(FORMEDITOR_COMPONENT_PLUGIN_SRC) $(TOOLBOX_ICONS_H) $(SHARED_LIB) | $(LIB_DIR)
+$(FORMEDITOR_COMPONENT_PLUGIN): $(FORMEDITOR_COMPONENT_PLUGIN_SRC) $(SHARED_LIB) | $(LIB_DIR)
 	@echo "Building FormEditor component plugin: $@"
 	$(CC) $(CFLAGS) $(FE_PLUGIN_LFLAGS) -I. -o $@ $< \
-		$(LDFLAGS)
+		$(LDFLAGS) $(FE_PLUGIN_LDLIBS)
 
-$(IE_COMPONENTS_PLUGIN): $(IE_COMPONENTS_PLUGIN_SRCS) $(TOOLBOX_ICONS_H) $(SHARED_LIB) | $(LIB_DIR)
+$(IE_COMPONENTS_PLUGIN): $(IE_COMPONENTS_PLUGIN_SRCS) $(SHARED_LIB) | $(LIB_DIR)
 	@echo "Building ImageEditor components plugin: $@"
 	$(CC) $(CFLAGS) $(FE_PLUGIN_LFLAGS) -I. -Iexamples/imageeditor -o $@ $(IE_COMPONENTS_PLUGIN_SRCS) \
-		$(LDFLAGS)
+		$(LDFLAGS) $(FE_PLUGIN_LDLIBS)
 
 .PHONY: imagelite
 imagelite: share $(IMAGELITE_BIN)
@@ -383,7 +414,7 @@ $(IMAGELITE_BIN): $(wildcard examples/imageeditor/*.c) $(IMAGEEDITOR_FORMS_H) $(
 		$(CC) $(CFLAGS) -DIMAGEEDITOR_SINGLE_LAYER -I. -Iexamples/imageeditor -DSHAREDIR='"../share/imageeditor"' -x c -o $@ - \
 		$(LDFLAGS) $(LDFLAGS_EXAMPLE) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
 
-$(BIN_DIR)/formeditor$(EXE_EXT): $(wildcard examples/formeditor/*.c) $(TOOLBOX_ICONS_H) $(SHARED_LIB) $(FORMEDITOR_COMPONENT_PLUGIN) | $(BIN_DIR) share
+$(BIN_DIR)/formeditor$(EXE_EXT): $(wildcard examples/formeditor/*.c) $(SHARED_LIB) $(FORMEDITOR_COMPONENT_PLUGIN) | $(BIN_DIR) share
 	@echo "Building example: $@"
 	@(find examples/formeditor -maxdepth 1 -name "*.c" ! -name "main.c" | sort | sed 's/.*/#include "&"/'; \
 	 echo '#include "examples/formeditor/main.c"') | \
@@ -524,7 +555,7 @@ $(BIN_DIR)/test_gitclient_ui_test$(EXE_EXT): $(TEST_DIR)/gitclient_ui_test.c $(T
 		$(LDFLAGS) $(LDFLAGS_TEST) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
 
 # Imageeditor UI test — needs all imageeditor sources except main.c + test_env.c.
-$(IMAGEEDITOR_UI_TEST_BIN): $(IMAGEEDITOR_UI_TEST_SRC) $(TEST_DIR)/test_env.c $(IMAGEEDITOR_SRCS_NO_MAIN) $(IMAGEEDITOR_FORMS_H) $(TOOLBOX_ICONS_H) $(SHARED_LIB) | $(BIN_DIR)
+$(IMAGEEDITOR_UI_TEST_BIN): $(IMAGEEDITOR_UI_TEST_SRC) $(TEST_DIR)/test_env.c $(IMAGEEDITOR_SRCS_NO_MAIN) $(IMAGEEDITOR_FORMS_H) $(SHARED_LIB) | $(BIN_DIR)
 	@echo "Building imageeditor UI test: $@"
 	$(CC) $(CFLAGS) -I. -Iexamples/imageeditor -DIMAGEEDITOR_DEBUG=0 -o $@ \
 		$(IMAGEEDITOR_UI_TEST_SRC) $(TEST_DIR)/test_env.c \
@@ -532,7 +563,7 @@ $(IMAGEEDITOR_UI_TEST_BIN): $(IMAGEEDITOR_UI_TEST_SRC) $(TEST_DIR)/test_env.c $(
 		$(LDFLAGS) $(LDFLAGS_TEST) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
 
 # Formeditor UI test — needs all formeditor sources except main.c + test_env.c.
-$(FORMEDITOR_UI_TEST_BIN): $(FORMEDITOR_UI_TEST_SRC) $(TEST_DIR)/test_env.c $(FORMEDITOR_SRCS_NO_MAIN) $(TOOLBOX_ICONS_H) $(SHARED_LIB) $(FORMEDITOR_COMPONENT_PLUGIN) $(IE_COMPONENTS_PLUGIN) | $(BIN_DIR)
+$(FORMEDITOR_UI_TEST_BIN): $(FORMEDITOR_UI_TEST_SRC) $(TEST_DIR)/test_env.c $(FORMEDITOR_SRCS_NO_MAIN) $(SHARED_LIB) $(FORMEDITOR_COMPONENT_PLUGIN) $(IE_COMPONENTS_PLUGIN) | $(BIN_DIR)
 	@echo "Building formeditor UI test: $@"
 	$(CC) $(CFLAGS) $(LIBXML2_CFLAGS) -I. -Iexamples/formeditor -o $@ \
 		$(FORMEDITOR_UI_TEST_SRC) $(TEST_DIR)/test_env.c \

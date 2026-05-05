@@ -1,9 +1,6 @@
 // Animation GL rendering: thumbnail generation for indexed and 1-bit frames.
-// Compiled only when IMAGEEDITOR_ANIMATIONS == 1.
 
 #include "imageeditor.h"
-
-#if IMAGEEDITOR_ANIMATIONS
 
 // ============================================================
 // GL shader programs
@@ -157,4 +154,3 @@ bool anim_render_frame_thumbnail(const anim_frame_t *frame, int w, int h,
   return ok;
 }
 
-#endif // IMAGEEDITOR_ANIMATIONS

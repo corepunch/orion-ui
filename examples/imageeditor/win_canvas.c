@@ -538,7 +538,10 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       irect16_t canvas_rect = canvas_doc_rect_to_view(win, state, 0, 0,
                                                       doc->canvas_w, doc->canvas_h);
       if (!doc->mask_only_view) {
-        draw_checkerboard(canvas_rect, CANVAS_CHECKER_SQUARE_PX);
+        if (doc->show_background)
+          fill_rect(doc->background_color, canvas_rect);
+        else
+          draw_checkerboard(canvas_rect, CANVAS_CHECKER_SQUARE_PX);
         for (int li = 0; li < doc->layer_count; li++) {
           const layer_t *lay = doc->layers[li];
           if (!lay || !lay->visible) continue;
@@ -878,7 +881,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           canvas_draw_circle(doc, px, py, brush_radius(), g_app->fg_color);
           break;
         case ID_TOOL_ERASER:
-          canvas_draw_circle(doc, px, py, brush_radius(), g_app->bg_color);
+          canvas_draw_circle(doc, px, py, brush_radius(), MAKE_COLOR(0x00, 0x00, 0x00, 0x00));
           break;
         case ID_TOOL_FILL:
           canvas_flood_fill(doc, px, py, g_app->fg_color);
@@ -1062,7 +1065,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           break;
         case ID_TOOL_ERASER:
           canvas_draw_line(doc, doc->last.x, doc->last.y, px, py,
-                           brush_radius(), g_app->bg_color);
+                           brush_radius(), MAKE_COLOR(0x00, 0x00, 0x00, 0x00));
           break;
         case ID_TOOL_FILL:
           break;

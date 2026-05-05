@@ -15,6 +15,7 @@
 
 #include "../../ui.h"
 #include "../../user/icons.h"
+#include "image-editor.h"
 
 #ifndef IMAGEEDITOR_DEBUG
 #define IMAGEEDITOR_DEBUG 1
@@ -24,9 +25,7 @@
 #define IMAGEEDITOR_SINGLE_LAYER 0
 #endif
 
-#ifndef IMAGEEDITOR_ANIMATIONS
 #define IMAGEEDITOR_ANIMATIONS 1
-#endif
 
 #ifndef IMAGEEDITOR_SHOW_SELECTION_BOUNDS
 #define IMAGEEDITOR_SHOW_SELECTION_BOUNDS 0
@@ -63,12 +62,13 @@
 #define APP_TOOLBAR_H   (TB_SPACING + 2*(TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH))
 
 #define PALETTE_WIN_X   4
-#define TOOL_PALETTE_BTN_SIZE (TOOLBOX_BTN_SIZE + 4)
+#define IMAGEEDITOR_TOOL_ICON_PX 24
+#define TOOL_PALETTE_BTN_SIZE    (IMAGEEDITOR_TOOL_ICON_PX + 6)
 // Tool palette window width: always 2 toolbox columns wide.
 #define PALETTE_WIN_W   (TOOLBOX_COLS * TOOL_PALETTE_BTN_SIZE)
 
-#define TOOL_ICON_W    16
-#define TOOL_ICON_H    16
+#define TOOL_ICON_W     IMAGEEDITOR_TOOL_ICON_PX
+#define TOOL_ICON_H     IMAGEEDITOR_TOOL_ICON_PX
 
 // Toolbox grid rows and height: ceil(NUM_TOOLS / 2) rows x button size.
 #define TOOL_TOOLBAR_ROWS (((NUM_TOOLS) + TOOLBOX_COLS - 1) / TOOLBOX_COLS)
@@ -209,15 +209,15 @@ typedef struct {
   ui_render_effect_params_t preview_params;
 } layer_t;
 
-#if IMAGEEDITOR_ANIMATIONS
 // Forward-declare anim_timeline_t so canvas_doc_t can hold a pointer.
 typedef struct anim_timeline_s anim_timeline_t;
-#endif
 
 typedef struct canvas_doc_s {
   uint8_t *pixels;           // convenience alias → layers[active_layer]->pixels
   int      canvas_w;         // image width in pixels
   int      canvas_h;         // image height in pixels
+  uint32_t background_color; // document background color used by preview/display paths
+  bool     show_background;  // true = paint the document background behind pixels
   bool     canvas_dirty;
   bool     drawing;
   bool     close_prompt_open;
@@ -266,9 +266,8 @@ typedef struct canvas_doc_s {
   uint8_t *float_pixels;   // RGBA data extracted from canvas
   uint8_t *float_mask;     // float_w * float_h edit mask, same semantics as sel_mask
   GLuint   float_tex;      // cached GL texture for float_pixels (0 = none)
-#if IMAGEEDITOR_ANIMATIONS
-  anim_timeline_t *anim;   // animation timeline (NULL when not in animation mode)
-#endif
+  anim_timeline_t *anim;   // animation timeline; non-NULL after successful create_document(),
+                           // but may be NULL on allocation failure (OOM guard)
 } canvas_doc_t;
 
 typedef struct {
@@ -298,10 +297,8 @@ typedef struct {
   window_t      *tool_options_win;
   window_t      *color_win;
   window_t      *layers_win;
-#if IMAGEEDITOR_ANIMATIONS
   window_t      *timeline_win;
   uint32_t       anim_timer_id; // axSetTimer handle for playback; 0 = stopped
-#endif
   hinstance_t    hinstance;  // owning app instance
   int            current_tool;
   uint32_t       palette[NUM_COLORS];
@@ -457,7 +454,7 @@ bool canvas_contract_selection(canvas_doc_t *doc, int amount);
 void canvas_crop_to_selection(canvas_doc_t *doc);
 // Crop or expand the canvas to the active selection.
 // If the selection extends outside the canvas the canvas grows (new areas filled
-// with opaque white); if it is smaller the canvas shrinks.
+// with transparent pixels); if it is smaller the canvas shrinks.
 // Returns true on success, false if the operation could not be performed
 // (invalid state, oversized selection, or allocation failure — canvas unchanged).
 bool canvas_crop_or_expand_to_selection(canvas_doc_t *doc);
@@ -610,7 +607,7 @@ bool show_selection_modify_dialog(window_t *parent, const char *title, int *out_
 // Layer management (canvas.c)
 // ============================================================
 
-// Add a new empty layer above the current active layer (filled with opaque white).
+// Add a new empty layer above the current active layer (filled with transparent pixels).
 bool doc_add_layer(canvas_doc_t *doc);
 
 // Add a new layer filled with the given RGBA color (0x00000000 = transparent,
@@ -644,7 +641,7 @@ void doc_move_layer_down(canvas_doc_t *doc);
 // Flatten the active layer onto the one below it.
 void doc_merge_down(canvas_doc_t *doc);
 
-// Flatten all layers into a single background layer.
+// Flatten all layers into a single layer.
 void doc_flatten(canvas_doc_t *doc);
 
 // Free all layers (called by close_document).
@@ -690,10 +687,10 @@ void swap_foreground_background_colors(void);
 
 // ============================================================
 // Animation support (anim.c / win_timeline.c)
-// Only compiled when IMAGEEDITOR_ANIMATIONS == 1
+// Animation is always enabled: a single-frame timeline is the default
+// canvas state; additional frames enable sprite/animation workflows.
 // ============================================================
 
-#if IMAGEEDITOR_ANIMATIONS
 #include "anim.h"
 
 // Timeline window geometry — docked at the bottom of the screen.
@@ -718,6 +715,5 @@ void anim_tick(canvas_doc_t *doc);
 bool anim_export_gif(canvas_doc_t *doc, const char *path);
 bool anim_export_apng(canvas_doc_t *doc, const char *path);
 bool anim_export_spritesheet(canvas_doc_t *doc, const char *path);
-#endif // IMAGEEDITOR_ANIMATIONS
 
 #endif // __IMAGEEDITOR_H__

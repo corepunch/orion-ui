@@ -61,7 +61,12 @@ typedef struct {
   terminal_cmd_func_t callback;
 } terminal_cmd_t;
 
+#define TERMINAL_STATE_MAGIC 0x54524D4EU  /* "NRMT" */
+
 typedef struct terminal_state_s {
+  uint32_t magic;        // Set to TERMINAL_STATE_MAGIC; used by terminal_get_buffer
+                         // to verify the window is actually a terminal on all platforms
+                         // (DLL function pointer comparison is unreliable on Windows).
 #if defined(HAVE_LUA)
   lua_State *L;          // Main Lua state (NULL if in command mode)
   lua_State *co;         // Coroutine for script execution (NULL if in command mode)
@@ -318,10 +323,9 @@ static void process_command(terminal_state_t *s, const char *cmd) {
 // terminal output buffer. It safely handles null pointers and invalid window types.
 const char* terminal_get_buffer(window_t *win) {
   if (!win || !win->userdata) return "";
-  if (win->proc != win_terminal) return "";
-  
   terminal_state_t *s = (terminal_state_t *)win->userdata;
-  if (!s || !s->textbuf) return "";
+  if (s->magic != TERMINAL_STATE_MAGIC) return "";
+  if (!s->textbuf) return "";
   
   return s->textbuf->data;
 }
@@ -333,6 +337,7 @@ result_t win_terminal(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
     case evCreate: {
       s = allocate_window_data(win, sizeof(terminal_state_t));
       if (!s) return false;
+      s->magic = TERMINAL_STATE_MAGIC;
       
       // Note: the terminal does not implement a scrollback buffer, so it does
       // not set WINDOW_VSCROLL.  The input line is always anchored to the

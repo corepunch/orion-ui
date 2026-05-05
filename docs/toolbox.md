@@ -78,9 +78,9 @@ static result_t my_toolbox_proc(window_t *win, uint32_t msg,
 
       // 2. Load a PNG sprite sheet (square tiles; wparam = tile size in px).
       char path[512];
-      snprintf(path, sizeof(path), "%s/" SHAREDIR "/tools.png",
+      snprintf(path, sizeof(path), "%s/../share/imageeditor/image-editor.png",
                ui_get_exe_dir());
-      send_message(win, bxLoadStrip, 16 /* tile px */, path);
+      send_message(win, bxLoadStrip, 24 /* tile px */, path);
 
       // 3. Set items and mark the default active tool.
       send_message(win, bxSetItems, MY_TOOL_COUNT, kMyTools);

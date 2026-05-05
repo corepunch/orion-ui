@@ -1,5 +1,4 @@
 // APNG and sprite-sheet PNG exporter for the image editor.
-// Compiled only when IMAGEEDITOR_ANIMATIONS == 1.
 //
 // APNG export: extends the single-image PNG written by png_save() with the
 // three APNG chunks (acTL, fcTL, fdAT) needed for animation.
@@ -7,8 +6,6 @@
 // canvas and calls png_save() on a temporary document.
 
 #include "imageeditor.h"
-
-#if IMAGEEDITOR_ANIMATIONS
 
 // ============================================================
 // APNG export
@@ -361,5 +358,3 @@ bool anim_export_spritesheet(canvas_doc_t *doc, const char *path) {
   free(sheet);
   return ok;
 }
-
-#endif // IMAGEEDITOR_ANIMATIONS

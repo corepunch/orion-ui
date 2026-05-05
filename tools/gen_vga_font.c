@@ -1,6 +1,6 @@
 // tools/gen_vga_font.c
 //
-// Headless tool that generates share/vga-rom-font-8x16.png — a 128x256 RGBA
+// Headless tool that generates share/fonts/vga-rom-font-8x16.png — a 128x256 RGBA
 // monospace character sheet with 256 glyphs arranged in a 16-column x 16-row
 // grid (each cell is 8x16 pixels, white glyphs on transparent background).
 //
@@ -15,7 +15,7 @@
 //
 // Usage:
 //   gen_vga_font [output_path]
-//   (default output path: share/vga-rom-font-8x16.png)
+//   (default output path: share/fonts/vga-rom-font-8x16.png)
 //
 // Build: this tool is compiled by the standard Makefile tools rule.  It is
 // self-contained — the font data lives in tools/font_6x8.h and the only
@@ -39,7 +39,7 @@
 #define SRC_ROWS    8   /* rows in the 6x8 source glyph */
 
 int main(int argc, char *argv[]) {
-  const char *out_path = (argc > 1) ? argv[1] : "share/vga-rom-font-8x16.png";
+  const char *out_path = (argc > 1) ? argv[1] : "share/fonts/vga-rom-font-8x16.png";
 
   // Allocate RGBA pixel buffer, initialised to transparent black.
   uint8_t *pixels = (uint8_t *)calloc((size_t)(SHEET_W * SHEET_H * 4), 1);

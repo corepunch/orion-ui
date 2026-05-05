@@ -270,7 +270,7 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
       // Load VGA font for the diff viewer.
       char font_path[600];
       snprintf(font_path, sizeof(font_path),
-               "%s/../share/orion/vga-rom-font-8x16.png",
+               "%s/../share/orion/fonts/vga-rom-font-8x16.png",
                ui_get_exe_dir());
       vga_font_init(font_path);
 

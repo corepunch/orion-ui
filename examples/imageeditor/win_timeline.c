@@ -1,9 +1,6 @@
 // Timeline palette window — horizontal strip showing animation frames.
-// Compiled only when IMAGEEDITOR_ANIMATIONS == 1.
 
 #include "imageeditor.h"
-
-#if IMAGEEDITOR_ANIMATIONS
 
 // ============================================================
 // Layout constants
@@ -128,7 +125,7 @@ static void update_play_button_icon(window_t *win) {
 }
 
 // Draw a single frame cell at position cx in client space.
-static void draw_cell(const timeline_state_t *st, int idx,
+static void draw_cell(const timeline_state_t *st, canvas_doc_t *doc, int idx,
                       bool active, bool hover, int h) {
   int cx = cell_x(st, idx);
   int cw = TIMELINE_THUMB_W;
@@ -143,8 +140,13 @@ static void draw_cell(const timeline_state_t *st, int idx,
     int ty = CELL_PAD;
     int tw = cw - CELL_PAD * 2;
     int th = THUMB_H;
-    if (tw > 0 && th > 0)
+    if (tw > 0 && th > 0) {
+      if (doc && doc->show_background)
+        fill_rect(doc->background_color, R(tx, ty, tw, th));
+      else
+        draw_checkerboard(R(tx, ty, tw, th), CANVAS_CHECKER_SQUARE_PX);
       draw_rect(st->thumbs[idx], R(tx, ty, tw, th));
+    }
   }
 
   // Frame number label.
@@ -217,7 +219,7 @@ static result_t timeline_proc(window_t *win, uint32_t msg,
           int cx = cell_x(st, i);
           if (cx + TIMELINE_THUMB_W < 0) continue;
           if (cx > w) break;
-          draw_cell(st, i, i == active, i == st->hover_cell, h);
+          draw_cell(st, doc, i, i == active, i == st->hover_cell, h);
         }
       }
       return true;
@@ -237,7 +239,7 @@ static result_t timeline_proc(window_t *win, uint32_t msg,
           if (anim_timeline_switch_frame(doc->anim, cell,
                                          &doc->pixels,
                                          doc->canvas_w, doc->canvas_h,
-                                         FRAME_FORMAT_INDEXED)) {
+                                         FRAME_FORMAT_RGBA)) {
             // Sync the active layer's pixel pointer.
             if (doc->layer_count > 0)
               doc->layers[doc->active_layer]->pixels = doc->pixels;
@@ -322,13 +324,6 @@ static result_t timeline_proc(window_t *win, uint32_t msg,
       return true;
     }
 
-    case evRightButtonDown: {
-      if (!st) return true;
-      // Right-click: new frame as a quick action (context menus not available).
-      handle_menu_command(ID_ANIM_NEW_FRAME);
-      return true;
-    }
-
     case tbButtonClick:
       if (wparam == ID_ANIM_PLAY) {
         canvas_doc_t *doc = tl_doc();
@@ -338,20 +333,6 @@ static result_t timeline_proc(window_t *win, uint32_t msg,
         handle_menu_command((uint16_t)wparam);
       }
       return true;
-
-    case evCommand:
-      // Forward toolbar clicks to handle_menu_command.
-      if (HIWORD(wparam) == btnClicked || HIWORD(wparam) == tbButtonClick) {
-        uint16_t id = (uint16_t)LOWORD(wparam);
-        if (id == ID_ANIM_PLAY) {
-          canvas_doc_t *doc = tl_doc();
-          handle_menu_command(doc && doc->anim && doc->anim->playing
-                              ? ID_ANIM_STOP : ID_ANIM_PLAY);
-        } else {
-          handle_menu_command(id);
-        }
-      }
-      return false;
 
     default:
       return false;
@@ -423,7 +404,7 @@ void anim_tick(canvas_doc_t *doc) {
 
   if (anim_timeline_switch_frame(tl, next, &doc->pixels,
                                   doc->canvas_w, doc->canvas_h,
-                                  FRAME_FORMAT_INDEXED)) {
+                                  FRAME_FORMAT_RGBA)) {
     if (doc->layer_count > 0)
       doc->layers[doc->active_layer]->pixels = doc->pixels;
     doc->canvas_dirty = true;
@@ -431,5 +412,3 @@ void anim_tick(canvas_doc_t *doc) {
     timeline_win_refresh();
   }
 }
-
-#endif // IMAGEEDITOR_ANIMATIONS

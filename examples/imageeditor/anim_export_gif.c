@@ -1,12 +1,9 @@
 // GIF89a animation exporter for the image editor.
-// Compiled only when IMAGEEDITOR_ANIMATIONS == 1.
 //
 // Writes a minimal GIF89a file from the timeline frames without any external
 // library dependency.  The encoder uses the LZW variant required by GIF.
 
 #include "imageeditor.h"
-
-#if IMAGEEDITOR_ANIMATIONS
 
 // ============================================================
 // GIF byte-output helpers
@@ -301,5 +298,3 @@ bool anim_export_gif(canvas_doc_t *doc, const char *path) {
   fclose(fp);
   return ok;
 }
-
-#endif // IMAGEEDITOR_ANIMATIONS

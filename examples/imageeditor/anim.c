@@ -1,9 +1,6 @@
 // Animation support: frame compress/expand and timeline CRUD.
-// Compiled only when IMAGEEDITOR_ANIMATIONS == 1.
 
 #include "imageeditor.h"
-
-#if IMAGEEDITOR_ANIMATIONS
 
 // ============================================================
 // Internal helpers
@@ -466,5 +463,3 @@ bool anim_timeline_switch_frame(anim_timeline_t *tl, int idx,
   tl->active_frame = idx;
   return true;
 }
-
-#endif // IMAGEEDITOR_ANIMATIONS

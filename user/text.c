@@ -204,10 +204,10 @@ void init_text_rendering(void) {
 
   const char *exe = ui_get_exe_dir();
   char small_path[4096], chicago_path[4096], geneva9_path[4096], geneva12_path[4096];
-  snprintf(small_path,  sizeof(small_path),  "%s/../share/orion/SmallFont.png",  exe);
-  snprintf(chicago_path,  sizeof(chicago_path),  "%s/../share/orion/Chicago-12.png", exe);
-  snprintf(geneva9_path, sizeof(geneva9_path), "%s/../share/orion/Geneva-9.png", exe);
-  snprintf(geneva12_path, sizeof(geneva12_path), "%s/../share/orion/Geneva-12.png", exe);
+  snprintf(small_path,  sizeof(small_path),  "%s/../share/orion/fonts/SmallFont.png",  exe);
+  snprintf(chicago_path,  sizeof(chicago_path),  "%s/../share/orion/fonts/Chicago-12.png", exe);
+  snprintf(geneva9_path, sizeof(geneva9_path), "%s/../share/orion/fonts/Geneva-9.png", exe);
+  snprintf(geneva12_path, sizeof(geneva12_path), "%s/../share/orion/fonts/Geneva-12.png", exe);
 
 #if UI_WINDOW_SCALE == 1
   // At native (1:1) scale: ChiKareGo2 for chrome (FONT_SYSTEM), Geneva-12

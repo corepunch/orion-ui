@@ -2,20 +2,14 @@
 // Defaults to a reportview icon+name list, similar to later Visual Basic
 // toolbox versions. Define FE_TOOLBOX_USE_BUTTON_GRID to use the classic
 // compact button grid.
-// toolbox.png is a generated 16x16-px-per-tile shared component icon atlas.
+// Shared icon atlas is loaded by the framework; use sysicon_* values here.
 
 #include "formeditor.h"
 #include "../../commctl/commctl.h"
 #include "../../commctl/columnview.h"
-#include "../../kernel/renderer.h"
-#include "../../user/image.h"
+#include "../../user/icons.h"
 
 #ifndef FE_TOOLBOX_USE_BUTTON_GRID
-typedef struct {
-  bitmap_strip_t strip;
-  uint32_t strip_tex;
-} tool_palette_state_t;
-
 static reportview_item_t g_tools[FE_MAX_COMPONENTS + 1];
 #else
 static toolbox_item_t g_tools[FE_MAX_COMPONENTS + 1];
@@ -75,13 +69,13 @@ static void build_tool_items(void) {
 #ifdef FE_TOOLBOX_USE_BUTTON_GRID
   g_tools[g_tool_count++] = (toolbox_item_t){
       ID_TOOL_SELECT,
-      toolbox_icon_cursor,
+      sysicon_cursor,
       "Select"
   };
 #else
   g_tools[g_tool_count++] = (reportview_item_t){
       .text = "Select",
-      .icon = toolbox_icon_cursor,
+      .icon = sysicon_cursor,
       .color = get_sys_color(brTextNormal),
       .userdata = ID_TOOL_SELECT,
   };
@@ -108,45 +102,6 @@ static void build_tool_items(void) {
 #endif
   }
 }
-
-#ifndef FE_TOOLBOX_USE_BUTTON_GRID
-#ifdef SHAREDIR
-static bool load_toolbox_strip(tool_palette_state_t *st, const char *path) {
-  if (!st || !path || !g_ui_runtime.running)
-    return false;
-
-  int w = 0;
-  int h = 0;
-  uint8_t *pixels = load_image(path, &w, &h);
-  if (!pixels)
-    return false;
-  if (w < FE_TOOLBOX_ICON_W || h < FE_TOOLBOX_ICON_W ||
-      (w % FE_TOOLBOX_ICON_W) != 0 || (h % FE_TOOLBOX_ICON_W) != 0) {
-    image_free(pixels);
-    return false;
-  }
-
-  uint32_t tex = R_CreateTextureRGBA(w, h, pixels, R_FILTER_NEAREST, R_WRAP_CLAMP);
-  image_free(pixels);
-  if (!tex)
-    return false;
-
-  if (st->strip_tex)
-    R_DeleteTexture(st->strip_tex);
-  st->strip_tex = tex;
-  st->strip = (bitmap_strip_t){
-      .tex = tex,
-      .icon_w = FE_TOOLBOX_ICON_W,
-      .icon_h = FE_TOOLBOX_ICON_W,
-      .cols = w / FE_TOOLBOX_ICON_W,
-      .sheet_w = w,
-      .sheet_h = h,
-  };
-  return true;
-}
-#endif
-
-#endif
 
 static void select_tool_by_ident(window_t *win, int ident) {
   if (g_app) {
@@ -191,28 +146,12 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       win_toolbox(win, msg, wparam, lparam);
       send_message(win, bxSetButtonSize, FE_TOOLBOX_BTN_SIZE, NULL);
 
-#ifdef SHAREDIR
-      char path[4096];
-      snprintf(path, sizeof(path), "%s/" SHAREDIR "/toolbox.png", ui_get_exe_dir());
-      send_message(win, bxLoadStrip, FE_TOOLBOX_ICON_W, path);
-#endif
-
       build_tool_items();
       send_message(win, bxSetItems, g_tool_count, (void *)g_tools);
       send_message(win, bxSetActiveItem, ID_TOOL_SELECT, NULL);
       return true;
 #else
       win_reportview(win, msg, wparam, lparam);
-      tool_palette_state_t *st = allocate_window_data(win, sizeof(tool_palette_state_t));
-
-#ifdef SHAREDIR
-      char path[4096];
-      snprintf(path, sizeof(path), "%s/" SHAREDIR "/toolbox.png", ui_get_exe_dir());
-      if (load_toolbox_strip(st, path))
-        send_message(win, RVM_SETICONSTRIP, 0, &st->strip);
-#else
-      (void)st;
-#endif
 
       send_message(win, RVM_SETVIEWMODE, RVM_VIEW_ICON, NULL);
       send_message(win, RVM_SETCOLUMNWIDTH, PALETTE_WIN_W - 12, NULL);
@@ -222,18 +161,6 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       return true;
 #endif
     }
-
-#ifndef FE_TOOLBOX_USE_BUTTON_GRID
-    case evDestroy: {
-      tool_palette_state_t *st = (tool_palette_state_t *)win->userdata;
-      if (st && st->strip_tex)
-        R_DeleteTexture(st->strip_tex);
-      free(st);
-      win->userdata = NULL;
-      return win_reportview(win, msg, wparam, lparam);
-    }
-#endif
-
     case evCommand:
 #ifdef FE_TOOLBOX_USE_BUTTON_GRID
       if (HIWORD(wparam) == bxClicked) {

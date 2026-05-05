@@ -2,7 +2,6 @@
 #define __ANIM_H__
 
 // Animation support for the Image Editor.
-// Compiled only when IMAGEEDITOR_ANIMATIONS == 1.
 //
 // Storage model:
 //   • All editing is done in RGBA (doc->pixels — unchanged).

@@ -1,4 +1,11 @@
 #include "user.h"
+#include "icons.h"
+
+static bool is_valid_toolbox_icon(int icon) {
+  if (icon >= SYSICON_BASE && icon <= sysicon_yield_add)
+    return true;
+  return false;
+}
 
 #define FE_MAX_COMPONENT_PLUGINS 32
 
@@ -35,8 +42,8 @@ bool fe_register_component(const fe_component_desc_t *desc) {
     return false;
 
   fe_component_desc_t stored = *desc;
-  if (stored.toolbox_icon < 0 || stored.toolbox_icon >= toolbox_icon_count)
-    stored.toolbox_icon = toolbox_icon_default;
+  if (!is_valid_toolbox_icon(stored.toolbox_icon))
+    stored.toolbox_icon = sysicon_puzzle;
 
   g_components[g_component_count].desc = stored;
   g_component_count++;

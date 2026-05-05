@@ -23,8 +23,8 @@
 #define FORM_DEFAULT_H    240
 
 // Tool palette.
-// toolbox.png is a generated 16x16-tile atlas; see user/toolbox_icons.h.
-#define FE_TOOLBOX_ICON_W   16   // icon tile size in toolbox.png
+// The button-grid mode uses the shared 16x16 sysicon atlas.
+#define FE_TOOLBOX_ICON_W   16   // icon tile size in the shared strip
 #define FE_TOOLBOX_BTN_SIZE 24   // square button size for classic grid mode
 
 // Palette window dimensions.

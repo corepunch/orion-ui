@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-gen_small_font.py — generate share/Geneva9.png for Orion.
+gen_small_font.py — generate share/fonts/Geneva9.png for Orion.
 
 Geneva9.png is a composite 128x128 greyscale font atlas:
   Chars   0–127: FindersKeepers (bundled in fonts/) rasterised at 8x8 cells.
@@ -31,15 +31,15 @@ def main():
     repo = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
     fk_ttf         = sys.argv[1] if len(sys.argv) > 1 else os.path.join(repo, 'fonts', 'FindersKeepers.ttf')
-    smallfont_png  = sys.argv[2] if len(sys.argv) > 2 else os.path.join(repo, 'share', 'SmallFont.png')
-    output_png     = sys.argv[3] if len(sys.argv) > 3 else os.path.join(repo, 'share', 'Geneva9.png')
+    smallfont_png  = sys.argv[2] if len(sys.argv) > 2 else os.path.join(repo, 'share', 'fonts', 'SmallFont.png')
+    output_png     = sys.argv[3] if len(sys.argv) > 3 else os.path.join(repo, 'share', 'fonts', 'Geneva9.png')
     font_atlas_bin = sys.argv[4] if len(sys.argv) > 4 else os.path.join(repo, 'build', 'bin', 'font_atlas')
 
     # Locate font_atlas binary if the default doesn't exist yet.
     if not os.path.exists(font_atlas_bin):
         sys.exit(
             'ERROR: font_atlas binary not found. Build it with:\n'
-            '  make Geneva9\n'
+            '  make fonts\n'
             'or:\n'
             '  gcc -std=c11 -O2 -Itools tools/font_atlas.c -lm -o build/bin/font_atlas'
         )

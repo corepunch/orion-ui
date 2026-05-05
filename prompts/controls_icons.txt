@@ -1,0 +1,94 @@
+Create a cohesive set of **64 UI icons** for a UI editor / interface builder toolbox.
+
+---
+
+## Layout
+
+* **Solid white background** (NOT transparent)
+* **8×8 grid** (64 icons total)
+* Each icon **32×32 px**
+* **8 px padding** between icons
+* Crisp pixel alignment, clean edges, **no blur**
+* All icons centered perfectly inside their cells
+
+---
+
+## Style
+
+* Colorful, vibrant palette that stands out strongly on white
+* **Thick black outlines** on every icon (consistent stroke width)
+* Bold geometric shapes, strong silhouettes
+* Slightly puffy / inflated “toy UI” look, subtly rounded corners
+* Chibi-like simplification (large readable forms, no micro detail)
+* High contrast, readable at **16×16 scale**
+* Subtle gradients and soft highlights (plastic toy-like finish)
+* Consistent lighting direction (top-left highlight, bottom-right shadow)
+* No text, no labels, no letters
+* No realism, no glass, no metallic materials
+* Pure iconography for a **toolbox / tool palette**
+
+---
+
+## Icon Theme (Toolbox Set — UI Editor Components Only)
+
+### Core UI controls
+
+button, toggle switch, checkbox, radio button, slider, knob/dial, progress bar, loading spinner, tab, panel, divider, spacer
+
+### Input fields
+
+text field, multiline text area, password field, number input, dropdown combobox, searchable combobox, date picker, color picker, file input, drag handle
+
+### Cursor & interaction tools
+
+arrow cursor, pointer hand, text cursor, move tool, resize tool, selection box, multi-select tool, drag tool
+
+### Layout tools
+
+container box, grid layout, flex row, flex column, alignment tool, spacing tool, padding tool, margin tool, anchor tool, responsive breakpoint
+
+### Navigation & structure
+
+menu, context menu, toolbar, sidebar, breadcrumb, search, filter, command palette
+
+### Data & backend
+
+database, table/grid data, JSON document, API endpoint, sync, cloud storage, import, export, refresh
+
+### Editing actions
+
+add (+), remove (-), edit, duplicate, copy, paste, cut, undo, redo, save, open, delete, confirm, cancel
+
+### View & debugging
+
+grid toggle, list view, card view, split view, fullscreen, zoom in, zoom out, preview, visibility toggle, inspector, history, timer, settings, warning, info, error, help
+
+### Assets
+
+image asset, font asset, vector/SVG, asset library, upload, download
+
+---
+
+## Special constraint
+
+* Only a single generic **“button”** icon is included (no states like default/pressed/disabled)
+* Each concept is represented once (no duplicates or variants)
+
+---
+
+## Rendering requirements
+
+* Icons must feel like a **cohesive toolbox language system**
+* Strong visual consistency across all 64 icons
+* Clear silhouettes optimized for small-scale readability
+* Uniform stroke thickness and corner radius
+* Balanced composition within each 32×32 cell
+* No text, no UI screenshots, no realism
+
+---
+
+## Output
+
+* One **PNG sprite sheet**
+* Solid white background
+* Perfect **8×8 grid alignment (64 icons total)**

@@ -4,6 +4,7 @@
 #include "../user/user.h"
 #include "../user/messages.h"
 #include "../user/draw.h"
+#include "../user/icons.h"
 #include "../user/rect.h"
 #include "../user/theme.h"
 #include "commctl.h"
@@ -170,8 +171,7 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
       // end_dialog → destroy_window(win), freeing 'win'. Reading win->parent
       // in get_root_window() on freed memory causes SIGSEGV on macOS.
       invalidate_window(win);
-      send_message(get_root_window(win), evCommand,
-                   MAKEDWORD(win->id, btnClicked), win);
+      send_message(get_root_window(win), tbButtonClick, win->id, win);
       return true;
     case evKeyDown:
       if (wparam == AX_KEY_ENTER || wparam == AX_KEY_SPACE) {
@@ -187,8 +187,7 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
           autoradio_select(win);
         // Same ordering fix as evLeftButtonUp.
         invalidate_window(win);
-        send_message(get_root_window(win), evCommand,
-                     MAKEDWORD(win->id, btnClicked), win);
+        send_message(get_root_window(win), tbButtonClick, win->id, win);
         return true;
       }
       return false;
@@ -209,9 +208,10 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
       // bitmap_strip_t descriptor and the icon index.
       // wparam = icon index; lparam = bitmap_strip_t*
       if (lparam) {
+        bitmap_strip_t *src = (bitmap_strip_t *)lparam;
         toolbar_button_data_t *bd = malloc(sizeof(toolbar_button_data_t));
         if (!bd) return false; // OOM: keep old image
-        memcpy(&bd->strip, lparam, sizeof(bitmap_strip_t));
+        memcpy(&bd->strip, src, sizeof(bitmap_strip_t));
         bd->index = (int)(uint32_t)wparam;
         if (win->userdata) free(win->userdata);
         win->userdata = bd;
