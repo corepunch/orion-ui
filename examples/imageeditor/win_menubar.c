@@ -88,7 +88,6 @@ static bool cancel_active_canvas_interaction(canvas_doc_t *doc, int old_tool) {
   return changed;
 }
 
-#if IMAGEEDITOR_ANIMATIONS
 static void anim_stop_playback(canvas_doc_t *doc) {
   if (!doc || !doc->anim) return;
   doc->anim->playing = false;
@@ -120,7 +119,6 @@ static bool anim_step_frame(canvas_doc_t *doc, int delta) {
   timeline_win_refresh();
   return true;
 }
-#endif
 
 // ============================================================
 // Palette window helpers (shared by gem_init / handle_menu_command)
@@ -747,7 +745,6 @@ void handle_menu_command(uint16_t id) {
       }
       break;
 
-#if !IMAGEEDITOR_SINGLE_LAYER
     case ID_WINDOW_LAYERS:
       if (g_app->layers_win) {
         show_window(g_app->layers_win, true);
@@ -755,7 +752,6 @@ void handle_menu_command(uint16_t id) {
         create_layers_window();
       }
       break;
-#endif
 
     case ID_LAYER_NEW:
       if (doc) {

@@ -21,23 +21,13 @@
 #define IMAGEEDITOR_DEBUG 1
 #endif
 
-#ifndef IMAGEEDITOR_SINGLE_LAYER
-#define IMAGEEDITOR_SINGLE_LAYER 0
-#endif
-
 #ifndef IMAGEEDITOR_INDEXED
 #define IMAGEEDITOR_INDEXED 0
 #endif
 
 #if IMAGEEDITOR_INDEXED
-// Indexed (palette) images are always single-layer and have no animations.
-#undef  IMAGEEDITOR_SINGLE_LAYER
-#define IMAGEEDITOR_SINGLE_LAYER 1
-#define IMAGEEDITOR_ANIMATIONS   0
 // Which palette index is treated as transparent (the "eraser" target).
 #define IMAGEEDITOR_TRANSPARENT_INDEX 0
-#else
-#define IMAGEEDITOR_ANIMATIONS 1
 #endif
 
 // Bytes per pixel in the layer pixel buffer.

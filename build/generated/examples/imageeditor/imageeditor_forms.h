@@ -237,61 +237,27 @@ static menu_item_t s_view_items[] = {
 static const menu_item_t kWindowItems[] = {
   { "Tools", ID_WINDOW_TOOLS, NULL, 0 },
   { "Colors", ID_WINDOW_COLORS, NULL, 0 },
-#if !IMAGEEDITOR_SINGLE_LAYER
   { "Layers", ID_WINDOW_LAYERS, NULL, 0 },
-#endif
-#if IMAGEEDITOR_ANIMATIONS
   { "Timeline", ID_WINDOW_TIMELINE, NULL, 0 },
-#endif
   { NULL, 0, NULL, 0 },
 };
 
 static const menu_item_t kAnimItems[] = {
-#if IMAGEEDITOR_ANIMATIONS
   { "New Frame", ID_ANIM_NEW_FRAME, NULL, 0 },
-#endif
-#if IMAGEEDITOR_ANIMATIONS
   { "Duplicate Frame", ID_ANIM_DUPLICATE_FRAME, NULL, 0 },
-#endif
-#if IMAGEEDITOR_ANIMATIONS
   { "Delete Frame", ID_ANIM_DELETE_FRAME, NULL, 0 },
-#endif
-#if IMAGEEDITOR_ANIMATIONS
   { NULL, 0, NULL, 0 },
-#endif
-#if IMAGEEDITOR_ANIMATIONS
   { "Previous Frame\tPage Up", ID_ANIM_PREV_FRAME, NULL, 0 },
-#endif
-#if IMAGEEDITOR_ANIMATIONS
   { "Next Frame\tPage Down", ID_ANIM_NEXT_FRAME, NULL, 0 },
-#endif
-#if IMAGEEDITOR_ANIMATIONS
   { NULL, 0, NULL, 0 },
-#endif
-#if IMAGEEDITOR_ANIMATIONS
   { "Play", ID_ANIM_PLAY, NULL, 0 },
-#endif
-#if IMAGEEDITOR_ANIMATIONS
   { "Stop", ID_ANIM_STOP, NULL, 0 },
-#endif
-#if IMAGEEDITOR_ANIMATIONS
   { "[ ] Loop", ID_ANIM_LOOP, NULL, 0 },
-#endif
-#if IMAGEEDITOR_ANIMATIONS
   { NULL, 0, NULL, 0 },
-#endif
-#if IMAGEEDITOR_ANIMATIONS
   { "Export GIF...", ID_ANIM_EXPORT_GIF, NULL, 0 },
-#endif
-#if IMAGEEDITOR_ANIMATIONS
   { "Export APNG...", ID_ANIM_EXPORT_APNG, NULL, 0 },
-#endif
-#if IMAGEEDITOR_ANIMATIONS
   { "Export Sprite Sheet...", ID_ANIM_EXPORT_SPRITESHEET, NULL, 0 },
-#endif
-#if IMAGEEDITOR_ANIMATIONS
   { "Set FPS...", ID_ANIM_SET_FPS, NULL, 0 },
-#endif
 };
 
 static const menu_item_t kHelpItems[] = {

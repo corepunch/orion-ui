@@ -250,7 +250,6 @@ GITCLIENT_SRCS_NO_MAIN = $(filter-out examples/gitclient/main.c,$(wildcard examp
 IMAGEEDITOR_UI_TEST_SRC  = $(TEST_DIR)/imageeditor_ui_test.c
 IMAGEEDITOR_UI_TEST_BIN  = $(BIN_DIR)/test_imageeditor_ui_test$(EXE_EXT)
 IMAGEEDITOR_SRCS_NO_MAIN = $(filter-out examples/imageeditor/main.c,$(wildcard examples/imageeditor/*.c))
-IMAGELITE_BIN = $(BIN_DIR)/imagelite$(EXE_EXT)
 
 # Formeditor UI test — links formeditor sources (no main.c) + test_env.c.
 FORMEDITOR_UI_TEST_SRC  = $(TEST_DIR)/formeditor_ui_test.c
@@ -406,17 +405,6 @@ $(IE_COMPONENTS_PLUGIN): $(IE_COMPONENTS_PLUGIN_SRCS) $(SHARED_LIB) | $(LIB_DIR)
 	$(CC) $(CFLAGS) $(FE_PLUGIN_LFLAGS) -I. -Iexamples/imageeditor -o $@ $(IE_COMPONENTS_PLUGIN_SRCS) \
 		$(LDFLAGS) $(FE_PLUGIN_LDLIBS)
 
-.PHONY: imagelite
-imagelite: share $(IMAGELITE_BIN)
-	@echo "Single-layer image editor built"
-
-$(IMAGELITE_BIN): $(wildcard examples/imageeditor/*.c) $(IMAGEEDITOR_FORMS_H) $(SHARED_LIB) | $(BIN_DIR) share
-	@echo "Building single-layer image editor: $@"
-	@(find examples/imageeditor -name "*.c" ! -name "main.c" | sort | sed 's/.*/#include "&"/'; \
-	 echo '#include "examples/imageeditor/main.c"') | \
-		$(CC) $(CFLAGS) -DIMAGEEDITOR_SINGLE_LAYER -I. -Iexamples/imageeditor -DSHAREDIR='"../share/imageeditor"' -x c -o $@ - \
-		$(LDFLAGS) $(LDFLAGS_EXAMPLE) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
-
 $(BIN_DIR)/formeditor$(EXE_EXT): $(wildcard examples/formeditor/*.c) $(SHARED_LIB) $(FORMEDITOR_COMPONENT_PLUGIN) | $(BIN_DIR) share
 	@echo "Building example: $@"
 	@(find examples/formeditor -maxdepth 1 -name "*.c" ! -name "main.c" | sort | sed 's/.*/#include "&"/'; \
@@ -435,7 +423,7 @@ $(IMAGEEDITOR256_EXAMPLE_BIN): $(wildcard examples/imageeditor/*.c) $(IMAGEEDITO
 	@echo "Building 256-color image editor: $@"
 	@(find examples/imageeditor -maxdepth 1 -name "*.c" ! -name "main.c" | sort | sed 's/.*/#include "&"/'; \
 	 echo '#include "examples/imageeditor/main.c"') | \
-		$(CC) $(CFLAGS) -DIMAGEEDITOR_INDEXED=1 -DIMAGEEDITOR_SINGLE_LAYER=1 \
+		$(CC) $(CFLAGS) -DIMAGEEDITOR_INDEXED=1 \
 		      -I. -Iexamples/imageeditor -DSHAREDIR='"../share/imageeditor"' -x c -o $@ - \
 		$(LDFLAGS) $(LDFLAGS_EXAMPLE) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
 
@@ -508,7 +496,7 @@ $(GEM_DIR)/imageeditor256.gem: $(wildcard examples/imageeditor/*.c) $(IMAGEEDITO
 	@(echo '#include "gem_magic.h"'; \
 	 find examples/imageeditor -maxdepth 1 -name "*.c" ! -name "main.c" | sort | sed 's/.*/#include "&"/'; \
 	 echo '#include "examples/imageeditor/main.c"') | \
-		$(CC) $(GEM_CFLAGS) $(GEM_LFLAGS) -DIMAGEEDITOR_INDEXED=1 -DIMAGEEDITOR_SINGLE_LAYER=1 \
+		$(CC) $(GEM_CFLAGS) $(GEM_LFLAGS) -DIMAGEEDITOR_INDEXED=1 \
 		      -I. -Iexamples/imageeditor -DSHAREDIR='"../share/imageeditor"' -x c -o $@ - \
 		$(LDFLAGS) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
 	@$(MAKE) --no-print-directory validate-gem GEM=$@
@@ -628,7 +616,6 @@ help:
 	@echo "  all       - Build library, examples, gems, and shell"
 	@echo "  library   - Build static and shared libraries"
 	@echo "  examples  - Build example applications"
-	@echo "  imagelite - Build the single-layer image editor"
 	@echo "  gems      - Build all .gem shared libraries"
 	@echo "  shell     - Build the Orion shell"
 	@echo "  test      - Build and run tests"

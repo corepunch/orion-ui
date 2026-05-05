@@ -97,9 +97,7 @@ static void create_app_windows(hinstance_t hinstance) {
   create_tool_palette_window();
   create_tool_options_window();
   create_color_palette_window();
-#if !IMAGEEDITOR_SINGLE_LAYER
   create_layers_window();
-#endif
   create_timeline_window();
 }
 
