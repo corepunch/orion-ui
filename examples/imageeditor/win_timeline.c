@@ -141,8 +141,8 @@ static void draw_cell(const timeline_state_t *st, canvas_doc_t *doc, int idx,
     int tw = cw - CELL_PAD * 2;
     int th = THUMB_H;
     if (tw > 0 && th > 0) {
-      if (doc && doc->show_background)
-        fill_rect(doc->background_color, R(tx, ty, tw, th));
+      if (doc && doc->background.show)
+        fill_rect(doc->background.color, R(tx, ty, tw, th));
       else
         draw_checkerboard(R(tx, ty, tw, th), CANVAS_CHECKER_SQUARE_PX);
       draw_rect(st->thumbs[idx], R(tx, ty, tw, th));

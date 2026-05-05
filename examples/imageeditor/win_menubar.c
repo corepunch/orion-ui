@@ -57,7 +57,7 @@ static bool cancel_active_canvas_interaction(canvas_doc_t *doc, int old_tool) {
 
   if (doc->sel.move.active) {
     IE_DEBUG("cancel_interaction selection_move doc=%p float_pos=(%d,%d)",
-             (void *)doc, doc->sel.floating.pos.x, doc->sel.floating.pos.y);
+             (void *)doc, doc->sel.floating.rect.x, doc->sel.floating.rect.y);
     canvas_commit_move(doc);
     changed = true;
   }
@@ -208,7 +208,7 @@ void imageeditor_sync_main_toolbar(void) {
   }
 
   if (bg_btn) {
-    bool checked = !g_app->active_doc || g_app->active_doc->show_background;
+    bool checked = !g_app->active_doc || g_app->active_doc->background.show;
     send_message(bg_btn, btnSetCheck, checked ? btnStateChecked : btnStateUnchecked, NULL);
     if (strip) {
       int icon = checked ? (sysicon_eye_show - SYSICON_BASE)
@@ -239,7 +239,7 @@ static void view_menu_rebuild(void) {
                               ? MENU_CHECK_ON "Snap to Grid"
                               : MENU_CHECK_OFF "Snap to Grid";
     if (s_view_items[i].id == ID_VIEW_SHOW_BACKGROUND)
-      s_view_items[i].label = (!doc || doc->show_background)
+      s_view_items[i].label = (!doc || doc->background.show)
                               ? MENU_CHECK_ON "Show Background"
                               : MENU_CHECK_OFF "Show Background";
     if (s_view_items[i].id == ID_VIEW_MASK_ONLY)
@@ -645,7 +645,7 @@ void handle_menu_command(uint16_t id) {
 
     case ID_VIEW_SHOW_BACKGROUND:
       if (doc) {
-        doc->show_background = !doc->show_background;
+        doc->background.show = !doc->background.show;
         if (doc->canvas_win)
           invalidate_window(doc->canvas_win);
         if (g_app->timeline_win)

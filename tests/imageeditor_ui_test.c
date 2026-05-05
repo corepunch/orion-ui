@@ -1074,7 +1074,8 @@ void test_ie_move_masked_selection_preserves_shape(void) {
 
     canvas_begin_move(doc, bg);
     ASSERT_TRUE(doc->sel.move.active);
-    doc->sel.floating.pos = (ipoint16_t){2, 2};
+    doc->sel.floating.rect.x = 2;
+    doc->sel.floating.rect.y = 2;
     canvas_commit_move(doc);
 
     ASSERT_FALSE(doc->sel.move.active);

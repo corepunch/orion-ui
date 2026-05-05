@@ -151,8 +151,8 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
 
   doc->canvas_w = w;
   doc->canvas_h = h;
-  doc->background_color = MAKE_COLOR(0xFF, 0xFF, 0xFF, 0xFF);
-  doc->show_background = true;
+  doc->background.color = MAKE_COLOR(0xFF, 0xFF, 0xFF, 0xFF);
+  doc->background.show = true;
   // Guard against integer overflow in the pixel buffer allocation.
   // Reject images larger than 16384x16384 to keep the size_t arithmetic safe.
   if ((size_t)w > 16384 || (size_t)h > 16384 ||

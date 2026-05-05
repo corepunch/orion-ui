@@ -1568,20 +1568,18 @@ void canvas_begin_move(canvas_doc_t *doc, uint32_t bg) {
         canvas_set_pixel_direct(doc, x, y, bg);
   doc->sel.floating.pixels  = buf;
   doc->sel.floating.mask    = mask;
-  doc->sel.floating.size.w       = w;
-  doc->sel.floating.size.h       = h;
-  doc->sel.floating.pos     = (ipoint16_t){x0, y0};
-  doc->sel.move.active    = true;
+  doc->sel.floating.rect    = (irect16_t){x0, y0, w, h};
+  doc->sel.move.active      = true;
   canvas_clear_selection_mask(doc);
 }
 
 // Paste float_pixels back at float_pos, update selection bounds, end move.
 void canvas_commit_move(canvas_doc_t *doc) {
   if (!doc || !doc->sel.move.active) return;
-  int dx = doc->sel.floating.pos.x;
-  int dy = doc->sel.floating.pos.y;
-  int w  = doc->sel.floating.size.w;
-  int h  = doc->sel.floating.size.h;
+  int dx = doc->sel.floating.rect.x;
+  int dy = doc->sel.floating.rect.y;
+  int w  = doc->sel.floating.rect.w;
+  int h  = doc->sel.floating.rect.h;
   size_t count = (size_t)doc->canvas_w * doc->canvas_h;
   uint8_t *new_mask = malloc(count);
   if (new_mask) memset(new_mask, 255, count);
@@ -1626,8 +1624,8 @@ void canvas_commit_move(canvas_doc_t *doc) {
   free(doc->sel.floating.mask);
   doc->sel.floating.pixels = NULL;
   doc->sel.floating.mask   = NULL;
-  doc->sel.floating.size.w      = 0;
-  doc->sel.floating.size.h      = 0;
+  doc->sel.floating.rect.w      = 0;
+  doc->sel.floating.rect.h      = 0;
   doc->sel.move.active   = false;
 }
 

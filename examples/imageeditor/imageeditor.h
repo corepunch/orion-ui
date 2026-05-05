@@ -224,8 +224,10 @@ typedef struct canvas_doc_s {
   uint8_t *pixels;           // convenience alias → layer.stack[layer.active]->pixels
   int      canvas_w;         // image width in pixels
   int      canvas_h;         // image height in pixels
-  uint32_t background_color; // document background color used by preview/display paths
-  bool     show_background;  // true = paint the document background behind pixels
+  struct {
+    uint32_t color;          // document background color used by preview/display paths
+    bool     show;           // true = paint the document background behind pixels
+  } background;
   bool     canvas_dirty;
   bool     drawing;
   bool     close_prompt_open;
@@ -267,10 +269,9 @@ typedef struct canvas_doc_s {
       ipoint16_t  origin;       // canvas pixel where drag began
     } move;
     struct {
-      ipoint16_t  pos;           // current top-left of floating selection
-      isize16_t   size;
+      irect16_t   rect;          // position and size of floating selection
       uint8_t    *pixels;        // RGBA data extracted from canvas
-      uint8_t    *mask;          // size.w × size.h edit mask, same semantics as sel.mask.data
+      uint8_t    *mask;          // rect.w × rect.h edit mask, same semantics as sel.mask.data
       GLuint      tex;           // cached GL texture for pixels (0 = none)
     } floating;
   } sel;
@@ -295,7 +296,7 @@ typedef struct {
   ipoint16_t    pan;        // pan offset in screen pixels
   bool          panning;    // true while hand-tool drag is in progress
   ipoint16_t    pan_start;  // screen-local coords where hand drag began
-  ipoint16_t       hover;      // canvas pixel coords under the cursor
+  ipoint16_t    hover;      // canvas pixel coords under the cursor
   bool          hover_valid; // true when hover is on the canvas (for magnifier overlay)
   GLuint        mag_tex;    // GL texture for magnifier loupe (created once, updated each paint)
   char          last_sb[64]; // last text sent to status bar — avoids redundant updates

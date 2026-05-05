@@ -379,7 +379,7 @@ static void float_tex_free(canvas_doc_t *doc) {
 static void float_tex_upload(canvas_doc_t *doc) {
   float_tex_free(doc);
   if (!g_ui_runtime.running) return;
-  if (!doc->sel.floating.pixels || doc->sel.floating.size.w <= 0 || doc->sel.floating.size.h <= 0) return;
+  if (!doc->sel.floating.pixels || doc->sel.floating.rect.w <= 0 || doc->sel.floating.rect.h <= 0) return;
   glGenTextures(1, &doc->sel.floating.tex);
   glBindTexture(GL_TEXTURE_2D, doc->sel.floating.tex);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -387,7 +387,7 @@ static void float_tex_upload(canvas_doc_t *doc) {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
-               doc->sel.floating.size.w, doc->sel.floating.size.h, 0,
+               doc->sel.floating.rect.w, doc->sel.floating.rect.h, 0,
                GL_RGBA, GL_UNSIGNED_BYTE, doc->sel.floating.pixels);
 }
 
@@ -538,8 +538,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       irect16_t canvas_rect = canvas_doc_rect_to_view(win, state, 0, 0,
                                                       doc->canvas_w, doc->canvas_h);
       if (!doc->layer.mask_only_view) {
-        if (doc->show_background)
-          fill_rect(doc->background_color, canvas_rect);
+        if (doc->background.show)
+          fill_rect(doc->background.color, canvas_rect);
         else
           draw_checkerboard(canvas_rect, CANVAS_CHECKER_SQUARE_PX);
         for (int li = 0; li < doc->layer.count; li++) {
@@ -590,10 +590,10 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       if (doc->sel.move.active && doc->sel.floating.tex) {
         // Draw the floating selection at its current position
         irect16_t float_rect = canvas_doc_rect_to_view(win, state,
-                                                       doc->sel.floating.pos.x,
-                                                       doc->sel.floating.pos.y,
-                                                       doc->sel.floating.pos.x + doc->sel.floating.size.w,
-                                                       doc->sel.floating.pos.y + doc->sel.floating.size.h);
+                                                       doc->sel.floating.rect.x,
+                                                       doc->sel.floating.rect.y,
+                                                       doc->sel.floating.rect.x + doc->sel.floating.rect.w,
+                                                       doc->sel.floating.rect.y + doc->sel.floating.rect.h);
         draw_rect(doc->sel.floating.tex, float_rect);
         draw_sel_rect(float_rect);
       } else if (doc->sel.active &&
@@ -1076,8 +1076,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           if (doc->sel.move.active) {
             int dx = px - doc->sel.move.origin.x;
             int dy = py - doc->sel.move.origin.y;
-            doc->sel.floating.pos.x += dx;
-            doc->sel.floating.pos.y += dy;
+            doc->sel.floating.rect.x += dx;
+            doc->sel.floating.rect.y += dy;
             doc->sel.move.origin.x = px;
             doc->sel.move.origin.y = py;
           }
@@ -1086,8 +1086,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           if (doc->sel.move.active) {
             int dx = px - doc->sel.move.origin.x;
             int dy = py - doc->sel.move.origin.y;
-            doc->sel.floating.pos.x += dx;
-            doc->sel.floating.pos.y += dy;
+            doc->sel.floating.rect.x += dx;
+            doc->sel.floating.rect.y += dy;
             doc->sel.move.origin.x = px;
             doc->sel.move.origin.y = py;
           } else if (doc->sel.move.mask_moving) {
