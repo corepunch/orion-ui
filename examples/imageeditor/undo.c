@@ -123,12 +123,8 @@ cleanup:
 
 restore:
 
-  // Replace old layer stack.
-  for (int i = 0; i < doc->layer.count; i++) {
-    free(doc->layer.stack[i]->pixels);
-    free(doc->layer.stack[i]);
-  }
-  free(doc->layer.stack);
+  // Replace old layer stack (use doc_free_layers to also release GL textures).
+  doc_free_layers(doc);
 
   doc->layer.stack      = nl;
   doc->layer.count = n;

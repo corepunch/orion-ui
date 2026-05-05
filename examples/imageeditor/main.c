@@ -232,18 +232,8 @@ void gem_shutdown(void) {
     g_loaded_component_plugins = false;
   }
 
-  while (g_app->docs) {
-    canvas_doc_t *next = g_app->docs->next;
-    doc_free_undo(g_app->docs);
-    if (g_app->docs->sel.floating.tex)
-      glDeleteTextures(1, &g_app->docs->sel.floating.tex);
-    image_free(g_app->docs->sel.floating.pixels);
-    image_free(g_app->docs->sel.floating.mask);
-    canvas_clear_selection_mask(g_app->docs);
-    image_free(g_app->docs->pixels);
-    free(g_app->docs);
-    g_app->docs = next;
-  }
+  while (g_app->docs)
+    close_document(g_app->docs);
   free(g_app);
   g_app = NULL;
 }

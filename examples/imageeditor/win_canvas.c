@@ -54,12 +54,12 @@ static int canvas_center_offset_y(const canvas_doc_t *doc, float scale, int win_
 
 static int canvas_doc_origin_x(window_t *win, canvas_win_state_t *state) {
   if (!win || !state) return 0;
-  return canvas_center_offset_x(state->doc, state->scale, win->frame.w) - state->pan.x;
+  return canvas_center_offset_x(state->doc, state->scale, win->frame.w) - state->pan_x;
 }
 
 static int canvas_doc_origin_y(window_t *win, canvas_win_state_t *state) {
   if (!win || !state) return 0;
-  return canvas_center_offset_y(state->doc, state->scale, win->frame.h) - state->pan.y;
+  return canvas_center_offset_y(state->doc, state->scale, win->frame.h) - state->pan_y;
 }
 
 static int canvas_view_axis_to_doc(int view_px, int origin_px, float scale) {
@@ -250,13 +250,13 @@ static void canvas_sync_scrollbars(window_t *win, canvas_win_state_t *state) {
   // Horizontal: update the doc window's built-in hscroll (merged with status bar).
   si.nMax  = canvas_w;
   si.nPage = view_w;
-  si.nPos  = state->pan.x;
+  si.nPos  = state->pan_x;
   set_scroll_info(dwin, SB_HORZ, &si, false);
 
   // Vertical: update the canvas window's built-in vscroll.
   si.nMax  = canvas_h;
   si.nPage = view_h;
-  si.nPos  = state->pan.y;
+  si.nPos  = state->pan_y;
   set_scroll_info(win, SB_VERT, &si, false);
 
 #ifdef CANVAS_SB_ALWAYS_VISIBLE
@@ -267,8 +267,8 @@ static void canvas_sync_scrollbars(window_t *win, canvas_win_state_t *state) {
   enable_scroll_bar(win,  SB_VERT, need_v);
 #endif
 
-  if (!need_h) state->pan.x = 0;
-  if (!need_v) state->pan.y = 0;
+  if (!need_h) state->pan_x = 0;
+  if (!need_v) state->pan_y = 0;
 }
 
 // Clamp pan to the valid range for the current zoom level and window size.
@@ -286,10 +286,10 @@ static void clamp_pan(canvas_win_state_t *state, int win_w, int win_h) {
 
   int max_x = MAX(0, canvas_w - view_w);
   int max_y = MAX(0, canvas_h - view_h);
-  if (state->pan.x < 0) state->pan.x = 0;
-  if (state->pan.y < 0) state->pan.y = 0;
-  if (state->pan.x > max_x) state->pan.x = max_x;
-  if (state->pan.y > max_y) state->pan.y = max_y;
+  if (state->pan_x < 0) state->pan_x = 0;
+  if (state->pan_y < 0) state->pan_y = 0;
+  if (state->pan_x > max_x) state->pan_x = max_x;
+  if (state->pan_y > max_y) state->pan_y = max_y;
 }
 
 // Set zoom level on a canvas window (called by menu/accelerator handler).
@@ -353,8 +353,8 @@ void canvas_win_fit_zoom(window_t *win) {
   // visually by the document-to-view conversion while keeping pan at 0.
   int scaled_w = canvas_scaled_w(doc, fit_scale);
   int scaled_h = canvas_scaled_h(doc, fit_scale);
-  state->pan.x = (scaled_w > view_w) ? (scaled_w - view_w) / 2 : 0;
-  state->pan.y = (scaled_h > view_h) ? (scaled_h - view_h) / 2 : 0;
+  state->pan_x = (scaled_w > view_w) ? (scaled_w - view_w) / 2 : 0;
+  state->pan_y = (scaled_h > view_h) ? (scaled_h - view_h) / 2 : 0;
   canvas_win_set_scale(win, fit_scale);
 }
 
@@ -411,8 +411,8 @@ static void apply_zoom_centered(window_t *win, canvas_win_state_t *state,
   canvas_doc_t *doc = state->doc;
   int center_x = canvas_center_offset_x(doc, (float)new_scale, win->frame.w);
   int center_y = canvas_center_offset_y(doc, (float)new_scale, win->frame.h);
-  state->pan.x = scaled_px(cx, (float)new_scale) + center_x - mx;
-  state->pan.y = scaled_px(cy, (float)new_scale) + center_y - my;
+  state->pan_x = scaled_px(cx, (float)new_scale) + center_x - mx;
+  state->pan_y = scaled_px(cy, (float)new_scale) + center_y - my;
   canvas_win_set_zoom(win, new_scale);
 }
 
@@ -509,8 +509,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       s->doc = (canvas_doc_t *)lparam;
       s->doc->canvas_win = win;
       s->scale = 1.0f;
-      s->pan.x = 0;
-      s->pan.y = 0;
+      s->pan_x = 0;
+      s->pan_y = 0;
       // Sync built-in scrollbars (WINDOW_HSCROLL | WINDOW_VSCROLL on this window)
       canvas_sync_scrollbars(win, s);
       return true;
@@ -674,7 +674,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
     case evHScroll:
       if (state) {
-        state->pan.x = (int)wparam;
+        state->pan_x = (int)wparam;
         clamp_pan(state, win->frame.w, win->frame.h);
         canvas_sync_scrollbars(win, state);
         invalidate_window(win);
@@ -683,7 +683,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
     case evVScroll:
       if (state) {
-        state->pan.y = (int)wparam;
+        state->pan_y = (int)wparam;
         clamp_pan(state, win->frame.w, win->frame.h);
         canvas_sync_scrollbars(win, state);
         invalidate_window(win);
@@ -713,8 +713,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         // LOWORD = -wheel.x * SCROLL_SENSITIVITY; HIWORD = wheel.y * SCROLL_SENSITIVITY
         int dx = -(int16_t)LOWORD(wparam);  // natural scroll: flip x axis
         int dy = -(int16_t)HIWORD(wparam);  // natural scroll: flip y axis
-        state->pan.x = MIN(MAX(state->pan.x + dx, 0), max_pan_x);
-        state->pan.y = MIN(MAX(state->pan.y + dy, 0), max_pan_y);
+        state->pan_x = MIN(MAX(state->pan_x + dx, 0), max_pan_x);
+        state->pan_y = MIN(MAX(state->pan_y + dy, 0), max_pan_y);
         canvas_sync_scrollbars(win, state);
         invalidate_window(win);
         return true;
@@ -737,8 +737,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       // Hand tool: begin pan drag
       if (g_app->current_tool == ID_TOOL_HAND) {
         state->panning = true;
-        state->pan_start.x = lx;
-        state->pan_start.y = ly;
+        state->pan_start_x = lx;
+        state->pan_start_y = ly;
         IE_DEBUG("pan_begin doc=%p at=(%d,%d)", (void *)doc, lx, ly);
         return true;
       }
@@ -989,10 +989,10 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       if (state->panning) {
         int lx = (int16_t)LOWORD(wparam);
         int ly = (int16_t)HIWORD(wparam);
-        state->pan.x -= lx - state->pan_start.x;
-        state->pan.y -= ly - state->pan_start.y;
-        state->pan_start.x = lx;
-        state->pan_start.y = ly;
+        state->pan_x -= lx - state->pan_start_x;
+        state->pan_y -= ly - state->pan_start_y;
+        state->pan_start_x = lx;
+        state->pan_start_y = ly;
         clamp_pan(state, win->frame.w, win->frame.h);
         canvas_sync_scrollbars(win, state);
         invalidate_window(win);

@@ -293,12 +293,14 @@ typedef struct canvas_doc_s {
 typedef struct {
   canvas_doc_t *doc;
   float         scale;
-  ipoint16_t    pan;        // pan offset in screen pixels
-  bool          panning;    // true while hand-tool drag is in progress
-  ipoint16_t    pan_start;  // screen-local coords where hand drag began
-  ipoint16_t    hover;      // canvas pixel coords under the cursor
+  int           pan_x;       // pan offset in screen pixels (int to avoid int16 overflow)
+  int           pan_y;
+  bool          panning;     // true while hand-tool drag is in progress
+  int           pan_start_x; // screen-local coords where hand drag began
+  int           pan_start_y;
+  ipoint16_t    hover;       // canvas pixel coords under the cursor
   bool          hover_valid; // true when hover is on the canvas (for magnifier overlay)
-  GLuint        mag_tex;    // GL texture for magnifier loupe (created once, updated each paint)
+  GLuint        mag_tex;     // GL texture for magnifier loupe (created once, updated each paint)
   char          last_sb[64]; // last text sent to status bar — avoids redundant updates
 } canvas_win_state_t;
 
