@@ -41,9 +41,9 @@ static void ie_setup(void) {
     g_app->current_tool = ID_TOOL_SELECT;
     g_app->fg_color     = MAKE_COLOR(0xFF,0x00,0x00,0xFF);
     g_app->bg_color     = MAKE_COLOR(0xFF,0xFF,0xFF,0xFF);
-    g_app->wand_antialias = true;
-    g_app->wand_spread = 24;
-    g_app->wand_overlay_color = MAKE_COLOR(0x40, 0xA0, 0xFF, 0x55);
+    g_app->wand.antialias = true;
+    g_app->wand.spread = 24;
+    g_app->wand.overlay_color = MAKE_COLOR(0x40, 0xA0, 0xFF, 0x55);
     // menubar_win left NULL: window_menu_rebuild guards against it.
     // tool_win / color_win created per-test as needed.
 }
@@ -881,8 +881,8 @@ void test_ie_shift_wand_adds_from_canvas_window(void) {
     ASSERT_NOT_NULL(doc);
     g_app->active_doc = doc;
     g_app->current_tool = ID_TOOL_MAGIC_WAND;
-    g_app->wand_spread = 0;
-    g_app->wand_antialias = false;
+    g_app->wand.spread = 0;
+    g_app->wand.antialias = false;
 
     uint32_t green = MAKE_COLOR(0x20, 0xA0, 0x20, 0xFF);
     uint32_t red = MAKE_COLOR(0xE0, 0x10, 0x10, 0xFF);
