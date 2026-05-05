@@ -124,6 +124,7 @@ extern const int kBrushSizes[NUM_BRUSH_SIZES];
 
 #define UNDO_MAX   20
 #define MAX_POLY_POINTS 256
+#define MAX_FILENAME 512
 
 // Menu command IDs and static menu resources are generated from imageeditor.orion.
 
@@ -230,7 +231,7 @@ typedef struct canvas_doc_s {
   bool     close_prompt_open;
   ipoint16_t  last;
   bool     modified;
-  char     filename[512];
+  char     filename[MAX_FILENAME];
   window_t *win;
   window_t *canvas_win;
   struct canvas_doc_s *next;
