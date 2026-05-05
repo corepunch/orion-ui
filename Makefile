@@ -126,12 +126,17 @@ endif
 # On Linux: -shared implicitly allows unresolved symbols in shared objects.
 # On Windows (MinGW): all symbols must be resolved at link time; link against
 # the liborion.dll.a import library generated alongside liborion.dll.
+# IMPORTANT: FE_PLUGIN_LDLIBS must appear AFTER source files in the link
+# command (MinGW linker processes libraries left-to-right after objects).
 ifeq ($(OS),Windows_NT)
-	FE_PLUGIN_LFLAGS = $(LIB_FLAGS) -L$(LIB_DIR) -lorion
+	FE_PLUGIN_LFLAGS = $(LIB_FLAGS)
+	FE_PLUGIN_LDLIBS = -L$(LIB_DIR) -lorion
 else ifeq ($(UNAME_S),Darwin)
 	FE_PLUGIN_LFLAGS = $(LIB_FLAGS) -undefined dynamic_lookup
+	FE_PLUGIN_LDLIBS =
 else
 	FE_PLUGIN_LFLAGS = $(LIB_FLAGS)
+	FE_PLUGIN_LDLIBS =
 endif
 
 # Build directories
@@ -378,12 +383,12 @@ plugins: $(FORMEDITOR_COMPONENT_PLUGIN) $(IE_COMPONENTS_PLUGIN)
 $(FORMEDITOR_COMPONENT_PLUGIN): $(FORMEDITOR_COMPONENT_PLUGIN_SRC) $(SHARED_LIB) | $(LIB_DIR)
 	@echo "Building FormEditor component plugin: $@"
 	$(CC) $(CFLAGS) $(FE_PLUGIN_LFLAGS) -I. -o $@ $< \
-		$(LDFLAGS)
+		$(LDFLAGS) $(FE_PLUGIN_LDLIBS)
 
 $(IE_COMPONENTS_PLUGIN): $(IE_COMPONENTS_PLUGIN_SRCS) $(SHARED_LIB) | $(LIB_DIR)
 	@echo "Building ImageEditor components plugin: $@"
 	$(CC) $(CFLAGS) $(FE_PLUGIN_LFLAGS) -I. -Iexamples/imageeditor -o $@ $(IE_COMPONENTS_PLUGIN_SRCS) \
-		$(LDFLAGS)
+		$(LDFLAGS) $(FE_PLUGIN_LDLIBS)
 
 .PHONY: imagelite
 imagelite: share $(IMAGELITE_BIN)

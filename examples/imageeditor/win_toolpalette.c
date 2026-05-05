@@ -73,12 +73,14 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       win_toolbox(win, msg, wparam, lparam);
       send_message(win, bxSetButtonSize, TOOL_PALETTE_BTN_SIZE, NULL);
 
+#ifdef SHAREDIR
       char icon_path[512];
       int n = snprintf(icon_path, sizeof(icon_path), "%s/" SHAREDIR "/image-editor.png",
                        ui_get_exe_dir());
       if (n > 0 && (size_t)n < sizeof(icon_path)) {
         send_message(win, bxLoadStrip, ICON_W, icon_path);
       }
+#endif
 
       // Set tools from unified array.
       send_message(win, bxSetItems, NUM_TOOLS, (void *)k_tools);
