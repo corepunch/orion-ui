@@ -664,7 +664,7 @@ void test_ie_image_resize_bilinear_scales_pixels(void) {
     ASSERT_EQUAL(COLOR_B(px), 128);
     ASSERT_EQUAL(COLOR_A(px), 255);
     ASSERT_TRUE(doc->modified);
-    ASSERT_FALSE(doc->sel_active);
+    ASSERT_FALSE(doc->sel.active);
 
     ie_teardown();
     PASS();
@@ -800,17 +800,17 @@ void test_ie_magic_wand_selects_contiguous_color_region(void) {
     canvas_set_pixel(doc, 3, 2, red); // same color, but not contiguous
 
     ASSERT_TRUE(canvas_magic_wand_select(doc, 0, 0, 16, false));
-    ASSERT_TRUE(doc->sel_active);
-    ASSERT_NOT_NULL(doc->sel_mask);
+    ASSERT_TRUE(doc->sel.active);
+    ASSERT_NOT_NULL(doc->sel.mask.data);
     ASSERT_TRUE(canvas_in_selection(doc, 0, 0));
     ASSERT_TRUE(canvas_in_selection(doc, 1, 0));
     ASSERT_TRUE(canvas_in_selection(doc, 0, 1));
     ASSERT_FALSE(canvas_in_selection(doc, 1, 1));
     ASSERT_FALSE(canvas_in_selection(doc, 3, 2));
-    ASSERT_EQUAL(doc->sel_start.x, 0);
-    ASSERT_EQUAL(doc->sel_start.y, 0);
-    ASSERT_EQUAL(doc->sel_end.x, 1);
-    ASSERT_EQUAL(doc->sel_end.y, 1);
+    ASSERT_EQUAL(doc->sel.start.x, 0);
+    ASSERT_EQUAL(doc->sel.start.y, 0);
+    ASSERT_EQUAL(doc->sel.end.x, 1);
+    ASSERT_EQUAL(doc->sel.end.y, 1);
 
     ie_teardown();
     PASS();
@@ -824,10 +824,10 @@ void test_ie_rect_selection_uses_mask(void) {
     ASSERT_NOT_NULL(doc);
 
     ASSERT_TRUE(canvas_select_rect(doc, 1, 1, 3, 2));
-    ASSERT_TRUE(doc->sel_active);
-    ASSERT_NOT_NULL(doc->sel_mask);
-    ASSERT_EQUAL(doc->sel_mask[(size_t)1 * doc->canvas_w + 1], 0);
-    ASSERT_EQUAL(doc->sel_mask[(size_t)0 * doc->canvas_w + 0], 255);
+    ASSERT_TRUE(doc->sel.active);
+    ASSERT_NOT_NULL(doc->sel.mask.data);
+    ASSERT_EQUAL(doc->sel.mask.data[(size_t)1 * doc->canvas_w + 1], 0);
+    ASSERT_EQUAL(doc->sel.mask.data[(size_t)0 * doc->canvas_w + 0], 255);
     ASSERT_FALSE(canvas_in_selection(doc, 0, 1));
     ASSERT_TRUE(canvas_in_selection(doc, 1, 1));
     ASSERT_TRUE(canvas_in_selection(doc, 3, 2));
@@ -858,10 +858,10 @@ void test_ie_shift_adds_to_selection_mask(void) {
     ASSERT_FALSE(canvas_in_selection(doc, 2, 1));
     ASSERT_TRUE(canvas_in_selection(doc, 3, 2));
     ASSERT_TRUE(canvas_in_selection(doc, 4, 3));
-    ASSERT_EQUAL(doc->sel_start.x, 0);
-    ASSERT_EQUAL(doc->sel_start.y, 0);
-    ASSERT_EQUAL(doc->sel_end.x, 4);
-    ASSERT_EQUAL(doc->sel_end.y, 3);
+    ASSERT_EQUAL(doc->sel.start.x, 0);
+    ASSERT_EQUAL(doc->sel.start.y, 0);
+    ASSERT_EQUAL(doc->sel.end.x, 4);
+    ASSERT_EQUAL(doc->sel.end.y, 3);
 
     ASSERT_TRUE(canvas_magic_wand_select_add(doc, 2, 1, 0, false));
     ASSERT_TRUE(canvas_in_selection(doc, 0, 0));
@@ -932,15 +932,15 @@ void test_ie_shift_rect_selection_is_square(void) {
     send_message(doc->canvas_win, evMouseMove, MAKEDWORD(3, 1), NULL);
     send_message(doc->canvas_win, evLeftButtonUp, MAKEDWORD(3, 1), NULL);
 
-    ASSERT_TRUE(doc->sel_active);
+    ASSERT_TRUE(doc->sel.active);
     ASSERT_TRUE(canvas_in_selection(doc, 0, 0));
     ASSERT_TRUE(canvas_in_selection(doc, 1, 1));
     ASSERT_FALSE(canvas_in_selection(doc, 2, 1));
     ASSERT_FALSE(canvas_in_selection(doc, 0, 2));
-    ASSERT_EQUAL(doc->sel_start.x, 0);
-    ASSERT_EQUAL(doc->sel_start.y, 0);
-    ASSERT_EQUAL(doc->sel_end.x, 1);
-    ASSERT_EQUAL(doc->sel_end.y, 1);
+    ASSERT_EQUAL(doc->sel.start.x, 0);
+    ASSERT_EQUAL(doc->sel.start.y, 0);
+    ASSERT_EQUAL(doc->sel.end.x, 1);
+    ASSERT_EQUAL(doc->sel.end.y, 1);
 
     evt.wParam = 0;
     dispatch_message(&evt);
@@ -961,26 +961,26 @@ void test_ie_select_tool_moves_selection_mask_only(void) {
     uint32_t red = MAKE_COLOR(0xE0, 0x10, 0x10, 0xFF);
     canvas_set_pixel(doc, 1, 1, red);
     ASSERT_TRUE(canvas_select_rect(doc, 1, 1, 1, 1));
-    uint8_t *mask = doc->sel_mask;
+    uint8_t *mask = doc->sel.mask.data;
     ASSERT_NOT_NULL(mask);
-    doc->sel_mask_dirty = false;
+    doc->sel.mask.dirty = false;
 
     send_message(doc->canvas_win, evLeftButtonDown, MAKEDWORD(1, 1), NULL);
     send_message(doc->canvas_win, evMouseMove, MAKEDWORD(2, 1), NULL);
 
-    ASSERT_TRUE(doc->sel_mask_moving);
-    ASSERT_TRUE(doc->sel_mask == mask);
-    ASSERT_FALSE(doc->sel_mask_dirty);
-    ASSERT_EQUAL(doc->sel_mask_offset.x, 1);
-    ASSERT_EQUAL(doc->sel_mask_offset.y, 0);
+    ASSERT_TRUE(doc->sel.move.mask_moving);
+    ASSERT_TRUE(doc->sel.mask.data == mask);
+    ASSERT_FALSE(doc->sel.mask.dirty);
+    ASSERT_EQUAL(doc->sel.mask.offset.x, 1);
+    ASSERT_EQUAL(doc->sel.mask.offset.y, 0);
     ASSERT_FALSE(canvas_in_selection(doc, 1, 1));
     ASSERT_TRUE(canvas_in_selection(doc, 2, 1));
 
     send_message(doc->canvas_win, evLeftButtonUp, MAKEDWORD(2, 1), NULL);
 
-    ASSERT_FALSE(doc->sel_mask_moving);
-    ASSERT_EQUAL(doc->sel_mask_offset.x, 0);
-    ASSERT_EQUAL(doc->sel_mask_offset.y, 0);
+    ASSERT_FALSE(doc->sel.move.mask_moving);
+    ASSERT_EQUAL(doc->sel.mask.offset.x, 0);
+    ASSERT_EQUAL(doc->sel.mask.offset.y, 0);
     ASSERT_EQUAL(canvas_get_pixel(doc, 1, 1), red);
     ASSERT_FALSE(canvas_in_selection(doc, 1, 1));
     ASSERT_TRUE(canvas_in_selection(doc, 2, 1));
@@ -998,28 +998,28 @@ void test_ie_select_soft_edge_starts_new_selection(void) {
     g_app->active_doc = doc;
     g_app->current_tool = ID_TOOL_SELECT;
 
-    doc->sel_mask = malloc((size_t)doc->canvas_w * doc->canvas_h);
-    ASSERT_NOT_NULL(doc->sel_mask);
-    memset(doc->sel_mask, 255, (size_t)doc->canvas_w * doc->canvas_h);
-    doc->sel_mask[(size_t)1 * doc->canvas_w + 1] = 128;
-    doc->sel_active = true;
-    doc->sel_start = (ipoint16_t){1, 1};
-    doc->sel_end = (ipoint16_t){1, 1};
-    doc->sel_mask_dirty = true;
+    doc->sel.mask.data = malloc((size_t)doc->canvas_w * doc->canvas_h);
+    ASSERT_NOT_NULL(doc->sel.mask.data);
+    memset(doc->sel.mask.data, 255, (size_t)doc->canvas_w * doc->canvas_h);
+    doc->sel.mask.data[(size_t)1 * doc->canvas_w + 1] = 128;
+    doc->sel.active = true;
+    doc->sel.start = (ipoint16_t){1, 1};
+    doc->sel.end = (ipoint16_t){1, 1};
+    doc->sel.mask.dirty = true;
 
     send_message(doc->canvas_win, evLeftButtonDown, MAKEDWORD(1, 1), NULL);
     send_message(doc->canvas_win, evMouseMove, MAKEDWORD(2, 1), NULL);
     send_message(doc->canvas_win, evLeftButtonUp, MAKEDWORD(2, 1), NULL);
 
-    ASSERT_FALSE(doc->sel_mask_moving);
-    ASSERT_TRUE(doc->sel_active);
+    ASSERT_FALSE(doc->sel.move.mask_moving);
+    ASSERT_TRUE(doc->sel.active);
     ASSERT_TRUE(canvas_in_selection(doc, 1, 1));
     ASSERT_TRUE(canvas_in_selection(doc, 2, 1));
     ASSERT_FALSE(canvas_in_selection(doc, 0, 1));
-    ASSERT_EQUAL(doc->sel_start.x, 1);
-    ASSERT_EQUAL(doc->sel_start.y, 1);
-    ASSERT_EQUAL(doc->sel_end.x, 2);
-    ASSERT_EQUAL(doc->sel_end.y, 1);
+    ASSERT_EQUAL(doc->sel.start.x, 1);
+    ASSERT_EQUAL(doc->sel.start.y, 1);
+    ASSERT_EQUAL(doc->sel.end.x, 2);
+    ASSERT_EQUAL(doc->sel.end.y, 1);
 
     ie_teardown();
     PASS();
@@ -1073,11 +1073,11 @@ void test_ie_move_masked_selection_preserves_shape(void) {
     ASSERT_FALSE(canvas_in_selection(doc, 2, 2));
 
     canvas_begin_move(doc, bg);
-    ASSERT_TRUE(doc->sel_moving);
-    doc->float_pos = (ipoint16_t){2, 2};
+    ASSERT_TRUE(doc->sel.move.active);
+    doc->sel.floating.pos = (ipoint16_t){2, 2};
     canvas_commit_move(doc);
 
-    ASSERT_FALSE(doc->sel_moving);
+    ASSERT_FALSE(doc->sel.move.active);
     ASSERT_EQUAL(canvas_get_pixel(doc, 1, 1), bg);
     ASSERT_EQUAL(canvas_get_pixel(doc, 2, 1), bg);
     ASSERT_EQUAL(canvas_get_pixel(doc, 1, 2), bg);
@@ -1145,7 +1145,7 @@ void test_ie_image_crop_command_crops_to_selection(void) {
     ASSERT_EQUAL(doc->canvas_h, 2);
     ASSERT_EQUAL(canvas_get_pixel(doc, 0, 0), red);
     ASSERT_EQUAL(canvas_get_pixel(doc, 1, 1), blue);
-    ASSERT_FALSE(doc->sel_active);
+    ASSERT_FALSE(doc->sel.active);
     ASSERT_TRUE(doc->modified);
 
     ie_teardown();
@@ -1182,22 +1182,22 @@ void test_ie_selection_expand_preserves_soft_mask(void) {
     canvas_doc_t *doc = create_document(NULL, 3, 3);
     ASSERT_NOT_NULL(doc);
 
-    doc->sel_mask = malloc(9);
-    ASSERT_NOT_NULL(doc->sel_mask);
-    memset(doc->sel_mask, 255, 9);
-    doc->sel_mask[4] = 128;
-    doc->sel_active = true;
-    doc->sel_mask_dirty = true;
-    doc->sel_start = (ipoint16_t){1, 1};
-    doc->sel_end = (ipoint16_t){1, 1};
+    doc->sel.mask.data = malloc(9);
+    ASSERT_NOT_NULL(doc->sel.mask.data);
+    memset(doc->sel.mask.data, 255, 9);
+    doc->sel.mask.data[4] = 128;
+    doc->sel.active = true;
+    doc->sel.mask.dirty = true;
+    doc->sel.start = (ipoint16_t){1, 1};
+    doc->sel.end = (ipoint16_t){1, 1};
 
     ASSERT_TRUE(canvas_expand_selection(doc, 1));
-    ASSERT_EQUAL(doc->sel_mask[0], 128);
-    ASSERT_EQUAL(doc->sel_mask[4], 128);
-    ASSERT_EQUAL(doc->sel_start.x, 0);
-    ASSERT_EQUAL(doc->sel_start.y, 0);
-    ASSERT_EQUAL(doc->sel_end.x, 2);
-    ASSERT_EQUAL(doc->sel_end.y, 2);
+    ASSERT_EQUAL(doc->sel.mask.data[0], 128);
+    ASSERT_EQUAL(doc->sel.mask.data[4], 128);
+    ASSERT_EQUAL(doc->sel.start.x, 0);
+    ASSERT_EQUAL(doc->sel.start.y, 0);
+    ASSERT_EQUAL(doc->sel.end.x, 2);
+    ASSERT_EQUAL(doc->sel.end.y, 2);
 
     ie_teardown();
     PASS();
@@ -1241,15 +1241,15 @@ void test_ie_layer_initial_state(void) {
     canvas_doc_t *doc = create_document(NULL, 32, 32);
     ASSERT_NOT_NULL(doc);
 
-    ASSERT_EQUAL(doc->layer_count, 1);
-    ASSERT_EQUAL(doc->active_layer, 0);
-    ASSERT_NOT_NULL(doc->layers);
-    ASSERT_NOT_NULL(doc->layers[0]);
-    ASSERT_NOT_NULL(doc->layers[0]->pixels);
-    ASSERT_TRUE(doc->layers[0]->visible);
-    ASSERT_EQUAL(doc->layers[0]->opacity, 255);
+    ASSERT_EQUAL(doc->layer.count, 1);
+    ASSERT_EQUAL(doc->layer.active, 0);
+    ASSERT_NOT_NULL(doc->layer.stack);
+    ASSERT_NOT_NULL(doc->layer.stack[0]);
+    ASSERT_NOT_NULL(doc->layer.stack[0]->pixels);
+    ASSERT_TRUE(doc->layer.stack[0]->visible);
+    ASSERT_EQUAL(doc->layer.stack[0]->opacity, 255);
     // doc->pixels must alias the active layer's pixel buffer.
-    ASSERT_TRUE(doc->pixels == doc->layers[0]->pixels);
+    ASSERT_TRUE(doc->pixels == doc->layer.stack[0]->pixels);
 
     ie_teardown();
     PASS();
@@ -1262,13 +1262,13 @@ void test_ie_layer_add(void) {
     ie_setup();
     canvas_doc_t *doc = create_document(NULL, 8, 8);
     ASSERT_NOT_NULL(doc);
-    ASSERT_EQUAL(doc->layer_count, 1);
+    ASSERT_EQUAL(doc->layer.count, 1);
 
     bool ok = doc_add_layer(doc);
     ASSERT_TRUE(ok);
-    ASSERT_EQUAL(doc->layer_count, 2);
-    ASSERT_EQUAL(doc->active_layer, 1);
-    ASSERT_TRUE(doc->pixels == doc->layers[1]->pixels);
+    ASSERT_EQUAL(doc->layer.count, 2);
+    ASSERT_EQUAL(doc->layer.active, 1);
+    ASSERT_TRUE(doc->pixels == doc->layer.stack[1]->pixels);
 
     ie_teardown();
     PASS();
@@ -1282,17 +1282,17 @@ void test_ie_layer_delete(void) {
     canvas_doc_t *doc = create_document(NULL, 8, 8);
     ASSERT_NOT_NULL(doc);
     doc_add_layer(doc);
-    ASSERT_EQUAL(doc->layer_count, 2);
+    ASSERT_EQUAL(doc->layer.count, 2);
 
     bool ok = doc_delete_layer(doc);
     ASSERT_TRUE(ok);
-    ASSERT_EQUAL(doc->layer_count, 1);
-    ASSERT_EQUAL(doc->active_layer, 0);
+    ASSERT_EQUAL(doc->layer.count, 1);
+    ASSERT_EQUAL(doc->layer.active, 0);
 
     // Cannot delete the last remaining layer.
     ok = doc_delete_layer(doc);
     ASSERT_FALSE(ok);
-    ASSERT_EQUAL(doc->layer_count, 1);
+    ASSERT_EQUAL(doc->layer.count, 1);
 
     ie_teardown();
     PASS();
@@ -1311,8 +1311,8 @@ void test_ie_layer_duplicate(void) {
 
     bool ok = doc_duplicate_layer(doc);
     ASSERT_TRUE(ok);
-    ASSERT_EQUAL(doc->layer_count, 2);
-    ASSERT_EQUAL(doc->active_layer, 1);
+    ASSERT_EQUAL(doc->layer.count, 2);
+    ASSERT_EQUAL(doc->layer.active, 1);
 
     // Both layers should have the same pixel at (0,0).
     doc_set_active_layer(doc, 0);
@@ -1335,19 +1335,19 @@ void test_ie_layer_set_active(void) {
     doc_add_layer(doc);
 
     doc_set_active_layer(doc, 0);
-    ASSERT_EQUAL(doc->active_layer, 0);
-    ASSERT_TRUE(doc->pixels == doc->layers[0]->pixels);
+    ASSERT_EQUAL(doc->layer.active, 0);
+    ASSERT_TRUE(doc->pixels == doc->layer.stack[0]->pixels);
 
     doc_set_active_layer(doc, 1);
-    ASSERT_EQUAL(doc->active_layer, 1);
-    ASSERT_TRUE(doc->pixels == doc->layers[1]->pixels);
+    ASSERT_EQUAL(doc->layer.active, 1);
+    ASSERT_TRUE(doc->pixels == doc->layer.stack[1]->pixels);
 
     doc_set_mask_only_view(doc, true);
-    ASSERT_TRUE(doc->mask_only_view);
+    ASSERT_TRUE(doc->layer.mask_only_view);
     doc->canvas_dirty = false;
     doc_set_active_layer(doc, 0);
     ASSERT_TRUE(doc->canvas_dirty);
-    ASSERT_EQUAL(doc->active_layer, 0);
+    ASSERT_EQUAL(doc->layer.active, 0);
 
     ie_teardown();
     PASS();
@@ -1362,24 +1362,24 @@ void test_ie_layer_move(void) {
     ASSERT_NOT_NULL(doc);
     doc_add_layer(doc);
     doc_add_layer(doc);
-    ASSERT_EQUAL(doc->layer_count, 3);
-    ASSERT_EQUAL(doc->active_layer, 2);
+    ASSERT_EQUAL(doc->layer.count, 3);
+    ASSERT_EQUAL(doc->layer.active, 2);
 
     doc_move_layer_down(doc);
-    ASSERT_EQUAL(doc->active_layer, 1);
+    ASSERT_EQUAL(doc->layer.active, 1);
 
     doc_move_layer_up(doc);
-    ASSERT_EQUAL(doc->active_layer, 2);
+    ASSERT_EQUAL(doc->layer.active, 2);
 
     // Moving the bottom layer down does nothing.
     doc_set_active_layer(doc, 0);
     doc_move_layer_down(doc);
-    ASSERT_EQUAL(doc->active_layer, 0);
+    ASSERT_EQUAL(doc->layer.active, 0);
 
     // Moving the top layer up does nothing.
     doc_set_active_layer(doc, 2);
     doc_move_layer_up(doc);
-    ASSERT_EQUAL(doc->active_layer, 2);
+    ASSERT_EQUAL(doc->layer.active, 2);
 
     ie_teardown();
     PASS();
@@ -1394,13 +1394,13 @@ void test_ie_layer_flatten(void) {
     ASSERT_NOT_NULL(doc);
     doc_add_layer(doc);
     doc_add_layer(doc);
-    ASSERT_EQUAL(doc->layer_count, 3);
+    ASSERT_EQUAL(doc->layer.count, 3);
 
     doc_flatten(doc);
-    ASSERT_EQUAL(doc->layer_count, 1);
-    ASSERT_EQUAL(doc->active_layer, 0);
+    ASSERT_EQUAL(doc->layer.count, 1);
+    ASSERT_EQUAL(doc->layer.active, 0);
     ASSERT_NOT_NULL(doc->pixels);
-    ASSERT_TRUE(doc->pixels == doc->layers[0]->pixels);
+    ASSERT_TRUE(doc->pixels == doc->layer.stack[0]->pixels);
 
     ie_teardown();
     PASS();
@@ -1420,7 +1420,7 @@ void test_ie_flatten_preserves_alpha(void) {
     canvas_set_pixel(doc, 0, 0, MAKE_COLOR(0xFF, 0x00, 0x00, 0x80));
 
     doc_flatten(doc);
-    ASSERT_EQUAL(doc->layer_count, 1);
+    ASSERT_EQUAL(doc->layer.count, 1);
     ASSERT_EQUAL(COLOR_R(canvas_get_pixel(doc, 0, 0)), 0xFF);
     ASSERT_EQUAL(COLOR_A(canvas_get_pixel(doc, 0, 0)), 0x80);
 
@@ -1441,10 +1441,10 @@ void test_ie_layer_merge_down(void) {
     // Paint an opaque red pixel on layer 1 at (0,0).
     canvas_set_pixel(doc, 0, 0, MAKE_COLOR(0xFF, 0, 0, 0xFF));
 
-    ASSERT_EQUAL(doc->active_layer, 1);
+    ASSERT_EQUAL(doc->layer.active, 1);
     doc_merge_down(doc);
-    ASSERT_EQUAL(doc->layer_count, 1);
-    ASSERT_EQUAL(doc->active_layer, 0);
+    ASSERT_EQUAL(doc->layer.count, 1);
+    ASSERT_EQUAL(doc->layer.active, 0);
 
     // The merged pixel at (0,0) should be red.
     uint32_t px = canvas_get_pixel(doc, 0, 0);
@@ -1469,7 +1469,7 @@ void test_ie_mask_add(void) {
     bool ok = layer_add_mask(doc, 0);
     ASSERT_TRUE(ok);
     ASSERT_EQUAL(COLOR_A(canvas_get_pixel(doc, 0, 0)), 0xFF);
-    ASSERT_TRUE(doc->editing_mask);
+    ASSERT_TRUE(doc->layer.editing_mask);
 
     ie_teardown();
     PASS();
@@ -1483,11 +1483,11 @@ void test_ie_mask_remove(void) {
     ASSERT_NOT_NULL(doc);
 
     canvas_set_pixel(doc, 0, 0, MAKE_COLOR(0xFF, 0x00, 0x00, 0x80));
-    doc->editing_mask = true;
+    doc->layer.editing_mask = true;
 
     layer_remove_mask(doc, 0);
     ASSERT_EQUAL(COLOR_A(canvas_get_pixel(doc, 0, 0)), 0xFF);
-    ASSERT_FALSE(doc->editing_mask);
+    ASSERT_FALSE(doc->layer.editing_mask);
 
     ie_teardown();
     PASS();
@@ -1501,9 +1501,9 @@ void test_ie_mask_apply(void) {
     ASSERT_NOT_NULL(doc);
 
     canvas_set_pixel(doc, 0, 0, MAKE_COLOR(0xFF, 0x00, 0x00, 0x80));
-    doc->editing_mask = true;
+    doc->layer.editing_mask = true;
     layer_apply_mask(doc, 0);
-    ASSERT_FALSE(doc->editing_mask);
+    ASSERT_FALSE(doc->layer.editing_mask);
     ASSERT_EQUAL(COLOR_A(canvas_get_pixel(doc, 0, 0)), 0x80);
 
     ie_teardown();
@@ -1545,18 +1545,18 @@ void test_ie_mask_add_fill_modes(void) {
     ASSERT_NOT_NULL(doc);
     canvas_set_pixel(doc, 0, 0, MAKE_COLOR(0xAA, 0x40, 0x20, 0xFF));
 
-    ASSERT_TRUE(layer_add_mask_ex(doc, doc->active_layer, MASK_EXTRACT_GRAYSCALE));
+    ASSERT_TRUE(layer_add_mask_ex(doc, doc->layer.active, MASK_EXTRACT_GRAYSCALE));
     uint8_t expected_gray = (uint8_t)((0xAA * 77 + 0x40 * 150 + 0x20 * 29) >> 8);
     ASSERT_EQUAL(COLOR_A(canvas_get_pixel(doc, 0, 0)), expected_gray);
 
-    ASSERT_TRUE(layer_add_mask_ex(doc, doc->active_layer, MASK_EXTRACT_WHITE));
+    ASSERT_TRUE(layer_add_mask_ex(doc, doc->layer.active, MASK_EXTRACT_WHITE));
     ASSERT_EQUAL(COLOR_A(canvas_get_pixel(doc, 0, 0)), 255);
 
-    ASSERT_TRUE(layer_add_mask_ex(doc, doc->active_layer, MASK_EXTRACT_BACKGROUND));
+    ASSERT_TRUE(layer_add_mask_ex(doc, doc->layer.active, MASK_EXTRACT_BACKGROUND));
     uint8_t expected_bg = (uint8_t)((0x44 * 77 + 0x55 * 150 + 0x66 * 29) >> 8);
     ASSERT_EQUAL(COLOR_A(canvas_get_pixel(doc, 0, 0)), expected_bg);
 
-    ASSERT_TRUE(layer_add_mask_ex(doc, doc->active_layer, MASK_EXTRACT_FOREGROUND));
+    ASSERT_TRUE(layer_add_mask_ex(doc, doc->layer.active, MASK_EXTRACT_FOREGROUND));
     uint8_t expected_fg = (uint8_t)((0x11 * 77 + 0x22 * 150 + 0x33 * 29) >> 8);
     ASSERT_EQUAL(COLOR_A(canvas_get_pixel(doc, 0, 0)), expected_fg);
 
@@ -1608,22 +1608,22 @@ void test_ie_layer_undo_redo(void) {
     ie_setup();
     canvas_doc_t *doc = create_document(NULL, 4, 4);
     ASSERT_NOT_NULL(doc);
-    ASSERT_EQUAL(doc->layer_count, 1);
+    ASSERT_EQUAL(doc->layer.count, 1);
 
     // Push undo, then add a layer.
     doc_push_undo(doc);
     doc_add_layer(doc);
-    ASSERT_EQUAL(doc->layer_count, 2);
+    ASSERT_EQUAL(doc->layer.count, 2);
 
     // Undo should restore to 1 layer.
     bool ok = doc_undo(doc);
     ASSERT_TRUE(ok);
-    ASSERT_EQUAL(doc->layer_count, 1);
+    ASSERT_EQUAL(doc->layer.count, 1);
 
     // Redo should bring back 2 layers.
     ok = doc_redo(doc);
     ASSERT_TRUE(ok);
-    ASSERT_EQUAL(doc->layer_count, 2);
+    ASSERT_EQUAL(doc->layer.count, 2);
 
     ie_teardown();
     PASS();
@@ -1856,8 +1856,8 @@ void test_ie_canvas_centers_small_image_hit_testing(void) {
     canvas_win_state_t *state = (canvas_win_state_t *)doc->canvas_win->userdata;
     ASSERT_NOT_NULL(state);
     ASSERT_EQUAL(state->scale, 1);
-    ASSERT_EQUAL(state->pan_x, 0);
-    ASSERT_EQUAL(state->pan_y, 0);
+    ASSERT_EQUAL(state->pan.x, 0);
+    ASSERT_EQUAL(state->pan.y, 0);
 
     int origin_x = ((200 - SCROLLBAR_WIDTH) - 32) / 2;
     int origin_y = (150 - 20) / 2;
