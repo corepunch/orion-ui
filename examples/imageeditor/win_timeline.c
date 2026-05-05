@@ -241,8 +241,8 @@ static result_t timeline_proc(window_t *win, uint32_t msg,
                                          doc->canvas_w, doc->canvas_h,
                                          FRAME_FORMAT_RGBA)) {
             // Sync the active layer's pixel pointer.
-            if (doc->layer_count > 0)
-              doc->layers[doc->active_layer]->pixels = doc->pixels;
+            if (doc->layer.count > 0)
+              doc->layer.stack[doc->layer.active]->pixels = doc->pixels;
             doc->canvas_dirty = true;
             if (doc->canvas_win) invalidate_window(doc->canvas_win);
             st->thumbs_dirty = true;
@@ -405,8 +405,8 @@ void anim_tick(canvas_doc_t *doc) {
   if (anim_timeline_switch_frame(tl, next, &doc->pixels,
                                   doc->canvas_w, doc->canvas_h,
                                   FRAME_FORMAT_RGBA)) {
-    if (doc->layer_count > 0)
-      doc->layers[doc->active_layer]->pixels = doc->pixels;
+    if (doc->layer.count > 0)
+      doc->layer.stack[doc->layer.active]->pixels = doc->pixels;
     doc->canvas_dirty = true;
     if (doc->canvas_win) invalidate_window(doc->canvas_win);
     timeline_win_refresh();

@@ -55,9 +55,9 @@
 #define ID_VIEW_ZOOM_8X      46
 #define ID_VIEW_SHOW_GRID    47
 #define ID_VIEW_SNAP_GRID    48
+#define ID_VIEW_SHOW_BACKGROUND 72
 #define ID_VIEW_MASK_ONLY    56
 #define ID_VIEW_GRID_OPTIONS 49
-#define ID_VIEW_SHOW_BACKGROUND 72
 #define ID_WINDOW_TOOLS      200
 #define ID_WINDOW_COLORS     201
 #define ID_WINDOW_LAYERS     202
@@ -221,9 +221,9 @@ static menu_item_t s_view_items[] = {
   { "6x", ID_VIEW_ZOOM_6X, NULL, 0 },
   { "8x", ID_VIEW_ZOOM_8X, NULL, 0 },
   { NULL, 0, NULL, 0 },
-  { "[x] Show Background", ID_VIEW_SHOW_BACKGROUND, NULL, 0 },
   { "[ ] Show Grid", ID_VIEW_SHOW_GRID, NULL, 0 },
   { "[ ] Snap to Grid", ID_VIEW_SNAP_GRID, NULL, 0 },
+  { "[x] Show Background", ID_VIEW_SHOW_BACKGROUND, NULL, 0 },
   { "[ ] Mask Only View", ID_VIEW_MASK_ONLY, NULL, 0 },
   { NULL, 0, NULL, 0 },
   { "Grid Options...", ID_VIEW_GRID_OPTIONS, NULL, 0 },

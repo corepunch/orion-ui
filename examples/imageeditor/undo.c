@@ -39,11 +39,11 @@ static void clear_stack(uint8_t **states, int *count) {
 
 // Serialize the full layer stack into a heap blob; returns NULL on OOM.
 static uint8_t *make_snapshot(const canvas_doc_t *doc) {
-  if (!doc || doc->layer_count == 0) return NULL;
+  if (!doc || doc->layer.count == 0) return NULL;
   size_t px_sz = (size_t)doc->canvas_w * doc->canvas_h * 4;
 
   size_t total = sizeof(snap_header_t);
-  for (int i = 0; i < doc->layer_count; i++) {
+  for (int i = 0; i < doc->layer.count; i++) {
     total += sizeof(snap_layer_hdr_t) + px_sz;
   }
 
@@ -53,14 +53,14 @@ static uint8_t *make_snapshot(const canvas_doc_t *doc) {
 
   snap_header_t *hdr = (snap_header_t *)p;
   hdr->magic        = SNAP_MAGIC;
-  hdr->layer_count  = doc->layer_count;
-  hdr->active_layer = doc->active_layer;
+  hdr->layer_count  = doc->layer.count;
+  hdr->active_layer = doc->layer.active;
   hdr->canvas_w     = doc->canvas_w;
   hdr->canvas_h     = doc->canvas_h;
   p += sizeof(snap_header_t);
 
-  for (int i = 0; i < doc->layer_count; i++) {
-    const layer_t *lay = doc->layers[i];
+  for (int i = 0; i < doc->layer.count; i++) {
+    const layer_t *lay = doc->layer.stack[i];
     snap_layer_hdr_t *lhdr = (snap_layer_hdr_t *)p;
     memcpy(lhdr->name, lay->name, 64);
     lhdr->visible  = lay->visible;
@@ -124,26 +124,26 @@ cleanup:
 restore:
 
   // Replace old layer stack.
-  for (int i = 0; i < doc->layer_count; i++) {
-    free(doc->layers[i]->pixels);
-    free(doc->layers[i]);
+  for (int i = 0; i < doc->layer.count; i++) {
+    free(doc->layer.stack[i]->pixels);
+    free(doc->layer.stack[i]);
   }
-  free(doc->layers);
+  free(doc->layer.stack);
 
-  doc->layers      = nl;
-  doc->layer_count = n;
-  doc->active_layer = hdr->active_layer < n ? hdr->active_layer : n - 1;
-  doc->pixels       = doc->layers[doc->active_layer]->pixels;
+  doc->layer.stack      = nl;
+  doc->layer.count = n;
+  doc->layer.active = hdr->active_layer < n ? hdr->active_layer : n - 1;
+  doc->pixels       = doc->layer.stack[doc->layer.active]->pixels;
 
   // Restore canvas dimensions if they changed (e.g. after resize).
   if (new_w != doc->canvas_w || new_h != doc->canvas_h) {
-    free(doc->composite_buf);
-    doc->composite_buf = malloc(px_sz);
+    free(doc->layer.composite_buf);
+    doc->layer.composite_buf = malloc(px_sz);
     doc->canvas_w = new_w;
     doc->canvas_h = new_h;
   }
 
-  doc->editing_mask = false;
+  doc->layer.editing_mask = false;
   doc->canvas_dirty = true;
   doc->modified     = true;
   return true;
@@ -166,23 +166,23 @@ void doc_push_undo(canvas_doc_t *doc) {
   if (!doc) return;
   uint8_t *snap = make_snapshot(doc);
   if (!snap) return;
-  clear_stack(doc->redo_states, &doc->redo_count);
-  stack_push(doc->undo_states, &doc->undo_count, snap);
+  clear_stack(doc->redo.states, &doc->redo.count);
+  stack_push(doc->undo.states, &doc->undo.count, snap);
 }
 
 // Restore the most recent undo state.
 // The current state is pushed onto the redo stack first.
 // Returns true if an undo was performed.
 bool doc_undo(canvas_doc_t *doc) {
-  if (!doc || doc->undo_count == 0) return false;
+  if (!doc || doc->undo.count == 0) return false;
   uint8_t *current = make_snapshot(doc);
   if (!current) return false;
-  stack_push(doc->redo_states, &doc->redo_count, current);
+  stack_push(doc->redo.states, &doc->redo.count, current);
 
-  doc->undo_count--;
-  bool ok = restore_snapshot(doc, doc->undo_states[doc->undo_count]);
-  free(doc->undo_states[doc->undo_count]);
-  doc->undo_states[doc->undo_count] = NULL;
+  doc->undo.count--;
+  bool ok = restore_snapshot(doc, doc->undo.states[doc->undo.count]);
+  free(doc->undo.states[doc->undo.count]);
+  doc->undo.states[doc->undo.count] = NULL;
   return ok;
 }
 
@@ -190,30 +190,30 @@ bool doc_undo(canvas_doc_t *doc) {
 // The current state is pushed onto the undo stack first.
 // Returns true if a redo was performed.
 bool doc_redo(canvas_doc_t *doc) {
-  if (!doc || doc->redo_count == 0) return false;
+  if (!doc || doc->redo.count == 0) return false;
   uint8_t *current = make_snapshot(doc);
   if (!current) return false;
-  stack_push(doc->undo_states, &doc->undo_count, current);
+  stack_push(doc->undo.states, &doc->undo.count, current);
 
-  doc->redo_count--;
-  bool ok = restore_snapshot(doc, doc->redo_states[doc->redo_count]);
-  free(doc->redo_states[doc->redo_count]);
-  doc->redo_states[doc->redo_count] = NULL;
+  doc->redo.count--;
+  bool ok = restore_snapshot(doc, doc->redo.states[doc->redo.count]);
+  free(doc->redo.states[doc->redo.count]);
+  doc->redo.states[doc->redo.count] = NULL;
   return ok;
 }
 
 // Release all undo/redo memory (call when closing a document).
 void doc_free_undo(canvas_doc_t *doc) {
   if (!doc) return;
-  clear_stack(doc->undo_states, &doc->undo_count);
-  clear_stack(doc->redo_states, &doc->redo_count);
+  clear_stack(doc->undo.states, &doc->undo.count);
+  clear_stack(doc->redo.states, &doc->redo.count);
 }
 
 // Drop the most recently pushed undo entry without applying it.
 // Use this when an operation is cancelled after pushing an undo state.
 void doc_discard_undo(canvas_doc_t *doc) {
-  if (!doc || doc->undo_count == 0) return;
-  doc->undo_count--;
-  free(doc->undo_states[doc->undo_count]);
-  doc->undo_states[doc->undo_count] = NULL;
+  if (!doc || doc->undo.count == 0) return;
+  doc->undo.count--;
+  free(doc->undo.states[doc->undo.count]);
+  doc->undo.states[doc->undo.count] = NULL;
 }

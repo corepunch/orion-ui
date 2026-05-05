@@ -79,12 +79,12 @@ static int row_y(int row) { return row * LAYERS_ROW_H; }
 // Convert a visual row to a layer index (0=bottom, count-1=top).
 // Visual row 0 = topmost layer (count-1), row 1 = count-2, etc.
 static int row_to_layer_idx(const canvas_doc_t *doc, int row) {
-  return doc->layer_count - 1 - row;
+  return doc->layer.count - 1 - row;
 }
 
 // Convert a layer index to the visual row.
 static int layer_idx_to_row(const canvas_doc_t *doc, int idx) {
-  return doc->layer_count - 1 - idx;
+  return doc->layer.count - 1 - idx;
 }
 // Hit-test: returns visual row index or -1.
 static int hit_row(window_t *win, int mx, int my) {
@@ -117,11 +117,11 @@ static void sync_blend_combo(window_t *win, layers_win_state_t *st) {
     st->blend_cb->disabled = true;
     return;
   }
-  if (doc->active_layer < 0 || doc->active_layer >= doc->layer_count) {
+  if (doc->layer.active < 0 || doc->layer.active >= doc->layer.count) {
     st->blend_cb->disabled = true;
     return;
   }
-  const layer_t *lay = doc->layers[doc->active_layer];
+  const layer_t *lay = doc->layer.stack[doc->layer.active];
   if (!lay) return;
 
   st->blend_cb->disabled = false;
@@ -142,17 +142,17 @@ static void paint_layers(window_t *win, layers_win_state_t *st) {
   // Background of the list area.
   fill_rect(get_sys_color(brWindowBg), R(0, 0, w, client_h));
 
-  if (doc && doc->layer_count > 0) {
+  if (doc && doc->layer.count > 0) {
     int nvis = visible_rows(win);
     for (int row = 0; row < nvis; row++) {
       int li = row_to_layer_idx(doc, row + st->scroll_top);
-      if (li < 0 || li >= doc->layer_count) break;
-      const layer_t *lay = doc->layers[li];
+      if (li < 0 || li >= doc->layer.count) break;
+      const layer_t *lay = doc->layer.stack[li];
       int ry = row_y(row);
 
       // Row background.
       uint32_t bg;
-      if (li == doc->active_layer)
+      if (li == doc->layer.active)
         bg = COL_ROW_ACTIVE;
       else
         bg = get_sys_color(brWindowBg);
@@ -160,22 +160,22 @@ static void paint_layers(window_t *win, layers_win_state_t *st) {
 
       // Eye icon: visibility toggle.
       int icon_y = ry + (LAYERS_ROW_H - 16) / 2;
-      // uint32_t eye_col = (li == doc->active_layer)
+      // uint32_t eye_col = (li == doc->layer.active)
       //                    ? MAKE_COLOR(0xFF,0xFF,0xFF,0xFF)
       //                    : get_sys_color(brTextNormal);
       draw_icon16(lay->visible ? sysicon_eye_show : sysicon_eye_hide,
                   1, icon_y, lay->visible ? 0xffffffff : 0x40ffffff); //eye_col);
 
       // Alpha edit icon: pencil when editing, transparency icon when viewing.
-      uint32_t chip_col = (doc->editing_mask && li == doc->active_layer)
+      uint32_t chip_col = (doc->layer.editing_mask && li == doc->layer.active)
                           ? COL_ALPHA_EDIT : get_sys_color(brTextNormal);
       int chip_x = 1 + LAYERS_EYE_W + 2;
-      draw_icon16((doc->editing_mask && li == doc->active_layer)
+      draw_icon16((doc->layer.editing_mask && li == doc->layer.active)
                   ? sysicon_pencil : sysicon_transparency,
                   chip_x, icon_y, chip_col);
 
       // Layer name.
-      uint32_t name_col = (li == doc->active_layer)
+      uint32_t name_col = (li == doc->layer.active)
                           ? MAKE_COLOR(0xFF,0xFF,0xFF,0xFF)
                           : get_sys_color(brTextNormal);
       irect16_t name_rect = R(LAYERS_NAME_X, ry, LAYERS_NAME_W, LAYERS_ROW_H);
@@ -238,22 +238,22 @@ result_t win_layers_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
       int row = hit_row(win, mx, my);
       if (row >= 0) {
         int li = row_to_layer_idx(doc, row + st->scroll_top);
-        if (li < 0 || li >= doc->layer_count) return true;
+        if (li < 0 || li >= doc->layer.count) return true;
         int zone = hit_zone(mx);
         if (zone == ZONE_EYE) {
           doc_push_undo(doc);
-          doc->layers[li]->visible = !doc->layers[li]->visible;
+          doc->layer.stack[li]->visible = !doc->layer.stack[li]->visible;
           doc->canvas_dirty = true;
           doc->modified = true;
           invalidate_window(doc->canvas_win);
           invalidate_window(win);
         } else if (zone == ZONE_CHIP) {
-          if (li == doc->active_layer) {
-            doc->editing_mask = !doc->editing_mask;
+          if (li == doc->layer.active) {
+            doc->layer.editing_mask = !doc->layer.editing_mask;
             if (doc->canvas_win) invalidate_window(doc->canvas_win);
           } else {
             doc_set_active_layer(doc, li);
-            doc->editing_mask = true;
+            doc->layer.editing_mask = true;
             if (doc->canvas_win) invalidate_window(doc->canvas_win);
           }
           invalidate_window(win);
@@ -267,7 +267,7 @@ result_t win_layers_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
           }
         } else {
           // Select layer.
-          if (li != doc->active_layer) {
+          if (li != doc->layer.active) {
             doc_set_active_layer(doc, li);
             invalidate_window(doc->canvas_win);
             invalidate_window(win);
@@ -284,12 +284,12 @@ result_t win_layers_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
       uint16_t id = LOWORD(wparam);
       if (code == cbSelectionChange && st && g_app && g_app->active_doc) {
         canvas_doc_t *doc = g_app->active_doc;
-        if (id == ID_LAYER_BLEND_COMBO && lparam && doc->active_layer >= 0 &&
-            doc->active_layer < doc->layer_count) {
+        if (id == ID_LAYER_BLEND_COMBO && lparam && doc->layer.active >= 0 &&
+            doc->layer.active < doc->layer.count) {
           result_t sel = send_message((window_t *)lparam, cbGetCurrentSelection, 0, NULL);
           if (sel != (result_t)kComboBoxError) {
             doc_push_undo(doc);
-            doc_set_layer_blend_mode(doc, doc->active_layer, (layer_blend_mode_t)sel);
+            doc_set_layer_blend_mode(doc, doc->layer.active, (layer_blend_mode_t)sel);
             invalidate_window(win);
             if (doc->canvas_win) invalidate_window(doc->canvas_win);
             return true;
@@ -304,7 +304,7 @@ result_t win_layers_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
       canvas_doc_t *doc = g_app->active_doc;
       int delta = (int)(int32_t)wparam;
       int nvis = visible_rows(win);
-      int max_scroll = MAX(0, doc->layer_count - nvis);
+      int max_scroll = MAX(0, doc->layer.count - nvis);
       st->scroll_top += (delta > 0) ? -1 : 1;
       if (st->scroll_top < 0) st->scroll_top = 0;
       if (st->scroll_top > max_scroll) st->scroll_top = max_scroll;
@@ -346,7 +346,7 @@ void layers_win_refresh(void) {
     // Ensure scroll_top keeps the active layer visible.
     canvas_doc_t *doc = g_app->active_doc;
     int nvis = visible_rows(g_app->layers_win);
-    int active_row = layer_idx_to_row(doc, doc->active_layer);
+    int active_row = layer_idx_to_row(doc, doc->layer.active);
     if (active_row < st->scroll_top)
       st->scroll_top = active_row;
     else if (active_row >= st->scroll_top + nvis)

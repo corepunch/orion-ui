@@ -161,12 +161,12 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
   }
 
   // Allocate the composite scratch buffer.
-  doc->composite_buf = malloc((size_t)w * (size_t)h * 4);
-  if (!doc->composite_buf) { free(doc); return NULL; }
+  doc->layer.composite_buf = malloc((size_t)w * (size_t)h * 4);
+  if (!doc->layer.composite_buf) { free(doc); return NULL; }
 
   // Add the initial transparent layer (doc_add_layer also sets doc->pixels).
   if (!doc_add_layer(doc)) {
-    free(doc->composite_buf);
+    free(doc->layer.composite_buf);
     free(doc);
     return NULL;
   }
@@ -249,17 +249,17 @@ void close_document(canvas_doc_t *doc) {
 
   doc_free_undo(doc);
 
-  free(doc->shape_snapshot);
-  doc->shape_snapshot = NULL;
-  if (doc->float_tex)
-    glDeleteTextures(1, &doc->float_tex);
-  free(doc->float_pixels);
-  free(doc->float_mask);
+  free(doc->shape.snapshot);
+  doc->shape.snapshot = NULL;
+  if (doc->sel.floating.tex)
+    glDeleteTextures(1, &doc->sel.floating.tex);
+  free(doc->sel.floating.pixels);
+  free(doc->sel.floating.mask);
   canvas_clear_selection_mask(doc);
 
   doc_free_layers(doc);
-  free(doc->composite_buf);
-  doc->composite_buf = NULL;
+  free(doc->layer.composite_buf);
+  doc->layer.composite_buf = NULL;
 
   if (doc->anim) {
     anim_timeline_free(doc->anim);

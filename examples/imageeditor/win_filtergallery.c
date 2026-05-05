@@ -24,9 +24,9 @@ typedef struct {
 } filter_gallery_state_t;
 
 static uint32_t filter_gallery_make_preview_tex(canvas_doc_t *doc) {
-  if (!doc || doc->active_layer < 0 || doc->active_layer >= doc->layer_count)
+  if (!doc || doc->layer.active < 0 || doc->layer.active >= doc->layer.count)
     return 0;
-  layer_t *lay = doc->layers[doc->active_layer];
+  layer_t *lay = doc->layer.stack[doc->layer.active];
   if (!lay || !lay->pixels || doc->canvas_w <= 0 || doc->canvas_h <= 0)
     return 0;
 
@@ -232,7 +232,7 @@ bool show_filter_gallery_dialog(window_t *parent) {
     return false;
   }
   canvas_doc_t *doc = g_app->active_doc;
-  if (doc->active_layer < 0 || doc->active_layer >= doc->layer_count)
+  if (doc->layer.active < 0 || doc->layer.active >= doc->layer.count)
     return false;
 
   filter_gallery_state_t st;

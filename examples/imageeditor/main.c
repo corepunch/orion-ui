@@ -163,8 +163,8 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   g_app->wand_antialias = true;
   g_app->wand_spread = 24;
   g_app->wand_overlay_color = MAKE_COLOR(0x40, 0xA0, 0xFF, 0x55);
-  g_app->grid_spacing_x = 16;
-  g_app->grid_spacing_y = 16;
+  g_app->grid_spacing.x = 16;
+  g_app->grid_spacing.y = 16;
 
 #ifndef BUILD_AS_GEM
   ui_register_open_file_handler(image_editor_open_file_handler);
@@ -235,10 +235,10 @@ void gem_shutdown(void) {
   while (g_app->docs) {
     canvas_doc_t *next = g_app->docs->next;
     doc_free_undo(g_app->docs);
-    if (g_app->docs->float_tex)
-      glDeleteTextures(1, &g_app->docs->float_tex);
-    image_free(g_app->docs->float_pixels);
-    image_free(g_app->docs->float_mask);
+    if (g_app->docs->sel.floating.tex)
+      glDeleteTextures(1, &g_app->docs->sel.floating.tex);
+    image_free(g_app->docs->sel.floating.pixels);
+    image_free(g_app->docs->sel.floating.mask);
     canvas_clear_selection_mask(g_app->docs);
     image_free(g_app->docs->pixels);
     free(g_app->docs);
