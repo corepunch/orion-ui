@@ -153,9 +153,9 @@ static void wand_sync_spread_from_edit(window_t *win) {
   window_t *ed = get_window_item(win, WAND_OPT_ID_SPREAD);
   if (!ed) return;
   int spread = atoi(ed->title);
-  g_app->wand_spread = CLAMP(spread, 0, 255);
+  g_app->wand.spread = CLAMP(spread, 0, 255);
   char buf[16];
-  snprintf(buf, sizeof(buf), "%d", g_app->wand_spread);
+  snprintf(buf, sizeof(buf), "%d", g_app->wand.spread);
   send_message(ed, edSetText, 0, buf);
 }
 
@@ -175,7 +175,7 @@ static void wand_create_controls(window_t *win) {
   if (spread_label_win) spread_label_win->id = WAND_OPT_ID_SPREAD_LABEL;
 
   char spread_text[16];
-  snprintf(spread_text, sizeof(spread_text), "%d", g_app ? g_app->wand_spread : 0);
+  snprintf(spread_text, sizeof(spread_text), "%d", g_app ? g_app->wand.spread : 0);
   irect16_t spread = wand_spread_rect();
   window_t *spread_win = create_window(spread_text, 0, &spread, win, win_textedit, 0, NULL);
   if (spread_win) spread_win->id = WAND_OPT_ID_SPREAD;
@@ -206,12 +206,12 @@ static void wand_sync_controls(window_t *win) {
   if (!win || !g_app) return;
   window_t *aa = get_window_item(win, WAND_OPT_ID_AA);
   if (aa) send_message(aa, btnSetCheck,
-                       g_app->wand_antialias ? btnStateChecked : btnStateUnchecked,
+                       g_app->wand.antialias ? btnStateChecked : btnStateUnchecked,
                        NULL);
   window_t *spread = get_window_item(win, WAND_OPT_ID_SPREAD);
   if (spread && !spread->editing) {
     char buf[16];
-    snprintf(buf, sizeof(buf), "%d", g_app->wand_spread);
+    snprintf(buf, sizeof(buf), "%d", g_app->wand.spread);
     send_message(spread, edSetText, 0, buf);
   }
 }
@@ -220,7 +220,7 @@ static void draw_wand_panel(window_t *win) {
   (void)win;
   irect16_t sw = wand_color_rect();
   fill_rect(get_sys_color(brDarkEdge), R(sw.x - 1, sw.y - 1, sw.w + 2, sw.h + 2));
-  fill_rect(g_app ? g_app->wand_overlay_color : MAKE_COLOR(0x40, 0xA0, 0xFF, 0x55), sw);
+  fill_rect(g_app ? g_app->wand.overlay_color : MAKE_COLOR(0x40, 0xA0, 0xFF, 0x55), sw);
 }
 
 // ── Hit-testing ─────────────────────────────────────────────────────────────
@@ -284,7 +284,7 @@ result_t win_tool_options_proc(window_t *win, uint32_t msg,
       if (!src) return false;
 
       if (src->id == WAND_OPT_ID_AA && notif == btnClicked) {
-        g_app->wand_antialias = send_message(src, btnGetCheck, 0, NULL) != 0;
+        g_app->wand.antialias = send_message(src, btnGetCheck, 0, NULL) != 0;
         invalidate_window(win);
         return true;
       }
@@ -319,9 +319,9 @@ result_t win_tool_options_proc(window_t *win, uint32_t msg,
         irect16_t sw = wand_color_rect();
         if (mx >= sw.x && mx < sw.x + sw.w &&
             my >= sw.y && my < sw.y + sw.h) {
-          uint32_t new_col = g_app->wand_overlay_color;
-          if (show_color_picker(win, g_app->wand_overlay_color, &new_col)) {
-            g_app->wand_overlay_color = new_col;
+          uint32_t new_col = g_app->wand.overlay_color;
+          if (show_color_picker(win, g_app->wand.overlay_color, &new_col)) {
+            g_app->wand.overlay_color = new_col;
             invalidate_window(win);
             if (g_app->active_doc && g_app->active_doc->canvas_win)
               invalidate_window(g_app->active_doc->canvas_win);

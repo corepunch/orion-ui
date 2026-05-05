@@ -23,10 +23,10 @@ static bool cancel_active_canvas_interaction(canvas_doc_t *doc, int old_tool) {
   if (!doc) return false;
 
   state = doc->canvas_win ? (canvas_win_state_t *)doc->canvas_win->userdata : NULL;
-  if (state && state->panning) {
+  if (state && state->pan.active) {
     IE_DEBUG("cancel_interaction pan doc=%p old_tool=%s",
              (void *)doc, tool_id_name(old_tool));
-    state->panning = false;
+    state->pan.active = false;
     changed = true;
   }
 
@@ -231,11 +231,11 @@ static void view_menu_rebuild(void) {
   int n = (int)(sizeof(s_view_items) / sizeof(s_view_items[0]));
   for (int i = 0; i < n; i++) {
     if (s_view_items[i].id == ID_VIEW_SHOW_GRID)
-      s_view_items[i].label = g_app->grid_visible
+      s_view_items[i].label = g_app->grid.visible
                               ? MENU_CHECK_ON "Show Grid"
                               : MENU_CHECK_OFF "Show Grid";
     if (s_view_items[i].id == ID_VIEW_SNAP_GRID)
-      s_view_items[i].label = g_app->grid_snap
+      s_view_items[i].label = g_app->grid.snap
                               ? MENU_CHECK_ON "Snap to Grid"
                               : MENU_CHECK_OFF "Snap to Grid";
     if (s_view_items[i].id == ID_VIEW_SHOW_BACKGROUND)
@@ -614,21 +614,21 @@ void handle_menu_command(uint16_t id) {
       break;
 
     case ID_VIEW_SHOW_GRID:
-      g_app->grid_visible = !g_app->grid_visible;
+      g_app->grid.visible = !g_app->grid.visible;
       if (doc && doc->canvas_win) invalidate_window(doc->canvas_win);
       break;
 
     case ID_VIEW_SNAP_GRID:
-      g_app->grid_snap = !g_app->grid_snap;
+      g_app->grid.snap = !g_app->grid.snap;
       break;
 
     case ID_VIEW_GRID_OPTIONS: {
-      int gx = g_app->grid_spacing.x > 0 ? g_app->grid_spacing.x : 8;
-      int gy = g_app->grid_spacing.y > 0 ? g_app->grid_spacing.y : 8;
+      int gx = g_app->grid.spacing.x > 0 ? g_app->grid.spacing.x : 8;
+      int gy = g_app->grid.spacing.y > 0 ? g_app->grid.spacing.y : 8;
       if (show_grid_options_dialog(g_app->menubar_win, &gx, &gy)) {
-        g_app->grid_spacing.x = gx;
-        g_app->grid_spacing.y = gy;
-        if (doc && doc->canvas_win && g_app->grid_visible)
+        g_app->grid.spacing.x = gx;
+        g_app->grid.spacing.y = gy;
+        if (doc && doc->canvas_win && g_app->grid.visible)
           invalidate_window(doc->canvas_win);
       }
       break;

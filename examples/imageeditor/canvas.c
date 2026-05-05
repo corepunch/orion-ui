@@ -59,7 +59,7 @@ static bool layer_crop_expand(layer_t *lay, int old_w, int old_h,
     glDeleteTextures(1, &lay->tex);
     lay->tex = 0;
   }
-  lay->preview_active = false;
+  lay->preview.active = false;
   return true;
 }
 
@@ -145,9 +145,9 @@ static void layer_upload_texture(canvas_doc_t *doc, layer_t *lay) {
 
 static void layer_clear_preview_one(layer_t *lay) {
   if (!lay) return;
-  lay->preview_active = false;
-  lay->preview_effect = UI_RENDER_EFFECT_COPY;
-  memset(&lay->preview_params, 0, sizeof(lay->preview_params));
+  lay->preview.active = false;
+  lay->preview.effect = UI_RENDER_EFFECT_COPY;
+  memset(&lay->preview.params, 0, sizeof(lay->preview.params));
 }
 
 // ============================================================
@@ -561,12 +561,12 @@ bool layer_set_preview_effect(canvas_doc_t *doc, int idx,
   if (!doc || idx < 0 || idx >= doc->layer.count) return false;
   layer_t *lay = doc->layer.stack[idx];
   if (!lay) return false;
-  lay->preview_effect = effect;
+  lay->preview.effect = effect;
   if (params)
-    lay->preview_params = *params;
+    lay->preview.params = *params;
   else
-    memset(&lay->preview_params, 0, sizeof(lay->preview_params));
-  lay->preview_active = true;
+    memset(&lay->preview.params, 0, sizeof(lay->preview.params));
+  lay->preview.active = true;
   if (doc->canvas_win)
     invalidate_window(doc->canvas_win);
   return true;
@@ -576,14 +576,14 @@ bool layer_commit_preview_effect(canvas_doc_t *doc, int idx) {
   if (!doc || idx < 0 || idx >= doc->layer.count) return false;
   layer_t *lay = doc->layer.stack[idx];
   if (!lay) return false;
-  if (!lay->preview_active) return true;
+  if (!lay->preview.active) return true;
 
   size_t sz = (size_t)doc->canvas_w * doc->canvas_h * 4;
   uint8_t *buf = malloc(sz);
   if (!buf) return false;
   uint32_t baked_tex = 0;
   if (!bake_texture_effect((int)lay->tex, doc->canvas_w, doc->canvas_h,
-                           lay->preview_effect, &lay->preview_params, &baked_tex)) {
+                           lay->preview.effect, &lay->preview.params, &baked_tex)) {
     free(buf);
     return false;
   }
@@ -1851,7 +1851,7 @@ static void layer_replace_pixels(layer_t *lay, uint8_t *pixels) {
     glDeleteTextures(1, &lay->tex);
     lay->tex = 0;
   }
-  lay->preview_active = false;
+  lay->preview.active = false;
 }
 
 // Resize the image contents to new_w x new_h.

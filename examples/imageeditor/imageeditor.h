@@ -206,9 +206,12 @@ typedef struct {
   bool     visible;
   uint8_t  opacity;     // 0 = transparent, 255 = fully opaque
   uint8_t  blend_mode;  // layer_blend_mode_t
-  bool     preview_active;
-  ui_render_effect_t preview_effect;
-  ui_render_effect_params_t preview_params;
+  // Live-preview effect applied while an adjustment dialog is open.
+  struct {
+    bool                      active;
+    ui_render_effect_t        effect;
+    ui_render_effect_params_t params;
+  } preview;
 } layer_t;
 
 // Forward-declare anim_timeline_t so canvas_doc_t can hold a pointer.
@@ -293,11 +296,14 @@ typedef struct canvas_doc_s {
 typedef struct {
   canvas_doc_t *doc;
   float         scale;
-  int           pan_x;       // pan offset in screen pixels (int to avoid int16 overflow)
-  int           pan_y;
-  bool          panning;     // true while hand-tool drag is in progress
-  int           pan_start_x; // screen-local coords where hand drag began
-  int           pan_start_y;
+  // Pan / hand-tool scroll state.  int to avoid int16 overflow at high zoom.
+  struct {
+    int  x;          // pan offset in screen pixels
+    int  y;
+    bool active;     // true while hand-tool drag is in progress
+    int  start_x;   // screen-local coords where hand drag began
+    int  start_y;
+  } pan;
   ipoint16_t    hover;       // canvas pixel coords under the cursor
   bool          hover_valid; // true when hover is on the canvas (for magnifier overlay)
   GLuint        mag_tex;     // GL texture for magnifier loupe (created once, updated each paint)
@@ -330,22 +336,29 @@ typedef struct {
   int            num_user_colors;
   int            brush_size;    // current brush radius (index into kBrushSizes)
   bool           shape_filled;  // true = shapes draw filled, false = outline only
-  // Text tool persistent settings
-  int            text_font_size;  // pixel height, default 16
-  bool           text_antialias;  // default true
-  bool           wand_antialias;
-  int            wand_spread;      // RGB tolerance, 0..255
-  uint32_t       wand_overlay_color;
+  // Text tool persistent settings (font size, antialias flag).
+  struct {
+    int  font_size;  // pixel height, default 16
+    bool antialias;  // default true
+  } text_tool;
+  // Magic-wand tool settings.
+  struct {
+    bool     antialias;
+    int      spread;         // RGB tolerance, 0..255
+    uint32_t overlay_color;
+  } wand;
   // Instagram-style filter presets loaded from share/filters.
   image_filter_t filters[IMAGEEDITOR_MAX_FILTERS];
   int            filter_count;
   // Clipboard (shared across documents)
   uint8_t       *clipboard;
   isize16_t      clipboard_size;
-  // Grid
-  bool           grid_visible;
-  bool           grid_snap;
-  ipoint16_t     grid_spacing;     // grid cell size in canvas pixels
+  // Grid overlay settings.
+  struct {
+    bool       visible;
+    bool       snap;
+    ipoint16_t spacing;  // grid cell size in canvas pixels
+  } grid;
 } app_state_t;
 
 // ============================================================

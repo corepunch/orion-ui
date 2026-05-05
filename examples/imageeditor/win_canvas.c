@@ -54,12 +54,12 @@ static int canvas_center_offset_y(const canvas_doc_t *doc, float scale, int win_
 
 static int canvas_doc_origin_x(window_t *win, canvas_win_state_t *state) {
   if (!win || !state) return 0;
-  return canvas_center_offset_x(state->doc, state->scale, win->frame.w) - state->pan_x;
+  return canvas_center_offset_x(state->doc, state->scale, win->frame.w) - state->pan.x;
 }
 
 static int canvas_doc_origin_y(window_t *win, canvas_win_state_t *state) {
   if (!win || !state) return 0;
-  return canvas_center_offset_y(state->doc, state->scale, win->frame.h) - state->pan_y;
+  return canvas_center_offset_y(state->doc, state->scale, win->frame.h) - state->pan.y;
 }
 
 static int canvas_view_axis_to_doc(int view_px, int origin_px, float scale) {
@@ -206,9 +206,9 @@ static int brush_radius(void) {
 // Apply snap-to-grid to a canvas pixel position if the grid snap option is
 // enabled.  Rounds px/py to the nearest grid intersection.
 static void snap_canvas_pos(int *px, int *py) {
-  if (!g_app || !g_app->grid_snap) return;
-  int gx = g_app->grid_spacing.x;
-  int gy = g_app->grid_spacing.y;
+  if (!g_app || !g_app->grid.snap) return;
+  int gx = g_app->grid.spacing.x;
+  int gy = g_app->grid.spacing.y;
   if (gx > 1) *px = SNAP_AXIS(*px, gx);
   if (gy > 1) *py = SNAP_AXIS(*py, gy);
 }
@@ -250,13 +250,13 @@ static void canvas_sync_scrollbars(window_t *win, canvas_win_state_t *state) {
   // Horizontal: update the doc window's built-in hscroll (merged with status bar).
   si.nMax  = canvas_w;
   si.nPage = view_w;
-  si.nPos  = state->pan_x;
+  si.nPos  = state->pan.x;
   set_scroll_info(dwin, SB_HORZ, &si, false);
 
   // Vertical: update the canvas window's built-in vscroll.
   si.nMax  = canvas_h;
   si.nPage = view_h;
-  si.nPos  = state->pan_y;
+  si.nPos  = state->pan.y;
   set_scroll_info(win, SB_VERT, &si, false);
 
 #ifdef CANVAS_SB_ALWAYS_VISIBLE
@@ -267,8 +267,8 @@ static void canvas_sync_scrollbars(window_t *win, canvas_win_state_t *state) {
   enable_scroll_bar(win,  SB_VERT, need_v);
 #endif
 
-  if (!need_h) state->pan_x = 0;
-  if (!need_v) state->pan_y = 0;
+  if (!need_h) state->pan.x = 0;
+  if (!need_v) state->pan.y = 0;
 }
 
 // Clamp pan to the valid range for the current zoom level and window size.
@@ -286,10 +286,10 @@ static void clamp_pan(canvas_win_state_t *state, int win_w, int win_h) {
 
   int max_x = MAX(0, canvas_w - view_w);
   int max_y = MAX(0, canvas_h - view_h);
-  if (state->pan_x < 0) state->pan_x = 0;
-  if (state->pan_y < 0) state->pan_y = 0;
-  if (state->pan_x > max_x) state->pan_x = max_x;
-  if (state->pan_y > max_y) state->pan_y = max_y;
+  if (state->pan.x < 0) state->pan.x = 0;
+  if (state->pan.y < 0) state->pan.y = 0;
+  if (state->pan.x > max_x) state->pan.x = max_x;
+  if (state->pan.y > max_y) state->pan.y = max_y;
 }
 
 // Set zoom level on a canvas window (called by menu/accelerator handler).
@@ -353,8 +353,8 @@ void canvas_win_fit_zoom(window_t *win) {
   // visually by the document-to-view conversion while keeping pan at 0.
   int scaled_w = canvas_scaled_w(doc, fit_scale);
   int scaled_h = canvas_scaled_h(doc, fit_scale);
-  state->pan_x = (scaled_w > view_w) ? (scaled_w - view_w) / 2 : 0;
-  state->pan_y = (scaled_h > view_h) ? (scaled_h - view_h) / 2 : 0;
+  state->pan.x = (scaled_w > view_w) ? (scaled_w - view_w) / 2 : 0;
+  state->pan.y = (scaled_h > view_h) ? (scaled_h - view_h) / 2 : 0;
   canvas_win_set_scale(win, fit_scale);
 }
 
@@ -411,8 +411,8 @@ static void apply_zoom_centered(window_t *win, canvas_win_state_t *state,
   canvas_doc_t *doc = state->doc;
   int center_x = canvas_center_offset_x(doc, (float)new_scale, win->frame.w);
   int center_y = canvas_center_offset_y(doc, (float)new_scale, win->frame.h);
-  state->pan_x = scaled_px(cx, (float)new_scale) + center_x - mx;
-  state->pan_y = scaled_px(cy, (float)new_scale) + center_y - my;
+  state->pan.x = scaled_px(cx, (float)new_scale) + center_x - mx;
+  state->pan.y = scaled_px(cy, (float)new_scale) + center_y - my;
   canvas_win_set_zoom(win, new_scale);
 }
 
@@ -421,10 +421,10 @@ static void apply_zoom_centered(window_t *win, canvas_win_state_t *state,
 // spanning the full visible canvas width (horizontal) or height (vertical).
 // Only lines inside the viewport are submitted to the GPU.
 static void canvas_draw_grid(window_t *win, canvas_win_state_t *state) {
-  if (!g_app || !g_app->grid_visible) return;
+  if (!g_app || !g_app->grid.visible) return;
   canvas_doc_t *doc = state->doc;
-  int gx = g_app->grid_spacing.x;
-  int gy = g_app->grid_spacing.y;
+  int gx = g_app->grid.spacing.x;
+  int gy = g_app->grid.spacing.y;
   if (gx < 1) gx = 1;
   if (gy < 1) gy = 1;
 
@@ -490,10 +490,10 @@ static void canvas_draw_selection_mask_overlay(canvas_doc_t *doc,
   ui_render_effect_params_t params = {{0}};
   params.f[0] = (float)doc->sel.mask.offset.x / (float)doc->canvas_w;
   params.f[1] = (float)doc->sel.mask.offset.y / (float)doc->canvas_h;
-  params.f[4] = (float)COLOR_R(g_app->wand_overlay_color) / 255.0f;
-  params.f[5] = (float)COLOR_G(g_app->wand_overlay_color) / 255.0f;
-  params.f[6] = (float)COLOR_B(g_app->wand_overlay_color) / 255.0f;
-  params.f[7] = (float)COLOR_A(g_app->wand_overlay_color) / 255.0f;
+  params.f[4] = (float)COLOR_R(g_app->wand.overlay_color) / 255.0f;
+  params.f[5] = (float)COLOR_G(g_app->wand.overlay_color) / 255.0f;
+  params.f[6] = (float)COLOR_B(g_app->wand.overlay_color) / 255.0f;
+  params.f[7] = (float)COLOR_A(g_app->wand.overlay_color) / 255.0f;
   draw_rect_effect((int)doc->sel.mask.tex,
                    canvas_rect.x, canvas_rect.y, canvas_rect.w, canvas_rect.h,
                    UI_RENDER_EFFECT_SELECTION_MASK, &params);
@@ -509,8 +509,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       s->doc = (canvas_doc_t *)lparam;
       s->doc->canvas_win = win;
       s->scale = 1.0f;
-      s->pan_x = 0;
-      s->pan_y = 0;
+      s->pan.x = 0;
+      s->pan.y = 0;
       // Sync built-in scrollbars (WINDOW_HSCROLL | WINDOW_VSCROLL on this window)
       canvas_sync_scrollbars(win, s);
       return true;
@@ -546,14 +546,14 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           const layer_t *lay = doc->layer.stack[li];
           if (!lay || !lay->visible) continue;
           if (!lay->tex) continue;
-          if (lay->preview_active) {
+          if (lay->preview.active) {
             draw_rect_effect_blend(lay->tex,
                                    canvas_rect.x, canvas_rect.y,
                                    canvas_rect.w, canvas_rect.h,
                                    lay->opacity / 255.0f,
                                    (ui_layer_blend_t)lay->blend_mode,
-                                   lay->preview_effect,
-                                   &lay->preview_params);
+                                   lay->preview.effect,
+                                   &lay->preview.params);
           } else {
             draw_rect_blend(lay->tex,
                             canvas_rect.x, canvas_rect.y,
@@ -565,14 +565,14 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       } else if (doc->layer.active >= 0 && doc->layer.active < doc->layer.count) {
         const layer_t *lay = doc->layer.stack[doc->layer.active];
         if (lay && lay->tex) {
-          if (lay->preview_active) {
+          if (lay->preview.active) {
             draw_rect_effect_blend(lay->tex,
                                    canvas_rect.x, canvas_rect.y,
                                    canvas_rect.w, canvas_rect.h,
                                    lay->opacity / 255.0f,
                                    UI_LAYER_BLEND_NORMAL,
-                                   lay->preview_effect,
-                                   &lay->preview_params);
+                                   lay->preview.effect,
+                                   &lay->preview.params);
           } else {
             draw_rect_effect(lay->tex,
                              canvas_rect.x, canvas_rect.y,
@@ -674,7 +674,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
     case evHScroll:
       if (state) {
-        state->pan_x = (int)wparam;
+        state->pan.x = (int)wparam;
         clamp_pan(state, win->frame.w, win->frame.h);
         canvas_sync_scrollbars(win, state);
         invalidate_window(win);
@@ -683,7 +683,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
     case evVScroll:
       if (state) {
-        state->pan_y = (int)wparam;
+        state->pan.y = (int)wparam;
         clamp_pan(state, win->frame.w, win->frame.h);
         canvas_sync_scrollbars(win, state);
         invalidate_window(win);
@@ -713,8 +713,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         // LOWORD = -wheel.x * SCROLL_SENSITIVITY; HIWORD = wheel.y * SCROLL_SENSITIVITY
         int dx = -(int16_t)LOWORD(wparam);  // natural scroll: flip x axis
         int dy = -(int16_t)HIWORD(wparam);  // natural scroll: flip y axis
-        state->pan_x = MIN(MAX(state->pan_x + dx, 0), max_pan_x);
-        state->pan_y = MIN(MAX(state->pan_y + dy, 0), max_pan_y);
+        state->pan.x = MIN(MAX(state->pan.x + dx, 0), max_pan_x);
+        state->pan.y = MIN(MAX(state->pan.y + dy, 0), max_pan_y);
         canvas_sync_scrollbars(win, state);
         invalidate_window(win);
         return true;
@@ -732,13 +732,13 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       // Clear any stale panning state – if the user switched away from Hand
       // while holding the button, panning must not bleed into MouseMove.
-      if (g_app->current_tool != ID_TOOL_HAND) state->panning = false;
+      if (g_app->current_tool != ID_TOOL_HAND) state->pan.active = false;
 
       // Hand tool: begin pan drag
       if (g_app->current_tool == ID_TOOL_HAND) {
-        state->panning = true;
-        state->pan_start_x = lx;
-        state->pan_start_y = ly;
+        state->pan.active = true;
+        state->pan.start_x = lx;
+        state->pan.start_y = ly;
         IE_DEBUG("pan_begin doc=%p at=(%d,%d)", (void *)doc, lx, ly);
         return true;
       }
@@ -783,13 +783,13 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         IE_DEBUG("text_dialog_open doc=%p at=(%d,%d)", (void *)doc, px, py);
         text_options_t opts;
         memset(&opts, 0, sizeof(opts));
-        opts.font_size = g_app->text_font_size;
+        opts.font_size = g_app->text_tool.font_size;
         opts.color     = g_app->fg_color;
-        opts.antialias = g_app->text_antialias;
+        opts.antialias = g_app->text_tool.antialias;
         if (show_text_dialog(win, &opts) && opts.text[0]) {
           // Persist settings for next use
-          g_app->text_font_size = opts.font_size;
-          g_app->text_antialias = opts.antialias;
+          g_app->text_tool.font_size = opts.font_size;
+          g_app->text_tool.antialias = opts.antialias;
           doc_push_undo(doc);
           if (canvas_draw_text_stb(doc, px, py, &opts)) {
             doc->modified = true;
@@ -807,15 +807,15 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         if (doc->sel.move.active) canvas_commit_move(doc);
         bool selected = shift
           ? canvas_magic_wand_select_add(doc, px, py,
-                                         g_app->wand_spread,
-                                         g_app->wand_antialias)
+                                         g_app->wand.spread,
+                                         g_app->wand.antialias)
           : canvas_magic_wand_select(doc, px, py,
-                                     g_app->wand_spread,
-                                     g_app->wand_antialias);
+                                     g_app->wand.spread,
+                                     g_app->wand.antialias);
         if (selected) {
           IE_DEBUG("magic_wand_select doc=%p at=(%d,%d) spread=%d aa=%d",
                    (void *)doc, px, py,
-                   g_app->wand_spread, g_app->wand_antialias);
+                   g_app->wand.spread, g_app->wand.antialias);
           invalidate_window(win);
         }
         return true;
@@ -986,13 +986,13 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       if (!state || !g_app) return true;
 
       // Hand tool: update pan while dragging
-      if (state->panning) {
+      if (state->pan.active) {
         int lx = (int16_t)LOWORD(wparam);
         int ly = (int16_t)HIWORD(wparam);
-        state->pan_x -= lx - state->pan_start_x;
-        state->pan_y -= ly - state->pan_start_y;
-        state->pan_start_x = lx;
-        state->pan_start_y = ly;
+        state->pan.x -= lx - state->pan.start_x;
+        state->pan.y -= ly - state->pan.start_y;
+        state->pan.start_x = lx;
+        state->pan.start_y = ly;
         clamp_pan(state, win->frame.w, win->frame.h);
         canvas_sync_scrollbars(win, state);
         invalidate_window(win);
@@ -1124,9 +1124,9 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
     }
 
     case evLeftButtonUp: {
-      if (state && state->panning) {
+      if (state && state->pan.active) {
         IE_DEBUG("pan_end doc=%p", (void *)doc);
-        state->panning = false;
+        state->pan.active = false;
       }
       if (!doc || !g_app) return true;
       int tool = g_app->current_tool;

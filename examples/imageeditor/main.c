@@ -158,13 +158,13 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   g_app->fg_color = g_app->palette[4];
   g_app->bg_color = g_app->palette[0];
   g_app->brush_size = 1;  // default: radius 1 (3px diameter)
-  g_app->text_font_size = 16;
-  g_app->text_antialias = true;
-  g_app->wand_antialias = true;
-  g_app->wand_spread = 24;
-  g_app->wand_overlay_color = MAKE_COLOR(0x40, 0xA0, 0xFF, 0x55);
-  g_app->grid_spacing.x = 16;
-  g_app->grid_spacing.y = 16;
+  g_app->text_tool.font_size = 16;
+  g_app->text_tool.antialias = true;
+  g_app->wand.antialias = true;
+  g_app->wand.spread = 24;
+  g_app->wand.overlay_color = MAKE_COLOR(0x40, 0xA0, 0xFF, 0x55);
+  g_app->grid.spacing.x = 16;
+  g_app->grid.spacing.y = 16;
 
 #ifndef BUILD_AS_GEM
   ui_register_open_file_handler(image_editor_open_file_handler);
