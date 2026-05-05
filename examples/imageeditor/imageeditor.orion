@@ -112,27 +112,27 @@
       <menu id="window" label="Window" var="kWindowItems" dynamic="true">
         <item id="ID_WINDOW_TOOLS" value="200" label="Tools" />
         <item id="ID_WINDOW_COLORS" value="201" label="Colors" />
-        <item id="ID_WINDOW_LAYERS" value="202" label="Layers" if="!IMAGEEDITOR_SINGLE_LAYER" />
-        <item id="ID_WINDOW_TIMELINE" value="203" label="Timeline" if="IMAGEEDITOR_ANIMATIONS" />
+        <item id="ID_WINDOW_LAYERS" value="202" label="Layers" />
+        <item id="ID_WINDOW_TIMELINE" value="203" label="Timeline" />
         <separator />
       </menu>
 
       <menu id="anim" label="Anim" var="kAnimItems">
-        <item id="ID_ANIM_NEW_FRAME" value="400" label="New Frame" if="IMAGEEDITOR_ANIMATIONS" />
-        <item id="ID_ANIM_DUPLICATE_FRAME" value="401" label="Duplicate Frame" if="IMAGEEDITOR_ANIMATIONS" />
-        <item id="ID_ANIM_DELETE_FRAME" value="402" label="Delete Frame" if="IMAGEEDITOR_ANIMATIONS" />
-        <separator if="IMAGEEDITOR_ANIMATIONS" />
-        <item id="ID_ANIM_PREV_FRAME" value="407" label="Previous Frame" shortcut="Page Up" if="IMAGEEDITOR_ANIMATIONS" />
-        <item id="ID_ANIM_NEXT_FRAME" value="408" label="Next Frame" shortcut="Page Down" if="IMAGEEDITOR_ANIMATIONS" />
-        <separator if="IMAGEEDITOR_ANIMATIONS" />
-        <item id="ID_ANIM_PLAY" value="403" label="Play" if="IMAGEEDITOR_ANIMATIONS" />
-        <item id="ID_ANIM_STOP" value="404" label="Stop" if="IMAGEEDITOR_ANIMATIONS" />
-        <item id="ID_ANIM_LOOP" value="405" label="[ ] Loop" if="IMAGEEDITOR_ANIMATIONS" />
-        <separator if="IMAGEEDITOR_ANIMATIONS" />
-        <item id="ID_ANIM_EXPORT_GIF" value="410" label="Export GIF..." if="IMAGEEDITOR_ANIMATIONS" />
-        <item id="ID_ANIM_EXPORT_APNG" value="411" label="Export APNG..." if="IMAGEEDITOR_ANIMATIONS" />
-        <item id="ID_ANIM_EXPORT_SPRITESHEET" value="412" label="Export Sprite Sheet..." if="IMAGEEDITOR_ANIMATIONS" />
-        <item id="ID_ANIM_SET_FPS" value="406" label="Set FPS..." if="IMAGEEDITOR_ANIMATIONS" />
+        <item id="ID_ANIM_NEW_FRAME" value="400" label="New Frame" />
+        <item id="ID_ANIM_DUPLICATE_FRAME" value="401" label="Duplicate Frame" />
+        <item id="ID_ANIM_DELETE_FRAME" value="402" label="Delete Frame" />
+        <separator />
+        <item id="ID_ANIM_PREV_FRAME" value="407" label="Previous Frame" shortcut="Page Up" />
+        <item id="ID_ANIM_NEXT_FRAME" value="408" label="Next Frame" shortcut="Page Down" />
+        <separator />
+        <item id="ID_ANIM_PLAY" value="403" label="Play" />
+        <item id="ID_ANIM_STOP" value="404" label="Stop" />
+        <item id="ID_ANIM_LOOP" value="405" label="[ ] Loop" />
+        <separator />
+        <item id="ID_ANIM_EXPORT_GIF" value="410" label="Export GIF..." />
+        <item id="ID_ANIM_EXPORT_APNG" value="411" label="Export APNG..." />
+        <item id="ID_ANIM_EXPORT_SPRITESHEET" value="412" label="Export Sprite Sheet..." />
+        <item id="ID_ANIM_SET_FPS" value="406" label="Set FPS..." />
       </menu>
 
       <menu id="help" label="Help" var="kHelpItems">

@@ -2,14 +2,16 @@
 
 #include "imageeditor.h"
 
-#define FILTER_PREFIX_COUNT ((int)(sizeof(kFilterItems) / sizeof(kFilterItems[0])))
 #define WINDOW_PREFIX_COUNT ((int)(sizeof(kWindowItems) / sizeof(kWindowItems[0])))
 
+#if !IMAGEEDITOR_INDEXED
+#define FILTER_PREFIX_COUNT ((int)(sizeof(kFilterItems) / sizeof(kFilterItems[0])))
 static menu_item_t s_filter_items[FILTER_PREFIX_COUNT + 1 + IMAGEEDITOR_MAX_FILTERS];
 static int         s_filter_item_count = FILTER_PREFIX_COUNT;
 static menu_item_t s_filter_photo_items[IMAGEEDITOR_MAX_FILTERS];
 static int         s_filter_photo_item_count = 0;
 static char        s_filter_photo_labels[IMAGEEDITOR_MAX_FILTERS][64];
+#endif // !IMAGEEDITOR_INDEXED
 
 // Persistent storage for dynamically built items and document title strings.
 static menu_item_t s_window_items[WINDOW_PREFIX_COUNT + WINDOW_MENU_MAX_DOCS];
@@ -36,7 +38,7 @@ static bool cancel_active_canvas_interaction(canvas_doc_t *doc, int old_tool) {
              (void *)doc, doc->poly.count);
     if (doc->shape.snapshot) {
       memcpy(doc->pixels, doc->shape.snapshot,
-             (size_t)doc->canvas_w * doc->canvas_h * 4);
+             (size_t)doc->canvas_w * doc->canvas_h * DOC_BPP);
       doc->canvas_dirty = true;
     }
     doc_discard_undo(doc);
@@ -51,7 +53,7 @@ static bool cancel_active_canvas_interaction(canvas_doc_t *doc, int old_tool) {
              doc->shape.start.x, doc->shape.start.y,
              doc->last.x, doc->last.y);
     memcpy(doc->pixels, doc->shape.snapshot,
-           (size_t)doc->canvas_w * doc->canvas_h * 4);
+           (size_t)doc->canvas_w * doc->canvas_h * DOC_BPP);
     doc->canvas_dirty = true;
     changed = true;
   }
@@ -86,7 +88,6 @@ static bool cancel_active_canvas_interaction(canvas_doc_t *doc, int old_tool) {
   return changed;
 }
 
-#if IMAGEEDITOR_ANIMATIONS
 static void anim_stop_playback(canvas_doc_t *doc) {
   if (!doc || !doc->anim) return;
   doc->anim->playing = false;
@@ -118,7 +119,6 @@ static bool anim_step_frame(canvas_doc_t *doc, int delta) {
   timeline_win_refresh();
   return true;
 }
-#endif
 
 // ============================================================
 // Palette window helpers (shared by gem_init / handle_menu_command)
@@ -283,25 +283,40 @@ bool imageeditor_open_file_path(const char *path) {
   if (!g_app || !path || !path[0]) return false;
 
   int img_w = 0, img_h = 0;
-  uint8_t *px = load_image(path, &img_w, &img_h);
+#if IMAGEEDITOR_INDEXED
+  uint32_t pal[256] = {0};
+  int pal_count = 0;
+  uint8_t *px = image_io_load(path, &img_w, &img_h, pal, &pal_count);
+#else
+  uint8_t *px = image_io_load(path, &img_w, &img_h, NULL, NULL);
+#endif
   if (!px || img_w <= 0 || img_h <= 0) {
-    if (px) image_free(px);
+    free(px);
     return false;
   }
 
   canvas_doc_t *ndoc = create_document(path, img_w, img_h);
   if (!ndoc) {
-    image_free(px);
+    free(px);
     return false;
   }
 
   // Swap the transparent placeholder pixels for the actual loaded image.
   // Update both the layer buffer and the convenience alias.
-  image_free(ndoc->layer.stack[0]->pixels);
+  free(ndoc->layer.stack[0]->pixels);
   ndoc->layer.stack[0]->pixels = px;
   ndoc->pixels = px;
   ndoc->canvas_dirty = true;
   ndoc->modified = false;
+
+#if IMAGEEDITOR_INDEXED
+  // Overwrite the default palette with the one embedded in the file.
+  if (pal_count > 0) {
+    memcpy(ndoc->ipal.entries, pal, (size_t)pal_count * sizeof(uint32_t));
+    ndoc->ipal.count = pal_count;
+  }
+#endif
+
   // Sync the animation frame 0 with the loaded pixels so the thumbnail is
   // accurate from the start.
   if (ndoc->anim && ndoc->anim->frame_count > 0)
@@ -352,7 +367,7 @@ void handle_menu_command(uint16_t id) {
     case ID_FILE_SAVE:
       if (!doc) break;
       if (!doc->filename[0]) goto do_save_as;
-      if (png_save(doc->filename, doc)) {
+      if (image_io_save(doc->filename, doc)) {
         doc->modified = false;
         doc_update_title(doc);
         send_message(doc->win, evStatusBar, 0, (void *)"Saved");
@@ -368,7 +383,7 @@ void handle_menu_command(uint16_t id) {
       if (show_file_picker(g_app->menubar_win, true, path, sizeof(path))) {
         strncpy(doc->filename, path, sizeof(doc->filename)-1);
         doc->filename[sizeof(doc->filename)-1] = '\0';
-        if (png_save(path, doc)) {
+        if (image_io_save(path, doc)) {
           doc->modified = false;
           doc_update_title(doc);
           send_message(doc->win, evStatusBar, 0, path);
@@ -519,6 +534,9 @@ void handle_menu_command(uint16_t id) {
       }
       break;
 
+#if !IMAGEEDITOR_INDEXED
+    // Levels is GPU/shader-based; in indexed mode it would need to remap
+    // palette entries instead of pixel data (future work).
     case ID_IMAGE_LEVELS:
       if (doc && doc->layer.active >= 0 && doc->layer.active < doc->layer.count) {
         doc_push_undo(doc);
@@ -526,7 +544,9 @@ void handle_menu_command(uint16_t id) {
           doc_discard_undo(doc);
       }
       break;
+#endif // !IMAGEEDITOR_INDEXED
 
+#if !IMAGEEDITOR_INDEXED
     case ID_FILTER_RELOAD:
       imageeditor_load_filters();
       break;
@@ -569,6 +589,7 @@ void handle_menu_command(uint16_t id) {
           invalidate_window(doc->canvas_win);
       }
       break;
+#endif // !IMAGEEDITOR_INDEXED
 
     case ID_IMAGE_RESIZE: {
       if (!doc) break;
@@ -724,7 +745,6 @@ void handle_menu_command(uint16_t id) {
       }
       break;
 
-#if !IMAGEEDITOR_SINGLE_LAYER
     case ID_WINDOW_LAYERS:
       if (g_app->layers_win) {
         show_window(g_app->layers_win, true);
@@ -732,7 +752,6 @@ void handle_menu_command(uint16_t id) {
         create_layers_window();
       }
       break;
-#endif
 
     case ID_LAYER_NEW:
       if (doc) {
@@ -1051,6 +1070,7 @@ void handle_menu_command(uint16_t id) {
       break;
 
     default:
+#if !IMAGEEDITOR_INDEXED
       if (id >= ID_FILTER_BASE && id < ID_FILTER_BASE + IMAGEEDITOR_MAX_FILTERS) {
         if (doc) {
           int filter_idx = (int)id - ID_FILTER_BASE;
@@ -1070,6 +1090,7 @@ void handle_menu_command(uint16_t id) {
         }
         break;
       }
+#endif // !IMAGEEDITOR_INDEXED
 
       if (id >= ID_WINDOW_DOC_BASE &&
           id < ID_WINDOW_DOC_BASE + WINDOW_MENU_MAX_DOCS) {
@@ -1087,6 +1108,7 @@ void handle_menu_command(uint16_t id) {
 }
 
 void imageeditor_sync_filter_menu(void) {
+#if !IMAGEEDITOR_INDEXED
   if (!g_app) return;
 
   int n = 0;
@@ -1124,6 +1146,7 @@ void imageeditor_sync_filter_menu(void) {
     send_message(g_app->menubar_win, kMenuBarMessageSetMenus,
                  (uint32_t)kNumMenus, kMenus);
   }
+#endif // !IMAGEEDITOR_INDEXED
 }
 
 result_t editor_menubar_proc(window_t *win, uint32_t msg,

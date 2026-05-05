@@ -5,6 +5,8 @@
 
 #include "imageeditor.h"
 
+#if !IMAGEEDITOR_INDEXED
+
 #if UI_WINDOW_SCALE > 1
 #define FG_ICON_SIZE       64
 #define FG_ICON_CELL_W     74
@@ -249,3 +251,5 @@ bool show_filter_gallery_dialog(window_t *parent) {
   }
   return res && st.accepted;
 }
+
+#endif // !IMAGEEDITOR_INDEXED

@@ -97,9 +97,7 @@ static void create_app_windows(hinstance_t hinstance) {
   create_tool_palette_window();
   create_tool_options_window();
   create_color_palette_window();
-#if !IMAGEEDITOR_SINGLE_LAYER
   create_layers_window();
-#endif
   create_timeline_window();
 }
 
@@ -107,7 +105,11 @@ static void create_app_windows(hinstance_t hinstance) {
 // .gem entry points
 // ============================================================
 
+#if IMAGEEDITOR_INDEXED
+static const char *image_editor_types[] = { ".pcx", ".bmp", NULL };
+#else
 static const char *image_editor_types[] = { ".png", ".bmp", ".jpg", ".jpeg", NULL };
+#endif
 
 static bool has_ext(const char *path, const char *ext) {
   if (!path || !ext) return false;
@@ -173,7 +175,9 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   srand((unsigned int)time(NULL));
 
   create_app_windows(hinstance);
+#if !IMAGEEDITOR_INDEXED
   imageeditor_load_filters();
+#endif
 
   {
     char path[4096];
@@ -225,7 +229,9 @@ void gem_shutdown(void) {
   free(g_app->clipboard);
   g_app->clipboard = NULL;
 
+#if !IMAGEEDITOR_INDEXED
   imageeditor_free_filters();
+#endif // !IMAGEEDITOR_INDEXED
 
   if (g_loaded_component_plugins) {
     fe_unload_component_plugins();
@@ -238,7 +244,14 @@ void gem_shutdown(void) {
   g_app = NULL;
 }
 
+#if IMAGEEDITOR_INDEXED
+GEM_DEFINE("Image Editor 256", "1.0", gem_init, gem_shutdown, image_editor_types)
+
+GEM_STANDALONE_MAIN("Orion Image Editor 256", UI_INIT_DESKTOP, SCREEN_W, SCREEN_H,
+                    g_app->menubar_win, g_app->accel)
+#else
 GEM_DEFINE("Image Editor", "1.0", gem_init, gem_shutdown, image_editor_types)
 
 GEM_STANDALONE_MAIN("Orion Image Editor", UI_INIT_DESKTOP, SCREEN_W, SCREEN_H,
                     g_app->menubar_win, g_app->accel)
+#endif

@@ -811,6 +811,9 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         int py = doc_pt.y;
         if (canvas_in_bounds(doc, px, py)) {
           g_app->fg_color = canvas_get_pixel(doc, px, py);
+#if IMAGEEDITOR_INDEXED
+          g_app->fg_palette_idx = doc->pixels[(size_t)py * doc->canvas_w + px];
+#endif
           if (g_app->tool_win)  invalidate_window(g_app->tool_win);
           if (g_app->color_win) invalidate_window(g_app->color_win);
         }
@@ -930,7 +933,14 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           canvas_draw_circle(doc, px, py, brush_radius(), g_app->fg_color);
           break;
         case ID_TOOL_ERASER:
-          canvas_draw_circle(doc, px, py, brush_radius(), MAKE_COLOR(0x00, 0x00, 0x00, 0x00));
+          canvas_draw_circle(doc, px, py, brush_radius(),
+#if IMAGEEDITOR_INDEXED
+                             // In indexed mode the eraser writes the transparent index.
+                             doc->ipal.entries[doc->ipal.transparent]
+#else
+                             MAKE_COLOR(0x00, 0x00, 0x00, 0x00)
+#endif
+                             );
           break;
         case ID_TOOL_FILL:
           canvas_flood_fill(doc, px, py, g_app->fg_color);
@@ -1114,7 +1124,13 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           break;
         case ID_TOOL_ERASER:
           canvas_draw_line(doc, doc->last.x, doc->last.y, px, py,
-                           brush_radius(), MAKE_COLOR(0x00, 0x00, 0x00, 0x00));
+                           brush_radius(),
+#if IMAGEEDITOR_INDEXED
+                           doc->ipal.entries[doc->ipal.transparent]
+#else
+                           MAKE_COLOR(0x00, 0x00, 0x00, 0x00)
+#endif
+                           );
           break;
         case ID_TOOL_FILL:
           break;

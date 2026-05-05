@@ -21,11 +21,22 @@
 #define IMAGEEDITOR_DEBUG 1
 #endif
 
-#ifndef IMAGEEDITOR_SINGLE_LAYER
-#define IMAGEEDITOR_SINGLE_LAYER 0
+#ifndef IMAGEEDITOR_INDEXED
+#define IMAGEEDITOR_INDEXED 0
 #endif
 
-#define IMAGEEDITOR_ANIMATIONS 1
+#if IMAGEEDITOR_INDEXED
+// Which palette index is treated as transparent (the "eraser" target).
+#define IMAGEEDITOR_TRANSPARENT_INDEX 0
+#endif
+
+// Bytes per pixel in the layer pixel buffer.
+// 32-bit RGBA mode = 4; indexed mode = 1 (palette index).
+#if IMAGEEDITOR_INDEXED
+#define DOC_BPP 1
+#else
+#define DOC_BPP 4
+#endif
 
 #ifndef IMAGEEDITOR_SHOW_SELECTION_BOUNDS
 #define IMAGEEDITOR_SHOW_SELECTION_BOUNDS 0
@@ -203,7 +214,8 @@ typedef enum {
 } image_resize_filter_t;
 
 typedef struct {
-  uint8_t *pixels;      // RGBA pixel buffer (canvas_w * canvas_h * 4 bytes)
+  uint8_t *pixels;      // pixel buffer: RGBA (canvas_w * canvas_h * 4 bytes)
+                        // or indexed (canvas_w * canvas_h * 1 byte) depending on DOC_BPP
   GLuint   tex;         // GPU texture for realtime compositing
   char     name[64];
   bool     visible;
@@ -294,6 +306,15 @@ typedef struct canvas_doc_s {
   } poly;
   anim_timeline_t *anim;   // animation timeline; non-NULL after successful create_document(),
                            // but may be NULL on allocation failure (OOM guard)
+#if IMAGEEDITOR_INDEXED
+  // Indexed-color (256-color palette) mode.
+  // doc->pixels stores 1-byte palette indices rather than 4-byte RGBA values.
+  struct {
+    uint32_t entries[256]; // RGBA value for each palette entry (index → color)
+    int      count;        // number of used entries (up to 256)
+    int      transparent;  // palette index that means "transparent" (default: IMAGEEDITOR_TRANSPARENT_INDEX)
+  } ipal;
+#endif
 } canvas_doc_t;
 
 typedef struct {
@@ -339,6 +360,9 @@ typedef struct {
   uint32_t       palette[NUM_COLORS];
   uint32_t       fg_color;
   uint32_t       bg_color;
+#if IMAGEEDITOR_INDEXED
+  int            fg_palette_idx; // active palette index (indexed mode only)
+#endif
   accel_table_t *accel;
   uint32_t       user_palette[NUM_USER_COLORS];
   int            num_user_colors;
@@ -456,6 +480,18 @@ void canvas_set_pixel(canvas_doc_t *doc, int x, int y, uint32_t c);
 uint32_t canvas_get_pixel(const canvas_doc_t *doc, int x, int y);
 void canvas_clear(canvas_doc_t *doc);
 void canvas_upload(canvas_doc_t *doc);
+#if IMAGEEDITOR_INDEXED
+// Find the palette entry nearest to the given RGBA color.
+// Returns the palette index (0–255), or ipal.transparent if the palette is empty.
+int canvas_nearest_palette_index(const canvas_doc_t *doc, uint32_t color);
+// Resolve the RGBA color for a pixel at (x, y) by mapping index → ipal.entries.
+uint32_t canvas_get_pixel_rgba(const canvas_doc_t *doc, int x, int y);
+// The eraser color in indexed mode: transparent palette index expanded to RGBA.
+static inline uint32_t canvas_eraser_color(const canvas_doc_t *doc) {
+  (void)doc;
+  return MAKE_COLOR(0x00, 0x00, 0x00, 0x00);  // sentinel; translated to transparent index in set_pixel
+}
+#endif
 void canvas_draw_circle(canvas_doc_t *doc, int cx, int cy, int r, uint32_t c);
 void canvas_draw_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1, int radius, uint32_t c);
 void canvas_flood_fill(canvas_doc_t *doc, int sx, int sy, uint32_t fill);
@@ -513,8 +549,16 @@ bool doc_redo(canvas_doc_t *doc);
 void doc_free_undo(canvas_doc_t *doc);
 void doc_discard_undo(canvas_doc_t *doc);
 
-// PNG I/O
-bool png_save(const char *path, const canvas_doc_t *doc);
+// Unified image I/O (image_io.c).
+// Indexed mode: PCX and BMP 8-bit indexed.
+// 32-bit mode:  PNG save; any format load via user/image.h.
+//
+// image_io_load: returns a malloc'd pixel buffer (1 bpp in indexed mode,
+//   4 bpp RGBA in 32-bit mode).  Caller must free() the result.
+//   out_pal[256] and *out_pal_count are only set in indexed mode.
+uint8_t *image_io_load(const char *path, int *out_w, int *out_h,
+                       uint32_t out_pal[256], int *out_pal_count);
+bool     image_io_save(const char *path, const canvas_doc_t *doc);
 
 // Native file picker wrapper used by the menu commands.
 bool show_file_picker(window_t *parent, bool save_mode, char *out_path, size_t out_sz);
