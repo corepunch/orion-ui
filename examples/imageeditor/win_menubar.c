@@ -521,6 +521,9 @@ void handle_menu_command(uint16_t id) {
       }
       break;
 
+#if !IMAGEEDITOR_INDEXED
+    // Levels is GPU/shader-based; in indexed mode it would need to remap
+    // palette entries instead of pixel data (future work).
     case ID_IMAGE_LEVELS:
       if (doc && doc->layer.active >= 0 && doc->layer.active < doc->layer.count) {
         doc_push_undo(doc);
@@ -528,6 +531,7 @@ void handle_menu_command(uint16_t id) {
           doc_discard_undo(doc);
       }
       break;
+#endif // !IMAGEEDITOR_INDEXED
 
 #if !IMAGEEDITOR_INDEXED
     case ID_FILTER_RELOAD:
