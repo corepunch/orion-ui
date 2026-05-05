@@ -226,10 +226,10 @@ bool imageeditor_apply_filter(canvas_doc_t *doc, int filter_idx) {
     return false;
   if (!g_app->filters[filter_idx].program)
     return false;
-  if (doc->active_layer < 0 || doc->active_layer >= doc->layer_count)
+  if (doc->layer.active < 0 || doc->layer.active >= doc->layer.count)
     return false;
 
-  layer_t *lay = doc->layers[doc->active_layer];
+  layer_t *lay = doc->layer.stack[doc->layer.active];
   if (!lay || !lay->pixels) return false;
 
   canvas_upload(doc);
@@ -278,10 +278,10 @@ bool imageeditor_apply_filter(canvas_doc_t *doc, int filter_idx) {
 
 bool imageeditor_apply_builtin_filter(canvas_doc_t *doc, uint16_t id) {
   if (!g_app || !doc) return false;
-  if (doc->active_layer < 0 || doc->active_layer >= doc->layer_count)
+  if (doc->layer.active < 0 || doc->layer.active >= doc->layer.count)
     return false;
 
-  layer_t *lay = doc->layers[doc->active_layer];
+  layer_t *lay = doc->layer.stack[doc->layer.active];
   if (!lay || !lay->pixels) return false;
 
   canvas_upload(doc);

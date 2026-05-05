@@ -123,6 +123,8 @@ extern const int kBrushSizes[NUM_BRUSH_SIZES];
 #define NUM_USER_COLORS  8
 
 #define UNDO_MAX   20
+#define MAX_POLY_POINTS 256
+#define MAX_FILENAME 512
 
 // Menu command IDs and static menu resources are generated from imageeditor.orion.
 
@@ -204,68 +206,89 @@ typedef struct {
   bool     visible;
   uint8_t  opacity;     // 0 = transparent, 255 = fully opaque
   uint8_t  blend_mode;  // layer_blend_mode_t
-  bool     preview_active;
-  ui_render_effect_t preview_effect;
-  ui_render_effect_params_t preview_params;
+  // Live-preview effect applied while an adjustment dialog is open.
+  struct {
+    bool                      active;
+    ui_render_effect_t        effect;
+    ui_render_effect_params_t params;
+  } preview;
 } layer_t;
 
 // Forward-declare anim_timeline_t so canvas_doc_t can hold a pointer.
 typedef struct anim_timeline_s anim_timeline_t;
 
+// Undo/redo stack (heap-allocated layer-stack snapshots)
+typedef struct {
+  uint8_t *states[UNDO_MAX];
+  int      count;
+} undo_t;
+
 typedef struct canvas_doc_s {
-  uint8_t *pixels;           // convenience alias → layers[active_layer]->pixels
+  uint8_t *pixels;           // convenience alias → layer.stack[layer.active]->pixels
   int      canvas_w;         // image width in pixels
   int      canvas_h;         // image height in pixels
-  uint32_t background_color; // document background color used by preview/display paths
-  bool     show_background;  // true = paint the document background behind pixels
+  struct {
+    uint32_t color;          // document background color used by preview/display paths
+    bool     show;           // true = paint the document background behind pixels
+  } background;
   bool     canvas_dirty;
   bool     drawing;
   bool     close_prompt_open;
   ipoint16_t  last;
   bool     modified;
-  char     filename[512];
+  char     filename[MAX_FILENAME];
   window_t *win;
   window_t *canvas_win;
   struct canvas_doc_s *next;
   // Layer stack
-  layer_t **layers;          // heap array, index 0=bottom … layer_count-1=top
-  int       layer_count;
-  int       active_layer;    // index of the active layer
-  bool      editing_mask;    // true → drawing ops paint the active layer's alpha
-  bool      mask_only_view;  // true → canvas shows the active layer alpha only
-  uint8_t  *composite_buf;   // canvas_w * canvas_h * 4 scratch buffer for compositing
+  struct {
+    layer_t **stack;           // heap array, index 0=bottom … count-1=top
+    int       count;
+    int       active;          // index of the active layer
+    bool      editing_mask;    // true → drawing ops paint the active layer's alpha
+    bool      mask_only_view;  // true → canvas shows the active layer alpha only
+    uint8_t  *composite_buf;   // canvas_w * canvas_h * 4 scratch buffer for compositing
+  } layer;
   // Undo/redo history (heap-allocated layer-stack snapshots)
-  uint8_t *undo_states[UNDO_MAX];
-  int      undo_count;
-  uint8_t *redo_states[UNDO_MAX];
-  int      redo_count;
-  bool     sel_active;
-  ipoint16_t  sel_start;
-  ipoint16_t  sel_end;
-  bool     sel_add_mode;    // true while Shift-dragging to add to selection
-  // Optional canvas_w * canvas_h edit mask: 0 = selected/editable,
-  // 255 = protected/unselected. NULL means the whole canvas is editable.
-  uint8_t *sel_mask;
-  GLuint   sel_mask_tex;  // GL_RED texture cache for protected-area overlay
-  bool     sel_mask_dirty;
-  ipoint16_t  sel_mask_offset; // transient drag offset, committed on mouse-up
+  undo_t undo;
+  undo_t redo;
+  // Selection state
+  struct {
+    bool        active;
+    ipoint16_t  start;
+    ipoint16_t  end;
+    bool        add_mode;    // true while Shift-dragging to add to selection
+    // Selection mask (canvas_w × canvas_h: 0=selected/editable, 255=protected/unselected)
+    struct {
+      uint8_t    *data;      // NULL means the whole canvas is editable
+      GLuint      tex;       // GL_RED texture cache for protected-area overlay
+      bool        dirty;
+      ipoint16_t  offset;    // transient drag offset, committed on mouse-up
+    } mask;
+    // Move/drag state
+    struct {
+      bool        active;       // selection is being moved
+      bool        mask_moving;  // mask offset is being adjusted
+      ipoint16_t  origin;       // canvas pixel where drag began
+    } move;
+    struct {
+      irect16_t   rect;          // position and size of floating selection
+      uint8_t    *pixels;        // RGBA data extracted from canvas
+      uint8_t    *mask;          // rect.w × rect.h edit mask, same semantics as sel.mask.data
+      GLuint      tex;           // cached GL texture for pixels (0 = none)
+    } floating;
+  } sel;
   // Shape tool rubber-band preview state
-  uint8_t *shape_snapshot;  // pixel backup taken when shape drag starts
-  ipoint16_t  shape_start;     // canvas coords where the shape drag began
+  struct {
+    uint8_t    *snapshot;  // pixel backup taken when shape drag starts
+    ipoint16_t  start;     // canvas coords where the shape drag began
+  } shape;
   // Polygon tool in-progress vertices
-  ipoint16_t  poly_pts[256];
-  int      poly_count;
-  bool     poly_active;     // true while accumulating polygon vertices
-  // Floating selection state (during move drag)
-  bool     sel_moving;
-  bool     sel_mask_moving;
-  ipoint16_t  move_origin;    // canvas pixel where drag began
-  ipoint16_t  float_pos;      // current top-left of floating selection
-  int      float_w;
-  int      float_h;
-  uint8_t *float_pixels;   // RGBA data extracted from canvas
-  uint8_t *float_mask;     // float_w * float_h edit mask, same semantics as sel_mask
-  GLuint   float_tex;      // cached GL texture for float_pixels (0 = none)
+  struct {
+    ipoint16_t  pts[MAX_POLY_POINTS];
+    int         count;
+    bool        active;     // true while accumulating polygon vertices
+  } poly;
   anim_timeline_t *anim;   // animation timeline; non-NULL after successful create_document(),
                            // but may be NULL on allocation failure (OOM guard)
 } canvas_doc_t;
@@ -273,13 +296,17 @@ typedef struct canvas_doc_s {
 typedef struct {
   canvas_doc_t *doc;
   float         scale;
-  int           pan_x;      // horizontal pan offset in screen pixels
-  int           pan_y;      // vertical pan offset in screen pixels
-  bool          panning;    // true while hand-tool drag is in progress
-  ipoint16_t       pan_start;  // screen-local coords where hand drag began
-  ipoint16_t       hover;      // canvas pixel coords under the cursor
+  // Pan / hand-tool scroll state.  int to avoid int16 overflow at high zoom.
+  struct {
+    int  x;          // pan offset in screen pixels
+    int  y;
+    bool active;     // true while hand-tool drag is in progress
+    int  start_x;   // screen-local coords where hand drag began
+    int  start_y;
+  } pan;
+  ipoint16_t    hover;       // canvas pixel coords under the cursor
   bool          hover_valid; // true when hover is on the canvas (for magnifier overlay)
-  GLuint        mag_tex;    // GL texture for magnifier loupe (created once, updated each paint)
+  GLuint        mag_tex;     // GL texture for magnifier loupe (created once, updated each paint)
   char          last_sb[64]; // last text sent to status bar — avoids redundant updates
 } canvas_win_state_t;
 
@@ -309,24 +336,29 @@ typedef struct {
   int            num_user_colors;
   int            brush_size;    // current brush radius (index into kBrushSizes)
   bool           shape_filled;  // true = shapes draw filled, false = outline only
-  // Text tool persistent settings
-  int            text_font_size;  // pixel height, default 16
-  bool           text_antialias;  // default true
-  bool           wand_antialias;
-  int            wand_spread;      // RGB tolerance, 0..255
-  uint32_t       wand_overlay_color;
+  // Text tool persistent settings (font size, antialias flag).
+  struct {
+    int  font_size;  // pixel height, default 16
+    bool antialias;  // default true
+  } text_tool;
+  // Magic-wand tool settings.
+  struct {
+    bool     antialias;
+    int      spread;         // RGB tolerance, 0..255
+    uint32_t overlay_color;
+  } wand;
   // Instagram-style filter presets loaded from share/filters.
   image_filter_t filters[IMAGEEDITOR_MAX_FILTERS];
   int            filter_count;
   // Clipboard (shared across documents)
   uint8_t       *clipboard;
-  int            clipboard_w;
-  int            clipboard_h;
-  // Grid
-  bool           grid_visible;
-  bool           grid_snap;
-  int            grid_spacing_x;   // horizontal grid cell size in canvas pixels
-  int            grid_spacing_y;   // vertical grid cell size in canvas pixels
+  isize16_t      clipboard_size;
+  // Grid overlay settings.
+  struct {
+    bool       visible;
+    bool       snap;
+    ipoint16_t spacing;  // grid cell size in canvas pixels
+  } grid;
 } app_state_t;
 
 // ============================================================
@@ -368,15 +400,15 @@ static inline void debug_log_doc_state(const char *tag, const canvas_doc_t *doc)
     IE_DEBUG("%s doc=NULL", tag);
     return;
   }
-  IE_DEBUG("%s doc=%p tool=%s modified=%d drawing=%d sel_active=%d sel_moving=%d poly_active=%d close_prompt_open=%d",
+  IE_DEBUG("%s doc=%p tool=%s modified=%d drawing=%d sel.active=%d sel.move.active=%d poly.active=%d close_prompt_open=%d",
            tag,
            (void *)doc,
            g_app ? tool_id_name(g_app->current_tool) : "<no-app>",
            doc->modified,
            doc->drawing,
-           doc->sel_active,
-           doc->sel_moving,
-           doc->poly_active,
+           doc->sel.active,
+           doc->sel.move.active,
+           doc->poly.active,
            doc->close_prompt_open);
 }
 
@@ -389,17 +421,17 @@ static inline bool canvas_in_bounds(const canvas_doc_t *doc, int x, int y) {
 }
 
 static inline bool canvas_in_selection(const canvas_doc_t *doc, int x, int y) {
-  if (!doc->sel_active) return true;
-  if (doc->sel_mask) {
-    int sx = x - doc->sel_mask_offset.x;
-    int sy = y - doc->sel_mask_offset.y;
+  if (!doc->sel.active) return true;
+  if (doc->sel.mask.data) {
+    int sx = x - doc->sel.mask.offset.x;
+    int sy = y - doc->sel.mask.offset.y;
     if (!canvas_in_bounds(doc, sx, sy)) return false;
-    return doc->sel_mask[(size_t)sy * doc->canvas_w + sx] == 0;
+    return doc->sel.mask.data[(size_t)sy * doc->canvas_w + sx] == 0;
   }
-  int x0 = MIN(doc->sel_start.x, doc->sel_end.x);
-  int y0 = MIN(doc->sel_start.y, doc->sel_end.y);
-  int x1 = MAX(doc->sel_start.x, doc->sel_end.x);
-  int y1 = MAX(doc->sel_start.y, doc->sel_end.y);
+  int x0 = MIN(doc->sel.start.x, doc->sel.end.x);
+  int y0 = MIN(doc->sel.start.y, doc->sel.end.y);
+  int x1 = MAX(doc->sel.start.x, doc->sel.end.x);
+  int y1 = MAX(doc->sel.start.y, doc->sel.end.y);
   return x >= x0 && x <= x1 && y >= y0 && y <= y1;
 }
 

@@ -23,53 +23,53 @@ static bool cancel_active_canvas_interaction(canvas_doc_t *doc, int old_tool) {
   if (!doc) return false;
 
   state = doc->canvas_win ? (canvas_win_state_t *)doc->canvas_win->userdata : NULL;
-  if (state && state->panning) {
+  if (state && state->pan.active) {
     IE_DEBUG("cancel_interaction pan doc=%p old_tool=%s",
              (void *)doc, tool_id_name(old_tool));
-    state->panning = false;
+    state->pan.active = false;
     changed = true;
   }
 
-  if (old_tool == ID_TOOL_POLYGON && doc->poly_active) {
+  if (old_tool == ID_TOOL_POLYGON && doc->poly.active) {
     IE_DEBUG("cancel_interaction polygon doc=%p points=%d",
-             (void *)doc, doc->poly_count);
-    if (doc->shape_snapshot) {
-      memcpy(doc->pixels, doc->shape_snapshot,
+             (void *)doc, doc->poly.count);
+    if (doc->shape.snapshot) {
+      memcpy(doc->pixels, doc->shape.snapshot,
              (size_t)doc->canvas_w * doc->canvas_h * 4);
       doc->canvas_dirty = true;
     }
     doc_discard_undo(doc);
-    doc->poly_active = false;
-    doc->poly_count = 0;
+    doc->poly.active = false;
+    doc->poly.count = 0;
     changed = true;
   }
 
-  if (canvas_is_shape_tool(old_tool) && doc->drawing && doc->shape_snapshot) {
+  if (canvas_is_shape_tool(old_tool) && doc->drawing && doc->shape.snapshot) {
     IE_DEBUG("cancel_interaction shape doc=%p tool=%s start=(%d,%d) last=(%d,%d)",
              (void *)doc, tool_id_name(old_tool),
-             doc->shape_start.x, doc->shape_start.y,
+             doc->shape.start.x, doc->shape.start.y,
              doc->last.x, doc->last.y);
-    memcpy(doc->pixels, doc->shape_snapshot,
+    memcpy(doc->pixels, doc->shape.snapshot,
            (size_t)doc->canvas_w * doc->canvas_h * 4);
     doc->canvas_dirty = true;
     changed = true;
   }
 
-  if (doc->sel_moving) {
+  if (doc->sel.move.active) {
     IE_DEBUG("cancel_interaction selection_move doc=%p float_pos=(%d,%d)",
-             (void *)doc, doc->float_pos.x, doc->float_pos.y);
+             (void *)doc, doc->sel.floating.rect.x, doc->sel.floating.rect.y);
     canvas_commit_move(doc);
     changed = true;
   }
 
-  if (doc->sel_mask_moving) {
+  if (doc->sel.move.mask_moving) {
     IE_DEBUG("cancel_interaction selection_mask_move doc=%p", (void *)doc);
     canvas_commit_selection_mask_offset(doc);
-    doc->sel_mask_moving = false;
+    doc->sel.move.mask_moving = false;
     changed = true;
   }
 
-  if (old_tool == ID_TOOL_CROP && doc->sel_active) {
+  if (old_tool == ID_TOOL_CROP && doc->sel.active) {
     IE_DEBUG("cancel_interaction crop doc=%p", (void *)doc);
     canvas_deselect(doc);
     changed = true;
@@ -109,8 +109,8 @@ static bool anim_step_frame(canvas_doc_t *doc, int delta) {
     doc_discard_undo(doc);
     return false;
   }
-  if (doc->layer_count > 0)
-    doc->layers[doc->active_layer]->pixels = doc->pixels;
+  if (doc->layer.count > 0)
+    doc->layer.stack[doc->layer.active]->pixels = doc->pixels;
   doc->canvas_dirty = true;
   if (doc->canvas_win)
     invalidate_window(doc->canvas_win);
@@ -203,12 +203,12 @@ void imageeditor_sync_main_toolbar(void) {
   window_t *bg_btn   = get_window_item(g_app->main_toolbar_win, ID_VIEW_SHOW_BACKGROUND);
 
   if (mask_btn) {
-    bool checked = g_app->active_doc && g_app->active_doc->mask_only_view;
+    bool checked = g_app->active_doc && g_app->active_doc->layer.mask_only_view;
     send_message(mask_btn, btnSetCheck, checked ? btnStateChecked : btnStateUnchecked, NULL);
   }
 
   if (bg_btn) {
-    bool checked = !g_app->active_doc || g_app->active_doc->show_background;
+    bool checked = !g_app->active_doc || g_app->active_doc->background.show;
     send_message(bg_btn, btnSetCheck, checked ? btnStateChecked : btnStateUnchecked, NULL);
     if (strip) {
       int icon = checked ? (sysicon_eye_show - SYSICON_BASE)
@@ -231,19 +231,19 @@ static void view_menu_rebuild(void) {
   int n = (int)(sizeof(s_view_items) / sizeof(s_view_items[0]));
   for (int i = 0; i < n; i++) {
     if (s_view_items[i].id == ID_VIEW_SHOW_GRID)
-      s_view_items[i].label = g_app->grid_visible
+      s_view_items[i].label = g_app->grid.visible
                               ? MENU_CHECK_ON "Show Grid"
                               : MENU_CHECK_OFF "Show Grid";
     if (s_view_items[i].id == ID_VIEW_SNAP_GRID)
-      s_view_items[i].label = g_app->grid_snap
+      s_view_items[i].label = g_app->grid.snap
                               ? MENU_CHECK_ON "Snap to Grid"
                               : MENU_CHECK_OFF "Snap to Grid";
     if (s_view_items[i].id == ID_VIEW_SHOW_BACKGROUND)
-      s_view_items[i].label = (!doc || doc->show_background)
+      s_view_items[i].label = (!doc || doc->background.show)
                               ? MENU_CHECK_ON "Show Background"
                               : MENU_CHECK_OFF "Show Background";
     if (s_view_items[i].id == ID_VIEW_MASK_ONLY)
-      s_view_items[i].label = (doc && doc->mask_only_view)
+      s_view_items[i].label = (doc && doc->layer.mask_only_view)
                               ? MENU_CHECK_ON "Mask Only View"
                               : MENU_CHECK_OFF "Mask Only View";
   }
@@ -296,8 +296,8 @@ bool imageeditor_open_file_path(const char *path) {
 
   // Swap the transparent placeholder pixels for the actual loaded image.
   // Update both the layer buffer and the convenience alias.
-  image_free(ndoc->layers[0]->pixels);
-  ndoc->layers[0]->pixels = px;
+  image_free(ndoc->layer.stack[0]->pixels);
+  ndoc->layer.stack[0]->pixels = px;
   ndoc->pixels = px;
   ndoc->canvas_dirty = true;
   ndoc->modified = false;
@@ -415,7 +415,7 @@ void handle_menu_command(uint16_t id) {
       break;
 
     case ID_EDIT_CUT:
-      if (doc && doc->sel_active) {
+      if (doc && doc->sel.active) {
         doc_push_undo(doc);
         canvas_cut_selection(doc, MAKE_COLOR(0, 0, 0, 0));
         doc_update_title(doc);
@@ -424,7 +424,7 @@ void handle_menu_command(uint16_t id) {
       break;
 
     case ID_EDIT_COPY:
-      if (doc && doc->sel_active)
+      if (doc && doc->sel.active)
         canvas_copy_selection(doc);
       break;
 
@@ -437,7 +437,7 @@ void handle_menu_command(uint16_t id) {
       break;
 
     case ID_SELECT_CLEAR:
-      if (doc && doc->sel_active) {
+      if (doc && doc->sel.active) {
         doc_push_undo(doc);
         canvas_clear_selection(doc, MAKE_COLOR(0, 0, 0, 0));
         doc_update_title(doc);
@@ -460,7 +460,7 @@ void handle_menu_command(uint16_t id) {
       break;
 
     case ID_SELECT_EXPAND:
-      if (doc && doc->sel_active) {
+      if (doc && doc->sel.active) {
         int amount = 1;
         if (show_selection_modify_dialog(doc->win ? doc->win : g_app->menubar_win,
                                          "Expand Selection", &amount) &&
@@ -471,7 +471,7 @@ void handle_menu_command(uint16_t id) {
       break;
 
     case ID_SELECT_CONTRACT:
-      if (doc && doc->sel_active) {
+      if (doc && doc->sel.active) {
         int amount = 1;
         if (show_selection_modify_dialog(doc->win ? doc->win : g_app->menubar_win,
                                          "Contract Selection", &amount) &&
@@ -482,7 +482,7 @@ void handle_menu_command(uint16_t id) {
       break;
 
     case ID_IMAGE_CROP:
-      if (doc && doc->sel_active) {
+      if (doc && doc->sel.active) {
         doc_push_undo(doc);
         if (canvas_crop_or_expand_to_selection(doc)) {
           doc_update_title(doc);
@@ -519,7 +519,7 @@ void handle_menu_command(uint16_t id) {
       break;
 
     case ID_IMAGE_LEVELS:
-      if (doc && doc->active_layer >= 0 && doc->active_layer < doc->layer_count) {
+      if (doc && doc->layer.active >= 0 && doc->layer.active < doc->layer.count) {
         doc_push_undo(doc);
         if (!show_levels_dialog(doc->win ? doc->win : g_app->menubar_win))
           doc_discard_undo(doc);
@@ -614,21 +614,21 @@ void handle_menu_command(uint16_t id) {
       break;
 
     case ID_VIEW_SHOW_GRID:
-      g_app->grid_visible = !g_app->grid_visible;
+      g_app->grid.visible = !g_app->grid.visible;
       if (doc && doc->canvas_win) invalidate_window(doc->canvas_win);
       break;
 
     case ID_VIEW_SNAP_GRID:
-      g_app->grid_snap = !g_app->grid_snap;
+      g_app->grid.snap = !g_app->grid.snap;
       break;
 
     case ID_VIEW_GRID_OPTIONS: {
-      int gx = g_app->grid_spacing_x > 0 ? g_app->grid_spacing_x : 8;
-      int gy = g_app->grid_spacing_y > 0 ? g_app->grid_spacing_y : 8;
+      int gx = g_app->grid.spacing.x > 0 ? g_app->grid.spacing.x : 8;
+      int gy = g_app->grid.spacing.y > 0 ? g_app->grid.spacing.y : 8;
       if (show_grid_options_dialog(g_app->menubar_win, &gx, &gy)) {
-        g_app->grid_spacing_x = gx;
-        g_app->grid_spacing_y = gy;
-        if (doc && doc->canvas_win && g_app->grid_visible)
+        g_app->grid.spacing.x = gx;
+        g_app->grid.spacing.y = gy;
+        if (doc && doc->canvas_win && g_app->grid.visible)
           invalidate_window(doc->canvas_win);
       }
       break;
@@ -636,7 +636,7 @@ void handle_menu_command(uint16_t id) {
 
     case ID_VIEW_MASK_ONLY:
       if (doc) {
-        doc_set_mask_only_view(doc, !doc->mask_only_view);
+        doc_set_mask_only_view(doc, !doc->layer.mask_only_view);
         if (doc->canvas_win)
           invalidate_window(doc->canvas_win);
         view_menu_rebuild();
@@ -645,7 +645,7 @@ void handle_menu_command(uint16_t id) {
 
     case ID_VIEW_SHOW_BACKGROUND:
       if (doc) {
-        doc->show_background = !doc->show_background;
+        doc->background.show = !doc->background.show;
         if (doc->canvas_win)
           invalidate_window(doc->canvas_win);
         if (g_app->timeline_win)
@@ -788,11 +788,11 @@ void handle_menu_command(uint16_t id) {
         doc_push_undo(doc);
         int fill_mode = MASK_EXTRACT_WHITE;
         if (show_add_mask_dialog(doc->win ? doc->win : g_app->menubar_win, &fill_mode)) {
-          if (!layer_add_mask_ex(doc, doc->active_layer, fill_mode)) {
+          if (!layer_add_mask_ex(doc, doc->layer.active, fill_mode)) {
             doc_discard_undo(doc);
             break;
           }
-          doc->editing_mask = true;
+          doc->layer.editing_mask = true;
           if (doc->canvas_win) {
             canvas_win_state_t *state = (canvas_win_state_t *)doc->canvas_win->userdata;
             if (state) {
@@ -812,7 +812,7 @@ void handle_menu_command(uint16_t id) {
     case ID_LAYER_APPLY_MASK:
       if (doc) {
         doc_push_undo(doc);
-        layer_apply_mask(doc, doc->active_layer);
+        layer_apply_mask(doc, doc->layer.active);
         if (doc->canvas_win) {
           canvas_win_state_t *state = (canvas_win_state_t *)doc->canvas_win->userdata;
           if (state) {
@@ -828,7 +828,7 @@ void handle_menu_command(uint16_t id) {
     case ID_LAYER_REMOVE_MASK:
       if (doc) {
         doc_push_undo(doc);
-        layer_remove_mask(doc, doc->active_layer);
+        layer_remove_mask(doc, doc->layer.active);
         if (doc->canvas_win) {
           canvas_win_state_t *state = (canvas_win_state_t *)doc->canvas_win->userdata;
           if (state) {
@@ -850,8 +850,8 @@ void handle_menu_command(uint16_t id) {
       break;
 
     case ID_LAYER_EDIT_MASK:
-      if (doc && doc->layer_count > 0) {
-        doc->editing_mask = !doc->editing_mask;
+      if (doc && doc->layer.count > 0) {
+        doc->layer.editing_mask = !doc->layer.editing_mask;
         layers_win_refresh();
         if (doc->canvas_win) {
           canvas_win_state_t *state = (canvas_win_state_t *)doc->canvas_win->userdata;
@@ -892,8 +892,8 @@ void handle_menu_command(uint16_t id) {
                                        &doc->pixels,
                                        doc->canvas_w, doc->canvas_h,
                                        FRAME_FORMAT_RGBA);
-            if (doc->layer_count > 0)
-              doc->layers[doc->active_layer]->pixels = doc->pixels;
+            if (doc->layer.count > 0)
+              doc->layer.stack[doc->layer.active]->pixels = doc->pixels;
             doc->canvas_dirty = true;
             if (doc->canvas_win) invalidate_window(doc->canvas_win);
             timeline_win_refresh();
@@ -914,8 +914,8 @@ void handle_menu_command(uint16_t id) {
           } else {
             memset(doc->pixels, 0, (size_t)doc->canvas_w * doc->canvas_h * 4);
           }
-          if (doc->layer_count > 0)
-            doc->layers[doc->active_layer]->pixels = doc->pixels;
+          if (doc->layer.count > 0)
+            doc->layer.stack[doc->layer.active]->pixels = doc->pixels;
           doc->canvas_dirty = true;
           if (doc->canvas_win) invalidate_window(doc->canvas_win);
           timeline_win_refresh();

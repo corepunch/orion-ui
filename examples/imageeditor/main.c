@@ -158,13 +158,13 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   g_app->fg_color = g_app->palette[4];
   g_app->bg_color = g_app->palette[0];
   g_app->brush_size = 1;  // default: radius 1 (3px diameter)
-  g_app->text_font_size = 16;
-  g_app->text_antialias = true;
-  g_app->wand_antialias = true;
-  g_app->wand_spread = 24;
-  g_app->wand_overlay_color = MAKE_COLOR(0x40, 0xA0, 0xFF, 0x55);
-  g_app->grid_spacing_x = 16;
-  g_app->grid_spacing_y = 16;
+  g_app->text_tool.font_size = 16;
+  g_app->text_tool.antialias = true;
+  g_app->wand.antialias = true;
+  g_app->wand.spread = 24;
+  g_app->wand.overlay_color = MAKE_COLOR(0x40, 0xA0, 0xFF, 0x55);
+  g_app->grid.spacing.x = 16;
+  g_app->grid.spacing.y = 16;
 
 #ifndef BUILD_AS_GEM
   ui_register_open_file_handler(image_editor_open_file_handler);
@@ -232,18 +232,8 @@ void gem_shutdown(void) {
     g_loaded_component_plugins = false;
   }
 
-  while (g_app->docs) {
-    canvas_doc_t *next = g_app->docs->next;
-    doc_free_undo(g_app->docs);
-    if (g_app->docs->float_tex)
-      glDeleteTextures(1, &g_app->docs->float_tex);
-    image_free(g_app->docs->float_pixels);
-    image_free(g_app->docs->float_mask);
-    canvas_clear_selection_mask(g_app->docs);
-    image_free(g_app->docs->pixels);
-    free(g_app->docs);
-    g_app->docs = next;
-  }
+  while (g_app->docs)
+    close_document(g_app->docs);
   free(g_app);
   g_app = NULL;
 }

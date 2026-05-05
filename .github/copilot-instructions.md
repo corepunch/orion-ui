@@ -177,6 +177,119 @@ for (int i = 0; i < NUM_TOOLS; i++) {
 - Use forward declarations to minimize header dependencies
 
 ### Struct Design
+
+**Organizing Large Structs with Inline Anonymous Structs**
+
+When a struct accumulates many related fields (20+), organize them into logical groups using inline anonymous structs. This dramatically improves readability and makes field relationships explicit.
+
+❌ **Bad: Flat 40+ field struct**
+```c
+typedef struct {
+  uint8_t *pixels;
+  int canvas_w, canvas_h;
+  layer_t **layers;
+  int layer_count;
+  int active_layer;
+  bool editing_mask, mask_only_view;
+  uint8_t *composite_buf;
+  uint8_t *undo_states[UNDO_MAX];
+  int undo_count;
+  uint8_t *redo_states[UNDO_MAX];
+  int redo_count;
+  bool sel_active;
+  int sel_start_x, sel_start_y;
+  int sel_end_x, sel_end_y;
+  uint8_t *sel_mask;
+  GLuint sel_mask_tex;
+  bool sel_mask_dirty;
+  int sel_mask_offset_x, sel_mask_offset_y;
+  bool sel_moving;
+  bool sel_mask_moving;
+  int sel_move_origin_x, sel_move_origin_y;
+  int sel_floating_x, sel_floating_y;
+  int sel_floating_w, sel_floating_h;
+  uint8_t *sel_floating_pixels;
+  // ... 20 more fields
+} canvas_doc_t;
+```
+
+✅ **Good: Organized with inline structs and geometry types**
+```c
+typedef struct {
+  // Minimal reusable undo/redo struct
+  uint8_t *states[UNDO_MAX];
+  int      count;
+} undo_t;
+
+typedef struct canvas_doc_s {
+  // Core document fields
+  uint8_t *pixels;
+  int canvas_w, canvas_h;
+  
+  // Layer management (inline struct groups related fields)
+  struct {
+    layer_t **stack;
+    int count, active;
+    bool editing_mask, mask_only_view;
+    uint8_t *composite_buf;
+  } layer;
+  
+  // Separate undo/redo instances
+  undo_t undo;
+  undo_t redo;
+  
+  // Selection with nested substructs (3 levels deep is fine)
+  struct {
+    bool active;
+    ipoint16_t start, end;    // Use geometry types, not separate x/y
+    bool add_mode;
+    
+    struct {
+      uint8_t *data;          // The mask bitmap
+      GLuint tex;
+      bool dirty;
+      ipoint16_t offset;      // Mask position relative to canvas
+    } mask;
+    
+    struct {
+      bool active;            // Currently dragging selection
+      bool mask_moving;       // Moving mask vs. pixels
+      ipoint16_t origin;      // Drag start point
+    } move;
+    
+    struct {
+      ipoint16_t pos;         // Top-left position
+      isize16_t size;         // Width and height
+      uint8_t *pixels;        // RGBA data
+      uint8_t *mask;          // Edit mask
+      GLuint tex;
+    } floating;
+  } sel;
+  
+  // Shape and polygon tools
+  struct { uint8_t *snapshot; ipoint16_t start; } shape;
+  struct { ipoint16_t pts[256]; int count; bool active; } poly;
+} canvas_doc_t;
+```
+
+**Field Access Updates**
+When refactoring, update all field accesses systematically:
+- `doc->layers` → `doc->layer.stack`
+- `doc->layer_count` → `doc->layer.count`
+- `doc->undo_states` → `doc->undo.states`
+- `doc->sel_mask` → `doc->sel.mask.data`
+- `doc->sel_floating_x` → `doc->sel.floating.pos.x`
+- `doc->sel_floating_w` → `doc->sel.floating.size.w`
+
+**Benefits of This Pattern**
+- Instantly see conceptual groupings (layer state, selection state, etc.)
+- Nested substructs make ownership clear (`sel.mask` belongs to selection)
+- Geometry types eliminate parallel `_x/_y` and `_w/_h` fields
+- Extractable components (undo_t can be reused in other documents)
+- Much easier to reason about state changes and memory management
+
+**Geometry Types for Coordinate Pairs**
+
 - Prefer geometry structs wherever possible instead of loose coordinate fields: use `ipoint16_t { x, y }` for positions/deltas, `isize16_t { w, h }` for sizes, and `irect16_t { x, y, w, h }` for rectangles.
 - `ipoint16_t`, `isize16_t`, and `irect16_t` are defined in `user/user.h` and available everywhere via `ui.h`.
 - Do not scatter parallel `_x` / `_y`, `_w` / `_h`, or `_start` / `_end` fields across a struct when a point, size, or rect member would be cleaner.

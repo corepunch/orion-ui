@@ -104,9 +104,9 @@ static void lv_apply_slider_values(lv_state_t *st, uint16_t slider_id) {
 static void lv_rebuild_histogram(lv_state_t *st) {
   memset(st->hist, 0, sizeof(st->hist));
   st->hist_max = 0;
-  if (!st->doc || st->layer_idx < 0 || st->layer_idx >= st->doc->layer_count)
+  if (!st->doc || st->layer_idx < 0 || st->layer_idx >= st->doc->layer.count)
     return;
-  const layer_t *lay = st->doc->layers[st->layer_idx];
+  const layer_t *lay = st->doc->layer.stack[st->layer_idx];
   if (!lay || !lay->pixels) return;
   size_t n = (size_t)st->doc->canvas_w * st->doc->canvas_h;
   for (size_t i = 0; i < n; i++) {
@@ -331,12 +331,12 @@ bool show_levels_dialog(window_t *parent) {
   }
 
   canvas_doc_t *doc = g_app->active_doc;
-  if (doc->active_layer < 0 || doc->active_layer >= doc->layer_count) return false;
+  if (doc->layer.active < 0 || doc->layer.active >= doc->layer.count) return false;
 
   lv_state_t st;
   memset(&st, 0, sizeof(st));
   st.doc = doc;
-  st.layer_idx = doc->active_layer;
+  st.layer_idx = doc->layer.active;
   st.gamma = 1.0f;
   st.black = 0;
   st.white = 255;

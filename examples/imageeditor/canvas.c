@@ -59,7 +59,7 @@ static bool layer_crop_expand(layer_t *lay, int old_w, int old_h,
     glDeleteTextures(1, &lay->tex);
     lay->tex = 0;
   }
-  lay->preview_active = false;
+  lay->preview.active = false;
   return true;
 }
 
@@ -69,8 +69,8 @@ static void canvas_composite(const canvas_doc_t *doc, uint8_t *dst) {
   size_t n = (size_t)doc->canvas_w * doc->canvas_h;
   memset(dst, 0x00, n * 4);
 
-  for (int li = 0; li < doc->layer_count; li++) {
-    const layer_t *lay = doc->layers[li];
+  for (int li = 0; li < doc->layer.count; li++) {
+    const layer_t *lay = doc->layer.stack[li];
     if (!lay->visible) continue;
 
     for (size_t i = 0; i < n; i++) {
@@ -123,6 +123,37 @@ static void canvas_composite(const canvas_doc_t *doc, uint8_t *dst) {
   }
 }
 
+static void canvas_composite_over_bg(const canvas_doc_t *doc, uint8_t *rgba) {
+  if (!doc || !rgba) return;
+  if (!doc->background.show) return;
+
+  uint8_t bg_r = COLOR_R(doc->background.color);
+  uint8_t bg_g = COLOR_G(doc->background.color);
+  uint8_t bg_b = COLOR_B(doc->background.color);
+  size_t n = (size_t)doc->canvas_w * doc->canvas_h;
+
+  for (size_t i = 0; i < n; i++) {
+    uint8_t *p = rgba + i * 4;
+    uint32_t sa = p[3];
+    if (sa == 0) {
+      p[0] = bg_r;
+      p[1] = bg_g;
+      p[2] = bg_b;
+      p[3] = 255;
+      continue;
+    }
+    if (sa == 255) {
+      continue;
+    }
+
+    uint32_t inv = 255 - sa;
+    p[0] = (uint8_t)((p[0] * sa + bg_r * inv + 127) / 255);
+    p[1] = (uint8_t)((p[1] * sa + bg_g * inv + 127) / 255);
+    p[2] = (uint8_t)((p[2] * sa + bg_b * inv + 127) / 255);
+    p[3] = 255;
+  }
+}
+
 static void layer_upload_texture(canvas_doc_t *doc, layer_t *lay) {
   if (!doc || !lay || !lay->pixels) return;
   if (!lay->tex) {
@@ -145,9 +176,9 @@ static void layer_upload_texture(canvas_doc_t *doc, layer_t *lay) {
 
 static void layer_clear_preview_one(layer_t *lay) {
   if (!lay) return;
-  lay->preview_active = false;
-  lay->preview_effect = UI_RENDER_EFFECT_COPY;
-  memset(&lay->preview_params, 0, sizeof(lay->preview_params));
+  lay->preview.active = false;
+  lay->preview.effect = UI_RENDER_EFFECT_COPY;
+  memset(&lay->preview.params, 0, sizeof(lay->preview.params));
 }
 
 // ============================================================
@@ -155,13 +186,13 @@ static void layer_clear_preview_one(layer_t *lay) {
 // ============================================================
 
 bool doc_add_layer_filled(canvas_doc_t *doc, uint32_t fill_color) {
-  if (!doc || doc->layer_count >= LAYER_MAX) return false;
+  if (!doc || doc->layer.count >= LAYER_MAX) return false;
 
   char name[64];
-  if (doc->layer_count == 0)
+  if (doc->layer.count == 0)
     strncpy(name, "Layer 1", sizeof(name) - 1);
   else
-    snprintf(name, sizeof(name), "Layer %d", doc->layer_count + 1);
+    snprintf(name, sizeof(name), "Layer %d", doc->layer.count + 1);
 
   layer_t *lay = layer_new(doc->canvas_w, doc->canvas_h, name);
   if (!lay) return false;
@@ -173,14 +204,14 @@ bool doc_add_layer_filled(canvas_doc_t *doc, uint32_t fill_color) {
   for (size_t i = 0; i < npx; i++)
     dst[i] = fill_color;
 
-  layer_t **nl = realloc(doc->layers, sizeof(layer_t *) * (doc->layer_count + 1));
+  layer_t **nl = realloc(doc->layer.stack, sizeof(layer_t *) * (doc->layer.count + 1));
   if (!nl) { layer_free_one(lay); return false; }
-  doc->layers = nl;
-  doc->layers[doc->layer_count] = lay;
-  doc->layer_count++;
-  doc->active_layer = doc->layer_count - 1;
-  doc->pixels = doc->layers[doc->active_layer]->pixels;
-  if (doc->layer_count > 1) {
+  doc->layer.stack = nl;
+  doc->layer.stack[doc->layer.count] = lay;
+  doc->layer.count++;
+  doc->layer.active = doc->layer.count - 1;
+  doc->pixels = doc->layer.stack[doc->layer.active]->pixels;
+  if (doc->layer.count > 1) {
     doc->canvas_dirty = true;
     doc->modified = true;
   }
@@ -193,24 +224,24 @@ bool doc_add_layer(canvas_doc_t *doc) {
 }
 
 bool doc_delete_layer(canvas_doc_t *doc) {
-  if (!doc || doc->layer_count <= 1) return false;
-  int i = doc->active_layer;
-  layer_free_one(doc->layers[i]);
-  memmove(&doc->layers[i], &doc->layers[i + 1],
-          sizeof(layer_t *) * (doc->layer_count - i - 1));
-  doc->layer_count--;
-  if (doc->active_layer >= doc->layer_count)
-    doc->active_layer = doc->layer_count - 1;
-  doc->pixels = doc->layers[doc->active_layer]->pixels;
-  doc->editing_mask = false;
+  if (!doc || doc->layer.count <= 1) return false;
+  int i = doc->layer.active;
+  layer_free_one(doc->layer.stack[i]);
+  memmove(&doc->layer.stack[i], &doc->layer.stack[i + 1],
+          sizeof(layer_t *) * (doc->layer.count - i - 1));
+  doc->layer.count--;
+  if (doc->layer.active >= doc->layer.count)
+    doc->layer.active = doc->layer.count - 1;
+  doc->pixels = doc->layer.stack[doc->layer.active]->pixels;
+  doc->layer.editing_mask = false;
   doc->canvas_dirty = true;
   doc->modified = true;
   return true;
 }
 
 bool doc_duplicate_layer(canvas_doc_t *doc) {
-  if (!doc || doc->layer_count >= LAYER_MAX) return false;
-  const layer_t *src = doc->layers[doc->active_layer];
+  if (!doc || doc->layer.count >= LAYER_MAX) return false;
+  const layer_t *src = doc->layer.stack[doc->layer.active];
   size_t px_sz = (size_t)doc->canvas_w * doc->canvas_h * 4;
 
   layer_t *dup = calloc(1, sizeof(layer_t));
@@ -223,26 +254,26 @@ bool doc_duplicate_layer(canvas_doc_t *doc) {
   dup->blend_mode = src->blend_mode;
   snprintf(dup->name, sizeof(dup->name), "%s copy", src->name);
 
-  int ins = doc->active_layer + 1;
-  layer_t **nl = realloc(doc->layers, sizeof(layer_t *) * (doc->layer_count + 1));
+  int ins = doc->layer.active + 1;
+  layer_t **nl = realloc(doc->layer.stack, sizeof(layer_t *) * (doc->layer.count + 1));
   if (!nl) { free(dup->pixels); free(dup); return false; }
-  doc->layers = nl;
-  memmove(&doc->layers[ins + 1], &doc->layers[ins],
-          sizeof(layer_t *) * (doc->layer_count - ins));
-  doc->layers[ins] = dup;
-  doc->layer_count++;
-  doc->active_layer = ins;
-  doc->pixels = doc->layers[doc->active_layer]->pixels;
+  doc->layer.stack = nl;
+  memmove(&doc->layer.stack[ins + 1], &doc->layer.stack[ins],
+          sizeof(layer_t *) * (doc->layer.count - ins));
+  doc->layer.stack[ins] = dup;
+  doc->layer.count++;
+  doc->layer.active = ins;
+  doc->pixels = doc->layer.stack[doc->layer.active]->pixels;
   doc->canvas_dirty = true;
   doc->modified = true;
   return true;
 }
 
 void doc_set_active_layer(canvas_doc_t *doc, int idx) {
-  if (!doc || idx < 0 || idx >= doc->layer_count) return;
-  doc->active_layer = idx;
-  doc->pixels = doc->layers[idx]->pixels;
-  doc->editing_mask = false;
+  if (!doc || idx < 0 || idx >= doc->layer.count) return;
+  doc->layer.active = idx;
+  doc->pixels = doc->layer.stack[idx]->pixels;
+  doc->layer.editing_mask = false;
   doc->canvas_dirty = true;
   if (doc->canvas_win)
     invalidate_window(doc->canvas_win);
@@ -257,8 +288,8 @@ void doc_set_active_layer(canvas_doc_t *doc, int idx) {
 
 void doc_set_mask_only_view(canvas_doc_t *doc, bool enabled) {
   if (!doc) return;
-  if (doc->mask_only_view == enabled) return;
-  doc->mask_only_view = enabled;
+  if (doc->layer.mask_only_view == enabled) return;
+  doc->layer.mask_only_view = enabled;
   doc->canvas_dirty = true;
   if (doc->canvas_win) {
     invalidate_window(doc->canvas_win);
@@ -272,33 +303,33 @@ void doc_set_mask_only_view(canvas_doc_t *doc, bool enabled) {
 }
 
 void doc_move_layer_up(canvas_doc_t *doc) {
-  if (!doc || doc->active_layer >= doc->layer_count - 1) return;
-  int i = doc->active_layer;
-  layer_t *tmp = doc->layers[i];
-  doc->layers[i] = doc->layers[i + 1];
-  doc->layers[i + 1] = tmp;
-  doc->active_layer = i + 1;
+  if (!doc || doc->layer.active >= doc->layer.count - 1) return;
+  int i = doc->layer.active;
+  layer_t *tmp = doc->layer.stack[i];
+  doc->layer.stack[i] = doc->layer.stack[i + 1];
+  doc->layer.stack[i + 1] = tmp;
+  doc->layer.active = i + 1;
   doc->canvas_dirty = true;
   doc->modified = true;
 }
 
 void doc_move_layer_down(canvas_doc_t *doc) {
-  if (!doc || doc->active_layer == 0) return;
-  int i = doc->active_layer;
-  layer_t *tmp = doc->layers[i];
-  doc->layers[i] = doc->layers[i - 1];
-  doc->layers[i - 1] = tmp;
-  doc->active_layer = i - 1;
+  if (!doc || doc->layer.active == 0) return;
+  int i = doc->layer.active;
+  layer_t *tmp = doc->layer.stack[i];
+  doc->layer.stack[i] = doc->layer.stack[i - 1];
+  doc->layer.stack[i - 1] = tmp;
+  doc->layer.active = i - 1;
   doc->canvas_dirty = true;
   doc->modified = true;
 }
 
 void doc_merge_down(canvas_doc_t *doc) {
-  if (!doc || doc->active_layer == 0 || doc->layer_count < 2) return;
-  int top_idx = doc->active_layer;
+  if (!doc || doc->layer.active == 0 || doc->layer.count < 2) return;
+  int top_idx = doc->layer.active;
   int bot_idx = top_idx - 1;
-  const layer_t *top = doc->layers[top_idx];
-  layer_t       *bot = doc->layers[bot_idx];
+  const layer_t *top = doc->layer.stack[top_idx];
+  layer_t       *bot = doc->layer.stack[bot_idx];
   size_t n = (size_t)doc->canvas_w * doc->canvas_h;
 
   for (size_t i = 0; i < n; i++) {
@@ -314,19 +345,19 @@ void doc_merge_down(canvas_doc_t *doc) {
     d[3] = 255;
   }
 
-  layer_free_one(doc->layers[top_idx]);
-  memmove(&doc->layers[top_idx], &doc->layers[top_idx + 1],
-          sizeof(layer_t *) * (doc->layer_count - top_idx - 1));
-  doc->layer_count--;
-  doc->active_layer = bot_idx;
-  doc->pixels = doc->layers[doc->active_layer]->pixels;
+  layer_free_one(doc->layer.stack[top_idx]);
+  memmove(&doc->layer.stack[top_idx], &doc->layer.stack[top_idx + 1],
+          sizeof(layer_t *) * (doc->layer.count - top_idx - 1));
+  doc->layer.count--;
+  doc->layer.active = bot_idx;
+  doc->pixels = doc->layer.stack[doc->layer.active]->pixels;
   doc->canvas_dirty = true;
   doc->modified = true;
 }
 
 void doc_flatten(canvas_doc_t *doc) {
-  if (!doc || doc->layer_count < 1) return;
-  if (doc->layer_count == 1) {
+  if (!doc || doc->layer.count < 1) return;
+  if (doc->layer.count == 1) {
     // Nothing to flatten.
     return;
   }
@@ -349,28 +380,28 @@ void doc_flatten(canvas_doc_t *doc) {
   strncpy(bg->name, "Layer 1", sizeof(bg->name) - 1);
 
   // All allocations succeeded — now free the old stack.
-  for (int i = 0; i < doc->layer_count; i++)
-    layer_free_one(doc->layers[i]);
-  free(doc->layers);
+  for (int i = 0; i < doc->layer.count; i++)
+    layer_free_one(doc->layer.stack[i]);
+  free(doc->layer.stack);
 
-  doc->layers       = nl;
-  doc->layers[0]    = bg;
-  doc->layer_count  = 1;
-  doc->active_layer = 0;
+  doc->layer.stack       = nl;
+  doc->layer.stack[0]    = bg;
+  doc->layer.count  = 1;
+  doc->layer.active = 0;
   doc->pixels       = bg->pixels;
-  doc->editing_mask = false;
+  doc->layer.editing_mask = false;
   doc->canvas_dirty = true;
   doc->modified     = true;
 }
 
 void doc_free_layers(canvas_doc_t *doc) {
   if (!doc) return;
-  for (int i = 0; i < doc->layer_count; i++)
-    layer_free_one(doc->layers[i]);
-  free(doc->layers);
-  doc->layers       = NULL;
-  doc->layer_count  = 0;
-  doc->active_layer = 0;
+  for (int i = 0; i < doc->layer.count; i++)
+    layer_free_one(doc->layer.stack[i]);
+  free(doc->layer.stack);
+  doc->layer.stack       = NULL;
+  doc->layer.count  = 0;
+  doc->layer.active = 0;
   doc->pixels       = NULL;
 }
 
@@ -390,14 +421,14 @@ static uint8_t color_to_gray(uint32_t c) {
 
 void canvas_clear_selection_mask(canvas_doc_t *doc) {
   if (!doc) return;
-  if (doc->sel_mask_tex) {
-    R_DeleteTexture(doc->sel_mask_tex);
-    doc->sel_mask_tex = 0;
+  if (doc->sel.mask.tex) {
+    R_DeleteTexture(doc->sel.mask.tex);
+    doc->sel.mask.tex = 0;
   }
-  free(doc->sel_mask);
-  doc->sel_mask = NULL;
-  doc->sel_mask_dirty = false;
-  doc->sel_mask_offset = (ipoint16_t){0, 0};
+  free(doc->sel.mask.data);
+  doc->sel.mask.data = NULL;
+  doc->sel.mask.dirty = false;
+  doc->sel.mask.offset = (ipoint16_t){0, 0};
 }
 
 static bool selection_mask_bounds_for(const canvas_doc_t *doc, const uint8_t *mask,
@@ -429,10 +460,10 @@ static bool canvas_apply_selection_mask(canvas_doc_t *doc, uint8_t *mask,
     return false;
   }
 
-  if (add_to_selection && doc->sel_active) {
-    if (doc->sel_mask) {
+  if (add_to_selection && doc->sel.active) {
+    if (doc->sel.mask.data) {
       for (size_t i = 0, count = (size_t)doc->canvas_w * doc->canvas_h; i < count; i++)
-        mask[i] = MIN(mask[i], doc->sel_mask[i]);
+        mask[i] = MIN(mask[i], doc->sel.mask.data[i]);
     } else {
       for (int y = 0; y < doc->canvas_h; y++) {
         for (int x = 0; x < doc->canvas_w; x++) {
@@ -446,17 +477,17 @@ static bool canvas_apply_selection_mask(canvas_doc_t *doc, uint8_t *mask,
   int x0, y0, x1, y1;
   if (!selection_mask_bounds_for(doc, mask, &x0, &y0, &x1, &y1)) {
     free(mask);
-    doc->sel_active = false;
+    doc->sel.active = false;
     canvas_clear_selection_mask(doc);
     return false;
   }
 
   canvas_clear_selection_mask(doc);
-  doc->sel_mask = mask;
-  doc->sel_mask_dirty = true;
-  doc->sel_active = true;
-  doc->sel_start = (ipoint16_t){x0, y0};
-  doc->sel_end = (ipoint16_t){x1, y1};
+  doc->sel.mask.data = mask;
+  doc->sel.mask.dirty = true;
+  doc->sel.active = true;
+  doc->sel.start = (ipoint16_t){x0, y0};
+  doc->sel.end = (ipoint16_t){x1, y1};
   return true;
 }
 
@@ -474,7 +505,7 @@ static bool canvas_select_rect_ex(canvas_doc_t *doc, int x0, int y0, int x1, int
   bottom = MIN(doc->canvas_h - 1, bottom);
 
   if (left > right || top > bottom) {
-    doc->sel_active = false;
+    doc->sel.active = false;
     canvas_clear_selection_mask(doc);
     return false;
   }
@@ -538,8 +569,8 @@ const char *layer_blend_mode_name(layer_blend_mode_t mode) {
 }
 
 void doc_set_layer_blend_mode(canvas_doc_t *doc, int idx, layer_blend_mode_t mode) {
-  if (!doc || idx < 0 || idx >= doc->layer_count) return;
-  layer_t *lay = doc->layers[idx];
+  if (!doc || idx < 0 || idx >= doc->layer.count) return;
+  layer_t *lay = doc->layer.stack[idx];
   if (!lay) return;
   lay->blend_mode = (uint8_t)CLAMP((int)mode, 0, (int)LAYER_BLEND_COUNT - 1);
   doc->canvas_dirty = true;
@@ -549,8 +580,8 @@ void doc_set_layer_blend_mode(canvas_doc_t *doc, int idx, layer_blend_mode_t mod
 }
 
 void layer_clear_preview_effect(canvas_doc_t *doc, int idx) {
-  if (!doc || idx < 0 || idx >= doc->layer_count) return;
-  layer_clear_preview_one(doc->layers[idx]);
+  if (!doc || idx < 0 || idx >= doc->layer.count) return;
+  layer_clear_preview_one(doc->layer.stack[idx]);
   if (doc->canvas_win)
     invalidate_window(doc->canvas_win);
 }
@@ -558,32 +589,32 @@ void layer_clear_preview_effect(canvas_doc_t *doc, int idx) {
 bool layer_set_preview_effect(canvas_doc_t *doc, int idx,
                               ui_render_effect_t effect,
                               const ui_render_effect_params_t *params) {
-  if (!doc || idx < 0 || idx >= doc->layer_count) return false;
-  layer_t *lay = doc->layers[idx];
+  if (!doc || idx < 0 || idx >= doc->layer.count) return false;
+  layer_t *lay = doc->layer.stack[idx];
   if (!lay) return false;
-  lay->preview_effect = effect;
+  lay->preview.effect = effect;
   if (params)
-    lay->preview_params = *params;
+    lay->preview.params = *params;
   else
-    memset(&lay->preview_params, 0, sizeof(lay->preview_params));
-  lay->preview_active = true;
+    memset(&lay->preview.params, 0, sizeof(lay->preview.params));
+  lay->preview.active = true;
   if (doc->canvas_win)
     invalidate_window(doc->canvas_win);
   return true;
 }
 
 bool layer_commit_preview_effect(canvas_doc_t *doc, int idx) {
-  if (!doc || idx < 0 || idx >= doc->layer_count) return false;
-  layer_t *lay = doc->layers[idx];
+  if (!doc || idx < 0 || idx >= doc->layer.count) return false;
+  layer_t *lay = doc->layer.stack[idx];
   if (!lay) return false;
-  if (!lay->preview_active) return true;
+  if (!lay->preview.active) return true;
 
   size_t sz = (size_t)doc->canvas_w * doc->canvas_h * 4;
   uint8_t *buf = malloc(sz);
   if (!buf) return false;
   uint32_t baked_tex = 0;
   if (!bake_texture_effect((int)lay->tex, doc->canvas_w, doc->canvas_h,
-                           lay->preview_effect, &lay->preview_params, &baked_tex)) {
+                           lay->preview.effect, &lay->preview.params, &baked_tex)) {
     free(buf);
     return false;
   }
@@ -605,42 +636,42 @@ bool layer_commit_preview_effect(canvas_doc_t *doc, int idx) {
 }
 
 bool layer_add_mask_ex(canvas_doc_t *doc, int idx, int fill_mode) {
-  if (!doc || idx < 0 || idx >= doc->layer_count) return false;
-  layer_t *lay = doc->layers[idx];
+  if (!doc || idx < 0 || idx >= doc->layer.count) return false;
+  layer_t *lay = doc->layer.stack[idx];
   size_t n = (size_t)doc->canvas_w * doc->canvas_h;
   if (fill_mode == MASK_EXTRACT_GRAYSCALE) {
     fill_alpha_from_layer_gray(doc, lay);
   } else {
     fill_alpha_gray_value(lay->pixels, n, fill_mode_to_alpha(fill_mode));
   }
-  doc->editing_mask = true;
+  doc->layer.editing_mask = true;
   doc->canvas_dirty = true;
   doc->modified     = true;
   return true;
 }
 
 void layer_apply_mask(canvas_doc_t *doc, int idx) {
-  if (!doc || idx < 0 || idx >= doc->layer_count) return;
+  if (!doc || idx < 0 || idx >= doc->layer.count) return;
   doc->canvas_dirty = true;
   doc->modified     = true;
-  doc->editing_mask = false;
+  doc->layer.editing_mask = false;
 }
 
 void layer_remove_mask(canvas_doc_t *doc, int idx) {
-  if (!doc || idx < 0 || idx >= doc->layer_count) return;
-  layer_t *lay = doc->layers[idx];
+  if (!doc || idx < 0 || idx >= doc->layer.count) return;
+  layer_t *lay = doc->layer.stack[idx];
   size_t n = (size_t)doc->canvas_w * doc->canvas_h;
   for (size_t i = 0; i < n; i++)
     lay->pixels[i * 4 + 3] = 255;
   doc->canvas_dirty = true;
   doc->modified     = true;
-  doc->editing_mask = false;
+  doc->layer.editing_mask = false;
 }
 
 // Open the active layer's alpha channel as a new document.
 canvas_doc_t *canvas_extract_mask(canvas_doc_t *doc) {
-  if (!doc || !g_app || doc->layer_count == 0) return NULL;
-  layer_t *lay = doc->layers[doc->active_layer];
+  if (!doc || !g_app || doc->layer.count == 0) return NULL;
+  layer_t *lay = doc->layer.stack[doc->layer.active];
   size_t n = (size_t)doc->canvas_w * doc->canvas_h;
 
   canvas_doc_t *new_doc = create_document(NULL, doc->canvas_w, doc->canvas_h);
@@ -679,7 +710,7 @@ void canvas_set_pixel(canvas_doc_t *doc, int x, int y, uint32_t c) {
   if (!canvas_in_selection(doc, x, y)) return;
 
   uint8_t *p = doc->pixels + ((size_t)y * doc->canvas_w + x) * 4;
-  if (doc->editing_mask) {
+  if (doc->layer.editing_mask) {
     // Mask edits affect only alpha, while the RGB content stays intact.
     uint8_t gray = (uint8_t)((COLOR_R(c) * 77 + COLOR_G(c) * 150 + COLOR_B(c) * 29) >> 8);
     p[3] = gray;
@@ -1104,14 +1135,14 @@ void canvas_constrain_tool_drag(int tool_id, uint32_t mods,
 // Save pixel snapshot before starting a shape drag (no undo push yet)
 void canvas_shape_begin(canvas_doc_t *doc, int cx, int cy) {
   size_t sz = (size_t)doc->canvas_w * doc->canvas_h * 4;
-  if (!doc->shape_snapshot) {
-    doc->shape_snapshot = malloc(sz);
+  if (!doc->shape.snapshot) {
+    doc->shape.snapshot = malloc(sz);
   }
-  if (doc->shape_snapshot) {
-    memcpy(doc->shape_snapshot, doc->pixels, sz);
+  if (doc->shape.snapshot) {
+    memcpy(doc->shape.snapshot, doc->pixels, sz);
   }
-  doc->shape_start.x = cx;
-  doc->shape_start.y = cy;
+  doc->shape.start.x = cx;
+  doc->shape.start.y = cy;
 }
 
 // Restore snapshot and draw a preview of the current shape without pushing undo.
@@ -1119,8 +1150,8 @@ void canvas_shape_begin(canvas_doc_t *doc, int cx, int cy) {
 void canvas_shape_preview(canvas_doc_t *doc, int x0, int y0, int x1, int y1,
                           int tool, bool filled, uint32_t fg, uint32_t bg, bool shift_held) {
   // Restore snapshot
-  if (doc->shape_snapshot) {
-    memcpy(doc->pixels, doc->shape_snapshot, (size_t)doc->canvas_w * doc->canvas_h * 4);
+  if (doc->shape.snapshot) {
+    memcpy(doc->pixels, doc->shape.snapshot, (size_t)doc->canvas_w * doc->canvas_h * 4);
     doc->canvas_dirty = true;
   }
   canvas_constrain_tool_drag(tool, shift_held ? AX_MOD_SHIFT : 0, x0, y0, &x1, &y1);
@@ -1163,7 +1194,7 @@ void canvas_shape_commit(canvas_doc_t *doc) {
 // Returns false when the clamped region is empty (no-op for callers).
 static bool selection_bounds(const canvas_doc_t *doc,
                              int *x0, int *y0, int *x1, int *y1) {
-  if (doc->sel_mask) {
+  if (doc->sel.mask.data) {
     bool any = false;
     *x0 = doc->canvas_w;
     *y0 = doc->canvas_h;
@@ -1171,9 +1202,9 @@ static bool selection_bounds(const canvas_doc_t *doc,
     *y1 = -1;
     for (int y = 0; y < doc->canvas_h; y++) {
       for (int x = 0; x < doc->canvas_w; x++) {
-        if (doc->sel_mask[(size_t)y * doc->canvas_w + x] == 255) continue;
-        int sx = x + doc->sel_mask_offset.x;
-        int sy = y + doc->sel_mask_offset.y;
+        if (doc->sel.mask.data[(size_t)y * doc->canvas_w + x] == 255) continue;
+        int sx = x + doc->sel.mask.offset.x;
+        int sy = y + doc->sel.mask.offset.y;
         if (!canvas_in_bounds(doc, sx, sy)) continue;
         if (sx < *x0) *x0 = sx;
         if (sy < *y0) *y0 = sy;
@@ -1184,10 +1215,10 @@ static bool selection_bounds(const canvas_doc_t *doc,
     }
     return any;
   }
-  *x0 = MIN(doc->sel_start.x, doc->sel_end.x);
-  *y0 = MIN(doc->sel_start.y, doc->sel_end.y);
-  *x1 = MAX(doc->sel_start.x, doc->sel_end.x);
-  *y1 = MAX(doc->sel_start.y, doc->sel_end.y);
+  *x0 = MIN(doc->sel.start.x, doc->sel.end.x);
+  *y0 = MIN(doc->sel.start.y, doc->sel.end.y);
+  *x1 = MAX(doc->sel.start.x, doc->sel.end.x);
+  *y1 = MAX(doc->sel.start.y, doc->sel.end.y);
   // Clamp to canvas bounds so callers are safe against out-of-range coords.
   if (*x0 < 0) *x0 = 0;
   if (*y0 < 0) *y0 = 0;
@@ -1198,7 +1229,7 @@ static bool selection_bounds(const canvas_doc_t *doc,
 
 // Copy the selected region into the app clipboard.
 void canvas_copy_selection(canvas_doc_t *doc) {
-  if (!doc || !doc->sel_active || !g_app) return;
+  if (!doc || !doc->sel.active || !g_app) return;
   int x0, y0, x1, y1;
   if (!selection_bounds(doc, &x0, &y0, &x1, &y1)) return;
   int w = x1 - x0 + 1;
@@ -1218,13 +1249,13 @@ void canvas_copy_selection(canvas_doc_t *doc) {
   }
   free(g_app->clipboard);
   g_app->clipboard   = buf;
-  g_app->clipboard_w = w;
-  g_app->clipboard_h = h;
+  g_app->clipboard_size.w = w;
+  g_app->clipboard_size.h = h;
 }
 
 // Fill the selected region with fill_color.
 void canvas_clear_selection(canvas_doc_t *doc, uint32_t fill) {
-  if (!doc || !doc->sel_active) return;
+  if (!doc || !doc->sel.active) return;
   int x0, y0, x1, y1;
   if (!selection_bounds(doc, &x0, &y0, &x1, &y1)) return;
   for (int y = y0; y <= y1; y++)
@@ -1244,8 +1275,8 @@ void canvas_cut_selection(canvas_doc_t *doc, uint32_t fill) {
 void canvas_paste_clipboard(canvas_doc_t *doc) {
   if (!doc || !g_app || !g_app->clipboard) return;
   doc_push_undo(doc);
-  int w = g_app->clipboard_w;
-  int h = g_app->clipboard_h;
+  int w = g_app->clipboard_size.w;
+  int h = g_app->clipboard_size.h;
   for (int row = 0; row < h; row++) {
     for (int col = 0; col < w; col++) {
       const uint8_t *p = g_app->clipboard + ((size_t)row * w + col) * 4;
@@ -1270,17 +1301,17 @@ void canvas_select_all(canvas_doc_t *doc) {
 void canvas_deselect(canvas_doc_t *doc) {
   if (!doc) return;
   // Commit any in-progress move before deselecting.
-  if (doc->sel_moving) canvas_commit_move(doc);
-  doc->sel_active = false;
+  if (doc->sel.move.active) canvas_commit_move(doc);
+  doc->sel.active = false;
   canvas_clear_selection_mask(doc);
 }
 
 static bool selection_modify_mask_gpu(canvas_doc_t *doc, int amount, bool expand) {
-  if (!g_ui_runtime.running || !doc || !doc->sel_active || amount <= 0)
+  if (!g_ui_runtime.running || !doc || !doc->sel.active || amount <= 0)
     return false;
 
   size_t count = (size_t)doc->canvas_w * doc->canvas_h;
-  uint8_t *src = doc->sel_mask;
+  uint8_t *src = doc->sel.mask.data;
   uint8_t *owned_src = NULL;
   if (!src) {
     int x0, y0, x1, y1;
@@ -1363,17 +1394,17 @@ static bool selection_modify_mask_gpu(canvas_doc_t *doc, int amount, bool expand
   canvas_clear_selection_mask(doc);
   if (!any) {
     free(dst);
-    doc->sel_active = false;
+    doc->sel.active = false;
     return true;
   }
 
-  doc->sel_mask = dst;
-  doc->sel_mask_dirty = true;
+  doc->sel.mask.data = dst;
+  doc->sel.mask.dirty = true;
   int x0, y0, x1, y1;
   selection_bounds(doc, &x0, &y0, &x1, &y1);
-  doc->sel_start = (ipoint16_t){x0, y0};
-  doc->sel_end = (ipoint16_t){x1, y1};
-  doc->sel_active = true;
+  doc->sel.start = (ipoint16_t){x0, y0};
+  doc->sel.end = (ipoint16_t){x1, y1};
+  doc->sel.active = true;
   return true;
 }
 
@@ -1382,7 +1413,7 @@ static bool selection_modify_mask(canvas_doc_t *doc, int amount, bool expand) {
     return true;
 
   size_t count = (size_t)doc->canvas_w * doc->canvas_h;
-  uint8_t *src = doc->sel_mask;
+  uint8_t *src = doc->sel.mask.data;
   uint8_t *owned_src = NULL;
   uint8_t *dst = malloc(count);
   if (!dst) return false;
@@ -1431,28 +1462,28 @@ static bool selection_modify_mask(canvas_doc_t *doc, int amount, bool expand) {
   canvas_clear_selection_mask(doc);
   if (!any) {
     free(dst);
-    doc->sel_active = false;
+    doc->sel.active = false;
     return true;
   }
-  doc->sel_mask = dst;
-  doc->sel_mask_dirty = true;
+  doc->sel.mask.data = dst;
+  doc->sel.mask.dirty = true;
   int x0, y0, x1, y1;
   selection_bounds(doc, &x0, &y0, &x1, &y1);
-  doc->sel_start = (ipoint16_t){x0, y0};
-  doc->sel_end = (ipoint16_t){x1, y1};
-  doc->sel_active = true;
+  doc->sel.start = (ipoint16_t){x0, y0};
+  doc->sel.end = (ipoint16_t){x1, y1};
+  doc->sel.active = true;
   return true;
 }
 
 bool canvas_expand_selection(canvas_doc_t *doc, int amount) {
-  if (!doc || !doc->sel_active || amount <= 0) return false;
-  if (doc->sel_moving) canvas_commit_move(doc);
+  if (!doc || !doc->sel.active || amount <= 0) return false;
+  if (doc->sel.move.active) canvas_commit_move(doc);
   return selection_modify_mask(doc, amount, true);
 }
 
 bool canvas_contract_selection(canvas_doc_t *doc, int amount) {
-  if (!doc || !doc->sel_active || amount <= 0) return false;
-  if (doc->sel_moving) canvas_commit_move(doc);
+  if (!doc || !doc->sel.active || amount <= 0) return false;
+  if (doc->sel.move.active) canvas_commit_move(doc);
   return selection_modify_mask(doc, amount, false);
 }
 
@@ -1460,7 +1491,7 @@ bool canvas_contract_selection(canvas_doc_t *doc, int amount) {
 // entire canvas, then stamp the copied pixels at the top-left
 // corner (0,0).  The selection is cleared afterwards.
 void canvas_crop_to_selection(canvas_doc_t *doc) {
-  if (!doc || !doc->sel_active) return;
+  if (!doc || !doc->sel.active) return;
   int x0, y0, x1, y1;
   if (!selection_bounds(doc, &x0, &y0, &x1, &y1)) return;
   int w = x1 - x0 + 1;
@@ -1486,7 +1517,7 @@ void canvas_crop_to_selection(canvas_doc_t *doc) {
     }
   }
   free(buf);
-  doc->sel_active = false;
+  doc->sel.active = false;
   canvas_clear_selection_mask(doc);
   doc->canvas_dirty = true;
 }
@@ -1500,32 +1531,32 @@ void canvas_crop_to_selection(canvas_doc_t *doc) {
 // Returns true on success, false if the state is invalid, the requested size
 // exceeds the maximum, or memory allocation fails (canvas is unchanged).
 bool canvas_crop_or_expand_to_selection(canvas_doc_t *doc) {
-  if (!doc || !doc->sel_active) return false;
-  int x0 = MIN(doc->sel_start.x, doc->sel_end.x);
-  int y0 = MIN(doc->sel_start.y, doc->sel_end.y);
-  int x1 = MAX(doc->sel_start.x, doc->sel_end.x);
-  int y1 = MAX(doc->sel_start.y, doc->sel_end.y);
+  if (!doc || !doc->sel.active) return false;
+  int x0 = MIN(doc->sel.start.x, doc->sel.end.x);
+  int y0 = MIN(doc->sel.start.y, doc->sel.end.y);
+  int x1 = MAX(doc->sel.start.x, doc->sel.end.x);
+  int y1 = MAX(doc->sel.start.y, doc->sel.end.y);
   int new_w = x1 - x0 + 1;
   int new_h = y1 - y0 + 1;
 
   if (new_w <= 0 || new_h <= 0) return false;
   if ((size_t)new_w > 16384 || (size_t)new_h > 16384) return false;
 
-  for (int i = 0; i < doc->layer_count; i++) {
-    if (!layer_crop_expand(doc->layers[i], doc->canvas_w, doc->canvas_h,
+  for (int i = 0; i < doc->layer.count; i++) {
+    if (!layer_crop_expand(doc->layer.stack[i], doc->canvas_w, doc->canvas_h,
                            x0, y0, new_w, new_h))
       return false;
   }
 
-  free(doc->composite_buf);
-  doc->composite_buf = malloc((size_t)new_w * new_h * 4);
+  free(doc->layer.composite_buf);
+  doc->layer.composite_buf = malloc((size_t)new_w * new_h * 4);
 
   doc->canvas_w     = new_w;
   doc->canvas_h     = new_h;
-  doc->pixels       = doc->layers[doc->active_layer]->pixels;
+  doc->pixels       = doc->layer.stack[doc->layer.active]->pixels;
   doc->canvas_dirty = true;
   doc->modified     = true;
-  doc->sel_active   = false;
+  doc->sel.active   = false;
   canvas_clear_selection_mask(doc);
   return true;
 }
@@ -1534,7 +1565,7 @@ bool canvas_crop_or_expand_to_selection(canvas_doc_t *doc) {
 // Enters "move mode": the caller should track float_pos deltas and call
 // canvas_commit_move() when the drag ends.
 void canvas_begin_move(canvas_doc_t *doc, uint32_t bg) {
-  if (!doc || !doc->sel_active || doc->sel_moving) return;
+  if (!doc || !doc->sel.active || doc->sel.move.active) return;
   int x0, y0, x1, y1;
   if (!selection_bounds(doc, &x0, &y0, &x1, &y1)) return;
   int w = x1 - x0 + 1;
@@ -1566,22 +1597,20 @@ void canvas_begin_move(canvas_doc_t *doc, uint32_t bg) {
     for (int x = x0; x <= x1; x++)
       if (canvas_in_selection(doc, x, y))
         canvas_set_pixel_direct(doc, x, y, bg);
-  doc->float_pixels  = buf;
-  doc->float_mask    = mask;
-  doc->float_w       = w;
-  doc->float_h       = h;
-  doc->float_pos     = (ipoint16_t){x0, y0};
-  doc->sel_moving    = true;
+  doc->sel.floating.pixels  = buf;
+  doc->sel.floating.mask    = mask;
+  doc->sel.floating.rect    = (irect16_t){x0, y0, w, h};
+  doc->sel.move.active      = true;
   canvas_clear_selection_mask(doc);
 }
 
 // Paste float_pixels back at float_pos, update selection bounds, end move.
 void canvas_commit_move(canvas_doc_t *doc) {
-  if (!doc || !doc->sel_moving) return;
-  int dx = doc->float_pos.x;
-  int dy = doc->float_pos.y;
-  int w  = doc->float_w;
-  int h  = doc->float_h;
+  if (!doc || !doc->sel.move.active) return;
+  int dx = doc->sel.floating.rect.x;
+  int dy = doc->sel.floating.rect.y;
+  int w  = doc->sel.floating.rect.w;
+  int h  = doc->sel.floating.rect.h;
   size_t count = (size_t)doc->canvas_w * doc->canvas_h;
   uint8_t *new_mask = malloc(count);
   if (new_mask) memset(new_mask, 255, count);
@@ -1589,13 +1618,13 @@ void canvas_commit_move(canvas_doc_t *doc) {
   for (int row = 0; row < h; row++) {
     for (int col = 0; col < w; col++) {
       size_t local_idx = (size_t)row * w + col;
-      if (doc->float_mask && doc->float_mask[local_idx] != 0)
+      if (doc->sel.floating.mask && doc->sel.floating.mask[local_idx] != 0)
         continue;
       int x = dx + col;
       int y = dy + row;
       if (!canvas_in_bounds(doc, x, y))
         continue;
-      const uint8_t *p = doc->float_pixels + local_idx * 4;
+      const uint8_t *p = doc->sel.floating.pixels + local_idx * 4;
       canvas_set_pixel_direct(doc, x, y, MAKE_COLOR(p[0], p[1], p[2], p[3]));
       if (new_mask) {
         new_mask[(size_t)y * doc->canvas_w + x] = 0;
@@ -1606,40 +1635,40 @@ void canvas_commit_move(canvas_doc_t *doc) {
   // Update selection to the new position
   canvas_clear_selection_mask(doc);
   if (new_mask && any) {
-    doc->sel_mask = new_mask;
-    doc->sel_mask_dirty = true;
+    doc->sel.mask.data = new_mask;
+    doc->sel.mask.dirty = true;
     int x0, y0, x1, y1;
     selection_bounds(doc, &x0, &y0, &x1, &y1);
-    doc->sel_start = (ipoint16_t){x0, y0};
-    doc->sel_end = (ipoint16_t){x1, y1};
-    doc->sel_active = true;
+    doc->sel.start = (ipoint16_t){x0, y0};
+    doc->sel.end = (ipoint16_t){x1, y1};
+    doc->sel.active = true;
   } else {
     free(new_mask);
-    doc->sel_active = false;
+    doc->sel.active = false;
   }
   // Release float resources including the GL texture overlay.
-  if (doc->float_tex) {
-    glDeleteTextures(1, &doc->float_tex);
-    doc->float_tex = 0;
+  if (doc->sel.floating.tex) {
+    glDeleteTextures(1, &doc->sel.floating.tex);
+    doc->sel.floating.tex = 0;
   }
-  free(doc->float_pixels);
-  free(doc->float_mask);
-  doc->float_pixels = NULL;
-  doc->float_mask   = NULL;
-  doc->float_w      = 0;
-  doc->float_h      = 0;
-  doc->sel_moving   = false;
+  free(doc->sel.floating.pixels);
+  free(doc->sel.floating.mask);
+  doc->sel.floating.pixels = NULL;
+  doc->sel.floating.mask   = NULL;
+  doc->sel.floating.rect.w      = 0;
+  doc->sel.floating.rect.h      = 0;
+  doc->sel.move.active   = false;
 }
 
 bool canvas_translate_selection_mask(canvas_doc_t *doc, int dx, int dy) {
-  if (!doc || !doc->sel_active) return false;
-  dx += doc->sel_mask_offset.x;
-  dy += doc->sel_mask_offset.y;
-  doc->sel_mask_offset = (ipoint16_t){0, 0};
+  if (!doc || !doc->sel.active) return false;
+  dx += doc->sel.mask.offset.x;
+  dy += doc->sel.mask.offset.y;
+  doc->sel.mask.offset = (ipoint16_t){0, 0};
   if (dx == 0 && dy == 0) return true;
 
   size_t count = (size_t)doc->canvas_w * doc->canvas_h;
-  uint8_t *src = doc->sel_mask;
+  uint8_t *src = doc->sel.mask.data;
   uint8_t *owned_src = NULL;
   if (!src) {
     int x0, y0, x1, y1;
@@ -1678,36 +1707,36 @@ bool canvas_translate_selection_mask(canvas_doc_t *doc, int dx, int dy) {
   canvas_clear_selection_mask(doc);
   if (!any) {
     free(dst);
-    doc->sel_active = false;
+    doc->sel.active = false;
     return true;
   }
 
-  doc->sel_mask = dst;
-  doc->sel_mask_dirty = true;
+  doc->sel.mask.data = dst;
+  doc->sel.mask.dirty = true;
   int x0, y0, x1, y1;
   selection_bounds(doc, &x0, &y0, &x1, &y1);
-  doc->sel_start = (ipoint16_t){x0, y0};
-  doc->sel_end = (ipoint16_t){x1, y1};
-  doc->sel_active = true;
+  doc->sel.start = (ipoint16_t){x0, y0};
+  doc->sel.end = (ipoint16_t){x1, y1};
+  doc->sel.active = true;
   return true;
 }
 
 void canvas_set_selection_mask_offset(canvas_doc_t *doc, int dx, int dy) {
   if (!doc) return;
-  doc->sel_mask_offset = (ipoint16_t){dx, dy};
-  if (doc->sel_active && doc->sel_mask) {
+  doc->sel.mask.offset = (ipoint16_t){dx, dy};
+  if (doc->sel.active && doc->sel.mask.data) {
     int x0, y0, x1, y1;
     if (selection_bounds(doc, &x0, &y0, &x1, &y1)) {
-      doc->sel_start = (ipoint16_t){x0, y0};
-      doc->sel_end = (ipoint16_t){x1, y1};
+      doc->sel.start = (ipoint16_t){x0, y0};
+      doc->sel.end = (ipoint16_t){x1, y1};
     }
   }
 }
 
 bool canvas_commit_selection_mask_offset(canvas_doc_t *doc) {
-  if (!doc || !doc->sel_active) return false;
-  int dx = doc->sel_mask_offset.x;
-  int dy = doc->sel_mask_offset.y;
+  if (!doc || !doc->sel.active) return false;
+  int dx = doc->sel.mask.offset.x;
+  int dy = doc->sel.mask.offset.y;
   if (dx == 0 && dy == 0) return true;
   return canvas_translate_selection_mask(doc, 0, 0);
 }
@@ -1853,7 +1882,7 @@ static void layer_replace_pixels(layer_t *lay, uint8_t *pixels) {
     glDeleteTextures(1, &lay->tex);
     lay->tex = 0;
   }
-  lay->preview_active = false;
+  lay->preview.active = false;
 }
 
 // Resize the image contents to new_w x new_h.
@@ -1866,10 +1895,10 @@ bool canvas_resize_image(canvas_doc_t *doc, int new_w, int new_h,
   if (filter < 0 || filter >= IMAGE_RESIZE_FILTER_COUNT)
     filter = IMAGE_RESIZE_BILINEAR;
 
-  uint8_t **new_pixels = calloc((size_t)doc->layer_count, sizeof(uint8_t *));
+  uint8_t **new_pixels = calloc((size_t)doc->layer.count, sizeof(uint8_t *));
   if (!new_pixels) return false;
-  for (int i = 0; i < doc->layer_count; i++) {
-    new_pixels[i] = layer_resample_pixels(doc->layers[i],
+  for (int i = 0; i < doc->layer.count; i++) {
+    new_pixels[i] = layer_resample_pixels(doc->layer.stack[i],
                                           doc->canvas_w, doc->canvas_h,
                                           new_w, new_h, filter);
     if (!new_pixels[i]) {
@@ -1879,18 +1908,18 @@ bool canvas_resize_image(canvas_doc_t *doc, int new_w, int new_h,
     }
   }
 
-  for (int i = 0; i < doc->layer_count; i++)
-    layer_replace_pixels(doc->layers[i], new_pixels[i]);
+  for (int i = 0; i < doc->layer.count; i++)
+    layer_replace_pixels(doc->layer.stack[i], new_pixels[i]);
   free(new_pixels);
 
-  free(doc->composite_buf);
-  doc->composite_buf = malloc((size_t)new_w * new_h * 4);
+  free(doc->layer.composite_buf);
+  doc->layer.composite_buf = malloc((size_t)new_w * new_h * 4);
   doc->canvas_w     = new_w;
   doc->canvas_h     = new_h;
-  doc->pixels       = doc->layers[doc->active_layer]->pixels;
+  doc->pixels       = doc->layer.stack[doc->layer.active]->pixels;
   doc->canvas_dirty = true;
   doc->modified     = true;
-  doc->sel_active   = false;
+  doc->sel.active   = false;
   canvas_clear_selection_mask(doc);
   return true;
 }
@@ -1906,23 +1935,23 @@ bool canvas_resize(canvas_doc_t *doc, int new_w, int new_h) {
   if (new_w == doc->canvas_w && new_h == doc->canvas_h) return true;
   if ((size_t)new_w > 16384 || (size_t)new_h > 16384) return false;
 
-  for (int i = 0; i < doc->layer_count; i++) {
-    if (!layer_crop_expand(doc->layers[i], doc->canvas_w, doc->canvas_h,
+  for (int i = 0; i < doc->layer.count; i++) {
+    if (!layer_crop_expand(doc->layer.stack[i], doc->canvas_w, doc->canvas_h,
                            0, 0, new_w, new_h))
       return false;
   }
 
-  free(doc->composite_buf);
-  doc->composite_buf = malloc((size_t)new_w * new_h * 4);
+  free(doc->layer.composite_buf);
+  doc->layer.composite_buf = malloc((size_t)new_w * new_h * 4);
   // If this allocation fails, canvas_upload will retry and skip rendering
   // until it succeeds.  The document's layer data is already valid.
 
   doc->canvas_w     = new_w;
   doc->canvas_h     = new_h;
-  doc->pixels       = doc->layers[doc->active_layer]->pixels;
+  doc->pixels       = doc->layer.stack[doc->layer.active]->pixels;
   doc->canvas_dirty = true;
   doc->modified     = true;
-  doc->sel_active   = false;
+  doc->sel.active   = false;
   canvas_clear_selection_mask(doc);
   return true;
 }
@@ -1937,6 +1966,7 @@ bool png_save(const char *path, const canvas_doc_t *doc) {
   uint8_t *comp = malloc(sz);
   if (!comp) return false;
   canvas_composite(doc, comp);
+  canvas_composite_over_bg(doc, comp);
   bool ok = save_image_png(path, comp, doc->canvas_w, doc->canvas_h);
   free(comp);
   return ok;
@@ -1949,14 +1979,14 @@ bool png_save(const char *path, const canvas_doc_t *doc) {
 void canvas_upload(canvas_doc_t *doc) {
   if (!doc) return;
   bool need_upload = doc->canvas_dirty;
-  for (int i = 0; i < doc->layer_count && !need_upload; i++) {
-    if (!doc->layers[i]->tex)
+  for (int i = 0; i < doc->layer.count && !need_upload; i++) {
+    if (!doc->layer.stack[i]->tex)
       need_upload = true;
   }
 
   if (need_upload) {
-    for (int i = 0; i < doc->layer_count; i++)
-      layer_upload_texture(doc, doc->layers[i]);
+    for (int i = 0; i < doc->layer.count; i++)
+      layer_upload_texture(doc, doc->layer.stack[i]);
     doc->canvas_dirty = false;
   }
 }
