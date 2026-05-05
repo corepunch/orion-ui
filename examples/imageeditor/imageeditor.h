@@ -216,6 +216,8 @@ typedef struct canvas_doc_s {
   uint8_t *pixels;           // convenience alias → layers[active_layer]->pixels
   int      canvas_w;         // image width in pixels
   int      canvas_h;         // image height in pixels
+  uint32_t background_color; // document background color used for preview/export UI
+  bool     show_background;  // true = paint the document background behind pixels
   bool     canvas_dirty;
   bool     drawing;
   bool     close_prompt_open;
@@ -452,7 +454,7 @@ bool canvas_contract_selection(canvas_doc_t *doc, int amount);
 void canvas_crop_to_selection(canvas_doc_t *doc);
 // Crop or expand the canvas to the active selection.
 // If the selection extends outside the canvas the canvas grows (new areas filled
-// with opaque white); if it is smaller the canvas shrinks.
+// with transparent pixels); if it is smaller the canvas shrinks.
 // Returns true on success, false if the operation could not be performed
 // (invalid state, oversized selection, or allocation failure — canvas unchanged).
 bool canvas_crop_or_expand_to_selection(canvas_doc_t *doc);
@@ -605,7 +607,7 @@ bool show_selection_modify_dialog(window_t *parent, const char *title, int *out_
 // Layer management (canvas.c)
 // ============================================================
 
-// Add a new empty layer above the current active layer (filled with opaque white).
+// Add a new empty layer above the current active layer (filled with transparent pixels).
 bool doc_add_layer(canvas_doc_t *doc);
 
 // Add a new layer filled with the given RGBA color (0x00000000 = transparent,
@@ -639,7 +641,7 @@ void doc_move_layer_down(canvas_doc_t *doc);
 // Flatten the active layer onto the one below it.
 void doc_merge_down(canvas_doc_t *doc);
 
-// Flatten all layers into a single background layer.
+// Flatten all layers into a single layer.
 void doc_flatten(canvas_doc_t *doc);
 
 // Free all layers (called by close_document).

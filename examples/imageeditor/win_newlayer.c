@@ -21,7 +21,7 @@ typedef struct {
 } nl_state_t;
 
 static const ctrl_binding_t kNewLayerBindings[] = {
-  DDX_COMBO(NL_ID_FILL, nl_state_t, fill_index, 1 /* default: white */),
+  DDX_COMBO(NL_ID_FILL, nl_state_t, fill_index, 0 /* default: transparent */),
 };
 
 // ──────────────────────────────────────────────────────────────────
@@ -44,7 +44,7 @@ static result_t new_layer_proc(window_t *win, uint32_t msg,
         send_message(cb, cbAddString, 0, (void *)"Background Color");
         send_message(cb, cbAddString, 0, (void *)"Foreground Color");
       }
-      // Push initial selection (default = white, index 1).
+      // Push initial selection (default = transparent, index 0).
       dialog_push(win, s, kNewLayerBindings, ARRAY_LEN(kNewLayerBindings));
       return true;
     }
@@ -76,7 +76,7 @@ static result_t new_layer_proc(window_t *win, uint32_t msg,
 // ──────────────────────────────────────────────────────────────────
 
 bool show_new_layer_dialog(window_t *parent, uint32_t *out_color) {
-  nl_state_t st = { .fill_index = 1, .accepted = false };
+  nl_state_t st = { .fill_index = 0, .accepted = false };
 
   show_dialog_from_form(&imageeditor_new_layer_form, "New Layer", parent,
                         new_layer_proc, &st);

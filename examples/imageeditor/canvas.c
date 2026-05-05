@@ -6,13 +6,13 @@
 // Layer management helpers
 // ============================================================
 
-// Allocate a new layer with an opaque-white pixel buffer.
+// Allocate a new layer with a transparent pixel buffer.
 static layer_t *layer_new(int w, int h, const char *name) {
   layer_t *lay = calloc(1, sizeof(layer_t));
   if (!lay) return NULL;
   lay->pixels = malloc((size_t)w * h * 4);
   if (!lay->pixels) { free(lay); return NULL; }
-  memset(lay->pixels, 0xFF, (size_t)w * h * 4);
+  memset(lay->pixels, 0x00, (size_t)w * h * 4);
   lay->tex = 0;
   strncpy(lay->name, name, sizeof(lay->name) - 1);
   lay->visible = true;
@@ -35,7 +35,7 @@ static bool layer_crop_expand(layer_t *lay, int old_w, int old_h,
                                int src_x, int src_y, int new_w, int new_h) {
   uint8_t *buf = malloc((size_t)new_w * new_h * 4);
   if (!buf) return false;
-  memset(buf, 0xFF, (size_t)new_w * new_h * 4);
+  memset(buf, 0x00, (size_t)new_w * new_h * 4);
 
   int ix0 = MAX(src_x, 0);
   int iy0 = MAX(src_y, 0);
@@ -159,7 +159,7 @@ bool doc_add_layer_filled(canvas_doc_t *doc, uint32_t fill_color) {
 
   char name[64];
   if (doc->layer_count == 0)
-    strncpy(name, "Background", sizeof(name) - 1);
+    strncpy(name, "Layer 1", sizeof(name) - 1);
   else
     snprintf(name, sizeof(name), "Layer %d", doc->layer_count + 1);
 
@@ -188,8 +188,8 @@ bool doc_add_layer_filled(canvas_doc_t *doc, uint32_t fill_color) {
 }
 
 bool doc_add_layer(canvas_doc_t *doc) {
-  // Default fill: opaque white (matches the original layer_new() behaviour).
-  return doc_add_layer_filled(doc, MAKE_COLOR(0xFF, 0xFF, 0xFF, 0xFF));
+  // Default fill: transparent, so the document background stays separate.
+  return doc_add_layer_filled(doc, MAKE_COLOR(0x00, 0x00, 0x00, 0x00));
 }
 
 bool doc_delete_layer(canvas_doc_t *doc) {
@@ -346,7 +346,7 @@ void doc_flatten(canvas_doc_t *doc) {
   bg->pixels  = flat;
   bg->visible = true;
   bg->opacity = 255;
-  strncpy(bg->name, "Background", sizeof(bg->name) - 1);
+  strncpy(bg->name, "Layer 1", sizeof(bg->name) - 1);
 
   // All allocations succeeded — now free the old stack.
   for (int i = 0; i < doc->layer_count; i++)
@@ -697,7 +697,7 @@ uint32_t canvas_get_pixel(const canvas_doc_t *doc, int x, int y) {
 }
 
 void canvas_clear(canvas_doc_t *doc) {
-  memset(doc->pixels, 0xFF, (size_t)doc->canvas_w * doc->canvas_h * 4);
+  memset(doc->pixels, 0x00, (size_t)doc->canvas_w * doc->canvas_h * 4);
   doc->canvas_dirty = true;
   doc->modified     = false;
 }
@@ -1456,8 +1456,8 @@ bool canvas_contract_selection(canvas_doc_t *doc, int amount) {
   return selection_modify_mask(doc, amount, false);
 }
 
-// Crop the canvas to the active selection: copy the selected pixels, fill the
-// entire canvas with white, then stamp the copied pixels at the top-left
+// Crop the canvas to the active selection: copy the selected pixels, clear the
+// entire canvas, then stamp the copied pixels at the top-left
 // corner (0,0).  The selection is cleared afterwards.
 void canvas_crop_to_selection(canvas_doc_t *doc) {
   if (!doc || !doc->sel_active) return;
@@ -1475,7 +1475,7 @@ void canvas_crop_to_selection(canvas_doc_t *doc) {
       p[0] = COLOR_R(c); p[1] = COLOR_G(c); p[2] = COLOR_B(c); p[3] = COLOR_A(c);
     }
   }
-  // Fill the entire canvas with white.
+  // Clear the entire canvas.
   canvas_clear(doc);
   // Stamp the copied region at (0,0), clipping to the canvas dimensions.
   for (int row = 0; row < h && row < doc->canvas_h; row++) {
@@ -1494,7 +1494,7 @@ void canvas_crop_to_selection(canvas_doc_t *doc) {
 // Crop or expand the canvas to the active selection rectangle.
 // Unlike canvas_crop_to_selection(), the selection may extend outside the
 // current canvas bounds — in that case the canvas grows to fit, with the new
-// areas filled with opaque white.  If the selection is entirely inside the
+// areas filled with transparent pixels.  If the selection is entirely inside the
 // canvas the canvas shrinks (crop).  The existing pixels within the
 // intersection of old and new bounds are preserved in place.
 // Returns true on success, false if the state is invalid, the requested size
@@ -1897,7 +1897,7 @@ bool canvas_resize_image(canvas_doc_t *doc, int new_w, int new_h,
 
 // Resize the canvas to new_w x new_h.
 // All layer pixel buffers are resized. Existing pixels are preserved
-// at the top-left corner; any new area is filled with opaque white.
+// at the top-left corner; any new area is filled with transparent pixels.
 // The GL texture is invalidated so it will be re-created on the next paint.
 // Returns true on success, false if an allocation fails (canvas may be partially
 // resized in that case; callers should treat it as a fatal document error).
