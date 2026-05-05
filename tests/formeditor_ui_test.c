@@ -16,6 +16,7 @@
 #include "../examples/formeditor/formeditor.h"
 #include "../examples/imageeditor/components/lv_cmpn.h"
 #include "../commctl/commctl.h"
+#include "../user/icons.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
