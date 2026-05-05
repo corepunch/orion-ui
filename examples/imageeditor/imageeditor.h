@@ -216,7 +216,7 @@ typedef struct canvas_doc_s {
   uint8_t *pixels;           // convenience alias → layers[active_layer]->pixels
   int      canvas_w;         // image width in pixels
   int      canvas_h;         // image height in pixels
-  uint32_t background_color; // document background color used for preview/export UI
+  uint32_t background_color; // document background color used by preview/display paths
   bool     show_background;  // true = paint the document background behind pixels
   bool     canvas_dirty;
   bool     drawing;
