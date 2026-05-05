@@ -73,7 +73,7 @@ void test_rect_offset(void) {
 // ── rect_center ──────────────────────────────────────────────────────────
 
 void test_rect_center(void) {
-    TEST("rect_center: centers w×h inside parent rect");
+    TEST("rect_center: centers wxh inside parent rect");
     irect16_t parent = {10, 20, 200, 100};
     irect16_t c = rect_center(parent, 40, 20);
     ASSERT_EQUAL(c.x, 10 + (200 - 40) / 2);

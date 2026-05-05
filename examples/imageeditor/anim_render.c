@@ -19,7 +19,7 @@ static const char kAnimVertSrc[] =
 
 // Indexed-colour fragment shader:
 //   u_indices  – GL_R8 texture, one byte per pixel (palette index)
-//   u_palette  – GL_RGBA texture, 256×1 colour LUT
+//   u_palette  – GL_RGBA texture, 256x1 colour LUT
 static const char kIndexedFragSrc[] =
   "#version 150 core\n"
   "uniform sampler2D u_indices;\n"

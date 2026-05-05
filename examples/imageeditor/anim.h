@@ -9,7 +9,7 @@
 //     quantized into the target frame_format_t and stored in anim_frame_t.
 //   • On frame load the compressed bytes are expanded back to RGBA.
 //
-// Memory cost at 320×200:
+// Memory cost at 320x200:
 //   RGBA      → 256 000 bytes / frame
 //   INDEXED   →  65 024 bytes / frame  (1/4)
 //   BITMAP_1BIT →  8 000 bytes / frame  (1/32)

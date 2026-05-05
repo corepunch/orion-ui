@@ -59,7 +59,7 @@ static uint32_t filter_gallery_make_preview_tex(canvas_doc_t *doc) {
   return tex;
 }
 
-// Bake a 64×64 thumbnail for every filter by rendering the preview texture
+// Bake a 64x64 thumbnail for every filter by rendering the preview texture
 // through each filter's GL program once, reading the pixels back, and packing
 // them into a single vertical strip texture.  The strip is stored in st and
 // fed to win_reportview via RVM_SETICONSTRIP.

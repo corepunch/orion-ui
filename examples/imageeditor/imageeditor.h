@@ -258,7 +258,7 @@ typedef struct canvas_doc_s {
     ipoint16_t  start;
     ipoint16_t  end;
     bool        add_mode;    // true while Shift-dragging to add to selection
-    // Selection mask (canvas_w × canvas_h: 0=selected/editable, 255=protected/unselected)
+    // Selection mask (canvas_w x canvas_h: 0=selected/editable, 255=protected/unselected)
     struct {
       uint8_t    *data;      // NULL means the whole canvas is editable
       GLuint      tex;       // GL_RED texture cache for protected-area overlay
@@ -274,7 +274,7 @@ typedef struct canvas_doc_s {
     struct {
       irect16_t   rect;          // position and size of floating selection
       uint8_t    *pixels;        // RGBA data extracted from canvas
-      uint8_t    *mask;          // rect.w × rect.h edit mask, same semantics as sel.mask.data
+      uint8_t    *mask;          // rect.w x rect.h edit mask, same semantics as sel.mask.data
       GLuint      tex;           // cached GL texture for pixels (0 = none)
     } floating;
   } sel;
