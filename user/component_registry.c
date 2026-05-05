@@ -4,8 +4,6 @@
 static bool is_valid_toolbox_icon(int icon) {
   if (icon >= SYSICON_BASE && icon <= sysicon_yield_add)
     return true;
-  if (icon >= SILK_ICON_BASE && icon < SILK_ICON_COUNT)
-    return true;
   return false;
 }
 
@@ -45,7 +43,7 @@ bool fe_register_component(const fe_component_desc_t *desc) {
 
   fe_component_desc_t stored = *desc;
   if (!is_valid_toolbox_icon(stored.toolbox_icon))
-    stored.toolbox_icon = SILK_ICON_PLUGIN;
+    stored.toolbox_icon = sysicon_puzzle;
 
   g_components[g_component_count].desc = stored;
   g_component_count++;

@@ -12,32 +12,31 @@
 #include "imageeditor.h"
 #include "../../commctl/commctl.h"
 
-// Silk atlas tile size (all icons are square).
-#define ICON_W  16
+// Image editor atlas tile size (all icons are square).
+#define ICON_W  TOOL_ICON_W
 
 // Tool palette layout with ident, icon index, and tooltip text (hotkey in parentheses).
-// Mixes built-in sysicon_* ids with Silk-only fallbacks where the 16x16 sheet
-// does not have a strong match yet.
+// Uses the bundled 24x24 image-editor.png atlas.
 static const toolbox_item_t k_tools[NUM_TOOLS] = {
-  { ID_TOOL_SELECT,        sysicon_select_edit,              "Select (S)"         },
-  { ID_TOOL_MOVE,          sysicon_move_interact,            "Move (V)"           },
-  { ID_TOOL_MAGIC_WAND,    FUGUE_ICON_WAND_MAGIC,            "Magic Wand (W)"     },
-  { ID_TOOL_CROP,          sysicon_scissors,                 "Crop (C)"           },
-  { ID_TOOL_HAND,          sysicon_hand,                     "Hand"               },
-  { ID_TOOL_EYEDROPPER,    sysicon_eyedropper,               "Eyedropper (I)"     },
-  { ID_TOOL_ZOOM,          sysicon_magnifier,                "Zoom"               },
-  { ID_TOOL_PENCIL,        sysicon_pencil,                   "Pencil (P)"         },
-  { ID_TOOL_BRUSH,         FUGUE_ICON_PAINT_BRUSH,           "Brush (B)"          },
-  { ID_TOOL_SPRAY,         FUGUE_ICON_SPRAY,                 "Spray (A)"          },
-  { ID_TOOL_FILL,          sysicon_paint_can,                "Fill (K)"           },
-  { ID_TOOL_ERASER,        FUGUE_ICON_ERASER,                "Eraser (E)"         },
-  { ID_TOOL_LINE,          FUGUE_ICON_LAYER_SHAPE_LINE,      "Line"               },
-  { ID_TOOL_TEXT,          FUGUE_ICON_LAYER_SHAPE_TEXT,      "Text (T)"           },
-  { ID_TOOL_RECT,          FUGUE_ICON_LAYER_SHAPE,           "Rectangle"          },
-  { ID_TOOL_ELLIPSE,       FUGUE_ICON_LAYER_SHAPE_ELLIPSE,   "Ellipse"            },
-  { ID_TOOL_ROUNDED_RECT,  FUGUE_ICON_LAYER_SHAPE_ROUND,     "Rounded Rect"       },
-  { ID_TOOL_POLYGON,       FUGUE_ICON_LAYER_SHAPE_POLYGON,   "Polygon"            },
-  { ID_TOOL_MAGNIFIER,     sysicon_magnifier_zoom_in,        "Magnifier (G)"      },
+  { ID_TOOL_SELECT,        IE_RECTANGULAR_MARQUEE,           "Select (S)"         },
+  { ID_TOOL_MOVE,          IE_MOVE,                          "Move (V)"           },
+  { ID_TOOL_MAGIC_WAND,    IE_MAGIC_WAND,                    "Magic Wand (W)"     },
+  { ID_TOOL_CROP,          IE_CROP,                          "Crop (C)"           },
+  { ID_TOOL_HAND,          IE_HAND,                          "Hand"               },
+  { ID_TOOL_EYEDROPPER,    IE_EYEDROPPER,                    "Eyedropper (I)"     },
+  { ID_TOOL_ZOOM,          IE_ZOOM_IN,                       "Zoom"               },
+  { ID_TOOL_PENCIL,        IE_PENCIL,                        "Pencil (P)"         },
+  { ID_TOOL_BRUSH,         IE_BRUSH,                         "Brush (B)"          },
+  { ID_TOOL_SPRAY,         IE_SPRAY_CAN,                     "Spray (A)"          },
+  { ID_TOOL_FILL,          IE_PAINT_BUCKET,                 "Fill (K)"           },
+  { ID_TOOL_ERASER,        IE_ERASER,                        "Eraser (E)"         },
+  { ID_TOOL_LINE,          IE_LINE,                          "Line"               },
+  { ID_TOOL_TEXT,          IE_TEXT,                          "Text (T)"           },
+  { ID_TOOL_RECT,          IE_RECTANGLE,                     "Rectangle"          },
+  { ID_TOOL_ELLIPSE,       IE_ELLIPSE,                       "Ellipse"            },
+  { ID_TOOL_ROUNDED_RECT,  IE_ROUNDED_RECTANGLE,            "Rounded Rect"       },
+  { ID_TOOL_POLYGON,       IE_POLYGON_LASSO,                "Polygon"            },
+  { ID_TOOL_MAGNIFIER,     IE_ZOOM_OUT,                      "Magnifier (G)"      },
 };
 
 static void draw_palette_swatch(window_t *win,
@@ -73,6 +72,13 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       // First let win_toolbox initialise its state.
       win_toolbox(win, msg, wparam, lparam);
       send_message(win, bxSetButtonSize, TOOL_PALETTE_BTN_SIZE, NULL);
+
+      char icon_path[512];
+      int n = snprintf(icon_path, sizeof(icon_path), "%s/" SHAREDIR "/image-editor.png",
+                       ui_get_exe_dir());
+      if (n > 0 && (size_t)n < sizeof(icon_path)) {
+        send_message(win, bxLoadStrip, ICON_W, icon_path);
+      }
 
       // Set tools from unified array.
       send_message(win, bxSetItems, NUM_TOOLS, (void *)k_tools);

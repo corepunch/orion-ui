@@ -117,7 +117,6 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
 typedef struct {
   bitmap_strip_t strip; // private copy of the strip descriptor
   int            index; // which icon in the strip (iBitmap)
-  uint32_t       source_base; // 0 for custom strips, otherwise SILK_ICON_BASE / SYSICON_BASE
 } toolbar_button_data_t;
 
 // Toolbar button window procedure.
@@ -137,16 +136,10 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
       irect16_t local = {0, 0, win->frame.w, win->frame.h};
       draw_button(local, 1, 1, show_pressed);
       int px = show_pressed ? 1 : 0;
-      irect16_t icon_rect = rect_offset(rect_center(local, 16, 16), px, px);
       toolbar_button_data_t *bd = (toolbar_button_data_t *)win->userdata;
       if (bd && bd->strip.cols > 0) {
         // Compute UV sub-region for the Nth icon in the strip.
         bitmap_strip_t *s = &bd->strip;
-        if (bd->source_base == SILK_ICON_BASE) {
-          // Silk icons are outlined for readability.
-          draw_silk_icon16(bd->index + SILK_ICON_BASE, icon_rect.x, icon_rect.y, 0xFFFFFFFF);
-          return true;
-        }
         int col = bd->index % s->cols;
         int row = bd->index / s->cols;
         float u0 = (float)(col * s->icon_w) / (float)s->sheet_w;
@@ -220,11 +213,6 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
         if (!bd) return false; // OOM: keep old image
         memcpy(&bd->strip, src, sizeof(bitmap_strip_t));
         bd->index = (int)(uint32_t)wparam;
-        bd->source_base = 0;
-        if (src == ui_get_silk_strip())
-          bd->source_base = SILK_ICON_BASE;
-        else if (src == ui_get_sysicon_strip())
-          bd->source_base = SYSICON_BASE;
         if (win->userdata) free(win->userdata);
         win->userdata = bd;
       } else {

@@ -6,7 +6,7 @@
 #include <stdbool.h>
 
 #include "messages.h"
-#include "../kernel/kernel.h" 
+#include "../kernel/kernel.h"
 
 // Forward declarations
 typedef struct window_s window_t;
@@ -205,15 +205,13 @@ typedef struct {
 #define FE_COMPONENT_PLACEABLE      0x0001u
 #define FE_COMPONENT_SHOW_TOOLBOX   0x0002u
 
-#include "silk.h"
-
 typedef struct {
   const char *class_name;     // stable runtime class key (e.g. "button")
   const char *display_name;   // UI/display caption base (e.g. "Button")
   const char *token;          // stable serialization token (e.g. "button")
   const char *name_prefix;    // identifier prefix (e.g. "IDC_BTN")
   int         toolbox_ident;  // command ID sent by toolbox host
-  int           toolbox_icon;   // icon id from sysicon_* or SILK_ICON_*
+  int         toolbox_icon;    // icon id from sysicon_* or custom strip index
   isize16_t   default_size;   // default size when click-placing
   uint32_t    capabilities;   // FE_COMPONENT_* flags
   winproc_t   proc;           // runtime window proc backing this component

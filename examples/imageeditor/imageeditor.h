@@ -15,6 +15,7 @@
 
 #include "../../ui.h"
 #include "../../user/icons.h"
+#include "image-editor.h"
 
 #ifndef IMAGEEDITOR_DEBUG
 #define IMAGEEDITOR_DEBUG 1
@@ -61,12 +62,13 @@
 #define APP_TOOLBAR_H   (TB_SPACING + 2*(TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH))
 
 #define PALETTE_WIN_X   4
-#define TOOL_PALETTE_BTN_SIZE (TOOLBOX_BTN_SIZE + 4)
+#define IMAGEEDITOR_TOOL_ICON_PX 24
+#define TOOL_PALETTE_BTN_SIZE    (IMAGEEDITOR_TOOL_ICON_PX + 6)
 // Tool palette window width: always 2 toolbox columns wide.
 #define PALETTE_WIN_W   (TOOLBOX_COLS * TOOL_PALETTE_BTN_SIZE)
 
-#define TOOL_ICON_W    16
-#define TOOL_ICON_H    16
+#define TOOL_ICON_W     IMAGEEDITOR_TOOL_ICON_PX
+#define TOOL_ICON_H     IMAGEEDITOR_TOOL_ICON_PX
 
 // Toolbox grid rows and height: ceil(NUM_TOOLS / 2) rows x button size.
 #define TOOL_TOOLBAR_ROWS (((NUM_TOOLS) + TOOLBOX_COLS - 1) / TOOLBOX_COLS)

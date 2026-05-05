@@ -42,7 +42,5 @@ make -C "$ROOT" build/bin/gen_toolbox_atlas
 cp "$HEADER_TMP" "$ROOT/user/toolbox_icons.h"
 
 unzip -p "$TMPDIR/ledicons.zip" 1license.txt > "$LICENSE_OUT"
-rm -f "$ROOT/examples/formeditor/share/toolbox_FUGUE_README.txt" \
-      "$ROOT/examples/formeditor/share/toolbox_OCTICONS_LICENSE.txt"
 
 echo "Updated examples/formeditor/share/toolbox.png and user/toolbox_icons.h"

@@ -38,7 +38,6 @@ void draw_icon(int id, int x, int y, int size, uint32_t col);
 void draw_icon8(int icon, int x, int y, uint32_t col);
 void draw_icon8_clipped(int icon, irect16_t rect, uint32_t col);
 void draw_icon16(int icon, int x, int y, uint32_t col);
-void draw_silk_icon16(int icon, int x, int y, uint32_t col);
 void draw_checkerboard(irect16_t r, int square_px);
 
 // Viewport and projection

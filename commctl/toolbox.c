@@ -19,9 +19,9 @@
 //       // Optional: load a custom icon strip from a PNG sprite sheet.
 //       // Icon tiles are square; wparam = tile size in px.
 //       char path[512];
-//       snprintf(path, sizeof(path), "%s/../share/orion/silk.png",
+//       snprintf(path, sizeof(path), "%s/../share/imageeditor/image-editor.png",
 //                ui_get_exe_dir());
-//       send_message(win, bxLoadStrip, 16, path);
+//       send_message(win, bxLoadStrip, 24, path);
 //
 //       toolbox_item_t items[] = {
 //           { ID_TOOL_SELECT, 0 },
@@ -126,10 +126,6 @@ static void draw_toolbox_button(toolbox_state_t *st, int idx,
     // Built-in 16x16 sysicon sheet.
     irect16_t icon_dst = rect_offset(rect_center(cell, 16, 16), px, px);
     draw_icon16(icon, icon_dst.x, icon_dst.y, 0xFFFFFFFF);
-  } else if (icon >= SILK_ICON_BASE) {
-    // Built-in Silk sheet.
-    irect16_t icon_dst = rect_offset(rect_center(cell, 16, 16), px, px);
-    draw_silk_icon16(icon, icon_dst.x, icon_dst.y, 0xFFFFFFFF);
   } else if (st->strip.tex && st->strip.cols > 0) {
     // Custom sprite-sheet strips carry their own colors.
     bitmap_strip_t *s = &st->strip;

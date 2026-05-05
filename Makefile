@@ -237,8 +237,6 @@ FORMEDITOR_UI_TEST_BIN  = $(BIN_DIR)/test_formeditor_ui_test$(EXE_EXT)
 FORMEDITOR_SRCS_NO_MAIN = $(filter-out examples/formeditor/main.c,$(wildcard examples/formeditor/*.c))
 FORMEDITOR_COMPONENT_PLUGIN_SRC = commctl/formeditor_components_plugin.c
 FORMEDITOR_COMPONENT_PLUGIN = $(LIB_DIR)/formeditor_components$(LIB_EXT)
-SILK_ICONS_H = user/silk.h
-
 IE_COMPONENTS_PLUGIN_SRCS = \
 	examples/imageeditor/components/lv_plug.c \
 	examples/imageeditor/components/lv_hist.c \
@@ -335,13 +333,10 @@ share: $(VGA_FONT_PNG) | $(SHARE_DIR)
 	@cp share/fonts/Geneva-12.png $(SHARE_DIR)/orion/fonts/
 	@cp share/theme.png $(SHARE_DIR)/orion/
 	@cp share/filepicker.png $(SHARE_DIR)/orion/
-	@cp share/silk.png $(SHARE_DIR)/orion/
 	@mkdir -p $(SHARE_DIR)/orion/shaders
 	@cp share/shaders/*.glsl $(SHARE_DIR)/orion/shaders/
-	@mkdir -p $(SHARE_DIR)/imageeditor/shaders
-	@cp examples/imageeditor/share/shaders/*.glsl $(SHARE_DIR)/imageeditor/shaders/
-	@mkdir -p $(SHARE_DIR)/imageeditor/filters
-	@cp examples/imageeditor/share/filters/*.glsl $(SHARE_DIR)/imageeditor/filters/
+	@mkdir -p $(SHARE_DIR)/imageeditor
+	@cp -R examples/imageeditor/share/. $(SHARE_DIR)/imageeditor/
 	@[ ! -f share/fonts/Geneva9.png ] || cp share/fonts/Geneva9.png $(SHARE_DIR)/orion/fonts/
 	@for dir in examples/*/; do \
 	  name=$$(basename "$$dir"); \
@@ -380,12 +375,12 @@ examples: share $(EXAMPLE_BINS) $(EXTRA_EXAMPLE_BINS) $(FORMEDITOR_COMPONENT_PLU
 .PHONY: plugins
 plugins: $(FORMEDITOR_COMPONENT_PLUGIN) $(IE_COMPONENTS_PLUGIN)
 
-$(FORMEDITOR_COMPONENT_PLUGIN): $(FORMEDITOR_COMPONENT_PLUGIN_SRC) $(SILK_ICONS_H) $(SHARED_LIB) | $(LIB_DIR)
+$(FORMEDITOR_COMPONENT_PLUGIN): $(FORMEDITOR_COMPONENT_PLUGIN_SRC) $(SHARED_LIB) | $(LIB_DIR)
 	@echo "Building FormEditor component plugin: $@"
 	$(CC) $(CFLAGS) $(FE_PLUGIN_LFLAGS) -I. -o $@ $< \
 		$(LDFLAGS)
 
-$(IE_COMPONENTS_PLUGIN): $(IE_COMPONENTS_PLUGIN_SRCS) $(SILK_ICONS_H) $(SHARED_LIB) | $(LIB_DIR)
+$(IE_COMPONENTS_PLUGIN): $(IE_COMPONENTS_PLUGIN_SRCS) $(SHARED_LIB) | $(LIB_DIR)
 	@echo "Building ImageEditor components plugin: $@"
 	$(CC) $(CFLAGS) $(FE_PLUGIN_LFLAGS) -I. -Iexamples/imageeditor -o $@ $(IE_COMPONENTS_PLUGIN_SRCS) \
 		$(LDFLAGS)
@@ -401,7 +396,7 @@ $(IMAGELITE_BIN): $(wildcard examples/imageeditor/*.c) $(IMAGEEDITOR_FORMS_H) $(
 		$(CC) $(CFLAGS) -DIMAGEEDITOR_SINGLE_LAYER -I. -Iexamples/imageeditor -DSHAREDIR='"../share/imageeditor"' -x c -o $@ - \
 		$(LDFLAGS) $(LDFLAGS_EXAMPLE) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
 
-$(BIN_DIR)/formeditor$(EXE_EXT): $(wildcard examples/formeditor/*.c) $(SILK_ICONS_H) $(SHARED_LIB) $(FORMEDITOR_COMPONENT_PLUGIN) | $(BIN_DIR) share
+$(BIN_DIR)/formeditor$(EXE_EXT): $(wildcard examples/formeditor/*.c) $(SHARED_LIB) $(FORMEDITOR_COMPONENT_PLUGIN) | $(BIN_DIR) share
 	@echo "Building example: $@"
 	@(find examples/formeditor -maxdepth 1 -name "*.c" ! -name "main.c" | sort | sed 's/.*/#include "&"/'; \
 	 echo '#include "examples/formeditor/main.c"') | \
@@ -542,7 +537,7 @@ $(BIN_DIR)/test_gitclient_ui_test$(EXE_EXT): $(TEST_DIR)/gitclient_ui_test.c $(T
 		$(LDFLAGS) $(LDFLAGS_TEST) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
 
 # Imageeditor UI test — needs all imageeditor sources except main.c + test_env.c.
-$(IMAGEEDITOR_UI_TEST_BIN): $(IMAGEEDITOR_UI_TEST_SRC) $(TEST_DIR)/test_env.c $(IMAGEEDITOR_SRCS_NO_MAIN) $(IMAGEEDITOR_FORMS_H) $(SILK_ICONS_H) $(SHARED_LIB) | $(BIN_DIR)
+$(IMAGEEDITOR_UI_TEST_BIN): $(IMAGEEDITOR_UI_TEST_SRC) $(TEST_DIR)/test_env.c $(IMAGEEDITOR_SRCS_NO_MAIN) $(IMAGEEDITOR_FORMS_H) $(SHARED_LIB) | $(BIN_DIR)
 	@echo "Building imageeditor UI test: $@"
 	$(CC) $(CFLAGS) -I. -Iexamples/imageeditor -DIMAGEEDITOR_DEBUG=0 -o $@ \
 		$(IMAGEEDITOR_UI_TEST_SRC) $(TEST_DIR)/test_env.c \
@@ -550,7 +545,7 @@ $(IMAGEEDITOR_UI_TEST_BIN): $(IMAGEEDITOR_UI_TEST_SRC) $(TEST_DIR)/test_env.c $(
 		$(LDFLAGS) $(LDFLAGS_TEST) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
 
 # Formeditor UI test — needs all formeditor sources except main.c + test_env.c.
-$(FORMEDITOR_UI_TEST_BIN): $(FORMEDITOR_UI_TEST_SRC) $(TEST_DIR)/test_env.c $(FORMEDITOR_SRCS_NO_MAIN) $(SILK_ICONS_H) $(SHARED_LIB) $(FORMEDITOR_COMPONENT_PLUGIN) $(IE_COMPONENTS_PLUGIN) | $(BIN_DIR)
+$(FORMEDITOR_UI_TEST_BIN): $(FORMEDITOR_UI_TEST_SRC) $(TEST_DIR)/test_env.c $(FORMEDITOR_SRCS_NO_MAIN) $(SHARED_LIB) $(FORMEDITOR_COMPONENT_PLUGIN) $(IE_COMPONENTS_PLUGIN) | $(BIN_DIR)
 	@echo "Building formeditor UI test: $@"
 	$(CC) $(CFLAGS) $(LIBXML2_CFLAGS) -I. -Iexamples/formeditor -o $@ \
 		$(FORMEDITOR_UI_TEST_SRC) $(TEST_DIR)/test_env.c \

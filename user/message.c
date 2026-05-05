@@ -21,7 +21,6 @@ extern result_t win_combobox(window_t *, uint32_t, uint32_t, void *);
 extern result_t win_textedit(window_t *, uint32_t, uint32_t, void *);
 extern result_t win_button(window_t *, uint32_t, uint32_t, void *);
 extern bitmap_strip_t *ui_get_sysicon_strip(void);
-extern bitmap_strip_t *ui_get_silk_strip(void);
 
 #define CONTAINS(x, y, x1, y1, w1, h1) \
 ((x1) <= (x) && (y1) <= (y) && (x1) + (w1) > (x) && (y1) + (h1) > (y))
@@ -133,12 +132,6 @@ static window_t *create_toolbar_child(window_t *parent, winproc_t proc,
       if (sys) {
         send_message(tc, btnSetImage,
                      (uint32_t)(icon - SYSICON_BASE), sys);
-      }
-    } else if (icon >= SILK_ICON_BASE) {
-      bitmap_strip_t *silk = ui_get_silk_strip();
-      if (silk) {
-        send_message(tc, btnSetImage,
-                     (uint32_t)(icon - SILK_ICON_BASE), silk);
       }
     } else if (parent->toolbar_strip.tex != 0) {
       send_message(tc, btnSetImage,

@@ -1,0 +1,43 @@
+Create a cohesive set of **64 UI icons** for a Photoshop-like image editing software.
+
+## Layout
+
+* **Solid white background** (NOT transparent)
+* **8×8 grid** (64 icons total)
+* Each icon **32×32 px**
+* **8 px padding** between icons
+* Crisp pixel alignment, clean edges, **no blur**
+* All icons centered perfectly inside their cells
+
+## Style
+
+* Colorful, vibrant palette that stands out strongly on white
+* **Thick black outlines** on every icon (consistent stroke width)
+* Bold shapes, strong silhouettes
+* Puffy / inflated look, slightly rounded like soft plastic
+* Chibi-like proportions (big shapes, simplified details)
+* High contrast, readable even when scaled down to 16×16
+* Subtle gradients and highlights (soft toy-like shading, not glossy metal)
+* No thin lines, no tiny details, no text
+* Same lighting direction for all icons (top-left highlight, bottom-right shadow)
+
+## Icon theme (Photoshop-like tools)
+
+Brush, pencil, eraser, paint bucket, gradient tool, smudge, blur tool, sharpen tool, dodge, burn, sponge, lasso, polygon lasso, magic wand, crop tool, move tool, hand tool, zoom in, zoom out, rotate canvas, selection marquee, transform, clone stamp, healing brush, color picker, pen tool, shape tool, rectangle, ellipse, line tool, text tool, layers icon, new layer, delete layer, merge layers, lock layer, eye visibility toggle, mask icon, scissors cut, copy, paste, undo, redo, save, open file, export, print, grid toggle, rulers, guides, snap, resize image, rotate image, flip horizontal, flip vertical, fill, stroke, opacity slider, settings gear, history panel, palette color wheel, **spray can**, **rounded rectangle shape tool**.
+
+## Rendering requirements
+
+* Each icon should look like a **cute mini toy version** of the real tool
+* Use clear silhouettes and bold negative space
+* Icons should feel consistent:
+
+  * same stroke thickness
+  * same lighting direction (top-left highlight)
+  * same slight 3D toy perspective but still UI-flat readable
+* Maintain uniform line thickness and consistent icon proportions
+
+## Output
+
+* **One PNG sprite sheet**
+* Solid white background
+* Perfectly aligned 8×8 grid

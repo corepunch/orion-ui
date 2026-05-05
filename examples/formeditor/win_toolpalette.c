@@ -2,7 +2,7 @@
 // Defaults to a reportview icon+name list, similar to later Visual Basic
 // toolbox versions. Define FE_TOOLBOX_USE_BUTTON_GRID to use the classic
 // compact button grid.
-// silk.png is a generated 16x16-px-per-tile shared Orion icon atlas.
+// Shared icon atlas is loaded by the framework; use sysicon_* values here.
 
 #include "formeditor.h"
 #include "../../commctl/commctl.h"
@@ -68,13 +68,13 @@ static void build_tool_items(void) {
 #ifdef FE_TOOLBOX_USE_BUTTON_GRID
   g_tools[g_tool_count++] = (toolbox_item_t){
       ID_TOOL_SELECT,
-      FUGUE_ICON_CURSOR,
+      sysicon_cursor,
       "Select"
   };
 #else
   g_tools[g_tool_count++] = (reportview_item_t){
       .text = "Select",
-      .icon = FUGUE_ICON_CURSOR,
+      .icon = sysicon_cursor,
       .color = get_sys_color(brTextNormal),
       .userdata = ID_TOOL_SELECT,
   };

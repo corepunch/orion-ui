@@ -190,12 +190,6 @@ void ui_update_screen_size(int width, int height);
 //     send_message(btn, btnSetImage, sysicon_add - SYSICON_BASE, s);
 bitmap_strip_t *ui_get_sysicon_strip(void);
 
-// Built-in Silk icon strip.
-// Returns a pointer to the global bitmap_strip_t for silk.png, or NULL if the
-// sheet was not found at startup.  Icon values from user/silk.h start at
-// SILK_ICON_BASE (1000); subtract SILK_ICON_BASE to get the strip index.
-bitmap_strip_t *ui_get_silk_strip(void);
-
 // Transparency checkerboard texture used by apps that need a visible alpha
 // background.  This is a 2x2 RGBA texture intended for repeated tiling.
 extern uint32_t ui_transparency_checker_texture;
