@@ -220,6 +220,13 @@ $(info NOTE: libxml2 not found; skipping browser example. Install libxml2 + pkg-
 endif
 endif
 
+# Include the formeditor example only when libxml2 is available (it uses libxml).
+ifneq ($(strip $(LIBXML2_LIBS)),)
+FORMEDITOR_EXAMPLE_BIN = $(BIN_DIR)/formeditor$(EXE_EXT)
+else
+$(info NOTE: libxml2 not found; skipping formeditor example.)
+endif
+
 # Gitclient tests require custom build rules because they compile gitclient
 # source files alongside the test.  The UI test also needs test_env.c; the
 # backend test uses only test_framework.h (header-only).  Both are excluded
@@ -375,7 +382,7 @@ $(SHARED_LIB): $(USER_SRCS) $(KERNEL_SRCS) $(COMMCTL_SRCS) $(PLATFORM_LIB) | $(L
 
 # Examples
 .PHONY: examples
-examples: share $(EXAMPLE_BINS) $(EXTRA_EXAMPLE_BINS) $(FORMEDITOR_COMPONENT_PLUGIN) $(IE_COMPONENTS_PLUGIN) $(BIN_DIR)/formeditor$(EXE_EXT) $(BIN_DIR)/imageeditor$(EXE_EXT)
+examples: share $(EXAMPLE_BINS) $(EXTRA_EXAMPLE_BINS) $(FORMEDITOR_COMPONENT_PLUGIN) $(IE_COMPONENTS_PLUGIN) $(FORMEDITOR_EXAMPLE_BIN) $(BIN_DIR)/imageeditor$(EXE_EXT)
 
 .PHONY: plugins
 plugins: $(FORMEDITOR_COMPONENT_PLUGIN) $(IE_COMPONENTS_PLUGIN)

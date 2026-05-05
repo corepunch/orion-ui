@@ -7,6 +7,7 @@
 #include "formeditor.h"
 #include "../../commctl/commctl.h"
 #include "../../commctl/columnview.h"
+#include "../../user/icons.h"
 
 #ifndef FE_TOOLBOX_USE_BUTTON_GRID
 static reportview_item_t g_tools[FE_MAX_COMPONENTS + 1];
