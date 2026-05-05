@@ -173,7 +173,9 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   srand((unsigned int)time(NULL));
 
   create_app_windows(hinstance);
+#if !IMAGEEDITOR_INDEXED
   imageeditor_load_filters();
+#endif
 
   {
     char path[4096];
@@ -225,7 +227,9 @@ void gem_shutdown(void) {
   free(g_app->clipboard);
   g_app->clipboard = NULL;
 
+#if !IMAGEEDITOR_INDEXED
   imageeditor_free_filters();
+#endif // !IMAGEEDITOR_INDEXED
 
   if (g_loaded_component_plugins) {
     fe_unload_component_plugins();
@@ -238,7 +242,14 @@ void gem_shutdown(void) {
   g_app = NULL;
 }
 
+#if IMAGEEDITOR_INDEXED
+GEM_DEFINE("Image Editor 256", "1.0", gem_init, gem_shutdown, image_editor_types)
+
+GEM_STANDALONE_MAIN("Orion Image Editor 256", UI_INIT_DESKTOP, SCREEN_W, SCREEN_H,
+                    g_app->menubar_win, g_app->accel)
+#else
 GEM_DEFINE("Image Editor", "1.0", gem_init, gem_shutdown, image_editor_types)
 
 GEM_STANDALONE_MAIN("Orion Image Editor", UI_INIT_DESKTOP, SCREEN_W, SCREEN_H,
                     g_app->menubar_win, g_app->accel)
+#endif

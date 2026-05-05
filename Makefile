@@ -177,9 +177,12 @@ TOOLS_BINS = $(patsubst tools/%.c,$(BIN_DIR)/%$(EXE_EXT),$(TOOLS_SRCS))
 # orionc requires libxml2; added to TOOLS_BINS only when libxml2 is available.
 TOOLS_CFLAGS = $(CFLAGS) -Wno-unused-function
 
+IMAGEEDITOR256_EXAMPLE_BIN = $(BIN_DIR)/imageeditor256$(EXE_EXT)
+
 # .gem output directory and target list
 GEM_DIR  = $(BUILD_DIR)/gem
 GEM_BINS = $(GEM_DIR)/imageeditor.gem \
+           $(GEM_DIR)/imageeditor256.gem \
            $(GEM_DIR)/filemanager.gem \
            $(GEM_DIR)/helloworld.gem \
            $(GEM_DIR)/terminal.gem \
@@ -388,7 +391,7 @@ $(SHARED_LIB): $(USER_SRCS) $(KERNEL_SRCS) $(COMMCTL_SRCS) $(PLATFORM_LIB) | $(L
 
 # Examples
 .PHONY: examples
-examples: share $(EXAMPLE_BINS) $(EXTRA_EXAMPLE_BINS) $(FORMEDITOR_COMPONENT_PLUGIN) $(IE_COMPONENTS_PLUGIN) $(FORMEDITOR_EXAMPLE_BIN) $(IMAGEEDITOR_EXAMPLE_BIN)
+examples: share $(EXAMPLE_BINS) $(EXTRA_EXAMPLE_BINS) $(FORMEDITOR_COMPONENT_PLUGIN) $(IE_COMPONENTS_PLUGIN) $(FORMEDITOR_EXAMPLE_BIN) $(IMAGEEDITOR_EXAMPLE_BIN) $(IMAGEEDITOR256_EXAMPLE_BIN)
 
 .PHONY: plugins
 plugins: $(FORMEDITOR_COMPONENT_PLUGIN) $(IE_COMPONENTS_PLUGIN)
@@ -426,6 +429,14 @@ $(BIN_DIR)/imageeditor$(EXE_EXT): $(wildcard examples/imageeditor/*.c) $(IMAGEED
 	@(find examples/imageeditor -maxdepth 1 -name "*.c" ! -name "main.c" | sort | sed 's/.*/#include "&"/'; \
 	 echo '#include "examples/imageeditor/main.c"') | \
 		$(CC) $(CFLAGS) -I. -Iexamples/imageeditor -DSHAREDIR='"../share/imageeditor"' -x c -o $@ - \
+		$(LDFLAGS) $(LDFLAGS_EXAMPLE) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
+
+$(IMAGEEDITOR256_EXAMPLE_BIN): $(wildcard examples/imageeditor/*.c) $(IMAGEEDITOR_FORMS_H) $(SHARED_LIB) $(IE_COMPONENTS_PLUGIN) | $(BIN_DIR) share
+	@echo "Building 256-color image editor: $@"
+	@(find examples/imageeditor -maxdepth 1 -name "*.c" ! -name "main.c" | sort | sed 's/.*/#include "&"/'; \
+	 echo '#include "examples/imageeditor/main.c"') | \
+		$(CC) $(CFLAGS) -DIMAGEEDITOR_INDEXED=1 -DIMAGEEDITOR_SINGLE_LAYER=1 \
+		      -I. -Iexamples/imageeditor -DSHAREDIR='"../share/imageeditor"' -x c -o $@ - \
 		$(LDFLAGS) $(LDFLAGS_EXAMPLE) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
 
 # Static unity-build rule for all examples.
@@ -489,6 +500,16 @@ $(GEM_DIR)/imageeditor.gem: $(wildcard examples/imageeditor/*.c) $(IMAGEEDITOR_F
 	 find examples/imageeditor -maxdepth 1 -name "*.c" ! -name "main.c" | sort | sed 's/.*/#include "&"/'; \
 	 echo '#include "examples/imageeditor/main.c"') | \
 		$(CC) $(GEM_CFLAGS) $(GEM_LFLAGS) -I. -Iexamples/imageeditor -DSHAREDIR='"../share/imageeditor"' -x c -o $@ - \
+		$(LDFLAGS) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
+	@$(MAKE) --no-print-directory validate-gem GEM=$@
+
+$(GEM_DIR)/imageeditor256.gem: $(wildcard examples/imageeditor/*.c) $(IMAGEEDITOR_FORMS_H) $(SHARED_LIB) $(IE_COMPONENTS_PLUGIN) | $(GEM_DIR)
+	@echo "Building .gem: $@"
+	@(echo '#include "gem_magic.h"'; \
+	 find examples/imageeditor -maxdepth 1 -name "*.c" ! -name "main.c" | sort | sed 's/.*/#include "&"/'; \
+	 echo '#include "examples/imageeditor/main.c"') | \
+		$(CC) $(GEM_CFLAGS) $(GEM_LFLAGS) -DIMAGEEDITOR_INDEXED=1 -DIMAGEEDITOR_SINGLE_LAYER=1 \
+		      -I. -Iexamples/imageeditor -DSHAREDIR='"../share/imageeditor"' -x c -o $@ - \
 		$(LDFLAGS) $(ORION_LDFLAGS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
 	@$(MAKE) --no-print-directory validate-gem GEM=$@
 

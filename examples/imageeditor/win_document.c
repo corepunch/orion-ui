@@ -173,6 +173,45 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
   canvas_clear(doc);
   doc->modified = false;
 
+#if IMAGEEDITOR_INDEXED
+  // Initialize the palette with 256 named colors.  We fill in a simple default
+  // palette: index 0 is the transparent "background" color (black, alpha 0),
+  // and indices 1–255 cycle through a compact set of common colors.
+  doc->ipal.transparent = IMAGEEDITOR_TRANSPARENT_INDEX;
+  doc->ipal.entries[0]  = MAKE_COLOR(0x00, 0x00, 0x00, 0x00); // transparent
+  // Indices 1-15: a standard 4-bit EGA-style base palette.
+  static const uint32_t kBasePalette[] = {
+    MAKE_COLOR(0,0,0,255),       // 1  black
+    MAKE_COLOR(170,0,0,255),     // 2  dark red
+    MAKE_COLOR(0,170,0,255),     // 3  dark green
+    MAKE_COLOR(170,170,0,255),   // 4  dark yellow
+    MAKE_COLOR(0,0,170,255),     // 5  dark blue
+    MAKE_COLOR(170,0,170,255),   // 6  dark magenta
+    MAKE_COLOR(0,170,170,255),   // 7  dark cyan
+    MAKE_COLOR(170,170,170,255), // 8  light gray
+    MAKE_COLOR(85,85,85,255),    // 9  dark gray
+    MAKE_COLOR(255,85,85,255),   // 10 red
+    MAKE_COLOR(85,255,85,255),   // 11 green
+    MAKE_COLOR(255,255,85,255),  // 12 yellow
+    MAKE_COLOR(85,85,255,255),   // 13 blue
+    MAKE_COLOR(255,85,255,255),  // 14 magenta
+    MAKE_COLOR(85,255,255,255),  // 15 cyan
+    MAKE_COLOR(255,255,255,255), // 16 white
+  };
+  for (int i = 0; i < (int)(sizeof(kBasePalette)/sizeof(kBasePalette[0])); i++)
+    doc->ipal.entries[i + 1] = kBasePalette[i];
+  // Fill remaining slots with a 6x6x6 color cube (indices 17-232).
+  int idx = 17;
+  for (int r = 0; r < 6 && idx < 233; r++)
+    for (int g = 0; g < 6 && idx < 233; g++)
+      for (int b = 0; b < 6 && idx < 233; b++, idx++)
+        doc->ipal.entries[idx] = MAKE_COLOR(r*51, g*51, b*51, 255);
+  // Fill 233-255 with a 24-step grayscale ramp.
+  for (int i = 0; i < 24 && idx < 256; i++, idx++)
+    doc->ipal.entries[idx] = MAKE_COLOR(i*11, i*11, i*11, 255);
+  doc->ipal.count = 256;
+#endif
+
   // Always initialize the animation timeline with one frame capturing the
   // current canvas pixels.  Single-canvas workflows simply use frame 0.
   doc->anim = anim_timeline_new(w, h);

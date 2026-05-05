@@ -2,14 +2,16 @@
 
 #include "imageeditor.h"
 
-#define FILTER_PREFIX_COUNT ((int)(sizeof(kFilterItems) / sizeof(kFilterItems[0])))
 #define WINDOW_PREFIX_COUNT ((int)(sizeof(kWindowItems) / sizeof(kWindowItems[0])))
 
+#if !IMAGEEDITOR_INDEXED
+#define FILTER_PREFIX_COUNT ((int)(sizeof(kFilterItems) / sizeof(kFilterItems[0])))
 static menu_item_t s_filter_items[FILTER_PREFIX_COUNT + 1 + IMAGEEDITOR_MAX_FILTERS];
 static int         s_filter_item_count = FILTER_PREFIX_COUNT;
 static menu_item_t s_filter_photo_items[IMAGEEDITOR_MAX_FILTERS];
 static int         s_filter_photo_item_count = 0;
 static char        s_filter_photo_labels[IMAGEEDITOR_MAX_FILTERS][64];
+#endif // !IMAGEEDITOR_INDEXED
 
 // Persistent storage for dynamically built items and document title strings.
 static menu_item_t s_window_items[WINDOW_PREFIX_COUNT + WINDOW_MENU_MAX_DOCS];
@@ -36,7 +38,7 @@ static bool cancel_active_canvas_interaction(canvas_doc_t *doc, int old_tool) {
              (void *)doc, doc->poly.count);
     if (doc->shape.snapshot) {
       memcpy(doc->pixels, doc->shape.snapshot,
-             (size_t)doc->canvas_w * doc->canvas_h * 4);
+             (size_t)doc->canvas_w * doc->canvas_h * DOC_BPP);
       doc->canvas_dirty = true;
     }
     doc_discard_undo(doc);
@@ -51,7 +53,7 @@ static bool cancel_active_canvas_interaction(canvas_doc_t *doc, int old_tool) {
              doc->shape.start.x, doc->shape.start.y,
              doc->last.x, doc->last.y);
     memcpy(doc->pixels, doc->shape.snapshot,
-           (size_t)doc->canvas_w * doc->canvas_h * 4);
+           (size_t)doc->canvas_w * doc->canvas_h * DOC_BPP);
     doc->canvas_dirty = true;
     changed = true;
   }
@@ -527,6 +529,7 @@ void handle_menu_command(uint16_t id) {
       }
       break;
 
+#if !IMAGEEDITOR_INDEXED
     case ID_FILTER_RELOAD:
       imageeditor_load_filters();
       break;
@@ -569,6 +572,7 @@ void handle_menu_command(uint16_t id) {
           invalidate_window(doc->canvas_win);
       }
       break;
+#endif // !IMAGEEDITOR_INDEXED
 
     case ID_IMAGE_RESIZE: {
       if (!doc) break;
@@ -1051,6 +1055,7 @@ void handle_menu_command(uint16_t id) {
       break;
 
     default:
+#if !IMAGEEDITOR_INDEXED
       if (id >= ID_FILTER_BASE && id < ID_FILTER_BASE + IMAGEEDITOR_MAX_FILTERS) {
         if (doc) {
           int filter_idx = (int)id - ID_FILTER_BASE;
@@ -1070,6 +1075,7 @@ void handle_menu_command(uint16_t id) {
         }
         break;
       }
+#endif // !IMAGEEDITOR_INDEXED
 
       if (id >= ID_WINDOW_DOC_BASE &&
           id < ID_WINDOW_DOC_BASE + WINDOW_MENU_MAX_DOCS) {
@@ -1087,6 +1093,7 @@ void handle_menu_command(uint16_t id) {
 }
 
 void imageeditor_sync_filter_menu(void) {
+#if !IMAGEEDITOR_INDEXED
   if (!g_app) return;
 
   int n = 0;
@@ -1124,6 +1131,7 @@ void imageeditor_sync_filter_menu(void) {
     send_message(g_app->menubar_win, kMenuBarMessageSetMenus,
                  (uint32_t)kNumMenus, kMenus);
   }
+#endif // !IMAGEEDITOR_INDEXED
 }
 
 result_t editor_menubar_proc(window_t *win, uint32_t msg,

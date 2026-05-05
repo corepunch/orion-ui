@@ -6,6 +6,8 @@
 
 #include "imageeditor.h"
 
+#if !IMAGEEDITOR_INDEXED
+
 typedef struct {
   const char *filename;
   const char *label;
@@ -390,3 +392,5 @@ bool imageeditor_apply_builtin_filter(canvas_doc_t *doc, uint16_t id) {
     return apply_baked_texture_to_active_layer(doc, baked_tex);
   }
 }
+
+#endif // !IMAGEEDITOR_INDEXED

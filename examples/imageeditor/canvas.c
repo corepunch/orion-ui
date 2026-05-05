@@ -1,6 +1,7 @@
 // Canvas operations: pixel drawing, PNG I/O, GL texture management
 
 #include "imageeditor.h"
+#include <limits.h>
 
 // ============================================================
 // Layer management helpers
@@ -10,9 +11,9 @@
 static layer_t *layer_new(int w, int h, const char *name) {
   layer_t *lay = calloc(1, sizeof(layer_t));
   if (!lay) return NULL;
-  lay->pixels = malloc((size_t)w * h * 4);
+  lay->pixels = malloc((size_t)w * h * DOC_BPP);
   if (!lay->pixels) { free(lay); return NULL; }
-  memset(lay->pixels, 0x00, (size_t)w * h * 4);
+  memset(lay->pixels, 0x00, (size_t)w * h * DOC_BPP);
   lay->tex = 0;
   strncpy(lay->name, name, sizeof(lay->name) - 1);
   lay->visible = true;
@@ -33,9 +34,9 @@ static void layer_free_one(layer_t *lay) {
 // src_x / src_y is the top-left corner of the selection in old-canvas coords.
 static bool layer_crop_expand(layer_t *lay, int old_w, int old_h,
                                int src_x, int src_y, int new_w, int new_h) {
-  uint8_t *buf = malloc((size_t)new_w * new_h * 4);
+  uint8_t *buf = malloc((size_t)new_w * new_h * DOC_BPP);
   if (!buf) return false;
-  memset(buf, 0x00, (size_t)new_w * new_h * 4);
+  memset(buf, 0x00, (size_t)new_w * new_h * DOC_BPP);
 
   int ix0 = MAX(src_x, 0);
   int iy0 = MAX(src_y, 0);
@@ -48,9 +49,9 @@ static bool layer_crop_expand(layer_t *lay, int old_w, int old_h,
     int dcol = ix0 - src_x;
     int drow = iy0 - src_y;
     for (int r = 0; r < ih; r++) {
-      const uint8_t *srow = lay->pixels + ((size_t)(iy0 + r) * old_w + ix0) * 4;
-      uint8_t       *drow_ptr = buf + ((size_t)(drow + r) * new_w + dcol) * 4;
-      memcpy(drow_ptr, srow, (size_t)iw * 4);
+      const uint8_t *srow = lay->pixels + ((size_t)(iy0 + r) * old_w + ix0) * DOC_BPP;
+      uint8_t       *drow_ptr = buf + ((size_t)(drow + r) * new_w + dcol) * DOC_BPP;
+      memcpy(drow_ptr, srow, (size_t)iw * DOC_BPP);
     }
   }
   free(lay->pixels);
@@ -69,6 +70,26 @@ static void canvas_composite(const canvas_doc_t *doc, uint8_t *dst) {
   size_t n = (size_t)doc->canvas_w * doc->canvas_h;
   memset(dst, 0x00, n * 4);
 
+#if IMAGEEDITOR_INDEXED
+  // Indexed mode: one layer, map each pixel index through the palette.
+  // The transparent index produces fully transparent pixels.
+  if (doc->layer.count > 0 && doc->layer.stack[0]->pixels) {
+    const uint8_t *idx_buf = doc->layer.stack[0]->pixels;
+    for (size_t i = 0; i < n; i++) {
+      uint8_t pidx = idx_buf[i];
+      uint8_t *d = dst + i * 4;
+      if (pidx == (uint8_t)doc->ipal.transparent) {
+        // Transparent: leave as zero (already cleared).
+        continue;
+      }
+      uint32_t c = doc->ipal.entries[pidx];
+      d[0] = COLOR_R(c);
+      d[1] = COLOR_G(c);
+      d[2] = COLOR_B(c);
+      d[3] = 255;
+    }
+  }
+#else
   for (int li = 0; li < doc->layer.count; li++) {
     const layer_t *lay = doc->layer.stack[li];
     if (!lay->visible) continue;
@@ -121,6 +142,7 @@ static void canvas_composite(const canvas_doc_t *doc, uint8_t *dst) {
       d[3] = (uint8_t)out_a;
     }
   }
+#endif
 }
 
 static void canvas_composite_over_bg(const canvas_doc_t *doc, uint8_t *rgba) {
@@ -156,6 +178,29 @@ static void canvas_composite_over_bg(const canvas_doc_t *doc, uint8_t *rgba) {
 
 static void layer_upload_texture(canvas_doc_t *doc, layer_t *lay) {
   if (!doc || !lay || !lay->pixels) return;
+#if IMAGEEDITOR_INDEXED
+  // Indexed mode: expand the palette-index buffer to RGBA for the GPU.
+  // Use the composite scratch buffer as a temporary (it is always canvas_w * canvas_h * 4).
+  uint8_t *rgba = doc->layer.composite_buf;
+  if (!rgba) return;
+  canvas_composite(doc, rgba);
+  if (!lay->tex) {
+    GLuint tex;
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, doc->canvas_w, doc->canvas_h, 0,
+                 GL_RGBA, GL_UNSIGNED_BYTE, rgba);
+    lay->tex = tex;
+  } else {
+    glBindTexture(GL_TEXTURE_2D, lay->tex);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, doc->canvas_w, doc->canvas_h,
+                    GL_RGBA, GL_UNSIGNED_BYTE, rgba);
+  }
+#else
   if (!lay->tex) {
     GLuint tex;
     glGenTextures(1, &tex);
@@ -172,6 +217,7 @@ static void layer_upload_texture(canvas_doc_t *doc, layer_t *lay) {
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, doc->canvas_w, doc->canvas_h,
                     GL_RGBA, GL_UNSIGNED_BYTE, lay->pixels);
   }
+#endif
 }
 
 static void layer_clear_preview_one(layer_t *lay) {
@@ -197,12 +243,23 @@ bool doc_add_layer_filled(canvas_doc_t *doc, uint32_t fill_color) {
   layer_t *lay = layer_new(doc->canvas_w, doc->canvas_h, name);
   if (!lay) return false;
 
+  // Fill with the requested color.
+#if IMAGEEDITOR_INDEXED
+  // In indexed mode, fill with the transparent index by default.
+  // Opaque fill colors map to palette index 0 (first palette entry).
+  uint8_t pidx = (COLOR_A(fill_color) == 0)
+               ? (uint8_t)IMAGEEDITOR_TRANSPARENT_INDEX
+               : 0;
+  memset(lay->pixels, pidx, (size_t)doc->canvas_w * (size_t)doc->canvas_h);
+  (void)fill_color;
+#else
   // Fill with the requested color using 4-byte writes for efficiency.
   // malloc() returns sufficiently aligned memory for uint32_t access.
   size_t npx = (size_t)doc->canvas_w * doc->canvas_h;
   uint32_t *dst = (uint32_t *)lay->pixels;
   for (size_t i = 0; i < npx; i++)
     dst[i] = fill_color;
+#endif
 
   layer_t **nl = realloc(doc->layer.stack, sizeof(layer_t *) * (doc->layer.count + 1));
   if (!nl) { layer_free_one(lay); return false; }
@@ -242,7 +299,7 @@ bool doc_delete_layer(canvas_doc_t *doc) {
 bool doc_duplicate_layer(canvas_doc_t *doc) {
   if (!doc || doc->layer.count >= LAYER_MAX) return false;
   const layer_t *src = doc->layer.stack[doc->layer.active];
-  size_t px_sz = (size_t)doc->canvas_w * doc->canvas_h * 4;
+  size_t px_sz = (size_t)doc->canvas_w * doc->canvas_h * DOC_BPP;
 
   layer_t *dup = calloc(1, sizeof(layer_t));
   if (!dup) return false;
@@ -326,6 +383,10 @@ void doc_move_layer_down(canvas_doc_t *doc) {
 
 void doc_merge_down(canvas_doc_t *doc) {
   if (!doc || doc->layer.active == 0 || doc->layer.count < 2) return;
+#if IMAGEEDITOR_INDEXED
+  // Indexed mode is always single-layer; merge-down is a no-op.
+  return;
+#else
   int top_idx = doc->layer.active;
   int bot_idx = top_idx - 1;
   const layer_t *top = doc->layer.stack[top_idx];
@@ -353,6 +414,7 @@ void doc_merge_down(canvas_doc_t *doc) {
   doc->pixels = doc->layer.stack[doc->layer.active]->pixels;
   doc->canvas_dirty = true;
   doc->modified = true;
+#endif
 }
 
 void doc_flatten(canvas_doc_t *doc) {
@@ -362,6 +424,10 @@ void doc_flatten(canvas_doc_t *doc) {
     return;
   }
 
+#if IMAGEEDITOR_INDEXED
+  // Indexed mode is always single-layer; flatten is a no-op.
+  return;
+#else
   size_t sz = (size_t)doc->canvas_w * doc->canvas_h * 4;
   uint8_t *flat = malloc(sz);
   if (!flat) return;
@@ -392,6 +458,7 @@ void doc_flatten(canvas_doc_t *doc) {
   doc->layer.editing_mask = false;
   doc->canvas_dirty = true;
   doc->modified     = true;
+#endif
 }
 
 void doc_free_layers(canvas_doc_t *doc) {
@@ -608,7 +675,11 @@ bool layer_commit_preview_effect(canvas_doc_t *doc, int idx) {
   layer_t *lay = doc->layer.stack[idx];
   if (!lay) return false;
   if (!lay->preview.active) return true;
-
+#if IMAGEEDITOR_INDEXED
+  // GL-based effects not supported in indexed mode.
+  layer_clear_preview_one(lay);
+  return false;
+#else
   size_t sz = (size_t)doc->canvas_w * doc->canvas_h * 4;
   uint8_t *buf = malloc(sz);
   if (!buf) return false;
@@ -633,10 +704,16 @@ bool layer_commit_preview_effect(canvas_doc_t *doc, int idx) {
   if (doc->canvas_win)
     invalidate_window(doc->canvas_win);
   return true;
+#endif
 }
 
 bool layer_add_mask_ex(canvas_doc_t *doc, int idx, int fill_mode) {
   if (!doc || idx < 0 || idx >= doc->layer.count) return false;
+#if IMAGEEDITOR_INDEXED
+  // Indexed images have no alpha channel — masks are not supported.
+  (void)fill_mode;
+  return false;
+#else
   layer_t *lay = doc->layer.stack[idx];
   size_t n = (size_t)doc->canvas_w * doc->canvas_h;
   if (fill_mode == MASK_EXTRACT_GRAYSCALE) {
@@ -648,6 +725,7 @@ bool layer_add_mask_ex(canvas_doc_t *doc, int idx, int fill_mode) {
   doc->canvas_dirty = true;
   doc->modified     = true;
   return true;
+#endif
 }
 
 void layer_apply_mask(canvas_doc_t *doc, int idx) {
@@ -659,17 +737,24 @@ void layer_apply_mask(canvas_doc_t *doc, int idx) {
 
 void layer_remove_mask(canvas_doc_t *doc, int idx) {
   if (!doc || idx < 0 || idx >= doc->layer.count) return;
+#if !IMAGEEDITOR_INDEXED
   layer_t *lay = doc->layer.stack[idx];
   size_t n = (size_t)doc->canvas_w * doc->canvas_h;
   for (size_t i = 0; i < n; i++)
     lay->pixels[i * 4 + 3] = 255;
+#endif
   doc->canvas_dirty = true;
   doc->modified     = true;
   doc->layer.editing_mask = false;
 }
 
 // Open the active layer's alpha channel as a new document.
+// Not supported in indexed mode (no alpha channel in palette indices).
 canvas_doc_t *canvas_extract_mask(canvas_doc_t *doc) {
+#if IMAGEEDITOR_INDEXED
+  (void)doc;
+  return NULL;
+#else
   if (!doc || !g_app || doc->layer.count == 0) return NULL;
   layer_t *lay = doc->layer.stack[doc->layer.active];
   size_t n = (size_t)doc->canvas_w * doc->canvas_h;
@@ -690,17 +775,61 @@ canvas_doc_t *canvas_extract_mask(canvas_doc_t *doc) {
   doc_update_title(new_doc);
   invalidate_window(new_doc->canvas_win);
   return new_doc;
+#endif
 }
 
 // ============================================================
 // Canvas pixel operations
 // ============================================================
 
+#if IMAGEEDITOR_INDEXED
+// Find the palette entry in doc->ipal that is nearest to the given RGBA color.
+// Uses Manhattan distance in RGBA space.  Returns the transparent index if the
+// color has alpha == 0.  Returns ipal.transparent if the palette is empty.
+int canvas_nearest_palette_index(const canvas_doc_t *doc, uint32_t color) {
+  if (COLOR_A(color) == 0)
+    return doc->ipal.transparent;
+  if (doc->ipal.count <= 0)
+    return doc->ipal.transparent;
+
+  int best_idx = 0;
+  int best_dist = INT_MAX;
+  int r = COLOR_R(color), g = COLOR_G(color), b = COLOR_B(color), a = COLOR_A(color);
+  for (int i = 0; i < doc->ipal.count && i < 256; i++) {
+    if (i == doc->ipal.transparent) continue;  // skip transparent slot
+    uint32_t e = doc->ipal.entries[i];
+    int dr = abs(r - (int)COLOR_R(e));
+    int dg = abs(g - (int)COLOR_G(e));
+    int db = abs(b - (int)COLOR_B(e));
+    int da = abs(a - (int)COLOR_A(e));
+    int dist = dr + dg + db + da;
+    if (dist < best_dist) {
+      best_dist = dist;
+      best_idx  = i;
+    }
+  }
+  return best_idx;
+}
+
+// Get the RGBA color for pixel (x,y) by resolving its palette index.
+uint32_t canvas_get_pixel_rgba(const canvas_doc_t *doc, int x, int y) {
+  if (!canvas_in_bounds(doc, x, y)) return MAKE_COLOR(0,0,0,0);
+  uint8_t pidx = doc->pixels[(size_t)y * doc->canvas_w + x];
+  if (pidx == (uint8_t)doc->ipal.transparent) return MAKE_COLOR(0,0,0,0);
+  return doc->ipal.entries[pidx];
+}
+#endif
+
 // Write a pixel directly (bypasses selection mask – used for paste/move commit).
 static void canvas_set_pixel_direct(canvas_doc_t *doc, int x, int y, uint32_t c) {
   if (!canvas_in_bounds(doc, x, y)) return;
+#if IMAGEEDITOR_INDEXED
+  doc->pixels[(size_t)y * doc->canvas_w + x] =
+      (uint8_t)canvas_nearest_palette_index(doc, c);
+#else
   uint8_t *p = doc->pixels + ((size_t)y * doc->canvas_w + x) * 4;
   p[0]=COLOR_R(c); p[1]=COLOR_G(c); p[2]=COLOR_B(c); p[3]=COLOR_A(c);
+#endif
   doc->canvas_dirty = true;
   doc->modified     = true;
 }
@@ -709,6 +838,10 @@ void canvas_set_pixel(canvas_doc_t *doc, int x, int y, uint32_t c) {
   if (!canvas_in_bounds(doc, x, y)) return;
   if (!canvas_in_selection(doc, x, y)) return;
 
+#if IMAGEEDITOR_INDEXED
+  doc->pixels[(size_t)y * doc->canvas_w + x] =
+      (uint8_t)canvas_nearest_palette_index(doc, c);
+#else
   uint8_t *p = doc->pixels + ((size_t)y * doc->canvas_w + x) * 4;
   if (doc->layer.editing_mask) {
     // Mask edits affect only alpha, while the RGB content stays intact.
@@ -717,18 +850,23 @@ void canvas_set_pixel(canvas_doc_t *doc, int x, int y, uint32_t c) {
   } else {
     p[0]=COLOR_R(c); p[1]=COLOR_G(c); p[2]=COLOR_B(c); p[3]=COLOR_A(c);
   }
+#endif
   doc->canvas_dirty = true;
   doc->modified     = true;
 }
 
 uint32_t canvas_get_pixel(const canvas_doc_t *doc, int x, int y) {
   if (!canvas_in_bounds(doc, x, y)) return MAKE_COLOR(0,0,0,0);
+#if IMAGEEDITOR_INDEXED
+  return canvas_get_pixel_rgba(doc, x, y);
+#else
   const uint8_t *p = doc->pixels + ((size_t)y * doc->canvas_w + x) * 4;
   return MAKE_COLOR(p[0],p[1],p[2],p[3]);
+#endif
 }
 
 void canvas_clear(canvas_doc_t *doc) {
-  memset(doc->pixels, 0x00, (size_t)doc->canvas_w * doc->canvas_h * 4);
+  memset(doc->pixels, 0x00, (size_t)doc->canvas_w * doc->canvas_h * DOC_BPP);
   doc->canvas_dirty = true;
   doc->modified     = false;
 }
@@ -1134,7 +1272,7 @@ void canvas_constrain_tool_drag(int tool_id, uint32_t mods,
 
 // Save pixel snapshot before starting a shape drag (no undo push yet)
 void canvas_shape_begin(canvas_doc_t *doc, int cx, int cy) {
-  size_t sz = (size_t)doc->canvas_w * doc->canvas_h * 4;
+  size_t sz = (size_t)doc->canvas_w * doc->canvas_h * DOC_BPP;
   if (!doc->shape.snapshot) {
     doc->shape.snapshot = malloc(sz);
   }
@@ -1151,7 +1289,7 @@ void canvas_shape_preview(canvas_doc_t *doc, int x0, int y0, int x1, int y1,
                           int tool, bool filled, uint32_t fg, uint32_t bg, bool shift_held) {
   // Restore snapshot
   if (doc->shape.snapshot) {
-    memcpy(doc->pixels, doc->shape.snapshot, (size_t)doc->canvas_w * doc->canvas_h * 4);
+    memcpy(doc->pixels, doc->shape.snapshot, (size_t)doc->canvas_w * doc->canvas_h * DOC_BPP);
     doc->canvas_dirty = true;
   }
   canvas_constrain_tool_drag(tool, shift_held ? AX_MOD_SHIFT : 0, x0, y0, &x1, &y1);
@@ -1562,7 +1700,6 @@ bool canvas_crop_or_expand_to_selection(canvas_doc_t *doc) {
 }
 
 // Extract the current selection into a float buffer and clear that region.
-// Enters "move mode": the caller should track float_pos deltas and call
 // canvas_commit_move() when the drag ends.
 void canvas_begin_move(canvas_doc_t *doc, uint32_t bg) {
   if (!doc || !doc->sel.active || doc->sel.move.active) return;
@@ -1751,12 +1888,12 @@ void canvas_flip_h(canvas_doc_t *doc) {
   int w = doc->canvas_w, h = doc->canvas_h;
   for (int y = 0; y < h; y++) {
     for (int x = 0; x < w / 2; x++) {
-      uint8_t *l = doc->pixels + ((size_t)y * w + x) * 4;
-      uint8_t *r = doc->pixels + ((size_t)y * w + (w - 1 - x)) * 4;
+      uint8_t *l = doc->pixels + ((size_t)y * w + x) * DOC_BPP;
+      uint8_t *r = doc->pixels + ((size_t)y * w + (w - 1 - x)) * DOC_BPP;
       uint8_t tmp[4];
-      memcpy(tmp, l, 4);
-      memcpy(l, r, 4);
-      memcpy(r, tmp, 4);
+      memcpy(tmp, l, DOC_BPP);
+      memcpy(l, r, DOC_BPP);
+      memcpy(r, tmp, DOC_BPP);
     }
   }
   doc->canvas_dirty = true;
@@ -1767,7 +1904,7 @@ void canvas_flip_h(canvas_doc_t *doc) {
 void canvas_flip_v(canvas_doc_t *doc) {
   if (!doc) return;
   int w = doc->canvas_w, h = doc->canvas_h;
-  size_t row_bytes = (size_t)w * 4;
+  size_t row_bytes = (size_t)w * DOC_BPP;
   uint8_t *tmp = malloc(row_bytes);
   if (!tmp) return;
   for (int y = 0; y < h / 2; y++) {
@@ -1785,6 +1922,17 @@ void canvas_flip_v(canvas_doc_t *doc) {
 // Invert all pixel colors (complement R, G, B; leave alpha unchanged).
 void canvas_invert_colors(canvas_doc_t *doc) {
   if (!doc) return;
+#if IMAGEEDITOR_INDEXED
+  // Invert by remapping palette entries — leave pixel indices unchanged.
+  for (int i = 0; i < doc->ipal.count && i < 256; i++) {
+    if (i == doc->ipal.transparent) continue;
+    uint32_t c = doc->ipal.entries[i];
+    doc->ipal.entries[i] = MAKE_COLOR((uint8_t)(255 - COLOR_R(c)),
+                                      (uint8_t)(255 - COLOR_G(c)),
+                                      (uint8_t)(255 - COLOR_B(c)),
+                                      COLOR_A(c));
+  }
+#else
   size_t n = (size_t)doc->canvas_w * doc->canvas_h;
   for (size_t i = 0; i < n; i++) {
     uint8_t *p = doc->pixels + i * 4;
@@ -1793,6 +1941,7 @@ void canvas_invert_colors(canvas_doc_t *doc) {
     p[2] = (uint8_t)(255 - p[2]);
     // alpha unchanged
   }
+#endif
   doc->canvas_dirty = true;
   doc->modified     = true;
 }
@@ -1856,6 +2005,23 @@ static void sample_layer_bilinear(const layer_t *lay, int old_w, int old_h,
 static uint8_t *layer_resample_pixels(const layer_t *lay, int old_w, int old_h,
                                       int new_w, int new_h,
                                       image_resize_filter_t filter) {
+#if IMAGEEDITOR_INDEXED
+  // Indexed mode: use nearest-neighbor only (palette indices can't be interpolated).
+  uint8_t *buf = malloc((size_t)new_w * new_h);
+  if (!buf) return NULL;
+  float sx_scale = (float)old_w / (float)new_w;
+  float sy_scale = (float)old_h / (float)new_h;
+  for (int y = 0; y < new_h; y++) {
+    for (int x = 0; x < new_w; x++) {
+      int sx = (int)(((float)x + 0.5f) * sx_scale);
+      int sy = (int)(((float)y + 0.5f) * sy_scale);
+      sx = MAX(0, MIN(old_w - 1, sx));
+      sy = MAX(0, MIN(old_h - 1, sy));
+      buf[(size_t)y * new_w + x] = lay->pixels[(size_t)sy * old_w + sx];
+    }
+  }
+  return buf;
+#else
   uint8_t *buf = malloc((size_t)new_w * new_h * 4);
   if (!buf) return NULL;
   float sx_scale = (float)old_w / (float)new_w;
@@ -1872,6 +2038,7 @@ static uint8_t *layer_resample_pixels(const layer_t *lay, int old_w, int old_h,
     }
   }
   return buf;
+#endif
 }
 
 static void layer_replace_pixels(layer_t *lay, uint8_t *pixels) {
@@ -1962,6 +2129,7 @@ bool canvas_resize(canvas_doc_t *doc, int new_w, int new_h) {
 
 bool png_save(const char *path, const canvas_doc_t *doc) {
   // Composite all layers before saving.
+  // In indexed mode, composite() already expands palette indices to RGBA.
   size_t sz = (size_t)doc->canvas_w * doc->canvas_h * 4;
   uint8_t *comp = malloc(sz);
   if (!comp) return false;

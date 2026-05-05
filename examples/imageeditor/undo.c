@@ -6,7 +6,7 @@
 //   [snap_header_t]
 //   for each layer:
 //     [snap_layer_hdr_t]
-//     [canvas_w * canvas_h * 4]  pixel data (RGBA)
+//     [canvas_w * canvas_h * DOC_BPP]  pixel data
 
 #include "imageeditor.h"
 
@@ -40,7 +40,7 @@ static void clear_stack(uint8_t **states, int *count) {
 // Serialize the full layer stack into a heap blob; returns NULL on OOM.
 static uint8_t *make_snapshot(const canvas_doc_t *doc) {
   if (!doc || doc->layer.count == 0) return NULL;
-  size_t px_sz = (size_t)doc->canvas_w * doc->canvas_h * 4;
+  size_t px_sz = (size_t)doc->canvas_w * doc->canvas_h * DOC_BPP;
 
   size_t total = sizeof(snap_header_t);
   for (int i = 0; i < doc->layer.count; i++) {
@@ -85,7 +85,7 @@ static bool restore_snapshot(canvas_doc_t *doc, const uint8_t *blob) {
   int      n     = hdr->layer_count;
   int      new_w = hdr->canvas_w;
   int      new_h = hdr->canvas_h;
-  size_t   px_sz = (size_t)new_w * new_h * 4;
+  size_t   px_sz = (size_t)new_w * new_h * DOC_BPP;
   const uint8_t *p = blob + sizeof(snap_header_t);
 
   layer_t **nl = malloc(sizeof(layer_t *) * n);
