@@ -151,6 +151,8 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
 
   doc->canvas_w = w;
   doc->canvas_h = h;
+  doc->background_color = MAKE_COLOR(0xFF, 0xFF, 0xFF, 0xFF);
+  doc->show_background = true;
   // Guard against integer overflow in the pixel buffer allocation.
   // Reject images larger than 16384x16384 to keep the size_t arithmetic safe.
   if ((size_t)w > 16384 || (size_t)h > 16384 ||
@@ -162,7 +164,7 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
   doc->composite_buf = malloc((size_t)w * (size_t)h * 4);
   if (!doc->composite_buf) { free(doc); return NULL; }
 
-  // Add the initial background layer (doc_add_layer also sets doc->pixels).
+  // Add the initial transparent layer (doc_add_layer also sets doc->pixels).
   if (!doc_add_layer(doc)) {
     free(doc->composite_buf);
     free(doc);

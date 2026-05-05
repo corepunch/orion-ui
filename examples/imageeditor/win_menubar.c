@@ -198,10 +198,24 @@ window_t *create_main_toolbar_window(void) {
 
 void imageeditor_sync_main_toolbar(void) {
   if (!g_app || !g_app->main_toolbar_win) return;
-  window_t *btn = get_window_item(g_app->main_toolbar_win, ID_VIEW_MASK_ONLY);
-  if (!btn) return;
-  bool checked = g_app->active_doc && g_app->active_doc->mask_only_view;
-  send_message(btn, btnSetCheck, checked ? btnStateChecked : btnStateUnchecked, NULL);
+  bitmap_strip_t *strip = ui_get_sysicon_strip();
+  window_t *mask_btn = get_window_item(g_app->main_toolbar_win, ID_VIEW_MASK_ONLY);
+  window_t *bg_btn   = get_window_item(g_app->main_toolbar_win, ID_VIEW_SHOW_BACKGROUND);
+
+  if (mask_btn) {
+    bool checked = g_app->active_doc && g_app->active_doc->mask_only_view;
+    send_message(mask_btn, btnSetCheck, checked ? btnStateChecked : btnStateUnchecked, NULL);
+  }
+
+  if (bg_btn) {
+    bool checked = !g_app->active_doc || g_app->active_doc->show_background;
+    send_message(bg_btn, btnSetCheck, checked ? btnStateChecked : btnStateUnchecked, NULL);
+    if (strip) {
+      int icon = checked ? (sysicon_eye_show - SYSICON_BASE)
+                         : (sysicon_eye_hide - SYSICON_BASE);
+      send_message(bg_btn, btnSetImage, (uint32_t)icon, strip);
+    }
+  }
 }
 
 // Prefix strings for toggleable menu items.
@@ -224,6 +238,10 @@ static void view_menu_rebuild(void) {
       s_view_items[i].label = g_app->grid_snap
                               ? MENU_CHECK_ON "Snap to Grid"
                               : MENU_CHECK_OFF "Snap to Grid";
+    if (s_view_items[i].id == ID_VIEW_SHOW_BACKGROUND)
+      s_view_items[i].label = (!doc || doc->show_background)
+                              ? MENU_CHECK_ON "Show Background"
+                              : MENU_CHECK_OFF "Show Background";
     if (s_view_items[i].id == ID_VIEW_MASK_ONLY)
       s_view_items[i].label = (doc && doc->mask_only_view)
                               ? MENU_CHECK_ON "Mask Only View"
@@ -276,7 +294,7 @@ bool imageeditor_open_file_path(const char *path) {
     return false;
   }
 
-  // Swap the white placeholder pixels for the actual loaded image.
+  // Swap the transparent placeholder pixels for the actual loaded image.
   // Update both the layer buffer and the convenience alias.
   image_free(ndoc->layers[0]->pixels);
   ndoc->layers[0]->pixels = px;
@@ -621,6 +639,18 @@ void handle_menu_command(uint16_t id) {
         doc_set_mask_only_view(doc, !doc->mask_only_view);
         if (doc->canvas_win)
           invalidate_window(doc->canvas_win);
+        view_menu_rebuild();
+      }
+      break;
+
+    case ID_VIEW_SHOW_BACKGROUND:
+      if (doc) {
+        doc->show_background = !doc->show_background;
+        if (doc->canvas_win)
+          invalidate_window(doc->canvas_win);
+        if (g_app->timeline_win)
+          invalidate_window(g_app->timeline_win);
+        imageeditor_sync_main_toolbar();
         view_menu_rebuild();
       }
       break;

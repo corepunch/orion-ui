@@ -103,6 +103,7 @@
         <separator />
         <item id="ID_VIEW_SHOW_GRID" value="47" label="[ ] Show Grid" />
         <item id="ID_VIEW_SNAP_GRID" value="48" label="[ ] Snap to Grid" />
+        <item id="ID_VIEW_SHOW_BACKGROUND" value="72" label="[x] Show Background" />
         <item id="ID_VIEW_MASK_ONLY" value="56" label="[ ] Mask Only View" />
         <separator />
         <item id="ID_VIEW_GRID_OPTIONS" value="49" label="Grid Options..." />
@@ -151,6 +152,7 @@
         <button id="ID_VIEW_ZOOM_1X" icon="sysicon_image_dimensions" text="1x" />
         <button id="ID_VIEW_ZOOM_FIT" icon="sysicon_expand" text="Fit" />
         <spacer w="10" />
+        <button id="ID_VIEW_SHOW_BACKGROUND" icon="sysicon_eye_show" flags="BUTTON_PUSHLIKE" text="BG" />
         <button id="ID_VIEW_MASK_ONLY" icon="sysicon_transparency" flags="BUTTON_PUSHLIKE" text="Mask" />
       </toolbar>
     </toolbars>

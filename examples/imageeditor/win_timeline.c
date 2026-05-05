@@ -125,7 +125,7 @@ static void update_play_button_icon(window_t *win) {
 }
 
 // Draw a single frame cell at position cx in client space.
-static void draw_cell(const timeline_state_t *st, int idx,
+static void draw_cell(const timeline_state_t *st, canvas_doc_t *doc, int idx,
                       bool active, bool hover, int h) {
   int cx = cell_x(st, idx);
   int cw = TIMELINE_THUMB_W;
@@ -140,8 +140,13 @@ static void draw_cell(const timeline_state_t *st, int idx,
     int ty = CELL_PAD;
     int tw = cw - CELL_PAD * 2;
     int th = THUMB_H;
-    if (tw > 0 && th > 0)
+    if (tw > 0 && th > 0) {
+      if (doc && doc->show_background)
+        fill_rect(doc->background_color, R(tx, ty, tw, th));
+      else
+        draw_checkerboard(R(tx, ty, tw, th), CANVAS_CHECKER_SQUARE_PX);
       draw_rect(st->thumbs[idx], R(tx, ty, tw, th));
+    }
   }
 
   // Frame number label.
@@ -214,7 +219,7 @@ static result_t timeline_proc(window_t *win, uint32_t msg,
           int cx = cell_x(st, i);
           if (cx + TIMELINE_THUMB_W < 0) continue;
           if (cx > w) break;
-          draw_cell(st, i, i == active, i == st->hover_cell, h);
+          draw_cell(st, doc, i, i == active, i == st->hover_cell, h);
         }
       }
       return true;
