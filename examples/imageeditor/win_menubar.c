@@ -868,12 +868,22 @@ void handle_menu_command(uint16_t id) {
       if (doc && doc->anim) {
         anim_stop_playback(doc);
         // Commit current pixels to the active frame, then insert a new blank
-        // frame after it.  The user stays on the current frame so their drawing
-        // is not lost; they can click the new frame in the timeline to switch.
+        // frame after it, then switch to the new frame so the user can keep
+        // drawing immediately on the next frame.
         if (anim_frame_compress(doc->anim->frames[doc->anim->active_frame],
                                 doc->pixels, doc->canvas_w, doc->canvas_h,
                                 FRAME_FORMAT_RGBA)) {
-          anim_timeline_insert_frame(doc->anim, doc->anim->active_frame);
+          int new_idx = anim_timeline_insert_frame(doc->anim, doc->anim->active_frame);
+          if (new_idx >= 0 &&
+              anim_timeline_switch_frame(doc->anim, new_idx,
+                                         &doc->pixels,
+                                         doc->canvas_w, doc->canvas_h,
+                                         FRAME_FORMAT_RGBA)) {
+            if (doc->layer.count > 0)
+              doc->layer.stack[doc->layer.active]->pixels = doc->pixels;
+            doc->canvas_dirty = true;
+            if (doc->canvas_win) invalidate_window(doc->canvas_win);
+          }
           timeline_win_refresh();
         }
       }
@@ -966,6 +976,15 @@ void handle_menu_command(uint16_t id) {
     case ID_ANIM_LOOP:
       if (doc && doc->anim) {
         doc->anim->loop = !doc->anim->loop;
+        timeline_win_refresh();
+      }
+      break;
+
+    case ID_ANIM_TRACE:
+      if (g_app) {
+        g_app->anim_trace_enabled = !g_app->anim_trace_enabled;
+        if (doc && doc->canvas_win)
+          invalidate_window(doc->canvas_win);
         timeline_win_refresh();
       }
       break;

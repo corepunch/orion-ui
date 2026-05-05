@@ -211,6 +211,45 @@ void test_ie_large_document_windows_cascade(void) {
     PASS();
 }
 
+void test_ie_anim_new_frame_selects_inserted_frame(void) {
+    TEST("Anim: New Frame inserts a blank frame and selects it");
+
+    ie_setup();
+    canvas_doc_t *doc = create_document(NULL, 4, 4);
+    ASSERT_NOT_NULL(doc);
+    g_app->active_doc = doc;
+
+    canvas_set_pixel(doc, 0, 0, MAKE_COLOR(0xAA, 0x11, 0x22, 0xFF));
+    canvas_set_pixel(doc, 1, 0, MAKE_COLOR(0x33, 0x44, 0x55, 0xFF));
+
+    handle_menu_command(ID_ANIM_NEW_FRAME);
+
+    ASSERT_NOT_NULL(doc->anim);
+    ASSERT_EQUAL(doc->anim->frame_count, 2);
+    ASSERT_EQUAL(doc->anim->active_frame, 1);
+    ASSERT_EQUAL(canvas_get_pixel(doc, 0, 0), MAKE_COLOR(0x00, 0x00, 0x00, 0x00));
+    ASSERT_EQUAL(canvas_get_pixel(doc, 1, 0), MAKE_COLOR(0x00, 0x00, 0x00, 0x00));
+
+    ie_teardown();
+    PASS();
+}
+
+void test_ie_anim_trace_toggle(void) {
+    TEST("Anim: trace toggle flips the onion-skin overlay state");
+
+    ie_setup();
+    ASSERT_FALSE(g_app->anim_trace_enabled);
+
+    handle_menu_command(ID_ANIM_TRACE);
+    ASSERT_TRUE(g_app->anim_trace_enabled);
+
+    handle_menu_command(ID_ANIM_TRACE);
+    ASSERT_FALSE(g_app->anim_trace_enabled);
+
+    ie_teardown();
+    PASS();
+}
+
 // Palette windows are created correctly and their pointers are stored.
 void test_ie_palette_windows_created(void) {
     TEST("create palette windows: g_app->tool_win and g_app->color_win are valid");
@@ -1934,6 +1973,8 @@ int main(int argc, char *argv[]) {
     test_ie_close_multiple_documents();
     test_ie_document_windows_cascade();
     test_ie_large_document_windows_cascade();
+    test_ie_anim_new_frame_selects_inserted_frame();
+    test_ie_anim_trace_toggle();
     test_ie_palette_windows_created();
     test_ie_close_tool_window_clears_pointer();
     test_ie_reopen_tool_window();

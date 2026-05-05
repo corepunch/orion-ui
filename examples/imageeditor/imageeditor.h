@@ -136,6 +136,9 @@ extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 
 #define ID_COLOR_SWAP     54
 
+// Timeline toolbar-only command IDs.
+#define ID_ANIM_TRACE     413
+
 #define ID_FILTER_BASE   1000
 #define IMAGEEDITOR_MAX_FILTERS 64
 
@@ -307,6 +310,9 @@ typedef struct {
   ipoint16_t    hover;       // canvas pixel coords under the cursor
   bool          hover_valid; // true when hover is on the canvas (for magnifier overlay)
   GLuint        mag_tex;     // GL texture for magnifier loupe (created once, updated each paint)
+  GLuint        onion_tex;    // GL texture for animation trace overlay
+  int           onion_tex_w;  // cached canvas width for onion_tex
+  int           onion_tex_h;  // cached canvas height for onion_tex
   char          last_sb[64]; // last text sent to status bar — avoids redundant updates
 } canvas_win_state_t;
 
@@ -328,6 +334,8 @@ typedef struct {
   uint32_t       anim_timer_id; // axSetTimer handle for playback; 0 = stopped
   hinstance_t    hinstance;  // owning app instance
   int            current_tool;
+  bool           anim_trace_enabled; // onion-skin overlay toggle for animation frames
+  int            anim_trace_frames;  // number of prior frames shown in trace mode
   uint32_t       palette[NUM_COLORS];
   uint32_t       fg_color;
   uint32_t       bg_color;

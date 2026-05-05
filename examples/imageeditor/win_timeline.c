@@ -40,6 +40,7 @@ static const toolbar_item_t kTimelineToolbar[] = {
   { TOOLBAR_ITEM_BUTTON, ID_ANIM_NEXT_FRAME,  sysicon_anim_frame_move_right, 0, 0, "Next Frame" },
   { TOOLBAR_ITEM_SPACER, 0, -1, 6, 0, NULL },
   { TOOLBAR_ITEM_BUTTON, ID_ANIM_PLAY,        sysicon_clock_play,            0, 0, "Play" },
+  { TOOLBAR_ITEM_BUTTON, ID_ANIM_TRACE,       -1,                            0, BUTTON_PUSHLIKE, "Trace" },
   { TOOLBAR_ITEM_BUTTON, ID_ANIM_NEW_FRAME,   sysicon_anim_frame_add,       0, 0, "New Frame" },
   { TOOLBAR_ITEM_BUTTON, ID_ANIM_DELETE_FRAME,sysicon_anim_frame_delete,    0, 0, "Delete Frame" },
 };
@@ -124,6 +125,15 @@ static void update_play_button_icon(window_t *win) {
   send_message(btn, btnSetImage, (uint32_t)icon, strip);
 }
 
+static void update_trace_button_state(window_t *win) {
+  if (!win || !g_app) return;
+  window_t *btn = get_window_item(win, ID_ANIM_TRACE);
+  if (!btn) return;
+  send_message(btn, btnSetCheck,
+               g_app->anim_trace_enabled ? btnStateChecked : btnStateUnchecked,
+               NULL);
+}
+
 // Draw a single frame cell at position cx in client space.
 static void draw_cell(const timeline_state_t *st, canvas_doc_t *doc, int idx,
                       bool active, bool hover, int h) {
@@ -177,6 +187,7 @@ static result_t timeline_proc(window_t *win, uint32_t msg,
                    (uint32_t)(sizeof(kTimelineToolbar) / sizeof(kTimelineToolbar[0])),
                    (void *)kTimelineToolbar);
       update_play_button_icon(win);
+      update_trace_button_state(win);
       anim_render_init();
       return true;
     }
@@ -329,6 +340,8 @@ static result_t timeline_proc(window_t *win, uint32_t msg,
         canvas_doc_t *doc = tl_doc();
         handle_menu_command(doc && doc->anim && doc->anim->playing
                             ? ID_ANIM_STOP : ID_ANIM_PLAY);
+      } else if (wparam == ID_ANIM_TRACE) {
+        handle_menu_command(ID_ANIM_TRACE);
       } else {
         handle_menu_command((uint16_t)wparam);
       }
@@ -369,6 +382,7 @@ window_t *create_timeline_window(void) {
 void timeline_toolbar_sync(void) {
   if (!g_app || !g_app->timeline_win) return;
   update_play_button_icon(g_app->timeline_win);
+  update_trace_button_state(g_app->timeline_win);
 }
 
 void timeline_win_refresh(void) {

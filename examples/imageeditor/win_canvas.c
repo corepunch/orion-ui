@@ -499,6 +499,49 @@ static void canvas_draw_selection_mask_overlay(canvas_doc_t *doc,
                    UI_RENDER_EFFECT_SELECTION_MASK, &params);
 }
 
+static void canvas_draw_animation_trace(window_t *win,
+                                        canvas_win_state_t *state,
+                                        canvas_doc_t *doc,
+                                        irect16_t canvas_rect) {
+  if (!win || !state || !doc || !doc->anim || !g_app || !g_app->anim_trace_enabled)
+    return;
+  if (doc->layer.mask_only_view || doc->anim->frame_count <= 1)
+    return;
+  if (doc->anim->active_frame <= 0)
+    return;
+
+  int trace_frames = g_app->anim_trace_frames > 0 ? g_app->anim_trace_frames : 3;
+  if (trace_frames <= 0)
+    return;
+
+  int available = MIN(trace_frames, doc->anim->active_frame);
+  if (available <= 0)
+    return;
+
+  if (state->onion_tex_w != doc->canvas_w || state->onion_tex_h != doc->canvas_h) {
+    if (state->onion_tex) {
+      glDeleteTextures(1, &state->onion_tex);
+      state->onion_tex = 0;
+    }
+    state->onion_tex_w = doc->canvas_w;
+    state->onion_tex_h = doc->canvas_h;
+  }
+
+  for (int step = available; step >= 1; step--) {
+    int idx = doc->anim->active_frame - step;
+    if (idx < 0) break;
+    const anim_frame_t *frame = doc->anim->frames[idx];
+    if (!frame) continue;
+
+    float alpha = 0.18f + 0.12f * (float)(available - step);
+    if (alpha > 0.42f) alpha = 0.42f;
+    if (alpha < 0.05f) alpha = 0.05f;
+
+    if (anim_render_frame_thumbnail(frame, doc->canvas_w, doc->canvas_h, &state->onion_tex))
+      draw_rect_ex((int)state->onion_tex, canvas_rect, 0, alpha);
+  }
+}
+
 result_t win_canvas_proc(window_t *win, uint32_t msg,
                           uint32_t wparam, void *lparam) {
   canvas_win_state_t *state = (canvas_win_state_t *)win->userdata;
@@ -521,6 +564,10 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         glDeleteTextures(1, &state->mag_tex);
         state->mag_tex = 0;
       }
+      if (state && state->onion_tex) {
+        glDeleteTextures(1, &state->onion_tex);
+        state->onion_tex = 0;
+      }
       return false;
     }
 
@@ -542,6 +589,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           fill_rect(doc->background.color, canvas_rect);
         else
           draw_checkerboard(canvas_rect, CANVAS_CHECKER_SQUARE_PX);
+        canvas_draw_animation_trace(win, state, doc, canvas_rect);
         for (int li = 0; li < doc->layer.count; li++) {
           const layer_t *lay = doc->layer.stack[li];
           if (!lay || !lay->visible) continue;
