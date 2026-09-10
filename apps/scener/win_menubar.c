@@ -77,11 +77,20 @@ static scene_doc_t *current_doc(void) {
 }
 
 static bool is_create_primitive(uint16_t id) {
-  return id >= ID_CREATE_BOX && id <= ID_CREATE_ARCH;
+  return id >= ID_CREATE_BOX && id <= ID_CREATE_WINDOW_GOTHIC;
 }
 
 bool scener_create_primitive(scene_doc_t *doc, uint16_t id, vec3 ground_pos) {
   if (!doc || !is_create_primitive(id)) return false;
+  if (id >= ID_CREATE_WINDOW_ROUND && id <= ID_CREATE_WINDOW_GOTHIC) {
+    const char *preset = id == ID_CREATE_WINDOW_ROUND ? "round-arch" : id == ID_CREATE_WINDOW_COTTAGE ? "cottage" : "gothic";
+    if (!scene_create_window(&doc->scene, preset, ground_pos)) return false;
+    doc->modified = true;
+    doc_update_title(doc);
+    property_browser_refresh();
+    if (doc->viewport_win) invalidate_window(doc->viewport_win);
+    return true;
+  }
   Mesh m = {0};
   float lift = 0.0f;
   switch (id) {
@@ -164,8 +173,8 @@ void handle_menu_command(uint16_t id) {
         if (get_save_filename(&ofn)) {
           strncpy(doc->filename, path, sizeof(doc->filename)-1);
           doc->filename[sizeof(doc->filename)-1] = '\0';
-          scene_save_all(&doc->scene);
-          doc->modified = false;
+          snprintf(doc->scene.scenePath, sizeof(doc->scene.scenePath), "%s", path);
+          if (scene_save_all(&doc->scene)) doc->modified = false;
           doc_update_title(doc);
         }
       }
@@ -232,6 +241,9 @@ void handle_menu_command(uint16_t id) {
     case ID_CREATE_PRISM:
     case ID_CREATE_CAPSULE:
     case ID_CREATE_ARCH:
+    case ID_CREATE_WINDOW_ROUND:
+    case ID_CREATE_WINDOW_COTTAGE:
+    case ID_CREATE_WINDOW_GOTHIC:
       if (doc) {
         doc->scene.createMode = id;
         doc->scene.editMode = EDIT_Q_SELECT;

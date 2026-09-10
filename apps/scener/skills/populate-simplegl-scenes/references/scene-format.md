@@ -28,12 +28,12 @@ The complete supported element inventory is:
 
 | Placement | Elements |
 |-----------|----------|
-| `<scene>` attributes | `ambient`, `background` |
+| `<scene>` attributes | `ambient`, `background`, `up`, `convention` |
 | Scene configuration | `<camera>`, `<material>`, `<sun>`, `<chardef>`, `<shape>` |
-| Transformable content | `<box>`, `<sphere>`, `<cylinder>`, `<capsule>`, `<arch>`, `<prism>`, `<cone>`, `<pyramid>`, `<torus>`, `<lathe>`, `<loft>`, `<wall>`, `<group>`, `<prefab>`, `<light>`, `<line>`, `<dummy>` |
+| Transformable content | `<box>`, `<sphere>`, `<cylinder>`, `<capsule>`, `<arch>`, `<prism>`, `<cone>`, `<pyramid>`, `<torus>`, `<lathe>`, `<loft>`, `<wall>`, `<window>`, `<group>`, `<prefab>`, `<light>`, `<line>`, `<dummy>` |
 | Wall cutters | `<bool-negative-box>`, `<bool-negative-arch>`, `<bool-negative-cylinder>` |
 | Mesh modifiers | `<taper>`, `<twist>`, `<bend>`, `<stretch>`, `<skew>`, `<array>`, `<extrude>`, `<mirror>`, `<noise>`, `<shell>` |
-| Context-only children | `<camera><transform>`, `<shape><v>`, `<wall><opening>`, `<prefab><attach>` |
+| Context-only children | `<camera><transform>`, `<shape><v>`, `<prefab><attach>` |
 
 Unknown elements produce an `unsupported XML element` warning. Element names
 and attribute names are case-sensitive.
@@ -51,9 +51,14 @@ make scener
 
 After changing a referenced `.blk`, re-run the same `.blks` render command;
 prefabs are loaded from disk for each Scener process. Batch rendering defaults
-to `1024x768`, all cameras, PNG output, and the local `render/` directory. It
+to `1280x800`, all cameras, JPEG output, and the current directory. It
 uses a hidden OpenGL context and returns nonzero on load, camera, context, or
 write failure.
+
+For scenes authored against the 3ds Max conversion on upstream main, use
+`<scene convention="3dsmax">`: position/rotation `(x,y,z)` maps to `(x,z,-y)`
+and box size maps to `(x,z,y)` in the Y-up renderer. This takes precedence
+over `up`. Omit it to keep native axes and the explicit `up="z"` view mode.
 
 ## Quick example
 
@@ -81,7 +86,7 @@ framebuffer encode the result for display.
 
 | XML data | Authored meaning | Renderer treatment |
 |----------|------------------|--------------------|
-| `ambient`, `background` | sRGB color | Converted once to linear |
+| `ambient`, `background`, `up`, `convention` | sRGB color | Converted once to linear |
 | Material, shape, prefab, unlit, and dummy `color` | sRGB color | Converted once to linear |
 | Light and sun `color` | sRGB color/chromaticity | Converted once to linear |
 | Light and sun `intensity` | Linear scalar | Never color-converted |
@@ -169,6 +174,15 @@ Preset background IDs:
 ```
 
 ## Config tags (top-level children of `<scene>`)
+
+### World up axis
+
+`<scene up="y">` (the default) uses Y up; `<scene up="z">` uses Z up for
+camera views, interactive navigation, ground placement and diagnostic layouts.
+This never rearranges geometry coordinates, rotations or primitive local axes.
+For Z-up scenes, cylinders and walls still have local Y height; rotate them
+`rot="90 0 0"` when that local height must point along world Z. Box size always
+remains local X/Y/Z. The scene's horizontal compass mapping is authored separately.
 
 ### `<camera>`
 
@@ -394,7 +408,7 @@ All shapes share common attributes plus shape-specific ones. Shapes may contain 
 |--------------|--------|------------------|-------------|
 | `pos`        | vec3   | 0 0 0            | World position |
 | `rot`        | vec3   | 0 0 0            | Euler rotation `rx ry rz` in degrees, applied X→Y→Z |
-| `scale`      | vec3   | 1 1 1            | Non-uniform scale (ignored by `<wall>`) |
+| `scale`      | vec3   | 1 1 1            | Non-uniform scale |
 | `material`   | string | (none)           | Reference to a `<material id="...">` |
 | `color`      | vec3   | 0.8 0.8 0.8      | Diffuse sRGB colour (used if no material ref) |
 | `shininess`  | float  | 8.0              | Specular exponent (used if no material ref) |
@@ -468,6 +482,170 @@ Round-arched solid or frame extruded along Z. This is useful for Roman-arch or r
 | `thickness` | float | 0     | Alias for `tube`, in cm |
 | `segments` | int   | 16      | Semicircle subdivisions |
 | `inset` | float | 0 | Additional inset between the outer arch and hollow frame opening, in cm |
+
+### `<window>`
+
+A procedural fixed window. One authored element owns the perimeter frame,
+optional undivided pane, optional sill and automatic wall opening. Prefer this
+primitive for supported window types instead of assembling separate boxes,
+arches and cutters. All generated parts select and save as one window.
+
+Use the following schema for exact parameter names and defaults. See
+[procedural-windows.md](procedural-windows.md) for runnable examples of every
+preset/style, material overrides, recessed placement, open apertures, stacked
+windows and reusable prefabs.
+
+#### Window types and styles
+
+These are the complete supported sets; identifiers are case-sensitive.
+
+| `preset` | Outer outline | Default width × height (cm) | Default sill | Height constraint |
+|----------|---------------|----------------------------|--------------|-------------------|
+| `round-arch` (default) | Straight jambs and a semicircular head | 120 × 180 | Off | `height > width / 2` |
+| `cottage` | Rectangle | 120 × 140 | On | Positive height |
+| `gothic` | Straight jambs and two circular arcs meeting at a pointed head | 120 × 220 | Off | `height > sqrt(3) * width / 2` |
+
+| `style` | Default frame width | Other effects |
+|---------|---------------------|---------------|
+| `plain` (default) | `0.06 * min(width, height)` | None |
+| `storybook` | `0.10 * min(width, height)` | None; it does not add distortion, ornament or bars |
+
+Style and preset are independent: `preset="gothic" style="storybook"` is valid.
+There is no `roman`, `cartoon`, circular, opening/casement, grille or tracery
+preset. `round-arch` has fixed semicircular proportions; `gothic` has fixed
+pointed-arch proportions. There is no independent arch-rise/radius parameter.
+Change `width`/`height` to regenerate the profile. Nonuniform `scale` stretches
+finished geometry, including frame thickness; it does not recompute defaults.
+
+#### Window-specific parameters
+
+All lengths are centimetres before transforms. Use `0` or `1` for booleans.
+Explicit values override defaults; omitted values are recomputed from the
+current dimensions, style and frame width each time the scene is loaded.
+
+| Attribute | Type | Default | Meaning / constraints |
+|-----------|------|---------|-----------------------|
+| `preset` | enum string | `round-arch` | One of the three presets above |
+| `style` | enum string | `plain` | `plain` or `storybook` |
+| `width` | positive float, cm | 120 | Full outer width of frame and cutter |
+| `height` | positive float, cm | Preset table | Full outer height, including the curved head; must satisfy the preset's height constraint |
+| `frameWidth` | positive float, cm | Style table | Inward offset from the sampled outer profile; must leave a nonempty inner opening |
+| `depth` | positive float, cm | `1.5 * frameWidth` | Frame extrusion depth, centred on local Z=0 |
+| `frameMaterial` | material ID | `material`, or `wood` if neither is set | Material shared by frame and sill |
+| `glassMaterial` | material ID | `glass` | Pane material; define custom IDs with `<material>` in the containing scene |
+| `pane` | boolean | 1 | Generate the pane; `0` leaves the framed aperture open |
+| `paneDepth` | positive float, cm | 2 | Pane extrusion thickness |
+| `paneOffset` | finite float, cm | 0 | Pane centre offset along local Z; positive is toward the front |
+| `sill` | boolean | 1 for cottage, otherwise 0 | Generate the rectangular sill beneath the opening; does not mean elevation above the floor |
+| `sillHeight` | positive float, cm | `frameWidth` | Sill height below the opening |
+| `sillProjection` | nonnegative float, cm | `frameWidth` | Extra depth beyond the frame's front and overhang at **each** side; one value controls both |
+| `cutWalls` | boolean | 1 | Register the outer profile as a cutter for matching `<wall>` elements |
+| `cutDepth` | positive float, cm | `depth` | Depth of the matching volume, centred on the window; does not set the hole's final depth |
+| `segments` | integer | 32 | Arc subdivisions, 8–128 inclusive; odd values round up to even; accepted/validated but geometrically unused for cottage |
+
+For example, a 140 × 200 round-arch with storybook style defaults to a 14 cm
+frame and 21 cm depth. Setting `frameWidth="8"` changes the default depth to
+12 cm. An explicitly authored `depth="20"` stays 20 cm when frame width changes.
+
+With a pane enabled, `abs(paneOffset) + paneDepth / 2 <= depth / 2` must hold.
+For `depth="20" paneDepth="2"`, valid offsets are −9 through +9 cm. Positive
+length parameters are validated even when their optional component is disabled:
+use `pane="0"`, not `paneDepth="0"`; use `sill="0"`, not `sillHeight="0"`.
+All dimensions must be finite. Leave practical clearance from the mathematical
+height limit and verify that the requested frame inset leaves glass area.
+
+#### Common attributes and their window semantics
+
+| Attribute | Default | Window behaviour |
+|-----------|---------|------------------|
+| `name` | None | Names the single window element for selection and camera `<transform target="...">` overrides |
+| `pos` | `0 0 0` | Centre of the outer opening's bounding rectangle in the parent frame |
+| `rot` | `0 0 0` | Degrees, following the common X→Y→Z convention |
+| `scale` | `1 1 1` | Unitless geometry/cutter scale; use nonzero components; reflections are supported |
+| `pivotOffset` | `0 0 0` | Pivot in local centimetres for transforms |
+| `material` | None | Frame/sill material fallback when `frameMaterial` is absent |
+| `castShadow` | 1 | Applies to frame and sill; pane shadow casting is always off |
+| `renderable` | 1 | Applies to all visible window parts; does **not** disable its wall cut |
+| `unlit` | 0 | Applies to all window parts, not just the pane |
+
+Use named materials for color and shininess. Resolved frame/glass materials
+supply those values; a bare `color`, `shininess` or prefab tint is not a reliable
+way to override the default wood/glass materials. A `<group material="...">`
+is not a material override for its window children.
+
+#### Coordinates, sill and wall matching
+
+Window local X is width, Y is height, Z is depth. The front is +Z.
+`width`/`height` describe the **outer frame and opening**, not clear glass area.
+The optional sill extends beyond that bounding rectangle. For a Z-up scene,
+`rot="90 0 0"` maps window height to world Z and its front to world −Y.
+
+For a Z-up window with this rotation, the nominal opening bottom is
+`pos.z - height / 2`. To place a 200 cm opening with its bottom at Z=60,
+use `pos.z=160`. The wall origin is different: its base is at local Y=0,
+not half its height. Do not add a second vertical half-height to a wall.
+
+The sill spans `width + 2*sillProjection` horizontally. In depth it spans
+`-depth/2` to `depth/2 + sillProjection`, with its top seated into the frame
+by a tiny internal overlap. It does not automatically extend to the wall face.
+For a centred window in a wall of thickness T, the visible front projection is
+`depth/2 + sillProjection - T/2`. Increase `sillProjection` when this is too
+small. This also increases the side overhang; independent dimensions are not
+implemented. See the recessed-window recipe for a worked calculation.
+
+A wall matches when its thickness axis is parallel to the window's thickness
+axis, its slab intersects the window's `cutDepth` volume, and the outer profile
+overlaps the wall in-plane. The window's XY plane must remain parallel to the
+wall's XY plane; an in-plane rotation is allowed, an oblique cut is not.
+The resulting hole uses the **exact sampled outer profile** and crosses the
+complete wall thickness. A thin frame can therefore cut a thick wall without
+setting `cutDepth` to that thickness. For a surface-mounted window outside the
+slab, enlarge `cutDepth` enough to reach the slab; it can match more than one
+wall, so do not use an unnecessarily large value.
+
+The prepass finds windows inside ordinary groups and prefabs, before building
+walls. XML order is immaterial. Window/cutter transforms include parent
+transforms, nonuniform scale, reflections and named camera overrides. Moving a
+window in the editor rebuilds the wall opening. Overlapping cuts remove their
+union, stacked windows work, and a profile may extend beyond a wall edge.
+These describe **cutting**, not a guarantee that overlapping visible frames
+form sensible architecture. Window-bearing walls can also contain legacy
+rectangular, round-arch and circular cutters.
+
+#### Supported composition and current limits
+
+- Place `<window>` at scene level or inside `<group>` / prefab content. It is
+  a sibling of `<wall>`, not a child of it: a wall's children are `<opening>`
+  declarations only. Do not add a duplicate negative shape or `<opening>` for
+  a procedural window with `cutWalls="1"`.
+- `<window>` must have no children. Any child element, including `<array>`,
+  `<extrude>`, `<shape>` or a material definition, rejects the whole window.
+  Its extrusion is built in through `depth` and `frameWidth`.
+- Do not use `attach` on the window or attach-based placement for a containing
+  window assembly. The cutter prepass does not resolve attach placements.
+- Repeat windows with explicit `<window>` or `<prefab>` instances. Do not put
+  an `<array>` on a window-containing prefab: visible prefab copies are
+  expanded, but the cutter prepass does not repeat their cuts.
+- Only `<wall>` geometry is cut, not `<box>` or arbitrary meshes. To use an
+  insert in an existing authored hole, set `cutWalls="0"` and match the opening.
+- `cutWalls="0"` does not hide geometry. `renderable="0"` does not stop cutting.
+  `pane="0"` removes only the pane, retaining the frame, sill and cutter.
+- Glass uses the renderer's existing opaque material rendering. It does not
+  give a transparent view of outside scenery. Panes never cast shadows, so
+  lighting may pass through conceptually. No window light is created; author
+  a separate sun or motivated point light in the scene/group/prefab.
+- Only fixed, undivided panes are supported. Opening sashes, shutters, grids,
+  fans, tracery, bevels and custom curve syntax are not window parameters.
+- The editor's Create controls offer all three presets, and the property
+  browser displays their attributes. The browser is currently read-only;
+  configure detailed parameters in XML. The editor can move/rotate/scale and
+  save the window as one source element.
+
+Unknown presets/styles, unusable dimensions/insets, out-of-frame panes,
+`attach`, or children are diagnosed and produce neither window nor cutter.
+Treat these diagnostics as validation failures even if the CLI exits zero.
+Unknown attributes may be ignored; do not invent parameter names based on
+features available in another modeller.
 
 ### `<capsule>`
 
@@ -628,7 +806,7 @@ axes. Parent or prefab rotation is supported when the cutter and wall remain
 aligned. Oblique cutters are ignored.
 
 ```xml
-<!-- window.blk: origin is the opening center; local +Z faces the room -->
+<!-- Custom rectangular insert: for standard windows prefer <window>. -->
 <prefab>
   <bool-negative-box size="200 170 30"/>
   <box pos="-94 0 4" size="12 170 16" material="wood"/>
@@ -643,10 +821,12 @@ Do not declare a duplicate child `<opening>` on the wall.
 ### `<bool-negative-arch>`
 
 A non-rendered round-arch wall cutter using the same transform rules and wall-only
-scope as `<bool-negative-box>`. It accepts `width`, `height`, and `depth`;
-align local Z to the wall thickness and extend `depth` completely through both
-wall faces. Pair it with visible `<arch>` frame geometry carrying the same
-outer width and height.
+scope as `<bool-negative-box>`. It reads `width`, `height` and `depth`; align local
+Z to the wall thickness and extend `depth` completely through both wall faces.
+The legacy cutter does not read `segments`, so an independently authored arch
+frame is not guaranteed to share its sampled boundary. Prefer `<window>` for
+windows: it owns both the geometry and exact cutter profile. Keep this primitive
+for custom inserts such as doorways.
 
 ```xml
 <prefab>
@@ -688,6 +868,7 @@ Modifiers are child elements of mesh-producing shapes: `<box>`, `<sphere>`,
 `<torus>`, `<lathe>`, and `<loft>`. They are applied in document order in
 local space before the shape transform. `<array>` is also accepted as a child
 of a `<prefab>` instance, where it repeats the complete prefab assembly.
+`<window>` does not accept modifier children.
 
 Deform modifiers (`taper`, `twist`, `bend`, `stretch`, `skew`) operate relative to the object's bounding box along the chosen axis. The axis range [min, max] is mapped to [0, 1]. Each accepts `axis="y"` (`x`, `y`, or `z`), defaulting to `"y"`.
 

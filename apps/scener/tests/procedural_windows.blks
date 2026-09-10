@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<scene up="z" ambient="0.35 0.38 0.43" background="0.13 0.19 0.26">
+  <material id="cream" color="0.78 0.69 0.53" shininess="6" />
+  <material id="teal" color="0.08 0.32 0.32" shininess="18" />
+  <material id="oak" color="0.49 0.27 0.11" shininess="12" />
+  <material id="limestone" color="0.64 0.63 0.56" shininess="6" />
+  <material id="blue-glass" color="0.28 0.51 0.68" shininess="70" />
+  <camera name="front" pos="0 -920 190" look="0 0 160" fov="45" comment="Compare the three silhouettes and verify continuous frame-to-pane joins." />
+  <camera name="oblique" pos="390 -850 360" look="0 0 145" fov="48" comment="Inspect frame depth, projecting sill and wall reveals." />
+  <camera name="rear" pos="-270 850 330" look="0 0 145" fov="48" comment="Verify that each outer silhouette cuts through the complete wall." />
+  <sun dir="-0.5 0.7 -1" color="1 0.9 0.75" intensity="1.1" />
+  <light pos="-220 -350 310" color="0.76 0.87 1" intensity="1.3" radius="1300" castShadows="1" />
+  <box pos="0 0 -5" size="720 200 10" material="limestone" />
+  <wall pos="0 0 0" rot="90 0 0" length="660" height="300" thickness="32" material="cream" />
+  <window name="round" preset="round-arch" style="storybook" pos="-215 0 150" rot="90 0 0" width="140" height="200" frameMaterial="teal" glassMaterial="blue-glass" />
+  <window name="cottage" preset="cottage" sillProjection="24" pos="0 0 150" rot="90 0 0" width="140" height="160" frameMaterial="oak" glassMaterial="blue-glass" />
+  <window name="gothic" preset="gothic" pos="215 0 150" rot="90 0 0" width="120" height="230" frameMaterial="limestone" glassMaterial="blue-glass" />
+</scene>

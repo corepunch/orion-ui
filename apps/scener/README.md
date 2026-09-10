@@ -1,5 +1,8 @@
 # Scener
 
+Current Orion build, batch rendering and deployment instructions are in
+[CLI.md](CLI.md).
+
 A very small modular OpenGL scene renderer with real-time **stencil shadow
 volumes**. Shadows are a first-class composition tool: position lights and
 casters to create long silhouettes, pools of light, strong contrast, and
@@ -112,9 +115,9 @@ loads the scene, and writes one clean render per camera without editor overlays:
 
 The required argument is a `.blks` scene or `.blk` prefab. A prefab opened
 directly uses Scener's default preview camera and lights. Resolution defaults
-to `1024x768`, PNG is the default format, all scene cameras are rendered by
-default, and output defaults to the local `render/` directory. Camera names
-become filenames such as `render/Main.png`. Inspect scene cameras or override
+to `1280x800`, JPEG is the default format, all scene cameras are rendered by
+default, and output defaults to the current directory. Camera names
+become filenames such as `Main.jpg`. Inspect scene cameras or override
 each optional value:
 
 ```sh
@@ -154,9 +157,7 @@ scene geometry or a shadow volume:
 ./build/bin/scener --render apps/scener/scenes/sample_room.blks -no-shadows
 ```
 
-Overlay the generated shadow volumes as red wireframes while retaining the
-filled, lit scene. This is a diagnostic mode; it does not render scene geometry
-as an unlit wireframe:
+Render scene geometry as unlit white wireframes:
 
 ```sh
 ./build/bin/scener --render apps/scener/scenes/sample_room.blks -wireframe
@@ -172,15 +173,16 @@ The same batch interface makes direct mode comparisons reproducible:
 
 Interpret these outputs as follows:
 
-- `render/shaded/Main.png` is the expected production camera view: filled,
+- `render/shaded/Main.jpg` is the expected production camera view: filled,
   material-colored, lit, and shadowed.
-- `render/unshadowed/Main.png` is still filled and lit, but receives no stencil
+- `render/unshadowed/Main.jpg` is still filled and lit, but receives no stencil
   shadows.
-- `render/wireframe/Main.png` includes red shadow-volume edges by explicit
-  request. Red wireframes must never appear in the default output.
+- `render/wireframe/Main.jpg` shows unlit white scene geometry. For the
+  upstream red shadow-volume diagnostic, use `-d 2`.
 - Dense black triangular streaks in a default render are not wireframe mode.
-  They indicate an invalid or open shadow-casting mesh whose stencil volume
-  does not close correctly. Compare against `-no-shadows`, then repair the
+  On a supported GPU they can indicate an invalid or open shadow-casting mesh.
+  The known-bad Apple Software Renderer is rejected for shadow exports.
+  Compare against `-no-shadows`, then repair the
   caster topology or set `castShadow="0"` only when the object intentionally
   must not cast a shadow.
 
@@ -308,3 +310,11 @@ workflow.
 - No texturing — flat/vertex colors only.
 - `<wall>` openings are axis-aligned rectangles only (that's the whole
   "boxes instead of real CSG" trade-off described above).
+
+## Procedural windows
+
+Use `<window preset="round-arch|cottage|gothic">` for a fixed window whose
+outer profile also cuts matching walls. Frame, pane and optional sill share one
+source element; `style="storybook"` supplies a thicker frame default.
+The Create menu includes all three presets. See the [window format reference](skills/populate-simplegl-scenes/references/scene-format.md#window)
+and [three-window review scene](tests/procedural_windows.blks).

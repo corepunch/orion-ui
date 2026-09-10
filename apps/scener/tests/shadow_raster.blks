@@ -1,0 +1,17 @@
+<scene up="z" ambient="0.3 0.3 0.3" background="0.1 0.12 0.15">
+  <box size="740 1030 12" pos="0 245 -6" color="0.65 0.60 0.50"/>
+  <box size="740 12 400" pos="0 760 200" color="0.8 0.75 0.65"/>
+  <box size="100 120 180" pos="-180 470 90" color="0.7 0.2 0.1"/>
+  <box size="100 120 100" pos="160 170 50" color="0.1 0.4 0.6"/>
+  <light pos="-230 360 330" color="1 0.85 0.65" intensity="1.3" castShadows="1"/>
+  <light pos="250 520 330" color="0.6 0.75 1" intensity="0.8" castShadows="1"/>
+  <camera name="a" pos="0 -230 295" look="0 430 65" fov="62"/>
+  <camera name="b" pos="0 -230 295" look="0 430 110" fov="62"/>
+  <camera name="c" pos="0 -230 295" look="0 430 160" fov="62"/>
+  <camera name="d" pos="0 -230 330" look="0 430 65" fov="62"/>
+  <camera name="e" pos="0 -230 330" look="0 430 110" fov="62"/>
+  <camera name="f" pos="0 -230 330" look="0 430 160" fov="62"/>
+  <camera name="g" pos="0 -230 365" look="0 430 65" fov="62"/>
+  <camera name="h" pos="0 -230 365" look="0 430 110" fov="62"/>
+  <camera name="i" pos="0 -230 365" look="0 430 160" fov="62"/>
+</scene>

@@ -69,6 +69,13 @@ typedef struct {
 	vec3 *pts; int npts,cpts;
 } LoftPath;
 
+typedef enum { WINDOW_RECTANGLE, WINDOW_ROUND_ARCH, WINDOW_POINTED_ARCH } window_outline_t;
+Shape2D shape2d_window(window_outline_t outline,float width,float height,int segments);
+Shape2D shape2d_inset(const Shape2D *profile,float distance);
+Mesh gen_profile_extrusion(const Shape2D *profile,float depth);
+Mesh gen_profile_frame(const Shape2D *outer,const Shape2D *inner,float depth);
+Mesh gen_profile_cutouts(const Shape2D *boundary,const Shape2D *holes,int nholes,float depth);
+
 void shape2d_free(Shape2D *s);
 void shape2d_compute_normals(Shape2D *s);
 Mesh gen_lathe(Shape2D *profile,int segments);
@@ -120,6 +127,7 @@ typedef struct { Mesh mesh; vec3 color; float shininess; int castsShadow,rendera
 typedef struct { char name[32]; vec3 pos; } AttachPoint;
 typedef struct { char ref[32]; char path[256]; void *root; AttachPoint *attaches; int nattaches, cattaches; } PrefabDef;
 typedef struct { char name[32]; char ref[32]; mat4 transform, rotMatrix; } InstanceDef;
+typedef struct { mat4 transform; Shape2D profile; float depth; } negative_profile_t;
 typedef struct { mat4 transform; vec3 size; } NegativeBox;
 typedef struct { mat4 transform; float width,height,depth; } NegativeArch;
 typedef struct { mat4 transform; float radius,depth; } NegativeCylinder;
@@ -146,7 +154,8 @@ enum {
 };
 
 typedef struct {
-	vec3 camPos,camLook; float camFov;
+	vec3 camPos,camLook,worldUp; float camFov;
+	int convention3dsMax;
 	Camera *cameras; int ncameras,ccameras;
 	vec3 ambient,bg;
 	Light *lights; int nlights,clights;
@@ -155,6 +164,7 @@ typedef struct {
 	ShadowVolume *svols;
 	PrefabDef *prefabs; int nprefabs,cprefabs;
 	InstanceDef *instances; int ninstances,cinstances;
+	negative_profile_t *negativeProfiles; int nnegativeProfiles,cnegativeProfiles;
 	NegativeBox *negativeBoxes; int nnegativeBoxes,cnegativeBoxes;
 	NegativeArch *negativeArches; int nnegativeArches,cnegativeArches;
 	NegativeCylinder *negativeCylinders; int nnegativeCylinders,cnegativeCylinders;
@@ -202,6 +212,7 @@ int scene_enter_selected_prefab(Scene *s);
 int scene_exit_prefab(Scene *s);
 int scene_selected_prefab_path(Scene *s,char *path,size_t pathSize);
 int scene_save_all(Scene *s);
+int scene_create_window(Scene *s,const char *preset,vec3 ground);
 int scene_is_prefab_mode(Scene *s);
 const char *scene_node_tag(const void *node);
 const char *scene_node_attr(const void *node,const char *name);
@@ -230,6 +241,8 @@ void scene_rebuild_node_shadow_volumes(Scene *s,void *editNode);
 #define DBG_HIDE_LIGHTS     (1 << 3)
 #define DBG_HIDE_CHARS      (1 << 4)
 #define DBG_HIDE_GIZMOS     (1 << 5)
+#define DBG_WIREFRAME       (1 << 6)
+#define DBG_FLAT            (1 << 7)
 
 void render_frame(Scene *s,int w,int h,mat4 proj,mat4 view,vec3 camPos,vec3 camLook,int debugFlags);
 

@@ -5,11 +5,13 @@ description: Implement, populate, edit, compose, or validate SimpleGL XML scenes
 
 # Populate SimpleGL XML Scenes
 
-Build scenes in stable local coordinate frames and verify them with CLI checks and tests.
+Build scenes in stable local coordinate frames and verify them with CLI checks and tests. Author lengths in centimetres, rotations in degrees and scales as unitless values. New scenes declare `<scene up="z">`; primitive local axes remain unchanged.
 
 ## Read the relevant references
 
 - Read [references/scene-format.md](references/scene-format.md) for supported XML tags, attributes, defaults, rotations, modifiers, and prefabs.
+- For windows, read the complete [window schema](references/scene-format.md#window) and [procedural-window recipes](references/procedural-windows.md). These list every supported preset/style and parameter, with runnable placement examples and current limitations.
+- Read [../../CLI.md](../../CLI.md) for the active Scener commands; historical `simplegl` and standalone `screenshot` commands are obsolete.
 - Read [references/layout-and-validation.md](references/layout-and-validation.md) whenever placing walls, openings, inserts, furniture, cameras, lights, or prefabs.
 - Read [references/shot-composition-guide.md](references/shot-composition-guide.md) whenever placing or revising cameras, and use it to define each shot's story purpose, framing, continuity, negative space, and field of view.
 - Read [references/alone-in-the-dark-layout-study.md](references/alone-in-the-dark-layout-study.md) whenever planning a multi-room floor, fixed-camera coverage regions and handoffs, corridors, column rhythms, or stair traversal shots.
@@ -27,8 +29,8 @@ Build scenes in stable local coordinate frames and verify them with CLI checks a
 9. Audit every visible contact: joined assembly parts terminate cleanly against their supports, while unrelated objects retain deliberate negative space without accidental overlap or tangency.
 10. Audit coverage: every `CANON` element and required initial state is represented, every hero/secondary design element reads in at least one intended camera, and any deliberate omission is documented. For story cameras, audit the actor/action/target as well as the environment: place one camera-scoped character dummy for each character who must appear, choose a readable pose aimed toward the interaction target, and never rely on a camera merely pointing at an empty object to imply the action.
 11. Validate XML, build the project, and run the tests.
-12. Load the scene with `./build/bin/scener --list-cameras PATH.blks` and check its declared cameras.
-13. When composition, lighting, or references are part of the request, render the affected cameras with `./build/bin/scener --render PATH.blks --camera CameraName --output-dir render/review`, then inspect the PNG before accepting the edit. Review the result as an art-direction problem: identify generic hero silhouettes, empty functional volumes, weak upper-space occupation, flat front-on staging, repetitive prop rhythm, implausible scale, missing reference motifs, blocked actions, tangencies, and false grouping. Correct the scene and render again. Use `-d 24` to hide lamp and character editor overlays. For every camera requiring a character, also render a blocking review with `-d 8`, which hides camera/lamp helpers but keeps character gizmos visible; confirm the correct actor appears once, at the correct support height, with a readable pose and gesture toward the focal target. Rendered review complements, but does not replace, CLI validation.
+12. Load the scene through the CLI and check its declared cameras.
+13. When composition, lighting, or references are part of the request, render the affected cameras with `scener --render scenes/scene.blks --camera CameraName --size 1536x1024 --format jpg --output-dir /tmp/scene-review`, then inspect the image before accepting the edit. Review the result as an art-direction problem: identify generic hero silhouettes, empty functional volumes, weak upper-space occupation, flat front-on staging, repetitive prop rhythm, implausible scale, missing reference motifs, blocked actions, tangencies, and false grouping. Correct the scene and render again. Batch renders hide editor overlays by default. For every camera requiring a character, also render a blocking review with `-d 8`, which hides camera/lamp helpers but keeps character gizmos visible; confirm the correct actor appears once, at the correct support height, with a readable pose and gesture toward the focal target. Screenshot review complements, but does not replace, CLI validation.
 14. For every interior room, place at least one motivated practical or window light that casts readable shadows. Match visible lamp geometry to its light position, establish a clear key direction, and use weaker fill only where needed to keep important actions legible.
 15. Correct every invariant violation found through brief coverage, coordinate calculations, XML validation, scene loading, screenshot review, or tests.
 
@@ -90,6 +92,15 @@ unknown nodes but ignores them, silently falling back to its defaults.
 See [references/scene-format.md](references/scene-format.md#color-space-and-numeric-units)
 for the complete attribute classification and renderer data flow.
 
+## Procedural windows
+
+- Use the existing presets and parameters from the schema; do not infer features from other modellers. `style="storybook"` is valid with any of the three presets. `style="cartoon"`, bars, tracery and opening sashes are not implemented.
+- Author windows as siblings of walls or inside a shared group/prefab, never as wall children. Use `rot="90 0 0"` for an otherwise unrotated Z-up window; keep its cutter plane parallel to its wall.
+- Specify outer dimensions; the frame, inner pane and exact wall cut derive from them. Use `frameWidth` and `depth` directly; `<window>` rejects all child elements, including modifiers.
+- Treat `pane`, `sill`, `cutWalls`, `renderable` and `castShadow` as independent controls. Omit a pane with `pane="0"`, not a zero thickness. `sill` is a boolean on a window but an elevation on a legacy `<opening>`.
+- For recessed windows, calculate whether `depth/2 + sillProjection` clears the wall's front face. The sill does not find that face automatically. Use named frame/glass materials; the pane is opaque and no light is generated automatically.
+- Consult the recipe reference for explicit prefab repetition, stacked windows, dimension constraints, material precedence and troubleshooting before constructing a custom workaround.
+
 ## Spatial invariants
 
 - Treat `pos`, `rot`, and `scale` as transforms in the parent group's coordinate frame.
@@ -99,7 +110,7 @@ for the complete attribute classification and renderer data flow.
   - center Y: `opening.sill + opening.height / 2`
   - center Z: `0`
 - Align the smallest dimension of a thin insert with the wall's local Z thickness axis.
-- Prefer a window or door prefab containing its own `<bool-negative-box>` so the opening and insert cannot drift apart. Match the outer frame extents to the cutter extents; inset only the pane or explicitly recessed pieces.
+- Prefer `<window preset="round-arch|cottage|gothic">` for supported fixed windows; choose one literal preset, not the pipe-separated list. Its outer profile already cuts matching walls. Do not add a duplicate `<opening>` or negative shape. For custom door/other inserts, keep the correctly shaped cutter and visible geometry together in one prefab.
 - Keep inserts smaller than their opening only when visible construction clearance is intentional.
 - Treat a gap or penetration larger than `0.001` scene units as an error unless the design explicitly requires it.
 - Make structural and decorative members terminate deliberately. Bars, mullions, rails, legs, cords, and similar joined parts must meet their intended frame or support within `0.001`; never leave endpoints floating visibly inside open space. For a member ending at a curved boundary, calculate the curve intersection at the member's full width instead of extending or shortening it by eye.
@@ -128,18 +139,37 @@ for the complete attribute classification and renderer data flow.
 
 ## Required CLI validation
 
+For scene/prefab authoring, use the deployed Scener CLI from the consuming
+project's working directory (replace paths/camera names with the actual target):
+
 ```sh
 xmllint --noout scenes/scene.blks
 xmllint --xpath 'count(/scene/ambient | /scene/background)' scenes/scene.blks
-make
-make test
-./build/bin/scener --list-cameras scenes/scene.blks
-./build/bin/scener --render scenes/scene.blks --size 320x240 --output-dir render/validation
+scener --list-cameras scenes/scene.blks
+scener --render scenes/scene.blks --camera CameraName --size 1536x1024 --format jpg --output-dir /tmp/scene-review
 ```
 
-Run `xmllint` on every edited scene and prefab. Use the actual target path in place of `scenes/scene.blks`. Treat parser errors, `unsupported XML element` warnings on stderr, unresolved materials or prefabs, build warnings, test failures, and invalid camera declarations as failures. Keep this technical gate distinct from the mandatory rendered-camera review; neither substitutes for the other.
-The XPath count must print `0`; any other value means scene-wide settings were
-written as ignored child elements instead of root attributes.
+Run `xmllint` on every edited scene and prefab. The XPath count must be `0`.
+The active CLI has no `-test` mode; camera listing loads the scene but is not a
+layout/geometry audit. Inspect stderr as well as exit status: unsupported tags,
+invalid window parameters, unresolved materials or prefabs are failures even
+when loading returns zero. Inspect affected raster views to validate actual
+contacts, silhouettes and through-wall openings. Use the GPU-backed shadow
+rendering described in [../../CLI.md](../../CLI.md).
+
+When Scener code changes, build from the Orion UI root and run the focused tests:
+
+```sh
+cd ~/Developer/mapview/ui
+make build/bin/scener build/bin/test_scener_input_test
+DYLD_LIBRARY_PATH="$PWD/build/lib" ./build/bin/test_scener_input_test
+python3 apps/scener/deploy.py --prefix "$HOME/.local"
+python3 apps/scener/tests/test_cli.py "$HOME/.local/bin/scener"
+```
+
+Run `test_shadow_backend.py` as described in `CLI.md` for renderer/backend
+changes. Artwork or documentation changes alone do not require rebuilding an
+unchanged engine. Do not rerender unrelated artwork to verify instructions.
 
 ## Prefab rules
 
@@ -150,7 +180,7 @@ written as ignored child elements instead of root attributes.
 - Declare `<attach>` elements on prefabs that have meaningful surface reference points (tabletop center, seat surface, shelf height). Name the primary work surface `top_surface`; use `under_center`, `shelf_lower`, `shelf_upper`, or `edge_n`/`edge_s` for secondary slots.
 - Define a shelf attach at the center of each usable shelf surface. Name them by tier (`shelf_lower`, `shelf_upper`). Treat edge anchors as separate, explicitly named slots rather than using an edge as the default surface anchor.
 - Keep a practical light, its unlit emitter, and its shadow-casting shade in one prefab. Verify transformed and scaled instances keep the point light inside the emitter and on the emitting side of the shade lip.
-- Put a wall insert's `<bool-negative-box>` and all visible frame geometry in the same prefab. Center the prefab on the desired opening, align its local Z with wall thickness, and make the cutter deep enough to cross the complete wall.
+- A window prefab contains `<window>` as its insert and cutter. Keep it centred on the opening, with local Z aligned to wall thickness. For custom inserts without a procedural window, keep the cutter and visible frame in one prefab and size the cutter to cross the wall. Repeat window prefabs with explicit instances: prefab `<array>` copies do not repeat cutters. Do not use attach-based placement for window assemblies.
 - Use `source=` on `<prefab>` to specify the file; `name=` only when something references this instance via `attach`.
 - Use `sanityIgnore="1"` only for a documented intentional overlap that the proxy checker cannot model, such as a wall insert owning its cutter. Never exempt a hero, furniture assembly, traversal mechanism, or practical light merely to obtain a passing scene test; correct its placement or explain the exact checker limitation.
 - Verify a directional prefab's `0`, `90`, `-90`, and `180` orientation mappings numerically before using it repeatedly.

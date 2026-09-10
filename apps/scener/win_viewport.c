@@ -45,6 +45,7 @@ typedef struct {
 	render_texture_t target;
 	uint32_t present_program;
 	float cam_yaw, cam_pitch;
+	vec3 world_up;
 	int last_mouse_x, last_mouse_y, orbiting, left_down;
 	uint32_t navigation_timer;
 	longTime_t last_move_time;
@@ -81,19 +82,21 @@ static GLuint vp_create_present_program(void) {
 
 static vec3 vp_camera_dir(const viewport_state_t *vp) {
 	float yaw = vp->cam_yaw * M_PIf / 180.0f, pitch = vp->cam_pitch * M_PIf / 180.0f;
-	return v3(cosf(pitch) * sinf(yaw), sinf(pitch), -cosf(pitch) * cosf(yaw));
+	vec3 dir=v3(cosf(pitch)*sinf(yaw),sinf(pitch),-cosf(pitch)*cosf(yaw));
+	return vp->world_up.z>0?v3(dir.x,-dir.z,dir.y):dir;
 }
 
 static vec3 vp_mouse_ray(const viewport_state_t *vp, const Scene *scene, int x, int y, int w, int h) {
-	vec3 fwd = vp_camera_dir(vp), right = vnorm(vcross(fwd, v3(0, 1, 0))), up = vnorm(vcross(right, fwd));
+	vec3 fwd = vp_camera_dir(vp), right = vnorm(vcross(fwd, vp->world_up)), up = vnorm(vcross(right, fwd));
 	float tan_h = tanf((scene->camFov > 0 ? scene->camFov : DEFAULT_FOV) * M_PIf / 360.0f);
 	float nx = (float)x / w * 2.0f - 1.0f, ny = 1.0f - (float)y / h * 2.0f;
 	return vnorm(vadd(vadd(fwd, vscale(right, nx * tan_h * (float)w / h)), vscale(up, ny * tan_h)));
 }
 
 static vec3 vp_ground_point(const Scene *scene, vec3 ray) {
-	if (fabsf(ray.y) > CREATE_GROUND_EPSILON) {
-		float t = -scene->camPos.y / ray.y;
+	float vertical=vdot(ray,scene->worldUp);
+	if (fabsf(vertical) > CREATE_GROUND_EPSILON) {
+		float t = -vdot(scene->camPos,scene->worldUp) / vertical;
 		if (t > 0.0f) return vadd(scene->camPos, vscale(ray, t));
 	}
 	return vadd(scene->camPos, vscale(ray, CREATE_FALLBACK_DEPTH));
@@ -114,13 +117,13 @@ static bool vp_move_camera(viewport_state_t *vp, scene_doc_t *doc) {
 	float dt = (float)(now - vp->last_move_time) / 1000.0f;
 	vp->last_move_time = now;
 	if (dt <= 0 || dt > MOVE_DT_CAP) dt = MOVE_DT_FALLBACK;
-	vec3 look = vp_camera_dir(vp), right = vnorm(vcross(look, v3(0, 1, 0))), move = v3(0, 0, 0);
+	vec3 look = vp_camera_dir(vp), right = vnorm(vcross(look, vp->world_up)), move = v3(0, 0, 0);
 	if (ui_is_key_down(AX_KEY_W)) move = vadd(move, look);
 	if (ui_is_key_down(AX_KEY_S)) move = vsub(move, look);
 	if (ui_is_key_down(AX_KEY_D)) move = vadd(move, right);
 	if (ui_is_key_down(AX_KEY_A)) move = vsub(move, right);
-	if (ui_is_key_down(AX_KEY_E)) move = vadd(move, v3(0, 1, 0));
-	if (ui_is_key_down(AX_KEY_Q)) move = vsub(move, v3(0, 1, 0));
+	if (ui_is_key_down(AX_KEY_E)) move = vadd(move, vp->world_up);
+	if (ui_is_key_down(AX_KEY_Q)) move = vsub(move, vp->world_up);
 	if (vlen(move) <= 1e-6f) return false;
 	float speed = ui_is_key_down(AX_KEY_SHIFT) ? MOVE_SPEED_FAST : MOVE_SPEED_NORMAL;
 	doc->scene.camPos = vadd(doc->scene.camPos, vscale(vnorm(move), speed * dt));
@@ -257,7 +260,7 @@ static void vp_render(viewport_state_t *vp, scene_doc_t *doc) {
 	scene->camLook = vadd(scene->camPos, dir);
 	mat4 proj = mat4_perspective(scene->camFov > 0 ? scene->camFov : DEFAULT_FOV,
 		(float)target->width / target->height, PERSP_NEAR, PERSP_FAR);
-	mat4 view = mat4_lookat(scene->camPos, scene->camLook, v3(0, 1, 0));
+	mat4 view = mat4_lookat(scene->camPos, scene->camLook, scene->worldUp);
 	glBindFramebuffer(GL_FRAMEBUFFER, target->fbo);
 	glViewport(0, 0, target->width, target->height);
 	glScissor(0, 0, target->width, target->height);
@@ -271,8 +274,9 @@ static void vp_init_camera(viewport_state_t *vp, const Scene *scene) {
 	vec3 dir = vsub(scene->camLook, scene->camPos);
 	if (vlen(dir) < DIR_EPSILON) dir = v3(0, 0, -1);
 	dir = vnorm(dir);
-	vp->cam_yaw = atan2f(dir.x, -dir.z) * 180.0f / M_PIf;
-	vp->cam_pitch = asinf(dir.y) * 180.0f / M_PIf;
+	vp->world_up=scene->worldUp;
+	vp->cam_yaw=atan2f(dir.x,scene->worldUp.z>0?dir.y:-dir.z)*180.0f/M_PIf;
+	vp->cam_pitch=asinf(scene->worldUp.z>0?dir.z:dir.y)*180.0f/M_PIf;
 }
 
 void scener_sync_viewport_camera(scene_doc_t *doc) {
@@ -409,7 +413,7 @@ result_t win_viewport(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
 			} else if (doc) {
 				irect16_t cr = get_client_rect(win);
 				if (cr.w <= 0 || cr.h <= 0) return true;
-				vec3 fwd = vp_camera_dir(vp), right = vnorm(vcross(fwd, v3(0, 1, 0))), up = vnorm(vcross(right, fwd));
+				vec3 fwd = vp_camera_dir(vp), right = vnorm(vcross(fwd, vp->world_up)), up = vnorm(vcross(right, fwd));
 				vec3 ray = vp_mouse_ray(vp, &doc->scene, mx, my, cr.w, cr.h);
 				if (vp->left_down && doc->scene.draggingHandle != GIZMO_NONE) {
 					gizmo_apply_drag(&doc->scene, mx, my, cr.w, cr.h, doc->scene.camPos, right, up, fwd, doc->scene.camFov);

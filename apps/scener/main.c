@@ -1,47 +1,43 @@
 #include "scener.h"
+#include <errno.h>
+#include <sys/stat.h>
 #include <orion/gem.h>
 #include <orion/ui.h>
 #include <orion/user/gl_compat.h>
-#include <orion/user/bmp_icon_loader.h>
 #include <orion/user/image.h>
+#include <orion/user/bmp_icon_loader.h>
 #include <platform/platform.h>
 #include <ctype.h>
-#include <float.h>
-#include <math.h>
 
 #define DEFAULT_FOV   60.0f
 #define PERSP_NEAR    0.1f
 #define PERSP_FAR     1000.0f
-#define SCENER_VERSION "1.0"
+#define SCENER_VERSION "1.1 Book CLI"
+#define CLI_MAX_SIZE 8192
+#define CLI_JPEG_QUALITY 95
+#define LAYOUT_PADDING 1.08f
+#define LAYOUT_CUT_FRACTION 0.85f
+#define LAYOUT_EYE_OFFSET 10.0f
+#define CLI_DEFAULT_SUPERSAMPLE 2
+#define CLI_MAX_SUPERSAMPLE 4
+#define CLI_BYTE_MAX 255.0f
+#define CLI_COLOR_GAMMA 2.2f
 
 typedef struct {
 	bool screenshot_mode;
-	bool list_cameras, show_help, show_version;
-	bool layout_mode;
+	bool batch, layout, list_cameras, help, version, invalid;
+	char output_dir[1024], format[8];
 	float layout_scale;
+	bool debug_flags_set;
 	char scene_path[512];
-	char output_dir[1024];
+	char output_path[1024];
 	char camera_name[32];
-	char format[8];
-	int width, height;
+	int width, height, supersample;
 	int debug_flags;
-	bool invalid_format;
 } scener_cli_t;
 
 app_state_t *g_app = NULL;
 static scener_cli_t g_cli;
-
-static bool scener_save_screenshot(const char *path, const uint8_t *pixels,
-                                   int width, int height) {
-	const char *ext = strrchr(path, '.');
-	if (ext && (!strcasecmp(ext, ".jpg") || !strcasecmp(ext, ".jpeg")))
-		return save_image_jpg(path, pixels, width, height, 90);
-	if (ext && !strcasecmp(ext, ".png"))
-		return save_image_png(path, pixels, width, height);
-	fprintf(stderr, "[scener] unsupported screenshot format: %s\n", path);
-	fflush(stderr);
-	return false;
-}
 
 // Navigation uses a reduced context-specific table while the viewport is
 // being dragged. The default command accelerators are generated from the
@@ -62,133 +58,84 @@ accel_table_t *scener_active_accelerators(void) {
   return g_app->viewport_navigating ? g_app->navigation_accel : g_app->accel;
 }
 
-static void cli_init(void) {
-	memset(&g_cli, 0, sizeof(g_cli));
-	g_cli.width = 1024;
-	g_cli.height = 768;
-	snprintf(g_cli.output_dir, sizeof(g_cli.output_dir), "%s", "render");
-	snprintf(g_cli.format, sizeof(g_cli.format), "%s", "png");
-}
-
-static void cli_parse_size(const char *s) {
-	int w = 0, h = 0;
-	if (!s) return;
-	if (sscanf(s, "%dx%d", &w, &h) != 2 && sscanf(s, "%d %d", &w, &h) != 2) return;
-	if (w > 0) g_cli.width = w;
-	if (h > 0) g_cli.height = h;
+static void cli_usage(void) {
+	puts("scener [SCENE] [--cam NAME]\n"
+	     "scener --render SCENE [--camera NAME] [--size WIDTHxHEIGHT] [--format jpg|png] [--output-dir DIR]\n"
+	     "scener --layout SCENE [--scale PIXELS_PER_CM] [--format jpg|png] [--output-dir DIR]\n"
+	     "scener --list-cameras SCENE\n"
+	     "scener SCENE --screenshot FILE [--cam NAME] [--size WIDTHxHEIGHT]\n"
+	     "Options: --supersample 1..4 (default 2), -no-shadows, -wireframe, -d FLAGS, --help, --version\n"
+	     "Scenes default to Y up; <scene up=\"z\"> selects Z-up views without changing primitive axes.");
 }
 
 static void cli_parse(int argc, char *argv[]) {
-	cli_init();
-	for (int i = 1; i < argc; i++) {
-		const char *arg = argv[i];
-		if (!arg || !arg[0]) continue;
-		if (!strcmp(arg, "--help") || !strcmp(arg, "-h")) {
-			g_cli.show_help = true;
+	memset(&g_cli,0,sizeof(g_cli));
+	g_cli.width=1280; g_cli.height=800; g_cli.layout_scale=2;g_cli.supersample=CLI_DEFAULT_SUPERSAMPLE;
+	strcpy(g_cli.format,"jpg"); strcpy(g_cli.output_dir,".");
+	g_cli.debug_flags=DBG_HIDE_CHARS|DBG_HIDE_LIGHTS;
+	for(int i=1;i<argc;i++){
+		const char *arg=argv[i], *value=NULL;
+		if(!strcmp(arg,"--help")||!strcmp(arg,"-h")){g_cli.help=true;continue;}
+		if(!strcmp(arg,"--version")||!strcmp(arg,"-V")){g_cli.version=true;continue;}
+		if(!strcmp(arg,"--render")){g_cli.batch=g_cli.screenshot_mode=true;continue;}
+		if(!strcmp(arg,"--layout")){g_cli.layout=g_cli.screenshot_mode=true;continue;}
+		if(!strcmp(arg,"--list-cameras")||!strcmp(arg,"-list-cameras")){g_cli.list_cameras=true;continue;}
+		if(!strcmp(arg,"-no-shadows")){g_cli.debug_flags|=DBG_NO_SHADOWS;continue;}
+		if(!strcmp(arg,"-wireframe")){g_cli.debug_flags|=DBG_WIREFRAME;continue;}
+		if(arg[0]!='-'){
+			if(g_cli.scene_path[0]){fprintf(stderr,"unexpected argument: %s\n",arg);g_cli.invalid=true;}
+			else snprintf(g_cli.scene_path,sizeof(g_cli.scene_path),"%s",arg);
 			continue;
 		}
-		if (!strcmp(arg, "--version") || !strcmp(arg, "-V")) {
-			g_cli.show_version = true;
-			continue;
-		}
-		if (!strcmp(arg, "--render")) {
-			g_cli.screenshot_mode = true;
-			continue;
-		}
-		if (!strcmp(arg, "--layout")) {
-			g_cli.layout_mode = true;
-			g_cli.screenshot_mode = true;
-			continue;
-		}
-		if (!strcmp(arg, "--scale")) {
-			if (i + 1 < argc) g_cli.layout_scale = (float)atof(argv[++i]);
-			continue;
-		}
-		if (!strcmp(arg, "--list-cameras")) {
-			g_cli.list_cameras = true;
-			continue;
-		}
-		if (!strcmp(arg, "--output-dir") || !strcmp(arg, "-o")) {
-			if (i + 1 < argc)
-				snprintf(g_cli.output_dir, sizeof(g_cli.output_dir), "%s", argv[++i]);
-			continue;
-		}
-		if (!strcmp(arg, "--camera") || !strcmp(arg, "--cam") || !strcmp(arg, "-cam")) {
-			if (i + 1 < argc) snprintf(g_cli.camera_name, sizeof(g_cli.camera_name), "%s", argv[++i]);
-			continue;
-		}
-		if (!strcmp(arg, "--size")) {
-			if (i + 1 < argc) cli_parse_size(argv[++i]);
-			continue;
-		}
-		if (!strcmp(arg, "--format")) {
-			if (i + 1 < argc) {
-				const char *format = argv[++i];
-				if (!strcasecmp(format, "jpg") || !strcasecmp(format, "jpeg"))
-					snprintf(g_cli.format, sizeof(g_cli.format), "%s", "jpg");
-				else if (!strcasecmp(format, "png"))
-					snprintf(g_cli.format, sizeof(g_cli.format), "%s", "png");
-				else
-					g_cli.invalid_format = true;
-			}
-			continue;
-		}
-		if (!strcmp(arg, "-d")) {
-			if (i + 1 < argc) {
-				g_cli.debug_flags = atoi(argv[++i]);
-			}
-			continue;
-		}
-		if (!strcmp(arg, "-no-shadows")) {
-			g_cli.debug_flags |= DBG_NO_SHADOWS;
-			g_cli.screenshot_mode = true;
-			continue;
-		}
-		if (!strcmp(arg, "-wireframe")) {
-			g_cli.debug_flags |= DBG_WIRE_SHADOWVOL;
-			g_cli.screenshot_mode = true;
-			continue;
-		}
-		if (arg[0] == '-') continue;
-		if (!g_cli.scene_path[0]) snprintf(g_cli.scene_path, sizeof(g_cli.scene_path), "%s", arg);
+		bool output=!strcmp(arg,"--screenshot")||!strcmp(arg,"--output")||!strcmp(arg,"-o");
+		bool output_dir=!strcmp(arg,"--output-dir")||(!strcmp(arg,"-o")&&(g_cli.batch||g_cli.layout));
+		if(output_dir)output=false;
+		bool camera=!strcmp(arg,"--camera")||!strcmp(arg,"--cam")||!strcmp(arg,"-cam");
+		bool known=output||output_dir||camera||!strcmp(arg,"--size")||!strcmp(arg,"--format")||!strcmp(arg,"--output-dir")||!strcmp(arg,"--scale")||!strcmp(arg,"--supersample")||!strcmp(arg,"-d");
+		if(!known){fprintf(stderr,"unsupported option: %s\n",arg);g_cli.invalid=true;continue;}
+		if(i+1>=argc){fprintf(stderr,"missing value for %s\n",arg);g_cli.invalid=true;continue;}
+		value=argv[++i];
+		if(output){g_cli.screenshot_mode=true;snprintf(g_cli.output_path,sizeof(g_cli.output_path),"%s",value);}
+		else if(camera) snprintf(g_cli.camera_name,sizeof(g_cli.camera_name),"%s",value);
+		else if(output_dir) snprintf(g_cli.output_dir,sizeof(g_cli.output_dir),"%s",value);
+		else if(!strcmp(arg,"--format")){
+			if(strcasecmp(value,"jpg")&&strcasecmp(value,"jpeg")&&strcasecmp(value,"png")){fprintf(stderr,"unsupported format: %s\n",value);g_cli.invalid=true;}
+			else snprintf(g_cli.format,sizeof(g_cli.format),"%s",!strcasecmp(value,"png")?"png":"jpg");
+		}else if(!strcmp(arg,"--size")){
+			char tail; int w,h;
+			if(sscanf(value,"%dx%d%c",&w,&h,&tail)!=2||w<=0||h<=0||w>CLI_MAX_SIZE||h>CLI_MAX_SIZE){fprintf(stderr,"invalid size: %s\n",value);g_cli.invalid=true;}
+			else{g_cli.width=w;g_cli.height=h;}
+		}else if(!strcmp(arg,"--scale")){
+			char *end; float scale=strtof(value,&end);
+			if(*end||!isfinite(scale)||scale<=0){fprintf(stderr,"invalid scale: %s\n",value);g_cli.invalid=true;}else g_cli.layout_scale=scale;
+		}else if(!strcmp(arg,"--supersample")){
+			char *end;long n=strtol(value,&end,10);
+			if(*end||n<1||n>CLI_MAX_SUPERSAMPLE){fprintf(stderr,"invalid supersampling: %s\n",value);g_cli.invalid=true;}else g_cli.supersample=(int)n;
+		}else if(!strcmp(arg,"-d")) g_cli.debug_flags=atoi(value);
 	}
+	if(g_cli.screenshot_mode&&!g_cli.scene_path[0]){fprintf(stderr,"rendering requires a scene\n");g_cli.invalid=true;}
+	if(g_cli.list_cameras&&!g_cli.scene_path[0]){fprintf(stderr,"camera listing requires a scene\n");g_cli.invalid=true;}
+	if((g_cli.layout&&g_cli.batch)||(g_cli.list_cameras&&g_cli.screenshot_mode)){fprintf(stderr,"select one CLI mode\n");g_cli.invalid=true;}
+	if(g_cli.screenshot_mode&&!g_cli.batch&&!g_cli.layout&&!g_cli.output_path[0]) strcpy(g_cli.output_path,"screenshot.png");
 }
 
-#ifndef BUILD_AS_GEM
-static void cli_print_help(void) {
-	printf("Usage:\n");
-	printf("  scener SCENE.blks\n");
-	printf("  scener --render SCENE.blks [OPTIONS]\n\n");
-	printf("Render options:\n");
-	printf("  --size WIDTHxHEIGHT    Output resolution (default: 1024x768)\n");
-	printf("  --camera NAME          Render one camera (default: all cameras)\n");
-	printf("  --output-dir DIR       Output directory (default: render/)\n");
-	printf("  --format png|jpg       Output format (default: png)\n");
-	printf("  --list-cameras         List scene cameras and exit\n");
-	printf("  --layout               Render orthographic top-down plan (auto-size from scene bounds)\n");
-	printf("  --scale N              Pixels per cm for --layout (default: 2)\n");
-	printf("  -no-shadows            Keep filled lighting but disable stencil shadows\n");
-	printf("  -wireframe             Overlay red shadow-volume wireframes\n\n");
-	printf("Default rendering uses filled materials, all scene lights, and each\n");
-	printf("light's castShadows setting. The -wireframe mode is a shadow-volume\n");
-	printf("diagnostic; it does not replace scene geometry with wireframe. Red\n");
-	printf("lines only appear in that diagnostic. Black triangular streaks in a\n");
-	printf("default render indicate an invalid or open shadow-casting mesh; compare\n");
-	printf("the same camera with -no-shadows, then repair the caster topology.\n\n");
-	printf("General options:\n");
-	printf("  -h, --help             Show this help and exit\n");
-	printf("  -V, --version          Show version and exit\n");
-}
-
-static bool cli_print_cameras(const char *path) {
-	Scene scene;
-	if (!load_scene(path, &scene)) return false;
-	for (int i = 0; i < scene.ncameras; i++)
-		printf("%s\t%s\n", scene.cameras[i].name, scene.cameras[i].comment);
-	scene_free(&scene);
+static bool cli_make_dirs(const char *path) {
+	char buf[1024];
+	if(strlen(path)>=sizeof(buf)){fprintf(stderr,"output directory too long\n");return false;}
+	strcpy(buf,path);
+	for(char *p=buf+1;;p++){
+		if(*p!='/'&&*p) continue;
+		char saved=*p;*p=0;
+		if(!axMkDir(buf)&&!axPathExists(buf)){fprintf(stderr,"cannot create %s: %s\n",buf,strerror(errno));return false;}
+		*p=saved;if(!saved)break;
+	}
 	return true;
 }
-#endif
+
+static bool cli_select_camera(Scene *scene,const char *name) {
+	for(int i=0;i<scene->ncameras;i++) if(!strcmp(scene->cameras[i].name,name)){scene_select_camera(scene,name);return true;}
+	fprintf(stderr,"unknown camera: %s\n",name);return false;
+}
 
 static void create_app_windows(hinstance_t hinstance) {
 #ifdef BUILD_AS_GEM
@@ -218,40 +165,56 @@ static bool scener_open_file_handler(const char *path) {
 }
 #endif
 
-static void scener_camera_filename(const char *name, char *filename, size_t size) {
-	size_t offset = 0;
-	for (const unsigned char *p = (const unsigned char *)name; *p && offset + 1 < size; p++)
-		filename[offset++] = isalnum(*p) || *p == '-' || *p == '_' ? (char)*p : '_';
-	if (!offset && size > 1) filename[offset++] = 'c';
-	filename[offset] = '\0';
+static uint8_t *cli_downsample(const uint8_t *pixels,int width,int height,int factor) {
+	int outW=width/factor,outH=height/factor;
+	uint8_t *out=malloc((size_t)outW*outH*4);if(!out)return NULL;
+	float linear[256];for(int i=0;i<256;i++)linear[i]=powf(i/CLI_BYTE_MAX,CLI_COLOR_GAMMA);
+	for(int y=0;y<outH;y++)for(int x=0;x<outW;x++){
+		float sum[3]={0};
+		for(int dy=0;dy<factor;dy++)for(int dx=0;dx<factor;dx++){
+			const uint8_t *src=pixels+((size_t)(y*factor+dy)*width+x*factor+dx)*4;
+			for(int c=0;c<3;c++)sum[c]+=linear[src[c]];
+		}
+		uint8_t *dst=out+((size_t)y*outW+x)*4;
+		for(int c=0;c<3;c++)dst[c]=(uint8_t)fminf(CLI_BYTE_MAX,roundf(CLI_BYTE_MAX*powf(sum[c]/(factor*factor),1/CLI_COLOR_GAMMA)));
+		dst[3]=255;
+	}
+	return out;
 }
 
-static bool scener_write_camera(scene_doc_t *doc, const char *camera_name) {
-	char filename[128], path[1200];
-	if (!doc || !camera_name || !camera_name[0]) return false;
-	scener_camera_filename(camera_name, filename, sizeof(filename));
-	int n = snprintf(path, sizeof(path), "%s/%s.%s", g_cli.output_dir, filename,
-	                 g_cli.format);
-	if (n < 0 || (size_t)n >= sizeof(path)) return false;
-	bool found = false;
-	for (int i = 0; i < doc->scene.ncameras; i++)
-		if (!strcmp(doc->scene.cameras[i].name, camera_name)) { found = true; break; }
-	if (!found) {
-		fprintf(stderr, "[scener] camera not found: %s\n", camera_name);
-		return false;
-	}
-	scene_select_camera(&doc->scene, camera_name);
+static bool scener_write_screenshot(scene_doc_t *doc, const char *path) {
+	if (!doc || !path || !path[0]) return false;
 	int width = g_cli.width, height = g_cli.height;
 
 	Scene *scene = &doc->scene;
 	scene->camFov = scene->camFov > 0 ? scene->camFov : DEFAULT_FOV;
+	if (g_cli.camera_name[0] && !g_cli.layout && !cli_select_camera(scene,g_cli.camera_name)) return false;
+
 	vec3 dir = vsub(scene->camLook, scene->camPos);
 	if (vlen(dir) < DIR_EPSILON) dir = v3(0, 0, -1);
 	dir = vnorm(dir);
 	mat4 proj = mat4_perspective(scene->camFov, (float)width / (float)height, PERSP_NEAR, PERSP_FAR);
-	mat4 view = mat4_lookat(scene->camPos, scene->camLook, v3(0, 1, 0));
+	mat4 view = mat4_lookat(scene->camPos, scene->camLook, scene->worldUp);
+	if(g_cli.layout){
+		vec3 lo,hi;scene_get_bounds(scene,&lo,&hi);
+		bool zup=scene->worldUp.z>0;float spanX=hi.x-lo.x,spanV=zup?hi.y-lo.y:hi.z-lo.z;
+		if(!isfinite(spanX)||!isfinite(spanV)||spanX<=0||spanV<=0){fprintf(stderr,"empty layout bounds\n");return false;}
+		width=(int)ceilf(spanX*100*g_cli.layout_scale*LAYOUT_PADDING);
+		height=(int)ceilf(spanV*100*g_cli.layout_scale*LAYOUT_PADDING);
+		if(width>CLI_MAX_SIZE||height>CLI_MAX_SIZE||width<=0||height<=0){fprintf(stderr,"layout dimensions exceed limit; reduce --scale\n");return false;}
+		float minH=zup?lo.z:lo.y,maxH=zup?hi.z:hi.y;
+		vec3 center=vscale(vadd(lo,hi),0.5f),eye=center;
+		if(zup)eye.z=maxH+LAYOUT_EYE_OFFSET;else eye.y=maxH+LAYOUT_EYE_OFFSET;
+		view=mat4_lookat(eye,center,zup?v3(0,1,0):v3(0,0,-1));
+		float near=LAYOUT_EYE_OFFSET+(maxH-minH)*(1-LAYOUT_CUT_FRACTION),far=LAYOUT_EYE_OFFSET+maxH-minH+1;
+		proj=mat4_identity();proj.m[0]=2/(spanX*LAYOUT_PADDING);proj.m[5]=2/(spanV*LAYOUT_PADDING);
+		proj.m[10]=-2/(far-near);proj.m[14]=-(far+near)/(far-near);
+		scene->camPos=eye;dir=vscale(scene->worldUp,-1);
+	}
 
-	ui_begin_frame();
+	int outW=width,outH=height;
+	if(width>CLI_MAX_SIZE/g_cli.supersample||height>CLI_MAX_SIZE/g_cli.supersample){fprintf(stderr,"supersampled dimensions exceed %d; reduce --size, --scale or --supersample\n",CLI_MAX_SIZE);return false;}
+	width*=g_cli.supersample;height*=g_cli.supersample;
 	GLuint fbo = 0, color = 0, depth = 0;
 	glGenFramebuffers(1, &fbo);
 	glGenTextures(1, &color);
@@ -266,126 +229,53 @@ static bool scener_write_camera(scene_doc_t *doc, const char *camera_name) {
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, color, 0);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depth);
 	glDrawBuffer(GL_COLOR_ATTACHMENT0);
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-		fprintf(stderr, "[scener] cannot create render target: %dx%d\n", width, height);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glDeleteFramebuffers(1, &fbo);
-		glDeleteTextures(1, &color);
-		glDeleteRenderbuffers(1, &depth);
-		return false;
-	}
+	if(glCheckFramebufferStatus(GL_FRAMEBUFFER)!=GL_FRAMEBUFFER_COMPLETE){fprintf(stderr,"screenshot framebuffer is incomplete\n");glBindFramebuffer(GL_FRAMEBUFFER,0);glDeleteFramebuffers(1,&fbo);glDeleteTextures(1,&color);glDeleteRenderbuffers(1,&depth);return false;}
 
+	ui_begin_frame();
+	glBindFramebuffer(GL_FRAMEBUFFER,fbo);
 	glViewport(0, 0, width, height);
 	glScissor(0, 0, width, height);
 	glEnable(GL_SCISSOR_TEST);
-	int flags = g_cli.debug_flags | DBG_HIDE_CHARS | DBG_HIDE_LIGHTS | DBG_HIDE_GIZMOS;
-	render_frame(scene, width, height, proj, view, scene->camPos, dir, flags);
+	render_frame(scene, width, height, proj, view, scene->camPos, dir, g_cli.debug_flags|DBG_HIDE_GIZMOS|(g_cli.layout?DBG_FLAT:0));
 
 	size_t bytes = (size_t)width * (size_t)height * 4;
 	uint8_t *pixels = malloc(bytes);
-	bool ok = pixels && capture_framebuffer_rgba(width, height, pixels) &&
-		scener_save_screenshot(path, pixels, width, height);
+	bool ok=pixels&&capture_framebuffer_rgba(width,height,pixels);
+	if(ok&&g_cli.supersample>1){uint8_t *reduced=cli_downsample(pixels,width,height,g_cli.supersample);free(pixels);pixels=reduced;ok=pixels!=NULL;}
+	width=outW;height=outH;
+	const char *ext=strrchr(path,'.');
+	if(ok){
+		if(ext&&(!strcasecmp(ext,".jpg")||!strcasecmp(ext,".jpeg")))ok=save_image_jpg(path,pixels,width,height,CLI_JPEG_QUALITY);
+		else if(ext&&!strcasecmp(ext,".png"))ok=save_image_png(path,pixels,width,height);
+		else{fprintf(stderr,"unsupported screenshot format: %s\n",path);ok=false;}
+	}
+	if(!ok)fprintf(stderr,"cannot write screenshot: %s\n",path);
+	else fprintf(stderr,"rendered %s (%dx%d)\n",path,width,height);
 	free(pixels);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glDeleteFramebuffers(1, &fbo);
 	glDeleteTextures(1, &color);
 	glDeleteRenderbuffers(1, &depth);
-	if (ok) fprintf(stderr, "[scener] rendered camera=%s output=%s size=%dx%d\n",
-	                camera_name, path, width, height);
 	return ok;
 }
 
-static bool scener_write_layout(scene_doc_t *doc) {
-	Scene *scene = &doc->scene;
-	if (scene->nobjs == 0) { fprintf(stderr, "[scener] --layout: scene has no objects\n"); return false; }
-
-	/* compute XYZ bounds over all objects */
-	float xmin=FLT_MAX,xmax=-FLT_MAX,ymin=FLT_MAX,ymax=-FLT_MAX,zmin=FLT_MAX,zmax=-FLT_MAX;
-	for (int i = 0; i < scene->nobjs; i++) {
-		vec3 omin, omax;
-		scene_get_obj_bounds(scene, i, &omin, &omax);
-		if (omin.x<xmin) xmin=omin.x; if (omax.x>xmax) xmax=omax.x;
-		if (omin.y<ymin) ymin=omin.y; if (omax.y>ymax) ymax=omax.y;
-		if (omin.z<zmin) zmin=omin.z; if (omax.z>zmax) zmax=omax.z;
-	}
-	float wx = xmax - xmin, wz = zmax - zmin;
-	if (wx < 0.01f || wz < 0.01f) { fprintf(stderr, "[scener] --layout: degenerate bounds\n"); return false; }
-
-	/* scene uses meters internally (cm/100 at parse time); scale is px/cm */
-	float scale = g_cli.layout_scale > 0.0f ? g_cli.layout_scale : 2.0f;
-	int width  = (int)ceilf(wx * 100.0f * scale);
-	int height = (int)ceilf(wz * 100.0f * scale);
-
-	/* orthographic camera inside the room at 80% height — ceiling is above = behind camera */
-	float cx = (xmin + xmax) * 0.5f, cz = (zmin + zmax) * 0.5f;
-	float camH = ymin + (ymax - ymin) * 0.80f;
-	vec3 camPos  = v3(cx, camH, cz);
-	vec3 camLook = v3(cx, ymin, cz - 0.01f); /* tiny Z offset for stable up vector */
-	vec3 camUp   = v3(0, 0, -1);             /* north-up: -Z world = top of plan */
-	float hw = wx * 0.5f, hd = wz * 0.5f;
-	mat4 view = mat4_lookat(camPos, camLook, camUp);
-	float zdepth = camH - ymin + 1.0f;       /* objects in front of camera; ceiling behind */
-	mat4 proj = mat4_ortho(-hw, hw, -hd, hd, 0.01f, zdepth);
-
-	char path[1200];
-	int n = snprintf(path, sizeof(path), "%s/layout.%s", g_cli.output_dir, g_cli.format);
-	if (n < 0 || (size_t)n >= sizeof(path)) return false;
-
-	ui_begin_frame();
-	GLuint fbo = 0, color = 0, depth = 0;
-	glGenFramebuffers(1, &fbo);
-	glGenTextures(1, &color);
-	glGenRenderbuffers(1, &depth);
-	glBindTexture(GL_TEXTURE_2D, color);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8_ALPHA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glBindRenderbuffer(GL_RENDERBUFFER, depth);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
-	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, color, 0);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depth);
-	glDrawBuffer(GL_COLOR_ATTACHMENT0);
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-		fprintf(stderr, "[scener] cannot create render target: %dx%d\n", width, height);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glDeleteFramebuffers(1, &fbo); glDeleteTextures(1, &color); glDeleteRenderbuffers(1, &depth);
+static bool cli_check_render_backend(void) {
+	const char *vendor=(const char*)glGetString(GL_VENDOR);
+	const char *renderer=(const char*)glGetString(GL_RENDERER);
+	const char *version=(const char*)glGetString(GL_VERSION);
+	fprintf(stderr,"[scener] OpenGL vendor=%s renderer=%s version=%s\n",vendor?vendor:"unknown",renderer?renderer:"unknown",version?version:"unknown");
+	bool shadows=g_cli.screenshot_mode&&!g_cli.layout&&!(g_cli.debug_flags&(DBG_NO_SHADOWS|DBG_WIREFRAME));
+	if(shadows&&renderer&&strstr(renderer,"Apple Software Renderer")){
+		fprintf(stderr,"[scener] shadow export rejected: Apple Software Renderer produces invalid stencil shadows. Run Scener with GPU access (outside the restricted sandbox). Use -no-shadows only for diagnostic exports. No image was written.\n");
 		return false;
 	}
-	glViewport(0, 0, width, height);
-	glScissor(0, 0, width, height);
-	glEnable(GL_SCISSOR_TEST);
-	int flags = g_cli.debug_flags | DBG_HIDE_CHARS | DBG_HIDE_LIGHTS | DBG_HIDE_GIZMOS;
-	vec3 dir = vnorm(vsub(camLook, camPos));
-	render_frame(scene, width, height, proj, view, camPos, dir, flags);
-
-	size_t bytes = (size_t)width * (size_t)height * 4;
-	uint8_t *pixels = malloc(bytes);
-	bool ok = pixels && capture_framebuffer_rgba(width, height, pixels) &&
-		scener_save_screenshot(path, pixels, width, height);
-	free(pixels);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glDeleteFramebuffers(1, &fbo); glDeleteTextures(1, &color); glDeleteRenderbuffers(1, &depth);
-	if (ok) fprintf(stderr, "[scener] layout output=%s size=%dx%d scale=%.1fpx/cm\n",
-		path, width, height, scale);
-	return ok;
-}
-
-static bool scener_render_scene(scene_doc_t *doc) {
-	if (!axMkDir(g_cli.output_dir) && !axPathExists(g_cli.output_dir)) {
-		fprintf(stderr, "[scener] cannot create output directory: %s\n", g_cli.output_dir);
-		return false;
-	}
-	if (g_cli.layout_mode) return scener_write_layout(doc);
-	if (g_cli.camera_name[0]) return scener_write_camera(doc, g_cli.camera_name);
-	for (int i = 0; i < doc->scene.ncameras; i++)
-		if (!scener_write_camera(doc, doc->scene.cameras[i].name)) return false;
 	return true;
 }
 
 bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   cli_parse(argc, argv);
+  if(g_cli.invalid || !cli_check_render_backend()) return false;
 
   g_app = calloc(1, sizeof(app_state_t));
   if (!g_app) return false;
@@ -399,16 +289,15 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
 
   srand((unsigned int)time(NULL));
   register_commctl_classes();
-	if (g_cli.screenshot_mode)
-		ui_begin_frame();
+  if (g_cli.screenshot_mode) ui_begin_frame();
   shader_init();
 
   {
-		char icons_path[4096];
-		int n = snprintf(icons_path, sizeof(icons_path), "%s/../share/scener/icons",
+    char icons_path[4096];
+    int n = snprintf(icons_path, sizeof(icons_path), "%s/../share/scener/icons",
                      ui_get_exe_dir());
     if (n > 0 && (size_t)n < sizeof(icons_path))
-			bmp_add_icons_dir(icons_path);
+      bmp_add_icons_dir(icons_path);
   }
 
   if (!g_cli.screenshot_mode)
@@ -423,11 +312,23 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
                                         !g_cli.screenshot_mode);
   if (!doc) return false;
 
-  if (g_cli.camera_name[0])
-    scene_select_camera(&doc->scene, g_cli.camera_name);
-
-  if (g_cli.screenshot_mode) {
-		if (!scener_render_scene(doc)) return false;
+  if(g_cli.camera_name[0]&&!cli_select_camera(&doc->scene,g_cli.camera_name))return false;
+  if(g_cli.screenshot_mode){
+    if(g_cli.batch||g_cli.layout){
+      if(!cli_make_dirs(g_cli.output_dir))return false;
+      int count=g_cli.layout||g_cli.camera_name[0]?1:doc->scene.ncameras;
+      char (*names)[32]=calloc((size_t)count,sizeof(*names));
+      if(!names)return false;
+      for(int i=0;i<count;i++)snprintf(names[i],sizeof(names[i]),"%s",g_cli.layout?"layout":g_cli.camera_name[0]?g_cli.camera_name:doc->scene.cameras[i].name);
+      bool ok=true;
+      for(int i=0;i<count&&ok;i++){
+        if(strchr(names[i],'/')||strchr(names[i],'\\')||!names[i][0]){fprintf(stderr,"invalid output camera name: %s\n",names[i]);ok=false;break;}
+        char output[2048];snprintf(output,sizeof(output),"%s/%s.%s",g_cli.output_dir,names[i],g_cli.format);
+        if(!g_cli.layout)ok=cli_select_camera(&doc->scene,names[i]);
+        if(ok)ok=scener_write_screenshot(doc,output);
+      }
+      free(names);if(!ok)return false;
+    }else if(!scener_write_screenshot(doc,g_cli.output_path))return false;
     ui_request_quit();
   }
 
@@ -468,24 +369,24 @@ GEM_DEFINE("SimpleSketch3D", SCENER_VERSION, gem_init, gem_shutdown, scener_file
 #ifndef BUILD_AS_GEM
 int main(int argc, char *argv[]) {
   cli_parse(argc, argv);
-	if (g_cli.show_help) { cli_print_help(); return 0; }
-	if (g_cli.show_version) { printf("scener %s\n", SCENER_VERSION); return 0; }
-	if (g_cli.invalid_format) {
-		fprintf(stderr, "scener: --format must be png or jpg\n");
-		return 2;
-	}
-	if ((g_cli.screenshot_mode || g_cli.list_cameras) && !g_cli.scene_path[0]) {
-		fprintf(stderr, "scener: a .blks or .blk file is required\n");
-		return 2;
-	}
-	if (g_cli.list_cameras) return cli_print_cameras(g_cli.scene_path) ? 0 : 1;
-	int flags = g_cli.screenshot_mode ? UI_INIT_HIDDEN : UI_INIT_DESKTOP;
-  if (!ui_init_graphics(flags, "SimpleSketch3D", g_cli.width, g_cli.height)) return 1;
+  if(g_cli.invalid)return 2;
+  if(g_cli.help){cli_usage();return 0;}
+  if(g_cli.version){puts("scener " SCENER_VERSION);return 0;}
+  if(g_cli.list_cameras){
+    Scene scene={0};if(!load_scene(g_cli.scene_path,&scene))return 1;
+    for(int i=0;i<scene.ncameras;i++)puts(scene.cameras[i].name);
+    scene_free(&scene);return 0;
+  }
+  int flags = g_cli.screenshot_mode ? UI_INIT_HIDDEN : UI_INIT_DESKTOP;
+  int sample=g_cli.screenshot_mode?g_cli.supersample:1;
+  if(g_cli.width>CLI_MAX_SIZE/sample||g_cli.height>CLI_MAX_SIZE/sample){fprintf(stderr,"supersampled dimensions exceed %d\n",CLI_MAX_SIZE);return 2;}
+  // The platform drawable and screenshot target must share the working raster size.
+  if (!ui_init_graphics(flags, "SimpleSketch3D", g_cli.width*sample, g_cli.height*sample)) return 1;
   if (!gem_init(argc, argv, 0)) {
     ui_shutdown_graphics();
     return 1;
   }
-	if (!g_cli.screenshot_mode) {
+  if (!g_cli.screenshot_mode) {
     while (ui_is_running()) {
       ui_event_t e;
       while (get_message(&e)) {

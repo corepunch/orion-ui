@@ -51,7 +51,7 @@ static GLuint compile_line_shader(GLenum type, const char *src) {
     glCompileShader(s);
     GLint ok;
     glGetShaderiv(s, GL_COMPILE_STATUS, &ok);
-    if (!ok) { glDeleteShader(s); return 0; }
+    if (!ok) { char log[1024]; glGetShaderInfoLog(s,sizeof(log),NULL,log); fprintf(stderr,"[scener] shader compile failed: %s\n",log); glDeleteShader(s); return 0; }
     return s;
 }
 
@@ -64,7 +64,7 @@ static GLuint link_program(GLuint vs, GLuint fs) {
     glLinkProgram(p);
     GLint ok;
     glGetProgramiv(p, GL_LINK_STATUS, &ok);
-    if (!ok) { glDeleteProgram(p); return 0; }
+    if (!ok) { char log[1024]; glGetProgramInfoLog(p,sizeof(log),NULL,log); fprintf(stderr,"[scener] shader link failed: %s\n",log); glDeleteProgram(p); return 0; }
     return p;
 }
 
@@ -76,7 +76,7 @@ static GLuint link_shadow_program(GLuint vs, GLuint fs) {
     glLinkProgram(p);
     GLint ok;
     glGetProgramiv(p, GL_LINK_STATUS, &ok);
-    if (!ok) { glDeleteProgram(p); return 0; }
+    if (!ok) { char log[1024]; glGetProgramInfoLog(p,sizeof(log),NULL,log); fprintf(stderr,"[scener] shader link failed: %s\n",log); glDeleteProgram(p); return 0; }
     return p;
 }
 
@@ -87,6 +87,7 @@ void ensure_line_prog(void) {
     if (vs && fs) {
         s_line_prog = link_program(vs, fs);
         s_line_viewproj_loc = glGetUniformLocation(s_line_prog, "uViewProj");
+        if(s_line_prog)fprintf(stderr,"[scener] ambient shader linked\n");
     }
     if (vs) glDeleteShader(vs);
     if (fs) glDeleteShader(fs);
@@ -101,6 +102,7 @@ static void ensure_shadow_prog(void) {
         s_shadow_proj_loc = glGetUniformLocation(s_shadow_prog, "uProj");
         s_shadow_view_loc = glGetUniformLocation(s_shadow_prog, "uView");
         s_shadow_color_loc = glGetUniformLocation(s_shadow_prog, "uColor");
+        if(s_shadow_prog)fprintf(stderr,"[scener] stencil shader linked\n");
     }
     if (vs) glDeleteShader(vs);
     if (fs) glDeleteShader(fs);
@@ -318,6 +320,13 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
         glUseProgram(0);
     }
 
+    if(flags & DBG_WIREFRAME){
+        glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
+        for(int i=0;i<s->nobjs;i++)if(s->objs[i].renderable)draw_mesh_flat_vbo(&s->objs[i].mesh,v3(1,1,1));
+        glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
+        return;
+    }
+
     /* Pass 1: ambient fill (fills depth buffer) */
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
@@ -328,8 +337,10 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
     for (int i = 0; i < s->nobjs; i++) {
         if (!s->objs[i].renderable) continue;
         vec3 color = render_srgb_to_linear(s->objs[i].color);
-        draw_mesh_flat_vbo(&s->objs[i].mesh, s->objs[i].unlit ? color : vmul(color, ambient));
+        draw_mesh_flat_vbo(&s->objs[i].mesh, (s->objs[i].unlit || (flags & DBG_FLAT)) ? color : vmul(color, ambient));
     }
+
+    if(flags & DBG_FLAT)return;
 
     /* Per-light pass: shadow volume + PBR lit */
     shader_bind();

@@ -1,0 +1,5 @@
+<scene up="z" ambient="0.3 0.3 0.3">
+  <camera name="front" pos="400 -600 400" look="0 0 100" fov="50"/>
+  <camera name="reverse" pos="-400 600 400" look="0 0 100" fov="50"/>
+  <box size="100 80 200" pos="0 0 100"/>
+</scene>

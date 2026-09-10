@@ -1,5 +1,12 @@
 #include "simplegl.h"
 
+#define PROFILE_EPSILON 0.000001f
+#define PROFILE_MIN_POINTS 3
+#define WINDOW_MIN_SEGMENTS 8
+#define WINDOW_MAX_SEGMENTS 128
+#define WINDOW_POINTED_RISE_SQUARED 3.0f
+#define WINDOW_POINTED_ANGLE_DIVISOR 3.0f
+
 void mesh_free(Mesh *m){
     free(m->verts); free(m->tris); free(m->edges); free(m->triN);
     memset(m,0,sizeof(*m));
@@ -466,6 +473,120 @@ static void extrude_polygon(Mesh *m,vec3 *pts,vec3 *side_normals,int n,float dep
 		if(!flip){ mesh_add_tri(m,ib0,ib1,if1); mesh_add_tri(m,ib0,if1,if0); }
 		else { mesh_add_tri(m,ib0,if1,ib1); mesh_add_tri(m,ib0,if0,if1); }
 	}
+}
+
+Shape2D shape2d_window(window_outline_t outline,float width,float height,int segments){
+	Shape2D p={0}; p.closed=1;
+	if(!isfinite(width)||!isfinite(height)||width<=PROFILE_EPSILON||height<=PROFILE_EPSILON) return p;
+	if(segments<WINDOW_MIN_SEGMENTS) segments=WINDOW_MIN_SEGMENTS;
+	if(segments>WINDOW_MAX_SEGMENTS) segments=WINDOW_MAX_SEGMENTS;
+	if(segments%2) segments++;
+	float r=width/2,top=height/2,bottom=-top;
+	vec3 v=v3(-r,bottom,0); DA_PUSH(p.pts,p.npts,p.cpts,v);
+	v=v3(r,bottom,0); DA_PUSH(p.pts,p.npts,p.cpts,v);
+	if(outline==WINDOW_RECTANGLE){
+		v=v3(r,top,0); DA_PUSH(p.pts,p.npts,p.cpts,v);
+		v=v3(-r,top,0); DA_PUSH(p.pts,p.npts,p.cpts,v);
+		return p;
+	}
+	float rise=outline==WINDOW_ROUND_ARCH?r:sqrtf(WINDOW_POINTED_RISE_SQUARED)*r;
+	if(height<=rise+PROFILE_EPSILON){ shape2d_free(&p); return p; }
+	float spring=top-rise;
+	for(int i=0;i<=segments;i++){
+		float angle=(float)i/(float)segments*M_PIf;
+		if(outline==WINDOW_ROUND_ARCH) v=v3(r*cosf(angle),spring+r*sinf(angle),0);
+		else {
+			float a=(float)(i<=segments/2?i:segments-i)/(float)(segments/2)*M_PIf/WINDOW_POINTED_ANGLE_DIVISOR;
+			float x=-r+width*cosf(a);
+			v=v3(i<=segments/2?x:-x,spring+width*sinf(a),0);
+		}
+		DA_PUSH(p.pts,p.npts,p.cpts,v);
+	}
+	return p;
+}
+
+static float shape2d_area(const Shape2D *p){
+	float area=0;
+	for(int i=0;i<p->npts;i++){
+		vec3 a=p->pts[i],b=p->pts[(i+1)%p->npts]; area+=a.x*b.y-a.y*b.x;
+	}
+	return area/2;
+}
+
+
+Mesh gen_profile_extrusion(const Shape2D *p,float depth){
+	Mesh m={0};
+	if(p->npts>=PROFILE_MIN_POINTS && depth>PROFILE_EPSILON)
+		extrude_polygon(&m,p->pts,NULL,p->npts,depth,1,1,0,0);
+	return m;
+}
+
+
+static void profile_push_unique(Shape2D *p,vec3 v){
+	if(!p->npts||vlen(vsub(p->pts[p->npts-1],v))>PROFILE_EPSILON)
+		DA_PUSH(p->pts,p->npts,p->cpts,v);
+}
+
+static Shape2D profile_halfplane(const Shape2D *p,vec3 a,vec3 b,int inside){
+	Shape2D q={0}; q.closed=1;
+	for(int i=0;i<p->npts;i++){
+		vec3 u=p->pts[i],v=p->pts[(i+1)%p->npts];
+		float du=profile_cross(a,b,u),dv=profile_cross(a,b,v);
+		if(!inside){ du=-du; dv=-dv; }
+		if(du>=0) profile_push_unique(&q,u);
+		if((du<0&&dv>0)||(du>0&&dv<0)) profile_push_unique(&q,lerp(u,v,du/(du-dv)));
+	}
+	if(q.npts>1&&vlen(vsub(q.pts[0],q.pts[q.npts-1]))<=PROFILE_EPSILON) q.npts--;
+	if(q.npts<PROFILE_MIN_POINTS||shape2d_area(&q)<=PROFILE_EPSILON) shape2d_free(&q);
+	return q;
+}
+
+Shape2D shape2d_inset(const Shape2D *p,float distance){
+	Shape2D q={0}; q.closed=1;
+	if(p->npts<PROFILE_MIN_POINTS||distance<0||!isfinite(distance)) return q;
+	for(int i=0;i<p->npts;i++) DA_PUSH(q.pts,q.npts,q.cpts,p->pts[i]);
+	for(int i=0;i<p->npts&&q.npts;i++){
+		vec3 a=p->pts[i],b=p->pts[(i+1)%p->npts],e=vnorm(vsub(b,a));
+		vec3 offset=vscale(v3(-e.y,e.x,0),distance);
+		Shape2D clipped=profile_halfplane(&q,vadd(a,offset),vadd(b,offset),1);
+		shape2d_free(&q); q=clipped;
+	}
+	return q;
+}
+
+/* Partition in 2D so overlapping cutters remove their union, including at wall edges. */
+Mesh gen_profile_cutouts(const Shape2D *boundary,const Shape2D *holes,int nholes,float depth){
+	Mesh mesh={0};
+	Shape2D *pieces=NULL; int npieces=0,cpieces=0;
+	Shape2D initial={0}; initial.closed=1;
+	for(int i=0;i<boundary->npts;i++) DA_PUSH(initial.pts,initial.npts,initial.cpts,boundary->pts[i]);
+	DA_PUSH(pieces,npieces,cpieces,initial);
+	for(int h=0;h<nholes;h++){
+		Shape2D *next=NULL; int nnext=0,cnext=0;
+		for(int p=0;p<npieces;p++){
+			Shape2D remaining=pieces[p];
+			for(int e=0;e<holes[h].npts&&remaining.npts;e++){
+				vec3 a=holes[h].pts[e],b=holes[h].pts[(e+1)%holes[h].npts];
+				Shape2D outside=profile_halfplane(&remaining,a,b,0);
+				Shape2D inside=profile_halfplane(&remaining,a,b,1);
+				if(outside.npts) DA_PUSH(next,nnext,cnext,outside);
+				shape2d_free(&remaining); remaining=inside;
+			}
+			shape2d_free(&remaining);
+		}
+		free(pieces); pieces=next; npieces=nnext; cpieces=cnext;
+	}
+	for(int p=0;p<npieces;p++){
+		extrude_polygon(&mesh,pieces[p].pts,NULL,pieces[p].npts,depth,1,1,0,0);
+		shape2d_free(&pieces[p]);
+	}
+	free(pieces);
+	return mesh;
+}
+
+Mesh gen_profile_frame(const Shape2D *outer,const Shape2D *inner,float depth){
+	if(inner->npts<PROFILE_MIN_POINTS||depth<=PROFILE_EPSILON) return (Mesh){0};
+	return gen_profile_cutouts(outer,inner,1,depth);
 }
 
 /* Wall lunette above a roman-arch opening, extruded along Z.

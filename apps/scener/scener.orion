@@ -68,6 +68,9 @@
         <item name="prism" label="Prism" />
         <item name="capsule" label="Capsule" />
         <item name="arch" label="Arch" />
+        <item name="window_round" label="Round-arch Window" />
+        <item name="window_cottage" label="Cottage Window" />
+        <item name="window_gothic" label="Gothic Window" />
         <Separator />
         <item name="point_light" label="Point Light" />
         <item name="directional_light" label="Directional Light" />

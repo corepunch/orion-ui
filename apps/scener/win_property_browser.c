@@ -44,6 +44,13 @@ static const prop_def_t kConeProperties[] = { P("Base Radius", "radius", "50"), 
 static const prop_def_t kPyramidProperties[] = { P("Base Radius", "radius", "50"), P("Top Radius", "radiusTop", "0"), P("Height", "height", "100"), P("Sides", "sides", "4") };
 static const prop_def_t kTorusProperties[] = { P("Major Radius", "majorRadius", "50"), P("Minor Radius", "minorRadius", "15"), P("Major Segments", "majorSegments", "24"), P("Minor Segments", "minorSegments", "12") };
 static const prop_def_t kArchProperties[] = { P("Width", "width", "100"), P("Height", "height", "150"), P("Depth", "depth", "20"), PF("Thickness", "tube", "thickness", "0"), P("Inset", "inset", "0"), P("Segments", "segments", "16") };
+static const prop_def_t kWindowProperties[] = {
+	P("Preset", "preset", "round-arch"), P("Style", "style", "plain"),
+	P("Width", "width", "120"), P("Height", "height", "preset"), P("Frame Width", "frameWidth", "automatic"), P("Depth", "depth", "automatic"),
+	PF("Frame Material", "frameMaterial", "material", "wood"), P("Glass Material", "glassMaterial", "glass"), PB("Pane", "pane", "1"),
+	P("Pane Depth", "paneDepth", "2"), P("Pane Offset", "paneOffset", "0"), PB("Cut Walls", "cutWalls", "1"), P("Cut Depth", "cutDepth", "frame depth"),
+	P("Sill", "sill", "preset"), P("Sill Height", "sillHeight", "frame width"), P("Sill Projection", "sillProjection", "frame width"), P("Segments", "segments", "32"),
+};
 static const prop_def_t kCapsuleProperties[] = { P("Radius", "radius", "50"), P("Height", "height", "100"), P("Rings", "rings", "12"), P("Slices", "slices", "24") };
 static const prop_def_t kWallProperties[] = { P("Length", "length", "400"), P("Height", "height", "270"), P("Thickness", "thickness", "20") };
 static const prop_def_t kLightProperties[] = {
@@ -65,6 +72,7 @@ static const prop_def_t kNegativeArchProperties[] = { P("Width", "width", "100")
 static const prop_def_t kNegativeCylinderProperties[] = { P("Radius", "radius", "50"), PF("Depth", "depth", "size_z", "30") };
 
 static const node_class_t kNodeClasses[] = {
+	{ "window", "Window", kWindowProperties, PROP_COUNT(kWindowProperties), 1, 1 },
 	{ "box", "Box", kBoxProperties, PROP_COUNT(kBoxProperties), 1, 1 }, { "sphere", "Sphere", kSphereProperties, PROP_COUNT(kSphereProperties), 1, 1 },
 	{ "cylinder", "Cylinder", kCylinderProperties, PROP_COUNT(kCylinderProperties), 1, 1 }, { "prism", "Prism", kPrismProperties, PROP_COUNT(kPrismProperties), 1, 1 },
 	{ "cone", "Cone", kConeProperties, PROP_COUNT(kConeProperties), 1, 1 }, { "pyramid", "Pyramid", kPyramidProperties, PROP_COUNT(kPyramidProperties), 1, 1 },

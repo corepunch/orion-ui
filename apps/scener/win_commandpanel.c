@@ -50,6 +50,9 @@ static const cp_command_t kShapeItems[] = {
 	CP_MENU_COMMAND("Prism",    ID_CREATE_PRISM,    "primitives/prism"),
 	CP_MENU_COMMAND("Capsule",  ID_CREATE_CAPSULE,  "primitives/capsule"),
 	CP_MENU_COMMAND("Arch",     ID_CREATE_ARCH,     "primitives/arch"),
+	CP_MENU_COMMAND("Round Window", ID_CREATE_WINDOW_ROUND, "primitives/arch"),
+	CP_MENU_COMMAND("Cottage Window", ID_CREATE_WINDOW_COTTAGE, "primitives/box"),
+	CP_MENU_COMMAND("Gothic Window", ID_CREATE_WINDOW_GOTHIC, "primitives/arch"),
 };
 
 static const cp_command_t kSceneItems[] = {

@@ -2,55 +2,67 @@
 
 ## Coordinate model
 
-SimpleGL uses X for horizontal width, Y for height, and Z for depth. Primitive `pos` values identify their centers. A box resting on `y=0` therefore uses `pos.y = size.y / 2`.
+Author lengths in centimetres and new scenes with `<scene up="z">`. Primitive
+local axes do not change: a wall/window still uses local X for width, local Y
+for height and local Z for thickness. Rotate `rot="90 0 0"` to map that height
+to world Z; the window's front then faces world −Y. Boxes remain centred on all
+axes, so a Z-up box rests on Z=0 with `pos.z = size.z / 2`.
 
-Transforms are hierarchical. A child inside `<group>` uses group-local coordinates. Use this for assemblies and every collection that shares a rotated coordinate frame.
+Transforms are hierarchical. A shared wall frame avoids repeating world-space
+rotations on every insert:
 
 ```xml
-<group pos="-4 0 0" rot="0 90 0">
-  <wall length="6" height="2.8" thickness="0.2" material="wall">
-    <opening type="window" x="2" width="1.4" height="1.2" sill="0.9"/>
-  </wall>
-  <box pos="-0.3 1.5 0" size="1.3 1.1 0.03"
-       material="glass"/>
-</group>
+<scene up="z" ambient="0.3 0.3 0.35" background="dusk">
+  <group pos="-400 0 0" rot="90 0 25">
+    <wall length="600" height="280" thickness="32" material="wall" />
+    <window preset="round-arch" pos="-30 170 0" width="140" height="160"
+            frameWidth="10" depth="20" frameMaterial="wood" />
+  </group>
+</scene>
 ```
 
-The wall and pane above cannot disagree about the parent's translation or rotation. The pane is slightly smaller than the opening and thin along local Z.
+Both children inherit the same orientation. The window's local opening bottom
+is `170 - 160/2 = 90` cm; the wall starts at local Y=0. Its automatic cutter
+uses the window's outer profile. Do not add a separate cutter or `<opening>`.
 
 ## Wall opening calculations
 
-Walls are centered on their `pos`, but opening `x` is measured from the wall's local left edge. For wall length `L`, opening start `x`, width `w`, sill `s`, and height `h`:
+A wall's origin is at its base, centred along its length. A window's origin is
+at the centre of its outer opening rectangle. For a legacy rectangular child
+`<opening>`, X is measured from the wall's left edge. With wall length L,
+opening start x, width w, bottom elevation s and height h:
 
 ```text
-insert center = (x + w/2 - L/2, s + h/2, 0)
-insert size   = (w - horizontal_clearance, h - vertical_clearance, thickness)
+window centre in wall coordinates = (x + w/2 - L/2, s + h/2, 0)
+window outer dimensions = (w, h)
 ```
 
-Use deliberate, symmetric clearance. A pane can be inset behind a perimeter
-frame, but the frame's outside boundary must meet the opening boundary unless a
-visible construction gap is intentional. A crossbar or mullion alone is not a
-perimeter frame.
+Prefer a procedural `<window>` for fixed rectangular, round-arch and Gothic
+windows. It owns the visible frame and exact cutter, and can cut the full wall
+thickness when its matching depth volume merely overlaps the wall slab. Use
+`cutWalls="0"` only when inserting it into an independently authored hole.
+For full parameter bounds, sill projection calculations and examples, read the
+[window schema](scene-format.md#window) and
+[recipes](procedural-windows.md). Keep frame/sill/pane configuration on the
+window, and share transforms through a group or prefab.
 
-Prefer packaging the opening and insert together:
+Custom doors or other inserts may still require a separate negative shape in
+the same prefab. A legacy negative box must span both wall faces; this differs
+from the procedural window's depth-overlap matching. For example:
 
 ```xml
-<!-- prefab origin and cutter are at the opening center -->
 <prefab>
-  <bool-negative-box size="1.4 1.2 0.3"/>
-  <!-- frame outer extents are exactly 1.4 x 1.2 -->
+  <bool-negative-box size="100 210 34" />
+  <box size="100 210 8" material="wood" />
 </prefab>
 ```
 
-Place that prefab at the intended opening center, with its local Z aligned to
-wall thickness. Its cutter depth must span both wall faces with at least
-`0.001` scene units of excess per face. Keep the cutter wholly inside the
-wall's X/Y extents, and never combine it with a duplicate child `<opening>`.
-The renderer pre-collects prefab cutters, so the wall may appear earlier in the
-XML. Cutters are rectangular wall metadata; arbitrary or oblique mesh CSG is
-not supported.
-
-Do not place a pane as a world-space sibling of a rotated wall. If grouping is impossible, transform both its center and thin axis into world space explicitly. For a wall rotated 90 degrees around Y, an unrotated world-space box can represent the pane by swapping its X and Z sizes, but grouping remains safer.
+This is a rectangular custom insert centred on its opening, with local +Z as
+front. Its cutter fits a 32 cm wall, with 1 cm excess on each side. Keep its
+cutter within the wall's X/Y extents and do not duplicate it as a child
+`<opening>`. A round or pointed insert needs a matching outline; do not hide
+corner gaps with bars. Window profile cuts support overlapping/stacked openings
+and clipping at wall edges. Wall cutters are not arbitrary mesh CSG.
 
 ## Primitive placement
 
@@ -59,10 +71,11 @@ Do not place a pane as a world-space sibling of a rotated wall. If grouping is i
 - Cylinder/prism/cone/pyramid: centered along Y; rest using half `height`.
 - Torus: centered at `pos`, lying in the XZ plane.
 - Wall: base is at local `y=0`; length extends symmetrically around local X after the wall transform.
+- Window: centred on its outer opening rectangle; optional sill extends below and beyond it. In Z-up scenes rotate its local height into world Z. See the window schema for frame/pane/sill bounds.
 
 For assemblies, calculate positions from declared dimensions. Avoid visually tuned constants until the structural dimensions are correct.
 
-Use `0.001` scene units as the default contact tolerance. For a nominally grounded or connected part, the absolute difference between its lower/upper surface and the target surface must not exceed that tolerance. Small gaps such as `0.005` are errors, not harmless rounding.
+Use 0.1 cm (`0.001` internal scene units) as the default contact tolerance. For a nominally grounded or connected part, the absolute difference between its lower/upper surface and the target surface must not exceed that tolerance. Small gaps such as 0.5 cm (`0.005` internal units) are errors, not harmless rounding.
 
 Do not overlap visible faces on the same plane. A depth buffer cannot consistently decide which coplanar fragment owns a pixel, so the result flickers or forms striped patches as the camera moves. Build assemblies from non-overlapping exterior regions: for example, fit a sofa base and backrest between its arms instead of extending all three boxes across the same front or side planes. Adjacent parts may share an edge, and hidden structural intersections are acceptable only when none of their exterior faces overlap. Do not use tiny offsets or polygon offset to conceal unintended duplicate geometry.
 
@@ -75,7 +88,7 @@ Classify nearby geometry before spacing it:
 
 Make every exposed linear member terminate against an intended support. Bars,
 mullions, rails, legs, and cords must not stop visibly inside open space. Keep a
-nominal contact within `0.001` scene units. For a rectangular member meeting a
+nominal contact within 0.1 cm (`0.001` internal units). For a rectangular member meeting a
 curved frame, calculate the boundary at the member's outermost edge so both
 corners reach or enter the support without leaving a visible gap. For a circular
 boundary centered at `(cx, cy)` with radius `r`, the upper intersection at local
@@ -105,14 +118,14 @@ room-specific composites such as `workshop/desks/main.blk` or
 `workshop/commode/stocked.blk`. Do not encode hierarchy with underscore
 prefixes in a flat filename.
 
-Use `attach="instanceName:slotName"` on any shape or prefab to place it at a prefab's named reference point without manual surface-height calculations. The target instance must carry a `name` attribute.
+Use `attach="instanceName:slotName"` on supported shapes or prefabs (not procedural windows or window-containing assemblies) to place it at a prefab's named reference point without manual surface-height calculations. The target instance must carry a `name` attribute.
 
 ```xml
-<prefab source="furniture/dining_table" name="dining_table" pos="0 0 -1.5"/>
-<sphere attach="dining_table:center" radius="0.14" material="fabric"/>
+<prefab source="furniture/dining_table" name="dining_table" pos="0 0 -150"/>
+<sphere attach="dining_table:center" pos="0 14 0" radius="14" material="wood"/>
 ```
 
-The sphere lands on the table surface without computing `y = tableTop + sphereRadius`. When `attach` is present the element's `pos` is replaced by the attach point's world-space position.
+The object inherits the named attach frame; its own `pos`, `rot` and `scale` remain local offsets within that frame. Account for the object's origin: a centred sphere needs an upward offset equal to its radius to rest on the surface.
 
 Place a general-purpose surface attach at the usable surface center. Name it
 `top_surface` for the primary work or table surface. Name additional named
@@ -146,7 +159,7 @@ depths and heights while keeping item footprints inside the support.
 Use `pivotOffset` to rotate a shape around an edge instead of its center. The offset is in local space, applied before rotation:
 
 ```xml
-<box size="0.3 0.02 0.2" rot="0 0 45" pivotOffset="-0.15 0 0"/>
+<box size="30 2 20" rot="0 0 45" pivotOffset="-15 0 0"/>
 ```
 
 ## Rotation and facing
@@ -157,10 +170,10 @@ Current directional prefabs:
 
 | Prefab | Default front | Footprint |
 |---|---|---|
-| `chair` | +Z | approximately 0.45 × 0.45 |
-| `sofa` | +Z | approximately 2.2 × 0.9 |
-| `coffee_table` | none | 1.2 × 0.7 |
-| `dining_table` | none | 1.6 × 1.0 |
+| `chair` | +Z | approximately 45 × 45 cm |
+| `sofa` | +Z | approximately 220 × 90 cm |
+| `coffee_table` | none | 120 × 70 cm |
+| `dining_table` | none | 160 × 100 cm |
 
 For an object facing +Z by default:
 
@@ -207,7 +220,7 @@ blocking directional light and contributing to stencil shadow volumes so the
 interior lighting remains correct:
 
 ```xml
-<wall pos="0 0 0" length="10" height="4.2" thickness="0.2"
+<wall pos="0 0 0" length="1000" height="420" thickness="20"
       material="plaster" renderable="0" castShadow="1"/>
 ```
 
@@ -227,18 +240,20 @@ Follow the enclosed-room pattern in `scenes/sample_room.blks`: combine a low amb
 
 Aim cameras at useful targets, not arbitrary Euler directions. Keep the near plane away from geometry.
 
-Every `<camera>` must carry a `comment` attribute describing its purpose. The `--list-cameras` flag reads these comments so an automated agent can select the right view without parsing the full XML:
+Give each `<camera>` a `comment` describing its purpose. The active
+`--list-cameras` command prints names only; read comments from the XML to
+choose the intended composition:
 
 ```sh
-./build/bin/scener --list-cameras scenes/scene.blks
+scener --list-cameras scenes/scene.blks
 ```
 
 Example output:
 
 ```text
-Main             "Front-half view from entrance"
-Top              "Overhead top-down"
-Close            "Close-up of dining table"
+Main
+Top
+Close
 ```
 
 Use descriptive comments: a person or agent reading the list should understand what each camera shows and when to select it.
@@ -260,8 +275,8 @@ Before completion, verify:
 11. Lived-in prop clusters use deliberate variation without floating, penetration, overlap, or accidental overhang.
 12. Edited XML files pass `xmllint --noout`.
 13. Every practical point light remains inside its emitter and below the shade lip after instance transforms and scale.
-14. The project builds, relevant tests pass, and the scene loads with `--list-cameras`.
-15. Every window or door prefab cutter crosses its wall completely, remains wall-axis-aligned, and matches the visible outer frame boundary without an accidental reveal gap.
+14. The scene loads with `scener --list-cameras`; code changes also build and pass relevant tests.
+15. Each procedural window matches a parallel wall slab and owns its exact outer-profile cut. Legacy custom-insert cutters must cross their wall completely. No duplicate cuts or accidental frame/reveal gaps remain.
 16. Every visible RGB value is authored directly as sRGB, while light
     intensity remains a separate, unmodified linear scalar.
 17. Every exposed bar, mullion, rail, leg, cord, or similar member terminates cleanly against its intended support without a visible floating endpoint or exterior overshoot.
