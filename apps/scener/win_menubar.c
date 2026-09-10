@@ -77,14 +77,17 @@ static scene_doc_t *current_doc(void) {
 }
 
 static bool is_create_primitive(uint16_t id) {
-  return id >= ID_CREATE_BOX && id <= ID_CREATE_WINDOW_GOTHIC;
+  return id >= ID_CREATE_BOX && id <= ID_CREATE_DOOR_GOTHIC;
 }
 
 bool scener_create_primitive(scene_doc_t *doc, uint16_t id, vec3 ground_pos) {
   if (!doc || !is_create_primitive(id)) return false;
-  if (id >= ID_CREATE_WINDOW_ROUND && id <= ID_CREATE_WINDOW_GOTHIC) {
-    const char *preset = id == ID_CREATE_WINDOW_ROUND ? "round-arch" : id == ID_CREATE_WINDOW_COTTAGE ? "cottage" : "gothic";
-    if (!scene_create_window(&doc->scene, preset, ground_pos)) return false;
+  if (id >= ID_CREATE_WINDOW_ROUND && id <= ID_CREATE_DOOR_GOTHIC) {
+    bool door = id >= ID_CREATE_DOOR_RECTANGULAR;
+    const char *preset = door
+      ? (id == ID_CREATE_DOOR_RECTANGULAR ? "rectangular" : id == ID_CREATE_DOOR_ROUND ? "round-arch" : "gothic")
+      : (id == ID_CREATE_WINDOW_ROUND ? "round-arch" : id == ID_CREATE_WINDOW_COTTAGE ? "cottage" : "gothic");
+    if (!(door ? scene_create_door(&doc->scene, preset, ground_pos) : scene_create_window(&doc->scene, preset, ground_pos))) return false;
     doc->modified = true;
     doc_update_title(doc);
     property_browser_refresh();
@@ -244,6 +247,9 @@ void handle_menu_command(uint16_t id) {
     case ID_CREATE_WINDOW_ROUND:
     case ID_CREATE_WINDOW_COTTAGE:
     case ID_CREATE_WINDOW_GOTHIC:
+    case ID_CREATE_DOOR_RECTANGULAR:
+    case ID_CREATE_DOOR_ROUND:
+    case ID_CREATE_DOOR_GOTHIC:
       if (doc) {
         doc->scene.createMode = id;
         doc->scene.editMode = EDIT_Q_SELECT;

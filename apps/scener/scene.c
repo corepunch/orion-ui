@@ -24,6 +24,19 @@
 #define WINDOW_JOIN_OVERLAP 0.0001f
 #define WINDOW_EPSILON 0.000001f
 #define WINDOW_ALIGNMENT_EPSILON 0.0001f
+#define DOOR_DEFAULT_WIDTH 1.0f
+#define DOOR_DEFAULT_HEIGHT 2.1f
+#define DOOR_LEAF_DEPTH 0.04f
+#define DOOR_CLEARANCE 0.002f
+#define DOOR_MAX_ANGLE 180.0f
+#define DOOR_HANDLE_RADIUS_RATIO 0.025f
+#define DOOR_HANDLE_INSET_RATIO 0.12f
+#define DOOR_HANDLE_HEIGHT_RATIO 0.45f
+#define DOOR_HANDLE_SEGMENTS 16
+#define DOOR_WINDOW_WIDTH_RATIO 0.40f
+#define DOOR_WINDOW_HEIGHT_RATIO 0.28f
+#define DOOR_WINDOW_CENTER_RATIO 0.70f
+#define MAX_DOOR_OPENINGS 2
 
 /* -------------------------------------------------------------- Tiny XML */
 
@@ -610,6 +623,12 @@ typedef struct {
 	int sill;
 } window_preset_t;
 
+static const window_preset_t door_presets[]={
+	{ "rectangular", WINDOW_RECTANGLE, DOOR_DEFAULT_WIDTH, DOOR_DEFAULT_HEIGHT, 0 },
+	{ "round-arch", WINDOW_ROUND_ARCH, DOOR_DEFAULT_WIDTH, DOOR_DEFAULT_HEIGHT, 0 },
+	{ "gothic", WINDOW_POINTED_ARCH, DOOR_DEFAULT_WIDTH, DOOR_DEFAULT_HEIGHT, 0 }
+};
+
 static const window_preset_t window_presets[]={
 	{ "round-arch", WINDOW_ROUND_ARCH, WINDOW_DEFAULT_WIDTH, WINDOW_DEFAULT_HEIGHT, 0 },
 	{ "cottage", WINDOW_RECTANGLE, WINDOW_DEFAULT_WIDTH, WINDOW_COTTAGE_HEIGHT, 1 },
@@ -629,25 +648,27 @@ static void window_spec_free(window_spec_t *w){
 static int window_spec(XmlNode *n,window_spec_t *w){
 	memset(w,0,sizeof(*w));
 	if(xml_attr(n,"attach",NULL)||n->nkids){
-		fprintf(stderr,"[scener] window: use group/prefab transforms; attach and child modifiers are unsupported\n"); return 0;
+		fprintf(stderr,"[scener] %s: use group/prefab transforms; attach and child modifiers are unsupported\n",n->tag); return 0;
 	}
-	const char *preset=xml_attr(n,"preset","round-arch"),*style=xml_attr(n,"style","plain");
+	int door=!strcmp(n->tag,"door");
+	const char *preset=xml_attr(n,"preset",door?"rectangular":"round-arch"),*style=xml_attr(n,"style","plain");
 	const window_preset_t *p=NULL;
-	for(int i=0;i<(int)(sizeof(window_presets)/sizeof(window_presets[0]));i++)
-		if(!strcmp(preset,window_presets[i].name)) p=&window_presets[i];
+	const window_preset_t *presets=door?door_presets:window_presets;
+	int count=door?sizeof(door_presets)/sizeof(door_presets[0]):sizeof(window_presets)/sizeof(window_presets[0]);
+	for(int i=0;i<count;i++) if(!strcmp(preset,presets[i].name)) p=&presets[i];
 	if(!p|| (strcmp(style,"plain")&&strcmp(style,"storybook"))){
-		fprintf(stderr,"[scener] window: unknown preset '%s' or style '%s'\n",preset,style); return 0;
+		fprintf(stderr,"[scener] %s: unknown preset '%s' or style '%s'\n",n->tag,preset,style); return 0;
 	}
 	w->width=xml_attr_f_cm(n,"width",p->width); w->height=xml_attr_f_cm(n,"height",p->height);
 	float size=fminf(w->width,w->height);
 	w->frame=xml_attr_f_cm(n,"frameWidth",size*(!strcmp(style,"storybook")?WINDOW_STORYBOOK_FRAME_RATIO:WINDOW_FRAME_RATIO));
 	w->depth=xml_attr_f_cm(n,"depth",w->frame*WINDOW_DEPTH_RATIO);
-	w->paneDepth=xml_attr_f_cm(n,"paneDepth",WINDOW_PANE_DEPTH);
-	w->paneOffset=xml_attr_f_cm(n,"paneOffset",0);
+	w->paneDepth=door?WINDOW_PANE_DEPTH:xml_attr_f_cm(n,"paneDepth",WINDOW_PANE_DEPTH);
+	w->paneOffset=door?0:xml_attr_f_cm(n,"paneOffset",0);
 	w->cutDepth=xml_attr_f_cm(n,"cutDepth",w->depth);
-	w->sillHeight=xml_attr_f_cm(n,"sillHeight",w->frame);
-	w->sillProjection=xml_attr_f_cm(n,"sillProjection",w->frame);
-	w->pane=xml_attr_i(n,"pane",1); w->sill=xml_attr_i(n,"sill",p->sill); w->cutWalls=xml_attr_i(n,"cutWalls",1);
+	w->sillHeight=door?w->frame:xml_attr_f_cm(n,"sillHeight",w->frame);
+	w->sillProjection=door?w->frame:xml_attr_f_cm(n,"sillProjection",w->frame);
+	w->pane=door?0:xml_attr_i(n,"pane",1); w->sill=door?0:xml_attr_i(n,"sill",p->sill); w->cutWalls=xml_attr_i(n,"cutWalls",1);
 	int segments=xml_attr_i(n,"segments",WINDOW_DEFAULT_SEGMENTS);
 	float positive[]={w->width,w->height,w->frame,w->depth,w->paneDepth,w->cutDepth,w->sillHeight};
 	int valid=segments>=WINDOW_MIN_SEGMENTS&&segments<=WINDOW_MAX_SEGMENTS;
@@ -660,7 +681,7 @@ static int window_spec(XmlNode *n,window_spec_t *w){
 		valid=w->inner.npts>0;
 	}
 	if(!valid){
-		fprintf(stderr,"[scener] window: invalid dimensions, frame inset, pane placement or segments for '%s'\n",preset);
+		fprintf(stderr,"[scener] %s: invalid dimensions, frame inset, pane placement or segments for '%s'\n",n->tag,preset);
 		window_spec_free(w); return 0;
 	}
 	return 1;
@@ -687,6 +708,154 @@ static void parse_window(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos
 		scene_add_obj(s,mesh,paneM,R,glass?glass->color:color,glass?glass->shininess:shin,0,renderable,unlit);
 	}
 	window_spec_free(&w);
+}
+
+
+typedef struct {
+	window_spec_t frame;
+	Shape2D leaf,pet,petOuter,windowOuter,windowInner;
+	float leafDepth,gap,angle,hingeX,windowPaneDepth;
+	int handle,windowPane;
+} door_spec_t;
+
+static void door_spec_free(door_spec_t *d){
+	window_spec_free(&d->frame); shape2d_free(&d->leaf);
+	shape2d_free(&d->pet); shape2d_free(&d->petOuter);
+	shape2d_free(&d->windowOuter); shape2d_free(&d->windowInner);
+}
+
+
+static int door_profile_contains(const Shape2D *outer,const Shape2D *inner){
+	if(!outer->npts||!inner->npts) return 0;
+	for(int i=0;i<outer->npts;i++){
+		vec3 a=outer->pts[i],b=outer->pts[(i+1)%outer->npts],e=vnorm(vsub(b,a));
+		for(int j=0;j<inner->npts;j++)
+			if(vdot(v3(-e.y,e.x,0),vsub(inner->pts[j],a))<-WINDOW_EPSILON) return 0;
+	}
+	return 1;
+}
+
+static int door_window_spec(XmlNode *n,door_spec_t *d){
+	const char *kind=xml_attr(n,"window","none");
+	if(!strcmp(kind,"none")) return 1;
+	window_spec_t *w=&d->frame;
+	if(!strcmp(kind,"matching")) kind=xml_attr(n,"preset","rectangular");
+	int round=!strcmp(kind,"round");
+	const window_preset_t *preset=NULL;
+	for(int i=0;i<(int)(sizeof(door_presets)/sizeof(door_presets[0]));i++)
+		if(!strcmp(kind,door_presets[i].name)) preset=&door_presets[i];
+	if(!round&&!preset) return 0;
+	float width=xml_attr_f_cm(n,"windowWidth",w->width*DOOR_WINDOW_WIDTH_RATIO);
+	float height=xml_attr_f_cm(n,"windowHeight",round?width:w->height*DOOR_WINDOW_HEIGHT_RATIO);
+	float frame=xml_attr_f_cm(n,"windowFrameWidth",w->frame/2);
+	float center=xml_attr_f_cm(n,"windowCenter",w->height*DOOR_WINDOW_CENTER_RATIO);
+	d->windowPane=xml_attr_i(n,"windowPane",1);
+	d->windowPaneDepth=xml_attr_f_cm(n,"windowPaneDepth",fminf(WINDOW_PANE_DEPTH,d->leafDepth));
+	float positive[]={width,height,frame,d->windowPaneDepth};
+	for(int i=0;i<(int)(sizeof(positive)/sizeof(positive[0]));i++)
+		if(!isfinite(positive[i])||positive[i]<=WINDOW_EPSILON) return 0;
+	if(!isfinite(center)||d->windowPaneDepth>d->leafDepth||(round&&fabsf(height-width)>WINDOW_EPSILON)) return 0;
+	int segments=xml_attr_i(n,"segments",WINDOW_DEFAULT_SEGMENTS);
+	if(segments%2) segments++;
+	if(round){
+		d->windowOuter.closed=1;
+		for(int i=0;i<segments;i++){
+			float angle=2*M_PIf*i/segments;
+			vec3 v=v3(width/2*cosf(angle),width/2*sinf(angle),0);
+			DA_PUSH(d->windowOuter.pts,d->windowOuter.npts,d->windowOuter.cpts,v);
+		}
+	} else d->windowOuter=shape2d_window(preset->outline,width,height,segments);
+	for(int i=0;i<d->windowOuter.npts;i++) d->windowOuter.pts[i].y+=center-w->height/2;
+	d->windowInner=shape2d_inset(&d->windowOuter,frame);
+	if(!d->windowInner.npts||!door_profile_contains(&d->leaf,&d->windowOuter)) return 0;
+	float bottom=INFINITY,petTop=-INFINITY;
+	for(int i=0;i<d->windowOuter.npts;i++) bottom=fminf(bottom,d->windowOuter.pts[i].y);
+	for(int i=0;i<d->petOuter.npts;i++) petTop=fmaxf(petTop,d->petOuter.pts[i].y);
+	return bottom>petTop+WINDOW_EPSILON;
+}
+
+static int door_spec(XmlNode *n,door_spec_t *d){
+	memset(d,0,sizeof(*d));
+	if(!window_spec(n,&d->frame)) return 0;
+	window_spec_t *w=&d->frame;
+	d->leafDepth=xml_attr_f_cm(n,"leafDepth",DOOR_LEAF_DEPTH);
+	d->gap=xml_attr_f_cm(n,"clearance",DOOR_CLEARANCE);
+	d->angle=xml_attr_f(n,"openAngle",0);
+	d->handle=xml_attr_i(n,"handle",1);
+	const char *hinge=xml_attr(n,"hinge","left");
+	float pw=xml_attr_f_cm(n,"petWidth",0),ph=xml_attr_f_cm(n,"petHeight",0);
+	float trim=xml_attr_f_cm(n,"petFrameWidth",w->frame/2);
+	int valid=isfinite(d->leafDepth)&&d->leafDepth>WINDOW_EPSILON&&d->leafDepth<=w->depth;
+	valid&=isfinite(d->gap)&&d->gap>=0&&isfinite(d->angle)&&fabsf(d->angle)<=DOOR_MAX_ANGLE;
+	valid&=!strcmp(hinge,"left")||!strcmp(hinge,"right");
+	valid&=isfinite(pw)&&isfinite(ph)&&isfinite(trim)&&pw>=0&&ph>=0&&trim>0;
+	valid&=(pw==0&&ph==0)||(pw>0&&ph>pw/2);
+	if(valid){
+		/* Door jambs end at the floor; only the leaf has a bottom clearance. */
+		for(int i=0;i<w->inner.npts;i++)
+			if(w->inner.pts[i].y<=-w->height/2+w->frame+WINDOW_EPSILON) w->inner.pts[i].y=-w->height/2;
+		d->leaf=shape2d_inset(&w->inner,d->gap);
+		valid=d->leaf.npts>0;
+		d->hingeX=(!strcmp(hinge,"left")?-1:1)*(w->width/2-w->frame);
+		if(pw>0&&valid){
+			int segments=xml_attr_i(n,"segments",WINDOW_DEFAULT_SEGMENTS);
+			d->pet=shape2d_window(WINDOW_ROUND_ARCH,pw,ph,segments);
+			d->petOuter=shape2d_window(WINDOW_ROUND_ARCH,pw+2*trim,ph+trim,segments);
+			for(int i=0;i<d->pet.npts;i++) d->pet.pts[i].y+=-w->height/2+d->gap+ph/2;
+			for(int i=0;i<d->petOuter.npts;i++) d->petOuter.pts[i].y+=-w->height/2+d->gap+(ph+trim)/2;
+			valid=door_profile_contains(&d->leaf,&d->petOuter);
+		}
+	}
+	if(valid) valid=door_window_spec(n,d);
+	if(!valid){
+		fprintf(stderr,"[scener] door: invalid leaf, hinge, angle, pet passage or window opening\n");
+		door_spec_free(d); return 0;
+	}
+	return 1;
+}
+
+static void parse_door(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos,vec3 rot,vec3 color,float shin,int castsShadow,int renderable,int unlit){
+	(void)parentM; (void)pos; (void)rot;
+	door_spec_t d;
+	if(!door_spec(n,&d)) return;
+	window_spec_t *w=&d.frame;
+	Material *frame=find_material(s,xml_attr(n,"frameMaterial",xml_attr(n,"material","wood")));
+	Material *leaf=find_material(s,xml_attr(n,"leafMaterial",xml_attr(n,"material","wood")));
+	Material *metal=find_material(s,xml_attr(n,"hardwareMaterial","metal"));
+	scene_add_obj(s,gen_profile_frame(&w->outer,&w->inner,w->depth),M,R,frame?frame->color:color,frame?frame->shininess:shin,castsShadow,renderable,unlit);
+	vec3 pivot=v3(d.hingeX,0,w->depth/2);
+	mat4 swing=mat4_rot_xyz(v3(0,d.hingeX<0?-d.angle:d.angle,0));
+	mat4 leafM=mat4_mul(M,mat4_mul(mat4_translate(pivot),mat4_mul(swing,mat4_translate(vscale(pivot,-1)))));
+	mat4 leafR=mat4_mul(R,swing);
+	leafM=mat4_mul(leafM,mat4_translate(v3(0,0,(w->depth-d.leafDepth)/2)));
+	Shape2D holes[MAX_DOOR_OPENINGS]; int nholes=0;
+	if(d.petOuter.npts) holes[nholes++]=d.petOuter;
+	if(d.windowOuter.npts) holes[nholes++]=d.windowOuter;
+	Mesh mesh=gen_profile_cutouts(&d.leaf,holes,nholes,d.leafDepth);
+	scene_add_obj(s,mesh,leafM,leafR,leaf?leaf->color:color,leaf?leaf->shininess:shin,castsShadow,renderable,unlit);
+	if(d.pet.npts){
+		mesh=gen_profile_frame(&d.petOuter,&d.pet,d.leafDepth*2);
+		scene_add_obj(s,mesh,leafM,leafR,metal?metal->color:color,metal?metal->shininess:shin,castsShadow,renderable,unlit);
+	}
+	if(d.windowOuter.npts){
+		Material *trim=find_material(s,xml_attr(n,"windowFrameMaterial",xml_attr(n,"frameMaterial",xml_attr(n,"material","wood"))));
+		mesh=gen_profile_frame(&d.windowOuter,&d.windowInner,d.leafDepth*2);
+		scene_add_obj(s,mesh,leafM,leafR,trim?trim->color:color,trim?trim->shininess:shin,castsShadow,renderable,unlit);
+		if(d.windowPane){
+			Material *glass=find_material(s,xml_attr(n,"windowGlassMaterial","glass"));
+			mesh=gen_profile_extrusion(&d.windowInner,d.windowPaneDepth);
+			scene_add_obj(s,mesh,leafM,leafR,glass?glass->color:color,glass?glass->shininess:shin,0,renderable,unlit);
+		}
+	}
+	if(d.handle){
+		float radius=fminf(w->width,w->height)*DOOR_HANDLE_RADIUS_RATIO;
+		float x=-d.hingeX*(1-2*DOOR_HANDLE_INSET_RATIO),y=w->height*(DOOR_HANDLE_HEIGHT_RATIO-1.0f/2);
+		for(int side=-1;side<=1;side+=2){
+			mat4 handleM=mat4_mul(leafM,mat4_translate(v3(x,y,side*(d.leafDepth/2+radius/2))));
+			scene_add_obj(s,gen_sphere(radius,DOOR_HANDLE_SEGMENTS,DOOR_HANDLE_SEGMENTS),handleM,leafR,metal?metal->color:color,metal?metal->shininess:shin,castsShadow,renderable,unlit);
+		}
+	}
+	door_spec_free(&d);
 }
 
 static void parse_capsule(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 pos, vec3 rot, vec3 color, float shin, int castsShadow, int renderable, int unlit){
@@ -972,6 +1141,16 @@ static void collect_negative_boxes(Scene *s, XmlNode *parent, mat4 parentM){
 				}
 				window_spec_free(&w);
 			}
+		} else if(!strcmp(n->tag,"door")){
+			door_spec_t d;
+			if(door_spec(n,&d)){
+				if(d.frame.cutWalls){
+					negative_profile_t p={M,d.frame.outer,d.frame.cutDepth};
+					DA_PUSH(s->negativeProfiles,s->nnegativeProfiles,s->cnegativeProfiles,p);
+					memset(&d.frame.outer,0,sizeof(d.frame.outer));
+				}
+				door_spec_free(&d);
+			}
 		} else if(!strcmp(n->tag,"bool-negative-box")){
 			NegativeBox b={M,cvt3ds_sz(s,xml_attr_v3_cm(n,"size",v3(1,1,1)))};
 			DA_PUSH(s->negativeBoxes,s->nnegativeBoxes,s->cnegativeBoxes,b);
@@ -1064,6 +1243,7 @@ static const struct {
 	{ "torus",    parse_torus },
 	{ "arch",     parse_arch },
 	{ "window",   parse_window },
+	{ "door",     parse_door },
 	{ "capsule",  parse_capsule },
 	{ "group",    parse_group },
 	{ "light",    parse_light },
@@ -1158,7 +1338,7 @@ static void parse_nodes(Scene *s, XmlNode *parent, mat4 parentM, mat4 parentR){
 typedef void (*scene_tag_parser_fn)(Scene *s, XmlNode *n);
 
 static void parse_camera_tag(Scene *s, XmlNode *n){
-	Camera cam={0}; strncpy(cam.name, xml_attr(n,"name","Camera1"), 31);
+	Camera cam={0}; snprintf(cam.name,sizeof(cam.name),"%s",xml_attr(n,"name","Camera1"));
 	strncpy(cam.comment, xml_attr(n,"comment",""), 63);
 	cam.pos = cvt3ds(s,xml_attr_v3_cm(n,"pos", s->ncameras>0 ? cvt3ds_inv(s,s->camPos) : (s->convention3dsMax?v3(0,-3.0f,1.6f):v3(0,1.6f,5))));
 	cam.look = cvt3ds(s,xml_attr_v3_cm(n,"look", s->ncameras>0 ? cvt3ds_inv(s,s->camLook) : (s->convention3dsMax?v3(0,1.0f,1.2f):v3(0,1.2f,0))));
@@ -1174,7 +1354,7 @@ static void parse_camera_tag(Scene *s, XmlNode *n){
 	DA_PUSH(s->cameras,s->ncameras,s->ccameras,cam);
 	if(s->ncameras==1){
 		s->camPos=cam.pos; s->camLook=cam.look; s->camFov=cam.fov;
-		strncpy(s->activeCamera,cam.name,31);
+		snprintf(s->activeCamera,sizeof(s->activeCamera),"%s",cam.name);
 	}
 }
 
@@ -1267,7 +1447,7 @@ static void warn_unknown_children(XmlNode *parent, const char *path, int root, i
 		else if(!strcmp(parent->tag,"group"))
 			supported=has_shape_parser(n->tag) || !strcmp(n->tag,"bool-negative-box") || !strcmp(n->tag,"bool-negative-arch") || !strcmp(n->tag,"bool-negative-cylinder") || !strcmp(n->tag,"shape");
 		else if(!strcmp(parent->tag,"camera")) supported=!strcmp(n->tag,"transform");
-		else if(!strcmp(parent->tag,"wall")||!strcmp(parent->tag,"window")) supported=0;
+		else if(!strcmp(parent->tag,"wall")||!strcmp(parent->tag,"window")||!strcmp(parent->tag,"door")) supported=0;
 		else if(!strcmp(parent->tag,"prefab")) supported=!strcmp(n->tag,"array");
 		else if(has_shape_parser(parent->tag)) supported=has_modifier_parser(n->tag);
 		if(!supported){
@@ -1365,7 +1545,7 @@ static void scene_rebuild_view(Scene *s){
 	XmlNode *sceneRoot=(XmlNode*)s->sceneRoot;
 	int prefabMode=s->prefabDocument||s->editDepth;
 	void *selected=s->selectedNode;
-	char requestedCamera[32]; strncpy(requestedCamera,s->activeCamera,31); requestedCamera[31]=0;
+	char requestedCamera[MAX_CAMERA_NAME]; snprintf(requestedCamera,sizeof(requestedCamera),"%s",s->activeCamera);
 	scene_clear_view(s);
 	s->camPos=v3(0,1.6f,5); s->camLook=v3(0,1.2f,0); s->camFov=60;
 	s->convention3dsMax=!strcmp(xml_attr(sceneRoot,"convention",""),"3dsmax");
@@ -1389,7 +1569,7 @@ static void scene_rebuild_view(Scene *s){
 		if(!strcmp(root->kids[i]->tag,scene_tags[j].tag)){ scene_tags[j].parse(s,root->kids[i]); break; }
 	if(requestedCamera[0]) for(int i=0;i<s->ncameras;i++) if(!strcmp(s->cameras[i].name,requestedCamera)){
 		s->camPos=s->cameras[i].pos; s->camLook=s->cameras[i].look; s->camFov=s->cameras[i].fov;
-		strncpy(s->activeCamera,requestedCamera,31); s->activeCamera[31]=0;
+		snprintf(s->activeCamera,sizeof(s->activeCamera),"%s",requestedCamera);
 		break;
 	}
 	collect_negative_boxes(s,root,I);
@@ -1416,7 +1596,7 @@ static void scene_rebuild_view(Scene *s){
 		}
 	}
 	if(!s->ncameras){
-		Camera def={0}; strncpy(def.name,"Camera1",31);
+		Camera def={0}; snprintf(def.name,sizeof(def.name),"%s","Camera1");
 		def.pos=s->camPos; def.look=s->camLook; def.fov=s->camFov;
 		DA_PUSH(s->cameras,s->ncameras,s->ccameras,def);
 	}
@@ -1435,8 +1615,8 @@ static void scene_rebuild_view(Scene *s){
 	scene_build_all_shadow_volumes(s);
 }
 
-int scene_create_window(Scene *s,const char *preset,vec3 ground){
-	XmlNode *node=xml_new("window"); xml_set_attr(node,"preset",preset);
+static int scene_create_insert(Scene *s,const char *tag,const char *preset,vec3 ground){
+	XmlNode *node=xml_new(tag); xml_set_attr(node,"preset",preset);
 	window_spec_t w;
 	if(!window_spec(node,&w)){ xml_free(node); return 0; }
 	vec3 up=s->worldUp.z==1?v3(0,0,1):v3(0,1,0);
@@ -1471,9 +1651,12 @@ int scene_create_window(Scene *s,const char *preset,vec3 ground){
 	for(int i=0;i<nloose;i++) DA_PUSH(s->objs,s->nobjs,s->cobjs,loose[i]);
 	free(loose);
 	if(nloose) scene_build_all_shadow_volumes(s);
-	fprintf(stderr,"[scener] create window preset=%s at=(%g,%g,%g)\n",preset,ground.x,ground.y,ground.z);
+	fprintf(stderr,"[scener] create %s preset=%s at=(%g,%g,%g)\n",tag,preset,ground.x,ground.y,ground.z);
 	return 1;
 }
+
+int scene_create_window(Scene *s,const char *preset,vec3 ground){ return scene_create_insert(s,"window",preset,ground); }
+int scene_create_door(Scene *s,const char *preset,vec3 ground){ return scene_create_insert(s,"door",preset,ground); }
 
 int load_scene(const char *path, Scene *s){
 	memset(s,0,sizeof(*s));
@@ -1509,12 +1692,12 @@ int load_scene(const char *path, Scene *s){
 void scene_select_camera(Scene *s, const char *name){
 	for(int i=0;i<s->ncameras;i++){
 		if(!strcmp(s->cameras[i].name,name)){
-			char selected[32]; strncpy(selected,s->cameras[i].name,31); selected[31]=0;
+			char selected[MAX_CAMERA_NAME]; snprintf(selected,sizeof(selected),"%s",s->cameras[i].name);
 			if(!strcmp(s->activeCamera,selected)){
 				s->camPos=s->cameras[i].pos; s->camLook=s->cameras[i].look; s->camFov=s->cameras[i].fov;
 				return;
 			}
-			strncpy(s->activeCamera,selected,31); s->activeCamera[31]=0;
+			snprintf(s->activeCamera,sizeof(s->activeCamera),"%s",selected);
 			scene_rebuild_view(s);
 			return;
 		}

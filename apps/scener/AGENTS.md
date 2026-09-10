@@ -113,3 +113,9 @@ To add a new modifier:
 3. Add `{ "tag", parse_mod_* }` to the `modifier_parsers[]` array.
 
 Common attributes (`pos`, `rot`, `scale`, `color`, `shininess`, `material`, `castShadow`, `renderable`, `unlit`) are extracted before dispatch, so individual shape parsers only need to read shape-specific attributes.
+
+Procedural doors use `<door preset="rectangular|round-arch|gothic">` (choose one).
+Read the [door schema](skills/populate-simplegl-scenes/references/scene-format.md#door).
+`openAngle` swings the fitted leaf and optional pet-opening trim around the
+selected hinge while the frame and its exact wall cut remain fixed. The Create
+menu offers all three door presets; XML supplies detailed dimensions and angle.

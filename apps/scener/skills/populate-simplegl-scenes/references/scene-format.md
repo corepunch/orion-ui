@@ -30,7 +30,7 @@ The complete supported element inventory is:
 |-----------|----------|
 | `<scene>` attributes | `ambient`, `background`, `up`, `convention` |
 | Scene configuration | `<camera>`, `<material>`, `<sun>`, `<chardef>`, `<shape>` |
-| Transformable content | `<box>`, `<sphere>`, `<cylinder>`, `<capsule>`, `<arch>`, `<prism>`, `<cone>`, `<pyramid>`, `<torus>`, `<lathe>`, `<loft>`, `<wall>`, `<window>`, `<group>`, `<prefab>`, `<light>`, `<line>`, `<dummy>` |
+| Transformable content | `<box>`, `<sphere>`, `<cylinder>`, `<capsule>`, `<arch>`, `<prism>`, `<cone>`, `<pyramid>`, `<torus>`, `<lathe>`, `<loft>`, `<wall>`, `<window>`, `<door>`, `<group>`, `<prefab>`, `<light>`, `<line>`, `<dummy>` |
 | Wall cutters | `<bool-negative-box>`, `<bool-negative-arch>`, `<bool-negative-cylinder>` |
 | Mesh modifiers | `<taper>`, `<twist>`, `<bend>`, `<stretch>`, `<skew>`, `<array>`, `<extrude>`, `<mirror>`, `<noise>`, `<shell>` |
 | Context-only children | `<camera><transform>`, `<shape><v>`, `<prefab><attach>` |
@@ -646,6 +646,90 @@ Unknown presets/styles, unusable dimensions/insets, out-of-frame panes,
 Treat these diagnostics as validation failures even if the CLI exits zero.
 Unknown attributes may be ignored; do not invent parameter names based on
 features available in another modeller.
+
+### `<door>`
+
+A source-backed hinged door: one element owns the frame, fitted leaf, handles,
+optional pet passage, optional upper window and exact outer-profile wall cut. All parts select, move
+and save together. Dimensions and coordinate conventions match `<window>`:
+local X width, Y height, +Z front; the origin is the outer bounding-box centre.
+For Z-up scenes use `rot="90 0 0"` and `pos.z=height/2` at floor level.
+
+| Attribute | Default | Meaning |
+|-----------|---------|---------|
+| `preset` | `rectangular` | `rectangular`, `round-arch`, `gothic`; all default to 100 × 210 cm |
+| `style` | `plain` | `plain` or `storybook`, same frame-width ratios as windows |
+| `width`, `height` | 100, 210 | Positive outer dimensions in cm; arched height constraints match windows |
+| `frameWidth` | 6% of smaller dimension | Inward frame offset; 10% with storybook style |
+| `depth` | 1.5 × frameWidth | Positive frame depth in cm |
+| `leafDepth` | 4 | Positive leaf thickness, no greater than frame depth |
+| `clearance` | 0.2 | Nonnegative gap in cm, inset from the frame aperture, including the floor |
+| `hinge` | `left` | `left` or `right`, seen from local +Z |
+| `openAngle` | 0 | Degrees, −180…180; positive swings toward +Z for either hinge side |
+| `frameMaterial` | `material`, otherwise `wood` | Frame finish |
+| `leafMaterial` | `material`, otherwise `wood` | Leaf finish |
+| `hardwareMaterial` | `metal` | Handles and pet-passage trim |
+| `handle` | 1 | Generate a round handle on both faces |
+| `petWidth`, `petHeight` | 0, 0 | Both zero disable the passage; otherwise positive cm, height > width/2 |
+| `petFrameWidth` | frameWidth / 2 | Positive trim width; the entire trimmed passage must fit in the leaf |
+| `window` | `none` | `none`, `round`, `matching`, `rectangular`, `round-arch` or `gothic`; `matching` follows the door preset |
+| `windowWidth` | 40% of door width | Positive outer window width in cm, including trim; diameter for `round` |
+| `windowHeight` | 28% of door height | Positive outer height in cm; defaults to width for `round`, which requires equal width and height |
+| `windowCenter` | 70% of door height | Window centre elevation in cm above the door's bottom, centred horizontally |
+| `windowFrameWidth` | frameWidth / 2 | Positive inward trim width, leaving a nonempty aperture |
+| `windowFrameMaterial` | frame material | Window trim finish |
+| `windowGlassMaterial` | `glass` | Pane material |
+| `windowPane` | 1 | `0` leaves an open aperture; only applies when `window` is enabled |
+| `windowPaneDepth` | min(2, leafDepth) | Positive pane thickness in cm, no greater than leaf thickness |
+| `cutWalls` | 1 | Cut matching wall slabs using the exact outer frame profile |
+| `cutDepth` | depth | Positive wall-matching depth in cm |
+| `segments` | 32 | Arc subdivisions, 8…128, rounded up to even |
+
+The frame has two jambs and a head, with no bottom crosspiece. Its leaf is
+derived from that same aperture with the requested construction clearance.
+The closed leaf sits flush with the frame's front; the hinge axis lies at the
+front inner jamb edge. `rot` rotates the entire assembly, while `openAngle`
+rotates the leaf, its handles, pet trim and window, leaving the frame and wall cut fixed.
+Negative angles are supported, but the author must allow clearance from the
+wall/reveal and nearby furniture. Scener does not perform collision resolution.
+
+The optional pet passage is a floor-level round arch cut through the leaf.
+Its trim follows the same profile and swings with the leaf. It is an open
+passage, not an independently hinged flap. It does not create a second wall cut.
+The optional upper window cuts only the leaf, with trim derived from the same
+profile and a pane seated inside it. `window="round"` creates a circle on any
+door; `window="matching"` creates a rectangle, Roman arch or Gothic arch to
+match the door preset. An explicit shape can also be used on any door.
+Defaults place it wholly in the upper half of the standard door presets.
+The complete outer window must fit in the leaf above the pet passage; invalid
+sizes, frame insets, pane depths and overlapping openings reject the whole door.
+Window dimensions have no effect while `window="none"`.
+
+`windowPane="0"` leaves a genuine open aperture. With a pane, Scener's glass
+material remains opaque and does not cast shadows, as for standalone windows;
+it does not simulate transparency or create a light. The window trim spans
+twice the leaf depth, with no duplicate inner leaf surfaces. All its parts
+follow either hinge direction and `openAngle` as part of the one saved door.
+Standalone-window `pane` and sill controls do not apply to doors. Door primitives
+reject children and `attach`; use explicit sibling placements inside groups or
+prefabs, without prefab arrays, as for procedural windows. Named camera
+transforms operate on the whole assembly; per-camera open-angle overrides are
+not implemented. The property browser shows source attributes read-only;
+author detailed dimensions and opening angles in XML.
+
+```xml
+<door name="rear-door" preset="round-arch" style="storybook"
+      pos="0 0 135" rot="90 0 0" width="154" height="270"
+      frameWidth="10" depth="20" leafDepth="8" clearance="0.2"
+      frameMaterial="wood" leafMaterial="wood" hardwareMaterial="metal"
+      hinge="left" openAngle="0" petWidth="40" petHeight="48"
+      petFrameWidth="2" segments="48" window="round" windowWidth="64"
+      windowCenter="202" windowFrameWidth="5" />
+```
+
+Inspect [the door fixture](../../../tests/procedural_doors.blks) from front,
+oblique and rear cameras to check the fixed wall opening and swung leaf.
+
 
 ### `<capsule>`
 

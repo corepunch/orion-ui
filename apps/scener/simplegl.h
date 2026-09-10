@@ -116,8 +116,10 @@ Mesh gen_box_hole_arch(float w,float h,float depth,int sides);
 
 typedef struct { char id[32]; vec3 color; float shininess; } Material;
 typedef struct { char target[32]; vec3 pos,rot,scale; } CameraTransform;
+#define MAX_CAMERA_NAME 128
+
 typedef struct {
-	char name[32],comment[64]; vec3 pos,look; float fov;
+	char name[MAX_CAMERA_NAME],comment[64]; vec3 pos,look; float fov;
 	CameraTransform *transforms; int ntransforms,ctransforms;
 } Camera;
 typedef struct { vec3 pos,color,dir; float intensity,radius; int castsShadow,isDirectional; } Light;
@@ -173,7 +175,7 @@ typedef struct {
 	int sanityIgnoreActive, sanityFloorActive, sanityCheckActive;
 	OverlayLine *overlayLines; int noverlayLines, coverlayLines;
 	CharDef *charDefs; int ncharDefs, ccharDefs;
-	char activeCamera[32];
+	char activeCamera[MAX_CAMERA_NAME];
 	char scenePath[512];
 	char assetRoot[512];
 	int prefabDocument;
@@ -213,6 +215,7 @@ int scene_exit_prefab(Scene *s);
 int scene_selected_prefab_path(Scene *s,char *path,size_t pathSize);
 int scene_save_all(Scene *s);
 int scene_create_window(Scene *s,const char *preset,vec3 ground);
+int scene_create_door(Scene *s,const char *preset,vec3 ground);
 int scene_is_prefab_mode(Scene *s);
 const char *scene_node_tag(const void *node);
 const char *scene_node_attr(const void *node,const char *name);

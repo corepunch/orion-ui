@@ -279,6 +279,151 @@ static void test_window_creation_persists(void){
 	PASS();
 }
 
+
+#define DOOR_TEST_MAX_XML 1024
+#define DOOR_TEST_WIDTH 1.54f
+#define DOOR_TEST_HEIGHT 2.70f
+#define DOOR_TEST_FRAME 0.10f
+#define DOOR_TEST_GAP 0.002f
+#define DOOR_TEST_DEPTH 0.20f
+#define DOOR_TEST_PET_WIDTH 0.40f
+#define DOOR_TEST_PET_HEIGHT 0.48f
+#define DOOR_TEST_TRIM 0.02f
+#define DOOR_TEST_LEAF_DEPTH 0.08f
+#define DOOR_TEST_SEGMENTS 32
+
+static void test_door_fit_swing_and_pet_opening(void){
+	TEST("procedural doors: matched frame/leaf, floor passage, hinge swing and fixed wall cutter");
+	const char *presets[]={"rectangular","round-arch","gothic"};
+	for(int p=0;p<(int)(sizeof(presets)/sizeof(presets[0]));p++){
+		Scene closed={0},opened={0}; char xml[DOOR_TEST_MAX_XML];
+		snprintf(xml,sizeof(xml),"<scene><door preset='%s' width='154' height='270' frameWidth='10' depth='20' leafDepth='8' clearance='0.2' handle='0' petWidth='40' petHeight='48' petFrameWidth='2'/></scene>",presets[p]);
+		ASSERT_TRUE(window_test_load(&closed,xml));
+		ASSERT_EQUAL(closed.nnegativeProfiles,1); ASSERT_EQUAL(closed.nobjs,3);
+		ASSERT_TRUE(closed.objs[0].editNode==closed.objs[1].editNode&&closed.objs[1].editNode==closed.objs[2].editNode);
+		vec3 lo=v3(INFINITY,INFINITY,INFINITY);
+		for(int i=0;i<closed.objs[1].mesh.nverts;i++){
+			vec3 v=closed.objs[1].mesh.verts[i].pos;lo.x=fminf(lo.x,v.x);lo.y=fminf(lo.y,v.y);
+		}
+		ASSERT_TRUE(fabsf(lo.x-(-DOOR_TEST_WIDTH/2+DOOR_TEST_FRAME+DOOR_TEST_GAP))<WINDOW_TEST_EPSILON);
+		ASSERT_TRUE(fabsf(lo.y-(-DOOR_TEST_HEIGHT/2+DOOR_TEST_GAP))<WINDOW_TEST_EPSILON);
+		Shape2D inner=shape2d_inset(&closed.negativeProfiles[0].profile,DOOR_TEST_FRAME);
+		for(int i=0;i<inner.npts;i++) if(inner.pts[i].y<=-DOOR_TEST_HEIGHT/2+DOOR_TEST_FRAME+WINDOW_TEST_EPSILON) inner.pts[i].y=-DOOR_TEST_HEIGHT/2;
+		Shape2D leaf=shape2d_inset(&inner,DOOR_TEST_GAP);
+		Shape2D pet=shape2d_window(WINDOW_ROUND_ARCH,DOOR_TEST_PET_WIDTH+2*DOOR_TEST_TRIM,DOOR_TEST_PET_HEIGHT+DOOR_TEST_TRIM,DOOR_TEST_SEGMENTS);
+		float expected=(window_test_area(&leaf)-window_test_area(&pet))*DOOR_TEST_LEAF_DEPTH;
+		ASSERT_TRUE(fabsf(mesh_signed_volume(&closed.objs[1].mesh)-expected)<WINDOW_TEST_EPSILON);
+		shape2d_free(&inner);shape2d_free(&leaf);shape2d_free(&pet);
+		for(int side=-1;side<=1;side+=2){
+			snprintf(xml,sizeof(xml),"<scene><door preset='%s' width='154' height='270' frameWidth='10' depth='20' leafDepth='8' clearance='0.2' handle='0' petWidth='40' petHeight='48' petFrameWidth='2' hinge='%s' openAngle='90'/></scene>",presets[p],side<0?"left":"right");
+			ASSERT_TRUE(window_test_load(&opened,xml)); ASSERT_EQUAL(opened.nobjs,closed.nobjs);
+			ASSERT_EQUAL(opened.negativeProfiles[0].profile.npts,closed.negativeProfiles[0].profile.npts);
+			for(int i=0;i<closed.objs[0].mesh.nverts;i++) ASSERT_TRUE(vlen(vsub(closed.objs[0].mesh.verts[i].pos,opened.objs[0].mesh.verts[i].pos))<WINDOW_TEST_EPSILON);
+			float hingeX=side*(DOOR_TEST_WIDTH/2-DOOR_TEST_FRAME);
+			for(int o=1;o<closed.nobjs;o++) for(int i=0;i<closed.objs[o].mesh.nverts;i++){
+				vec3 a=closed.objs[o].mesh.verts[i].pos,b=opened.objs[o].mesh.verts[i].pos;
+				ASSERT_TRUE(fabsf(b.x-(hingeX+side*(a.z-DOOR_TEST_DEPTH/2)))<WINDOW_TEST_EPSILON);
+				ASSERT_TRUE(fabsf(b.y-a.y)<WINDOW_TEST_EPSILON);
+				ASSERT_TRUE(fabsf(b.z-(DOOR_TEST_DEPTH/2-side*(a.x-hingeX)))<WINDOW_TEST_EPSILON);
+			}
+			scene_free(&opened);
+		}
+		scene_free(&closed);
+	}
+	Scene s={0};
+	ASSERT_TRUE(window_test_load(&s,"<scene><wall length='400' height='300' thickness='24'/><door preset='round-arch' width='154' height='270' pos='0 135 0'/></scene>"));
+	ASSERT_FALSE(window_test_wall_at(&s,v3(0,DOOR_TEST_GAP,0)));
+	ASSERT_TRUE(window_test_wall_at(&s,v3(DOOR_TEST_WIDTH/2,DOOR_TEST_HEIGHT-DOOR_TEST_FRAME,0)));
+	scene_free(&s);
+	const char *invalid[]={"openAngle='nan'","hinge='top'","leafDepth='100'","clearance='90'","petWidth='150' petHeight='60'","petWidth='40'","preset='missing'","petFrameWidth='nan'"};
+	for(int i=0;i<(int)(sizeof(invalid)/sizeof(invalid[0]));i++){
+		char xml[DOOR_TEST_MAX_XML];snprintf(xml,sizeof(xml),"<scene><door %s/></scene>",invalid[i]);
+		ASSERT_TRUE(window_test_load(&s,xml));ASSERT_EQUAL(s.nobjs,0);ASSERT_EQUAL(s.nnegativeProfiles,0);scene_free(&s);
+	}
+	ASSERT_TRUE(window_test_load(&s,"<scene up='z'/>"));
+	ASSERT_TRUE(scene_create_door(&s,"round-arch",v3(0,0,0)));
+	ASSERT_TRUE(!strcmp(scene_node_tag(s.selectedNode),"door"));
+	snprintf(s.scenePath,sizeof(s.scenePath),"/tmp/scener-door-save-%d.blks",getpid());
+	ASSERT_TRUE(scene_save_all(&s));
+	Scene restored={0};ASSERT_TRUE(load_scene(s.scenePath,&restored));ASSERT_EQUAL(restored.nobjs,s.nobjs);ASSERT_EQUAL(restored.nnegativeProfiles,1);
+	unlink(s.scenePath);scene_free(&s);scene_free(&restored);
+	PASS();
+}
+
+
+static void test_long_camera_names(void){
+	TEST("camera names retain distinct long Book asset IDs through selection and reload");
+	Scene s={0};
+	const char *first="workbench-top-examine-half-finished-toys",*second="workbench-top-examine-half-finished-toys-repaired";
+	ASSERT_TRUE(window_test_load(&s,"<scene><camera name='workbench-top-examine-half-finished-toys' pos='0 0 500'/><camera name='workbench-top-examine-half-finished-toys-repaired' pos='0 0 600'/></scene>"));
+	ASSERT_TRUE(!strcmp(s.cameras[0].name,first));ASSERT_TRUE(!strcmp(s.cameras[1].name,second));
+	scene_select_camera(&s,second);ASSERT_TRUE(!strcmp(s.activeCamera,second));
+	scene_select_camera(&s,first);ASSERT_TRUE(!strcmp(s.activeCamera,first));
+	snprintf(s.scenePath,sizeof(s.scenePath),"/tmp/scener-long-camera-%d.blks",getpid());
+	ASSERT_TRUE(scene_save_all(&s));
+	Scene restored={0};ASSERT_TRUE(load_scene(s.scenePath,&restored));
+	ASSERT_TRUE(!strcmp(restored.cameras[0].name,first));ASSERT_TRUE(!strcmp(restored.cameras[1].name,second));
+	unlink(s.scenePath);scene_free(&s);scene_free(&restored);PASS();
+}
+
+
+#define DOOR_WINDOW_ASSERT(expr) do { int passed=(expr); if(!passed) fprintf(stderr,"door window assertion %d: %s\n",__LINE__,#expr); ASSERT_TRUE(passed); } while(0)
+#define DOOR_WINDOW_EQUAL(a,b) DOOR_WINDOW_ASSERT((a)==(b))
+#define DOOR_WINDOW_TEST_CENTER 0.54f
+#define DOOR_WINDOW_TEST_PANE_DEPTH 0.02f
+#define DOOR_WINDOW_TEST_CAMERA_DISTANCE 5
+
+static void test_door_windows(void){
+	TEST("door windows: optional matching/circular apertures, exact cuts, glazing, hinge and persistence");
+	const char *presets[]={"rectangular","round-arch","gothic"};
+	const char *windows[]={"round","matching","rectangular","round-arch","gothic"};
+	for(int p=0;p<(int)(sizeof(presets)/sizeof(presets[0]));p++){
+		Scene plain={0};char xml[DOOR_TEST_MAX_XML];
+		snprintf(xml,sizeof(xml),"<scene><door preset='%s' width='154' height='270' frameWidth='10' depth='20' leafDepth='8' handle='0' petWidth='40' petHeight='48' petFrameWidth='2'/></scene>",presets[p]);
+		DOOR_WINDOW_ASSERT(window_test_load(&plain,xml));
+		for(int w=0;w<(int)(sizeof(windows)/sizeof(windows[0]));w++){
+			Scene closed={0},opened={0},empty={0};
+			snprintf(xml,sizeof(xml),"<scene><door preset='%s' width='154' height='270' frameWidth='10' depth='20' leafDepth='8' handle='0' petWidth='40' petHeight='48' petFrameWidth='2' window='%s'/></scene>",presets[p],windows[w]);
+			DOOR_WINDOW_ASSERT(window_test_load(&closed,xml));DOOR_WINDOW_EQUAL(closed.nobjs,5);DOOR_WINDOW_EQUAL(closed.nnegativeProfiles,1);
+			for(int i=0;i<closed.nobjs;i++) DOOR_WINDOW_ASSERT(closed.objs[i].editNode==closed.objs[0].editNode);
+			ASSERT_FALSE(closed.objs[4].castsShadow);
+			float removed=mesh_signed_volume(&plain.objs[1].mesh)-mesh_signed_volume(&closed.objs[1].mesh);
+			float filled=mesh_signed_volume(&closed.objs[3].mesh)/2+mesh_signed_volume(&closed.objs[4].mesh)*DOOR_TEST_LEAF_DEPTH/DOOR_WINDOW_TEST_PANE_DEPTH;
+			DOOR_WINDOW_ASSERT(removed>0&&fabsf(removed-filled)<WINDOW_TEST_EPSILON);
+			vec3 ray=v3(0,DOOR_WINDOW_TEST_CENTER,DOOR_WINDOW_TEST_CAMERA_DISTANCE);
+			DOOR_WINDOW_EQUAL(scene_pick_object(&closed,ray,v3(0,0,-1),NULL),0);
+			snprintf(xml,sizeof(xml),"<scene><door preset='%s' width='154' height='270' frameWidth='10' depth='20' leafDepth='8' handle='0' petWidth='40' petHeight='48' petFrameWidth='2' window='%s' windowPane='0'/></scene>",presets[p],windows[w]);
+			DOOR_WINDOW_ASSERT(window_test_load(&empty,xml));DOOR_WINDOW_EQUAL(empty.nobjs,4);
+			DOOR_WINDOW_EQUAL(scene_pick_object(&empty,ray,v3(0,0,-1),NULL),-1);
+			for(int side=-1;side<=1;side+=2){
+				snprintf(xml,sizeof(xml),"<scene><door preset='%s' width='154' height='270' frameWidth='10' depth='20' leafDepth='8' handle='0' petWidth='40' petHeight='48' petFrameWidth='2' window='%s' hinge='%s' openAngle='90'/></scene>",presets[p],windows[w],side<0?"left":"right");
+				DOOR_WINDOW_ASSERT(window_test_load(&opened,xml));DOOR_WINDOW_EQUAL(opened.nobjs,closed.nobjs);
+				float hingeX=side*(DOOR_TEST_WIDTH/2-DOOR_TEST_FRAME);
+				for(int o=1;o<closed.nobjs;o++) for(int i=0;i<closed.objs[o].mesh.nverts;i++){
+					vec3 a=closed.objs[o].mesh.verts[i].pos,b=opened.objs[o].mesh.verts[i].pos;
+					DOOR_WINDOW_ASSERT(fabsf(b.x-(hingeX+side*(a.z-DOOR_TEST_DEPTH/2)))<WINDOW_TEST_EPSILON);
+					DOOR_WINDOW_ASSERT(fabsf(b.y-a.y)<WINDOW_TEST_EPSILON);
+					DOOR_WINDOW_ASSERT(fabsf(b.z-(DOOR_TEST_DEPTH/2-side*(a.x-hingeX)))<WINDOW_TEST_EPSILON);
+				}
+				scene_free(&opened);
+			}
+			scene_free(&closed);scene_free(&empty);
+		}
+		scene_free(&plain);
+	}
+	const char *invalid[]={"window='unknown'","window='round' windowWidth='-1'","window='round' windowHeight='60'","window='matching' windowWidth='500'","window='round' windowFrameWidth='100'","window='round' windowCenter='nan'","window='round' windowPaneDepth='100'","window='round' windowCenter='40' petWidth='40' petHeight='48'","window='gothic' windowHeight='1'"};
+	for(int i=0;i<(int)(sizeof(invalid)/sizeof(invalid[0]));i++){
+		Scene s={0};char xml[DOOR_TEST_MAX_XML];snprintf(xml,sizeof(xml),"<scene><door %s/></scene>",invalid[i]);
+		DOOR_WINDOW_ASSERT(window_test_load(&s,xml));DOOR_WINDOW_EQUAL(s.nobjs,0);DOOR_WINDOW_EQUAL(s.nnegativeProfiles,0);scene_free(&s);
+	}
+	Scene s={0},restored={0};
+	DOOR_WINDOW_ASSERT(window_test_load(&s,"<scene up='z'><door window='round' rot='90 0 0' openAngle='65' windowPane='0'/></scene>"));
+	snprintf(s.scenePath,sizeof(s.scenePath),"/tmp/scener-door-window-%d.blks",getpid());
+	DOOR_WINDOW_ASSERT(scene_save_all(&s));DOOR_WINDOW_ASSERT(load_scene(s.scenePath,&restored));DOOR_WINDOW_EQUAL(restored.nobjs,s.nobjs);
+	for(int o=0;o<s.nobjs;o++) for(int i=0;i<s.objs[o].mesh.nverts;i++) DOOR_WINDOW_ASSERT(vlen(vsub(s.objs[o].mesh.verts[i].pos,restored.objs[o].mesh.verts[i].pos))<WINDOW_TEST_EPSILON);
+	unlink(s.scenePath);scene_free(&s);scene_free(&restored);PASS();
+}
+
 int main(void) {
   TEST_START("scener input and command state");
   test_tool_commands_share_document_state();
@@ -287,6 +432,9 @@ int main(void) {
   test_explicit_scene_up_axis();
   test_scene_coordinate_conventions();
   test_window_profiles();
+  test_long_camera_names();
+  test_door_fit_swing_and_pet_opening();
+  test_door_windows();
   test_window_wall_cutting();
   test_window_cut_transforms_and_union();
   test_window_invalid_and_opt_out();

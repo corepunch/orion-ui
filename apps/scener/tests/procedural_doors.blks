@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<scene up="z" ambient="0.35 0.38 0.43" background="dusk">
+  <material id="teal" color="0.19 0.40 0.39" shininess="10" />
+  <material id="brass" color="0.75 0.53 0.22" shininess="38" />
+  <camera name="front" pos="0 -950 230" look="0 0 130" fov="45" comment="Closed round arch, left swing, right swing; pet passages remain cut through leaves." />
+  <camera name="oblique" pos="630 -740 350" look="0 0 120" fov="47" comment="Inspect hinged thickness, shared frame fit and wall reveals." />
+  <camera name="rear" pos="0 800 260" look="0 0 130" fov="48" comment="All three exact profile cuts cross the entire wall slab." />
+  <light pos="-240 -400 600" color="1 0.9 0.76" intensity="1.7" radius="1600" castShadows="1" />
+  <light pos="200 400 450" color="0.65 0.8 1" intensity="1.2" radius="1200" castShadows="1" />
+  <box pos="0 0 -6" size="900 500 12" material="floor" />
+  <wall length="760" height="340" thickness="24" rot="90 0 0" material="wall" />
+  <door name="closed" window="round" windowFrameMaterial="brass" preset="round-arch" pos="-245 0 135" rot="90 0 0" width="154" height="270" frameWidth="10" depth="24" leafDepth="8" leafMaterial="teal" hardwareMaterial="brass" petWidth="40" petHeight="48" petFrameWidth="2" segments="48" />
+  <door name="left" window="matching" windowFrameMaterial="brass" preset="rectangular" pos="0 0 135" rot="90 0 0" width="154" height="270" frameWidth="10" depth="24" leafDepth="8" leafMaterial="teal" hardwareMaterial="brass" openAngle="65" petWidth="40" petHeight="48" petFrameWidth="2" segments="48" />
+  <door name="right" window="matching" windowPane="0" windowFrameMaterial="brass" preset="gothic" pos="245 0 135" rot="90 0 0" width="154" height="270" frameWidth="10" depth="24" leafDepth="8" leafMaterial="teal" hardwareMaterial="brass" hinge="right" openAngle="90" petWidth="40" petHeight="48" petFrameWidth="2" segments="48" />
+</scene>

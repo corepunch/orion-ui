@@ -31,7 +31,7 @@ typedef struct {
 	bool debug_flags_set;
 	char scene_path[512];
 	char output_path[1024];
-	char camera_name[32];
+	char camera_name[MAX_CAMERA_NAME];
 	int width, height, supersample;
 	int debug_flags;
 } scener_cli_t;
@@ -317,7 +317,7 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
     if(g_cli.batch||g_cli.layout){
       if(!cli_make_dirs(g_cli.output_dir))return false;
       int count=g_cli.layout||g_cli.camera_name[0]?1:doc->scene.ncameras;
-      char (*names)[32]=calloc((size_t)count,sizeof(*names));
+      char (*names)[MAX_CAMERA_NAME]=calloc((size_t)count,sizeof(*names));
       if(!names)return false;
       for(int i=0;i<count;i++)snprintf(names[i],sizeof(names[i]),"%s",g_cli.layout?"layout":g_cli.camera_name[0]?g_cli.camera_name:doc->scene.cameras[i].name);
       bool ok=true;
