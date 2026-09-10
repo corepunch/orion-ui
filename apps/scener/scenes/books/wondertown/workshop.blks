@@ -16,6 +16,7 @@
   <chardef name="Pip" height="30" radius="3.4" top="1" neck="0.72" pelvis="0.34" feet="0"/>
 
   <material id="plaster" color="0.42 0.31 0.22" shininess="3"/>
+  <material id="dado" color="0.20 0.27 0.23" shininess="5"/>
   <material id="floor" color="0.23 0.13 0.07" shininess="10"/>
   <material id="wood" color="0.39 0.18 0.07" shininess="13"/>
   <material id="dark_wood" color="0.16 0.065 0.025" shininess="10"/>
@@ -32,14 +33,21 @@
   <sun dir="-0.52 -1.08 1" color="0.30 0.47 0.68" intensity="0.72" castShadows="1"/>
   <light pos="-470 55 -1058" color="0.26 0.48 0.72" intensity="2.0" radius="280" castShadows="0"/>
 
-  <box pos="0 -9 -550" size="1200 18 1100" material="floor"/>
+  <floor pos="0 0 -550" width="1200" depth="1100" thickness="18" style="boards"
+         tileWidth="22" tileLength="160" gap="0.3" colorVariation="0.18" seed="23"
+         material="floor" groutMaterial="dark_wood"/>
   <box pos="0 610 -550" size="1200 20 1100" material="ceiling"/>
-  <wall pos="0 0 -1100" length="1200" height="600" thickness="24" material="plaster"/>
-  <wall pos="-600 0 -550" rot="0 90 0" length="1100" height="600" thickness="24" material="plaster"/>
-  <wall pos="600 0 -550" rot="0 90 0" length="1100" height="600" thickness="24" material="plaster"/>
+  <wall pos="0 0 -1100" length="1200" height="600" thickness="24"
+        material="plaster" lowerHeight="180" lowerMaterial="dado" trimMaterial="dark_wood"
+        bottomTrimHeight="12" middleTrimHeight="8" topTrimHeight="26" trimDepth="4" topTrimDepth="14" trimSide="front"/>
+  <wall pos="-600 0 -550" rot="0 90 0" length="1100" height="600" thickness="24"
+        material="plaster" lowerHeight="180" lowerMaterial="dado" trimMaterial="dark_wood"
+        bottomTrimHeight="12" middleTrimHeight="8" topTrimHeight="26" trimDepth="4" topTrimDepth="14" trimSide="front"/>
+  <wall pos="600 0 -550" rot="0 90 0" length="1100" height="600" thickness="24"
+        material="plaster" lowerHeight="180" lowerMaterial="dado" trimMaterial="dark_wood"
+        bottomTrimHeight="12" middleTrimHeight="8" topTrimHeight="26" trimDepth="4" topTrimDepth="14" trimSide="back"/>
   <wall pos="0 0 0" length="1200" height="600" thickness="24" material="plaster" renderable="0" castShadow="1"/>
 
-  <box pos="0 580 -1084" size="1160 26 20" material="dark_wood"/>
   <box pos="-572 290 -1084" size="22 580 20" material="dark_wood"/>
   <box pos="-355 290 -1084" size="20 580 20" material="dark_wood"/>
   <box pos="-130 290 -1084" size="20 580 20" material="dark_wood"/>

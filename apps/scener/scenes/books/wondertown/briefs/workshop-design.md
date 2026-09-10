@@ -42,6 +42,16 @@ Tolliver's workshop is an old, beloved toymaker's cathedral of work: ordinary fu
 - Adapt: keep the existing room footprint and story cameras while increasing large and medium-scale masses.
 - Reject: incompatible alternate window shapes, multiple dominant clocks, aircraft, excessive hanging objects and any clutter that blocks canonical climb paths.
 
+## Parameterized architecture (September 2026 direction)
+
+Use automatic wall finishes: desaturated green lower sections to 180 cm, warm
+plaster above, dark wood baseboards, divider rails and ceiling trims. The wall
+owns these finishes and cuts them together at doors and windows. Retain the
+exposed vertical posts, braces and ceiling rafters as structural members.
+Use a procedural board floor at the existing Y=0 support plane, with 22 cm
+courses, 160 cm board lengths, 0.3 cm joints and 18% deterministic color variation.
+Keep room dimensions, furniture placement, lights and story cameras unchanged.
+
 ## Categorized inventory
 
 | Element | Class | Function | State | Zone | Visual priority | Evidence |

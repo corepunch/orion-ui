@@ -44,3 +44,13 @@
 - Endgame lighting variant.
 
 These are intentionally not conflated with the initial-state scene. Their mechanical and adaptation decisions remain in `workshop-design.md` under `Unresolved decisions`.
+
+## Procedural surface coverage
+
+The workshop shell uses two-section `<wall>` finishes with automatically cut
+baseboards, divider rails and ceiling trims on each visible wall. The old rear
+ceiling rail box is replaced by the wall's top trim; posts and diagonal braces
+remain explicit structural geometry. One `<floor style="boards">` replaces the
+plain slab and generates staggered boards, recessed joints and seeded color
+variation. The walkable top stays at Y=0 and all existing scene placements stay
+at their original coordinates.

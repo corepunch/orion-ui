@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<scene up="z" ambient="0.35 0.35 0.35" background="neutral">
+<camera name="Overview" pos="0 -1150 1050" look="0 170 80" fov="72"/>
+<sun dir="-0.5 1 -1" color="1 0.95 0.85" intensity="0.8" castShadows="1"/>
+<camera name="boards" pos="-600 -280 210" look="-720 190 105" fov="62"/>
+<group pos="-720 0 0" rot="90 0 0">
+<floor pos="0 0 -180" width="420" depth="360" style="boards" tileWidth="32" tileLength="120" gap="1" colorVariation="0.25" seed="17" color="0.42 0.25 0.13" groutColor="0.18 0.18 0.18"/>
+<wall pos="0 0 -360" length="420" height="300" thickness="20" lowerHeight="100" lowerColor="0.18 0.34 0.30" upperColor="0.75 0.67 0.53" trimColor="0.28 0.17 0.10" bottomTrimHeight="12" middleTrimHeight="10" topTrimHeight="12" trimDepth="5"/>
+<door preset="round-arch" pos="-100 110 -360" width="100" height="220" frameWidth="8" depth="32" openAngle="45"/>
+<window preset="gothic" pos="100 190 -360" width="110" height="180" frameWidth="8" depth="32" pane="0"/>
+</group>
+<camera name="squares" pos="-120 -280 210" look="-240 190 105" fov="62"/>
+<group pos="-240 0 0" rot="90 0 0">
+<floor pos="0 0 -180" width="420" depth="360" style="squares" tileWidth="32" gap="1" colorVariation="0.25" seed="17" color="0.50 0.53 0.57" groutColor="0.18 0.18 0.18"/>
+<wall pos="0 0 -360" length="420" height="300" thickness="20" lowerHeight="100" lowerColor="0.18 0.34 0.30" upperColor="0.75 0.67 0.53" trimColor="0.28 0.17 0.10" bottomTrimHeight="12" middleTrimHeight="10" topTrimHeight="12" trimDepth="5"/>
+<door preset="round-arch" pos="-100 110 -360" width="100" height="220" frameWidth="8" depth="32" openAngle="45"/>
+<window preset="gothic" pos="100 190 -360" width="110" height="180" frameWidth="8" depth="32" pane="0"/>
+</group>
+<camera name="hexes" pos="360 -280 210" look="240 190 105" fov="62"/>
+<group pos="240 0 0" rot="90 0 0">
+<floor pos="0 0 -180" width="420" depth="360" style="hexes" tileWidth="32" gap="1" colorVariation="0.25" seed="17" color="0.50 0.53 0.57" groutColor="0.18 0.18 0.18"/>
+<wall pos="0 0 -360" length="420" height="300" thickness="20" lowerHeight="100" lowerColor="0.18 0.34 0.30" upperColor="0.75 0.67 0.53" trimColor="0.28 0.17 0.10" bottomTrimHeight="12" middleTrimHeight="10" topTrimHeight="12" trimDepth="5"/>
+<door preset="round-arch" pos="-100 110 -360" width="100" height="220" frameWidth="8" depth="32" openAngle="45"/>
+<window preset="gothic" pos="100 190 -360" width="110" height="180" frameWidth="8" depth="32" pane="0"/>
+</group>
+<camera name="stones" pos="840 -280 210" look="720 190 105" fov="62"/>
+<group pos="720 0 0" rot="90 0 0">
+<floor pos="0 0 -180" width="420" depth="360" style="stones" tileWidth="32" gap="1" colorVariation="0.25" seed="17" color="0.50 0.53 0.57" groutColor="0.18 0.18 0.18"/>
+<wall pos="0 0 -360" length="420" height="300" thickness="20" lowerHeight="100" lowerColor="0.18 0.34 0.30" upperColor="0.75 0.67 0.53" trimColor="0.28 0.17 0.10" bottomTrimHeight="12" middleTrimHeight="10" topTrimHeight="12" trimDepth="5"/>
+<door preset="round-arch" pos="-100 110 -360" width="100" height="220" frameWidth="8" depth="32" openAngle="45"/>
+<window preset="gothic" pos="100 190 -360" width="110" height="180" frameWidth="8" depth="32" pane="0"/>
+</group>
+</scene>

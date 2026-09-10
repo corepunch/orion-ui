@@ -7,6 +7,33 @@
 #include "simplegl.h"
 #include "materials.h"
 
+#define SURFACE_EPSILON 0.000001f
+#define SURFACE_NAME_CAPACITY 64
+#define WALL_DEFAULT_LENGTH 4.0f
+#define WALL_DEFAULT_HEIGHT 2.7f
+#define WALL_DEFAULT_THICKNESS 0.2f
+#define WALL_DEFAULT_TRIM_DEPTH 0.02f
+#define FLOOR_DEFAULT_WIDTH 4.0f
+#define FLOOR_DEFAULT_DEPTH 4.0f
+#define FLOOR_DEFAULT_THICKNESS 0.18f
+#define FLOOR_DEFAULT_TILE_DEPTH 0.02f
+#define FLOOR_DEFAULT_TILE_WIDTH 0.2f
+#define FLOOR_DEFAULT_TILE_LENGTH 1.2f
+#define FLOOR_DEFAULT_GAP 0.002f
+#define FLOOR_DEFAULT_VARIATION 0.1f
+#define FLOOR_MAX_CELLS 10000
+#define FLOOR_PLANE_ROTATION 90.0f
+#define FLOOR_HEX_SIDES 6
+#define FLOOR_HEX_ROW_STEP 1.5f
+#define FLOOR_SQRT_THREE 1.7320508075688772f
+#define FLOOR_STONE_BEVEL 0.16f
+#define FLOOR_STONE_JITTER 0.22f
+#define FLOOR_HASH_ROW 0x9e3779b9u
+#define FLOOR_HASH_COLUMN 0x85ebca6bu
+#define FLOOR_HASH_MIX 0x7feb352du
+#define FLOOR_HASH_SHIFT 16
+#define FLOOR_HASH_MASK 0x00ffffffu
+
 #define PICK_TRIANGLE_EPSILON 0.00000001f
 #define WINDOW_Z_UP_ROTATION "90 0 0"
 #define WINDOW_VALUE_CAPACITY 32
@@ -871,7 +898,6 @@ static void parse_group(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3
 	parse_nodes(s, n, M, R);
 }
 
-/* build the boxes that make up a wall with rectangular openings */
 #define OPENING_RECT     0
 #define OPENING_ARCH     1
 #define OPENING_CYLINDER 2
@@ -879,13 +905,9 @@ static void parse_group(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3
 typedef struct {
 	float x,width,height,sill;
 	int type;       /* OPENING_RECT / OPENING_ARCH / OPENING_CYLINDER */
-	int emitted;
 	Shape2D profile;
 	float cylR;     /* cylinder: radius (in wall-local XY) */
 } Opening;
-static void build_wall_boxes(Scene *s, mat4 wallM, mat4 wallR, float L,float H,float T,
-                              Opening *openings,int nopen, vec3 color,float shin, int castsShadow,int renderable,int unlit);
-
 static int mat4_inverse_affine(mat4 m, mat4 *out){
 	vec3 a=v3(m.m[0],m.m[1],m.m[2]), b=v3(m.m[4],m.m[5],m.m[6]);
 	vec3 c=v3(m.m[8],m.m[9],m.m[10]), t=v3(m.m[12],m.m[13],m.m[14]);
@@ -1019,18 +1041,180 @@ static void add_negative_profile_openings(Scene *s,mat4 wallM,float L,float H,fl
 	}
 }
 
-static void parse_wall(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 pos, vec3 rot, vec3 color, float shin, int castsShadow, int renderable, int unlit){
+typedef struct { vec3 color; float shin; int texture; } surface_material_t;
+
+static surface_material_t surface_material(Scene *s,XmlNode *n,const char *prefix,surface_material_t fallback){
+	char key[SURFACE_NAME_CAPACITY];
+	snprintf(key,sizeof(key),"%sMaterial",prefix);
+	const char *name=xml_attr(n,key,NULL);
+	Material *m=find_material(s,name);
+	if(name&&!m) fprintf(stderr,"[scener] %s: unknown %s '%s'\n",n->tag,key,name);
+	if(m){ fallback.color=m->color; fallback.shin=m->shininess; fallback.texture=materials_index_for_name(m->id); }
+	snprintf(key,sizeof(key),"%sColor",prefix);
+	fallback.color=xml_attr_v3(n,key,fallback.color);
+	return fallback;
+}
+
+static void surface_add(Scene *s,Mesh mesh,mat4 M,mat4 R,surface_material_t material,int shadow,int visible,int unlit){
+	if(!mesh.ntris){ mesh_free(&mesh); return; }
+	int texture=s->activeTexIndex; s->activeTexIndex=material.texture;
+	scene_add_obj(s,mesh,M,R,material.color,material.shin,shadow,visible,unlit);
+	s->activeTexIndex=texture;
+}
+
+static Shape2D wall_opening_profile(const Opening *o,float length){
+	Shape2D p={0}; p.closed=1;
+	if(o->type==OPENING_PROFILE){
+		for(int j=0;j<o->profile.npts;j++) DA_PUSH(p.pts,p.npts,p.cpts,o->profile.pts[j]);
+		return p;
+	}
+	if(o->type==OPENING_CYLINDER){
+		for(int j=0;j<WINDOW_DEFAULT_SEGMENTS;j++){
+			float a=(float)j/WINDOW_DEFAULT_SEGMENTS*2*M_PIf;
+			vec3 v=v3(cosf(a)*o->cylR,sinf(a)*o->cylR,0); DA_PUSH(p.pts,p.npts,p.cpts,v);
+		}
+	} else p=shape2d_window(o->type==OPENING_ARCH?WINDOW_ROUND_ARCH:WINDOW_RECTANGLE,o->width,o->height,WINDOW_DEFAULT_SEGMENTS);
+	for(int j=0;j<p.npts;j++) p.pts[j]=vadd(p.pts[j],v3(o->x-length/2+o->width/2,o->sill+o->height/2,0));
+	return p;
+}
+
+static void wall_band(Scene *s,mat4 M,mat4 R,float length,float y0,float y1,float depth,float z,
+		Shape2D *holes,int nholes,surface_material_t material,int shadow,int visible,int unlit){
+	if(y1-y0<=SURFACE_EPSILON) return;
+	Shape2D boundary=shape2d_window(WINDOW_RECTANGLE,length,y1-y0,WINDOW_MIN_SEGMENTS);
+	for(int i=0;i<boundary.npts;i++) boundary.pts[i].y+=(y0+y1)/2;
+	Mesh mesh=gen_profile_cutouts(&boundary,holes,nholes,depth);
+	surface_add(s,mesh,mat4_mul(M,mat4_translate(v3(0,0,z))),R,material,shadow,visible,unlit);
+	shape2d_free(&boundary);
+}
+
+static void parse_wall(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos,vec3 rot,vec3 color,float shin,int castsShadow,int renderable,int unlit){
 	(void)parentM; (void)pos; (void)rot;
-	float L=xml_attr_f_cm(n,"length",4.0f), H=xml_attr_f_cm(n,"height",2.7f), T=xml_attr_f_cm(n,"thickness",0.2f);
-	mat4 wallM=M;
+	float L=xml_attr_f_cm(n,"length",WALL_DEFAULT_LENGTH),H=xml_attr_f_cm(n,"height",WALL_DEFAULT_HEIGHT);
+	float T=xml_attr_f_cm(n,"thickness",WALL_DEFAULT_THICKNESS),lower=xml_attr_f_cm(n,"lowerHeight",0);
+	float trimDepth=xml_attr_f_cm(n,"trimDepth",WALL_DEFAULT_TRIM_DEPTH);
+	const char *side=xml_attr(n,"trimSide","front");
+	const char *prefixes[]={"bottomTrim","middleTrim","topTrim"};
+	float heights[3],depths[3];
+	int valid=isfinite(L)&&L>SURFACE_EPSILON&&isfinite(H)&&H>SURFACE_EPSILON&&isfinite(T)&&T>SURFACE_EPSILON;
+	valid&=isfinite(lower)&&lower>=0&&lower<=H&&isfinite(trimDepth)&&trimDepth>SURFACE_EPSILON&&!n->nkids;
+	valid&=!strcmp(side,"front")||!strcmp(side,"back")||!strcmp(side,"both");
+	for(int i=0;i<(int)(sizeof(prefixes)/sizeof(prefixes[0]));i++){
+		char key[SURFACE_NAME_CAPACITY];
+		snprintf(key,sizeof(key),"%sHeight",prefixes[i]); heights[i]=xml_attr_f_cm(n,key,0);
+		snprintf(key,sizeof(key),"%sDepth",prefixes[i]); depths[i]=xml_attr_f_cm(n,key,trimDepth);
+		valid&=isfinite(heights[i])&&heights[i]>=0&&heights[i]<=H&&isfinite(depths[i])&&depths[i]>SURFACE_EPSILON;
+	}
+	valid&=heights[1]==0||(lower-heights[1]/2>=heights[0]&&lower+heights[1]/2<=H-heights[2]);
+	valid&=heights[0]+heights[2]<=H;
+	if(!valid){ fprintf(stderr,"[scener] wall: invalid dimensions, overlapping trims, trimSide or children\n"); return; }
 	Opening *op=NULL; int nop=0,cop=0;
-	add_negative_openings(s,wallM,L,H,T,&op,&nop,&cop);
-	add_negative_arch_openings(s,wallM,L,H,T,&op,&nop,&cop);
-	add_negative_cylinder_openings(s,wallM,L,H,T,&op,&nop,&cop);
-	add_negative_profile_openings(s,wallM,L,H,T,&op,&nop,&cop);
-	build_wall_boxes(s, wallM, R, L,H,T, op,nop, color, shin, castsShadow, renderable, unlit);
-	for(int i=0;i<nop;i++) shape2d_free(&op[i].profile);
+	add_negative_openings(s,M,L,H,T,&op,&nop,&cop);
+	add_negative_arch_openings(s,M,L,H,T,&op,&nop,&cop);
+	add_negative_cylinder_openings(s,M,L,H,T,&op,&nop,&cop);
+	add_negative_profile_openings(s,M,L,H,T,&op,&nop,&cop);
+	Shape2D *holes=NULL; int nholes=0,choles=0;
+	for(int i=0;i<nop;i++){
+		Shape2D p=wall_opening_profile(&op[i],L); DA_PUSH(holes,nholes,choles,p);
+		shape2d_free(&op[i].profile);
+	}
 	free(op);
+	surface_material_t base={color,shin,s->activeTexIndex};
+	wall_band(s,M,R,L,0,lower,T,0,holes,nholes,surface_material(s,n,"lower",base),castsShadow,renderable,unlit);
+	wall_band(s,M,R,L,lower,H,T,0,holes,nholes,surface_material(s,n,"upper",base),castsShadow,renderable,unlit);
+	surface_material_t trim=surface_material(s,n,"trim",base);
+	float starts[]={0,lower-heights[1]/2,H-heights[2]};
+	for(int i=0;i<(int)(sizeof(prefixes)/sizeof(prefixes[0]));i++){
+		if(heights[i]<=SURFACE_EPSILON) continue;
+		surface_material_t mat=surface_material(s,n,prefixes[i],trim);
+		for(int sign=-1;sign<=1;sign+=2){
+			if((sign<0&&!strcmp(side,"front"))||(sign>0&&!strcmp(side,"back"))) continue;
+			/* Match cutters against the wall once; shallow frames must also cut projecting trims. */
+			wall_band(s,M,R,L,starts[i],starts[i]+heights[i],depths[i],sign*(T+depths[i])/2,holes,nholes,mat,castsShadow,renderable,unlit);
+		}
+	}
+	for(int i=0;i<nholes;i++) shape2d_free(&holes[i]);
+	free(holes);
+}
+
+static float floor_random(int row,int column,unsigned seed){
+	unsigned value=seed^(unsigned)row*FLOOR_HASH_ROW^(unsigned)column*FLOOR_HASH_COLUMN;
+	value^=value>>FLOOR_HASH_SHIFT; value*=FLOOR_HASH_MIX; value^=value>>FLOOR_HASH_SHIFT;
+	return (float)(value&FLOOR_HASH_MASK)/FLOOR_HASH_MASK;
+}
+
+typedef enum { FLOOR_BOARDS,FLOOR_SQUARES,FLOOR_HEXES,FLOOR_STONES } floor_style_t;
+static const struct { const char *name; floor_style_t style; } floor_styles[]={
+	{"boards",FLOOR_BOARDS},{"squares",FLOOR_SQUARES},{"hexes",FLOOR_HEXES},{"stones",FLOOR_STONES}
+};
+
+static Shape2D floor_cell(floor_style_t style,float x,float y,float width,float length,float bevel){
+	Shape2D p={0}; p.closed=1;
+	if(style==FLOOR_HEXES){
+		for(int i=0;i<FLOOR_HEX_SIDES;i++){
+			float a=M_PIf/2+(float)i/FLOOR_HEX_SIDES*2*M_PIf;
+			vec3 v=v3(x+cosf(a)*width/FLOOR_SQRT_THREE,y+sinf(a)*width/FLOOR_SQRT_THREE,0);
+			DA_PUSH(p.pts,p.npts,p.cpts,v);
+		}
+	} else if(style==FLOOR_STONES){
+		vec3 points[]={v3(-width/2+bevel,-length/2,0),v3(width/2-bevel,-length/2,0),
+			v3(width/2,-length/2+bevel,0),v3(width/2,length/2-bevel,0),
+			v3(width/2-bevel,length/2,0),v3(-width/2+bevel,length/2,0),
+			v3(-width/2,length/2-bevel,0),v3(-width/2,-length/2+bevel,0)};
+		for(int i=0;i<(int)(sizeof(points)/sizeof(points[0]));i++){
+			vec3 v=vadd(points[i],v3(x,y,0)); DA_PUSH(p.pts,p.npts,p.cpts,v);
+		}
+	} else {
+		p=shape2d_window(WINDOW_RECTANGLE,width,length,WINDOW_MIN_SEGMENTS);
+		for(int i=0;i<p.npts;i++) p.pts[i]=vadd(p.pts[i],v3(x,y,0));
+	}
+	return p;
+}
+
+static void parse_floor(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos,vec3 rot,vec3 color,float shin,int castsShadow,int renderable,int unlit){
+	(void)parentM; (void)pos; (void)rot;
+	const char *name=xml_attr(n,"style","boards"); int style=-1;
+	for(int i=0;i<(int)(sizeof(floor_styles)/sizeof(floor_styles[0]));i++) if(!strcmp(name,floor_styles[i].name)) style=floor_styles[i].style;
+	float width=xml_attr_f_cm(n,"width",FLOOR_DEFAULT_WIDTH),depth=xml_attr_f_cm(n,"depth",FLOOR_DEFAULT_DEPTH);
+	float thickness=xml_attr_f_cm(n,"thickness",FLOOR_DEFAULT_THICKNESS),tileDepth=xml_attr_f_cm(n,"tileDepth",FLOOR_DEFAULT_TILE_DEPTH);
+	float tileWidth=xml_attr_f_cm(n,"tileWidth",FLOOR_DEFAULT_TILE_WIDTH);
+	float tileLength=xml_attr_f_cm(n,"tileLength",style==FLOOR_BOARDS?FLOOR_DEFAULT_TILE_LENGTH:tileWidth);
+	float gap=xml_attr_f_cm(n,"gap",FLOOR_DEFAULT_GAP),variation=xml_attr_f(n,"colorVariation",FLOOR_DEFAULT_VARIATION);
+	unsigned seed=(unsigned)xml_attr_i(n,"seed",1);
+	float values[]={width,depth,thickness,tileDepth,tileWidth,tileLength}; int valid=style>=0&&!n->nkids;
+	for(int i=0;i<(int)(sizeof(values)/sizeof(values[0]));i++) valid&=isfinite(values[i])&&values[i]>SURFACE_EPSILON;
+	valid&=thickness-tileDepth>SURFACE_EPSILON&&isfinite(gap)&&gap>=0&&gap<fminf(tileWidth,tileLength)/2;
+	valid&=isfinite(variation)&&variation>=0&&variation<=1;
+	if((style==FLOOR_SQUARES||style==FLOOR_HEXES)&&xml_attr(n,"tileLength",NULL)) valid&=tileLength==tileWidth;
+	float step=style==FLOOR_HEXES?tileWidth/FLOOR_SQRT_THREE*FLOOR_HEX_ROW_STEP:tileWidth;
+	float across=style==FLOOR_HEXES?tileWidth:tileLength;
+	double rows=ceil((double)depth/step)+2,columns=ceil((double)width/across)+2;
+	valid&=isfinite(rows)&&isfinite(columns)&&rows*columns<=FLOOR_MAX_CELLS;
+	if(!valid){ fprintf(stderr,"[scener] floor: invalid style/dimensions, children, colorVariation or cell count (limit %d)\n",FLOOR_MAX_CELLS); return; }
+	surface_material_t base={color,shin,s->activeTexIndex};
+	surface_material_t grout=surface_material(s,n,"grout",base);
+	surface_add(s,gen_box(width,thickness-tileDepth,depth),mat4_mul(M,mat4_translate(v3(0,-(thickness+tileDepth)/2,0))),R,grout,castsShadow,renderable,unlit);
+	mat4 plane=mat4_rot_xyz(v3(FLOOR_PLANE_ROTATION,0,0));
+	mat4 tileM=mat4_mul(M,mat4_mul(mat4_translate(v3(0,-tileDepth/2,0)),plane)),tileR=mat4_mul(R,plane);
+	for(int row=-1;row<(int)rows-1;row++) for(int column=-1;column<(int)columns-1;column++){
+		float x=-width/2+(column+1)*across,y=-depth/2+(row+1)*step;
+		if(style!=FLOOR_SQUARES) x+=(row&1)*across/2;
+		float cellWidth=across,cellLength=step;
+		if(style==FLOOR_STONES){
+			float left=(floor_random(row,column,seed)-1.0f/2)*across*FLOOR_STONE_JITTER;
+			float right=(floor_random(row,column+1,seed)-1.0f/2)*across*FLOOR_STONE_JITTER;
+			x+=(left+right)/2; cellWidth+=right-left;
+		}
+		float bevel=fminf(cellWidth,cellLength)*FLOOR_STONE_BEVEL*(1+floor_random(row,column,seed));
+		Shape2D cell=floor_cell(style,x,y,cellWidth,cellLength,bevel);
+		Shape2D inset=shape2d_inset(&cell,gap/2),clipped=shape2d_clip_rect(&inset,width,depth);
+		Mesh mesh=gen_profile_extrusion(&clipped,tileDepth);
+		surface_material_t tile=base;
+		float factor=1+(2*floor_random(row,column,seed)-1)*variation;
+		tile.color=v3(fminf(1,fmaxf(0,color.x*factor)),fminf(1,fmaxf(0,color.y*factor)),fminf(1,fmaxf(0,color.z*factor)));
+		surface_add(s,mesh,tileM,tileR,tile,castsShadow,renderable,unlit);
+		shape2d_free(&cell); shape2d_free(&inset); shape2d_free(&clipped);
+	}
 }
 
 static void parse_line(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 pos, vec3 rot, vec3 color, float shin, int castsShadow, int renderable, int unlit){
@@ -1249,6 +1433,7 @@ static const struct {
 	{ "light",    parse_light },
 	{ "prefab",   parse_prefab },
 	{ "wall",     parse_wall },
+	{ "floor",    parse_floor },
 	{ "line",     parse_line },
 	{ "dummy",    parse_dummy },
 	{ "lathe",    parse_lathe },
@@ -1447,7 +1632,7 @@ static void warn_unknown_children(XmlNode *parent, const char *path, int root, i
 		else if(!strcmp(parent->tag,"group"))
 			supported=has_shape_parser(n->tag) || !strcmp(n->tag,"bool-negative-box") || !strcmp(n->tag,"bool-negative-arch") || !strcmp(n->tag,"bool-negative-cylinder") || !strcmp(n->tag,"shape");
 		else if(!strcmp(parent->tag,"camera")) supported=!strcmp(n->tag,"transform");
-		else if(!strcmp(parent->tag,"wall")||!strcmp(parent->tag,"window")||!strcmp(parent->tag,"door")) supported=0;
+		else if(!strcmp(parent->tag,"wall")||!strcmp(parent->tag,"floor")||!strcmp(parent->tag,"window")||!strcmp(parent->tag,"door")) supported=0;
 		else if(!strcmp(parent->tag,"prefab")) supported=!strcmp(n->tag,"array");
 		else if(has_shape_parser(parent->tag)) supported=has_modifier_parser(n->tag);
 		if(!supported){
@@ -2041,120 +2226,6 @@ void gizmo_apply_drag(Scene *s,int mX,int mY,int W,int H,
 		scene_rebuild_view(s);
 		s->camPos=eye; s->camLook=look; s->camFov=fov;
 	} else scene_apply_drag_transform(s,n);
-}
-
-/* -------------------------------------- build_wall_boxes (below parse_nodes) */
-
-/* Emit a single box piece of a wall segment */
-static void emit_wall_box(Scene *s, mat4 wallM, mat4 wallR, float T,
-		float y0, float y1, float x0, float x1,
-		vec3 color, float shin, int castsShadow, int renderable, int unlit){
-	float w=x1-x0, h=y1-y0;
-	if(w<1e-4f || h<1e-4f) return;
-	vec3 localCenter=v3((x0+x1)*0.5f,(y0+y1)*0.5f,0);
-	Mesh box=gen_box(w,h,T);
-	mat4 M=mat4_mul(wallM,mat4_translate(localCenter));
-	scene_add_obj(s,box,M,wallR,color,shin,castsShadow,renderable,unlit);
-}
-
-static void build_wall_profiles(Scene *s,mat4 M,mat4 R,float L,float H,float T,Opening *openings,int nopen,vec3 color,float shin,int castsShadow,int renderable,int unlit){
-	Shape2D boundary=shape2d_window(WINDOW_RECTANGLE,L,H,WINDOW_DEFAULT_SEGMENTS);
-	for(int i=0;i<boundary.npts;i++) boundary.pts[i].y+=H/2;
-	Shape2D *holes=NULL; int nholes=0,choles=0;
-	for(int i=0;i<nopen;i++){
-		Opening *o=&openings[i]; Shape2D p={0}; p.closed=1;
-		if(o->type==OPENING_PROFILE){
-			for(int j=0;j<o->profile.npts;j++) DA_PUSH(p.pts,p.npts,p.cpts,o->profile.pts[j]);
-		} else {
-			if(o->type==OPENING_CYLINDER){
-				for(int j=0;j<WINDOW_DEFAULT_SEGMENTS;j++){
-					float a=(float)j/WINDOW_DEFAULT_SEGMENTS*2*M_PIf;
-					vec3 v=v3(cosf(a)*o->cylR,sinf(a)*o->cylR,0); DA_PUSH(p.pts,p.npts,p.cpts,v);
-				}
-			} else p=shape2d_window(o->type==OPENING_ARCH?WINDOW_ROUND_ARCH:WINDOW_RECTANGLE,o->width,o->height,WINDOW_DEFAULT_SEGMENTS);
-			for(int j=0;j<p.npts;j++) p.pts[j]=vadd(p.pts[j],v3(o->x-L/2+o->width/2,o->sill+o->height/2,0));
-		}
-		if(p.npts) DA_PUSH(holes,nholes,choles,p);
-	}
-	Mesh mesh=gen_profile_cutouts(&boundary,holes,nholes,T);
-	scene_add_obj(s,mesh,M,R,color,shin,castsShadow,renderable,unlit);
-	for(int i=0;i<nholes;i++) shape2d_free(&holes[i]);
-	free(holes); shape2d_free(&boundary);
-}
-
-static void build_wall_boxes(Scene *s, mat4 wallM, mat4 wallR, float L,float H,float T,
-                              Opening *openings,int nopen, vec3 color,float shin, int castsShadow,int renderable,int unlit){
-	for(int i=0;i<nopen;i++) if(openings[i].type==OPENING_PROFILE){
-		build_wall_profiles(s,wallM,wallR,L,H,T,openings,nopen,color,shin,castsShadow,renderable,unlit);
-		return;
-	}
-	/* Convert x coordinates to wall-local space (origin at left edge, centered horizontally):
-	 * opening.x is already in [0,L] from left edge; wall mesh has center at x=0,
-	 * so wall-local x = opening.x - L/2. */
-	float half=L*0.5f;
-
-	/* Collect X breakpoints from all openings' bounding rects */
-	float *bp=NULL; int nbp=0,cbp=0;
-	float b0=0,bL=L; DA_PUSH(bp,nbp,cbp,b0); DA_PUSH(bp,nbp,cbp,bL);
-	for(int i=0;i<nopen;i++){
-		float a=openings[i].x, b=openings[i].x+openings[i].width;
-		DA_PUSH(bp,nbp,cbp,a); DA_PUSH(bp,nbp,cbp,b);
-	}
-	/* Sort breakpoints */
-	for(int i=0;i<nbp;i++) for(int j=i+1;j<nbp;j++) if(bp[j]<bp[i]){ float t=bp[i]; bp[i]=bp[j]; bp[j]=t; }
-
-	for(int i=0;i+1<nbp;i++){
-		float x0=bp[i], x1=bp[i+1];
-		if(x1-x0 < 1e-4f) continue;
-		float xm=(x0+x1)*0.5f;
-
-		/* Find the opening whose bounding rect this column is inside */
-		Opening *hit=NULL;
-		for(int k=0;k<nopen;k++){
-			if(xm>openings[k].x && xm<openings[k].x+openings[k].width){ hit=&openings[k]; break; }
-		}
-
-		if(!hit){
-			/* Solid column */
-			emit_wall_box(s,wallM,wallR,T,0,H,xm-half-(x1-x0)*0.5f,xm-half+(x1-x0)*0.5f,color,shin,castsShadow,renderable,unlit);
-			continue;
-		}
-
-		if(hit->type==OPENING_RECT){
-			/* Simple rectangular opening: emit boxes below sill and above top */
-			float lx=xm-half, w=x1-x0;
-			if(hit->sill>1e-4f)
-				emit_wall_box(s,wallM,wallR,T,0,hit->sill,lx-w*0.5f,lx+w*0.5f,color,shin,castsShadow,renderable,unlit);
-			float top=hit->sill+hit->height;
-			if(top<H-1e-4f)
-				emit_wall_box(s,wallM,wallR,T,top,H,lx-w*0.5f,lx+w*0.5f,color,shin,castsShadow,renderable,unlit);
-			continue;
-		}
-		if(hit->emitted) continue;
-		hit->emitted=1;
-
-		/* ARCH or CYLINDER: the column slice exactly covers the opening width.
-		 * Left/right neighbor columns are handled as solid columns by the outer loop.
-		 * Only emit the below-sill and above-top strips within the opening's X span. */
-		float ox=hit->x, ow=hit->width, oh=hit->height, os=hit->sill;
-		float ox_local=ox-half;
-		float ocx=ox_local+ow*0.5f;
-
-		if(os>1e-4f)
-			emit_wall_box(s,wallM,wallR,T,0,os,ox_local,ox_local+ow,color,shin,castsShadow,renderable,unlit);
-		if(os+oh<H-1e-4f)
-			emit_wall_box(s,wallM,wallR,T,os+oh,H,ox_local,ox_local+ow,color,shin,castsShadow,renderable,unlit);
-
-		Mesh mesh;
-		if(hit->type==OPENING_CYLINDER)
-			mesh=gen_box_hole_cylinder(ow,oh,T,hit->cylR,32);
-		else
-			mesh=gen_box_hole_arch(ow,oh,T,16);
-		vec3 meshCenter=v3(ocx,os+oh*0.5f,0);
-		mat4 M=mat4_mul(wallM,mat4_translate(meshCenter));
-		scene_add_obj(s,mesh,M,wallR,color,shin,castsShadow,renderable,unlit);
-	}
-	free(bp);
 }
 
 #ifdef SCENER_USE_TEXTURES

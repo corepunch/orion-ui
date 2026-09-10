@@ -11,9 +11,10 @@
   <box pos="0 -5 -300" size="800 10 600" material="floor" castShadow="0"/>
 
   <!-- back wall -->
-  <wall pos="-400 0 -600" rot="0 90 0" length="600" height="280" thickness="20" material="wall">
-    <opening type="door" x="4" width="100" height="210"/>
-  </wall>
+  <group pos="-400 0 -600" rot="0 90 0">
+    <wall length="600" height="280" thickness="20" material="wall"/>
+    <bool-negative-box pos="-246 105 0" size="100 210 20"/>
+  </group>
 
   <!-- right wall, solid -->
   <wall pos="400 0 -300" length="600" height="280" thickness="20" material="wall"/>

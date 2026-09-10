@@ -45,7 +45,11 @@ static void test_nested_arch_emits_wall_parts_once(void) {
   TEST("scener walls: a contained arch does not duplicate wall geometry");
   Scene scene = {0};
   ASSERT_TRUE(load_scene("apps/scener/scenes/test_wall_nested_arch.blks", &scene));
-  ASSERT_EQUAL(scene.nobjs, 4);
+  ASSERT_EQUAL(scene.nobjs, 1);
+  Shape2D arch=shape2d_window(WINDOW_ROUND_ARCH,2,3,32);
+  Mesh opening=gen_profile_extrusion(&arch,0.2f);
+  ASSERT_TRUE(fabsf(mesh_signed_volume(&scene.objs[0].mesh)+mesh_signed_volume(&opening)-4.8f)<0.0001f);
+  mesh_free(&opening); shape2d_free(&arch);
   scene_free(&scene);
   PASS();
 }
@@ -245,9 +249,10 @@ static void test_window_picking_through_wall(void){
 static void test_window_drag_recuts_wall(void){
 	TEST("window drag: old hole closes and new hole follows every mouse move");
 	Scene s={0};
-	ASSERT_TRUE(window_test_load(&s,"<scene><wall length='600' height='300' thickness='32'/>"
+	ASSERT_TRUE(window_test_load(&s,"<scene><wall length='600' height='300' thickness='32' lowerHeight='150' lowerColor='0.2 0.3 0.4' middleTrimHeight='10' bottomTrimHeight='10' trimSide='both'/>"
 		"<window preset='cottage' pos='0 150 0' width='100' height='100' sill='0'/></scene>"));
-	s.selectedObj=1; s.selectedNode=s.objs[1].editNode; s.editMode=EDIT_W_MOVE;
+	for(int i=0;i<s.nobjs;i++) if(!strcmp(scene_node_tag(s.objs[i].editNode),"window")){ s.selectedObj=i; break; }
+	s.selectedNode=s.objs[s.selectedObj].editNode; s.editMode=EDIT_W_MOVE;
 	gizmo_begin_drag(&s,GIZMO_AXIS_X,WINDOW_TEST_DRAG_START,WINDOW_TEST_DRAG_START);
 	vec3 eye=v3(0,WINDOW_TEST_MID_HEIGHT,WINDOW_TEST_CAMERA_DISTANCE),right=v3(1,0,0),up=v3(0,1,0),look=v3(0,0,-1);
 	gizmo_apply_drag(&s,WINDOW_TEST_DRAG_FIRST,WINDOW_TEST_DRAG_START,WINDOW_TEST_VIEWPORT,WINDOW_TEST_VIEWPORT,eye,right,up,look,WINDOW_TEST_FOV);
@@ -424,6 +429,166 @@ static void test_door_windows(void){
 	unlink(s.scenePath);scene_free(&s);scene_free(&restored);PASS();
 }
 
+#define SURFACE_ASSERT(condition) do { int surface_ok=(condition); if(!surface_ok) fprintf(stderr,"surface assertion at line %d: %s\n",__LINE__,#condition); ASSERT_TRUE(surface_ok); } while(0)
+#define SURFACE_TEST_EPSILON 0.0001f
+#define SURFACE_TEST_CAPACITY 2048
+#define SURFACE_TEST_WALL_XML "<wall length='400' height='300' thickness='20' lowerHeight='100' lowerColor='0.2 0.3 0.4' upperColor='0.8 0.7 0.6' bottomTrimHeight='10' middleTrimHeight='10' topTrimHeight='10' trimDepth='4' trimColor='0.1 0.1 0.1' trimSide='both'/>"
+
+static int surface_test_closed(Scene *s){
+	for(int o=0;o<s->nobjs;o++){
+		Mesh *m=&s->objs[o].mesh;
+		if(!m->ntris||mesh_signed_volume(m)<=0){ fprintf(stderr,"surface mesh %d: volume %g\n",o,mesh_signed_volume(m)); return 0; }
+		for(int e=0;e<m->nedges;e++) if(m->edges[e].t1<0){ fprintf(stderr,"surface mesh %d (%s): open edge %d\n",o,scene_node_tag(s->objs[o].editNode),e); return 0; }
+	}
+	return 1;
+}
+
+static void surface_test_bounds(Mesh *m,vec3 *lo,vec3 *hi){
+	*lo=v3(INFINITY,INFINITY,INFINITY); *hi=v3(-INFINITY,-INFINITY,-INFINITY);
+	for(int i=0;i<m->nverts;i++){
+		vec3 p=m->verts[i].pos;
+		lo->x=fminf(lo->x,p.x); lo->y=fminf(lo->y,p.y); lo->z=fminf(lo->z,p.z);
+		hi->x=fmaxf(hi->x,p.x); hi->y=fmaxf(hi->y,p.y); hi->z=fmaxf(hi->z,p.z);
+	}
+}
+
+static void test_wall_sections_and_trims(void){
+	TEST("wall sections and trims share exact cuts, materials and closed geometry");
+	Scene s={0};
+	SURFACE_ASSERT(window_test_load(&s,"<scene>" SURFACE_TEST_WALL_XML "</scene>"));
+	ASSERT_EQUAL(s.nobjs,8);
+	SURFACE_ASSERT(surface_test_closed(&s));
+	vec3 lo,hi; surface_test_bounds(&s.objs[0].mesh,&lo,&hi);
+	SURFACE_ASSERT(fabsf(lo.y)<SURFACE_TEST_EPSILON&&fabsf(hi.y-1)<SURFACE_TEST_EPSILON);
+	SURFACE_ASSERT(fabsf(s.objs[0].color.x-0.2f)<SURFACE_TEST_EPSILON);
+	SURFACE_ASSERT(fabsf(s.objs[1].color.x-0.8f)<SURFACE_TEST_EPSILON);
+	float volume=0; for(int i=0;i<s.nobjs;i++) volume+=mesh_signed_volume(&s.objs[i].mesh);
+	SURFACE_ASSERT(fabsf(volume-(4*3*0.2f+2*3*4*0.1f*0.04f))<SURFACE_TEST_EPSILON);
+	scene_free(&s);
+	SURFACE_ASSERT(window_test_load(&s,"<scene>" SURFACE_TEST_WALL_XML
+		"<door preset='round-arch' width='100' height='280' depth='2' leafDepth='1' handle='0' frameWidth='4' pos='0 140 0'/>"
+		"<window preset='gothic' width='80' height='180' pos='130 190 0' depth='2' frameWidth='4' pane='0'/>"
+		"</scene>"));
+	ASSERT_FALSE(window_test_wall_at(&s,v3(0,0.05f,0)));
+	ASSERT_FALSE(window_test_wall_at(&s,v3(0,1,0)));
+	ASSERT_FALSE(window_test_wall_at(&s,v3(1.3f,1.05f,0)));
+	SURFACE_ASSERT(window_test_wall_at(&s,v3(-1,1,0)));
+	SURFACE_ASSERT(window_test_wall_at(&s,v3(0,2.95f,0)));
+	SURFACE_ASSERT(surface_test_closed(&s));
+	scene_free(&s);
+	PASS();
+}
+
+static void test_wall_surface_transforms_and_invalid(void){
+	TEST("wall surfaces preserve grouped transforms, flags, bounds and reject invalid parameters");
+	Scene a={0},b={0};
+	SURFACE_ASSERT(window_test_load(&a,"<scene>" SURFACE_TEST_WALL_XML "<bool-negative-box pos='0 100 0' size='100 200 30'/></scene>"));
+	ASSERT_FALSE(window_test_wall_at(&a,v3(0,0.05f,0)));
+	ASSERT_FALSE(window_test_wall_at(&a,v3(0,1,0)));
+	SURFACE_ASSERT(window_test_load(&b,"<scene up='z'><group pos='100 200 300' rot='90 0 30' scale='2 2 2'>"
+		SURFACE_TEST_WALL_XML "<bool-negative-box pos='0 100 0' size='100 200 30'/></group></scene>"));
+	ASSERT_EQUAL(a.nobjs,b.nobjs);
+	mat4 transform=mat4_mul(mat4_translate(v3(1,2,3)),mat4_mul(mat4_rot_xyz(v3(90,0,30)),mat4_scale(v3(2,2,2))));
+	for(int o=0;o<a.nobjs;o++){
+		ASSERT_EQUAL(a.objs[o].mesh.nverts,b.objs[o].mesh.nverts);
+		for(int v=0;v<a.objs[o].mesh.nverts;v++)
+			SURFACE_ASSERT(vlen(vsub(mat4_xform_point(transform,a.objs[o].mesh.verts[v].pos),b.objs[o].mesh.verts[v].pos))<SURFACE_TEST_EPSILON);
+	}
+	scene_free(&a); scene_free(&b);
+	const char *invalid[]={"length='0'","height='nan'","thickness='-1'","lowerHeight='400'","trimSide='left'",
+		"middleTrimHeight='20'","bottomTrimHeight='200' topTrimHeight='100'","lowerHeight='100' middleTrimHeight='20' bottomTrimHeight='100'"};
+	for(int i=0;i<(int)(sizeof(invalid)/sizeof(invalid[0]));i++){
+		char xml[SURFACE_TEST_CAPACITY]; snprintf(xml,sizeof(xml),"<scene><wall %s/></scene>",invalid[i]);
+		SURFACE_ASSERT(window_test_load(&a,xml)); ASSERT_EQUAL(a.nobjs,0); scene_free(&a);
+	}
+	SURFACE_ASSERT(window_test_load(&a,"<scene><wall lowerHeight='270' renderable='0' castShadow='0' unlit='1' bottomTrimHeight='10'/></scene>"));
+	ASSERT_EQUAL(a.nobjs,2);
+	for(int o=0;o<a.nobjs;o++){ ASSERT_FALSE(a.objs[o].renderable); ASSERT_FALSE(a.objs[o].castsShadow); SURFACE_ASSERT(a.objs[o].unlit); }
+	scene_free(&a); PASS();
+}
+
+static void test_procedural_floors(void){
+	TEST("floor styles stay within footprint, close every mesh and vary colors deterministically");
+	const char *styles[]={"boards","squares","hexes","stones"};
+	for(int style=0;style<(int)(sizeof(styles)/sizeof(styles[0]));style++){
+		Scene a={0},b={0},c={0}; char xml[SURFACE_TEST_CAPACITY];
+		snprintf(xml,sizeof(xml),"<scene><floor style='%s' width='137' depth='113' tileWidth='30' gap='1' color='0.5 0.4 0.3' colorVariation='0.25' seed='42'/></scene>",styles[style]);
+		SURFACE_ASSERT(window_test_load(&a,xml)); SURFACE_ASSERT(window_test_load(&b,xml));
+		SURFACE_ASSERT(a.nobjs>2); ASSERT_EQUAL(a.nobjs,b.nobjs); SURFACE_ASSERT(surface_test_closed(&a));
+		int varied=0; void *node=a.objs[0].editNode;
+		for(int o=0;o<a.nobjs;o++){
+			vec3 lo,hi; surface_test_bounds(&a.objs[o].mesh,&lo,&hi);
+			SURFACE_ASSERT(lo.x>=-0.685f-SURFACE_TEST_EPSILON&&hi.x<=0.685f+SURFACE_TEST_EPSILON);
+			SURFACE_ASSERT(lo.z>=-0.565f-SURFACE_TEST_EPSILON&&hi.z<=0.565f+SURFACE_TEST_EPSILON);
+			SURFACE_ASSERT(lo.y>=-0.18f-SURFACE_TEST_EPSILON&&hi.y<=SURFACE_TEST_EPSILON);
+			SURFACE_ASSERT(a.objs[o].editNode==node);
+			SURFACE_ASSERT(vlen(vsub(a.objs[o].color,b.objs[o].color))==0);
+			ASSERT_EQUAL(a.objs[o].mesh.nverts,b.objs[o].mesh.nverts);
+			for(int v=0;v<a.objs[o].mesh.nverts;v++) SURFACE_ASSERT(vlen(vsub(a.objs[o].mesh.verts[v].pos,b.objs[o].mesh.verts[v].pos))==0);
+			if(o){
+				SURFACE_ASSERT(fabsf(hi.y)<SURFACE_TEST_EPSILON);
+				SURFACE_ASSERT(a.objs[o].color.x>=0.375f&&a.objs[o].color.x<=0.625f);
+				varied|=fabsf(a.objs[o].color.x-a.objs[1].color.x)>SURFACE_TEST_EPSILON;
+			}
+		}
+		SURFACE_ASSERT(varied);
+		snprintf(xml,sizeof(xml),"<scene><floor style='%s' width='137' depth='113' tileWidth='30' gap='1' color='0.5 0.4 0.3' colorVariation='0' seed='42'/></scene>",styles[style]);
+		SURFACE_ASSERT(window_test_load(&c,xml)); ASSERT_EQUAL(a.nobjs,c.nobjs);
+		for(int o=1;o<c.nobjs;o++){
+			SURFACE_ASSERT(c.objs[o].color.x==0.5f);
+			ASSERT_EQUAL(a.objs[o].mesh.nverts,c.objs[o].mesh.nverts);
+			for(int v=0;v<a.objs[o].mesh.nverts;v++) SURFACE_ASSERT(vlen(vsub(a.objs[o].mesh.verts[v].pos,c.objs[o].mesh.verts[v].pos))==0);
+		}
+		scene_free(&a); scene_free(&b); scene_free(&c);
+	}
+	PASS();
+}
+
+static void test_floor_coverage_and_limits(void){
+	TEST("floors fill zero-gap bounds, transform as one object, and bound invalid or excessive generation");
+	const char *styles[]={"boards","squares","hexes"}; Scene s={0};
+	for(int i=0;i<(int)(sizeof(styles)/sizeof(styles[0]));i++){
+		char xml[SURFACE_TEST_CAPACITY]; snprintf(xml,sizeof(xml),"<scene up='z'><floor style='%s' width='137' depth='113' tileWidth='30' gap='0' pos='100 200 300' rot='90 0 0'/></scene>",styles[i]);
+		SURFACE_ASSERT(window_test_load(&s,xml)); float volume=0;
+		for(int o=0;o<s.nobjs;o++) volume+=mesh_signed_volume(&s.objs[o].mesh);
+		SURFACE_ASSERT(fabsf(volume-1.37f*1.13f*0.18f)<SURFACE_TEST_EPSILON);
+		vec3 lo,hi; scene_get_bounds(&s,&lo,&hi);
+		SURFACE_ASSERT(fabsf(hi.z-3)<SURFACE_TEST_EPSILON&&fabsf(lo.z-2.82f)<SURFACE_TEST_EPSILON);
+		scene_free(&s);
+	}
+	const char *invalid[]={"style='unknown'","width='0'","depth='nan'","tileWidth='0.00001'","gap='-1'",
+		"tileDepth='18'","colorVariation='1.1'","colorVariation='nan'","style='squares' tileLength='40'","gap='11'"};
+	for(int i=0;i<(int)(sizeof(invalid)/sizeof(invalid[0]));i++){
+		char xml[SURFACE_TEST_CAPACITY]; snprintf(xml,sizeof(xml),"<scene><floor %s/></scene>",invalid[i]);
+		SURFACE_ASSERT(window_test_load(&s,xml)); ASSERT_EQUAL(s.nobjs,0); scene_free(&s);
+	}
+	SURFACE_ASSERT(window_test_load(&s,"<scene><floor width='1' depth='1' colorVariation='0' castShadow='0' renderable='0' unlit='1'/></scene>"));
+	SURFACE_ASSERT(s.nobjs>1);
+	for(int o=0;o<s.nobjs;o++){ ASSERT_FALSE(s.objs[o].castsShadow); ASSERT_FALSE(s.objs[o].renderable); SURFACE_ASSERT(s.objs[o].unlit); }
+	scene_free(&s); PASS();
+}
+
+static void test_surface_materials_and_roundtrip(void){
+	TEST("surface material precedence and save/reload retain all generated parts");
+	Scene s={0},restored={0};
+	SURFACE_ASSERT(window_test_load(&s,"<scene><material id='paint' color='0.2 0.3 0.4' shininess='23'/>"
+		"<wall lowerHeight='100' lowerMaterial='paint' lowerColor='0.1 0.2 0.3' upperMaterial='paint' trimMaterial='paint' bottomTrimHeight='10' bottomTrimColor='0.6 0.5 0.4'/>"
+		"<floor style='squares' width='40' depth='40' material='paint' colorVariation='0' groutMaterial='paint' groutColor='0.7 0.6 0.5'/></scene>"));
+	SURFACE_ASSERT(s.objs[0].shininess==23&&s.objs[0].color.x==0.1f);
+	SURFACE_ASSERT(s.objs[1].shininess==23&&s.objs[1].color.x==0.2f);
+	SURFACE_ASSERT(s.objs[2].shininess==23&&s.objs[2].color.x==0.6f);
+	SURFACE_ASSERT(s.objs[3].shininess==23&&s.objs[3].color.x==0.7f);
+	SURFACE_ASSERT(s.objs[4].shininess==23&&s.objs[4].color.x==0.2f);
+	SURFACE_ASSERT(scene_save_all(&s)); SURFACE_ASSERT(load_scene(s.scenePath,&restored));
+	ASSERT_EQUAL(s.nobjs,restored.nobjs);
+	for(int o=0;o<s.nobjs;o++){
+		SURFACE_ASSERT(vlen(vsub(s.objs[o].color,restored.objs[o].color))==0);
+		ASSERT_EQUAL(s.objs[o].mesh.nverts,restored.objs[o].mesh.nverts);
+		for(int v=0;v<s.objs[o].mesh.nverts;v++) SURFACE_ASSERT(vlen(vsub(s.objs[o].mesh.verts[v].pos,restored.objs[o].mesh.verts[v].pos))==0);
+	}
+	unlink(s.scenePath); scene_free(&s); scene_free(&restored); PASS();
+}
+
 int main(void) {
   TEST_START("scener input and command state");
   test_tool_commands_share_document_state();
@@ -432,6 +597,11 @@ int main(void) {
   test_explicit_scene_up_axis();
   test_scene_coordinate_conventions();
   test_window_profiles();
+  test_wall_sections_and_trims();
+  test_wall_surface_transforms_and_invalid();
+  test_procedural_floors();
+  test_floor_coverage_and_limits();
+  test_surface_materials_and_roundtrip();
   test_long_camera_names();
   test_door_fit_swing_and_pet_opening();
   test_door_windows();

@@ -615,8 +615,7 @@ rectangular, round-arch and circular cutters.
 #### Supported composition and current limits
 
 - Place `<window>` at scene level or inside `<group>` / prefab content. It is
-  a sibling of `<wall>`, not a child of it: a wall's children are `<opening>`
-  declarations only. Do not add a duplicate negative shape or `<opening>` for
+  a sibling of `<wall>`, not a child of it: walls reject child elements. Do not add a duplicate negative shape or `<opening>` for
   a procedural window with `cutWalls="1"`.
 - `<window>` must have no children. Any child element, including `<array>`,
   `<extrude>`, `<shape>` or a material definition, rejects the whole window.
@@ -855,28 +854,105 @@ closed loop. When `closed="0"`, the first and last rings receive flat end caps.
 
 ### `<wall>`
 
-A flat wall with rectangular openings (doors/windows). Uses "boolean via boxes" — the wall is split into box segments around openings. Walls ignore `scale`; `castShadow` applies to the generated wall boxes.
+A wall owns its lower/upper finishes and optional baseboard, divider and ceiling
+trims. Local X is length, Y is height (base at zero), and Z is thickness.
+All generated parts inherit the wall's transform, selection identity,
+`castShadow`, `renderable` and `unlit`. Lengths below are centimetres.
 
-| Attribute   | Type  | Default | Description |
-|-------------|-------|---------|-------------|
-| `length`    | float | 400     | Wall length along local X, in cm |
-| `height`    | float | 270     | Wall height along local Y, in cm |
-| `thickness` | float | 20      | Wall depth along local Z, in cm |
+| Attribute | Default | Meaning |
+|---|---|---|
+| `length`, `height`, `thickness` | 400, 270, 20 | Positive wall dimensions |
+| `lowerHeight` | 0 | Section boundary measured from the base, within 0..height; 0 means all upper, height means all lower |
+| `lowerMaterial`, `upperMaterial` | wall material | Material of each section |
+| `lowerColor`, `upperColor` | section material color | Optional sRGB overrides |
+| `bottomTrimHeight` | 0 | Baseboard height, measured upward from the base; 0 disables |
+| `middleTrimHeight` | 0 | Divider height, centred at lowerHeight; 0 disables |
+| `topTrimHeight` | 0 | Ceiling trim height, measured down from the wall top; 0 disables |
+| `trimDepth` | 2 | Positive projection beyond the wall face |
+| `trimSide` | front | `front` (+Z), `back` (−Z), or `both` |
+| `trimMaterial`, `trimColor` | wall material/color | Shared trim finish; explicit color overrides the material color |
+| `bottomTrimDepth`, `middleTrimDepth`, `topTrimDepth` | trimDepth | Per-trim projection overrides |
+| `bottomTrimMaterial`, `middleTrimMaterial`, `topTrimMaterial` | shared trim finish | Per-trim material overrides |
+| `bottomTrimColor`, `middleTrimColor`, `topTrimColor` | per-trim material color | Per-trim sRGB color overrides |
 
-Child `<opening>` elements:
+The sections are adjoining solids, not coplanar painted overlays. Trims project
+outward from the selected face and stay within the wall's vertical extent.
+Enabled trim bands cannot overlap; a divider needs space on both sides of
+`lowerHeight`. Zero dimensions, non-finite dimensions, invalid sides, overlapping
+trims and child elements are rejected with a diagnostic. Use sibling windows,
+doors or negative cutters, with shared group/prefab transforms when useful.
 
-| Attribute | Type   | Default     | Description |
-|-----------|--------|-------------|-------------|
-| `type`    | string | "door"      | "door" or "window" |
-| `x`       | float  | 0           | Position along wall length |
-| `width`   | float  | 100         | Opening width in cm |
-| `height`  | float  | 210/120     | Opening height in cm (door: 210, window: 120) |
-| `sill`    | float  | 0/90        | Height from floor in cm (door: 0, window: 90) |
+```xml
+<wall length="600" height="300" thickness="24"
+      lowerHeight="110" lowerColor="0.20 0.32 0.28" upperColor="0.72 0.65 0.52"
+      trimMaterial="wood" bottomTrimHeight="12" middleTrimHeight="6"
+      topTrimHeight="16" trimDepth="3" topTrimDepth="6"/>
+<door preset="round-arch" pos="-180 110 0" width="100" height="220"/>
+<window preset="gothic" pos="100 190 0" width="120" height="180"/>
+```
 
-Walls also consume intersecting `<bool-negative-box>` nodes collected from the
-scene and instantiated prefabs before wall geometry is built. This makes a
-window or door prefab capable of carrying its own rough opening. Document order
-does not matter.
+Wall matching happens once against the structural slab. Each matching cutter's
+profile is subtracted from **both sections and every trim**, even when the
+trim projects beyond the cutter's depth. Doors cut baseboards down to the floor;
+windows cut a divider only where the opening crosses that band. Rectangular,
+round, arched and Gothic profiles, overlapping openings, and profiles crossing
+section boundaries all use the same polygon subtraction. XML order is immaterial.
+Procedural door/window matching uses depth overlap; negative box/arch/cylinder
+cutters must span the structural slab. Cutters must remain parallel to the wall.
+This is wall-specific geometry, not arbitrary mesh CSG or automatic corner mitres.
+At room corners, choose lengths and trim sides so perpendicular trim runs meet
+without overlapping. Detailed moulding profiles and panel relief are not generated.
+
+### `<floor>`
+
+An automatic rectangular floor assembled from individually colored, closed solid
+elements over a recessed backing/grout slab. Its walkable top is at local Y=0,
+its bottom at Y=−thickness, and width/depth extend symmetrically along X/Z.
+Rotate `rot="90 0 0"` for a Z-up scene. Normal group/prefab transforms, materials,
+selection, `renderable`, `unlit` and `castShadow` apply to the whole floor.
+
+| Attribute | Default | Meaning |
+|---|---|---|
+| `style` | boards | `boards`, `squares`, `hexes`, `stones` |
+| `width`, `depth` | 400, 400 | Positive overall footprint, cm |
+| `thickness` | 18 | Total floor thickness, cm |
+| `tileDepth` | 2 | Element thickness/recess to grout, positive and less than total thickness |
+| `tileWidth` | 20 | Course width for boards/stones, square side length, or hex width across flats |
+| `tileLength` | 120 for boards; tileWidth otherwise | Length along X for boards/stones; omit for squares/hexes |
+| `gap` | 0.2 | Joint width, cm; nonnegative and less than half the smaller element dimension |
+| `colorVariation` | 0.1 | Per-element brightness variation in 0..1; 0 gives uniform color |
+| `seed` | 1 | Integer seed for repeatable variation and stone sizing |
+| `material`, `color`, `shininess` | common shape defaults | Base element finish; a named material takes precedence over common color/shininess |
+| `groutMaterial`, `groutColor` | floor finish | Backing/grout finish; explicit groutColor overrides its material color |
+
+Boards have staggered end joints; squares form a regular grid; regular hexagons
+tessellate in staggered rows. Stones are staggered paving blocks with varied
+widths and clipped corners, not a random rubble/Voronoi surface. `tileLength`
+may differ from `tileWidth` only for boards/stones. Change orientation using the
+floor transform. Every edge element is clipped automatically to the footprint.
+The backing closes joints from below; no separate authored base slab is needed.
+
+One deterministic scalar per element multiplies all three authored sRGB
+channels by a value in `[1-colorVariation, 1+colorVariation]`, clamped to `[0,1]`.
+This preserves hue until clipping. Changing variation alone leaves geometry
+unchanged; the same parameters and seed reproduce the same floor regardless of
+load order. Stone geometry also uses the seed. Floors do not consume the global
+random generator. Generation is limited to 10,000 candidate cells per floor;
+invalid or excessive requests emit a diagnostic and generate no partial floor.
+Children/modifiers and floor cutouts are unsupported.
+
+```xml
+<floor pos="0 0 -300" width="600" depth="600" style="boards"
+       tileWidth="22" tileLength="160" gap="0.3" material="wood"
+       colorVariation="0.18" seed="23" groutColor="0.10 0.07 0.04"/>
+<floor pos="800 0 -300" width="500" depth="600" style="hexes"
+       tileWidth="35" gap="1" color="0.52 0.55 0.58"
+       colorVariation="0.2" seed="7" groutColor="0.18 0.18 0.18"/>
+```
+
+See `tests/procedural_surfaces.blks` for all four styles beside two-section walls
+with automatically cut trims, doors and windows, and the workshop for a complete
+room using these elements.
 
 ### `<bool-negative-box>`
 

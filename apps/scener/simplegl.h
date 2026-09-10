@@ -71,6 +71,7 @@ typedef struct {
 
 typedef enum { WINDOW_RECTANGLE, WINDOW_ROUND_ARCH, WINDOW_POINTED_ARCH } window_outline_t;
 Shape2D shape2d_window(window_outline_t outline,float width,float height,int segments);
+Shape2D shape2d_clip_rect(const Shape2D *profile,float width,float height);
 Shape2D shape2d_inset(const Shape2D *profile,float distance);
 Mesh gen_profile_extrusion(const Shape2D *profile,float depth);
 Mesh gen_profile_frame(const Shape2D *outer,const Shape2D *inner,float depth);

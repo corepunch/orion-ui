@@ -541,6 +541,17 @@ static Shape2D profile_halfplane(const Shape2D *p,vec3 a,vec3 b,int inside){
 	return q;
 }
 
+Shape2D shape2d_clip_rect(const Shape2D *p,float width,float height){
+	Shape2D q={0}; q.closed=1;
+	Shape2D bounds=shape2d_window(WINDOW_RECTANGLE,width,height,WINDOW_MIN_SEGMENTS);
+	for(int i=0;i<p->npts;i++) DA_PUSH(q.pts,q.npts,q.cpts,p->pts[i]);
+	for(int i=0;i<bounds.npts&&q.npts;i++){
+		Shape2D clipped=profile_halfplane(&q,bounds.pts[i],bounds.pts[(i+1)%bounds.npts],1);
+		shape2d_free(&q); q=clipped;
+	}
+	shape2d_free(&bounds); return q;
+}
+
 Shape2D shape2d_inset(const Shape2D *p,float distance){
 	Shape2D q={0}; q.closed=1;
 	if(p->npts<PROFILE_MIN_POINTS||distance<0||!isfinite(distance)) return q;

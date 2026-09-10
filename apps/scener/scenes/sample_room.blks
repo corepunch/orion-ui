@@ -12,13 +12,15 @@
   <box pos="0 -5 -300" size="800 10 600" material="floor" castShadow="0"/>
   <box pos="0 285 -300" size="800 10 600" material="plaster"/>
 
-  <wall pos="0 0 -600" length="800" height="280" thickness="20" material="wall">
-    <opening type="door" x="4" width="100" height="210"/>
-  </wall>
+  <group pos="0 0 -600">
+    <wall length="800" height="280" thickness="20" material="wall"/>
+    <bool-negative-box pos="-346 105 0" size="100 210 20"/>
+  </group>
 
-  <wall pos="-400 0 -300" rot="0 90 0" length="600" height="280" thickness="20" material="wall">
-    <opening type="window" x="2" width="140" height="120" sill="90"/>
-  </wall>
+  <group pos="-400 0 -300" rot="0 90 0">
+    <wall length="600" height="280" thickness="20" material="wall"/>
+    <bool-negative-box pos="-228 150 0" size="140 120 20"/>
+  </group>
 
   <wall pos="400 0 -300" rot="0 90 0" length="600" height="280" thickness="20" material="wall"/>
 

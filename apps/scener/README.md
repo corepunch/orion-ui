@@ -237,18 +237,10 @@ Reproduce any camera in the scene with:
   scenes get much more complex you'd
   want to swap in a real parser — the loader code is isolated in
   `xml_parse()`/`load_scene()` so that's a contained change.
-- **Booleans via boxes**, not real CSG. A proper solid-boolean library (BSP
-  clipping, etc.) is a lot of code for what a room generator actually needs:
-  rectangular holes in axis-aligned walls. So `<wall>` + `<opening>` doesn't
-  do a boolean subtraction at all — it slices the wall's length into
-  segments at each opening's edges and emits a handful of `<box>` objects:
-  full-height boxes between openings, and a sill box + lintel box for each
-  opening. See `build_wall_boxes()`. This is exactly "if forced to use boxes
-  for booleans, so be it" — and it's enough for door/window frames, which is
-  the actual use case. If you later need e.g. a circular hole or a boolean
-  between two arbitrary meshes, that's a genuinely different (and much
-  bigger) piece of code — worth doing as a separate module, not bolted on
-  here.
+- **Wall profiles share one cutout path.** Wall sections and trims subtract the
+  same door/window/negative profiles before extrusion. This preserves matching
+  apertures across colors and projecting trim bands, including curved, stacked
+  and overlapping openings. It remains wall-specific geometry, not arbitrary CSG.
 - **Static scene ⇒ shadow volumes precomputed once.** Nothing in the scene
   format can move, so silhouette/volume computation happens once at load
   (`scene_build_all_shadow_volumes`), not per frame. If you add moving
@@ -308,8 +300,7 @@ workflow.
   only, not a full inverse-transpose. Fine for boxes/furniture; would matter
   for a heavily stretched sphere.
 - No texturing — flat/vertex colors only.
-- `<wall>` openings are axis-aligned rectangles only (that's the whole
-  "boxes instead of real CSG" trade-off described above).
+- Wall cutters must be parallel to the wall; oblique and arbitrary mesh CSG are unsupported.
 
 ## Procedural windows
 
@@ -318,3 +309,18 @@ outer profile also cuts matching walls. Frame, pane and optional sill share one
 source element; `style="storybook"` supplies a thicker frame default.
 The Create menu includes all three presets. See the [window format reference](skills/populate-simplegl-scenes/references/scene-format.md#window)
 and [three-window review scene](tests/procedural_windows.blks).
+
+## Procedural walls and floors
+
+`<wall>` supports `lowerHeight`, separate `lowerMaterial`/`upperMaterial` or
+`lowerColor`/`upperColor`, and optional `bottomTrimHeight`, `middleTrimHeight`,
+`topTrimHeight`. Set `trimMaterial`, `trimDepth` and `trimSide` once, with optional
+per-trim overrides. Door and window openings cut all sections and trims together.
+
+`<floor style="boards|squares|hexes|stones">` (choose one style) fills its footprint
+with clipped edge pieces over a backing slab. Set `tileWidth`, `tileLength`,
+`gap`, `colorVariation` and `seed`; the top remains at local Y=0. The workshop now
+uses these elements for its two-tone walls, rails and staggered board floor.
+
+See the [wall/floor schema](skills/populate-simplegl-scenes/references/scene-format.md#wall)
+and [surface review scene](tests/procedural_surfaces.blks) for parameters and examples.
