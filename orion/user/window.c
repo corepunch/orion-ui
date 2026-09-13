@@ -11,6 +11,7 @@
 #include "user.h"
 #include "messages.h"
 #include "draw.h"
+#include <orion/kernel/renderer.h>
 #include <orion/commctl/commctl.h>
 
 // NeXTSTEP-style database singleton
@@ -252,7 +253,6 @@ static void invalidate_overlaps(window_t *win) {
 // Move window to new position
 void move_window(window_t *win, int x, int y) {
   post_message(win, evResize, 0, NULL);
-  post_message(win, evRefreshStencil, 0, NULL);
 
   invalidate_overlaps(win);
   invalidate_window(win);
@@ -277,8 +277,6 @@ void resize_window(window_t *win, int new_w, int new_h) {
   // dimensions while the parent's border has already moved.
   send_message(win, evResize, 0, NULL);
   window_layout_sync(win);
-
-  post_message(win, evRefreshStencil, 0, NULL);
 
   invalidate_overlaps(win);
   invalidate_window(win);
@@ -358,7 +356,6 @@ void clear_window_children(window_t *win) {
 // Destroy a window
 void destroy_window(window_t *win) {
   window_t *root = get_root_window(win);
-  post_message((window_t*)1, evRefreshStencil, 0, NULL);
   invalidate_overlaps(win);
   if (win->role == WINDOW_ROLE_HOST && win->active_page)
     set_host_page(win, NULL);
@@ -381,9 +378,11 @@ void destroy_window(window_t *win) {
   remove_from_global_queue(win);
   clear_toolbar_children(win);
   clear_window_children(win);
+  // Release the per-window render target before freeing the struct.
+  R_DestroyWindowTarget(&win->surface_fbo, &win->surface_tex,
+                        &win->surface_w, &win->surface_h);
   free(win);
 
-  post_message((window_t*)1, evRefreshStencil, 0, NULL);
   if (root && root != win && is_window(root) && window_has_state(root, WINDOW_STATE_VISIBLE)) {
     invalidate_window(root);
   }
@@ -510,25 +509,11 @@ void set_focus(window_t* win) {
 }
 
 // Invalidate window (request repaint).
-// Always routes to the root window so that evNCPaint
-// redraws the panel background (via draw_panel), erasing stale pixels from
-// the previous state before evPaint redraws the content.
-// For root windows get_root_window() returns win itself, so behaviour is
-// identical to the previous implementation.  For child windows the root is
-// invalidated, which clears the background and repaints all children —
-// necessary to erase, e.g., a stale selection highlight in a child control.
-//
-// A evRefreshStencil is posted before the paint messages so that
-// if the paint messages end up deferred to a later repost_messages() call
-// (because they were added during the current processing cycle, beyond the
-// captured write index), the stencil is always rebuilt at the current window
-// positions before the non-client paint runs.  Without this, a move between
-// two repost_messages() calls would leave NonClientPaint using a stale stencil
-// from the previous frame, causing the focused border to fail the stencil test
-// and not be drawn for that frame.
+// Always routes to the root window so that evNCPaint redraws the panel
+// background, erasing stale pixels from the previous state before evPaint
+// redraws the content.
 void invalidate_window(window_t *win) {
   window_t *root = get_root_window(win);
-  post_message(root, evRefreshStencil, 0, NULL);
   post_message(root, evNCPaint, 0, NULL);
   post_message(root, evPaint, 0, NULL);
 }
@@ -975,7 +960,6 @@ static void create_form_children(window_t *parent, const form_ctrl_def_t *childr
 
 // Show or hide window
 void show_window(window_t *win, bool visible) {
-  post_message(win, evRefreshStencil, 0, NULL);
   if (!visible) {
     invalidate_overlaps(win);
     if (g_ui_runtime.focused == win) set_focus(NULL);
