@@ -536,7 +536,13 @@ static void canvas_draw_animation_trace(window_t *win,
     if (alpha <= 0.0f) continue;
     const anim_frame_t *frame = doc->anim->frames[idx];
     if (!frame) continue;
-    if (anim_render_frame_thumbnail(frame, doc->canvas_w, doc->canvas_h, &state->onion_tex))
+    if (anim_render_frame_thumbnail(frame, doc->canvas_w, doc->canvas_h, &state->onion_tex,
+#if IMAGEEDITOR_INDEXED
+                                    doc->ipal.entries
+#else
+                                    NULL
+#endif
+                                    ))
       draw_rect_ex((int)state->onion_tex, canvas_rect, 0, CLAMP(alpha, 0.0f, 1.0f));
   }
 
@@ -547,7 +553,13 @@ static void canvas_draw_animation_trace(window_t *win,
     if (alpha <= 0.0f) continue;
     const anim_frame_t *frame = doc->anim->frames[idx];
     if (!frame) continue;
-    if (anim_render_frame_thumbnail(frame, doc->canvas_w, doc->canvas_h, &state->onion_tex))
+    if (anim_render_frame_thumbnail(frame, doc->canvas_w, doc->canvas_h, &state->onion_tex,
+#if IMAGEEDITOR_INDEXED
+                                    doc->ipal.entries
+#else
+                                    NULL
+#endif
+                                    ))
       draw_rect_ex((int)state->onion_tex, canvas_rect, 0, CLAMP(alpha, 0.0f, 1.0f));
   }
 }

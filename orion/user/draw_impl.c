@@ -128,10 +128,7 @@ void draw_button(irect16_t r, int dx, int dy, bool pressed) {
 // Draw window panel
 void draw_panel(window_t const *win) {
   irect16_t r = win->frame;
-  if (window_has_focus(win))
-    draw_focused(r);
-  else
-    draw_bevel(r);
+  draw_bevel(r);
   if (!(win->flags & WINDOW_NORESIZE)) {
     int sb = SCROLLBAR_WIDTH;
     fill_rect(get_sys_color(brLightEdge), R(r.x+r.w, r.y+r.h-sb+1, 1, sb));

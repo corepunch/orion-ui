@@ -135,8 +135,10 @@ void anim_render_shutdown(void);
 
 // Create (or update) a GL_RGBA texture representing a compressed frame.
 // If *tex is 0 a new texture is allocated; otherwise the existing one is
-// updated.  Returns true on success.
+// updated.  palette is the caller's palette (doc->ipal.entries) for
+// INDEXED frames; pass NULL for non-indexed formats.
+// Returns true on success.
 bool anim_render_frame_thumbnail(const anim_frame_t *frame, int w, int h,
-                                 uint32_t *tex);
+                                 uint32_t *tex, const uint32_t *palette);
 
 #endif // __ANIM_H__

@@ -106,8 +106,14 @@ static void rebuild_thumbnails(timeline_state_t *st) {
   for (int i = 0; i < doc->anim->frame_count; i++) {
     if (i < st->thumb_count)
       anim_render_frame_thumbnail(doc->anim->frames[i],
-                                  doc->canvas_w, doc->canvas_h,
-                                  &st->thumbs[i]);
+                                   doc->canvas_w, doc->canvas_h,
+                                   &st->thumbs[i],
+#if IMAGEEDITOR_INDEXED
+                                   doc->ipal.entries
+#else
+                                   NULL
+#endif
+                                   );
   }
   st->thumbs_dirty = false;
 }

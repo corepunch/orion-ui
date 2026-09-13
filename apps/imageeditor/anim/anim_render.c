@@ -119,8 +119,13 @@ void anim_render_shutdown(void) {
 // Expand the compressed frame to RGBA in a temporary buffer, then upload
 // that buffer into a RGBA GL texture.  This is the universal path that
 // works for all three formats without requiring a separate FBO pass.
+//
+// palette: for INDEXED frames, the caller's palette (doc->ipal.entries).
+//          In indexed builds the per-frame palette is not stored (the
+//          working palette lives in doc->ipal), so this parameter is
+//          required.  Pass NULL for non-indexed formats.
 bool anim_render_frame_thumbnail(const anim_frame_t *frame, int w, int h,
-                                 uint32_t *tex) {
+                                 uint32_t *tex, const uint32_t *palette) {
   if (!frame || w <= 0 || h <= 0 || !tex) return false;
 
   size_t sz = (size_t)w * (size_t)h * 4;
@@ -134,12 +139,13 @@ bool anim_render_frame_thumbnail(const anim_frame_t *frame, int w, int h,
       // Indexed frames: expand palette indices → RGBA manually.
       // anim_frame_expand() in indexed builds does a raw memcpy of indices
       // (targeting doc->pixels, which is 1-byte/pixel), but here we always
-      // need RGBA output.  Use the per-frame palette.
+      // need RGBA output.  Use the caller-supplied palette (doc->ipal).
       size_t npx = (size_t)w * (size_t)h;
       if (frame->data_size < npx) { free(rgba); return false; }
+      const uint32_t *pal = palette ? palette : frame->palette;
       for (size_t i = 0; i < npx; i++) {
         uint8_t idx = frame->data[i];
-        uint32_t col = frame->palette[idx];
+        uint32_t col = pal[idx];
         rgba[i*4+0] = COLOR_R(col);
         rgba[i*4+1] = COLOR_G(col);
         rgba[i*4+2] = COLOR_B(col);
