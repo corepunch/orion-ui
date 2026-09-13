@@ -200,6 +200,41 @@ void set_clip_rect(window_t const *win, irect16_t r) {
   set_scissor_cached(&ogl_rect);
 }
 
+// Set viewport and projection for rendering into a root window's FBO.
+// Translates coordinates so the root's top-left is at FBO origin (0,0).
+void set_viewport_for_fbo(window_t *root) {
+  if (!g_ui_runtime.running || !root) return;
+  int w = root->surface_w;
+  int h = root->surface_h;
+  if (w <= 0 || h <= 0) return;
+  glViewport(0, 0, w, h);
+  glDisable(GL_SCISSOR_TEST);
+  g_scissor_valid = false;
+  set_projection(root->frame.x, root->frame.y, w, h);
+}
+
+// Set scissor rect in FBO pixel coordinates (Y already flipped).
+void set_scissor_fbo(irect16_t r) {
+  if (!g_ui_runtime.running) return;
+  glEnable(GL_SCISSOR_TEST);
+  glScissor(r.x, r.y, r.w, r.h);
+}
+
+static void clear_rounded_corner(uint32_t clear_stencil_id, int x0, int y0, int radius,
+                                int cx2, int cy2, int r2_2x) {
+  for (int y = 0; y < radius; y++) {
+    int py2 = (y0 + y) * 2 + 1;
+    for (int x = 0; x < radius; x++) {
+      int px = x0 + x;
+      int dx2 = ((x0 + x) * 2 + 1) - cx2;
+      int dy2 = py2 - cy2;
+      if (dx2 * dx2 + dy2 * dy2 > r2_2x) {
+        fill_rect(clear_stencil_id, R(px, y0 + y, 1, 1));
+      }
+    }
+  }
+}
+
 // Paint window to stencil buffer
 void paint_window_stencil(window_t const *w) {
   extern uint32_t ui_white_texture;
@@ -207,6 +242,29 @@ void paint_window_stencil(window_t const *w) {
   glStencilFunc(GL_ALWAYS, w->id, 0xFF);            // Always pass
   glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE); // Replace stencil with window ID
   draw_rect(ui_white_texture, R(w->frame.x-p, w->frame.y-p, w->frame.w+p*2, w->frame.h+p*2));
+
+  int radius = (int)(4.0f * (float)axGetScaling() + 0.5f);
+  int max_radius_x = w->frame.w / 2;
+  int max_radius_y = w->frame.h / 2;
+  if (radius > max_radius_x) radius = max_radius_x;
+  if (radius > max_radius_y) radius = max_radius_y;
+  if (radius <= 0) return;
+
+  int frame_x = w->frame.x;
+  int frame_y = w->frame.y;
+  int frame_x2 = w->frame.x + w->frame.w;
+  int frame_y2 = w->frame.y + w->frame.h;
+  int cx_tl = (frame_x + radius) * 2;
+  int cy_tl = (frame_y + radius) * 2;
+  int cx_tr = (frame_x2 - radius) * 2;
+  int cy_br = (frame_y2 - radius) * 2;
+  int r2_2x = (radius * 2) * (radius * 2);
+  
+  glStencilFunc(GL_ALWAYS, 0, 0xFF); // clear only outside rounded corners
+  clear_rounded_corner(0, frame_x, frame_y, radius, cx_tl, cy_tl, r2_2x);
+  clear_rounded_corner(0, frame_x2 - radius, frame_y, radius, cx_tr, cy_tl, r2_2x);
+  clear_rounded_corner(0, frame_x, frame_y2 - radius, radius, cx_tl, cy_br, r2_2x);
+  clear_rounded_corner(0, frame_x2 - radius, frame_y2 - radius, radius, cx_tr, cy_br, r2_2x);
 }
 
 // Repaint window stencil buffer

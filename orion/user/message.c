@@ -11,6 +11,7 @@
 #include "draw.h"
 #include "scrollbar.h"
 #include "toolbar.h"
+#include <orion/kernel/renderer.h>
 
 #define CONTAINS(x, y, x1, y1, w1, h1) \
 ((x1) <= (x) && (y1) <= (y) && (x1) + (w1) > (x) && (y1) + (h1) > (y))
@@ -206,8 +207,12 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
     case evNCPaint:
       // Skip OpenGL calls if graphics aren't initialized (e.g., in tests)
       if (g_ui_runtime.running) {
-        ui_set_stencil_for_window(win->id);
-        set_fullscreen();
+        // Ensure root window has an FBO and bind it.
+        R_EnsureWindowTarget(&root->surface_fbo, &root->surface_tex,
+                             &root->surface_w, &root->surface_h,
+                             root->frame.w, root->frame.h);
+        glBindFramebuffer(GL_FRAMEBUFFER, root->surface_fbo);
+        set_viewport_for_fbo(root);
         if (!(win->flags&WINDOW_TRANSPARENT)) {
           draw_panel(win);
         }
@@ -228,8 +233,9 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       // Skip OpenGL calls if graphics aren't initialized (e.g., in tests)
       if (g_ui_runtime.running) {
         int t = titlebar_height(root);
-        ui_set_stencil_for_root_window(get_root_window(win)->id);
-        set_viewport(root->frame);
+        // FBO already bound by evNCPaint.  Set viewport/projection for
+        // FBO-local coordinates (root origin at 0,0).
+        set_viewport_for_fbo(root);
         // Shift projection so that (0,0) in drawing space maps to the top-left
         // of the window's own client area.  For root windows (no parent),
         // cx=cy=0 and the projection is unchanged (backward compat).  For child
@@ -248,14 +254,15 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
                        root->frame.h - t - cy + root->vscroll.pos);
         // For scrollable windows, tighten the scissor to the client area so
         // that scrolled content cannot bleed into non-client areas (title bar,
-        // toolbar, status bar).  Only applied when a window actually has
-        // built-in scrollbars — no scissor state is wasted on non-scrollable
-        // windows, and the stencil buffer is not touched at all for this.
+        // toolbar, status bar).
         if (win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL)) {
           int t_win = titlebar_height(win);   /* win's own non-client height */
           irect16_t cr = get_client_rect(win);
           irect16_t wf = win_frame_in_screen(win, root, t);
-          set_clip_rect(NULL, (irect16_t){wf.x, wf.y + t_win, cr.w, cr.h});
+          // Convert root-relative client rect to FBO pixel coords (Y-flipped).
+          int fbo_x = wf.x - root->frame.x;
+          int fbo_y = root->surface_h - (wf.y - root->frame.y + t_win + cr.h);
+          set_scissor_fbo((irect16_t){fbo_x, fbo_y, cr.w, cr.h});
         }
       }
       break;
@@ -415,34 +422,33 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
     uint32_t col = (get_sys_color(brControlBg) & 0x00FFFFFF) | 0x80000000;
     int root_t = titlebar_height(root);
     irect16_t wf = win_frame_in_screen(win, root, root_t);
-    set_viewport((irect16_t){ 0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight)});
-    set_projection(0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight));
-    fill_rect(col, R(wf.x, wf.y, wf.w, wf.h));
+    // Render in FBO-local coordinates.
+    set_viewport_for_fbo(root);
+    fill_rect(col, R(wf.x - root->frame.x, wf.y - root->frame.y, wf.w, wf.h));
   }
   if (msg == evPaint && win == g_ui_runtime.modal_overlay_parent) {
     int root_t = titlebar_height(root);
     irect16_t wf = win_frame_in_screen(win, root, root_t);
-    set_viewport((irect16_t){ 0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight)});
-    set_projection(0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight));
-    fill_rect(get_sys_color(brModalOverlay), R(wf.x, wf.y, wf.w, wf.h));
+    set_viewport_for_fbo(root);
+    fill_rect(get_sys_color(brModalOverlay), R(wf.x - root->frame.x, wf.y - root->frame.y, wf.w, wf.h));
   }
   // Draw built-in scrollbars on top of window content.
-  // Restore the window/root paint state first: the disabled overlay above
-  // switches to a fullscreen viewport/projection, but the built-in bars are
-  // drawn in the root-relative coordinate space established by paint setup.
-  // Also restore the scissor to the window's full frame: the bars live in
-  // the non-client area outside the client rect that was scissored above.
+  // Restore the FBO paint state: the overlay above may have changed the
+  // projection.  The bars are drawn in the root-relative coordinate space
+  // established by paint setup.
   if (msg == evPaint && g_ui_runtime.running &&
       (win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL))) {
     int root_t = titlebar_height(root);
     irect16_t wf = win_frame_in_screen(win, root, root_t);
-    irect16_t rootf = root->frame;
     int scroll_x = win == root ? 0 : (int)root->hscroll.pos;
     int scroll_y = win == root ? 0 : (int)root->vscroll.pos;
-    set_viewport(rootf);
+    set_viewport_for_fbo(root);
     set_projection(scroll_x, -root_t + scroll_y,
                    root->frame.w + scroll_x, root->frame.h - root_t + scroll_y);
-    set_clip_rect(NULL, wf);
+    // Scissor to the window frame in FBO coords (Y-flipped).
+    int fbo_x = wf.x - root->frame.x;
+    int fbo_y = root->surface_h - (wf.y - root->frame.y + wf.h);
+    set_scissor_fbo((irect16_t){fbo_x, fbo_y, wf.w, wf.h});
     draw_builtin_scrollbars(win);
   }
   return value;
