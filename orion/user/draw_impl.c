@@ -22,6 +22,10 @@ extern window_t *get_root_window(window_t *window);
 static bool g_scissor_valid = false;
 static irect16_t g_scissor_rect = {0};
 
+// When non-NULL, viewport/projection/scissor functions redirect from
+// screen-space to FBO-local coordinates automatically.
+static window_t *g_fbo_root = NULL;
+
 static void set_scissor_cached(irect16_t const *r) {
   if (!r) return;
   glEnable(GL_SCISSOR_TEST);
@@ -46,6 +50,10 @@ extern intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void 
 extern void set_projection(int x, int y, int w, int h);
 
 void set_fullscreen(void) {
+  if (g_fbo_root) {
+    set_viewport_for_fbo(g_fbo_root);
+    return;
+  }
   int w = ui_get_system_metrics(kSystemMetricScreenWidth);
   int h = ui_get_system_metrics(kSystemMetricScreenHeight);
   set_viewport((irect16_t){0, 0, w, h});
@@ -188,6 +196,21 @@ void draw_statusbar(window_t *win, const char *text) {
 // Set OpenGL viewport for window
 void set_viewport(irect16_t frame) {
   if (!g_ui_runtime.running) return;
+  if (g_fbo_root) {
+    // Translate screen-space rect → FBO-local physical pixels.
+    int scale = (int)axGetScaling();
+    if (scale < 1) scale = 1;
+    int lx = (frame.x - g_fbo_root->frame.x) * scale;
+    int ly = (frame.y - g_fbo_root->frame.y) * scale;
+    int lw = frame.w * scale;
+    int lh = frame.h * scale;
+    // GL viewport has y=0 at bottom; FBO has y=0 at top → flip.
+    glViewport(lx, g_fbo_root->surface_h - ly - lh, lw, lh);
+    glEnable(GL_SCISSOR_TEST);
+    glScissor(lx, g_fbo_root->surface_h - ly - lh, lw, lh);
+    g_scissor_valid = false;
+    return;
+  }
   irect16_t ogl_rect = get_opengl_rect(frame);
   
   glViewport(ogl_rect.x, ogl_rect.y, ogl_rect.w, ogl_rect.h);
@@ -196,6 +219,20 @@ void set_viewport(irect16_t frame) {
 
 void set_clip_rect(window_t const *win, irect16_t r) {
   if (!g_ui_runtime.running) return;
+  if (g_fbo_root) {
+    int scale = (int)axGetScaling();
+    if (scale < 1) scale = 1;
+    int base_x = win ? win->frame.x : 0;
+    int base_y = win ? win->frame.y : 0;
+    int lx = (r.x + base_x - g_fbo_root->frame.x) * scale;
+    int ly = (r.y + base_y - g_fbo_root->frame.y) * scale;
+    int lw = r.w * scale;
+    int lh = r.h * scale;
+    glEnable(GL_SCISSOR_TEST);
+    glScissor(lx, g_fbo_root->surface_h - ly - lh, lw, lh);
+    g_scissor_valid = false;
+    return;
+  }
   irect16_t ogl_rect = get_opengl_rect(win ? rect_offset(r, win->frame.x, win->frame.y) : r);
   set_scissor_cached(&ogl_rect);
 }
@@ -206,18 +243,23 @@ void set_clip_rect(window_t const *win, irect16_t r) {
 // FBO pixels, with Y flipped so logical y=0 (top) maps to FBO y=0 (top).
 void set_viewport_for_fbo(window_t *root) {
   if (!g_ui_runtime.running || !root) return;
+  g_fbo_root = root;
   int w = root->surface_w;
   int h = root->surface_h;
   if (w <= 0 || h <= 0) return;
   glViewport(0, 0, w, h);
   glDisable(GL_SCISSOR_TEST);
   g_scissor_valid = false;
-  // Flip Y: logical y=0 → FBO top, logical y=h_logical → FBO bottom.
   int scale = (int)axGetScaling();
   if (scale < 1) scale = 1;
   int log_w = w / scale;
   int log_h = h / scale;
-  set_projection(root->frame.x, log_h + root->frame.y, log_w + root->frame.x, root->frame.y);
+  // Projection maps screen-space coords to the FBO.  Drawing uses
+  // win->frame.x/y (screen positions), so the ortho origin must be the
+  // root window's screen position.  Y is flipped: screen y=root.frame.y
+  // → FBO top (clip y=+1), screen y=root.frame.y+log_h → FBO bottom.
+  set_projection(root->frame.x, log_h + root->frame.y,
+                 log_w + root->frame.x, root->frame.y);
 }
 
 // Set scissor rect in FBO pixel coordinates (Y already flipped).
@@ -348,6 +390,7 @@ void draw_checkerboard(irect16_t r, int square_px) {
 // default framebuffer, applying SDF rounded-corner masking.
 void composite_root_windows(void) {
   if (!g_ui_runtime.running) return;
+  g_fbo_root = NULL;
 
   // Switch to the default framebuffer (screen).
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -363,7 +406,7 @@ void composite_root_windows(void) {
   // Set projection for screen-space compositing.
   set_fullscreen();
 
-  float base_radius = 4.0f * axGetScaling();
+  float base_radius = WINDOW_CORNER_RADIUS * axGetScaling();
 
   for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
     if (!window_has_state(w, WINDOW_STATE_VISIBLE)) continue;
