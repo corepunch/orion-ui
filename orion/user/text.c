@@ -33,7 +33,7 @@ static struct {
 } text_state = {0};
 
 // ── Dynamic metric accessors ──────────────────────────────────────────────────
-// All space/line/height values are loaded from each font's foNT metadata.
+// Space and line metrics come from each TTF at its logical em size.
 
 static inline font_atlas_t *font_for_role(ui_font_t font) {
   if (font == FONT_SMALLEST) return &text_state.smallest;
@@ -70,8 +70,8 @@ static void init_atlas_mesh(font_atlas_t *atlas) {
   R_MeshInit(&atlas->mesh, attribs, 3, sizeof(text_vertex_t), GL_TRIANGLES);
 }
 
-static bool load_atlas(font_atlas_t *atlas, const char *path, float pixel_height) {
-  atlas->cache = font_cache_create(path, pixel_height);
+static bool load_atlas(font_atlas_t *atlas, const char *path, float em_size) {
+  atlas->cache = font_cache_create(path, em_size);
   if (!atlas->cache) return false;
   init_atlas_mesh(atlas);
   return true;

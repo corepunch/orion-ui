@@ -96,11 +96,11 @@ typedef struct layout_s {
 // Used with btnSetImage and tbSetStrip.
 typedef struct bitmap_strip_s {
   uint32_t tex;     // OpenGL texture ID of the strip texture
-  int      icon_w;  // pixel width of each icon tile
-  int      icon_h;  // pixel height of each icon tile
+  int      icon_w;  // logical pixel width of each icon tile
+  int      icon_h;  // logical pixel height of each icon tile
   int      cols;    // number of tile columns in the strip (strip_w / icon_w)
-  int      sheet_w; // total texture width in pixels (for UV calculation)
-  int      sheet_h; // total texture height in pixels (for UV calculation)
+  int      sheet_w; // logical sheet width (for UV ratios; texture may be denser)
+  int      sheet_h; // logical sheet height (for UV ratios; texture may be denser)
 } bitmap_strip_t;
 
 typedef struct toolbar_state_s {

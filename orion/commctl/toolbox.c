@@ -127,12 +127,11 @@ static void draw_toolbox_button(toolbox_state_t *st, int idx,
     if (sysicon_resolve(icon_name, &res)) {
       irect16_t icon_dst = rect_offset(rect_center(cell, res.w, res.h), px, px);
       draw_sprite_region((int)res.tex, R(icon_dst.x, icon_dst.y, res.w, res.h),
-                         UV_RECT(res.u0, res.v0, res.u1, res.v1), 0xFFFFFFFF, 0);
+                         UV_RECT(res.u0, res.v0, res.u1, res.v1), get_sys_color(brToolbarForeground), 0);
     }
   } else {
     int icon = st->items[idx].icon;
     if (st->strip.tex && st->strip.cols > 0) {
-      // Custom sprite-sheet strips carry their own colors.
       bitmap_strip_t *s = &st->strip;
       int col_idx = icon % s->cols;
       int row_idx = icon / s->cols;
@@ -143,13 +142,13 @@ static void draw_toolbox_button(toolbox_state_t *st, int idx,
       irect16_t icon_dst = rect_offset(rect_center(cell, s->icon_w, s->icon_h), px, px);
       draw_sprite_region((int)s->tex,
                          R(icon_dst.x, icon_dst.y, s->icon_w, s->icon_h),
-                         UV_RECT(u0, v0, u1, v1), 0xFFFFFFFF, 0);
+                         UV_RECT(u0, v0, u1, v1), get_sys_color(brToolbarForeground), 0);
     } else {
       // Text fallback: draw item index as a number.
       char buf[8];
       snprintf(buf, sizeof(buf), "%d", idx);
       draw_text_small(buf, bx + px + 4, by + px + (bsz - 8) / 2,
-                      get_sys_color(brTextNormal));
+                      get_sys_color(brToolbarForeground));
     }
   }
 }

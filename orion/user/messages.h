@@ -456,7 +456,7 @@ typedef enum {
   brFolderText           = 21,  // folder entry text in file lists
   brColumnViewBg         = 22,  // report/icon column view background
   brModalOverlay         = 23,  // modal owner dimming overlay (ARGB with alpha)
-  brToolbarForeground    = 24,  // toolbar icons, labels, and dropdown arrows
+  brToolbarForeground    = 24,  // toolbar/toolbox icons, labels, and dropdown arrows
   brCount                = 25
 } sys_color_idx_t;
 

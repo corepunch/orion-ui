@@ -49,8 +49,8 @@ static uint8_t *read_ttf(const char *path) {
   return data;
 }
 
-font_cache_t *font_cache_create(const char *path, float pixel_height) {
-  if (!path || pixel_height <= 0.0f) return NULL;
+font_cache_t *font_cache_create(const char *path, float em_size) {
+  if (!path || em_size <= 0.0f) return NULL;
   font_cache_t *cache = (font_cache_t *)calloc(1, sizeof(*cache));
   if (!cache) return NULL;
   cache->ttf_data = read_ttf(path);
@@ -64,9 +64,9 @@ font_cache_t *font_cache_create(const char *path, float pixel_height) {
   int ascent, descent, line_gap, x0, y0, x1, y1;
   cache->bitmap_scale = axGetScaling();
   if (cache->bitmap_scale < 1.0f) cache->bitmap_scale = 1.0f;
-  cache->scale = stbtt_ScaleForPixelHeight(&cache->font, pixel_height);
-  cache->raster_scale = stbtt_ScaleForPixelHeight(
-    &cache->font, pixel_height * cache->bitmap_scale);
+  // Font size is the logical em size; display density only affects the bitmap.
+  cache->scale = stbtt_ScaleForMappingEmToPixels(&cache->font, em_size);
+  cache->raster_scale = cache->scale * cache->bitmap_scale;
   stbtt_GetFontVMetrics(&cache->font, &ascent, &descent, &line_gap);
   stbtt_GetFontBoundingBox(&cache->font, &x0, &y0, &x1, &y1);
   cache->baseline = (int)ceilf((float)ascent * cache->raster_scale);

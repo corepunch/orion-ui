@@ -1,0 +1,29 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "make imageeditor",
+      "type": "shell",
+      "command": "make",
+      "args": [
+        "apps"
+      ],
+      "group": {
+        "kind": "build"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "run imageeditor",
+      "type": "shell",
+      "command": "build/bin/imageeditor",
+      "dependsOn": "make imageeditor",
+      "dependsOrder": "sequence",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    }
+  ]
+}

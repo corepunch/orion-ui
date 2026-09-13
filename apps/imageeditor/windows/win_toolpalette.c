@@ -83,7 +83,7 @@ static void palette_draw_icon(irect16_t r, int icon_idx, int offset) {
                                offset, offset);
   draw_sprite_region((int)g_tool_strip.tex,
                      R(icon.x, icon.y, g_tool_strip.icon_w, g_tool_strip.icon_h),
-                     UV_RECT(u0, v0, u1, v1), 0xFFFFFFFF, 0);
+                     UV_RECT(u0, v0, u1, v1), get_sys_color(brToolbarForeground), 0);
 }
 
 static void palette_set_active_tool(window_t *win, int ident) {
@@ -240,7 +240,7 @@ static result_t palette_root_proc(window_t *win, uint32_t msg,
           palette_draw_icon(r, k_tools[i].icon, down ? 1 : 0);
         } else {
           const char *label = tool_names[i] ? tool_names[i] : "";
-          draw_text_small(label, r.x + 3, r.y + 4, get_sys_color(brTextNormal));
+          draw_text_small(label, r.x + 3, r.y + 4, get_sys_color(brToolbarForeground));
         }
       }
       palette_draw_swatches(win);

@@ -13,7 +13,8 @@ typedef struct {
   int16_t advance;
 } font_cache_glyph_t;
 
-font_cache_t *font_cache_create(const char *path, float pixel_height);
+// em_size and advance/line metrics use logical pixels; bitmap bounds use texels.
+font_cache_t *font_cache_create(const char *path, float em_size);
 void font_cache_destroy(font_cache_t *cache);
 
 const font_cache_glyph_t *font_cache_get_glyph(font_cache_t *cache,

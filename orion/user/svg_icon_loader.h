@@ -9,7 +9,7 @@
 //
 // svg_names : array of `count` iconoir base names (no .svg extension);
 //             NULL entries produce blank tiles.
-// icon_size : output tile size in pixels (square).
+// icon_size : logical tile size in pixels (square); rasterized at display density.
 // cols      : sheet columns; rows are computed automatically.
 // missing   : optional FILE* to receive one diagnostic line per blank tile.
 //
@@ -37,7 +37,8 @@ typedef struct {
 } sysicon_resolved_t;
 
 // Resolve an SVG base name (e.g. "git-fork", "undo") to GPU draw info.
-// Loads the SVG on demand and caches the result per name.
+// Loads the SVG on demand and refreshes cached pixels when display density changes.
+// Returned dimensions are logical pixels; texture resolution follows display density.
 // Returns false if the icon cannot be found in any registered icons directory.
 bool sysicon_resolve(const char *name, sysicon_resolved_t *out);
 
