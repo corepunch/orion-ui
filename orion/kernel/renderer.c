@@ -972,3 +972,58 @@ bool R_DrawVGABuffer(const R_VgaBuffer *buf,
   glEnable(GL_DEPTH_TEST);
   return true;
 }
+
+// ── Per-window render-target helpers ────────────────────────────────────────
+
+bool R_EnsureWindowTarget(uint32_t *fbo, uint32_t *tex,
+                          int *cur_w, int *cur_h,
+                          int req_w, int req_h) {
+  if (!fbo || !tex || !cur_w || !cur_h) return false;
+  if (req_w <= 0 || req_h <= 0) return false;
+
+  // Already correct size — nothing to do.
+  if (*fbo != 0 && *cur_w == req_w && *cur_h == req_h)
+    return true;
+
+  // Destroy previous target if dimensions changed.
+  if (*fbo != 0)
+    R_DestroyWindowTarget(fbo, tex, cur_w, cur_h);
+
+  GLuint new_tex = R_CreateTextureRGBA(req_w, req_h, NULL,
+                                        R_FILTER_LINEAR, R_WRAP_CLAMP);
+  if (!new_tex) return false;
+
+  GLuint new_fbo = 0;
+  glGenFramebuffers(1, &new_fbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, new_fbo);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                         GL_TEXTURE_2D, new_tex, 0);
+  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteFramebuffers(1, &new_fbo);
+    R_DeleteTexture(new_tex);
+    return false;
+  }
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+  *fbo   = new_fbo;
+  *tex   = new_tex;
+  *cur_w = req_w;
+  *cur_h = req_h;
+  return true;
+}
+
+void R_DestroyWindowTarget(uint32_t *fbo, uint32_t *tex,
+                           int *w, int *h) {
+  if (fbo && *fbo != 0) {
+    GLuint id = (GLuint)*fbo;
+    glDeleteFramebuffers(1, &id);
+    *fbo = 0;
+  }
+  if (tex && *tex != 0) {
+    R_DeleteTexture(*tex);
+    *tex = 0;
+  }
+  if (w) *w = 0;
+  if (h) *h = 0;
+}

@@ -124,6 +124,17 @@ bool R_UpdateTextureRGBA(uint32_t tex, int x, int y, int w, int h,
 // Delete a texture by its ID (no-op when id == 0).
 void R_DeleteTexture(uint32_t id);
 
+// Per-window render-target helpers.
+// Create or resize an FBO+texture pair.  Returns true when *fbo/*tex are
+// valid and sized to req_w × req_h.  If they already match, this is a no-op.
+bool R_EnsureWindowTarget(uint32_t *fbo, uint32_t *tex,
+                          int *cur_w, int *cur_h,
+                          int req_w, int req_h);
+
+// Destroy a window render target (no-op when *fbo == 0).
+void R_DestroyWindowTarget(uint32_t *fbo, uint32_t *tex,
+                           int *w, int *h);
+
 // Blend state
 // Enable/disable standard alpha blending (SRC_ALPHA / ONE_MINUS_SRC_ALPHA)
 // and pair it with depth-test disable/enable for 2-D UI rendering.
