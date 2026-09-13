@@ -59,4 +59,7 @@ void ui_set_stencil_for_root_window(uint32_t window_id);
 // WINDOW_VSCROLL is set.  Safe to call when neither bar is visible (no-op).
 void draw_builtin_scrollbars(window_t *win);
 
+// Composite all visible root windows from their FBO textures to the screen.
+void composite_root_windows(void);
+
 #endif

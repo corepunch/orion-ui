@@ -774,11 +774,7 @@ void dispatch_message(ui_event_t *msg) {
     }
 
     case evRefreshStencil:
-      // evRefreshStencil rebuilds the compositing stencil for all windows.
-      // The target may be the dummy value (window_t*)1 used by show_window and
-      // theme-change callers, so it has its own case rather than going through
-      // the window-validity check in the default branch.
-      if (g_ui_runtime.running) repaint_stencil();
+      // Stencil no longer used; discard.
       break;
 
     case kEventTimer:

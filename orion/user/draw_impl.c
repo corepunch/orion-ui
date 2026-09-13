@@ -404,3 +404,44 @@ void draw_checkerboard(irect16_t r, int square_px) {
                      UV_RECT(0.0f, 0.0f, uv_x, uv_y),
                      0xFFFFFFFF, 0);
 }
+
+// Composite all visible root windows from their FBO textures to the
+// default framebuffer, applying SDF rounded-corner masking.
+void composite_root_windows(void) {
+  if (!g_ui_runtime.running) return;
+
+  // Switch to the default framebuffer (screen).
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  uint32_t ws = axGetSize(NULL);
+  int screen_w = (int)LOWORD(ws);
+  int screen_h = (int)HIWORD(ws);
+  glViewport(0, 0, screen_w, screen_h);
+  glDisable(GL_SCISSOR_TEST);
+  glDisable(GL_DEPTH_TEST);
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+  // Set projection for screen-space compositing.
+  set_fullscreen();
+
+  float base_radius = 4.0f * axGetScaling();
+
+  for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
+    if (!window_has_state(w, WINDOW_STATE_VISIBLE)) continue;
+    if (!w->surface_tex) continue;
+
+    int max_r_x = w->frame.w / 2;
+    int max_r_y = w->frame.h / 2;
+    float radius = base_radius;
+    if (radius > max_r_x) radius = (float)max_r_x;
+    if (radius > max_r_y) radius = (float)max_r_y;
+
+    draw_rounded_rect((int)w->surface_tex,
+                      (irect16_t){w->frame.x, w->frame.y, w->frame.w, w->frame.h},
+                      w->frame.w, w->frame.h,
+                      radius, 1.0f);
+  }
+
+  glDisable(GL_BLEND);
+  glEnable(GL_DEPTH_TEST);
+}

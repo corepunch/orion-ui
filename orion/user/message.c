@@ -514,10 +514,8 @@ void repost_messages(void) {
       continue;
     }
     if (m->msg == evRefreshStencil) {
+      // Stencil no longer used; discard.
       free_posted_lparam(m->msg, m->lparam);
-      if (g_ui_runtime.running) {
-        repaint_stencil();
-      }
       continue;
     }
     if (!is_valid_window_ptr(m->target, g_ui_runtime.windows)) {
@@ -527,6 +525,10 @@ void repost_messages(void) {
     if (m->msg == evPaint) frame_had_paint = true;
     send_message(m->target, m->msg, m->wparam, m->lparam);
     free_posted_lparam(m->msg, m->lparam);
+  }
+  // Composite all root-window FBO textures to the screen.
+  if (frame_began && frame_had_paint) {
+    composite_root_windows();
   }
   char screenshot_path[1024];
   int screenshot_quality = 90;
