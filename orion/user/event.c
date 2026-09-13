@@ -28,8 +28,6 @@ extern void destroy_window(window_t *win);
 extern int titlebar_height(window_t const *win);
 // Window-liveness check — defined in user/message.c; used to guard posted events.
 extern bool is_valid_window_ptr(window_t *target, window_t *list);
-// repaint_stencil() is called when evRefreshStencil is dispatched.
-extern void repaint_stencil(void);
 
 // Macros for coordinate conversion (platform logical → Orion logical)
 #define SCALE_POINT(x) ((x)/UI_WINDOW_SCALE)
@@ -182,7 +180,6 @@ void move_to_top(window_t* _win) {
   extern window_t *get_root_window(window_t *window);
 
   window_t *win = get_root_window(_win);
-  post_message(win, evRefreshStencil, 0, NULL);
   invalidate_window(win);
 
   if (win->flags & WINDOW_ALWAYSINBACK)
@@ -367,7 +364,6 @@ void dispatch_message(ui_event_t *msg) {
           }
         }
       }
-      post_message((window_t *)1, evRefreshStencil, 0, NULL);
       for (win = g_ui_runtime.windows; win; win = win->next) {
         if (window_has_state(win, WINDOW_STATE_VISIBLE)) {
           invalidate_window(win);

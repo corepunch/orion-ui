@@ -63,30 +63,16 @@ extern void draw_window_controls(window_t *win);
 extern void draw_statusbar(window_t *win, const char *text);
 extern void draw_bevel(irect16_t r);
 extern void draw_button(irect16_t r, int dx, int dy, bool pressed);
-extern void paint_window_stencil(window_t const *w);
-extern void repaint_stencil(void);
 extern void set_fullscreen(void);
 extern window_t *get_root_window(window_t *window);
 
 // Forward declarations for kernel/event.c helpers.
-// wake_event_loop() posts a sentinel to make get_message() return 0 (loop exit).
 extern void wake_event_loop(void);
-// dispatch_message() routes a platform or Orion event to its target window proc.
 void dispatch_message(ui_event_t *evt);
 // Forward declarations for kernel/init.c per-frame rendering.
 extern void ui_begin_frame(void);
 extern void ui_end_frame(void);
 
-// Forward declarations
-extern void draw_panel(window_t const *win);
-extern void draw_window_controls(window_t *win);
-extern void draw_statusbar(window_t *win, const char *text);
-extern void draw_bevel(irect16_t r);
-extern void draw_button(irect16_t r, int dx, int dy, bool pressed);
-extern void paint_window_stencil(window_t const *w);
-extern void repaint_stencil(void);
-extern void set_fullscreen(void);
-extern window_t *get_root_window(window_t *window);
 extern int titlebar_height(window_t const *win);
 extern int statusbar_height(window_t const *win);
 // Returns win's frame rect in absolute screen coordinates.

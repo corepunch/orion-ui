@@ -124,7 +124,6 @@ static bool tab_select(window_t *win, int index, bool notify) {
   if (index == st->selected) return false;
   st->selected = index;
   tab_arrange(win);
-  post_message(win, evRefreshStencil, 0, NULL);
   invalidate_window(win);
   if (notify && win->parent)
     send_message(win->parent, evCommand, MAKEDWORD((uint16_t)win->id, tcnSelChange), win);

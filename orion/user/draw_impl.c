@@ -220,79 +220,11 @@ void set_scissor_fbo(irect16_t r) {
   glScissor(r.x, r.y, r.w, r.h);
 }
 
-static void clear_rounded_corner(uint32_t clear_stencil_id, int x0, int y0, int radius,
-                                int cx2, int cy2, int r2_2x) {
-  for (int y = 0; y < radius; y++) {
-    int py2 = (y0 + y) * 2 + 1;
-    for (int x = 0; x < radius; x++) {
-      int px = x0 + x;
-      int dx2 = ((x0 + x) * 2 + 1) - cx2;
-      int dy2 = py2 - cy2;
-      if (dx2 * dx2 + dy2 * dy2 > r2_2x) {
-        fill_rect(clear_stencil_id, R(px, y0 + y, 1, 1));
-      }
-    }
-  }
-}
-
-// Paint window to stencil buffer
-void paint_window_stencil(window_t const *w) {
-  extern uint32_t ui_white_texture;
-  int p = 1;
-  glStencilFunc(GL_ALWAYS, w->id, 0xFF);            // Always pass
-  glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE); // Replace stencil with window ID
-  draw_rect(ui_white_texture, R(w->frame.x-p, w->frame.y-p, w->frame.w+p*2, w->frame.h+p*2));
-
-  int radius = (int)(4.0f * (float)axGetScaling() + 0.5f);
-  int max_radius_x = w->frame.w / 2;
-  int max_radius_y = w->frame.h / 2;
-  if (radius > max_radius_x) radius = max_radius_x;
-  if (radius > max_radius_y) radius = max_radius_y;
-  if (radius <= 0) return;
-
-  int frame_x = w->frame.x;
-  int frame_y = w->frame.y;
-  int frame_x2 = w->frame.x + w->frame.w;
-  int frame_y2 = w->frame.y + w->frame.h;
-  int cx_tl = (frame_x + radius) * 2;
-  int cy_tl = (frame_y + radius) * 2;
-  int cx_tr = (frame_x2 - radius) * 2;
-  int cy_br = (frame_y2 - radius) * 2;
-  int r2_2x = (radius * 2) * (radius * 2);
-  
-  glStencilFunc(GL_ALWAYS, 0, 0xFF); // clear only outside rounded corners
-  clear_rounded_corner(0, frame_x, frame_y, radius, cx_tl, cy_tl, r2_2x);
-  clear_rounded_corner(0, frame_x2 - radius, frame_y, radius, cx_tr, cy_tl, r2_2x);
-  clear_rounded_corner(0, frame_x, frame_y2 - radius, radius, cx_tl, cy_br, r2_2x);
-  clear_rounded_corner(0, frame_x2 - radius, frame_y2 - radius, radius, cx_tr, cy_br, r2_2x);
-}
-
-// Repaint window stencil buffer
-void repaint_stencil(void) {
-  set_fullscreen();
-  
-  glEnable(GL_STENCIL_TEST);
-  glClearStencil(0);
-  glClear(GL_STENCIL_BUFFER_BIT);
-  glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-  for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
-    if (!window_has_state(w, WINDOW_STATE_VISIBLE))
-      continue;
-    send_message(w, evPaintStencil, 0, NULL);
-  }
-  glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-  glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
-}
-
-// Set stencil test to render for specific window
-void ui_set_stencil_for_window(uint32_t window_id) {
-  glStencilFunc(GL_EQUAL, window_id, 0xFF);
-}
-
-// Set stencil test to render for root window
-void ui_set_stencil_for_root_window(uint32_t window_id) {
-  glStencilFunc(GL_EQUAL, window_id, 0xFF);
-}
+// ── Stencil no-ops (kept for API compat, superseded by FBO compositing) ───
+void paint_window_stencil(window_t const *w) { (void)w; }
+void repaint_stencil(void) {}
+void ui_set_stencil_for_window(uint32_t id) { (void)id; }
+void ui_set_stencil_for_root_window(uint32_t id) { (void)id; }
 
 // Fill a rectangle with a solid color
 void fill_rect(uint32_t color, irect16_t r) {
