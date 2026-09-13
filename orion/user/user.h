@@ -485,6 +485,9 @@ struct window_s {
   struct window_s *toolbar; // toolbar host window (win_toolbar); state lives in toolbar->userdata
   struct window_s *active_page; // selected page projected by a WINDOW_ROLE_HOST
   struct window_s *page_host; // WINDOW_ROLE_HOST currently projecting this page
+  uint32_t surface_fbo; // Offscreen render target for per-window composition.
+  uint32_t surface_tex; // Backing texture for the render target.
+  int surface_w, surface_h; // Render target size in physical pixels.
   const toolbar_item_t *page_toolbar_items; // declarative page contribution; not owned
   int page_toolbar_count;
   const struct menu_item_s *context_menu; // generated declarative menu; not owned
