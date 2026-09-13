@@ -369,11 +369,10 @@ void composite_root_windows(void) {
     if (!window_has_state(w, WINDOW_STATE_VISIBLE)) continue;
     if (!w->surface_tex) continue;
 
-    int max_r_x = w->frame.w / 2;
-    int max_r_y = w->frame.h / 2;
+    // Clamp radius to half the smallest dimension (in physical pixels).
+    int max_r = w->surface_w < w->surface_h ? w->surface_w / 2 : w->surface_h / 2;
     float radius = base_radius;
-    if (radius > max_r_x) radius = (float)max_r_x;
-    if (radius > max_r_y) radius = (float)max_r_y;
+    if (radius > max_r) radius = (float)max_r;
 
     draw_rounded_rect((int)w->surface_tex,
                       (irect16_t){w->frame.x, w->frame.y, w->frame.w, w->frame.h},
