@@ -28,6 +28,9 @@ enum {
 void draw_sprite_region(int tex, irect16_t r,
                         frect_t const *uv,
                         uint32_t color, uint32_t flags);
+// Draw a texture with SDF rounded-corner masking (anti-aliased).
+void draw_rounded_rect(int tex, irect16_t r, int win_w, int win_h,
+                       float radius, float alpha);
 // Draw a dashed selection-outline rectangle (2–4 GL draw calls depending on dimensions, O(1) regardless of size)
 void draw_sel_rect(irect16_t r);
 

@@ -87,6 +87,7 @@ typedef struct {
 typedef struct {
   sprite_program_t copy_sprite;
   sprite_program_t gradient_sprite;
+  sprite_program_t rounded_rect_sprite; // SDF rounded-corner compositor
   GLuint vga_program;    // VGA text renderer program
   R_Mesh mesh;           // Sprite mesh for drawing quads
   fmat16_t projection;   // Orthographic projection matrix
@@ -111,6 +112,14 @@ typedef struct {
 } vga_renderer_t;
 
 static vga_renderer_t g_vga = {0};
+
+// Cached uniforms for the rounded-rect SDF compositor.
+typedef struct {
+  GLint size_u;
+  GLint radius_u;
+} rounded_rect_uniforms_t;
+
+static rounded_rect_uniforms_t g_rounded_rect = {0};
 
 static void draw_rect_program_common(int tex, int x, int y, int w, int h,
                                      float alpha, uint32_t program,
@@ -222,6 +231,10 @@ static void update_sprite_projection_uniforms(const fmat16_t *projection) {
   if (g_ref.gradient_sprite.program && g_ref.gradient_sprite.projection_u >= 0) {
     glUseProgram(g_ref.gradient_sprite.program);
     glUniformMatrix4fv(g_ref.gradient_sprite.projection_u, 1, GL_FALSE, fmat16_data(projection));
+  }
+  if (g_ref.rounded_rect_sprite.program && g_ref.rounded_rect_sprite.projection_u >= 0) {
+    glUseProgram(g_ref.rounded_rect_sprite.program);
+    glUniformMatrix4fv(g_ref.rounded_rect_sprite.projection_u, 1, GL_FALSE, fmat16_data(projection));
   }
   glUseProgram((GLuint)prev_prog);
 }
@@ -351,6 +364,18 @@ bool ui_init_prog(void) {
   }
   cache_sprite_uniforms(&g_ref.gradient_sprite);
 
+  g_ref.rounded_rect_sprite.program = load_program_from_files("sprite_rounded_rect.frag.glsl",
+                                                               "position", "texcoord", "color");
+  if (!g_ref.rounded_rect_sprite.program) {
+    ui_shutdown_prog();
+    return false;
+  }
+  cache_sprite_uniforms(&g_ref.rounded_rect_sprite);
+  if (g_ref.rounded_rect_sprite.program) {
+    g_rounded_rect.size_u   = glGetUniformLocation(g_ref.rounded_rect_sprite.program, "size");
+    g_rounded_rect.radius_u = glGetUniformLocation(g_ref.rounded_rect_sprite.program, "radius");
+  }
+
   g_ref.vga_program = load_program_from_files("vga.frag.glsl",
                                               "position", "texcoord", NULL);
   if (!g_ref.vga_program) {
@@ -404,6 +429,7 @@ void ui_shutdown_prog(void) {
   SAFE_DELETE_N(g_vga.palette_texture, glDeleteTextures);
   SAFE_DELETE(g_ref.copy_sprite.program, glDeleteProgram);
   SAFE_DELETE(g_ref.gradient_sprite.program, glDeleteProgram);
+  SAFE_DELETE(g_ref.rounded_rect_sprite.program, glDeleteProgram);
   SAFE_DELETE(g_ref.vga_program, glDeleteProgram);
   R_MeshDestroy(&g_ref.mesh);
 }
@@ -707,6 +733,39 @@ bool bake_texture_program(int src_tex, int w, int h, uint32_t program,
 
 void draw_program_rect(int tex, irect16_t r, uint32_t program, float mix_amount) {
   draw_rect_program(tex, r.x, r.y, r.w, r.h, program, mix_amount);
+}
+
+// Draw a texture with SDF rounded-corner masking.
+// tex     — source texture (typically an FBO color attachment).
+// r       — destination rectangle in logical coordinates.
+// win_w/h — window size in pixels (used for SDF computation).
+// radius  — corner radius in pixels.
+// alpha   — overall opacity multiplier.
+void draw_rounded_rect(int tex, irect16_t r, int win_w, int win_h,
+                       float radius, float alpha) {
+  if (!g_ref.rounded_rect_sprite.program || !tex) return;
+  glUseProgram(g_ref.rounded_rect_sprite.program);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, (GLuint)tex);
+  glUniform1i(g_ref.rounded_rect_sprite.tex0_u, 0);
+  glUniform2f(g_ref.rounded_rect_sprite.offset_u, (float)r.x, (float)r.y);
+  glUniform2f(g_ref.rounded_rect_sprite.scale_u, (float)r.w, (float)r.h);
+  glUniform1f(g_ref.rounded_rect_sprite.alpha_u, alpha);
+  glUniform4f(g_ref.rounded_rect_sprite.params0_u, 0.0f, 0.0f, 0.0f, 0.0f);
+  glUniform4f(g_ref.rounded_rect_sprite.params1_u, 0.0f, 0.0f, 0.0f, 0.0f);
+  glUniform2f(g_ref.rounded_rect_sprite.uv_offset_u, 0.0f, 0.0f);
+  glUniform2f(g_ref.rounded_rect_sprite.uv_scale_u, 1.0f, 1.0f);
+  glUniform4f(g_ref.rounded_rect_sprite.tint_u, 1.0f, 1.0f, 1.0f, 1.0f);
+  // SDF-specific uniforms.
+  glUniform2f(g_rounded_rect.size_u, (float)win_w, (float)win_h);
+  glUniform1f(g_rounded_rect.radius_u, radius);
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  glDisable(GL_DEPTH_TEST);
+  g_ref.mesh.draw_mode = GL_TRIANGLE_FAN;
+  R_MeshDraw(&g_ref.mesh);
+  glEnable(GL_DEPTH_TEST);
+  glDisable(GL_BLEND);
 }
 
 bool read_texture_rgba(int src_tex, int w, int h, uint8_t *out_rgba) {
