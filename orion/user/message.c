@@ -193,10 +193,12 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
     case evNCPaint:
       // Skip OpenGL calls if graphics aren't initialized (e.g., in tests)
       if (g_ui_runtime.running) {
-        // Ensure root window has an FBO and bind it.
+        // Ensure root window has an FBO at physical pixel resolution.
+        int scale = (int)axGetScaling();
+        if (scale < 1) scale = 1;
         R_EnsureWindowTarget(&root->surface_fbo, &root->surface_tex,
                              &root->surface_w, &root->surface_h,
-                             root->frame.w, root->frame.h);
+                             root->frame.w * scale, root->frame.h * scale);
         glBindFramebuffer(GL_FRAMEBUFFER, root->surface_fbo);
         set_viewport_for_fbo(root);
         if (!(win->flags&WINDOW_TRANSPARENT)) {
@@ -242,13 +244,15 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         // that scrolled content cannot bleed into non-client areas (title bar,
         // toolbar, status bar).
         if (win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL)) {
+          int scale = (int)axGetScaling();
+          if (scale < 1) scale = 1;
           int t_win = titlebar_height(win);   /* win's own non-client height */
           irect16_t cr = get_client_rect(win);
           irect16_t wf = win_frame_in_screen(win, root, t);
-          // Convert root-relative client rect to FBO pixel coords (Y-flipped).
-          int fbo_x = wf.x - root->frame.x;
-          int fbo_y = root->surface_h - (wf.y - root->frame.y + t_win + cr.h);
-          set_scissor_fbo((irect16_t){fbo_x, fbo_y, cr.w, cr.h});
+          // Convert root-relative client rect to FBO physical pixel coords (Y-flipped).
+          int fbo_x = (wf.x - root->frame.x) * scale;
+          int fbo_y = root->surface_h - (wf.y - root->frame.y + t_win + cr.h) * scale;
+          set_scissor_fbo((irect16_t){fbo_x, fbo_y, cr.w * scale, cr.h * scale});
         }
       }
       break;
@@ -431,10 +435,14 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
     set_viewport_for_fbo(root);
     set_projection(scroll_x, -root_t + scroll_y,
                    root->frame.w + scroll_x, root->frame.h - root_t + scroll_y);
-    // Scissor to the window frame in FBO coords (Y-flipped).
-    int fbo_x = wf.x - root->frame.x;
-    int fbo_y = root->surface_h - (wf.y - root->frame.y + wf.h);
-    set_scissor_fbo((irect16_t){fbo_x, fbo_y, wf.w, wf.h});
+    // Scissor to the window frame in FBO physical pixel coords (Y-flipped).
+    {
+      int scale = (int)axGetScaling();
+      if (scale < 1) scale = 1;
+      int fbo_x = (wf.x - root->frame.x) * scale;
+      int fbo_y = root->surface_h - (wf.y - root->frame.y + wf.h) * scale;
+      set_scissor_fbo((irect16_t){fbo_x, fbo_y, wf.w * scale, wf.h * scale});
+    }
     draw_builtin_scrollbars(win);
   }
   return value;

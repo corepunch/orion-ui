@@ -201,7 +201,9 @@ void set_clip_rect(window_t const *win, irect16_t r) {
 }
 
 // Set viewport and projection for rendering into a root window's FBO.
-// Translates coordinates so the root's top-left is at FBO origin (0,0).
+// The FBO is sized in physical pixels (logical × scale), but drawing
+// coordinates are logical.  The projection maps logical coords → physical
+// FBO pixels, with Y flipped so logical y=0 (top) maps to FBO y=0 (top).
 void set_viewport_for_fbo(window_t *root) {
   if (!g_ui_runtime.running || !root) return;
   int w = root->surface_w;
@@ -210,7 +212,12 @@ void set_viewport_for_fbo(window_t *root) {
   glViewport(0, 0, w, h);
   glDisable(GL_SCISSOR_TEST);
   g_scissor_valid = false;
-  set_projection(root->frame.x, root->frame.y, w, h);
+  // Flip Y: logical y=0 → FBO top, logical y=h_logical → FBO bottom.
+  int scale = (int)axGetScaling();
+  if (scale < 1) scale = 1;
+  int log_w = w / scale;
+  int log_h = h / scale;
+  set_projection(root->frame.x, log_h + root->frame.y, log_w + root->frame.x, root->frame.y);
 }
 
 // Set scissor rect in FBO pixel coordinates (Y already flipped).
@@ -370,7 +377,7 @@ void composite_root_windows(void) {
 
     draw_rounded_rect((int)w->surface_tex,
                       (irect16_t){w->frame.x, w->frame.y, w->frame.w, w->frame.h},
-                      w->frame.w, w->frame.h,
+                      w->surface_w, w->surface_h,
                       radius, 1.0f);
   }
 

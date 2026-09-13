@@ -753,8 +753,8 @@ void draw_rounded_rect(int tex, irect16_t r, int win_w, int win_h,
   glUniform1f(g_ref.rounded_rect_sprite.alpha_u, alpha);
   glUniform4f(g_ref.rounded_rect_sprite.params0_u, 0.0f, 0.0f, 0.0f, 0.0f);
   glUniform4f(g_ref.rounded_rect_sprite.params1_u, 0.0f, 0.0f, 0.0f, 0.0f);
-  glUniform2f(g_ref.rounded_rect_sprite.uv_offset_u, 0.0f, 0.0f);
-  glUniform2f(g_ref.rounded_rect_sprite.uv_scale_u, 1.0f, 1.0f);
+  glUniform2f(g_ref.rounded_rect_sprite.uv_offset_u, 0.0f, 1.0f);
+  glUniform2f(g_ref.rounded_rect_sprite.uv_scale_u, 1.0f, -1.0f);
   glUniform4f(g_ref.rounded_rect_sprite.tint_u, 1.0f, 1.0f, 1.0f, 1.0f);
   // SDF-specific uniforms.
   glUniform2f(g_rounded_rect.size_u, (float)win_w, (float)win_h);
