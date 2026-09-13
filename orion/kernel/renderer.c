@@ -45,6 +45,11 @@ const char *ui_get_exe_dir(void) {
   if (last) *last = '\0';
 #endif
 
+#ifdef AX_PLATFORM_IOS
+  // Preserve the shared bin/../share resource convention inside a flat iOS bundle.
+  size_t len = strlen(buf);
+  if (len + 4 < sizeof(buf)) strcat(buf, "/bin");
+#endif
   return buf;
 }
 
@@ -146,7 +151,14 @@ static char *read_shader_file(const char *name) {
 // Compile a shader
 GLuint compile_shader(GLenum type, const char* src) {
   GLuint shader = glCreateShader(type);
+#ifdef ORION_OPENGL_ES
+  const char *body = src;
+  if (strncmp(body, "#version", 8) == 0 && strchr(body, '\n')) body = strchr(body, '\n') + 1;
+  const char *parts[] = {"#version 300 es\nprecision highp float;\nprecision highp int;\n", body};
+  glShaderSource(shader, 2, parts, NULL);
+#else
   glShaderSource(shader, 1, &src, 0);
+#endif
   glCompileShader(shader);
   
   // Check for errors
@@ -663,7 +675,8 @@ static bool bake_texture_program_common(int src_tex, int w, int h,
     return false;
   }
 
-  glDrawBuffer(GL_COLOR_ATTACHMENT0);
+  const GLenum draw_buffer = GL_COLOR_ATTACHMENT0;
+  glDrawBuffers(1, &draw_buffer);
   glViewport(0, 0, w, h);
   glScissor(0, 0, w, h);
   set_projection(0, 0, w, h);
@@ -721,7 +734,8 @@ bool read_texture_rgba(int src_tex, int w, int h, uint8_t *out_rgba) {
     return false;
   }
 
-  glDrawBuffer(GL_COLOR_ATTACHMENT0);
+  const GLenum draw_buffer = GL_COLOR_ATTACHMENT0;
+  glDrawBuffers(1, &draw_buffer);
   glReadBuffer(GL_COLOR_ATTACHMENT0);
   glPixelStorei(GL_PACK_ALIGNMENT, 1);
   size_t row_sz = (size_t)w * 4;
@@ -823,6 +837,13 @@ uint32_t R_CreateTextureRGBA(int w, int h, const void *rgba,
   return (uint32_t)tex;
 }
 
+int R_GetMaxTextureSize(void) {
+  GLint limit = 0;
+  glGetIntegerv(GL_MAX_TEXTURE_SIZE, &limit);
+  if (limit <= 0) { fprintf(stderr, "[renderer] texture limit unavailable\n"); fflush(stderr); }
+  return limit;
+}
+
 uint32_t R_CreateTextureR8(int w, int h, const void *pixels,
                             R_TextureFilter filter, R_TextureWrap wrap) {
   GLuint tex = 0;
@@ -835,10 +856,20 @@ uint32_t R_CreateTextureR8(int w, int h, const void *pixels,
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, gl_wrap);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, gl_wrap);
   GLint swizzle_mask[] = {GL_ONE, GL_ONE, GL_ONE, GL_RED};
-  glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzle_mask);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, swizzle_mask[0]);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, swizzle_mask[1]);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, swizzle_mask[2]);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, swizzle_mask[3]);
   glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, w, h, 0, GL_RED,
                GL_UNSIGNED_BYTE, pixels);
+  GLenum error = glGetError();
+  if (error != GL_NO_ERROR) {
+    fprintf(stderr, "[renderer] R8 texture failed size=%dx%d error=0x%x\n", w, h, error);
+    fflush(stderr);
+    glDeleteTextures(1, &tex);
+    return 0;
+  }
   return (uint32_t)tex;
 }
 

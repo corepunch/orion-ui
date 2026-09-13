@@ -177,6 +177,11 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   imageeditor_load_filters();
 #endif
 
+#ifdef AX_PLATFORM_IOS
+  extern int fe_plugin_class_count(void);
+  extern const fe_component_desc_t *fe_plugin_class_desc(int);
+  for (int i = 0; i < fe_plugin_class_count(); i++) register_window_class(fe_plugin_class_desc(i));
+#else
   {
     char path[4096];
     int n = snprintf(path, sizeof(path), "%s/../lib/imageeditor_components%s",
@@ -189,6 +194,8 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
       IE_DEBUG("component plugin path was truncated");
     }
   }
+
+#endif
 
   g_app->accel = load_accelerators(imageeditor_default_accels,
                                    imageeditor_default_accel_count);

@@ -24,7 +24,7 @@ struct font_cache_s {
   float bitmap_scale;
   int baseline;
   int line_height;
-  int cell_w, cell_h;
+  int cell_w, cell_h, columns, capacity;
   int texture_w, texture_h;
   uint32_t texture;
   uint16_t next_slot;
@@ -78,8 +78,18 @@ font_cache_t *font_cache_create(const char *path, float em_size) {
   if (cache->line_height < 1) cache->line_height = 1;
   if (cache->cell_w < 1) cache->cell_w = 1;
   if (cache->cell_h < 1) cache->cell_h = 1;
-  cache->texture_w = FONT_ATLAS_COLS * cache->cell_w;
-  cache->texture_h = FONT_ATLAS_ROWS * cache->cell_h;
+  int limit = R_GetMaxTextureSize();
+  cache->columns = MIN(FONT_ATLAS_COLS, limit / cache->cell_w);
+  int rows = MIN(FONT_ATLAS_ROWS, limit / cache->cell_h);
+  if (!cache->columns || !rows) {
+    fprintf(stderr, "[font] glyph cell %dx%d exceeds texture limit=%d\n", cache->cell_w, cache->cell_h, limit);
+    fflush(stderr);
+    font_cache_destroy(cache);
+    return NULL;
+  }
+  cache->capacity = cache->columns * rows;
+  cache->texture_w = cache->columns * cache->cell_w;
+  cache->texture_h = rows * cache->cell_h;
 
   size_t atlas_size = (size_t)cache->texture_w * (size_t)cache->texture_h;
   uint8_t *empty_atlas = (uint8_t *)calloc(atlas_size, 1);
@@ -120,7 +130,7 @@ const font_cache_glyph_t *font_cache_get_glyph(font_cache_t *cache,
   codepoint = supported_codepoint(cache, codepoint);
   uint16_t mapped = cache->slots[codepoint];
   if (mapped) return &cache->glyphs[mapped - 1];
-  if (cache->next_slot >= FONT_ATLAS_CAPACITY) {
+  if (cache->next_slot >= cache->capacity) {
     fprintf(stderr, "[font] atlas capacity exhausted at U+%04X\n", codepoint);
     fflush(stderr);
     return codepoint == '?' ? NULL : font_cache_get_glyph(cache, '?');
@@ -128,8 +138,8 @@ const font_cache_glyph_t *font_cache_get_glyph(font_cache_t *cache,
 
   uint16_t slot = cache->next_slot++;
   font_cache_glyph_t *glyph = &cache->glyphs[slot];
-  glyph->atlas_x = (slot % FONT_ATLAS_COLS) * cache->cell_w;
-  glyph->atlas_y = (slot / FONT_ATLAS_COLS) * cache->cell_h;
+  glyph->atlas_x = (slot % cache->columns) * cache->cell_w;
+  glyph->atlas_y = (slot / cache->columns) * cache->cell_h;
   int advance, left_bearing, width, height, x_offset, y_offset;
   stbtt_GetCodepointHMetrics(&cache->font, (int)codepoint, &advance, &left_bearing);
   unsigned char *bitmap = stbtt_GetCodepointBitmap(&cache->font, 0,

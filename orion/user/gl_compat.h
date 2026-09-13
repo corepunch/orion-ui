@@ -3,7 +3,13 @@
 #define __GL_COMPAT_H__
 
 #ifdef __APPLE__
-  #include <OpenGL/gl3.h>
+  #include <TargetConditionals.h>
+  #if TARGET_OS_IOS
+    #define ORION_OPENGL_ES 1
+    #include <OpenGLES/ES3/gl.h>
+  #else
+    #include <OpenGL/gl3.h>
+  #endif
 #elif defined(_WIN32) || defined(_WIN64)
   /* Windows platform - use GLEW for OpenGL extension loading */
   #define WIN32_LEAN_AND_MEAN

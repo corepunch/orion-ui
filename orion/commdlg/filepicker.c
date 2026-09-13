@@ -908,7 +908,14 @@ static bool fp_run(openfilename_t *ofn, bool save_mode,
 }
 
 bool get_open_filename(openfilename_t *ofn) {
+#ifdef AX_PLATFORM_IOS
+  if (!ofn) return false;
+  AXopenfilename native = { .lpstrFile = ofn->lpstrFile, .nMaxFile = ofn->nMaxFile,
+                           .lpstrFilter = ofn->lpstrFilter };
+  return axGetOpenFileName(&native);
+#else
   return fp_run(ofn, false, "Open File");
+#endif
 }
 
 bool get_save_filename(openfilename_t *ofn) {

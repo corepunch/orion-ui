@@ -244,6 +244,13 @@ static result_t timeline_proc(window_t *win, uint32_t msg,
   timeline_state_t *st = (timeline_state_t *)win->userdata;
 
   switch (msg) {
+    case evDisplayChange: {
+      irect16_t frame = rect_split_bottom(R(0, 0, LOWORD(wparam), HIWORD(wparam)), TIMELINE_WIN_H);
+      IE_TRACE("timeline display change win=%p size=%dx%d", (void *)win, frame.w, frame.h);
+      move_window(win, frame.x, frame.y);
+      resize_window(win, frame.w, frame.h);
+      return true;
+    }
     case evCreate: {
       timeline_state_t *s = allocate_window_data(win, sizeof(timeline_state_t));
       s->hover_cell    = -1;

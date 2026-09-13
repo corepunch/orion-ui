@@ -474,9 +474,12 @@ static void canvas_draw_selection_mask_overlay(canvas_doc_t *doc,
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     GLint swizzle[] = { GL_ONE, GL_ONE, GL_ONE, GL_RED };
-    glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzle);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, swizzle[0]);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, swizzle[1]);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, swizzle[2]);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, swizzle[3]);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, doc->canvas_w, doc->canvas_h, 0,
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, doc->canvas_w, doc->canvas_h, 0,
                  GL_RED, GL_UNSIGNED_BYTE, doc->sel.mask.data);
     doc->sel.mask.dirty = false;
   } else if (doc->sel.mask.dirty) {

@@ -315,6 +315,9 @@ static uint32_t run_dialog_loop(window_t *dlg, window_t *parent) {
       dispatch_message(&event);
     }
     repost_messages();
+#ifdef AX_PLATFORM_IOS
+    axWaitMessage(10);
+#endif
   }
   // If the app is quitting, the modal loop exits without the dialog having
   // been closed via end_dialog(). Make sure we destroy it here so stack-owned

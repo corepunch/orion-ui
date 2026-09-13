@@ -67,6 +67,8 @@ extern int g_bw_retina_scale;
 #define IMAGEEDITOR_SHOW_SELECTION_BOUNDS 0
 #endif
 
+#define IE_TRACE(...) do { fprintf(stderr, "[imageeditor] " __VA_ARGS__); fputc('\n', stderr); fflush(stderr); } while (0)
+
 #if IMAGEEDITOR_DEBUG
 #define IE_DEBUG(...) do { \
   axLog("[imageeditor] " __VA_ARGS__); \

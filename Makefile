@@ -345,6 +345,9 @@ help:
 	@echo "gems      - Build all .gem shared libraries"
 	@echo "tools     - Build command-line tools"
 	@echo "test      - Build and run tests"
+	@echo "ipad-all  - Build separate Image Editor and Pencil Test iPad bundles"
+	@echo "ipad / ipad-simulator / ipad-run / ipad-deploy / ipad-mac - IPAD_APP=imageeditor|penciltest"
+	@echo "list-devices - List paired devices (see packaging/ipad/README.md)"
 	@echo "ALLOW_HIGHDPI=0 - Disable high-DPI surfaces (use with -B)"
 	@echo "clean     - Remove all build artifacts"
 	@echo "help      - Show this help message"
@@ -356,3 +359,22 @@ help:
 	@echo "$(BIN_DIR)   - Binaries and tests"
 	@echo "$(GEM_DIR)   - .gem shared libraries"
 	@echo "$(SHARE_DIR) - Shared data assets (icons, etc.)"
+
+# Direct SDK builds, with separate bundle identities for the two editor variants.
+IPAD_APP ?= imageeditor
+.PHONY: ipad ipad-simulator ipad-run ipad-deploy ipad-mac ipad-all list-devices
+ipad:
+	$(MAKE) -f packaging/ipad/build.mk APP=$(IPAD_APP) SDK=iphoneos app
+ipad-simulator:
+	$(MAKE) -f packaging/ipad/build.mk APP=$(IPAD_APP) SDK=iphonesimulator app
+ipad-run:
+	$(MAKE) -f packaging/ipad/build.mk APP=$(IPAD_APP) SDK=iphonesimulator run
+ipad-deploy:
+	$(MAKE) -f packaging/ipad/build.mk APP=$(IPAD_APP) SDK=iphoneos deploy
+ipad-mac:
+	$(MAKE) -f packaging/ipad/build.mk APP=$(IPAD_APP) SDK=iphoneos mac
+ipad-all:
+	$(MAKE) -f packaging/ipad/build.mk APP=imageeditor SDK=iphoneos app
+	$(MAKE) -f packaging/ipad/build.mk APP=penciltest SDK=iphoneos app
+list-devices:
+	xcrun devicectl list devices

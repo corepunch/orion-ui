@@ -86,6 +86,8 @@ void R_MeshDrawDynamic(R_Mesh* mesh, const void* data, size_t vertex_count);
 // Destroy mesh and free GPU resources
 void R_MeshDestroy(R_Mesh* mesh);
 
+int R_GetMaxTextureSize(void);
+
 // Texture management functions
 // Bind texture to current texture unit
 void R_TextureBind(R_Texture* texture);

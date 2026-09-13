@@ -49,10 +49,19 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       }
       return true;
     }
+#ifdef AX_PLATFORM_IOS
+    case evKillFocus:
+    case evDestroy:
+      axSetTextInput(FALSE);
+      return true;
+#endif
     case evLeftButtonUp:
       if (g_ui_runtime.focused == win) {
         invalidate_window(win);
         window_set_state(win, WINDOW_STATE_EDITING, true);
+#ifdef AX_PLATFORM_IOS
+        axSetTextInput(TRUE);
+#endif
         int text_x = TEXTEDIT_PADDING_HORZ;
         win->cursor_pos = 0;
         for (int i = 0; i <= (int)strlen(win->title); i++) {

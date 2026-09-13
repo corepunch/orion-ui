@@ -54,7 +54,13 @@ static GLuint s_1bit_prog    = 0;
 static GLuint compile_shader(GLenum type, const char *src) {
   GLuint sh = glCreateShader(type);
   if (!sh) return 0;
+#ifdef ORION_OPENGL_ES
+  const char *body = strchr(src, '\n');
+  const char *parts[] = {"#version 300 es\nprecision highp float;\nprecision highp int;\n", body ? body + 1 : src};
+  glShaderSource(sh, 2, parts, NULL);
+#else
   glShaderSource(sh, 1, &src, NULL);
+#endif
   glCompileShader(sh);
   GLint ok = 0;
   glGetShaderiv(sh, GL_COMPILE_STATUS, &ok);

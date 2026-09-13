@@ -3,20 +3,24 @@
 #include <platform/platform.h>
 
 static float test_display_scale = 1.0f;
+static int test_texture_limit = 16384;
+static int test_max_texture_size(void) { return test_texture_limit; }
 static float test_scaling(void) { return test_display_scale; }
 static uint32_t test_create_texture(int w, int h, const void *pixels,
                                     R_TextureFilter filter, R_TextureWrap wrap) {
-  return 1;
+  return w <= test_texture_limit && h <= test_texture_limit ? 1 : 0;
 }
 static bool test_update_texture(uint32_t tex, int x, int y, int w, int h,
                                 const void *pixels) { return true; }
 static void test_delete_texture(uint32_t tex) {}
 
+#define R_GetMaxTextureSize test_max_texture_size
 #define axGetScaling test_scaling
 #define R_CreateTextureR8 test_create_texture
 #define R_UpdateTextureR8 test_update_texture
 #define R_DeleteTexture test_delete_texture
 #include <orion/user/font_cache.c>
+#undef R_GetMaxTextureSize
 #undef axGetScaling
 #undef R_CreateTextureR8
 #undef R_UpdateTextureR8
@@ -69,9 +73,29 @@ static void test_retina_metrics(void) {
   PASS();
 }
 
+static void test_mobile_texture_limit(void) {
+  TEST("Retina font atlases fit mobile GPU limits and wrap glyph rows");
+  test_display_scale = 2.0f;
+  test_texture_limit = 4096;
+  font_cache_t *cache = font_cache_create("share/fonts/NotoSans-Regular.ttf", 12.0f);
+  ASSERT_NOT_NULL(cache);
+  ASSERT_TRUE(font_cache_texture_width(cache) <= test_texture_limit);
+  ASSERT_TRUE(font_cache_texture_height(cache) <= test_texture_limit);
+  for (uint32_t c = 32; c < 256; c++) {
+    const font_cache_glyph_t *glyph = font_cache_get_glyph(cache, c);
+    ASSERT_NOT_NULL(glyph);
+    ASSERT_TRUE(glyph->atlas_x + glyph->width <= font_cache_texture_width(cache));
+    ASSERT_TRUE(glyph->atlas_y + glyph->height <= font_cache_texture_height(cache));
+  }
+  font_cache_destroy(cache);
+  test_texture_limit = 16384;
+  PASS();
+}
+
 int main(void) {
   TEST_START("UI font sizing");
   test_font_size();
   test_retina_metrics();
+  test_mobile_texture_limit();
   TEST_END();
 }
