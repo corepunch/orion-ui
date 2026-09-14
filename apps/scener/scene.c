@@ -113,13 +113,13 @@ static vec3 xml_attr_v3(XmlNode*n,const char*name,vec3 def){
 	vec3 v=def; sscanf(s,"%f %f %f",&v.x,&v.y,&v.z); return v;
 }
 static float xml_attr_f(XmlNode*n,const char*name,float def){
-	const char*s=xml_attr(n,name,NULL); return s? (float)atof(s): def;
+	const char*s=xml_attr(n,name,NULL); return s? strtof(s,NULL): def;
 }
 static int xml_attr_i(XmlNode*n,const char*name,int def){
 	const char*s=xml_attr(n,name,NULL); return s? atoi(s): def;
 }
 static float xml_attr_f_cm(XmlNode*n,const char*name,float def){
-	const char*s=xml_attr(n,name,NULL); return s? (float)atof(s)*0.01f: def;
+	const char*s=xml_attr(n,name,NULL); return s? strtof(s,NULL)*0.01f: def;
 }
 static vec3 xml_attr_v3_cm(XmlNode*n,const char*name,vec3 def){
 	const char*s=xml_attr(n,name,NULL); if(!s) return def;
