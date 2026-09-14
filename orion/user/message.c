@@ -252,6 +252,7 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
     case tbSetStrip:
     case tbSetActiveButton:
     case tbSetButtonSize:
+    case tbSetOrientation:
     case tbSetStyle:
     case tbLoadStrip:
       (void)toolbar_handle_message(win, msg, wparam, lparam);

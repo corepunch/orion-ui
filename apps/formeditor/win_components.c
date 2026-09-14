@@ -49,8 +49,8 @@ static int components_item_count(void) {
   for (int i = 0; i < fe_component_count(); i++) {
     const fe_component_desc_t *c = fe_component_at(i);
     if (!c) continue;
-    if ((c->capabilities & (FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX)) ==
-        (FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX))
+    if ((c->capabilities & (FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBAR)) ==
+        (FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBAR))
       items++;
   }
   return items;
@@ -170,12 +170,12 @@ static void comp_build_tool_items(void) {
   for (int i = 0; i < fe_component_count() && g_comp_tool_count < FE_MAX_COMPONENTS + 1; i++) {
     const fe_component_desc_t *c = fe_component_at(i);
     if (!c) continue;
-    if ((c->capabilities & (FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX)) !=
-        (FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX))
+    if ((c->capabilities & (FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBAR)) !=
+        (FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBAR))
       continue;
     g_comp_tools[g_comp_tool_count++] = (reportview_item_t){
         .text = c->class_name,
-        .icon_name = c->toolbox_icon,
+        .icon_name = c->toolbar_icon,
         .color = get_sys_color(brTextNormal),
         .userdata = (uint32_t)i,
     };
@@ -271,7 +271,7 @@ void formeditor_rebuild_tool_palette(void) {
 #if FE_DEFAULT_EDIT_MODE == FE_EDIT_MODE_AUTO_LAYOUT
   g_app->windows[FE_WIN_TOOL] = formeditor_create_components_palette(g_app->hinstance);
 #else
-  g_app->windows[FE_WIN_TOOL] = formeditor_create_legacy_toolpalette(g_app->hinstance);
+  g_app->windows[FE_WIN_TOOL] = formeditor_create_tool_toolbar(g_app->hinstance);
 #endif
 }
 
@@ -387,7 +387,7 @@ result_t win_components_proc(window_t *win, uint32_t msg,
             if (g_app) {
               g_app->current_tool = ID_TOOL_SELECT;
               if (g_app->windows[FE_WIN_TOOL])
-                send_message(g_app->windows[FE_WIN_TOOL], bxSetActiveItem, (uint32_t)ID_TOOL_SELECT, NULL);
+                send_message(g_app->windows[FE_WIN_TOOL], tbSetActiveButton, (uint32_t)ID_TOOL_SELECT, NULL);
             }
           }
           components_hide_ghost();

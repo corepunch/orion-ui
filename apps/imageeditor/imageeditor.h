@@ -104,28 +104,17 @@ extern int g_bw_retina_scale;
 
 #define PALETTE_WIN_X   4
 #define IMAGEEDITOR_TOOL_ICON_PX 24
-#define TOOL_PALETTE_BTN_SIZE    (IMAGEEDITOR_TOOL_ICON_PX + 6)
-// Tool palette window width: always 2 toolbox columns wide.
-#define PALETTE_WIN_W   (TOOLBOX_COLS * TOOL_PALETTE_BTN_SIZE)
-
+#define TOOL_PALETTE_BTN_SIZE    (IMAGEEDITOR_TOOL_ICON_PX + 2)
+#define PALETTE_WIN_W   (TOOL_PALETTE_BTN_SIZE + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH))
 #define TOOL_ICON_W     IMAGEEDITOR_TOOL_ICON_PX
 #define TOOL_ICON_H     IMAGEEDITOR_TOOL_ICON_PX
-
-// Toolbox grid rows and height: ceil(NUM_TOOLS / 2) rows x button size.
-#define TOOL_TOOLBAR_ROWS (((NUM_TOOLS) + TOOLBOX_COLS - 1) / TOOLBOX_COLS)
-#define TOOL_TOOLBAR_H    ((TOOL_TOOLBAR_ROWS) * TOOL_PALETTE_BTN_SIZE)
+#define TOOL_TOOLBAR_H  ((NUM_TOOLS + 1) * TOOL_PALETTE_BTN_SIZE + NUM_TOOLS * TOOLBAR_SPACING + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH))
 
 // PALETTE_WIN_Y is the window top (title bar top) of the tool palette.
 // It sits below the app toolbar, with a 4px gap.
 #define PALETTE_WIN_Y  (APP_TOOLBAR_Y + APP_TOOLBAR_H + 4)
 
-#define TOOL_SWATCH_BOX_H    PALETTE_WIN_W
-
-// Total frame height for the tool palette:
-//   title bar + toolbar rows (non-client) + client content (swatches only)
-//   The fill/outline toggle has moved to the tool options palette.
-#define SWATCH_CLIENT_H TOOL_SWATCH_BOX_H
-#define TOOL_WIN_H    (TITLEBAR_HEIGHT + TOOL_TOOLBAR_H + SWATCH_CLIENT_H)
+#define TOOL_WIN_H    (TITLEBAR_HEIGHT + TOOL_TOOLBAR_H)
 
 // Tool options palette — docked under the Layers palette in the right pane.
 // Content height accommodates brush, shape, and magic-wand option panels.

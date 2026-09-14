@@ -361,9 +361,7 @@ optional Lua scripting. Built-in commands: `echo`, `help`, `clear`,
 
 Run as standalone: `terminal [script.lua]`
 
-## Toolbox
+## Vertical toolbars
 
-See [Toolbox](toolbox) for the complete `win_toolbox` documentation — a
-**2-column floating tool-palette** (Photoshop / VB3 / MS Paint style).
-Use this instead of `WINDOW_TOOLBAR` whenever you need a vertical tool-selector
-panel.
+Use `WINDOW_TOOLBAR` with `tbSetOrientation, TOOLBAR_VERTICAL` for tool selectors.
+See [Toolbars](toolbars.md) for layout and custom item drawing.

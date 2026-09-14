@@ -61,7 +61,7 @@ button area:
 #define TB_SPACING        TOOLBAR_HEIGHT  // toolbar buttons are square
 ```
 
-Changing `SYSICON_SIZE` automatically resizes toolbar buttons, the toolbox grid,
+Changing `SYSICON_SIZE` automatically resizes toolbar buttons, vertical toolbars,
 and the icon sheet tile size.  No other constants need touching.
 
 ---

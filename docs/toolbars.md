@@ -43,7 +43,7 @@ Defined in `orion/user/messages.h`:
 typedef struct {
   toolbar_item_type_t type;    // BUTTON, LABEL, COMBOBOX, TEXTEDIT, SEPARATOR, SPACER, DROPDOWN
   int                 ident;   // command ID / button identifier
-  int                 icon;    // sysicon_* value; -1 = default (missing icon)
+  const char         *icon;    // SVG icon name; NULL = missing icon
   int                 w;       // explicit width in pixels (0 = automatic)
   uint32_t            flags;   // BUTTON_PUSHLIKE, BUTTON_AUTORADIO, etc.
   const char         *text;    // label text, or combobox/textedit initial text
@@ -275,3 +275,23 @@ The chrome window:
 Every toolbar — main, layers, timeline — follows this exact sequence.  The
 pattern scales from a 3-button strip to a full application toolbar with
 comboboxes, dropdowns, and toggle buttons.
+
+## Orientation and custom items
+
+`toolbar_orientation_t` defines `TOOLBAR_HORIZONTAL` (the default) and
+`TOOLBAR_VERTICAL`. Set it with `send_message(win, tbSetOrientation,
+TOOLBAR_VERTICAL, NULL)`. Vertical toolbars stack items downward in one column;
+separators and spacers consume height instead of width. The non-client band
+height follows the item extent. Floating palette windows should be sized to
+that extent, plus title height and toolbar padding.
+
+Use `TOOLBAR_ITEM_CUSTOM` for application-rendered items such as imageeditor's
+foreground/background swatch. During toolbar painting, the owning window
+receives `tbDrawItem`, with the item identifier in `wparam` and a borrowed
+`toolbar_draw_item_t *` in `lparam`. Its `rect` is item-local (origin 0,0),
+`state` contains `CTRL_*` flags, and `index` identifies the item. Draw only during
+this callback; invalidate the toolbar window when the custom content changes.
+The toolbar owns hover, pressed state, tooltips, and `tbButtonClick` delivery.
+
+The former toolbox control and `bx*` messages have been removed. Component
+registration uses `toolbar_icon` and `FE_COMPONENT_SHOW_TOOLBAR`.

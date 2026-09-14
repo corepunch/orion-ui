@@ -164,7 +164,7 @@ static bool anim_step_frame(canvas_doc_t *doc, int delta) {
 window_t *create_tool_palette_window(void) {
   window_t *tp = create_window(
       "Tools",
-      WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
+      WINDOW_TOOLBAR | WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
       MAKERECT(PALETTE_WIN_X, PALETTE_WIN_Y, PALETTE_WIN_W, TOOL_WIN_H),
       NULL, win_tool_palette_proc, g_app->hinstance, NULL);
   show_window(tp, true);
@@ -707,7 +707,7 @@ void handle_menu_command(uint16_t id) {
                tool_id_name(old_tool),
                tool_id_name((int)id));
       if (g_app->tool_win)
-        send_message(g_app->tool_win, bxSetActiveItem, (uint32_t)id, NULL);
+        send_message(g_app->tool_win, tbSetActiveButton, (uint32_t)id, NULL);
       if (g_app->tool_options_win)
         invalidate_window(g_app->tool_options_win);
       break;
@@ -718,7 +718,7 @@ void handle_menu_command(uint16_t id) {
         show_window(g_app->tool_win, true);
       } else {
         window_t *tp = create_tool_palette_window();
-        send_message(tp, bxSetActiveItem, (uint32_t)g_app->current_tool, NULL);
+        send_message(tp, tbSetActiveButton, (uint32_t)g_app->current_tool, NULL);
       }
       break;
 

@@ -42,7 +42,7 @@ static inline bool fe_default_auto_layout_enabled(void) {
 }
 
 // Tool palettes.
-#define FE_VB_TOOLBOX_BTN_SIZE 30   // legacy toolbox button size (icon 24px + 6px padding)
+#define FE_TOOLBAR_BTN_SIZE 30   // tool toolbar button size (icon 24px + 6px padding)
 #define FE_COMPONENTS_GRID_COLS 4   // palette wraps after four items per row
 #define FE_COMPONENTS_BTN_SIZE 56   // large-icon grid cell width/height
 #define FE_COMPONENTS_MIN_ROWS 5    // default palette height shows a little over 4.5 icons
@@ -93,7 +93,7 @@ static inline bool fe_default_auto_layout_enabled(void) {
 
 #define ID_HELP_ABOUT   100
 
-// Tool command IDs (VB3 toolbox slot numbers map to strip indices)
+// Tool command IDs (VB3 tool slot numbers map to strip indices)
 // Strip order: 0=Pointer, 1=Picture(skip), 2=Label, 3=TextBox,
 //              4=Frame(skip), 5=Button, 6=CheckBox, 7=Option(skip),
 //              8=ComboBox, 9=ListBox, ...
@@ -238,7 +238,7 @@ bool canvas_bind_database_field(window_t *doc, const fe_database_field_ref_t *fi
                                 int screen_x, int screen_y);
 void formeditor_rebuild_tool_palette(void);
 window_t *formeditor_create_components_palette(hinstance_t hinstance);
-window_t *formeditor_create_legacy_toolpalette(hinstance_t hinstance);
+window_t *formeditor_create_tool_toolbar(hinstance_t hinstance);
 window_t *property_browser_create(hinstance_t hinstance);
 void property_browser_refresh(window_t *doc);
 window_t *forms_browser_create(hinstance_t hinstance);

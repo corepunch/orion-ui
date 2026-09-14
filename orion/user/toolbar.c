@@ -12,7 +12,7 @@ int toolbar_item_hit(const toolbar_state_t *tb, int tx, int ty) {
   if (!tb || !tb->item_rects) return -1;
   for (int i = 0; i < tb->item_count; i++) {
     irect16_t r = tb->item_rects[i];
-    if (tx >= r.x && tx < r.x + r.w && ty >= r.y && ty < r.y + r.h)
+    if (rect_contains_point(r, (ipoint16_t){tx, ty}))
       return i;
   }
   return -1;
@@ -24,13 +24,20 @@ static int toolbar_state_item_height(const toolbar_state_t *tb) {
 }
 
 static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
-  if (!tb || !tb->items) return;
+  if (!tb) return;
 
   free(tb->item_rects);
   tb->item_rects = tb->item_count > 0 ? malloc((size_t)tb->item_count * sizeof(irect16_t)) : NULL;
 
+  if (tb->item_count > 0 && !tb->item_rects) {
+    fprintf(stderr, "[tb] rect allocation failed win=%u count=%d\n", parent->id, tb->item_count);
+    fflush(stderr);
+    return;
+  }
   int bsz = (tb->btn_size > 0) ? tb->btn_size : TB_SPACING;
   int item_h = toolbar_state_item_height(tb);
+  bool vertical = tb->orientation == TOOLBAR_VERTICAL;
+  int cursor = TOOLBAR_BEVEL_WIDTH + TOOLBAR_PADDING;
   int x = TOOLBAR_BEVEL_WIDTH + TOOLBAR_PADDING;
   int base_y = TOOLBAR_BEVEL_WIDTH + TOOLBAR_PADDING;
   int field_y = base_y + 2;
@@ -43,6 +50,7 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
     int h = item_h;
 
     switch (item->type) {
+      case TOOLBAR_ITEM_CUSTOM:
       case TOOLBAR_ITEM_BUTTON:
         w = item->w > 0 ? item->w : bsz;
         if (!item->w && (tb->style & TOOLBAR_STYLE_SHOW_LABELS) && item->text)
@@ -79,9 +87,17 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
         break;
     }
 
+    if (vertical) {
+      if (item->type == TOOLBAR_ITEM_SEPARATOR || item->type == TOOLBAR_ITEM_SPACER) {
+        h = w;
+        w = bsz;
+      }
+      y += cursor - base_y;
+      cursor += h + TOOLBAR_SPACING;
+    }
     if (tb->item_rects)
       tb->item_rects[i] = (irect16_t){x, y, w, h};
-    x += w + TOOLBAR_SPACING;
+    if (!vertical) x += w + TOOLBAR_SPACING;
   }
 
   for (window_t *tc = tb->children; tc; tc = tc->next) {
@@ -93,7 +109,6 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
     }
   }
 
-  (void)parent;
 }
 
 static void draw_toolbar_icon_in_rect(toolbar_state_t *tb, const char *icon_name, irect16_t r, int offset) {
@@ -106,7 +121,7 @@ static void draw_toolbar_icon_in_rect(toolbar_state_t *tb, const char *icon_name
                      UV_RECT(res.u0, res.v0, res.u1, res.v1), get_sys_color(brToolbarForeground), 0);
 }
 
-static void draw_toolbar_item_at_origin(toolbar_state_t *tb, int i) {
+static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int i) {
   toolbar_item_t *item = &tb->items[i];
   irect16_t r = tb->item_rects[i];
   bool is_pressed = (tb->pressed_item == i);
@@ -115,6 +130,13 @@ static void draw_toolbar_item_at_origin(toolbar_state_t *tb, int i) {
   theme_t *th = get_theme();
 
   switch (item->type) {
+    case TOOLBAR_ITEM_CUSTOM: {
+      toolbar_draw_item_t draw = {R(0, 0, r.w, r.h),
+        (is_active ? CTRL_SELECTED : 0) | (is_pressed ? CTRL_PRESSED : 0) |
+        (is_hot ? CTRL_HOVER : 0), i};
+      send_message(win, tbDrawItem, (uint32_t)item->ident, &draw);
+      break;
+    }
     case TOOLBAR_ITEM_BUTTON: {
       irect16_t local = {0, 0, r.w, r.h};
       // Derive each flag independently; let the theme decide rendering.
@@ -217,9 +239,11 @@ static result_t win_toolbar(window_t *win, uint32_t msg, uint32_t wparam, void *
       if (idx < 0) return false;
 
       toolbar_item_t *item = &tb->items[idx];
-      if (item->type != TOOLBAR_ITEM_BUTTON && item->type != TOOLBAR_ITEM_DROPDOWN)
+      if (item->type != TOOLBAR_ITEM_BUTTON && item->type != TOOLBAR_ITEM_DROPDOWN &&
+          item->type != TOOLBAR_ITEM_CUSTOM)
         return false;
 
+      fprintf(stderr, "[tb] press win=%u index=%d ident=%d\n", win->parent->id, idx, item->ident);
       tb->pressed_item = idx;
       tb->pressed_in_arrow = (item->type == TOOLBAR_ITEM_DROPDOWN) &&
                              (tx >= tb->item_rects[idx].x + tb->item_rects[idx].w - DROPDOWN_ARROW_W);
@@ -243,6 +267,7 @@ static result_t win_toolbar(window_t *win, uint32_t msg, uint32_t wparam, void *
       if (hit != saved_idx) return true;
 
       toolbar_item_t *item = &tb->items[saved_idx];
+      fprintf(stderr, "[tb] click win=%u index=%d ident=%d\n", win->parent->id, saved_idx, item->ident);
       window_t *root = get_root_window(win);
       if (item->type == TOOLBAR_ITEM_DROPDOWN && saved_in_arrow) {
         send_message(root, evCommand,
@@ -336,7 +361,14 @@ int toolbar_effective_bsz(window_t const *win) {
 }
 
 int toolbar_effective_item_height(window_t const *win) {
-  return toolbar_state_item_height(window_toolbar_state((window_t *)win));
+  toolbar_state_t *tb = window_toolbar_state((window_t *)win);
+  int height = toolbar_state_item_height(tb);
+  if (tb && tb->orientation == TOOLBAR_VERTICAL && tb->item_rects) {
+    for (int i = 0; i < tb->item_count; i++)
+      height = MAX(height, tb->item_rects[i].y + tb->item_rects[i].h -
+                   TOOLBAR_PADDING - TOOLBAR_BEVEL_WIDTH);
+  }
+  return height;
 }
 
 void toolbar_draw_non_client(window_t *win) {
@@ -359,7 +391,7 @@ void toolbar_draw_non_client(window_t *win) {
     for (int i = 0; i < tb->item_count; i++) {
       irect16_t r = tb->item_rects[i];
       set_projection(-r.x, -r.y, win->frame.w - r.x, total_h - r.y);
-      draw_toolbar_item_at_origin(tb, i);
+      draw_toolbar_item_at_origin(win, tb, i);
     }
   }
 
@@ -460,6 +492,7 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
         }
       }
 
+      post_message(win, evRefreshStencil, 0, NULL);
       invalidate_window(win);
       return true;
     }
@@ -478,6 +511,7 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
     case tbSetActiveButton: {
       toolbar_state_t *tb = toolbar_get_state(win);
       uint32_t ident = wparam;
+      fprintf(stderr, "[tb] active win=%u ident=%u count=%d\n", win->id, ident, tb ? tb->item_count : 0);
       if (tb && tb->items) {
         for (int i = 0; i < tb->item_count; i++) {
           bool active = ((uint32_t)tb->items[i].ident == ident);
@@ -501,6 +535,25 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
       if (new_btn_size != 0 && new_btn_size < 8) new_btn_size = 8;
       if (old_btn_size != new_btn_size) {
         tb->btn_size = new_btn_size;
+        compute_toolbar_item_rects(win, tb);
+        post_message(win, evRefreshStencil, 0, NULL);
+        invalidate_window(get_root_window(win));
+      }
+      return true;
+    }
+
+    case tbSetOrientation: {
+      if (wparam != TOOLBAR_HORIZONTAL && wparam != TOOLBAR_VERTICAL) {
+        fprintf(stderr, "[tb] invalid orientation win=%u value=%u\n", win->id, wparam);
+        fflush(stderr);
+        return true;
+      }
+      toolbar_state_t *tb = toolbar_ensure_state(win);
+      if (!tb) return true;
+      if (tb->orientation != (toolbar_orientation_t)wparam) {
+        fprintf(stderr, "[tb] orientation win=%u value=%u\n", win->id, wparam);
+        tb->orientation = (toolbar_orientation_t)wparam;
+        compute_toolbar_item_rects(win, tb);
         post_message(win, evRefreshStencil, 0, NULL);
         invalidate_window(get_root_window(win));
       }

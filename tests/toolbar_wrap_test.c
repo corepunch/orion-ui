@@ -7,6 +7,7 @@
 #include "test_env.h"
 #include <orion/ui.h>
 #include <orion/commctl/commctl.h>
+#include <orion/user/toolbar.h>
 
 // ---- helpers ----------------------------------------------------------------
 
@@ -846,11 +847,69 @@ void test_app_chrome_owns_and_resizes_bands(void) {
     PASS();
 }
 
+static int custom_draw_count;
+static toolbar_draw_item_t custom_draw;
+static result_t custom_draw_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  if (msg == tbDrawItem) {
+    custom_draw_count++;
+    custom_draw = *(toolbar_draw_item_t *)lparam;
+    return true;
+  }
+  return click_capture_proc(win, msg, wparam, lparam);
+}
+
+static void test_toolbar_vertical_custom_item(void) {
+  TEST("Vertical toolbar routes clicks, custom paint, and orientation changes");
+  test_env_init();
+  irect16_t frame = {20, 20, 60, 200};
+  window_t *win = create_window("Tools", WINDOW_TOOLBAR | WINDOW_NORESIZE,
+                                &frame, NULL, custom_draw_proc, 0, NULL);
+  toolbar_item_t items[] = {
+    {.type = TOOLBAR_ITEM_BUTTON, .ident = 1},
+    {.type = TOOLBAR_ITEM_SPACER, .w = 8},
+    {.type = TOOLBAR_ITEM_CUSTOM, .ident = 2, .tooltip = "Colors"},
+  };
+  send_message(win, tbSetItems, ARRAY_LEN(items), items);
+  toolbar_state_t *tb = window_toolbar_state(win);
+  ASSERT_EQUAL(tb->orientation, TOOLBAR_HORIZONTAL);
+  send_message(win, tbSetOrientation, TOOLBAR_VERTICAL, NULL);
+  send_message(win, tbSetButtonSize, 30, NULL);
+  ASSERT_EQUAL(tb->item_rects[0].x, tb->item_rects[2].x);
+  ASSERT_EQUAL(tb->item_rects[1].h, 8);
+  ASSERT_EQUAL(tb->item_rects[2].y, tb->item_rects[0].y + 30 + 8 + 2 * TOOLBAR_SPACING);
+  irect16_t r = tb->item_rects[2];
+  ASSERT_EQUAL(titlebar_height(win), TITLEBAR_HEIGHT + r.y + r.h + TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH);
+  send_message(win, tbSetOrientation, 999, NULL);
+  ASSERT_EQUAL(tb->orientation, TOOLBAR_VERTICAL);
+  g_click_count = 0;
+  dispatch_left_mouse_at(win->frame.x + r.x + 4, win->frame.y + TITLEBAR_HEIGHT + r.y + 4, kEventLeftButtonDown);
+  dispatch_left_mouse_at(win->frame.x + r.x + 4, win->frame.y + TITLEBAR_HEIGHT + r.y + 4, kEventLeftButtonUp);
+  ASSERT_EQUAL(g_click_count, 1);
+  ASSERT_EQUAL(g_last_click_ident, 2);
+  send_message(win, tbSetActiveButton, 2, NULL);
+  custom_draw_count = 0;
+  toolbar_draw_non_client(win);
+  ASSERT_EQUAL(custom_draw_count, 1);
+  ASSERT_EQUAL(custom_draw.rect.x, 0);
+  ASSERT_EQUAL(custom_draw.rect.y, 0);
+  ASSERT_EQUAL(custom_draw.rect.w, 30);
+  ASSERT_EQUAL(custom_draw.rect.h, 30);
+  ASSERT_TRUE(custom_draw.state & CTRL_SELECTED);
+  ASSERT_EQUAL(custom_draw.index, 2);
+  send_message(win, tbSetOrientation, TOOLBAR_HORIZONTAL, NULL);
+  ASSERT_EQUAL(tb->item_rects[0].y, tb->item_rects[2].y);
+  ASSERT_EQUAL(titlebar_height(win), TITLEBAR_HEIGHT + 30 + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH));
+  destroy_window(win);
+  test_env_shutdown();
+  PASS();
+}
+
 int main(int argc, char *argv[]) {
     (void)argc;
     (void)argv;
     TEST_START("Toolbar child-window tests");
 
+    test_toolbar_vertical_custom_item();
     test_toolbar_set_items_creates_children();
     test_toolbar_spacer_skipped();
     test_toolbar_set_items_replaces();

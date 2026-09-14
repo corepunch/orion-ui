@@ -116,7 +116,7 @@ static result_t cp_surface_proc(window_t *win, uint32_t msg,
 static const fe_component_desc_t kColorPickerSurfaceDesc = {
   .class_name = "ColorPickerSurface",
   .name_prefix = "IDC_CPSURF",
-  .toolbox_icon = NULL,
+  .toolbar_icon = NULL,
   .default_size = {CP_WIN_W, CP_BTN_Y},
   .capabilities = 0,
   .proc = cp_surface_proc,

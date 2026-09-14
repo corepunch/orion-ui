@@ -180,10 +180,6 @@ void layout_flow_measure_window(window_t *win, layout_measure_t *m);
 void layout_flow_arrange_window(window_t *win, const irect16_t *rect);
 void layout_flow_horizontal(window_t *first, int start_x, int gap);
 
-// Toolbox — 2-column grid of icon buttons (Photoshop / VB3 / Paint style).
-// See commctl/toolbox.c for the full API and usage examples.
-result_t win_toolbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
-
 // Splitter — thin draggable divider bar between two sibling panels.
 // Orientation is set via lparam at create time:
 //   (void *)SPLIT_VERT  → vertical bar (narrow column, drag left/right)
@@ -211,10 +207,6 @@ int      win_splitter_orientation(window_t *win);
 result_t win_splitview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 window_t *splitview_get_left(window_t *win);
 window_t *splitview_get_right(window_t *win);
-
-// Returns the height (in client pixels) that win_toolbox occupies for its
-// button grid.  Call from a wrapping proc to find where custom content starts.
-int toolbox_grid_height(window_t *win);
 
 // Console API functions
 void init_console(void);

@@ -103,6 +103,12 @@ typedef struct bitmap_strip_s {
   int      sheet_h; // logical sheet height (for UV ratios; texture may be denser)
 } bitmap_strip_t;
 
+typedef struct {
+  irect16_t rect;             // item-local bounds; drawing origin is already set
+  uint32_t state;             // CTRL_* flags
+  int index;
+} toolbar_draw_item_t;
+
 typedef struct toolbar_state_s {
   // Owner-draw item list — buttons/separators/spacers/labels/dropdowns drawn inline.
   toolbar_item_t *items;          // owned copy of the item descriptors (malloc'd)
@@ -120,6 +126,7 @@ typedef struct toolbar_state_s {
   bitmap_strip_t  strip;
   uint32_t        strip_tex;    // GL texture owned here; freed on toolbar destroy
   int             btn_size;     // 0 = TB_SPACING default; >0 = custom square size in px
+  toolbar_orientation_t orientation;
   uint32_t        style;        // TOOLBAR_STYLE_* flags
 } toolbar_state_t;
 
@@ -381,12 +388,12 @@ static inline uint32_t label_pack_userdata(uint32_t color_index, ui_font_t font,
 #define FE_MAX_COMPONENTS 128
 
 #define FE_COMPONENT_PLACEABLE      0x0001u
-#define FE_COMPONENT_SHOW_TOOLBOX   0x0002u
+#define FE_COMPONENT_SHOW_TOOLBAR   0x0002u
 
 typedef struct {
   const char *class_name;     // stable runtime class key (e.g. "Button")
   const char *name_prefix;    // identifier prefix (e.g. "IDC_BTN")
-  const char *toolbox_icon;   // SVG icon name resolved via sysicon_resolve() (NULL = none)
+  const char *toolbar_icon;   // SVG icon name resolved via sysicon_resolve() (NULL = none)
   isize16_t   default_size;   // default size when click-placing
   uint32_t    capabilities;   // FE_COMPONENT_* flags
   winproc_t   proc;           // runtime window proc backing this component
@@ -515,7 +522,7 @@ static inline toolbar_state_t *window_toolbar_state(window_t *win) {
 }
 
 // Returns the combined height of the non-client title bar and (if WINDOW_TOOLBAR
-// is set) the single-row toolbar band.  Used by event routing and layout.
+// is set) the toolbar band.  Used by event routing and layout.
 int titlebar_height(window_t const *win);
 int statusbar_height(window_t const *win);
 int window_screen_x(window_t const *win);
@@ -733,7 +740,7 @@ int dialog_pull_command(window_t *win, void *state,
                         uint16_t command);
 
 // ── Tooltip API ───────────────────────────────────────────────────────────────
-// Tooltips are shown after a short hover delay for toolbar and toolbox buttons.
+// Tooltips are shown after a short hover delay for toolbar buttons.
 // The tooltip text follows the "Name (Hotkey)" convention used by WinAPI apps.
 //
 // tooltip_update() is called from event.c on every kEventMouseMoved; callers

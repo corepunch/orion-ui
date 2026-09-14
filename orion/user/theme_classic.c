@@ -50,6 +50,12 @@ static void classic_draw_toolbar_item_bg(irect16_t r, ctrl_state_t state,
 // ── Toolbar separator ─────────────────────────────────────────────────────────
 
 static void classic_draw_toolbar_separator(irect16_t r) {
+  if (r.w > r.h) {
+    int my = r.y + r.h / 2;
+    fill_rect(get_sys_color(brDarkEdge),  R(r.x + 2, my,     r.w - 4, 1));
+    fill_rect(get_sys_color(brLightEdge), R(r.x + 2, my + 1, r.w - 4, 1));
+    return;
+  }
   int mx = r.x + r.w / 2;
   fill_rect(get_sys_color(brDarkEdge),  R(mx,     r.y + 2, 1, r.h - 4));
   fill_rect(get_sys_color(brLightEdge), R(mx + 1, r.y + 2, 1, r.h - 4));

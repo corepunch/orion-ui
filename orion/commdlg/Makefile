@@ -7,6 +7,8 @@ all: libcommdlg.a
 libcommdlg.a: $(OBJS)
 	$(AR) rcs $@ $^
 
+$(OBJS): $(wildcard ../*.h ../user/*.h ../kernel/*.h ../commctl/*.h *.h)
+
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 

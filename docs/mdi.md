@@ -309,8 +309,8 @@ show_window(tp, true);
 g_app->tool_win = tp;
 ```
 
-Use `win_toolbox` for a 2-column tool-selector grid (Photoshop-style palette).
-See the [Toolbox control](controls.md) for the full API.
+Use `WINDOW_TOOLBAR` with `TOOLBAR_VERTICAL` for a tool-selector palette.
+See [Toolbars](toolbars.md) for the API.
 
 ---
 

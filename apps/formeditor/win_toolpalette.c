@@ -1,28 +1,25 @@
-// Legacy tool palette for the form editor.
-// This is the classic VB-style toolbox: a real toolbox control, not a grid.
-
 #include "formeditor.h"
 #include <orion/commctl/commctl.h>
-static toolbox_item_t g_tools[FE_MAX_COMPONENTS + 1];
+static toolbar_item_t g_tools[FE_MAX_COMPONENTS + 1];
 static int g_tool_count = 0;
 
 static void build_tool_items(void) {
   g_tool_count = 0;
-  g_tools[g_tool_count++] = (toolbox_item_t){
-      .ident = ID_TOOL_SELECT,
-      .icon_name = "cursor-pointer",
+  g_tools[g_tool_count++] = (toolbar_item_t){
+      .type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_SELECT,
+      .icon = "cursor-pointer",
       .tooltip = "Select",
   };
 
   for (int i = 0; i < fe_component_count() && g_tool_count < FE_MAX_COMPONENTS + 1; i++) {
     const fe_component_desc_t *c = fe_component_at(i);
     if (!c) continue;
-    if ((c->capabilities & (FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX)) !=
-        (FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBOX))
+    if ((c->capabilities & (FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBAR)) !=
+        (FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBAR))
       continue;
-    g_tools[g_tool_count++] = (toolbox_item_t){
-        .ident = i,
-        .icon_name = c->toolbox_icon,
+    g_tools[g_tool_count++] = (toolbar_item_t){
+        .type = TOOLBAR_ITEM_BUTTON, .ident = i,
+        .icon = c->toolbar_icon,
         .tooltip = c->class_name,
     };
   }
@@ -43,29 +40,29 @@ static void select_tool_by_ident(window_t *win, int ident) {
   }
 }
 
-static void populate_toolbox(window_t *win) {
+static void populate_toolbar(window_t *win) {
   if (!win)
     return;
 
   build_tool_items();
-  send_message(win, bxSetButtonSize, FE_VB_TOOLBOX_BTN_SIZE, NULL);
-  send_message(win, bxSetIconTintBrush, brTextNormal, NULL);
-  send_message(win, bxSetItems, (uint32_t)g_tool_count, g_tools);
+  send_message(win, tbSetButtonSize, FE_TOOLBAR_BTN_SIZE, NULL);
+  send_message(win, tbSetOrientation, TOOLBAR_VERTICAL, NULL);
+  send_message(win, tbSetItems, (uint32_t)g_tool_count, g_tools);
 
   int current = g_app ? g_app->current_tool : ID_TOOL_SELECT;
-  send_message(win, bxSetActiveItem, (uint32_t)current, NULL);
+  send_message(win, tbSetActiveButton, (uint32_t)current, NULL);
 }
 
-window_t *formeditor_create_legacy_toolpalette(hinstance_t hinstance) {
+window_t *formeditor_create_tool_toolbar(hinstance_t hinstance) {
   build_tool_items();
-  int rows = (g_tool_count + TOOLBOX_COLS - 1) / TOOLBOX_COLS;
-  if (rows < 2) rows = 2;
+  int padding = 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH);
   window_t *tp = create_window(
-      "Toolbox",
-      WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
+      "Tools",
+      WINDOW_TOOLBAR | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
       MAKERECT(PALETTE_WIN_X, MENUBAR_HEIGHT + 4,
-               TOOLBOX_COLS * FE_VB_TOOLBOX_BTN_SIZE,
-               TITLEBAR_HEIGHT + rows * FE_VB_TOOLBOX_BTN_SIZE),
+               FE_TOOLBAR_BTN_SIZE + padding,
+               TITLEBAR_HEIGHT + g_tool_count * FE_TOOLBAR_BTN_SIZE +
+               (g_tool_count - 1) * TOOLBAR_SPACING + padding),
       NULL, win_tool_palette_proc, hinstance, NULL);
   if (tp) show_window(tp, true);
   return tp;
@@ -75,19 +72,19 @@ lresult_t win_tool_palette_proc(window_t *win, uint32_t msg,
                                 uint32_t wparam, void *lparam) {
   switch (msg) {
     case evCreate:
-      if (!win_toolbox(win, msg, wparam, lparam))
-        return false;
-      populate_toolbox(win);
+      populate_toolbar(win);
       return true;
 
-    case evCommand:
-      if ((lparam == win) && HIWORD(wparam) == bxClicked) {
-        select_tool_by_ident(win, (int)LOWORD(wparam));
-        return true;
-      }
-      return false;
-
-    default:
-      return win_toolbox(win, msg, wparam, lparam);
+    case tbButtonClick:
+      fprintf(stderr, "[fe] tool click win=%p ident=%u current=%d\n", (void *)win,
+              wparam, g_app ? g_app->current_tool : -1);
+      send_message(win, tbSetActiveButton, wparam, NULL);
+      select_tool_by_ident(win, (int)wparam);
+      return true;
+    case evPaint:   return true;
+    case evDestroy:
+      if (g_app && g_app->windows[FE_WIN_TOOL] == win) g_app->windows[FE_WIN_TOOL] = NULL;
+      return true;
+    default:       return false;
   }
 }

@@ -116,6 +116,8 @@ enum {
   slSetPos,         // wparam = handle index (0..3), lparam=(void*)(intptr_t)pos
   slGetPos,         // wparam = handle index (0..3), lparam=int* out(optional)
   tbSetButtonSize,    // wparam=square button size in pixels (0 resets to TB_SPACING)
+  tbSetOrientation,   // wparam=toolbar_orientation_t
+  tbDrawItem,         // paint-only callback: wparam=ident, lparam=toolbar_draw_item_t*
   tbSetStyle,         // wparam=TOOLBAR_STYLE_* flags
   tbLoadStrip,        // wparam=icon tile size in px (square); lparam=const char* path to PNG
   tbSetItems,         // wparam=count; lparam=toolbar_item_t* — set toolbar item list (owner-drawn)
@@ -129,13 +131,6 @@ enum {
   edSetText,        // wparam=0; lparam=const char* src → replaces text
   // List (popup) messages
   lstSetItem,             // wparam=item index to pre-select in the dropdown list
-  // Toolbox control messages (commctl/toolbox.c)
-  bxSetItems,         // wparam=count; lparam=toolbox_item_t[] — copy item list
-  bxSetActiveItem,    // wparam=ident (-1 = clear active)
-  bxSetStrip,         // wparam=0; lparam=bitmap_strip_t* (NULL=clear) — external strip
-  bxSetButtonSize,    // wparam=size in px (0 = reset to TOOLBOX_BTN_SIZE)
-  bxLoadStrip,        // wparam=icon_w (square tiles); lparam=const char* path — load PNG
-  bxSetIconTintBrush, // wparam=br* index (e.g., brTextNormal), -1 disables tint
   // Individual desktop-style icon control (commctl/icon.c).
   icSetImage,         // wparam=0; lparam=icon_image_t* (copied, texture not owned)
   icSetStatusImage,   // wparam=0; lparam=icon_image_t* (copied, NULL clears; drawn beside label)
@@ -178,7 +173,6 @@ enum {
   // HIWORD(wparam)=ddxDataChanged, lparam=pointer to dialog state/model.
   ddxDataChanged,
   sbChanged,  // wparam: MAKEDWORD(scrollbar_id, sbChanged); lparam: (void*)(intptr_t)new_pos
-  bxClicked,    // sent via evCommand: MAKEDWORD(ident, bxClicked)
   // Icon notifications. lparam is the source icon window.
   icnClicked,
   icnSelectionChange,
@@ -218,27 +212,6 @@ enum {
 
 // Error codes
 #define kComboBoxError -1
-
-// Toolbox item descriptor — one button in a win_toolbox 2-column grid.
-// Set via bxSetItems.  icon_name (SVG name resolved via sysicon_resolve) takes
-// priority when set.  icon is a strip tile index (0-based) for custom PNG strips
-// loaded via bxLoadStrip, used when icon_name is NULL.
-typedef struct {
-  int         ident;      // command identifier echoed in bxClicked
-  int         icon;       // strip tile index for custom PNG strips (ignored when icon_name set)
-  const char *icon_name;  // SVG icon name for sysicon_resolve(); preferred over icon
-  const char *tooltip;    // tooltip text shown on hover, e.g. "Pencil (P)"; NULL = none
-} toolbox_item_t;
-
-// Toolbox layout constants.
-// TOOLBOX_COLS is always 2 — toolboxes are a fixed-width 2-column grid.
-// TOOLBOX_BTN_SIZE is intentionally set equal to TB_SPACING (22 px) so that
-// toolbox buttons have the same square size as toolbar buttons.  If you need
-// a different size, override per-window with bxSetButtonSize.
-// Window width  = TOOLBOX_COLS * TOOLBOX_BTN_SIZE = 44 px.
-// Window height = TITLEBAR_HEIGHT + ceil(n/2) * TOOLBOX_BTN_SIZE.
-#define TOOLBOX_COLS      2
-#define TOOLBOX_BTN_SIZE  TB_SPACING  // 22 px (= TB_SPACING by design)
 
 // Window flags
 #define WINDOW_NOTITLE      (1 << 0)
@@ -374,6 +347,11 @@ typedef struct {
 #define TOOLBAR_STYLE_SHOW_LABELS    (1u << 0) // WinAPI-style text below button icons
 #define DROPDOWN_ARROW_W             12          // pixel width of the dropdown arrow zone in TOOLBAR_ITEM_DROPDOWN
 
+typedef enum {
+  TOOLBAR_HORIZONTAL = 0,
+  TOOLBAR_VERTICAL,
+} toolbar_orientation_t;
+
 // Toolbar item types used with tbSetItems.
 typedef enum {
   TOOLBAR_ITEM_BUTTON    = 0,  // icon-only button (owner-drawn)
@@ -383,6 +361,7 @@ typedef enum {
   TOOLBAR_ITEM_SEPARATOR = 4,  // narrow visual separator (owner-drawn)
   TOOLBAR_ITEM_SPACER    = 5,  // invisible gap (owner-drawn, no interaction)
   TOOLBAR_ITEM_DROPDOWN  = 6,  // split button: left half fires tbButtonClick, right arrow fires tbDropdown
+  TOOLBAR_ITEM_CUSTOM,        // drawn by the owner during tbDrawItem
 } toolbar_item_type_t;
 
 // Descriptor for a single toolbar item (used with tbSetItems).
@@ -457,7 +436,7 @@ typedef enum {
   brFolderText           = 21,  // folder entry text in file lists
   brColumnViewBg         = 22,  // report/icon column view background
   brModalOverlay         = 23,  // modal owner dimming overlay (ARGB with alpha)
-  brToolbarForeground    = 24,  // toolbar/toolbox icons, labels, and dropdown arrows
+  brToolbarForeground    = 24,  // toolbar icons, labels, and dropdown arrows
   brCount                = 25
 } sys_color_idx_t;
 

@@ -10,7 +10,7 @@ typedef struct {
 static window_class_t g_window_classes[MAX_WINDOW_CLASSES];
 static int g_window_class_count = 0;
 
-static bool is_valid_toolbox_icon(const char *icon) {
+static bool is_valid_toolbar_icon(const char *icon) {
   return icon && icon[0];
 }
 
@@ -179,8 +179,8 @@ bool fe_load_component_plugin(const char *path) {
     if (!d)
       continue;
     fe_component_desc_t stored = *d;
-    if (!is_valid_toolbox_icon(stored.toolbox_icon))
-      stored.toolbox_icon = "puzzle";
+    if (!is_valid_toolbar_icon(stored.toolbar_icon))
+      stored.toolbar_icon = "puzzle";
     register_window_class(&stored);
   }
 

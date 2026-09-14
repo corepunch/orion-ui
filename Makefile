@@ -168,8 +168,7 @@ $(BIN_DIR)/%$(EXE_EXT): tools/%.c $(CORE_LIBS) | $(BIN_DIR)
 
 # Self-contained tools that don't need the core libraries.
 $(ORIONC_BIN):                          TOOL_LINK = $(LDFLAGS) $(LIBS)
-$(BIN_DIR)/gen_toolbox_atlas$(EXE_EXT): TOOL_LINK = -lm
-$(ORIONC_BIN) $(BIN_DIR)/gen_toolbox_atlas$(EXE_EXT): $(BIN_DIR)/%$(EXE_EXT): tools/%.c | $(BIN_DIR)
+$(ORIONC_BIN): $(BIN_DIR)/%$(EXE_EXT): tools/%.c | $(BIN_DIR)
 	@echo "TOOL    $@"
 	@$(CC) $(TOOLS_CFLAGS) -I. -Itools -o $@ $< $(TOOL_LINK)
 
@@ -199,10 +198,12 @@ share: | $(SHARE_DIR)
 # ── Core libraries ───────────────────────────────────────────────────────
 library: $(CORE_LIBS)
 
+CORE_HEADERS = $(wildcard orion/*.h orion/user/*.h orion/kernel/*.h orion/commctl/*.h orion/commdlg/*.h)
+
 # unity_lib <name> <srcs> <lib-deps> <extra-cflags> <link-libs>
 # The sources are #included into a single translation unit fed via stdin.
 define unity_lib
-$(LIB_DIR)/lib$(1).$(LIB_EXT): $(2) $(3) $(PLATFORM_LIB) | $(LIB_DIR)
+$(LIB_DIR)/lib$(1).$(LIB_EXT): $(2) $(3) $(PLATFORM_LIB) $(CORE_HEADERS) | $(LIB_DIR)
 	@echo "LIB     $$@"
 	@printf '%s\n' $(sort $(2)) | sed 's/.*/\#include "&"/' | \
 	    $(CC) $(CFLAGS) $(LIB_FLAGS) $(call lib_id_flags,$(1)) $(4) -x c -o $$@ - \
@@ -216,7 +217,7 @@ $(eval $(call unity_lib,user,$(USER_SRCS),$(COMMDLG_LIB) $(KERNEL_LIB),,-lcommdl
 $(eval $(call unity_lib,commctl,$(wildcard orion/commctl/*.c),$(USER_LIB) $(KERNEL_LIB),-Icomponents,-luser -lkernel))
 
 # commdlg is built by its own makefile as a static library
-$(COMMDLG_LIB): $(wildcard orion/commdlg/*.c) | $(LIB_DIR)
+$(COMMDLG_LIB): $(wildcard orion/commdlg/*.c) $(CORE_HEADERS) | $(LIB_DIR)
 	@echo "LIB     $@"
 	@$(MAKE) -C orion/commdlg CC="$(CC)" CFLAGS="$(CFLAGS) -I$(abspath .)"
 	@cp orion/commdlg/libcommdlg.a $(COMMDLG_LIB)

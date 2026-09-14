@@ -6,7 +6,7 @@
 //                 a vertical list of 5 MacPaint-style horizontal stroke previews
 //                 used to pick the brush radius (0, 1, 2, 3, 4).
 //   OPTS_SHAPE  — line / rect / ellipse / rounded rect / polygon:
-//                 an Outline / Filled toggle matching the old toolbox widget.
+//                 an Outline / Filled toggle matching the tool options widget.
 //   OPTS_WAND   — magic-wand tolerance and overlay display controls.
 //   OPTS_NONE   — all other tools: empty / blank panel.
 //

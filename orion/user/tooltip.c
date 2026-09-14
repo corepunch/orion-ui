@@ -1,4 +1,4 @@
-// Tooltip system — singleton tooltip popup for toolbar and toolbox buttons.
+// Tooltip system — singleton tooltip popup for toolbar buttons.
 //
 // Usage:
 //   tooltip_update(source_win, text, screen_x, screen_y)
