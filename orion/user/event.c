@@ -443,6 +443,9 @@ void dispatch_message(ui_event_t *msg) {
     case kEventOtherButtonDragged: {
       px = (int)msg->x;
       py = (int)msg->y;
+      // a. Record last known pointer position so scroll handlers can resync hover.
+      g_ui_runtime.last_mouse_sx = SCALE_POINT(px);
+      g_ui_runtime.last_mouse_sy = SCALE_POINT(py);
       int16_t rdx = msg->dx;
       int16_t rdy = msg->dy;
       if (g_ui_runtime.dragging) {
@@ -485,6 +488,15 @@ void dispatch_message(ui_event_t *msg) {
         if (hover && !window_has_state(hover, WINDOW_STATE_DISABLED)) {
           // Route toolbar mousemove to the host window for hover tracking
           window_t *tb_host = find_toolbar_host_at(hover, sx, sy);
+          // b. Deliver evMouseLeave to the toolbar host when the pointer leaves
+          // the toolbar band (tb_host transitions from non-NULL to NULL or changes).
+          // win_toolbar does not call track_mouse, so the generic track_mouse
+          // mechanism cannot drive this transition automatically.
+          if (tb_host != g_ui_runtime.tracked_toolbar) {
+            if (g_ui_runtime.tracked_toolbar)
+              send_message(g_ui_runtime.tracked_toolbar, evMouseLeave, 0, NULL);
+            g_ui_runtime.tracked_toolbar = tb_host;
+          }
           if (tb_host) {
             int title_h = (hover->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
             int tb_x = sx - hover->frame.x;
@@ -512,6 +524,11 @@ void dispatch_message(ui_event_t *msg) {
             }
           }
         } else {
+          // Mouse is outside any interactive window; clear toolbar hover too.
+          if (g_ui_runtime.tracked_toolbar) {
+            send_message(g_ui_runtime.tracked_toolbar, evMouseLeave, 0, NULL);
+            g_ui_runtime.tracked_toolbar = NULL;
+          }
           tooltip_update(NULL, NULL, sx, sy);
         }
         // Cursor shape update: query the hovered window for the desired cursor.
@@ -544,6 +561,9 @@ void dispatch_message(ui_event_t *msg) {
     case kEventScrollWheel: {
       px = (int)msg->x;
       py = (int)msg->y;
+      // a. Keep last_mouse up to date; sb_try_scroll reads it to resync hover.
+      g_ui_runtime.last_mouse_sx = SCALE_POINT(px);
+      g_ui_runtime.last_mouse_sy = SCALE_POINT(py);
         if ((win = g_ui_runtime.captured) ||
           (win = find_window(SCALE_POINT(px), SCALE_POINT(py))))
       {

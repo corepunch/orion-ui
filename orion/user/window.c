@@ -85,6 +85,9 @@ ui_runtime_state_t g_ui_runtime = {
   .modal_overlay_parent = NULL,
   .default_window_x = 20,
   .default_window_y = 20,
+  .last_mouse_sx = 0,
+  .last_mouse_sy = 0,
+  .tracked_toolbar = NULL,
 };
 
 // Forward declarations
@@ -366,6 +369,7 @@ void destroy_window(window_t *win) {
   if (g_ui_runtime.focused == win) set_focus(NULL);
   if (g_ui_runtime.captured == win) set_capture(NULL);
   if (g_ui_runtime.tracked == win) track_mouse(NULL);
+  if (g_ui_runtime.tracked_toolbar == win) g_ui_runtime.tracked_toolbar = NULL;
   if (g_ui_runtime.dragging == win) g_ui_runtime.dragging = NULL;
   if (g_ui_runtime.resizing == win) g_ui_runtime.resizing = NULL;
   if (g_ui_runtime.toolbar_down_win == win) g_ui_runtime.toolbar_down_win = NULL;

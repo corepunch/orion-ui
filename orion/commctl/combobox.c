@@ -67,6 +67,15 @@ static void open_dropdown(window_t *win) {
   result_t sel = send_message(win, cbGetCurrentSelection, 0, NULL);
   if (sel != (result_t)kComboBoxError)
     send_message(list, lstSetItem, (uint32_t)sel, NULL);
+  // c. Popup open: the popup steals mouse events, so the combobox button will
+  // not receive evMouseLeave naturally.  Clear the hover flag before the popup
+  // becomes visible so the button does not stay highlighted while the list is open.
+  if (g_ui_runtime.tracked == win) {
+    track_mouse(NULL);  /* sends evMouseLeave → clears WINDOW_STATE_HOVERED */
+  } else if (window_has_state(win, WINDOW_STATE_HOVERED)) {
+    window_set_state(win, WINDOW_STATE_HOVERED, false);
+    invalidate_window(win);
+  }
   show_window(list, true);
   set_capture(list);
   set_focus(list);

@@ -173,6 +173,20 @@ static bool sb_try_scroll(window_t *win, win_sb_t *sb, uint32_t scroll_msg, int 
   invalidate_window(win);
   if (get_theme()->scrollbar_overlay)
     sb_overlay_reveal(win, sb);
+  // a. Scroll under stationary pointer: re-evaluate hover after content moves
+  // under a stationary cursor.  Synthesise an evMouseMove at the last known
+  // pointer position so the window proc can update item-level hover state.
+  {
+    int sx = g_ui_runtime.last_mouse_sx;
+    int sy = g_ui_runtime.last_mouse_sy;
+    int abs_x = win->parent ? window_screen_x(win) : win->frame.x;
+    int abs_y = win->parent ? window_screen_y(win)
+                            : (win->frame.y + titlebar_height(win));
+    int lx = sx - abs_x + (int)win->hscroll.pos;
+    int ly = sy - abs_y + (int)win->vscroll.pos;
+    if (lx >= 0 && lx < win->frame.w && ly >= 0)
+      send_message(win, evMouseMove, MAKEDWORD((uint16_t)lx, (uint16_t)ly), NULL);
+  }
   return true;
 }
 

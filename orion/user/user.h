@@ -633,6 +633,9 @@ typedef struct {
   window_t *modal_overlay_parent;
   int       default_window_x;
   int       default_window_y;
+  int       last_mouse_sx;    // last known pointer position in scaled screen pixels
+  int       last_mouse_sy;    // (updated on every platform mouse event; used for hover resync)
+  window_t *tracked_toolbar;  // toolbar host that last received evMouseMove (for evMouseLeave delivery)
 } ui_runtime_state_t;
 
 extern ui_runtime_state_t g_ui_runtime;
