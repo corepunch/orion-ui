@@ -449,7 +449,9 @@ void post_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     if (queue.messages[r].target == win &&
         queue.messages[r].msg == msg)
     {
-      if (msg == evHttpProgress) {
+      if (msg == evHttpProgress || msg == evThemeChanged) {
+        // These messages carry a meaningful payload in wparam/lparam that must
+        // reflect the latest value, not the value at the time of the first post.
         free_posted_lparam(msg, queue.messages[r].lparam);
         queue.messages[r].wparam = wparam;
         queue.messages[r].lparam = lparam;

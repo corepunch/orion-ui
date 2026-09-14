@@ -77,7 +77,8 @@ static void modern_draw_button_bg(irect16_t r, ctrl_state_t state) {
 
 // ── Toolbar items ─────────────────────────────────────────────────────────────
 
-static void modern_draw_toolbar_item_bg(irect16_t r, ctrl_state_t state) {
+static void modern_draw_toolbar_item_bg(irect16_t r, ctrl_state_t state, bool labeled) {
+  (void)labeled;
   if (state & CTRL_DISABLED) return;  // disabled: no bg
   uint32_t color;
   if (state & CTRL_PRESSED) {

@@ -118,11 +118,12 @@ static void draw_toolbar_item_at_origin(toolbar_state_t *tb, int i) {
     case TOOLBAR_ITEM_BUTTON: {
       irect16_t local = {0, 0, r.w, r.h};
       // Derive each flag independently; let the theme decide rendering.
+      bool labeled = (tb->style & TOOLBAR_STYLE_SHOW_LABELS) != 0;
       ctrl_state_t state = CTRL_NORMAL;
       if (is_active)  state |= CTRL_SELECTED;
       if (is_pressed) state |= CTRL_PRESSED;
       if (is_hot)     state |= CTRL_HOVER;
-      th->draw_toolbar_item_bg(local, state);
+      th->draw_toolbar_item_bg(local, state, labeled);
       int poff = is_pressed ? th->press_icon_offset : 0;
       const char *icon_name = item->icon ? item->icon : "missing";
       irect16_t icon_rect = local;
@@ -143,11 +144,12 @@ static void draw_toolbar_item_at_origin(toolbar_state_t *tb, int i) {
       bool arrow_pressed = is_pressed && tb->pressed_in_arrow;
       bool btn_pressed   = is_pressed && !tb->pressed_in_arrow;
 
+      bool labeled = (tb->style & TOOLBAR_STYLE_SHOW_LABELS) != 0;
       ctrl_state_t btn_state = CTRL_NORMAL;
       if (is_active)   btn_state |= CTRL_SELECTED;
       if (btn_pressed) btn_state |= CTRL_PRESSED;
       if (is_hot)      btn_state |= CTRL_HOVER;
-      th->draw_toolbar_item_bg(btn_part, btn_state);
+      th->draw_toolbar_item_bg(btn_part, btn_state, labeled);
 
       int btn_poff = btn_pressed ? th->press_icon_offset : 0;
       const char *icon_name = item->icon ? item->icon : "missing";
@@ -164,7 +166,7 @@ static void draw_toolbar_item_at_origin(toolbar_state_t *tb, int i) {
       ctrl_state_t arr_state = CTRL_NORMAL;
       if (arrow_pressed) arr_state |= CTRL_PRESSED;
       if (is_hot)        arr_state |= CTRL_HOVER;
-      th->draw_toolbar_item_bg(arr_part, arr_state);
+      th->draw_toolbar_item_bg(arr_part, arr_state, labeled);
 
       int arr_poff = arrow_pressed ? th->press_icon_offset : 0;
       int cx = arr_part.x + arr_part.w / 2;

@@ -98,7 +98,9 @@ typedef struct {
 
   void (*draw_bevel)(irect16_t r);
   void (*draw_button_bg)(irect16_t r, ctrl_state_t state);
-  void (*draw_toolbar_item_bg)(irect16_t r, ctrl_state_t state);
+  // labeled=true when TOOLBAR_STYLE_SHOW_LABELS is active; Classic uses this
+  // to preserve borderless labeled items, Modern ignores it.
+  void (*draw_toolbar_item_bg)(irect16_t r, ctrl_state_t state, bool labeled);
   void (*draw_toolbar_separator)(irect16_t r);
   void (*draw_panel_bg)(irect16_t r, bool resize_grip);
   void (*draw_titlebar_bg)(irect16_t r, bool focused);
