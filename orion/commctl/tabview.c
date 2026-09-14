@@ -11,8 +11,6 @@
 #include "commctl.h"
 #include <stdio.h>
 
-extern void draw_bevel(irect16_t r);
-
 typedef struct {
   int selected;
   uint32_t style;
@@ -61,20 +59,11 @@ static void draw_tab_icon(tabview_state_t *st, int idx, int x, int y, int h) {
                      UV_RECT(u0, v0, u1, v1), 0xFFFFFFFF, 0);
 }
 
-static void draw_tab(irect16_t r) {
-  fill_rect(get_sys_color(brControlBg), r);
-  fill_rect(get_sys_color(brLightEdge), R(r.x, r.y, r.w - 1, 1));
-  fill_rect(get_sys_color(brLightEdge), R(r.x, r.y, 1, r.h));
-  fill_rect(get_sys_color(brDarkEdge), R(r.x + r.w - 1, r.y + 1, 1, r.h - 1));
-  fill_rect(get_sys_color(brFlare), R(r.x, r.y, 1, 1));
-}
-
 static void draw_tab_item(window_t *page, int x, bool selected, tabview_state_t *st, int idx) {
   int w = tab_width(page, st, idx), y = selected ? 0 : 2;
   int th = tab_header_height(st);
   int h = th - y - 2;
-  draw_tab(R(x, y, w, h));
-  if (selected) fill_rect(get_sys_color(brControlBg), R(x + 2, th - 2, w - 4, 2));
+  theme_draw(THEME_PART_TAB, R(x, y, w, h), selected ? CTRL_SELECTED : CTRL_NORMAL);
   bool has_icon = tab_has_icon(st, idx);
   if (st->style & TAB_STYLE_ICONS_ONLY) {
     draw_tab_icon(st, idx, x + (w - st->strip.icon_w) / 2, y, h);
@@ -124,7 +113,6 @@ static bool tab_select(window_t *win, int index, bool notify) {
   if (index == st->selected) return false;
   st->selected = index;
   tab_arrange(win);
-  post_message(win, evRefreshStencil, 0, NULL);
   invalidate_window(win);
   if (notify && win->parent)
     send_message(win->parent, evCommand, MAKEDWORD((uint16_t)win->id, tcnSelChange), win);
@@ -134,7 +122,7 @@ static bool tab_select(window_t *win, int index, bool notify) {
 static void tab_paint(window_t *win) {
   tabview_state_t *st = (tabview_state_t *)win->userdata;
   irect16_t cr = get_client_rect(win);
-  fill_rect(get_sys_color(brControlBg), cr);
+  theme_draw(THEME_PART_SURFACE, cr, CTRL_NORMAL);
   if (!st) return;
 
   int selected_x = 2;
@@ -148,7 +136,7 @@ static void tab_paint(window_t *win) {
 
   int th = tab_header_height(st);
   irect16_t page = rect_trim_top(cr, th - 1);
-  draw_bevel(page);
+  theme_draw(THEME_PART_TAB_PANE, page, CTRL_NORMAL);
   if (selected) draw_tab_item(selected, selected_x, true, st, st->selected);
   if (selected) send_message(selected, evPaint, 0, NULL);
 }

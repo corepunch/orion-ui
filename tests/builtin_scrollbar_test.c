@@ -25,6 +25,7 @@ static result_t scrolling_window_proc(window_t *win, uint32_t msg,
 }
 
 static window_t *make_scrolling_window(int w, int h) {
+  set_theme(THEME_CLASSIC);
   irect16_t fr = {0, 0, w, h};
   return create_window("scrolling", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL,
                        &fr, NULL, scrolling_window_proc, 0, NULL);

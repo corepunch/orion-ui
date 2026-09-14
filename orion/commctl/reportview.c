@@ -89,16 +89,6 @@ static bool report_hit_checkbox(window_t *win, reportview_data_t *data,
   return true;
 }
 
-static void report_draw_checkbox(irect16_t box, bool checked, uint32_t fg,
-                                 uint32_t bg) {
-  fill_rect(bg, box);
-  fill_rect(fg, R(box.x,             box.y,             box.w, 1));
-  fill_rect(fg, R(box.x,             box.y + box.h - 1, box.w, 1));
-  fill_rect(fg, R(box.x,             box.y,             1, box.h));
-  fill_rect(fg, R(box.x + box.w - 1, box.y,             1, box.h));
-  if (checked) draw_theme_icon_in_rect(THEME_ICON_CHECKMARK, box, fg);
-}
-
 static bool report_set_item_state(window_t *win, reportview_data_t *data,
                                   int index, uint32_t state, uint32_t mask,
                                   bool notify) {
@@ -184,12 +174,9 @@ static void report_paint(window_t *win, reportview_data_t *data) {
 
   if (data->selected >= first_row && data->selected < last_row) {
     int y = header_h + data->selected * entry_h - scroll_y;
-    if (y < header_h) y = header_h;
-    fill_rect(get_sys_color(brTextNormal), R(0, y, eff_w, entry_h - 1));
+    int top = MAX(y, header_h), bottom = MIN(y + entry_h, cr.h);
+    theme_draw(THEME_PART_LIST_ITEM, R(0, top, eff_w, bottom - top), CTRL_SELECTED);
   }
-
-  int scr_x = window_screen_x(win);
-  int scr_y = window_screen_y(win);
 
   int col_x = 0;
   uint32_t draw_columns = data->cell_style == REPORTVIEW_CELL_TWO_LINE ? 1 : data->column_count;
@@ -205,18 +192,18 @@ static void report_paint(window_t *win, reportview_data_t *data) {
       continue;
     }
     if (header_h > 0) {
-      set_clip_rect(NULL, (irect16_t){scr_x + clip_x, scr_y, clip_w, header_h});
-      draw_button((irect16_t){draw_x, 0, col_w, header_h}, 1, 1, false);
+      set_clip_rect(win, (irect16_t){clip_x, 0, clip_w, header_h});
+      theme_draw(THEME_PART_HEADER, R(draw_x, 0, col_w, header_h), CTRL_NORMAL);
       draw_text_small_clipped(data->columns[col].title,
                               &(irect16_t){draw_x, 0, col_w, header_h},
                               hdr_fg, TEXT_PADDING_LEFT);
     }
 
     int body_h_local = cr.h - header_h;
-    set_clip_rect(NULL, (irect16_t){scr_x + clip_x, scr_y + header_h, clip_w, body_h_local});
+    set_clip_rect(win, (irect16_t){clip_x, header_h, clip_w, body_h_local});
     for (int row = first_row; row < last_row; row++) {
       reportview_item_t *it = &data->items[row];
-      uint32_t fg = (row == data->selected) ? get_sys_color(brControlBg)
+      uint32_t fg = (row == data->selected) ? theme_foreground(THEME_PART_LIST_ITEM, CTRL_SELECTED)
                   : it->color ? it->color : get_sys_color(brTextNormal);
       int y = header_h + row * entry_h - scroll_y;
       const char *src = "";
@@ -231,8 +218,9 @@ static void report_paint(window_t *win, reportview_data_t *data) {
         irect16_t box = {text_x,
                          y + MAX(0, (entry_h - CHECKBOX_BOX_SIZE) / 2),
                          CHECKBOX_BOX_SIZE, CHECKBOX_BOX_SIZE};
-        uint32_t box_bg = row == data->selected ? get_sys_color(brTextNormal) : bg_col;
-        report_draw_checkbox(box, RV_STATEIMAGEINDEX(it->state) == 2, fg, box_bg);
+        bool cb_checked = RV_STATEIMAGEINDEX(it->state) == 2;
+        ctrl_state_t cb_state = cb_checked ? CTRL_SELECTED : CTRL_NORMAL;
+        theme_draw(THEME_PART_CHECKBOX, box, cb_state);
         text_x += CHECKBOX_BOX_SIZE + CHECKBOX_GAP;
       }
       int text_w = MAX(0, draw_x + col_w - text_x);
@@ -250,7 +238,7 @@ static void report_paint(window_t *win, reportview_data_t *data) {
                    used ? " - " : "", part);
         }
         draw_text_clipped(FONT_SMALLEST, subtitle, &subtitle_rect,
-                          get_sys_color(brTextDisabled), 0);
+                          row == data->selected ? fg : get_sys_color(brTextDisabled), 0);
       } else {
         irect16_t text_rect = {text_x, y, text_w, entry_h};
         draw_text_clipped(FONT_SMALL, src, &text_rect, fg, 0);
@@ -260,7 +248,7 @@ static void report_paint(window_t *win, reportview_data_t *data) {
     col_x += col_w;
   }
 
-  set_clip_rect(NULL, (irect16_t){scr_x, scr_y, eff_w, cr.h});
+  set_clip_rect(win, (irect16_t){0, 0, eff_w, cr.h});
   col_x = 0;
   for (uint32_t col = 0; col < data->column_count; col++) {
       int col_w = data->cell_style == REPORTVIEW_CELL_TWO_LINE

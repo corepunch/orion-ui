@@ -107,14 +107,32 @@ static bool cancel_active_canvas_interaction(canvas_doc_t *doc, int old_tool) {
   return changed;
 }
 
-static void anim_stop_playback(canvas_doc_t *doc) {
+void anim_stop_playback(canvas_doc_t *doc) {
   if (!doc || !doc->anim) return;
-  doc->anim->playing = false;
+  anim_timeline_t *tl = doc->anim;
+  bool was_playing = tl->playing;
+  tl->playing = false;
   if (g_app && g_app->anim_timer_id) {
     axCancelTimer(g_app->anim_timer_id);
     g_app->anim_timer_id = 0;
   }
-  timeline_toolbar_sync();
+  if (was_playing) {
+    IE_TRACE("playback stop win=%p frame=%d restore=%d", (void *)doc->canvas_win,
+             tl->active_frame, tl->playback_start_frame);
+    if (anim_timeline_switch_frame(tl, tl->playback_start_frame, &doc->pixels,
+                                    doc->canvas_w, doc->canvas_h, IE_FRAME_FORMAT)) {
+      if (doc->layer.count > 0)
+        doc->layer.stack[doc->layer.active]->pixels = doc->pixels;
+      doc->canvas_dirty = true;
+    } else {
+      IE_TRACE("playback restore failed win=%p frame=%d target=%d count=%d",
+               (void *)doc->canvas_win, tl->active_frame, tl->playback_start_frame, tl->frame_count);
+    }
+    if (doc->canvas_win) invalidate_window(doc->canvas_win);
+    timeline_win_refresh();
+  } else {
+    timeline_toolbar_sync();
+  }
 }
 
 static bool anim_step_frame(canvas_doc_t *doc, int delta) {
@@ -941,7 +959,11 @@ void handle_menu_command(uint16_t id) {
         g_app->anim_timer_id = axSetTimer(
             g_app->timeline_win, interval, NULL, (bool_t)1);
         if (g_app->anim_timer_id) {
+          doc->anim->playback_start_frame = doc->anim->active_frame;
           doc->anim->playing = true;
+          IE_TRACE("playback start win=%p frame=%d count=%d", (void *)doc->canvas_win,
+                   doc->anim->active_frame, doc->anim->frame_count);
+          if (doc->canvas_win) invalidate_window(doc->canvas_win);
           timeline_win_refresh();
         }
       }

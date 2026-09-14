@@ -5,21 +5,21 @@
 typedef struct {
   bool    accepted;
   bool    enabled;
-  uint8_t prev[ONION_SKIN_MAX_STEPS];
-  uint8_t next[ONION_SKIN_MAX_STEPS];
+  float   prev[ONION_SKIN_MAX_STEPS];
+  float   next[ONION_SKIN_MAX_STEPS];
   bool    sel_is_next;
   int     sel_idx;
 
   bool    original_enabled;
-  uint8_t original_prev[ONION_SKIN_MAX_STEPS];
-  uint8_t original_next[ONION_SKIN_MAX_STEPS];
+  float   original_prev[ONION_SKIN_MAX_STEPS];
+  float   original_next[ONION_SKIN_MAX_STEPS];
 } onion_skin_state_t;
 
-static int onion_clamp_percent(int v) {
+static float onion_clamp_percent(float v) {
   return CLAMP(v, 0, 100);
 }
 
-static int onion_count_nonzero(const uint8_t *vals, int n) {
+static int onion_count_nonzero(const float *vals, int n) {
   int count = 0;
   if (!vals || n <= 0) return 0;
   for (int i = 0; i < n; i++) {
@@ -29,14 +29,14 @@ static int onion_count_nonzero(const uint8_t *vals, int n) {
   return count;
 }
 
-static int onion_selected_value(const onion_skin_state_t *st) {
+static float onion_selected_value(const onion_skin_state_t *st) {
   if (!st) return 0;
   return st->sel_is_next ? st->next[st->sel_idx] : st->prev[st->sel_idx];
 }
 
-static void onion_set_selected_value(onion_skin_state_t *st, int value) {
+static void onion_set_selected_value(onion_skin_state_t *st, float value) {
   if (!st) return;
-  uint8_t v = (uint8_t)onion_clamp_percent(value);
+  float v = onion_clamp_percent(value);
   if (st->sel_is_next)
     st->next[st->sel_idx] = v;
   else
@@ -51,6 +51,9 @@ static void onion_apply_runtime(const onion_skin_state_t *st) {
   g_app->anim_trace_frames = MAX(
       onion_count_nonzero(g_app->anim_trace_prev_opacity, ONION_SKIN_MAX_STEPS),
       onion_count_nonzero(g_app->anim_trace_next_opacity, ONION_SKIN_MAX_STEPS));
+  IE_TRACE("onion apply enabled=%d selected=%s:%d opacity=%g span=%d",
+           st->enabled, st->sel_is_next ? "next" : "prev", st->sel_idx,
+           onion_selected_value(st), g_app->anim_trace_frames);
 }
 
 static void onion_restore_runtime(const onion_skin_state_t *st) {
@@ -61,6 +64,7 @@ static void onion_restore_runtime(const onion_skin_state_t *st) {
   g_app->anim_trace_frames = MAX(
       onion_count_nonzero(g_app->anim_trace_prev_opacity, ONION_SKIN_MAX_STEPS),
       onion_count_nonzero(g_app->anim_trace_next_opacity, ONION_SKIN_MAX_STEPS));
+  IE_TRACE("onion restore enabled=%d span=%d", st->original_enabled, g_app->anim_trace_frames);
 }
 
 static void onion_refresh_preview(void) {
@@ -83,14 +87,14 @@ static void onion_sync_buttons(window_t *win, const onion_skin_state_t *st) {
   for (int i = 0; i < ONION_SKIN_MAX_STEPS; i++) {
     window_t *btn = get_window_item(win, prev_ids[i]);
     if (btn) {
-      set_window_item_text(win, prev_ids[i], "%d%%", st->prev[i]);
+      set_window_item_text(win, prev_ids[i], "%g%%", st->prev[i]);
       send_message(btn, btnSetCheck,
                    (!st->sel_is_next && st->sel_idx == i) ? btnStateChecked : btnStateUnchecked,
                    NULL);
     }
     btn = get_window_item(win, next_ids[i]);
     if (btn) {
-      set_window_item_text(win, next_ids[i], "%d%%", st->next[i]);
+      set_window_item_text(win, next_ids[i], "%g%%", st->next[i]);
       send_message(btn, btnSetCheck,
                    (st->sel_is_next && st->sel_idx == i) ? btnStateChecked : btnStateUnchecked,
                    NULL);
@@ -100,14 +104,14 @@ static void onion_sync_buttons(window_t *win, const onion_skin_state_t *st) {
 
 static void onion_sync_slider(window_t *win, const onion_skin_state_t *st) {
   if (!win || !st) return;
-  int v = onion_selected_value(st);
+  float v = onion_selected_value(st);
   window_t *slider = get_window_item(win, ID_ONION_SKIN_VALUE);
   if (slider)
-    send_message(slider, slSetPos, 0, (void *)(intptr_t)v);
+    send_message(slider, slSetPos, 0, (void *)(intptr_t)(v * 2.0f));
 
-  set_window_item_text(win, ID_ONION_SKIN_VALUE_LABEL, "Opacity: %d%%", v);
+  set_window_item_text(win, ID_ONION_SKIN_VALUE_LABEL, "Opacity: %g%%", v);
   set_window_item_text(win, ID_ONION_SKIN_SELECTED_LABEL,
-                       "Selected: %s %d (%d%%)",
+                       "Selected: %s %d (%g%%)",
                        st->sel_is_next ? "Next" : "Previous",
                        st->sel_idx + 1, v);
 }
@@ -144,9 +148,9 @@ static result_t onion_skin_proc(window_t *win, uint32_t msg,
 
       window_t *slider = get_window_item(win, ID_ONION_SKIN_VALUE);
       if (slider) {
-        slider_range_t range = {0, 100};
+        slider_range_t range = {0, 200};
         send_message(slider, slSetRange, 0, &range);
-        // One handle; slider value is directly interpreted as 0..100%.
+        // Half-percent steps preserve fractional frame opacities.
         send_message(slider, slSetCount, 1, NULL);
       }
 
@@ -160,10 +164,13 @@ static result_t onion_skin_proc(window_t *win, uint32_t msg,
       uint16_t notif = HIWORD(wparam);
       window_t *src = (window_t *)lparam;
       if (!st || !src) return false;
+      IE_TRACE("onion command win=%p source=%u notification=%u selected=%s:%d opacity=%g",
+               (void *)win, (unsigned)src->id, notif,
+               st->sel_is_next ? "next" : "prev", st->sel_idx, onion_selected_value(st));
 
       if (src->id == ID_ONION_SKIN_VALUE &&
           notif == sliderValueChanged) {
-        onion_set_selected_value(st, (int)send_message(src, slGetPos, 0, NULL));
+        onion_set_selected_value(st, (float)send_message(src, slGetPos, 0, NULL) / 2.0f);
         onion_sync_ui(win, st);
         onion_apply_runtime(st);
         onion_refresh_preview();

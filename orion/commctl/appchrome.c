@@ -45,7 +45,6 @@ static result_t win_app_chrome(window_t *win, uint32_t msg,
     case evPaint:
       if (st && st->menubar) send_message(st->menubar, evPaint, wparam, lparam);
       if (st && st->toolbar) {
-        ui_set_stencil_for_root_window(win->id);
         toolbar_draw_non_client(st->toolbar);
       }
       return true;

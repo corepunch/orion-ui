@@ -395,23 +395,23 @@
 
       <form name="onion_skin" title="Onion Skin" width="276" height="142" spacing="6" padding="8">
         <CheckBox name="enabled" text="Enable Onion Skin" />
-        <Label name="selected_label" text="Selected: Previous 1 (40%)" />
+        <Label name="selected_label" text="Selected: Previous 1 (50%)" />
         <StackView name="prev_row" orientation="horizontal" spacing="4">
           <Label name="prev_label" text="Prev" width="30" />
-          <Button name="prev1" text="40%" width="44" flags="BUTTON_PUSHLIKE" />
-          <Button name="prev2" text="20%" width="44" flags="BUTTON_PUSHLIKE" />
-          <Button name="prev3" text="10%" width="44" flags="BUTTON_PUSHLIKE" />
-          <Button name="prev4" text="5%" width="44" flags="BUTTON_PUSHLIKE" />
+          <Button name="prev1" text="50%" width="44" flags="BUTTON_PUSHLIKE" />
+          <Button name="prev2" text="25%" width="44" flags="BUTTON_PUSHLIKE" />
+          <Button name="prev3" text="12.5%" width="44" flags="BUTTON_PUSHLIKE" />
+          <Button name="prev4" text="0%" width="44" flags="BUTTON_PUSHLIKE" />
         </StackView>
         <StackView name="next_row" orientation="horizontal" spacing="4">
           <Label name="next_label" text="Next" width="30" />
-          <Button name="next1" text="30%" width="44" flags="BUTTON_PUSHLIKE" />
-          <Button name="next2" text="15%" width="44" flags="BUTTON_PUSHLIKE" />
-          <Button name="next3" text="8%" width="44" flags="BUTTON_PUSHLIKE" />
-          <Button name="next4" text="4%" width="44" flags="BUTTON_PUSHLIKE" />
+          <Button name="next1" text="50%" width="44" flags="BUTTON_PUSHLIKE" />
+          <Button name="next2" text="25%" width="44" flags="BUTTON_PUSHLIKE" />
+          <Button name="next3" text="12.5%" width="44" flags="BUTTON_PUSHLIKE" />
+          <Button name="next4" text="0%" width="44" flags="BUTTON_PUSHLIKE" />
         </StackView>
         <StackView name="value_row" orientation="vertical" spacing="2">
-          <Label name="value_label" text="Opacity: 40%" />
+          <Label name="value_label" text="Opacity: 50%" />
           <Slider name="value" text="" flags="WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOTABSTOP" />
         </StackView>
         <Separator name="sep" />

@@ -28,8 +28,6 @@ extern void destroy_window(window_t *win);
 extern int titlebar_height(window_t const *win);
 // Window-liveness check — defined in user/message.c; used to guard posted events.
 extern bool is_valid_window_ptr(window_t *target, window_t *list);
-// repaint_stencil() is called when evRefreshStencil is dispatched.
-extern void repaint_stencil(void);
 
 // Macros for coordinate conversion (platform logical → Orion logical)
 #define SCALE_POINT(x) ((x)/UI_WINDOW_SCALE)
@@ -182,7 +180,6 @@ void move_to_top(window_t* _win) {
   extern window_t *get_root_window(window_t *window);
 
   window_t *win = get_root_window(_win);
-  post_message(win, evRefreshStencil, 0, NULL);
   invalidate_window(win);
 
   if (win->flags & WINDOW_ALWAYSINBACK)
@@ -367,7 +364,6 @@ void dispatch_message(ui_event_t *msg) {
           }
         }
       }
-      post_message((window_t *)1, evRefreshStencil, 0, NULL);
       for (win = g_ui_runtime.windows; win; win = win->next) {
         if (window_has_state(win, WINDOW_STATE_VISIBLE)) {
           invalidate_window(win);
@@ -447,6 +443,9 @@ void dispatch_message(ui_event_t *msg) {
     case kEventOtherButtonDragged: {
       px = (int)msg->x;
       py = (int)msg->y;
+      // a. Record last known pointer position so scroll handlers can resync hover.
+      g_ui_runtime.last_mouse_sx = SCALE_POINT(px);
+      g_ui_runtime.last_mouse_sy = SCALE_POINT(py);
       int16_t rdx = msg->dx;
       int16_t rdy = msg->dy;
       if (g_ui_runtime.dragging) {
@@ -489,6 +488,15 @@ void dispatch_message(ui_event_t *msg) {
         if (hover && !window_has_state(hover, WINDOW_STATE_DISABLED)) {
           // Route toolbar mousemove to the host window for hover tracking
           window_t *tb_host = find_toolbar_host_at(hover, sx, sy);
+          // b. Deliver evMouseLeave to the toolbar host when the pointer leaves
+          // the toolbar band (tb_host transitions from non-NULL to NULL or changes).
+          // win_toolbar does not call track_mouse, so the generic track_mouse
+          // mechanism cannot drive this transition automatically.
+          if (tb_host != g_ui_runtime.tracked_toolbar) {
+            if (g_ui_runtime.tracked_toolbar)
+              send_message(g_ui_runtime.tracked_toolbar, evMouseLeave, 0, NULL);
+            g_ui_runtime.tracked_toolbar = tb_host;
+          }
           if (tb_host) {
             int title_h = (hover->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
             int tb_x = sx - hover->frame.x;
@@ -516,6 +524,11 @@ void dispatch_message(ui_event_t *msg) {
             }
           }
         } else {
+          // Mouse is outside any interactive window; clear toolbar hover too.
+          if (g_ui_runtime.tracked_toolbar) {
+            send_message(g_ui_runtime.tracked_toolbar, evMouseLeave, 0, NULL);
+            g_ui_runtime.tracked_toolbar = NULL;
+          }
           tooltip_update(NULL, NULL, sx, sy);
         }
         // Cursor shape update: query the hovered window for the desired cursor.
@@ -548,6 +561,9 @@ void dispatch_message(ui_event_t *msg) {
     case kEventScrollWheel: {
       px = (int)msg->x;
       py = (int)msg->y;
+      // a. Keep last_mouse up to date; sb_try_scroll reads it to resync hover.
+      g_ui_runtime.last_mouse_sx = SCALE_POINT(px);
+      g_ui_runtime.last_mouse_sy = SCALE_POINT(py);
         if ((win = g_ui_runtime.captured) ||
           (win = find_window(SCALE_POINT(px), SCALE_POINT(py))))
       {
@@ -774,11 +790,7 @@ void dispatch_message(ui_event_t *msg) {
     }
 
     case evRefreshStencil:
-      // evRefreshStencil rebuilds the compositing stencil for all windows.
-      // The target may be the dummy value (window_t*)1 used by show_window and
-      // theme-change callers, so it has its own case rather than going through
-      // the window-validity check in the default branch.
-      if (g_ui_runtime.running) repaint_stencil();
+      // Stencil no longer used; discard.
       break;
 
     case kEventTimer:

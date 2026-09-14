@@ -188,6 +188,47 @@ case evCommand:
 
 ---
 
+## Theme-Controlled Scrollbar Behavior
+
+The active theme determines whether scrollbars use a **reserved gutter** or
+**overlay** mode.  Two fields in `theme_t` control this:
+
+| Field | Classic | Modern |
+|---|---|---|
+| `scrollbar_width` | > 0 (e.g. 12 px) | 0 |
+| `scrollbar_overlay` | `false` | `true` |
+
+### Gutter mode (`scrollbar_overlay = false`)
+
+The window system permanently reserves `scrollbar_width` pixels along the
+relevant edge of the client area.  `SCROLLBAR_WIDTH` in layout helpers
+(e.g. `sync_scrollbars`) reads this value.  The bar is always visible when
+the range exceeds the page size.
+
+### Overlay mode (`scrollbar_overlay = true`)
+
+No gutter is reserved (`scrollbar_width = 0`).  The thumb floats over content
+and appears only on hover or scroll activity.  Client layout calculations
+should not subtract any scrollbar width — the full window edge is available
+to content.
+
+When `set_theme()` detects a `scrollbar_width` change (gutter ↔ overlay
+transition), it posts `evResize` to all top-level windows so layout managers
+recalculate scroll-channel allocations.
+
+### Querying the active policy
+
+```c
+theme_t *t = get_theme();
+if (t->scrollbar_overlay) {
+    // no gutter — content fills the full client rect
+} else {
+    int gutter = t->scrollbar_width;  // subtract from layout width/height
+}
+```
+
+---
+
 ## Common Mistakes
 
 | ❌ Wrong | ✅ Correct |

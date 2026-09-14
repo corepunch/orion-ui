@@ -75,6 +75,14 @@ Use `send_message()` for synchronous behavior and `post_message()` for queued
 work. Menus, toolbars, context menus, and accelerators should converge on the
 same command IDs so one controller path owns each action.
 
+Window composition keeps texture ownership and drawing in the renderer, while
+the active theme owns `window_corner_radius` in logical pixels (Modern: 8,
+Classic: 0). Rounded UI fills and window textures share the rounded-box SDF
+shader; theme code does not rasterize corner geometry. Modern toolbar, list,
+and tab backgrounds share `item_background` roles for hover, selection,
+selection with hover, and press. These are UI/workbench colors, separate from
+document content or syntax colors.
+
 ## Input And Coordinate Spaces
 
 The window system owns parent-to-child routing and conversion. A window
@@ -179,6 +187,60 @@ persistent model objects.
 Screenshots use the same framebuffer boundary. `ui_request_screenshot()` waits
 for a fully painted frame, while `ui_save_screenshot()` captures the current
 completed frame immediately. The path extension selects PNG or JPEG encoding.
+
+## Theme System
+
+The theme system provides a runtime-switchable drawing vtable (`theme_t`) that
+separates visual policy from control logic.
+
+### Vtable Drawing Dispatch
+
+Controls never paint themselves conditionally per theme.  Instead each control
+calls the active theme through `theme_draw()`:
+
+```c
+theme_draw(THEME_PART_BUTTON, r, state);
+theme_draw(THEME_PART_CHECKBOX, box_r, state | (checked ? CTRL_SELECTED : 0));
+theme_draw(THEME_PART_FIELD, field_r, state);
+```
+
+Part identifiers combine class and part in a single enum (for example,
+`THEME_PART_TOOLBAR_SPLIT_ARROW`), avoiding invalid class/part pairs. Bevels are
+private Classic helpers. The dispatch wrapper removes hover/pressed flags from
+disabled states and rejects invalid part identifiers with a diagnostic.
+
+Themes paint fields, tabs, headers, menu surfaces, toolbars, panels and scrollbar
+parts. Window chrome and statusbar callbacks also own caption/text/glyph drawing.
+The window system keeps viewport setup, scrollbar geometry, visibility and input;
+controls keep content layout and application icons/text. No theme callback
+receives a window pointer. Shell code only selects the theme through `set_theme()`.
+
+The vtable callbacks receive logical bounds and a `ctrl_state_t` bitmask of
+orthogonal flags (`CTRL_HOVER`, `CTRL_PRESSED`, `CTRL_SELECTED`,
+`CTRL_DISABLED`, `CTRL_FOCUSED`, `CTRL_DEFAULT`).  Themes may not dispatch
+messages, query control internals, or mutate state — they call `fill_rect()`
+and other low-level primitives only.
+
+### Switching Themes
+
+`set_theme(style)` performs the full switch atomically:
+
+1. Validates the style, required callbacks and metrics; invalid requests leave the active theme unchanged.
+2. Calls `apply_palette()` — writes `g_sys_colors` with the new palette.
+3. Broadcasts `evThemeChanged` depth-first to every window.
+4. Invalidates all visible roots; posts `evResize` if scrollbar gutter width changed.
+
+`evThemeChanged` handlers see the new palette immediately via `get_sys_color()`.
+Calls made during a switch are rejected. Notifications are queued; handlers must
+not trigger another theme switch in response to `evThemeChanged`.
+
+### Palette Ownership
+
+Each theme owns its palette; `apply_palette()` is the sole writer during a
+switch.  `set_sys_colors()` applies runtime overrides on top of the active
+theme and is unrelated to `set_theme()`.  See `orion/user/theme.h` for the
+full contract including metric fields (`scrollbar_width`, `scrollbar_overlay`,
+`press_icon_offset`, `button_corner_radius`, `control_padding`).
 
 ## Debugging The Message Pipeline
 

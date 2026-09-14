@@ -33,6 +33,7 @@
 #include <orion/user/user.h>
 #include <orion/user/messages.h>
 #include <orion/user/draw.h>
+#include <orion/user/theme.h>
 #include "commctl.h"
 
 // Internal per-scrollbar state
@@ -130,15 +131,13 @@ result_t win_scrollbar(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       if (!s) return true;
       bool vert = sb_vertical(win);
       int track = sb_track(win);
-      int tl    = sb_thumb_len(s, track);
-      int to    = sb_thumb_off(s, track);
-      int x = 0, y = 0;
-      int w = win->frame.w, h = win->frame.h;
-      fill_rect(get_sys_color(brWindowDarkBg), R(x, y, w, h));
-      if (vert)
-        fill_rect(get_sys_color(brLightEdge), R(x, y + to, w, tl));
-      else
-        fill_rect(get_sys_color(brLightEdge), R(x + to, y, tl, h));
+      int tl = sb_thumb_len(s, track), to = sb_thumb_off(s, track);
+      irect16_t r = R(0, 0, win->frame.w, win->frame.h);
+      ctrl_state_t state = s->dragging ? CTRL_PRESSED : CTRL_NORMAL;
+      if (window_has_state(win, WINDOW_STATE_DISABLED)) state |= CTRL_DISABLED;
+      theme_draw(THEME_PART_SCROLLBAR_TRACK, r, state);
+      irect16_t thumb = vert ? R(0, to, r.w, tl) : R(to, 0, tl, r.h);
+      theme_draw(THEME_PART_SCROLLBAR_THUMB, thumb, state);
       return true;
     }
 

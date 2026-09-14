@@ -20,9 +20,6 @@
 // Maximum number of characters that can be stored (leave room for the NUL).
 #define ME_MAX_LEN  (ME_BUF_SIZE - 2)
 
-extern window_t *get_root_window(window_t *window);
-extern int titlebar_height(window_t const *win);
-
 typedef struct {
   char buf[ME_BUF_SIZE];
   int  len;        // strlen(buf)
@@ -134,26 +131,6 @@ static void me_sync_scrollbar(window_t *win, me_state_t *s) {
   enable_scroll_bar(win, SB_VERT, needs_scroll);
 }
 
-// Compute the absolute screen rect of win's text area.
-// Walks the parent chain so the result is correct even when win is nested
-// inside an intermediate container window (not a direct child of root).
-static irect16_t me_text_screen_rect(window_t *win, window_t *root) {
-  int tw, th;
-  me_text_dims(win, &tw, &th);
-  int x = win->frame.x + ME_PADDING;
-  int y = win->frame.y + ME_PADDING;
-  for (window_t *p = win->parent; p && p != root; p = p->parent) {
-    x += p->frame.x;
-    y += p->frame.y;
-  }
-  return (irect16_t){
-    root->frame.x + x,
-    root->frame.y + titlebar_height(root) + y,
-    tw,
-    th,
-  };
-}
-
 // ---------------------------------------------------------------------------
 // Window procedure
 // ---------------------------------------------------------------------------
@@ -211,23 +188,16 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       if (!s) return true;
       bool focused = (g_ui_runtime.focused == win);
 
-      // Focus ring (matches win_textedit style).
-      fill_rect(focused ? get_sys_color(brAccent)
-                        : get_sys_color(brControlBg),
-                R(-1, -1, win->frame.w + 2, win->frame.h + 2));
-
-      // Inset bevel border.
-      draw_button((irect16_t){0, 0, win->frame.w, win->frame.h}, 1, 1, true);
+      ctrl_state_t state = focused ? CTRL_FOCUSED : CTRL_NORMAL;
+      if (window_has_state(win, WINDOW_STATE_DISABLED)) state |= CTRL_DISABLED;
+      theme_draw(THEME_PART_FIELD, R(0, 0, win->frame.w, win->frame.h), state);
 
       int tw, th;
       me_text_dims(win, &tw, &th);
       int tx = ME_PADDING;
       int ty = ME_PADDING;
 
-      // Clip to text area (scissor uses absolute screen coordinates).
-      window_t *root = get_root_window(win);
-      irect16_t tr = me_text_screen_rect(win, root);
-      set_clip_rect(NULL, tr);
+      set_clip_rect(win, R(tx, ty, tw, th));
 
       // Draw wrapped text, offset upward by scroll_y.
       irect16_t vp = { tx, ty - s->scroll_y, tw, th + s->scroll_y };
@@ -245,10 +215,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       }
 
       // Reset scissor to full control frame so subsequent rendering is unclipped.
-      set_clip_rect(NULL, (irect16_t){
-        tr.x - ME_PADDING, tr.y - ME_PADDING,
-        win->frame.w, win->frame.h,
-      });
+      set_clip_rect(win, R(0, 0, win->frame.w, win->frame.h));
 
       return true;
     }

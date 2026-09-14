@@ -241,8 +241,13 @@ static void canvas_sync_scrollbars(window_t *win, canvas_win_state_t *state) {
 #ifdef CANVAS_SB_ALWAYS_VISIBLE
   // Always-visible mode: lock bars permanently shown before updating their
   // range so the framework does not auto-hide them in set_scroll_info().
-  show_scroll_bar(dwin, SB_HORZ, true);
-  show_scroll_bar(win,  SB_VERT, true);
+  if (get_theme()->scrollbar_overlay) {
+    show_scroll_bar(dwin, SB_HORZ, need_h);
+    show_scroll_bar(win,  SB_VERT, need_v);
+  } else {
+    show_scroll_bar(dwin, SB_HORZ, true);
+    show_scroll_bar(win,  SB_VERT, true);
+  }
 #endif
 
   scroll_info_t si;
@@ -510,7 +515,7 @@ static void canvas_draw_animation_trace(window_t *win,
                                         irect16_t canvas_rect) {
   if (!win || !state || !doc || !doc->anim || !g_app || !g_app->anim_trace_enabled)
     return;
-  if (doc->layer.mask_only_view || doc->anim->frame_count <= 1)
+  if (doc->layer.mask_only_view || doc->anim->playing || doc->anim->frame_count <= 1)
     return;
 
   if (state->onion_tex_w != doc->canvas_w || state->onion_tex_h != doc->canvas_h) {
@@ -800,7 +805,6 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       if (!doc || !g_app) return true;
       ipoint16_t doc_pt = _canvas_view_to_doc_point(win, state, lx, ly);
-
       // Clear any stale panning state – if the user switched away from Hand
       // while holding the button, panning must not bleed into MouseMove.
       if (g_app->current_tool != ID_TOOL_HAND) state->pan.active = false;

@@ -58,6 +58,7 @@ accel_table_t *scener_active_accelerators(void) {
   return g_app->viewport_navigating ? g_app->navigation_accel : g_app->accel;
 }
 
+#ifndef BUILD_AS_GEM
 static void cli_usage(void) {
 	puts("scener [SCENE] [--cam NAME]\n"
 	     "scener --render SCENE [--camera NAME] [--size WIDTHxHEIGHT] [--format jpg|png] [--output-dir DIR]\n"
@@ -67,6 +68,7 @@ static void cli_usage(void) {
 	     "Options: --supersample 1..4 (default 2), -no-shadows, -wireframe, -d FLAGS, --help, --version\n"
 	     "Scenes default to Y up; <scene up=\"z\"> selects Z-up views without changing primitive axes.");
 }
+#endif
 
 static void cli_parse(int argc, char *argv[]) {
 	memset(&g_cli,0,sizeof(g_cli));
@@ -206,9 +208,9 @@ static bool scener_write_screenshot(scene_doc_t *doc, const char *path) {
 		vec3 center=vscale(vadd(lo,hi),0.5f),eye=center;
 		if(zup)eye.z=maxH+LAYOUT_EYE_OFFSET;else eye.y=maxH+LAYOUT_EYE_OFFSET;
 		view=mat4_lookat(eye,center,zup?v3(0,1,0):v3(0,0,-1));
-		float near=LAYOUT_EYE_OFFSET+(maxH-minH)*(1-LAYOUT_CUT_FRACTION),far=LAYOUT_EYE_OFFSET+maxH-minH+1;
+		float near_clip=LAYOUT_EYE_OFFSET+(maxH-minH)*(1-LAYOUT_CUT_FRACTION),far_clip=LAYOUT_EYE_OFFSET+maxH-minH+1;
 		proj=mat4_identity();proj.m[0]=2/(spanX*LAYOUT_PADDING);proj.m[5]=2/(spanV*LAYOUT_PADDING);
-		proj.m[10]=-2/(far-near);proj.m[14]=-(far+near)/(far-near);
+		proj.m[10]=-2/(far_clip-near_clip);proj.m[14]=-(far_clip+near_clip)/(far_clip-near_clip);
 		scene->camPos=eye;dir=vscale(scene->worldUp,-1);
 	}
 

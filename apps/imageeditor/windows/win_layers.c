@@ -22,7 +22,6 @@
 // ============================================================
 
 // Color palette used by the layers panel.
-#define COL_ROW_ACTIVE  MAKE_COLOR(0x00, 0x78, 0xD7, 0xFF)  // blue highlight
 #define COL_ALPHA_EDIT  MAKE_COLOR(0xE0, 0x40, 0x00, 0xFF)  // orange = editing alpha
 #define LAYER_ICON_SIZE 12
 
@@ -155,7 +154,7 @@ static void paint_layers(window_t *win, layers_win_state_t *st) {
       // Row background.
       uint32_t bg;
       if (li == doc->layer.active)
-        bg = COL_ROW_ACTIVE;
+        bg = get_sys_color(brAccent);
       else
         bg = get_sys_color(brControlBg);
       fill_rect(bg, R(0, ry, w, LAYERS_ROW_H));

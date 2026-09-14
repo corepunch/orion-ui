@@ -206,7 +206,7 @@ $(LIB_DIR)/lib$(1).$(LIB_EXT): $(2) $(3) $(PLATFORM_LIB) | $(LIB_DIR)
 	@echo "LIB     $$@"
 	@printf '%s\n' $(sort $(2)) | sed 's/.*/\#include "&"/' | \
 	    $(CC) $(CFLAGS) $(LIB_FLAGS) $(call lib_id_flags,$(1)) $(4) -x c -o $$@ - \
-	    $(LDFLAGS) $$(RPATH_FLAGS) $(PLATFORM_LDFLAGS) $(5) $(LIBS) $$(IMPLIB_FLAGS)
+        $(LDFLAGS) $$(RPATH_FLAGS) $(5) $(PLATFORM_LDFLAGS) $(LIBS) $$(IMPLIB_FLAGS)
 endef
 
 USER_SRCS = $(filter-out orion/user/dialog.c orion/user/component_registry.c,$(wildcard orion/user/*.c))

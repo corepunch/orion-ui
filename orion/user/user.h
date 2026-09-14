@@ -457,6 +457,9 @@ typedef struct {
   int  drag_start_mouse;   // axis coord (window-local) when drag began
   int  drag_mouse;         // accumulated axis coord while dragging
   int  drag_start_pos;     // pos value when drag began
+  // Modern overlay-scrollbar state.  Ignored when scrollbar_overlay == false.
+  bool     overlay_visible;  // thumb is currently revealed (fading in/visible)
+  uint32_t hide_timer_id;    // axSetTimer handle for auto-hide delay; 0 = none
 } win_sb_t;
 
 // Window structure
@@ -485,6 +488,9 @@ struct window_s {
   struct window_s *toolbar; // toolbar host window (win_toolbar); state lives in toolbar->userdata
   struct window_s *active_page; // selected page projected by a WINDOW_ROLE_HOST
   struct window_s *page_host; // WINDOW_ROLE_HOST currently projecting this page
+  uint32_t surface_fbo; // Offscreen render target for per-window composition.
+  uint32_t surface_tex; // Backing texture for the render target.
+  int surface_w, surface_h; // Render target size in physical pixels.
   const toolbar_item_t *page_toolbar_items; // declarative page contribution; not owned
   int page_toolbar_count;
   const struct menu_item_s *context_menu; // generated declarative menu; not owned
@@ -627,6 +633,9 @@ typedef struct {
   window_t *modal_overlay_parent;
   int       default_window_x;
   int       default_window_y;
+  int       last_mouse_sx;    // last known pointer position in scaled screen pixels
+  int       last_mouse_sy;    // (updated on every platform mouse event; used for hover resync)
+  window_t *tracked_toolbar;  // toolbar host that last received evMouseMove (for evMouseLeave delivery)
 } ui_runtime_state_t;
 
 extern ui_runtime_state_t g_ui_runtime;

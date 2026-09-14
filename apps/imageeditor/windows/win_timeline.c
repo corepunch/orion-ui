@@ -15,7 +15,6 @@
 // Colours
 #define COL_TL_BG      MAKE_COLOR(0x2A, 0x2A, 0x2A, 0xFF)
 #define COL_TL_BORDER  MAKE_COLOR(0x44, 0x44, 0x44, 0xFF)
-#define COL_ACTIVE_BG  MAKE_COLOR(0x00, 0x78, 0xD7, 0xFF)
 #define COL_HOVER_BG   MAKE_COLOR(0x3A, 0x3A, 0x3A, 0xFF)
 
 // ============================================================
@@ -163,23 +162,13 @@ static void timeline_ensure_frame_visible(timeline_state_t *st, window_t *win,
   if (st->scroll_x > max_scroll) st->scroll_x = max_scroll;
 }
 
-static void timeline_stop_playback(canvas_doc_t *doc) {
-  if (!doc || !doc->anim || !doc->anim->playing) return;
-  doc->anim->playing = false;
-  if (g_app && g_app->anim_timer_id) {
-    axCancelTimer(g_app->anim_timer_id);
-    g_app->anim_timer_id = 0;
-  }
-  timeline_toolbar_sync();
-}
-
 static bool timeline_select_frame(window_t *win, timeline_state_t *st,
                                   int target_idx) {
   canvas_doc_t *doc = tl_doc();
   if (!win || !st || !doc || !doc->anim) return false;
   if (target_idx < 0 || target_idx >= doc->anim->frame_count) return false;
 
-  timeline_stop_playback(doc);
+  anim_stop_playback(doc);
 
   if (doc->anim->active_frame == target_idx) {
     timeline_ensure_frame_visible(st, win, target_idx);
@@ -212,7 +201,7 @@ static void draw_cell(const timeline_state_t *st, canvas_doc_t *doc, int idx,
   int cx = cell_x(st, idx);
   int cw = TIMELINE_THUMB_W;
 
-  uint32_t bg = active ? COL_ACTIVE_BG : (hover ? COL_HOVER_BG : COL_TL_BG);
+  uint32_t bg = active ? get_sys_color(brAccent) : (hover ? COL_HOVER_BG : COL_TL_BG);
   fill_rect(bg, R(cx, 0, cw, h));
   fill_rect(COL_TL_BORDER, R(cx + cw - 1, 0, 1, h));
 
@@ -497,17 +486,12 @@ void timeline_win_refresh(void) {
 void anim_tick(canvas_doc_t *doc) {
   if (!doc || !doc->anim) return;
   anim_timeline_t *tl = doc->anim;
-  if (!tl->playing || tl->frame_count <= 1) return;
+  if (!tl->playing || tl->frame_count < 1) return;
 
   int next = tl->active_frame + 1;
   if (next >= tl->frame_count) {
     if (!tl->loop) {
-      tl->playing = false;
-      if (g_app && g_app->anim_timer_id) {
-        axCancelTimer(g_app->anim_timer_id);
-        g_app->anim_timer_id = 0;
-      }
-      timeline_win_refresh();
+      anim_stop_playback(doc);
       return;
     }
     next = 0;

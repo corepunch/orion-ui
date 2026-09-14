@@ -22,6 +22,20 @@ extern window_t *get_root_window(window_t *window);
 static bool g_scissor_valid = false;
 static irect16_t g_scissor_rect = {0};
 
+// When non-NULL, viewport/projection/scissor functions redirect from
+// screen-space to FBO-local coordinates automatically.
+static window_t *g_fbo_root = NULL;
+
+// OpenGL's framebuffer origin is bottom-left. Keep that backend detail here;
+// every public drawing/scissor API uses logical top-left coordinates.
+static irect16_t fbo_rect(window_t const *root, irect16_t r) {
+  int scale = (int)axGetScaling();
+  if (scale < 1) scale = 1;
+  return R(r.x * scale,
+           root->surface_h - (r.y + r.h) * scale,
+           r.w * scale, r.h * scale);
+}
+
 static void set_scissor_cached(irect16_t const *r) {
   if (!r) return;
   glEnable(GL_SCISSOR_TEST);
@@ -46,6 +60,10 @@ extern intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void 
 extern void set_projection(int x, int y, int w, int h);
 
 void set_fullscreen(void) {
+  if (g_fbo_root) {
+    set_viewport_for_fbo(g_fbo_root);
+    return;
+  }
   int w = ui_get_system_metrics(kSystemMetricScreenWidth);
   int h = ui_get_system_metrics(kSystemMetricScreenHeight);
   set_viewport((irect16_t){0, 0, w, h});
@@ -77,6 +95,15 @@ int titlebar_height(window_t const *win) {
   return t;
 }
 
+static ipoint16_t window_origin_in_root(window_t const *win) {
+  ipoint16_t p = {0, 0};
+  for (window_t const *w = win; w && w->parent; w = w->parent) {
+    p.x += w->frame.x;
+    p.y += w->frame.y + titlebar_height(w->parent);
+  }
+  return p;
+}
+
 // Get statusbar height
 int statusbar_height(window_t const *win) {
   int s = 0;
@@ -98,45 +125,20 @@ void draw_focused(irect16_t r) {
   draw_wire_rect(r, 1, get_sys_color(brAccent));
 }
 
-// Draw bevel border
-void draw_bevel(irect16_t r) {
-  fill_rect(get_sys_color(brLightEdge), R(r.x-1, r.y-1, r.w+2, 1));
-  fill_rect(get_sys_color(brLightEdge), R(r.x-1, r.y-1, 1, r.h+2));
-  fill_rect(get_sys_color(brDarkEdge), R(r.x+r.w, r.y, 1, r.h+1));
-  fill_rect(get_sys_color(brDarkEdge), R(r.x, r.y+r.h, r.w+1, 1));
-  fill_rect(get_sys_color(brFlare), R(r.x-1, r.y-1, 1, 1));
-}
-
-// Draw button
+// Draw button background — routed through the active theme.
+// dx/dy were unused press-offset params; kept for ABI compatibility.
 void draw_button(irect16_t r, int dx, int dy, bool pressed) {
   (void)dx; (void)dy;
-  if (pressed) {
-    fill_rect(get_sys_color(brDarkEdge), r);
-    fill_rect(get_sys_color(brLightEdge), R(r.x+1, r.y+1, r.w-1, r.h-1));
-    fill_rect(get_sys_color(brDarkEdge), R(r.x+1, r.y+1, r.w-2, r.h-2));
-    fill_rect(get_sys_color(brWindowDarkBg), R(r.x+2, r.y+2, r.w-3, r.h-3));
-    fill_rect(get_sys_color(brFlare), R(r.x+r.w-1, r.y+r.h-1, 1, 1));
-  } else {
-    fill_rect(get_sys_color(brDarkEdge), r);
-    fill_rect(get_sys_color(brLightEdge), R(r.x, r.y, r.w-1, r.h-1));
-    fill_rect(get_sys_color(brDarkEdge), R(r.x+1, r.y+1, r.w-2, r.h-2));
-    fill_rect(get_sys_color(brControlBg), R(r.x+1, r.y+1, r.w-3, r.h-3));
-    fill_rect(get_sys_color(brFlare), R(r.x, r.y, 1, 1));
-  }
+  ctrl_state_t state = pressed ? CTRL_PRESSED : CTRL_NORMAL;
+  theme_draw(THEME_PART_BUTTON, r, state);
 }
 
-// Draw window panel
+// Draw window panel — border/grip via theme, fill guarded by WINDOW_NOFILL.
 void draw_panel(window_t const *win) {
-  irect16_t r = win->frame;
-  draw_bevel(r);
-  if (!(win->flags & WINDOW_NORESIZE)) {
-    int sb = SCROLLBAR_WIDTH;
-    fill_rect(get_sys_color(brLightEdge), R(r.x+r.w, r.y+r.h-sb+1, 1, sb));
-    fill_rect(get_sys_color(brLightEdge), R(r.x+r.w-sb+1, r.y+r.h, sb, 1));
-  }
-  if (!(win->flags&WINDOW_NOFILL)) {
-    fill_rect(get_sys_color(brControlBg), r);
-  }
+  irect16_t r = R(0, 0, win->frame.w, win->frame.h);
+  theme_draw((win->flags & WINDOW_NOFILL) ? THEME_PART_PANEL_BORDER : THEME_PART_PANEL,
+             r, CTRL_NORMAL);
+  if (!(win->flags & WINDOW_NORESIZE)) theme_draw(THEME_PART_RESIZE_GRIP, r, CTRL_NORMAL);
 }
 
 // Draw a theme icon centred inside rect r.
@@ -147,15 +149,12 @@ void draw_theme_icon_in_rect(int id, irect16_t r, uint32_t col) {
                   THEME_ICON_SIZE, col);
 }
 
-// Draw window controls (close, minimize, etc.)
+// Draw window controls (titlebar + close button).
 void draw_window_controls(window_t *win) {
-  irect16_t r = win->frame;
-  fill_rect(get_sys_color(window_has_focus(win) ? brActiveTitlebar : brInactiveTitlebar),
-            rect_split_top(r, titlebar_height(win)));
-  set_fullscreen();
-  draw_theme_icon_in_rect(THEME_ICON_CLOSE,
-                          rect_split_right(rect_split_top(r, TITLEBAR_HEIGHT), TITLEBAR_HEIGHT),
-                          get_sys_color(brTextNormal));
+  irect16_t r = R(0, 0, win->frame.w, win->frame.h);
+  get_theme()->draw_window_chrome(rect_split_top(r, TITLEBAR_HEIGHT),
+                                  rect_split_top(r, TITLEBAR_HEIGHT), win->title,
+                                  window_has_focus(win) ? CTRL_FOCUSED : CTRL_NORMAL);
 }
 
 // Draw status bar
@@ -164,7 +163,7 @@ void draw_window_controls(window_t *win) {
 void draw_statusbar(window_t *win, const char *text) {
   if (!(win->flags&WINDOW_STATUSBAR)) return;
 
-  irect16_t r = win->frame;
+  irect16_t r = R(0, 0, win->frame.w, win->frame.h);
   int s = statusbar_height(win);
   irect16_t row = rect_split_bottom(r, s);  // the statusbar row at the bottom of the frame
 
@@ -172,13 +171,7 @@ void draw_statusbar(window_t *win, const char *text) {
   int split_x = has_h ? SB_STATUS_SPLIT_X(r.w) : r.w;
 
   irect16_t text_area = rect_split_left(row, split_x);
-  fill_rect(get_sys_color(brStatusbarBg), text_area);
-  set_fullscreen();
-
-  if (text) {
-    draw_text_clipped(FONT_SMALL, text, &text_area,
-                      get_sys_color(brTextNormal), TEXT_PADDING_LEFT);
-  }
+  get_theme()->draw_statusbar(text_area, text);
 
   if (has_h) {
     scrollbar_draw_statusbar_merged_hscroll(win, row, split_x);
@@ -188,6 +181,15 @@ void draw_statusbar(window_t *win, const char *text) {
 // Set OpenGL viewport for window
 void set_viewport(irect16_t frame) {
   if (!g_ui_runtime.running) return;
+  if (g_fbo_root) {
+    // FBO callers use root-local, top-left coordinates.
+    irect16_t r = fbo_rect(g_fbo_root, frame);
+    glViewport(r.x, r.y, r.w, r.h);
+    glEnable(GL_SCISSOR_TEST);
+    glScissor(r.x, r.y, r.w, r.h);
+    g_scissor_valid = false;
+    return;
+  }
   irect16_t ogl_rect = get_opengl_rect(frame);
   
   glViewport(ogl_rect.x, ogl_rect.y, ogl_rect.w, ogl_rect.h);
@@ -196,45 +198,55 @@ void set_viewport(irect16_t frame) {
 
 void set_clip_rect(window_t const *win, irect16_t r) {
   if (!g_ui_runtime.running) return;
-  irect16_t ogl_rect = get_opengl_rect(win ? rect_offset(r, win->frame.x, win->frame.y) : r);
+  if (g_fbo_root) {
+    ipoint16_t origin = win ? window_origin_in_root(win) : (ipoint16_t){0, 0};
+    irect16_t local = rect_offset(r, origin.x, origin.y);
+    irect16_t clip = fbo_rect(g_fbo_root, local);
+    glEnable(GL_SCISSOR_TEST);
+    glScissor(clip.x, clip.y, clip.w, clip.h);
+    g_scissor_valid = false;
+    return;
+  }
+  irect16_t absolute = win
+                     ? rect_offset(r, window_screen_x(win), window_screen_y(win))
+                     : r;
+  irect16_t ogl_rect = get_opengl_rect(absolute);
   set_scissor_cached(&ogl_rect);
 }
 
-// Paint window to stencil buffer
-void paint_window_stencil(window_t const *w) {
-  extern uint32_t ui_white_texture;
-  int p = 1;
-  glStencilFunc(GL_ALWAYS, w->id, 0xFF);            // Always pass
-  glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE); // Replace stencil with window ID
-  draw_rect(ui_white_texture, R(w->frame.x-p, w->frame.y-p, w->frame.w+p*2, w->frame.h+p*2));
+// Set viewport and projection for rendering into a root window's FBO.
+// The FBO is sized in physical pixels (logical × scale), but drawing
+// coordinates are logical.  The projection maps logical coords → physical
+// FBO pixels, with Y flipped so logical y=0 (top) maps to FBO y=0 (top).
+void set_viewport_for_fbo(window_t *root) {
+  if (!g_ui_runtime.running || !root) return;
+  g_fbo_root = root;
+  int w = root->surface_w;
+  int h = root->surface_h;
+  if (w <= 0 || h <= 0) return;
+  glViewport(0, 0, w, h);
+  glDisable(GL_SCISSOR_TEST);
+  g_scissor_valid = false;
+  int scale = (int)axGetScaling();
+  if (scale < 1) scale = 1;
+  int log_w = w / scale;
+  int log_h = h / scale;
+  set_projection(0, 0, log_w, log_h);
 }
 
-// Repaint window stencil buffer
-void repaint_stencil(void) {
-  set_fullscreen();
-  
-  glEnable(GL_STENCIL_TEST);
-  glClearStencil(0);
-  glClear(GL_STENCIL_BUFFER_BIT);
-  glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-  for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
-    if (!window_has_state(w, WINDOW_STATE_VISIBLE))
-      continue;
-    send_message(w, evPaintStencil, 0, NULL);
-  }
-  glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-  glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+// Set an FBO scissor using root-local, top-left logical coordinates.
+void set_scissor_fbo(window_t const *root, irect16_t r) {
+  if (!g_ui_runtime.running || !root) return;
+  irect16_t clip = fbo_rect(root, r);
+  glEnable(GL_SCISSOR_TEST);
+  glScissor(clip.x, clip.y, clip.w, clip.h);
 }
 
-// Set stencil test to render for specific window
-void ui_set_stencil_for_window(uint32_t window_id) {
-  glStencilFunc(GL_EQUAL, window_id, 0xFF);
-}
-
-// Set stencil test to render for root window
-void ui_set_stencil_for_root_window(uint32_t window_id) {
-  glStencilFunc(GL_EQUAL, window_id, 0xFF);
-}
+// ── Stencil no-ops (kept for API compat, superseded by FBO compositing) ───
+void paint_window_stencil(window_t const *w) { (void)w; }
+void repaint_stencil(void) {}
+void ui_set_stencil_for_window(uint32_t id) { (void)id; }
+void ui_set_stencil_for_root_window(uint32_t id) { (void)id; }
 
 // Fill a rectangle with a solid color
 void fill_rect(uint32_t color, irect16_t r) {
@@ -244,6 +256,15 @@ void fill_rect(uint32_t color, irect16_t r) {
   // no glTexSubImage2D needed.  draw_sprite_region unpacks RGBA from color and
   // sets the tint and alpha uniforms so the shader outputs the desired color.
   draw_sprite_region((int)ui_white_texture, r, NULL, color, 0);
+}
+
+void fill_rounded_rect(uint32_t color, irect16_t r, int radius) {
+  extern uint32_t ui_white_texture;
+  if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0) return;
+  if (radius <= 0) { fill_rect(color, r); return; }
+  float scale = MAX(1.0f, axGetScaling());
+  render_rounded_rect(ui_white_texture, r, (int)(r.w * scale + 0.5f),
+                      (int)(r.h * scale + 0.5f), radius * scale, 1.0f, color);
 }
 
 static void color_to_params(uint32_t color, ui_render_effect_params_t *params, int base) {
@@ -345,4 +366,45 @@ void draw_checkerboard(irect16_t r, int square_px) {
   draw_sprite_region(ui_transparency_checker_texture, r,
                      UV_RECT(0.0f, 0.0f, uv_x, uv_y),
                      0xFFFFFFFF, 0);
+}
+
+// Composite all visible root windows from their FBO textures to the
+// default framebuffer, applying SDF rounded-corner masking.
+void composite_root_windows(void) {
+  if (!g_ui_runtime.running) return;
+  g_fbo_root = NULL;
+
+  // Switch to the default framebuffer (screen).
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  uint32_t ws = axGetSize(NULL);
+  int screen_w = (int)LOWORD(ws);
+  int screen_h = (int)HIWORD(ws);
+  glViewport(0, 0, screen_w, screen_h);
+  glDisable(GL_SCISSOR_TEST);
+  glDisable(GL_DEPTH_TEST);
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+  // Set projection for screen-space compositing.
+  set_fullscreen();
+
+  float base_radius = get_theme()->window_corner_radius * axGetScaling();
+
+  for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
+    if (!window_has_state(w, WINDOW_STATE_VISIBLE)) continue;
+    if (!w->surface_tex) continue;
+
+    // Clamp radius to half the smallest dimension (in physical pixels).
+    int max_r = w->surface_w < w->surface_h ? w->surface_w / 2 : w->surface_h / 2;
+    float radius = base_radius;
+    if (radius > max_r) radius = (float)max_r;
+
+    draw_rounded_rect((int)w->surface_tex,
+                      (irect16_t){w->frame.x, w->frame.y, w->frame.w, w->frame.h},
+                      w->surface_w, w->surface_h,
+                      radius, 1.0f);
+  }
+
+  glDisable(GL_BLEND);
+  glEnable(GL_DEPTH_TEST);
 }

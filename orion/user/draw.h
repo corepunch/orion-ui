@@ -8,6 +8,7 @@
 
 // Rectangle drawing functions
 void fill_rect(uint32_t color, irect16_t r);
+void fill_rounded_rect(uint32_t color, irect16_t r, int radius);
 void draw_gradient_rect(irect16_t r, uint32_t left_color, uint32_t right_color);
 void draw_rect(int tex, irect16_t r);
 void draw_rect_ex(int tex, irect16_t r, int type, float alpha);
@@ -28,6 +29,11 @@ enum {
 void draw_sprite_region(int tex, irect16_t r,
                         frect_t const *uv,
                         uint32_t color, uint32_t flags);
+// Draw a texture with SDF rounded-corner masking (anti-aliased).
+void draw_rounded_rect(int tex, irect16_t r, int win_w, int win_h,
+                       float radius, float alpha);
+void render_rounded_rect(int tex, irect16_t r, int pixel_w, int pixel_h,
+                         float radius, float alpha, uint32_t color);
 // Draw a dashed selection-outline rectangle (2–4 GL draw calls depending on dimensions, O(1) regardless of size)
 void draw_sel_rect(irect16_t r);
 
@@ -44,6 +50,8 @@ void draw_checkerboard(irect16_t r, int square_px);
 void set_viewport(irect16_t frame);
 void set_projection(int x, int y, int w, int h);
 void set_clip_rect(window_t const *, irect16_t r);
+void set_viewport_for_fbo(window_t *root);
+void set_scissor_fbo(window_t const *root, irect16_t r);
 
 // Stencil management (internal use)
 void ui_set_stencil_for_window(uint32_t window_id);
@@ -53,5 +61,8 @@ void ui_set_stencil_for_root_window(uint32_t window_id);
 // Called by send_message() after evPaint when WINDOW_HSCROLL or
 // WINDOW_VSCROLL is set.  Safe to call when neither bar is visible (no-op).
 void draw_builtin_scrollbars(window_t *win);
+
+// Composite all visible root windows from their FBO textures to the screen.
+void composite_root_windows(void);
 
 #endif

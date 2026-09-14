@@ -6,6 +6,7 @@
 #include <orion/user/user.h>
 #include <orion/user/messages.h>
 #include <orion/user/draw.h>
+#include <orion/user/theme.h>
 #include "commctl.h"
 
 
@@ -42,12 +43,6 @@ static int sl_value_from_mouse_x(const window_t *win, const slider_state_t *s, i
   int range = MAX(1, s->max_val - s->min_val);
   int v = s->min_val + (int)lroundf((float)raw * (float)range / (float)sl_track_w(win));
   return sl_clamp_pos(s, v);
-}
-
-static void sl_draw_thumb(int x, int y, bool active) {
-  fill_rect(active ? get_sys_color(brAccent) : get_sys_color(brDarkEdge),
-            R(x - 3, y - 2, SLIDER_MIN_THUMB_W, 11));
-  fill_rect(get_sys_color(brTextNormal), R(x - 2, y - 1, SLIDER_MIN_THUMB_W - 2, 9));
 }
 
 static void sl_notify(window_t *win, int handle_index, int value) {
@@ -97,13 +92,14 @@ result_t win_slider(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
       if (!s) return true;
       {
       irect16_t cr = get_client_rect(win);
-      fill_rect(get_sys_color(brControlBg), cr);
-      fill_rect(get_sys_color(brDarkEdge),
-                R(SLIDER_TRACK_PAD, SLIDER_BAR_Y + SLIDER_BAR_H / 2 - 1,
-                  sl_track_w(win), 2));
+      theme_draw(THEME_PART_SURFACE, cr, CTRL_NORMAL);
+      theme_draw(THEME_PART_SLIDER_TRACK,
+                 R(SLIDER_TRACK_PAD, SLIDER_BAR_Y + SLIDER_BAR_H / 2 - 1, sl_track_w(win), 2), CTRL_NORMAL);
       for (int i = 0; i < s->count; i++) {
         bool active = s->dragging && s->drag_index == i;
-        sl_draw_thumb(sl_thumb_x_from_value(win, s, s->pos[i]), SLIDER_HANDLE_Y, active);
+        int tx = sl_thumb_x_from_value(win, s, s->pos[i]);
+        irect16_t thumb = R(tx - 3, SLIDER_HANDLE_Y - 2, SLIDER_MIN_THUMB_W, 11);
+        theme_draw(THEME_PART_SLIDER_THUMB, thumb, active ? CTRL_PRESSED : CTRL_NORMAL);
       }
       }
       return true;

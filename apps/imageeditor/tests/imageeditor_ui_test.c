@@ -238,6 +238,79 @@ void test_ie_anim_new_frame_selects_inserted_frame(void) {
     PASS();
 }
 
+static void test_ie_anim_playback_restores_selection(void) {
+  TEST("Anim: stopping playback restores the selected frame and its pixels");
+  ie_setup();
+  canvas_doc_t *doc = create_document(NULL, 4, 4);
+  ASSERT_NOT_NULL(doc);
+  g_app->active_doc = doc;
+  uint32_t colors[] = {MAKE_COLOR(255, 0, 0, 255), MAKE_COLOR(0, 255, 0, 255),
+                       MAKE_COLOR(0, 0, 255, 255)};
+  for (int i = 0; i < 3; i++) {
+    if (i) handle_menu_command(ID_ANIM_NEW_FRAME);
+    canvas_set_pixel(doc, 0, 0, colors[i]);
+  }
+  handle_menu_command(ID_ANIM_PREV_FRAME);
+  ASSERT_EQUAL(doc->anim->active_frame, 1);
+  // Include unsaved edits on the selected frame.
+  canvas_set_pixel(doc, 1, 0, colors[0]);
+  doc->anim->loop = true;
+  handle_menu_command(ID_ANIM_PLAY);
+  ASSERT_TRUE(doc->anim->playing);
+  ASSERT_EQUAL(doc->anim->playback_start_frame, 1);
+  anim_tick(doc);
+  ASSERT_EQUAL(doc->anim->active_frame, 2);
+  handle_menu_command(ID_ANIM_PLAY);
+  ASSERT_EQUAL(doc->anim->playback_start_frame, 1);
+  anim_tick(doc);
+  ASSERT_EQUAL(doc->anim->active_frame, 0);
+  handle_menu_command(ID_ANIM_STOP);
+  ASSERT_FALSE(doc->anim->playing);
+  ASSERT_EQUAL(g_app->anim_timer_id, 0);
+  ASSERT_EQUAL(doc->anim->active_frame, 1);
+  ASSERT_EQUAL(canvas_get_pixel(doc, 0, 0), colors[1]);
+  ASSERT_EQUAL(canvas_get_pixel(doc, 1, 0), colors[0]);
+  ASSERT_TRUE(doc->layer.stack[doc->layer.active]->pixels == doc->pixels);
+  ASSERT_TRUE(g_app->anim_trace_enabled);
+  anim_tick(doc);
+  ASSERT_EQUAL(doc->anim->active_frame, 1);
+  // A new playback session remembers the new selection, even before a tick.
+  handle_menu_command(ID_ANIM_PREV_FRAME);
+  handle_menu_command(ID_ANIM_PLAY);
+  handle_menu_command(ID_ANIM_STOP);
+  ASSERT_EQUAL(doc->anim->active_frame, 0);
+  ASSERT_EQUAL(canvas_get_pixel(doc, 0, 0), colors[0]);
+  ie_teardown();
+  PASS();
+}
+
+static void test_ie_anim_playback_end_restores_selection(void) {
+  TEST("Anim: non-looping playback restores selection at the end");
+  ie_setup();
+  canvas_doc_t *doc = create_document(NULL, 4, 4);
+  ASSERT_NOT_NULL(doc);
+  g_app->active_doc = doc;
+  handle_menu_command(ID_ANIM_NEW_FRAME);
+  handle_menu_command(ID_ANIM_NEW_FRAME);
+  handle_menu_command(ID_ANIM_PREV_FRAME);
+  doc->anim->loop = false;
+  handle_menu_command(ID_ANIM_PLAY);
+  anim_tick(doc);
+  ASSERT_EQUAL(doc->anim->active_frame, 2);
+  ASSERT_TRUE(doc->anim->playing);
+  anim_tick(doc);
+  ASSERT_FALSE(doc->anim->playing);
+  ASSERT_EQUAL(doc->anim->active_frame, 1);
+  ASSERT_EQUAL(g_app->anim_timer_id, 0);
+  ASSERT_TRUE(g_app->anim_trace_enabled);
+  // Stopping again must not undo an explicit selection made after playback.
+  handle_menu_command(ID_ANIM_PREV_FRAME);
+  handle_menu_command(ID_ANIM_STOP);
+  ASSERT_EQUAL(doc->anim->active_frame, 0);
+  ie_teardown();
+  PASS();
+}
+
 void test_ie_anim_trace_toggle(void) {
     TEST("Anim: trace toggle flips the onion-skin overlay state");
 
@@ -2193,6 +2266,8 @@ int main(int argc, char *argv[]) {
     test_ie_large_document_windows_cascade();
     test_ie_anim_new_frame_selects_inserted_frame();
     test_ie_anim_trace_toggle();
+    test_ie_anim_playback_restores_selection();
+    test_ie_anim_playback_end_restores_selection();
     test_ie_timeline_keyboard_navigation();
     test_ie_palette_windows_created();
     test_ie_all_forms_use_auto_layout();

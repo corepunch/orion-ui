@@ -52,6 +52,7 @@ struct anim_timeline_s {
   int            fps;          // default playback speed (default 12)
   bool           loop;         // whether playback loops
   bool           playing;      // true while animation is running
+  int            playback_start_frame; // selection to restore when playback stops
 };
 
 // Quantize raw RGBA pixels to a ≤256-entry palette + index map.
