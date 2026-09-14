@@ -1,6 +1,9 @@
 // System color theme table and active-theme runtime.
 // Analogous to WinAPI GetSysColor / SetSysColors.
-// Access colours via get_sys_color(brXxx); change them via set_sys_colors().
+// Access colours via get_sys_color(brXxx).
+// Theme switches update g_sys_colors via theme_t.apply_palette() inside
+// set_theme(); set_sys_colors() is for runtime overrides on top of the
+// active theme palette.
 
 #include <stdint.h>
 #include <stdio.h>

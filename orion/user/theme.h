@@ -4,6 +4,92 @@
 #include <stdbool.h>
 #include <orion/user/user.h>
 
+/**
+ * Theme system — runtime-switchable drawing vtable
+ * =================================================
+ *
+ * OVERVIEW
+ * --------
+ * A theme_t is a process-lifetime, immutable drawing vtable.  Controls pass
+ * computed bounds and semantic state; the active theme paints them without
+ * reading control internals, dispatching messages, or mutating state.
+ * get_theme() / set_theme() manage the active singleton.
+ *
+ *
+ * CREATING A NEW THEME
+ * --------------------
+ * 1. Implement every callback in theme_t (see REQUIRE() in theme_validate()).
+ *    Callbacks receive logical coordinates; use fill_rect() and other
+ *    low-level primitives.  Never call post_message() or mutate window state.
+ * 2. Implement apply_palette(): write the theme's color table into g_sys_colors
+ *    using direct assignment (g_sys_colors[brXxx] = 0xAARRGGBB).  This function
+ *    is called by set_theme() before evThemeChanged is broadcast.
+ * 3. Set metric fields (see METRIC FIELDS below).
+ * 4. Expose the singleton via a theme_xxx_instance() function and add a
+ *    THEME_xxx entry to theme_style_t.
+ * 5. Register it in set_theme()'s style dispatch.
+ *
+ *
+ * PALETTE OWNERSHIP AND g_sys_colors
+ * -----------------------------------
+ * Each theme owns its palette.  apply_palette() is the sole writer during a
+ * theme switch; no other code should write g_sys_colors for theme-defined
+ * colors.  After set_theme() returns, g_sys_colors is fully populated with
+ * the new theme's values — get_sys_color() is always valid for any handler
+ * that runs on or after evThemeChanged.
+ *
+ * set_sys_colors() is a separate API for runtime overrides (e.g. user
+ * color-picker adjustments) applied on top of the active theme palette.
+ * Those overrides are lost on the next set_theme() call.
+ *
+ *
+ * METRIC FIELDS
+ * -------------
+ * Metrics are per-theme geometry constants consumed by draw code and layout:
+ *
+ *   scrollbar_width      Reserved gutter width in pixels.  Layout subtracts
+ *                        this from the client area when allocating scroll
+ *                        channels.  Set to 0 for overlay-only themes.
+ *                        Consumed by: window system scrollbar layout,
+ *                        sync_scrollbars() helpers, SCROLLBAR_WIDTH fallback.
+ *
+ *   scrollbar_overlay    true  = Modern overlay thumbs; no persistent gutter;
+ *                                bars float over content on hover.
+ *                        false = Classic reserved-gutter bars that always
+ *                                occupy scrollbar_width pixels.
+ *                        Consumed by: scrollbar.c paint and hit-test paths.
+ *
+ *   press_icon_offset    Pixel shift applied to icon/label content when a
+ *                        button is in the PRESSED state.  Classic sets this
+ *                        to 1 to simulate physical depression; Modern sets it
+ *                        to 0 (background changes only).
+ *                        Consumed by: button, toolbar item draw code.
+ *
+ *   button_corner_radius Rounded-corner radius for push buttons (0 = square).
+ *                        Consumed by: draw_button_bg implementations,
+ *                        fill_rounded_rect() helpers.
+ *
+ *   control_padding      Standard inset from a control's outer frame to its
+ *                        content area in pixels.  Supplements the fixed
+ *                        BUTTON_PADDING / TEXTEDIT_PADDING_* constants for
+ *                        controls that need a theme-adjustable gap.
+ *                        Consumed by: combobox, list item, and custom
+ *                        controls that call get_theme()->control_padding.
+ *
+ *
+ * evThemeChanged BROADCAST ORDER
+ * --------------------------------
+ * set_theme() guarantees the following sequence:
+ *   1. apply_palette()   — g_sys_colors is fully updated.
+ *   2. evThemeChanged    — broadcast depth-first to every window.
+ *   3. invalidate_window — all visible roots scheduled for repaint.
+ *   4. evResize          — posted to roots if scrollbar_width changed.
+ *
+ * Handlers that receive evThemeChanged may call get_sys_color() safely;
+ * the new palette is already in place before the first handler runs.
+ * Handlers must not call set_theme() (re-entrant calls are rejected).
+ */
+
 // Named spacing and geometry constants for widget draw code.
 // Dimension constants that are owned by a specific subsystem (e.g.
 // SCROLLBAR_WIDTH, TITLEBAR_HEIGHT) live in messages.h.  This file
@@ -142,10 +228,10 @@ typedef struct {
 // Active-theme accessor — never returns NULL (defaults to Classic).
 theme_t *get_theme(void);
 
-// Switch the active theme.  Validates the candidate; if valid, updates
-// g_sys_colors with the theme palette, broadcasts evThemeChanged to all
-// windows, and invalidates all roots.  Returns false and leaves the current
-// theme unchanged on validation failure.
+// Switch the active theme.  Validates the candidate; if valid, applies the
+// theme palette via apply_palette() (which writes g_sys_colors), broadcasts
+// evThemeChanged to all windows, and invalidates all roots.  Returns false
+// and leaves the current theme unchanged on validation failure.
 bool set_theme(theme_style_t style);
 
 // Built-in theme singletons.

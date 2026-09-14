@@ -180,6 +180,47 @@ Screenshots use the same framebuffer boundary. `ui_request_screenshot()` waits
 for a fully painted frame, while `ui_save_screenshot()` captures the current
 completed frame immediately. The path extension selects PNG or JPEG encoding.
 
+## Theme System
+
+The theme system provides a runtime-switchable drawing vtable (`theme_t`) that
+separates visual policy from control logic.
+
+### Vtable Drawing Dispatch
+
+Controls never paint themselves conditionally per theme.  Instead each control
+calls the active theme through `get_theme()`:
+
+```c
+get_theme()->draw_button_bg(r, state);
+get_theme()->draw_checkbox_box(box_r, checked, state);
+```
+
+The vtable callbacks receive logical bounds and a `ctrl_state_t` bitmask of
+orthogonal flags (`CTRL_HOVER`, `CTRL_PRESSED`, `CTRL_SELECTED`,
+`CTRL_DISABLED`, `CTRL_FOCUSED`, `CTRL_DEFAULT`).  Themes may not dispatch
+messages, query control internals, or mutate state — they call `fill_rect()`
+and other low-level primitives only.
+
+### Switching Themes
+
+`set_theme(style)` performs the full switch atomically:
+
+1. Validates every required vtable slot.
+2. Calls `apply_palette()` — writes `g_sys_colors` with the new palette.
+3. Broadcasts `evThemeChanged` depth-first to every window.
+4. Invalidates all visible roots; posts `evResize` if scrollbar gutter width changed.
+
+`evThemeChanged` handlers see the new palette immediately via `get_sys_color()`.
+Re-entrant `set_theme()` calls (e.g. from within a handler) are rejected.
+
+### Palette Ownership
+
+Each theme owns its palette; `apply_palette()` is the sole writer during a
+switch.  `set_sys_colors()` applies runtime overrides on top of the active
+theme and is unrelated to `set_theme()`.  See `orion/user/theme.h` for the
+full contract including metric fields (`scrollbar_width`, `scrollbar_overlay`,
+`press_icon_offset`, `button_corner_radius`, `control_padding`).
+
 ## Debugging The Message Pipeline
 
 For an interaction bug, follow ownership in order:
