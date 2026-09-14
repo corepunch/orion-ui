@@ -81,11 +81,8 @@ static void classic_draw_checkbox_box(irect16_t r, bool checked, ctrl_state_t st
   fill_rect(get_sys_color(brDarkEdge),  R(r.x+1, r.y+1, r.w-2, r.h-2));
   fill_rect(get_sys_color(brWindowDarkBg), R(r.x+1, r.y+1, r.w-3, r.h-3));
 
-  if (focused) {
-    irect16_t fr = R(r.x - CHECKBOX_FOCUS_PAD, r.y - CHECKBOX_FOCUS_PAD,
-                     r.w + 2*CHECKBOX_FOCUS_PAD, r.h + 2*CHECKBOX_FOCUS_PAD);
-    draw_focused(fr);
-  }
+  if (focused)
+    draw_focused(rect_inset(r, -CHECKBOX_FOCUS_PAD));
   if (checked) {
     draw_theme_icon_in_rect(THEME_ICON_CHECKMARK, r, get_sys_color(brTextNormal));
   }
