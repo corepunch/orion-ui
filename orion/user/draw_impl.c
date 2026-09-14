@@ -152,7 +152,7 @@ void draw_theme_icon_in_rect(int id, irect16_t r, uint32_t col) {
 // Draw window controls (titlebar + close button).
 void draw_window_controls(window_t *win) {
   irect16_t r = R(0, 0, win->frame.w, win->frame.h);
-  get_theme()->draw_window_chrome(rect_split_top(r, titlebar_height(win)),
+  get_theme()->draw_window_chrome(rect_split_top(r, TITLEBAR_HEIGHT),
                                   rect_split_top(r, TITLEBAR_HEIGHT), win->title,
                                   window_has_focus(win) ? CTRL_FOCUSED : CTRL_NORMAL);
 }
@@ -256,6 +256,15 @@ void fill_rect(uint32_t color, irect16_t r) {
   // no glTexSubImage2D needed.  draw_sprite_region unpacks RGBA from color and
   // sets the tint and alpha uniforms so the shader outputs the desired color.
   draw_sprite_region((int)ui_white_texture, r, NULL, color, 0);
+}
+
+void fill_rounded_rect(uint32_t color, irect16_t r, int radius) {
+  extern uint32_t ui_white_texture;
+  if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0) return;
+  if (radius <= 0) { fill_rect(color, r); return; }
+  float scale = MAX(1.0f, axGetScaling());
+  render_rounded_rect(ui_white_texture, r, (int)(r.w * scale + 0.5f),
+                      (int)(r.h * scale + 0.5f), radius * scale, 1.0f, color);
 }
 
 static void color_to_params(uint32_t color, ui_render_effect_params_t *params, int base) {
@@ -379,7 +388,7 @@ void composite_root_windows(void) {
   // Set projection for screen-space compositing.
   set_fullscreen();
 
-  float base_radius = WINDOW_CORNER_RADIUS * axGetScaling();
+  float base_radius = get_theme()->window_corner_radius * axGetScaling();
 
   for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
     if (!window_has_state(w, WINDOW_STATE_VISIBLE)) continue;

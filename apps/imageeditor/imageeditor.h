@@ -81,8 +81,8 @@ extern int g_bw_retina_scale;
 // Constants
 // ============================================================
 
-#define CANVAS_W      320
-#define CANVAS_H      200
+#define CANVAS_W      640
+#define CANVAS_H      480
 
 // Maximum number of layers per document.
 #define LAYER_MAX     32
@@ -365,8 +365,8 @@ typedef struct {
   int            current_tool;
   bool           anim_trace_enabled; // onion-skin overlay toggle for animation frames
   int            anim_trace_frames;  // active onion-skin step span (max non-zero prev/next opacity step)
-  uint8_t        anim_trace_prev_opacity[ONION_SKIN_MAX_STEPS];
-  uint8_t        anim_trace_next_opacity[ONION_SKIN_MAX_STEPS];
+  float          anim_trace_prev_opacity[ONION_SKIN_MAX_STEPS];
+  float          anim_trace_next_opacity[ONION_SKIN_MAX_STEPS];
   uint32_t       palette[NUM_COLORS];
   uint32_t       fg_color;
   uint32_t       bg_color;
@@ -819,6 +819,7 @@ void timeline_win_refresh(void);
 
 // Animation playback tick — called from evTimer to advance frames.
 void anim_tick(canvas_doc_t *doc);
+void anim_stop_playback(canvas_doc_t *doc);
 
 // Export helpers
 bool anim_export_gif(canvas_doc_t *doc, const char *path);

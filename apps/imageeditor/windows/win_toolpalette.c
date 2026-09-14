@@ -230,14 +230,19 @@ static result_t palette_root_proc(window_t *win, uint32_t msg,
       return true;
 
     case evPaint: {
+      theme_draw(THEME_PART_SURFACE, R(0, 0, win->frame.w, win->frame.h), CTRL_NORMAL);
       for (int i = 0; i < NUM_TOOLS; i++) {
         irect16_t r = palette_tool_rect(i);
         bool active = st && (st->active_tool == k_tools[i].ident);
         bool pressed = st && (st->pressed_index == i);
-        bool down = active || pressed;
-        draw_button(r, 1, 1, down);
+        ctrl_state_t state = CTRL_NORMAL;
+        if (active) state |= CTRL_SELECTED;
+        if (pressed) state |= CTRL_PRESSED;
+        if (st && st->hot_index == i) state |= CTRL_HOVER;
+        theme_draw(THEME_PART_TOOLBAR_BUTTON, r, state);
         if (g_tool_strip_loaded) {
-          palette_draw_icon(r, k_tools[i].icon, down ? 1 : 0);
+          palette_draw_icon(r, k_tools[i].icon,
+                            (active || pressed) ? get_theme()->press_icon_offset : 0);
         } else {
           const char *label = tool_names[i] ? tool_names[i] : "";
           draw_text_small(label, r.x + 3, r.y + 4, get_sys_color(brToolbarForeground));
@@ -261,6 +266,7 @@ static result_t palette_root_proc(window_t *win, uint32_t msg,
     }
 
     case evMouseMove: {
+      track_mouse(win);
       int x = (int16_t)LOWORD(wparam);
       int y = (int16_t)HIWORD(wparam);
       int idx = palette_hit_tool(x, y);

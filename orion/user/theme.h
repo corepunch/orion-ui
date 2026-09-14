@@ -71,8 +71,6 @@ typedef enum {
 // the label text.
 #define CHECKBOX_GAP         6
 
-// Window cornder radius for rounded-corner masking of the FBO texture during compositing.
-#define WINDOW_CORNER_RADIUS 8
 
 // ── Theme drawing infrastructure ─────────────────────────────────────────────
 //
@@ -168,6 +166,10 @@ typedef struct {
 
   // Per-theme geometry metrics used by draw code to avoid hardcoded literals.
   int button_corner_radius;  // rounded-corner radius for push buttons (0 = square)
+  int window_corner_radius;  // logical pixels, applied by the SDF compositor
+  struct {
+    int hover, selected, selected_hover, pressed; // system color roles
+  } item_background;
   int control_padding;       // standard inset from control frame to content area
 
   // Writes the theme's palette into g_sys_colors.  Called by set_theme()

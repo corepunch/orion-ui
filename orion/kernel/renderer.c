@@ -468,9 +468,9 @@ void draw_rect_ex(int tex, irect16_t r, int type, float alpha) {
   if (!g_ref.vga_program) return;
   push_sprite_args(tex, r.x, r.y, r.w, r.h, alpha);
   
-  // Enable blending for transparency
+  // Source-over alpha keeps opaque window surfaces opaque under faded sprites.
   glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
   // Disable depth testing for UI elements
   glDisable(GL_DEPTH_TEST);
   
@@ -518,7 +518,7 @@ void draw_sprite_region(int tex, irect16_t r,
     glDisable(GL_BLEND);
   } else {
     glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
   }
   glDisable(GL_DEPTH_TEST);
   g_ref.mesh.draw_mode = GL_TRIANGLE_FAN;
@@ -546,7 +546,7 @@ void draw_rect_gradient(int tex, int x, int y, int w, int h,
   glUniform2f(g_ref.gradient_sprite.uv_scale_u, 1.0f, 1.0f);
   glUniform4f(g_ref.gradient_sprite.tint_u, 1.0f, 1.0f, 1.0f, 1.0f);
   glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
   glDisable(GL_DEPTH_TEST);
   g_ref.mesh.draw_mode = GL_TRIANGLE_FAN;
   R_MeshDraw(&g_ref.mesh);
@@ -573,7 +573,7 @@ void draw_rect_program_params_blend(int tex, int x, int y, int w, int h,
       break;
     case UI_LAYER_BLEND_NORMAL:
     default:
-      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+      glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
       break;
   }
   draw_rect_program_common(tex, x, y, w, h, alpha, program, mix_amount, params);
@@ -598,7 +598,7 @@ void draw_rect_blend(int tex, int x, int y, int w, int h, float alpha,
       break;
     case UI_LAYER_BLEND_NORMAL:
     default:
-      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+      glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
       break;
   }
   glDisable(GL_DEPTH_TEST);
@@ -741,8 +741,8 @@ void draw_program_rect(int tex, irect16_t r, uint32_t program, float mix_amount)
 // win_w/h — window size in pixels (used for SDF computation).
 // radius  — corner radius in pixels.
 // alpha   — overall opacity multiplier.
-void draw_rounded_rect(int tex, irect16_t r, int win_w, int win_h,
-                       float radius, float alpha) {
+void render_rounded_rect(int tex, irect16_t r, int win_w, int win_h,
+                                float radius, float alpha, uint32_t color) {
   if (!g_ref.rounded_rect_sprite.program || !tex) return;
   glUseProgram(g_ref.rounded_rect_sprite.program);
   glActiveTexture(GL_TEXTURE0);
@@ -755,17 +755,24 @@ void draw_rounded_rect(int tex, irect16_t r, int win_w, int win_h,
   glUniform4f(g_ref.rounded_rect_sprite.params1_u, 0.0f, 0.0f, 0.0f, 0.0f);
   glUniform2f(g_ref.rounded_rect_sprite.uv_offset_u, 0.0f, 1.0f);
   glUniform2f(g_ref.rounded_rect_sprite.uv_scale_u, 1.0f, -1.0f);
-  glUniform4f(g_ref.rounded_rect_sprite.tint_u, 1.0f, 1.0f, 1.0f, 1.0f);
+  glUniform4f(g_ref.rounded_rect_sprite.tint_u,
+              (color & 255) / 255.0f, ((color >> 8) & 255) / 255.0f,
+              ((color >> 16) & 255) / 255.0f, (color >> 24) / 255.0f);
   // SDF-specific uniforms.
   glUniform2f(g_rounded_rect.size_u, (float)win_w, (float)win_h);
-  glUniform1f(g_rounded_rect.radius_u, radius);
+  glUniform1f(g_rounded_rect.radius_u, MAX(0.0f, MIN(radius, MIN(win_w, win_h) * 0.5f)));
   glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
   glDisable(GL_DEPTH_TEST);
   g_ref.mesh.draw_mode = GL_TRIANGLE_FAN;
   R_MeshDraw(&g_ref.mesh);
   glEnable(GL_DEPTH_TEST);
   glDisable(GL_BLEND);
+}
+
+void draw_rounded_rect(int tex, irect16_t r, int win_w, int win_h,
+                       float radius, float alpha) {
+  render_rounded_rect(tex, r, win_w, win_h, radius, alpha, 0xffffffff);
 }
 
 bool read_texture_rgba(int src_tex, int w, int h, uint8_t *out_rgba) {
@@ -977,7 +984,7 @@ void R_DeleteTexture(uint32_t id) {
 void R_SetBlendMode(bool enabled) {
   if (enabled) {
     glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     glDisable(GL_DEPTH_TEST);
   } else {
     glDisable(GL_BLEND);

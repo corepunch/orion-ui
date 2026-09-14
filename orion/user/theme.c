@@ -24,7 +24,7 @@ uint32_t g_sys_colors[brCount] = {
   [brControlBg]            = 0xff3c3c3c,   // dialog, panel, and control face
   [brWindowDarkBg]         = 0xff2c2c2c,   // dark secondary panel background
   [brWorkspaceBg]          = 0xff1e1e1e,   // darker than status bar — canvas workspace
-  [brActiveTitlebar]       = 0xffa05a1e,   // focused window: blue caption bar (dark theme)
+  [brActiveTitlebar]       = 0xffD77800,   // focused window: blue caption bar (dark theme)
   [brActiveTitlebarText]   = 0xffffffff,   // focused caption text: white
   [brInactiveTitlebar]     = 0xff2c2c2c,   // unfocused: flat dark gray
   [brInactiveTitlebarText] = 0xff787878,   // unfocused caption text: medium gray
@@ -32,7 +32,7 @@ uint32_t g_sys_colors[brCount] = {
   [brLightEdge]            = 0xff7f7f7f,   // top-left edge for beveled elements
   [brDarkEdge]             = 0xff1a1a1a,   // bottom-right edge for bevel
   [brFlare]                = 0xffcfcfcf,   // corner flare for beveled elements
-  [brAccent]               = 0xff5EC4F3,   // focus, selection, and active-state accent
+  [brAccent]               = 0xffD77800,   // focus, selection, and active-state accent
   [brButtonInner]          = 0xff505050,   // inner fill of button
   [brButtonHover]          = 0xff5a5a5a,   // slightly brighter for hover state
   [brTextNormal]           = 0xffc0c0c0,   // standard text color
@@ -71,10 +71,10 @@ static bool theme_validate(theme_t *t) {
 #undef REQUIRE
   if (t->scrollbar_width < 0 || (!t->scrollbar_overlay && t->scrollbar_width == 0) ||
       (t->scrollbar_overlay && t->scrollbar_width != 0) || t->control_padding < 0 ||
-      t->press_icon_offset < 0 || t->button_corner_radius < 0) {
-    THEME_TRACE("invalid metrics name=%s gutter=%d overlay=%d padding=%d offset=%d radius=%d",
+      t->press_icon_offset < 0 || t->button_corner_radius < 0 || t->window_corner_radius < 0) {
+    THEME_TRACE("invalid metrics name=%s gutter=%d overlay=%d padding=%d offset=%d radius=%d window_radius=%d",
                 t->name, t->scrollbar_width, t->scrollbar_overlay, t->control_padding,
-                t->press_icon_offset, t->button_corner_radius);
+                t->press_icon_offset, t->button_corner_radius, t->window_corner_radius);
     return false;
   }
   return true;

@@ -174,8 +174,8 @@ static void report_paint(window_t *win, reportview_data_t *data) {
 
   if (data->selected >= first_row && data->selected < last_row) {
     int y = header_h + data->selected * entry_h - scroll_y;
-    if (y < header_h) y = header_h;
-    theme_draw(THEME_PART_LIST_ITEM, R(0, y, eff_w, entry_h - 1), CTRL_SELECTED);
+    int top = MAX(y, header_h), bottom = MIN(y + entry_h, cr.h);
+    theme_draw(THEME_PART_LIST_ITEM, R(0, top, eff_w, bottom - top), CTRL_SELECTED);
   }
 
   int col_x = 0;
@@ -238,7 +238,7 @@ static void report_paint(window_t *win, reportview_data_t *data) {
                    used ? " - " : "", part);
         }
         draw_text_clipped(FONT_SMALLEST, subtitle, &subtitle_rect,
-                          get_sys_color(brTextDisabled), 0);
+                          row == data->selected ? fg : get_sys_color(brTextDisabled), 0);
       } else {
         irect16_t text_rect = {text_x, y, text_w, entry_h};
         draw_text_clipped(FONT_SMALL, src, &text_rect, fg, 0);

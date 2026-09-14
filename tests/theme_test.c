@@ -111,9 +111,34 @@ static void test_all_parts(void) {
       for (int state = 0; state < 64; state++)
         theme_draw((theme_part_t)part, R(5, 7, 60, 24), (ctrl_state_t)state);
     ASSERT_EQUAL(theme_foreground(THEME_PART_LIST_ITEM, CTRL_SELECTED),
-                 get_sys_color(style == THEME_CLASSIC ? brControlBg : brTextNormal));
+                 get_sys_color(brActiveTitlebarText));
     ASSERT_EQUAL(theme_foreground(THEME_PART_BUTTON, CTRL_DISABLED | CTRL_DEFAULT), get_sys_color(brTextDisabled));
   }
+  test_env_shutdown();
+  PASS();
+}
+
+extern void draw_window_controls(window_t *win);
+static irect16_t recorded_titlebar, recorded_caption;
+static void record_chrome(irect16_t titlebar, irect16_t caption, const char *title, ctrl_state_t state) {
+  recorded_titlebar = titlebar;
+  recorded_caption = caption;
+}
+
+static void test_titlebar_bounds(void) {
+  TEST("titlebar paint excludes the toolbar band");
+  test_env_init();
+  window_t win = {0};
+  win.frame = R(0, 0, 300, 200);
+  win.flags = WINDOW_TOOLBAR;
+  theme_t *theme = get_theme();
+  void (*saved)(irect16_t, irect16_t, const char *, ctrl_state_t) = theme->draw_window_chrome;
+  theme->draw_window_chrome = record_chrome;
+  draw_window_controls(&win);
+  theme->draw_window_chrome = saved;
+  ASSERT_EQUAL(recorded_titlebar.h, TITLEBAR_HEIGHT);
+  ASSERT_EQUAL(recorded_titlebar.w, 300);
+  ASSERT_EQUAL(recorded_caption.h, TITLEBAR_HEIGHT);
   test_env_shutdown();
   PASS();
 }
@@ -124,5 +149,6 @@ int main(void) {
   test_semantic_dispatch();
   test_control_parts();
   test_all_parts();
+  test_titlebar_bounds();
   TEST_END();
 }

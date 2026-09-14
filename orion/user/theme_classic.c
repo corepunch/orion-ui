@@ -66,7 +66,7 @@ static void classic_draw_panel_bg(irect16_t r) {
 // ── Titlebar ─────────────────────────────────────────────────────────────────
 
 static void classic_draw_titlebar_bg(irect16_t r, bool focused) {
-  fill_rect(get_sys_color(focused ? brActiveTitlebar : brInactiveTitlebar), r);
+  fill_rect(get_sys_color(focused ? brAccent : brInactiveTitlebar), r);
 }
 
 // ── Statusbar ────────────────────────────────────────────────────────────────
@@ -145,7 +145,7 @@ static void classic_apply_palette(void) {
   g_sys_colors[brControlBg]            = 0xff3c3c3c;
   g_sys_colors[brWindowDarkBg]         = 0xff2c2c2c;
   g_sys_colors[brWorkspaceBg]          = 0xff1e1e1e;
-  g_sys_colors[brActiveTitlebar]       = 0xffa05a1e;
+  g_sys_colors[brActiveTitlebar]       = 0xffD77800;
   g_sys_colors[brActiveTitlebarText]   = 0xffffffff;
   g_sys_colors[brInactiveTitlebar]     = 0xff2c2c2c;
   g_sys_colors[brInactiveTitlebarText] = 0xff787878;
@@ -153,7 +153,7 @@ static void classic_apply_palette(void) {
   g_sys_colors[brLightEdge]            = 0xff7f7f7f;
   g_sys_colors[brDarkEdge]             = 0xff1a1a1a;
   g_sys_colors[brFlare]                = 0xffcfcfcf;
-  g_sys_colors[brAccent]               = 0xff5EC4F3;
+  g_sys_colors[brAccent]               = 0xffD77800;
   g_sys_colors[brButtonInner]          = 0xff505050;
   g_sys_colors[brButtonHover]          = 0xff5a5a5a;
   g_sys_colors[brTextNormal]           = 0xffc0c0c0;
@@ -269,7 +269,7 @@ static void classic_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state
 
 static uint32_t classic_foreground(theme_part_t part, ctrl_state_t state) {
   if (state & CTRL_DISABLED) return get_sys_color(brTextDisabled);
-  if (part == THEME_PART_LIST_ITEM && (state & CTRL_SELECTED)) return get_sys_color(brControlBg);
+  if (part == THEME_PART_LIST_ITEM && (state & CTRL_SELECTED)) return get_sys_color(brActiveTitlebarText);
   if (part == THEME_PART_MENU_ITEM && (state & (CTRL_HOVER | CTRL_SELECTED | CTRL_PRESSED)))
     return get_sys_color(brControlBg);
   return get_sys_color(brTextNormal);
@@ -306,6 +306,7 @@ static theme_t g_classic_theme = {
   .scrollbar_overlay      = false,
   .press_icon_offset      = 1,
   .button_corner_radius   = 0,
+  .window_corner_radius   = 0,
   .control_padding        = BUTTON_PADDING,
   .apply_palette          = classic_apply_palette,
 };

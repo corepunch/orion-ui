@@ -143,8 +143,8 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   g_app->grid.spacing.x = 16;
   g_app->grid.spacing.y = 16;
   {
-    static const uint8_t kDefaultPrev[ONION_SKIN_MAX_STEPS] = { 40, 20, 10, 5 };
-    static const uint8_t kDefaultNext[ONION_SKIN_MAX_STEPS] = { 30, 15, 8, 4 };
+    static const float kDefaultPrev[ONION_SKIN_MAX_STEPS] = { 50.0f, 25.0f, 12.5f, 0.0f };
+    static const float kDefaultNext[ONION_SKIN_MAX_STEPS] = { 50.0f, 25.0f, 12.5f, 0.0f };
     g_app->anim_trace_enabled = true;
     memcpy(g_app->anim_trace_prev_opacity, kDefaultPrev, sizeof(kDefaultPrev));
     memcpy(g_app->anim_trace_next_opacity, kDefaultNext, sizeof(kDefaultNext));

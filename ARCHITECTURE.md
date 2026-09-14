@@ -75,6 +75,14 @@ Use `send_message()` for synchronous behavior and `post_message()` for queued
 work. Menus, toolbars, context menus, and accelerators should converge on the
 same command IDs so one controller path owns each action.
 
+Window composition keeps texture ownership and drawing in the renderer, while
+the active theme owns `window_corner_radius` in logical pixels (Modern: 8,
+Classic: 0). Rounded UI fills and window textures share the rounded-box SDF
+shader; theme code does not rasterize corner geometry. Modern toolbar, list,
+and tab backgrounds share `item_background` roles for hover, selection,
+selection with hover, and press. These are UI/workbench colors, separate from
+document content or syntax colors.
+
 ## Input And Coordinate Spaces
 
 The window system owns parent-to-child routing and conversion. A window

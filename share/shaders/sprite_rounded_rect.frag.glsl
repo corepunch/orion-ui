@@ -19,6 +19,11 @@ float roundedBoxSDF(vec2 p, vec2 b, float r) {
 
 void main() {
   vec4 src = texture(tex0, tex) * col * tint;
+  if (radius <= 0.0) {
+    outColor = src;
+    outColor.a *= alpha;
+    return;
+  }
   // Map texcoord [0,1] to pixel space centered at the window center.
   vec2 pixel = tex * size;
   vec2 center = size * 0.5;

@@ -88,7 +88,7 @@ static void test_explicit_scene_up_axis(void) {
 #define WINDOW_TEST_MIN_SEGMENTS 8
 #define WINDOW_TEST_MAX_SEGMENTS 128
 #define WINDOW_TEST_FRONT_POINTS 3
-#define WINDOW_TEST_MAX_PATH 64
+#define WINDOW_TEST_MAX_PATH 1024
 
 static float window_test_area(const Shape2D *p){
 	float a=0;
@@ -128,8 +128,17 @@ static void test_window_profiles(void){
 	PASS();
 }
 
+static const char *window_test_temp_dir(void){
+	const char *path=getenv("TEMP");
+	if(!path || !*path) path=getenv("TMP");
+	if(!path || !*path) path=getenv("TMPDIR");
+	return path && *path ? path : ".";
+}
+
 static int window_test_load(Scene *s,const char *xml){
-	char path[WINDOW_TEST_MAX_PATH]="/tmp/scener-window-XXXXXX";
+	char path[WINDOW_TEST_MAX_PATH];
+	int len=snprintf(path,sizeof(path),"%s/scener-window-XXXXXX",window_test_temp_dir());
+	if(len<0 || (size_t)len>=sizeof(path)) return 0;
 	int fd=mkstemp(path); if(fd<0) return 0;
 	FILE *file=fdopen(fd,"w"); if(!file){ close(fd); unlink(path); return 0; }
 	fputs(xml,file); fclose(file);
@@ -348,7 +357,7 @@ static void test_door_fit_swing_and_pet_opening(void){
 	ASSERT_TRUE(window_test_load(&s,"<scene up='z'/>"));
 	ASSERT_TRUE(scene_create_door(&s,"round-arch",v3(0,0,0)));
 	ASSERT_TRUE(!strcmp(scene_node_tag(s.selectedNode),"door"));
-	snprintf(s.scenePath,sizeof(s.scenePath),"/tmp/scener-door-save-%d.blks",getpid());
+	snprintf(s.scenePath,sizeof(s.scenePath),"%s/scener-door-save-%d.blks",window_test_temp_dir(),getpid());
 	ASSERT_TRUE(scene_save_all(&s));
 	Scene restored={0};ASSERT_TRUE(load_scene(s.scenePath,&restored));ASSERT_EQUAL(restored.nobjs,s.nobjs);ASSERT_EQUAL(restored.nnegativeProfiles,1);
 	unlink(s.scenePath);scene_free(&s);scene_free(&restored);
@@ -364,7 +373,7 @@ static void test_long_camera_names(void){
 	ASSERT_TRUE(!strcmp(s.cameras[0].name,first));ASSERT_TRUE(!strcmp(s.cameras[1].name,second));
 	scene_select_camera(&s,second);ASSERT_TRUE(!strcmp(s.activeCamera,second));
 	scene_select_camera(&s,first);ASSERT_TRUE(!strcmp(s.activeCamera,first));
-	snprintf(s.scenePath,sizeof(s.scenePath),"/tmp/scener-long-camera-%d.blks",getpid());
+	snprintf(s.scenePath,sizeof(s.scenePath),"%s/scener-long-camera-%d.blks",window_test_temp_dir(),getpid());
 	ASSERT_TRUE(scene_save_all(&s));
 	Scene restored={0};ASSERT_TRUE(load_scene(s.scenePath,&restored));
 	ASSERT_TRUE(!strcmp(restored.cameras[0].name,first));ASSERT_TRUE(!strcmp(restored.cameras[1].name,second));
@@ -423,7 +432,7 @@ static void test_door_windows(void){
 	}
 	Scene s={0},restored={0};
 	DOOR_WINDOW_ASSERT(window_test_load(&s,"<scene up='z'><door window='round' rot='90 0 0' openAngle='65' windowPane='0'/></scene>"));
-	snprintf(s.scenePath,sizeof(s.scenePath),"/tmp/scener-door-window-%d.blks",getpid());
+	snprintf(s.scenePath,sizeof(s.scenePath),"%s/scener-door-window-%d.blks",window_test_temp_dir(),getpid());
 	DOOR_WINDOW_ASSERT(scene_save_all(&s));DOOR_WINDOW_ASSERT(load_scene(s.scenePath,&restored));DOOR_WINDOW_EQUAL(restored.nobjs,s.nobjs);
 	for(int o=0;o<s.nobjs;o++) for(int i=0;i<s.objs[o].mesh.nverts;i++) DOOR_WINDOW_ASSERT(vlen(vsub(s.objs[o].mesh.verts[i].pos,restored.objs[o].mesh.verts[i].pos))<WINDOW_TEST_EPSILON);
 	unlink(s.scenePath);scene_free(&s);scene_free(&restored);PASS();

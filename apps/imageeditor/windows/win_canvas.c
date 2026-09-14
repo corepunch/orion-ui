@@ -515,7 +515,7 @@ static void canvas_draw_animation_trace(window_t *win,
                                         irect16_t canvas_rect) {
   if (!win || !state || !doc || !doc->anim || !g_app || !g_app->anim_trace_enabled)
     return;
-  if (doc->layer.mask_only_view || doc->anim->frame_count <= 1)
+  if (doc->layer.mask_only_view || doc->anim->playing || doc->anim->frame_count <= 1)
     return;
 
   if (state->onion_tex_w != doc->canvas_w || state->onion_tex_h != doc->canvas_h) {
