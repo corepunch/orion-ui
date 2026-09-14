@@ -277,6 +277,10 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
        msg == evLeftButtonUp)) {
     if (scrollbar_handle_builtin_mouse(win, msg, wparam, lparam)) return true;
   }
+  // Route timer events to the overlay-scrollbar hide logic.  The timer is NOT
+  // consumed so the window proc can still handle its own timers.
+  if ((win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL)) && msg == evTimer)
+    scrollbar_handle_builtin_timer(win, (uint32_t)wparam);
   if (win->parent && parent_notify_message(msg)) {
     parent_notify_t pn = {
       .child = win,

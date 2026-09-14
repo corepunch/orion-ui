@@ -3,8 +3,19 @@
 #include "messages.h"
 #include "draw.h"
 #include "theme.h"
+#include <platform/platform.h>
 
 static void draw_theme_icon_in_rect_scrollbar(int id, irect16_t r, uint32_t col);
+
+// ── Overlay scrollbar constants ───────────────────────────────────────────────
+// Visual thumb is 6 px wide; hit zone is 16 px so the target is always
+// reachable even though the gutter is invisible.
+#define SB_OVERLAY_THUMB_W   6
+#define SB_OVERLAY_HIT_W    16
+// Thumb auto-hides after this many milliseconds of no activity.
+#define SB_OVERLAY_HIDE_MS  1500
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 static int ui_sb_clamp_range(win_sb_t const *sb, int pos) {
   int max_pos = sb->max_val - sb->page;
@@ -28,6 +39,32 @@ static int ui_sb_thumb_off(win_sb_t const *sb, int track, int tl) {
   if (tt <= 0) return 0;
   return (sb->pos - sb->min_val) * tt / travel;
 }
+
+// ── Overlay reveal / hide ─────────────────────────────────────────────────────
+
+// Reveal the overlay thumb and (re)start the auto-hide timer.
+// Safe to call repeatedly — cancels any pending timer before starting a new one.
+static void sb_overlay_reveal(window_t *win, win_sb_t *sb) {
+  bool was_visible = sb->overlay_visible;
+  sb->overlay_visible = true;
+  // Cancel previous timer if any.
+  if (sb->hide_timer_id) {
+    axCancelTimer(sb->hide_timer_id);
+    sb->hide_timer_id = 0;
+  }
+  sb->hide_timer_id = axSetTimer(win, SB_OVERLAY_HIDE_MS, NULL, false);
+  if (!was_visible)
+    invalidate_window(win);
+}
+
+// Hide the overlay thumb for a single bar and clear the timer handle.
+static void sb_overlay_hide(window_t *win, win_sb_t *sb) {
+  sb->overlay_visible = false;
+  sb->hide_timer_id   = 0;
+  invalidate_window(win);
+}
+
+// ── set_scroll_info helpers ───────────────────────────────────────────────────
 
 static void set_scroll_info_one(win_sb_t *sb, scroll_info_t const *info) {
   if (info->fMask & SIF_RANGE) {
@@ -113,6 +150,8 @@ void reset_scroll_bar_auto(window_t *win, int bar) {
   if (bar == SB_VERT || bar == SB_BOTH) win->vscroll.visible_mode = SB_VIS_AUTO;
 }
 
+// ── Mouse coordinate helpers ──────────────────────────────────────────────────
+
 static int sb_mouse_axis_coord(uint32_t wparam, bool vertical) {
   return vertical ? (int16_t)HIWORD(wparam) : (int16_t)LOWORD(wparam);
 }
@@ -122,14 +161,22 @@ static int sb_mouse_axis_delta(void *lparam, bool vertical) {
   return vertical ? (int16_t)HIWORD(delta) : (int16_t)LOWORD(delta);
 }
 
+// ── Scroll helpers ────────────────────────────────────────────────────────────
+
+// Attempt to scroll to new_pos.  Returns true if the position changed.
+// In overlay mode, also reveals the thumb and restarts the hide timer.
 static bool sb_try_scroll(window_t *win, win_sb_t *sb, uint32_t scroll_msg, int new_pos) {
   new_pos = ui_sb_clamp_range(sb, new_pos);
   if (new_pos == sb->pos) return false;
   sb->pos = new_pos;
   send_message(win, scroll_msg, (uint32_t)new_pos, NULL);
   invalidate_window(win);
+  if (get_theme()->scrollbar_overlay)
+    sb_overlay_reveal(win, sb);
   return true;
 }
+
+// ── Classic drag helpers ──────────────────────────────────────────────────────
 
 static void sb_handle_drag_move(window_t *win, win_sb_t *sb, uint32_t scroll_msg,
                                  int mouse_delta, int track) {
@@ -189,6 +236,45 @@ static void sb_handle_track_click(window_t *win, win_sb_t *sb, uint32_t scroll_m
   }
 }
 
+// ── Overlay drag helpers ──────────────────────────────────────────────────────
+
+// Begin or page-scroll in overlay mode.  track is the full content extent
+// along the scroll axis (no gutter deduction, no arrow buttons).
+static void sb_handle_track_click_overlay(window_t *win, win_sb_t *sb,
+                                          uint32_t scroll_msg, int pos, int track) {
+  int tl = ui_sb_thumb_len(sb, track);
+  int to = ui_sb_thumb_off(sb, track, tl);
+  if (pos >= to && pos < to + tl) {
+    // Begin thumb drag.
+    sb->dragging         = true;
+    sb->drag_start_mouse = pos;
+    sb->drag_mouse       = pos;
+    sb->drag_start_pos   = sb->pos;
+    set_capture(win);
+  } else {
+    sb_try_scroll(win, sb, scroll_msg,
+                  sb->pos + (pos < to ? -sb->page : sb->page));
+  }
+}
+
+// Update scroll position while dragging an overlay thumb.
+// track is the full content extent (no arrow deduction).
+static void sb_handle_drag_move_overlay(window_t *win, win_sb_t *sb,
+                                        uint32_t scroll_msg,
+                                        int mouse_delta, int track) {
+  sb->drag_mouse += mouse_delta;
+  int tl = ui_sb_thumb_len(sb, track);
+  int tp = track - tl;
+  int tr = sb->max_val - sb->min_val - sb->page;
+  if (tp > 0 && tr > 0) {
+    sb_try_scroll(win, sb, scroll_msg,
+                  sb->drag_start_pos +
+                  (sb->drag_mouse - sb->drag_start_mouse) * tr / tp);
+  }
+}
+
+// ── Public API ────────────────────────────────────────────────────────────────
+
 bool scrollbar_handle_builtin_mouse(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   bool has_h = (win->flags & WINDOW_HSCROLL) && win->hscroll.visible;
   bool has_v = (win->flags & WINDOW_VSCROLL) && win->vscroll.visible;
@@ -198,68 +284,166 @@ bool scrollbar_handle_builtin_mouse(window_t *win, uint32_t msg, uint32_t wparam
   int content_h = win->frame.h - t - s;
 
   bool h_merged = has_h && (win->flags & WINDOW_STATUSBAR);
-  int h_x_min   = h_merged ? SB_STATUS_SPLIT_X(win->frame.w) : 0;
-  int h_y_min   = h_merged ? content_h : content_h - SCROLLBAR_WIDTH;
-  int h_y_max   = h_merged ? content_h + STATUSBAR_HEIGHT : content_h;
-  int h_track   = (win->frame.w - h_x_min) -
-                  (h_merged ? SCROLLBAR_WIDTH : (has_v ? SCROLLBAR_WIDTH : 0));
-  int v_track = content_h - (has_h && !h_merged ? SCROLLBAR_WIDTH : 0);
 
-  if (msg == evMouseMove || msg == evLeftButtonUp) {
-    if (win->hscroll.dragging) {
-      int mouse_delta = sb_mouse_axis_delta(lparam, false);
-      if (msg == evMouseMove)
-        sb_handle_drag_move(win, &win->hscroll, evHScroll, mouse_delta, h_track);
-      else {
-        win->hscroll.dragging = false;
-        set_capture(NULL);
+  bool overlay = get_theme()->scrollbar_overlay;
+
+  if (overlay) {
+    // ── Overlay mode ──────────────────────────────────────────────────────────
+    //
+    // In overlay mode the scrollbar gutter has zero reserved width/height; the
+    // thumb is drawn over the content.  Hit-testing uses a 16 px zone at the
+    // content edge regardless of the 6 px visual thumb.
+
+    // Convert mouse coords from content-space back to window-space.
+    int cx = sb_mouse_axis_coord(wparam, false) - (int)win->hscroll.pos;
+    int cy = sb_mouse_axis_coord(wparam, true)  - (int)win->vscroll.pos;
+
+    if (msg == evMouseMove || msg == evLeftButtonUp) {
+      // Drag continuation / release.
+      if (win->hscroll.dragging) {
+        int mouse_delta = sb_mouse_axis_delta(lparam, false);
+        if (msg == evMouseMove) {
+          sb_handle_drag_move_overlay(win, &win->hscroll, evHScroll,
+                                      mouse_delta, win->frame.w);
+        } else {
+          win->hscroll.dragging = false;
+          set_capture(NULL);
+          // Restart hide timer after drag release.
+          sb_overlay_reveal(win, &win->hscroll);
+        }
+        return true;
       }
+      if (win->vscroll.dragging) {
+        int mouse_delta = sb_mouse_axis_delta(lparam, true);
+        if (msg == evMouseMove) {
+          sb_handle_drag_move_overlay(win, &win->vscroll, evVScroll,
+                                      mouse_delta, content_h);
+        } else {
+          win->vscroll.dragging = false;
+          set_capture(NULL);
+          sb_overlay_reveal(win, &win->vscroll);
+        }
+        return true;
+      }
+
+      if (msg == evMouseMove) {
+        // Reveal bars when the pointer is within the hit zone at the edge.
+        if (has_v && cx >= win->frame.w - SB_OVERLAY_HIT_W &&
+            cy >= 0 && cy < content_h)
+          sb_overlay_reveal(win, &win->vscroll);
+        if (has_h && !h_merged &&
+            cy >= content_h - SB_OVERLAY_HIT_W &&
+            cx >= 0 && cx < win->frame.w)
+          sb_overlay_reveal(win, &win->hscroll);
+      }
+      // Don't consume mouse-move/up — content should still receive them.
+      return false;
+    }
+
+    if (msg != evLeftButtonDown && msg != evLeftButtonDoubleClick) return false;
+    if (!has_h && !has_v) return false;
+
+    // Hit-test using the 16 px zone at the window edge.
+    if (has_v && cx >= win->frame.w - SB_OVERLAY_HIT_W && cx < win->frame.w &&
+        cy >= 0 && cy < content_h) {
+      if (!win->vscroll.enabled) return true;
+      sb_overlay_reveal(win, &win->vscroll);
+      sb_handle_track_click_overlay(win, &win->vscroll, evVScroll, cy, content_h);
       return true;
     }
-    if (win->vscroll.dragging) {
-      int mouse_delta = sb_mouse_axis_delta(lparam, true);
-      if (msg == evMouseMove)
-        sb_handle_drag_move(win, &win->vscroll, evVScroll, mouse_delta, v_track);
-      else {
-        win->vscroll.dragging = false;
-        set_capture(NULL);
-      }
+    if (has_h && !h_merged &&
+        cy >= content_h - SB_OVERLAY_HIT_W && cy < content_h &&
+        cx >= 0 && cx < win->frame.w) {
+      if (!win->hscroll.enabled) return true;
+      sb_overlay_reveal(win, &win->hscroll);
+      sb_handle_track_click_overlay(win, &win->hscroll, evHScroll, cx, win->frame.w);
       return true;
     }
     return false;
+
+  } else {
+    // ── Classic (reserved-gutter) mode ────────────────────────────────────────
+
+    int h_x_min   = h_merged ? SB_STATUS_SPLIT_X(win->frame.w) : 0;
+    int h_y_min   = h_merged ? content_h : content_h - SCROLLBAR_WIDTH;
+    int h_y_max   = h_merged ? content_h + STATUSBAR_HEIGHT : content_h;
+    int h_track   = (win->frame.w - h_x_min) -
+                    (h_merged ? SCROLLBAR_WIDTH : (has_v ? SCROLLBAR_WIDTH : 0));
+    int v_track = content_h - (has_h && !h_merged ? SCROLLBAR_WIDTH : 0);
+
+    if (msg == evMouseMove || msg == evLeftButtonUp) {
+      if (win->hscroll.dragging) {
+        int mouse_delta = sb_mouse_axis_delta(lparam, false);
+        if (msg == evMouseMove)
+          sb_handle_drag_move(win, &win->hscroll, evHScroll, mouse_delta, h_track);
+        else {
+          win->hscroll.dragging = false;
+          set_capture(NULL);
+        }
+        return true;
+      }
+      if (win->vscroll.dragging) {
+        int mouse_delta = sb_mouse_axis_delta(lparam, true);
+        if (msg == evMouseMove)
+          sb_handle_drag_move(win, &win->vscroll, evVScroll, mouse_delta, v_track);
+        else {
+          win->vscroll.dragging = false;
+          set_capture(NULL);
+        }
+        return true;
+      }
+      return false;
+    }
+
+    if (msg != evLeftButtonDown && msg != evLeftButtonDoubleClick) return false;
+    if (!has_h && !has_v) return false;
+
+    // Mouse messages are delivered to window procedures in content space, but
+    // built-in scrollbars live in the fixed viewport/non-client area. Convert
+    // back before hit-testing so scrolling the client does not move the
+    // scrollbar's clickable strip over the content.
+    int cx = sb_mouse_axis_coord(wparam, false) - (int)win->hscroll.pos;
+    int cy = sb_mouse_axis_coord(wparam, true) - (int)win->vscroll.pos;
+
+    if (has_h && cy >= h_y_min && cy < h_y_max && cx >= h_x_min && cx < win->frame.w) {
+      if (!win->hscroll.enabled) return true;
+      int lx = cx - h_x_min;
+      if (lx >= h_track) return true;
+      sb_handle_track_click(win, &win->hscroll, evHScroll, lx, h_track);
+      return true;
+    }
+
+    if (has_v && cx >= win->frame.w - SCROLLBAR_WIDTH && cx < win->frame.w &&
+        cy >= 0 && cy < content_h) {
+      if (!win->vscroll.enabled) return true;
+      if (cy >= v_track) return true;
+      sb_handle_track_click(win, &win->vscroll, evVScroll, cy, v_track);
+      return true;
+    }
+
+    return false;
   }
+}
 
-  if (msg != evLeftButtonDown && msg != evLeftButtonDoubleClick) return false;
-  if (!has_h && !has_v) return false;
-
-  // Mouse messages are delivered to window procedures in content space, but
-  // built-in scrollbars live in the fixed viewport/non-client area. Convert
-  // back before hit-testing so scrolling the client does not move the
-  // scrollbar's clickable strip over the content.
-  int cx = sb_mouse_axis_coord(wparam, false) - (int)win->hscroll.pos;
-  int cy = sb_mouse_axis_coord(wparam, true) - (int)win->vscroll.pos;
-
-  if (has_h && cy >= h_y_min && cy < h_y_max && cx >= h_x_min && cx < win->frame.w) {
-    if (!win->hscroll.enabled) return true;
-    int lx = cx - h_x_min;
-    if (lx >= h_track) return true;
-    sb_handle_track_click(win, &win->hscroll, evHScroll, lx, h_track);
-    return true;
+// Called from message.c on evTimer for windows that have built-in scrollbars.
+// Checks whether the timer ID matches a pending overlay-hide timer and, if so,
+// hides the corresponding thumb.  Does NOT consume the event (the window proc
+// may also have timers of its own).
+void scrollbar_handle_builtin_timer(window_t *win, uint32_t timer_id) {
+  if (!timer_id) return;
+  if ((win->flags & WINDOW_HSCROLL) && win->hscroll.hide_timer_id == timer_id) {
+    sb_overlay_hide(win, &win->hscroll);
+    return;
   }
-
-  if (has_v && cx >= win->frame.w - SCROLLBAR_WIDTH && cx < win->frame.w &&
-      cy >= 0 && cy < content_h) {
-    if (!win->vscroll.enabled) return true;
-    if (cy >= v_track) return true;
-    sb_handle_track_click(win, &win->vscroll, evVScroll, cy, v_track);
-    return true;
+  if ((win->flags & WINDOW_VSCROLL) && win->vscroll.hide_timer_id == timer_id) {
+    sb_overlay_hide(win, &win->vscroll);
   }
-
-  return false;
 }
 
 void scrollbar_handle_builtin_wheel(window_t *win, void *lparam) {
   if (!win) return;
+  // sb_try_scroll already calls sb_overlay_reveal in overlay mode when the
+  // position changes, so no additional reveal call is needed here.
   if ((win->flags & WINDOW_HSCROLL) && win->hscroll.visible && win->hscroll.enabled) {
     int delta = (int16_t)LOWORD((uintptr_t)lparam);
     sb_try_scroll(win, &win->hscroll, evHScroll, win->hscroll.pos + delta);
@@ -269,6 +453,10 @@ void scrollbar_handle_builtin_wheel(window_t *win, void *lparam) {
     sb_try_scroll(win, &win->vscroll, evVScroll, win->vscroll.pos + delta);
   }
 }
+
+// ── Status-bar merged hscroll ─────────────────────────────────────────────────
+// Always drawn Classic-style regardless of overlay mode (the bar lives inside
+// the status-bar row and is not a gutter that compresses content).
 
 void scrollbar_draw_statusbar_merged_hscroll(window_t *win, irect16_t row, int split_x) {
   if (!win) return;
@@ -312,21 +500,14 @@ static void draw_theme_icon_in_rect_scrollbar(int id, irect16_t r, uint32_t col)
                   THEME_ICON_SIZE, col);
 }
 
+// ── draw_builtin_scrollbars ───────────────────────────────────────────────────
+
 void draw_builtin_scrollbars(window_t *win) {
   bool has_h = (win->flags & WINDOW_HSCROLL) && win->hscroll.visible;
   bool has_v = (win->flags & WINDOW_VSCROLL) && win->vscroll.visible;
   if (!has_h && !has_v) return;
 
-  // TODO: overlay — apply theme scrollbar_overlay/scrollbar_width policy here
-  // once overlay-thumb support lands; currently only reserved-space bars render.
-  static theme_t *s_last_sb_theme = NULL;
   theme_t *th = get_theme();
-  if (th != s_last_sb_theme) {
-    fprintf(stderr, "[theme] builtin-scrollbar geometry: name=%s overlay=%d width=%d\n",
-            th->name, (int)th->scrollbar_overlay, th->scrollbar_width);
-    fflush(stderr);
-    s_last_sb_theme = th;
-  }
 
   int t = titlebar_height(win);
   int s = statusbar_height(win);
@@ -338,6 +519,39 @@ void draw_builtin_scrollbars(window_t *win) {
 
   bool h_merged = has_h && (win->flags & WINDOW_STATUSBAR);
   int content_h = win->frame.h - t - s;
+
+  if (th->scrollbar_overlay) {
+    // ── Overlay mode: draw thin transparent thumbs over content ──────────────
+    //
+    // No gutter fill, no arrow buttons.  Each thumb is SB_OVERLAY_THUMB_W px
+    // wide and is only rendered when overlay_visible is set.  The thumb uses
+    // the full content_h / frame.w as its track (no arrow deduction).
+
+    if (has_v && win->vscroll.overlay_visible) {
+      win_sb_t *sb = &win->vscroll;
+      int track = content_h;
+      int tl = ui_sb_thumb_len(sb, track);
+      int to = ui_sb_thumb_off(sb, track, tl);
+      uint32_t col = sb->enabled ? get_sys_color(brLightEdge) : get_sys_color(brDarkEdge);
+      fill_rect(col, R(base_x + win->frame.w - SB_OVERLAY_THUMB_W,
+                       base_y + to,
+                       SB_OVERLAY_THUMB_W, tl));
+    }
+
+    if (has_h && !h_merged && win->hscroll.overlay_visible) {
+      win_sb_t *sb = &win->hscroll;
+      int track = win->frame.w;
+      int tl = ui_sb_thumb_len(sb, track);
+      int to = ui_sb_thumb_off(sb, track, tl);
+      uint32_t col = sb->enabled ? get_sys_color(brLightEdge) : get_sys_color(brDarkEdge);
+      fill_rect(col, R(base_x + to,
+                       base_y + content_h - SB_OVERLAY_THUMB_W,
+                       tl, SB_OVERLAY_THUMB_W));
+    }
+    return;
+  }
+
+  // ── Classic mode: reserved-gutter bars with arrow buttons ────────────────
 
   if (has_h && !h_merged) {
     win_sb_t *sb = &win->hscroll;
