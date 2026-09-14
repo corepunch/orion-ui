@@ -372,8 +372,9 @@ void composite_root_windows(void) {
   if (!g_ui_runtime.running) return;
   g_fbo_root = NULL;
 
-  // Switch to the default framebuffer (screen).
+  // iOS and offscreen hosts present a platform-owned, nonzero framebuffer.
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  axBindFramebuffer();
   uint32_t ws = axGetSize(NULL);
   int screen_w = (int)LOWORD(ws);
   int screen_h = (int)HIWORD(ws);

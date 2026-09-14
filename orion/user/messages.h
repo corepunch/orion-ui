@@ -3,6 +3,10 @@
 
 #include "config.h"  // Tunable framework parameters
 
+#ifdef __APPLE__
+#include <TargetConditionals.h>
+#endif
+
 // Window messages
 enum {
   evCreate,
@@ -314,9 +318,14 @@ typedef struct {
 // icons centre with equal integer padding on every side.
 #define SYSICON_SIZE      24              // canonical size of sysicon/toolbar SVG tiles
 #define TITLEBAR_HEIGHT   (FONT_SIZE + 5)
-#define TOOLBAR_HEIGHT    (SYSICON_SIZE + 4)  // button area = icon + 2px margin each side
+#if defined(__APPLE__) && TARGET_OS_IOS
+#define TOOLBAR_HEIGHT    42
+#define BUTTON_HEIGHT     40
+#else
+#define TOOLBAR_HEIGHT    38
+#define BUTTON_HEIGHT     25
+#endif
 #define STATUSBAR_HEIGHT  (FONT_SIZE + 5)
-#define BUTTON_HEIGHT     19
 #define CONTROL_HEIGHT_MINI     13
 #define CONTROL_HEIGHT_SMALL    16
 #define CONTROL_HEIGHT_REGULAR  BUTTON_HEIGHT

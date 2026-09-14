@@ -452,12 +452,10 @@ void dispatch_message(ui_event_t *msg) {
         move_window(g_ui_runtime.dragging,
                     SCALE_POINT(px) - drag_anchor[0],
                     SCALE_POINT(py) - drag_anchor[1]);
-        repost_messages();
       } else if (g_ui_runtime.resizing) {
         int new_w = SCALE_POINT(px) - resize_anchor[0] - g_ui_runtime.resizing->frame.x;
         int new_h = SCALE_POINT(py) - resize_anchor[1] - g_ui_runtime.resizing->frame.y;
         resize_window(g_ui_runtime.resizing, new_w, new_h);
-        repost_messages();
       } else if (((win = g_ui_runtime.captured) ||
                   (win = find_window(SCALE_POINT(px), SCALE_POINT(py)))))
       {

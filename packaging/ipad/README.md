@@ -10,13 +10,16 @@ make ipad IPAD_APP=imageeditor         # one device bundle
 make ipad-simulator IPAD_APP=penciltest
 make ipad-run IPAD_APP=penciltest       # build, install, launch in Simulator
 make list-devices
-make ipad-deploy IPAD_APP=imageeditor DEVICE="iPad name or identifier"
-make ipad-deploy IPAD_APP=penciltest DEVICE="iPad name or identifier"
+make ipad-deploy IPAD_APP=imageeditor         # auto-select the only connected iPad
+make ipad-deploy IPAD_APP=penciltest          # auto-select the only connected iPad
+make ipad-deploy IPAD_APP=penciltest DEVICE="iPad name or identifier"  # explicit device
 make ipad-mac IPAD_APP=penciltest       # signed iPad build on Apple silicon Mac
 ```
 
-`IPAD_APP` defaults to `imageeditor`. `DEVICE` also selects a simulator by name
-or UDID. Device installation uses an installed development certificate and a
+`IPAD_APP` defaults to `imageeditor`. If `DEVICE` is omitted for deployment,
+the Makefile auto-selects the sole connected iPad and fails if there are zero
+or multiple iPads. `DEVICE` may also select a device or simulator by name or
+UDID. Device installation uses an installed development certificate and a
 matching provisioning profile; optionally supply `TEAM=...`, `PROFILE=...`,
 and `BUNDLE_ID=...`. Defaults are `com.orion.imageeditor` and
 `com.orion.penciltest`, so the apps coexist and have independent Documents and
@@ -37,6 +40,10 @@ artwork's pixel dimensions. One finger or Apple Pencil draws; Pencil movement
 includes coalesced samples. Two-finger dragging scrolls through the existing
 framework routing. Hardware shortcuts use Orion accelerators. Text controls
 request the software keyboard.
+
+Each display callback drains queued input, including wakeup sentinels, before
+painting once. Window dragging and resizing defer painting to that frame;
+all coalesced touch samples remain available for drawing strokes.
 
 Open uses the system document picker to import files. Save uses Orion's file
 picker, starting in the app's writable Documents directory. Documents are

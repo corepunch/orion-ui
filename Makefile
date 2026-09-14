@@ -347,7 +347,7 @@ help:
 	@echo "tools     - Build command-line tools"
 	@echo "test      - Build and run tests"
 	@echo "ipad-all  - Build separate Image Editor and Pencil Test iPad bundles"
-	@echo "ipad / ipad-simulator / ipad-run / ipad-deploy / ipad-mac - IPAD_APP=imageeditor|penciltest"
+	@echo "ipad / ipad-simulator / ipad-run / ipad-deploy / ipad-mac - IPAD_APP=imageeditor|penciltest (ipad-deploy auto-selects one connected iPad)"
 	@echo "list-devices - List paired devices (see packaging/ipad/README.md)"
 	@echo "ALLOW_HIGHDPI=0 - Disable high-DPI surfaces (use with -B)"
 	@echo "clean     - Remove all build artifacts"

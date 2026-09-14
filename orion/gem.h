@@ -308,7 +308,8 @@ gem_rc_query(const char *req, char *resp, int resplen)
   static void gem_ios_frame(void) { \
     if (!ui_is_running()) return; \
     ui_event_t e; \
-    while (get_message(&e)) \
+    /* Drain through wakeup sentinels; UIKit already schedules this frame. */ \
+    while (axPeekMessage(&e)) \
       if (!translate_accelerator((menubar_), &e, (accel_))) dispatch_message(&e); \
     repost_messages(); \
   } \

@@ -79,10 +79,19 @@ run: app
 	python3 tools/ipad/run_simulator.py "$(BUNDLE)" $(if $(DEVICE),--device "$(DEVICE)")
 deploy: app
 	@test "$(SDK)" = iphoneos -a "$(ARCH)" = arm64 || { echo 'Deploy requires SDK=iphoneos ARCH=arm64'; exit 1; }
-	@test -n "$(DEVICE)" || { echo 'Set DEVICE="iPad name or UDID"; use make list-devices'; exit 1; }
-	python3 tools/ipad/sign.py "$(BUNDLE)" $(if $(TEAM),--team "$(TEAM)") $(if $(PROFILE),--profile "$(PROFILE)")
-	xcrun devicectl device install app --device "$(DEVICE)" "$(BUNDLE)"
-	xcrun devicectl device process launch --device "$(DEVICE)" --terminate-existing "$(BUNDLE_ID)"
+	@device="$(DEVICE)"; \
+	if [ -z "$$device" ]; then \
+		device="$$(xcrun devicectl list devices | awk '/iPad/ { for (i = 1; i <= NF; i++) if ($$i ~ /^[[:xdigit:]]{8}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{12}$$/) print $$i }')"; \
+		count="$$(printf '%s\n' "$$device" | sed '/^$$/d' | wc -l | tr -d ' ')"; \
+		if [ "$$count" -ne 1 ]; then \
+			echo "Expected exactly one connected iPad; found $$count. Use make list-devices and set DEVICE=..." >&2; \
+			exit 1; \
+		fi; \
+		echo "Auto-selected iPad $$device"; \
+	fi; \
+	python3 tools/ipad/sign.py "$(BUNDLE)" $(if $(TEAM),--team "$(TEAM)") $(if $(PROFILE),--profile "$(PROFILE)"); \
+	xcrun devicectl device install app --device "$$device" "$(BUNDLE)"; \
+	xcrun devicectl device process launch --device "$$device" --terminate-existing "$(BUNDLE_ID)"
 mac: app
 	@test "$(SDK)" = iphoneos -a "$(ARCH)" = arm64 || { echo 'Mac launch requires SDK=iphoneos ARCH=arm64'; exit 1; }
 	python3 tools/ipad/sign.py "$(BUNDLE)" $(if $(TEAM),--team "$(TEAM)") $(if $(PROFILE),--profile "$(PROFILE)")

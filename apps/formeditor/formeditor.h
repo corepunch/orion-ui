@@ -42,7 +42,7 @@ static inline bool fe_default_auto_layout_enabled(void) {
 }
 
 // Tool palettes.
-#define FE_TOOLBAR_BTN_SIZE 30   // tool toolbar button size (icon 24px + 6px padding)
+#define FE_TOOLBAR_BTN_SIZE TB_SPACING
 #define FE_COMPONENTS_GRID_COLS 4   // palette wraps after four items per row
 #define FE_COMPONENTS_BTN_SIZE 56   // large-icon grid cell width/height
 #define FE_COMPONENTS_MIN_ROWS 5    // default palette height shows a little over 4.5 icons

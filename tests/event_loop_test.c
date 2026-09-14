@@ -488,6 +488,59 @@ void test_keyboard_state_tracks_press_release_and_focus_loss(void) {
   PASS();
 }
 
+static void test_window_motion_batches_paint(bool resizing) {
+  TEST(resizing ? "resize: input batch paints once" : "drag: input batch paints once");
+  test_env_init();
+  window_t *win = test_env_create_window("motion", 0, 0, 100, 100, proc_a, NULL);
+  ASSERT_NOT_NULL(win);
+  repost_messages();
+  count_proc_a = 0;
+  if (resizing) g_ui_runtime.resizing = win;
+  else          g_ui_runtime.dragging = win;
+
+  for (int i = 0; i < 8; i++) {
+    ui_event_t evt = { .message = kEventLeftButtonDragged,
+      .x = (120 + i * 10) * UI_WINDOW_SCALE,
+      .y = (130 + i * 10) * UI_WINDOW_SCALE };
+    dispatch_message(&evt);
+  }
+  ASSERT_EQUAL(count_proc_a, 0);
+  if (resizing) {
+    ASSERT_EQUAL(win->frame.w, 190);
+    ASSERT_EQUAL(win->frame.h, 200);
+  } else {
+    ASSERT_EQUAL(win->frame.x, 190);
+    ASSERT_EQUAL(win->frame.y, 200);
+  }
+  repost_messages();
+  ASSERT_EQUAL(count_proc_a, 1);
+  test_env_shutdown();
+  PASS();
+}
+
+static int motion_sample_count;
+static result_t motion_sample_proc(window_t *win, uint32_t msg, uint32_t wp, void *lp) {
+  if (msg == evMouseMove) motion_sample_count++;
+  return true;
+}
+
+static void test_captured_motion_preserves_samples(void) {
+  TEST("captured input: every drawing sample is delivered");
+  test_env_init();
+  window_t *win = test_env_create_window("stroke", 0, 0, 100, 100, motion_sample_proc, NULL);
+  ASSERT_NOT_NULL(win);
+  g_ui_runtime.captured = win;
+  motion_sample_count = 0;
+  for (int i = 0; i < 8; i++) {
+    ui_event_t evt = { .message = kEventLeftButtonDragged,
+      .x = (20 + i) * UI_WINDOW_SCALE, .y = 50 * UI_WINDOW_SCALE };
+    dispatch_message(&evt);
+  }
+  ASSERT_EQUAL(motion_sample_count, 8);
+  test_env_shutdown();
+  PASS();
+}
+
 // =============================================================================
 // main
 // =============================================================================
@@ -520,6 +573,9 @@ int main(int argc, char *argv[]) {
   test_drag_drop_no_handler();
   test_letter_keys_are_normalized();
   test_keyboard_state_tracks_press_release_and_focus_loss();
+  test_window_motion_batches_paint(false);
+  test_window_motion_batches_paint(true);
+  test_captured_motion_preserves_samples();
 
   TEST_END();
 }
