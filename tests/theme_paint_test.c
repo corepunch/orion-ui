@@ -101,8 +101,15 @@ static void test_flat_tool_items(void) {
     memset(pixels, 0, sizeof(pixels));
     theme->draw_part(THEME_PART_TOOLBAR_BUTTON, R(10, 10, 30, 30), states[i]);
     ASSERT_EQUAL(pixels[10][10], 0);
-    ASSERT_EQUAL(pixels[25][10], 0);
+    ASSERT_EQUAL(pixels[25][9], 0);
+    ASSERT_EQUAL(pixels[25][40], 0);
+    ASSERT_EQUAL(pixels[9][25], 0);
+    ASSERT_EQUAL(pixels[40][25], 0);
     ASSERT_EQUAL(pixels[39][39], 0);
+    ASSERT_EQUAL(pixels[25][10], pixels[25][25]);
+    ASSERT_EQUAL(pixels[25][39], pixels[25][25]);
+    ASSERT_EQUAL(pixels[10][25], pixels[25][25]);
+    ASSERT_EQUAL(pixels[39][25], pixels[25][25]);
     if (i == 0) { ASSERT_EQUAL(pixels[25][25], 0); }
     else { ASSERT_NOT_EQUAL(pixels[25][25], 0); }
     if (i == 2) {

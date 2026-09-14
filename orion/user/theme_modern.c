@@ -70,7 +70,7 @@ static void modern_draw_toolbar_item_bg(irect16_t r, ctrl_state_t state,
     return;  // normal: no permanent background
   }
   if (part == THEME_PART_LIST_ITEM) fill_rect(color, r);
-  else fill_rounded_rect(color, rect_inset(r, 2), RADIUS_TOOLBAR_ITEM);
+  else fill_rounded_rect(color, r, RADIUS_TOOLBAR_ITEM);
 }
 
 // ── Panel ─────────────────────────────────────────────────────────────────────
