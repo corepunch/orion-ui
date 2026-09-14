@@ -26,6 +26,16 @@ static irect16_t g_scissor_rect = {0};
 // screen-space to FBO-local coordinates automatically.
 static window_t *g_fbo_root = NULL;
 
+// OpenGL's framebuffer origin is bottom-left. Keep that backend detail here;
+// every public drawing/scissor API uses logical top-left coordinates.
+static irect16_t fbo_rect(window_t const *root, irect16_t r) {
+  int scale = (int)axGetScaling();
+  if (scale < 1) scale = 1;
+  return R(r.x * scale,
+           root->surface_h - (r.y + r.h) * scale,
+           r.w * scale, r.h * scale);
+}
+
 static void set_scissor_cached(irect16_t const *r) {
   if (!r) return;
   glEnable(GL_SCISSOR_TEST);
@@ -85,6 +95,15 @@ int titlebar_height(window_t const *win) {
   return t;
 }
 
+static ipoint16_t window_origin_in_root(window_t const *win) {
+  ipoint16_t p = {0, 0};
+  for (window_t const *w = win; w && w->parent; w = w->parent) {
+    p.x += w->frame.x;
+    p.y += w->frame.y + titlebar_height(w->parent);
+  }
+  return p;
+}
+
 // Get statusbar height
 int statusbar_height(window_t const *win) {
   int s = 0;
@@ -135,7 +154,7 @@ void draw_button(irect16_t r, int dx, int dy, bool pressed) {
 
 // Draw window panel
 void draw_panel(window_t const *win) {
-  irect16_t r = win->frame;
+  irect16_t r = R(0, 0, win->frame.w, win->frame.h);
   draw_bevel(r);
   if (!(win->flags & WINDOW_NORESIZE)) {
     int sb = SCROLLBAR_WIDTH;
@@ -157,7 +176,7 @@ void draw_theme_icon_in_rect(int id, irect16_t r, uint32_t col) {
 
 // Draw window controls (close, minimize, etc.)
 void draw_window_controls(window_t *win) {
-  irect16_t r = win->frame;
+  irect16_t r = R(0, 0, win->frame.w, win->frame.h);
   fill_rect(get_sys_color(window_has_focus(win) ? brActiveTitlebar : brInactiveTitlebar),
             rect_split_top(r, titlebar_height(win)));
   set_fullscreen();
@@ -172,7 +191,7 @@ void draw_window_controls(window_t *win) {
 void draw_statusbar(window_t *win, const char *text) {
   if (!(win->flags&WINDOW_STATUSBAR)) return;
 
-  irect16_t r = win->frame;
+  irect16_t r = R(0, 0, win->frame.w, win->frame.h);
   int s = statusbar_height(win);
   irect16_t row = rect_split_bottom(r, s);  // the statusbar row at the bottom of the frame
 
@@ -197,17 +216,11 @@ void draw_statusbar(window_t *win, const char *text) {
 void set_viewport(irect16_t frame) {
   if (!g_ui_runtime.running) return;
   if (g_fbo_root) {
-    // Translate screen-space rect → FBO-local physical pixels.
-    int scale = (int)axGetScaling();
-    if (scale < 1) scale = 1;
-    int lx = (frame.x - g_fbo_root->frame.x) * scale;
-    int ly = (frame.y - g_fbo_root->frame.y) * scale;
-    int lw = frame.w * scale;
-    int lh = frame.h * scale;
-    // GL viewport has y=0 at bottom; FBO has y=0 at top → flip.
-    glViewport(lx, g_fbo_root->surface_h - ly - lh, lw, lh);
+    // FBO callers use root-local, top-left coordinates.
+    irect16_t r = fbo_rect(g_fbo_root, frame);
+    glViewport(r.x, r.y, r.w, r.h);
     glEnable(GL_SCISSOR_TEST);
-    glScissor(lx, g_fbo_root->surface_h - ly - lh, lw, lh);
+    glScissor(r.x, r.y, r.w, r.h);
     g_scissor_valid = false;
     return;
   }
@@ -220,20 +233,18 @@ void set_viewport(irect16_t frame) {
 void set_clip_rect(window_t const *win, irect16_t r) {
   if (!g_ui_runtime.running) return;
   if (g_fbo_root) {
-    int scale = (int)axGetScaling();
-    if (scale < 1) scale = 1;
-    int base_x = win ? win->frame.x : 0;
-    int base_y = win ? win->frame.y : 0;
-    int lx = (r.x + base_x - g_fbo_root->frame.x) * scale;
-    int ly = (r.y + base_y - g_fbo_root->frame.y) * scale;
-    int lw = r.w * scale;
-    int lh = r.h * scale;
+    ipoint16_t origin = win ? window_origin_in_root(win) : (ipoint16_t){0, 0};
+    irect16_t local = rect_offset(r, origin.x, origin.y);
+    irect16_t clip = fbo_rect(g_fbo_root, local);
     glEnable(GL_SCISSOR_TEST);
-    glScissor(lx, g_fbo_root->surface_h - ly - lh, lw, lh);
+    glScissor(clip.x, clip.y, clip.w, clip.h);
     g_scissor_valid = false;
     return;
   }
-  irect16_t ogl_rect = get_opengl_rect(win ? rect_offset(r, win->frame.x, win->frame.y) : r);
+  irect16_t absolute = win
+                     ? rect_offset(r, window_screen_x(win), window_screen_y(win))
+                     : r;
+  irect16_t ogl_rect = get_opengl_rect(absolute);
   set_scissor_cached(&ogl_rect);
 }
 
@@ -254,19 +265,15 @@ void set_viewport_for_fbo(window_t *root) {
   if (scale < 1) scale = 1;
   int log_w = w / scale;
   int log_h = h / scale;
-  // Projection maps screen-space coords to the FBO.  Drawing uses
-  // win->frame.x/y (screen positions), so the ortho origin must be the
-  // root window's screen position.  Y is flipped: screen y=root.frame.y
-  // → FBO top (clip y=+1), screen y=root.frame.y+log_h → FBO bottom.
-  set_projection(root->frame.x, log_h + root->frame.y,
-                 log_w + root->frame.x, root->frame.y);
+  set_projection(0, 0, log_w, log_h);
 }
 
-// Set scissor rect in FBO pixel coordinates (Y already flipped).
-void set_scissor_fbo(irect16_t r) {
-  if (!g_ui_runtime.running) return;
+// Set an FBO scissor using root-local, top-left logical coordinates.
+void set_scissor_fbo(window_t const *root, irect16_t r) {
+  if (!g_ui_runtime.running || !root) return;
+  irect16_t clip = fbo_rect(root, r);
   glEnable(GL_SCISSOR_TEST);
-  glScissor(r.x, r.y, r.w, r.h);
+  glScissor(clip.x, clip.y, clip.w, clip.h);
 }
 
 // ── Stencil no-ops (kept for API compat, superseded by FBO compositing) ───

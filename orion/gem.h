@@ -158,7 +158,7 @@ extern hinstance_t g_gem_hinstance;
 // list_windows, get_rect, get_ctrl_rect, get_text, get_value, and
 // click_ctrl commands by reading the live window tree.
 // ---------------------------------------------------------------------------
-static void
+static inline void
 gem_rc_query(const char *req, char *resp, int resplen)
 {
   /* list_windows */

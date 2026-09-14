@@ -58,6 +58,7 @@ accel_table_t *scener_active_accelerators(void) {
   return g_app->viewport_navigating ? g_app->navigation_accel : g_app->accel;
 }
 
+#ifndef BUILD_AS_GEM
 static void cli_usage(void) {
 	puts("scener [SCENE] [--cam NAME]\n"
 	     "scener --render SCENE [--camera NAME] [--size WIDTHxHEIGHT] [--format jpg|png] [--output-dir DIR]\n"
@@ -67,6 +68,7 @@ static void cli_usage(void) {
 	     "Options: --supersample 1..4 (default 2), -no-shadows, -wireframe, -d FLAGS, --help, --version\n"
 	     "Scenes default to Y up; <scene up=\"z\"> selects Z-up views without changing primitive axes.");
 }
+#endif
 
 static void cli_parse(int argc, char *argv[]) {
 	memset(&g_cli,0,sizeof(g_cli));

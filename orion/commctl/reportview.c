@@ -188,9 +188,6 @@ static void report_paint(window_t *win, reportview_data_t *data) {
     fill_rect(get_sys_color(brTextNormal), R(0, y, eff_w, entry_h - 1));
   }
 
-  int scr_x = window_screen_x(win);
-  int scr_y = window_screen_y(win);
-
   int col_x = 0;
   uint32_t draw_columns = data->cell_style == REPORTVIEW_CELL_TWO_LINE ? 1 : data->column_count;
   for (uint32_t col = 0; col < draw_columns; col++) {
@@ -205,7 +202,7 @@ static void report_paint(window_t *win, reportview_data_t *data) {
       continue;
     }
     if (header_h > 0) {
-      set_clip_rect(NULL, (irect16_t){scr_x + clip_x, scr_y, clip_w, header_h});
+      set_clip_rect(win, (irect16_t){clip_x, 0, clip_w, header_h});
       draw_button((irect16_t){draw_x, 0, col_w, header_h}, 1, 1, false);
       draw_text_small_clipped(data->columns[col].title,
                               &(irect16_t){draw_x, 0, col_w, header_h},
@@ -213,7 +210,7 @@ static void report_paint(window_t *win, reportview_data_t *data) {
     }
 
     int body_h_local = cr.h - header_h;
-    set_clip_rect(NULL, (irect16_t){scr_x + clip_x, scr_y + header_h, clip_w, body_h_local});
+    set_clip_rect(win, (irect16_t){clip_x, header_h, clip_w, body_h_local});
     for (int row = first_row; row < last_row; row++) {
       reportview_item_t *it = &data->items[row];
       uint32_t fg = (row == data->selected) ? get_sys_color(brControlBg)
@@ -260,7 +257,7 @@ static void report_paint(window_t *win, reportview_data_t *data) {
     col_x += col_w;
   }
 
-  set_clip_rect(NULL, (irect16_t){scr_x, scr_y, eff_w, cr.h});
+  set_clip_rect(win, (irect16_t){0, 0, eff_w, cr.h});
   col_x = 0;
   for (uint32_t col = 0; col < data->column_count; col++) {
       int col_w = data->cell_style == REPORTVIEW_CELL_TWO_LINE

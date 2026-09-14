@@ -57,4 +57,7 @@ typedef enum {
 // the label text.
 #define CHECKBOX_GAP         6
 
+// Window cornder radius for rounded-corner masking of the FBO texture during compositing.
+#define WINDOW_CORNER_RADIUS 8
+
 #endif /* __UI_THEME_H__ */

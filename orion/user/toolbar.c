@@ -322,10 +322,13 @@ void toolbar_draw_non_client(window_t *win) {
   if (!win || !(win->flags & WINDOW_TOOLBAR)) return;
 
   toolbar_state_t *tb = toolbar_ensure_state(win);
+  window_t *root = get_root_window(win);
   int bsz = toolbar_effective_item_height(win);
   int title_h = (win->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
   int total_h = bsz + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH);
-  irect16_t tb_rect = {win->frame.x, win->frame.y + title_h, win->frame.w, total_h};
+  int root_x = window_screen_x(win) - root->frame.x;
+  int root_y = window_screen_y(win) - root->frame.y;
+  irect16_t tb_rect = {root_x, root_y + title_h, win->frame.w, total_h};
   irect16_t rect = rect_inset(tb_rect, TOOLBAR_BEVEL_WIDTH);
 
   draw_bevel(rect);

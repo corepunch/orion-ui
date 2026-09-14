@@ -48,7 +48,7 @@ void set_viewport(irect16_t frame);
 void set_projection(int x, int y, int w, int h);
 void set_clip_rect(window_t const *, irect16_t r);
 void set_viewport_for_fbo(window_t *root);
-void set_scissor_fbo(irect16_t r);
+void set_scissor_fbo(window_t const *root, irect16_t r);
 
 // Stencil management (internal use)
 void ui_set_stencil_for_window(uint32_t window_id);
