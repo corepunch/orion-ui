@@ -89,16 +89,6 @@ static bool report_hit_checkbox(window_t *win, reportview_data_t *data,
   return true;
 }
 
-static void report_draw_checkbox(irect16_t box, bool checked, uint32_t fg,
-                                 uint32_t bg) {
-  fill_rect(bg, box);
-  fill_rect(fg, R(box.x,             box.y,             box.w, 1));
-  fill_rect(fg, R(box.x,             box.y + box.h - 1, box.w, 1));
-  fill_rect(fg, R(box.x,             box.y,             1, box.h));
-  fill_rect(fg, R(box.x + box.w - 1, box.y,             1, box.h));
-  if (checked) draw_theme_icon_in_rect(THEME_ICON_CHECKMARK, box, fg);
-}
-
 static bool report_set_item_state(window_t *win, reportview_data_t *data,
                                   int index, uint32_t state, uint32_t mask,
                                   bool notify) {
@@ -228,8 +218,9 @@ static void report_paint(window_t *win, reportview_data_t *data) {
         irect16_t box = {text_x,
                          y + MAX(0, (entry_h - CHECKBOX_BOX_SIZE) / 2),
                          CHECKBOX_BOX_SIZE, CHECKBOX_BOX_SIZE};
-        uint32_t box_bg = row == data->selected ? get_sys_color(brTextNormal) : bg_col;
-        report_draw_checkbox(box, RV_STATEIMAGEINDEX(it->state) == 2, fg, box_bg);
+        bool cb_checked = RV_STATEIMAGEINDEX(it->state) == 2;
+        ctrl_state_t cb_state = (row == data->selected) ? CTRL_SELECTED : CTRL_NORMAL;
+        get_theme()->draw_checkbox_box(box, cb_checked, cb_state);
         text_x += CHECKBOX_BOX_SIZE + CHECKBOX_GAP;
       }
       int text_w = MAX(0, draw_x + col_w - text_x);

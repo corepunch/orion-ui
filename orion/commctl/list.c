@@ -6,6 +6,7 @@
 #include <orion/user/messages.h>
 #include <orion/user/draw.h>
 #include <orion/user/rect.h>
+#include <orion/user/theme.h>
 #include "commctl.h"
 
 #define LIST_HEIGHT     (FONT_SIZE_SMALL + 5)
@@ -72,7 +73,7 @@ result_t win_list(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       for (uint32_t i = 0; i < cb->cursor_pos; i++) {
         irect16_t item = { 0, (int)(i * LIST_HEIGHT), item_w, LIST_HEIGHT };
         if (i == win->cursor_pos) {
-          fill_rect(get_sys_color(brTextNormal), R(item.x, item.y, item.w, item.h));
+          get_theme()->draw_list_item_bg(item, CTRL_SELECTED);
           draw_text_clipped(FONT_SMALL, texts[i], &item, get_sys_color(brControlBg), TEXT_PADDING_LEFT);
         } else {
           draw_text_clipped(FONT_SMALL, texts[i], &item, get_sys_color(brTextNormal), TEXT_PADDING_LEFT);

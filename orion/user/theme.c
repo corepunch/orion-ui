@@ -66,6 +66,10 @@ static bool theme_validate(theme_t *t) {
   REQUIRE(draw_titlebar_bg)
   REQUIRE(draw_statusbar_bg)
   REQUIRE(draw_checkbox_box)
+  REQUIRE(draw_combobox_bg)
+  REQUIRE(draw_list_item_bg)
+  REQUIRE(draw_slider_thumb)
+  REQUIRE(draw_menu_item_bg)
   REQUIRE(apply_palette)
 #undef REQUIRE
   return true;

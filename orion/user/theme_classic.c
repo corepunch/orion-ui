@@ -78,17 +78,60 @@ static void classic_draw_statusbar_bg(irect16_t r) {
 
 static void classic_draw_checkbox_box(irect16_t r, bool checked, ctrl_state_t state) {
   bool focused = (state & CTRL_FOCUSED) != 0;
+  bool pressed = (state & CTRL_PRESSED) != 0;
 
-  fill_rect(get_sys_color(brDarkEdge),  r);
-  fill_rect(get_sys_color(brLightEdge), R(r.x, r.y, r.w-1, r.h-1));
-  fill_rect(get_sys_color(brDarkEdge),  R(r.x+1, r.y+1, r.w-2, r.h-2));
-  fill_rect(get_sys_color(brWindowDarkBg), R(r.x+1, r.y+1, r.w-3, r.h-3));
-
-  if (focused)
-    draw_focused(rect_inset(r, -CHECKBOX_FOCUS_PAD));
-  if (checked) {
-    draw_theme_icon_in_rect(THEME_ICON_CHECKMARK, r, get_sys_color(brTextNormal));
+  // Focus background: solid accent fill when focused, nothing when unfocused
+  // (the surrounding panel or row background shows through).
+  if (focused) {
+    irect16_t focus_bg = rect_inset(r, -CHECKBOX_FOCUS_PAD);
+    fill_rect(get_sys_color(brAccent), focus_bg);
   }
+
+  // Box bevel — identical to classic button bevel so checkboxes track button style.
+  if (pressed) {
+    fill_rect(get_sys_color(brDarkEdge),     r);
+    fill_rect(get_sys_color(brLightEdge),    R(r.x+1, r.y+1, r.w-1, r.h-1));
+    fill_rect(get_sys_color(brDarkEdge),     R(r.x+1, r.y+1, r.w-2, r.h-2));
+    fill_rect(get_sys_color(brWindowDarkBg), R(r.x+2, r.y+2, r.w-3, r.h-3));
+    fill_rect(get_sys_color(brFlare),        R(r.x+r.w-1, r.y+r.h-1, 1, 1));
+  } else {
+    fill_rect(get_sys_color(brDarkEdge),     r);
+    fill_rect(get_sys_color(brLightEdge),    R(r.x, r.y, r.w-1, r.h-1));
+    fill_rect(get_sys_color(brDarkEdge),     R(r.x+1, r.y+1, r.w-2, r.h-2));
+    fill_rect(get_sys_color(brControlBg),    R(r.x+1, r.y+1, r.w-3, r.h-3));
+    fill_rect(get_sys_color(brFlare),        R(r.x, r.y, 1, 1));
+  }
+
+  if (checked)
+    draw_theme_icon_in_rect(THEME_ICON_CHECKMARK, r, get_sys_color(brTextNormal));
+}
+
+// ── Combobox ─────────────────────────────────────────────────────────────────
+
+// Combobox uses the same bevel as a button — identical to current direct-draw output.
+static void classic_draw_combobox_bg(irect16_t r, ctrl_state_t state) {
+  classic_draw_button_bg(r, state);
+}
+
+// ── List item ────────────────────────────────────────────────────────────────
+
+static void classic_draw_list_item_bg(irect16_t r, ctrl_state_t state) {
+  if (state & CTRL_SELECTED)
+    fill_rect(get_sys_color(brTextNormal), r);
+}
+
+// ── Slider thumb ─────────────────────────────────────────────────────────────
+
+static void classic_draw_slider_thumb(irect16_t r, bool active) {
+  fill_rect(active ? get_sys_color(brAccent) : get_sys_color(brDarkEdge), r);
+  fill_rect(get_sys_color(brTextNormal), R(r.x+1, r.y+1, r.w-2, r.h-2));
+}
+
+// ── Menu item background ─────────────────────────────────────────────────────
+
+static void classic_draw_menu_item_bg(irect16_t r, ctrl_state_t state) {
+  if (state & (CTRL_HOVER | CTRL_SELECTED | CTRL_PRESSED))
+    fill_rect(get_sys_color(brAccent), r);
 }
 
 // ── Palette ───────────────────────────────────────────────────────────────────
@@ -124,22 +167,26 @@ static void classic_apply_palette(void) {
 // ── Singleton ────────────────────────────────────────────────────────────────
 
 static theme_t g_classic_theme = {
-  .style                 = THEME_CLASSIC,
-  .name                  = "Classic",
-  .draw_bevel            = classic_draw_bevel,
-  .draw_button_bg        = classic_draw_button_bg,
-  .draw_toolbar_item_bg  = classic_draw_toolbar_item_bg,
-  .draw_toolbar_separator= classic_draw_toolbar_separator,
-  .draw_panel_bg         = classic_draw_panel_bg,
-  .draw_titlebar_bg      = classic_draw_titlebar_bg,
-  .draw_statusbar_bg     = classic_draw_statusbar_bg,
-  .draw_checkbox_box     = classic_draw_checkbox_box,
-  .scrollbar_width       = SCROLLBAR_WIDTH,
-  .scrollbar_overlay     = false,
-  .press_icon_offset     = 1,
-  .button_corner_radius  = 0,
-  .control_padding       = BUTTON_PADDING,
-  .apply_palette         = classic_apply_palette,
+  .style                  = THEME_CLASSIC,
+  .name                   = "Classic",
+  .draw_bevel             = classic_draw_bevel,
+  .draw_button_bg         = classic_draw_button_bg,
+  .draw_toolbar_item_bg   = classic_draw_toolbar_item_bg,
+  .draw_toolbar_separator = classic_draw_toolbar_separator,
+  .draw_panel_bg          = classic_draw_panel_bg,
+  .draw_titlebar_bg       = classic_draw_titlebar_bg,
+  .draw_statusbar_bg      = classic_draw_statusbar_bg,
+  .draw_checkbox_box      = classic_draw_checkbox_box,
+  .draw_combobox_bg       = classic_draw_combobox_bg,
+  .draw_list_item_bg      = classic_draw_list_item_bg,
+  .draw_slider_thumb      = classic_draw_slider_thumb,
+  .draw_menu_item_bg      = classic_draw_menu_item_bg,
+  .scrollbar_width        = SCROLLBAR_WIDTH,
+  .scrollbar_overlay      = false,
+  .press_icon_offset      = 1,
+  .button_corner_radius   = 0,
+  .control_padding        = BUTTON_PADDING,
+  .apply_palette          = classic_apply_palette,
 };
 
 theme_t *theme_classic_instance(void) { return &g_classic_theme; }

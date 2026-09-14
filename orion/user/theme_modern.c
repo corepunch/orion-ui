@@ -136,15 +136,45 @@ static void modern_draw_statusbar_bg(irect16_t r) {
 // ── Checkbox ─────────────────────────────────────────────────────────────────
 
 static void modern_draw_checkbox_box(irect16_t r, bool checked, ctrl_state_t state) {
+  // Focus background: solid accent fill, only when keyboard-focused.
+  if (state & CTRL_FOCUSED) {
+    irect16_t focus_bg = rect_inset(r, -CHECKBOX_FOCUS_PAD);
+    fill_rect(get_sys_color(brAccent), focus_bg);
+  }
+
   uint32_t bg = (state & CTRL_HOVER) ? get_sys_color(brButtonHover)
                                       : get_sys_color(brWindowDarkBg);
   fill_rounded_rect(bg, r, 3);
 
-  if (state & CTRL_FOCUSED)
-    draw_focused(rect_inset(r, -CHECKBOX_FOCUS_PAD));
-
   if (checked)
     draw_theme_icon_in_rect(THEME_ICON_CHECKMARK, r, get_sys_color(brAccent));
+}
+
+// ── Combobox ─────────────────────────────────────────────────────────────────
+
+static void modern_draw_combobox_bg(irect16_t r, ctrl_state_t state) {
+  modern_draw_button_bg(r, state);
+}
+
+// ── List item ────────────────────────────────────────────────────────────────
+
+static void modern_draw_list_item_bg(irect16_t r, ctrl_state_t state) {
+  if (state & CTRL_SELECTED)
+    fill_rect(get_sys_color(brTextNormal), r);
+}
+
+// ── Slider thumb ─────────────────────────────────────────────────────────────
+
+static void modern_draw_slider_thumb(irect16_t r, bool active) {
+  fill_rect(active ? get_sys_color(brAccent) : get_sys_color(brDarkEdge), r);
+  fill_rect(get_sys_color(brTextNormal), R(r.x+1, r.y+1, r.w-2, r.h-2));
+}
+
+// ── Menu item background ─────────────────────────────────────────────────────
+
+static void modern_draw_menu_item_bg(irect16_t r, ctrl_state_t state) {
+  if (state & (CTRL_HOVER | CTRL_SELECTED | CTRL_PRESSED))
+    fill_rect(get_sys_color(brAccent), r);
 }
 
 // ── Palette ───────────────────────────────────────────────────────────────────
@@ -190,6 +220,10 @@ static theme_t g_modern_theme = {
   .draw_titlebar_bg       = modern_draw_titlebar_bg,
   .draw_statusbar_bg      = modern_draw_statusbar_bg,
   .draw_checkbox_box      = modern_draw_checkbox_box,
+  .draw_combobox_bg       = modern_draw_combobox_bg,
+  .draw_list_item_bg      = modern_draw_list_item_bg,
+  .draw_slider_thumb      = modern_draw_slider_thumb,
+  .draw_menu_item_bg      = modern_draw_menu_item_bg,
   .scrollbar_width        = 0,
   .scrollbar_overlay      = true,
   .press_icon_offset      = 0,

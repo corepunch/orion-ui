@@ -114,6 +114,10 @@ typedef struct {
   void (*draw_titlebar_bg)(irect16_t r, bool focused);
   void (*draw_statusbar_bg)(irect16_t r);
   void (*draw_checkbox_box)(irect16_t r, bool checked, ctrl_state_t state);
+  void (*draw_combobox_bg)(irect16_t r, ctrl_state_t state);
+  void (*draw_list_item_bg)(irect16_t r, ctrl_state_t state);
+  void (*draw_slider_thumb)(irect16_t r, bool active);
+  void (*draw_menu_item_bg)(irect16_t r, ctrl_state_t state);
 
   // Scrollbar geometry policy.  scrollbar_overlay=true means Modern overlay
   // thumbs; no reserved gutter is allocated.

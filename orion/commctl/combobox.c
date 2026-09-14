@@ -219,7 +219,8 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         irect16_t text_rect = {2, 0, arrow.x - 4, win->frame.h};
         bool show_pressed = window_has_state(win, WINDOW_STATE_PRESSED) ||
                             ((win->flags & BUTTON_PUSHLIKE) && win->value);
-        draw_button(local, 1, 1, show_pressed);
+        ctrl_state_t state = show_pressed ? CTRL_PRESSED : CTRL_NORMAL;
+        get_theme()->draw_combobox_bg(local, state);
         draw_text_clipped(FONT_SYSTEM, win->title, &text_rect,
                           get_sys_color(brTextNormal), TEXT_PADDING_LEFT);
         draw_theme_icon_in_rect(THEME_ICON_ARROW_UPDOWN, arrow,
