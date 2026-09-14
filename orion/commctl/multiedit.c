@@ -188,13 +188,9 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       if (!s) return true;
       bool focused = (g_ui_runtime.focused == win);
 
-      // Focus ring (matches win_textedit style).
-      fill_rect(focused ? get_sys_color(brAccent)
-                        : get_sys_color(brControlBg),
-                R(-1, -1, win->frame.w + 2, win->frame.h + 2));
-
-      // Inset bevel border.
-      draw_button((irect16_t){0, 0, win->frame.w, win->frame.h}, 1, 1, true);
+      ctrl_state_t state = focused ? CTRL_FOCUSED : CTRL_NORMAL;
+      if (window_has_state(win, WINDOW_STATE_DISABLED)) state |= CTRL_DISABLED;
+      theme_draw(THEME_PART_FIELD, R(0, 0, win->frame.w, win->frame.h), state);
 
       int tw, th;
       me_text_dims(win, &tw, &th);

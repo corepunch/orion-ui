@@ -108,19 +108,12 @@ static void draw_toolbox_button(toolbox_state_t *st, int idx,
 
   bool is_active  = (st->items[idx].ident == st->active_ident);
   bool is_pressed = (idx == st->pressed_idx);
-  bool depressed  = is_pressed || is_active;
+  ctrl_state_t state = CTRL_NORMAL;
+  if (is_active) state |= CTRL_SELECTED;
+  if (is_pressed) state |= CTRL_PRESSED;
+  theme_draw(THEME_PART_TOOLBAR_BUTTON, cell, state);
 
-  if (depressed) {
-    draw_button(cell, 1, 1, true);   // inset / pressed look
-  } else {
-#ifndef TOOLBOX_FLAT
-    // Unpressed tools still draw as raised buttons.
-    draw_button(cell, 1, 1, false);
-#endif
-  }
-
-  // Draw icon centred in the cell (shifted 1px when depressed).
-  int px = depressed ? 1 : 0;
+  int px = is_pressed ? get_theme()->press_icon_offset : 0;
   const char *icon_name = st->items[idx].icon_name;
   if (icon_name) {
     sysicon_resolved_t res;

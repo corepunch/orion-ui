@@ -16,18 +16,38 @@
 
 // Shell-owned command IDs live in a reserved high range so they cannot
 // collide with gem-defined menu IDs, which commonly start at small values.
-#define ID_SHELL_CMD_BASE  0xF000
-#define ID_SHELL_QUIT      (ID_SHELL_CMD_BASE + 1)
+#define ID_SHELL_CMD_BASE           0xF000
+#define ID_SHELL_QUIT               (ID_SHELL_CMD_BASE + 1)
+#define ID_SHELL_APPEARANCE_CLASSIC (ID_SHELL_CMD_BASE + 2)
+#define ID_SHELL_APPEARANCE_MODERN  (ID_SHELL_CMD_BASE + 3)
 
 static const menu_item_t kShellFileItems[] = {
     {"Quit", ID_SHELL_QUIT},
 };
-static const menu_def_t kShellMenus[] = {
-    {"File", kShellFileItems, 1},
+// Mutable so shell_update_appearance_checks() can swap the label pointer to
+// add or remove the "* " active-theme indicator before rebuilding the menubar.
+static menu_item_t kShellAppearanceItems[] = {
+    {"  Classic", ID_SHELL_APPEARANCE_CLASSIC},
+    {"  Modern",  ID_SHELL_APPEARANCE_MODERN},
 };
-#define SHELL_MENU_COUNT 1
+static const menu_def_t kShellMenus[] = {
+    {"File",       kShellFileItems,       1},
+    {"Appearance", kShellAppearanceItems, 2},
+};
+#define SHELL_MENU_COUNT 2
 
 static window_t *g_menubar = NULL;
+
+// Stamp "* " on the active theme's label and "  " on the inactive one so the
+// popup shows which theme is currently in use.  Call before every
+// shell_rebuild_menubar() and after evThemeChanged.
+static void shell_update_appearance_checks(void) {
+    theme_style_t active = get_theme()->style;
+    kShellAppearanceItems[0].label = (active == THEME_CLASSIC) ? "* Classic"
+                                                                : "  Classic";
+    kShellAppearanceItems[1].label = (active == THEME_MODERN)  ? "* Modern"
+                                                                : "  Modern";
+}
 
 static bool shell_default_gem_path(char *path, size_t size, const char *name) {
     int n = snprintf(path, size, "%s/../lib/orion/gems/%s.gem",
@@ -50,12 +70,23 @@ static void shell_rebuild_menubar(void) {
 
 static result_t shell_menubar_proc(window_t *win, uint32_t msg,
                                     uint32_t wparam, void *lparam) {
+    if (msg == evThemeChanged) {
+        // Re-stamp the active-theme indicator and push the updated labels to
+        // the menubar control so the popup reflects the new state immediately.
+        shell_update_appearance_checks();
+        shell_rebuild_menubar();
+        return false;  // let win_menubar repaint itself too
+    }
     if (msg == evCommand) {
         uint16_t notif = HIWORD(wparam);
         if (notif == kMenuBarNotificationItemClick) {
             uint16_t id = LOWORD(wparam);
             if (id == ID_SHELL_QUIT) {
                 ui_request_quit();
+            } else if (id == ID_SHELL_APPEARANCE_CLASSIC) {
+                set_theme(THEME_CLASSIC);
+            } else if (id == ID_SHELL_APPEARANCE_MODERN) {
+                set_theme(THEME_MODERN);
             } else {
                 // Route to whichever gem owns this command.
                 shell_dispatch_gem_command(id);
@@ -91,6 +122,7 @@ int main(int argc, char *argv[]) {
         WINDOW_NOTITLE | WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
         MAKERECT(0, 0, sw, MENUBAR_HEIGHT),
         NULL, shell_menubar_proc, 0, NULL);
+    shell_update_appearance_checks();
     shell_rebuild_menubar();
     show_window(g_menubar, true);
 

@@ -61,7 +61,6 @@ extern void ui_end_frame(void);
 extern void draw_panel(window_t const *win);
 extern void draw_window_controls(window_t *win);
 extern void draw_statusbar(window_t *win, const char *text);
-extern void draw_bevel(irect16_t r);
 extern void draw_button(irect16_t r, int dx, int dy, bool pressed);
 extern void set_fullscreen(void);
 extern window_t *get_root_window(window_t *window);
@@ -206,10 +205,6 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         }
         if (!(win->flags&WINDOW_NOTITLE)) {
           draw_window_controls(win);
-          draw_text_small_clipped(win->title,
-                          &(irect16_t){0, 0, frame->w, TITLEBAR_HEIGHT},
-                          get_sys_color(window_has_focus(win) ? brActiveTitlebarText : brInactiveTitlebarText),
-                          TEXT_PADDING_LEFT);
         }
         toolbar_draw_non_client(win);
         if (win->flags&WINDOW_STATUSBAR) {
@@ -277,6 +272,10 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
        msg == evLeftButtonUp)) {
     if (scrollbar_handle_builtin_mouse(win, msg, wparam, lparam)) return true;
   }
+  // Route timer events to the overlay-scrollbar hide logic.  The timer is NOT
+  // consumed so the window proc can still handle its own timers.
+  if ((win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL)) && msg == evTimer)
+    scrollbar_handle_builtin_timer(win, (uint32_t)wparam);
   if (win->parent && parent_notify_message(msg)) {
     parent_notify_t pn = {
       .child = win,
@@ -449,7 +448,9 @@ void post_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     if (queue.messages[r].target == win &&
         queue.messages[r].msg == msg)
     {
-      if (msg == evHttpProgress) {
+      if (msg == evHttpProgress || msg == evThemeChanged) {
+        // These messages carry a meaningful payload in wparam/lparam that must
+        // reflect the latest value, not the value at the time of the first post.
         free_posted_lparam(msg, queue.messages[r].lparam);
         queue.messages[r].wparam = wparam;
         queue.messages[r].lparam = lparam;

@@ -125,45 +125,20 @@ void draw_focused(irect16_t r) {
   draw_wire_rect(r, 1, get_sys_color(brAccent));
 }
 
-// Draw bevel border
-void draw_bevel(irect16_t r) {
-  fill_rect(get_sys_color(brLightEdge), R(r.x-1, r.y-1, r.w+2, 1));
-  fill_rect(get_sys_color(brLightEdge), R(r.x-1, r.y-1, 1, r.h+2));
-  fill_rect(get_sys_color(brDarkEdge), R(r.x+r.w, r.y, 1, r.h+1));
-  fill_rect(get_sys_color(brDarkEdge), R(r.x, r.y+r.h, r.w+1, 1));
-  fill_rect(get_sys_color(brFlare), R(r.x-1, r.y-1, 1, 1));
-}
-
-// Draw button
+// Draw button background — routed through the active theme.
+// dx/dy were unused press-offset params; kept for ABI compatibility.
 void draw_button(irect16_t r, int dx, int dy, bool pressed) {
   (void)dx; (void)dy;
-  if (pressed) {
-    fill_rect(get_sys_color(brDarkEdge), r);
-    fill_rect(get_sys_color(brLightEdge), R(r.x+1, r.y+1, r.w-1, r.h-1));
-    fill_rect(get_sys_color(brDarkEdge), R(r.x+1, r.y+1, r.w-2, r.h-2));
-    fill_rect(get_sys_color(brWindowDarkBg), R(r.x+2, r.y+2, r.w-3, r.h-3));
-    fill_rect(get_sys_color(brFlare), R(r.x+r.w-1, r.y+r.h-1, 1, 1));
-  } else {
-    fill_rect(get_sys_color(brDarkEdge), r);
-    fill_rect(get_sys_color(brLightEdge), R(r.x, r.y, r.w-1, r.h-1));
-    fill_rect(get_sys_color(brDarkEdge), R(r.x+1, r.y+1, r.w-2, r.h-2));
-    fill_rect(get_sys_color(brControlBg), R(r.x+1, r.y+1, r.w-3, r.h-3));
-    fill_rect(get_sys_color(brFlare), R(r.x, r.y, 1, 1));
-  }
+  ctrl_state_t state = pressed ? CTRL_PRESSED : CTRL_NORMAL;
+  theme_draw(THEME_PART_BUTTON, r, state);
 }
 
-// Draw window panel
+// Draw window panel — border/grip via theme, fill guarded by WINDOW_NOFILL.
 void draw_panel(window_t const *win) {
   irect16_t r = R(0, 0, win->frame.w, win->frame.h);
-  draw_bevel(r);
-  if (!(win->flags & WINDOW_NORESIZE)) {
-    int sb = SCROLLBAR_WIDTH;
-    fill_rect(get_sys_color(brLightEdge), R(r.x+r.w, r.y+r.h-sb+1, 1, sb));
-    fill_rect(get_sys_color(brLightEdge), R(r.x+r.w-sb+1, r.y+r.h, sb, 1));
-  }
-  if (!(win->flags&WINDOW_NOFILL)) {
-    fill_rect(get_sys_color(brControlBg), r);
-  }
+  theme_draw((win->flags & WINDOW_NOFILL) ? THEME_PART_PANEL_BORDER : THEME_PART_PANEL,
+             r, CTRL_NORMAL);
+  if (!(win->flags & WINDOW_NORESIZE)) theme_draw(THEME_PART_RESIZE_GRIP, r, CTRL_NORMAL);
 }
 
 // Draw a theme icon centred inside rect r.
@@ -174,15 +149,12 @@ void draw_theme_icon_in_rect(int id, irect16_t r, uint32_t col) {
                   THEME_ICON_SIZE, col);
 }
 
-// Draw window controls (close, minimize, etc.)
+// Draw window controls (titlebar + close button).
 void draw_window_controls(window_t *win) {
   irect16_t r = R(0, 0, win->frame.w, win->frame.h);
-  fill_rect(get_sys_color(window_has_focus(win) ? brActiveTitlebar : brInactiveTitlebar),
-            rect_split_top(r, titlebar_height(win)));
-  set_fullscreen();
-  draw_theme_icon_in_rect(THEME_ICON_CLOSE,
-                          rect_split_right(rect_split_top(r, TITLEBAR_HEIGHT), TITLEBAR_HEIGHT),
-                          get_sys_color(brTextNormal));
+  get_theme()->draw_window_chrome(rect_split_top(r, titlebar_height(win)),
+                                  rect_split_top(r, TITLEBAR_HEIGHT), win->title,
+                                  window_has_focus(win) ? CTRL_FOCUSED : CTRL_NORMAL);
 }
 
 // Draw status bar
@@ -199,13 +171,7 @@ void draw_statusbar(window_t *win, const char *text) {
   int split_x = has_h ? SB_STATUS_SPLIT_X(r.w) : r.w;
 
   irect16_t text_area = rect_split_left(row, split_x);
-  fill_rect(get_sys_color(brStatusbarBg), text_area);
-  set_fullscreen();
-
-  if (text) {
-    draw_text_clipped(FONT_SMALL, text, &text_area,
-                      get_sys_color(brTextNormal), TEXT_PADDING_LEFT);
-  }
+  get_theme()->draw_statusbar(text_area, text);
 
   if (has_h) {
     scrollbar_draw_statusbar_merged_hscroll(win, row, split_x);

@@ -11,6 +11,7 @@
 #include "user.h"
 #include "messages.h"
 #include "draw.h"
+#include "theme.h"
 #include <orion/kernel/renderer.h>
 #include <orion/commctl/commctl.h>
 
@@ -84,6 +85,9 @@ ui_runtime_state_t g_ui_runtime = {
   .modal_overlay_parent = NULL,
   .default_window_x = 20,
   .default_window_y = 20,
+  .last_mouse_sx = 0,
+  .last_mouse_sy = 0,
+  .tracked_toolbar = NULL,
 };
 
 // Forward declarations
@@ -365,6 +369,7 @@ void destroy_window(window_t *win) {
   if (g_ui_runtime.focused == win) set_focus(NULL);
   if (g_ui_runtime.captured == win) set_capture(NULL);
   if (g_ui_runtime.tracked == win) track_mouse(NULL);
+  if (g_ui_runtime.tracked_toolbar == win) g_ui_runtime.tracked_toolbar = NULL;
   if (g_ui_runtime.dragging == win) g_ui_runtime.dragging = NULL;
   if (g_ui_runtime.resizing == win) g_ui_runtime.resizing = NULL;
   if (g_ui_runtime.toolbar_down_win == win) g_ui_runtime.toolbar_down_win = NULL;
@@ -568,8 +573,10 @@ irect16_t get_client_rect(window_t const *win) {
   bool has_h = (win->flags & WINDOW_HSCROLL) && win->hscroll.visible;
   bool has_v = (win->flags & WINDOW_VSCROLL) && win->vscroll.visible;
   bool h_merged = has_h && (win->flags & WINDOW_STATUSBAR);
-  int hstrip = (has_h && !h_merged) ? SCROLLBAR_WIDTH : 0;
-  int vstrip = has_v ? SCROLLBAR_WIDTH : 0;
+  bool overlay = get_theme()->scrollbar_overlay;
+  // Overlay scrollbars draw over content — no reserved gutter strips.
+  int hstrip = (has_h && !h_merged && !overlay) ? SCROLLBAR_WIDTH : 0;
+  int vstrip = (has_v && !overlay) ? SCROLLBAR_WIDTH : 0;
   int cw = win->frame.w - vstrip;
   int ch = win->frame.h - t - s - hstrip;
   if (cw < 0) cw = 0;
@@ -594,11 +601,13 @@ void adjust_window_rect(irect16_t *r, flags_t flags) {
   if (flags & WINDOW_TOOLBAR)    t += TB_SPACING + 2 * TOOLBAR_PADDING;  // minimum one toolbar row
   int s = (flags & WINDOW_STATUSBAR) ? STATUSBAR_HEIGHT : 0;
   // Horizontal scrollbar: adds SCROLLBAR_WIDTH to the bottom unless it is
-  // merged with the status bar (WINDOW_STATUSBAR also set).
+  // merged with the status bar (WINDOW_STATUSBAR also set), or the active
+  // theme uses overlay scrollbars (no reserved gutter).
   bool hscroll_standalone = (flags & WINDOW_HSCROLL) && !(flags & WINDOW_STATUSBAR);
-  int hstrip = hscroll_standalone ? SCROLLBAR_WIDTH : 0;
-  // Vertical scrollbar: adds SCROLLBAR_WIDTH to the right.
-  int vstrip = (flags & WINDOW_VSCROLL) ? SCROLLBAR_WIDTH : 0;
+  bool overlay = get_theme()->scrollbar_overlay;
+  int hstrip = (hscroll_standalone && !overlay) ? SCROLLBAR_WIDTH : 0;
+  // Vertical scrollbar: adds SCROLLBAR_WIDTH to the right (Classic only).
+  int vstrip = ((flags & WINDOW_VSCROLL) && !overlay) ? SCROLLBAR_WIDTH : 0;
   r->y -= t;
   r->w += vstrip;
   r->h += t + s + hstrip;

@@ -67,6 +67,15 @@ static void open_dropdown(window_t *win) {
   result_t sel = send_message(win, cbGetCurrentSelection, 0, NULL);
   if (sel != (result_t)kComboBoxError)
     send_message(list, lstSetItem, (uint32_t)sel, NULL);
+  // c. Popup open: the popup steals mouse events, so the combobox button will
+  // not receive evMouseLeave naturally.  Clear the hover flag before the popup
+  // becomes visible so the button does not stay highlighted while the list is open.
+  if (g_ui_runtime.tracked == win) {
+    track_mouse(NULL);  /* sends evMouseLeave → clears WINDOW_STATE_HOVERED */
+  } else if (window_has_state(win, WINDOW_STATE_HOVERED)) {
+    window_set_state(win, WINDOW_STATE_HOVERED, false);
+    invalidate_window(win);
+  }
   show_window(list, true);
   set_capture(list);
   set_focus(list);
@@ -215,15 +224,14 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
     case evPaint:
       {
         irect16_t local = {0, 0, win->frame.w, win->frame.h};
-        irect16_t arrow = rect_split_right(local, MIN(win->frame.h, 16));
-        irect16_t text_rect = {2, 0, arrow.x - 4, win->frame.h};
         bool show_pressed = window_has_state(win, WINDOW_STATE_PRESSED) ||
                             ((win->flags & BUTTON_PUSHLIKE) && win->value);
-        draw_button(local, 1, 1, show_pressed);
-        draw_text_clipped(FONT_SYSTEM, win->title, &text_rect,
-                          get_sys_color(brTextNormal), TEXT_PADDING_LEFT);
-        draw_theme_icon_in_rect(THEME_ICON_ARROW_UPDOWN, arrow,
-                                get_sys_color(brTextNormal));
+        ctrl_state_t state = CTRL_NORMAL;
+        if (show_pressed)                                 state |= CTRL_PRESSED;
+        if (window_has_state(win, WINDOW_STATE_HOVERED))  state |= CTRL_HOVER;
+        if (window_has_state(win, WINDOW_STATE_DISABLED)) state |= CTRL_DISABLED;
+        if (g_ui_runtime.focused == win)                  state |= CTRL_FOCUSED;
+        get_theme()->draw_combobox(local, win->title, state);
       }
       return true;
     case evLeftButtonUp:
@@ -269,6 +277,17 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       if (wparam == AX_KEY_SPACE || wparam == AX_KEY_ENTER || wparam == AX_KEY_KP_ENTER)
         return true;
       return win_button(win, msg, wparam, lparam);
+    case evMouseMove:
+      track_mouse(win);
+      if (!window_has_state(win, WINDOW_STATE_HOVERED)) {
+        window_set_state(win, WINDOW_STATE_HOVERED, true);
+        invalidate_window(win);
+      }
+      return false;
+    case evMouseLeave:
+      window_set_state(win, WINDOW_STATE_HOVERED, false);
+      invalidate_window(win);
+      return false;
     case cbClear:
       memset(texts, 0, sizeof(combobox_string_t) * win->cursor_pos);
       win->cursor_pos = 0;
