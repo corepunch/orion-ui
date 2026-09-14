@@ -1,10 +1,11 @@
 // Image Editor – MacPaint-inspired with color support
-// MDI architecture: floating tool palette, floating color palette,
+// MDI architecture: docked toolbars, floating color palette,
 // menu bar, and multiple document windows.
 // PNG open/save via libpng.
 
 #include "imageeditor.h"
 #include <orion/gem.h>
+#include <orion/user/svg_icon_loader.h>
 
 // Global application state
 app_state_t *g_app = NULL;
@@ -43,7 +44,10 @@ static void create_app_windows(hinstance_t hinstance) {
 #ifdef BUILD_AS_GEM
   g_app->menubar_win = set_app_menu(editor_menubar_proc, kMenus, kNumMenus,
                                     handle_menu_command, hinstance);
-  create_main_toolbar_window();
+  g_app->chrome_win = create_app_chrome("Image Editor Chrome", NULL, NULL, 0,
+                                        main_toolbar_proc, hinstance);
+  g_app->main_toolbar_win = app_chrome_toolbar(g_app->chrome_win);
+  imageeditor_sync_main_toolbar();
 #else
   g_app->chrome_win = create_app_chrome("Image Editor Chrome", editor_menubar_proc,
                                         kMenus, kNumMenus, main_toolbar_proc,
@@ -104,6 +108,14 @@ static int open_startup_documents(int argc, char *argv[]) {
 bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   g_app = calloc(1, sizeof(app_state_t));
   if (!g_app) return false;
+
+  {
+    char icons_path[4096];
+    int n = snprintf(icons_path, sizeof(icons_path), "%s/../share/imageeditor/icons",
+                     ui_get_exe_dir());
+    if (n > 0 && (size_t)n < sizeof(icons_path))
+      svg_add_icons_dir(icons_path);
+  }
 
 #if IMAGEEDITOR_DEBUG
   {

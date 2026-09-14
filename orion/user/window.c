@@ -409,11 +409,12 @@ window_t *find_window(int x, int y) {
   for (window_t *win = g_ui_runtime.windows; win; win = win->next) {
     if (!window_has_state(win, WINDOW_STATE_VISIBLE)) continue;
     if (CONTAINS(x, y, win->frame.x, win->frame.y, win->frame.w, win->frame.h)) {
-      last = win;
+      window_t *hit = win;
       int t = titlebar_height(win);
       if (!window_has_state(win, WINDOW_STATE_DISABLED)) {
-        send_message(win, evHitTest, MAKEDWORD(x - win->frame.x, y - win->frame.y - t), &last);
+        send_message(win, evHitTest, MAKEDWORD(x - win->frame.x, y - win->frame.y - t), &hit);
       }
+      if (hit) last = hit;
     }
   }
   return last;
@@ -983,12 +984,10 @@ void show_window(window_t *win, bool visible) {
   post_message(win, evShowWindow, visible, NULL);
 }
 
-// Check if pointer is a valid window
+// Check membership without dereferencing a potentially destroyed pointer.
+extern bool is_valid_window_ptr(window_t *target, window_t *list);
 bool is_window(window_t *win) {
-  for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
-    if (w == win) return true;
-  }
-  return false;
+  return win && is_valid_window_ptr(win, g_ui_runtime.windows);
 }
 
 // Enable or disable window

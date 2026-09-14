@@ -57,6 +57,10 @@ static void ie_teardown(void) {
     // Destroy palette windows first so their evDestroy handlers can safely
     // null out g_app->tool_win / g_app->tool_options_win / g_app->color_win
     // while g_app is still valid.
+    if (g_app->chrome_win) {
+        destroy_window(g_app->chrome_win);
+        g_app->chrome_win = NULL;
+    }
     if (g_app->main_toolbar_win) {
         destroy_window(g_app->main_toolbar_win);
         g_app->main_toolbar_win = NULL;
@@ -391,6 +395,8 @@ void test_ie_palette_windows_created(void) {
         return;
     }
     ASSERT_TRUE(is_window(g_app->tool_win));
+    ASSERT_TRUE(g_app->tool_win->parent == g_app->chrome_win);
+    ASSERT_TRUE(g_app->tool_win->flags & WINDOW_NOTITLE);
     ASSERT_TRUE(is_window(g_app->tool_options_win));
     ASSERT_TRUE(is_window(g_app->color_win));
     // Tool palette is owner-drawn (no child button windows).

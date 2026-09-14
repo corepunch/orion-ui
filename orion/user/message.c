@@ -189,6 +189,9 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
   }
   // Handle special messages
   switch (msg) {
+    case evResize:
+      layout_docked_toolbars(win, get_client_rect(win));
+      break;
     case evNCPaint:
       // Skip OpenGL calls if graphics aren't initialized (e.g., in tests)
       if (g_ui_runtime.running) {
@@ -198,6 +201,7 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         R_EnsureWindowTarget(&root->surface_fbo, &root->surface_tex,
                              &root->surface_w, &root->surface_h,
                              root->frame.w * scale, root->frame.h * scale);
+        if (win == root && (win->flags & WINDOW_TRANSPARENT)) R_ClearWindowTarget(root->surface_fbo);
         glBindFramebuffer(GL_FRAMEBUFFER, root->surface_fbo);
         set_viewport_for_fbo(root);
         if (!(win->flags&WINDOW_TRANSPARENT)) {
@@ -215,6 +219,7 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
     case evPaint:
       // Skip OpenGL calls if graphics aren't initialized (e.g., in tests)
       if (g_ui_runtime.running) {
+        if (win->parent && (win->flags & WINDOW_TOOLBAR)) toolbar_draw_non_client(win);
         int t = titlebar_height(root);
         // FBO already bound by evNCPaint.  Set viewport/projection for
         // FBO-local coordinates (root origin at 0,0).
@@ -480,9 +485,10 @@ void post_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
 // was called.  O(window_count) per call; window counts are small in practice
 // (typically < 50).
 bool is_valid_window_ptr(window_t *target, window_t *list) {
+  if (!target) return false;
   for (window_t *w = list; w; w = w->next) {
     toolbar_state_t *tb = toolbar_get_state(w);
-    if (w == target) return true;
+    if (w == target || w->toolbar == target) return true;
     if (is_valid_window_ptr(target, w->children)) return true;
     if (is_valid_window_ptr(target, tb ? tb->children : NULL)) return true;
   }

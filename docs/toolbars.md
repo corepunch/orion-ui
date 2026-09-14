@@ -280,7 +280,7 @@ comboboxes, dropdowns, and toggle buttons.
 
 `toolbar_orientation_t` defines `TOOLBAR_HORIZONTAL` (the default) and
 `TOOLBAR_VERTICAL`. Set it with `send_message(win, tbSetOrientation,
-TOOLBAR_VERTICAL, NULL)`. Vertical toolbars stack items downward in one column;
+TOOLBAR_VERTICAL, NULL)`. Undocked vertical toolbars stack items downward in one column;
 separators and spacers consume height instead of width. The non-client band
 height follows the item extent. Floating palette windows should be sized to
 that extent, plus title height and toolbar padding.
@@ -295,3 +295,25 @@ The toolbar owns hover, pressed state, tooltips, and `tbButtonClick` delivery.
 
 The former toolbox control and `bx*` messages have been removed. Component
 registration uses `toolbar_icon` and `FE_COMPONENT_SHOW_TOOLBAR`.
+
+## Multiple docked toolbars
+
+Ordinary windows can own multiple toolbar bands. Create each band with
+`create_docked_toolbar(owner, TOOLBAR_DOCK_TOP, proc)` or
+`create_docked_toolbar(owner, TOOLBAR_DOCK_LEFT, proc)`. The returned child has
+its own items, state, and command procedure; destroying the owner destroys its
+bands. Existing `WINDOW_TOOLBAR` / `tbSetItems` callers remain supported.
+
+In the owner's layout handler, pass its available rectangle to
+`layout_docked_toolbars(owner, area)` and lay out content inside the returned
+rectangle. Top bands stack first; left bands occupy the remaining height.
+Left bands wrap into additional columns when their items exceed that height.
+Window resize automatically updates docked bands. Custom content layout should
+use the returned rectangle to keep content clear of the bands.
+
+Application chrome uses the same bands through
+`app_chrome_add_toolbar(chrome, TOOLBAR_DOCK_LEFT, proc)`. It owns the top and
+left toolbars, paints only its bands, and passes workspace hit tests through to
+document windows. Pass a NULL menu procedure to `create_app_chrome` when the
+shell supplies the application menu. ImageEditor uses this arrangement in both
+standalone and GEM builds; its tools are no longer a floating palette window.

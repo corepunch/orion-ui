@@ -240,7 +240,7 @@ static result_t timeline_proc(window_t *win, uint32_t msg,
 
   switch (msg) {
     case evDisplayChange: {
-      irect16_t frame = rect_split_bottom(R(0, 0, LOWORD(wparam), HIWORD(wparam)), TIMELINE_WIN_H);
+      irect16_t frame = rect_split_bottom(rect_trim_left(R(0, 0, LOWORD(wparam), HIWORD(wparam)), APP_TOOLS_W), TIMELINE_WIN_H);
       IE_TRACE("timeline display change win=%p size=%dx%d", (void *)win, frame.w, frame.h);
       move_window(win, frame.x, frame.y);
       resize_window(win, frame.w, frame.h);
@@ -450,9 +450,9 @@ window_t *create_timeline_window(void) {
   if (screen_w <= 0) screen_w = SCREEN_W;
   if (screen_h <= 0) screen_h = SCREEN_H;
 
-  int tw_x = 0;
+  int tw_x = APP_TOOLS_W;
   int tw_y = screen_h - TIMELINE_WIN_H;
-  int tw_w = screen_w;
+  int tw_w = screen_w - tw_x;
   int tw_h = TIMELINE_WIN_H;
 
   window_t *tw = create_window(

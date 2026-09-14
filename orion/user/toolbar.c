@@ -42,6 +42,7 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
   int base_y = TOOLBAR_BEVEL_WIDTH + TOOLBAR_PADDING;
   int field_y = base_y + 2;
   int field_h = bsz > 4 ? (bsz - 4) : bsz;
+  int column_w = 0;
 
   for (int i = 0; i < tb->item_count; i++) {
     toolbar_item_t *item = &tb->items[i];
@@ -92,6 +93,13 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
         h = w;
         w = bsz;
       }
+      if (parent->toolbar_dock == TOOLBAR_DOCK_LEFT && cursor > base_y &&
+          cursor + h + base_y > parent->frame.h) {
+        x += column_w + TOOLBAR_SPACING;
+        cursor = base_y;
+        column_w = 0;
+      }
+      column_w = MAX(column_w, w);
       y += cursor - base_y;
       cursor += h + TOOLBAR_SPACING;
     }
@@ -378,12 +386,15 @@ void toolbar_draw_non_client(window_t *win) {
   window_t *root = get_root_window(win);
   int bsz = toolbar_effective_item_height(win);
   int title_h = (win->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
-  int total_h = bsz + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH);
+  int total_h = win->toolbar_dock == TOOLBAR_DOCK_LEFT ? win->frame.h
+                : bsz + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH);
   int root_x = window_screen_x(win) - root->frame.x;
   int root_y = window_screen_y(win) - root->frame.y;
   irect16_t tb_rect = {root_x, root_y + title_h, win->frame.w, total_h};
   irect16_t rect = rect_inset(tb_rect, TOOLBAR_BEVEL_WIDTH);
 
+  set_viewport_for_fbo(root);
+  set_projection(0, 0, root->frame.w, root->frame.h);
   theme_draw(THEME_PART_TOOLBAR, rect, CTRL_NORMAL);
 
   set_viewport(tb_rect);
@@ -651,4 +662,58 @@ bool toolbar_dispatch_embedded_mouse(window_t *parent, uint32_t msg, int tb_x, i
   }
 
   return false;
+}
+
+irect16_t layout_docked_toolbars(window_t *owner, irect16_t area) {
+  if (!owner) {
+    fprintf(stderr, "[tb] dock layout rejected: missing owner\n");
+    fflush(stderr);
+    return area;
+  }
+  for (int dock = TOOLBAR_DOCK_TOP; dock <= TOOLBAR_DOCK_LEFT; dock++) {
+    for (window_t *bar = owner->children; bar; bar = bar->next) {
+      if (bar->toolbar_dock != dock || !window_has_state(bar, WINDOW_STATE_VISIBLE)) continue;
+      irect16_t old_frame = bar->frame;
+      int size = titlebar_height(bar);
+      if (dock == TOOLBAR_DOCK_LEFT) {
+        toolbar_state_t *tb = toolbar_get_state(bar);
+        bar->frame.h = area.h;
+        compute_toolbar_item_rects(bar, tb);
+        size = toolbar_effective_bsz(bar) + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH);
+        for (int i = 0; tb && tb->item_rects && i < tb->item_count; i++)
+          size = MAX(size, tb->item_rects[i].x + tb->item_rects[i].w + TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH);
+      }
+      irect16_t band = dock == TOOLBAR_DOCK_TOP ? rect_split_top(area, MIN(size, area.h))
+                                               : rect_split_left(area, MIN(size, area.w));
+      area = dock == TOOLBAR_DOCK_TOP ? rect_trim_top(area, band.h) : rect_trim_left(area, band.w);
+      if (memcmp(&old_frame, &band, sizeof(band))) {
+        bar->frame = band;
+        send_message(bar, evResize, 0, NULL);
+        invalidate_window(bar);
+      }
+    }
+  }
+  return area;
+}
+
+window_t *create_docked_toolbar(window_t *owner, toolbar_dock_t dock, winproc_t proc) {
+  if (!owner || !proc || (dock != TOOLBAR_DOCK_TOP && dock != TOOLBAR_DOCK_LEFT)) {
+    fprintf(stderr, "[tb] invalid dock owner=%p dock=%d proc=%p\n", (void *)owner, dock, (void *)proc);
+    fflush(stderr);
+    return NULL;
+  }
+  irect16_t area = get_client_rect(owner);
+  window_t *bar = create_window("", WINDOW_TOOLBAR | WINDOW_NOTITLE | WINDOW_NORESIZE |
+                                WINDOW_NODRAG | WINDOW_NOTRAYBUTTON,
+                                &area, owner, proc, owner->hinstance, NULL);
+  if (!bar) {
+    fprintf(stderr, "[tb] dock allocation failed win=%u dock=%d\n", owner->id, dock);
+    fflush(stderr);
+    return NULL;
+  }
+  bar->toolbar_dock = dock;
+  send_message(bar, tbSetOrientation, dock == TOOLBAR_DOCK_LEFT ? TOOLBAR_VERTICAL : TOOLBAR_HORIZONTAL, NULL);
+  layout_docked_toolbars(owner, area);
+  invalidate_window(owner);
+  return bar;
 }

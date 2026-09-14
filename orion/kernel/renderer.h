@@ -100,6 +100,7 @@ void R_TextureUnbind(void);
 void R_SetVertexAttribs(const R_VertexAttrib* attribs, size_t count, size_t vertex_size);
 
 // Disable vertex attributes
+void R_ClearWindowTarget(uint32_t fbo);
 void R_ClearVertexAttribs(size_t count);
 
 // High-level texture helpers (no GL knowledge required in callers)

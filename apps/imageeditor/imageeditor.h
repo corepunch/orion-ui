@@ -144,7 +144,8 @@ extern const int kBrushSizes[NUM_BRUSH_SIZES];
 #define CANVAS_CHECKER_SQUARE_PX 16
 
 #define DOC_PALETTE_GAP 8
-#define DOC_START_X   (PALETTE_WIN_X + PALETTE_WIN_W + DOC_PALETTE_GAP)
+#define APP_TOOLS_W   (g_app && g_app->tool_win ? g_app->tool_win->frame.w : PALETTE_WIN_W)
+#define DOC_START_X   (APP_TOOLS_W + DOC_PALETTE_GAP)
 #define DOC_START_Y   (APP_TOOLBAR_Y + APP_TOOLBAR_H + DOC_PALETTE_GAP)
 #define DOC_WORKSPACE_MARGIN 16
 

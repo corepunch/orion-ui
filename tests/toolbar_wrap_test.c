@@ -847,6 +847,69 @@ void test_app_chrome_owns_and_resizes_bands(void) {
     PASS();
 }
 
+void test_multiple_docked_toolbars(void) {
+    TEST("Top and left toolbars dock, resize, route clicks and leave workspace interactive");
+    test_env_init();
+    window_t *doc = create_window("Document", WINDOW_NOTITLE, MAKERECT(0, 0, 600, 480),
+                                  NULL, noop_proc, 7, NULL);
+    window_t *chrome = create_app_chrome("Chrome", test_menubar_proc, NULL, 0,
+                                         test_chrome_toolbar_proc, 7);
+    window_t *left = app_chrome_add_toolbar(chrome, TOOLBAR_DOCK_LEFT, test_chrome_toolbar_proc);
+    window_t *top = app_chrome_toolbar(chrome);
+    ASSERT_NOT_NULL(left);
+    ASSERT_TRUE(left->parent == chrome);
+    ASSERT_TRUE(is_window(left));
+    ASSERT_EQUAL(left->frame.x, 0);
+    ASSERT_EQUAL(left->frame.y, MENUBAR_HEIGHT + top->frame.h);
+    ASSERT_EQUAL(window_toolbar_state(left)->orientation, TOOLBAR_VERTICAL);
+    send_message(chrome, evDisplayChange, MAKEDWORD(600, 480), NULL);
+    ASSERT_EQUAL(left->frame.h, 480 - left->frame.y);
+    ASSERT_TRUE(find_window(200, 200) == doc);
+    toolbar_state_t *tb = window_toolbar_state(left);
+    irect16_t item = tb->item_rects[0];
+    int x = window_screen_x(left) + item.x + item.w / 2;
+    int y = window_screen_y(left) + item.y + item.h / 2;
+    ASSERT_TRUE(find_window(x, y) == left);
+    g_chrome_toolbar_click = 0;
+    dispatch_left_mouse_at(x, y, kEventLeftButtonDown);
+    dispatch_left_mouse_at(x, y, kEventLeftButtonUp);
+    ASSERT_EQUAL(g_chrome_toolbar_click, 91);
+    destroy_window(top);
+    ASSERT_NULL(app_chrome_toolbar(chrome));
+    top = app_chrome_add_toolbar(chrome, TOOLBAR_DOCK_TOP, test_chrome_toolbar_proc);
+    ASSERT_TRUE(app_chrome_toolbar(chrome) == top);
+    destroy_window(chrome);
+    ASSERT_FALSE(is_window(left));
+    ASSERT_TRUE(find_window(x, y) == doc);
+
+    window_t *top_bar = create_docked_toolbar(doc, TOOLBAR_DOCK_TOP, test_chrome_toolbar_proc);
+    window_t *left_bar = create_docked_toolbar(doc, TOOLBAR_DOCK_LEFT, test_chrome_toolbar_proc);
+    window_t *second_top = create_docked_toolbar(doc, TOOLBAR_DOCK_TOP, test_chrome_toolbar_proc);
+    irect16_t content = layout_docked_toolbars(doc, get_client_rect(doc));
+    ASSERT_EQUAL(content.x, left_bar->frame.w);
+    ASSERT_EQUAL(content.y, top_bar->frame.h + second_top->frame.h);
+    ASSERT_EQUAL(left_bar->frame.y, content.y);
+    resize_window(doc, 400, 300);
+    ASSERT_EQUAL(top_bar->frame.w, 400);
+    ASSERT_EQUAL(left_bar->frame.h, 300 - content.y);
+    toolbar_item_t items[20] = {0};
+    for (int i = 0; i < 20; i++) {
+        items[i].type = TOOLBAR_ITEM_BUTTON;
+        items[i].ident = 100 + i;
+    }
+    send_message(left_bar, tbSetItems, 20, items);
+    content = layout_docked_toolbars(doc, get_client_rect(doc));
+    tb = window_toolbar_state(left_bar);
+    ASSERT_TRUE(left_bar->frame.w > toolbar_effective_bsz(left_bar) * 2);
+    for (int i = 0; i < tb->item_count; i++) {
+        ASSERT_TRUE(tb->item_rects[i].y + tb->item_rects[i].h <= left_bar->frame.h);
+        ASSERT_TRUE(tb->item_rects[i].x + tb->item_rects[i].w <= content.x);
+    }
+    destroy_window(doc);
+    test_env_shutdown();
+    PASS();
+}
+
 static int custom_draw_count;
 static toolbar_draw_item_t custom_draw;
 static result_t custom_draw_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
@@ -933,6 +996,7 @@ int main(int argc, char *argv[]) {
     test_toolbar_item_button_frame_clamped();
     test_nodrag_toolbar_stays_fixed();
     test_app_chrome_owns_and_resizes_bands();
+    test_multiple_docked_toolbars();
 
     TEST_END();
 }

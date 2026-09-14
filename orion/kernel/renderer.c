@@ -1093,3 +1093,15 @@ void R_DestroyWindowTarget(uint32_t *fbo, uint32_t *tex,
   if (w) *w = 0;
   if (h) *h = 0;
 }
+
+void R_ClearWindowTarget(uint32_t fbo) {
+  GLint previous;
+  glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previous);
+  GLboolean scissor = glIsEnabled(GL_SCISSOR_TEST);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+  glDisable(GL_SCISSOR_TEST);
+  glClearColor(0, 0, 0, 0);
+  glClear(GL_COLOR_BUFFER_BIT);
+  if (scissor) glEnable(GL_SCISSOR_TEST);
+  glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)previous);
+}

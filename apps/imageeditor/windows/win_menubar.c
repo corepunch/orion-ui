@@ -162,12 +162,15 @@ static bool anim_step_frame(canvas_doc_t *doc, int delta) {
 // ============================================================
 
 window_t *create_tool_palette_window(void) {
-  window_t *tp = create_window(
-      "Tools",
-      WINDOW_TOOLBAR | WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
-      MAKERECT(PALETTE_WIN_X, PALETTE_WIN_Y, PALETTE_WIN_W, TOOL_WIN_H),
-      NULL, win_tool_palette_proc, g_app->hinstance, NULL);
-  show_window(tp, true);
+  if (!g_app) return NULL;
+  if (g_app->tool_win) return g_app->tool_win;
+  if (!g_app->chrome_win) {
+    g_app->chrome_win = create_app_chrome("Image Editor Chrome", NULL, NULL, 0,
+                                          main_toolbar_proc, g_app->hinstance);
+    g_app->main_toolbar_win = app_chrome_toolbar(g_app->chrome_win);
+  }
+  window_t *tp = app_chrome_add_toolbar(g_app->chrome_win, TOOLBAR_DOCK_LEFT, win_tool_palette_proc);
+  IE_TRACE("attach tools toolbar win=%p chrome=%p", (void *)tp, (void *)g_app->chrome_win);
   g_app->tool_win = tp;
   return tp;
 }
@@ -220,16 +223,9 @@ result_t main_toolbar_proc(window_t *win, uint32_t msg,
 window_t *create_main_toolbar_window(void) {
   if (!g_app) return NULL;
   if (g_app->chrome_win) return app_chrome_toolbar(g_app->chrome_win);
-  int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
-  window_t *win = create_window(
-      "Toolbar",
-      WINDOW_TOOLBAR | WINDOW_NOTITLE | WINDOW_ALWAYSONTOP |
-      WINDOW_NORESIZE | WINDOW_NOTRAYBUTTON | WINDOW_NODRAG,
-      MAKERECT(0, MENUBAR_HEIGHT, sw, APP_TOOLBAR_H),
-      NULL, main_toolbar_proc,
-      g_app->hinstance, NULL);
-  if (!win) return NULL;
-  show_window(win, true);
+  g_app->chrome_win = create_app_chrome("Image Editor Chrome", NULL, NULL, 0,
+                                        main_toolbar_proc, g_app->hinstance);
+  window_t *win = app_chrome_toolbar(g_app->chrome_win);
   g_app->main_toolbar_win = win;
   imageeditor_sync_main_toolbar();
   return win;
