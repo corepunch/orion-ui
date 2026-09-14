@@ -89,6 +89,15 @@ typedef enum {
   THEME_MODERN  = 1,
 } theme_style_t;
 
+// Toolbar item drawing variant.  Passed to draw_toolbar_item_bg so themes can
+// distinguish cases where Classic's borderless exception applies.
+typedef enum {
+  TOOLBAR_VARIANT_BUTTON,          // TOOLBAR_ITEM_BUTTON, no labels
+  TOOLBAR_VARIANT_BUTTON_LABELED,  // TOOLBAR_ITEM_BUTTON, SHOW_LABELS active
+  TOOLBAR_VARIANT_DROPDOWN_BTN,    // TOOLBAR_ITEM_DROPDOWN, main button part
+  TOOLBAR_VARIANT_DROPDOWN_ARROW,  // TOOLBAR_ITEM_DROPDOWN, arrow part
+} toolbar_item_variant_t;
+
 // Drawing vtable.  All callbacks receive logical coordinates and explicit state.
 // They must not dispatch messages, change control state, or perform hit-testing.
 // Implementations may call fill_rect() and other low-level draw primitives.
@@ -98,9 +107,8 @@ typedef struct {
 
   void (*draw_bevel)(irect16_t r);
   void (*draw_button_bg)(irect16_t r, ctrl_state_t state);
-  // labeled=true when TOOLBAR_STYLE_SHOW_LABELS is active; Classic uses this
-  // to preserve borderless labeled items, Modern ignores it.
-  void (*draw_toolbar_item_bg)(irect16_t r, ctrl_state_t state, bool labeled);
+  void (*draw_toolbar_item_bg)(irect16_t r, ctrl_state_t state,
+                               toolbar_item_variant_t variant);
   void (*draw_toolbar_separator)(irect16_t r);
   void (*draw_panel_bg)(irect16_t r, bool resize_grip);
   void (*draw_titlebar_bg)(irect16_t r, bool focused);

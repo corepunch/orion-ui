@@ -35,10 +35,11 @@ static void classic_draw_button_bg(irect16_t r, ctrl_state_t state) {
   }
 }
 
-// Toolbar item background — bevel for icon-only items; labeled items were
-// historically borderless in Classic and that appearance is preserved.
-static void classic_draw_toolbar_item_bg(irect16_t r, ctrl_state_t state, bool labeled) {
-  if (labeled) return;
+// Toolbar item background.  Classic preserves historical borderless appearance
+// for ordinary labeled buttons; dropdown parts always draw a bevel.
+static void classic_draw_toolbar_item_bg(irect16_t r, ctrl_state_t state,
+                                         toolbar_item_variant_t variant) {
+  if (variant == TOOLBAR_VARIANT_BUTTON_LABELED) return;
   classic_draw_button_bg(r, state);
 }
 
