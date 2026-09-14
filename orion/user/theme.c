@@ -111,6 +111,23 @@ bool set_theme(theme_style_t style) {
     return false;
   }
 
+  // Capture/drag safety: a live drag would leave the dragged control in a
+  // stale visual state after the palette changes.  Synthesise a cancel by
+  // delivering evMouseLeave to the capturer and then releasing capture, so
+  // the next mouse-move or button-up arrives with no ghost pressed state.
+  if (g_ui_runtime.captured) {
+    THEME_TRACE("capture active during theme switch — cancelling capture on %p",
+                (void *)g_ui_runtime.captured);
+    window_t *capturer = g_ui_runtime.captured;
+    set_capture(NULL);
+    post_message(capturer, evMouseLeave, 0, NULL);
+  }
+
+  // Record the old scrollbar gutter width so we know whether layout needs
+  // to be recalculated after the switch (Classic reserves a gutter, Modern
+  // uses overlay scrollbars with zero reserved width).
+  int old_scrollbar_width = g_active_theme ? g_active_theme->scrollbar_width : 0;
+
   s_switching = true;
   g_active_theme = candidate;
   candidate->apply_palette();
@@ -120,8 +137,23 @@ bool set_theme(theme_style_t style) {
     THEME_TRACE("broadcasting evThemeChanged style=%d name=%s",
                 (int)style, candidate->name);
     post_to_win_tree(g_ui_runtime.windows, evThemeChanged, (uint32_t)style);
+
+    // Repaint only visible top-level windows; hidden windows receive the
+    // evThemeChanged notification above so controls can update caches, but
+    // should not trigger a redundant paint until they become visible.
     for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
       if (window_has_state(w, WINDOW_STATE_VISIBLE)) invalidate_window(w);
+    }
+
+    // If the scrollbar gutter width changed the client area of every window
+    // shrinks or grows; post evResize to all top-level windows so layout
+    // managers recalculate scroll-channel allocations.
+    if (candidate->scrollbar_width != old_scrollbar_width) {
+      THEME_TRACE("scrollbar_width changed %d->%d, posting evResize to roots",
+                  old_scrollbar_width, candidate->scrollbar_width);
+      for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
+        post_message(w, evResize, 0, NULL);
+      }
     }
   }
   s_switching = false;

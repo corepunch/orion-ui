@@ -290,6 +290,15 @@ static result_t win_toolbar(window_t *win, uint32_t msg, uint32_t wparam, void *
       return true;
     }
 
+    case evThemeChanged:
+      // Recompute item rects after a theme change: per-theme metrics such as
+      // font height (labelled buttons) and padding may differ between themes.
+      // Do NOT call invalidate_window here — set_theme() drives repaints for
+      // visible windows; hidden toolbars must stay silent until made visible.
+      if (tb && tb->items)
+        compute_toolbar_item_rects(win->parent, tb);
+      return false;
+
     default:
       (void)wparam;
       (void)lparam;
