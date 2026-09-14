@@ -6,6 +6,7 @@
 #include "draw.h"
 #include "image.h"
 #include "svg_icon_loader.h"
+#include "theme.h"
 
 int toolbar_item_hit(const toolbar_state_t *tb, int tx, int ty) {
   if (!tb || !tb->item_rects) return -1;
@@ -109,22 +110,29 @@ static void draw_toolbar_item_at_origin(toolbar_state_t *tb, int i) {
   toolbar_item_t *item = &tb->items[i];
   irect16_t r = tb->item_rects[i];
   bool is_pressed = (tb->pressed_item == i);
-  bool is_active = (item->flags & TOOLBAR_BUTTON_FLAG_ACTIVE) != 0;
+  bool is_active  = (item->flags & TOOLBAR_BUTTON_FLAG_ACTIVE) != 0;
+  bool is_hot     = (tb->hot_item == i);
   bool show_pressed = is_pressed || is_active;
+  theme_t *th = get_theme();
+  int poff = show_pressed ? th->press_icon_offset : 0;
 
   switch (item->type) {
     case TOOLBAR_ITEM_BUTTON: {
       irect16_t local = {0, 0, r.w, r.h};
+      ctrl_state_t state = CTRL_NORMAL;
+      if (is_active)           state |= CTRL_SELECTED;
+      if (show_pressed)        state |= CTRL_PRESSED;
+      if (is_hot && !show_pressed) state |= CTRL_HOVER;
       if (!(tb->style & TOOLBAR_STYLE_SHOW_LABELS))
-        draw_button(local, 1, 1, show_pressed);
+        th->draw_toolbar_item_bg(local, state);
       const char *icon_name = item->icon ? item->icon : "missing";
       irect16_t icon_rect = local;
       if (tb->style & TOOLBAR_STYLE_SHOW_LABELS)
         icon_rect.h = (tb->btn_size > 0) ? tb->btn_size : TB_SPACING;
-      draw_toolbar_icon_in_rect(tb, icon_name, icon_rect, show_pressed ? 1 : 0);
+      draw_toolbar_icon_in_rect(tb, icon_name, icon_rect, poff);
       if ((tb->style & TOOLBAR_STYLE_SHOW_LABELS) && item->text) {
-        int tx = (local.w - text_strwidth(FONT_SMALLEST, item->text)) / 2 + (show_pressed ? 1 : 0);
-        int ty = local.h - text_char_height(FONT_SMALLEST) - 2 + (show_pressed ? 1 : 0);
+        int tx = (local.w - text_strwidth(FONT_SMALLEST, item->text)) / 2 + poff;
+        int ty = local.h - text_char_height(FONT_SMALLEST) - 2 + poff;
         draw_text(FONT_SMALLEST, item->text, tx, ty, get_sys_color(brToolbarForeground));
       }
       break;
@@ -133,22 +141,35 @@ static void draw_toolbar_item_at_origin(toolbar_state_t *tb, int i) {
       int aw = DROPDOWN_ARROW_W;
       irect16_t btn_part = {0, 0, r.w - aw, r.h};
       irect16_t arr_part = {r.w - aw, 0, aw, r.h};
-      draw_button(btn_part, 1, 1, show_pressed);
+      bool arrow_pressed = is_pressed && tb->pressed_in_arrow;
+      bool btn_pressed   = show_pressed && !tb->pressed_in_arrow;
+      int  btn_poff      = btn_pressed  ? th->press_icon_offset : 0;
+      int  arr_poff      = arrow_pressed ? th->press_icon_offset : 0;
+
+      ctrl_state_t btn_state = CTRL_NORMAL;
+      if (is_active)  btn_state |= CTRL_SELECTED;
+      if (btn_pressed) btn_state |= CTRL_PRESSED;
+      if (is_hot && !is_pressed) btn_state |= CTRL_HOVER;
+      th->draw_toolbar_item_bg(btn_part, btn_state);
+
       const char *icon_name = item->icon ? item->icon : "missing";
       irect16_t icon_rect = btn_part;
       if (tb->style & TOOLBAR_STYLE_SHOW_LABELS)
         icon_rect.h = (tb->btn_size > 0) ? tb->btn_size : TB_SPACING;
-      draw_toolbar_icon_in_rect(tb, icon_name, icon_rect, show_pressed ? 1 : 0);
+      draw_toolbar_icon_in_rect(tb, icon_name, icon_rect, btn_poff);
       if ((tb->style & TOOLBAR_STYLE_SHOW_LABELS) && item->text) {
-        int tx = (btn_part.w - text_strwidth(FONT_SMALLEST, item->text)) / 2 + (show_pressed ? 1 : 0);
-        int ty = btn_part.h - text_char_height(FONT_SMALLEST) - 2 + (show_pressed ? 1 : 0);
+        int tx = (btn_part.w - text_strwidth(FONT_SMALLEST, item->text)) / 2 + btn_poff;
+        int ty = btn_part.h - text_char_height(FONT_SMALLEST) - 2 + btn_poff;
         draw_text(FONT_SMALLEST, item->text, tx, ty, get_sys_color(brToolbarForeground));
       }
-      bool arrow_pressed = is_pressed && tb->pressed_in_arrow;
-      draw_button(arr_part, 1, 1, arrow_pressed);
+
+      ctrl_state_t arr_state = CTRL_NORMAL;
+      if (arrow_pressed) arr_state |= CTRL_PRESSED;
+      if (is_hot && !is_pressed) arr_state |= CTRL_HOVER;
+      th->draw_toolbar_item_bg(arr_part, arr_state);
 
       int cx = arr_part.x + arr_part.w / 2;
-      int cy = arr_part.y + arr_part.h / 2 - 1 + (arrow_pressed ? 1 : 0);
+      int cy = arr_part.y + arr_part.h / 2 - 1 + arr_poff;
       uint32_t arrow_col = get_sys_color(brToolbarForeground);
       fill_rect(arrow_col, R(cx - 3, cy, 7, 1));
       fill_rect(arrow_col, R(cx - 2, cy + 1, 5, 1));
@@ -156,12 +177,9 @@ static void draw_toolbar_item_at_origin(toolbar_state_t *tb, int i) {
       fill_rect(arrow_col, R(cx, cy + 3, 1, 1));
       break;
     }
-    case TOOLBAR_ITEM_SEPARATOR: {
-      int mx = r.w / 2;
-      fill_rect(get_sys_color(brDarkEdge), R(mx, 2, 1, r.h - 4));
-      fill_rect(get_sys_color(brLightEdge), R(mx + 1, 2, 1, r.h - 4));
+    case TOOLBAR_ITEM_SEPARATOR:
+      th->draw_toolbar_separator(R(0, 0, r.w, r.h));
       break;
-    }
     case TOOLBAR_ITEM_LABEL: {
       int ty = (r.h - text_char_height(FONT_SMALLEST)) / 2;
       draw_text(FONT_SMALLEST, item->text ? item->text : "", 2, ty, get_sys_color(brToolbarForeground));

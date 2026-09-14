@@ -1,10 +1,12 @@
-// System color theme table.
+// System color theme table and active-theme runtime.
 // Analogous to WinAPI GetSysColor / SetSysColors.
 // Access colours via get_sys_color(brXxx); change them via set_sys_colors().
 
 #include <stdint.h>
+#include <stdio.h>
 #include "messages.h"
 #include "user.h"
+#include "theme.h"
 
 uint32_t g_sys_colors[brCount] = {
   [brTransparent]          = 0x00000000,   // fully transparent
@@ -33,6 +35,49 @@ uint32_t g_sys_colors[brCount] = {
   [brModalOverlay]         = 0x40402000,   // modal owner dim overlay (semi-transparent)
   [brToolbarForeground]    = 0xffd8d8d8,   // neutral light gray for toolbar content
 };
+
+// ── Active theme runtime ───────────────────────────────────────────────────
+
+static theme_t *g_active_theme = NULL;
+
+theme_t *get_theme(void) {
+  if (!g_active_theme) g_active_theme = theme_classic_instance();
+  return g_active_theme;
+}
+
+// Returns true if all required vtable slots in t are non-NULL.
+static bool theme_validate(theme_t *t) {
+  if (!t) { fprintf(stderr, "theme: NULL theme pointer\n"); return false; }
+#define REQUIRE(fn) \
+  if (!t->fn) { fprintf(stderr, "theme[%s]: missing " #fn "\n", t->name ? t->name : "?"); return false; }
+  REQUIRE(draw_bevel)
+  REQUIRE(draw_button_bg)
+  REQUIRE(draw_toolbar_item_bg)
+  REQUIRE(draw_toolbar_separator)
+  REQUIRE(draw_panel_bg)
+  REQUIRE(draw_titlebar_bg)
+  REQUIRE(draw_statusbar_bg)
+  REQUIRE(draw_checkbox_box)
+#undef REQUIRE
+  return true;
+}
+
+bool set_theme(theme_style_t style) {
+  theme_t *candidate = (style == THEME_MODERN)
+                     ? theme_modern_instance()
+                     : theme_classic_instance();
+  if (!theme_validate(candidate)) return false;  // leave current theme active
+
+  g_active_theme = candidate;
+
+  if (g_ui_runtime.running) {
+    post_message((window_t *)1, evThemeChanged, (uint32_t)style, NULL);
+    for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
+      if (window_has_state(w, WINDOW_STATE_VISIBLE)) invalidate_window(w);
+    }
+  }
+  return true;
+}
 
 void set_sys_colors(int count, const int *indices, const uint32_t *colors) {
   for (int i = 0; i < count; i++) {

@@ -14,6 +14,7 @@ enum {
   evPaint,
   evRefreshStencil,
   evPaintStencil,
+  evThemeChanged,   // wparam = theme_style_t; broadcast by set_theme() before invalidate
   evMouseActivate,
   evActivate,
   evDeactivate,

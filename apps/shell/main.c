@@ -16,16 +16,23 @@
 
 // Shell-owned command IDs live in a reserved high range so they cannot
 // collide with gem-defined menu IDs, which commonly start at small values.
-#define ID_SHELL_CMD_BASE  0xF000
-#define ID_SHELL_QUIT      (ID_SHELL_CMD_BASE + 1)
+#define ID_SHELL_CMD_BASE           0xF000
+#define ID_SHELL_QUIT               (ID_SHELL_CMD_BASE + 1)
+#define ID_SHELL_APPEARANCE_CLASSIC (ID_SHELL_CMD_BASE + 2)
+#define ID_SHELL_APPEARANCE_MODERN  (ID_SHELL_CMD_BASE + 3)
 
 static const menu_item_t kShellFileItems[] = {
     {"Quit", ID_SHELL_QUIT},
 };
-static const menu_def_t kShellMenus[] = {
-    {"File", kShellFileItems, 1},
+static const menu_item_t kShellAppearanceItems[] = {
+    {"Classic", ID_SHELL_APPEARANCE_CLASSIC},
+    {"Modern",  ID_SHELL_APPEARANCE_MODERN},
 };
-#define SHELL_MENU_COUNT 1
+static const menu_def_t kShellMenus[] = {
+    {"File",       kShellFileItems,       1},
+    {"Appearance", kShellAppearanceItems, 2},
+};
+#define SHELL_MENU_COUNT 2
 
 static window_t *g_menubar = NULL;
 
@@ -56,6 +63,10 @@ static result_t shell_menubar_proc(window_t *win, uint32_t msg,
             uint16_t id = LOWORD(wparam);
             if (id == ID_SHELL_QUIT) {
                 ui_request_quit();
+            } else if (id == ID_SHELL_APPEARANCE_CLASSIC) {
+                set_theme(THEME_CLASSIC);
+            } else if (id == ID_SHELL_APPEARANCE_MODERN) {
+                set_theme(THEME_MODERN);
             } else {
                 // Route to whichever gem owns this command.
                 shell_dispatch_gem_command(id);
