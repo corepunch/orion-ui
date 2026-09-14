@@ -61,26 +61,41 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
                           ((win->flags & BUTTON_PUSHLIKE) && win->value);
       // Build full control state so the theme can vary appearance by focus/default.
       ctrl_state_t state = CTRL_NORMAL;
-      if (show_pressed)                 state |= CTRL_PRESSED;
-      if (g_ui_runtime.focused == win)  state |= CTRL_FOCUSED;
-      if (win->flags & BUTTON_DEFAULT)  state |= CTRL_DEFAULT;
+      if (show_pressed)                                 state |= CTRL_PRESSED;
+      if (window_has_state(win, WINDOW_STATE_HOVERED))  state |= CTRL_HOVER;
+      if (window_has_state(win, WINDOW_STATE_DISABLED)) state |= CTRL_DISABLED;
+      if (g_ui_runtime.focused == win)                  state |= CTRL_FOCUSED;
+      if (win->flags & BUTTON_DEFAULT)                  state |= CTRL_DEFAULT;
       irect16_t local = {0, 0, win->frame.w, win->frame.h};
       // BUTTON_DEFAULT (BS_DEFPUSHBUTTON analogue): use black for the outer 1-px
       // gap so a thin black outline is visible around the button bevel.
       // When the button has keyboard focus brAccent takes precedence.
       irect16_t outer = rect_inset(local, -1);
-      fill_rect((state & CTRL_FOCUSED) ? get_sys_color(brAccent) :
-                (state & CTRL_DEFAULT) ? 0xff000000             :
-                                         get_sys_color(brControlBg), outer);
+      fill_rect((state & CTRL_FOCUSED)  ? get_sys_color(brAccent) :
+                (state & CTRL_DEFAULT)  ? 0xff000000             :
+                                          get_sys_color(brControlBg), outer);
       get_theme()->draw_button_bg(local, state);
       irect16_t content = rect_inset_xy(local, BUTTON_PADDING, 2);
       irect16_t label = rect_center(content, strwidth(win->title), CHAR_HEIGHT);
-      if (!show_pressed)
+      bool disabled = (state & CTRL_DISABLED) != 0;
+      uint32_t text_col = disabled ? get_sys_color(brTextDisabled) : get_sys_color(brTextNormal);
+      if (!show_pressed && !disabled)
         draw_text_small(win->title, label.x + TEXT_SHADOW_OFFSET, label.y + TEXT_SHADOW_OFFSET, get_sys_color(brDarkEdge));
       irect16_t label_draw = rect_offset(label, show_pressed ? 1 : 0, show_pressed ? 1 : 0);
-      draw_text_small(win->title, label_draw.x, label_draw.y, get_sys_color(brTextNormal));
+      draw_text_small(win->title, label_draw.x, label_draw.y, text_col);
       return true;
     }
+    case evMouseMove:
+      track_mouse(win);
+      if (!window_has_state(win, WINDOW_STATE_HOVERED)) {
+        window_set_state(win, WINDOW_STATE_HOVERED, true);
+        invalidate_window(win);
+      }
+      return false;
+    case evMouseLeave:
+      window_set_state(win, WINDOW_STATE_HOVERED, false);
+      invalidate_window(win);
+      return false;
     case evLeftButtonDown:
       window_set_state(win, WINDOW_STATE_PRESSED, true);
       invalidate_window(win);
@@ -156,7 +171,14 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
       bool show_pressed = window_has_state(win, WINDOW_STATE_PRESSED) ||
                           ((win->flags & BUTTON_PUSHLIKE) && win->value);
       irect16_t local = {0, 0, win->frame.w, win->frame.h};
-      draw_button(local, 1, 1, show_pressed);
+      {
+        ctrl_state_t tbs = CTRL_NORMAL;
+        if (show_pressed)                                 tbs |= CTRL_PRESSED;
+        if (window_has_state(win, WINDOW_STATE_HOVERED))  tbs |= CTRL_HOVER;
+        if (window_has_state(win, WINDOW_STATE_DISABLED)) tbs |= CTRL_DISABLED;
+        if (g_ui_runtime.focused == win)                  tbs |= CTRL_FOCUSED;
+        get_theme()->draw_button_bg(local, tbs);
+      }
       int px = show_pressed ? 1 : 0;
       toolbar_button_data_t *bd = (toolbar_button_data_t *)win->userdata;
       bool drew_icon = false;
@@ -222,6 +244,17 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
         send_message(get_root_window(win), tbButtonClick, win->id, win);
         return true;
       }
+      return false;
+    case evMouseMove:
+      track_mouse(win);
+      if (!window_has_state(win, WINDOW_STATE_HOVERED)) {
+        window_set_state(win, WINDOW_STATE_HOVERED, true);
+        invalidate_window(win);
+      }
+      return false;
+    case evMouseLeave:
+      window_set_state(win, WINDOW_STATE_HOVERED, false);
+      invalidate_window(win);
       return false;
     case btnSetCheck: {
       bool checked = (wparam == btnStateChecked);

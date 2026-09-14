@@ -219,12 +219,16 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         irect16_t text_rect = {2, 0, arrow.x - 4, win->frame.h};
         bool show_pressed = window_has_state(win, WINDOW_STATE_PRESSED) ||
                             ((win->flags & BUTTON_PUSHLIKE) && win->value);
-        ctrl_state_t state = show_pressed ? CTRL_PRESSED : CTRL_NORMAL;
+        ctrl_state_t state = CTRL_NORMAL;
+        if (show_pressed)                                 state |= CTRL_PRESSED;
+        if (window_has_state(win, WINDOW_STATE_HOVERED))  state |= CTRL_HOVER;
+        if (window_has_state(win, WINDOW_STATE_DISABLED)) state |= CTRL_DISABLED;
+        if (g_ui_runtime.focused == win)                  state |= CTRL_FOCUSED;
         get_theme()->draw_combobox_bg(local, state);
-        draw_text_clipped(FONT_SYSTEM, win->title, &text_rect,
-                          get_sys_color(brTextNormal), TEXT_PADDING_LEFT);
-        draw_theme_icon_in_rect(THEME_ICON_ARROW_UPDOWN, arrow,
-                                get_sys_color(brTextNormal));
+        bool disabled = (state & CTRL_DISABLED) != 0;
+        uint32_t text_col = disabled ? get_sys_color(brTextDisabled) : get_sys_color(brTextNormal);
+        draw_text_clipped(FONT_SYSTEM, win->title, &text_rect, text_col, TEXT_PADDING_LEFT);
+        draw_theme_icon_in_rect(THEME_ICON_ARROW_UPDOWN, arrow, text_col);
       }
       return true;
     case evLeftButtonUp:
@@ -270,6 +274,17 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       if (wparam == AX_KEY_SPACE || wparam == AX_KEY_ENTER || wparam == AX_KEY_KP_ENTER)
         return true;
       return win_button(win, msg, wparam, lparam);
+    case evMouseMove:
+      track_mouse(win);
+      if (!window_has_state(win, WINDOW_STATE_HOVERED)) {
+        window_set_state(win, WINDOW_STATE_HOVERED, true);
+        invalidate_window(win);
+      }
+      return false;
+    case evMouseLeave:
+      window_set_state(win, WINDOW_STATE_HOVERED, false);
+      invalidate_window(win);
+      return false;
     case cbClear:
       memset(texts, 0, sizeof(combobox_string_t) * win->cursor_pos);
       win->cursor_pos = 0;

@@ -137,17 +137,21 @@ static void modern_draw_statusbar_bg(irect16_t r) {
 
 static void modern_draw_checkbox_box(irect16_t r, bool checked, ctrl_state_t state) {
   // Focus background: solid accent fill, only when keyboard-focused.
-  if (state & CTRL_FOCUSED) {
+  if ((state & CTRL_FOCUSED) && !(state & CTRL_DISABLED)) {
     irect16_t focus_bg = rect_inset(r, -CHECKBOX_FOCUS_PAD);
     fill_rect(get_sys_color(brAccent), focus_bg);
   }
 
-  uint32_t bg = (state & CTRL_HOVER) ? get_sys_color(brButtonHover)
-                                      : get_sys_color(brWindowDarkBg);
+  uint32_t bg = (state & CTRL_DISABLED) ? get_sys_color(brWindowDarkBg) :
+                (state & CTRL_HOVER)    ? get_sys_color(brButtonHover)  :
+                                          get_sys_color(brWindowDarkBg);
   fill_rounded_rect(bg, r, 3);
 
-  if (checked)
-    draw_theme_icon_in_rect(THEME_ICON_CHECKMARK, r, get_sys_color(brAccent));
+  if (checked) {
+    uint32_t check_col = (state & CTRL_DISABLED) ? get_sys_color(brTextDisabled)
+                                                 : get_sys_color(brAccent);
+    draw_theme_icon_in_rect(THEME_ICON_CHECKMARK, r, check_col);
+  }
 }
 
 // ── Combobox ─────────────────────────────────────────────────────────────────

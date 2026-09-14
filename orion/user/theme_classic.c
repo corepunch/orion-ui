@@ -20,6 +20,10 @@ static void classic_draw_bevel(irect16_t r) {
 
 static void classic_draw_button_bg(irect16_t r, ctrl_state_t state) {
   bool pressed = (state & (CTRL_PRESSED | CTRL_SELECTED)) != 0;
+  // Disabled: etched (dimmer inner fill); hover: slightly brighter fill.
+  uint32_t inner = (state & CTRL_DISABLED) ? get_sys_color(brWindowDarkBg) :
+                   (state & CTRL_HOVER)    ? get_sys_color(brButtonHover)  :
+                                             get_sys_color(brControlBg);
   if (pressed) {
     fill_rect(get_sys_color(brDarkEdge),      r);
     fill_rect(get_sys_color(brLightEdge),     R(r.x+1, r.y+1, r.w-1, r.h-1));
@@ -30,7 +34,7 @@ static void classic_draw_button_bg(irect16_t r, ctrl_state_t state) {
     fill_rect(get_sys_color(brDarkEdge),      r);
     fill_rect(get_sys_color(brLightEdge),     R(r.x, r.y, r.w-1, r.h-1));
     fill_rect(get_sys_color(brDarkEdge),      R(r.x+1, r.y+1, r.w-2, r.h-2));
-    fill_rect(get_sys_color(brControlBg),     R(r.x+1, r.y+1, r.w-3, r.h-3));
+    fill_rect(inner,                          R(r.x+1, r.y+1, r.w-3, r.h-3));
     fill_rect(get_sys_color(brFlare),         R(r.x, r.y, 1, 1));
   }
 }
@@ -88,6 +92,9 @@ static void classic_draw_checkbox_box(irect16_t r, bool checked, ctrl_state_t st
   }
 
   // Box bevel — identical to classic button bevel so checkboxes track button style.
+  uint32_t box_inner = (state & CTRL_DISABLED) ? get_sys_color(brWindowDarkBg) :
+                       (state & CTRL_HOVER)    ? get_sys_color(brButtonHover)  :
+                                                 get_sys_color(brControlBg);
   if (pressed) {
     fill_rect(get_sys_color(brDarkEdge),     r);
     fill_rect(get_sys_color(brLightEdge),    R(r.x+1, r.y+1, r.w-1, r.h-1));
@@ -98,7 +105,7 @@ static void classic_draw_checkbox_box(irect16_t r, bool checked, ctrl_state_t st
     fill_rect(get_sys_color(brDarkEdge),     r);
     fill_rect(get_sys_color(brLightEdge),    R(r.x, r.y, r.w-1, r.h-1));
     fill_rect(get_sys_color(brDarkEdge),     R(r.x+1, r.y+1, r.w-2, r.h-2));
-    fill_rect(get_sys_color(brControlBg),    R(r.x+1, r.y+1, r.w-3, r.h-3));
+    fill_rect(box_inner,                     R(r.x+1, r.y+1, r.w-3, r.h-3));
     fill_rect(get_sys_color(brFlare),        R(r.x, r.y, 1, 1));
   }
 

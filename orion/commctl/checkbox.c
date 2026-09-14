@@ -40,8 +40,10 @@ result_t win_checkbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         CHECKBOX_BOX_SIZE
       };
       ctrl_state_t state = CTRL_NORMAL;
-      if (g_ui_runtime.focused == win)             state |= CTRL_FOCUSED;
-      if (window_has_state(win, WINDOW_STATE_PRESSED)) state |= CTRL_PRESSED;
+      if (g_ui_runtime.focused == win)                  state |= CTRL_FOCUSED;
+      if (window_has_state(win, WINDOW_STATE_PRESSED))  state |= CTRL_PRESSED;
+      if (window_has_state(win, WINDOW_STATE_HOVERED))  state |= CTRL_HOVER;
+      if (window_has_state(win, WINDOW_STATE_DISABLED)) state |= CTRL_DISABLED;
       get_theme()->draw_checkbox_box(box, (bool)win->value, state);
       irect16_t text_rect = {
         box.x + box.w + CHECKBOX_GAP,
@@ -49,11 +51,26 @@ result_t win_checkbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         win->frame.w - box.w - CHECKBOX_GAP,
         win->frame.h
       };
-      irect16_t shadow_rect = rect_offset(text_rect, TEXT_SHADOW_OFFSET, TEXT_SHADOW_OFFSET);
-      draw_text_clipped(FONT_SMALL, win->title, &shadow_rect, get_sys_color(brDarkEdge), 0);
-      draw_text_clipped(FONT_SMALL, win->title, &text_rect, get_sys_color(brTextNormal), 0);
+      bool disabled = (state & CTRL_DISABLED) != 0;
+      uint32_t text_col = disabled ? get_sys_color(brTextDisabled) : get_sys_color(brTextNormal);
+      if (!disabled) {
+        irect16_t shadow_rect = rect_offset(text_rect, TEXT_SHADOW_OFFSET, TEXT_SHADOW_OFFSET);
+        draw_text_clipped(FONT_SMALL, win->title, &shadow_rect, get_sys_color(brDarkEdge), 0);
+      }
+      draw_text_clipped(FONT_SMALL, win->title, &text_rect, text_col, 0);
       return true;
     }
+    case evMouseMove:
+      track_mouse(win);
+      if (!window_has_state(win, WINDOW_STATE_HOVERED)) {
+        window_set_state(win, WINDOW_STATE_HOVERED, true);
+        invalidate_window(win);
+      }
+      return false;
+    case evMouseLeave:
+      window_set_state(win, WINDOW_STATE_HOVERED, false);
+      invalidate_window(win);
+      return false;
     case evLeftButtonDown:
       window_set_state(win, WINDOW_STATE_PRESSED, true);
       invalidate_window(win);
