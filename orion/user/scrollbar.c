@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "user.h"
 #include "messages.h"
 #include "draw.h"
@@ -315,6 +316,17 @@ void draw_builtin_scrollbars(window_t *win) {
   bool has_h = (win->flags & WINDOW_HSCROLL) && win->hscroll.visible;
   bool has_v = (win->flags & WINDOW_VSCROLL) && win->vscroll.visible;
   if (!has_h && !has_v) return;
+
+  // TODO: overlay — apply theme scrollbar_overlay/scrollbar_width policy here
+  // once overlay-thumb support lands; currently only reserved-space bars render.
+  static theme_t *s_last_sb_theme = NULL;
+  theme_t *th = get_theme();
+  if (th != s_last_sb_theme) {
+    fprintf(stderr, "[theme] builtin-scrollbar geometry: name=%s overlay=%d width=%d\n",
+            th->name, (int)th->scrollbar_overlay, th->scrollbar_width);
+    fflush(stderr);
+    s_last_sb_theme = th;
+  }
 
   int t = titlebar_height(win);
   int s = statusbar_height(win);

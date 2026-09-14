@@ -29,10 +29,12 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #include <orion/user/user.h>
 #include <orion/user/messages.h>
 #include <orion/user/draw.h>
+#include <orion/user/theme.h>
 #include "commctl.h"
 
 // Internal per-scrollbar state
@@ -128,6 +130,16 @@ result_t win_scrollbar(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
 
     case evPaint: {
       if (!s) return true;
+      // TODO: overlay — read theme scrollbar_overlay/scrollbar_width here when
+      // overlay-thumb support is added to the commctl scrollbar control.
+      static theme_t *s_last_sb_theme = NULL;
+      theme_t *th = get_theme();
+      if (th != s_last_sb_theme) {
+        fprintf(stderr, "[theme] commctl/scrollbar geometry: name=%s overlay=%d width=%d\n",
+                th->name, (int)th->scrollbar_overlay, th->scrollbar_width);
+        fflush(stderr);
+        s_last_sb_theme = th;
+      }
       bool vert = sb_vertical(win);
       int track = sb_track(win);
       int tl    = sb_thumb_len(s, track);

@@ -8,6 +8,14 @@
 #include "user.h"
 #include "theme.h"
 
+// Always-on trace for theme switch lifecycle and state transitions.
+// One line per discrete event; keep noise-free so logs stay auditable.
+#define THEME_TRACE(...) do { \
+  fprintf(stderr, "[theme] " __VA_ARGS__); \
+  fputc('\n', stderr); \
+  fflush(stderr); \
+} while (0)
+
 uint32_t g_sys_colors[brCount] = {
   [brTransparent]          = 0x00000000,   // fully transparent
   [brControlBg]            = 0xff3c3c3c,   // dialog, panel, and control face
@@ -76,20 +84,44 @@ static void post_to_win_tree(window_t *win, uint32_t msg, uint32_t wparam) {
 }
 
 bool set_theme(theme_style_t style) {
+  static bool s_switching = false;
+  if (s_switching) {
+    THEME_TRACE("set_theme REJECTED re-entrant style=%d", (int)style);
+    return false;
+  }
+
   theme_t *candidate = (style == THEME_MODERN)
                      ? theme_modern_instance()
                      : theme_classic_instance();
-  if (!theme_validate(candidate)) return false;  // leave current theme active
 
+  THEME_TRACE("set_theme ENTER style=%d name=%s", (int)style,
+              candidate && candidate->name ? candidate->name : "?");
+
+  if (!theme_validate(candidate)) {
+    THEME_TRACE("set_theme REJECTED validation-failure style=%d", (int)style);
+    return false;  // leave current theme active
+  }
+
+  if (g_active_theme && g_active_theme->style == style) {
+    THEME_TRACE("set_theme REJECTED same-theme name=%s", candidate->name);
+    return false;
+  }
+
+  s_switching = true;
   g_active_theme = candidate;
   candidate->apply_palette();
+  THEME_TRACE("palette applied name=%s", candidate->name);
 
   if (g_ui_runtime.running) {
+    THEME_TRACE("broadcasting evThemeChanged style=%d name=%s",
+                (int)style, candidate->name);
     post_to_win_tree(g_ui_runtime.windows, evThemeChanged, (uint32_t)style);
     for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
       if (window_has_state(w, WINDOW_STATE_VISIBLE)) invalidate_window(w);
     }
   }
+  s_switching = false;
+  THEME_TRACE("set_theme DONE name=%s", candidate->name);
   return true;
 }
 
