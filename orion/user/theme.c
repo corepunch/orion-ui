@@ -49,7 +49,7 @@ uint32_t g_sys_colors[brCount] = {
 static theme_t *g_active_theme = NULL;
 
 theme_t *get_theme(void) {
-  if (!g_active_theme) g_active_theme = theme_classic_instance();
+  if (!g_active_theme) g_active_theme = theme_modern_instance();
   return g_active_theme;
 }
 
