@@ -238,7 +238,7 @@ static void modern_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state)
       break;
     case THEME_PART_MENU_BAR:            fill_rect(get_sys_color(brWindowDarkBg), r); break;
     case THEME_PART_MENU_POPUP:          fill_rounded_rect(get_sys_color(brControlBg), r, RADIUS_FIELD); break;
-    case THEME_PART_SEPARATOR:           break;
+    case THEME_PART_SEPARATOR:           fill_rect(get_sys_color(brButtonInner), r); break;
     case THEME_PART_SLIDER_TRACK:        fill_rect(get_sys_color(brButtonInner), r); break;
     case THEME_PART_SCROLLBAR_TRACK:     break;
     case THEME_PART_SCROLLBAR_THUMB:     fill_rounded_rect(get_sys_color(disabled ? brTextDisabled : brLightEdge), r, MIN(r.w, r.h) / 2); break;

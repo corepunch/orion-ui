@@ -56,7 +56,7 @@ static void test_modern_surfaces(void) {
 }
 
 static void test_translated_separator(void) {
-  TEST("Classic separators respect caller bounds; Modern separators draw nothing");
+  TEST("Classic toolbar separators respect caller bounds; Modern toolbar separators draw nothing");
   theme_t *themes[] = {paint_classic_instance(), paint_modern_instance()};
   for (int i = 0; i < 2; i++) {
     themes[i]->apply_palette();
