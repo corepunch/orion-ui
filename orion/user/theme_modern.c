@@ -20,7 +20,9 @@
 
 // Accent-tinted fill for selected/active toolbar items.
 // Derived from brAccent (cyan-blue) blended into the dark panel.
-#define MODERN_SELECTED_BG  0xff3c4858
+#define MODERN_SELECTED_BG       0xff3c4858
+// Slightly brighter version used when selected + hovered simultaneously.
+#define MODERN_SELECTED_HOVER_BG 0xff465266
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -80,6 +82,9 @@ static void modern_draw_toolbar_item_bg(irect16_t r, ctrl_state_t state) {
   uint32_t color;
   if (state & CTRL_PRESSED) {
     color = get_sys_color(brWindowDarkBg);
+  } else if ((state & (CTRL_SELECTED | CTRL_HOVER)) == (CTRL_SELECTED | CTRL_HOVER)) {
+    // Selected + hover: still clearly selected, with subtle interaction feedback.
+    color = MODERN_SELECTED_HOVER_BG;
   } else if (state & CTRL_SELECTED) {
     color = MODERN_SELECTED_BG;
   } else if (state & CTRL_HOVER) {

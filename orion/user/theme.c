@@ -62,6 +62,18 @@ static bool theme_validate(theme_t *t) {
   return true;
 }
 
+// Depth-first walk over the entire window tree, posting msg to every live
+// window.  Covers regular children and toolbar-band embedded controls
+// (toolbar_state_t->children), which live in a separate list from win->children.
+static void post_to_win_tree(window_t *win, uint32_t msg, uint32_t wparam) {
+  for (; win; win = win->next) {
+    post_message(win, msg, wparam, NULL);
+    post_to_win_tree(win->children, msg, wparam);
+    toolbar_state_t *tb = window_toolbar_state(win);
+    if (tb) post_to_win_tree(tb->children, msg, wparam);
+  }
+}
+
 bool set_theme(theme_style_t style) {
   theme_t *candidate = (style == THEME_MODERN)
                      ? theme_modern_instance()
@@ -71,7 +83,7 @@ bool set_theme(theme_style_t style) {
   g_active_theme = candidate;
 
   if (g_ui_runtime.running) {
-    post_message((window_t *)1, evThemeChanged, (uint32_t)style, NULL);
+    post_to_win_tree(g_ui_runtime.windows, evThemeChanged, (uint32_t)style);
     for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
       if (window_has_state(w, WINDOW_STATE_VISIBLE)) invalidate_window(w);
     }

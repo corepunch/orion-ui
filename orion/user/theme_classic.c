@@ -30,7 +30,7 @@ static void classic_draw_button_bg(irect16_t r, ctrl_state_t state) {
     fill_rect(get_sys_color(brDarkEdge),      r);
     fill_rect(get_sys_color(brLightEdge),     R(r.x, r.y, r.w-1, r.h-1));
     fill_rect(get_sys_color(brDarkEdge),      R(r.x+1, r.y+1, r.w-2, r.h-2));
-    fill_rect(get_sys_color(brButtonInner),   R(r.x+1, r.y+1, r.w-3, r.h-3));
+    fill_rect(get_sys_color(brControlBg),     R(r.x+1, r.y+1, r.w-3, r.h-3));
     fill_rect(get_sys_color(brFlare),         R(r.x, r.y, 1, 1));
   }
 }
