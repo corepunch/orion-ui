@@ -147,6 +147,36 @@ static void modern_draw_checkbox_box(irect16_t r, bool checked, ctrl_state_t sta
     draw_theme_icon_in_rect(THEME_ICON_CHECKMARK, r, get_sys_color(brAccent));
 }
 
+// ── Palette ───────────────────────────────────────────────────────────────────
+
+static void modern_apply_palette(void) {
+  g_sys_colors[brTransparent]          = 0x00000000;
+  g_sys_colors[brControlBg]            = 0xffF3F3F3;
+  g_sys_colors[brWindowDarkBg]         = 0xffE8E8E8;
+  g_sys_colors[brWorkspaceBg]          = 0xffDCDCDC;
+  g_sys_colors[brActiveTitlebar]       = 0xff0078D4;
+  g_sys_colors[brActiveTitlebarText]   = 0xffffffff;
+  g_sys_colors[brInactiveTitlebar]     = 0xffF0F0F0;
+  g_sys_colors[brInactiveTitlebarText] = 0xff767676;
+  g_sys_colors[brStatusbarBg]          = 0xffF0F0F0;
+  g_sys_colors[brLightEdge]            = 0xffffffff;
+  g_sys_colors[brDarkEdge]             = 0xffC8C8C8;
+  g_sys_colors[brFlare]                = 0xffffffff;
+  g_sys_colors[brAccent]               = 0xff0078D4;
+  g_sys_colors[brButtonInner]          = 0xffE0E0E0;
+  g_sys_colors[brButtonHover]          = 0xffD0D0D0;
+  g_sys_colors[brTextNormal]           = 0xff1A1A1A;
+  g_sys_colors[brTextDisabled]         = 0xff9E9E9E;
+  g_sys_colors[brTextError]            = 0xffC42B1C;
+  g_sys_colors[brTextSuccess]          = 0xff0F7B0F;
+  g_sys_colors[brBorderFocus]          = 0xff005FB8;
+  g_sys_colors[brBorderActive]         = 0xff868686;
+  g_sys_colors[brFolderText]           = 0xff107C10;
+  g_sys_colors[brColumnViewBg]         = 0xffDEE3EA;
+  g_sys_colors[brModalOverlay]         = 0x40000000;
+  g_sys_colors[brToolbarForeground]    = 0xff1A1A1A;
+}
+
 // ── Singleton ────────────────────────────────────────────────────────────────
 
 static theme_t g_modern_theme = {
@@ -163,6 +193,9 @@ static theme_t g_modern_theme = {
   .scrollbar_width        = 0,
   .scrollbar_overlay      = true,
   .press_icon_offset      = 0,
+  .button_corner_radius   = RADIUS_BUTTON,
+  .control_padding        = BUTTON_PADDING,
+  .apply_palette          = modern_apply_palette,
 };
 
 theme_t *theme_modern_instance(void) { return &g_modern_theme; }

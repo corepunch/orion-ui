@@ -58,6 +58,7 @@ static bool theme_validate(theme_t *t) {
   REQUIRE(draw_titlebar_bg)
   REQUIRE(draw_statusbar_bg)
   REQUIRE(draw_checkbox_box)
+  REQUIRE(apply_palette)
 #undef REQUIRE
   return true;
 }
@@ -81,6 +82,7 @@ bool set_theme(theme_style_t style) {
   if (!theme_validate(candidate)) return false;  // leave current theme active
 
   g_active_theme = candidate;
+  candidate->apply_palette();
 
   if (g_ui_runtime.running) {
     post_to_win_tree(g_ui_runtime.windows, evThemeChanged, (uint32_t)style);

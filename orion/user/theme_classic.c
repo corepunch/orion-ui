@@ -91,6 +91,36 @@ static void classic_draw_checkbox_box(irect16_t r, bool checked, ctrl_state_t st
   }
 }
 
+// ── Palette ───────────────────────────────────────────────────────────────────
+
+static void classic_apply_palette(void) {
+  g_sys_colors[brTransparent]          = 0x00000000;
+  g_sys_colors[brControlBg]            = 0xff3c3c3c;
+  g_sys_colors[brWindowDarkBg]         = 0xff2c2c2c;
+  g_sys_colors[brWorkspaceBg]          = 0xff1e1e1e;
+  g_sys_colors[brActiveTitlebar]       = 0xffa05a1e;
+  g_sys_colors[brActiveTitlebarText]   = 0xffffffff;
+  g_sys_colors[brInactiveTitlebar]     = 0xff2c2c2c;
+  g_sys_colors[brInactiveTitlebarText] = 0xff787878;
+  g_sys_colors[brStatusbarBg]          = 0xff2c2c2c;
+  g_sys_colors[brLightEdge]            = 0xff7f7f7f;
+  g_sys_colors[brDarkEdge]             = 0xff1a1a1a;
+  g_sys_colors[brFlare]                = 0xffcfcfcf;
+  g_sys_colors[brAccent]               = 0xff5EC4F3;
+  g_sys_colors[brButtonInner]          = 0xff505050;
+  g_sys_colors[brButtonHover]          = 0xff5a5a5a;
+  g_sys_colors[brTextNormal]           = 0xffc0c0c0;
+  g_sys_colors[brTextDisabled]         = 0xff808080;
+  g_sys_colors[brTextError]            = 0xffff4444;
+  g_sys_colors[brTextSuccess]          = 0xff44ff44;
+  g_sys_colors[brBorderFocus]          = 0xff101010;
+  g_sys_colors[brBorderActive]         = 0xff808080;
+  g_sys_colors[brFolderText]           = 0xffa0d000;
+  g_sys_colors[brColumnViewBg]         = 0xff544e47;
+  g_sys_colors[brModalOverlay]         = 0x40402000;
+  g_sys_colors[brToolbarForeground]    = 0xffd8d8d8;
+}
+
 // ── Singleton ────────────────────────────────────────────────────────────────
 
 static theme_t g_classic_theme = {
@@ -107,6 +137,9 @@ static theme_t g_classic_theme = {
   .scrollbar_width       = SCROLLBAR_WIDTH,
   .scrollbar_overlay     = false,
   .press_icon_offset     = 1,
+  .button_corner_radius  = 0,
+  .control_padding       = BUTTON_PADDING,
+  .apply_palette         = classic_apply_palette,
 };
 
 theme_t *theme_classic_instance(void) { return &g_classic_theme; }

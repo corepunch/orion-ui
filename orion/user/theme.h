@@ -124,6 +124,15 @@ typedef struct {
   // when a button is pressed to simulate physical depression; Modern keeps
   // content stationary and changes only the background.
   int press_icon_offset;
+
+  // Per-theme geometry metrics used by draw code to avoid hardcoded literals.
+  int button_corner_radius;  // rounded-corner radius for push buttons (0 = square)
+  int control_padding;       // standard inset from control frame to content area
+
+  // Writes the theme's palette into g_sys_colors.  Called by set_theme()
+  // before evThemeChanged is broadcast so controls see the new colors
+  // immediately on first repaint.
+  void (*apply_palette)(void);
 } theme_t;
 
 // Active-theme accessor — never returns NULL (defaults to Classic).
