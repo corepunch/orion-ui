@@ -391,11 +391,10 @@ void toolbar_draw_non_client(window_t *win) {
   int root_x = window_screen_x(win) - root->frame.x;
   int root_y = window_screen_y(win) - root->frame.y;
   irect16_t tb_rect = {root_x, root_y + title_h, win->frame.w, total_h};
-  irect16_t rect = rect_inset(tb_rect, TOOLBAR_BEVEL_WIDTH);
 
   set_viewport_for_fbo(root);
   set_projection(0, 0, root->frame.w, root->frame.h);
-  theme_draw(THEME_PART_TOOLBAR, rect, CTRL_NORMAL);
+  theme_draw(THEME_PART_TOOLBAR, tb_rect, CTRL_NORMAL);
 
   set_viewport(tb_rect);
   if (tb && tb->items && tb->item_rects) {
