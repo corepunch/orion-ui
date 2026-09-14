@@ -24,6 +24,13 @@
 // Slightly brighter version used when selected + hovered simultaneously.
 #define MODERN_SELECTED_HOVER_BG 0xff465266
 
+// Secondary-button resting border (#767676) — quieter than full accent.
+#define MODERN_SECONDARY_BORDER  0xff767676
+// Inspector/sidebar panel background — slightly lighter than window bg.
+#define MODERN_PANEL_BG          0xffF5F5F5
+// List selection: #0078D4 at 20 % alpha blended over the row background.
+#define MODERN_LIST_ACCENT       0x330078D4
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 // Filled rounded-rectangle using fill_rect() row-by-row.
@@ -49,10 +56,8 @@ static void fill_rounded_rect(uint32_t color, irect16_t r, int radius) {
 // ── Bevel ────────────────────────────────────────────────────────────────────
 
 static void modern_draw_bevel(irect16_t r) {
-  // Modern: replace bevels with a single-pixel subdued separator on the
-  // bottom and right edges only (gives depth without the retro 3-D look).
-  fill_rect(get_sys_color(brWindowDarkBg), R(r.x, r.y+r.h, r.w+1, 1));
-  fill_rect(get_sys_color(brWindowDarkBg), R(r.x+r.w, r.y, 1, r.h));
+  // Modern: one flat 1-px bottom separator in #E0E0E0; no raised/lowered 3-D edges.
+  fill_rect(get_sys_color(brButtonInner), R(r.x, r.y+r.h, r.w, 1));
 }
 
 // ── Buttons ──────────────────────────────────────────────────────────────────
@@ -62,17 +67,28 @@ static void modern_draw_button_bg(irect16_t r, ctrl_state_t state) {
     fill_rounded_rect(get_sys_color(brWindowDarkBg), r, RADIUS_BUTTON);
     return;
   }
-  uint32_t color;
-  if (state & (CTRL_PRESSED | CTRL_SELECTED)) {
-    color = get_sys_color(brWindowDarkBg);
-  } else if (state & CTRL_HOVER) {
-    color = get_sys_color(brButtonHover);
-  } else if (state & CTRL_DEFAULT) {
-    color = get_sys_color(brAccent);
-  } else {
-    color = get_sys_color(brButtonInner);
+
+  if (state & CTRL_DEFAULT) {
+    // Primary button: solid accent fill, no border; darker shade indicates press.
+    uint32_t fill = (state & CTRL_PRESSED) ? get_sys_color(brBorderFocus)
+                                           : get_sys_color(brAccent);
+    fill_rounded_rect(fill, r, RADIUS_BUTTON);
+    return;
   }
-  fill_rounded_rect(color, r, RADIUS_BUTTON);
+
+  // Secondary button: 1-px outline border; transparent rest, light tint on hover/press.
+  // Focus overrides border color to accent (#0078D4); otherwise subdued #767676.
+  uint32_t border = (state & CTRL_FOCUSED) ? get_sys_color(brAccent)
+                                           : MODERN_SECONDARY_BORDER;
+
+  // Draw outer border ring first, then cover the interior if a fill is needed.
+  fill_rounded_rect(border, r, RADIUS_BUTTON);
+  if (state & (CTRL_PRESSED | CTRL_SELECTED)) {
+    fill_rounded_rect(get_sys_color(brButtonHover), rect_inset(r, 1), RADIUS_BUTTON - 1);
+  } else if (state & CTRL_HOVER) {
+    fill_rounded_rect(get_sys_color(brButtonInner), rect_inset(r, 1), RADIUS_BUTTON - 1);
+  }
+  // Rest: only the 1-px border ring is visible; interior stays transparent.
 }
 
 // ── Toolbar items ─────────────────────────────────────────────────────────────
@@ -100,15 +116,19 @@ static void modern_draw_toolbar_item_bg(irect16_t r, ctrl_state_t state,
 // ── Toolbar separator ─────────────────────────────────────────────────────────
 
 static void modern_draw_toolbar_separator(irect16_t r) {
-  int mx = r.w / 2;
-  fill_rect(get_sys_color(brWindowDarkBg), R(mx, 4, 1, r.h - 8));
+  int mx  = r.w / 2;
+  int pad = BUTTON_PADDING / 2;  // theme control_padding drives vertical inset
+  fill_rect(get_sys_color(brButtonInner), R(mx, pad, 1, r.h - 2*pad));
 }
 
 // ── Panel ─────────────────────────────────────────────────────────────────────
 
 static void modern_draw_panel_bg(irect16_t r, bool resize_grip) {
-  // No bevel.  Subtle bottom separator instead.
-  fill_rect(get_sys_color(brWindowDarkBg), R(r.x, r.y + r.h, r.w, 1));
+  // Lighter surface (#F5F5F5) distinguishes inspector/sidebar panels from
+  // the window background without a bevel; a 1-px bottom edge in #E0E0E0
+  // gives a soft boundary.
+  fill_rect(MODERN_PANEL_BG, r);
+  fill_rect(get_sys_color(brButtonInner), R(r.x, r.y + r.h, r.w, 1));
   if (resize_grip) {
     // Minimal 3×3 dot grid in the bottom-right corner.
     uint32_t dot = get_sys_color(brTextDisabled);
@@ -163,8 +183,10 @@ static void modern_draw_combobox_bg(irect16_t r, ctrl_state_t state) {
 // ── List item ────────────────────────────────────────────────────────────────
 
 static void modern_draw_list_item_bg(irect16_t r, ctrl_state_t state) {
+  // Semi-transparent accent blend (~20 % #0078D4) instead of an opaque
+  // highlight fill so the row content remains legible over any bg texture.
   if (state & CTRL_SELECTED)
-    fill_rect(get_sys_color(brTextNormal), r);
+    fill_rect(MODERN_LIST_ACCENT, r);
 }
 
 // ── Slider thumb ─────────────────────────────────────────────────────────────
