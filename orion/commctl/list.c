@@ -75,7 +75,7 @@ result_t win_list(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
           R(0, win->vscroll.pos, item_w, get_client_rect(win).h), CTRL_NORMAL);
       for (uint32_t i = 0; i < cb->cursor_pos; i++) {
         irect16_t item = { 0, MENU_START_Y + (int)(i * LIST_HEIGHT), item_w, LIST_HEIGHT };
-        popup_item_paint(item, texts[i], i == win->cursor_pos ? CTRL_SELECTED : CTRL_NORMAL);
+        popup_item_paint(item, texts[i], i == win->cursor_pos ? CTRL_SELECTED : CTRL_NORMAL, FONT_SMALL);
       }
       return true;
     case evLeftButtonDown: {

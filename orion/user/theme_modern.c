@@ -15,7 +15,7 @@
 // Radius constants (logical pixels).
 #define RADIUS_TOOLBAR_ITEM  4
 #define RADIUS_BUTTON        ((BUTTON_HEIGHT + 1) / 2)
-#define RADIUS_FIELD         8
+#define RADIUS_FIELD         12
 #define RADIUS_MENU_ITEM     6
 #define MODERN_LIST_INSET_X  4
 #define MODERN_LIST_INSET_Y  1
@@ -127,10 +127,21 @@ static void modern_draw_checkbox_box(irect16_t r, bool checked, ctrl_state_t sta
 
 // ── Combobox ─────────────────────────────────────────────────────────────────
 
+static uint32_t modern_surface_midpoint(uint32_t a, uint32_t b) {
+  uint32_t color = 0xff000000;
+  for (int shift = 0; shift < 24; shift += 8)
+    color |= ((((a >> shift) & 0xff) + ((b >> shift) & 0xff)) / 2) << shift;
+  return color;
+}
+
 static void modern_draw_field_bg(irect16_t r, ctrl_state_t state) {
+  uint32_t surface = get_sys_color(brControlBg);
+  uint32_t border = modern_surface_midpoint(surface, get_sys_color(brButtonInner));
+  uint32_t fill = modern_surface_midpoint(surface, get_sys_color(brWindowDarkBg));
   bool focused = (state & CTRL_FOCUSED) && !(state & CTRL_DISABLED);
-  fill_rounded_rect(get_sys_color(focused ? brAccent : brButtonInner), r, RADIUS_FIELD);
-  fill_rounded_rect(get_sys_color(brWindowDarkBg), rect_inset(r, 1), RADIUS_FIELD - 1);
+  int radius = MIN(RADIUS_FIELD, MIN(r.w, r.h) / 2);
+  fill_rounded_rect(focused ? get_sys_color(brAccent) : border, r, radius);
+  fill_rounded_rect(fill, rect_inset(r, 1), MAX(0, radius - 1));
 }
 
 // ── List item ────────────────────────────────────────────────────────────────
@@ -261,7 +272,7 @@ static void modern_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state)
           fill_rect(get_sys_color(brTextDisabled), R(r.x+r.w-6+col*2, r.y+r.h-6+row*2, 1, 1));
       break;
     case THEME_PART_MENU_BAR:            fill_rect(get_sys_color(brWindowDarkBg), r); break;
-    case THEME_PART_MENU_POPUP:          fill_rounded_rect(get_sys_color(brControlBg), r, RADIUS_FIELD); break;
+    case THEME_PART_MENU_POPUP:          fill_rounded_rect(get_sys_color(brControlBg), r, RADIUS_MENU_ITEM); break;
     case THEME_PART_SEPARATOR:           fill_rect(get_sys_color(brButtonInner), r); break;
     case THEME_PART_SLIDER_TRACK:        fill_rect(get_sys_color(brButtonInner), r); break;
     case THEME_PART_SCROLLBAR_TRACK:     fill_rect(get_sys_color(brStatusbarBg), r); break;
@@ -304,11 +315,15 @@ static void modern_draw_button_label(irect16_t r, const char *text, ctrl_state_t
 static void modern_draw_combobox(irect16_t r, const char *text, ctrl_state_t state) {
   if (state & CTRL_DISABLED) state &= ~(CTRL_HOVER | CTRL_PRESSED);
   modern_draw_field_bg(r, state);
-  irect16_t arrow = rect_split_right(r, MIN(r.h, 16));
-  irect16_t label = rect_inset_xy(rect_trim_right(r, arrow.w), 2, 0);
+  int icon_size = MIN(COMBOBOX_ICON_SIZE, MAX(0, r.h - 4));
+  int icon_padding = TEXTEDIT_PADDING_HORZ - icon_size / 4;
+  irect16_t content = rect_inset_xy(r, TEXTEDIT_PADDING_HORZ, 0);
+  irect16_t arrow = rect_center(rect_split_right(rect_trim_right(r, icon_padding),
+                                              icon_size), icon_size, icon_size);
+  irect16_t label = rect_trim_right(content, icon_size + icon_padding);
   uint32_t foreground = modern_foreground(THEME_PART_COMBOBOX, state);
-  draw_text_clipped(FONT_SYSTEM, text, &label, foreground, TEXT_PADDING_LEFT);
-  draw_theme_icon_in_rect(THEME_ICON_ARROW_UPDOWN, arrow, foreground);
+  draw_text_clipped(FONT_SMALL, text, &label, foreground, 0);
+  draw_theme_icon(THEME_ICON_ARROW_UPDOWN, arrow.x, arrow.y, icon_size, foreground);
 }
 
 static theme_t g_modern_theme = {

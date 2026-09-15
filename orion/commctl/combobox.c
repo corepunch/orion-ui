@@ -60,17 +60,17 @@ static void open_dropdown(window_t *win) {
   int selected = sel == (result_t)kComboBoxError ? 0 : (int)sel;
   int width = win->frame.w + MENU_SIDE_PAD * 2;
   for (uint32_t i = 0; i < win->cursor_pos; i++)
-    width = MAX(width, text_strwidth(FONT_SYSTEM, state->texts[i]) + MENU_SIDE_PAD * 2);
+    width = MAX(width, text_strwidth(FONT_SMALL, state->texts[i]) + MENU_SIDE_PAD * 2);
   int screen_w = ui_get_system_metrics(kSystemMetricScreenWidth);
   int screen_h = ui_get_system_metrics(kSystemMetricScreenHeight);
   int height = visible_items * POPUP_ITEM_HEIGHT + MENU_START_Y * 2;
   if (screen_h > 0) height = MIN(height, screen_h);
   if (screen_w > 0) width = MIN(width, screen_w);
   int scroll = MAX(0, selected - visible_items + 1) * POPUP_ITEM_HEIGHT;
-  int font_h = text_char_height(FONT_SYSTEM);
+  int font_h = text_char_height(FONT_SMALL);
   int label_y = abs_y + (win->frame.h - font_h) / 2 - (POPUP_ITEM_HEIGHT - font_h) / 2;
   int popup_y = label_y - MENU_START_Y - selected * POPUP_ITEM_HEIGHT + scroll;
-  irect16_t rect = {abs_x + WINDOW_PADDING + 2 - MENU_SIDE_PAD, popup_y, width, height};
+  irect16_t rect = {abs_x + TEXTEDIT_PADDING_HORZ - MENU_SIDE_PAD, popup_y, width, height};
   if (screen_w > 0) rect.x = MAX(0, MIN(rect.x, screen_w - width));
   if (screen_h > 0) rect.y = MAX(0, MIN(rect.y, screen_h - height));
   scroll = MAX(0, MIN(rect.y + MENU_START_Y + selected * POPUP_ITEM_HEIGHT - label_y,
@@ -226,7 +226,8 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
     case evMeasure: {
       layout_measure_t *m = (layout_measure_t *)lparam;
       if (m) {
-        int text_w = strwidth(win->title) + 16 + 16; /* text + padding + arrow */
+        int text_w = text_strwidth(FONT_SMALL, win->title) + TEXTEDIT_PADDING_HORZ * 2
+                     + COMBOBOX_ICON_SIZE + COMBOBOX_ICON_PADDING;
         m->desired_w = MAX(win->frame.w > 0 ? win->frame.w : 60, text_w);
         m->desired_h = control_predefined_height(win->flags);
       }

@@ -307,11 +307,15 @@ static void classic_draw_button_label(irect16_t r, const char *text, ctrl_state_
 static void classic_draw_combobox(irect16_t r, const char *text, ctrl_state_t state) {
   if (state & CTRL_DISABLED) state &= ~(CTRL_HOVER | CTRL_PRESSED);
   classic_draw_combobox_bg(r, state);
-  irect16_t arrow = rect_split_right(r, MIN(r.h, 16));
-  irect16_t label = rect_inset_xy(rect_trim_right(r, arrow.w), 2, 0);
+  int icon_size = MIN(COMBOBOX_ICON_SIZE, MAX(0, r.h - 4));
+  int icon_padding = TEXTEDIT_PADDING_HORZ - icon_size / 4;
+  irect16_t content = rect_inset_xy(r, TEXTEDIT_PADDING_HORZ, 0);
+  irect16_t arrow = rect_center(rect_split_right(rect_trim_right(r, icon_padding),
+                                              icon_size), icon_size, icon_size);
+  irect16_t label = rect_trim_right(content, icon_size + icon_padding);
   uint32_t foreground = classic_foreground(THEME_PART_COMBOBOX, state);
-  draw_text_clipped(FONT_SYSTEM, text, &label, foreground, TEXT_PADDING_LEFT);
-  draw_theme_icon_in_rect(THEME_ICON_ARROW_UPDOWN, arrow, foreground);
+  draw_text_clipped(FONT_SMALL, text, &label, foreground, 0);
+  draw_theme_icon(THEME_ICON_ARROW_UPDOWN, arrow.x, arrow.y, icon_size, foreground);
 }
 
 static theme_t g_classic_theme = {

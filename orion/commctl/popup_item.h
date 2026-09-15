@@ -8,7 +8,7 @@
 // Popup rows grow at half the rate of regular controls above desktop size.
 #define POPUP_ITEM_HEIGHT (25 + (CONTROL_HEIGHT_REGULAR - 25 + 1) / 2)
 
-static inline void popup_item_paint(irect16_t row, const char *text, ctrl_state_t state) {
+static inline void popup_item_paint(irect16_t row, const char *text, ctrl_state_t state, int font) {
   theme_draw(THEME_PART_MENU_ITEM, rect_inset_xy(row, 1, 0), state);
   irect16_t label = rect_inset_xy(row, MENU_SIDE_PAD, 0);
   char buf[256];
@@ -19,7 +19,7 @@ static inline void popup_item_paint(irect16_t row, const char *text, ctrl_state_
     buf[n] = 0;
     text = buf;
   }
-  if (text) draw_text_clipped(FONT_SYSTEM, text, &label,
+  if (text) draw_text_clipped(font, text, &label,
                              theme_foreground(THEME_PART_MENU_ITEM, state), 0);
 }
 

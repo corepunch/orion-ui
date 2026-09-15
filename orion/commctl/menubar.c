@@ -216,7 +216,7 @@ static result_t popup_proc(window_t *win, uint32_t msg,
                                                   hov ? CTRL_HOVER : CTRL_NORMAL);
           uint32_t hotkey_col = hov ? label_col : get_sys_color(brTextDisabled);
           popup_item_paint(R(0, y, win->frame.w, MENU_ITEM_H), it->label,
-                           hov ? CTRL_HOVER : CTRL_NORMAL);
+                           hov ? CTRL_HOVER : CTRL_NORMAL, FONT_SYSTEM);
           if (menu_item_has_submenu(it)) {
             draw_text_small_clipped(">",
                                    &(irect16_t){0, y, win->frame.w - MENU_SIDE_PAD, MENU_ITEM_H},

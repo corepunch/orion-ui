@@ -483,8 +483,8 @@ void test_cb_dropdown_outside_click_cancels(void) {
     ASSERT_NOT_NULL(cb);
     window_t *list = open_test_dropdown(cb, 10, 2);
     ASSERT_NOT_NULL(list);
-    int font_h = text_char_height(FONT_SYSTEM);
-    ASSERT_EQUAL(list->frame.x + MENU_SIDE_PAD, window_screen_x(cb) + WINDOW_PADDING + 2);
+    int font_h = text_char_height(FONT_SMALL);
+    ASSERT_EQUAL(list->frame.x + MENU_SIDE_PAD, window_screen_x(cb) + TEXTEDIT_PADDING_HORZ);
     ASSERT_EQUAL(list->frame.y + MENU_START_Y + 2 * CONTROL_HEIGHT_REGULAR
                  - (int)list->vscroll.pos + (CONTROL_HEIGHT_REGULAR - font_h) / 2,
                  window_screen_y(cb) + (cb->frame.h - font_h) / 2);

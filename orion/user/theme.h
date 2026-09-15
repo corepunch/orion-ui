@@ -57,7 +57,6 @@ typedef enum {
 // enough to give text some breathing room inside the bevel.
 #define BUTTON_PADDING    8
 
-#define TEXTEDIT_PADDING_HORZ 4  // horizontal padding inside textedit controls (between frame and text)
 #define TEXTEDIT_PADDING_VERT 1   // vertical padding inside textedit controls (between frame and text)
 
 // ── Checkboxes ────────────────────────────────────────────────────────────
