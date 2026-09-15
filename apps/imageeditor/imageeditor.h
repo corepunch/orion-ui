@@ -502,6 +502,8 @@ static inline uint32_t canvas_eraser_color(const canvas_doc_t *doc) {
 #endif
 void canvas_draw_circle(canvas_doc_t *doc, int cx, int cy, int r, uint32_t c);
 void canvas_draw_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1, int radius, uint32_t c);
+void canvas_draw_soft_circle(canvas_doc_t *doc, int cx, int cy, int r, uint32_t c);
+void canvas_draw_soft_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1, int radius, uint32_t c);
 void canvas_flood_fill(canvas_doc_t *doc, int sx, int sy, uint32_t fill);
 bool canvas_magic_wand_select(canvas_doc_t *doc, int sx, int sy,
                               int spread, bool antialias);

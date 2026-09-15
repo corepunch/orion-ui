@@ -277,7 +277,7 @@ static uint32_t classic_foreground(theme_part_t part, ctrl_state_t state) {
   if (state & CTRL_DISABLED) return get_sys_color(brTextDisabled);
   if (part == THEME_PART_LIST_ITEM && (state & CTRL_SELECTED)) return get_sys_color(brActiveTitlebarText);
   if (part == THEME_PART_MENU_ITEM && (state & (CTRL_HOVER | CTRL_SELECTED | CTRL_PRESSED)))
-    return get_sys_color(brControlBg);
+    return get_sys_color(brActiveTitlebarText);
   return get_sys_color(brTextNormal);
 }
 

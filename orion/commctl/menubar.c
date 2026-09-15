@@ -225,8 +225,9 @@ static result_t popup_proc(window_t *win, uint32_t msg,
                 R(1, y, win->frame.w - 2, MENU_ITEM_H), CTRL_HOVER);
           }
           bool hov = (i == pd->hovered);
-          uint32_t label_col  = hov ? get_sys_color(brControlBg) : get_sys_color(brTextNormal);
-          uint32_t hotkey_col = hov ? get_sys_color(brControlBg) : get_sys_color(brTextDisabled);
+          uint32_t label_col  = theme_foreground(THEME_PART_MENU_ITEM,
+                                                  hov ? CTRL_HOVER : CTRL_NORMAL);
+          uint32_t hotkey_col = hov ? label_col : get_sys_color(brTextDisabled);
           draw_item_label(it->label, &(irect16_t){MENU_SIDE_PAD, y, win->frame.w - MENU_SIDE_PAD * 2, MENU_ITEM_H}, label_col);
           if (menu_item_has_submenu(it)) {
             draw_text_small_clipped(">",
@@ -498,13 +499,15 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
         bool active = (i == data->active_idx);
         int label_w = strwidth(data->menus[i].label) + MENU_LABEL_PAD;
         int label_x0 = data->menu_x[i] - 2;
+        irect16_t label_rect = {label_x0, 0, label_w, win->frame.h};
         if (active) {
           theme_draw(THEME_PART_MENU_ITEM,
               R(label_x0, 0, label_w, win->frame.h - 1), CTRL_SELECTED);
         }
-        draw_text_small_clipped(data->menus[i].label,
-                        &(irect16_t){data->menu_x[i], 0, label_w, win->frame.h},
-                        active ? get_sys_color(brControlBg) : get_sys_color(brTextNormal), 0);
+        draw_text_small_clipped(data->menus[i].label, &label_rect,
+                        theme_foreground(THEME_PART_MENU_ITEM,
+                                         active ? CTRL_SELECTED : CTRL_NORMAL),
+                        TEXT_ALIGN_CENTER);
       }
       return true;
     }

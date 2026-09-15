@@ -953,10 +953,10 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       switch (tool) {
         case ID_TOOL_PENCIL:
-          canvas_draw_pen(doc, px, py, g_app->fg_color);
+          canvas_draw_circle(doc, px, py, brush_radius(), g_app->fg_color);
           break;
         case ID_TOOL_BRUSH:
-          canvas_draw_circle(doc, px, py, brush_radius(), g_app->fg_color);
+          canvas_draw_soft_circle(doc, px, py, brush_radius(), g_app->fg_color);
           break;
         case ID_TOOL_ERASER:
           canvas_draw_circle(doc, px, py, brush_radius(),
@@ -1146,11 +1146,12 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       switch (tool) {
         case ID_TOOL_PENCIL:
-          canvas_draw_pen_line(doc, doc->last.x, doc->last.y, px, py, g_app->fg_color);
-          break;
-        case ID_TOOL_BRUSH:
           canvas_draw_line(doc, doc->last.x, doc->last.y, px, py,
                            brush_radius(), g_app->fg_color);
+          break;
+        case ID_TOOL_BRUSH:
+          canvas_draw_soft_line(doc, doc->last.x, doc->last.y, px, py,
+                                brush_radius(), g_app->fg_color);
           break;
         case ID_TOOL_ERASER:
           canvas_draw_line(doc, doc->last.x, doc->last.y, px, py,

@@ -7,21 +7,25 @@ extern app_state_t *g_app;
 
 // Helper to get brush radius from app state
 static int tool_brush_get_radius(void) {
-  return g_app ? g_app->brush_size : 4;
+  int idx = g_app ? g_app->brush_size : 0;
+  if (idx < 0) idx = 0;
+  if (idx >= NUM_BRUSH_SIZES) idx = NUM_BRUSH_SIZES - 1;
+  return kBrushSizes[idx] * g_bw_retina_scale;
 }
 
 static void brush_begin(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t doc_pt) {
   if (!doc || !g_app) return;
   ie_doc_begin_op(doc, "Brush Stroke");
   doc->last = doc_pt;
-  canvas_draw_circle(doc, doc_pt.x, doc_pt.y, tool_brush_get_radius(), g_app->fg_color);
+  canvas_draw_soft_circle(doc, doc_pt.x, doc_pt.y, tool_brush_get_radius(), g_app->fg_color);
   ie_doc_after_pixels_changed(doc);
 }
 
 static void brush_drag(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t doc_pt) {
   if (!doc || !g_app) return;
   if (doc_pt.x == doc->last.x && doc_pt.y == doc->last.y) return;
-  canvas_draw_line(doc, doc->last.x, doc->last.y, doc_pt.x, doc_pt.y, tool_brush_get_radius(), g_app->fg_color);
+  canvas_draw_soft_line(doc, doc->last.x, doc->last.y, doc_pt.x, doc_pt.y,
+                        tool_brush_get_radius(), g_app->fg_color);
   doc->last = doc_pt;
   ie_doc_after_pixels_changed(doc);
 }

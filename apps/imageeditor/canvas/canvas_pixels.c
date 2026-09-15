@@ -118,6 +118,62 @@ void canvas_draw_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1,
   }
 }
 
+// Blend a brush dab over the existing pixel. Indexed canvases cannot represent
+// partial coverage, so they use the nearest palette colour as a hard dab.
+static void canvas_blend_pixel(canvas_doc_t *doc, int x, int y, uint32_t c,
+                               uint8_t coverage) {
+  if (coverage == 0) return;
+#if IMAGEEDITOR_INDEXED
+  (void)coverage;
+  canvas_set_pixel(doc, x, y, c);
+#else
+  uint32_t dst = canvas_get_pixel(doc, x, y);
+  int sa = (int)COLOR_A(c) * coverage / 255;
+  int da = COLOR_A(dst);
+  int oa = sa + da * (255 - sa) / 255;
+  if (oa <= 0) {
+    canvas_set_pixel(doc, x, y, MAKE_COLOR(0, 0, 0, 0));
+    return;
+  }
+  canvas_set_pixel(doc, x, y, MAKE_COLOR(
+      (uint8_t)((COLOR_R(c) * sa + COLOR_R(dst) * da * (255 - sa) / 255) / oa),
+      (uint8_t)((COLOR_G(c) * sa + COLOR_G(dst) * da * (255 - sa) / 255) / oa),
+      (uint8_t)((COLOR_B(c) * sa + COLOR_B(dst) * da * (255 - sa) / 255) / oa),
+      (uint8_t)oa));
+#endif
+}
+
+void canvas_draw_soft_circle(canvas_doc_t *doc, int cx, int cy, int r, uint32_t c) {
+  if (r <= 0) {
+    canvas_set_pixel(doc, cx, cy, c);
+    return;
+  }
+  int outer = r + 1;
+  for (int dy = -outer; dy <= outer; dy++) {
+    for (int dx = -outer; dx <= outer; dx++) {
+      float distance = sqrtf((float)(dx * dx + dy * dy));
+      float coverage = (float)r + 0.5f - distance;
+      if (coverage > 0.0f)
+        canvas_blend_pixel(doc, cx + dx, cy + dy, c,
+                          (uint8_t)CLAMP((int)(coverage * 255.0f), 0, 255));
+    }
+  }
+}
+
+void canvas_draw_soft_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1,
+                           int radius, uint32_t c) {
+  int dx = abs(x1 - x0), dy = abs(y1 - y0);
+  int sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+  int err = dx - dy;
+  while (true) {
+    canvas_draw_soft_circle(doc, x0, y0, radius, c);
+    if (x0 == x1 && y0 == y1) break;
+    int e2 = 2 * err;
+    if (e2 > -dy) { err -= dy; x0 += sx; }
+    if (e2 <  dx) { err += dx; y0 += sy; }
+  }
+}
+
 void canvas_flood_fill(canvas_doc_t *doc, int sx, int sy, uint32_t fill) {
   if (!canvas_in_selection(doc, sx, sy)) return;
   uint32_t target = canvas_get_pixel(doc, sx, sy);
