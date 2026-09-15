@@ -55,6 +55,21 @@ static void test_modern_surfaces(void) {
   PASS();
 }
 
+static void test_modern_button_states(void) {
+  TEST("Modern secondary button stays neutral when pressed");
+  theme_t *theme = paint_modern_instance();
+  theme->apply_palette();
+  memset(pixels, 0, sizeof(pixels));
+  theme->draw_part(THEME_PART_BUTTON, R(12, 10, 80, 30), CTRL_PRESSED);
+  ASSERT_EQUAL(pixels[25][12], MODERN_SECONDARY_BORDER);
+  ASSERT_EQUAL(pixels[25][50], get_sys_color(brButtonHover));
+  ASSERT_NOT_EQUAL(pixels[25][50], get_sys_color(brAccent));
+  memset(pixels, 0, sizeof(pixels));
+  theme->draw_part(THEME_PART_BUTTON, R(12, 10, 80, 30), CTRL_DEFAULT | CTRL_PRESSED);
+  ASSERT_EQUAL(pixels[25][50], get_sys_color(brAccent));
+  PASS();
+}
+
 static void test_translated_separator(void) {
   TEST("Classic toolbar separators respect caller bounds; Modern toolbar separators draw nothing");
   theme_t *themes[] = {paint_classic_instance(), paint_modern_instance()};
@@ -177,6 +192,7 @@ static void test_full_row_selection(void) {
 int main(void) {
   TEST_START("theme paint output");
   test_modern_surfaces();
+  test_modern_button_states();
   test_translated_separator();
   test_independent_parts();
   test_flat_tool_items();

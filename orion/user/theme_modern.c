@@ -38,7 +38,7 @@ static void modern_draw_button_bg(irect16_t r, ctrl_state_t state) {
     return;
   }
 
-  // Secondary button: 1-px outline border; transparent rest, light tint on hover/press.
+  // Secondary button: 1-px outline border; neutral interaction fills.
   // Focus overrides border color to accent (#0078D4); otherwise subdued #767676.
   uint32_t border = (state & CTRL_FOCUSED) ? get_sys_color(brAccent)
                                            : MODERN_SECONDARY_BORDER;
@@ -46,7 +46,7 @@ static void modern_draw_button_bg(irect16_t r, ctrl_state_t state) {
   // Cover the interior after drawing the border.
   fill_rounded_rect(border, r, RADIUS_BUTTON);
   if (state & (CTRL_PRESSED | CTRL_SELECTED)) {
-    fill_rounded_rect(get_sys_color(brAccent), rect_inset(r, 1), RADIUS_BUTTON - 1);
+    fill_rounded_rect(get_sys_color(brButtonHover), rect_inset(r, 1), RADIUS_BUTTON - 1);
   } else if (state & CTRL_HOVER) {
     fill_rounded_rect(get_sys_color(brButtonInner), rect_inset(r, 1), RADIUS_BUTTON - 1);
   } else {
