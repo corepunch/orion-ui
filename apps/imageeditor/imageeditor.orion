@@ -116,7 +116,7 @@
         <item name="tools" label="Tools" />
         <item name="colors" label="Colors" />
         <item name="layers" label="Layers" />
-        <item name="timeline" label="Timeline" />
+        <item name="timeline" label="Frames" />
         <Separator />
       </menu>
 

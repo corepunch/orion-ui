@@ -285,7 +285,15 @@ static result_t win_toolbar(window_t *win, uint32_t msg, uint32_t wparam, void *
 
       if (saved_idx >= tb->item_count) return true;
       int hit = toolbar_item_hit(tb, tx, ty);
-      if (hit != saved_idx) return true;
+      if (hit != saved_idx) {
+        if (hit >= 0 && (tb->items[saved_idx].flags & TOOLBAR_ITEM_FLAG_REORDERABLE) &&
+            (tb->items[hit].flags & TOOLBAR_ITEM_FLAG_REORDERABLE)) {
+          toolbar_drop_item_t drop = {tb->items[saved_idx].ident, tb->items[hit].ident};
+          fprintf(stderr, "[tb] drop win=%u from=%u to=%u\n", win->parent->id, drop.from_ident, drop.to_ident);
+          send_message(get_root_window(win), evCommand, MAKEDWORD(0, tbItemDrop), &drop);
+        }
+        return true;
+      }
 
       toolbar_item_t *item = &tb->items[saved_idx];
       fprintf(stderr, "[tb] click win=%u index=%d ident=%d\n", win->parent->id, saved_idx, item->ident);

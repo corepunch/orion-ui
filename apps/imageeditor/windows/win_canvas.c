@@ -161,8 +161,10 @@ static void canvas_sync_scrollbars(window_t *win, canvas_win_state_t *state) {
   frect_t bounds = window_view_bounds(win);
   set_scroll_content(owner, (int)ceilf(bounds.w), (int)ceilf(bounds.h),
                      window_view_scroll(win, SB_HORZ), window_view_scroll(win, SB_VERT));
-  window_view_set_scroll(win, SB_HORZ, get_scroll_pos(owner, SB_HORZ));
-  window_view_set_scroll(win, SB_VERT, get_scroll_pos(owner, SB_VERT));
+  if (!win->view.free_pan) {
+    window_view_set_scroll(win, SB_HORZ, get_scroll_pos(owner, SB_HORZ));
+    window_view_set_scroll(win, SB_VERT, get_scroll_pos(owner, SB_VERT));
+  }
 #endif
 }
 
@@ -448,12 +450,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       canvas_win_state_t *s = allocate_window_data(win, sizeof(canvas_win_state_t));
       s->doc = (canvas_doc_t *)lparam;
       s->doc->canvas_win = win;
-      window_view_init(win, s->doc->canvas_w, s->doc->canvas_h, g_bw_retina_scale,
-#ifdef AX_PLATFORM_IOS
-                       true);
-#else
-                       false);
-#endif
+      window_view_init(win, s->doc->canvas_w, s->doc->canvas_h, g_bw_retina_scale, true);
       // Sync the document window's built-in scrollbars.
       canvas_sync_scrollbars(win, s);
       return true;

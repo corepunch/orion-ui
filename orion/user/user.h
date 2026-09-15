@@ -109,6 +109,10 @@ typedef struct {
   int index;
 } toolbar_draw_item_t;
 
+typedef struct {
+  uint32_t from_ident, to_ident;
+} toolbar_drop_item_t;
+
 typedef struct toolbar_state_s {
   // Owner-draw item list — buttons/separators/spacers/labels/dropdowns drawn inline.
   toolbar_item_t *items;          // owned copy of the item descriptors (malloc'd)

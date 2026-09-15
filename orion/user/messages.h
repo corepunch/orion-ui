@@ -204,6 +204,7 @@ enum {
   //   Not sent by win_splitter itself; parent may use it to notify grandparents.
   spnDragStart,
   spnMoved,
+  tbItemDrop,         // evCommand notification: lparam=toolbar_drop_item_t*
 };
 
 // Button state
@@ -360,7 +361,8 @@ typedef struct {
 #define TOOLBAR_COMBOBOX_DEFAULT_WIDTH_MULT  3  // default combobox width = button_size * this multiplier
 #define TOOLBAR_BUTTON_FLAG_ACTIVE   (1u << 0)
 #define TOOLBAR_BUTTON_FLAG_PRESSED  (1u << 1)
-#define TOOLBAR_STYLE_GRIP           (1u << 1) // draggable grip above a vertical floating toolbar
+#define TOOLBAR_ITEM_FLAG_REORDERABLE (1u << 2) // drop onto another reorderable item
+#define TOOLBAR_STYLE_GRIP           (1u << 1) // draggable grip on a floating toolbar
 #define TOOLBAR_GRIP_HEIGHT          12
 #define TOOLBAR_GRIP_WIDTH           12
 #define TOOLBAR_STYLE_SHOW_LABELS    (1u << 0) // WinAPI-style text below button icons

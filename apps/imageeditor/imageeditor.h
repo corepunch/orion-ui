@@ -807,11 +807,10 @@ void swap_foreground_background_colors(void);
 
 #include "anim/anim.h"
 
-// Timeline window geometry — docked at the bottom of the screen.
-#define TIMELINE_THUMB_W   48   // thumbnail cell width
-#define TIMELINE_TOOLBAR_H (TB_SPACING + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH))
-#define TIMELINE_CLIENT_H   56   // visible frame strip height
-#define TIMELINE_WIN_H     (TITLEBAR_HEIGHT + TIMELINE_TOOLBAR_H + TIMELINE_CLIENT_H)
+// Floating frame strip geometry.
+#define TIMELINE_THUMB_W    56
+#define TIMELINE_CLIENT_H   56
+#define TIMELINE_WIN_H     (TIMELINE_CLIENT_H + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH))
 
 // Factory helper: create, show, and register the timeline palette window.
 window_t *create_timeline_window(void);

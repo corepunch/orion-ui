@@ -376,6 +376,68 @@ void test_ie_timeline_keyboard_navigation(void) {
     PASS();
 }
 
+static void test_ie_floating_frames(void) {
+  TEST("Frames: compact layout, actual toolbar clicks/reordering, overflow, visibility");
+  ie_setup();
+  canvas_doc_t *doc = create_document(NULL, 32, 20);
+  window_t *win = create_timeline_window();
+  ASSERT_NOT_NULL(win);
+  ASSERT_FALSE(window_has_state(win, WINDOW_STATE_VISIBLE));
+  ASSERT_TRUE(win->flags & WINDOW_NOTITLE);
+  ASSERT_EQUAL(win->frame.h, TIMELINE_WIN_H);
+  int single_w = win->frame.w;
+  handle_menu_command(ID_ANIM_NEW_FRAME);
+  ASSERT_TRUE(window_has_state(win, WINDOW_STATE_VISIBLE));
+  ASSERT_TRUE(win->frame.w > single_w);
+  toolbar_state_t *tb = window_toolbar_state(win);
+  int first = -1, second = -1;
+  for (int i = 0; i < tb->item_count; i++) {
+    if (tb->items[i].type != TOOLBAR_ITEM_CUSTOM) continue;
+    if (first < 0) first = i; else { second = i; break; }
+  }
+  ASSERT_TRUE(first >= 0 && second >= 0);
+  irect16_t a = tb->item_rects[first], b = tb->item_rects[second];
+  uint32_t pa = MAKEDWORD(a.x + a.w / 2, a.y + a.h / 2);
+  uint32_t pb = MAKEDWORD(b.x + b.w / 2, b.y + b.h / 2);
+  send_message(win->toolbar, evLeftButtonDown, pa, NULL);
+  send_message(win->toolbar, evLeftButtonUp, pa, NULL);
+  ASSERT_EQUAL(doc->anim->active_frame, 0);
+  anim_frame_t *selected = doc->anim->frames[0];
+  doc->modified = false;
+  send_message(win->toolbar, evLeftButtonDown, pa, NULL);
+  send_message(win->toolbar, evLeftButtonUp, pb, NULL);
+  ASSERT_TRUE(doc->anim->frames[1] == selected);
+  ASSERT_EQUAL(doc->anim->active_frame, 1);
+  ASSERT_TRUE(doc->modified);
+  for (int i = 0; i < 12; i++) handle_menu_command(ID_ANIM_NEW_FRAME);
+  send_message(win, evDisplayChange, MAKEDWORD(758, 1080), NULL);
+  ASSERT_TRUE(win->frame.w < 758);
+  ASSERT_EQUAL(win->frame.y + win->frame.h, 1080 - 12);
+  tb = window_toolbar_state(win);
+  for (int i = 0; i < tb->item_count; i++)
+    ASSERT_TRUE(tb->item_rects[i].x + tb->item_rects[i].w <= win->frame.w);
+  int active = doc->anim->active_frame;
+  send_message(win, evWheel, 0, (void *)(intptr_t)MAKEDWORD(0, 1));
+  ASSERT_EQUAL(doc->anim->active_frame, active);
+  send_message(win, evKeyDown, AX_KEY_HOME, NULL);
+  ASSERT_EQUAL(doc->anim->active_frame, 0);
+  move_window(win, 20, 150);
+  send_message(win, evDisplayChange, MAKEDWORD(1080, 758), NULL);
+  ASSERT_EQUAL(win->frame.x, 20);
+  ASSERT_EQUAL(win->frame.y, 150);
+  handle_menu_command(ID_WINDOW_TIMELINE);
+  ASSERT_FALSE(window_has_state(win, WINDOW_STATE_VISIBLE));
+  timeline_win_refresh();
+  ASSERT_FALSE(window_has_state(win, WINDOW_STATE_VISIBLE));
+  handle_menu_command(ID_WINDOW_TIMELINE);
+  ASSERT_TRUE(window_has_state(win, WINDOW_STATE_VISIBLE));
+  window_view_pan(doc->canvas_win, (ipoint16_t){0, -100});
+  canvas_win_sync_scrollbars(doc->canvas_win);
+  ASSERT_TRUE(window_view_bounds(doc->canvas_win).y < 0);
+  ie_teardown();
+  PASS();
+}
+
 // Palette windows are created correctly and their pointers are stored.
 void test_ie_palette_windows_created(void) {
     TEST("create palette windows: g_app->tool_win and g_app->color_win are valid");
@@ -2243,6 +2305,7 @@ void test_ie_canvas_centers_small_image_hit_testing(void) {
     ASSERT_NOT_NULL(doc);
 
     resize_window(doc->win, 200, 150 + TITLEBAR_HEIGHT + STATUSBAR_HEIGHT);
+    window_view_center(doc->canvas_win);
     canvas_win_sync_scrollbars(doc->canvas_win);
 
     canvas_win_state_t *state = (canvas_win_state_t *)doc->canvas_win->userdata;
@@ -2353,6 +2416,7 @@ int main(int argc, char *argv[]) {
     test_ie_anim_playback_restores_selection();
     test_ie_anim_playback_end_restores_selection();
     test_ie_timeline_keyboard_navigation();
+    test_ie_floating_frames();
     test_ie_palette_windows_created();
     test_ie_all_forms_use_auto_layout();
     test_ie_filter_gallery_layout_shape();

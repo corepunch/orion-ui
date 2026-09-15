@@ -69,7 +69,7 @@ static void test_pencil_canvas_extends_behind_timeline(void) {
   ASSERT_EQUAL(doc->win->frame.w, area.w);
   ASSERT_EQUAL(doc->win->frame.h, area.h);
   ASSERT_EQUAL(doc->canvas_w, area.w * g_bw_retina_scale);
-  int visible_h = g_app->timeline_win->frame.y - area.y;
+  int visible_h = area.h;
   ASSERT_EQUAL(doc->canvas_h, visible_h * g_bw_retina_scale);
   frect_t bounds = window_view_bounds(doc->canvas_win);
   ASSERT_TRUE(fabsf(bounds.x) < 0.01f);

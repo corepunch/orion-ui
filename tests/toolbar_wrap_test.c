@@ -998,11 +998,58 @@ void test_toolbar_embedded_slider_drag(void) {
   PASS();
 }
 
+static toolbar_drop_item_t last_drop;
+static int drop_count;
+static result_t drop_capture_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  if (msg == evCommand && HIWORD(wparam) == tbItemDrop) {
+    last_drop = *(toolbar_drop_item_t *)lparam;
+    drop_count++;
+    return true;
+  }
+  return click_capture_proc(win, msg, wparam, lparam);
+}
+
+static void test_toolbar_reorderable_items(void) {
+  TEST("Floating toolbar routes a drag only between reorderable items");
+  test_env_init();
+  window_t *win = create_window("Frames", WINDOW_TOOLBAR | WINDOW_NOTITLE | WINDOW_NORESIZE,
+    MAKERECT(20, 30, 300, TOOLBAR_BAND_HEIGHT), NULL, drop_capture_proc, 0, NULL);
+  toolbar_item_t items[] = {
+    {.type = TOOLBAR_ITEM_CUSTOM, .ident = 101, .flags = TOOLBAR_ITEM_FLAG_REORDERABLE},
+    {.type = TOOLBAR_ITEM_CUSTOM, .ident = 102, .flags = TOOLBAR_ITEM_FLAG_REORDERABLE},
+    {.type = TOOLBAR_ITEM_BUTTON, .ident = 103},
+  };
+  send_message(win, tbSetItems, ARRAY_LEN(items), items);
+  show_window(win, true);
+  toolbar_state_t *tb = window_toolbar_state(win);
+  irect16_t a = rect_offset(tb->item_rects[0], win->frame.x, win->frame.y);
+  irect16_t b = rect_offset(tb->item_rects[1], win->frame.x, win->frame.y);
+  irect16_t c = rect_offset(tb->item_rects[2], win->frame.x, win->frame.y);
+  drop_count = g_click_count = 0;
+  dispatch_left_mouse_at(a.x + 8, a.y + 8, kEventLeftButtonDown);
+  dispatch_left_mouse_at(b.x + 8, b.y + 8, kEventLeftButtonUp);
+  ASSERT_EQUAL(drop_count, 1);
+  ASSERT_EQUAL(last_drop.from_ident, 101);
+  ASSERT_EQUAL(last_drop.to_ident, 102);
+  ASSERT_EQUAL(g_click_count, 0);
+  dispatch_left_mouse_at(a.x + 8, a.y + 8, kEventLeftButtonDown);
+  dispatch_left_mouse_at(c.x + 8, c.y + 8, kEventLeftButtonUp);
+  ASSERT_EQUAL(drop_count, 1);
+  ASSERT_EQUAL(g_click_count, 0);
+  dispatch_left_mouse_at(a.x + 8, a.y + 8, kEventLeftButtonDown);
+  dispatch_left_mouse_at(a.x + 8, a.y + 8, kEventLeftButtonUp);
+  ASSERT_EQUAL(g_click_count, 1);
+  ASSERT_EQUAL(g_last_click_ident, 101);
+  test_env_shutdown();
+  PASS();
+}
+
 int main(int argc, char *argv[]) {
     (void)argc;
     (void)argv;
     TEST_START("Toolbar child-window tests");
 
+    test_toolbar_reorderable_items();
     test_toolbar_embedded_slider_drag();
     test_toolbar_vertical_custom_item();
     test_toolbar_set_items_creates_children();

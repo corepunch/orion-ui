@@ -7,7 +7,7 @@ static void imageeditor_layout_ipad_palettes(void) {
   if (!g_app) return;
   irect16_t screen = R(0, 0, ui_get_system_metrics(kSystemMetricScreenWidth),
                                    ui_get_system_metrics(kSystemMetricScreenHeight));
-  irect16_t area = rect_inset(rect_trim_bottom(rect_trim_top(screen, APP_TOOLBAR_Y + APP_TOOLBAR_H), TIMELINE_WIN_H), 4);
+  irect16_t area = rect_inset(rect_trim_top(screen, APP_TOOLBAR_Y + APP_TOOLBAR_H), 4);
   irect16_t right = rect_split_right(area, RIGHT_PANE_WIN_W);
   window_t *panels[] = {g_app->color_win, g_app->layers_win};
   for (size_t i = 0; i < ARRAY_LEN(panels); i++) {
@@ -32,8 +32,7 @@ irect16_t imageeditor_document_workspace_rect(void) {
                                              : MENUBAR_HEIGHT + APP_TOOLBAR_H;
   return rect_trim_left(rect_trim_top(R(0, 0, screen_w, screen_h), top), left);
 #elif defined(AX_PLATFORM_IOS)
-  irect16_t area = rect_trim_bottom(rect_trim_top(R(0, 0, screen_w, screen_h),
-                                                 APP_TOOLBAR_Y + APP_TOOLBAR_H), TIMELINE_WIN_H);
+  irect16_t area = rect_trim_top(R(0, 0, screen_w, screen_h), APP_TOOLBAR_Y + APP_TOOLBAR_H);
   return rect_inset(rect_trim_right(rect_trim_left(area, PALETTE_WIN_W + 8), RIGHT_PANE_WIN_W + 8), 4);
 #else
   int left_palette_right = PALETTE_WIN_X + PALETTE_WIN_W;
@@ -55,13 +54,7 @@ irect16_t imageeditor_document_workspace_rect(void) {
 
 #if IMAGEEDITOR_BW
 static irect16_t imageeditor_pencil_canvas_rect(void) {
-  irect16_t area = imageeditor_document_workspace_rect();
-  if (!g_app || !g_app->timeline_win ||
-      !window_has_state(g_app->timeline_win, WINDOW_STATE_VISIBLE)) return area;
-  int timeline_top = window_screen_y(g_app->timeline_win);
-  if (timeline_top > area.y && timeline_top < area.y + area.h)
-    area.h = timeline_top - area.y;
-  return area;
+  return imageeditor_document_workspace_rect();
 }
 #endif
 

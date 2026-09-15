@@ -87,7 +87,9 @@ void init_text_rendering(void) {
   snprintf(system_path, sizeof(system_path), "%s/../share/orion/fonts/NotoSans-Medium.ttf", exe);
   snprintf(compact_path, sizeof(compact_path), "%s/../share/orion/fonts/NotoSans-Regular.ttf", exe);
 
-#if UI_WINDOW_SCALE == 1
+#if defined(AX_PLATFORM_IOS)
+  const float system_size = 14.4f, small_size = 14.4f, smallest_size = 10.8f;
+#elif UI_WINDOW_SCALE == 1
   const float system_size = 12.0f, small_size = 12.0f, smallest_size = 9.0f;
 #else
   const float system_size = 8.0f, small_size = 8.0f, smallest_size = 7.0f;

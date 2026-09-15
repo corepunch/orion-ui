@@ -1047,8 +1047,9 @@ void handle_menu_command(uint16_t id) {
     }
 
     case ID_WINDOW_TIMELINE:
+      IE_TRACE("frames toggle win=%p", (void *)g_app->timeline_win);
       if (g_app->timeline_win) {
-        show_window(g_app->timeline_win, true);
+        show_window(g_app->timeline_win, !window_has_state(g_app->timeline_win, WINDOW_STATE_VISIBLE));
       } else {
         create_timeline_window();
       }

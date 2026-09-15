@@ -5,7 +5,11 @@
 
 // Height of the menu bar strip — matches the generous dropdown row rhythm.
 // FONT_SIZE is a compile-time constant from kernel/kernel.h (included via user/user.h).
+#ifdef AX_PLATFORM_IOS
+#define MENUBAR_HEIGHT 29
+#else
 #define MENUBAR_HEIGHT (FONT_SIZE + 12)
+#endif
 
 // One item inside a dropdown menu.  label == NULL && id == 0 means separator.
 // Submenus use id == 0 with a non-NULL label and submenu_items/submenu_count.
