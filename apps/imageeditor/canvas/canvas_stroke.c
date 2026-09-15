@@ -36,8 +36,8 @@ void canvas_stroke_begin(canvas_doc_t *doc, ipoint16_t point, int radius, uint32
   doc->stroke.x = point.x;
   doc->stroke.y = point.y;
   stroke_stamp(doc, point);
-  IE_TRACE("stroke begin win=%p doc=%p at=(%d,%d) radius=%d soft=%d",
-           (void *)doc->canvas_win, (void *)doc, point.x, point.y, radius, soft);
+  // IE_TRACE("stroke begin win=%p doc=%p at=(%d,%d) radius=%d soft=%d",
+  //          (void *)doc->canvas_win, (void *)doc, point.x, point.y, radius, soft);
 }
 
 void canvas_stroke_drag(canvas_doc_t *doc, ipoint16_t point) {
@@ -47,8 +47,8 @@ void canvas_stroke_drag(canvas_doc_t *doc, ipoint16_t point) {
   // Midpoint joins share a tangent; raw samples control the rounded turns.
   stroke_curve(doc, prev.x, prev.y, (prev.x + point.x) * 0.5f, (prev.y + point.y) * 0.5f);
   doc->stroke.sample = doc->last = point;
-  IE_TRACE("stroke drag win=%p doc=%p at=(%d,%d)",
-           (void *)doc->canvas_win, (void *)doc, point.x, point.y);
+  // IE_TRACE("stroke drag win=%p doc=%p at=(%d,%d)",
+  //          (void *)doc->canvas_win, (void *)doc, point.x, point.y);
 }
 
 void canvas_stroke_end(canvas_doc_t *doc, ipoint16_t point) {
@@ -56,12 +56,12 @@ void canvas_stroke_end(canvas_doc_t *doc, ipoint16_t point) {
   canvas_stroke_drag(doc, point);
   stroke_curve(doc, point.x, point.y, point.x, point.y);
   doc->stroke.active = false;
-  IE_TRACE("stroke end win=%p doc=%p at=(%d,%d)",
-           (void *)doc->canvas_win, (void *)doc, point.x, point.y);
+  // IE_TRACE("stroke end win=%p doc=%p at=(%d,%d)",
+  //          (void *)doc->canvas_win, (void *)doc, point.x, point.y);
 }
 
 void canvas_stroke_cancel(canvas_doc_t *doc) {
   if (!doc || !doc->stroke.active) return;
   doc->stroke.active = false;
-  IE_TRACE("stroke cancel win=%p doc=%p", (void *)doc->canvas_win, (void *)doc);
+  // IE_TRACE("stroke cancel win=%p doc=%p", (void *)doc->canvas_win, (void *)doc);
 }

@@ -116,7 +116,7 @@ static void timeline_layout(window_t *win, int width, int height, bool follow) {
   }
   x = CLAMP(x, 0, MAX(0, width - w));
   y = CLAMP(y, 0, MAX(0, height - TIMELINE_WIN_H));
-  if (win->frame.w != w) resize_window(win, w, TIMELINE_WIN_H);
+  if (win->frame.w != w || win->frame.h != TIMELINE_WIN_H) resize_window(win, w, TIMELINE_WIN_H);
   if (win->frame.x != x || win->frame.y != y) move_window(win, x, y);
   st->positioned = true;
   st->last_position = (ipoint16_t){x, y};
@@ -183,14 +183,14 @@ static void timeline_draw_frame(window_t *win, int idx, toolbar_draw_item_t *dra
   timeline_state_t *st = win->userdata;
   canvas_doc_t *doc = tl_doc();
   if (st->thumbs_dirty) rebuild_thumbnails(st);
-  irect16_t outer = rect_inset(draw->rect, 2);
-  irect16_t inner = rect_inset(outer, 2);
-  uint32_t border = get_sys_color((draw->state & CTRL_SELECTED) ? brAccent : brControlBg);
-  if (!(draw->state & CTRL_SELECTED) && (draw->state & CTRL_HOVER)) border = get_sys_color(brToolbarForeground);
-  fill_rounded_rect(border, outer, 7);
-  fill_rounded_rect(doc && doc->background.show ? doc->background.color : MAKE_COLOR(0xCC, 0xCC, 0xCC, 0xFF), inner, 5);
+  irect16_t inner = draw->rect;
+  bool outlined = (draw->state & (CTRL_SELECTED | CTRL_HOVER)) != 0;
+  int radius = 4;
+  if (outlined)
+    fill_rounded_rect(get_sys_color((draw->state & CTRL_SELECTED) ? brAccent : brToolbarForeground), rect_inset(inner, -1), radius + 1);
+  fill_rounded_rect(doc && doc->background.show ? doc->background.color : MAKE_COLOR(0xCC, 0xCC, 0xCC, 0xFF), inner, radius);
   if (idx >= 0 && idx < st->thumb_count && st->thumbs[idx])
-    draw_rounded_rect(st->thumbs[idx], inner, inner.w, inner.h, 5, 1.0f);
+    draw_rounded_rect(st->thumbs[idx], inner, inner.w, inner.h, radius+2, 2.0f);
   char number[16];
   snprintf(number, sizeof(number), "%d", idx + 1);
   int h = text_char_height(FONT_SMALLEST), w = text_strwidth(FONT_SMALLEST, number);
@@ -206,7 +206,6 @@ static result_t timeline_proc(window_t *win, uint32_t msg, uint32_t wparam, void
       st = allocate_window_data(win, sizeof(*st));
       if (!st) return false;
       st->thumbs_dirty = true;
-      send_message(win, tbSetButtonSize, TIMELINE_CLIENT_H, NULL);
       send_message(win, tbSetStyle, TOOLBAR_STYLE_GRIP, NULL);
       return true;
     case evPaint: return true;

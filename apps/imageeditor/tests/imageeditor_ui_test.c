@@ -385,6 +385,7 @@ static void test_ie_floating_frames(void) {
   ASSERT_FALSE(window_has_state(win, WINDOW_STATE_VISIBLE));
   ASSERT_TRUE(win->flags & WINDOW_NOTITLE);
   ASSERT_EQUAL(win->frame.h, TIMELINE_WIN_H);
+  ASSERT_EQUAL(win->frame.h, TOOLBAR_BAND_HEIGHT);
   int single_w = win->frame.w;
   handle_menu_command(ID_ANIM_NEW_FRAME);
   ASSERT_TRUE(window_has_state(win, WINDOW_STATE_VISIBLE));
@@ -397,6 +398,9 @@ static void test_ie_floating_frames(void) {
   }
   ASSERT_TRUE(first >= 0 && second >= 0);
   irect16_t a = tb->item_rects[first], b = tb->item_rects[second];
+  ASSERT_EQUAL(toolbar_effective_bsz(win), TB_SPACING);
+  ASSERT_EQUAL(a.w, TB_SPACING);
+  ASSERT_EQUAL(a.h, TB_SPACING);
   uint32_t pa = MAKEDWORD(a.x + a.w / 2, a.y + a.h / 2);
   uint32_t pb = MAKEDWORD(b.x + b.w / 2, b.y + b.h / 2);
   send_message(win->toolbar, evLeftButtonDown, pa, NULL);
