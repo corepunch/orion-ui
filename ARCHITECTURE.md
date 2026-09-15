@@ -111,6 +111,20 @@ scrollbars are intercepted by the window system before ordinary client input.
 See [Window System](docs/window-system.md) and
 [Messages & Events](docs/messages.md).
 
+Two-finger transforms follow the same boundary: the iPad backend queues an
+inline `ax_gesture_t` (centroid, previous centroid, incremental scale and
+clockwise rotation). `event.c` routes `evGesture` through the child hierarchy,
+converts both points into content coordinates, and retains the accepting window
+until end/cancel. Unhandled gestures fall back to two-finger scrolling.
+`evPointerCancel` aborts the first finger's interaction before a gesture begins.
+Apple Pencil strokes retain priority over finger gestures.
+
+Canvas scale, rotation and translation belong to `canvas_win_state_t`, not the
+image model. `canvas_coords.c` owns forward/inverse mappings and anchored gesture
+updates. Painting scopes a renderer projection transform around image content
+and overlays, then restores it before drawing viewport UI. The window system
+continues to own clipping; rotated views do not implement their own event router.
+
 ## Controls And Notifications
 
 Controls are ordinary windows with registered classes and message contracts.

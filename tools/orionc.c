@@ -493,7 +493,9 @@ static void emit_toolbar(FILE *f, xmlNodePtr toolbar, const char *symbol,
       if (text && *text) cstr(textq, sizeof(textq), text); else snprintf(textq, sizeof(textq), "NULL");
       if (tooltip && *tooltip) cstr(tipq, sizeof(tipq), tooltip); else snprintf(tipq, sizeof(tipq), "NULL");
       if (icon && *icon) snprintf(iconq, sizeof(iconq), "\"%s\"", icon); else snprintf(iconq, sizeof(iconq), "NULL");
+      emit_if(f, it, false);
       OUT("  { %s, %s, %s, %s, %s, %s, %s },\n", toolbar_type(it), id, iconq, nz(w, "0"), nz(flags, "0"), textq, tipq);
+      emit_if(f, it, true);
       free(command); free(menu); free(name); free(icon); free(w); free(flags); free(text); free(tooltip);
     }
     OUT("};\n\n");

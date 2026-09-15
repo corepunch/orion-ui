@@ -7,8 +7,59 @@
 
 extern bool ui_init_prog(void);
 extern void ui_shutdown_prog(void);
+extern void init_ui_white_texture(void);
+extern void shutdown_white_texture(void);
 
 static uint32_t viewport_texture;
+static void test_view_rotation(void) {
+  TEST("Renderer rotates canvas content and restores the projection for viewport UI");
+  CGLPixelFormatAttribute attrs[] = {kCGLPFAOpenGLProfile,
+    (CGLPixelFormatAttribute)kCGLOGLPVersion_3_2_Core, 0};
+  CGLPixelFormatObj format = NULL;
+  CGLContextObj context = NULL;
+  GLint count = 0;
+  if (CGLChoosePixelFormat(attrs, &format, &count) != kCGLNoError || !format) {
+    SKIP("Offscreen OpenGL unavailable");
+  }
+  CGLError error = CGLCreateContext(format, NULL, &context);
+  CGLDestroyPixelFormat(format);
+  if (error != kCGLNoError || !context) { SKIP("Offscreen OpenGL context unavailable"); }
+  CGLSetCurrentContext(context);
+  bool ok = ui_init_prog();
+  if (ok) {
+    init_ui_white_texture();
+    GLuint fbo = 0, texture = 0;
+    int width = 0, height = 0;
+    R_EnsureWindowTarget(&fbo, &texture, &width, &height, 64, 64);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glViewport(0, 0, 64, 64);
+    glDisable(GL_SCISSOR_TEST);
+    glClearColor(0, 0, 0, 1);
+    glClear(GL_COLOR_BUFFER_BIT);
+    set_projection(0, 0, 64, 64);
+    float saved[16];
+    g_ui_runtime.running = true;
+    begin_draw_transform(1.57079632679f, 32, 32, 2, 3, saved);
+    fill_rect(0xffffffff, R(8, 4, 8, 4));
+    end_draw_transform(saved);
+    fill_rect(0xffffffff, R(2, 2, 3, 3));
+    uint8_t rotated[4], original[4], overlay[4];
+    glReadPixels(60, 64 - 15 - 1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, rotated);
+    glReadPixels(10, 64 - 6 - 1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, original);
+    glReadPixels(3, 64 - 3 - 1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, overlay);
+    ok = rotated[0] == 255 && original[0] == 0 && overlay[0] == 255 && glGetError() == GL_NO_ERROR;
+    g_ui_runtime.running = false;
+    glDeleteTextures(1, &texture);
+    glDeleteFramebuffers(1, &fbo);
+    shutdown_white_texture();
+    ui_shutdown_prog();
+  }
+  CGLSetCurrentContext(NULL);
+  CGLDestroyContext(context);
+  ASSERT_TRUE(ok);
+  PASS();
+}
+
 static result_t viewport_proc(window_t *win, uint32_t msg, uint32_t wp, void *lp) {
   if (msg == evPaint) {
     draw_rect_ex(viewport_texture, R(-win->parent->hscroll.pos, -win->parent->vscroll.pos, 400, 300), 0, 1);
@@ -143,6 +194,7 @@ static void test_onion_alpha(void) {
 int main(void) {
   TEST_START("Renderer alpha");
 #if defined(__APPLE__) && !TARGET_OS_IOS
+  test_view_rotation();
   test_fixed_viewport();
 #endif
   test_onion_alpha();

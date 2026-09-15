@@ -694,11 +694,13 @@ void canvas_commit_move(canvas_doc_t *doc) {
     free(new_mask);
     doc->sel.active = false;
   }
-  // Release float resources including the GL texture overlay.
-  if (doc->sel.floating.tex) {
-    glDeleteTextures(1, &doc->sel.floating.tex);
-    doc->sel.floating.tex = 0;
-  }
+  canvas_discard_move(doc);
+}
+
+void canvas_discard_move(canvas_doc_t *doc) {
+  if (!doc) return;
+  R_DeleteTexture(doc->sel.floating.tex);
+  doc->sel.floating.tex = 0;
   free(doc->sel.floating.pixels);
   free(doc->sel.floating.mask);
   doc->sel.floating.pixels = NULL;

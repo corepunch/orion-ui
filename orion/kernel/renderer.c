@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #if defined(_WIN32) || defined(_WIN64)
 #  include <windows.h>
@@ -461,6 +462,25 @@ void set_projection(int x, int y, int w, int h) {
 
 float *get_sprite_matrix(void) {
   return (float*)fmat16_data(&g_ref.projection);
+}
+
+void end_draw_transform(const float saved[16]) {
+  memcpy(&g_ref.projection, saved, sizeof(g_ref.projection));
+  fmat16_copy(&g_ref.projection, &g_active_projection);
+  update_sprite_projection_uniforms(&g_ref.projection);
+}
+
+void begin_draw_transform(float radians, float cx, float cy, float tx, float ty, float saved[16]) {
+  memcpy(saved, get_sprite_matrix(), sizeof(float) * 16);
+  float c = cosf(radians), s = sinf(radians), transformed[16];
+  float x = cx + tx - c * cx + s * cy, y = cy + ty - s * cx - c * cy;
+  memcpy(transformed, saved, sizeof(transformed));
+  for (int row = 0; row < 4; row++) {
+    transformed[row] = saved[row] * c + saved[4 + row] * s;
+    transformed[4 + row] = -saved[row] * s + saved[4 + row] * c;
+    transformed[12 + row] = saved[row] * x + saved[4 + row] * y + saved[12 + row];
+  }
+  end_draw_transform(transformed);
 }
 
 // Draw a sprite at the specified screen position

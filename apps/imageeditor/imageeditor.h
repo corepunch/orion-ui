@@ -315,6 +315,10 @@ typedef struct canvas_doc_s {
 typedef struct {
   canvas_doc_t *doc;
   float         scale;
+  float         rotation, translate_x, translate_y; // View transform; never changes document pixels.
+  bool          gesture_active;
+  bool          stroke_modified;
+  bool          stroke_undo;
   // Pan / hand-tool scroll state.  int to avoid int16 overflow at high zoom.
   struct {
     int  x;          // pan offset in screen pixels
@@ -554,11 +558,13 @@ bool canvas_commit_selection_mask_offset(canvas_doc_t *doc);
 // Move-selection helpers (called from win_canvas.c)
 void canvas_begin_move(canvas_doc_t *doc, uint32_t bg);
 void canvas_commit_move(canvas_doc_t *doc);
+void canvas_discard_move(canvas_doc_t *doc);
 bool canvas_translate_selection_mask(canvas_doc_t *doc, int dx, int dy);
 
 // Undo/redo
 void doc_push_undo(canvas_doc_t *doc);
 bool doc_undo(canvas_doc_t *doc);
+bool doc_cancel_undo(canvas_doc_t *doc);
 bool doc_redo(canvas_doc_t *doc);
 void doc_free_undo(canvas_doc_t *doc);
 void doc_discard_undo(canvas_doc_t *doc);
@@ -599,6 +605,8 @@ result_t win_color_palette_proc(window_t *win, uint32_t msg, uint32_t wparam, vo
 // Zoom support
 void canvas_win_set_zoom(window_t *canvas_win, int new_scale);
 void canvas_win_set_scale(window_t *canvas_win, float new_scale);
+void canvas_transform_point(window_t *win, const canvas_win_state_t *state, float *x, float *y, bool inverse);
+void canvas_apply_gesture(window_t *win, canvas_win_state_t *state, const ax_gesture_t *gesture);
 
 // Fit the canvas to the viewport at the largest integer zoom that shows the
 // whole image — equivalent to Photoshop's "Fit on Screen" (Ctrl+0).

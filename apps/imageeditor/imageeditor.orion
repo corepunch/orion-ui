@@ -182,11 +182,11 @@
         <Button name="undo" command="edit.undo" icon="undo" text="Undo" tooltip="Undo" />
         <Button name="redo" command="edit.redo" icon="redo" text="Redo" tooltip="Redo" />
         <spacer w="10" />
-        <Button name="zoom_out" command="view.zoom_out" icon="zoom-out" text="Zoom Out" tooltip="Zoom out" />
-        <Button name="zoom_in" command="view.zoom_in" icon="zoom-in" text="Zoom In" tooltip="Zoom in" />
-        <Button name="zoom_1x" command="view.zoom_1x" icon="frame" text="1x" tooltip="Zoom to 100%" />
-        <Button name="zoom_fit" command="view.zoom_fit" icon="expand" text="Fit" tooltip="Fit on screen" />
-        <spacer w="10" />
+        <Button name="zoom_out" command="view.zoom_out" icon="zoom-out" text="Zoom Out" tooltip="Zoom out" if="!defined(AX_PLATFORM_IOS)" />
+        <Button name="zoom_in" command="view.zoom_in" icon="zoom-in" text="Zoom In" tooltip="Zoom in" if="!defined(AX_PLATFORM_IOS)" />
+        <Button name="zoom_1x" command="view.zoom_1x" icon="frame" text="1x" tooltip="Zoom to 100%" if="!defined(AX_PLATFORM_IOS)" />
+        <Button name="zoom_fit" command="view.zoom_fit" icon="expand" text="Fit" tooltip="Fit on screen" if="!defined(AX_PLATFORM_IOS)" />
+        <spacer w="10" if="!defined(AX_PLATFORM_IOS)" />
         <Button name="show_background" command="view.show_background" icon="eye" flags="BUTTON_PUSHLIKE" text="BG" tooltip="Toggle background" />
         <Button name="mask_only" command="view.mask_only" icon="square-dashed" flags="BUTTON_PUSHLIKE" text="Mask" tooltip="Toggle mask view" />
         </Toolbar>

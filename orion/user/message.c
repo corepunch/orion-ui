@@ -307,6 +307,10 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
   // Call window procedure
   if (!(value = win->proc(win, msg, wparam, lparam))) {
     switch (msg) {
+      case evPointerCancel:
+        // Existing controls release their pressed state without an inside click.
+        win->proc(win, evLeftButtonUp, MAKEDWORD(-1, -1), NULL);
+        return true;
       case evPaint:
         for (window_t *sub = win->children; sub; sub = sub->next) {
           if (window_has_state(sub, WINDOW_STATE_VISIBLE))

@@ -60,19 +60,21 @@ void imageeditor_max_document_frame_size(int *out_w, int *out_h) {
 void imageeditor_max_canvas_viewport_size(int *out_w, int *out_h) {
   int frame_w = 1;
   int frame_h = 1;
+  int status_h = IMAGEEDITOR_BW ? 0 : STATUSBAR_HEIGHT;
   imageeditor_max_document_frame_size(&frame_w, &frame_h);
   if (out_w) *out_w = MAX(1, frame_w);
-  if (out_h) *out_h = MAX(1, frame_h - TITLEBAR_HEIGHT - STATUSBAR_HEIGHT);
+  if (out_h) *out_h = MAX(1, frame_h - TITLEBAR_HEIGHT - status_h);
 }
 
 void imageeditor_document_frame_for_viewport(int viewport_w, int viewport_h,
                                              int *out_w, int *out_h) {
   int max_frame_w = 1;
   int max_frame_h = 1;
+  int status_h = IMAGEEDITOR_BW ? 0 : STATUSBAR_HEIGHT;
   imageeditor_max_document_frame_size(&max_frame_w, &max_frame_h);
 
   int frame_w = MAX(1, viewport_w);
-  int frame_h = MAX(1, viewport_h) + TITLEBAR_HEIGHT + STATUSBAR_HEIGHT;
+  int frame_h = MAX(1, viewport_h) + TITLEBAR_HEIGHT + status_h;
 
   if (out_w) *out_w = MIN(frame_w, max_frame_w);
   if (out_h) *out_h = MIN(frame_h, max_frame_h);
@@ -309,9 +311,13 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
   irect16_t ws = imageeditor_document_workspace_rect();
   set_default_window_position(ws.x, ws.y);
 
+  flags_t flags = IMAGEEDITOR_BW ? 0 : WINDOW_STATUSBAR;
+#ifndef AX_PLATFORM_IOS
+  flags |= WINDOW_HSCROLL | WINDOW_VSCROLL;
+#endif
   window_t *dwin = create_window(
       filename ? filename : "Untitled",
-      WINDOW_STATUSBAR | WINDOW_HSCROLL | WINDOW_VSCROLL,
+      flags,
       MAKERECT(CW_USEDEFAULT, CW_USEDEFAULT, win_w, win_h),
       NULL, doc_win_proc, g_app->hinstance, NULL);
   dwin->userdata = doc;
@@ -343,8 +349,10 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
   imageeditor_sync_main_toolbar();
 
   doc_update_title(doc);
+#if !IMAGEEDITOR_BW
   send_message(dwin, evStatusBar, 0,
                (void *)(filename ? filename : "New image"));
+#endif
 
   // Rebuild the Window menu so the new document appears in the list.
   window_menu_rebuild();

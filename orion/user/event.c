@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <time.h>
+#include <math.h>
 
 #include "user.h"
 #include "messages.h"
@@ -100,6 +101,11 @@ static void update_key_state(ui_event_t *msg) {
 // Drag/resize state (shared with user/window.c for destroy_window cleanup)
 static int drag_anchor[2];
 static int resize_anchor[2];
+static window_t *gesture_target;
+static uint32_t gesture_target_id;
+static bool gesture_scroll;
+static window_t *pointer_target;
+static uint32_t pointer_target_id;
 
 // Window that received evNCLeftButtonDown (toolbar press).
 // Always delivered evNCLeftButtonUp on the next left-up,
@@ -123,10 +129,23 @@ static int handle_mouse(int msg, window_t *win, int x, int y, void *lparam) {
     // root window or through one or more nested layout containers.
     int lx = x - c->frame.x + (int)c->hscroll.pos;
     int ly = y - c->frame.y + (int)c->vscroll.pos;
-    if (handle_mouse(msg, c, lx, ly, lparam))
+    ax_gesture_t local;
+    void *payload = lparam;
+    if (msg == evGesture && lparam) {
+      local = *(ax_gesture_t *)lparam;
+      float dx = -win->hscroll.pos - c->frame.x + c->hscroll.pos;
+      float dy = -win->vscroll.pos - c->frame.y + c->vscroll.pos;
+      local.x += dx; local.previous_x += dx;
+      local.y += dy; local.previous_y += dy;
+      payload = &local;
+    }
+    if (handle_mouse(msg, c, lx, ly, payload))
       return true;
-    if (send_message(c, msg, MAKEDWORD(lx, ly), lparam))
+    if (send_message(c, msg, MAKEDWORD(lx, ly), payload)) {
+      if (msg == evGesture) { gesture_target = c; gesture_target_id = c->id; }
+      if (msg == evLeftButtonDown) { pointer_target = c; pointer_target_id = c->id; }
       return true;
+    }
   }
   return false;
 }
@@ -561,6 +580,83 @@ void dispatch_message(ui_event_t *msg) {
       break;
     }
 
+    case kEventGesture: {
+      ax_gesture_t gesture = msg->gesture;
+      if (!isfinite(gesture.x) || !isfinite(gesture.y) || !isfinite(gesture.previous_x) ||
+          !isfinite(gesture.previous_y) || !isfinite(gesture.scale) || gesture.scale <= 0 ||
+          !isfinite(gesture.rotation) || gesture.phase > AX_GESTURE_CANCEL) {
+        fprintf(stderr, "[input] invalid gesture phase=%u scale=%f rotation=%f\n", gesture.phase, gesture.scale, gesture.rotation);
+        fflush(stderr);
+        return;
+      }
+      if (gesture.phase == AX_GESTURE_BEGIN) {
+        if (gesture_target && is_window(gesture_target) && gesture_target->id == gesture_target_id && !gesture_scroll) {
+          ax_gesture_t cancel = {.phase = AX_GESTURE_CANCEL, .scale = 1};
+          send_message(gesture_target, evGesture, 0, &cancel);
+        }
+        gesture_target = NULL;
+        gesture_scroll = false;
+        win = find_window(SCALE_POINT(gesture.x), SCALE_POINT(gesture.y));
+      } else {
+        win = gesture_target;
+        if (!win || !is_window(win) || win->id != gesture_target_id) { gesture_target = NULL; return; }
+      }
+      if (!win) return;
+      for (window_t *owner = win; owner; owner = owner->parent) {
+        if (window_has_state(owner, WINDOW_STATE_DISABLED) || !window_has_state(owner, WINDOW_STATE_VISIBLE)) {
+          if (gesture_target && !gesture_scroll) {
+            ax_gesture_t cancel = {.phase = AX_GESTURE_CANCEL, .scale = 1};
+            send_message(gesture_target, evGesture, 0, &cancel);
+          }
+          gesture_target = NULL;
+          return;
+        }
+      }
+      gesture.x = LOCAL_X(gesture.x, gesture.y, win);
+      gesture.y = LOCAL_Y(msg->gesture.x, gesture.y, win);
+      gesture.previous_x = LOCAL_X(gesture.previous_x, gesture.previous_y, win);
+      gesture.previous_y = LOCAL_Y(msg->gesture.previous_x, gesture.previous_y, win);
+      uint32_t point = MAKEDWORD((int)gesture.x, (int)gesture.y);
+      if (gesture_scroll) {
+        if (gesture.phase == AX_GESTURE_UPDATE) {
+          int dx = (int)lroundf(gesture.x - gesture.previous_x);
+          int dy = (int)lroundf(gesture.y - gesture.previous_y);
+          void *delta = (void *)(intptr_t)MAKEDWORD(-dx * SCROLL_SENSITIVITY, dy * SCROLL_SENSITIVITY);
+          if (!handle_mouse(evWheel, win, gesture.x, gesture.y, delta)) send_message(win, evWheel, point, delta);
+        }
+      } else if (gesture.phase != AX_GESTURE_BEGIN || !handle_mouse(evGesture, win, gesture.x, gesture.y, &gesture)) {
+        if (send_message(win, evGesture, point, &gesture)) { gesture_target = win; gesture_target_id = win->id; }
+      }
+      if (gesture.phase == AX_GESTURE_BEGIN && !gesture_target) {
+        gesture_target = win; gesture_target_id = win->id; gesture_scroll = true;
+      }
+      if (gesture.phase != AX_GESTURE_UPDATE) {
+        fprintf(stderr, "[input] gesture phase=%u win=%u target=%u\n", gesture.phase, win->id, gesture_target ? gesture_target_id : 0);
+        fflush(stderr);
+      }
+      if (gesture.phase == AX_GESTURE_END || gesture.phase == AX_GESTURE_CANCEL) gesture_target = NULL;
+      break;
+    }
+    case kEventPointerCancel: {
+      px = msg->x; py = msg->y;
+      win = g_ui_runtime.captured;
+      if (!win && pointer_target && is_window(pointer_target) && pointer_target->id == pointer_target_id)
+        win = pointer_target;
+      if (!win) win = find_window(SCALE_POINT(px), SCALE_POINT(py));
+      if (win) {
+        int lx = LOCAL_X(px, py, win), ly = LOCAL_Y(px, py, win);
+        if ((win == pointer_target || !handle_mouse(evPointerCancel, win, lx, ly, NULL)) &&
+            !send_message(win, evPointerCancel, MAKEDWORD(lx, ly), NULL))
+          send_message(win, evLeftButtonUp, MAKEDWORD(-1, -1), NULL);
+        fprintf(stderr, "[input] pointer cancel win=%u\n", win->id);
+        fflush(stderr);
+      }
+      g_ui_runtime.captured = NULL;
+      g_ui_runtime.dragging = NULL;
+      g_ui_runtime.resizing = NULL;
+      pointer_target = NULL;
+      break;
+    }
     case kEventScrollWheel: {
       px = (int)msg->x;
       py = (int)msg->y;
@@ -589,6 +685,7 @@ void dispatch_message(ui_event_t *msg) {
 
     case kEventLeftButtonDown:
     case kEventRightButtonDown: {
+      if (msg->message == kEventLeftButtonDown) pointer_target = NULL;
       px = (int)msg->x;
       py = (int)msg->y;
       tooltip_cancel();
@@ -682,6 +779,7 @@ void dispatch_message(ui_event_t *msg) {
                        : evRightButtonDown;
             if (!handle_mouse(wmsg, win, lx, ly, NULL)) {
               send_message(win, wmsg, MAKEDWORD(lx, ly), NULL);
+              if (wmsg == evLeftButtonDown) { pointer_target = win; pointer_target_id = win->id; }
             }
           }
         }
@@ -708,6 +806,7 @@ void dispatch_message(ui_event_t *msg) {
 
     case kEventLeftButtonUp:
     case kEventRightButtonUp: {
+      if (msg->message == kEventLeftButtonUp) pointer_target = NULL;
       px = (int)msg->x;
       py = (int)msg->y;
       // Toolbar clicks are handled entirely by the toolbar host window's

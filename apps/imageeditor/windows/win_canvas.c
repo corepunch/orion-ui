@@ -159,6 +159,9 @@ static void snap_canvas_pos(int *px, int *py) {
 // merged with its status bar. The document window owns both bars; the canvas
 // child is only the scrollable viewport.
 static void canvas_sync_scrollbars(window_t *win, canvas_win_state_t *state) {
+#ifdef AX_PLATFORM_IOS
+  return; // The touch viewport can pan freely, including beyond the image edges.
+#endif
   window_t *owner = state->doc->win;
   set_scroll_content(owner, canvas_scaled_w(state->doc, state->scale),
                      canvas_scaled_h(state->doc, state->scale), state->pan.x, state->pan.y);
@@ -316,7 +319,7 @@ static void apply_zoom_centered(window_t *win, canvas_win_state_t *state,
 // draw_sel_rect.  Each grid line is drawn as a 1-pixel-wide dashed line
 // spanning the full visible canvas width (horizontal) or height (vertical).
 // Only lines inside the viewport are submitted to the GPU.
-static void canvas_draw_grid(window_t *win, canvas_win_state_t *state) {
+static void canvas_draw_grid(window_t *win, canvas_win_state_t *state, irect16_t viewport) {
   if (!g_app || !g_app->grid.visible) return;
   canvas_doc_t *doc = state->doc;
   int gx = g_app->grid.spacing.x;
@@ -329,10 +332,10 @@ irect16_t canvas_rect = canvas_doc_rect_to_view(win, state, 0, 0,
                                                     doc->canvas_w, doc->canvas_h);
 
   // Intersection of canvas rect and window rect (visible canvas area)
-  int clip_x0 = MAX(0, canvas_rect.x);
-  int clip_y0 = MAX(0, canvas_rect.y);
-  int clip_x1 = MIN(win->frame.w, canvas_rect.x + canvas_rect.w);
-  int clip_y1 = MIN(win->frame.h, canvas_rect.y + canvas_rect.h);
+  int clip_x0 = MAX(viewport.x, canvas_rect.x);
+  int clip_y0 = MAX(viewport.y, canvas_rect.y);
+  int clip_x1 = MIN(viewport.x + viewport.w, canvas_rect.x + canvas_rect.w);
+  int clip_y1 = MIN(viewport.y + viewport.h, canvas_rect.y + canvas_rect.h);
   if (clip_x1 <= clip_x0 || clip_y1 <= clip_y0) return;
   int clip_w = clip_x1 - clip_x0;
   int clip_h = clip_y1 - clip_y0;
@@ -497,6 +500,18 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
     case evPaint: {
       if (!state || !doc) return true;
       canvas_upload(doc);
+      float saved_projection[16];
+      float rotation = state->rotation, tx = state->translate_x, ty = state->translate_y;
+      float left = INFINITY, top = INFINITY, right = -INFINITY, bottom = -INFINITY;
+      for (int corner = 0; corner < 4; corner++) {
+        float x = (corner & 1) ? win->frame.w : 0, y = (corner & 2) ? win->frame.h : 0;
+        canvas_transform_point(win, state, &x, &y, true);
+        left = MIN(left, x); top = MIN(top, y); right = MAX(right, x); bottom = MAX(bottom, y);
+      }
+      irect16_t grid_viewport = R((int)floorf(left), (int)floorf(top),
+                                  (int)ceilf(right - left), (int)ceilf(bottom - top));
+      begin_draw_transform(rotation, win->frame.w * 0.5f, win->frame.h * 0.5f, tx, ty, saved_projection);
+      state->rotation = state->translate_x = state->translate_y = 0;
 
       irect16_t canvas_rect = canvas_doc_rect_to_view(win, state, 0, 0,
                                                        doc->canvas_w, doc->canvas_h);
@@ -547,7 +562,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       }
 
       // Draw grid overlay (same checker-texture mechanism as selection)
-      canvas_draw_grid(win, state);
+      canvas_draw_grid(win, state, grid_viewport);
 
       canvas_draw_selection_mask_overlay(doc, state, win);
 
@@ -583,6 +598,9 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
                                                       MAX(v0.y, v1.y) + 1);
         draw_sel_rect(poly_rect);
       }
+
+      state->rotation = rotation; state->translate_x = tx; state->translate_y = ty;
+      end_draw_transform(saved_projection);
 
       // Magnifier tool: draw a loupe overlay in the top-right corner of the canvas
       // showing a 16x16 canvas-pixel region centered on the cursor at 4x zoom.
@@ -668,6 +686,12 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       // mid-stroke would invalidate doc->last (stored in pre-pan pixel coords)
       // and produce a visible position jump on the next MouseMove segment.
       if (doc && doc->drawing) return true;
+#ifdef AX_PLATFORM_IOS
+      state->translate_x += (int16_t)LOWORD((uintptr_t)lparam);
+      state->translate_y += (int16_t)HIWORD((uintptr_t)lparam);
+      invalidate_window(win);
+      return true;
+#endif
       int canvas_w  = canvas_scaled_w(doc, state->scale);
       int canvas_h  = canvas_scaled_h(doc, state->scale);
       // The document window owns both scrollbars; the horizontal one is merged
@@ -689,12 +713,58 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       return false;
     }
 
+    case evGesture: {
+      if (!state || !doc || !lparam) return false;
+      const ax_gesture_t *gesture = lparam;
+      if (gesture->phase == AX_GESTURE_BEGIN) {
+        state->gesture_active = true;
+        state->hover_valid = false;
+        set_focus(win);
+      } else if (gesture->phase == AX_GESTURE_UPDATE && state->gesture_active) {
+        canvas_apply_gesture(win, state, gesture);
+        invalidate_window(win);
+      } else {
+        state->gesture_active = false;
+      }
+      IE_TRACE("gesture win=%u phase=%u scale=%.3f rotation=%.3f offset=(%.1f,%.1f)",
+               win->id, gesture->phase, state->scale, state->rotation, state->translate_x, state->translate_y);
+      return true;
+    }
+    case evPointerCancel: {
+      if (!state || !doc || !g_app) return false;
+      state->pan.active = false;
+      if (doc->drawing) {
+        if (canvas_is_shape_tool(g_app->current_tool)) {
+          if (doc->shape.snapshot) {
+            memcpy(doc->pixels, doc->shape.snapshot, (size_t)doc->canvas_w * doc->canvas_h * DOC_BPP);
+            free(doc->shape.snapshot); doc->shape.snapshot = NULL;
+          }
+        } else if (state->stroke_undo) {
+          if (!doc_cancel_undo(doc)) IE_TRACE("pointer cancel restore failed win=%u", win->id);
+        }
+        doc->drawing = false;
+        doc->modified = state->stroke_modified;
+        doc->canvas_dirty = true;
+        if (doc->sel.move.active) canvas_discard_move(doc);
+        if (doc->sel.move.mask_moving) canvas_set_selection_mask_offset(doc, 0, 0);
+        doc->sel.move.mask_moving = false;
+        if (g_app->current_tool == ID_TOOL_CROP || g_app->current_tool == ID_TOOL_SELECT)
+          canvas_deselect(doc);
+        doc_update_title(doc);
+      }
+      IE_TRACE("pointer cancel win=%u", win->id);
+      invalidate_window(win);
+      return true;
+    }
     case evLeftButtonDown: {
       if (!state) return true;
       int lx = (int16_t)LOWORD(wparam);
       int ly = (int16_t)HIWORD(wparam);
 
       if (!doc || !g_app) return true;
+      if (state->gesture_active) return true;
+      state->stroke_modified = doc->modified;
+      state->stroke_undo = false;
       ipoint16_t doc_pt = canvas_view_to_doc_point(win, state, lx, ly);
       // Clear any stale panning state – if the user switched away from Hand
       // while holding the button, panning must not bleed into MouseMove.
@@ -840,7 +910,9 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         return true;
       }
 
+      uint8_t *previous_undo = doc->undo.count ? doc->undo.states[doc->undo.count - 1] : NULL;
       doc_push_undo(doc);
+      state->stroke_undo = doc->undo.count && doc->undo.states[doc->undo.count - 1] != previous_undo;
 
       switch (tool) {
         case ID_TOOL_PENCIL:
@@ -967,8 +1039,13 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       if (state->pan.active) {
         int lx = (int16_t)LOWORD(wparam);
         int ly = (int16_t)HIWORD(wparam);
+#ifdef AX_PLATFORM_IOS
+        state->translate_x += lx - state->pan.start_x;
+        state->translate_y += ly - state->pan.start_y;
+#else
         state->pan.x -= lx - state->pan.start_x;
         state->pan.y -= ly - state->pan.start_y;
+#endif
         state->pan.start_x = lx;
         state->pan.start_y = ly;
         clamp_pan(state, win->frame.w, win->frame.h);

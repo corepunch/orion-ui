@@ -182,6 +182,13 @@ bool doc_undo(canvas_doc_t *doc) {
   return ok;
 }
 
+bool doc_cancel_undo(canvas_doc_t *doc) {
+  if (!doc || !doc->undo.count) return false;
+  if (!restore_snapshot(doc, doc->undo.states[doc->undo.count - 1])) return false;
+  doc_discard_undo(doc);
+  return true;
+}
+
 // Restore the most recently undone state.
 // The current state is pushed onto the undo stack first.
 // Returns true if a redo was performed.

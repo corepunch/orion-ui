@@ -128,6 +128,9 @@ bool ui_load_program_from_source(const char *vs_src, const char *fs_src,
 void ui_delete_program(uint32_t program);
 void set_projection(int x, int y, int w, int h);
 float *get_sprite_matrix(void);
+// Scope a view rotation/translation to drawing; restore before drawing other UI.
+void begin_draw_transform(float radians, float cx, float cy, float tx, float ty, float saved[16]);
+void end_draw_transform(const float saved[16]);
 
 // Application lifecycle — prefer these over direct access to 'running'.
 // ui_is_running()   returns true while the event loop should keep going.

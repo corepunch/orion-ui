@@ -32,6 +32,8 @@ enum {
   evCommand,
   evTextInput,
   evWheel,
+  evGesture, // wparam: local centroid; lparam: ax_gesture_t*, local content coordinates.
+  evPointerCancel, // Abort the current pointer interaction without committing it.
   evMouseMove,
   evMouseLeave,
   evLeftButtonDown,

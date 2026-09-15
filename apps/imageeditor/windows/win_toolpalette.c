@@ -10,7 +10,9 @@ static const toolbar_item_t k_tools[] = {
   {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_CROP, .icon = "ie-crop", .tooltip = "Crop"},
   {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_HAND, .icon = "ie-hand", .tooltip = "Hand"},
   {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_EYEDROPPER, .icon = "ie-eyedropper", .tooltip = "Eyedropper"},
+#ifndef AX_PLATFORM_IOS
   {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_ZOOM, .icon = "ie-zoom-in", .tooltip = "Zoom"},
+#endif
   {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_PENCIL, .icon = "ie-pencil", .tooltip = "Pencil"},
   {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_BRUSH, .icon = "ie-brush", .tooltip = "Brush"},
   {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_SPRAY, .icon = "ie-spray", .tooltip = "Spray"},
