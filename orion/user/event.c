@@ -113,6 +113,22 @@ static uint32_t pointer_target_id;
 // Shared with user/window.c for destroy_window cleanup (stored in g_ui_runtime).
 
 // Handle mouse events on child windows.
+result_t send_pointer_message(window_t *win, uint32_t msg, uint32_t point, void *lparam) {
+  if (win && win->view.enabled && (msg == evMouseMove || msg == evLeftButtonDown ||
+      msg == evLeftButtonUp || msg == evLeftButtonDoubleClick || msg == evRightButtonDown || msg == evRightButtonUp)) {
+    ipoint16_t client = {(int16_t)LOWORD(point), (int16_t)HIWORD(point)};
+    win->view.pointer = client;
+    ipoint16_t content = window_client_to_content(win, client);
+    point = MAKEDWORD(content.x, content.y);
+    if (msg == evMouseMove && lparam) {
+      ipoint16_t previous = {client.x - (int16_t)LOWORD((uintptr_t)lparam), client.y - (int16_t)HIWORD((uintptr_t)lparam)};
+      previous = window_client_to_content(win, previous);
+      lparam = (void *)(intptr_t)MAKEDWORD(content.x - previous.x, content.y - previous.y);
+    }
+  }
+  return send_message(win, msg, point, lparam);
+}
+
 // Delivery coordinates include the owner's scroll offset. Child frames are
 // fixed in its viewport, so remove that offset before descending.
 static int handle_mouse(int msg, window_t *win, int x, int y, void *lparam) {
@@ -141,7 +157,7 @@ static int handle_mouse(int msg, window_t *win, int x, int y, void *lparam) {
     }
     if (handle_mouse(msg, c, lx, ly, payload))
       return true;
-    if (send_message(c, msg, MAKEDWORD(lx, ly), payload)) {
+    if (send_pointer_message(c, msg, MAKEDWORD(lx, ly), payload)) {
       if (msg == evGesture) { gesture_target = c; gesture_target_id = c->id; }
       if (msg == evLeftButtonDown) { pointer_target = c; pointer_target_id = c->id; }
       return true;
@@ -490,7 +506,7 @@ void dispatch_message(ui_event_t *msg) {
           void *motion = (void*)(intptr_t)MAKEDWORD(rdx, rdy);
           if (win == g_ui_runtime.captured ||
               !handle_mouse(evMouseMove, win, lx, ly, motion))
-            send_message(win, evMouseMove, MAKEDWORD(lx, ly), motion);
+            send_pointer_message(win, evMouseMove, MAKEDWORD(lx, ly), motion);
         }
       }
       if (g_ui_runtime.tracked && !CONTAINS(SCALE_POINT(px), SCALE_POINT(py),
@@ -778,7 +794,7 @@ void dispatch_message(ui_event_t *msg) {
                        ? evLeftButtonDown
                        : evRightButtonDown;
             if (!handle_mouse(wmsg, win, lx, ly, NULL)) {
-              send_message(win, wmsg, MAKEDWORD(lx, ly), NULL);
+              send_pointer_message(win, wmsg, MAKEDWORD(lx, ly), NULL);
               if (wmsg == evLeftButtonDown) { pointer_target = win; pointer_target_id = win->id; }
             }
           }
@@ -797,7 +813,7 @@ void dispatch_message(ui_event_t *msg) {
         int lx = LOCAL_X(px, py, win);
         int ly = LOCAL_Y(px, py, win);
         if (!handle_mouse(evLeftButtonDoubleClick, win, lx, ly, NULL)) {
-          send_message(win, evLeftButtonDoubleClick,
+          send_pointer_message(win, evLeftButtonDoubleClick,
                        MAKEDWORD(lx, ly), NULL);
         }
       }
@@ -875,7 +891,7 @@ void dispatch_message(ui_event_t *msg) {
                        ? evLeftButtonUp
                        : evRightButtonUp;
             if (!handle_mouse(wmsg, win, lx, ly, NULL)) {
-              send_message(win, wmsg, MAKEDWORD(lx, ly), NULL);
+              send_pointer_message(win, wmsg, MAKEDWORD(lx, ly), NULL);
             }
           }
         } else {

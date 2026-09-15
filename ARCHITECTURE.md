@@ -114,16 +114,31 @@ See [Window System](docs/window-system.md) and
 Two-finger transforms follow the same boundary: the iPad backend queues an
 inline `ax_gesture_t` (centroid, previous centroid, incremental scale and
 clockwise rotation). `event.c` routes `evGesture` through the child hierarchy,
-converts both points into content coordinates, and retains the accepting window
-until end/cancel. Unhandled gestures fall back to two-finger scrolling.
+converts both points into window-local coordinates before the content-view
+transform, and retains the accepting window until end/cancel. Unhandled gestures
+fall back to two-finger scrolling.
 `evPointerCancel` aborts the first finger's interaction before a gesture begins.
 Apple Pencil strokes retain priority over finger gestures.
 
-Canvas scale, rotation and translation belong to `canvas_win_state_t`, not the
-image model. `canvas_coords.c` owns forward/inverse mappings and anchored gesture
-updates. Painting scopes a renderer projection transform around image content
-and overlays, then restores it before drawing viewport UI. The window system
-continues to own clipping; rotated views do not implement their own event router.
+Windows can opt into a content view with `window_view_init()`. A single matrix
+on the window owns content zoom, rotation, translation, and Retina scaling.
+`orion/user/view.c` owns all transform arithmetic, including anchored gestures,
+scroll positions, and visible content bounds. Gesture composition requires no
+conversion through image coordinates.
+
+The event router calls `send_pointer_message()` to deliver image/content
+coordinates. Direct `send_message()` calls already use content coordinates.
+Painting automatically applies that same matrix around the window procedure's
+`evPaint` callback. Canvas code draws the image and selections directly in image
+pixels, with no coordinate conversion or renderer-state manipulation.
+Hand-tool dragging uses `window_view_begin_drag()` / `window_view_drag()`;
+the router retains viewport pointer positions so high zoom cannot quantize panning.
+
+For an enabled content view, a second `evPaint` callback has
+`wparam = WINDOW_PAINT_OVERLAY` and uses ordinary viewport coordinates; this is
+where fixed UI such as the magnifier is drawn. Child frames remain anchored in
+the viewport, just as with scrolling. The window system owns clipping, and the
+transform is restored before overlays and children are painted.
 
 ## Controls And Notifications
 

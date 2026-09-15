@@ -470,6 +470,14 @@ typedef struct {
 } win_sb_t;
 
 // Window structure
+typedef struct {
+  bool enabled, free_pan;
+  int width, height;
+  float pixel_ratio;
+  view_matrix_t matrix;
+  ipoint16_t pointer, drag_pointer;
+} window_view_t;
+
 struct window_s {
   irect16_t frame;
   irect16_t restore_frame;
@@ -493,6 +501,7 @@ struct window_s {
   void *userdata2;
   win_sb_t hscroll;   // built-in horizontal scrollbar state (WINDOW_HSCROLL)
   win_sb_t vscroll;   // built-in vertical scrollbar state (WINDOW_VSCROLL)
+  window_view_t view; // Transforms this window's content; child frames remain in viewport space.
   struct window_s *next;
   struct window_s *children;
   struct window_s *parent;
@@ -508,6 +517,25 @@ struct window_s {
   const struct menu_item_s *context_menu; // generated declarative menu; not owned
   int                       context_menu_count;
 };
+
+enum { WINDOW_PAINT_CONTENT = 0, WINDOW_PAINT_OVERLAY = 1 };
+void window_view_init(window_t *win, int width, int height, float pixel_ratio, bool free_pan);
+void window_view_set_size(window_t *win, int width, int height);
+float window_view_zoom(const window_t *win);
+void window_view_set_zoom(window_t *win, float zoom, const ipoint16_t *content_anchor);
+void window_view_center(window_t *win);
+void window_view_pan(window_t *win, ipoint16_t delta);
+void window_view_begin_drag(window_t *win);
+void window_view_drag(window_t *win);
+void window_view_set_scroll(window_t *win, int axis, int pos);
+int window_view_scroll(const window_t *win, int axis);
+frect_t window_view_bounds(const window_t *win);
+irect16_t window_view_visible_rect(const window_t *win);
+void window_view_apply_gesture(window_t *win, const ax_gesture_t *gesture);
+ipoint16_t window_content_to_client(const window_t *win, ipoint16_t point);
+ipoint16_t window_client_to_content(const window_t *win, ipoint16_t point);
+// Platform/router entry: client coordinates in, content coordinates delivered to the proc.
+result_t send_pointer_message(window_t *win, uint32_t msg, uint32_t point, void *lparam);
 
 static inline bool window_has_state(const window_t *win, uint32_t state_flag) {
   return win && ((win->flags & state_flag) != 0u);

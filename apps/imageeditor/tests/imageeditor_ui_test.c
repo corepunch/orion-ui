@@ -1140,7 +1140,7 @@ void test_ie_shift_wand_adds_from_canvas_window(void) {
     canvas_set_pixel(doc, 0, 0, red);
     canvas_set_pixel(doc, 3, 2, red);
 
-    send_message(doc->canvas_win, evLeftButtonDown, MAKEDWORD(0, 0), NULL);
+    send_pointer_message(doc->canvas_win, evLeftButtonDown, MAKEDWORD(0, 0), NULL);
     ASSERT_TRUE(canvas_in_selection(doc, 0, 0));
     ASSERT_FALSE(canvas_in_selection(doc, 3, 2));
 
@@ -1149,7 +1149,7 @@ void test_ie_shift_wand_adds_from_canvas_window(void) {
     evt.wParam = AX_MOD_SHIFT;
     dispatch_message(&evt);
 
-    send_message(doc->canvas_win, evLeftButtonDown, MAKEDWORD(3, 2), NULL);
+    send_pointer_message(doc->canvas_win, evLeftButtonDown, MAKEDWORD(3, 2), NULL);
     ASSERT_TRUE(canvas_in_selection(doc, 0, 0));
     ASSERT_TRUE(canvas_in_selection(doc, 3, 2));
     ASSERT_FALSE(canvas_in_selection(doc, 1, 1));
@@ -1170,15 +1170,15 @@ void test_ie_shift_rect_selection_is_square(void) {
     g_app->active_doc = doc;
     g_app->current_tool = ID_TOOL_SELECT;
 
-    send_message(doc->canvas_win, evLeftButtonDown, MAKEDWORD(0, 0), NULL);
+    send_pointer_message(doc->canvas_win, evLeftButtonDown, MAKEDWORD(0, 0), NULL);
 
     ui_event_t evt = {0};
     evt.message = kEventModifiersChanged;
     evt.wParam = AX_MOD_SHIFT;
     dispatch_message(&evt);
 
-    send_message(doc->canvas_win, evMouseMove, MAKEDWORD(3, 1), NULL);
-    send_message(doc->canvas_win, evLeftButtonUp, MAKEDWORD(3, 1), NULL);
+    send_pointer_message(doc->canvas_win, evMouseMove, MAKEDWORD(3, 1), NULL);
+    send_pointer_message(doc->canvas_win, evLeftButtonUp, MAKEDWORD(3, 1), NULL);
 
     ASSERT_TRUE(doc->sel.active);
     ASSERT_TRUE(canvas_in_selection(doc, 0, 0));
@@ -1213,8 +1213,8 @@ void test_ie_select_tool_moves_selection_mask_only(void) {
     ASSERT_NOT_NULL(mask);
     doc->sel.mask.dirty = false;
 
-    send_message(doc->canvas_win, evLeftButtonDown, MAKEDWORD(1, 1), NULL);
-    send_message(doc->canvas_win, evMouseMove, MAKEDWORD(2, 1), NULL);
+    send_pointer_message(doc->canvas_win, evLeftButtonDown, MAKEDWORD(1, 1), NULL);
+    send_pointer_message(doc->canvas_win, evMouseMove, MAKEDWORD(2, 1), NULL);
 
     ASSERT_TRUE(doc->sel.move.mask_moving);
     ASSERT_TRUE(doc->sel.mask.data == mask);
@@ -1224,7 +1224,7 @@ void test_ie_select_tool_moves_selection_mask_only(void) {
     ASSERT_FALSE(canvas_in_selection(doc, 1, 1));
     ASSERT_TRUE(canvas_in_selection(doc, 2, 1));
 
-    send_message(doc->canvas_win, evLeftButtonUp, MAKEDWORD(2, 1), NULL);
+    send_pointer_message(doc->canvas_win, evLeftButtonUp, MAKEDWORD(2, 1), NULL);
 
     ASSERT_FALSE(doc->sel.move.mask_moving);
     ASSERT_EQUAL(doc->sel.mask.offset.x, 0);
@@ -1255,9 +1255,9 @@ void test_ie_select_soft_edge_starts_new_selection(void) {
     doc->sel.end = (ipoint16_t){1, 1};
     doc->sel.mask.dirty = true;
 
-    send_message(doc->canvas_win, evLeftButtonDown, MAKEDWORD(1, 1), NULL);
-    send_message(doc->canvas_win, evMouseMove, MAKEDWORD(2, 1), NULL);
-    send_message(doc->canvas_win, evLeftButtonUp, MAKEDWORD(2, 1), NULL);
+    send_pointer_message(doc->canvas_win, evLeftButtonDown, MAKEDWORD(1, 1), NULL);
+    send_pointer_message(doc->canvas_win, evMouseMove, MAKEDWORD(2, 1), NULL);
+    send_pointer_message(doc->canvas_win, evLeftButtonUp, MAKEDWORD(2, 1), NULL);
 
     ASSERT_FALSE(doc->sel.move.mask_moving);
     ASSERT_TRUE(doc->sel.active);
@@ -1286,9 +1286,9 @@ void test_ie_move_tool_moves_selected_pixels(void) {
     canvas_set_pixel(doc, 1, 1, red);
     ASSERT_TRUE(canvas_select_rect(doc, 1, 1, 1, 1));
 
-    send_message(doc->canvas_win, evLeftButtonDown, MAKEDWORD(1, 1), NULL);
-    send_message(doc->canvas_win, evMouseMove, MAKEDWORD(2, 1), NULL);
-    send_message(doc->canvas_win, evLeftButtonUp, MAKEDWORD(2, 1), NULL);
+    send_pointer_message(doc->canvas_win, evLeftButtonDown, MAKEDWORD(1, 1), NULL);
+    send_pointer_message(doc->canvas_win, evMouseMove, MAKEDWORD(2, 1), NULL);
+    send_pointer_message(doc->canvas_win, evLeftButtonUp, MAKEDWORD(2, 1), NULL);
 
     ASSERT_EQUAL(COLOR_A(canvas_get_pixel(doc, 1, 1)), 0);
     ASSERT_EQUAL(canvas_get_pixel(doc, 2, 1), red);
@@ -2097,7 +2097,7 @@ void test_ie_open_file_path_large_uses_birdeye_scale(void) {
 
     canvas_win_state_t *state = (canvas_win_state_t *)g_app->docs->canvas_win->userdata;
     ASSERT_NOT_NULL(state);
-    ASSERT_TRUE(state->scale < 1.0f);
+    ASSERT_TRUE(window_view_zoom(state->doc->canvas_win) < 1.0f);
 
     ie_teardown();
     remove(tmp);
@@ -2121,7 +2121,7 @@ void test_ie_fit_zoom_zero_viewport(void) {
     canvas_win_state_t *state = (canvas_win_state_t *)doc->canvas_win->userdata;
     ASSERT_NOT_NULL(state);
     // Scale must remain at its initial value (1).
-    ASSERT_EQUAL(state->scale, 1);
+    ASSERT_EQUAL(window_view_zoom(state->doc->canvas_win), 1);
 
     ie_teardown();
     PASS();
@@ -2146,7 +2146,7 @@ void test_ie_fit_zoom_selects_best_scale(void) {
     canvas_win_state_t *state = (canvas_win_state_t *)doc->canvas_win->userdata;
     ASSERT_NOT_NULL(state);
     // The child frame is the viewport; there is no second gutter deduction.
-    ASSERT_EQUAL(state->scale, 6);
+    ASSERT_EQUAL(window_view_zoom(state->doc->canvas_win), 6);
 
     ie_teardown();
     PASS();
@@ -2168,7 +2168,7 @@ void test_ie_fit_zoom_fallback_to_1x(void) {
 
     canvas_win_state_t *state = (canvas_win_state_t *)doc->canvas_win->userdata;
     ASSERT_NOT_NULL(state);
-    ASSERT_EQUAL(state->scale, 1);
+    ASSERT_EQUAL(window_view_zoom(state->doc->canvas_win), 1);
 
     ie_teardown();
     PASS();
@@ -2189,28 +2189,28 @@ void test_ie_canvas_centers_small_image_hit_testing(void) {
 
     canvas_win_state_t *state = (canvas_win_state_t *)doc->canvas_win->userdata;
     ASSERT_NOT_NULL(state);
-    ASSERT_EQUAL(state->scale, 1);
-    ASSERT_EQUAL(state->pan.x, 0);
-    ASSERT_EQUAL(state->pan.y, 0);
+    ASSERT_EQUAL(window_view_zoom(state->doc->canvas_win), 1);
+    ASSERT_EQUAL(window_view_scroll(state->doc->canvas_win, SB_HORZ), 0);
+    ASSERT_EQUAL(window_view_scroll(state->doc->canvas_win, SB_VERT), 0);
 
     int origin_x = (200 - 32) / 2;
     int origin_y = (150 - 20) / 2;
 
-    send_message(doc->canvas_win, evMouseMove, MAKEDWORD(0, 0), NULL);
+    send_pointer_message(doc->canvas_win, evMouseMove, MAKEDWORD(0, 0), NULL);
     ASSERT_FALSE(state->hover_valid);
 
-    send_message(doc->canvas_win, evMouseMove, MAKEDWORD(origin_x, origin_y), NULL);
+    send_pointer_message(doc->canvas_win, evMouseMove, MAKEDWORD(origin_x, origin_y), NULL);
     ASSERT_TRUE(state->hover_valid);
     ASSERT_EQUAL(state->hover.x, 0);
     ASSERT_EQUAL(state->hover.y, 0);
 
-    send_message(doc->canvas_win, evMouseMove,
+    send_pointer_message(doc->canvas_win, evMouseMove,
                  MAKEDWORD(origin_x + 31, origin_y + 19), NULL);
     ASSERT_TRUE(state->hover_valid);
     ASSERT_EQUAL(state->hover.x, 31);
     ASSERT_EQUAL(state->hover.y, 19);
 
-    send_message(doc->canvas_win, evMouseMove,
+    send_pointer_message(doc->canvas_win, evMouseMove,
                  MAKEDWORD(origin_x + 32, origin_y + 20), NULL);
     ASSERT_FALSE(state->hover_valid);
 
@@ -2249,7 +2249,7 @@ void test_ie_zoom_fit_command(void) {
     canvas_win_state_t *state = (canvas_win_state_t *)doc->canvas_win->userdata;
     ASSERT_NOT_NULL(state);
     // 32*6=192 <= 200; 20*6=120 <= 150.
-    ASSERT_EQUAL(state->scale, 6);
+    ASSERT_EQUAL(window_view_zoom(state->doc->canvas_win), 6);
 
     ie_teardown();
     PASS();

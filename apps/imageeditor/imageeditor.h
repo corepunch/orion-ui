@@ -314,18 +314,11 @@ typedef struct canvas_doc_s {
 
 typedef struct {
   canvas_doc_t *doc;
-  float         scale;
-  float         rotation, translate_x, translate_y; // View transform; never changes document pixels.
   bool          gesture_active;
   bool          stroke_modified;
   bool          stroke_undo;
-  // Pan / hand-tool scroll state.  int to avoid int16 overflow at high zoom.
   struct {
-    int  x;          // pan offset in screen pixels
-    int  y;
     bool active;     // true while hand-tool drag is in progress
-    int  start_x;   // screen-local coords where hand drag began
-    int  start_y;
   } pan;
   ipoint16_t    hover;       // canvas pixel coords under the cursor
   bool          hover_valid; // true when hover is on the canvas (for magnifier overlay)
@@ -605,8 +598,6 @@ result_t win_color_palette_proc(window_t *win, uint32_t msg, uint32_t wparam, vo
 // Zoom support
 void canvas_win_set_zoom(window_t *canvas_win, int new_scale);
 void canvas_win_set_scale(window_t *canvas_win, float new_scale);
-void canvas_transform_point(window_t *win, const canvas_win_state_t *state, float *x, float *y, bool inverse);
-void canvas_apply_gesture(window_t *win, canvas_win_state_t *state, const ax_gesture_t *gesture);
 
 // Fit the canvas to the viewport at the largest integer zoom that shows the
 // whole image — equivalent to Photoshop's "Fit on Screen" (Ctrl+0).
@@ -857,28 +848,6 @@ void ie_doc_invalidate_timeline(canvas_doc_t *doc);
 void ie_doc_after_pixels_changed(canvas_doc_t *doc);
 void ie_doc_after_layers_changed(canvas_doc_t *doc);
 void ie_doc_after_selection_changed(canvas_doc_t *doc);
-
-// ============================================================
-// Coordinate conversion (canvas_coords.c)
-// ============================================================
-
-// Convert viewport (screen) coordinates to document (pixel) coordinates.
-void canvas_view_to_doc(window_t *win, canvas_win_state_t *state,
-                        int view_x, int view_y, int *doc_x, int *doc_y);
-
-ipoint16_t canvas_view_to_doc_point(window_t *win, canvas_win_state_t *state,
-                                    int view_x, int view_y);
-
-// Convert document (pixel) coordinates to viewport (screen) coordinates.
-void canvas_doc_to_view(window_t *win, canvas_win_state_t *state,
-                        int doc_x, int doc_y, int *view_x, int *view_y);
-
-ipoint16_t canvas_doc_to_view_point(window_t *win, canvas_win_state_t *state,
-                                    int doc_x, int doc_y);
-
-// Convert a document rectangle to viewport coordinates.
-irect16_t canvas_doc_rect_to_view(window_t *win, canvas_win_state_t *state,
-                                  int x0, int y0, int x1, int y1);
 
 // ── Tool handler system (tools/tools.h)
 // ============================================================

@@ -74,11 +74,11 @@ bool imageeditor_handle_zoom_command(canvas_doc_t *doc, uint32_t id) {
     canvas_win_fit_zoom(doc->canvas_win);
   } else if (id == ID_VIEW_ZOOM_IN) {
     for (int i = 0; i < NUM_ZOOM_LEVELS; i++) {
-      if (kZoomLevels[i] > state->scale) { new_scale = kZoomLevels[i]; break; }
+      if (kZoomLevels[i] > window_view_zoom(doc->canvas_win)) { new_scale = kZoomLevels[i]; break; }
     }
   } else if (id == ID_VIEW_ZOOM_OUT) {
     for (int i = NUM_ZOOM_LEVELS - 1; i >= 0; i--) {
-      if (kZoomLevels[i] < state->scale) { new_scale = kZoomLevels[i]; break; }
+      if (kZoomLevels[i] < window_view_zoom(doc->canvas_win)) { new_scale = kZoomLevels[i]; break; }
     }
   } else {
     for (int i = 0; i < NUM_ZOOM_LEVELS; i++) {
@@ -92,7 +92,7 @@ bool imageeditor_handle_zoom_command(canvas_doc_t *doc, uint32_t id) {
 
   char zoom_msg[32];
   char zoom_text[16];
-  imageeditor_format_zoom(zoom_text, sizeof(zoom_text), state->scale);
+  imageeditor_format_zoom(zoom_text, sizeof(zoom_text), window_view_zoom(doc->canvas_win));
   snprintf(zoom_msg, sizeof(zoom_msg), "Zoom: %s", zoom_text);
   send_message(doc->win, evStatusBar, 0, zoom_msg);
   return true;
@@ -151,53 +151,26 @@ static void snap_canvas_pos(int *px, int *py) {
   if (gy > 1) *py = SNAP_AXIS(*py, gy);
 }
 
-// ---- scrollbar helpers -------------------------------------------------------
-
-// Update built-in scrollbar info to match the current zoom/pan state.
-//
-// The horizontal scrollbar lives on the document window (doc->win) and is
-// merged with its status bar. The document window owns both bars; the canvas
-// child is only the scrollable viewport.
+// The document owns the scrollbars; the child owns its content transform.
 static void canvas_sync_scrollbars(window_t *win, canvas_win_state_t *state) {
-#ifdef AX_PLATFORM_IOS
-  return; // The touch viewport can pan freely, including beyond the image edges.
-#endif
-  window_t *owner = state->doc->win;
-  set_scroll_content(owner, canvas_scaled_w(state->doc, state->scale),
-                     canvas_scaled_h(state->doc, state->scale), state->pan.x, state->pan.y);
-  state->pan.x = get_scroll_pos(owner, SB_HORZ);
-  state->pan.y = get_scroll_pos(owner, SB_VERT);
-}
-
-// Clamp pan to the valid range for the current zoom level and window size.
-// Both scrollbars belong to the document; the child frame is the viewport.
-static void clamp_pan(canvas_win_state_t *state, int win_w, int win_h) {
   canvas_doc_t *doc = state->doc;
-  int canvas_w = canvas_scaled_w(doc, state->scale);
-  int canvas_h = canvas_scaled_h(doc, state->scale);
-
-  // The canvas frame is already the document client width, after the document
-  // window's vertical scrollbar gutter has been removed.
-  int view_w = canvas_view_w(win_w);
-  int view_h = win_h;
-
-  int max_x = MAX(0, canvas_w - view_w);
-  int max_y = MAX(0, canvas_h - view_h);
-  if (state->pan.x < 0) state->pan.x = 0;
-  if (state->pan.y < 0) state->pan.y = 0;
-  if (state->pan.x > max_x) state->pan.x = max_x;
-  if (state->pan.y > max_y) state->pan.y = max_y;
+  window_view_set_size(win, doc->canvas_w, doc->canvas_h);
+#ifndef AX_PLATFORM_IOS
+  window_t *owner = doc->win;
+  if (!owner) return;
+  frect_t bounds = window_view_bounds(win);
+  set_scroll_content(owner, (int)ceilf(bounds.w), (int)ceilf(bounds.h),
+                     window_view_scroll(win, SB_HORZ), window_view_scroll(win, SB_VERT));
+  window_view_set_scroll(win, SB_HORZ, get_scroll_pos(owner, SB_HORZ));
+  window_view_set_scroll(win, SB_VERT, get_scroll_pos(owner, SB_VERT));
+#endif
 }
 
-// Set zoom level on a canvas window (called by menu/accelerator handler).
-// new_scale is snapped to the nearest supported zoom level so callers can
-// never trigger a divide-by-zero or produce unexpected canvas sizes.
+// Set a continuous zoom level through the window's content view.
 void canvas_win_set_scale(window_t *win, float new_scale) {
   canvas_win_state_t *state = (canvas_win_state_t *)win->userdata;
   if (!state) return;
-  if (new_scale < 0.05f) new_scale = 0.05f;
-  state->scale = new_scale;
-  clamp_pan(state, win->frame.w, win->frame.h);
+  window_view_set_zoom(win, MAX(0.05f, new_scale), NULL);
   canvas_sync_scrollbars(win, state);
   invalidate_window(win);
 }
@@ -246,13 +219,9 @@ void canvas_win_fit_zoom(window_t *win) {
                                                        view_w, view_h, true);
   if (fit_scale < 1.0f) fit_scale = 1.0f;
 
-  // Center the scroll position when it overflows; fitted images are centered
-  // visually by the document-to-view conversion while keeping pan at 0.
-  int scaled_w = canvas_scaled_w(doc, fit_scale);
-  int scaled_h = canvas_scaled_h(doc, fit_scale);
-  state->pan.x = (scaled_w > view_w) ? (scaled_w - view_w) / 2 : 0;
-  state->pan.y = (scaled_h > view_h) ? (scaled_h - view_h) / 2 : 0;
   canvas_win_set_scale(win, fit_scale);
+  window_view_center(win);
+  canvas_sync_scrollbars(win, state);
 }
 
 // Public helper: re-clamp pan and update scrollbars without changing zoom.
@@ -260,7 +229,6 @@ void canvas_win_fit_zoom(window_t *win) {
 void canvas_win_sync_scrollbars(window_t *win) {
   canvas_win_state_t *state = (canvas_win_state_t *)win->userdata;
   if (!state) return;
-  clamp_pan(state, win->frame.w, win->frame.h);
   canvas_sync_scrollbars(win, state);
 }
 
@@ -299,62 +267,20 @@ static bool selection_move_hit(const canvas_doc_t *doc, int x, int y) {
   return canvas_in_selection(doc, x, y);
 }
 
-// Apply a new zoom level centered on the canvas pixel (cx, cy) currently
-// displayed at screen-local position (mx, my) inside the canvas frame.
-// new_scale must be a valid zoom level; the pan is re-derived so the
-// pointed-at canvas pixel stays under the cursor after zooming.
-static void apply_zoom_centered(window_t *win, canvas_win_state_t *state,
-                                int new_scale, int cx, int cy, int mx, int my) {
-  canvas_win_state_t zoomed = *state;
-  zoomed.scale = new_scale;
-  ipoint16_t origin = canvas_doc_to_view_point(win, &zoomed, 0, 0);
-  int center_x = origin.x + state->pan.x;
-  int center_y = origin.y + state->pan.y;
-  state->pan.x = scaled_px(cx, (float)new_scale / g_bw_retina_scale) + center_x - mx;
-  state->pan.y = scaled_px(cy, (float)new_scale / g_bw_retina_scale) + center_y - my;
-  canvas_win_set_zoom(win, new_scale);
+// Keep the clicked image pixel under the pointer.
+static void apply_zoom_centered(window_t *win, canvas_win_state_t *state, int scale, ipoint16_t anchor) {
+  window_view_set_zoom(win, scale, &anchor);
+  canvas_sync_scrollbars(win, state);
 }
 
-// Draw the grid overlay using the same checker-texture mechanism as
-// draw_sel_rect.  Each grid line is drawn as a 1-pixel-wide dashed line
-// spanning the full visible canvas width (horizontal) or height (vertical).
-// Only lines inside the viewport are submitted to the GPU.
-static void canvas_draw_grid(window_t *win, canvas_win_state_t *state, irect16_t viewport) {
+static void canvas_draw_grid(window_t *win) {
   if (!g_app || !g_app->grid.visible) return;
-  canvas_doc_t *doc = state->doc;
-  int gx = g_app->grid.spacing.x;
-  int gy = g_app->grid.spacing.y;
-  if (gx < 1) gx = 1;
-  if (gy < 1) gy = 1;
-
-  // Canvas rect in screen-local coordinates (may extend outside the window)
-irect16_t canvas_rect = canvas_doc_rect_to_view(win, state, 0, 0,
-                                                    doc->canvas_w, doc->canvas_h);
-
-  // Intersection of canvas rect and window rect (visible canvas area)
-  int clip_x0 = MAX(viewport.x, canvas_rect.x);
-  int clip_y0 = MAX(viewport.y, canvas_rect.y);
-  int clip_x1 = MIN(viewport.x + viewport.w, canvas_rect.x + canvas_rect.w);
-  int clip_y1 = MIN(viewport.y + viewport.h, canvas_rect.y + canvas_rect.h);
-  if (clip_x1 <= clip_x0 || clip_y1 <= clip_y0) return;
-  int clip_w = clip_x1 - clip_x0;
-  int clip_h = clip_y1 - clip_y0;
-
-  // Horizontal lines at canvas y = gy, 2*gy, ...
-  for (int row = gy; row < doc->canvas_h; row += gy) {
-    int sy = canvas_doc_to_view_point(win, state, 0, row).y;
-    if (sy >= clip_y1) break;
-    if (sy < clip_y0) continue;
-    draw_sel_rect(R(clip_x0, sy, clip_w, 1));
-  }
-
-  // Vertical lines at canvas x = gx, 2*gx, ...
-  for (int col = gx; col < doc->canvas_w; col += gx) {
-    int sx = canvas_doc_to_view_point(win, state, col, 0).x;
-    if (sx >= clip_x1) break;
-    if (sx < clip_x0) continue;
-    draw_sel_rect(R(sx, clip_y0, 1, clip_h));
-  }
+  irect16_t visible = window_view_visible_rect(win);
+  int gx = MAX(1, g_app->grid.spacing.x), gy = MAX(1, g_app->grid.spacing.y);
+  for (int y = gy; y < visible.y + visible.h; y += gy)
+    if (y >= visible.y) draw_sel_rect(R(visible.x, y, visible.w, 1));
+  for (int x = gx; x < visible.x + visible.w; x += gx)
+    if (x >= visible.x) draw_sel_rect(R(x, visible.y, 1, visible.h));
 }
 
 static void canvas_draw_selection_mask_overlay(canvas_doc_t *doc,
@@ -387,8 +313,7 @@ static void canvas_draw_selection_mask_overlay(canvas_doc_t *doc,
     doc->sel.mask.dirty = false;
   }
 
-  irect16_t canvas_rect = canvas_doc_rect_to_view(win, state, 0, 0,
-                                                   doc->canvas_w, doc->canvas_h);
+  irect16_t canvas_rect = R(0, 0, doc->canvas_w, doc->canvas_h);
   ui_render_effect_params_t params = {{0}};
   params.f[0] = (float)doc->sel.mask.offset.x / (float)doc->canvas_w;
   params.f[1] = (float)doc->sel.mask.offset.y / (float)doc->canvas_h;
@@ -461,6 +386,59 @@ static void canvas_draw_animation_trace(window_t *win,
   }
 }
 
+static void canvas_draw_loupe(window_t *win, canvas_win_state_t *state, canvas_doc_t *doc) {
+  // Magnifier tool: draw a loupe overlay in the top-right corner of the canvas
+  // showing a 16x16 canvas-pixel region centered on the cursor at 4x zoom.
+  // Rendered as a single textured quad to avoid 256 fill_rect() calls.
+  enum { MAG_PIXELS = 16, MAG_ZOOM = 4, MAG_SIZE = MAG_PIXELS * MAG_ZOOM, MAG_MARGIN = 4 };
+  if (g_app && g_app->current_tool == ID_TOOL_MAGNIFIER &&
+      state->hover_valid &&
+      win->frame.w  >= MAG_SIZE + MAG_MARGIN * 2 + 4 &&
+      win->frame.h  >= MAG_SIZE + MAG_MARGIN * 2 + 4) {
+    int lox = win->frame.w - MAG_SIZE - MAG_MARGIN - 2;
+    int loy = MAG_MARGIN;
+    // Border
+    fill_rect(0xFF808080, R(lox - 1, loy - 1, MAG_SIZE + 2, MAG_SIZE + 2));
+    // Build a 16x16 RGBA pixel buffer from the canvas region around hover
+    uint8_t mag_buf[MAG_PIXELS * MAG_PIXELS * 4];
+    int hx = state->hover.x - MAG_PIXELS / 2;
+    int hy = state->hover.y - MAG_PIXELS / 2;
+    for (int row = 0; row < MAG_PIXELS; row++) {
+      for (int col = 0; col < MAG_PIXELS; col++) {
+        int sx = hx + col, sy = hy + row;
+        uint32_t px = canvas_in_bounds(doc, sx, sy)
+                    ? canvas_get_pixel(doc, sx, sy)
+                    : MAKE_COLOR(0x22, 0x22, 0x22, 0xFF);
+        uint8_t *dst = mag_buf + (row * MAG_PIXELS + col) * 4;
+        dst[0] = COLOR_R(px); dst[1] = COLOR_G(px); dst[2] = COLOR_B(px); dst[3] = COLOR_A(px);
+      }
+    }
+    // Upload pixel buffer to a cached GL texture and draw as a single quad
+    if (!state->mag_tex) {
+      glGenTextures(1, &state->mag_tex);
+      glBindTexture(GL_TEXTURE_2D, state->mag_tex);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, MAG_PIXELS, MAG_PIXELS, 0,
+                   GL_RGBA, GL_UNSIGNED_BYTE, mag_buf);
+    } else {
+      glBindTexture(GL_TEXTURE_2D, state->mag_tex);
+      glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, MAG_PIXELS, MAG_PIXELS,
+                      GL_RGBA, GL_UNSIGNED_BYTE, mag_buf);
+    }
+    draw_rect(state->mag_tex, R(lox, loy, MAG_SIZE, MAG_SIZE));
+    // Crosshair at loupe center
+    int lcx = lox + MAG_SIZE / 2;
+    int lcy = loy + MAG_SIZE / 2;
+    fill_rect(0xFF000000, R(lcx - 3, lcy, 3, 1));
+    fill_rect(0xFF000000, R(lcx + 1, lcy, 3, 1));
+    fill_rect(0xFF000000, R(lcx, lcy - 3, 1, 3));
+    fill_rect(0xFF000000, R(lcx, lcy + 1, 1, 3));
+  }
+}
+
 result_t win_canvas_proc(window_t *win, uint32_t msg,
                           uint32_t wparam, void *lparam) {
   canvas_win_state_t *state = (canvas_win_state_t *)win->userdata;
@@ -470,9 +448,12 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       canvas_win_state_t *s = allocate_window_data(win, sizeof(canvas_win_state_t));
       s->doc = (canvas_doc_t *)lparam;
       s->doc->canvas_win = win;
-      s->scale = 1.0f;
-      s->pan.x = 0;
-      s->pan.y = 0;
+      window_view_init(win, s->doc->canvas_w, s->doc->canvas_h, g_bw_retina_scale,
+#ifdef AX_PLATFORM_IOS
+                       true);
+#else
+                       false);
+#endif
       // Sync the document window's built-in scrollbars.
       canvas_sync_scrollbars(win, s);
       return true;
@@ -499,22 +480,12 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
     case evPaint: {
       if (!state || !doc) return true;
-      canvas_upload(doc);
-      float saved_projection[16];
-      float rotation = state->rotation, tx = state->translate_x, ty = state->translate_y;
-      float left = INFINITY, top = INFINITY, right = -INFINITY, bottom = -INFINITY;
-      for (int corner = 0; corner < 4; corner++) {
-        float x = (corner & 1) ? win->frame.w : 0, y = (corner & 2) ? win->frame.h : 0;
-        canvas_transform_point(win, state, &x, &y, true);
-        left = MIN(left, x); top = MIN(top, y); right = MAX(right, x); bottom = MAX(bottom, y);
+      if (wparam == WINDOW_PAINT_OVERLAY) {
+        canvas_draw_loupe(win, state, doc);
+        return true;
       }
-      irect16_t grid_viewport = R((int)floorf(left), (int)floorf(top),
-                                  (int)ceilf(right - left), (int)ceilf(bottom - top));
-      begin_draw_transform(rotation, win->frame.w * 0.5f, win->frame.h * 0.5f, tx, ty, saved_projection);
-      state->rotation = state->translate_x = state->translate_y = 0;
-
-      irect16_t canvas_rect = canvas_doc_rect_to_view(win, state, 0, 0,
-                                                       doc->canvas_w, doc->canvas_h);
+      canvas_upload(doc);
+      irect16_t canvas_rect = R(0, 0, doc->canvas_w, doc->canvas_h);
       if (!doc->layer.mask_only_view) {
         if (doc->background.show)
           fill_rect(doc->background.color, canvas_rect);
@@ -562,28 +533,21 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       }
 
       // Draw grid overlay (same checker-texture mechanism as selection)
-      canvas_draw_grid(win, state, grid_viewport);
+      canvas_draw_grid(win);
 
       canvas_draw_selection_mask_overlay(doc, state, win);
 
       if (doc->sel.move.active && doc->sel.floating.tex) {
         // Draw the floating selection at its current position
-        irect16_t float_rect = canvas_doc_rect_to_view(win, state,
-                                                       doc->sel.floating.rect.x,
-                                                       doc->sel.floating.rect.y,
-                                                       doc->sel.floating.rect.x + doc->sel.floating.rect.w,
-                                                       doc->sel.floating.rect.y + doc->sel.floating.rect.h);
+        irect16_t float_rect = doc->sel.floating.rect;
         draw_rect(doc->sel.floating.tex, float_rect);
         draw_sel_rect(float_rect);
       } else if (doc->sel.active &&
                  (IMAGEEDITOR_SHOW_SELECTION_BOUNDS ||
                   (g_app && ((g_app->current_tool == ID_TOOL_SELECT && doc->drawing) ||
                              g_app->current_tool == ID_TOOL_CROP)))) {
-        irect16_t sel_rect = canvas_doc_rect_to_view(win, state,
-                                                     MIN(doc->sel.start.x, doc->sel.end.x),
-                                                     MIN(doc->sel.start.y, doc->sel.end.y),
-                                                     MAX(doc->sel.start.x, doc->sel.end.x) + 1,
-                                                     MAX(doc->sel.start.y, doc->sel.end.y) + 1);
+        irect16_t sel_rect = R(MIN(doc->sel.start.x, doc->sel.end.x), MIN(doc->sel.start.y, doc->sel.end.y),
+                               abs(doc->sel.end.x - doc->sel.start.x) + 1, abs(doc->sel.end.y - doc->sel.start.y) + 1);
         draw_sel_rect(sel_rect);
       }
       // Polygon in-progress: draw a sel_rect bounding the rubber-band edge
@@ -591,75 +555,17 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       if (doc->poly.active && doc->poly.count > 0) {
         ipoint16_t v0 = doc->poly.pts[doc->poly.count - 1];
         ipoint16_t v1 = doc->last;
-        irect16_t poly_rect = canvas_doc_rect_to_view(win, state,
-                                                      MIN(v0.x, v1.x),
-                                                      MIN(v0.y, v1.y),
-                                                      MAX(v0.x, v1.x) + 1,
-                                                      MAX(v0.y, v1.y) + 1);
+        irect16_t poly_rect = R(MIN(v0.x, v1.x), MIN(v0.y, v1.y), abs(v1.x - v0.x) + 1, abs(v1.y - v0.y) + 1);
         draw_sel_rect(poly_rect);
       }
 
-      state->rotation = rotation; state->translate_x = tx; state->translate_y = ty;
-      end_draw_transform(saved_projection);
-
-      // Magnifier tool: draw a loupe overlay in the top-right corner of the canvas
-      // showing a 16x16 canvas-pixel region centered on the cursor at 4x zoom.
-      // Rendered as a single textured quad to avoid 256 fill_rect() calls.
-      enum { MAG_PIXELS = 16, MAG_ZOOM = 4, MAG_SIZE = MAG_PIXELS * MAG_ZOOM, MAG_MARGIN = 4 };
-      if (g_app && g_app->current_tool == ID_TOOL_MAGNIFIER &&
-          state->hover_valid &&
-          win->frame.w  >= MAG_SIZE + MAG_MARGIN * 2 + 4 &&
-          win->frame.h  >= MAG_SIZE + MAG_MARGIN * 2 + 4) {
-        int lox = win->frame.w - MAG_SIZE - MAG_MARGIN - 2;
-        int loy = MAG_MARGIN;
-        // Border
-        fill_rect(0xFF808080, R(lox - 1, loy - 1, MAG_SIZE + 2, MAG_SIZE + 2));
-        // Build a 16x16 RGBA pixel buffer from the canvas region around hover
-        uint8_t mag_buf[MAG_PIXELS * MAG_PIXELS * 4];
-        int hx = state->hover.x - MAG_PIXELS / 2;
-        int hy = state->hover.y - MAG_PIXELS / 2;
-        for (int row = 0; row < MAG_PIXELS; row++) {
-          for (int col = 0; col < MAG_PIXELS; col++) {
-            int sx = hx + col, sy = hy + row;
-            uint32_t px = canvas_in_bounds(doc, sx, sy)
-                        ? canvas_get_pixel(doc, sx, sy)
-                        : MAKE_COLOR(0x22, 0x22, 0x22, 0xFF);
-            uint8_t *dst = mag_buf + (row * MAG_PIXELS + col) * 4;
-            dst[0] = COLOR_R(px); dst[1] = COLOR_G(px); dst[2] = COLOR_B(px); dst[3] = COLOR_A(px);
-          }
-        }
-        // Upload pixel buffer to a cached GL texture and draw as a single quad
-        if (!state->mag_tex) {
-          glGenTextures(1, &state->mag_tex);
-          glBindTexture(GL_TEXTURE_2D, state->mag_tex);
-          glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-          glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-          glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-          glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-          glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, MAG_PIXELS, MAG_PIXELS, 0,
-                       GL_RGBA, GL_UNSIGNED_BYTE, mag_buf);
-        } else {
-          glBindTexture(GL_TEXTURE_2D, state->mag_tex);
-          glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, MAG_PIXELS, MAG_PIXELS,
-                          GL_RGBA, GL_UNSIGNED_BYTE, mag_buf);
-        }
-        draw_rect(state->mag_tex, R(lox, loy, MAG_SIZE, MAG_SIZE));
-        // Crosshair at loupe center
-        int lcx = lox + MAG_SIZE / 2;
-        int lcy = loy + MAG_SIZE / 2;
-        fill_rect(0xFF000000, R(lcx - 3, lcy, 3, 1));
-        fill_rect(0xFF000000, R(lcx + 1, lcy, 3, 1));
-        fill_rect(0xFF000000, R(lcx, lcy - 3, 1, 3));
-        fill_rect(0xFF000000, R(lcx, lcy + 1, 1, 3));
-      }
       return true;
     }
 
     case evHScroll:
       if (state) {
         IE_TRACE("hscroll win=%u pos=%u", win->id, wparam);
-        state->pan.x = (int)wparam;
-        clamp_pan(state, win->frame.w, win->frame.h);
+        window_view_set_scroll(win, SB_HORZ, (int)wparam);
         canvas_sync_scrollbars(win, state);
         invalidate_window(win);
       }
@@ -668,8 +574,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
     case evVScroll:
       if (state) {
         IE_TRACE("vscroll win=%u pos=%u", win->id, wparam);
-        state->pan.y = (int)wparam;
-        clamp_pan(state, win->frame.w, win->frame.h);
+        window_view_set_scroll(win, SB_VERT, (int)wparam);
         canvas_sync_scrollbars(win, state);
         invalidate_window(win);
       }
@@ -686,31 +591,9 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       // mid-stroke would invalidate doc->last (stored in pre-pan pixel coords)
       // and produce a visible position jump on the next MouseMove segment.
       if (doc && doc->drawing) return true;
-#ifdef AX_PLATFORM_IOS
-      state->translate_x += (int16_t)LOWORD((uintptr_t)lparam);
-      state->translate_y += (int16_t)HIWORD((uintptr_t)lparam);
-      invalidate_window(win);
+      window_view_pan(win, (ipoint16_t){(int16_t)LOWORD((uintptr_t)lparam), (int16_t)HIWORD((uintptr_t)lparam)});
+      canvas_sync_scrollbars(win, state);
       return true;
-#endif
-      int canvas_w  = canvas_scaled_w(doc, state->scale);
-      int canvas_h  = canvas_scaled_h(doc, state->scale);
-      // The document window owns both scrollbars; the horizontal one is merged
-      // with the document-window status bar and does not eat canvas height.
-      int view_w    = canvas_view_w(win->frame.w);
-      int view_h    = win->frame.h;
-      int max_pan_x = MAX(0, canvas_w - view_w);
-      int max_pan_y = MAX(0, canvas_h - view_h);
-      if (max_pan_x > 0 || max_pan_y > 0) {
-        // lparam = scroll deltas MAKEDWORD(dx, dy)
-        int dx = -(int16_t)LOWORD((uintptr_t)lparam);  // natural scroll: flip x axis
-        int dy = -(int16_t)HIWORD((uintptr_t)lparam);  // natural scroll: flip y axis
-        state->pan.x = MIN(MAX(state->pan.x + dx, 0), max_pan_x);
-        state->pan.y = MIN(MAX(state->pan.y + dy, 0), max_pan_y);
-        canvas_sync_scrollbars(win, state);
-        invalidate_window(win);
-        return true;
-      }
-      return false;
     }
 
     case evGesture: {
@@ -721,13 +604,12 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         state->hover_valid = false;
         set_focus(win);
       } else if (gesture->phase == AX_GESTURE_UPDATE && state->gesture_active) {
-        canvas_apply_gesture(win, state, gesture);
+        window_view_apply_gesture(win, gesture);
         invalidate_window(win);
       } else {
         state->gesture_active = false;
       }
-      IE_TRACE("gesture win=%u phase=%u scale=%.3f rotation=%.3f offset=(%.1f,%.1f)",
-               win->id, gesture->phase, state->scale, state->rotation, state->translate_x, state->translate_y);
+      IE_TRACE("gesture win=%u phase=%u zoom=%.3f", win->id, gesture->phase, window_view_zoom(win));
       return true;
     }
     case evPointerCancel: {
@@ -765,7 +647,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       if (state->gesture_active) return true;
       state->stroke_modified = doc->modified;
       state->stroke_undo = false;
-      ipoint16_t doc_pt = canvas_view_to_doc_point(win, state, lx, ly);
+      ipoint16_t doc_pt = {lx, ly};
       // Clear any stale panning state – if the user switched away from Hand
       // while holding the button, panning must not bleed into MouseMove.
       if (g_app->current_tool != ID_TOOL_HAND) state->pan.active = false;
@@ -773,22 +655,19 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       // Hand tool: begin pan drag
       if (g_app->current_tool == ID_TOOL_HAND) {
         state->pan.active = true;
-        state->pan.start_x = lx;
-        state->pan.start_y = ly;
+        window_view_begin_drag(win);
         IE_DEBUG("pan_begin doc=%p at=(%d,%d)", (void *)doc, lx, ly);
         return true;
       }
 
       // Zoom tool (left click): zoom in centered on cursor
       if (g_app->current_tool == ID_TOOL_ZOOM) {
-        int mx = lx;
-        int my = ly;
         int new_scale = -1;
         for (int i = 0; i < NUM_ZOOM_LEVELS; i++) {
-          if (kZoomLevels[i] > state->scale) { new_scale = kZoomLevels[i]; break; }
+          if (kZoomLevels[i] > window_view_zoom(win)) { new_scale = kZoomLevels[i]; break; }
         }
         if (new_scale > 0)
-          apply_zoom_centered(win, state, new_scale, doc_pt.x, doc_pt.y, mx, my);
+          apply_zoom_centered(win, state, new_scale, doc_pt);
         return true;
       }
 
@@ -983,7 +862,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       if (state && g_app->current_tool == ID_TOOL_EYEDROPPER) {
         int lx = (int16_t)LOWORD(wparam);
         int ly = (int16_t)HIWORD(wparam);
-        ipoint16_t doc_pt = canvas_view_to_doc_point(win, state, lx, ly);
+        ipoint16_t doc_pt = ((ipoint16_t){lx, ly});
         int px = doc_pt.x;
         int py = doc_pt.y;
         if (canvas_in_bounds(doc, px, py)) {
@@ -998,15 +877,13 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       if (state && g_app->current_tool == ID_TOOL_ZOOM) {
         int lx = (int16_t)LOWORD(wparam);
         int ly = (int16_t)HIWORD(wparam);
-        int mx = lx;
-        int my = ly;
-        ipoint16_t doc_pt = canvas_view_to_doc_point(win, state, mx, my);
+        ipoint16_t doc_pt = {lx, ly};
         int new_scale = -1;
         for (int i = NUM_ZOOM_LEVELS - 1; i >= 0; i--) {
-          if (kZoomLevels[i] < state->scale) { new_scale = kZoomLevels[i]; break; }
+          if (kZoomLevels[i] < window_view_zoom(win)) { new_scale = kZoomLevels[i]; break; }
         }
         if (new_scale > 0)
-          apply_zoom_centered(win, state, new_scale, doc_pt.x, doc_pt.y, mx, my);
+          apply_zoom_centered(win, state, new_scale, doc_pt);
         return true;
       } else if (g_app->current_tool == ID_TOOL_POLYGON && doc->poly.active && doc->poly.count >= 2) {
         if (g_app->shape_filled)
@@ -1037,18 +914,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       // Hand tool: update pan while dragging
       if (state->pan.active) {
-        int lx = (int16_t)LOWORD(wparam);
-        int ly = (int16_t)HIWORD(wparam);
-#ifdef AX_PLATFORM_IOS
-        state->translate_x += lx - state->pan.start_x;
-        state->translate_y += ly - state->pan.start_y;
-#else
-        state->pan.x -= lx - state->pan.start_x;
-        state->pan.y -= ly - state->pan.start_y;
-#endif
-        state->pan.start_x = lx;
-        state->pan.start_y = ly;
-        clamp_pan(state, win->frame.w, win->frame.h);
+        window_view_drag(win);
         canvas_sync_scrollbars(win, state);
         invalidate_window(win);
         return true;
@@ -1058,7 +924,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       int lx = (int16_t)LOWORD(wparam);
       int ly = (int16_t)HIWORD(wparam);
-      ipoint16_t doc_pt = canvas_view_to_doc_point(win, state, lx, ly);
+      ipoint16_t doc_pt = {lx, ly};
       int px = doc_pt.x;
       int py = doc_pt.y;
 
@@ -1330,7 +1196,6 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
     case evResize: {
       if (state) {
-        clamp_pan(state, win->frame.w, win->frame.h);
         canvas_sync_scrollbars(win, state);
       }
       return false;

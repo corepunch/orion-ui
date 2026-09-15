@@ -304,8 +304,16 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
     if (send_message(win->parent, evParentNotify, 0, &pn))
       return true;
   }
-  // Call window procedure
-  if (!(value = win->proc(win, msg, wparam, lparam))) {
+  // The same window-owned matrix defines painting and pointer delivery.
+  float saved_projection[16];
+  bool view_paint = msg == evPaint && g_ui_runtime.running && win->view.enabled;
+  if (view_paint) begin_draw_transform(&win->view.matrix, saved_projection);
+  value = win->proc(win, msg, wparam, lparam);
+  if (view_paint) {
+    end_draw_transform(saved_projection);
+    win->proc(win, evPaint, WINDOW_PAINT_OVERLAY, NULL);
+  }
+  if (!value) {
     switch (msg) {
       case evPointerCancel:
         // Existing controls release their pressed state without an inside click.

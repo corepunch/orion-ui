@@ -5,10 +5,12 @@
 
 static ax_gesture_t received;
 static int gesture_count;
+static ipoint16_t pointer;
 static result_t gesture_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
     case evCreate: case evPaint: case evDestroy: return true;
     case evGesture: received = *(ax_gesture_t *)lparam; gesture_count++; return true;
+    case evMouseMove: pointer = (ipoint16_t){(int16_t)LOWORD(wparam), (int16_t)HIWORD(wparam)}; return true;
     default: return false;
   }
 }
@@ -39,6 +41,14 @@ static void test_nested_gesture(void) {
   ASSERT_EQUAL(gesture_count, 2);
   ASSERT_TRUE(fabsf(received.x - 558) < 0.001f);
   ASSERT_TRUE(fabsf(received.y - 430) < 0.001f);
+  canvas->hscroll.pos = canvas->vscroll.pos = 0;
+  window_view_init(canvas, 100, 100, 1, true);
+  ax_gesture_t rotation = {AX_GESTURE_UPDATE, 50, 50, 50, 50, 2, 1.57079632679f};
+  window_view_apply_gesture(canvas, &rotation);
+  ui_event_t move = {.message = kEventMouseMoved, .wParam = MAKEDWORD(65, 95)};
+  dispatch_message(&move);
+  ASSERT_EQUAL(pointer.x, 35);
+  ASSERT_EQUAL(pointer.y, 65);
   destroy_window(root);
   event.gesture.phase = AX_GESTURE_END;
   dispatch_message(&event);

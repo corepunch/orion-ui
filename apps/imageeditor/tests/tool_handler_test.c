@@ -80,8 +80,7 @@ void test_pencil_begin_end_lifecycle(void) {
   canvas_doc_t *doc = create_document(NULL, 32, 32);
   ASSERT_NOT_NULL(doc);
   
-  window_t *win = test_env_create_window("Canvas", 0, 0, 200, 200, NULL, NULL);
-  canvas_win_state_t state = {.doc = doc, .scale = 100, .pan = {0, 0}};
+  canvas_win_state_t state = {.doc = doc};
   
   const tool_handler_t *pencil = get_tool_handler(ID_TOOL_PENCIL);
   ASSERT_NOT_NULL(pencil);
@@ -119,8 +118,7 @@ void test_line_preview_lifecycle(void) {
   canvas_doc_t *doc = create_document(NULL, 32, 32);
   ASSERT_NOT_NULL(doc);
   
-  window_t *win = test_env_create_window("Canvas", 0, 0, 200, 200, NULL, NULL);
-  canvas_win_state_t state = {.doc = doc, .scale = 100, .pan = {0, 0}};
+  canvas_win_state_t state = {.doc = doc};
   
   const tool_handler_t *line = get_tool_handler(ID_TOOL_LINE);
   ASSERT_NOT_NULL(line);
@@ -161,8 +159,7 @@ void test_tool_cancel_discards(void) {
   canvas_doc_t *doc = create_document(NULL, 32, 32);
   ASSERT_NOT_NULL(doc);
   
-  window_t *win = test_env_create_window("Canvas", 0, 0, 200, 200, NULL, NULL);
-  canvas_win_state_t state = {.doc = doc, .scale = 100, .pan = {0, 0}};
+  canvas_win_state_t state = {.doc = doc};
   
   const tool_handler_t *pencil = get_tool_handler(ID_TOOL_PENCIL);
   ASSERT_NOT_NULL(pencil);

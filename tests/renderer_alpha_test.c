@@ -11,6 +11,13 @@ extern void init_ui_white_texture(void);
 extern void shutdown_white_texture(void);
 
 static uint32_t viewport_texture;
+static result_t rotated_content_proc(window_t *win, uint32_t msg, uint32_t wp, void *lp) {
+  if (msg == evPaint) {
+    fill_rect(0xffffffff, wp == WINDOW_PAINT_OVERLAY ? R(2, 2, 3, 3) : R(8, 4, 8, 4));
+    return true;
+  }
+  return false;
+}
 static void test_view_rotation(void) {
   TEST("Renderer rotates canvas content and restores the projection for viewport UI");
   CGLPixelFormatAttribute attrs[] = {kCGLPFAOpenGLProfile,
@@ -37,12 +44,12 @@ static void test_view_rotation(void) {
     glClearColor(0, 0, 0, 1);
     glClear(GL_COLOR_BUFFER_BIT);
     set_projection(0, 0, 64, 64);
-    float saved[16];
     g_ui_runtime.running = true;
-    begin_draw_transform(1.57079632679f, 32, 32, 2, 3, saved);
-    fill_rect(0xffffffff, R(8, 4, 8, 4));
-    end_draw_transform(saved);
-    fill_rect(0xffffffff, R(2, 2, 3, 3));
+    window_t win = {.frame = {0, 0, 64, 64}, .flags = WINDOW_NOTITLE, .proc = rotated_content_proc,
+      .surface_fbo = fbo, .surface_tex = texture, .surface_w = 64, .surface_h = 64,
+      .view = {.enabled = true, .width = 64, .height = 64, .pixel_ratio = 1,
+               .matrix = {.a = 0, .b = 1, .tx = 66, .ty = 3}}};
+    send_message(&win, evPaint, 0, NULL);
     uint8_t rotated[4], original[4], overlay[4];
     glReadPixels(60, 64 - 15 - 1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, rotated);
     glReadPixels(10, 64 - 6 - 1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, original);

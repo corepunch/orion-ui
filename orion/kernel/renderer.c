@@ -470,10 +470,9 @@ void end_draw_transform(const float saved[16]) {
   update_sprite_projection_uniforms(&g_ref.projection);
 }
 
-void begin_draw_transform(float radians, float cx, float cy, float tx, float ty, float saved[16]) {
+void begin_draw_transform(const view_matrix_t *view, float saved[16]) {
   memcpy(saved, get_sprite_matrix(), sizeof(float) * 16);
-  float c = cosf(radians), s = sinf(radians), transformed[16];
-  float x = cx + tx - c * cx + s * cy, y = cy + ty - s * cx - c * cy;
+  float c = view->a, s = view->b, x = view->tx, y = view->ty, transformed[16];
   memcpy(transformed, saved, sizeof(transformed));
   for (int row = 0; row < 4; row++) {
     transformed[row] = saved[row] * c + saved[4 + row] * s;
