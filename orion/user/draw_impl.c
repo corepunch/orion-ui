@@ -134,6 +134,10 @@ void draw_button(irect16_t r, int dx, int dy, bool pressed) {
 // Draw window panel — border/grip via theme, fill guarded by WINDOW_NOFILL.
 void draw_panel(window_t const *win) {
   irect16_t r = R(0, 0, win->frame.w, win->frame.h);
+  if (win->maximized) {
+    if (!(win->flags & WINDOW_NOFILL)) fill_rect(get_sys_color(brControlBg), r);
+    return;
+  }
   theme_draw((win->flags & WINDOW_NOFILL) ? THEME_PART_PANEL_BORDER : THEME_PART_PANEL,
              r, CTRL_NORMAL);
   if (!(win->flags & WINDOW_NORESIZE)) theme_draw(THEME_PART_RESIZE_GRIP, r, CTRL_NORMAL);
@@ -141,10 +145,10 @@ void draw_panel(window_t const *win) {
 
 // Draw a theme icon centred inside rect r.
 void draw_theme_icon_in_rect(int id, irect16_t r, uint32_t col) {
-  draw_theme_icon(id,
-                  r.x + (r.w - THEME_ICON_SIZE) / 2,
-                  r.y + (r.h - THEME_ICON_SIZE) / 2,
-                  THEME_ICON_SIZE, col);
+  int size = (id == THEME_ICON_CLOSE || id == THEME_ICON_MAXIMIZE || id == THEME_ICON_RESTORE)
+    ? MIN(16, MIN(r.w, r.h)) : THEME_ICON_SIZE;
+  irect16_t icon = rect_center(r, size, size);
+  draw_theme_icon(id, icon.x, icon.y, size, col);
 }
 
 // Draw window controls (titlebar + close button).
@@ -152,7 +156,8 @@ void draw_window_controls(window_t *win) {
   irect16_t r = R(0, 0, win->frame.w, win->frame.h);
   get_theme()->draw_window_chrome(rect_split_top(r, TITLEBAR_HEIGHT),
                                   rect_split_top(r, TITLEBAR_HEIGHT), win->title,
-                                  window_has_focus(win) ? CTRL_FOCUSED : CTRL_NORMAL);
+                                  window_has_focus(win) ? CTRL_FOCUSED : CTRL_NORMAL,
+                                  win->maximizable && !win->parent && !(win->flags & (WINDOW_NORESIZE | WINDOW_DIALOG | WINDOW_ALWAYSINBACK | WINDOW_ALWAYSONTOP)));
 }
 
 // Draw status bar
@@ -317,17 +322,20 @@ void draw_sel_rect(irect16_t r) {
 }
 
 void draw_theme_icon(int id, int x, int y, int size, uint32_t col) {
-  bitmap_strip_t *s = ui_get_theme_strip();
-  if (!s || s->tex == 0 || s->cols <= 0) return;
-  int total = s->cols * (s->sheet_h / s->icon_h);
-  if (id < 0 || id >= total) return;
-  int scol = id % s->cols;
-  int srow = id / s->cols;
-  float u0 = (float)(scol * s->icon_w) / (float)s->sheet_w;
-  float v0 = (float)(srow * s->icon_h) / (float)s->sheet_h;
-  float u1 = u0 + (float)s->icon_w / (float)s->sheet_w;
-  float v1 = v0 + (float)s->icon_h / (float)s->sheet_h;
-  draw_sprite_region((int)s->tex, R(x, y, size, size), UV_RECT(u0, v0, u1, v1), col, 0);
+  static const char *names[THEME_ICON_COUNT] = {
+    "lucide-x", "lucide-chevron-up", "lucide-chevron-down", "lucide-chevrons-up-down",
+    "lucide-check", "lucide-chevron-up", "lucide-chevron-right", "lucide-chevron-down",
+    "lucide-chevron-left", "lucide-grip", "lucide-maximize", "lucide-copy"
+  };
+  if (id < 0 || id >= THEME_ICON_COUNT || size <= 0) {
+    fprintf(stderr, "[draw] invalid theme icon id=%d size=%d\n", id, size);
+    fflush(stderr);
+    return;
+  }
+  sysicon_resolved_t icon;
+  if (!sysicon_resolve(names[id], &icon)) return;
+  draw_sprite_region((int)icon.tex, R(x, y, size, size),
+                     UV_RECT(icon.u0, icon.v0, icon.u1, icon.v1), col, 0);
 }
 
 void draw_icon8(int icon, int x, int y, uint32_t col) {
@@ -396,10 +404,10 @@ void composite_root_windows(void) {
 
     // Clamp radius to half the smallest dimension (in physical pixels).
     int max_r = w->surface_w < w->surface_h ? w->surface_w / 2 : w->surface_h / 2;
-    float radius = base_radius;
+    float radius = w->maximized ? 0.0f : base_radius;
     if (radius > max_r) radius = (float)max_r;
 
-    if (!(w->flags & WINDOW_TRANSPARENT))
+    if (!w->maximized && !(w->flags & WINDOW_TRANSPARENT))
       draw_rect_shadow(w->frame, theme->window_corner_radius, theme->window_shadow_blur,
                        theme->window_shadow_offset, theme->window_shadow_color);
     draw_rounded_rect((int)w->surface_tex,

@@ -176,9 +176,7 @@ void ui_update_screen_size(int width, int height);
 extern uint32_t ui_transparency_checker_texture;
 
 // Theme icon strip (theme.png, 128x16 grayscale, 8x8 tiles).
-// Icons are indexed by theme_icon_t (user/theme.h).
-// Used by draw_theme_icon() for all chrome icons (close, scrollbar arrows,
-// checkmark, combobox arrow, resize grip).
+// Legacy bitmap accessor; window/control glyphs now resolve Lucide SVGs.
 // Returns NULL if the sheet was not found at startup.
 bitmap_strip_t *ui_get_theme_strip(void);
 

@@ -77,6 +77,10 @@ void gc_handle_command_impl(uint16_t id) {
   GC_LOG("gc_handle_command: id=%d", (int)id);
 
   switch (id) {
+    case ID_VIEW_WINDOW_MODE:
+      if (gc->main_win->maximized) restore_window(gc->main_win);
+      else maximize_window(gc->main_win);
+      break;
     case ID_VIEW_CHANGES: gc_set_view_mode(0); break;
     case ID_VIEW_HISTORY: gc_set_view_mode(1); break;
     case ID_VIEW_GITHUB:  gc_set_view_mode(2); break;

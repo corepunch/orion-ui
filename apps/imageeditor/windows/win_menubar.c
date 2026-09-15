@@ -621,6 +621,14 @@ void handle_menu_command(uint16_t id) {
       show_about_dialog(g_app->menubar_win);
       break;
 
+    case ID_VIEW_WINDOW_MODE:
+      if (g_app->active_doc) {
+        window_t *host = g_app->active_doc->win;
+        IE_TRACE("window mode win=%p maximized=%d", (void *)host, host->maximized);
+        if (host->maximized) restore_window(host);
+        else maximize_window(host);
+      }
+      break;
     case ID_VIEW_ZOOM_IN:
     case ID_VIEW_ZOOM_OUT:
     case ID_VIEW_ZOOM_FIT:

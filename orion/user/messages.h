@@ -41,6 +41,7 @@ enum {
   evRightButtonUp,
   evResize,
   evDisplayChange,
+  evGetWorkspaceRect, // lparam: irect16_t*, initialized to available screen bounds
   evKeyDown,
   evKeyUp,
   evJoyButtonDown,

@@ -14,7 +14,7 @@ static bool gc_action_has_handler(uint16_t id) {
     case ID_FILE_CLONE: case ID_FILE_QUIT:
     case ID_REPO_REFRESH: case ID_REPO_SEARCH: case ID_REPO_IDENTITY:
     case ID_REPO_TERMINAL:
-    case ID_VIEW_CHANGES: case ID_VIEW_HISTORY: case ID_VIEW_GITHUB:
+    case ID_VIEW_WINDOW_MODE: case ID_VIEW_CHANGES: case ID_VIEW_HISTORY: case ID_VIEW_GITHUB:
     case ID_BRANCH_NEW: case ID_BRANCH_CHECKOUT: case ID_BRANCH_MERGE:
     case ID_BRANCH_REBASE: case ID_BRANCH_DELETE: case ID_BRANCH_RENAME:
     case ID_COMMIT_COMMIT: case ID_COMMIT_AMEND: case ID_COMMIT_UNDO:

@@ -23,9 +23,7 @@
 
 // ── Theme icons ───────────────────────────────────────────────────────────
 //
-// Indices into share/orion/theme.png (144x18 px grayscale, 9x9 tiles).
-// The sheet contains 16 columns x 2 rows; only the first THEME_ICON_COUNT
-// entries are defined.  Use draw_theme_icon() to render them.
+// Theme glyphs resolve to shared Lucide SVG assets via draw_theme_icon().
 typedef enum {
   THEME_ICON_CLOSE        = 0,   // window close (x)
   THEME_ICON_ARROW_UP     = 1,   // up arrow, no tail (e.g. scroll-up button)
@@ -37,10 +35,12 @@ typedef enum {
   THEME_ICON_SCROLL_DOWN  = 7,   // scroll-bar down
   THEME_ICON_SCROLL_LEFT  = 8,   // scroll-bar left
   THEME_ICON_RESIZE       = 9,   // resize grip (bottom-right window corner)
-  THEME_ICON_COUNT        = 10,
+  THEME_ICON_MAXIMIZE     = 10,
+  THEME_ICON_RESTORE      = 11,
+  THEME_ICON_COUNT        = 12,
 } theme_icon_t;
 
-// Native tile size of theme icons in logical pixels.
+// Default logical size for compact control glyphs.
 #define THEME_ICON_SIZE  9
 
 // ── Text rendering ────────────────────────────────────────────────────────
@@ -148,7 +148,7 @@ typedef struct {
 
   void (*draw_part)(theme_part_t part, irect16_t r, ctrl_state_t state);
   void (*draw_window_chrome)(irect16_t titlebar, irect16_t caption,
-                             const char *title, ctrl_state_t state);
+                             const char *title, ctrl_state_t state, bool maximizable);
   void (*draw_statusbar)(irect16_t r, const char *text);
   void (*draw_button_label)(irect16_t r, const char *text, ctrl_state_t state);
   void (*draw_combobox)(irect16_t r, const char *text, ctrl_state_t state);

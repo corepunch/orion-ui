@@ -28,6 +28,9 @@ static int scaled_px(int px, float scale) {
 }
 
 static int canvas_view_w(int win_w) {
+#if IMAGEEDITOR_BW
+  return MAX(0, win_w);
+#endif
   return MAX(0, win_w - SCROLLBAR_WIDTH);
 }
 
@@ -224,6 +227,9 @@ static void snap_canvas_pos(int *px, int *py) {
 // window (win) itself. This splits ownership so the doc window always shows
 // the merged row while the canvas handles only vertical scrolling internally.
 static void canvas_sync_scrollbars(window_t *win, canvas_win_state_t *state) {
+#if IMAGEEDITOR_BW
+  return;
+#endif
   canvas_doc_t *doc = state->doc;
   window_t *dwin   = doc->win;  // document window owns the hscroll
   int canvas_w = canvas_scaled_w(doc, state->scale);

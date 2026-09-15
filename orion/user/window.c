@@ -286,6 +286,73 @@ void resize_window(window_t *win, int new_w, int new_h) {
   invalidate_window(win);
 }
 
+static bool window_workspace_rect(window_t *win, irect16_t *area) {
+  *area = R(0, 0, ui_get_system_metrics(kSystemMetricScreenWidth),
+                         ui_get_system_metrics(kSystemMetricScreenHeight));
+  send_message(win, evGetWorkspaceRect, 0, area);
+  if (area->w > 0 && area->h > 0) return true;
+  fprintf(stderr, "[win] invalid workspace win=%u rect=%d,%d,%d,%d\n",
+          win->id, area->x, area->y, area->w, area->h);
+  fflush(stderr);
+  return false;
+}
+
+void update_maximized_window(window_t *win) {
+  if (!win || !is_window(win) || !win->maximized) return;
+  irect16_t area;
+  if (!window_workspace_rect(win, &area)) return;
+  move_window(win, area.x, area.y);
+  resize_window(win, area.w, area.h);
+}
+
+bool maximize_window(window_t *win) {
+  if (!win || !is_window(win) || win->parent ||
+      (win->flags & (WINDOW_DIALOG | WINDOW_ALWAYSINBACK | WINDOW_ALWAYSONTOP))) {
+    fprintf(stderr, "[win] maximize rejected win=%p: requires ordinary root\n", (void *)win);
+    fflush(stderr);
+    return false;
+  }
+  if (win->maximized) return true;
+  irect16_t area;
+  if (!window_workspace_rect(win, &area)) return false;
+  win->restore_frame = win->frame;
+  win->restore_decorations = win->flags & (WINDOW_NOTITLE | WINDOW_NORESIZE);
+  win->maximizable = true;
+  win->maximized = true;
+  win->flags |= WINDOW_NOTITLE | WINDOW_NORESIZE;
+  fprintf(stderr, "[win] maximize win=%u from=%d,%d,%d,%d to=%d,%d,%d,%d\n",
+          win->id, win->frame.x, win->frame.y, win->frame.w, win->frame.h,
+          area.x, area.y, area.w, area.h);
+  fflush(stderr);
+  move_window(win, area.x, area.y);
+  resize_window(win, area.w, area.h);
+  move_to_top(win);
+  return true;
+}
+
+bool restore_window(window_t *win) {
+  if (!win || !is_window(win) || !win->maximized) {
+    fprintf(stderr, "[win] restore rejected win=%p: requires maximized window\n", (void *)win);
+    fflush(stderr);
+    return false;
+  }
+  irect16_t area;
+  if (!window_workspace_rect(win, &area)) return false;
+  irect16_t frame = win->restore_frame;
+  frame.w = MIN(frame.w, area.w);
+  frame.h = MIN(frame.h, area.h);
+  frame.x = MAX(area.x, MIN(frame.x, area.x + area.w - frame.w));
+  frame.y = MAX(area.y, MIN(frame.y, area.y + area.h - frame.h));
+  win->maximized = false;
+  win->flags = (win->flags & ~(WINDOW_NOTITLE | WINDOW_NORESIZE)) | win->restore_decorations;
+  fprintf(stderr, "[win] restore win=%u rect=%d,%d,%d,%d\n",
+          win->id, frame.x, frame.y, frame.w, frame.h);
+  fflush(stderr);
+  move_window(win, frame.x, frame.y);
+  resize_window(win, frame.w, frame.h);
+  return true;
+}
+
 void set_default_window_position(int x, int y) {
   g_ui_runtime.default_window_x = x;
   g_ui_runtime.default_window_y = y;
@@ -531,7 +598,7 @@ void invalidate_window(window_t *win) {
 // Windows with WINDOW_NOTITLE have no title row; their toolbar area is the
 // only non-client space and may be dragged from freely (e.g. tool palettes).
 bool window_in_drag_area(window_t const *win, int sy) {
-  if (win->parent || (win->flags & WINDOW_NODRAG)) return false;
+  if (win->maximized || win->parent || (win->flags & WINDOW_NODRAG)) return false;
   int t = titlebar_height(win);
   if (sy < win->frame.y || sy >= win->frame.y + t) return false;
   if (!(win->flags & WINDOW_TOOLBAR) || (win->flags & WINDOW_NOTITLE)) return true;

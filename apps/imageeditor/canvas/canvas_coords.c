@@ -10,6 +10,9 @@ static inline int cc_scaled_px(int px, float scale) {
 }
 
 static inline int cc_canvas_view_w(int win_w) {
+#if IMAGEEDITOR_BW
+  return MAX(0, win_w);
+#endif
   return MAX(0, win_w - SCROLLBAR_WIDTH);
 }
 

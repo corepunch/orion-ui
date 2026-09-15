@@ -86,12 +86,16 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
                               uint32_t wparam, void *lparam) {
   canvas_doc_t *doc = (canvas_doc_t *)win->userdata;
   switch (msg) {
+    case evGetWorkspaceRect:
+#if IMAGEEDITOR_BW
+      *(irect16_t *)lparam = rect_trim_bottom(rect_trim_top(*(irect16_t *)lparam,
+                                             APP_TOOLBAR_Y + APP_TOOLBAR_H), TIMELINE_WIN_H);
+#else
+      *(irect16_t *)lparam = imageeditor_document_workspace_rect();
+#endif
+      return true;
 #ifdef AX_PLATFORM_IOS
     case evDisplayChange: {
-      irect16_t area = imageeditor_document_workspace_rect();
-      IE_TRACE("display change win=%p viewport=%dx%d", (void *)win, area.w, area.h);
-      move_window(win, area.x, area.y);
-      resize_window(win, area.w, area.h);
       if (doc == g_app->active_doc) imageeditor_layout_ipad_palettes();
       return true;
     }
@@ -294,13 +298,12 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
   }
 
 #if IMAGEEDITOR_BW
-  // Frameless full-screen window for pencil test.
-  // Tool palette and timeline float on top (always-on-top windows).
+  // Keep a normal restore frame; maximize the document host at startup.
   int doc_top = APP_TOOLBAR_Y + APP_TOOLBAR_H;
   window_t *dwin = create_window(
-      "",
-      WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
-      MAKERECT(0, doc_top, w, h),
+      "Pencil Test",
+      WINDOW_NOFILL | WINDOW_NOTRAYBUTTON,
+      MAKERECT(32, doc_top + 24, MAX(1, w * 3 / 4), MAX(1, h * 3 / 4)),
       NULL, doc_win_proc, g_app->hinstance, NULL);
   dwin->userdata = doc;
   doc->win = dwin;
@@ -345,6 +348,10 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
   doc->canvas_win = cwin;
 #endif
 
+  dwin->maximizable = true;
+#if IMAGEEDITOR_BW
+  maximize_window(dwin);
+#endif
   show_window(dwin, true);
 
   doc->next   = g_app->docs;

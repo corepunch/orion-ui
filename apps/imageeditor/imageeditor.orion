@@ -93,6 +93,7 @@
       </menu>
 
       <menu name="view" label="View" mutable="true">
+        <item name="window_mode" label="Maximize / Restore" />
         <item name="zoom_in" label="Zoom In" shortcut="Ctrl+Equals;Ctrl+Shift+Equals" />
         <item name="zoom_out" label="Zoom Out" shortcut="Ctrl+Minus" />
         <item name="zoom_fit" label="Fit on Screen" shortcut="Ctrl+0" />
@@ -184,6 +185,7 @@
         <Button name="zoom_out" command="view.zoom_out" icon="zoom-out" text="Zoom Out" tooltip="Zoom out" />
         <Button name="zoom_in" command="view.zoom_in" icon="zoom-in" text="Zoom In" tooltip="Zoom in" />
         <Button name="zoom_1x" command="view.zoom_1x" icon="frame" text="1x" tooltip="Zoom to 100%" />
+        <Button name="window_mode" command="view.window_mode" icon="lucide-copy" text="Window" tooltip="Maximize / Restore window" />
         <Button name="zoom_fit" command="view.zoom_fit" icon="expand" text="Fit" tooltip="Fit on screen" />
         <spacer w="10" />
         <Button name="show_background" command="view.show_background" icon="eye" flags="BUTTON_PUSHLIKE" text="BG" tooltip="Toggle background" />

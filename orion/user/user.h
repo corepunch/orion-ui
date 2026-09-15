@@ -472,6 +472,10 @@ typedef struct {
 // Window structure
 struct window_s {
   irect16_t frame;
+  irect16_t restore_frame;
+  uint32_t restore_decorations;
+  bool maximized;
+  bool maximizable; // app exposes a restore command when title bar is hidden
   uint32_t id;
   uint64_t editor_id;    // optional design-time stable identity; 0 outside editors
   window_role_t role;
@@ -580,6 +584,9 @@ void show_window(window_t *win, bool visible);
 void destroy_window(window_t *win);
 void clear_window_children(window_t *win);
 void clear_toolbar_children(window_t *win);
+bool maximize_window(window_t *win);
+bool restore_window(window_t *win);
+void update_maximized_window(window_t *win);
 void move_window(window_t *win, int x, int y);
 void resize_window(window_t *win, int new_w, int new_h);
 void layout_measure_window(window_t *win, layout_measure_t *m);

@@ -177,12 +177,17 @@ static void classic_apply_palette(void) {
 // ── Singleton ────────────────────────────────────────────────────────────────
 
 static void classic_draw_window_chrome(irect16_t titlebar, irect16_t caption,
-                                       const char *title, ctrl_state_t state) {
+                                       const char *title, ctrl_state_t state, bool maximizable) {
   bool focused = (state & CTRL_FOCUSED) != 0;
   classic_draw_titlebar_bg(titlebar, focused);
   irect16_t close = rect_split_right(caption, caption.h);
   draw_theme_icon_in_rect(THEME_ICON_CLOSE, close, get_sys_color(brTextNormal));
   caption = rect_trim_right(caption, close.w);
+  if (maximizable) {
+    draw_theme_icon_in_rect(THEME_ICON_MAXIMIZE, rect_split_right(caption, caption.h),
+                            get_sys_color(brTextNormal));
+    caption = rect_trim_right(caption, caption.h);
+  }
   draw_text_small_clipped(title, &caption,
       get_sys_color(focused ? brActiveTitlebarText : brInactiveTitlebarText), TEXT_PADDING_LEFT);
 }

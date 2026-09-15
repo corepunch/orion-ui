@@ -361,6 +361,7 @@ void dispatch_message(ui_event_t *msg) {
           } else {
             send_message(win, evDisplayChange,
                          MAKEDWORD(sw, sh), NULL);
+            update_maximized_window(win);
           }
         }
       }
@@ -636,7 +637,7 @@ void dispatch_message(ui_event_t *msg) {
           g_ui_runtime.resizing = resize_target;
           resize_anchor[0] = sx - (resize_target->frame.x + resize_target->frame.w);
           resize_anchor[1] = sy - (resize_target->frame.y + resize_target->frame.h);
-        } else if (window_in_drag_area(win, SCALE_POINT(py)) && win != g_ui_runtime.captured) {
+        } else if (!win->maximized && window_in_drag_area(win, SCALE_POINT(py)) && win != g_ui_runtime.captured) {
           // For WINDOW_NOTITLE toolbars, don't drag if the click hits a toolbar
           // button — only drag from empty space.
           bool skip_drag = false;
@@ -715,12 +716,22 @@ void dispatch_message(ui_event_t *msg) {
         bool on_close = !(g_ui_runtime.dragging->flags & WINDOW_NOTITLE)
                         && sx >= close_btn.x && sx < close_btn.x + close_btn.w
                         && sy >= close_btn.y && sy < close_btn.y + close_btn.h;
-        if (on_close) {
+        window_t *dragged = g_ui_runtime.dragging;
+        irect16_t max_btn = rect_split_right(rect_trim_right(titlebar, TITLEBAR_HEIGHT), TITLEBAR_HEIGHT);
+        bool on_maximize = msg->message == kEventLeftButtonUp && dragged->maximizable && !dragged->parent &&
+          !(dragged->flags & (WINDOW_NOTITLE | WINDOW_NORESIZE | WINDOW_DIALOG | WINDOW_ALWAYSINBACK | WINDOW_ALWAYSONTOP)) &&
+          rect_contains_point(max_btn, (ipoint16_t){sx, sy});
+        if (on_maximize) {
+          g_ui_runtime.dragging = NULL;
+          maximize_window(dragged);
+        } else if (on_close) {
           // Clear dragging BEFORE the send: evClose may open a modal
           // dialog that pumps events, and a live dragging pointer would cause the
           // window to follow the mouse during that dialog.  Same pattern as
           // toolbar_down_win which is cleared before its send above.
           window_t *closing = g_ui_runtime.dragging;
+          fprintf(stderr, "[win] close win=%u\n", closing->id);
+          fflush(stderr);
           g_ui_runtime.dragging = NULL;
           if (closing->flags & WINDOW_DIALOG) {
             end_dialog(closing, -1);

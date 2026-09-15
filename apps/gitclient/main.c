@@ -82,6 +82,7 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
                                            NULL, gc_main_proc,
                                            hinstance, NULL);
   if (!g_gc->main_win) return false;
+  maximize_window(g_gc->main_win);
   show_window(g_gc->main_win, true);
 
   // Open an explicit repository, or use the launch directory when it is one.

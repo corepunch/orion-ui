@@ -169,6 +169,9 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
   gc_state_t *gc = (gc_state_t *)win->userdata;
 
   switch (msg) {
+    case evGetWorkspaceRect:
+      *(irect16_t *)lparam = rect_trim_top(*(irect16_t *)lparam, MENUBAR_HEIGHT);
+      return true;
     case evCreate: {
       gc = g_gc;
       win->userdata = gc;

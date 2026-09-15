@@ -210,3 +210,23 @@ ownership and [Controls](controls) for container behavior.
 - [Scrollbars](scrollbars)
 - [Toolbars](toolbars)
 - [Architecture](architecture)
+
+## Maximize And Restore
+
+`maximize_window(win)` fills a regular root window's workspace and hides its
+inner title bar, border, shadow, and resize grip. It preserves the original
+frame and title/resize styles. `restore_window(win)` restores them, constraining
+the frame to the current workspace so it remains reachable after display changes.
+The document and its child controls retain their state throughout.
+
+The framework initializes an `irect16_t` to the logical screen bounds and sends
+`evGetWorkspaceRect` with its address in `lparam`. An app can trim this rectangle
+to reserve menus, toolbars, or palettes. Maximized roots automatically recompute
+these bounds after `evDisplayChange`. Call `update_maximized_window(win)` when
+workspace reservations change without a display resize.
+
+`win->maximized` exposes the current state. Set `win->maximizable = true`
+to opt into the title-bar maximize button when the app exposes a restore command;
+calling `maximize_window` also opts in. Route a menu or toolbar command to
+`restore_window` when true and `maximize_window` otherwise. This is internal
+workspace maximization; it does not change the native operating-system window.

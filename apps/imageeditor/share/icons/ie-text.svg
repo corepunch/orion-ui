@@ -1,3 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-  <path d="M2 8V6Q2 2 6 2H18Q22 2 22 6V8M12 2V22M6 22H18" stroke-linecap="round" stroke-linejoin="round"/>
+<svg width="24" height="24" viewBox="0 0 24 24" stroke-width="2" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <polyline points="4 7 4 4 20 4 20 7" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="9" x2="15" y1="20" y2="20" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="12" x2="12" y1="4" y2="20" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
