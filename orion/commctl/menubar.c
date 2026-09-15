@@ -19,8 +19,9 @@
 #include <orion/user/accel.h>
 #include <orion/user/theme.h>
 #include "menubar.h"
+#include "popup_item.h"
 
-#define MENU_ITEM_H      TITLEBAR_HEIGHT  // height of a normal dropdown row (font-size dependent)
+#define MENU_ITEM_H      POPUP_ITEM_HEIGHT
 
 // ---- per-menubar userdata -----------------------------------------------
 
@@ -76,20 +77,14 @@ static const char *item_label_shortcut(const char *label) {
   return (tab && tab[1]) ? tab + 1 : NULL;
 }
 
-// Draw a menu item label, stopping at a '\t' character.
-static void draw_item_label(const char *label, irect16_t const *rect, uint32_t col) {
-  if (!label) return;
-  const char *tab = strchr(label, '\t');
-  if (tab) {
-    int len = (int)(tab - label);
-    char buf[256];
-    int n = len < (int)(sizeof(buf) - 1) ? len : (int)(sizeof(buf) - 1);
-    memcpy(buf, label, (size_t)n);
-    buf[n] = '\0';
-    draw_text_small_clipped(buf, rect, col, 0);
-  } else {
-    draw_text_small_clipped(label, rect, col, 0);
+static const char *item_shortcut(const menu_item_t *it, const accel_table_t *accel,
+                                 char *buf, int size) {
+  const accel_t *a = accel_find_cmd(accel, it->id);
+  if (a) {
+    accel_format(a, buf, size);
+    return buf;
   }
+  return item_label_shortcut(it->label);
 }
 
 static int popup_items_height(const menu_item_t *items, int item_count) {
@@ -108,15 +103,10 @@ static int popup_items_width(const menu_item_t *items, int item_count,
       int lw = item_label_width(it->label) + MENU_SIDE_PAD * 2;
       if (menu_item_has_submenu(it)) {
         lw += strwidth(">") + MENU_HOTKEY_GAP;
-      } else if (item_label_shortcut(it->label)) {
-        lw += MENU_HOTKEY_GAP + strwidth(item_label_shortcut(it->label)) + MENU_SIDE_PAD;
-      } else if (accel) {
-        const accel_t *a = accel_find_cmd(accel, it->id);
-        if (a) {
-          char hkbuf[32];
-          accel_format(a, hkbuf, sizeof(hkbuf));
-          lw += MENU_HOTKEY_GAP + strwidth(hkbuf) + MENU_SIDE_PAD;
-        }
+      } else {
+        char hkbuf[128];
+        const char *shortcut = item_shortcut(it, accel, hkbuf, sizeof(hkbuf));
+        if (shortcut) lw += MENU_HOTKEY_GAP + strwidth(shortcut);
       }
       if (lw > w) w = lw;
     }
@@ -216,33 +206,25 @@ static result_t popup_proc(window_t *win, uint32_t msg,
         const menu_item_t *it = &pd->items[i];
         if (menu_item_is_separator(it)) {
           // separator
-          theme_draw(THEME_PART_SEPARATOR, R(MENU_SIDE_PAD, y + 2,
-                    win->frame.w - MENU_SIDE_PAD * 2, 1), CTRL_NORMAL);
+          theme_draw(THEME_PART_SEPARATOR, R(0, y + MENU_SEP_H / 2,
+                    win->frame.w, 1), CTRL_NORMAL);
           y += MENU_SEP_H;
         } else {
-          if (i == pd->hovered) {
-            theme_draw(THEME_PART_MENU_ITEM,
-                R(1, y, win->frame.w - 2, MENU_ITEM_H), CTRL_HOVER);
-          }
           bool hov = (i == pd->hovered);
           uint32_t label_col  = theme_foreground(THEME_PART_MENU_ITEM,
                                                   hov ? CTRL_HOVER : CTRL_NORMAL);
           uint32_t hotkey_col = hov ? label_col : get_sys_color(brTextDisabled);
-          draw_item_label(it->label, &(irect16_t){MENU_SIDE_PAD, y, win->frame.w - MENU_SIDE_PAD * 2, MENU_ITEM_H}, label_col);
+          popup_item_paint(R(0, y, win->frame.w, MENU_ITEM_H), it->label,
+                           hov ? CTRL_HOVER : CTRL_NORMAL);
           if (menu_item_has_submenu(it)) {
             draw_text_small_clipped(">",
                                    &(irect16_t){0, y, win->frame.w - MENU_SIDE_PAD, MENU_ITEM_H},
                                    hotkey_col, TEXT_ALIGN_RIGHT);
-          } else if (item_label_shortcut(it->label)) {
-            draw_text_small_clipped(item_label_shortcut(it->label),
-                                   &(irect16_t){0, y, win->frame.w - MENU_SIDE_PAD, MENU_ITEM_H},
-                                   hotkey_col, TEXT_ALIGN_RIGHT);
-          } else if (pd->accel) {
-            const accel_t *a = accel_find_cmd(pd->accel, it->id);
-            if (a) {
-              char hkbuf[32];
-              accel_format(a, hkbuf, sizeof(hkbuf));
-              draw_text_small_clipped(hkbuf,
+          } else {
+            char hkbuf[128];
+            const char *shortcut = item_shortcut(it, pd->accel, hkbuf, sizeof(hkbuf));
+            if (shortcut) {
+              draw_text_small_clipped(shortcut,
                                      &(irect16_t){0, y, win->frame.w - MENU_SIDE_PAD, MENU_ITEM_H},
                                      hotkey_col, TEXT_ALIGN_RIGHT);
             }
@@ -495,15 +477,22 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
     case evPaint: {
       theme_draw(THEME_PART_MENU_BAR, R(0, 0, win->frame.w, win->frame.h), CTRL_NORMAL);
       if (!data || !data->menus) return true;
+      if (data->active_idx >= 0 && data->active_idx < data->count) {
+        int i = data->active_idx;
+        irect16_t selection = R(data->menu_x[i] - 2, 0,
+            strwidth(data->menus[i].label) + MENU_LABEL_PAD, win->frame.h - 1);
+        // Capsule padding can overlap adjacent hit targets; paint behind all labels.
+        if (get_theme()->style == THEME_MODERN) {
+          selection = rect_center(selection, strwidth(data->menus[i].label), selection.h);
+          selection = rect_inset_xy(selection, -(MENU_CAPSULE_PAD + MENU_CAPSULE_INSET), 0);
+        }
+        theme_draw(THEME_PART_MENU_ITEM, selection, CTRL_SELECTED);
+      }
       for (int i = 0; i < data->count; i++) {
         bool active = (i == data->active_idx);
         int label_w = strwidth(data->menus[i].label) + MENU_LABEL_PAD;
         int label_x0 = data->menu_x[i] - 2;
         irect16_t label_rect = {label_x0, 0, label_w, win->frame.h};
-        if (active) {
-          theme_draw(THEME_PART_MENU_ITEM,
-              R(label_x0, 0, label_w, win->frame.h - 1), CTRL_SELECTED);
-        }
         draw_text_small_clipped(data->menus[i].label, &label_rect,
                         theme_foreground(THEME_PART_MENU_ITEM,
                                          active ? CTRL_SELECTED : CTRL_NORMAL),

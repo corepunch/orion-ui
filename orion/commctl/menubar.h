@@ -3,10 +3,9 @@
 
 #include <orion/user/user.h>
 
-// Height of the menu bar strip — same formula as TITLEBAR_HEIGHT.
+// Height of the menu bar strip — matches the generous dropdown row rhythm.
 // FONT_SIZE is a compile-time constant from kernel/kernel.h (included via user/user.h).
-// +5 keeps the height odd so 9x9 theme icons centre with equal padding.
-#define MENUBAR_HEIGHT (FONT_SIZE + 5)
+#define MENUBAR_HEIGHT (FONT_SIZE + 12)
 
 // One item inside a dropdown menu.  label == NULL && id == 0 means separator.
 // Submenus use id == 0 with a non-NULL label and submenu_items/submenu_count.

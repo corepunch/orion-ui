@@ -125,23 +125,25 @@
 // Controls: Menu
 // ──────────────────────────────────────────────────────────────────────────
 
-// Menu separator height
-#define MENU_SEP_H              5
+// Menu geometry follows the more generous spacing of native desktop menus.
+#define MENU_SEP_H              9
 
-// Menu horizontal text padding
-#define MENU_SIDE_PAD           4
+// Text-to-capsule padding, shared by menu-bar labels and popup items.
+#define MENU_CAPSULE_PAD        12
+#define MENU_CAPSULE_INSET      4
+#define MENU_SIDE_PAD           (1 + MENU_CAPSULE_INSET + MENU_CAPSULE_PAD)
 
 // Menu minimum popup width
-#define MENU_MIN_W              90
+#define MENU_MIN_W              180
 
 // Menu top-level label padding
-#define MENU_LABEL_PAD          12
+#define MENU_LABEL_PAD          16
 
 // Menu gap between label and right-aligned hotkey
-#define MENU_HOTKEY_GAP         12
+#define MENU_HOTKEY_GAP         16
 
 // Menu vertical padding (above first/below last item)
-#define MENU_START_Y            1
+#define MENU_START_Y            5
 
 // ──────────────────────────────────────────────────────────────────────────
 // Controls: Slider

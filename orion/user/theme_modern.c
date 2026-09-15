@@ -16,6 +16,9 @@
 #define RADIUS_TOOLBAR_ITEM  4
 #define RADIUS_BUTTON        6
 #define RADIUS_FIELD         8
+#define RADIUS_MENU_ITEM     6
+#define MODERN_LIST_INSET_X  4
+#define MODERN_LIST_INSET_Y  1
 
 // Secondary-button resting border (#767676) — quieter than full accent.
 #define MODERN_SECONDARY_BORDER  0xff767676
@@ -69,8 +72,14 @@ static void modern_draw_toolbar_item_bg(irect16_t r, ctrl_state_t state,
   } else {
     return;  // normal: no permanent background
   }
-  if (part == THEME_PART_LIST_ITEM) fill_rect(color, r);
-  else fill_rounded_rect(color, r, RADIUS_TOOLBAR_ITEM);
+  if (part == THEME_PART_LIST_ITEM) {
+    // Keep the row clickable edge-to-edge, but make the selected surface read
+    // as a native rounded selection rather than a solid table stripe.
+    r = rect_inset_xy(r, MODERN_LIST_INSET_X, MODERN_LIST_INSET_Y);
+    fill_rounded_rect(color, r, RADIUS_MENU_ITEM);
+  } else {
+    fill_rounded_rect(color, r, RADIUS_TOOLBAR_ITEM);
+  }
 }
 
 // ── Panel ─────────────────────────────────────────────────────────────────────
@@ -139,8 +148,10 @@ static void modern_draw_slider_thumb(irect16_t r, bool active) {
 // ── Menu item background ─────────────────────────────────────────────────────
 
 static void modern_draw_menu_item_bg(irect16_t r, ctrl_state_t state) {
-  if (state & (CTRL_HOVER | CTRL_SELECTED | CTRL_PRESSED))
-    fill_rect(get_sys_color(brAccent), r);
+  if (state & (CTRL_HOVER | CTRL_SELECTED | CTRL_PRESSED)) {
+    r = rect_inset_xy(r, MENU_CAPSULE_INSET, 1);
+    fill_rounded_rect(get_sys_color(brAccent), r, MIN(r.w, r.h) / 2);
+  }
 }
 
 // ── Palette ───────────────────────────────────────────────────────────────────
@@ -297,6 +308,9 @@ static theme_t g_modern_theme = {
   .press_icon_offset      = 0,
   .button_corner_radius   = RADIUS_BUTTON,
   .window_corner_radius   = 8,
+  .window_shadow_blur     = 8,
+  .window_shadow_offset   = {0, 4},
+  .window_shadow_color    = 0x80000000,
   .item_background        = {
     .hover = brButtonHover, .selected = brAccent,
     .selected_hover = brAccent, .pressed = brAccent,

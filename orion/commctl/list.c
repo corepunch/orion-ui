@@ -8,15 +8,16 @@
 #include <orion/user/rect.h>
 #include <orion/user/theme.h>
 #include "commctl.h"
+#include "popup_item.h"
 
-#define LIST_HEIGHT     (FONT_SIZE_SMALL + 5)
+#define LIST_HEIGHT     POPUP_ITEM_HEIGHT
 
 // Helper functions (will be moved to ui/user/window.c later)
 extern window_t *get_root_window(window_t *window);
 
 static void list_sync_scroll(window_t *win) {
   window_t *cb = win ? win->userdata : NULL;
-  int content_h = cb ? (int)cb->cursor_pos * LIST_HEIGHT : 0;
+  int content_h = cb ? MENU_START_Y * 2 + (int)cb->cursor_pos * LIST_HEIGHT : 0;
   int page_h = win ? get_client_rect(win).h : 0;
   scroll_info_t si = { SIF_ALL, 0, content_h, page_h, win ? (int)win->vscroll.pos : 0 };
   set_scroll_info(win, SB_VERT, &si, false);
@@ -29,7 +30,7 @@ static void list_scroll_to_item(window_t *win) {
   int pos = (int)win->vscroll.pos;
   int page_h = get_client_rect(win).h;
   int top = (int)win->cursor_pos * LIST_HEIGHT;
-  int bottom = top + LIST_HEIGHT;
+  int bottom = top + LIST_HEIGHT + MENU_START_Y * 2;
   if (top < pos) pos = top;
   else if (bottom > pos + page_h) pos = bottom - page_h;
   win->vscroll.pos = (uint32_t)MAX(0, pos);
@@ -70,24 +71,24 @@ result_t win_list(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       if (!cb || !texts)
         return true;
       int item_w = get_client_rect(win).w;
+      theme_draw(THEME_PART_MENU_POPUP,
+          R(0, win->vscroll.pos, item_w, get_client_rect(win).h), CTRL_NORMAL);
       for (uint32_t i = 0; i < cb->cursor_pos; i++) {
-        irect16_t item = { 0, (int)(i * LIST_HEIGHT), item_w, LIST_HEIGHT };
-        if (i == win->cursor_pos) {
-          theme_draw(THEME_PART_LIST_ITEM, item, CTRL_SELECTED);
-          draw_text_clipped(FONT_SMALL, texts[i], &item, theme_foreground(THEME_PART_LIST_ITEM, CTRL_SELECTED), TEXT_PADDING_LEFT);
-        } else {
-          draw_text_clipped(FONT_SMALL, texts[i], &item, get_sys_color(brTextNormal), TEXT_PADDING_LEFT);
-        }
+        irect16_t item = { 0, MENU_START_Y + (int)(i * LIST_HEIGHT), item_w, LIST_HEIGHT };
+        popup_item_paint(item, texts[i], i == win->cursor_pos ? CTRL_SELECTED : CTRL_NORMAL);
       }
       return true;
-    case evLeftButtonDown:
+    case evLeftButtonDown: {
       if (!cb || !texts)
         return true;
       if (!list_point_inside(win, wparam)) {
         list_cancel(win);
         return true;
       }
-      win->cursor_pos = HIWORD(wparam)/LIST_HEIGHT;
+      int y = (int16_t)HIWORD(wparam) - MENU_START_Y;
+      if (y < 0 || y >= (int)cb->cursor_pos * LIST_HEIGHT) return true;
+      win->cursor_pos = y / LIST_HEIGHT;
+      fprintf(stderr, "[list] select win=%u index=%u\n", win->id, win->cursor_pos);
       if (win->cursor_pos < cb->cursor_pos) {
         window_set_state(win, WINDOW_STATE_PRESSED, true);
       } else {
@@ -95,6 +96,7 @@ result_t win_list(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       }
       invalidate_window(win);
       return true;
+    }
     case evLeftButtonUp:
       if (!list_point_inside(win, wparam)) {
         list_cancel(win);

@@ -8,6 +8,7 @@
 #include <orion/user/draw.h>
 #include <orion/user/theme.h>
 #include "commctl.h"
+#include "popup_item.h"
 
 // Forward declare list control procedure  
 extern result_t win_list(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
@@ -27,7 +28,7 @@ static void open_dropdown(window_t *win) {
   if (!state || !state->texts || win->cursor_pos == 0)
     return;
 
-  // Determine the screen-absolute position of the combobox bottom edge.
+  // Determine the screen-absolute position of the combobox label.
   // Toolbar children have toolbar-band-relative frame.x/y; regular body
   // children have root-client-relative frames.
   int abs_x, abs_y;
@@ -41,21 +42,39 @@ static void open_dropdown(window_t *win) {
   if (is_toolbar_child) {
     window_t *parent = win->parent;
     int parent_title_h = (parent->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
-    abs_x = parent->frame.x + win->frame.x;
-    abs_y = parent->frame.y + parent_title_h + win->frame.y + win->frame.h + 2;
+    abs_x = window_screen_x(parent) + win->frame.x;
+    abs_y = window_screen_y(parent) + parent_title_h + win->frame.y;
   } else {
     // Walk parent chain to compute absolute screen position
     abs_x = win->frame.x;
-    abs_y = win->frame.y + win->frame.h + 2;
+    abs_y = win->frame.y;
     
     for (window_t *p = win->parent; p; p = p->parent) {
-      int title_h = (p->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
+      int title_h = titlebar_height(p);
       abs_x += p->frame.x;
       abs_y += p->frame.y + title_h;
     }
   }
   int visible_items = MIN((int)win->cursor_pos, COMBOBOX_DROPDOWN_MAX_VISIBLE);
-  irect16_t rect = {abs_x, abs_y, win->frame.w, visible_items * (FONT_SIZE_SMALL + 5)};
+  result_t sel = send_message(win, cbGetCurrentSelection, 0, NULL);
+  int selected = sel == (result_t)kComboBoxError ? 0 : (int)sel;
+  int width = win->frame.w + MENU_SIDE_PAD * 2;
+  for (uint32_t i = 0; i < win->cursor_pos; i++)
+    width = MAX(width, text_strwidth(FONT_SYSTEM, state->texts[i]) + MENU_SIDE_PAD * 2);
+  int screen_w = ui_get_system_metrics(kSystemMetricScreenWidth);
+  int screen_h = ui_get_system_metrics(kSystemMetricScreenHeight);
+  int height = visible_items * POPUP_ITEM_HEIGHT + MENU_START_Y * 2;
+  if (screen_h > 0) height = MIN(height, screen_h);
+  if (screen_w > 0) width = MIN(width, screen_w);
+  int scroll = MAX(0, selected - visible_items + 1) * POPUP_ITEM_HEIGHT;
+  int font_h = text_char_height(FONT_SYSTEM);
+  int label_y = abs_y + (win->frame.h - font_h) / 2 - (POPUP_ITEM_HEIGHT - font_h) / 2;
+  int popup_y = label_y - MENU_START_Y - selected * POPUP_ITEM_HEIGHT + scroll;
+  irect16_t rect = {abs_x + WINDOW_PADDING + 2 - MENU_SIDE_PAD, popup_y, width, height};
+  if (screen_w > 0) rect.x = MAX(0, MIN(rect.x, screen_w - width));
+  if (screen_h > 0) rect.y = MAX(0, MIN(rect.y, screen_h - height));
+  scroll = MAX(0, MIN(rect.y + MENU_START_Y + selected * POPUP_ITEM_HEIGHT - label_y,
+                     MENU_START_Y * 2 + (int)win->cursor_pos * POPUP_ITEM_HEIGHT - height));
   window_t *list = create_window("", WINDOW_NOTITLE|WINDOW_NORESIZE|WINDOW_VSCROLL|WINDOW_ALWAYSONTOP|WINDOW_NOTRAYBUTTON, &rect, NULL, win_list, win->hinstance, NULL);
   if (!list)
     return;
@@ -64,9 +83,10 @@ static void open_dropdown(window_t *win) {
   if (list->userdata2)
     memcpy(list->userdata2, win->title, sizeof(win->title));
 
-  result_t sel = send_message(win, cbGetCurrentSelection, 0, NULL);
-  if (sel != (result_t)kComboBoxError)
-    send_message(list, lstSetItem, (uint32_t)sel, NULL);
+  list->vscroll.pos = scroll;
+  send_message(list, lstSetItem, (uint32_t)selected, NULL);
+  fprintf(stderr, "[cb] popup win=%u selected=%d rect=%d,%d,%d,%d scroll=%u\n",
+          win->id, selected, rect.x, rect.y, rect.w, rect.h, list->vscroll.pos);
   // c. Popup open: the popup steals mouse events, so the combobox button will
   // not receive evMouseLeave naturally.  Clear the hover flag before the popup
   // becomes visible so the button does not stay highlighted while the list is open.

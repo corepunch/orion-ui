@@ -9,6 +9,8 @@
 // Rectangle drawing functions
 void fill_rect(uint32_t color, irect16_t r);
 void fill_rounded_rect(uint32_t color, irect16_t r, int radius);
+// Procedural rounded-box shadow; radius, blur (Gaussian sigma), and offset are logical pixels.
+void draw_rect_shadow(irect16_t r, float radius, float blur, ipoint16_t offset, uint32_t color);
 void draw_gradient_rect(irect16_t r, uint32_t left_color, uint32_t right_color);
 void draw_rect(int tex, irect16_t r);
 void draw_rect_ex(int tex, irect16_t r, int type, float alpha);

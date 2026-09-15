@@ -741,9 +741,10 @@ void draw_program_rect(int tex, irect16_t r, uint32_t program, float mix_amount)
 // win_w/h — window size in pixels (used for SDF computation).
 // radius  — corner radius in pixels.
 // alpha   — overall opacity multiplier.
-void render_rounded_rect(int tex, irect16_t r, int win_w, int win_h,
-                                float radius, float alpha, uint32_t color) {
-  if (!g_ref.rounded_rect_sprite.program || !tex) return;
+static void render_rounded_box(int tex, irect16_t r, int win_w, int win_h,
+                                float radius, float alpha, uint32_t color,
+                                float blur, float padding) {
+  if (!g_ref.rounded_rect_sprite.program || (!tex && blur <= 0)) return;
   glUseProgram(g_ref.rounded_rect_sprite.program);
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, (GLuint)tex);
@@ -751,7 +752,7 @@ void render_rounded_rect(int tex, irect16_t r, int win_w, int win_h,
   glUniform2f(g_ref.rounded_rect_sprite.offset_u, (float)r.x, (float)r.y);
   glUniform2f(g_ref.rounded_rect_sprite.scale_u, (float)r.w, (float)r.h);
   glUniform1f(g_ref.rounded_rect_sprite.alpha_u, alpha);
-  glUniform4f(g_ref.rounded_rect_sprite.params0_u, 0.0f, 0.0f, 0.0f, 0.0f);
+  glUniform4f(g_ref.rounded_rect_sprite.params0_u, blur, padding, 0.0f, 0.0f);
   glUniform4f(g_ref.rounded_rect_sprite.params1_u, 0.0f, 0.0f, 0.0f, 0.0f);
   glUniform2f(g_ref.rounded_rect_sprite.uv_offset_u, 0.0f, 1.0f);
   glUniform2f(g_ref.rounded_rect_sprite.uv_scale_u, 1.0f, -1.0f);
@@ -768,6 +769,23 @@ void render_rounded_rect(int tex, irect16_t r, int win_w, int win_h,
   R_MeshDraw(&g_ref.mesh);
   glEnable(GL_DEPTH_TEST);
   glDisable(GL_BLEND);
+}
+
+void render_rounded_rect(int tex, irect16_t r, int win_w, int win_h,
+                          float radius, float alpha, uint32_t color) {
+  render_rounded_box(tex, r, win_w, win_h, radius, alpha, color, 0, 0);
+}
+
+void draw_rect_shadow(irect16_t r, float radius, float blur, ipoint16_t offset, uint32_t color) {
+  if (r.w <= 0 || r.h <= 0 || !(color >> 24) || blur == 0) return;
+  if (!(blur > 0 && blur <= 256) || !(radius >= 0)) {
+    fprintf(stderr, "[renderer] invalid shadow radius=%g blur=%g\n", radius, blur);
+    fflush(stderr);
+    return;
+  }
+  int padding = (int)(blur * 3 + 1);
+  irect16_t bounds = rect_inset(rect_offset(r, offset.x, offset.y), -padding);
+  render_rounded_box(0, bounds, r.w, r.h, radius, 1, color, blur, padding);
 }
 
 void draw_rounded_rect(int tex, irect16_t r, int win_w, int win_h,

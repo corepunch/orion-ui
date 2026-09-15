@@ -388,11 +388,11 @@ void test_cb_dropdown_shows_at_most_eight_items(void) {
     window_t *list = open_test_dropdown(cb, 10, 0);
     ASSERT_NOT_NULL(list);
 
-    int row_h = FONT_SIZE_SMALL + 5;
-    ASSERT_EQUAL(list->frame.h, 8 * row_h);
+    int row_h = CONTROL_HEIGHT_REGULAR;
+    ASSERT_EQUAL(list->frame.h, 8 * row_h + MENU_START_Y * 2);
     ASSERT_TRUE(list->vscroll.visible);
-    ASSERT_EQUAL(list->vscroll.max_val, 10 * row_h);
-    ASSERT_EQUAL(list->vscroll.page, 8 * row_h);
+    ASSERT_EQUAL(list->vscroll.max_val, 10 * row_h + MENU_START_Y * 2);
+    ASSERT_EQUAL(list->vscroll.page, 8 * row_h + MENU_START_Y * 2);
 
     destroy_window(list);
     destroy_window(parent);
@@ -412,7 +412,7 @@ void test_cb_dropdown_keyboard_keeps_selection_visible(void) {
     window_t *list = open_test_dropdown(cb, 10, 0);
     ASSERT_NOT_NULL(list);
 
-    int row_h = FONT_SIZE_SMALL + 5;
+    int row_h = CONTROL_HEIGHT_REGULAR;
     for (int i = 0; i < 8; i++) send_message(list, evKeyDown, AX_KEY_DOWNARROW, NULL);
     ASSERT_EQUAL((int)list->cursor_pos, 8);
     ASSERT_EQUAL((int)list->vscroll.pos, row_h);
@@ -438,7 +438,7 @@ void test_cb_dropdown_mouse_wheel_scrolls(void) {
     window_t *list = open_test_dropdown(cb, 10, 0);
     ASSERT_NOT_NULL(list);
 
-    int row_h = FONT_SIZE_SMALL + 5;
+    int row_h = CONTROL_HEIGHT_REGULAR;
     send_message(list, evWheel, 0, (void *)(intptr_t)MAKEDWORD(0, (uint16_t)-row_h));
     ASSERT_EQUAL((int)list->vscroll.pos, row_h);
 
@@ -483,6 +483,11 @@ void test_cb_dropdown_outside_click_cancels(void) {
     ASSERT_NOT_NULL(cb);
     window_t *list = open_test_dropdown(cb, 10, 2);
     ASSERT_NOT_NULL(list);
+    int font_h = text_char_height(FONT_SYSTEM);
+    ASSERT_EQUAL(list->frame.x + MENU_SIDE_PAD, window_screen_x(cb) + WINDOW_PADDING + 2);
+    ASSERT_EQUAL(list->frame.y + MENU_START_Y + 2 * CONTROL_HEIGHT_REGULAR
+                 - (int)list->vscroll.pos + (CONTROL_HEIGHT_REGULAR - font_h) / 2,
+                 window_screen_y(cb) + (cb->frame.h - font_h) / 2);
 
     send_message(list, evKeyDown, AX_KEY_DOWNARROW, NULL);
     ASSERT_EQUAL((int)list->cursor_pos, 3);
@@ -509,7 +514,7 @@ void test_cb_dropdown_mouse_click_commits_selection(void) {
     window_t *list = open_test_dropdown(cb, 10, 0);
     ASSERT_NOT_NULL(list);
 
-    int row_h = FONT_SIZE_SMALL + 5;
+    int row_h = CONTROL_HEIGHT_REGULAR;
     int x = list->frame.x + 4;
     int y = list->frame.y + row_h + row_h / 2;
     dispatch_mouse_at(x, y, kEventLeftButtonDown);
@@ -537,7 +542,7 @@ void test_cb_dropdown_scrolled_mouse_click_commits_visible_item(void) {
     window_t *list = open_test_dropdown(cb, 10, 8);
     ASSERT_NOT_NULL(list);
 
-    int row_h = FONT_SIZE_SMALL + 5;
+    int row_h = CONTROL_HEIGHT_REGULAR;
     ASSERT_EQUAL((int)list->vscroll.pos, row_h);
     int x = list->frame.x + 4;
     int y = list->frame.y + 2 * row_h + row_h / 2;

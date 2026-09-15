@@ -83,6 +83,15 @@ and tab backgrounds share `item_background` roles for hover, selection,
 selection with hover, and press. These are UI/workbench colors, separate from
 document content or syntax colors.
 
+Modern root windows, including popups, receive a procedural shadow immediately
+before their surface is composited. `draw_rect_shadow(rect, radius, blur, offset,
+color)` uses logical pixels and the existing quad/SDF shader with a Gaussian-tail
+approximation; no blur texture or additional framebuffer is allocated. Theme
+fields `window_shadow_blur`, `window_shadow_offset`, and `window_shadow_color`
+control the default appearance. Zero blur disables the shadow.
+Transparent roots (`WINDOW_TRANSPARENT`), such as the workspace-sized application
+chrome host, do not cast rectangular shadows through their empty content.
+
 ## Input And Coordinate Spaces
 
 The window system owns parent-to-child routing and conversion. A window

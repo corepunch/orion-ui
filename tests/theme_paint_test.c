@@ -147,19 +147,30 @@ static void test_palette_overrides(void) {
 }
 
 static void test_full_row_selection(void) {
-  TEST("Modern selection fills every row pixel with square corners and selected text");
+  TEST("Modern list selection is inset, rounded, and uses selected text");
   theme_t *theme = paint_modern_instance();
   theme->apply_palette();
   memset(pixels, 0, sizeof(pixels));
   theme->draw_part(THEME_PART_LIST_ITEM, R(10, 10, 80, 30), CTRL_SELECTED);
-  for (int y = 10; y < 40; y++)
-    for (int x = 10; x < 90; x++) ASSERT_EQUAL(pixels[y][x], get_sys_color(brAccent));
+  ASSERT_EQUAL(pixels[10][10], 0);
+  ASSERT_EQUAL(pixels[25][10], 0);
+  ASSERT_EQUAL(pixels[10][50], 0);
+  ASSERT_EQUAL(pixels[25][14], get_sys_color(brAccent));
+  ASSERT_EQUAL(pixels[25][50], get_sys_color(brAccent));
+  ASSERT_EQUAL(pixels[25][85], get_sys_color(brAccent));
   ASSERT_EQUAL(pixels[9][10], 0);
   ASSERT_EQUAL(pixels[40][10], 0);
   ASSERT_EQUAL(pixels[25][90], 0);
   ASSERT_EQUAL(theme->foreground(THEME_PART_LIST_ITEM, CTRL_SELECTED), get_sys_color(brActiveTitlebarText));
   ASSERT_NOT_EQUAL(theme->foreground(THEME_PART_LIST_ITEM, CTRL_SELECTED),
                    theme->foreground(THEME_PART_LIST_ITEM, CTRL_NORMAL));
+  memset(pixels, 0, sizeof(pixels));
+  theme->draw_part(THEME_PART_MENU_ITEM, R(10, 10, 80, 24), CTRL_HOVER);
+  ASSERT_EQUAL(recorded_radius, 11);
+  ASSERT_EQUAL(pixels[11][14], 0);
+  ASSERT_EQUAL(pixels[11][25], get_sys_color(brAccent));
+  ASSERT_EQUAL(pixels[22][14], get_sys_color(brAccent));
+  ASSERT_EQUAL(pixels[22][13], 0);
   PASS();
 }
 

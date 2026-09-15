@@ -317,7 +317,7 @@ typedef struct {
 // +5 instead of +4 keeps the height odd at both scales so that 9x9 theme
 // icons centre with equal integer padding on every side.
 #define SYSICON_SIZE      24              // canonical size of sysicon/toolbar SVG tiles
-#define TITLEBAR_HEIGHT   (FONT_SIZE + 5)
+#define TITLEBAR_HEIGHT   (FONT_SIZE + 9)
 #if defined(__APPLE__) && TARGET_OS_IOS
 #define TOOLBAR_HEIGHT    42
 #define BUTTON_HEIGHT     40

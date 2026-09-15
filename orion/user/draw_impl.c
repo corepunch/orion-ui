@@ -387,7 +387,8 @@ void composite_root_windows(void) {
   // Set projection for screen-space compositing.
   set_fullscreen();
 
-  float base_radius = get_theme()->window_corner_radius * axGetScaling();
+  theme_t *theme = get_theme();
+  float base_radius = theme->window_corner_radius * axGetScaling();
 
   for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
     if (!window_has_state(w, WINDOW_STATE_VISIBLE)) continue;
@@ -398,6 +399,9 @@ void composite_root_windows(void) {
     float radius = base_radius;
     if (radius > max_r) radius = (float)max_r;
 
+    if (!(w->flags & WINDOW_TRANSPARENT))
+      draw_rect_shadow(w->frame, theme->window_corner_radius, theme->window_shadow_blur,
+                       theme->window_shadow_offset, theme->window_shadow_color);
     draw_rounded_rect((int)w->surface_tex,
                       (irect16_t){w->frame.x, w->frame.y, w->frame.w, w->frame.h},
                       w->surface_w, w->surface_h,

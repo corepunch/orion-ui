@@ -253,14 +253,12 @@ void test_popup_cancel_on_different_item_release(void) {
     window_t *popup = find_other_window(mb);
     ASSERT_NOT_NULL(popup);
 
-    // Press on "Open" (y=5, item index 0).
-    send_message(popup, evLeftButtonDown, MAKEDWORD(10, 5), NULL);
+    // Press on "Open" (y=10, item index 0).
+    send_message(popup, evLeftButtonDown, MAKEDWORD(10, 10), NULL);
     ASSERT_EQUAL(count_windows(), 2);   // popup still open
 
-    // Release on "Save" (y=22, item index 1) – different item, must cancel.
-    // MENU_ITEM_H=TITLEBAR_HEIGHT=17, MENU_START_Y=1:
-    //   "Open" [1,18), "Save" [18,35) — y=22 is inside "Save".
-    send_message(popup, evLeftButtonUp, MAKEDWORD(10, 22), NULL);
+    // Release on "Save" (y=35, item index 1) – different item, must cancel.
+    send_message(popup, evLeftButtonUp, MAKEDWORD(10, 35), NULL);
     ASSERT_EQUAL(g_cmd_count, 0);       // no command fired
     ASSERT_EQUAL(count_windows(), 1);   // popup closed
 
@@ -279,27 +277,25 @@ void test_popup_command_delivered_for_each_item(void) {
     ASSERT_NOT_NULL(mb);
 
     // Press and release on "Save" (id=2).
-    // MENU_ITEM_H=TITLEBAR_HEIGHT=17, MENU_START_Y=1:
-    // "Open" occupies y in [1, 18), "Save" in [18, 35).
     open_popup(mb);
     window_t *popup = find_other_window(mb);
     ASSERT_NOT_NULL(popup);
 
-    send_message(popup, evLeftButtonDown, MAKEDWORD(10, 22), NULL);
-    send_message(popup, evLeftButtonUp,   MAKEDWORD(10, 22), NULL);
+    send_message(popup, evLeftButtonDown, MAKEDWORD(10, 35), NULL);
+    send_message(popup, evLeftButtonUp,   MAKEDWORD(10, 35), NULL);
 
     ASSERT_EQUAL(g_cmd_count, 1);
     ASSERT_EQUAL(g_cmd_last_id, 2);
     ASSERT_EQUAL(count_windows(), 1); // popup is gone
 
     // Now open again and press/release on "Quit" (id=3).
-    // "Open" [1,18), "Save" [18,35), sep [35,40), "Quit" [40,57)
+    // "Open" [5,29), "Save" [29,53), sep [53,62), "Quit" [62,86)
     open_popup(mb);
     popup = find_other_window(mb);
     ASSERT_NOT_NULL(popup);
 
-    send_message(popup, evLeftButtonDown, MAKEDWORD(10, 43), NULL);
-    send_message(popup, evLeftButtonUp,   MAKEDWORD(10, 43), NULL);
+    send_message(popup, evLeftButtonDown, MAKEDWORD(10, 65), NULL);
+    send_message(popup, evLeftButtonUp,   MAKEDWORD(10, 65), NULL);
 
     ASSERT_EQUAL(g_cmd_count, 2);
     ASSERT_EQUAL(g_cmd_last_id, 3);
@@ -381,9 +377,8 @@ void test_submenu_opens_and_dispatches_child_item(void) {
     window_t *popup = find_other_window(mb);
     ASSERT_NOT_NULL(popup);
 
-    // "More" is after Open, Save, separator, Quit:
-    // [1,18), [18,35), [35,40), [40,57), so y=62 is inside More.
-    send_message(popup, evMouseMove, MAKEDWORD(10, 62), NULL);
+    // "More" follows Open, Save, the separator, and Quit.
+    send_message(popup, evMouseMove, MAKEDWORD(10, 90), NULL);
     ASSERT_EQUAL(count_windows(), 3);
 
     window_t *submenu = find_window_not(mb, popup);
@@ -427,7 +422,7 @@ void test_submenu_click_transfers_to_sibling_item(void) {
     // parent popup.  The child submenu should forward the click to its parent
     // so the menu switches instead of collapsing the whole tree.
     int sharpen_x = popup->frame.x + 10 - blur_submenu->frame.x;
-    int sharpen_y = popup->frame.y + 22 - blur_submenu->frame.y;
+    int sharpen_y = popup->frame.y + 35 - blur_submenu->frame.y;
     send_message(blur_submenu, evLeftButtonDown,
                  MAKEDWORD(sharpen_x, sharpen_y), NULL);
 
@@ -487,7 +482,7 @@ void test_context_popup_submenu_dispatches_to_owner(void) {
                                (int)(sizeof(kTestItems) / sizeof(kTestItems[0])), 20, 30));
     window_t *popup = find_other_window(owner);
     ASSERT_NOT_NULL(popup);
-    send_message(popup, evLeftButtonDown, MAKEDWORD(10, 60), NULL);
+    send_message(popup, evLeftButtonDown, MAKEDWORD(10, 90), NULL);
     ASSERT_EQUAL(count_windows(), 3);
     window_t *submenu = find_window_not(owner, popup);
     ASSERT_NOT_NULL(submenu);
