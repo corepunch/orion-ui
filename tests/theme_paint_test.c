@@ -101,7 +101,7 @@ static void test_independent_parts(void) {
     ASSERT_EQUAL(pixels[25][50], get_sys_color(brWindowDarkBg));
   }
   memset(pixels, 0, sizeof(pixels));
-  theme->draw_part(THEME_PART_SCROLLBAR_THUMB, R(10, 10, 6, 30), CTRL_NORMAL);
+  theme->draw_part(THEME_PART_SCROLLBAR_THUMB, R(10, 10, SCROLLBAR_WIDTH, 30), CTRL_NORMAL);
   ASSERT_EQUAL(pixels[10][10], 0);
   ASSERT_NOT_EQUAL(pixels[25][13], 0);
   PASS();
@@ -189,6 +189,24 @@ static void test_full_row_selection(void) {
   PASS();
 }
 
+static void test_scrollbar_thickness(void) {
+  TEST("Both scrollbar orientations paint an 11 pixel thumb inside a 17 pixel strip");
+  theme_t *theme = paint_modern_instance();
+  memset(pixels, 0, sizeof(pixels));
+  theme->draw_part(THEME_PART_SCROLLBAR_THUMB, R(10, 5, 17, 50), CTRL_NORMAL);
+  int width = 0;
+  for (int x = 10; x < 27; x++) width += pixels[30][x] != 0;
+  ASSERT_EQUAL(width, 11);
+  ASSERT_EQUAL(pixels[30][12], 0);
+  ASSERT_EQUAL(pixels[30][24], 0);
+  memset(pixels, 0, sizeof(pixels));
+  theme->draw_part(THEME_PART_SCROLLBAR_THUMB, R(10, 5, 50, 17), CTRL_NORMAL);
+  int height = 0;
+  for (int y = 5; y < 22; y++) height += pixels[y][35] != 0;
+  ASSERT_EQUAL(height, 11);
+  PASS();
+}
+
 int main(void) {
   TEST_START("theme paint output");
   test_modern_surfaces();
@@ -198,5 +216,6 @@ int main(void) {
   test_flat_tool_items();
   test_palette_overrides();
   test_full_row_selection();
+  test_scrollbar_thickness();
   TEST_END();
 }

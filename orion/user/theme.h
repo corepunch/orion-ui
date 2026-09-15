@@ -149,7 +149,7 @@ typedef struct {
   void (*draw_part)(theme_part_t part, irect16_t r, ctrl_state_t state);
   void (*draw_window_chrome)(irect16_t titlebar, irect16_t caption,
                              const char *title, ctrl_state_t state, bool maximizable);
-  void (*draw_statusbar)(irect16_t r, const char *text);
+  void (*draw_statusbar_text)(irect16_t r, const char *text);
   void (*draw_button_label)(irect16_t r, const char *text, ctrl_state_t state);
   void (*draw_combobox)(irect16_t r, const char *text, ctrl_state_t state);
   uint32_t (*foreground)(theme_part_t part, ctrl_state_t state);

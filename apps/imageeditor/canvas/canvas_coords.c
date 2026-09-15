@@ -10,18 +10,15 @@ static inline int cc_scaled_px(int px, float scale) {
 }
 
 static inline int cc_canvas_view_w(int win_w) {
-#if IMAGEEDITOR_BW
   return MAX(0, win_w);
-#endif
-  return MAX(0, win_w - SCROLLBAR_WIDTH);
 }
 
 static inline int cc_canvas_scaled_w(const canvas_doc_t *doc, float scale) {
-  return doc ? cc_scaled_px(doc->canvas_w, scale) : 0;
+  return doc ? cc_scaled_px(doc->canvas_w, scale) / g_bw_retina_scale : 0;
 }
 
 static inline int cc_canvas_scaled_h(const canvas_doc_t *doc, float scale) {
-  return doc ? cc_scaled_px(doc->canvas_h, scale) : 0;
+  return doc ? cc_scaled_px(doc->canvas_h, scale) / g_bw_retina_scale : 0;
 }
 
 static inline int cc_canvas_center_offset_x(const canvas_doc_t *doc, float scale, int win_w) {
@@ -49,7 +46,7 @@ static inline int cc_canvas_doc_origin_y(window_t *win, canvas_win_state_t *stat
 
 static inline int cc_canvas_view_axis_to_doc(int view_px, int origin_px, float scale) {
   if (scale <= 0.0f) return 0;
-  return (int)floorf((float)(view_px - origin_px) / scale);
+  return (int)floorf((float)(view_px - origin_px) * g_bw_retina_scale / scale);
 }
 
 // ── Public API ─────────────────────────────────────────────────────────────
@@ -85,18 +82,18 @@ void canvas_doc_to_view(window_t *win, canvas_win_state_t *state,
     return;
   }
   if (view_x) {
-    *view_x = cc_canvas_doc_origin_x(win, state) + cc_scaled_px(doc_x, state->scale);
+    *view_x = cc_canvas_doc_origin_x(win, state) + cc_scaled_px(doc_x, state->scale / g_bw_retina_scale);
   }
   if (view_y) {
-    *view_y = cc_canvas_doc_origin_y(win, state) + cc_scaled_px(doc_y, state->scale);
+    *view_y = cc_canvas_doc_origin_y(win, state) + cc_scaled_px(doc_y, state->scale / g_bw_retina_scale);
   }
 }
 
 ipoint16_t canvas_doc_to_view_point(window_t *win, canvas_win_state_t *state,
                                     int doc_x, int doc_y) {
   ipoint16_t pt;
-  pt.x = cc_canvas_doc_origin_x(win, state) + cc_scaled_px(doc_x, state->scale);
-  pt.y = cc_canvas_doc_origin_y(win, state) + cc_scaled_px(doc_y, state->scale);
+  pt.x = cc_canvas_doc_origin_x(win, state) + cc_scaled_px(doc_x, state->scale / g_bw_retina_scale);
+  pt.y = cc_canvas_doc_origin_y(win, state) + cc_scaled_px(doc_y, state->scale / g_bw_retina_scale);
   return pt;
 }
 

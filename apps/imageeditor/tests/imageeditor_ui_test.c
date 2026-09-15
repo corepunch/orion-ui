@@ -2133,21 +2133,20 @@ void test_ie_fit_zoom_selects_best_scale(void) {
     TEST("canvas_win_fit_zoom: selects largest integer zoom that fits viewport");
 
     ie_setup();
-    // 32×20 canvas, 200×150 viewport → 4x fits (32*4=128≤200, 20*4=80≤150)
+    // 32×20 canvas, 200×150 viewport → 6x fits (192×120).
     //                                   8x does not (32*8=256>200)
     canvas_doc_t *doc = create_document(NULL, 32, 20);
     ASSERT_NOT_NULL(doc);
 
     // Manually set the canvas window frame to simulate a real viewport.
-    doc->canvas_win->frame.w = 200;
-    doc->canvas_win->frame.h = 150;
+    resize_window(doc->win, 200, 150 + TITLEBAR_HEIGHT + STATUSBAR_HEIGHT);
 
     canvas_win_fit_zoom(doc->canvas_win);
 
     canvas_win_state_t *state = (canvas_win_state_t *)doc->canvas_win->userdata;
     ASSERT_NOT_NULL(state);
-    // Expected fit scale: 4 (32*4=128 ≤ 200-SCROLLBAR_WIDTH; 20*4=80 ≤ 150)
-    ASSERT_EQUAL(state->scale, 4);
+    // The child frame is the viewport; there is no second gutter deduction.
+    ASSERT_EQUAL(state->scale, 6);
 
     ie_teardown();
     PASS();
@@ -2163,8 +2162,7 @@ void test_ie_fit_zoom_fallback_to_1x(void) {
     canvas_doc_t *doc = create_document(NULL, 1000, 800);
     ASSERT_NOT_NULL(doc);
 
-    doc->canvas_win->frame.w = 200;
-    doc->canvas_win->frame.h = 150;
+    resize_window(doc->win, 200, 150 + TITLEBAR_HEIGHT + STATUSBAR_HEIGHT);
 
     canvas_win_fit_zoom(doc->canvas_win);
 
@@ -2186,8 +2184,7 @@ void test_ie_canvas_centers_small_image_hit_testing(void) {
     canvas_doc_t *doc = create_document(NULL, 32, 20);
     ASSERT_NOT_NULL(doc);
 
-    doc->canvas_win->frame.w = 200;
-    doc->canvas_win->frame.h = 150;
+    resize_window(doc->win, 200, 150 + TITLEBAR_HEIGHT + STATUSBAR_HEIGHT);
     canvas_win_sync_scrollbars(doc->canvas_win);
 
     canvas_win_state_t *state = (canvas_win_state_t *)doc->canvas_win->userdata;
@@ -2196,7 +2193,7 @@ void test_ie_canvas_centers_small_image_hit_testing(void) {
     ASSERT_EQUAL(state->pan.x, 0);
     ASSERT_EQUAL(state->pan.y, 0);
 
-    int origin_x = ((200 - SCROLLBAR_WIDTH) - 32) / 2;
+    int origin_x = (200 - 32) / 2;
     int origin_y = (150 - 20) / 2;
 
     send_message(doc->canvas_win, evMouseMove, MAKEDWORD(0, 0), NULL);
@@ -2245,21 +2242,44 @@ void test_ie_zoom_fit_command(void) {
     ASSERT_NOT_NULL(doc);
     g_app->active_doc = doc;
 
-    doc->canvas_win->frame.w = 200;
-    doc->canvas_win->frame.h = 150;
+    resize_window(doc->win, 200, 150 + TITLEBAR_HEIGHT + STATUSBAR_HEIGHT);
 
     handle_menu_command(ID_VIEW_ZOOM_FIT);
 
     canvas_win_state_t *state = (canvas_win_state_t *)doc->canvas_win->userdata;
     ASSERT_NOT_NULL(state);
-    // 32*4=128 ≤ 200-SCROLLBAR_WIDTH; 20*4=80 ≤ 150 → expect 4x
-    ASSERT_EQUAL(state->scale, 4);
+    // 32*6=192 <= 200; 20*6=120 <= 150.
+    ASSERT_EQUAL(state->scale, 6);
 
     ie_teardown();
     PASS();
 }
 
 // ── Entry point ───────────────────────────────────────────────────────────────
+
+static void test_ie_scrollbars_follow_fit(void) {
+    TEST("Document bars disappear together at exact fit and return after zoom");
+    ie_setup();
+    canvas_doc_t *doc = create_document(NULL, 100, 100);
+    resize_window(doc->win, 200, 200 + TITLEBAR_HEIGHT + STATUSBAR_HEIGHT);
+    ASSERT_FALSE(doc->win->hscroll.visible);
+    ASSERT_FALSE(doc->win->vscroll.visible);
+    canvas_win_set_scale(doc->canvas_win, 4);
+    ASSERT_TRUE(doc->win->hscroll.visible);
+    ASSERT_TRUE(doc->win->vscroll.visible);
+    ASSERT_EQUAL(doc->canvas_win->frame.w, 200 - SCROLLBAR_WIDTH);
+    send_message(doc->win, evHScroll, 50, NULL);
+    send_message(doc->win, evVScroll, 50, NULL);
+    resize_window(doc->win, 400, 400 + TITLEBAR_HEIGHT + STATUSBAR_HEIGHT);
+    ASSERT_FALSE(doc->win->hscroll.visible);
+    ASSERT_FALSE(doc->win->vscroll.visible);
+    ASSERT_EQUAL(doc->canvas_win->frame.w, 400);
+    ASSERT_EQUAL(doc->canvas_win->frame.h, 400);
+    ASSERT_EQUAL(doc->win->hscroll.pos, 0);
+    ASSERT_EQUAL(doc->win->vscroll.pos, 0);
+    ie_teardown();
+    PASS();
+}
 
 int main(int argc, char *argv[]) {
     (void)argc; (void)argv;
@@ -2357,6 +2377,7 @@ int main(int argc, char *argv[]) {
     test_ie_canvas_centers_small_image_hit_testing();
     test_ie_zoom_fit_no_doc();
     test_ie_zoom_fit_command();
+    test_ie_scrollbars_follow_fit();
 
     TEST_END();
 }

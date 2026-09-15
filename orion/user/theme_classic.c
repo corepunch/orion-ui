@@ -155,7 +155,7 @@ static void classic_apply_palette(void) {
   g_sys_colors[brActiveTitlebarText]   = 0xffffffff;
   g_sys_colors[brInactiveTitlebar]     = 0xff2c2c2c;
   g_sys_colors[brInactiveTitlebarText] = 0xff787878;
-  g_sys_colors[brStatusbarBg]          = 0xff2c2c2c;
+  g_sys_colors[brStatusbarBg]          = 0xff383838;
   g_sys_colors[brLightEdge]            = 0xff7f7f7f;
   g_sys_colors[brDarkEdge]             = 0xff1a1a1a;
   g_sys_colors[brFlare]                = 0xffcfcfcf;
@@ -192,8 +192,7 @@ static void classic_draw_window_chrome(irect16_t titlebar, irect16_t caption,
       get_sys_color(focused ? brActiveTitlebarText : brInactiveTitlebarText), TEXT_PADDING_LEFT);
 }
 
-static void classic_draw_statusbar(irect16_t r, const char *text) {
-  classic_draw_statusbar_bg(r);
+static void classic_draw_statusbar_text(irect16_t r, const char *text) {
   if (text) draw_text_clipped(FONT_SMALL, text, &r, get_sys_color(brTextNormal), TEXT_PADDING_LEFT);
 }
 
@@ -257,8 +256,8 @@ static void classic_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state
     case THEME_PART_MENU_POPUP:          fill_rect(get_sys_color(brControlBg), r); draw_wire_rect(r, 0, get_sys_color(brDarkEdge)); break;
     case THEME_PART_SEPARATOR:
     case THEME_PART_SLIDER_TRACK:        fill_rect(get_sys_color(brDarkEdge), r); break;
-    case THEME_PART_SCROLLBAR_TRACK:     fill_rect(get_sys_color(brWindowDarkBg), r); break;
-    case THEME_PART_SCROLLBAR_THUMB:     fill_rect(get_sys_color(disabled ? brDarkEdge : brLightEdge), r); break;
+    case THEME_PART_SCROLLBAR_TRACK:     fill_rect(get_sys_color(brStatusbarBg), r); break;
+    case THEME_PART_SCROLLBAR_THUMB:     fill_rect(get_sys_color(disabled ? brDarkEdge : brLightEdge), rect_inset(r, (SCROLLBAR_WIDTH - SCROLLBAR_THUMB_WIDTH) / 2)); break;
     case THEME_PART_SCROLLBAR_ARROW_UP:
     case THEME_PART_SCROLLBAR_ARROW_DOWN:
     case THEME_PART_SCROLLBAR_ARROW_LEFT:
@@ -266,12 +265,12 @@ static void classic_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state
       int icon = part == THEME_PART_SCROLLBAR_ARROW_UP ? THEME_ICON_SCROLL_UP :
                  part == THEME_PART_SCROLLBAR_ARROW_DOWN ? THEME_ICON_SCROLL_DOWN :
                  part == THEME_PART_SCROLLBAR_ARROW_LEFT ? THEME_ICON_SCROLL_LEFT : THEME_ICON_SCROLL_RIGHT;
-      fill_rect(get_sys_color(brControlBg), r);
+      fill_rect(get_sys_color(brStatusbarBg), r);
       draw_theme_icon_in_rect(icon, r, foreground);
       break;
     }
     case THEME_PART_SCROLLBAR_CORNER:
-      fill_rect(get_sys_color(brWindowDarkBg), r);
+      fill_rect(get_sys_color(brStatusbarBg), r);
       draw_theme_icon_in_rect(THEME_ICON_RESIZE, r, foreground);
       break;
     case THEME_PART_COUNT: break;
@@ -312,7 +311,7 @@ static theme_t g_classic_theme = {
   .foreground             = classic_foreground,
   .draw_part              = classic_draw_part,
   .draw_window_chrome     = classic_draw_window_chrome,
-  .draw_statusbar         = classic_draw_statusbar,
+  .draw_statusbar_text    = classic_draw_statusbar_text,
   .scrollbar_width        = SCROLLBAR_WIDTH,
   .scrollbar_overlay      = false,
   .press_icon_offset      = 1,

@@ -107,9 +107,13 @@ static int resize_anchor[2];
 // Shared with user/window.c for destroy_window cleanup (stored in g_ui_runtime).
 
 // Handle mouse events on child windows.
-// x, y are in the parent window's client coordinate system.
-// Each child receives coords in its own client coordinate system (WinAPI style).
+// Delivery coordinates include the owner's scroll offset. Child frames are
+// fixed in its viewport, so remove that offset before descending.
 static int handle_mouse(int msg, window_t *win, int x, int y, void *lparam) {
+  if (win == g_ui_runtime.captured) return false;
+  x -= win->hscroll.pos;
+  y -= win->vscroll.pos;
+  if (!rect_contains_point(get_client_rect(win), (ipoint16_t){x, y})) return false;
   for (window_t *c = win->children; c; c = c->next) {
     if (!window_has_state(c, WINDOW_STATE_VISIBLE)) continue;
     if (!CONTAINS(x, y, c->frame.x, c->frame.y, c->frame.w, c->frame.h))

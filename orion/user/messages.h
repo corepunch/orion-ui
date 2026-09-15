@@ -287,7 +287,8 @@ enum {
 #define SB_VIS_SHOW  ((int8_t) 1)
 
 // Width of a built-in scrollbar strip in logical pixels (also height of arrow buttons)
-#define SCROLLBAR_WIDTH  13
+#define SCROLLBAR_WIDTH  17
+#define SCROLLBAR_THUMB_WIDTH 11
 // Scroll distance applied per arrow-button click (one logical unit).
 #define SB_ARROW_STEP    1
 // Pixel size (width and height) of an icon8 glyph
@@ -326,7 +327,7 @@ typedef struct {
 #define TOOLBAR_HEIGHT    38
 #define BUTTON_HEIGHT     25
 #endif
-#define STATUSBAR_HEIGHT  (FONT_SIZE + 5)
+#define STATUSBAR_HEIGHT  SCROLLBAR_WIDTH
 #define CONTROL_HEIGHT_MINI     13
 #define CONTROL_HEIGHT_SMALL    16
 #define CONTROL_HEIGHT_REGULAR  BUTTON_HEIGHT

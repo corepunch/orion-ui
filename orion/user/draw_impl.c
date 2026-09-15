@@ -173,8 +173,12 @@ void draw_statusbar(window_t *win, const char *text) {
   bool has_h = (win->flags & WINDOW_HSCROLL) && win->hscroll.visible;
   int split_x = has_h ? SB_STATUS_SPLIT_X(r.w) : r.w;
 
+  set_scissor_fbo(get_root_window(win), row);
+  theme_draw(THEME_PART_STATUSBAR, row, CTRL_NORMAL);
   irect16_t text_area = rect_split_left(row, split_x);
-  get_theme()->draw_statusbar(text_area, text);
+  set_scissor_fbo(get_root_window(win), text_area);
+  get_theme()->draw_statusbar_text(text_area, text);
+  set_scissor_fbo(get_root_window(win), r);
 
   if (has_h) {
     scrollbar_draw_statusbar_merged_hscroll(win, row, split_x);

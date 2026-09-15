@@ -28,7 +28,7 @@ uint32_t g_sys_colors[brCount] = {
   [brActiveTitlebarText]   = 0xffffffff,   // focused caption text: white
   [brInactiveTitlebar]     = 0xff2c2c2c,   // unfocused: flat dark gray
   [brInactiveTitlebarText] = 0xff787878,   // unfocused caption text: medium gray
-  [brStatusbarBg]          = 0xff2c2c2c,   // status bar background
+  [brStatusbarBg]          = 0xff383838,   // status bar and scrollbar background
   [brLightEdge]            = 0xff7f7f7f,   // top-left edge for beveled elements
   [brDarkEdge]             = 0xff1a1a1a,   // bottom-right edge for bevel
   [brFlare]                = 0xffcfcfcf,   // corner flare for beveled elements
@@ -63,7 +63,7 @@ static bool theme_validate(theme_t *t) {
   if (!t->fn) { fprintf(stderr, "theme[%s]: missing " #fn "\n", t->name ? t->name : "?"); fflush(stderr); return false; }
   REQUIRE(draw_part)
   REQUIRE(draw_window_chrome)
-  REQUIRE(draw_statusbar)
+  REQUIRE(draw_statusbar_text)
   REQUIRE(foreground)
   REQUIRE(draw_button_label)
   REQUIRE(draw_combobox)
@@ -133,8 +133,7 @@ bool set_theme(theme_style_t style) {
   }
 
   // Record the old scrollbar gutter width so we know whether layout needs
-  // to be recalculated after the switch (Classic reserves a gutter, Modern
-  // uses overlay scrollbars with zero reserved width).
+  // to be recalculated after the switch.
   int old_scrollbar_width = g_active_theme ? g_active_theme->scrollbar_width : 0;
 
   s_switching = true;

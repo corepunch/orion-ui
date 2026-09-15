@@ -729,6 +729,8 @@ void set_scroll_info(window_t *win, int bar, scroll_info_t const *info, bool red
 void get_scroll_info(window_t *win, int bar, scroll_info_t *info);
 int  get_scroll_pos(window_t *win, int bar);
 void enable_scroll_bar(window_t *win, int bar, bool enable);
+// Publish pixel content extent and position; resolve both gutters and relayout.
+void set_scroll_content(window_t *win, int width, int height, int x, int y);
 void show_scroll_bar(window_t *win, int bar, bool show);
 void reset_scroll_bar_auto(window_t *win, int bar);
 

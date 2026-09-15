@@ -10,16 +10,6 @@ const int kZoomMenuIDs[NUM_ZOOM_LEVELS] = {
   ID_VIEW_ZOOM_6X, ID_VIEW_ZOOM_8X
 };
 
-// ---- scrollbar display mode -------------------------------------------------
-
-// Define CANVAS_SB_ALWAYS_VISIBLE to keep both scrollbars permanently shown
-// (disabled/greyed when the content fits, enabled when scrolling is possible).
-// Comment it out for the auto-hide behaviour where set_scroll_info() shows/hides
-// the bars automatically.  Note: the vscroll strip (SCROLLBAR_WIDTH pixels on the
-// right) is always reserved in the layout to avoid jitter when the bar appears or
-// disappears; only the thumb rendering and mouse interaction change between modes.
-#define CANVAS_SB_ALWAYS_VISIBLE
-
 // Round v to the nearest multiple of step (snap-to-grid helper).
 #define SNAP_AXIS(v, step) (((v) + (step) / 2) / (step) * (step))
 
@@ -28,10 +18,7 @@ static int scaled_px(int px, float scale) {
 }
 
 static int canvas_view_w(int win_w) {
-#if IMAGEEDITOR_BW
   return MAX(0, win_w);
-#endif
-  return MAX(0, win_w - SCROLLBAR_WIDTH);
 }
 
 static int canvas_scaled_w(const canvas_doc_t *doc, float scale) {
@@ -40,60 +27,6 @@ static int canvas_scaled_w(const canvas_doc_t *doc, float scale) {
 
 static int canvas_scaled_h(const canvas_doc_t *doc, float scale) {
   return doc ? (scaled_px(doc->canvas_h, scale) / g_bw_retina_scale) : 0;
-}
-
-static int canvas_center_offset_x(const canvas_doc_t *doc, float scale, int win_w) {
-  if (!doc) return 0;
-  int view_w = canvas_view_w(win_w);
-  int doc_w = canvas_scaled_w(doc, scale);
-  return (doc_w < view_w) ? (view_w - doc_w) / 2 : 0;
-}
-
-static int canvas_center_offset_y(const canvas_doc_t *doc, float scale, int win_h) {
-  if (!doc) return 0;
-  int doc_h = canvas_scaled_h(doc, scale);
-  return (doc_h < win_h) ? (win_h - doc_h) / 2 : 0;
-}
-
-static int canvas_doc_origin_x(window_t *win, canvas_win_state_t *state) {
-  if (!win || !state) return 0;
-  return canvas_center_offset_x(state->doc, state->scale, win->frame.w) - state->pan.x;
-}
-
-static int canvas_doc_origin_y(window_t *win, canvas_win_state_t *state) {
-  if (!win || !state) return 0;
-  return canvas_center_offset_y(state->doc, state->scale, win->frame.h) - state->pan.y;
-}
-
-static int canvas_view_axis_to_doc(int view_px, int origin_px, float scale) {
-  if (scale <= 0.0f) return 0;
-  return (int)floorf((float)(view_px - origin_px) * g_bw_retina_scale / scale);
-}
-
-static ipoint16_t _canvas_view_to_doc_point(window_t *win,
-                                             canvas_win_state_t *state,
-                                             int view_x, int view_y) {
-  ipoint16_t pt;
-  pt.x = canvas_view_axis_to_doc(view_x, canvas_doc_origin_x(win, state), state->scale);
-  pt.y = canvas_view_axis_to_doc(view_y, canvas_doc_origin_y(win, state), state->scale);
-  return pt;
-}
-
-static ipoint16_t _canvas_doc_to_view_point(window_t *win,
-                                             canvas_win_state_t *state,
-                                             int doc_x, int doc_y) {
-  ipoint16_t pt;
-  pt.x = canvas_doc_origin_x(win, state) + scaled_px(doc_x, state->scale / g_bw_retina_scale);
-  pt.y = canvas_doc_origin_y(win, state) + scaled_px(doc_y, state->scale / g_bw_retina_scale);
-  return pt;
-}
-
-static irect16_t _canvas_doc_rect_to_view(window_t *win,
-                                          canvas_win_state_t *state,
-                                          int x0, int y0, int x1, int y1) {
-  ipoint16_t p0 = _canvas_doc_to_view_point(win, state, x0, y0);
-  ipoint16_t p1 = _canvas_doc_to_view_point(win, state, x1, y1);
-  return R(p0.x, p0.y, p1.x - p0.x, p1.y - p0.y);
 }
 
 float imageeditor_fit_scale_for_viewport(int content_w, int content_h,
@@ -223,77 +156,25 @@ static void snap_canvas_pos(int *px, int *py) {
 // Update built-in scrollbar info to match the current zoom/pan state.
 //
 // The horizontal scrollbar lives on the document window (doc->win) and is
-// merged with its status bar. The vertical scrollbar lives on the canvas
-// window (win) itself. This splits ownership so the doc window always shows
-// the merged row while the canvas handles only vertical scrolling internally.
+// merged with its status bar. The document window owns both bars; the canvas
+// child is only the scrollable viewport.
 static void canvas_sync_scrollbars(window_t *win, canvas_win_state_t *state) {
-#if IMAGEEDITOR_BW
-  return;
-#endif
-  canvas_doc_t *doc = state->doc;
-  window_t *dwin   = doc->win;  // document window owns the hscroll
-  int canvas_w = canvas_scaled_w(doc, state->scale);
-  int canvas_h = canvas_scaled_h(doc, state->scale);
-  int win_w    = win->frame.w;
-  int win_h    = win->frame.h;
-
-  // The vscroll always occupies the right SCROLLBAR_WIDTH pixels of the canvas.
-  // The hscroll is hosted on the doc window and does NOT eat into canvas height.
-  int view_w = canvas_view_w(win_w);
-  int view_h = win_h;
-  bool need_h = canvas_w > view_w;
-  bool need_v = canvas_h > view_h;
-
-#ifdef CANVAS_SB_ALWAYS_VISIBLE
-  // Always-visible mode: lock bars permanently shown before updating their
-  // range so the framework does not auto-hide them in set_scroll_info().
-  if (get_theme()->scrollbar_overlay) {
-    show_scroll_bar(dwin, SB_HORZ, need_h);
-    show_scroll_bar(win,  SB_VERT, need_v);
-  } else {
-    show_scroll_bar(dwin, SB_HORZ, true);
-    show_scroll_bar(win,  SB_VERT, true);
-  }
-#endif
-
-  scroll_info_t si;
-  si.fMask = SIF_RANGE | SIF_PAGE | SIF_POS;
-  si.nMin  = 0;
-
-  // Horizontal: update the doc window's built-in hscroll (merged with status bar).
-  si.nMax  = canvas_w;
-  si.nPage = view_w;
-  si.nPos  = state->pan.x;
-  set_scroll_info(dwin, SB_HORZ, &si, false);
-
-  // Vertical: update the canvas window's built-in vscroll.
-  si.nMax  = canvas_h;
-  si.nPage = view_h;
-  si.nPos  = state->pan.y;
-  set_scroll_info(win, SB_VERT, &si, false);
-
-#ifdef CANVAS_SB_ALWAYS_VISIBLE
-  // Enable only when scrolling is possible.  Called after set_scroll_info so
-  // that the framework's "first-time-visible" heuristic cannot re-enable a bar
-  // we want disabled.
-  enable_scroll_bar(dwin, SB_HORZ, need_h);
-  enable_scroll_bar(win,  SB_VERT, need_v);
-#endif
-
-  if (!need_h) state->pan.x = 0;
-  if (!need_v) state->pan.y = 0;
+  window_t *owner = state->doc->win;
+  set_scroll_content(owner, canvas_scaled_w(state->doc, state->scale),
+                     canvas_scaled_h(state->doc, state->scale), state->pan.x, state->pan.y);
+  state->pan.x = get_scroll_pos(owner, SB_HORZ);
+  state->pan.y = get_scroll_pos(owner, SB_VERT);
 }
 
 // Clamp pan to the valid range for the current zoom level and window size.
-// Only the vertical scrollbar lives inside the canvas; the horizontal one is
-// merged with the document-window status bar and does not eat canvas height.
+// Both scrollbars belong to the document; the child frame is the viewport.
 static void clamp_pan(canvas_win_state_t *state, int win_w, int win_h) {
   canvas_doc_t *doc = state->doc;
   int canvas_w = canvas_scaled_w(doc, state->scale);
   int canvas_h = canvas_scaled_h(doc, state->scale);
 
-  // vscroll always occupies the right SCROLLBAR_WIDTH pixels; hscroll does not
-  // reduce canvas height (it is rendered in the doc window's status bar row).
+  // The canvas frame is already the document client width, after the document
+  // window's vertical scrollbar gutter has been removed.
   int view_w = canvas_view_w(win_w);
   int view_h = win_h;
 
@@ -358,7 +239,7 @@ void canvas_win_fit_zoom(window_t *win) {
   int view_h = win->frame.h;
   if (view_w <= 0 || view_h <= 0) return;
 
-  float fit_scale = imageeditor_fit_scale_for_viewport(doc->canvas_w, doc->canvas_h,
+  float fit_scale = imageeditor_fit_scale_for_viewport(canvas_scaled_w(doc, 1), canvas_scaled_h(doc, 1),
                                                        view_w, view_h, true);
   if (fit_scale < 1.0f) fit_scale = 1.0f;
 
@@ -421,11 +302,13 @@ static bool selection_move_hit(const canvas_doc_t *doc, int x, int y) {
 // pointed-at canvas pixel stays under the cursor after zooming.
 static void apply_zoom_centered(window_t *win, canvas_win_state_t *state,
                                 int new_scale, int cx, int cy, int mx, int my) {
-  canvas_doc_t *doc = state->doc;
-  int center_x = canvas_center_offset_x(doc, (float)new_scale, win->frame.w);
-  int center_y = canvas_center_offset_y(doc, (float)new_scale, win->frame.h);
-  state->pan.x = scaled_px(cx / g_bw_retina_scale, (float)new_scale) + center_x - mx;
-  state->pan.y = scaled_px(cy / g_bw_retina_scale, (float)new_scale) + center_y - my;
+  canvas_win_state_t zoomed = *state;
+  zoomed.scale = new_scale;
+  ipoint16_t origin = canvas_doc_to_view_point(win, &zoomed, 0, 0);
+  int center_x = origin.x + state->pan.x;
+  int center_y = origin.y + state->pan.y;
+  state->pan.x = scaled_px(cx, (float)new_scale / g_bw_retina_scale) + center_x - mx;
+  state->pan.y = scaled_px(cy, (float)new_scale / g_bw_retina_scale) + center_y - my;
   canvas_win_set_zoom(win, new_scale);
 }
 
@@ -442,7 +325,7 @@ static void canvas_draw_grid(window_t *win, canvas_win_state_t *state) {
   if (gy < 1) gy = 1;
 
   // Canvas rect in screen-local coordinates (may extend outside the window)
-irect16_t canvas_rect = _canvas_doc_rect_to_view(win, state, 0, 0,
+irect16_t canvas_rect = canvas_doc_rect_to_view(win, state, 0, 0,
                                                     doc->canvas_w, doc->canvas_h);
 
   // Intersection of canvas rect and window rect (visible canvas area)
@@ -456,7 +339,7 @@ irect16_t canvas_rect = _canvas_doc_rect_to_view(win, state, 0, 0,
 
   // Horizontal lines at canvas y = gy, 2*gy, ...
   for (int row = gy; row < doc->canvas_h; row += gy) {
-    int sy = _canvas_doc_to_view_point(win, state, 0, row).y;
+    int sy = canvas_doc_to_view_point(win, state, 0, row).y;
     if (sy >= clip_y1) break;
     if (sy < clip_y0) continue;
     draw_sel_rect(R(clip_x0, sy, clip_w, 1));
@@ -464,7 +347,7 @@ irect16_t canvas_rect = _canvas_doc_rect_to_view(win, state, 0, 0,
 
   // Vertical lines at canvas x = gx, 2*gx, ...
   for (int col = gx; col < doc->canvas_w; col += gx) {
-    int sx = _canvas_doc_to_view_point(win, state, col, 0).x;
+    int sx = canvas_doc_to_view_point(win, state, col, 0).x;
     if (sx >= clip_x1) break;
     if (sx < clip_x0) continue;
     draw_sel_rect(R(sx, clip_y0, 1, clip_h));
@@ -501,7 +384,7 @@ static void canvas_draw_selection_mask_overlay(canvas_doc_t *doc,
     doc->sel.mask.dirty = false;
   }
 
-  irect16_t canvas_rect = _canvas_doc_rect_to_view(win, state, 0, 0,
+  irect16_t canvas_rect = canvas_doc_rect_to_view(win, state, 0, 0,
                                                    doc->canvas_w, doc->canvas_h);
   ui_render_effect_params_t params = {{0}};
   params.f[0] = (float)doc->sel.mask.offset.x / (float)doc->canvas_w;
@@ -587,7 +470,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       s->scale = 1.0f;
       s->pan.x = 0;
       s->pan.y = 0;
-      // Sync built-in scrollbars (WINDOW_HSCROLL | WINDOW_VSCROLL on this window)
+      // Sync the document window's built-in scrollbars.
       canvas_sync_scrollbars(win, s);
       return true;
     }
@@ -615,7 +498,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       if (!state || !doc) return true;
       canvas_upload(doc);
 
-      irect16_t canvas_rect = _canvas_doc_rect_to_view(win, state, 0, 0,
+      irect16_t canvas_rect = canvas_doc_rect_to_view(win, state, 0, 0,
                                                        doc->canvas_w, doc->canvas_h);
       if (!doc->layer.mask_only_view) {
         if (doc->background.show)
@@ -670,7 +553,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       if (doc->sel.move.active && doc->sel.floating.tex) {
         // Draw the floating selection at its current position
-        irect16_t float_rect = _canvas_doc_rect_to_view(win, state,
+        irect16_t float_rect = canvas_doc_rect_to_view(win, state,
                                                        doc->sel.floating.rect.x,
                                                        doc->sel.floating.rect.y,
                                                        doc->sel.floating.rect.x + doc->sel.floating.rect.w,
@@ -681,7 +564,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
                  (IMAGEEDITOR_SHOW_SELECTION_BOUNDS ||
                   (g_app && ((g_app->current_tool == ID_TOOL_SELECT && doc->drawing) ||
                              g_app->current_tool == ID_TOOL_CROP)))) {
-        irect16_t sel_rect = _canvas_doc_rect_to_view(win, state,
+        irect16_t sel_rect = canvas_doc_rect_to_view(win, state,
                                                      MIN(doc->sel.start.x, doc->sel.end.x),
                                                      MIN(doc->sel.start.y, doc->sel.end.y),
                                                      MAX(doc->sel.start.x, doc->sel.end.x) + 1,
@@ -693,7 +576,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       if (doc->poly.active && doc->poly.count > 0) {
         ipoint16_t v0 = doc->poly.pts[doc->poly.count - 1];
         ipoint16_t v1 = doc->last;
-        irect16_t poly_rect = _canvas_doc_rect_to_view(win, state,
+        irect16_t poly_rect = canvas_doc_rect_to_view(win, state,
                                                       MIN(v0.x, v1.x),
                                                       MIN(v0.y, v1.y),
                                                       MAX(v0.x, v1.x) + 1,
@@ -756,6 +639,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
     case evHScroll:
       if (state) {
+        IE_TRACE("hscroll win=%u pos=%u", win->id, wparam);
         state->pan.x = (int)wparam;
         clamp_pan(state, win->frame.w, win->frame.h);
         canvas_sync_scrollbars(win, state);
@@ -765,6 +649,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
     case evVScroll:
       if (state) {
+        IE_TRACE("vscroll win=%u pos=%u", win->id, wparam);
         state->pan.y = (int)wparam;
         clamp_pan(state, win->frame.w, win->frame.h);
         canvas_sync_scrollbars(win, state);
@@ -785,8 +670,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       if (doc && doc->drawing) return true;
       int canvas_w  = canvas_scaled_w(doc, state->scale);
       int canvas_h  = canvas_scaled_h(doc, state->scale);
-      // Only the vertical scrollbar lives inside the canvas; the horizontal one
-      // is merged with the document-window status bar and does not eat height.
+      // The document window owns both scrollbars; the horizontal one is merged
+      // with the document-window status bar and does not eat canvas height.
       int view_w    = canvas_view_w(win->frame.w);
       int view_h    = win->frame.h;
       int max_pan_x = MAX(0, canvas_w - view_w);
@@ -810,7 +695,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       int ly = (int16_t)HIWORD(wparam);
 
       if (!doc || !g_app) return true;
-      ipoint16_t doc_pt = _canvas_view_to_doc_point(win, state, lx, ly);
+      ipoint16_t doc_pt = canvas_view_to_doc_point(win, state, lx, ly);
       // Clear any stale panning state – if the user switched away from Hand
       // while holding the button, panning must not bleed into MouseMove.
       if (g_app->current_tool != ID_TOOL_HAND) state->pan.active = false;
@@ -1026,7 +911,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       if (state && g_app->current_tool == ID_TOOL_EYEDROPPER) {
         int lx = (int16_t)LOWORD(wparam);
         int ly = (int16_t)HIWORD(wparam);
-        ipoint16_t doc_pt = _canvas_view_to_doc_point(win, state, lx, ly);
+        ipoint16_t doc_pt = canvas_view_to_doc_point(win, state, lx, ly);
         int px = doc_pt.x;
         int py = doc_pt.y;
         if (canvas_in_bounds(doc, px, py)) {
@@ -1043,7 +928,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         int ly = (int16_t)HIWORD(wparam);
         int mx = lx;
         int my = ly;
-        ipoint16_t doc_pt = _canvas_view_to_doc_point(win, state, mx, my);
+        ipoint16_t doc_pt = canvas_view_to_doc_point(win, state, mx, my);
         int new_scale = -1;
         for (int i = NUM_ZOOM_LEVELS - 1; i >= 0; i--) {
           if (kZoomLevels[i] < state->scale) { new_scale = kZoomLevels[i]; break; }
@@ -1096,7 +981,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       int lx = (int16_t)LOWORD(wparam);
       int ly = (int16_t)HIWORD(wparam);
-      ipoint16_t doc_pt = _canvas_view_to_doc_point(win, state, lx, ly);
+      ipoint16_t doc_pt = canvas_view_to_doc_point(win, state, lx, ly);
       int px = doc_pt.x;
       int py = doc_pt.y;
 

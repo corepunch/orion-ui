@@ -8,6 +8,10 @@ static result_t composite_test_proc(window_t *win, uint32_t msg, uint32_t wp, vo
   return true;
 }
 
+static result_t status_host_proc(window_t *win, uint32_t msg, uint32_t wp, void *lp) {
+  return false;
+}
+
 static void test_platform_framebuffer(void) {
   TEST("Window compositing draws into the platform's nonzero framebuffer");
   if (!ui_init_graphics(UI_INIT_HIDDEN, "composite-test", 256, 256)) {
@@ -45,7 +49,31 @@ static void test_platform_framebuffer(void) {
   GLenum shadow_error = glGetError();
   fprintf(stderr, "[composite-test] shadow viewport=%d,%d inside=%u near=%u far=%u error=0x%x\n",
     viewport[2], viewport[3], inside[0], near_edge[0], far_edge[0], shadow_error);
+  // An oversized child must not overwrite the status row, with or without
+  // the horizontal bar. Use a distinctive background and inspect the FBO.
+  window_t *status = create_window("", WINDOW_STATUSBAR | WINDOW_HSCROLL,
+    MAKERECT(0, 0, 200, 200), NULL, status_host_proc, 0, NULL);
+  window_t *child = create_window("", WINDOW_NOTITLE,
+    MAKERECT(0, 0, 300, 300), status, composite_test_proc, 0, NULL);
+  show_window(child, true);
+  int color_id = brStatusbarBg;
+  uint32_t red = 0xff0000ff;
+  set_sys_colors(1, &color_id, &red);
+  bool status_ok = true;
+  for (int visible = 0; visible < 2; visible++) {
+    scroll_info_t info = {.fMask = SIF_ALL, .nMax = visible ? 400 : 100, .nPage = 200};
+    set_scroll_info(status, SB_HORZ, &info, false);
+    send_message(status, evNCPaint, 0, NULL);
+    send_message(status, evPaint, 0, NULL);
+    int scale = status->surface_w / status->frame.w;
+    uint8_t row_pixel[4];
+    glReadPixels(190 * scale, 5 * scale, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, row_pixel);
+    fprintf(stderr, "[composite-test] status hscroll=%d pixel=%u,%u,%u\n",
+            visible, row_pixel[0], row_pixel[1], row_pixel[2]);
+    status_ok &= row_pixel[0] == 255 && row_pixel[1] == 0 && row_pixel[2] == 0;
+  }
   ui_shutdown_graphics();
+  ASSERT_TRUE(status_ok);
   ASSERT_EQUAL(shadow_error, GL_NO_ERROR);
   ASSERT_TRUE(inside[0] < near_edge[0]);
   ASSERT_TRUE(near_edge[0] < far_edge[0]);

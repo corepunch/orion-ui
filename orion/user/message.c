@@ -236,21 +236,24 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
           cx = window_screen_x(win) - window_screen_x(root);
           cy = window_screen_y(win) - (window_screen_y(root) + t);
         }
-        set_projection(root->hscroll.pos - cx,
-                       -t - cy + root->vscroll.pos,
-                       root->frame.w + root->hscroll.pos - cx,
-                       root->frame.h - t - cy + root->vscroll.pos);
-        // For scrollable windows, tighten the scissor to the client area so
-        // that scrolled content cannot bleed into non-client areas (title bar,
-        // toolbar, status bar).
-        if (win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL)) {
-          int t_win = titlebar_height(win);   /* win's own non-client height */
-          irect16_t cr = get_client_rect(win);
-          irect16_t wf = win_frame_in_screen(win, root, t);
-          set_scissor_fbo(root, (irect16_t){
-            wf.x - root->frame.x, wf.y - root->frame.y + t_win, cr.w, cr.h
-          });
+        int scroll_x = win->parent ? 0 : win->hscroll.pos;
+        int scroll_y = win->parent ? 0 : win->vscroll.pos;
+        set_projection(scroll_x - cx, -t - cy + scroll_y,
+                       root->frame.w + scroll_x - cx,
+                       root->frame.h - t - cy + scroll_y);
+        // Every child is clipped to its own client area and every ancestor's
+        // viewport, including children without built-in scrollbars.
+        irect16_t clip = R(0, 0, root->frame.w, root->frame.h);
+        for (window_t *owner = win; owner; owner = owner->parent) {
+          irect16_t cr = get_client_rect(owner);
+          cr = rect_offset(cr, window_screen_x(owner) - root->frame.x,
+                           window_screen_y(owner) - root->frame.y + titlebar_height(owner));
+          int left = MAX(clip.x, cr.x), top = MAX(clip.y, cr.y);
+          int right = MIN(clip.x + clip.w, cr.x + cr.w);
+          int bottom = MIN(clip.y + clip.h, cr.y + cr.h);
+          clip = R(left, top, MAX(0, right - left), MAX(0, bottom - top));
         }
+        set_scissor_fbo(root, clip);
       }
       break;
     case tbSetItems:
@@ -278,8 +281,17 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
        msg == evLeftButtonUp)) {
     if (scrollbar_handle_builtin_mouse(win, msg, wparam, lparam)) return true;
   }
-  // Route timer events to the overlay-scrollbar hide logic.  The timer is NOT
-  // consumed so the window proc can still handle its own timers.
+  // Non-client input must never reach the document or its child controls.
+  if (msg == evLeftButtonDown || msg == evLeftButtonDoubleClick ||
+      msg == evLeftButtonUp || msg == evRightButtonDown ||
+      msg == evRightButtonUp || msg == evMouseMove || msg == evWheel) {
+    ipoint16_t point = {(int16_t)LOWORD(wparam) - win->hscroll.pos,
+                       (int16_t)HIWORD(wparam) - win->vscroll.pos};
+    if ((win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL | WINDOW_STATUSBAR)) &&
+        g_ui_runtime.captured != win &&
+        !rect_contains_point(get_client_rect(win), point)) return true;
+  }
+  // Scrollbar timers do not consume the window's own timer notifications.
   if ((win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL)) && msg == evTimer)
     scrollbar_handle_builtin_timer(win, (uint32_t)wparam);
   if (win->parent && parent_notify_message(msg)) {
@@ -356,9 +368,8 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       }
       case evHitTest:
         {
-          uint16_t x = LOWORD(wparam), y = HIWORD(wparam);
-          x += (uint16_t)win->hscroll.pos;
-          y += (uint16_t)win->vscroll.pos;
+          int x = (int16_t)LOWORD(wparam), y = (int16_t)HIWORD(wparam);
+          if (!rect_contains_point(get_client_rect(win), (ipoint16_t){x, y})) break;
           for (window_t *item = win->children; item; item = item->next) {
             if (!window_has_state(item, WINDOW_STATE_VISIBLE)) continue;
             irect16_t r = item->frame;
@@ -432,8 +443,8 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       (win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL))) {
     int root_t = titlebar_height(root);
     irect16_t wf = win_frame_in_screen(win, root, root_t);
-    int scroll_x = win == root ? 0 : (int)root->hscroll.pos;
-    int scroll_y = win == root ? 0 : (int)root->vscroll.pos;
+    int scroll_x = 0;
+    int scroll_y = 0;
     set_viewport_for_fbo(root);
     set_projection(scroll_x, -root_t + scroll_y,
                    root->frame.w + scroll_x, root->frame.h - root_t + scroll_y);

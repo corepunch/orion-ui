@@ -39,8 +39,8 @@ static void test_switch_validation(void) {
   ASSERT_FALSE(result);
   ASSERT_TRUE(get_theme() == modern);
   ASSERT_EQUAL(modern_color, get_sys_color(brControlBg));
-  ASSERT_TRUE(modern->scrollbar_overlay);
-  ASSERT_EQUAL(modern->scrollbar_width, 0);
+  ASSERT_FALSE(modern->scrollbar_overlay);
+  ASSERT_EQUAL(modern->scrollbar_width, SCROLLBAR_WIDTH);
   ASSERT_TRUE(set_theme(THEME_CLASSIC));
   ASSERT_EQUAL(get_sys_color(brControlBg), classic_color);
   ASSERT_EQUAL(get_theme()->scrollbar_width, SCROLLBAR_WIDTH);
@@ -120,7 +120,7 @@ static void test_all_parts(void) {
 
 extern void draw_window_controls(window_t *win);
 static irect16_t recorded_titlebar, recorded_caption;
-static void record_chrome(irect16_t titlebar, irect16_t caption, const char *title, ctrl_state_t state) {
+static void record_chrome(irect16_t titlebar, irect16_t caption, const char *title, ctrl_state_t state, bool maximizable) {
   recorded_titlebar = titlebar;
   recorded_caption = caption;
 }
@@ -132,7 +132,7 @@ static void test_titlebar_bounds(void) {
   win.frame = R(0, 0, 300, 200);
   win.flags = WINDOW_TOOLBAR;
   theme_t *theme = get_theme();
-  void (*saved)(irect16_t, irect16_t, const char *, ctrl_state_t) = theme->draw_window_chrome;
+  void (*saved)(irect16_t, irect16_t, const char *, ctrl_state_t, bool) = theme->draw_window_chrome;
   theme->draw_window_chrome = record_chrome;
   draw_window_controls(&win);
   theme->draw_window_chrome = saved;

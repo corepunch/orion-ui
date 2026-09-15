@@ -61,7 +61,7 @@ void imageeditor_max_canvas_viewport_size(int *out_w, int *out_h) {
   int frame_w = 1;
   int frame_h = 1;
   imageeditor_max_document_frame_size(&frame_w, &frame_h);
-  if (out_w) *out_w = MAX(1, frame_w - SCROLLBAR_WIDTH);
+  if (out_w) *out_w = MAX(1, frame_w);
   if (out_h) *out_h = MAX(1, frame_h - TITLEBAR_HEIGHT - STATUSBAR_HEIGHT);
 }
 
@@ -71,7 +71,7 @@ void imageeditor_document_frame_for_viewport(int viewport_w, int viewport_h,
   int max_frame_h = 1;
   imageeditor_max_document_frame_size(&max_frame_w, &max_frame_h);
 
-  int frame_w = MAX(1, viewport_w) + SCROLLBAR_WIDTH;
+  int frame_w = MAX(1, viewport_w);
   int frame_h = MAX(1, viewport_h) + TITLEBAR_HEIGHT + STATUSBAR_HEIGHT;
 
   if (out_w) *out_w = MIN(frame_w, max_frame_w);
@@ -97,6 +97,12 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
       // hscroll (which is merged with the status bar) to the canvas child.
       if (doc && doc->canvas_win)
         send_message(doc->canvas_win, evHScroll, wparam, lparam);
+      return true;
+    case evVScroll:
+      // The document window owns both built-in scrollbars so the vertical bar
+      // stays fixed to the document frame while the canvas viewport pans.
+      if (doc && doc->canvas_win)
+        send_message(doc->canvas_win, evVScroll, wparam, lparam);
       return true;
     case evCreate:
       return true;
@@ -289,25 +295,6 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
     doc->filename[sizeof(doc->filename) - 1] = '\0';
   }
 
-#if IMAGEEDITOR_BW
-  // Keep a normal restore frame; maximize the document host at startup.
-  int doc_top = APP_TOOLBAR_Y + APP_TOOLBAR_H;
-  window_t *dwin = create_window(
-      "Pencil Test",
-      WINDOW_NOFILL | WINDOW_NOTRAYBUTTON,
-      MAKERECT(32, doc_top + 24, MAX(1, w * 3 / 4), MAX(1, h * 3 / 4)),
-      NULL, doc_win_proc, g_app->hinstance, NULL);
-  dwin->userdata = doc;
-  doc->win = dwin;
-
-  irect16_t cr = get_client_rect(dwin);
-  window_t *cwin = create_window(
-      "", WINDOW_NOTITLE | WINDOW_NOFILL,
-      MAKERECT(0, 0, cr.w, cr.h),
-      dwin, win_canvas_proc, 0, doc);
-  cwin->flags &= ~WINDOW_NOTABSTOP;
-  doc->canvas_win = cwin;
-#else
   int max_view_w = 1;
   int max_view_h = 1;
   imageeditor_max_canvas_viewport_size(&max_view_w, &max_view_h);
@@ -324,7 +311,7 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
 
   window_t *dwin = create_window(
       filename ? filename : "Untitled",
-      WINDOW_STATUSBAR | WINDOW_HSCROLL,
+      WINDOW_STATUSBAR | WINDOW_HSCROLL | WINDOW_VSCROLL,
       MAKERECT(CW_USEDEFAULT, CW_USEDEFAULT, win_w, win_h),
       NULL, doc_win_proc, g_app->hinstance, NULL);
   dwin->userdata = doc;
@@ -333,12 +320,11 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
   // Canvas child fills the document window's client area.
   irect16_t cr = get_client_rect(dwin);
   window_t *cwin = create_window(
-      "", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL,
+      "", WINDOW_NOTITLE | WINDOW_NOFILL,
       MAKERECT(0, 0, cr.w, cr.h),
       dwin, win_canvas_proc, 0, doc);
   cwin->flags &= ~WINDOW_NOTABSTOP;
   doc->canvas_win = cwin;
-#endif
 
   dwin->maximizable = true;
 #if IMAGEEDITOR_BW

@@ -202,8 +202,7 @@ static void modern_draw_window_chrome(irect16_t titlebar, irect16_t caption,
       get_sys_color(focused ? brActiveTitlebarText : brInactiveTitlebarText), TEXT_PADDING_LEFT);
 }
 
-static void modern_draw_statusbar(irect16_t r, const char *text) {
-  modern_draw_statusbar_bg(r);
+static void modern_draw_statusbar_text(irect16_t r, const char *text) {
   if (text) draw_text_clipped(FONT_SMALL, text, &r, get_sys_color(brTextNormal), TEXT_PADDING_LEFT);
 }
 
@@ -256,8 +255,11 @@ static void modern_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state)
     case THEME_PART_MENU_POPUP:          fill_rounded_rect(get_sys_color(brControlBg), r, RADIUS_FIELD); break;
     case THEME_PART_SEPARATOR:           fill_rect(get_sys_color(brButtonInner), r); break;
     case THEME_PART_SLIDER_TRACK:        fill_rect(get_sys_color(brButtonInner), r); break;
-    case THEME_PART_SCROLLBAR_TRACK:     break;
-    case THEME_PART_SCROLLBAR_THUMB:     fill_rounded_rect(get_sys_color(disabled ? brTextDisabled : brLightEdge), r, MIN(r.w, r.h) / 2); break;
+    case THEME_PART_SCROLLBAR_TRACK:     fill_rect(get_sys_color(brStatusbarBg), r); break;
+    case THEME_PART_SCROLLBAR_THUMB:
+      r = rect_inset(r, (SCROLLBAR_WIDTH - SCROLLBAR_THUMB_WIDTH) / 2);
+      fill_rounded_rect(get_sys_color(disabled ? brTextDisabled : brLightEdge), r, MIN(r.w, r.h) / 2);
+      break;
     case THEME_PART_SCROLLBAR_ARROW_UP:
     case THEME_PART_SCROLLBAR_ARROW_DOWN:
     case THEME_PART_SCROLLBAR_ARROW_LEFT:
@@ -269,6 +271,7 @@ static void modern_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state)
       break;
     }
     case THEME_PART_SCROLLBAR_CORNER:
+      fill_rect(get_sys_color(brStatusbarBg), r);
       break;
     case THEME_PART_COUNT: break;
   }
@@ -307,9 +310,12 @@ static theme_t g_modern_theme = {
   .foreground             = modern_foreground,
   .draw_part              = modern_draw_part,
   .draw_window_chrome     = modern_draw_window_chrome,
-  .draw_statusbar         = modern_draw_statusbar,
-  .scrollbar_width        = 0,
-  .scrollbar_overlay      = true,
+  .draw_statusbar_text    = modern_draw_statusbar_text,
+  .scrollbar_width        = SCROLLBAR_WIDTH,
+  // Use the same reserved-space scrollbar geometry as Classic for now.  The
+  // overlay/auto-hide treatment is deliberately deferred until it has a
+  // complete input and layout contract.
+  .scrollbar_overlay      = false,
   .press_icon_offset      = 0,
   .button_corner_radius   = RADIUS_BUTTON,
   .window_corner_radius   = 8,

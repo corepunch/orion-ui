@@ -117,6 +117,47 @@ void get_scroll_info(window_t *win, int bar, scroll_info_t *info) {
   if (info->fMask & SIF_POS)  info->nPos  = sb->pos;
 }
 
+void set_scroll_content(window_t *win, int width, int height, int x, int y) {
+  if (!win || width < 0 || height < 0) {
+    fprintf(stderr, "[sb] invalid content win=%u size=%dx%d\n", win ? win->id : 0, width, height);
+    fflush(stderr);
+    return;
+  }
+  irect16_t before = get_client_rect(win);
+  win_sb_t bars[] = {win->hscroll, win->vscroll};
+  int extent[] = {width, height}, position[] = {x, y};
+  bool allowed[] = {(win->flags & WINDOW_HSCROLL) != 0, (win->flags & WINDOW_VSCROLL) != 0};
+  int available[] = {win->frame.w, MAX(0, win->frame.h - titlebar_height(win) - statusbar_height(win))};
+  int gutter[] = {(win->flags & WINDOW_STATUSBAR) ? 0 : SCROLLBAR_WIDTH, SCROLLBAR_WIDTH};
+  for (int axis = 0; axis < 2; axis++)
+    bars[axis].visible = allowed[axis] && bars[axis].visible_mode == SB_VIS_SHOW;
+  // Start without automatic gutters, then converge as either bar can reduce
+  // the other axis's page. Both states are committed before notifying layout.
+  for (int pass = 0; pass < 3; pass++) {
+    bool visible[] = {bars[0].visible, bars[1].visible};
+    for (int axis = 0; axis < 2; axis++) {
+      int other = 1 - axis;
+      int page = MAX(0, available[axis] - (visible[other] ? gutter[other] : 0));
+      scroll_info_t info = {.fMask = SIF_ALL, .nMax = extent[axis], .nPage = page, .nPos = position[axis]};
+      set_scroll_info_one(&bars[axis], &info);
+      bars[axis].visible &= allowed[axis];
+      bars[axis].enabled = bars[axis].page < extent[axis];
+    }
+  }
+  bool changed = bars[0].visible != win->hscroll.visible || bars[1].visible != win->vscroll.visible;
+  win->hscroll = bars[0];
+  win->vscroll = bars[1];
+  irect16_t after = get_client_rect(win);
+  if (changed) {
+    fprintf(stderr, "[sb] layout win=%u visible=%d,%d content=%dx%d viewport=%dx%d\n",
+            win->id, bars[0].visible, bars[1].visible, width, height, after.w, after.h);
+    fflush(stderr);
+  }
+  if (before.w != after.w || before.h != after.h)
+    send_message(win, evResize, 0, NULL);
+  invalidate_window(win);
+}
+
 int get_scroll_pos(window_t *win, int bar) {
   if (!win) return 0;
   if (bar == SB_VERT) return win->vscroll.pos;
@@ -168,6 +209,9 @@ static bool sb_try_scroll(window_t *win, win_sb_t *sb, uint32_t scroll_msg, int 
   new_pos = ui_sb_clamp_range(sb, new_pos);
   if (new_pos == sb->pos) return false;
   sb->pos = new_pos;
+  fprintf(stderr, "[sb] scroll win=%u axis=%s pos=%d page=%d max=%d\n",
+          win->id, scroll_msg == evHScroll ? "h" : "v", new_pos, sb->page, sb->max_val);
+  fflush(stderr);
   send_message(win, scroll_msg, (uint32_t)new_pos, NULL);
   invalidate_window(win);
   if (get_theme()->scrollbar_overlay)
@@ -517,7 +561,7 @@ void draw_builtin_scrollbars(window_t *win) {
   window_t *root = get_root_window(win);
   int root_t = titlebar_height(root);
   int base_x = window_screen_x(win) - root->frame.x;
-  int base_y = window_screen_y(win) - (root->frame.y + root_t);
+  int base_y = window_screen_y(win) + t - (root->frame.y + root_t);
 
   bool h_merged = has_h && (win->flags & WINDOW_STATUSBAR);
   int content_h = win->frame.h - t - s;
