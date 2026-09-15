@@ -29,6 +29,23 @@ uint32_t canvas_get_pixel(const canvas_doc_t *doc, int x, int y) {
 // Pixel drawing primitives
 // ============================================================
 
+void canvas_mark_dirty_pixel(canvas_doc_t *doc, int x, int y) {
+  if (!canvas_in_bounds(doc, x, y)) return;
+  if (doc->layer.active < 0 || doc->layer.active >= doc->layer.count ||
+      !doc->layer.stack || !doc->layer.stack[doc->layer.active]) {
+    doc->canvas_dirty = true;
+    return;
+  }
+  irect16_t *r = &doc->layer.stack[doc->layer.active]->dirty_rect;
+  if (r->w <= 0 || r->h <= 0) {
+    *r = R(x, y, 1, 1);
+  } else {
+    int x0 = MIN(r->x, x), y0 = MIN(r->y, y);
+    int x1 = MAX(r->x + r->w, x + 1), y1 = MAX(r->y + r->h, y + 1);
+    *r = R(x0, y0, x1 - x0, y1 - y0);
+  }
+}
+
 // Write a pixel directly (bypasses selection mask – used for paste/move commit).
 static void canvas_set_pixel_direct(canvas_doc_t *doc, int x, int y, uint32_t c) {
   if (!canvas_in_bounds(doc, x, y)) return;
@@ -39,7 +56,7 @@ static void canvas_set_pixel_direct(canvas_doc_t *doc, int x, int y, uint32_t c)
   uint8_t *p = doc->pixels + ((size_t)y * doc->canvas_w + x) * 4;
   p[0]=COLOR_R(c); p[1]=COLOR_G(c); p[2]=COLOR_B(c); p[3]=COLOR_A(c);
 #endif
-  doc->canvas_dirty = true;
+  canvas_mark_dirty_pixel(doc, x, y);
   doc->modified     = true;
 }
 
@@ -60,7 +77,7 @@ void canvas_set_pixel(canvas_doc_t *doc, int x, int y, uint32_t c) {
     p[0]=COLOR_R(c); p[1]=COLOR_G(c); p[2]=COLOR_B(c); p[3]=COLOR_A(c);
   }
 #endif
-  doc->canvas_dirty = true;
+  canvas_mark_dirty_pixel(doc, x, y);
   doc->modified     = true;
 }
 

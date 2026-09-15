@@ -120,61 +120,71 @@ void canvas_composite_over_bg(const canvas_doc_t *doc, uint8_t *rgba) {
 // GL texture management
 // ============================================================
 
-static void layer_upload_texture(canvas_doc_t *doc, layer_t *lay) {
-  if (!doc || !lay || !lay->pixels) return;
+static bool layer_upload_texture(canvas_doc_t *doc, layer_t *lay, irect16_t r) {
+  const uint8_t *rgba = lay->pixels;
 #if IMAGEEDITOR_INDEXED
-  // Indexed mode: expand the palette-index buffer to RGBA for the GPU.
-  // Use the composite scratch buffer as a temporary (it is always canvas_w * canvas_h * 4).
-  uint8_t *rgba = doc->layer.composite_buf;
-  if (!rgba) return;
-  canvas_composite(doc, rgba);
-  if (!lay->tex) {
-    GLuint tex;
-    glGenTextures(1, &tex);
-    glBindTexture(GL_TEXTURE_2D, tex);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, doc->canvas_w, doc->canvas_h, 0,
-                 GL_RGBA, GL_UNSIGNED_BYTE, rgba);
-    lay->tex = tex;
-  } else {
-    glBindTexture(GL_TEXTURE_2D, lay->tex);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, doc->canvas_w, doc->canvas_h,
-                    GL_RGBA, GL_UNSIGNED_BYTE, rgba);
-  }
+  bool pack = true;
 #else
-  if (!lay->tex) {
-    GLuint tex;
-    glGenTextures(1, &tex);
-    glBindTexture(GL_TEXTURE_2D, tex);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, doc->canvas_w, doc->canvas_h, 0,
-                 GL_RGBA, GL_UNSIGNED_BYTE, lay->pixels);
-    lay->tex = tex;
-  } else {
-    glBindTexture(GL_TEXTURE_2D, lay->tex);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, doc->canvas_w, doc->canvas_h,
-                    GL_RGBA, GL_UNSIGNED_BYTE, lay->pixels);
-  }
+  bool pack = r.x != 0 || r.w != doc->canvas_w;
+  rgba += (size_t)r.y * doc->canvas_w * 4;
 #endif
+  if (pack) {
+    if (!doc->layer.composite_buf)
+      doc->layer.composite_buf = malloc((size_t)doc->canvas_w * doc->canvas_h * 4);
+    if (!doc->layer.composite_buf) {
+      IE_TRACE("texture scratch allocation failed doc=%p size=%dx%d",
+               (void *)doc, doc->canvas_w, doc->canvas_h);
+      return false;
+    }
+    uint8_t *dst = doc->layer.composite_buf;
+    for (int y = r.y; y < r.y + r.h; y++) {
+#if IMAGEEDITOR_INDEXED
+      const uint8_t *src = lay->pixels + (size_t)y * doc->canvas_w + r.x;
+      for (int x = 0; x < r.w; x++, dst += 4) {
+        uint8_t idx = src[x];
+        uint32_t c = doc->ipal.entries[idx];
+        if (idx == (uint8_t)doc->ipal.transparent) {
+          memset(dst, 0, 4);
+        } else {
+          dst[0] = COLOR_R(c); dst[1] = COLOR_G(c);
+          dst[2] = COLOR_B(c); dst[3] = 255;
+        }
+      }
+#else
+      memcpy(dst, lay->pixels + ((size_t)y * doc->canvas_w + r.x) * 4, (size_t)r.w * 4);
+      dst += (size_t)r.w * 4;
+#endif
+    }
+    rgba = doc->layer.composite_buf;
+  }
+  if (!lay->tex) {
+    lay->tex = R_CreateTextureRGBA(doc->canvas_w, doc->canvas_h, rgba,
+                                   R_FILTER_NEAREST, R_WRAP_CLAMP);
+    return lay->tex != 0;
+  }
+  return R_UpdateTextureRGBA(lay->tex, r.x, r.y, r.w, r.h, rgba);
 }
 
 void canvas_upload(canvas_doc_t *doc) {
   if (!doc) return;
-  bool need_upload = doc->canvas_dirty;
-  for (int i = 0; i < doc->layer.count && !need_upload; i++) {
-    if (!doc->layer.stack[i]->tex)
-      need_upload = true;
+  bool complete = true;
+  for (int i = 0; i < doc->layer.count; i++) {
+    layer_t *lay = doc->layer.stack[i];
+    if (!lay || !lay->pixels) {
+      IE_TRACE("texture pixels unavailable doc=%p layer=%d", (void *)doc, i);
+      complete = false;
+      continue;
+    }
+    irect16_t r = (doc->canvas_dirty || !lay->tex) ?
+                  R(0, 0, doc->canvas_w, doc->canvas_h) : lay->dirty_rect;
+    if (r.w <= 0 || r.h <= 0) continue;
+    if (layer_upload_texture(doc, lay, r)) {
+      lay->dirty_rect = R(0, 0, 0, 0);
+    } else {
+      IE_TRACE("texture upload failed doc=%p layer=%d rect=%d,%d,%d,%d",
+               (void *)doc, i, r.x, r.y, r.w, r.h);
+      complete = false;
+    }
   }
-
-  if (need_upload) {
-    for (int i = 0; i < doc->layer.count; i++)
-      layer_upload_texture(doc, doc->layer.stack[i]);
-    doc->canvas_dirty = false;
-  }
+  if (complete) doc->canvas_dirty = false;
 }

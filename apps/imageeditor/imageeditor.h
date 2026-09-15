@@ -211,6 +211,7 @@ typedef struct {
   uint8_t *pixels;      // pixel buffer: RGBA (canvas_w * canvas_h * 4 bytes)
                         // or indexed (canvas_w * canvas_h * 1 byte) depending on DOC_BPP
   GLuint   tex;         // GPU texture for realtime compositing
+  irect16_t dirty_rect; // pixel damage since the last successful upload
   char     name[64];
   bool     visible;
   uint8_t  opacity;     // 0 = transparent, 255 = fully opaque
@@ -240,7 +241,7 @@ typedef struct canvas_doc_s {
     uint32_t color;          // document background color used by preview/display paths
     bool     show;           // true = paint the document background behind pixels
   } background;
-  bool     canvas_dirty;
+  bool     canvas_dirty; // full upload required; overrides layer damage
   bool     drawing;
   bool     close_prompt_open;
   ipoint16_t  last;
@@ -493,6 +494,7 @@ void canvas_draw_pen_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1, uin
 uint32_t canvas_get_pixel(const canvas_doc_t *doc, int x, int y);
 void canvas_clear(canvas_doc_t *doc);
 void canvas_upload(canvas_doc_t *doc);
+void canvas_mark_dirty_pixel(canvas_doc_t *doc, int x, int y);
 #if IMAGEEDITOR_INDEXED
 // Find the palette entry nearest to the given RGBA color.
 // Returns the palette index (0–255), or ipal.transparent if the palette is empty.
