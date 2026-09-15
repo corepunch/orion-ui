@@ -19,7 +19,10 @@ static void app_chrome_resize_children(window_t *win) {
   app_chrome_state_t *st = (app_chrome_state_t *)win->userdata;
   if (!st) return;
   if (st->menubar) resize_window(st->menubar, win->frame.w, MENUBAR_HEIGHT);
-  layout_docked_toolbars(win, rect_trim_top(get_client_rect(win), st->menubar ? MENUBAR_HEIGHT : 0));
+  irect16_t area = layout_docked_toolbars(win,
+      rect_trim_top(get_client_rect(win), st->menubar ? MENUBAR_HEIGHT : 0));
+  area = rect_offset(area, window_screen_x(win), window_screen_y(win));
+  set_application_workspace(win, &area);
 }
 
 static result_t win_app_chrome(window_t *win, uint32_t msg,

@@ -174,6 +174,35 @@ void canvas_draw_soft_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1,
   }
 }
 
+// Brush sizes are logical radii. A zero-radius brush is still one logical
+// pixel, so use the density-aware pen instead of multiplying zero by scale.
+void canvas_draw_scaled_circle(canvas_doc_t *doc, int cx, int cy,
+                               int logical_radius, uint32_t c) {
+  if (logical_radius <= 0) { canvas_draw_pen(doc, cx, cy, c); return; }
+  canvas_draw_circle(doc, cx, cy, logical_radius * MAX(1, g_bw_retina_scale), c);
+}
+
+void canvas_draw_scaled_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1,
+                             int logical_radius, uint32_t c) {
+  if (logical_radius <= 0) { canvas_draw_pen_line(doc, x0, y0, x1, y1, c); return; }
+  canvas_draw_line(doc, x0, y0, x1, y1,
+                   logical_radius * MAX(1, g_bw_retina_scale), c);
+}
+
+void canvas_draw_scaled_soft_circle(canvas_doc_t *doc, int cx, int cy,
+                                    int logical_radius, uint32_t c) {
+  if (logical_radius <= 0) { canvas_draw_pen(doc, cx, cy, c); return; }
+  canvas_draw_soft_circle(doc, cx, cy,
+                          logical_radius * MAX(1, g_bw_retina_scale), c);
+}
+
+void canvas_draw_scaled_soft_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1,
+                                  int logical_radius, uint32_t c) {
+  if (logical_radius <= 0) { canvas_draw_pen_line(doc, x0, y0, x1, y1, c); return; }
+  canvas_draw_soft_line(doc, x0, y0, x1, y1,
+                        logical_radius * MAX(1, g_bw_retina_scale), c);
+}
+
 void canvas_flood_fill(canvas_doc_t *doc, int sx, int sy, uint32_t fill) {
   if (!canvas_in_selection(doc, sx, sy)) return;
   uint32_t target = canvas_get_pixel(doc, sx, sy);

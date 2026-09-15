@@ -92,6 +92,12 @@ control the default appearance. Zero blur disables the shadow.
 Transparent roots (`WINDOW_TRANSPARENT`), such as the workspace-sized application
 chrome host, do not cast rectangular shadows through their empty content.
 
+Maximized window geometry is framework-owned. The application chrome publishes
+the client rectangle remaining after its menu and docked top/left toolbars, and
+the window manager applies that rectangle to every maximized window in the same
+application instance. Floating palettes do not reduce the maximize rectangle;
+applications must not duplicate chrome measurements in `evGetWorkspaceRect`.
+
 ## Input And Coordinate Spaces
 
 The window system owns parent-to-child routing and conversion. A window

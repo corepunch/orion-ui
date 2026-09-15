@@ -244,6 +244,12 @@ static void modern_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state)
     case THEME_PART_TAB_PANE:
     case THEME_PART_PANEL_BORDER:        break;
     case THEME_PART_TOOLBAR:             fill_rect(get_sys_color(brControlBg), r); break;
+    case THEME_PART_TOOLBAR_GRIP:
+      if (r.w > r.h)
+        fill_rect(get_sys_color(brTextDisabled), rect_center(r, MIN(16, r.w - 4), 2));
+      else
+        fill_rect(get_sys_color(brTextDisabled), rect_center(r, 2, MIN(16, r.h - 4)));
+      break;
     case THEME_PART_HEADER:
       fill_rect(get_sys_color(brControlBg), r);
       fill_rect(get_sys_color(brButtonInner), rect_split_bottom(r, 1));

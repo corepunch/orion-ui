@@ -253,6 +253,7 @@ enum {
 #define WINDOW_NOCLOSE      (1 << 16)  // movable palette without a close button
 #define SLIDER_VERTICAL     (1 << 13)  // slider values increase upward
 #define WINDOW_NODRAG       (1 << 23)  // fixed chrome/panel: never initiate a window drag
+#define WINDOW_TOOLWINDOW   (1u << 31) // WinAPI WS_EX_TOOLWINDOW: compact palette/tool window
 #define WINDOW_STACK_VERTICAL   0
 
 // Runtime window state bits stored in window_t.flags. Bits 29-30 hold the
@@ -361,6 +362,7 @@ typedef struct {
 #define TOOLBAR_BUTTON_FLAG_PRESSED  (1u << 1)
 #define TOOLBAR_STYLE_GRIP           (1u << 1) // draggable grip above a vertical floating toolbar
 #define TOOLBAR_GRIP_HEIGHT          12
+#define TOOLBAR_GRIP_WIDTH           12
 #define TOOLBAR_STYLE_SHOW_LABELS    (1u << 0) // WinAPI-style text below button icons
 #define DROPDOWN_ARROW_W             12          // pixel width of the dropdown arrow zone in TOOLBAR_ITEM_DROPDOWN
 

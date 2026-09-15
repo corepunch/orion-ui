@@ -84,9 +84,13 @@ irect16_t get_opengl_rect(irect16_t r) {
 }
 
 // Get titlebar height
+int window_caption_height(window_t const *win) {
+  return (win && (win->flags & WINDOW_TOOLWINDOW)) ? (FONT_SIZE + 5) : TITLEBAR_HEIGHT;
+}
+
 int titlebar_height(window_t const *win) {
   int t = 0;
-  if (!(win->flags & WINDOW_NOTITLE)) t += TITLEBAR_HEIGHT;
+  if (!(win->flags & WINDOW_NOTITLE)) t += window_caption_height(win);
   if (win->flags & WINDOW_TOOLBAR) {
     t += toolbar_effective_item_height(win) + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH);
   }
@@ -154,8 +158,9 @@ void draw_theme_icon_in_rect(int id, irect16_t r, uint32_t col) {
 // Draw window controls (titlebar + close button).
 void draw_window_controls(window_t *win) {
   irect16_t r = R(0, 0, win->frame.w, win->frame.h);
-  get_theme()->draw_window_chrome(rect_split_top(r, TITLEBAR_HEIGHT),
-                                  rect_split_top(r, TITLEBAR_HEIGHT), win->title,
+  int caption_h = window_caption_height(win);
+  get_theme()->draw_window_chrome(rect_split_top(r, caption_h),
+                                  rect_split_top(r, caption_h), win->title,
                                   (window_has_focus(win) ? CTRL_FOCUSED : CTRL_NORMAL) |
                                   ((win->flags & WINDOW_NOCLOSE) ? CTRL_NO_CLOSE : 0),
                                   win->maximizable && !win->parent && !(win->flags & (WINDOW_NORESIZE | WINDOW_DIALOG | WINDOW_ALWAYSINBACK | WINDOW_ALWAYSONTOP)));

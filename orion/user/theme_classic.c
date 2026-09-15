@@ -223,6 +223,15 @@ static void classic_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state
       }
       break;
     case THEME_PART_TOOLBAR_SEPARATOR:   classic_draw_toolbar_separator(r); break;
+    case THEME_PART_TOOLBAR_GRIP:
+      if (r.w > r.h) {
+        fill_rect(get_sys_color(brLightEdge), rect_center(r, MIN(16, r.w - 4), 2));
+        fill_rect(get_sys_color(brDarkEdge), rect_offset(rect_center(r, MIN(16, r.w - 4), 2), 1, 1));
+      } else {
+        fill_rect(get_sys_color(brLightEdge), rect_center(r, 2, MIN(16, r.h - 4)));
+        fill_rect(get_sys_color(brDarkEdge), rect_offset(rect_center(r, 2, MIN(16, r.h - 4)), 1, 1));
+      }
+      break;
     case THEME_PART_PANEL:               classic_draw_panel_bg(r); break;
     case THEME_PART_TITLEBAR:            classic_draw_titlebar_bg(r, state & CTRL_FOCUSED); break;
     case THEME_PART_WINDOW_CLOSE:        draw_theme_icon_in_rect(THEME_ICON_CLOSE, r, foreground); break;

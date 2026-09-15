@@ -38,8 +38,9 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
   int item_h = toolbar_state_item_height(tb);
   bool vertical = tb->orientation == TOOLBAR_VERTICAL;
   int grip_h = (vertical && (tb->style & TOOLBAR_STYLE_GRIP)) ? TOOLBAR_GRIP_HEIGHT : 0;
+  int grip_w = (!vertical && (tb->style & TOOLBAR_STYLE_GRIP)) ? TOOLBAR_GRIP_WIDTH : 0;
   int cursor = TOOLBAR_BEVEL_WIDTH + TOOLBAR_PADDING + grip_h;
-  int x = TOOLBAR_BEVEL_WIDTH + TOOLBAR_PADDING;
+  int x = TOOLBAR_BEVEL_WIDTH + TOOLBAR_PADDING + grip_w;
   int base_y = TOOLBAR_BEVEL_WIDTH + TOOLBAR_PADDING + grip_h;
   int field_y = base_y + 2;
   int field_h = bsz > 4 ? (bsz - 4) : bsz;
@@ -383,6 +384,8 @@ int toolbar_effective_bsz(window_t const *win) {
 int toolbar_effective_item_height(window_t const *win) {
   toolbar_state_t *tb = window_toolbar_state((window_t *)win);
   int height = toolbar_state_item_height(tb);
+  if (tb && tb->orientation == TOOLBAR_VERTICAL && (tb->style & TOOLBAR_STYLE_GRIP))
+    height += TOOLBAR_GRIP_HEIGHT;
   if (tb && tb->orientation == TOOLBAR_VERTICAL && tb->item_rects) {
     for (int i = 0; i < tb->item_count; i++)
       height = MAX(height, tb->item_rects[i].y + tb->item_rects[i].h -
@@ -397,7 +400,7 @@ void toolbar_draw_non_client(window_t *win) {
   toolbar_state_t *tb = toolbar_ensure_state(win);
   window_t *root = get_root_window(win);
   int bsz = toolbar_effective_item_height(win);
-  int title_h = (win->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
+  int title_h = (win->flags & WINDOW_NOTITLE) ? 0 : window_caption_height(win);
   int total_h = win->toolbar_dock == TOOLBAR_DOCK_LEFT ? win->frame.h
                 : bsz + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH);
   int root_x = window_screen_x(win) - root->frame.x;
@@ -408,9 +411,11 @@ void toolbar_draw_non_client(window_t *win) {
   set_projection(0, 0, root->frame.w, root->frame.h);
   theme_draw(THEME_PART_TOOLBAR, tb_rect, CTRL_NORMAL);
 
-  if (tb && tb->orientation == TOOLBAR_VERTICAL && (tb->style & TOOLBAR_STYLE_GRIP)) {
-    irect16_t grip = rect_split_top(tb_rect, TOOLBAR_GRIP_HEIGHT);
-    fill_rect(get_sys_color(brToolbarForeground), rect_center(grip, MIN(16, grip.w - 8), 2));
+  if (tb && (tb->style & TOOLBAR_STYLE_GRIP)) {
+    irect16_t grip = tb->orientation == TOOLBAR_VERTICAL
+      ? rect_split_top(tb_rect, TOOLBAR_GRIP_HEIGHT)
+      : rect_split_left(tb_rect, TOOLBAR_GRIP_WIDTH);
+    theme_draw(THEME_PART_TOOLBAR_GRIP, grip, CTRL_NORMAL);
   }
   set_viewport(tb_rect);
   if (tb && tb->items && tb->item_rects) {

@@ -536,7 +536,7 @@ void dispatch_message(ui_event_t *msg) {
             g_ui_runtime.tracked_toolbar = tb_host;
           }
           if (tb_host) {
-            int title_h = (hover->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
+            int title_h = (hover->flags & WINDOW_NOTITLE) ? 0 : window_caption_height(hover);
             int tb_x = sx - hover->frame.x;
             int tb_y = sy - (hover->frame.y + title_h);
             send_message(tb_host, evMouseMove,
@@ -754,7 +754,7 @@ void dispatch_message(ui_event_t *msg) {
           g_ui_runtime.resizing = resize_target;
           resize_anchor[0] = sx - (resize_target->frame.x + resize_target->frame.w);
           resize_anchor[1] = sy - (resize_target->frame.y + resize_target->frame.h);
-        } else if (!win->maximized && window_in_drag_area(win, SCALE_POINT(py)) && win != g_ui_runtime.captured) {
+        } else if (!win->maximized && window_in_drag_area_at(win, sx, sy) && win != g_ui_runtime.captured) {
           // For WINDOW_NOTITLE toolbars, don't drag if the click hits a toolbar
           // button — only drag from empty space.
           bool skip_drag = false;
@@ -830,13 +830,14 @@ void dispatch_message(ui_event_t *msg) {
       if (g_ui_runtime.dragging) {
         int sx = SCALE_POINT(px);
         int sy = SCALE_POINT(py);
-        irect16_t titlebar  = rect_split_top(g_ui_runtime.dragging->frame, TITLEBAR_HEIGHT);
-        irect16_t close_btn = rect_split_right(titlebar, TITLEBAR_HEIGHT);
+        int caption_h = window_caption_height(g_ui_runtime.dragging);
+        irect16_t titlebar  = rect_split_top(g_ui_runtime.dragging->frame, caption_h);
+        irect16_t close_btn = rect_split_right(titlebar, caption_h);
         bool on_close = !(g_ui_runtime.dragging->flags & (WINDOW_NOTITLE | WINDOW_NOCLOSE))
                         && sx >= close_btn.x && sx < close_btn.x + close_btn.w
                         && sy >= close_btn.y && sy < close_btn.y + close_btn.h;
         window_t *dragged = g_ui_runtime.dragging;
-        irect16_t max_btn = rect_split_right(rect_trim_right(titlebar, TITLEBAR_HEIGHT), TITLEBAR_HEIGHT);
+        irect16_t max_btn = rect_split_right(rect_trim_right(titlebar, caption_h), caption_h);
         bool on_maximize = msg->message == kEventLeftButtonUp && dragged->maximizable && !dragged->parent &&
           !(dragged->flags & (WINDOW_NOTITLE | WINDOW_NORESIZE | WINDOW_DIALOG | WINDOW_ALWAYSINBACK | WINDOW_ALWAYSONTOP)) &&
           rect_contains_point(max_btn, (ipoint16_t){sx, sy});
@@ -900,7 +901,7 @@ void dispatch_message(ui_event_t *msg) {
           if (msg->message == kEventLeftButtonUp) {
             window_t *tb_host = find_toolbar_host_at(win, sx, sy);
             if ((win->flags & WINDOW_TOOLBAR) && tb_host) {
-              int title_h = (win->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
+              int title_h = (win->flags & WINDOW_NOTITLE) ? 0 : window_caption_height(win);
               int tb_x = sx - window_screen_x(win);
               int tb_y = sy - (window_screen_y(win) + title_h);
               if (!toolbar_dispatch_embedded_mouse(win, evLeftButtonUp, tb_x, tb_y)) {

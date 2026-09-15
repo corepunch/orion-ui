@@ -481,7 +481,9 @@ typedef struct {
 struct window_s {
   irect16_t frame;
   irect16_t restore_frame;
+  irect16_t workspace;
   uint32_t restore_decorations;
+  bool workspace_valid;
   bool maximized;
   bool maximizable; // app exposes a restore command when title bar is hidden
   uint32_t id;
@@ -557,6 +559,7 @@ static inline toolbar_state_t *window_toolbar_state(window_t *win) {
 // Returns the combined height of the non-client title bar and (if WINDOW_TOOLBAR
 // is set) the toolbar band.  Used by event routing and layout.
 int titlebar_height(window_t const *win);
+int window_caption_height(window_t const *win);
 int statusbar_height(window_t const *win);
 int window_screen_x(window_t const *win);
 int window_screen_y(window_t const *win);
@@ -615,6 +618,7 @@ void clear_toolbar_children(window_t *win);
 bool maximize_window(window_t *win);
 bool restore_window(window_t *win);
 void update_maximized_window(window_t *win);
+void set_application_workspace(window_t *owner, const irect16_t *area);
 void move_window(window_t *win, int x, int y);
 void resize_window(window_t *win, int new_w, int new_h);
 void layout_measure_window(window_t *win, layout_measure_t *m);
@@ -631,6 +635,7 @@ void invalidate_window(window_t *win);
 window_t *get_window_item(window_t const *win, uint32_t id);
 bool is_window(window_t *win);
 bool window_in_drag_area(window_t const *win, int sy);
+bool window_in_drag_area_at(window_t const *win, int sx, int sy);
 window_t *get_root_window(window_t *window);
 // Framework-owned desktop root created by UI_INIT_DESKTOP, or NULL when the
 // current runtime has no desktop. Desktop icon controls should parent here.

@@ -151,6 +151,8 @@ static window_t *alloc_window(char const *title, flags_t flags, irect16_t const 
   const fe_component_desc_t *class_desc = find_window_class_desc_by_proc(proc);
   if (class_desc)
     flags |= class_desc->default_flags;
+  if (flags & WINDOW_TOOLWINDOW)
+    flags |= WINDOW_NOTRAYBUTTON;
   
   win->flags = flags;
   window_set_state(win, WINDOW_STATE_VISIBLE, (flags & WINDOW_HIDDEN) == 0);
@@ -291,10 +293,35 @@ void resize_window(window_t *win, int new_w, int new_h) {
   invalidate_window(win);
 }
 
+static bool registered_workspace_rect(hinstance_t hinstance, irect16_t *area) {
+  for (window_t *owner = g_ui_runtime.windows; owner; owner = owner->next) {
+    if (owner->parent || owner->hinstance != hinstance || !owner->workspace_valid ||
+        !window_has_state(owner, WINDOW_STATE_VISIBLE)) continue;
+    *area = owner->workspace;
+    return true;
+  }
+  return false;
+}
+
+void set_application_workspace(window_t *owner, const irect16_t *area) {
+  if (!owner || owner->parent || !area || area->w <= 0 || area->h <= 0) {
+    fprintf(stderr, "[win] workspace rejected owner=%p rect=%d,%d,%d,%d\n", (void *)owner,
+            area ? area->x : 0, area ? area->y : 0, area ? area->w : 0, area ? area->h : 0);
+    fflush(stderr);
+    return;
+  }
+  owner->workspace = *area;
+  owner->workspace_valid = true;
+  for (window_t *win = g_ui_runtime.windows; win; win = win->next)
+    if (win != owner && !win->parent && win->hinstance == owner->hinstance && win->maximized)
+      update_maximized_window(win);
+}
+
 static bool window_workspace_rect(window_t *win, irect16_t *area) {
   *area = R(0, 0, ui_get_system_metrics(kSystemMetricScreenWidth),
                          ui_get_system_metrics(kSystemMetricScreenHeight));
-  send_message(win, evGetWorkspaceRect, 0, area);
+  if (!registered_workspace_rect(win->hinstance, area))
+    send_message(win, evGetWorkspaceRect, 0, area);
   if (area->w > 0 && area->h > 0) return true;
   fprintf(stderr, "[win] invalid workspace win=%u rect=%d,%d,%d,%d\n",
           win->id, area->x, area->y, area->w, area->h);
@@ -620,7 +647,24 @@ bool window_in_drag_area(window_t const *win, int sy) {
   if (sy < win->frame.y || sy >= win->frame.y + t) return false;
   if (!(win->flags & WINDOW_TOOLBAR) || (win->flags & WINDOW_NOTITLE)) return true;
   // Has both title bar and toolbar: only the title bar row (top TITLEBAR_HEIGHT px) is draggable.
-  return sy < win->frame.y + TITLEBAR_HEIGHT;
+  return sy < win->frame.y + window_caption_height(win);
+}
+
+bool window_in_drag_area_at(window_t const *win, int sx, int sy) {
+  if (!win || win->maximized || win->parent || (win->flags & WINDOW_NODRAG)) return false;
+  if (win->flags & WINDOW_TOOLBAR) {
+    if (sy < win->frame.y || sy >= win->frame.y + titlebar_height(win)) return false;
+    toolbar_state_t *tb = window_toolbar_state((window_t *)win);
+    if (tb && (tb->style & TOOLBAR_STYLE_GRIP)) {
+      int title_h = (win->flags & WINDOW_NOTITLE) ? 0 : window_caption_height(win);
+      if (tb->orientation == TOOLBAR_VERTICAL)
+        return CONTAINS(sx, sy, win->frame.x, win->frame.y + title_h,
+                        win->frame.w, TOOLBAR_GRIP_HEIGHT);
+      return CONTAINS(sx, sy, win->frame.x, win->frame.y + title_h,
+                      TOOLBAR_GRIP_WIDTH, titlebar_height(win) - title_h);
+    }
+  }
+  return window_in_drag_area(win, sy);
 }
 
 // Get child window by ID
@@ -682,7 +726,7 @@ void adjust_window_rect(irect16_t *r, flags_t flags) {
   if (!r) return;
   // Compute non-client heights for the given flags.
   int t = 0;
-  if (!(flags & WINDOW_NOTITLE)) t += TITLEBAR_HEIGHT;
+  if (!(flags & WINDOW_NOTITLE)) t += (flags & WINDOW_TOOLWINDOW) ? (FONT_SIZE + 5) : TITLEBAR_HEIGHT;
   if (flags & WINDOW_TOOLBAR)    t += TB_SPACING + 2 * TOOLBAR_PADDING;  // minimum one toolbar row
   int s = (flags & WINDOW_STATUSBAR) ? STATUSBAR_HEIGHT : 0;
   // Horizontal scrollbar: adds SCROLLBAR_WIDTH to the bottom unless it is

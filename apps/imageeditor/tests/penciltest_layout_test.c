@@ -20,7 +20,7 @@ static void penciltest_setup(void) {
   g_app = calloc(1, sizeof(*g_app));
   g_app->current_tool = ID_TOOL_PENCIL;
   create_tool_palette_window();
-  resize_window(g_app->chrome_win, 1080, 758);
+  resize_window(g_app->chrome_win, 1080, 758 - window_screen_y(g_app->chrome_win));
   create_tool_options_window();
   create_timeline_window();
 }
@@ -56,26 +56,30 @@ static void test_ipad_options_keep_toolbar_geometry(void) {
   PASS();
 }
 
-static void test_pencil_canvas_matches_workspace(void) {
-  TEST("Pencil Test canvas fills final maximized workspace at native pixel ratio");
+static void test_pencil_canvas_extends_behind_timeline(void) {
+  TEST("Pencil Test maximized canvas covers the client behind the timeline");
   penciltest_setup();
   canvas_doc_t *doc = create_document(NULL, CANVAS_W, CANVAS_H);
   ASSERT_NOT_NULL(doc);
+  irect16_t override = R(0, 0, 1, 1);
+  ASSERT_FALSE(send_message(doc->win, evGetWorkspaceRect, 0, &override));
   irect16_t area = imageeditor_document_workspace_rect();
   ASSERT_EQUAL(doc->win->frame.x, area.x);
   ASSERT_EQUAL(doc->win->frame.y, area.y);
   ASSERT_EQUAL(doc->win->frame.w, area.w);
   ASSERT_EQUAL(doc->win->frame.h, area.h);
   ASSERT_EQUAL(doc->canvas_w, area.w * g_bw_retina_scale);
-  ASSERT_EQUAL(doc->canvas_h, area.h * g_bw_retina_scale);
+  int visible_h = g_app->timeline_win->frame.y - area.y;
+  ASSERT_EQUAL(doc->canvas_h, visible_h * g_bw_retina_scale);
   frect_t bounds = window_view_bounds(doc->canvas_win);
   ASSERT_TRUE(fabsf(bounds.x) < 0.01f);
   ASSERT_TRUE(fabsf(bounds.y) < 0.01f);
   ASSERT_TRUE(fabsf(bounds.w - doc->canvas_win->frame.w) < 0.01f);
-  ASSERT_TRUE(fabsf(bounds.h - doc->canvas_win->frame.h) < 0.01f);
+  ASSERT_TRUE(fabsf(bounds.h - visible_h) < 0.01f);
   ASSERT_EQUAL(area.x, g_app->tool_win->frame.w);
   ASSERT_EQUAL(area.y, window_screen_y(g_app->main_toolbar_win) + g_app->main_toolbar_win->frame.h);
-  ASSERT_EQUAL(area.y + area.h, 758 - g_app->timeline_win->frame.h);
+  ASSERT_EQUAL(area.y + area.h, 758);
+  ASSERT_TRUE(g_app->timeline_win->frame.y < doc->win->frame.y + doc->win->frame.h);
   canvas_doc_t *loaded = create_document("image.pcx", CANVAS_W, CANVAS_H);
   ASSERT_NOT_NULL(loaded);
   ASSERT_EQUAL(loaded->canvas_w, CANVAS_W * g_bw_retina_scale);
@@ -87,6 +91,6 @@ static void test_pencil_canvas_matches_workspace(void) {
 int main(void) {
   TEST_START("Pencil Test iPad layout");
   test_ipad_options_keep_toolbar_geometry();
-  test_pencil_canvas_matches_workspace();
+  test_pencil_canvas_extends_behind_timeline();
   TEST_END();
 }

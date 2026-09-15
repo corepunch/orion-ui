@@ -132,13 +132,13 @@ void canvas_win_update_status(window_t *win, int px, int py, bool hover_valid) {
   }
 }
 
-// Return the brush radius (pixels) for the current brush_size, clamping any
+// Return the logical brush radius for the current brush_size, clamping any
 // out-of-range value to the nearest valid index to prevent OOB reads.
 static int brush_radius(void) {
   int idx = g_app ? g_app->brush_size : 0;
   if (idx < 0) idx = 0;
   if (idx >= NUM_BRUSH_SIZES) idx = NUM_BRUSH_SIZES - 1;
-  return kBrushSizes[idx] * g_bw_retina_scale;
+  return kBrushSizes[idx];
 }
 
 // Apply snap-to-grid to a canvas pixel position if the grid snap option is
@@ -795,13 +795,13 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       switch (tool) {
         case ID_TOOL_PENCIL:
-          canvas_draw_circle(doc, px, py, brush_radius(), g_app->fg_color);
+          canvas_draw_scaled_circle(doc, px, py, brush_radius(), g_app->fg_color);
           break;
         case ID_TOOL_BRUSH:
-          canvas_draw_soft_circle(doc, px, py, brush_radius(), g_app->fg_color);
+          canvas_draw_scaled_soft_circle(doc, px, py, brush_radius(), g_app->fg_color);
           break;
         case ID_TOOL_ERASER:
-          canvas_draw_circle(doc, px, py, brush_radius(),
+          canvas_draw_scaled_circle(doc, px, py, brush_radius(),
 #if IMAGEEDITOR_INDEXED
                              // In indexed mode the eraser writes the transparent index.
                              doc->ipal.entries[doc->ipal.transparent]
@@ -980,16 +980,16 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       switch (tool) {
         case ID_TOOL_PENCIL:
-          canvas_draw_line(doc, doc->last.x, doc->last.y, px, py,
-                           brush_radius(), g_app->fg_color);
+          canvas_draw_scaled_line(doc, doc->last.x, doc->last.y, px, py,
+                                  brush_radius(), g_app->fg_color);
           break;
         case ID_TOOL_BRUSH:
-          canvas_draw_soft_line(doc, doc->last.x, doc->last.y, px, py,
-                                brush_radius(), g_app->fg_color);
+          canvas_draw_scaled_soft_line(doc, doc->last.x, doc->last.y, px, py,
+                                       brush_radius(), g_app->fg_color);
           break;
         case ID_TOOL_ERASER:
-          canvas_draw_line(doc, doc->last.x, doc->last.y, px, py,
-                           brush_radius(),
+          canvas_draw_scaled_line(doc, doc->last.x, doc->last.y, px, py,
+                                  brush_radius(),
 #if IMAGEEDITOR_INDEXED
                            doc->ipal.entries[doc->ipal.transparent]
 #else

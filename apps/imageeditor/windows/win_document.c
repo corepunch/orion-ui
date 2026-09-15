@@ -30,9 +30,7 @@ irect16_t imageeditor_document_workspace_rect(void) {
   int left = g_app && g_app->tool_win ? window_screen_x(g_app->tool_win) + g_app->tool_win->frame.w : PALETTE_WIN_W;
   int top = g_app && g_app->main_toolbar_win ? window_screen_y(g_app->main_toolbar_win) + g_app->main_toolbar_win->frame.h
                                              : MENUBAR_HEIGHT + APP_TOOLBAR_H;
-  int timeline_h = g_app && g_app->timeline_win && window_has_state(g_app->timeline_win, WINDOW_STATE_VISIBLE)
-                     ? g_app->timeline_win->frame.h : 0;
-  return rect_trim_left(rect_trim_bottom(rect_trim_top(R(0, 0, screen_w, screen_h), top), timeline_h), left);
+  return rect_trim_left(rect_trim_top(R(0, 0, screen_w, screen_h), top), left);
 #elif defined(AX_PLATFORM_IOS)
   irect16_t area = rect_trim_bottom(rect_trim_top(R(0, 0, screen_w, screen_h),
                                                  APP_TOOLBAR_Y + APP_TOOLBAR_H), TIMELINE_WIN_H);
@@ -54,6 +52,18 @@ irect16_t imageeditor_document_workspace_rect(void) {
   return (irect16_t){ left, top, right - left, bottom - top };
 #endif
 }
+
+#if IMAGEEDITOR_BW
+static irect16_t imageeditor_pencil_canvas_rect(void) {
+  irect16_t area = imageeditor_document_workspace_rect();
+  if (!g_app || !g_app->timeline_win ||
+      !window_has_state(g_app->timeline_win, WINDOW_STATE_VISIBLE)) return area;
+  int timeline_top = window_screen_y(g_app->timeline_win);
+  if (timeline_top > area.y && timeline_top < area.y + area.h)
+    area.h = timeline_top - area.y;
+  return area;
+}
+#endif
 
 void imageeditor_max_document_frame_size(int *out_w, int *out_h) {
   irect16_t ws = imageeditor_document_workspace_rect();
@@ -92,12 +102,6 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
                               uint32_t wparam, void *lparam) {
   canvas_doc_t *doc = (canvas_doc_t *)win->userdata;
   switch (msg) {
-#if IMAGEEDITOR_BW
-    case evGetWorkspaceRect:
-      if (!lparam) return false;
-      *(irect16_t *)lparam = imageeditor_document_workspace_rect();
-      return true;
-#endif
 #ifdef AX_PLATFORM_IOS
     case evDisplayChange: {
       if (doc == g_app->active_doc) imageeditor_layout_ipad_palettes();
@@ -198,11 +202,12 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
   if (!g_app) return NULL;
 
 #if IMAGEEDITOR_BW
-  if (!filename && w == CANVAS_W && h == CANVAS_H) {
-    irect16_t workspace = imageeditor_document_workspace_rect();
-    w = workspace.w;
-    h = workspace.h;
-    IE_TRACE("pencil canvas workspace=%d,%d,%d,%d ratio=%d", workspace.x, workspace.y, w, h, g_bw_retina_scale);
+  bool pencil_default_canvas = !filename && w == CANVAS_W && h == CANVAS_H;
+  if (pencil_default_canvas) {
+    irect16_t canvas = imageeditor_pencil_canvas_rect();
+    w = canvas.w;
+    h = canvas.h;
+    IE_TRACE("pencil canvas rect=%d,%d,%d,%d ratio=%d", canvas.x, canvas.y, w, h, g_bw_retina_scale);
   }
 #endif
 
@@ -340,7 +345,12 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
   dwin->maximizable = true;
 #if IMAGEEDITOR_BW
   maximize_window(dwin);
-  window_view_center(cwin);
+  if (pencil_default_canvas) {
+    frect_t bounds = window_view_bounds(cwin);
+    window_view_pan(cwin, (ipoint16_t){(int16_t)-lroundf(bounds.x), (int16_t)-lroundf(bounds.y)});
+  } else {
+    window_view_center(cwin);
+  }
 #endif
   show_window(dwin, true);
 
