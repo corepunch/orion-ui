@@ -92,7 +92,7 @@ int titlebar_height(window_t const *win) {
   int t = 0;
   if (!(win->flags & WINDOW_NOTITLE)) t += window_caption_height(win);
   if (win->flags & WINDOW_TOOLBAR) {
-    t += toolbar_effective_item_height(win) + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH);
+    t += toolbar_effective_item_height(win) + 2 * toolbar_effective_padding(win);
   }
   return t;
 }

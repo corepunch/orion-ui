@@ -12,7 +12,8 @@ uniform vec4 params1;
 
 void main() {
   float a = texture(tex0, tex).a;
-  float width = max(params0.y, 0.0001);
-  float m = smoothstep(params0.x - width, params0.x + width, a);
-  outColor = vec4(vec3(m), m * alpha) * col * tint;
+  // Thumbnail cleanup uses a strict alpha test: any coverage surviving the
+  // blur becomes fully opaque. Preserve the source colour for line art.
+  float m = a > 0.0 ? 1.0 : 0.0;
+  outColor = vec4(texture(tex0, tex).rgb, m * alpha) * col * tint;
 }

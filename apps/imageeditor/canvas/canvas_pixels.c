@@ -412,23 +412,26 @@ void canvas_draw_polygon_filled(canvas_doc_t *doc, const ipoint16_t *pts, int co
 }
 
 // Shape geometry and scan conversion use backing-pixel coordinates.
-static int shape_scale(void) { return MAX(1, g_bw_retina_scale); }
+// Shape outlines deliberately follow the shared brush-size selection. Keep
+// this in one helper so a future shape-specific default can be introduced
+// without changing every shape rasterizer below.
+static int shape_radius(void) {
+  int idx = g_app ? g_app->brush_size : 0;
+  if (idx < 0) idx = 0;
+  if (idx >= NUM_BRUSH_SIZES) idx = NUM_BRUSH_SIZES - 1;
+  return kBrushSizes[idx];
+}
 static void shape_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1, uint32_t c) {
-  canvas_draw_pen_line(doc, x0, y0, x1, y1, c);
+  canvas_draw_scaled_line(doc, x0, y0, x1, y1, shape_radius(), c);
 }
 static void shape_pixel(canvas_doc_t *doc, int x, int y, uint32_t c) {
-  canvas_draw_pen(doc, x, y, c);
+  canvas_draw_scaled_circle(doc, x, y, shape_radius(), c);
 }
 
 void canvas_draw_rect_scaled(canvas_doc_t *doc, int x, int y, int w, int h,
                              bool filled, uint32_t outline, uint32_t fill) {
-  if (shape_scale() == 1) {
-    if (filled) canvas_draw_rect_filled(doc, x, y, w, h, outline, fill);
-    else        canvas_draw_rect_outline(doc, x, y, w, h, outline);
-    return;
-  }
   if (w <= 0 || h <= 0) return;
-  if (filled) canvas_draw_rect_filled(doc, x, y, w, h, fill, fill);
+  if (filled) canvas_draw_rect_filled(doc, x, y, w, h, outline, fill);
   shape_line(doc, x, y, x + w - 1, y, outline);
   shape_line(doc, x, y + h - 1, x + w - 1, y + h - 1, outline);
   shape_line(doc, x, y, x, y + h - 1, outline);
@@ -437,13 +440,8 @@ void canvas_draw_rect_scaled(canvas_doc_t *doc, int x, int y, int w, int h,
 
 void canvas_draw_ellipse_scaled(canvas_doc_t *doc, int cx, int cy, int rx, int ry,
                                 bool filled, uint32_t outline, uint32_t fill) {
-  if (shape_scale() == 1) {
-    if (filled) canvas_draw_ellipse_filled(doc, cx, cy, rx, ry, outline, fill);
-    else        canvas_draw_ellipse_outline(doc, cx, cy, rx, ry, outline);
-    return;
-  }
   if (rx <= 0 || ry <= 0) return;
-  if (filled) canvas_draw_ellipse_filled(doc, cx, cy, rx, ry, fill, fill);
+  if (filled) canvas_draw_ellipse_filled(doc, cx, cy, rx, ry, outline, fill);
   long rx2 = (long)rx * rx, ry2 = (long)ry * ry;
   long x = 0, y = ry, dx = 2 * ry2 * x, dy = 2 * rx2 * y;
   long p = (long)(ry2 - rx2 * ry + 0.25f * rx2);
@@ -466,14 +464,9 @@ void canvas_draw_ellipse_scaled(canvas_doc_t *doc, int cx, int cy, int rx, int r
 
 void canvas_draw_rounded_rect_scaled(canvas_doc_t *doc, int x, int y, int w, int h, int r,
                                      bool filled, uint32_t outline, uint32_t fill) {
-  if (shape_scale() == 1) {
-    if (filled) canvas_draw_rounded_rect_filled(doc, x, y, w, h, r, outline, fill);
-    else        canvas_draw_rounded_rect_outline(doc, x, y, w, h, r, outline);
-    return;
-  }
   if (w <= 0 || h <= 0) return;
   r = MIN(MAX(r, 0), MIN(w / 2, h / 2));
-  if (filled) canvas_draw_rounded_rect_filled(doc, x, y, w, h, r, fill, fill);
+  if (filled) canvas_draw_rounded_rect_filled(doc, x, y, w, h, r, outline, fill);
   shape_line(doc, x + r, y, x + w - r - 1, y, outline);
   shape_line(doc, x + r, y + h - 1, x + w - r - 1, y + h - 1, outline);
   shape_line(doc, x, y + r, x, y + h - r - 1, outline);
@@ -491,11 +484,6 @@ void canvas_draw_rounded_rect_scaled(canvas_doc_t *doc, int x, int y, int w, int
 
 void canvas_draw_polygon_scaled(canvas_doc_t *doc, const ipoint16_t *pts, int count,
                                 bool filled, uint32_t outline, uint32_t fill) {
-  if (shape_scale() == 1) {
-    if (filled) canvas_draw_polygon_filled(doc, pts, count, outline, fill);
-    else        canvas_draw_polygon_outline(doc, pts, count, outline);
-    return;
-  }
   if (count < 3) { for (int i = 0; i + 1 < count; i++) shape_line(doc, pts[i].x, pts[i].y, pts[i+1].x, pts[i+1].y, outline); return; }
   if (filled) {
     int y_min = pts[0].y, y_max = pts[0].y;

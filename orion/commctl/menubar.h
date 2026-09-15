@@ -38,6 +38,7 @@ typedef struct {
 //   wparam = 0 (unused)
 //   lparam = const accel_table_t *  (pass NULL to clear)
 #define kMenuBarMessageSetAccelerators (evUser + 201)
+#define kMenuBarMessageGetContentWidth (evUser + 202)
 
 // Notification code placed in HIWORD(wparam) of evCommand that
 // win_menubar sends to *itself* when the user selects an item.

@@ -44,14 +44,14 @@ static void create_app_windows(hinstance_t hinstance) {
 #ifdef BUILD_AS_GEM
   g_app->menubar_win = set_app_menu(editor_menubar_proc, kMenus, kNumMenus,
                                     handle_menu_command, hinstance);
-  g_app->chrome_win = create_app_chrome("Image Editor Chrome", NULL, NULL, 0,
-                                        main_toolbar_proc, hinstance);
+  g_app->chrome_win = create_application_chrome("Image Editor Chrome", NULL, NULL, 0,
+                                        main_toolbar_proc, &imageeditor_application_toolbar, hinstance);
   g_app->main_toolbar_win = app_chrome_toolbar(g_app->chrome_win);
   imageeditor_sync_main_toolbar();
 #else
-  g_app->chrome_win = create_app_chrome("Image Editor Chrome", editor_menubar_proc,
+  g_app->chrome_win = create_application_chrome("Image Editor Chrome", editor_menubar_proc,
                                         kMenus, kNumMenus, main_toolbar_proc,
-                                        hinstance);
+                                        &imageeditor_application_toolbar, hinstance);
   g_app->menubar_win      = app_chrome_menubar(g_app->chrome_win);
   g_app->main_toolbar_win = app_chrome_toolbar(g_app->chrome_win);
   imageeditor_sync_main_toolbar();
@@ -148,7 +148,9 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   g_app->fg_color = g_app->palette[4];
   g_app->bg_color = g_app->palette[0];
 #endif
-  g_app->brush_size = 1;  // default: radius 1 (3px diameter)
+  // Keep the initial drawing weight here so pencil, brush, and shape tools
+  // start consistently. Change this index if the preferred default evolves.
+  g_app->brush_size = 2;  // default: radius 2 (5px diameter)
   g_app->text_tool.font_size = 16;
   g_app->text_tool.antialias = true;
   g_app->wand.antialias = true;
@@ -157,8 +159,8 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   g_app->grid.spacing.x = 16;
   g_app->grid.spacing.y = 16;
   {
-    static const float kDefaultPrev[ONION_SKIN_MAX_STEPS] = { 50.0f, 25.0f, 12.5f, 0.0f };
-    static const float kDefaultNext[ONION_SKIN_MAX_STEPS] = { 50.0f, 25.0f, 12.5f, 0.0f };
+    static const float kDefaultPrev[ONION_SKIN_MAX_STEPS] = { 25.0f, 12.5f, 6.25f, 0.0f };
+    static const float kDefaultNext[ONION_SKIN_MAX_STEPS] = { 25.0f, 12.5f, 6.25f, 0.0f };
     g_app->anim_trace_enabled = true;
     memcpy(g_app->anim_trace_prev_opacity, kDefaultPrev, sizeof(kDefaultPrev));
     memcpy(g_app->anim_trace_next_opacity, kDefaultNext, sizeof(kDefaultNext));

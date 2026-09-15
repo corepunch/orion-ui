@@ -171,9 +171,7 @@
       </menu>
     </menus>
 
-    <forms>
-      <form name="main_toolbar" title="Toolbar" width="1" height="1">
-        <Toolbar>
+    <toolbar presentation="compact">
         <Button name="new" command="file.new" icon="page-plus" text="New" tooltip="New image" />
         <Button name="open" command="file.open" icon="folder" text="Open" tooltip="Open image" />
         <Button name="save" command="file.save" icon="floppy-disk" text="Save" tooltip="Save image" />
@@ -189,9 +187,9 @@
         <spacer w="10" if="!defined(AX_PLATFORM_IOS)" />
         <Button name="show_background" command="view.show_background" icon="eye" flags="BUTTON_PUSHLIKE" text="BG" tooltip="Toggle background" />
         <Button name="mask_only" command="view.mask_only" icon="square-dashed" flags="BUTTON_PUSHLIKE" text="Mask" tooltip="Toggle mask view" />
-        </Toolbar>
-      </form>
+    </toolbar>
 
+    <forms>
       <form name="new_image" title="New Image" width="180" spacing="8" padding="8">
         <GridView name="fields" spacing="4">
           <Column name="labels" width="48">

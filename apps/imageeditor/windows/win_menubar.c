@@ -165,8 +165,8 @@ window_t *create_tool_palette_window(void) {
   if (!g_app) return NULL;
   if (g_app->tool_win) return g_app->tool_win;
   if (!g_app->chrome_win) {
-    g_app->chrome_win = create_app_chrome("Image Editor Chrome", NULL, NULL, 0,
-                                          main_toolbar_proc, g_app->hinstance);
+    g_app->chrome_win = create_application_chrome("Image Editor Chrome", NULL, NULL, 0,
+                                          main_toolbar_proc, &imageeditor_application_toolbar, g_app->hinstance);
     g_app->main_toolbar_win = app_chrome_toolbar(g_app->chrome_win);
   }
   window_t *tp = app_chrome_add_toolbar(g_app->chrome_win, TOOLBAR_DOCK_LEFT, win_tool_palette_proc);
@@ -206,9 +206,6 @@ result_t main_toolbar_proc(window_t *win, uint32_t msg,
   (void)lparam;
   switch (msg) {
     case evCreate:
-      send_message(win, tbSetItems,
-                   (uint32_t)imageeditor_main_toolbar_form.toolbar_count,
-                   (void *)imageeditor_main_toolbar_form.toolbar_items);
       imageeditor_sync_main_toolbar();
       return true;
     case tbButtonClick:
@@ -226,8 +223,8 @@ result_t main_toolbar_proc(window_t *win, uint32_t msg,
 window_t *create_main_toolbar_window(void) {
   if (!g_app) return NULL;
   if (g_app->chrome_win) return app_chrome_toolbar(g_app->chrome_win);
-  g_app->chrome_win = create_app_chrome("Image Editor Chrome", NULL, NULL, 0,
-                                        main_toolbar_proc, g_app->hinstance);
+  g_app->chrome_win = create_application_chrome("Image Editor Chrome", NULL, NULL, 0,
+                                        main_toolbar_proc, &imageeditor_application_toolbar, g_app->hinstance);
   window_t *win = app_chrome_toolbar(g_app->chrome_win);
   g_app->main_toolbar_win = win;
   imageeditor_sync_main_toolbar();

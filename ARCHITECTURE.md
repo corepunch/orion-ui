@@ -99,6 +99,14 @@ the window manager applies that rectangle to every maximized window in the same
 application instance. Floating palettes do not reduce the maximize rectangle;
 applications must not duplicate chrome measurements in `evGetWorkspaceRect`.
 
+The root `.orion` `<toolbar presentation="normal|compact">` declares the
+application toolbar independently of forms. Application chrome consumes its
+generated descriptor and owns the underlying toolbar window. Compact toolbars
+share the menu row and reserve the restore-button slot; narrow layouts and
+shell-owned menus use the normal toolbar band. A form's nested `<Toolbar>`
+remains local to that window. Both declarations reuse the same toolbar items
+and command IDs.
+
 ## Input And Coordinate Spaces
 
 The window system owns parent-to-child routing and conversion. A window

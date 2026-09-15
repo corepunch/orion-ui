@@ -489,6 +489,10 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       if (data) data->accel = (accel_table_t *)lparam;
       return true;
 
+    case kMenuBarMessageGetContentWidth:
+      if (!data || !data->count) return 4;
+      return data->menu_x[data->count - 1] + strwidth(data->menus[data->count - 1].label) + MENU_LABEL_PAD;
+
     case evPaint: {
       theme_draw(THEME_PART_MENU_BAR, R(0, 0, win->frame.w, win->frame.h), CTRL_NORMAL);
       window_t *maximized = menubar_maximized_window(win);

@@ -183,10 +183,31 @@ void test_malformed_hotkey_rejected(void) {
 }
 #endif // !_WIN32
 
+#if !defined(_WIN32)
+void test_application_toolbar_declaration(void) {
+  TEST("orionc: application toolbar is independent of forms and validates presentation");
+  char out[12000] = {0};
+  const char *valid = "<orion><menus><menu name=\"file\" label=\"File\">"
+    "<item name=\"new\" label=\"New\" /></menu></menus>"
+    "<toolbar presentation=\"compact\"><Button command=\"file.new\" icon=\"page-plus\" /></toolbar></orion>";
+  ASSERT_EQUAL(run_orionc(valid, "app_toolbar", out, sizeof(out)), 0);
+  ASSERT_TRUE(contains(out, "application_toolbar_t test_application_toolbar"));
+  ASSERT_TRUE(contains(out, "TOOLBAR_PRESENTATION_COMPACT"));
+  ASSERT_FALSE(contains(out, "form_def_t"));
+  ASSERT_TRUE(run_orionc("<orion><toolbar presentation=\"tiny\" /></orion>", "bad_presentation", out, sizeof(out)) != 0);
+  ASSERT_TRUE(run_orionc("<orion><toolbar/><toolbar/></orion>", "duplicate_toolbar", out, sizeof(out)) != 0);
+  ASSERT_TRUE(run_orionc("<orion><toolbar><Button command=\"file.missing\" /></toolbar></orion>", "bad_app_command", out, sizeof(out)) != 0);
+  ASSERT_EQUAL(run_orionc("<orion><toolbar/></orion>", "default_toolbar", out, sizeof(out)), 0);
+  ASSERT_TRUE(contains(out, "TOOLBAR_PRESENTATION_NORMAL"));
+  PASS();
+}
+#endif
+
 int main(void) {
     TEST_START("orionc generator contract");
 #if !defined(_WIN32)
     test_valid_manifest_accepted();
+    test_application_toolbar_declaration();
     test_top_level_toolbars_rejected();
     test_toolbar_reference_rejected();
     test_unknown_form_role_rejected();

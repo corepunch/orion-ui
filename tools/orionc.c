@@ -998,7 +998,7 @@ int main(int argc, char **argv) {
   char guard[256], pre[128]; ident(guard, sizeof(guard), output, true); ident(pre, sizeof(pre), prefix, false);
   xmlNodePtr menus = child(root, "menus"), contexts = child(root, "contextmenus"), forms = child(root, "forms"), databases = child(root, "databases"), database = databases ? child(databases, "database") : child(root, "database");
   if (child(root, "toolbars")) {
-    fprintf(stderr, "orionc: top-level <toolbars> is invalid; declare <Toolbar> inside its owning <form>\n");
+    fprintf(stderr, "orionc: top-level <toolbars> is invalid; use one root <toolbar> for the application or nest <Toolbar> inside its owning <form>\n");
     fclose(f); xmlFreeDoc(doc); return 1;
   }
   EACH_ELEMENT(form, forms) if (elem(form, "form")) {
@@ -1010,9 +1010,18 @@ int main(int argc, char **argv) {
     }
     free(toolbar_ref);
   }
+  xmlNodePtr app_toolbar = child(root, "toolbar");
+  int app_toolbar_count = 0;
+  EACH_ELEMENT(node, root) if (elem(node, "toolbar")) app_toolbar_count++;
+  char *presentation = attr(app_toolbar, "presentation");
+  if (app_toolbar_count > 1 || (presentation && !eq(presentation, "normal") && !eq(presentation, "compact"))) {
+    fprintf(stderr, "orionc: declare at most one application <toolbar> with presentation=\"normal\" or \"compact\"\n");
+    free(presentation); fclose(f); xmlFreeDoc(doc); return 1;
+  }
   ids_t commands = {0}, controls = {0}; cmd_refs_t refs = {0}; action_meta_list_t meta = {0};
   EACH_ELEMENT(m, menus) if (elem(m, "menu")) { char *name = attr(m, "name"), scope[128]; ident(scope, sizeof(scope), name, true); collect_menu_ids(&commands, &meta, m, scope, name); free(name); }
   EACH_ELEMENT(form, forms) if (elem(form, "form")) { char *name = attr(form, "name"); collect_toolbar_ids(&commands, &refs, child(form, "toolbar"), name); free(name); }
+  collect_toolbar_ids(&commands, &refs, app_toolbar, "application");
   collect_context_ids(&commands, &refs, contexts);
   EACH_ELEMENT(form, forms) if (elem(form, "form")) { char *name = attr(form, "name"), form_id[128]; if (!only || eq(name, only)) { ident(form_id, sizeof(form_id), name, false); collect_control_ids(&controls, form, form_id); } free(name); }
   int errors = validate_actions(&commands, &refs, &meta);
@@ -1021,6 +1030,14 @@ int main(int argc, char **argv) {
   emit_defines(f, &commands, "ID_COMMAND_BASE"); emit_defines(f, &controls, "ID_CONTROL_BASE");
   emit_action_meta(f, pre, &meta); emit_accelerators(f, pre, &meta);
   emit_menus(f, menus); emit_context_menus(f, contexts);
+  if (app_toolbar) {
+    LINE("#include <orion/user/toolbar.h>\n");
+    char symbol[256]; snprintf(symbol, sizeof(symbol), "%s_application_toolbar_items", pre);
+    emit_toolbar(f, app_toolbar, symbol, "application");
+    OUT("static const application_toolbar_t %s_application_toolbar = { .items = %s, .count = ARRAY_LEN(%s), .presentation = %s };\n\n",
+        pre, symbol, symbol, eq(presentation, "compact") ? "TOOLBAR_PRESENTATION_COMPACT" : "TOOLBAR_PRESENTATION_NORMAL");
+  }
+  free(presentation);
   // Emit every <database> under <databases> (a lone top-level <database> with
   // no wrapper is also supported, for older .orion files). Only the first is
   // "primary" and keeps the original unqualified symbol names.

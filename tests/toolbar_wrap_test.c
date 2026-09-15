@@ -185,6 +185,49 @@ void test_toolbar_set_items_replaces(void) {
     PASS();
 }
 
+void test_toolbar_set_items_preserves_pressed_button(void) {
+    TEST("tbSetItems preserves a pressed button during toolbar refresh");
+
+    test_env_init();
+    g_last_click_ident = -1;
+    g_click_count = 0;
+
+    irect16_t frame = {0, 0, 200, 60};
+    window_t *win = create_window("W", WINDOW_TOOLBAR | WINDOW_NORESIZE,
+                                  &frame, NULL, click_capture_proc, 0, NULL);
+    ASSERT_NOT_NULL(win);
+
+    toolbar_item_t items[] = {
+        {TOOLBAR_ITEM_BUTTON, 21, 0, 0, 0, NULL},
+        {TOOLBAR_ITEM_BUTTON, 22, 0, 0, 0, NULL},
+    };
+    send_message(win, tbSetItems, 2, items);
+    toolbar_state_t *tb = require_toolbar_state(win);
+    ASSERT_NOT_NULL(tb);
+
+    irect16_t r = tb->item_rects[0];
+    uint32_t point = MAKEDWORD((uint16_t)(r.x + r.w / 2), (uint16_t)(r.y + r.h / 2));
+    send_message(win->toolbar, evLeftButtonDown, point, NULL);
+    ASSERT_EQUAL(tb->pressed_item, 0);
+
+    toolbar_item_t refreshed[] = {
+        {TOOLBAR_ITEM_BUTTON, 22, 0, 0, 0, NULL},
+        {TOOLBAR_ITEM_BUTTON, 21, 0, 0, 0, NULL},
+    };
+    send_message(win, tbSetItems, 2, refreshed);
+    ASSERT_EQUAL(tb->pressed_item, 1);
+
+    r = tb->item_rects[1];
+    point = MAKEDWORD((uint16_t)(r.x + r.w / 2), (uint16_t)(r.y + r.h / 2));
+    send_message(win->toolbar, evLeftButtonUp, point, NULL);
+    ASSERT_EQUAL(g_click_count, 1);
+    ASSERT_EQUAL(g_last_click_ident, 21);
+
+    destroy_window(win);
+    test_env_shutdown();
+    PASS();
+}
+
 void test_toolbar_set_active_button(void) {
     TEST("tbSetActiveButton sets value on correct child");
 
@@ -1044,6 +1087,54 @@ static void test_toolbar_reorderable_items(void) {
   PASS();
 }
 
+void test_compact_application_toolbar(void) {
+  TEST("Compact application toolbar shares menu row, routes clicks and falls back at narrow widths");
+  test_env_init();
+  menu_def_t menu = {"File", NULL, 0};
+  toolbar_item_t item = {TOOLBAR_ITEM_BUTTON, 91, NULL, 0, 0, NULL, "Action"};
+  application_toolbar_t def = {&item, 1, TOOLBAR_PRESENTATION_COMPACT};
+  window_t *chrome = create_application_chrome("Compact", test_menubar_proc,
+      &menu, 1, test_chrome_toolbar_proc, &def, 7);
+  ASSERT_NOT_NULL(chrome);
+  send_message(chrome, evDisplayChange, MAKEDWORD(600, 400), NULL);
+  window_t *bar = app_chrome_toolbar(chrome);
+  window_t *doc = create_window("Document", 0, MAKERECT(40, 60, 200, 200), NULL, noop_proc, 7, NULL);
+  ASSERT_TRUE(maximize_window(doc));
+  ASSERT_EQUAL(doc->frame.y, MENUBAR_HEIGHT);
+  ASSERT_NOT_NULL(bar);
+  ASSERT_EQUAL(bar->frame.y, 0);
+  ASSERT_EQUAL(bar->frame.h, MENUBAR_HEIGHT);
+  ASSERT_EQUAL(bar->frame.x + bar->frame.w, 600 - MENUBAR_HEIGHT);
+  toolbar_state_t *tb = require_toolbar_state(bar);
+  irect16_t r = tb->item_rects[0];
+  ASSERT_EQUAL(r.y, 2);
+  ASSERT_EQUAL(r.w, r.h);
+  ASSERT_EQUAL(r.y + r.h, MENUBAR_HEIGHT - 2);
+  int x = window_screen_x(bar) + r.x + r.w / 2;
+  int y = window_screen_y(bar) + r.y + r.h / 2;
+  ASSERT_TRUE(find_window(x, y) == bar);
+  g_chrome_toolbar_click = 0;
+  dispatch_left_mouse_at(x, y, kEventLeftButtonDown);
+  dispatch_left_mouse_at(x, y, kEventLeftButtonUp);
+  ASSERT_EQUAL(g_chrome_toolbar_click, 91);
+  send_message(chrome, evDisplayChange, MAKEDWORD(60, 400), NULL);
+  ASSERT_EQUAL(bar->frame.y, MENUBAR_HEIGHT);
+  ASSERT_EQUAL(bar->frame.h, TOOLBAR_BAND_HEIGHT);
+  ASSERT_EQUAL(doc->frame.y, MENUBAR_HEIGHT + TOOLBAR_BAND_HEIGHT);
+  send_message(chrome, evDisplayChange, MAKEDWORD(600, 400), NULL);
+  ASSERT_EQUAL(bar->frame.y, 0);
+  ASSERT_EQUAL(doc->frame.y, MENUBAR_HEIGHT);
+  window_t *menu_win = app_chrome_menubar(chrome);
+  uint32_t restore_point = MAKEDWORD(600 - MENUBAR_HEIGHT / 2, MENUBAR_HEIGHT / 2);
+  send_message(menu_win, evLeftButtonDown, restore_point, NULL);
+  send_message(menu_win, evLeftButtonUp, restore_point, NULL);
+  ASSERT_FALSE(doc->maximized);
+  destroy_window(doc);
+  destroy_window(chrome);
+  test_env_shutdown();
+  PASS();
+}
+
 int main(int argc, char *argv[]) {
     (void)argc;
     (void)argv;
@@ -1055,6 +1146,7 @@ int main(int argc, char *argv[]) {
     test_toolbar_set_items_creates_children();
     test_toolbar_spacer_skipped();
     test_toolbar_set_items_replaces();
+    test_toolbar_set_items_preserves_pressed_button();
     test_toolbar_set_active_button();
     test_toolbar_set_strip();
     test_toolbar_set_items_button();
@@ -1075,6 +1167,7 @@ int main(int argc, char *argv[]) {
     test_toolbar_item_button_frame_clamped();
     test_nodrag_toolbar_stays_fixed();
     test_app_chrome_owns_and_resizes_bands();
+    test_compact_application_toolbar();
     test_multiple_docked_toolbars();
 
     TEST_END();

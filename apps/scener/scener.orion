@@ -105,9 +105,7 @@
       </menu>
     </menus>
 
-    <forms>
-      <form name="main_toolbar" title="Toolbar" width="1" height="1">
-        <Toolbar>
+    <toolbar presentation="normal">
           <Button name="undo" command="edit.undo" icon="toolbar/undo" text="Undo" tooltip="Undo" />
           <Button name="redo" command="edit.redo" icon="toolbar/redo" text="Redo" tooltip="Redo" />
           <spacer w="10" />
@@ -117,8 +115,6 @@
           <Button name="scale" command="tool.scale" icon="tools/scale" text="Scale" tooltip="Scale mode" flags="BUTTON_AUTORADIO" />
           <spacer w="10" />
           <Button name="zoom_fit" command="view.zoom_fit" icon="view/frame" text="Fit" tooltip="Frame selected" />
-        </Toolbar>
-      </form>
-    </forms>
+    </toolbar>
 
 </orion>

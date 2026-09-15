@@ -6,9 +6,6 @@ result_t scener_toolbar_proc(window_t *win, uint32_t msg,
   (void)lparam;
   switch (msg) {
     case evCreate:
-      send_message(win, tbSetItems,
-                   (uint32_t)scener_main_toolbar_form.toolbar_count,
-                   (void *)scener_main_toolbar_form.toolbar_items);
       scener_sync_main_toolbar();
       return true;
     case tbButtonClick:
@@ -26,13 +23,9 @@ result_t scener_toolbar_proc(window_t *win, uint32_t msg,
 window_t *create_main_toolbar_window(void) {
   if (!g_app) return NULL;
   if (g_app->chrome_win) return app_chrome_toolbar(g_app->chrome_win);
-  int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
-  window_t *win = create_window(
-      "Toolbar",
-      WINDOW_TOOLBAR | WINDOW_NOTITLE | WINDOW_ALWAYSONTOP |
-      WINDOW_NORESIZE | WINDOW_NOTRAYBUTTON | WINDOW_NODRAG,
-      MAKERECT(0, MENUBAR_HEIGHT, sw, TOOLBAR_BAND_HEIGHT),
-      NULL, scener_toolbar_proc, g_app->hinstance, NULL);
+  g_app->chrome_win = create_application_chrome("SimpleSketch3D Chrome", NULL, NULL, 0,
+      scener_toolbar_proc, &scener_application_toolbar, g_app->hinstance);
+  window_t *win = app_chrome_toolbar(g_app->chrome_win);
   if (!win) return NULL;
   show_window(win, true);
   g_app->main_toolbar_win = win;

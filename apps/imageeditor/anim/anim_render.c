@@ -124,13 +124,14 @@ void anim_render_shutdown(void) {
 //          In indexed builds the per-frame palette is not stored (the
 //          working palette lives in doc->ipal), so this parameter is
 //          required.  Pass NULL for non-indexed formats.
-bool anim_render_frame_thumbnail(const anim_frame_t *frame, int w, int h,
-                                 uint32_t *tex, const uint32_t *palette) {
-  if (!frame || w <= 0 || h <= 0 || !tex) return false;
+static uint8_t *anim_frame_rgba(const anim_frame_t *frame, int w, int h,
+                                const uint32_t *palette) {
+  if (!frame || w <= 0 || h <= 0 || (size_t)w > SIZE_MAX / 4 / (size_t)h)
+    return NULL;
 
   size_t sz = (size_t)w * (size_t)h * 4;
   uint8_t *rgba = malloc(sz);
-  if (!rgba) return false;
+  if (!rgba) return NULL;
 
   bool ok = false;
 
@@ -141,7 +142,7 @@ bool anim_render_frame_thumbnail(const anim_frame_t *frame, int w, int h,
       // (targeting doc->pixels, which is 1-byte/pixel), but here we always
       // need RGBA output.  Use the caller-supplied palette (doc->ipal).
       size_t npx = (size_t)w * (size_t)h;
-      if (frame->data_size < npx) { free(rgba); return false; }
+      if (frame->data_size < npx) { free(rgba); return NULL; }
       const uint32_t *pal = palette ? palette : frame->palette;
       for (size_t i = 0; i < npx; i++) {
         uint8_t idx = frame->data[i];
@@ -161,26 +162,59 @@ bool anim_render_frame_thumbnail(const anim_frame_t *frame, int w, int h,
     ok = true;
   }
 
-  if (ok) {
-    if (*tex == 0) {
-      GLuint t = 0;
-      glGenTextures(1, &t);
-      glBindTexture(GL_TEXTURE_2D, t);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
-                   GL_RGBA, GL_UNSIGNED_BYTE, rgba);
-      *tex = t;
-    } else {
-      glBindTexture(GL_TEXTURE_2D, *tex);
-      glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h,
-                      GL_RGBA, GL_UNSIGNED_BYTE, rgba);
-    }
+  if (!ok) { free(rgba); return NULL; }
+  return rgba;
+}
+
+bool anim_render_frame_thumbnail(const anim_frame_t *frame, int w, int h,
+                                 uint32_t *tex, const uint32_t *palette) {
+  if (!tex) return false;
+  uint8_t *rgba = anim_frame_rgba(frame, w, h, palette);
+  if (!rgba) return false;
+  if (*tex == 0) {
+    GLuint t = 0;
+    glGenTextures(1, &t);
+    glBindTexture(GL_TEXTURE_2D, t);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
+                 GL_RGBA, GL_UNSIGNED_BYTE, rgba);
+    *tex = t;
+  } else {
+    glBindTexture(GL_TEXTURE_2D, *tex);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h,
+                    GL_RGBA, GL_UNSIGNED_BYTE, rgba);
   }
 
   free(rgba);
-  return ok;
+  return *tex != 0;
 }
 
+bool anim_render_frame_thumbnail_scaled(const anim_frame_t *frame,
+                                        int w, int h, int target_size,
+                                        uint32_t *tex, const uint32_t *palette) {
+  if (!tex)
+    return false;
+
+  uint8_t *rgba = anim_frame_rgba(frame, w, h, palette);
+  if (!rgba) {
+    IE_TRACE("thumbnail expansion failed size=%dx%d", w, h);
+    return false;
+  }
+  uint8_t *small = downscale_image_ex(rgba, w, h, target_size,
+                                      IMAGE_DOWNSCALE_STROKES | IMAGE_DOWNSCALE_FLIP_Y);
+  free(rgba);
+  if (!small) return false;
+  uint32_t scaled = R_CreateTextureRGBA(target_size, target_size, small,
+                                        R_FILTER_LINEAR, R_WRAP_CLAMP);
+  image_free(small);
+  if (!scaled) {
+    IE_TRACE("thumbnail texture allocation failed target=%d", target_size);
+    return false;
+  }
+  if (*tex) R_DeleteTexture(*tex);
+  *tex = scaled;
+  return true;
+}

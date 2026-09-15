@@ -6,7 +6,13 @@
 
 #include "user.h"
 
-typedef enum { TOOLBAR_DOCK_TOP = 1, TOOLBAR_DOCK_LEFT = 2 } toolbar_dock_t;
+typedef enum { TOOLBAR_DOCK_TOP = 1, TOOLBAR_DOCK_LEFT = 2, TOOLBAR_DOCK_MENU = 3 } toolbar_dock_t;
+typedef enum { TOOLBAR_PRESENTATION_NORMAL, TOOLBAR_PRESENTATION_COMPACT } toolbar_presentation_t;
+typedef struct {
+  const toolbar_item_t *items;
+  int count;
+  toolbar_presentation_t presentation;
+} application_toolbar_t;
 
 // Docked toolbars are owned children; use the remaining rectangle for content.
 window_t *create_docked_toolbar(window_t *owner, toolbar_dock_t dock, winproc_t proc);
@@ -16,6 +22,7 @@ toolbar_state_t *toolbar_ensure_state(window_t *win);
 toolbar_state_t *toolbar_get_state(window_t *win);
 int toolbar_effective_bsz(window_t const *win);
 int toolbar_effective_item_height(window_t const *win);
+int toolbar_effective_padding(window_t const *win);
 
 void toolbar_draw_non_client(window_t *win);
 

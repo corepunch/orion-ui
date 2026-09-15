@@ -145,11 +145,11 @@ static void create_app_windows(hinstance_t hinstance) {
                                     handle_menu_command, hinstance);
   create_main_toolbar_window();
 #else
-  g_app->chrome_win = create_app_chrome("SimpleSketch3D Chrome",
+  g_app->chrome_win = create_application_chrome("SimpleSketch3D Chrome",
                                         scener_menubar_proc,
                                         kMenus, kNumMenus,
                                         scener_toolbar_proc,
-                                        hinstance);
+                                        &scener_application_toolbar, hinstance);
   g_app->menubar_win      = app_chrome_menubar(g_app->chrome_win);
   g_app->main_toolbar_win = app_chrome_toolbar(g_app->chrome_win);
   scener_sync_main_toolbar();

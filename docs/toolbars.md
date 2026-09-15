@@ -99,7 +99,44 @@ static const toolbar_item_t kLayersToolbar[] = {
 };
 ```
 
-### 2. `.orion` XML (window-owned toolbar)
+### 2. `.orion` XML (application toolbar)
+
+Declare the application's main toolbar directly under `<orion>`, alongside
+`<menus>` and `<forms>`. It is application metadata, not a form:
+
+```xml
+<orion name="imageeditor">
+  <toolbar presentation="compact">
+    <Button name="new" command="file.new" icon="page-plus"
+            text="New" tooltip="New image" />
+  </toolbar>
+  <!-- menus declare file.new; forms declare document windows and dialogs -->
+</orion>
+```
+
+`presentation="normal"` (the default) creates the usual toolbar band below
+the menu. `presentation="compact"` puts small icon buttons at the right of
+the menu row, leaving the far-right restore-button slot free. Icons have a
+background highlight only while pressed. Compact
+icons are 16 logical pixels; square pressed backgrounds have 2 pixels of
+vertical padding, with 6 pixels between button boxes. If there is
+insufficient room beside the menu labels, the toolbar uses the normal band
+and returns to compact placement when space permits. Hosts with a shell-owned
+menu (GEMs) also use the normal band; this API does not contribute icons to
+the shell's shared menu.
+
+The compiler emits `<prefix>_application_toolbar`, an `application_toolbar_t`
+descriptor containing items, count, and presentation. Pass it to
+`create_application_chrome(title, menubar_proc, menus, menu_count, toolbar_proc,
+&imageeditor_application_toolbar, hinstance)`. Application chrome loads the
+items and owns layout and lifetime; `toolbar_proc` handles the existing
+`tbButtonClick` commands. There is no synthetic toolbar form or separate item
+loading in the application's `evCreate` handler.
+
+Only one root toolbar is allowed. Unknown presentations and unresolved command
+references are compile errors. Existing form-owned toolbars remain supported.
+
+### 3. `.orion` XML (window-owned toolbar)
 
 Declare a toolbar inside the form that owns it. The compiler stores the
 generated items in that form's `toolbar_items` and `toolbar_count` metadata:
@@ -107,7 +144,7 @@ generated items in that form's `toolbar_items` and `toolbar_count` metadata:
 ```xml
 <!-- imageeditor.orion -->
 <forms>
-  <form name="main_toolbar" title="Toolbar" width="1" height="1">
+  <form name="document" title="Document" width="640" height="480">
     <Toolbar>
     <Button name="new"  command="file.new" icon="sysicon_page_add"      text="New"  tooltip="New image" />
     <Button name="open" command="file.open" icon="sysicon_folder_page"   text="Open" tooltip="Open image" />
@@ -135,7 +172,8 @@ Include the generated header:
 The `command=` attribute links each button to a fully qualified menu item for
 consistent command IDs. `<Toolbar>` is chrome metadata, not a content child.
 Top-level `<toolbars>` resources and `toolbar="name"` references are not
-supported; the owning form is the single source of truth.
+supported. A root `<toolbar>` belongs to the application; a nested `<Toolbar>`
+belongs to its containing form.
 
 For normal windows and hosts, a nested `<Toolbar>` automatically enables
 `WINDOW_TOOLBAR`. A `role="page"` form publishes the same metadata without
@@ -171,8 +209,10 @@ automatically.
 
 ## Loading items
 
-Send `tbSetItems` in `evCreate`.  The framework copies the array internally —
-the caller does not need to keep it alive after the call.
+For a programmatic toolbar, send `tbSetItems` in `evCreate`. Application chrome
+and declarative form creation load their toolbar metadata automatically.
+The framework copies the array internally — the caller does not need to keep
+it alive after the call.
 
 ```c
 result_t my_toolbar_proc(window_t *win, uint32_t msg,
@@ -180,8 +220,7 @@ result_t my_toolbar_proc(window_t *win, uint32_t msg,
   switch (msg) {
     case evCreate:
       send_message(win, tbSetItems,
-                   (uint32_t)my_main_toolbar_form.toolbar_count,
-                   (void *)my_main_toolbar_form.toolbar_items);
+                   ARRAY_LEN(kLayersToolbar), (void *)kLayersToolbar);
       return true;
     case tbButtonClick:
       handle_menu_command((uint16_t)wparam);

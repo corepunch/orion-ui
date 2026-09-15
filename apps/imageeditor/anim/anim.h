@@ -142,4 +142,10 @@ void anim_render_shutdown(void);
 bool anim_render_frame_thumbnail(const anim_frame_t *frame, int w, int h,
                                  uint32_t *tex, const uint32_t *palette);
 
+// Create a square, center-cropped thumbnail with strengthened stroke coverage.
+// Texture rows match the bottom-up convention used by draw_rounded_rect.
+bool anim_render_frame_thumbnail_scaled(const anim_frame_t *frame,
+                                        int w, int h, int target_size,
+                                        uint32_t *tex, const uint32_t *palette);
+
 #endif // __ANIM_H__

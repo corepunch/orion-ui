@@ -36,12 +36,14 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
   }
   int bsz = (tb->btn_size > 0) ? tb->btn_size : TB_SPACING;
   int item_h = toolbar_state_item_height(tb);
+  int padding = toolbar_effective_padding(parent);
+  int spacing = (tb->style & TOOLBAR_STYLE_COMPACT) ? TOOLBAR_COMPACT_SPACING : TOOLBAR_SPACING;
   bool vertical = tb->orientation == TOOLBAR_VERTICAL;
   int grip_h = (vertical && (tb->style & TOOLBAR_STYLE_GRIP)) ? TOOLBAR_GRIP_HEIGHT : 0;
   int grip_w = (!vertical && (tb->style & TOOLBAR_STYLE_GRIP)) ? TOOLBAR_GRIP_WIDTH : 0;
-  int cursor = TOOLBAR_BEVEL_WIDTH + TOOLBAR_PADDING + grip_h;
-  int x = TOOLBAR_BEVEL_WIDTH + TOOLBAR_PADDING + grip_w;
-  int base_y = TOOLBAR_BEVEL_WIDTH + TOOLBAR_PADDING + grip_h;
+  int cursor = padding + grip_h;
+  int x = padding + grip_w;
+  int base_y = padding + grip_h;
   int field_y = base_y + 2;
   int field_h = bsz > 4 ? (bsz - 4) : bsz;
   int column_w = 0;
@@ -111,7 +113,7 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
     }
     if (tb->item_rects)
       tb->item_rects[i] = (irect16_t){x, y, w, h};
-    if (!vertical) x += w + TOOLBAR_SPACING;
+    if (!vertical) x += w + spacing;
   }
 
   for (window_t *tc = tb->children; tc; tc = tc->next) {
@@ -130,21 +132,29 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
 }
 
 static void draw_toolbar_icon_in_rect(toolbar_state_t *tb, const char *icon_name, irect16_t r, int offset) {
-  (void)tb;
   sysicon_resolved_t res;
   if (!sysicon_resolve(icon_name ? icon_name : "missing", &res)) return;
-  int ix = r.x + (r.w - res.w) / 2 + offset;
-  int iy = r.y + (r.h - res.h) / 2 + offset;
-  draw_sprite_region((int)res.tex, R(ix, iy, res.w, res.h),
-                     UV_RECT(res.u0, res.v0, res.u1, res.v1), get_sys_color(brToolbarForeground), 0);
+  bool compact = tb && (tb->style & TOOLBAR_STYLE_COMPACT);
+  int w = res.w, h = res.h;
+  if (compact && w > 0 && h > 0) {
+    int size = MAX(1, MIN(TOOLBAR_COMPACT_ICON_SIZE, MIN(r.w, r.h)));
+    int extent = MAX(w, h);
+    w = MAX(1, w * size / extent);
+    h = MAX(1, h * size / extent);
+  }
+  irect16_t icon = rect_offset(rect_center(r, w, h), offset, offset);
+  draw_sprite_region((int)res.tex, icon,
+                     UV_RECT(res.u0, res.v0, res.u1, res.v1),
+                     get_sys_color(compact ? brTextNormal : brToolbarForeground), 0);
 }
 
 static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int i) {
   toolbar_item_t *item = &tb->items[i];
   irect16_t r = tb->item_rects[i];
   bool is_pressed = (tb->pressed_item == i);
-  bool is_active  = (item->flags & TOOLBAR_BUTTON_FLAG_ACTIVE) != 0;
-  bool is_hot     = (tb->hot_item == i);
+  bool compact = (tb->style & TOOLBAR_STYLE_COMPACT) != 0;
+  bool is_active  = !compact && (item->flags & TOOLBAR_BUTTON_FLAG_ACTIVE) != 0;
+  bool is_hot     = !compact && (tb->hot_item == i);
   theme_t *th = get_theme();
 
   switch (item->type) {
@@ -165,7 +175,11 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       theme_part_t part = (tb->style & TOOLBAR_STYLE_SHOW_LABELS)
                                      ? THEME_PART_TOOLBAR_LABELED_BUTTON
                                      : THEME_PART_TOOLBAR_BUTTON;
-      theme_draw(part, local, state);
+      if (tb->style & TOOLBAR_STYLE_COMPACT) {
+        if (is_pressed) theme_draw(THEME_PART_TOOLBAR_BUTTON, rect_center(local, local.h, local.h), CTRL_PRESSED);
+      } else {
+        theme_draw(part, local, state);
+      }
       int poff = is_pressed ? th->press_icon_offset : 0;
       const char *icon_name = item->icon ? item->icon : "missing";
       irect16_t icon_rect = local;
@@ -389,6 +403,12 @@ int toolbar_effective_bsz(window_t const *win) {
   return (tb && tb->btn_size > 0) ? tb->btn_size : TB_SPACING;
 }
 
+int toolbar_effective_padding(window_t const *win) {
+  toolbar_state_t *tb = window_toolbar_state((window_t *)win);
+  return tb && (tb->style & TOOLBAR_STYLE_COMPACT) ? TOOLBAR_COMPACT_PADDING
+                                                : TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH;
+}
+
 int toolbar_effective_item_height(window_t const *win) {
   toolbar_state_t *tb = window_toolbar_state((window_t *)win);
   int height = toolbar_state_item_height(tb);
@@ -397,7 +417,7 @@ int toolbar_effective_item_height(window_t const *win) {
   if (tb && tb->orientation == TOOLBAR_VERTICAL && tb->item_rects) {
     for (int i = 0; i < tb->item_count; i++)
       height = MAX(height, tb->item_rects[i].y + tb->item_rects[i].h -
-                   TOOLBAR_PADDING - TOOLBAR_BEVEL_WIDTH);
+                   toolbar_effective_padding(win));
   }
   return height;
 }
@@ -410,14 +430,15 @@ void toolbar_draw_non_client(window_t *win) {
   int bsz = toolbar_effective_item_height(win);
   int title_h = (win->flags & WINDOW_NOTITLE) ? 0 : window_caption_height(win);
   int total_h = win->toolbar_dock == TOOLBAR_DOCK_LEFT ? win->frame.h
-                : bsz + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH);
+                : bsz + 2 * toolbar_effective_padding(win);
   int root_x = window_screen_x(win) - root->frame.x;
   int root_y = window_screen_y(win) - root->frame.y;
   irect16_t tb_rect = {root_x, root_y + title_h, win->frame.w, total_h};
 
   set_viewport_for_fbo(root);
   set_projection(0, 0, root->frame.w, root->frame.h);
-  theme_draw(THEME_PART_TOOLBAR, tb_rect, CTRL_NORMAL);
+  theme_draw(tb && (tb->style & TOOLBAR_STYLE_COMPACT) ? THEME_PART_MENU_BAR : THEME_PART_TOOLBAR,
+             tb_rect, CTRL_NORMAL);
 
   if (tb && (tb->style & TOOLBAR_STYLE_GRIP)) {
     irect16_t grip = tb->orientation == TOOLBAR_VERTICAL
@@ -448,6 +469,12 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
     case tbSetItems: {
       toolbar_state_t *tb = toolbar_ensure_state(win);
       if (!tb) return true;
+
+      int pressed_ident = 0;
+      bool preserve_pressed = tb->pressed_item >= 0 &&
+                              tb->pressed_item < tb->item_count && tb->items;
+      if (preserve_pressed)
+        pressed_ident = tb->items[tb->pressed_item].ident;
 
       clear_toolbar_children(win);
       SAFE_DELETE(tb->items, free);
@@ -494,6 +521,15 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
         }
 
         compute_toolbar_item_rects(win, tb);
+
+        if (preserve_pressed) {
+          for (int i = 0; i < tb->item_count; i++) {
+            if (tb->items[i].ident == pressed_ident) {
+              tb->pressed_item = i;
+              break;
+            }
+          }
+        }
 
         window_t **tail = &tb->children;
         for (int i = 0; tb->items && i < n && tb->item_rects; i++) {
