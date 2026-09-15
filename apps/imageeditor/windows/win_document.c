@@ -9,7 +9,7 @@ static void imageeditor_layout_ipad_palettes(void) {
                                    ui_get_system_metrics(kSystemMetricScreenHeight));
   irect16_t area = rect_inset(rect_trim_bottom(rect_trim_top(screen, APP_TOOLBAR_Y + APP_TOOLBAR_H), TIMELINE_WIN_H), 4);
   irect16_t right = rect_split_right(area, RIGHT_PANE_WIN_W);
-  window_t *panels[] = {g_app->color_win, g_app->layers_win, g_app->tool_options_win};
+  window_t *panels[] = {g_app->color_win, g_app->layers_win};
   for (size_t i = 0; i < ARRAY_LEN(panels); i++) {
     if (!panels[i]) continue;
     irect16_t frame = rect_split_top(right, MIN(panels[i]->frame.h, right.h));
@@ -26,15 +26,18 @@ irect16_t imageeditor_document_workspace_rect(void) {
   if (screen_w <= 0) screen_w = SCREEN_W;
   if (screen_h <= 0) screen_h = SCREEN_H;
 
-#ifdef AX_PLATFORM_IOS
+#if IMAGEEDITOR_BW
+  int left = g_app && g_app->tool_win ? window_screen_x(g_app->tool_win) + g_app->tool_win->frame.w : PALETTE_WIN_W;
+  int top = g_app && g_app->main_toolbar_win ? window_screen_y(g_app->main_toolbar_win) + g_app->main_toolbar_win->frame.h
+                                             : MENUBAR_HEIGHT + APP_TOOLBAR_H;
+  int timeline_h = g_app && g_app->timeline_win && window_has_state(g_app->timeline_win, WINDOW_STATE_VISIBLE)
+                     ? g_app->timeline_win->frame.h : 0;
+  return rect_trim_left(rect_trim_bottom(rect_trim_top(R(0, 0, screen_w, screen_h), top), timeline_h), left);
+#elif defined(AX_PLATFORM_IOS)
   irect16_t area = rect_trim_bottom(rect_trim_top(R(0, 0, screen_w, screen_h),
                                                  APP_TOOLBAR_Y + APP_TOOLBAR_H), TIMELINE_WIN_H);
-#if IMAGEEDITOR_BW
-  return area;
-#else
   return rect_inset(rect_trim_right(rect_trim_left(area, PALETTE_WIN_W + 8), RIGHT_PANE_WIN_W + 8), 4);
-#endif
-#endif
+#else
   int left_palette_right = PALETTE_WIN_X + PALETTE_WIN_W;
   int left = MAX(DOC_START_X, left_palette_right + DOC_PALETTE_GAP);
 
@@ -49,6 +52,7 @@ irect16_t imageeditor_document_workspace_rect(void) {
   if (bottom <= top) bottom = top + 1;
 
   return (irect16_t){ left, top, right - left, bottom - top };
+#endif
 }
 
 void imageeditor_max_document_frame_size(int *out_w, int *out_h) {
@@ -88,6 +92,12 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
                               uint32_t wparam, void *lparam) {
   canvas_doc_t *doc = (canvas_doc_t *)win->userdata;
   switch (msg) {
+#if IMAGEEDITOR_BW
+    case evGetWorkspaceRect:
+      if (!lparam) return false;
+      *(irect16_t *)lparam = imageeditor_document_workspace_rect();
+      return true;
+#endif
 #ifdef AX_PLATFORM_IOS
     case evDisplayChange: {
       if (doc == g_app->active_doc) imageeditor_layout_ipad_palettes();
@@ -188,16 +198,11 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
   if (!g_app) return NULL;
 
 #if IMAGEEDITOR_BW
-  // Pencil test: use full available screen space for the canvas.
-  // Override default CANVAS_W/CANVAS_H to fill screen below toolbar.
-  if (w == CANVAS_W && h == CANVAS_H) {
-    int screen_w = ui_get_system_metrics(kSystemMetricScreenWidth);
-    int screen_h = ui_get_system_metrics(kSystemMetricScreenHeight);
-    if (screen_w <= 0) screen_w = SCREEN_W;
-    if (screen_h <= 0) screen_h = SCREEN_H;
-    int top = APP_TOOLBAR_Y + APP_TOOLBAR_H;
-    w = screen_w;
-    h = screen_h - top - TIMELINE_WIN_H;
+  if (!filename && w == CANVAS_W && h == CANVAS_H) {
+    irect16_t workspace = imageeditor_document_workspace_rect();
+    w = workspace.w;
+    h = workspace.h;
+    IE_TRACE("pencil canvas workspace=%d,%d,%d,%d ratio=%d", workspace.x, workspace.y, w, h, g_bw_retina_scale);
   }
 #endif
 
@@ -335,6 +340,7 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
   dwin->maximizable = true;
 #if IMAGEEDITOR_BW
   maximize_window(dwin);
+  window_view_center(cwin);
 #endif
   show_window(dwin, true);
 

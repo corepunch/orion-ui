@@ -88,6 +88,17 @@ result_t win_tool_options_proc(window_t *win, uint32_t msg, uint32_t wparam, voi
       send_message(win, tbSetStyle, TOOLBAR_STYLE_GRIP, NULL);
       return true;
     case evPaint: return true;
+    case evDisplayChange: {
+      int width = LOWORD(wparam), height = HIWORD(wparam);
+      if (width <= 0 || height <= 0) return false;
+      int x = CLAMP(win->frame.x, 0, MAX(0, width - win->frame.w));
+      int y = CLAMP(win->frame.y, 0, MAX(0, height - win->frame.h));
+      if (x != win->frame.x || y != win->frame.y) {
+        IE_TRACE("options constrain win=%p position=%d,%d", (void *)win, x, y);
+        move_window(win, x, y);
+      }
+      return true;
+    }
     case evClose:
       IE_TRACE("options close rejected win=%p", (void *)win);
       return true;
