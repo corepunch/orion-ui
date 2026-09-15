@@ -967,11 +967,43 @@ static void test_toolbar_vertical_custom_item(void) {
   PASS();
 }
 
+void test_toolbar_embedded_slider_drag(void) {
+  TEST("toolbar slider routes captured dragging in both orientations");
+  test_env_init();
+  window_t *win = create_window("", WINDOW_TOOLBAR | WINDOW_NOTITLE | WINDOW_NORESIZE,
+                                MAKERECT(50, 60, 40, 210), NULL, noop_proc, 0, NULL);
+  send_message(win, tbSetOrientation, TOOLBAR_VERTICAL, NULL);
+  send_message(win, tbSetStyle, TOOLBAR_STYLE_GRIP, NULL);
+  toolbar_item_t item = {.type = TOOLBAR_ITEM_SLIDER, .ident = 42};
+  send_message(win, tbSetItems, 1, &item);
+  show_window(win, true);
+  window_t *slider = get_window_item(win, 42);
+  ASSERT_NOT_NULL(slider);
+  ASSERT_TRUE(slider->flags & SLIDER_VERTICAL);
+  ASSERT_EQUAL(slider->frame.h, 3 * TB_SPACING + 2 * TOOLBAR_SPACING);
+  int x = window_screen_x(slider) + slider->frame.w / 2;
+  int y = window_screen_y(slider);
+  ASSERT_EQUAL(y, win->frame.y + slider->frame.y);
+  dispatch_left_mouse_at(x, y + slider->frame.h - SLIDER_TRACK_PAD, kEventLeftButtonDown);
+  ASSERT_TRUE(g_ui_runtime.captured == slider);
+  dispatch_left_mouse_at(x, y + SLIDER_TRACK_PAD, kEventLeftButtonDragged);
+  ASSERT_EQUAL(send_message(slider, slGetPos, 0, NULL), 255);
+  dispatch_left_mouse_at(x, y + SLIDER_TRACK_PAD, kEventLeftButtonUp);
+  ASSERT_NULL(g_ui_runtime.captured);
+  send_message(win, tbSetOrientation, TOOLBAR_HORIZONTAL, NULL);
+  ASSERT_FALSE(slider->flags & SLIDER_VERTICAL);
+  ASSERT_EQUAL(slider->frame.w, 3 * TB_SPACING + 2 * TOOLBAR_SPACING);
+  destroy_window(win);
+  test_env_shutdown();
+  PASS();
+}
+
 int main(int argc, char *argv[]) {
     (void)argc;
     (void)argv;
     TEST_START("Toolbar child-window tests");
 
+    test_toolbar_embedded_slider_drag();
     test_toolbar_vertical_custom_item();
     test_toolbar_set_items_creates_children();
     test_toolbar_spacer_skipped();

@@ -262,6 +262,7 @@ static const char *toolbar_type(xmlNodePtr n) {
   if (elem(n, "button")) return "TOOLBAR_ITEM_BUTTON";
   if (elem(n, "label")) return "TOOLBAR_ITEM_LABEL";
   if (elem(n, "combobox")) return "TOOLBAR_ITEM_COMBOBOX";
+  if (elem(n, "slider")) return "TOOLBAR_ITEM_SLIDER";
   if (elem(n, "textedit")) return "TOOLBAR_ITEM_TEXTEDIT";
   if (elem(n, "separator")) return "TOOLBAR_ITEM_SEPARATOR";
   if (elem(n, "spacer")) return "TOOLBAR_ITEM_SPACER";

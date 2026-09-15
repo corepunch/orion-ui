@@ -156,7 +156,8 @@ void draw_window_controls(window_t *win) {
   irect16_t r = R(0, 0, win->frame.w, win->frame.h);
   get_theme()->draw_window_chrome(rect_split_top(r, TITLEBAR_HEIGHT),
                                   rect_split_top(r, TITLEBAR_HEIGHT), win->title,
-                                  window_has_focus(win) ? CTRL_FOCUSED : CTRL_NORMAL,
+                                  (window_has_focus(win) ? CTRL_FOCUSED : CTRL_NORMAL) |
+                                  ((win->flags & WINDOW_NOCLOSE) ? CTRL_NO_CLOSE : 0),
                                   win->maximizable && !win->parent && !(win->flags & (WINDOW_NORESIZE | WINDOW_DIALOG | WINDOW_ALWAYSINBACK | WINDOW_ALWAYSONTOP)));
 }
 
@@ -329,7 +330,7 @@ void draw_theme_icon(int id, int x, int y, int size, uint32_t col) {
   static const char *names[THEME_ICON_COUNT] = {
     "lucide-x", "lucide-chevron-up", "lucide-chevron-down", "lucide-chevrons-up-down",
     "lucide-check", "lucide-chevron-up", "lucide-chevron-right", "lucide-chevron-down",
-    "lucide-chevron-left", "lucide-grip", "lucide-maximize", "lucide-copy"
+    "lucide-chevron-left", "lucide-grip", "lucide-arrow-up", "lucide-copy"
   };
   if (id < 0 || id >= THEME_ICON_COUNT || size <= 0) {
     fprintf(stderr, "[draw] invalid theme icon id=%d size=%d\n", id, size);

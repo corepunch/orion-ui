@@ -130,6 +130,8 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
 #endif
 
   g_app->current_tool = ID_TOOL_PENCIL;
+  g_app->brush_tool = ID_TOOL_PENCIL;
+  g_app->shape_tool = ID_TOOL_RECT;
   g_app->hinstance    = hinstance;
 #if IMAGEEDITOR_BW
   // BW mode: simple black/white palette, use pencil tool by default.

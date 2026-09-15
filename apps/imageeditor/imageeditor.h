@@ -116,16 +116,15 @@ extern int g_bw_retina_scale;
 
 #define TOOL_WIN_H    (TITLEBAR_HEIGHT + TOOL_TOOLBAR_H)
 
-// Tool options palette — docked under the Layers palette in the right pane.
+// Floating options toolbar, initially beside the left tool strip.
 // Content height accommodates brush, shape, and magic-wand option panels.
-#define OPTS_BRUSH_CELL_H      12
-#define TOOL_OPTIONS_PANEL_H   76
-#define TOOL_OPTIONS_WIN_W     RIGHT_PANE_WIN_W
-#define TOOL_OPTIONS_WIN_H     (TITLEBAR_HEIGHT + TOOL_OPTIONS_PANEL_H)
-#define TOOL_OPTIONS_WIN_X     LAYERS_WIN_X
-#define TOOL_OPTIONS_WIN_Y     (LAYERS_WIN_Y + LAYERS_WIN_H + 4)
+#define TOOL_OPTIONS_PANEL_H   TOOLBAR_BAND_HEIGHT
+#define TOOL_OPTIONS_WIN_W     PALETTE_WIN_W
+#define TOOL_OPTIONS_WIN_H     TOOL_OPTIONS_PANEL_H
+#define TOOL_OPTIONS_WIN_X     (PALETTE_WIN_X + PALETTE_WIN_W + 8)
+#define TOOL_OPTIONS_WIN_Y     (PALETTE_WIN_Y + 4 * TOOL_PALETTE_BTN_SIZE)
 
-// Brush size selector: 5 MacPaint-style sizes (radii: 0, 1, 2, 3, 4).
+// Brush slider steps (radii: 0, 1, 2, 3, 4).
 #define NUM_BRUSH_SIZES   5
 extern const int kBrushSizes[NUM_BRUSH_SIZES];
 
@@ -363,6 +362,8 @@ typedef struct {
   accel_table_t *accel;
   uint32_t       user_palette[NUM_USER_COLORS];
   int            num_user_colors;
+  int            brush_tool;
+  int            shape_tool;
   int            brush_size;    // current brush radius (index into kBrushSizes)
   bool           shape_filled;  // true = shapes draw filled, false = outline only
   // Text tool persistent settings (font size, antialias flag).
@@ -592,6 +593,9 @@ bool doc_confirm_close(canvas_doc_t *doc, window_t *parent_win);
 result_t editor_menubar_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_canvas_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_tool_palette_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+enum { IE_OPT_AA = 9001, IE_OPT_SPREAD, IE_OPT_COLOR, IE_OPT_SIZE, IE_OPT_FILLED };
+void imageeditor_sync_tool_options(void);
+int imageeditor_tool_group(int tool);
 result_t win_tool_options_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_color_palette_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 

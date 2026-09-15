@@ -119,7 +119,7 @@ typedef struct toolbar_state_s {
   int             hot_item;       // index of hovered item; -1 = none
   int             pressed_item;   // index of currently pressed item; -1 = none
   bool            pressed_in_arrow; // true when the press was in the dropdown arrow zone
-  // Embedded control child windows (COMBOBOX / TEXTEDIT items only).
+  // Embedded control child windows (COMBOBOX / TEXTEDIT / SLIDER).
   // These are real window_t children with toolbar-band-relative frames.
   window_t       *children;
   // Strip for icon rendering (set via tbSetStrip / tbLoadStrip)

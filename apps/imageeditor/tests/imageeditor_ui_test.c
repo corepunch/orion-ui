@@ -20,6 +20,7 @@
 #include "apps/imageeditor/imageeditor.h"
 #include <unistd.h>
 #include <stdlib.h>
+#include <orion/user/toolbar.h>
 
 // ── Cross-platform temp directory helper (same pattern as image_test.c) ─────────
 static const char *ie_temp_dir(void) {
@@ -913,9 +914,9 @@ void test_ie_tool_options_window_created(void) {
     PASS();
 }
 
-// Tool options should dock directly under the layers palette with matching width.
+// Options use the same toolbar width as the left tool strip.
 void test_ie_tool_options_dock_under_layers(void) {
-    TEST("create_tool_options_window: docks under layers with the same width");
+    TEST("create_tool_options_window: floating icon toolbar cannot close");
 
     ie_setup();
     create_layers_window();
@@ -923,10 +924,15 @@ void test_ie_tool_options_dock_under_layers(void) {
 
     ASSERT_NOT_NULL(g_app->layers_win);
     ASSERT_NOT_NULL(g_app->tool_options_win);
-    ASSERT_EQUAL(g_app->tool_options_win->frame.x, g_app->layers_win->frame.x);
-    ASSERT_EQUAL(g_app->tool_options_win->frame.w, g_app->layers_win->frame.w);
+    ASSERT_EQUAL(g_app->tool_options_win->frame.x, TOOL_OPTIONS_WIN_X);
+    ASSERT_TRUE(g_app->tool_options_win->flags & WINDOW_TOOLBAR);
+    ASSERT_TRUE(g_app->tool_options_win->flags & WINDOW_NOTITLE);
+    ASSERT_EQUAL(g_app->tool_options_win->frame.w, TOOL_OPTIONS_WIN_W);
+    ASSERT_TRUE(g_app->tool_options_win->flags & WINDOW_NOCLOSE);
+    ASSERT_TRUE(send_message(g_app->tool_options_win, evClose, 0, NULL));
+    ASSERT_TRUE(is_window(g_app->tool_options_win));
     ASSERT_EQUAL(g_app->tool_options_win->frame.y,
-                 g_app->layers_win->frame.y + g_app->layers_win->frame.h + 4);
+                 TOOL_OPTIONS_WIN_Y);
 
     ie_teardown();
     PASS();
@@ -944,6 +950,58 @@ void test_ie_close_tool_options_window_clears_pointer(void) {
 
     ASSERT_NULL(g_app->tool_options_win);
 
+    ie_teardown();
+    PASS();
+}
+
+void test_ie_grouped_tool_options(void) {
+    TEST("grouped tools: visible icons, vertical size drag, remembered selection");
+    ie_setup();
+    create_tool_options_window();
+    handle_menu_command(ID_TOOL_BRUSH);
+    window_t *options = g_app->tool_options_win;
+    toolbar_state_t *tb = toolbar_get_state(options);
+    ASSERT_NOT_NULL(tb);
+    ASSERT_EQUAL(tb->orientation, TOOLBAR_VERTICAL);
+    ASSERT_EQUAL(tb->item_count, 4);
+    const int brushes[] = {ID_TOOL_PENCIL, ID_TOOL_BRUSH, ID_TOOL_SPRAY};
+    for (int i = 0; i < 3; i++) {
+      ASSERT_EQUAL(tb->items[i].type, TOOLBAR_ITEM_BUTTON);
+      ASSERT_EQUAL(tb->items[i].ident, brushes[i]);
+      send_message(options, tbButtonClick, brushes[i], NULL);
+      ASSERT_EQUAL(g_app->current_tool, brushes[i]);
+      ASSERT_TRUE(tb->items[i].flags & TOOLBAR_BUTTON_FLAG_ACTIVE);
+    }
+    ASSERT_EQUAL(tb->items[3].type, TOOLBAR_ITEM_SLIDER);
+    ASSERT_EQUAL(g_app->current_tool, ID_TOOL_SPRAY);
+    ASSERT_EQUAL(g_app->brush_tool, ID_TOOL_SPRAY);
+    ASSERT_EQUAL(imageeditor_tool_group(g_app->current_tool), ID_TOOL_BRUSH);
+    window_t *slider = get_window_item(options, IE_OPT_SIZE);
+    ASSERT_NOT_NULL(slider);
+    ASSERT_TRUE(slider->flags & SLIDER_VERTICAL);
+    send_message(slider, evLeftButtonDown, MAKEDWORD(slider->frame.w / 2, slider->frame.h - SLIDER_TRACK_PAD), NULL);
+    send_message(slider, evMouseMove, MAKEDWORD(slider->frame.w / 2, SLIDER_TRACK_PAD), NULL);
+    send_message(slider, evLeftButtonUp, 0, NULL);
+    ASSERT_EQUAL(g_app->brush_size, NUM_BRUSH_SIZES - 1);
+    handle_menu_command(ID_TOOL_RECT);
+    const int shapes[] = {ID_TOOL_LINE, ID_TOOL_RECT, ID_TOOL_ELLIPSE, ID_TOOL_ROUNDED_RECT, ID_TOOL_POLYGON};
+    for (int i = 0; i < 5; i++) {
+      ASSERT_EQUAL(tb->item_count, 6);
+      ASSERT_EQUAL(tb->items[i].ident, shapes[i]);
+      send_message(options, tbButtonClick, shapes[i], NULL);
+      ASSERT_EQUAL(g_app->current_tool, shapes[i]);
+      ASSERT_EQUAL(g_app->shape_tool, shapes[i]);
+      ASSERT_EQUAL(imageeditor_tool_group(g_app->current_tool), ID_TOOL_RECT);
+    }
+    send_message(options, tbButtonClick, IE_OPT_FILLED, NULL);
+    ASSERT_TRUE(g_app->shape_filled);
+    ASSERT_TRUE(tb->items[5].flags & TOOLBAR_BUTTON_FLAG_ACTIVE);
+    send_message(options, tbButtonClick, IE_OPT_FILLED, NULL);
+    ASSERT_FALSE(g_app->shape_filled);
+    handle_menu_command(ID_TOOL_MAGIC_WAND);
+    ASSERT_EQUAL(tb->item_count, 3);
+    ASSERT_EQUAL(tb->items[1].type, TOOLBAR_ITEM_SLIDER);
+    ASSERT_NOT_NULL(get_window_item(options, IE_OPT_SPREAD));
     ie_teardown();
     PASS();
 }
@@ -2320,6 +2378,7 @@ int main(int argc, char *argv[]) {
     test_ie_tool_options_window_created();
     test_ie_tool_options_dock_under_layers();
     test_ie_close_tool_options_window_clears_pointer();
+    test_ie_grouped_tool_options();
     test_ie_brush_size_valid_range();
     test_ie_brush_sizes_array();
     test_ie_tool_switch_updates_options_panel();

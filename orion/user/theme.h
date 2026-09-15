@@ -85,6 +85,7 @@ typedef enum {
 // dimensions; do NOT collapse CTRL_SELECTED into CTRL_PRESSED.
 typedef enum {
   CTRL_NORMAL   = 0,
+  CTRL_NO_CLOSE = 1 << 6,   // window chrome omits the close button
   CTRL_HOVER    = 1 << 0,   // pointer is inside the hit target
   CTRL_PRESSED  = 1 << 1,   // mouse button is held down
   CTRL_SELECTED = 1 << 2,   // persistently active/checked/toggled

@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <math.h>
+#include <stdio.h>
 
 #include <orion/user/user.h>
 #include <orion/user/messages.h>
@@ -20,7 +21,8 @@ typedef struct {
 } slider_state_t;
 
 static int sl_track_w(const window_t *win) {
-  return MAX(1, get_client_rect(win).w - 2 * SLIDER_TRACK_PAD);
+  irect16_t cr = get_client_rect(win);
+  return MAX(1, ((win->flags & SLIDER_VERTICAL) ? cr.h : cr.w) - 2 * SLIDER_TRACK_PAD);
 }
 
 static int sl_clamp_count(int n) {
@@ -47,7 +49,8 @@ static int sl_value_from_mouse_x(const window_t *win, const slider_state_t *s, i
 
 static void sl_notify(window_t *win, int handle_index, int value) {
   uint16_t notif = (uint16_t)(sliderValueChanged + CLAMP(handle_index, 0, SLIDER_MAX_HANDLES - 1));
-  (void)value; /* value readable via slGetPos; lparam must be the source window */
+  fprintf(stderr, "[sl] change win=%u handle=%d value=%d\n", win->id, handle_index, value);
+  fflush(stderr);
   if (!win->parent) return;
   send_message(win->parent, evCommand,
                MAKEWPARAM(win->id, notif),
@@ -55,6 +58,11 @@ static void sl_notify(window_t *win, int handle_index, int value) {
 }
 
 static int sl_hit_handle(const window_t *win, const slider_state_t *s, int mx, int my) {
+  if (win->flags & SLIDER_VERTICAL) {
+    int axis = get_client_rect(win).h - my;
+    my = mx - get_client_rect(win).w / 2 + SLIDER_HANDLE_Y;
+    mx = axis;
+  }
   int y = SLIDER_HANDLE_Y;
   int best_i = -1;
   int best_d = 0x7fffffff;
@@ -77,6 +85,11 @@ result_t win_slider(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
   switch (msg) {
     case evCreate: {
       slider_state_t *ns = allocate_window_data(win, sizeof(slider_state_t));
+      if (!ns) {
+        fprintf(stderr, "[sl] allocation failed win=%u\n", win->id);
+        fflush(stderr);
+        return false;
+      }
       ns->min_val = 0;
       ns->max_val = 255;
       ns->count = 1;
@@ -92,13 +105,16 @@ result_t win_slider(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
       if (!s) return true;
       {
       irect16_t cr = get_client_rect(win);
-      theme_draw(THEME_PART_SURFACE, cr, CTRL_NORMAL);
-      theme_draw(THEME_PART_SLIDER_TRACK,
-                 R(SLIDER_TRACK_PAD, SLIDER_BAR_Y + SLIDER_BAR_H / 2 - 1, sl_track_w(win), 2), CTRL_NORMAL);
+      if (!(win->flags & WINDOW_NOFILL)) theme_draw(THEME_PART_SURFACE, cr, CTRL_NORMAL);
+      bool vertical = (win->flags & SLIDER_VERTICAL) != 0;
+      irect16_t track = R(SLIDER_TRACK_PAD, SLIDER_BAR_Y + SLIDER_BAR_H / 2 - 1, sl_track_w(win), 2);
+      if (vertical) track = R(cr.w / 2 - 1, SLIDER_TRACK_PAD, 2, sl_track_w(win));
+      theme_draw(THEME_PART_SLIDER_TRACK, track, CTRL_NORMAL);
       for (int i = 0; i < s->count; i++) {
         bool active = s->dragging && s->drag_index == i;
         int tx = sl_thumb_x_from_value(win, s, s->pos[i]);
         irect16_t thumb = R(tx - 3, SLIDER_HANDLE_Y - 2, SLIDER_MIN_THUMB_W, 11);
+        if (vertical) thumb = R(cr.w / 2 - 5, cr.h - tx - 3, 11, SLIDER_MIN_THUMB_W);
         theme_draw(THEME_PART_SLIDER_THUMB, thumb, active ? CTRL_PRESSED : CTRL_NORMAL);
       }
       }
@@ -181,6 +197,7 @@ result_t win_slider(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
       if (!s || !s->dragging || s->drag_index < 0) return false;
       {
         int mx = (int16_t)LOWORD(wparam);
+        if (win->flags & SLIDER_VERTICAL) mx = get_client_rect(win).h - (int16_t)HIWORD(wparam);
         int v = sl_value_from_mouse_x(win, s, mx);
         if (v != s->pos[s->drag_index]) {
           s->pos[s->drag_index] = v;
@@ -200,6 +217,11 @@ result_t win_slider(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
       }
       return false;
 
+    case evDestroy:
+      if (s && s->dragging) set_capture(NULL);
+      free(s);
+      win->userdata = NULL;
+      return true;
     default:
       return false;
   }

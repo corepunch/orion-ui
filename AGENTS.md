@@ -212,6 +212,8 @@ routing, hit-testing, keyboard handling, and accessibility.
 
 # Icon design
 
+Use [Lucide](https://lucide.dev) for icons whenever a suitable icon exists.
+
 All app icons live in `apps/<name>/share/icons/` as 24×24 SVG files. When drawing or modifying icons:
 
 - **Fill the canvas.** Draw within x=2..22, y=2..22 (2 px margin from each edge). Total visual content must span at least 20×20 px — shapes that huddle in the center look small and timid.

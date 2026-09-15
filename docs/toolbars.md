@@ -59,9 +59,24 @@ Item types:
 | `TOOLBAR_ITEM_LABEL` | Static text label |
 | `TOOLBAR_ITEM_COMBOBOX` | Drop-down combobox (embedded child window) |
 | `TOOLBAR_ITEM_TEXTEDIT` | Single-line text input (embedded child window) |
+| `TOOLBAR_ITEM_SLIDER` | Slider occupying exactly three icon slots along the toolbar orientation |
 | `TOOLBAR_ITEM_SEPARATOR` | Narrow vertical divider |
 | `TOOLBAR_ITEM_SPACER` | Invisible gap (no interaction) |
 | `TOOLBAR_ITEM_DROPDOWN` | Split button: left fires `tbButtonClick`, right arrow fires `tbDropdown` |
+
+## Floating options toolbars
+
+Use `WINDOW_TOOLBAR | WINDOW_NOTITLE | WINDOW_NORESIZE | WINDOW_NOCLOSE` for a
+movable options toolbar. Set `tbSetOrientation` to `TOOLBAR_VERTICAL` and
+`tbSetStyle` to `TOOLBAR_STYLE_GRIP` to reserve a drag grip above its items.
+Use the same button size and padding as the main tool strip.
+
+`TOOLBAR_ITEM_SLIDER` creates a framework-owned `Slider` in the toolbar's
+embedded child list. Its length is fixed at three icon slots, including the
+two inter-icon gaps; its width matches one icon in a vertical toolbar.
+Orientation follows the toolbar automatically. Configure its range and value
+through `slSetRange` / `slSetPos` on `get_window_item(toolbar, ident)` and handle
+`sliderValueChanged` through `evCommand`. Declarative toolbars can use `<slider>`.
 
 ## Two ways to define items
 

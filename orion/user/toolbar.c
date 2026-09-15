@@ -37,9 +37,10 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
   int bsz = (tb->btn_size > 0) ? tb->btn_size : TB_SPACING;
   int item_h = toolbar_state_item_height(tb);
   bool vertical = tb->orientation == TOOLBAR_VERTICAL;
-  int cursor = TOOLBAR_BEVEL_WIDTH + TOOLBAR_PADDING;
+  int grip_h = (vertical && (tb->style & TOOLBAR_STYLE_GRIP)) ? TOOLBAR_GRIP_HEIGHT : 0;
+  int cursor = TOOLBAR_BEVEL_WIDTH + TOOLBAR_PADDING + grip_h;
   int x = TOOLBAR_BEVEL_WIDTH + TOOLBAR_PADDING;
-  int base_y = TOOLBAR_BEVEL_WIDTH + TOOLBAR_PADDING;
+  int base_y = TOOLBAR_BEVEL_WIDTH + TOOLBAR_PADDING + grip_h;
   int field_y = base_y + 2;
   int field_h = bsz > 4 ? (bsz - 4) : bsz;
   int column_w = 0;
@@ -71,6 +72,10 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
         w = item->w > 0 ? item->w : (bsz * TOOLBAR_COMBOBOX_DEFAULT_WIDTH_MULT);
         y = field_y;
         h = field_h;
+        break;
+      case TOOLBAR_ITEM_SLIDER:
+        w = vertical ? bsz : bsz * 3 + TOOLBAR_SPACING * 2;
+        h = vertical ? item_h * 3 + TOOLBAR_SPACING * 2 : item_h;
         break;
       case TOOLBAR_ITEM_TEXTEDIT:
         w = item->w > 0 ? item->w : (bsz * 8);
@@ -112,6 +117,10 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
     for (int i = 0; i < tb->item_count; i++) {
       if ((uint32_t)tb->items[i].ident == tc->id && tb->item_rects) {
         tc->frame = tb->item_rects[i];
+        if (tb->items[i].type == TOOLBAR_ITEM_SLIDER) {
+          if (vertical) tc->flags |= SLIDER_VERTICAL;
+          else tc->flags &= ~SLIDER_VERTICAL;
+        }
         break;
       }
     }
@@ -209,6 +218,7 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       draw_text(FONT_SMALLEST, item->text ? item->text : "", 2, ty, get_sys_color(brToolbarForeground));
       break;
     }
+    case TOOLBAR_ITEM_SLIDER:
     case TOOLBAR_ITEM_SPACER:
     case TOOLBAR_ITEM_COMBOBOX:
     case TOOLBAR_ITEM_TEXTEDIT:
@@ -236,6 +246,8 @@ static result_t win_toolbar(window_t *win, uint32_t msg, uint32_t wparam, void *
         SAFE_DELETE(tb->item_tooltips, free);
         SAFE_DELETE(tb->item_icons, free);
         SAFE_DELETE(tb->item_rects, free);
+        free(tb);
+        win->userdata = NULL;
       }
       return true;
 
@@ -396,6 +408,10 @@ void toolbar_draw_non_client(window_t *win) {
   set_projection(0, 0, root->frame.w, root->frame.h);
   theme_draw(THEME_PART_TOOLBAR, tb_rect, CTRL_NORMAL);
 
+  if (tb && tb->orientation == TOOLBAR_VERTICAL && (tb->style & TOOLBAR_STYLE_GRIP)) {
+    irect16_t grip = rect_split_top(tb_rect, TOOLBAR_GRIP_HEIGHT);
+    fill_rect(get_sys_color(brToolbarForeground), rect_center(grip, MIN(16, grip.w - 8), 2));
+  }
   set_viewport(tb_rect);
   if (tb && tb->items && tb->item_rects) {
     for (int i = 0; i < tb->item_count; i++) {
@@ -467,16 +483,19 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
         compute_toolbar_item_rects(win, tb);
 
         window_t **tail = &tb->children;
-        for (int i = 0; i < n && tb->item_rects; i++) {
+        for (int i = 0; tb->items && i < n && tb->item_rects; i++) {
           toolbar_item_t *item = &tb->items[i];
-          if (item->type != TOOLBAR_ITEM_COMBOBOX && item->type != TOOLBAR_ITEM_TEXTEDIT)
+          if (item->type != TOOLBAR_ITEM_COMBOBOX && item->type != TOOLBAR_ITEM_TEXTEDIT &&
+              item->type != TOOLBAR_ITEM_SLIDER)
             continue;
 
-          const char *cls = (item->type == TOOLBAR_ITEM_COMBOBOX) ? "ComboBox" : "TextBox";
+          const char *cls = item->type == TOOLBAR_ITEM_COMBOBOX ? "ComboBox"
+                            : item->type == TOOLBAR_ITEM_SLIDER ? "Slider" : "TextBox";
           irect16_t r = tb->item_rects[i];
           irect16_t rf = {r.x, r.y, r.w, r.h};
           window_t *tc = create_window(item->text ? item->text : "",
-                                       WINDOW_NOTITLE | WINDOW_NOFILL,
+                                       WINDOW_NOTITLE | WINDOW_NOFILL |
+                                       ((item->type == TOOLBAR_ITEM_SLIDER && tb->orientation == TOOLBAR_VERTICAL) ? SLIDER_VERTICAL : 0),
                                        &rf, win, cls, win->hinstance, NULL);
           if (!tc) continue;
 

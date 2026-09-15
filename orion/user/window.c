@@ -391,6 +391,7 @@ static void remove_from_parent_child_list(window_t *win) {
 
   for (size_t i = 0; i < sizeof(lists) / sizeof(lists[0]); i++) {
     window_t **link = lists[i];
+    if (!link) continue;
     while (*link) {
       if (*link == win) {
         *link = win->next;
@@ -457,6 +458,7 @@ void destroy_window(window_t *win) {
   remove_from_global_hooks(win);
   remove_from_global_queue(win);
   clear_toolbar_children(win);
+  if (win->toolbar) destroy_window(win->toolbar);
   clear_window_children(win);
   // Release the per-window render target before freeing the struct.
   R_DestroyWindowTarget(&win->surface_fbo, &win->surface_tex,
@@ -510,7 +512,13 @@ int window_screen_x(window_t const *win) {
 int window_screen_y(window_t const *win) {
   if (!win) return 0;
   if (!win->parent) return win->frame.y;
-  return window_screen_y(win->parent) + titlebar_height(win->parent) + win->frame.y;
+  int inset = titlebar_height(win->parent);
+  toolbar_state_t *tb = window_toolbar_state(win->parent);
+  bool toolbar_child = win->parent->toolbar == win;
+  for (window_t *child = tb ? tb->children : NULL; child; child = child->next)
+    if (child == win) toolbar_child = true;
+  if (toolbar_child) inset = (win->parent->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
+  return window_screen_y(win->parent) + inset + win->frame.y;
 }
 
 irect16_t center_window_rect(irect16_t frame_rect, window_t const *owner) {

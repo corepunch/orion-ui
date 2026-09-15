@@ -11,9 +11,9 @@ static bool view_ready(const window_t *win) {
 }
 
 static void view_changed(window_t *win) {
-  view_matrix_t *m = &win->view.matrix;
-  fprintf(stderr, "[view] change win=%u matrix=(%.3f,%.3f,%.1f,%.1f)\n", win->id, m->a, m->b, m->tx, m->ty);
-  fflush(stderr);
+  // view_matrix_t *m = &win->view.matrix;
+  // fprintf(stderr, "[view] change win=%u matrix=(%.3f,%.3f,%.1f,%.1f)\n", win->id, m->a, m->b, m->tx, m->ty);
+  // fflush(stderr);
   invalidate_window(win);
 }
 

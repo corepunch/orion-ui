@@ -13,17 +13,11 @@ static const toolbar_item_t k_tools[] = {
 #ifndef AX_PLATFORM_IOS
   {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_ZOOM, .icon = "ie-zoom-in", .tooltip = "Zoom"},
 #endif
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_PENCIL, .icon = "ie-pencil", .tooltip = "Pencil"},
   {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_BRUSH, .icon = "ie-brush", .tooltip = "Brush"},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_SPRAY, .icon = "ie-spray", .tooltip = "Spray"},
   {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_FILL, .icon = "ie-fill", .tooltip = "Fill"},
   {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_ERASER, .icon = "ie-eraser", .tooltip = "Eraser"},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_LINE, .icon = "ie-line", .tooltip = "Line"},
   {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_TEXT, .icon = "ie-text", .tooltip = "Text"},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_RECT, .icon = "ie-rect", .tooltip = "Rect"},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_ELLIPSE, .icon = "ie-ellipse", .tooltip = "Ellipse"},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_ROUNDED_RECT, .icon = "ie-rounded-rect", .tooltip = "Rounded Rect"},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_POLYGON, .icon = "ie-polygon", .tooltip = "Polygon"},
+  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_RECT, .icon = "ie-rect", .tooltip = "Shapes"},
   {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_MAGNIFIER, .icon = "ie-zoom-out", .tooltip = "Magnifier"},
   {.type = TOOLBAR_ITEM_CUSTOM, .ident = ID_TOOL_SWATCH, .tooltip = "Foreground / background colors"},
 };
@@ -58,7 +52,7 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       send_message(win, tbSetOrientation, TOOLBAR_VERTICAL, NULL);
       send_message(win, tbSetButtonSize, TOOL_PALETTE_BTN_SIZE, NULL);
       send_message(win, tbSetItems, ARRAY_LEN(k_tools), (void *)k_tools);
-      send_message(win, tbSetActiveButton, g_app ? g_app->current_tool : ID_TOOL_SELECT, NULL);
+      send_message(win, tbSetActiveButton, g_app ? imageeditor_tool_group(g_app->current_tool) : ID_TOOL_SELECT, NULL);
       return true;
     case tbDrawItem:
       if (wparam != ID_TOOL_SWATCH || !lparam) return false;
@@ -67,8 +61,11 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
     case tbButtonClick:
       IE_TRACE("tool click win=%p ident=%u current=%d", (void *)win, wparam,
                g_app ? g_app->current_tool : -1);
-      if (wparam != ID_TOOL_SWATCH && g_app)
+      if (wparam != ID_TOOL_SWATCH && g_app) {
+        if (wparam == ID_TOOL_BRUSH && g_app->brush_tool) wparam = g_app->brush_tool;
+        if (wparam == ID_TOOL_RECT && g_app->shape_tool) wparam = g_app->shape_tool;
         handle_menu_command((uint16_t)wparam);
+      }
       return true;
     case evPaint:
       return true;

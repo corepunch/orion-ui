@@ -176,14 +176,17 @@ window_t *create_tool_palette_window(void) {
 }
 
 window_t *create_tool_options_window(void) {
+  if (!g_app) return NULL;
+  if (g_app->tool_options_win) return g_app->tool_options_win;
   window_t *tw = create_window(
       "Options",
-      WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
+      WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOTITLE | WINDOW_TOOLBAR,
       MAKERECT(TOOL_OPTIONS_WIN_X, TOOL_OPTIONS_WIN_Y,
                TOOL_OPTIONS_WIN_W, TOOL_OPTIONS_WIN_H),
       NULL, win_tool_options_proc, g_app->hinstance, NULL);
   show_window(tw, true);
   g_app->tool_options_win = tw;
+  imageeditor_sync_tool_options();
   return tw;
 }
 
@@ -706,14 +709,17 @@ void handle_menu_command(uint16_t id) {
         invalidate_window(doc->canvas_win);
       }
       g_app->current_tool = id;
+      int group = imageeditor_tool_group(id);
+      if (group == ID_TOOL_BRUSH) g_app->brush_tool = id;
+      if (group == ID_TOOL_RECT) g_app->shape_tool = id;
+      IE_TRACE("tool switch old=%d tool=%d group=%d", old_tool, id, group);
       IE_DEBUG("tool_switch doc=%p %s -> %s",
                (void *)doc,
                tool_id_name(old_tool),
                tool_id_name((int)id));
       if (g_app->tool_win)
-        send_message(g_app->tool_win, tbSetActiveButton, (uint32_t)id, NULL);
-      if (g_app->tool_options_win)
-        invalidate_window(g_app->tool_options_win);
+        send_message(g_app->tool_win, tbSetActiveButton, (uint32_t)group, NULL);
+      imageeditor_sync_tool_options();
       break;
     }
 
@@ -722,7 +728,7 @@ void handle_menu_command(uint16_t id) {
         show_window(g_app->tool_win, true);
       } else {
         window_t *tp = create_tool_palette_window();
-        send_message(tp, tbSetActiveButton, (uint32_t)g_app->current_tool, NULL);
+        send_message(tp, tbSetActiveButton, (uint32_t)imageeditor_tool_group(g_app->current_tool), NULL);
       }
       break;
 

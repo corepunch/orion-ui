@@ -243,13 +243,15 @@ enum {
 #define BUTTON_PUSHLIKE     (1 << 13)
 #define BUTTON_AUTORADIO    (1 << 14)
 #define BUTTON_DEFAULT      (1 << 15)
-// Bit 16 is intentionally unused (the former WINDOW_SIDEBAR special case).
+// Bit 16 controls close-button visibility.
 #define WINDOW_NOACTIVATE   (1 << 17)  // do not steal keyboard focus when shown
 #define WINDOW_NOTABSTOP    (1 << 18)  // exclude from Tab-key focus cycle (WS_TABSTOP equivalent)
 #define WINDOW_STACK_HORIZONTAL (1 << 19)  // auto-layout stack flows left-to-right
 #define WINDOW_FLEXSPACE    (1 << 20)  // space/spring child that absorbs leftover horizontal room
 #define WINDOW_AUTO_LAYOUT  (1 << 21)  // enable automatic measure/arrange for children
 #define WINDOW_LAYOUT_CONTAINER (1 << 22)  // window arranges children (stack/grid/flow/column)
+#define WINDOW_NOCLOSE      (1 << 16)  // movable palette without a close button
+#define SLIDER_VERTICAL     (1 << 13)  // slider values increase upward
 #define WINDOW_NODRAG       (1 << 23)  // fixed chrome/panel: never initiate a window drag
 #define WINDOW_STACK_VERTICAL   0
 
@@ -357,6 +359,8 @@ typedef struct {
 #define TOOLBAR_COMBOBOX_DEFAULT_WIDTH_MULT  3  // default combobox width = button_size * this multiplier
 #define TOOLBAR_BUTTON_FLAG_ACTIVE   (1u << 0)
 #define TOOLBAR_BUTTON_FLAG_PRESSED  (1u << 1)
+#define TOOLBAR_STYLE_GRIP           (1u << 1) // draggable grip above a vertical floating toolbar
+#define TOOLBAR_GRIP_HEIGHT          12
 #define TOOLBAR_STYLE_SHOW_LABELS    (1u << 0) // WinAPI-style text below button icons
 #define DROPDOWN_ARROW_W             12          // pixel width of the dropdown arrow zone in TOOLBAR_ITEM_DROPDOWN
 
@@ -375,6 +379,7 @@ typedef enum {
   TOOLBAR_ITEM_SPACER    = 5,  // invisible gap (owner-drawn, no interaction)
   TOOLBAR_ITEM_DROPDOWN  = 6,  // split button: left half fires tbButtonClick, right arrow fires tbDropdown
   TOOLBAR_ITEM_CUSTOM,        // drawn by the owner during tbDrawItem
+  TOOLBAR_ITEM_SLIDER,        // embedded Slider; occupies three icon slots
 } toolbar_item_type_t;
 
 // Descriptor for a single toolbar item (used with tbSetItems).
