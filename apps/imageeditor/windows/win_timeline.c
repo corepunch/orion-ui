@@ -4,7 +4,6 @@
 #define FRAME_ITEM_BASE 0x10000u
 #define FRAME_MAX_VISIBLE 8
 #define FRAME_MARGIN 12
-#define FRAME_COUNTER 0x7000
 
 typedef struct {
   int first_frame, visible_count, screen_w, screen_h;
@@ -15,7 +14,6 @@ typedef struct {
   bool thumbs_dirty, positioned;
   canvas_doc_t *last_doc;
   int last_count;
-  char counter[48];
 } timeline_state_t;
 
 static const toolbar_item_t kTimelineToolbar[] = {
@@ -87,17 +85,9 @@ static void rebuild_thumbnails(timeline_state_t *st) {
   st->thumbs_dirty = false;
 }
 
-static int timeline_counter_width(canvas_doc_t *doc) {
-  char counter[48];
-  int count = doc && doc->anim ? doc->anim->frame_count : 0;
-  int active = count ? doc->anim->active_frame + 1 : 0;
-  snprintf(counter, sizeof(counter), "%d / %d", active, count);
-  return MAX(32, text_strwidth(FONT_SMALL, counter) + 8);
-}
-
-static int timeline_fixed_width(canvas_doc_t *doc) {
+static int timeline_fixed_width(void) {
   return TOOLBAR_GRIP_WIDTH + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH) +
-         7 * (40 + TOOLBAR_SPACING) + 6 + TOOLBAR_SPACING + timeline_counter_width(doc);
+         7 * (40 + TOOLBAR_SPACING) + 6 + TOOLBAR_SPACING;
 }
 
 static void timeline_layout(window_t *win, int width, int height, bool follow) {
@@ -109,7 +99,7 @@ static void timeline_layout(window_t *win, int width, int height, bool follow) {
   st->screen_w = width;
   st->screen_h = height;
   int available = MAX(1, width - APP_TOOLS_W - 2 * FRAME_MARGIN);
-  st->visible_count = MIN(MAX(1, count), CLAMP((available - timeline_fixed_width(doc)) /
+  st->visible_count = MIN(MAX(1, count), CLAMP((available - timeline_fixed_width()) /
                           (TIMELINE_THUMB_W + TOOLBAR_SPACING), 1, FRAME_MAX_VISIBLE));
   st->first_frame = CLAMP(st->first_frame, 0, MAX(0, count - st->visible_count));
   if (follow && count) {
@@ -117,7 +107,7 @@ static void timeline_layout(window_t *win, int width, int height, bool follow) {
     if (active < st->first_frame) st->first_frame = active;
     if (active >= st->first_frame + st->visible_count) st->first_frame = active - st->visible_count + 1;
   }
-  int w = timeline_fixed_width(doc) + st->visible_count * (TIMELINE_THUMB_W + TOOLBAR_SPACING);
+  int w = timeline_fixed_width() + st->visible_count * (TIMELINE_THUMB_W + TOOLBAR_SPACING);
   int x = win->frame.x, y = win->frame.y;
   if (st->positioned && (x != st->last_position.x || y != st->last_position.y)) st->user_placed = true;
   if (!st->user_placed) {
@@ -145,9 +135,6 @@ static void timeline_build_items(window_t *win) {
     items[n++] = (toolbar_item_t){.type = TOOLBAR_ITEM_CUSTOM, .ident = FRAME_ITEM_BASE + i,
       .w = TIMELINE_THUMB_W, .flags = TOOLBAR_ITEM_FLAG_REORDERABLE |
         (i == doc->anim->active_frame ? TOOLBAR_BUTTON_FLAG_ACTIVE : 0), .tooltip = "Select frame; drag to reorder"};
-  snprintf(st->counter, sizeof(st->counter), "%d / %d", count ? doc->anim->active_frame + 1 : 0, count);
-  items[n++] = (toolbar_item_t){.type = TOOLBAR_ITEM_LABEL, .ident = FRAME_COUNTER,
-                                .w = timeline_counter_width(doc), .text = st->counter};
   send_message(win, tbSetItems, n, items);
 }
 

@@ -203,15 +203,19 @@ bool anim_render_frame_thumbnail_scaled(const anim_frame_t *frame,
     IE_TRACE("thumbnail expansion failed size=%dx%d", w, h);
     return false;
   }
-  uint8_t *small = downscale_image_ex(rgba, w, h, target_size,
+  // Keep a little resolution in the cached thumbnail and let the linear
+  // texture sampler perform the final reduction when it is drawn.  This
+  // gives curves and diagonal strokes a second, sub-pixel filtering pass.
+  int render_size = target_size * 2;
+  uint8_t *small = downscale_image_ex(rgba, w, h, render_size,
                                       IMAGE_DOWNSCALE_STROKES | IMAGE_DOWNSCALE_FLIP_Y);
   free(rgba);
   if (!small) return false;
-  uint32_t scaled = R_CreateTextureRGBA(target_size, target_size, small,
+  uint32_t scaled = R_CreateTextureRGBA(render_size, render_size, small,
                                         R_FILTER_LINEAR, R_WRAP_CLAMP);
   image_free(small);
   if (!scaled) {
-    IE_TRACE("thumbnail texture allocation failed target=%d", target_size);
+    IE_TRACE("thumbnail texture allocation failed target=%d", render_size);
     return false;
   }
   if (*tex) R_DeleteTexture(*tex);
