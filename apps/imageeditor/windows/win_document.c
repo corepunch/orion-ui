@@ -86,14 +86,6 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
                               uint32_t wparam, void *lparam) {
   canvas_doc_t *doc = (canvas_doc_t *)win->userdata;
   switch (msg) {
-    case evGetWorkspaceRect:
-#if IMAGEEDITOR_BW
-      *(irect16_t *)lparam = rect_trim_bottom(rect_trim_top(*(irect16_t *)lparam,
-                                             APP_TOOLBAR_Y + APP_TOOLBAR_H), TIMELINE_WIN_H);
-#else
-      *(irect16_t *)lparam = imageeditor_document_workspace_rect();
-#endif
-      return true;
 #ifdef AX_PLATFORM_IOS
     case evDisplayChange: {
       if (doc == g_app->active_doc) imageeditor_layout_ipad_palettes();

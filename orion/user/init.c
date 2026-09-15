@@ -145,6 +145,8 @@ void shutdown_white_texture(void) {
 }
 
 static window_t *g_desktop_window;
+static bool g_desktop_enabled;
+static bool g_syncing_desktop;
 
 window_t *get_desktop_window(void) {
   return g_desktop_window && is_window(g_desktop_window) ? g_desktop_window : NULL;
@@ -168,6 +170,34 @@ static result_t win_desktop(window_t *win, uint32_t msg, uint32_t wparam, void *
   return false;
 }
 
+void sync_desktop_window(void) {
+  if (g_syncing_desktop) return;
+  g_syncing_desktop = true;
+  bool replaced = false;
+  for (window_t *win = g_ui_runtime.windows; win; win = win->next)
+    if (win->maximized && window_has_state(win, WINDOW_STATE_VISIBLE)) replaced = true;
+  if ((!g_desktop_enabled || replaced) && get_desktop_window()) {
+    fprintf(stderr, "[desktop] release win=%u replaced=%d\n", g_desktop_window->id, replaced);
+    fflush(stderr);
+    destroy_window(g_desktop_window);
+  } else if (g_desktop_enabled && !replaced && !get_desktop_window()) {
+    g_desktop_window = create_window("Desktop",
+      WINDOW_NOTITLE | WINDOW_ALWAYSINBACK | WINDOW_NOTRAYBUTTON | WINDOW_NOACTIVATE,
+      MAKERECT(0, 0, ui_get_system_metrics(kSystemMetricScreenWidth),
+                     ui_get_system_metrics(kSystemMetricScreenHeight)), NULL, win_desktop, 0, NULL);
+    fprintf(stderr, "[desktop] recreate win=%p\n", (void *)g_desktop_window);
+    fflush(stderr);
+  }
+  for (window_t *win = g_ui_runtime.windows; win; win = win->next)
+    invalidate_window(win);
+  g_syncing_desktop = false;
+}
+
+void enable_desktop_window(bool enabled) {
+  g_desktop_enabled = enabled;
+  sync_desktop_window();
+}
+
 // Initialize graphics context (platform + OpenGL)
 bool ui_init_graphics(int flags, const char *title, int width, int height) {
   // Guard against double-initialization (e.g. when a gem calls this
@@ -178,7 +208,7 @@ bool ui_init_graphics(int flags, const char *title, int width, int height) {
 
   uint32_t pixel_w = (uint32_t)(width * UI_WINDOW_SCALE);
   uint32_t pixel_h = (uint32_t)(height * UI_WINDOW_SCALE);
-  uint32_t window_flags = ORION_ALLOW_HIGHDPI ? AX_WINDOW_HIGHDPI : 0;
+  uint32_t window_flags = AX_WINDOW_RESIZABLE | (ORION_ALLOW_HIGHDPI ? AX_WINDOW_HIGHDPI : 0);
   if (flags & UI_INIT_HIDDEN) {
     if (!axCreateSurface(pixel_w, pixel_h) &&
         !axCreateWindow(title, pixel_w, pixel_h, window_flags | AX_WINDOW_HIDDEN)) {
@@ -225,18 +255,12 @@ bool ui_init_graphics(int flags, const char *title, int width, int height) {
 
   init_console();
 
-  if (flags & UI_INIT_DESKTOP) {
-    g_desktop_window = create_window("Desktop",
-                                     WINDOW_NOTITLE|WINDOW_ALWAYSINBACK|WINDOW_NOTRAYBUTTON,
-                                     MAKERECT(0, 0, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight)),
-                                     NULL, win_desktop, 0, NULL);
-    if (!g_desktop_window) {
-      fprintf(stderr, "[ui] desktop window could not be created\n");
-      fflush(stderr);
-      ui_shutdown_graphics();
-      return false;
-    }
-    show_window(g_desktop_window, true);
+  enable_desktop_window((flags & UI_INIT_DESKTOP) != 0);
+  if ((flags & UI_INIT_DESKTOP) && !get_desktop_window()) {
+    fprintf(stderr, "[ui] desktop window could not be created\n");
+    fflush(stderr);
+    ui_shutdown_graphics();
+    return false;
   }
 
   if (flags & UI_INIT_TRAY) {
@@ -268,6 +292,7 @@ static void cleanup_all_windows(void) {
 
 // Shutdown graphics context
 void ui_shutdown_graphics(void) {
+  g_desktop_enabled = false;
   g_desktop_window = NULL;
   cleanup_all_windows();
 

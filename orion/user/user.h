@@ -607,6 +607,8 @@ window_t *get_root_window(window_t *window);
 // Framework-owned desktop root created by UI_INIT_DESKTOP, or NULL when the
 // current runtime has no desktop. Desktop icon controls should parent here.
 window_t *get_desktop_window(void);
+void enable_desktop_window(bool enabled);
+void sync_desktop_window(void);
 window_t *find_window(int x, int y);
 window_t *find_default_button(window_t *win);
 bool window_has_focus(const window_t *win);

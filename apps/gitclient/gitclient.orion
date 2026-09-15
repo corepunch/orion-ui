@@ -208,7 +208,6 @@
         <!-- Changes page: file list + inline commit panel on left, diff on right. -->
         <form name="changes_page" width="960" height="600" role="page" auto_layout="1" flags="nofill,flexspace">
             <Toolbar>
-                <Button name="window_mode" command="view.window_mode" icon="lucide-copy" text="Window" tooltip="Maximize / Restore window" />
                 <Button name="sync"        command="remote.sync"        icon="data-transfer-both"  text="Sync"       tooltip="Publish, pull, or push the current branch" />
                 <Button name="fetch"       command="remote.fetch"       icon="git-fetch"           text="Fetch"      tooltip="Fetch from remote" />
                 <spacer />
@@ -249,7 +248,6 @@
         <!-- History page: branches/tags/stash sidebar, log + files + diff. -->
         <form name="history_page" width="960" height="600" role="page" auto_layout="1" flags="nofill,flexspace">
             <Toolbar>
-                <Button name="window_mode" command="view.window_mode" icon="lucide-copy" text="Window" tooltip="Maximize / Restore window" />
                 <Button name="sync"        command="remote.sync"        icon="data-transfer-both"  text="Sync"       tooltip="Publish, pull, or push the current branch" />
                 <Button name="fetch"       command="remote.fetch"       icon="git-fetch"           text="Fetch"      tooltip="Fetch from remote" />
                 <spacer />
@@ -299,7 +297,6 @@
         <!-- GitHub page: issues on top, pull requests on bottom. -->
         <form name="github_page" width="960" height="600" role="page" auto_layout="1" flags="nofill,flexspace">
             <Toolbar>
-                <Button name="window_mode" command="view.window_mode" icon="lucide-copy" text="Window" tooltip="Maximize / Restore window" />
                 <Button name="refresh" command="repo.refresh" icon="refresh" text="Refresh" tooltip="Refresh GitHub data" />
                 <Button name="repos" command="file.repositories" icon="git-repos" text="Repos" tooltip="Switch or discover repositories" />
             </Toolbar>

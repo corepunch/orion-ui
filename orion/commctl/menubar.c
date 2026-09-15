@@ -31,6 +31,7 @@ typedef struct {
   int             *menu_x;      // x offset for each label (window-local)
   window_t        *open_popup;  // currently visible dropdown, or NULL
   int              active_idx;  // index of the currently open menu label (-1 if none)
+  window_t        *restore_pressed;
   accel_table_t   *accel;       // optional accelerator table for hotkey hints (not owned)
 } menubar_data_t;
 
@@ -438,6 +439,20 @@ static void open_popup(window_t *mb_win, menubar_data_t *data, int idx) {
 
 // ---- menu bar proc -------------------------------------------------------
 
+static window_t *menubar_maximized_window(window_t *win) {
+  hinstance_t owner = get_root_window(win)->hinstance;
+  window_t *target = NULL;
+  for (window_t *root = g_ui_runtime.windows; root; root = root->next)
+    if (root->hinstance == owner && root->maximized &&
+        window_has_state(root, WINDOW_STATE_VISIBLE)) target = root;
+  return target;
+}
+
+static irect16_t menubar_restore_rect(window_t *win) {
+  irect16_t client = get_client_rect(win);
+  return rect_split_right(client, client.h);
+}
+
 result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   menubar_data_t *data = (menubar_data_t *)win->userdata;
   switch (msg) {
@@ -476,6 +491,11 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
 
     case evPaint: {
       theme_draw(THEME_PART_MENU_BAR, R(0, 0, win->frame.w, win->frame.h), CTRL_NORMAL);
+      window_t *maximized = menubar_maximized_window(win);
+      irect16_t restore = menubar_restore_rect(win);
+      if (maximized) {
+        draw_theme_icon_in_rect(THEME_ICON_RESTORE, restore, get_sys_color(brTextNormal));
+      }
       if (!data || !data->menus) return true;
       if (data->active_idx >= 0 && data->active_idx < data->count) {
         int i = data->active_idx;
@@ -492,6 +512,7 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
         bool active = (i == data->active_idx);
         int label_w = strwidth(data->menus[i].label) + MENU_LABEL_PAD;
         int label_x0 = data->menu_x[i] - 2;
+        if (maximized && label_x0 + label_w > restore.x) break;
         irect16_t label_rect = {label_x0, 0, label_w, win->frame.h};
         draw_text_small_clipped(data->menus[i].label, &label_rect,
                         theme_foreground(THEME_PART_MENU_ITEM,
@@ -502,6 +523,18 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
     }
 
     case evLeftButtonDown: {
+      if (!data) return true;
+      window_t *target = menubar_maximized_window(win);
+      ipoint16_t point = {(int16_t)LOWORD(wparam), (int16_t)HIWORD(wparam)};
+      if (target && rect_contains_point(menubar_restore_rect(win), point)) {
+        close_popup(win, data);
+        data->restore_pressed = target;
+        fprintf(stderr, "[mb] restore press win=%u target=%u\n", win->id, target->id);
+        fflush(stderr);
+        set_capture(win);
+        invalidate_window(win);
+        return true;
+      }
       if (!data || !data->menus) return true;
       int lx = (int16_t)LOWORD(wparam);
       for (int i = 0; i < data->count; i++) {
@@ -516,6 +549,21 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       }
       // Click outside any label – close any open popup
       close_popup(win, data);
+      return true;
+    }
+
+    case evLeftButtonUp: {
+      if (!data || !data->restore_pressed) return false;
+      window_t *target = data->restore_pressed;
+      data->restore_pressed = NULL;
+      set_capture(NULL);
+      ipoint16_t point = {(int16_t)LOWORD(wparam), (int16_t)HIWORD(wparam)};
+      if (target == menubar_maximized_window(win) && rect_contains_point(menubar_restore_rect(win), point)) {
+        fprintf(stderr, "[mb] restore click win=%u target=%u\n", win->id, target->id);
+        fflush(stderr);
+        restore_window(target);
+      }
+      invalidate_window(win);
       return true;
     }
 

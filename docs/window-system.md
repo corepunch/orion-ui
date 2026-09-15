@@ -221,12 +221,19 @@ The document and its child controls retain their state throughout.
 
 The framework initializes an `irect16_t` to the logical screen bounds and sends
 `evGetWorkspaceRect` with its address in `lparam`. An app can trim this rectangle
-to reserve menus, toolbars, or palettes. Maximized roots automatically recompute
+to reserve menus or docked toolbars. Floating palettes overlay the document;
+avoid reserving unused palette columns when maximized. Maximized roots automatically recompute
 these bounds after `evDisplayChange`. Call `update_maximized_window(win)` when
 workspace reservations change without a display resize.
 
 `win->maximized` exposes the current state. Set `win->maximizable = true`
-to opt into the title-bar maximize button when the app exposes a restore command;
-calling `maximize_window` also opts in. Route a menu or toolbar command to
-`restore_window` when true and `maximize_window` otherwise. This is internal
+to opt into the title-bar maximize button; calling `maximize_window` also opts in.
+The shared menu bar displays a Lucide Restore button at its top-right for the
+topmost visible maximized document belonging to that application. This is internal
 workspace maximization; it does not change the native operating-system window.
+
+While any maximized document is visible, the framework releases the Desktop
+window and its rendering resources. Restoring, hiding, or closing the last visible
+maximized document recreates Desktop when `UI_INIT_DESKTOP` was requested.
+Desktop recreation does not activate it or steal focus. Shutdown disables
+recreation before destroying windows. Apps without Desktop never acquire one.

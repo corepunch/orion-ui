@@ -98,6 +98,11 @@ extern int statusbar_height(window_t const *win);
 
 // Window list management
 void push_window(window_t *win, window_t **windows) {
+  if (!win->parent && (win->flags & WINDOW_ALWAYSINBACK)) {
+    win->next = *windows;
+    *windows = win;
+    return;
+  }
   if (!*windows) {
     *windows = win;
   } else {
@@ -178,7 +183,7 @@ static window_t *alloc_window(char const *title, flags_t flags, irect16_t const 
   // visible_mode == SB_VIS_HIDE and the bars would never appear.
   if (flags & WINDOW_HSCROLL) win->hscroll.visible_mode = SB_VIS_AUTO;
   if (flags & WINDOW_VSCROLL) win->vscroll.visible_mode = SB_VIS_AUTO;
-  g_ui_runtime.focused = win;
+  if (!(flags & WINDOW_NOACTIVATE)) g_ui_runtime.focused = win;
   push_window(win, parent ? &parent->children : &g_ui_runtime.windows);
   return win;
 }
@@ -327,6 +332,7 @@ bool maximize_window(window_t *win) {
   move_window(win, area.x, area.y);
   resize_window(win, area.w, area.h);
   move_to_top(win);
+  sync_desktop_window();
   return true;
 }
 
@@ -350,6 +356,7 @@ bool restore_window(window_t *win) {
   fflush(stderr);
   move_window(win, frame.x, frame.y);
   resize_window(win, frame.w, frame.h);
+  sync_desktop_window();
   return true;
 }
 
@@ -426,6 +433,7 @@ void clear_window_children(window_t *win) {
 
 // Destroy a window
 void destroy_window(window_t *win) {
+  bool was_maximized = win->maximized;
   window_t *root = get_root_window(win);
   invalidate_overlaps(win);
   if (win->role == WINDOW_ROLE_HOST && win->active_page)
@@ -454,6 +462,7 @@ void destroy_window(window_t *win) {
   R_DestroyWindowTarget(&win->surface_fbo, &win->surface_tex,
                         &win->surface_w, &win->surface_h);
   free(win);
+  if (was_maximized) sync_desktop_window();
 
   if (root && root != win && is_window(root) && window_has_state(root, WINDOW_STATE_VISIBLE)) {
     invalidate_window(root);
@@ -1049,6 +1058,7 @@ void show_window(window_t *win, bool visible) {
   }
   window_set_state(win, WINDOW_STATE_VISIBLE, visible);
   post_message(win, evShowWindow, visible, NULL);
+  if (win->maximized) sync_desktop_window();
 }
 
 // Check membership without dereferencing a potentially destroyed pointer.
