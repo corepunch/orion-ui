@@ -85,7 +85,7 @@ typedef struct layout_s {
   uint8_t   h_align;        // horizontal alignment; 0 = stretch
   uint8_t   v_align;        // vertical alignment; 0 = stretch
   uint8_t   layout_spacing;  // spacing between direct children; 0 = default
-  int16_t   layout_fixed_w;  // declarative width hint used by auto-layout
+  int16_t   layout_fixed_w;  // declarative width hint; grid columns: -1 content, 0 stretch
   int16_t   layout_fixed_h;  // declarative height hint used by auto-layout
   irect16_t layout_padding;  // inner padding for auto-layout containers
   irect16_t layout_margin;   // outer margin when nested inside a layout container

@@ -207,9 +207,27 @@ static void test_scrollbar_thickness(void) {
   PASS();
 }
 
+static void test_button_capsules(void) {
+  TEST("Modern button ends follow the full height at desktop and touch sizes");
+  theme_t *theme = paint_modern_instance();
+  const int heights[] = {13, 25, 40};
+  const ctrl_state_t states[] = {CTRL_NORMAL, CTRL_DEFAULT, CTRL_DISABLED, CTRL_HOVER, CTRL_PRESSED};
+  for (int h = 0; h < ARRAY_LEN(heights); h++) {
+    for (int st = 0; st < ARRAY_LEN(states); st++) {
+      memset(pixels, 0, sizeof(pixels));
+      theme->draw_part(THEME_PART_BUTTON, R(10, 10, 100, heights[h]), states[st]);
+      ASSERT_EQUAL(pixels[10][12], 0);
+      ASSERT_TRUE(pixels[10 + heights[h] / 2][10] != 0);
+      ASSERT_TRUE(pixels[10][60] != 0);
+    }
+  }
+  PASS();
+}
+
 int main(void) {
   TEST_START("theme paint output");
   test_modern_surfaces();
+  test_button_capsules();
   test_modern_button_states();
   test_translated_separator();
   test_independent_parts();

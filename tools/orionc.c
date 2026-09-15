@@ -201,6 +201,7 @@ static bool rect_attr(xmlNodePtr n, const char *name, rect_t *r) {
 static rect_t size_attr(xmlNodePtr n) {
   char *w = attrs_first(n, "w", "width"), *h = attrs_first(n, "h", "height");
   rect_t r = {0, 0, w ? atoi(w) : 0, h ? atoi(h) : 0};
+  if (elem(n, "Column") && eq(w, "auto")) r.w = -1;
   free(w); free(h);
   return r;
 }

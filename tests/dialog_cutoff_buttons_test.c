@@ -165,9 +165,43 @@ void test_dialog_grid_buttons_not_cutoff(void) {
   PASS();
 }
 
+static result_t intrinsic_cell_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  if (msg == evMeasure) {
+    layout_measure_t *m = lparam;
+    m->desired_w = 61;
+    m->desired_h = m->avail_w < 61 ? 28 : 14;
+    return true;
+  }
+  return msg == evCreate || msg == evPaint || msg == evDestroy;
+}
+
+static void test_content_column_width(void) {
+  TEST("grid: content column fits label and leaves remaining width for inputs");
+  test_env_init();
+  window_t *grid = create_window("", WINDOW_NOTITLE, MAKERECT(0, 0, 240, 80),
+                                 NULL, win_grid, 0, NULL);
+  window_t *labels = create_window("", 0, MAKERECT(0, 0, -1, 0), grid, win_column, 0, NULL);
+  window_t *inputs = create_window("", 0, MAKERECT(0, 0, 0, 0), grid, win_column, 0, NULL);
+  window_t *label = create_window("Height:", 0, MAKERECT(0, 0, 0, 0), labels, intrinsic_cell_proc, 0, NULL);
+  grid->layout.layout_spacing = 4;
+  window_layout_sync(grid);
+  ASSERT_EQUAL(labels->frame.w, 61);
+  ASSERT_EQUAL(label->frame.w, 61);
+  ASSERT_EQUAL(label->frame.h, 14);
+  ASSERT_EQUAL(inputs->frame.w, 175);
+  resize_window(grid, 300, 80);
+  window_layout_sync(grid);
+  ASSERT_EQUAL(labels->frame.w, 61);
+  ASSERT_EQUAL(inputs->frame.w, 235);
+  destroy_window(grid);
+  test_env_shutdown();
+  PASS();
+}
+
 int main(int argc, char *argv[]) {
   (void)argc; (void)argv;
   TEST_START("dialog layout: buttons not cut off by grid");
   test_dialog_grid_buttons_not_cutoff();
+  test_content_column_width();
   TEST_END();
 }

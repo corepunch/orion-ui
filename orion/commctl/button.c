@@ -37,13 +37,13 @@ static void autoradio_select(window_t *win) {
 result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
     case evCreate:
-      win->frame.w = MAX(win->frame.w, strwidth(win->title) + BUTTON_PADDING * 2);
+      win->frame.w = MAX(win->frame.w, strwidth(win->title) + MAX(BUTTON_PADDING, (control_predefined_height(win->flags) + 1) / 2) * 2);
       control_apply_predefined_height(win, "button");
       return true;
     case evMeasure: {
       layout_measure_t *m = (layout_measure_t *)lparam;
       if (m) {
-        m->desired_w = MAX(win->frame.w, strwidth(win->title) + BUTTON_PADDING * 2);
+        m->desired_w = MAX(win->frame.w, strwidth(win->title) + MAX(BUTTON_PADDING, (control_predefined_height(win->flags) + 1) / 2) * 2);
         m->desired_h = control_predefined_height(win->flags);
       }
       return true;

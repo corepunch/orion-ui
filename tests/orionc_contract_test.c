@@ -201,12 +201,26 @@ void test_application_toolbar_declaration(void) {
   ASSERT_TRUE(contains(out, "TOOLBAR_PRESENTATION_NORMAL"));
   PASS();
 }
+static void test_content_column_width(void) {
+  TEST("orionc: auto column width preserves intrinsic sizing");
+  char out[12000] = {0};
+  const char *fixture = "<orion><forms><form name=\"resize\" width=\"210\"><GridView name=\"fields\">"
+    "<Column name=\"labels\" width=\"auto\"><Label text=\"Height:\" /></Column>"
+    "<Column name=\"inputs\"><TextBox name=\"height\" /></Column>"
+    "</GridView></form></forms></orion>";
+  ASSERT_EQUAL(run_orionc(fixture, "content_column", out, sizeof(out)), 0);
+  ASSERT_TRUE(contains(out, "ID_RESIZE_LABELS, { -1, 0 }"));
+  ASSERT_TRUE(contains(out, "ID_RESIZE_INPUTS, { 0, 0 }"));
+  PASS();
+}
+
 #endif
 
 int main(void) {
     TEST_START("orionc generator contract");
 #if !defined(_WIN32)
     test_valid_manifest_accepted();
+    test_content_column_width();
     test_application_toolbar_declaration();
     test_top_level_toolbars_rejected();
     test_toolbar_reference_rejected();

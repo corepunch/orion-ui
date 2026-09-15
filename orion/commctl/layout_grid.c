@@ -48,13 +48,13 @@ void layout_grid_measure_window(window_t *win, layout_measure_t *m) {
       col_w[col] = column->layout.layout_fixed_w;
       col_auto[col] = false;
     } else {
-      col_auto[col] = true;
+      col_auto[col] = !column || column->layout.layout_fixed_w == 0;
     }
     for (int row = 0; row < row_count; row++) {
       window_t *cell = layout_child_at(column, row);
       if (!cell) continue;
       layout_measure_t cm = layout_measure_child(cell, content_w, content_h);
-      if (col_auto[col] && cm.desired_w > col_w[col]) col_w[col] = cm.desired_w;
+      if ((col_auto[col] || column->layout.layout_fixed_w < 0) && cm.desired_w > col_w[col]) col_w[col] = cm.desired_w;
     }
   }
   int total_fixed_w = 0;
@@ -170,13 +170,13 @@ void layout_grid_arrange_window(window_t *win, const irect16_t *rect) {
       col_w[col] = column->layout.layout_fixed_w;
       col_auto[col] = false;
     } else {
-      col_auto[col] = true;
+      col_auto[col] = !column || column->layout.layout_fixed_w == 0;
     }
     for (int row = 0; row < row_count; row++) {
       window_t *cell = layout_child_at(column, row);
       if (!cell) continue;
       layout_measure_t cm = layout_measure_child(cell, content.w, content.h);
-      if (col_auto[col] && cm.desired_w > col_w[col]) col_w[col] = cm.desired_w;
+      if ((col_auto[col] || column->layout.layout_fixed_w < 0) && cm.desired_w > col_w[col]) col_w[col] = cm.desired_w;
     }
   }
   int total_fixed = 0;

@@ -192,7 +192,7 @@
     <forms>
       <form name="new_image" title="New Image" width="180" spacing="8" padding="8">
         <GridView name="fields" spacing="4">
-          <Column name="labels" width="48">
+          <Column name="labels" width="auto">
             <Label name="lbl_width" text="Width:" />
             <Label name="lbl_height" text="Height:" />
           </Column>
@@ -211,7 +211,7 @@
 
       <form name="image_resize" title="Image Size" width="210" spacing="8" padding="8">
         <GridView name="fields" spacing="4">
-          <Column name="labels" width="48">
+          <Column name="labels" width="auto">
             <Label name="lbl_width" text="Width:" />
             <Label name="lbl_height" text="Height:" />
             <Label name="lbl_filter" text="Filter:" />
@@ -232,7 +232,7 @@
 
       <form name="grid_options" title="Grid Options" width="180" spacing="8" padding="8">
         <GridView name="fields" spacing="4">
-          <Column name="labels" width="48">
+          <Column name="labels" width="auto">
             <Label name="lbl_width" text="Width:" />
             <Label name="lbl_height" text="Height:" />
           </Column>

@@ -14,7 +14,7 @@
 
 // Radius constants (logical pixels).
 #define RADIUS_TOOLBAR_ITEM  4
-#define RADIUS_BUTTON        6
+#define RADIUS_BUTTON        ((BUTTON_HEIGHT + 1) / 2)
 #define RADIUS_FIELD         8
 #define RADIUS_MENU_ITEM     6
 #define MODERN_LIST_INSET_X  4
@@ -26,15 +26,16 @@
 // ── Buttons ──────────────────────────────────────────────────────────────────
 
 static void modern_draw_button_bg(irect16_t r, ctrl_state_t state) {
+  int radius = (MIN(r.w, r.h) + 1) / 2;
   if (state & CTRL_DISABLED) {
-    fill_rounded_rect(get_sys_color(brWindowDarkBg), r, RADIUS_BUTTON);
+    fill_rounded_rect(get_sys_color(brWindowDarkBg), r, radius);
     return;
   }
 
   if (state & CTRL_DEFAULT) {
     // Primary button shares the active-state accent.
     uint32_t fill = get_sys_color(brAccent);
-    fill_rounded_rect(fill, r, RADIUS_BUTTON);
+    fill_rounded_rect(fill, r, radius);
     return;
   }
 
@@ -44,13 +45,13 @@ static void modern_draw_button_bg(irect16_t r, ctrl_state_t state) {
                                            : MODERN_SECONDARY_BORDER;
 
   // Cover the interior after drawing the border.
-  fill_rounded_rect(border, r, RADIUS_BUTTON);
+  fill_rounded_rect(border, r, radius);
   if (state & (CTRL_PRESSED | CTRL_SELECTED)) {
-    fill_rounded_rect(get_sys_color(brButtonHover), rect_inset(r, 1), RADIUS_BUTTON - 1);
+    fill_rounded_rect(get_sys_color(brButtonHover), rect_inset(r, 1), radius - 1);
   } else if (state & CTRL_HOVER) {
-    fill_rounded_rect(get_sys_color(brButtonInner), rect_inset(r, 1), RADIUS_BUTTON - 1);
+    fill_rounded_rect(get_sys_color(brButtonInner), rect_inset(r, 1), radius - 1);
   } else {
-    fill_rounded_rect(get_sys_color(brControlBg), rect_inset(r, 1), RADIUS_BUTTON - 1);
+    fill_rounded_rect(get_sys_color(brControlBg), rect_inset(r, 1), radius - 1);
   }
 }
 

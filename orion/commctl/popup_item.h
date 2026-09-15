@@ -5,7 +5,8 @@
 #include <orion/user/theme.h>
 #include <string.h>
 
-#define POPUP_ITEM_HEIGHT CONTROL_HEIGHT_REGULAR
+// Popup rows grow at half the rate of regular controls above desktop size.
+#define POPUP_ITEM_HEIGHT (25 + (CONTROL_HEIGHT_REGULAR - 25 + 1) / 2)
 
 static inline void popup_item_paint(irect16_t row, const char *text, ctrl_state_t state) {
   theme_draw(THEME_PART_MENU_ITEM, rect_inset_xy(row, 1, 0), state);
