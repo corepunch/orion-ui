@@ -483,6 +483,8 @@ void canvas_composite_over_bg(const canvas_doc_t *doc, uint8_t *rgba);
 
 // Forward declarations for canvas operations
 void canvas_set_pixel(canvas_doc_t *doc, int x, int y, uint32_t c);
+void canvas_draw_pen(canvas_doc_t *doc, int x, int y, uint32_t c);
+void canvas_draw_pen_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1, uint32_t c);
 uint32_t canvas_get_pixel(const canvas_doc_t *doc, int x, int y);
 void canvas_clear(canvas_doc_t *doc);
 void canvas_upload(canvas_doc_t *doc);
@@ -514,6 +516,10 @@ void canvas_draw_rounded_rect_outline(canvas_doc_t *doc, int x, int y, int w, in
 void canvas_draw_rounded_rect_filled(canvas_doc_t *doc, int x, int y, int w, int h, int r, uint32_t outline, uint32_t fill);
 void canvas_draw_polygon_outline(canvas_doc_t *doc, const ipoint16_t *pts, int count, uint32_t c);
 void canvas_draw_polygon_filled(canvas_doc_t *doc, const ipoint16_t *pts, int count, uint32_t outline, uint32_t fill);
+void canvas_draw_rect_scaled(canvas_doc_t *doc, int x, int y, int w, int h, bool filled, uint32_t outline, uint32_t fill);
+void canvas_draw_ellipse_scaled(canvas_doc_t *doc, int cx, int cy, int rx, int ry, bool filled, uint32_t outline, uint32_t fill);
+void canvas_draw_rounded_rect_scaled(canvas_doc_t *doc, int x, int y, int w, int h, int r, bool filled, uint32_t outline, uint32_t fill);
+void canvas_draw_polygon_scaled(canvas_doc_t *doc, const ipoint16_t *pts, int count, bool filled, uint32_t outline, uint32_t fill);
 bool canvas_is_shape_tool(int tool_id);
 void canvas_constrain_tool_drag(int tool_id, uint32_t mods,
                                 int x0, int y0, int *x1, int *y1);

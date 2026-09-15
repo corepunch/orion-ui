@@ -104,29 +104,27 @@ void canvas_shape_preview(canvas_doc_t *doc, int x0, int y0, int x1, int y1,
     memcpy(doc->pixels, doc->shape.snapshot, (size_t)doc->canvas_w * doc->canvas_h * DOC_BPP);
     doc->canvas_dirty = true;
   }
+  int step = MAX(1, g_bw_retina_scale);
   canvas_constrain_tool_drag(tool, shift_held ? AX_MOD_SHIFT : 0, x0, y0, &x1, &y1);
   int half_w = abs(x1 - x0), half_h = abs(y1 - y0);
   int lx = x0 - half_w, rx = x0 + half_w;
   int ty = y0 - half_h, by = y0 + half_h;
   int w = rx - lx + 1, h = by - ty + 1;
   int rxa = half_w, rya = half_h;
-  int corner_r = MIN(8, MIN(w / 4, h / 4));
+  int corner_r = MIN(8 * step, MIN(w / 4, h / 4));
 
   switch (tool) {
     case ID_TOOL_LINE:
-      canvas_draw_line(doc, x0, y0, x1, y1, 0, fg);
+      canvas_draw_pen_line(doc, x0, y0, x1, y1, fg);
       break;
     case ID_TOOL_RECT:
-      if (filled) canvas_draw_rect_filled(doc, lx, ty, w, h, fg, bg);
-      else        canvas_draw_rect_outline(doc, lx, ty, w, h, fg);
+      canvas_draw_rect_scaled(doc, lx, ty, w, h, filled, fg, bg);
       break;
     case ID_TOOL_ELLIPSE:
-      if (filled) canvas_draw_ellipse_filled(doc, x0, y0, rxa, rya, fg, bg);
-      else        canvas_draw_ellipse_outline(doc, x0, y0, rxa, rya, fg);
+      canvas_draw_ellipse_scaled(doc, x0, y0, rxa, rya, filled, fg, bg);
       break;
     case ID_TOOL_ROUNDED_RECT:
-      if (filled) canvas_draw_rounded_rect_filled(doc, lx, ty, w, h, corner_r, fg, bg);
-      else        canvas_draw_rounded_rect_outline(doc, lx, ty, w, h, corner_r, fg);
+      canvas_draw_rounded_rect_scaled(doc, lx, ty, w, h, corner_r, filled, fg, bg);
       break;
   }
 }

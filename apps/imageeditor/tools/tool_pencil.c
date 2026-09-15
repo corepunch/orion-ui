@@ -18,14 +18,14 @@ static void pencil_begin(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t
   ie_doc_begin_op(doc, "Pencil Stroke");
   doc->last.x = doc_pt.x;
   doc->last.y = doc_pt.y;
-  canvas_set_pixel(doc, doc_pt.x, doc_pt.y, g_app->fg_color);
+  canvas_draw_pen(doc, doc_pt.x, doc_pt.y, g_app->fg_color);
   ie_doc_invalidate_canvas(doc);
 }
 
 static void pencil_drag(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t doc_pt) {
   (void)view;
   // Draw line from last position to current
-  canvas_draw_line(doc, doc->last.x, doc->last.y, doc_pt.x, doc_pt.y, 0, g_app->fg_color);
+  canvas_draw_pen_line(doc, doc->last.x, doc->last.y, doc_pt.x, doc_pt.y, g_app->fg_color);
   doc->last.x = doc_pt.x;
   doc->last.y = doc_pt.y;
   ie_doc_invalidate_canvas(doc);

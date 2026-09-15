@@ -64,6 +64,33 @@ void canvas_set_pixel(canvas_doc_t *doc, int x, int y, uint32_t c) {
   doc->modified     = true;
 }
 
+// Diameter scales with density; positions remain in backing pixels.
+void canvas_draw_pen(canvas_doc_t *doc, int x, int y, uint32_t c) {
+  int diameter = MAX(1, g_bw_retina_scale);
+  int offset = (diameter - 1) / 2;
+  for (int dy = 0; dy < diameter; dy++) {
+    for (int dx = 0; dx < diameter; dx++) {
+      int cx = 2 * dx + 1 - diameter, cy = 2 * dy + 1 - diameter;
+      if (cx * cx + cy * cy <= diameter * diameter)
+        canvas_set_pixel(doc, x + dx - offset, y + dy - offset, c);
+    }
+  }
+}
+
+void canvas_draw_pen_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1,
+                          uint32_t c) {
+  int dx = abs(x1 - x0), dy = abs(y1 - y0);
+  int sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+  int err = dx - dy;
+  while (true) {
+    canvas_draw_pen(doc, x0, y0, c);
+    if (x0 == x1 && y0 == y1) break;
+    int e2 = 2 * err;
+    if (e2 > -dy) { err -= dy; x0 += sx; }
+    if (e2 <  dx) { err += dx; y0 += sy; }
+  }
+}
+
 void canvas_clear(canvas_doc_t *doc) {
   memset(doc->pixels, 0x00, (size_t)doc->canvas_w * doc->canvas_h * DOC_BPP);
   doc->canvas_dirty = true;
@@ -297,4 +324,111 @@ void canvas_draw_polygon_filled(canvas_doc_t *doc, const ipoint16_t *pts, int co
   }
   free(xs);
   canvas_draw_polygon_outline(doc, pts, count, outline);
+}
+
+// Shape geometry and scan conversion use backing-pixel coordinates.
+static int shape_scale(void) { return MAX(1, g_bw_retina_scale); }
+static void shape_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1, uint32_t c) {
+  canvas_draw_pen_line(doc, x0, y0, x1, y1, c);
+}
+static void shape_pixel(canvas_doc_t *doc, int x, int y, uint32_t c) {
+  canvas_draw_pen(doc, x, y, c);
+}
+
+void canvas_draw_rect_scaled(canvas_doc_t *doc, int x, int y, int w, int h,
+                             bool filled, uint32_t outline, uint32_t fill) {
+  if (shape_scale() == 1) {
+    if (filled) canvas_draw_rect_filled(doc, x, y, w, h, outline, fill);
+    else        canvas_draw_rect_outline(doc, x, y, w, h, outline);
+    return;
+  }
+  if (w <= 0 || h <= 0) return;
+  if (filled) canvas_draw_rect_filled(doc, x, y, w, h, fill, fill);
+  shape_line(doc, x, y, x + w - 1, y, outline);
+  shape_line(doc, x, y + h - 1, x + w - 1, y + h - 1, outline);
+  shape_line(doc, x, y, x, y + h - 1, outline);
+  shape_line(doc, x + w - 1, y, x + w - 1, y + h - 1, outline);
+}
+
+void canvas_draw_ellipse_scaled(canvas_doc_t *doc, int cx, int cy, int rx, int ry,
+                                bool filled, uint32_t outline, uint32_t fill) {
+  if (shape_scale() == 1) {
+    if (filled) canvas_draw_ellipse_filled(doc, cx, cy, rx, ry, outline, fill);
+    else        canvas_draw_ellipse_outline(doc, cx, cy, rx, ry, outline);
+    return;
+  }
+  if (rx <= 0 || ry <= 0) return;
+  if (filled) canvas_draw_ellipse_filled(doc, cx, cy, rx, ry, fill, fill);
+  long rx2 = (long)rx * rx, ry2 = (long)ry * ry;
+  long x = 0, y = ry, dx = 2 * ry2 * x, dy = 2 * rx2 * y;
+  long p = (long)(ry2 - rx2 * ry + 0.25f * rx2);
+  while (dx < dy) {
+    shape_pixel(doc, cx + x, cy + y, outline); shape_pixel(doc, cx - x, cy + y, outline);
+    shape_pixel(doc, cx + x, cy - y, outline); shape_pixel(doc, cx - x, cy - y, outline);
+    x++; dx += 2 * ry2;
+    if (p < 0) p += ry2 + dx;
+    else { y--; dy -= 2 * rx2; p += ry2 + dx - dy; }
+  }
+  p = (long)(ry2 * (x + 0.5f) * (x + 0.5f) + rx2 * (y - 1) * (y - 1) - rx2 * ry2);
+  while (y >= 0) {
+    shape_pixel(doc, cx + x, cy + y, outline); shape_pixel(doc, cx - x, cy + y, outline);
+    shape_pixel(doc, cx + x, cy - y, outline); shape_pixel(doc, cx - x, cy - y, outline);
+    y--; dy -= 2 * rx2;
+    if (p > 0) p += rx2 - dy;
+    else { x++; dx += 2 * ry2; p += rx2 - dy + dx; }
+  }
+}
+
+void canvas_draw_rounded_rect_scaled(canvas_doc_t *doc, int x, int y, int w, int h, int r,
+                                     bool filled, uint32_t outline, uint32_t fill) {
+  if (shape_scale() == 1) {
+    if (filled) canvas_draw_rounded_rect_filled(doc, x, y, w, h, r, outline, fill);
+    else        canvas_draw_rounded_rect_outline(doc, x, y, w, h, r, outline);
+    return;
+  }
+  if (w <= 0 || h <= 0) return;
+  r = MIN(MAX(r, 0), MIN(w / 2, h / 2));
+  if (filled) canvas_draw_rounded_rect_filled(doc, x, y, w, h, r, fill, fill);
+  shape_line(doc, x + r, y, x + w - r - 1, y, outline);
+  shape_line(doc, x + r, y + h - 1, x + w - r - 1, y + h - 1, outline);
+  shape_line(doc, x, y + r, x, y + h - r - 1, outline);
+  shape_line(doc, x + w - 1, y + r, x + w - 1, y + h - r - 1, outline);
+  int px = 0, py = r, d = 3 - 2 * r;
+  while (px <= py) {
+    shape_pixel(doc, x + r - px, y + r - py, outline); shape_pixel(doc, x + w - r + px - 1, y + r - py, outline);
+    shape_pixel(doc, x + r - py, y + r - px, outline); shape_pixel(doc, x + w - r + py - 1, y + r - px, outline);
+    shape_pixel(doc, x + r - px, y + h - r + py - 1, outline); shape_pixel(doc, x + w - r + px - 1, y + h - r + py - 1, outline);
+    shape_pixel(doc, x + r - py, y + h - r + px - 1, outline); shape_pixel(doc, x + w - r + py - 1, y + h - r + px - 1, outline);
+    if (d < 0) d += 4 * px + 6; else { d += 4 * (px - py) + 10; py--; }
+    px++;
+  }
+}
+
+void canvas_draw_polygon_scaled(canvas_doc_t *doc, const ipoint16_t *pts, int count,
+                                bool filled, uint32_t outline, uint32_t fill) {
+  if (shape_scale() == 1) {
+    if (filled) canvas_draw_polygon_filled(doc, pts, count, outline, fill);
+    else        canvas_draw_polygon_outline(doc, pts, count, outline);
+    return;
+  }
+  if (count < 3) { for (int i = 0; i + 1 < count; i++) shape_line(doc, pts[i].x, pts[i].y, pts[i+1].x, pts[i+1].y, outline); return; }
+  if (filled) {
+    int y_min = pts[0].y, y_max = pts[0].y;
+    for (int i = 1; i < count; i++) { y_min = MIN(y_min, pts[i].y); y_max = MAX(y_max, pts[i].y); }
+    int *xs = malloc(sizeof(int) * count * 2);
+    if (xs) {
+      for (int y = MAX(y_min, 0); y <= MIN(y_max, doc->canvas_h - 1); y++) {
+        int n = 0;
+        for (int i = 0, j = count - 1; i < count; j = i++) {
+          if ((pts[i].y <= y && pts[j].y > y) || (pts[j].y <= y && pts[i].y > y))
+            xs[n++] = pts[i].x + (y - pts[i].y) * (pts[j].x - pts[i].x) / (pts[j].y - pts[i].y);
+        }
+        for (int a = 0; a < n - 1; a++) for (int b = a + 1; b < n; b++) if (xs[a] > xs[b]) { int t = xs[a]; xs[a] = xs[b]; xs[b] = t; }
+        for (int a = 0; a + 1 < n; a += 2) canvas_draw_line(doc, xs[a], y, xs[a+1], y, 0, fill);
+      }
+      free(xs);
+    }
+  }
+  for (int i = 0; i < count - 1; i++) shape_line(doc, pts[i].x, pts[i].y, pts[i+1].x, pts[i+1].y, outline);
+  shape_line(doc, pts[count-1].x, pts[count-1].y, pts[0].x, pts[0].y, outline);
 }

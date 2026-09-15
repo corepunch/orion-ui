@@ -64,15 +64,15 @@ static int canvas_doc_origin_y(window_t *win, canvas_win_state_t *state) {
 
 static int canvas_view_axis_to_doc(int view_px, int origin_px, float scale) {
   if (scale <= 0.0f) return 0;
-  return (int)floorf((float)(view_px - origin_px) / scale);
+  return (int)floorf((float)(view_px - origin_px) * g_bw_retina_scale / scale);
 }
 
 static ipoint16_t _canvas_view_to_doc_point(window_t *win,
                                              canvas_win_state_t *state,
                                              int view_x, int view_y) {
   ipoint16_t pt;
-  pt.x = canvas_view_axis_to_doc(view_x, canvas_doc_origin_x(win, state), state->scale) * g_bw_retina_scale;
-  pt.y = canvas_view_axis_to_doc(view_y, canvas_doc_origin_y(win, state), state->scale) * g_bw_retina_scale;
+  pt.x = canvas_view_axis_to_doc(view_x, canvas_doc_origin_x(win, state), state->scale);
+  pt.y = canvas_view_axis_to_doc(view_y, canvas_doc_origin_y(win, state), state->scale);
   return pt;
 }
 
@@ -80,8 +80,8 @@ static ipoint16_t _canvas_doc_to_view_point(window_t *win,
                                              canvas_win_state_t *state,
                                              int doc_x, int doc_y) {
   ipoint16_t pt;
-  pt.x = canvas_doc_origin_x(win, state) + scaled_px(doc_x / g_bw_retina_scale, state->scale);
-  pt.y = canvas_doc_origin_y(win, state) + scaled_px(doc_y / g_bw_retina_scale, state->scale);
+  pt.x = canvas_doc_origin_x(win, state) + scaled_px(doc_x, state->scale / g_bw_retina_scale);
+  pt.y = canvas_doc_origin_y(win, state) + scaled_px(doc_y, state->scale / g_bw_retina_scale);
   return pt;
 }
 
@@ -953,7 +953,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       switch (tool) {
         case ID_TOOL_PENCIL:
-          canvas_draw_circle(doc, px, py, 0, g_app->fg_color);
+          canvas_draw_pen(doc, px, py, g_app->fg_color);
           break;
         case ID_TOOL_BRUSH:
           canvas_draw_circle(doc, px, py, brush_radius(), g_app->fg_color);
@@ -1047,9 +1047,11 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         return true;
       } else if (g_app->current_tool == ID_TOOL_POLYGON && doc->poly.active && doc->poly.count >= 2) {
         if (g_app->shape_filled)
-          canvas_draw_polygon_filled(doc, doc->poly.pts, doc->poly.count, g_app->fg_color, g_app->bg_color);
+          canvas_draw_polygon_scaled(doc, doc->poly.pts, doc->poly.count, true,
+                                     g_app->fg_color, g_app->bg_color);
         else
-          canvas_draw_polygon_outline(doc, doc->poly.pts, doc->poly.count, g_app->fg_color);
+          canvas_draw_polygon_scaled(doc, doc->poly.pts, doc->poly.count, false,
+                                     g_app->fg_color, g_app->bg_color);
         // Fix up undo: undo_states[top] was pushed with pre-draw pixels from shape_begin.
         // After drawing, swap undo entry (pre-draw) with shape_snapshot (drawn) to align them.
         // Actually the undo was already pushed correctly on first click via doc_push_undo
@@ -1144,7 +1146,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       switch (tool) {
         case ID_TOOL_PENCIL:
-          canvas_draw_line(doc, doc->last.x, doc->last.y, px, py, 0, g_app->fg_color);
+          canvas_draw_pen_line(doc, doc->last.x, doc->last.y, px, py, g_app->fg_color);
           break;
         case ID_TOOL_BRUSH:
           canvas_draw_line(doc, doc->last.x, doc->last.y, px, py,
