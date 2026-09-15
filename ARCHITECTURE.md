@@ -90,7 +90,8 @@ approximation; no blur texture or additional framebuffer is allocated. Theme
 fields `window_shadow_blur`, `window_shadow_offset`, and `window_shadow_color`
 control the default appearance. Zero blur disables the shadow.
 Transparent roots (`WINDOW_TRANSPARENT`), such as the workspace-sized application
-chrome host, do not cast rectangular shadows through their empty content.
+chrome host, have no compositor corner mask or shadow. Their children define
+their visible shapes; the native OS owns the application's outer window shape.
 
 Maximized window geometry is framework-owned. The application chrome publishes
 the client rectangle remaining after its menu and docked top/left toolbars, and

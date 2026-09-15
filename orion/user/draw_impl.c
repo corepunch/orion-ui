@@ -414,7 +414,7 @@ void composite_root_windows(void) {
 
     // Clamp radius to half the smallest dimension (in physical pixels).
     int max_r = w->surface_w < w->surface_h ? w->surface_w / 2 : w->surface_h / 2;
-    float radius = w->maximized ? 0.0f : base_radius;
+    float radius = (w->maximized || (w->flags & WINDOW_TRANSPARENT)) ? 0.0f : base_radius;
     if (radius > max_r) radius = (float)max_r;
 
     if (!w->maximized && !(w->flags & WINDOW_TRANSPARENT))
