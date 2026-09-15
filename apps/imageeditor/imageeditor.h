@@ -292,6 +292,13 @@ typedef struct canvas_doc_s {
     uint8_t    *snapshot;  // pixel backup taken when shape drag starts
     ipoint16_t  start;     // canvas coords where the shape drag began
   } shape;
+  struct {
+    bool active, soft;
+    int radius;
+    uint32_t color;
+    ipoint16_t sample, stamp;
+    float x, y;  // Last curve endpoint, retaining half-pixel midpoints.
+  } stroke;
   // Polygon tool in-progress vertices
   struct {
     ipoint16_t  pts[MAX_POLY_POINTS];
@@ -502,6 +509,10 @@ void canvas_draw_circle(canvas_doc_t *doc, int cx, int cy, int r, uint32_t c);
 void canvas_draw_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1, int radius, uint32_t c);
 void canvas_draw_soft_circle(canvas_doc_t *doc, int cx, int cy, int r, uint32_t c);
 void canvas_draw_soft_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1, int radius, uint32_t c);
+void canvas_stroke_begin(canvas_doc_t *doc, ipoint16_t point, int radius, uint32_t color, bool soft);
+void canvas_stroke_drag(canvas_doc_t *doc, ipoint16_t point);
+void canvas_stroke_end(canvas_doc_t *doc, ipoint16_t point);
+void canvas_stroke_cancel(canvas_doc_t *doc);
 void canvas_draw_scaled_circle(canvas_doc_t *doc, int cx, int cy, int logical_radius, uint32_t c);
 void canvas_draw_scaled_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1, int logical_radius, uint32_t c);
 void canvas_draw_scaled_soft_circle(canvas_doc_t *doc, int cx, int cy, int logical_radius, uint32_t c);

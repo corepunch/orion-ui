@@ -14,38 +14,35 @@ static int pencil_radius(void) {
 
 // ── Pencil tool lifecycle ──────────────────────────────────────────────────
 
-// Pencil tool:  Simple pixel-by-pixel drawing.
+// Pencil tool: rounded freehand strokes.
 // - begin(): Push undo, start stroke
-// - drag():  Draw line from last position to current
+// - drag():  Extend the smoothed stroke
 // - end():   Finish stroke
 // - cancel(): Handled by default undo discard
 
 static void pencil_begin(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t doc_pt) {
   (void)view;
   ie_doc_begin_op(doc, "Pencil Stroke");
-  doc->last.x = doc_pt.x;
-  doc->last.y = doc_pt.y;
-  canvas_draw_scaled_circle(doc, doc_pt.x, doc_pt.y, pencil_radius(), g_app->fg_color);
+  canvas_stroke_begin(doc, doc_pt, pencil_radius(), g_app->fg_color, false);
   ie_doc_invalidate_canvas(doc);
 }
 
 static void pencil_drag(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t doc_pt) {
   (void)view;
-  // Draw line from last position to current
-  canvas_draw_scaled_line(doc, doc->last.x, doc->last.y, doc_pt.x, doc_pt.y,
-                          pencil_radius(), g_app->fg_color);
-  doc->last.x = doc_pt.x;
-  doc->last.y = doc_pt.y;
+  canvas_stroke_drag(doc, doc_pt);
   ie_doc_invalidate_canvas(doc);
 }
 
 static void pencil_end(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t doc_pt) {
-  (void)view; (void)doc_pt;
+  (void)view;
+  canvas_stroke_end(doc, doc_pt);
+  ie_doc_invalidate_canvas(doc);
   ie_doc_commit_op(doc, true);
 }
 
 static void pencil_cancel(canvas_doc_t *doc, canvas_win_state_t *view) {
   (void)view;
+  canvas_stroke_cancel(doc);
   ie_doc_commit_op(doc, false);  // Discard undo
 }
 

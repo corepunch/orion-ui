@@ -23,28 +23,26 @@ static uint32_t erase_color(canvas_doc_t *doc) {
 static void eraser_begin(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t doc_pt) {
   if (!doc) return;
   ie_doc_begin_op(doc, "Erase");
-  doc->last = doc_pt;
-  canvas_draw_scaled_circle(doc, doc_pt.x, doc_pt.y,
-                            eraser_brush_radius(), erase_color(doc));
+  canvas_stroke_begin(doc, doc_pt, eraser_brush_radius(), erase_color(doc), false);
   ie_doc_after_pixels_changed(doc);
 }
 
 static void eraser_drag(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t doc_pt) {
-  if (!doc) return;
-  if (doc_pt.x == doc->last.x && doc_pt.y == doc->last.y) return;
-  canvas_draw_scaled_line(doc, doc->last.x, doc->last.y, doc_pt.x, doc_pt.y,
-                          eraser_brush_radius(), erase_color(doc));
-  doc->last = doc_pt;
+  (void)view;
+  canvas_stroke_drag(doc, doc_pt);
   ie_doc_after_pixels_changed(doc);
 }
 
 static void eraser_end(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t doc_pt) {
   if (!doc) return;
+  canvas_stroke_end(doc, doc_pt);
+  ie_doc_invalidate_canvas(doc);
   ie_doc_commit_op(doc, true);
 }
 
 static void eraser_cancel(canvas_doc_t *doc, canvas_win_state_t *view) {
   if (!doc) return;
+  canvas_stroke_cancel(doc);
   ie_doc_commit_op(doc, false);
 }
 

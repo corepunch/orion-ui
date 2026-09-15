@@ -612,6 +612,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
     case evPointerCancel: {
       if (!state || !doc || !g_app) return false;
       state->pan.active = false;
+      canvas_stroke_cancel(doc);
       if (doc->drawing) {
         if (canvas_is_shape_tool(g_app->current_tool)) {
           if (doc->shape.snapshot) {
@@ -642,6 +643,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       if (!doc || !g_app) return true;
       if (state->gesture_active) return true;
+      canvas_stroke_cancel(doc);
       state->stroke_modified = doc->modified;
       state->stroke_undo = false;
       ipoint16_t doc_pt = {lx, ly};
@@ -792,21 +794,19 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       switch (tool) {
         case ID_TOOL_PENCIL:
-          canvas_draw_scaled_circle(doc, px, py, brush_radius(), g_app->fg_color);
-          break;
         case ID_TOOL_BRUSH:
-          canvas_draw_scaled_soft_circle(doc, px, py, brush_radius(), g_app->fg_color);
-          break;
-        case ID_TOOL_ERASER:
-          canvas_draw_scaled_circle(doc, px, py, brush_radius(),
+        case ID_TOOL_ERASER: {
+          uint32_t color = g_app->fg_color;
+          if (tool == ID_TOOL_ERASER) {
 #if IMAGEEDITOR_INDEXED
-                             // In indexed mode the eraser writes the transparent index.
-                             doc->ipal.entries[doc->ipal.transparent]
+            color = doc->ipal.entries[doc->ipal.transparent];
 #else
-                             MAKE_COLOR(0x00, 0x00, 0x00, 0x00)
+            color = MAKE_COLOR(0, 0, 0, 0);
 #endif
-                             );
+          }
+          canvas_stroke_begin(doc, doc_pt, brush_radius(), color, tool == ID_TOOL_BRUSH);
           break;
+        }
         case ID_TOOL_FILL:
           canvas_flood_fill(doc, px, py, g_app->fg_color);
           break;
@@ -977,22 +977,9 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       switch (tool) {
         case ID_TOOL_PENCIL:
-          canvas_draw_scaled_line(doc, doc->last.x, doc->last.y, px, py,
-                                  brush_radius(), g_app->fg_color);
-          break;
         case ID_TOOL_BRUSH:
-          canvas_draw_scaled_soft_line(doc, doc->last.x, doc->last.y, px, py,
-                                       brush_radius(), g_app->fg_color);
-          break;
         case ID_TOOL_ERASER:
-          canvas_draw_scaled_line(doc, doc->last.x, doc->last.y, px, py,
-                                  brush_radius(),
-#if IMAGEEDITOR_INDEXED
-                           doc->ipal.entries[doc->ipal.transparent]
-#else
-                           MAKE_COLOR(0x00, 0x00, 0x00, 0x00)
-#endif
-                           );
+          canvas_stroke_drag(doc, (ipoint16_t){px, py});
           break;
         case ID_TOOL_FILL:
           break;
@@ -1057,6 +1044,12 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       }
       if (!doc || !g_app) return true;
       int tool = g_app->current_tool;
+
+      if (doc->drawing && doc->stroke.active) {
+        ipoint16_t point = {(int16_t)LOWORD(wparam), (int16_t)HIWORD(wparam)};
+        canvas_stroke_end(doc, point);
+        invalidate_window(win);
+      }
 
       if (canvas_is_shape_tool(tool) && doc->drawing) {
         // Commit the final shape.  doc->pixels already has the drawn result.

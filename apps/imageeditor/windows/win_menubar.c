@@ -98,6 +98,7 @@ static bool cancel_active_canvas_interaction(canvas_doc_t *doc, int old_tool) {
   }
 
   if (doc->drawing) {
+    canvas_stroke_end(doc, doc->last);
     IE_DEBUG("cancel_interaction drawing doc=%p old_tool=%s",
              (void *)doc, tool_id_name(old_tool));
     doc->drawing = false;

@@ -16,28 +16,26 @@ static int tool_brush_get_radius(void) {
 static void brush_begin(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t doc_pt) {
   if (!doc || !g_app) return;
   ie_doc_begin_op(doc, "Brush Stroke");
-  doc->last = doc_pt;
-  canvas_draw_scaled_soft_circle(doc, doc_pt.x, doc_pt.y,
-                                 tool_brush_get_radius(), g_app->fg_color);
+  canvas_stroke_begin(doc, doc_pt, tool_brush_get_radius(), g_app->fg_color, true);
   ie_doc_after_pixels_changed(doc);
 }
 
 static void brush_drag(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t doc_pt) {
-  if (!doc || !g_app) return;
-  if (doc_pt.x == doc->last.x && doc_pt.y == doc->last.y) return;
-  canvas_draw_scaled_soft_line(doc, doc->last.x, doc->last.y, doc_pt.x, doc_pt.y,
-                               tool_brush_get_radius(), g_app->fg_color);
-  doc->last = doc_pt;
+  (void)view;
+  canvas_stroke_drag(doc, doc_pt);
   ie_doc_after_pixels_changed(doc);
 }
 
 static void brush_end(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t doc_pt) {
   if (!doc) return;
+  canvas_stroke_end(doc, doc_pt);
+  ie_doc_invalidate_canvas(doc);
   ie_doc_commit_op(doc, true);
 }
 
 static void brush_cancel(canvas_doc_t *doc, canvas_win_state_t *view) {
   if (!doc) return;
+  canvas_stroke_cancel(doc);
   ie_doc_commit_op(doc, false);
 }
 
