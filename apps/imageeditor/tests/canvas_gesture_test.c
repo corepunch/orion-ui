@@ -6,6 +6,53 @@
 app_state_t *g_app;
 int g_bw_retina_scale = 1;
 
+static void test_screen_aligned_shapes(void) {
+  TEST("rotated shape previews follow screen axes across zoom, Retina, fill and Shift");
+  uint8_t pixels[128 * 128 * DOC_BPP] = {0};
+  window_t win = {0};
+  canvas_doc_t doc = {.pixels = pixels, .canvas_w = 128, .canvas_h = 128, .canvas_win = &win};
+  const int tools[] = {ID_TOOL_RECT, ID_TOOL_ELLIPSE, ID_TOOL_ROUNDED_RECT};
+  const float angles[] = {0, 0.78539816339f, -0.52359877559f, 1.57079632679f};
+  uint32_t ink = MAKE_COLOR(0, 0, 0, 255), fill = MAKE_COLOR(200, 100, 50, 255);
+  for (int retina = 1; retina <= 2; retina++) {
+    g_bw_retina_scale = retina;
+    for (int a = 0; a < ARRAY_LEN(angles); a++) {
+      float c = cosf(angles[a]), s = sinf(angles[a]), scale = 1.5f / retina;
+      win.view.enabled = true;
+      win.view.matrix = (view_matrix_t){scale * c, scale * s, 17, -9};
+      for (int t = 0; t < ARRAY_LEN(tools); t++) {
+        for (int filled = 0; filled <= 1; filled++) {
+          for (int shift = 0; shift <= 1; shift++) {
+            memset(pixels, 0, sizeof(pixels));
+            canvas_shape_begin(&doc, 64, 64);
+            canvas_shape_preview(&doc, 64, 64, 100, 100, tools[t], filled, ink, fill, false);
+            canvas_shape_preview(&doc, 64, 64, 64 + (int)lroundf(c * 24 + s * 10),
+                                 64 + (int)lroundf(-s * 24 + c * 10), tools[t], filled, ink, fill, shift);
+            float min_x = 128, min_y = 128, max_x = -128, max_y = -128;
+            for (int y = 0; y < 128; y++) {
+              for (int x = 0; x < 128; x++) {
+                if (!canvas_get_pixel(&doc, x, y)) continue;
+                float sx = c * (x - 64) - s * (y - 64), sy = s * (x - 64) + c * (y - 64);
+                min_x = MIN(min_x, sx); max_x = MAX(max_x, sx);
+                min_y = MIN(min_y, sy); max_y = MAX(max_y, sy);
+              }
+            }
+            int hw = shift ? 10 : 24;
+            ASSERT_TRUE(fabsf(min_x + hw) <= 3 && fabsf(max_x - hw) <= 3);
+            ASSERT_TRUE(fabsf(min_y + 10) <= 3 && fabsf(max_y - 10) <= 3);
+            ASSERT_EQUAL(canvas_get_pixel(&doc, 64, 64), filled ? fill : 0);
+            canvas_shape_commit(&doc);
+            ASSERT_EQUAL(canvas_get_pixel(&doc, 64, 64), filled ? fill : 0);
+          }
+        }
+      }
+    }
+  }
+  free(doc.shape.snapshot);
+  g_bw_retina_scale = 1;
+  PASS();
+}
+
 static void test_gesture_anchor(void) {
   TEST("pinch/rotation preserves the document point beneath the moving centroid");
   canvas_doc_t doc = {.canvas_w = 1000, .canvas_h = 800};
@@ -64,6 +111,7 @@ static void test_cancel_stroke(void) {
 
 int main(void) {
   TEST_START("Canvas gestures");
+  test_screen_aligned_shapes();
   test_gesture_anchor();
   test_cancel_stroke();
   TEST_END();

@@ -6,9 +6,16 @@
 
 void swap_foreground_background_colors(void) {
   if (!g_app) return;
+  IE_TRACE("swap colors fg=%08x bg=%08x", g_app->fg_color, g_app->bg_color);
   uint32_t tmp = g_app->fg_color;
   g_app->fg_color = g_app->bg_color;
   g_app->bg_color = tmp;
+#if IMAGEEDITOR_INDEXED
+  if (g_app->active_doc) g_app->fg_palette_idx =
+    canvas_nearest_palette_index(g_app->active_doc, g_app->fg_color);
+  else if (g_app->fg_palette_idx == 1) g_app->fg_palette_idx = 2;
+  else if (g_app->fg_palette_idx == 2) g_app->fg_palette_idx = 1;
+#endif
   if (g_app->tool_win)  invalidate_window(g_app->tool_win);
   if (g_app->color_win) invalidate_window(g_app->color_win);
 }

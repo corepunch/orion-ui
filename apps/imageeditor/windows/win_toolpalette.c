@@ -45,6 +45,34 @@ static void palette_draw_swatches(irect16_t sw) {
   fill_rect(0xFF000000, reset_black);
 }
 
+static void swatch_edit_fg(window_t *owner) {
+  if (!g_app) return;
+#if IMAGEEDITOR_INDEXED
+  canvas_doc_t *doc = g_app->active_doc;
+  int idx = g_app->fg_palette_idx;
+  if (doc && idx >= 0 && idx < 256 && idx != doc->ipal.transparent) {
+    uint32_t out;
+    IE_TRACE("swatch fg picker pal_idx=%d", idx);
+    if (show_color_picker(owner, doc->ipal.entries[idx], &out)) {
+      doc->ipal.entries[idx] = out;
+      g_app->fg_color = out;
+      doc->canvas_dirty = true;
+      if (doc->canvas_win) invalidate_window(doc->canvas_win);
+      if (g_app->tool_win)  invalidate_window(g_app->tool_win);
+      if (g_app->color_win) invalidate_window(g_app->color_win);
+    }
+    return;
+  }
+#endif
+  uint32_t out;
+  IE_TRACE("swatch fg picker");
+  if (show_color_picker(owner, g_app->fg_color, &out)) {
+    g_app->fg_color = out;
+    if (g_app->tool_win)  invalidate_window(g_app->tool_win);
+    if (g_app->color_win) invalidate_window(g_app->color_win);
+  }
+}
+
 result_t win_tool_palette_proc(window_t *win, uint32_t msg,
                                uint32_t wparam, void *lparam) {
   switch (msg) {
@@ -61,11 +89,21 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
     case tbButtonClick:
       IE_TRACE("tool click win=%p ident=%u current=%d", (void *)win, wparam,
                g_app ? g_app->current_tool : -1);
-      if (wparam != ID_TOOL_SWATCH && g_app) {
-        if (wparam == ID_TOOL_BRUSH && g_app->brush_tool) wparam = g_app->brush_tool;
-        if (wparam == ID_TOOL_RECT && g_app->shape_tool) wparam = g_app->shape_tool;
-        handle_menu_command((uint16_t)wparam);
+      if (!g_app) return true;
+      if (wparam == ID_TOOL_SWATCH) {
+#if IMAGEEDITOR_BW
+        IE_TRACE("swatch click win=%p swap fg=%08x bg=%08x", (void *)win,
+                 g_app->fg_color, g_app->bg_color);
+        swap_foreground_background_colors();
+#else
+        IE_TRACE("swatch click win=%p fg=%08x", (void *)win, g_app->fg_color);
+        swatch_edit_fg(win);
+#endif
+        return true;
       }
+      if (wparam == ID_TOOL_BRUSH && g_app->brush_tool) wparam = g_app->brush_tool;
+      if (wparam == ID_TOOL_RECT && g_app->shape_tool) wparam = g_app->shape_tool;
+      handle_menu_command((uint16_t)wparam);
       return true;
     case evPaint:
       return true;
