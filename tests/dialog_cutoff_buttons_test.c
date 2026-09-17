@@ -188,11 +188,13 @@ static void test_content_column_width(void) {
   ASSERT_EQUAL(labels->frame.w, 61);
   ASSERT_EQUAL(label->frame.w, 61);
   ASSERT_EQUAL(label->frame.h, 14);
-  ASSERT_EQUAL(inputs->frame.w, 175);
+  ASSERT_EQUAL(inputs->frame.w,
+               get_client_rect(grid).w - labels->frame.w - grid->layout.layout_spacing);
   resize_window(grid, 300, 80);
   window_layout_sync(grid);
   ASSERT_EQUAL(labels->frame.w, 61);
-  ASSERT_EQUAL(inputs->frame.w, 235);
+  ASSERT_EQUAL(inputs->frame.w,
+               get_client_rect(grid).w - labels->frame.w - grid->layout.layout_spacing);
   destroy_window(grid);
   test_env_shutdown();
   PASS();
