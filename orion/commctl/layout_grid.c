@@ -338,7 +338,7 @@ result_t win_column(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
       return !(target->proc == win_grid || target->proc == win_gridview);
     }
     case evCreate: {
-      win->flags |= WINDOW_AUTO_LAYOUT;
+      win->flags |= WINDOW_AUTO_LAYOUT | WINDOW_LAYOUT_CONTAINER;
       win->flags &= ~WINDOW_STACK_HORIZONTAL;
       win->layout.layout_spacing = 4;
       win->layout.layout_padding = (irect16_t){0, 0, 0, 0};
@@ -385,7 +385,7 @@ result_t win_column(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
 result_t win_grid(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
     case evCreate: {
-      win->flags |= WINDOW_AUTO_LAYOUT;
+      win->flags |= WINDOW_AUTO_LAYOUT | WINDOW_LAYOUT_CONTAINER;
       win->flags &= ~WINDOW_STACK_HORIZONTAL;
       win->layout.layout_spacing = 0;
       win->layout.layout_padding = (irect16_t){0, 0, 0, 0};

@@ -196,16 +196,12 @@ static void test_content_column_width(void) {
   ASSERT_EQUAL(label->frame.w, 61);
   ASSERT_EQUAL(label->frame.h, 14);
   ASSERT_EQUAL(inputs->frame.x, labels->frame.x + labels->frame.w + gap);
-  ASSERT_TRUE(inputs->frame.w == grid->frame.w - labels->frame.w - gap ||
-              inputs->frame.w == client.w - labels->frame.w - gap);
-  int inputs_w = inputs->frame.w;
+  ASSERT_EQUAL(inputs->frame.w, 175);
   resize_window(grid, 300, 80);
   window_layout_sync(grid);
-  client = get_client_rect(grid);
   ASSERT_EQUAL(labels->frame.w, 61);
-  ASSERT_TRUE(inputs->frame.w == grid->frame.w - labels->frame.w - gap ||
-              inputs->frame.w == client.w - labels->frame.w - gap);
-  ASSERT_TRUE(inputs->frame.w > inputs_w);
+  ASSERT_EQUAL(inputs->frame.x, labels->frame.x + labels->frame.w + gap);
+  ASSERT_EQUAL(inputs->frame.w, 235);
   destroy_window(grid);
   test_env_shutdown();
   PASS();
