@@ -4,8 +4,8 @@
 // for likely gap points (dangling stroke endpoints and sharp local curvature
 // maxima), synthesize the shortest invisible stitch across each candidate's
 // stamp window, run the fill against the stitched barrier, then merge away
-// tiny slivers the stitching created. Stitches only ever block the fill —
-// they are never painted into the document.
+// tiny slivers the stitching created. Reached stitches receive the fill color
+// without propagating across the barrier.
 
 #include "imageeditor.h"
 
@@ -15,8 +15,7 @@
 #define GAP_BAR_FILLED  3
 #define GAP_BAR_TEMP    4
 #define GAP_BAR_REJECT  5
-
-#define GAP_MAX_CANDIDATES 4096
+#define GAP_BAR_ACTIVE  6
 
 typedef struct { int x, y; } gap_pt_t;
 
@@ -40,12 +39,6 @@ static int gap_ink_neighbors(const canvas_doc_t *doc, int x, int y,
   return n;
 }
 
-static bool gap_has_point(const ipoint16_t *pts, int count, int x, int y) {
-  for (int i = 0; i < count; i++)
-    if (pts[i].x == x && pts[i].y == y) return true;
-  return false;
-}
-
 static bool gap_neighbors_one_sided(const gap_pt_t *nb, int n) {
   for (int i = 0; i < n; i++)
     for (int j = i + 1; j < n; j++)
@@ -64,10 +57,18 @@ int canvas_gap_detect_endpoints(const canvas_doc_t *doc, uint32_t target,
       if (!canvas_in_selection(doc, x, y)) continue;
       if (canvas_get_pixel(doc, x, y) == target) continue;
       int n = gap_ink_neighbors(doc, x, y, target, nb);
-      // 1px tips have 1 neighbor. 2px (retina) caps have 3 one-sided neighbors.
+      // Rounded thick caps have four neighbors in an open half-plane.
       // N==2 is a 1px corner and is handled by canvas_gap_detect_corners.
-      if (n != 1 && n != 3) continue;
+      if (n != 1 && n != 3 && n != 4) continue;
       if (n == 3 && !gap_neighbors_one_sided(nb, n)) continue;
+      if (n == 4) {
+        gap_pt_t direction = {0};
+        for (int i = 0; i < n; i++) { direction.x += nb[i].x; direction.y += nb[i].y; }
+        bool cap = true;
+        for (int i = 0; i < n; i++)
+          if (direction.x * nb[i].x + direction.y * nb[i].y <= 0) cap = false;
+        if (!cap) continue;
+      }
       if (found < max_out) out[found] = (ipoint16_t){x, y};
       found++;
     }
@@ -113,7 +114,9 @@ static int gap_segment_paper_count(const uint8_t *bar, int w,
   int sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
   int err = dx - dy, paper = 0;
   while (true) {
-    if (bar[(size_t)y0 * w + x0] == GAP_BAR_OPEN) paper++;
+    // Measure against the original drawing, including already stitched paper.
+    uint8_t v = bar[(size_t)y0 * w + x0];
+    if (v == GAP_BAR_OPEN || v == GAP_BAR_STITCH) paper++;
     if (x0 == x1 && y0 == y1) break;
     int e2 = 2 * err;
     if (e2 > -dy) { err -= dy; x0 += sx; }
@@ -122,12 +125,32 @@ static int gap_segment_paper_count(const uint8_t *bar, int w,
   return paper;
 }
 
-static bool gap_try_stitch(uint8_t *bar, int w, int h, int cx, int cy, int gap) {
-  int reach = gap + 2;
-  int bx = -1, by = -1, best = reach * reach + 1;
+static bool gap_try_stitch(uint8_t *bar, int w, int h, int cx, int cy, int gap,
+                            uint8_t *connected, gap_pt_t *queue) {
+  int reach = gap + 2, side = 2 * reach + 1;
+  memset(connected, 0, (size_t)side * side);
+  size_t head = 0, tail = 0;
+  queue[tail++] = (gap_pt_t){cx, cy};
+  connected[reach * side + reach] = 1;
+  // Components are local to the stamp: a distant connection must not hide a gap.
+  while (head < tail) {
+    gap_pt_t cur = queue[head++];
+    for (int dy = -1; dy <= 1; dy++)
+      for (int dx = -1; dx <= 1; dx++) {
+        int x = cur.x + dx, y = cur.y + dy;
+        int lx = x - cx + reach, ly = y - cy + reach;
+        if (x < 0 || x >= w || y < 0 || y >= h || lx < 0 || lx >= side || ly < 0 || ly >= side) continue;
+        size_t k = (size_t)ly * side + lx;
+        uint8_t v = bar[(size_t)y * w + x];
+        if (connected[k] || (v != GAP_BAR_INK && v != GAP_BAR_STITCH)) continue;
+        connected[k] = 1;
+        queue[tail++] = (gap_pt_t){x, y};
+      }
+  }
+  int bx = -1, by = -1, best = 2 * reach * reach + 1;
   for (int dy = -reach; dy <= reach; dy++)
     for (int dx = -reach; dx <= reach; dx++) {
-      if (dx == 0 && dy == 0) continue;
+      if (connected[(dy + reach) * side + dx + reach]) continue;
       if (abs(dx) <= 1 && abs(dy) <= 1) continue;
       int d2 = dx * dx + dy * dy;
       if (d2 >= best) continue;
@@ -169,6 +192,34 @@ static void gap_plain_fill(canvas_doc_t *doc, int sx, int sy, uint32_t fill,
   free(queue);
 }
 
+static void gap_activate_stitches(uint8_t *bar, int w, int h, gap_pt_t *queue) {
+  size_t head = 0, tail = 0;
+  for (int y = 0; y < h; y++)
+    for (int x = 0; x < w; x++) {
+      size_t k = (size_t)y * w + x;
+      if (bar[k] != GAP_BAR_STITCH) continue;
+      if ((x > 0 && bar[k-1] == GAP_BAR_FILLED) ||
+          (x+1 < w && bar[k+1] == GAP_BAR_FILLED) ||
+          (y > 0 && bar[k-w] == GAP_BAR_FILLED) ||
+          (y+1 < h && bar[k+w] == GAP_BAR_FILLED)) {
+        bar[k] = GAP_BAR_ACTIVE;
+        queue[tail++] = (gap_pt_t){x, y};
+      }
+    }
+  while (head < tail) {
+    gap_pt_t cur = queue[head++];
+    for (int dy = -1; dy <= 1; dy++)
+      for (int dx = -1; dx <= 1; dx++) {
+        int x = cur.x + dx, y = cur.y + dy;
+        if (x < 0 || x >= w || y < 0 || y >= h) continue;
+        size_t k = (size_t)y * w + x;
+        if (bar[k] != GAP_BAR_STITCH) continue;
+        bar[k] = GAP_BAR_ACTIVE;
+        queue[tail++] = (gap_pt_t){x, y};
+      }
+  }
+}
+
 int canvas_flood_fill_with_gap(canvas_doc_t *doc, int sx, int sy,
                                uint32_t fill, int gap_px) {
   if (!doc || !canvas_in_bounds(doc, sx, sy)) return 0;
@@ -176,7 +227,8 @@ int canvas_flood_fill_with_gap(canvas_doc_t *doc, int sx, int sy,
   uint32_t target = canvas_get_pixel(doc, sx, sy);
   if (target == fill) return 0;
   if (gap_px <= 0) { gap_plain_fill(doc, sx, sy, fill, target); return 0; }
-  if (gap_px > IE_FILL_GAP_MAX) gap_px = IE_FILL_GAP_MAX;
+  int max_gap = IE_FILL_GAP_MAX * MAX(1, g_bw_retina_scale);
+  if (gap_px > max_gap) gap_px = max_gap;
 
   int w = doc->canvas_w, h = doc->canvas_h;
   size_t n = (size_t)w * (size_t)h;
@@ -193,19 +245,30 @@ int canvas_flood_fill_with_gap(canvas_doc_t *doc, int sx, int sy,
           (!canvas_in_selection(doc, x, y) ||
            canvas_get_pixel(doc, x, y) != target) ? GAP_BAR_INK : GAP_BAR_OPEN;
 
-  ipoint16_t cand[GAP_MAX_CANDIDATES];
-  int nend = canvas_gap_detect_endpoints(doc, target, cand, GAP_MAX_CANDIDATES);
-  int ncor = 0;
-  if (nend < GAP_MAX_CANDIDATES) {
-    ipoint16_t buf[GAP_MAX_CANDIDATES];
-    int total = canvas_gap_detect_corners(doc, target, buf, GAP_MAX_CANDIDATES);
-    for (int i = 0; i < total && nend + ncor < GAP_MAX_CANDIDATES; i++)
-      if (!gap_has_point(cand, nend + ncor, buf[i].x, buf[i].y))
-        cand[nend + ncor++] = buf[i];
+  ipoint16_t first;
+  int nend = canvas_gap_detect_endpoints(doc, target, &first, 1);
+  int ncor = canvas_gap_detect_corners(doc, target, &first, 1);
+  ipoint16_t *cand = malloc(sizeof(*cand) * (size_t)MAX(1, nend + ncor));
+  if (!cand) {
+    IE_TRACE("fill_gap candidate allocation failed count=%d", nend + ncor);
+    free(bar); free(queue);
+    return 0;
+  }
+  if (nend) canvas_gap_detect_endpoints(doc, target, cand, nend);
+  if (ncor) canvas_gap_detect_corners(doc, target, cand + nend, ncor);
+  int side = 2 * (gap_px + 2) + 1;
+  uint8_t *connected = malloc((size_t)side * side);
+  if (!connected) {
+    IE_TRACE("fill_gap component allocation failed side=%d", side);
+    free(cand); free(bar); free(queue);
+    return 0;
   }
   int stitches = 0;
   for (int i = 0; i < nend + ncor; i++)
-    if (gap_try_stitch(bar, w, h, cand[i].x, cand[i].y, gap_px)) stitches++;
+    if (gap_try_stitch(bar, w, h, cand[i].x, cand[i].y, gap_px, connected, queue)) stitches++;
+
+  free(connected);
+  free(cand);
 
   size_t head = 0, tail = 0;
   queue[tail++] = (gap_pt_t){sx, sy};
@@ -226,6 +289,7 @@ int canvas_flood_fill_with_gap(canvas_doc_t *doc, int sx, int sy,
     }
   }
 
+  gap_activate_stitches(bar, w, h, queue);
   int sliver_max = gap_px * gap_px * 2, slivers = 0;
   for (int y = 0; y < h; y++)
     for (int x = 0; x < w; x++) {
@@ -241,7 +305,7 @@ int canvas_flood_fill_with_gap(canvas_doc_t *doc, int sx, int sy,
         for (int i = 0; i < 4; i++) {
           if (nx[i] < 0 || nx[i] >= w || ny[i] < 0 || ny[i] >= h) continue;
           uint8_t v = bar[(size_t)ny[i] * w + nx[i]];
-          if (v == GAP_BAR_STITCH) touch = 1;
+          if (v == GAP_BAR_ACTIVE) touch = 1;
           else if (v == GAP_BAR_OPEN) {
             bar[(size_t)ny[i] * w + nx[i]] = GAP_BAR_TEMP;
             queue[tail++] = (gap_pt_t){nx[i], ny[i]};
@@ -261,8 +325,18 @@ int canvas_flood_fill_with_gap(canvas_doc_t *doc, int sx, int sy,
       if (merge) slivers++;
     }
 
-  IE_TRACE("fill_gap at=(%d,%d) gap=%d endpoints=%d corners=%d stitches=%d filled=%d slivers=%d",
-           sx, sy, gap_px, nend, ncor, stitches, filled, slivers);
+  // Paint reached barriers, but never propagate through them into the other region.
+  gap_activate_stitches(bar, w, h, queue);
+  int bridge_pixels = 0;
+  for (int y = 0; y < h; y++)
+    for (int x = 0; x < w; x++)
+      if (bar[(size_t)y * w + x] == GAP_BAR_ACTIVE) {
+        canvas_set_pixel(doc, x, y, fill);
+        bridge_pixels++;
+      }
+
+  IE_TRACE("fill_gap at=(%d,%d) gap=%d endpoints=%d corners=%d stitches=%d filled=%d slivers=%d bridge_pixels=%d",
+           sx, sy, gap_px, nend, ncor, stitches, filled, slivers, bridge_pixels);
   free(bar);
   free(queue);
   return stitches;

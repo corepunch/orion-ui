@@ -146,6 +146,9 @@ TEST_SRCS = $(sort $(filter-out $(TEST_DIR)/test_env.c,$(wildcard $(TEST_DIR)/*.
     $(wildcard $(APPS)/*/tests/*.c))
 TEST_BINS = $(patsubst %,$(BIN_DIR)/test_%$(EXE_EXT),$(basename $(notdir $(TEST_SRCS))))
 
+# Tests unity-include app implementations; edits must rebuild their executables.
+$(foreach n,$(EXAMPLES),$(foreach t,$(wildcard $(APPS)/$(n)/tests/*.c),$(eval $(BIN_DIR)/test_$(basename $(notdir $(t)))$(EXE_EXT): $(call app_srcs,$(n)))))
+
 # Shell fragment emitting the unity translation unit for example dir $(1):
 # every .c outside $(COMPS), main.c last.  ('#' is backslash-escaped for make.)
 unity_tu = find $(1) -name '*.c' ! -name main.c ! -path '*/$(COMPS)/*' ! -path '*/tests/*' | sort | sed 's/.*/\#include "&"/'; echo '\#include "$(1)/main.c"'
@@ -347,7 +350,7 @@ help:
 	@echo "tools     - Build command-line tools"
 	@echo "test      - Build and run tests"
 	@echo "ipad-all  - Build separate Image Editor and Pencil Test iPad bundles"
-	@echo "ipad / ipad-simulator / ipad-run / ipad-deploy / ipad-mac - IPAD_APP=imageeditor|penciltest (ipad-deploy auto-selects one connected iPad)"
+	@echo "ipad / ipad-simulator / ipad-run / ipad-deploy / ipad-mac - APP=imageeditor|penciltest (ipad-deploy auto-selects one connected iPad)"
 	@echo "list-devices - List paired devices (see packaging/ipad/README.md)"
 	@echo "ALLOW_HIGHDPI=0 - Disable high-DPI surfaces (use with -B)"
 	@echo "clean     - Remove all build artifacts"
@@ -362,18 +365,18 @@ help:
 	@echo "$(SHARE_DIR) - Shared data assets (icons, etc.)"
 
 # Direct SDK builds, with separate bundle identities for the two editor variants.
-IPAD_APP ?= imageeditor
+APP ?= imageeditor
 .PHONY: ipad ipad-simulator ipad-run ipad-deploy ipad-mac ipad-all list-devices
 ipad:
-	$(MAKE) -f packaging/ipad/build.mk APP=$(IPAD_APP) SDK=iphoneos app
+	$(MAKE) -f packaging/ipad/build.mk APP=$(APP) SDK=iphoneos app
 ipad-simulator:
-	$(MAKE) -f packaging/ipad/build.mk APP=$(IPAD_APP) SDK=iphonesimulator app
+	$(MAKE) -f packaging/ipad/build.mk APP=$(APP) SDK=iphonesimulator app
 ipad-run:
-	$(MAKE) -f packaging/ipad/build.mk APP=$(IPAD_APP) SDK=iphonesimulator run
+	$(MAKE) -f packaging/ipad/build.mk APP=$(APP) SDK=iphonesimulator run
 ipad-deploy:
-	$(MAKE) -f packaging/ipad/build.mk APP=$(IPAD_APP) SDK=iphoneos deploy
+	$(MAKE) -f packaging/ipad/build.mk APP=$(APP) SDK=iphoneos deploy
 ipad-mac:
-	$(MAKE) -f packaging/ipad/build.mk APP=$(IPAD_APP) SDK=iphoneos mac
+	$(MAKE) -f packaging/ipad/build.mk APP=$(APP) SDK=iphoneos mac
 ipad-all:
 	$(MAKE) -f packaging/ipad/build.mk APP=imageeditor SDK=iphoneos app
 	$(MAKE) -f packaging/ipad/build.mk APP=penciltest SDK=iphoneos app

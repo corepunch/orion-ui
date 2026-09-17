@@ -530,6 +530,7 @@ void canvas_flood_fill(canvas_doc_t *doc, int sx, int sy, uint32_t fill);
 // barrier segments before filling, then merges stitch-adjacent slivers.
 // Returns the number of stitch segments drawn (0 when gap_px <= 0).
 // See canvas/canvas_fill_gap.c for the Gangnet/Van Thong pipeline.
+// Settings and the limit are logical pixels; gap_px is in backing pixels.
 #define IE_FILL_GAP_OFF    0
 #define IE_FILL_GAP_SMALL  2
 #define IE_FILL_GAP_MEDIUM 5
