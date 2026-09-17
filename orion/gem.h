@@ -121,8 +121,7 @@ gem_interface_t *gem_get_interface(void);
 //   }
 // -----------------------------------------------------------------------
 
-// GEM_STANDALONE_MAIN is a no-op in gem mode; the host owns initialization
-// and the event loop. This includes the generic iOS launcher.
+// GEM_STANDALONE_MAIN is a no-op in gem mode; the shell owns the event loop.
 #define GEM_STANDALONE_MAIN(title_, flags_, w_, h_, menubar_, accel_) \
     /* no-op: standalone main() not needed when loaded as a .gem */
 
@@ -298,6 +297,27 @@ gem_rc_query(const char *req, char *resp, int resplen)
 //   --screenshot PATH  Capture the first fully painted frame as JPEG and exit.
 //   -rc [PORT]         Start the TCP remote-control server (default 17777).
 // ---------------------------------------------------------------------------
+#ifdef AX_PLATFORM_IOS
+#define GEM_STANDALONE_MAIN(title_, flags_, w_, h_, menubar_, accel_) \
+  static bool_t gem_ios_start(int argc, char **argv) { \
+    if (!ui_init_graphics((flags_), (title_), (w_), (h_))) return FALSE; \
+    char *args[] = {argv[0], NULL}; \
+    if (!gem_init(1, args, 0)) { ui_shutdown_graphics(); return FALSE; } \
+    return TRUE; \
+  } \
+  static void gem_ios_frame(void) { \
+    if (!ui_is_running()) return; \
+    ui_event_t e; \
+    /* Drain through wakeup sentinels; UIKit already schedules this frame. */ \
+    while (axPeekMessage(&e)) \
+      if (!translate_accelerator((menubar_), &e, (accel_))) dispatch_message(&e); \
+    repost_messages(); \
+  } \
+  static void gem_ios_stop(void) { gem_shutdown(); ui_shutdown_graphics(); } \
+  int main(int argc, char **argv) { \
+    return axRunApplication(argc, argv, gem_ios_start, gem_ios_frame, gem_ios_stop); \
+  }
+#else
 #define GEM_STANDALONE_MAIN(title_, flags_, w_, h_, menubar_, accel_)     \
   int main(int argc, char *argv[]) {                                        \
     const char *gem_screenshot_path = NULL;                                 \
@@ -355,6 +375,7 @@ gem_rc_query(const char *req, char *resp, int resplen)
     return 0;                                                               \
   }
 
+#endif  /* AX_PLATFORM_IOS */
 #endif  /* BUILD_AS_GEM */
 
 // ---------------------------------------------------------------------------

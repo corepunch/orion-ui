@@ -24,7 +24,6 @@ COMPILER := xcrun --sdk $(SDK) clang
 MIN_FLAG := $(if $(filter iphoneos,$(SDK)),-miphoneos-version-min,-mios-simulator-version-min)=$(IOS_MIN)
 FLAGS := -isysroot "$(SDK_PATH)" -arch $(ARCH) $(MIN_FLAG) -std=c11 -O2 -g -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-parameter -Wno-unused-function -Wno-deprecated-declarations -MMD -MP -I. -I"$(SDK_PATH)/usr/include/libxml2" -DORION_ALLOW_HIGHDPI=1
 APP_FLAGS := -DSTBTT_STATIC $(if $(filter penciltest,$(APP)),-DIMAGEEDITOR_BW=1 -DIMAGEEDITOR_BW_RETINA) -Iapps/imageeditor -Iapps/imageeditor/components -DSHAREDIR='"../share/imageeditor"'
-APP_FLAGS += -DBUILD_AS_GEM
 USER_SRCS := $(filter-out orion/user/dialog.c orion/user/component_registry.c,$(wildcard orion/user/*.c))
 KERNEL_SRCS := $(wildcard orion/kernel/*.c)
 COMMCTL_SRCS := $(filter-out orion/commctl/tray.c,$(wildcard orion/commctl/*.c))
@@ -32,7 +31,6 @@ COMMDLG_SRCS := $(wildcard orion/commdlg/*.c)
 COMPONENT_SRCS := $(wildcard apps/imageeditor/components/*.c)
 OBJECTS := $(addprefix $(BUILD_ROOT)/,user.o kernel.o commctl.o) $(addprefix $(BUILD_ROOT)/,$(COMMDLG_SRCS:.c=.o) $(COMPONENT_SRCS:.c=.o))
 APP_SRCS := $(shell find apps/imageeditor -name '*.c' ! -path '*/components/*' ! -path '*/tests/*' ! -name main.c | sort) apps/imageeditor/main.c
-IOS_MAIN_SRC := packaging/ipad/ios_main.c
 PLATFORM_LIB := $(BUILD_ROOT)/platform/libplatform.a
 HOST_TOOL := $(abspath $(BUILD_DIR))/host/orionc
 GENERATED := build/generated/apps/imageeditor/imageeditor.h
@@ -67,15 +65,10 @@ $(BUILD_ROOT)/%.o: %.c $(BUILD_ROOT)/settings $(GENERATED) packaging/ipad/build.
 	@mkdir -p "$(@D)"
 	$(COMPILER) $(FLAGS) -Iapps/imageeditor -Iapps/imageeditor/components -c "$<" -o "$@"
 $(APP_ROOT)/app.o: $(APP_SRCS) $(GENERATED) $(APP_ROOT)/settings packaging/ipad/build.mk
-	@echo '#include <platform/platform.h>' > "$(APP_ROOT)/app.c"
-	@echo '#include <orion/gem.h>' >> "$(APP_ROOT)/app.c"
-	@printf '%s\n' $(APP_SRCS) | sed 's/.*/\#include "&"/' >> "$(APP_ROOT)/app.c"
+	@printf '%s\n' $(APP_SRCS) | sed 's/.*/\#include "&"/' > "$(APP_ROOT)/app.c"
 	$(COMPILER) $(FLAGS) $(APP_FLAGS) -c "$(APP_ROOT)/app.c" -o "$@"
-$(APP_ROOT)/ios_main.o: $(IOS_MAIN_SRC) $(BUILD_ROOT)/settings packaging/ipad/build.mk
-	@mkdir -p "$(@D)"
-	$(COMPILER) $(FLAGS) -c "$(IOS_MAIN_SRC)" -o "$@"
-$(APP_ROOT)/$(APP): $(OBJECTS) $(APP_ROOT)/app.o $(APP_ROOT)/ios_main.o $(PLATFORM_LIB)
-	$(COMPILER) -isysroot "$(SDK_PATH)" -arch $(ARCH) $(MIN_FLAG) $(OBJECTS) "$(APP_ROOT)/app.o" "$(APP_ROOT)/ios_main.o" $(PLATFORM_LIB) $(LIBS) -o "$@"
+$(APP_ROOT)/$(APP): $(OBJECTS) $(APP_ROOT)/app.o $(PLATFORM_LIB)
+	$(COMPILER) -isysroot "$(SDK_PATH)" -arch $(ARCH) $(MIN_FLAG) $(OBJECTS) "$(APP_ROOT)/app.o" $(PLATFORM_LIB) $(LIBS) -o "$@"
 app: $(APP_ROOT)/$(APP)
 	python3 tools/ipad/bundle.py --root "$(CURDIR)" --target "$(BUNDLE)" --binary "$<" --app $(APP) --bundle-id "$(BUNDLE_ID)" --sdk $(SDK) --sdk-version $(SDK_VERSION) --minimum $(IOS_MIN)
 ifeq ($(SDK),iphonesimulator)
