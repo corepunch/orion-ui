@@ -385,6 +385,12 @@ typedef struct {
     int      spread;         // RGB tolerance, 0..255
     uint32_t overlay_color;
   } wand;
+  // Fill tool gap detection (Gangnet/Van Thong-style invisible stitching).
+  // Maximum gap to stitch closed before the fill runs, in canvas pixels.
+  // 0 = off; otherwise one of IE_FILL_GAP_SMALL/MEDIUM/LARGE.
+  struct {
+    int gap;
+  } fill;
   // Instagram-style filter presets loaded from share/filters.
   image_filter_t filters[IMAGEEDITOR_MAX_FILTERS];
   int            filter_count;
@@ -520,6 +526,23 @@ void canvas_draw_scaled_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1, 
 void canvas_draw_scaled_soft_circle(canvas_doc_t *doc, int cx, int cy, int logical_radius, uint32_t c);
 void canvas_draw_scaled_soft_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1, int logical_radius, uint32_t c);
 void canvas_flood_fill(canvas_doc_t *doc, int sx, int sy, uint32_t fill);
+// Gap-closing flood fill: stitches gaps up to gap_px wide with invisible
+// barrier segments before filling, then merges stitch-adjacent slivers.
+// Returns the number of stitch segments drawn (0 when gap_px <= 0).
+// See canvas/canvas_fill_gap.c for the Gangnet/Van Thong pipeline.
+#define IE_FILL_GAP_OFF    0
+#define IE_FILL_GAP_SMALL  2
+#define IE_FILL_GAP_MEDIUM 5
+#define IE_FILL_GAP_LARGE  10
+#define IE_FILL_GAP_MAX    16
+int canvas_flood_fill_with_gap(canvas_doc_t *doc, int sx, int sy,
+                               uint32_t fill, int gap_px);
+// Gap candidate detectors. Ink = in-selection pixels != target.
+// Returns the total number found (only the first max_out are stored).
+int canvas_gap_detect_endpoints(const canvas_doc_t *doc, uint32_t target,
+                                ipoint16_t *out, int max_out);
+int canvas_gap_detect_corners(const canvas_doc_t *doc, uint32_t target,
+                              ipoint16_t *out, int max_out);
 bool canvas_magic_wand_select(canvas_doc_t *doc, int sx, int sy,
                               int spread, bool antialias);
 bool canvas_magic_wand_select_add(canvas_doc_t *doc, int sx, int sy,
@@ -609,8 +632,8 @@ bool doc_confirm_close(canvas_doc_t *doc, window_t *parent_win);
 // Window procedures
 result_t editor_menubar_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_canvas_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
-result_t win_tool_palette_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
-enum { IE_OPT_AA = 9001, IE_OPT_SPREAD, IE_OPT_COLOR, IE_OPT_SIZE, IE_OPT_FILLED };
+ result_t win_tool_palette_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+enum { IE_OPT_AA = 9001, IE_OPT_SPREAD, IE_OPT_COLOR, IE_OPT_SIZE, IE_OPT_FILLED, IE_OPT_GAP };
 void imageeditor_sync_tool_options(void);
 int imageeditor_tool_group(int tool);
 result_t win_tool_options_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);

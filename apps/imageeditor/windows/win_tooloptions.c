@@ -33,6 +33,24 @@ static void options_slider_tooltip(window_t *win, int ident, const char *name, i
   }
 }
 
+static int fill_gap_to_index(int gap) {
+  if (gap >= IE_FILL_GAP_LARGE) return 3;
+  if (gap >= IE_FILL_GAP_MEDIUM) return 2;
+  if (gap > IE_FILL_GAP_OFF) return 1;
+  return 0;
+}
+
+static int fill_gap_from_index(int idx) {
+  static const int kGapPx[4] = {IE_FILL_GAP_OFF, IE_FILL_GAP_SMALL,
+                                IE_FILL_GAP_MEDIUM, IE_FILL_GAP_LARGE};
+  return kGapPx[CLAMP(idx, 0, 3)];
+}
+
+static const char *fill_gap_name(int idx) {
+  static const char *kGapNames[4] = {"Off", "Small", "Medium", "Large"};
+  return kGapNames[CLAMP(idx, 0, 3)];
+}
+
 void imageeditor_sync_tool_options(void) {
   if (!g_app || !g_app->tool_options_win) return;
   window_t *win = g_app->tool_options_win;
@@ -55,6 +73,9 @@ void imageeditor_sync_tool_options(void) {
     items[count++] = (toolbar_item_t){.type = TOOLBAR_ITEM_BUTTON, .ident = IE_OPT_FILLED,
                                     .icon = "ie-fill", .tooltip = g_app->shape_filled ? "Filled — click for outline" : "Outline — click to fill",
                                     .flags = g_app->shape_filled ? TOOLBAR_BUTTON_FLAG_ACTIVE : 0};
+  } else if (tool == ID_TOOL_FILL) {
+    items[count++] = (toolbar_item_t){.type = TOOLBAR_ITEM_SLIDER, .ident = IE_OPT_GAP,
+                                    .tooltip = "Gap detection"};
   } else if (tool == ID_TOOL_MAGIC_WAND) {
     items[count++] = (toolbar_item_t){.type = TOOLBAR_ITEM_BUTTON, .ident = IE_OPT_AA,
                                     .icon = "ie-magic-wand", .tooltip = "Antialias selection edges",
@@ -66,14 +87,24 @@ void imageeditor_sync_tool_options(void) {
   }
   window_t *focus = g_ui_runtime.focused;
   send_message(win, tbSetItems, count, items);
-  window_t *slider = get_window_item(win, tool == ID_TOOL_MAGIC_WAND ? IE_OPT_SPREAD : IE_OPT_SIZE);
+  int slider_id = IE_OPT_SIZE;
+  if (tool == ID_TOOL_MAGIC_WAND) slider_id = IE_OPT_SPREAD;
+  else if (tool == ID_TOOL_FILL) slider_id = IE_OPT_GAP;
+  window_t *slider = get_window_item(win, slider_id);
   if (slider) {
-    bool wand = tool == ID_TOOL_MAGIC_WAND;
-    slider_range_t range = {0, wand ? 255 : NUM_BRUSH_SIZES - 1};
+    bool wand = tool == ID_TOOL_MAGIC_WAND, fill = tool == ID_TOOL_FILL;
+    slider_range_t range = {0, wand ? 255 : fill ? 3 : NUM_BRUSH_SIZES - 1};
     send_message(slider, slSetRange, 0, &range);
-    send_message(slider, slSetPos, 0, (void *)(intptr_t)(wand ? g_app->wand.spread : g_app->brush_size));
-    options_slider_tooltip(win, slider->id, wand ? "Tolerance" : "Size (px)",
-                           wand ? g_app->wand.spread : 2 * kBrushSizes[CLAMP(g_app->brush_size, 0, NUM_BRUSH_SIZES - 1)] + 1);
+    send_message(slider, slSetPos, 0, (void *)(intptr_t)(wand ? g_app->wand.spread : fill ? fill_gap_to_index(g_app->fill.gap) : g_app->brush_size));
+    if (fill) {
+      int idx = fill_gap_to_index(g_app->fill.gap);
+      char label[32];
+      snprintf(label, sizeof(label), "Gap %s", fill_gap_name(idx));
+      options_slider_tooltip(win, IE_OPT_GAP, label, fill_gap_from_index(idx));
+    } else {
+      options_slider_tooltip(win, slider->id, wand ? "Tolerance" : "Size (px)",
+                             wand ? g_app->wand.spread : 2 * kBrushSizes[CLAMP(g_app->brush_size, 0, NUM_BRUSH_SIZES - 1)] + 1);
+    }
   }
   resize_window(win, PALETTE_WIN_W, toolbar_effective_item_height(win) + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH));
   if (focus && is_window(focus)) g_ui_runtime.focused = focus;
@@ -142,6 +173,15 @@ result_t win_tool_options_proc(window_t *win, uint32_t msg, uint32_t wparam, voi
           g_app->wand.spread = CLAMP(value, 0, 255);
           options_slider_tooltip(win, IE_OPT_SPREAD, "Tolerance", g_app->wand.spread);
           break;
+        case IE_OPT_GAP: {
+          int idx = CLAMP(value, 0, 3);
+          g_app->fill.gap = fill_gap_from_index(idx);
+          char label[32];
+          snprintf(label, sizeof(label), "Gap %s", fill_gap_name(idx));
+          options_slider_tooltip(win, IE_OPT_GAP, label, g_app->fill.gap);
+          IE_TRACE("fill gap win=%p idx=%d px=%d", (void *)win, idx, g_app->fill.gap);
+          break;
+        }
         default: return false;
       }
       IE_TRACE("options slider win=%p ident=%u value=%d", (void *)win, slider->id, value);

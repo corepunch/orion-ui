@@ -156,6 +156,11 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   g_app->wand.antialias = true;
   g_app->wand.spread = 24;
   g_app->wand.overlay_color = MAKE_COLOR(0x40, 0xA0, 0xFF, 0x55);
+#if IMAGEEDITOR_BW
+  g_app->fill.gap = IE_FILL_GAP_SMALL;
+#else
+  g_app->fill.gap = IE_FILL_GAP_OFF;
+#endif
   g_app->grid.spacing.x = 16;
   g_app->grid.spacing.y = 16;
   {
