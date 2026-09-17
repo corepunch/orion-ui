@@ -221,7 +221,7 @@ void canvas_draw_scaled_soft_line(canvas_doc_t *doc, int x0, int y0, int x1, int
 }
 
 void canvas_flood_fill(canvas_doc_t *doc, int sx, int sy, uint32_t fill) {
-  int gap = (g_app) ? g_app->fill.gap : 0;
+  int gap = (g_app) ? g_app->fill.gap * MAX(1, g_bw_retina_scale) : 0;
   if (gap > 0) {
     canvas_flood_fill_with_gap(doc, sx, sy, fill, gap);
     return;

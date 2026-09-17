@@ -189,6 +189,46 @@ void test_gap_large_pocket_kept(void) {
   PASS();
 }
 
+static canvas_doc_t *thick_gapped_box(uint32_t *paper_out) {
+  canvas_doc_t *doc = create_document(NULL, 32, 32);
+  if (!doc) return NULL;
+  *paper_out = canvas_get_pixel(doc, 0, 0);
+  canvas_draw_line(doc, 8, 8, 23, 8, 0, GAP_INK);
+  canvas_draw_line(doc, 8, 9, 23, 9, 0, GAP_INK);
+  canvas_draw_line(doc, 8, 8, 8, 23, 0, GAP_INK);
+  canvas_draw_line(doc, 9, 8, 9, 23, 0, GAP_INK);
+  canvas_draw_line(doc, 22, 8, 22, 23, 0, GAP_INK);
+  canvas_draw_line(doc, 23, 8, 23, 23, 0, GAP_INK);
+  canvas_draw_line(doc, 8, 22, 14, 22, 0, GAP_INK);
+  canvas_draw_line(doc, 8, 23, 14, 23, 0, GAP_INK);
+  canvas_draw_line(doc, 17, 22, 23, 22, 0, GAP_INK);
+  canvas_draw_line(doc, 17, 23, 23, 23, 0, GAP_INK);
+  return doc;
+}
+
+void test_gap_thick_stroke_contained(void) {
+  TEST("gap fill stitches a 2px opening in a 2px-wide stroke");
+  test_env_init();
+  g_app = calloc(1, sizeof(app_state_t));
+  uint32_t paper;
+  canvas_doc_t *doc = thick_gapped_box(&paper);
+  ASSERT_NOT_NULL(doc);
+
+  ipoint16_t ends[32];
+  int found = canvas_gap_detect_endpoints(doc, paper, ends, 32);
+  ASSERT_TRUE(found >= 2);
+
+  int stitches = canvas_flood_fill_with_gap(doc, 15, 15, GAP_FILL, IE_FILL_GAP_SMALL);
+  ASSERT_TRUE(stitches >= 1);
+  ASSERT_EQUAL(canvas_get_pixel(doc, 15, 15), GAP_FILL);
+  ASSERT_EQUAL(canvas_get_pixel(doc, 2, 2), paper);
+
+  close_document(doc);
+  free(g_app);
+  test_env_shutdown();
+  PASS();
+}
+
 void test_gap_app_setting_wires_through(void) {
   TEST("canvas_flood_fill honors g_app fill.gap");
   test_env_init();
@@ -219,6 +259,7 @@ int main(int argc, char *argv[]) {
   test_gap_too_large_still_leaks();
   test_gap_sliver_merged();
   test_gap_large_pocket_kept();
+  test_gap_thick_stroke_contained();
   test_gap_app_setting_wires_through();
 
   TEST_END();

@@ -534,7 +534,7 @@ void canvas_flood_fill(canvas_doc_t *doc, int sx, int sy, uint32_t fill);
 #define IE_FILL_GAP_SMALL  2
 #define IE_FILL_GAP_MEDIUM 5
 #define IE_FILL_GAP_LARGE  10
-#define IE_FILL_GAP_MAX    16
+#define IE_FILL_GAP_MAX    32
 int canvas_flood_fill_with_gap(canvas_doc_t *doc, int sx, int sy,
                                uint32_t fill, int gap_px);
 // Gap candidate detectors. Ink = in-selection pixels != target.

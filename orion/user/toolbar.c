@@ -311,12 +311,15 @@ static result_t win_toolbar(window_t *win, uint32_t msg, uint32_t wparam, void *
 
       toolbar_item_t *item = &tb->items[saved_idx];
       fprintf(stderr, "[tb] click win=%u index=%d ident=%d\n", win->parent->id, saved_idx, item->ident);
-      window_t *root = get_root_window(win);
+      // Notify the toolbar window that owns this host, not the top-level chrome.
+      // Docked palettes are children of app chrome; get_root_window() would send
+      // every click to the top band and skip the left tool strip.
+      window_t *owner = win->parent ? win->parent : get_root_window(win);
       if (item->type == TOOLBAR_ITEM_DROPDOWN && saved_in_arrow) {
-        send_message(root, evCommand,
+        send_message(owner, evCommand,
                      MAKEDWORD((uint16_t)item->ident, (uint16_t)tbDropdown), win);
       } else {
-        send_message(root, tbButtonClick, (uint32_t)item->ident, win);
+        send_message(owner, tbButtonClick, (uint32_t)item->ident, win);
       }
       return true;
     }

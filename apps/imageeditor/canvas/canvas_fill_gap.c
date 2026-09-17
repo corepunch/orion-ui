@@ -46,15 +46,28 @@ static bool gap_has_point(const ipoint16_t *pts, int count, int x, int y) {
   return false;
 }
 
+static bool gap_neighbors_one_sided(const gap_pt_t *nb, int n) {
+  for (int i = 0; i < n; i++)
+    for (int j = i + 1; j < n; j++)
+      if (nb[i].x * nb[j].x + nb[i].y * nb[j].y < 0)
+        return false;
+  return n > 0;
+}
+
 int canvas_gap_detect_endpoints(const canvas_doc_t *doc, uint32_t target,
                                 ipoint16_t *out, int max_out) {
   if (!doc || !out || max_out <= 0) return 0;
   int found = 0;
+  gap_pt_t nb[8];
   for (int y = 0; y < doc->canvas_h; y++)
     for (int x = 0; x < doc->canvas_w; x++) {
       if (!canvas_in_selection(doc, x, y)) continue;
       if (canvas_get_pixel(doc, x, y) == target) continue;
-      if (gap_ink_neighbors(doc, x, y, target, NULL) != 1) continue;
+      int n = gap_ink_neighbors(doc, x, y, target, nb);
+      // 1px tips have 1 neighbor. 2px (retina) caps have 3 one-sided neighbors.
+      // N==2 is a 1px corner and is handled by canvas_gap_detect_corners.
+      if (n != 1 && n != 3) continue;
+      if (n == 3 && !gap_neighbors_one_sided(nb, n)) continue;
       if (found < max_out) out[found] = (ipoint16_t){x, y};
       found++;
     }
@@ -94,33 +107,35 @@ static int gap_draw_stitch(uint8_t *bar, int w, int h,
   return converted;
 }
 
-static bool gap_segment_has_paper(const uint8_t *bar, int w,
-                                    int x0, int y0, int x1, int y1) {
+static int gap_segment_paper_count(const uint8_t *bar, int w,
+                                   int x0, int y0, int x1, int y1) {
   int dx = abs(x1 - x0), dy = abs(y1 - y0);
   int sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
-  int err = dx - dy;
+  int err = dx - dy, paper = 0;
   while (true) {
-    if (bar[(size_t)y0 * w + x0] == GAP_BAR_OPEN) return true;
+    if (bar[(size_t)y0 * w + x0] == GAP_BAR_OPEN) paper++;
     if (x0 == x1 && y0 == y1) break;
     int e2 = 2 * err;
     if (e2 > -dy) { err -= dy; x0 += sx; }
     if (e2 <  dx) { err += dx; y0 += sy; }
   }
-  return false;
+  return paper;
 }
 
 static bool gap_try_stitch(uint8_t *bar, int w, int h, int cx, int cy, int gap) {
-  int bx = -1, by = -1, best = gap * gap + 1;
-  for (int dy = -gap; dy <= gap; dy++)
-    for (int dx = -gap; dx <= gap; dx++) {
+  int reach = gap + 2;
+  int bx = -1, by = -1, best = reach * reach + 1;
+  for (int dy = -reach; dy <= reach; dy++)
+    for (int dx = -reach; dx <= reach; dx++) {
       if (dx == 0 && dy == 0) continue;
       if (abs(dx) <= 1 && abs(dy) <= 1) continue;
       int d2 = dx * dx + dy * dy;
-      if (d2 > gap * gap || d2 >= best) continue;
+      if (d2 >= best) continue;
       int tx = cx + dx, ty = cy + dy;
       if (tx < 0 || tx >= w || ty < 0 || ty >= h) continue;
       if (bar[(size_t)ty * w + tx] != GAP_BAR_INK) continue;
-      if (!gap_segment_has_paper(bar, w, cx, cy, tx, ty)) continue;
+      int paper = gap_segment_paper_count(bar, w, cx, cy, tx, ty);
+      if (paper < 1 || paper > gap) continue;
       best = d2; bx = tx; by = ty;
     }
   if (bx < 0) return false;

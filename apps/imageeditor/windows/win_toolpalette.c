@@ -45,6 +45,7 @@ static void palette_draw_swatches(irect16_t sw) {
   fill_rect(0xFF000000, reset_black);
 }
 
+#if !IMAGEEDITOR_BW
 static void swatch_edit_fg(window_t *owner) {
   if (!g_app) return;
 #if IMAGEEDITOR_INDEXED
@@ -72,6 +73,7 @@ static void swatch_edit_fg(window_t *owner) {
     if (g_app->color_win) invalidate_window(g_app->color_win);
   }
 }
+#endif
 
 result_t win_tool_palette_proc(window_t *win, uint32_t msg,
                                uint32_t wparam, void *lparam) {

@@ -54,6 +54,25 @@ static result_t test_chrome_toolbar_proc(window_t *win, uint32_t msg,
     return 0;
 }
 
+static int g_chrome_left_click;
+static result_t test_left_toolbar_proc(window_t *win, uint32_t msg,
+                                       uint32_t wparam, void *lparam) {
+    (void)lparam;
+    if (msg == evCreate) {
+        toolbar_item_t items[] = {
+          {TOOLBAR_ITEM_BUTTON, 77, 0, 0, 0, "Tool"},
+          {TOOLBAR_ITEM_CUSTOM, 32766, 0, 0, 0, "Swatch"},
+        };
+        send_message(win, tbSetItems, 2, items);
+        return 1;
+    }
+    if (msg == tbButtonClick) {
+        g_chrome_left_click = (int)wparam;
+        return 1;
+    }
+    return 0;
+}
+
 // Count the children in a window's toolbar_children list.
 static int count_toolbar_children(window_t *win) {
     toolbar_state_t *tb = window_toolbar_state(win);
@@ -897,7 +916,7 @@ void test_multiple_docked_toolbars(void) {
                                   NULL, noop_proc, 7, NULL);
     window_t *chrome = create_app_chrome("Chrome", test_menubar_proc, NULL, 0,
                                          test_chrome_toolbar_proc, 7);
-    window_t *left = app_chrome_add_toolbar(chrome, TOOLBAR_DOCK_LEFT, test_chrome_toolbar_proc);
+    window_t *left = app_chrome_add_toolbar(chrome, TOOLBAR_DOCK_LEFT, test_left_toolbar_proc);
     window_t *top = app_chrome_toolbar(chrome);
     ASSERT_NOT_NULL(left);
     ASSERT_TRUE(left->parent == chrome);
@@ -914,9 +933,19 @@ void test_multiple_docked_toolbars(void) {
     int y = window_screen_y(left) + item.y + item.h / 2;
     ASSERT_TRUE(find_window(x, y) == left);
     g_chrome_toolbar_click = 0;
+    g_chrome_left_click = 0;
     dispatch_left_mouse_at(x, y, kEventLeftButtonDown);
     dispatch_left_mouse_at(x, y, kEventLeftButtonUp);
-    ASSERT_EQUAL(g_chrome_toolbar_click, 91);
+    ASSERT_EQUAL(g_chrome_left_click, 77);
+    ASSERT_EQUAL(g_chrome_toolbar_click, 0);
+    irect16_t swatch = tb->item_rects[1];
+    x = window_screen_x(left) + swatch.x + swatch.w / 2;
+    y = window_screen_y(left) + swatch.y + swatch.h / 2;
+    g_chrome_left_click = 0;
+    dispatch_left_mouse_at(x, y, kEventLeftButtonDown);
+    dispatch_left_mouse_at(x, y, kEventLeftButtonUp);
+    ASSERT_EQUAL(g_chrome_left_click, 32766);
+    ASSERT_EQUAL(g_chrome_toolbar_click, 0);
     destroy_window(top);
     ASSERT_NULL(app_chrome_toolbar(chrome));
     top = app_chrome_add_toolbar(chrome, TOOLBAR_DOCK_TOP, test_chrome_toolbar_proc);

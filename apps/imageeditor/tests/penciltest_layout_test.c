@@ -88,9 +88,34 @@ static void test_pencil_canvas_extends_behind_timeline(void) {
   PASS();
 }
 
+static void test_swatch_tap_swaps_colors(void) {
+  TEST("Pencil Test swatch tap swaps foreground and background");
+  penciltest_setup();
+  g_app->fg_color = MAKE_COLOR(0x00, 0x00, 0x00, 0xFF);
+  g_app->bg_color = MAKE_COLOR(0xFF, 0xFF, 0xFF, 0xFF);
+  window_t *tools = g_app->tool_win;
+  ASSERT_NOT_NULL(tools);
+  ASSERT_NOT_NULL(tools->toolbar);
+  toolbar_state_t *tb = window_toolbar_state(tools);
+  ASSERT_NOT_NULL(tb);
+  int swatch = -1;
+  for (int i = 0; i < tb->item_count; i++)
+    if (tb->items[i].type == TOOLBAR_ITEM_CUSTOM) swatch = i;
+  ASSERT_TRUE(swatch >= 0);
+  irect16_t r = tb->item_rects[swatch];
+  uint32_t pt = MAKEDWORD(r.x + r.w / 2, r.y + r.h / 2);
+  send_message(tools->toolbar, evLeftButtonDown, pt, NULL);
+  send_message(tools->toolbar, evLeftButtonUp, pt, NULL);
+  ASSERT_EQUAL(g_app->fg_color, MAKE_COLOR(0xFF, 0xFF, 0xFF, 0xFF));
+  ASSERT_EQUAL(g_app->bg_color, MAKE_COLOR(0x00, 0x00, 0x00, 0xFF));
+  penciltest_teardown();
+  PASS();
+}
+
 int main(void) {
   TEST_START("Pencil Test iPad layout");
   test_ipad_options_keep_toolbar_geometry();
   test_pencil_canvas_extends_behind_timeline();
+  test_swatch_tap_swaps_colors();
   TEST_END();
 }

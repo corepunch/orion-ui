@@ -366,7 +366,11 @@ typedef struct {
 #define TOOLBAR_STYLE_COMPACT        (1u << 2) // menu-bar background, icon-only items
 #define TOOLBAR_COMPACT_PADDING      2
 #define TOOLBAR_COMPACT_SPACING      6
+#if defined(__APPLE__) && TARGET_OS_IOS
+#define TOOLBAR_COMPACT_ICON_SIZE   20
+#else
 #define TOOLBAR_COMPACT_ICON_SIZE   16
+#endif
 #define TOOLBAR_GRIP_HEIGHT          12
 #define TOOLBAR_GRIP_WIDTH           12
 #define TOOLBAR_STYLE_SHOW_LABELS    (1u << 0) // WinAPI-style text below button icons

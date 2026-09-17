@@ -150,7 +150,7 @@ void draw_panel(window_t const *win) {
 // Draw a theme icon centred inside rect r.
 void draw_theme_icon_in_rect(int id, irect16_t r, uint32_t col) {
   int size = (id == THEME_ICON_CLOSE || id == THEME_ICON_MAXIMIZE || id == THEME_ICON_RESTORE)
-    ? MIN(16, MIN(r.w, r.h)) : THEME_ICON_SIZE;
+    ? MIN(TOOLBAR_COMPACT_ICON_SIZE, MIN(r.w, r.h)) : THEME_ICON_SIZE;
   irect16_t icon = rect_center(r, size, size);
   draw_theme_icon(id, icon.x, icon.y, size, col);
 }

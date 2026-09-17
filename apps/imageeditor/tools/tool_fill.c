@@ -8,11 +8,12 @@ extern app_state_t *g_app;
 static void fill_begin(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t doc_pt) {
   (void)view;
   if (!doc || !g_app) return;
-  IE_TRACE("fill begin doc=%p at=(%d,%d) gap=%d", (void *)doc,
-           doc_pt.x, doc_pt.y, g_app->fill.gap);
+  int gap = g_app->fill.gap * MAX(1, g_bw_retina_scale);
+  IE_TRACE("fill begin doc=%p at=(%d,%d) gap=%d scale=%d", (void *)doc,
+           doc_pt.x, doc_pt.y, gap, g_bw_retina_scale);
   ie_doc_begin_op(doc, "Fill");
   int stitches = canvas_flood_fill_with_gap(doc, doc_pt.x, doc_pt.y,
-                                            g_app->fg_color, g_app->fill.gap);
+                                            g_app->fg_color, gap);
   IE_TRACE("fill end doc=%p stitches=%d", (void *)doc, stitches);
   ie_doc_commit_op(doc, true);
 }
