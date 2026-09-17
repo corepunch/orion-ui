@@ -171,7 +171,7 @@ void layout_flow_arrange_window(window_t *win, const irect16_t *rect) {
 result_t win_flow(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
     case evCreate: {
-      win->flags |= WINDOW_AUTO_LAYOUT;
+      win->flags |= WINDOW_AUTO_LAYOUT | WINDOW_LAYOUT_CONTAINER;
       win->flags |= WINDOW_STACK_HORIZONTAL;
       win->layout.layout_spacing = 0;
       win->layout.layout_padding = (irect16_t){0, 0, 0, 0};

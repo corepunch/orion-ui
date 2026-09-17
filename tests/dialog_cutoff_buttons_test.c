@@ -183,15 +183,24 @@ static void test_content_column_width(void) {
   window_t *labels = create_window("", 0, MAKERECT(0, 0, -1, 0), grid, win_column, 0, NULL);
   window_t *inputs = create_window("", 0, MAKERECT(0, 0, 0, 0), grid, win_column, 0, NULL);
   window_t *label = create_window("Height:", 0, MAKERECT(0, 0, 0, 0), labels, intrinsic_cell_proc, 0, NULL);
-  grid->layout.layout_spacing = 4;
+  int gap = 4;
+  grid->layout.layout_spacing = gap;
   window_layout_sync(grid);
+  irect16_t client = get_client_rect(grid);
+  fprintf(stderr, "grid frame=%dx%d client=%dx%d labels=%d,%d %dx%d inputs=%d,%d %dx%d label=%dx%d\n",
+          grid->frame.w, grid->frame.h, client.w, client.h,
+          labels->frame.x, labels->frame.y, labels->frame.w, labels->frame.h,
+          inputs->frame.x, inputs->frame.y, inputs->frame.w, inputs->frame.h,
+          label->frame.w, label->frame.h);
   ASSERT_EQUAL(labels->frame.w, 61);
   ASSERT_EQUAL(label->frame.w, 61);
   ASSERT_EQUAL(label->frame.h, 14);
+  ASSERT_EQUAL(inputs->frame.x, labels->frame.x + labels->frame.w + gap);
   ASSERT_EQUAL(inputs->frame.w, 175);
   resize_window(grid, 300, 80);
   window_layout_sync(grid);
   ASSERT_EQUAL(labels->frame.w, 61);
+  ASSERT_EQUAL(inputs->frame.x, labels->frame.x + labels->frame.w + gap);
   ASSERT_EQUAL(inputs->frame.w, 235);
   destroy_window(grid);
   test_env_shutdown();

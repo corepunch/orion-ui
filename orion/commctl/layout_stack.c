@@ -134,7 +134,7 @@ void layout_flow_horizontal(window_t *first, int start_x, int gap) {
 result_t win_stack(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
     case evCreate: {
-      win->flags |= WINDOW_AUTO_LAYOUT;
+      win->flags |= WINDOW_AUTO_LAYOUT | WINDOW_LAYOUT_CONTAINER;
       win->flags &= ~WINDOW_STACK_HORIZONTAL;
       win->layout.layout_spacing = 4;
       win->layout.layout_padding = (irect16_t){0, 0, 0, 0};

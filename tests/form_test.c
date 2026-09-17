@@ -1587,7 +1587,7 @@ void test_auto_layout_margin(void) {
   ASSERT_EQUAL(first->frame.y, 8);
   ASSERT_EQUAL(first->frame.w, 184);
   ASSERT_EQUAL(second->frame.x, 2);
-  ASSERT_EQUAL(second->frame.y, 45);
+  ASSERT_EQUAL(second->frame.y, 51);
   ASSERT_EQUAL(second->frame.w, 196);
 
   destroy_window(win);
