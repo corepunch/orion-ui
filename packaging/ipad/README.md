@@ -6,17 +6,17 @@ iOS dependencies are required. The default deployment target is iPadOS 16.
 
 ```sh
 make ipad-all                         # both device bundles
-make ipad IPAD_APP=imageeditor         # one device bundle
-make ipad-simulator IPAD_APP=penciltest
-make ipad-run IPAD_APP=penciltest       # build, install, launch in Simulator
+make ipad APP=imageeditor               # one device bundle
+make ipad-simulator APP=penciltest
+make ipad-run APP=penciltest             # build, install, launch in Simulator
 make list-devices
-make ipad-deploy IPAD_APP=imageeditor         # auto-select the only connected iPad
-make ipad-deploy IPAD_APP=penciltest          # auto-select the only connected iPad
-make ipad-deploy IPAD_APP=penciltest DEVICE="iPad name or identifier"  # explicit device
-make ipad-mac IPAD_APP=penciltest       # signed iPad build on Apple silicon Mac
+make ipad-deploy APP=imageeditor         # auto-select the only connected iPad
+make ipad-deploy APP=penciltest          # auto-select the only connected iPad
+make ipad-deploy APP=penciltest DEVICE="iPad name or identifier"  # explicit device
+make ipad-mac APP=penciltest             # signed iPad build on Apple silicon Mac
 ```
 
-`IPAD_APP` defaults to `imageeditor`. If `DEVICE` is omitted for deployment,
+`APP` defaults to `imageeditor`. If `DEVICE` is omitted for deployment,
 the Makefile auto-selects the sole connected iPad and fails if there are zero
 or multiple iPads. `DEVICE` may also select a device or simulator by name or
 UDID. Device installation uses an installed development certificate and a
