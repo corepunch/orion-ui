@@ -196,8 +196,10 @@ void test_ie_document_windows_cascade(void) {
     ASSERT_NOT_NULL(d1);
     ASSERT_NOT_NULL(d2);
 
-    ASSERT_EQUAL(d2->win->frame.x, d1->win->frame.x + DEFAULT_WINDOW_CASCADE_X);
-    ASSERT_EQUAL(d2->win->frame.y, d1->win->frame.y + DEFAULT_WINDOW_CASCADE_Y);
+    irect16_t a = d1->win->maximized ? d1->win->restore_frame : d1->win->frame;
+    irect16_t b = d2->win->maximized ? d2->win->restore_frame : d2->win->frame;
+    ASSERT_EQUAL(b.x, a.x + DEFAULT_WINDOW_CASCADE_X);
+    ASSERT_EQUAL(b.y, a.y + DEFAULT_WINDOW_CASCADE_Y);
 
     ie_teardown();
     PASS();
@@ -213,8 +215,10 @@ void test_ie_large_document_windows_cascade(void) {
     ASSERT_NOT_NULL(d1);
     ASSERT_NOT_NULL(d2);
 
-    ASSERT_EQUAL(d2->win->frame.x, d1->win->frame.x + DEFAULT_WINDOW_CASCADE_X);
-    ASSERT_EQUAL(d2->win->frame.y, d1->win->frame.y + DEFAULT_WINDOW_CASCADE_Y);
+    irect16_t a = d1->win->maximized ? d1->win->restore_frame : d1->win->frame;
+    irect16_t b = d2->win->maximized ? d2->win->restore_frame : d2->win->frame;
+    ASSERT_EQUAL(b.x, a.x + DEFAULT_WINDOW_CASCADE_X);
+    ASSERT_EQUAL(b.y, a.y + DEFAULT_WINDOW_CASCADE_Y);
 
     ie_teardown();
     PASS();
@@ -380,6 +384,8 @@ static void test_ie_floating_frames(void) {
   TEST("Frames: compact layout, actual toolbar clicks/reordering, overflow, visibility");
   ie_setup();
   canvas_doc_t *doc = create_document(NULL, 32, 20);
+  restore_window(doc->win);
+  window_view_center(doc->canvas_win);
   window_t *win = create_timeline_window();
   ASSERT_NOT_NULL(win);
   ASSERT_FALSE(window_has_state(win, WINDOW_STATE_VISIBLE));
@@ -1251,6 +1257,8 @@ void test_ie_shift_wand_adds_from_canvas_window(void) {
     ie_setup();
     canvas_doc_t *doc = create_document(NULL, 5, 4);
     ASSERT_NOT_NULL(doc);
+    restore_window(doc->win);
+    window_view_center(doc->canvas_win);
     g_app->active_doc = doc;
     g_app->current_tool = ID_TOOL_MAGIC_WAND;
     g_app->wand.spread = 0;
@@ -1291,6 +1299,8 @@ void test_ie_shift_rect_selection_is_square(void) {
     ie_setup();
     canvas_doc_t *doc = create_document(NULL, 6, 6);
     ASSERT_NOT_NULL(doc);
+    restore_window(doc->win);
+    window_view_center(doc->canvas_win);
     g_app->active_doc = doc;
     g_app->current_tool = ID_TOOL_SELECT;
 
@@ -1327,6 +1337,8 @@ void test_ie_select_tool_moves_selection_mask_only(void) {
     ie_setup();
     canvas_doc_t *doc = create_document(NULL, 4, 3);
     ASSERT_NOT_NULL(doc);
+    restore_window(doc->win);
+    window_view_center(doc->canvas_win);
     g_app->active_doc = doc;
     g_app->current_tool = ID_TOOL_SELECT;
 
@@ -1367,6 +1379,8 @@ void test_ie_select_soft_edge_starts_new_selection(void) {
     ie_setup();
     canvas_doc_t *doc = create_document(NULL, 4, 3);
     ASSERT_NOT_NULL(doc);
+    restore_window(doc->win);
+    window_view_center(doc->canvas_win);
     g_app->active_doc = doc;
     g_app->current_tool = ID_TOOL_SELECT;
 
@@ -1403,6 +1417,8 @@ void test_ie_move_tool_moves_selected_pixels(void) {
     ie_setup();
     canvas_doc_t *doc = create_document(NULL, 4, 3);
     ASSERT_NOT_NULL(doc);
+    restore_window(doc->win);
+    window_view_center(doc->canvas_win);
     g_app->active_doc = doc;
     g_app->current_tool = ID_TOOL_MOVE;
 
@@ -2238,8 +2254,10 @@ void test_ie_fit_zoom_zero_viewport(void) {
     ie_setup();
     canvas_doc_t *doc = create_document(NULL, 320, 200);
     ASSERT_NOT_NULL(doc);
+    restore_window(doc->win);
+    resize_window(doc->canvas_win, 0, 0);
 
-    // canvas_win frame is 0×0 in headless mode — fit zoom must not crash.
+    // Fit zoom on a 0×0 viewport must not crash or change scale.
     canvas_win_fit_zoom(doc->canvas_win);
 
     canvas_win_state_t *state = (canvas_win_state_t *)doc->canvas_win->userdata;
@@ -2261,9 +2279,10 @@ void test_ie_fit_zoom_selects_best_scale(void) {
     //                                   8x does not (32*8=256>200)
     canvas_doc_t *doc = create_document(NULL, 32, 20);
     ASSERT_NOT_NULL(doc);
+    restore_window(doc->win);
 
     // Manually set the canvas window frame to simulate a real viewport.
-    resize_window(doc->win, 200, 150 + TITLEBAR_HEIGHT + STATUSBAR_HEIGHT);
+    resize_window(doc->win, 200, 150 + TITLEBAR_HEIGHT + IMAGEEDITOR_DOCUMENT_STATUS_H);
 
     canvas_win_fit_zoom(doc->canvas_win);
 
@@ -2285,8 +2304,9 @@ void test_ie_fit_zoom_fallback_to_1x(void) {
     // 1000×800 canvas in a 200×150 viewport — even 1x doesn't fit, stays at 1.
     canvas_doc_t *doc = create_document(NULL, 1000, 800);
     ASSERT_NOT_NULL(doc);
+    restore_window(doc->win);
 
-    resize_window(doc->win, 200, 150 + TITLEBAR_HEIGHT + STATUSBAR_HEIGHT);
+    resize_window(doc->win, 200, 150 + TITLEBAR_HEIGHT + IMAGEEDITOR_DOCUMENT_STATUS_H);
 
     canvas_win_fit_zoom(doc->canvas_win);
 
@@ -2307,8 +2327,9 @@ void test_ie_canvas_centers_small_image_hit_testing(void) {
     ie_setup();
     canvas_doc_t *doc = create_document(NULL, 32, 20);
     ASSERT_NOT_NULL(doc);
+    restore_window(doc->win);
 
-    resize_window(doc->win, 200, 150 + TITLEBAR_HEIGHT + STATUSBAR_HEIGHT);
+    resize_window(doc->win, 200, 150 + TITLEBAR_HEIGHT + IMAGEEDITOR_DOCUMENT_STATUS_H);
     window_view_center(doc->canvas_win);
     canvas_win_sync_scrollbars(doc->canvas_win);
 
@@ -2366,8 +2387,9 @@ void test_ie_zoom_fit_command(void) {
     canvas_doc_t *doc = create_document(NULL, 32, 20);
     ASSERT_NOT_NULL(doc);
     g_app->active_doc = doc;
+    restore_window(doc->win);
 
-    resize_window(doc->win, 200, 150 + TITLEBAR_HEIGHT + STATUSBAR_HEIGHT);
+    resize_window(doc->win, 200, 150 + TITLEBAR_HEIGHT + IMAGEEDITOR_DOCUMENT_STATUS_H);
 
     handle_menu_command(ID_VIEW_ZOOM_FIT);
 
@@ -2386,7 +2408,8 @@ static void test_ie_scrollbars_follow_fit(void) {
     TEST("Document bars disappear together at exact fit and return after zoom");
     ie_setup();
     canvas_doc_t *doc = create_document(NULL, 100, 100);
-    resize_window(doc->win, 200, 200 + TITLEBAR_HEIGHT + STATUSBAR_HEIGHT);
+    restore_window(doc->win);
+    resize_window(doc->win, 200, 200 + TITLEBAR_HEIGHT + IMAGEEDITOR_DOCUMENT_STATUS_H);
     ASSERT_FALSE(doc->win->hscroll.visible);
     ASSERT_FALSE(doc->win->vscroll.visible);
     canvas_win_set_scale(doc->canvas_win, 4);
@@ -2395,7 +2418,7 @@ static void test_ie_scrollbars_follow_fit(void) {
     ASSERT_EQUAL(doc->canvas_win->frame.w, 200 - SCROLLBAR_WIDTH);
     send_message(doc->win, evHScroll, 50, NULL);
     send_message(doc->win, evVScroll, 50, NULL);
-    resize_window(doc->win, 400, 400 + TITLEBAR_HEIGHT + STATUSBAR_HEIGHT);
+    resize_window(doc->win, 400, 400 + TITLEBAR_HEIGHT + IMAGEEDITOR_DOCUMENT_STATUS_H);
     ASSERT_FALSE(doc->win->hscroll.visible);
     ASSERT_FALSE(doc->win->vscroll.visible);
     ASSERT_EQUAL(doc->canvas_win->frame.w, 400);

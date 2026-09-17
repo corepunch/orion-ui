@@ -61,9 +61,14 @@ static void test_pencil_canvas_extends_behind_timeline(void) {
   penciltest_setup();
   canvas_doc_t *doc = create_document(NULL, CANVAS_W, CANVAS_H);
   ASSERT_NOT_NULL(doc);
-  irect16_t override = R(0, 0, 1, 1);
-  ASSERT_FALSE(send_message(doc->win, evGetWorkspaceRect, 0, &override));
   irect16_t area = imageeditor_document_workspace_rect();
+  irect16_t override = R(0, 0, 1, 1);
+  ASSERT_TRUE(send_message(doc->win, evGetWorkspaceRect, 0, &override));
+  ASSERT_EQUAL(override.x, area.x);
+  ASSERT_EQUAL(override.y, area.y);
+  ASSERT_EQUAL(override.w, area.w);
+  ASSERT_EQUAL(override.h, area.h);
+  ASSERT_TRUE(doc->win->maximized);
   ASSERT_EQUAL(doc->win->frame.x, area.x);
   ASSERT_EQUAL(doc->win->frame.y, area.y);
   ASSERT_EQUAL(doc->win->frame.w, area.w);

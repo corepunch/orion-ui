@@ -52,12 +52,6 @@ irect16_t imageeditor_document_workspace_rect(void) {
 #endif
 }
 
-#if IMAGEEDITOR_BW
-static irect16_t imageeditor_pencil_canvas_rect(void) {
-  return imageeditor_document_workspace_rect();
-}
-#endif
-
 void imageeditor_max_document_frame_size(int *out_w, int *out_h) {
   irect16_t ws = imageeditor_document_workspace_rect();
   if (out_w) *out_w = MAX(1, ws.w);
@@ -67,17 +61,24 @@ void imageeditor_max_document_frame_size(int *out_w, int *out_h) {
 void imageeditor_max_canvas_viewport_size(int *out_w, int *out_h) {
   int frame_w = 1;
   int frame_h = 1;
-  int status_h = IMAGEEDITOR_BW ? 0 : STATUSBAR_HEIGHT;
+  int status_h = IMAGEEDITOR_DOCUMENT_STATUS_H;
   imageeditor_max_document_frame_size(&frame_w, &frame_h);
   if (out_w) *out_w = MAX(1, frame_w);
   if (out_h) *out_h = MAX(1, frame_h - TITLEBAR_HEIGHT - status_h);
+}
+
+static bool imageeditor_default_canvas_size(int *out_w, int *out_h) {
+  irect16_t canvas = imageeditor_document_workspace_rect();
+  if (out_w) *out_w = MAX(1, canvas.w);
+  if (out_h) *out_h = MAX(1, canvas.h);
+  return true;
 }
 
 void imageeditor_document_frame_for_viewport(int viewport_w, int viewport_h,
                                              int *out_w, int *out_h) {
   int max_frame_w = 1;
   int max_frame_h = 1;
-  int status_h = IMAGEEDITOR_BW ? 0 : STATUSBAR_HEIGHT;
+  int status_h = IMAGEEDITOR_DOCUMENT_STATUS_H;
   imageeditor_max_document_frame_size(&max_frame_w, &max_frame_h);
 
   int frame_w = MAX(1, viewport_w);
@@ -95,6 +96,9 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
                               uint32_t wparam, void *lparam) {
   canvas_doc_t *doc = (canvas_doc_t *)win->userdata;
   switch (msg) {
+    case evGetWorkspaceRect:
+      if (lparam) *(irect16_t *)lparam = imageeditor_document_workspace_rect();
+      return true;
 #ifdef AX_PLATFORM_IOS
     case evDisplayChange: {
       if (doc == g_app->active_doc) imageeditor_layout_ipad_palettes();
@@ -194,15 +198,10 @@ bool doc_confirm_close(canvas_doc_t *doc, window_t *parent_win) {
 canvas_doc_t *create_document(const char *filename, int w, int h) {
   if (!g_app) return NULL;
 
-#if IMAGEEDITOR_BW
-  bool pencil_default_canvas = !filename && w == CANVAS_W && h == CANVAS_H;
-  if (pencil_default_canvas) {
-    irect16_t canvas = imageeditor_pencil_canvas_rect();
-    w = canvas.w;
-    h = canvas.h;
-    IE_TRACE("pencil canvas rect=%d,%d,%d,%d ratio=%d", canvas.x, canvas.y, w, h, g_bw_retina_scale);
-  }
-#endif
+  bool fill_client = !filename && w == CANVAS_W && h == CANVAS_H &&
+                     imageeditor_default_canvas_size(&w, &h);
+  if (fill_client)
+    IE_TRACE("default canvas %dx%d ratio=%d", w, h, g_bw_retina_scale);
 
   if (w <= 0 || h <= 0) return NULL;
 
@@ -303,18 +302,14 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
   int max_view_w = 1;
   int max_view_h = 1;
   imageeditor_max_canvas_viewport_size(&max_view_w, &max_view_h);
-#ifdef AX_PLATFORM_IOS
-  int viewport_w = max_view_w, viewport_h = max_view_h;
-#else
   int viewport_w = MIN(w, max_view_w), viewport_h = MIN(h, max_view_h);
-#endif
   int win_w = 1;
   int win_h = 1;
   imageeditor_document_frame_for_viewport(viewport_w, viewport_h, &win_w, &win_h);
   irect16_t ws = imageeditor_document_workspace_rect();
   set_default_window_position(ws.x, ws.y);
 
-  flags_t flags = IMAGEEDITOR_BW ? 0 : WINDOW_STATUSBAR;
+  flags_t flags = IMAGEEDITOR_DOCUMENT_STATUSBAR ? WINDOW_STATUSBAR : 0;
 #ifndef AX_PLATFORM_IOS
   flags |= WINDOW_HSCROLL | WINDOW_VSCROLL;
 #endif
@@ -336,15 +331,34 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
   doc->canvas_win = cwin;
 
   dwin->maximizable = true;
-#if IMAGEEDITOR_BW
   maximize_window(dwin);
-  if (pencil_default_canvas) {
+  cr = get_client_rect(dwin);
+  resize_window(cwin, cr.w, cr.h);
+  if (fill_client) {
+    int snap_w = MAX(1, cr.w) * g_bw_retina_scale;
+    int snap_h = MAX(1, cr.h) * g_bw_retina_scale;
+    if (snap_w != doc->canvas_w || snap_h != doc->canvas_h) {
+      canvas_resize(doc, snap_w, snap_h);
+      canvas_clear(doc);
+      doc->modified = false;
+      if (doc->anim) {
+        anim_timeline_free(doc->anim);
+        doc->anim = anim_timeline_new(snap_w, snap_h);
+        if (doc->anim)
+          anim_frame_compress(doc->anim->frames[0], doc->pixels, snap_w, snap_h,
+#if IMAGEEDITOR_INDEXED
+                              FRAME_FORMAT_INDEXED);
+#else
+                              FRAME_FORMAT_RGBA);
+#endif
+      }
+      window_view_set_size(cwin, doc->canvas_w, doc->canvas_h);
+    }
     frect_t bounds = window_view_bounds(cwin);
     window_view_pan(cwin, (ipoint16_t){(int16_t)-lroundf(bounds.x), (int16_t)-lroundf(bounds.y)});
   } else {
     window_view_center(cwin);
   }
-#endif
   show_window(dwin, true);
 
   doc->next   = g_app->docs;
@@ -358,7 +372,7 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
   imageeditor_sync_main_toolbar();
 
   doc_update_title(doc);
-#if !IMAGEEDITOR_BW
+#if IMAGEEDITOR_DOCUMENT_STATUSBAR
   send_message(dwin, evStatusBar, 0,
                (void *)(filename ? filename : "New image"));
 #endif
