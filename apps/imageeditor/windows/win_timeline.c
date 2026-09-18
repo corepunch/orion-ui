@@ -212,9 +212,9 @@ static void timeline_draw_frame(window_t *win, int idx, toolbar_draw_item_t *dra
   bool outlined = selected || (draw->state & CTRL_HOVER) != 0;
   int radius = 4;
   if (outlined) {
-    int ring = selected ? TIMELINE_FRAME_OUTLINE : 1;
     fill_rounded_rect(get_sys_color(selected ? brAccent : brToolbarForeground),
-                      rect_inset(inner, -ring), radius + ring);
+                      rect_inset(inner, -TIMELINE_FRAME_OUTLINE),
+                      radius + TIMELINE_FRAME_OUTLINE);
   }
   fill_rounded_rect(doc && doc->background.show ? doc->background.color : MAKE_COLOR(0xCC, 0xCC, 0xCC, 0xFF), inner, radius);
   if (idx >= 0 && idx < st->thumb_count && st->thumbs[idx])
@@ -223,8 +223,10 @@ static void timeline_draw_frame(window_t *win, int idx, toolbar_draw_item_t *dra
   snprintf(number, sizeof(number), "%d", idx + 1);
   int h = text_char_height(FONT_SMALLEST), w = text_strwidth(FONT_SMALLEST, number);
   irect16_t badge = R(inner.x + 2, inner.y + inner.h - h - 3, w + 6, h + 2);
-  fill_rounded_rect(MAKE_COLOR(0x2A, 0x2A, 0x2A, 0xFF), badge, 3);
-  draw_text(FONT_SMALLEST, number, badge.x + 3, badge.y + 1, MAKE_COLOR(0xFF, 0xFF, 0xFF, 0xFF));
+  uint32_t badge_bg = selected ? get_sys_color(brAccent) : MAKE_COLOR(0x2A, 0x2A, 0x2A, 0xFF);
+  uint32_t badge_fg = selected ? get_sys_color(brActiveTitlebarText) : MAKE_COLOR(0xFF, 0xFF, 0xFF, 0xFF);
+  fill_rounded_rect(badge_bg, badge, 3);
+  draw_text(FONT_SMALLEST, number, badge.x + 3, badge.y + 1, badge_fg);
 }
 
 static result_t timeline_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
