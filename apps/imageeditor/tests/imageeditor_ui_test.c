@@ -426,6 +426,7 @@ static void test_ie_floating_frames(void) {
   ASSERT_EQUAL(toolbar_effective_bsz(win), TB_SPACING);
   ASSERT_EQUAL(a.w, TB_SPACING);
   ASSERT_EQUAL(a.h, TB_SPACING);
+  ASSERT_EQUAL(b.x - (a.x + a.w), TIMELINE_FRAME_GAP);
   uint32_t pa = MAKEDWORD(a.x + a.w / 2, a.y + a.h / 2);
   uint32_t pb = MAKEDWORD(b.x + b.w / 2, b.y + b.h / 2);
   send_message(win->toolbar, evLeftButtonDown, pa, NULL);

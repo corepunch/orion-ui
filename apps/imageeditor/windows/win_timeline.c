@@ -90,6 +90,16 @@ static int timeline_fixed_width(void) {
          7 * (40 + TOOLBAR_SPACING) + 6 + TOOLBAR_SPACING;
 }
 
+// Inter-frame TOOLBAR_ITEM_SPACER width: the toolbar also adds TOOLBAR_SPACING
+// after the previous frame and after the spacer, so spacer + 2*SPACING = GAP.
+#define TIMELINE_FRAME_SPACER_W (TIMELINE_FRAME_GAP - 2 * TOOLBAR_SPACING)
+
+static int timeline_frame_strip_width(int visible_count) {
+  if (visible_count <= 0) return 0;
+  return visible_count * (TIMELINE_THUMB_W + TOOLBAR_SPACING) +
+         (visible_count - 1) * (TIMELINE_FRAME_GAP - TOOLBAR_SPACING);
+}
+
 static void timeline_layout(window_t *win, int width, int height, bool follow) {
   timeline_state_t *st = win->userdata;
   canvas_doc_t *doc = tl_doc();
@@ -100,14 +110,14 @@ static void timeline_layout(window_t *win, int width, int height, bool follow) {
   st->screen_h = height;
   int available = MAX(1, width - APP_TOOLS_W - 2 * FRAME_MARGIN);
   st->visible_count = MIN(MAX(1, count), CLAMP((available - timeline_fixed_width()) /
-                          (TIMELINE_THUMB_W + TOOLBAR_SPACING), 1, FRAME_MAX_VISIBLE));
+                          (TIMELINE_THUMB_W + TIMELINE_FRAME_GAP), 1, FRAME_MAX_VISIBLE));
   st->first_frame = CLAMP(st->first_frame, 0, MAX(0, count - st->visible_count));
   if (follow && count) {
     int active = doc->anim->active_frame;
     if (active < st->first_frame) st->first_frame = active;
     if (active >= st->first_frame + st->visible_count) st->first_frame = active - st->visible_count + 1;
   }
-  int w = timeline_fixed_width() + st->visible_count * (TIMELINE_THUMB_W + TOOLBAR_SPACING);
+  int w = timeline_fixed_width() + timeline_frame_strip_width(st->visible_count);
   int x = win->frame.x, y = win->frame.y;
   if (st->positioned && (x != st->last_position.x || y != st->last_position.y)) st->user_placed = true;
   if (!st->user_placed) {
@@ -126,15 +136,18 @@ static void timeline_build_items(window_t *win) {
   timeline_state_t *st = win->userdata;
   canvas_doc_t *doc = tl_doc();
   int count = doc && doc->anim ? doc->anim->frame_count : 0;
-  toolbar_item_t items[ARRAY_LEN(kTimelineToolbar) + FRAME_MAX_VISIBLE + 1];
+  toolbar_item_t items[ARRAY_LEN(kTimelineToolbar) + 2 * FRAME_MAX_VISIBLE];
   memcpy(items, kTimelineToolbar, sizeof(kTimelineToolbar));
   int n = ARRAY_LEN(kTimelineToolbar);
   items[1].icon = doc && doc->anim && doc->anim->playing ? "square" : "play";
   items[3].flags = g_app && g_app->anim_trace_enabled ? TOOLBAR_BUTTON_FLAG_ACTIVE : 0;
-  for (int i = st->first_frame; i < MIN(count, st->first_frame + st->visible_count); i++)
+  for (int i = st->first_frame; i < MIN(count, st->first_frame + st->visible_count); i++) {
+    if (i > st->first_frame)
+      items[n++] = (toolbar_item_t){.type = TOOLBAR_ITEM_SPACER, .w = TIMELINE_FRAME_SPACER_W};
     items[n++] = (toolbar_item_t){.type = TOOLBAR_ITEM_CUSTOM, .ident = FRAME_ITEM_BASE + i,
       .w = TIMELINE_THUMB_W, .flags = TOOLBAR_ITEM_FLAG_REORDERABLE |
         (i == doc->anim->active_frame ? TOOLBAR_BUTTON_FLAG_ACTIVE : 0), .tooltip = "Select frame; drag to reorder"};
+  }
   send_message(win, tbSetItems, n, items);
 }
 
@@ -184,10 +197,14 @@ static void timeline_draw_frame(window_t *win, int idx, toolbar_draw_item_t *dra
   canvas_doc_t *doc = tl_doc();
   if (st->thumbs_dirty) rebuild_thumbnails(st);
   irect16_t inner = draw->rect;
-  bool outlined = (draw->state & (CTRL_SELECTED | CTRL_HOVER)) != 0;
+  bool selected = (draw->state & CTRL_SELECTED) != 0;
+  bool outlined = selected || (draw->state & CTRL_HOVER) != 0;
   int radius = 4;
-  if (outlined)
-    fill_rounded_rect(get_sys_color((draw->state & CTRL_SELECTED) ? brAccent : brToolbarForeground), rect_inset(inner, -1), radius + 1);
+  if (outlined) {
+    int ring = selected ? TIMELINE_FRAME_OUTLINE : 1;
+    fill_rounded_rect(get_sys_color(selected ? brAccent : brToolbarForeground),
+                      rect_inset(inner, -ring), radius + ring);
+  }
   fill_rounded_rect(doc && doc->background.show ? doc->background.color : MAKE_COLOR(0xCC, 0xCC, 0xCC, 0xFF), inner, radius);
   if (idx >= 0 && idx < st->thumb_count && st->thumbs[idx])
     draw_rounded_rect(st->thumbs[idx], inner, inner.w, inner.h, radius+2, 2.0f);
