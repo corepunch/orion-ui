@@ -142,14 +142,14 @@ void anim_render_shutdown(void);
 bool anim_render_frame_thumbnail(const anim_frame_t *frame, int w, int h,
                                  uint32_t *tex, const uint32_t *palette);
 
-// Same as anim_render_frame_thumbnail, then recolor ink toward `tint` and
-// punch paper (near-white) to transparent so onion-skin is not gray.
+// Same as anim_render_frame_thumbnail, then replace black with `tint` while
+// keeping coverage so the 25%/12.5%/6.25% overlay still steps.
 bool anim_render_frame_thumbnail_tinted(const anim_frame_t *frame, int w, int h,
                                         uint32_t *tex, const uint32_t *palette,
                                         uint32_t tint);
 
-// Recolor dark ink in an RGBA buffer to `tint`. Near-white paper becomes
-// transparent. `npx` is the pixel count (not the byte count).
+// Replace #000000 in a gray onion with `tint`. Paper (near-white) becomes
+// transparent; source alpha is kept. `npx` is the pixel count.
 void anim_onion_tint_rgba(uint8_t *rgba, size_t npx, uint32_t tint);
 
 // Create a square, center-cropped thumbnail with strengthened stroke coverage.
