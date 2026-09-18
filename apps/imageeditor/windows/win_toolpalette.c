@@ -41,8 +41,8 @@ static void palette_draw_swatches(irect16_t sw) {
   fill_rect(g_app ? g_app->fg_color : 0xFFFFFFFF, fg_inner);
 
   fill_rect(get_sys_color(brDarkEdge), reset_outer);
-  fill_rect(0xFFFFFFFF, reset_inner);
-  fill_rect(0xFF000000, reset_black);
+  fill_rect(IE_PAPER_COLOR, reset_inner);
+  fill_rect(IE_INK_COLOR, reset_black);
 }
 
 #if !IMAGEEDITOR_BW

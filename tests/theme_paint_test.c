@@ -147,7 +147,7 @@ static void test_palette_overrides(void) {
   g_sys_colors[brAccent] = 0xff123456;
   g_sys_colors[brControlBg] = 0xff654321;
   theme_part_t parts[] = {THEME_PART_TOOLBAR_BUTTON, THEME_PART_TAB, THEME_PART_LIST_ITEM,
-                          THEME_PART_TITLEBAR, THEME_PART_BUTTON};
+                          THEME_PART_BUTTON};
   ctrl_state_t states[] = {CTRL_SELECTED, CTRL_SELECTED | CTRL_HOVER, CTRL_SELECTED | CTRL_PRESSED};
   for (int i = 0; i < ARRAY_LEN(parts); i++) {
     for (int j = 0; j < ARRAY_LEN(states); j++) {
@@ -158,6 +158,11 @@ static void test_palette_overrides(void) {
   }
   theme->draw_part(THEME_PART_PANEL, R(10, 10, 80, 30), CTRL_NORMAL);
   ASSERT_EQUAL(pixels[25][50], get_sys_color(brControlBg));
+  g_sys_colors[brActiveTitlebar] = 0xffabcdef;
+  memset(pixels, 0, sizeof(pixels));
+  theme->draw_part(THEME_PART_TITLEBAR, R(10, 10, 80, 30), CTRL_FOCUSED);
+  ASSERT_EQUAL(pixels[25][50], get_sys_color(brActiveTitlebar));
+  ASSERT_NOT_EQUAL(pixels[25][50], get_sys_color(brAccent));
   theme->apply_palette();
   PASS();
 }
@@ -178,8 +183,7 @@ static void test_full_row_selection(void) {
   ASSERT_EQUAL(pixels[40][10], 0);
   ASSERT_EQUAL(pixels[25][90], 0);
   ASSERT_EQUAL(theme->foreground(THEME_PART_LIST_ITEM, CTRL_SELECTED), get_sys_color(brActiveTitlebarText));
-  ASSERT_NOT_EQUAL(theme->foreground(THEME_PART_LIST_ITEM, CTRL_SELECTED),
-                   theme->foreground(THEME_PART_LIST_ITEM, CTRL_NORMAL));
+  ASSERT_EQUAL(theme->foreground(THEME_PART_LIST_ITEM, CTRL_NORMAL), get_sys_color(brTextNormal));
   memset(pixels, 0, sizeof(pixels));
   theme->draw_part(THEME_PART_MENU_ITEM, R(10, 10, 80, 24), CTRL_HOVER);
   ASSERT_EQUAL(recorded_radius, 11);

@@ -2,7 +2,13 @@
 #define __UI_THEME_H__
 
 #include <stdbool.h>
+#include <stdint.h>
 #include <orion/user/user.h>
+
+// Packed 0xAABBGGRR (red in the low byte) to match fill_rect / draw_sprite_region.
+#define THEME_RGB(r, g, b) \
+  (0xff000000u | ((uint32_t)(uint8_t)(b) << 16) | \
+   ((uint32_t)(uint8_t)(g) << 8) | (uint32_t)(uint8_t)(r))
 
 // Themes own visual policy; controls own layout, input, values and notifications.
 // Implement every callback below in theme_<name>.c and register its singleton

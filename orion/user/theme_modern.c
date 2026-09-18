@@ -1,5 +1,6 @@
-// Modern theme — flat, quiet surfaces; borderless toolbar controls;
-// rounded hover backgrounds.  Visual reference: Procreate / macOS / ChatGPT.
+// Modern theme — flat navy chrome, purple accent, borderless toolbar controls.
+// Palette reference: Pencil Test / FrameFun concept (cool off-white canvas,
+// warm-purple ink, navy UI). Not a pixel-exact recreation.
 //
 // Toolbar item states (per issue #216):
 //   Normal    — icon/text only, no permanent frame
@@ -20,8 +21,8 @@
 #define MODERN_LIST_INSET_X  4
 #define MODERN_LIST_INSET_Y  1
 
-// Secondary-button resting border (#767676) — quieter than full accent.
-#define MODERN_SECONDARY_BORDER  0xff767676
+// Secondary-button resting border — dark-UI hairline, quieter than accent.
+#define MODERN_SECONDARY_BORDER  THEME_RGB(0x2A, 0x39, 0x54)
 
 // ── Buttons ──────────────────────────────────────────────────────────────────
 
@@ -94,8 +95,7 @@ static void modern_draw_panel_bg(irect16_t r) {
 // ── Titlebar ─────────────────────────────────────────────────────────────────
 
 static void modern_draw_titlebar_bg(irect16_t r, bool focused) {
-  // Same color logic as Classic; chrome colors are already "modern" enough.
-  fill_rect(get_sys_color(focused ? brAccent : brInactiveTitlebar), r);
+  fill_rect(get_sys_color(focused ? brActiveTitlebar : brInactiveTitlebar), r);
 }
 
 // ── Statusbar ────────────────────────────────────────────────────────────────
@@ -170,30 +170,30 @@ static void modern_draw_menu_item_bg(irect16_t r, ctrl_state_t state) {
 
 static void modern_apply_palette(void) {
   g_sys_colors[brTransparent]          = 0x00000000;
-  g_sys_colors[brControlBg]            = 0xffF3F3F3;
-  g_sys_colors[brWindowDarkBg]         = 0xffE8E8E8;
-  g_sys_colors[brWorkspaceBg]          = 0xffDCDCDC;
-  g_sys_colors[brActiveTitlebar]       = 0xffD77800;
-  g_sys_colors[brActiveTitlebarText]   = 0xffffffff;
-  g_sys_colors[brInactiveTitlebar]     = 0xffF0F0F0;
-  g_sys_colors[brInactiveTitlebarText] = 0xff767676;
-  g_sys_colors[brStatusbarBg]          = 0xffF0F0F0;
-  g_sys_colors[brLightEdge]            = 0xffffffff;
-  g_sys_colors[brDarkEdge]             = 0xffC8C8C8;
-  g_sys_colors[brFlare]                = 0xffffffff;
-  g_sys_colors[brAccent]               = 0xffD77800;
-  g_sys_colors[brButtonInner]          = 0xffE0E0E0;
-  g_sys_colors[brButtonHover]          = 0xffD0D0D0;
-  g_sys_colors[brTextNormal]           = 0xff1A1A1A;
-  g_sys_colors[brTextDisabled]         = 0xff9E9E9E;
-  g_sys_colors[brTextError]            = 0xffC42B1C;
-  g_sys_colors[brTextSuccess]          = 0xff0F7B0F;
-  g_sys_colors[brBorderFocus]          = 0xff005FB8;
-  g_sys_colors[brBorderActive]         = 0xff868686;
-  g_sys_colors[brFolderText]           = 0xff107C10;
-  g_sys_colors[brColumnViewBg]         = 0xffDEE3EA;
-  g_sys_colors[brModalOverlay]         = 0x40000000;
-  g_sys_colors[brToolbarForeground]    = 0xff1A1A1A;
+  g_sys_colors[brControlBg]            = THEME_RGB(0x17, 0x24, 0x3B);  // #17243B
+  g_sys_colors[brWindowDarkBg]         = THEME_RGB(0x1A, 0x29, 0x42);  // #1A2942
+  g_sys_colors[brWorkspaceBg]          = THEME_RGB(0x17, 0x24, 0x3B);  // #17243B
+  g_sys_colors[brActiveTitlebar]       = THEME_RGB(0x19, 0x26, 0x3E);  // #19263E
+  g_sys_colors[brActiveTitlebarText]   = THEME_RGB(0xF6, 0xF8, 0xFF);  // #F6F8FF
+  g_sys_colors[brInactiveTitlebar]     = THEME_RGB(0x17, 0x24, 0x3B);  // #17243B
+  g_sys_colors[brInactiveTitlebarText] = THEME_RGB(0x64, 0x70, 0x89);  // #647089
+  g_sys_colors[brStatusbarBg]          = THEME_RGB(0x19, 0x27, 0x3E);  // #19273E
+  g_sys_colors[brLightEdge]            = THEME_RGB(0x4A, 0x5C, 0x7A);
+  g_sys_colors[brDarkEdge]             = THEME_RGB(0x2A, 0x39, 0x54);  // #2A3954
+  g_sys_colors[brFlare]                = THEME_RGB(0xF8, 0xFA, 0xFF);  // #F8FAFF
+  g_sys_colors[brAccent]               = THEME_RGB(0x73, 0x57, 0xF6);  // #7357F6
+  g_sys_colors[brButtonInner]          = THEME_RGB(0x1B, 0x29, 0x42);  // #1B2942
+  g_sys_colors[brButtonHover]          = THEME_RGB(0x24, 0x35, 0x52);
+  g_sys_colors[brTextNormal]           = THEME_RGB(0xF6, 0xF8, 0xFF);  // #F6F8FF
+  g_sys_colors[brTextDisabled]         = THEME_RGB(0x64, 0x70, 0x89);  // #647089
+  g_sys_colors[brTextError]            = THEME_RGB(0xC4, 0x2B, 0x1C);  // #C42B1C
+  g_sys_colors[brTextSuccess]          = THEME_RGB(0x63, 0xC9, 0x94);  // #63C994
+  g_sys_colors[brBorderFocus]          = THEME_RGB(0x8B, 0x70, 0xFF);  // #8B70FF
+  g_sys_colors[brBorderActive]         = THEME_RGB(0x2A, 0x39, 0x54);  // #2A3954
+  g_sys_colors[brFolderText]           = THEME_RGB(0x4C, 0x91, 0xF5);  // #4C91F5
+  g_sys_colors[brColumnViewBg]         = THEME_RGB(0x1A, 0x29, 0x42);  // #1A2942
+  g_sys_colors[brModalOverlay]         = 0x403B2417;
+  g_sys_colors[brToolbarForeground]    = THEME_RGB(0xF6, 0xF8, 0xFF);  // #F6F8FF
 }
 
 // ── Singleton ────────────────────────────────────────────────────────────────
@@ -255,7 +255,7 @@ static void modern_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state)
       break;
     case THEME_PART_TAB_PANE:
     case THEME_PART_PANEL_BORDER:        break;
-    case THEME_PART_TOOLBAR:             fill_rect(get_sys_color(brControlBg), r); break;
+    case THEME_PART_TOOLBAR:             fill_rect(get_sys_color(brActiveTitlebar), r); break;
     case THEME_PART_TOOLBAR_GRIP:
       if (r.w > r.h)
         fill_rect(get_sys_color(brTextDisabled), rect_center(r, MIN(16, r.w - 4), 2));
@@ -271,7 +271,7 @@ static void modern_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state)
         for (int col = row; col < 3; col++)
           fill_rect(get_sys_color(brTextDisabled), R(r.x+r.w-6+col*2, r.y+r.h-6+row*2, 1, 1));
       break;
-    case THEME_PART_MENU_BAR:            fill_rect(get_sys_color(brWindowDarkBg), r); break;
+    case THEME_PART_MENU_BAR:            fill_rect(get_sys_color(brActiveTitlebar), r); break;
     case THEME_PART_MENU_POPUP:          fill_rounded_rect(get_sys_color(brControlBg), r, RADIUS_MENU_ITEM); break;
     case THEME_PART_SEPARATOR:           fill_rect(get_sys_color(brButtonInner), r); break;
     case THEME_PART_SLIDER_TRACK:        fill_rect(get_sys_color(brButtonInner), r); break;
@@ -302,7 +302,8 @@ static uint32_t modern_foreground(theme_part_t part, ctrl_state_t state) {
   if ((state & CTRL_SELECTED) && (part == THEME_PART_LIST_ITEM || part == THEME_PART_TAB ||
       part == THEME_PART_TOOLBAR_BUTTON || part == THEME_PART_TOOLBAR_LABELED_BUTTON))
     return get_sys_color(brActiveTitlebarText);
-  if (part == THEME_PART_BUTTON && (state & CTRL_DEFAULT)) return 0xffffffff;
+  if (part == THEME_PART_BUTTON && (state & CTRL_DEFAULT))
+    return get_sys_color(brActiveTitlebarText);
   if (part == THEME_PART_MENU_ITEM && (state & (CTRL_HOVER | CTRL_SELECTED | CTRL_PRESSED)))
     return get_sys_color(brActiveTitlebarText);
   return get_sys_color(brTextNormal);

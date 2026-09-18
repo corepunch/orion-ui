@@ -193,6 +193,18 @@ extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 #define COLOR_B(c) ((uint8_t)(((c) >> 16) & 0xFF))
 #define COLOR_A(c) ((uint8_t)(((c) >> 24) & 0xFF))
 
+// Pencil Test paper/ink: cool off-white and warm-purple lineart, not #FFF/#000.
+// Color editor keeps a white document background until that palette is retuned.
+#if IMAGEEDITOR_BW
+#define IE_PAPER_COLOR MAKE_COLOR(0xFB, 0xFC, 0xFF, 0xFF)  /* #FBFCFF */
+#define IE_INK_COLOR   MAKE_COLOR(0x33, 0x2B, 0x3B, 0xFF)  /* #332B3B */
+#else
+#define IE_PAPER_COLOR MAKE_COLOR(0xFF, 0xFF, 0xFF, 0xFF)
+#define IE_INK_COLOR   MAKE_COLOR(0x00, 0x00, 0x00, 0xFF)
+#endif
+#define IE_ONION_PREV_COLOR MAKE_COLOR(0xB9, 0xD5, 0xFF, 0xFF)  /* #B9D5FF */
+#define IE_ONION_NEXT_COLOR MAKE_COLOR(0xF3, 0xBD, 0xD8, 0xFF)  /* #F3BDD8 */
+
 // ============================================================
 // Types
 // ============================================================

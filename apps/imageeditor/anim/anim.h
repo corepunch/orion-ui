@@ -142,6 +142,16 @@ void anim_render_shutdown(void);
 bool anim_render_frame_thumbnail(const anim_frame_t *frame, int w, int h,
                                  uint32_t *tex, const uint32_t *palette);
 
+// Same as anim_render_frame_thumbnail, then recolor ink toward `tint` and
+// punch paper (near-white) to transparent so onion-skin is not gray.
+bool anim_render_frame_thumbnail_tinted(const anim_frame_t *frame, int w, int h,
+                                        uint32_t *tex, const uint32_t *palette,
+                                        uint32_t tint);
+
+// Recolor dark ink in an RGBA buffer to `tint`. Near-white paper becomes
+// transparent. `npx` is the pixel count (not the byte count).
+void anim_onion_tint_rgba(uint8_t *rgba, size_t npx, uint32_t tint);
+
 // Create a square, center-cropped thumbnail with strengthened stroke coverage.
 // Texture rows match the bottom-up convention used by draw_rounded_rect.
 bool anim_render_frame_thumbnail_scaled(const anim_frame_t *frame,

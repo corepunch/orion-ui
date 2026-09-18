@@ -134,12 +134,11 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   g_app->shape_tool = ID_TOOL_RECT;
   g_app->hinstance    = hinstance;
 #if IMAGEEDITOR_BW
-  // BW mode: simple black/white palette, use pencil tool by default.
-  // The ipal will be initialized in create_document() with just 3 entries:
-  // 0=transparent, 1=black, 2=white.
-  g_app->fg_color = MAKE_COLOR(0x00, 0x00, 0x00, 0xFF); // black
-  g_app->bg_color = MAKE_COLOR(0xFF, 0xFF, 0xFF, 0xFF); // white
-  g_app->fg_palette_idx = 1; // index 1 = black (foreground draws black)
+  // BW mode: 2-color palette, pencil by default.
+  // ipal is initialized in create_document(): 0=transparent, 1=ink, 2=paper.
+  g_app->fg_color = IE_INK_COLOR;
+  g_app->bg_color = IE_PAPER_COLOR;
+  g_app->fg_palette_idx = 1; // index 1 = ink
   #ifdef IMAGEEDITOR_BW_RETINA
   g_bw_retina_scale = MAX(1, (int)(axGetScaling() + 0.5f));
   #endif

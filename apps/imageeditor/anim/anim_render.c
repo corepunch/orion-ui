@@ -166,11 +166,24 @@ static uint8_t *anim_frame_rgba(const anim_frame_t *frame, int w, int h,
   return rgba;
 }
 
-bool anim_render_frame_thumbnail(const anim_frame_t *frame, int w, int h,
-                                 uint32_t *tex, const uint32_t *palette) {
-  if (!tex) return false;
-  uint8_t *rgba = anim_frame_rgba(frame, w, h, palette);
-  if (!rgba) return false;
+void anim_onion_tint_rgba(uint8_t *rgba, size_t npx, uint32_t tint) {
+  if (!rgba || npx == 0 || COLOR_A(tint) == 0) return;
+  uint8_t tr = COLOR_R(tint), tg = COLOR_G(tint), tb = COLOR_B(tint);
+  for (size_t i = 0; i < npx; i++) {
+    uint8_t *p = rgba + i * 4;
+    if (p[3] == 0) continue;
+    int luma = (p[0] * 77 + p[1] * 150 + p[2] * 29) >> 8;
+    int ink = 255 - luma;
+    if (ink < 8) { memset(p, 0, 4); continue; }
+    p[0] = tr;
+    p[1] = tg;
+    p[2] = tb;
+    p[3] = (uint8_t)((ink * (int)p[3] + 127) / 255);
+  }
+}
+
+static bool anim_upload_thumbnail_rgba(uint8_t *rgba, int w, int h, uint32_t *tex) {
+  if (!rgba || !tex) return false;
   if (*tex == 0) {
     GLuint t = 0;
     glGenTextures(1, &t);
@@ -187,9 +200,29 @@ bool anim_render_frame_thumbnail(const anim_frame_t *frame, int w, int h,
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h,
                     GL_RGBA, GL_UNSIGNED_BYTE, rgba);
   }
-
-  free(rgba);
   return *tex != 0;
+}
+
+bool anim_render_frame_thumbnail(const anim_frame_t *frame, int w, int h,
+                                 uint32_t *tex, const uint32_t *palette) {
+  if (!tex) return false;
+  uint8_t *rgba = anim_frame_rgba(frame, w, h, palette);
+  if (!rgba) return false;
+  bool ok = anim_upload_thumbnail_rgba(rgba, w, h, tex);
+  free(rgba);
+  return ok;
+}
+
+bool anim_render_frame_thumbnail_tinted(const anim_frame_t *frame, int w, int h,
+                                        uint32_t *tex, const uint32_t *palette,
+                                        uint32_t tint) {
+  if (!tex) return false;
+  uint8_t *rgba = anim_frame_rgba(frame, w, h, palette);
+  if (!rgba) return false;
+  anim_onion_tint_rgba(rgba, (size_t)w * (size_t)h, tint);
+  bool ok = anim_upload_thumbnail_rgba(rgba, w, h, tex);
+  free(rgba);
+  return ok;
 }
 
 bool anim_render_frame_thumbnail_scaled(const anim_frame_t *frame,
