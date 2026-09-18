@@ -265,7 +265,7 @@ static void invalidate_window_chrome(window_t *win) {
   window_t *root = get_root_window(win);
   if (!root) return;
   if (g_ui_runtime.running && root->surface_tex) {
-    post_message(root, evNCPaint, 0, NULL);
+    post_message(root, evNCPaint, 1, NULL); // chrome only; do not wipe baked client
     request_composite();
     return;
   }

@@ -12,7 +12,7 @@ enum {
   evCreate,
   evDestroy,
   evShowWindow,
-  evNCPaint,
+  evNCPaint,          // wparam=0 fill panel; wparam=1 chrome only (keep baked client)
   evNCLeftButtonDown,
   evNCLeftButtonUp,
   evPaint,
