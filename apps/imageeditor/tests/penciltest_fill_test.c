@@ -13,7 +13,7 @@ static void test_pencil_fill_scale(int scale, int gap) {
   test_env_init();
   g_bw_retina_scale = scale;
   g_app = calloc(1, sizeof(*g_app));
-  g_app->fg_color = MAKE_COLOR(0, 0, 0, 255);
+  g_app->fg_color = IE_INK_COLOR;
   g_app->fill.gap = gap;
   canvas_doc_t *doc = create_document(NULL, 64, 64);
   ASSERT_NOT_NULL(doc);
@@ -74,7 +74,7 @@ static void test_binary_outline_fixture(void) {
   g_app = calloc(1, sizeof(*g_app));
   canvas_doc_t *doc = create_document(NULL, w, h);
   ASSERT_NOT_NULL(doc);
-  uint32_t ink = MAKE_COLOR(0, 0, 0, 255);
+  uint32_t ink = IE_INK_COLOR;
   for (int y = 0; y < h; y++)
     for (int x = 0; x < w; x += 8) {
       int bits = fgetc(f);

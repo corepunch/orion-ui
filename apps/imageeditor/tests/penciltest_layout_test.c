@@ -93,6 +93,44 @@ static void test_pencil_canvas_extends_behind_timeline(void) {
   PASS();
 }
 
+static void test_pencil_paper_and_ink(void) {
+  TEST("Pencil Test paper is cool off-white and ink is warm purple, not black/white");
+  penciltest_setup();
+  g_app->fg_color = IE_INK_COLOR;
+  g_app->bg_color = IE_PAPER_COLOR;
+  canvas_doc_t *doc = create_document(NULL, 64, 64);
+  ASSERT_NOT_NULL(doc);
+  ASSERT_EQUAL(doc->background.color, IE_PAPER_COLOR);
+  ASSERT_EQUAL(doc->ipal.entries[1], IE_INK_COLOR);
+  ASSERT_EQUAL(doc->ipal.entries[2], IE_PAPER_COLOR);
+  ASSERT_NOT_EQUAL(IE_INK_COLOR, MAKE_COLOR(0x00, 0x00, 0x00, 0xFF));
+  ASSERT_NOT_EQUAL(IE_PAPER_COLOR, MAKE_COLOR(0xFF, 0xFF, 0xFF, 0xFF));
+  canvas_set_pixel(doc, 4, 4, g_app->fg_color);
+  ASSERT_EQUAL(canvas_get_pixel(doc, 4, 4), IE_INK_COLOR);
+  penciltest_teardown();
+  PASS();
+}
+
+static void test_onion_tint_is_not_gray(void) {
+  TEST("onion-skin tint turns ink blue/pink and punches paper to transparent");
+  uint8_t prev[8] = { 0x33, 0x2B, 0x3B, 0xFF, 0xFB, 0xFC, 0xFF, 0xFF };
+  uint8_t next[8] = { 0x33, 0x2B, 0x3B, 0xFF, 0xFB, 0xFC, 0xFF, 0xFF };
+  anim_onion_tint_rgba(prev, 2, IE_ONION_PREV_COLOR);
+  anim_onion_tint_rgba(next, 2, IE_ONION_NEXT_COLOR);
+  ASSERT_EQUAL(prev[0], COLOR_R(IE_ONION_PREV_COLOR));
+  ASSERT_EQUAL(prev[1], COLOR_G(IE_ONION_PREV_COLOR));
+  ASSERT_EQUAL(prev[2], COLOR_B(IE_ONION_PREV_COLOR));
+  ASSERT_TRUE(prev[3] > 200);
+  ASSERT_TRUE(prev[0] != prev[1] || prev[1] != prev[2]);
+  ASSERT_EQUAL(prev[7], 0);
+  ASSERT_EQUAL(next[0], COLOR_R(IE_ONION_NEXT_COLOR));
+  ASSERT_EQUAL(next[1], COLOR_G(IE_ONION_NEXT_COLOR));
+  ASSERT_EQUAL(next[2], COLOR_B(IE_ONION_NEXT_COLOR));
+  ASSERT_TRUE(next[0] != next[1] || next[1] != next[2]);
+  ASSERT_EQUAL(next[7], 0);
+  PASS();
+}
+
 static void test_swatch_tap_swaps_colors(void) {
   TEST("Pencil Test swatch tap swaps foreground and background");
   penciltest_setup();
@@ -121,6 +159,8 @@ int main(void) {
   TEST_START("Pencil Test iPad layout");
   test_ipad_options_keep_toolbar_geometry();
   test_pencil_canvas_extends_behind_timeline();
+  test_pencil_paper_and_ink();
+  test_onion_tint_is_not_gray();
   test_swatch_tap_swaps_colors();
   TEST_END();
 }

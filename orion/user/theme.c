@@ -20,31 +20,31 @@
 } while (0)
 
 uint32_t g_sys_colors[brCount] = {
-  [brTransparent]          = 0x00000000,   // fully transparent
-  [brControlBg]            = 0xff3c3c3c,   // dialog, panel, and control face
-  [brWindowDarkBg]         = 0xff2c2c2c,   // dark secondary panel background
-  [brWorkspaceBg]          = 0xff1e1e1e,   // darker than status bar — canvas workspace
-  [brActiveTitlebar]       = 0xffD77800,   // focused window: blue caption bar (dark theme)
-  [brActiveTitlebarText]   = 0xffffffff,   // focused caption text: white
-  [brInactiveTitlebar]     = 0xff2c2c2c,   // unfocused: flat dark gray
-  [brInactiveTitlebarText] = 0xff787878,   // unfocused caption text: medium gray
-  [brStatusbarBg]          = 0xff383838,   // status bar and scrollbar background
-  [brLightEdge]            = 0xff7f7f7f,   // top-left edge for beveled elements
-  [brDarkEdge]             = 0xff1a1a1a,   // bottom-right edge for bevel
-  [brFlare]                = 0xffcfcfcf,   // corner flare for beveled elements
-  [brAccent]               = 0xffD77800,   // focus, selection, and active-state accent
-  [brButtonInner]          = 0xff505050,   // inner fill of button
-  [brButtonHover]          = 0xff5a5a5a,   // slightly brighter for hover state
-  [brTextNormal]           = 0xffc0c0c0,   // standard text color
-  [brTextDisabled]         = 0xff808080,   // for disabled/inactive text
-  [brTextError]            = 0xffff4444,   // red text for errors
-  [brTextSuccess]          = 0xff44ff44,   // green text for success messages
-  [brBorderFocus]          = 0xff101010,   // very dark outline for focused item
-  [brBorderActive]         = 0xff808080,   // light gray for active border
-  [brFolderText]           = 0xffa0d000,   // folder entry text in file lists
-  [brColumnViewBg]         = 0xff544e47,   // blue-gray for report/icon column views
-  [brModalOverlay]         = 0x40402000,   // modal owner dim overlay (semi-transparent)
-  [brToolbarForeground]    = 0xffd8d8d8,   // neutral light gray for toolbar content
+  [brTransparent]          = 0x00000000,                    // fully transparent
+  [brControlBg]            = THEME_RGB(0x17, 0x24, 0x3B),  // #17243B main navy
+  [brWindowDarkBg]         = THEME_RGB(0x1A, 0x29, 0x42),  // #1A2942 panel outer
+  [brWorkspaceBg]          = THEME_RGB(0x17, 0x24, 0x3B),  // #17243B canvas workspace
+  [brActiveTitlebar]       = THEME_RGB(0x19, 0x26, 0x3E),  // #19263E top chrome
+  [brActiveTitlebarText]   = THEME_RGB(0xF6, 0xF8, 0xFF),  // #F6F8FF text on dark
+  [brInactiveTitlebar]     = THEME_RGB(0x17, 0x24, 0x3B),  // #17243B
+  [brInactiveTitlebarText] = THEME_RGB(0x64, 0x70, 0x89),  // #647089 secondary text
+  [brStatusbarBg]          = THEME_RGB(0x19, 0x27, 0x3E),  // #19273E timeline
+  [brLightEdge]            = THEME_RGB(0x4A, 0x5C, 0x7A),  // scrollbar thumb
+  [brDarkEdge]             = THEME_RGB(0x2A, 0x39, 0x54),  // #2A3954 dark border
+  [brFlare]                = THEME_RGB(0xF8, 0xFA, 0xFF),  // #F8FAFF light card
+  [brAccent]               = THEME_RGB(0x73, 0x57, 0xF6),  // #7357F6 primary purple
+  [brButtonInner]          = THEME_RGB(0x1B, 0x29, 0x42),  // #1B2942 left toolbar
+  [brButtonHover]          = THEME_RGB(0x24, 0x35, 0x52),  // lifted navy hover
+  [brTextNormal]           = THEME_RGB(0xF6, 0xF8, 0xFF),  // #F6F8FF
+  [brTextDisabled]         = THEME_RGB(0x64, 0x70, 0x89),  // #647089
+  [brTextError]            = THEME_RGB(0xC4, 0x2B, 0x1C),  // #C42B1C
+  [brTextSuccess]          = THEME_RGB(0x63, 0xC9, 0x94),  // #63C994
+  [brBorderFocus]          = THEME_RGB(0x8B, 0x70, 0xFF),  // #8B70FF purple border
+  [brBorderActive]         = THEME_RGB(0x2A, 0x39, 0x54),  // #2A3954
+  [brFolderText]           = THEME_RGB(0x4C, 0x91, 0xF5),  // #4C91F5 cyan
+  [brColumnViewBg]         = THEME_RGB(0x1A, 0x29, 0x42),  // #1A2942
+  [brModalOverlay]         = 0x403B2417,                    // #17243B at 25%
+  [brToolbarForeground]    = THEME_RGB(0xF6, 0xF8, 0xFF),  // #F6F8FF
 };
 
 // ── Active theme runtime ───────────────────────────────────────────────────
@@ -52,7 +52,11 @@ uint32_t g_sys_colors[brCount] = {
 static theme_t *g_active_theme = NULL;
 
 theme_t *get_theme(void) {
-  if (!g_active_theme) g_active_theme = theme_modern_instance();
+  if (!g_active_theme) {
+    g_active_theme = theme_modern_instance();
+    g_active_theme->apply_palette();
+    THEME_TRACE("default theme applied name=%s", g_active_theme->name);
+  }
   return g_active_theme;
 }
 

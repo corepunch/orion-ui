@@ -213,7 +213,7 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
 
   doc->canvas_w = buf_w;
   doc->canvas_h = buf_h;
-  doc->background.color = MAKE_COLOR(0xFF, 0xFF, 0xFF, 0xFF);
+  doc->background.color = IE_PAPER_COLOR;
   doc->background.show = true;
   // Guard against integer overflow in the pixel buffer allocation.
   // Reject images larger than 16384x16384 to keep the size_t arithmetic safe.
@@ -239,11 +239,11 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
 #if IMAGEEDITOR_INDEXED
   // Initialize the palette.
 #if IMAGEEDITOR_BW
-  // BW mode: just 2 colors (transparent + black + white).
+  // BW mode: transparent + warm-purple ink + cool off-white paper.
   doc->ipal.transparent = 0;
   doc->ipal.entries[0] = MAKE_COLOR(0x00, 0x00, 0x00, 0x00); // transparent
-  doc->ipal.entries[1] = MAKE_COLOR(0x00, 0x00, 0x00, 0xFF); // black
-  doc->ipal.entries[2] = MAKE_COLOR(0xFF, 0xFF, 0xFF, 0xFF); // white
+  doc->ipal.entries[1] = IE_INK_COLOR;
+  doc->ipal.entries[2] = IE_PAPER_COLOR;
   doc->ipal.count = 3;
 #else
   // Full 256-color palette: index 0 is transparent, indices 1–255 cycle through common colors.
