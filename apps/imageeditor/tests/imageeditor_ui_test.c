@@ -339,6 +339,22 @@ void test_ie_onion_tint_is_not_gray(void) {
     PASS();
 }
 
+void test_ie_anim_compress_bumps_revision(void) {
+    TEST("anim_frame_compress bumps revision for onion-skin cache");
+    ie_setup();
+    canvas_doc_t *doc = create_document(NULL, 4, 4);
+    ASSERT_NOT_NULL(doc);
+    anim_frame_t *f = doc->anim->frames[0];
+    uint32_t rev0 = f->revision;
+    ASSERT_TRUE(anim_frame_compress(f, doc->pixels, 4, 4, IE_FRAME_FORMAT));
+    ASSERT_TRUE(f->revision > rev0);
+    uint32_t rev1 = f->revision;
+    ASSERT_TRUE(anim_frame_compress(f, doc->pixels, 4, 4, IE_FRAME_FORMAT));
+    ASSERT_TRUE(f->revision > rev1);
+    ie_teardown();
+    PASS();
+}
+
 void test_ie_anim_trace_toggle(void) {
     TEST("Anim: trace toggle flips the onion-skin overlay state");
 
@@ -427,6 +443,8 @@ static void test_ie_floating_frames(void) {
   ASSERT_EQUAL(a.w, TB_SPACING);
   ASSERT_EQUAL(a.h, TB_SPACING);
   ASSERT_EQUAL(b.x - (a.x + a.w), TIMELINE_FRAME_GAP);
+  ASSERT_EQUAL(a.y, toolbar_effective_padding(win));
+  ASSERT_EQUAL(win->frame.w - (b.x + b.w), toolbar_effective_padding(win));
   uint32_t pa = MAKEDWORD(a.x + a.w / 2, a.y + a.h / 2);
   uint32_t pb = MAKEDWORD(b.x + b.w / 2, b.y + b.h / 2);
   send_message(win->toolbar, evLeftButtonDown, pa, NULL);
@@ -2460,6 +2478,7 @@ int main(int argc, char *argv[]) {
     test_ie_large_document_windows_cascade();
     test_ie_anim_new_frame_selects_inserted_frame();
     test_ie_onion_tint_is_not_gray();
+    test_ie_anim_compress_bumps_revision();
     test_ie_anim_trace_toggle();
     test_ie_anim_playback_restores_selection();
     test_ie_anim_playback_end_restores_selection();

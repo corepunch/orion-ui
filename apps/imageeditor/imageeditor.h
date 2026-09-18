@@ -338,6 +338,8 @@ typedef struct canvas_doc_s {
 #endif
 } canvas_doc_t;
 
+#define ONION_SKIN_MAX_STEPS 4
+
 typedef struct {
   canvas_doc_t *doc;
   bool          gesture_active;
@@ -349,9 +351,11 @@ typedef struct {
   ipoint16_t    hover;       // canvas pixel coords under the cursor
   bool          hover_valid; // true when hover is on the canvas (for magnifier overlay)
   GLuint        mag_tex;     // GL texture for magnifier loupe (created once, updated each paint)
-  GLuint        onion_tex;    // GL texture for animation trace overlay
-  int           onion_tex_w;  // cached canvas width for onion_tex
-  int           onion_tex_h;  // cached canvas height for onion_tex
+  GLuint        onion_tex[ONION_SKIN_MAX_STEPS * 2];
+  const void   *onion_key[ONION_SKIN_MAX_STEPS * 2];
+  uint32_t      onion_rev[ONION_SKIN_MAX_STEPS * 2];
+  int           onion_tex_w;
+  int           onion_tex_h;
   char          last_sb[64]; // last text sent to status bar — avoids redundant updates
 } canvas_win_state_t;
 
@@ -359,8 +363,6 @@ typedef struct {
   char     name[64];
   uint32_t program;
 } image_filter_t;
-
-#define ONION_SKIN_MAX_STEPS 4
 
 typedef struct {
   canvas_doc_t  *active_doc;
