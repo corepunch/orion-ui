@@ -864,8 +864,10 @@ void swap_foreground_background_colors(void);
 #include "anim/anim.h"
 
 // Floating frame strip geometry.
-#define TIMELINE_THUMB_W   TB_SPACING
-#define TIMELINE_WIN_H     TOOLBAR_BAND_HEIGHT
+#define TIMELINE_THUMB_W        TB_SPACING
+#define TIMELINE_WIN_H          TOOLBAR_BAND_HEIGHT
+#define TIMELINE_FRAME_GAP      4   // pixels between adjacent frame thumbs
+#define TIMELINE_FRAME_OUTLINE  2   // selected-frame ring thickness
 
 // Factory helper: create, show, and register the timeline palette window.
 window_t *create_timeline_window(void);
