@@ -219,7 +219,6 @@ void move_to_top(window_t* _win) {
   extern window_t *get_root_window(window_t *window);
 
   window_t *win = get_root_window(_win);
-  invalidate_window(win);
 
   if (win->flags & WINDOW_ALWAYSINBACK)
     return;
@@ -242,6 +241,7 @@ void move_to_top(window_t* _win) {
     if (!*head) {
       *head = win;
       win->next = NULL;
+      request_composite();
       return;
     }
 
@@ -265,6 +265,7 @@ void move_to_top(window_t* _win) {
       if (prev) prev->next = win;
       else      *head      = win;
     }
+    request_composite();
     return;
   }
 
@@ -346,10 +347,7 @@ void move_to_top(window_t* _win) {
   if (ins_prev) ins_prev->next = group_head;
   else          g_ui_runtime.windows        = group_head;
 
-  // Invalidate every window in the moved group so previously-occluded windows
-  // repaint correctly now that the group has come to the front.
-  for (window_t *gw = group_head; gw != cur; gw = gw->next)
-    invalidate_window(gw);
+  request_composite();
 }
 
 // Dispatch a platform AXmessage to the Orion window system.

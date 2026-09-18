@@ -543,8 +543,11 @@ void repost_messages(void) {
     send_message(m->target, m->msg, m->wparam, m->lparam);
     free_posted_lparam(m->msg, m->lparam);
   }
-  // Composite all root-window FBO textures to the screen.
-  if (frame_began && frame_had_paint) {
+  // Composite baked root-window FBO textures to the screen. A move can
+  // request a blit without posting evPaint (the surfaces are already valid).
+  bool want_composite = frame_had_paint || g_ui_runtime.needs_composite;
+  g_ui_runtime.needs_composite = false;
+  if (frame_began && want_composite) {
     composite_root_windows();
   }
   char screenshot_path[1024];
