@@ -96,8 +96,8 @@ static int timeline_fixed_width(void) {
 
 static int timeline_frame_strip_width(int visible_count) {
   if (visible_count <= 0) return 0;
-  return visible_count * (TIMELINE_THUMB_W + TOOLBAR_SPACING) +
-         (visible_count - 1) * (TIMELINE_FRAME_GAP - TOOLBAR_SPACING);
+  return visible_count * TIMELINE_THUMB_W +
+         (visible_count - 1) * TIMELINE_FRAME_GAP;
 }
 
 static void timeline_layout(window_t *win, int width, int height, bool follow) {
