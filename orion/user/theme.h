@@ -2,7 +2,13 @@
 #define __UI_THEME_H__
 
 #include <stdbool.h>
+#include <stdint.h>
 #include <orion/user/user.h>
+
+// WEB(0xaabbcc) is #aabbcc. Packs R in the low byte (fill_rect) with alpha 0xff.
+#define WEB(hex) \
+  (0xff000000u | ((uint32_t)((hex) & 0x000000ffu) << 16) | \
+   ((uint32_t)((hex) & 0x0000ff00u)) | ((uint32_t)((hex) >> 16) & 0xffu))
 
 // Themes own visual policy; controls own layout, input, values and notifications.
 // Implement every callback below in theme_<name>.c and register its singleton

@@ -285,8 +285,8 @@ void test_toolbar_button_set_image_zero_cols_no_crash(void) {
 
 void test_toolbar_theme_colors(void) {
     TEST("toolbar foreground is neutral while accent retains the focus color");
-    ASSERT_EQUAL((int)get_sys_color(brToolbarForeground), (int)0xffF6F8FFu);
-    ASSERT_EQUAL((int)get_sys_color(brAccent), (int)0xff7357F6u);
+    ASSERT_EQUAL((int)get_sys_color(brToolbarForeground), (int)WEB(0xF6F8FF));
+    ASSERT_EQUAL((int)get_sys_color(brAccent), (int)WEB(0x7357F6));
     PASS();
 }
 

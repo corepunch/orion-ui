@@ -20,31 +20,31 @@
 } while (0)
 
 uint32_t g_sys_colors[brCount] = {
-  [brTransparent]          = 0x00000000,   // fully transparent
-  [brControlBg]            = 0xff17243B,   // main navy
-  [brWindowDarkBg]         = 0xff1A2942,   // panel outer
-  [brWorkspaceBg]          = 0xff17243B,   // canvas workspace
-  [brActiveTitlebar]       = 0xff19263E,   // top chrome
-  [brActiveTitlebarText]   = 0xffF6F8FF,   // text on dark
-  [brInactiveTitlebar]     = 0xff17243B,   // unfocused caption
-  [brInactiveTitlebarText] = 0xff647089,   // secondary text
-  [brStatusbarBg]          = 0xff19273E,   // timeline / status
-  [brLightEdge]            = 0xff4A5C7A,   // scrollbar thumb
-  [brDarkEdge]             = 0xff2A3954,   // dark UI border
-  [brFlare]                = 0xffF8FAFF,   // light card
-  [brAccent]               = 0xff7357F6,   // primary purple
-  [brButtonInner]          = 0xff1B2942,   // left toolbar
-  [brButtonHover]          = 0xff243552,   // lifted navy hover
-  [brTextNormal]           = 0xffF6F8FF,   // text on dark
-  [brTextDisabled]         = 0xff647089,   // secondary / disabled
-  [brTextError]            = 0xffC42B1C,   // error
-  [brTextSuccess]          = 0xff63C994,   // success
-  [brBorderFocus]          = 0xff8B70FF,   // purple border
-  [brBorderActive]         = 0xff2A3954,   // dark UI border
-  [brFolderText]           = 0xff4C91F5,   // cyan
-  [brColumnViewBg]         = 0xff1A2942,   // panel outer
-  [brModalOverlay]         = 0x4017243B,   // navy dim overlay
-  [brToolbarForeground]    = 0xffF6F8FF,   // text on dark
+  [brTransparent]          = 0x00000000,                 // fully transparent
+  [brControlBg]            = WEB(0x17243B),              // main navy
+  [brWindowDarkBg]         = WEB(0x1A2942),              // panel outer
+  [brWorkspaceBg]          = WEB(0x17243B),              // canvas workspace
+  [brActiveTitlebar]       = WEB(0x19263E),              // top chrome
+  [brActiveTitlebarText]   = WEB(0xF6F8FF),              // text on dark
+  [brInactiveTitlebar]     = WEB(0x17243B),              // unfocused caption
+  [brInactiveTitlebarText] = WEB(0x647089),              // secondary text
+  [brStatusbarBg]          = WEB(0x19273E),              // timeline / status
+  [brLightEdge]            = WEB(0x4A5C7A),              // scrollbar thumb
+  [brDarkEdge]             = WEB(0x2A3954),              // dark UI border
+  [brFlare]                = WEB(0xF8FAFF),              // light card
+  [brAccent]               = WEB(0x7357F6),              // primary purple
+  [brButtonInner]          = WEB(0x1B2942),              // left toolbar
+  [brButtonHover]          = WEB(0x243552),              // lifted navy hover
+  [brTextNormal]           = WEB(0xF6F8FF),              // text on dark
+  [brTextDisabled]         = WEB(0x647089),              // secondary / disabled
+  [brTextError]            = WEB(0xC42B1C),              // error
+  [brTextSuccess]          = WEB(0x63C994),              // success
+  [brBorderFocus]          = WEB(0x8B70FF),              // purple border
+  [brBorderActive]         = WEB(0x2A3954),              // dark UI border
+  [brFolderText]           = WEB(0x4C91F5),              // cyan
+  [brColumnViewBg]         = WEB(0x1A2942),              // panel outer
+  [brModalOverlay]         = (WEB(0x17243B) & 0x00ffffffu) | 0x40000000u,
+  [brToolbarForeground]    = WEB(0xF6F8FF),              // text on dark
 };
 
 // ── Active theme runtime ───────────────────────────────────────────────────
