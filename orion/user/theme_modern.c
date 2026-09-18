@@ -22,7 +22,7 @@
 #define MODERN_LIST_INSET_Y  1
 
 // Secondary-button resting border — dark-UI hairline, quieter than accent.
-#define MODERN_SECONDARY_BORDER  THEME_RGB(0x2A, 0x39, 0x54)
+#define MODERN_SECONDARY_BORDER  0xff2A3954
 
 // ── Buttons ──────────────────────────────────────────────────────────────────
 
@@ -170,30 +170,30 @@ static void modern_draw_menu_item_bg(irect16_t r, ctrl_state_t state) {
 
 static void modern_apply_palette(void) {
   g_sys_colors[brTransparent]          = 0x00000000;
-  g_sys_colors[brControlBg]            = THEME_RGB(0x17, 0x24, 0x3B);  // #17243B
-  g_sys_colors[brWindowDarkBg]         = THEME_RGB(0x1A, 0x29, 0x42);  // #1A2942
-  g_sys_colors[brWorkspaceBg]          = THEME_RGB(0x17, 0x24, 0x3B);  // #17243B
-  g_sys_colors[brActiveTitlebar]       = THEME_RGB(0x19, 0x26, 0x3E);  // #19263E
-  g_sys_colors[brActiveTitlebarText]   = THEME_RGB(0xF6, 0xF8, 0xFF);  // #F6F8FF
-  g_sys_colors[brInactiveTitlebar]     = THEME_RGB(0x17, 0x24, 0x3B);  // #17243B
-  g_sys_colors[brInactiveTitlebarText] = THEME_RGB(0x64, 0x70, 0x89);  // #647089
-  g_sys_colors[brStatusbarBg]          = THEME_RGB(0x19, 0x27, 0x3E);  // #19273E
-  g_sys_colors[brLightEdge]            = THEME_RGB(0x4A, 0x5C, 0x7A);
-  g_sys_colors[brDarkEdge]             = THEME_RGB(0x2A, 0x39, 0x54);  // #2A3954
-  g_sys_colors[brFlare]                = THEME_RGB(0xF8, 0xFA, 0xFF);  // #F8FAFF
-  g_sys_colors[brAccent]               = THEME_RGB(0x73, 0x57, 0xF6);  // #7357F6
-  g_sys_colors[brButtonInner]          = THEME_RGB(0x1B, 0x29, 0x42);  // #1B2942
-  g_sys_colors[brButtonHover]          = THEME_RGB(0x24, 0x35, 0x52);
-  g_sys_colors[brTextNormal]           = THEME_RGB(0xF6, 0xF8, 0xFF);  // #F6F8FF
-  g_sys_colors[brTextDisabled]         = THEME_RGB(0x64, 0x70, 0x89);  // #647089
-  g_sys_colors[brTextError]            = THEME_RGB(0xC4, 0x2B, 0x1C);  // #C42B1C
-  g_sys_colors[brTextSuccess]          = THEME_RGB(0x63, 0xC9, 0x94);  // #63C994
-  g_sys_colors[brBorderFocus]          = THEME_RGB(0x8B, 0x70, 0xFF);  // #8B70FF
-  g_sys_colors[brBorderActive]         = THEME_RGB(0x2A, 0x39, 0x54);  // #2A3954
-  g_sys_colors[brFolderText]           = THEME_RGB(0x4C, 0x91, 0xF5);  // #4C91F5
-  g_sys_colors[brColumnViewBg]         = THEME_RGB(0x1A, 0x29, 0x42);  // #1A2942
-  g_sys_colors[brModalOverlay]         = 0x403B2417;
-  g_sys_colors[brToolbarForeground]    = THEME_RGB(0xF6, 0xF8, 0xFF);  // #F6F8FF
+  g_sys_colors[brControlBg]            = 0xff17243B;
+  g_sys_colors[brWindowDarkBg]         = 0xff1A2942;
+  g_sys_colors[brWorkspaceBg]          = 0xff17243B;
+  g_sys_colors[brActiveTitlebar]       = 0xff19263E;
+  g_sys_colors[brActiveTitlebarText]   = 0xffF6F8FF;
+  g_sys_colors[brInactiveTitlebar]     = 0xff17243B;
+  g_sys_colors[brInactiveTitlebarText] = 0xff647089;
+  g_sys_colors[brStatusbarBg]          = 0xff19273E;
+  g_sys_colors[brLightEdge]            = 0xff4A5C7A;
+  g_sys_colors[brDarkEdge]             = 0xff2A3954;
+  g_sys_colors[brFlare]                = 0xffF8FAFF;
+  g_sys_colors[brAccent]               = 0xff7357F6;
+  g_sys_colors[brButtonInner]          = 0xff1B2942;
+  g_sys_colors[brButtonHover]          = 0xff243552;
+  g_sys_colors[brTextNormal]           = 0xffF6F8FF;
+  g_sys_colors[brTextDisabled]         = 0xff647089;
+  g_sys_colors[brTextError]            = 0xffC42B1C;
+  g_sys_colors[brTextSuccess]          = 0xff63C994;
+  g_sys_colors[brBorderFocus]          = 0xff8B70FF;
+  g_sys_colors[brBorderActive]         = 0xff2A3954;
+  g_sys_colors[brFolderText]           = 0xff4C91F5;
+  g_sys_colors[brColumnViewBg]         = 0xff1A2942;
+  g_sys_colors[brModalOverlay]         = 0x4017243B;
+  g_sys_colors[brToolbarForeground]    = 0xffF6F8FF;
 }
 
 // ── Singleton ────────────────────────────────────────────────────────────────
