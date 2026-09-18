@@ -337,6 +337,7 @@ int canvas_flood_fill_with_gap(canvas_doc_t *doc, int sx, int sy,
 
   IE_TRACE("fill_gap at=(%d,%d) gap=%d endpoints=%d corners=%d stitches=%d filled=%d slivers=%d bridge_pixels=%d",
            sx, sy, gap_px, nend, ncor, stitches, filled, slivers, bridge_pixels);
+  (void)filled; (void)slivers; (void)bridge_pixels;
   free(bar);
   free(queue);
   return stitches;

@@ -15,6 +15,7 @@ static void fill_begin(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t d
   int stitches = canvas_flood_fill_with_gap(doc, doc_pt.x, doc_pt.y,
                                             g_app->fg_color, gap);
   IE_TRACE("fill end doc=%p stitches=%d", (void *)doc, stitches);
+  (void)stitches;
   ie_doc_commit_op(doc, true);
 }
 
