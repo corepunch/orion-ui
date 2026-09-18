@@ -5,6 +5,7 @@
 #include <orion/user/messages.h>
 #include <orion/user/draw.h>
 #include <orion/user/theme.h>
+#include <orion/user/theme_palette_dark.h>
 
 // ── Primitive: bevel ──────────────────────────────────────────────────────────
 
@@ -147,31 +148,7 @@ static void classic_draw_menu_item_bg(irect16_t r, ctrl_state_t state) {
 // ── Palette ───────────────────────────────────────────────────────────────────
 
 static void classic_apply_palette(void) {
-  g_sys_colors[brTransparent]          = 0x00000000;
-  g_sys_colors[brControlBg]            = 0xff3c3c3c;
-  g_sys_colors[brWindowDarkBg]         = 0xff2c2c2c;
-  g_sys_colors[brWorkspaceBg]          = 0xff1e1e1e;
-  g_sys_colors[brActiveTitlebar]       = 0xffD77800;
-  g_sys_colors[brActiveTitlebarText]   = 0xffffffff;
-  g_sys_colors[brInactiveTitlebar]     = 0xff2c2c2c;
-  g_sys_colors[brInactiveTitlebarText] = 0xff787878;
-  g_sys_colors[brStatusbarBg]          = 0xff383838;
-  g_sys_colors[brLightEdge]            = 0xff7f7f7f;
-  g_sys_colors[brDarkEdge]             = 0xff1a1a1a;
-  g_sys_colors[brFlare]                = 0xffcfcfcf;
-  g_sys_colors[brAccent]               = 0xffD77800;
-  g_sys_colors[brButtonInner]          = 0xff505050;
-  g_sys_colors[brButtonHover]          = 0xff5a5a5a;
-  g_sys_colors[brTextNormal]           = 0xffc0c0c0;
-  g_sys_colors[brTextDisabled]         = 0xff808080;
-  g_sys_colors[brTextError]            = 0xffff4444;
-  g_sys_colors[brTextSuccess]          = 0xff44ff44;
-  g_sys_colors[brBorderFocus]          = 0xff101010;
-  g_sys_colors[brBorderActive]         = 0xff808080;
-  g_sys_colors[brFolderText]           = 0xffa0d000;
-  g_sys_colors[brColumnViewBg]         = 0xff544e47;
-  g_sys_colors[brModalOverlay]         = 0x40402000;
-  g_sys_colors[brToolbarForeground]    = 0xffd8d8d8;
+  theme_copy_palette(k_theme_palette_dark);
 }
 
 // ── Singleton ────────────────────────────────────────────────────────────────

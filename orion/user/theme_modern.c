@@ -1,8 +1,8 @@
-// Modern theme — flat, borderless toolbar controls; rounded hover backgrounds.
-// THEME_MODERN is the original light WinUI palette (quiet gray, accent caption).
-// THEME_NAVY shares this drawing with a navy/purple palette. Drawing consults
-// get_theme()->style so accent titlebars stay on Modern and navy toolbars stay
-// on Navy.
+// Modern drawing — flat, borderless toolbar controls; rounded hover backgrounds.
+// Palettes live in theme_palette_*.h. THEME_MODERN applies dark (process default,
+// matching pre-navy launch). THEME_LIGHT is the old light WinUI table. THEME_NAVY
+// is navy/purple. Drawing consults get_theme()->style so Navy keeps chrome
+// titlebars; Modern and Light keep accent titlebars.
 //
 // Toolbar item states (per issue #216):
 //   Normal    — icon/text only, no permanent frame
@@ -14,14 +14,15 @@
 #include <orion/user/messages.h>
 #include <orion/user/draw.h>
 #include <orion/user/theme.h>
+#include <orion/user/theme_palette_dark.h>
+#include <orion/user/theme_palette_light.h>
+#include <orion/user/theme_palette_navy.h>
 
 // Radius constants (logical pixels).
 #define RADIUS_TOOLBAR_ITEM  4
 #define RADIUS_BUTTON        ((BUTTON_HEIGHT + 1) / 2)
 #define RADIUS_FIELD         12
 #define RADIUS_MENU_ITEM     6
-#define MODERN_LIST_INSET_X  4
-#define MODERN_LIST_INSET_Y  1
 
 // Secondary-button resting border. Navy uses the visible-on-navy hairline
 // (brLightEdge). Default keeps the original quiet gray outline.
@@ -83,14 +84,7 @@ static void modern_draw_toolbar_item_bg(irect16_t r, ctrl_state_t state,
   } else {
     return;  // normal: no permanent background
   }
-  if (part == THEME_PART_LIST_ITEM) {
-    // Keep the row clickable edge-to-edge, but make the selected surface read
-    // as a native rounded selection rather than a solid table stripe.
-    r = rect_inset_xy(r, MODERN_LIST_INSET_X, MODERN_LIST_INSET_Y);
-    fill_rounded_rect(color, r, RADIUS_MENU_ITEM);
-  } else {
-    fill_rounded_rect(color, r, RADIUS_TOOLBAR_ITEM);
-  }
+  fill_rounded_rect(color, r, RADIUS_TOOLBAR_ITEM);
 }
 
 // ── Panel ─────────────────────────────────────────────────────────────────────
@@ -168,7 +162,19 @@ static void modern_draw_field_bg(irect16_t r, ctrl_state_t state) {
 // ── List item ────────────────────────────────────────────────────────────────
 
 static void modern_draw_list_item_bg(irect16_t r, ctrl_state_t state) {
-  modern_draw_toolbar_item_bg(r, state, THEME_PART_LIST_ITEM);
+  // Reportview / table rows fill the full hit rect. Menus and dropdowns use
+  // THEME_PART_MENU_ITEM (capsule), not this path.
+  if (state & CTRL_DISABLED) return;
+  uint32_t color;
+  if (state & CTRL_PRESSED)
+    color = get_sys_color(theme_modern_instance()->item_background.pressed);
+  else if (state & CTRL_SELECTED)
+    color = get_sys_color(theme_modern_instance()->item_background.selected);
+  else if (state & CTRL_HOVER)
+    color = get_sys_color(theme_modern_instance()->item_background.hover);
+  else
+    return;
+  fill_rect(color, r);
 }
 
 // ── Slider thumb ─────────────────────────────────────────────────────────────
@@ -189,68 +195,9 @@ static void modern_draw_menu_item_bg(irect16_t r, ctrl_state_t state) {
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 
-static void modern_copy_palette(const uint32_t *src) {
-  for (int i = 0; i < brCount; i++) g_sys_colors[i] = src[i];
-}
-
-static const uint32_t k_modern_default[brCount] = {
-  [brTransparent]          = 0x00000000,
-  [brControlBg]            = 0xffF3F3F3,
-  [brWindowDarkBg]         = 0xffE8E8E8,
-  [brWorkspaceBg]          = 0xffDCDCDC,
-  [brActiveTitlebar]       = 0xffD77800,
-  [brActiveTitlebarText]   = 0xffffffff,
-  [brInactiveTitlebar]     = 0xffF0F0F0,
-  [brInactiveTitlebarText] = 0xff767676,
-  [brStatusbarBg]          = 0xffF0F0F0,
-  [brLightEdge]            = 0xffffffff,
-  [brDarkEdge]             = 0xffC8C8C8,
-  [brFlare]                = 0xffffffff,
-  [brAccent]               = 0xffD77800,
-  [brButtonInner]          = 0xffE0E0E0,
-  [brButtonHover]          = 0xffD0D0D0,
-  [brTextNormal]           = 0xff1A1A1A,
-  [brTextDisabled]         = 0xff9E9E9E,
-  [brTextError]            = 0xffC42B1C,
-  [brTextSuccess]          = 0xff0F7B0F,
-  [brBorderFocus]          = 0xff005FB8,
-  [brBorderActive]         = 0xff868686,
-  [brFolderText]           = 0xff107C10,
-  [brColumnViewBg]         = 0xffDEE3EA,
-  [brModalOverlay]         = 0x40000000,
-  [brToolbarForeground]    = 0xff1A1A1A,
-};
-
-static const uint32_t k_modern_navy[brCount] = {
-  [brTransparent]          = 0x00000000,
-  [brControlBg]            = WEB(0x17243B),
-  [brWindowDarkBg]         = WEB(0x1A2942),
-  [brWorkspaceBg]          = WEB(0x17243B),
-  [brActiveTitlebar]       = WEB(0x19263E),
-  [brActiveTitlebarText]   = WEB(0xF6F8FF),
-  [brInactiveTitlebar]     = WEB(0x17243B),
-  [brInactiveTitlebarText] = WEB(0x647089),
-  [brStatusbarBg]          = WEB(0x19273E),
-  [brLightEdge]            = WEB(0x4A5C7A),
-  [brDarkEdge]             = WEB(0x2A3954),
-  [brFlare]                = WEB(0xF8FAFF),
-  [brAccent]               = WEB(0x7357F6),
-  [brButtonInner]          = WEB(0x1B2942),
-  [brButtonHover]          = WEB(0x243552),
-  [brTextNormal]           = WEB(0xF6F8FF),
-  [brTextDisabled]         = WEB(0x647089),
-  [brTextError]            = WEB(0xC42B1C),
-  [brTextSuccess]          = WEB(0x63C994),
-  [brBorderFocus]          = WEB(0x8B70FF),
-  [brBorderActive]         = WEB(0x2A3954),
-  [brFolderText]           = WEB(0x4C91F5),
-  [brColumnViewBg]         = WEB(0x1A2942),
-  [brModalOverlay]         = (WEB(0x17243B) & 0x00ffffffu) | 0x40000000u,
-  [brToolbarForeground]    = WEB(0xF6F8FF),
-};
-
-static void modern_apply_palette(void) { modern_copy_palette(k_modern_default); }
-static void navy_apply_palette(void)   { modern_copy_palette(k_modern_navy); }
+static void modern_apply_palette(void) { theme_copy_palette(k_theme_palette_dark); }
+static void light_apply_palette(void)  { theme_copy_palette(k_theme_palette_light); }
+static void navy_apply_palette(void)   { theme_copy_palette(k_theme_palette_navy); }
 
 // ── Singleton ────────────────────────────────────────────────────────────────
 
@@ -419,15 +366,23 @@ static theme_t g_modern_theme = {
 
 theme_t *theme_modern_instance(void) { return &g_modern_theme; }
 
-theme_t *theme_navy_instance(void) {
-  static theme_t g_navy_theme;
-  static int ready;
-  if (!ready) {
-    g_navy_theme = g_modern_theme;
-    g_navy_theme.style = THEME_NAVY;
-    g_navy_theme.name = "Navy";
-    g_navy_theme.apply_palette = navy_apply_palette;
-    ready = 1;
+static theme_t *modern_variant(theme_style_t style, const char *name,
+                                void (*apply)(void)) {
+  static theme_t light, navy;
+  theme_t *slot = (style == THEME_NAVY) ? &navy : &light;
+  if (!slot->draw_part) {
+    *slot = g_modern_theme;
+    slot->style = style;
+    slot->name = name;
+    slot->apply_palette = apply;
   }
-  return &g_navy_theme;
+  return slot;
+}
+
+theme_t *theme_light_instance(void) {
+  return modern_variant(THEME_LIGHT, "Light", light_apply_palette);
+}
+
+theme_t *theme_navy_instance(void) {
+  return modern_variant(THEME_NAVY, "Navy", navy_apply_palette);
 }

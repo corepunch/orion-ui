@@ -34,8 +34,10 @@ static void paint_rounded(uint32_t color, irect16_t r, int radius) {
 #define theme_classic_instance paint_classic_instance
 #define theme_modern_instance paint_modern_instance
 #define theme_navy_instance paint_navy_instance
+#define theme_light_instance paint_light_instance
 theme_t *paint_modern_instance(void);
 theme_t *paint_navy_instance(void);
+theme_t *paint_light_instance(void);
 #include <orion/user/theme_classic.c>
 #include <orion/user/theme_modern.c>
 #undef fill_rect
@@ -44,6 +46,7 @@ theme_t *paint_navy_instance(void);
 #undef theme_classic_instance
 #undef theme_modern_instance
 #undef theme_navy_instance
+#undef theme_light_instance
 
 static theme_t *paint_with_theme(theme_style_t style) {
   if (get_theme()->style != style) set_theme(style);
@@ -188,16 +191,17 @@ static void test_palette_overrides(void) {
 }
 
 static void test_full_row_selection(void) {
-  TEST("Modern list selection is inset, rounded, and uses selected text");
+  TEST("Modern list selection fills the row; menus stay capsule-shaped");
   theme_t *theme = paint_with_theme(THEME_NAVY);
   memset(pixels, 0, sizeof(pixels));
   theme->draw_part(THEME_PART_LIST_ITEM, R(10, 10, 80, 30), CTRL_SELECTED);
-  ASSERT_EQUAL(pixels[10][10], 0);
-  ASSERT_EQUAL(pixels[25][10], 0);
-  ASSERT_EQUAL(pixels[10][50], 0);
+  ASSERT_EQUAL(pixels[10][10], get_sys_color(brAccent));
+  ASSERT_EQUAL(pixels[25][10], get_sys_color(brAccent));
+  ASSERT_EQUAL(pixels[10][50], get_sys_color(brAccent));
   ASSERT_EQUAL(pixels[25][14], get_sys_color(brAccent));
   ASSERT_EQUAL(pixels[25][50], get_sys_color(brAccent));
-  ASSERT_EQUAL(pixels[25][85], get_sys_color(brAccent));
+  ASSERT_EQUAL(pixels[25][89], get_sys_color(brAccent));
+  ASSERT_EQUAL(pixels[39][10], get_sys_color(brAccent));
   ASSERT_EQUAL(pixels[9][10], 0);
   ASSERT_EQUAL(pixels[40][10], 0);
   ASSERT_EQUAL(pixels[25][90], 0);
@@ -232,9 +236,9 @@ static void test_scrollbar_thickness(void) {
 }
 
 static void test_default_modern_chrome(void) {
-  TEST("Default Modern uses accent titlebars, light toolbar fill, and inner slider tracks");
+  TEST("Default Modern uses the dark palette, accent titlebars, and inner slider tracks");
   theme_t *theme = paint_with_theme(THEME_MODERN);
-  ASSERT_EQUAL(get_sys_color(brControlBg), 0xffF3F3F3);
+  ASSERT_EQUAL(get_sys_color(brControlBg), 0xff3c3c3c);
   ASSERT_EQUAL(get_sys_color(brAccent), 0xffD77800);
   memset(pixels, 0, sizeof(pixels));
   theme->draw_part(THEME_PART_TITLEBAR, R(10, 10, 80, 30), CTRL_FOCUSED);
@@ -245,6 +249,17 @@ static void test_default_modern_chrome(void) {
   memset(pixels, 0, sizeof(pixels));
   theme->draw_part(THEME_PART_SLIDER_TRACK, R(20, 20, 2, 40), CTRL_NORMAL);
   ASSERT_EQUAL(pixels[30][20], get_sys_color(brButtonInner));
+  PASS();
+}
+
+static void test_light_chrome(void) {
+  TEST("Light theme uses the original light WinUI palette");
+  theme_t *theme = paint_with_theme(THEME_LIGHT);
+  ASSERT_EQUAL(get_sys_color(brControlBg), 0xffF3F3F3);
+  ASSERT_EQUAL(get_sys_color(brToolbarForeground), 0xff1A1A1A);
+  memset(pixels, 0, sizeof(pixels));
+  theme->draw_part(THEME_PART_TITLEBAR, R(10, 10, 80, 30), CTRL_FOCUSED);
+  ASSERT_EQUAL(pixels[25][50], get_sys_color(brAccent));
   PASS();
 }
 
@@ -278,5 +293,6 @@ int main(void) {
   test_full_row_selection();
   test_scrollbar_thickness();
   test_default_modern_chrome();
+  test_light_chrome();
   TEST_END();
 }

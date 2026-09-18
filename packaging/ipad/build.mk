@@ -26,8 +26,8 @@ FLAGS := -isysroot "$(SDK_PATH)" -arch $(ARCH) $(MIN_FLAG) -std=c11 -O2 -g -Wall
 THEME_imageeditor ?= navy
 THEME_penciltest  ?= navy
 ifeq ($(THEME_$(APP)),)
-else ifeq ($(filter classic modern navy,$(THEME_$(APP))),)
-$(error unknown THEME_$(APP)=$(THEME_$(APP)) (want classic, modern, or navy))
+else ifeq ($(filter classic modern light navy,$(THEME_$(APP))),)
+$(error unknown THEME_$(APP)=$(THEME_$(APP)) (want classic, modern, light, or navy))
 endif
 APP_THEME_FLAGS := $(if $(filter-out modern,$(THEME_$(APP))),-DORION_THEME=$(THEME_$(APP)))
 APP_FLAGS := -DSTBTT_STATIC $(if $(filter penciltest,$(APP)),-DIMAGEEDITOR_BW=1 -DIMAGEEDITOR_BW_RETINA) $(APP_THEME_FLAGS) -Iapps/imageeditor -Iapps/imageeditor/components -DSHAREDIR='"../share/imageeditor"'

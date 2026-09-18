@@ -126,14 +126,14 @@ PHONY_APP_NAMES = penciltest
 
 # Per-app theme for standalone binaries only. Gems never receive this flag —
 # get_theme() is already the shell's live theme (and its palette).
-# Values: classic, modern (omit / default), navy.
+# Values: classic, modern (dark, omit / default), light, navy.
 # Example: THEME_imageeditor = navy
 # Override per build: make imageeditor THEME_imageeditor=modern
 THEME_imageeditor ?= navy
 THEME_penciltest  ?= navy
 app_theme_cflags = $(if $(filter-out modern,$(THEME_$(1))),-DORION_THEME=$(THEME_$(1)))
 define check_app_theme
-$(if $(THEME_$(1)),$(if $(filter classic modern navy,$(THEME_$(1))),,$(error unknown THEME_$(1)=$(THEME_$(1)) (want classic, modern, or navy))))
+$(if $(THEME_$(1)),$(if $(filter classic modern light navy,$(THEME_$(1))),,$(error unknown THEME_$(1)=$(THEME_$(1)) (want classic, modern, light, or navy))))
 endef
 $(foreach n,$(EXAMPLES) $(PHONY_APP_NAMES),$(eval $(call check_app_theme,$(n))))
 PHONY_APP_BINS  = $(patsubst %,$(BIN_DIR)/%$(EXE_EXT),$(PHONY_APP_NAMES))
@@ -373,7 +373,7 @@ help:
 	@$(foreach a,$(PHONY_APP_NAMES),echo "  $a - $(call appdir,$(a)) + $(PHONY_APPS_CFLAGS_$(a))";)
 	@echo ""
 	@echo "Themes (standalone only; gems inherit the shell's get_theme()):"
-	@echo "  THEME_<app>=classic|modern|navy   (imageeditor and penciltest default to navy)"
+	@echo "  THEME_<app>=classic|modern|light|navy   (modern=dark default; imageeditor/penciltest=navy)"
 	@echo ""
 	@echo "$(LIB_DIR)   - Libraries"
 	@echo "$(BIN_DIR)   - Binaries and tests"

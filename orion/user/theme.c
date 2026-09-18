@@ -10,6 +10,7 @@
 #include "messages.h"
 #include "user.h"
 #include "theme.h"
+#include "theme_palette_dark.h"
 
 // Always-on trace for theme switch lifecycle and state transitions.
 // One line per discrete event; keep noise-free so logs stay auditable.
@@ -19,33 +20,7 @@
   fflush(stderr); \
 } while (0)
 
-uint32_t g_sys_colors[brCount] = {
-  [brTransparent]          = 0x00000000,   // fully transparent
-  [brControlBg]            = 0xff3c3c3c,   // dialog, panel, and control face
-  [brWindowDarkBg]         = 0xff2c2c2c,   // dark secondary panel background
-  [brWorkspaceBg]          = 0xff1e1e1e,   // darker than status bar — canvas workspace
-  [brActiveTitlebar]       = 0xffD77800,   // focused window caption
-  [brActiveTitlebarText]   = 0xffffffff,   // focused caption text: white
-  [brInactiveTitlebar]     = 0xff2c2c2c,   // unfocused: flat dark gray
-  [brInactiveTitlebarText] = 0xff787878,   // unfocused caption text: medium gray
-  [brStatusbarBg]          = 0xff383838,   // status bar and scrollbar background
-  [brLightEdge]            = 0xff7f7f7f,   // top-left edge for beveled elements
-  [brDarkEdge]             = 0xff1a1a1a,   // bottom-right edge for bevel
-  [brFlare]                = 0xffcfcfcf,   // corner flare for beveled elements
-  [brAccent]               = 0xffD77800,   // focus, selection, and active-state accent
-  [brButtonInner]          = 0xff505050,   // inner fill of button
-  [brButtonHover]          = 0xff5a5a5a,   // slightly brighter for hover state
-  [brTextNormal]           = 0xffc0c0c0,   // standard text color
-  [brTextDisabled]         = 0xff808080,   // for disabled/inactive text
-  [brTextError]            = 0xffff4444,   // red text for errors
-  [brTextSuccess]          = 0xff44ff44,   // green text for success messages
-  [brBorderFocus]          = 0xff101010,   // very dark outline for focused item
-  [brBorderActive]         = 0xff808080,   // light gray for active border
-  [brFolderText]           = 0xffa0d000,   // folder entry text in file lists
-  [brColumnViewBg]         = 0xff544e47,   // blue-gray for report/icon column views
-  [brModalOverlay]         = 0x40402000,   // modal owner dim overlay (semi-transparent)
-  [brToolbarForeground]    = 0xffd8d8d8,   // neutral light gray for toolbar content
-};
+uint32_t g_sys_colors[brCount] = { THEME_PALETTE_DARK_INIT };
 
 // ── Active theme runtime ───────────────────────────────────────────────────
 
@@ -55,6 +30,7 @@ static theme_t *theme_for_style(theme_style_t style) {
   switch (style) {
     case THEME_CLASSIC: return theme_classic_instance();
     case THEME_MODERN:  return theme_modern_instance();
+    case THEME_LIGHT:   return theme_light_instance();
     case THEME_NAVY:    return theme_navy_instance();
     default:            return NULL;
   }

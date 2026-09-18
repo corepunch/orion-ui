@@ -100,14 +100,16 @@ typedef enum {
 } ctrl_state_t;
 
 typedef enum {
-  THEME_CLASSIC = 0,  // bevelled dark-gray
-  THEME_MODERN  = 1,  // flat light WinUI
-  THEME_NAVY    = 2,  // Modern drawing, navy chrome + purple accent
+  THEME_CLASSIC = 0,  // bevels + dark palette
+  THEME_MODERN  = 1,  // flat + dark palette (process default)
+  THEME_LIGHT   = 2,  // flat + light WinUI palette
+  THEME_NAVY    = 3,  // flat + navy/purple palette
 } theme_style_t;
 
-// Makefile THEME_<app>=classic|modern|navy → -DORION_THEME=<name> (standalone only).
+// Makefile THEME_<app>=classic|modern|light|navy → -DORION_THEME=<name>
 #define THEME_classic  THEME_CLASSIC
 #define THEME_modern   THEME_MODERN
+#define THEME_light    THEME_LIGHT
 #define THEME_navy     THEME_NAVY
 
 // Semantic class/part identifiers, flattened into one enum to prevent invalid
@@ -195,7 +197,11 @@ typedef struct {
 } theme_t;
 
 static inline bool theme_is_modern(const theme_t *t) {
-  return t && (t->style == THEME_MODERN || t->style == THEME_NAVY);
+  return t && t->style != THEME_CLASSIC;
+}
+
+static inline void theme_copy_palette(const uint32_t *src) {
+  for (int i = 0; i < brCount; i++) g_sys_colors[i] = src[i];
 }
 
 // Active-theme accessor — never returns NULL. First use applies the
@@ -214,9 +220,10 @@ bool set_theme(theme_style_t style);
 void theme_draw(theme_part_t part, irect16_t r, ctrl_state_t state);
 uint32_t theme_foreground(theme_part_t part, ctrl_state_t state);
 
-// Built-in theme singletons. Navy shares Modern drawing with its own palette.
+// Built-in theme singletons. Light and Navy share Modern drawing.
 theme_t *theme_classic_instance(void);
 theme_t *theme_modern_instance(void);
+theme_t *theme_light_instance(void);
 theme_t *theme_navy_instance(void);
 
 // Standalone binaries compiled with -DORION_THEME=<name> select that theme

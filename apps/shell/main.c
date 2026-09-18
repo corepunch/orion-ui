@@ -20,6 +20,8 @@
 #define ID_SHELL_QUIT               (ID_SHELL_CMD_BASE + 1)
 #define ID_SHELL_APPEARANCE_CLASSIC (ID_SHELL_CMD_BASE + 2)
 #define ID_SHELL_APPEARANCE_MODERN  (ID_SHELL_CMD_BASE + 3)
+#define ID_SHELL_APPEARANCE_LIGHT   (ID_SHELL_CMD_BASE + 4)
+#define ID_SHELL_APPEARANCE_NAVY    (ID_SHELL_CMD_BASE + 5)
 
 static const menu_item_t kShellFileItems[] = {
     {"Quit", ID_SHELL_QUIT},
@@ -29,10 +31,12 @@ static const menu_item_t kShellFileItems[] = {
 static menu_item_t kShellAppearanceItems[] = {
     {"  Classic", ID_SHELL_APPEARANCE_CLASSIC},
     {"  Modern",  ID_SHELL_APPEARANCE_MODERN},
+    {"  Light",   ID_SHELL_APPEARANCE_LIGHT},
+    {"  Navy",    ID_SHELL_APPEARANCE_NAVY},
 };
 static const menu_def_t kShellMenus[] = {
     {"File",       kShellFileItems,       1},
-    {"Appearance", kShellAppearanceItems, 2},
+    {"Appearance", kShellAppearanceItems, 4},
 };
 #define SHELL_MENU_COUNT 2
 
@@ -43,10 +47,10 @@ static window_t *g_menubar = NULL;
 // shell_rebuild_menubar() and after evThemeChanged.
 static void shell_update_appearance_checks(void) {
     theme_style_t active = get_theme()->style;
-    kShellAppearanceItems[0].label = (active == THEME_CLASSIC) ? "* Classic"
-                                                                : "  Classic";
-    kShellAppearanceItems[1].label = (active == THEME_MODERN)  ? "* Modern"
-                                                                : "  Modern";
+    kShellAppearanceItems[0].label = (active == THEME_CLASSIC) ? "* Classic" : "  Classic";
+    kShellAppearanceItems[1].label = (active == THEME_MODERN)  ? "* Modern"  : "  Modern";
+    kShellAppearanceItems[2].label = (active == THEME_LIGHT)   ? "* Light"   : "  Light";
+    kShellAppearanceItems[3].label = (active == THEME_NAVY)    ? "* Navy"    : "  Navy";
 }
 
 static bool shell_default_gem_path(char *path, size_t size, const char *name) {
@@ -87,6 +91,10 @@ static result_t shell_menubar_proc(window_t *win, uint32_t msg,
                 set_theme(THEME_CLASSIC);
             } else if (id == ID_SHELL_APPEARANCE_MODERN) {
                 set_theme(THEME_MODERN);
+            } else if (id == ID_SHELL_APPEARANCE_LIGHT) {
+                set_theme(THEME_LIGHT);
+            } else if (id == ID_SHELL_APPEARANCE_NAVY) {
+                set_theme(THEME_NAVY);
             } else {
                 // Route to whichever gem owns this command.
                 shell_dispatch_gem_command(id);

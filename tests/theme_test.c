@@ -18,14 +18,14 @@ static void test_switch_validation(void) {
   test_env_init();
   set_theme(THEME_CLASSIC);
   uint32_t classic_color = get_sys_color(brControlBg);
-  ASSERT_TRUE(set_theme(THEME_MODERN));
+  ASSERT_TRUE(set_theme(THEME_LIGHT));
   ASSERT_NOT_EQUAL(classic_color, get_sys_color(brControlBg));
-  theme_t *modern = get_theme(), *classic = theme_classic_instance();
-  uint32_t modern_color = get_sys_color(brControlBg);
+  theme_t *light = get_theme(), *classic = theme_classic_instance();
+  uint32_t light_color = get_sys_color(brControlBg);
   ASSERT_FALSE(set_theme((theme_style_t)-1));
   ASSERT_FALSE(set_theme((theme_style_t)255));
-  ASSERT_TRUE(get_theme() == modern);
-  ASSERT_EQUAL(modern_color, get_sys_color(brControlBg));
+  ASSERT_TRUE(get_theme() == light);
+  ASSERT_EQUAL(light_color, get_sys_color(brControlBg));
 
   void (*saved)(theme_part_t, irect16_t, ctrl_state_t) = classic->draw_part;
   classic->draw_part = NULL;
@@ -37,10 +37,10 @@ static void test_switch_validation(void) {
   result = set_theme(THEME_CLASSIC);
   classic->scrollbar_width = width;
   ASSERT_FALSE(result);
-  ASSERT_TRUE(get_theme() == modern);
-  ASSERT_EQUAL(modern_color, get_sys_color(brControlBg));
-  ASSERT_FALSE(modern->scrollbar_overlay);
-  ASSERT_EQUAL(modern->scrollbar_width, SCROLLBAR_WIDTH);
+  ASSERT_TRUE(get_theme() == light);
+  ASSERT_EQUAL(light_color, get_sys_color(brControlBg));
+  ASSERT_FALSE(light->scrollbar_overlay);
+  ASSERT_EQUAL(light->scrollbar_width, SCROLLBAR_WIDTH);
   ASSERT_TRUE(set_theme(THEME_CLASSIC));
   ASSERT_EQUAL(get_sys_color(brControlBg), classic_color);
   ASSERT_EQUAL(get_theme()->scrollbar_width, SCROLLBAR_WIDTH);
@@ -49,7 +49,7 @@ static void test_switch_validation(void) {
   set_sys_colors(1, &color_id, &override);
   ASSERT_FALSE(set_theme(THEME_CLASSIC));
   ASSERT_EQUAL(get_sys_color(brControlBg), override);
-  set_theme(THEME_MODERN);
+  set_theme(THEME_LIGHT);
   set_theme(THEME_CLASSIC);
   ASSERT_EQUAL(get_sys_color(brControlBg), classic_color);
   test_env_shutdown();
@@ -57,12 +57,14 @@ static void test_switch_validation(void) {
 }
 
 static void test_navy_theme_palette(void) {
-  TEST("Navy is a theme with its own palette; Classic and Modern keep theirs");
+  TEST("Modern and Classic share the dark palette; Light and Navy have their own");
   test_env_init();
   if (get_theme()->style != THEME_MODERN) ASSERT_TRUE(set_theme(THEME_MODERN));
   ASSERT_EQUAL(get_theme()->style, THEME_MODERN);
-  ASSERT_EQUAL(get_sys_color(brControlBg), 0xffF3F3F3);
+  ASSERT_EQUAL(get_sys_color(brControlBg), 0xff3c3c3c);
   ASSERT_EQUAL(get_sys_color(brAccent), 0xffD77800);
+  ASSERT_TRUE(set_theme(THEME_LIGHT));
+  ASSERT_EQUAL(get_sys_color(brControlBg), 0xffF3F3F3);
   ASSERT_TRUE(set_theme(THEME_NAVY));
   ASSERT_EQUAL(get_theme()->style, THEME_NAVY);
   ASSERT_EQUAL(get_sys_color(brControlBg), WEB(0x17243B));
@@ -75,7 +77,7 @@ static void test_navy_theme_palette(void) {
   ASSERT_TRUE(set_theme(THEME_NAVY));
   ASSERT_EQUAL(get_sys_color(brControlBg), WEB(0x17243B));
   ASSERT_TRUE(set_theme(THEME_MODERN));
-  ASSERT_EQUAL(get_sys_color(brControlBg), 0xffF3F3F3);
+  ASSERT_EQUAL(get_sys_color(brControlBg), 0xff3c3c3c);
   test_env_shutdown();
   PASS();
 }
