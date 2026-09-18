@@ -961,10 +961,10 @@ static void t_canvas_draw_ellipse_outline(test_canvas_t *s,
                                            int cx, int cy,
                                            int rx, int ry, uint32_t c) {
   if (rx <= 0 || ry <= 0) return;
-  long rx2 = (long)rx*rx, ry2 = (long)ry*ry;
-  long ex = 0, ey = ry;
-  long dx2 = 2*ry2*ex, dy2 = 2*rx2*ey;
-  long p = (long)(ry2 - rx2*ry + 0.25*rx2);
+  int64_t rx2 = (int64_t)rx*rx, ry2 = (int64_t)ry*ry;
+  int64_t ex = 0, ey = ry;
+  int64_t dx2 = 2*ry2*ex, dy2 = 2*rx2*ey;
+  int64_t p = ry2 - rx2*ry + rx2 / 4;
   while (dx2 < dy2) {
     canvas_set_pixel(s, (int)(cx+ex), (int)(cy+ey), c);
     canvas_set_pixel(s, (int)(cx-ex), (int)(cy+ey), c);
@@ -974,7 +974,7 @@ static void t_canvas_draw_ellipse_outline(test_canvas_t *s,
     if (p < 0) { p += ry2 + dx2; }
     else { ey--; dy2 -= 2*rx2; p += ry2 + dx2 - dy2; }
   }
-  p = (long)(ry2*(ex+0.5)*(ex+0.5) + rx2*(ey-1)*(ey-1) - rx2*ry2);
+  p = ry2*(2*ex+1)*(2*ex+1)/4 + rx2*(ey-1)*(ey-1) - rx2*ry2;
   while (ey >= 0) {
     canvas_set_pixel(s, (int)(cx+ex), (int)(cy+ey), c);
     canvas_set_pixel(s, (int)(cx-ex), (int)(cy+ey), c);
