@@ -1128,6 +1128,8 @@ void show_window(window_t *win, bool visible) {
   post_message(win, evShowWindow, visible, NULL);
   if (win->maximized) sync_desktop_window();
   if (!visible) request_composite();
+  else if (g_ui_runtime.running && get_root_window(win) && !get_root_window(win)->surface_tex)
+    invalidate_window(win);
 }
 
 // Check membership without dereferencing a potentially destroyed pointer.
