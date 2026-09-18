@@ -291,13 +291,14 @@ void canvas_draw_rect_filled(canvas_doc_t *doc, int x, int y, int w, int h, uint
   canvas_draw_rect_outline(doc, x, y, w, h, outline);
 }
 
-// Midpoint ellipse algorithm (Bresenham's)
+// Midpoint ellipse. Use 64-bit math: Windows long is 32-bit, and rx²*ry²
+// overflows for radii >= 256.
 void canvas_draw_ellipse_outline(canvas_doc_t *doc, int cx, int cy, int rx, int ry, uint32_t c) {
   if (rx <= 0 || ry <= 0) return;
-  long rx2 = (long)rx * rx, ry2 = (long)ry * ry;
-  long x = 0, y = ry;
-  long dx = 2 * ry2 * x, dy = 2 * rx2 * y;
-  long p = (long)(ry2 - rx2 * ry + 0.25f * rx2);
+  int64_t rx2 = (int64_t)rx * rx, ry2 = (int64_t)ry * ry;
+  int64_t x = 0, y = ry;
+  int64_t dx = 2 * ry2 * x, dy = 2 * rx2 * y;
+  int64_t p = ry2 - rx2 * ry + rx2 / 4;
 
   while (dx < dy) {
     canvas_set_pixel(doc, (int)(cx+x), (int)(cy+y), c);
@@ -312,7 +313,7 @@ void canvas_draw_ellipse_outline(canvas_doc_t *doc, int cx, int cy, int rx, int 
       y--; dy -= 2 * rx2; p += ry2 + dx - dy;
     }
   }
-  p = (long)(ry2 * (x + 0.5f) * (x + 0.5f) + rx2 * (y-1) * (y-1) - rx2 * ry2);
+  p = ry2 * (2 * x + 1) * (2 * x + 1) / 4 + rx2 * (y - 1) * (y - 1) - rx2 * ry2;
   while (y >= 0) {
     canvas_set_pixel(doc, (int)(cx+x), (int)(cy+y), c);
     canvas_set_pixel(doc, (int)(cx-x), (int)(cy+y), c);
@@ -464,9 +465,9 @@ void canvas_draw_ellipse_scaled(canvas_doc_t *doc, int cx, int cy, int rx, int r
                                 bool filled, uint32_t outline, uint32_t fill) {
   if (rx <= 0 || ry <= 0) return;
   if (filled) canvas_draw_ellipse_filled(doc, cx, cy, rx, ry, outline, fill);
-  long rx2 = (long)rx * rx, ry2 = (long)ry * ry;
-  long x = 0, y = ry, dx = 2 * ry2 * x, dy = 2 * rx2 * y;
-  long p = (long)(ry2 - rx2 * ry + 0.25f * rx2);
+  int64_t rx2 = (int64_t)rx * rx, ry2 = (int64_t)ry * ry;
+  int64_t x = 0, y = ry, dx = 2 * ry2 * x, dy = 2 * rx2 * y;
+  int64_t p = ry2 - rx2 * ry + rx2 / 4;
   while (dx < dy) {
     shape_pixel(doc, cx + x, cy + y, outline); shape_pixel(doc, cx - x, cy + y, outline);
     shape_pixel(doc, cx + x, cy - y, outline); shape_pixel(doc, cx - x, cy - y, outline);
@@ -474,7 +475,7 @@ void canvas_draw_ellipse_scaled(canvas_doc_t *doc, int cx, int cy, int rx, int r
     if (p < 0) p += ry2 + dx;
     else { y--; dy -= 2 * rx2; p += ry2 + dx - dy; }
   }
-  p = (long)(ry2 * (x + 0.5f) * (x + 0.5f) + rx2 * (y - 1) * (y - 1) - rx2 * ry2);
+  p = ry2 * (2 * x + 1) * (2 * x + 1) / 4 + rx2 * (y - 1) * (y - 1) - rx2 * ry2;
   while (y >= 0) {
     shape_pixel(doc, cx + x, cy + y, outline); shape_pixel(doc, cx - x, cy + y, outline);
     shape_pixel(doc, cx + x, cy - y, outline); shape_pixel(doc, cx - x, cy - y, outline);

@@ -383,6 +383,26 @@ static void test_gap_diagonal(int hole) {
   PASS();
 }
 
+static void test_large_circle_outline_is_closed(void) {
+  TEST("256px circle outline is closed (no 32-bit ellipse overflow)");
+  test_env_init();
+  g_app = calloc(1, sizeof(*g_app));
+  canvas_doc_t *doc = create_document(NULL, 544, 544);
+  ASSERT_NOT_NULL(doc);
+  canvas_draw_ellipse_outline(doc, 272, 272, 256, 256, GAP_INK);
+  ASSERT_EQUAL(canvas_get_pixel(doc, 528, 272), GAP_INK);
+  ASSERT_EQUAL(canvas_get_pixel(doc, 16, 272), GAP_INK);
+  ASSERT_EQUAL(canvas_get_pixel(doc, 272, 528), GAP_INK);
+  ASSERT_EQUAL(canvas_get_pixel(doc, 272, 16), GAP_INK);
+  canvas_flood_fill_with_gap(doc, 272, 272, GAP_FILL, 0);
+  ASSERT_TRUE(canvas_get_pixel(doc, 0, 0) != GAP_FILL);
+  close_document(doc);
+  test_env_shutdown();
+  free(g_app);
+  g_app = NULL;
+  PASS();
+}
+
 static void test_gap_circle(int scale, int degrees, int direction) {
   TEST("circle with a 1-2 degree break fills without leaks or white speckles");
   test_env_init();
@@ -407,7 +427,8 @@ static void test_gap_circle(int scale, int degrees, int direction) {
   for (int y = 0; y < size; y++)
     for (int x = 0; x < size; x++) {
       if (canvas_get_pixel(doc, x, y) != GAP_INK) continue;
-      double delta = remainder(atan2(y - center, x - center) - angle, 2 * M_PI);
+      double delta = atan2(y - center, x - center) - angle;
+      delta -= 2 * M_PI * floor((delta + M_PI) / (2 * M_PI));
       if (fabs(delta) > degrees * M_PI / 360) continue;
       canvas_set_pixel(doc, x, y, paper);
       expected[y * size + x] = GAP_BRIDGE;
@@ -474,6 +495,7 @@ int main(int argc, char *argv[]) {
   test_gap_dense_drawing();
   for (int hole = -1; hole < 4; hole++) test_gap_diagonal(hole);
 
+  test_large_circle_outline_is_closed();
   for (int scale = 1; scale <= 2; scale++)
     for (int degrees = 1; degrees <= 2; degrees++)
       for (int direction = 0; direction < 8; direction++) test_gap_circle(scale, degrees, direction);
