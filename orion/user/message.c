@@ -204,7 +204,7 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         if (win == root && (win->flags & WINDOW_TRANSPARENT)) R_ClearWindowTarget(root->surface_fbo);
         glBindFramebuffer(GL_FRAMEBUFFER, root->surface_fbo);
         set_viewport_for_fbo(root);
-        if (!(win->flags&WINDOW_TRANSPARENT)) {
+        if (!(win->flags&WINDOW_TRANSPARENT) && wparam == 0) {
           draw_panel(win);
         }
         if (!(win->flags&WINDOW_NOTITLE)) {
@@ -483,6 +483,8 @@ void post_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         free_posted_lparam(msg, queue.messages[r].lparam);
         queue.messages[r].wparam = wparam;
         queue.messages[r].lparam = lparam;
+      } else if (msg == evNCPaint && wparam == 0) {
+        queue.messages[r].wparam = 0;
       } else {
         free_posted_lparam(msg, lparam);
       }
