@@ -219,9 +219,13 @@ void move_to_top(window_t* _win) {
   extern window_t *get_root_window(window_t *window);
 
   window_t *win = get_root_window(_win);
+  if (!win) return;
+  if (g_ui_runtime.running && !win->surface_tex) invalidate_window(win);
 
-  if (win->flags & WINDOW_ALWAYSINBACK)
+  if (win->flags & WINDOW_ALWAYSINBACK) {
+    request_composite();
     return;
+  }
 
   hinstance_t h = win->hinstance;
 
