@@ -87,12 +87,14 @@ ui_runtime_state_t g_ui_runtime = {
   .default_window_y = 20,
   .last_mouse_sx = 0,
   .last_mouse_sy = 0,
+  .needs_composite = false,
   .tracked_toolbar = NULL,
 };
 
 // Forward declarations
 extern void post_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 extern intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+extern void wake_event_loop(void);
 extern int titlebar_height(window_t const *win);
 extern int statusbar_height(window_t const *win);
 
@@ -252,6 +254,24 @@ bool do_windows_overlap(const window_t *a, const window_t *b) {
   return a_x1 < b_x2 && a_x2 > b_x1 && a_y1 < b_y2 && a_y2 > b_y1;
 }
 
+// Blit baked root-window textures without re-running evPaint.
+void request_composite(void) {
+  g_ui_runtime.needs_composite = true;
+  wake_event_loop();
+}
+
+// Titlebar/toolbar only. Content (and child canvases) stay on the baked surface.
+static void invalidate_window_chrome(window_t *win) {
+  window_t *root = get_root_window(win);
+  if (!root) return;
+  if (g_ui_runtime.running && root->surface_tex) {
+    post_message(root, evNCPaint, 0, NULL);
+    request_composite();
+    return;
+  }
+  invalidate_window(root);
+}
+
 // Invalidate overlapping windows
 static void invalidate_overlaps(window_t *win) {
   for (window_t *t = g_ui_runtime.windows; t; t = t->next) {
@@ -263,15 +283,13 @@ static void invalidate_overlaps(window_t *win) {
 
 // Move window to new position
 void move_window(window_t *win, int x, int y) {
-  post_message(win, evResize, 0, NULL);
-
-  invalidate_overlaps(win);
-  invalidate_window(win);
-
+  if (!win || (win->frame.x == x && win->frame.y == y)) return;
   win->frame.x = x;
   win->frame.y = y;
-
-  invalidate_overlaps(win);
+  // Root windows are already baked into surface_tex; only the compositor
+  // needs to blit them at the new frame. Children share the parent FBO.
+  if (win->parent) invalidate_window(win);
+  else request_composite();
 }
 
 // Resize window
@@ -289,7 +307,6 @@ void resize_window(window_t *win, int new_w, int new_h) {
   send_message(win, evResize, 0, NULL);
   window_layout_sync(win);
 
-  invalidate_overlaps(win);
   invalidate_window(win);
 }
 
@@ -616,11 +633,11 @@ void set_focus(window_t* win) {
   if (g_ui_runtime.focused) {
     window_set_state(g_ui_runtime.focused, WINDOW_STATE_EDITING, false);
     post_message(g_ui_runtime.focused, evKillFocus, 0, win);
-    invalidate_window(g_ui_runtime.focused);
+    invalidate_window_chrome(g_ui_runtime.focused);
   }
   if (win) {
     post_message(win, evSetFocus, 0, g_ui_runtime.focused);
-    invalidate_window(win);
+    invalidate_window_chrome(win);
   }
   g_ui_runtime.focused = win;
 }
@@ -1099,7 +1116,6 @@ static void create_form_children(window_t *parent, const form_ctrl_def_t *childr
 // Show or hide window
 void show_window(window_t *win, bool visible) {
   if (!visible) {
-    invalidate_overlaps(win);
     if (g_ui_runtime.focused == win) set_focus(NULL);
     if (g_ui_runtime.captured == win) set_capture(NULL);
     if (g_ui_runtime.tracked == win) track_mouse(NULL);
@@ -1111,6 +1127,7 @@ void show_window(window_t *win, bool visible) {
   window_set_state(win, WINDOW_STATE_VISIBLE, visible);
   post_message(win, evShowWindow, visible, NULL);
   if (win->maximized) sync_desktop_window();
+  if (!visible) request_composite();
 }
 
 // Check membership without dereferencing a potentially destroyed pointer.

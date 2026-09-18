@@ -634,6 +634,7 @@ void set_default_window_position(int x, int y);
 intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 void post_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 void invalidate_window(window_t *win);
+void request_composite(void);
 
 // Window query functions
 window_t *get_window_item(window_t const *win, uint32_t id);
@@ -690,6 +691,7 @@ typedef struct {
   int       last_mouse_sx;    // last known pointer position in scaled screen pixels
   int       last_mouse_sy;    // (updated on every platform mouse event; used for hover resync)
   window_t *tracked_toolbar;  // toolbar host that last received evMouseMove (for evMouseLeave delivery)
+  bool      needs_composite;  // blit baked window textures without evPaint
 } ui_runtime_state_t;
 
 extern ui_runtime_state_t g_ui_runtime;

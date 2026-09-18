@@ -489,7 +489,7 @@ void test_keyboard_state_tracks_press_release_and_focus_loss(void) {
 }
 
 static void test_window_motion_batches_paint(bool resizing) {
-  TEST(resizing ? "resize: input batch paints once" : "drag: input batch paints once");
+  TEST(resizing ? "resize: input batch paints once" : "drag: input batch composites without painting");
   test_env_init();
   window_t *win = test_env_create_window("motion", 0, 0, 100, 100, proc_a, NULL);
   ASSERT_NOT_NULL(win);
@@ -511,9 +511,98 @@ static void test_window_motion_batches_paint(bool resizing) {
   } else {
     ASSERT_EQUAL(win->frame.x, 190);
     ASSERT_EQUAL(win->frame.y, 200);
+    ASSERT_TRUE(g_ui_runtime.needs_composite);
   }
   repost_messages();
-  ASSERT_EQUAL(count_proc_a, 1);
+  ASSERT_EQUAL(count_proc_a, resizing ? 1 : 0);
+  ASSERT_FALSE(g_ui_runtime.needs_composite);
+  test_env_shutdown();
+  PASS();
+}
+
+static int paint_under, paint_over, paint_parent;
+static result_t paint_under_proc(window_t *w, uint32_t msg, uint32_t wp, void *lp) {
+  (void)w; (void)wp; (void)lp;
+  if (msg == evPaint) paint_under++;
+  return true;
+}
+static result_t paint_over_proc(window_t *w, uint32_t msg, uint32_t wp, void *lp) {
+  (void)w; (void)wp; (void)lp;
+  if (msg == evPaint) paint_over++;
+  return true;
+}
+static result_t paint_parent_proc(window_t *w, uint32_t msg, uint32_t wp, void *lp) {
+  (void)w; (void)wp; (void)lp;
+  if (msg == evPaint) paint_parent++;
+  return false;
+}
+
+static void test_move_root_does_not_repaint_overlaps(void) {
+  TEST("move_window: root drag does not paint overlapping windows");
+  test_env_init();
+  irect16_t under_r = {0, 0, 200, 200};
+  irect16_t over_r = {10, 10, 80, 40};
+  window_t *under = create_window("under", 0, &under_r, NULL, paint_under_proc, 0, NULL);
+  window_t *over = create_window("over", WINDOW_ALWAYSONTOP, &over_r, NULL, paint_over_proc, 0, NULL);
+  ASSERT_NOT_NULL(under);
+  ASSERT_NOT_NULL(over);
+  repost_messages();
+  paint_under = paint_over = 0;
+  g_ui_runtime.needs_composite = false;
+  move_window(over, 40, 50);
+  ASSERT_EQUAL(over->frame.x, 40);
+  ASSERT_EQUAL(over->frame.y, 50);
+  ASSERT_TRUE(g_ui_runtime.needs_composite);
+  repost_messages();
+  ASSERT_EQUAL(paint_over, 0);
+  ASSERT_EQUAL(paint_under, 0);
+  ASSERT_FALSE(g_ui_runtime.needs_composite);
+  destroy_window(over);
+  destroy_window(under);
+  test_env_shutdown();
+  PASS();
+}
+
+static void test_move_to_top_does_not_paint_overlaps(void) {
+  TEST("move_to_top: raising a palette does not paint other app windows");
+  test_env_init();
+  irect16_t under_r = {0, 0, 200, 200};
+  irect16_t over_r = {10, 10, 80, 40};
+  window_t *under = create_window("under", 0, &under_r, NULL, paint_under_proc, 7, NULL);
+  window_t *over = create_window("over", WINDOW_ALWAYSONTOP, &over_r, NULL, paint_over_proc, 7, NULL);
+  ASSERT_NOT_NULL(under);
+  ASSERT_NOT_NULL(over);
+  repost_messages();
+  paint_under = paint_over = 0;
+  g_ui_runtime.needs_composite = false;
+  move_to_top(over);
+  repost_messages();
+  ASSERT_EQUAL(paint_under, 0);
+  ASSERT_EQUAL(paint_over, 0);
+  ASSERT_FALSE(g_ui_runtime.needs_composite);
+  destroy_window(over);
+  destroy_window(under);
+  test_env_shutdown();
+  PASS();
+}
+
+static void test_move_child_invalidates_parent(void) {
+  TEST("move_window: child move invalidates the parent surface");
+  test_env_init();
+  irect16_t parent_r = {0, 0, 200, 200};
+  irect16_t child_r = {10, 10, 40, 40};
+  window_t *parent = create_window("parent", 0, &parent_r, NULL, paint_parent_proc, 0, NULL);
+  window_t *child = create_window("child", 0, &child_r, parent, noop_proc, 0, NULL);
+  ASSERT_NOT_NULL(parent);
+  ASSERT_NOT_NULL(child);
+  repost_messages();
+  paint_parent = 0;
+  move_window(child, 30, 40);
+  repost_messages();
+  ASSERT_EQUAL(child->frame.x, 30);
+  ASSERT_EQUAL(child->frame.y, 40);
+  ASSERT_TRUE(paint_parent >= 1);
+  destroy_window(parent);
   test_env_shutdown();
   PASS();
 }
@@ -575,6 +664,9 @@ int main(int argc, char *argv[]) {
   test_keyboard_state_tracks_press_release_and_focus_loss();
   test_window_motion_batches_paint(false);
   test_window_motion_batches_paint(true);
+  test_move_root_does_not_repaint_overlaps();
+  test_move_to_top_does_not_paint_overlaps();
+  test_move_child_invalidates_parent();
   test_captured_motion_preserves_samples();
 
   TEST_END();
