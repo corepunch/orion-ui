@@ -123,6 +123,19 @@ app_plugin = $(if $(call app_plugin_file,$(1)),-x none $(call app_plugin_file,$(
 PHONY_APPS_SRC_penciltest    = imageeditor
 PHONY_APPS_CFLAGS_penciltest = -DIMAGEEDITOR_BW=1 -DIMAGEEDITOR_BW_RETINA
 PHONY_APP_NAMES = penciltest
+
+# Per-app theme for standalone binaries only. Gems never receive this flag —
+# get_theme() is already the shell's live theme (and its palette).
+# Values: classic, modern (omit / default), navy.
+# Example: THEME_imageeditor = navy
+# Override per build: make imageeditor THEME_imageeditor=modern
+THEME_imageeditor ?= navy
+THEME_penciltest  ?= navy
+app_theme_cflags = $(if $(filter-out modern,$(THEME_$(1))),-DORION_THEME=$(THEME_$(1)))
+define check_app_theme
+$(if $(THEME_$(1)),$(if $(filter classic modern navy,$(THEME_$(1))),,$(error unknown THEME_$(1)=$(THEME_$(1)) (want classic, modern, or navy))))
+endef
+$(foreach n,$(EXAMPLES) $(PHONY_APP_NAMES),$(eval $(call check_app_theme,$(n))))
 PHONY_APP_BINS  = $(patsubst %,$(BIN_DIR)/%$(EXE_EXT),$(PHONY_APP_NAMES))
 PHONY_APP_GEMS  = $(patsubst %,$(GEM_DIR)/%.gem,$(PHONY_APP_NAMES))
 
@@ -278,7 +291,7 @@ $(LIB_DIR)/%_components.$(LIB_EXT): $$(wildcard $(APPS)/$$*/$(COMPS)/*.c) $(CORE
 $(EXAMPLE_BINS) $(PHONY_APP_BINS): $(BIN_DIR)/%$(EXE_EXT): $(CORE_LIBS) $(GENERATED_HEADERS) | $(BIN_DIR) share
 	@printf '%-8s%s\n' '$(if $(PHONY_APPS_SRC_$*),PHONY,BIN)' "$@"
 	@{ $(call unity_tu,$(call appdir,$*)); } | \
-	    $(CC) $(CFLAGS) $(PHONY_APPS_CFLAGS_$*) $(app_inc) -x c -o $@ - \
+	    $(CC) $(CFLAGS) $(PHONY_APPS_CFLAGS_$*) $(call app_theme_cflags,$*) $(app_inc) -x c -o $@ - \
 	    $(LDFLAGS_EXAMPLE) $(app_libs)
 
 # Each .gem is built against the split core libraries so it shares the same
@@ -358,6 +371,9 @@ help:
 	@echo ""
 	@echo "Phony apps (derived builds with extra flags):"
 	@$(foreach a,$(PHONY_APP_NAMES),echo "  $a - $(call appdir,$(a)) + $(PHONY_APPS_CFLAGS_$(a))";)
+	@echo ""
+	@echo "Themes (standalone only; gems inherit the shell's get_theme()):"
+	@echo "  THEME_<app>=classic|modern|navy   (imageeditor and penciltest default to navy)"
 	@echo ""
 	@echo "$(LIB_DIR)   - Libraries"
 	@echo "$(BIN_DIR)   - Binaries and tests"

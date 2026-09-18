@@ -23,7 +23,14 @@ BUNDLE := $(APP_ROOT)/$(APP).app
 COMPILER := xcrun --sdk $(SDK) clang
 MIN_FLAG := $(if $(filter iphoneos,$(SDK)),-miphoneos-version-min,-mios-simulator-version-min)=$(IOS_MIN)
 FLAGS := -isysroot "$(SDK_PATH)" -arch $(ARCH) $(MIN_FLAG) -std=c11 -O2 -g -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-parameter -Wno-unused-function -Wno-deprecated-declarations -MMD -MP -I. -I"$(SDK_PATH)/usr/include/libxml2" -DORION_ALLOW_HIGHDPI=1
-APP_FLAGS := -DSTBTT_STATIC $(if $(filter penciltest,$(APP)),-DIMAGEEDITOR_BW=1 -DIMAGEEDITOR_BW_RETINA) -Iapps/imageeditor -Iapps/imageeditor/components -DSHAREDIR='"../share/imageeditor"'
+THEME_imageeditor ?= navy
+THEME_penciltest  ?= navy
+ifeq ($(THEME_$(APP)),)
+else ifeq ($(filter classic modern navy,$(THEME_$(APP))),)
+$(error unknown THEME_$(APP)=$(THEME_$(APP)) (want classic, modern, or navy))
+endif
+APP_THEME_FLAGS := $(if $(filter-out modern,$(THEME_$(APP))),-DORION_THEME=$(THEME_$(APP)))
+APP_FLAGS := -DSTBTT_STATIC $(if $(filter penciltest,$(APP)),-DIMAGEEDITOR_BW=1 -DIMAGEEDITOR_BW_RETINA) $(APP_THEME_FLAGS) -Iapps/imageeditor -Iapps/imageeditor/components -DSHAREDIR='"../share/imageeditor"'
 USER_SRCS := $(filter-out orion/user/dialog.c orion/user/component_registry.c,$(wildcard orion/user/*.c))
 KERNEL_SRCS := $(wildcard orion/kernel/*.c)
 COMMCTL_SRCS := $(filter-out orion/commctl/tray.c,$(wildcard orion/commctl/*.c))

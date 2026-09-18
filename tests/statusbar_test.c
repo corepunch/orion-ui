@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
     TEST_PASS("STATUSBAR_HEIGHT constant is correct");
     
     // Test 4: brStatusbarBg default value is correct
-    TEST_ASSERT(get_sys_color(brStatusbarBg) == WEB(0x19273E), "brStatusbarBg has correct default value");
+    TEST_ASSERT(get_sys_color(brStatusbarBg) == 0xff383838, "brStatusbarBg has correct default value");
     TEST_PASS("brStatusbarBg default is defined correctly");
 
 #ifdef __APPLE__

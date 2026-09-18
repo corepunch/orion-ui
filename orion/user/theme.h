@@ -100,9 +100,15 @@ typedef enum {
 } ctrl_state_t;
 
 typedef enum {
-  THEME_CLASSIC = 0,
-  THEME_MODERN  = 1,
+  THEME_CLASSIC = 0,  // bevelled dark-gray
+  THEME_MODERN  = 1,  // flat light WinUI
+  THEME_NAVY    = 2,  // Modern drawing, navy chrome + purple accent
 } theme_style_t;
+
+// Makefile THEME_<app>=classic|modern|navy → -DORION_THEME=<name> (standalone only).
+#define THEME_classic  THEME_CLASSIC
+#define THEME_modern   THEME_MODERN
+#define THEME_navy     THEME_NAVY
 
 // Semantic class/part identifiers, flattened into one enum to prevent invalid
 // class/part pairs. Bounds and interaction state come from the caller.
@@ -188,7 +194,13 @@ typedef struct {
   void (*apply_palette)(void);
 } theme_t;
 
-// Active-theme accessor — never returns NULL (defaults to Modern).
+static inline bool theme_is_modern(const theme_t *t) {
+  return t && (t->style == THEME_MODERN || t->style == THEME_NAVY);
+}
+
+// Active-theme accessor — never returns NULL. First use applies the
+// process default (Modern, or the standalone -DORION_THEME). Gems do not
+// compile a default; get_theme() is already the shell's theme.
 theme_t *get_theme(void);
 
 // Switch the active theme.  Validates the candidate; if valid, applies the
@@ -202,8 +214,20 @@ bool set_theme(theme_style_t style);
 void theme_draw(theme_part_t part, irect16_t r, ctrl_state_t state);
 uint32_t theme_foreground(theme_part_t part, ctrl_state_t state);
 
-// Built-in theme singletons.
+// Built-in theme singletons. Navy shares Modern drawing with its own palette.
 theme_t *theme_classic_instance(void);
 theme_t *theme_modern_instance(void);
+theme_t *theme_navy_instance(void);
+
+// Standalone binaries compiled with -DORION_THEME=<name> select that theme
+// before main(). Gems omit the define, so get_theme() is the shell's theme.
+#ifdef ORION_THEME
+#define ORION_THEME_PASTE(name) THEME_##name
+#define ORION_THEME_VALUE(name) ORION_THEME_PASTE(name)
+static void orion_theme_ctor(void) __attribute__((constructor, used));
+static void orion_theme_ctor(void) {
+  set_theme(ORION_THEME_VALUE(ORION_THEME));
+}
+#endif
 
 #endif /* __UI_THEME_H__ */

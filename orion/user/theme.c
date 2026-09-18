@@ -20,36 +20,45 @@
 } while (0)
 
 uint32_t g_sys_colors[brCount] = {
-  [brTransparent]          = 0x00000000,                 // fully transparent
-  [brControlBg]            = WEB(0x17243B),              // main navy
-  [brWindowDarkBg]         = WEB(0x1A2942),              // panel outer
-  [brWorkspaceBg]          = WEB(0x17243B),              // canvas workspace
-  [brActiveTitlebar]       = WEB(0x19263E),              // top chrome
-  [brActiveTitlebarText]   = WEB(0xF6F8FF),              // text on dark
-  [brInactiveTitlebar]     = WEB(0x17243B),              // unfocused caption
-  [brInactiveTitlebarText] = WEB(0x647089),              // secondary text
-  [brStatusbarBg]          = WEB(0x19273E),              // timeline / status
-  [brLightEdge]            = WEB(0x4A5C7A),              // field/slider/button hairline
-  [brDarkEdge]             = WEB(0x2A3954),              // quiet divider / bevel shadow
-  [brFlare]                = WEB(0xF8FAFF),              // light card
-  [brAccent]               = WEB(0x7357F6),              // primary purple
-  [brButtonInner]          = WEB(0x1B2942),              // left toolbar
-  [brButtonHover]          = WEB(0x243552),              // lifted navy hover
-  [brTextNormal]           = WEB(0xF6F8FF),              // text on dark
-  [brTextDisabled]         = WEB(0x647089),              // secondary / disabled
-  [brTextError]            = WEB(0xC42B1C),              // error
-  [brTextSuccess]          = WEB(0x63C994),              // success
-  [brBorderFocus]          = WEB(0x8B70FF),              // purple border
-  [brBorderActive]         = WEB(0x2A3954),              // dark UI border
-  [brFolderText]           = WEB(0x4C91F5),              // cyan
-  [brColumnViewBg]         = WEB(0x1A2942),              // panel outer
-  [brModalOverlay]         = (WEB(0x17243B) & 0x00ffffffu) | 0x40000000u,
-  [brToolbarForeground]    = WEB(0xF6F8FF),              // text on dark
+  [brTransparent]          = 0x00000000,   // fully transparent
+  [brControlBg]            = 0xff3c3c3c,   // dialog, panel, and control face
+  [brWindowDarkBg]         = 0xff2c2c2c,   // dark secondary panel background
+  [brWorkspaceBg]          = 0xff1e1e1e,   // darker than status bar — canvas workspace
+  [brActiveTitlebar]       = 0xffD77800,   // focused window caption
+  [brActiveTitlebarText]   = 0xffffffff,   // focused caption text: white
+  [brInactiveTitlebar]     = 0xff2c2c2c,   // unfocused: flat dark gray
+  [brInactiveTitlebarText] = 0xff787878,   // unfocused caption text: medium gray
+  [brStatusbarBg]          = 0xff383838,   // status bar and scrollbar background
+  [brLightEdge]            = 0xff7f7f7f,   // top-left edge for beveled elements
+  [brDarkEdge]             = 0xff1a1a1a,   // bottom-right edge for bevel
+  [brFlare]                = 0xffcfcfcf,   // corner flare for beveled elements
+  [brAccent]               = 0xffD77800,   // focus, selection, and active-state accent
+  [brButtonInner]          = 0xff505050,   // inner fill of button
+  [brButtonHover]          = 0xff5a5a5a,   // slightly brighter for hover state
+  [brTextNormal]           = 0xffc0c0c0,   // standard text color
+  [brTextDisabled]         = 0xff808080,   // for disabled/inactive text
+  [brTextError]            = 0xffff4444,   // red text for errors
+  [brTextSuccess]          = 0xff44ff44,   // green text for success messages
+  [brBorderFocus]          = 0xff101010,   // very dark outline for focused item
+  [brBorderActive]         = 0xff808080,   // light gray for active border
+  [brFolderText]           = 0xffa0d000,   // folder entry text in file lists
+  [brColumnViewBg]         = 0xff544e47,   // blue-gray for report/icon column views
+  [brModalOverlay]         = 0x40402000,   // modal owner dim overlay (semi-transparent)
+  [brToolbarForeground]    = 0xffd8d8d8,   // neutral light gray for toolbar content
 };
 
 // ── Active theme runtime ───────────────────────────────────────────────────
 
 static theme_t *g_active_theme = NULL;
+
+static theme_t *theme_for_style(theme_style_t style) {
+  switch (style) {
+    case THEME_CLASSIC: return theme_classic_instance();
+    case THEME_MODERN:  return theme_modern_instance();
+    case THEME_NAVY:    return theme_navy_instance();
+    default:            return NULL;
+  }
+}
 
 theme_t *get_theme(void) {
   if (!g_active_theme) {
@@ -103,13 +112,11 @@ bool set_theme(theme_style_t style) {
     return false;
   }
 
-  if (style != THEME_CLASSIC && style != THEME_MODERN) {
+  theme_t *candidate = theme_for_style(style);
+  if (!candidate) {
     THEME_TRACE("set_theme REJECTED invalid style=%d", (int)style);
     return false;
   }
-  theme_t *candidate = (style == THEME_MODERN)
-                     ? theme_modern_instance()
-                     : theme_classic_instance();
 
   THEME_TRACE("set_theme ENTER style=%d name=%s", (int)style,
               candidate && candidate->name ? candidate->name : "?");

@@ -33,7 +33,9 @@ static void paint_rounded(uint32_t color, irect16_t r, int radius) {
 #define draw_wire_rect paint_wire
 #define theme_classic_instance paint_classic_instance
 #define theme_modern_instance paint_modern_instance
+#define theme_navy_instance paint_navy_instance
 theme_t *paint_modern_instance(void);
+theme_t *paint_navy_instance(void);
 #include <orion/user/theme_classic.c>
 #include <orion/user/theme_modern.c>
 #undef fill_rect
@@ -41,11 +43,16 @@ theme_t *paint_modern_instance(void);
 #undef fill_rounded_rect
 #undef theme_classic_instance
 #undef theme_modern_instance
+#undef theme_navy_instance
+
+static theme_t *paint_with_theme(theme_style_t style) {
+  if (get_theme()->style != style) set_theme(style);
+  return paint_modern_instance();
+}
 
 static void test_modern_surfaces(void) {
   TEST("Modern paints a button border with a separate interior and preserves its panel fill");
-  theme_t *theme = paint_modern_instance();
-  theme->apply_palette();
+  theme_t *theme = paint_with_theme(THEME_NAVY);
   memset(pixels, 0, sizeof(pixels));
   theme->draw_part(THEME_PART_BUTTON, R(12, 10, 80, 30), CTRL_NORMAL);
   ASSERT_EQUAL(pixels[25][12], MODERN_SECONDARY_BORDER);
@@ -57,8 +64,7 @@ static void test_modern_surfaces(void) {
 
 static void test_modern_button_states(void) {
   TEST("Modern secondary button stays neutral when pressed");
-  theme_t *theme = paint_modern_instance();
-  theme->apply_palette();
+  theme_t *theme = paint_with_theme(THEME_NAVY);
   memset(pixels, 0, sizeof(pixels));
   theme->draw_part(THEME_PART_BUTTON, R(12, 10, 80, 30), CTRL_PRESSED);
   ASSERT_EQUAL(pixels[25][12], MODERN_SECONDARY_BORDER);
@@ -87,8 +93,7 @@ static void test_translated_separator(void) {
 
 static void test_independent_parts(void) {
   TEST("Modern dropdowns match field bounds and fills in every state");
-  theme_t *theme = paint_modern_instance();
-  theme->apply_palette();
+  theme_t *theme = paint_with_theme(THEME_NAVY);
   ctrl_state_t states[] = {CTRL_NORMAL, CTRL_HOVER, CTRL_PRESSED, CTRL_FOCUSED, CTRL_DISABLED};
   uint32_t field[64][128];
   for (int i = 0; i < ARRAY_LEN(states); i++) {
@@ -116,8 +121,7 @@ static void test_independent_parts(void) {
 
 static void test_modern_slider_track_contrasts(void) {
   TEST("Modern slider tracks use the light-edge hairline, not the navy fill");
-  theme_t *theme = paint_modern_instance();
-  theme->apply_palette();
+  theme_t *theme = paint_with_theme(THEME_NAVY);
   memset(pixels, 0, sizeof(pixels));
   theme->draw_part(THEME_PART_SLIDER_TRACK, R(20, 20, 2, 40), CTRL_NORMAL);
   ASSERT_EQUAL(pixels[30][20], get_sys_color(brLightEdge));
@@ -128,8 +132,7 @@ static void test_modern_slider_track_contrasts(void) {
 
 static void test_flat_tool_items(void) {
   TEST("Modern tool items are transparent at rest and highlight only inside their bounds");
-  theme_t *theme = paint_modern_instance();
-  theme->apply_palette();
+  theme_t *theme = paint_with_theme(THEME_NAVY);
   ctrl_state_t states[] = {CTRL_NORMAL, CTRL_HOVER, CTRL_SELECTED, CTRL_PRESSED};
   for (int i = 0; i < ARRAY_LEN(states); i++) {
     memset(pixels, 0, sizeof(pixels));
@@ -160,8 +163,7 @@ static void test_flat_tool_items(void) {
 
 static void test_palette_overrides(void) {
   TEST("Modern active parts and panels follow runtime palette overrides");
-  theme_t *theme = paint_modern_instance();
-  theme->apply_palette();
+  theme_t *theme = paint_with_theme(THEME_NAVY);
   g_sys_colors[brAccent] = 0xff123456;
   g_sys_colors[brControlBg] = 0xff654321;
   theme_part_t parts[] = {THEME_PART_TOOLBAR_BUTTON, THEME_PART_TAB, THEME_PART_LIST_ITEM,
@@ -181,14 +183,13 @@ static void test_palette_overrides(void) {
   theme->draw_part(THEME_PART_TITLEBAR, R(10, 10, 80, 30), CTRL_FOCUSED);
   ASSERT_EQUAL(pixels[25][50], get_sys_color(brActiveTitlebar));
   ASSERT_NOT_EQUAL(pixels[25][50], get_sys_color(brAccent));
-  theme->apply_palette();
+  get_theme()->apply_palette();
   PASS();
 }
 
 static void test_full_row_selection(void) {
   TEST("Modern list selection is inset, rounded, and uses selected text");
-  theme_t *theme = paint_modern_instance();
-  theme->apply_palette();
+  theme_t *theme = paint_with_theme(THEME_NAVY);
   memset(pixels, 0, sizeof(pixels));
   theme->draw_part(THEME_PART_LIST_ITEM, R(10, 10, 80, 30), CTRL_SELECTED);
   ASSERT_EQUAL(pixels[10][10], 0);
@@ -214,7 +215,7 @@ static void test_full_row_selection(void) {
 
 static void test_scrollbar_thickness(void) {
   TEST("Both scrollbar orientations paint an 11 pixel thumb inside a 17 pixel strip");
-  theme_t *theme = paint_modern_instance();
+  theme_t *theme = paint_with_theme(THEME_NAVY);
   memset(pixels, 0, sizeof(pixels));
   theme->draw_part(THEME_PART_SCROLLBAR_THUMB, R(10, 5, 17, 50), CTRL_NORMAL);
   int width = 0;
@@ -230,9 +231,26 @@ static void test_scrollbar_thickness(void) {
   PASS();
 }
 
+static void test_default_modern_chrome(void) {
+  TEST("Default Modern uses accent titlebars, light toolbar fill, and inner slider tracks");
+  theme_t *theme = paint_with_theme(THEME_MODERN);
+  ASSERT_EQUAL(get_sys_color(brControlBg), 0xffF3F3F3);
+  ASSERT_EQUAL(get_sys_color(brAccent), 0xffD77800);
+  memset(pixels, 0, sizeof(pixels));
+  theme->draw_part(THEME_PART_TITLEBAR, R(10, 10, 80, 30), CTRL_FOCUSED);
+  ASSERT_EQUAL(pixels[25][50], get_sys_color(brAccent));
+  memset(pixels, 0, sizeof(pixels));
+  theme->draw_part(THEME_PART_TOOLBAR, R(10, 10, 80, 30), CTRL_NORMAL);
+  ASSERT_EQUAL(pixels[25][50], get_sys_color(brControlBg));
+  memset(pixels, 0, sizeof(pixels));
+  theme->draw_part(THEME_PART_SLIDER_TRACK, R(20, 20, 2, 40), CTRL_NORMAL);
+  ASSERT_EQUAL(pixels[30][20], get_sys_color(brButtonInner));
+  PASS();
+}
+
 static void test_button_capsules(void) {
   TEST("Modern button ends follow the full height at desktop and touch sizes");
-  theme_t *theme = paint_modern_instance();
+  theme_t *theme = paint_with_theme(THEME_NAVY);
   const int heights[] = {13, 25, 40};
   const ctrl_state_t states[] = {CTRL_NORMAL, CTRL_DEFAULT, CTRL_DISABLED, CTRL_HOVER, CTRL_PRESSED};
   for (int h = 0; h < ARRAY_LEN(heights); h++) {
@@ -259,5 +277,6 @@ int main(void) {
   test_palette_overrides();
   test_full_row_selection();
   test_scrollbar_thickness();
+  test_default_modern_chrome();
   TEST_END();
 }

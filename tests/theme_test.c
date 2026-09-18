@@ -56,6 +56,30 @@ static void test_switch_validation(void) {
   PASS();
 }
 
+static void test_navy_theme_palette(void) {
+  TEST("Navy is a theme with its own palette; Classic and Modern keep theirs");
+  test_env_init();
+  if (get_theme()->style != THEME_MODERN) ASSERT_TRUE(set_theme(THEME_MODERN));
+  ASSERT_EQUAL(get_theme()->style, THEME_MODERN);
+  ASSERT_EQUAL(get_sys_color(brControlBg), 0xffF3F3F3);
+  ASSERT_EQUAL(get_sys_color(brAccent), 0xffD77800);
+  ASSERT_TRUE(set_theme(THEME_NAVY));
+  ASSERT_EQUAL(get_theme()->style, THEME_NAVY);
+  ASSERT_EQUAL(get_sys_color(brControlBg), WEB(0x17243B));
+  ASSERT_EQUAL(get_sys_color(brAccent), WEB(0x7357F6));
+  ASSERT_FALSE(set_theme(THEME_NAVY));
+  ASSERT_FALSE(set_theme((theme_style_t)255));
+  ASSERT_EQUAL(get_sys_color(brControlBg), WEB(0x17243B));
+  ASSERT_TRUE(set_theme(THEME_CLASSIC));
+  ASSERT_EQUAL(get_sys_color(brControlBg), 0xff3c3c3c);
+  ASSERT_TRUE(set_theme(THEME_NAVY));
+  ASSERT_EQUAL(get_sys_color(brControlBg), WEB(0x17243B));
+  ASSERT_TRUE(set_theme(THEME_MODERN));
+  ASSERT_EQUAL(get_sys_color(brControlBg), 0xffF3F3F3);
+  test_env_shutdown();
+  PASS();
+}
+
 static void test_semantic_dispatch(void) {
   TEST("semantic dispatch preserves selection/focus, suppresses disabled transients and rejects invalid parts");
   theme_t *theme = get_theme();
@@ -105,7 +129,7 @@ static void test_control_parts(void) {
 static void test_all_parts(void) {
   TEST("both themes implement every part/state combination and selection foreground policy");
   test_env_init();
-  for (int style = THEME_CLASSIC; style <= THEME_MODERN; style++) {
+  for (int style = THEME_CLASSIC; style <= THEME_NAVY; style++) {
     set_theme((theme_style_t)style);
     for (int part = 0; part < THEME_PART_COUNT; part++)
       for (int state = 0; state < 64; state++)
@@ -146,6 +170,7 @@ static void test_titlebar_bounds(void) {
 int main(void) {
   TEST_START("theme semantic API");
   test_switch_validation();
+  test_navy_theme_palette();
   test_semantic_dispatch();
   test_control_parts();
   test_all_parts();
