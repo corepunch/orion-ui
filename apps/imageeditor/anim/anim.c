@@ -460,10 +460,12 @@ bool anim_timeline_switch_frame(anim_timeline_t *tl, int idx,
   if (idx < 0 || idx >= tl->frame_count) return false;
   if (idx == tl->active_frame) return true;
 
-  // Commit current pixel buffer to the active frame.
-  anim_frame_t *cur = tl->frames[tl->active_frame];
-  if (!anim_frame_compress(cur, *working_buf, w, h, commit_fmt))
-    return false;
+  // Playback only displays stored frames; do not recompress or rebuild thumbs.
+  if (!tl->playing) {
+    anim_frame_t *cur = tl->frames[tl->active_frame];
+    if (!anim_frame_compress(cur, *working_buf, w, h, commit_fmt))
+      return false;
+  }
 
   // Load the new frame: expand into working_buf.
   anim_frame_t *next = tl->frames[idx];

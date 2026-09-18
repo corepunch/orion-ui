@@ -967,6 +967,9 @@ void handle_menu_command(uint16_t id) {
         g_app->anim_timer_id = axSetTimer(
             g_app->timeline_win, interval, NULL, (bool_t)1);
         if (g_app->anim_timer_id) {
+          anim_frame_compress(doc->anim->frames[doc->anim->active_frame],
+                              doc->pixels, doc->canvas_w, doc->canvas_h,
+                              IE_FRAME_FORMAT);
           doc->anim->playback_start_frame = doc->anim->active_frame;
           doc->anim->playing = true;
           IE_TRACE("playback start win=%p frame=%d count=%d", (void *)doc->canvas_win,
