@@ -328,6 +328,43 @@ static void canvas_draw_selection_mask_overlay(canvas_doc_t *doc,
                                IE_RENDER_EFFECT_SELECTION_MASK, &params);
 }
 
+static void onion_cache_reset(canvas_win_state_t *state) {
+  if (!state) return;
+  for (int i = 0; i < ONION_SKIN_MAX_STEPS * 2; i++) {
+    if (state->onion_tex[i]) {
+      glDeleteTextures(1, &state->onion_tex[i]);
+      state->onion_tex[i] = 0;
+    }
+    state->onion_key[i] = NULL;
+    state->onion_rev[i] = 0;
+  }
+}
+
+static void canvas_draw_onion_slot(canvas_win_state_t *state, canvas_doc_t *doc,
+                                   int slot, const anim_frame_t *frame,
+                                   uint32_t tint, float alpha, irect16_t canvas_rect) {
+  if (!frame || alpha <= 0.0f) return;
+  bool stale = state->onion_key[slot] != frame ||
+               state->onion_rev[slot] != frame->revision ||
+               !state->onion_tex[slot];
+  bool live = g_ui_runtime.dragging || doc->drawing;
+  if (stale && !live) {
+    if (!anim_render_frame_thumbnail_tinted(frame, doc->canvas_w, doc->canvas_h,
+                                            &state->onion_tex[slot],
+#if IMAGEEDITOR_INDEXED
+                                            doc->ipal.entries,
+#else
+                                            NULL,
+#endif
+                                            tint))
+      return;
+    state->onion_key[slot] = frame;
+    state->onion_rev[slot] = frame->revision;
+  }
+  if (state->onion_tex[slot])
+    draw_rect_ex((int)state->onion_tex[slot], canvas_rect, 0, CLAMP(alpha, 0.0f, 1.0f));
+}
+
 static void canvas_draw_animation_trace(window_t *win,
                                         canvas_win_state_t *state,
                                         canvas_doc_t *doc,
@@ -338,10 +375,7 @@ static void canvas_draw_animation_trace(window_t *win,
     return;
 
   if (state->onion_tex_w != doc->canvas_w || state->onion_tex_h != doc->canvas_h) {
-    if (state->onion_tex) {
-      glDeleteTextures(1, &state->onion_tex);
-      state->onion_tex = 0;
-    }
+    onion_cache_reset(state);
     state->onion_tex_w = doc->canvas_w;
     state->onion_tex_h = doc->canvas_h;
   }
@@ -356,37 +390,19 @@ static void canvas_draw_animation_trace(window_t *win,
   for (int step = prev_steps; step >= 1; step--) {
     int idx = doc->anim->active_frame - step;
     if (idx < 0) continue;
-    float alpha = (float)g_app->anim_trace_prev_opacity[step - 1] / 100.0f;
-    if (alpha <= 0.0f) continue;
-    const anim_frame_t *frame = doc->anim->frames[idx];
-    if (!frame) continue;
-    if (anim_render_frame_thumbnail_tinted(frame, doc->canvas_w, doc->canvas_h,
-                                           &state->onion_tex,
-#if IMAGEEDITOR_INDEXED
-                                           doc->ipal.entries,
-#else
-                                           NULL,
-#endif
-                                           IE_ONION_PREV_COLOR))
-      draw_rect_ex((int)state->onion_tex, canvas_rect, 0, CLAMP(alpha, 0.0f, 1.0f));
+    canvas_draw_onion_slot(state, doc, step - 1, doc->anim->frames[idx],
+                           IE_ONION_PREV_COLOR,
+                           (float)g_app->anim_trace_prev_opacity[step - 1] / 100.0f,
+                           canvas_rect);
   }
 
   for (int step = next_steps; step >= 1; step--) {
     int idx = doc->anim->active_frame + step;
     if (idx >= doc->anim->frame_count) continue;
-    float alpha = (float)g_app->anim_trace_next_opacity[step - 1] / 100.0f;
-    if (alpha <= 0.0f) continue;
-    const anim_frame_t *frame = doc->anim->frames[idx];
-    if (!frame) continue;
-    if (anim_render_frame_thumbnail_tinted(frame, doc->canvas_w, doc->canvas_h,
-                                           &state->onion_tex,
-#if IMAGEEDITOR_INDEXED
-                                           doc->ipal.entries,
-#else
-                                           NULL,
-#endif
-                                           IE_ONION_NEXT_COLOR))
-      draw_rect_ex((int)state->onion_tex, canvas_rect, 0, CLAMP(alpha, 0.0f, 1.0f));
+    canvas_draw_onion_slot(state, doc, ONION_SKIN_MAX_STEPS + step - 1,
+                           doc->anim->frames[idx], IE_ONION_NEXT_COLOR,
+                           (float)g_app->anim_trace_next_opacity[step - 1] / 100.0f,
+                           canvas_rect);
   }
 }
 
@@ -463,10 +479,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         glDeleteTextures(1, &state->mag_tex);
         state->mag_tex = 0;
       }
-      if (state && state->onion_tex) {
-        glDeleteTextures(1, &state->onion_tex);
-        state->onion_tex = 0;
-      }
+      onion_cache_reset(state);
       return false;
     }
 

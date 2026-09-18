@@ -38,6 +38,7 @@ typedef struct {
   frame_format_t format;
   uint32_t       palette[256];  // RGBA entries (for FRAME_FORMAT_INDEXED only)
   int            delay_ms;      // per-frame display duration in milliseconds
+  uint32_t       revision;      // bumped on compress; onion-skin cache key
   char           name[32];      // human-readable frame name
 } anim_frame_t;
 

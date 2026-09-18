@@ -245,6 +245,7 @@ bool anim_frame_compress(anim_frame_t *frame, const uint8_t *pixels,
   frame->data      = new_data;
   frame->data_size = new_size;
   frame->format    = fmt;
+  frame->revision++;
   if (fmt == FRAME_FORMAT_INDEXED)
     memcpy(frame->palette, new_palette, sizeof(new_palette));
   return true;
