@@ -278,7 +278,6 @@ static result_t win_toolbar(window_t *win, uint32_t msg, uint32_t wparam, void *
           item->type != TOOLBAR_ITEM_CUSTOM)
         return false;
 
-      fprintf(stderr, "[tb] press win=%u index=%d ident=%d\n", win->parent->id, idx, item->ident);
       tb->pressed_item = idx;
       tb->pressed_in_arrow = (item->type == TOOLBAR_ITEM_DROPDOWN) &&
                              (tx >= tb->item_rects[idx].x + tb->item_rects[idx].w - DROPDOWN_ARROW_W);
@@ -303,14 +302,12 @@ static result_t win_toolbar(window_t *win, uint32_t msg, uint32_t wparam, void *
         if (hit >= 0 && (tb->items[saved_idx].flags & TOOLBAR_ITEM_FLAG_REORDERABLE) &&
             (tb->items[hit].flags & TOOLBAR_ITEM_FLAG_REORDERABLE)) {
           toolbar_drop_item_t drop = {tb->items[saved_idx].ident, tb->items[hit].ident};
-          fprintf(stderr, "[tb] drop win=%u from=%u to=%u\n", win->parent->id, drop.from_ident, drop.to_ident);
           send_message(get_root_window(win), evCommand, MAKEDWORD(0, tbItemDrop), &drop);
         }
         return true;
       }
 
       toolbar_item_t *item = &tb->items[saved_idx];
-      fprintf(stderr, "[tb] click win=%u index=%d ident=%d\n", win->parent->id, saved_idx, item->ident);
       // Notify the toolbar window that owns this host, not the top-level chrome.
       // Docked palettes are children of app chrome; get_root_window() would send
       // every click to the top band and skip the left tool strip.
@@ -592,7 +589,6 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
     case tbSetActiveButton: {
       toolbar_state_t *tb = toolbar_get_state(win);
       uint32_t ident = wparam;
-      fprintf(stderr, "[tb] active win=%u ident=%u count=%d\n", win->id, ident, tb ? tb->item_count : 0);
       if (tb && tb->items) {
         for (int i = 0; i < tb->item_count; i++) {
           bool active = ((uint32_t)tb->items[i].ident == ident);
@@ -632,7 +628,6 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
       toolbar_state_t *tb = toolbar_ensure_state(win);
       if (!tb) return true;
       if (tb->orientation != (toolbar_orientation_t)wparam) {
-        fprintf(stderr, "[tb] orientation win=%u value=%u\n", win->id, wparam);
         tb->orientation = (toolbar_orientation_t)wparam;
         compute_toolbar_item_rects(win, tb);
         post_message(win, evRefreshStencil, 0, NULL);
