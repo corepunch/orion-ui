@@ -321,17 +321,17 @@ static void test_ie_anim_playback_end_restores_selection(void) {
 }
 
 void test_ie_onion_tint_is_not_gray(void) {
-    TEST("onion-skin tint turns dark ink blue/pink and punches paper");
-    uint8_t prev[8] = { 0, 0, 0, 255, 255, 255, 255, 255 };
+    TEST("onion-skin replaces black with blue/pink and keeps coverage");
+    uint8_t prev[12] = { 0, 0, 0, 255, 0, 0, 0, 128, 255, 255, 255, 255 };
     uint8_t next[8] = { 0, 0, 0, 255, 255, 255, 255, 255 };
-    anim_onion_tint_rgba(prev, 2, IE_ONION_PREV_COLOR);
+    anim_onion_tint_rgba(prev, 3, IE_ONION_PREV_COLOR);
     anim_onion_tint_rgba(next, 2, IE_ONION_NEXT_COLOR);
     ASSERT_EQUAL(prev[0], COLOR_R(IE_ONION_PREV_COLOR));
     ASSERT_EQUAL(prev[1], COLOR_G(IE_ONION_PREV_COLOR));
     ASSERT_EQUAL(prev[2], COLOR_B(IE_ONION_PREV_COLOR));
-    ASSERT_TRUE(prev[3] > 200);
-    ASSERT_TRUE(prev[0] != prev[1] || prev[1] != prev[2]);
-    ASSERT_EQUAL(prev[7], 0);
+    ASSERT_EQUAL(prev[3], 255);
+    ASSERT_EQUAL(prev[7], 128);
+    ASSERT_EQUAL(prev[11], 0);
     ASSERT_EQUAL(next[0], COLOR_R(IE_ONION_NEXT_COLOR));
     ASSERT_EQUAL(next[1], COLOR_G(IE_ONION_NEXT_COLOR));
     ASSERT_EQUAL(next[2], COLOR_B(IE_ONION_NEXT_COLOR));

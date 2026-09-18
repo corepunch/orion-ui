@@ -202,8 +202,10 @@ extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 #define IE_PAPER_COLOR MAKE_COLOR(0xFF, 0xFF, 0xFF, 0xFF)
 #define IE_INK_COLOR   MAKE_COLOR(0x00, 0x00, 0x00, 0xFF)
 #endif
-#define IE_ONION_PREV_COLOR MAKE_COLOR(0xB9, 0xD5, 0xFF, 0xFF)  /* #B9D5FF */
-#define IE_ONION_NEXT_COLOR MAKE_COLOR(0xF3, 0xBD, 0xD8, 0xFF)  /* #F3BDD8 */
+// Onion overlays use the old gray fade (25% / 12.5% / 6.25%), with #000000
+// replaced by these inks so nearer ghosts stay darker.
+#define IE_ONION_PREV_COLOR MAKE_COLOR(0x4C, 0x91, 0xF5, 0xFF)  /* #4C91F5 */
+#define IE_ONION_NEXT_COLOR MAKE_COLOR(0xF0, 0x8D, 0xB4, 0xFF)  /* #F08DB4 */
 
 // ============================================================
 // Types

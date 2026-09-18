@@ -173,12 +173,10 @@ void anim_onion_tint_rgba(uint8_t *rgba, size_t npx, uint32_t tint) {
     uint8_t *p = rgba + i * 4;
     if (p[3] == 0) continue;
     int luma = (p[0] * 77 + p[1] * 150 + p[2] * 29) >> 8;
-    int ink = 255 - luma;
-    if (ink < 8) { memset(p, 0, 4); continue; }
+    if (luma >= 248) { memset(p, 0, 4); continue; }
     p[0] = tr;
     p[1] = tg;
     p[2] = tb;
-    p[3] = (uint8_t)((ink * (int)p[3] + 127) / 255);
   }
 }
 
