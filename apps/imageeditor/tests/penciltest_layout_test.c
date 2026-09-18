@@ -94,7 +94,7 @@ static void test_pencil_canvas_extends_behind_timeline(void) {
 }
 
 static void test_pencil_paper_and_ink(void) {
-  TEST("Pencil Test paper is cool off-white and ink is warm purple, not black/white");
+  TEST("Pencil Test paper is cool off-white and ink is dark purple, not brown/black");
   penciltest_setup();
   g_app->fg_color = IE_INK_COLOR;
   g_app->bg_color = IE_PAPER_COLOR;
@@ -105,6 +105,10 @@ static void test_pencil_paper_and_ink(void) {
   ASSERT_EQUAL(doc->ipal.entries[2], IE_PAPER_COLOR);
   ASSERT_NOT_EQUAL(IE_INK_COLOR, MAKE_COLOR(0x00, 0x00, 0x00, 0xFF));
   ASSERT_NOT_EQUAL(IE_PAPER_COLOR, MAKE_COLOR(0xFF, 0xFF, 0xFF, 0xFF));
+  // Purple, not brown: G is lowest, B leads R, and chroma is visible in a stroke.
+  ASSERT_TRUE(COLOR_G(IE_INK_COLOR) < COLOR_R(IE_INK_COLOR));
+  ASSERT_TRUE(COLOR_R(IE_INK_COLOR) < COLOR_B(IE_INK_COLOR));
+  ASSERT_TRUE((int)COLOR_B(IE_INK_COLOR) - (int)COLOR_G(IE_INK_COLOR) >= 40);
   canvas_set_pixel(doc, 4, 4, g_app->fg_color);
   ASSERT_EQUAL(canvas_get_pixel(doc, 4, 4), IE_INK_COLOR);
   penciltest_teardown();

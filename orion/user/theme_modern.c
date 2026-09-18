@@ -1,6 +1,6 @@
 // Modern theme — flat navy chrome, purple accent, borderless toolbar controls.
 // Palette reference: Pencil Test / FrameFun concept (cool off-white canvas,
-// warm-purple ink, navy UI). Not a pixel-exact recreation.
+// dark purple ink, navy UI). Not a pixel-exact recreation.
 //
 // Toolbar item states (per issue #216):
 //   Normal    — icon/text only, no permanent frame

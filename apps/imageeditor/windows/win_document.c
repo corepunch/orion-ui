@@ -239,7 +239,7 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
 #if IMAGEEDITOR_INDEXED
   // Initialize the palette.
 #if IMAGEEDITOR_BW
-  // BW mode: transparent + warm-purple ink + cool off-white paper.
+  // BW mode: transparent + dark purple ink + cool off-white paper.
   doc->ipal.transparent = 0;
   doc->ipal.entries[0] = MAKE_COLOR(0x00, 0x00, 0x00, 0x00); // transparent
   doc->ipal.entries[1] = IE_INK_COLOR;
