@@ -21,8 +21,9 @@
 #define MODERN_LIST_INSET_X  4
 #define MODERN_LIST_INSET_Y  1
 
-// Secondary-button resting border — dark-UI hairline, quieter than accent.
-#define MODERN_SECONDARY_BORDER  WEB(0x2A3954)
+// Secondary-button resting border — same visible-on-navy hairline as field
+// outlines and slider tracks (brLightEdge). Quieter than accent.
+#define MODERN_SECONDARY_BORDER  WEB(0x4A5C7A)
 
 // ── Buttons ──────────────────────────────────────────────────────────────────
 
@@ -40,8 +41,7 @@ static void modern_draw_button_bg(irect16_t r, ctrl_state_t state) {
     return;
   }
 
-  // Secondary button: 1-px outline border; neutral interaction fills.
-  // Focus overrides border color to accent (#0078D4); otherwise subdued #767676.
+  // Secondary button: 1-px outline; focus uses accent, rest uses the navy hairline.
   uint32_t border = (state & CTRL_FOCUSED) ? get_sys_color(brAccent)
                                            : MODERN_SECONDARY_BORDER;
 
@@ -127,21 +127,11 @@ static void modern_draw_checkbox_box(irect16_t r, bool checked, ctrl_state_t sta
 
 // ── Combobox ─────────────────────────────────────────────────────────────────
 
-static uint32_t modern_surface_midpoint(uint32_t a, uint32_t b) {
-  uint32_t color = 0xff000000;
-  for (int shift = 0; shift < 24; shift += 8)
-    color |= ((((a >> shift) & 0xff) + ((b >> shift) & 0xff)) / 2) << shift;
-  return color;
-}
-
 static void modern_draw_field_bg(irect16_t r, ctrl_state_t state) {
-  uint32_t surface = get_sys_color(brControlBg);
-  uint32_t border = modern_surface_midpoint(surface, get_sys_color(brButtonInner));
-  uint32_t fill = modern_surface_midpoint(surface, get_sys_color(brWindowDarkBg));
   bool focused = (state & CTRL_FOCUSED) && !(state & CTRL_DISABLED);
   int radius = MIN(RADIUS_FIELD, MIN(r.w, r.h) / 2);
-  fill_rounded_rect(focused ? get_sys_color(brAccent) : border, r, radius);
-  fill_rounded_rect(fill, rect_inset(r, 1), MAX(0, radius - 1));
+  fill_rounded_rect(focused ? get_sys_color(brAccent) : get_sys_color(brLightEdge), r, radius);
+  fill_rounded_rect(get_sys_color(brWindowDarkBg), rect_inset(r, 1), MAX(0, radius - 1));
 }
 
 // ── List item ────────────────────────────────────────────────────────────────
@@ -178,8 +168,8 @@ static void modern_apply_palette(void) {
   g_sys_colors[brInactiveTitlebar]     = WEB(0x17243B);
   g_sys_colors[brInactiveTitlebarText] = WEB(0x647089);
   g_sys_colors[brStatusbarBg]          = WEB(0x19273E);
-  g_sys_colors[brLightEdge]            = WEB(0x4A5C7A);
-  g_sys_colors[brDarkEdge]             = WEB(0x2A3954);
+  g_sys_colors[brLightEdge]            = WEB(0x4A5C7A);  // field/slider/button hairline
+  g_sys_colors[brDarkEdge]             = WEB(0x2A3954);  // quiet divider / bevel shadow
   g_sys_colors[brFlare]                = WEB(0xF8FAFF);
   g_sys_colors[brAccent]               = WEB(0x7357F6);
   g_sys_colors[brButtonInner]          = WEB(0x1B2942);
@@ -274,7 +264,7 @@ static void modern_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state)
     case THEME_PART_MENU_BAR:            fill_rect(get_sys_color(brActiveTitlebar), r); break;
     case THEME_PART_MENU_POPUP:          fill_rounded_rect(get_sys_color(brControlBg), r, RADIUS_MENU_ITEM); break;
     case THEME_PART_SEPARATOR:           fill_rect(get_sys_color(brButtonInner), r); break;
-    case THEME_PART_SLIDER_TRACK:        fill_rect(get_sys_color(brButtonInner), r); break;
+    case THEME_PART_SLIDER_TRACK:        fill_rect(get_sys_color(brLightEdge), r); break;
     case THEME_PART_SCROLLBAR_TRACK:     fill_rect(get_sys_color(brStatusbarBg), r); break;
     case THEME_PART_SCROLLBAR_THUMB:
       r = rect_inset(r, (SCROLLBAR_WIDTH - SCROLLBAR_THUMB_WIDTH) / 2);
