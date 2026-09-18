@@ -98,13 +98,31 @@ static void test_independent_parts(void) {
     memset(pixels, 0, sizeof(pixels));
     theme->draw_part(THEME_PART_COMBOBOX, R(10, 10, 80, 30), states[i]);
     ASSERT_EQUAL(memcmp(field, pixels, sizeof(field)), 0);
-    ASSERT_EQUAL(pixels[25][50], modern_surface_midpoint(get_sys_color(brControlBg),
-                                                      get_sys_color(brWindowDarkBg)));
+    ASSERT_EQUAL(pixels[25][50], get_sys_color(brWindowDarkBg));
+    if (states[i] == CTRL_FOCUSED) {
+      ASSERT_EQUAL(pixels[25][10], get_sys_color(brAccent));
+    } else {
+      ASSERT_EQUAL(pixels[25][10], get_sys_color(brLightEdge));
+    }
+    ASSERT_NOT_EQUAL(pixels[25][10], get_sys_color(brControlBg));
+    ASSERT_NOT_EQUAL(pixels[25][10], pixels[25][50]);
   }
   memset(pixels, 0, sizeof(pixels));
   theme->draw_part(THEME_PART_SCROLLBAR_THUMB, R(10, 10, SCROLLBAR_WIDTH, 30), CTRL_NORMAL);
   ASSERT_EQUAL(pixels[10][10], 0);
   ASSERT_NOT_EQUAL(pixels[25][13], 0);
+  PASS();
+}
+
+static void test_modern_slider_track_contrasts(void) {
+  TEST("Modern slider tracks use the light-edge hairline, not the navy fill");
+  theme_t *theme = paint_modern_instance();
+  theme->apply_palette();
+  memset(pixels, 0, sizeof(pixels));
+  theme->draw_part(THEME_PART_SLIDER_TRACK, R(20, 20, 2, 40), CTRL_NORMAL);
+  ASSERT_EQUAL(pixels[30][20], get_sys_color(brLightEdge));
+  ASSERT_NOT_EQUAL(pixels[30][20], get_sys_color(brControlBg));
+  ASSERT_NOT_EQUAL(pixels[30][20], get_sys_color(brButtonInner));
   PASS();
 }
 
@@ -236,6 +254,7 @@ int main(void) {
   test_modern_button_states();
   test_translated_separator();
   test_independent_parts();
+  test_modern_slider_track_contrasts();
   test_flat_tool_items();
   test_palette_overrides();
   test_full_row_selection();
