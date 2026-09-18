@@ -10,6 +10,7 @@ typedef struct {
   ipoint16_t last_position;
   bool user_placed;
   GLuint *thumbs;
+  uint32_t *thumb_rev;
   int thumb_count;
   bool thumbs_dirty, positioned;
   canvas_doc_t *last_doc;
@@ -45,18 +46,24 @@ static void sync_thumb_array(timeline_state_t *st, int frame_count) {
 
   if (!frame_count) {
     free(st->thumbs);
+    free(st->thumb_rev);
     st->thumbs = NULL;
+    st->thumb_rev = NULL;
     st->thumb_count = 0;
     return;
   }
   GLuint *t = realloc(st->thumbs, sizeof(GLuint) * (size_t)frame_count);
-  if (!t) {
+  uint32_t *rev = realloc(st->thumb_rev, sizeof(uint32_t) * (size_t)frame_count);
+  if (!t || !rev) {
     IE_TRACE("frames thumbnail allocation failed count=%d", frame_count);
     return;
   }
   st->thumbs = t;
-  for (int i = st->thumb_count; i < frame_count; i++)
+  st->thumb_rev = rev;
+  for (int i = st->thumb_count; i < frame_count; i++) {
     st->thumbs[i] = 0;
+    st->thumb_rev[i] = 0;
+  }
   st->thumb_count = frame_count;
 }
 
@@ -69,18 +76,20 @@ static void rebuild_thumbnails(timeline_state_t *st) {
     return;
   }
   sync_thumb_array(st, doc->anim->frame_count);
-  for (int i = 0; i < doc->anim->frame_count; i++) {
-    if (i < st->thumb_count)
-      anim_render_frame_thumbnail_scaled(doc->anim->frames[i],
-                                         doc->canvas_w, doc->canvas_h,
-                                         TIMELINE_THUMB_W,
-                                         &st->thumbs[i],
+  for (int i = 0; i < doc->anim->frame_count && i < st->thumb_count; i++) {
+    uint32_t rev = doc->anim->frames[i] ? doc->anim->frames[i]->revision : 0;
+    if (st->thumbs[i] && st->thumb_rev[i] == rev) continue;
+    if (anim_render_frame_thumbnail_scaled(doc->anim->frames[i],
+                                           doc->canvas_w, doc->canvas_h,
+                                           TIMELINE_THUMB_W,
+                                           &st->thumbs[i],
 #if IMAGEEDITOR_INDEXED
-                                   doc->ipal.entries
+                                           doc->ipal.entries
 #else
-                                   NULL
+                                           NULL
 #endif
-                                   );
+                                           ))
+      st->thumb_rev[i] = rev;
   }
   st->thumbs_dirty = false;
 }
@@ -195,7 +204,9 @@ static bool timeline_select_frame(window_t *win, timeline_state_t *st,
 static void timeline_draw_frame(window_t *win, int idx, toolbar_draw_item_t *draw) {
   timeline_state_t *st = win->userdata;
   canvas_doc_t *doc = tl_doc();
-  if (st->thumbs_dirty) rebuild_thumbnails(st);
+  bool playing = doc && doc->anim && doc->anim->playing;
+  if (st->thumbs_dirty && (!playing || !st->thumbs))
+    rebuild_thumbnails(st);
   irect16_t inner = draw->rect;
   bool selected = (draw->state & CTRL_SELECTED) != 0;
   bool outlined = selected || (draw->state & CTRL_HOVER) != 0;
@@ -231,6 +242,7 @@ static result_t timeline_proc(window_t *win, uint32_t msg, uint32_t wparam, void
         anim_render_shutdown();
         for (int i = 0; i < st->thumb_count; i++) R_DeleteTexture(st->thumbs[i]);
         free(st->thumbs);
+        free(st->thumb_rev);
       }
       if (g_app && g_app->timeline_win == win) g_app->timeline_win = NULL;
       return true;
@@ -343,9 +355,9 @@ void timeline_toolbar_sync(void) {
 void timeline_win_refresh(void) {
   if (!g_app || !g_app->timeline_win) return;
   timeline_state_t *st = g_app->timeline_win->userdata;
-  if (st) st->thumbs_dirty = true;
-  timeline_toolbar_sync();
   canvas_doc_t *doc = tl_doc();
+  if (st && !(doc && doc->anim && doc->anim->playing)) st->thumbs_dirty = true;
+  timeline_toolbar_sync();
   int count = doc && doc->anim ? doc->anim->frame_count : 0;
   if (st && count > 1 && (st->last_doc != doc || st->last_count <= 1))
     show_window(g_app->timeline_win, true);
