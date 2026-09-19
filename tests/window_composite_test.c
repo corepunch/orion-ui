@@ -12,6 +12,19 @@ static result_t status_host_proc(window_t *win, uint32_t msg, uint32_t wp, void 
   return false;
 }
 
+static uint32_t g_paint_color;
+
+static result_t color_paint_proc(window_t *win, uint32_t msg, uint32_t wp, void *lp) {
+  (void)wp; (void)lp;
+  if (msg == evPaint) fill_rect(g_paint_color, get_client_rect(win));
+  return true;
+}
+
+static void read_window_pixel(window_t *win, int x, int y, uint8_t pixel[4]) {
+  glBindFramebuffer(GL_FRAMEBUFFER, win->surface_fbo);
+  glReadPixels(x, y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+}
+
 static void test_platform_framebuffer(void) {
   TEST("Window compositing draws into the platform's nonzero framebuffer");
   if (!ui_init_graphics(UI_INIT_HIDDEN, "composite-test", 256, 256)) {
@@ -86,9 +99,59 @@ static void test_platform_framebuffer(void) {
   ASSERT_EQUAL(pixel[2], 255);
   PASS();
 }
+
+static void test_paint_binds_own_surface(void) {
+  TEST("Interleaved root paints stay in each window's own surface");
+  if (!ui_init_graphics(UI_INIT_HIDDEN, "paint-target-test", 256, 256)) {
+    SKIP("Offscreen graphics unavailable");
+  }
+  window_t *bar = create_window("bar", WINDOW_NOTITLE,
+    MAKERECT(0, 0, 200, 24), NULL, color_paint_proc, 0, NULL);
+  window_t *popup = create_window("popup", WINDOW_NOTITLE,
+    MAKERECT(8, 24, 80, 96), NULL, color_paint_proc, 0, NULL);
+  ASSERT_NOT_NULL(bar);
+  ASSERT_NOT_NULL(popup);
+  show_window(bar, true);
+  show_window(popup, true);
+  send_message(bar, evNCPaint, 0, NULL);
+  send_message(popup, evNCPaint, 0, NULL);
+  g_paint_color = 0xFF00FF00;
+  send_message(popup, evPaint, 0, NULL);
+  g_paint_color = 0xFF0000FF;
+  send_message(bar, evPaint, 0, NULL);
+
+  int bar_scale = bar->surface_h / bar->frame.h;
+  int popup_scale = popup->surface_h / popup->frame.h;
+  uint8_t bar_px[4] = {0}, popup_center[4] = {0}, popup_bottom[4] = {0};
+  read_window_pixel(bar, 100 * bar_scale, (bar->surface_h / 2), bar_px);
+  read_window_pixel(popup, 40 * popup_scale, popup->surface_h / 2, popup_center);
+  read_window_pixel(popup, 40 * popup_scale, 2 * popup_scale, popup_bottom);
+  fprintf(stderr, "[paint-target] bar=%u,%u,%u popup_c=%u,%u,%u popup_b=%u,%u,%u\n",
+          bar_px[0], bar_px[1], bar_px[2],
+          popup_center[0], popup_center[1], popup_center[2],
+          popup_bottom[0], popup_bottom[1], popup_bottom[2]);
+  fflush(stderr);
+  ui_shutdown_graphics();
+  ASSERT_EQUAL(bar_px[0], 255);
+  ASSERT_EQUAL(bar_px[1], 0);
+  ASSERT_EQUAL(bar_px[2], 0);
+  ASSERT_EQUAL(popup_center[0], 0);
+  ASSERT_EQUAL(popup_center[1], 255);
+  ASSERT_EQUAL(popup_center[2], 0);
+  ASSERT_EQUAL(popup_bottom[0], 0);
+  ASSERT_EQUAL(popup_bottom[1], 255);
+  ASSERT_EQUAL(popup_bottom[2], 0);
+  PASS();
+}
+
 #else
 static void test_platform_framebuffer(void) {
   TEST("Window compositing draws into the platform's nonzero framebuffer");
+  SKIP("Requires the macOS offscreen platform framebuffer");
+}
+
+static void test_paint_binds_own_surface(void) {
+  TEST("Interleaved root paints stay in each window's own surface");
   SKIP("Requires the macOS offscreen platform framebuffer");
 }
 #endif
@@ -96,5 +159,6 @@ static void test_platform_framebuffer(void) {
 int main(void) {
   TEST_START("Window compositing");
   test_platform_framebuffer();
+  test_paint_binds_own_surface();
   TEST_END();
 }
