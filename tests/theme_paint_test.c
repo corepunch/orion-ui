@@ -181,11 +181,11 @@ static void test_palette_overrides(void) {
   }
   theme->draw_part(THEME_PART_PANEL, R(10, 10, 80, 30), CTRL_NORMAL);
   ASSERT_EQUAL(pixels[25][50], get_sys_color(brControlBg));
-  g_sys_colors[brActiveTitlebar] = 0xffabcdef;
+  g_sys_colors[brAccent] = 0xffabcdef;
   memset(pixels, 0, sizeof(pixels));
   theme->draw_part(THEME_PART_TITLEBAR, R(10, 10, 80, 30), CTRL_FOCUSED);
-  ASSERT_EQUAL(pixels[25][50], get_sys_color(brActiveTitlebar));
-  ASSERT_NOT_EQUAL(pixels[25][50], get_sys_color(brAccent));
+  ASSERT_EQUAL(pixels[25][50], get_sys_color(brAccent));
+  ASSERT_NOT_EQUAL(pixels[25][50], get_sys_color(brControlBg));
   get_theme()->apply_palette();
   PASS();
 }
@@ -263,6 +263,24 @@ static void test_light_chrome(void) {
   PASS();
 }
 
+static void test_navy_caption_bar(void) {
+  TEST("Navy focused caption is the accent; inactive caption is not the window face");
+  theme_t *theme = paint_with_theme(THEME_NAVY);
+  ASSERT_NOT_EQUAL(get_sys_color(brAccent), get_sys_color(brControlBg));
+  ASSERT_NOT_EQUAL(get_sys_color(brInactiveTitlebar), get_sys_color(brControlBg));
+  memset(pixels, 0, sizeof(pixels));
+  theme->draw_part(THEME_PART_TITLEBAR, R(10, 10, 80, 30), CTRL_FOCUSED);
+  ASSERT_EQUAL(pixels[25][50], get_sys_color(brAccent));
+  memset(pixels, 0, sizeof(pixels));
+  theme->draw_part(THEME_PART_TITLEBAR, R(10, 10, 80, 30), CTRL_NORMAL);
+  ASSERT_EQUAL(pixels[25][50], get_sys_color(brInactiveTitlebar));
+  ASSERT_NOT_EQUAL(pixels[25][50], get_sys_color(brControlBg));
+  memset(pixels, 0, sizeof(pixels));
+  theme->draw_part(THEME_PART_TOOLBAR, R(10, 10, 80, 30), CTRL_NORMAL);
+  ASSERT_EQUAL(pixels[25][50], get_sys_color(brControlBg));
+  PASS();
+}
+
 static void test_button_capsules(void) {
   TEST("Modern button ends follow the full height at desktop and touch sizes");
   theme_t *theme = paint_with_theme(THEME_NAVY);
@@ -294,5 +312,6 @@ int main(void) {
   test_scrollbar_thickness();
   test_default_modern_chrome();
   test_light_chrome();
+  test_navy_caption_bar();
   TEST_END();
 }

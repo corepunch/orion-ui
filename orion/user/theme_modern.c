@@ -98,12 +98,8 @@ static void modern_draw_panel_bg(irect16_t r) {
 // ── Titlebar ─────────────────────────────────────────────────────────────────
 
 static void modern_draw_titlebar_bg(irect16_t r, bool focused) {
-  // Navy keeps titlebars on chrome (brActiveTitlebar), not the purple accent.
-  // Default matches Classic: focused caption is the accent color.
-  uint32_t color = modern_navy()
-    ? get_sys_color(focused ? brActiveTitlebar : brInactiveTitlebar)
-    : get_sys_color(focused ? brAccent : brInactiveTitlebar);
-  fill_rect(color, r);
+  // Win95/XP: active caption is the accent; inactive is a distinct dull bar.
+  fill_rect(get_sys_color(focused ? brAccent : brInactiveTitlebar), r);
 }
 
 // ── Statusbar ────────────────────────────────────────────────────────────────
@@ -259,7 +255,7 @@ static void modern_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state)
     case THEME_PART_TAB_PANE:
     case THEME_PART_PANEL_BORDER:        break;
     case THEME_PART_TOOLBAR:
-      fill_rect(get_sys_color(modern_navy() ? brActiveTitlebar : brControlBg), r);
+      fill_rect(get_sys_color(brControlBg), r);
       break;
     case THEME_PART_TOOLBAR_GRIP:
       if (r.w > r.h)
@@ -277,7 +273,7 @@ static void modern_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state)
           fill_rect(get_sys_color(brTextDisabled), R(r.x+r.w-6+col*2, r.y+r.h-6+row*2, 1, 1));
       break;
     case THEME_PART_MENU_BAR:
-      fill_rect(get_sys_color(modern_navy() ? brActiveTitlebar : brWindowDarkBg), r);
+      fill_rect(get_sys_color(brWindowDarkBg), r);
       break;
     case THEME_PART_MENU_POPUP:          fill_rounded_rect(get_sys_color(brControlBg), r, RADIUS_MENU_ITEM); break;
     case THEME_PART_SEPARATOR:           fill_rect(get_sys_color(brButtonInner), r); break;

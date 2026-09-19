@@ -5,6 +5,7 @@
 #include <orion/user/theme.h>
 
 // Navy chrome + purple accent (Image Editor / Pencil Test standalone).
+// Caption follows Win95/XP: active = accent, inactive = dull bar, not the face.
 // WEB() packs CSS #rrggbb with R in the low byte.
 
 #define THEME_PALETTE_NAVY_INIT \
@@ -12,9 +13,9 @@
   [brControlBg]            = WEB(0x17243B), \
   [brWindowDarkBg]         = WEB(0x1A2942), \
   [brWorkspaceBg]          = WEB(0x17243B), \
-  [brActiveTitlebar]       = WEB(0x19263E), \
+  [brActiveTitlebar]       = WEB(0x7357F6), \
   [brActiveTitlebarText]   = WEB(0xF6F8FF), \
-  [brInactiveTitlebar]     = WEB(0x17243B), \
+  [brInactiveTitlebar]     = WEB(0x3A4558), \
   [brInactiveTitlebarText] = WEB(0x647089), \
   [brStatusbarBg]          = WEB(0x19273E), \
   [brLightEdge]            = WEB(0x4A5C7A), \
