@@ -26,7 +26,12 @@ static void ie_layout_teardown(void) {
 static void test_ipad_default_canvas_fills_client(void) {
   TEST("Image Editor default canvas fills the iPad document client");
   ie_layout_setup();
-  canvas_doc_t *doc = create_document(NULL, CANVAS_W, CANVAS_H);
+  int w = CANVAS_W, h = CANVAS_H;
+  imageeditor_default_canvas_size(&w, &h);
+  ASSERT_EQUAL(w, imageeditor_document_workspace_rect().w);
+  ASSERT_EQUAL(h, imageeditor_document_workspace_rect().h);
+  ASSERT_TRUE(w != CANVAS_W || h != CANVAS_H);
+  canvas_doc_t *doc = create_document(NULL, w, h);
   ASSERT_NOT_NULL(doc);
   ASSERT_TRUE(doc->win->maximized);
   irect16_t area = imageeditor_document_workspace_rect();
@@ -40,6 +45,8 @@ static void test_ipad_default_canvas_fills_client(void) {
   ASSERT_EQUAL(doc->canvas_win->frame.h, cr.h);
   ASSERT_EQUAL(doc->canvas_w, cr.w);
   ASSERT_EQUAL(doc->canvas_h, cr.h);
+  ASSERT_EQUAL(doc->canvas_w, w);
+  ASSERT_EQUAL(doc->canvas_h, h);
   ASSERT_EQUAL(doc->background.color, MAKE_COLOR(0xFF, 0xFF, 0xFF, 0xFF));
   ASSERT_TRUE(doc->background.show);
   frect_t bounds = window_view_bounds(doc->canvas_win);
@@ -47,6 +54,10 @@ static void test_ipad_default_canvas_fills_client(void) {
   ASSERT_TRUE(fabsf(bounds.y) < 0.01f);
   ASSERT_TRUE(fabsf(bounds.w - (float)cr.w) < 0.01f);
   ASSERT_TRUE(fabsf(bounds.h - (float)cr.h) < 0.01f);
+  canvas_doc_t *vga = create_document(NULL, CANVAS_W, CANVAS_H);
+  ASSERT_NOT_NULL(vga);
+  ASSERT_EQUAL(vga->canvas_w, CANVAS_W);
+  ASSERT_EQUAL(vga->canvas_h, CANVAS_H);
   canvas_doc_t *custom = create_document(NULL, 320, 200);
   ASSERT_NOT_NULL(custom);
   ASSERT_EQUAL(custom->canvas_w, 320);

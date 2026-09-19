@@ -922,6 +922,27 @@ void test_ie_zoom_commands(void) {
     PASS();
 }
 
+void test_ie_new_image_defaults_match_created_canvas(void) {
+    TEST("New Image defaults are the workspace size used to create the empty image");
+
+    ie_setup();
+    int w = CANVAS_W, h = CANVAS_H;
+    imageeditor_default_canvas_size(&w, &h);
+    ASSERT_TRUE(w > 0 && h > 0);
+    ASSERT_EQUAL(w, imageeditor_document_workspace_rect().w);
+    ASSERT_EQUAL(h, imageeditor_document_workspace_rect().h);
+    canvas_doc_t *doc = create_document(NULL, w, h);
+    ASSERT_NOT_NULL(doc);
+    ASSERT_EQUAL(doc->canvas_w, w * g_bw_retina_scale);
+    ASSERT_EQUAL(doc->canvas_h, h * g_bw_retina_scale);
+    canvas_doc_t *vga = create_document(NULL, CANVAS_W, CANVAS_H);
+    ASSERT_NOT_NULL(vga);
+    ASSERT_EQUAL(vga->canvas_w, CANVAS_W * g_bw_retina_scale);
+    ASSERT_EQUAL(vga->canvas_h, CANVAS_H * g_bw_retina_scale);
+    ie_teardown();
+    PASS();
+}
+
 // show_size_dialog returns false in headless mode (modal loop exits immediately).
 void test_ie_size_dialog_headless(void) {
     TEST("show_size_dialog: returns false in headless mode (no event loop)");
@@ -2502,6 +2523,7 @@ int main(int argc, char *argv[]) {
     test_ie_canvas_pixel_helpers();
     test_ie_file_close_command();
     test_ie_zoom_commands();
+    test_ie_new_image_defaults_match_created_canvas();
     test_ie_size_dialog_headless();
     test_ie_size_dialog_accept();
     test_ie_image_resize_dialog_headless();

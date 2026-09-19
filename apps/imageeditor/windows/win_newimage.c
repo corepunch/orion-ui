@@ -29,7 +29,7 @@ static const ctrl_binding_t k_ni_bindings[] = {
 // ──────────────────────────────────────────────────────────────────
 
 // Show a modal dialog that lets the user choose a canvas width and height.
-// out_w / out_h are pre-filled with the default values on entry; on return they
+// out_w / out_h are pre-filled with the caller's values on entry; on return they
 // hold the user-entered values (only modified when the function returns true).
 bool show_size_dialog(window_t *parent, const char *title, int *out_w, int *out_h) {
   ni_state_t st = { .w = *out_w, .h = *out_h };

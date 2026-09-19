@@ -687,6 +687,7 @@ float imageeditor_fit_scale_for_viewport(int content_w, int content_h,
 irect16_t imageeditor_document_workspace_rect(void);
 void imageeditor_max_document_frame_size(int *out_w, int *out_h);
 void imageeditor_max_canvas_viewport_size(int *out_w, int *out_h);
+void imageeditor_default_canvas_size(int *out_w, int *out_h);
 void imageeditor_document_frame_for_viewport(int viewport_w, int viewport_h,
                                              int *out_w, int *out_h);
 bool imageeditor_handle_zoom_command(canvas_doc_t *doc, uint32_t id);

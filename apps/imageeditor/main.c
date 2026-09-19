@@ -222,8 +222,11 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   if (g_app->menubar_win)
     send_message(g_app->menubar_win, kMenuBarMessageSetAccelerators, 0, g_app->accel);
 
-  if (open_startup_documents(argc, argv) == 0)
-    create_document(NULL, CANVAS_W, CANVAS_H);
+  if (open_startup_documents(argc, argv) == 0) {
+    int w, h;
+    imageeditor_default_canvas_size(&w, &h);
+    create_document(NULL, w, h);
+  }
 
   /* Splash screen disabled for image editor startup.
 #ifdef SHAREDIR

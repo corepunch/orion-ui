@@ -32,10 +32,19 @@ static void penciltest_teardown(void) {
   g_app = NULL;
 }
 
+static void penciltest_default_size(int *out_w, int *out_h) {
+  int w = CANVAS_W, h = CANVAS_H;
+  imageeditor_default_canvas_size(&w, &h);
+  if (out_w) *out_w = w;
+  if (out_h) *out_h = h;
+}
+
 static void test_ipad_options_keep_toolbar_geometry(void) {
   TEST("iPad display layout preserves options toolbar width and user position");
   penciltest_setup();
-  canvas_doc_t *doc = create_document(NULL, CANVAS_W, CANVAS_H);
+  int w, h;
+  penciltest_default_size(&w, &h);
+  canvas_doc_t *doc = create_document(NULL, w, h);
   ASSERT_NOT_NULL(doc);
   window_t *options = g_app->tool_options_win;
   ASSERT_EQUAL(options->frame.w, g_app->tool_win->frame.w);
@@ -59,7 +68,12 @@ static void test_ipad_options_keep_toolbar_geometry(void) {
 static void test_pencil_canvas_extends_behind_timeline(void) {
   TEST("Pencil Test maximized canvas covers the client behind the timeline");
   penciltest_setup();
-  canvas_doc_t *doc = create_document(NULL, CANVAS_W, CANVAS_H);
+  int w, h;
+  penciltest_default_size(&w, &h);
+  ASSERT_EQUAL(w, imageeditor_document_workspace_rect().w);
+  ASSERT_EQUAL(h, imageeditor_document_workspace_rect().h);
+  ASSERT_TRUE(w != CANVAS_W || h != CANVAS_H);
+  canvas_doc_t *doc = create_document(NULL, w, h);
   ASSERT_NOT_NULL(doc);
   irect16_t area = imageeditor_document_workspace_rect();
   irect16_t override = R(0, 0, 1, 1);

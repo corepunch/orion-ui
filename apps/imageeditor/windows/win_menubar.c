@@ -398,7 +398,8 @@ void handle_menu_command(uint16_t id) {
 
   switch (id) {
     case ID_FILE_NEW: {
-      int w = CANVAS_W, h = CANVAS_H;
+      int w, h;
+      imageeditor_default_canvas_size(&w, &h);
       if (show_size_dialog(g_app->menubar_win, "New Image", &w, &h))
         create_document(NULL, w, h);
       break;
