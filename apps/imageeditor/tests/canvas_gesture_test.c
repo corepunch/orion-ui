@@ -41,10 +41,14 @@ static void test_screen_aligned_shapes(void) {
                 min_y = MIN(min_y, sy); max_y = MAX(max_y, sy);
               }
             }
-            int hw = shift ? 10 : 24;
+            float exp_hw = shift ? 10 : 24, exp_hh = 10;
+            if (tools[t] == ID_TOOL_ELLIPSE) {
+              exp_hw = shift ? ceilf(hypotf(24, 10)) : ceilf(1.41421356237f * 24);
+              exp_hh = shift ? exp_hw : ceilf(1.41421356237f * 10);
+            }
             ASSERT_TRUE(painted > 0);
-            ASSERT_TRUE(fabsf(min_x + hw) <= 3 && fabsf(max_x - hw) <= 3);
-            ASSERT_TRUE(fabsf(min_y + 10) <= 3 && fabsf(max_y - 10) <= 3);
+            ASSERT_TRUE(fabsf(min_x + exp_hw) <= 3 && fabsf(max_x - exp_hw) <= 3);
+            ASSERT_TRUE(fabsf(min_y + exp_hh) <= 3 && fabsf(max_y - exp_hh) <= 3);
             ASSERT_EQUAL(canvas_get_pixel(&doc, 64, 64), filled ? ink : 0);
             canvas_shape_commit(&doc);
             ASSERT_EQUAL(canvas_get_pixel(&doc, 64, 64), filled ? ink : 0);
@@ -55,6 +59,45 @@ static void test_screen_aligned_shapes(void) {
   }
   free(doc.shape.snapshot);
   g_bw_retina_scale = 1;
+  PASS();
+}
+
+static int ink_near(canvas_doc_t *doc, int x, int y, uint32_t ink, int r) {
+  for (int dy = -r; dy <= r; dy++)
+    for (int dx = -r; dx <= r; dx++)
+      if (canvas_get_pixel(doc, x + dx, y + dy) == ink) return 1;
+  return 0;
+}
+
+static void test_ellipse_drag_on_curve(void) {
+  TEST("ellipse drag point sits on the curve, not the bounding-box corner");
+  uint8_t pixels[160 * 160 * DOC_BPP] = {0};
+  canvas_doc_t doc = {.pixels = pixels, .canvas_w = 160, .canvas_h = 160};
+  uint32_t ink = MAKE_COLOR(0, 0, 0, 255), bg = MAKE_COLOR(200, 100, 50, 255);
+  int cx = 80, cy = 80, dx = 30, dy = 20;
+  canvas_shape_begin(&doc, cx, cy);
+  canvas_shape_preview(&doc, cx, cy, cx + dx, cy + dy, ID_TOOL_ELLIPSE, true, ink, bg, false);
+  ASSERT_EQUAL(canvas_get_pixel(&doc, cx, cy), ink);
+  ASSERT_TRUE(ink_near(&doc, cx + dx, cy + dy, ink, 1));
+  ASSERT_EQUAL(canvas_get_pixel(&doc, cx + dx * 3 / 2, cy + dy * 3 / 2), 0);
+  memset(pixels, 0, sizeof(pixels));
+  canvas_shape_preview(&doc, cx, cy, cx + dx, cy + dy, ID_TOOL_ELLIPSE, true, ink, bg, true);
+  ASSERT_EQUAL(canvas_get_pixel(&doc, cx, cy), ink);
+  ASSERT_TRUE(ink_near(&doc, cx + dx, cy + dy, ink, 1));
+  ASSERT_EQUAL(canvas_get_pixel(&doc, cx + dx * 3 / 2, cy + dy * 3 / 2), 0);
+  int min_x = 160, max_x = -1, min_y = 160, max_y = -1;
+  for (int y = 0; y < 160; y++)
+    for (int x = 0; x < 160; x++) {
+      if (canvas_get_pixel(&doc, x, y) != ink) continue;
+      min_x = MIN(min_x, x); max_x = MAX(max_x, x);
+      min_y = MIN(min_y, y); max_y = MAX(max_y, y);
+    }
+  ASSERT_TRUE(abs((max_x - min_x) - (max_y - min_y)) <= 2);
+  memset(pixels, 0, sizeof(pixels));
+  canvas_shape_preview(&doc, cx, cy, cx + dx, cy + dy, ID_TOOL_RECT, true, ink, bg, false);
+  ASSERT_EQUAL(canvas_get_pixel(&doc, cx + dx, cy + dy), ink);
+  ASSERT_EQUAL(canvas_get_pixel(&doc, cx + dx, cy), ink);
+  free(doc.shape.snapshot);
   PASS();
 }
 
@@ -140,6 +183,7 @@ static void test_cancel_stroke(void) {
 int main(void) {
   TEST_START("Canvas gestures");
   test_screen_aligned_shapes();
+  test_ellipse_drag_on_curve();
   test_filled_shape_is_solid_ink();
   test_gesture_anchor();
   test_cancel_stroke();

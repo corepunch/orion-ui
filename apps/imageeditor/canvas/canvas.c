@@ -35,10 +35,26 @@ typedef struct {
 static const tool_drag_alias_t kToolDragAliases[] = {
   { ID_TOOL_LINE,         AX_MOD_SHIFT, DRAG_ALIAS_45_DEGREES },
   { ID_TOOL_RECT,         AX_MOD_SHIFT, DRAG_ALIAS_SQUARE },
-  { ID_TOOL_ELLIPSE,      AX_MOD_SHIFT, DRAG_ALIAS_SQUARE },
   { ID_TOOL_ROUNDED_RECT, AX_MOD_SHIFT, DRAG_ALIAS_SQUARE },
   { ID_TOOL_SELECT,       AX_MOD_SHIFT, DRAG_ALIAS_SQUARE },
 };
+
+// Pointer-on-curve radii: scale the drag box by sqrt(2) so the pointer sits on
+// the ellipse, or a circle through the pointer when shift is held.
+static void canvas_ellipse_radii(int dx, int dy, bool circle, float *rx, float *ry) {
+  float adx = (float)abs(dx), ady = (float)abs(dy);
+  if (circle) {
+    *rx = *ry = ceilf(hypotf(adx, ady));
+    return;
+  }
+  if (dx != 0 && dy != 0) {
+    *rx = ceilf(1.41421356237f * adx);
+    *ry = ceilf(1.41421356237f * ady);
+    return;
+  }
+  *rx = adx;
+  *ry = ady;
+}
 
 static drag_alias_t tool_drag_alias_for(int tool_id, uint32_t mods) {
   for (size_t i = 0; i < sizeof(kToolDragAliases) / sizeof(kToolDragAliases[0]); i++) {
@@ -102,8 +118,11 @@ static void canvas_shape_rotated(canvas_doc_t *doc, int x0, int y0, int x1, int 
   // still gets an upright rectangle/ellipse, then map vertices back.
   int dx = (int)lroundf(c * (x1 - x0) - s * (y1 - y0));
   int dy = (int)lroundf(s * (x1 - x0) + c * (y1 - y0));
-  canvas_constrain_tool_drag(tool, shift_held ? AX_MOD_SHIFT : 0, 0, 0, &dx, &dy);
-  float hw = abs(dx), hh = abs(dy);
+  if (tool != ID_TOOL_ELLIPSE)
+    canvas_constrain_tool_drag(tool, shift_held ? AX_MOD_SHIFT : 0, 0, 0, &dx, &dy);
+  float hw = (float)abs(dx), hh = (float)abs(dy);
+  if (tool == ID_TOOL_ELLIPSE)
+    canvas_ellipse_radii(dx, dy, shift_held, &hw, &hh);
   float radius = tool == ID_TOOL_ROUNDED_RECT ? MIN(8 * MAX(1, g_bw_retina_scale),
                                                   MIN((2 * abs(dx) + 1) / 4, (2 * abs(dy) + 1) / 4)) : 0;
   int steps = tool == ID_TOOL_ELLIPSE ? (int)ceilf(sqrtf(MAX(hw, hh)) * 2) :
@@ -127,7 +146,7 @@ static void canvas_shape_rotated(canvas_doc_t *doc, int x0, int y0, int x1, int 
 
 // Restore snapshot and draw a preview of the current shape without pushing undo.
 // The initial point is the center for area shapes and the first endpoint for lines.
-// shift_held constrains the shape (45° line, square, circle).
+// shift_held constrains the shape (45° line, square, circle through pointer).
 // Filled shapes are a single color (fg) with no outline. Area shapes are laid
 // out on screen axes so they stay upright when the canvas view is rotated.
 void canvas_shape_preview(canvas_doc_t *doc, int x0, int y0, int x1, int y1,
@@ -151,13 +170,16 @@ void canvas_shape_preview(canvas_doc_t *doc, int x0, int y0, int x1, int y1,
     return;
   }
   int step = MAX(1, g_bw_retina_scale);
-  canvas_constrain_tool_drag(tool, shift_held ? AX_MOD_SHIFT : 0, x0, y0, &x1, &y1);
+  if (tool != ID_TOOL_ELLIPSE)
+    canvas_constrain_tool_drag(tool, shift_held ? AX_MOD_SHIFT : 0, x0, y0, &x1, &y1);
   int half_w = abs(x1 - x0), half_h = abs(y1 - y0);
   int lx = x0 - half_w, rx = x0 + half_w;
   int ty = y0 - half_h, by = y0 + half_h;
   int w = rx - lx + 1, h = by - ty + 1;
-  int rxa = half_w, rya = half_h;
   int corner_r = MIN(8 * step, MIN(w / 4, h / 4));
+  float ell_rx = 0, ell_ry = 0;
+  if (tool == ID_TOOL_ELLIPSE)
+    canvas_ellipse_radii(x1 - x0, y1 - y0, shift_held, &ell_rx, &ell_ry);
 
   switch (tool) {
     case ID_TOOL_LINE:
@@ -167,7 +189,7 @@ void canvas_shape_preview(canvas_doc_t *doc, int x0, int y0, int x1, int y1,
       canvas_draw_rect_scaled(doc, lx, ty, w, h, filled, fg, fg);
       break;
     case ID_TOOL_ELLIPSE:
-      canvas_draw_ellipse_scaled(doc, x0, y0, rxa, rya, filled, fg, fg);
+      canvas_draw_ellipse_scaled(doc, x0, y0, (int)ell_rx, (int)ell_ry, filled, fg, fg);
       break;
     case ID_TOOL_ROUNDED_RECT:
       canvas_draw_rounded_rect_scaled(doc, lx, ty, w, h, corner_r, filled, fg, fg);
