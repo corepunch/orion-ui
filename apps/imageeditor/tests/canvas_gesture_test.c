@@ -13,7 +13,7 @@ static void test_screen_aligned_shapes(void) {
   canvas_doc_t doc = {.pixels = pixels, .canvas_w = 128, .canvas_h = 128, .canvas_win = &win};
   const int tools[] = {ID_TOOL_RECT, ID_TOOL_ELLIPSE, ID_TOOL_ROUNDED_RECT};
   const float angles[] = {0, 0.78539816339f, -0.52359877559f, 1.57079632679f};
-  uint32_t ink = MAKE_COLOR(0, 0, 0, 255), fill = MAKE_COLOR(200, 100, 50, 255);
+  uint32_t ink = MAKE_COLOR(0, 0, 0, 255), unused_bg = MAKE_COLOR(200, 100, 50, 255);
   for (int retina = 1; retina <= 2; retina++) {
     g_bw_retina_scale = retina;
     for (int a = 0; a < ARRAY_LEN(angles); a++) {
@@ -25,24 +25,29 @@ static void test_screen_aligned_shapes(void) {
           for (int shift = 0; shift <= 1; shift++) {
             memset(pixels, 0, sizeof(pixels));
             canvas_shape_begin(&doc, 64, 64);
-            canvas_shape_preview(&doc, 64, 64, 100, 100, tools[t], filled, ink, fill, false);
+            canvas_shape_preview(&doc, 64, 64, 100, 100, tools[t], filled, ink, unused_bg, false);
             canvas_shape_preview(&doc, 64, 64, 64 + (int)lroundf(c * 24 + s * 10),
-                                 64 + (int)lroundf(-s * 24 + c * 10), tools[t], filled, ink, fill, shift);
+                                 64 + (int)lroundf(-s * 24 + c * 10), tools[t], filled, ink, unused_bg, shift);
             float min_x = 128, min_y = 128, max_x = -128, max_y = -128;
+            int painted = 0;
             for (int y = 0; y < 128; y++) {
               for (int x = 0; x < 128; x++) {
-                if (!canvas_get_pixel(&doc, x, y)) continue;
+                uint32_t pixel = canvas_get_pixel(&doc, x, y);
+                if (!pixel) continue;
+                ASSERT_EQUAL(pixel, ink);
+                painted++;
                 float sx = c * (x - 64) - s * (y - 64), sy = s * (x - 64) + c * (y - 64);
                 min_x = MIN(min_x, sx); max_x = MAX(max_x, sx);
                 min_y = MIN(min_y, sy); max_y = MAX(max_y, sy);
               }
             }
             int hw = shift ? 10 : 24;
+            ASSERT_TRUE(painted > 0);
             ASSERT_TRUE(fabsf(min_x + hw) <= 3 && fabsf(max_x - hw) <= 3);
             ASSERT_TRUE(fabsf(min_y + 10) <= 3 && fabsf(max_y - 10) <= 3);
-            ASSERT_EQUAL(canvas_get_pixel(&doc, 64, 64), filled ? fill : 0);
+            ASSERT_EQUAL(canvas_get_pixel(&doc, 64, 64), filled ? ink : 0);
             canvas_shape_commit(&doc);
-            ASSERT_EQUAL(canvas_get_pixel(&doc, 64, 64), filled ? fill : 0);
+            ASSERT_EQUAL(canvas_get_pixel(&doc, 64, 64), filled ? ink : 0);
           }
         }
       }
@@ -50,6 +55,29 @@ static void test_screen_aligned_shapes(void) {
   }
   free(doc.shape.snapshot);
   g_bw_retina_scale = 1;
+  PASS();
+}
+
+static void test_filled_shape_is_solid_ink(void) {
+  TEST("filled shapes are a single ink color with no outline");
+  uint8_t pixels[64 * 64 * DOC_BPP] = {0};
+  canvas_doc_t doc = {.pixels = pixels, .canvas_w = 64, .canvas_h = 64};
+  uint32_t ink = MAKE_COLOR(10, 20, 30, 255), bg = MAKE_COLOR(200, 100, 50, 255);
+  const int tools[] = {ID_TOOL_RECT, ID_TOOL_ELLIPSE, ID_TOOL_ROUNDED_RECT};
+  for (int t = 0; t < ARRAY_LEN(tools); t++) {
+    memset(pixels, 0, sizeof(pixels));
+    canvas_shape_begin(&doc, 24, 24);
+    canvas_shape_preview(&doc, 24, 24, 40, 36, tools[t], true, ink, bg, false);
+    ASSERT_EQUAL(canvas_get_pixel(&doc, 24, 24), ink);
+    ASSERT_EQUAL(canvas_get_pixel(&doc, 40, 24), ink);
+    ASSERT_EQUAL(canvas_get_pixel(&doc, 24, 36), ink);
+    for (int y = 0; y < 64; y++)
+      for (int x = 0; x < 64; x++) {
+        uint32_t pixel = canvas_get_pixel(&doc, x, y);
+        ASSERT_TRUE(pixel == 0 || pixel == ink);
+      }
+  }
+  free(doc.shape.snapshot);
   PASS();
 }
 
@@ -112,6 +140,7 @@ static void test_cancel_stroke(void) {
 int main(void) {
   TEST_START("Canvas gestures");
   test_screen_aligned_shapes();
+  test_filled_shape_is_solid_ink();
   test_gesture_anchor();
   test_cancel_stroke();
   TEST_END();

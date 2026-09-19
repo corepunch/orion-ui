@@ -396,7 +396,7 @@ typedef struct {
   int            brush_tool;
   int            shape_tool;
   int            brush_size;    // current brush radius (index into kBrushSizes)
-  bool           shape_filled;  // true = shapes draw filled, false = outline only
+  bool           shape_filled;  // true = solid fg fill, no outline; false = outline only
   // Text tool persistent settings (font size, antialias flag).
   struct {
     int  font_size;  // pixel height, default 16

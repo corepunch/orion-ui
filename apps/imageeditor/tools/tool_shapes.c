@@ -18,7 +18,7 @@ static void rect_begin(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t d
 static void rect_drag(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t doc_pt) {
   if (!doc || !g_app) return;
   canvas_shape_preview(doc, doc->shape.start.x, doc->shape.start.y, doc_pt.x, doc_pt.y,
-                       ID_TOOL_RECT, g_app->shape_filled, g_app->fg_color, g_app->bg_color, false);
+                       ID_TOOL_RECT, g_app->shape_filled, g_app->fg_color, g_app->fg_color, false);
   ie_doc_invalidate_canvas(doc);
 }
 
@@ -59,7 +59,7 @@ static void ellipse_begin(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_
 static void ellipse_drag(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t doc_pt) {
   if (!doc || !g_app) return;
   canvas_shape_preview(doc, doc->shape.start.x, doc->shape.start.y, doc_pt.x, doc_pt.y,
-                       ID_TOOL_ELLIPSE, g_app->shape_filled, g_app->fg_color, g_app->bg_color, false);
+                       ID_TOOL_ELLIPSE, g_app->shape_filled, g_app->fg_color, g_app->fg_color, false);
   ie_doc_invalidate_canvas(doc);
 }
 
@@ -93,7 +93,7 @@ static void rounded_rect_begin(canvas_doc_t *doc, canvas_win_state_t *view, ipoi
 static void rounded_rect_drag(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t doc_pt) {
   if (!doc || !g_app) return;
   canvas_shape_preview(doc, doc->shape.start.x, doc->shape.start.y, doc_pt.x, doc_pt.y,
-                       ID_TOOL_ROUNDED_RECT, g_app->shape_filled, g_app->fg_color, g_app->bg_color, false);
+                       ID_TOOL_ROUNDED_RECT, g_app->shape_filled, g_app->fg_color, g_app->fg_color, false);
   ie_doc_invalidate_canvas(doc);
 }
 

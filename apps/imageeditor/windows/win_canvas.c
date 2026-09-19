@@ -905,12 +905,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           apply_zoom_centered(win, state, new_scale, doc_pt);
         return true;
       } else if (g_app->current_tool == ID_TOOL_POLYGON && doc->poly.active && doc->poly.count >= 2) {
-        if (g_app->shape_filled)
-          canvas_draw_polygon_scaled(doc, doc->poly.pts, doc->poly.count, true,
-                                     g_app->fg_color, g_app->bg_color);
-        else
-          canvas_draw_polygon_scaled(doc, doc->poly.pts, doc->poly.count, false,
-                                     g_app->fg_color, g_app->bg_color);
+        canvas_draw_polygon_scaled(doc, doc->poly.pts, doc->poly.count, g_app->shape_filled,
+                                   g_app->fg_color, g_app->fg_color);
         // Fix up undo: undo_states[top] was pushed with pre-draw pixels from shape_begin.
         // After drawing, swap undo entry (pre-draw) with shape_snapshot (drawn) to align them.
         // Actually the undo was already pushed correctly on first click via doc_push_undo

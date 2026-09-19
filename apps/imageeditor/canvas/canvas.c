@@ -96,9 +96,10 @@ void canvas_shape_begin(canvas_doc_t *doc, int cx, int cy) {
 }
 
 static void canvas_shape_rotated(canvas_doc_t *doc, int x0, int y0, int x1, int y1,
-                                 int tool, bool filled, uint32_t fg, uint32_t bg,
+                                 int tool, bool filled, uint32_t color,
                                  bool shift_held, float c, float s) {
-  // Work in screen-aligned axes at document scale, then rotate the contour back.
+  // Build the contour in screen-aligned document units so a rotated canvas
+  // still gets an upright rectangle/ellipse, then map vertices back.
   int dx = (int)lroundf(c * (x1 - x0) - s * (y1 - y0));
   int dy = (int)lroundf(s * (x1 - x0) + c * (y1 - y0));
   canvas_constrain_tool_drag(tool, shift_held ? AX_MOD_SHIFT : 0, 0, 0, &dx, &dy);
@@ -121,29 +122,33 @@ static void canvas_shape_rotated(canvas_doc_t *doc, int x0, int y0, int x1, int 
                                     CLAMP(lroundf(y0 - s * x + c * y), INT16_MIN, INT16_MAX)};
     }
   }
-  canvas_draw_polygon_scaled(doc, points, count, filled, fg, bg);
+  canvas_draw_polygon_scaled(doc, points, count, filled, color, color);
 }
 
 // Restore snapshot and draw a preview of the current shape without pushing undo.
 // The initial point is the center for area shapes and the first endpoint for lines.
 // shift_held constrains the shape (45° line, square, circle).
+// Filled shapes are a single color (fg) with no outline. Area shapes are laid
+// out on screen axes so they stay upright when the canvas view is rotated.
 void canvas_shape_preview(canvas_doc_t *doc, int x0, int y0, int x1, int y1,
                           int tool, bool filled, uint32_t fg, uint32_t bg, bool shift_held) {
-  // Restore snapshot
+  (void)bg;
   if (doc->shape.snapshot) {
     memcpy(doc->pixels, doc->shape.snapshot, (size_t)doc->canvas_w * doc->canvas_h * DOC_BPP);
     doc->canvas_dirty = true;
   }
   window_t *win = doc->canvas_win;
+  float c = 1, s = 0;
   if (tool != ID_TOOL_LINE && win && win->view.enabled) {
     float a = win->view.matrix.a, b = win->view.matrix.b;
     float scale = hypotf(a, b);
-    if (scale > 0 && (fabsf(b) > scale * 0.00001f || a < 0)) {
-      IE_TRACE("shape_preview win=%p tool=%d start=(%d,%d) end=(%d,%d) rotation=%f",
-               (void *)win, tool, x0, y0, x1, y1, atan2f(b, a));
-      canvas_shape_rotated(doc, x0, y0, x1, y1, tool, filled, fg, bg, shift_held, a / scale, b / scale);
-      return;
-    }
+    if (scale > 0) { c = a / scale; s = b / scale; }
+  }
+  if (tool != ID_TOOL_LINE && (fabsf(s) > 0.00001f || c < 0)) {
+    IE_TRACE("shape_preview win=%p tool=%d start=(%d,%d) end=(%d,%d) rotation=%f",
+             (void *)win, tool, x0, y0, x1, y1, atan2f(s, c));
+    canvas_shape_rotated(doc, x0, y0, x1, y1, tool, filled, fg, shift_held, c, s);
+    return;
   }
   int step = MAX(1, g_bw_retina_scale);
   canvas_constrain_tool_drag(tool, shift_held ? AX_MOD_SHIFT : 0, x0, y0, &x1, &y1);
@@ -159,13 +164,13 @@ void canvas_shape_preview(canvas_doc_t *doc, int x0, int y0, int x1, int y1,
       canvas_draw_pen_line(doc, x0, y0, x1, y1, fg);
       break;
     case ID_TOOL_RECT:
-      canvas_draw_rect_scaled(doc, lx, ty, w, h, filled, fg, bg);
+      canvas_draw_rect_scaled(doc, lx, ty, w, h, filled, fg, fg);
       break;
     case ID_TOOL_ELLIPSE:
-      canvas_draw_ellipse_scaled(doc, x0, y0, rxa, rya, filled, fg, bg);
+      canvas_draw_ellipse_scaled(doc, x0, y0, rxa, rya, filled, fg, fg);
       break;
     case ID_TOOL_ROUNDED_RECT:
-      canvas_draw_rounded_rect_scaled(doc, lx, ty, w, h, corner_r, filled, fg, bg);
+      canvas_draw_rounded_rect_scaled(doc, lx, ty, w, h, corner_r, filled, fg, fg);
       break;
   }
 }
