@@ -169,8 +169,7 @@ static void test_palette_overrides(void) {
   theme_t *theme = paint_with_theme(THEME_NAVY);
   g_sys_colors[brAccent] = 0xff123456;
   g_sys_colors[brControlBg] = 0xff654321;
-  theme_part_t parts[] = {THEME_PART_TOOLBAR_BUTTON, THEME_PART_TAB, THEME_PART_LIST_ITEM,
-                          THEME_PART_BUTTON};
+  theme_part_t parts[] = {THEME_PART_TOOLBAR_BUTTON, THEME_PART_LIST_ITEM, THEME_PART_BUTTON};
   ctrl_state_t states[] = {CTRL_SELECTED, CTRL_SELECTED | CTRL_HOVER, CTRL_SELECTED | CTRL_PRESSED};
   for (int i = 0; i < ARRAY_LEN(parts); i++) {
     for (int j = 0; j < ARRAY_LEN(states); j++) {
@@ -179,6 +178,9 @@ static void test_palette_overrides(void) {
       ASSERT_EQUAL(pixels[25][50], get_sys_color(brAccent));
     }
   }
+  memset(pixels, 0, sizeof(pixels));
+  theme->draw_part(THEME_PART_TAB, R(10, 10, 80, 30), CTRL_SELECTED);
+  ASSERT_EQUAL(pixels[25][50], get_sys_color(brControlBg));
   theme->draw_part(THEME_PART_PANEL, R(10, 10, 80, 30), CTRL_NORMAL);
   ASSERT_EQUAL(pixels[25][50], get_sys_color(brControlBg));
   g_sys_colors[brAccent] = 0xffabcdef;
@@ -245,7 +247,7 @@ static void test_default_modern_chrome(void) {
   ASSERT_EQUAL(pixels[25][50], get_sys_color(brAccent));
   memset(pixels, 0, sizeof(pixels));
   theme->draw_part(THEME_PART_TOOLBAR, R(10, 10, 80, 30), CTRL_NORMAL);
-  ASSERT_EQUAL(pixels[25][50], get_sys_color(brControlBg));
+  ASSERT_EQUAL(pixels[25][50], get_sys_color(brPanelDarker));
   memset(pixels, 0, sizeof(pixels));
   theme->draw_part(THEME_PART_SLIDER_TRACK, R(20, 20, 2, 40), CTRL_NORMAL);
   ASSERT_EQUAL(pixels[30][20], get_sys_color(brButtonInner));
@@ -277,7 +279,39 @@ static void test_navy_caption_bar(void) {
   ASSERT_NOT_EQUAL(pixels[25][50], get_sys_color(brControlBg));
   memset(pixels, 0, sizeof(pixels));
   theme->draw_part(THEME_PART_TOOLBAR, R(10, 10, 80, 30), CTRL_NORMAL);
-  ASSERT_EQUAL(pixels[25][50], get_sys_color(brControlBg));
+  ASSERT_EQUAL(pixels[25][50], get_sys_color(brPanelDarker));
+  PASS();
+}
+
+static void test_panel_shades_and_tabs(void) {
+  TEST("Toolbar and tab strip are darker; active tab merges with the pane");
+  theme_style_t styles[] = {THEME_MODERN, THEME_LIGHT, THEME_NAVY, THEME_CLASSIC};
+  for (int i = 0; i < ARRAY_LEN(styles); i++) {
+    theme_t *theme = paint_with_theme(styles[i]);
+    ASSERT_NOT_EQUAL(get_sys_color(brControlBg), get_sys_color(brPanelDark));
+    ASSERT_NOT_EQUAL(get_sys_color(brPanelDark), get_sys_color(brPanelDarker));
+    ASSERT_NOT_EQUAL(get_sys_color(brControlBg), get_sys_color(brPanelDarker));
+    memset(pixels, 0, sizeof(pixels));
+    theme->draw_part(THEME_PART_TOOLBAR, R(10, 10, 80, 30), CTRL_NORMAL);
+    ASSERT_EQUAL(pixels[25][50], get_sys_color(brPanelDarker));
+    memset(pixels, 0, sizeof(pixels));
+    theme->draw_part(THEME_PART_TAB_BAR, R(10, 10, 80, 30), CTRL_NORMAL);
+    ASSERT_EQUAL(pixels[25][50], get_sys_color(brPanelDarker));
+    memset(pixels, 0, sizeof(pixels));
+    theme->draw_part(THEME_PART_TAB, R(10, 10, 80, 30), CTRL_NORMAL);
+    ASSERT_EQUAL(pixels[25][50], get_sys_color(brPanelDark));
+    memset(pixels, 0, sizeof(pixels));
+    theme->draw_part(THEME_PART_TAB, R(10, 10, 80, 30), CTRL_SELECTED);
+    ASSERT_EQUAL(pixels[25][50], get_sys_color(brControlBg));
+    memset(pixels, 0, sizeof(pixels));
+    theme->draw_part(THEME_PART_TAB_PANE, R(10, 10, 80, 30), CTRL_NORMAL);
+    ASSERT_EQUAL(pixels[25][50], get_sys_color(brControlBg));
+  }
+  theme_t *modern = paint_with_theme(THEME_MODERN);
+  memset(pixels, 0, sizeof(pixels));
+  modern->draw_part(THEME_PART_TAB, R(10, 10, 80, 30), CTRL_SELECTED);
+  ASSERT_EQUAL(pixels[10][10], 0);
+  ASSERT_EQUAL(pixels[39][10], get_sys_color(brControlBg));
   PASS();
 }
 
@@ -313,5 +347,6 @@ int main(void) {
   test_default_modern_chrome();
   test_light_chrome();
   test_navy_caption_bar();
+  test_panel_shades_and_tabs();
   TEST_END();
 }

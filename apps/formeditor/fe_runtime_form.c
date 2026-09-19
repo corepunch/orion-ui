@@ -344,6 +344,8 @@ static uint8_t runtime_parse_color(const char *s, bool *set) {
   if (str_ieq(s, "text-success")) return brTextSuccess;
   if (str_ieq(s, "control-bg")) return brControlBg;
   if (str_ieq(s, "workspace-bg")) return brWorkspaceBg;
+  if (str_ieq(s, "panel-dark")) return brPanelDark;
+  if (str_ieq(s, "panel-darker")) return brPanelDarker;
   return brTransparent;
 }
 

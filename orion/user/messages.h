@@ -443,7 +443,7 @@ typedef enum {
 // Access via get_sys_color(brXxx); change via set_sys_colors().
 typedef enum {
   brTransparent          = 0,   // fully transparent / no fill
-  brControlBg            = 1,   // dialog, panel, and control-face background
+  brControlBg            = 1,   // dialog, panel face, active tab, and tab pane
   brWindowDarkBg         = 2,   // dark secondary panel background
   brWorkspaceBg          = 3,   // document / canvas workspace area
   brActiveTitlebar       = 4,   // focused window title bar background
@@ -467,7 +467,9 @@ typedef enum {
   brColumnViewBg         = 22,  // report/icon column view background
   brModalOverlay         = 23,  // modal owner dimming overlay (ARGB with alpha)
   brToolbarForeground    = 24,  // toolbar icons, labels, and dropdown arrows
-  brCount                = 25
+  brPanelDark            = 25,  // inactive tabs; one step below the face
+  brPanelDarker          = 26,  // toolbar and tab-strip chrome, outside the client
+  brCount                = 27
 } sys_color_idx_t;
 
 // Runtime-accessible theme table (defined in user/theme.c).

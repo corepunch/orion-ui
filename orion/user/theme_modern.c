@@ -23,6 +23,7 @@
 #define RADIUS_BUTTON        ((BUTTON_HEIGHT + 1) / 2)
 #define RADIUS_FIELD         12
 #define RADIUS_MENU_ITEM     6
+#define RADIUS_TAB           6
 
 // Secondary-button resting border. Navy uses the visible-on-navy hairline
 // (brLightEdge). Default keeps the original quiet gray outline.
@@ -93,6 +94,20 @@ static void modern_draw_panel_bg(irect16_t r) {
   // Flat sidebar surface, with no boundary stroke.
   fill_rect(get_sys_color(brControlBg), r);
 
+}
+
+// Rounded on top only so a selected tab can sit flush on the pane.
+static void fill_rounded_top(uint32_t color, irect16_t r, int radius) {
+  if (radius <= 0 || r.h <= 0) { fill_rect(color, r); return; }
+  fill_rounded_rect(color, r, MIN(radius, MIN(r.w, r.h) / 2));
+  if (r.h > radius) fill_rect(color, rect_split_bottom(r, radius));
+}
+
+static void modern_draw_tab(irect16_t r, ctrl_state_t state) {
+  uint32_t color = (state & CTRL_SELECTED) ? get_sys_color(brControlBg) :
+                   (state & (CTRL_HOVER | CTRL_PRESSED)) ? get_sys_color(brButtonHover) :
+                   get_sys_color(brPanelDark);
+  fill_rounded_top(color, r, RADIUS_TAB);
 }
 
 // ── Titlebar ─────────────────────────────────────────────────────────────────
@@ -250,12 +265,13 @@ static void modern_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state)
     case THEME_PART_SURFACE:             fill_rect(get_sys_color(brControlBg), r); break;
     case THEME_PART_FIELD:               modern_draw_field_bg(r, state); break;
     case THEME_PART_TAB:
-      modern_draw_toolbar_item_bg(r, state, part);
+      modern_draw_tab(r, state);
       break;
-    case THEME_PART_TAB_PANE:
+    case THEME_PART_TAB_BAR:             fill_rect(get_sys_color(brPanelDarker), r); break;
+    case THEME_PART_TAB_PANE:            fill_rect(get_sys_color(brControlBg), r); break;
     case THEME_PART_PANEL_BORDER:        break;
     case THEME_PART_TOOLBAR:
-      fill_rect(get_sys_color(brControlBg), r);
+      fill_rect(get_sys_color(brPanelDarker), r);
       break;
     case THEME_PART_TOOLBAR_GRIP:
       if (r.w > r.h)
@@ -304,7 +320,7 @@ static void modern_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state)
 
 static uint32_t modern_foreground(theme_part_t part, ctrl_state_t state) {
   if (state & CTRL_DISABLED) return get_sys_color(brTextDisabled);
-  if ((state & CTRL_SELECTED) && (part == THEME_PART_LIST_ITEM || part == THEME_PART_TAB ||
+  if ((state & CTRL_SELECTED) && (part == THEME_PART_LIST_ITEM ||
       part == THEME_PART_TOOLBAR_BUTTON || part == THEME_PART_TOOLBAR_LABELED_BUTTON))
     return get_sys_color(brActiveTitlebarText);
   if (part == THEME_PART_BUTTON && (state & CTRL_DEFAULT))

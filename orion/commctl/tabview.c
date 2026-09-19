@@ -8,6 +8,7 @@
 #include <orion/user/user.h>
 #include <orion/user/messages.h>
 #include <orion/user/draw.h>
+#include <orion/user/theme.h>
 #include "commctl.h"
 #include <stdio.h>
 
@@ -62,8 +63,11 @@ static void draw_tab_icon(tabview_state_t *st, int idx, int x, int y, int h) {
 static void draw_tab_item(window_t *page, int x, bool selected, tabview_state_t *st, int idx) {
   int w = tab_width(page, st, idx), y = selected ? 0 : 2;
   int th = tab_header_height(st);
-  int h = th - y - 2;
-  theme_draw(THEME_PART_TAB, R(x, y, w, h), selected ? CTRL_SELECTED : CTRL_NORMAL);
+  // Selected tab is flush with the pane so header and content are one face.
+  // Inactive tabs sit on the tab-bar chrome with a 2px shelf above the pane.
+  int h = selected ? th : th - y - 2;
+  ctrl_state_t state = selected ? CTRL_SELECTED : CTRL_NORMAL;
+  theme_draw(THEME_PART_TAB, R(x, y, w, h), state);
   bool has_icon = tab_has_icon(st, idx);
   if (st->style & TAB_STYLE_ICONS_ONLY) {
     draw_tab_icon(st, idx, x + (w - st->strip.icon_w) / 2, y, h);
@@ -73,7 +77,8 @@ static void draw_tab_item(window_t *page, int x, bool selected, tabview_state_t 
   int content_w = iw + sw;
   int cx = x + (w - content_w) / 2;
   if (has_icon) { draw_tab_icon(st, idx, cx, y, h); cx += iw; }
-  draw_text_small(page->title, cx, y + (h - CHAR_HEIGHT) / 2, get_sys_color(brTextNormal));
+  draw_text_small(page->title, cx, y + (h - CHAR_HEIGHT) / 2,
+                  theme_foreground(THEME_PART_TAB, state));
 }
 
 static void tab_arrange(window_t *win) {
@@ -84,8 +89,9 @@ static void tab_arrange(window_t *win) {
   irect16_t cr = get_client_rect(win);
   int th = tab_header_height(st);
   irect16_t page_rect = rect_trim_top(cr, th);
-  page_rect.x += 2; page_rect.w = MAX(0, page_rect.w - 4);
-  page_rect.h = MAX(0, page_rect.h - 2);
+  int frame = theme_is_modern(get_theme()) ? 0 : 2;
+  page_rect.x += frame; page_rect.w = MAX(0, page_rect.w - 2 * frame);
+  page_rect.h = MAX(0, page_rect.h - frame);
   int i = 0;
   for (window_t *c = win->children; c; c = c->next, i++) {
     bool visible = i == st->selected;
@@ -122,7 +128,8 @@ static bool tab_select(window_t *win, int index, bool notify) {
 static void tab_paint(window_t *win) {
   tabview_state_t *st = (tabview_state_t *)win->userdata;
   irect16_t cr = get_client_rect(win);
-  theme_draw(THEME_PART_SURFACE, cr, CTRL_NORMAL);
+  int th = st ? tab_header_height(st) : TAB_CONTROL_HEIGHT;
+  theme_draw(THEME_PART_TAB_BAR, rect_split_top(cr, th), CTRL_NORMAL);
   if (!st) return;
 
   int selected_x = 2;
@@ -134,7 +141,6 @@ static void tab_paint(window_t *win) {
     x += tab_width(c, st, i) + 1;
   }
 
-  int th = tab_header_height(st);
   irect16_t page = rect_trim_top(cr, th - 1);
   theme_draw(THEME_PART_TAB_PANE, page, CTRL_NORMAL);
   if (selected) draw_tab_item(selected, selected_x, true, st, st->selected);

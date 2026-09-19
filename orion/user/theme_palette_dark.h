@@ -32,7 +32,9 @@
   [brFolderText]           = 0xffa0d000, \
   [brColumnViewBg]         = 0xff544e47, \
   [brModalOverlay]         = 0x40402000, \
-  [brToolbarForeground]    = 0xffd8d8d8
+  [brToolbarForeground]    = 0xffd8d8d8, \
+  [brPanelDark]            = 0xff323232, \
+  [brPanelDarker]          = 0xff262626
 
 static const uint32_t k_theme_palette_dark[brCount]
   __attribute__((unused)) = { THEME_PALETTE_DARK_INIT };

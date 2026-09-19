@@ -33,7 +33,9 @@
   [brFolderText]           = WEB(0x4C91F5), \
   [brColumnViewBg]         = WEB(0x1A2942), \
   [brModalOverlay]         = (WEB(0x17243B) & 0x00ffffffu) | 0x40000000u, \
-  [brToolbarForeground]    = WEB(0xF6F8FF)
+  [brToolbarForeground]    = WEB(0xF6F8FF), \
+  [brPanelDark]            = WEB(0x121C30), \
+  [brPanelDarker]          = WEB(0x0C1424)
 
 static const uint32_t k_theme_palette_navy[brCount]
   __attribute__((unused)) = { THEME_PALETTE_NAVY_INIT };

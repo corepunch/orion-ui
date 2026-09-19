@@ -221,17 +221,34 @@ static void classic_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state
       fill_rect(get_sys_color((state & CTRL_FOCUSED) ? brAccent : brControlBg), rect_inset(r, -1));
       classic_draw_button_bg(r, state | CTRL_PRESSED);
       break;
-    case THEME_PART_TAB:
-      fill_rect(get_sys_color(brControlBg), r);
-      fill_rect(get_sys_color(brLightEdge), R(r.x, r.y, r.w - 1, 1));
-      fill_rect(get_sys_color(brLightEdge), R(r.x, r.y, 1, r.h));
-      fill_rect(get_sys_color(brDarkEdge), R(r.x + r.w - 1, r.y + 1, 1, r.h - 1));
-      fill_rect(get_sys_color(brFlare), R(r.x, r.y, 1, 1));
-      if (state & CTRL_SELECTED) fill_rect(get_sys_color(brControlBg), R(r.x + 2, r.y + r.h, r.w - 4, 2));
+    case THEME_PART_TAB: {
+      bool selected = (state & CTRL_SELECTED) != 0;
+      uint32_t face = get_sys_color(selected ? brControlBg : brPanelDark);
+      uint32_t bar = get_sys_color(brPanelDarker);
+      fill_rect(face, r);
+      // Win95 2px chamfer against the tab strip.
+      fill_rect(bar, R(r.x, r.y, 2, 1));
+      fill_rect(bar, R(r.x, r.y, 1, 2));
+      fill_rect(bar, R(r.x + r.w - 2, r.y, 2, 1));
+      fill_rect(bar, R(r.x + r.w - 1, r.y, 1, 2));
+      fill_rect(get_sys_color(brLightEdge), R(r.x + 2, r.y, r.w - 4, 1));
+      fill_rect(get_sys_color(brLightEdge), R(r.x, r.y + 2, 1, r.h - 2));
+      fill_rect(get_sys_color(brDarkEdge), R(r.x + r.w - 1, r.y + 2, 1, r.h - (selected ? 0 : 1)));
+      fill_rect(get_sys_color(brFlare), R(r.x + 1, r.y + 1, 1, 1));
+      if (selected) fill_rect(face, R(r.x + 1, r.y + r.h, r.w - 2, 2));
+      else fill_rect(get_sys_color(brDarkEdge), R(r.x, r.y + r.h - 1, r.w, 1));
       break;
+    }
+    case THEME_PART_TAB_BAR:             fill_rect(get_sys_color(brPanelDarker), r); break;
     case THEME_PART_TAB_PANE:
+      fill_rect(get_sys_color(brControlBg), r);
+      classic_draw_bevel(r);
+      break;
     case THEME_PART_PANEL_BORDER:        classic_draw_bevel(r); break;
-    case THEME_PART_TOOLBAR:             classic_draw_bevel(r); fill_rect(get_sys_color(brControlBg), r); break;
+    case THEME_PART_TOOLBAR:
+      fill_rect(get_sys_color(brPanelDarker), r);
+      classic_draw_bevel(r);
+      break;
     case THEME_PART_HEADER:              classic_draw_button_bg(r, state); break;
     case THEME_PART_RESIZE_GRIP:
       fill_rect(get_sys_color(brLightEdge), R(r.x+r.w, r.y+r.h-SCROLLBAR_WIDTH+1, 1, SCROLLBAR_WIDTH));
