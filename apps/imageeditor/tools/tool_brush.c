@@ -6,11 +6,11 @@
 extern app_state_t *g_app;
 
 // Helper to get brush radius from app state
-static int tool_brush_get_radius(void) {
+static float tool_brush_get_radius(void) {
   int idx = g_app ? g_app->brush_size : 0;
   if (idx < 0) idx = 0;
   if (idx >= NUM_BRUSH_SIZES) idx = NUM_BRUSH_SIZES - 1;
-  return kBrushSizes[idx];
+  return canvas_pointer_radius((float)kBrushSizes[idx]);
 }
 
 static void brush_begin(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t doc_pt) {
@@ -22,12 +22,14 @@ static void brush_begin(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t 
 
 static void brush_drag(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t doc_pt) {
   (void)view;
+  canvas_stroke_set_radius(doc, tool_brush_get_radius());
   canvas_stroke_drag(doc, doc_pt);
   ie_doc_after_pixels_changed(doc);
 }
 
 static void brush_end(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t doc_pt) {
   if (!doc) return;
+  canvas_stroke_set_radius(doc, tool_brush_get_radius());
   canvas_stroke_end(doc, doc_pt);
   ie_doc_invalidate_canvas(doc);
   ie_doc_commit_op(doc, true);

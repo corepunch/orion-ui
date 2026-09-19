@@ -141,6 +141,13 @@ static int brush_radius(void) {
   return kBrushSizes[idx];
 }
 
+static float stroke_radius_for_tool(int tool) {
+  float r = (float)brush_radius();
+  if (tool == ID_TOOL_PENCIL || tool == ID_TOOL_BRUSH)
+    r = canvas_pointer_radius(r);
+  return r;
+}
+
 // Apply snap-to-grid to a canvas pixel position if the grid snap option is
 // enabled.  Rounds px/py to the nearest grid intersection.
 static void snap_canvas_pos(int *px, int *py) {
@@ -819,7 +826,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
             color = MAKE_COLOR(0, 0, 0, 0);
 #endif
           }
-          canvas_stroke_begin(doc, doc_pt, brush_radius(), color, tool == ID_TOOL_BRUSH);
+          canvas_stroke_begin(doc, doc_pt, stroke_radius_for_tool(tool), color, tool == ID_TOOL_BRUSH);
           break;
         }
         case ID_TOOL_FILL:
@@ -977,7 +984,10 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       }
 
       if (!doc->drawing) return true;
-      if (px == doc->last.x && py == doc->last.y) return true;
+      float stroke_r = stroke_radius_for_tool(tool);
+      if (px == doc->last.x && py == doc->last.y &&
+          !(doc->stroke.active && stroke_r != doc->stroke.radius))
+        return true;
 
       if (canvas_is_shape_tool(tool)) {
         canvas_shape_preview(doc,
@@ -994,6 +1004,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         case ID_TOOL_PENCIL:
         case ID_TOOL_BRUSH:
         case ID_TOOL_ERASER:
+          canvas_stroke_set_radius(doc, stroke_r);
           canvas_stroke_drag(doc, (ipoint16_t){px, py});
           break;
         case ID_TOOL_FILL:
@@ -1062,6 +1073,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       if (doc->drawing && doc->stroke.active) {
         ipoint16_t point = {(int16_t)LOWORD(wparam), (int16_t)HIWORD(wparam)};
+        canvas_stroke_set_radius(doc, stroke_radius_for_tool(tool));
         canvas_stroke_end(doc, point);
         invalidate_window(win);
       }

@@ -20,6 +20,7 @@ static void test_env_reset_ui_state(void) {
     g_ui_runtime.default_window_x = 20;
     g_ui_runtime.default_window_y = 20;
     g_ui_runtime.running = false;
+    ui_set_pointer((ax_pointer_t){0});
 }
 
 // Global test environment

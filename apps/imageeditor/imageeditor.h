@@ -315,7 +315,8 @@ typedef struct canvas_doc_s {
   } shape;
   struct {
     bool active, soft;
-    int radius;
+    float radius;        // Logical radius; 0 uses the 1-logical-pixel pen.
+    float stamp_radius;  // Last raster stamp; interpolates toward radius.
     uint32_t color;
     ipoint16_t sample, stamp;
     float x, y;  // Last curve endpoint, retaining half-pixel midpoints.
@@ -535,17 +536,27 @@ static inline uint32_t canvas_eraser_color(const canvas_doc_t *doc) {
   return MAKE_COLOR(0x00, 0x00, 0x00, 0x00);  // sentinel; translated to transparent index in set_pixel
 }
 #endif
-void canvas_draw_circle(canvas_doc_t *doc, int cx, int cy, int r, uint32_t c);
+void canvas_draw_circle(canvas_doc_t *doc, int cx, int cy, float r, uint32_t c);
 void canvas_draw_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1, int radius, uint32_t c);
-void canvas_draw_soft_circle(canvas_doc_t *doc, int cx, int cy, int r, uint32_t c);
+void canvas_draw_soft_circle(canvas_doc_t *doc, int cx, int cy, float r, uint32_t c);
 void canvas_draw_soft_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1, int radius, uint32_t c);
-void canvas_stroke_begin(canvas_doc_t *doc, ipoint16_t point, int radius, uint32_t color, bool soft);
+void canvas_stroke_begin(canvas_doc_t *doc, ipoint16_t point, float radius, uint32_t color, bool soft);
+void canvas_stroke_set_radius(canvas_doc_t *doc, float radius);
 void canvas_stroke_drag(canvas_doc_t *doc, ipoint16_t point);
 void canvas_stroke_end(canvas_doc_t *doc, ipoint16_t point);
 void canvas_stroke_cancel(canvas_doc_t *doc);
-void canvas_draw_scaled_circle(canvas_doc_t *doc, int cx, int cy, int logical_radius, uint32_t c);
+// Pencil/brush radius from Apple Pencil altitude. Upright (π/2) is 50% of
+// `base`; a 45° drawing grip is 100%. Size 0 is treated as 0.5 logical so
+// 50% can stamp a single backing pixel. Snapped to half a backing pixel.
+// Finger/mouse leave `base` unchanged.
+#define IE_PENCIL_UPRIGHT_SCALE     0.5f
+#define IE_PENCIL_NATURAL_SCALE     1.0f
+#define IE_PENCIL_NATURAL_ALTITUDE  0.78539816339744830962f /* π/4, 45° from the glass */
+float canvas_tilt_radius(float base, float altitude);
+float canvas_pointer_radius(float base);
+void canvas_draw_scaled_circle(canvas_doc_t *doc, int cx, int cy, float logical_radius, uint32_t c);
 void canvas_draw_scaled_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1, int logical_radius, uint32_t c);
-void canvas_draw_scaled_soft_circle(canvas_doc_t *doc, int cx, int cy, int logical_radius, uint32_t c);
+void canvas_draw_scaled_soft_circle(canvas_doc_t *doc, int cx, int cy, float logical_radius, uint32_t c);
 void canvas_draw_scaled_soft_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1, int logical_radius, uint32_t c);
 void canvas_flood_fill(canvas_doc_t *doc, int sx, int sy, uint32_t fill);
 // Gap-closing flood fill: stitches gaps up to gap_px wide with invisible

@@ -77,6 +77,12 @@ uint32_t ui_get_mod_state(void);
 // Keyboard state accessor — true while the AX_KEY_* key is held.
 bool ui_is_key_down(uint32_t key);
 
+// Latest pointer sample from the platform event currently being dispatched.
+// Zeroed (no AX_POINTER_STYLUS) for mouse, finger, and tests that send window
+// messages directly. ui_set_pointer is for tests.
+ax_pointer_t ui_get_pointer(void);
+void ui_set_pointer(ax_pointer_t pointer);
+
 // Sprite stuff
 int get_sprite_prog(void);
 int get_sprite_vao(void);

@@ -114,11 +114,14 @@ void canvas_clear(canvas_doc_t *doc) {
   doc->modified     = false;
 }
 
-void canvas_draw_circle(canvas_doc_t *doc, int cx, int cy, int r, uint32_t c) {
-  for (int dy = -r; dy <= r; dy++)
-    for (int dx = -r; dx <= r; dx++)
-      if (dx*dx + dy*dy <= r*r)
-        canvas_set_pixel(doc, cx+dx, cy+dy, c);
+void canvas_draw_circle(canvas_doc_t *doc, int cx, int cy, float r, uint32_t c) {
+  if (r < 0.5f) r = 0.5f;
+  int span = (int)ceilf(r);
+  float r2 = r * r;
+  for (int dy = -span; dy <= span; dy++)
+    for (int dx = -span; dx <= span; dx++)
+      if ((float)(dx * dx + dy * dy) <= r2)
+        canvas_set_pixel(doc, cx + dx, cy + dy, c);
 }
 
 void canvas_draw_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1,
@@ -160,16 +163,16 @@ static void canvas_blend_pixel(canvas_doc_t *doc, int x, int y, uint32_t c,
 #endif
 }
 
-void canvas_draw_soft_circle(canvas_doc_t *doc, int cx, int cy, int r, uint32_t c) {
-  if (r <= 0) {
+void canvas_draw_soft_circle(canvas_doc_t *doc, int cx, int cy, float r, uint32_t c) {
+  if (r <= 0.0f) {
     canvas_set_pixel(doc, cx, cy, c);
     return;
   }
-  int outer = r + 1;
+  int outer = (int)ceilf(r + 1.0f);
   for (int dy = -outer; dy <= outer; dy++) {
     for (int dx = -outer; dx <= outer; dx++) {
       float distance = sqrtf((float)(dx * dx + dy * dy));
-      float coverage = (float)r + 0.5f - distance;
+      float coverage = r + 0.5f - distance;
       if (coverage > 0.0f)
         canvas_blend_pixel(doc, cx + dx, cy + dy, c,
                           (uint8_t)CLAMP((int)(coverage * 255.0f), 0, 255));
@@ -194,9 +197,9 @@ void canvas_draw_soft_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1,
 // Brush sizes are logical radii. A zero-radius brush is still one logical
 // pixel, so use the density-aware pen instead of multiplying zero by scale.
 void canvas_draw_scaled_circle(canvas_doc_t *doc, int cx, int cy,
-                               int logical_radius, uint32_t c) {
-  if (logical_radius <= 0) { canvas_draw_pen(doc, cx, cy, c); return; }
-  canvas_draw_circle(doc, cx, cy, logical_radius * MAX(1, g_bw_retina_scale), c);
+                               float logical_radius, uint32_t c) {
+  if (logical_radius <= 0.0f) { canvas_draw_pen(doc, cx, cy, c); return; }
+  canvas_draw_circle(doc, cx, cy, logical_radius * (float)MAX(1, g_bw_retina_scale), c);
 }
 
 void canvas_draw_scaled_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1,
@@ -207,10 +210,10 @@ void canvas_draw_scaled_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1,
 }
 
 void canvas_draw_scaled_soft_circle(canvas_doc_t *doc, int cx, int cy,
-                                    int logical_radius, uint32_t c) {
-  if (logical_radius <= 0) { canvas_draw_pen(doc, cx, cy, c); return; }
+                                    float logical_radius, uint32_t c) {
+  if (logical_radius <= 0.0f) { canvas_draw_pen(doc, cx, cy, c); return; }
   canvas_draw_soft_circle(doc, cx, cy,
-                          logical_radius * MAX(1, g_bw_retina_scale), c);
+                          logical_radius * (float)MAX(1, g_bw_retina_scale), c);
 }
 
 void canvas_draw_scaled_soft_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1,

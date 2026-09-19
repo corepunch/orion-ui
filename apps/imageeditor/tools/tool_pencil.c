@@ -5,11 +5,11 @@
 // Forward declaration for global app state
 extern app_state_t *g_app;
 
-static int pencil_radius(void) {
+static float pencil_radius(void) {
   int idx = g_app ? g_app->brush_size : 0;
   if (idx < 0) idx = 0;
   if (idx >= NUM_BRUSH_SIZES) idx = NUM_BRUSH_SIZES - 1;
-  return kBrushSizes[idx];
+  return canvas_pointer_radius((float)kBrushSizes[idx]);
 }
 
 // ── Pencil tool lifecycle ──────────────────────────────────────────────────
@@ -29,12 +29,14 @@ static void pencil_begin(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t
 
 static void pencil_drag(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t doc_pt) {
   (void)view;
+  canvas_stroke_set_radius(doc, pencil_radius());
   canvas_stroke_drag(doc, doc_pt);
   ie_doc_invalidate_canvas(doc);
 }
 
 static void pencil_end(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t doc_pt) {
   (void)view;
+  canvas_stroke_set_radius(doc, pencil_radius());
   canvas_stroke_end(doc, doc_pt);
   ie_doc_invalidate_canvas(doc);
   ie_doc_commit_op(doc, true);

@@ -60,6 +60,7 @@ static bool g_wakeup_pending = false;
 // Current modifier state (updated on key and modifier-only events)
 static uint32_t g_mod_state = 0;
 static bool g_key_state[256];
+static ax_pointer_t g_pointer;
 
 static uint32_t normalize_key_code(uint32_t key) {
   return key >= 'a' && key <= 'z' ? key - ('a' - 'A') : key;
@@ -67,6 +68,14 @@ static uint32_t normalize_key_code(uint32_t key) {
 
 uint32_t ui_get_mod_state(void) {
   return g_mod_state;
+}
+
+ax_pointer_t ui_get_pointer(void) {
+  return g_pointer;
+}
+
+void ui_set_pointer(ax_pointer_t pointer) {
+  g_pointer = pointer;
 }
 
 bool ui_is_key_down(uint32_t key) {
@@ -96,6 +105,29 @@ static void update_key_state(ui_event_t *msg) {
   g_key_state[AX_KEY_SHIFT] = (g_mod_state & AX_MOD_SHIFT) != 0;
   g_key_state[AX_KEY_CTRL]  = (g_mod_state & AX_MOD_CTRL)  != 0;
   g_key_state[AX_KEY_ALT]   = (g_mod_state & AX_MOD_ALT)   != 0;
+}
+
+static void update_pointer_state(ui_event_t *msg) {
+  switch (msg->message) {
+    case kEventMouseMoved:
+    case kEventLeftButtonDown:
+    case kEventLeftButtonUp:
+    case kEventLeftButtonDragged:
+    case kEventLeftDoubleClick:
+    case kEventRightButtonDown:
+    case kEventRightButtonUp:
+    case kEventRightButtonDragged:
+    case kEventRightDoubleClick:
+    case kEventOtherButtonDown:
+    case kEventOtherButtonUp:
+    case kEventOtherButtonDragged:
+    case kEventOtherDoubleClick:
+    case kEventPointerCancel:
+      g_pointer = msg->pointer;
+      break;
+    default:
+      break;
+  }
 }
 
 // Drag/resize state (shared with user/window.c for destroy_window cleanup)
@@ -365,6 +397,7 @@ void dispatch_message(ui_event_t *msg) {
   }
 
   update_key_state(msg);
+  update_pointer_state(msg);
 
   window_t *win;
   int px, py; // platform logical coordinates
@@ -966,6 +999,7 @@ void dispatch_message(ui_event_t *msg) {
 int get_message(ui_event_t *evt) {
   static bool s_draining_queue = false;
   int r;
+  memset(evt, 0, sizeof(*evt));
 
   if (s_draining_queue) {
     r = axPeekMessage(evt);
