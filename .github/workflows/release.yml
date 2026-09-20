@@ -21,7 +21,12 @@ jobs:
             platform: linux-x86_64
           - os: macos-14
             platform: macos-arm64
+          - os: windows-latest
+            platform: windows-x86_64
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: ${{ matrix.os == 'windows-latest' && 'msys2 {0}' || 'bash' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -32,6 +37,21 @@ jobs:
       - name: Install macOS dependencies
         if: runner.os == 'macOS'
         run: brew install cglm lua@5.4 libxml2
+      - name: Setup MSYS2
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-make
+            mingw-w64-x86_64-pkgconf
+            mingw-w64-x86_64-glew
+            mingw-w64-x86_64-lua
+            mingw-w64-x86_64-cglm
+            mingw-w64-x86_64-libxml2
+            make
       - name: Determine version
         id: version
         shell: bash
