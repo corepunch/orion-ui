@@ -1,7 +1,6 @@
 browser	Web browser
 filemanager	File manager
 formeditor	Declarative UI form editor
-gen_toolbox_atlas	Toolbox icon atlas generator
 gitclient	Git repository client
 helloworld	Minimal Orion example application
 imageeditor	Layered image editor
