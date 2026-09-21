@@ -88,10 +88,17 @@ deploy: app
 	@test "$(SDK)" = iphoneos -a "$(ARCH)" = arm64 || { echo 'Deploy requires SDK=iphoneos ARCH=arm64'; exit 1; }
 	@device="$(DEVICE)"; \
 	if [ -z "$$device" ]; then \
-		device="$$(xcrun devicectl list devices | awk '/iPad/ { for (i = 1; i <= NF; i++) if ($$i ~ /^[[:xdigit:]]{8}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{12}$$/) print $$i }')"; \
+		devices="$$(xcrun devicectl list devices)" || exit $$?; \
+		device="$$(printf '%s\n' "$$devices" | awk '/iPad/ && !/simulated/ { \
+			for (i = 1; i <= NF; i++) { \
+				if ($$i !~ /^([[:xdigit:]]{8}-[[:xdigit:]]{16}|[[:xdigit:]]{8}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{12})$$/) continue; \
+				state = i + 1; if ($$state == "(UDID)") state++; \
+				if ($$state == "available" || $$state == "connected") print $$i; \
+			} \
+		}')"; \
 		count="$$(printf '%s\n' "$$device" | sed '/^$$/d' | wc -l | tr -d ' ')"; \
 		if [ "$$count" -ne 1 ]; then \
-			echo "Expected exactly one connected iPad; found $$count. Use make list-devices and set DEVICE=..." >&2; \
+			echo "Expected exactly one available physical iPad; found $$count. Use make list-devices and set DEVICE=..." >&2; \
 			exit 1; \
 		fi; \
 		echo "Auto-selected iPad $$device"; \

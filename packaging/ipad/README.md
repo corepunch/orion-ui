@@ -17,8 +17,9 @@ make ipad-mac APP=penciltest       # signed iPad build on Apple silicon Mac
 ```
 
 `APP` defaults to `imageeditor`. If `DEVICE` is omitted for deployment,
-the Makefile auto-selects the sole connected iPad and fails if there are zero
-or multiple iPads. `DEVICE` may also select a device or simulator by name or
+the Makefile auto-selects the sole available physical iPad, ignoring simulators,
+iPhones, and unavailable devices. It fails if there are zero or multiple eligible
+iPads. `DEVICE` may also select a device or simulator by name or
 UDID. Device installation uses an installed development certificate and a
 matching provisioning profile; optionally supply `TEAM=...`, `PROFILE=...`,
 and `BUNDLE_ID=...`. Defaults are `com.orion.imageeditor` and
