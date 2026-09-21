@@ -400,4 +400,5 @@ void close_document(canvas_doc_t *doc) {
 
   // Rebuild the Window menu to remove the closed document.
   window_menu_rebuild();
+  imageeditor_sync_main_toolbar();
 }

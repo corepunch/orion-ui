@@ -15,7 +15,7 @@ static float tool_brush_get_radius(void) {
 
 static void brush_begin(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t doc_pt) {
   if (!doc || !g_app) return;
-  ie_doc_begin_op(doc, "Brush Stroke");
+  if (!ie_doc_begin_op(doc, "Brush Stroke")) return;
   canvas_stroke_begin(doc, doc_pt, tool_brush_get_radius(), g_app->fg_color, true);
   ie_doc_after_pixels_changed(doc);
 }

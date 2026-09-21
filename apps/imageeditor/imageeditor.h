@@ -72,13 +72,12 @@ extern int g_bw_retina_scale;
 #define IMAGEEDITOR_SHOW_SELECTION_BOUNDS 0
 #endif
 
-#if IMAGEEDITOR_DEBUG
 #define IE_TRACE(...) do { fprintf(stderr, "[imageeditor] " __VA_ARGS__); fputc('\n', stderr); fflush(stderr); } while (0)
+#if IMAGEEDITOR_DEBUG
 #define IE_DEBUG(...) do { \
   axLog("[imageeditor] " __VA_ARGS__); \
 } while (0)
 #else
-#define IE_TRACE(...) ((void)0)
 #define IE_DEBUG(...) ((void)0)
 #endif
 
@@ -247,9 +246,10 @@ typedef struct {
 // Forward-declare anim_timeline_t so canvas_doc_t can hold a pointer.
 typedef struct anim_timeline_s anim_timeline_t;
 
-// Undo/redo stack (heap-allocated layer-stack snapshots)
+// Opaque document checkpoints; pixel buffers cannot be used as history entries.
+typedef struct doc_snapshot_s doc_snapshot_t;
 typedef struct {
-  uint8_t *states[UNDO_MAX];
+  doc_snapshot_t *states[UNDO_MAX];
   int      count;
 } undo_t;
 
@@ -279,9 +279,10 @@ typedef struct canvas_doc_s {
     bool      mask_only_view;  // true → canvas shows the active layer alpha only
     uint8_t  *composite_buf;   // canvas_w * canvas_h * 4 scratch buffer for compositing
   } layer;
-  // Undo/redo history (heap-allocated layer-stack snapshots)
+  // Undo/redo history and the in-progress command (owned by this document).
   undo_t undo;
   undo_t redo;
+  struct { doc_snapshot_t *before; const char *name; } command;
   // Selection state
   struct {
     bool        active;
@@ -345,8 +346,6 @@ typedef struct canvas_doc_s {
 typedef struct {
   canvas_doc_t *doc;
   bool          gesture_active;
-  bool          stroke_modified;
-  bool          stroke_undo;
   struct {
     bool active;     // true while hand-tool drag is in progress
   } pan;
@@ -597,7 +596,7 @@ void canvas_draw_polygon_scaled(canvas_doc_t *doc, const ipoint16_t *pts, int co
 bool canvas_is_shape_tool(int tool_id);
 void canvas_constrain_tool_drag(int tool_id, uint32_t mods,
                                 int x0, int y0, int *x1, int *y1);
-void canvas_shape_begin(canvas_doc_t *doc, int cx, int cy);
+bool canvas_shape_begin(canvas_doc_t *doc, int cx, int cy);
 void canvas_shape_preview(canvas_doc_t *doc, int x0, int y0, int x1, int y1, int tool, bool filled, uint32_t fg, uint32_t bg, bool shift_held);
 void canvas_shape_commit(canvas_doc_t *doc);
 
@@ -629,13 +628,15 @@ void canvas_commit_move(canvas_doc_t *doc);
 void canvas_discard_move(canvas_doc_t *doc);
 bool canvas_translate_selection_mask(canvas_doc_t *doc, int dx, int dy);
 
+bool canvas_resize_frames(canvas_doc_t *doc, int x, int y, int w, int h,
+                           bool resample, image_resize_filter_t filter);
+
 // Undo/redo
-void doc_push_undo(canvas_doc_t *doc);
+bool doc_begin_command(canvas_doc_t *doc, const char *name);
+void doc_end_command(canvas_doc_t *doc, bool success);
 bool doc_undo(canvas_doc_t *doc);
-bool doc_cancel_undo(canvas_doc_t *doc);
 bool doc_redo(canvas_doc_t *doc);
 void doc_free_undo(canvas_doc_t *doc);
-void doc_discard_undo(canvas_doc_t *doc);
 
 // Unified image I/O (image_io.c).
 // Indexed mode: PCX and BMP 8-bit indexed.
@@ -906,11 +907,11 @@ bool anim_export_spritesheet(canvas_doc_t *doc, const char *path);
 // Operation lifecycle API (canvas_ops.c)
 // ============================================================
 
-// Begin a document mutation operation — pushes undo snapshot.
+// Begin a command before any mutation. Failure must abort the caller.
 bool ie_doc_begin_op(canvas_doc_t *doc, const char *op_name);
 
 // Commit the operation — marks dirty, updates title, and refreshes all views.
-// If success is false, discards the undo snapshot instead.
+// Failure restores the document. No-ops/cancellation preserve redo.
 void ie_doc_commit_op(canvas_doc_t *doc, bool success);
 
 // Dirty state and title management.
@@ -948,6 +949,11 @@ void register_builtin_tools(void);
 // Replaces handle_menu_command's giant switch with focused command modules.
 // Each command uses Phase 1's ie_doc_begin_op/commit_op lifecycle wrappers.
 // See commands/commands.h for all command declarations.
+
+bool cmd_frame_select(canvas_doc_t *doc, int index);
+void cmd_frame_add(canvas_doc_t *doc, bool duplicate);
+void cmd_frame_delete(canvas_doc_t *doc);
+void cmd_frame_move(canvas_doc_t *doc, int from, int to);
 
 // Edit commands
 void cmd_undo(canvas_doc_t *doc);

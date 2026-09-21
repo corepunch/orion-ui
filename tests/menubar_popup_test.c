@@ -556,10 +556,38 @@ void test_form_instantiation_copies_context_menu_descriptor(void) {
 
 // ---- main -------------------------------------------------------------------
 
+static void test_disabled_popup_item(void) {
+  TEST("disabled popup commands cannot be clicked");
+  test_env_init();
+  reset_counters();
+  window_t *mb = make_menubar(menubar_proc_basic);
+  ASSERT_NOT_NULL(mb);
+  menu_item_t items[] = {
+    {.label = "Undo", .id = 81, .disabled = true},
+    {.label = "Redo", .id = 82},
+  };
+  menu_def_t menu = {"Edit", items, 2};
+  send_message(mb, kMenuBarMessageSetMenus, 1, &menu);
+  open_popup(mb);
+  window_t *popup = find_other_window(mb);
+  ASSERT_NOT_NULL(popup);
+  send_message(popup, evLeftButtonDown, MAKEDWORD(10, 5), NULL);
+  send_message(popup, evLeftButtonUp, MAKEDWORD(10, 5), NULL);
+  ASSERT_EQUAL(g_cmd_count, 0);
+  send_message(popup, evLeftButtonDown, MAKEDWORD(10, 35), NULL);
+  send_message(popup, evLeftButtonUp, MAKEDWORD(10, 35), NULL);
+  ASSERT_EQUAL(g_cmd_count, 1);
+  ASSERT_EQUAL(g_cmd_last_id, 82);
+  destroy_window(mb);
+  test_env_shutdown();
+  PASS();
+}
+
 int main(int argc, char *argv[]) {
     (void)argc; (void)argv;
     TEST_START("Menubar Popup Dismissal");
 
+    test_disabled_popup_item();
     test_popup_opens_on_label_click();
     test_popup_closes_on_outside_click();
     test_popup_closes_before_command_on_item_click();

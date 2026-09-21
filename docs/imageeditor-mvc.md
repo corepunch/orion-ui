@@ -10,7 +10,10 @@ This document describes the suggested MVC split for the image editor, following
 the same pattern already applied in `apps/socialfeed/` and documented in
 the Orion coding conventions.
 
-> **Status:** Proposal.  The filters subsystem has already been migrated
+> **Status:** Historical proposal. The implemented command/history contract is
+> documented in [Image Editor architecture](../apps/imageeditor/ARCHITECTURE.md).
+>
+> Original proposal:  The filters subsystem has already been migrated
 > (`filtermgr.c` / `win_filtergallery.c`).  The rest of the editor still
 > mixes document logic, pixel operations, and window procedures inside the
 > same files.

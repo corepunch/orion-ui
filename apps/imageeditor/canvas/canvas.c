@@ -97,18 +97,20 @@ void canvas_constrain_tool_drag(int tool_id, uint32_t mods,
   }
 }
 
-// Save pixel snapshot before starting a shape drag (no undo push yet)
-void canvas_shape_begin(canvas_doc_t *doc, int cx, int cy) {
+// Preview pixels are separate from the command checkpoint.
+bool canvas_shape_begin(canvas_doc_t *doc, int cx, int cy) {
   IE_TRACE("shape_begin win=%p doc=%p start=(%d,%d)", (void *)doc->canvas_win, (void *)doc, cx, cy);
   size_t sz = (size_t)doc->canvas_w * doc->canvas_h * DOC_BPP;
+  free(doc->shape.snapshot);
+  doc->shape.snapshot = malloc(sz);
   if (!doc->shape.snapshot) {
-    doc->shape.snapshot = malloc(sz);
+    IE_TRACE("shape preview allocation failed doc=%p size=%zu", (void *)doc, sz);
+    return false;
   }
-  if (doc->shape.snapshot) {
-    memcpy(doc->shape.snapshot, doc->pixels, sz);
-  }
+  memcpy(doc->shape.snapshot, doc->pixels, sz);
   doc->shape.start.x = cx;
   doc->shape.start.y = cy;
+  return true;
 }
 
 static void canvas_shape_rotated(canvas_doc_t *doc, int x0, int y0, int x1, int y1,
@@ -199,5 +201,6 @@ void canvas_shape_preview(canvas_doc_t *doc, int x0, int y0, int x1, int y1,
 
 // No-op: snapshot is kept until next shape begins or doc is freed
 void canvas_shape_commit(canvas_doc_t *doc) {
-  (void)doc;
+  free(doc->shape.snapshot);
+  doc->shape.snapshot = NULL;
 }

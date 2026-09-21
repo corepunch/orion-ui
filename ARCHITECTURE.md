@@ -214,8 +214,17 @@ For nontrivial apps, keep these responsibilities distinct:
 | Layout | Measure, arrange, reflow, drop targets | App command dispatch |
 | I/O | Archive, database, and file formats | Input routing or selection drawing |
 
-UI-originated mutations should go through named commands. Commands update the
-model, dirty state, layout/live views, and interested panels in one place.
+UI-originated mutations must go through named commands. Commands update the
+model, history, dirty state, layout/live views, and interested panels in one place.
+Interactive commands capture their starting state before previews and commit once
+on completion; cancellation restores that state without discarding redo. History
+availability drives disabled menu and toolbar states, with commands also checking
+availability when invoked through accelerators.
+
+Image Editor and Pencil Test use document-owned transactions and opaque complete
+checkpoints for pixel, selection, layer, palette, and frame edits. See their
+[command and history architecture](apps/imageeditor/ARCHITECTURE.md) for ownership,
+failure guarantees, extension rules, and regression coverage.
 
 ## Scrolling
 

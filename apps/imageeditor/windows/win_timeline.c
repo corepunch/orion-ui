@@ -78,7 +78,7 @@ static void rebuild_thumbnails(timeline_state_t *st) {
   sync_thumb_array(st, doc->anim->frame_count);
   for (int i = 0; i < doc->anim->frame_count && i < st->thumb_count; i++) {
     uint32_t rev = doc->anim->frames[i] ? doc->anim->frames[i]->revision : 0;
-    if (st->thumbs[i] && st->thumb_rev[i] == rev) continue;
+    if (!st->thumbs_dirty && st->thumbs[i] && st->thumb_rev[i] == rev) continue;
     if (anim_render_frame_thumbnail_scaled(doc->anim->frames[i],
                                            doc->canvas_w, doc->canvas_h,
                                            TIMELINE_THUMB_W,
@@ -181,19 +181,7 @@ static bool timeline_select_frame(window_t *win, timeline_state_t *st,
     return true;
   }
 
-  doc_push_undo(doc);
-  if (!anim_timeline_switch_frame(doc->anim, target_idx,
-                                  &doc->pixels,
-                                  doc->canvas_w, doc->canvas_h,
-                                  IE_FRAME_FORMAT)) {
-    doc_discard_undo(doc);
-    return false;
-  }
-
-  if (doc->layer.count > 0)
-    doc->layer.stack[doc->layer.active]->pixels = doc->pixels;
-  doc->canvas_dirty = true;
-  if (doc->canvas_win) invalidate_window(doc->canvas_win);
+  if (!cmd_frame_select(doc, target_idx)) return false;
   st->thumbs_dirty = true;
   timeline_ensure_frame_visible(st, win, target_idx);
   timeline_toolbar_sync();
@@ -267,11 +255,7 @@ static result_t timeline_proc(window_t *win, uint32_t msg, uint32_t wparam, void
         int from = (int)(drop->from_ident - FRAME_ITEM_BASE), to = (int)(drop->to_ident - FRAME_ITEM_BASE);
         if (!doc || !doc->anim || from < 0 || to < 0 || from >= doc->anim->frame_count || to >= doc->anim->frame_count) return false;
         IE_TRACE("frame reorder win=%p from=%d to=%d count=%d", (void *)win, from, to, doc->anim->frame_count);
-        anim_stop_playback(doc);
-        anim_timeline_move_frame(doc->anim, from, to);
-        ie_doc_mark_dirty(doc);
-        ie_doc_update_title(doc);
-        timeline_win_refresh();
+        cmd_frame_move(doc, from, to);
         return true;
       }
       return false;

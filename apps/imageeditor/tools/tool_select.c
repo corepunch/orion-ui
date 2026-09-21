@@ -13,6 +13,7 @@
 static void select_begin(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t doc_pt) {
   (void)view;
   
+  if (!ie_doc_begin_op(doc, doc->sel.add_mode ? "Add to Selection" : "Select Rectangle")) return;
   // Start a new selection; commit any in-progress move first
   if (doc->sel.move.active) 
     canvas_commit_move(doc);
@@ -50,27 +51,17 @@ static void select_end(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t d
   int y1 = MAX(doc->sel.start.y, doc->sel.end.y);
   
   // Apply selection
-  ie_doc_begin_op(doc, doc->sel.add_mode ? "Add to Selection" : "Select Rectangle");
   bool ok = doc->sel.add_mode 
     ? canvas_select_rect_add(doc, x0, y0, x1, y1)
     : canvas_select_rect(doc, x0, y0, x1, y1);
   ie_doc_commit_op(doc, ok);
   
-  // Clear rubber-band
-  doc->sel.start.x = -1;
-  doc->sel.start.y = -1;
-  doc->sel.end.x   = -1;
-  doc->sel.end.y   = -1;
+
 }
 
 static void select_cancel(canvas_doc_t *doc, canvas_win_state_t *view) {
   (void)view;
-  // Just clear the rubber-band
-  doc->sel.start.x = -1;
-  doc->sel.start.y = -1;
-  doc->sel.end.x   = -1;
-  doc->sel.end.y   = -1;
-  ie_doc_invalidate_canvas(doc);
+  ie_doc_commit_op(doc, false);
 }
 
 static bool select_key(canvas_doc_t *doc, canvas_win_state_t *view, uint32_t key, uint32_t mods) {

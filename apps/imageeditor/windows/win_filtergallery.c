@@ -125,12 +125,13 @@ static void filter_gallery_sync_preview(window_t *win, filter_gallery_state_t *s
 // Extracted so both the OK button and the double-click path share the same logic.
 static void filter_gallery_accept(window_t *win, filter_gallery_state_t *st) {
   if (st && st->doc && st->selected >= 0) {
-    doc_push_undo(st->doc);
+    if (!ie_doc_begin_op(st->doc, "Filter Gallery")) return;
     if (!imageeditor_apply_filter(st->doc, st->selected)) {
-      doc_discard_undo(st->doc);
+      ie_doc_commit_op(st->doc, false);
       end_dialog(win, 0);
       return;
     }
+    ie_doc_commit_op(st->doc, true);
     st->accepted = true;
   }
   end_dialog(win, 1);

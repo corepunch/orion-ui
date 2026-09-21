@@ -11,7 +11,7 @@ static void fill_begin(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t d
   int gap = g_app->fill.gap * MAX(1, g_bw_retina_scale);
   IE_TRACE("fill begin doc=%p at=(%d,%d) gap=%d scale=%d", (void *)doc,
            doc_pt.x, doc_pt.y, gap, g_bw_retina_scale);
-  ie_doc_begin_op(doc, "Fill");
+  if (!ie_doc_begin_op(doc, "Fill")) return;
   int stitches = canvas_flood_fill_with_gap(doc, doc_pt.x, doc_pt.y,
                                             g_app->fg_color, gap);
   IE_TRACE("fill end doc=%p stitches=%d", (void *)doc, stitches);

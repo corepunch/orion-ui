@@ -635,25 +635,12 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       if (!state || !doc || !g_app) return false;
       state->pan.active = false;
       canvas_stroke_cancel(doc);
-      if (doc->drawing) {
-        if (canvas_is_shape_tool(g_app->current_tool)) {
-          if (doc->shape.snapshot) {
-            memcpy(doc->pixels, doc->shape.snapshot, (size_t)doc->canvas_w * doc->canvas_h * DOC_BPP);
-            free(doc->shape.snapshot); doc->shape.snapshot = NULL;
-          }
-        } else if (state->stroke_undo) {
-          if (!doc_cancel_undo(doc)) IE_TRACE("pointer cancel restore failed win=%u", win->id);
-        }
-        doc->drawing = false;
-        doc->modified = state->stroke_modified;
-        doc->canvas_dirty = true;
-        if (doc->sel.move.active) canvas_discard_move(doc);
-        if (doc->sel.move.mask_moving) canvas_set_selection_mask_offset(doc, 0, 0);
-        doc->sel.move.mask_moving = false;
-        if (g_app->current_tool == ID_TOOL_CROP || g_app->current_tool == ID_TOOL_SELECT)
-          canvas_deselect(doc);
-        doc_update_title(doc);
+      if (doc->command.before) {
+        ie_doc_commit_op(doc, false);
+      } else if (doc->drawing && g_app->current_tool == ID_TOOL_CROP) {
+        canvas_deselect(doc);
       }
+      doc->drawing = false;
       IE_TRACE("pointer cancel win=%u", win->id);
       invalidate_window(win);
       return true;
@@ -666,8 +653,6 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       if (!doc || !g_app) return true;
       if (state->gesture_active) return true;
       canvas_stroke_cancel(doc);
-      state->stroke_modified = doc->modified;
-      state->stroke_undo = false;
       ipoint16_t doc_pt = {lx, ly};
       // Clear any stale panning state – if the user switched away from Hand
       // while holding the button, panning must not bleed into MouseMove.
@@ -729,13 +714,12 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           // Persist settings for next use
           g_app->text_tool.font_size = opts.font_size;
           g_app->text_tool.antialias = opts.antialias;
-          doc_push_undo(doc);
+          if (!ie_doc_begin_op(doc, "Text")) return true;
           if (canvas_draw_text_stb(doc, px, py, &opts)) {
-            doc->modified = true;
-            doc_update_title(doc);
+            ie_doc_commit_op(doc, true);
             invalidate_window(win);
           } else {
-            doc_discard_undo(doc);
+            ie_doc_commit_op(doc, false);
           }
         }
         return true;
@@ -743,6 +727,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       if (tool == ID_TOOL_MAGIC_WAND) {
         if (!canvas_in_bounds(doc, px, py)) return true;
+        if (!ie_doc_begin_op(doc, "Magic Wand")) return true;
         if (doc->sel.move.active) canvas_commit_move(doc);
         bool selected = shift
           ? canvas_magic_wand_select_add(doc, px, py,
@@ -751,6 +736,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           : canvas_magic_wand_select(doc, px, py,
                                      g_app->wand.spread,
                                      g_app->wand.antialias);
+        ie_doc_commit_op(doc, selected);
         if (selected) {
           IE_DEBUG("magic_wand_select doc=%p at=(%d,%d) spread=%d aa=%d",
                    (void *)doc, px, py,
@@ -763,8 +749,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       // Polygon: accumulate vertices on each click; commit on right-click
       if (tool == ID_TOOL_POLYGON) {
         if (!doc->poly.active) {
-          doc_push_undo(doc);
-          canvas_shape_begin(doc, px, py);  // snapshot for cancel/undo
+          if (!ie_doc_begin_op(doc, "Polygon")) return true;
+          if (!canvas_shape_begin(doc, px, py)) { ie_doc_commit_op(doc, false); return true; }
           doc->poly.active = true;
           doc->poly.count  = 0;
           IE_DEBUG("polygon_begin doc=%p at=(%d,%d)", (void *)doc, px, py);
@@ -787,17 +773,19 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
            (void *)doc, tool_id_name(tool), px, py);
 
       if (canvas_is_shape_tool(tool)) {
-        // Shape tools: take snapshot then preview – undo is pushed on mouse-up
-        canvas_shape_begin(doc, px, py);
+        // The command captures the document before the rubber-band preview.
+        if (!ie_doc_begin_op(doc, "Draw Shape")) { doc->drawing = false; return true; }
+        if (!canvas_shape_begin(doc, px, py)) { ie_doc_commit_op(doc, false); return true; }
         canvas_shape_preview(doc, px, py, px, py, tool,
                              g_app->shape_filled, g_app->fg_color, g_app->bg_color, false);
         invalidate_window(win);
         return true;
       }
 
-      // Crop tool: only rubber-band the selection — no pixel changes on mouse-down,
-      // so no undo snapshot needed here (undo is pushed only on Enter commit).
+      // Crop preview and its eventual Enter commit share one transaction.
       if (tool == ID_TOOL_CROP) {
+        if (doc->command.before) ie_doc_commit_op(doc, false);
+        if (!ie_doc_begin_op(doc, "Crop")) { doc->drawing = false; return true; }
         doc->drawing = true;
         doc->sel.add_mode = false;
         doc->sel.active = false;
@@ -810,9 +798,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         return true;
       }
 
-      uint8_t *previous_undo = doc->undo.count ? doc->undo.states[doc->undo.count - 1] : NULL;
-      doc_push_undo(doc);
-      state->stroke_undo = doc->undo.count && doc->undo.states[doc->undo.count - 1] != previous_undo;
+      if (!ie_doc_begin_op(doc, tool_id_name(tool))) { doc->drawing = false; return true; }
 
       switch (tool) {
         case ID_TOOL_PENCIL:
@@ -907,16 +893,11 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       } else if (g_app->current_tool == ID_TOOL_POLYGON && doc->poly.active && doc->poly.count >= 2) {
         canvas_draw_polygon_scaled(doc, doc->poly.pts, doc->poly.count, g_app->shape_filled,
                                    g_app->fg_color, g_app->fg_color);
-        // Fix up undo: undo_states[top] was pushed with pre-draw pixels from shape_begin.
-        // After drawing, swap undo entry (pre-draw) with shape_snapshot (drawn) to align them.
-        // Actually the undo was already pushed correctly on first click via doc_push_undo
-        // in the polygon start handler; shape_snapshot holds the pre-draw state.
-        // We need undo_states[top] = pre-draw, but it currently = pre-draw (correct!).
-        // Nothing extra needed — doc_push_undo was called at polygon start.
+        canvas_shape_commit(doc);
+        ie_doc_commit_op(doc, true);
         IE_DEBUG("polygon_commit doc=%p points=%d", (void *)doc, doc->poly.count);
         doc->poly.active = false;
         doc->poly.count  = 0;
-        doc->modified = true;
         doc_update_title(doc);
         invalidate_window(win);
         return true;
@@ -1066,6 +1047,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       }
       if (!doc || !g_app) return true;
       int tool = g_app->current_tool;
+      bool was_drawing = doc->drawing;
 
       if (doc->drawing && doc->stroke.active) {
         ipoint16_t point = {(int16_t)LOWORD(wparam), (int16_t)HIWORD(wparam)};
@@ -1075,19 +1057,9 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       }
 
       if (canvas_is_shape_tool(tool) && doc->drawing) {
-        // Commit the final shape.  doc->pixels already has the drawn result.
-        // We need the undo stack to hold the PRE-draw state (shape_snapshot).
-        // doc_push_undo() saves the CURRENT pixels; after that we swap the
-        // newly pushed entry (= drawn pixels) with shape_snapshot (= pre-draw)
-        // so that undo correctly restores the pre-draw state.
-        doc_push_undo(doc);
-        if (doc->shape.snapshot && doc->undo.count > 0) {
-          uint8_t *tmp = doc->undo.states[doc->undo.count - 1];
-          doc->undo.states[doc->undo.count - 1] = doc->shape.snapshot;
-          doc->shape.snapshot = tmp;  // reuse buffer next time
-        }
+        canvas_shape_commit(doc);
+        ie_doc_commit_op(doc, true);
         doc->drawing  = false;
-        doc->modified = true;
         IE_DEBUG("shape_commit doc=%p tool=%s",
                  (void *)doc, tool_id_name(tool));
         doc_update_title(doc);
@@ -1138,7 +1110,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           // Zero-area crop: cancel selection.
           if (doc->sel.start.x == doc->sel.end.x &&
               doc->sel.start.y == doc->sel.end.y) {
-            canvas_deselect(doc);
+            ie_doc_commit_op(doc, false);
             IE_DEBUG("crop_deselect_zero_area doc=%p", (void *)doc);
           }
         }
@@ -1147,6 +1119,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
                    (void *)doc, tool_id_name(tool));
         }
         doc->drawing = false;
+        if (was_drawing && tool != ID_TOOL_CROP) ie_doc_commit_op(doc, true);
       }
       return true;
     }
@@ -1161,15 +1134,16 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
                  (void *)doc,
                  doc->sel.start.x, doc->sel.start.y,
                  doc->sel.end.x,   doc->sel.end.y);
-        doc_push_undo(doc);
+        if (!doc->command.before && !ie_doc_begin_op(doc, "Crop")) return true;
         if (canvas_crop_or_expand_to_selection(doc)) {
+          ie_doc_commit_op(doc, true);
           canvas_win_sync_scrollbars(win);
           doc_update_title(doc);
           char sb[32];
           snprintf(sb, sizeof(sb), "%dx%d", doc->canvas_w / g_bw_retina_scale, doc->canvas_h / g_bw_retina_scale);
           send_message(doc->win, evStatusBar, 0, sb);
         } else {
-          doc_discard_undo(doc);  // crop failed — drop the no-op undo entry
+          ie_doc_commit_op(doc, false);
         }
         invalidate_window(win);
         return true;
@@ -1177,17 +1151,18 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       // Escape cancels an in-progress polygon or shape drag
       if (wparam == AX_KEY_ESCAPE) {
         if (tool == ID_TOOL_CROP && doc->sel.active) {
-          canvas_deselect(doc);
+          if (doc->command.before) ie_doc_commit_op(doc, false);
+          else canvas_deselect(doc);
           IE_DEBUG("crop_cancel doc=%p", (void *)doc);
           invalidate_window(win);
           return true;
         }
         if (tool == ID_TOOL_POLYGON && doc->poly.active) {
           if (doc->shape.snapshot) {
-            memcpy(doc->pixels, doc->shape.snapshot, (size_t)doc->canvas_w * doc->canvas_h * 4);
+            memcpy(doc->pixels, doc->shape.snapshot, (size_t)doc->canvas_w * doc->canvas_h * DOC_BPP);
             doc->canvas_dirty = true;
           }
-          doc_discard_undo(doc);  // drop the no-op undo entry pushed at polygon start
+          ie_doc_commit_op(doc, false);
           doc->poly.active = false;
           doc->poly.count  = 0;
           IE_DEBUG("polygon_cancel doc=%p", (void *)doc);
@@ -1195,8 +1170,9 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           return true;
         }
         if (canvas_is_shape_tool(tool) && doc->drawing && doc->shape.snapshot) {
-          memcpy(doc->pixels, doc->shape.snapshot, (size_t)doc->canvas_w * doc->canvas_h * 4);
+          memcpy(doc->pixels, doc->shape.snapshot, (size_t)doc->canvas_w * doc->canvas_h * DOC_BPP);
           doc->canvas_dirty = true;
+          ie_doc_commit_op(doc, false);
           doc->drawing = false;
           IE_DEBUG("shape_cancel doc=%p tool=%s",
                    (void *)doc, tool_id_name(tool));

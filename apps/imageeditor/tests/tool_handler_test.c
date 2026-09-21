@@ -87,7 +87,7 @@ void test_pencil_begin_end_lifecycle(void) {
   
   // Begin stroke
   pencil->begin(doc, &state, (ipoint16_t){10, 10});
-  ASSERT_EQUAL(doc->undo.count, 1);  // Undo pushed
+  ASSERT_NOT_NULL(doc->command.before);
   
   // Drag
   if (pencil->drag) {
@@ -166,8 +166,7 @@ void test_tool_cancel_discards(void) {
   
   // Begin stroke
   pencil->begin(doc, &state, (ipoint16_t){10, 10});
-  int undo_count = doc->undo.count;
-  ASSERT_TRUE(undo_count > 0);
+  ASSERT_NOT_NULL(doc->command.before);
   
   // Cancel
   if (pencil->cancel) {

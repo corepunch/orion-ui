@@ -62,7 +62,7 @@ static bool menu_item_has_submenu(const menu_item_t *it) {
 }
 
 static bool menu_item_is_active(const menu_item_t *it) {
-  return it && !menu_item_is_separator(it) && (it->id || menu_item_has_submenu(it));
+  return it && !it->disabled && !menu_item_is_separator(it) && (it->id || menu_item_has_submenu(it));
 }
 
 // Return the display width of a label, stopping at a '\t' character.
@@ -100,7 +100,7 @@ static int popup_items_width(const menu_item_t *items, int item_count,
   int w = MENU_MIN_W;
   for (int i = 0; i < item_count; i++) {
     const menu_item_t *it = &items[i];
-    if (menu_item_is_active(it)) {
+    if (!menu_item_is_separator(it)) {
       int lw = item_label_width(it->label) + MENU_SIDE_PAD * 2;
       if (menu_item_has_submenu(it)) {
         lw += strwidth(">") + MENU_HOTKEY_GAP;
@@ -211,12 +211,13 @@ static result_t popup_proc(window_t *win, uint32_t msg,
                     win->frame.w, 1), CTRL_NORMAL);
           y += MENU_SEP_H;
         } else {
-          bool hov = (i == pd->hovered);
+          bool hov = !it->disabled && (i == pd->hovered);
+          ctrl_state_t state = it->disabled ? CTRL_DISABLED : (hov ? CTRL_HOVER : CTRL_NORMAL);
           uint32_t label_col  = theme_foreground(THEME_PART_MENU_ITEM,
-                                                  hov ? CTRL_HOVER : CTRL_NORMAL);
+                                                  state);
           uint32_t hotkey_col = hov ? label_col : get_sys_color(brTextDisabled);
           popup_item_paint(R(0, y, win->frame.w, MENU_ITEM_H), it->label,
-                           hov ? CTRL_HOVER : CTRL_NORMAL, FONT_SYSTEM);
+                           state, FONT_SYSTEM);
           if (menu_item_has_submenu(it)) {
             draw_text_small_clipped(">",
                                    &(irect16_t){0, y, win->frame.w - MENU_SIDE_PAD, MENU_ITEM_H},

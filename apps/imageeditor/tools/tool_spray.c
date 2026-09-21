@@ -7,7 +7,7 @@ extern app_state_t *g_app;
 
 static void spray_begin(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t doc_pt) {
   if (!doc || !g_app) return;
-  ie_doc_begin_op(doc, "Spray");
+  if (!ie_doc_begin_op(doc, "Spray")) return;
   doc->last = doc_pt;
   canvas_spray(doc, doc_pt.x, doc_pt.y, 8, g_app->fg_color);
   ie_doc_after_pixels_changed(doc);

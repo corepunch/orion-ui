@@ -2146,9 +2146,7 @@ void test_ie_layer_undo_redo(void) {
     ASSERT_NOT_NULL(doc);
     ASSERT_EQUAL(doc->layer.count, 1);
 
-    // Push undo, then add a layer.
-    doc_push_undo(doc);
-    doc_add_layer(doc);
+    cmd_layer_new(doc, 0);
     ASSERT_EQUAL(doc->layer.count, 2);
 
     // Undo should restore to 1 layer.

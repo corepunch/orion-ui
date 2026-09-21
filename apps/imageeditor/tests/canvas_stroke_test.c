@@ -207,6 +207,7 @@ static void test_stroke_window(void) {
     g_app->current_tool = tools[i];
     canvas_doc_t *doc = create_document(NULL, 64, 64);
     ASSERT_NOT_NULL(doc);
+    if (tools[i] == ID_TOOL_ERASER) canvas_fill_active_layer(doc, g_app->fg_color);
     uint32_t original = canvas_get_pixel(doc, 36, 12);
     send_message(doc->canvas_win, evLeftButtonDown, MAKEDWORD(8, 8), NULL);
     send_message(doc->canvas_win, evMouseMove, MAKEDWORD(40, 8), NULL);
@@ -218,7 +219,7 @@ static void test_stroke_window(void) {
     ASSERT_EQUAL(canvas_get_pixel(doc, 40, 8), original);
     ASSERT_FALSE(doc->stroke.active);
     ASSERT_EQUAL(doc->undo.count, 1);
-    ASSERT_TRUE(doc_cancel_undo(doc));
+    ASSERT_TRUE(doc_undo(doc));
     ASSERT_EQUAL(canvas_get_pixel(doc, 36, 12), original);
     close_document(doc);
   }

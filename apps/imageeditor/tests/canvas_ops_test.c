@@ -18,7 +18,9 @@ void test_begin_commit_marks_dirty(void) {
   ASSERT_FALSE(doc->modified);
   
   ie_doc_begin_op(doc, "Test Operation");
-  ASSERT_EQUAL(doc->undo.count, 1);  // Undo snapshot pushed
+  ASSERT_EQUAL(doc->undo.count, 0);
+  ASSERT_NOT_NULL(doc->command.before);
+  canvas_set_pixel(doc, 3, 3, MAKE_COLOR(255, 0, 0, 255));
   
   ie_doc_commit_op(doc, true);
   ASSERT_TRUE(doc->modified);  // Document marked dirty
@@ -39,7 +41,8 @@ void test_begin_discard_rolls_back(void) {
   
   ie_doc_begin_op(doc, "Failed Operation");
   int undo_count_before = doc->undo.count;
-  ASSERT_EQUAL(undo_count_before, 1);
+  ASSERT_EQUAL(undo_count_before, 0);
+  ASSERT_NOT_NULL(doc->command.before);
   
   ie_doc_commit_op(doc, false);  // Discard
   ASSERT_EQUAL(doc->undo.count, 0);  // Undo snapshot discarded
@@ -61,18 +64,12 @@ void test_nested_operations_not_supported(void) {
   
   ASSERT_EQUAL(doc->undo.count, 0);  // Start with empty undo stack
   
-  ie_doc_begin_op(doc, "Operation 1");
-  int count1 = doc->undo.count;
-  ASSERT_EQUAL(count1, 1);  // First op pushed one snapshot
-  
-  ie_doc_begin_op(doc, "Operation 2");
-  int count2 = doc->undo.count;
-  
-  // If nested ops are supported, count should be 2
-  // If not, second begin may discard first or keep it at 1
-  // For this test, just verify the function doesn't crash
-  ASSERT_TRUE(count2 >= 1);  // At least one undo exists
-  
+  ASSERT_TRUE(ie_doc_begin_op(doc, "Operation 1"));
+  ASSERT_FALSE(ie_doc_begin_op(doc, "Operation 2"));
+  ASSERT_EQUAL(doc->undo.count, 0);
+  ASSERT_NOT_NULL(doc->command.before);
+  ie_doc_commit_op(doc, false);
+
   close_document(doc);
   free(g_app);
   test_env_shutdown();

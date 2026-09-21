@@ -182,6 +182,33 @@ static void layer_replace_pixels(layer_t *lay, uint8_t *pixels) {
   lay->preview.active = false;
 }
 
+// Resize stored frames alongside the working layers, inside the same command.
+bool canvas_resize_frames(canvas_doc_t *doc, int x, int y, int w, int h,
+                           bool resample, image_resize_filter_t filter) {
+  if (!doc->anim) return true;
+  for (int i = 0; i < doc->anim->frame_count; i++) {
+    if (i == doc->anim->active_frame) continue;
+    anim_frame_t *frame = doc->anim->frames[i];
+    if (!frame->data || !frame->data_size) continue;
+    layer_t layer = {0};
+    layer.pixels = malloc((size_t)doc->canvas_w * doc->canvas_h * DOC_BPP);
+    if (!layer.pixels) return false;
+    bool ok = anim_frame_expand(frame, layer.pixels, doc->canvas_w, doc->canvas_h);
+    if (ok && resample) {
+      uint8_t *pixels = layer_resample_pixels(&layer, doc->canvas_w, doc->canvas_h, w, h, filter);
+      free(layer.pixels);
+      layer.pixels = pixels;
+      ok = pixels != NULL;
+    } else if (ok) {
+      ok = layer_crop_expand(&layer, doc->canvas_w, doc->canvas_h, x, y, w, h);
+    }
+    if (ok) ok = anim_frame_compress(frame, layer.pixels, w, h, IE_FRAME_FORMAT);
+    free(layer.pixels);
+    if (!ok) return false;
+  }
+  return true;
+}
+
 // Resize the image contents to new_w x new_h.
 // All layer pixel buffers are resampled with the requested filter.
 bool canvas_resize_image(canvas_doc_t *doc, int new_w, int new_h,
@@ -205,6 +232,11 @@ bool canvas_resize_image(canvas_doc_t *doc, int new_w, int new_h,
     }
   }
 
+  if (!canvas_resize_frames(doc, 0, 0, new_w, new_h, true, filter)) {
+    for (int i = 0; i < doc->layer.count; i++) free(new_pixels[i]);
+    free(new_pixels);
+    return false;
+  }
   for (int i = 0; i < doc->layer.count; i++)
     layer_replace_pixels(doc->layer.stack[i], new_pixels[i]);
   free(new_pixels);
@@ -231,6 +263,8 @@ bool canvas_resize(canvas_doc_t *doc, int new_w, int new_h) {
   if (!doc || new_w <= 0 || new_h <= 0) return false;
   if (new_w == doc->canvas_w && new_h == doc->canvas_h) return true;
   if ((size_t)new_w > 16384 || (size_t)new_h > 16384) return false;
+
+  if (!canvas_resize_frames(doc, 0, 0, new_w, new_h, false, IMAGE_RESIZE_NEAREST)) return false;
 
   for (int i = 0; i < doc->layer.count; i++) {
     if (!layer_crop_expand(doc->layer.stack[i], doc->canvas_w, doc->canvas_h,

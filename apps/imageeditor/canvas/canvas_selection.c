@@ -310,7 +310,6 @@ void canvas_cut_selection(canvas_doc_t *doc, uint32_t fill) {
 // The pasted region becomes the new selection.
 void canvas_paste_clipboard(canvas_doc_t *doc) {
   if (!doc || !g_app || !g_app->clipboard) return;
-  doc_push_undo(doc);
   int w = g_app->clipboard_size.w;
   int h = g_app->clipboard_size.h;
   for (int row = 0; row < h; row++) {
@@ -585,6 +584,8 @@ bool canvas_crop_or_expand_to_selection(canvas_doc_t *doc) {
 
   if (new_w <= 0 || new_h <= 0) return false;
   if ((size_t)new_w > 16384 || (size_t)new_h > 16384) return false;
+
+  if (!canvas_resize_frames(doc, x0, y0, new_w, new_h, false, IMAGE_RESIZE_NEAREST)) return false;
 
   for (int i = 0; i < doc->layer.count; i++) {
     if (!layer_crop_expand(doc->layer.stack[i], doc->canvas_w, doc->canvas_h,

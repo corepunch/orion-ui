@@ -12,6 +12,7 @@ int toolbar_item_hit(const toolbar_state_t *tb, int tx, int ty) {
   if (!tb || !tb->item_rects) return -1;
   for (int i = 0; i < tb->item_count; i++) {
     irect16_t r = tb->item_rects[i];
+    if (tb->items[i].flags & TOOLBAR_ITEM_FLAG_DISABLED) continue;
     if (rect_contains_point(r, (ipoint16_t){tx, ty}))
       return i;
   }
@@ -131,7 +132,7 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
 
 }
 
-static void draw_toolbar_icon_in_rect(toolbar_state_t *tb, const char *icon_name, irect16_t r, int offset) {
+static void draw_toolbar_icon_in_rect(toolbar_state_t *tb, const char *icon_name, irect16_t r, int offset, bool disabled) {
   sysicon_resolved_t res;
   if (!sysicon_resolve(icon_name ? icon_name : "missing", &res)) return;
   bool compact = tb && (tb->style & TOOLBAR_STYLE_COMPACT);
@@ -145,30 +146,31 @@ static void draw_toolbar_icon_in_rect(toolbar_state_t *tb, const char *icon_name
   irect16_t icon = rect_offset(rect_center(r, w, h), offset, offset);
   draw_sprite_region((int)res.tex, icon,
                      UV_RECT(res.u0, res.v0, res.u1, res.v1),
-                     get_sys_color(compact ? brTextNormal : brToolbarForeground), 0);
+                     get_sys_color(disabled ? brTextDisabled : (compact ? brTextNormal : brToolbarForeground)), 0);
 }
 
 static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int i) {
   toolbar_item_t *item = &tb->items[i];
   irect16_t r = tb->item_rects[i];
-  bool is_pressed = (tb->pressed_item == i);
+  bool disabled = (item->flags & TOOLBAR_ITEM_FLAG_DISABLED) != 0;
+  bool is_pressed = !disabled && (tb->pressed_item == i);
   bool compact = (tb->style & TOOLBAR_STYLE_COMPACT) != 0;
-  bool is_active  = !compact && (item->flags & TOOLBAR_BUTTON_FLAG_ACTIVE) != 0;
-  bool is_hot     = !compact && (tb->hot_item == i);
+  bool is_active  = !disabled && !compact && (item->flags & TOOLBAR_BUTTON_FLAG_ACTIVE) != 0;
+  bool is_hot     = !disabled && !compact && (tb->hot_item == i);
   theme_t *th = get_theme();
 
   switch (item->type) {
     case TOOLBAR_ITEM_CUSTOM: {
       toolbar_draw_item_t draw = {R(0, 0, r.w, r.h),
         (is_active ? CTRL_SELECTED : 0) | (is_pressed ? CTRL_PRESSED : 0) |
-        (is_hot ? CTRL_HOVER : 0), i};
+        (is_hot ? CTRL_HOVER : 0) | (disabled ? CTRL_DISABLED : 0), i};
       send_message(win, tbDrawItem, (uint32_t)item->ident, &draw);
       break;
     }
     case TOOLBAR_ITEM_BUTTON: {
       irect16_t local = {0, 0, r.w, r.h};
       // Derive each flag independently; let the theme decide rendering.
-      ctrl_state_t state = CTRL_NORMAL;
+      ctrl_state_t state = disabled ? CTRL_DISABLED : CTRL_NORMAL;
       if (is_active)  state |= CTRL_SELECTED;
       if (is_pressed) state |= CTRL_PRESSED;
       if (is_hot)     state |= CTRL_HOVER;
@@ -185,11 +187,11 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       irect16_t icon_rect = local;
       if (tb->style & TOOLBAR_STYLE_SHOW_LABELS)
         icon_rect.h = (tb->btn_size > 0) ? tb->btn_size : TB_SPACING;
-      draw_toolbar_icon_in_rect(tb, icon_name, icon_rect, poff);
+      draw_toolbar_icon_in_rect(tb, icon_name, icon_rect, poff, disabled);
       if ((tb->style & TOOLBAR_STYLE_SHOW_LABELS) && item->text) {
         int tx = (local.w - text_strwidth(FONT_SMALLEST, item->text)) / 2 + poff;
         int ty = local.h - text_char_height(FONT_SMALLEST) - 2 + poff;
-        draw_text(FONT_SMALLEST, item->text, tx, ty, get_sys_color(brToolbarForeground));
+        draw_text(FONT_SMALLEST, item->text, tx, ty, get_sys_color(disabled ? brTextDisabled : brToolbarForeground));
       }
       break;
     }
@@ -200,7 +202,7 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       bool arrow_pressed = is_pressed && tb->pressed_in_arrow;
       bool btn_pressed   = is_pressed && !tb->pressed_in_arrow;
 
-      ctrl_state_t btn_state = CTRL_NORMAL;
+      ctrl_state_t btn_state = disabled ? CTRL_DISABLED : CTRL_NORMAL;
       if (is_active)   btn_state |= CTRL_SELECTED;
       if (btn_pressed) btn_state |= CTRL_PRESSED;
       if (is_hot)      btn_state |= CTRL_HOVER;
@@ -211,14 +213,14 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       irect16_t icon_rect = btn_part;
       if (tb->style & TOOLBAR_STYLE_SHOW_LABELS)
         icon_rect.h = (tb->btn_size > 0) ? tb->btn_size : TB_SPACING;
-      draw_toolbar_icon_in_rect(tb, icon_name, icon_rect, btn_poff);
+      draw_toolbar_icon_in_rect(tb, icon_name, icon_rect, btn_poff, disabled);
       if ((tb->style & TOOLBAR_STYLE_SHOW_LABELS) && item->text) {
         int tx = (btn_part.w - text_strwidth(FONT_SMALLEST, item->text)) / 2 + btn_poff;
         int ty = btn_part.h - text_char_height(FONT_SMALLEST) - 2 + btn_poff;
-        draw_text(FONT_SMALLEST, item->text, tx, ty, get_sys_color(brToolbarForeground));
+        draw_text(FONT_SMALLEST, item->text, tx, ty, get_sys_color(disabled ? brTextDisabled : brToolbarForeground));
       }
 
-      ctrl_state_t arr_state = CTRL_NORMAL;
+      ctrl_state_t arr_state = disabled ? CTRL_DISABLED : CTRL_NORMAL;
       if (arrow_pressed) arr_state |= CTRL_PRESSED;
       if (is_hot)        arr_state |= CTRL_HOVER;
       theme_draw(THEME_PART_TOOLBAR_SPLIT_ARROW, arr_part, arr_state);
@@ -230,7 +232,7 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       break;
     case TOOLBAR_ITEM_LABEL: {
       int ty = (r.h - text_char_height(FONT_SMALLEST)) / 2;
-      draw_text(FONT_SMALLEST, item->text ? item->text : "", 2, ty, get_sys_color(brToolbarForeground));
+      draw_text(FONT_SMALLEST, item->text ? item->text : "", 2, ty, get_sys_color(disabled ? brTextDisabled : brToolbarForeground));
       break;
     }
     case TOOLBAR_ITEM_SLIDER:
@@ -602,6 +604,25 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
         tc->value = (tc->id == ident);
       invalidate_window(win);
       return true;
+    }
+
+    case tbEnableItem: {
+      toolbar_state_t *tb = toolbar_get_state(win);
+      for (int i = 0; tb && i < tb->item_count; i++) {
+        if ((uint32_t)tb->items[i].ident != wparam) continue;
+        uint32_t old = tb->items[i].flags;
+        if (lparam) tb->items[i].flags &= ~TOOLBAR_ITEM_FLAG_DISABLED;
+        else tb->items[i].flags |= TOOLBAR_ITEM_FLAG_DISABLED;
+        if (old != tb->items[i].flags) {
+          if (!lparam && tb->pressed_item == i) tb->pressed_item = -1;
+          if (!lparam && tb->hot_item == i) tb->hot_item = -1;
+          invalidate_window(win);
+        }
+        return true;
+      }
+      fprintf(stderr, "[tb] enable rejected win=%u ident=%u: item unavailable\n", win->id, wparam);
+      fflush(stderr);
+      return false;
     }
 
     case tbSetButtonSize: {

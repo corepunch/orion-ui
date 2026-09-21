@@ -18,6 +18,7 @@ typedef struct menu_item_s {
   uint16_t           id;
   const struct menu_item_s *submenu_items;
   int                submenu_count;
+  bool               disabled;
 } menu_item_t;
 
 // A top-level menu entry, e.g. "File" with its list of dropdown items.

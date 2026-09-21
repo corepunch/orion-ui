@@ -1164,6 +1164,45 @@ void test_compact_application_toolbar(void) {
   PASS();
 }
 
+static void test_toolbar_disabled_item(void) {
+  TEST("disabled toolbar items reject clicks and cancel a pending press");
+  test_env_init();
+  g_click_count = 0;
+  irect16_t frame = R(0, 0, 200, 60);
+  window_t *win = create_window("Toolbar", WINDOW_TOOLBAR | WINDOW_NOTITLE,
+                                &frame, NULL, click_capture_proc, 0, NULL);
+  ASSERT_NOT_NULL(win);
+  toolbar_item_t item = {.type = TOOLBAR_ITEM_BUTTON, .ident = 88};
+  send_message(win, tbSetItems, 1, &item);
+  window_set_state(win, WINDOW_STATE_VISIBLE, true);
+  toolbar_state_t *tb = toolbar_get_state(win);
+  irect16_t r = tb->item_rects[0];
+  ui_event_t ev = {.message = kEventLeftButtonDown,
+    .x = (win->frame.x + r.x + 4) * UI_WINDOW_SCALE,
+    .y = (win->frame.y + r.y + 4) * UI_WINDOW_SCALE};
+  send_message(win, tbEnableItem, 88, NULL);
+  ASSERT_TRUE(tb->items[0].flags & TOOLBAR_ITEM_FLAG_DISABLED);
+  dispatch_message(&ev);
+  ev.message = kEventLeftButtonUp;
+  dispatch_message(&ev);
+  ASSERT_EQUAL(g_click_count, 0);
+  send_message(win, tbEnableItem, 88, (void *)1);
+  ev.message = kEventLeftButtonDown;
+  dispatch_message(&ev);
+  ev.message = kEventLeftButtonUp;
+  dispatch_message(&ev);
+  ASSERT_EQUAL(g_click_count, 1);
+  ev.message = kEventLeftButtonDown;
+  dispatch_message(&ev);
+  send_message(win, tbEnableItem, 88, NULL);
+  ev.message = kEventLeftButtonUp;
+  dispatch_message(&ev);
+  ASSERT_EQUAL(g_click_count, 1);
+  destroy_window(win);
+  test_env_shutdown();
+  PASS();
+}
+
 int main(int argc, char *argv[]) {
     (void)argc;
     (void)argv;
@@ -1193,6 +1232,7 @@ int main(int argc, char *argv[]) {
     test_titlebar_height_single_row();
     test_toolbar_labels_increase_button_and_band_size();
     test_toolbar_button_click_cancelled_if_released_outside();
+    test_toolbar_disabled_item();
     test_toolbar_item_button_frame_clamped();
     test_nodrag_toolbar_stays_fixed();
     test_app_chrome_owns_and_resizes_bands();

@@ -10,7 +10,8 @@ extern app_state_t *g_app;
 
 static void rect_begin(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t doc_pt) {
   if (!doc) return;
-  canvas_shape_begin(doc, doc_pt.x, doc_pt.y);
+  if (!ie_doc_begin_op(doc, "Draw Shape")) return;
+  if (!canvas_shape_begin(doc, doc_pt.x, doc_pt.y)) { ie_doc_commit_op(doc, false); return; }
   doc->last = doc_pt;
   doc->shape.start = doc_pt;
 }
@@ -24,16 +25,12 @@ static void rect_drag(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t do
 
 static void rect_end(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t doc_pt) {
   if (!doc) return;
-  ie_doc_begin_op(doc, "Draw Rectangle");
   canvas_shape_commit(doc);
   ie_doc_commit_op(doc, true);
 }
 
 static void rect_cancel(canvas_doc_t *doc, canvas_win_state_t *view) {
-  if (!doc || !doc->shape.snapshot) return;
-  memcpy(doc->pixels, doc->shape.snapshot, (size_t)doc->canvas_w * doc->canvas_h * DOC_BPP);
-  doc->canvas_dirty = true;
-  ie_doc_invalidate_canvas(doc);
+  ie_doc_commit_op(doc, false);
 }
 
 static bool rect_key(canvas_doc_t *doc, canvas_win_state_t *view, uint32_t key, uint32_t mods) {
@@ -65,7 +62,6 @@ static void ellipse_drag(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t
 
 static void ellipse_end(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t doc_pt) {
   if (!doc) return;
-  ie_doc_begin_op(doc, "Draw Ellipse");
   canvas_shape_commit(doc);
   ie_doc_commit_op(doc, true);
 }
@@ -99,7 +95,6 @@ static void rounded_rect_drag(canvas_doc_t *doc, canvas_win_state_t *view, ipoin
 
 static void rounded_rect_end(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t doc_pt) {
   if (!doc) return;
-  ie_doc_begin_op(doc, "Draw Rounded Rectangle");
   canvas_shape_commit(doc);
   ie_doc_commit_op(doc, true);
 }

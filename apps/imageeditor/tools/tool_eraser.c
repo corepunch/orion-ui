@@ -22,7 +22,7 @@ static uint32_t erase_color(canvas_doc_t *doc) {
 
 static void eraser_begin(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t doc_pt) {
   if (!doc) return;
-  ie_doc_begin_op(doc, "Erase");
+  if (!ie_doc_begin_op(doc, "Erase")) return;
   canvas_stroke_begin(doc, doc_pt, eraser_brush_radius(), erase_color(doc), false);
   ie_doc_after_pixels_changed(doc);
 }

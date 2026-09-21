@@ -22,7 +22,7 @@ static float pencil_radius(void) {
 
 static void pencil_begin(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t doc_pt) {
   (void)view;
-  ie_doc_begin_op(doc, "Pencil Stroke");
+  if (!ie_doc_begin_op(doc, "Pencil Stroke")) return;
   canvas_stroke_begin(doc, doc_pt, pencil_radius(), g_app->fg_color, false);
   ie_doc_invalidate_canvas(doc);
 }

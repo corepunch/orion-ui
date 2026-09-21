@@ -16,6 +16,7 @@ static char        s_filter_photo_labels[IMAGEEDITOR_MAX_FILTERS][64];
 #endif // !IMAGEEDITOR_INDEXED
 
 // Persistent storage for dynamically built items and document title strings.
+static menu_item_t s_edit_items[ARRAY_LEN(MENU_EDIT_ITEMS)];
 static menu_item_t s_view_items[VIEW_ITEM_COUNT];
 static bool        s_view_items_initialized = false;
 static menu_item_t s_window_items[WINDOW_PREFIX_COUNT + WINDOW_MENU_MAX_DOCS];
@@ -60,7 +61,7 @@ static bool cancel_active_canvas_interaction(canvas_doc_t *doc, int old_tool) {
              (size_t)doc->canvas_w * doc->canvas_h * DOC_BPP);
       doc->canvas_dirty = true;
     }
-    doc_discard_undo(doc);
+    ie_doc_commit_op(doc, false);
     doc->poly.active = false;
     doc->poly.count = 0;
     changed = true;
@@ -74,6 +75,7 @@ static bool cancel_active_canvas_interaction(canvas_doc_t *doc, int old_tool) {
     memcpy(doc->pixels, doc->shape.snapshot,
            (size_t)doc->canvas_w * doc->canvas_h * DOC_BPP);
     doc->canvas_dirty = true;
+    ie_doc_commit_op(doc, false);
     changed = true;
   }
 
@@ -93,7 +95,8 @@ static bool cancel_active_canvas_interaction(canvas_doc_t *doc, int old_tool) {
 
   if (old_tool == ID_TOOL_CROP && doc->sel.active) {
     IE_DEBUG("cancel_interaction crop doc=%p", (void *)doc);
-    canvas_deselect(doc);
+    if (doc->command.before) ie_doc_commit_op(doc, false);
+    else canvas_deselect(doc);
     changed = true;
   }
 
@@ -105,6 +108,7 @@ static bool cancel_active_canvas_interaction(canvas_doc_t *doc, int old_tool) {
     changed = true;
   }
 
+  ie_doc_commit_op(doc, true);
   return changed;
 }
 
@@ -142,20 +146,7 @@ static bool anim_step_frame(canvas_doc_t *doc, int delta) {
   anim_timeline_t *tl = doc->anim;
   int target = tl->active_frame + delta;
   if (target < 0 || target >= tl->frame_count) return false;
-  doc_push_undo(doc);
-  if (!anim_timeline_switch_frame(tl, target, &doc->pixels,
-                                  doc->canvas_w, doc->canvas_h,
-                                  IE_FRAME_FORMAT)) {
-    doc_discard_undo(doc);
-    return false;
-  }
-  if (doc->layer.count > 0)
-    doc->layer.stack[doc->layer.active]->pixels = doc->pixels;
-  doc->canvas_dirty = true;
-  if (doc->canvas_win)
-    invalidate_window(doc->canvas_win);
-  timeline_win_refresh();
-  return true;
+  return cmd_frame_select(doc, target);
 }
 
 // ============================================================
@@ -233,7 +224,21 @@ window_t *create_main_toolbar_window(void) {
 }
 
 void imageeditor_sync_main_toolbar(void) {
-  if (!g_app || !g_app->main_toolbar_win) return;
+  if (!g_app) return;
+  canvas_doc_t *doc = g_app->active_doc;
+  bool undo = doc && !doc->command.before && doc->undo.count > 0;
+  bool redo = doc && !doc->command.before && doc->redo.count > 0;
+  memcpy(s_edit_items, MENU_EDIT_ITEMS, sizeof(s_edit_items));
+  for (int i = 0; i < ARRAY_LEN(s_edit_items); i++) {
+    if (s_edit_items[i].id == ID_EDIT_UNDO) s_edit_items[i].disabled = !undo;
+    if (s_edit_items[i].id == ID_EDIT_REDO) s_edit_items[i].disabled = !redo;
+  }
+  menu_def_t *edit = find_menu("Edit");
+  if (edit) edit->items = s_edit_items;
+  publish_dynamic_menus();
+  if (!g_app->main_toolbar_win) return;
+  send_message(g_app->main_toolbar_win, tbEnableItem, ID_EDIT_UNDO, (void *)(intptr_t)undo);
+  send_message(g_app->main_toolbar_win, tbEnableItem, ID_EDIT_REDO, (void *)(intptr_t)redo);
   window_t *mask_btn = get_window_item(g_app->main_toolbar_win, ID_VIEW_MASK_ONLY);
   window_t *bg_btn   = get_window_item(g_app->main_toolbar_win, ID_VIEW_SHOW_BACKGROUND);
 
@@ -396,6 +401,7 @@ void handle_menu_command(uint16_t id) {
   // If no document has focus, fall back to the first available document
   if (!doc) doc = g_app->docs;
 
+  IE_TRACE("command dispatch doc=%p id=%u", (void *)doc, id);
   switch (id) {
     case ID_FILE_NEW: {
       int w, h;
@@ -536,9 +542,8 @@ void handle_menu_command(uint16_t id) {
     // palette entries instead of pixel data (future work).
     case ID_IMAGE_LEVELS:
       if (doc && doc->layer.active >= 0 && doc->layer.active < doc->layer.count) {
-        doc_push_undo(doc);
-        if (!show_levels_dialog(doc->win ? doc->win : g_app->menubar_win))
-          doc_discard_undo(doc);
+        if (!ie_doc_begin_op(doc, "Levels")) break;
+        ie_doc_commit_op(doc, show_levels_dialog(doc->win ? doc->win : g_app->menubar_win));
       }
       break;
 #endif // !IMAGEEDITOR_INDEXED
@@ -561,11 +566,8 @@ void handle_menu_command(uint16_t id) {
         int amount = s_last_blur_radius;
         if (show_blur_dialog(doc->win ? doc->win : g_app->menubar_win, &amount)) {
           s_last_blur_radius = amount;
-          doc_push_undo(doc);
-          if (!imageeditor_apply_builtin_blur(doc, amount)) {
-            doc_discard_undo(doc);
-            break;
-          }
+          if (!ie_doc_begin_op(doc, "Blur")) break;
+          ie_doc_commit_op(doc, imageeditor_apply_builtin_blur(doc, amount));
           doc_update_title(doc);
           if (doc->canvas_win)
             invalidate_window(doc->canvas_win);
@@ -576,11 +578,8 @@ void handle_menu_command(uint16_t id) {
     case ID_FILTER_SHARPEN:
     case ID_FILTER_EDGE:
       if (doc) {
-        doc_push_undo(doc);
-        if (!imageeditor_apply_builtin_filter(doc, id)) {
-          doc_discard_undo(doc);
-          break;
-        }
+        if (!ie_doc_begin_op(doc, "Filter")) break;
+        ie_doc_commit_op(doc, imageeditor_apply_builtin_filter(doc, id));
         doc_update_title(doc);
         if (doc->canvas_win)
           invalidate_window(doc->canvas_win);
@@ -793,11 +792,11 @@ void handle_menu_command(uint16_t id) {
 
     case ID_LAYER_ADD_MASK:
       if (doc) {
-        doc_push_undo(doc);
+        if (!ie_doc_begin_op(doc, "Add Mask")) break;
         int fill_mode = MASK_EXTRACT_WHITE;
         if (show_add_mask_dialog(doc->win ? doc->win : g_app->menubar_win, &fill_mode)) {
           if (!layer_add_mask_ex(doc, doc->layer.active, fill_mode)) {
-            doc_discard_undo(doc);
+            ie_doc_commit_op(doc, false);
             break;
           }
           doc->layer.editing_mask = true;
@@ -809,45 +808,15 @@ void handle_menu_command(uint16_t id) {
             }
           }
         } else {
-          doc_discard_undo(doc);
+          ie_doc_commit_op(doc, false);
           break;
         }
-        invalidate_window(doc->canvas_win);
-        layers_win_refresh();
+        ie_doc_commit_op(doc, true);
       }
       break;
 
-    case ID_LAYER_APPLY_MASK:
-      if (doc) {
-        doc_push_undo(doc);
-        layer_apply_mask(doc, doc->layer.active);
-        if (doc->canvas_win) {
-          canvas_win_state_t *state = (canvas_win_state_t *)doc->canvas_win->userdata;
-          if (state) {
-            canvas_win_update_status(doc->canvas_win, state->hover.x, state->hover.y,
-                                     state->hover_valid);
-          }
-        }
-        invalidate_window(doc->canvas_win);
-        layers_win_refresh();
-      }
-      break;
-
-    case ID_LAYER_REMOVE_MASK:
-      if (doc) {
-        doc_push_undo(doc);
-        layer_remove_mask(doc, doc->layer.active);
-        if (doc->canvas_win) {
-          canvas_win_state_t *state = (canvas_win_state_t *)doc->canvas_win->userdata;
-          if (state) {
-            canvas_win_update_status(doc->canvas_win, state->hover.x, state->hover.y,
-                                     state->hover_valid);
-          }
-        }
-        invalidate_window(doc->canvas_win);
-        layers_win_refresh();
-      }
-      break;
+    case ID_LAYER_APPLY_MASK:  cmd_layer_apply_mask(doc);  break;
+    case ID_LAYER_REMOVE_MASK: cmd_layer_remove_mask(doc); break;
 
     case ID_LAYER_EXTRACT_MASK:
       if (doc) canvas_extract_mask(doc);
@@ -872,74 +841,9 @@ void handle_menu_command(uint16_t id) {
       }
       break;
 
-    case ID_ANIM_NEW_FRAME:
-      if (doc && doc->anim) {
-        anim_stop_playback(doc);
-        // Commit current pixels to the active frame, then insert a new blank
-        // frame after it, then switch to the new frame so the user can keep
-        // drawing immediately on the next frame.
-        if (anim_frame_compress(doc->anim->frames[doc->anim->active_frame],
-                                doc->pixels, doc->canvas_w, doc->canvas_h,
-                                IE_FRAME_FORMAT)) {
-          int new_idx = anim_timeline_insert_frame(doc->anim, doc->anim->active_frame);
-          if (new_idx >= 0 &&
-              anim_timeline_switch_frame(doc->anim, new_idx,
-                                         &doc->pixels,
-                                         doc->canvas_w, doc->canvas_h,
-                                         IE_FRAME_FORMAT)) {
-            if (doc->layer.count > 0)
-              doc->layer.stack[doc->layer.active]->pixels = doc->pixels;
-            doc->canvas_dirty = true;
-            if (doc->canvas_win) invalidate_window(doc->canvas_win);
-          }
-          timeline_win_refresh();
-        }
-      }
-      break;
-
-    case ID_ANIM_DUPLICATE_FRAME:
-      if (doc && doc->anim) {
-        anim_stop_playback(doc);
-        if (anim_frame_compress(doc->anim->frames[doc->anim->active_frame],
-                                doc->pixels, doc->canvas_w, doc->canvas_h,
-                                IE_FRAME_FORMAT)) {
-          int dup_idx = anim_timeline_duplicate_frame(doc->anim,
-                                                       doc->anim->active_frame);
-          if (dup_idx >= 0) {
-            anim_timeline_switch_frame(doc->anim, dup_idx,
-                                       &doc->pixels,
-                                       doc->canvas_w, doc->canvas_h,
-                                       IE_FRAME_FORMAT);
-            if (doc->layer.count > 0)
-              doc->layer.stack[doc->layer.active]->pixels = doc->pixels;
-            doc->canvas_dirty = true;
-            if (doc->canvas_win) invalidate_window(doc->canvas_win);
-            timeline_win_refresh();
-          }
-        }
-      }
-      break;
-
-    case ID_ANIM_DELETE_FRAME:
-      if (doc && doc->anim) {
-        anim_stop_playback(doc);
-        if (anim_timeline_delete_frame(doc->anim, doc->anim->active_frame)) {
-          // Load the new active frame; fall back to blank on expand failure.
-          anim_frame_t *af = doc->anim->frames[doc->anim->active_frame];
-          if (af->data && af->data_size > 0) {
-            if (!anim_frame_expand(af, doc->pixels, doc->canvas_w, doc->canvas_h))
-              memset(doc->pixels, 0, (size_t)doc->canvas_w * doc->canvas_h * 4);
-          } else {
-            memset(doc->pixels, 0, (size_t)doc->canvas_w * doc->canvas_h * 4);
-          }
-          if (doc->layer.count > 0)
-            doc->layer.stack[doc->layer.active]->pixels = doc->pixels;
-          doc->canvas_dirty = true;
-          if (doc->canvas_win) invalidate_window(doc->canvas_win);
-          timeline_win_refresh();
-        }
-      }
-      break;
+    case ID_ANIM_NEW_FRAME:       cmd_frame_add(doc, false); break;
+    case ID_ANIM_DUPLICATE_FRAME: cmd_frame_add(doc, true);  break;
+    case ID_ANIM_DELETE_FRAME:    cmd_frame_delete(doc);     break;
 
     case ID_ANIM_PREV_FRAME:
       if (doc)
@@ -1063,11 +967,8 @@ void handle_menu_command(uint16_t id) {
         if (doc) {
           int filter_idx = (int)id - ID_FILTER_BASE;
           if (filter_idx >= 0 && filter_idx < g_app->filter_count) {
-            doc_push_undo(doc);
-            if (!imageeditor_apply_filter(doc, filter_idx)) {
-              doc_discard_undo(doc);
-              break;
-            }
+            if (!ie_doc_begin_op(doc, "Photo Filter")) break;
+            ie_doc_commit_op(doc, imageeditor_apply_filter(doc, filter_idx));
             doc_update_title(doc);
             if (doc->canvas_win)
               invalidate_window(doc->canvas_win);

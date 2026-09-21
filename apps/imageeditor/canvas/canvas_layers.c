@@ -131,19 +131,18 @@ bool canvas_fill_active_layer(canvas_doc_t *doc, uint32_t fill_color) {
   layer_t *lay = doc->layer.stack[doc->layer.active];
   if (!lay || !lay->pixels) return false;
 
-  if (doc->sel.active) {
-    uint32_t *dst = (uint32_t *)lay->pixels;
-    for (int y = 0; y < doc->canvas_h; y++) {
-      for (int x = 0; x < doc->canvas_w; x++) {
-        if (!canvas_in_selection(doc, x, y)) continue;
-        dst[(size_t)y * (size_t)doc->canvas_w + (size_t)x] = fill_color;
-      }
+#if IMAGEEDITOR_INDEXED
+  uint8_t value = (uint8_t)canvas_nearest_palette_index(doc, fill_color);
+  uint8_t *dst = lay->pixels;
+#else
+  uint32_t value = fill_color;
+  uint32_t *dst = (uint32_t *)lay->pixels;
+#endif
+  for (int y = 0; y < doc->canvas_h; y++) {
+    for (int x = 0; x < doc->canvas_w; x++) {
+      if (doc->sel.active && !canvas_in_selection(doc, x, y)) continue;
+      dst[(size_t)y * doc->canvas_w + x] = value;
     }
-  } else {
-    size_t npx = (size_t)doc->canvas_w * (size_t)doc->canvas_h;
-    uint32_t *dst = (uint32_t *)lay->pixels;
-    for (size_t i = 0; i < npx; i++)
-      dst[i] = fill_color;
   }
 
   doc->pixels = lay->pixels;

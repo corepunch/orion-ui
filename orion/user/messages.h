@@ -361,6 +361,9 @@ typedef struct {
 #define TOOLBAR_COMBOBOX_DEFAULT_WIDTH_MULT  3  // default combobox width = button_size * this multiplier
 #define TOOLBAR_BUTTON_FLAG_ACTIVE   (1u << 0)
 #define TOOLBAR_BUTTON_FLAG_PRESSED  (1u << 1)
+#define TOOLBAR_ITEM_FLAG_DISABLED   (1u << 3)
+// wparam=item ident, lparam=(void *)(intptr_t)enabled
+#define tbEnableItem (evUser + 950)
 #define TOOLBAR_ITEM_FLAG_REORDERABLE (1u << 2) // drop onto another reorderable item
 #define TOOLBAR_STYLE_GRIP           (1u << 1) // draggable grip on a floating toolbar
 #define TOOLBAR_STYLE_COMPACT        (1u << 2) // menu-bar background, icon-only items
