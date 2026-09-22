@@ -264,6 +264,7 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       break;
     case tbEnableItem:
     case tbSetItems:
+    case tbSetColumns:
     case tbSetStrip:
     case tbSetActiveButton:
     case tbSetButtonSize:

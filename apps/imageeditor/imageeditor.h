@@ -34,7 +34,7 @@
 #endif
 #define IMAGEEDITOR_DOCUMENT_STATUS_H (IMAGEEDITOR_DOCUMENT_STATUSBAR ? STATUSBAR_HEIGHT : 0)
 
-// BW mode is just indexed mode with a 2-color palette.
+// Pencil Test uses indexed storage with a compact drawing palette.
 #if IMAGEEDITOR_BW
 #undef IMAGEEDITOR_INDEXED
 #define IMAGEEDITOR_INDEXED 1
@@ -54,7 +54,7 @@ extern int g_bw_retina_scale;
 #endif
 
 // Bytes per pixel in the layer pixel buffer.
-// 32-bit RGBA mode = 4; indexed mode = 1 (palette index); BW mode = 1 (0 or 1).
+// 32-bit RGBA mode = 4; indexed/Pencil Test mode = 1 (palette index).
 #if IMAGEEDITOR_INDEXED || IMAGEEDITOR_BW
 #define DOC_BPP 1
 #else
@@ -125,7 +125,7 @@ extern int g_bw_retina_scale;
 #define TOOL_OPTIONS_PANEL_H   TOOLBAR_BAND_HEIGHT
 #define TOOL_OPTIONS_WIN_W     PALETTE_WIN_W
 #define TOOL_OPTIONS_WIN_H     TOOL_OPTIONS_PANEL_H
-#define TOOL_OPTIONS_WIN_X     (PALETTE_WIN_X + PALETTE_WIN_W + 8)
+#define TOOL_OPTIONS_WIN_X     (PALETTE_WIN_X + APP_TOOLS_W + 8)
 #define TOOL_OPTIONS_WIN_Y     (PALETTE_WIN_Y + 4 * TOOL_PALETTE_BTN_SIZE)
 
 // Brush slider steps (radii: 0, 1, 2, 3, 4).
@@ -206,6 +206,11 @@ extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 // replaced by these inks so nearer ghosts stay darker.
 #define IE_ONION_PREV_COLOR MAKE_COLOR(0x4C, 0x91, 0xF5, 0xFF)  /* #4C91F5 */
 #define IE_ONION_NEXT_COLOR MAKE_COLOR(0xF0, 0x8D, 0xB4, 0xFF)  /* #F08DB4 */
+
+#define IE_PENCIL_COLORS 16
+#define IE_PENCIL_PALETTE_BASE 0x7f00
+extern const uint32_t k_pencil_palette[IE_PENCIL_COLORS];
+extern const char *const k_pencil_color_names[IE_PENCIL_COLORS];
 
 // ============================================================
 // Types
@@ -965,6 +970,7 @@ void cmd_frame_move(canvas_doc_t *doc, int from, int to);
 
 // Edit commands
 void cmd_undo(canvas_doc_t *doc);
+bool cmd_pencil_color(canvas_doc_t *doc, int swatch);
 void cmd_redo(canvas_doc_t *doc);
 void cmd_cut(canvas_doc_t *doc);
 void cmd_copy(canvas_doc_t *doc);

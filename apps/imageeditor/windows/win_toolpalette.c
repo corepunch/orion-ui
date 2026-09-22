@@ -4,6 +4,15 @@
 #define ID_TOOL_SWATCH 0x7ffe
 
 static const toolbar_item_t k_tools[] = {
+#if IMAGEEDITOR_BW
+  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_BRUSH, .icon = "ie-pencil", .tooltip = "Pencil / Brush"},
+  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_ERASER, .icon = "ie-eraser", .tooltip = "Eraser"},
+  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_FILL, .icon = "ie-fill", .tooltip = "Fill"},
+  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_EYEDROPPER, .icon = "ie-eyedropper", .tooltip = "Eyedropper"},
+  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_SELECT, .icon = "ie-select", .tooltip = "Select"},
+  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_MOVE, .icon = "ie-move", .tooltip = "Move"},
+  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_HAND, .icon = "ie-hand", .tooltip = "Hand"},
+#else
   {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_SELECT, .icon = "ie-select", .tooltip = "Select"},
   {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_MOVE, .icon = "ie-move", .tooltip = "Move"},
   {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_MAGIC_WAND, .icon = "ie-magic-wand", .tooltip = "Magic Wand"},
@@ -19,8 +28,27 @@ static const toolbar_item_t k_tools[] = {
   {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_TEXT, .icon = "ie-text", .tooltip = "Text"},
   {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_RECT, .icon = "ie-rect", .tooltip = "Shapes"},
   {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_MAGNIFIER, .icon = "ie-zoom-out", .tooltip = "Magnifier"},
+#endif
   {.type = TOOLBAR_ITEM_CUSTOM, .ident = ID_TOOL_SWATCH, .tooltip = "Foreground / background colors"},
 };
+
+#if IMAGEEDITOR_BW
+static void pencil_palette_draw(int swatch, const toolbar_draw_item_t *draw) {
+  uint32_t color = k_pencil_palette[swatch];
+  bool selected = g_app && g_app->fg_color == color;
+  irect16_t outer = rect_inset(draw->rect, 2);
+  uint32_t border = get_sys_color(selected ? brAccent : brDarkEdge);
+  if (!selected && (draw->state & (CTRL_HOVER | CTRL_PRESSED)))
+    border = get_sys_color(brTextNormal);
+  fill_rounded_rect(border, outer, 5);
+  fill_rounded_rect(color, rect_inset(outer, selected ? 3 : 1), 3);
+  if (selected) {
+    uint32_t mark = COLOR_R(color) * 299 + COLOR_G(color) * 587 + COLOR_B(color) * 114 > 140000
+                    ? MAKE_COLOR(24, 24, 32, 255) : MAKE_COLOR(255, 255, 255, 255);
+    fill_rounded_rect(mark, rect_center(outer, 6, 6), 3);
+  }
+}
+#endif
 
 static void palette_draw_swatches(irect16_t sw) {
   irect16_t inner_box = rect_inset(sw, 2);
@@ -78,13 +106,32 @@ static void swatch_edit_fg(window_t *owner) {
 result_t win_tool_palette_proc(window_t *win, uint32_t msg,
                                uint32_t wparam, void *lparam) {
   switch (msg) {
-    case evCreate:
+    case evCreate: {
       send_message(win, tbSetOrientation, TOOLBAR_VERTICAL, NULL);
       send_message(win, tbSetButtonSize, TOOL_PALETTE_BTN_SIZE, NULL);
+#if IMAGEEDITOR_BW
+      toolbar_item_t items[ARRAY_LEN(k_tools) + 1 + IE_PENCIL_COLORS];
+      memcpy(items, k_tools, sizeof(k_tools));
+      int count = ARRAY_LEN(k_tools);
+      items[count++] = (toolbar_item_t){.type = TOOLBAR_ITEM_SEPARATOR};
+      for (int i = 0; i < IE_PENCIL_COLORS; i++)
+        items[count++] = (toolbar_item_t){.type = TOOLBAR_ITEM_CUSTOM,
+          .ident = IE_PENCIL_PALETTE_BASE + i, .tooltip = k_pencil_color_names[i]};
+      send_message(win, tbSetColumns, 2, NULL);
+      send_message(win, tbSetItems, count, items);
+#else
       send_message(win, tbSetItems, ARRAY_LEN(k_tools), (void *)k_tools);
+#endif
       send_message(win, tbSetActiveButton, g_app ? imageeditor_tool_group(g_app->current_tool) : ID_TOOL_SELECT, NULL);
       return true;
+    }
     case tbDrawItem:
+#if IMAGEEDITOR_BW
+      if (wparam >= IE_PENCIL_PALETTE_BASE && wparam < IE_PENCIL_PALETTE_BASE + IE_PENCIL_COLORS && lparam) {
+        pencil_palette_draw(wparam - IE_PENCIL_PALETTE_BASE, lparam);
+        return true;
+      }
+#endif
       if (wparam != ID_TOOL_SWATCH || !lparam) return false;
       palette_draw_swatches(((toolbar_draw_item_t *)lparam)->rect);
       return true;
@@ -92,6 +139,13 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       IE_TRACE("tool click win=%p ident=%u current=%d", (void *)win, wparam,
                g_app ? g_app->current_tool : -1);
       if (!g_app) return true;
+#if IMAGEEDITOR_BW
+      if (wparam >= IE_PENCIL_PALETTE_BASE && wparam < IE_PENCIL_PALETTE_BASE + IE_PENCIL_COLORS) {
+        if (!cmd_pencil_color(g_app->active_doc, wparam - IE_PENCIL_PALETTE_BASE))
+          message_box(win, "This color could not be added to the document palette.", "Color", MB_OK);
+        return true;
+      }
+#endif
       if (wparam == ID_TOOL_SWATCH) {
 #if IMAGEEDITOR_BW
         IE_TRACE("swatch click win=%p swap fg=%08x bg=%08x", (void *)win,

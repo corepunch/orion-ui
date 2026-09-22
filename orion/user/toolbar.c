@@ -102,7 +102,7 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
         h = w;
         w = bsz;
       }
-      if (parent->toolbar_dock == TOOLBAR_DOCK_LEFT && cursor > base_y &&
+      if (tb->columns <= 1 && parent->toolbar_dock == TOOLBAR_DOCK_LEFT && cursor > base_y &&
           cursor + h + base_y > parent->frame.h) {
         x += column_w + TOOLBAR_SPACING;
         cursor = base_y;
@@ -115,6 +115,36 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
     if (tb->item_rects)
       tb->item_rects[i] = (irect16_t){x, y, w, h};
     if (!vertical) x += w + spacing;
+  }
+
+  if (vertical && tb->columns > 1) {
+    int cell_w = bsz;
+    for (int i = 0; i < tb->item_count; i++)
+      cell_w = MAX(cell_w, tb->item_rects[i].w);
+    int grid_w = tb->columns * cell_w + (tb->columns - 1) * spacing;
+    x = padding;
+    cursor = base_y;
+    for (int i = 0; i < tb->item_count;) {
+      int count = 1, row_h = tb->item_rects[i].h;
+      bool buttons = tb->items[i].type == TOOLBAR_ITEM_BUTTON ||
+                     tb->items[i].type == TOOLBAR_ITEM_CUSTOM;
+      while (buttons && count < tb->columns && i + count < tb->item_count &&
+             (tb->items[i + count].type == TOOLBAR_ITEM_BUTTON ||
+              tb->items[i + count].type == TOOLBAR_ITEM_CUSTOM)) {
+        row_h = MAX(row_h, tb->item_rects[i + count].h);
+        count++;
+      }
+      if (parent->toolbar_dock == TOOLBAR_DOCK_LEFT && cursor > base_y &&
+          cursor + row_h + base_y > parent->frame.h) {
+        x += grid_w + spacing;
+        cursor = base_y;
+      }
+      for (int col = 0; col < count; col++)
+        tb->item_rects[i + col] = R(x + col * (cell_w + spacing), cursor,
+                                    buttons ? cell_w : grid_w, row_h);
+      cursor += row_h + spacing;
+      i += count;
+    }
   }
 
   for (window_t *tc = tb->children; tc; tc = tc->next) {
@@ -633,6 +663,23 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
       if (new_btn_size != 0 && new_btn_size < 8) new_btn_size = 8;
       if (old_btn_size != new_btn_size) {
         tb->btn_size = new_btn_size;
+        compute_toolbar_item_rects(win, tb);
+        post_message(win, evRefreshStencil, 0, NULL);
+        invalidate_window(get_root_window(win));
+      }
+      return true;
+    }
+
+    case tbSetColumns: {
+      if (wparam < 1 || wparam > 4) {
+        fprintf(stderr, "[tb] invalid columns win=%u value=%u\n", win->id, wparam);
+        fflush(stderr);
+        return false;
+      }
+      toolbar_state_t *tb = toolbar_ensure_state(win);
+      if (!tb) return false;
+      if (tb->columns != (int)wparam) {
+        tb->columns = (int)wparam;
         compute_toolbar_item_rects(win, tb);
         post_message(win, evRefreshStencil, 0, NULL);
         invalidate_window(get_root_window(win));

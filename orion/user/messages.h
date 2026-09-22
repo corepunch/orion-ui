@@ -364,6 +364,8 @@ typedef struct {
 #define TOOLBAR_ITEM_FLAG_DISABLED   (1u << 3)
 // wparam=item ident, lparam=(void *)(intptr_t)enabled
 #define tbEnableItem (evUser + 950)
+// Vertical toolbar grid (1..4 columns); non-button items occupy a full row.
+#define tbSetColumns (evUser + 951)
 #define TOOLBAR_ITEM_FLAG_REORDERABLE (1u << 2) // drop onto another reorderable item
 #define TOOLBAR_STYLE_GRIP           (1u << 1) // draggable grip on a floating toolbar
 #define TOOLBAR_STYLE_COMPACT        (1u << 2) // menu-bar background, icon-only items

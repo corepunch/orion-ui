@@ -1203,12 +1203,58 @@ static void test_toolbar_disabled_item(void) {
   PASS();
 }
 
+static void test_vertical_grid_columns(void) {
+  TEST("vertical toolbar grids keep rows together, route each cell, and span separators");
+  test_env_init();
+  window_t *win = create_window("Grid", WINDOW_TOOLBAR | WINDOW_NOTITLE,
+                                MAKERECT(0, 0, 160, 200), NULL, click_capture_proc, 0, NULL);
+  ASSERT_NOT_NULL(win);
+  toolbar_item_t items[] = {
+    {.type = TOOLBAR_ITEM_BUTTON, .ident = 1}, {.type = TOOLBAR_ITEM_CUSTOM, .ident = 2},
+    {.type = TOOLBAR_ITEM_SEPARATOR},
+    {.type = TOOLBAR_ITEM_CUSTOM, .ident = 3}, {.type = TOOLBAR_ITEM_CUSTOM, .ident = 4},
+    {.type = TOOLBAR_ITEM_CUSTOM, .ident = 5}, {.type = TOOLBAR_ITEM_CUSTOM, .ident = 6},
+  };
+  send_message(win, tbSetOrientation, TOOLBAR_VERTICAL, NULL);
+  send_message(win, tbSetColumns, 2, NULL);
+  send_message(win, tbSetItems, ARRAY_LEN(items), items);
+  toolbar_state_t *tb = toolbar_get_state(win);
+  ASSERT_EQUAL(tb->item_rects[0].y, tb->item_rects[1].y);
+  ASSERT_TRUE(tb->item_rects[0].x + tb->item_rects[0].w < tb->item_rects[1].x);
+  ASSERT_EQUAL(tb->item_rects[2].w, 2 * TB_SPACING + TOOLBAR_SPACING);
+  ASSERT_TRUE(tb->item_rects[3].y > tb->item_rects[2].y);
+  ASSERT_EQUAL(tb->item_rects[3].y, tb->item_rects[4].y);
+  for (int i = 0; i < ARRAY_LEN(items); i++) {
+    if (items[i].type == TOOLBAR_ITEM_SEPARATOR) continue;
+    irect16_t r = tb->item_rects[i];
+    uint32_t point = MAKEDWORD(r.x + r.w / 2, r.y + r.h / 2);
+    g_last_click_ident = -1;
+    send_message(win->toolbar, evLeftButtonDown, point, NULL);
+    send_message(win->toolbar, evLeftButtonUp, point, NULL);
+    ASSERT_EQUAL(g_last_click_ident, items[i].ident);
+  }
+  send_message(win, tbSetColumns, 4, NULL);
+  ASSERT_EQUAL(tb->item_rects[3].y, tb->item_rects[6].y);
+  send_message(win, tbSetColumns, 0, NULL);
+  ASSERT_EQUAL(tb->columns, 4);
+  win->toolbar_dock = TOOLBAR_DOCK_LEFT;
+  win->frame.h = 2 * TB_SPACING;
+  send_message(win, tbSetColumns, 2, NULL);
+  ASSERT_EQUAL(tb->item_rects[3].y, tb->item_rects[4].y);
+  ASSERT_TRUE(tb->item_rects[3].x > tb->item_rects[0].x);
+  ASSERT_EQUAL(tb->item_rects[5].y, tb->item_rects[6].y);
+  destroy_window(win);
+  test_env_shutdown();
+  PASS();
+}
+
 int main(int argc, char *argv[]) {
     (void)argc;
     (void)argv;
     TEST_START("Toolbar child-window tests");
 
     test_toolbar_reorderable_items();
+    test_vertical_grid_columns();
     test_toolbar_embedded_slider_drag();
     test_toolbar_vertical_custom_item();
     test_toolbar_set_items_creates_children();

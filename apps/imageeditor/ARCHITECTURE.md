@@ -99,6 +99,16 @@ build/bin/test_history_indexed_test`, then run each executable.
 
 ## Pencil Test animation files
 
+Pencil Test exposes 16 drawing colors in a two-column docked toolbar. Index 0
+remains transparent, with the original ink and paper at indices 1 and 2. The
+remaining default colors occupy indices 3–16; the indexed file format is still
+capable of retaining larger imported palettes. Selecting a missing swatch in an
+older document adds it as an undoable palette command, using only an empty slot
+unreferenced by any working layer or stored frame. Existing colors are preserved.
+The toolbar keeps pencil/brush, eraser, fill, eyedropper, select, move, hand, and
+foreground/background swap. Other tools remain accessible through menus.
+The floating options palette stays one column wide beside the docked toolbar.
+
 File > Save / Save As writes `.flc`; Open accepts 8-bit FLC and legacy FLI as
 well as PCX/BMP still images. Saving an imported still or FLI first asks for an
 FLC filename. GIF/APNG/sprite-sheet exports remain separate commands. The RGBA

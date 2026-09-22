@@ -47,7 +47,8 @@ static void test_ipad_options_keep_toolbar_geometry(void) {
   canvas_doc_t *doc = create_document(NULL, w, h);
   ASSERT_NOT_NULL(doc);
   window_t *options = g_app->tool_options_win;
-  ASSERT_EQUAL(options->frame.w, g_app->tool_win->frame.w);
+  ASSERT_EQUAL(options->frame.w, PALETTE_WIN_W);
+  ASSERT_TRUE(options->frame.w < g_app->tool_win->frame.w);
   ASSERT_EQUAL(options->frame.x, TOOL_OPTIONS_WIN_X);
   ASSERT_EQUAL(options->frame.y, TOOL_OPTIONS_WIN_Y);
   move_window(options, 100, 160);
@@ -164,7 +165,7 @@ static void test_swatch_tap_swaps_colors(void) {
   ASSERT_NOT_NULL(tb);
   int swatch = -1;
   for (int i = 0; i < tb->item_count; i++)
-    if (tb->items[i].type == TOOLBAR_ITEM_CUSTOM) swatch = i;
+    if (tb->items[i].type == TOOLBAR_ITEM_CUSTOM && tb->items[i].ident >= IE_PENCIL_PALETTE_BASE + IE_PENCIL_COLORS) swatch = i;
   ASSERT_TRUE(swatch >= 0);
   irect16_t r = tb->item_rects[swatch];
   uint32_t pt = MAKEDWORD(r.x + r.w / 2, r.y + r.h / 2);
@@ -176,6 +177,79 @@ static void test_swatch_tap_swaps_colors(void) {
   PASS();
 }
 
+static void test_coloring_palette(void) {
+  TEST("two-column palette selects all 16 colors and drawing survives frame switches and undo");
+  penciltest_setup();
+  canvas_doc_t *doc = create_document(NULL, 64, 64);
+  ASSERT_NOT_NULL(doc);
+  ASSERT_EQUAL(doc->ipal.count, IE_PENCIL_COLORS + 1);
+  toolbar_state_t *tb = window_toolbar_state(g_app->tool_win);
+  ASSERT_EQUAL(tb->columns, 2);
+  int found = 0;
+  irect16_t previous = {0};
+  for (int i = 0; i < tb->item_count; i++) {
+    ASSERT_TRUE(tb->items[i].ident != ID_TOOL_TEXT && tb->items[i].ident != ID_TOOL_CROP &&
+                tb->items[i].ident != ID_TOOL_MAGIC_WAND && tb->items[i].ident != ID_TOOL_MAGNIFIER);
+    int swatch = tb->items[i].ident - IE_PENCIL_PALETTE_BASE;
+    if (swatch < 0 || swatch >= IE_PENCIL_COLORS) continue;
+    irect16_t r = tb->item_rects[i];
+    ASSERT_TRUE(r.x + r.w <= g_app->tool_win->frame.w);
+    ASSERT_TRUE(r.y + r.h <= g_app->tool_win->frame.h);
+    if (swatch % 2) {
+      ASSERT_EQUAL(r.y, previous.y);
+      ASSERT_TRUE(r.x > previous.x + previous.w);
+    }
+    uint32_t point = MAKEDWORD(r.x + r.w / 2, r.y + r.h / 2);
+    send_message(g_app->tool_win->toolbar, evLeftButtonDown, point, NULL);
+    send_message(g_app->tool_win->toolbar, evLeftButtonUp, point, NULL);
+    ASSERT_EQUAL(g_app->fg_color, k_pencil_palette[swatch]);
+    ASSERT_EQUAL(doc->ipal.entries[g_app->fg_palette_idx], k_pencil_palette[swatch]);
+    ASSERT_TRUE(ie_doc_begin_op(doc, "Color Stroke"));
+    canvas_set_pixel(doc, swatch, 0, g_app->fg_color);
+    ie_doc_commit_op(doc, true);
+    previous = r;
+    found++;
+  }
+  ASSERT_EQUAL(found, IE_PENCIL_COLORS);
+  cmd_frame_add(doc, false);
+  ASSERT_TRUE(cmd_frame_select(doc, 0));
+  for (int i = 0; i < IE_PENCIL_COLORS; i++) ASSERT_EQUAL(canvas_get_pixel(doc, i, 0), k_pencil_palette[i]);
+  ASSERT_TRUE(cmd_pencil_color(doc, 4));
+  ASSERT_TRUE(ie_doc_begin_op(doc, "Color Fill"));
+  canvas_flood_fill(doc, 0, 1, g_app->fg_color);
+  ie_doc_commit_op(doc, true);
+  ASSERT_EQUAL(canvas_get_pixel(doc, 0, 1), k_pencil_palette[4]);
+  cmd_undo(doc);
+  ASSERT_EQUAL(COLOR_A(canvas_get_pixel(doc, 0, 1)), 0);
+  cmd_redo(doc);
+  ASSERT_EQUAL(canvas_get_pixel(doc, 0, 1), k_pencil_palette[4]);
+  penciltest_teardown();
+  PASS();
+}
+
+static void test_legacy_palette_extension(void) {
+  TEST("legacy palette gains colors without recoloring stored frames; extension is undoable");
+  penciltest_setup();
+  canvas_doc_t *doc = create_document(NULL, 8, 8);
+  ASSERT_NOT_NULL(doc);
+  memset(doc->ipal.entries + 3, 0, 253 * sizeof(uint32_t));
+  doc->ipal.count = 256; // FLC reader retains the full palette, including unused entries.
+  doc->pixels[0] = 3;
+  cmd_frame_add(doc, false);
+  ASSERT_TRUE(cmd_pencil_color(doc, 4));
+  ASSERT_EQUAL(g_app->fg_palette_idx, 4); // Slot 3 is still referenced by frame 0.
+  ASSERT_EQUAL(doc->ipal.entries[3], 0);
+  ASSERT_EQUAL(doc->ipal.entries[4], k_pencil_palette[4]);
+  cmd_undo(doc);
+  ASSERT_EQUAL(doc->ipal.entries[4], 0);
+  cmd_redo(doc);
+  ASSERT_EQUAL(doc->ipal.entries[4], k_pencil_palette[4]);
+  ASSERT_TRUE(cmd_frame_select(doc, 0));
+  ASSERT_EQUAL(doc->pixels[0], 3);
+  penciltest_teardown();
+  PASS();
+}
+
 int main(void) {
   TEST_START("Pencil Test iPad layout");
   test_ipad_options_keep_toolbar_geometry();
@@ -183,5 +257,7 @@ int main(void) {
   test_pencil_paper_and_ink();
   test_onion_tint_is_not_gray();
   test_swatch_tap_swaps_colors();
+  test_coloring_palette();
+  test_legacy_palette_extension();
   TEST_END();
 }

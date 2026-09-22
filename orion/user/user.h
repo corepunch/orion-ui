@@ -130,6 +130,7 @@ typedef struct toolbar_state_s {
   bitmap_strip_t  strip;
   uint32_t        strip_tex;    // GL texture owned here; freed on toolbar destroy
   int             btn_size;     // 0 = TB_SPACING default; >0 = custom square size in px
+  int             columns;      // vertical grid; 0/1 = single column
   toolbar_orientation_t orientation;
   uint32_t        style;        // TOOLBAR_STYLE_* flags
 } toolbar_state_t;

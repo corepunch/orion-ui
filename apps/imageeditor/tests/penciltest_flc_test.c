@@ -191,6 +191,30 @@ static void flc_reject_corruption(void) {
   PASS();
 }
 
+static void flc_color_palette_roundtrip(void) {
+  TEST("16 coloring swatches retain exact colors through FLC save and reopen");
+  canvas_doc_t *doc = create_document(NULL, IE_PENCIL_COLORS, 2);
+  ASSERT_NOT_NULL(doc);
+  for (int i = 0; i < IE_PENCIL_COLORS; i++) {
+    ASSERT_TRUE(cmd_pencil_color(doc, i));
+    canvas_set_pixel(doc, i, 0, g_app->fg_color);
+  }
+  cmd_frame_add(doc, true);
+  ASSERT_TRUE(cmd_pencil_color(doc, 4));
+  canvas_set_pixel(doc, 0, 1, g_app->fg_color);
+  char path[600]; snprintf(path, sizeof(path), "%s/colors.flc", flc_test_dir);
+  ASSERT_TRUE(image_io_save(path, doc));
+  ASSERT_TRUE(imageeditor_open_file_path(path));
+  canvas_doc_t *again = g_app->active_doc;
+  for (int frame = 0; frame < 2; frame++) {
+    ASSERT_TRUE(cmd_frame_select(again, frame));
+    for (int i = 0; i < IE_PENCIL_COLORS; i++) ASSERT_EQUAL(canvas_get_pixel(again, i, 0), k_pencil_palette[i]);
+  }
+  ASSERT_EQUAL(canvas_get_pixel(again, 0, 1), k_pencil_palette[4]);
+  close_document(again); close_document(doc); remove(path);
+  PASS();
+}
+
 int main(void) {
   TEST_START("Penciltest FLC persistence");
   snprintf(flc_test_dir, sizeof(flc_test_dir), "%s/orion-flc-XXXXXX", getenv("TMPDIR") ? getenv("TMPDIR") : "/tmp");
@@ -198,6 +222,7 @@ int main(void) {
   snprintf(flc_test_path, sizeof(flc_test_path), "%s/animation.flc", flc_test_dir);
   test_env_init(); g_app = calloc(1, sizeof(*g_app));
   flc_roundtrip(); flc_menu_and_retina(); flc_save_as(); flc_external_compression(); flc_reject_corruption();
+  flc_color_palette_roundtrip();
   while (g_app->docs) close_document(g_app->docs);
   free(g_app); g_app = NULL; test_env_shutdown();
   if (getenv("FLC_TEST_KEEP_FILES")) printf("FLC fixture: %s\n", flc_test_path);
