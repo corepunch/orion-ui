@@ -46,8 +46,11 @@ Each display callback drains queued input, including wakeup sentinels, before
 painting once. Window dragging and resizing defer painting to that frame;
 all coalesced touch samples remain available for drawing strokes.
 
-Open uses the system document picker to import files. Save uses Orion's file
-picker, starting in the app's writable Documents directory. Documents are
+Open uses the native Files picker starting in the app's Documents directory.
+Files already there open directly; external files are copied into Documents with
+a unique name so subsequent saves use permanent app-owned storage. Save / Save As
+uses a native filename prompt and confirms replacement of existing files.
+Pencil Test defaults to `.flc`; Image Editor defaults to `.png`. Documents are
 visible in Files and through file sharing. Framework and app resources are
 bundled under `share/`; dynamic editor components are linked and registered
 statically on iOS.

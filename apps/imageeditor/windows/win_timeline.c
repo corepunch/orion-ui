@@ -355,6 +355,7 @@ void anim_tick(canvas_doc_t *doc) {
   if (!doc || !doc->anim) return;
   anim_timeline_t *tl = doc->anim;
   if (!tl->playing || tl->frame_count < 1) return;
+  int old_delay = tl->frames[tl->active_frame]->delay_ms;
 
   int next = tl->active_frame + 1;
   if (next >= tl->frame_count) {
@@ -371,6 +372,15 @@ void anim_tick(canvas_doc_t *doc) {
     if (doc->layer.count > 0)
       doc->layer.stack[doc->layer.active]->pixels = doc->pixels;
     doc->canvas_dirty = true;
+    int delay = tl->frames[next]->delay_ms;
+    if (delay != old_delay && delay > 0 && g_app && g_app->anim_timer_id && g_app->timeline_win) {
+      axCancelTimer(g_app->anim_timer_id);
+      g_app->anim_timer_id = axSetTimer(g_app->timeline_win, delay, NULL, (bool_t)1);
+      if (!g_app->anim_timer_id) {
+        IE_TRACE("playback timer failed doc=%p frame=%d delay=%d", (void *)doc, next, delay);
+        anim_stop_playback(doc);
+      }
+    }
     if (doc->canvas_win) invalidate_window(doc->canvas_win);
     timeline_win_refresh();
   }

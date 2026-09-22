@@ -195,12 +195,20 @@ bool doc_confirm_close(canvas_doc_t *doc, window_t *parent_win) {
 }
 
 canvas_doc_t *create_document(const char *filename, int w, int h) {
+  int scale = MAX(1, g_bw_retina_scale);
+  if (w <= 0 || h <= 0 || w > 16384 / scale || h > 16384 / scale) return NULL;
+  return create_document_pixels(filename, w * scale, h * scale);
+}
+
+canvas_doc_t *create_document_pixels(const char *filename, int w, int h) {
   if (!g_app) return NULL;
 
-  if (w <= 0 || h <= 0) return NULL;
+  if (w <= 0 || h <= 0 || w > 16384 || h > 16384) return NULL;
 
-  int buf_w = w * g_bw_retina_scale;
-  int buf_h = h * g_bw_retina_scale;
+  int buf_w = w;
+  int buf_h = h;
+  w = MAX(1, w / MAX(1, g_bw_retina_scale));
+  h = MAX(1, h / MAX(1, g_bw_retina_scale));
 
   canvas_doc_t *doc = calloc(1, sizeof(canvas_doc_t));
   if (!doc) return NULL;

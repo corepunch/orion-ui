@@ -329,22 +329,39 @@ void window_menu_rebuild(void) {
 bool imageeditor_open_file_path(const char *path) {
   if (!g_app || !path || !path[0]) return false;
 
+  IE_TRACE("open path=%s", path);
   int img_w = 0, img_h = 0;
 #if IMAGEEDITOR_INDEXED
   uint32_t pal[256] = {0};
+  uint32_t background = IE_PAPER_COLOR;
+  bool show_bg = true;
+  anim_timeline_t *loaded_anim = NULL;
   int pal_count = 0;
-  uint8_t *px = image_io_load(path, &img_w, &img_h, pal, &pal_count);
+  uint8_t *px = NULL;
+  if (flc_is_file(path)) {
+    loaded_anim = flc_load(path, &img_w, &img_h, pal, &background, &show_bg);
+    if (!loaded_anim) return false;
+    pal_count = 256;
+    px = malloc((size_t)img_w * img_h);
+    if (px) memcpy(px, loaded_anim->frames[0]->data, (size_t)img_w * img_h);
+  } else px = image_io_load(path, &img_w, &img_h, pal, &pal_count);
 #else
   uint8_t *px = image_io_load(path, &img_w, &img_h, NULL, NULL);
 #endif
   if (!px || img_w <= 0 || img_h <= 0) {
     free(px);
+#if IMAGEEDITOR_INDEXED
+    anim_timeline_free(loaded_anim);
+#endif
     return false;
   }
 
-  canvas_doc_t *ndoc = create_document(path, img_w, img_h);
+  canvas_doc_t *ndoc = create_document_pixels(path, img_w, img_h);
   if (!ndoc) {
     free(px);
+#if IMAGEEDITOR_INDEXED
+    anim_timeline_free(loaded_anim);
+#endif
     return false;
   }
 
@@ -361,6 +378,12 @@ bool imageeditor_open_file_path(const char *path) {
   if (pal_count > 0) {
     memcpy(ndoc->ipal.entries, pal, (size_t)pal_count * sizeof(uint32_t));
     ndoc->ipal.count = pal_count;
+  }
+  if (loaded_anim) {
+    anim_timeline_free(ndoc->anim);
+    ndoc->anim = loaded_anim;
+    ndoc->background.color = background;
+    ndoc->background.show = show_bg;
   }
 #endif
 
@@ -392,6 +415,21 @@ bool imageeditor_open_file_path(const char *path) {
   resize_window(ndoc->win, wrapped_frame_w, wrapped_frame_h);
   canvas_win_set_scale(ndoc->canvas_win, open_scale);
   invalidate_window(ndoc->canvas_win);
+  timeline_win_refresh();
+  return true;
+}
+
+static bool save_document_file(canvas_doc_t *doc, const char *path) {
+  anim_stop_playback(doc);
+  if (!image_io_save(path, doc)) {
+    IE_TRACE("save failed doc=%p path=%s", (void *)doc, path);
+    message_box(doc->win, "Could not save the document. Check the filename, available space,\nand that no drawing operation is in progress.", "Save failed", MB_OK);
+    return false;
+  }
+  if (path != doc->filename) snprintf(doc->filename, sizeof(doc->filename), "%s", path);
+  doc->modified = false;
+  doc_update_title(doc);
+  send_message(doc->win, evStatusBar, 0, (void *)"Saved");
   return true;
 }
 
@@ -414,7 +452,8 @@ void handle_menu_command(uint16_t id) {
     case ID_FILE_OPEN: {
       char path[512] = {0};
       if (show_file_picker(g_app->menubar_win, false, path, sizeof(path))) {
-        imageeditor_open_file_path(path);
+        if (!imageeditor_open_file_path(path))
+          message_box(g_app->menubar_win, "Could not open this file. It may be damaged or use an unsupported format.", "Open failed", MB_OK);
       }
       break;
     }
@@ -422,29 +461,27 @@ void handle_menu_command(uint16_t id) {
     case ID_FILE_SAVE:
       if (!doc) break;
       if (!doc->filename[0]) goto do_save_as;
-      if (image_io_save(doc->filename, doc)) {
-        doc->modified = false;
-        doc_update_title(doc);
-        send_message(doc->win, evStatusBar, 0, (void *)"Saved");
-      } else {
-        send_message(doc->win, evStatusBar, 0, (void *)"Save failed");
-      }
+#if IMAGEEDITOR_BW
+      const char *ext = strrchr(doc->filename, '.');
+      if (!ext || strcasecmp(ext, ".flc")) goto do_save_as;
+#endif
+      save_document_file(doc, doc->filename);
       break;
 
     do_save_as:
     case ID_FILE_SAVEAS: {
       if (!doc) break;
-      char path[512] = {0};
+      char path[512];
+      snprintf(path, sizeof(path), "%s", doc->filename);
+#if IMAGEEDITOR_BW
+      char *ext = strrchr(path, '.'), *slash = strrchr(path, '/');
+      if (ext && (!slash || ext > slash)) *ext = 0;
+      if (!path[0]) snprintf(path, sizeof(path), "Untitled");
+      if (strlen(path) + 4 >= sizeof(path)) break;
+      strcat(path, ".flc");
+#endif
       if (show_file_picker(g_app->menubar_win, true, path, sizeof(path))) {
-        strncpy(doc->filename, path, sizeof(doc->filename)-1);
-        doc->filename[sizeof(doc->filename)-1] = '\0';
-        if (image_io_save(path, doc)) {
-          doc->modified = false;
-          doc_update_title(doc);
-          send_message(doc->win, evStatusBar, 0, path);
-        } else {
-          send_message(doc->win, evStatusBar, 0, (void *)"Save failed");
-        }
+        save_document_file(doc, path);
       }
       break;
     }
@@ -867,6 +904,8 @@ void handle_menu_command(uint16_t id) {
         uint32_t interval = (doc->anim->fps > 0)
                             ? (uint32_t)(1000 / doc->anim->fps)
                             : kDefaultFrameIntervalMs;
+        int delay = doc->anim->frames[doc->anim->active_frame]->delay_ms;
+        if (delay > 0) interval = (uint32_t)delay;
         if (g_app->anim_timer_id)
           axCancelTimer(g_app->anim_timer_id);
         g_app->anim_timer_id = axSetTimer(
@@ -894,8 +933,10 @@ void handle_menu_command(uint16_t id) {
 
     case ID_ANIM_LOOP:
       if (doc && doc->anim) {
+        anim_stop_playback(doc);
+        if (!ie_doc_begin_op(doc, "Loop Playback")) break;
         doc->anim->loop = !doc->anim->loop;
-        timeline_win_refresh();
+        ie_doc_commit_op(doc, true);
       }
       break;
 
@@ -918,7 +959,7 @@ void handle_menu_command(uint16_t id) {
 
     case ID_ANIM_EXPORT_GIF: {
       if (!doc || !doc->anim) break;
-      char path[512] = {0};
+      char path[512] = "Untitled.gif";
       if (show_file_picker(g_app->menubar_win, true, path, sizeof(path))) {
         if (anim_export_gif(doc, path))
           send_message(doc->win, evStatusBar, 0, (void *)"GIF exported");
@@ -930,7 +971,7 @@ void handle_menu_command(uint16_t id) {
 
     case ID_ANIM_EXPORT_APNG: {
       if (!doc || !doc->anim) break;
-      char path[512] = {0};
+      char path[512] = "Untitled.png";
       if (show_file_picker(g_app->menubar_win, true, path, sizeof(path))) {
         if (anim_export_apng(doc, path))
           send_message(doc->win, evStatusBar, 0, (void *)"APNG exported");
@@ -942,7 +983,7 @@ void handle_menu_command(uint16_t id) {
 
     case ID_ANIM_EXPORT_SPRITESHEET: {
       if (!doc || !doc->anim) break;
-      char path[512] = {0};
+      char path[512] = "Untitled.png";
       if (show_file_picker(g_app->menubar_win, true, path, sizeof(path))) {
         if (anim_export_spritesheet(doc, path))
           send_message(doc->win, evStatusBar, 0, (void *)"Sprite sheet exported");

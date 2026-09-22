@@ -909,7 +909,7 @@ static bool fp_run(openfilename_t *ofn, bool save_mode,
 
 bool get_open_filename(openfilename_t *ofn) {
 #ifdef AX_PLATFORM_IOS
-  if (!ofn) return false;
+  if (!ofn) { fprintf(stderr, "[fp] open rejected: null request\n"); fflush(stderr); return false; }
   AXopenfilename native = { .lpstrFile = ofn->lpstrFile, .nMaxFile = ofn->nMaxFile,
                            .lpstrFilter = ofn->lpstrFilter };
   return axGetOpenFileName(&native);
@@ -919,7 +919,14 @@ bool get_open_filename(openfilename_t *ofn) {
 }
 
 bool get_save_filename(openfilename_t *ofn) {
+#ifdef AX_PLATFORM_IOS
+  if (!ofn) { fprintf(stderr, "[fp] save rejected: null request\n"); fflush(stderr); return false; }
+  AXopenfilename native = { .lpstrFile = ofn->lpstrFile, .nMaxFile = ofn->nMaxFile,
+                           .lpstrFilter = ofn->lpstrFilter };
+  return axGetSaveFileName(&native);
+#else
   return fp_run(ofn, true, "Save File");
+#endif
 }
 
 bool get_folder_name(openfilename_t *ofn) {

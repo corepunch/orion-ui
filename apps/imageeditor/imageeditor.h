@@ -639,7 +639,7 @@ bool doc_redo(canvas_doc_t *doc);
 void doc_free_undo(canvas_doc_t *doc);
 
 // Unified image I/O (image_io.c).
-// Indexed mode: PCX and BMP 8-bit indexed.
+// Indexed mode: PCX and BMP still images; FLC timeline saving (default in BW).
 // 32-bit mode:  PNG save; any format load via user/image.h.
 //
 // image_io_load: returns a malloc'd pixel buffer (1 bpp in indexed mode,
@@ -656,6 +656,7 @@ bool show_file_picker(window_t *parent, bool save_mode, char *out_path, size_t o
 
 // Forward declarations for document management
 canvas_doc_t *create_document(const char *filename, int w, int h);
+canvas_doc_t *create_document_pixels(const char *filename, int w, int h);
 void close_document(canvas_doc_t *doc);
 void doc_update_title(canvas_doc_t *doc);
 // Show a "Unsaved Changes" dialog when doc->modified is set.
@@ -878,6 +879,13 @@ void swap_foreground_background_colors(void);
 // ============================================================
 
 #include "anim/anim.h"
+
+#if IMAGEEDITOR_INDEXED
+bool flc_is_file(const char *path);
+bool flc_save(const char *path, const canvas_doc_t *doc);
+anim_timeline_t *flc_load(const char *path, int *w, int *h, uint32_t palette[256],
+                          uint32_t *background, bool *show_bg);
+#endif
 
 // Floating frame strip geometry.
 #define TIMELINE_THUMB_W        TB_SPACING
