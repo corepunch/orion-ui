@@ -98,6 +98,35 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
     }
 
     if (vertical) {
+      bool small = tb->columns <= 1 && (item->flags & TOOLBAR_ITEM_FLAG_SMALL) != 0 &&
+                   (item->type == TOOLBAR_ITEM_BUTTON || item->type == TOOLBAR_ITEM_CUSTOM);
+      if (small) {
+        // Half-size cell: two minis + one gap fill a normal button cell, so a
+        // 2x2 block takes one normal row (within 1px when bsz is odd).
+        int mini = (bsz - TOOLBAR_SPACING) / 2;
+        if (mini < 1) mini = 1;
+        int pair = 1;
+        if (i + 1 < tb->item_count) {
+          toolbar_item_t *next = &tb->items[i + 1];
+          if ((next->flags & TOOLBAR_ITEM_FLAG_SMALL) != 0 &&
+              (next->type == TOOLBAR_ITEM_BUTTON || next->type == TOOLBAR_ITEM_CUSTOM))
+            pair = 2;
+        }
+        if (parent->toolbar_dock == TOOLBAR_DOCK_LEFT && cursor > base_y &&
+            cursor + mini + base_y > parent->frame.h) {
+          x += column_w + TOOLBAR_SPACING;
+          cursor = base_y;
+          column_w = 0;
+        }
+        column_w = MAX(column_w, pair == 2 ? mini * 2 + TOOLBAR_SPACING : mini);
+        for (int col = 0; col < pair; col++)
+          if (tb->item_rects)
+            tb->item_rects[i + col] = (irect16_t){x + col * (mini + TOOLBAR_SPACING),
+                                                  y + cursor - base_y, mini, mini};
+        cursor += mini + TOOLBAR_SPACING;
+        i += pair - 1;
+        continue;
+      }
       if (item->type == TOOLBAR_ITEM_SEPARATOR || item->type == TOOLBAR_ITEM_SPACER) {
         h = w;
         w = bsz;

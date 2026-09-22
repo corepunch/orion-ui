@@ -1248,6 +1248,54 @@ static void test_vertical_grid_columns(void) {
   PASS();
 }
 
+static void test_vertical_small_items_pack(void) {
+  TEST("single-column vertical toolbar packs SMALL items two per row in one cell");
+  test_env_init();
+  window_t *win = create_window("Small", WINDOW_TOOLBAR | WINDOW_NOTITLE,
+                                MAKERECT(0, 0, 160, 400), NULL, click_capture_proc, 0, NULL);
+  ASSERT_NOT_NULL(win);
+  toolbar_item_t items[] = {
+    {.type = TOOLBAR_ITEM_CUSTOM, .ident = 1, .flags = TOOLBAR_ITEM_FLAG_SMALL},
+    {.type = TOOLBAR_ITEM_CUSTOM, .ident = 2, .flags = TOOLBAR_ITEM_FLAG_SMALL},
+    {.type = TOOLBAR_ITEM_CUSTOM, .ident = 3, .flags = TOOLBAR_ITEM_FLAG_SMALL},
+    {.type = TOOLBAR_ITEM_CUSTOM, .ident = 4, .flags = TOOLBAR_ITEM_FLAG_SMALL},
+    {.type = TOOLBAR_ITEM_BUTTON, .ident = 5},
+    {.type = TOOLBAR_ITEM_CUSTOM, .ident = 6, .flags = TOOLBAR_ITEM_FLAG_SMALL},
+    {.type = TOOLBAR_ITEM_CUSTOM, .ident = 7, .flags = TOOLBAR_ITEM_FLAG_SMALL},
+    {.type = TOOLBAR_ITEM_CUSTOM, .ident = 8, .flags = TOOLBAR_ITEM_FLAG_SMALL},
+  };
+  send_message(win, tbSetOrientation, TOOLBAR_VERTICAL, NULL);
+  send_message(win, tbSetItems, ARRAY_LEN(items), items);
+  toolbar_state_t *tb = toolbar_get_state(win);
+  int mini = (TB_SPACING - TOOLBAR_SPACING) / 2;
+  for (int i = 0; i < 4; i++) {
+    ASSERT_EQUAL(tb->item_rects[i].w, mini);
+    ASSERT_EQUAL(tb->item_rects[i].h, mini);
+  }
+  ASSERT_EQUAL(tb->item_rects[0].y, tb->item_rects[1].y);
+  ASSERT_EQUAL(tb->item_rects[2].y, tb->item_rects[3].y);
+  ASSERT_TRUE(tb->item_rects[1].x > tb->item_rects[0].x);
+  ASSERT_EQUAL(tb->item_rects[3].y + tb->item_rects[3].h - tb->item_rects[0].y,
+               2 * mini + TOOLBAR_SPACING);
+  ASSERT_TRUE(2 * mini + TOOLBAR_SPACING <= TB_SPACING);
+  ASSERT_EQUAL(tb->item_rects[4].w, TB_SPACING);
+  ASSERT_EQUAL(tb->item_rects[4].h, TB_SPACING);
+  ASSERT_EQUAL(tb->item_rects[5].y, tb->item_rects[6].y);
+  ASSERT_EQUAL(tb->item_rects[7].w, mini);
+  ASSERT_TRUE(tb->item_rects[7].x == tb->item_rects[5].x);
+  for (int i = 0; i < ARRAY_LEN(items); i++) {
+    irect16_t r = tb->item_rects[i];
+    uint32_t point = MAKEDWORD(r.x + r.w / 2, r.y + r.h / 2);
+    g_last_click_ident = -1;
+    send_message(win->toolbar, evLeftButtonDown, point, NULL);
+    send_message(win->toolbar, evLeftButtonUp, point, NULL);
+    ASSERT_EQUAL(g_last_click_ident, items[i].ident);
+  }
+  destroy_window(win);
+  test_env_shutdown();
+  PASS();
+}
+
 int main(int argc, char *argv[]) {
     (void)argc;
     (void)argv;
@@ -1255,6 +1303,7 @@ int main(int argc, char *argv[]) {
 
     test_toolbar_reorderable_items();
     test_vertical_grid_columns();
+    test_vertical_small_items_pack();
     test_toolbar_embedded_slider_drag();
     test_toolbar_vertical_custom_item();
     test_toolbar_set_items_creates_children();

@@ -367,6 +367,9 @@ typedef struct {
 // Vertical toolbar grid (1..4 columns); non-button items occupy a full row.
 #define tbSetColumns (evUser + 951)
 #define TOOLBAR_ITEM_FLAG_REORDERABLE (1u << 2) // drop onto another reorderable item
+// Half-size cell: in a single-column vertical toolbar consecutive SMALL
+// buttons/customs pack 2 per row, so 2x2 of them fills one normal button cell.
+#define TOOLBAR_ITEM_FLAG_SMALL      (1u << 4)
 #define TOOLBAR_STYLE_GRIP           (1u << 1) // draggable grip on a floating toolbar
 #define TOOLBAR_STYLE_COMPACT        (1u << 2) // menu-bar background, icon-only items
 #define TOOLBAR_COMPACT_PADDING      2

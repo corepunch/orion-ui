@@ -33,19 +33,31 @@ static const toolbar_item_t k_tools[] = {
 };
 
 #if IMAGEEDITOR_BW
+// Half-size swatch for the single-column strip: two minis fill one button cell.
 static void pencil_palette_draw(int swatch, const toolbar_draw_item_t *draw) {
   uint32_t color = k_pencil_palette[swatch];
   bool selected = g_app && g_app->fg_color == color;
-  irect16_t outer = rect_inset(draw->rect, 2);
+  irect16_t outer = rect_inset(draw->rect, 1);
   uint32_t border = get_sys_color(selected ? brAccent : brDarkEdge);
   if (!selected && (draw->state & (CTRL_HOVER | CTRL_PRESSED)))
     border = get_sys_color(brTextNormal);
-  fill_rounded_rect(border, outer, 5);
-  fill_rounded_rect(color, rect_inset(outer, selected ? 3 : 1), 3);
+  fill_rounded_rect(border, outer, 3);
+  fill_rounded_rect(color, rect_inset(outer, selected ? 2 : 1), 2);
   if (selected) {
     uint32_t mark = COLOR_R(color) * 299 + COLOR_G(color) * 587 + COLOR_B(color) * 114 > 140000
                     ? MAKE_COLOR(24, 24, 32, 255) : MAKE_COLOR(255, 255, 255, 255);
-    fill_rounded_rect(mark, rect_center(outer, 6, 6), 3);
+    fill_rounded_rect(mark, rect_center(outer, 4, 4), 2);
+  }
+}
+
+// Two-letter codes: mini cells hold a quarter of a normal button.
+static const char *pencil_layer_code(int layer) {
+  switch (layer) {
+    case IE_LAYER_BG:     return "BG";
+    case IE_LAYER_COLOR:  return "CO";
+    case IE_LAYER_PENCIL: return "PE";
+    case IE_LAYER_FX:     return "FX";
+    default:              return "??";
   }
 }
 #endif
@@ -113,7 +125,8 @@ static void pencil_toolbar_items(window_t *win) {
   int count = 0;
   for (int i = 0; i < 4; i++)
     items[count++] = (toolbar_item_t){.type = TOOLBAR_ITEM_CUSTOM,
-      .ident = IE_PENCIL_LAYER_BASE + order[i], .tooltip = tips[order[i]]};
+      .ident = IE_PENCIL_LAYER_BASE + order[i], .tooltip = tips[order[i]],
+      .flags = TOOLBAR_ITEM_FLAG_SMALL};
   items[count++] = (toolbar_item_t){.type = TOOLBAR_ITEM_SEPARATOR};
   for (int i = 0; i < ARRAY_LEN(k_tools); i++) {
     if (layer == IE_LAYER_PENCIL && (k_tools[i].ident == ID_TOOL_FILL || k_tools[i].ident == ID_TOOL_EYEDROPPER)) continue;
@@ -123,7 +136,8 @@ static void pencil_toolbar_items(window_t *win) {
     items[count++] = (toolbar_item_t){.type = TOOLBAR_ITEM_SEPARATOR};
     for (int i = 0; i < IE_PENCIL_COLORS; i++)
       items[count++] = (toolbar_item_t){.type = TOOLBAR_ITEM_CUSTOM,
-        .ident = IE_PENCIL_PALETTE_BASE + i, .tooltip = k_pencil_color_names[i]};
+        .ident = IE_PENCIL_PALETTE_BASE + i, .tooltip = k_pencil_color_names[i],
+        .flags = TOOLBAR_ITEM_FLAG_SMALL};
   }
   send_message(win, tbSetItems, count, items);
   send_message(win, tbSetActiveButton, g_app ? imageeditor_tool_group(g_app->current_tool) : ID_TOOL_BRUSH, NULL);
@@ -147,7 +161,7 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       send_message(win, tbSetOrientation, TOOLBAR_VERTICAL, NULL);
       send_message(win, tbSetButtonSize, TOOL_PALETTE_BTN_SIZE, NULL);
 #if IMAGEEDITOR_BW
-      send_message(win, tbSetColumns, 2, NULL);
+      send_message(win, tbSetColumns, 1, NULL);
       pencil_toolbar_items(win);
 #else
       send_message(win, tbSetItems, ARRAY_LEN(k_tools), (void *)k_tools);
@@ -159,13 +173,13 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
 #if IMAGEEDITOR_BW
       if (wparam >= IE_PENCIL_LAYER_BASE && wparam < IE_PENCIL_LAYER_BASE + IE_LAYER_COUNT && lparam) {
         int layer = wparam - IE_PENCIL_LAYER_BASE;
-        static const char *const labels[] = {"BG", "Color", "Pencil", "FX"};
         toolbar_draw_item_t *draw = lparam;
         bool active = g_app && pencil_has_layers(g_app->active_doc) && g_app->active_doc->layer.active == layer;
         theme_draw(THEME_PART_TOOLBAR_BUTTON, draw->rect, draw->state | (active ? CTRL_SELECTED : 0));
-        int width = text_strwidth(FONT_SMALLEST, labels[layer]);
+        const char *code = pencil_layer_code(layer);
+        int width = text_strwidth(FONT_SMALLEST, code);
         irect16_t text = rect_center(draw->rect, width, text_char_height(FONT_SMALLEST));
-        draw_text(FONT_SMALLEST, labels[layer], text.x, text.y, get_sys_color(brTextNormal));
+        draw_text(FONT_SMALLEST, code, text.x, text.y, get_sys_color(brTextNormal));
         return true;
       }
       if (wparam >= IE_PENCIL_PALETTE_BASE && wparam < IE_PENCIL_PALETTE_BASE + IE_PENCIL_COLORS && lparam) {

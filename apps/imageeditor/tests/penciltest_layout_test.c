@@ -48,7 +48,7 @@ static void test_ipad_options_keep_toolbar_geometry(void) {
   ASSERT_NOT_NULL(doc);
   window_t *options = g_app->tool_options_win;
   ASSERT_EQUAL(options->frame.w, PALETTE_WIN_W);
-  ASSERT_TRUE(options->frame.w < g_app->tool_win->frame.w);
+  ASSERT_EQUAL(options->frame.w, g_app->tool_win->frame.w);
   ASSERT_EQUAL(options->frame.x, TOOL_OPTIONS_WIN_X);
   ASSERT_EQUAL(options->frame.y, TOOL_OPTIONS_WIN_Y);
   move_window(options, 100, 160);
@@ -178,14 +178,27 @@ static void test_swatch_tap_swaps_colors(void) {
 }
 
 static void test_coloring_palette(void) {
-  TEST("two-column palette selects all 16 colors and drawing survives frame switches and undo");
+  TEST("single-column half-size palette selects 16 colors; drawing survives frame switches and undo");
   penciltest_setup();
   canvas_doc_t *doc = create_document(NULL, 64, 64);
   ASSERT_NOT_NULL(doc);
   ASSERT_EQUAL(doc->ipal.count, IE_PENCIL_COLORS + 1);
   ASSERT_TRUE(cmd_pencil_layer(doc, IE_LAYER_COLOR));
   toolbar_state_t *tb = window_toolbar_state(g_app->tool_win);
-  ASSERT_EQUAL(tb->columns, 2);
+  ASSERT_EQUAL(tb->columns, 1);
+  ASSERT_EQUAL(g_app->tool_win->frame.w, PALETTE_WIN_W);
+  int mini = (TOOL_PALETTE_BTN_SIZE - TOOLBAR_SPACING) / 2;
+  for (int i = 0; i < 4; i++) {
+    ASSERT_TRUE(tb->items[i].flags & TOOLBAR_ITEM_FLAG_SMALL);
+    ASSERT_EQUAL(tb->item_rects[i].w, mini);
+    ASSERT_EQUAL(tb->item_rects[i].h, mini);
+  }
+  ASSERT_EQUAL(tb->item_rects[0].y, tb->item_rects[1].y);
+  ASSERT_EQUAL(tb->item_rects[2].y, tb->item_rects[3].y);
+  ASSERT_TRUE(tb->item_rects[1].x > tb->item_rects[0].x);
+  ASSERT_EQUAL(tb->item_rects[3].y + tb->item_rects[3].h - tb->item_rects[0].y,
+               2 * mini + TOOLBAR_SPACING);
+  ASSERT_TRUE(2 * mini + TOOLBAR_SPACING <= TOOL_PALETTE_BTN_SIZE);
   int found = 0;
   irect16_t previous = {0};
   for (int i = 0; i < tb->item_count; i++) {
@@ -194,6 +207,8 @@ static void test_coloring_palette(void) {
     int swatch = tb->items[i].ident - IE_PENCIL_PALETTE_BASE;
     if (swatch < 0 || swatch >= IE_PENCIL_COLORS) continue;
     irect16_t r = tb->item_rects[i];
+    ASSERT_EQUAL(r.w, mini);
+    ASSERT_EQUAL(r.h, mini);
     ASSERT_TRUE(r.x + r.w <= g_app->tool_win->frame.w);
     ASSERT_TRUE(r.y + r.h <= g_app->tool_win->frame.h);
     if (swatch % 2) {

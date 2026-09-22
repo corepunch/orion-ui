@@ -108,7 +108,9 @@ resizing/cropping, and history preserve all cels and the shared background.
 Rendering, thumbnails, and export compose against the live shared background,
 rather than trusting a preview from before the background changed.
 
-Four sidebar buttons form a 2×2 selector. Pencil hides the color palette and
+The tool strip stays one column wide. The four layer buttons are half-size
+(`TOOLBAR_ITEM_FLAG_SMALL`) and pack 2×2 into a single button cell; the 16
+color swatches are the same half size, two per row. Pencil hides the color palette and
 uses monochrome ink; painting paper on it erases to transparency. Background,
 Color, and FX expose 16 swatches, with their last tool/color remembered during
 the session. Color fill uses the Pencil plane as a boundary and writes only to
