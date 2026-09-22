@@ -12,6 +12,7 @@
 // A trailing top-level 0x7074 chunk holds Penciltest editing metadata.
 // Keep it outside frames for readers that reject unknown frame subchunks.
 #define FLC_META 0x7074
+#define FLC_LAYERS 0x7075
 #define FLC_LIMIT (512u * 1024u * 1024u)
 #define FLC_META_SIZE 1084
 
@@ -98,11 +99,15 @@ static bool flc_decode(uint16_t type, const uint8_t *p, size_t size,
   return true;
 }
 
-anim_timeline_t *flc_load(const char *path, int *out_w, int *out_h,
-                          uint32_t out_pal[256], uint32_t *background, bool *show_bg) {
+anim_timeline_t *flc_load_layers(const char *path, int *out_w, int *out_h,
+                                 uint32_t out_pal[256], uint32_t *background, bool *show_bg,
+                                 pencil_file_layers_t *layers) {
   FILE *fp = fopen(path, "rb");
   uint8_t header[128], *pixels = NULL, *block = NULL, *metadata = NULL;
   anim_timeline_t *tl = NULL;
+  uint8_t *layerdata = NULL;
+  uint8_t active_layer = IE_LAYER_PENCIL, visible_layers = 15;
+  if (layers) memset(layers, 0, sizeof(*layers));
   uint32_t pal[256], editing_pal[256];
   int colors = 1;
   memset(out_pal, 0, 256 * sizeof(*out_pal));
@@ -128,9 +133,20 @@ anim_timeline_t *flc_load(const char *path, int *out_w, int *out_h,
       if (metadata || length != 16u + (uint32_t)frames * FLC_META_SIZE) goto fail;
       metadata = malloc(length - 16);
       if (!metadata || fread(metadata, 1, length - 16, fp) != length - 16) goto fail;
+    } else if (flc_u16(chunk + 4) == FLC_LAYERS) {
+      uint64_t n = (uint64_t)w * h;
+      uint64_t bytes = n * (1 + 3u * frames);
+      if (layerdata || memcmp(chunk + 8, "PTL2", 4) || chunk[12] != IE_LAYER_COUNT ||
+          chunk[13] >= IE_LAYER_COUNT || chunk[14] > 15 || chunk[15] != 0 ||
+          bytes + n * frames > FLC_LIMIT || length != 16 + bytes) goto fail;
+      layerdata = malloc((size_t)bytes);
+      if (!layerdata || fread(layerdata, 1, (size_t)bytes, fp) != bytes) goto fail;
+      active_layer = chunk[13]; visible_layers = chunk[14];
     } else if (fseek(fp, length - 16, SEEK_CUR)) goto fail;
     pos += length;
   }
+  const char *ext = strrchr(path, '.');
+  if ((layerdata && !metadata) || (ext && !strcasecmp(ext, ".ptf") && !layerdata)) goto fail;
   if (fseek(fp, 128, SEEK_SET)) goto fail;
   pixels = calloc((size_t)w, h);
   tl = calloc(1, sizeof(*tl));
@@ -195,6 +211,23 @@ anim_timeline_t *flc_load(const char *path, int *out_w, int *out_h,
     }
     free(block); block = NULL;
   }
+  if (layerdata) {
+    size_t n = (size_t)w * h;
+    for (int i = 0; i < frames; i++) {
+      anim_frame_t *f = tl->frames[i];
+      f->cels = malloc(3 * n);
+      if (!f->cels) goto fail;
+      memcpy(f->cels, layerdata + n + (size_t)i * 3 * n, 3 * n);
+      f->cels_size = 3 * n;
+    }
+    if (layers) {
+      layers->background = malloc(n);
+      if (!layers->background) goto fail;
+      memcpy(layers->background, layerdata, n);
+      layers->active = active_layer; layers->visible = visible_layers;
+    }
+  }
+  free(layerdata);
   fclose(fp); free(pixels); free(metadata);
   *out_w = w; *out_h = h;
   IE_TRACE("FLC loaded path=%s size=%dx%d frames=%d", path, w, h, frames);
@@ -202,17 +235,28 @@ anim_timeline_t *flc_load(const char *path, int *out_w, int *out_h,
 fail:
   IE_TRACE("FLC load failed path=%s", path);
   if (fp) fclose(fp);
-  free(pixels); free(block); free(metadata); anim_timeline_free(tl);
+  free(pixels); free(block); free(metadata); free(layerdata); anim_timeline_free(tl);
   return NULL;
+}
+
+anim_timeline_t *flc_load(const char *path, int *w, int *h, uint32_t palette[256],
+                          uint32_t *background, bool *show_bg) {
+  return flc_load_layers(path, w, h, palette, background, show_bg, NULL);
 }
 
 static bool flc_write_frame(FILE *fp, const canvas_doc_t *doc, int index) {
   const anim_frame_t *frame = doc->anim->frames[index];
   size_t n = (size_t)doc->canvas_w * doc->canvas_h;
+  uint8_t *composite = NULL;
   const uint8_t *pixels = index == doc->anim->active_frame ? doc->pixels : frame->data;
+  if (pencil_has_layers(doc)) {
+    composite = malloc(n);
+    if (!composite || !pencil_composite_frame(doc, index, composite)) { free(composite); return false; }
+    pixels = composite;
+  }
   if (!pixels || (index != doc->anim->active_frame &&
       (frame->format != FRAME_FORMAT_INDEXED || frame->data_size != n)) ||
-      frame->delay_ms < 1 || frame->delay_ms > 65535) return false;
+      frame->delay_ms < 1 || frame->delay_ms > 65535) { free(composite); return false; }
   uint8_t header[16] = {0}, palette[778] = {0}, copy[6] = {0};
   flc_put32(header, 16 + sizeof(palette) + 6 + n + (n & 1));
   flc_put16(header + 4, 0xf1fa); flc_put16(header + 6, 2); flc_put16(header + 8, frame->delay_ms);
@@ -225,9 +269,11 @@ static bool flc_write_frame(FILE *fp, const canvas_doc_t *doc, int index) {
     palette[12 + i * 3] = (COLOR_B(c) * a + b * (255 - a)) / 255;
   }
   flc_put32(copy, 6 + n + (n & 1)); flc_put16(copy + 4, 16);
-  return fwrite(header, 1, 16, fp) == 16 && fwrite(palette, 1, sizeof(palette), fp) == sizeof(palette) &&
+  bool ok = fwrite(header, 1, 16, fp) == 16 && fwrite(palette, 1, sizeof(palette), fp) == sizeof(palette) &&
          fwrite(copy, 1, 6, fp) == 6 &&
          fwrite(pixels, 1, n, fp) == n && (!(n & 1) || fputc(0, fp) != EOF);
+  free(composite);
+  return ok;
 }
 
 static bool flc_write_metadata(FILE *fp, const canvas_doc_t *doc) {
@@ -248,8 +294,28 @@ static bool flc_write_metadata(FILE *fp, const canvas_doc_t *doc) {
   return true;
 }
 
+static bool flc_write_layers(FILE *fp, const canvas_doc_t *doc) {
+  size_t n = (size_t)doc->canvas_w * doc->canvas_h;
+  uint8_t header[16] = {0};
+  flc_put32(header, 16 + n * (1 + 3u * doc->anim->frame_count));
+  flc_put16(header + 4, FLC_LAYERS); memcpy(header + 8, "PTL2", 4);
+  header[12] = IE_LAYER_COUNT; header[13] = doc->layer.active;
+  for (int i = 0; i < IE_LAYER_COUNT; i++) if (doc->layer.stack[i]->visible) header[14] |= 1u << i;
+  if (fwrite(header, 1, 16, fp) != 16 || fwrite(doc->layer.stack[0]->pixels, 1, n, fp) != n) return false;
+  uint8_t *blank = calloc(1, n);
+  if (!blank) return false;
+  bool ok = true;
+  for (int f = 0; ok && f < doc->anim->frame_count; f++)
+    for (int layer = 1; ok && layer < IE_LAYER_COUNT; layer++) {
+      const uint8_t *pixels = pencil_frame_layer(doc, f, layer);
+      ok = fwrite(pixels ? pixels : blank, 1, n, fp) == n;
+    }
+  free(blank);
+  return ok;
+}
+
 bool flc_save(const char *path, const canvas_doc_t *doc) {
-  if (!path || !doc || !doc->anim || doc->command.before || doc->layer.count != 1 ||
+  if (!path || !doc || !doc->anim || doc->command.before || (doc->layer.count != 1 && !pencil_has_layers(doc)) ||
       doc->anim->playing || doc->anim->fps < 1 || doc->anim->fps > 1000 ||
       doc->anim->frame_count < 1 || doc->anim->frame_count > 65535 ||
       doc->anim->active_frame < 0 || doc->anim->active_frame >= doc->anim->frame_count ||
@@ -259,7 +325,9 @@ bool flc_save(const char *path, const canvas_doc_t *doc) {
   uint64_t n = (uint64_t)doc->canvas_w * doc->canvas_h;
   uint64_t frame_size = 16 + 778 + 6 + n + (n & 1);
   uint64_t total = 128 + frame_size * (doc->anim->frame_count + 1) + 16 + (uint64_t)FLC_META_SIZE * doc->anim->frame_count;
-  if (total > UINT32_MAX || n * doc->anim->frame_count > FLC_LIMIT) return false;
+  uint64_t layer_bytes = pencil_has_layers(doc) ? n * (1 + 3u * doc->anim->frame_count) : 0;
+  if (layer_bytes) total += 16 + layer_bytes;
+  if (total > 2u * FLC_LIMIT || n * doc->anim->frame_count + layer_bytes > FLC_LIMIT) return false;
   char temp[1024];
   if (snprintf(temp, sizeof(temp), "%s.XXXXXX", path) >= (int)sizeof(temp)) return false;
 #ifdef _WIN32
@@ -283,6 +351,7 @@ bool flc_save(const char *path, const canvas_doc_t *doc) {
   for (int i = 0; ok && i < doc->anim->frame_count; i++) ok = flc_write_frame(fp, doc, i);
   if (ok) ok = flc_write_frame(fp, doc, 0); // Ring frame restores the start for other FLC players.
   if (ok) ok = flc_write_metadata(fp, doc);
+  if (ok && pencil_has_layers(doc)) ok = flc_write_layers(fp, doc);
   if (fflush(fp)) ok = false;
 #ifdef _WIN32
   if (ok && _commit(fd)) ok = false;

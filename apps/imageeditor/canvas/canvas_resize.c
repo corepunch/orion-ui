@@ -189,6 +189,27 @@ bool canvas_resize_frames(canvas_doc_t *doc, int x, int y, int w, int h,
   for (int i = 0; i < doc->anim->frame_count; i++) {
     if (i == doc->anim->active_frame) continue;
     anim_frame_t *frame = doc->anim->frames[i];
+    if (pencil_has_layers(doc) && frame->cels) {
+      size_t old_n = (size_t)doc->canvas_w * doc->canvas_h, new_n = (size_t)w * h;
+      if (frame->cels_size != 3 * old_n) return false;
+      uint8_t *cels = malloc(3 * new_n);
+      if (!cels) return false;
+      for (int li = 0; li < 3; li++) {
+        layer_t cel = {0};
+        cel.pixels = malloc(old_n);
+        if (!cel.pixels) { free(cels); return false; }
+        memcpy(cel.pixels, frame->cels + li * old_n, old_n);
+        bool ok = true;
+        if (resample) {
+          uint8_t *pixels = layer_resample_pixels(&cel, doc->canvas_w, doc->canvas_h, w, h, filter);
+          free(cel.pixels); cel.pixels = pixels; ok = pixels != NULL;
+        } else ok = layer_crop_expand(&cel, doc->canvas_w, doc->canvas_h, x, y, w, h);
+        if (ok) memcpy(cels + li * new_n, cel.pixels, new_n);
+        free(cel.pixels);
+        if (!ok) { free(cels); return false; }
+      }
+      free(frame->cels); frame->cels = cels; frame->cels_size = 3 * new_n;
+    }
     if (!frame->data || !frame->data_size) continue;
     layer_t layer = {0};
     layer.pixels = malloc((size_t)doc->canvas_w * doc->canvas_h * DOC_BPP);

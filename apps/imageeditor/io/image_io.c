@@ -412,9 +412,9 @@ uint8_t *image_io_load(const char *path, int *out_w, int *out_h,
 // Save a document.  Dispatches on extension: .bmp → BMP, else PCX (default).
 bool image_io_save(const char *path, const canvas_doc_t *doc) {
   if (!path || !doc) return false;
-  if (iio_has_ext(path, ".flc")) return flc_save(path, doc);
+  if (iio_has_ext(path, ".flc") || iio_has_ext(path, ".ptf")) return flc_save(path, doc);
 #if IMAGEEDITOR_BW
-  IE_TRACE("animation save requires .flc path=%s", path);
+  IE_TRACE("animation save requires .ptf path=%s", path);
   return false;
 #endif
   if (iio_has_ext(path, ".bmp"))

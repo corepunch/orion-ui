@@ -71,7 +71,7 @@ static void create_app_windows(hinstance_t hinstance) {
 // ============================================================
 
 #if IMAGEEDITOR_BW
-static const char *image_editor_types[] = { ".flc", ".fli", ".pcx", ".bmp", NULL };
+static const char *image_editor_types[] = { ".ptf", ".flc", ".fli", ".pcx", ".bmp", NULL };
 #elif IMAGEEDITOR_INDEXED
 static const char *image_editor_types[] = { ".flc", ".fli", ".pcx", ".bmp", NULL };
 #else

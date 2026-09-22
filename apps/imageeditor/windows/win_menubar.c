@@ -17,6 +17,17 @@ static char        s_filter_photo_labels[IMAGEEDITOR_MAX_FILTERS][64];
 
 // Persistent storage for dynamically built items and document title strings.
 static menu_item_t s_edit_items[ARRAY_LEN(MENU_EDIT_ITEMS)];
+#if IMAGEEDITOR_BW
+static menu_item_t s_pencil_layer_items[] = {
+  {"Background (shared)", IE_PENCIL_LAYER_BASE + IE_LAYER_BG, NULL, 0},
+  {"Pencil", IE_PENCIL_LAYER_BASE + IE_LAYER_PENCIL, NULL, 0},
+  {"Color", IE_PENCIL_LAYER_BASE + IE_LAYER_COLOR, NULL, 0},
+  {"FX", IE_PENCIL_LAYER_BASE + IE_LAYER_FX, NULL, 0},
+  {NULL, 0, NULL, 0},
+  {"Fill with Foreground Color\tAlt+Backspace", ID_LAYER_FILL_FOREGROUND, NULL, 0},
+  {"Fill with Background Color\tCtrl+Backspace", ID_LAYER_FILL_BACKGROUND, NULL, 0},
+};
+#endif
 static menu_item_t s_view_items[VIEW_ITEM_COUNT];
 static bool        s_view_items_initialized = false;
 static menu_item_t s_window_items[WINDOW_PREFIX_COUNT + WINDOW_MENU_MAX_DOCS];
@@ -124,8 +135,7 @@ void anim_stop_playback(canvas_doc_t *doc) {
   if (was_playing) {
     IE_TRACE("playback stop win=%p frame=%d restore=%d", (void *)doc->canvas_win,
              tl->active_frame, tl->playback_start_frame);
-    if (anim_timeline_switch_frame(tl, tl->playback_start_frame, &doc->pixels,
-                                    doc->canvas_w, doc->canvas_h, IE_FRAME_FORMAT)) {
+    if (doc_anim_load(doc, tl->playback_start_frame)) {
       if (doc->layer.count > 0)
         doc->layer.stack[doc->layer.active]->pixels = doc->pixels;
       doc->canvas_dirty = true;
@@ -235,6 +245,13 @@ void imageeditor_sync_main_toolbar(void) {
   }
   menu_def_t *edit = find_menu("Edit");
   if (edit) edit->items = s_edit_items;
+#if IMAGEEDITOR_BW
+  menu_def_t *layer = find_menu("Layer");
+  if (layer) {
+    layer->items = s_pencil_layer_items;
+    layer->item_count = ARRAY_LEN(s_pencil_layer_items);
+  }
+#endif
   publish_dynamic_menus();
   if (!g_app->main_toolbar_win) return;
   send_message(g_app->main_toolbar_win, tbEnableItem, ID_EDIT_UNDO, (void *)(intptr_t)undo);
@@ -336,11 +353,17 @@ bool imageeditor_open_file_path(const char *path) {
   uint32_t background = IE_PAPER_COLOR;
   bool show_bg = true;
   anim_timeline_t *loaded_anim = NULL;
+  pencil_file_layers_t loaded_layers = {0};
   int pal_count = 0;
   uint8_t *px = NULL;
   if (flc_is_file(path)) {
-    loaded_anim = flc_load(path, &img_w, &img_h, pal, &background, &show_bg);
+    loaded_anim = flc_load_layers(path, &img_w, &img_h, pal, &background, &show_bg, &loaded_layers);
     if (!loaded_anim) return false;
+    if (loaded_layers.background && !IMAGEEDITOR_BW) {
+      IE_TRACE("layered project requires Pencil Test path=%s", path);
+      anim_timeline_free(loaded_anim); free(loaded_layers.background);
+      return false;
+    }
     pal_count = 256;
     px = malloc((size_t)img_w * img_h);
     if (px) memcpy(px, loaded_anim->frames[0]->data, (size_t)img_w * img_h);
@@ -352,6 +375,7 @@ bool imageeditor_open_file_path(const char *path) {
     free(px);
 #if IMAGEEDITOR_INDEXED
     anim_timeline_free(loaded_anim);
+    free(loaded_layers.background);
 #endif
     return false;
   }
@@ -361,14 +385,15 @@ bool imageeditor_open_file_path(const char *path) {
     free(px);
 #if IMAGEEDITOR_INDEXED
     anim_timeline_free(loaded_anim);
+    free(loaded_layers.background);
 #endif
     return false;
   }
 
   // Swap the transparent placeholder pixels for the actual loaded image.
   // Update both the layer buffer and the convenience alias.
-  free(ndoc->layer.stack[0]->pixels);
-  ndoc->layer.stack[0]->pixels = px;
+  free(ndoc->layer.stack[ndoc->layer.active]->pixels);
+  ndoc->layer.stack[ndoc->layer.active]->pixels = px;
   ndoc->pixels = px;
   ndoc->canvas_dirty = true;
   ndoc->modified = false;
@@ -384,18 +409,25 @@ bool imageeditor_open_file_path(const char *path) {
     ndoc->anim = loaded_anim;
     ndoc->background.color = background;
     ndoc->background.show = show_bg;
+    if (pencil_has_layers(ndoc)) {
+      if (loaded_layers.background) {
+        free(ndoc->layer.stack[IE_LAYER_BG]->pixels);
+        ndoc->layer.stack[IE_LAYER_BG]->pixels = loaded_layers.background;
+        loaded_layers.background = NULL;
+        for (int i = 0; i < IE_LAYER_COUNT; i++) ndoc->layer.stack[i]->visible = (loaded_layers.visible >> i) & 1;
+        doc_set_active_layer(ndoc, loaded_layers.active);
+      }
+      if (!doc_anim_load(ndoc, 0)) { close_document(ndoc); return false; }
+    }
+
   }
 #endif
 
-  // Sync the animation frame 0 with the loaded pixels so the thumbnail is
-  // accurate from the start.
-  if (ndoc->anim && ndoc->anim->frame_count > 0)
-    anim_frame_compress(ndoc->anim->frames[0], px, img_w, img_h,
 #if IMAGEEDITOR_INDEXED
-                        FRAME_FORMAT_INDEXED);
-#else
-                        FRAME_FORMAT_RGBA);
+  free(loaded_layers.background);
 #endif
+  if (!doc_anim_commit(ndoc)) { close_document(ndoc); return false; }
+  imageeditor_sync_tool_palette();
   doc_update_title(ndoc);
   send_message(ndoc->win, evStatusBar, 0, (void *)path);
   // Large images open in a bird's-eye view using the maximum reasonable
@@ -440,6 +472,10 @@ void handle_menu_command(uint16_t id) {
   if (!doc) doc = g_app->docs;
 
   IE_TRACE("command dispatch doc=%p id=%u", (void *)doc, id);
+  if (IMAGEEDITOR_BW && id >= IE_PENCIL_LAYER_BASE && id < IE_PENCIL_LAYER_BASE + IE_LAYER_COUNT) {
+    cmd_pencil_layer(doc, id - IE_PENCIL_LAYER_BASE);
+    return;
+  }
   switch (id) {
     case ID_FILE_NEW: {
       int w, h;
@@ -463,7 +499,7 @@ void handle_menu_command(uint16_t id) {
       if (!doc->filename[0]) goto do_save_as;
 #if IMAGEEDITOR_BW
       const char *ext = strrchr(doc->filename, '.');
-      if (!ext || strcasecmp(ext, ".flc")) goto do_save_as;
+      if (!ext || strcasecmp(ext, ".ptf")) goto do_save_as;
 #endif
       save_document_file(doc, doc->filename);
       break;
@@ -478,7 +514,7 @@ void handle_menu_command(uint16_t id) {
       if (ext && (!slash || ext > slash)) *ext = 0;
       if (!path[0]) snprintf(path, sizeof(path), "Untitled");
       if (strlen(path) + 4 >= sizeof(path)) break;
-      strcat(path, ".flc");
+      strcat(path, ".ptf");
 #endif
       if (show_file_picker(g_app->menubar_win, true, path, sizeof(path))) {
         save_document_file(doc, path);
@@ -911,9 +947,11 @@ void handle_menu_command(uint16_t id) {
         g_app->anim_timer_id = axSetTimer(
             g_app->timeline_win, interval, NULL, (bool_t)1);
         if (g_app->anim_timer_id) {
-          anim_frame_compress(doc->anim->frames[doc->anim->active_frame],
-                              doc->pixels, doc->canvas_w, doc->canvas_h,
-                              IE_FRAME_FORMAT);
+          if (!doc_anim_commit(doc)) {
+            axCancelTimer(g_app->anim_timer_id);
+            g_app->anim_timer_id = 0;
+            break;
+          }
           doc->anim->playback_start_frame = doc->anim->active_frame;
           doc->anim->playing = true;
           IE_TRACE("playback start win=%p frame=%d count=%d", (void *)doc->canvas_win,

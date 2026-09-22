@@ -129,7 +129,7 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
       return false;
     }
     case evSetFocus:
-      if (g_app && doc) g_app->active_doc = doc;
+      if (g_app && doc) { g_app->active_doc = doc; imageeditor_sync_tool_palette(); }
       return false;
     case evClose: {
       // WM_CLOSE analogue: give the user a chance to save before closing.
@@ -235,6 +235,16 @@ canvas_doc_t *create_document_pixels(const char *filename, int w, int h) {
     return NULL;
   }
 
+#if IMAGEEDITOR_BW
+  static const char *const names[] = {"Background", "Color", "Pencil", "FX"};
+  while (doc->layer.count < IE_LAYER_COUNT) {
+    if (!doc_add_layer(doc)) { doc_free_layers(doc); free(doc->layer.composite_buf); free(doc); return NULL; }
+  }
+  for (int i = 0; i < IE_LAYER_COUNT; i++)
+    snprintf(doc->layer.stack[i]->name, sizeof(doc->layer.stack[i]->name), "%s", names[i]);
+  doc_set_active_layer(doc, IE_LAYER_PENCIL);
+#endif
+
   canvas_clear(doc);
   doc->modified = false;
 
@@ -287,13 +297,10 @@ canvas_doc_t *create_document_pixels(const char *filename, int w, int h) {
   // Always initialize the animation timeline with one frame capturing the
   // current canvas pixels.  Single-canvas workflows simply use frame 0.
   doc->anim = anim_timeline_new(buf_w, buf_h);
-  if (doc->anim)
-    anim_frame_compress(doc->anim->frames[0], doc->pixels, buf_w, buf_h,
-#if IMAGEEDITOR_INDEXED
-                        FRAME_FORMAT_INDEXED);
-#else
-                        FRAME_FORMAT_RGBA);
-#endif
+  if (!doc->anim || !doc_anim_commit(doc)) {
+    anim_timeline_free(doc->anim); doc_free_layers(doc); free(doc->layer.composite_buf); free(doc);
+    return NULL;
+  }
 
   if (filename) {
     strncpy(doc->filename, filename, sizeof(doc->filename) - 1);
@@ -348,6 +355,7 @@ canvas_doc_t *create_document_pixels(const char *filename, int w, int h) {
   doc->next   = g_app->docs;
   g_app->docs = doc;
   g_app->active_doc = doc;
+  imageeditor_sync_tool_palette();
 #ifdef AX_PLATFORM_IOS
   send_message(dwin, evDisplayChange, 0, NULL);
 #endif

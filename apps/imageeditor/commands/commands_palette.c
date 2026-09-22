@@ -32,6 +32,7 @@ static int pencil_unused_palette_index(const canvas_doc_t *doc) {
       return -1;
     }
     for (size_t p = 0; p < n; p++) used[frame->data[p]] = true;
+    for (size_t p = 0; frame->cels && p < frame->cels_size; p++) used[frame->cels[p]] = true;
   }
   for (int i = 0; i < 256; i++)
     if (!used[i] && (i >= doc->ipal.count || COLOR_A(doc->ipal.entries[i]) == 0)) return i;

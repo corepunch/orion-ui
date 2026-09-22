@@ -35,6 +35,8 @@ typedef enum {
 typedef struct {
   uint8_t       *data;          // compressed pixel bytes
   size_t         data_size;     // byte count of data
+  uint8_t       *cels;          // Pencil Test: Color, Pencil, FX indexed planes
+  size_t         cels_size;     // three canvas-sized planes; NULL for legacy frames
   frame_format_t format;
   uint32_t       palette[256];  // RGBA entries (for FRAME_FORMAT_INDEXED only)
   int            delay_ms;      // per-frame display duration in milliseconds

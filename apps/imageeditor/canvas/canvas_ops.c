@@ -33,6 +33,7 @@ void ie_doc_update_title(canvas_doc_t *doc) {
 
 void ie_doc_invalidate_all(canvas_doc_t *doc) {
   if (!doc) return;
+  imageeditor_sync_tool_palette();
   if (doc->canvas_win && doc->canvas_win->userdata) {
     canvas_win_state_t *view = doc->canvas_win->userdata;
     memset(view->onion_key, 0, sizeof(view->onion_key));

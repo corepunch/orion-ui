@@ -1,6 +1,6 @@
 // File picker dialog — thin wrapper around the framework's
 // get_open_filename() / get_save_filename().
-// Pencil Test saves FLC animations; indexed imports also accept PCX/BMP.
+// Pencil Test saves layered PTF projects; indexed imports also accept PCX/BMP.
 // RGBA editing saves PNG, with separate GIF/APNG exports.
 
 #include "imageeditor.h"
@@ -14,7 +14,8 @@ bool show_file_picker(window_t *parent, bool save_mode,
   ofn.lpstrFile    = out_path;
   ofn.nMaxFile     = (uint32_t)out_sz;
 #if IMAGEEDITOR_INDEXED
-  ofn.lpstrFilter  = "Animation and Image Files\0*.flc;*.fli;*.pcx;*.bmp\0"
+  ofn.lpstrFilter  = "Animation and Image Files\0*.ptf;*.flc;*.fli;*.pcx;*.bmp\0"
+                     "Pencil Test Project\0*.ptf\0"
                      "FLC Animation\0*.flc\0"
                      "PCX Files\0*.pcx\0"
                      "BMP Files\0*.bmp\0"
@@ -30,8 +31,8 @@ bool show_file_picker(window_t *parent, bool save_mode,
     if (ext && !strcasecmp(ext, ".gif")) ofn.lpstrFilter = "GIF Animation\0*.gif\0";
     else if (ext && !strcasecmp(ext, ".png")) ofn.lpstrFilter = "PNG Image\0*.png\0";
 #if IMAGEEDITOR_BW
-    else ofn.lpstrFilter = "FLC Animation\0*.flc\0";
-    if (!out_path[0]) snprintf(out_path, out_sz, "Untitled.flc");
+    else ofn.lpstrFilter = "Pencil Test Project\0*.ptf\0";
+    if (!out_path[0]) snprintf(out_path, out_sz, "Untitled.ptf");
 #elif !IMAGEEDITOR_INDEXED
     else ofn.lpstrFilter = "PNG Image\0*.png\0";
     if (!out_path[0]) snprintf(out_path, out_sz, "Untitled.png");

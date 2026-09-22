@@ -97,49 +97,66 @@ Build the applications with `make build/bin/imageeditor penciltest`. Build tests
 with `make build/bin/test_history_test build/bin/test_penciltest_history_test
 build/bin/test_history_indexed_test`, then run each executable.
 
-## Pencil Test animation files
+## Pencil Test layers and animation files
 
-Pencil Test exposes 16 drawing colors in a two-column docked toolbar. Index 0
-remains transparent, with the original ink and paper at indices 1 and 2. The
-remaining default colors occupy indices 3–16; the indexed file format is still
-capable of retaining larger imported palettes. Selecting a missing swatch in an
-older document adds it as an undoable palette command, using only an empty slot
-unreferenced by any working layer or stored frame. Existing colors are preserved.
-The toolbar keeps pencil/brush, eraser, fill, eyedropper, select, move, hand, and
-foreground/background swap. Other tools remain accessible through menus.
-The floating options palette stays one column wide beside the docked toolbar.
+Pencil Test has four fixed indexed planes, composited bottom to top: Background,
+Color, Pencil, FX. Background is shared by all frames. Each `anim_frame_t` stores
+three canvas-sized cel planes in `cels` (Color, Pencil, FX); `data` retains a
+flattened preview. The live document owns four working layers. `doc_anim_commit`,
+`doc_anim_load`, and `doc_anim_switch` manage their transfer. Frame structure edits,
+resizing/cropping, and history preserve all cels and the shared background.
+Rendering, thumbnails, and export compose against the live shared background,
+rather than trusting a preview from before the background changed.
 
-File > Save / Save As writes `.flc`; Open accepts 8-bit FLC and legacy FLI as
-well as PCX/BMP still images. Saving an imported still or FLI first asks for an
-FLC filename. GIF/APNG/sprite-sheet exports remain separate commands. The RGBA
-Image Editor retains its PNG workflow.
+Four sidebar buttons form a 2×2 selector. Pencil hides the color palette and
+uses monochrome ink; painting paper on it erases to transparency. Background,
+Color, and FX expose 16 swatches, with their last tool/color remembered during
+the session. Color fill uses the Pencil plane as a boundary and writes only to
+Color. Onion skin reads only neighboring Pencil planes, above Background/Color
+and beneath the current Pencil/FX. The timeline retains one shared frame timing.
 
-`io/flc.c` writes standard COLOR256 and COPY chunks and a ring frame. Readers
-support COLOR256, COLOR64, COPY, BLACK, BRUN, LC and SS2, including palette changes,
-empty/repeated frames, prefix chunks and odd dimensions. File dimensions are
-physical pixels, independent of the display's Retina scale. Frame delays drive
-playback; FLI's 70 Hz time units are converted to milliseconds.
+Index 0 remains transparent; original ink and paper occupy indices 1 and 2.
+Default coloring swatches occupy indices 3–16. Imported palettes can be larger.
+Selecting a missing swatch adds it as an undoable command, using only an empty
+slot unreferenced by any working layer, stored composite, or cel.
 
-An optional trailer after the ring frame (type `0x7074`, `PTA1` signature at
-offset 8 of its 16-byte header) preserves frame names,
-exact indexed palette including alpha, background color/visibility, FPS and loop.
-It contains one 1084-byte little-endian record per frame, with a `PTF1` signature
-at offset 0, a 32-byte name
-at 4, FPS at 36, delay at 40, loop/show flags at 44/45, background RGBA at 48,
-and 256 packed palette entries at 60; other bytes are reserved. Standard players
-finish playback before this trailer and display transparent pixels against the saved paper color.
-Files are currently uncompressed, so size grows with pixel count and frame count.
-External FLICs are mapped to a common document palette, with index 0 reserved for
-transparency; files needing more than 255 distinct opaque colors across the
-animation are rejected. True-color FLIC variants are unsupported. Animation pixel
-storage is limited to 512 MiB and frame delays to 65535 ms. FLC is a single-layer
-format; saving a layered indexed document is rejected rather than losing layers.
+File > Save / Save As writes `.ptf` (Pencil Test project). It retains an FLC
+playback stream with flattened COLOR256/COPY frames and a ring frame, followed
+by versioned editing chunks. Older FLC/FLI and PCX/BMP files open on Pencil with
+empty Background/Color/FX planes. Saving an imported file asks for a PTF name.
+GIF, APNG and sprite-sheet exports flatten the complete composition. The RGBA
+Image Editor retains its existing document workflow.
 
-Save reads live pixels for the active frame without mutating timeline/history.
-It writes and flushes a sibling temporary file, then atomically replaces the
-original. Failure leaves the old file, document filename and dirty state intact.
-Open decodes the entire timeline before creating a document. Malformed chunks,
-truncation and allocation failures release partial results without adding windows.
-Regression coverage: `make build/bin/test_penciltest_flc_test` then run that binary.
+Readers support COLOR256, COLOR64, COPY, BLACK, BRUN, LC and SS2, palette changes,
+repeated frames, prefix chunks and odd dimensions. Dimensions are physical
+pixels; FLI timing uses 70 Hz ticks. External FLICs map to a common palette with
+index 0 reserved for transparency; animations requiring over 255 opaque colors
+are rejected. True-color FLIC variants remain unsupported.
+
+The existing `0x7074` top-level trailer uses `PTA1` at offset 8 in its 16-byte
+header. It contains one 1084-byte little-endian record per frame: `PTF1` at 0,
+name at 4 (32 bytes), FPS at 36, delay at 40, loop/show-paper at 44/45, paper RGBA
+at 48, and 256 packed RGBA palette entries at 60. Other bytes are reserved.
+
+The new `0x7075` top-level trailer follows it. Its 16-byte header holds total
+chunk length at 0, type at 4, `PTL2` at 8, layer count 4 at 12, active layer at
+13, a four-bit visibility mask at 14, and reserved zero at 15. Its payload is
+one shared Background plane, then Color/Pencil/FX planes for every frame in
+timeline order. Every plane is exactly width × height bytes. PTF requires this
+extension; its size, signature, layer count, and selectors are validated before
+opening. Plain legacy FLC can omit it. Older FLC readers can use the flattened
+playback stream but cannot preserve the editing layers if they rewrite it.
+
+Files are currently uncompressed. Total composite/cel/background pixel storage
+is limited to 512 MiB; frame delays are 1–65535 ms. Save reads live working layers
+without mutating history, writes and flushes a sibling temporary file, then
+atomically replaces the destination. A failed write preserves the original.
+Load validates and decodes the file before opening a document; malformed chunks,
+unknown layer versions, truncation and allocation failures discard partial data.
+
+Regression coverage: `test_penciltest_layers_test`, `test_penciltest_flc_test`,
+`test_penciltest_layout_test`, and the shared history suites. Layer tests cover
+sidebar routing, palette visibility, underpaint fill, frame operations, playback,
+resize/undo, PTF round trips, corrupted extensions, and flattened exports.
 
 Format reference: Jim Kent's [The FLIC File Format](https://jacobfilipp.com/DrDobbs/articles/DDJ/1993/9303/9303a/9303a.htm).

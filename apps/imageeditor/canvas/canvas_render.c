@@ -13,8 +13,9 @@ void canvas_composite(const canvas_doc_t *doc, uint8_t *dst) {
 #if IMAGEEDITOR_INDEXED
   // Indexed mode: one layer, map each pixel index through the palette.
   // The transparent index produces fully transparent pixels.
-  if (doc->layer.count > 0 && doc->layer.stack[0]->pixels) {
-    const uint8_t *idx_buf = doc->layer.stack[0]->pixels;
+  for (int li = 0; li < doc->layer.count; li++) {
+    if (!doc->layer.stack[li]->visible) continue;
+    const uint8_t *idx_buf = doc->layer.stack[li]->pixels;
     for (size_t i = 0; i < n; i++) {
       uint8_t pidx = idx_buf[i];
       uint8_t *d = dst + i * 4;

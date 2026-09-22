@@ -12,6 +12,11 @@ static void fill_begin(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t d
   IE_TRACE("fill begin doc=%p at=(%d,%d) gap=%d scale=%d", (void *)doc,
            doc_pt.x, doc_pt.y, gap, g_bw_retina_scale);
   if (!ie_doc_begin_op(doc, "Fill")) return;
+  if (pencil_has_layers(doc) && doc->layer.active == IE_LAYER_COLOR) {
+    bool ok = pencil_color_fill(doc, doc_pt.x, doc_pt.y, g_app->fg_color, gap);
+    ie_doc_commit_op(doc, ok);
+    return;
+  }
   int stitches = canvas_flood_fill_with_gap(doc, doc_pt.x, doc_pt.y,
                                             g_app->fg_color, gap);
   IE_TRACE("fill end doc=%p stitches=%d", (void *)doc, stitches);

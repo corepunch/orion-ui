@@ -183,6 +183,7 @@ static void test_coloring_palette(void) {
   canvas_doc_t *doc = create_document(NULL, 64, 64);
   ASSERT_NOT_NULL(doc);
   ASSERT_EQUAL(doc->ipal.count, IE_PENCIL_COLORS + 1);
+  ASSERT_TRUE(cmd_pencil_layer(doc, IE_LAYER_COLOR));
   toolbar_state_t *tb = window_toolbar_state(g_app->tool_win);
   ASSERT_EQUAL(tb->columns, 2);
   int found = 0;

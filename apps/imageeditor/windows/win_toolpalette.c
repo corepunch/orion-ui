@@ -103,6 +103,43 @@ static void swatch_edit_fg(window_t *owner) {
 }
 #endif
 
+#if IMAGEEDITOR_BW
+static void pencil_toolbar_items(window_t *win) {
+  canvas_doc_t *doc = g_app ? g_app->active_doc : NULL;
+  int layer = pencil_has_layers(doc) ? doc->layer.active : IE_LAYER_PENCIL;
+  static const int order[] = {IE_LAYER_BG, IE_LAYER_PENCIL, IE_LAYER_COLOR, IE_LAYER_FX};
+  static const char *const tips[] = {"Background — shared by all frames", "Color — beneath pencil", "Pencil — monochrome drawing", "FX — above pencil"};
+  toolbar_item_t items[4 + 2 + ARRAY_LEN(k_tools) + IE_PENCIL_COLORS];
+  int count = 0;
+  for (int i = 0; i < 4; i++)
+    items[count++] = (toolbar_item_t){.type = TOOLBAR_ITEM_CUSTOM,
+      .ident = IE_PENCIL_LAYER_BASE + order[i], .tooltip = tips[order[i]]};
+  items[count++] = (toolbar_item_t){.type = TOOLBAR_ITEM_SEPARATOR};
+  for (int i = 0; i < ARRAY_LEN(k_tools); i++) {
+    if (layer == IE_LAYER_PENCIL && (k_tools[i].ident == ID_TOOL_FILL || k_tools[i].ident == ID_TOOL_EYEDROPPER)) continue;
+    items[count++] = k_tools[i];
+  }
+  if (layer != IE_LAYER_PENCIL) {
+    items[count++] = (toolbar_item_t){.type = TOOLBAR_ITEM_SEPARATOR};
+    for (int i = 0; i < IE_PENCIL_COLORS; i++)
+      items[count++] = (toolbar_item_t){.type = TOOLBAR_ITEM_CUSTOM,
+        .ident = IE_PENCIL_PALETTE_BASE + i, .tooltip = k_pencil_color_names[i]};
+  }
+  send_message(win, tbSetItems, count, items);
+  send_message(win, tbSetActiveButton, g_app ? imageeditor_tool_group(g_app->current_tool) : ID_TOOL_BRUSH, NULL);
+  win->value = layer + 1;
+}
+#endif
+
+void imageeditor_sync_tool_palette(void) {
+#if IMAGEEDITOR_BW
+  if (!g_app || !g_app->tool_win) return;
+  int layer = pencil_has_layers(g_app->active_doc) ? g_app->active_doc->layer.active : IE_LAYER_PENCIL;
+  if (g_app->tool_win->value != (uint32_t)(layer + 1)) pencil_toolbar_items(g_app->tool_win);
+  invalidate_window(g_app->tool_win);
+#endif
+}
+
 result_t win_tool_palette_proc(window_t *win, uint32_t msg,
                                uint32_t wparam, void *lparam) {
   switch (msg) {
@@ -110,15 +147,8 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       send_message(win, tbSetOrientation, TOOLBAR_VERTICAL, NULL);
       send_message(win, tbSetButtonSize, TOOL_PALETTE_BTN_SIZE, NULL);
 #if IMAGEEDITOR_BW
-      toolbar_item_t items[ARRAY_LEN(k_tools) + 1 + IE_PENCIL_COLORS];
-      memcpy(items, k_tools, sizeof(k_tools));
-      int count = ARRAY_LEN(k_tools);
-      items[count++] = (toolbar_item_t){.type = TOOLBAR_ITEM_SEPARATOR};
-      for (int i = 0; i < IE_PENCIL_COLORS; i++)
-        items[count++] = (toolbar_item_t){.type = TOOLBAR_ITEM_CUSTOM,
-          .ident = IE_PENCIL_PALETTE_BASE + i, .tooltip = k_pencil_color_names[i]};
       send_message(win, tbSetColumns, 2, NULL);
-      send_message(win, tbSetItems, count, items);
+      pencil_toolbar_items(win);
 #else
       send_message(win, tbSetItems, ARRAY_LEN(k_tools), (void *)k_tools);
 #endif
@@ -127,6 +157,17 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
     }
     case tbDrawItem:
 #if IMAGEEDITOR_BW
+      if (wparam >= IE_PENCIL_LAYER_BASE && wparam < IE_PENCIL_LAYER_BASE + IE_LAYER_COUNT && lparam) {
+        int layer = wparam - IE_PENCIL_LAYER_BASE;
+        static const char *const labels[] = {"BG", "Color", "Pencil", "FX"};
+        toolbar_draw_item_t *draw = lparam;
+        bool active = g_app && pencil_has_layers(g_app->active_doc) && g_app->active_doc->layer.active == layer;
+        theme_draw(THEME_PART_TOOLBAR_BUTTON, draw->rect, draw->state | (active ? CTRL_SELECTED : 0));
+        int width = text_strwidth(FONT_SMALLEST, labels[layer]);
+        irect16_t text = rect_center(draw->rect, width, text_char_height(FONT_SMALLEST));
+        draw_text(FONT_SMALLEST, labels[layer], text.x, text.y, get_sys_color(brTextNormal));
+        return true;
+      }
       if (wparam >= IE_PENCIL_PALETTE_BASE && wparam < IE_PENCIL_PALETTE_BASE + IE_PENCIL_COLORS && lparam) {
         pencil_palette_draw(wparam - IE_PENCIL_PALETTE_BASE, lparam);
         return true;
@@ -140,6 +181,10 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
                g_app ? g_app->current_tool : -1);
       if (!g_app) return true;
 #if IMAGEEDITOR_BW
+      if (wparam >= IE_PENCIL_LAYER_BASE && wparam < IE_PENCIL_LAYER_BASE + IE_LAYER_COUNT) {
+        cmd_pencil_layer(g_app->active_doc, wparam - IE_PENCIL_LAYER_BASE);
+        return true;
+      }
       if (wparam >= IE_PENCIL_PALETTE_BASE && wparam < IE_PENCIL_PALETTE_BASE + IE_PENCIL_COLORS) {
         if (!cmd_pencil_color(g_app->active_doc, wparam - IE_PENCIL_PALETTE_BASE))
           message_box(win, "This color could not be added to the document palette.", "Color", MB_OK);

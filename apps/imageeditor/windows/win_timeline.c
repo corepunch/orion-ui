@@ -79,7 +79,15 @@ static void rebuild_thumbnails(timeline_state_t *st) {
   for (int i = 0; i < doc->anim->frame_count && i < st->thumb_count; i++) {
     uint32_t rev = doc->anim->frames[i] ? doc->anim->frames[i]->revision : 0;
     if (!st->thumbs_dirty && st->thumbs[i] && st->thumb_rev[i] == rev) continue;
-    if (anim_render_frame_thumbnail_scaled(doc->anim->frames[i],
+    anim_frame_t preview = *doc->anim->frames[i];
+    uint8_t *rgba = NULL;
+    if (pencil_has_layers(doc)) {
+      rgba = malloc((size_t)doc->canvas_w * doc->canvas_h * 4);
+      if (!rgba || !doc_anim_rgba(doc, i, rgba)) { free(rgba); continue; }
+      preview.data = rgba; preview.data_size = (size_t)doc->canvas_w * doc->canvas_h * 4;
+      preview.format = FRAME_FORMAT_RGBA;
+    }
+    if (anim_render_frame_thumbnail_scaled(&preview,
                                            doc->canvas_w, doc->canvas_h,
                                            TIMELINE_THUMB_W,
                                            &st->thumbs[i],
@@ -90,6 +98,7 @@ static void rebuild_thumbnails(timeline_state_t *st) {
 #endif
                                            ))
       st->thumb_rev[i] = rev;
+    free(rgba);
   }
   st->thumbs_dirty = false;
 }
@@ -366,9 +375,7 @@ void anim_tick(canvas_doc_t *doc) {
     next = 0;
   }
 
-  if (anim_timeline_switch_frame(tl, next, &doc->pixels,
-                                  doc->canvas_w, doc->canvas_h,
-                                  IE_FRAME_FORMAT)) {
+  if (doc_anim_load(doc, next)) {
     if (doc->layer.count > 0)
       doc->layer.stack[doc->layer.active]->pixels = doc->pixels;
     doc->canvas_dirty = true;

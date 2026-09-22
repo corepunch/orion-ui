@@ -226,9 +226,7 @@ bool anim_export_gif(canvas_doc_t *doc, const char *path) {
 
   // Commit the current working buffer to the active frame first.
   // Abort if compression fails to avoid wiping the active frame's data.
-  if (!anim_frame_compress(tl->frames[tl->active_frame],
-                           doc->pixels, doc->canvas_w, doc->canvas_h,
-                           FRAME_FORMAT_INDEXED)) {
+  if (!doc_anim_commit(doc)) {
     fclose(fp);
     return false;
   }
@@ -255,7 +253,7 @@ bool anim_export_gif(canvas_doc_t *doc, const char *path) {
     int             lct_size   = 256;
     uint32_t        tmp_pal[256];
 
-    if (frame->format == FRAME_FORMAT_INDEXED && frame->data) {
+    if (!IMAGEEDITOR_INDEXED && frame->format == FRAME_FORMAT_INDEXED && frame->data) {
       // Use the palette stored with the compressed frame directly.
       indices  = frame->data;
       lct      = frame->palette;
@@ -266,7 +264,7 @@ bool anim_export_gif(canvas_doc_t *doc, const char *path) {
         rgba_tmp = malloc((size_t)doc->canvas_w * (size_t)doc->canvas_h * 4);
         if (!rgba_tmp) { ok = false; break; }
       }
-      if (!anim_frame_expand(frame, rgba_tmp, doc->canvas_w, doc->canvas_h)) {
+      if (!doc_anim_rgba(doc, fi, rgba_tmp)) {
         ok = false;
         break;
       }

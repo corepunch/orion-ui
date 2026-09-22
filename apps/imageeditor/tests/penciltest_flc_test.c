@@ -163,7 +163,15 @@ static void flc_external_compression(void) {
   tl = flc_load(path, &w, &h, pal, &bg, &show);
   ASSERT_NOT_NULL(tl); ASSERT_EQUAL(tl->frames[0]->delay_ms, 100);
   ASSERT_EQUAL(pal[tl->frames[1]->data[5]], MAKE_COLOR(252,252,252,255));
-  anim_timeline_free(tl); remove(path);
+  anim_timeline_free(tl);
+  ASSERT_TRUE(imageeditor_open_file_path(path));
+  canvas_doc_t *legacy = g_app->active_doc;
+  ASSERT_EQUAL(legacy->layer.count, IE_LAYER_COUNT);
+  ASSERT_EQUAL(legacy->layer.active, IE_LAYER_PENCIL);
+  ASSERT_TRUE(cmd_frame_select(legacy, 1));
+  ASSERT_EQUAL(canvas_get_pixel(legacy, 0, 0), black);
+  ASSERT_EQUAL(legacy->layer.stack[IE_LAYER_BG]->pixels[0], 0);
+  close_document(legacy); remove(path);
   PASS();
 }
 
@@ -195,6 +203,7 @@ static void flc_color_palette_roundtrip(void) {
   TEST("16 coloring swatches retain exact colors through FLC save and reopen");
   canvas_doc_t *doc = create_document(NULL, IE_PENCIL_COLORS, 2);
   ASSERT_NOT_NULL(doc);
+  ASSERT_TRUE(cmd_pencil_layer(doc, IE_LAYER_COLOR));
   for (int i = 0; i < IE_PENCIL_COLORS; i++) {
     ASSERT_TRUE(cmd_pencil_color(doc, i));
     canvas_set_pixel(doc, i, 0, g_app->fg_color);
@@ -219,7 +228,7 @@ int main(void) {
   TEST_START("Penciltest FLC persistence");
   snprintf(flc_test_dir, sizeof(flc_test_dir), "%s/orion-flc-XXXXXX", getenv("TMPDIR") ? getenv("TMPDIR") : "/tmp");
   if (!mkdtemp(flc_test_dir)) return 1;
-  snprintf(flc_test_path, sizeof(flc_test_path), "%s/animation.flc", flc_test_dir);
+  snprintf(flc_test_path, sizeof(flc_test_path), "%s/animation.ptf", flc_test_dir);
   test_env_init(); g_app = calloc(1, sizeof(*g_app));
   flc_roundtrip(); flc_menu_and_retina(); flc_save_as(); flc_external_compression(); flc_reject_corruption();
   flc_color_palette_roundtrip();

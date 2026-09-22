@@ -74,7 +74,9 @@ static doc_snapshot_t *make_snapshot(const canvas_doc_t *doc) {
       if (!frame) goto fail;
       s->anim->frames[s->anim->frame_count++] = frame;
       *frame = *doc->anim->frames[i];
-      if (!copy_bytes(&frame->data, doc->anim->frames[i]->data, frame->data_size)) goto fail;
+      frame->cels = NULL;
+      if (!copy_bytes(&frame->data, doc->anim->frames[i]->data, frame->data_size) ||
+          !copy_bytes(&frame->cels, doc->anim->frames[i]->cels, frame->cels_size)) goto fail;
     }
   }
   return snap;
@@ -175,6 +177,7 @@ static bool snapshot_matches(const canvas_doc_t *doc, const canvas_doc_t *s) {
     for (int i = 0; i < a->frame_count; i++) {
       anim_frame_t *af = a->frames[i], *bf = b->frames[i];
       if (af->format != bf->format || af->data_size != bf->data_size ||
+          af->cels_size != bf->cels_size || !bytes_equal(af->cels, bf->cels, af->cels_size) ||
           af->delay_ms != bf->delay_ms || strcmp(af->name, bf->name) ||
           memcmp(af->palette, bf->palette, sizeof(af->palette)) ||
           !bytes_equal(af->data, bf->data, af->data_size)) return false;
@@ -195,8 +198,7 @@ void doc_end_command(canvas_doc_t *doc, bool success) {
     return;
   }
   if (success && doc->anim)
-    success = anim_frame_compress(doc->anim->frames[doc->anim->active_frame], doc->pixels,
-                                  doc->canvas_w, doc->canvas_h, IE_FRAME_FORMAT);
+    success = doc_anim_commit(doc);
   if (success) {
     clear_stack(doc->redo.states, &doc->redo.count);
     stack_push(doc->undo.states, &doc->undo.count, before);

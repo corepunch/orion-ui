@@ -548,6 +548,8 @@ canvas_doc_t *canvas_extract_mask(canvas_doc_t *doc) {
 // Uses Manhattan distance in RGBA space.  Returns the transparent index if the
 // color has alpha == 0.  Returns ipal.transparent if the palette is empty.
 int canvas_nearest_palette_index(const canvas_doc_t *doc, uint32_t color) {
+  if (pencil_has_layers(doc) && doc->layer.active == IE_LAYER_PENCIL && COLOR_A(color))
+    color = color == IE_PAPER_COLOR ? 0 : IE_INK_COLOR;
   if (COLOR_A(color) == 0)
     return doc->ipal.transparent;
   if (doc->ipal.count <= 0)

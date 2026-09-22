@@ -9,6 +9,7 @@ extern app_state_t *g_app;
 
 void cmd_layer_new(canvas_doc_t *doc, uint32_t fill_color) {
   if (!doc) return;
+  if (pencil_has_layers(doc)) { IE_TRACE("fixed layer structure rejected doc=%p", (void *)doc); return; }
   
   if (!ie_doc_begin_op(doc, "New Layer")) return;
   bool ok = doc_add_layer_filled(doc, fill_color);
@@ -20,6 +21,7 @@ void cmd_layer_new(canvas_doc_t *doc, uint32_t fill_color) {
 
 void cmd_layer_delete(canvas_doc_t *doc) {
   if (!doc) return;
+  if (pencil_has_layers(doc)) { IE_TRACE("fixed layer structure rejected doc=%p", (void *)doc); return; }
   
   if (!ie_doc_begin_op(doc, "Delete Layer")) return;
   bool ok = doc_delete_layer(doc);
@@ -31,6 +33,7 @@ void cmd_layer_delete(canvas_doc_t *doc) {
 
 void cmd_layer_duplicate(canvas_doc_t *doc) {
   if (!doc) return;
+  if (pencil_has_layers(doc)) { IE_TRACE("fixed layer structure rejected doc=%p", (void *)doc); return; }
   
   if (!ie_doc_begin_op(doc, "Duplicate Layer")) return;
   bool ok = doc_duplicate_layer(doc);
@@ -42,6 +45,7 @@ void cmd_layer_duplicate(canvas_doc_t *doc) {
 
 void cmd_layer_move_up(canvas_doc_t *doc) {
   if (!doc) return;
+  if (pencil_has_layers(doc)) { IE_TRACE("fixed layer structure rejected doc=%p", (void *)doc); return; }
   
   if (!ie_doc_begin_op(doc, "Move Layer Up")) return;
   doc_move_layer_up(doc);
@@ -52,6 +56,7 @@ void cmd_layer_move_up(canvas_doc_t *doc) {
 
 void cmd_layer_move_down(canvas_doc_t *doc) {
   if (!doc) return;
+  if (pencil_has_layers(doc)) { IE_TRACE("fixed layer structure rejected doc=%p", (void *)doc); return; }
   
   if (!ie_doc_begin_op(doc, "Move Layer Down")) return;
   doc_move_layer_down(doc);
@@ -62,6 +67,7 @@ void cmd_layer_move_down(canvas_doc_t *doc) {
 
 void cmd_layer_merge_down(canvas_doc_t *doc) {
   if (!doc) return;
+  if (pencil_has_layers(doc)) { IE_TRACE("fixed layer structure rejected doc=%p", (void *)doc); return; }
   
   if (!ie_doc_begin_op(doc, "Merge Down")) return;
   doc_merge_down(doc);
@@ -72,6 +78,7 @@ void cmd_layer_merge_down(canvas_doc_t *doc) {
 
 void cmd_layer_flatten(canvas_doc_t *doc) {
   if (!doc) return;
+  if (pencil_has_layers(doc)) { IE_TRACE("fixed layer structure rejected doc=%p", (void *)doc); return; }
   
   if (!ie_doc_begin_op(doc, "Flatten")) return;
   doc_flatten(doc);

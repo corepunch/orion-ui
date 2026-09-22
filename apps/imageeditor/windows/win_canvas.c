@@ -356,7 +356,13 @@ static void canvas_draw_onion_slot(canvas_win_state_t *state, canvas_doc_t *doc,
                !state->onion_tex[slot];
   bool live = g_ui_runtime.dragging || doc->drawing;
   if (stale && !live) {
-    if (!anim_render_frame_thumbnail_tinted(frame, doc->canvas_w, doc->canvas_h,
+    anim_frame_t ink = *frame;
+    if (pencil_has_layers(doc) && frame->cels && frame->cels_size == (size_t)doc->canvas_w * doc->canvas_h * 3) {
+      ink.data = frame->cels + (size_t)doc->canvas_w * doc->canvas_h;
+      ink.data_size = (size_t)doc->canvas_w * doc->canvas_h;
+      ink.format = FRAME_FORMAT_INDEXED;
+    }
+    if (!anim_render_frame_thumbnail_tinted(&ink, doc->canvas_w, doc->canvas_h,
                                             &state->onion_tex[slot],
 #if IMAGEEDITOR_INDEXED
                                             doc->ipal.entries,
@@ -378,7 +384,8 @@ static void canvas_draw_animation_trace(window_t *win,
                                         irect16_t canvas_rect) {
   if (!win || !state || !doc || !doc->anim || !g_app || !g_app->anim_trace_enabled)
     return;
-  if (doc->layer.mask_only_view || doc->anim->playing || doc->anim->frame_count <= 1)
+  if ((pencil_has_layers(doc) && doc->layer.active == IE_LAYER_BG) ||
+      doc->layer.mask_only_view || doc->anim->playing || doc->anim->frame_count <= 1)
     return;
 
   if (state->onion_tex_w != doc->canvas_w || state->onion_tex_h != doc->canvas_h) {
@@ -493,6 +500,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
     case evSetFocus:
       if (g_app && doc) {
         g_app->active_doc = doc;
+        imageeditor_sync_tool_palette();
         imageeditor_sync_main_toolbar();
       }
       return false;
@@ -510,8 +518,10 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           fill_rect(doc->background.color, canvas_rect);
         else
           draw_checkerboard(canvas_rect, CANVAS_CHECKER_SQUARE_PX);
-        canvas_draw_animation_trace(win, state, doc, canvas_rect);
+        if (!pencil_has_layers(doc)) canvas_draw_animation_trace(win, state, doc, canvas_rect);
         for (int li = 0; li < doc->layer.count; li++) {
+          if (pencil_has_layers(doc) && li == IE_LAYER_PENCIL)
+            canvas_draw_animation_trace(win, state, doc, canvas_rect);
           const layer_t *lay = doc->layer.stack[li];
           if (!lay || !lay->visible) continue;
           if (!lay->tex) continue;

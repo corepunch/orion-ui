@@ -115,7 +115,7 @@ static void oct_reduce(octree_t *oc) {
 // Walk the tree and collect up to 256 leaf colours.
 static int oct_collect(oct_node_t *n, uint32_t *palette, int *pal_size) {
   if (!n) return 0;
-  if (n->is_leaf || n->count == 0) {
+  if (n->is_leaf) {
     if (*pal_size >= 256) return 0;
     uint32_t cnt = n->count > 0 ? n->count : 1;
     uint8_t r = (uint8_t)(n->r / cnt);
@@ -320,6 +320,7 @@ anim_frame_t *anim_frame_new(const char *name, int delay_ms) {
 void anim_frame_free(anim_frame_t *f) {
   if (!f) return;
   free(f->data);
+  free(f->cels);
   free(f);
 }
 
@@ -401,6 +402,13 @@ int anim_timeline_duplicate_frame(anim_timeline_t *tl, int idx) {
     if (!copy->data) { anim_frame_free(copy); return -1; }
     memcpy(copy->data, src->data, src->data_size);
     copy->data_size = src->data_size;
+  }
+
+  if (src->cels_size) {
+    copy->cels = malloc(src->cels_size);
+    if (!copy->cels) { anim_frame_free(copy); return -1; }
+    memcpy(copy->cels, src->cels, src->cels_size);
+    copy->cels_size = src->cels_size;
   }
 
   int ins = idx + 1;

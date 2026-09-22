@@ -227,9 +227,7 @@ bool anim_export_apng(canvas_doc_t *doc, const char *path) {
 
   // Commit the current working buffer; abort if compression fails to avoid
   // silently wiping the active frame's stored data.
-  if (!anim_frame_compress(tl->frames[tl->active_frame],
-                           doc->pixels, doc->canvas_w, doc->canvas_h,
-                           FRAME_FORMAT_INDEXED))
+  if (!doc_anim_commit(doc))
     return false;
 
   FILE *fp = fopen(path, "wb");
@@ -243,7 +241,7 @@ bool anim_export_apng(canvas_doc_t *doc, const char *path) {
   if (!rgba) { fclose(fp); return false; }
 
   // Expand first frame.
-  if (!anim_frame_expand(tl->frames[0], rgba, w, h)) {
+  if (!doc_anim_rgba(doc, 0, rgba)) {
     free(rgba); fclose(fp); return false;
   }
 
@@ -270,7 +268,7 @@ bool anim_export_apng(canvas_doc_t *doc, const char *path) {
     anim_frame_t *frame = tl->frames[fi];
 
     if (fi > 0) {
-      if (!anim_frame_expand(frame, rgba, w, h)) { ok = false; break; }
+      if (!doc_anim_rgba(doc, fi, rgba)) { ok = false; break; }
     }
 
     // fcTL: sequence, width, height, delay_num/den, disposal, blend.
@@ -318,9 +316,7 @@ bool anim_export_spritesheet(canvas_doc_t *doc, const char *path) {
   if (tl->frame_count == 0) return false;
 
   // Commit the current working buffer; abort if compression fails.
-  if (!anim_frame_compress(tl->frames[tl->active_frame],
-                           doc->pixels, doc->canvas_w, doc->canvas_h,
-                           FRAME_FORMAT_INDEXED))
+  if (!doc_anim_commit(doc))
     return false;
 
   int w = doc->canvas_w;
@@ -336,7 +332,7 @@ bool anim_export_spritesheet(canvas_doc_t *doc, const char *path) {
   for (int fi = 0; fi < n && ok; fi++) {
     uint8_t *tmp = malloc((size_t)w * h * 4);
     if (!tmp) { ok = false; break; }
-    ok = anim_frame_expand(tl->frames[fi], tmp, w, h);
+    ok = doc_anim_rgba(doc, fi, tmp);
     if (ok) {
       for (int r = 0; r < h; r++) {
         uint8_t *src_row = tmp  + (size_t)r * w * 4;

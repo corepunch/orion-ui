@@ -235,7 +235,14 @@ static void history_selection_resize_layers(void) {
   cmd_redo(doc);
   ASSERT_EQUAL(doc->canvas_w, 16);
   ASSERT_EQUAL(doc->canvas_h, 20);
-#if !IMAGEEDITOR_SINGLE_LAYER
+#if IMAGEEDITOR_BW
+  ASSERT_EQUAL(doc->layer.count, IE_LAYER_COUNT);
+  cmd_layer_new(doc, 0);
+  ASSERT_EQUAL(doc->layer.count, IE_LAYER_COUNT);
+  cmd_layer_set_visibility(doc, IE_LAYER_FX, false);
+  cmd_undo(doc);
+  ASSERT_TRUE(doc->layer.stack[IE_LAYER_FX]->visible);
+#elif !IMAGEEDITOR_SINGLE_LAYER
   cmd_layer_new(doc, 0);
   ASSERT_EQUAL(doc->layer.count, 2);
   cmd_layer_set_visibility(doc, doc->layer.active, false);

@@ -209,6 +209,8 @@ extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 
 #define IE_PENCIL_COLORS 16
 #define IE_PENCIL_PALETTE_BASE 0x7f00
+#define IE_PENCIL_LAYER_BASE 0x7e00
+enum { IE_LAYER_BG, IE_LAYER_COLOR, IE_LAYER_PENCIL, IE_LAYER_FX, IE_LAYER_COUNT };
 extern const uint32_t k_pencil_palette[IE_PENCIL_COLORS];
 extern const char *const k_pencil_color_names[IE_PENCIL_COLORS];
 
@@ -384,6 +386,8 @@ typedef struct {
   uint32_t       anim_timer_id; // axSetTimer handle for playback; 0 = stopped
   hinstance_t    hinstance;  // owning app instance
   int            current_tool;
+  int            pencil_layer_tool[IE_LAYER_COUNT];
+  uint32_t       pencil_layer_color[IE_LAYER_COUNT];
   bool           anim_trace_enabled; // onion-skin overlay toggle for animation frames
   int            anim_trace_frames;  // active onion-skin step span (max non-zero prev/next opacity step)
   float          anim_trace_prev_opacity[ONION_SKIN_MAX_STEPS];
@@ -886,10 +890,17 @@ void swap_foreground_background_colors(void);
 #include "anim/anim.h"
 
 #if IMAGEEDITOR_INDEXED
+typedef struct {
+  uint8_t *background; // owned by caller, one indexed canvas
+  int active;
+  uint8_t visible;
+} pencil_file_layers_t;
 bool flc_is_file(const char *path);
 bool flc_save(const char *path, const canvas_doc_t *doc);
 anim_timeline_t *flc_load(const char *path, int *w, int *h, uint32_t palette[256],
                           uint32_t *background, bool *show_bg);
+anim_timeline_t *flc_load_layers(const char *path, int *w, int *h, uint32_t palette[256],
+                                 uint32_t *background, bool *show_bg, pencil_file_layers_t *layers);
 #endif
 
 // Floating frame strip geometry.
@@ -971,6 +982,16 @@ void cmd_frame_move(canvas_doc_t *doc, int from, int to);
 // Edit commands
 void cmd_undo(canvas_doc_t *doc);
 bool cmd_pencil_color(canvas_doc_t *doc, int swatch);
+bool pencil_has_layers(const canvas_doc_t *doc);
+bool cmd_pencil_layer(canvas_doc_t *doc, int layer);
+void imageeditor_sync_tool_palette(void);
+bool doc_anim_commit(canvas_doc_t *doc);
+bool doc_anim_load(canvas_doc_t *doc, int index);
+bool doc_anim_switch(canvas_doc_t *doc, int index);
+const uint8_t *pencil_frame_layer(const canvas_doc_t *doc, int frame, int layer);
+bool pencil_composite_frame(const canvas_doc_t *doc, int frame, uint8_t *pixels);
+bool doc_anim_rgba(const canvas_doc_t *doc, int frame, uint8_t *rgba);
+bool pencil_color_fill(canvas_doc_t *doc, int x, int y, uint32_t color, int gap);
 void cmd_redo(canvas_doc_t *doc);
 void cmd_cut(canvas_doc_t *doc);
 void cmd_copy(canvas_doc_t *doc);
