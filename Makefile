@@ -43,6 +43,7 @@ LIB_FLAGS = -dynamiclib
 RPATH_FLAGS = -Wl,-rpath,@loader_path/../lib
 GEM_INSTALL_RPATH_FLAGS = -Wl,-rpath,@loader_path/../..
 lib_id_flags = -Wl,-install_name,@rpath/lib$(1).$(LIB_EXT)
+component_id_flags = -Wl,-install_name,@rpath/$(notdir $@)
 GEM_NM   = nm -g
 GEM_SYM  = T _gem_get_interface
 else ifeq ($(UNAME_S),Linux)
@@ -52,6 +53,7 @@ LIB_EXT  = so
 LIB_FLAGS = -shared -fPIC
 RPATH_FLAGS = -Wl,-rpath,'$$ORIGIN/../lib'
 GEM_INSTALL_RPATH_FLAGS = -Wl,-rpath,'$$ORIGIN/../..'
+component_id_flags = -Wl,-soname,$(notdir $@)
 GEM_NM   = nm -D
 GEM_SYM  = T gem_get_interface
 else
@@ -285,7 +287,7 @@ $(foreach a,$(PHONY_APP_NAMES),$(eval $(a): $(BIN_DIR)/$(a)$(EXE_EXT)))
 
 $(LIB_DIR)/%_components.$(LIB_EXT): $$(wildcard $(APPS)/$$*/$(COMPS)/*.c) $(CORE_LIBS) $(GENERATED_HEADERS) | $(LIB_DIR)
 	@echo "PLUGIN  $@"
-	@$(CC) $(CFLAGS) $(LIB_FLAGS) -I. -I$(APPS)/$* -I$(APPS)/$*/$(COMPS) -o $@ $(wildcard $(APPS)/$*/$(COMPS)/*.c) \
+	@$(CC) $(CFLAGS) $(LIB_FLAGS) $(component_id_flags) -I. -I$(APPS)/$* -I$(APPS)/$*/$(COMPS) -o $@ $(wildcard $(APPS)/$*/$(COMPS)/*.c) \
 	    $(LDFLAGS) $(CORE_LDLIBS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
 
 $(EXAMPLE_BINS) $(PHONY_APP_BINS): $(BIN_DIR)/%$(EXE_EXT): $(CORE_LIBS) $(GENERATED_HEADERS) | $(BIN_DIR) share

@@ -37,12 +37,12 @@ static const toolbar_item_t k_tools[] = {
 static void pencil_palette_draw(int swatch, const toolbar_draw_item_t *draw) {
   uint32_t color = k_pencil_palette[swatch];
   bool selected = g_app && g_app->fg_color == color;
-  irect16_t outer = rect_inset(draw->rect, 1);
+  irect16_t outer = draw->rect;
   uint32_t border = get_sys_color(selected ? brAccent : brDarkEdge);
   if (!selected && (draw->state & (CTRL_HOVER | CTRL_PRESSED)))
     border = get_sys_color(brTextNormal);
   fill_rounded_rect(border, outer, 3);
-  fill_rounded_rect(color, rect_inset(outer, selected ? 2 : 1), 2);
+  fill_rounded_rect(color, rect_inset(outer, 1), 2);
   if (selected) {
     uint32_t mark = COLOR_R(color) * 299 + COLOR_G(color) * 587 + COLOR_B(color) * 114 > 140000
                     ? MAKE_COLOR(24, 24, 32, 255) : MAKE_COLOR(255, 255, 255, 255);
