@@ -5,6 +5,9 @@ description: Implement, populate, edit, compose, or validate SimpleGL XML scenes
 
 # Populate SimpleGL XML Scenes
 
+For ellipsoid character geometry and posing, also use
+[populate-scener-characters](../populate-scener-characters/SKILL.md).
+
 Build scenes in stable local coordinate frames and verify them with CLI checks and tests. Author lengths in centimetres, rotations in degrees and scales as unitless values. New scenes declare `<scene up="z">`; primitive local axes remain unchanged.
 
 ## Read the relevant references

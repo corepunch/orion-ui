@@ -45,6 +45,12 @@ reference. It documents `.blks` scenes, `.blk` prefabs, every supported tag
 and attribute, defaults, units, transforms, materials, lights, cameras,
 primitives, groups, cutters, modifiers, attachments, validation, and rendering.
 
+For ellipsoid characters and camera-specific poses, use the
+[character authoring guide](docs/character-authoring.md) and
+[character population skill](skills/populate-scener-characters/SKILL.md).
+The [pose study](docs/character-pose-study.md) contains a working prefab,
+three rendered poses, and an assessment of animation and IK gaps.
+
 Install Scener together with every Orion application, GEM, runtime library,
 asset, example, and offline documentation file with:
 

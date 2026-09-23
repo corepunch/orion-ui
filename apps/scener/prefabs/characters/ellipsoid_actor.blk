@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Ellipsoid actor: about 180 cm tall, front faces local -Y, feet rest on Z=0 in a Z-up scene. -->
+<prefab>
+  <group name="rig_root" pos="0 0 92">
+    <sphere pos="0 0 -1" radius="1" scale="19 11 14" color="0.13 0.18 0.23" rings="12" slices="16"/>
+    <group name="torso">
+      <sphere pos="0 0 28" radius="1" scale="23 13 36" color="0.11 0.32 0.36" rings="12" slices="16"/>
+      <sphere pos="0 -8 50" radius="1" scale="25 8 10" color="0.10 0.29 0.33" rings="12" slices="16"/>
+      <sphere pos="0 -3 59" radius="1" scale="8 8 12" color="0.80 0.51 0.29" rings="12" slices="16"/>
+      <group name="head" pos="0 -2 67">
+        <sphere pos="0 -2 0" radius="1" scale="14 12 17" color="0.85 0.57 0.34" rings="12" slices="16"/>
+        <sphere pos="0 1 13" radius="1" scale="14 12 7" color="0.10 0.09 0.08" rings="12" slices="16"/>
+        <sphere pos="-6 -12 3" radius="1" scale="2 1.5 2" color="0.10 0.09 0.08" rings="8" slices="12"/>
+        <sphere pos="6 -12 3" radius="1" scale="2 1.5 2" color="0.10 0.09 0.08" rings="8" slices="12"/>
+        <sphere pos="0 -14 -4" radius="1" scale="3 4 4" color="0.89 0.62 0.39" rings="8" slices="12"/>
+      </group>
+      <group name="left_shoulder" pos="-24 0 46" rot="0 17 0">
+        <sphere pos="0 0 -14" radius="1" scale="8 8 19" color="0.83 0.55 0.33" rings="12" slices="16"/>
+        <group name="left_elbow" pos="0 0 -30">
+          <sphere pos="0 0 -13" radius="1" scale="6.5 6.5 17" color="0.87 0.59 0.36" rings="12" slices="16"/>
+          <sphere pos="0 0 -30" radius="1" scale="5.5 5 8" color="0.88 0.60 0.38" rings="10" slices="14"/>
+        </group>
+      </group>
+      <group name="right_shoulder" pos="24 0 46" rot="0 -17 0">
+        <sphere pos="0 0 -14" radius="1" scale="8 8 19" color="0.83 0.55 0.33" rings="12" slices="16"/>
+        <group name="right_elbow" pos="0 0 -30">
+          <sphere pos="0 0 -13" radius="1" scale="6.5 6.5 17" color="0.87 0.59 0.36" rings="12" slices="16"/>
+          <sphere pos="0 0 -30" radius="1" scale="5.5 5 8" color="0.88 0.60 0.38" rings="10" slices="14"/>
+        </group>
+      </group>
+    </group>
+    <group name="left_hip" pos="-11 0 -4">
+      <sphere pos="0 0 -19" radius="1" scale="11 10 24" color="0.24 0.37 0.54" rings="12" slices="16"/>
+      <group name="left_knee" pos="0 0 -42">
+        <sphere pos="0 0 -19" radius="1" scale="7.5 8 23" color="0.28 0.42 0.62" rings="12" slices="16"/>
+        <group name="left_ankle" pos="0 0 -39">
+          <sphere pos="0 -8 -1" radius="1" scale="9 17 6" color="0.10 0.09 0.08" rings="10" slices="14"/>
+        </group>
+      </group>
+    </group>
+    <group name="right_hip" pos="11 0 -4">
+      <sphere pos="0 0 -19" radius="1" scale="11 10 24" color="0.24 0.37 0.54" rings="12" slices="16"/>
+      <group name="right_knee" pos="0 0 -42">
+        <sphere pos="0 0 -19" radius="1" scale="7.5 8 23" color="0.28 0.42 0.62" rings="12" slices="16"/>
+        <group name="right_ankle" pos="0 0 -39">
+          <sphere pos="0 -8 -1" radius="1" scale="9 17 6" color="0.10 0.09 0.08" rings="10" slices="14"/>
+        </group>
+      </group>
+    </group>
+  </group>
+</prefab>

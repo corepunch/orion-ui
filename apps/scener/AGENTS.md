@@ -46,6 +46,7 @@ deployed command from the consuming project's working directory.
 | `CLI.md`, `deploy.py` | Current batch/capture interface and bundled macOS deployment |
 | `win_viewport.c` | Editor viewport, navigation, rendering and picking |
 | `skills/populate-simplegl-scenes/` | Scene population workflow and format reference |
+| `skills/populate-scener-characters/` | Ellipsoid character and pose authoring workflow |
 | `scenes/` | Runnable and diagnostic scene files (`*.blks`) |
 | `prefabs/` | Reusable object files (`chair.blk`, `sofa.blk`, etc.) |
 
@@ -57,6 +58,8 @@ supported element and attribute, defaults, units, and CLI validation. Read it
 before editing scene XML. Follow
 [`skills/populate-simplegl-scenes/SKILL.md`](skills/populate-simplegl-scenes/SKILL.md)
 for placement, composition, lighting, camera, and rendered-review requirements.
+For character geometry or posing, also follow
+[`skills/populate-scener-characters/SKILL.md`](skills/populate-scener-characters/SKILL.md).
 
 After editing a scene or referenced prefab:
 
