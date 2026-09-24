@@ -12,7 +12,7 @@ const uint8_t *pencil_frame_layer(const canvas_doc_t *doc, int frame, int layer)
   const anim_frame_t *f = doc->anim->frames[frame];
   size_t n = (size_t)doc->canvas_w * doc->canvas_h;
   if (f->cels && f->cels_size == 3 * n) return f->cels + (layer - 1) * n;
-  if (!f->cels && layer == IE_LAYER_PENCIL && f->format == FRAME_FORMAT_INDEXED && f->data_size == n)
+  if (!f->cels && layer == IE_LAYER_COLOR && f->format == FRAME_FORMAT_INDEXED && f->data_size == n)
     return f->data;
   return NULL;
 }
@@ -27,11 +27,16 @@ bool pencil_composite_frame(const canvas_doc_t *doc, int frame, uint8_t *pixels)
       ((f->cels && f->cels_size != 3 * n) || (!f->cels && f->data &&
         (f->format != FRAME_FORMAT_INDEXED || f->data_size != n)))) return false;
   memset(pixels, doc->ipal.transparent, n);
-  for (int layer = 0; layer < IE_LAYER_COUNT; layer++) {
+  static const int order[] = {IE_LAYER_BG, IE_LAYER_PENCIL, IE_LAYER_COLOR, IE_LAYER_FX};
+  for (int order_i = 0; order_i < IE_LAYER_COUNT; order_i++) {
+    int layer = order[order_i];
     if (!doc->layer.stack[layer]->visible) continue;
     const uint8_t *src = pencil_frame_layer(doc, frame, layer);
-    if (src) for (size_t p = 0; p < n; p++)
-      if (src[p] != doc->ipal.transparent) pixels[p] = src[p];
+    if (src) for (size_t p = 0; p < n; p++) {
+      if (layer == IE_LAYER_PENCIL) {
+        if (src[p]) pixels[p] = (uint8_t)canvas_nearest_palette_index(doc, pencil_configured_color());
+      } else if (src[p] != doc->ipal.transparent) pixels[p] = src[p];
+    }
   }
   return true;
 #else
@@ -39,6 +44,56 @@ bool pencil_composite_frame(const canvas_doc_t *doc, int frame, uint8_t *pixels)
   return false;
 #endif
 }
+
+#if IMAGEEDITOR_INDEXED
+static void pencil_rgba_blend(uint8_t *dst, uint32_t color, uint8_t alpha) {
+  if (!alpha) return;
+  uint32_t da = dst[3], inv = 255 - alpha;
+  uint32_t out_a = alpha + (da * inv + 127) / 255;
+  uint64_t denom = (uint64_t)out_a * 255;
+  if (!denom) return;
+  dst[0] = (uint8_t)(((uint64_t)COLOR_R(color) * alpha * 255 + (uint64_t)dst[0] * da * inv + denom / 2) / denom);
+  dst[1] = (uint8_t)(((uint64_t)COLOR_G(color) * alpha * 255 + (uint64_t)dst[1] * da * inv + denom / 2) / denom);
+  dst[2] = (uint8_t)(((uint64_t)COLOR_B(color) * alpha * 255 + (uint64_t)dst[2] * da * inv + denom / 2) / denom);
+  dst[3] = (uint8_t)out_a;
+}
+
+static bool pencil_composite_frame_rgba(const canvas_doc_t *doc, int frame, uint8_t *rgba) {
+  if (!pencil_has_layers(doc) || !rgba || !doc->anim || frame < 0 || frame >= doc->anim->frame_count)
+    return false;
+  const anim_frame_t *f = doc->anim->frames[frame];
+  size_t n = (size_t)doc->canvas_w * doc->canvas_h;
+  if (frame != doc->anim->active_frame &&
+      ((f->cels && f->cels_size != 3 * n) || (!f->cels && f->data &&
+        (f->format != FRAME_FORMAT_INDEXED || f->data_size != n)))) return false;
+  memset(rgba, 0, n * 4);
+  static const int order[] = {IE_LAYER_BG, IE_LAYER_PENCIL, IE_LAYER_COLOR, IE_LAYER_FX};
+  for (int order_i = 0; order_i < IE_LAYER_COUNT; order_i++) {
+    int layer = order[order_i];
+    const layer_t *lay = doc->layer.stack[layer];
+    if (!lay->visible) continue;
+    const uint8_t *src = pencil_frame_layer(doc, frame, layer);
+    if (!src) continue;
+    for (size_t p = 0; p < n; p++) {
+      uint32_t color;
+      uint32_t alpha;
+      if (layer == IE_LAYER_PENCIL) {
+        if (!src[p]) continue;
+        color = pencil_configured_color();
+        alpha = src[p];
+      } else {
+        uint8_t index = src[p];
+        if (index == (uint8_t)doc->ipal.transparent) continue;
+        color = doc->ipal.entries[index];
+        alpha = COLOR_A(color);
+      }
+      alpha = alpha * lay->opacity / 255;
+      pencil_rgba_blend(rgba + p * 4, color, (uint8_t)alpha);
+    }
+  }
+  return true;
+}
+#endif
 
 bool doc_anim_commit(canvas_doc_t *doc) {
   if (!doc || !doc->anim) return false;
@@ -73,9 +128,9 @@ bool doc_anim_load(canvas_doc_t *doc, int index) {
         (frame->format != FRAME_FORMAT_INDEXED || frame->data_size != n))) return false;
     for (int i = 1; i < IE_LAYER_COUNT; i++) {
       const uint8_t *src = frame->cels ? frame->cels + (i - 1) * n :
-                           i == IE_LAYER_PENCIL ? frame->data : NULL;
+                           i == IE_LAYER_COLOR ? frame->data : NULL;
       if (src) memcpy(doc->layer.stack[i]->pixels, src, n);
-      else memset(doc->layer.stack[i]->pixels, 0, n);
+      else memset(doc->layer.stack[i]->pixels, i == IE_LAYER_PENCIL ? 0 : 255, n);
     }
   } else if (frame->data && frame->data_size) {
     if (!anim_frame_expand(frame, doc->pixels, doc->canvas_w, doc->canvas_h)) return false;
@@ -94,17 +149,20 @@ bool doc_anim_rgba(const canvas_doc_t *doc, int index, uint8_t *rgba) {
   if (!doc || !doc->anim || !rgba || index < 0 || index >= doc->anim->frame_count) return false;
 #if IMAGEEDITOR_INDEXED
   size_t n = (size_t)doc->canvas_w * doc->canvas_h;
-  uint8_t *pixels = malloc(n);
-  if (!pixels) return false;
-  bool ok = pencil_has_layers(doc) ? pencil_composite_frame(doc, index, pixels) :
-            index == doc->anim->active_frame ? (memcpy(pixels, doc->pixels, n), true) :
-            anim_frame_expand(doc->anim->frames[index], pixels, doc->canvas_w, doc->canvas_h);
-  if (ok) for (size_t p = 0; p < n; p++) {
-    uint32_t c = doc->ipal.entries[pixels[p]];
-    rgba[4*p] = COLOR_R(c); rgba[4*p+1] = COLOR_G(c); rgba[4*p+2] = COLOR_B(c);
-    rgba[4*p+3] = pixels[p] == doc->ipal.transparent ? 0 : 255;
+  bool ok;
+  if (pencil_has_layers(doc)) ok = pencil_composite_frame_rgba(doc, index, rgba);
+  else {
+    uint8_t *pixels = malloc(n);
+    if (!pixels) return false;
+    ok = index == doc->anim->active_frame ? (memcpy(pixels, doc->pixels, n), true) :
+         anim_frame_expand(doc->anim->frames[index], pixels, doc->canvas_w, doc->canvas_h);
+    if (ok) for (size_t p = 0; p < n; p++) {
+      uint32_t c = doc->ipal.entries[pixels[p]];
+      rgba[4*p] = COLOR_R(c); rgba[4*p+1] = COLOR_G(c); rgba[4*p+2] = COLOR_B(c);
+      rgba[4*p+3] = pixels[p] == doc->ipal.transparent ? 0 : COLOR_A(c);
+    }
+    free(pixels);
   }
-  free(pixels);
   if (ok) canvas_composite_over_bg(doc, rgba);
   return ok;
 #else

@@ -76,7 +76,7 @@ static void test_layer_frames(void) {
   ASSERT_TRUE(layer_pixel(doc, IE_LAYER_FX, 3, 0, 12));
   cmd_frame_add(doc, true);
   ASSERT_EQUAL(doc->layer.stack[IE_LAYER_COLOR]->pixels[1], 5);
-  ASSERT_EQUAL(doc->layer.stack[IE_LAYER_PENCIL]->pixels[2], 1);
+  ASSERT_EQUAL(doc->layer.stack[IE_LAYER_PENCIL]->pixels[2], IE_PENCIL_MAX_OPACITY);
   ASSERT_EQUAL(doc->layer.stack[IE_LAYER_FX]->pixels[3], 13);
   ASSERT_TRUE(layer_pixel(doc, IE_LAYER_FX, 3, 0, 14));
   cmd_undo(doc); ASSERT_EQUAL(doc->pixels[3], 13);
@@ -102,22 +102,23 @@ static void test_layer_frames(void) {
 }
 
 static void test_underpaint_fill(void) {
-  TEST("color fill uses pencil outlines without changing pencil or shared background");
+  TEST("color fill uses hard ink outlines without changing pencil or shared background");
   canvas_doc_t *doc = layers_setup();
+  ASSERT_TRUE(cmd_pencil_layer(doc, IE_LAYER_COLOR));
   ASSERT_TRUE(ie_doc_begin_op(doc, "Outline"));
   for (int i = 3; i <= 12; i++) {
     canvas_set_pixel(doc, i, 3, IE_INK_COLOR); canvas_set_pixel(doc, i, 12, IE_INK_COLOR);
     canvas_set_pixel(doc, 3, i, IE_INK_COLOR); canvas_set_pixel(doc, 12, i, IE_INK_COLOR);
   }
   ie_doc_commit_op(doc, true);
-  uint8_t ink[256]; memcpy(ink, doc->pixels, sizeof(ink));
-  ASSERT_TRUE(cmd_pencil_layer(doc, IE_LAYER_COLOR));
+  uint8_t ink_top = doc->pixels[3 * 16 + 6], ink_left = doc->pixels[6 * 16 + 3];
   ASSERT_TRUE(ie_doc_begin_op(doc, "Underpaint"));
   ASSERT_TRUE(pencil_color_fill(doc, 6, 6, k_pencil_palette[4], 2));
   ie_doc_commit_op(doc, true);
   ASSERT_EQUAL(canvas_get_pixel(doc, 6, 6), k_pencil_palette[4]);
   ASSERT_EQUAL(doc->pixels[0], 0);
-  ASSERT_EQUAL(memcmp(ink, doc->layer.stack[IE_LAYER_PENCIL]->pixels, sizeof(ink)), 0);
+  ASSERT_EQUAL(doc->layer.stack[IE_LAYER_COLOR]->pixels[3 * 16 + 6], ink_top);
+  ASSERT_EQUAL(doc->layer.stack[IE_LAYER_COLOR]->pixels[6 * 16 + 3], ink_left);
   ASSERT_EQUAL(doc->layer.stack[IE_LAYER_BG]->pixels[6 * 16 + 6], 0);
   cmd_undo(doc); ASSERT_EQUAL(doc->pixels[6 * 16 + 6], 0);
   cmd_redo(doc); ASSERT_EQUAL(doc->pixels[6 * 16 + 6], 5);
@@ -125,7 +126,8 @@ static void test_underpaint_fill(void) {
   ASSERT_TRUE(ie_doc_begin_op(doc, "Monochrome Stroke"));
   canvas_set_pixel(doc, 6, 6, k_pencil_palette[12]);
   ie_doc_commit_op(doc, true);
-  ASSERT_EQUAL(canvas_get_pixel(doc, 6, 6), IE_INK_COLOR);
+  ASSERT_EQUAL(COLOR_A(canvas_get_pixel(doc, 6, 6)), IE_PENCIL_MAX_OPACITY);
+  ASSERT_EQUAL(COLOR_R(canvas_get_pixel(doc, 6, 6)), COLOR_R(pencil_configured_color()));
   ASSERT_TRUE(ie_doc_begin_op(doc, "Erase Pencil"));
   canvas_set_pixel(doc, 6, 6, IE_PAPER_COLOR);
   ie_doc_commit_op(doc, true);
@@ -145,12 +147,12 @@ static void test_layer_resize(void) {
   ASSERT_EQUAL(doc->anim->frames[0]->cels_size, 3 * 64);
   ASSERT_EQUAL(doc->anim->frames[1]->cels_size, 3 * 64);
   cmd_undo(doc);
-  for (int i = 0; i < 4; i++) ASSERT_EQUAL(doc->layer.stack[i]->pixels[4 * 16 + 4], i == IE_LAYER_PENCIL ? 1 : i + 4);
+  for (int i = 0; i < 4; i++) ASSERT_EQUAL(doc->layer.stack[i]->pixels[4 * 16 + 4], i == IE_LAYER_PENCIL ? IE_PENCIL_MAX_OPACITY : i + 4);
   ASSERT_TRUE(cmd_frame_select(doc, 0));
-  for (int i = 0; i < 4; i++) ASSERT_EQUAL(doc->layer.stack[i]->pixels[4 * 16 + 4], i == IE_LAYER_PENCIL ? 1 : i + 4);
+  for (int i = 0; i < 4; i++) ASSERT_EQUAL(doc->layer.stack[i]->pixels[4 * 16 + 4], i == IE_LAYER_PENCIL ? IE_PENCIL_MAX_OPACITY : i + 4);
   cmd_resize_canvas(doc, 20, 20);
   ASSERT_TRUE(cmd_frame_select(doc, 1));
-  for (int i = 0; i < 4; i++) ASSERT_EQUAL(doc->layer.stack[i]->pixels[4 * 20 + 4], i == IE_LAYER_PENCIL ? 1 : i + 4);
+  for (int i = 0; i < 4; i++) ASSERT_EQUAL(doc->layer.stack[i]->pixels[4 * 20 + 4], i == IE_LAYER_PENCIL ? IE_PENCIL_MAX_OPACITY : i + 4);
   layers_teardown(); PASS();
 }
 
@@ -171,9 +173,9 @@ static void test_layer_project(void) {
   ASSERT_EQUAL(again->layer.active, IE_LAYER_FX);
   ASSERT_FALSE(again->layer.stack[IE_LAYER_COLOR]->visible);
   ASSERT_EQUAL(again->layer.stack[IE_LAYER_BG]->pixels[10], 14);
-  for (int i = 1; i < 4; i++) ASSERT_EQUAL(again->layer.stack[i]->pixels[i], i == IE_LAYER_PENCIL ? 1 : i + 4);
+  for (int i = 1; i < 4; i++) ASSERT_EQUAL(again->layer.stack[i]->pixels[i], i == IE_LAYER_PENCIL ? IE_PENCIL_MAX_OPACITY : i + 4);
   ASSERT_TRUE(cmd_frame_select(again, 1));
-  for (int i = 1; i < 4; i++) ASSERT_EQUAL(again->layer.stack[i]->pixels[16 + i], i == IE_LAYER_PENCIL ? 1 : i + 7);
+  for (int i = 1; i < 4; i++) ASSERT_EQUAL(again->layer.stack[i]->pixels[16 + i], i == IE_LAYER_PENCIL ? IE_PENCIL_MAX_OPACITY : i + 7);
   ASSERT_EQUAL(again->pixels[12], 16);
   uint8_t composite[256];
   ASSERT_TRUE(pencil_composite_frame(again, 0, composite)); ASSERT_EQUAL(composite[10], 14);
@@ -184,7 +186,7 @@ static void test_layer_project(void) {
   FILE *fp = fopen(path, "r+b"); ASSERT_NOT_NULL(fp);
   ASSERT_EQUAL(fseek(fp, -(16 + 256 * 7), SEEK_END), 0);
   uint8_t header[16]; ASSERT_EQUAL(fread(header, 1, 16, fp), 16);
-  ASSERT_EQUAL(memcmp(header + 8, "PTL2", 4), 0);
+  ASSERT_EQUAL(memcmp(header + 8, "PTL3", 4), 0);
   header[11] = '9';
   ASSERT_EQUAL(fseek(fp, -16, SEEK_CUR), 0);
   ASSERT_EQUAL(fwrite(header, 1, 16, fp), 16); fclose(fp);
@@ -205,7 +207,13 @@ static void test_layer_exports(void) {
   int w, h; uint8_t *rgba = load_image(path, &w, &h);
   ASSERT_NOT_NULL(rgba); ASSERT_EQUAL(w, 32); ASSERT_EQUAL(h, 16);
   for (int f = 0; f < 2; f++) for (int i = 0; i < 4; i++) {
-    uint32_t color = k_pencil_palette[i == IE_LAYER_PENCIL ? 0 : i ? i + 3 : 12];
+    uint32_t color = k_pencil_palette[i ? i + 3 : 12];
+    if (i == IE_LAYER_PENCIL) {
+      uint32_t paper = IE_PAPER_COLOR, pencil = pencil_configured_color();
+      color = MAKE_COLOR((COLOR_R(pencil) * IE_PENCIL_MAX_OPACITY + COLOR_R(paper) * (255 - IE_PENCIL_MAX_OPACITY) + 127) / 255,
+                         (COLOR_G(pencil) * IE_PENCIL_MAX_OPACITY + COLOR_G(paper) * (255 - IE_PENCIL_MAX_OPACITY) + 127) / 255,
+                         (COLOR_B(pencil) * IE_PENCIL_MAX_OPACITY + COLOR_B(paper) * (255 - IE_PENCIL_MAX_OPACITY) + 127) / 255, 255);
+    }
     uint8_t *p = rgba + (f * 16 + i) * 4;
     ASSERT_EQUAL(p[0], COLOR_R(color)); ASSERT_EQUAL(p[1], COLOR_G(color)); ASSERT_EQUAL(p[2], COLOR_B(color));
   }

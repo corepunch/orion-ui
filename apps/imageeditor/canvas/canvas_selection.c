@@ -589,7 +589,7 @@ bool canvas_crop_or_expand_to_selection(canvas_doc_t *doc) {
 
   for (int i = 0; i < doc->layer.count; i++) {
     if (!layer_crop_expand(doc->layer.stack[i], doc->canvas_w, doc->canvas_h,
-                           x0, y0, new_w, new_h))
+                           x0, y0, new_w, new_h, layer_empty_value(doc, i)))
       return false;
   }
 

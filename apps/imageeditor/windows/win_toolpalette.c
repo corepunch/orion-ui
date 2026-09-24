@@ -120,7 +120,7 @@ static void pencil_toolbar_items(window_t *win) {
   canvas_doc_t *doc = g_app ? g_app->active_doc : NULL;
   int layer = pencil_has_layers(doc) ? doc->layer.active : IE_LAYER_PENCIL;
   static const int order[] = {IE_LAYER_BG, IE_LAYER_PENCIL, IE_LAYER_COLOR, IE_LAYER_FX};
-  static const char *const tips[] = {"Background — shared by all frames", "Color — beneath pencil", "Pencil — monochrome drawing", "FX — above pencil"};
+  static const char *const tips[] = {"Background — shared by all frames", "Ink and color — above pencil", "Pencil — soft alpha strokes", "FX — above pencil"};
   toolbar_item_t items[4 + 2 + ARRAY_LEN(k_tools) + IE_PENCIL_COLORS];
   int count = 0;
   for (int i = 0; i < 4; i++)

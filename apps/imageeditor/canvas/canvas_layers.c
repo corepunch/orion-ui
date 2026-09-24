@@ -31,11 +31,24 @@ static void layer_free_one(layer_t *lay) {
 
 // Crop or expand a single layer's pixel buffer.
 // src_x / src_y is the top-left corner of the selection in old-canvas coords.
+static uint8_t layer_empty_value(const canvas_doc_t *doc, int layer) {
+#if IMAGEEDITOR_INDEXED
+  if (pencil_has_layers(doc)) {
+    if (layer == IE_LAYER_PENCIL) return 0;
+    if (layer == IE_LAYER_BG) return (uint8_t)canvas_nearest_palette_index(doc, IE_PAPER_COLOR);
+  }
+  return (uint8_t)doc->ipal.transparent;
+#else
+  (void)doc; (void)layer;
+  return 0;
+#endif
+}
+
 static bool layer_crop_expand(layer_t *lay, int old_w, int old_h,
-                               int src_x, int src_y, int new_w, int new_h) {
+                               int src_x, int src_y, int new_w, int new_h, uint8_t empty) {
   uint8_t *buf = malloc((size_t)new_w * new_h * DOC_BPP);
   if (!buf) return false;
-  memset(buf, 0x00, (size_t)new_w * new_h * DOC_BPP);
+  memset(buf, empty, (size_t)new_w * new_h * DOC_BPP);
 
   int ix0 = MAX(src_x, 0);
   int iy0 = MAX(src_y, 0);
@@ -133,6 +146,8 @@ bool canvas_fill_active_layer(canvas_doc_t *doc, uint32_t fill_color) {
 
 #if IMAGEEDITOR_INDEXED
   uint8_t value = (uint8_t)canvas_nearest_palette_index(doc, fill_color);
+  if (pencil_has_layers(doc) && doc->layer.active == IE_LAYER_PENCIL)
+    value = fill_color == IE_PAPER_COLOR ? 0 : COLOR_A(fill_color);
   uint8_t *dst = lay->pixels;
 #else
   uint32_t value = fill_color;
@@ -334,6 +349,7 @@ void doc_flatten(canvas_doc_t *doc) {
 
 void doc_free_layers(canvas_doc_t *doc) {
   if (!doc) return;
+  canvas_stroke_cancel(doc);
   for (int i = 0; i < doc->layer.count; i++)
     layer_free_one(doc->layer.stack[i]);
   free(doc->layer.stack);
@@ -548,8 +564,6 @@ canvas_doc_t *canvas_extract_mask(canvas_doc_t *doc) {
 // Uses Manhattan distance in RGBA space.  Returns the transparent index if the
 // color has alpha == 0.  Returns ipal.transparent if the palette is empty.
 int canvas_nearest_palette_index(const canvas_doc_t *doc, uint32_t color) {
-  if (pencil_has_layers(doc) && doc->layer.active == IE_LAYER_PENCIL && COLOR_A(color))
-    color = color == IE_PAPER_COLOR ? 0 : IE_INK_COLOR;
   if (COLOR_A(color) == 0)
     return doc->ipal.transparent;
   if (doc->ipal.count <= 0)

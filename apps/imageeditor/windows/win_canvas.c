@@ -356,26 +356,33 @@ static void canvas_draw_onion_slot(canvas_win_state_t *state, canvas_doc_t *doc,
                !state->onion_tex[slot];
   bool live = g_ui_runtime.dragging || doc->drawing;
   if (stale && !live) {
-    anim_frame_t ink = *frame;
-    if (pencil_has_layers(doc) && frame->cels && frame->cels_size == (size_t)doc->canvas_w * doc->canvas_h * 3) {
-      ink.data = frame->cels + (size_t)doc->canvas_w * doc->canvas_h;
-      ink.data_size = (size_t)doc->canvas_w * doc->canvas_h;
-      ink.format = FRAME_FORMAT_INDEXED;
-    }
-    if (!anim_render_frame_thumbnail_tinted(&ink, doc->canvas_w, doc->canvas_h,
-                                            &state->onion_tex[slot],
+    if (pencil_has_layers(doc)) {
+      R_DeleteTexture(state->onion_tex[slot]);
+      state->onion_tex[slot] = 0;
+      size_t n = (size_t)doc->canvas_w * doc->canvas_h;
+      if (frame->cels && frame->cels_size == 3 * n) {
+        state->onion_tex[slot] = R_CreateTextureR8(doc->canvas_w, doc->canvas_h,
+                                                  frame->cels + n, R_FILTER_NEAREST, R_WRAP_CLAMP);
+        if (!state->onion_tex[slot]) return;
+      }
+    } else if (!anim_render_frame_thumbnail_tinted(frame, doc->canvas_w, doc->canvas_h,
+                                                   &state->onion_tex[slot],
 #if IMAGEEDITOR_INDEXED
-                                            doc->ipal.entries,
+                                                   doc->ipal.entries,
 #else
-                                            NULL,
+                                                   NULL,
 #endif
-                                            tint))
-      return;
+                                                   tint)) return;
     state->onion_key[slot] = frame;
     state->onion_rev[slot] = frame->revision;
   }
-  if (state->onion_tex[slot])
-    draw_rect_ex((int)state->onion_tex[slot], canvas_rect, 0, CLAMP(alpha, 0.0f, 1.0f));
+  if (state->onion_tex[slot]) {
+    if (pencil_has_layers(doc)) {
+      uint8_t opacity = (uint8_t)lroundf(COLOR_A(tint) * CLAMP(alpha, 0.0f, 1.0f));
+      draw_sprite_region(state->onion_tex[slot], canvas_rect, NULL,
+                         MAKE_COLOR(COLOR_R(tint), COLOR_G(tint), COLOR_B(tint), opacity), 0);
+    } else draw_rect_ex((int)state->onion_tex[slot], canvas_rect, 0, CLAMP(alpha, 0.0f, 1.0f));
+  }
 }
 
 static void canvas_draw_animation_trace(window_t *win,
@@ -519,13 +526,23 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         else
           draw_checkerboard(canvas_rect, CANVAS_CHECKER_SQUARE_PX);
         if (!pencil_has_layers(doc)) canvas_draw_animation_trace(win, state, doc, canvas_rect);
-        for (int li = 0; li < doc->layer.count; li++) {
+        static const int pencil_order[] = {IE_LAYER_BG, IE_LAYER_PENCIL, IE_LAYER_COLOR, IE_LAYER_FX};
+        for (int order_i = 0; order_i < doc->layer.count; order_i++) {
+          int li = pencil_has_layers(doc) ? pencil_order[order_i] : order_i;
           if (pencil_has_layers(doc) && li == IE_LAYER_PENCIL)
             canvas_draw_animation_trace(win, state, doc, canvas_rect);
           const layer_t *lay = doc->layer.stack[li];
           if (!lay || !lay->visible) continue;
           if (!lay->tex) continue;
-          if (lay->preview.active) {
+          if (pencil_has_layers(doc)) {
+#if IMAGEEDITOR_BW
+            if (li == IE_LAYER_PENCIL) {
+              uint32_t c = pencil_configured_color();
+              draw_sprite_region(lay->tex, canvas_rect, NULL,
+                                 MAKE_COLOR(COLOR_R(c), COLOR_G(c), COLOR_B(c), lay->opacity), 0);
+            } else draw_indexed_rect(lay->tex, canvas_rect, doc->ipal.entries, doc->ipal.transparent, lay->opacity / 255.0f);
+#endif
+          } else if (lay->preview.active) {
             imageeditor_draw_rect_effect_blend(lay->tex,
                                                canvas_rect.x, canvas_rect.y,
                                                canvas_rect.w, canvas_rect.h,
@@ -643,6 +660,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
     }
     case evPointerCancel: {
       if (!state || !doc || !g_app) return false;
+      if (g_ui_runtime.captured == win) set_capture(NULL);
       state->pan.active = false;
       canvas_stroke_cancel(doc);
       if (doc->command.before) {
@@ -662,6 +680,10 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       if (!doc || !g_app) return true;
       if (state->gesture_active) return true;
+      if (doc->drawing || doc->stroke.active) {
+        IE_TRACE("finish previous pointer interaction win=%u tool=%s", win->id, tool_id_name(g_app->current_tool));
+        imageeditor_finish_canvas_interaction(doc, g_app->current_tool);
+      }
       canvas_stroke_cancel(doc);
       ipoint16_t doc_pt = {lx, ly};
       // Clear any stale panning state – if the user switched away from Hand
@@ -671,6 +693,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       // Hand tool: begin pan drag
       if (g_app->current_tool == ID_TOOL_HAND) {
         state->pan.active = true;
+        set_capture(win);
         window_view_begin_drag(win);
         IE_DEBUG("pan_begin doc=%p at=(%d,%d)", (void *)doc, lx, ly);
         return true;
@@ -788,6 +811,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         if (!canvas_shape_begin(doc, px, py)) { ie_doc_commit_op(doc, false); return true; }
         canvas_shape_preview(doc, px, py, px, py, tool,
                              g_app->shape_filled, g_app->fg_color, g_app->bg_color, false);
+        set_capture(win);
         invalidate_window(win);
         return true;
       }
@@ -804,11 +828,14 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         doc->sel.start.y = doc->sel.end.y = py;
         doc->sel.active = true;
         IE_DEBUG("crop_begin doc=%p anchor=(%d,%d)", (void *)doc, px, py);
+        set_capture(win);
         invalidate_window(win);
         return true;
       }
 
       if (!ie_doc_begin_op(doc, tool_id_name(tool))) { doc->drawing = false; return true; }
+      set_capture(win);
+      IE_TRACE("pointer begin win=%u tool=%s at=(%d,%d) layer=%d", win->id, tool_id_name(tool), px, py, doc->layer.active);
 
       switch (tool) {
         case ID_TOOL_PENCIL:
@@ -1051,6 +1078,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
     }
 
     case evLeftButtonUp: {
+      if (g_ui_runtime.captured == win) set_capture(NULL);
       if (state && state->pan.active) {
         IE_DEBUG("pan_end doc=%p", (void *)doc);
         state->pan.active = false;
@@ -1058,6 +1086,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       if (!doc || !g_app) return true;
       int tool = g_app->current_tool;
       bool was_drawing = doc->drawing;
+      IE_TRACE("pointer end win=%u tool=%s drawing=%d stroke=%d pending=%d", win->id, tool_id_name(tool),
+               was_drawing, doc->stroke.active, doc->command.before != NULL);
 
       if (doc->drawing && doc->stroke.active) {
         ipoint16_t point = {(int16_t)LOWORD(wparam), (int16_t)HIWORD(wparam)};
@@ -1140,6 +1170,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       // Enter commits the crop tool selection (crop or expand canvas).
       if ((wparam == AX_KEY_ENTER || wparam == AX_KEY_KP_ENTER) &&
           tool == ID_TOOL_CROP && doc->sel.active) {
+        if (g_ui_runtime.captured == win) set_capture(NULL);
         IE_DEBUG("crop_commit doc=%p sel=(%d,%d)-(%d,%d)",
                  (void *)doc,
                  doc->sel.start.x, doc->sel.start.y,
@@ -1161,6 +1192,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       // Escape cancels an in-progress polygon or shape drag
       if (wparam == AX_KEY_ESCAPE) {
         if (tool == ID_TOOL_CROP && doc->sel.active) {
+          if (g_ui_runtime.captured == win) set_capture(NULL);
           if (doc->command.before) ie_doc_commit_op(doc, false);
           else canvas_deselect(doc);
           IE_DEBUG("crop_cancel doc=%p", (void *)doc);
@@ -1180,6 +1212,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           return true;
         }
         if (canvas_is_shape_tool(tool) && doc->drawing && doc->shape.snapshot) {
+          if (g_ui_runtime.captured == win) set_capture(NULL);
           memcpy(doc->pixels, doc->shape.snapshot, (size_t)doc->canvas_w * doc->canvas_h * DOC_BPP);
           doc->canvas_dirty = true;
           ie_doc_commit_op(doc, false);

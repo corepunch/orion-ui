@@ -167,7 +167,7 @@ static void flc_external_compression(void) {
   ASSERT_TRUE(imageeditor_open_file_path(path));
   canvas_doc_t *legacy = g_app->active_doc;
   ASSERT_EQUAL(legacy->layer.count, IE_LAYER_COUNT);
-  ASSERT_EQUAL(legacy->layer.active, IE_LAYER_PENCIL);
+  ASSERT_EQUAL(legacy->layer.active, IE_LAYER_COLOR);
   ASSERT_TRUE(cmd_frame_select(legacy, 1));
   ASSERT_EQUAL(canvas_get_pixel(legacy, 0, 0), black);
   ASSERT_EQUAL(legacy->layer.stack[IE_LAYER_BG]->pixels[0], 0);

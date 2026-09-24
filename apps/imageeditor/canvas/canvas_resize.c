@@ -203,7 +203,7 @@ bool canvas_resize_frames(canvas_doc_t *doc, int x, int y, int w, int h,
         if (resample) {
           uint8_t *pixels = layer_resample_pixels(&cel, doc->canvas_w, doc->canvas_h, w, h, filter);
           free(cel.pixels); cel.pixels = pixels; ok = pixels != NULL;
-        } else ok = layer_crop_expand(&cel, doc->canvas_w, doc->canvas_h, x, y, w, h);
+        } else ok = layer_crop_expand(&cel, doc->canvas_w, doc->canvas_h, x, y, w, h, layer_empty_value(doc, li + 1));
         if (ok) memcpy(cels + li * new_n, cel.pixels, new_n);
         free(cel.pixels);
         if (!ok) { free(cels); return false; }
@@ -221,7 +221,7 @@ bool canvas_resize_frames(canvas_doc_t *doc, int x, int y, int w, int h,
       layer.pixels = pixels;
       ok = pixels != NULL;
     } else if (ok) {
-      ok = layer_crop_expand(&layer, doc->canvas_w, doc->canvas_h, x, y, w, h);
+      ok = layer_crop_expand(&layer, doc->canvas_w, doc->canvas_h, x, y, w, h, layer_empty_value(doc, -1));
     }
     if (ok) ok = anim_frame_compress(frame, layer.pixels, w, h, IE_FRAME_FORMAT);
     free(layer.pixels);
@@ -289,7 +289,7 @@ bool canvas_resize(canvas_doc_t *doc, int new_w, int new_h) {
 
   for (int i = 0; i < doc->layer.count; i++) {
     if (!layer_crop_expand(doc->layer.stack[i], doc->canvas_w, doc->canvas_h,
-                           0, 0, new_w, new_h))
+                           0, 0, new_w, new_h, layer_empty_value(doc, i)))
       return false;
   }
 

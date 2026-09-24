@@ -135,10 +135,10 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   g_app->hinstance    = hinstance;
 #if IMAGEEDITOR_BW
   // Pencil Test starts with ink; coloring swatches share the indexed palette.
-  // ipal is initialized in create_document(): 0=transparent, 1=ink, 2=paper.
-  g_app->fg_color = IE_INK_COLOR;
+  // ipal is initialized in create_document(): 0=ink, 1=paper, 255=transparent.
+  g_app->fg_color = pencil_configured_color();
   g_app->bg_color = IE_PAPER_COLOR;
-  g_app->fg_palette_idx = 1; // index 1 = ink
+  g_app->fg_palette_idx = 0;
   #ifdef IMAGEEDITOR_BW_RETINA
   g_bw_retina_scale = MAX(1, (int)(axGetScaling() + 0.5f));
   #endif

@@ -16,13 +16,19 @@ const char *const k_pencil_color_names[IE_PENCIL_COLORS] = {
   "Brown", "Sand", "Forest", "Mint", "Blue", "Sky", "Lavender", "Rose",
 };
 
+uint32_t pencil_configured_color(void) {
+  return k_pencil_palette[IE_PENCIL_COLOR_SWATCH];
+}
+
 #if IMAGEEDITOR_BW
 static int pencil_unused_palette_index(const canvas_doc_t *doc) {
   bool used[256] = {0};
   used[(uint8_t)doc->ipal.transparent] = true;
   size_t n = (size_t)doc->canvas_w * doc->canvas_h;
-  for (int i = 0; i < doc->layer.count; i++)
+  for (int i = 0; i < doc->layer.count; i++) {
+    if (i == IE_LAYER_PENCIL && pencil_has_layers(doc)) continue;
     for (size_t p = 0; p < n; p++) used[doc->layer.stack[i]->pixels[p]] = true;
+  }
   for (int i = 0; doc->anim && i < doc->anim->frame_count; i++) {
     anim_frame_t *frame = doc->anim->frames[i];
     if (!frame->data || !frame->data_size) continue;
@@ -32,7 +38,13 @@ static int pencil_unused_palette_index(const canvas_doc_t *doc) {
       return -1;
     }
     for (size_t p = 0; p < n; p++) used[frame->data[p]] = true;
-    for (size_t p = 0; frame->cels && p < frame->cels_size; p++) used[frame->cels[p]] = true;
+    if (frame->cels && frame->cels_size == 3 * n) {
+      for (int layer = 1; layer < IE_LAYER_COUNT; layer++) {
+        if (layer == IE_LAYER_PENCIL) continue;
+        const uint8_t *cel = frame->cels + (size_t)(layer - 1) * n;
+        for (size_t p = 0; p < n; p++) used[cel[p]] = true;
+      }
+    }
   }
   for (int i = 0; i < 256; i++)
     if (!used[i] && (i >= doc->ipal.count || COLOR_A(doc->ipal.entries[i]) == 0)) return i;

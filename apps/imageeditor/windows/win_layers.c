@@ -77,14 +77,22 @@ static int visible_rows(window_t *win) {
 // y-coordinate (in client space) of the top of a visual row.
 static int row_y(int row) { return row * LAYERS_ROW_H; }
 
-// Convert a visual row to a layer index (0=bottom, count-1=top).
-// Visual row 0 = topmost layer (count-1), row 1 = count-2, etc.
+// Pencil Test keeps storage IDs stable while stacking Pencil beneath Color.
 static int row_to_layer_idx(const canvas_doc_t *doc, int row) {
+  if (pencil_has_layers(doc)) {
+    static const int order[] = {IE_LAYER_BG, IE_LAYER_PENCIL, IE_LAYER_COLOR, IE_LAYER_FX};
+    int order_idx = doc->layer.count - 1 - row;
+    return order_idx < 0 || order_idx >= doc->layer.count ? -1 : order[order_idx];
+  }
   return doc->layer.count - 1 - row;
 }
 
 // Convert a layer index to the visual row.
 static int layer_idx_to_row(const canvas_doc_t *doc, int idx) {
+  if (pencil_has_layers(doc)) {
+    static const int order[] = {IE_LAYER_BG, IE_LAYER_PENCIL, IE_LAYER_COLOR, IE_LAYER_FX};
+    for (int i = 0; i < doc->layer.count; i++) if (order[i] == idx) return doc->layer.count - 1 - i;
+  }
   return doc->layer.count - 1 - idx;
 }
 // Hit-test: returns visual row index or -1.

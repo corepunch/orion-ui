@@ -10,8 +10,21 @@
 uint32_t canvas_get_pixel_rgba(const canvas_doc_t *doc, int x, int y) {
   if (!canvas_in_bounds(doc, x, y)) return MAKE_COLOR(0,0,0,0);
   uint8_t pidx = doc->pixels[(size_t)y * doc->canvas_w + x];
+  if (pencil_has_layers(doc) && doc->layer.active == IE_LAYER_PENCIL)
+    return MAKE_COLOR(COLOR_R(pencil_configured_color()), COLOR_G(pencil_configured_color()),
+                      COLOR_B(pencil_configured_color()), pidx);
   if (pidx == (uint8_t)doc->ipal.transparent) return MAKE_COLOR(0,0,0,0);
   return doc->ipal.entries[pidx];
+}
+#endif
+
+#if IMAGEEDITOR_INDEXED
+static uint8_t canvas_indexed_value(const canvas_doc_t *doc, uint32_t color) {
+  if (pencil_has_layers(doc) && doc->layer.active == IE_LAYER_PENCIL) {
+    if (color == IE_PAPER_COLOR) return 0;
+    return COLOR_A(color);
+  }
+  return (uint8_t)canvas_nearest_palette_index(doc, color);
 }
 #endif
 
@@ -50,8 +63,7 @@ void canvas_mark_dirty_pixel(canvas_doc_t *doc, int x, int y) {
 static void canvas_set_pixel_direct(canvas_doc_t *doc, int x, int y, uint32_t c) {
   if (!canvas_in_bounds(doc, x, y)) return;
 #if IMAGEEDITOR_INDEXED
-  doc->pixels[(size_t)y * doc->canvas_w + x] =
-      (uint8_t)canvas_nearest_palette_index(doc, c);
+  doc->pixels[(size_t)y * doc->canvas_w + x] = canvas_indexed_value(doc, c);
 #else
   uint8_t *p = doc->pixels + ((size_t)y * doc->canvas_w + x) * 4;
   p[0]=COLOR_R(c); p[1]=COLOR_G(c); p[2]=COLOR_B(c); p[3]=COLOR_A(c);
@@ -65,8 +77,7 @@ void canvas_set_pixel(canvas_doc_t *doc, int x, int y, uint32_t c) {
   if (!canvas_in_selection(doc, x, y)) return;
 
 #if IMAGEEDITOR_INDEXED
-  doc->pixels[(size_t)y * doc->canvas_w + x] =
-      (uint8_t)canvas_nearest_palette_index(doc, c);
+  doc->pixels[(size_t)y * doc->canvas_w + x] = canvas_indexed_value(doc, c);
 #else
   uint8_t *p = doc->pixels + ((size_t)y * doc->canvas_w + x) * 4;
   if (doc->layer.editing_mask) {
@@ -109,7 +120,11 @@ void canvas_draw_pen_line(canvas_doc_t *doc, int x0, int y0, int x1, int y1,
 }
 
 void canvas_clear(canvas_doc_t *doc) {
-  memset(doc->pixels, 0x00, (size_t)doc->canvas_w * doc->canvas_h * DOC_BPP);
+  int value = 0;
+#if IMAGEEDITOR_INDEXED
+  value = pencil_has_layers(doc) && doc->layer.active == IE_LAYER_PENCIL ? 0 : doc->ipal.transparent;
+#endif
+  memset(doc->pixels, value, (size_t)doc->canvas_w * doc->canvas_h * DOC_BPP);
   doc->canvas_dirty = true;
   doc->modified     = false;
 }
@@ -144,8 +159,20 @@ static void canvas_blend_pixel(canvas_doc_t *doc, int x, int y, uint32_t c,
                                uint8_t coverage) {
   if (coverage == 0) return;
 #if IMAGEEDITOR_INDEXED
-  (void)coverage;
-  canvas_set_pixel(doc, x, y, c);
+  if (pencil_has_layers(doc) && doc->layer.active == IE_LAYER_PENCIL) {
+    if (!canvas_in_bounds(doc, x, y) || !canvas_in_selection(doc, x, y)) return;
+    uint32_t opacity = (uint32_t)IE_PENCIL_MAX_OPACITY * COLOR_A(c) * coverage;
+    uint8_t value = (uint8_t)((opacity + 32512) / 65025);
+    size_t at = (size_t)y * doc->canvas_w + x;
+    if (value && doc->pixels[at] < 255) {
+      doc->pixels[at] = (uint8_t)MIN(255, doc->pixels[at] + value);
+      canvas_mark_dirty_pixel(doc, x, y);
+      doc->modified = true;
+    }
+  } else {
+    (void)coverage;
+    canvas_set_pixel(doc, x, y, c);
+  }
 #else
   uint32_t dst = canvas_get_pixel(doc, x, y);
   int sa = (int)COLOR_A(c) * coverage / 255;

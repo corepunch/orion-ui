@@ -251,11 +251,13 @@ canvas_doc_t *create_document_pixels(const char *filename, int w, int h) {
 #if IMAGEEDITOR_INDEXED
   // Initialize the palette.
 #if IMAGEEDITOR_BW
-  // Keep ink/paper at their legacy indices; remaining slots are coloring swatches.
-  doc->ipal.transparent = 0;
-  doc->ipal.entries[0] = MAKE_COLOR(0x00, 0x00, 0x00, 0x00); // transparent
-  memcpy(doc->ipal.entries + 1, k_pencil_palette, sizeof(k_pencil_palette));
-  doc->ipal.count = IE_PENCIL_COLORS + 1;
+  doc->ipal.transparent = 255;
+  memcpy(doc->ipal.entries, k_pencil_palette, sizeof(k_pencil_palette));
+  doc->ipal.entries[255] = 0;
+  doc->ipal.count = IE_PENCIL_COLORS;
+  for (int i = 0; i < IE_LAYER_COUNT; i++)
+    memset(doc->layer.stack[i]->pixels, i == IE_LAYER_PENCIL ? 0 : i == IE_LAYER_BG ? 1 : 255,
+           (size_t)buf_w * buf_h);
 #else
   // Full 256-color palette: index 0 is transparent, indices 1–255 cycle through common colors.
   doc->ipal.transparent = IMAGEEDITOR_TRANSPARENT_INDEX;

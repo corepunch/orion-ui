@@ -99,8 +99,8 @@ build/bin/test_history_indexed_test`, then run each executable.
 
 ## Pencil Test layers and animation files
 
-Pencil Test has four fixed indexed planes, composited bottom to top: Background,
-Color, Pencil, FX. Background is shared by all frames. Each `anim_frame_t` stores
+Pencil Test has four fixed byte planes, composited bottom to top: Background,
+Pencil, Color, FX. Background is shared by all frames. Each `anim_frame_t` stores
 three canvas-sized cel planes in `cels` (Color, Pencil, FX); `data` retains a
 flattened preview. The live document owns four working layers. `doc_anim_commit`,
 `doc_anim_load`, and `doc_anim_switch` manage their transfer. Frame structure edits,
@@ -111,28 +111,39 @@ rather than trusting a preview from before the background changed.
 The tool strip stays one column wide. The four layer buttons are half-size
 (`TOOLBAR_ITEM_FLAG_SMALL`) and pack 2×2 into a single button cell; the 16
 color swatches are the same half size, two per row. Pencil hides the color palette and
-uses monochrome ink; painting paper on it erases to transparency. Background,
+uses a fixed configurable pencil color; painting paper on it erases to transparency. Background,
 Color, and FX expose 16 swatches, with their last tool/color remembered during
-the session. Color fill uses the Pencil plane as a boundary and writes only to
-Color. Onion skin reads only neighboring Pencil planes, above Background/Color
-and beneath the current Pencil/FX. The timeline retains one shared frame timing.
+the session. Color fill uses opaque ink on the Color plane as a boundary.
+Onion skin reads neighboring Pencil planes above Background and beneath the
+current Pencil/Color/FX. The timeline retains one shared frame timing.
 
-Index 0 remains transparent; original ink and paper occupy indices 1 and 2.
-Default coloring swatches occupy indices 3–16. Imported palettes can be larger.
+Pencil stores alpha from 0 to 255 in a `GL_R8` texture, tinted with
+`pencil_configured_color()`. Dabs add coverage even when a stroke crosses or
+retraces itself, saturating at 255. Distance-based dab spacing and flow normalized
+by brush width keep a straight pass near `IE_PENCIL_MAX_OPACITY` (64), independent
+of input event frequency. A floating-point accumulator preserves fractional dab
+coverage; fade-tail updates add only the change from the previous path length.
+The fade distance is 16 logical pixels at each end. Fade distance, dab spacing,
+grain and opacity are configured in `imageeditor.h`.
+Background and Color store palette indices in `GL_R8`, resolved by the renderer's
+palette shader. Index 255 is transparent; ink and paper occupy indices 0 and 1.
+New Background pixels contain paper, new Color pixels contain 255, and new
+Pencil pixels contain zero alpha. Default coloring swatches occupy indices 2–15.
+Imported palettes can be larger.
 Selecting a missing swatch adds it as an undoable command, using only an empty
 slot unreferenced by any working layer, stored composite, or cel.
 
 File > Save / Save As writes `.ptf` (Pencil Test project). It retains an FLC
 playback stream with flattened COLOR256/COPY frames and a ring frame, followed
-by versioned editing chunks. Older FLC/FLI and PCX/BMP files open on Pencil with
-empty Background/Color/FX planes. Saving an imported file asks for a PTF name.
+by versioned editing chunks. Older FLC/FLI and PCX/BMP files open on Color with
+empty Background/Pencil/FX planes. Saving an imported file asks for a PTF name.
 GIF, APNG and sprite-sheet exports flatten the complete composition. The RGBA
 Image Editor retains its existing document workflow.
 
 Readers support COLOR256, COLOR64, COPY, BLACK, BRUN, LC and SS2, palette changes,
 repeated frames, prefix chunks and odd dimensions. Dimensions are physical
 pixels; FLI timing uses 70 Hz ticks. External FLICs map to a common palette with
-index 0 reserved for transparency; animations requiring over 255 opaque colors
+index 255 reserved for transparency; animations requiring over 255 opaque colors
 are rejected. True-color FLIC variants remain unsupported.
 
 The existing `0x7074` top-level trailer uses `PTA1` at offset 8 in its 16-byte
@@ -141,13 +152,16 @@ name at 4 (32 bytes), FPS at 36, delay at 40, loop/show-paper at 44/45, paper RG
 at 48, and 256 packed RGBA palette entries at 60. Other bytes are reserved.
 
 The new `0x7075` top-level trailer follows it. Its 16-byte header holds total
-chunk length at 0, type at 4, `PTL2` at 8, layer count 4 at 12, active layer at
+chunk length at 0, type at 4, `PTL4` at 8, layer count 4 at 12, active layer at
 13, a four-bit visibility mask at 14, and reserved zero at 15. Its payload is
 one shared Background plane, then Color/Pencil/FX planes for every frame in
 timeline order. Every plane is exactly width × height bytes. PTF requires this
 extension; its size, signature, layer count, and selectors are validated before
 opening. Plain legacy FLC can omit it. Older FLC readers can use the flattened
 playback stream but cannot preserve the editing layers if they rewrite it.
+`PTL2` and `PTL3` remain readable: their palette indices are rotated from
+transparent 0 to transparent 255. `PTL2` pencil ink becomes alpha 64; `PTL3`
+already stores pencil alpha. Pencil alpha is never palette-remapped.
 
 Files are currently uncompressed. Total composite/cel/background pixel storage
 is limited to 512 MiB; frame delays are 1–65535 ms. Save reads live working layers

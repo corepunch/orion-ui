@@ -106,6 +106,8 @@ anim_timeline_t *flc_load_layers(const char *path, int *out_w, int *out_h,
   uint8_t header[128], *pixels = NULL, *block = NULL, *metadata = NULL;
   anim_timeline_t *tl = NULL;
   uint8_t *layerdata = NULL;
+  bool soft_pencil_layers = false;
+  bool alpha_index_layers = false;
   uint8_t active_layer = IE_LAYER_PENCIL, visible_layers = 15;
   if (layers) memset(layers, 0, sizeof(*layers));
   uint32_t pal[256], editing_pal[256];
@@ -136,9 +138,11 @@ anim_timeline_t *flc_load_layers(const char *path, int *out_w, int *out_h,
     } else if (flc_u16(chunk + 4) == FLC_LAYERS) {
       uint64_t n = (uint64_t)w * h;
       uint64_t bytes = n * (1 + 3u * frames);
-      if (layerdata || memcmp(chunk + 8, "PTL2", 4) || chunk[12] != IE_LAYER_COUNT ||
+      if (layerdata || (memcmp(chunk + 8, "PTL2", 4) && memcmp(chunk + 8, "PTL3", 4) && memcmp(chunk + 8, "PTL4", 4)) || chunk[12] != IE_LAYER_COUNT ||
           chunk[13] >= IE_LAYER_COUNT || chunk[14] > 15 || chunk[15] != 0 ||
           bytes + n * frames > FLC_LIMIT || length != 16 + bytes) goto fail;
+      alpha_index_layers = !memcmp(chunk + 8, "PTL4", 4);
+      soft_pencil_layers = alpha_index_layers || !memcmp(chunk + 8, "PTL3", 4);
       layerdata = malloc((size_t)bytes);
       if (!layerdata || fread(layerdata, 1, (size_t)bytes, fp) != bytes) goto fail;
       active_layer = chunk[13]; visible_layers = chunk[14];
@@ -211,8 +215,30 @@ anim_timeline_t *flc_load_layers(const char *path, int *out_w, int *out_h,
     }
     free(block); block = NULL;
   }
+#if IMAGEEDITOR_BW
+  if (!alpha_index_layers) {
+    // Older projects reserve index 0; rotate indices so 255 is transparent.
+    memmove(out_pal, out_pal + 1, 255 * sizeof(*out_pal));
+    out_pal[255] = 0;
+    size_t n = (size_t)w * h;
+    for (int i = 0; i < frames; i++) {
+      for (size_t p = 0; p < n; p++) tl->frames[i]->data[p]--;
+      if (layerdata) for (int layer = 1; layer < IE_LAYER_COUNT; layer++) {
+        if (layer == IE_LAYER_PENCIL) continue;
+        uint8_t *cel = layerdata + n + ((size_t)i * 3 + layer - 1) * n;
+        for (size_t p = 0; p < n; p++) cel[p]--;
+      }
+    }
+    if (layerdata) for (size_t p = 0; p < n; p++) layerdata[p]--;
+  }
+#endif
   if (layerdata) {
     size_t n = (size_t)w * h;
+    if (!soft_pencil_layers) for (int i = 0; i < frames; i++) {
+      uint8_t *pencil = layerdata + n + ((size_t)i * 3 + (IE_LAYER_PENCIL - 1)) * n;
+      for (size_t p = 0; p < n; p++)
+        pencil[p] = pencil[p] ? IE_PENCIL_MAX_OPACITY : 0;
+    }
     for (int i = 0; i < frames; i++) {
       anim_frame_t *f = tl->frames[i];
       f->cels = malloc(3 * n);
@@ -298,7 +324,7 @@ static bool flc_write_layers(FILE *fp, const canvas_doc_t *doc) {
   size_t n = (size_t)doc->canvas_w * doc->canvas_h;
   uint8_t header[16] = {0};
   flc_put32(header, 16 + n * (1 + 3u * doc->anim->frame_count));
-  flc_put16(header + 4, FLC_LAYERS); memcpy(header + 8, "PTL2", 4);
+  flc_put16(header + 4, FLC_LAYERS); memcpy(header + 8, "PTL4", 4);
   header[12] = IE_LAYER_COUNT; header[13] = doc->layer.active;
   for (int i = 0; i < IE_LAYER_COUNT; i++) if (doc->layer.stack[i]->visible) header[14] |= 1u << i;
   if (fwrite(header, 1, 16, fp) != 16 || fwrite(doc->layer.stack[0]->pixels, 1, n, fp) != n) return false;
@@ -308,6 +334,7 @@ static bool flc_write_layers(FILE *fp, const canvas_doc_t *doc) {
   for (int f = 0; ok && f < doc->anim->frame_count; f++)
     for (int layer = 1; ok && layer < IE_LAYER_COUNT; layer++) {
       const uint8_t *pixels = pencil_frame_layer(doc, f, layer);
+      if (!pixels) memset(blank, layer == IE_LAYER_PENCIL ? 0 : doc->ipal.transparent, n);
       ok = fwrite(pixels ? pixels : blank, 1, n, fp) == n;
     }
   free(blank);

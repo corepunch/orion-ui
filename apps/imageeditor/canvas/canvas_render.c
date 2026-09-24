@@ -11,23 +11,36 @@ void canvas_composite(const canvas_doc_t *doc, uint8_t *dst) {
   memset(dst, 0x00, n * 4);
 
 #if IMAGEEDITOR_INDEXED
-  // Indexed mode: one layer, map each pixel index through the palette.
-  // The transparent index produces fully transparent pixels.
-  for (int li = 0; li < doc->layer.count; li++) {
-    if (!doc->layer.stack[li]->visible) continue;
-    const uint8_t *idx_buf = doc->layer.stack[li]->pixels;
+  // Indexed layers are opaque palette pixels, except Pencil Test's pencil
+  // layer, whose byte is per-pixel coverage in the configured pencil color.
+  static const int pencil_order[] = {IE_LAYER_BG, IE_LAYER_PENCIL, IE_LAYER_COLOR, IE_LAYER_FX};
+  for (int order_i = 0; order_i < doc->layer.count; order_i++) {
+    int li = pencil_has_layers(doc) ? pencil_order[order_i] : order_i;
+    const layer_t *lay = doc->layer.stack[li];
+    if (!lay->visible) continue;
+    const uint8_t *idx_buf = lay->pixels;
     for (size_t i = 0; i < n; i++) {
       uint8_t pidx = idx_buf[i];
-      uint8_t *d = dst + i * 4;
-      if (pidx == (uint8_t)doc->ipal.transparent) {
-        // Transparent: leave as zero (already cleared).
-        continue;
+      uint32_t c;
+      uint32_t sa;
+      if (pencil_has_layers(doc) && li == IE_LAYER_PENCIL) {
+        if (!pidx) continue;
+        c = pencil_configured_color();
+        sa = (uint32_t)pidx * lay->opacity / 255;
+      } else {
+        if (pidx == (uint8_t)doc->ipal.transparent) continue;
+        c = doc->ipal.entries[pidx];
+        sa = (uint32_t)COLOR_A(c) * lay->opacity / 255;
       }
-      uint32_t c = doc->ipal.entries[pidx];
-      d[0] = COLOR_R(c);
-      d[1] = COLOR_G(c);
-      d[2] = COLOR_B(c);
-      d[3] = 255;
+      if (!sa) continue;
+      uint8_t *d = dst + i * 4;
+      uint32_t da = d[3], inv = 255 - sa;
+      uint32_t out_a = sa + (da * inv + 127) / 255;
+      if (!out_a) continue;
+      d[0] = (uint8_t)(((uint32_t)COLOR_R(c) * sa * 255 + (uint32_t)d[0] * da * inv + out_a * 127) / (out_a * 255));
+      d[1] = (uint8_t)(((uint32_t)COLOR_G(c) * sa * 255 + (uint32_t)d[1] * da * inv + out_a * 127) / (out_a * 255));
+      d[2] = (uint8_t)(((uint32_t)COLOR_B(c) * sa * 255 + (uint32_t)d[2] * da * inv + out_a * 127) / (out_a * 255));
+      d[3] = (uint8_t)out_a;
     }
   }
 #else
@@ -122,6 +135,28 @@ void canvas_composite_over_bg(const canvas_doc_t *doc, uint8_t *rgba) {
 // ============================================================
 
 static bool layer_upload_texture(canvas_doc_t *doc, layer_t *lay, irect16_t r) {
+#if IMAGEEDITOR_BW
+  if (pencil_has_layers(doc)) {
+    const uint8_t *pixels = lay->pixels + (size_t)r.y * doc->canvas_w;
+    if (r.x != 0 || r.w != doc->canvas_w) {
+      if (!doc->layer.composite_buf)
+        doc->layer.composite_buf = malloc((size_t)doc->canvas_w * doc->canvas_h * 4);
+      if (!doc->layer.composite_buf) {
+        IE_TRACE("R8 upload allocation failed doc=%p", (void *)doc);
+        return false;
+      }
+      for (int y = 0; y < r.h; y++)
+        memcpy(doc->layer.composite_buf + (size_t)y * r.w,
+               pixels + (size_t)y * doc->canvas_w + r.x, r.w);
+      pixels = doc->layer.composite_buf;
+    }
+    if (!lay->tex) {
+      lay->tex = R_CreateTextureR8(doc->canvas_w, doc->canvas_h, pixels, R_FILTER_NEAREST, R_WRAP_CLAMP);
+      return lay->tex != 0;
+    }
+    return R_UpdateTextureR8(lay->tex, r.x, r.y, r.w, r.h, pixels);
+  }
+#endif
   const uint8_t *rgba = lay->pixels;
 #if IMAGEEDITOR_INDEXED
   bool pack = true;
@@ -143,12 +178,15 @@ static bool layer_upload_texture(canvas_doc_t *doc, layer_t *lay, irect16_t r) {
       const uint8_t *src = lay->pixels + (size_t)y * doc->canvas_w + r.x;
       for (int x = 0; x < r.w; x++, dst += 4) {
         uint8_t idx = src[x];
-        uint32_t c = doc->ipal.entries[idx];
-        if (idx == (uint8_t)doc->ipal.transparent) {
+        uint32_t c = pencil_has_layers(doc) && lay == doc->layer.stack[IE_LAYER_PENCIL]
+                   ? pencil_configured_color() : doc->ipal.entries[idx];
+        if (pencil_has_layers(doc) && lay == doc->layer.stack[IE_LAYER_PENCIL]) {
+          dst[0] = COLOR_R(c); dst[1] = COLOR_G(c); dst[2] = COLOR_B(c); dst[3] = idx;
+        } else if (idx == (uint8_t)doc->ipal.transparent) {
           memset(dst, 0, 4);
         } else {
           dst[0] = COLOR_R(c); dst[1] = COLOR_G(c);
-          dst[2] = COLOR_B(c); dst[3] = 255;
+          dst[2] = COLOR_B(c); dst[3] = COLOR_A(c);
         }
       }
 #else

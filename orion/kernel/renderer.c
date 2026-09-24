@@ -87,6 +87,8 @@ typedef struct {
 
 typedef struct {
   sprite_program_t copy_sprite;
+  sprite_program_t indexed_sprite;
+  GLuint indexed_palette;
   sprite_program_t gradient_sprite;
   sprite_program_t rounded_rect_sprite; // SDF rounded-corner compositor
   GLuint vga_program;    // VGA text renderer program
@@ -429,6 +431,8 @@ void ui_shutdown_prog(void) {
   // Delete shader program and buffers
   SAFE_DELETE_N(g_vga.palette_texture, glDeleteTextures);
   SAFE_DELETE(g_ref.copy_sprite.program, glDeleteProgram);
+  SAFE_DELETE(g_ref.indexed_sprite.program, glDeleteProgram);
+  SAFE_DELETE_N(g_ref.indexed_palette, glDeleteTextures);
   SAFE_DELETE(g_ref.gradient_sprite.program, glDeleteProgram);
   SAFE_DELETE(g_ref.rounded_rect_sprite.program, glDeleteProgram);
   SAFE_DELETE(g_ref.vga_program, glDeleteProgram);
@@ -505,6 +509,55 @@ void draw_rect_ex(int tex, irect16_t r, int type, float alpha) {
 // Draw a sprite at the specified screen position
 void draw_rect(int tex, irect16_t r) {
   draw_rect_ex(tex, r, false, 1);
+}
+
+void draw_indexed_rect(uint32_t tex, irect16_t r, const uint32_t palette[256], int transparent, float alpha) {
+  if (!tex || !palette || transparent < 0 || transparent > 255 || r.w <= 0 || r.h <= 0) {
+    fprintf(stderr, "[renderer] indexed draw rejected tex=%u transparent=%d rect=%d,%d,%d,%d\n",
+            tex, transparent, r.x, r.y, r.w, r.h);
+    fflush(stderr);
+    return;
+  }
+  sprite_program_t *prog = &g_ref.indexed_sprite;
+  if (!prog->program) {
+    prog->program = load_program_from_files("sprite_indexed.frag.glsl", "position", "texcoord", "color");
+    if (!prog->program) {
+      fprintf(stderr, "[renderer] indexed shader unavailable\n");
+      fflush(stderr);
+      return;
+    }
+    cache_sprite_uniforms(prog);
+  }
+  uint8_t rgba[256 * 4];
+  for (int i = 0; i < 256; i++) {
+    rgba[i * 4] = (uint8_t)palette[i]; rgba[i * 4 + 1] = (uint8_t)(palette[i] >> 8);
+    rgba[i * 4 + 2] = (uint8_t)(palette[i] >> 16);
+    rgba[i * 4 + 3] = i == transparent ? 0 : (uint8_t)(palette[i] >> 24);
+  }
+  glActiveTexture(GL_TEXTURE1);
+  if (!g_ref.indexed_palette)
+    g_ref.indexed_palette = R_CreateTextureRGBA(256, 1, rgba, R_FILTER_NEAREST, R_WRAP_CLAMP);
+  else R_UpdateTextureRGBA(g_ref.indexed_palette, 0, 0, 256, 1, rgba);
+  glBindTexture(GL_TEXTURE_2D, g_ref.indexed_palette);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, tex);
+  glUseProgram(prog->program);
+  glUniformMatrix4fv(prog->projection_u, 1, GL_FALSE, fmat16_data(&g_active_projection));
+  glUniform2f(prog->offset_u, r.x, r.y);
+  glUniform2f(prog->scale_u, r.w, r.h);
+  glUniform2f(prog->uv_offset_u, 0, 0);
+  glUniform2f(prog->uv_scale_u, 1, 1);
+  glUniform1f(prog->alpha_u, alpha);
+  glUniform1i(prog->tex0_u, 0);
+  glUniform1i(glGetUniformLocation(prog->program, "palette_tex"), 1);
+  glEnable(GL_BLEND);
+  glBlendEquation(GL_FUNC_ADD);
+  glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+  glDisable(GL_DEPTH_TEST);
+  g_ref.mesh.draw_mode = GL_TRIANGLE_FAN;
+  R_MeshDraw(&g_ref.mesh);
+  glEnable(GL_DEPTH_TEST);
+  glDisable(GL_BLEND);
 }
 
 // Draw a sub-region of a sprite sheet at the specified screen position.

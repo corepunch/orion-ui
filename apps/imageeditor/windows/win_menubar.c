@@ -50,11 +50,12 @@ static void publish_dynamic_menus(void) {
 }
 
 
-static bool cancel_active_canvas_interaction(canvas_doc_t *doc, int old_tool) {
+bool imageeditor_finish_canvas_interaction(canvas_doc_t *doc, int old_tool) {
   bool changed = false;
   canvas_win_state_t *state;
 
   if (!doc) return false;
+  if (g_ui_runtime.captured == doc->canvas_win) set_capture(NULL);
 
   state = doc->canvas_win ? (canvas_win_state_t *)doc->canvas_win->userdata : NULL;
   if (state && state->pan.active) {
@@ -111,9 +112,9 @@ static bool cancel_active_canvas_interaction(canvas_doc_t *doc, int old_tool) {
     changed = true;
   }
 
-  if (doc->drawing) {
+  if (doc->drawing || doc->stroke.active) {
     canvas_stroke_end(doc, doc->last);
-    IE_DEBUG("cancel_interaction drawing doc=%p old_tool=%s",
+    IE_TRACE("finish interaction doc=%p old_tool=%s",
              (void *)doc, tool_id_name(old_tool));
     doc->drawing = false;
     changed = true;
@@ -392,6 +393,9 @@ bool imageeditor_open_file_path(const char *path) {
 
   // Swap the transparent placeholder pixels for the actual loaded image.
   // Update both the layer buffer and the convenience alias.
+#if IMAGEEDITOR_BW
+  doc_set_active_layer(ndoc, IE_LAYER_COLOR);
+#endif
   free(ndoc->layer.stack[ndoc->layer.active]->pixels);
   ndoc->layer.stack[ndoc->layer.active]->pixels = px;
   ndoc->pixels = px;
@@ -404,6 +408,11 @@ bool imageeditor_open_file_path(const char *path) {
     memcpy(ndoc->ipal.entries, pal, (size_t)pal_count * sizeof(uint32_t));
     ndoc->ipal.count = pal_count;
   }
+#if IMAGEEDITOR_BW
+  ndoc->ipal.entries[255] = 0;
+  // Imported palettes may use the default paper index for a different color.
+  memset(ndoc->layer.stack[IE_LAYER_BG]->pixels, 255, (size_t)img_w * img_h);
+#endif
   if (loaded_anim) {
     anim_timeline_free(ndoc->anim);
     ndoc->anim = loaded_anim;
@@ -416,7 +425,7 @@ bool imageeditor_open_file_path(const char *path) {
         loaded_layers.background = NULL;
         for (int i = 0; i < IE_LAYER_COUNT; i++) ndoc->layer.stack[i]->visible = (loaded_layers.visible >> i) & 1;
         doc_set_active_layer(ndoc, loaded_layers.active);
-      }
+      } else doc_set_active_layer(ndoc, IE_LAYER_COLOR);
       if (!doc_anim_load(ndoc, 0)) { close_document(ndoc); return false; }
     }
 
@@ -776,7 +785,7 @@ void handle_menu_command(uint16_t id) {
     case ID_TOOL_MAGIC_WAND:
     case ID_TOOL_MOVE: {
       int old_tool = g_app->current_tool;
-      if (doc && old_tool != (int)id && cancel_active_canvas_interaction(doc, old_tool)) {
+      if (doc && old_tool != (int)id && imageeditor_finish_canvas_interaction(doc, old_tool)) {
         invalidate_window(doc->canvas_win);
       }
       g_app->current_tool = id;

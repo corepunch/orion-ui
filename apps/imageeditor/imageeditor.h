@@ -42,7 +42,11 @@
 
 #if IMAGEEDITOR_INDEXED
 // Which palette index is treated as transparent (the "eraser" target).
+#if IMAGEEDITOR_BW
+#define IMAGEEDITOR_TRANSPARENT_INDEX 255
+#else
 #define IMAGEEDITOR_TRANSPARENT_INDEX 0
+#endif
 #endif
 
 // Retina pixel buffer scale for BW mode (pencil test).  Set from axGetScaling()
@@ -210,9 +214,15 @@ extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 #define IE_PENCIL_COLORS 16
 #define IE_PENCIL_PALETTE_BASE 0x7f00
 #define IE_PENCIL_LAYER_BASE 0x7e00
+#define IE_PENCIL_COLOR_SWATCH 0
+#define IE_PENCIL_MAX_OPACITY 64       // 25% of 255; pencil coverage is stored as a byte.
+#define IE_PENCIL_FADE_LENGTH 16.0f   // Logical pixels from each stroke endpoint to full opacity.
+#define IE_PENCIL_DAB_SPACING 0.5f    // Backing pixels; flow is normalized by brush width.
+#define IE_PENCIL_GRAIN_VARIATION 32  // Deterministic 0–12.5% paper-grain variation.
 enum { IE_LAYER_BG, IE_LAYER_COLOR, IE_LAYER_PENCIL, IE_LAYER_FX, IE_LAYER_COUNT };
 extern const uint32_t k_pencil_palette[IE_PENCIL_COLORS];
 extern const char *const k_pencil_color_names[IE_PENCIL_COLORS];
+uint32_t pencil_configured_color(void);
 
 // ============================================================
 // Types
@@ -329,6 +339,13 @@ typedef struct canvas_doc_s {
     ipoint16_t sample, stamp;
     float x, y;  // Last curve endpoint, retaining half-pixel midpoints.
   } stroke;
+  struct {
+    bool active;
+    float *coverage;
+    struct { ipoint16_t point; float radius; } *samples;
+    int count, capacity;
+    float length, max_radius;
+  } pencil_stroke;
   // Polygon tool in-progress vertices
   struct {
     ipoint16_t  pts[MAX_POLY_POINTS];
@@ -740,6 +757,7 @@ void window_menu_rebuild(void);
 // Dispatch a menu command.  Called by editor_menubar_proc (standalone) or
 // by the shell (gem mode) when the user selects a menu item.
 void handle_menu_command(uint16_t id);
+bool imageeditor_finish_canvas_interaction(canvas_doc_t *doc, int old_tool);
 
 // Open an image file path and create a new document from it.
 // Returns true on success, false on load/create failure.
