@@ -1177,10 +1177,10 @@ STBIWDEF unsigned char *stbi_write_png_to_mem(const unsigned char *pixels, int s
    STBIW_FREE(filt);
    if (!zlib) return 0;
 
-   // each tag requires 12 bytes of overhead
-   out = (unsigned char *) STBIW_MALLOC(8 + 12+13 + 12+zlen + 12);
+   // IHDR, sRGB declaration, IDAT, and IEND chunks.
+   out = (unsigned char *) STBIW_MALLOC(8 + 12+13 + 12+1 + 12+zlen + 12);
    if (!out) return 0;
-   *out_len = 8 + 12+13 + 12+zlen + 12;
+   *out_len = 8 + 12+13 + 12+1 + 12+zlen + 12;
 
    o=out;
    STBIW_MEMMOVE(o,sig,8); o+= 8;
@@ -1194,6 +1194,11 @@ STBIWDEF unsigned char *stbi_write_png_to_mem(const unsigned char *pixels, int s
    *o++ = 0;
    *o++ = 0;
    stbiw__wpcrc(&o,13);
+
+   stbiw__wp32(o, 1);
+   stbiw__wptag(o, "sRGB");
+   *o++ = 0; // Perceptual rendering intent.
+   stbiw__wpcrc(&o,1);
 
    stbiw__wp32(o, zlen);
    stbiw__wptag(o, "IDAT");

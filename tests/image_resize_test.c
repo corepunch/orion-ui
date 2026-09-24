@@ -83,13 +83,13 @@ static void test_square_crop(void) {
   }
   uint8_t *out = downscale_image(src, 3, 2, 2);
   ASSERT_NOT_NULL(out);
-  for (int i = 0; i < 4; i++) ASSERT_EQUAL(out[i * 4], 128);
+  for (int i = 0; i < 4; i++) ASSERT_EQUAL(out[i * 4], 188);
   image_free(out);
   for (int y = 0; y < 3; y++)
     for (int x = 0; x < 2; x++) src[(y * 2 + x) * 4] = y == 1 ? 255 : 0;
   out = downscale_image(src, 2, 3, 2);
   ASSERT_NOT_NULL(out);
-  for (int i = 0; i < 4; i++) ASSERT_EQUAL(out[i * 4], 128);
+  for (int i = 0; i < 4; i++) ASSERT_EQUAL(out[i * 4], 188);
   image_free(out);
   PASS();
 }

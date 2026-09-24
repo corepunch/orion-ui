@@ -7,6 +7,7 @@
 #include "text.h"
 
 // Rectangle drawing functions
+// Color arguments are packed 0xAABBGGRR with sRGB RGB and linear alpha.
 void fill_rect(uint32_t color, irect16_t r);
 void fill_rounded_rect(uint32_t color, irect16_t r, int radius);
 // Procedural rounded-box shadow; radius, blur (Gaussian sigma), and offset are logical pixels.
@@ -36,6 +37,10 @@ void draw_sprite_region(int tex, irect16_t r,
 // Draw a texture with SDF rounded-corner masking (anti-aliased).
 void draw_rounded_rect(int tex, irect16_t r, int win_w, int win_h,
                        float radius, float alpha);
+// Same as draw_rounded_rect, for textures that already contain premultiplied
+// linear RGB (for example a cached root-window surface).
+void draw_rounded_rect_premultiplied(int tex, irect16_t r, int win_w, int win_h,
+                                     float radius, float alpha);
 void render_rounded_rect(int tex, irect16_t r, int pixel_w, int pixel_h,
                          float radius, float alpha, uint32_t color);
 // Draw a dashed selection-outline rectangle (2–4 GL draw calls depending on dimensions, O(1) regardless of size)

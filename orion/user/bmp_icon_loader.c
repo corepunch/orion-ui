@@ -81,8 +81,8 @@ bool bmp_build_strip(const char *icons_dir, const char **bmp_names, int count,
     return false;
   }
 
-  uint32_t tex = R_CreateTextureRGBA(sheet_w, sheet_h, sheet,
-                                     R_FILTER_NEAREST, R_WRAP_CLAMP);
+  uint32_t tex = R_CreateTextureSRGBA8(sheet_w, sheet_h, sheet,
+                                       R_FILTER_NEAREST, R_WRAP_CLAMP);
   free(sheet);
   if (!tex)
     return false;
@@ -114,7 +114,7 @@ bool bmp_icon_resolve(const char *name, sysicon_resolved_t *out) {
   if (!pixels)
     return false;
 
-  uint32_t tex = R_CreateTextureRGBA(w, h, pixels, R_FILTER_NEAREST, R_WRAP_CLAMP);
+  uint32_t tex = R_CreateTextureSRGBA8(w, h, pixels, R_FILTER_NEAREST, R_WRAP_CLAMP);
   image_free(pixels);
   if (!tex)
     return false;

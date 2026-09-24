@@ -24,7 +24,7 @@ static layer_t *layer_new(int w, int h, const char *name) {
 static void layer_free_one(layer_t *lay) {
   if (!lay) return;
   if (lay->tex)
-    glDeleteTextures(1, &lay->tex);
+    R_DeleteTexture(lay->tex);
   free(lay->pixels);
   free(lay);
 }
@@ -69,7 +69,7 @@ static bool layer_crop_expand(layer_t *lay, int old_w, int old_h,
   free(lay->pixels);
   lay->pixels = buf;
   if (lay->tex) {
-    glDeleteTextures(1, &lay->tex);
+    R_DeleteTexture(lay->tex);
     lay->tex = 0;
   }
   lay->preview.active = false;
@@ -282,14 +282,7 @@ void doc_merge_down(canvas_doc_t *doc) {
   for (size_t i = 0; i < n; i++) {
     const uint8_t *s = top->pixels + i * 4;
     uint8_t       *d = bot->pixels + i * 4;
-    uint32_t sa = s[3];
-    sa = (sa * top->opacity + 127) / 255;
-    if (sa == 0) continue;
-    uint32_t inv = 255 - sa;
-    d[0] = (uint8_t)((s[0]*sa + d[0]*inv + 127)/255);
-    d[1] = (uint8_t)((s[1]*sa + d[1]*inv + 127)/255);
-    d[2] = (uint8_t)((s[2]*sa + d[2]*inv + 127)/255);
-    d[3] = 255;
+    ui_composite_srgba8(d, s, (float)top->opacity / 255.0f);
   }
 
   layer_free_one(doc->layer.stack[top_idx]);

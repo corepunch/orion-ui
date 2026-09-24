@@ -5,7 +5,8 @@
 #include <stdint.h>
 #include <orion/user/user.h>
 
-// WEB(0xaabbcc) is #aabbcc. Packs R in the low byte (fill_rect) with alpha 0xff.
+// Public drawing colors use sRGB RGB and linear alpha. Packed values are
+// 0xAABBGGRR (R in the low byte); WEB(0xaabbcc) accepts CSS #RRGGBB.
 #define WEB(hex) \
   (0xff000000u | ((uint32_t)((hex) & 0x000000ffu) << 16) | \
    ((uint32_t)((hex) & 0x0000ff00u)) | ((uint32_t)((hex) >> 16) & 0xffu))

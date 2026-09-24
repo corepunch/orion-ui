@@ -191,9 +191,77 @@ static void test_onion_alpha(void) {
   ASSERT_TRUE(correct);
   PASS();
 }
+
+static void test_srgb_linear_source_over(void) {
+  TEST("sRGB window targets store linear-light source-over results");
+  CGLPixelFormatAttribute attrs[] = {kCGLPFAOpenGLProfile,
+    (CGLPixelFormatAttribute)kCGLOGLPVersion_3_2_Core, (CGLPixelFormatAttribute)0};
+  CGLPixelFormatObj format = NULL;
+  CGLContextObj context = NULL;
+  GLint count = 0;
+  CGLError err = CGLChoosePixelFormat(attrs, &format, &count);
+  if (err != kCGLNoError || !format) { SKIP("Offscreen OpenGL unavailable"); }
+  err = CGLCreateContext(format, NULL, &context);
+  CGLDestroyPixelFormat(format);
+  if (err != kCGLNoError || !context) { SKIP("Offscreen OpenGL context unavailable"); }
+  CGLSetCurrentContext(context);
+  bool initialized = ui_init_prog();
+  bool correct = initialized;
+  uint32_t fbo = 0, surface = 0, black = 0, color_tex = 0, float_tex = 0;
+  int width = 0, height = 0;
+  if (correct) {
+    correct = R_EnsureWindowTarget(&fbo, &surface, &width, &height, 1, 1);
+    black = R_CreateTextureRGBA(1, 1, (uint8_t[]){0, 0, 0, 255},
+                                R_FILTER_NEAREST, R_WRAP_CLAMP);
+    correct &= black != 0;
+    color_tex = R_CreateTextureSRGBA8(1, 1, (uint8_t[]){128, 128, 128, 128},
+                                      R_FILTER_NEAREST, R_WRAP_CLAMP);
+    float_tex = R_CreateTexture(1, 1, R_TEXTURE_RGBA16F_LINEAR,
+                                (float[]){0.25f, 0.25f, 0.25f, 0.5f},
+                                R_FILTER_NEAREST, R_WRAP_CLAMP);
+    correct &= color_tex != 0 && float_tex != 0;
+  }
+  if (correct) {
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glViewport(0, 0, 1, 1);
+    glDisable(GL_SCISSOR_TEST);
+    set_projection(0, 0, 1, 1);
+    R_SetFramebufferSRGB(true);
+    glClearColor(1, 1, 1, 1);
+    glClear(GL_COLOR_BUFFER_BIT);
+    draw_rect_ex((int)black, R(0, 0, 1, 1), 0, 0.5f);
+    uint8_t result[4] = {0};
+    glReadPixels(0, 0, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, result);
+    correct = abs((int)result[0] - 188) <= 1 &&
+              abs((int)result[1] - 188) <= 1 &&
+              abs((int)result[2] - 188) <= 1 && result[3] == 255 &&
+              glGetError() == GL_NO_ERROR;
+    uint8_t straight[4] = {0};
+    correct &= R_ReadTextureSRGBA8(surface, 1, 1, straight) &&
+               abs((int)straight[0] - 188) <= 1 && straight[3] == 255;
+    correct &= R_ReadTextureSRGBA8(color_tex, 1, 1, straight) &&
+               straight[0] == 128 && straight[3] == 128;
+    correct &= R_ReadTextureSRGBA8(float_tex, 1, 1, straight) &&
+               abs((int)straight[0] - 188) <= 1 && straight[3] == 128;
+  }
+  R_SetFramebufferSRGB(false);
+  if (black) R_DeleteTexture(black);
+  if (color_tex) R_DeleteTexture(color_tex);
+  if (float_tex) R_DeleteTexture(float_tex);
+  R_DestroyWindowTarget(&fbo, &surface, &width, &height);
+  if (initialized) ui_shutdown_prog();
+  CGLSetCurrentContext(NULL);
+  CGLDestroyContext(context);
+  ASSERT_TRUE(correct);
+  PASS();
+}
 #else
 static void test_onion_alpha(void) {
   TEST("Faded strokes keep an opaque canvas opaque through window compositing");
+  SKIP("Offscreen test requires macOS CGL");
+}
+static void test_srgb_linear_source_over(void) {
+  TEST("sRGB window targets store linear-light source-over results");
   SKIP("Offscreen test requires macOS CGL");
 }
 #endif
@@ -205,5 +273,6 @@ int main(void) {
   test_fixed_viewport();
 #endif
   test_onion_alpha();
+  test_srgb_linear_source_over();
   TEST_END();
 }

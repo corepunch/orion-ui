@@ -199,7 +199,7 @@ static void components_load_strip(void) {
     image_free(pixels);
     return;
   }
-  uint32_t tex = R_CreateTextureRGBA(w, h, pixels, R_FILTER_LINEAR, R_WRAP_CLAMP);
+  uint32_t tex = R_CreateTextureSRGBA8(w, h, pixels, R_FILTER_LINEAR, R_WRAP_CLAMP);
   image_free(pixels);
   if (!tex) return;
   g_tool_strip = (bitmap_strip_t){

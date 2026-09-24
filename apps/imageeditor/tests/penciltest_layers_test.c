@@ -220,6 +220,26 @@ static void test_layer_exports(void) {
   image_free(rgba); remove(path);
   snprintf(path, sizeof(path), "%s/animation.png", layer_test_dir);
   ASSERT_TRUE(anim_export_apng(doc, path));
+  FILE *apng = fopen(path, "rb"); ASSERT_NOT_NULL(apng);
+  uint8_t png_signature[8];
+  static const uint8_t expected_signature[8] = {137, 80, 78, 71, 13, 10, 26, 10};
+  ASSERT_EQUAL(fread(png_signature, 1, sizeof(png_signature), apng), sizeof(png_signature));
+  ASSERT_EQUAL(memcmp(png_signature, expected_signature, sizeof(expected_signature)), 0);
+  bool has_srgb = false;
+  uint8_t chunk_header[8];
+  while (fread(chunk_header, 1, sizeof(chunk_header), apng) == sizeof(chunk_header)) {
+    uint32_t chunk_size = ((uint32_t)chunk_header[0] << 24) |
+                          ((uint32_t)chunk_header[1] << 16) |
+                          ((uint32_t)chunk_header[2] << 8) | chunk_header[3];
+    if (memcmp(chunk_header + 4, "sRGB", 4) == 0) {
+      has_srgb = chunk_size == 1;
+      break;
+    }
+    if (fseek(apng, (long)chunk_size + 4, SEEK_CUR) != 0 ||
+        memcmp(chunk_header + 4, "IEND", 4) == 0)
+      break;
+  }
+  fclose(apng); ASSERT_TRUE(has_srgb);
   rgba = load_image(path, &w, &h); ASSERT_NOT_NULL(rgba);
   ASSERT_EQUAL(rgba[0], COLOR_R(k_pencil_palette[12])); image_free(rgba); remove(path);
   snprintf(path, sizeof(path), "%s/animation.gif", layer_test_dir);

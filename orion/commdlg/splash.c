@@ -87,7 +87,7 @@ window_t *show_splash_screen(const char *path, hinstance_t hinstance) {
     return NULL;
   }
 
-  uint32_t tex = R_CreateTextureRGBA(w, h, pixels, R_FILTER_LINEAR, R_WRAP_CLAMP);
+  uint32_t tex = R_CreateTextureSRGBA8(w, h, pixels, R_FILTER_LINEAR, R_WRAP_CLAMP);
   image_free(pixels);
   if (!tex) return NULL;
 

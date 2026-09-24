@@ -74,9 +74,9 @@ void init_ui_transparency_checker_texture(void) {
       /* row 0 */ 208, 208, 208, 255, 176, 176, 176, 255,
       /* row 1 */ 176, 176, 176, 255, 208, 208, 208, 255,
     };
-    ui_transparency_checker_texture = R_CreateTextureRGBA(2, 2, pixels,
-                                                          R_FILTER_NEAREST,
-                                                          R_WRAP_REPEAT);
+    ui_transparency_checker_texture = R_CreateTextureSRGBA8(2, 2, pixels,
+                                                            R_FILTER_NEAREST,
+                                                            R_WRAP_REPEAT);
   }
 }
 

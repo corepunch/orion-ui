@@ -419,7 +419,7 @@ static uint32_t load_asset_texture(const char *filename, int *out_w, int *out_h)
     if (n >= 0 && (size_t)n < sizeof(path)) pixels = load_image(path, &w, &h);
   }
   if (!pixels) return 0;
-  uint32_t texture = R_CreateTextureRGBA(w, h, pixels, R_FILTER_LINEAR, R_WRAP_CLAMP);
+  uint32_t texture = R_CreateTextureSRGBA8(w, h, pixels, R_FILTER_LINEAR, R_WRAP_CLAMP);
   image_free(pixels);
   if (out_w) *out_w = w;
   if (out_h) *out_h = h;

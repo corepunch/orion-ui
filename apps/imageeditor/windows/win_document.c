@@ -396,7 +396,7 @@ void close_document(canvas_doc_t *doc) {
   free(doc->shape.snapshot);
   doc->shape.snapshot = NULL;
   if (doc->sel.floating.tex)
-    glDeleteTextures(1, &doc->sel.floating.tex);
+    R_DeleteTexture(doc->sel.floating.tex);
   free(doc->sel.floating.pixels);
   free(doc->sel.floating.mask);
   canvas_clear_selection_mask(doc);

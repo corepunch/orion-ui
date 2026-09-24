@@ -62,6 +62,34 @@ static const char *write_temp_png(void) {
   return path;
 }
 
+static bool png_has_srgb_chunk(const char *path) {
+  FILE *fp = fopen(path, "rb");
+  if (!fp) return false;
+  uint8_t signature[8];
+  static const uint8_t png_signature[8] = {137, 80, 78, 71, 13, 10, 26, 10};
+  bool found = false;
+  if (fread(signature, 1, sizeof(signature), fp) != sizeof(signature) ||
+      memcmp(signature, png_signature, sizeof(signature)) != 0) {
+    fclose(fp);
+    return false;
+  }
+  for (;;) {
+    uint8_t header[8];
+    if (fread(header, 1, sizeof(header), fp) != sizeof(header)) break;
+    uint32_t length = ((uint32_t)header[0] << 24) | ((uint32_t)header[1] << 16) |
+                      ((uint32_t)header[2] << 8) | header[3];
+    if (memcmp(header + 4, "sRGB", 4) == 0) {
+      found = length == 1;
+      break;
+    }
+    if (fseek(fp, (long)length + 4, SEEK_CUR) != 0 ||
+        memcmp(header + 4, "IEND", 4) == 0)
+      break;
+  }
+  fclose(fp);
+  return found;
+}
+
 static void set_pixel(uint8_t *px, int w, int x, int y,
                       uint8_t r, uint8_t g, uint8_t b) {
   uint8_t *p = px + ((size_t)y * w + x) * 4;
@@ -187,6 +215,7 @@ void test_save_and_reload(void) {
 
   bool ok = save_image_png(path, src, 2, 2);
   ASSERT_TRUE(ok);
+  ASSERT_TRUE(png_has_srgb_chunk(path));
 
   int w = 0, h = 0;
   uint8_t *px = load_image(path, &w, &h);

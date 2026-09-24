@@ -97,6 +97,21 @@ static bool rasterize_svg(const char *path, int size, uint8_t *out_rgba) {
     return true;
 }
 
+// NanoSVG emits premultiplied encoded bytes. Uploads to SRGBA8 accept straight
+// sRGB input, so undo that association before the renderer premultiplies in
+// linear light for filtered sampling.
+static void svg_unpremultiply_rgba(uint8_t *rgba, size_t pixels) {
+    if (!rgba) return;
+    for (size_t i = 0; i < pixels; i++, rgba += 4) {
+        unsigned a = rgba[3];
+        if (!a) { rgba[0] = rgba[1] = rgba[2] = 0; continue; }
+        for (int c = 0; c < 3; c++) {
+            unsigned value = ((unsigned)rgba[c] * 255u + a / 2u) / a;
+            rgba[c] = (uint8_t)(value > 255u ? 255u : value);
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Public: generic strip builder
 // ---------------------------------------------------------------------------
@@ -145,6 +160,7 @@ bool svg_build_strip(const char *icons_dir,
             snprintf(path, sizeof(path), "%s/%s.svg", icons_dir, name);
             drawn = rasterize_svg(path, raster_size, tile);
             if (drawn) {
+                svg_unpremultiply_rgba(tile, (size_t)raster_size * raster_size);
                 ok_count++;
             } else if (missing) {
                 fprintf(missing, "MISSING icon[%d] \"%s\"\n", i, name);
@@ -173,8 +189,8 @@ bool svg_build_strip(const char *icons_dir,
         return false;
     }
 
-    uint32_t tex = R_CreateTextureRGBA(sheet_w, sheet_h, (uint8_t *)sheet,
-                                       R_FILTER_LINEAR, R_WRAP_CLAMP);
+    uint32_t tex = R_CreateTextureSRGBA8(sheet_w, sheet_h, (uint8_t *)sheet,
+                                         R_FILTER_LINEAR, R_WRAP_CLAMP);
     free(sheet);
     if (!tex) return false;
 
@@ -254,8 +270,9 @@ bool sysicon_resolve(const char *name, sysicon_resolved_t *out) {
         drawn = rasterize_svg(path, raster_size, pixels);
     }
     if (!drawn) { free(pixels); return false; }
-    uint32_t tex = R_CreateTextureRGBA(raster_size, raster_size, pixels,
-                                       R_FILTER_LINEAR, R_WRAP_CLAMP);
+    svg_unpremultiply_rgba(pixels, (size_t)raster_size * raster_size);
+    uint32_t tex = R_CreateTextureSRGBA8(raster_size, raster_size, pixels,
+                                         R_FILTER_LINEAR, R_WRAP_CLAMP);
     free(pixels);
     if (!tex) return false;
     sysicon_cache_t *e = entry ? entry : &g_sysicon_cache[g_sysicon_cache_n++];

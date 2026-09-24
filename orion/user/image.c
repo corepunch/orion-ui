@@ -28,6 +28,11 @@ static uint32_t image_read32_tiff(const uint8_t *p, bool le) {
                ((uint32_t)p[2] << 8) | (uint32_t)p[3]);
 }
 
+static uint32_t image_read32_le(const uint8_t *p) {
+  return (uint32_t)p[0] | ((uint32_t)p[1] << 8) |
+         ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
+}
+
 static bool image_parse_exif_orientation(const uint8_t *data, size_t len,
                                          int *out_orientation) {
   if (!data || len < 14 || memcmp(data, "Exif\0\0", 6) != 0)
@@ -68,8 +73,110 @@ static bool image_parse_exif_orientation(const uint8_t *data, size_t len,
   return false;
 }
 
-static int image_jpeg_orientation(const char *path) {
+static bool image_png_srgb_supported(const char *path) {
+  static const uint8_t signature[8] = {137, 80, 78, 71, 13, 10, 26, 10};
   FILE *f = fopen(path, "rb");
+  if (!f) return true;
+  uint8_t sig[8];
+  if (fread(sig, 1, sizeof(sig), f) != sizeof(sig) ||
+      memcmp(sig, signature, sizeof(sig)) != 0) {
+    fclose(f);
+    return true;
+  }
+
+  bool has_srgb = false, has_iccp = false, has_gamma = false;
+  bool has_chrm = false, has_cicp = false;
+  int bit_depth = 8;
+  bool valid = true;
+  for (;;) {
+    uint8_t header[8];
+    if (fread(header, 1, sizeof(header), f) != sizeof(header)) break;
+    uint32_t n = ((uint32_t)header[0] << 24) | ((uint32_t)header[1] << 16) |
+                 ((uint32_t)header[2] << 8) | (uint32_t)header[3];
+    if (n > (1u << 30)) { valid = false; break; }
+    const uint8_t *type = header + 4;
+    if (memcmp(type, "IHDR", 4) == 0) {
+      uint8_t ihdr[13];
+      if (n != sizeof(ihdr) || fread(ihdr, 1, sizeof(ihdr), f) != sizeof(ihdr)) {
+        valid = false;
+        break;
+      }
+      bit_depth = ihdr[8];
+      if (fseek(f, 4, SEEK_CUR) != 0) { valid = false; break; }
+      continue;
+    }
+    if (memcmp(type, "sRGB", 4) == 0) has_srgb = true;
+    else if (memcmp(type, "iCCP", 4) == 0) has_iccp = true;
+    else if (memcmp(type, "gAMA", 4) == 0) has_gamma = true;
+    else if (memcmp(type, "cHRM", 4) == 0) has_chrm = true;
+    else if (memcmp(type, "cICP", 4) == 0) has_cicp = true;
+    if (fseek(f, (long)n + 4, SEEK_CUR) != 0) { valid = false; break; }
+    if (memcmp(type, "IEND", 4) == 0) break;
+  }
+  fclose(f);
+  if (!valid) {
+    fprintf(stderr, "[image] malformed PNG metadata path=%s\n", path);
+    fflush(stderr);
+    return false;
+  }
+  if (bit_depth > 8) {
+    fprintf(stderr, "[image] unsupported PNG bit depth=%d path=%s; Orion documents use 8-bit RGBA\n",
+            bit_depth, path);
+    fflush(stderr);
+    return false;
+  }
+  if (has_iccp || has_cicp || ((!has_srgb) && (has_gamma || has_chrm))) {
+    fprintf(stderr, "[image] unsupported PNG color metadata path=%s sRGB=%d iCCP=%d gAMA=%d cHRM=%d cICP=%d\n",
+            path, has_srgb, has_iccp, has_gamma, has_chrm, has_cicp);
+    fflush(stderr);
+    return false;
+  }
+  return true;
+}
+
+static bool image_bmp_srgb_supported(const char *path) {
+  FILE *f = fopen(path, "rb");
+  if (!f) return true;
+  uint8_t file_header[14], size_bytes[4];
+  if (fread(file_header, 1, sizeof(file_header), f) != sizeof(file_header) ||
+      file_header[0] != 'B' || file_header[1] != 'M' ||
+      fread(size_bytes, 1, sizeof(size_bytes), f) != sizeof(size_bytes)) {
+    fclose(f);
+    return true;
+  }
+  uint32_t header_size = image_read32_le(size_bytes);
+  if (header_size < 108) {
+    fclose(f);
+    return true;
+  }
+  uint8_t dib[124] = {0};
+  memcpy(dib, size_bytes, sizeof(size_bytes));
+  size_t dib_size = header_size;
+  if (dib_size > sizeof(dib)) dib_size = sizeof(dib);
+  size_t rest = dib_size - sizeof(size_bytes);
+  if (fread(dib + sizeof(size_bytes), 1, rest, f) != rest) {
+    fclose(f);
+    fprintf(stderr, "[image] malformed BMP color header path=%s size=%u\n",
+            path, header_size);
+    fflush(stderr);
+    return false;
+  }
+  fclose(f);
+
+  uint32_t color_space = image_read32_le(dib + 56);
+  uint32_t profile_size = header_size >= 124 ? image_read32_le(dib + 116) : 0;
+  if (color_space != 0x73524742u || profile_size != 0) {
+    fprintf(stderr, "[image] unsupported BMP color metadata path=%s colorspace=0x%08x profile_size=%u\n",
+            path, color_space, profile_size);
+    fflush(stderr);
+    return false;
+  }
+  return true;
+}
+
+static int image_jpeg_orientation(const char *path, bool *has_icc) {
+  FILE *f = fopen(path, "rb");
+  if (has_icc) *has_icc = false;
   if (!f) return 1;
 
   uint8_t hdr[2];
@@ -78,6 +185,7 @@ static int image_jpeg_orientation(const char *path) {
     return 1;
   }
 
+  int orientation = 1;
   for (;;) {
     int c;
     do {
@@ -104,14 +212,17 @@ static int image_jpeg_orientation(const char *path) {
         free(payload);
         break;
       }
-      int orientation = 1;
-      bool found = image_parse_exif_orientation(payload, payload_len,
-                                                &orientation);
+      (void)image_parse_exif_orientation(payload, payload_len, &orientation);
       free(payload);
-      if (found) {
-        fclose(f);
-        return orientation;
-      }
+      continue;
+    }
+
+    if (marker == 0xe2 && payload_len >= 12) {
+      uint8_t profile_sig[12];
+      if (fread(profile_sig, 1, sizeof(profile_sig), f) != sizeof(profile_sig)) break;
+      if (memcmp(profile_sig, "ICC_PROFILE\0", sizeof(profile_sig)) == 0 && has_icc)
+        *has_icc = true;
+      if (fseek(f, (long)(payload_len - sizeof(profile_sig)), SEEK_CUR) != 0) break;
       continue;
     }
 
@@ -120,7 +231,7 @@ static int image_jpeg_orientation(const char *path) {
   }
 
   fclose(f);
-  return 1;
+  return orientation;
 }
 
 static uint8_t *image_apply_orientation(uint8_t *src, int *w, int *h,
@@ -133,8 +244,12 @@ static uint8_t *image_apply_orientation(uint8_t *src, int *w, int *h,
   int dw = (orientation >= 5 && orientation <= 8) ? sh : sw;
   int dh = (orientation >= 5 && orientation <= 8) ? sw : sh;
   uint8_t *dst = malloc((size_t)dw * dh * 4);
-  if (!dst)
+  if (!dst) {
+    fprintf(stderr, "[image] orientation transform allocation failed size=%dx%d orientation=%d\n",
+            dw, dh, orientation);
+    fflush(stderr);
     return src;
+  }
 
   for (int y = 0; y < sh; y++) {
     for (int x = 0; x < sw; x++) {
@@ -165,11 +280,19 @@ uint8_t *load_image(const char *path, int *out_w, int *out_h) {
   *out_w = 0;
   *out_h = 0;
   if (!path) return NULL;
+  if (!image_png_srgb_supported(path)) return NULL;
+  if (!image_bmp_srgb_supported(path)) return NULL;
+  bool has_jpeg_icc = false;
+  int orientation = image_jpeg_orientation(path, &has_jpeg_icc);
+  if (has_jpeg_icc) {
+    fprintf(stderr, "[image] unsupported JPEG ICC profile path=%s; import skipped\n", path);
+    fflush(stderr);
+    return NULL;
+  }
   int channels;
   uint8_t *pixels = stbi_load(path, out_w, out_h, &channels, 4);
   if (!pixels)
     return NULL;
-  int orientation = image_jpeg_orientation(path);
   return image_apply_orientation(pixels, out_w, out_h, orientation);
 }
 

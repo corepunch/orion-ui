@@ -6,6 +6,98 @@
 
 static uint32_t g_effect_programs[IE_RENDER_EFFECT_COUNT] = {0};
 
+static char *replace_shader_text(const char *source, const char *needle,
+                                 const char *replacement) {
+  size_t source_len = strlen(source), needle_len = strlen(needle);
+  size_t replacement_len = strlen(replacement), count = 0;
+  for (const char *p = source; (p = strstr(p, needle)) != NULL; p += needle_len)
+    count++;
+  if (replacement_len > needle_len &&
+      count > (SIZE_MAX - source_len - 1) / (replacement_len - needle_len))
+    return NULL;
+  size_t out_len = source_len + count * (replacement_len - needle_len);
+  char *out = malloc(out_len + 1);
+  if (!out) return NULL;
+  const char *src = source;
+  char *dst = out;
+  while (*src) {
+    const char *match = strstr(src, needle);
+    if (!match) {
+      size_t tail = strlen(src);
+      memcpy(dst, src, tail + 1);
+      break;
+    }
+    size_t head = (size_t)(match - src);
+    memcpy(dst, src, head);
+    dst += head;
+    memcpy(dst, replacement, replacement_len);
+    dst += replacement_len;
+    src = match + needle_len;
+  }
+  return out;
+}
+
+char *imageeditor_prepare_effect_shader(const char *source) {
+  static const char input_helpers[] =
+    "\nuniform float source_premultiplied;\n"
+    "uniform float output_premultiplied;\n"
+    "float imageeditor_srgb_to_linear(float x) {\n"
+    "  return x <= 0.04045 ? x / 12.92 : pow((x + 0.055) / 1.055, 2.4);\n"
+    "}\n"
+    "float imageeditor_linear_to_srgb(float x) {\n"
+    "  x = max(x, 0.0);\n"
+    "  return x <= 0.0031308 ? 12.92 * x : 1.055 * pow(x, 1.0 / 2.4) - 0.055;\n"
+    "}\n"
+    "vec4 imageeditor_effect_sample(vec2 uv) {\n"
+    "  vec4 c = texture(tex0, uv);\n"
+    "  if (source_premultiplied > 0.5) {\n"
+    "    if (c.a > 0.00001) {\n"
+    "      c.rgb = vec3(imageeditor_linear_to_srgb(c.r / c.a),\n"
+    "                   imageeditor_linear_to_srgb(c.g / c.a),\n"
+    "                   imageeditor_linear_to_srgb(c.b / c.a));\n"
+    "    } else c.rgb = vec3(0.0);\n"
+    "  }\n"
+    "  return c;\n"
+    "}\n";
+  static const char output_wrapper[] =
+    "\nvoid main() {\n"
+    "  imageeditor_user_main();\n"
+    "  if (output_premultiplied > 0.5) {\n"
+    "    float a = clamp(outColor.a, 0.0, 1.0);\n"
+    "    vec3 linear_rgb = vec3(imageeditor_srgb_to_linear(outColor.r),\n"
+    "                           imageeditor_srgb_to_linear(outColor.g),\n"
+    "                           imageeditor_srgb_to_linear(outColor.b));\n"
+    "    outColor = vec4(linear_rgb * a, a);\n"
+    "  }\n"
+    "}\n";
+  if (!source || !strstr(source, "uniform sampler2D tex0;") ||
+      !strstr(source, "out vec4 outColor;") || !strstr(source, "void main"))
+    return NULL;
+  char *samples = replace_shader_text(source, "texture(tex0,",
+                                       "imageeditor_effect_sample(");
+  if (!samples) return NULL;
+  char *renamed = replace_shader_text(samples, "void main",
+                                      "void imageeditor_user_main");
+  free(samples);
+  if (!renamed) return NULL;
+  const char *uniform_end = strstr(renamed, "uniform sampler2D tex0;");
+  size_t prefix_len = (size_t)(uniform_end - renamed) + strlen("uniform sampler2D tex0;");
+  size_t input_len = strlen(input_helpers), source_len = strlen(renamed);
+  size_t wrapper_len = strlen(output_wrapper);
+  char *prepared = malloc(source_len + input_len + wrapper_len + 1);
+  if (!prepared) {
+    free(renamed);
+    return NULL;
+  }
+  memcpy(prepared, renamed, prefix_len);
+  memcpy(prepared + prefix_len, input_helpers, input_len);
+  memcpy(prepared + prefix_len + input_len, renamed + prefix_len,
+         source_len - prefix_len);
+  memcpy(prepared + source_len + input_len, output_wrapper, wrapper_len + 1);
+  free(renamed);
+  return prepared;
+}
+
 static char *ie_read_text_file(const char *path) {
   FILE *fp = fopen(path, "rb");
   if (!fp) return NULL;
@@ -50,11 +142,17 @@ static bool ie_load_program_from_files(const char *fs_name, uint32_t *out_progra
     return false;
   }
 
-  bool ok = ui_load_program_from_source(vs_src, fs_src,
+  char *prepared_fs = imageeditor_prepare_effect_shader(fs_src);
+  free(fs_src);
+  if (!prepared_fs) {
+    free(vs_src);
+    return false;
+  }
+  bool ok = ui_load_program_from_source(vs_src, prepared_fs,
                                         "position", "texcoord", "color",
                                         out_program);
   free(vs_src);
-  free(fs_src);
+  free(prepared_fs);
   return ok;
 }
 
@@ -74,7 +172,7 @@ static bool roundtrip_texture_rgba(int src_tex, int w, int h, uint32_t *out_tex)
 
   bool ok = read_texture_rgba(src_tex, w, h, buf);
   if (ok) {
-    *out_tex = R_CreateTextureRGBA(w, h, buf, R_FILTER_LINEAR, R_WRAP_CLAMP);
+    *out_tex = R_CreateTextureSRGBA8(w, h, buf, R_FILTER_LINEAR, R_WRAP_CLAMP);
     ok = (*out_tex != 0);
   }
   free(buf);

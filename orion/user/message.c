@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdarg.h>
+#include <stdio.h>
 
 #include "user.h"
 #include "messages.h"
@@ -178,14 +179,22 @@ static bool parent_notify_message(uint32_t msg) {
 // Bind the root's offscreen target. evPaint cannot assume the matching
 // evNCPaint just ran: another root (menu popup, tooltip) can paint in between
 // and leave its FBO bound. Children share this same root target.
-static void bind_root_surface(window_t *root) {
+static bool bind_root_surface(window_t *root) {
+  if (!root) {
+    fprintf(stderr, "[ui] root surface rejected: root window unavailable\n");
+    fflush(stderr);
+    return false;
+  }
   int scale = (int)axGetScaling();
   if (scale < 1) scale = 1;
-  R_EnsureWindowTarget(&root->surface_fbo, &root->surface_tex,
-                       &root->surface_w, &root->surface_h,
-                       root->frame.w * scale, root->frame.h * scale);
+  if (!R_EnsureWindowTarget(&root->surface_fbo, &root->surface_tex,
+                            &root->surface_w, &root->surface_h,
+                            root->frame.w * scale, root->frame.h * scale))
+    return false;
   glBindFramebuffer(GL_FRAMEBUFFER, root->surface_fbo);
+  R_SetFramebufferSRGB(true);
   set_viewport_for_fbo(root);
+  return true;
 }
 
 // Send message to window (synchronous)
@@ -208,7 +217,7 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
     case evNCPaint:
       // Skip OpenGL calls if graphics aren't initialized (e.g., in tests)
       if (g_ui_runtime.running) {
-        bind_root_surface(root);
+        if (!bind_root_surface(root)) return false;
         if (win == root && (win->flags & WINDOW_TRANSPARENT)) R_ClearWindowTarget(root->surface_fbo);
         glBindFramebuffer(GL_FRAMEBUFFER, root->surface_fbo);
         set_viewport_for_fbo(root);
@@ -227,7 +236,7 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
     case evPaint:
       // Skip OpenGL calls if graphics aren't initialized (e.g., in tests)
       if (g_ui_runtime.running) {
-        bind_root_surface(root);
+        if (!bind_root_surface(root)) return false;
         if (win->parent && (win->flags & WINDOW_TOOLBAR)) toolbar_draw_non_client(win);
         int t = titlebar_height(root);
         // Shift projection so that (0,0) in drawing space maps to the top-left

@@ -207,6 +207,8 @@ static bool write_png_base(FILE *fp, const uint8_t *rgba, int w, int h) {
   ihdr[11] = 0;  // filter method
   ihdr[12] = 0;  // interlace method
   write_png_chunk(fp, 0x49484452u /*IHDR*/, ihdr, 13);
+  uint8_t srgb_intent = 0;
+  write_png_chunk(fp, 0x73524742u /*sRGB*/, &srgb_intent, 1);
 
   // IDAT.
   size_t idat_size = 0;
@@ -256,6 +258,8 @@ bool anim_export_apng(canvas_doc_t *doc, const char *path) {
   ihdr[ 6]=(uint8_t)(h>> 8); ihdr[7]=(uint8_t)(h);
   ihdr[ 8]=8; ihdr[9]=6; // 8-bit RGBA
   write_png_chunk(fp, 0x49484452u, ihdr, 13);
+  uint8_t srgb_intent = 0;
+  write_png_chunk(fp, 0x73524742u, &srgb_intent, 1);
 
   // acTL chunk.
   uint8_t actl[8];

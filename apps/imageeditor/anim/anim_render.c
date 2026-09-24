@@ -183,22 +183,10 @@ void anim_onion_tint_rgba(uint8_t *rgba, size_t npx, uint32_t tint) {
 static bool anim_upload_thumbnail_rgba(uint8_t *rgba, int w, int h, uint32_t *tex) {
   if (!rgba || !tex) return false;
   if (*tex == 0) {
-    GLuint t = 0;
-    glGenTextures(1, &t);
-    glBindTexture(GL_TEXTURE_2D, t);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
-                 GL_RGBA, GL_UNSIGNED_BYTE, rgba);
-    *tex = t;
-  } else {
-    glBindTexture(GL_TEXTURE_2D, *tex);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h,
-                    GL_RGBA, GL_UNSIGNED_BYTE, rgba);
+    *tex = R_CreateTextureSRGBA8(w, h, rgba, R_FILTER_LINEAR, R_WRAP_CLAMP);
+    return *tex != 0;
   }
-  return *tex != 0;
+  return R_UpdateTextureRGBA(*tex, 0, 0, w, h, rgba);
 }
 
 bool anim_render_frame_thumbnail(const anim_frame_t *frame, int w, int h,
@@ -242,8 +230,8 @@ bool anim_render_frame_thumbnail_scaled(const anim_frame_t *frame,
                                       IMAGE_DOWNSCALE_STROKES | IMAGE_DOWNSCALE_FLIP_Y);
   free(rgba);
   if (!small) return false;
-  uint32_t scaled = R_CreateTextureRGBA(render_size, render_size, small,
-                                        R_FILTER_LINEAR, R_WRAP_CLAMP);
+  uint32_t scaled = R_CreateTextureSRGBA8(render_size, render_size, small,
+                                          R_FILTER_LINEAR, R_WRAP_CLAMP);
   image_free(small);
   if (!scaled) {
     IE_TRACE("thumbnail texture allocation failed target=%d", render_size);

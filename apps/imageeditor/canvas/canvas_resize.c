@@ -176,7 +176,7 @@ static void layer_replace_pixels(layer_t *lay, uint8_t *pixels) {
   free(lay->pixels);
   lay->pixels = pixels;
   if (lay->tex) {
-    glDeleteTextures(1, &lay->tex);
+    R_DeleteTexture(lay->tex);
     lay->tex = 0;
   }
   lay->preview.active = false;

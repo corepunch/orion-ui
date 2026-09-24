@@ -31,14 +31,7 @@ static GLuint load_banner_texture(void) {
   uint8_t *pixels = load_image(found, &w, &h);
   if (!pixels) return 0;
 
-  GLuint tex;
-  glGenTextures(1, &tex);
-  glBindTexture(GL_TEXTURE_2D, tex);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+  GLuint tex = R_CreateTextureSRGBA8(w, h, pixels, R_FILTER_LINEAR, R_WRAP_CLAMP);
   image_free(pixels);
 
   return tex;
@@ -70,7 +63,7 @@ static result_t about_proc(window_t *win, uint32_t msg,
 
     case evDestroy: {
       if (st && st->banner_tex) {
-        glDeleteTextures(1, &st->banner_tex);
+        R_DeleteTexture(st->banner_tex);
         st->banner_tex = 0;
       }
       return false;
