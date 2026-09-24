@@ -247,8 +247,12 @@ static void test_layer_exports(void) {
 
 int main(void) {
   TEST_START("Pencil Test fixed layers");
-  snprintf(layer_test_dir, sizeof(layer_test_dir), "%s/orion-layers-XXXXXX", getenv("TMPDIR") ? getenv("TMPDIR") : "/tmp");
-  if (!mkdtemp(layer_test_dir)) return 1;
+  const char *temp_dir = getenv("TEMP");
+  if (!temp_dir) temp_dir = getenv("TMP");
+  if (!temp_dir) temp_dir = getenv("TMPDIR");
+  if (!temp_dir) temp_dir = "/tmp";
+  snprintf(layer_test_dir, sizeof(layer_test_dir), "%s/orion-layers-XXXXXX", temp_dir);
+  if (!mkdtemp(layer_test_dir)) { perror(layer_test_dir); return 1; }
   test_layer_sidebar(); test_layer_frames(); test_underpaint_fill();
   test_layer_resize(); test_layer_project(); test_layer_exports();
   if (!getenv("LAYERS_KEEP_EXPORT")) rmdir(layer_test_dir);

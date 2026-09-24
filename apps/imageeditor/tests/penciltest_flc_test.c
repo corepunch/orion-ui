@@ -229,8 +229,12 @@ static void flc_color_palette_roundtrip(void) {
 
 int main(void) {
   TEST_START("Penciltest FLC persistence");
-  snprintf(flc_test_dir, sizeof(flc_test_dir), "%s/orion-flc-XXXXXX", getenv("TMPDIR") ? getenv("TMPDIR") : "/tmp");
-  if (!mkdtemp(flc_test_dir)) return 1;
+  const char *temp_dir = getenv("TEMP");
+  if (!temp_dir) temp_dir = getenv("TMP");
+  if (!temp_dir) temp_dir = getenv("TMPDIR");
+  if (!temp_dir) temp_dir = "/tmp";
+  snprintf(flc_test_dir, sizeof(flc_test_dir), "%s/orion-flc-XXXXXX", temp_dir);
+  if (!mkdtemp(flc_test_dir)) { perror(flc_test_dir); return 1; }
   snprintf(flc_test_path, sizeof(flc_test_path), "%s/animation.ptf", flc_test_dir);
   test_env_init(); g_app = calloc(1, sizeof(*g_app));
   flc_roundtrip(); flc_menu_and_retina(); flc_save_as(); flc_external_compression(); flc_reject_corruption();
