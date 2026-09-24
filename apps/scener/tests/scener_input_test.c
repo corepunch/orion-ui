@@ -6,6 +6,13 @@ app_state_t *g_app;
 static const char *window_test_temp_dir(void);
 static int window_test_load(Scene *s,const char *xml);
 
+static Mesh rounded_rect_solid(float width,float height,float depth,float radius,float bevel,int segments,int bevel_segments) {
+  Shape2D profile = shape2d_rounded_rect(width,height,radius,segments);
+  Mesh mesh = gen_profile_extrusion_beveled(&profile,depth,bevel,bevel_segments);
+  shape2d_free(&profile);
+  return mesh;
+}
+
 static void test_tool_commands_share_document_state(void) {
   TEST("scener tools: command IDs update the document source of truth");
   app_state_t app = {0};
@@ -45,7 +52,7 @@ static void test_prefab_files_open_as_documents(void) {
 
 static void test_device_screen_geometry_and_assets(void) {
   TEST("promo devices: rounded solids are sealed and screen images resolve through prefabs");
-  Mesh mesh = gen_rounded_box(2.0f, 4.0f, 0.1f, 0.3f, 8);
+  Mesh mesh = rounded_rect_solid(2.0f, 4.0f, 0.1f, 0.3f, 0, 8, 1);
   mesh_build_edges(&mesh);
   ASSERT_TRUE(mesh.nverts > 0 && mesh.ntris > 0);
   for (int i = 0; i < mesh.nedges; i++) ASSERT_TRUE(mesh.edges[i].t1 >= 0);
@@ -55,10 +62,10 @@ static void test_device_screen_geometry_and_assets(void) {
     ASSERT_TRUE(mesh.verts[i].v >= 0 && mesh.verts[i].v <= 1);
   }
   mesh_free(&mesh);
-  mesh = gen_rounded_box(2.0f, 4.0f, 0.4f, 0.3f, 8);
+  mesh = rounded_rect_solid(2.0f, 4.0f, 0.4f, 0.3f, 0, 8, 1);
   float sharp_volume = mesh_signed_volume(&mesh);
   mesh_free(&mesh);
-  mesh = gen_rounded_box_beveled(2.0f, 4.0f, 0.4f, 0.3f, 0.08f, 8, 4);
+  mesh = rounded_rect_solid(2.0f, 4.0f, 0.4f, 0.3f, 0.08f, 8, 4);
   ASSERT_TRUE(mesh.nverts > 0 && mesh.ntris > 0);
   mesh_build_edges(&mesh);
   for (int i = 0; i < mesh.nedges; i++) ASSERT_TRUE(mesh.edges[i].t1 >= 0);
@@ -79,10 +86,10 @@ static void test_device_screen_geometry_and_assets(void) {
     ASSERT_TRUE(vdot(normal, mesh.verts[t.a].nrm) > -1e-6f);
   }
   mesh_free(&mesh);
-  mesh = gen_rounded_box_beveled(2.0f, 4.0f, 0.4f, 0.3f, 0.3f, 8, 4);
+  mesh = rounded_rect_solid(2.0f, 4.0f, 0.4f, 0.3f, 0.3f, 8, 4);
   ASSERT_EQUAL(mesh.ntris, 0);
   for (int beveled = 0; beveled <= 1; beveled++) {
-    mesh = gen_rounded_box_beveled(2.0f, 4.0f, 0.4f, 1.0f, beveled ? 0.08f : 0, 8, 4);
+    mesh = rounded_rect_solid(2.0f, 4.0f, 0.4f, 1.0f, beveled ? 0.08f : 0, 8, 4);
     mesh_build_edges(&mesh);
     ASSERT_TRUE(mesh_signed_volume(&mesh) > 0);
     for (int i = 0; i < mesh.nedges; i++) ASSERT_TRUE(mesh.edges[i].t1 >= 0);
@@ -99,7 +106,7 @@ static void test_device_screen_geometry_and_assets(void) {
   };
   for (int i = 0; i < 2; i++) {
     const float *d = device_sizes[i];
-    mesh = gen_rounded_box_beveled(d[0], d[1], d[2], d[3], d[4], 8, 4);
+    mesh = rounded_rect_solid(d[0], d[1], d[2], d[3], d[4], 8, 4);
     mesh_build_edges(&mesh);
     ASSERT_EQUAL(mesh.nedges * 2, mesh.ntris * 3);
     for (int edge = 0; edge < mesh.nedges; edge++) {
@@ -111,10 +118,70 @@ static void test_device_screen_geometry_and_assets(void) {
   Scene scene = {0};
   ASSERT_TRUE(load_scene("apps/scener/scenes/device_promo.blks", &scene));
   ASSERT_EQUAL(scene.ncameras, 1);
+  ASSERT_EQUAL(scene.nobjs, 12);
   ASSERT_EQUAL(scene.nscreenTextures, 2);
   int screens = 0;
-  for (int i = 0; i < scene.nobjs; i++) if (scene.objs[i].screenTexture >= 0) screens++;
+  for (int i = 0; i < scene.nobjs; i++) {
+    if (scene.objs[i].screenTexture >= 0) screens++;
+    if (scene.objs[i].castsShadow) {
+      Mesh *solid = &scene.objs[i].mesh;
+      ASSERT_TRUE(mesh_signed_volume(solid) > 0);
+      ASSERT_EQUAL(solid->nedges * 2, solid->ntris * 3);
+    }
+  }
   ASSERT_EQUAL(screens, 2);
+  scene_free(&scene);
+  const struct { const char *path; int objects; } promo_scenes[] = {
+    { "apps/scener/scenes/iphone18_promo.blks", 7 },
+    { "apps/scener/scenes/ipad_promo.blks", 5 },
+  };
+  for (int i = 0; i < 2; i++) {
+    Scene promo = {0};
+    ASSERT_TRUE(load_scene(promo_scenes[i].path, &promo));
+    ASSERT_EQUAL(promo.ncameras, 3);
+    ASSERT_EQUAL(promo.nobjs, promo_scenes[i].objects);
+    ASSERT_EQUAL(promo.nscreenTextures, 1);
+    scene_free(&promo);
+  }
+  Scene created = {0};
+  ASSERT_TRUE(window_test_load(&created, "<scene/>"));
+  ASSERT_TRUE(scene_create_promo_shape(&created, "rounded-rect", v3(0, 0, 0)));
+  ASSERT_EQUAL(created.nobjs, 1);
+  ASSERT_TRUE(!strcmp(scene_node_tag(created.selectedNode), "rounded-rect"));
+  snprintf(created.scenePath, sizeof(created.scenePath), "%s/scener-profile-%d.blks", window_test_temp_dir(), getpid());
+  ASSERT_TRUE(scene_save_all(&created));
+  Scene restored = {0};
+  ASSERT_TRUE(load_scene(created.scenePath, &restored));
+  ASSERT_EQUAL(restored.nobjs, 1);
+  unlink(created.scenePath);
+  scene_free(&created); scene_free(&restored);
+  PASS();
+}
+
+static void test_profile_extrude_and_bevel(void) {
+  TEST("2D profiles: rect, rounded rect, circle, ellipse and star share sealed extrusion and bevel");
+  const char *xml = "<scene>"
+    "<rounded-rect size=\"7.6 16.2\" radius=\"1.28\"><extrude amount=\"0.8\"/><bevel amount=\"0.16\" bevelSegments=\"4\"/></rounded-rect>"
+    "<rect size=\"4 3\"><extrude amount=\"1\"/><bevel amount=\"0.1\"/></rect>"
+    "<circle radius=\"2\"><extrude amount=\"1\"/><bevel amount=\"0.1\"/></circle>"
+    "<ellipse size=\"5 3\"><extrude amount=\"1\"/><bevel amount=\"0.1\"/></ellipse>"
+    "<star outerRadius=\"3\" innerRadius=\"1.5\" points=\"5\"><extrude amount=\"1\"/><bevel amount=\"0.1\"/></star>"
+    "</scene>";
+  Scene scene = {0};
+  ASSERT_TRUE(window_test_load(&scene, xml));
+  ASSERT_EQUAL(scene.nobjs, 5);
+  for (int i = 0; i < scene.nobjs; i++) {
+    Mesh *mesh = &scene.objs[i].mesh;
+    ASSERT_TRUE(mesh_signed_volume(mesh) > 0);
+    ASSERT_EQUAL(mesh->nedges * 2, mesh->ntris * 3);
+    for (int e = 0; e < mesh->nedges; e++) ASSERT_TRUE(mesh->edges[e].t1 >= 0);
+    for (int t = 0; t < mesh->ntris; t++) {
+      Tri tri = mesh->tris[t];
+      vec3 a = mesh->verts[tri.a].pos, b = mesh->verts[tri.b].pos, c = mesh->verts[tri.c].pos;
+      ASSERT_TRUE(vlen(vcross(vsub(b, a), vsub(c, a))) > 1e-12f);
+    }
+  }
+  ASSERT_TRUE(fabsf(mesh_signed_volume(&scene.objs[0].mesh) - 0.00007f) < 0.00003f);
   scene_free(&scene);
   PASS();
 }
@@ -781,6 +848,7 @@ int main(void) {
   test_tool_commands_share_document_state();
   test_prefab_files_open_as_documents();
   test_device_screen_geometry_and_assets();
+  test_profile_extrude_and_bevel();
   test_created_screen_persists();
   test_instance_rig_ik();
   test_rig_mirror_and_pose_reuse();

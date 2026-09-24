@@ -30,9 +30,9 @@ The complete supported element inventory is:
 |-----------|----------|
 | `<scene>` attributes | `ambient`, `background`, `up`, `convention` |
 | Scene configuration | `<camera>`, `<pose>`, `<material>`, `<sun>`, `<chardef>`, `<shape>` |
-| Transformable content | `<box>`, `<rounded-box>`, `<screen>`, `<sphere>`, `<cylinder>`, `<capsule>`, `<arch>`, `<prism>`, `<cone>`, `<pyramid>`, `<torus>`, `<lathe>`, `<loft>`, `<wall>`, `<window>`, `<door>`, `<group>`, `<prefab>`, `<light>`, `<line>`, `<dummy>` |
+| Transformable content | `<box>`, `<rect>`, `<rounded-rect>`, `<circle>`, `<ellipse>`, `<star>`, `<screen>`, `<sphere>`, `<cylinder>`, `<capsule>`, `<arch>`, `<prism>`, `<cone>`, `<pyramid>`, `<torus>`, `<lathe>`, `<loft>`, `<wall>`, `<window>`, `<door>`, `<group>`, `<prefab>`, `<light>`, `<line>`, `<dummy>` |
 | Wall cutters | `<bool-negative-box>`, `<bool-negative-arch>`, `<bool-negative-cylinder>` |
-| Mesh modifiers | `<taper>`, `<twist>`, `<bend>`, `<stretch>`, `<skew>`, `<array>`, `<extrude>`, `<mirror>`, `<noise>`, `<shell>` |
+| Mesh modifiers | `<taper>`, `<twist>`, `<bend>`, `<stretch>`, `<skew>`, `<array>`, `<extrude>`, `<bevel>`, `<mirror>`, `<noise>`, `<shell>` |
 | Context-only children | `<camera><transform>`, `<camera><use-pose>`, `<pose><joint>`, `<pose><ik>`, `<prefab><joint>`, `<prefab><ik>`, `<shape><v>`, `<prefab><attach>` |
 
 Unknown elements produce an `unsupported XML element` warning. Element names
@@ -420,7 +420,7 @@ Example: moon through a back-wall window at 45° down and 30° horizontal offset
 
 ## Shape objects
 
-All shapes share common attributes plus shape-specific ones. Shapes may contain modifier child elements. The supported shapes include `box`, `rounded-box`, `screen`, `sphere`, `cylinder`, `arch`, `prism`, `cone`/`pyramid`, `torus`, `lathe`, `loft`, and `wall`.
+All shapes share common attributes plus shape-specific ones. Shapes may contain modifier child elements. The supported shapes include `box`, `rect`, `rounded-rect`, `circle`, `ellipse`, `star`, `screen`, `sphere`, `cylinder`, `arch`, `prism`, `cone`/`pyramid`, `torus`, `lathe`, `loft`, and `wall`.
 
 ### Common attributes
 
@@ -468,17 +468,39 @@ Axis-aligned box centered at origin.
 | `size`    | vec3 | 1 1 1   | Width, height, depth |
 | `inset`   | float/vec2 | 0 | Hollow the box into a rectangular tube. One value uses the same inset on X and Y; two values are `insetX insetY`. The opening passes fully through local Z |
 
-### `<rounded-box>`
+### 2D profiles: `<rect>`, `<rounded-rect>`, `<circle>`, `<ellipse>`, `<star>`
 
-A sealed box whose XY outline has rounded corners. Local +Z is its front.
+These elements define closed outlines in local XY. They require one child
+`<extrude amount="…"/>` to make a renderable solid along local Z. An optional
+`<bevel amount="…" bevelSegments="…"/>` follows the extrusion and rounds the
+front and back rim. Later mesh modifiers operate on the finished solid.
+All dimensions and modifier amounts are in centimetres. The solid is centred
+on local Z, so its front face lies at `+amount/2`.
 
-| Attribute | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `size` | vec3 | 1 1 1 | Width, height, depth in cm |
-| `radius` | float | 0 | XY corner radius in cm, clamped to half the smaller side |
-| `segments` | int | 8 | Segments per corner, clamped to 2–32 |
-| `bevel` | float | 0 | Rounded front and back edge radius in cm; must be smaller than the corner radius and half the depth |
-| `bevelSegments` | int | 4 | Segments per bevel arc, clamped to 1–8 |
+| Profile | Attributes | Defaults |
+|---------|------------|----------|
+| `<rect>` | `size="width height"` | `1 1` |
+| `<rounded-rect>` | `size="width height"`, `radius`, `segments` per corner (2–32) | `1 1`, `0`, `8` |
+| `<circle>` | `radius`, `segments` (8–128) | `0.5`, `32` |
+| `<ellipse>` | `size="width height"`, `segments` (8–128) | `1 1`, `48` |
+| `<star>` | `outerRadius`, `innerRadius`, `points` (3–32) | `0.5`, `0.25`, `5` |
+
+`radius` on a rounded rectangle is clamped to half its shorter side. The
+bevel must be smaller than half the extrusion depth and leave a simple,
+non-self-intersecting inset outline. If the inset would fold over, Scener
+rejects that solid with a diagnostic; reduce the bevel amount. This is
+especially relevant to sharp star points.
+
+```xml
+<rounded-rect size="7.6 16.2" radius="1.28">
+  <extrude amount="0.8"/>
+  <bevel amount="0.16" bevelSegments="4"/>
+</rounded-rect>
+<star outerRadius="3" innerRadius="1.5" points="5">
+  <extrude amount="1"/>
+  <bevel amount="0.1"/>
+</star>
+```
 
 ### `<screen>`
 
@@ -1189,13 +1211,25 @@ Duplicates the mesh `count` times, applying a per-step translation and rotation 
 
 ### `<extrude>`
 
-Duplicates the mesh offset along an axis and bridges boundary edges with quads.
-Turns flat or open shapes into solids with depth.
+On a 2D profile, creates a sealed solid of the specified depth centred on
+local Z. Place it before `<bevel>`. On an existing 3D mesh, the legacy
+modifier duplicates the mesh and bridges open boundary edges.
 
 | Attribute | Type  | Default | Description |
 |-----------|-------|---------|-------------|
-| `amount`  | float | 10      | Extrusion distance in cm |
-| `axis`    | char  | y       | Extrusion axis (x, y, or z) |
+| `amount`  | float | required on profiles; 10 on 3D meshes | Extrusion distance in cm |
+| `axis`    | char  | z on profiles; y on 3D meshes | A 2D profile only accepts local Z; legacy mesh extrusion accepts x, y, or z |
+
+### `<bevel>`
+
+Rounds the front and back perimeter of an extruded 2D profile. It follows
+`<extrude>` and precedes any mesh deformation modifiers. It does not bevel
+arbitrary pre-existing 3D meshes.
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `amount` | float | 0 | Rim radius in cm; must be less than half the extrusion depth |
+| `bevelSegments` | int | 4 | Segments in the quarter-circle rim, clamped to 1–8 |
 
 ```xml
 <box size="200 5 100">

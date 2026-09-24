@@ -54,6 +54,14 @@ Primitive generators should work at the highest useful level. Prefer composing c
 
 `extrude_polygon()` is the common implementation for boxes, cylinders, cylinder tubes, Roman arches, and circular or arched wall-opening pieces. It triangulates convex or concave caps, can emit caps or boundary walls independently, supports inward-facing hole boundaries, and can smooth circular side normals. This keeps triangulation and winding rules in one place.
 
+Renderable 2D profile elements (`rect`, `rounded-rect`, `circle`, `ellipse`,
+`star`) use `<extrude>` to create a closed local-Z solid. A following `<bevel>`
+insets the cap outline and adds rounded perimeter rings before later mesh
+modifiers run. The same extrusion and bevel generator consumes each profile.
+Inset profiles are checked
+for collapsed or crossing edges so sharp concave shapes cannot create open
+shadow meshes.
+
 For symmetric shapes, generate one half or one 90-degree corner and mirror it. A solid Roman arch extrudes one mirrored outline. A framed arch composes mirrored quarter-arch cap profiles with rectangular sill and leg cap profiles, then extrudes only its outer and inner boundaries. A cylinder tube uses one annular quarter for its caps plus extruded outer and inner circles. A box around a circular opening uses one corner profile mirrored across both axes plus extruded box and circle boundaries.
 
 Do not create overlapping or duplicate internal faces when composing profiles. Cap regions may share an edge, but that edge must appear once in each neighboring region with opposite directions. Boundary profiles must contain matching split points so cap edges and side-wall edges have identical endpoints.

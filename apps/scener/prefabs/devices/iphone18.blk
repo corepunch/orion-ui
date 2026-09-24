@@ -1,13 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Stylized iPhone 18 promo model. Local +Z is the display/front; center is the device center. Dimensions are illustrative. -->
 <prefab>
-  <rounded-box size="7.6 16.2 0.8" radius="1.28" bevel="0.16" bevelSegments="4" color="0.12 0.14 0.18" shininess="70"/>
-  <rounded-box pos="0 0 0.405" size="7.33 15.93 0.11" radius="1.14" bevel="0.025" bevelSegments="3" color="0.015 0.018 0.025" shininess="85"/>
+  <rounded-rect size="7.6 16.2" radius="1.28" color="0.12 0.14 0.18" shininess="70">
+    <extrude amount="0.8"/><bevel amount="0.16" bevelSegments="4"/>
+  </rounded-rect>
+  <rounded-rect pos="0 0 0.405" size="7.33 15.93" radius="1.14" color="0.015 0.018 0.025" shininess="85">
+    <extrude amount="0.11"/><bevel amount="0.025" bevelSegments="3"/>
+  </rounded-rect>
   <screen pos="0 0 0.475" size="7.03 15.54 0.03" radius="0.98"
           image="share/screens/phone-demo.png" color="1 1 1"/>
-  <rounded-box pos="0 7.35 0.51" size="1.95 0.43 0.045" radius="0.21"
-               color="0.006 0.008 0.012" shininess="50" castShadow="0" unlit="1"/>
-  <rounded-box pos="-3.82 3.9 0" size="0.09 1.15 0.26" radius="0.04" color="0.28 0.31 0.38"/>
-  <rounded-box pos="-3.82 2.2 0" size="0.09 1.15 0.26" radius="0.04" color="0.28 0.31 0.38"/>
-  <rounded-box pos="3.82 3.2 0" size="0.09 1.75 0.26" radius="0.04" color="0.28 0.31 0.38"/>
+  <rounded-rect pos="0 7.35 0.51" size="1.95 0.43" radius="0.21"
+                color="0.006 0.008 0.012" shininess="50" castShadow="0" unlit="1"><extrude amount="0.045"/></rounded-rect>
+  <rounded-rect pos="-3.82 3.9 0" size="0.09 1.15" radius="0.04" color="0.28 0.31 0.38"><extrude amount="0.26"/></rounded-rect>
+  <rounded-rect pos="-3.82 2.2 0" size="0.09 1.15" radius="0.04" color="0.28 0.31 0.38"><extrude amount="0.26"/></rounded-rect>
+  <rounded-rect pos="3.82 3.2 0" size="0.09 1.75" radius="0.04" color="0.28 0.31 0.38"><extrude amount="0.26"/></rounded-rect>
 </prefab>
