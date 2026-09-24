@@ -7,11 +7,12 @@ bool cmd_pencil_layer(canvas_doc_t *doc, int layer) {
   }
   imageeditor_finish_canvas_interaction(doc, g_app ? g_app->current_tool : ID_TOOL_PENCIL);
   anim_stop_playback(doc);
-  IE_TRACE("layer select win=%p from=%d to=%d frame=%d", (void *)doc->canvas_win,
-           doc->layer.active, layer, doc->anim->active_frame);
+  int old_layer = doc->layer.active;
+  int old_tool = g_app ? g_app->current_tool : ID_TOOL_PENCIL;
+  IE_TRACE("layer select win=%p from=%d to=%d frame=%d tool=%d", (void *)doc->canvas_win,
+           old_layer, layer, doc->anim->active_frame, old_tool);
   if (doc->sel.move.active) return false;
   if (g_app) {
-    g_app->pencil_layer_tool[doc->layer.active] = g_app->current_tool;
     g_app->pencil_layer_color[doc->layer.active] = g_app->fg_color;
   }
   doc_set_active_layer(doc, layer);
@@ -21,8 +22,16 @@ bool cmd_pencil_layer(canvas_doc_t *doc, int layer) {
     g_app->fg_color = layer == IE_LAYER_PENCIL ? pencil_configured_color() :
                       g_app->pencil_layer_color[layer] ? g_app->pencil_layer_color[layer] : pencil_configured_color();
     g_app->bg_color = IE_PAPER_COLOR;
-    int tool = g_app->pencil_layer_tool[layer];
-    handle_menu_command(tool ? tool : layer == IE_LAYER_COLOR ? ID_TOOL_FILL : ID_TOOL_PENCIL);
+    int tool = old_tool;
+    if (old_layer == IE_LAYER_PENCIL && layer == IE_LAYER_COLOR && tool == ID_TOOL_PENCIL)
+      tool = ID_TOOL_BRUSH;
+    else if (old_layer == IE_LAYER_COLOR && layer == IE_LAYER_PENCIL && tool == ID_TOOL_BRUSH)
+      tool = ID_TOOL_PENCIL;
+    else if (layer == IE_LAYER_PENCIL && (tool == ID_TOOL_FILL || tool == ID_TOOL_EYEDROPPER))
+      tool = ID_TOOL_PENCIL;
+    IE_TRACE("layer tool carry win=%p layer=%d->%d tool=%d->%d", (void *)doc->canvas_win,
+             old_layer, layer, old_tool, tool);
+    handle_menu_command(tool);
   }
   imageeditor_sync_tool_palette();
   ie_doc_invalidate_all(doc);

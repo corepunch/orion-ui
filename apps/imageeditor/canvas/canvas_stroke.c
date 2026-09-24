@@ -52,6 +52,67 @@ static void pencil_path_release(canvas_doc_t *doc) {
   memset(&doc->pencil_stroke, 0, sizeof(doc->pencil_stroke));
 }
 
+typedef struct { float x, y; } pencil_point_t;
+
+static pencil_point_t pencil_bezier_point(pencil_point_t start, pencil_point_t control,
+                                          pencil_point_t end, float t) {
+  float u = 1.0f - t;
+  return (pencil_point_t){u * u * start.x + 2.0f * u * t * control.x + t * t * end.x,
+                          u * u * start.y + 2.0f * u * t * control.y + t * t * end.y};
+}
+
+static int pencil_curve_steps(pencil_point_t start, pencil_point_t control, pencil_point_t end) {
+  float length = hypotf(control.x - start.x, control.y - start.y) +
+                 hypotf(end.x - control.x, end.y - control.y);
+  return MAX(1, (int)ceilf(2.0f * length));
+}
+
+static float pencil_curve_length(pencil_point_t start, pencil_point_t control, pencil_point_t end) {
+  int steps = pencil_curve_steps(start, control, end);
+  float length = 0.0f;
+  pencil_point_t previous = start;
+  for (int i = 1; i <= steps; i++) {
+    pencil_point_t point = pencil_bezier_point(start, control, end, (float)i / steps);
+    length += hypotf(point.x - previous.x, point.y - previous.y);
+    previous = point;
+  }
+  return length;
+}
+
+static bool pencil_path_segment(canvas_doc_t *doc, int i, pencil_point_t *start,
+                                pencil_point_t *control, pencil_point_t *end,
+                                float *start_radius, float *end_radius) {
+  if (i < 1 || i >= doc->pencil_stroke.count) return false;
+  ipoint16_t a = doc->pencil_stroke.samples[i - 1].point;
+  ipoint16_t b = doc->pencil_stroke.samples[i].point;
+  if (i == 1) {
+    *start = (pencil_point_t){a.x, a.y};
+    *control = *start;
+  } else {
+    ipoint16_t before = doc->pencil_stroke.samples[i - 2].point;
+    *start = (pencil_point_t){(before.x + a.x) * 0.5f, (before.y + a.y) * 0.5f};
+    *control = (pencil_point_t){a.x, a.y};
+  }
+  *end = (pencil_point_t){(a.x + b.x) * 0.5f, (a.y + b.y) * 0.5f};
+  *start_radius = doc->pencil_stroke.samples[i - 1].radius;
+  *end_radius = doc->pencil_stroke.samples[i].radius;
+  return true;
+}
+
+static bool pencil_path_tail(canvas_doc_t *doc, pencil_point_t *start,
+                             pencil_point_t *control, pencil_point_t *end,
+                             float *start_radius, float *end_radius) {
+  int count = doc->pencil_stroke.count;
+  if (count < 2) return false;
+  ipoint16_t a = doc->pencil_stroke.samples[count - 2].point;
+  ipoint16_t b = doc->pencil_stroke.samples[count - 1].point;
+  *start = (pencil_point_t){(a.x + b.x) * 0.5f, (a.y + b.y) * 0.5f};
+  *control = *end = (pencil_point_t){b.x, b.y};
+  *start_radius = doc->pencil_stroke.samples[count - 2].radius;
+  *end_radius = doc->pencil_stroke.samples[count - 1].radius;
+  return true;
+}
+
 static bool pencil_path_append(canvas_doc_t *doc, ipoint16_t point, float radius) {
   int count = doc->pencil_stroke.count;
   if (count && doc->pencil_stroke.samples[count - 1].point.x == point.x &&
@@ -69,13 +130,18 @@ static bool pencil_path_append(canvas_doc_t *doc, ipoint16_t point, float radius
     doc->pencil_stroke.samples = samples;
     doc->pencil_stroke.capacity = capacity;
   }
-  if (count) {
-    ipoint16_t prev = doc->pencil_stroke.samples[count - 1].point;
-    doc->pencil_stroke.length += hypotf((float)point.x - prev.x, (float)point.y - prev.y);
-  }
   doc->pencil_stroke.samples[count].point = point;
   doc->pencil_stroke.samples[count].radius = radius;
+  doc->pencil_stroke.samples[count].distance = doc->pencil_stroke.length;
   doc->pencil_stroke.count++;
+  if (doc->pencil_stroke.count > 1) {
+    pencil_point_t start, control, end;
+    float start_radius, end_radius;
+    pencil_path_segment(doc, doc->pencil_stroke.count - 1, &start, &control, &end,
+                        &start_radius, &end_radius);
+    doc->pencil_stroke.length += pencil_curve_length(start, control, end);
+    doc->pencil_stroke.samples[count].distance = doc->pencil_stroke.length;
+  }
   doc->pencil_stroke.max_radius = MAX(doc->pencil_stroke.max_radius, radius);
   return true;
 }
@@ -128,35 +194,64 @@ static void pencil_stamp(canvas_doc_t *doc, float cx, float cy, float along,
   }
 }
 
-static void pencil_path_render(canvas_doc_t *doc, float previous_total) {
+static void pencil_curve_render(canvas_doc_t *doc, pencil_point_t start, pencil_point_t control,
+                                pencil_point_t end, float start_radius, float end_radius,
+                                float *along, float from_distance, float total,
+                                float previous_total) {
+  int steps = pencil_curve_steps(start, control, end);
+  pencil_point_t previous = start;
+  for (int i = 1; i <= steps; i++) {
+    float t0 = (float)(i - 1) / steps, t1 = (float)i / steps;
+    pencil_point_t point = pencil_bezier_point(start, control, end, t1);
+    float dx = point.x - previous.x, dy = point.y - previous.y;
+    float length = hypotf(dx, dy);
+    if (length > 0.0f && *along + length >= from_distance) {
+      int first = (int)ceilf(MAX(*along, from_distance) / IE_PENCIL_DAB_SPACING);
+      int limit = (int)ceilf((*along + length) / IE_PENCIL_DAB_SPACING);
+      for (int j = first; j < limit; j++) {
+        float distance = j * IE_PENCIL_DAB_SPACING;
+        float t = t0 + (t1 - t0) * ((distance - *along) / length);
+        float tx = 2.0f * ((1.0f - t) * (control.x - start.x) + t * (end.x - control.x));
+        float ty = 2.0f * ((1.0f - t) * (control.y - start.y) + t * (end.y - control.y));
+        float tangent_length = hypotf(tx, ty);
+        if (tangent_length <= 0.0f) { tx = dx / length; ty = dy / length; }
+        else { tx /= tangent_length; ty /= tangent_length; }
+        pencil_point_t dab = pencil_bezier_point(start, control, end, t);
+        float radius = start_radius + (end_radius - start_radius) * t;
+        pencil_stamp(doc, dab.x, dab.y, distance, total, previous_total,
+                     tx, ty, radius, false);
+      }
+    }
+    *along += length;
+    previous = point;
+  }
+}
+
+static void pencil_path_render(canvas_doc_t *doc, float previous_total, bool include_tail) {
   int count = doc->pencil_stroke.count;
   if (count < 2) return;
   float total = doc->pencil_stroke.length;
   float tail = IE_PENCIL_FADE_LENGTH * stroke_backing_scale() +
                doc->pencil_stroke.max_radius * stroke_backing_scale() + 2.0f;
   float from_distance = MAX(0.0f, previous_total - tail);
-  if (total > 0.0f) {
-    float along = 0.0f;
-    for (int i = 1; i < count; i++) {
-      ipoint16_t a = doc->pencil_stroke.samples[i - 1].point;
-      ipoint16_t b = doc->pencil_stroke.samples[i].point;
-      float dx = (float)b.x - a.x, dy = (float)b.y - a.y;
-      float length = hypotf(dx, dy);
-      if (length <= 0.0f) continue;
-      if (along + length < from_distance) { along += length; continue; }
-      // Global distance spacing and half-open segments avoid duplicate endpoint dabs.
-      int first = (int)ceilf(MAX(along, from_distance) / IE_PENCIL_DAB_SPACING);
-      int end = (int)ceilf((along + length) / IE_PENCIL_DAB_SPACING);
-      for (int j = first; j < end; j++) {
-        float distance = j * IE_PENCIL_DAB_SPACING;
-        float t = (distance - along) / length;
-        float radius = doc->pencil_stroke.samples[i - 1].radius +
-                       (doc->pencil_stroke.samples[i].radius - doc->pencil_stroke.samples[i - 1].radius) * t;
-        pencil_stamp(doc, a.x + dx * t, a.y + dy * t, distance,
-                     total, previous_total, dx / length, dy / length, radius, false);
-      }
-      along += length;
+  float along = 0.0f;
+  for (int i = 1; i < count; i++) {
+    if (doc->pencil_stroke.samples[i].distance < from_distance) {
+      along = doc->pencil_stroke.samples[i].distance;
+      continue;
     }
+    pencil_point_t start, control, end;
+    float start_radius, end_radius;
+    if (pencil_path_segment(doc, i, &start, &control, &end, &start_radius, &end_radius))
+      pencil_curve_render(doc, start, control, end, start_radius, end_radius,
+                          &along, from_distance, total, previous_total);
+  }
+  if (include_tail) {
+    pencil_point_t start, control, end;
+    float start_radius, end_radius;
+    if (pencil_path_tail(doc, &start, &control, &end, &start_radius, &end_radius))
+      pencil_curve_render(doc, start, control, end, start_radius, end_radius,
+                          &along, from_distance, total, previous_total);
   }
 }
 
@@ -181,17 +276,21 @@ static bool pencil_path_begin(canvas_doc_t *doc, ipoint16_t point, float radius)
 }
 
 static void pencil_path_drag(canvas_doc_t *doc, ipoint16_t point) {
-  IE_TRACE("pencil stroke drag doc=%p win=%p at=(%d,%d) samples=%d",
-           (void *)doc, (void *)doc->canvas_win, point.x, point.y, doc->pencil_stroke.count);
   float previous_length = doc->pencil_stroke.length;
   if (!pencil_path_append(doc, point, doc->stroke.radius)) return;
-  pencil_path_render(doc, previous_length);
+  pencil_path_render(doc, previous_length, false);
 }
 
 static void pencil_path_end(canvas_doc_t *doc, ipoint16_t point) {
   float previous_length = doc->pencil_stroke.length;
   pencil_path_append(doc, point, doc->stroke.radius);
-  pencil_path_render(doc, previous_length);
+  if (doc->pencil_stroke.count > 1) {
+    pencil_point_t start, control, end;
+    float start_radius, end_radius;
+    if (pencil_path_tail(doc, &start, &control, &end, &start_radius, &end_radius))
+      doc->pencil_stroke.length += pencil_curve_length(start, control, end);
+  }
+  pencil_path_render(doc, previous_length, true);
   if (doc->pencil_stroke.count == 1) {
     float fade = MAX(1.0f, IE_PENCIL_FADE_LENGTH * stroke_backing_scale());
     pencil_stamp(doc, point.x, point.y, fade, fade * 2.0f, 0.0f, 0.0f, 0.0f, doc->stroke.radius, true);

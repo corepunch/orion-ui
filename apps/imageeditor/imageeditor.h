@@ -342,7 +342,7 @@ typedef struct canvas_doc_s {
   struct {
     bool active;
     float *coverage;
-    struct { ipoint16_t point; float radius; } *samples;
+    struct { ipoint16_t point; float radius, distance; } *samples;
     int count, capacity;
     float length, max_radius;
   } pencil_stroke;
@@ -403,7 +403,6 @@ typedef struct {
   uint32_t       anim_timer_id; // axSetTimer handle for playback; 0 = stopped
   hinstance_t    hinstance;  // owning app instance
   int            current_tool;
-  int            pencil_layer_tool[IE_LAYER_COUNT];
   uint32_t       pencil_layer_color[IE_LAYER_COUNT];
   bool           anim_trace_enabled; // onion-skin overlay toggle for animation frames
   int            anim_trace_frames;  // active onion-skin step span (max non-zero prev/next opacity step)
