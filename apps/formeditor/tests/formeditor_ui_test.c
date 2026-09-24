@@ -3,6 +3,7 @@
 #include "test_framework.h"
 #include "test_env.h"
 #include "apps/formeditor/formeditor.h"
+#include "apps/formeditor/controls-icons.h"
 #include <orion/commctl/commctl.h>
 
 #include <libxml/parser.h>
@@ -199,6 +200,27 @@ void test_objects_browser_lists_forms_and_databases(void) {
   PASS();
 }
 
+void test_components_palette_uses_png_strip_indices(void) {
+  TEST("Components palette: bitmap strip indices identify the original PNG icons");
+  setup();
+  g_app->windows[FE_WIN_TOOL] = formeditor_create_components_palette(0);
+  window_t *list = g_app->windows[FE_WIN_TOOL]->children;
+  ASSERT_NOT_NULL(list);
+  reportview_item_t button = {0}, checkbox = {0}, label = {0};
+  ASSERT_TRUE(send_message(list, RVM_GETITEMDATA, 0, &button));
+  ASSERT_TRUE(send_message(list, RVM_GETITEMDATA, 1, &checkbox));
+  ASSERT_TRUE(send_message(list, RVM_GETITEMDATA, 2, &label));
+  ASSERT_EQUAL(button.icon, IC_BUTTON);
+  ASSERT_EQUAL(checkbox.icon, IC_CHECKBOX);
+  ASSERT_EQUAL(label.icon, IC_TEXT);
+  ASSERT_EQUAL((int)send_message(list, RVM_HITTEST, MAKEDWORD(140, 20), NULL), 2);
+  ASSERT_TRUE(button.icon_name == NULL);
+  ASSERT_TRUE(checkbox.icon_name == NULL);
+  ASSERT_TRUE(label.icon_name == NULL);
+  teardown();
+  PASS();
+}
+
 void test_database_browser_cascades(void) {
   TEST("database browser: tables cascade to fields and related fields");
   setup();
@@ -365,6 +387,7 @@ int main(void) {
   test_document_title_update_is_stable();
   test_component_drop_persists_without_sidecar();
   test_objects_browser_lists_forms_and_databases();
+  test_components_palette_uses_png_strip_indices();
   test_database_browser_cascades();
   test_database_field_drop_updates_xml_column();
   test_database_field_drop_rejects_other_database();

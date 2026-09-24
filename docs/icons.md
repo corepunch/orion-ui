@@ -6,10 +6,10 @@ nav_order: 13
 
 # Icon System
 
-Orion's icon system has one source of truth: **SVG files from [iconoir](https://iconoir.com)**
-in `share/icons/`.  At startup, `nanosvg` rasterizes those SVGs into GPU
-texture sheets (`bitmap_strip_t`).  No compiled-in PNG sheets exist; the old
-`icon_sheet_16x16.png` and `filepicker.png` have been deleted.
+Orion's toolbar and system icons use **SVG files from [iconoir](https://iconoir.com)**
+in `share/icons/`. The Form Editor Components grid uses the restored
+`apps/formeditor/share/controls-icons-48.png` bitmap sheet. Both paths draw
+through GPU textures; the icon grid receives a `bitmap_strip_t` and tile indices.
 
 ---
 
@@ -37,16 +37,17 @@ color to `draw_icon16` / `draw_toolbar_icon_in_rect`.
 
 ---
 
-## The three icon strips
+## Icon strips
 
 | Strip | Index enum | Tile size | Source | Loaded by |
 |---|---|---|---|---|
 | **sysicon** | `sysicon_*` in `orion/user/icons.h` | `SYSICON_SIZE` (24 px) | `share/icons/*.svg` | `orion/user/init.c` |
 | **picker** | `icon_id_t` in `orion/user/sysicons.h` | 16 px | `share/icons/*.svg` | `orion/user/init.c` |
 | **imageeditor tools** | `IE_ICONS` in `apps/imageeditor/image-editor.h` | 24 px | `share/icons/*.svg` | `apps/imageeditor/windows/win_toolpalette.c` |
+| **Form Editor components** | `IC_*` in `apps/formeditor/controls-icons.h` | 48 px source, drawn at 24 px | `apps/formeditor/share/controls-icons-48.png` | `apps/formeditor/win_components.c` |
 
-All three strips read from the **same flat directory** (`share/icons/`).  File names
-match the iconoir regular-weight name, e.g. `arrow-up.svg`, `trash.svg`.
+The SVG strips read from `share/icons/`. The Form Editor strip is an indexed PNG
+sheet, so its 48 px tiles remain sharp at a 24 point size on Retina displays.
 
 ---
 

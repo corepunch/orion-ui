@@ -76,8 +76,8 @@ typedef struct {
 
 typedef struct {
   const char *text;
-  int         icon;       // strip tile index (ignored when icon_name set)
-  const char *icon_name;  // SVG icon name for sysicon_resolve(); NULL = use icon field
+  int         icon;       // strip tile index; icon_name overrides it outside icon grid
+  const char *icon_name;  // SVG icon for report/icon lists; icon grid always uses strip index
   uint32_t    color;
   uint32_t    userdata;
   uint32_t    state;

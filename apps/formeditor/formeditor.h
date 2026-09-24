@@ -43,13 +43,13 @@ static inline bool fe_default_auto_layout_enabled(void) {
 
 // Tool palettes.
 #define FE_TOOLBAR_BTN_SIZE TB_SPACING
-#define FE_COMPONENTS_GRID_COLS 4   // palette wraps after four items per row
+#define FE_COMPONENTS_GRID_COLS 3   // default palette fits three items per row
 #define FE_COMPONENTS_BTN_SIZE 56   // large-icon grid cell width/height
 #define FE_COMPONENTS_MIN_ROWS 5    // default palette height shows a little over 4.5 icons
 
 // Palette window dimensions.
 #define PALETTE_WIN_X     4
-#define PALETTE_WIN_W     197
+#define PALETTE_WIN_W     201
 
 // Property browser window.  This is intentionally a reportview-backed
 // inspector: close to VB1's simple property sheet, without inline editing yet.

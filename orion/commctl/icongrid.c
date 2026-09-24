@@ -5,7 +5,6 @@
 #include <orion/user/messages.h>
 #include <orion/user/draw.h>
 #include <orion/user/theme.h>
-#include <orion/user/svg_icon_loader.h>
 
 typedef struct {
   int ncol;
@@ -144,17 +143,7 @@ static void grid_paint(window_t *win, reportview_data_t *data) {
 
     uint32_t icon_col = data->preserve_icon_colors ? 0xFFFFFFFF :
                         selected ? 0xFFFFFFFF : data->items[i].color;
-    const char *icon_name = data->items[i].icon_name;
-    if (icon_name) {
-      sysicon_resolved_t res;
-      if (sysicon_resolve(icon_name, &res)) {
-        irect16_t dst = rect_center(icon_r, res.w, res.h);
-        draw_sprite_region((int)res.tex, dst,
-                           UV_RECT(res.u0, res.v0, res.u1, res.v1), icon_col, 0);
-      }
-    } else {
-      rv_draw_item_icon(strip, data->items[i].icon, &icon_r, icon_col);
-    }
+    rv_draw_item_icon(strip, data->items[i].icon, &icon_r, icon_col);
 
     uint32_t txt_col = selected ? get_sys_color(brActiveTitlebarText)
                                 : get_sys_color(brTextNormal);

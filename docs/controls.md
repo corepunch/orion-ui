@@ -169,7 +169,7 @@ notifications:
 
 * `win_iconview` for the small-icon list
 * `win_reportview` for the multi-column report view
-* `win_icongrid` for the thumbnail grid
+* `win_icongrid` for the thumbnail grid, using bitmap strip tile indices
 
 Used by the file manager, file-picker dialog, and several editor palettes.
 

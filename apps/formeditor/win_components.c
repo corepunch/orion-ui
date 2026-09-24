@@ -4,18 +4,22 @@
 // grid view, the same way Filter Gallery does in ImageEditor.
 
 #include "formeditor.h"
+#include "controls-icons.h"
 #include <orion/commctl/commctl.h>
 #include <orion/commctl/columnview.h>
 #include <orion/kernel/renderer.h>
 #include <orion/user/draw.h>
-#include <orion/user/icons.h>
-#include <orion/user/svg_icon_loader.h>
+#include <orion/user/image.h>
 
-#define FE_TOOL_ICON_SIZE SYSICON_SIZE
+#define FE_TOOL_ICON_SIZE 24
+#define FE_TOOL_BITMAP_SIZE 48
 #define FE_DRAG_THRESHOLD 2
 
 static reportview_item_t g_comp_tools[FE_MAX_COMPONENTS + 1];
 static int g_comp_tool_count = 0;
+#ifdef SHAREDIR
+static bitmap_strip_t g_tool_strip = {0};
+#endif
 
 typedef struct {
   window_t *list_win;
@@ -24,7 +28,7 @@ typedef struct {
 typedef struct {
   window_t *win;
   int tool_ident;
-  const char *icon_name;
+  int icon;
   char text[64];
 } palette_drag_ghost_t;
 
@@ -39,6 +43,28 @@ typedef struct {
 static palette_drag_ghost_t g_ghost = {0};
 #endif
 static palette_drag_state_t g_drag = {0};
+
+static int components_bitmap_icon(const fe_component_desc_t *c) {
+  static const struct { const char *name; int icon; } icons[] = {
+    {"Button",         IC_BUTTON},         {"CheckBox", IC_CHECKBOX},
+    {"Label",          IC_TEXT},           {"TextEdit", IC_TEXT_FIELD},
+    {"ListBox",        IC_LIST_VIEW},      {"ComboBox", IC_COMBO_BOX},
+    {"Slider",         IC_SLIDER},         {"Gradient", IC_PROGRESS_BAR},
+    {"Column",         IC_PANEL},          {"StackView", IC_DOCUMENT_STACK},
+    {"GridView",       IC_GRID_LAYOUT},    {"FlowView", IC_DOCUMENT_STACK},
+    {"ReportView",     IC_DETAILS_VIEW},   {"Icon", IC_GRID_VIEW},
+    {"Separator",      IC_PANEL},          {"TabView", IC_PANEL},
+    {"database-check", IC_DATABASE},       {"palette", IC_PALETTE},
+    {"media-image",    IC_IMAGE},
+  };
+  const char *name = c ? c->class_name : NULL;
+  for (size_t i = 0; name && i < ARRAY_LEN(icons); i++)
+    if (strcmp(name, icons[i].name) == 0) return icons[i].icon;
+  name = c ? c->toolbar_icon : NULL;
+  for (size_t i = 0; name && i < ARRAY_LEN(icons); i++)
+    if (strcmp(name, icons[i].name) == 0) return icons[i].icon;
+  return IC_PANEL;
+}
 
 static int components_win_y(void) {
   return MENUBAR_HEIGHT + 4;
@@ -107,11 +133,16 @@ static result_t components_drag_ghost_proc(window_t *win, uint32_t msg,
 
       int px = 4;
       int py = (h - FE_TOOL_ICON_SIZE) / 2;
-      if (g_ghost.icon_name) {
-        sysicon_resolved_t res;
-        if (sysicon_resolve(g_ghost.icon_name, &res))
-          draw_sprite_region((int)res.tex, R(px, py, res.w, res.h),
-                             UV_RECT(res.u0, res.v0, res.u1, res.v1), 0xFFFFFFFF, 0);
+      if (g_tool_strip.tex && g_tool_strip.cols > 0 && g_ghost.icon >= 0 &&
+          g_ghost.icon < IC_ICON_COUNT) {
+        int col = g_ghost.icon % g_tool_strip.cols;
+        int row = g_ghost.icon / g_tool_strip.cols;
+        float u0 = (float)(col * FE_TOOL_BITMAP_SIZE) / g_tool_strip.sheet_w;
+        float v0 = (float)(row * FE_TOOL_BITMAP_SIZE) / g_tool_strip.sheet_h;
+        float u1 = u0 + (float)FE_TOOL_BITMAP_SIZE / g_tool_strip.sheet_w;
+        float v1 = v0 + (float)FE_TOOL_BITMAP_SIZE / g_tool_strip.sheet_h;
+        draw_sprite_region((int)g_tool_strip.tex, R(px, py, FE_TOOL_ICON_SIZE, FE_TOOL_ICON_SIZE),
+                           UV_RECT(u0, v0, u1, v1), 0xFFFFFFFF, 0);
       }
       draw_text(FONT_SMALL, g_ghost.text,
                 px + FE_TOOL_ICON_SIZE + 6,
@@ -144,7 +175,7 @@ static void components_update_ghost(int ident, int sx, int sy) {
   }
 
   g_ghost.tool_ident = ident;
-  g_ghost.icon_name = item->icon_name;
+  g_ghost.icon = item->icon;
   snprintf(g_ghost.text, sizeof(g_ghost.text), "%s", item->text ? item->text : "");
 
   int text_w = text_strwidth(FONT_SMALL, g_ghost.text);
@@ -163,6 +194,34 @@ static void components_update_ghost(int ident, int sx, int sy) {
 #endif
 }
 
+static void components_load_strip(void) {
+  if (g_tool_strip.tex) return;
+  char path[512];
+  int n = snprintf(path, sizeof(path), "%s/" SHAREDIR "/controls-icons-48.png",
+                   ui_get_exe_dir());
+  if (n <= 0 || (size_t)n >= sizeof(path)) return;
+  int w = 0, h = 0;
+  uint8_t *pixels = load_image(path, &w, &h);
+  if (!pixels) {
+    fprintf(stderr, "[fe] palette PNG unavailable path=%s\n", path);
+    fflush(stderr);
+    return;
+  }
+  if (w != 16 * FE_TOOL_BITMAP_SIZE || h != 8 * FE_TOOL_BITMAP_SIZE) {
+    fprintf(stderr, "[fe] palette PNG invalid size path=%s size=%dx%d\n", path, w, h);
+    fflush(stderr);
+    image_free(pixels);
+    return;
+  }
+  uint32_t tex = R_CreateTextureRGBA(w, h, pixels, R_FILTER_LINEAR, R_WRAP_CLAMP);
+  image_free(pixels);
+  if (!tex) return;
+  g_tool_strip = (bitmap_strip_t){
+    .tex = tex, .icon_w = FE_TOOL_BITMAP_SIZE, .icon_h = FE_TOOL_BITMAP_SIZE,
+    .cols = w / FE_TOOL_BITMAP_SIZE, .sheet_w = w, .sheet_h = h,
+  };
+}
+
 #endif
 
 static void comp_build_tool_items(void) {
@@ -175,7 +234,7 @@ static void comp_build_tool_items(void) {
       continue;
     g_comp_tools[g_comp_tool_count++] = (reportview_item_t){
         .text = c->class_name,
-        .icon_name = c->toolbar_icon,
+        .icon = components_bitmap_icon(c),
         .color = get_sys_color(brTextNormal),
         .userdata = (uint32_t)i,
     };
@@ -234,7 +293,12 @@ static void components_palette_sync_list(window_t *win) {
   send_message(st->list_win, RVM_SETLARGEICONCOLS, 0, NULL);
   send_message(st->list_win, RVM_SETCOLUMNWIDTH, FE_COMPONENTS_BTN_SIZE, NULL);
   send_message(st->list_win, RVM_SETICONSIZE, FE_TOOL_ICON_SIZE, NULL);
+#ifdef SHAREDIR
+  components_load_strip();
+  send_message(st->list_win, RVM_SETICONSTRIP, 0, g_tool_strip.tex ? &g_tool_strip : NULL);
+#else
   send_message(st->list_win, RVM_SETICONSTRIP, 0, NULL);
+#endif
   send_message(st->list_win, RVM_SETPRESERVEICONCOLORS, 1, NULL);
   send_message(st->list_win, RVM_SETCOLUMNTITLESVISIBLE, 0, NULL);
   populate_tool_list(st->list_win);
@@ -306,6 +370,11 @@ result_t win_components_proc(window_t *win, uint32_t msg,
     case evDestroy:
       if (g_app && g_app->windows[FE_WIN_TOOL] == win)
         g_app->windows[FE_WIN_TOOL] = NULL;
+#ifdef SHAREDIR
+      components_hide_ghost();
+      if (g_tool_strip.tex) R_DeleteTexture(g_tool_strip.tex);
+      g_tool_strip = (bitmap_strip_t){0};
+#endif
       return false;
 
     case evCommand:
