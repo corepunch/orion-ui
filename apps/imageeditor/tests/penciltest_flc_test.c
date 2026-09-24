@@ -47,8 +47,10 @@ static void flc_roundtrip(void) {
   ASSERT_EQUAL(tl->fps, 24); ASSERT_FALSE(tl->loop);
   ASSERT_EQUAL(tl->frames[0]->delay_ms, 42); ASSERT_EQUAL(tl->frames[1]->delay_ms, 210);
   ASSERT_STR_EQUAL(tl->frames[1]->name, "Hold pose");
-  ASSERT_EQUAL(tl->frames[0]->data[4], 0);
-  ASSERT_EQUAL(memcmp(tl->frames[1]->data, doc->pixels, 15), 0);
+  ASSERT_NOT_NULL(tl->frames[0]->cels);
+  ASSERT_NOT_NULL(tl->frames[1]->cels);
+  ASSERT_EQUAL(tl->frames[0]->cels[(IE_LAYER_PENCIL - 1) * 15 + 4], 0);
+  ASSERT_EQUAL(memcmp(tl->frames[1]->cels + (IE_LAYER_PENCIL - 1) * 15, doc->pixels, 15), 0);
   ASSERT_EQUAL(memcmp(pal, doc->ipal.entries, sizeof(pal)), 0);
   ASSERT_EQUAL(bg, doc->background.color); ASSERT_FALSE(show);
   anim_timeline_free(tl);
@@ -75,7 +77,8 @@ static void flc_menu_and_retina(void) {
   ASSERT_FALSE(doc->modified);
   ASSERT_TRUE(imageeditor_open_file_path(flc_test_path));
   canvas_doc_t *again = g_app->active_doc;
-  ASSERT_EQUAL(again->anim->frames[1]->data[8], 1);
+  ASSERT_NOT_NULL(again->anim->frames[1]->cels);
+  ASSERT_EQUAL(again->anim->frames[1]->cels[(IE_LAYER_PENCIL - 1) * 15 + 8], 1);
   ASSERT_EQUAL(again->canvas_w, 5);
   close_document(again); close_document(doc);
   g_bw_retina_scale = 1;
@@ -170,7 +173,7 @@ static void flc_external_compression(void) {
   ASSERT_EQUAL(legacy->layer.active, IE_LAYER_COLOR);
   ASSERT_TRUE(cmd_frame_select(legacy, 1));
   ASSERT_EQUAL(canvas_get_pixel(legacy, 0, 0), black);
-  ASSERT_EQUAL(legacy->layer.stack[IE_LAYER_BG]->pixels[0], 0);
+  ASSERT_EQUAL(legacy->layer.stack[IE_LAYER_BG]->pixels[0], 255);
   close_document(legacy); remove(path);
   PASS();
 }

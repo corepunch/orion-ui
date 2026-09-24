@@ -23,12 +23,12 @@ static void test_delete(uint32_t tex) { delete_count++; }
 static bool test_bmp_resolve(const char *name, sysicon_resolved_t *out) { return false; }
 
 #define axGetScaling test_scaling
-#define R_CreateTextureRGBA test_upload
+#define R_CreateTextureSRGBA8 test_upload
 #define R_DeleteTexture test_delete
 #define bmp_icon_resolve test_bmp_resolve
 #include <orion/user/svg_icon_loader.c>
 #undef axGetScaling
-#undef R_CreateTextureRGBA
+#undef R_CreateTextureSRGBA8
 #undef R_DeleteTexture
 #undef bmp_icon_resolve
 

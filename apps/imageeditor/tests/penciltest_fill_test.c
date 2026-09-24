@@ -18,12 +18,13 @@ static void test_pencil_fill_scale(int scale, int gap) {
   canvas_doc_t *doc = create_document(NULL, 64, 64);
   ASSERT_NOT_NULL(doc);
   int size = doc->canvas_w;
-  uint32_t paper = canvas_get_pixel(doc, 0, 0), ink = g_app->fg_color;
+  uint32_t ink = g_app->fg_color;
   canvas_draw_pen_line(doc, 8*scale, 8*scale, 55*scale, 8*scale, ink);
   canvas_draw_pen_line(doc, 8*scale, 8*scale, 8*scale, 55*scale, ink);
   canvas_draw_pen_line(doc, 55*scale, 8*scale, 55*scale, 55*scale, ink);
   canvas_draw_pen_line(doc, 8*scale, 55*scale, 20*scale, 55*scale, ink);
   canvas_draw_pen_line(doc, (21+gap)*scale, 55*scale, 55*scale, 55*scale, ink);
+  uint32_t paper = canvas_get_pixel(doc, 0, 0);
   size_t bytes = (size_t)size * size * DOC_BPP;
   uint8_t *before = malloc(bytes), *after = malloc(bytes);
   ASSERT_NOT_NULL(before);
@@ -41,7 +42,7 @@ static void test_pencil_fill_scale(int scale, int gap) {
           x >= 20*scale - offset && x < (22+gap)*scale - offset) continue;
       bool inside = x >= 9*scale - offset && x < 55*scale - offset &&
                     y >= 9*scale - offset && y < 55*scale - offset;
-      bool filled = inside || before[y * size + x] != IMAGEEDITOR_TRANSPARENT_INDEX;
+      bool filled = inside || before[y * size + x] != 0;
       if (canvas_get_pixel(doc, x, y) != (filled ? ink : paper)) {
         if (!mismatches) fprintf(stderr, "pencil scale=%d gap=%d mismatch=(%d,%d) expected=%u actual=%u\n",
                                  scale, gap, x, y, filled ? ink : paper, canvas_get_pixel(doc, x, y));
