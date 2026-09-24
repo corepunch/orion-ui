@@ -30,7 +30,7 @@ The complete supported element inventory is:
 |-----------|----------|
 | `<scene>` attributes | `ambient`, `background`, `up`, `convention` |
 | Scene configuration | `<camera>`, `<pose>`, `<material>`, `<sun>`, `<chardef>`, `<shape>` |
-| Transformable content | `<box>`, `<rect>`, `<rounded-rect>`, `<circle>`, `<ellipse>`, `<star>`, `<screen>`, `<sphere>`, `<cylinder>`, `<capsule>`, `<arch>`, `<prism>`, `<cone>`, `<pyramid>`, `<torus>`, `<lathe>`, `<loft>`, `<wall>`, `<window>`, `<door>`, `<group>`, `<prefab>`, `<light>`, `<line>`, `<dummy>` |
+| Transformable content | `<box>`, `<rect>`, `<rounded-rect>`, `<circle>`, `<ellipse>`, `<star>`, `<rounded-box>`, `<screen>`, `<sphere>`, `<cylinder>`, `<capsule>`, `<arch>`, `<prism>`, `<cone>`, `<pyramid>`, `<torus>`, `<lathe>`, `<loft>`, `<wall>`, `<window>`, `<door>`, `<group>`, `<prefab>`, `<light>`, `<line>`, `<dummy>` |
 | Wall cutters | `<bool-negative-box>`, `<bool-negative-arch>`, `<bool-negative-cylinder>` |
 | Mesh modifiers | `<taper>`, `<twist>`, `<bend>`, `<stretch>`, `<skew>`, `<array>`, `<extrude>`, `<bevel>`, `<mirror>`, `<noise>`, `<shell>` |
 | Context-only children | `<camera><transform>`, `<camera><use-pose>`, `<pose><joint>`, `<pose><ik>`, `<prefab><joint>`, `<prefab><ik>`, `<shape><v>`, `<prefab><attach>` |
@@ -420,7 +420,7 @@ Example: moon through a back-wall window at 45° down and 30° horizontal offset
 
 ## Shape objects
 
-All shapes share common attributes plus shape-specific ones. Shapes may contain modifier child elements. The supported shapes include `box`, `rect`, `rounded-rect`, `circle`, `ellipse`, `star`, `screen`, `sphere`, `cylinder`, `arch`, `prism`, `cone`/`pyramid`, `torus`, `lathe`, `loft`, and `wall`.
+All shapes share common attributes plus shape-specific ones. Shapes may contain modifier child elements. The supported shapes include `box`, `rect`, `rounded-rect`, `circle`, `ellipse`, `star`, `rounded-box`, `screen`, `sphere`, `cylinder`, `arch`, `prism`, `cone`/`pyramid`, `torus`, `lathe`, `loft`, and `wall`.
 
 ### Common attributes
 
@@ -501,6 +501,19 @@ especially relevant to sharp star points.
   <bevel amount="0.1"/>
 </star>
 ```
+
+### `<rounded-box>`
+
+A legacy single-element rounded solid. New scenes should use
+`<rounded-rect>` with child `<extrude>` and `<bevel>` instead.
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `size` | vec3 | 1 1 1 | Width, height, depth in cm |
+| `radius` | float | 0 | XY corner radius in cm, clamped to half the smaller side |
+| `segments` | int | 8 | Segments per corner, clamped to 2–32 |
+| `bevel` | float | 0 | Rounded front and back edge radius in cm; must be smaller than the corner radius and half the depth |
+| `bevelSegments` | int | 4 | Segments per bevel arc, clamped to 1–8 |
 
 ### `<screen>`
 

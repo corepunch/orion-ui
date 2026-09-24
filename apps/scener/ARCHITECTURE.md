@@ -57,8 +57,8 @@ Primitive generators should work at the highest useful level. Prefer composing c
 Renderable 2D profile elements (`rect`, `rounded-rect`, `circle`, `ellipse`,
 `star`) use `<extrude>` to create a closed local-Z solid. A following `<bevel>`
 insets the cap outline and adds rounded perimeter rings before later mesh
-modifiers run. The same extrusion and bevel generator consumes each profile.
-Inset profiles are checked
+modifiers run. The same extrusion and bevel generator consumes each profile;
+the legacy `rounded-box` element delegates to it. Inset profiles are checked
 for collapsed or crossing edges so sharp concave shapes cannot create open
 shadow meshes.
 

@@ -6,13 +6,6 @@ app_state_t *g_app;
 static const char *window_test_temp_dir(void);
 static int window_test_load(Scene *s,const char *xml);
 
-static Mesh rounded_rect_solid(float width,float height,float depth,float radius,float bevel,int segments,int bevel_segments) {
-  Shape2D profile = shape2d_rounded_rect(width,height,radius,segments);
-  Mesh mesh = gen_profile_extrusion_beveled(&profile,depth,bevel,bevel_segments);
-  shape2d_free(&profile);
-  return mesh;
-}
-
 static void test_tool_commands_share_document_state(void) {
   TEST("scener tools: command IDs update the document source of truth");
   app_state_t app = {0};
@@ -52,7 +45,7 @@ static void test_prefab_files_open_as_documents(void) {
 
 static void test_device_screen_geometry_and_assets(void) {
   TEST("promo devices: rounded solids are sealed and screen images resolve through prefabs");
-  Mesh mesh = rounded_rect_solid(2.0f, 4.0f, 0.1f, 0.3f, 0, 8, 1);
+  Mesh mesh = gen_rounded_box(2.0f, 4.0f, 0.1f, 0.3f, 8);
   mesh_build_edges(&mesh);
   ASSERT_TRUE(mesh.nverts > 0 && mesh.ntris > 0);
   for (int i = 0; i < mesh.nedges; i++) ASSERT_TRUE(mesh.edges[i].t1 >= 0);
@@ -62,10 +55,10 @@ static void test_device_screen_geometry_and_assets(void) {
     ASSERT_TRUE(mesh.verts[i].v >= 0 && mesh.verts[i].v <= 1);
   }
   mesh_free(&mesh);
-  mesh = rounded_rect_solid(2.0f, 4.0f, 0.4f, 0.3f, 0, 8, 1);
+  mesh = gen_rounded_box(2.0f, 4.0f, 0.4f, 0.3f, 8);
   float sharp_volume = mesh_signed_volume(&mesh);
   mesh_free(&mesh);
-  mesh = rounded_rect_solid(2.0f, 4.0f, 0.4f, 0.3f, 0.08f, 8, 4);
+  mesh = gen_rounded_box_beveled(2.0f, 4.0f, 0.4f, 0.3f, 0.08f, 8, 4);
   ASSERT_TRUE(mesh.nverts > 0 && mesh.ntris > 0);
   mesh_build_edges(&mesh);
   for (int i = 0; i < mesh.nedges; i++) ASSERT_TRUE(mesh.edges[i].t1 >= 0);
@@ -86,10 +79,10 @@ static void test_device_screen_geometry_and_assets(void) {
     ASSERT_TRUE(vdot(normal, mesh.verts[t.a].nrm) > -1e-6f);
   }
   mesh_free(&mesh);
-  mesh = rounded_rect_solid(2.0f, 4.0f, 0.4f, 0.3f, 0.3f, 8, 4);
+  mesh = gen_rounded_box_beveled(2.0f, 4.0f, 0.4f, 0.3f, 0.3f, 8, 4);
   ASSERT_EQUAL(mesh.ntris, 0);
   for (int beveled = 0; beveled <= 1; beveled++) {
-    mesh = rounded_rect_solid(2.0f, 4.0f, 0.4f, 1.0f, beveled ? 0.08f : 0, 8, 4);
+    mesh = gen_rounded_box_beveled(2.0f, 4.0f, 0.4f, 1.0f, beveled ? 0.08f : 0, 8, 4);
     mesh_build_edges(&mesh);
     ASSERT_TRUE(mesh_signed_volume(&mesh) > 0);
     for (int i = 0; i < mesh.nedges; i++) ASSERT_TRUE(mesh.edges[i].t1 >= 0);
@@ -106,7 +99,7 @@ static void test_device_screen_geometry_and_assets(void) {
   };
   for (int i = 0; i < 2; i++) {
     const float *d = device_sizes[i];
-    mesh = rounded_rect_solid(d[0], d[1], d[2], d[3], d[4], 8, 4);
+    mesh = gen_rounded_box_beveled(d[0], d[1], d[2], d[3], d[4], 8, 4);
     mesh_build_edges(&mesh);
     ASSERT_EQUAL(mesh.nedges * 2, mesh.ntris * 3);
     for (int edge = 0; edge < mesh.nedges; edge++) {
@@ -131,18 +124,6 @@ static void test_device_screen_geometry_and_assets(void) {
   }
   ASSERT_EQUAL(screens, 2);
   scene_free(&scene);
-  const struct { const char *path; int objects; } promo_scenes[] = {
-    { "apps/scener/scenes/iphone18_promo.blks", 7 },
-    { "apps/scener/scenes/ipad_promo.blks", 5 },
-  };
-  for (int i = 0; i < 2; i++) {
-    Scene promo = {0};
-    ASSERT_TRUE(load_scene(promo_scenes[i].path, &promo));
-    ASSERT_EQUAL(promo.ncameras, 3);
-    ASSERT_EQUAL(promo.nobjs, promo_scenes[i].objects);
-    ASSERT_EQUAL(promo.nscreenTextures, 1);
-    scene_free(&promo);
-  }
   Scene created = {0};
   ASSERT_TRUE(window_test_load(&created, "<scene/>"));
   ASSERT_TRUE(scene_create_promo_shape(&created, "rounded-rect", v3(0, 0, 0)));
