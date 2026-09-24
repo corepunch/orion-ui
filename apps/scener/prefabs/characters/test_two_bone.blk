@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<prefab>
+  <group name="root" pos="0 0 200">
+    <sphere radius="1" scale="4 4 4"/>
+    <group name="mid" pos="0 0 -100">
+      <sphere radius="1" scale="4 4 4"/>
+      <group name="tip" pos="0 0 -100">
+        <sphere radius="1" scale="4 4 4"/>
+      </group>
+    </group>
+  </group>
+</prefab>

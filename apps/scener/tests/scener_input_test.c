@@ -41,6 +41,88 @@ static void test_prefab_files_open_as_documents(void) {
   PASS();
 }
 
+static vec3 rig_test_center(Scene *s,int index){
+	Mesh *mesh=&s->objs[index].mesh;
+	vec3 lo=v3(INFINITY,INFINITY,INFINITY),hi=v3(-INFINITY,-INFINITY,-INFINITY);
+	for(int i=0;i<mesh->nverts;i++){
+		vec3 p=mesh->verts[i].pos;
+		lo.x=fminf(lo.x,p.x); lo.y=fminf(lo.y,p.y); lo.z=fminf(lo.z,p.z);
+		hi.x=fmaxf(hi.x,p.x); hi.y=fmaxf(hi.y,p.y); hi.z=fmaxf(hi.z,p.z);
+	}
+	return vscale(vadd(lo,hi),0.5f);
+}
+
+static void test_instance_rig_ik(void){
+	TEST("rig poses: instance isolation, pole IK, world foot pin and reach status");
+	Scene s={0};
+	ASSERT_TRUE(load_scene("apps/scener/scenes/test_rig.blks",&s));
+	ASSERT_EQUAL(scene_rig_joint_count(&s,s.objs[0].editNode),3);
+	ASSERT_TRUE(fabsf(rig_test_center(&s,2).x+1)<0.001f);
+	void *a=s.objs[0].editNode,*b=s.objs[3].editNode;
+	ASSERT_TRUE(a!=b);
+	scene_select_camera(&s,"Pinned");
+	ASSERT_EQUAL(s.nrigTargets,1);
+	ASSERT_TRUE(s.rigTargets[0].reachable);
+	ASSERT_TRUE(fabsf(rig_test_center(&s,2).x+1)<0.002f);
+	ASSERT_TRUE(fabsf(rig_test_center(&s,2).z)<0.002f);
+	ASSERT_TRUE(rig_test_center(&s,1).y<0);
+	ASSERT_TRUE(fabsf(rig_test_center(&s,0).z-1.6f)<0.002f);
+	ASSERT_TRUE(fabsf(rig_test_center(&s,3).z-2.0f)<0.002f);
+	ASSERT_TRUE(fabsf(rig_test_center(&s,5).x-1.0f)<0.002f);
+	void *tip=scene_rig_joint_at(&s,a,2,NULL);
+	ASSERT_TRUE(scene_rig_set_target(&s,a,tip,"target",v3(-0.8f,0,0)));
+	ASSERT_TRUE(fabsf(rig_test_center(&s,2).x+0.8f)<0.002f);
+	ASSERT_TRUE(scene_rig_set_target(&s,a,tip,"target",v3(-1.0f,0,0)));
+	void *joint=scene_rig_joint_at(&s,a,0,NULL);
+	ASSERT_TRUE(scene_rig_select_joint(&s,a,joint));
+	ASSERT_TRUE(scene_rig_set_joint(&s,a,joint,"pos",v3(0,0,-0.1f)));
+	ASSERT_TRUE(fabsf(rig_test_center(&s,3).z-2.0f)<0.002f);
+	ASSERT_TRUE(fabsf(rig_test_center(&s,2).z)<0.002f);
+	scene_select_camera(&s,"Unreachable");
+	ASSERT_TRUE(s.rigTargets[0].reachable);
+	ASSERT_TRUE(scene_rig_set_target(&s,a,tip,"target",v3(-1,0,5)));
+	ASSERT_EQUAL(s.nrigTargets,1);
+	ASSERT_FALSE(s.rigTargets[0].reachable);
+	ASSERT_TRUE(s.rigTargets[0].error>1.0f);
+	for(int i=0;i<s.objs[2].mesh.nverts;i++){
+		vec3 p=s.objs[2].mesh.verts[i].pos;
+		ASSERT_TRUE(isfinite(p.x) && isfinite(p.y) && isfinite(p.z));
+	}
+	scene_free(&s); PASS();
+}
+
+static void test_rig_mirror_and_pose_reuse(void){
+	TEST("rig editing mirrors explicit pairs and saves a shot pose");
+	Scene s={0};
+	ASSERT_TRUE(load_scene("apps/scener/scenes/character_pose_study.blks",&s));
+	void *actor=NULL,*left=NULL,*right=NULL,*head=NULL;
+	for(int i=0;i<s.nobjs;i++) if(!strcmp(scene_node_tag(s.objs[i].editNode),"prefab")){ actor=s.objs[i].editNode; break; }
+	ASSERT_TRUE(actor!=NULL);
+	for(int i=0;i<scene_rig_joint_count(&s,actor);i++){
+		void *joint=scene_rig_joint_at(&s,actor,i,NULL);
+		if(!strcmp(scene_node_attr(joint,"name"),"left_shoulder")) left=joint;
+		if(!strcmp(scene_node_attr(joint,"name"),"right_shoulder")) right=joint;
+		if(!strcmp(scene_node_attr(joint,"name"),"head")) head=joint;
+	}
+	ASSERT_TRUE(left!=NULL && right!=NULL);
+	ASSERT_TRUE(scene_rig_set_joint(&s,actor,left,"rot",v3(10,20,30)));
+	ASSERT_TRUE(scene_rig_mirror_joint(&s,actor,left));
+	vec3 mirrored=scene_rig_joint_value(&s,actor,right,"rot");
+	ASSERT_TRUE(fabsf(mirrored.x-10)<0.01f && fabsf(mirrored.y+20)<0.01f && fabsf(mirrored.z+30)<0.01f);
+	ASSERT_TRUE(scene_rig_set_joint(&s,actor,right,"rot",v3(0,0,5)));
+	ASSERT_TRUE(fabsf(scene_rig_joint_value(&s,actor,left,"rot").x-10)<0.01f);
+	ASSERT_TRUE(scene_rig_select_joint(&s,actor,head));
+	mat4 before,after; ASSERT_TRUE(scene_rig_joint_world(&s,&before));
+	ASSERT_TRUE(scene_rig_reparent_joint(&s,actor,head,"rig_root"));
+	ASSERT_TRUE(scene_rig_joint_world(&s,&after));
+	ASSERT_TRUE(vlen(vsub(mat4_xform_point(before,v3(0,0,0)),mat4_xform_point(after,v3(0,0,0))))<0.001f);
+	ASSERT_FALSE(scene_rig_reparent_joint(&s,actor,head,"head"));
+	ASSERT_TRUE(scene_rig_save_pose(&s,actor,"Edited"));
+	ASSERT_TRUE(scene_rig_assign_pose(&s,actor,"Edited",1));
+	ASSERT_TRUE(s.nobjs>0);
+	scene_free(&s); PASS();
+}
+
 static void test_nested_arch_emits_wall_parts_once(void) {
   TEST("scener walls: a contained arch does not duplicate wall geometry");
   Scene scene = {0};
@@ -602,6 +684,8 @@ int main(void) {
   TEST_START("scener input and command state");
   test_tool_commands_share_document_state();
   test_prefab_files_open_as_documents();
+  test_instance_rig_ik();
+  test_rig_mirror_and_pose_reuse();
   test_nested_arch_emits_wall_parts_once();
   test_explicit_scene_up_axis();
   test_scene_coordinate_conventions();

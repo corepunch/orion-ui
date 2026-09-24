@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scene up="z">
+  <camera name="Neutral"/>
+  <camera name="Pinned">
+    <use-pose instance="A" name="Crouch"/>
+  </camera>
+  <camera name="Unreachable">
+    <use-pose instance="A" name="Far"/>
+  </camera>
+  <pose name="Crouch">
+    <joint target="root" pos="0 0 -40"/>
+    <ik root="root" mid="mid" tip="tip" target="-100 0 0" pole="0 -1 0" keepOrientation="1"/>
+  </pose>
+  <pose name="Far">
+    <ik root="root" mid="mid" tip="tip" target="-100 0 500" pole="0 -1 0"/>
+  </pose>
+  <prefab name="A" source="characters/test_two_bone" pos="-100 0 0"/>
+  <prefab name="B" source="characters/test_two_bone" pos="100 0 0"/>
+</scene>

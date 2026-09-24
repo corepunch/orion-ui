@@ -70,6 +70,7 @@ window_t *create_main_toolbar_window(void);
 window_t *create_command_panel_window(void);
 window_t *create_property_browser_window(void);
 void property_browser_refresh(void);
+void scener_rig_panel_refresh(void);
 result_t win_property_browser(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 window_t *create_viewport_window(window_t *parent, scene_doc_t *doc);
 

@@ -1,26 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <scene up="z" ambient="0.34 0.35 0.38" background="0.075 0.085 0.11">
-  <camera name="Standing" comment="Neutral ellipsoid actor" pos="-260 -450 210" look="0 -10 94" fov="39"/>
+  <camera name="Standing" comment="Neutral ellipsoid actor" pos="-260 -450 210" look="0 -10 94" fov="39">
+    <use-pose instance="Actor" name="Neutral"/>
+  </camera>
   <camera name="Reaching" comment="Right hand reaches toward the marker" pos="-260 -450 210" look="0 -10 94" fov="39">
-    <transform target="right_shoulder" rot="-100 0 0"/>
-    <transform target="right_elbow" rot="10 0 0"/>
-    <transform target="head" rot="12 0 0"/>
+    <use-pose instance="Actor" name="Reach"/>
   </camera>
-  <camera name="Crouching" comment="Manually posed crouch and foot-contact study" pos="-260 -450 210" look="0 -10 94" fov="39">
+  <camera name="Crouching" comment="IK crouch with both feet planted" pos="-260 -450 210" look="0 -10 94" fov="39">
+    <use-pose instance="Actor" name="Crouch"/>
     <transform target="marker" pos="400 0 0"/>
-    <transform target="rig_root" pos="0 0 -20"/>
-    <transform target="torso" rot="25 0 0"/>
-    <transform target="left_hip" rot="-55 8 0"/>
-    <transform target="left_knee" rot="80 0 0"/>
-    <transform target="left_ankle" rot="-25 0 0"/>
-    <transform target="right_hip" rot="45 -8 0"/>
-    <transform target="right_knee" rot="-85 0 0"/>
-    <transform target="right_ankle" rot="40 0 0"/>
-    <transform target="left_shoulder" rot="-48 0 0"/>
-    <transform target="left_elbow" rot="-42 0 0"/>
-    <transform target="right_shoulder" rot="-54 0 0"/>
-    <transform target="right_elbow" rot="-38 0 0"/>
   </camera>
+  <pose name="Neutral"/>
+  <pose name="Reach">
+    <joint target="head" rot="12 0 0"/>
+    <ik root="right_shoulder" mid="right_elbow" tip="right_hand" target="29 -58 143" pole="0 -1 0" keepOrientation="1"/>
+  </pose>
+  <pose name="Crouch">
+    <joint target="rig_root" pos="0 0 -20"/>
+    <joint target="torso" rot="25 0 0"/>
+    <joint target="left_shoulder" rot="-48 0 0"/>
+    <joint target="right_shoulder" rot="-54 0 0"/>
+    <ik root="left_hip" mid="left_knee" tip="left_ankle" target="-11 0 7" pole="0 -1 0" keepOrientation="1"/>
+    <ik root="right_hip" mid="right_knee" tip="right_ankle" target="11 0 7" pole="0 -1 0" keepOrientation="1"/>
+  </pose>
   <light pos="-170 -150 310" color="1 0.85 0.7" intensity="1.6" radius="630" castShadows="1"/>
   <light pos="150 170 240" color="0.5 0.65 1" intensity="0.55" radius="500" castShadows="0"/>
   <box pos="0 0 -6" size="360 250 12" color="0.27 0.25 0.23"/>

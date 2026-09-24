@@ -417,6 +417,7 @@ result_t win_viewport(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
 				vec3 ray = vp_mouse_ray(vp, &doc->scene, mx, my, cr.w, cr.h);
 				if (vp->left_down && doc->scene.draggingHandle != GIZMO_NONE) {
 					gizmo_apply_drag(&doc->scene, mx, my, cr.w, cr.h, doc->scene.camPos, right, up, fwd, doc->scene.camFov);
+					if(!doc->modified){ doc->modified=true; doc_update_title(doc); }
 					property_browser_refresh();
 				} else {
 					int hovered = gizmo_pick_handle(&doc->scene, doc->scene.camPos, ray, fwd, doc->scene.camFov, cr.w, cr.h);

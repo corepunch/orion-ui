@@ -23,7 +23,8 @@ static vec3 handle_color(vec3 color,int hovered){
 static int gizmo_geometry(Scene *s,vec3 camPos,vec3 camLook,float camFov,int vpW,int vpH,
 	vec3 *center,float *radiusX,float *radiusY,mat4 *matrix,vec3 *bmin,vec3 *bmax){
 	if(s->selectedObj<0 || s->selectedObj>=s->nobjs || !s->objs[s->selectedObj].renderable) return 0;
-	scene_get_obj_oriented_bounds(s,s->selectedObj,matrix,bmin,bmax);
+	if(scene_rig_joint_world(s,matrix)) *bmin=*bmax=v3(0,0,0);
+	else scene_get_obj_oriented_bounds(s,s->selectedObj,matrix,bmin,bmax);
 	*center=mat4_xform_point(*matrix,v3(0,0,0));
 	float depth=vdot(vsub(*center,camPos),vnorm(camLook));
 	if(depth<=0.0f) return 0;
@@ -136,7 +137,7 @@ void gizmo_draw(Scene *s,vec3 camPos,vec3 camLook,float camFov,int vpW,int vpH){
 	glDisable(GL_DEPTH_TEST); glDisable(GL_CULL_FACE);
 	glDisable(GL_BLEND); glLineWidth(1.0f);
 	GizmoLines gl={0};
-	gl_bounds_corners(&gl,matrix,bmin,bmax);
+	if(!s->selectedRigJoint) gl_bounds_corners(&gl,matrix,bmin,bmax);
 	if(!s->selectedNode){
 		/* no XML node — bounds only, no transform handles */
 	} else if(s->editMode==EDIT_W_MOVE){
