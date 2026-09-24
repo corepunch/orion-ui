@@ -66,8 +66,6 @@ static void classic_draw_toolbar_separator(irect16_t r) {
 
 static void classic_draw_panel_bg(irect16_t r) {
   fill_rect(get_sys_color(brControlBg), r);
-  classic_draw_bevel(r);
-
 }
 
 // ── Titlebar ─────────────────────────────────────────────────────────────────
@@ -247,7 +245,11 @@ static void classic_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state
       fill_rect(get_sys_color(brControlBg), r);
       classic_draw_bevel(r);
       break;
-    case THEME_PART_PANEL_BORDER:        classic_draw_bevel(r); break;
+    case THEME_PART_PANEL_BORDER:        break;
+    case THEME_PART_WINDOW_BORDER:
+      if (state & CTRL_FOCUSED) draw_wire_rect(r, 1, get_sys_color(brAccent));
+      else classic_draw_bevel(r);
+      break;
     case THEME_PART_TOOLBAR:
       fill_rect(get_sys_color(brControlBg), r);
       classic_draw_bevel(r);

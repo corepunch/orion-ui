@@ -424,6 +424,9 @@ void composite_root_windows(void) {
                       (irect16_t){w->frame.x, w->frame.y, w->frame.w, w->frame.h},
                       w->surface_w, w->surface_h,
                       radius, 1.0f);
+    if (!w->maximized && !(w->flags & WINDOW_TRANSPARENT))
+      theme_draw(THEME_PART_WINDOW_BORDER, w->frame,
+                 window_has_focus(w) ? CTRL_FOCUSED : CTRL_NORMAL);
   }
 
   glDisable(GL_BLEND);

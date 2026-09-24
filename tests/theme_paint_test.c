@@ -94,6 +94,29 @@ static void test_translated_separator(void) {
   PASS();
 }
 
+static void test_classic_window_border(void) {
+  TEST("Classic paints a bevel outside inactive windows and an accent border outside focused windows");
+  theme_t *classic = paint_classic_instance();
+  classic->apply_palette();
+  irect16_t frame = R(10, 10, 80, 30);
+  memset(pixels, 0, sizeof(pixels));
+  classic->draw_part(THEME_PART_WINDOW_BORDER, frame, CTRL_NORMAL);
+  ASSERT_EQUAL(pixels[9][50], get_sys_color(brLightEdge));
+  ASSERT_EQUAL(pixels[25][9], get_sys_color(brLightEdge));
+  ASSERT_EQUAL(pixels[25][90], get_sys_color(brDarkEdge));
+  ASSERT_EQUAL(pixels[40][50], get_sys_color(brDarkEdge));
+  ASSERT_EQUAL(pixels[25][50], 0);
+  memset(pixels, 0, sizeof(pixels));
+  classic->draw_part(THEME_PART_WINDOW_BORDER, frame, CTRL_FOCUSED);
+  ASSERT_EQUAL(pixels[9][50], get_sys_color(brAccent));
+  ASSERT_EQUAL(pixels[25][90], get_sys_color(brAccent));
+  ASSERT_EQUAL(pixels[25][50], 0);
+  memset(pixels, 0, sizeof(pixels));
+  paint_modern_instance()->draw_part(THEME_PART_WINDOW_BORDER, frame, CTRL_FOCUSED);
+  ASSERT_EQUAL(pixels[9][50], 0);
+  PASS();
+}
+
 static void test_independent_parts(void) {
   TEST("Modern dropdowns match field bounds and fills in every state");
   theme_t *theme = paint_with_theme(THEME_NAVY);
@@ -338,6 +361,7 @@ int main(void) {
   test_button_capsules();
   test_modern_button_states();
   test_translated_separator();
+  test_classic_window_border();
   test_independent_parts();
   test_modern_slider_track_contrasts();
   test_flat_tool_items();

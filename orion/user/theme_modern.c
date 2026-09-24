@@ -276,6 +276,7 @@ static void modern_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state)
     case THEME_PART_TAB_BAR:             fill_rect(get_sys_color(brPanelDarker), r); break;
     case THEME_PART_TAB_PANE:            fill_rect(get_sys_color(brControlBg), r); break;
     case THEME_PART_PANEL_BORDER:        break;
+    case THEME_PART_WINDOW_BORDER:       break;
     case THEME_PART_TOOLBAR:
       fill_rect(get_sys_color(brPanelDarker), r);
       break;
