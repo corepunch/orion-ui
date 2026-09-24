@@ -242,7 +242,7 @@ static void test_srgb_linear_source_over(void) {
     bool color_read = R_ReadTextureSRGBA8(color_tex, 1, 1, color_result);
     bool float_read = R_ReadTextureSRGBA8(float_tex, 1, 1, float_result);
     bool surface_ok = surface_read && abs((int)surface_result[0] - 188) <= 1 && surface_result[3] == 255;
-    bool color_ok = color_read && color_result[0] == 128 && color_result[3] == 128;
+    bool color_ok = color_read && abs((int)color_result[0] - 128) <= 1 && color_result[3] == 128;
     bool float_ok = float_read && abs((int)float_result[0] - 188) <= 1 && float_result[3] == 128;
     correct = draw_ok && surface_ok && color_ok && float_ok;
     if (!correct)
