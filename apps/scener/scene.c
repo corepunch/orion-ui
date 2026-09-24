@@ -1,5 +1,6 @@
 #include <orion/user/gl_compat.h>
 #include <orion/ui.h>
+#include <orion/user/image.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -265,6 +266,8 @@ void scene_free(Scene *s){
 	free(s->prefabs); free(s->instances); free(s->rigRotations); free(s->rigTargets); free(s->rigJointWorlds); free(s->negativeBoxes); free(s->negativeArches);
 	free(s->negativeCylinders); free(s->overlayLines); free(s->charDefs); free(s->shapes);
 	free(s->dragStartVerts); free(s->dragObjIndices); free(s->dragVertOffsets);
+	for(int i=0;i<s->nscreenTextures;i++) image_free(s->screenTextures[i].pixels);
+	free(s->screenTextures);
 	memset(s,0,sizeof(*s));
 }
 
@@ -300,6 +303,7 @@ void scene_add_obj(Scene *s, Mesh mesh, mat4 M, mat4 R, vec3 color, float shin, 
 	o.sanityFloor=s->sanityFloorActive; o.sanityCheck=s->sanityCheckActive;
 	o.editNode=s->activeEditNode; o.editMatrix=s->activeEditMatrix;
 	o.texIndex=s->activeTexIndex;
+	o.screenTexture=s->activeScreenTexture>=0&&s->activeScreenTexture<s->nscreenTextures?s->activeScreenTexture:-1;
 	DA_PUSH(s->objs,s->nobjs,s->cobjs,o);
 }
 
@@ -596,6 +600,48 @@ static void parse_box(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 p
 		: gen_box(sz.x,sz.y,sz.z);
 	apply_modifiers(&mesh,n);
 	scene_add_obj(s, mesh, M,R, color,shin,castsShadow,renderable,unlit);
+}
+
+static int screen_texture_index(Scene *s,const char *image){
+	char path[1024];
+	int length=snprintf(path,sizeof(path),"%s%s%s",image[0]=='/'?"":s->assetRoot,
+		image[0]=='/'||!s->assetRoot[0]?"":"/",image);
+	if(length<0 || (size_t)length>=sizeof(path)){
+		fprintf(stderr,"[scener] screen image path too long: %s\n",image); s->assetError=1; return -1;
+	}
+	for(int i=0;i<s->nscreenTextures;i++) if(!strcmp(s->screenTextures[i].path,path)) return i;
+	ScreenTexture texture={0};
+	snprintf(texture.path,sizeof(texture.path),"%s",path);
+	texture.pixels=load_image(path,&texture.width,&texture.height);
+	if(!texture.pixels){
+		fprintf(stderr,"[scener] cannot load screen image: %s\n",path); s->assetError=1; return -1;
+	}
+	DA_PUSH(s->screenTextures,s->nscreenTextures,s->cscreenTextures,texture);
+	return s->nscreenTextures-1;
+}
+
+static void parse_rounded_box(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 pos, vec3 rot, vec3 color, float shin, int castsShadow, int renderable, int unlit){
+	(void)parentM; (void)pos; (void)rot;
+	vec3 size=xml_attr_v3_cm(n,"size",v3(0.01f,0.01f,0.01f));
+	Mesh mesh=gen_rounded_box_beveled(size.x,size.y,size.z,xml_attr_f_cm(n,"radius",0),
+		xml_attr_f_cm(n,"bevel",0),xml_attr_i(n,"segments",8),xml_attr_i(n,"bevelSegments",4));
+	if(!mesh.ntris){ fprintf(stderr,"[scener] rounded-box: invalid size, radius, or bevel\n"); return; }
+	apply_modifiers(&mesh,n);
+	scene_add_obj(s,mesh,M,R,color,shin,castsShadow,renderable,unlit);
+}
+
+static void parse_screen(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 pos, vec3 rot, vec3 color, float shin, int castsShadow, int renderable, int unlit){
+	(void)parentM; (void)pos; (void)rot; (void)castsShadow; (void)unlit;
+	if(!xml_attr(n,"material",NULL) && !xml_attr(n,"color",NULL)) color=v3(1,1,1);
+	vec3 size=xml_attr_v3_cm(n,"size",v3(0.01f,0.01f,0.0004f));
+	Mesh mesh=gen_rounded_box(size.x,size.y,size.z,xml_attr_f_cm(n,"radius",0),xml_attr_i(n,"segments",8));
+	if(!mesh.ntris){ fprintf(stderr,"[scener] screen: invalid size or radius\n"); return; }
+	apply_modifiers(&mesh,n);
+	const char *image=s->activeScreenImage?s->activeScreenImage:xml_attr(n,"image",NULL);
+	int old=s->activeScreenTexture;
+	s->activeScreenTexture=image&&image[0]?screen_texture_index(s,image):-1;
+	scene_add_obj(s,mesh,M,R,color,shin,xml_attr_i(n,"castShadow",0),renderable,xml_attr_i(n,"unlit",1));
+	s->activeScreenTexture=old;
 }
 
 static void parse_sphere(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 pos, vec3 rot, vec3 color, float shin, int castsShadow, int renderable, int unlit){
@@ -1514,6 +1560,9 @@ static void parse_prefab(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec
 	}
 	int oldTintActive=s->prefabTintActive;
 	vec3 oldTint=s->prefabTint;
+	const char *oldScreenImage=s->activeScreenImage;
+	const char *screenImage=xml_attr(n,"screenImage",NULL);
+	if(screenImage) s->activeScreenImage=screenImage;
 	if(xml_attr(n,"color",NULL)){
 		s->prefabTintActive=1;
 		s->prefabTint=color;
@@ -1546,6 +1595,7 @@ static void parse_prefab(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec
 
 	s->prefabTintActive=oldTintActive;
 	s->prefabTint=oldTint;
+	s->activeScreenImage=oldScreenImage;
 }
 
 static void parse_light(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 pos, vec3 rot, vec3 color, float shin, int castsShadow, int renderable, int unlit){
@@ -1564,6 +1614,8 @@ static const struct {
 	shape_parser_fn parse;
 } shape_parsers[] = {
 	{ "box",      parse_box },
+	{ "rounded-box", parse_rounded_box },
+	{ "screen",   parse_screen },
 	{ "sphere",   parse_sphere },
 	{ "cylinder", parse_cylinder },
 	{ "prism",    parse_prism },
@@ -1891,6 +1943,7 @@ static void scene_clear_view(Scene *s){
 
 static void scene_rebuild_view(Scene *s){
 	XmlNode *root=(XmlNode*)s->editRoot;
+	s->assetError=0;
 	XmlNode *sceneRoot=(XmlNode*)s->sceneRoot;
 	int prefabMode=s->prefabDocument||s->editDepth;
 	void *selected=s->selectedNode;
@@ -1964,15 +2017,8 @@ static void scene_rebuild_view(Scene *s){
 	scene_build_all_shadow_volumes(s);
 }
 
-static int scene_create_insert(Scene *s,const char *tag,const char *preset,vec3 ground){
-	XmlNode *node=xml_new(tag); xml_set_attr(node,"preset",preset);
-	window_spec_t w;
-	if(!window_spec(node,&w)){ xml_free(node); return 0; }
+static int scene_insert_source_node(Scene *s,XmlNode *node){
 	vec3 up=s->worldUp.z==1?v3(0,0,1):v3(0,1,0);
-	float lift=w.height/2+(w.sill?w.sillHeight-WINDOW_JOIN_OVERLAP:0);
-	xml_set_attr_v3_cm(node,"pos",vadd(ground,vscale(up,lift)));
-	if(up.z==1) xml_set_attr(node,"rot",WINDOW_Z_UP_ROTATION);
-	window_spec_free(&w);
 	if(!s->sceneRoot){
 		XmlNode *root=xml_new("scene"); s->sceneRoot=s->editRoot=root;
 		xml_set_attr(root,"up",up.z==1?"z":"y");
@@ -1990,7 +2036,7 @@ static int scene_create_insert(Scene *s,const char *tag,const char *preset,vec3 
 			DA_PUSH(root->kids,root->nkids,root->ckids,n);
 		}
 	}
-	/* Legacy Create tools leave mesh-only objects; keep them when adding a source-backed window. */
+	/* Legacy Create tools leave mesh-only objects; keep them during a source rebuild. */
 	SceneObj *loose=NULL; int nloose=0,cloose=0;
 	for(int i=0;i<s->nobjs;i++) if(!s->objs[i].editNode){
 		DA_PUSH(loose,nloose,cloose,s->objs[i]); memset(&s->objs[i],0,sizeof(s->objs[i]));
@@ -2000,7 +2046,37 @@ static int scene_create_insert(Scene *s,const char *tag,const char *preset,vec3 
 	for(int i=0;i<nloose;i++) DA_PUSH(s->objs,s->nobjs,s->cobjs,loose[i]);
 	free(loose);
 	if(nloose) scene_build_all_shadow_volumes(s);
+	return 1;
+}
+
+static int scene_create_insert(Scene *s,const char *tag,const char *preset,vec3 ground){
+	XmlNode *node=xml_new(tag); xml_set_attr(node,"preset",preset);
+	window_spec_t w;
+	if(!window_spec(node,&w)){ xml_free(node); return 0; }
+	vec3 up=s->worldUp.z==1?v3(0,0,1):v3(0,1,0);
+	float lift=w.height/2+(w.sill?w.sillHeight-WINDOW_JOIN_OVERLAP:0);
+	xml_set_attr_v3_cm(node,"pos",vadd(ground,vscale(up,lift)));
+	if(up.z==1) xml_set_attr(node,"rot",WINDOW_Z_UP_ROTATION);
+	window_spec_free(&w);
+	if(!scene_insert_source_node(s,node)) return 0;
 	fprintf(stderr,"[scener] create %s preset=%s at=(%g,%g,%g)\n",tag,preset,ground.x,ground.y,ground.z);
+	return 1;
+}
+
+int scene_create_promo_shape(Scene *s,const char *tag,vec3 ground){
+	int screen=!strcmp(tag,"screen");
+	if(!screen&&strcmp(tag,"rounded-box")) return 0;
+	XmlNode *node=xml_new(tag);
+	vec3 up=s->worldUp.z==1?v3(0,0,1):v3(0,1,0);
+	float height=screen?0.1554f:0.162f;
+	xml_set_attr(node,"size",screen?"7.03 15.54 0.03":"7.6 16.2 0.8");
+	xml_set_attr(node,"radius",screen?"0.98":"1.28");
+	if(!screen){ xml_set_attr(node,"bevel","0.16"); xml_set_attr(node,"bevelSegments","4"); }
+	xml_set_attr_v3_cm(node,"pos",vadd(ground,vscale(up,height*0.5f)));
+	if(up.z==1) xml_set_attr(node,"rot",WINDOW_Z_UP_ROTATION);
+	if(screen){ xml_set_attr(node,"color","1 1 1"); xml_set_attr(node,"unlit","1"); xml_set_attr(node,"castShadow","0"); }
+	if(!scene_insert_source_node(s,node)) return 0;
+	fprintf(stderr,"[scener] create %s at=(%g,%g,%g)\n",tag,ground.x,ground.y,ground.z);
 	return 1;
 }
 
@@ -2011,6 +2087,7 @@ int load_scene(const char *path, Scene *s){
 	memset(s,0,sizeof(*s));
 	s->selectedObj=-1; s->editMode=EDIT_W_MOVE;
 	s->activeTexIndex=-1;
+	s->activeScreenTexture=-1;
 	strncpy(s->scenePath,path,sizeof(s->scenePath)-1);
 	const char *content=strstr(path,"/scenes/");
 	if(!content) content=strstr(path,"\\scenes\\");
@@ -2035,6 +2112,7 @@ int load_scene(const char *path, Scene *s){
 	warn_unknown_elements(root,path,s->prefabDocument);
 	s->sceneRoot=root; s->editRoot=root;
 	scene_rebuild_view(s);
+	if(s->assetError){ scene_free(s); return 0; }
 	return 1;
 }
 
@@ -2685,10 +2763,15 @@ void scene_init_textures(Scene *s){
 }
 
 void scene_free_textures(Scene *s){
+	for(int i=0;i<s->nscreenTextures;i++) if(s->screenTextures[i].texture)
+		glDeleteTextures(1,&s->screenTextures[i].texture);
 	materials_free(s->materialTextures);
 	glDeleteTextures(1,&s->whiteTexture);
 }
 #else
 void scene_init_textures(Scene *s){ (void)s; }
-void scene_free_textures(Scene *s){ (void)s; }
+void scene_free_textures(Scene *s){
+	for(int i=0;i<s->nscreenTextures;i++) if(s->screenTextures[i].texture)
+		glDeleteTextures(1,&s->screenTextures[i].texture);
+}
 #endif

@@ -3,6 +3,8 @@
 #include <unistd.h>
 
 app_state_t *g_app;
+static const char *window_test_temp_dir(void);
+static int window_test_load(Scene *s,const char *xml);
 
 static void test_tool_commands_share_document_state(void) {
   TEST("scener tools: command IDs update the document source of truth");
@@ -38,6 +40,100 @@ static void test_prefab_files_open_as_documents(void) {
   ASSERT_TRUE(scene_selected_prefab_path(&scene, path, sizeof(path)));
   ASSERT_TRUE(strstr(path, "prefabs/items/book.blk") != NULL);
   scene_free(&scene);
+  PASS();
+}
+
+static void test_device_screen_geometry_and_assets(void) {
+  TEST("promo devices: rounded solids are sealed and screen images resolve through prefabs");
+  Mesh mesh = gen_rounded_box(2.0f, 4.0f, 0.1f, 0.3f, 8);
+  mesh_build_edges(&mesh);
+  ASSERT_TRUE(mesh.nverts > 0 && mesh.ntris > 0);
+  for (int i = 0; i < mesh.nedges; i++) ASSERT_TRUE(mesh.edges[i].t1 >= 0);
+  ASSERT_TRUE(fabsf(mesh_signed_volume(&mesh) - (8.0f - (4.0f - M_PIf) * 0.09f) * 0.1f) < 0.001f);
+  for (int i = 0; i < mesh.nverts; i++) {
+    ASSERT_TRUE(mesh.verts[i].u >= 0 && mesh.verts[i].u <= 1);
+    ASSERT_TRUE(mesh.verts[i].v >= 0 && mesh.verts[i].v <= 1);
+  }
+  mesh_free(&mesh);
+  mesh = gen_rounded_box(2.0f, 4.0f, 0.4f, 0.3f, 8);
+  float sharp_volume = mesh_signed_volume(&mesh);
+  mesh_free(&mesh);
+  mesh = gen_rounded_box_beveled(2.0f, 4.0f, 0.4f, 0.3f, 0.08f, 8, 4);
+  ASSERT_TRUE(mesh.nverts > 0 && mesh.ntris > 0);
+  mesh_build_edges(&mesh);
+  for (int i = 0; i < mesh.nedges; i++) ASSERT_TRUE(mesh.edges[i].t1 >= 0);
+  ASSERT_TRUE(mesh_signed_volume(&mesh) > 0);
+  ASSERT_TRUE(mesh_signed_volume(&mesh) < sharp_volume);
+  int diagonal_normals = 0;
+  for (int i = 0; i < mesh.nverts; i++) {
+    vec3 p = mesh.verts[i].pos, n = mesh.verts[i].nrm;
+    ASSERT_TRUE(fabsf(p.x) <= 1.0001f && fabsf(p.y) <= 2.0001f && fabsf(p.z) <= 0.2001f);
+    if (fabsf(n.z) > 0.1f && fabsf(n.z) < 0.9f) diagonal_normals++;
+  }
+  ASSERT_TRUE(diagonal_normals > 0);
+  for (int i = 0; i < mesh.ntris; i++) {
+    Tri t = mesh.tris[i];
+    vec3 a = mesh.verts[t.a].pos, b = mesh.verts[t.b].pos, c = mesh.verts[t.c].pos;
+    vec3 normal = vcross(vsub(b, a), vsub(c, a));
+    ASSERT_TRUE(vlen(normal) > 1e-7f);
+    ASSERT_TRUE(vdot(normal, mesh.verts[t.a].nrm) > -1e-6f);
+  }
+  mesh_free(&mesh);
+  mesh = gen_rounded_box_beveled(2.0f, 4.0f, 0.4f, 0.3f, 0.3f, 8, 4);
+  ASSERT_EQUAL(mesh.ntris, 0);
+  for (int beveled = 0; beveled <= 1; beveled++) {
+    mesh = gen_rounded_box_beveled(2.0f, 4.0f, 0.4f, 1.0f, beveled ? 0.08f : 0, 8, 4);
+    mesh_build_edges(&mesh);
+    ASSERT_TRUE(mesh_signed_volume(&mesh) > 0);
+    for (int i = 0; i < mesh.nedges; i++) ASSERT_TRUE(mesh.edges[i].t1 >= 0);
+    for (int i = 0; i < mesh.ntris; i++) {
+      Tri t = mesh.tris[i];
+      vec3 a = mesh.verts[t.a].pos, b = mesh.verts[t.b].pos, c = mesh.verts[t.c].pos;
+      ASSERT_TRUE(vlen(vcross(vsub(b, a), vsub(c, a))) > 1e-7f);
+    }
+    mesh_free(&mesh);
+  }
+  const float device_sizes[][5] = {
+    {0.076f, 0.162f, 0.008f, 0.0128f, 0.0016f},
+    {0.0733f, 0.1593f, 0.0011f, 0.0114f, 0.00025f},
+  };
+  for (int i = 0; i < 2; i++) {
+    const float *d = device_sizes[i];
+    mesh = gen_rounded_box_beveled(d[0], d[1], d[2], d[3], d[4], 8, 4);
+    mesh_build_edges(&mesh);
+    ASSERT_EQUAL(mesh.nedges * 2, mesh.ntris * 3);
+    for (int edge = 0; edge < mesh.nedges; edge++) {
+      ASSERT_TRUE(mesh.edges[edge].t1 >= 0);
+      ASSERT_TRUE(mesh.edges[edge].t0 != mesh.edges[edge].t1);
+    }
+    mesh_free(&mesh);
+  }
+  Scene scene = {0};
+  ASSERT_TRUE(load_scene("apps/scener/scenes/device_promo.blks", &scene));
+  ASSERT_EQUAL(scene.ncameras, 1);
+  ASSERT_EQUAL(scene.nscreenTextures, 2);
+  int screens = 0;
+  for (int i = 0; i < scene.nobjs; i++) if (scene.objs[i].screenTexture >= 0) screens++;
+  ASSERT_EQUAL(screens, 2);
+  scene_free(&scene);
+  PASS();
+}
+
+static void test_created_screen_persists(void) {
+  TEST("promo screen: Create inserts editable XML that survives save and reload");
+  Scene scene = {0};
+  ASSERT_TRUE(window_test_load(&scene, "<scene/>"));
+  ASSERT_TRUE(scene_create_promo_shape(&scene, "screen", v3(0, 0, 0)));
+  ASSERT_TRUE(!strcmp(scene_node_tag(scene.selectedNode), "screen"));
+  ASSERT_TRUE(!strcmp(scene_node_attr(scene.selectedNode, "size"), "7.03 15.54 0.03"));
+  snprintf(scene.scenePath, sizeof(scene.scenePath), "%s/scener-screen-%d.blks", window_test_temp_dir(), getpid());
+  ASSERT_TRUE(scene_save_all(&scene));
+  Scene restored = {0};
+  ASSERT_TRUE(load_scene(scene.scenePath, &restored));
+  ASSERT_TRUE(restored.nobjs > 0);
+  ASSERT_TRUE(!strcmp(scene_node_tag(restored.objs[restored.nobjs - 1].editNode), "screen"));
+  unlink(scene.scenePath);
+  scene_free(&scene); scene_free(&restored);
   PASS();
 }
 
@@ -684,6 +780,8 @@ int main(void) {
   TEST_START("scener input and command state");
   test_tool_commands_share_document_state();
   test_prefab_files_open_as_documents();
+  test_device_screen_geometry_and_assets();
+  test_created_screen_persists();
   test_instance_rig_ik();
   test_rig_mirror_and_pose_reuse();
   test_nested_arch_emits_wall_parts_once();

@@ -360,6 +360,7 @@ void gem_shutdown(void) {
   while (g_app->docs)
     close_document(g_app->docs);
 
+  render_deinit();
   shader_deinit();
 
   free(g_app);

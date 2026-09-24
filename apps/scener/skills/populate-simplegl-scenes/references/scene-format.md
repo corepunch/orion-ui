@@ -30,7 +30,7 @@ The complete supported element inventory is:
 |-----------|----------|
 | `<scene>` attributes | `ambient`, `background`, `up`, `convention` |
 | Scene configuration | `<camera>`, `<pose>`, `<material>`, `<sun>`, `<chardef>`, `<shape>` |
-| Transformable content | `<box>`, `<sphere>`, `<cylinder>`, `<capsule>`, `<arch>`, `<prism>`, `<cone>`, `<pyramid>`, `<torus>`, `<lathe>`, `<loft>`, `<wall>`, `<window>`, `<door>`, `<group>`, `<prefab>`, `<light>`, `<line>`, `<dummy>` |
+| Transformable content | `<box>`, `<rounded-box>`, `<screen>`, `<sphere>`, `<cylinder>`, `<capsule>`, `<arch>`, `<prism>`, `<cone>`, `<pyramid>`, `<torus>`, `<lathe>`, `<loft>`, `<wall>`, `<window>`, `<door>`, `<group>`, `<prefab>`, `<light>`, `<line>`, `<dummy>` |
 | Wall cutters | `<bool-negative-box>`, `<bool-negative-arch>`, `<bool-negative-cylinder>` |
 | Mesh modifiers | `<taper>`, `<twist>`, `<bend>`, `<stretch>`, `<skew>`, `<array>`, `<extrude>`, `<mirror>`, `<noise>`, `<shell>` |
 | Context-only children | `<camera><transform>`, `<camera><use-pose>`, `<pose><joint>`, `<pose><ik>`, `<prefab><joint>`, `<prefab><ik>`, `<shape><v>`, `<prefab><attach>` |
@@ -420,7 +420,7 @@ Example: moon through a back-wall window at 45° down and 30° horizontal offset
 
 ## Shape objects
 
-All shapes share common attributes plus shape-specific ones. Shapes may contain modifier child elements. The supported shapes are: `box`, `sphere`, `cylinder`, `arch`, `prism`, `cone`/`pyramid`, `torus`, `lathe`, `loft`, `wall`.
+All shapes share common attributes plus shape-specific ones. Shapes may contain modifier child elements. The supported shapes include `box`, `rounded-box`, `screen`, `sphere`, `cylinder`, `arch`, `prism`, `cone`/`pyramid`, `torus`, `lathe`, `loft`, and `wall`.
 
 ### Common attributes
 
@@ -467,6 +467,40 @@ Axis-aligned box centered at origin.
 |-----------|------|---------|-------------|
 | `size`    | vec3 | 1 1 1   | Width, height, depth |
 | `inset`   | float/vec2 | 0 | Hollow the box into a rectangular tube. One value uses the same inset on X and Y; two values are `insetX insetY`. The opening passes fully through local Z |
+
+### `<rounded-box>`
+
+A sealed box whose XY outline has rounded corners. Local +Z is its front.
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `size` | vec3 | 1 1 1 | Width, height, depth in cm |
+| `radius` | float | 0 | XY corner radius in cm, clamped to half the smaller side |
+| `segments` | int | 8 | Segments per corner, clamped to 2–32 |
+| `bevel` | float | 0 | Rounded front and back edge radius in cm; must be smaller than the corner radius and half the depth |
+| `bevelSegments` | int | 4 | Segments per bevel arc, clamped to 1–8 |
+
+### `<screen>`
+
+A thin rounded solid with an image mapped once across its front (+Z) face.
+The image is shown at its original sRGB colors by default (`unlit="1"`),
+clipped to the rounded outline, and does not cast a shadow by default. Its
+aspect ratio should match `size.x / size.y` to avoid stretching. The image
+alpha channel is blended over geometry behind the screen.
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `size` | vec3 | 1 1 0.04 | Width, height, depth in cm |
+| `radius` | float | 0 | XY corner radius in cm |
+| `segments` | int | 8 | Segments per corner |
+| `image` | path | (none) | PNG, JPEG, or BMP file; relative paths start at the scene asset root, absolute paths are allowed |
+
+The scene asset root is the directory containing `scenes/` and `prefabs/` for
+repository scenes, or the scene file's directory for other scenes. A missing
+image is a load error. For a reusable prefab, give `<screen>` a default
+`image`, then replace it per instance with `screenImage` on the containing
+`<prefab>` tag. The override applies to descendant screens and is restored
+after that instance, so copies can display different app screenshots.
 
 ### `<sphere>`
 
@@ -1240,6 +1274,7 @@ inheritance are not currently implemented; define those on child shapes.
 |-----------|--------|---------|-------------|
 | `source`  | string | (required) | Prefab file name, loads from `prefabs/<source>.blk` |
 | `name`    | string | (none)     | Instance name for `attach` references — only needed when something attaches to this instance |
+| `screenImage` | path | (none) | Override descendant `<screen image="...">` for this instance |
 
 Prefab `scale` applies to its complete local transform, including named attach
 points. A prefab-level `color` selectively replaces the diffuse color of

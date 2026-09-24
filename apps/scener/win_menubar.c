@@ -75,6 +75,14 @@ static bool is_create_primitive(uint16_t id) {
 
 bool scener_create_primitive(scene_doc_t *doc, uint16_t id, vec3 ground_pos) {
   if (!doc || !is_create_primitive(id)) return false;
+  if (id == ID_CREATE_ROUNDED_BOX || id == ID_CREATE_SCREEN) {
+    if (!scene_create_promo_shape(&doc->scene, id == ID_CREATE_SCREEN ? "screen" : "rounded-box", ground_pos)) return false;
+    doc->modified = true;
+    doc_update_title(doc);
+    property_browser_refresh();
+    if (doc->viewport_win) invalidate_window(doc->viewport_win);
+    return true;
+  }
   if (id >= ID_CREATE_WINDOW_ROUND && id <= ID_CREATE_DOOR_GOTHIC) {
     bool door = id >= ID_CREATE_DOOR_RECTANGULAR;
     const char *preset = door
@@ -230,6 +238,8 @@ void handle_menu_command(uint16_t id) {
       break;
 
     case ID_CREATE_BOX:
+    case ID_CREATE_ROUNDED_BOX:
+    case ID_CREATE_SCREEN:
     case ID_CREATE_SPHERE:
     case ID_CREATE_CYLINDER:
     case ID_CREATE_CONE:

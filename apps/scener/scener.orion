@@ -61,6 +61,8 @@
 
       <menu name="create" label="Create">
         <item name="box" label="Box" />
+        <item name="rounded_box" label="Rounded Box" />
+        <item name="screen" label="Screen" />
         <item name="sphere" label="Sphere" />
         <item name="cylinder" label="Cylinder" />
         <item name="cone" label="Cone" />

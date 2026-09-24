@@ -6,13 +6,20 @@
 #define WINDOW_MAX_SEGMENTS 128
 #define WINDOW_POINTED_RISE_SQUARED 3.0f
 #define WINDOW_POINTED_ANGLE_DIVISOR 3.0f
+#define ROUNDED_BOX_CORNER_COUNT 4
+#define ROUNDED_BOX_MAX_CORNER_SEGMENTS 32
+#define ROUNDED_BOX_MAX_BEVEL_SEGMENTS 8
+#define ROUNDED_BOX_POINT_EPSILON 1e-6f
+#define MESH_EDGE_WELD_MAX 1e-4f
+#define MESH_EDGE_WELD_MIN_LENGTH 1e-8f
+#define MESH_EDGE_WELD_FRACTION 0.25f
 
 void mesh_free(Mesh *m){
     free(m->verts); free(m->tris); free(m->edges); free(m->triN);
     memset(m,0,sizeof(*m));
 }
 int mesh_add_vert(Mesh *m, vec3 p, vec3 n){
-    Vertex v={p,n}; DA_PUSH(m->verts,m->nverts,m->cverts,v); return m->nverts-1;
+    Vertex v={0}; v.pos=p; v.nrm=n; DA_PUSH(m->verts,m->nverts,m->cverts,v); return m->nverts-1;
 }
 void mesh_add_tri(Mesh *m,int a,int b,int c){
     Tri t={a,b,c}; DA_PUSH(m->tris,m->ntris,m->ctris,t);
@@ -32,11 +39,21 @@ void mesh_compute_face_normals(Mesh *m){
     }
 }
 void mesh_build_edges(Mesh *m){
+    float shortest=INFINITY;
+    for(int i=0;i<m->ntris;i++){
+        Tri t=m->tris[i];
+        int ids[3]={t.a,t.b,t.c};
+        for(int e=0;e<3;e++){
+            float length=vlen(vsub(m->verts[ids[e]].pos,m->verts[ids[(e+1)%3]].pos));
+            if(length>MESH_EDGE_WELD_MIN_LENGTH && length<shortest) shortest=length;
+        }
+    }
+    float threshold=fminf(MESH_EDGE_WELD_MAX,shortest*MESH_EDGE_WELD_FRACTION);
     int *weld = malloc(sizeof(int)*(size_t)m->nverts);
     for(int i=0;i<m->nverts;i++){
         weld[i]=i;
         for(int j=0;j<i;j++){
-            if(vlen(vsub(m->verts[i].pos,m->verts[j].pos)) < 1e-4f){ weld[i]=weld[j]; break; }
+            if(vlen(vsub(m->verts[i].pos,m->verts[j].pos)) < threshold){ weld[i]=weld[j]; break; }
         }
     }
     free(m->edges); m->edges=NULL; m->nedges=m->cedges=0;
@@ -108,7 +125,10 @@ static vec3* mirror_profile_y(vec3 *pts,int n){
 
 static void mesh_append(Mesh *dst, Mesh src){
 	int base=dst->nverts;
-	for(int i=0;i<src.nverts;i++) mesh_add_vert(dst,src.verts[i].pos,src.verts[i].nrm);
+	for(int i=0;i<src.nverts;i++){
+		int v=mesh_add_vert(dst,src.verts[i].pos,src.verts[i].nrm);
+		dst->verts[v].u=src.verts[i].u; dst->verts[v].v=src.verts[i].v;
+	}
 	for(int i=0;i<src.ntris;i++) mesh_add_tri(dst,src.tris[i].a+base,src.tris[i].b+base,src.tris[i].c+base);
 	mesh_free(&src);
 }
@@ -124,6 +144,103 @@ Mesh gen_box(float sx,float sy,float sz){
 	vec3 p[4]={v3(-x,-y,0),v3(x,-y,0),v3(x,y,0),v3(-x,y,0)};
 	extrude_polygon(&m,p,NULL,4,sz,1,1,0,0);
 	return m;
+}
+
+typedef struct { vec3 center,dir; } rounded_box_point_t;
+
+static int rounded_box_outline(float sx,float sy,float radius,int segments,rounded_box_point_t *outline){
+	int count=0;
+	for(int corner=0;corner<ROUNDED_BOX_CORNER_COUNT;corner++){
+		vec3 center=v3((corner<2?1.0f:-1.0f)*(sx*0.5f-radius),
+			(corner==0||corner==ROUNDED_BOX_CORNER_COUNT-1?-1.0f:1.0f)*(sy*0.5f-radius),0);
+		float start=((float)corner-1.0f)*M_PIf*0.5f;
+		for(int step=0;step<=segments;step++){
+			float angle=start+(float)step/(float)segments*M_PIf*0.5f;
+			vec3 dir=v3(cosf(angle),sinf(angle),0),point=vadd(center,vscale(dir,radius));
+			if(count){
+				rounded_box_point_t prev=outline[count-1];
+				if(vlen(vsub(point,vadd(prev.center,vscale(prev.dir,radius))))<=ROUNDED_BOX_POINT_EPSILON) continue;
+			}
+			outline[count++]=(rounded_box_point_t){center,dir};
+		}
+	}
+	if(count>1){
+		vec3 first=vadd(outline[0].center,vscale(outline[0].dir,radius));
+		vec3 last=vadd(outline[count-1].center,vscale(outline[count-1].dir,radius));
+		if(vlen(vsub(first,last))<=ROUNDED_BOX_POINT_EPSILON) count--;
+	}
+	return count;
+}
+
+Mesh gen_rounded_box(float sx,float sy,float sz,float radius,int segments){
+	if(!isfinite(sx)||!isfinite(sy)||!isfinite(sz)||!isfinite(radius)||sx<=0||sy<=0||sz<=0) return (Mesh){0};
+	if(radius<=0) return gen_box(sx,sy,sz);
+	float limit=fminf(sx,sy)*0.5f;
+	if(radius>limit) radius=limit;
+	if(segments<2) segments=2;
+	if(segments>ROUNDED_BOX_MAX_CORNER_SEGMENTS) segments=ROUNDED_BOX_MAX_CORNER_SEGMENTS;
+	rounded_box_point_t outline[ROUNDED_BOX_CORNER_COUNT*(ROUNDED_BOX_MAX_CORNER_SEGMENTS+1)];
+	int count=rounded_box_outline(sx,sy,radius,segments,outline);
+	Shape2D profile={0}; profile.closed=1;
+	for(int i=0;i<count;i++){
+		vec3 point=vadd(outline[i].center,vscale(outline[i].dir,radius));
+		DA_PUSH(profile.pts,profile.npts,profile.cpts,point);
+	}
+	Mesh mesh=gen_profile_extrusion(&profile,sz);
+	shape2d_free(&profile);
+	for(int i=0;i<mesh.nverts;i++){
+		mesh.verts[i].u=mesh.verts[i].pos.x/sx+0.5f;
+		mesh.verts[i].v=0.5f-mesh.verts[i].pos.y/sy;
+	}
+	return mesh;
+}
+
+Mesh gen_rounded_box_beveled(float sx,float sy,float sz,float radius,float bevel,int segments,int bevel_segments){
+	if(!isfinite(bevel)||bevel<0) return (Mesh){0};
+	if(bevel==0) return gen_rounded_box(sx,sy,sz,radius,segments);
+	if(!isfinite(sx)||!isfinite(sy)||!isfinite(sz)||!isfinite(radius)||sx<=0||sy<=0||sz<=0) return (Mesh){0};
+	radius=fminf(radius,fminf(sx,sy)*0.5f);
+	if(bevel>=radius||bevel>=sz*0.5f) return (Mesh){0};
+	if(segments<2) segments=2;
+	if(segments>ROUNDED_BOX_MAX_CORNER_SEGMENTS) segments=ROUNDED_BOX_MAX_CORNER_SEGMENTS;
+	if(bevel_segments<1) bevel_segments=1;
+	if(bevel_segments>ROUNDED_BOX_MAX_BEVEL_SEGMENTS) bevel_segments=ROUNDED_BOX_MAX_BEVEL_SEGMENTS;
+	Mesh mesh={0};
+	rounded_box_point_t outline[ROUNDED_BOX_CORNER_COUNT*(ROUNDED_BOX_MAX_CORNER_SEGMENTS+1)];
+	int profile_count=rounded_box_outline(sx,sy,radius,segments,outline);
+	int ring_count=2*(bevel_segments+1);
+	for(int ring=0;ring<ring_count;ring++){
+		int front=ring>bevel_segments;
+		int step=front?ring-bevel_segments-1:ring;
+		float angle=(float)step/(float)bevel_segments*M_PIf*0.5f;
+		float inset=front?bevel*(1.0f-cosf(angle)):bevel*(1.0f-sinf(angle));
+		float z=front?sz*0.5f-bevel+bevel*sinf(angle):-sz*0.5f+bevel*(1.0f-cosf(angle));
+		float radial=front?cosf(angle):sinf(angle),axial=front?sinf(angle):-cosf(angle);
+		for(int point=0;point<profile_count;point++){
+			rounded_box_point_t base=outline[point];
+			vec3 pos=vadd(base.center,vscale(base.dir,radius-inset)); pos.z=z;
+			int index=mesh_add_vert(&mesh,pos,v3(base.dir.x*radial,base.dir.y*radial,axial));
+			mesh.verts[index].u=pos.x/sx+0.5f;
+			mesh.verts[index].v=0.5f-pos.y/sy;
+		}
+	}
+	for(int ring=0;ring<ring_count-1;ring++) for(int point=0;point<profile_count;point++){
+		int next=(point+1)%profile_count;
+		int a=ring*profile_count+point,b=ring*profile_count+next;
+		int c=(ring+1)*profile_count+next,d=(ring+1)*profile_count+point;
+		mesh_add_tri(&mesh,a,b,c); mesh_add_tri(&mesh,a,c,d);
+	}
+	int back=mesh_add_vert(&mesh,v3(0,0,-sz*0.5f),v3(0,0,-1));
+	int front=mesh_add_vert(&mesh,v3(0,0,sz*0.5f),v3(0,0,1));
+	mesh.verts[back].u=mesh.verts[front].u=0.5f;
+	mesh.verts[back].v=mesh.verts[front].v=0.5f;
+	int front_start=(ring_count-1)*profile_count;
+	for(int point=0;point<profile_count;point++){
+		int next=(point+1)%profile_count;
+		mesh_add_tri(&mesh,back,next,point);
+		mesh_add_tri(&mesh,front,front_start+point,front_start+next);
+	}
+	return mesh;
 }
 
 Mesh gen_box_inset(float sx,float sy,float sz,float insetX,float insetY){
@@ -870,7 +987,8 @@ void mesh_apply_array(Mesh *m, int count, vec3 off, vec3 rot){
 		for(int v=0;v<ov;v++){
 			vec3 p=mat4_xform_point(step, m->verts[v].pos);
 			vec3 n=mat4_xform_dir(mat4_rot_xyz(v3(rot.x*c,rot.y*c,rot.z*c)), m->verts[v].nrm);
-			mesh_add_vert(m,p,n);
+			int copy=mesh_add_vert(m,p,n);
+			m->verts[copy].u=m->verts[v].u; m->verts[copy].v=m->verts[v].v;
 		}
 		for(int t=0;t<ot;t++)
 			mesh_add_tri(m,m->tris[t].a+c*ov,m->tris[t].b+c*ov,m->tris[t].c+c*ov);

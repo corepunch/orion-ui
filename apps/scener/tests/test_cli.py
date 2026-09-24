@@ -68,6 +68,16 @@ def png_rows(path):
     return rows, channels
 
 
+def write_solid_png(path, rgba):
+    def chunk(kind, payload):
+        return struct.pack('>I', len(payload)) + kind + payload + struct.pack('>I', zlib.crc32(kind + payload))
+    data = b'\x89PNG\r\n\x1a\n'
+    data += chunk(b'IHDR', struct.pack('>IIBBBBB', 1, 1, 8, 6, 0, 0, 0))
+    data += chunk(b'IDAT', zlib.compress(b'\0' + bytes(rgba)))
+    data += chunk(b'IEND', b'')
+    path.write_bytes(data)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('scener', type=Path)
@@ -118,6 +128,26 @@ def main():
         assert all(value > 0 for value in dimensions(work / 'layout/layout.jpg'))
         run(scene, '--screenshot', 'legacy.png', '--cam', 'front', '--size', '160x120', '-wireframe')
         assert dimensions(work / 'legacy.png') == (160, 120)
+
+        (work / 'prefabs/devices').mkdir(parents=True)
+        (work / 'prefabs/devices/swatch.blk').write_text('<prefab><screen size="100 100 1" image="red.png" color="1 1 1"/></prefab>')
+        write_solid_png(work / 'red.png', (255, 0, 0, 255))
+        write_solid_png(work / 'blue.png', (0, 0, 255, 255))
+        textured = work / 'textured.blks'
+        textured.write_text('''<scene background="black">
+<camera name="front" pos="0 0 300" look="0 0 0" fov="60"/>
+<prefab source="devices/swatch" pos="-80 0 0"/>
+<prefab source="devices/swatch" pos="80 0 0" screenImage="blue.png"/>
+</scene>''')
+        run('--render', textured, '--camera', 'front', '--size', '256x128', '--format', 'png', '--output-dir', 'textures', '-no-shadows')
+        pixels, channels = png_rows(work / 'textures/front.png')
+        left = pixels[64][98 * channels:98 * channels + 3]
+        right = pixels[64][158 * channels:158 * channels + 3]
+        assert left[0] > 180 and left[1] < 50 and left[2] < 50, f'left screen lost red image: {left}'
+        assert right[2] > 180 and right[0] < 50 and right[1] < 50, f'instance screenImage override failed: {right}'
+        missing = work / 'missing.blks'
+        missing.write_text('<scene><screen image="absent.png"/></scene>')
+        assert 'cannot load screen image' in run('--list-cameras', missing, success=False).stderr
         print('PASS: CLI errors, cameras, JPEG/PNG encoding, output dimensions, batch, selection, layout, legacy screenshot')
 
 

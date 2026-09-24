@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scene ambient="0.48 0.52 0.60" background="0.055 0.075 0.12">
+  <camera name="Front" comment="Straight-on screen capture" pos="0 0 43" look="0 0 0" fov="40"/>
+  <camera name="ThreeQuarter" comment="Frame and display" pos="11 4 39" look="0 0 0" fov="43"/>
+  <camera name="Close" comment="Crop into the display" pos="2 3 29" look="0 1 0" fov="34"/>
+
+  <light pos="-18 23 26" color="1 0.95 0.88" intensity="2.3" radius="55" castShadows="0"/>
+  <light pos="18 -12 12" color="0.58 0.73 1" intensity="1.2" radius="45" castShadows="0"/>
+
+  <prefab source="devices/ipad" name="Tablet" screenImage="share/screens/tablet-demo.png"/>
+</scene>

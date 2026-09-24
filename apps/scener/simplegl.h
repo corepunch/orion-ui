@@ -47,7 +47,7 @@ mat4 mat4_ortho(float left,float right,float bottom,float top,float znear,float 
 mat4 mat4_lookat(vec3 eye,vec3 center,vec3 up);
 int ray_intersect_aabb(vec3 origin,vec3 dir,vec3 bbMin,vec3 bbMax,float *tOut);
 
-typedef struct { vec3 pos,nrm; } Vertex;
+typedef struct { vec3 pos,nrm; float u,v; } Vertex;
 typedef struct { int a,b,c; } Tri;
 typedef struct { vec3 p0,p1; int t0,t1; int v0,v1; } Edge;
 
@@ -102,6 +102,8 @@ void mesh_apply_mirror(Mesh *m,char axis,float weldThreshold);
 void mesh_apply_noise(Mesh *m,float strength,int seed);
 void mesh_apply_shell(Mesh *m,float amount);
 Mesh gen_box(float sx,float sy,float sz);
+Mesh gen_rounded_box(float sx,float sy,float sz,float radius,int segments);
+Mesh gen_rounded_box_beveled(float sx,float sy,float sz,float radius,float bevel,int segments,int bevel_segments);
 Mesh gen_box_inset(float sx,float sy,float sz,float insetX,float insetY);
 Mesh gen_cylinder_like(int sides,float rBot,float rTop,float height,int smooth);
 Mesh gen_cylinder(float r,float h,int sides);
@@ -126,7 +128,8 @@ typedef struct {
 typedef struct { vec3 pos,color,dir; float intensity,radius; int castsShadow,isDirectional; } Light;
 typedef struct { float x,y,z,w; } ShadowVertex;
 typedef struct { ShadowVertex *verts; int nverts,cverts; } ShadowVolume;
-typedef struct { Mesh mesh; vec3 color; float shininess; int castsShadow,renderable,unlit,sanityIgnore,sanityFloor,sanityCheck; void *editNode; mat4 editMatrix; ShadowVolume *shadowParts; int nshadowParts; int texIndex; } SceneObj;
+typedef struct { Mesh mesh; vec3 color; float shininess; int castsShadow,renderable,unlit,sanityIgnore,sanityFloor,sanityCheck; void *editNode; mat4 editMatrix; ShadowVolume *shadowParts; int nshadowParts; int texIndex,screenTexture; } SceneObj;
+typedef struct { char path[1024]; unsigned char *pixels; int width,height; unsigned int texture; } ScreenTexture;
 typedef struct { char name[32]; vec3 pos; } AttachPoint;
 typedef struct { char ref[32]; char path[256]; void *root; AttachPoint *attaches; int nattaches, cattaches; } PrefabDef;
 typedef struct { char name[32]; char ref[32]; mat4 transform, rotMatrix; } InstanceDef;
@@ -190,6 +193,10 @@ typedef struct {
 	void *sceneRoot, *editRoot, *selectedNode, *activeEditNode;
 	mat4 activeEditMatrix;
 	int activeTexIndex;
+	const char *activeScreenImage;
+	int activeScreenTexture;
+	ScreenTexture *screenTextures; int nscreenTextures,cscreenTextures;
+	int assetError;
 	unsigned int materialTextures[8];
 	unsigned int whiteTexture;
 	void *editStack[32]; int editDepth;
@@ -225,6 +232,7 @@ int scene_selected_prefab_path(Scene *s,char *path,size_t pathSize);
 int scene_save_all(Scene *s);
 int scene_create_window(Scene *s,const char *preset,vec3 ground);
 int scene_create_door(Scene *s,const char *preset,vec3 ground);
+int scene_create_promo_shape(Scene *s,const char *tag,vec3 ground);
 int scene_is_prefab_mode(Scene *s);
 const char *scene_node_tag(const void *node);
 const char *scene_node_attr(const void *node,const char *name);
@@ -269,5 +277,6 @@ void scene_rebuild_node_shadow_volumes(Scene *s,void *editNode);
 #define DBG_FLAT            (1 << 7)
 
 void render_frame(Scene *s,int w,int h,mat4 proj,mat4 view,vec3 camPos,vec3 camLook,int debugFlags);
+void render_deinit(void);
 
 #endif

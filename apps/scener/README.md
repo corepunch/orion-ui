@@ -102,10 +102,13 @@ shininess and leaving unmarked parts unchanged.
 
 Important authoring features still missing are named multi-color material
 slots, per-camera visibility or state variants, animation, object/layer names
-for CLI inspection, orthographic and aspect-safe cameras, textures and alpha,
-and area lights or soft shadows. Prefab-wide `material`, `shininess`,
-`castShadow`, and `renderable` inheritance are also not implemented; child
-shapes continue to own those properties.
+for CLI inspection, orthographic and aspect-safe cameras, general material
+texture mapping beyond screens, and area lights or soft shadows. Prefab-wide
+`material`, `shininess`, `castShadow`, and `renderable` inheritance are also
+not implemented; child shapes continue to own those properties.
+
+Reusable phone and tablet promo models, image-backed screens, and camera scenes
+are documented in [device-promo.md](docs/device-promo.md).
 
 ## Rendering modes
 

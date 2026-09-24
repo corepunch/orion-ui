@@ -37,6 +37,15 @@ static const prop_def_t kBoxProperties[] = {
 	PV("Width", "size", "100 100 100", PROP_X), PV("Height", "size", "100 100 100", PROP_Y), PV("Depth", "size", "100 100 100", PROP_Z),
 	PV("Inset X", "inset", "0 0 0", PROP_X), PV("Inset Y", "inset", "0 0 0", PROP_Y),
 };
+static const prop_def_t kRoundedBoxProperties[] = {
+	PV("Width", "size", "100 100 10", PROP_X), PV("Height", "size", "100 100 10", PROP_Y), PV("Depth", "size", "100 100 10", PROP_Z),
+	P("Corner Radius", "radius", "10"), P("Segments", "segments", "8"),
+	P("Bevel", "bevel", "0"), P("Bevel Segments", "bevelSegments", "4"),
+};
+static const prop_def_t kScreenProperties[] = {
+	PV("Width", "size", "100 100 0.04", PROP_X), PV("Height", "size", "100 100 0.04", PROP_Y), PV("Depth", "size", "100 100 0.04", PROP_Z),
+	P("Corner Radius", "radius", "10"), P("Image", "image", ""),
+};
 static const prop_def_t kSphereProperties[] = { P("Radius", "radius", "50"), P("Rings", "rings", "16"), P("Slices", "slices", "24") };
 static const prop_def_t kCylinderProperties[] = { P("Radius", "radius", "50"), P("Height", "height", "100"), P("Tube", "tube", "0"), P("Sides", "sides", "24") };
 static const prop_def_t kPrismProperties[] = { P("Radius", "radius", "50"), P("Height", "height", "100"), P("Sides", "sides", "6") };
@@ -57,7 +66,7 @@ static const prop_def_t kLightProperties[] = {
 	P("Intensity", "intensity", "1"), P("Attenuation Radius", "radius", "0"), PB("Cast Shadows", "castShadows", "1"),
 	PV("Color R", "color", "1 1 1", PROP_X), PV("Color G", "color", "1 1 1", PROP_Y), PV("Color B", "color", "1 1 1", PROP_Z),
 };
-static const prop_def_t kPrefabProperties[] = { P("Source", "source", ""), P("Attach", "attach", ""), PB("Tint", "tint", "0") };
+static const prop_def_t kPrefabProperties[] = { P("Source", "source", ""), P("Screen Image", "screenImage", ""), P("Attach", "attach", ""), PB("Tint", "tint", "0") };
 static const prop_def_t kLineProperties[] = {
 	PV("Start X", "start", "0 0 0", PROP_X), PV("Start Y", "start", "0 0 0", PROP_Y), PV("Start Z", "start", "0 0 0", PROP_Z),
 	PV("End X", "end", "0 100 0", PROP_X), PV("End Y", "end", "0 100 0", PROP_Y), PV("End Z", "end", "0 100 0", PROP_Z), P("Camera", "camera", ""),
@@ -74,6 +83,8 @@ static const prop_def_t kNegativeCylinderProperties[] = { P("Radius", "radius", 
 static const node_class_t kNodeClasses[] = {
 	{ "window", "Window", kWindowProperties, PROP_COUNT(kWindowProperties), 1, 1 },
 	{ "box", "Box", kBoxProperties, PROP_COUNT(kBoxProperties), 1, 1 }, { "sphere", "Sphere", kSphereProperties, PROP_COUNT(kSphereProperties), 1, 1 },
+	{ "rounded-box", "Rounded Box", kRoundedBoxProperties, PROP_COUNT(kRoundedBoxProperties), 1, 1 },
+	{ "screen", "Screen", kScreenProperties, PROP_COUNT(kScreenProperties), 1, 1 },
 	{ "cylinder", "Cylinder", kCylinderProperties, PROP_COUNT(kCylinderProperties), 1, 1 }, { "prism", "Prism", kPrismProperties, PROP_COUNT(kPrismProperties), 1, 1 },
 	{ "cone", "Cone", kConeProperties, PROP_COUNT(kConeProperties), 1, 1 }, { "pyramid", "Pyramid", kPyramidProperties, PROP_COUNT(kPyramidProperties), 1, 1 },
 	{ "torus", "Torus", kTorusProperties, PROP_COUNT(kTorusProperties), 1, 1 }, { "arch", "Arch", kArchProperties, PROP_COUNT(kArchProperties), 1, 1 },

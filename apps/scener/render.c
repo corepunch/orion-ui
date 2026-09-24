@@ -1,6 +1,7 @@
 #include <orion/user/gl_compat.h>
 #include <math.h>
 #include <stdio.h>
+#include <stddef.h>
 #include <string.h>
 #include "simplegl.h"
 #include "shader.h"
@@ -14,6 +15,9 @@ static GLuint s_tri_vao, s_tri_vbo;
 static GLuint s_shadow_vao, s_shadow_vbo;
 static GLuint s_quad_vao, s_quad_vbo;
 static GLuint s_shadow_prog;
+static GLuint s_image_prog,s_image_vao,s_image_vbo,s_image_ebo;
+static GLint s_image_viewproj_loc,s_image_color_loc,s_image_sampler_loc;
+static vec3 render_srgb_to_linear(vec3 color);
 static GLint s_shadow_proj_loc, s_shadow_view_loc, s_shadow_color_loc;
 GLuint s_line_prog;
 GLint s_line_viewproj_loc;
@@ -44,6 +48,22 @@ static const char *s_shadow_fs =
     "uniform vec4 uColor;\n"
     "out vec4 frag;\n"
     "void main(){ frag=uColor; }\n";
+
+static const char *s_image_vs =
+    "#version 150\n"
+    "in vec3 aPos;\n"
+    "in vec2 aUV;\n"
+    "uniform mat4 uViewProj;\n"
+    "out vec2 vUV;\n"
+    "void main(){ vUV=aUV; gl_Position=uViewProj*vec4(aPos,1.0); }\n";
+
+static const char *s_image_fs =
+    "#version 150\n"
+    "in vec2 vUV;\n"
+    "uniform sampler2D uImage;\n"
+    "uniform vec3 uColor;\n"
+    "out vec4 frag;\n"
+    "void main(){ vec4 pixel=texture(uImage,vUV); frag=vec4(pixel.rgb*uColor,pixel.a); }\n";
 
 static GLuint compile_line_shader(GLenum type, const char *src) {
     GLuint s = glCreateShader(type);
@@ -78,6 +98,81 @@ static GLuint link_shadow_program(GLuint vs, GLuint fs) {
     glGetProgramiv(p, GL_LINK_STATUS, &ok);
     if (!ok) { char log[1024]; glGetProgramInfoLog(p,sizeof(log),NULL,log); fprintf(stderr,"[scener] shader link failed: %s\n",log); glDeleteProgram(p); return 0; }
     return p;
+}
+
+static void ensure_image_prog(void) {
+    if(s_image_prog) return;
+    GLuint vs=compile_line_shader(GL_VERTEX_SHADER,s_image_vs);
+    GLuint fs=compile_line_shader(GL_FRAGMENT_SHADER,s_image_fs);
+    if(vs&&fs){
+        s_image_prog=glCreateProgram();
+        glAttachShader(s_image_prog,vs); glAttachShader(s_image_prog,fs);
+        glBindAttribLocation(s_image_prog,0,"aPos"); glBindAttribLocation(s_image_prog,1,"aUV");
+        glLinkProgram(s_image_prog);
+        GLint ok=0; glGetProgramiv(s_image_prog,GL_LINK_STATUS,&ok);
+        if(!ok){
+            char log[1024]; glGetProgramInfoLog(s_image_prog,sizeof(log),NULL,log);
+            fprintf(stderr,"[scener] image shader link failed: %s\n",log);
+            glDeleteProgram(s_image_prog); s_image_prog=0;
+        } else {
+            s_image_viewproj_loc=glGetUniformLocation(s_image_prog,"uViewProj");
+            s_image_color_loc=glGetUniformLocation(s_image_prog,"uColor");
+            s_image_sampler_loc=glGetUniformLocation(s_image_prog,"uImage");
+            glGenVertexArrays(1,&s_image_vao); glGenBuffers(1,&s_image_vbo); glGenBuffers(1,&s_image_ebo);
+        }
+    }
+    if(vs) glDeleteShader(vs);
+    if(fs) glDeleteShader(fs);
+}
+
+static GLuint screen_texture(ScreenTexture *image) {
+    if(image->texture) return image->texture;
+    if(!image->pixels) return 0;
+    glGenTextures(1,&image->texture);
+    glBindTexture(GL_TEXTURE_2D,image->texture);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+    glPixelStorei(GL_UNPACK_ALIGNMENT,1);
+    glTexImage2D(GL_TEXTURE_2D,0,GL_SRGB8_ALPHA8,image->width,image->height,0,GL_RGBA,GL_UNSIGNED_BYTE,image->pixels);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D,0);
+    return image->texture;
+}
+
+static int draw_screen_image(SceneObj *obj,ScreenTexture *image,mat4 viewProj) {
+    ensure_image_prog();
+    GLuint texture=screen_texture(image);
+    if(!s_image_prog||!texture) return 0;
+    vec3 color=render_srgb_to_linear(obj->color);
+    glUseProgram(s_image_prog);
+    glUniformMatrix4fv(s_image_viewproj_loc,1,GL_FALSE,viewProj.m);
+    glUniform3f(s_image_color_loc,color.x,color.y,color.z);
+    glUniform1i(s_image_sampler_loc,0);
+    glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D,texture);
+    glBindVertexArray(s_image_vao);
+    glBindBuffer(GL_ARRAY_BUFFER,s_image_vbo);
+    glBufferData(GL_ARRAY_BUFFER,(GLsizeiptr)(obj->mesh.nverts*sizeof(Vertex)),obj->mesh.verts,GL_DYNAMIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,s_image_ebo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER,(GLsizeiptr)(obj->mesh.ntris*sizeof(Tri)),obj->mesh.tris,GL_DYNAMIC_DRAW);
+    glEnableVertexAttribArray(0); glEnableVertexAttribArray(1);
+    glVertexAttribPointer(0,3,GL_FLOAT,GL_FALSE,sizeof(Vertex),(void*)offsetof(Vertex,pos));
+    glVertexAttribPointer(1,2,GL_FLOAT,GL_FALSE,sizeof(Vertex),(void*)offsetof(Vertex,u));
+    glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+    glDrawElements(GL_TRIANGLES,obj->mesh.ntris*3,GL_UNSIGNED_INT,(void*)0);
+    glDisable(GL_BLEND);
+    glDisableVertexAttribArray(0); glDisableVertexAttribArray(1);
+    glBindVertexArray(0); glBindTexture(GL_TEXTURE_2D,0); glUseProgram(0);
+    return 1;
+}
+
+void render_deinit(void) {
+    if(s_image_ebo) glDeleteBuffers(1,&s_image_ebo);
+    if(s_image_vbo) glDeleteBuffers(1,&s_image_vbo);
+    if(s_image_vao) glDeleteVertexArrays(1,&s_image_vao);
+    if(s_image_prog) glDeleteProgram(s_image_prog);
+    s_image_ebo=s_image_vbo=s_image_vao=s_image_prog=0;
 }
 
 void ensure_line_prog(void) {
@@ -336,6 +431,10 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
     vec3 ambient = render_srgb_to_linear(s->ambient);
     for (int i = 0; i < s->nobjs; i++) {
         if (!s->objs[i].renderable) continue;
+        if(s->objs[i].screenTexture>=0 && !(flags & DBG_FLAT) &&
+           draw_screen_image(&s->objs[i],&s->screenTextures[s->objs[i].screenTexture],viewProj)){
+            continue;
+        }
         vec3 color = render_srgb_to_linear(s->objs[i].color);
         draw_mesh_flat_vbo(&s->objs[i].mesh, (s->objs[i].unlit || (flags & DBG_FLAT)) ? color : vmul(color, ambient));
     }
