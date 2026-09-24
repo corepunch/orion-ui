@@ -30,6 +30,12 @@
 #define MODERN_SECONDARY_BORDER        WEB(0x4A5C7A)
 #define MODERN_DEFAULT_SECONDARY_BORDER  0xff767676
 
+#if defined(__APPLE__) && TARGET_OS_IOS
+#define MODERN_MENUBAR_HEIGHT 29
+#else
+#define MODERN_MENUBAR_HEIGHT (FONT_SIZE + 12)
+#endif
+
 static bool modern_navy(void) { return get_theme()->style == THEME_NAVY; }
 
 static uint32_t modern_secondary_border(void) {
@@ -358,6 +364,10 @@ static theme_t g_modern_theme = {
   .draw_window_chrome     = modern_draw_window_chrome,
   .draw_statusbar_text    = modern_draw_statusbar_text,
   .scrollbar_width        = SCROLLBAR_WIDTH,
+  .caption_height         = TITLEBAR_HEIGHT,
+  .menubar_height         = MODERN_MENUBAR_HEIGHT,
+  .toolbar_button_size    = TB_SPACING,
+  .toolbar_padding        = TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH,
   // Use the same reserved-space scrollbar geometry as Classic for now.  The
   // overlay/auto-hide treatment is deliberately deferred until it has a
   // complete input and layout contract.

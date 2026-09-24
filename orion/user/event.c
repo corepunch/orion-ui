@@ -12,6 +12,7 @@
 #include "messages.h"
 #include "rect.h"
 #include "toolbar.h"
+#include "theme.h"
 #include <orion/kernel/kernel.h>
 
 // External functions
@@ -611,8 +612,8 @@ void dispatch_message(ui_event_t *msg) {
           int root_lx = sx - root->frame.x;
           int root_ly = sy - root->frame.y;
           int cursor_id = curArrow;
-          if (root_lx >= root->frame.w - SCROLLBAR_WIDTH &&
-              root_ly >= root->frame.h - SCROLLBAR_WIDTH &&
+          if (root_lx >= root->frame.w - get_theme()->scrollbar_width &&
+              root_ly >= root->frame.h - get_theme()->scrollbar_width &&
               !(root->flags & WINDOW_NORESIZE) &&
               root->parent)
           {
@@ -781,8 +782,8 @@ void dispatch_message(ui_event_t *msg) {
         int root_lx = resize_target ? sx - resize_target->frame.x : 0;
         int root_ly = resize_target ? sy - resize_target->frame.y : 0;
         if (resize_target &&
-            root_lx >= resize_target->frame.w - SCROLLBAR_WIDTH &&
-            root_ly >= resize_target->frame.h - SCROLLBAR_WIDTH &&
+            root_lx >= resize_target->frame.w - get_theme()->scrollbar_width &&
+            root_ly >= resize_target->frame.h - get_theme()->scrollbar_width &&
             !(resize_target->flags&WINDOW_NORESIZE) &&
             win != g_ui_runtime.captured)
         {
@@ -817,7 +818,7 @@ void dispatch_message(ui_event_t *msg) {
           if (msg->message == kEventLeftButtonDown &&
               (win->flags & WINDOW_TOOLBAR) && toolbar_host) {
             // Route to toolbar host's mouse handler (owner-draw item dispatch)
-            int title_h = (win->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
+            int title_h = (win->flags & WINDOW_NOTITLE) ? 0 : window_caption_height(win);
             int tb_x = sx - window_screen_x(win);
             int tb_y = sy - (window_screen_y(win) + title_h);
             if (!toolbar_dispatch_embedded_mouse(win, evLeftButtonDown, tb_x, tb_y)) {

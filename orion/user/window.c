@@ -561,7 +561,7 @@ int window_screen_y(window_t const *win) {
   bool toolbar_child = win->parent->toolbar == win;
   for (window_t *child = tb ? tb->children : NULL; child; child = child->next)
     if (child == win) toolbar_child = true;
-  if (toolbar_child) inset = (win->parent->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
+  if (toolbar_child) inset = (win->parent->flags & WINDOW_NOTITLE) ? 0 : window_caption_height(win->parent);
   return window_screen_y(win->parent) + inset + win->frame.y;
 }
 
@@ -663,7 +663,7 @@ bool window_in_drag_area(window_t const *win, int sy) {
   int t = titlebar_height(win);
   if (sy < win->frame.y || sy >= win->frame.y + t) return false;
   if (!(win->flags & WINDOW_TOOLBAR) || (win->flags & WINDOW_NOTITLE)) return true;
-  // Has both title bar and toolbar: only the title bar row (top TITLEBAR_HEIGHT px) is draggable.
+  // Has both title bar and toolbar: only the caption row is draggable.
   return sy < win->frame.y + window_caption_height(win);
 }
 
@@ -721,8 +721,8 @@ irect16_t get_client_rect(window_t const *win) {
   bool h_merged = has_h && (win->flags & WINDOW_STATUSBAR);
   bool overlay = get_theme()->scrollbar_overlay;
   // Overlay scrollbars draw over content — no reserved gutter strips.
-  int hstrip = (has_h && !h_merged && !overlay) ? SCROLLBAR_WIDTH : 0;
-  int vstrip = (has_v && !overlay) ? SCROLLBAR_WIDTH : 0;
+  int hstrip = (has_h && !h_merged && !overlay) ? get_theme()->scrollbar_width : 0;
+  int vstrip = (has_v && !overlay) ? get_theme()->scrollbar_width : 0;
   int cw = win->frame.w - vstrip;
   int ch = win->frame.h - t - s - hstrip;
   if (cw < 0) cw = 0;
@@ -743,17 +743,17 @@ void adjust_window_rect(irect16_t *r, flags_t flags) {
   if (!r) return;
   // Compute non-client heights for the given flags.
   int t = 0;
-  if (!(flags & WINDOW_NOTITLE)) t += (flags & WINDOW_TOOLWINDOW) ? (FONT_SIZE + 5) : TITLEBAR_HEIGHT;
-  if (flags & WINDOW_TOOLBAR)    t += TB_SPACING + 2 * TOOLBAR_PADDING;  // minimum one toolbar row
+  if (!(flags & WINDOW_NOTITLE)) t += (flags & WINDOW_TOOLWINDOW) ? (FONT_SIZE + 5) : get_theme()->caption_height;
+  if (flags & WINDOW_TOOLBAR)    t += theme_toolbar_band_height();
   int s = (flags & WINDOW_STATUSBAR) ? STATUSBAR_HEIGHT : 0;
-  // Horizontal scrollbar: adds SCROLLBAR_WIDTH to the bottom unless it is
+  // Horizontal scrollbar: adds get_theme()->scrollbar_width to the bottom unless it is
   // merged with the status bar (WINDOW_STATUSBAR also set), or the active
   // theme uses overlay scrollbars (no reserved gutter).
   bool hscroll_standalone = (flags & WINDOW_HSCROLL) && !(flags & WINDOW_STATUSBAR);
   bool overlay = get_theme()->scrollbar_overlay;
-  int hstrip = (hscroll_standalone && !overlay) ? SCROLLBAR_WIDTH : 0;
-  // Vertical scrollbar: adds SCROLLBAR_WIDTH to the right (Classic only).
-  int vstrip = ((flags & WINDOW_VSCROLL) && !overlay) ? SCROLLBAR_WIDTH : 0;
+  int hstrip = (hscroll_standalone && !overlay) ? get_theme()->scrollbar_width : 0;
+  // Vertical scrollbar: adds get_theme()->scrollbar_width to the right (Classic only).
+  int vstrip = ((flags & WINDOW_VSCROLL) && !overlay) ? get_theme()->scrollbar_width : 0;
   r->y -= t;
   r->w += vstrip;
   r->h += t + s + hstrip;

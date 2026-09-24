@@ -42,14 +42,14 @@ static inline bool fe_default_auto_layout_enabled(void) {
 }
 
 // Tool palettes.
-#define FE_TOOLBAR_BTN_SIZE TB_SPACING
+#define FE_TOOLBAR_BTN_SIZE (get_theme()->toolbar_button_size)
 #define FE_COMPONENTS_GRID_COLS 3   // default palette fits three items per row
 #define FE_COMPONENTS_BTN_SIZE 56   // large-icon grid cell width/height
 #define FE_COMPONENTS_MIN_ROWS 5    // default palette height shows a little over 4.5 icons
 
 // Palette window dimensions.
 #define PALETTE_WIN_X     4
-#define PALETTE_WIN_W     201
+#define PALETTE_WIN_W     (184 + get_theme()->scrollbar_width)
 
 // Property browser window.  This is intentionally a reportview-backed
 // inspector: close to VB1's simple property sheet, without inline editing yet.
@@ -59,7 +59,7 @@ static inline bool fe_default_auto_layout_enabled(void) {
 
 // Project forms browser.
 #define FORMS_WIN_X       PROPBROWSER_WIN_X
-#define FORMS_WIN_Y       (MENUBAR_HEIGHT + 4)
+#define FORMS_WIN_Y       (get_theme()->menubar_height + 4)
 #define FORMS_WIN_W       PROPBROWSER_WIN_W
 #define FORMS_WIN_H       180
 
@@ -74,7 +74,7 @@ static inline bool fe_default_auto_layout_enabled(void) {
 // Document window initial position
 // frame.y is the window top; place it 8px below the menu bar.
 #define DOC_START_X       (PALETTE_WIN_X + PALETTE_WIN_W + 10)
-#define DOC_START_Y       (MENUBAR_HEIGHT + 8)
+#define DOC_START_Y       (get_theme()->menubar_height + 8)
 
 // ============================================================
 // Menu item IDs

@@ -60,10 +60,13 @@ static bool theme_validate(theme_t *t) {
 #undef REQUIRE
   if (t->scrollbar_width < 0 || (!t->scrollbar_overlay && t->scrollbar_width == 0) ||
       (t->scrollbar_overlay && t->scrollbar_width != 0) || t->control_padding < 0 ||
-      t->press_icon_offset < 0 || t->button_corner_radius < 0 || t->window_corner_radius < 0) {
-    THEME_TRACE("invalid metrics name=%s gutter=%d overlay=%d padding=%d offset=%d radius=%d window_radius=%d",
+      t->press_icon_offset < 0 || t->button_corner_radius < 0 || t->window_corner_radius < 0 ||
+      t->caption_height <= 0 || t->menubar_height <= 0 || t->toolbar_button_size <= 0 ||
+      t->toolbar_padding < 0) {
+    THEME_TRACE("invalid metrics name=%s gutter=%d overlay=%d padding=%d offset=%d radius=%d window_radius=%d caption=%d menu=%d toolbar=%d toolbar_padding=%d",
                 t->name, t->scrollbar_width, t->scrollbar_overlay, t->control_padding,
-                t->press_icon_offset, t->button_corner_radius, t->window_corner_radius);
+                t->press_icon_offset, t->button_corner_radius, t->window_corner_radius,
+                t->caption_height, t->menubar_height, t->toolbar_button_size, t->toolbar_padding);
     return false;
   }
   return true;
@@ -119,9 +122,12 @@ bool set_theme(theme_style_t style) {
     post_message(capturer, evMouseLeave, 0, NULL);
   }
 
-  // Record the old scrollbar gutter width so we know whether layout needs
-  // to be recalculated after the switch.
+  // Track geometry that changes client layout after the switch.
   int old_scrollbar_width = g_active_theme ? g_active_theme->scrollbar_width : 0;
+  int old_caption_height = g_active_theme ? g_active_theme->caption_height : 0;
+  int old_menubar_height = g_active_theme ? g_active_theme->menubar_height : 0;
+  int old_toolbar_size = g_active_theme ? g_active_theme->toolbar_button_size : 0;
+  int old_toolbar_padding = g_active_theme ? g_active_theme->toolbar_padding : 0;
 
   s_switching = true;
   g_active_theme = candidate;
@@ -143,9 +149,12 @@ bool set_theme(theme_style_t style) {
     // If the scrollbar gutter width changed the client area of every window
     // shrinks or grows; post evResize to all top-level windows so layout
     // managers recalculate scroll-channel allocations.
-    if (candidate->scrollbar_width != old_scrollbar_width) {
-      THEME_TRACE("scrollbar_width changed %d->%d, posting evResize to roots",
-                  old_scrollbar_width, candidate->scrollbar_width);
+    if (candidate->scrollbar_width != old_scrollbar_width ||
+        candidate->caption_height != old_caption_height ||
+        candidate->menubar_height != old_menubar_height ||
+        candidate->toolbar_button_size != old_toolbar_size ||
+        candidate->toolbar_padding != old_toolbar_padding) {
+      THEME_TRACE("geometry changed, posting evResize to roots");
       for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
         post_message(w, evResize, 0, NULL);
       }

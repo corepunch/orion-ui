@@ -85,7 +85,7 @@ irect16_t get_opengl_rect(irect16_t r) {
 
 // Get titlebar height
 int window_caption_height(window_t const *win) {
-  return (win && (win->flags & WINDOW_TOOLWINDOW)) ? (FONT_SIZE + 5) : TITLEBAR_HEIGHT;
+  return (win && (win->flags & WINDOW_TOOLWINDOW)) ? (FONT_SIZE + 5) : get_theme()->caption_height;
 }
 
 int titlebar_height(window_t const *win) {

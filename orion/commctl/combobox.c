@@ -41,7 +41,7 @@ static void open_dropdown(window_t *win) {
   }
   if (is_toolbar_child) {
     window_t *parent = win->parent;
-    int parent_title_h = (parent->flags & WINDOW_NOTITLE) ? 0 : TITLEBAR_HEIGHT;
+    int parent_title_h = (parent->flags & WINDOW_NOTITLE) ? 0 : window_caption_height(parent);
     abs_x = window_screen_x(parent) + win->frame.x;
     abs_y = window_screen_y(parent) + parent_title_h + win->frame.y;
   } else {

@@ -20,7 +20,7 @@ int toolbar_item_hit(const toolbar_state_t *tb, int tx, int ty) {
 }
 
 static int toolbar_state_item_height(const toolbar_state_t *tb) {
-  int bsz = (tb && tb->btn_size > 0) ? tb->btn_size : TB_SPACING;
+  int bsz = (tb && tb->btn_size > 0) ? tb->btn_size : get_theme()->toolbar_button_size;
   return bsz + ((tb && (tb->style & TOOLBAR_STYLE_SHOW_LABELS)) ? text_char_height(FONT_SMALLEST) + 2 : 0);
 }
 
@@ -35,7 +35,7 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
     fflush(stderr);
     return;
   }
-  int bsz = (tb->btn_size > 0) ? tb->btn_size : TB_SPACING;
+  int bsz = (tb->btn_size > 0) ? tb->btn_size : get_theme()->toolbar_button_size;
   int item_h = toolbar_state_item_height(tb);
   int padding = toolbar_effective_padding(parent);
   int spacing = (tb->style & TOOLBAR_STYLE_COMPACT) ? TOOLBAR_COMPACT_SPACING : TOOLBAR_SPACING;
@@ -245,7 +245,7 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       const char *icon_name = item->icon ? item->icon : "missing";
       irect16_t icon_rect = local;
       if (tb->style & TOOLBAR_STYLE_SHOW_LABELS)
-        icon_rect.h = (tb->btn_size > 0) ? tb->btn_size : TB_SPACING;
+        icon_rect.h = (tb->btn_size > 0) ? tb->btn_size : get_theme()->toolbar_button_size;
       draw_toolbar_icon_in_rect(tb, icon_name, icon_rect, poff, disabled);
       if ((tb->style & TOOLBAR_STYLE_SHOW_LABELS) && item->text) {
         int tx = (local.w - text_strwidth(FONT_SMALLEST, item->text)) / 2 + poff;
@@ -271,7 +271,7 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       const char *icon_name = item->icon ? item->icon : "missing";
       irect16_t icon_rect = btn_part;
       if (tb->style & TOOLBAR_STYLE_SHOW_LABELS)
-        icon_rect.h = (tb->btn_size > 0) ? tb->btn_size : TB_SPACING;
+        icon_rect.h = (tb->btn_size > 0) ? tb->btn_size : get_theme()->toolbar_button_size;
       draw_toolbar_icon_in_rect(tb, icon_name, icon_rect, btn_poff, disabled);
       if ((tb->style & TOOLBAR_STYLE_SHOW_LABELS) && item->text) {
         int tx = (btn_part.w - text_strwidth(FONT_SMALLEST, item->text)) / 2 + btn_poff;
@@ -461,13 +461,13 @@ toolbar_state_t *toolbar_get_state(window_t *win) {
 
 int toolbar_effective_bsz(window_t const *win) {
   toolbar_state_t *tb = window_toolbar_state((window_t *)win);
-  return (tb && tb->btn_size > 0) ? tb->btn_size : TB_SPACING;
+  return (tb && tb->btn_size > 0) ? tb->btn_size : get_theme()->toolbar_button_size;
 }
 
 int toolbar_effective_padding(window_t const *win) {
   toolbar_state_t *tb = window_toolbar_state((window_t *)win);
   return tb && (tb->style & TOOLBAR_STYLE_COMPACT) ? TOOLBAR_COMPACT_PADDING
-                                                : TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH;
+                                                : get_theme()->toolbar_padding;
 }
 
 int toolbar_effective_item_height(window_t const *win) {
@@ -841,9 +841,9 @@ irect16_t layout_docked_toolbars(window_t *owner, irect16_t area) {
         toolbar_state_t *tb = toolbar_get_state(bar);
         bar->frame.h = area.h;
         compute_toolbar_item_rects(bar, tb);
-        size = toolbar_effective_bsz(bar) + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH);
+        size = toolbar_effective_bsz(bar) + 2 * toolbar_effective_padding(bar);
         for (int i = 0; tb && tb->item_rects && i < tb->item_count; i++)
-          size = MAX(size, tb->item_rects[i].x + tb->item_rects[i].w + TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH);
+          size = MAX(size, tb->item_rects[i].x + tb->item_rects[i].w + toolbar_effective_padding(bar));
       }
       irect16_t band = dock == TOOLBAR_DOCK_TOP ? rect_split_top(area, MIN(size, area.h))
                                                : rect_split_left(area, MIN(size, area.w));

@@ -422,7 +422,7 @@ static inline window_t *set_app_menu(
     window_t *mb = create_window(
         "menubar",
         WINDOW_NOTITLE | WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
-        MAKERECT(0, 0, sw, MENUBAR_HEIGHT),
+        MAKERECT(0, 0, sw, get_theme()->menubar_height),
         NULL, proc, hinstance, NULL);
     send_message(mb, kMenuBarMessageSetMenus, (uint32_t)menu_count, (void *)menus);
     show_window(mb, true);

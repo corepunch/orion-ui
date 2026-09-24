@@ -2,6 +2,7 @@
 
 #include "appchrome.h"
 #include <orion/user/draw.h>
+#include <orion/user/theme.h>
 #include <orion/user/toolbar.h>
 
 typedef struct {
@@ -19,17 +20,18 @@ typedef struct {
 static void app_chrome_resize_children(window_t *win) {
   app_chrome_state_t *st = (app_chrome_state_t *)win->userdata;
   if (!st) return;
-  if (st->menubar) resize_window(st->menubar, win->frame.w, MENUBAR_HEIGHT);
+  int menu_h = get_theme()->menubar_height;
+  if (st->menubar) resize_window(st->menubar, win->frame.w, menu_h);
   window_t *bar = app_chrome_toolbar(win);
   if (bar && st->presentation == TOOLBAR_PRESENTATION_COMPACT) {
     send_message(bar, tbSetStyle, TOOLBAR_STYLE_COMPACT, NULL);
-    send_message(bar, tbSetButtonSize, MENUBAR_HEIGHT - 2 * TOOLBAR_COMPACT_PADDING, NULL);
+    send_message(bar, tbSetButtonSize, menu_h - 2 * TOOLBAR_COMPACT_PADDING, NULL);
     toolbar_state_t *tb = toolbar_get_state(bar);
     int width = 2 * TOOLBAR_COMPACT_PADDING;
     for (int i = 0; tb && tb->item_rects && i < tb->item_count; i++)
       width = MAX(width, tb->item_rects[i].x + tb->item_rects[i].w + TOOLBAR_COMPACT_PADDING);
     int menu_width = st->menubar ? send_message(st->menubar, kMenuBarMessageGetContentWidth, 0, NULL) : win->frame.w;
-    bool compact = width + menu_width + MENUBAR_HEIGHT + 8 <= win->frame.w;
+    bool compact = width + menu_width + menu_h + 8 <= win->frame.w;
     toolbar_dock_t dock = compact ? TOOLBAR_DOCK_MENU : TOOLBAR_DOCK_TOP;
     if (bar->toolbar_dock != dock) {
       fprintf(stderr, "[chrome] toolbar layout win=%u toolbar=%u compact=%d width=%d menu_width=%d\n",
@@ -38,8 +40,8 @@ static void app_chrome_resize_children(window_t *win) {
     }
     bar->toolbar_dock = dock;
     if (compact) {
-      irect16_t row = rect_split_top(get_client_rect(win), MENUBAR_HEIGHT);
-      bar->frame = rect_split_right(rect_trim_right(row, MENUBAR_HEIGHT), width);
+      irect16_t row = rect_split_top(get_client_rect(win), menu_h);
+      bar->frame = rect_split_right(rect_trim_right(row, menu_h), width);
       invalidate_window(bar);
     } else {
       send_message(bar, tbSetStyle, 0, NULL);
@@ -47,7 +49,7 @@ static void app_chrome_resize_children(window_t *win) {
     }
   }
   irect16_t area = layout_docked_toolbars(win,
-      rect_trim_top(get_client_rect(win), st->menubar ? MENUBAR_HEIGHT : 0));
+      rect_trim_top(get_client_rect(win), st->menubar ? menu_h : 0));
   area = rect_offset(area, window_screen_x(win), window_screen_y(win));
   set_application_workspace(win, &area);
 }
@@ -62,7 +64,7 @@ static result_t win_app_chrome(window_t *win, uint32_t msg,
       if (!cfg || !cfg->toolbar_proc) return false;
       if (cfg->menubar_proc)
         st->menubar = create_window("menubar", WINDOW_NOTITLE | WINDOW_NORESIZE,
-                                    MAKERECT(0, 0, win->frame.w, MENUBAR_HEIGHT),
+                                    MAKERECT(0, 0, win->frame.w, get_theme()->menubar_height),
                                     win, cfg->menubar_proc, 0, NULL);
       window_t *toolbar = create_docked_toolbar(win, TOOLBAR_DOCK_TOP, cfg->toolbar_proc);
       app_chrome_resize_children(win);
@@ -92,6 +94,9 @@ static result_t win_app_chrome(window_t *win, uint32_t msg,
     case evPaint:
       return false;
     case evResize:
+      app_chrome_resize_children(win);
+      return true;
+    case evThemeChanged:
       app_chrome_resize_children(win);
       return true;
     case tbButtonClick: {
@@ -127,12 +132,13 @@ window_t *create_app_chrome(const char *title, winproc_t menubar_proc,
                             const menu_def_t *menus, int menu_count,
                             winproc_t toolbar_proc, hinstance_t hinstance) {
   int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
-  int sh = MAX(MENUBAR_HEIGHT + TOOLBAR_BAND_HEIGHT, ui_get_system_metrics(kSystemMetricScreenHeight));
+  int menu_h = get_theme()->menubar_height;
+  int sh = MAX(menu_h + theme_toolbar_band_height(), ui_get_system_metrics(kSystemMetricScreenHeight));
   app_chrome_create_t cfg = {menubar_proc, menus, menu_count, toolbar_proc};
   window_t *win = create_window(title ? title : "Application Chrome",
       WINDOW_NOTITLE | WINDOW_TRANSPARENT | WINDOW_NOFILL | WINDOW_ALWAYSONTOP |
       WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE | WINDOW_NODRAG,
-      MAKERECT(0, menubar_proc ? 0 : MENUBAR_HEIGHT, sw, sh - (menubar_proc ? 0 : MENUBAR_HEIGHT)),
+      MAKERECT(0, menubar_proc ? 0 : menu_h, sw, sh - (menubar_proc ? 0 : menu_h)),
       NULL, win_app_chrome, hinstance, &cfg);
   if (win) show_window(win, true);
   return win;

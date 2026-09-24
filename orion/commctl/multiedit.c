@@ -13,6 +13,7 @@
 #include <orion/user/user.h>
 #include <orion/user/messages.h>
 #include <orion/user/draw.h>
+#include <orion/user/theme.h>
 
 #define ME_BUF_SIZE 2048
 #define ME_PADDING  3
@@ -101,7 +102,7 @@ static void me_ensure_visible(me_state_t *s, int max_w, int vis_h) {
 // the full frame without a title bar; only the vertical scrollbar strip is carved out.
 static void me_text_dims(window_t *win, int *tw, int *th) {
   bool has_v = (win->flags & WINDOW_VSCROLL) && win->vscroll.visible;
-  *tw = win->frame.w - (has_v ? SCROLLBAR_WIDTH : 0) - ME_PADDING * 2;
+  *tw = win->frame.w - (has_v ? get_theme()->scrollbar_width : 0) - ME_PADDING * 2;
   *th = win->frame.h - ME_PADDING * 2;
   if (*tw < 1) *tw = 1;
   if (*th < 1) *th = 1;

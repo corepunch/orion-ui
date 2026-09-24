@@ -4,7 +4,7 @@
 // Usage:
 //   1. Create a top-level window with win_menubar as the proc
 //      (usually WINDOW_NOTITLE | WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON |
-//       WINDOW_NORESIZE, full screen width, height = MENUBAR_HEIGHT).
+//       WINDOW_NORESIZE, full screen width, height = get_theme()->menubar_height).
 //   2. Send kMenuBarMessageSetMenus with your menu_def_t array.
 //   3. Handle evCommand in the same proc (chain with win_menubar)
 //      checking HIWORD(wparam) == kMenuBarNotificationItemClick.
@@ -427,7 +427,7 @@ static void open_popup(window_t *mb_win, menubar_data_t *data, int idx) {
 
   const menu_def_t *menu = &data->menus[idx];
   int px = window_screen_x(mb_win) + data->menu_x[idx] - 1; // TODO: why -1?
-  int py = window_screen_y(mb_win) + MENUBAR_HEIGHT;
+  int py = window_screen_y(mb_win) + mb_win->frame.h;
 
   window_t *popup = create_popup_window(mb_win, NULL, menu->items,
                                         menu->item_count, data->accel,
@@ -493,6 +493,11 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
     case kMenuBarMessageGetContentWidth:
       if (!data || !data->count) return 4;
       return data->menu_x[data->count - 1] + strwidth(data->menus[data->count - 1].label) + MENU_LABEL_PAD;
+
+    case evThemeChanged:
+      if (!win->parent && win->frame.h != get_theme()->menubar_height)
+        resize_window(win, win->frame.w, get_theme()->menubar_height);
+      return true;
 
     case evPaint: {
       theme_draw(THEME_PART_MENU_BAR, R(0, 0, win->frame.w, win->frame.h), CTRL_NORMAL);

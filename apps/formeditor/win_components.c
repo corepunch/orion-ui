@@ -67,25 +67,11 @@ static int components_bitmap_icon(const fe_component_desc_t *c) {
 }
 
 static int components_win_y(void) {
-  return MENUBAR_HEIGHT + 4;
-}
-
-static int components_item_count(void) {
-  int items = 0;
-  for (int i = 0; i < fe_component_count(); i++) {
-    const fe_component_desc_t *c = fe_component_at(i);
-    if (!c) continue;
-    if ((c->capabilities & (FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBAR)) ==
-        (FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBAR))
-      items++;
-  }
-  return items;
+  return get_theme()->menubar_height + 4;
 }
 
 static int components_win_h(void) {
-  int rows = (components_item_count() + FE_COMPONENTS_GRID_COLS - 1) / FE_COMPONENTS_GRID_COLS;
-  if (rows < FE_COMPONENTS_MIN_ROWS) rows = FE_COMPONENTS_MIN_ROWS;
-  return TITLEBAR_HEIGHT + rows * FE_COMPONENTS_BTN_SIZE + 4;
+  return get_theme()->caption_height + FE_COMPONENTS_MIN_ROWS * FE_COMPONENTS_BTN_SIZE + 4;
 }
 
 #ifndef SHAREDIR

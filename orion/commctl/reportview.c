@@ -27,8 +27,8 @@ static void report_sync_scroll(window_t *win, reportview_data_t *data) {
   bool show_h = false;
   bool show_v = false;
   for (int i = 0; i < 3; i++) {
-    int page_w = content_w - (show_v ? SCROLLBAR_WIDTH : 0);
-    int page_h = content_h - (show_h ? SCROLLBAR_WIDTH : 0);
+    int page_w = content_w - (show_v ? get_theme()->scrollbar_width : 0);
+    int page_h = content_h - (show_h ? get_theme()->scrollbar_width : 0);
     if (page_w < 0) page_w = 0;
     if (page_h < 0) page_h = 0;
     bool next_h = total_w > page_w;
@@ -39,8 +39,8 @@ static void report_sync_scroll(window_t *win, reportview_data_t *data) {
     show_v = next_v;
   }
 
-  int page_w = content_w - (show_v ? SCROLLBAR_WIDTH : 0);
-  int page_h = content_h - (show_h ? SCROLLBAR_WIDTH : 0);
+  int page_w = content_w - (show_v ? get_theme()->scrollbar_width : 0);
+  int page_h = content_h - (show_h ? get_theme()->scrollbar_width : 0);
   if (page_w < 0) page_w = 0;
   if (page_h < 0) page_h = 0;
 

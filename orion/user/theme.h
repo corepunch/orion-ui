@@ -18,12 +18,12 @@
 // apply_palette() writes g_sys_colors before evThemeChanged is queued. Runtime
 // set_sys_colors() overrides last until the next theme switch. The setter
 // validates callbacks/metrics, cancels capture, queues theme notifications and
-// invalidates roots; a changed scrollbar gutter also queues evResize.
+// invalidates roots; changed geometry also queues evResize.
 // Theme definitions live for the process lifetime.
 
 // Named spacing and geometry constants for widget draw code.
-// Dimension constants that are owned by a specific subsystem (e.g.
-// SCROLLBAR_WIDTH, TITLEBAR_HEIGHT) live in messages.h.  This file
+// Default dimension constants live in messages.h; theme-specific chrome
+// geometry is stored in theme_t. This file
 // covers the per-widget magic numbers that would otherwise appear as
 // bare integer literals inside paint handlers.
 
@@ -175,6 +175,12 @@ typedef struct {
   int  scrollbar_width;    // reserved gutter width (pixels); 0 = overlay only
   bool scrollbar_overlay;  // true = overlay thumbs, false = reserved-space bars
 
+  // Non-client and toolbar geometry in logical pixels.
+  int caption_height;
+  int menubar_height;
+  int toolbar_button_size;
+  int toolbar_padding;
+
   // Icon/label press offset in logical pixels.  Classic shifts content by 1
   // when a button is pressed to simulate physical depression; Modern keeps
   // content stationary and changes only the background.
@@ -215,6 +221,11 @@ theme_t *get_theme(void);
 // evThemeChanged to all windows, and invalidates all roots.  Returns false
 // and leaves the current theme unchanged on validation failure.
 bool set_theme(theme_style_t style);
+
+static inline int theme_toolbar_band_height(void) {
+  theme_t *theme = get_theme();
+  return theme->toolbar_button_size + 2 * theme->toolbar_padding;
+}
 
 // Paint semantic parts only inside the established paint path. Disabled state
 // suppresses hover/pressed feedback while preserving selection and focus.

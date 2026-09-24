@@ -21,6 +21,7 @@
 #include <orion/user/user.h>
 #include <orion/user/messages.h>
 #include <orion/user/draw.h>
+#include <orion/user/theme.h>
 #include <orion/kernel/kernel.h>
 
 #define FL_ENTRY_HEIGHT  COLUMNVIEW_ENTRY_HEIGHT
@@ -293,7 +294,7 @@ static int fl_hit_index(window_t *win, filelist_data_t *data, uint32_t wparam) {
   int mx = (int)(int16_t)LOWORD(wparam);
   int my = (int)(int16_t)HIWORD(wparam);
   int col_w = (int)(uint32_t)send_message(win, RVM_GETCOLUMNWIDTH, 0, NULL);
-  int eff_w = win->frame.w - (win->vscroll.visible ? SCROLLBAR_WIDTH : 0);
+  int eff_w = win->frame.w - (win->vscroll.visible ? get_theme()->scrollbar_width : 0);
   int ncol  = (col_w > 0 && eff_w > 0) ? (eff_w / col_w) : 1;
   if (ncol < 1) ncol = 1;
   int col   = (col_w > 0) ? (mx / col_w) : 0;

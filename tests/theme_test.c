@@ -43,7 +43,7 @@ static void test_switch_validation(void) {
   ASSERT_EQUAL(light->scrollbar_width, SCROLLBAR_WIDTH);
   ASSERT_TRUE(set_theme(THEME_CLASSIC));
   ASSERT_EQUAL(get_sys_color(brControlBg), classic_color);
-  ASSERT_EQUAL(get_theme()->scrollbar_width, SCROLLBAR_WIDTH);
+  ASSERT_EQUAL(get_theme()->scrollbar_width, 13);
   int color_id = brControlBg;
   uint32_t override = 0xff123456;
   set_sys_colors(1, &color_id, &override);
@@ -57,7 +57,7 @@ static void test_switch_validation(void) {
 }
 
 static void test_navy_theme_palette(void) {
-  TEST("Modern and Classic share the dark palette; Light and Navy have their own");
+  TEST("Classic keeps its historical colors; Modern, Light and Navy use their palettes");
   test_env_init();
   if (get_theme()->style != THEME_MODERN) ASSERT_TRUE(set_theme(THEME_MODERN));
   ASSERT_EQUAL(get_theme()->style, THEME_MODERN);
@@ -74,10 +74,34 @@ static void test_navy_theme_palette(void) {
   ASSERT_EQUAL(get_sys_color(brControlBg), WEB(0x17243B));
   ASSERT_TRUE(set_theme(THEME_CLASSIC));
   ASSERT_EQUAL(get_sys_color(brControlBg), 0xff3c3c3c);
+  ASSERT_EQUAL(get_sys_color(brActiveTitlebar), 0xffa05a1e);
+  ASSERT_EQUAL(get_sys_color(brStatusbarBg), 0xff2c2c2c);
+  ASSERT_EQUAL(get_sys_color(brAccent), 0xff5ec4f3);
   ASSERT_TRUE(set_theme(THEME_NAVY));
   ASSERT_EQUAL(get_sys_color(brControlBg), WEB(0x17243B));
   ASSERT_TRUE(set_theme(THEME_MODERN));
   ASSERT_EQUAL(get_sys_color(brControlBg), 0xff3c3c3c);
+  test_env_shutdown();
+  PASS();
+}
+
+static void test_classic_geometry(void) {
+  TEST("Classic owns compact menu, caption, toolbar and scrollbar dimensions");
+  test_env_init();
+  if (get_theme()->style != THEME_CLASSIC) ASSERT_TRUE(set_theme(THEME_CLASSIC));
+  ASSERT_EQUAL(get_theme()->menubar_height, FONT_SIZE + 5);
+  ASSERT_EQUAL(get_theme()->caption_height, FONT_SIZE + 5);
+  ASSERT_EQUAL(get_theme()->toolbar_button_size, SYSICON_SIZE + 4);
+  ASSERT_EQUAL(theme_toolbar_band_height(), SYSICON_SIZE + 10);
+  ASSERT_EQUAL(get_theme()->scrollbar_width, 13);
+  window_t *win = test_env_create_window("classic", 0, 0, 200, 120, win_button, NULL);
+  ASSERT_NOT_NULL(win);
+  ASSERT_EQUAL(window_caption_height(win), get_theme()->caption_height);
+  ASSERT_TRUE(set_theme(THEME_MODERN));
+  ASSERT_EQUAL(get_theme()->caption_height, TITLEBAR_HEIGHT);
+  ASSERT_EQUAL(get_theme()->toolbar_button_size, TB_SPACING);
+  ASSERT_EQUAL(get_theme()->scrollbar_width, SCROLLBAR_WIDTH);
+  destroy_window(win);
   test_env_shutdown();
   PASS();
 }
@@ -137,7 +161,7 @@ static void test_all_parts(void) {
       for (int state = 0; state < 64; state++)
         theme_draw((theme_part_t)part, R(5, 7, 60, 24), (ctrl_state_t)state);
     ASSERT_EQUAL(theme_foreground(THEME_PART_LIST_ITEM, CTRL_SELECTED),
-                 get_sys_color(brActiveTitlebarText));
+                 get_sys_color(style == THEME_CLASSIC ? brWindowDarkBg : brActiveTitlebarText));
     ASSERT_EQUAL(theme_foreground(THEME_PART_BUTTON, CTRL_DISABLED | CTRL_DEFAULT), get_sys_color(brTextDisabled));
   }
   test_env_shutdown();
@@ -162,9 +186,9 @@ static void test_titlebar_bounds(void) {
   theme->draw_window_chrome = record_chrome;
   draw_window_controls(&win);
   theme->draw_window_chrome = saved;
-  ASSERT_EQUAL(recorded_titlebar.h, TITLEBAR_HEIGHT);
+  ASSERT_EQUAL(recorded_titlebar.h, get_theme()->caption_height);
   ASSERT_EQUAL(recorded_titlebar.w, 300);
-  ASSERT_EQUAL(recorded_caption.h, TITLEBAR_HEIGHT);
+  ASSERT_EQUAL(recorded_caption.h, get_theme()->caption_height);
   test_env_shutdown();
   PASS();
 }
@@ -173,6 +197,7 @@ int main(void) {
   TEST_START("theme semantic API");
   test_switch_validation();
   test_navy_theme_palette();
+  test_classic_geometry();
   test_semantic_dispatch();
   test_control_parts();
   test_all_parts();

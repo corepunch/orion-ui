@@ -50,14 +50,14 @@ void form_doc_show_only(window_t *doc) {
 
 irect16_t form_doc_frame_for_size(int form_w, int form_h, uint32_t form_flags) {
   int max_w = SCREEN_W - 4;
-  int max_h = SCREEN_H - MENUBAR_HEIGHT - 4;
+  int max_h = SCREEN_H - get_theme()->menubar_height - 4;
   bool has_status = (form_flags & WINDOW_STATUSBAR) != 0;
   bool has_toolbar = (form_flags & WINDOW_TOOLBAR) != 0;
   int status_h = has_status ? STATUSBAR_HEIGHT : 0;
-  int toolbar_h = has_toolbar ? (TB_SPACING + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH)) : 0;
+  int toolbar_h = has_toolbar ? theme_toolbar_band_height() : 0;
   bool needs_hscroll = form_w > max_w;
-  int hstrip = (needs_hscroll && !has_status) ? SCROLLBAR_WIDTH : 0;
-  int max_canvas_h = max_h - TITLEBAR_HEIGHT - toolbar_h - status_h - hstrip;
+  int hstrip = (needs_hscroll && !has_status) ? get_theme()->scrollbar_width : 0;
+  int max_canvas_h = max_h - get_theme()->caption_height - toolbar_h - status_h - hstrip;
   bool needs_vscroll;
   int frame_w;
   int frame_h;
@@ -66,10 +66,10 @@ irect16_t form_doc_frame_for_size(int form_w, int form_h, uint32_t form_flags) {
   if (max_canvas_h < 1) max_canvas_h = 1;
 
   needs_vscroll = form_h > max_canvas_h;
-  frame_w = form_w + (needs_vscroll ? SCROLLBAR_WIDTH : 0);
+  frame_w = form_w + (needs_vscroll ? get_theme()->scrollbar_width : 0);
   if (frame_w > max_w) frame_w = max_w;
 
-  frame_h = TITLEBAR_HEIGHT + toolbar_h + status_h + hstrip + form_h;
+  frame_h = get_theme()->caption_height + toolbar_h + status_h + hstrip + form_h;
   if (frame_h > max_h) frame_h = max_h;
 
   return (irect16_t){CW_USEDEFAULT, CW_USEDEFAULT, frame_w, frame_h};

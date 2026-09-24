@@ -73,7 +73,7 @@ static void classic_draw_panel_bg(irect16_t r) {
 // ── Titlebar ─────────────────────────────────────────────────────────────────
 
 static void classic_draw_titlebar_bg(irect16_t r, bool focused) {
-  fill_rect(get_sys_color(focused ? brAccent : brInactiveTitlebar), r);
+  fill_rect(get_sys_color(focused ? brActiveTitlebar : brInactiveTitlebar), r);
 }
 
 // ── Statusbar ────────────────────────────────────────────────────────────────
@@ -149,6 +149,9 @@ static void classic_draw_menu_item_bg(irect16_t r, ctrl_state_t state) {
 
 static void classic_apply_palette(void) {
   theme_copy_palette(k_theme_palette_dark);
+  g_sys_colors[brActiveTitlebar] = 0xffa05a1e;
+  g_sys_colors[brStatusbarBg] = 0xff2c2c2c;
+  g_sys_colors[brAccent] = 0xff5ec4f3;
 }
 
 // ── Singleton ────────────────────────────────────────────────────────────────
@@ -246,13 +249,13 @@ static void classic_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state
       break;
     case THEME_PART_PANEL_BORDER:        classic_draw_bevel(r); break;
     case THEME_PART_TOOLBAR:
-      fill_rect(get_sys_color(brPanelDarker), r);
+      fill_rect(get_sys_color(brControlBg), r);
       classic_draw_bevel(r);
       break;
     case THEME_PART_HEADER:              classic_draw_button_bg(r, state); break;
     case THEME_PART_RESIZE_GRIP:
-      fill_rect(get_sys_color(brLightEdge), R(r.x+r.w, r.y+r.h-SCROLLBAR_WIDTH+1, 1, SCROLLBAR_WIDTH));
-      fill_rect(get_sys_color(brLightEdge), R(r.x+r.w-SCROLLBAR_WIDTH+1, r.y+r.h, SCROLLBAR_WIDTH, 1));
+      fill_rect(get_sys_color(brLightEdge), R(r.x+r.w, r.y+r.h-get_theme()->scrollbar_width+1, 1, get_theme()->scrollbar_width));
+      fill_rect(get_sys_color(brLightEdge), R(r.x+r.w-get_theme()->scrollbar_width+1, r.y+r.h, get_theme()->scrollbar_width, 1));
       break;
     case THEME_PART_MENU_BAR:
       fill_rect(get_sys_color(brWindowDarkBg), r);
@@ -262,7 +265,7 @@ static void classic_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state
     case THEME_PART_SEPARATOR:
     case THEME_PART_SLIDER_TRACK:        fill_rect(get_sys_color(brDarkEdge), r); break;
     case THEME_PART_SCROLLBAR_TRACK:     fill_rect(get_sys_color(brStatusbarBg), r); break;
-    case THEME_PART_SCROLLBAR_THUMB:     fill_rect(get_sys_color(disabled ? brDarkEdge : brLightEdge), rect_inset(r, (SCROLLBAR_WIDTH - SCROLLBAR_THUMB_WIDTH) / 2)); break;
+    case THEME_PART_SCROLLBAR_THUMB:     fill_rect(get_sys_color(disabled ? brDarkEdge : brLightEdge), rect_inset(r, (get_theme()->scrollbar_width - SCROLLBAR_THUMB_WIDTH) / 2)); break;
     case THEME_PART_SCROLLBAR_ARROW_UP:
     case THEME_PART_SCROLLBAR_ARROW_DOWN:
     case THEME_PART_SCROLLBAR_ARROW_LEFT:
@@ -284,7 +287,7 @@ static void classic_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state
 
 static uint32_t classic_foreground(theme_part_t part, ctrl_state_t state) {
   if (state & CTRL_DISABLED) return get_sys_color(brTextDisabled);
-  if (part == THEME_PART_LIST_ITEM && (state & CTRL_SELECTED)) return get_sys_color(brActiveTitlebarText);
+  if (part == THEME_PART_LIST_ITEM && (state & CTRL_SELECTED)) return get_sys_color(brWindowDarkBg);
   if (part == THEME_PART_MENU_ITEM && (state & (CTRL_HOVER | CTRL_SELECTED | CTRL_PRESSED)))
     return get_sys_color(brActiveTitlebarText);
   return get_sys_color(brTextNormal);
@@ -321,8 +324,12 @@ static theme_t g_classic_theme = {
   .draw_part              = classic_draw_part,
   .draw_window_chrome     = classic_draw_window_chrome,
   .draw_statusbar_text    = classic_draw_statusbar_text,
-  .scrollbar_width        = SCROLLBAR_WIDTH,
+  .scrollbar_width        = 13,
   .scrollbar_overlay      = false,
+  .caption_height         = FONT_SIZE + 5,
+  .menubar_height         = FONT_SIZE + 5,
+  .toolbar_button_size    = SYSICON_SIZE + 4,
+  .toolbar_padding        = TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH,
   .press_icon_offset      = 1,
   .button_corner_radius   = 0,
   .window_corner_radius   = 0,

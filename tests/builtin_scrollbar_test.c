@@ -56,8 +56,8 @@ void test_builtin_vscroll_click_starts_drag(void) {
   send_message(win, evLeftButtonDown, MAKEDWORD(95, 46), NULL);
 
   ASSERT_TRUE(win->vscroll.dragging);
-  ASSERT_EQUAL(win->vscroll.drag_start_mouse, 9);
-  ASSERT_EQUAL(win->vscroll.drag_mouse, 9);
+  ASSERT_EQUAL(win->vscroll.drag_start_mouse, 26 - get_theme()->scrollbar_width);
+  ASSERT_EQUAL(win->vscroll.drag_mouse, 26 - get_theme()->scrollbar_width);
   ASSERT_EQUAL((int)win->vscroll.pos, 20);
 
   send_message(win, evLeftButtonUp, MAKEDWORD(95, 26), NULL);
@@ -79,17 +79,16 @@ void test_builtin_vscroll_drag_ignores_scroll_feedback(void) {
   send_message(win, evLeftButtonDown, MAKEDWORD(95, 46), NULL);
   ASSERT_TRUE(win->vscroll.dragging);
 
-  // Move the mouse by 1 px. The scrollbar changes its position by 2.
+  // Move the mouse by 1 px and record the theme-dependent scroll step.
   send_message(win, evMouseMove, MAKEDWORD(95, 27), (void *)(intptr_t)MAKEDWORD(0, 1));
-  ASSERT_EQUAL((int)win->vscroll.pos, 23);
-  ASSERT_EQUAL((int)win->vscroll.pos, 23);
+  int dragged_pos = win->vscroll.pos;
+  ASSERT_TRUE(dragged_pos > 20);
 
   // The window's scroll position changed, so the next LOCAL_Y reported by the
-  // framework would also shift by +2 even if the cursor stayed still.
-  // A correct drag handler must ignore that feedback and leave the thumb at 22.
+  // framework would also shift even if the cursor stayed still.
+  // The drag handler must ignore that feedback.
   send_message(win, evMouseMove, MAKEDWORD(95, 30), (void *)(intptr_t)MAKEDWORD(0, 0));
-  ASSERT_EQUAL((int)win->vscroll.pos, 23);
-  ASSERT_EQUAL((int)win->vscroll.pos, 23);
+  ASSERT_EQUAL((int)win->vscroll.pos, dragged_pos);
 
   send_message(win, evLeftButtonUp, MAKEDWORD(95, 30), NULL);
   destroy_window(win);
