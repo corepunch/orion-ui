@@ -314,6 +314,10 @@ void test_socialfeed_project_loads_runtime_and_database(void) {
   ASSERT_STR_EQUAL(doc->title, "Social Feed");
   ASSERT_TRUE((doc->flags & WINDOW_TOOLBAR) != 0);
   ASSERT_TRUE((doc->flags & WINDOW_STATUSBAR) != 0);
+  toolbar_state_t *toolbar = window_toolbar_state(doc);
+  ASSERT_NOT_NULL(toolbar);
+  ASSERT_EQUAL(toolbar->item_count, 5);
+  ASSERT_STR_EQUAL(toolbar->items[2].icon, "chat-bubble-empty");
   ASSERT_NOT_NULL(doc->children);
   ASSERT_TRUE(doc->children->frame.w > 0);
   ASSERT_TRUE(doc->children->frame.h > 0);

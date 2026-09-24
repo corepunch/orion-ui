@@ -75,7 +75,7 @@
         <Toolbar>
           <Button name="new" command="post.new" icon="plus" text="New Post" tooltip="Create new post" />
           <Button name="like" command="post.like" icon="heart" text="Like" tooltip="Like post" />
-          <Button name="view" command="post.view" icon="chat-bubble" text="View Post" tooltip="View post details" />
+          <Button name="view" command="post.view" icon="chat-bubble-empty" text="View Post" tooltip="View post details" />
           <spacer />
           <Button name="delete" command="post.delete" icon="trash" text="Delete" tooltip="Delete post" />
         </Toolbar>

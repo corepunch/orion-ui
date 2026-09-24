@@ -290,6 +290,7 @@ static const char *fe_parse_sysicon_name(const char *name) {
   if (strcmp(name, "plus") == 0)        return "plus";
   if (strcmp(name, "trash") == 0)       return "trash";
   if (strcmp(name, "heart") == 0)       return "heart";
+  if (strcmp(name, "chat-bubble-empty") == 0) return "chat-bubble-empty";
   if (strcmp(name, "folder") == 0)      return "folder";
   if (strcmp(name, "play") == 0)        return "play";
   if (strcmp(name, "undo") == 0)        return "undo";
