@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scene ambient="0.48 0.52 0.60" background="0.055 0.075 0.12">
+  <camera name="Front" comment="Compare the five outlines" pos="0 0 26" look="0 0 0" fov="34"/>
+  <camera name="Angle" comment="Check shared extrusion and bevel depth" pos="6 4 26" look="0 0 0" fov="37"/>
+  <light pos="-15 14 18" color="1 0.94 0.82" intensity="2" radius="40" castShadows="0"/>
+  <light pos="15 -9 13" color="0.63 0.76 1" intensity="1.3" radius="35" castShadows="0"/>
+
+  <rect pos="-12 0 0" size="4 5" color="0.76 0.43 0.29" shininess="55">
+    <extrude amount="0.8"/><bevel amount="0.12" bevelSegments="4"/>
+  </rect>
+  <rounded-rect pos="-6 0 0" size="4 5" radius="0.9" color="0.46 0.62 0.92" shininess="55">
+    <extrude amount="0.8"/><bevel amount="0.12" bevelSegments="4"/>
+  </rounded-rect>
+  <circle radius="2.35" pos="0 0 0" color="0.40 0.79 0.73" shininess="55">
+    <extrude amount="0.8"/><bevel amount="0.12" bevelSegments="4"/>
+  </circle>
+  <ellipse size="5 3.5" pos="6 0 0" color="0.91 0.70 0.36" shininess="55">
+    <extrude amount="0.8"/><bevel amount="0.12" bevelSegments="4"/>
+  </ellipse>
+  <star outerRadius="2.5" innerRadius="1.25" points="5" pos="12 0 0" color="0.85 0.49 0.70" shininess="55">
+    <extrude amount="0.8"/><bevel amount="0.12" bevelSegments="4"/>
+  </star>
+</scene>

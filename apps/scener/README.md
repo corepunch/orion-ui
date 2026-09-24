@@ -108,7 +108,9 @@ texture mapping beyond screens, and area lights or soft shadows. Prefab-wide
 not implemented; child shapes continue to own those properties.
 
 Reusable phone and tablet promo models, image-backed screens, and camera scenes
-are documented in [device-promo.md](docs/device-promo.md).
+are documented in [device-promo.md](docs/device-promo.md). Their bodies use
+2D `<rounded-rect>` profiles with child `<extrude>` and `<bevel>` modifiers;
+the same pipeline supports `<rect>`, `<circle>`, `<ellipse>`, and `<star>`.
 
 ## Rendering modes
 

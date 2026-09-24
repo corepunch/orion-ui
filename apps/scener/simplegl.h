@@ -71,9 +71,14 @@ typedef struct {
 
 typedef enum { WINDOW_RECTANGLE, WINDOW_ROUND_ARCH, WINDOW_POINTED_ARCH } window_outline_t;
 Shape2D shape2d_window(window_outline_t outline,float width,float height,int segments);
+Shape2D shape2d_rect(float width,float height);
+Shape2D shape2d_rounded_rect(float width,float height,float radius,int segments);
+Shape2D shape2d_ellipse(float radius_x,float radius_y,int segments);
+Shape2D shape2d_star(float outer_radius,float inner_radius,int points);
 Shape2D shape2d_clip_rect(const Shape2D *profile,float width,float height);
 Shape2D shape2d_inset(const Shape2D *profile,float distance);
 Mesh gen_profile_extrusion(const Shape2D *profile,float depth);
+Mesh gen_profile_extrusion_beveled(const Shape2D *profile,float depth,float bevel,int bevel_segments);
 Mesh gen_profile_frame(const Shape2D *outer,const Shape2D *inner,float depth);
 Mesh gen_profile_cutouts(const Shape2D *boundary,const Shape2D *holes,int nholes,float depth);
 
@@ -102,8 +107,6 @@ void mesh_apply_mirror(Mesh *m,char axis,float weldThreshold);
 void mesh_apply_noise(Mesh *m,float strength,int seed);
 void mesh_apply_shell(Mesh *m,float amount);
 Mesh gen_box(float sx,float sy,float sz);
-Mesh gen_rounded_box(float sx,float sy,float sz,float radius,int segments);
-Mesh gen_rounded_box_beveled(float sx,float sy,float sz,float radius,float bevel,int segments,int bevel_segments);
 Mesh gen_box_inset(float sx,float sy,float sz,float insetX,float insetY);
 Mesh gen_cylinder_like(int sides,float rBot,float rTop,float height,int smooth);
 Mesh gen_cylinder(float r,float h,int sides);

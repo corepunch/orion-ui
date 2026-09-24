@@ -6,13 +6,20 @@
 #define WINDOW_MAX_SEGMENTS 128
 #define WINDOW_POINTED_RISE_SQUARED 3.0f
 #define WINDOW_POINTED_ANGLE_DIVISOR 3.0f
-#define ROUNDED_BOX_CORNER_COUNT 4
-#define ROUNDED_BOX_MAX_CORNER_SEGMENTS 32
-#define ROUNDED_BOX_MAX_BEVEL_SEGMENTS 8
-#define ROUNDED_BOX_POINT_EPSILON 1e-6f
+#define ROUNDED_RECT_CORNER_COUNT 4
+#define ROUNDED_RECT_MAX_CORNER_SEGMENTS 32
+#define PROFILE_MAX_BEVEL_SEGMENTS 8
+#define ROUNDED_RECT_POINT_EPSILON 1e-6f
 #define MESH_EDGE_WELD_MAX 1e-4f
 #define MESH_EDGE_WELD_MIN_LENGTH 1e-8f
 #define MESH_EDGE_WELD_FRACTION 0.25f
+#define PROFILE_MIN_ELLIPSE_SEGMENTS 8
+#define PROFILE_MAX_ELLIPSE_SEGMENTS 128
+#define PROFILE_MIN_STAR_POINTS 3
+#define PROFILE_MAX_STAR_POINTS 32
+#define PROFILE_OFFSET_PARALLEL_EPSILON 1e-6f
+#define PROFILE_TRIANGULATION_RATIO 1e-8f
+#define PROFILE_TRIANGULATION_MIN_EPSILON 1e-16f
 
 void mesh_free(Mesh *m){
     free(m->verts); free(m->tris); free(m->edges); free(m->triN);
@@ -146,101 +153,74 @@ Mesh gen_box(float sx,float sy,float sz){
 	return m;
 }
 
-typedef struct { vec3 center,dir; } rounded_box_point_t;
+typedef struct { vec3 center,dir; } rounded_rect_point_t;
 
-static int rounded_box_outline(float sx,float sy,float radius,int segments,rounded_box_point_t *outline){
+static int rounded_rect_outline(float sx,float sy,float radius,int segments,rounded_rect_point_t *outline){
 	int count=0;
-	for(int corner=0;corner<ROUNDED_BOX_CORNER_COUNT;corner++){
+	for(int corner=0;corner<ROUNDED_RECT_CORNER_COUNT;corner++){
 		vec3 center=v3((corner<2?1.0f:-1.0f)*(sx*0.5f-radius),
-			(corner==0||corner==ROUNDED_BOX_CORNER_COUNT-1?-1.0f:1.0f)*(sy*0.5f-radius),0);
+			(corner==0||corner==ROUNDED_RECT_CORNER_COUNT-1?-1.0f:1.0f)*(sy*0.5f-radius),0);
 		float start=((float)corner-1.0f)*M_PIf*0.5f;
 		for(int step=0;step<=segments;step++){
 			float angle=start+(float)step/(float)segments*M_PIf*0.5f;
 			vec3 dir=v3(cosf(angle),sinf(angle),0),point=vadd(center,vscale(dir,radius));
 			if(count){
-				rounded_box_point_t prev=outline[count-1];
-				if(vlen(vsub(point,vadd(prev.center,vscale(prev.dir,radius))))<=ROUNDED_BOX_POINT_EPSILON) continue;
+				rounded_rect_point_t prev=outline[count-1];
+				if(vlen(vsub(point,vadd(prev.center,vscale(prev.dir,radius))))<=ROUNDED_RECT_POINT_EPSILON) continue;
 			}
-			outline[count++]=(rounded_box_point_t){center,dir};
+			outline[count++]=(rounded_rect_point_t){center,dir};
 		}
 	}
 	if(count>1){
 		vec3 first=vadd(outline[0].center,vscale(outline[0].dir,radius));
 		vec3 last=vadd(outline[count-1].center,vscale(outline[count-1].dir,radius));
-		if(vlen(vsub(first,last))<=ROUNDED_BOX_POINT_EPSILON) count--;
+		if(vlen(vsub(first,last))<=ROUNDED_RECT_POINT_EPSILON) count--;
 	}
 	return count;
 }
 
-Mesh gen_rounded_box(float sx,float sy,float sz,float radius,int segments){
-	if(!isfinite(sx)||!isfinite(sy)||!isfinite(sz)||!isfinite(radius)||sx<=0||sy<=0||sz<=0) return (Mesh){0};
-	if(radius<=0) return gen_box(sx,sy,sz);
-	float limit=fminf(sx,sy)*0.5f;
-	if(radius>limit) radius=limit;
-	if(segments<2) segments=2;
-	if(segments>ROUNDED_BOX_MAX_CORNER_SEGMENTS) segments=ROUNDED_BOX_MAX_CORNER_SEGMENTS;
-	rounded_box_point_t outline[ROUNDED_BOX_CORNER_COUNT*(ROUNDED_BOX_MAX_CORNER_SEGMENTS+1)];
-	int count=rounded_box_outline(sx,sy,radius,segments,outline);
+Shape2D shape2d_rect(float width,float height){
+	return shape2d_window(WINDOW_RECTANGLE,width,height,WINDOW_MIN_SEGMENTS);
+}
+
+Shape2D shape2d_rounded_rect(float width,float height,float radius,int segments){
 	Shape2D profile={0}; profile.closed=1;
+	if(!isfinite(width)||!isfinite(height)||!isfinite(radius)||width<=0||height<=0||radius<0) return profile;
+	if(radius==0) return shape2d_rect(width,height);
+	radius=fminf(radius,fminf(width,height)*0.5f);
+	if(segments<2) segments=2;
+	if(segments>ROUNDED_RECT_MAX_CORNER_SEGMENTS) segments=ROUNDED_RECT_MAX_CORNER_SEGMENTS;
+	rounded_rect_point_t outline[ROUNDED_RECT_CORNER_COUNT*(ROUNDED_RECT_MAX_CORNER_SEGMENTS+1)];
+	int count=rounded_rect_outline(width,height,radius,segments,outline);
 	for(int i=0;i<count;i++){
 		vec3 point=vadd(outline[i].center,vscale(outline[i].dir,radius));
 		DA_PUSH(profile.pts,profile.npts,profile.cpts,point);
 	}
-	Mesh mesh=gen_profile_extrusion(&profile,sz);
-	shape2d_free(&profile);
-	for(int i=0;i<mesh.nverts;i++){
-		mesh.verts[i].u=mesh.verts[i].pos.x/sx+0.5f;
-		mesh.verts[i].v=0.5f-mesh.verts[i].pos.y/sy;
-	}
-	return mesh;
+	return profile;
 }
 
-Mesh gen_rounded_box_beveled(float sx,float sy,float sz,float radius,float bevel,int segments,int bevel_segments){
-	if(!isfinite(bevel)||bevel<0) return (Mesh){0};
-	if(bevel==0) return gen_rounded_box(sx,sy,sz,radius,segments);
-	if(!isfinite(sx)||!isfinite(sy)||!isfinite(sz)||!isfinite(radius)||sx<=0||sy<=0||sz<=0) return (Mesh){0};
-	radius=fminf(radius,fminf(sx,sy)*0.5f);
-	if(bevel>=radius||bevel>=sz*0.5f) return (Mesh){0};
-	if(segments<2) segments=2;
-	if(segments>ROUNDED_BOX_MAX_CORNER_SEGMENTS) segments=ROUNDED_BOX_MAX_CORNER_SEGMENTS;
-	if(bevel_segments<1) bevel_segments=1;
-	if(bevel_segments>ROUNDED_BOX_MAX_BEVEL_SEGMENTS) bevel_segments=ROUNDED_BOX_MAX_BEVEL_SEGMENTS;
-	Mesh mesh={0};
-	rounded_box_point_t outline[ROUNDED_BOX_CORNER_COUNT*(ROUNDED_BOX_MAX_CORNER_SEGMENTS+1)];
-	int profile_count=rounded_box_outline(sx,sy,radius,segments,outline);
-	int ring_count=2*(bevel_segments+1);
-	for(int ring=0;ring<ring_count;ring++){
-		int front=ring>bevel_segments;
-		int step=front?ring-bevel_segments-1:ring;
-		float angle=(float)step/(float)bevel_segments*M_PIf*0.5f;
-		float inset=front?bevel*(1.0f-cosf(angle)):bevel*(1.0f-sinf(angle));
-		float z=front?sz*0.5f-bevel+bevel*sinf(angle):-sz*0.5f+bevel*(1.0f-cosf(angle));
-		float radial=front?cosf(angle):sinf(angle),axial=front?sinf(angle):-cosf(angle);
-		for(int point=0;point<profile_count;point++){
-			rounded_box_point_t base=outline[point];
-			vec3 pos=vadd(base.center,vscale(base.dir,radius-inset)); pos.z=z;
-			int index=mesh_add_vert(&mesh,pos,v3(base.dir.x*radial,base.dir.y*radial,axial));
-			mesh.verts[index].u=pos.x/sx+0.5f;
-			mesh.verts[index].v=0.5f-pos.y/sy;
-		}
+Shape2D shape2d_ellipse(float radius_x,float radius_y,int segments){
+	Shape2D profile={0}; profile.closed=1;
+	if(!isfinite(radius_x)||!isfinite(radius_y)||radius_x<=0||radius_y<=0) return profile;
+	if(segments<PROFILE_MIN_ELLIPSE_SEGMENTS) segments=PROFILE_MIN_ELLIPSE_SEGMENTS;
+	if(segments>PROFILE_MAX_ELLIPSE_SEGMENTS) segments=PROFILE_MAX_ELLIPSE_SEGMENTS;
+	for(int i=0;i<segments;i++){
+		float angle=(float)i/(float)segments*2.0f*M_PIf;
+		DA_PUSH(profile.pts,profile.npts,profile.cpts,v3(cosf(angle)*radius_x,sinf(angle)*radius_y,0));
 	}
-	for(int ring=0;ring<ring_count-1;ring++) for(int point=0;point<profile_count;point++){
-		int next=(point+1)%profile_count;
-		int a=ring*profile_count+point,b=ring*profile_count+next;
-		int c=(ring+1)*profile_count+next,d=(ring+1)*profile_count+point;
-		mesh_add_tri(&mesh,a,b,c); mesh_add_tri(&mesh,a,c,d);
+	return profile;
+}
+
+Shape2D shape2d_star(float outer_radius,float inner_radius,int points){
+	Shape2D profile={0}; profile.closed=1;
+	if(!isfinite(outer_radius)||!isfinite(inner_radius)||outer_radius<=0||inner_radius<=0||inner_radius>=outer_radius) return profile;
+	if(points<PROFILE_MIN_STAR_POINTS||points>PROFILE_MAX_STAR_POINTS) return profile;
+	for(int i=0;i<points*2;i++){
+		float angle=(float)i/(float)(points*2)*2.0f*M_PIf-M_PIf*0.5f;
+		float radius=i%2?inner_radius:outer_radius;
+		DA_PUSH(profile.pts,profile.npts,profile.cpts,v3(cosf(angle)*radius,sinf(angle)*radius,0));
 	}
-	int back=mesh_add_vert(&mesh,v3(0,0,-sz*0.5f),v3(0,0,-1));
-	int front=mesh_add_vert(&mesh,v3(0,0,sz*0.5f),v3(0,0,1));
-	mesh.verts[back].u=mesh.verts[front].u=0.5f;
-	mesh.verts[back].v=mesh.verts[front].v=0.5f;
-	int front_start=(ring_count-1)*profile_count;
-	for(int point=0;point<profile_count;point++){
-		int next=(point+1)%profile_count;
-		mesh_add_tri(&mesh,back,next,point);
-		mesh_add_tri(&mesh,front,front_start+point,front_start+next);
-	}
-	return mesh;
+	return profile;
 }
 
 Mesh gen_box_inset(float sx,float sy,float sz,float insetX,float insetY){
@@ -519,22 +499,25 @@ static float profile_cross(vec3 a,vec3 b,vec3 c){
 	return (b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x);
 }
 
-static int profile_point_in_tri(vec3 p,vec3 a,vec3 b,vec3 c){
+static int profile_point_in_tri(vec3 p,vec3 a,vec3 b,vec3 c,float epsilon){
 	float ab=profile_cross(a,b,p),bc=profile_cross(b,c,p),ca=profile_cross(c,a,p);
-	return ab>=-1e-6f && bc>=-1e-6f && ca>=-1e-6f;
+	return ab>=-epsilon && bc>=-epsilon && ca>=-epsilon;
 }
 
 static void extrude_cap(Mesh *m,vec3 *pts,int n,float z,vec3 normal,int reverse){
 	int *idx=malloc(sizeof(int)*(size_t)n),nv=n;
+	float area=0;
+	for(int i=0;i<n;i++) area+=profile_cross(v3(0,0,0),pts[i],pts[(i+1)%n]);
+	float epsilon=fmaxf(PROFILE_TRIANGULATION_MIN_EPSILON,fabsf(area)*PROFILE_TRIANGULATION_RATIO);
 	for(int i=0;i<n;i++) idx[i]=i;
 	while(nv>2){
 		int found=0;
 		for(int i=0;i<nv;i++){
 			int ia=idx[(i+nv-1)%nv],ib=idx[i],ic=idx[(i+1)%nv],inside=0;
-			if(profile_cross(pts[ia],pts[ib],pts[ic])<=1e-6f) continue;
+			if(profile_cross(pts[ia],pts[ib],pts[ic])<=epsilon) continue;
 			for(int j=0;j<nv;j++){
 				int ip=idx[j];
-				if(ip!=ia && ip!=ib && ip!=ic && profile_point_in_tri(pts[ip],pts[ia],pts[ib],pts[ic])){
+				if(ip!=ia && ip!=ib && ip!=ic && profile_point_in_tri(pts[ip],pts[ia],pts[ib],pts[ic],epsilon)){
 					inside=1;
 					break;
 				}
@@ -636,6 +619,111 @@ Mesh gen_profile_extrusion(const Shape2D *p,float depth){
 	if(p->npts>=PROFILE_MIN_POINTS && depth>PROFILE_EPSILON)
 		extrude_polygon(&m,p->pts,NULL,p->npts,depth,1,1,0,0);
 	return m;
+}
+
+static int profile_simple(const vec3 *pts,int n){
+	if(n<PROFILE_MIN_POINTS) return 0;
+	float area=0;
+	for(int i=0;i<n;i++){
+		vec3 a=pts[i],b=pts[(i+1)%n];
+		if(!isfinite(a.x)||!isfinite(a.y)||vlen(vsub(b,a))<=MESH_EDGE_WELD_MIN_LENGTH) return 0;
+		area+=a.x*b.y-a.y*b.x;
+	}
+	if(area<=PROFILE_TRIANGULATION_MIN_EPSILON) return 0;
+	for(int i=0;i<n;i++) for(int j=i+2;j<n;j++){
+		if(i==0&&j==n-1) continue;
+		vec3 a=pts[i],b=pts[(i+1)%n],c=pts[j],d=pts[(j+1)%n];
+		float ab_c=profile_cross(a,b,c),ab_d=profile_cross(a,b,d);
+		float cd_a=profile_cross(c,d,a),cd_b=profile_cross(c,d,b);
+		if(ab_c*ab_d<0&&cd_a*cd_b<0) return 0;
+	}
+	return 1;
+}
+
+static int profile_contains_point(const vec3 *pts,int n,vec3 point){
+	int inside=0;
+	for(int i=0,j=n-1;i<n;j=i++){
+		vec3 a=pts[i],b=pts[j];
+		if((a.y>point.y)!=(b.y>point.y) &&
+			point.x<(b.x-a.x)*(point.y-a.y)/(b.y-a.y)+a.x) inside=!inside;
+	}
+	return inside;
+}
+
+static int profile_offset(const Shape2D *profile,float amount,vec3 *inset){
+	int n=profile->npts;
+	for(int i=0;i<n;i++){
+		vec3 prev=profile->pts[(i+n-1)%n],p=profile->pts[i],next=profile->pts[(i+1)%n];
+		vec3 before=vnorm(vsub(p,prev)),after=vnorm(vsub(next,p));
+		vec3 in_before=v3(-before.y,before.x,0),in_after=v3(-after.y,after.x,0);
+		float cross=before.x*after.y-before.y*after.x;
+		if(fabsf(cross)<PROFILE_OFFSET_PARALLEL_EPSILON){
+			if(vdot(before,after)<=0) return 0;
+			inset[i]=vadd(p,vscale(in_before,amount));
+		} else {
+			vec3 delta=vscale(vsub(in_after,in_before),amount);
+			float along=(delta.x*after.y-delta.y*after.x)/cross;
+			inset[i]=vadd(vadd(p,vscale(in_before,amount)),vscale(before,along));
+		}
+		if(!isfinite(inset[i].x)||!isfinite(inset[i].y)) return 0;
+	}
+	if(!profile_simple(inset,n)) return 0;
+	for(int i=0;i<n;i++){
+		vec3 midpoint=vscale(vadd(inset[i],inset[(i+1)%n]),0.5f);
+		if(!profile_contains_point(profile->pts,n,inset[i])||!profile_contains_point(profile->pts,n,midpoint)) return 0;
+	}
+	return 1;
+}
+
+Mesh gen_profile_extrusion_beveled(const Shape2D *profile,float depth,float bevel,int bevel_segments){
+	Mesh mesh={0};
+	if(!profile||!profile->closed||!isfinite(depth)||!isfinite(bevel)||depth<=0||bevel<0||bevel>=depth*0.5f||
+		!profile_simple(profile->pts,profile->npts)) return mesh;
+	int n=profile->npts;
+	if(bevel==0){
+		mesh=gen_profile_extrusion(profile,depth);
+		if(mesh.ntris!=4*n-4){ mesh_free(&mesh); return (Mesh){0}; }
+	}
+	else {
+		if(bevel_segments<1) bevel_segments=1;
+		if(bevel_segments>PROFILE_MAX_BEVEL_SEGMENTS) bevel_segments=PROFILE_MAX_BEVEL_SEGMENTS;
+		vec3 *inset=malloc(sizeof(vec3)*(size_t)n);
+		if(!profile_offset(profile,bevel,inset)){ free(inset); return mesh; }
+		int ring_count=2*(bevel_segments+1);
+		for(int ring=0;ring<ring_count;ring++){
+			int front=ring>bevel_segments,step=front?ring-bevel_segments-1:ring;
+			float angle=(float)step/(float)bevel_segments*M_PIf*0.5f;
+			float factor=front?1.0f-cosf(angle):1.0f-sinf(angle);
+			float z=front?depth*0.5f-bevel+bevel*sinf(angle):-depth*0.5f+bevel*(1.0f-cosf(angle));
+			float radial=front?cosf(angle):sinf(angle),axial=front?sinf(angle):-cosf(angle);
+			for(int i=0;i<n;i++){
+				vec3 outer=profile->pts[i],offset=vsub(inset[i],outer),normal=vnorm(vsub(outer,inset[i]));
+				vec3 point=vadd(outer,vscale(offset,factor)); point.z=z;
+				mesh_add_vert(&mesh,point,v3(normal.x*radial,normal.y*radial,axial));
+			}
+		}
+		for(int ring=0;ring<ring_count-1;ring++) for(int i=0;i<n;i++){
+			int next=(i+1)%n,a=ring*n+i,b=ring*n+next,c=(ring+1)*n+next,d=(ring+1)*n+i;
+			mesh_add_tri(&mesh,a,b,c); mesh_add_tri(&mesh,a,c,d);
+		}
+		int before=mesh.ntris;
+		extrude_cap(&mesh,inset,n,-depth*0.5f,v3(0,0,-1),1);
+		extrude_cap(&mesh,inset,n,depth*0.5f,v3(0,0,1),0);
+		free(inset);
+		if(mesh.ntris-before!=2*(n-2)){ mesh_free(&mesh); return (Mesh){0}; }
+	}
+	if(!mesh.ntris) return mesh;
+	vec3 lo=v3(INFINITY,INFINITY,0),hi=v3(-INFINITY,-INFINITY,0);
+	for(int i=0;i<n;i++){
+		lo.x=fminf(lo.x,profile->pts[i].x); lo.y=fminf(lo.y,profile->pts[i].y);
+		hi.x=fmaxf(hi.x,profile->pts[i].x); hi.y=fmaxf(hi.y,profile->pts[i].y);
+	}
+	float width=hi.x-lo.x,height=hi.y-lo.y;
+	for(int i=0;i<mesh.nverts;i++){
+		mesh.verts[i].u=(mesh.verts[i].pos.x-lo.x)/width;
+		mesh.verts[i].v=(hi.y-mesh.verts[i].pos.y)/height;
+	}
+	return mesh;
 }
 
 

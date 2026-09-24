@@ -34,11 +34,24 @@ screen. For an edge-to-edge screenshot, include the status bar, system chrome,
 and intended safe areas in the source image; the phone prefab adds its camera
 island in front of that image.
 
-The Create menu and Create panel offer `Rounded Box` and `Screen`. These create
-editable scene nodes that persist in `.blks` files. Select a screen and enter
-its image path in the property browser. A rounded box has `bevel` and
-`bevelSegments` properties for softening the front and back perimeter. The
+The device bodies use reusable 2D profiles and modifiers:
+
+```xml
+<rounded-rect size="7.6 16.2" radius="1.28">
+  <extrude amount="0.8"/>
+  <bevel amount="0.16" bevelSegments="4"/>
+</rounded-rect>
+```
+
+The same extrusion and bevel work on `<rect>`, `<circle>`, `<ellipse>`, and
+`<star>` profiles. The Create menu and Create panel offer all five profiles
+and a `Screen`. They create source nodes that persist in `.blks` files. The
 screen stays flat so the screenshot remains undistorted.
+
+[Profile examples](../scenes/profile_shapes.blks) include `Front` and `Angle`
+cameras to inspect the outline and bevel on each shape.
+
+![Extruded and beveled profile examples](profile-shapes-preview.png)
 
 ## Render
 

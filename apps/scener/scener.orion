@@ -61,7 +61,11 @@
 
       <menu name="create" label="Create">
         <item name="box" label="Box" />
-        <item name="rounded_box" label="Rounded Box" />
+        <item name="rect" label="Rect" />
+        <item name="rounded_rect" label="Rounded Rect" />
+        <item name="circle" label="Circle" />
+        <item name="ellipse" label="Ellipse" />
+        <item name="star" label="Star" />
         <item name="screen" label="Screen" />
         <item name="sphere" label="Sphere" />
         <item name="cylinder" label="Cylinder" />
