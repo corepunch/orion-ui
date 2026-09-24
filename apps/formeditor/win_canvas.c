@@ -6,10 +6,11 @@
 static void canvas_restore_local_draw_space(window_t *win) {
   window_t *root = get_root_window(win);
   int t = titlebar_height(root);
-  set_viewport(root->frame);
+  set_viewport_for_fbo(root);
   set_projection(root->hscroll.pos, -t + root->vscroll.pos,
                  root->frame.w + root->hscroll.pos,
                  root->frame.h - t + root->vscroll.pos);
+  set_scissor_fbo(root, rect_offset(get_client_rect(root), 0, t));
 }
 
 static irect16_t client_rect_in_host(window_t *host, window_t *target) {
