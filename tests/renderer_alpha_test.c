@@ -232,17 +232,24 @@ static void test_srgb_linear_source_over(void) {
     draw_rect_ex((int)black, R(0, 0, 1, 1), 0, 0.5f);
     uint8_t result[4] = {0};
     glReadPixels(0, 0, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, result);
-    correct = abs((int)result[0] - 188) <= 1 &&
-              abs((int)result[1] - 188) <= 1 &&
-              abs((int)result[2] - 188) <= 1 && result[3] == 255 &&
-              glGetError() == GL_NO_ERROR;
-    uint8_t straight[4] = {0};
-    correct &= R_ReadTextureSRGBA8(surface, 1, 1, straight) &&
-               abs((int)straight[0] - 188) <= 1 && straight[3] == 255;
-    correct &= R_ReadTextureSRGBA8(color_tex, 1, 1, straight) &&
-               straight[0] == 128 && straight[3] == 128;
-    correct &= R_ReadTextureSRGBA8(float_tex, 1, 1, straight) &&
-               abs((int)straight[0] - 188) <= 1 && straight[3] == 128;
+    GLenum draw_error = glGetError();
+    bool draw_ok = abs((int)result[0] - 188) <= 1 &&
+                   abs((int)result[1] - 188) <= 1 &&
+                   abs((int)result[2] - 188) <= 1 && result[3] == 255 &&
+                   draw_error == GL_NO_ERROR;
+    uint8_t surface_result[4] = {0}, color_result[4] = {0}, float_result[4] = {0};
+    bool surface_read = R_ReadTextureSRGBA8(surface, 1, 1, surface_result);
+    bool color_read = R_ReadTextureSRGBA8(color_tex, 1, 1, color_result);
+    bool float_read = R_ReadTextureSRGBA8(float_tex, 1, 1, float_result);
+    bool surface_ok = surface_read && abs((int)surface_result[0] - 188) <= 1 && surface_result[3] == 255;
+    bool color_ok = color_read && color_result[0] == 128 && color_result[3] == 128;
+    bool float_ok = float_read && abs((int)float_result[0] - 188) <= 1 && float_result[3] == 128;
+    correct = draw_ok && surface_ok && color_ok && float_ok;
+    if (!correct)
+      fprintf(stderr, "[renderer-test] gpu=%s draw=%u,%u,%u,%u error=0x%x surface=%d:%u,%u color=%d:%u,%u float=%d:%u,%u\n",
+              glGetString(GL_RENDERER), result[0], result[1], result[2], result[3], draw_error,
+              surface_read, surface_result[0], surface_result[3], color_read, color_result[0], color_result[3],
+              float_read, float_result[0], float_result[3]);
   }
   R_SetFramebufferSRGB(false);
   if (black) R_DeleteTexture(black);
