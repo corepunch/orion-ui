@@ -29,11 +29,11 @@ The complete supported element inventory is:
 | Placement | Elements |
 |-----------|----------|
 | `<scene>` attributes | `ambient`, `background`, `up`, `convention` |
-| Scene configuration | `<camera>`, `<material>`, `<sun>`, `<chardef>`, `<shape>` |
+| Scene configuration | `<camera>`, `<pose>`, `<material>`, `<sun>`, `<chardef>`, `<shape>` |
 | Transformable content | `<box>`, `<sphere>`, `<cylinder>`, `<capsule>`, `<arch>`, `<prism>`, `<cone>`, `<pyramid>`, `<torus>`, `<lathe>`, `<loft>`, `<wall>`, `<window>`, `<door>`, `<group>`, `<prefab>`, `<light>`, `<line>`, `<dummy>` |
 | Wall cutters | `<bool-negative-box>`, `<bool-negative-arch>`, `<bool-negative-cylinder>` |
 | Mesh modifiers | `<taper>`, `<twist>`, `<bend>`, `<stretch>`, `<skew>`, `<array>`, `<extrude>`, `<mirror>`, `<noise>`, `<shell>` |
-| Context-only children | `<camera><transform>`, `<shape><v>`, `<prefab><attach>` |
+| Context-only children | `<camera><transform>`, `<camera><use-pose>`, `<pose><joint>`, `<pose><ik>`, `<prefab><joint>`, `<prefab><ik>`, `<shape><v>`, `<prefab><attach>` |
 
 Unknown elements produce an `unsupported XML element` warning. Element names
 and attribute names are case-sensitive.
@@ -220,6 +220,26 @@ pose cannot leak between shots.
 <prefab source="workshop/clock" name="secret_clock"
         pos="0 200 0" pivotOffset="70 0 0"/>
 ```
+
+### Character rigs and still poses
+
+Named `<group>` elements inside a prefab form a joint hierarchy. Put each group origin at its articulation center; parent and child groups define a bone. A group's `pair` attribute explicitly names its mirrored partner. The editor's Hierarchy tab lists these joints for the selected prefab instance. Rotation and offset controls create `<joint>` overrides on that instance; Pivot and Parent change the shared prefab rig. The viewport move and rotate gizmos act on the selected joint. Moving a tip with an active IK target moves its world target.
+
+A scene-level `<pose name="...">` stores reusable joint offsets and IK constraints. A prefab instance can set `pose="Name"` as its default. A camera selects a different pose for one named instance with `<use-pose instance="Actor" name="Reach"/>`. An instance's own `<joint>` or `<ik>` entry overrides the same joint or chain in the selected pose. Legacy camera `<transform>` targets remain global by name; use poses for independent character instances.
+
+```xml
+<pose name="Reach">
+  <joint target="head" rot="12 0 0"/>
+  <ik root="right_shoulder" mid="right_elbow" tip="right_hand"
+      target="29 -58 143" pole="0 -1 0" keepOrientation="1"/>
+</pose>
+<camera name="Closeup"><use-pose instance="Actor" name="Reach"/></camera>
+<prefab source="characters/ellipsoid_actor" name="Actor"/>
+```
+
+`<joint>` uses `target` for a named group, `pos` for local centimetre offset, and `rot` for local Euler degrees. `<ik>` names a direct parent → child → grandchild group chain. Its `target` is a **world-space** position in centimetres; `pole` is a world-space direction indicating the preferred bend. `keepOrientation="1"` preserves the tip's original world orientation, useful for feet. The two-bone solver clamps unreachable targets without stretching bones. The Properties panel reports reachability and distance beyond reach; stderr also records unreachable targets. A fixed world target keeps a foot planted when the root or hips move. A saved pose contains the current pose's constraints and the instance's edits, and can be assigned to another camera.
+
+Mirroring uses the explicit `pair` and reflects local rotations across the character's X plane (`S R S`, with `S = diag(-1,1,1)`). Paired joints should have reflected rest orientations. Mesh `<mirror>` only changes geometry; it does not mirror a grouped rig or pose.
 
 ### `<material>`
 

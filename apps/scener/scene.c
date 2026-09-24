@@ -64,6 +64,8 @@
 #define DOOR_WINDOW_HEIGHT_RATIO 0.28f
 #define DOOR_WINDOW_CENTER_RATIO 0.70f
 #define MAX_DOOR_OPENINGS 2
+#define RIG_EPSILON 0.00001f
+#define RIG_REACH_MARGIN 0.0001f
 
 /* -------------------------------------------------------------- Tiny XML */
 
@@ -71,6 +73,7 @@ typedef struct XmlAttr { char *name, *value; } XmlAttr;
 typedef struct XmlNode {
 	char *tag;
 	XmlAttr *attrs; int nattrs,cattrs;
+	struct XmlNode *parent;
 	struct XmlNode **kids; int nkids,ckids;
 } XmlNode;
 
@@ -181,6 +184,7 @@ static void xml_parse_children(const char **p, XmlNode *parent){
 		if(**p=='<'){
 			XmlNode *child=xml_parse_node(p);
 			if(!child) return;
+			child->parent=parent;
 			DA_PUSH(parent->kids,parent->nkids,parent->ckids,child);
 			continue;
 		}
@@ -258,7 +262,7 @@ void scene_free(Scene *s){
 	free(s->negativeProfiles);
 	for(int i=0;i<s->ncameras;i++) free(s->cameras[i].transforms);
 	free(s->lights); free(s->mats); free(s->objs); free(s->svols); free(s->cameras);
-	free(s->prefabs); free(s->instances); free(s->negativeBoxes); free(s->negativeArches);
+	free(s->prefabs); free(s->instances); free(s->rigRotations); free(s->rigTargets); free(s->rigJointWorlds); free(s->negativeBoxes); free(s->negativeArches);
 	free(s->negativeCylinders); free(s->overlayLines); free(s->charDefs); free(s->shapes);
 	free(s->dragStartVerts); free(s->dragObjIndices); free(s->dragVertOffsets);
 	memset(s,0,sizeof(*s));
@@ -1303,6 +1307,138 @@ static void apply_camera_transform(Scene *s,XmlNode *n,mat4 *M,mat4 *R){
 	}
 }
 
+static XmlNode *rig_find_joint(XmlNode *root,const char *name){
+	if(!root || !name || !*name) return NULL;
+	if(!strcmp(root->tag,"group") && !strcmp(xml_attr(root,"name",""),name)) return root;
+	for(int i=0;i<root->nkids;i++){
+		XmlNode *found=rig_find_joint(root->kids[i],name);
+		if(found) return found;
+	}
+	return NULL;
+}
+
+static XmlNode *rig_override_in(XmlNode *container,const char *joint){
+	if(!container) return NULL;
+	for(int i=0;i<container->nkids;i++) if(!strcmp(container->kids[i]->tag,"joint") &&
+		!strcmp(xml_attr(container->kids[i],"target",""),joint)) return container->kids[i];
+	return NULL;
+}
+static XmlNode *rig_ik_for_tip(XmlNode *container,const char *tip);
+
+static XmlNode *rig_pose_for_instance(Scene *s,XmlNode *instance){
+	XmlNode *root=(XmlNode*)s->sceneRoot;
+	if(!root || !instance) return NULL;
+	const char *poseName=xml_attr(instance,"pose",NULL),*instanceName=xml_attr(instance,"name",NULL);
+	for(int j=0;j<root->nkids;j++) if(!strcmp(root->kids[j]->tag,"camera") &&
+		!strcmp(xml_attr(root->kids[j],"name",""),s->activeCamera)){
+		XmlNode *camera=root->kids[j];
+		for(int k=0;k<camera->nkids;k++) if(!strcmp(camera->kids[k]->tag,"use-pose") &&
+			!strcmp(xml_attr(camera->kids[k],"instance",""),instanceName?instanceName:"")) poseName=xml_attr(camera->kids[k],"name",poseName);
+	}
+	for(int i=0;poseName && i<root->nkids;i++) if(!strcmp(root->kids[i]->tag,"pose") &&
+		!strcmp(xml_attr(root->kids[i],"name",""),poseName)) return root->kids[i];
+	return NULL;
+}
+
+static mat4 rig_rotation(Scene *s,XmlNode *node){
+	for(int i=0;i<s->nrigRotations;i++) if(s->rigRotations[i].node==node) return s->rigRotations[i].rotation;
+	return mat4_identity();
+}
+
+static void rig_set_rotation(Scene *s,XmlNode *node,mat4 rotation){
+	for(int i=0;i<s->nrigRotations;i++) if(s->rigRotations[i].node==node){ s->rigRotations[i].rotation=rotation; return; }
+	RigRotation entry={node,rotation}; DA_PUSH(s->rigRotations,s->nrigRotations,s->crigRotations,entry);
+}
+
+static mat4 rig_local(Scene *s,XmlNode *node){
+	mat4 M=xml_node_transform(s,node);
+	const char *name=xml_attr(node,"name",NULL);
+	if(!name) return M;
+	XmlNode *override=rig_override_in((XmlNode*)s->activeRigInstance,name);
+	if(!override) override=rig_override_in((XmlNode*)s->activeRigPose,name);
+	if(override){
+		mat4 delta=mat4_mul(mat4_translate(cvt3ds(s,xml_attr_v3_cm(override,"pos",v3(0,0,0)))),
+			mat4_rot_xyz(cvt3ds(s,xml_attr_v3(override,"rot",v3(0,0,0)))));
+		M=mat4_mul(M,delta);
+	}
+	return mat4_mul(M,rig_rotation(s,node));
+}
+
+static mat4 rig_world(Scene *s,XmlNode *node,XmlNode *root,mat4 instanceM){
+	if(!node || node==root) return instanceM;
+	return mat4_mul(rig_world(s,node->parent,root,instanceM),rig_local(s,node));
+}
+
+static mat4 rig_from_to(vec3 from,vec3 to,vec3 fallback){
+	vec3 a=vnorm(from),b=vnorm(to); float d=fmaxf(-1,fminf(1,vdot(a,b)));
+	vec3 axis=vcross(a,b); float length=vlen(axis);
+	if(length<RIG_EPSILON){
+		if(d>0) return mat4_identity();
+		axis=vcross(a,fallback);
+		if(vlen(axis)<RIG_EPSILON) axis=vcross(a,fabsf(a.x)<0.9f?v3(1,0,0):v3(0,1,0));
+		axis=vnorm(axis);
+	} else axis=vscale(axis,1.0f/length);
+	float angle=acosf(d),c=cosf(angle),sn=sinf(angle),t=1-c;
+	mat4 m=mat4_identity();
+	m.m[0]=t*axis.x*axis.x+c;        m.m[4]=t*axis.x*axis.y-sn*axis.z; m.m[8]=t*axis.x*axis.z+sn*axis.y;
+	m.m[1]=t*axis.x*axis.y+sn*axis.z; m.m[5]=t*axis.y*axis.y+c;        m.m[9]=t*axis.y*axis.z-sn*axis.x;
+	m.m[2]=t*axis.x*axis.z-sn*axis.y; m.m[6]=t*axis.y*axis.z+sn*axis.x; m.m[10]=t*axis.z*axis.z+c;
+	return m;
+}
+
+static void rig_solve_ik(Scene *s,XmlNode *ik,XmlNode *root,mat4 instanceM){
+	XmlNode *hip=rig_find_joint(root,xml_attr(ik,"root",""));
+	XmlNode *knee=rig_find_joint(root,xml_attr(ik,"mid",""));
+	XmlNode *tip=rig_find_joint(root,xml_attr(ik,"tip",""));
+	if(!hip || !knee || !tip || knee->parent!=hip || tip->parent!=knee){
+		fprintf(stderr,"[scener] invalid IK chain root=%s mid=%s tip=%s\n",xml_attr(ik,"root",""),xml_attr(ik,"mid",""),xml_attr(ik,"tip",""));
+		fflush(stderr); return;
+	}
+	mat4 H=rig_world(s,hip,root,instanceM),K=rig_world(s,knee,root,instanceM),T=rig_world(s,tip,root,instanceM),originalT=T;
+	vec3 h=mat4_xform_point(H,v3(0,0,0)),k=mat4_xform_point(K,v3(0,0,0)),t=mat4_xform_point(T,v3(0,0,0));
+	float upper=vlen(vsub(k,h)),lower=vlen(vsub(t,k));
+	vec3 goal=xml_attr_v3_cm(ik,"target",t),pole=xml_attr_v3(ik,"pole",v3(0,-1,0));
+	if(!isfinite(upper) || !isfinite(lower) || upper<RIG_EPSILON || lower<RIG_EPSILON ||
+		!isfinite(goal.x) || !isfinite(goal.y) || !isfinite(goal.z) ||
+		!isfinite(pole.x) || !isfinite(pole.y) || !isfinite(pole.z)){
+		fprintf(stderr,"[scener] invalid IK bone or target for tip=%s\n",xml_attr(tip,"name","")); fflush(stderr); return;
+	}
+	vec3 travel=vsub(goal,h); float requested=vlen(travel);
+	vec3 direction=requested>RIG_EPSILON?vscale(travel,1.0f/requested):vnorm(vsub(t,h));
+	float minReach=fabsf(upper-lower)+RIG_REACH_MARGIN,maxReach=upper+lower-RIG_REACH_MARGIN;
+	if(maxReach<minReach) maxReach=minReach;
+	float distance=fmaxf(minReach,fminf(maxReach,requested));
+	vec3 bend=vsub(pole,vscale(direction,vdot(pole,direction)));
+	if(vlen(bend)<RIG_EPSILON){ bend=vsub(vsub(k,h),vscale(direction,vdot(vsub(k,h),direction))); }
+	if(vlen(bend)<RIG_EPSILON) bend=vcross(direction,fabsf(direction.x)<0.9f?v3(1,0,0):v3(0,1,0));
+	bend=vnorm(bend);
+	float along=(upper*upper-lower*lower+distance*distance)/(2*distance);
+	float height=sqrtf(fmaxf(0,upper*upper-along*along));
+	vec3 desiredK=vadd(h,vadd(vscale(direction,along),vscale(bend,height)));
+	vec3 desiredT=vadd(h,vscale(direction,distance));
+	mat4 invH=mat4_affine_inverse(H);
+	mat4 first=rig_from_to(mat4_xform_dir(invH,vsub(k,h)),mat4_xform_dir(invH,vsub(desiredK,h)),bend);
+	rig_set_rotation(s,hip,mat4_mul(rig_rotation(s,hip),first));
+	K=rig_world(s,knee,root,instanceM); T=rig_world(s,tip,root,instanceM);
+	k=mat4_xform_point(K,v3(0,0,0)); t=mat4_xform_point(T,v3(0,0,0));
+	mat4 invK=mat4_affine_inverse(K);
+	mat4 second=rig_from_to(mat4_xform_dir(invK,vsub(t,k)),mat4_xform_dir(invK,vsub(desiredT,k)),bend);
+	rig_set_rotation(s,knee,mat4_mul(rig_rotation(s,knee),second));
+	if(xml_attr_i(ik,"keepOrientation",0)){
+		mat4 newT=rig_world(s,tip,root,instanceM);
+		mat4 correction=mat4_mul(mat4_affine_inverse(newT),originalT);
+		correction.m[12]=correction.m[13]=correction.m[14]=0;
+		rig_set_rotation(s,tip,correction);
+	}
+	RigTargetStatus status={0};
+	snprintf(status.instance,sizeof(status.instance),"%s",xml_attr((XmlNode*)s->activeRigInstance,"name",""));
+	snprintf(status.joint,sizeof(status.joint),"%s",xml_attr(tip,"name",""));
+	status.target=goal; status.error=fabsf(requested-distance);
+	status.reachable=requested<=upper+lower+RIG_EPSILON && requested>=fabsf(upper-lower)-RIG_EPSILON;
+	DA_PUSH(s->rigTargets,s->nrigTargets,s->crigTargets,status);
+	if(!status.reachable){ fprintf(stderr,"[scener] IK %s:%s target out of reach by %.3f m\n",status.instance,status.joint,status.error); fflush(stderr); }
+}
+
 static void collect_negative_boxes(Scene *s, XmlNode *parent, mat4 parentM){
 	for(int i=0;i<parent->nkids;i++){
 		XmlNode *n=parent->kids[i];
@@ -1367,6 +1503,8 @@ static void parse_prefab(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec
 	if(!source) return;
 	XmlNode *proot=load_prefab(s,source);
 	if(!proot){ fprintf(stderr,"prefab not found: %s\n",source); return; }
+	void *oldRigInstance=s->activeRigInstance,*oldRigPose=s->activeRigPose,*oldRigRoot=s->activeRigRoot;
+	s->activeRigInstance=n; s->activeRigRoot=proot; s->activeRigPose=rig_pose_for_instance(s,n);
 	const char *name=xml_attr(n,"name",NULL);
 	if(name){
 		InstanceDef inst; memset(&inst,0,sizeof(inst));
@@ -1396,8 +1534,15 @@ static void parse_prefab(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec
 		vec3 off=vscale(arrayTrans,(float)step);
 		vec3 r=vscale(arrayRot,(float)step);
 		mat4 stepM=mat4_mul(M,mat4_mul(mat4_translate(off),mat4_rot_xyz(r)));
+		s->nrigRotations=0;
+		XmlNode *pose=(XmlNode*)s->activeRigPose;
+		if(pose) for(int i=0;i<pose->nkids;i++) if(!strcmp(pose->kids[i]->tag,"ik") &&
+			!rig_ik_for_tip(n,xml_attr(pose->kids[i],"tip",""))) rig_solve_ik(s,pose->kids[i],proot,stepM);
+		for(int i=0;i<n->nkids;i++) if(!strcmp(n->kids[i]->tag,"ik")) rig_solve_ik(s,n->kids[i],proot,stepM);
 		parse_nodes(s, proot, stepM, R);
 	}
+	s->nrigRotations=0;
+	s->activeRigInstance=oldRigInstance; s->activeRigPose=oldRigPose; s->activeRigRoot=oldRigRoot;
 
 	s->prefabTintActive=oldTintActive;
 	s->prefabTint=oldTint;
@@ -1493,6 +1638,21 @@ static void parse_nodes(Scene *s, XmlNode *parent, mat4 parentM, mat4 parentR){
 				mat4_mul(mat4_rot_xyz(rot), mat4_scale(scl)))));
 		}
 		apply_camera_transform(s,n,&M,&R);
+		if(s->activeRigInstance && !strcmp(tag,"group")){
+			const char *name=xml_attr(n,"name",NULL);
+			if(name){
+				XmlNode *override=rig_override_in((XmlNode*)s->activeRigInstance,name);
+				if(!override) override=rig_override_in((XmlNode*)s->activeRigPose,name);
+				if(override){
+					vec3 offset=cvt3ds(s,xml_attr_v3_cm(override,"pos",v3(0,0,0)));
+					mat4 turn=mat4_rot_xyz(cvt3ds(s,xml_attr_v3(override,"rot",v3(0,0,0))));
+					M=mat4_mul(M,mat4_mul(mat4_translate(offset),turn)); R=mat4_mul(R,turn);
+				}
+				mat4 extra=rig_rotation(s,n); M=mat4_mul(M,extra); R=mat4_mul(R,extra);
+				RigJointWorld world={s->activeRigInstance,n,M};
+				DA_PUSH(s->rigJointWorlds,s->nrigJointWorlds,s->crigJointWorlds,world);
+			}
+		}
 		if(ownsEditNode) s->activeEditMatrix=M;
 		const char *matName = xml_attr(n,"material",NULL);
 		Material *mat = find_material(s, matName);
@@ -1628,12 +1788,13 @@ static void warn_unknown_children(XmlNode *parent, const char *path, int root, i
 		XmlNode *n=parent->kids[i];
 		int supported=0;
 		if(root) supported=has_shape_parser(n->tag) || !strcmp(n->tag,"bool-negative-box") || !strcmp(n->tag,"bool-negative-arch") || !strcmp(n->tag,"bool-negative-cylinder") ||
-			(prefab ? (!strcmp(n->tag,"attach") || !strcmp(n->tag,"shape")) : has_scene_parser(n->tag));
+			(prefab ? (!strcmp(n->tag,"attach") || !strcmp(n->tag,"shape")) : has_scene_parser(n->tag) || !strcmp(n->tag,"pose"));
 		else if(!strcmp(parent->tag,"group"))
 			supported=has_shape_parser(n->tag) || !strcmp(n->tag,"bool-negative-box") || !strcmp(n->tag,"bool-negative-arch") || !strcmp(n->tag,"bool-negative-cylinder") || !strcmp(n->tag,"shape");
-		else if(!strcmp(parent->tag,"camera")) supported=!strcmp(n->tag,"transform");
+		else if(!strcmp(parent->tag,"camera")) supported=!strcmp(n->tag,"transform") || !strcmp(n->tag,"use-pose");
+		else if(!strcmp(parent->tag,"pose")) supported=!strcmp(n->tag,"joint") || !strcmp(n->tag,"ik");
 		else if(!strcmp(parent->tag,"wall")||!strcmp(parent->tag,"floor")||!strcmp(parent->tag,"window")||!strcmp(parent->tag,"door")) supported=0;
-		else if(!strcmp(parent->tag,"prefab")) supported=!strcmp(n->tag,"array");
+		else if(!strcmp(parent->tag,"prefab")) supported=!strcmp(n->tag,"array") || !strcmp(n->tag,"joint") || !strcmp(n->tag,"ik");
 		else if(has_shape_parser(parent->tag)) supported=has_modifier_parser(n->tag);
 		if(!supported){
 			warn_unsupported_tree(n,path,parent->tag);
@@ -1709,10 +1870,13 @@ static void scene_clear_view(Scene *s){
 	free(s->negativeProfiles);
 	for(int i=0;i<s->ncameras;i++) free(s->cameras[i].transforms);
 	free(s->lights); free(s->mats); free(s->objs); free(s->svols); free(s->cameras);
-	free(s->instances); free(s->negativeBoxes); free(s->negativeArches);
+	free(s->instances); free(s->rigRotations); free(s->rigTargets); free(s->rigJointWorlds); free(s->negativeBoxes); free(s->negativeArches);
 	free(s->negativeCylinders); free(s->overlayLines); free(s->charDefs); free(s->shapes);
 	s->lights=NULL; s->mats=NULL; s->objs=NULL; s->svols=NULL; s->cameras=NULL;
 	s->negativeProfiles=NULL; s->nnegativeProfiles=s->cnegativeProfiles=0;
+	s->rigRotations=NULL; s->nrigRotations=s->crigRotations=0;
+	s->rigTargets=NULL; s->nrigTargets=s->crigTargets=0;
+	s->rigJointWorlds=NULL; s->nrigJointWorlds=s->crigJointWorlds=0;
 	s->instances=NULL; s->negativeBoxes=NULL; s->negativeArches=NULL;
 	s->negativeCylinders=NULL; s->overlayLines=NULL; s->charDefs=NULL; s->shapes=NULL;
 	s->nlights=s->clights=s->nmats=s->cmats=s->nobjs=s->cobjs=0;
@@ -1889,6 +2053,243 @@ void scene_select_camera(Scene *s, const char *name){
 	}
 }
 
+static XmlNode *rig_instance_root(Scene *s,XmlNode *instance){
+	if(!instance || strcmp(instance->tag,"prefab")) return NULL;
+	const char *source=xml_attr(instance,"source",NULL);
+	return source?load_prefab(s,source):NULL;
+}
+
+static int rig_joint_count_tree(XmlNode *node){
+	int count=!strcmp(node->tag,"group") && xml_attr(node,"name",NULL)?1:0;
+	for(int i=0;i<node->nkids;i++) count+=rig_joint_count_tree(node->kids[i]);
+	return count;
+}
+
+int scene_rig_joint_count(Scene *s,void *instance){
+	XmlNode *root=rig_instance_root(s,(XmlNode*)instance);
+	return root?rig_joint_count_tree(root):0;
+}
+
+static XmlNode *rig_joint_at_tree(XmlNode *node,int *index,int level,int *depth){
+	int isJoint=!strcmp(node->tag,"group") && xml_attr(node,"name",NULL);
+	if(isJoint){
+		if(*index==0){ if(depth) *depth=level; return node; }
+		(*index)--;
+	}
+	for(int i=0;i<node->nkids;i++){
+		XmlNode *found=rig_joint_at_tree(node->kids[i],index,level+isJoint,depth);
+		if(found) return found;
+	}
+	return NULL;
+}
+
+void *scene_rig_joint_at(Scene *s,void *instance,int index,int *depth){
+	XmlNode *root=rig_instance_root(s,(XmlNode*)instance);
+	return root && index>=0?rig_joint_at_tree(root,&index,0,depth):NULL;
+}
+
+int scene_rig_select_joint(Scene *s,void *instance,void *joint){
+	XmlNode *in=(XmlNode*)instance,*j=(XmlNode*)joint,*root=rig_instance_root(s,in);
+	if(!root || !j || rig_find_joint(root,xml_attr(j,"name",""))!=j) return 0;
+	s->selectedRigInstance=in; s->selectedRigJoint=j; s->selectedNode=in;
+	s->selectedObj=-1;
+	for(int i=0;i<s->nobjs;i++) if(s->objs[i].editNode==in){ s->selectedObj=i; break; }
+	fprintf(stderr,"[scener] select rig instance=%s joint=%s\n",xml_attr(in,"name",""),xml_attr(j,"name","")); fflush(stderr);
+	return 1;
+}
+
+int scene_rig_joint_world(Scene *s,mat4 *matrix){
+	if(!s || !matrix || !s->selectedRigJoint) return 0;
+	for(int i=0;i<s->nrigJointWorlds;i++) if(s->rigJointWorlds[i].instance==s->selectedRigInstance &&
+		s->rigJointWorlds[i].joint==s->selectedRigJoint){ *matrix=s->rigJointWorlds[i].matrix; return 1; }
+	return 0;
+}
+
+static mat4 rig_rest_world(Scene *s,XmlNode *node,XmlNode *root){
+	if(!node || node==root) return mat4_identity();
+	return mat4_mul(rig_rest_world(s,node->parent,root),xml_node_transform(s,node));
+}
+
+int scene_rig_reparent_joint(Scene *s,void *instance,void *joint,const char *parentName){
+	XmlNode *in=(XmlNode*)instance,*j=(XmlNode*)joint,*root=rig_instance_root(s,in);
+	XmlNode *parent=rig_find_joint(root,parentName);
+	if(!root || !j || !parent || rig_find_joint(root,xml_attr(j,"name",""))!=j || j==parent || !j->parent) return 0;
+	for(XmlNode *walk=parent;walk;walk=walk->parent) if(walk==j) return 0;
+	int scaled=0;
+	for(XmlNode *walk=j;walk && walk!=root;walk=walk->parent) scaled|=xml_attr(walk,"scale",NULL)!=NULL;
+	for(XmlNode *walk=parent;walk && walk!=root;walk=walk->parent) scaled|=xml_attr(walk,"scale",NULL)!=NULL;
+	if(xml_attr(j,"pivotOffset",NULL) || scaled){
+		fprintf(stderr,"[scener] reparent requires unscaled joints without pivotOffset\n"); fflush(stderr); return 0;
+	}
+	mat4 oldWorld=rig_rest_world(s,j,root),newParent=rig_rest_world(s,parent,root);
+	mat4 local=mat4_mul(mat4_affine_inverse(newParent),oldWorld);
+	vec3 pos=cvt3ds_inv(s,v3(local.m[12],local.m[13],local.m[14]));
+	vec3 rot=cvt3ds_inv(s,v3(atan2f(local.m[6],local.m[10])*180/M_PIf,
+		asinf(fmaxf(-1,fminf(1,-local.m[2])))*180/M_PIf,atan2f(local.m[1],local.m[0])*180/M_PIf));
+	XmlNode *oldParent=j->parent;
+	for(int i=0;i<oldParent->nkids;i++) if(oldParent->kids[i]==j){
+		memmove(oldParent->kids+i,oldParent->kids+i+1,(size_t)(oldParent->nkids-i-1)*sizeof(*oldParent->kids));
+		oldParent->nkids--; break;
+	}
+	j->parent=parent; DA_PUSH(parent->kids,parent->nkids,parent->ckids,j);
+	xml_set_attr_v3_cm(j,"pos",pos); xml_set_attr_v3(j,"rot",rot);
+	fprintf(stderr,"[scener] reparent rig joint=%s parent=%s\n",xml_attr(j,"name",""),parentName); fflush(stderr);
+	scene_rebuild_view(s);
+	return 1;
+}
+
+static XmlNode *rig_ensure_instance_joint(XmlNode *instance,const char *name){
+	XmlNode *override=rig_override_in(instance,name);
+	if(override) return override;
+	override=xml_new("joint"); override->parent=instance; xml_set_attr(override,"target",name);
+	DA_PUSH(instance->kids,instance->nkids,instance->ckids,override);
+	return override;
+}
+
+int scene_rig_set_joint(Scene *s,void *instance,void *joint,const char *attribute,vec3 value){
+	XmlNode *in=(XmlNode*)instance,*j=(XmlNode*)joint,*root=rig_instance_root(s,in);
+	if(!root || !j || rig_find_joint(root,xml_attr(j,"name",""))!=j || !attribute) return 0;
+	if(!strcmp(attribute,"pivot")) xml_set_attr_v3_cm(j,"pos",value);
+	else if(!strcmp(attribute,"rot") || !strcmp(attribute,"pos")){
+		XmlNode *override=rig_ensure_instance_joint(in,xml_attr(j,"name",""));
+		if(!strcmp(attribute,"pos")) xml_set_attr_v3_cm(override,"pos",value);
+		else xml_set_attr_v3(override,"rot",value);
+	} else return 0;
+	fprintf(stderr,"[scener] edit rig instance=%s joint=%s attribute=%s value=%g,%g,%g\n",
+		xml_attr(in,"name",""),xml_attr(j,"name",""),attribute,value.x,value.y,value.z); fflush(stderr);
+	scene_rebuild_view(s);
+	return 1;
+}
+
+vec3 scene_rig_joint_value(Scene *s,void *instance,void *joint,const char *attribute){
+	XmlNode *in=(XmlNode*)instance,*j=(XmlNode*)joint;
+	if(!in || !j || !attribute) return v3(0,0,0);
+	if(!strcmp(attribute,"pivot")) return xml_attr_v3_cm(j,"pos",v3(0,0,0));
+	XmlNode *override=rig_override_in(in,xml_attr(j,"name",""));
+	if(!override) override=rig_override_in(rig_pose_for_instance(s,in),xml_attr(j,"name",""));
+	if(!override) return v3(0,0,0);
+	return !strcmp(attribute,"pos")?xml_attr_v3_cm(override,"pos",v3(0,0,0)):
+		xml_attr_v3(override,"rot",v3(0,0,0));
+}
+
+int scene_rig_save_pose(Scene *s,void *instance,const char *name){
+	XmlNode *in=(XmlNode*)instance,*root=(XmlNode*)s->sceneRoot;
+	if(!rig_instance_root(s,in) || !root || !name || !*name) return 0;
+	XmlNode *staging=xml_new("pose"),*source=rig_pose_for_instance(s,in);
+	for(int layer=0;layer<2;layer++){
+		XmlNode *container=layer?in:source;
+		if(!container) continue;
+		for(int i=0;i<container->nkids;i++) if(!strcmp(container->kids[i]->tag,"joint") || !strcmp(container->kids[i]->tag,"ik")){
+			XmlNode *src=container->kids[i],*copy=xml_new(src->tag); copy->parent=staging;
+			for(int a=0;a<src->nattrs;a++) xml_set_attr(copy,src->attrs[a].name,src->attrs[a].value);
+			for(int j=0;j<staging->nkids;j++) if(!strcmp(staging->kids[j]->tag,copy->tag) &&
+				!strcmp(xml_attr(staging->kids[j],!strcmp(copy->tag,"ik")?"tip":"target",""),
+					xml_attr(copy,!strcmp(copy->tag,"ik")?"tip":"target",""))){
+				xml_free(staging->kids[j]); staging->kids[j]=copy; copy=NULL; break;
+			}
+			if(copy) DA_PUSH(staging->kids,staging->nkids,staging->ckids,copy);
+		}
+	}
+	XmlNode *pose=NULL;
+	for(int i=0;i<root->nkids;i++) if(!strcmp(root->kids[i]->tag,"pose") &&
+		!strcmp(xml_attr(root->kids[i],"name",""),name)){ pose=root->kids[i]; break; }
+	if(!pose){ pose=xml_new("pose"); pose->parent=root; DA_PUSH(root->kids,root->nkids,root->ckids,pose); }
+	for(int i=0;i<pose->nkids;i++) xml_free(pose->kids[i]);
+	pose->nkids=0; xml_set_attr(pose,"name",name);
+	for(int i=0;i<staging->nkids;i++){ staging->kids[i]->parent=pose; DA_PUSH(pose->kids,pose->nkids,pose->ckids,staging->kids[i]); }
+	staging->nkids=0; xml_free(staging);
+	fprintf(stderr,"[scener] save pose name=%s instance=%s joints=%d\n",name,xml_attr(in,"name",""),pose->nkids); fflush(stderr);
+	return 1;
+}
+
+int scene_rig_assign_pose(Scene *s,void *instance,const char *name,int cameraOnly){
+	XmlNode *in=(XmlNode*)instance,*root=(XmlNode*)s->sceneRoot,*pose=NULL;
+	if(!rig_instance_root(s,in) || !root || !name) return 0;
+	for(int i=0;i<root->nkids;i++) if(!strcmp(root->kids[i]->tag,"pose") &&
+		!strcmp(xml_attr(root->kids[i],"name",""),name)) pose=root->kids[i];
+	if(!pose) return 0;
+	if(cameraOnly){
+		XmlNode *camera=NULL;
+		for(int i=0;i<root->nkids;i++) if(!strcmp(root->kids[i]->tag,"camera") &&
+			!strcmp(xml_attr(root->kids[i],"name",""),s->activeCamera)) camera=root->kids[i];
+		if(!camera || !xml_attr(in,"name",NULL)) return 0;
+		XmlNode *use=NULL;
+		for(int i=0;i<camera->nkids;i++) if(!strcmp(camera->kids[i]->tag,"use-pose") &&
+			!strcmp(xml_attr(camera->kids[i],"instance",""),xml_attr(in,"name",""))) use=camera->kids[i];
+		if(!use){ use=xml_new("use-pose"); use->parent=camera; DA_PUSH(camera->kids,camera->nkids,camera->ckids,use); }
+		xml_set_attr(use,"instance",xml_attr(in,"name","")); xml_set_attr(use,"name",name);
+	} else xml_set_attr(in,"pose",name);
+	fprintf(stderr,"[scener] assign pose name=%s instance=%s camera=%s\n",name,xml_attr(in,"name",""),cameraOnly?s->activeCamera:"all"); fflush(stderr);
+	scene_rebuild_view(s);
+	return 1;
+}
+
+static XmlNode *rig_ik_for_tip(XmlNode *container,const char *tip){
+	if(!container) return NULL;
+	for(int i=0;i<container->nkids;i++) if(!strcmp(container->kids[i]->tag,"ik") &&
+		!strcmp(xml_attr(container->kids[i],"tip",""),tip)) return container->kids[i];
+	return NULL;
+}
+
+vec3 scene_rig_target_value(Scene *s,void *instance,void *tip,const char *attribute){
+	XmlNode *in=(XmlNode*)instance,*j=(XmlNode*)tip;
+	if(!in || !j || !attribute) return v3(0,0,0);
+	XmlNode *ik=rig_ik_for_tip(in,xml_attr(j,"name",""));
+	if(!ik) ik=rig_ik_for_tip(rig_pose_for_instance(s,in),xml_attr(j,"name",""));
+	if(!strcmp(attribute,"pole")) return ik?xml_attr_v3(ik,"pole",v3(0,-1,0)):v3(0,-1,0);
+	if(ik) return xml_attr_v3_cm(ik,"target",v3(0,0,0));
+	for(int i=0;i<s->ninstances;i++) if(!strcmp(s->instances[i].name,xml_attr(in,"name",""))){
+		void *oldInstance=s->activeRigInstance,*oldPose=s->activeRigPose,*oldRoot=s->activeRigRoot;
+		s->activeRigInstance=in; s->activeRigPose=NULL; s->activeRigRoot=rig_instance_root(s,in);
+		vec3 point=mat4_xform_point(rig_world(s,j,(XmlNode*)s->activeRigRoot,s->instances[i].transform),v3(0,0,0));
+		s->activeRigInstance=oldInstance; s->activeRigPose=oldPose; s->activeRigRoot=oldRoot;
+		return point;
+	}
+	return v3(0,0,0);
+}
+
+int scene_rig_set_target(Scene *s,void *instance,void *tip,const char *attribute,vec3 value){
+	XmlNode *in=(XmlNode*)instance,*j=(XmlNode*)tip,*root=rig_instance_root(s,in);
+	if(!root || !j || !j->parent || !j->parent->parent ||
+		strcmp(j->tag,"group") || strcmp(j->parent->tag,"group") || strcmp(j->parent->parent->tag,"group") ||
+		(strcmp(attribute,"target") && strcmp(attribute,"pole"))) return 0;
+	if(rig_find_joint(root,xml_attr(j,"name",""))!=j || !xml_attr(j->parent,"name",NULL) || !xml_attr(j->parent->parent,"name",NULL)) return 0;
+	XmlNode *ik=rig_ik_for_tip(in,xml_attr(j,"name",""));
+	if(!ik){
+		ik=xml_new("ik"); ik->parent=in;
+		xml_set_attr(ik,"root",xml_attr(j->parent->parent,"name",""));
+		xml_set_attr(ik,"mid",xml_attr(j->parent,"name",""));
+		xml_set_attr(ik,"tip",xml_attr(j,"name",""));
+		xml_set_attr(ik,"keepOrientation","1");
+		xml_set_attr_v3_cm(ik,"target",scene_rig_target_value(s,in,j,"target"));
+		xml_set_attr_v3(ik,"pole",scene_rig_target_value(s,in,j,"pole"));
+		DA_PUSH(in->kids,in->nkids,in->ckids,ik);
+	}
+	if(!strcmp(attribute,"target")) xml_set_attr_v3_cm(ik,"target",value);
+	else xml_set_attr_v3(ik,"pole",value);
+	fprintf(stderr,"[scener] edit IK instance=%s tip=%s %s=%g,%g,%g\n",xml_attr(in,"name",""),xml_attr(j,"name",""),attribute,value.x,value.y,value.z); fflush(stderr);
+	scene_rebuild_view(s);
+	return 1;
+}
+
+int scene_rig_mirror_joint(Scene *s,void *instance,void *joint){
+	XmlNode *in=(XmlNode*)instance,*j=(XmlNode*)joint,*root=rig_instance_root(s,in);
+	if(!root || !j) return 0;
+	XmlNode *pair=rig_find_joint(root,xml_attr(j,"pair",""));
+	if(!pair || pair==j) return 0;
+	const char *name=xml_attr(j,"name","");
+	XmlNode *src=rig_override_in(in,name);
+	if(!src) src=rig_override_in(rig_pose_for_instance(s,in),name);
+	vec3 rot=src?xml_attr_v3(src,"rot",v3(0,0,0)):v3(0,0,0);
+	vec3 pos=src?xml_attr_v3_cm(src,"pos",v3(0,0,0)):v3(0,0,0);
+	vec3 result=v3(rot.x,-rot.y,-rot.z);
+	XmlNode *dest=rig_ensure_instance_joint(in,xml_attr(pair,"name",""));
+	xml_set_attr_v3(dest,"rot",result); xml_set_attr_v3_cm(dest,"pos",v3(-pos.x,pos.y,pos.z));
+	fprintf(stderr,"[scener] mirror rig instance=%s from=%s to=%s\n",xml_attr(in,"name",""),name,xml_attr(pair,"name","")); fflush(stderr);
+	scene_rebuild_view(s);
+	return 1;
+}
+
 typedef struct { vec3 min,max; } Bounds;
 
 static Bounds scene_obj_bounds(SceneObj *o){
@@ -2009,6 +2410,7 @@ int scene_pick_object(Scene *s, vec3 rayOrigin, vec3 rayDir, float *tOut){
 		}
 	}
 	s->selectedNode=hit>=0?s->objs[hit].editNode:NULL;
+	s->selectedRigInstance=NULL; s->selectedRigJoint=NULL;
 	if(tOut) *tOut=bestT;
 	return hit;
 }
@@ -2117,6 +2519,22 @@ void gizmo_begin_drag(Scene *s,int handle,int mouseX,int mouseY){
 	if(s->selectedObj<0 || s->selectedObj>=s->nobjs) return;
 	XmlNode *n=(XmlNode*)s->selectedNode;
 	if(!n) return;
+	if(s->selectedRigJoint){
+		mat4 world;
+		if(!scene_rig_joint_world(s,&world)) return;
+		s->draggingHandle=handle; s->dragStartMouseX=mouseX; s->dragStartMouseY=mouseY;
+		s->dragStartCenter=mat4_xform_point(world,v3(0,0,0));
+		s->dragStartRot=scene_rig_joint_value(s,s->selectedRigInstance,s->selectedRigJoint,"rot");
+		s->dragStartPos=scene_rig_joint_value(s,s->selectedRigInstance,s->selectedRigJoint,"pos");
+		s->dragRigTarget=0; s->dragParentMatrix=world;
+		for(int i=0;i<s->nrigTargets;i++) if(!strcmp(s->rigTargets[i].instance,xml_attr((XmlNode*)s->selectedRigInstance,"name","")) &&
+			!strcmp(s->rigTargets[i].joint,xml_attr((XmlNode*)s->selectedRigJoint,"name",""))){
+			s->dragRigTarget=1; s->dragStartPos=scene_rig_target_value(s,s->selectedRigInstance,s->selectedRigJoint,"target");
+			s->dragParentMatrix=mat4_identity(); break;
+		}
+		fprintf(stderr,"[scener] rig drag start joint=%s handle=%d target=%d\n",xml_attr((XmlNode*)s->selectedRigJoint,"name",""),handle,s->dragRigTarget); fflush(stderr);
+		return;
+	}
 	s->draggingHandle=handle;
 	s->dragStartMouseX=mouseX; s->dragStartMouseY=mouseY;
 	s->dragStartPos=xml_attr_v3_cm(n,"pos",v3(0,0,0));
@@ -2174,6 +2592,38 @@ void gizmo_apply_drag(Scene *s,int mX,int mY,int W,int H,
 	vec3 camPos,vec3 camRight,vec3 camUp,vec3 camLook,float camFov){
 	XmlNode *n=(XmlNode*)s->selectedNode;
 	if(!n || s->draggingHandle==GIZMO_NONE) return;
+	if(s->selectedRigJoint){
+		int h=s->draggingHandle; vec3 center=s->dragStartCenter;
+		vec3 sx=v3(1,0,0),sy=v3(0,1,0),sz=v3(0,0,1),a,b;
+		vec3 curRay=mouse_ray(camRight,camUp,camLook,camFov,mX,mY,W,H);
+		vec3 startRay=mouse_ray(camRight,camUp,camLook,camFov,s->dragStartMouseX,s->dragStartMouseY,W,H);
+		if(s->editMode==EDIT_W_MOVE){
+			vec3 delta;
+			if(h==GIZMO_AXIS_X || h==GIZMO_AXIS_Y || h==GIZMO_AXIS_Z){
+				vec3 axis=h==GIZMO_AXIS_X?sx:h==GIZMO_AXIS_Y?sy:sz;
+				vec3 pn=vnorm(vsub(camLook,vscale(axis,vdot(camLook,axis))));
+				if(!ray_plane_hit(camPos,startRay,center,pn,&a) || !ray_plane_hit(camPos,curRay,center,pn,&b)) return;
+				delta=vscale(axis,vdot(vsub(b,a),axis));
+			} else {
+				vec3 pn=h==GIZMO_PLANE_XY?sz:h==GIZMO_PLANE_XZ?sy:h==GIZMO_PLANE_YZ?sx:v3(0,0,0);
+				if(vlen(pn)<0.5f || !ray_plane_hit(camPos,startRay,center,pn,&a) || !ray_plane_hit(camPos,curRay,center,pn,&b)) return;
+				delta=vsub(b,a);
+			}
+			delta=mat4_xform_dir(mat4_affine_inverse(s->dragParentMatrix),delta);
+			vec3 value=vadd(s->dragStartPos,delta);
+			if(s->dragRigTarget) scene_rig_set_target(s,s->selectedRigInstance,s->selectedRigJoint,"target",value);
+			else scene_rig_set_joint(s,s->selectedRigInstance,s->selectedRigJoint,"pos",value);
+		} else if(s->editMode==EDIT_E_ROTATE){
+			vec3 axis=h==GIZMO_AXIS_X?sx:h==GIZMO_AXIS_Y?sy:h==GIZMO_AXIS_Z?sz:v3(0,0,0);
+			if(vlen(axis)<0.5f || !ray_plane_hit(camPos,startRay,center,axis,&a) || !ray_plane_hit(camPos,curRay,center,axis,&b)) return;
+			vec3 va=vnorm(vsub(a,center)),vb=vnorm(vsub(b,center));
+			float angle=atan2f(vdot(axis,vcross(va,vb)),vdot(va,vb))*180.0f/M_PIf;
+			vec3 rot=s->dragStartRot;
+			if(h==GIZMO_AXIS_X) rot.x+=angle; else if(h==GIZMO_AXIS_Y) rot.y+=angle; else rot.z+=angle;
+			scene_rig_set_joint(s,s->selectedRigInstance,s->selectedRigJoint,"rot",rot);
+		}
+		return;
+	}
 	int h=s->draggingHandle;
 	vec3 center=s->dragStartCenter;
 	vec3 sx=v3(1,0,0),sy=v3(0,1,0),sz=v3(0,0,1);

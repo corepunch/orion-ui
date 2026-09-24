@@ -136,6 +136,9 @@ typedef struct { mat4 transform; float width,height,depth; } NegativeArch;
 typedef struct { mat4 transform; float radius,depth; } NegativeCylinder;
 typedef struct { vec3 start, end, color; int category; char camera[32]; } OverlayLine;
 typedef struct { char name[32]; float height, radius; float top, neck, pelvis, feet; } CharDef;
+typedef struct { void *node; mat4 rotation; } RigRotation;
+typedef struct { char instance[32], joint[32]; vec3 target; float error; int reachable; } RigTargetStatus;
+typedef struct { void *instance,*joint; mat4 matrix; } RigJointWorld;
 
 enum {
 	EDIT_Q_SELECT = 0,
@@ -176,6 +179,10 @@ typedef struct {
 	int sanityIgnoreActive, sanityFloorActive, sanityCheckActive;
 	OverlayLine *overlayLines; int noverlayLines, coverlayLines;
 	CharDef *charDefs; int ncharDefs, ccharDefs;
+	void *activeRigInstance, *activeRigPose, *activeRigRoot, *selectedRigInstance, *selectedRigJoint;
+	RigRotation *rigRotations; int nrigRotations, crigRotations;
+	RigTargetStatus *rigTargets; int nrigTargets, crigTargets;
+	RigJointWorld *rigJointWorlds; int nrigJointWorlds, crigJointWorlds;
 	char activeCamera[MAX_CAMERA_NAME];
 	char scenePath[512];
 	char assetRoot[512];
@@ -193,6 +200,7 @@ typedef struct {
 	int draggingHandle;  /* GIZMO_* — active drag handle, GIZMO_NONE when idle */
 	int axisLock;        /* 0=all, or GIZMO_AXIS_X/Y/Z or GIZMO_PLANE_XY/XZ/YZ (keyboard axis lock) */
 	int dragStartMouseX, dragStartMouseY;
+	int dragRigTarget;
 	vec3 dragStartCenter; /* object centre at drag-start */
 	vec3 dragPrevAnchor; /* anchor point from previous frame (rotate/scale delta) */
 	vec3 dragStartPos,dragStartRot,dragStartScale;
@@ -223,6 +231,18 @@ const char *scene_node_attr(const void *node,const char *name);
 int scene_node_attr_count(const void *node);
 const char *scene_node_attr_name(const void *node,int index);
 const char *scene_node_attr_value(const void *node,int index);
+int scene_rig_joint_count(Scene *s,void *instance);
+void *scene_rig_joint_at(Scene *s,void *instance,int index,int *depth);
+int scene_rig_select_joint(Scene *s,void *instance,void *joint);
+int scene_rig_set_joint(Scene *s,void *instance,void *joint,const char *attribute,vec3 value);
+vec3 scene_rig_joint_value(Scene *s,void *instance,void *joint,const char *attribute);
+int scene_rig_mirror_joint(Scene *s,void *instance,void *joint);
+int scene_rig_save_pose(Scene *s,void *instance,const char *name);
+int scene_rig_assign_pose(Scene *s,void *instance,const char *name,int cameraOnly);
+int scene_rig_set_target(Scene *s,void *instance,void *tip,const char *attribute,vec3 value);
+vec3 scene_rig_target_value(Scene *s,void *instance,void *tip,const char *attribute);
+int scene_rig_joint_world(Scene *s,mat4 *matrix);
+int scene_rig_reparent_joint(Scene *s,void *instance,void *joint,const char *parentName);
 void scene_get_bounds(Scene *s,vec3 *outMin,vec3 *outMax);
 void scene_init_textures(Scene *s);
 void scene_free_textures(Scene *s);

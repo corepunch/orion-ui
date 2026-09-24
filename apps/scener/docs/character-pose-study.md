@@ -4,13 +4,13 @@ This study uses the supplied Ecstatica and Urban Decay images as visual referenc
 
 ## Scener experiment
 
-[`ellipsoid_actor.blk`](../prefabs/characters/ellipsoid_actor.blk) is an approximately 180 cm character assembled from 21 nonuniformly scaled spheres. Nested groups place pivots at the hips, knees, ankles, shoulders, elbows, torso, and head. [`character_pose_study.blks`](../scenes/character_pose_study.blks) uses one instance and three camera-specific sets of joint transforms. The marker gives the reaching hand a concrete target.
+[`ellipsoid_actor.blk`](../prefabs/characters/ellipsoid_actor.blk) is an approximately 180 cm character assembled from 21 nonuniformly scaled spheres. Named groups place pivots at the hips, knees, ankles, shoulders, elbows, hands, torso, and head. [`character_pose_study.blks`](../scenes/character_pose_study.blks) uses one instance, three reusable poses, and camera assignments. The marker gives the reaching hand a concrete IK target; both crouching feet use fixed world targets.
 
 | Standing | Reaching | Crouching |
 | --- | --- | --- |
 | ![Standing ellipsoid character](character-pose-study/Standing.png) | ![Character reaching toward a marker](character-pose-study/Reaching.png) | ![Manually posed crouch](character-pose-study/Crouching.png) |
 
-This proves that spheres, nonuniform scale, groups, and per-camera transforms can produce a character and distinct still poses today. The pose is assembled by editing many Euler angles. Reaching required moving the target into the arm's achievable range and manually aligning the shoulder and elbow. Crouching required coordinated root, hip, knee, ankle, torso, and arm edits; foot contact and silhouette remain sensitive to small changes. The joints are implicit in XML groups, with no dedicated character editing UI.
+The new rig workflow keeps groups as the joint hierarchy and stores pose overrides per character instance. The reach uses a pole-directed two-bone solve. The crouch lowers the root while two leg chains keep their ankles at floor targets and preserve foot orientation. The editor's Hierarchy tab exposes joint selection, local transforms, pivots, pairing, targets, and named poses.
 
 The renders above were produced by Scener on an Apple M1 GPU with stencil shadows. The character is intentionally simple; the test measures pose authoring and ellipsoid rendering rather than final character art.
 
@@ -33,9 +33,9 @@ cc -std=c99 -Wall -Wextra -Werror -o /tmp/ecstatica_index tools/ecstatica/ecstat
 
 ## Missing Scener capabilities, in implementation order
 
-1. **An instance-scoped character rig and pose editor.** The current hierarchy and motion tabs have no controls. Camera transforms target plain names, so two instances of the same named rig would both respond to a joint override. Expose joints, pivots, parent links, and per-instance selection and rotation in the viewport. Start with forward kinematics and joint limits.
+1. **Instance-scoped rig and pose editing is available.** The Hierarchy tab edits joints on a selected prefab instance, provides explicit pairing and mirroring, and saves named poses. Legacy camera `<transform>` still targets names globally; use `<use-pose>` for independently posed instances.
 2. **First-class ellipsoids with correct shading normals.** A scaled sphere gives the desired geometry, but `mesh_transform()` rotates its normals without the inverse transpose needed for nonuniform scale. This becomes obvious on strongly stretched limbs. Store radii directly or correct the normal transform for all meshes. An ellipsoid primitive would also simplify authoring.
-3. **Reusable poses and animation clips.** Camera overrides give useful stills, but there are no pose assets, keyframes, interpolation, timeline, or time-based rendering. Geometry is baked into world-space meshes and shadow volumes are built at scene load, so moving characters need a retained local-space rig and updated transforms/shadows during playback.
-4. **Target and contact constraints.** A two-bone IK solver for arms and legs would make hand-to-prop reaches and planted feet much faster and safer, especially when an actor or target moves. IK is not required for the standing or one-off reaching pose above. Add it after joints and clips exist, with forward kinematics remaining available for expressive animation.
+3. **Animation clips remain future work.** Poses and two-bone targets are still states without keyframes, interpolation, a timeline, or playback. Scene rebuilds regenerate world-space meshes and shadow volumes for each still pose.
+4. **Contact is world-target based.** An explicit target pins a hand or foot while the body moves. A live constraint to a moving prop, automatic ground detection, joint angle limits, and multi-chain whole-body balance remain future work.
 
 Facial part controls, pose blending, and stylized squash/stretch can follow once the basic rig and clip pipeline works. The immediate blocker is an authoring and animation model for characters, rather than the ability to draw ellipsoids.

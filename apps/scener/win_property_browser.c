@@ -127,6 +127,7 @@ static void prop_add_set(window_t *list,const void *node,const prop_def_t *prope
 }
 
 void property_browser_refresh(void){
+	scener_rig_panel_refresh();
 	window_t *win=g_app?g_app->property_browser_win:NULL;
 	prop_browser_state_t *st=win?(prop_browser_state_t*)win->userdata:NULL;
 	if(!st||!st->list_win) return;
@@ -135,6 +136,28 @@ void property_browser_refresh(void){
 	if(!doc){ prop_add_row(st->list_win,"Status","No active document"); return; }
 	void *node=doc->scene.selectedNode;
 	if(!node){ prop_add_row(st->list_win,"Status","No node selected"); return; }
+	if(doc->scene.selectedRigInstance==node && doc->scene.selectedRigJoint){
+		void *joint=doc->scene.selectedRigJoint;
+		char value[128];
+		prop_add_row(st->list_win,"Character",scene_node_attr(node,"name"));
+		prop_add_row(st->list_win,"Joint",scene_node_attr(joint,"name"));
+		prop_add_row(st->list_win,"Pair",scene_node_attr(joint,"pair"));
+		vec3 pivot=scene_rig_joint_value(&doc->scene,node,joint,"pivot");
+		snprintf(value,sizeof(value),"%.3g %.3g %.3g cm",pivot.x*100,pivot.y*100,pivot.z*100); prop_add_row(st->list_win,"Pivot",value);
+		vec3 rot=scene_rig_joint_value(&doc->scene,node,joint,"rot");
+		snprintf(value,sizeof(value),"%.3g %.3g %.3g deg",rot.x,rot.y,rot.z); prop_add_row(st->list_win,"Local pose rotation",value);
+		vec3 offset=scene_rig_joint_value(&doc->scene,node,joint,"pos");
+		snprintf(value,sizeof(value),"%.3g %.3g %.3g cm",offset.x*100,offset.y*100,offset.z*100); prop_add_row(st->list_win,"Local pose offset",value);
+		const char *instance_name=scene_node_attr(node,"name");
+		for(int i=0;i<doc->scene.nrigTargets;i++) if(!strcmp(doc->scene.rigTargets[i].instance,instance_name?instance_name:"") &&
+			!strcmp(doc->scene.rigTargets[i].joint,scene_node_attr(joint,"name"))){
+			snprintf(value,sizeof(value),doc->scene.rigTargets[i].reachable?"Reachable":"Out of reach by %.2f cm",doc->scene.rigTargets[i].error*100);
+			prop_add_row(st->list_win,"IK target",value);
+		}
+		prop_add_row(st->list_win,"Edit","Hierarchy tab controls");
+		prop_add_row(st->list_win,"Guide","Pivot at articulation; inspect bent seams");
+		return;
+	}
 	const char *tag=scene_node_tag(node);
 	const node_class_t *class_def=prop_find_class(tag);
 	prop_add_row(st->list_win,"Class",class_def?class_def->label:tag);
