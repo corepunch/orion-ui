@@ -244,7 +244,7 @@ void canvas_win_sync_scrollbars(window_t *win) {
 // Release the floating-selection GL texture if one exists.
 static void float_tex_free(canvas_doc_t *doc) {
   if (doc->sel.floating.tex) {
-    glDeleteTextures(1, &doc->sel.floating.tex);
+    R_DeleteTexture(doc->sel.floating.tex);
     doc->sel.floating.tex = 0;
   }
 }
@@ -254,15 +254,13 @@ static void float_tex_upload(canvas_doc_t *doc) {
   float_tex_free(doc);
   if (!g_ui_runtime.running) return;
   if (!doc->sel.floating.pixels || doc->sel.floating.rect.w <= 0 || doc->sel.floating.rect.h <= 0) return;
-  glGenTextures(1, &doc->sel.floating.tex);
-  glBindTexture(GL_TEXTURE_2D, doc->sel.floating.tex);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
-               doc->sel.floating.rect.w, doc->sel.floating.rect.h, 0,
-               GL_RGBA, GL_UNSIGNED_BYTE, doc->sel.floating.pixels);
+  doc->sel.floating.tex = R_CreateTextureSRGBA8(doc->sel.floating.rect.w,
+                                                doc->sel.floating.rect.h,
+                                                doc->sel.floating.pixels,
+                                                R_FILTER_NEAREST, R_WRAP_CLAMP);
+  if (!doc->sel.floating.tex)
+    fprintf(stderr, "[imageeditor] floating selection texture allocation failed size=%dx%d\n",
+            doc->sel.floating.rect.w, doc->sel.floating.rect.h);
 }
 
 static bool selection_move_hit(const canvas_doc_t *doc, int x, int y) {
@@ -339,7 +337,7 @@ static void onion_cache_reset(canvas_win_state_t *state) {
   if (!state) return;
   for (int i = 0; i < ONION_SKIN_MAX_STEPS * 2; i++) {
     if (state->onion_tex[i]) {
-      glDeleteTextures(1, &state->onion_tex[i]);
+      R_DeleteTexture(state->onion_tex[i]);
       state->onion_tex[i] = 0;
     }
     state->onion_key[i] = NULL;
@@ -454,21 +452,15 @@ static void canvas_draw_loupe(window_t *win, canvas_win_state_t *state, canvas_d
         dst[0] = COLOR_R(px); dst[1] = COLOR_G(px); dst[2] = COLOR_B(px); dst[3] = COLOR_A(px);
       }
     }
-    // Upload pixel buffer to a cached GL texture and draw as a single quad
+    // Upload pixel buffer to a cached sRGB texture and draw as a single quad.
     if (!state->mag_tex) {
-      glGenTextures(1, &state->mag_tex);
-      glBindTexture(GL_TEXTURE_2D, state->mag_tex);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, MAG_PIXELS, MAG_PIXELS, 0,
-                   GL_RGBA, GL_UNSIGNED_BYTE, mag_buf);
-    } else {
-      glBindTexture(GL_TEXTURE_2D, state->mag_tex);
-      glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, MAG_PIXELS, MAG_PIXELS,
-                      GL_RGBA, GL_UNSIGNED_BYTE, mag_buf);
+      state->mag_tex = R_CreateTextureSRGBA8(MAG_PIXELS, MAG_PIXELS, mag_buf,
+                                             R_FILTER_NEAREST, R_WRAP_CLAMP);
+    } else if (!R_UpdateTextureRGBA(state->mag_tex, 0, 0, MAG_PIXELS, MAG_PIXELS,
+                                    mag_buf)) {
+      return;
     }
+    if (!state->mag_tex) return;
     draw_rect(state->mag_tex, R(lox, loy, MAG_SIZE, MAG_SIZE));
     // Crosshair at loupe center
     int lcx = lox + MAG_SIZE / 2;
@@ -497,7 +489,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
     case evDestroy: {
       if (state && state->mag_tex) {
-        glDeleteTextures(1, &state->mag_tex);
+        R_DeleteTexture(state->mag_tex);
         state->mag_tex = 0;
       }
       onion_cache_reset(state);

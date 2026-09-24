@@ -21,6 +21,20 @@ typedef enum {
   R_WRAP_REPEAT = 1,      // Tile (patterns, selection dashes)
 } R_TextureWrap;
 
+// Texture storage and sampling role. SRGBA8 uploads accept straight-alpha
+// sRGB bytes and are stored premultiplied in linear light before encoding.
+typedef enum {
+  R_TEXTURE_RGBA8_DATA = 0,     // Raw RGBA8 bytes; masks, indices, legacy data.
+  R_TEXTURE_SRGBA8_COLOR,        // sRGB-encoded premultiplied linear RGB + alpha.
+  R_TEXTURE_RGBA16F_LINEAR,      // Linear-premultiplied float RGBA; caller supplies float pixels.
+} R_TextureFormat;
+
+typedef enum {
+  R_SCREEN_COMPOSITION_AUTO = 0, // Prefer FP16 when supported, else sRGB8.
+  R_SCREEN_COMPOSITION_SRGB8,
+  R_SCREEN_COMPOSITION_FP16,
+} R_ScreenCompositionMode;
+
 // Vertex attribute description
 typedef struct {
   GLuint index;           // Attribute index (location in shader)
@@ -104,9 +118,18 @@ void R_ClearWindowTarget(uint32_t fbo);
 void R_ClearVertexAttribs(size_t count);
 
 // High-level texture helpers (no GL knowledge required in callers)
-// Create an RGBA texture from pixel data.  Returns the texture ID, or 0 on failure.
+// Create raw RGBA8 data. Use for masks, indices and packed cell data; RGB is
+// not decoded. SRGBA8 input APIs accept straight-alpha sRGB bytes and convert
+// them to premultiplied linear RGB before storing encoded values for filtering.
 uint32_t R_CreateTextureRGBA(int w, int h, const void *rgba,
                               R_TextureFilter filter, R_TextureWrap wrap);
+uint32_t R_CreateTexture(int w, int h, R_TextureFormat format,
+                         const void *pixels, R_TextureFilter filter,
+                         R_TextureWrap wrap);
+uint32_t R_CreateTextureSRGBA8(int w, int h, const void *rgba,
+                               R_TextureFilter filter, R_TextureWrap wrap);
+// True for textures whose sampled RGB is already premultiplied linear light.
+bool R_TextureIsPremultiplied(uint32_t tex);
 uint32_t R_CreateTextureR8(int w, int h, const void *pixels,
                            R_TextureFilter filter, R_TextureWrap wrap);
 bool R_UpdateTextureR8(uint32_t tex, int x, int y, int w, int h,
@@ -121,6 +144,9 @@ bool R_UpdateTextureRG8(uint32_t tex, int x, int y, int w, int h,
 // Update a sub-region of an existing RGBA texture.
 bool R_UpdateTextureRGBA(uint32_t tex, int x, int y, int w, int h,
                          const void *rgba);
+// Read raw data bytes unchanged; convert tracked sRGB8/linear FP16 premultiplied
+// color textures to straight-alpha sRGB8. Rows are returned top-to-bottom.
+bool R_ReadTextureSRGBA8(uint32_t tex, int w, int h, uint8_t *out_rgba);
 
 // Delete a texture by its ID (no-op when id == 0).
 void R_DeleteTexture(uint32_t id);
@@ -135,6 +161,16 @@ bool R_EnsureWindowTarget(uint32_t *fbo, uint32_t *tex,
 // Destroy a window render target (no-op when *fbo == 0).
 void R_DestroyWindowTarget(uint32_t *fbo, uint32_t *tex,
                            int *w, int *h);
+
+// Screen composition uses one reusable physical-pixel target. The default AUTO
+// mode selects FP16 when renderable and blendable, with an sRGB8 fallback.
+void R_SetScreenCompositionMode(R_ScreenCompositionMode mode);
+R_ScreenCompositionMode R_GetScreenCompositionMode(void);
+bool R_BeginScreenComposition(int width, int height, uint32_t clear_color);
+void R_PresentScreenComposition(int width, int height);
+void R_DestroyScreenComposition(void);
+void R_SetFramebufferSRGB(bool enabled);
+void R_BlendPremultiplied(void);
 
 // Blend state
 // Enable/disable standard alpha blending (SRC_ALPHA / ONE_MINUS_SRC_ALPHA)

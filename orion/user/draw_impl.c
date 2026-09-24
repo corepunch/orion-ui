@@ -393,14 +393,22 @@ void composite_root_windows(void) {
   // iOS and offscreen hosts present a platform-owned, nonzero framebuffer.
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
   axBindFramebuffer();
-  uint32_t ws = axGetSize(NULL);
-  int screen_w = (int)LOWORD(ws);
-  int screen_h = (int)HIWORD(ws);
-  glViewport(0, 0, screen_w, screen_h);
+  struct AXsize size;
+  axGetSize(&size);
+  float scale = axGetScaling();
+  int screen_w = (int)((float)size.width * scale + 0.5f);
+  int screen_h = (int)((float)size.height * scale + 0.5f);
+  bool composed = R_BeginScreenComposition(screen_w, screen_h,
+                                            get_sys_color(brPanelDarker));
+  if (!composed) {
+    glViewport(0, 0, screen_w, screen_h);
+    R_SetFramebufferSRGB(true);
+  }
   glDisable(GL_SCISSOR_TEST);
   glDisable(GL_DEPTH_TEST);
   glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
+                      GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
   // Set projection for screen-space compositing.
   set_fullscreen();
@@ -420,10 +428,10 @@ void composite_root_windows(void) {
     if (!w->maximized && !(w->flags & WINDOW_TRANSPARENT))
       draw_rect_shadow(w->frame, theme->window_corner_radius, theme->window_shadow_blur,
                        theme->window_shadow_offset, theme->window_shadow_color);
-    draw_rounded_rect((int)w->surface_tex,
-                      (irect16_t){w->frame.x, w->frame.y, w->frame.w, w->frame.h},
-                      w->surface_w, w->surface_h,
-                      radius, 1.0f);
+    draw_rounded_rect_premultiplied((int)w->surface_tex,
+                                    (irect16_t){w->frame.x, w->frame.y, w->frame.w, w->frame.h},
+                                    w->surface_w, w->surface_h,
+                                    radius, 1.0f);
     if (!w->maximized && !(w->flags & WINDOW_TRANSPARENT))
       theme_draw(THEME_PART_WINDOW_BORDER, w->frame,
                  window_has_focus(w) ? CTRL_FOCUSED : CTRL_NORMAL);
@@ -431,4 +439,8 @@ void composite_root_windows(void) {
 
   glDisable(GL_BLEND);
   glEnable(GL_DEPTH_TEST);
+  if (composed) {
+    axBindFramebuffer();
+    R_PresentScreenComposition(screen_w, screen_h);
+  }
 }

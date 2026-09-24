@@ -190,10 +190,16 @@ bool imageeditor_load_filters(void) {
       continue;
     }
 
-    char *frag_src = modernize_filter_source(legacy);
+    char *modern_src = modernize_filter_source(legacy);
     free(legacy);
-    if (!frag_src) {
+    if (!modern_src) {
       IE_DEBUG("filter translate failed: %s", fs_path);
+      continue;
+    }
+    char *frag_src = imageeditor_prepare_effect_shader(modern_src);
+    free(modern_src);
+    if (!frag_src) {
+      IE_DEBUG("filter color wrapper failed: %s", fs_path);
       continue;
     }
 

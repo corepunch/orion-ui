@@ -21,6 +21,7 @@ typedef enum {
 
 bool imageeditor_render_effects_init(void);
 void imageeditor_render_effects_shutdown(void);
+char *imageeditor_prepare_effect_shader(const char *source);
 
 void imageeditor_draw_rect_effect(int tex, int x, int y, int w, int h,
                                   imageeditor_render_effect_t effect,

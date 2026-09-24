@@ -26,6 +26,7 @@ static uint32_t test_create(int w, int h, const void *rgba,
 
 #define R_UpdateTextureRGBA test_update
 #define R_CreateTextureRGBA test_create
+#define R_CreateTextureSRGBA8 test_create
 
 static void test_damage(void) {
   TEST("texture damage: partial rows, transparent erase, full override, retry and new texture");

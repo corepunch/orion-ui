@@ -116,8 +116,8 @@ static void test_pencil_paper_and_ink(void) {
   canvas_doc_t *doc = create_document(NULL, 64, 64);
   ASSERT_NOT_NULL(doc);
   ASSERT_EQUAL(doc->background.color, IE_PAPER_COLOR);
-  ASSERT_EQUAL(doc->ipal.entries[1], IE_INK_COLOR);
-  ASSERT_EQUAL(doc->ipal.entries[2], IE_PAPER_COLOR);
+  ASSERT_EQUAL(doc->ipal.entries[0], IE_INK_COLOR);
+  ASSERT_EQUAL(doc->ipal.entries[1], IE_PAPER_COLOR);
   ASSERT_NOT_EQUAL(IE_INK_COLOR, MAKE_COLOR(0x00, 0x00, 0x00, 0xFF));
   ASSERT_NOT_EQUAL(IE_PAPER_COLOR, MAKE_COLOR(0xFF, 0xFF, 0xFF, 0xFF));
   // Purple, not brown: G is lowest, B leads R, and chroma is visible in a stroke.
@@ -182,7 +182,7 @@ static void test_coloring_palette(void) {
   penciltest_setup();
   canvas_doc_t *doc = create_document(NULL, 64, 64);
   ASSERT_NOT_NULL(doc);
-  ASSERT_EQUAL(doc->ipal.count, IE_PENCIL_COLORS + 1);
+  ASSERT_EQUAL(doc->ipal.count, IE_PENCIL_COLORS);
   ASSERT_TRUE(cmd_pencil_layer(doc, IE_LAYER_COLOR));
   toolbar_state_t *tb = window_toolbar_state(g_app->tool_win);
   ASSERT_EQUAL(tb->columns, 1);
@@ -250,6 +250,7 @@ static void test_legacy_palette_extension(void) {
   ASSERT_NOT_NULL(doc);
   memset(doc->ipal.entries + 3, 0, 253 * sizeof(uint32_t));
   doc->ipal.count = 256; // FLC reader retains the full palette, including unused entries.
+  ASSERT_TRUE(cmd_pencil_layer(doc, IE_LAYER_COLOR));
   doc->pixels[0] = 3;
   cmd_frame_add(doc, false);
   ASSERT_TRUE(cmd_pencil_color(doc, 4));

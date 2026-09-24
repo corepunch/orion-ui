@@ -763,7 +763,7 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
       }
 
       R_DeleteTexture(tb->strip_tex);
-      uint32_t tex = R_CreateTextureRGBA(w, h, src, R_FILTER_NEAREST, R_WRAP_CLAMP);
+      uint32_t tex = R_CreateTextureSRGBA8(w, h, src, R_FILTER_NEAREST, R_WRAP_CLAMP);
       image_free(src);
 
       tb->strip_tex = tex;

@@ -146,8 +146,8 @@ static void lv_build_graph_texture(lv_hist_state_t *st, int w, int h) {
     lv_plot_px(pix, w, h, w - 1, y, edge);
   }
 
-  st->graph_tex = R_CreateTextureRGBA(w, h, pix,
-                                      R_FILTER_NEAREST, R_WRAP_CLAMP);
+  st->graph_tex = R_CreateTextureSRGBA8(w, h, pix,
+                                        R_FILTER_NEAREST, R_WRAP_CLAMP);
   free(pix);
   st->tex_w = w;
   st->tex_h = h;

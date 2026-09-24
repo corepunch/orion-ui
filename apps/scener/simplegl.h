@@ -108,6 +108,8 @@ void mesh_apply_noise(Mesh *m,float strength,int seed);
 void mesh_apply_shell(Mesh *m,float amount);
 Mesh gen_box(float sx,float sy,float sz);
 Mesh gen_box_inset(float sx,float sy,float sz,float insetX,float insetY);
+Mesh gen_rounded_box(float sx,float sy,float sz,float radius,int segments);
+Mesh gen_rounded_box_beveled(float sx,float sy,float sz,float radius,float bevel,int segments,int bevel_segments);
 Mesh gen_cylinder_like(int sides,float rBot,float rTop,float height,int smooth);
 Mesh gen_cylinder(float r,float h,int sides);
 Mesh gen_cylinder_tube(float r,float h,float wall,int sides);

@@ -58,7 +58,7 @@ static uint32_t filter_gallery_make_preview_tex(canvas_doc_t *doc) {
     }
   }
 
-  uint32_t tex = R_CreateTextureRGBA(dst, dst, pix, R_FILTER_LINEAR, R_WRAP_CLAMP);
+  uint32_t tex = R_CreateTextureSRGBA8(dst, dst, pix, R_FILTER_LINEAR, R_WRAP_CLAMP);
   free(pix);
   return tex;
 }
@@ -86,8 +86,8 @@ static void filter_gallery_bake_thumbnails(filter_gallery_state_t *st) {
     R_DeleteTexture(baked);
   }
 
-  st->thumb_sheet_tex = R_CreateTextureRGBA(sz, sz * count, sheet,
-                                            R_FILTER_LINEAR, R_WRAP_CLAMP);
+  st->thumb_sheet_tex = R_CreateTextureSRGBA8(sz, sz * count, sheet,
+                                              R_FILTER_LINEAR, R_WRAP_CLAMP);
   free(sheet);
   if (!st->thumb_sheet_tex) return;
 

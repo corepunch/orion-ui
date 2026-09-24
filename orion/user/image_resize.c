@@ -1,4 +1,5 @@
 #include "image.h"
+#include "color.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,9 +24,13 @@ static uint8_t *box2x(const uint8_t *src, int w, int h) {
       uint8_t *d = dst + ((size_t)y * nw + x) * 4;
       d[3] = (uint8_t)((as + 2) / 4);
       if (as) {
-        d[0] = (uint8_t)((a00 * p00[0] + a01 * p01[0] + a10 * p10[0] + a11 * p11[0] + as / 2) / as);
-        d[1] = (uint8_t)((a00 * p00[1] + a01 * p01[1] + a10 * p10[1] + a11 * p11[1] + as / 2) / as);
-        d[2] = (uint8_t)((a00 * p00[2] + a01 * p01[2] + a10 * p10[2] + a11 * p11[2] + as / 2) / as);
+        for (int c = 0; c < 3; c++) {
+          float sum = ui_srgb8_to_linear(p00[c]) * a00 +
+                      ui_srgb8_to_linear(p01[c]) * a01 +
+                      ui_srgb8_to_linear(p10[c]) * a10 +
+                      ui_srgb8_to_linear(p11[c]) * a11;
+          d[c] = ui_linear_to_srgb8(sum / as);
+        }
       } else {
         d[0] = d[1] = d[2] = 0;
       }
@@ -92,7 +97,8 @@ uint8_t *downscale_image_ex(const uint8_t *pixels, int w, int h, int target_size
           double a = weight * sp[3];
           max_alpha = fmax(max_alpha, sp[3]);
           alpha += a;
-          for (int c = 0; c < 3; c++) rgb[c] += a * sp[c];
+          for (int c = 0; c < 3; c++)
+            rgb[c] += a * ui_srgb8_to_linear(sp[c]);
           if (sp[3] && (!min_set || sp[0] + sp[1] + sp[2] < min_rgb[0] + min_rgb[1] + min_rgb[2])) {
             min_rgb[0] = sp[0]; min_rgb[1] = sp[1]; min_rgb[2] = sp[2];
             min_set = 1;
@@ -108,7 +114,7 @@ uint8_t *downscale_image_ex(const uint8_t *pixels, int w, int h, int target_size
         continue;
       }
       for (int c = 0; c < 3; c++)
-        p[c] = (uint8_t)fmin(255.0, rgb[c] / alpha + 0.5);
+        p[c] = ui_linear_to_srgb8((float)(rgb[c] / alpha));
       if ((flags & IMAGE_DOWNSCALE_STROKES) && min_set)
         for (int c = 0; c < 3; c++)
           p[c] = (uint8_t)(p[c] * 0.85 + min_rgb[c] * 0.15 + 0.5);

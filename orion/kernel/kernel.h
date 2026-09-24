@@ -121,6 +121,8 @@ bool bake_texture_program_params(int src_tex, int w, int h, uint32_t program,
                                  uint32_t *out_tex);
 bool bake_texture_program(int src_tex, int w, int h, uint32_t program,
                           float mix_amount, uint32_t *out_tex);
+// Read raw framebuffer component bytes. For color export, use
+// R_ReadTextureSRGBA8() to convert tracked linear/premultiplied textures.
 bool read_texture_rgba(int src_tex, int w, int h, uint8_t *out_rgba);
 bool capture_framebuffer_rgba(int w, int h, uint8_t *out_rgba);
 bool ui_save_screenshot(const char *path, int quality);

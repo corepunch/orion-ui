@@ -175,18 +175,11 @@ static void canvas_blend_pixel(canvas_doc_t *doc, int x, int y, uint32_t c,
   }
 #else
   uint32_t dst = canvas_get_pixel(doc, x, y);
-  int sa = (int)COLOR_A(c) * coverage / 255;
-  int da = COLOR_A(dst);
-  int oa = sa + da * (255 - sa) / 255;
-  if (oa <= 0) {
-    canvas_set_pixel(doc, x, y, MAKE_COLOR(0, 0, 0, 0));
-    return;
-  }
-  canvas_set_pixel(doc, x, y, MAKE_COLOR(
-      (uint8_t)((COLOR_R(c) * sa + COLOR_R(dst) * da * (255 - sa) / 255) / oa),
-      (uint8_t)((COLOR_G(c) * sa + COLOR_G(dst) * da * (255 - sa) / 255) / oa),
-      (uint8_t)((COLOR_B(c) * sa + COLOR_B(dst) * da * (255 - sa) / 255) / oa),
-      (uint8_t)oa));
+  uint8_t out[4] = {COLOR_R(dst), COLOR_G(dst), COLOR_B(dst), COLOR_A(dst)};
+  uint8_t source[4] = {COLOR_R(c), COLOR_G(c), COLOR_B(c),
+                       (uint8_t)((uint32_t)COLOR_A(c) * coverage / 255)};
+  ui_composite_srgba8(out, source, 1.0f);
+  canvas_set_pixel(doc, x, y, MAKE_COLOR(out[0], out[1], out[2], out[3]));
 #endif
 }
 

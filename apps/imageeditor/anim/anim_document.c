@@ -47,15 +47,8 @@ bool pencil_composite_frame(const canvas_doc_t *doc, int frame, uint8_t *pixels)
 
 #if IMAGEEDITOR_INDEXED
 static void pencil_rgba_blend(uint8_t *dst, uint32_t color, uint8_t alpha) {
-  if (!alpha) return;
-  uint32_t da = dst[3], inv = 255 - alpha;
-  uint32_t out_a = alpha + (da * inv + 127) / 255;
-  uint64_t denom = (uint64_t)out_a * 255;
-  if (!denom) return;
-  dst[0] = (uint8_t)(((uint64_t)COLOR_R(color) * alpha * 255 + (uint64_t)dst[0] * da * inv + denom / 2) / denom);
-  dst[1] = (uint8_t)(((uint64_t)COLOR_G(color) * alpha * 255 + (uint64_t)dst[1] * da * inv + denom / 2) / denom);
-  dst[2] = (uint8_t)(((uint64_t)COLOR_B(color) * alpha * 255 + (uint64_t)dst[2] * da * inv + denom / 2) / denom);
-  dst[3] = (uint8_t)out_a;
+  uint8_t source[4] = {COLOR_R(color), COLOR_G(color), COLOR_B(color), alpha};
+  ui_composite_srgba8(dst, source, 1.0f);
 }
 
 static bool pencil_composite_frame_rgba(const canvas_doc_t *doc, int frame, uint8_t *rgba) {

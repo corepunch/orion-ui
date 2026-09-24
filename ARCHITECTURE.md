@@ -250,6 +250,54 @@ Screenshots use the same framebuffer boundary. `ui_request_screenshot()` waits
 for a fully painted frame, while `ui_save_screenshot()` captures the current
 completed frame immediately. The path extension selects PNG or JPEG encoding.
 
+### Color and Alpha
+
+Public packed colors use sRGB-encoded RGB and linear alpha in `0xAABBGGRR`
+order (R is the low byte). `WEB(0xRRGGBB)` accepts CSS-style hex and converts
+to that packed layout. `ui_srgb_to_linear()` and `ui_linear_to_srgb()` implement
+the piecewise sRGB transfer curve; use them at CPU boundaries rather than a
+gamma-2.2 approximation.
+
+`R_CreateTextureRGBA()` is a raw RGBA8 data texture for masks, indices, glyph
+cells and legacy numerical data. `R_CreateTextureSRGBA8()` accepts straight
+sRGB RGBA8 source pixels, premultiplies RGB in linear light, and stores the
+sRGB encoding of that premultiplied value. The renderer tracks this role so
+ordinary sprite draws apply opacity to RGB and alpha together. Alpha remains a
+linear coverage value. Do not use sRGB formats for lookup indices or coverage
+masks.
+
+Root-window caches use `GL_SRGB8_ALPHA8` and remain 4 bytes per pixel. Orion
+enables framebuffer sRGB conversion for cache writes, so source-over blending
+uses linear RGB; cache RGB is premultiplied and sampling decodes it to linear.
+Screen composition uses one reusable physical-pixel target. `AUTO` is the
+default and uses `GL_RGBA16F` when the backend supports renderable, blendable
+float targets, otherwise it uses `GL_SRGB8_ALPHA8`. Select a comparison mode
+with `R_SetScreenCompositionMode(R_SCREEN_COMPOSITION_SRGB8)` or
+`R_SetScreenCompositionMode(R_SCREEN_COMPOSITION_FP16)`, or set
+`ORION_SCREEN_COMPOSITION=srgb8|fp16|auto` before startup. The renderer logs
+the chosen mode, dimensions, memory per pixel and any fallback.
+
+The final pass presents the opaque linear composition in sRGB once, accounting
+for backends that automatically encode sRGB attachments. macOS windows,
+Wayland/X11 EGL surfaces and iOS drawable layers declare sRGB where the
+platform API supports it. PNG screenshots and still/APNG exports carry an
+`sRGB` declaration and store straight-alpha sRGB8 bytes. Screenshot readback
+uses the already-presented sRGB surface. `R_ReadTextureSRGBA8()` also provides
+format-aware texture readback: it unpremultiplies sRGB8 and linear FP16 colors
+in linear light before encoding straight-alpha sRGB8, while raw data bytes are
+preserved unchanged. PNG/JPEG/BMP import uses sRGB for untagged files. PNGs
+with unsupported ICC/cICP/gamma-only metadata, JPEGs with ICC profiles, BMP
+V4/V5 files with unsupported color metadata, and PNGs above 8 bits are rejected
+with a diagnostic because the document model remains 8-bit RGBA and this build
+has no ICC transform library.
+
+Image-editor resize/downscale uses alpha-weighted linear-light filtering.
+CPU layer compositing, pixel-canvas antialiasing, layer merges and background
+compositing use the same linear-light source-over rule as the GPU renderer.
+Image-editor effect shaders keep their existing sRGB math: the loader converts
+premultiplied linear samples to straight sRGB inputs and converts shader output
+back to premultiplied linear before blending or to straight sRGB for readback.
+
 ## Theme System
 
 The theme system provides a runtime-switchable drawing vtable (`theme_t`) that
