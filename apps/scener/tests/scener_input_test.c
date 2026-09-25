@@ -124,6 +124,18 @@ static void test_device_screen_geometry_and_assets(void) {
   }
   ASSERT_EQUAL(screens, 2);
   scene_free(&scene);
+  const struct { const char *path; int objects; } promo_scenes[] = {
+    { "apps/scener/scenes/iphone18_promo.blks", 7 },
+    { "apps/scener/scenes/ipad_promo.blks", 5 },
+  };
+  for (int i = 0; i < 2; i++) {
+    Scene promo = {0};
+    ASSERT_TRUE(load_scene(promo_scenes[i].path, &promo));
+    ASSERT_EQUAL(promo.ncameras, 3);
+    ASSERT_EQUAL(promo.nobjs, promo_scenes[i].objects);
+    ASSERT_EQUAL(promo.nscreenTextures, 1);
+    scene_free(&promo);
+  }
   Scene created = {0};
   ASSERT_TRUE(window_test_load(&created, "<scene/>"));
   ASSERT_TRUE(scene_create_promo_shape(&created, "rounded-rect", v3(0, 0, 0)));
