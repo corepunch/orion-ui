@@ -100,6 +100,14 @@ under their chain. `node_position()` derives bone and `on=` feature positions,
 and `rig_is_joint()` accepts named groups and bones everywhere the rig looks
 for joints.
 
+After loading, `load_scene()` reports attributes no parser read
+(`warn_unused_attributes()`: typos, and values overridden such as `color` beside
+`material`), shadow-casting lights sealed inside shadow-casting meshes, and
+scenes with no lights (`warn_unlit_scene()`). Parsers read attributes through
+`xml_attr()`, which records use; read an optional attribute unconditionally when
+a later branch may ignore it, and list attributes only consumed later (pose data,
+book metadata) in `deferred_attributes[]`.
+
 `bool-negative-box` is handled by a prepass rather than `shape_parsers[]`. The
 prepass expands groups and prefabs before wall construction; each aligned box
 that fully crosses a wall becomes a rectangular opening in that wall. It is

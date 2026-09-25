@@ -236,6 +236,15 @@ Follow the enclosed-room pattern in `scenes/sample_room.blks`: combine a low amb
   compensation to an intensity because the displayed result already receives
   sRGB encoding after lighting.
 
+
+Practical fixtures must let their light out. A lamp's shade is an open drum
+(`<cylinder tube="…">`) hanging from a socket, or the `<light>` sits below the
+shade's opening; a light inside a capped `<cone>` or `<cylinder>` casts the
+whole room into its shade's shadow. Ambient only fills: keep it low (about
+0.35 or less per sRGB channel) and fix dark renders by fixing light placement,
+intensity or radius. Scener warns when a light is sealed inside a
+shadow-casting mesh and when a scene has no lights.
+
 ## Camera declarations
 
 Aim cameras at useful targets, not arbitrary Euler directions. Keep the near plane away from geometry.

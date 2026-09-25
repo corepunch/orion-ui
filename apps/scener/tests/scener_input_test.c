@@ -343,6 +343,26 @@ static void test_bone_skeleton(void){
 	scene_free(&authored); scene_free(&restored); PASS();
 }
 
+static void test_ignored_attributes_reported(void){
+	TEST("load reports misspelled and overridden attributes but not deferred pose data");
+	Scene s={0};
+	ASSERT_TRUE(window_test_load(&s,"<scene up=\"z\"><camera name=\"A\" textRect=\"0 0 0.5 0.5\"><use-pose instance=\"X\" name=\"P\"/></camera>"
+		"<pose name=\"P\"><joint target=\"j\" aim=\"0 0\"/></pose><material id=\"m\" color=\"1 0 0\"/>"
+		"<torus radius=\"5\" tube=\"1\"/><box size=\"1 1 1\" material=\"m\" color=\"0 1 0\"/><sphere radius=\"2\"/></scene>"));
+	ASSERT_EQUAL(s.ignoredAttributes,3);
+	scene_free(&s); PASS();
+}
+
+static void test_enclosed_light_reported(void){
+	TEST("a shadow-casting light sealed in a capped shade is reported; an open drum is not");
+	Scene s={0};
+	ASSERT_TRUE(window_test_load(&s,"<scene up=\"z\"><cone pos=\"0 0 100\" rot=\"90 0 0\" radius=\"20\" radiusTop=\"5\" height=\"16\"/>"
+		"<light pos=\"0 0 98\" radius=\"500\"/><cylinder pos=\"100 0 100\" rot=\"90 0 0\" radius=\"18\" height=\"14\" tube=\"1\"/>"
+		"<light pos=\"100 0 99\" radius=\"500\"/><box pos=\"0 0 -1\" size=\"400 400 2\"/></scene>"));
+	ASSERT_EQUAL(s.enclosedLights,1);
+	scene_free(&s); PASS();
+}
+
 static void test_nested_arch_emits_wall_parts_once(void) {
   TEST("scener walls: a contained arch does not duplicate wall geometry");
   Scene scene = {0};
@@ -910,6 +930,8 @@ int main(void) {
   test_instance_rig_ik();
   test_rig_mirror_and_pose_reuse();
   test_bone_skeleton();
+  test_ignored_attributes_reported();
+  test_enclosed_light_reported();
   test_nested_arch_emits_wall_parts_once();
   test_explicit_scene_up_axis();
   test_scene_coordinate_conventions();

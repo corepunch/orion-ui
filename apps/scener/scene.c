@@ -76,10 +76,14 @@
 #define BONE_NAME_CAPACITY 64
 #define BONE_FOOT_TOLERANCE 0.002f
 #define CM_PER_METRE 100.0f
+#define ENCLOSURE_RAY_X 0.5773f
+#define ENCLOSURE_RAY_Y 0.6211f
+#define ENCLOSURE_RAY_Z 0.5303f
+#define ENCLOSURE_EPSILON 0.0000001f
 
 /* -------------------------------------------------------------- Tiny XML */
 
-typedef struct XmlAttr { char *name, *value; } XmlAttr;
+typedef struct XmlAttr { char *name, *value; int used; } XmlAttr;
 typedef struct XmlNode {
 	char *tag;
 	XmlAttr *attrs; int nattrs,cattrs;
@@ -97,8 +101,9 @@ static void xml_free(XmlNode*n){
 	for(int i=0;i<n->nkids;i++) xml_free(n->kids[i]);
 	free(n->kids); free(n->tag); free(n);
 }
+/* Every lookup marks the attribute used, so load can report typos and ignored attributes. */
 static const char* xml_attr(XmlNode*n,const char*name,const char*def){
-	for(int i=0;i<n->nattrs;i++) if(!strcmp(n->attrs[i].name,name)) return n->attrs[i].value;
+	for(int i=0;i<n->nattrs;i++) if(!strcmp(n->attrs[i].name,name)){ n->attrs[i].used=1; return n->attrs[i].value; }
 	return def;
 }
 const char *scene_node_tag(const void *node){
@@ -946,7 +951,7 @@ static void parse_screen(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec
 	Mesh mesh=gen_rounded_box(size.x,size.y,size.z,xml_attr_f_cm(n,"radius",0),xml_attr_i(n,"segments",8));
 	if(!mesh.ntris){ fprintf(stderr,"[scener] screen: invalid size or radius\n"); return; }
 	apply_modifiers(&mesh,n);
-	const char *image=s->activeScreenImage?s->activeScreenImage:xml_attr(n,"image",NULL);
+	const char *own=xml_attr(n,"image",NULL),*image=s->activeScreenImage?s->activeScreenImage:own;
 	int old=s->activeScreenTexture;
 	s->activeScreenTexture=image&&image[0]?screen_texture_index(s,image):-1;
 	scene_add_obj(s,mesh,M,R,color,shin,xml_attr_i(n,"castShadow",0),renderable,xml_attr_i(n,"unlit",1));
@@ -1264,7 +1269,7 @@ static void parse_ellipsoid(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, 
 
 static void parse_bone(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 pos, vec3 rot, vec3 color, float shin, int castsShadow, int renderable, int unlit){
 	(void)parentM; (void)pos; (void)rot;
-	if(!xml_is_bone(n->parent) && xml_attr_i(n,"ground",1) && !s->activeRigPose){
+	if(!xml_is_bone(n->parent) && xml_attr_i(n,"ground",1)){
 		vec3 rest=bone_offset(n); rest.x=rest.y=0;
 		bone_report_feet(n,rest,xml_attr(n,"name","?"));
 	}
@@ -2065,7 +2070,8 @@ static void parse_nodes(Scene *s, XmlNode *parent, mat4 parentM, mat4 parentR){
 		Material *mat = find_material(s, matName);
 		s->activeTexIndex = materials_index_for_name(mat ? mat->id : matName);
 		vec3 color = mat? mat->color : xml_attr_v3(n,"color",v3(0.8f,0.8f,0.8f));
-		if(s->prefabTintActive && xml_attr_i(n,"tint",0)) color=s->prefabTint;
+		int tint=xml_attr_i(n,"tint",0);
+		if(s->prefabTintActive && tint) color=s->prefabTint;
 		float shin = mat? mat->shininess : xml_attr_f(n,"shininess",8.0f);
 		int castsShadow = xml_attr_i(n,"castShadow",1);
 		int renderable = xml_attr_i(n,"renderable",1);
@@ -2218,6 +2224,72 @@ static void warn_unknown_elements(XmlNode *root, const char *path, int prefab){
 		return;
 	}
 	warn_unknown_children(root,path,1,prefab);
+}
+
+/* Pose data applies only in the cameras that select it, and books read per-camera
+   text metadata; these attributes are valid even when this load never reads them. */
+static const struct { const char *tag; const char *attrs[8]; } deferred_attributes[]={
+	{ "camera",   { "textRect", "textScale" } },
+	{ "group",    { "pair" } },
+	{ "bone",     { "pair" } },
+	{ "use-pose", { "instance", "name" } },
+	{ "pose",     { "name" } },
+	{ "joint",    { "target", "pos", "rot", "aim" } },
+	{ "ik",       { "root", "mid", "tip", "target", "pole", "keepOrientation", "plant" } },
+};
+
+static int attribute_deferred(const char *tag,const char *name){
+	if(name[0]=='_' || !strcmp(name,"generated")) return 1;
+	for(size_t i=0;i<sizeof(deferred_attributes)/sizeof(deferred_attributes[0]);i++){
+		if(strcmp(deferred_attributes[i].tag,tag)) continue;
+		for(int k=0;k<8 && deferred_attributes[i].attrs[k];k++) if(!strcmp(deferred_attributes[i].attrs[k],name)) return 1;
+	}
+	return 0;
+}
+
+static void warn_unused_attributes(Scene *s,XmlNode *n,const char *path){
+	if(xml_attr(n,"generated",NULL)) return;
+	for(int i=0;i<n->nattrs;i++) if(!n->attrs[i].used && !attribute_deferred(n->tag,n->attrs[i].name) && ++s->ignoredAttributes)
+		fprintf(stderr,"warning: %s: <%s> ignores attribute '%s' (unknown, misspelled or overridden)\n",path,n->tag,n->attrs[i].name);
+	for(int i=0;i<n->nkids;i++) warn_unused_attributes(s,n->kids[i],path);
+}
+
+/* Odd crossings of a skew ray mean the point lies inside that closed mesh. */
+static int mesh_encloses(const Mesh *m,vec3 p){
+	vec3 d=v3(ENCLOSURE_RAY_X,ENCLOSURE_RAY_Y,ENCLOSURE_RAY_Z);
+	int crossings=0;
+	for(int i=0;i<m->ntris;i++){
+		vec3 a=m->verts[m->tris[i].a].pos,b=m->verts[m->tris[i].b].pos,c=m->verts[m->tris[i].c].pos;
+		vec3 e1=vsub(b,a),e2=vsub(c,a),h=vcross(d,e2); float det=vdot(e1,h);
+		if(fabsf(det)<ENCLOSURE_EPSILON) continue;
+		vec3 q=vsub(p,a); float u=vdot(q,h)/det; if(u<0 || u>1) continue;
+		vec3 r=vcross(q,e1); float v=vdot(d,r)/det; if(v<0 || u+v>1) continue;
+		if(vdot(e2,r)/det>ENCLOSURE_EPSILON) crossings++;
+	}
+	return crossings&1;
+}
+
+/* A shadow-casting light sealed in a shadow-casting solid (a capped cone shade, a box
+   fixture) lights nothing, and the scene silently falls back to ambient. */
+static void warn_unlit_scene(Scene *s,const char *path){
+	int lights=0;
+	for(int l=0;l<s->nlights;l++){
+		Light *light=&s->lights[l];
+		if(light->intensity>0) lights++;
+		if(light->isDirectional || !light->castsShadow) continue;
+		for(int i=0;i<s->nobjs;i++){
+			SceneObj *o=&s->objs[i];
+			if(!o->castsShadow || !mesh_encloses(&o->mesh,light->pos)) continue;
+			s->enclosedLights++;
+			fprintf(stderr,"warning: %s: light at %.1f %.1f %.1f cm is sealed inside a shadow-casting <%s>; open the shade "
+				"(cylinder tube=), move the light below it, or set castShadow=\"0\" on the enclosure\n",path,
+				light->pos.x*CM_PER_METRE,light->pos.y*CM_PER_METRE,light->pos.z*CM_PER_METRE,
+				o->editNode?scene_node_tag(o->editNode):"shape");
+			break;
+		}
+	}
+	if(!lights && s->nobjs && !s->prefabDocument)
+		fprintf(stderr,"warning: %s: scene has no <light> or <sun>; it is lit by ambient only\n",path);
 }
 
 /* --------------------------------------------------------------- IO & load */
@@ -2496,6 +2568,10 @@ int load_scene(const char *path, Scene *s){
 	s->sceneRoot=root; s->editRoot=root;
 	scene_rebuild_view(s);
 	if(s->assetError){ scene_free(s); return 0; }
+	xml_attr(root,"up",NULL); xml_attr(root,"convention",NULL); xml_attr(root,"ambient",NULL); xml_attr(root,"background",NULL);
+	warn_unused_attributes(s,root,path);
+	warn_unlit_scene(s,path);
+	for(int i=0;i<s->nprefabs;i++) warn_unused_attributes(s,(XmlNode*)s->prefabs[i].root,s->prefabs[i].path);
 	return 1;
 }
 

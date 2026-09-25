@@ -178,6 +178,7 @@ typedef struct {
 	SceneObj *objs; int nobjs,cobjs;
 	ShadowVolume *svols;
 	PrefabDef *prefabs; int nprefabs,cprefabs;
+	int ignoredAttributes,enclosedLights;
 	InstanceDef *instances; int ninstances,cinstances;
 	negative_profile_t *negativeProfiles; int nnegativeProfiles,cnegativeProfiles;
 	NegativeBox *negativeBoxes; int nnegativeBoxes,cnegativeBoxes;
