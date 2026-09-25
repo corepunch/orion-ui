@@ -303,6 +303,13 @@ static void test_navy_caption_bar(void) {
   memset(pixels, 0, sizeof(pixels));
   theme->draw_part(THEME_PART_TOOLBAR, R(10, 10, 80, 30), CTRL_NORMAL);
   ASSERT_EQUAL(pixels[25][50], get_sys_color(brPanelDarker));
+  uint32_t toolbar = pixels[25][50];
+  memset(pixels, 0, sizeof(pixels));
+  theme->draw_part(THEME_PART_MENU_BAR, R(10, 10, 80, 30), CTRL_NORMAL);
+  ASSERT_EQUAL(pixels[25][50], toolbar);
+  memset(pixels, 0, sizeof(pixels));
+  theme->draw_part(THEME_PART_STATUSBAR, R(10, 10, 80, 30), CTRL_NORMAL);
+  ASSERT_EQUAL(pixels[25][50], toolbar);
   PASS();
 }
 

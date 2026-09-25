@@ -69,6 +69,15 @@ static void test_navy_theme_palette(void) {
   ASSERT_EQUAL(get_theme()->style, THEME_NAVY);
   ASSERT_EQUAL(get_sys_color(brControlBg), WEB(0x2F3F58));
   ASSERT_EQUAL(get_sys_color(brAccent), WEB(0x8270F7));
+  ASSERT_EQUAL(get_sys_color(brWindowDarkBg), get_sys_color(brPanelDarker));
+  ASSERT_EQUAL(get_sys_color(brStatusbarBg), get_sys_color(brPanelDarker));
+  ASSERT_EQUAL(get_sys_color(brWorkspaceBg), get_sys_color(brPanelDarker));
+  ASSERT_EQUAL(get_sys_color(brButtonInner), get_sys_color(brInactiveTitlebar));
+  ASSERT_EQUAL(get_sys_color(brColumnViewBg), get_sys_color(brInactiveTitlebar));
+  ASSERT_EQUAL(get_sys_color(brTextDisabled), get_sys_color(brInactiveTitlebarText));
+  ASSERT_EQUAL(get_sys_color(brTextNormal), get_sys_color(brToolbarForeground));
+  ASSERT_NOT_EQUAL(get_sys_color(brPanelDark), get_sys_color(brPanelDarker));
+  ASSERT_NOT_EQUAL(get_sys_color(brPanelDark), get_sys_color(brControlBg));
   ASSERT_FALSE(set_theme(THEME_NAVY));
   ASSERT_FALSE(set_theme((theme_style_t)255));
   ASSERT_EQUAL(get_sys_color(brControlBg), WEB(0x2F3F58));
