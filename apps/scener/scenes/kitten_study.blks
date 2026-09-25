@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Skeleton authoring study: a bone-built kitten, a re-aimed pose and a planted-paw IK pose. -->
+<scene up="z" ambient="0.35 0.35 0.4" background="neutral">
+  <camera name="Standing" pos="-55 -70 35" look="0 0 12" fov="40" />
+  <camera name="Side" pos="-90 0 15" look="0 0 13" fov="35" />
+  <camera name="Batting" pos="-55 -70 35" look="0 0 12" fov="40"><use-pose instance="Kitten" name="Bat" /></camera>
+  <camera name="Stretching" pos="-80 -45 30" look="0 0 10" fov="40"><use-pose instance="Kitten" name="Stretch" /></camera>
+  <pose name="Bat">
+    <joint target="neck" aim="10 30" />
+    <joint target="head" aim="20 25" />
+    <joint target="left_shoulder" aim="0 -20" />
+    <joint target="left_forearm" aim="0 10" />
+    <joint target="tail_2" aim="-150 40" />
+  </pose>
+  <pose name="Stretch">
+    <joint target="spine" aim="0 -12" />
+    <ik tip="left_hind_paw" plant="1" pole="0 -1 0" keepOrientation="1" />
+    <ik tip="right_hind_paw" plant="1" pole="0 -1 0" keepOrientation="1" />
+    <ik tip="left_front_paw" target="5 -18 2" pole="0 -1 0" keepOrientation="1" />
+    <ik tip="right_front_paw" target="-5 -18 2" pole="0 -1 0" keepOrientation="1" />
+  </pose>
+  <material id="fur" color="0.55 0.53 0.52" shininess="4" />
+  <material id="ear" color="0.78 0.52 0.52" shininess="4" />
+  <material id="paw" color="0.85 0.83 0.80" shininess="4" />
+  <material id="muzzle" color="0.88 0.86 0.83" shininess="4" />
+  <material id="eye" color="0.12 0.14 0.10" shininess="60" />
+  <material id="nose" color="0.80 0.42 0.46" shininess="20" />
+  <sun dir="-0.5 0.4 -1" color="1 0.95 0.9" intensity="1" castShadows="1" />
+  <prefab source="characters/kitten" name="Kitten" />
+</scene>

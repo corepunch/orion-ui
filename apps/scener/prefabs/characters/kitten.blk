@@ -1,0 +1,27 @@
+<!-- Storybook kitten skeleton: body frame Z up, faces local -Y, its left is +X.
+     Lowest rest volume sits on local Z=0 through root grounding; about 26 cm to the ear tips,
+     38 cm nose to rump. Authored only with aim, length, radius, at/from and mirror. -->
+<prefab>
+  <bone name="spine" aim="0 0" aimEnd="0 8" segments="2" length="15" radius="7 6.5" material="fur">
+    <bone name="neck" aim="0 50" length="5" radius="4.2 4.2" material="fur">
+      <bone name="head" aim="0 5" length="8" radius="7 6" material="fur">
+        <bone name="left_ear" at="0.35" from="55 50" aim="28 72" length="6" radius="3 1.1" taper="0.15" mirror="1" material="ear" />
+        <sphere on="34 12" at="0.8" radius="1.5" material="eye" />
+        <sphere on="-34 12" at="0.8" radius="1.5" material="eye" />
+        <ellipsoid on="0 -18" at="0.9" radii="3 2.2 2" sink="1" material="muzzle" />
+        <sphere on="0 2" at="1" radius="0.9" material="nose" />
+      </bone>
+    </bone>
+    <bone name="left_shoulder" at="0.85" from="90 -55" aim="0 -88" length="6.5" radius="2.8 3" mirror="1" material="fur">
+      <bone name="left_forearm" aim="0 -90" length="6.5" radius="2.2 2.2" material="fur">
+        <bone name="left_front_paw" foot="1" aim="0 -8" length="3" radius="2.2 1.3" material="paw" />
+      </bone>
+    </bone>
+    <bone name="left_hip" at="0.1" from="90 -50" aim="0 -62" length="7.4" radius="3.4 3.6" mirror="1" material="fur">
+      <bone name="left_hock" aim="180 -70" length="7.7" radius="2.2 2.2" material="fur">
+        <bone name="left_hind_paw" foot="1" aim="0 -8" length="3.4" radius="2.2 1.3" material="paw" />
+      </bone>
+    </bone>
+    <bone name="tail" at="0" from="180 25" aim="180 35" aimEnd="165 85" segments="3" length="22" radius="1.8" taper="0.6" material="fur" />
+  </bone>
+</prefab>

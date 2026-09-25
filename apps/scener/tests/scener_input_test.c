@@ -279,6 +279,70 @@ static void test_rig_mirror_and_pose_reuse(void){
 	scene_free(&s); PASS();
 }
 
+
+#define BONE_TEST_TEXT_CAPACITY 4096
+
+static void *bone_test_joint(Scene *s,void *instance,const char *name){
+	for(int i=0;i<scene_rig_joint_count(s,instance);i++){
+		void *joint=scene_rig_joint_at(s,instance,i,NULL);
+		if(!strcmp(scene_node_attr(joint,"name"),name)) return joint;
+	}
+	return NULL;
+}
+
+static vec3 bone_test_world(Scene *s,void *instance,const char *name){
+	mat4 world;
+	if(!scene_rig_select_joint(s,instance,bone_test_joint(s,instance,name)) || !scene_rig_joint_world(s,&world)) return v3(NAN,NAN,NAN);
+	return mat4_xform_point(world,v3(0,0,0));
+}
+
+static void test_bone_skeleton(void){
+	TEST("bone skeletons: grounding, mirrors, segment chains, aim poses and planted IK");
+	Scene s={0};
+	ASSERT_TRUE(load_scene("apps/scener/scenes/kitten_study.blks",&s));
+	void *kitten=NULL;
+	for(int i=0;i<s.ninstances && !kitten;i++) for(int j=0;j<s.nobjs;j++)
+		if(!strcmp(scene_node_tag(s.objs[j].editNode),"prefab")){ kitten=s.objs[j].editNode; break; }
+	ASSERT_TRUE(kitten!=NULL);
+	ASSERT_TRUE(bone_test_joint(&s,kitten,"right_shoulder")!=NULL);
+	ASSERT_TRUE(bone_test_joint(&s,kitten,"right_ear")!=NULL);
+	ASSERT_TRUE(bone_test_joint(&s,kitten,"spine_2")!=NULL);
+	ASSERT_TRUE(bone_test_joint(&s,kitten,"tail_3")!=NULL);
+	float low=INFINITY;
+	for(int i=0;i<s.nobjs;i++) for(int v=0;v<s.objs[i].mesh.nverts;v++) low=fminf(low,s.objs[i].mesh.verts[v].pos.z);
+	ASSERT_TRUE(low>-0.001f && low<0.005f);
+	vec3 left=bone_test_world(&s,kitten,"left_shoulder"),right=bone_test_world(&s,kitten,"right_shoulder");
+	ASSERT_TRUE(left.x>0 && fabsf(left.x+right.x)<0.0005f && fabsf(left.y-right.y)<0.0005f && fabsf(left.z-right.z)<0.0005f);
+	vec3 paw=bone_test_world(&s,kitten,"left_hind_paw"),elbow=bone_test_world(&s,kitten,"left_forearm");
+	scene_select_camera(&s,"Batting");
+	vec3 raised=bone_test_world(&s,kitten,"left_forearm");
+	ASSERT_TRUE(raised.y<elbow.y-0.03f && raised.z>elbow.z);
+	scene_select_camera(&s,"Stretching");
+	ASSERT_EQUAL(s.nrigTargets,4);
+	for(int i=0;i<s.nrigTargets;i++) ASSERT_TRUE(s.rigTargets[i].reachable);
+	ASSERT_TRUE(vlen(vsub(bone_test_world(&s,kitten,"left_hind_paw"),paw))<0.002f);
+	vec3 front=bone_test_world(&s,kitten,"left_front_paw");
+	ASSERT_TRUE(fabsf(front.y+0.18f)<0.002f && fabsf(front.z-0.02f)<0.002f);
+	scene_free(&s);
+
+	Scene authored={0};
+	ASSERT_TRUE(window_test_load(&authored,"<scene up=\"z\"><bone name=\"left_leg\" mirror=\"1\" segments=\"2\" aim=\"0 -90\" length=\"20\" radius=\"3\">"
+		"<sphere on=\"0 0\" at=\"0.75\" radius=\"1\"/></bone></scene>"));
+	int objects=authored.nobjs;
+	ASSERT_EQUAL(objects,6);
+	snprintf(authored.scenePath,sizeof(authored.scenePath),"%s/scener-bones-%d.blks",window_test_temp_dir(),getpid());
+	ASSERT_TRUE(scene_save_all(&authored));
+	FILE *file=fopen(authored.scenePath,"rb"); ASSERT_TRUE(file!=NULL);
+	char text[BONE_TEST_TEXT_CAPACITY]={0}; fread(text,1,sizeof(text)-1,file); fclose(file);
+	ASSERT_TRUE(strstr(text,"generated")==NULL && strstr(text,"right_leg")==NULL && strstr(text,"left_leg_2")==NULL && strstr(text,"_at")==NULL);
+	ASSERT_TRUE(strstr(text,"segments=\"2\"")!=NULL && strstr(text,"at=\"0.75\"")!=NULL);
+	Scene restored={0};
+	ASSERT_TRUE(load_scene(authored.scenePath,&restored));
+	ASSERT_EQUAL(restored.nobjs,objects);
+	unlink(authored.scenePath);
+	scene_free(&authored); scene_free(&restored); PASS();
+}
+
 static void test_nested_arch_emits_wall_parts_once(void) {
   TEST("scener walls: a contained arch does not duplicate wall geometry");
   Scene scene = {0};
@@ -845,6 +909,7 @@ int main(void) {
   test_created_screen_persists();
   test_instance_rig_ik();
   test_rig_mirror_and_pose_reuse();
+  test_bone_skeleton();
   test_nested_arch_emits_wall_parts_once();
   test_explicit_scene_up_axis();
   test_scene_coordinate_conventions();

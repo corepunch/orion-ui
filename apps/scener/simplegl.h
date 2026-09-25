@@ -116,6 +116,7 @@ Mesh gen_cylinder_tube(float r,float h,float wall,int sides);
 Mesh gen_prism(float r,float h,int sides);
 Mesh gen_cone(float rBase,float rTop,float h,int sides);
 Mesh gen_sphere(float r,int rings,int slices);
+Mesh gen_ellipsoid(vec3 center,vec3 axisX,vec3 axisY,vec3 axisZ,vec3 radii,float taper,int rings,int slices);
 Mesh gen_torus(float R,float r,int majorSeg,int minorSeg);
 Mesh gen_capsule(float r,float h,int rings,int slices);
 Mesh gen_arch(float width,float height,float depth,float wall,int segments,float inset);

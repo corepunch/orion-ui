@@ -92,6 +92,14 @@ Scene loading is in `scene.c`. Three dispatch tables:
 2. **`shape_parsers[]`** — transformable scene content: primitive shapes (`box`, `sphere`, `cylinder`, `prism`, `cone`, `pyramid`, `torus`), procedural `window`, point `light`, `group`, `prefab`, and `wall`. This lets point lights inherit group and prefab transforms.
 3. **`modifier_parsers[]`** — mesh modifiers (`taper`, `twist`, `bend`, `stretch`, `skew`) applied as child elements of shape nodes. Each has a `parse_mod_*(Mesh*, XmlNode*)` function.
 
+`<bone>` builds characters from constraints. At load, `rig_expand_segments()`
+splits `segments="N"` bones into generated links and `rig_expand_mirrors()`
+adds reflected `mirror="1"` subtrees. Generated nodes and `_`-prefixed runtime
+attributes are never saved; `xml_write_kids()` writes authored children back
+under their chain. `node_position()` derives bone and `on=` feature positions,
+and `rig_is_joint()` accepts named groups and bones everywhere the rig looks
+for joints.
+
 `bool-negative-box` is handled by a prepass rather than `shape_parsers[]`. The
 prepass expands groups and prefabs before wall construction; each aligned box
 that fully crosses a wall becomes a rectangular opening in that wall. It is

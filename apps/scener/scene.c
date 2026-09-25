@@ -67,6 +67,15 @@
 #define MAX_DOOR_OPENINGS 2
 #define RIG_EPSILON 0.00001f
 #define RIG_REACH_MARGIN 0.0001f
+#define BONE_JOINT_OVERLAP_RATIO 0.5f
+#define BONE_ATTACH_SINK_RATIO 0.5f
+#define BONE_DEFAULT_RADIUS 0.05f
+#define BONE_DEFAULT_RINGS 12
+#define BONE_DEFAULT_SLICES 16
+#define BONE_VERTICAL_LIMIT 0.99f
+#define BONE_NAME_CAPACITY 64
+#define BONE_FOOT_TOLERANCE 0.002f
+#define CM_PER_METRE 100.0f
 
 /* -------------------------------------------------------------- Tiny XML */
 
@@ -130,6 +139,14 @@ static vec3 xml_attr_v3_cm(XmlNode*n,const char*name,vec3 def){
 	vec3 v=def; sscanf(s,"%f %f %f",&v.x,&v.y,&v.z);
 	v.x*=0.01f; v.y*=0.01f; v.z*=0.01f; return v;
 }
+static int xml_attr_2f(XmlNode*n,const char*name,float defX,float defY,float *outX,float *outY){
+	const char*s=xml_attr(n,name,NULL);
+	if(!s){ *outX=defX; *outY=defY; return 0; }
+	*outX=defX; *outY=defY;
+	int count=sscanf(s,"%f %f",outX,outY);
+	if(count==1) *outY=*outX;
+	return count>0;
+}
 static void xml_set_attr(XmlNode *n,const char *name,const char *value){
 	for(int i=0;i<n->nattrs;i++) if(!strcmp(n->attrs[i].name,name)){
 		free(n->attrs[i].value); n->attrs[i].value=strdup(value); return;
@@ -152,21 +169,250 @@ static inline vec3 cvt3ds(Scene *s,vec3 v)   { return s->convention3dsMax?v3(v.x
 static inline vec3 cvt3ds_sz(Scene *s,vec3 v){ return s->convention3dsMax?v3(v.x, v.z, v.y):v; }
 static inline vec3 cvt3ds_inv(Scene *s,vec3 v){ return s->convention3dsMax?v3(v.x,-v.z, v.y):v; } /* world → 3dsmax */
 
+
+/* Bones: a skeleton authored by direction, length and girth instead of xyz.
+   The body frame is Z up, front -Y and the character's left +X, so every joint
+   frame starts aligned with the body and mirroring flips X. */
+typedef struct { vec3 dir,side,other,center; float length,radiusSide,radiusOther,along,start,end,taper; } BoneGeom;
+
+static int xml_is_bone(XmlNode *n){ return n && !strcmp(n->tag,"bone"); }
+static int rig_is_joint(XmlNode *n){ return n && (!strcmp(n->tag,"group") || xml_is_bone(n)) && xml_attr(n,"name",NULL); }
+
+static vec3 bone_direction(float azimuth,float elevation){
+	float a=azimuth*M_PIf/180.0f,e=elevation*M_PIf/180.0f;
+	return v3(sinf(a)*cosf(e),-cosf(a)*cosf(e),sinf(e));
+}
+
+static vec3 xml_attr_direction(XmlNode *n,const char *name,vec3 def){
+	float azimuth,elevation;
+	return xml_attr_2f(n,name,0,0,&azimuth,&elevation)?bone_direction(azimuth,elevation):def;
+}
+
+static const char *bone_at(XmlNode *n){ const char *at=xml_attr(n,"_at",NULL); return at?at:xml_attr(n,"at",NULL); }
+
+static int bone_has_tip_child(XmlNode *n){
+	for(int i=0;i<n->nkids;i++) if(xml_is_bone(n->kids[i]) && !bone_at(n->kids[i])) return 1;
+	return 0;
+}
+
+static BoneGeom bone_geom(XmlNode *n){
+	BoneGeom g;
+	g.dir=xml_attr_direction(n,"aim",v3(0,0,1));
+	/* An authored segmented bone is the first link; later links are generated children. */
+	int segments=xml_attr(n,"generated",NULL)?1:xml_attr_i(n,"segments",1);
+	if(segments<1) segments=1;
+	float taper=xml_attr_f(n,"taper",1.0f);
+	g.taper=(1.0f+(taper-1.0f)/segments);
+	g.length=fmaxf(0,xml_attr_f_cm(n,"length",0))/segments;
+	float side=BONE_DEFAULT_RADIUS,other=BONE_DEFAULT_RADIUS;
+	const char *radius=xml_attr(n,"radius",NULL);
+	if(radius){
+		int count=sscanf(radius,"%f %f",&side,&other);
+		if(count<2) other=side;
+		side=fmaxf(RIG_EPSILON,side*0.01f); other=fmaxf(RIG_EPSILON,other*0.01f);
+	}
+	g.radiusSide=side; g.radiusOther=other;
+	vec3 reference=fabsf(g.dir.z)>BONE_VERTICAL_LIMIT?v3(0,-1,0):v3(0,0,1);
+	g.side=vnorm(vcross(g.dir,reference)); g.other=vcross(g.side,g.dir);
+	float overlap=xml_attr_f_cm(n,"overlap",BONE_JOINT_OVERLAP_RATIO*fminf(side,other));
+	g.start=xml_is_bone(n->parent)?-overlap:0;
+	g.end=g.length+(bone_has_tip_child(n)?overlap:0);
+	g.along=fmaxf((g.end-g.start)*0.5f,fminf(side,other));
+	g.center=vscale(g.dir,(g.start+g.end)*0.5f);
+	return g;
+}
+
+/* Joint-frame point on a bone's surface: cast from the axis at fraction t of its length. */
+static vec3 bone_attach_point(const BoneGeom *g,float t,vec3 direction,float sink){
+	vec3 origin=vscale(g->dir,fmaxf(g->start,fminf(g->end,g->length*t)));
+	vec3 w=vsub(origin,g->center);
+	vec3 wl=v3(vdot(w,g->side)/g->radiusSide,vdot(w,g->dir)/g->along,vdot(w,g->other)/g->radiusOther);
+	vec3 el=v3(vdot(direction,g->side)/g->radiusSide,vdot(direction,g->dir)/g->along,vdot(direction,g->other)/g->radiusOther);
+	float a=vdot(el,el),b=vdot(wl,el),c=vdot(wl,wl)-1,disc=b*b-a*c;
+	float distance=a>RIG_EPSILON && disc>=0?(-b+sqrtf(disc))/a:0;
+	return vadd(origin,vscale(direction,distance-sink));
+}
+
+static vec3 bone_offset(XmlNode *n);
+
+static float bone_volume_lowest(XmlNode *n,vec3 joint){
+	BoneGeom g=bone_geom(n);
+	vec3 center=vadd(joint,g.center);
+	float a=g.radiusSide*g.side.z,b=g.along*g.dir.z,c=g.radiusOther*g.other.z;
+	return center.z-sqrtf(a*a+b*b+c*c);
+}
+
+static float bone_lowest(XmlNode *n,vec3 joint){
+	float low=bone_volume_lowest(n,joint);
+	for(int i=0;i<n->nkids;i++) if(xml_is_bone(n->kids[i]))
+		low=fminf(low,bone_lowest(n->kids[i],vadd(joint,bone_offset(n->kids[i]))));
+	return low;
+}
+
+/* Joint position in the parent frame. A root bone rests its lowest rest-pose
+   volume on local Z=0 unless ground="0"; pos then only offsets it. */
+static vec3 bone_offset(XmlNode *n){
+	XmlNode *parent=n->parent;
+	if(!xml_is_bone(parent)){
+		vec3 pos=xml_attr_v3_cm(n,"pos",v3(0,0,0));
+		if(xml_attr_i(n,"ground",1)) pos.z-=bone_lowest(n,v3(0,0,0));
+		return pos;
+	}
+	BoneGeom pg=bone_geom(parent);
+	if(!bone_at(n)) return vscale(pg.dir,pg.length);
+	BoneGeom g=bone_geom(n);
+	vec3 direction=xml_attr_direction(n,"from",g.dir);
+	float sink=xml_attr_f_cm(n,"sink",BONE_ATTACH_SINK_RATIO*fminf(g.radiusSide,g.radiusOther));
+	return bone_attach_point(&pg,strtof(bone_at(n),NULL),direction,sink);
+}
+
+/* Report rest-pose clearance of bones marked foot="1" so authors fix lengths, not guesses. */
+static void bone_report_feet(XmlNode *n,vec3 joint,const char *root){
+	if(xml_attr_i(n,"foot",0) && !xml_attr(n,"_reported",NULL)){
+		float gap=bone_volume_lowest(n,joint);
+		xml_set_attr(n,"_reported","1");
+		if(fabsf(gap)>BONE_FOOT_TOLERANCE)
+			fprintf(stderr,"warning: skeleton %s: foot %s rests %.1f cm %s the ground\n",root,
+				xml_attr(n,"name","?"),fabsf(gap)*CM_PER_METRE,gap>0?"above":"below");
+	}
+	for(int i=0;i<n->nkids;i++) if(xml_is_bone(n->kids[i]))
+		bone_report_feet(n->kids[i],vadd(joint,bone_offset(n->kids[i])),root);
+}
+
+/* Decorations inside a bone use on="azimuth elevation" to sit on its surface. */
+static int bone_feature_point(XmlNode *n,vec3 *point){
+	if(!xml_is_bone(n->parent) || !xml_attr(n,"on",NULL)) return 0;
+	BoneGeom g=bone_geom(n->parent);
+	*point=bone_attach_point(&g,bone_at(n)?strtof(bone_at(n),NULL):1.0f,xml_attr_direction(n,"on",g.dir),xml_attr_f_cm(n,"sink",0));
+	return 1;
+}
+
+static vec3 node_position(Scene *s,XmlNode *n){
+	vec3 point;
+	if(xml_is_bone(n)) return bone_offset(n);
+	if(bone_feature_point(n,&point)) return point;
+	return cvt3ds(s,xml_attr_v3_cm(n,"pos",v3(0,0,0)));
+}
+
+static void xml_remove_attr(XmlNode *n,const char *name){
+	for(int i=0;i<n->nattrs;i++) if(!strcmp(n->attrs[i].name,name)){
+		free(n->attrs[i].name); free(n->attrs[i].value);
+		memmove(n->attrs+i,n->attrs+i+1,(size_t)(n->nattrs-i-1)*sizeof(*n->attrs));
+		n->nattrs--; return;
+	}
+}
+
+static void rig_mirror_name(const char *name,char *out,size_t size){
+	if(!strncmp(name,"left_",5)) snprintf(out,size,"right_%s",name+5);
+	else if(!strncmp(name,"right_",6)) snprintf(out,size,"left_%s",name+6);
+	else snprintf(out,size,"%s_mirror",name);
+}
+
+static XmlNode *xml_clone(XmlNode *n,XmlNode *parent){
+	XmlNode *copy=xml_new(n->tag); copy->parent=parent;
+	for(int i=0;i<n->nattrs;i++) xml_set_attr(copy,n->attrs[i].name,n->attrs[i].value);
+	for(int i=0;i<n->nkids;i++){ XmlNode *kid=xml_clone(n->kids[i],copy); DA_PUSH(copy->kids,copy->nkids,copy->ckids,kid); }
+	return copy;
+}
+
+static void rig_mirror_subtree(XmlNode *n){
+	static const char *directions[]={"aim","aimEnd","from","on"};
+	for(size_t i=0;i<sizeof(directions)/sizeof(directions[0]);i++){
+		float azimuth,elevation; char value[64];
+		if(!xml_attr_2f(n,directions[i],0,0,&azimuth,&elevation)) continue;
+		snprintf(value,sizeof(value),"%.6g %.6g",-azimuth,elevation); xml_set_attr(n,directions[i],value);
+	}
+	if(xml_attr(n,"pos",NULL)){ vec3 p=xml_attr_v3(n,"pos",v3(0,0,0)); xml_set_attr_v3(n,"pos",v3(-p.x,p.y,p.z)); }
+	if(xml_attr(n,"rot",NULL)){ vec3 r=xml_attr_v3(n,"rot",v3(0,0,0)); xml_set_attr_v3(n,"rot",v3(r.x,-r.y,-r.z)); }
+	const char *name=xml_attr(n,"name",NULL);
+	if(name){
+		char mirrored[BONE_NAME_CAPACITY];
+		rig_mirror_name(name,mirrored,sizeof(mirrored));
+		if(strncmp(name,"left_",5) && strncmp(name,"right_",6))
+			fprintf(stderr,"warning: mirrored joint '%s' lacks a left_/right_ prefix; using '%s'\n",name,mirrored);
+		xml_set_attr(n,"name",mirrored);
+	}
+	for(int i=0;i<n->nkids;i++) rig_mirror_subtree(n->kids[i]);
+}
+
+/* Split segments="N" bones into N links whose aims run from aim to aimEnd. Authored
+   children move to the link that owns their along-chain fraction; saving restores them. */
+static int has_shape_parser(const char *tag);
+
+static void rig_expand_segments(XmlNode *n){
+	for(int i=0;i<n->nkids;i++) rig_expand_segments(n->kids[i]);
+	int count=xml_attr_i(n,"segments",1);
+	if(!xml_is_bone(n) || count<2 || xml_attr(n,"generated",NULL)) return;
+	float az0,el0,az1,el1,taper=xml_attr_f(n,"taper",1.0f),side,other,length=xml_attr_f(n,"length",0);
+	xml_attr_2f(n,"aim",0,90,&az0,&el0);
+	if(!xml_attr_2f(n,"aimEnd",az0,el0,&az1,&el1)){ az1=az0; el1=el0; }
+	const char *radius=xml_attr(n,"radius","5");
+	if(sscanf(radius,"%f %f",&side,&other)<2) other=side;
+	XmlNode **links=calloc((size_t)count,sizeof(*links)); links[0]=n;
+	static const char *inherited[]={"material","color","shininess","rings","slices","castShadow","renderable","unlit","overlap"};
+	for(int k=1;k<count;k++){
+		XmlNode *link=xml_new("bone"); link->parent=links[k-1];
+		char value[BONE_NAME_CAPACITY];
+		float t=(float)k/(count-1),scale=1.0f+(taper-1.0f)*k/count,next=1.0f+(taper-1.0f)*(k+1)/count;
+		if(xml_attr(n,"name",NULL)){ snprintf(value,sizeof(value),"%s_%d",xml_attr(n,"name",""),k+1); xml_set_attr(link,"name",value); }
+		snprintf(value,sizeof(value),"%.6g %.6g",az0+(az1-az0)*t,el0+(el1-el0)*t); xml_set_attr(link,"aim",value);
+		snprintf(value,sizeof(value),"%.6g",length/count); xml_set_attr(link,"length",value);
+		snprintf(value,sizeof(value),"%.6g %.6g",side*scale,other*scale); xml_set_attr(link,"radius",value);
+		snprintf(value,sizeof(value),"%.6g",next/scale); xml_set_attr(link,"taper",value);
+		for(size_t a=0;a<sizeof(inherited)/sizeof(inherited[0]);a++)
+			if(xml_attr(n,inherited[a],NULL)) xml_set_attr(link,inherited[a],xml_attr(n,inherited[a],""));
+		xml_set_attr(link,"generated","segment");
+		DA_PUSH(links[k-1]->kids,links[k-1]->nkids,links[k-1]->ckids,link);
+		links[k]=link;
+	}
+	for(int i=0;i<n->nkids;){
+		XmlNode *kid=n->kids[i];
+		if(xml_attr(kid,"generated",NULL) || !has_shape_parser(kid->tag)){ i++; continue; }
+		const char *at=xml_attr(kid,"at",NULL);
+		float fraction=at?strtof(at,NULL):1.0f,scaled=fraction*count;
+		int k=(int)scaled; if(k>=count) k=count-1; if(k<0) k=0;
+		if(at){ char value[BONE_NAME_CAPACITY]; snprintf(value,sizeof(value),"%.6g",scaled-k); xml_set_attr(kid,"_at",value); }
+		if(k==0 && at){ i++; continue; }
+		if(!at) k=count-1;
+		memmove(n->kids+i,n->kids+i+1,(size_t)(n->nkids-i-1)*sizeof(*n->kids)); n->nkids--;
+		kid->parent=links[k]; DA_PUSH(links[k]->kids,links[k]->nkids,links[k]->ckids,kid);
+	}
+	free(links);
+}
+
+/* Expand mirror="1" bones into generated partners; saving skips generated nodes. */
+static void rig_expand_mirrors(XmlNode *n){
+	for(int i=0;i<n->nkids;i++){
+		XmlNode *kid=n->kids[i];
+		rig_expand_mirrors(kid);
+		if(!xml_is_bone(kid) || !xml_attr_i(kid,"mirror",0) || xml_attr(kid,"generated",NULL)) continue;
+		XmlNode *copy=xml_clone(kid,n);
+		xml_remove_attr(copy,"mirror");
+		rig_mirror_subtree(copy);
+		xml_set_attr(copy,"generated","mirror");
+		xml_set_attr(copy,"pair",xml_attr(kid,"name",""));
+		DA_PUSH(n->kids,n->nkids,n->ckids,copy);
+		memmove(n->kids+i+2,n->kids+i+1,(size_t)(n->nkids-i-2)*sizeof(*n->kids));
+		n->kids[++i]=copy;
+	}
+}
+
+static const char *rig_pair_name(XmlNode *joint,char *buffer,size_t size){
+	const char *pair=xml_attr(joint,"pair",NULL);
+	if(pair) return pair;
+	if(!xml_attr_i(joint,"mirror",0)) return "";
+	rig_mirror_name(xml_attr(joint,"name",""),buffer,size);
+	return buffer;
+}
+
 static mat4 xml_node_transform(Scene *s,XmlNode *n){
-	vec3 pos=cvt3ds(s,xml_attr_v3_cm(n,"pos",v3(0,0,0)));
+	vec3 pos=node_position(s,n);
+	if(xml_is_bone(n)) return mat4_translate(pos);
 	vec3 rot=cvt3ds(s,xml_attr_v3(n,"rot",v3(0,0,0)));
 	vec3 scl=xml_attr_v3(n,"scale",v3(1,1,1));
 	vec3 pvt=xml_attr_v3_cm(n,"pivotOffset",v3(0,0,0));
 	return mat4_mul(mat4_translate(pos),mat4_mul(mat4_translate(pvt),
 		mat4_mul(mat4_rot_xyz(rot),mat4_mul(mat4_translate(vscale(pvt,-1.0f)),mat4_scale(scl)))));
-}
-static int xml_attr_2f(XmlNode*n,const char*name,float defX,float defY,float *outX,float *outY){
-	const char*s=xml_attr(n,name,NULL);
-	if(!s){ *outX=defX; *outY=defY; return 0; }
-	*outX=defX; *outY=defY;
-	int count=sscanf(s,"%f %f",outX,outY);
-	if(count==1) *outY=*outX;
-	return count>0;
 }
 static void xp_skip_ws(const char**p){ while(**p && isspace((unsigned char)**p)) (*p)++; }
 
@@ -419,7 +665,7 @@ static void collect_shapes_from_tree(Scene *s,XmlNode *root){
 			sh.closed=xml_attr_i(n,"closed",0);
 			shape2d_compute_normals(&sh);
 			DA_PUSH(s->shapes,s->nshapes,s->cshapes,sh);
-		} else if(!strcmp(n->tag,"group")||!strcmp(n->tag,"prefab")){
+		} else if(!strcmp(n->tag,"group")||xml_is_bone(n)||!strcmp(n->tag,"prefab")){
 			collect_shapes_from_tree(s,n);
 		}
 	}
@@ -1006,6 +1252,31 @@ static void parse_capsule(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, ve
 	scene_add_obj(s, mesh, M,R, color,shin,castsShadow,renderable,unlit);
 }
 
+static void parse_ellipsoid(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 pos, vec3 rot, vec3 color, float shin, int castsShadow, int renderable, int unlit){
+	(void)parentM; (void)pos; (void)rot;
+	vec3 radii=xml_attr_v3_cm(n,"radii",v3(BONE_DEFAULT_RADIUS,BONE_DEFAULT_RADIUS,BONE_DEFAULT_RADIUS));
+	if(radii.x<=0 || radii.y<=0 || radii.z<=0){ fprintf(stderr,"[scener] ellipsoid: radii must be positive\n"); return; }
+	Mesh mesh=gen_ellipsoid(v3(0,0,0),v3(1,0,0),v3(0,1,0),v3(0,0,1),radii,xml_attr_f(n,"taper",1.0f),
+		xml_attr_i(n,"rings",BONE_DEFAULT_RINGS),xml_attr_i(n,"slices",BONE_DEFAULT_SLICES));
+	apply_modifiers(&mesh,n);
+	scene_add_obj(s, mesh, M,R, color,shin,castsShadow,renderable,unlit);
+}
+
+static void parse_bone(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 pos, vec3 rot, vec3 color, float shin, int castsShadow, int renderable, int unlit){
+	(void)parentM; (void)pos; (void)rot;
+	if(!xml_is_bone(n->parent) && xml_attr_i(n,"ground",1) && !s->activeRigPose){
+		vec3 rest=bone_offset(n); rest.x=rest.y=0;
+		bone_report_feet(n,rest,xml_attr(n,"name","?"));
+	}
+	if(xml_attr_i(n,"volume",1)){
+		BoneGeom g=bone_geom(n);
+		Mesh mesh=gen_ellipsoid(g.center,g.side,g.dir,g.other,v3(g.radiusSide,g.along,g.radiusOther),g.taper,
+			xml_attr_i(n,"rings",BONE_DEFAULT_RINGS),xml_attr_i(n,"slices",BONE_DEFAULT_SLICES));
+		scene_add_obj(s, mesh, M,R, color,shin,castsShadow,renderable,unlit);
+	}
+	parse_nodes(s, n, M, R);
+}
+
 static void parse_group(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 pos, vec3 rot, vec3 color, float shin, int castsShadow, int renderable, int unlit){
 	(void)parentM; (void)pos; (void)rot; (void)color; (void)shin; (void)castsShadow; (void)renderable; (void)unlit;
 	parse_nodes(s, n, M, R);
@@ -1381,6 +1652,8 @@ static XmlNode* load_prefab(Scene *s, const char *name){
 	free(buf);
 	if(!root) return NULL;
 	warn_unknown_elements(root,path,1);
+	rig_expand_segments(root);
+	rig_expand_mirrors(root);
 	PrefabDef pd; memset(&pd,0,sizeof(pd)); strncpy(pd.ref,name,31); pd.root=root;
 	strncpy(pd.path,path,sizeof(pd.path)-1);
 	for(int i=0;i<root->nkids;i++){
@@ -1418,7 +1691,7 @@ static void apply_camera_transform(Scene *s,XmlNode *n,mat4 *M,mat4 *R){
 
 static XmlNode *rig_find_joint(XmlNode *root,const char *name){
 	if(!root || !name || !*name) return NULL;
-	if(!strcmp(root->tag,"group") && !strcmp(xml_attr(root,"name",""),name)) return root;
+	if(rig_is_joint(root) && !strcmp(xml_attr(root,"name",""),name)) return root;
 	for(int i=0;i<root->nkids;i++){
 		XmlNode *found=rig_find_joint(root->kids[i],name);
 		if(found) return found;
@@ -1459,17 +1732,26 @@ static void rig_set_rotation(Scene *s,XmlNode *node,mat4 rotation){
 	RigRotation entry={node,rotation}; DA_PUSH(s->rigRotations,s->nrigRotations,s->crigRotations,entry);
 }
 
+static mat4 rig_from_to(vec3 from,vec3 to,vec3 fallback);
+
+/* A pose override may re-aim a bone in its parent frame before its Euler rot. */
+static mat4 rig_override_delta(Scene *s,XmlNode *node,XmlNode *override,mat4 *turn){
+	mat4 rotation=mat4_rot_xyz(cvt3ds(s,xml_attr_v3(override,"rot",v3(0,0,0))));
+	if(xml_is_bone(node) && xml_attr(override,"aim",NULL)){
+		BoneGeom g=bone_geom(node);
+		rotation=mat4_mul(rig_from_to(g.dir,xml_attr_direction(override,"aim",g.dir),g.other),rotation);
+	}
+	if(turn) *turn=rotation;
+	return mat4_mul(mat4_translate(cvt3ds(s,xml_attr_v3_cm(override,"pos",v3(0,0,0)))),rotation);
+}
+
 static mat4 rig_local(Scene *s,XmlNode *node){
 	mat4 M=xml_node_transform(s,node);
 	const char *name=xml_attr(node,"name",NULL);
 	if(!name) return M;
 	XmlNode *override=rig_override_in((XmlNode*)s->activeRigInstance,name);
 	if(!override) override=rig_override_in((XmlNode*)s->activeRigPose,name);
-	if(override){
-		mat4 delta=mat4_mul(mat4_translate(cvt3ds(s,xml_attr_v3_cm(override,"pos",v3(0,0,0)))),
-			mat4_rot_xyz(cvt3ds(s,xml_attr_v3(override,"rot",v3(0,0,0)))));
-		M=mat4_mul(M,delta);
-	}
+	if(override) M=mat4_mul(M,rig_override_delta(s,node,override,NULL));
 	return mat4_mul(M,rig_rotation(s,node));
 }
 
@@ -1495,18 +1777,23 @@ static mat4 rig_from_to(vec3 from,vec3 to,vec3 fallback){
 	return m;
 }
 
+static mat4 rig_rest_world(Scene *s,XmlNode *node,XmlNode *root);
+
 static void rig_solve_ik(Scene *s,XmlNode *ik,XmlNode *root,mat4 instanceM){
-	XmlNode *hip=rig_find_joint(root,xml_attr(ik,"root",""));
-	XmlNode *knee=rig_find_joint(root,xml_attr(ik,"mid",""));
 	XmlNode *tip=rig_find_joint(root,xml_attr(ik,"tip",""));
-	if(!hip || !knee || !tip || knee->parent!=hip || tip->parent!=knee){
+	/* A tip-only chain uses its parent and grandparent joints. */
+	XmlNode *knee=xml_attr(ik,"mid",NULL)?rig_find_joint(root,xml_attr(ik,"mid","")):tip?tip->parent:NULL;
+	XmlNode *hip=xml_attr(ik,"root",NULL)?rig_find_joint(root,xml_attr(ik,"root","")):knee?knee->parent:NULL;
+	if(!hip || !knee || !tip || knee->parent!=hip || tip->parent!=knee || !rig_is_joint(hip) || !rig_is_joint(knee)){
 		fprintf(stderr,"[scener] invalid IK chain root=%s mid=%s tip=%s\n",xml_attr(ik,"root",""),xml_attr(ik,"mid",""),xml_attr(ik,"tip",""));
 		fflush(stderr); return;
 	}
 	mat4 H=rig_world(s,hip,root,instanceM),K=rig_world(s,knee,root,instanceM),T=rig_world(s,tip,root,instanceM),originalT=T;
 	vec3 h=mat4_xform_point(H,v3(0,0,0)),k=mat4_xform_point(K,v3(0,0,0)),t=mat4_xform_point(T,v3(0,0,0));
 	float upper=vlen(vsub(k,h)),lower=vlen(vsub(t,k));
-	vec3 goal=xml_attr_v3_cm(ik,"target",t),pole=xml_attr_v3(ik,"pole",v3(0,-1,0));
+	vec3 rest=mat4_xform_point(mat4_mul(instanceM,rig_rest_world(s,tip,root)),v3(0,0,0));
+	/* plant="1" pins the tip at its unposed world position, e.g. a foot while the body moves. */
+	vec3 goal=xml_attr_v3_cm(ik,"target",xml_attr_i(ik,"plant",0)?rest:t),pole=xml_attr_v3(ik,"pole",v3(0,-1,0));
 	if(!isfinite(upper) || !isfinite(lower) || upper<RIG_EPSILON || lower<RIG_EPSILON ||
 		!isfinite(goal.x) || !isfinite(goal.y) || !isfinite(goal.z) ||
 		!isfinite(pole.x) || !isfinite(pole.y) || !isfinite(pole.z)){
@@ -1694,6 +1981,8 @@ static const struct {
 	{ "window",   parse_window },
 	{ "door",     parse_door },
 	{ "capsule",  parse_capsule },
+	{ "ellipsoid", parse_ellipsoid },
+	{ "bone",     parse_bone },
 	{ "group",    parse_group },
 	{ "light",    parse_light },
 	{ "prefab",   parse_prefab },
@@ -1717,9 +2006,9 @@ static void parse_nodes(Scene *s, XmlNode *parent, mat4 parentM, mat4 parentR){
 		s->sanityFloorActive |= xml_attr_i(n,"sanityFloor",0);
 		s->sanityCheckActive |= xml_attr_i(n,"sanityCheck",0);
 		char *tag=n->tag;
-		vec3 pos=cvt3ds(s,xml_attr_v3_cm(n,"pos",v3(0,0,0)));
-		vec3 rot=cvt3ds(s,xml_attr_v3(n,"rot",v3(0,0,0)));
-		vec3 scl=xml_attr_v3(n,"scale",v3(1,1,1));
+		vec3 pos=node_position(s,n);
+		vec3 rot=xml_is_bone(n)?v3(0,0,0):cvt3ds(s,xml_attr_v3(n,"rot",v3(0,0,0)));
+		vec3 scl=xml_is_bone(n)?v3(1,1,1):xml_attr_v3(n,"scale",v3(1,1,1));
 		const char *attach=xml_attr(n,"attach",NULL);
 		mat4 attachM=mat4_identity(), attachRmat=mat4_identity();
 		if(attach){
@@ -1758,15 +2047,13 @@ static void parse_nodes(Scene *s, XmlNode *parent, mat4 parentM, mat4 parentR){
 				mat4_mul(mat4_rot_xyz(rot), mat4_scale(scl)))));
 		}
 		apply_camera_transform(s,n,&M,&R);
-		if(s->activeRigInstance && !strcmp(tag,"group")){
+		if(s->activeRigInstance && (!strcmp(tag,"group") || xml_is_bone(n))){
 			const char *name=xml_attr(n,"name",NULL);
 			if(name){
 				XmlNode *override=rig_override_in((XmlNode*)s->activeRigInstance,name);
 				if(!override) override=rig_override_in((XmlNode*)s->activeRigPose,name);
 				if(override){
-					vec3 offset=cvt3ds(s,xml_attr_v3_cm(override,"pos",v3(0,0,0)));
-					mat4 turn=mat4_rot_xyz(cvt3ds(s,xml_attr_v3(override,"rot",v3(0,0,0))));
-					M=mat4_mul(M,mat4_mul(mat4_translate(offset),turn)); R=mat4_mul(R,turn);
+					mat4 turn; M=mat4_mul(M,rig_override_delta(s,n,override,&turn)); R=mat4_mul(R,turn);
 				}
 				mat4 extra=rig_rotation(s,n); M=mat4_mul(M,extra); R=mat4_mul(R,extra);
 				RigJointWorld world={s->activeRigInstance,n,M};
@@ -1909,7 +2196,7 @@ static void warn_unknown_children(XmlNode *parent, const char *path, int root, i
 		int supported=0;
 		if(root) supported=has_shape_parser(n->tag) || !strcmp(n->tag,"bool-negative-box") || !strcmp(n->tag,"bool-negative-arch") || !strcmp(n->tag,"bool-negative-cylinder") ||
 			(prefab ? (!strcmp(n->tag,"attach") || !strcmp(n->tag,"shape")) : has_scene_parser(n->tag) || !strcmp(n->tag,"pose"));
-		else if(!strcmp(parent->tag,"group"))
+		else if(!strcmp(parent->tag,"group") || xml_is_bone(parent))
 			supported=has_shape_parser(n->tag) || !strcmp(n->tag,"bool-negative-box") || !strcmp(n->tag,"bool-negative-arch") || !strcmp(n->tag,"bool-negative-cylinder") || !strcmp(n->tag,"shape");
 		else if(!strcmp(parent->tag,"camera")) supported=!strcmp(n->tag,"transform") || !strcmp(n->tag,"use-pose");
 		else if(!strcmp(parent->tag,"pose")) supported=!strcmp(n->tag,"joint") || !strcmp(n->tag,"ik");
@@ -2204,6 +2491,8 @@ int load_scene(const char *path, Scene *s){
 	if(strcmp(up,"y") && strcmp(up,"z")){ fprintf(stderr,"invalid scene up axis: %s\n",up); xml_free(root); return 0; }
 	s->prefabDocument=!strcmp(root->tag,"prefab");
 	warn_unknown_elements(root,path,s->prefabDocument);
+	rig_expand_segments(root);
+	rig_expand_mirrors(root);
 	s->sceneRoot=root; s->editRoot=root;
 	scene_rebuild_view(s);
 	if(s->assetError){ scene_free(s); return 0; }
@@ -2232,7 +2521,7 @@ static XmlNode *rig_instance_root(Scene *s,XmlNode *instance){
 }
 
 static int rig_joint_count_tree(XmlNode *node){
-	int count=!strcmp(node->tag,"group") && xml_attr(node,"name",NULL)?1:0;
+	int count=rig_is_joint(node);
 	for(int i=0;i<node->nkids;i++) count+=rig_joint_count_tree(node->kids[i]);
 	return count;
 }
@@ -2243,7 +2532,7 @@ int scene_rig_joint_count(Scene *s,void *instance){
 }
 
 static XmlNode *rig_joint_at_tree(XmlNode *node,int *index,int level,int *depth){
-	int isJoint=!strcmp(node->tag,"group") && xml_attr(node,"name",NULL);
+	int isJoint=rig_is_joint(node);
 	if(isJoint){
 		if(*index==0){ if(depth) *depth=level; return node; }
 		(*index)--;
@@ -2287,6 +2576,7 @@ int scene_rig_reparent_joint(Scene *s,void *instance,void *joint,const char *par
 	XmlNode *parent=rig_find_joint(root,parentName);
 	if(!root || !j || !parent || rig_find_joint(root,xml_attr(j,"name",""))!=j || j==parent || !j->parent) return 0;
 	for(XmlNode *walk=parent;walk;walk=walk->parent) if(walk==j) return 0;
+	if(xml_is_bone(j)){ fprintf(stderr,"[scener] bones attach to their XML parent; edit the XML\n"); fflush(stderr); return 0; }
 	int scaled=0;
 	for(XmlNode *walk=j;walk && walk!=root;walk=walk->parent) scaled|=xml_attr(walk,"scale",NULL)!=NULL;
 	for(XmlNode *walk=parent;walk && walk!=root;walk=walk->parent) scaled|=xml_attr(walk,"scale",NULL)!=NULL;
@@ -2321,6 +2611,9 @@ static XmlNode *rig_ensure_instance_joint(XmlNode *instance,const char *name){
 int scene_rig_set_joint(Scene *s,void *instance,void *joint,const char *attribute,vec3 value){
 	XmlNode *in=(XmlNode*)instance,*j=(XmlNode*)joint,*root=rig_instance_root(s,in);
 	if(!root || !j || rig_find_joint(root,xml_attr(j,"name",""))!=j || !attribute) return 0;
+	if(!strcmp(attribute,"pivot") && xml_is_bone(j)){
+		fprintf(stderr,"[scener] bone pivots derive from aim, length and at; edit the XML\n"); fflush(stderr); return 0;
+	}
 	if(!strcmp(attribute,"pivot")) xml_set_attr_v3_cm(j,"pos",value);
 	else if(!strcmp(attribute,"rot") || !strcmp(attribute,"pos")){
 		XmlNode *override=rig_ensure_instance_joint(in,xml_attr(j,"name",""));
@@ -2423,7 +2716,7 @@ vec3 scene_rig_target_value(Scene *s,void *instance,void *tip,const char *attrib
 int scene_rig_set_target(Scene *s,void *instance,void *tip,const char *attribute,vec3 value){
 	XmlNode *in=(XmlNode*)instance,*j=(XmlNode*)tip,*root=rig_instance_root(s,in);
 	if(!root || !j || !j->parent || !j->parent->parent ||
-		strcmp(j->tag,"group") || strcmp(j->parent->tag,"group") || strcmp(j->parent->parent->tag,"group") ||
+		!rig_is_joint(j) || !rig_is_joint(j->parent) || !rig_is_joint(j->parent->parent) ||
 		(strcmp(attribute,"target") && strcmp(attribute,"pole"))) return 0;
 	if(rig_find_joint(root,xml_attr(j,"name",""))!=j || !xml_attr(j->parent,"name",NULL) || !xml_attr(j->parent->parent,"name",NULL)) return 0;
 	XmlNode *ik=rig_ik_for_tip(in,xml_attr(j,"name",""));
@@ -2447,7 +2740,8 @@ int scene_rig_set_target(Scene *s,void *instance,void *tip,const char *attribute
 int scene_rig_mirror_joint(Scene *s,void *instance,void *joint){
 	XmlNode *in=(XmlNode*)instance,*j=(XmlNode*)joint,*root=rig_instance_root(s,in);
 	if(!root || !j) return 0;
-	XmlNode *pair=rig_find_joint(root,xml_attr(j,"pair",""));
+	char pairName[BONE_NAME_CAPACITY];
+	XmlNode *pair=rig_find_joint(root,rig_pair_name(j,pairName,sizeof(pairName)));
 	if(!pair || pair==j) return 0;
 	const char *name=xml_attr(j,"name","");
 	XmlNode *src=rig_override_in(in,name);
@@ -2457,6 +2751,10 @@ int scene_rig_mirror_joint(Scene *s,void *instance,void *joint){
 	vec3 result=v3(rot.x,-rot.y,-rot.z);
 	XmlNode *dest=rig_ensure_instance_joint(in,xml_attr(pair,"name",""));
 	xml_set_attr_v3(dest,"rot",result); xml_set_attr_v3_cm(dest,"pos",v3(-pos.x,pos.y,pos.z));
+	float azimuth,elevation;
+	if(src && xml_attr_2f(src,"aim",0,0,&azimuth,&elevation)){
+		char value[64]; snprintf(value,sizeof(value),"%.6g %.6g",-azimuth,elevation); xml_set_attr(dest,"aim",value);
+	} else xml_remove_attr(dest,"aim");
 	fprintf(stderr,"[scener] mirror rig instance=%s from=%s to=%s\n",xml_attr(in,"name",""),name,xml_attr(pair,"name","")); fflush(stderr);
 	scene_rebuild_view(s);
 	return 1;
@@ -2643,17 +2941,32 @@ static void xml_write_escaped(FILE *f,const char *s){
 	}
 }
 
+static void xml_write_node(FILE *f,XmlNode *n,int depth);
+
+/* Generated segment links are transparent: their authored children save under the chain. */
+static int xml_write_kids(FILE *f,XmlNode *n,int depth){
+	int written=0;
+	for(int i=0;i<n->nkids;i++){
+		XmlNode *kid=n->kids[i];
+		const char *generated=xml_attr(kid,"generated",NULL);
+		if(generated && !strcmp(generated,"segment")) written+=xml_write_kids(f,kid,depth);
+		else if(!generated){ if(f) xml_write_node(f,kid,depth); written++; }
+	}
+	return written;
+}
+
 static void xml_write_node(FILE *f,XmlNode *n,int depth){
 	for(int i=0;i<depth;i++) fputc('\t',f);
 	fprintf(f,"<%s",n->tag);
 	for(int i=0;i<n->nattrs;i++){
+		if(n->attrs[i].name[0]=='_') continue;
 		fprintf(f," %s=\"",n->attrs[i].name);
 		xml_write_escaped(f,n->attrs[i].value);
 		fputc('\"',f);
 	}
-	if(!n->nkids){ fputs(" />\n",f); return; }
+	if(!xml_write_kids(NULL,n,depth+1)){ fputs(" />\n",f); return; }
 	fputs(">\n",f);
-	for(int i=0;i<n->nkids;i++) xml_write_node(f,n->kids[i],depth+1);
+	xml_write_kids(f,n,depth+1);
 	for(int i=0;i<depth;i++) fputc('\t',f);
 	fprintf(f,"</%s>\n",n->tag);
 }

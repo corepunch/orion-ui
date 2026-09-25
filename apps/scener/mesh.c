@@ -13,6 +13,7 @@
 #define MESH_EDGE_WELD_MAX 1e-4f
 #define MESH_EDGE_WELD_MIN_LENGTH 1e-8f
 #define MESH_EDGE_WELD_FRACTION 0.25f
+#define ELLIPSOID_MIN_TAPER 0.05f
 #define PROFILE_MIN_ELLIPSE_SEGMENTS 8
 #define PROFILE_MAX_ELLIPSE_SEGMENTS 128
 #define PROFILE_MIN_STAR_POINTS 3
@@ -346,6 +347,31 @@ Mesh gen_sphere(float r,int rings,int slices){
             float u=(float)j/slices, th=u*2.0f*M_PIf;
             vec3 n=v3(sinf(phi)*cosf(th), cosf(phi), sinf(phi)*sinf(th));
             mesh_add_vert(&m, vscale(n,r), n);
+        }
+    }
+    int stride=slices+1;
+    for(int i=0;i<rings;i++) for(int j=0;j<slices;j++){
+        int a=i*stride+j, b=a+1, c=(i+1)*stride+j, d=c+1;
+        mesh_add_tri(&m,a,b,d); mesh_add_tri(&m,a,d,c);
+    }
+    return m;
+}
+
+Mesh gen_ellipsoid(vec3 center,vec3 axisX,vec3 axisY,vec3 axisZ,vec3 radii,float taper,int rings,int slices){
+    Mesh m={0}; if(rings<3) rings=12; if(slices<3) slices=16;
+    if(taper<ELLIPSOID_MIN_TAPER) taper=ELLIPSOID_MIN_TAPER;
+    for(int i=0;i<=rings;i++){
+        float v=(float)i/rings, phi=v*M_PIf;
+        for(int j=0;j<=slices;j++){
+            float u=(float)j/slices, th=u*2.0f*M_PIf;
+            vec3 n=v3(sinf(phi)*cosf(th), cosf(phi), sinf(phi)*sinf(th));
+            /* Taper scales the cross-section linearly from 1 at -Y to taper at +Y. */
+            float scale=1.0f+(taper-1.0f)*(n.y+1.0f)*0.5f, slope=(taper-1.0f)/(2.0f*radii.y);
+            vec3 p=vadd(center,vadd(vscale(axisX,radii.x*scale*n.x),vadd(vscale(axisY,radii.y*n.y),vscale(axisZ,radii.z*scale*n.z))));
+            /* The gradient of the implicit surface keeps shading correct for unequal radii. */
+            float gy=n.y/radii.y-(n.x*n.x+n.z*n.z)*slope/scale;
+            vec3 g=vadd(vscale(axisX,n.x/(radii.x*scale)),vadd(vscale(axisY,gy),vscale(axisZ,n.z/(radii.z*scale))));
+            mesh_add_vert(&m, p, vnorm(g));
         }
     }
     int stride=slices+1;

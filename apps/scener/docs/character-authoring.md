@@ -1,82 +1,167 @@
 # Building and posing characters in Scener
 
-Scener renders stylized characters from ellipsoids. Build a reusable `.blk` prefab from scaled spheres and named groups, then pose each instance in a `.blks` scene. The editor supports local joint edits, mirrored pairs, reusable still poses, and two-bone IK. There is no animation timeline or clip playback.
+Scener draws stylized characters from ellipsoids, in the spirit of Ecstatica:
+soft overlapping volumes and silhouettes that read at a glance. Build them as
+`<bone>` skeletons. A bone is a joint plus its body volume, placed by
+constraints rather than coordinates. You say which way a bone points, how long
+and thick it is, and where on its parent it grows from. Scener derives every
+joint position, joins the volumes, mirrors limbs and puts the feet on the
+ground. You never type an xyz coordinate or rotate an ellipsoid by hand.
 
-The working example is [ellipsoid_actor.blk](../prefabs/characters/ellipsoid_actor.blk) in [character_pose_study.blks](../scenes/character_pose_study.blks). The [pose study](character-pose-study.md) shows the rendered result and the remaining product gaps.
+The worked example is [kitten.blk](../prefabs/characters/kitten.blk) in
+[kitten_study.blks](../scenes/kitten_study.blks). The canonical attribute table
+is in [scene-format.md](../skills/populate-simplegl-scenes/references/scene-format.md#bone).
+The older hand-placed group rig ([ellipsoid_actor.blk](../prefabs/characters/ellipsoid_actor.blk))
+is still supported; see [Legacy group rigs](#legacy-group-rigs).
 
-## Character coordinate frame
+## Body frame and directions
 
-- Use centimetres in XML. New scenes declare `up="z"`; this changes camera navigation, not primitive geometry.
-- Put the character's ground baseline at local `Z=0` and document its height and front direction in the prefab's leading comment. The example actor is about 180 cm tall and faces local `-Y`.
-- Place the prefab instance at the actor's location. Rotate the instance around Z to choose its facing; keep joint coordinates in the prefab's local frame.
-- Put a group origin at each articulation center. A child part's transform is relative to that joint, so rotating a shoulder moves its elbow, forearm, and hand together. Use a pelvis or root group for body height and weight shifts.
+- The prefab's body frame is Z up, facing local −Y, with the character's left
+  at +X. Rotate the instance around Z to face it anywhere in the scene.
+- Directions are `"azimuth elevation"` in degrees. Azimuth 0 is forward, 90 the
+  character's left, −90 its right, 180 backward. Elevation 90 is up, −90 down.
+  `aim="0 -90"` is a leg pointing straight down; `aim="180 35"` is a tail
+  rising backward.
+- Lengths and radii are centimetres. Every joint frame starts aligned with the
+  body, so pose rotations and re-aims always read in body terms.
 
-## Model from ellipsoids
+## Build the skeleton
 
-A sphere with `radius="1"` and nonuniform `scale` is an ellipsoid. Scale values are its half-widths in centimetres:
+Work from the root outward, like a CAT rig: hub, spine, neck and head, then
+limbs, then tail and small parts.
 
-```xml
-<!-- Torso: 46 cm wide, 26 cm deep, 72 cm tall. -->
-<sphere pos="0 0 28" radius="1" scale="23 13 36"
-        color="0.11 0.32 0.36" rings="12" slices="16"/>
+1. **Root and spine.** The root bone is usually the spine, from hips toward the
+   chest. Give it `segments` and `aimEnd` to curve it (`aim="0 0" aimEnd="0 8"`
+   for a quadruped back rising toward the shoulders; `aim="0 90"` for an upright
+   biped torso). The root grounds itself: its lowest rest volume touches Z=0.
+2. **Neck and head.** Chain them tip-to-tip (no `at`). A head is a short, fat
+   bone aimed forward, so its volume sits ahead of the neck.
+3. **Limbs.** Attach the first limb bone to the body surface with `at` (fraction
+   along the parent) and `from` (direction to the surface point). Chain the rest
+   tip-to-tip down to a hand or foot. Author only the left side, named `left_*`,
+   with `mirror="1"` on the limb root. Mark feet with `foot="1"`.
+4. **Tail, ears, snout.** Use `segments`, `aimEnd` and `taper` for curves and
+   points. A cat's ears are short bones with `taper="0.15"`; a curling tail is
+   one bone with `segments="3" aimEnd="165 85" taper="0.6"`.
+5. **Details.** Put eyes, noses and buttons inside their bone with
+   `on="azimuth elevation"` and `at`. They snap to the bone's surface. Author
+   both eyes explicitly (`on="34 12"` and `on="-34 12"`); `mirror` applies to
+   bones only.
+
+Volumes overlap their neighbours automatically (`overlap`, `sink`), which keeps
+bent joints closed. Raise `sink` when a limb looks glued on, and lower it when
+a joint bulges.
+
+### Mapping CAT rig parts
+
+| CAT part | Skeleton equivalent |
+|---|---|
+| Pelvis / ribcage hub | A short fat bone, or the ends of a segmented spine |
+| Spine, neck, tail (N links) | One bone with `segments="N"` and `aimEnd` |
+| Leg / arm | Two or three chained bones plus a foot or hand, `mirror="1"` |
+| Palm / ankle | A short end bone aimed forward (`aim="0 -8"`) |
+| Digits | Usually omit. Add small `taper` bones only when a close shot needs them |
+| Limb IK | `<ik tip="left_front_paw">` infers the limb chain from its tip |
+
+### Proportions that read
+
+- Establish the character's scale sheet first: height, length and head size in
+  centimetres, and how big it must appear in wide shots.
+- Keep storybook proportions bold: a large head (a third to half of standing
+  height for young animals), clear gaps between legs, and ears and tails that
+  break the body silhouette.
+- Check at thumbnail size. Ecstatica characters read because each part is a
+  distinct, simple volume; do not add small ellipsoids that blur the outline.
+
+### Fix feet with numbers, not by eye
+
+With `foot="1"`, loading the prefab prints each foot's rest clearance:
+
+```
+warning: skeleton spine: foot left_hind_paw rests 1.0 cm above the ground
 ```
 
-Build the major silhouette first: pelvis, torso, head, paired thighs, shins, upper arms, forearms, hands, and feet. Add hair, eyes, clothing, or equipment only after the silhouette reads at the intended camera size. Make connected body masses overlap enough to avoid visible cracks at joints; keep the eye and clothing surfaces distinct enough to avoid coplanar flicker. `rings="12" slices="16"` gives the example a soft retro shape without an excessive mesh count.
+Correct the leg lengths from that number: add `gap / sin(|elevation|)` to the
+most vertical limb bone. Repeat until no warnings remain. Any change to the
+spine's slope can move the feet again.
 
-Give each limb a parent group at its proximal joint and a child group at its distal joint. Place the limb segment between these pivots. For a local Z-up leg, this places a thigh between hip and knee and a shin between knee and ankle:
+## Pose a character
 
-```xml
-<group name="left_hip" pos="-11 0 -4">
-  <sphere pos="0 0 -19" radius="1" scale="11 10 24" color="0.24 0.37 0.54"/>
-  <group name="left_knee" pos="0 0 -42">
-    <sphere pos="0 0 -19" radius="1" scale="7.5 8 23" color="0.28 0.42 0.62"/>
-    <group name="left_ankle" pos="0 0 -39">
-      <sphere pos="0 -8 -1" radius="1" scale="9 17 6" color="0.10 0.09 0.08"/>
-    </group>
-  </group>
-</group>
-```
-
-Give paired groups explicit `pair` attributes in both directions, such as `left_knee pair="right_knee"`; mirroring does not guess names. Keep feet flat at the baseline in the neutral pose. Overlap ellipsoids enough to hide joint gaps, then inspect bent poses for seams and swollen joints. In the pose study, about 20% overlap of the combined axial radii is a useful starting estimate, not a universal limit. Mesh `<mirror>` affects geometry only; it does not mirror a grouped skeleton or pose.
-
-## Pose a character for a camera
-
-Select a prefab instance in the viewport, open the Hierarchy tab, and select a joint. The Rotation and Offset buttons edit this instance; Pivot and Parent edit the shared prefab rig. The viewport move and rotate gizmos act at the joint pivot. Mirror copies the selected joint's local pose to its explicit partner, after which either side can be edited independently. Save Pose stores reusable still-pose data. Use Pose applies it to the instance, and Shot Pose assigns it only to the active camera.
-
-Pose XML is also useful for review scenes. Define poses independently of cameras, then select one for a named instance in each camera:
+Define poses in the scene and select them per camera:
 
 ```xml
-<pose name="Reach">
-  <joint target="head" rot="12 0 0"/>
-  <ik root="right_shoulder" mid="right_elbow" tip="right_hand"
-      target="29 -58 143" pole="0 -1 0" keepOrientation="1"/>
+<pose name="Stretch">
+  <joint target="spine" aim="0 -12"/>
+  <ik tip="left_hind_paw" plant="1" pole="0 -1 0" keepOrientation="1"/>
+  <ik tip="right_hind_paw" plant="1" pole="0 -1 0" keepOrientation="1"/>
+  <ik tip="left_front_paw" target="5 -18 2" pole="0 -1 0" keepOrientation="1"/>
 </pose>
-<camera name="Reaching" pos="-260 -450 210" look="0 -10 94" fov="39">
-  <use-pose instance="Actor" name="Reach"/>
+<camera name="Stretching" pos="-80 -45 30" look="0 0 10" fov="40">
+  <use-pose instance="Kitten" name="Stretch"/>
 </camera>
-<prefab source="characters/ellipsoid_actor" name="Actor"/>
+<prefab source="characters/kitten" name="Kitten"/>
 ```
 
-An `<ik>` chain needs three directly nested named groups. `target` is a world-space position in centimetres; `pole` is a world-space bend direction. Set `keepOrientation="1"` on a foot chain to hold its facing while the leg solves. Enter the floor contact point once, then adjust the root or hips: the foot stays at that world target. The solver keeps bone lengths fixed and clamps targets outside reach. The Properties panel reports whether the selected tip can reach its target. Move a selected IK tip with the viewport Move tool to reposition its target, or edit IK Target and IK Pole numerically in the Hierarchy tab. Forward posing remains available through joint Rotation and Offset after solving.
+- **Re-aim, don't rotate.** `<joint target="head" aim="20 25"/>` points the
+  head up and to its left. Aims are relative to the parent's current frame, so
+  aim parents first: spine, then neck, then head. Use `rot` only for roll and
+  small corrections; its Euler axes are body X (left), Y (back) and Z (up).
+- **IK from the tip.** `<ik tip="left_front_paw" target="…"/>` solves the two
+  joints above the paw. `target` is a world position in centimetres; `pole` is
+  the world direction the knee or elbow should bend toward. Add
+  `keepOrientation="1"` to keep a foot flat.
+- **Plant feet.** `plant="1"` without `target` pins a foot where it stands at
+  rest. Bend or lower the body and the planted feet stay on the floor.
+- **Segment links pose by name.** A three-link tail exposes `tail`, `tail_2` and
+  `tail_3`; aim the later links for a curl.
+- **Mirror a pose.** The editor's Mirror button copies `rot` and `aim` to the
+  `left_`/`right_` partner. Mirrored bones need no `pair` attribute.
 
-Start with the root and torso, then solve hips and knees, shoulders and elbows, ankles, and head. Check the pose from the actual camera after each pass. An arm or leg that appears correct from one view may float or intersect the body from another, so review at least one side view for a reusable pose.
+Pose in this order: root and spine, planted feet, head and gaze, reaching
+limbs, then tail and ears. Check the pose from the story camera and at least
+one side view, because a reach can look right from one angle and float in
+another.
 
-Choose a camera where the character's action reads from its silhouette. Show the actor, gesture, and target together. A three-quarter view usually gives a clearer read than a straight front view. Keep props and foreground elements from hiding the hands, feet, or important joints.
+Choose a camera where the action reads from the silhouette. Show the actor,
+gesture and target together. A three-quarter view usually reads better than a
+straight front view. Keep props from hiding hands, feet or key joints.
 
-These named poses are still states: they have no time, interpolation, animation blending, or clip playback. World targets are authored positions; there is no live link to a prop.
+Poses are still states: they have no time, interpolation, blending or playback.
+IK targets are fixed world positions, not live links to props.
+
+## Editor
+
+Select a prefab instance, open the Hierarchy tab and select a joint. Rotation
+and Offset edit this instance; Mirror copies the joint pose to its partner.
+Save Pose stores reusable pose data, Use Pose applies it and Shot Pose assigns
+it to the active camera. The viewport move and rotate gizmos act at the joint
+pivot. Moving an IK tip moves its world target. Bone pivots and parents come
+from the XML (aim, length, at), so Pivot and Parent edits refuse bones; edit
+the prefab source instead.
+
+## Legacy group rigs
+
+Older characters use named `<group>` joints holding scaled `<sphere>` parts.
+Each group origin is an articulation, children are positioned in xyz, and
+paired groups need explicit `pair` attributes. The pose, IK and editor tools
+work on them too. A scaled sphere shades incorrectly when stretched; use
+`<ellipsoid radii="…">` for new standalone ellipsoids. Prefer converting such
+rigs to bones when a character is revised.
 
 ## Validate and review
 
-From the repository root, replace the example paths and camera name with the character scene being edited:
+From the repository root, replacing the example paths and camera name:
 
 ```sh
-xmllint --noout apps/scener/prefabs/characters/ellipsoid_actor.blk apps/scener/scenes/character_pose_study.blks
-make scener
-./build/bin/scener --list-cameras apps/scener/scenes/character_pose_study.blks
-./build/bin/scener --render apps/scener/scenes/character_pose_study.blks \
-  --camera Reaching --size 960x720 --format png --output-dir /tmp/character-review
+xmllint --noout apps/scener/prefabs/characters/kitten.blk apps/scener/scenes/kitten_study.blks
+make build/bin/scener
+DYLD_LIBRARY_PATH="$PWD/build/lib" ./build/bin/scener --render apps/scener/scenes/kitten_study.blks \
+  --camera Stretching --size 960x720 --format png --output-dir /tmp/character-review
 ```
 
-Inspect the render at full size and thumbnail size. Check height, silhouette, hand-to-target contact, foot support, joint intersections, facial readability, and shadows. If the software renderer rejects stencil shadows, run the final render in a session with hardware GPU access. `-no-shadows` is useful for geometry review but does not verify contact shadows.
-
-For the XML schema, color and transform rules, and scene validation, use [scene-format.md](../skills/populate-simplegl-scenes/references/scene-format.md) and the [scene population skill](../skills/populate-simplegl-scenes/SKILL.md).
+Treat `foot … rests` warnings and `IK … out of reach` messages as failures.
+Inspect the render at full size and at thumbnail size. Check height,
+silhouette, hand-to-target contact, foot support, joint seams, facial
+readability and shadows. If the software renderer rejects stencil shadows, run
+the final render with hardware GPU access; `-no-shadows` is fine for geometry
+review but does not verify contact shadows.

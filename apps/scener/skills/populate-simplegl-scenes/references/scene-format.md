@@ -223,6 +223,11 @@ pose cannot leak between shots.
 
 ### Character rigs and still poses
 
+Build new characters from [`<bone>` skeletons](#bone): they derive every joint
+position from direction, length and girth, mirror limbs, split spines and tails
+into links, and ground themselves. The `<group>` rig below remains supported
+for existing characters and hand-built mechanisms.
+
 Named `<group>` elements inside a prefab form a joint hierarchy. Put each group origin at its articulation center; parent and child groups define a bone. A group's `pair` attribute explicitly names its mirrored partner. The editor's Hierarchy tab lists these joints for the selected prefab instance. Rotation and offset controls create `<joint>` overrides on that instance; Pivot and Parent change the shared prefab rig. The viewport move and rotate gizmos act on the selected joint. Moving a tip with an active IK target moves its world target.
 
 A scene-level `<pose name="...">` stores reusable joint offsets and IK constraints. A prefab instance can set `pose="Name"` as its default. A camera selects a different pose for one named instance with `<use-pose instance="Actor" name="Reach"/>`. An instance's own `<joint>` or `<ik>` entry overrides the same joint or chain in the selected pose. Legacy camera `<transform>` targets remain global by name; use poses for independent character instances.
@@ -237,7 +242,7 @@ A scene-level `<pose name="...">` stores reusable joint offsets and IK constrain
 <prefab source="characters/ellipsoid_actor" name="Actor"/>
 ```
 
-`<joint>` uses `target` for a named group, `pos` for local centimetre offset, and `rot` for local Euler degrees. `<ik>` names a direct parent → child → grandchild group chain. Its `target` is a **world-space** position in centimetres; `pole` is a world-space direction indicating the preferred bend. `keepOrientation="1"` preserves the tip's original world orientation, useful for feet. The two-bone solver clamps unreachable targets without stretching bones. The Properties panel reports reachability and distance beyond reach; stderr also records unreachable targets. A fixed world target keeps a foot planted when the root or hips move. A saved pose contains the current pose's constraints and the instance's edits, and can be assigned to another camera.
+`<joint>` uses `target` for a named group or bone, `pos` for local centimetre offset, and `rot` for local Euler degrees. On a bone, `aim="azimuth elevation"` re-points it in its parent's frame before `rot`; prefer it to Euler angles. `<ik>` names a direct parent → child → grandchild joint chain; with only `tip`, the tip's parent and grandparent form the chain. `plant="1"` without `target` pins the tip at its unposed world position, so a foot stays put while the body bends. Its `target` is a **world-space** position in centimetres; `pole` is a world-space direction indicating the preferred bend. `keepOrientation="1"` preserves the tip's original world orientation, useful for feet. The two-bone solver clamps unreachable targets without stretching bones. The Properties panel reports reachability and distance beyond reach; stderr also records unreachable targets. A fixed world target keeps a foot planted when the root or hips move. A saved pose contains the current pose's constraints and the instance's edits, and can be assigned to another camera.
 
 Mirroring uses the explicit `pair` and reflects local rotations across the character's X plane (`S R S`, with `S = diag(-1,1,1)`). Paired joints should have reflected rest orientations. Mesh `<mirror>` only changes geometry; it does not mirror a grouped rig or pose.
 
@@ -818,6 +823,76 @@ author detailed dimensions and opening angles in XML.
 Inspect [the door fixture](../../../tests/procedural_doors.blks) from front,
 oblique and rear cameras to check the fixed wall opening and swung leaf.
 
+
+### `<ellipsoid>`
+
+Ellipsoid centered at origin with semi-axes along local X, Y and Z. Unlike a
+scaled `<sphere>`, its normals stay correct for unequal radii.
+
+| Attribute | Type  | Default | Description |
+|-----------|-------|---------|-------------|
+| `radii`   | vec3  | 5 5 5   | Semi-axes in cm |
+| `taper`   | float | 1       | Cross-section scale at +Y relative to −Y, for eggs and teardrops |
+| `rings`   | int   | 12      | Latitude subdivisions |
+| `slices`  | int   | 16      | Longitude subdivisions |
+
+### `<bone>`
+
+A character joint plus its body volume, placed by constraints instead of
+coordinates. Author skeletons in prefabs. The body frame is fixed: Z up, the
+character faces local −Y, and its left is +X. Rotate the prefab instance to
+face it elsewhere. Every joint frame starts axis-aligned with the body, so pose
+angles always read in body axes. Directions are `"azimuth elevation"` degrees:
+azimuth 0 is forward, 90 the character's left, −90 its right, 180 backward;
+elevation 90 is up and −90 down.
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | string | — | Joint name for poses and IK. Name the left of a pair `left_*` |
+| `aim` | 2 floats | `0 90` | Rest direction from this joint toward the bone's tip |
+| `length` | float | 0 | Joint-to-tip length in cm; a child without `at` starts at the tip |
+| `radius` | 1–2 floats | 5 | Girth in cm: side radius, then the other cross radius |
+| `taper` | float | 1 | Tip girth relative to the base: pointed ears, tails, snouts |
+| `at` | float | tip | Attach along the parent at this fraction of its length, on its surface |
+| `from` | 2 floats | `aim` | Direction from the parent's axis to that surface point |
+| `sink` | float | ½ min radius | How far the joint sinks below the parent surface, in cm |
+| `overlap` | float | ½ min radius | Volume extension past connected joints, hiding seams |
+| `segments` | int | 1 | Split into N links named `name`, `name_2` … `name_N` |
+| `aimEnd` | 2 floats | `aim` | Last link direction; links interpolate from `aim`, curving spines, necks and tails |
+| `mirror` | 0/1 | 0 | Also build the reflected subtree, renaming `left_` to `right_` |
+| `foot` | 0/1 | 0 | Report rest-pose ground clearance so limb lengths can be corrected |
+| `ground` | 0/1 | 1 | Root bone only: lift so the lowest rest volume touches Z=0 |
+| `volume` | 0/1 | 1 | Omit the body volume and keep only the joint |
+| `pos` | vec3 | 0 0 0 | Root bone only: offset after grounding |
+
+Bones ignore `rot` and `scale`. `material`, `color`, `shininess`, `rings`,
+`slices` and shadow flags apply to the volume. A segmented bone's links inherit
+them and distribute `taper` along the chain. Children with `at` are assigned to
+the link that owns that fraction of the chain. Generated mirror and segment
+links are not saved; the file keeps what was authored.
+
+Other shapes inside a bone use `on="azimuth elevation"` with optional `at`
+(default 1) and `sink` (default 0) to sit on the bone's surface instead of
+`pos`. Use this for eyes, noses, buttons and buckles. Grounding, attachments
+and `on` use the untapered ellipsoid, so do not attach children near a
+strongly tapered tip.
+
+```xml
+<bone name="spine" aim="0 0" aimEnd="0 8" segments="2" length="15" radius="7 6.5" material="fur">
+  <bone name="neck" aim="0 50" length="5" radius="4.2">
+    <bone name="head" aim="0 5" length="8" radius="7 6">
+      <bone name="left_ear" at="0.35" from="55 50" aim="28 72" length="6" radius="3 1.1" taper="0.15" mirror="1"/>
+      <sphere on="34 12" at="0.8" radius="1.5" material="eye"/>
+    </bone>
+  </bone>
+  <bone name="left_shoulder" at="0.85" from="90 -55" aim="0 -88" length="6.5" radius="2.8 3" mirror="1">
+    <bone name="left_forearm" aim="0 -90" length="6.5" radius="2.2">
+      <bone name="left_front_paw" foot="1" aim="0 -8" length="3" radius="2.2 1.3"/>
+    </bone>
+  </bone>
+  <bone name="tail" at="0" from="180 25" aim="180 35" aimEnd="165 85" segments="3" length="22" radius="1.8" taper="0.6"/>
+</bone>
+```
 
 ### `<capsule>`
 
