@@ -129,6 +129,7 @@ static void pencil_toolbar_items(window_t *win) {
       .flags = TOOLBAR_ITEM_FLAG_SMALL};
   items[count++] = (toolbar_item_t){.type = TOOLBAR_ITEM_SEPARATOR};
   for (int i = 0; i < ARRAY_LEN(k_tools); i++) {
+    if (k_tools[i].ident == ID_TOOL_SWATCH) continue;
     if (layer == IE_LAYER_PENCIL && (k_tools[i].ident == ID_TOOL_FILL || k_tools[i].ident == ID_TOOL_EYEDROPPER)) continue;
     items[count++] = k_tools[i];
   }

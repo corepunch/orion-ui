@@ -153,26 +153,24 @@ static void test_onion_tint_is_not_gray(void) {
   PASS();
 }
 
-static void test_swatch_tap_swaps_colors(void) {
-  TEST("Pencil Test swatch tap swaps foreground and background");
+static void test_no_fg_bg_swatch(void) {
+  TEST("Pencil Test tool strip has no foreground/background swatch on any layer");
   penciltest_setup();
-  g_app->fg_color = MAKE_COLOR(0x00, 0x00, 0x00, 0xFF);
-  g_app->bg_color = MAKE_COLOR(0xFF, 0xFF, 0xFF, 0xFF);
-  window_t *tools = g_app->tool_win;
-  ASSERT_NOT_NULL(tools);
-  ASSERT_NOT_NULL(tools->toolbar);
-  toolbar_state_t *tb = window_toolbar_state(tools);
-  ASSERT_NOT_NULL(tb);
-  int swatch = -1;
-  for (int i = 0; i < tb->item_count; i++)
-    if (tb->items[i].type == TOOLBAR_ITEM_CUSTOM && tb->items[i].ident >= IE_PENCIL_PALETTE_BASE + IE_PENCIL_COLORS) swatch = i;
-  ASSERT_TRUE(swatch >= 0);
-  irect16_t r = tb->item_rects[swatch];
-  uint32_t pt = MAKEDWORD(r.x + r.w / 2, r.y + r.h / 2);
-  send_message(tools->toolbar, evLeftButtonDown, pt, NULL);
-  send_message(tools->toolbar, evLeftButtonUp, pt, NULL);
-  ASSERT_EQUAL(g_app->fg_color, MAKE_COLOR(0xFF, 0xFF, 0xFF, 0xFF));
-  ASSERT_EQUAL(g_app->bg_color, MAKE_COLOR(0x00, 0x00, 0x00, 0xFF));
+  canvas_doc_t *doc = create_document(NULL, 32, 32);
+  ASSERT_NOT_NULL(doc);
+  const int layers[] = {IE_LAYER_BG, IE_LAYER_PENCIL, IE_LAYER_COLOR, IE_LAYER_FX};
+  for (int layer = 0; layer < 4; layer++) {
+    ASSERT_TRUE(cmd_pencil_layer(doc, layers[layer]));
+    toolbar_state_t *tb = window_toolbar_state(g_app->tool_win);
+    ASSERT_NOT_NULL(tb);
+    for (int i = 0; i < tb->item_count; i++) {
+      if (tb->items[i].type != TOOLBAR_ITEM_CUSTOM) continue;
+      uint32_t ident = tb->items[i].ident;
+      bool layer_btn = ident >= IE_PENCIL_LAYER_BASE && ident < IE_PENCIL_LAYER_BASE + IE_LAYER_COUNT;
+      bool color_btn = ident >= IE_PENCIL_PALETTE_BASE && ident < IE_PENCIL_PALETTE_BASE + IE_PENCIL_COLORS;
+      ASSERT_TRUE(layer_btn || color_btn);
+    }
+  }
   penciltest_teardown();
   PASS();
 }
@@ -273,7 +271,7 @@ int main(void) {
   test_pencil_canvas_extends_behind_timeline();
   test_pencil_paper_and_ink();
   test_onion_tint_is_not_gray();
-  test_swatch_tap_swaps_colors();
+  test_no_fg_bg_swatch();
   test_coloring_palette();
   test_legacy_palette_extension();
   TEST_END();
