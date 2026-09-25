@@ -1,0 +1,176 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!-- Example storybook interior: grandmother's attic study with Mira the kitten, from the Three Stars blockout. Z up, X east, Y north, centimetres.
+     Interior: x -260..260, y -200..200, floor z=0, ceiling z=250.
+     Route: floor -> chair seat (45) -> desk top (76) -> window sill (98). -->
+<scene up="z" ambient="0.30 0.30 0.36" background="midnight">
+  <camera name="floor-show-room" comment="Wide room map: basket, star, chair, desk and window" pos="125 -115 120" look="-60 85 30" fov="58" textRect="0.15 0.05 0.21 0.20" textScale="0.72"><transform target="Mira" pos="-105 38 0" rot="0 0 124" /><use-pose instance="Mira" name="LookDown" /></camera>
+  <camera name="floor-show-cleared-room" comment="The floor after Mira takes the brass star" pos="125 -115 120" look="-60 85 30" fov="58" textRect="0.15 0.05 0.21 0.20" textScale="0.72"><transform target="BrassStar" pos="0 0 -1000" /><transform target="Mira" pos="-105 38 0" rot="0 0 124" /><use-pose instance="Mira" name="LookDown" /></camera>
+  <camera name="floor-take-gold-star" comment="Mira noses the brass star beside her basket" pos="-36 120 24" look="-70 62 8" fov="50" textRect="0.24 0.03 0.30 0.20" textScale="0.78"><transform target="Mira" pos="-79 58 0" rot="0 0 124" /><use-pose instance="Mira" name="TakeLow" /></camera>
+  <camera name="floor-climb-table" comment="Hind paws on the chair seat, front paws on the desk edge" pos="185 110 88" look="82 122 64" fov="52" textRect="0.02 0.66 0.22 0.28" textScale="0.74"><transform target="Mira" pos="82 122 45" rot="0 0 180" /><use-pose instance="Mira" name="ClimbDesk" /></camera>
+  <camera name="table-go-floor" comment="Mira looks down from the desk edge toward the chair" pos="165 45 125" look="82 140 68" fov="50" textRect="0.02 0.03 0.26 0.22" textScale="0.70"><transform target="Mira" pos="80 162 76" rot="0 0 0" /><use-pose instance="Mira" name="LookDown" /></camera>
+  <camera name="table-show-desk" comment="Chair in the foreground, desk, copper star and window" pos="165 55 140" look="70 170 85" fov="58" textRect="0.02 0.04 0.30 0.22" textScale="0.80"><transform target="Mira" pos="118 165 76" rot="0 0 -90" /><use-pose instance="Mira" name="LookDown" /></camera>
+  <camera name="table-show-cleared-desk" comment="The desk after Mira takes the copper star" pos="165 55 140" look="70 170 85" fov="58" textRect="0.02 0.04 0.30 0.22" textScale="0.80"><transform target="CopperStar" pos="0 0 -1000" /><transform target="Mira" pos="118 165 76" rot="0 0 -90" /><use-pose instance="Mira" name="LookDown" /></camera>
+  <camera name="table-take-copper-star" comment="Mira noses the copper star among the letters" pos="25 127 96" look="80 157 82" fov="50" textRect="0.68 0.08 0.30 0.22" textScale="0.74"><transform target="Mira" pos="93 156 76" rot="0 0 -90" /><use-pose instance="Mira" name="TakeLow" /></camera>
+  <camera name="table-climb-sill" comment="Mira stretches from the desk onto the window sill" pos="185 95 120" look="98 172 96" fov="50" textRect="0.02 0.03 0.26 0.18" textScale="0.70"><transform target="Mira" pos="100 156 76" rot="0 0 180" /><use-pose instance="Mira" name="ClimbSill" /></camera>
+  <camera name="sill-go-table" comment="Mira on the sill looks down at the desk" pos="-20 110 150" look="95 175 85" fov="55" textRect="0.64 0.05 0.32 0.22" textScale="0.68"><transform target="Mira" pos="118 186 98" rot="0 0 -90" /><use-pose instance="Mira" name="LookRoom" /></camera>
+  <camera name="sill-show-window" comment="Mira and the pearl star on the moonlit sill" pos="175 95 140" look="80 190 120" fov="55" textRect="0.03 0.05 0.25 0.24" textScale="0.76"><transform target="Mira" pos="125 186 98" rot="0 0 -90" /><use-pose instance="Mira" name="LookDown" /></camera>
+  <camera name="sill-show-cleared-window" comment="The sill after Mira takes the pearl star" pos="175 95 140" look="80 190 120" fov="55" textRect="0.03 0.05 0.25 0.24" textScale="0.76"><transform target="PearlStar" pos="0 0 -1000" /><transform target="Mira" pos="125 186 98" rot="0 0 -90" /><use-pose instance="Mira" name="LookDown" /></camera>
+  <camera name="sill-take-pearl-star" comment="Mira noses the pearl star by the window frame" pos="22 157 118" look="78 186 104" fov="50" textRect="0.12 0.02 0.22 0.16" textScale="0.78"><transform target="Mira" pos="92 186 98" rot="0 0 -90" /><use-pose instance="Mira" name="TakeLow" /></camera>
+  <camera name="attic-return-stars" comment="Mira in her basket with the three stars, under the paper-star mobile" pos="-72 -25 88" look="-150 118 48" fov="50" textRect="0.70 0.14 0.26 0.22" textScale="0.72"><transform target="Mira" pos="-152 136 5" rot="0 0 29" /><use-pose instance="Mira" name="Rest" /><transform target="BrassStar" pos="-100 38 9.3" /><transform target="CopperStar" pos="-207 -46 -67.4" /><transform target="PearlStar" pos="-226 -64 -88.6" /></camera>
+  <pose name="LookDown">
+    <joint target="head" aim="0 -12" />
+  </pose>
+  <pose name="LookRoom">
+    <joint target="neck" aim="40 40" />
+    <joint target="head" aim="60 -30" />
+  </pose>
+  <pose name="TakeLow">
+    <joint target="neck" aim="0 12" />
+    <joint target="head" aim="0 -45" />
+    <joint target="left_shoulder" aim="0 -65" />
+    <joint target="tail_2" aim="170 55" />
+  </pose>
+  <pose name="ClimbDesk">
+    <joint target="spine" pos="0 0 -3" aim="0 62" />
+    <joint target="neck" aim="0 20" />
+    <joint target="head" aim="0 -5" />
+    <ik tip="left_hind_paw" plant="1" pole="0 -1 0" keepOrientation="1" />
+    <ik tip="right_hind_paw" plant="1" pole="0 -1 0" keepOrientation="1" />
+    <ik tip="left_front_paw" target="87 137 77.3" pole="0 1 0" keepOrientation="1" />
+    <ik tip="right_front_paw" target="77 137 77.3" pole="0 1 0" keepOrientation="1" />
+  </pose>
+  <pose name="ClimbSill">
+    <joint target="spine" pos="0 0 -3" aim="0 48" />
+    <joint target="neck" aim="0 15" />
+    <ik tip="left_hind_paw" plant="1" pole="0 -1 0" keepOrientation="1" />
+    <ik tip="right_hind_paw" plant="1" pole="0 -1 0" keepOrientation="1" />
+    <ik tip="left_front_paw" target="105 176 99.3" pole="0 1 0" keepOrientation="1" />
+    <ik tip="right_front_paw" target="95 176 99.3" pole="0 1 0" keepOrientation="1" />
+  </pose>
+  <pose name="Rest">
+    <joint target="spine" pos="0 0 -6" />
+    <joint target="head" aim="-20 -20" />
+    <joint target="tail" aim="120 10" />
+  </pose>
+  <material id="plaster" color="0.66 0.61 0.56" shininess="2" />
+  <material id="dark_wood" color="0.40 0.28 0.20" shininess="10" />
+  <material id="wood" color="0.62 0.42 0.25" shininess="12" />
+  <material id="floorboards" color="0.50 0.36 0.25" shininess="6" />
+  <material id="brass" color="0.72 0.50 0.20" shininess="40" />
+  <material id="paper" color="0.84 0.79 0.66" shininess="2" />
+  <material id="paper_blue" color="0.26 0.40 0.62" shininess="3" />
+  <material id="book_pages" color="0.80 0.73 0.58" shininess="2" />
+  <material id="trunk_fabric" color="0.40 0.27 0.20" shininess="5" />
+  <material id="wicker" color="0.66 0.50 0.30" shininess="4" />
+  <material id="wicker_dark" color="0.50 0.36 0.20" shininess="4" />
+  <material id="cushion" color="0.62 0.32 0.36" shininess="3" />
+  <material id="rug" color="0.46 0.24 0.22" shininess="2" />
+  <material id="rug_border" color="0.70 0.58 0.36" shininess="2" />
+  <material id="lamp_shade" color="0.35 0.45 0.34" shininess="20" />
+  <material id="curtain" color="0.44 0.30 0.40" shininess="4" />
+  <material id="terracotta" color="0.62 0.30 0.20" shininess="6" />
+  <material id="leaf" color="0.26 0.44 0.26" shininess="8" />
+  <material id="ink" color="0.10 0.12 0.20" shininess="30" />
+  <material id="yarn" color="0.30 0.52 0.62" shininess="3" />
+  <material id="thread" color="0.86 0.84 0.78" shininess="2" />
+  <material id="brass_star" color="0.92 0.62 0.16" shininess="60" />
+  <material id="copper_star" color="0.78 0.34 0.16" shininess="55" />
+  <material id="pearl_star" color="0.84 0.88 0.96" shininess="70" />
+  <material id="mira_fur" color="0.56 0.56 0.58" shininess="4" />
+  <material id="mira_white" color="0.90 0.88 0.85" shininess="4" />
+  <material id="mira_ear" color="0.82 0.56 0.56" shininess="4" />
+  <material id="mira_eye" color="0.14 0.18 0.10" shininess="60" />
+  <material id="mira_nose" color="0.82 0.44 0.48" shininess="20" />
+  <!-- Moonlight enters only through the north window and falls diagonally across the desk. -->
+  <sun dir="0.35 -0.55 -1" color="0.60 0.70 1.0" intensity="1.2" castShadows="1" />
+
+  <!-- Shell: floor, ceiling with rafters and four walls. -->
+  <box pos="0 0 -5" size="552 432 10" material="floorboards" />
+  <box pos="0 0 258" size="552 432 16" material="plaster" />
+  <box pos="-150 0 243" size="14 400 14" material="dark_wood" />
+  <box pos="0 0 243" size="14 400 14" material="dark_wood" />
+  <box pos="150 0 243" size="14 400 14" material="dark_wood" />
+  <!-- The ceiling pendant is left on; it lights the whole room from the centre rafter. -->
+  <prefab source="study/pendant_lamp" pos="0 -20 236" />
+  <group pos="0 208 0" rot="90 0 0">
+    <wall length="552" height="250" thickness="16" material="plaster" bottomTrimHeight="10" trimMaterial="dark_wood" />
+    <window preset="cottage" pos="85 153 0" width="110" height="110" pane="0" sill="0" frameMaterial="wood" />
+  </group>
+  <group pos="-268 0 0" rot="90 0 90">
+    <wall length="400" height="250" thickness="16" material="plaster" bottomTrimHeight="10" trimMaterial="dark_wood" />
+  </group>
+  <group pos="268 0 0" rot="90 0 -90">
+    <wall length="400" height="250" thickness="16" material="plaster" bottomTrimHeight="10" trimMaterial="dark_wood" />
+  </group>
+  <!-- The attic door, with a small pet passage for Mira. -->
+  <group pos="0 -208 0" rot="90 0 180">
+    <wall length="552" height="250" thickness="16" material="plaster" bottomTrimHeight="10" trimMaterial="dark_wood" />
+    <door preset="rectangular" pos="60 100 0" width="90" height="200" hinge="right" frameMaterial="dark_wood" leafMaterial="wood" hardwareMaterial="brass" petWidth="18" petHeight="24" />
+  </group>
+
+  <!-- Window: a deep sill board, curtains on a rod held by two wall brackets, a flower pot. -->
+  <box pos="85 186 96" size="130 28 4" material="wood" />
+  <box pos="85 199 92" size="130 2 4" material="dark_wood" />
+  <cylinder pos="85 192 220" rot="0 0 90" radius="1.2" height="150" material="brass" />
+  <box pos="12 196 220" size="3 8 3" material="brass" />
+  <box pos="158 196 220" size="3 8 3" material="brass" />
+  <box pos="18 192 160" size="22 5 118" material="curtain" />
+  <box pos="152 192 160" size="22 5 118" material="curtain" />
+  <cylinder pos="38 188 103" rot="90 0 0" radius="6" height="10" material="terracotta" />
+  <cylinder pos="36 188 116" rot="90 0 -8" radius="0.8" height="18" material="leaf" />
+  <cylinder pos="41 188 114" rot="90 0 12" radius="0.7" height="14" material="leaf" />
+  <ellipsoid pos="34 188 125" radii="4 2 2.5" material="leaf" />
+  <ellipsoid pos="43 188 121" radii="3.5 2 2" material="leaf" />
+
+  <!-- Grandmother's desk under the window, her chair pushed back but close. -->
+  <prefab source="study/desk" pos="85 167 0" />
+  <prefab source="study/chair" pos="82 109 0" rot="0 0 188" />
+  <prefab source="study/desk_lamp" pos="32 156 76" rot="0 0 35" />
+  <box pos="52 160 76.15" rot="0 0 -8" size="21 29.7 0.3" material="paper" />
+  <box pos="70 154 76.45" rot="0 0 11" size="21 29.7 0.3" material="paper" />
+  <box pos="92 176 76.15" rot="0 0 4" size="16 11 0.3" material="paper_blue" />
+  <cylinder pos="104 146 76.5" rot="0 0 70" radius="0.5" height="17" material="wood" />
+  <cylinder pos="126 186 78.5" rot="90 0 0" radius="3" height="5" material="ink" />
+  <cylinder pos="126 186 81.5" rot="90 0 0" radius="1.4" height="1" material="brass" />
+  <prefab source="study/book" pos="132 156 76" rot="0 0 84" scale="0.9 1 1" color="0.15 0.26 0.42" />
+  <prefab source="study/book" pos="131 157 79.6" rot="0 0 97" scale="0.8 0.9 1" color="0.45 0.16 0.14" />
+  <prefab source="study/book" pos="133 155 83.2" rot="0 0 88" scale="0.65 0.8 0.8" color="0.52 0.36 0.14" />
+  <star pos="112 172 76.1" outerRadius="3.5" innerRadius="1.6" points="5" material="paper_blue"><extrude amount="0.2" /></star>
+  <star pos="118 168 76.1" rot="0 0 20" outerRadius="3" innerRadius="1.4" points="5" material="paper"><extrude amount="0.2" /></star>
+
+  <!-- Mira's corner: basket under the paper-star mobile hanging from the rafter, her yarn ball. -->
+  <prefab source="study/basket" pos="-150 120 0" />
+  <cylinder pos="-150 120 185.5" rot="90 0 0" radius="0.25" height="101" material="thread" />
+  <cylinder pos="-150 120 135" rot="0 0 90" radius="0.6" height="60" material="wood" />
+  <cylinder pos="-176 120 124.4" rot="90 0 0" radius="0.2" height="20" material="thread" />
+  <star pos="-176 120 108.4" rot="90 0 0" outerRadius="6" innerRadius="2.8" points="5" material="paper_blue"><extrude amount="0.3" /></star>
+  <cylinder pos="-124 120 124.4" rot="90 0 0" radius="0.2" height="20" material="thread" />
+  <star pos="-124 120 108.4" rot="90 0 0" outerRadius="6" innerRadius="2.8" points="5" material="paper"><extrude amount="0.3" /></star>
+  <!-- Three empty threads show where the scattered stars hung. -->
+  <cylinder pos="-163 120 127.4" rot="90 0 0" radius="0.2" height="14" material="thread" />
+  <sphere pos="-163 120 120.4" radius="0.6" material="thread" />
+  <cylinder pos="-150 120 127.4" rot="90 0 0" radius="0.2" height="14" material="thread" />
+  <sphere pos="-150 120 120.4" radius="0.6" material="thread" />
+  <cylinder pos="-137 120 127.4" rot="90 0 0" radius="0.2" height="14" material="thread" />
+  <sphere pos="-137 120 120.4" radius="0.6" material="thread" />
+  <sphere pos="-205 62 5" radius="5" material="yarn" />
+  <cylinder pos="-192 58 0.3" rot="0 0 60" radius="0.3" height="22" material="yarn" />
+
+  <!-- Room furniture along the walls, clear of the route. -->
+  <rounded-rect pos="-10 -45 0.4" size="200 120" radius="12" material="rug"><extrude amount="0.8" /></rounded-rect>
+  <prefab source="study/bookshelf" pos="-244 -40 0" rot="0 0 90" />
+  <prefab source="study/trunk" pos="236 -70 0" rot="0 0 -90" />
+  <prefab source="study/book" pos="236 -62 46" rot="0 0 12" color="0.36 0.20 0.34" />
+
+  <!-- Three unique star tokens, each resting on its story surface. -->
+  <group name="BrassStar" pos="-58 72 0"><star pos="0 0 1.25" outerRadius="7" innerRadius="3.2" points="5" material="brass_star"><extrude amount="2.5" /></star></group>
+  <group name="CopperStar" pos="66 156 76.6"><star pos="0 0 1.25" rot="0 0 15" outerRadius="7" innerRadius="3.2" points="5" material="copper_star"><extrude amount="2.5" /></star></group>
+  <group name="PearlStar" pos="63 186 98"><star pos="0 0 1.25" rot="0 0 -10" outerRadius="7" innerRadius="3.2" points="5" material="pearl_star"><extrude amount="2.5" /></star></group>
+
+  <!-- Mira; every camera places her with a transform and a pose. -->
+  <prefab source="characters/mira" name="Mira" />
+
+  <!-- Route anchors for the interaction circles. -->
+  <group name="Chair" pos="82 109 45" />
+  <group name="Sill-Ledge" pos="100 174 98" />
+</scene>

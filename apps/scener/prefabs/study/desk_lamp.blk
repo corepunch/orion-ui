@@ -1,0 +1,13 @@
+<!-- Desk lamp with its own warm light. Z up; base 14 cm across at z=0. An open drum shade
+     hangs from the arm toward local -Y, held by a socket and two spider arms. -->
+<prefab>
+  <cylinder pos="0 0 1" rot="90 0 0" radius="7" height="2" material="brass" />
+  <cylinder pos="0 0 21" rot="90 0 0" radius="1" height="38" material="brass" />
+  <cylinder pos="0 -4.5 40" radius="0.9" height="9" material="brass" />
+  <cylinder pos="0 -9 37.5" rot="90 0 0" radius="1.2" height="5" material="brass" />
+  <box pos="0 -9 39.7" size="14 0.4 0.4" material="brass" />
+  <box pos="0 -9 39.7" size="0.4 14 0.4" material="brass" />
+  <cylinder pos="0 -9 35" rot="90 0 0" radius="7.2" height="10" tube="0.8" material="lamp_shade" />
+  <sphere pos="0 -9 32.5" radius="2.2" color="1.0 0.82 0.52" unlit="1" castShadow="0" />
+  <light pos="0 -9 32.5" color="1.0 0.74 0.45" intensity="2.4" radius="520" castShadows="1" />
+</prefab>

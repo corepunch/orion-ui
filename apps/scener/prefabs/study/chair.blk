@@ -1,0 +1,15 @@
+<!-- Grandmother's kitchen-style chair. Z up; footprint 42 x 40 cm, baseline z=0.
+     The sitter faces local -Y; the backrest is at +Y. Seat top at z=45. -->
+<prefab>
+  <attach name="seat" pos="0 0 45" />
+  <box pos="0 0 43" size="42 40 4" material="wood" />
+  <box pos="-17 -16 20.5" size="4 4 41" material="dark_wood" />
+  <box pos="17 -16 20.5" size="4 4 41" material="dark_wood" />
+  <box pos="-17 16 45" size="4 4 90" material="dark_wood" />
+  <box pos="17 16 45" size="4 4 90" material="dark_wood" />
+  <box pos="0 16 64" size="30 3 6" material="wood" />
+  <box pos="0 16 82" size="30 3 10" material="wood" />
+  <box pos="0 -16 14" size="30 2 3" material="dark_wood" />
+  <box pos="-17 0 14" size="2 28 3" material="dark_wood" />
+  <box pos="17 0 14" size="2 28 3" material="dark_wood" />
+</prefab>

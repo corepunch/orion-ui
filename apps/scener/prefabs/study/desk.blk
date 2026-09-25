@@ -1,0 +1,19 @@
+<!-- Writing desk. Z up; footprint 130 x 64 cm, top surface at z=76.
+     Front (drawers) faces local -Y. -->
+<prefab>
+  <attach name="top_surface" pos="0 0 76" />
+  <box pos="0 0 74" size="130 64 4" material="wood" />
+  <box pos="-61 -28 36" size="5 5 72" material="dark_wood" />
+  <box pos="61 -28 36" size="5 5 72" material="dark_wood" />
+  <box pos="-61 28 36" size="5 5 72" material="dark_wood" />
+  <box pos="61 28 36" size="5 5 72" material="dark_wood" />
+  <box pos="0 28 65" size="117 2 14" material="dark_wood" />
+  <box pos="-61 0 65" size="2 51 14" material="dark_wood" />
+  <box pos="61 0 65" size="2 51 14" material="dark_wood" />
+  <box pos="0 -28 65" size="117 2 14" material="dark_wood" />
+  <box pos="-29 -29.8 65" size="50 1.6 10" material="wood" />
+  <box pos="29 -29.8 65" size="50 1.6 10" material="wood" />
+  <sphere pos="-29 -31.4 65" radius="1.6" material="brass" />
+  <sphere pos="29 -31.4 65" radius="1.6" material="brass" />
+  <box pos="0 20 8" size="117 2 3" material="dark_wood" />
+</prefab>

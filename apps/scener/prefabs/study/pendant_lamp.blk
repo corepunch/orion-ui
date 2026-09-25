@@ -1,0 +1,12 @@
+<!-- Ceiling pendant with its own warm light. Z up; the cord's top is at local z=0. An open
+     36 cm drum shade hangs from a socket by two spider arms, 42..58 cm below the origin, so the
+     bulb lights the room below and the ceiling above. Place the origin under a rafter. -->
+<prefab>
+  <cylinder pos="0 0 -23" rot="90 0 0" radius="0.5" height="46" material="dark_wood" />
+  <cylinder pos="0 0 -48" rot="90 0 0" radius="1.6" height="4" material="brass" />
+  <box pos="0 0 -46" size="35 0.6 0.6" material="brass" />
+  <box pos="0 0 -46" size="0.6 35 0.6" material="brass" />
+  <cylinder pos="0 0 -52" rot="90 0 0" radius="18" height="14" tube="1" material="lamp_shade" />
+  <sphere pos="0 0 -53" radius="3.5" color="1.0 0.84 0.56" unlit="1" castShadow="0" />
+  <light pos="0 0 -53" color="1.0 0.78 0.52" intensity="3.4" radius="1100" castShadows="1" />
+</prefab>

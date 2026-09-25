@@ -1,0 +1,8 @@
+<!-- A closed book lying flat. Z up; 30 x 22 cm, 3.6 cm thick, baseline z=0.
+     The spine faces local -X. Scale it per instance for varied sizes; tint recolours the cover. -->
+<prefab>
+  <box pos="0.3 0 1.8" size="29 21 3.2" material="book_pages" />
+  <box pos="0 0 0.2" size="30 22 0.4" color="0.48 0.16 0.12" tint="1" />
+  <box pos="0 0 3.4" size="30 22 0.4" color="0.48 0.16 0.12" tint="1" />
+  <box pos="-14.8 0 1.8" size="0.4 22 3.2" color="0.48 0.16 0.12" tint="1" />
+</prefab>

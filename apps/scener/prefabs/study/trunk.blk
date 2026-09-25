@@ -1,0 +1,11 @@
+<!-- Old storage trunk. Z up; footprint 84 x 46 cm, lid top at z=46.
+     The latch faces local -Y. -->
+<prefab>
+  <box pos="0 0 20" size="80 44 40" material="trunk_fabric" />
+  <box pos="0 0 43" size="84 46 6" material="dark_wood" />
+  <box pos="-28 0 23" size="5 45 46" material="dark_wood" />
+  <box pos="28 0 23" size="5 45 46" material="dark_wood" />
+  <box pos="0 -23.2 38" size="7 1.4 8" material="brass" />
+  <box pos="-40.8 0 30" size="1.6 12 4" material="brass" />
+  <box pos="40.8 0 30" size="1.6 12 4" material="brass" />
+</prefab>
