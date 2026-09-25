@@ -93,6 +93,8 @@ void canvas_composite_over_bg(const canvas_doc_t *doc, uint8_t *rgba) {
 
   for (size_t i = 0; i < n; i++) {
     uint8_t *p = rgba + i * 4;
+    if (p[3] == 255) continue;
+    if (p[3] == 0) { memcpy(p, background, sizeof(background)); continue; }
     uint8_t foreground[4];
     memcpy(foreground, p, sizeof(foreground));
     memcpy(p, background, sizeof(background));

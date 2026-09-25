@@ -58,7 +58,7 @@ static void test_modern_surfaces(void) {
   theme_t *theme = paint_with_theme(THEME_NAVY);
   memset(pixels, 0, sizeof(pixels));
   theme->draw_part(THEME_PART_BUTTON, R(12, 10, 80, 30), CTRL_NORMAL);
-  ASSERT_EQUAL(pixels[25][12], MODERN_SECONDARY_BORDER);
+  ASSERT_EQUAL(pixels[25][12], get_sys_color(brLightEdge));
   ASSERT_EQUAL(pixels[25][50], get_sys_color(brControlBg));
   theme->draw_part(THEME_PART_PANEL, R(12, 10, 80, 30), CTRL_NORMAL);
   ASSERT_EQUAL(pixels[25][50], get_sys_color(brControlBg));
@@ -70,7 +70,7 @@ static void test_modern_button_states(void) {
   theme_t *theme = paint_with_theme(THEME_NAVY);
   memset(pixels, 0, sizeof(pixels));
   theme->draw_part(THEME_PART_BUTTON, R(12, 10, 80, 30), CTRL_PRESSED);
-  ASSERT_EQUAL(pixels[25][12], MODERN_SECONDARY_BORDER);
+  ASSERT_EQUAL(pixels[25][12], get_sys_color(brLightEdge));
   ASSERT_EQUAL(pixels[25][50], get_sys_color(brButtonHover));
   ASSERT_NOT_EQUAL(pixels[25][50], get_sys_color(brAccent));
   memset(pixels, 0, sizeof(pixels));

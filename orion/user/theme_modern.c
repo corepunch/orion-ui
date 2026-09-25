@@ -25,9 +25,8 @@
 #define RADIUS_MENU_ITEM     6
 #define RADIUS_TAB           6
 
-// Secondary-button resting border. Navy uses the visible-on-navy hairline
-// (brLightEdge). Default keeps the original quiet gray outline.
-#define MODERN_SECONDARY_BORDER        WEB(0x4A5C7A)
+// Secondary-button resting border. Navy uses the palette hairline;
+// default keeps the original quiet gray outline.
 #define MODERN_DEFAULT_SECONDARY_BORDER  0xff767676
 
 #if defined(__APPLE__) && TARGET_OS_IOS
@@ -39,7 +38,7 @@
 static bool modern_navy(void) { return get_theme()->style == THEME_NAVY; }
 
 static uint32_t modern_secondary_border(void) {
-  return modern_navy() ? MODERN_SECONDARY_BORDER : MODERN_DEFAULT_SECONDARY_BORDER;
+  return modern_navy() ? get_sys_color(brLightEdge) : MODERN_DEFAULT_SECONDARY_BORDER;
 }
 
 // ── Buttons ──────────────────────────────────────────────────────────────────

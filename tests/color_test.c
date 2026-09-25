@@ -32,10 +32,26 @@ static void test_linear_half_black_over_white(void) {
   PASS();
 }
 
+static void test_composite_alpha_boundaries(void) {
+  TEST("transparent and opaque sRGB compositing preserves exact channel values");
+  uint8_t dst[4] = {30, 60, 90, 255};
+  const uint8_t transparent[4] = {210, 120, 40, 0};
+  ui_composite_srgba8(dst, transparent, 1.0f);
+  ASSERT_EQUAL(dst[0], 30); ASSERT_EQUAL(dst[1], 60); ASSERT_EQUAL(dst[2], 90); ASSERT_EQUAL(dst[3], 255);
+  const uint8_t opaque[4] = {210, 120, 40, 255};
+  ui_composite_srgba8(dst, opaque, 1.0f);
+  ASSERT_EQUAL(dst[0], 210); ASSERT_EQUAL(dst[1], 120); ASSERT_EQUAL(dst[2], 40); ASSERT_EQUAL(dst[3], 255);
+  dst[3] = 0;
+  ui_composite_srgba8(dst, opaque, 0.5f);
+  ASSERT_EQUAL(dst[0], 210); ASSERT_EQUAL(dst[1], 120); ASSERT_EQUAL(dst[2], 40); ASSERT_EQUAL(dst[3], 128);
+  PASS();
+}
+
 int main(void) {
   TEST_START("sRGB color contract");
   test_srgb8_roundtrip();
   test_web_color_packing();
   test_linear_half_black_over_white();
+  test_composite_alpha_boundaries();
   TEST_END();
 }

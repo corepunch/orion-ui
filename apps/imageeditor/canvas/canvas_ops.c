@@ -9,12 +9,28 @@ bool ie_doc_begin_op(canvas_doc_t *doc, const char *op_name) {
   return ok;
 }
 
-void ie_doc_commit_op(canvas_doc_t *doc, bool success) {
+static void ie_doc_commit_op_impl(canvas_doc_t *doc, bool success, bool active_frame_only) {
   if (!doc || !doc->command.before) return;
   doc_end_command(doc, success);
   ie_doc_update_title(doc);
-  ie_doc_invalidate_all(doc);
+  imageeditor_sync_tool_palette();
+  if (doc->canvas_win && doc->canvas_win->userdata) {
+    canvas_win_state_t *view = doc->canvas_win->userdata;
+    memset(view->onion_key, 0, sizeof(view->onion_key));
+  }
+  ie_doc_invalidate_canvas(doc);
+  ie_doc_invalidate_layers(doc);
+  if (active_frame_only && success && doc->anim) timeline_win_refresh_active_frame();
+  else ie_doc_invalidate_timeline(doc);
   imageeditor_sync_main_toolbar();
+}
+
+void ie_doc_commit_op(canvas_doc_t *doc, bool success) {
+  ie_doc_commit_op_impl(doc, success, false);
+}
+
+void ie_doc_commit_frame_op(canvas_doc_t *doc, bool success) {
+  ie_doc_commit_op_impl(doc, success, true);
 }
 
 // ── Dirty state management ─────────────────────────────────────────────────

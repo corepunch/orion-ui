@@ -12,7 +12,7 @@ typedef struct {
   GLuint *thumbs;
   uint32_t *thumb_rev;
   int thumb_count;
-  bool thumbs_dirty, positioned;
+  bool thumbs_dirty, thumbs_active_only, positioned;
   canvas_doc_t *last_doc;
   int last_count;
 } timeline_state_t;
@@ -78,6 +78,7 @@ static void rebuild_thumbnails(timeline_state_t *st) {
   sync_thumb_array(st, doc->anim->frame_count);
   for (int i = 0; i < doc->anim->frame_count && i < st->thumb_count; i++) {
     uint32_t rev = doc->anim->frames[i] ? doc->anim->frames[i]->revision : 0;
+    if (st->thumbs_active_only && i != doc->anim->active_frame && st->thumbs[i]) continue;
     if (!st->thumbs_dirty && st->thumbs[i] && st->thumb_rev[i] == rev) continue;
     anim_frame_t preview = *doc->anim->frames[i];
     uint8_t *rgba = NULL;
@@ -101,6 +102,7 @@ static void rebuild_thumbnails(timeline_state_t *st) {
     free(rgba);
   }
   st->thumbs_dirty = false;
+  st->thumbs_active_only = false;
 }
 
 static int timeline_fixed_width(void) {
@@ -192,6 +194,7 @@ static bool timeline_select_frame(window_t *win, timeline_state_t *st,
 
   if (!cmd_frame_select(doc, target_idx)) return false;
   st->thumbs_dirty = true;
+  st->thumbs_active_only = false;
   timeline_ensure_frame_visible(st, win, target_idx);
   timeline_toolbar_sync();
   invalidate_window(win);
@@ -233,6 +236,7 @@ static result_t timeline_proc(window_t *win, uint32_t msg, uint32_t wparam, void
       st = allocate_window_data(win, sizeof(*st));
       if (!st) return false;
       st->thumbs_dirty = true;
+      st->thumbs_active_only = false;
       send_message(win, tbSetStyle, TOOLBAR_STYLE_GRIP, NULL);
       return true;
     case evPaint: return true;
@@ -351,12 +355,27 @@ void timeline_win_refresh(void) {
   if (!g_app || !g_app->timeline_win) return;
   timeline_state_t *st = g_app->timeline_win->userdata;
   canvas_doc_t *doc = tl_doc();
-  if (st && !(doc && doc->anim && doc->anim->playing)) st->thumbs_dirty = true;
+  if (st && !(doc && doc->anim && doc->anim->playing)) {
+    st->thumbs_dirty = true;
+    st->thumbs_active_only = false;
+  }
   timeline_toolbar_sync();
   int count = doc && doc->anim ? doc->anim->frame_count : 0;
   if (st && count > 1 && (st->last_doc != doc || st->last_count <= 1))
     show_window(g_app->timeline_win, true);
   if (st) { st->last_doc = doc; st->last_count = count; }
+  invalidate_window(g_app->timeline_win);
+}
+
+void timeline_win_refresh_active_frame(void) {
+  if (!g_app || !g_app->timeline_win) return;
+  timeline_state_t *st = g_app->timeline_win->userdata;
+  canvas_doc_t *doc = tl_doc();
+  if (!st || !doc || !doc->anim || st->last_doc != doc ||
+      st->last_count != doc->anim->frame_count) { timeline_win_refresh(); return; }
+  if (!st->thumbs_dirty) st->thumbs_active_only = true;
+  st->thumbs_dirty = true;
+  timeline_toolbar_sync();
   invalidate_window(g_app->timeline_win);
 }
 

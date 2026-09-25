@@ -934,6 +934,7 @@ void timeline_toolbar_sync(void);
 
 // Refresh the timeline palette after frame changes.
 void timeline_win_refresh(void);
+void timeline_win_refresh_active_frame(void);
 
 // Animation playback tick — called from evTimer to advance frames.
 void anim_tick(canvas_doc_t *doc);
@@ -954,6 +955,7 @@ bool ie_doc_begin_op(canvas_doc_t *doc, const char *op_name);
 // Commit the operation — marks dirty, updates title, and refreshes all views.
 // Failure restores the document. No-ops/cancellation preserve redo.
 void ie_doc_commit_op(canvas_doc_t *doc, bool success);
+void ie_doc_commit_frame_op(canvas_doc_t *doc, bool success);
 
 // Dirty state and title management.
 void ie_doc_mark_dirty(canvas_doc_t *doc);

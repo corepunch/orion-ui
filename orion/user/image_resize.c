@@ -56,6 +56,8 @@ uint8_t *downscale_image_ex(const uint8_t *pixels, int w, int h, int target_size
     fflush(stderr);
     return NULL;
   }
+  float linear_rgb[256];
+  for (int i = 0; i < 256; i++) linear_rgb[i] = ui_srgb8_to_linear((uint8_t)i);
 
   int side = w < h ? w : h;
   double ox = (w - side) * 0.5, oy = (h - side) * 0.5;
@@ -98,7 +100,7 @@ uint8_t *downscale_image_ex(const uint8_t *pixels, int w, int h, int target_size
           max_alpha = fmax(max_alpha, sp[3]);
           alpha += a;
           for (int c = 0; c < 3; c++)
-            rgb[c] += a * ui_srgb8_to_linear(sp[c]);
+            rgb[c] += a * linear_rgb[sp[c]];
           if (sp[3] && (!min_set || sp[0] + sp[1] + sp[2] < min_rgb[0] + min_rgb[1] + min_rgb[2])) {
             min_rgb[0] = sp[0]; min_rgb[1] = sp[1]; min_rgb[2] = sp[2];
             min_set = 1;

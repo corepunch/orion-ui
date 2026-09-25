@@ -32,6 +32,12 @@ static inline void ui_composite_srgba8(uint8_t dst[4], const uint8_t src[4],
   if (opacity < 0.0f) opacity = 0.0f;
   if (opacity > 1.0f) opacity = 1.0f;
   float sa = ((float)src[3] / 255.0f) * opacity;
+  if (sa <= 0.0f) return;
+  if (sa >= 1.0f || dst[3] == 0) {
+    dst[0] = src[0]; dst[1] = src[1]; dst[2] = src[2];
+    dst[3] = (uint8_t)(sa * 255.0f + 0.5f);
+    return;
+  }
   float da = (float)dst[3] / 255.0f;
   float oa = sa + da * (1.0f - sa);
   if (oa <= 0.0f) {
