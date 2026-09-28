@@ -940,19 +940,19 @@ static void test_cat_rig_preset(void){
 	int shirt=0;
 	for(int i=0;i<s.nmats;i++) shirt|=!strcmp(s.mats[i].id,"shirt");
 	ASSERT_TRUE(shirt);
-	ASSERT_TRUE(!isnan(cat_test_joint(&s,"spine_2").x) && isnan(cat_test_joint(&s,"spine_3").x));
+	ASSERT_TRUE(!isnan(cat_test_joint(&s,"spine_3").x) && isnan(cat_test_joint(&s,"spine_4").x));
 	ASSERT_TRUE(!isnan(cat_test_joint(&s,"right_leg").x) && !isnan(cat_test_joint(&s,"right_thumb_2").x));
 	vec3 left=cat_test_joint(&s,"left_foot"),right=cat_test_joint(&s,"right_foot");
 	ASSERT_TRUE(left.x>5 && fabsf(left.x+right.x)<0.01f && fabsf(left.z-right.z)<0.01f);
-	vec3 restLeft=cat_test_joint(&s,"left_hand"),restRight=cat_test_joint(&s,"right_hand");
+	vec3 restLeft=cat_test_joint(&s,"left_palm"),restRight=cat_test_joint(&s,"right_palm");
 	scene_select_camera(&s,"Point");
 	ASSERT_EQUAL(s.nrigTargets,1);
 	ASSERT_TRUE(s.rigTargets[0].reachable);
-	ASSERT_TRUE(vlen(vsub(cat_test_joint(&s,"left_hand"),vadd(restLeft,v3(22,-43,54))))<0.5f);
+	ASSERT_TRUE(vlen(vsub(cat_test_joint(&s,"left_palm"),vadd(restLeft,v3(22,-43,54))))<0.5f);
 	scene_select_camera(&s,"Wave");
-	vec3 waving=cat_test_joint(&s,"right_hand");
+	vec3 waving=cat_test_joint(&s,"right_palm");
 	ASSERT_TRUE(fabsf(waving.x-(restRight.x-4))<0.5f && waving.z>150);
-	ASSERT_TRUE(vlen(vsub(cat_test_joint(&s,"left_hand"),restLeft))<0.01f);
+	ASSERT_TRUE(vlen(vsub(cat_test_joint(&s,"left_palm"),restLeft))<0.01f);
 	scene_free(&s);
 	PASS();
 }
@@ -981,15 +981,48 @@ static void test_timeline_gait_and_layers(void){
 	scene_set_time(&s,5.1f);
 	ASSERT_TRUE(fabsf(cat_test_joint(&s,"pelvis").y+300)<0.01f);
 	vec3 nodStart=cat_test_up(&s,"head");
-	ASSERT_TRUE(cat_test_joint(&s,"right_hand").z<100);
+	ASSERT_TRUE(cat_test_joint(&s,"right_palm").z<100);
 	scene_set_time(&s,6.0f);
-	ASSERT_TRUE(cat_test_joint(&s,"right_hand").z>150);
+	ASSERT_TRUE(cat_test_joint(&s,"right_palm").z>150);
 	ASSERT_TRUE(fabsf(cat_test_joint(&s,"left_foot").y+300)<0.01f && fabsf(cat_test_joint(&s,"right_foot").y+300)<0.01f);
 	scene_set_time(&s,5.8f);
 	ASSERT_TRUE(vdot(cat_test_up(&s,"head"),nodStart)<cosf(8*M_PIf/180));
 	scene_set_time(&s,7.4f);
-	ASSERT_TRUE(cat_test_joint(&s,"right_hand").z<100);
+	ASSERT_TRUE(cat_test_joint(&s,"right_palm").z<100);
 	ASSERT_TRUE(vdot(cat_test_up(&s,"head"),nodStart)>cosf(1*M_PIf/180));
+	scene_free(&s);
+	PASS();
+}
+
+/* CMU 02_01's floor rises about 5 cm over its three metres of walking. */
+#define MOCAP_TEST_FLOOR_DRIFT 6
+
+static void test_mocap_retarget(void){
+	TEST("mocap: BVH loads, retargets onto the CAT biped, walks forward on the ground, camera follows");
+	Scene s={0};
+	ASSERT_TRUE(load_scene("apps/scener/scenes/mocap_study.blks",&s));
+	ASSERT_EQUAL(s.ignoredAttributes,0);
+	ASSERT_EQUAL(s.nmocap,1);
+	bvh_clip_t *clip=s.mocap[0].clip;
+	ASSERT_TRUE(clip!=NULL);
+	ASSERT_EQUAL(clip->njoints,38);
+	ASSERT_EQUAL(clip->nframes,344);
+	ASSERT_TRUE(bvh_find(clip,"LeftUpLeg")>=0 && bvh_find(clip,"Head_End")>=0);
+	scene_select_camera(&s,"Front");
+	vec3 rest=cat_test_joint(&s,"left_foot");
+	float lastY=INFINITY;
+	for(float t=0.2f;t<2.8f;t+=0.2f){
+		scene_set_time(&s,t);
+		for(int i=0;i<s.nrigTargets;i++) ASSERT_TRUE(s.rigTargets[i].reachable);
+		vec3 pelvis=cat_test_joint(&s,"pelvis"),head=cat_test_joint(&s,"head");
+		vec3 left=cat_test_joint(&s,"left_foot"),right=cat_test_joint(&s,"right_foot");
+		ASSERT_TRUE(pelvis.y<lastY);
+		ASSERT_TRUE(head.z-pelvis.z>50);
+		ASSERT_TRUE(fminf(left.z,right.z)<rest.z+MOCAP_TEST_FLOOR_DRIFT && fminf(left.z,right.z)>rest.z-1);
+		ASSERT_TRUE(fabsf((s.camPos.y*100-pelvis.y)-(-420))<0.5f);
+		lastY=pelvis.y;
+	}
+	ASSERT_TRUE(lastY<-200);
 	scene_free(&s);
 	PASS();
 }
@@ -1006,6 +1039,7 @@ int main(void) {
   test_bone_skeleton();
   test_cat_rig_preset();
   test_timeline_gait_and_layers();
+  test_mocap_retarget();
   test_ignored_attributes_reported();
   test_enclosed_light_reported();
   test_nested_arch_emits_wall_parts_once();

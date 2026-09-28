@@ -38,7 +38,12 @@ scener --list-joints /absolute/path/walk.blks --camera Side --time 2.2
 to END inclusive, named `CAMERA_0000.jpg`, `CAMERA_0001.jpg` …; combine it with
 `--camera` to render a single shot. `--list-joints` prints every posed rig
 joint as `instance joint x y z` in world centimetres, for the given camera and
-time; it needs no graphical session. In the editor, Animation → Play / Pause
+time; it needs no graphical session.
+
+`tools/render_mocap_videos.py SCENER OUTPUT_DIR` renders one MP4 per fetched CMU
+clip through `--frames` and `tools/frames_to_mp4.swift`; the Swift encoder also
+turns any `--frames` sequence into a video:
+`swift tools/frames_to_mp4.swift FRAME_DIR CAMERA 30 out.mp4`. In the editor, Animation → Play / Pause
 (Space) plays the timeline, looping after `<scene duration>`, and Go to Start
 (Shift+Space) rewinds.
 

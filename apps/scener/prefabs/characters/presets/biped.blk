@@ -1,8 +1,10 @@
-<!-- CAT-style biped preset, about 178 cm. Copy this file to start a character, then edit
-     proportions, materials, features and poses; nothing is inherited from the preset.
+<!-- CAT-style biped preset after CAT's Base Human, about 178 cm. Copy this file to start a
+     character, then edit proportions, materials, features and poses; nothing is inherited.
      Body frame Z up, facing local -Y, the character's left at +X. Lengths in centimetres.
-     Structure: pelvis hub, spine, ribcage hub, neck, head hub; arms on the ribcage,
-     legs on the pelvis. Author the left limbs; mirror="1" builds the right ones. -->
+     Base Human layout: Pelvis hub; Spine of 3 links; Ribcage hub; Neck of 1 link; Head hub.
+     Legs on the pelvis: Thigh, Calf, Ankle (foot) and a two-knuckle toe digit.
+     Arms on the ribcage: Collarbone, Upperarm, Forearm, Palm and five three-knuckle digits.
+     Author the left limbs; mirror="1" builds the right ones, as CAT's Paste Mirrored does. -->
 <prefab>
   <material id="skin" color="0.86 0.68 0.56" shininess="10" />
   <material id="shirt" color="0.30 0.42 0.62" shininess="6" />
@@ -15,31 +17,37 @@
     <limb name="left_leg" type="leg" at="0.25" from="90 0" mirror="1">
       <bone name="left_thigh" aim="0 -90" length="44" radius="7.5 8" taper="0.75" material="trousers">
         <bone name="left_calf" aim="0 -90" length="43" radius="5.5 6" taper="0.75" material="trousers">
-          <ankle name="left_foot" aim="0 -10" length="20" radius="4.5 3.5" material="shoes" />
+          <ankle name="left_foot" aim="0 -12" length="15" radius="4.5 3.5" material="shoes">
+            <digit name="left_toe" at="1" from="0 -30" aim="0 -6" links="2" length="7" radius="4.2 2.4" taper="0.8" material="shoes" />
+          </ankle>
         </bone>
       </bone>
     </limb>
-    <spine name="spine" links="2" aim="0 90" aimEnd="0 86" length="24" radius="14 9.5" taper="1.1" material="shirt">
+    <spine name="spine" links="3" aim="0 90" aimEnd="0 86" length="24" radius="14 9.5" taper="1.1" material="shirt">
       <hub name="ribcage" aim="0 90" length="20" radius="17 11" material="shirt">
         <limb name="left_arm" type="arm" at="0.9" from="90 0" mirror="1">
-          <collarbone name="left_clavicle" aim="90 0" length="8" radius="4" material="shirt">
+          <collarbone name="left_collarbone" aim="90 0" length="8" radius="4" material="shirt">
             <bone name="left_upperarm" aim="90 -82" length="29" radius="5 5.5" taper="0.8" material="shirt">
               <bone name="left_forearm" aim="0 -86" length="26" radius="4.2 4.4" taper="0.75" material="skin">
-                <palm name="left_hand" aim="0 -90" length="10" radius="4.5 2.2" material="skin">
-                  <digit name="left_thumb" at="0.2" from="-40 0" aim="-30 -60" links="2" length="6" radius="1.4" taper="0.8" material="skin" />
+                <palm name="left_palm" aim="0 -90" length="9" radius="2 4.2" material="skin">
+                  <digit name="left_thumb" at="0.35" from="0 -10" aim="0 -45" links="3" length="7" radius="1.2" taper="0.8" material="skin" />
+                  <digit name="left_index" at="1" from="0 -55" aim="0 -90" links="3" length="8" radius="1.05" taper="0.8" material="skin" />
+                  <digit name="left_middle" at="1" from="0 -80" aim="0 -90" links="3" length="8.5" radius="1.05" taper="0.8" material="skin" />
+                  <digit name="left_ring" at="1" from="180 -80" aim="0 -90" links="3" length="8" radius="1" taper="0.8" material="skin" />
+                  <digit name="left_pinky" at="1" from="180 -55" aim="0 -90" links="3" length="6.5" radius="0.9" taper="0.8" material="skin" />
                 </palm>
               </bone>
             </bone>
           </collarbone>
         </limb>
-        <spine name="neck" links="2" aim="0 90" aimEnd="0 80" length="9" radius="5.5" material="skin">
+        <spine name="neck" aim="0 90" aimEnd="0 80" length="9" radius="5.5" material="skin">
           <hub name="head" aim="0 90" length="21" radius="8 9.5" material="skin">
             <sphere on="28 5" at="0.45" radius="1.3" material="eye" />
             <sphere on="-28 5" at="0.45" radius="1.3" material="eye" />
             <ellipsoid on="0 -5" at="0.35" radii="1.4 2 2.6" sink="0.5" material="skin" />
             <ellipsoid on="90 0" at="0.45" radii="1 2 3" sink="0.5" material="skin" />
             <ellipsoid on="-90 0" at="0.45" radii="1 2 3" sink="0.5" material="skin" />
-            <ellipsoid on="180 50" at="0.7" radii="8.5 9.5 7" sink="6" material="hair" />
+            <bone name="hair" at="0.7" from="180 50" aim="0 90" length="8" radius="8.5 9.5" sink="6" material="hair" />
           </hub>
         </spine>
       </hub>
@@ -50,13 +58,13 @@
   <pose name="Stand" />
   <pose name="WaveLeft">
     <ik limb="left_arm" offset="4 -8 72" bend="150 -20" />
-    <joint target="left_hand" aim="0 90" />
+    <joint target="left_palm" aim="0 90" />
     <joint target="head" rot="0 0 15" />
   </pose>
   <pose name="WaveRight" mirror="WaveLeft" />
   <pose name="PointLeft">
     <ik limb="left_arm" offset="22 -43 54" bend="90 -90" />
-    <joint target="left_hand" aim="30 0" />
+    <joint target="left_palm" aim="30 0" />
     <joint target="head" rot="0 0 25" />
   </pose>
   <pose name="PointRight" mirror="PointLeft" />
@@ -66,7 +74,7 @@
   </pose>
   <pose name="Think">
     <ik limb="right_arm" offset="21 -9 55" bend="-60 -60" />
-    <joint target="right_hand" aim="0 70" />
+    <joint target="right_palm" aim="0 70" />
     <ik limb="left_arm" offset="-14 -14 26" bend="150 -60" />
     <joint target="head" rot="8 0 -10" />
   </pose>

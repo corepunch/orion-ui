@@ -1,0 +1,3 @@
+# Clips are downloaded by tools/fetch_cmu_mocap.py; only the small walk used by tests is kept.
+cmu/*.bvh
+!cmu/02_01.bvh

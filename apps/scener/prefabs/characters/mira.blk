@@ -1,27 +1,35 @@
-<!-- Mira, a storybook kitten skeleton. Body frame Z up, faces local -Y, her left is +X.
-     The root grounds itself: about 26 cm to the ear tips, 38 cm nose to rump.
-     Author only with aim, length, radius, at/from, taper and mirror. -->
+<!-- Mira, a storybook kitten, built as a CAT quadruped: pelvis hub, spine, ribcage hub, neck, head hub.
+     Body frame Z up, faces local -Y, her left is +X. The root grounds itself: about 26 cm to the
+     ear tips, 38 cm nose to rump. Hind legs on the pelvis, front legs (elbows bend back) on the ribcage. -->
 <prefab>
-  <bone name="spine" aim="0 0" aimEnd="0 8" segments="2" length="15" radius="7 6.5" material="mira_fur">
-    <bone name="neck" aim="0 50" length="5" radius="4.2" material="mira_fur">
-      <bone name="head" aim="0 5" length="8" radius="7 6" material="mira_fur">
-        <bone name="left_ear" at="0.35" from="55 50" aim="28 72" length="6" radius="3 1.1" taper="0.15" mirror="1" material="mira_ear" />
-        <sphere on="34 12" at="0.8" radius="1.5" material="mira_eye" />
-        <sphere on="-34 12" at="0.8" radius="1.5" material="mira_eye" />
-        <ellipsoid on="0 -18" at="0.9" radii="3 2.2 2" sink="1" material="mira_white" />
-        <sphere on="0 2" at="1" radius="0.9" material="mira_nose" />
+  <hub name="pelvis" aim="0 0" length="5" radius="7 6.5" material="mira_fur">
+    <limb name="left_hind_leg" type="leg" at="0.3" from="90 -50" mirror="1">
+      <bone name="left_hip" aim="0 -62" length="7.4" radius="3.4 3.6" material="mira_fur">
+        <bone name="left_hock" aim="180 -70" length="7.7" radius="2.2 2.2" material="mira_fur">
+          <ankle name="left_hind_paw" aim="0 -8" length="3.4" radius="2.2 1.3" material="mira_white" />
+        </bone>
       </bone>
-    </bone>
-    <bone name="left_shoulder" at="0.85" from="90 -55" aim="0 -88" length="6.5" radius="2.8 3" mirror="1" material="mira_fur">
-      <bone name="left_forearm" aim="0 -90" length="6.5" radius="2.2" material="mira_fur">
-        <bone name="left_front_paw" foot="1" aim="0 -8" length="3" radius="2.2 1.3" material="mira_white" />
-      </bone>
-    </bone>
-    <bone name="left_hip" at="0.1" from="90 -50" aim="0 -62" length="7.4" radius="3.4 3.6" mirror="1" material="mira_fur">
-      <bone name="left_hock" aim="180 -70" length="7.7" radius="2.2" material="mira_fur">
-        <bone name="left_hind_paw" foot="1" aim="0 -8" length="3.4" radius="2.2 1.3" material="mira_white" />
-      </bone>
-    </bone>
-    <bone name="tail" at="0" from="180 25" aim="180 35" aimEnd="165 85" segments="3" length="22" radius="1.8" taper="0.6" material="mira_fur" />
-  </bone>
+    </limb>
+    <tail name="tail" at="0" from="180 25" aim="180 35" aimEnd="165 85" links="3" length="22" radius="1.8" taper="0.6" material="mira_fur" />
+    <spine name="spine" aim="0 4" length="4" radius="7 6.5" material="mira_fur">
+      <hub name="ribcage" aim="0 8" length="6" radius="7 6.5" material="mira_fur">
+        <limb name="left_front_leg" type="leg" at="0.6" from="90 -55" bend="180 0" mirror="1">
+          <bone name="left_shoulder" aim="0 -88" length="6.5" radius="2.8 3" material="mira_fur">
+            <bone name="left_forearm" aim="0 -90" length="7.1" radius="2.2 2.2" material="mira_fur">
+              <ankle name="left_front_paw" aim="0 -8" length="3" radius="2.2 1.3" material="mira_white" />
+            </bone>
+          </bone>
+        </limb>
+        <spine name="neck" aim="0 50" length="5" radius="4.2 4.2" material="mira_fur">
+          <hub name="head" aim="0 5" length="8" radius="7 6" material="mira_fur">
+            <bone name="left_ear" at="0.35" from="55 50" aim="28 72" length="6" radius="3 1.1" taper="0.15" mirror="1" material="mira_ear" />
+            <sphere on="34 12" at="0.8" radius="1.5" material="mira_eye" />
+            <sphere on="-34 12" at="0.8" radius="1.5" material="mira_eye" />
+            <ellipsoid on="0 -18" at="0.9" radii="3 2.2 2" sink="1" material="mira_white" />
+            <sphere on="0 2" at="1" radius="0.9" material="mira_nose" />
+          </hub>
+        </spine>
+      </hub>
+    </spine>
+  </hub>
 </prefab>

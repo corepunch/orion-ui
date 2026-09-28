@@ -270,7 +270,7 @@ install: all
 	fi
 	@cp -R "$(SHARE_DIR)/." "$(DESTDIR)$(PREFIX)/share/"
 	@$(INSTALL) -d "$(DESTDIR)$(PREFIX)/share/scener/share"
-	@cp -R "$(APPS)/scener/scenes" "$(APPS)/scener/prefabs" "$(DESTDIR)$(PREFIX)/share/scener/"
+	@cp -R "$(APPS)/scener/scenes" "$(APPS)/scener/prefabs" "$(APPS)/scener/mocap" "$(DESTDIR)$(PREFIX)/share/scener/"
 	@cp -R "$(APPS)/scener/share/screens" "$(DESTDIR)$(PREFIX)/share/scener/share/"
 	@find . -maxdepth 1 -type f -name '*.md' | while IFS= read -r file; do \
 	  $(INSTALL) -m 644 "$$file" "$(DESTDIR)$(PREFIX)/share/doc/orion/$${file#./}"; \

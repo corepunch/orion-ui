@@ -92,6 +92,14 @@
 #define GAIT_DEFAULT_ARM_SWING 20.0f
 #define GAIT_DEFAULT_SWING 0.4f
 #define GAIT_DEFAULT_RAMP 1.0f
+#define GAIT_DEFAULT_PELVIS_ROLL 3.0f
+#define GAIT_DEFAULT_FOOT_ROLL 20.0f
+#define GAIT_DEFAULT_ARM_BEND 15.0f
+#define GAIT_DEFAULT_ARM_OUT 4.0f
+#define GAIT_ELBOW_FOLLOW 0.5f
+#define GAIT_SPOT_SECONDS 3600.0f
+#define MOCAP_NAME_CAPACITY 64
+#define MOCAP_FOOT_POINTS 2
 #define CM_PER_METRE 100.0f
 #define ENCLOSURE_RAY_X 0.5773f
 #define ENCLOSURE_RAY_Y 0.6211f
@@ -530,7 +538,10 @@ static XmlNode* xml_parse(const char *buf){
 
 /* ------------------------------------------------------------- Scene ------ */
 
+static void mocap_free_all(Scene *s);
+
 void scene_free(Scene *s){
+	mocap_free_all(s);
 	xml_free((XmlNode*)s->sceneRoot);
 	for(int i=0;i<s->nprefabs;i++) xml_free((XmlNode*)s->prefabs[i].root);
 	for(int i=0;i<s->nprefabs;i++) free(s->prefabs[i].attaches);
@@ -1744,7 +1755,7 @@ static XmlNode *rig_override_in(XmlNode *container,const char *joint){
 static XmlNode *rig_ik_for_tip(XmlNode *root,XmlNode *container,const char *tip);
 static XmlNode *rig_instance_root(Scene *s,XmlNode *instance);
 static XmlNode *rig_find_pose(Scene *s,XmlNode *proot,const char *name);
-static XmlNode *rig_timeline_pose(Scene *s,XmlNode *instance,XmlNode *proot,XmlNode *base,float *travel);
+static XmlNode *rig_timeline_pose(Scene *s,XmlNode *instance,XmlNode *proot,XmlNode *base,vec3 *travel);
 
 static XmlNode *rig_pose_for_instance(Scene *s,XmlNode *instance){
 	XmlNode *root=(XmlNode*)s->sceneRoot;
@@ -2007,11 +2018,11 @@ static void parse_prefab(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec
 		parse_material_tag(s,proot->kids[i]);
 	void *oldRigInstance=s->activeRigInstance,*oldRigPose=s->activeRigPose,*oldRigRoot=s->activeRigRoot;
 	s->activeRigInstance=n; s->activeRigRoot=proot; s->activeRigPose=rig_pose_for_instance(s,n);
-	float travel=0;
+	vec3 travel=v3(0,0,0);
 	XmlNode *timeline=rig_timeline_pose(s,n,proot,(XmlNode*)s->activeRigPose,&travel);
 	if(timeline) s->activeRigPose=timeline;
-	/* A gait carries the instance along its body's forward axis (local -Y). */
-	if(travel!=0) M=mat4_mul(M,mat4_translate(v3(0,-travel/CM_PER_METRE,0)));
+	/* A gait carries the instance through its body frame. */
+	if(vlen(travel)>0) M=mat4_mul(M,mat4_translate(vscale(travel,1.0f/CM_PER_METRE)));
 	const char *name=xml_attr(n,"name",NULL);
 	if(name){
 		InstanceDef inst; memset(&inst,0,sizeof(inst));
@@ -2216,6 +2227,7 @@ static void parse_camera_tag(Scene *s, XmlNode *n){
 	cam.pos = cvt3ds(s,xml_attr_v3_cm(n,"pos", s->ncameras>0 ? cvt3ds_inv(s,s->camPos) : (s->convention3dsMax?v3(0,-3.0f,1.6f):v3(0,1.6f,5))));
 	cam.look = cvt3ds(s,xml_attr_v3_cm(n,"look", s->ncameras>0 ? cvt3ds_inv(s,s->camLook) : (s->convention3dsMax?v3(0,1.0f,1.2f):v3(0,1.2f,0))));
 	cam.fov = xml_attr_f(n,"fov",60.0f);
+	snprintf(cam.follow,sizeof(cam.follow),"%s",xml_attr(n,"follow",""));
 	for(int i=0;i<n->nkids;i++) if(!strcmp(n->kids[i]->tag,"transform")){
 		CameraTransform x={0};
 		strncpy(x.target,xml_attr(n->kids[i],"target",""),31);
@@ -2344,7 +2356,7 @@ static void warn_unknown_elements(XmlNode *root, const char *path, int prefab){
 
 /* Pose data applies only in the cameras that select it, and books read per-camera
    text metadata; these attributes are valid even when this load never reads them. */
-static const struct { const char *tag; const char *attrs[16]; } deferred_attributes[]={
+static const struct { const char *tag; const char *attrs[24]; } deferred_attributes[]={
 	{ "camera",   { "textRect", "textScale" } },
 	{ "group",    { "pair" } },
 	{ "bone",     { "pair" } },
@@ -2355,15 +2367,17 @@ static const struct { const char *tag; const char *attrs[16]; } deferred_attribu
 	{ "ik",       { "root", "mid", "tip", "target", "pole", "keepOrientation", "plant", "limb", "offset", "bend", "weight" } },
 	{ "clip",     { "name", "length", "loop", "ease" } },
 	{ "key",      { "t", "pose", "ease" } },
-	{ "layer",    { "pose", "clip", "start", "end", "fadeIn", "fadeOut", "weight", "mode", "mask", "mirror", "speed" } },
-	{ "gait",     { "start", "distance", "speed", "stride", "lift", "bounce", "sway", "hipTwist", "spineTwist", "armSwing", "lead", "swing", "ramp", "crouch" } },
+	{ "layer",    { "pose", "clip", "mocap", "start", "end", "fadeIn", "fadeOut", "weight", "mode", "mask", "mirror", "speed",
+	                "loop", "from", "to", "inPlace", "legs" } },
+	{ "gait",     { "start", "distance", "speed", "stride", "lift", "bounce", "sway", "hipTwist", "spineTwist", "armSwing", "lead", "swing", "ramp", "crouch",
+	                "mode", "direction", "footRoll", "armBend", "armOut", "pelvisRoll" } },
 };
 
 static int attribute_deferred(const char *tag,const char *name){
 	if(name[0]=='_' || !strcmp(name,"generated")) return 1;
 	for(size_t i=0;i<sizeof(deferred_attributes)/sizeof(deferred_attributes[0]);i++){
 		if(strcmp(deferred_attributes[i].tag,tag)) continue;
-		for(int k=0;k<16 && deferred_attributes[i].attrs[k];k++) if(!strcmp(deferred_attributes[i].attrs[k],name)) return 1;
+		for(int k=0;k<24 && deferred_attributes[i].attrs[k];k++) if(!strcmp(deferred_attributes[i].attrs[k],name)) return 1;
 	}
 	return 0;
 }
@@ -2489,6 +2503,8 @@ static void scene_clear_view(Scene *s){
 	s->ndragStartObjs=s->ndragStartVerts=0;
 }
 
+static void scene_apply_camera(Scene *s,int index);
+
 static void scene_rebuild_view(Scene *s){
 	XmlNode *root=(XmlNode*)s->editRoot;
 	s->assetError=0;
@@ -2527,6 +2543,7 @@ static void scene_rebuild_view(Scene *s){
 	collect_negative_boxes(s,root,I);
 	s->activeEditNode=NULL;
 	parse_nodes(s,root,I,I);
+	for(int i=0;i<s->ncameras;i++) if(!strcmp(s->cameras[i].name,s->activeCamera) && s->cameras[i].follow[0]) scene_apply_camera(s,i);
 	if(prefabMode && s->nlights==0){
 		vec3 bmin={1e30f,1e30f,1e30f},bmax={-1e30f,-1e30f,-1e30f};
 		for(int i=0;i<s->nobjs;i++) if(s->objs[i].renderable){
@@ -2698,14 +2715,26 @@ int load_scene(const char *path, Scene *s){
 	return 1;
 }
 
+/* A camera with follow="Instance" keeps its pos and look relative to where that instance's root
+   joint is over the ground, so it tracks a walking or mocap-driven character. */
+static void scene_apply_camera(Scene *s,int index){
+	Camera *cam=&s->cameras[index];
+	s->camPos=cam->pos; s->camLook=cam->look; s->camFov=cam->fov;
+	if(!cam->follow[0]) return;
+	for(int i=0;i<s->nrigJointWorlds;i++) if(!strcmp(xml_attr((XmlNode*)s->rigJointWorlds[i].instance,"name",""),cam->follow)){
+		vec3 p=mat4_xform_point(s->rigJointWorlds[i].matrix,v3(0,0,0));
+		p=vsub(p,vscale(s->worldUp,vdot(p,s->worldUp)));
+		s->camPos=vadd(s->camPos,p); s->camLook=vadd(s->camLook,p);
+		return;
+	}
+	fprintf(stderr,"[scener] camera %s follows unknown rig instance %s\n",cam->name,cam->follow); fflush(stderr);
+}
+
 void scene_select_camera(Scene *s, const char *name){
 	for(int i=0;i<s->ncameras;i++){
 		if(!strcmp(s->cameras[i].name,name)){
 			char selected[MAX_CAMERA_NAME]; snprintf(selected,sizeof(selected),"%s",s->cameras[i].name);
-			if(!strcmp(s->activeCamera,selected)){
-				s->camPos=s->cameras[i].pos; s->camLook=s->cameras[i].look; s->camFov=s->cameras[i].fov;
-				return;
-			}
+			if(!strcmp(s->activeCamera,selected)){ scene_apply_camera(s,i); return; }
 			snprintf(s->activeCamera,sizeof(s->activeCamera),"%s",selected);
 			scene_rebuild_view(s);
 			return;
@@ -3030,6 +3059,20 @@ static void anim_pose_read(Scene *s,XmlNode *proot,XmlNode *source,int mirror,An
 	}
 }
 
+/* Reflect a built pose across the body's left-right plane, as mirror="1" does for poses. */
+static void anim_pose_mirror(XmlNode *proot,AnimPose *p){
+	char pairName[BONE_NAME_CAPACITY];
+	for(int i=0;i<p->njoints;i++){
+		XmlNode *pair=rig_find_joint(proot,rig_mirror_joint_name(p->joints[i].name,pairName,sizeof(pairName)));
+		if(pair) p->joints[i].name=xml_attr(pair,"name","");
+		p->joints[i].q=quat_mirror_x(p->joints[i].q); p->joints[i].pos.x=-p->joints[i].pos.x;
+	}
+	for(int i=0;i<p->niks;i++){
+		rig_mirror_pose_item(p->iks[i].ik);
+		snprintf(p->iks[i].tip,sizeof(p->iks[i].tip),"%s",rig_ik_tip_name(proot,p->iks[i].ik));
+	}
+}
+
 static int anim_word_in(const char *list,const char *word){
 	size_t length=strlen(word);
 	for(const char *p=list;*p;){
@@ -3211,11 +3254,18 @@ static void anim_rotate(AnimPose *acc,XmlNode *joint,mat4 rotation){
 
 /* <gait distance="300" start="1"/> walks the character forward: legs plant through IK,
    the pelvis bobs, sways and twists, the spine counter-twists and the arms swing. */
-static void anim_gait(Scene *s,XmlNode *proot,XmlNode *gait,AnimPose *acc,float *travel){
+/* CATMotion equivalents: stride and speed (Max Stride Length, Max Step Time), direction and
+   mode="spot" (Globals Direction, Walk On Spot / Walk On Line), limb phase (LimbPhases),
+   footRoll (FootPlatform Pitch), armSwing/armBend/armOut (Arm Swing, Bend, CrossSwing),
+   hipTwist/pelvisRoll/sway/bounce (Pelvis Twist, Roll, WeightShift, Lift). */
+static void anim_gait(Scene *s,XmlNode *proot,XmlNode *gait,AnimPose *acc,vec3 *travel){
 	GaitLeg legs[GAIT_MAX_LIMBS],arms[GAIT_MAX_LIMBS]; int nlegs=0,narms=0;
 	rig_collect_limbs(proot,"leg",legs,&nlegs); rig_collect_limbs(proot,"arm",arms,&narms);
 	XmlNode *root=rig_root_bone(proot);
-	float distance=xml_attr_f(gait,"distance",0);
+	const char *mode=xml_attr(gait,"mode","line");
+	int spot=!strcmp(mode,"spot");
+	if(!spot && strcmp(mode,"line")){ fprintf(stderr,"[scener] gait mode '%s'; use line or spot\n",mode); fflush(stderr); }
+	float distance=xml_attr_f(gait,"distance",spot?INFINITY:0);
 	if(!nlegs || !root || distance<=0){
 		fprintf(stderr,"[scener] gait needs leg limbs and a positive distance (legs=%d distance=%g)\n",nlegs,distance); fflush(stderr); return;
 	}
@@ -3240,34 +3290,343 @@ static void anim_gait(Scene *s,XmlNode *proot,XmlNode *gait,AnimPose *acc,float 
 	/* By default a foot's stance is centred under its hip: it lands as far ahead as it leaves behind. */
 	p.lead=xml_attr_f(gait,"lead",(1-p.swing)*0.5f);
 	p.ramp=fmaxf(0,xml_attr_f(gait,"ramp",GAIT_DEFAULT_RAMP));
+	p.pelvisRoll=xml_attr_f(gait,"pelvisRoll",GAIT_DEFAULT_PELVIS_ROLL);
+	float footRoll=xml_attr_f(gait,"footRoll",GAIT_DEFAULT_FOOT_ROLL),armBend=xml_attr_f(gait,"armBend",GAIT_DEFAULT_ARM_BEND);
+	float armOut=xml_attr_f(gait,"armOut",GAIT_DEFAULT_ARM_OUT),heading=xml_attr_f(gait,"direction",0);
 	if(p.stride<=0 || p.speed<=0){ fprintf(stderr,"[scener] gait needs positive stride and speed (%g, %g)\n",p.stride,p.speed); fflush(stderr); return; }
+	if(spot && !isfinite(distance)) distance=p.speed*GAIT_SPOT_SECONDS;
+	/* Walk along Direction degrees from the facing (90 = the character's left), facing unchanged. */
+	vec3 way=bone_direction(heading,0);
 	float total=gait_total_phase(&p,legPhase,nlegs,distance),elapsed=s->time-xml_attr_f(gait,"start",0);
 	float phase=gait_phase_at(&p,total,elapsed),along=gait_travel(&p,phase,total,distance);
-	*travel+=along;
+	if(!spot) *travel=vadd(*travel,vscale(way,along));
 	/* Before it starts and once it ends a gait only places the body; poses and later gaits own the legs. */
 	if(elapsed<=0 || elapsed>=gait_duration(&p,total)) return;
 	/* Compass gait: the pelvis drops just enough for every foot target to stay within reach
 	   of a nearly straight leg, which gives the natural dip at double support. */
 	float usable=reach*GAIT_REACH_FRACTION,drop=0;
 	for(int i=0;i<nlegs;i++){
-		float forward,lift;
-		gait_foot(&p,legPhase[i],phase,total,distance,&forward,&lift);
+		float forward,lift,swing;
+		gait_foot(&p,legPhase[i],phase,total,distance,&forward,&lift,&swing);
 		float ahead=fminf(fabsf(forward-along),usable);
 		drop=fmaxf(drop,reach-lift-sqrtf(usable*usable-ahead*ahead));
 		XmlNode *ik=xml_new("ik");
 		xml_set_attr(ik,"limb",xml_attr(legs[i].limb,"name",""));
-		xml_set_attr_v3(ik,"offset",v3(0,-(forward-along),lift));
+		xml_set_attr_v3(ik,"offset",vadd(vscale(way,forward-along),v3(0,0,lift)));
 		anim_put_ik(acc,rig_ik_tip_name(proot,ik),ik);
+		/* The foot peels off toe-down and lands toe-up, like CAT's FootPlatform pitch. */
+		if(swing>=0) anim_rotate(acc,rig_limb_end(legs[i].limb),mat4_rot_x(footRoll*(1-2*swing)*sinf(M_PIf*swing)*2));
 	}
 	gait_body_t body; gait_body(&p,phase,total,&body);
 	drop=fmaxf(0,drop)+xml_attr_f(gait,"crouch",0)*gait_amplitude(&p,phase,total);
 	AnimJoint *pelvis=anim_joint(acc,xml_attr(root,"name",""));
 	pelvis->pos=vadd(pelvis->pos,vscale(v3(body.sway,0,body.bob-drop),1.0f/CM_PER_METRE));
-	anim_rotate(acc,root,mat4_rot_z(body.hipTwist));
+	anim_rotate(acc,root,mat4_mul(mat4_rot_z(body.hipTwist),mat4_rot_y(body.pelvisRoll)));
 	for(int i=0;i<root->nkids;i++) if(!strcmp(root->kids[i]->tag,"spine")){ anim_rotate(acc,root->kids[i],mat4_rot_z(body.spineTwist)); break; }
+	float a=gait_amplitude(&p,phase,total);
 	for(int i=0;i<narms;i++){
 		int right=!strncmp(xml_attr(arms[i].limb,"name",""),"right_",6);
-		anim_rotate(acc,rig_limb_upper(arms[i].limb),mat4_rot_x(right?-body.armSwing:body.armSwing));
+		float swingForward=right?-body.armSwing:body.armSwing;
+		XmlNode *upper=rig_limb_upper(arms[i].limb),*fore=NULL;
+		anim_rotate(acc,upper,mat4_mul(mat4_rot_x(swingForward),mat4_rot_y((right?armOut:-armOut)*a)));
+		for(int k=0;upper && k<upper->nkids && !fore;k++) if(xml_is_bone(upper->kids[k]) && !bone_at(upper->kids[k])) fore=upper->kids[k];
+		/* Elbows bend more as the arm swings forward. */
+		anim_rotate(acc,fore,mat4_rot_x(-a*armBend-fmaxf(0,-swingForward)*GAIT_ELBOW_FOLLOW));
+	}
+}
+
+/* ------------------------------------------------ Motion capture retargeting -- */
+/* <layer mocap="mocap/cmu/02_01.bvh"/> plays a BVH clip on a CAT rig, as CAT's Capture
+   Animation does. Source joints are found by common names (CMU, Mixamo, Biped) and matched
+   to rig roles: hubs take the source rotation relative to the reference frame (a T-pose),
+   spine, neck and limb bones point along the source bones, the pelvis follows the scaled
+   hips and the feet drive leg IK. The rig's own proportions are kept. */
+
+
+static void mocap_free_all(Scene *s){
+	for(int i=0;i<s->nmocap;i++){
+		MocapSource *m=&s->mocap[i];
+		bvh_free(m->clip); free(m->refPos); free(m->pos); free(m->refRot); free(m->rot);
+	}
+	free(s->mocap); s->mocap=NULL; s->nmocap=s->cmocap=0;
+}
+
+static void mocap_normalize(const char *name,char *out,size_t size){
+	const char *colon=strrchr(name,':');
+	if(colon) name=colon+1;
+	size_t n=0;
+	for(;*name && n+1<size;name++) if(isalnum((unsigned char)*name)) out[n++]=(char)tolower((unsigned char)*name);
+	out[n]=0;
+	if(!strncmp(out,"bip01",5)) memmove(out,out+5,strlen(out+5)+1);
+}
+
+/* Source joint for a role on one side ("left"/"l" or "right"/"r"), by common names. */
+static int mocap_find_side(const bvh_clip_t *c,const char *const *names,int right){
+	char want[MOCAP_NAME_CAPACITY],have[MOCAP_NAME_CAPACITY];
+	for(int k=0;names[k];k++) for(int prefix=0;prefix<2;prefix++){
+		snprintf(want,sizeof(want),"%s%s",prefix?(right?"r":"l"):(right?"right":"left"),names[k]);
+		for(int i=0;i<c->njoints;i++){ mocap_normalize(c->joints[i].name,have,sizeof(have)); if(!strcmp(have,want)) return i; }
+	}
+	return -1;
+}
+
+static int mocap_find(const bvh_clip_t *c,const char *const *names){
+	char have[MOCAP_NAME_CAPACITY];
+	for(int k=0;names[k];k++) for(int i=0;i<c->njoints;i++){
+		mocap_normalize(c->joints[i].name,have,sizeof(have));
+		if(!strcmp(have,names[k])) return i;
+	}
+	return -1;
+}
+
+static int mocap_first_child(const bvh_clip_t *c,int joint){
+	for(int i=0;joint>=0 && i<c->njoints;i++) if(c->joints[i].parent==joint) return i;
+	return -1;
+}
+
+/* Joints from `from` (exclusive) down to `to` (inclusive), in order. */
+static int mocap_chain(const bvh_clip_t *c,int from,int to,int *out){
+	int n=0,walk=to;
+	int reversed[MOCAP_MAX_CHAIN];
+	while(walk>=0 && walk!=from && n<MOCAP_MAX_CHAIN){ reversed[n++]=walk; walk=c->joints[walk].parent; }
+	if(walk!=from) return 0;
+	for(int i=0;i<n;i++) out[i]=reversed[n-1-i];
+	return n;
+}
+
+static void mocap_map(MocapSource *m){
+	static const char *const hips[]={"hips","hip","pelvis","root",NULL},*head[]={"head",NULL};
+	static const char *const upleg[]={"upleg","thigh","upperleg","hip",NULL},*leg[]={"leg","calf","shin","lowerleg","knee",NULL};
+	static const char *const foot[]={"foot","ankle",NULL},*toe[]={"toebase","toe","toes","ball",NULL};
+	static const char *const collar[]={"shoulder","collar","clavicle",NULL},*arm[]={"arm","upperarm","uparm",NULL};
+	static const char *const forearm[]={"forearm","lowerarm","elbow",NULL},*hand[]={"hand","wrist",NULL};
+	bvh_clip_t *c=m->clip;
+	m->role[MOCAP_HIPS]=mocap_find(c,hips); m->role[MOCAP_HEAD]=mocap_find(c,head);
+	m->role[MOCAP_HEAD_END]=mocap_first_child(c,m->role[MOCAP_HEAD]);
+	for(int side=0;side<2;side++){
+		m->role[MOCAP_UPLEG+side]=mocap_find_side(c,upleg,side); m->role[MOCAP_LEG+side]=mocap_find_side(c,leg,side);
+		m->role[MOCAP_FOOT+side]=mocap_find_side(c,foot,side); m->role[MOCAP_TOE+side]=mocap_find_side(c,toe,side);
+		m->role[MOCAP_COLLAR+side]=mocap_find_side(c,collar,side); m->role[MOCAP_ARM+side]=mocap_find_side(c,arm,side);
+		m->role[MOCAP_FOREARM+side]=mocap_find_side(c,forearm,side); m->role[MOCAP_HAND+side]=mocap_find_side(c,hand,side);
+		m->role[MOCAP_HAND_END+side]=mocap_first_child(c,m->role[MOCAP_HAND+side]);
+		if(m->role[MOCAP_TOE+side]<0) m->role[MOCAP_TOE+side]=mocap_first_child(c,m->role[MOCAP_FOOT+side]);
+	}
+	/* The chest is where the arms branch off the spine. */
+	int shoulder=m->role[MOCAP_COLLAR]>=0?m->role[MOCAP_COLLAR]:m->role[MOCAP_ARM];
+	m->role[MOCAP_CHEST]=shoulder>=0?c->joints[shoulder].parent:-1;
+	m->nspine=m->role[MOCAP_HIPS]>=0 && m->role[MOCAP_CHEST]>=0?mocap_chain(c,m->role[MOCAP_HIPS],m->role[MOCAP_CHEST],m->spine):0;
+	m->nneck=m->role[MOCAP_CHEST]>=0 && m->role[MOCAP_HEAD]>=0?mocap_chain(c,m->role[MOCAP_CHEST],m->role[MOCAP_HEAD],m->neck):0;
+}
+
+static MocapSource *mocap_source(Scene *s,const char *file){
+	char path[MOCAP_PATH_CAPACITY];
+	snprintf(path,sizeof(path),"%s%s%s",file[0]=='/'?"":s->assetRoot,file[0]=='/'||!s->assetRoot[0]?"":"/",file);
+	for(int i=0;i<s->nmocap;i++) if(!strcmp(s->mocap[i].path,path)) return s->mocap[i].clip?&s->mocap[i]:NULL;
+	MocapSource m; memset(&m,0,sizeof(m));
+	snprintf(m.path,sizeof(m.path),"%s",path);
+	m.clip=bvh_load(path);
+	if(m.clip){
+		int n=m.clip->njoints;
+		m.refPos=malloc(sizeof(vec3)*(size_t)n); m.pos=malloc(sizeof(vec3)*(size_t)n);
+		m.refRot=malloc(sizeof(quat)*(size_t)n); m.rot=malloc(sizeof(quat)*(size_t)n);
+		mocap_map(&m);
+		bvh_evaluate(m.clip,0,m.refPos,m.refRot);
+		int *r=m.role;
+		if(r[MOCAP_HIPS]<0 || r[MOCAP_UPLEG]<0 || r[MOCAP_UPLEG+1]<0 || r[MOCAP_FOOT]<0){
+			fprintf(stderr,"[mocap] %s: no hips or legs found; retargeting needs them\n",path); fflush(stderr);
+		} else {
+			/* Body axes from the reference pose: left from the hips, up is the file's +Y. */
+			vec3 up=v3(0,1,0),left=vsub(m.refPos[r[MOCAP_UPLEG]],m.refPos[r[MOCAP_UPLEG+1]]);
+			left=vnorm(vsub(left,vscale(up,vdot(left,up))));
+			vec3 back=vcross(up,left);
+			m.toBody=mat4_identity();
+			m.toBody.m[0]=left.x; m.toBody.m[4]=left.y; m.toBody.m[8]=left.z;
+			m.toBody.m[1]=back.x; m.toBody.m[5]=back.y; m.toBody.m[9]=back.z;
+			m.toBody.m[2]=up.x;   m.toBody.m[6]=up.y;   m.toBody.m[10]=up.z;
+			m.legLength=vlen(vsub(m.refPos[r[MOCAP_UPLEG]],m.refPos[r[MOCAP_FOOT]]));
+			/* A planted ankle is at its lowest in the clip; the T-pose frame need not stand the same way. */
+			int feet[MOCAP_FOOT_POINTS]={r[MOCAP_FOOT],r[MOCAP_FOOT+1]};
+			float refFloor=INFINITY,floor=INFINITY;
+			for(int k=0;k<MOCAP_FOOT_POINTS;k++) if(feet[k]>=0) refFloor=fminf(refFloor,vdot(m.refPos[feet[k]],up));
+			for(int f=m.clip->nframes>1;f<m.clip->nframes;f++){
+				bvh_evaluate(m.clip,f*m.clip->frameTime,m.pos,m.rot);
+				for(int k=0;k<MOCAP_FOOT_POINTS;k++) if(feet[k]>=0) floor=fminf(floor,vdot(m.pos[feet[k]],up));
+			}
+			m.groundShift=refFloor-floor;
+		}
+		fprintf(stderr,"[mocap] loaded %s joints=%d frames=%d fps=%.0f spine=%d neck=%d\n",path,n,m.clip->nframes,1/m.clip->frameTime,m.nspine,m.nneck); fflush(stderr);
+	}
+	DA_PUSH(s->mocap,s->nmocap,s->cmocap,m);
+	return m.clip?&s->mocap[s->nmocap-1]:NULL;
+}
+
+/* A source direction at arc-length fraction [a,b] of a joint polyline, in the body frame. */
+static vec3 mocap_polyline_dir(const MocapSource *m,int start,const int *chain,int n,float a,float b){
+	vec3 points[MOCAP_MAX_CHAIN+1]; float lengths[MOCAP_MAX_CHAIN+1],total=0;
+	points[0]=m->pos[start]; lengths[0]=0;
+	for(int i=0;i<n;i++){ points[i+1]=m->pos[chain[i]]; total+=vlen(vsub(points[i+1],points[i])); lengths[i+1]=total; }
+	vec3 at[2]; float want[2]={a*total,b*total};
+	for(int k=0;k<2;k++){
+		at[k]=points[n];
+		for(int i=0;i<n;i++) if(want[k]<=lengths[i+1]){
+			float span=lengths[i+1]-lengths[i];
+			at[k]=lerp(points[i],points[i+1],span>0?(want[k]-lengths[i])/span:0); break;
+		}
+	}
+	return vnorm(mat4_xform_dir(m->toBody,vsub(at[1],at[0])));
+}
+
+static vec3 mocap_bone_dir(const MocapSource *m,int from,int to){
+	return vnorm(mat4_xform_dir(m->toBody,vsub(m->pos[to],m->pos[from])));
+}
+
+/* Source rotation since the reference frame, expressed in the body frame. */
+static mat4 mocap_hub_rotation(const MocapSource *m,int joint){
+	mat4 delta=mat4_mul(mat4_from_quat(m->rot[joint]),mat4_affine_inverse(mat4_from_quat(m->refRot[joint])));
+	return mat4_mul(m->toBody,mat4_mul(delta,mat4_affine_inverse(m->toBody)));
+}
+
+/* An upper hub points its up axis along the source bone above it and faces where the source
+   joint faces; reference poses often tilt the chest or head, so their full rotation misleads. */
+static mat4 mocap_hub_frame(const MocapSource *m,int joint,int above){
+	mat4 turn=mocap_hub_rotation(m,joint);
+	if(above<0) return turn;
+	vec3 up=mocap_bone_dir(m,joint,above),forward=mat4_xform_dir(turn,v3(0,-1,0));
+	vec3 back=vscale(vsub(forward,vscale(up,vdot(forward,up))),-1);
+	if(vlen(back)<RIG_EPSILON) return turn;
+	back=vnorm(back);
+	vec3 left=vcross(back,up);
+	mat4 frame=mat4_identity();
+	frame.m[0]=left.x; frame.m[1]=left.y; frame.m[2]=left.z;
+	frame.m[4]=back.x; frame.m[5]=back.y; frame.m[6]=back.z;
+	frame.m[8]=up.x;   frame.m[9]=up.y;   frame.m[10]=up.z;
+	return frame;
+}
+
+typedef struct { const MocapSource *m; XmlNode *root; AnimPose *out; } MocapWalk;
+
+static void mocap_set(MocapWalk *w,XmlNode *bone,mat4 parentWorld,mat4 world,mat4 *result){
+	mat4 delta=mat4_mul(mat4_affine_inverse(parentWorld),world);
+	delta.m[12]=delta.m[13]=delta.m[14]=0;
+	AnimJoint *j=anim_joint(w->out,xml_attr(bone,"name",""));
+	j->q=quat_from_mat4(delta);
+	*result=world;
+}
+
+static void mocap_aim(MocapWalk *w,XmlNode *bone,mat4 parentWorld,vec3 direction,mat4 *result){
+	BoneGeom g=bone_geom(bone);
+	vec3 local=mat4_xform_dir(mat4_affine_inverse(parentWorld),direction);
+	mat4 delta=rig_from_to(g.dir,local,g.other);
+	AnimJoint *j=anim_joint(w->out,xml_attr(bone,"name",""));
+	j->q=quat_from_mat4(delta);
+	*result=mat4_mul(parentWorld,delta);
+}
+
+/* Walk the rig from a hub: hubDepth 0 is the pelvis, 1 the ribcage, 2 the head. */
+static void mocap_walk(MocapWalk *w,XmlNode *node,mat4 parentWorld,int hubDepth,int link,int links,int limbSide,int limbArm,int limbIndex){
+	const MocapSource *m=w->m; const int *r=m->role;
+	mat4 world=parentWorld;
+	int named=xml_attr(node,"name",NULL)!=NULL;
+	if(named && !strcmp(node->tag,"hub")){
+		int joint=hubDepth==0?r[MOCAP_HIPS]:hubDepth==1?r[MOCAP_CHEST]:hubDepth==2?r[MOCAP_HEAD]:-1;
+		int above=hubDepth==1?(m->nneck?m->neck[0]:-1):hubDepth==2?r[MOCAP_HEAD_END]:-1;
+		if(joint>=0) mocap_set(w,node,parentWorld,mocap_hub_frame(m,joint,above),&world);
+		hubDepth++; link=0;
+	} else if(named && !strcmp(node->tag,"spine") && links>0){
+		const int *chain=hubDepth==1?m->spine:m->neck; int n=hubDepth==1?m->nspine:m->nneck;
+		int start=hubDepth==1?r[MOCAP_HIPS]:r[MOCAP_CHEST];
+		if(n>0 && start>=0) mocap_aim(w,node,parentWorld,mocap_polyline_dir(m,start,chain,n,(float)link/links,(float)(link+1)/links),&world);
+		link++;
+	} else if(named && limbSide>=0 && strcmp(node->tag,"digit") && !bone_at(node)){
+		int from=-1,to=-1,side=limbSide;
+		if(limbArm){
+			if(!strcmp(node->tag,"collarbone")){ from=r[MOCAP_COLLAR+side]; to=r[MOCAP_ARM+side]; limbIndex=-1; }
+			else if(!strcmp(node->tag,"palm")){ from=r[MOCAP_HAND+side]; to=r[MOCAP_HAND_END+side]; }
+			else if(limbIndex==0){ from=r[MOCAP_ARM+side]; to=r[MOCAP_FOREARM+side]; }
+			else if(limbIndex==1){ from=r[MOCAP_FOREARM+side]; to=r[MOCAP_HAND+side]; }
+		} else {
+			if(!strcmp(node->tag,"ankle")){ from=r[MOCAP_FOOT+side]; to=r[MOCAP_TOE+side]; }
+			else if(limbIndex==0){ from=r[MOCAP_UPLEG+side]; to=r[MOCAP_LEG+side]; }
+			else if(limbIndex==1){ from=r[MOCAP_LEG+side]; to=r[MOCAP_FOOT+side]; }
+		}
+		if(from>=0 && to>=0) mocap_aim(w,node,parentWorld,mocap_bone_dir(m,from,to),&world);
+		limbIndex++;
+	}
+	for(int i=0;i<node->nkids;i++){
+		XmlNode *kid=node->kids[i];
+		if(!xml_is_bone(kid)) continue;
+		if(xml_is_limb(kid)){
+			const char *name=xml_attr(kid,"name","");
+			int side=!strncmp(name,"right_",6)?1:!strncmp(name,"left_",5)?0:-1;
+			mocap_walk(w,kid,world,hubDepth,0,0,side,strcmp(rig_limb_type(kid),"leg")!=0,0);
+			continue;
+		}
+		int kidLinks=links;
+		if(!strcmp(kid->tag,"spine") && strcmp(node->tag,"spine")){
+			kidLinks=0;
+			for(XmlNode *walk=kid;walk;){
+				kidLinks++;
+				XmlNode *next=NULL;
+				for(int k=0;k<walk->nkids && !next;k++) if(!strcmp(walk->kids[k]->tag,"spine")) next=walk->kids[k];
+				walk=next;
+			}
+		}
+		mocap_walk(w,kid,world,hubDepth,!strcmp(kid->tag,"spine")?link:0,kidLinks,limbSide,limbArm,limbIndex);
+	}
+}
+
+/* How far a joint moved from the reference frame, body frame, scaled; heights from the clip floor. */
+static vec3 mocap_moved(const MocapSource *m,int joint,float scale){
+	vec3 moved=mat4_xform_dir(m->toBody,vsub(m->pos[joint],m->refPos[joint]));
+	moved.z+=m->groundShift;
+	return vscale(moved,scale);
+}
+
+static void mocap_retarget(Scene *s,XmlNode *proot,XmlNode *layer,float seconds,AnimPose *out){
+	MocapSource *m=mocap_source(s,xml_attr(layer,"mocap",""));
+	XmlNode *root=rig_root_bone(proot);
+	if(!m || !root || m->legLength<=0) return;
+	bvh_clip_t *c=m->clip;
+	float from=xml_attr_f(layer,"from",c->frameTime),to=fminf(xml_attr_f(layer,"to",bvh_duration(c)),bvh_duration(c));
+	float t=from+seconds*xml_attr_f(layer,"speed",1);
+	if(xml_attr_i(layer,"loop",0) && to>from){ t=from+fmodf(t-from,to-from); if(t<from) t+=to-from; }
+	bvh_evaluate(c,fmaxf(from,fminf(t,to)),m->pos,m->rot);
+	MocapWalk w={m,root,out};
+	mocap_walk(&w,root,mat4_identity(),0,0,0,-1,0,0);
+	/* Positions scale by leg length; the rig keeps its own proportions and ground. */
+	GaitLeg legs[GAIT_MAX_LIMBS]; int nlegs=0;
+	rig_collect_limbs(proot,"leg",legs,&nlegs);
+	float reach=0;
+	for(int i=0;i<nlegs;i++){
+		XmlNode *end=rig_limb_end(legs[i].limb);
+		if(end) reach=fmaxf(reach,vlen(vsub(mat4_xform_point(rig_rest_world(s,legs[i].limb,proot),v3(0,0,0)),mat4_xform_point(rig_rest_world(s,end,proot),v3(0,0,0)))));
+	}
+	float scale=reach>0?reach/m->legLength:0;
+	int inPlace=xml_attr_i(layer,"inPlace",0);
+	vec3 hips=mocap_moved(m,m->role[MOCAP_HIPS],scale);
+	vec3 drift=inPlace?v3(hips.x,hips.y,0):v3(0,0,0);
+	AnimJoint *pelvis=anim_joint(out,xml_attr(root,"name",""));
+	pelvis->pos=vsub(hips,drift);
+	const char *legMode=xml_attr(layer,"legs","ik");
+	if(strcmp(legMode,"ik") && strcmp(legMode,"fk")){ fprintf(stderr,"[mocap] legs='%s'; use ik or fk\n",legMode); fflush(stderr); }
+	if(!strcmp(legMode,"fk")) return;
+	/* Feet follow the source ankle relative to its hip, from the rig's own (posed) hip joint,
+	   so a wider or narrower pelvis keeps its stance instead of crossing the feet. */
+	vec3 pelvisRest=mat4_xform_point(rig_rest_world(s,root,proot),v3(0,0,0));
+	mat4 pelvisTurn=mocap_hub_rotation(m,m->role[MOCAP_HIPS]);
+	for(int i=0;i<nlegs;i++){
+		const char *name=xml_attr(legs[i].limb,"name","");
+		int side=!strncmp(name,"right_",6),foot=m->role[MOCAP_FOOT+side],hip=m->role[MOCAP_UPLEG+side];
+		XmlNode *end=rig_limb_end(legs[i].limb);
+		if(foot<0 || hip<0 || !end) continue;
+		vec3 hipRest=mat4_xform_point(rig_rest_world(s,legs[i].limb,proot),v3(0,0,0));
+		vec3 hipNow=vadd(vadd(pelvisRest,pelvis->pos),mat4_xform_dir(pelvisTurn,vsub(hipRest,pelvisRest)));
+		vec3 leg=vscale(mat4_xform_dir(m->toBody,vsub(m->pos[foot],m->pos[hip])),scale);
+		vec3 moved=vsub(vadd(hipNow,leg),mat4_xform_point(rig_rest_world(s,end,proot),v3(0,0,0)));
+		XmlNode *ik=xml_new("ik");
+		xml_set_attr(ik,"limb",name);
+		xml_set_attr_v3(ik,"offset",vscale(moved,CM_PER_METRE));
+		anim_put_ik(out,rig_ik_tip_name(proot,ik),ik);
 	}
 }
 
@@ -3291,8 +3650,8 @@ static XmlNode *anim_pose_node(Scene *s,AnimPose *p){
 	return pose;
 }
 
-static XmlNode *rig_timeline_pose(Scene *s,XmlNode *instance,XmlNode *proot,XmlNode *base,float *travel){
-	*travel=0;
+static XmlNode *rig_timeline_pose(Scene *s,XmlNode *instance,XmlNode *proot,XmlNode *base,vec3 *travel){
+	*travel=v3(0,0,0);
 	int animated=0;
 	for(int i=0;i<instance->nkids;i++) animated|=!strcmp(instance->kids[i]->tag,"layer") || !strcmp(instance->kids[i]->tag,"gait");
 	if(!animated) return NULL;
@@ -3315,9 +3674,14 @@ static XmlNode *rig_timeline_pose(Scene *s,XmlNode *instance,XmlNode *proot,XmlN
 			XmlNode *clip=rig_find_clip(s,proot,clipName);
 			if(clip) anim_clip_sample(s,proot,clip,(s->time-xml_attr_f(item,"start",0))*xml_attr_f(item,"speed",1),mirror,&layer);
 			else { fprintf(stderr,"[scener] layer names unknown clip '%s'\n",clipName); fflush(stderr); }
-		} else { fprintf(stderr,"[scener] layer needs pose or clip\n"); fflush(stderr); }
-		if(strcmp(mode,"absolute") && strcmp(mode,"additive")){ fprintf(stderr,"[scener] layer mode '%s'; use absolute or additive\n",mode); fflush(stderr); }
-		anim_pose_apply(proot,&acc,&layer,fminf(1,w),!strcmp(mode,"additive"),xml_attr(item,"mask",NULL));
+		} else if(xml_attr(item,"mocap",NULL)){
+			mocap_retarget(s,proot,item,s->time-xml_attr_f(item,"start",0),&layer);
+			if(mirror) anim_pose_mirror(proot,&layer);
+		} else { fprintf(stderr,"[scener] layer needs pose, clip or mocap\n"); fflush(stderr); }
+		/* CAT names additive layers "Adjustment" layers. */
+		int additive=!strcmp(mode,"additive") || !strcmp(mode,"adjustment");
+		if(!additive && strcmp(mode,"absolute")){ fprintf(stderr,"[scener] layer mode '%s'; use absolute, additive or adjustment\n",mode); fflush(stderr); }
+		anim_pose_apply(proot,&acc,&layer,fminf(1,w),additive,xml_attr(item,"mask",NULL));
 		anim_pose_free(&layer);
 	}
 	XmlNode *node=anim_pose_node(s,&acc);

@@ -63,6 +63,28 @@ Every part takes the same placement and girth attributes as a
 `links` is `segments` under its CAT name. A limb's role drives IK and walking:
 legs step, arms swing, and `<ik limb="…">` finds the limb's bones by itself.
 
+The biped preset follows CAT's Base Human rig part for part. The reference is
+CAT's own mocap mapping for that preset, as shipped with Mixamo's AutoCAT script
+(`Mixamo_AutoCAT_MappingPreset.cam`):
+
+| Base Human (CAT address) | `biped.blk` |
+|---|---|
+| Pelvis (`SceneRootNode.Hub`) | `<hub name="pelvis">` |
+| Spine1–3 (`Hub.Spine[0].SpineLink[0..2]`) | `<spine name="spine" links="3">`: `spine`, `spine_2`, `spine_3` |
+| Ribcage (`Spine[0].Hub`) | `<hub name="ribcage">` |
+| Neck (`Ribcage.Spine[0].SpineLink[0]`) | `<spine name="neck">` |
+| Head, HeadBone001 (`….Hub`, `ArbBone[0]`) | `<hub name="head">`, extra `<bone name="hair">` |
+| LCollarbone, LUpperarm, LForearm, LPalm (`Ribcage.Limb[0]`) | `left_collarbone`, `left_upperarm`, `left_forearm`, `left_palm` |
+| LFinger1x–5x (`Palm.Digit[0..4]`, three knuckles) | `left_thumb`, `left_index`, `left_middle`, `left_ring`, `left_pinky`, `links="3"` |
+| LThigh, LCalf, LFoot (`Pelvis.Limb[0]`, the foot is the Palm) | `left_thigh`, `left_calf`, `<ankle name="left_foot">` |
+| LToe1x (`Palm.Digit[0]`, two knuckles) | `<digit name="left_toe" links="2">` |
+| Platform (the leg's IK target) | `<ik limb="left_leg"/>`: the ankle's rest point plus `offset` |
+| Limb[1] (the second limb of a hub is the right) | the `mirror="1"` partner, `right_*` |
+
+Not carried over: CAT's twist segments (`BoneSeg`) only matter for skinned
+meshes, and CAT's middle limbs (L/M/R) are limbs without a `left_`/`right_`
+prefix.
+
 ## Build the skeleton
 
 Work from the root outward: pelvis hub, spine, ribcage hub, neck and head hub,
@@ -134,7 +156,7 @@ scene. Select a pose for an instance with `pose="…"`, or per camera:
 <!-- in the character file -->
 <pose name="WaveLeft">
   <ik limb="left_arm" offset="4 -8 72" bend="150 -20"/>
-  <joint target="left_hand" aim="0 90"/>
+  <joint target="left_palm" aim="0 90"/>
   <joint target="head" rot="0 0 15"/>
 </pose>
 <pose name="WaveRight" mirror="WaveLeft"/>
@@ -207,10 +229,14 @@ children play over it, in document order, on top of the instance's pose:
   through IK and planted feet never slide; the pelvis dips at double support,
   sways and twists, the spine counter-twists and arms swing. Walks start and
   stop with shorter steps. Bipeds alternate legs; quadrupeds use a lateral
-  walk, front legs a quarter cycle after the hind legs. `stride`, `speed`,
-  `lift`, `sway`, `hipTwist`, `spineTwist` and `armSwing` tune the style;
-  defaults scale with hip height. After the walk the instance stays where it
-  arrived.
+  walk, front legs a quarter cycle after the hind legs. The controls follow
+  CATMotion's: `stride` and `speed` (Max Stride Length, Max Step Time),
+  `direction` (degrees from the facing: 90 walks sideways, 180 backwards) and
+  `mode="spot"` (Walk On Spot), a limb's `phase` (LimbPhases), `footRoll`
+  (FootPlatform pitch: toe-off and heel strike), `armSwing`, `armBend` and
+  `armOut` (Arm Swing, Bend, CrossSwing), and `hipTwist`, `pelvisRoll`, `sway`
+  and `bounce` (Pelvis Twist, Roll, WeightShift, Lift). Defaults scale with hip
+  height. After the walk the instance stays where it arrived.
 - **Play a pose or clip with `<layer>`.** `start`, `end`, `fadeIn` and
   `fadeOut` shape its weight over time. An `absolute` layer pulls the joints it
   keys toward its pose; an `additive` layer adds on top, so a nod plays over a
@@ -220,6 +246,43 @@ children play over it, in document order, on top of the instance's pose:
   own `<joint>`/`<ik>` entries, or both. Keys blend with smooth easing, or
   `ease="linear"`/`"step"`. `loop="1"` repeats over `length`; otherwise the
   last key holds.
+
+## Motion capture
+
+`<layer mocap="mocap/cmu/02_01.bvh"/>` plays a BVH clip on a CAT rig, like CAT's
+Capture Animation. It works with the same `start`, `end`, fades, `mask`,
+`mirror` and `speed` as other layers, plus:
+
+- `from` / `to` (seconds in the clip; `from` defaults to one frame in, which
+  skips a leading T-pose), and `loop="1"`.
+- `inPlace="1"` drops the clip's horizontal travel, for cycles and treadmills.
+- `legs="ik"` (default) places each foot through leg IK relative to its hip;
+  `legs="fk"` uses the leg bone directions only.
+
+Joints are recognized by common names (CMU/MotionBuilder, Mixamo, 3ds Max
+Biped): hips, spine chain, chest (where the arms branch), neck, head, and per
+side upleg/thigh, leg/calf, foot, toe, shoulder/collar, arm, forearm, hand. The
+first frame is the reference pose. Hubs take the source rotation relative to it
+(the ribcage and head keep their up axis along the source spine and head
+bones), spine, neck and limb bones point along the source bones, and positions
+scale by leg length with heights measured from the clip's own floor. The rig
+keeps its proportions, so an A-pose rig plays T-pose captures correctly.
+
+A camera with `follow="Adam"` keeps its `pos` and `look` relative to that
+instance's root over the ground, so it tracks walks, gaits and mocap travel.
+
+```xml
+<camera name="Front" follow="Adam" pos="-260 -420 170" look="0 0 90" fov="40"/>
+<prefab source="characters/presets/biped" name="Adam">
+  <layer mocap="mocap/cmu/13_27.bvh"/>
+  <layer pose="Think" start="4" fadeIn="0.5" mask="head"/>
+</prefab>
+```
+
+[mocap_study.blks](../scenes/mocap_study.blks) is the worked example.
+`tools/fetch_cmu_mocap.py` downloads twenty CMU clips and
+`tools/render_mocap_videos.py` renders one MP4 per clip, encoding with
+`tools/frames_to_mp4.swift` (AVFoundation, no ffmpeg needed).
 
 Render a sequence, or scrub a single moment:
 
