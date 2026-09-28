@@ -979,7 +979,7 @@ places the body.
 | `bounce`, `sway` | cm | 0, 0.018 × stride | Extra pelvis bob; side-to-side sway |
 | `crouch` | cm | 0 | Constant extra knee bend while walking |
 | `hipTwist`, `spineTwist`, `armSwing` | degrees | 6, 4, 20 | Pelvis twist, spine counter-twist beyond it, arm swing |
-| `pelvisRoll`, `footRoll` | degrees | 3, 20 | Swing-side hip drop; foot pitch at toe-off and heel strike |
+| `pelvisRoll`, `footRoll` | degrees | 3, 20 | Swing-side hip drop; heel/toe pivot roll with ankle compensation |
 | `armBend`, `armOut` | degrees | 15, 4 | Elbow bend (more on the forward swing); arms away from the body |
 | `direction` | degrees | 0 | Walk direction from the facing: 90 sideways left, 180 backwards |
 | `mode` | `line` / `spot` | `line` | `spot` walks in place (no `distance` needed) |
@@ -999,10 +999,18 @@ straight leg's reach, which produces the dip at double support.
 | `mask` | names | all | Joints (and everything below them) the layer affects |
 | `mirror` | 0/1 | 0 | Play reflected, as a mirror pose would |
 | `speed` | float | 1 | Clip or mocap playback rate |
-| `mode` value `adjustment` | — | — | CAT's name for `additive` |
-| `from`, `to`, `loop` | seconds, 0/1 | one frame, end, 0 | Mocap range within the file and looping |
+| `mode` value `adjustment` | — | — | Alias for local `additive`; world-space adjustment is not implemented |
+| `from`, `to`, `loop` | seconds, 0/1 | profile first frame, end, 0 | Mocap range within the file and looping |
 | `inPlace` | 0/1 | 0 | Mocap: drop horizontal travel |
-| `legs` | `ik` / `fk` | `ik` | Mocap: feet by leg IK relative to the hips, or bone directions only |
+| `legs` | `ik` / `fk` | `ik` | Source-pole leg IK with support cleanup, or transferred rotations |
+| `profile` | name / XML path | `bvh` | Capture calibration; `cmu` opts into leading-reference-frame conventions |
+| `rootMotion` | accumulate / repeat / inPlace | accumulate | Loop translation and heading accumulation, reset, or horizontal root removal |
+| `loopBlend` | seconds | 0.12 | Blend into next cycle at the seam; 0 disables |
+| `contacts` | auto / none | auto | Detect low, slow supports; authored contacts still apply with none |
+| `hands` | contact / fk | contact | Hand support IK or rotation transfer only |
+| `handPose` | pose name | — | Override hands with a named pose; absent tracks otherwise retain rest shape |
+| `ground` | cm | 0 | Support plane height in character-local coordinates |
+| `contactWeight` | 0..1 | 1 | Overall support cleanup strength |
 
 `<clip name length loop ease>` holds `<key t="seconds" pose="…" ease="…">`
 entries in time order. A key is a named pose, its own `<joint>`/`<ik>`
@@ -1011,6 +1019,54 @@ are at rest there, and IK goals fade in or out by weight. `ease` is `smooth`
 (default), `linear` or `step`; a key's `ease` shapes the blend into it.
 `loop="1"` repeats every `length` (default: the last key's time) and blends
 the last key back into the first; otherwise the last key holds.
+
+### `<capture-profile>` and `<contact>`
+
+A profile is a scene/prefab child, or the root of an external XML file named by
+`layer.profile` (asset-root-relative or absolute). Built-in `bvh` uses OFFSET
+rest transforms with `referenceFrame="-1" firstFrame="0"`; `cmu` uses
+`referenceFrame="0" firstFrame="1"`. Both default to Y-up.
+
+| Profile attribute | Default | Meaning |
+|---|---|---|
+| `name` | — | Name used by layers in this scene or prefab |
+| `up` | y | x, y, z, -x, -y, or -z source up axis |
+| `forward` | derived from hips | Source-space direction vector; projected against up |
+| `referenceFrame` | -1 | OFFSET rest (-1), or zero-based calibration frame |
+| `firstFrame` | 0 | First playback frame; no implicit frame skipping |
+| `scale` | limb-length ratio | Target centimetres per source unit |
+| `floor` | ankle-height 5th percentile | Source-up floor coordinate in source units |
+| `contactHeight` | 0.08 | Detection height tolerance as a fraction of source leg length |
+| `contactSpeed` | 0.35 | Detection speed in source leg lengths per second |
+| `contactFade` | 0.05 | Automatic support fade in/out, seconds |
+
+Profile children `<map source="LeftHand" role="left_palm" target="left_palm"
+rotation="0 0 0" tip="LeftHandMiddle1"/>` override name matching. `source` is
+required. `role` identifies a semantic source joint; `target` optionally maps a
+specific rig joint, `rotation` supplies a target-frame XYZ orientation offset in
+degrees, and `tip` names an explicit source child for alignment. A target-only
+map also works for custom names and finger joints. Supported roles are `hips`,
+`chest`, `head`, `head_tip`, and left/right `thigh`, `calf`, `foot`, `toe`,
+`collarbone`, `upperarm`, `forearm`, `palm`, `palm_tip`. Omitted channels retain
+rest shape; the loader logs mapped finger coverage and contact counts.
+
+Layer children `<contact limb="left_leg" start="0.2" end="0.8" fade="0.05"
+weight="1" mode="plant" offset="0 0 0"/>` author support intervals in source
+seconds. `limb` is left/right_leg or left/right_arm. Defaults: start 0, end clip
+end, fade profile contactFade, weight 1, mode plant, offset 0 cm. An explicit
+track replaces automatic detection for that limb, including gaps. `plant`
+locks endpoint orientation, `pivot` preserves rotation around the support,
+and `slide` preserves horizontal travel. Offset is in the character ground
+frame, centimetres. Automatic contacts use pivot mode and release at clip-range
+boundaries. Supports use the endpoint's bone/digit volumes on a flat plane;
+there is no terrain, prop support or general collision solver. FK limbs ignore
+contacts. Layer blending can soften support constraints.
+
+The biped preset supplies `HandsOpen`, `HandsRelaxed`, and `HandsFist`. Its
+knuckles use bone `across`: a signed fraction of the parent's second radius,
+combined with longitudinal `at`. This places roots across the palm without
+projecting them onto the same ellipsoid surface point. When present, `across`
+selects this direct attachment instead of `from`/`sink` surface placement.
 
 ### `<capsule>`
 

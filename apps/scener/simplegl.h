@@ -87,6 +87,7 @@ bvh_clip_t *bvh_load(const char *path);
 void bvh_free(bvh_clip_t *c);
 int bvh_find(const bvh_clip_t *c,const char *name);
 float bvh_duration(const bvh_clip_t *c);
+void bvh_reference(const bvh_clip_t *c,int frame,vec3 *pos,quat *rot);
 void bvh_evaluate(const bvh_clip_t *c,float seconds,vec3 *pos,quat *rot);
 
 /* A loaded clip and where its joints sit in rig roles (scene.c retargeting). */
@@ -97,8 +98,19 @@ enum { MOCAP_HIPS, MOCAP_CHEST, MOCAP_HEAD, MOCAP_HEAD_END,
 	MOCAP_COLLAR=MOCAP_TOE+2, MOCAP_ARM=MOCAP_COLLAR+2, MOCAP_FOREARM=MOCAP_ARM+2, MOCAP_HAND=MOCAP_FOREARM+2,
 	MOCAP_HAND_END=MOCAP_HAND+2, MOCAP_ROLES=MOCAP_HAND_END+2 };
 
+#define MOCAP_DIGITS 5
+#define MOCAP_KNUCKLES 3
+typedef struct {
+	int effector,start,end;
+} MocapContact;
+
 typedef struct MocapSource {
-	char path[MOCAP_PATH_CAPACITY];
+	char path[MOCAP_PATH_CAPACITY],profileName[MOCAP_PATH_CAPACITY];
+	void *profile,*rigDefinition;
+	int referenceFrame,firstFrame,valid;
+	int digits[2][MOCAP_DIGITS][MOCAP_KNUCKLES];
+	MocapContact *contacts; int ncontacts,ccontacts;
+	float contactFade,contactHeight,contactSpeed,floor;
 	bvh_clip_t *clip;
 	int role[MOCAP_ROLES];
 	int spine[MOCAP_MAX_CHAIN],nspine,neck[MOCAP_MAX_CHAIN],nneck;

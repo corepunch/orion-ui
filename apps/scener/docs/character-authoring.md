@@ -249,24 +249,58 @@ children play over it, in document order, on top of the instance's pose:
 
 ## Motion capture
 
-`<layer mocap="mocap/cmu/02_01.bvh"/>` plays a BVH clip on a CAT rig, like CAT's
-Capture Animation. It works with the same `start`, `end`, fades, `mask`,
-`mirror` and `speed` as other layers, plus:
+`<layer profile="cmu" mocap="mocap/cmu/02_01.bvh"/>` attaches a capture to a
+CAT-style rig. It shares the other layers' timing, fades, masks and mirroring.
+Use `profile="cmu"` for the supplied CMU conversion: frame 0 is calibration and
+playback starts at frame 1. The default `profile="bvh"` uses the hierarchy's
+OFFSET rest pose and plays frame 0; it does not assume the first frame is a T-pose.
 
-- `from` / `to` (seconds in the clip; `from` defaults to one frame in, which
-  skips a leading T-pose), and `loop="1"`.
-- `inPlace="1"` drops the clip's horizontal travel, for cycles and treadmills.
-- `legs="ik"` (default) places each foot through leg IK relative to its hip;
-  `legs="fk"` uses the leg bone directions only.
+A saved `<capture-profile>` in the scene, character prefab, or separate XML file
+can specify `up`, `forward`, `referenceFrame`, `firstFrame`, and `<map>` entries
+for source names, target joints and orientation offsets. Scale derives from the
+sum of thigh and calf lengths, including bent calibration poses; an explicit
+`scale` is target centimetres per source unit. See the canonical scene-format
+reference for all fields. Correct the profile once and reuse it for that source rig.
 
-Joints are recognized by common names (CMU/MotionBuilder, Mixamo, 3ds Max
-Biped): hips, spine chain, chest (where the arms branch), neck, head, and per
-side upleg/thigh, leg/calf, foot, toe, shoulder/collar, arm, forearm, hand. The
-first frame is the reference pose. Hubs take the source rotation relative to it
-(the ribcage and head keep their up axis along the source spine and head
-bones), spine, neck and limb bones point along the source bones, and positions
-scale by leg length with heights measured from the clip's own floor. The rig
-keeps its proportions, so an A-pose rig plays T-pose captures correctly.
+Limb rotations preserve axial twist, and available thumb/finger channels are
+transferred. Untracked fingers retain the preset's relaxed shape. CMU 02_01 has
+only six of the thirty finger channels: it cannot supply a complete hand performance.
+Choose `handPose="HandsOpen|HandsRelaxed|HandsFist"` (one name) to override both
+hands, or layer a masked pose for individual corrections.
+
+`legs="ik"` keeps source knee planes, including inverted motion; `legs="fk"`
+uses transferred rotations. Low, slow feet and hands produce cached support
+intervals. The solver anchors support points in the character's ground frame,
+fits pelvis translation to limb reach, and preserves captured roll at a pivot.
+`hands="fk"` disables hand constraints; `contacts="none"` disables automatic
+contacts. Authored contacts override detection for that limb:
+
+```xml
+<layer profile="cmu" mocap="mocap/cmu/02_01.bvh" handPose="HandsRelaxed">
+  <contact limb="left_leg" start="0.2" end="0.8" mode="plant" fade="0.05"/>
+</layer>
+```
+
+Contact times are source-clip seconds. `plant` fixes position and orientation,
+`pivot` retains orientation changes around the support, and `slide` preserves
+horizontal travel while enforcing support height. Explicit tracks are useful
+for intentional slides and captures where automatic thresholds misclassify a
+contact. The supported surface is a flat local ground plane (`ground`, cm), not
+terrain or a moving prop. Pelvis fitting enforces reach; it is not a balance or
+collision simulation. Contradictory simultaneous contacts may remain unreachable.
+
+`from` / `to` select a source range. `loop="1"` accumulates root translation and
+heading by default, with a short pose blend (`loopBlend`, seconds, default 0.12).
+Use `rootMotion="repeat"` for an intentional reset or `rootMotion="inPlace"`
+(the older `inPlace="1"` alias also works) to remove horizontal root travel.
+Crop a compatible cycle before looping: a seam blend cannot make arbitrary
+performances into a natural gait. Contacts release at the range boundary.
+
+This is XML-based capture and straight/spot gait authoring. A mapping-preview UI,
+path following, editable viewport footsteps and baking remain future work.
+`mode="adjustment"` currently aliases local additive layers; it does not implement
+CAT's world-space adjustment layers. Gait `footRoll` now rotates about heel/toe
+pivots and offsets the ankle to preserve the planted point.
 
 A camera with `follow="Adam"` keeps its `pos` and `look` relative to that
 instance's root over the ground, so it tracks walks, gaits and mocap travel.
@@ -274,7 +308,7 @@ instance's root over the ground, so it tracks walks, gaits and mocap travel.
 ```xml
 <camera name="Front" follow="Adam" pos="-260 -420 170" look="0 0 90" fov="40"/>
 <prefab source="characters/presets/biped" name="Adam">
-  <layer mocap="mocap/cmu/13_27.bvh"/>
+  <layer profile="cmu" mocap="mocap/cmu/13_27.bvh"/>
   <layer pose="Think" start="4" fadeIn="0.5" mask="head"/>
 </prefab>
 ```

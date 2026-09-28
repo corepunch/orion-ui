@@ -167,3 +167,12 @@ void bvh_evaluate(const bvh_clip_t *c,float seconds,vec3 *pos,quat *rot){
 		rot[i]=quat_mul(rot[parent],q);
 	}
 }
+
+void bvh_reference(const bvh_clip_t *c,int frame,vec3 *pos,quat *rot){
+	if(frame>=0){ bvh_evaluate(c,frame*c->frameTime,pos,rot); return; }
+	for(int i=0;i<c->njoints;i++){
+		int parent=c->joints[i].parent;
+		pos[i]=parent<0?c->joints[i].offset:vadd(pos[parent],c->joints[i].offset);
+		rot[i]=quat_identity();
+	}
+}
