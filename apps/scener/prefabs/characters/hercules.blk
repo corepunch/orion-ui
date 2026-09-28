@@ -1,0 +1,93 @@
+<!-- Hercules, an anatomical strongman: a bone skeleton (pelvis, lumbar spine, ribcage,
+     clavicles, scapulae, humeri, forearms, hands, femurs, tibiae, feet, neck, skull)
+     wrapped in Hercules-style muscles grouped into the forms artist anatomy books
+     draw (pectoralis, deltoid, trapezius, quadriceps, hamstrings, calf...) and one
+     generated skin. Body frame Z up,
+     faces local -Y, his left is +X; about 186 cm tall. Muscle directions are body
+     azimuth/elevation: 0 front, 90 his left (lateral on the left limbs), -90 medial,
+     180 back. Bone names follow the humanoid mocap map. Every left_ bone chain and muscle gets a mirrored
+     right_ twin. Set show="muscles" on the skin for an ecorche view. -->
+<prefab>
+  <skin material="herc_skin" muscleMaterial="herc_muscle" />
+
+  <bone name="pelvis" aim="0 90" length="16" radius="13 9.5" material="herc_bone">
+    <ellipsoid pos="0 -1 2" radii="15.5 12 9" material="herc_cloth" />
+    <ellipsoid pos="0 -1 10" radii="15 11.5 2.6" material="herc_belt" />
+    <bone name="spine" aim="0 90" length="14" radius="10 7.5" material="herc_bone">
+      <bone name="ribcage" aim="0 90" length="32" radius="15 11.5" taper="0.82" material="herc_bone">
+        <bone name="neck" aim="0 78" length="11" radius="5.8 6" material="herc_bone">
+          <bone name="head" aim="0 90" length="21" radius="8 9.6" taper="0.92" material="herc_bone">
+            <ellipsoid on="0 58" at="0.72" radii="9.5 10 5.5" sink="3.8" material="herc_hair" />
+            <ellipsoid on="180 10" at="0.55" radii="8.5 6 9" sink="4.5" material="herc_hair" />
+            <ellipsoid on="0 -32" at="0.22" radii="6.6 4.8 5.2" sink="2.6" material="herc_hair" />
+            <sphere on="26 12" at="0.55" radius="1.3" material="herc_eye" />
+            <sphere on="-26 12" at="0.55" radius="1.3" material="herc_eye" />
+            <ellipsoid on="0 72" at="0.55" radii="10 10 1.8" sink="1.2" material="herc_band" />
+          </bone>
+        </bone>
+        <bone name="left_clavicle" at="0.88" from="15 0" out="9.17" aim="93 -2" length="17" radius="1.7" material="herc_bone">
+          <bone name="left_scapula" aim="-160 -55" length="15" radius="4 1.2" volume="0" />
+          <bone name="left_upper_arm" aim="90 -80" length="30" radius="3.8" material="herc_bone">
+            <bone name="left_forearm" aim="85 -82" length="27" radius="3.8 2.8" taper="0.7" material="herc_bone">
+              <ellipsoid on="0 0" at="0.88" radii="4.6 3.6 4.6" sink="3" material="herc_band" />
+              <bone name="left_hand" aim="90 -86" length="17" radius="3.6 1.7" taper="0.75" material="herc_bone" />
+            </bone>
+          </bone>
+        </bone>
+      </bone>
+    </bone>
+    <bone name="left_thigh" at="0.45" from="90 -10" out="9.95" aim="0 -87" length="46" radius="5.5" taper="0.7" material="herc_bone">
+      <bone name="left_shin" aim="180 -86" length="43" radius="4 3.5" taper="0.6" material="herc_bone">
+        <bone name="left_foot" foot="1" aim="0 -6" length="23" radius="4.5 3" taper="0.8" material="herc_sandal" skin="0" />
+      </bone>
+    </bone>
+  </bone>
+
+  <!-- Torso -->
+  <muscle name="left_pectoral" origin="ribcage 0.3 10 0 .. 1 30 25" insertion="left_upper_arm 0.1 30 0 .. 0.22 30 0"
+          fibers="9" radius="3.4 2.4" profile="0.7 1 1 0.8 0.5" tendon="0 0.15" wrap="ribcage" jiggle="0.3" />
+  <muscle name="left_deltoid" origin="left_clavicle 0.55 0 0 .. 1 175 10" insertion="left_upper_arm 0.45 90 0"
+          fibers="5" radius="3.4 3" profile="0.7 1 0.8 0.4" tendon="0 0.1" jiggle="0.2" />
+  <muscle name="left_trapezius" origin="ribcage 0.35 178 0 .. 1.05 178 40" insertion="left_clavicle 0.6 175 0 .. 1 170 60"
+          fibers="7" radius="3.2 1.6" wrap="ribcage" />
+  <muscle name="left_lat" origin="ribcage 0 176 0 .. 0.55 170 0" insertion="left_upper_arm 0.1 -40 0"
+          fibers="7" radius="3.6 1.8" wrap="ribcage" />
+  <muscle name="left_back_shoulder" origin="left_scapula 0.2 180 0 .. 0.9 180 0" insertion="left_upper_arm 0.05 150 0"
+          fibers="3" radius="2.8 1.6" wrap="ribcage" />
+  <muscle name="left_erector" origin="pelvis 0.6 172 0" insertion="ribcage 0.8 172 0"
+          radius="2.4 2.2" profile="0.6 1 0.8 0.5" wrap="spine ribcage" />
+  <muscle name="left_abs" origin="pelvis 0.8 4 -10" insertion="ribcage 0.35 8 0"
+          radius="4.2 1.8" profile="0.8 1 1 1 0.9" bands="4" wrap="spine" />
+  <muscle name="left_oblique" origin="ribcage 0.1 75 -10 .. 0.45 45 -10" insertion="pelvis 0.85 70 0 .. 0.85 30 -20"
+          fibers="4" radius="3.4 2" wrap="spine" jiggle="0.2" />
+  <muscle name="left_sternocleidomastoid" origin="ribcage 0.98 8 20" insertion="head 0.12 110 0"
+          radius="1.6 1.4" profile="0.6 1 0.8" />
+
+  <!-- Hips and legs -->
+  <muscle name="left_glute_max" origin="pelvis 0.3 175 -10 .. 0.95 130 20" insertion="left_thigh 0.15 150 0 .. 0.3 120 0"
+          fibers="5" radius="4 4.2" profile="0.7 1 0.9 0.6" jiggle="0.4" />
+  <muscle name="left_glute_med" origin="pelvis 0.85 95 10 .. 0.85 120 10" insertion="left_thigh 0.03 90 0"
+          fibers="2" radius="3.6 2.8" />
+  <muscle name="left_quadriceps" origin="left_thigh 0.05 90 0 .. 0.45 -70 0" insertion="left_shin 0.03 0 0"
+          via="left_thigh 0.95 0 0 1" fibers="4" radius="4.2 4" tendon="0 0.12" profile="0.5 0.9 1 0.9 0.5" contract="0.4" jiggle="0.3" />
+  <muscle name="left_sartorius" origin="pelvis 0.55 50 0" insertion="left_shin 0.08 -100 0"
+          via="left_thigh 0.5 -30 0 2" radius="1.4 1" profile="1 1 1" />
+  <muscle name="left_adductors" origin="pelvis 0.1 -40 -40" insertion="left_thigh 0.3 -100 0 .. 0.8 -100 0"
+          fibers="3" radius="4 3.6" />
+  <muscle name="left_hamstrings" origin="pelvis 0.15 -170 -40 .. 0.15 160 -40" insertion="left_shin 0.06 -130 0 .. 0.06 120 0"
+          via="left_thigh 0.95 180 0 0.5" fibers="3" radius="3.6 3.2" tendon="0.05 0.2" />
+  <muscle name="left_calf" origin="left_thigh 0.95 -150 0 .. 0.95 150 0" insertion="left_foot 0 180 30"
+          via="left_shin 0.15 180 0 1.5" fibers="3" radius="3.6 3.6" tendon="0.05 0.45" profile="0.6 1 0.8 0.4" contract="0.3" jiggle="0.4" />
+  <muscle name="left_tibialis" origin="left_shin 0.1 45 0" insertion="left_foot 0.35 -40 60"
+          radius="2.2 2" tendon="0 0.35" />
+
+  <!-- Arm -->
+  <muscle name="left_biceps" origin="left_upper_arm 0.05 0 0" insertion="left_forearm 0.12 0 0"
+          radius="3 3.4" tendon="0.1 0.2" profile="0.4 0.8 1 0.7 0.3" bulge="1.4" contract="1" jiggle="0.4" />
+  <muscle name="left_triceps" origin="left_upper_arm 0.02 -150 0 .. 0.1 140 0" insertion="left_forearm 0 180 0"
+          via="left_upper_arm 0.96 175 0 0.5" fibers="2" radius="3 3.2" tendon="0 0.28" jiggle="0.3" />
+  <muscle name="left_forearm_extensors" origin="left_upper_arm 0.7 70 0 .. 0.95 100 0" insertion="left_forearm 0.95 60 0 .. 0.95 150 0"
+          fibers="2" radius="2.6 2.4" tendon="0 0.42" profile="0.6 1 0.7 0.4" />
+  <muscle name="left_forearm_flexors" origin="left_upper_arm 0.97 -80 0" insertion="left_forearm 0.95 -30 0"
+          radius="2.8 2.4" tendon="0 0.45" />
+</prefab>

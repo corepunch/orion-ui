@@ -148,6 +148,24 @@ typedef struct { char name[32]; float height, radius; float top, neck, pelvis, f
 typedef struct { void *node; mat4 rotation; } RigRotation;
 typedef struct { char instance[32], joint[32]; vec3 target; float error; int reachable; } RigTargetStatus;
 typedef struct { void *instance,*joint; mat4 matrix; } RigJointWorld;
+typedef struct { char name[64]; int parent; vec3 offset,endSite; int hasEndSite; int channels[6],nchannels,channelStart; } BvhJoint;
+typedef struct { char path[1024]; BvhJoint *joints; int njoints,cjoints; float *values; int nframes,nchannels; float frameTime; } BvhClip;
+typedef struct { void *instance,*muscle; vec3 pos,vel; float time; } MuscleState;
+typedef struct { vec3 pos,out; float w,t; } StrandSample;
+typedef struct { StrandSample *s; int n,c; } Strand;
+enum { SKIN_PRIM_ELLIPSOID, SKIN_PRIM_STRAND };
+typedef struct { int kind; vec3 center,ax,ay,az,radii; float taper,blend; Strand strand; } SkinPrim;
+typedef struct { void *instance; char name[64]; float length,rest,volume,flex; } MuscleRecord;
+
+float strand_volume(const Strand *st);
+Mesh strand_mesh(const Strand *st,int slices);
+Mesh skin_surface(const SkinPrim *prims,int nprims,float cell,float fat);
+
+int bvh_load(const char *path,BvhClip *clip);
+void bvh_free(BvhClip *clip);
+int bvh_find(const BvhClip *clip,const char *name);
+float bvh_duration(const BvhClip *clip);
+void bvh_sample(const BvhClip *clip,float time,int loop,vec3 *joints,vec3 *ends);
 
 enum {
 	EDIT_Q_SELECT = 0,
@@ -193,6 +211,11 @@ typedef struct {
 	RigRotation *rigRotations; int nrigRotations, crigRotations;
 	RigTargetStatus *rigTargets; int nrigTargets, crigTargets;
 	RigJointWorld *rigJointWorlds; int nrigJointWorlds, crigJointWorlds;
+	float time;
+	BvhClip *bvhClips; int nbvhClips, cbvhClips;
+	MuscleState *muscleStates; int nmuscleStates, cmuscleStates;
+	MuscleRecord *muscleRecords; int nmuscleRecords, cmuscleRecords;
+	SkinPrim *skinPrims; int nskinPrims, cskinPrims; int skinCollect; float skinBoneBlend;
 	char activeCamera[MAX_CAMERA_NAME];
 	char scenePath[512];
 	char assetRoot[512];
@@ -226,6 +249,8 @@ typedef struct {
 int load_scene(const char *path,Scene *s);
 void scene_free(Scene *s);
 void scene_select_camera(Scene *s,const char *name);
+void scene_set_time(Scene *s,float seconds);
+float scene_clip_duration(Scene *s);
 void scene_add_obj(Scene *s,Mesh mesh,mat4 M,mat4 R,vec3 color,float shin,int castsShadow,int renderable,int unlit);
 int scene_sanity_check(Scene *s);
 vec3 light_to_source(Light *light,vec3 point);

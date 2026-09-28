@@ -36,21 +36,24 @@ limbs, then tail and small parts.
    biped torso). The root grounds itself: its lowest rest volume touches Z=0.
 2. **Neck and head.** Chain them tip-to-tip (no `at`). A head is a short, fat
    bone aimed forward, so its volume sits ahead of the neck.
-3. **Limbs.** Attach the first limb bone to the body surface with `at` (fraction
-   along the parent) and `from` (direction to the surface point). Chain the rest
-   tip-to-tip down to a hand or foot. Author only the left side, named `left_*`,
-   with `mirror="1"` on the limb root. Mark feet with `foot="1"`.
+3. **Limbs.** Place the first limb bone's joint with `at` (fraction along the
+   parent), `from` (direction out of the parent's axis) and `out` (distance
+   from that axis in cm, e.g. a hip joint 10 cm from the pelvis axis). Chain the
+   rest tip-to-tip down to a hand or foot. Author only the left side, named
+   `left_*`; every `left_` limb gets a mirrored `right_` twin automatically.
+   Mark feet with `foot="1"`.
 4. **Tail, ears, snout.** Use `segments`, `aimEnd` and `taper` for curves and
    points. A cat's ears are short bones with `taper="0.15"`; a curling tail is
    one bone with `segments="3" aimEnd="165 85" taper="0.6"`.
 5. **Details.** Put eyes, noses and buttons inside their bone with
    `on="azimuth elevation"` and `at`. They snap to the bone's surface. Author
-   both eyes explicitly (`on="34 12"` and `on="-34 12"`); `mirror` applies to
-   bones only.
+   both eyes explicitly (`on="34 12"` and `on="-34 12"`); only `left_` bones
+   and muscles mirror.
 
-Volumes overlap their neighbours automatically (`overlap`, `sink`), which keeps
-bent joints closed. Raise `sink` when a limb looks glued on, and lower it when
-a joint bulges.
+Joints are skeleton, volumes are flesh: `out` is a plain distance, so changing
+a bone's radius or taper never moves a joint. Volumes overlap their neighbours
+automatically (`overlap`), which keeps bent joints closed. Check joint positions
+with `scener --list-joints` rather than by eye.
 
 ### Mapping CAT rig parts
 
@@ -58,7 +61,7 @@ a joint bulges.
 |---|---|
 | Pelvis / ribcage hub | A short fat bone, or the ends of a segmented spine |
 | Spine, neck, tail (N links) | One bone with `segments="N"` and `aimEnd` |
-| Leg / arm | Two or three chained bones plus a foot or hand, `mirror="1"` |
+| Leg / arm | Two or three chained `left_` bones plus a foot or hand |
 | Palm / ankle | A short end bone aimed forward (`aim="0 -8"`) |
 | Digits | Usually omit. Add small `taper` bones only when a close shot needs them |
 | Limb IK | `<ik tip="left_front_paw">` infers the limb chain from its tip |
@@ -126,8 +129,10 @@ Choose a camera where the action reads from the silhouette. Show the actor,
 gesture and target together. A three-quarter view usually reads better than a
 straight front view. Keep props from hiding hands, feet or key joints.
 
-Poses are still states: they have no time, interpolation, blending or playback.
-IK targets are fixed world positions, not live links to props.
+Poses are still states. To move a character over time, add muscles or play
+keyframed, walking or motion-capture clips as described in
+[character-animation.md](character-animation.md). IK targets are fixed world
+positions, not live links to props.
 
 ## Editor
 

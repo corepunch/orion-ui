@@ -326,7 +326,7 @@ static void test_bone_skeleton(void){
 	scene_free(&s);
 
 	Scene authored={0};
-	ASSERT_TRUE(window_test_load(&authored,"<scene up=\"z\"><bone name=\"left_leg\" mirror=\"1\" segments=\"2\" aim=\"0 -90\" length=\"20\" radius=\"3\">"
+	ASSERT_TRUE(window_test_load(&authored,"<scene up=\"z\"><bone name=\"left_leg\" segments=\"2\" aim=\"0 -90\" length=\"20\" radius=\"3\">"
 		"<sphere on=\"0 0\" at=\"0.75\" radius=\"1\"/></bone></scene>"));
 	int objects=authored.nobjs;
 	ASSERT_EQUAL(objects,6);
@@ -341,6 +341,75 @@ static void test_bone_skeleton(void){
 	ASSERT_EQUAL(restored.nobjs,objects);
 	unlink(authored.scenePath);
 	scene_free(&authored); scene_free(&restored); PASS();
+}
+
+#define HERCULES_MIN_MUSCLES 40
+#define SKIN_MIN_TRIANGLES 20000
+
+static const MuscleRecord *anim_test_muscle(Scene *s,const char *instance,const char *name){
+	for(int i=0;i<s->nmuscleRecords;i++)
+		if(!strcmp(scene_node_attr(s->muscleRecords[i].instance,"name"),instance) && !strcmp(s->muscleRecords[i].name,name)) return &s->muscleRecords[i];
+	return NULL;
+}
+
+static void test_animation_clips_and_muscles(void){
+	TEST("animation: keyframes, gait without foot slide, BVH retargeting, anatomical muscles and generated skin");
+	Scene s={0};
+	ASSERT_TRUE(load_scene("apps/scener/scenes/hercules_study.blks",&s));
+	ASSERT_EQUAL(s.ignoredAttributes,0);
+	void *herc=NULL;
+	for(int j=0;j<s.nobjs && !herc;j++) if(!strcmp(scene_node_tag(s.objs[j].editNode),"prefab") && !strcmp(scene_node_attr(s.objs[j].editNode,"name"),"Hercules")) herc=s.objs[j].editNode;
+	ASSERT_TRUE(herc!=NULL);
+	int muscles=0,skinTris=0;
+	for(int i=0;i<s.nmuscleRecords;i++) muscles+=s.muscleRecords[i].instance==herc;
+	for(int i=0;i<s.nobjs;i++) if(s.objs[i].editNode==herc && s.objs[i].mesh.ntris>skinTris) skinTris=s.objs[i].mesh.ntris;
+	ASSERT_TRUE(muscles>=HERCULES_MIN_MUSCLES);
+	ASSERT_TRUE(skinTris>SKIN_MIN_TRIANGLES);
+	/* Mirrored muscles route through mirrored vias and match their left side. */
+	static const char *pairs[]={"pectoral","deltoid","trapezius","lat","biceps","quadriceps","calf","sternocleidomastoid"};
+	for(size_t k=0;k<sizeof(pairs)/sizeof(pairs[0]);k++){
+		char left[64],right[64]; snprintf(left,sizeof(left),"left_%s",pairs[k]); snprintf(right,sizeof(right),"right_%s",pairs[k]);
+		const MuscleRecord *l=anim_test_muscle(&s,"Hercules",left),*r=anim_test_muscle(&s,"Hercules",right);
+		ASSERT_TRUE(l && r && fabsf(l->length-r->length)<0.002f && fabsf(l->volume/r->volume-1)<0.02f && fabsf(l->length/l->rest-1)<0.001f);
+	}
+	float lat=anim_test_muscle(&s,"Hercules","left_lat")->volume,biceps=anim_test_muscle(&s,"Hercules","left_biceps")->volume;
+	vec3 restHand=bone_test_world(&s,herc,"left_hand");
+
+	scene_select_camera(&s,"Flex");
+	ASSERT_TRUE(vlen(vsub(bone_test_world(&s,herc,"left_hand"),restHand))<0.001f);
+	scene_set_time(&s,1.0f);
+	ASSERT_TRUE(bone_test_world(&s,herc,"left_hand").z>bone_test_world(&s,herc,"left_upper_arm").z);
+	const MuscleRecord *bent=anim_test_muscle(&s,"Hercules","left_biceps");
+	ASSERT_TRUE(bent->length<bent->rest*0.9f && bent->flex>0.3f && bent->volume>biceps*1.15f);
+	ASSERT_TRUE(fabsf(anim_test_muscle(&s,"Hercules","left_lat")->volume/lat-1)<0.08f);
+	float bentVolume=bent->volume;
+	scene_set_time(&s,1.6f);
+	ASSERT_TRUE(anim_test_muscle(&s,"Hercules","left_biceps")->volume>bentVolume*1.05f);
+
+	scene_select_camera(&s,"Walk");
+	scene_set_time(&s,0.1f);
+	vec3 planted=bone_test_world(&s,herc,"left_foot"),hips=bone_test_world(&s,herc,"pelvis");
+	ASSERT_TRUE(planted.z<0.08f);
+	scene_set_time(&s,0.5f);
+	ASSERT_TRUE(vlen(vsub(bone_test_world(&s,herc,"left_foot"),planted))<0.004f);
+	scene_set_time(&s,0.9f);
+	ASSERT_TRUE(bone_test_world(&s,herc,"left_foot").z>planted.z+0.02f);
+	ASSERT_TRUE(bone_test_world(&s,herc,"pelvis").y<hips.y-0.5f);
+	for(int i=0;i<s.nrigTargets;i++) ASSERT_TRUE(s.rigTargets[i].reachable);
+
+	scene_select_camera(&s,"Mocap");
+	scene_set_time(&s,0);
+	ASSERT_TRUE(bone_test_world(&s,herc,"left_hand").z<bone_test_world(&s,herc,"left_upper_arm").z);
+	scene_set_time(&s,0.6f);
+	vec3 hand=bone_test_world(&s,herc,"left_hand"),head=bone_test_world(&s,herc,"head");
+	ASSERT_TRUE(hand.z>head.z && hand.x>0);
+	ASSERT_TRUE(bone_test_world(&s,herc,"left_foot").x>bone_test_world(&s,herc,"left_thigh").x);
+	ASSERT_TRUE(scene_clip_duration(&s)>=3.6f-0.001f);
+	scene_free(&s);
+
+	BvhClip missing;
+	ASSERT_TRUE(!bvh_load("apps/scener/mocap/missing.bvh",&missing));
+	PASS();
 }
 
 static void test_ignored_attributes_reported(void){
@@ -930,6 +999,7 @@ int main(void) {
   test_instance_rig_ik();
   test_rig_mirror_and_pose_reuse();
   test_bone_skeleton();
+  test_animation_clips_and_muscles();
   test_ignored_attributes_reported();
   test_enclosed_light_reported();
   test_nested_arch_emits_wall_parts_once();

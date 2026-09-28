@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Skeleton authoring study: a bone-built kitten, a re-aimed pose and a planted-paw IK pose. -->
+<!-- Skeleton authoring study: a bone-built kitten, a re-aimed pose, a planted-paw IK pose and a procedural walk. -->
 <scene up="z" ambient="0.35 0.35 0.4" background="neutral">
   <camera name="Standing" pos="-55 -70 35" look="0 0 12" fov="40" />
   <camera name="Side" pos="-90 0 15" look="0 0 13" fov="35" />
   <camera name="Batting" pos="-55 -70 35" look="0 0 12" fov="40"><use-pose instance="Kitten" name="Bat" /></camera>
   <camera name="Stretching" pos="-80 -45 30" look="0 0 10" fov="40"><use-pose instance="Kitten" name="Stretch" /></camera>
+  <camera name="Walking" pos="-75 -60 28" look="0 -14 10" fov="40"><use-clip instance="Kitten" name="Walk" /></camera>
+  <clip name="Walk" gait="walk" cycle="0.8" stride="7" lift="2.5" duty="0.65" bob="0.4" crouch="0.8" sway="3" tailSway="10" />
   <pose name="Bat">
     <joint target="neck" aim="10 30" />
     <joint target="head" aim="20 25" />

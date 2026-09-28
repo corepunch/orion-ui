@@ -22,10 +22,12 @@
 #define CLI_MAX_SUPERSAMPLE 4
 #define CLI_BYTE_MAX 255.0f
 #define CLI_COLOR_GAMMA 2.2f
+#define CLI_DEFAULT_FPS 24.0f
+#define CLI_MAX_FRAMES 100000
 
 typedef struct {
 	bool screenshot_mode;
-	bool batch, layout, list_cameras, help, version, invalid;
+	bool batch, layout, list_cameras, list_joints, help, version, invalid;
 	char output_dir[1024], format[8];
 	float layout_scale;
 	bool debug_flags_set;
@@ -34,6 +36,9 @@ typedef struct {
 	char camera_name[MAX_CAMERA_NAME];
 	int width, height, supersample;
 	int debug_flags;
+	float time, fps;
+	int frame_first, frame_last;
+	bool frames_all;
 } scener_cli_t;
 
 app_state_t *g_app = NULL;
@@ -62,8 +67,10 @@ accel_table_t *scener_active_accelerators(void) {
 static void cli_usage(void) {
 	puts("scener [SCENE] [--cam NAME]\n"
 	     "scener --render SCENE [--camera NAME] [--size WIDTHxHEIGHT] [--format jpg|png] [--output-dir DIR]\n"
+	     "        [--time SECONDS | --frames N|FIRST-LAST|all [--fps FPS]]   animated clips; sequences write CAMERA_0001.jpg\n"
 	     "scener --layout SCENE [--scale PIXELS_PER_CM] [--format jpg|png] [--output-dir DIR]\n"
 	     "scener --list-cameras SCENE\n"
+	     "scener --list-joints SCENE [--camera NAME] [--time SECONDS]   world joint positions in cm\n"
 	     "scener SCENE --screenshot FILE [--cam NAME] [--size WIDTHxHEIGHT]\n"
 	     "Options: --supersample 1..4 (default 2), -no-shadows, -wireframe, -d FLAGS, --help, --version\n"
 	     "Scenes default to Y up; <scene up=\"z\"> selects Z-up views without changing primitive axes.");
@@ -72,7 +79,7 @@ static void cli_usage(void) {
 
 static void cli_parse(int argc, char *argv[]) {
 	memset(&g_cli,0,sizeof(g_cli));
-	g_cli.width=1280; g_cli.height=800; g_cli.layout_scale=2;g_cli.supersample=CLI_DEFAULT_SUPERSAMPLE;
+	g_cli.width=1280; g_cli.height=800; g_cli.fps=CLI_DEFAULT_FPS; g_cli.frame_first=0; g_cli.frame_last=-1; g_cli.layout_scale=2;g_cli.supersample=CLI_DEFAULT_SUPERSAMPLE;
 	strcpy(g_cli.format,"jpg"); strcpy(g_cli.output_dir,".");
 	g_cli.debug_flags=DBG_HIDE_CHARS|DBG_HIDE_LIGHTS;
 	for(int i=1;i<argc;i++){
@@ -82,6 +89,7 @@ static void cli_parse(int argc, char *argv[]) {
 		if(!strcmp(arg,"--render")){g_cli.batch=g_cli.screenshot_mode=true;continue;}
 		if(!strcmp(arg,"--layout")){g_cli.layout=g_cli.screenshot_mode=true;continue;}
 		if(!strcmp(arg,"--list-cameras")||!strcmp(arg,"-list-cameras")){g_cli.list_cameras=true;continue;}
+		if(!strcmp(arg,"--list-joints")){g_cli.list_joints=true;continue;}
 		if(!strcmp(arg,"-no-shadows")){g_cli.debug_flags|=DBG_NO_SHADOWS;continue;}
 		if(!strcmp(arg,"-wireframe")){g_cli.debug_flags|=DBG_WIREFRAME;continue;}
 		if(arg[0]!='-'){
@@ -93,7 +101,7 @@ static void cli_parse(int argc, char *argv[]) {
 		bool output_dir=!strcmp(arg,"--output-dir")||(!strcmp(arg,"-o")&&(g_cli.batch||g_cli.layout));
 		if(output_dir)output=false;
 		bool camera=!strcmp(arg,"--camera")||!strcmp(arg,"--cam")||!strcmp(arg,"-cam");
-		bool known=output||output_dir||camera||!strcmp(arg,"--size")||!strcmp(arg,"--format")||!strcmp(arg,"--output-dir")||!strcmp(arg,"--scale")||!strcmp(arg,"--supersample")||!strcmp(arg,"-d");
+		bool known=output||output_dir||camera||!strcmp(arg,"--size")||!strcmp(arg,"--format")||!strcmp(arg,"--output-dir")||!strcmp(arg,"--scale")||!strcmp(arg,"--supersample")||!strcmp(arg,"-d")||!strcmp(arg,"--time")||!strcmp(arg,"--frames")||!strcmp(arg,"--fps");
 		if(!known){fprintf(stderr,"unsupported option: %s\n",arg);g_cli.invalid=true;continue;}
 		if(i+1>=argc){fprintf(stderr,"missing value for %s\n",arg);g_cli.invalid=true;continue;}
 		value=argv[++i];
@@ -113,11 +121,24 @@ static void cli_parse(int argc, char *argv[]) {
 		}else if(!strcmp(arg,"--supersample")){
 			char *end;long n=strtol(value,&end,10);
 			if(*end||n<1||n>CLI_MAX_SUPERSAMPLE){fprintf(stderr,"invalid supersampling: %s\n",value);g_cli.invalid=true;}else g_cli.supersample=(int)n;
+		}else if(!strcmp(arg,"--time")||!strcmp(arg,"--fps")){
+			char *end; float v=strtof(value,&end);
+			bool fps=!strcmp(arg,"--fps");
+			if(*end||!isfinite(v)||(fps?v<=0:v<0)){fprintf(stderr,"invalid %s: %s\n",arg+2,value);g_cli.invalid=true;}
+			else if(fps) g_cli.fps=v; else g_cli.time=v;
+		}else if(!strcmp(arg,"--frames")){
+			int a,b; char tail;
+			if(!strcmp(value,"all")) g_cli.frames_all=true;
+			else if(sscanf(value,"%d-%d%c",&a,&b,&tail)==2&&a>=0&&b>=a&&b<CLI_MAX_FRAMES){g_cli.frame_first=a;g_cli.frame_last=b;}
+			else if(sscanf(value,"%d%c",&a,&tail)==1&&a>0&&a<=CLI_MAX_FRAMES){g_cli.frame_first=0;g_cli.frame_last=a-1;}
+			else{fprintf(stderr,"invalid frames: %s\n",value);g_cli.invalid=true;}
 		}else if(!strcmp(arg,"-d")) g_cli.debug_flags=atoi(value);
 	}
 	if(g_cli.screenshot_mode&&!g_cli.scene_path[0]){fprintf(stderr,"rendering requires a scene\n");g_cli.invalid=true;}
+	if(g_cli.list_joints&&!g_cli.scene_path[0]){fprintf(stderr,"joint listing requires a scene\n");g_cli.invalid=true;}
 	if(g_cli.list_cameras&&!g_cli.scene_path[0]){fprintf(stderr,"camera listing requires a scene\n");g_cli.invalid=true;}
 	if((g_cli.layout&&g_cli.batch)||(g_cli.list_cameras&&g_cli.screenshot_mode)){fprintf(stderr,"select one CLI mode\n");g_cli.invalid=true;}
+	if((g_cli.frames_all||g_cli.frame_last>=0)&&!g_cli.batch){fprintf(stderr,"--frames requires --render\n");g_cli.invalid=true;}
 	if(g_cli.screenshot_mode&&!g_cli.batch&&!g_cli.layout&&!g_cli.output_path[0]) strcpy(g_cli.output_path,"screenshot.png");
 }
 
@@ -315,6 +336,12 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   if (!doc) return false;
 
   if(g_cli.camera_name[0]&&!cli_select_camera(&doc->scene,g_cli.camera_name))return false;
+  if(g_cli.time>0) scene_set_time(&doc->scene,g_cli.time);
+  if(g_cli.frames_all){
+    float duration=scene_clip_duration(&doc->scene);
+    if(duration<=0){fprintf(stderr,"--frames all: the scene has no clips\n");return false;}
+    g_cli.frame_first=0;g_cli.frame_last=(int)ceilf(duration*g_cli.fps)-1;
+  }
   if(g_cli.screenshot_mode){
     if(g_cli.batch||g_cli.layout){
       if(!cli_make_dirs(g_cli.output_dir))return false;
@@ -327,7 +354,12 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
         if(strchr(names[i],'/')||strchr(names[i],'\\')||!names[i][0]){fprintf(stderr,"invalid output camera name: %s\n",names[i]);ok=false;break;}
         char output[2048];snprintf(output,sizeof(output),"%s/%s.%s",g_cli.output_dir,names[i],g_cli.format);
         if(!g_cli.layout)ok=cli_select_camera(&doc->scene,names[i]);
-        if(ok)ok=scener_write_screenshot(doc,output);
+        for(int f=g_cli.frame_first;ok&&f<=g_cli.frame_last;f++){
+          snprintf(output,sizeof(output),"%s/%s_%04d.%s",g_cli.output_dir,names[i],f+1,g_cli.format);
+          scene_set_time(&doc->scene,f/g_cli.fps);
+          ok=scener_write_screenshot(doc,output);
+        }
+        if(ok&&g_cli.frame_last<0)ok=scener_write_screenshot(doc,output);
       }
       free(names);if(!ok)return false;
     }else if(!scener_write_screenshot(doc,g_cli.output_path))return false;
@@ -375,6 +407,21 @@ int main(int argc, char *argv[]) {
   if(g_cli.invalid)return 2;
   if(g_cli.help){cli_usage();return 0;}
   if(g_cli.version){puts("scener " SCENER_VERSION);return 0;}
+  if(g_cli.list_joints){
+    Scene scene={0};if(!load_scene(g_cli.scene_path,&scene))return 1;
+    if(g_cli.camera_name[0]) scene_select_camera(&scene,g_cli.camera_name);
+    if(g_cli.time>0) scene_set_time(&scene,g_cli.time);
+    for(int i=0;i<scene.nrigJointWorlds;i++){
+      RigJointWorld *w=&scene.rigJointWorlds[i];
+      vec3 p=mat4_xform_point(w->matrix,v3(0,0,0));
+      printf("%-12s %-28s %8.1f %8.1f %8.1f\n",scene_node_attr(w->instance,"name"),scene_node_attr(w->joint,"name"),p.x*100,p.y*100,p.z*100);
+    }
+    for(int i=0;i<scene.nmuscleRecords;i++){
+      MuscleRecord *m=&scene.muscleRecords[i];
+      printf("muscle %-12s %-28s length %.1f rest %.1f flex %.2f volume %.0f cm3\n",scene_node_attr(m->instance,"name"),m->name,m->length*100,m->rest*100,m->flex,m->volume*1e6);
+    }
+    scene_free(&scene);return 0;
+  }
   if(g_cli.list_cameras){
     Scene scene={0};if(!load_scene(g_cli.scene_path,&scene))return 1;
     for(int i=0;i<scene.ncameras;i++)puts(scene.cameras[i].name);

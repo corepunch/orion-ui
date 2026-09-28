@@ -68,14 +68,63 @@
 #define RIG_EPSILON 0.00001f
 #define RIG_REACH_MARGIN 0.0001f
 #define BONE_JOINT_OVERLAP_RATIO 0.5f
-#define BONE_ATTACH_SINK_RATIO 0.5f
 #define BONE_DEFAULT_RADIUS 0.05f
 #define BONE_DEFAULT_RINGS 12
 #define BONE_DEFAULT_SLICES 16
 #define BONE_VERTICAL_LIMIT 0.99f
 #define BONE_NAME_CAPACITY 64
+#define MIRROR_TEXT_CAPACITY 512
+#define ANCHOR_AZIMUTH_INDEX 1
 #define BONE_FOOT_TOLERANCE 0.002f
 #define CM_PER_METRE 100.0f
+#define BONE_DEFAULT_ELEVATION 90.0f
+#define ANIM_VALUE_CAPACITY 96
+#define GAIT_DEFAULT_CYCLE 1.0f
+#define GAIT_DEFAULT_STRIDE 0.2f
+#define GAIT_DEFAULT_LIFT 0.04f
+#define GAIT_DEFAULT_DUTY 0.6f
+#define GAIT_DEFAULT_BOB 0.01f
+#define GAIT_DEFAULT_SWAY 3.0f
+#define GAIT_DEFAULT_ARM_SWING 20.0f
+#define GAIT_DEFAULT_TAIL_SWAY 12.0f
+#define GAIT_HALF_CYCLE 0.5f
+#define GAIT_QUARTER_CYCLE 0.25f
+#define GAIT_BOB_HARMONIC 2.0f
+#define GAIT_TAIL_LAG 0.7f
+#define MOCAP_DEFAULT_SCALE 0.01f
+#define MUSCLE_DEFAULT_RADIUS 2.0f
+#define MUSCLE_DEFAULT_GREY 0.7f
+#define MUSCLE_DEFAULT_SHININESS 8.0f
+#define MUSCLE_DEFAULT_AT 0.2f
+#define MUSCLE_DEFAULT_SAMPLES 14
+#define MUSCLE_DEFAULT_BLEND 0.011f
+#define MUSCLE_FAN_BLEND 0.022f
+#define MUSCLE_PROFILE_CAPACITY 12
+#define MUSCLE_VIA_CAPACITY 6
+#define MUSCLE_VIA_TEXT 128
+#define MUSCLE_PATH_STEPS 16
+#define MUSCLE_DENSE_CAPACITY 256
+#define MUSCLE_TENDON_RATIO 0.25f
+#define MUSCLE_TENDON_FLATNESS 1.6f
+#define MUSCLE_BAND_DEPTH 0.4f
+#define MUSCLE_BAND_SHARPNESS 12.0f
+#define MUSCLE_BAND_WIDTH_SHARE 0.3f
+#define MUSCLE_SURFACE_RISE 0.5f
+#define MUSCLE_RED_R 0.62f
+#define MUSCLE_RED_G 0.20f
+#define MUSCLE_RED_B 0.17f
+#define MUSCLE_MIN_SCALE 0.6f
+#define MUSCLE_MAX_SCALE 1.8f
+#define MUSCLE_FLEX_GAIN 0.5f
+#define MUSCLE_FLEX_WIDTH 0.15f
+#define MUSCLE_CONTRACT_GAIN 4.0f
+#define MUSCLE_JIGGLE_HZ 5.0f
+#define MUSCLE_JIGGLE_DAMPING 0.2f
+#define MUSCLE_MAX_STEP 0.25f
+#define SKIN_DEFAULT_RESOLUTION 0.011f
+#define SKIN_DEFAULT_FAT 0.003f
+#define SKIN_DEFAULT_BONE_BLEND 0.025f
+#define MUSCLE_SUBSTEP (1.0f/240.0f)
 #define ENCLOSURE_RAY_X 0.5773f
 #define ENCLOSURE_RAY_Y 0.6211f
 #define ENCLOSURE_RAY_Z 0.5303f
@@ -265,10 +314,10 @@ static vec3 bone_offset(XmlNode *n){
 	}
 	BoneGeom pg=bone_geom(parent);
 	if(!bone_at(n)) return vscale(pg.dir,pg.length);
-	BoneGeom g=bone_geom(n);
-	vec3 direction=xml_attr_direction(n,"from",g.dir);
-	float sink=xml_attr_f_cm(n,"sink",BONE_ATTACH_SINK_RATIO*fminf(g.radiusSide,g.radiusOther));
-	return bone_attach_point(&pg,strtof(bone_at(n),NULL),direction,sink);
+	/* Joints sit a fixed distance from the parent's axis, never on its volume, so
+	   reshaping flesh (radius, taper, overlap) cannot move the skeleton. */
+	vec3 direction=vnorm(xml_attr_direction(n,"from",bone_geom(n).dir));
+	return vadd(vscale(pg.dir,pg.length*strtof(bone_at(n),NULL)),vscale(direction,xml_attr_f_cm(n,"out",0)));
 }
 
 /* Report rest-pose clearance of bones marked foot="1" so authors fix lengths, not guesses. */
@@ -320,8 +369,38 @@ static XmlNode *xml_clone(XmlNode *n,XmlNode *parent){
 	return copy;
 }
 
+/* Mirror a muscle anchor list ("bone at azimuth elevation [lift] [.. at azimuth elevation]; …"
+   or plain bone names): side-prefixed bones swap, every azimuth flips sign. */
+static void rig_mirror_anchors(XmlNode *n,const char *attr){
+	const char *value=xml_attr(n,attr,NULL);
+	if(!value) return;
+	char out[MIRROR_TEXT_CAPACITY]="",item[MIRROR_TEXT_CAPACITY];
+	while(*value){
+		const char *end=strchr(value,';');
+		char part[MIRROR_TEXT_CAPACITY],token[MIRROR_TEXT_CAPACITY]; int used,index=0;
+		snprintf(part,sizeof(part),"%.*s",(int)(end?(size_t)(end-value):strlen(value)),value);
+		value=end?end+1:value+strlen(value);
+		if(out[0]) strncat(out,";",sizeof(out)-strlen(out)-1);
+		for(const char *p=part;sscanf(p," %511s%n",token,&used)==1;p+=used){
+			char *number;
+			float v=strtof(token,&number);
+			if(!strcmp(token,"..")){ index=0; snprintf(item,sizeof(item)," .."); }
+			else if(*number || number==token){
+				char mirrored[BONE_NAME_CAPACITY];
+				if(!strncmp(token,"left_",5) || !strncmp(token,"right_",6)) rig_mirror_name(token,mirrored,sizeof(mirrored));
+				else snprintf(mirrored,sizeof(mirrored),"%s",token);
+				snprintf(item,sizeof(item)," %s",mirrored);
+			} else snprintf(item,sizeof(item)," %.6g",index++==ANCHOR_AZIMUTH_INDEX?-v:v);
+			strncat(out,item,sizeof(out)-strlen(out)-1);
+		}
+	}
+	xml_set_attr(n,attr,out[0]==' '?out+1:out);
+}
+
 static void rig_mirror_subtree(XmlNode *n){
 	static const char *directions[]={"aim","aimEnd","from","on"};
+	static const char *anchors[]={"origin","insertion","via","wrap"};
+	for(size_t i=0;i<sizeof(anchors)/sizeof(anchors[0]);i++) rig_mirror_anchors(n,anchors[i]);
 	for(size_t i=0;i<sizeof(directions)/sizeof(directions[0]);i++){
 		float azimuth,elevation; char value[64];
 		if(!xml_attr_2f(n,directions[i],0,0,&azimuth,&elevation)) continue;
@@ -390,9 +469,10 @@ static void rig_expand_mirrors(XmlNode *n){
 	for(int i=0;i<n->nkids;i++){
 		XmlNode *kid=n->kids[i];
 		rig_expand_mirrors(kid);
-		if(!xml_is_bone(kid) || !xml_attr_i(kid,"mirror",0) || xml_attr(kid,"generated",NULL)) continue;
+		/* Every left_ bone chain or muscle gets a right_ twin; a left_ bone under another left_ bone travels with its parent. */
+		if((!xml_is_bone(kid) && strcmp(kid->tag,"muscle")) || strncmp(xml_attr(kid,"name",""),"left_",5) ||
+			!strncmp(xml_attr(n,"name",""),"left_",5) || xml_attr(kid,"generated",NULL)) continue;
 		XmlNode *copy=xml_clone(kid,n);
-		xml_remove_attr(copy,"mirror");
 		rig_mirror_subtree(copy);
 		xml_set_attr(copy,"generated","mirror");
 		xml_set_attr(copy,"pair",xml_attr(kid,"name",""));
@@ -405,7 +485,8 @@ static void rig_expand_mirrors(XmlNode *n){
 static const char *rig_pair_name(XmlNode *joint,char *buffer,size_t size){
 	const char *pair=xml_attr(joint,"pair",NULL);
 	if(pair) return pair;
-	if(!xml_attr_i(joint,"mirror",0)) return "";
+	const char *name=xml_attr(joint,"name","");
+	if(strncmp(name,"left_",5) && strncmp(name,"right_",6)) return "";
 	rig_mirror_name(xml_attr(joint,"name",""),buffer,size);
 	return buffer;
 }
@@ -517,6 +598,10 @@ void scene_free(Scene *s){
 	free(s->prefabs); free(s->instances); free(s->rigRotations); free(s->rigTargets); free(s->rigJointWorlds); free(s->negativeBoxes); free(s->negativeArches);
 	free(s->negativeCylinders); free(s->overlayLines); free(s->charDefs); free(s->shapes);
 	free(s->dragStartVerts); free(s->dragObjIndices); free(s->dragVertOffsets);
+	for(int i=0;i<s->nbvhClips;i++) bvh_free(&s->bvhClips[i]);
+	free(s->bvhClips); free(s->muscleStates); free(s->muscleRecords);
+	for(int i=0;i<s->nskinPrims;i++) free(s->skinPrims[i].strand.s);
+	free(s->skinPrims);
 	for(int i=0;i<s->nscreenTextures;i++) image_free(s->screenTextures[i].pixels);
 	free(s->screenTextures);
 	memset(s,0,sizeof(*s));
@@ -1267,19 +1352,31 @@ static void parse_ellipsoid(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, 
 	scene_add_obj(s, mesh, M,R, color,shin,castsShadow,renderable,unlit);
 }
 
+static void bone_world_ellipsoid(XmlNode *bone,mat4 world,SkinPrim *e);
+
 static void parse_bone(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 pos, vec3 rot, vec3 color, float shin, int castsShadow, int renderable, int unlit){
 	(void)parentM; (void)pos; (void)rot;
 	if(!xml_is_bone(n->parent) && xml_attr_i(n,"ground",1)){
 		vec3 rest=bone_offset(n); rest.x=rest.y=0;
 		bone_report_feet(n,rest,xml_attr(n,"name","?"));
 	}
-	if(xml_attr_i(n,"volume",1)){
+	int skin=xml_attr_i(n,"skin",1);
+	if(xml_attr_i(n,"volume",1) && s->skinCollect && skin){
+		SkinPrim prim; bone_world_ellipsoid(n,M,&prim); prim.blend=s->skinBoneBlend;
+		DA_PUSH(s->skinPrims,s->nskinPrims,s->cskinPrims,prim);
+	} else if(xml_attr_i(n,"volume",1)){
 		BoneGeom g=bone_geom(n);
 		Mesh mesh=gen_ellipsoid(g.center,g.side,g.dir,g.other,v3(g.radiusSide,g.along,g.radiusOther),g.taper,
 			xml_attr_i(n,"rings",BONE_DEFAULT_RINGS),xml_attr_i(n,"slices",BONE_DEFAULT_SLICES));
 		scene_add_obj(s, mesh, M,R, color,shin,castsShadow,renderable,unlit);
 	}
 	parse_nodes(s, n, M, R);
+}
+
+/* Muscles span two bones, so parse_prefab renders them once the whole skeleton is placed. */
+static void parse_muscle(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 pos, vec3 rot, vec3 color, float shin, int castsShadow, int renderable, int unlit){
+	(void)M; (void)R; (void)parentM; (void)pos; (void)rot; (void)color; (void)shin; (void)castsShadow; (void)renderable; (void)unlit;
+	if(!s->activeRigInstance && !s->prefabDocument && !s->editDepth){ fprintf(stderr,"[scener] muscle %s outside a prefab instance is not rendered\n",xml_attr(n,"name","?")); fflush(stderr); }
 }
 
 static void parse_group(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 pos, vec3 rot, vec3 color, float shin, int castsShadow, int renderable, int unlit){
@@ -1840,6 +1937,747 @@ static void rig_solve_ik(Scene *s,XmlNode *ik,XmlNode *root,mat4 instanceM){
 	if(!status.reachable){ fprintf(stderr,"[scener] IK %s:%s target out of reach by %.3f m\n",status.instance,status.joint,status.error); fflush(stderr); }
 }
 
+/* ------------------------------------------------------------- Animation -- */
+
+/* A <clip> is evaluated at s->time into a transient pose (keyframes, gaits) or
+   into per-bone rig rotations (motion capture), so the static pose, IK and bone
+   volume code paths render every frame unchanged. */
+
+static XmlNode *anim_root_child(Scene *s,const char *tag,const char *name){
+	XmlNode *root=(XmlNode*)s->sceneRoot;
+	for(int i=0;root && name && i<root->nkids;i++)
+		if(!strcmp(root->kids[i]->tag,tag) && !strcmp(xml_attr(root->kids[i],"name",""),name)) return root->kids[i];
+	return NULL;
+}
+
+static XmlNode *anim_clip_for_instance(Scene *s,XmlNode *instance,float *offset){
+	const char *clipName=xml_attr(instance,"clip",NULL),*instanceName=xml_attr(instance,"name","");
+	*offset=xml_attr_f(instance,"clipOffset",0);
+	XmlNode *camera=anim_root_child(s,"camera",s->activeCamera);
+	for(int k=0;camera && k<camera->nkids;k++){
+		XmlNode *use=camera->kids[k];
+		if(strcmp(use->tag,"use-clip") || strcmp(xml_attr(use,"instance",""),instanceName)) continue;
+		clipName=xml_attr(use,"name",clipName); *offset=xml_attr_f(use,"offset",*offset);
+	}
+	XmlNode *clip=anim_root_child(s,"clip",clipName);
+	if(clipName && !clip){ fprintf(stderr,"[scener] instance %s: unknown clip '%s'\n",instanceName,clipName); fflush(stderr); }
+	return clip;
+}
+
+static float anim_wrap(float t,float length,int loop){
+	if(length<=0) return 0;
+	if(!loop) return fmaxf(0,fminf(t,length));
+	t=fmodf(t,length);
+	return t<0?t+length:t;
+}
+
+static XmlNode *anim_add(XmlNode *parent,const char *tag,const char *idAttr,const char *id){
+	XmlNode *n=xml_new(tag); n->parent=parent;
+	xml_set_attr(n,idAttr,id);
+	DA_PUSH(parent->kids,parent->nkids,parent->ckids,n);
+	return n;
+}
+
+static void anim_set_floats(XmlNode *n,const char *attr,const float *v,int count){
+	char value[ANIM_VALUE_CAPACITY];
+	if(count==1) snprintf(value,sizeof(value),"%.6g",v[0]);
+	else if(count==2) snprintf(value,sizeof(value),"%.6g %.6g",v[0],v[1]);
+	else snprintf(value,sizeof(value),"%.6g %.6g %.6g",v[0],v[1],v[2]);
+	xml_set_attr(n,attr,value);
+}
+
+static int anim_get_floats(XmlNode *n,const char *attr,float *v,int count){
+	const char *value=xml_attr(n,attr,NULL);
+	if(!value) return 0;
+	float f[3]={0};
+	int got=sscanf(value,"%f %f %f",&f[0],&f[1],&f[2]);
+	if(got<count){ fprintf(stderr,"[scener] <%s> %s='%s' needs %d numbers\n",n->tag,attr,value,count); fflush(stderr); return 0; }
+	memcpy(v,f,sizeof(float)*(size_t)count);
+	return 1;
+}
+
+typedef struct { const char *tag,*id,*attrs[3]; int counts[3]; } anim_kind_t;
+static const anim_kind_t anim_kinds[]={
+	{ "joint", "target", { "aim", "rot", "pos" },    { 2, 3, 3 } },
+	{ "flex",  "muscle", { "amount", NULL, NULL },   { 1, 0, 0 } },
+	{ "ik",    "tip",    { "target", NULL, NULL },   { 3, 0, 0 } },
+};
+#define ANIM_KIND_IK 2
+
+/* A key lists its own joints first, then those of the pose it names. */
+static XmlNode *anim_key_item(Scene *s,XmlNode *key,const anim_kind_t *kind,const char *id){
+	XmlNode *sources[2]={key,anim_root_child(s,"pose",xml_attr(key,"pose",NULL))};
+	for(int p=0;p<2;p++) for(int i=0;sources[p] && i<sources[p]->nkids;i++){
+		XmlNode *item=sources[p]->kids[i];
+		if(!strcmp(item->tag,kind->tag) && !strcmp(xml_attr(item,kind->id,""),id)) return item;
+	}
+	return NULL;
+}
+
+static int anim_rest_value(XmlNode *proot,const anim_kind_t *kind,const char *id,const char *attr,float *out){
+	memset(out,0,sizeof(float)*3);
+	if(kind==&anim_kinds[ANIM_KIND_IK]) return 0;
+	if(strcmp(attr,"aim")) return 1;
+	XmlNode *bone=rig_find_joint(proot,id);
+	if(!xml_is_bone(bone)) return 0;
+	out[1]=BONE_DEFAULT_ELEVATION;
+	anim_get_floats(bone,"aim",out,2);
+	return 1;
+}
+
+static float anim_catmull(float p0,float p1,float p2,float p3,float u){
+	return 0.5f*(2*p1+(p2-p0)*u+(2*p0-5*p1+4*p2-p3)*u*u+(3*p1-p0-3*p2+p3)*u*u*u);
+}
+
+typedef struct { XmlNode **keys; float *times; int n,loop; float length,time; const char *ease; int from,to,before,after; float u; } anim_span_t;
+
+static anim_span_t anim_span(XmlNode **keys,float *times,int n,int loop,float length,float t,const char *ease){
+	anim_span_t sp={keys,times,n,loop,length,t,ease,0,0,0,0,0};
+	int i=-1;
+	for(int k=0;k<n;k++) if(times[k]<=t) i=k;
+	if(!loop && (i<0 || i==n-1)){ sp.from=sp.to=sp.before=sp.after=i<0?0:n-1; return sp; }
+	float t0,t1;
+	if(i<0){ i=n-1; t+=length; }
+	sp.from=i; sp.to=loop?(i+1)%n:i+1;
+	t0=times[sp.from]; t1=times[sp.to]+(sp.to<=sp.from?length:0);
+	sp.before=loop?(i-1+n)%n:(i>0?i-1:0);
+	sp.after=loop?(sp.to+1)%n:(sp.to+1<n?sp.to+1:sp.to);
+	sp.u=t1>t0?(t-t0)/(t1-t0):0;
+	if(!strcmp(ease,"smooth")) sp.u=sp.u*sp.u*(3-2*sp.u);
+	return sp;
+}
+
+static int anim_channel(Scene *s,XmlNode *proot,const anim_span_t *sp,const anim_kind_t *kind,const char *id,int a,float *out){
+	int count=kind->counts[a];
+	float rest[3],values[4][3];
+	int hasRest=anim_rest_value(proot,kind,id,kind->attrs[a],rest),defined=0;
+	int picks[4]={sp->before,sp->from,sp->to,sp->after};
+	for(int k=0;k<sp->n;k++){ XmlNode *item=anim_key_item(s,sp->keys[k],kind,id); if(item && xml_attr(item,kind->attrs[a],NULL)) defined=1; }
+	if(!defined) return 0;
+	for(int p=0;p<4;p++){
+		XmlNode *item=anim_key_item(s,sp->keys[picks[p]],kind,id);
+		if(item && anim_get_floats(item,kind->attrs[a],values[p],count)) continue;
+		if(hasRest){ memcpy(values[p],rest,sizeof(rest)); continue; }
+		/* Channels without a rest value (IK targets) hold the nearest keyed value. */
+		int found=0;
+		for(int d=1;d<sp->n && !found;d++) for(int sign=-1;sign<=1 && !found;sign+=2){
+			int k=(picks[p]+sign*d+sp->n*2)%sp->n;
+			XmlNode *near=anim_key_item(s,sp->keys[k],kind,id);
+			found=near && anim_get_floats(near,kind->attrs[a],values[p],count);
+		}
+		if(!found) return 0;
+	}
+	for(int c=0;c<count;c++) out[c]=!strcmp(sp->ease,"spline")?anim_catmull(values[0][c],values[1][c],values[2][c],values[3][c],sp->u):
+		values[1][c]+(values[2][c]-values[1][c])*sp->u;
+	return 1;
+}
+
+static XmlNode *anim_keyframe_pose(Scene *s,XmlNode *clip,XmlNode *proot,float time){
+	XmlNode **keys=NULL; float *times=NULL; int n=0,ckeys=0,ctimes=0,ntimes=0;
+	for(int i=0;i<clip->nkids;i++) if(!strcmp(clip->kids[i]->tag,"key")){
+		XmlNode *key=clip->kids[i]; float t=xml_attr_f(key,"time",0);
+		int at=n;
+		while(at>0 && times[at-1]>t) at--;
+		DA_PUSH(keys,n,ckeys,key); DA_PUSH(times,ntimes,ctimes,t);
+		memmove(keys+at+1,keys+at,(size_t)(n-1-at)*sizeof(*keys)); memmove(times+at+1,times+at,(size_t)(n-1-at)*sizeof(*times));
+		keys[at]=key; times[at]=t;
+	}
+	const char *ease=xml_attr(clip,"ease","spline");
+	int loop=xml_attr_i(clip,"loop",1);
+	float length=xml_attr_f(clip,"length",n?times[n-1]:0);
+	if(strcmp(ease,"spline") && strcmp(ease,"smooth") && strcmp(ease,"linear")){ fprintf(stderr,"[scener] clip %s: unknown ease '%s'\n",xml_attr(clip,"name",""),ease); ease="spline"; }
+	if(!n){ fprintf(stderr,"[scener] clip %s has no keys\n",xml_attr(clip,"name","")); fflush(stderr); free(keys); free(times); return NULL; }
+	anim_span_t sp=anim_span(keys,times,n,loop,length,anim_wrap(time*xml_attr_f(clip,"speed",1),length,loop),ease);
+	XmlNode *pose=xml_new("pose");
+	for(size_t k=0;k<sizeof(anim_kinds)/sizeof(anim_kinds[0]);k++){
+		const anim_kind_t *kind=&anim_kinds[k];
+		for(int key=0;key<n;key++){
+			XmlNode *sources[2]={keys[key],anim_root_child(s,"pose",xml_attr(keys[key],"pose",NULL))};
+			for(int p=0;p<2;p++) for(int i=0;sources[p] && i<sources[p]->nkids;i++){
+				XmlNode *item=sources[p]->kids[i];
+				const char *id=xml_attr(item,kind->id,NULL);
+				if(strcmp(item->tag,kind->tag) || !id) continue;
+				int seen=0;
+				for(int j=0;j<pose->nkids && !seen;j++) seen=!strcmp(pose->kids[j]->tag,kind->tag) && !strcmp(xml_attr(pose->kids[j],kind->id,""),id);
+				if(seen) continue;
+				XmlNode *out=anim_add(pose,kind->tag,kind->id,id);
+				for(int a=0;a<3 && kind->attrs[a];a++){ float v[3]; if(anim_channel(s,proot,&sp,kind,id,a,v)) anim_set_floats(out,kind->attrs[a],v,kind->counts[a]); }
+				if(k==ANIM_KIND_IK){
+					XmlNode *near=anim_key_item(s,keys[sp.u<0.5f?sp.from:sp.to],kind,id);
+					if(!near) near=item;
+					static const char *copied[]={"pole","keepOrientation","plant","mid","root"};
+					for(size_t c=0;c<sizeof(copied)/sizeof(copied[0]);c++) if(xml_attr(near,copied[c],NULL)) xml_set_attr(out,copied[c],xml_attr(near,copied[c],""));
+				}
+			}
+		}
+	}
+	free(keys); free(times);
+	return pose;
+}
+
+/* Procedural gait: each foot="1" bone follows a stance/swing cycle solved by IK.
+   Stance moves the foot back at exactly the travel speed, so planted feet never slide. */
+typedef struct { XmlNode *tip; vec3 rest,hip,knee; float phase; } gait_leg_t;
+
+static void gait_collect(XmlNode *n,gait_leg_t **legs,int *count,int *cap,XmlNode ***arms,int *narms,int *carms,XmlNode ***tails,int *ntails,int *ctails){
+	for(int i=0;i<n->nkids;i++){
+		XmlNode *kid=n->kids[i];
+		if(!xml_is_bone(kid)) continue;
+		const char *name=xml_attr(kid,"name","");
+		int limb=!strncmp(name,"left_",5) || !strncmp(name,"right_",6);
+		int parentLimb=!strncmp(xml_attr(n,"name",""),"left_",5) || !strncmp(xml_attr(n,"name",""),"right_",6);
+		if(xml_attr_i(kid,"foot",0) && xml_is_bone(kid->parent) && xml_is_bone(kid->parent->parent)){
+			gait_leg_t leg={kid,{0},{0},{0},0}; DA_PUSH(*legs,*count,*cap,leg);
+		}
+		if(limb && (strstr(name,"upper_arm") || (!parentLimb && (strstr(name,"arm") || strstr(name,"shoulder"))))) DA_PUSH(*arms,*narms,*carms,kid);
+		if(!strncmp(name,"tail",4)) DA_PUSH(*tails,*ntails,*ctails,kid);
+		gait_collect(kid,legs,count,cap,arms,narms,carms,tails,ntails,ctails);
+	}
+}
+
+static int gait_has_foot(XmlNode *n){
+	if(xml_is_bone(n) && xml_attr_i(n,"foot",0)) return 1;
+	for(int i=0;i<n->nkids;i++) if(gait_has_foot(n->kids[i])) return 1;
+	return 0;
+}
+
+static XmlNode *anim_gait_pose(Scene *s,XmlNode *clip,XmlNode *proot,float time,mat4 *M){
+	const char *gait=xml_attr(clip,"gait","walk");
+	float cycle=xml_attr_f(clip,"cycle",GAIT_DEFAULT_CYCLE),stride=xml_attr_f_cm(clip,"stride",GAIT_DEFAULT_STRIDE);
+	float lift=xml_attr_f_cm(clip,"lift",GAIT_DEFAULT_LIFT),duty=xml_attr_f(clip,"duty",GAIT_DEFAULT_DUTY);
+	float bob=xml_attr_f_cm(clip,"bob",GAIT_DEFAULT_BOB),sway=xml_attr_f(clip,"sway",GAIT_DEFAULT_SWAY);
+	float armSwing=xml_attr_f(clip,"armSwing",GAIT_DEFAULT_ARM_SWING),tailSway=xml_attr_f(clip,"tailSway",GAIT_DEFAULT_TAIL_SWAY);
+	float lean=xml_attr_f(clip,"lean",0),crouch=xml_attr_f_cm(clip,"crouch",0);
+	int travel=xml_attr_i(clip,"travel",1);
+	float t=time*xml_attr_f(clip,"speed",1);
+	if(strcmp(gait,"walk")){ fprintf(stderr,"[scener] clip %s: unknown gait '%s'\n",xml_attr(clip,"name",""),gait); fflush(stderr); return NULL; }
+	if(cycle<=0 || duty<=0 || duty>=1){ fprintf(stderr,"[scener] clip %s: cycle must be positive and duty in (0,1)\n",xml_attr(clip,"name","")); fflush(stderr); return NULL; }
+	XmlNode *rootBone=NULL;
+	for(int i=0;i<proot->nkids && !rootBone;i++) if(xml_is_bone(proot->kids[i])) rootBone=proot->kids[i];
+	gait_leg_t *legs=NULL; int nlegs=0,clegs=0;
+	XmlNode **arms=NULL,**tails=NULL; int narms=0,carms=0,ntails=0,ctails=0;
+	gait_collect(proot,&legs,&nlegs,&clegs,&arms,&narms,&carms,&tails,&ntails,&ctails);
+	if(!rootBone || !nlegs){ fprintf(stderr,"[scener] clip %s: gait needs a bone skeleton with foot=\"1\" bones\n",xml_attr(clip,"name","")); fflush(stderr); free(legs); free(arms); free(tails); return NULL; }
+	float meanY=0;
+	for(int i=0;i<nlegs;i++){
+		legs[i].rest=mat4_xform_point(rig_rest_world(s,legs[i].tip,proot),v3(0,0,0));
+		legs[i].knee=mat4_xform_point(rig_rest_world(s,legs[i].tip->parent,proot),v3(0,0,0));
+		legs[i].hip=mat4_xform_point(rig_rest_world(s,legs[i].tip->parent->parent,proot),v3(0,0,0));
+		meanY+=legs[i].rest.y/nlegs;
+	}
+	/* Lateral-sequence walk: left hind, left fore, right hind, right fore a quarter apart. */
+	for(int i=0;i<nlegs;i++) legs[i].phase=(legs[i].rest.x<0?GAIT_HALF_CYCLE:0)+(nlegs>2 && legs[i].rest.y<meanY?GAIT_QUARTER_CYCLE:0);
+	float phase=t/cycle,speed=stride/(duty*cycle),turn=2*M_PIf*phase;
+	if(travel) *M=mat4_mul(*M,mat4_translate(v3(0,-speed*t,0)));
+	XmlNode *pose=xml_new("pose");
+	XmlNode *root=anim_add(pose,"joint","target",xml_attr(rootBone,"name",""));
+	float rootPos[3]={0,0,-CM_PER_METRE*(crouch+bob*(0.5f+0.5f*cosf(GAIT_BOB_HARMONIC*turn)))},rootRot[3]={lean,0,sway*sinf(turn)};
+	anim_set_floats(root,"pos",rootPos,3); anim_set_floats(root,"rot",rootRot,3);
+	for(int i=0;i<nlegs;i++){
+		float f=phase+legs[i].phase; f-=floorf(f);
+		vec3 p=legs[i].rest;
+		if(f<duty) p.y+=-stride*0.5f+stride*f/duty;
+		else {
+			float u=(f-duty)/(1-duty),smooth=u*u*(3-2*u);
+			p.y+=stride*0.5f-stride*smooth; p.z+=lift*sinf(M_PIf*u);
+		}
+		vec3 pole=vsub(legs[i].knee,vscale(vadd(legs[i].hip,legs[i].rest),0.5f));
+		if(vlen(pole)<RIG_EPSILON) pole=v3(0,-1,0);
+		vec3 world=vscale(mat4_xform_point(*M,p),CM_PER_METRE),poleWorld=vnorm(mat4_xform_dir(*M,pole));
+		XmlNode *ik=anim_add(pose,"ik","tip",xml_attr(legs[i].tip,"name",""));
+		anim_set_floats(ik,"target",&world.x,3); anim_set_floats(ik,"pole",&poleWorld.x,3);
+		xml_set_attr(ik,"keepOrientation","1");
+	}
+	for(int i=0;i<narms;i++){
+		if(gait_has_foot(arms[i])) continue;
+		float side=!strncmp(xml_attr(arms[i],"name",""),"left_",5)?0:M_PIf;
+		float rot[3]={armSwing*cosf(turn+side),0,0};
+		anim_set_floats(anim_add(pose,"joint","target",xml_attr(arms[i],"name","")),"rot",rot,3);
+	}
+	for(int i=0;i<ntails;i++){
+		float rot[3]={0,0,tailSway*sinf(turn-GAIT_TAIL_LAG*i)};
+		anim_set_floats(anim_add(pose,"joint","target",xml_attr(tails[i],"name","")),"rot",rot,3);
+	}
+	free(legs); free(arms); free(tails);
+	return pose;
+}
+
+/* Motion capture: BVH files are loaded once per scene and retargeted by aiming
+   each mapped bone along its captured segment. */
+static BvhClip *anim_bvh(Scene *s,const char *file){
+	char path[1024];
+	if(file[0]=='/') snprintf(path,sizeof(path),"%s",file);
+	else snprintf(path,sizeof(path),"%s%s%s",s->assetRoot,s->assetRoot[0]?"/":"",file);
+	for(int i=0;i<s->nbvhClips;i++) if(!strcmp(s->bvhClips[i].path,path)) return s->bvhClips[i].njoints?&s->bvhClips[i]:NULL;
+	BvhClip clip;
+	/* A failed load is cached empty so every frame does not retry and re-report it. */
+	if(!bvh_load(path,&clip)){ memset(&clip,0,sizeof(clip)); snprintf(clip.path,sizeof(clip.path),"%s",path); }
+	DA_PUSH(s->bvhClips,s->nbvhClips,s->cbvhClips,clip);
+	return clip.njoints?&s->bvhClips[s->nbvhClips-1]:NULL;
+}
+
+/* Joint names shared by CMU (cgspeed BVH), Mixamo and most humanoid exporters. */
+static const struct { const char *bone,*joint,*end; } humanoid_map[]={
+	{ "pelvis",          "Hips",         "Spine"        },
+	{ "spine",           "Spine",        "Spine1"       },
+	{ "ribcage",         "Spine1",       "Neck"         },
+	{ "neck",            "Neck",         "Head"         },
+	{ "head",            "Head",         NULL           },
+	{ "left_clavicle",   "LeftShoulder", "LeftArm"      },
+	{ "right_clavicle",  "RightShoulder","RightArm"     },
+	{ "left_upper_arm",  "LeftArm",      "LeftForeArm"  },
+	{ "left_forearm",    "LeftForeArm",  "LeftHand"     },
+	{ "left_hand",       "LeftHand",     NULL           },
+	{ "right_upper_arm", "RightArm",     "RightForeArm" },
+	{ "right_forearm",   "RightForeArm", "RightHand"    },
+	{ "right_hand",      "RightHand",    NULL           },
+	{ "left_thigh",      "LeftUpLeg",    "LeftLeg"      },
+	{ "left_shin",       "LeftLeg",      "LeftFoot"     },
+	{ "left_foot",       "LeftFoot",     "LeftToeBase"  },
+	{ "right_thigh",     "RightUpLeg",   "RightLeg"     },
+	{ "right_shin",      "RightLeg",     "RightFoot"    },
+	{ "right_foot",      "RightFoot",    "RightToeBase" },
+};
+
+typedef struct { XmlNode *bone; int joint,end; } mocap_link_t;
+typedef struct { const BvhClip *clip; mocap_link_t *links; int nlinks; vec3 *joints,*ends; float heading; int leftHip,rightHip; } mocap_frame_t;
+
+static vec3 mocap_point(vec3 p,float heading){
+	float a=heading*M_PIf/180.0f,c=cosf(a),sn=sinf(a);
+	vec3 q=v3(p.x,-p.z,p.y);
+	return v3(q.x*c-q.y*sn,q.x*sn+q.y*c,q.z);
+}
+
+static vec3 mocap_segment(const mocap_frame_t *f,const mocap_link_t *link){
+	vec3 end=link->end>=0?f->joints[link->end]:f->ends[link->joint];
+	return mocap_point(vsub(end,f->joints[link->joint]),f->heading);
+}
+
+static mat4 rig_frame_to_frame(vec3 dirA,vec3 leftA,vec3 dirB,vec3 leftB){
+	vec3 a[3],b[3];
+	a[0]=vnorm(dirA); a[1]=vsub(leftA,vscale(a[0],vdot(leftA,a[0])));
+	b[0]=vnorm(dirB); b[1]=vsub(leftB,vscale(b[0],vdot(leftB,b[0])));
+	if(vlen(a[1])<RIG_EPSILON || vlen(b[1])<RIG_EPSILON) return rig_from_to(dirA,dirB,leftA);
+	a[1]=vnorm(a[1]); b[1]=vnorm(b[1]); a[2]=vcross(a[0],a[1]); b[2]=vcross(b[0],b[1]);
+	mat4 r=mat4_identity();
+	for(int col=0;col<3;col++) for(int row=0;row<3;row++){
+		float sum=0;
+		for(int k=0;k<3;k++) sum+=(&b[k].x)[row]*(&a[k].x)[col];
+		r.m[col*4+row]=sum;
+	}
+	return r;
+}
+
+static void mocap_retarget(Scene *s,XmlNode *node,XmlNode *proot,const mocap_frame_t *f){
+	if(xml_is_bone(node)) for(int i=0;i<f->nlinks;i++) if(f->links[i].bone==node){
+		BoneGeom g=bone_geom(node);
+		vec3 d=mocap_segment(f,&f->links[i]);
+		if(vlen(d)<RIG_EPSILON) break;
+		if(!xml_is_bone(node->parent) && f->leftHip>=0 && f->rightHip>=0){
+			vec3 left=mocap_point(vsub(f->joints[f->leftHip],f->joints[f->rightHip]),f->heading);
+			rig_set_rotation(s,node,rig_frame_to_frame(g.dir,v3(1,0,0),d,left));
+		} else {
+			mat4 parent=rig_world(s,node->parent,proot,mat4_identity());
+			rig_set_rotation(s,node,rig_from_to(g.dir,mat4_xform_dir(mat4_affine_inverse(parent),d),g.other));
+		}
+		break;
+	}
+	for(int i=0;i<node->nkids;i++) mocap_retarget(s,node->kids[i],proot,f);
+}
+
+static void mocap_link(Scene *s,XmlNode *proot,const BvhClip *b,const char *bone,const char *joint,const char *end,mocap_link_t **links,int *n,int *c){
+	(void)s;
+	XmlNode *node=rig_find_joint(proot,bone);
+	int j=bvh_find(b,joint),e=end?bvh_find(b,end):-1;
+	if(!node || j<0) return;
+	if(!end) for(int k=0;k<b->njoints && e<0;k++) if(b->joints[k].parent==j && !b->joints[j].hasEndSite) e=k;
+	for(int i=0;i<*n;i++) if((*links)[i].bone==node){ (*links)[i].joint=j; (*links)[i].end=e; return; }
+	mocap_link_t link={node,j,e}; DA_PUSH(*links,*n,*c,link);
+}
+
+static XmlNode *anim_mocap_pose(Scene *s,XmlNode *clip,XmlNode *proot,float time,mat4 *M){
+	const char *rig=xml_attr(clip,"rig","humanoid");
+	float speed=xml_attr_f(clip,"speed",1),start=xml_attr_f(clip,"start",0),heading=xml_attr_f(clip,"heading",0),scale=xml_attr_f(clip,"scale",0);
+	int loop=xml_attr_i(clip,"loop",1),travel=xml_attr_i(clip,"travel",1);
+	BvhClip *b=anim_bvh(s,xml_attr(clip,"bvh",""));
+	if(!b) return NULL;
+	mocap_frame_t f={b,NULL,0,NULL,NULL,heading,bvh_find(b,"LeftUpLeg"),bvh_find(b,"RightUpLeg")};
+	int clinks=0;
+	if(!strcmp(rig,"humanoid")) for(size_t i=0;i<sizeof(humanoid_map)/sizeof(humanoid_map[0]);i++)
+		mocap_link(s,proot,b,humanoid_map[i].bone,humanoid_map[i].joint,humanoid_map[i].end,&f.links,&f.nlinks,&clinks);
+	else if(strcmp(rig,"none")) fprintf(stderr,"[scener] clip %s: unknown rig preset '%s'\n",xml_attr(clip,"name",""),rig);
+	for(int i=0;i<clip->nkids;i++) if(!strcmp(clip->kids[i]->tag,"map")){
+		XmlNode *map=clip->kids[i];
+		mocap_link(s,proot,b,xml_attr(map,"bone",""),xml_attr(map,"joint",""),xml_attr(map,"end",NULL),&f.links,&f.nlinks,&clinks);
+	}
+	if(!f.nlinks){ fprintf(stderr,"[scener] clip %s: no BVH joints map onto this skeleton\n",xml_attr(clip,"name","")); fflush(stderr); return NULL; }
+	f.joints=malloc((size_t)b->njoints*sizeof(vec3)); f.ends=malloc((size_t)b->njoints*sizeof(vec3));
+	vec3 *first=malloc((size_t)b->njoints*sizeof(vec3));
+	bvh_sample(b,start,0,first,NULL);
+	bvh_sample(b,start+anim_wrap(time*speed,bvh_duration(b),loop),loop,f.joints,f.ends);
+	XmlNode *rootBone=NULL;
+	for(int i=0;i<proot->nkids && !rootBone;i++) if(xml_is_bone(proot->kids[i])) rootBone=proot->kids[i];
+	int hips=-1;
+	for(int i=0;i<f.nlinks;i++) if(f.links[i].bone==rootBone) hips=f.links[i].joint;
+	/* Unscaled BVH units are matched by the height of the hips above the lowest joint on the first frame. */
+	if(scale<=0 && hips>=0 && rootBone){
+		float low=first[hips].y;
+		for(int i=0;i<b->njoints;i++) low=fminf(low,first[i].y);
+		float rest=mat4_xform_point(rig_rest_world(s,rootBone,proot),v3(0,0,0)).z;
+		scale=first[hips].y-low>RIG_EPSILON?rest/(first[hips].y-low):MOCAP_DEFAULT_SCALE;
+	}
+	if(scale<=0) scale=MOCAP_DEFAULT_SCALE;
+	if(hips>=0){
+		vec3 move=vscale(mocap_point(vsub(f.joints[hips],first[hips]),heading),scale);
+		if(!travel) move.x=move.y=0;
+		*M=mat4_mul(*M,mat4_translate(move));
+	}
+	mocap_retarget(s,proot,proot,&f);
+	free(first); free(f.joints); free(f.ends); free(f.links);
+	return xml_new("pose");
+}
+
+static XmlNode *anim_evaluate(Scene *s,XmlNode *instance,XmlNode *proot,mat4 *M){
+	float offset;
+	XmlNode *clip=anim_clip_for_instance(s,instance,&offset);
+	if(!clip) return NULL;
+	float t=s->time+offset;
+	if(xml_attr(clip,"gait",NULL)) return anim_gait_pose(s,clip,proot,t,M);
+	if(xml_attr(clip,"bvh",NULL)) return anim_mocap_pose(s,clip,proot,t,M);
+	return anim_keyframe_pose(s,clip,proot,t);
+}
+
+float scene_clip_duration(Scene *s){
+	XmlNode *root=(XmlNode*)s->sceneRoot;
+	float longest=0;
+	for(int i=0;root && i<root->nkids;i++){
+		XmlNode *clip=root->kids[i];
+		if(strcmp(clip->tag,"clip")) continue;
+		float speed=fmaxf(RIG_EPSILON,xml_attr_f(clip,"speed",1)),length=xml_attr_f(clip,"length",0);
+		if(xml_attr(clip,"gait",NULL)) length=xml_attr_f(clip,"cycle",GAIT_DEFAULT_CYCLE);
+		else if(xml_attr(clip,"bvh",NULL)){ BvhClip *b=anim_bvh(s,xml_attr(clip,"bvh","")); length=b?bvh_duration(b):0; }
+		else for(int k=0;k<clip->nkids && !xml_attr(clip,"length",NULL);k++) if(!strcmp(clip->kids[k]->tag,"key")) length=fmaxf(length,xml_attr_f(clip->kids[k],"time",0));
+		longest=fmaxf(longest,length/speed);
+	}
+	return longest;
+}
+
+/* ---------------------------------------------------------------- Muscles -- */
+
+/* Muscles follow Di-O-Matic Hercules' muscle primitive: a strand between an
+   origin and an insertion on two bones, shaped by a profile curve, bent through
+   via points and around other bones. Behaviours: volume-preserving squash and
+   stretch, flex, automatic contraction as the muscle shortens and secondary
+   jiggle. Fibres fan flat muscles from an origin line; bands groove the abs.
+   Under a prefab <skin>, bones and muscles become one smooth surface. */
+
+typedef struct { XmlNode *bone; mat4 world; float at[2],on[4]; int hasOn; } muscle_end_t;
+typedef struct { vec3 pos,out; } muscle_point_t;
+
+static XmlNode *muscle_bone(XmlNode *proot,XmlNode *m,const char *name,const char *role){
+	XmlNode *bone=rig_find_joint(proot,name);
+	if(!xml_is_bone(bone)){ fprintf(stderr,"[scener] muscle %s: %s '%s' is not a bone\n",xml_attr(m,"name","?"),role,name); fflush(stderr); return NULL; }
+	return bone;
+}
+
+static int muscle_joint_world(Scene *s,XmlNode *instance,XmlNode *bone,mat4 *out){
+	for(int i=s->nrigJointWorlds-1;i>=0;i--) if(s->rigJointWorlds[i].instance==instance && s->rigJointWorlds[i].joint==bone){ *out=s->rigJointWorlds[i].matrix; return 1; }
+	return 0;
+}
+
+static int muscle_floats(XmlNode *m,const char *key,float *out,int most){
+	const char *value=xml_attr(m,key,NULL);
+	if(!value) return 0;
+	int n=0; char *end;
+	for(const char *p=value;n<most;p=end){ float v=strtof(p,&end); if(end==p) break; out[n++]=v; }
+	return n;
+}
+
+/* An end is "bone at [azimuth elevation]", optionally spanned to a second point on the
+   same bone with ".. at [azimuth elevation]" so fibres fan across it. */
+static int muscle_end(Scene *s,XmlNode *m,XmlNode *instance,XmlNode *proot,mat4 instanceM,const char *role,int rest,muscle_end_t *e){
+	char bone[BONE_NAME_CAPACITY],first[MUSCLE_VIA_TEXT];
+	const char *value=xml_attr(m,role,""),*span=strstr(value,"..");
+	memset(e,0,sizeof(*e));
+	snprintf(first,sizeof(first),"%.*s",(int)(span?(size_t)(span-value):strlen(value)),value);
+	int n=sscanf(first,"%63s %f %f %f",bone,&e->at[0],&e->on[0],&e->on[1]);
+	if(n<2){ fprintf(stderr,"[scener] muscle %s: %s '%s' needs 'bone at [azimuth elevation] [.. at [azimuth elevation]]'\n",xml_attr(m,"name","?"),role,value); fflush(stderr); return 0; }
+	e->hasOn=n>=4;
+	e->at[1]=e->at[0]; e->on[2]=e->on[0]; e->on[3]=e->on[1];
+	if(span) sscanf(span+2,"%f %f %f",&e->at[1],&e->on[2],&e->on[3]);
+	e->bone=muscle_bone(proot,m,bone,role);
+	if(!e->bone) return 0;
+	if(rest){ e->world=mat4_mul(instanceM,rig_rest_world(s,e->bone,proot)); return 1; }
+	if(!muscle_joint_world(s,instance,e->bone,&e->world)){ fprintf(stderr,"[scener] muscle %s: bone %s was not placed\n",xml_attr(m,"name","?"),xml_attr(e->bone,"name","")); fflush(stderr); return 0; }
+	return 1;
+}
+
+static muscle_point_t muscle_surface(XmlNode *bone,mat4 world,float at,vec3 dir,int hasDir,float lift){
+	BoneGeom g=bone_geom(bone);
+	muscle_point_t p;
+	if(!hasDir) dir=g.other;
+	p.pos=mat4_xform_point(world,bone_attach_point(&g,at,dir,-lift));
+	p.out=vnorm(mat4_xform_dir(world,dir));
+	return p;
+}
+
+static muscle_point_t muscle_end_point(const muscle_end_t *e,float f){
+	float az=e->on[0]+(e->on[2]-e->on[0])*f,el=e->on[1]+(e->on[3]-e->on[1])*f;
+	return muscle_surface(e->bone,e->world,e->at[0]+(e->at[1]-e->at[0])*f,bone_direction(az,el),e->hasOn,0);
+}
+
+/* Via points ("bone at azimuth elevation lift; …") bend the path over joints and bony landmarks. */
+static int muscle_vias(Scene *s,XmlNode *m,XmlNode *instance,XmlNode *proot,mat4 instanceM,int rest,muscle_point_t *out,int most){
+	const char *value=xml_attr(m,"via",NULL);
+	int n=0;
+	while(value && *value && n<most){
+		const char *end=strchr(value,';');
+		char part[MUSCLE_VIA_TEXT],bone[BONE_NAME_CAPACITY]; float at,az,el,lift=0;
+		snprintf(part,sizeof(part),"%.*s",(int)(end?(size_t)(end-value):strlen(value)),value);
+		value=end?end+1:NULL;
+		if(sscanf(part,"%63s %f %f %f %f",bone,&at,&az,&el,&lift)<4){ fprintf(stderr,"[scener] muscle %s: via '%s' needs 'bone at azimuth elevation [lift]'\n",xml_attr(m,"name","?"),part); fflush(stderr); continue; }
+		XmlNode *node=muscle_bone(proot,m,bone,"via");
+		mat4 world;
+		if(node && (rest?(world=mat4_mul(instanceM,rig_rest_world(s,node,proot)),1):muscle_joint_world(s,instance,node,&world)))
+			out[n++]=muscle_surface(node,world,at,bone_direction(az,el),1,lift/CM_PER_METRE);
+	}
+	return n;
+}
+
+static void bone_world_ellipsoid(XmlNode *bone,mat4 world,SkinPrim *e){
+	BoneGeom g=bone_geom(bone);
+	vec3 ax=mat4_xform_dir(world,g.side),ay=mat4_xform_dir(world,g.dir),az=mat4_xform_dir(world,g.other);
+	memset(e,0,sizeof(*e));
+	e->kind=SKIN_PRIM_ELLIPSOID; e->center=mat4_xform_point(world,g.center);
+	e->radii=v3(g.radiusSide*vlen(ax),g.along*vlen(ay),g.radiusOther*vlen(az));
+	e->ax=vnorm(ax); e->ay=vnorm(ay); e->az=vnorm(az); e->taper=g.taper;
+}
+
+static float muscle_profile(const float *profile,int n,float u){
+	if(n<2) return n?profile[0]:1;
+	float x=fmaxf(0,fminf(1,u))*(n-1);
+	int i=(int)x; if(i>=n-1) i=n-2;
+	float t=x-i,p0=profile[i>0?i-1:0],p1=profile[i],p2=profile[i+1],p3=profile[i+2<n?i+2:n-1];
+	return fmaxf(0,anim_catmull(p0,p1,p2,p3,t));
+}
+
+typedef struct {
+	float width,thick,tendon[2],tendonRadius,profile[MUSCLE_PROFILE_CAPACITY],bandDepth,bulge,contract,jiggle,hz,damping;
+	int nprofile,bands,samples,fibers;
+} muscle_shape_t;
+
+static void muscle_shape(XmlNode *m,muscle_shape_t *sh){
+	float radius[2]={MUSCLE_DEFAULT_RADIUS,0};
+	if(muscle_floats(m,"radius",radius,2)<2) radius[1]=radius[0];
+	sh->width=radius[0]/CM_PER_METRE; sh->thick=radius[1]/CM_PER_METRE;
+	sh->nprofile=muscle_floats(m,"profile",sh->profile,MUSCLE_PROFILE_CAPACITY);
+	if(sh->nprofile<2){ static const float fusiform[]={0.35f,0.8f,1,0.8f,0.35f}; memcpy(sh->profile,fusiform,sizeof(fusiform)); sh->nprofile=5; }
+	sh->tendon[0]=sh->tendon[1]=0;
+	int n=muscle_floats(m,"tendon",sh->tendon,2);
+	if(n==1) sh->tendon[1]=sh->tendon[0];
+	sh->tendonRadius=fminf(sh->width,sh->thick)*MUSCLE_TENDON_RATIO;
+	sh->bands=xml_attr_i(m,"bands",0); sh->bandDepth=MUSCLE_BAND_DEPTH;
+	sh->bulge=xml_attr_f(m,"bulge",1); sh->contract=xml_attr_f(m,"contract",0);
+	sh->jiggle=xml_attr_f(m,"jiggle",0); sh->hz=MUSCLE_JIGGLE_HZ; sh->damping=MUSCLE_JIGGLE_DAMPING;
+	sh->samples=MUSCLE_DEFAULT_SAMPLES;
+	sh->fibers=xml_attr_i(m,"fibers",1); if(sh->fibers<1) sh->fibers=1;
+}
+
+/* Centerline through origin, vias and insertion (Catmull-Rom), resampled evenly by arc length. */
+static float muscle_path(const muscle_point_t *ctl,int nctl,int samples,Strand *out){
+	muscle_point_t dense[MUSCLE_DENSE_CAPACITY]; float along[MUSCLE_DENSE_CAPACITY];
+	int nd=0;
+	for(int i=0;i+1<nctl;i++) for(int k=0;k<MUSCLE_PATH_STEPS && nd<MUSCLE_DENSE_CAPACITY-1;k++){
+		float t=(float)k/MUSCLE_PATH_STEPS;
+		const muscle_point_t *p0=&ctl[i>0?i-1:0],*p1=&ctl[i],*p2=&ctl[i+1],*p3=&ctl[i+2<nctl?i+2:nctl-1];
+		dense[nd].pos=v3(anim_catmull(p0->pos.x,p1->pos.x,p2->pos.x,p3->pos.x,t),anim_catmull(p0->pos.y,p1->pos.y,p2->pos.y,p3->pos.y,t),anim_catmull(p0->pos.z,p1->pos.z,p2->pos.z,p3->pos.z,t));
+		dense[nd++].out=vnorm(lerp(p1->out,p2->out,t));
+	}
+	dense[nd++]=ctl[nctl-1];
+	along[0]=0;
+	for(int i=1;i<nd;i++) along[i]=along[i-1]+vlen(vsub(dense[i].pos,dense[i-1].pos));
+	float total=along[nd-1];
+	out->n=0;
+	for(int k=0,i=0;k<samples;k++){
+		float target=total*k/(samples-1);
+		while(i<nd-2 && along[i+1]<target) i++;
+		float span=along[i+1]-along[i],t=span>RIG_EPSILON?(target-along[i])/span:0;
+		StrandSample sample={lerp(dense[i].pos,dense[i+1].pos,t),vnorm(lerp(dense[i].out,dense[i+1].out,t)),0,0};
+		DA_PUSH(out->s,out->n,out->c,sample);
+	}
+	return total;
+}
+
+/* Push interior samples out of the listed bones' volumes so a muscle slides over them. */
+static void muscle_wrap(Scene *s,XmlNode *m,XmlNode *instance,XmlNode *proot,mat4 instanceM,int rest,Strand *st){
+	const char *value=xml_attr(m,"wrap",NULL);
+	char name[BONE_NAME_CAPACITY]; int used;
+	while(value && sscanf(value," %63s%n",name,&used)==1){
+		value+=used;
+		XmlNode *bone=muscle_bone(proot,m,name,"wrap");
+		mat4 world;
+		if(!bone || !(rest?(world=mat4_mul(instanceM,rig_rest_world(s,bone,proot)),1):muscle_joint_world(s,instance,bone,&world))) continue;
+		SkinPrim e; bone_world_ellipsoid(bone,world,&e);
+		for(int i=1;i+1<st->n;i++){
+			StrandSample *p=&st->s[i];
+			vec3 q=vsub(p->pos,e.center),r=vadd(e.radii,v3(p->t,p->t,p->t));
+			vec3 l=v3(vdot(q,e.ax)/r.x,vdot(q,e.ay)/r.y,vdot(q,e.az)/r.z);
+			float len=vlen(l);
+			if(len>=1 || len<RIG_EPSILON) continue;
+			l=vscale(l,1.0f/len);
+			p->pos=vadd(e.center,vadd(vscale(e.ax,l.x*r.x),vadd(vscale(e.ay,l.y*r.y),vscale(e.az,l.z*r.z))));
+			p->out=vnorm(vadd(vscale(e.ax,l.x/r.x),vadd(vscale(e.ay,l.y/r.y),vscale(e.az,l.z/r.z))));
+		}
+	}
+}
+
+static float muscle_flex(Scene *s,XmlNode *instance,const char *name){
+	XmlNode *sources[2]={instance,(XmlNode*)s->activeRigPose};
+	for(int p=0;p<2;p++) for(int i=0;sources[p] && i<sources[p]->nkids;i++){
+		XmlNode *flex=sources[p]->kids[i];
+		if(!strcmp(flex->tag,"flex") && !strcmp(xml_attr(flex,"muscle",""),name)) return fmaxf(0,fminf(1,xml_attr_f(flex,"amount",0)));
+	}
+	return 0;
+}
+
+static MuscleState *muscle_state(Scene *s,XmlNode *instance,XmlNode *m,vec3 target){
+	for(int i=0;i<s->nmuscleStates;i++) if(s->muscleStates[i].instance==instance && s->muscleStates[i].muscle==m) return &s->muscleStates[i];
+	MuscleState state={instance,m,target,v3(0,0,0),s->time};
+	DA_PUSH(s->muscleStates,s->nmuscleStates,s->cmuscleStates,state);
+	return &s->muscleStates[s->nmuscleStates-1];
+}
+
+/* Damped spring on the belly centre; returns the lag to add, bounded by the belly thickness. */
+static vec3 muscle_jiggle(Scene *s,XmlNode *instance,XmlNode *m,const muscle_shape_t *sh,vec3 center,float limit){
+	MuscleState *st=muscle_state(s,instance,m,center);
+	float dt=s->time-st->time;
+	if(dt<0 || dt>MUSCLE_MAX_STEP){ st->pos=center; st->vel=v3(0,0,0); }
+	else {
+		float w=2*M_PIf*sh->hz;
+		int steps=(int)ceilf(dt/MUSCLE_SUBSTEP);
+		for(int i=0;i<steps;i++){
+			float h=dt/steps;
+			vec3 acc=vsub(vscale(vsub(center,st->pos),w*w),vscale(st->vel,2*sh->damping*w));
+			st->vel=vadd(st->vel,vscale(acc,h)); st->pos=vadd(st->pos,vscale(st->vel,h));
+		}
+	}
+	st->time=s->time;
+	vec3 lag=vscale(vsub(st->pos,center),sh->jiggle);
+	return vlen(lag)>limit?vscale(vnorm(lag),limit):lag;
+}
+
+static int muscle_fiber(Scene *s,XmlNode *m,XmlNode *instance,XmlNode *proot,mat4 instanceM,int rest,float f,const muscle_shape_t *sh,Strand *st){
+	muscle_end_t origin,insertion;
+	muscle_point_t ctl[MUSCLE_VIA_CAPACITY+2];
+	if(!muscle_end(s,m,instance,proot,instanceM,"origin",rest,&origin) || !muscle_end(s,m,instance,proot,instanceM,"insertion",rest,&insertion)) return 0;
+	ctl[0]=muscle_end_point(&origin,f);
+	int n=1+muscle_vias(s,m,instance,proot,instanceM,rest,ctl+1,MUSCLE_VIA_CAPACITY);
+	ctl[n++]=muscle_end_point(&insertion,f);
+	muscle_path(ctl,n,sh->samples,st);
+	for(int i=0;i<st->n;i++) st->s[i].w=st->s[i].t=sh->thick;
+	muscle_wrap(s,m,instance,proot,instanceM,rest,st);
+	return 1;
+}
+
+static float strand_length(const Strand *st){
+	float l=0;
+	for(int i=0;i+1<st->n;i++) l+=vlen(vsub(st->s[i+1].pos,st->s[i].pos));
+	return l;
+}
+
+/* Cross-sections along the fibre: tendons at the ends, the profile curve over the
+   belly, bands as grooves, all scaled by stretch and flex. */
+static void muscle_sections(Strand *st,const muscle_shape_t *sh,float swell,float flex,vec3 lag){
+	float t0=sh->tendon[0],t1=sh->tendon[1],belly=fmaxf(RIG_EPSILON,1-t0-t1);
+	for(int i=0;i<st->n;i++){
+		StrandSample *p=&st->s[i];
+		float t=(float)i/(st->n-1),u=(t-t0)/belly;
+		float shape=muscle_profile(sh->profile,sh->nprofile,u);
+		/* Flexed bellies bunch toward their middle and rise out of the body. */
+		shape=powf(fmaxf(shape,0),1+flex);
+		float w=sh->width*shape*swell*(1+MUSCLE_FLEX_WIDTH*flex),th=sh->thick*shape*swell*(1+MUSCLE_FLEX_GAIN*flex);
+		if(sh->bands>0 && u>0 && u<1){
+			float groove=powf(fabsf(cosf(M_PIf*u*sh->bands)),MUSCLE_BAND_SHARPNESS);
+			th*=1-sh->bandDepth*groove; w*=1-sh->bandDepth*MUSCLE_BAND_WIDTH_SHARE*groove;
+		}
+		float tendon=sh->tendonRadius;
+		if(u<0 || u>1){ w=tendon*MUSCLE_TENDON_FLATNESS; th=tendon; }
+		p->w=fmaxf(w,tendon*MUSCLE_TENDON_FLATNESS); p->t=fmaxf(th,tendon);
+		float weight=sinf(M_PIf*t);
+		p->pos=vadd(p->pos,vscale(lag,weight));
+		/* Thick bellies sit on the bone surface rather than straddle it. */
+		p->pos=vadd(p->pos,vscale(p->out,(p->t-tendon)*MUSCLE_SURFACE_RISE));
+	}
+}
+
+static void muscle_render(Scene *s,XmlNode *m,XmlNode *instance,XmlNode *proot,mat4 instanceM,XmlNode *skin){
+	const char *name=xml_attr(m,"name","");
+	muscle_shape_t sh; muscle_shape(m,&sh);
+	Material *mat=find_material(s,xml_attr(m,"material",skin?xml_attr(skin,"muscleMaterial",NULL):NULL));
+	vec3 color=mat?mat->color:xml_attr_v3(m,"color",v3(MUSCLE_RED_R,MUSCLE_RED_G,MUSCLE_RED_B));
+	float shin=mat?mat->shininess:xml_attr_f(m,"shininess",MUSCLE_DEFAULT_SHININESS);
+	int castsShadow=xml_attr_i(m,"castShadow",1),slices=BONE_DEFAULT_SLICES;
+	/* Fanned fibres merge softly into one sheet; separate muscles keep a crisp groove between them. */
+	float blend=sh.fibers>1?MUSCLE_FAN_BLEND:MUSCLE_DEFAULT_BLEND;
+	Strand restFiber={0},midFiber={0};
+	float middle=sh.fibers>1?0.5f:0;
+	if(!muscle_fiber(s,m,instance,proot,instanceM,1,middle,&sh,&restFiber) || !muscle_fiber(s,m,instance,proot,instanceM,0,middle,&sh,&midFiber)){
+		free(restFiber.s); free(midFiber.s); return;
+	}
+	float rest=strand_length(&restFiber),length=strand_length(&midFiber);
+	free(restFiber.s);
+	if(length<RIG_EPSILON || rest<RIG_EPSILON){ fprintf(stderr,"[scener] muscle %s: origin and insertion coincide\n",name); fflush(stderr); free(midFiber.s); return; }
+	float flex=fmaxf(0,fminf(1,muscle_flex(s,instance,name)+sh.contract*MUSCLE_CONTRACT_GAIN*fmaxf(0,1-length/rest)));
+	float swell=fmaxf(MUSCLE_MIN_SCALE,fminf(MUSCLE_MAX_SCALE,powf(rest/length,0.5f*sh.bulge)));
+	vec3 lag=v3(0,0,0);
+	if(sh.jiggle>0) lag=muscle_jiggle(s,instance,m,&sh,midFiber.s[midFiber.n/2].pos,sh.thick*swell);
+	free(midFiber.s);
+	MuscleRecord record={instance,"",length,rest,0,flex};
+	snprintf(record.name,sizeof(record.name),"%s",name);
+	for(int f=0;f<sh.fibers;f++){
+		Strand st={0};
+		if(!muscle_fiber(s,m,instance,proot,instanceM,0,sh.fibers>1?(float)f/(sh.fibers-1):0,&sh,&st)) continue;
+		muscle_sections(&st,&sh,swell,flex,lag);
+		record.volume+=strand_volume(&st);
+		if(s->skinCollect){
+			SkinPrim prim={0}; prim.kind=SKIN_PRIM_STRAND; prim.blend=blend; prim.strand=st;
+			DA_PUSH(s->skinPrims,s->nskinPrims,s->cskinPrims,prim);
+			continue;
+		}
+		int texture=s->activeTexIndex; s->activeTexIndex=materials_index_for_name(mat?mat->id:NULL);
+		scene_add_obj(s,strand_mesh(&st,slices),mat4_identity(),mat4_identity(),color,shin,castsShadow,1,0);
+		s->activeTexIndex=texture;
+		free(st.s);
+	}
+	DA_PUSH(s->muscleRecords,s->nmuscleRecords,s->cmuscleRecords,record);
+}
+
+static void muscles_render(Scene *s,XmlNode *node,XmlNode *instance,XmlNode *proot,mat4 instanceM,XmlNode *skin){
+	for(int i=0;i<node->nkids;i++){
+		if(!strcmp(node->kids[i]->tag,"muscle")) muscle_render(s,node->kids[i],instance,proot,instanceM,skin);
+		else muscles_render(s,node->kids[i],instance,proot,instanceM,skin);
+	}
+}
+
+static XmlNode *skin_node(XmlNode *proot){
+	for(int i=0;i<proot->nkids;i++) if(!strcmp(proot->kids[i]->tag,"skin")) return proot->kids[i];
+	return NULL;
+}
+
+/* Polygonize the collected bones and muscles into one skin mesh. */
+static void skin_build(Scene *s,XmlNode *skin,int first){
+	Material *mat=find_material(s,xml_attr(skin,"material",NULL));
+	vec3 color=mat?mat->color:xml_attr_v3(skin,"color",v3(MUSCLE_DEFAULT_GREY,MUSCLE_DEFAULT_GREY,MUSCLE_DEFAULT_GREY));
+	float shin=mat?mat->shininess:xml_attr_f(skin,"shininess",MUSCLE_DEFAULT_SHININESS);
+	Mesh mesh=skin_surface(s->skinPrims+first,s->nskinPrims-first,xml_attr_f_cm(skin,"resolution",SKIN_DEFAULT_RESOLUTION),SKIN_DEFAULT_FAT);
+	for(int i=first;i<s->nskinPrims;i++) free(s->skinPrims[i].strand.s);
+	s->nskinPrims=first;
+	if(!mesh.ntris){ mesh_free(&mesh); return; }
+	int texture=s->activeTexIndex; s->activeTexIndex=materials_index_for_name(mat?mat->id:NULL);
+	scene_add_obj(s,mesh,mat4_identity(),mat4_identity(),color,shin,xml_attr_i(skin,"castShadow",1),1,0);
+	s->activeTexIndex=texture;
+}
+
 static void collect_negative_boxes(Scene *s, XmlNode *parent, mat4 parentM){
 	for(int i=0;i<parent->nkids;i++){
 		XmlNode *n=parent->kids[i];
@@ -1939,11 +2777,24 @@ static void parse_prefab(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec
 		vec3 r=vscale(arrayRot,(float)step);
 		mat4 stepM=mat4_mul(M,mat4_mul(mat4_translate(off),mat4_rot_xyz(r)));
 		s->nrigRotations=0;
+		XmlNode *staticPose=(XmlNode*)s->activeRigPose,*animPose=anim_evaluate(s,n,proot,&stepM);
+		if(animPose) s->activeRigPose=animPose;
 		XmlNode *pose=(XmlNode*)s->activeRigPose;
 		if(pose) for(int i=0;i<pose->nkids;i++) if(!strcmp(pose->kids[i]->tag,"ik") &&
 			!rig_ik_for_tip(n,xml_attr(pose->kids[i],"tip",""))) rig_solve_ik(s,pose->kids[i],proot,stepM);
 		for(int i=0;i<n->nkids;i++) if(!strcmp(n->kids[i]->tag,"ik")) rig_solve_ik(s,n->kids[i],proot,stepM);
+		XmlNode *skin=skin_node(proot);
+		const char *show=xml_attr(n,"show",skin?xml_attr(skin,"show","skin"):"muscles");
+		if(strcmp(show,"skin") && strcmp(show,"muscles")){ fprintf(stderr,"[scener] skin: unknown show '%s'; use skin or muscles\n",show); show="skin"; }
+		int oldCollect=s->skinCollect,firstPrim=s->nskinPrims; float oldBlend=s->skinBoneBlend;
+		s->skinCollect=skin && !strcmp(show,"skin");
+		s->skinBoneBlend=SKIN_DEFAULT_BONE_BLEND;
 		parse_nodes(s, proot, stepM, R);
+		muscles_render(s,proot,n,proot,stepM,skin);
+		if(s->skinCollect) skin_build(s,skin,firstPrim);
+		s->skinCollect=oldCollect; s->skinBoneBlend=oldBlend;
+		s->activeRigPose=staticPose;
+		if(animPose) xml_free(animPose);
 	}
 	s->nrigRotations=0;
 	s->activeRigInstance=oldRigInstance; s->activeRigPose=oldRigPose; s->activeRigRoot=oldRigRoot;
@@ -1997,6 +2848,7 @@ static const struct {
 	{ "dummy",    parse_dummy },
 	{ "lathe",    parse_lathe },
 	{ "loft",     parse_loft },
+	{ "muscle",   parse_muscle },
 };
 
 static void parse_nodes(Scene *s, XmlNode *parent, mat4 parentM, mat4 parentR){
@@ -2201,13 +3053,15 @@ static void warn_unknown_children(XmlNode *parent, const char *path, int root, i
 		XmlNode *n=parent->kids[i];
 		int supported=0;
 		if(root) supported=has_shape_parser(n->tag) || !strcmp(n->tag,"bool-negative-box") || !strcmp(n->tag,"bool-negative-arch") || !strcmp(n->tag,"bool-negative-cylinder") ||
-			(prefab ? (!strcmp(n->tag,"attach") || !strcmp(n->tag,"shape")) : has_scene_parser(n->tag) || !strcmp(n->tag,"pose"));
+			(prefab ? (!strcmp(n->tag,"attach") || !strcmp(n->tag,"shape") || !strcmp(n->tag,"skin")) : has_scene_parser(n->tag) || !strcmp(n->tag,"pose") || !strcmp(n->tag,"clip"));
 		else if(!strcmp(parent->tag,"group") || xml_is_bone(parent))
 			supported=has_shape_parser(n->tag) || !strcmp(n->tag,"bool-negative-box") || !strcmp(n->tag,"bool-negative-arch") || !strcmp(n->tag,"bool-negative-cylinder") || !strcmp(n->tag,"shape");
-		else if(!strcmp(parent->tag,"camera")) supported=!strcmp(n->tag,"transform") || !strcmp(n->tag,"use-pose");
-		else if(!strcmp(parent->tag,"pose")) supported=!strcmp(n->tag,"joint") || !strcmp(n->tag,"ik");
+		else if(!strcmp(parent->tag,"camera")) supported=!strcmp(n->tag,"transform") || !strcmp(n->tag,"use-pose") || !strcmp(n->tag,"use-clip");
+		else if(!strcmp(parent->tag,"pose") || !strcmp(parent->tag,"key")) supported=!strcmp(n->tag,"joint") || !strcmp(n->tag,"ik") || !strcmp(n->tag,"flex");
+		else if(!strcmp(parent->tag,"clip")) supported=!strcmp(n->tag,"key") || !strcmp(n->tag,"map");
+		else if(!strcmp(parent->tag,"muscle") || !strcmp(parent->tag,"skin")) supported=0;
 		else if(!strcmp(parent->tag,"wall")||!strcmp(parent->tag,"floor")||!strcmp(parent->tag,"window")||!strcmp(parent->tag,"door")) supported=0;
-		else if(!strcmp(parent->tag,"prefab")) supported=!strcmp(n->tag,"array") || !strcmp(n->tag,"joint") || !strcmp(n->tag,"ik");
+		else if(!strcmp(parent->tag,"prefab")) supported=!strcmp(n->tag,"array") || !strcmp(n->tag,"joint") || !strcmp(n->tag,"ik") || !strcmp(n->tag,"flex");
 		else if(has_shape_parser(parent->tag)) supported=has_modifier_parser(n->tag);
 		if(!supported){
 			warn_unsupported_tree(n,path,parent->tag);
@@ -2228,21 +3082,31 @@ static void warn_unknown_elements(XmlNode *root, const char *path, int prefab){
 
 /* Pose data applies only in the cameras that select it, and books read per-camera
    text metadata; these attributes are valid even when this load never reads them. */
-static const struct { const char *tag; const char *attrs[8]; } deferred_attributes[]={
+#define DEFERRED_ATTRIBUTE_CAPACITY 24
+static const struct { const char *tag; const char *attrs[DEFERRED_ATTRIBUTE_CAPACITY]; } deferred_attributes[]={
 	{ "camera",   { "textRect", "textScale" } },
 	{ "group",    { "pair" } },
 	{ "bone",     { "pair" } },
+	{ "muscle",   { "pair" } },
+	{ "skin",     { "material", "color", "shininess", "resolution", "castShadow", "show", "muscleMaterial" } },
+	{ "prefab",   { "show" } },
 	{ "use-pose", { "instance", "name" } },
+	{ "use-clip", { "instance", "name", "offset" } },
 	{ "pose",     { "name" } },
 	{ "joint",    { "target", "pos", "rot", "aim" } },
 	{ "ik",       { "root", "mid", "tip", "target", "pole", "keepOrientation", "plant" } },
+	{ "flex",     { "muscle", "amount" } },
+	{ "key",      { "time", "pose" } },
+	{ "map",      { "bone", "joint", "end" } },
+	{ "clip",     { "name", "length", "loop", "speed", "ease", "gait", "cycle", "stride", "lift", "duty", "bob", "sway",
+	                "armSwing", "tailSway", "lean", "crouch", "travel", "bvh", "rig", "start", "heading", "scale" } },
 };
 
 static int attribute_deferred(const char *tag,const char *name){
 	if(name[0]=='_' || !strcmp(name,"generated")) return 1;
 	for(size_t i=0;i<sizeof(deferred_attributes)/sizeof(deferred_attributes[0]);i++){
 		if(strcmp(deferred_attributes[i].tag,tag)) continue;
-		for(int k=0;k<8 && deferred_attributes[i].attrs[k];k++) if(!strcmp(deferred_attributes[i].attrs[k],name)) return 1;
+		for(int k=0;k<DEFERRED_ATTRIBUTE_CAPACITY && deferred_attributes[i].attrs[k];k++) if(!strcmp(deferred_attributes[i].attrs[k],name)) return 1;
 	}
 	return 0;
 }
@@ -2356,6 +3220,7 @@ static void scene_clear_view(Scene *s){
 	s->rigRotations=NULL; s->nrigRotations=s->crigRotations=0;
 	s->rigTargets=NULL; s->nrigTargets=s->crigTargets=0;
 	s->rigJointWorlds=NULL; s->nrigJointWorlds=s->crigJointWorlds=0;
+	s->nmuscleRecords=0;
 	s->instances=NULL; s->negativeBoxes=NULL; s->negativeArches=NULL;
 	s->negativeCylinders=NULL; s->overlayLines=NULL; s->charDefs=NULL; s->shapes=NULL;
 	s->nlights=s->clights=s->nmats=s->cmats=s->nobjs=s->cobjs=0;
@@ -2573,6 +3438,11 @@ int load_scene(const char *path, Scene *s){
 	warn_unlit_scene(s,path);
 	for(int i=0;i<s->nprefabs;i++) warn_unused_attributes(s,(XmlNode*)s->prefabs[i].root,s->prefabs[i].path);
 	return 1;
+}
+
+void scene_set_time(Scene *s,float seconds){
+	s->time=seconds;
+	scene_rebuild_view(s);
 }
 
 void scene_select_camera(Scene *s, const char *name){

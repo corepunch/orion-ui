@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Skeletal animation study: an anatomical strongman beside his ecorche twin
+     (show="muscles"), driven three ways.
+     Walk is a procedural gait, Flex is keyframed with muscle flex channels and
+     Mocap retargets a BVH capture. Render a clip as an image sequence with the
+     render mode's frames option; see docs/character-animation.md. -->
+<scene up="z" ambient="0.32 0.30 0.30" background="0.62 0.66 0.72">
+  <camera name="Rest" pos="-110 -400 125" look="45 10 100" fov="34" />
+  <camera name="Walk" pos="-330 -330 135" look="45 -60 95" fov="38"><use-clip instance="Hercules" name="Walk" /><use-clip instance="Ecorche" name="Walk" /></camera>
+  <camera name="Flex" pos="-40 -380 125" look="45 10 115" fov="36"><use-clip instance="Hercules" name="Flex" /><use-clip instance="Ecorche" name="Flex" /></camera>
+  <camera name="Mocap" pos="-200 -440 140" look="45 10 110" fov="38"><use-clip instance="Hercules" name="JumpingJacks" /><use-clip instance="Ecorche" name="JumpingJacks" /></camera>
+
+  <clip name="Walk" gait="walk" cycle="1.1" stride="54" lift="11" duty="0.62" bob="2.5" crouch="3" sway="5" armSwing="24" lean="-4" />
+
+  <pose name="DoubleBiceps">
+    <joint target="spine" rot="-4 0 0" />
+    <joint target="left_upper_arm" aim="90 8" />
+    <joint target="right_upper_arm" aim="-90 8" />
+    <joint target="left_forearm" aim="90 12" />
+    <joint target="right_forearm" aim="-90 12" />
+    <joint target="left_hand" aim="90 -20" />
+    <joint target="right_hand" aim="-90 -20" />
+    <joint target="head" rot="0 0 -15" />
+  </pose>
+  <clip name="Flex" length="4" loop="1">
+    <key time="0" />
+    <key time="1" pose="DoubleBiceps"><flex muscle="left_biceps" amount="0.2" /><flex muscle="right_biceps" amount="0.2" /></key>
+    <key time="1.6" pose="DoubleBiceps"><flex muscle="left_biceps" amount="1" /><flex muscle="right_biceps" amount="1" /><flex muscle="left_deltoid" amount="0.6" /><flex muscle="right_deltoid" amount="0.6" /></key>
+    <key time="2.3" pose="DoubleBiceps"><flex muscle="left_biceps" amount="0.4" /><flex muscle="right_biceps" amount="0.4" /></key>
+    <key time="2.8" pose="DoubleBiceps"><flex muscle="left_biceps" amount="1" /><flex muscle="right_biceps" amount="1" /><flex muscle="left_deltoid" amount="0.6" /><flex muscle="right_deltoid" amount="0.6" /></key>
+    <key time="3.4" />
+  </clip>
+
+  <clip name="JumpingJacks" bvh="mocap/jumping_jacks.bvh" rig="humanoid" travel="0" />
+
+  <material id="herc_skin" color="0.78 0.55 0.40" shininess="18" />
+  <material id="herc_muscle" color="0.66 0.24 0.20" shininess="24" />
+  <material id="herc_bone" color="0.88 0.84 0.74" shininess="10" />
+  <material id="herc_cloth" color="0.86 0.82 0.70" shininess="4" />
+  <material id="herc_belt" color="0.45 0.28 0.14" shininess="10" />
+  <material id="herc_band" color="0.80 0.62 0.22" shininess="40" />
+  <material id="herc_sandal" color="0.40 0.25 0.13" shininess="8" />
+  <material id="herc_hair" color="0.16 0.10 0.07" shininess="6" />
+  <material id="herc_eye" color="0.08 0.07 0.06" shininess="60" />
+  <material id="ground" color="0.72 0.68 0.60" shininess="2" />
+
+  <sun dir="-0.45 0.35 -1" color="1 0.95 0.88" intensity="1.1" castShadows="1" />
+  <light pos="300 -250 260" color="0.55 0.65 0.85" intensity="0.5" radius="900" castShadows="0" />
+  <box pos="0 -300 -2" size="6000 6000 4" material="ground" />
+  <prefab source="characters/hercules" name="Hercules" />
+  <prefab source="characters/hercules" name="Ecorche" show="muscles" pos="90 20 0" />
+</scene>

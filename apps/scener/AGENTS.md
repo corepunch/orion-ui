@@ -38,6 +38,8 @@ deployed command from the consuming project's working directory.
 | `math.c` | `vec3`, `mat4`, linear algebra |
 | `mesh.c` | `Mesh` (verts, tris, edges), primitive generators, **modifiers** (taper, twist, bend, stretch, skew) |
 | `scene.c` | Tiny XML parser, scene loading, named cameras, modifier dispatch, **prefab loading** |
+| `anim.c` | BVH motion-capture loading and sampling (clips, gaits, retargeting and muscles are evaluated in `scene.c`) |
+| `muscle.c` | Muscle strand meshes and the skin: signed-distance union of bones and muscles polygonized with surface nets |
 | `render.c` | OpenGL core-profile shader/VBO renderer with stencil shadows |
 | `shadow.c` | Stencil shadow volume construction (silhouette detection + edge extrusion) |
 | `tests/scener_input_test.c` | Focused document, tool command and scene-axis tests |
@@ -92,9 +94,18 @@ Scene loading is in `scene.c`. Three dispatch tables:
 2. **`shape_parsers[]`** — transformable scene content: primitive shapes (`box`, `sphere`, `cylinder`, `prism`, `cone`, `pyramid`, `torus`), procedural `window`, point `light`, `group`, `prefab`, and `wall`. This lets point lights inherit group and prefab transforms.
 3. **`modifier_parsers[]`** — mesh modifiers (`taper`, `twist`, `bend`, `stretch`, `skew`) applied as child elements of shape nodes. Each has a `parse_mod_*(Mesh*, XmlNode*)` function.
 
+Animation: `anim_evaluate()` turns the instance's `<clip>` at `s->time` into a
+transient pose (keyframes, gaits) or rig rotations (BVH retargeting) before IK,
+so stills and frames share one code path. `muscles_render()` builds `<muscle>`
+strands after the skeleton is placed; their jiggle springs persist across
+rebuilds in `s->muscleStates`, and `s->muscleRecords` reports each muscle's
+length, rest length, flex and volume. With a prefab `<skin>`, `parse_bone()`
+and the muscles feed `s->skinPrims` instead of meshes and `skin_build()` emits
+one surface. `scene_set_time()` rebuilds the view for a frame.
+
 `<bone>` builds characters from constraints. At load, `rig_expand_segments()`
 splits `segments="N"` bones into generated links and `rig_expand_mirrors()`
-adds reflected `mirror="1"` subtrees. Generated nodes and `_`-prefixed runtime
+adds reflected `right_` twins of every `left_` bone chain and muscle. Generated nodes and `_`-prefixed runtime
 attributes are never saved; `xml_write_kids()` writes authored children back
 under their chain. `node_position()` derives bone and `on=` feature positions,
 and `rig_is_joint()` accepts named groups and bones everywhere the rig looks

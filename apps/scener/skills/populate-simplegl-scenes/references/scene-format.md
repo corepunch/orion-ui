@@ -29,11 +29,11 @@ The complete supported element inventory is:
 | Placement | Elements |
 |-----------|----------|
 | `<scene>` attributes | `ambient`, `background`, `up`, `convention` |
-| Scene configuration | `<camera>`, `<pose>`, `<material>`, `<sun>`, `<chardef>`, `<shape>` |
-| Transformable content | `<box>`, `<rect>`, `<rounded-rect>`, `<circle>`, `<ellipse>`, `<star>`, `<rounded-box>`, `<screen>`, `<sphere>`, `<cylinder>`, `<capsule>`, `<arch>`, `<prism>`, `<cone>`, `<pyramid>`, `<torus>`, `<lathe>`, `<loft>`, `<wall>`, `<window>`, `<door>`, `<group>`, `<prefab>`, `<light>`, `<line>`, `<dummy>` |
+| Scene configuration | `<camera>`, `<pose>`, `<clip>`, `<material>`, `<sun>`, `<chardef>`, `<shape>` |
+| Transformable content | `<box>`, `<rect>`, `<rounded-rect>`, `<circle>`, `<ellipse>`, `<star>`, `<rounded-box>`, `<screen>`, `<sphere>`, `<cylinder>`, `<capsule>`, `<arch>`, `<prism>`, `<cone>`, `<pyramid>`, `<torus>`, `<lathe>`, `<loft>`, `<wall>`, `<window>`, `<door>`, `<group>`, `<prefab>`, `<light>`, `<line>`, `<dummy>`, `<bone>`, `<ellipsoid>`, `<muscle>` and `<skin>` (prefabs) |
 | Wall cutters | `<bool-negative-box>`, `<bool-negative-arch>`, `<bool-negative-cylinder>` |
 | Mesh modifiers | `<taper>`, `<twist>`, `<bend>`, `<stretch>`, `<skew>`, `<array>`, `<extrude>`, `<bevel>`, `<mirror>`, `<noise>`, `<shell>` |
-| Context-only children | `<camera><transform>`, `<camera><use-pose>`, `<pose><joint>`, `<pose><ik>`, `<prefab><joint>`, `<prefab><ik>`, `<shape><v>`, `<prefab><attach>` |
+| Context-only children | `<camera><transform>`, `<camera><use-pose>`, `<camera><use-clip>`, `<pose><joint>`, `<pose><ik>`, `<pose><flex>`, `<clip><key>`, `<clip><map>`, `<key><joint>`, `<key><ik>`, `<key><flex>`, `<prefab><joint>`, `<prefab><ik>`, `<prefab><flex>`, `<shape><v>`, `<prefab><attach>` |
 
 Unknown elements produce an `unsupported XML element` warning. Element names
 and attribute names are case-sensitive.
@@ -243,6 +243,36 @@ A scene-level `<pose name="...">` stores reusable joint offsets and IK constrain
 ```
 
 `<joint>` uses `target` for a named group or bone, `pos` for local centimetre offset, and `rot` for local Euler degrees. On a bone, `aim="azimuth elevation"` re-points it in its parent's frame before `rot`; prefer it to Euler angles. `<ik>` names a direct parent → child → grandchild joint chain; with only `tip`, the tip's parent and grandparent form the chain. `plant="1"` without `target` pins the tip at its unposed world position, so a foot stays put while the body bends. Its `target` is a **world-space** position in centimetres; `pole` is a world-space direction indicating the preferred bend. `keepOrientation="1"` preserves the tip's original world orientation, useful for feet. The two-bone solver clamps unreachable targets without stretching bones. The Properties panel reports reachability and distance beyond reach; stderr also records unreachable targets. A fixed world target keeps a foot planted when the root or hips move. A saved pose contains the current pose's constraints and the instance's edits, and can be assigned to another camera.
+
+### Animation clips
+
+A scene-level `<clip name="…">` moves characters over time; see the
+[animation guide](../../../docs/character-animation.md). A camera assigns it to
+one instance with `<use-clip instance="Actor" name="Walk" offset="0"/>`; a
+prefab instance can set `clip="Walk"` and `clipOffset` for every camera. A
+clip replaces that instance's still pose. Stills render time 0 unless
+`--time` is given; `--frames` renders sequences.
+
+| Clip attribute | Default | Description |
+|---|---|---|
+| `speed` | 1 | Playback rate |
+| `loop` | 1 | Wrap time over the clip length; `0` holds the last frame |
+| `length` | last key | Keyframed clips: loop length in seconds |
+| `ease` | `spline` | Keyframed clips: `spline` (Catmull-Rom), `smooth` or `linear` |
+| `gait` | — | `walk`: procedural walk on the skeleton's `foot="1"` bones |
+| `cycle`, `stride`, `lift`, `duty` | 1 s, 20, 4, 0.6 | Gait: seconds per cycle, foot excursion and lift in cm, stance fraction |
+| `bob`, `crouch`, `sway`, `lean` | 1, 0, 3, 0 | Gait: hip dip and constant lowering in cm, yaw sway and forward pitch in degrees |
+| `armSwing`, `tailSway` | 20, 12 | Gait: degrees for `*arm*`/`*shoulder*` bones without feet and for `tail*` bones |
+| `travel` | 1 | Gait and capture: move the body; `0` animates in place |
+| `bvh` | — | Motion capture file, relative to the asset root or absolute |
+| `rig` | `humanoid` | Capture joint-name preset, or `none` to use only `<map>` |
+| `start`, `heading`, `scale` | 0, 0, auto | Capture: start second, yaw in degrees, metres per BVH unit |
+
+Keyframed clips hold `<key time="…" pose="…">` children; a key may also hold
+its own `<joint>`, `<ik>` and `<flex>` entries. Capture clips accept
+`<map joint="BvhJoint" bone="bone_name" end="BvhEndJoint"/>`.
+`<flex muscle="…" amount="0..1"/>` contracts a [muscle](#muscle) in poses, keys
+and instances.
 
 Mirroring uses the explicit `pair` and reflects local rotations across the character's X plane (`S R S`, with `S = diag(-1,1,1)`). Paired joints should have reflected rest orientations. Mesh `<mirror>` only changes geometry; it does not mirror a grouped rig or pose.
 
@@ -853,13 +883,12 @@ elevation 90 is up and −90 down.
 | `length` | float | 0 | Joint-to-tip length in cm; a child without `at` starts at the tip |
 | `radius` | 1–2 floats | 5 | Girth in cm: side radius, then the other cross radius |
 | `taper` | float | 1 | Tip girth relative to the base: pointed ears, tails, snouts |
-| `at` | float | tip | Attach along the parent at this fraction of its length, on its surface |
-| `from` | 2 floats | `aim` | Direction from the parent's axis to that surface point |
-| `sink` | float | ½ min radius | How far the joint sinks below the parent surface, in cm |
+| `at` | float | tip | Joint at this fraction along the parent's axis |
+| `from` | 2 floats | `aim` | Direction from the parent's axis toward the joint |
+| `out` | float | 0 | Joint distance from the parent's axis along `from`, in cm; independent of any volume |
 | `overlap` | float | ½ min radius | Volume extension past connected joints, hiding seams |
 | `segments` | int | 1 | Split into N links named `name`, `name_2` … `name_N` |
 | `aimEnd` | 2 floats | `aim` | Last link direction; links interpolate from `aim`, curving spines, necks and tails |
-| `mirror` | 0/1 | 0 | Also build the reflected subtree, renaming `left_` to `right_` |
 | `foot` | 0/1 | 0 | Report rest-pose ground clearance so limb lengths can be corrected |
 | `ground` | 0/1 | 1 | Root bone only: lift so the lowest rest volume touches Z=0 |
 | `volume` | 0/1 | 1 | Omit the body volume and keep only the joint |
@@ -868,31 +897,72 @@ elevation 90 is up and −90 down.
 Bones ignore `rot` and `scale`. `material`, `color`, `shininess`, `rings`,
 `slices` and shadow flags apply to the volume. A segmented bone's links inherit
 them and distribute `taper` along the chain. Children with `at` are assigned to
-the link that owns that fraction of the chain. Generated mirror and segment
-links are not saved; the file keeps what was authored.
+the link that owns that fraction of the chain. Every `left_*` bone whose parent
+is not itself `left_*` gets a reflected `right_*` subtree. Generated mirror and
+segment links are not saved; the file keeps what was authored.
 
 Other shapes inside a bone use `on="azimuth elevation"` with optional `at`
 (default 1) and `sink` (default 0) to sit on the bone's surface instead of
-`pos`. Use this for eyes, noses, buttons and buckles. Grounding, attachments
-and `on` use the untapered ellipsoid, so do not attach children near a
-strongly tapered tip.
+`pos`. Use this for eyes, noses, buttons and buckles. Grounding and `on` use
+the untapered ellipsoid, so do not place details near a strongly tapered tip.
 
 ```xml
 <bone name="spine" aim="0 0" aimEnd="0 8" segments="2" length="15" radius="7 6.5" material="fur">
   <bone name="neck" aim="0 50" length="5" radius="4.2">
     <bone name="head" aim="0 5" length="8" radius="7 6">
-      <bone name="left_ear" at="0.35" from="55 50" aim="28 72" length="6" radius="3 1.1" taper="0.15" mirror="1"/>
+      <bone name="left_ear" at="0.35" from="55 50" out="5.5" aim="28 72" length="6" radius="3 1.1" taper="0.15"/>
       <sphere on="34 12" at="0.8" radius="1.5" material="eye"/>
     </bone>
   </bone>
-  <bone name="left_shoulder" at="0.85" from="90 -55" aim="0 -88" length="6.5" radius="2.8 3" mirror="1">
+  <bone name="left_shoulder" at="0.85" from="90 -55" out="5.3" aim="0 -88" length="6.5" radius="2.8 3">
     <bone name="left_forearm" aim="0 -90" length="6.5" radius="2.2">
       <bone name="left_front_paw" foot="1" aim="0 -8" length="3" radius="2.2 1.3"/>
     </bone>
   </bone>
-  <bone name="tail" at="0" from="180 25" aim="180 35" aimEnd="165 85" segments="3" length="22" radius="1.8" taper="0.6"/>
+  <bone name="tail" at="0" from="180 25" out="0.3" aim="180 35" aimEnd="165 85" segments="3" length="22" radius="1.8" taper="0.6"/>
 </bone>
 ```
+
+### `<muscle>`
+
+A Hercules-style muscle strand between two bones of the same prefab; see the
+[animation guide](../../../docs/character-animation.md#muscles-and-skin). Place
+muscles as direct children of the `<prefab>` root. They render after the
+skeleton, only inside prefab instances: into the prefab's `<skin>`, or as
+individual strands without one.
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | string | — | Muscle name for `<flex>`; `left_*` muscles get a mirrored `right_*` twin |
+| `origin`, `insertion` | anchor | — | `"bone at azimuth elevation"`: fraction along the bone and direction from its axis to its surface; `"… .. at azimuth elevation"` spans the end so fibres fan across it |
+| `radius` | 1–2 floats | 2 | Belly half width across the body, then half thickness, in cm |
+| `profile` | floats | `0.35 0.8 1 0.8 0.35` | Thickness curve from origin to insertion |
+| `tendon` | 1–2 floats | 0 | Fractions at the origin and insertion ends that are tendon |
+| `fibers` | int | 1 | Strands fanned across the end spans, fused into one sheet in the skin |
+| `via` | anchors | — | `"bone at azimuth elevation [lift]; …"` points the path passes through |
+| `wrap` | bone names | — | Bones the belly slides over instead of passing through |
+| `bands` | int | 0 | Tendinous grooves across the belly (rectus abdominis) |
+| `bulge` | float | 1 | 1 keeps volume as the ends approach; 0 keeps girth |
+| `contract` | float | 0 | Automatic flex as the muscle shortens |
+| `jiggle` | float | 0 | Secondary motion (0–1) in rendered sequences |
+
+`material`, `color`, `shininess` and `castShadow` apply to individual strands.
+
+### `<skin>`
+
+One per prefab, beside the skeleton. It fuses every bone volume and muscle of
+each instance into one smooth surface, rebuilt every frame.
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `material` / `color`, `shininess` | — | — | Skin surface |
+| `muscleMaterial` | material | red | Muscle colour in the écorché view |
+| `resolution` | float | 1.1 | Surface cell size in cm |
+| `show` | `skin`/`muscles` | `skin` | `muscles` draws the bones and individual muscles instead |
+| `castShadow` | 0/1 | 1 | Shadow casting |
+
+A prefab instance's `show` overrides the skin's. Bones with `skin="0"` stay
+separate meshes.
 
 ### `<capsule>`
 

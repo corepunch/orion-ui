@@ -30,6 +30,18 @@ scener --layout /absolute/path/room.blks --scale 2 --format jpg --output-dir ren
 scener /absolute/path/room.blks --cam room-main --screenshot /tmp/preview.png
 ```
 
+Animated scenes (see [docs/character-animation.md](docs/character-animation.md))
+render a moment with `--time SECONDS`, or a sequence with `--frames N`,
+`--frames FIRST-LAST` or `--frames all` (the longest clip) at `--fps` (default
+24). Sequences write `CAMERA_0001.jpg`, `CAMERA_0002.jpg`, … in order.
+
+```sh
+scener --render /absolute/path/hercules_study.blks --camera Walk --frames all --fps 24 --output-dir render/walk
+```
+
+`--list-joints SCENE` (with optional `--camera` and `--time`) prints rig joint
+world positions in cm and muscle lengths and volumes without rendering.
+
 Batch outputs use each camera name. `--layout` writes `layout.jpg` or
 `layout.png`: a flat-color orthographic cutaway plan (without lighting or shadows) clipped at 85% of the scene's vertical
 bounds, with image dimensions derived from `--scale` pixels per centimeter.
