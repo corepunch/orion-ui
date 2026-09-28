@@ -40,6 +40,7 @@ deployed command from the consuming project's working directory.
 | `scene.c` | Tiny XML parser, scene loading, named cameras, modifier dispatch, **prefab loading** |
 | `anim.c` | BVH motion-capture loading and sampling (clips, gaits, retargeting and muscles are evaluated in `scene.c`) |
 | `muscle.c` | Muscle strand meshes and the skin: signed-distance union of bones and muscles polygonized with surface nets |
+| `anatomy.c` | Anatomical bone shapes (skull, vertebrae, thorax, pelvis, limb bones, hands, feet) and the landmarks muscles attach to |
 | `render.c` | OpenGL core-profile shader/VBO renderer with stencil shadows |
 | `shadow.c` | Stencil shadow volume construction (silhouette detection + edge extrusion) |
 | `tests/scener_input_test.c` | Focused document, tool command and scene-axis tests |

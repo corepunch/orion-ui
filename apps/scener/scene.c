@@ -73,6 +73,9 @@
 #define BONE_DEFAULT_SLICES 16
 #define BONE_VERTICAL_LIMIT 0.99f
 #define BONE_NAME_CAPACITY 64
+#define BONE_SHAPE_KEY 160
+#define BONE_SLICE_OVERLAP 0.6f
+#define SKIN_PART_BLEND 0.006f
 #define MIRROR_TEXT_CAPACITY 512
 #define ANCHOR_AZIMUTH_INDEX 1
 #define BONE_FOOT_TOLERANCE 0.002f
@@ -101,7 +104,9 @@
 #define MUSCLE_FAN_BLEND 0.022f
 #define MUSCLE_PROFILE_CAPACITY 12
 #define MUSCLE_VIA_CAPACITY 6
-#define MUSCLE_VIA_TEXT 128
+#define MUSCLE_VIA_TEXT 256
+#define ANCHOR_MAX_POINTS 6
+#define ANCHOR_MAX_TOKENS 6
 #define MUSCLE_PATH_STEPS 16
 #define MUSCLE_DENSE_CAPACITY 256
 #define MUSCLE_TENDON_RATIO 0.25f
@@ -229,6 +234,7 @@ static inline vec3 cvt3ds_inv(Scene *s,vec3 v){ return s->convention3dsMax?v3(v.
    frame starts aligned with the body and mirroring flips X. */
 typedef struct { vec3 dir,side,other,center; float length,radiusSide,radiusOther,along,start,end,taper; } BoneGeom;
 
+static const char *rig_view_names[]={"skin","muscles","bones"};
 static int xml_is_bone(XmlNode *n){ return n && !strcmp(n->tag,"bone"); }
 static int rig_is_joint(XmlNode *n){ return n && (!strcmp(n->tag,"group") || xml_is_bone(n)) && xml_attr(n,"name",NULL); }
 
@@ -273,6 +279,9 @@ static BoneGeom bone_geom(XmlNode *n){
 	g.end=g.length+(bone_has_tip_child(n)?overlap:0);
 	g.along=fmaxf((g.end-g.start)*0.5f,fminf(side,other));
 	g.center=vscale(g.dir,(g.start+g.end)*0.5f);
+	/* Links of an anatomical chain (vertebrae) are slices that overlap their neighbours a
+	   little, so an envelope (neck, belly) follows the chain instead of swelling into balls. */
+	if(xml_attr_i(n,"_segments",1)>1 && xml_attr(n,"shape",NULL)){ g.along=g.length*0.5f+fminf(side,other)*BONE_SLICE_OVERLAP; g.center=vscale(g.dir,g.length*0.5f); }
 	return g;
 }
 
@@ -287,9 +296,48 @@ static vec3 bone_attach_point(const BoneGeom *g,float t,vec3 direction,float sin
 	return vadd(origin,vscale(direction,distance-sink));
 }
 
+/* Anatomical shapes depend only on these attributes, so the cache is keyed by their values. */
+typedef struct { char key[BONE_SHAPE_KEY]; BoneShape shape; int ok; } bone_shape_entry_t;
+static bone_shape_entry_t **bone_shape_cache; static int nbone_shape_cache,cbone_shape_cache;
+
+static const BoneShape *bone_shape(XmlNode *n){
+	const char *kind=xml_attr(n,"shape",NULL);
+	if(!xml_is_bone(n) || !kind) return NULL;
+	BoneGeom g=bone_geom(n);
+	const char *name=xml_attr(n,"name","");
+	float mirror=strncmp(name,"right_",6)?1.0f:-1.0f;
+	int segment=xml_attr_i(n,"_segment",0),segments=xml_attr_i(n,"_segments",1);
+	char key[BONE_SHAPE_KEY];
+	snprintf(key,sizeof(key),"%s|%.5f %.5f %.5f|%.5f|%.5f %.5f|%g|%d/%d",kind,g.dir.x,g.dir.y,g.dir.z,g.length,g.radiusSide,g.radiusOther,mirror,segment,segments);
+	for(int i=0;i<nbone_shape_cache;i++) if(!strcmp(bone_shape_cache[i]->key,key)) return bone_shape_cache[i]->ok?&bone_shape_cache[i]->shape:NULL;
+	bone_shape_entry_t *entry=calloc(1,sizeof(*entry));
+	snprintf(entry->key,sizeof(entry->key),"%s",key);
+	BoneShapeSpec spec={kind,g.dir,g.length,g.radiusSide,g.radiusOther,mirror,segment,segments};
+	entry->ok=bone_shape_build(&spec,&entry->shape);
+	if(!entry->ok){ fprintf(stderr,"[scener] bone %s: unknown shape '%s'\n",name,kind); fflush(stderr); }
+	DA_PUSH(bone_shape_cache,nbone_shape_cache,cbone_shape_cache,entry);
+	return entry->ok?&entry->shape:NULL;
+}
+
+static float bone_prim_lowest(const SkinPrim *p,vec3 joint){
+	if(p->kind==SKIN_PRIM_STRAND){
+		float low=INFINITY;
+		for(int i=0;i<p->strand.n;i++) low=fminf(low,joint.z+p->strand.s[i].pos.z-fmaxf(p->strand.s[i].w,p->strand.s[i].t));
+		return low;
+	}
+	float scale=fmaxf(1,p->taper),a=p->radii.x*scale*p->ax.z,b=p->radii.y*p->ay.z,c=p->radii.z*scale*p->az.z;
+	return joint.z+p->center.z-sqrtf(a*a+b*b+c*c);
+}
+
 static vec3 bone_offset(XmlNode *n);
 
 static float bone_volume_lowest(XmlNode *n,vec3 joint){
+	const BoneShape *shape=bone_shape(n);
+	if(shape && shape->nparts){
+		float low=INFINITY;
+		for(int i=0;i<shape->nparts;i++) low=fminf(low,bone_prim_lowest(&shape->parts[i].prim,joint));
+		return low;
+	}
 	BoneGeom g=bone_geom(n);
 	vec3 center=vadd(joint,g.center);
 	float a=g.radiusSide*g.side.z,b=g.along*g.dir.z,c=g.radiusOther*g.other.z;
@@ -399,7 +447,7 @@ static void rig_mirror_anchors(XmlNode *n,const char *attr){
 
 static void rig_mirror_subtree(XmlNode *n){
 	static const char *directions[]={"aim","aimEnd","from","on"};
-	static const char *anchors[]={"origin","insertion","via","wrap"};
+	static const char *anchors[]={"origin","insertion","via","wrap","twistWith"};
 	for(size_t i=0;i<sizeof(anchors)/sizeof(anchors[0]);i++) rig_mirror_anchors(n,anchors[i]);
 	for(size_t i=0;i<sizeof(directions)/sizeof(directions[0]);i++){
 		float azimuth,elevation; char value[64];
@@ -433,7 +481,9 @@ static void rig_expand_segments(XmlNode *n){
 	const char *radius=xml_attr(n,"radius","5");
 	if(sscanf(radius,"%f %f",&side,&other)<2) other=side;
 	XmlNode **links=calloc((size_t)count,sizeof(*links)); links[0]=n;
-	static const char *inherited[]={"material","color","shininess","rings","slices","castShadow","renderable","unlit","overlap"};
+	static const char *inherited[]={"material","color","shininess","rings","slices","castShadow","renderable","unlit","overlap","shape","envelope","skin","volume"};
+	char index[16];
+	snprintf(index,sizeof(index),"%d",count); xml_set_attr(n,"_segments",index); xml_set_attr(n,"_segment","0");
 	for(int k=1;k<count;k++){
 		XmlNode *link=xml_new("bone"); link->parent=links[k-1];
 		char value[BONE_NAME_CAPACITY];
@@ -446,6 +496,8 @@ static void rig_expand_segments(XmlNode *n){
 		for(size_t a=0;a<sizeof(inherited)/sizeof(inherited[0]);a++)
 			if(xml_attr(n,inherited[a],NULL)) xml_set_attr(link,inherited[a],xml_attr(n,inherited[a],""));
 		xml_set_attr(link,"generated","segment");
+		snprintf(index,sizeof(index),"%d",k); xml_set_attr(link,"_segment",index);
+		snprintf(index,sizeof(index),"%d",count); xml_set_attr(link,"_segments",index);
 		DA_PUSH(links[k-1]->kids,links[k-1]->nkids,links[k-1]->ckids,link);
 		links[k]=link;
 	}
@@ -1354,6 +1406,48 @@ static void parse_ellipsoid(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, 
 
 static void bone_world_ellipsoid(XmlNode *bone,mat4 world,SkinPrim *e);
 
+static void skin_prim_transform(const SkinPrim *src,mat4 M,SkinPrim *dst){
+	*dst=*src;
+	if(src->kind==SKIN_PRIM_STRAND){
+		memset(&dst->strand,0,sizeof(dst->strand));
+		for(int i=0;i<src->strand.n;i++){
+			StrandSample sample=src->strand.s[i];
+			sample.pos=mat4_xform_point(M,sample.pos); sample.out=vnorm(mat4_xform_dir(M,sample.out));
+			DA_PUSH(dst->strand.s,dst->strand.n,dst->strand.c,sample);
+		}
+		return;
+	}
+	vec3 ax=mat4_xform_dir(M,src->ax),ay=mat4_xform_dir(M,src->ay),az=mat4_xform_dir(M,src->az);
+	dst->center=mat4_xform_point(M,src->center);
+	dst->radii=v3(src->radii.x*vlen(ax),src->radii.y*vlen(ay),src->radii.z*vlen(az));
+	dst->ax=vnorm(ax); dst->ay=vnorm(ay); dst->az=vnorm(az);
+}
+
+/* Skeleton views draw the bony parts, one mesh per shade (bone, cartilage, cavity);
+   the skin fuses the parts that shape the surface, soft tissue included. */
+static void bone_render_shape(Scene *s,XmlNode *n,const BoneShape *shape,mat4 M,mat4 R,vec3 color,float shin,int castsShadow,int renderable,int unlit,int collect){
+	int rings=xml_attr_i(n,"rings",BONE_DEFAULT_RINGS),slices=xml_attr_i(n,"slices",BONE_DEFAULT_SLICES);
+	if(collect){
+		for(int i=0;i<shape->nparts;i++) if(shape->parts[i].flags&BONE_PART_SKIN){
+			SkinPrim prim; skin_prim_transform(&shape->parts[i].prim,M,&prim); prim.blend=SKIN_PART_BLEND;
+			DA_PUSH(s->skinPrims,s->nskinPrims,s->cskinPrims,prim);
+		}
+		return;
+	}
+	int *done=calloc((size_t)shape->nparts,sizeof(int));
+	for(int i=0;i<shape->nparts;i++){
+		if(done[i] || !(shape->parts[i].flags&BONE_PART_SKELETON)) continue;
+		float shade=shape->parts[i].shade;
+		Mesh mesh={0};
+		for(int j=i;j<shape->nparts;j++) if(!done[j] && shape->parts[j].shade==shade && (shape->parts[j].flags&BONE_PART_SKELETON)){
+			mesh_append(&mesh,bone_part_mesh(&shape->parts[j],rings,slices)); done[j]=1;
+		}
+		vec3 tinted=v3(fminf(1,color.x*shade),fminf(1,color.y*shade),fminf(1,color.z*shade));
+		scene_add_obj(s,mesh,M,R,tinted,shin,castsShadow,renderable,unlit);
+	}
+	free(done);
+}
+
 static void parse_bone(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 pos, vec3 rot, vec3 color, float shin, int castsShadow, int renderable, int unlit){
 	(void)parentM; (void)pos; (void)rot;
 	if(!xml_is_bone(n->parent) && xml_attr_i(n,"ground",1)){
@@ -1361,10 +1455,13 @@ static void parse_bone(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 
 		bone_report_feet(n,rest,xml_attr(n,"name","?"));
 	}
 	int skin=xml_attr_i(n,"skin",1);
-	if(xml_attr_i(n,"volume",1) && s->skinCollect && skin){
+	const BoneShape *shape=bone_shape(n);
+	int envelope=xml_attr_i(n,"envelope",shape?0:1);
+	if(shape) bone_render_shape(s,n,shape,M,R,color,shin,castsShadow,renderable,unlit,s->skinCollect && skin);
+	if(xml_attr_i(n,"volume",1) && envelope && s->skinCollect && skin){
 		SkinPrim prim; bone_world_ellipsoid(n,M,&prim); prim.blend=s->skinBoneBlend;
 		DA_PUSH(s->skinPrims,s->nskinPrims,s->cskinPrims,prim);
-	} else if(xml_attr_i(n,"volume",1)){
+	} else if(xml_attr_i(n,"volume",1) && !shape){
 		BoneGeom g=bone_geom(n);
 		Mesh mesh=gen_ellipsoid(g.center,g.side,g.dir,g.other,v3(g.radiusSide,g.along,g.radiusOther),g.taper,
 			xml_attr_i(n,"rings",BONE_DEFAULT_RINGS),xml_attr_i(n,"slices",BONE_DEFAULT_SLICES));
@@ -1836,24 +1933,84 @@ static void rig_set_rotation(Scene *s,XmlNode *node,mat4 rotation){
 
 static mat4 rig_from_to(vec3 from,vec3 to,vec3 fallback);
 
-/* A pose override may re-aim a bone in its parent frame before its Euler rot. */
-static mat4 rig_override_delta(Scene *s,XmlNode *node,XmlNode *override,mat4 *turn){
-	mat4 rotation=mat4_rot_xyz(cvt3ds(s,xml_attr_v3(override,"rot",v3(0,0,0))));
-	if(xml_is_bone(node) && xml_attr(override,"aim",NULL)){
-		BoneGeom g=bone_geom(node);
-		rotation=mat4_mul(rig_from_to(g.dir,xml_attr_direction(override,"aim",g.dir),g.other),rotation);
+static mat4 rig_axis_rotation(vec3 axis,float degrees){
+	axis=vnorm(axis);
+	float a=degrees*M_PIf/180.0f,c=cosf(a),sn=sinf(a),t=1-c;
+	mat4 m=mat4_identity();
+	m.m[0]=t*axis.x*axis.x+c;        m.m[4]=t*axis.x*axis.y-sn*axis.z; m.m[8]=t*axis.x*axis.z+sn*axis.y;
+	m.m[1]=t*axis.x*axis.y+sn*axis.z; m.m[5]=t*axis.y*axis.y+c;        m.m[9]=t*axis.y*axis.z-sn*axis.x;
+	m.m[2]=t*axis.x*axis.z-sn*axis.y; m.m[6]=t*axis.y*axis.z+sn*axis.x; m.m[10]=t*axis.z*axis.z+c;
+	return m;
+}
+
+/* Twist is roll about the bone's own axis; positive pronates (turns the front
+   medially) on both sides, so right bones turn the other way. */
+static float rig_twist_sign(XmlNode *node){ return strncmp(xml_attr(node,"name",""),"right_",6)?1.0f:-1.0f; }
+
+static XmlNode *rig_own_override(Scene *s,XmlNode *node){
+	const char *name=xml_attr(node,"name",NULL);
+	if(!name) return NULL;
+	XmlNode *override=rig_override_in((XmlNode*)s->activeRigInstance,name);
+	return override?override:rig_override_in((XmlNode*)s->activeRigPose,name);
+}
+
+static XmlNode *rig_next_link(XmlNode *node){
+	for(int i=0;i<node->nkids;i++) if(!strcmp(xml_attr(node->kids[i],"generated",""),"segment")) return node->kids[i];
+	return NULL;
+}
+
+/* A rot or twist on a segmented bone is shared evenly by its links, so bending "spine"
+   curls every lumbar vertebra. Links posed one by one (a gait's tail) keep their own. */
+static XmlNode *rig_find_override(Scene *s,XmlNode *node,float *share,int *first){
+	XmlNode *root=node,*own=rig_own_override(s,node);
+	while(!strcmp(xml_attr(root,"generated",""),"segment") && xml_is_bone(root->parent)) root=root->parent;
+	*share=1; *first=1;
+	int segments=xml_is_bone(root)?xml_attr_i(root,"segments",1):1;
+	if(segments<2) return own;
+	for(XmlNode *link=rig_next_link(root);link;link=rig_next_link(link)) if(rig_own_override(s,link)) return own;
+	if(root==node){ if(own) *share=1.0f/segments; return own; }
+	*first=0; *share=1.0f/segments;
+	return rig_own_override(s,root);
+}
+
+/* A pose override may re-aim a bone in its parent frame before its Euler rot and twist.
+   twistWith="bone" rolls a bone about the line from its joint to its parent's tip by the
+   named bone's twist: the radius crossing the ulna as the hand pronates. */
+static mat4 rig_pose_delta(Scene *s,XmlNode *node,mat4 *turn){
+	float share; int first;
+	XmlNode *override=rig_find_override(s,node,&share,&first);
+	mat4 rotation=mat4_identity(); vec3 pos=v3(0,0,0);
+	if(override){
+		rotation=mat4_rot_xyz(vscale(cvt3ds(s,xml_attr_v3(override,"rot",v3(0,0,0))),share));
+		if(xml_is_bone(node) && first && xml_attr(override,"aim",NULL)){
+			BoneGeom g=bone_geom(node);
+			rotation=mat4_mul(rig_from_to(g.dir,xml_attr_direction(override,"aim",g.dir),g.other),rotation);
+		}
+		float twist=xml_attr_f(override,"twist",0)*share;
+		if(twist!=0 && xml_is_bone(node)) rotation=mat4_mul(rotation,rig_axis_rotation(bone_geom(node).dir,twist*rig_twist_sign(node)));
+		if(first) pos=cvt3ds(s,xml_attr_v3_cm(override,"pos",v3(0,0,0)));
+	}
+	const char *with=xml_attr(node,"twistWith",NULL);
+	if(with && xml_is_bone(node) && xml_is_bone(node->parent)){
+		XmlNode *driver=rig_find_joint((XmlNode*)s->activeRigRoot,with);
+		float driverShare; int driverFirst;
+		XmlNode *driven=driver?rig_find_override(s,driver,&driverShare,&driverFirst):NULL;
+		if(!driver && s->activeRigRoot){ fprintf(stderr,"[scener] bone %s: twistWith names unknown bone '%s'\n",xml_attr(node,"name","?"),with); fflush(stderr); }
+		float twist=driven?xml_attr_f(driven,"twist",0)*driverShare:0;
+		if(twist!=0){
+			BoneGeom pg=bone_geom(node->parent);
+			vec3 axis=vsub(vscale(pg.dir,pg.length),bone_offset(node));
+			rotation=mat4_mul(rig_axis_rotation(axis,twist*rig_twist_sign(node)),rotation);
+		}
 	}
 	if(turn) *turn=rotation;
-	return mat4_mul(mat4_translate(cvt3ds(s,xml_attr_v3_cm(override,"pos",v3(0,0,0)))),rotation);
+	return mat4_mul(mat4_translate(pos),rotation);
 }
 
 static mat4 rig_local(Scene *s,XmlNode *node){
 	mat4 M=xml_node_transform(s,node);
-	const char *name=xml_attr(node,"name",NULL);
-	if(!name) return M;
-	XmlNode *override=rig_override_in((XmlNode*)s->activeRigInstance,name);
-	if(!override) override=rig_override_in((XmlNode*)s->activeRigPose,name);
-	if(override) M=mat4_mul(M,rig_override_delta(s,node,override,NULL));
+	if(!xml_attr(node,"name",NULL)) return M;
+	M=mat4_mul(M,rig_pose_delta(s,node,NULL));
 	return mat4_mul(M,rig_rotation(s,node));
 }
 
@@ -1896,6 +2053,8 @@ static void rig_solve_ik(Scene *s,XmlNode *ik,XmlNode *root,mat4 instanceM){
 	vec3 rest=mat4_xform_point(mat4_mul(instanceM,rig_rest_world(s,tip,root)),v3(0,0,0));
 	/* plant="1" pins the tip at its unposed world position, e.g. a foot while the body moves. */
 	vec3 goal=xml_attr_v3_cm(ik,"target",xml_attr_i(ik,"plant",0)?rest:t),pole=xml_attr_v3(ik,"pole",v3(0,-1,0));
+	/* offset moves the goal in the instance frame, so one keyed clip serves every instance. */
+	goal=vadd(goal,mat4_xform_dir(instanceM,xml_attr_v3_cm(ik,"offset",v3(0,0,0))));
 	if(!isfinite(upper) || !isfinite(lower) || upper<RIG_EPSILON || lower<RIG_EPSILON ||
 		!isfinite(goal.x) || !isfinite(goal.y) || !isfinite(goal.z) ||
 		!isfinite(pole.x) || !isfinite(pole.y) || !isfinite(pole.z)){
@@ -1996,11 +2155,12 @@ static int anim_get_floats(XmlNode *n,const char *attr,float *v,int count){
 	return 1;
 }
 
-typedef struct { const char *tag,*id,*attrs[3]; int counts[3]; } anim_kind_t;
+#define ANIM_CHANNELS 4
+typedef struct { const char *tag,*id,*attrs[ANIM_CHANNELS]; int counts[ANIM_CHANNELS]; } anim_kind_t;
 static const anim_kind_t anim_kinds[]={
-	{ "joint", "target", { "aim", "rot", "pos" },    { 2, 3, 3 } },
-	{ "flex",  "muscle", { "amount", NULL, NULL },   { 1, 0, 0 } },
-	{ "ik",    "tip",    { "target", NULL, NULL },   { 3, 0, 0 } },
+	{ "joint", "target", { "aim", "rot", "pos", "twist" }, { 2, 3, 3, 1 } },
+	{ "flex",  "muscle", { "amount", NULL, NULL, NULL },   { 1, 0, 0, 0 } },
+	{ "ik",    "tip",    { "target", "offset", NULL, NULL }, { 3, 3, 0, 0 } },
 };
 #define ANIM_KIND_IK 2
 
@@ -2016,7 +2176,7 @@ static XmlNode *anim_key_item(Scene *s,XmlNode *key,const anim_kind_t *kind,cons
 
 static int anim_rest_value(XmlNode *proot,const anim_kind_t *kind,const char *id,const char *attr,float *out){
 	memset(out,0,sizeof(float)*3);
-	if(kind==&anim_kinds[ANIM_KIND_IK]) return 0;
+	if(kind==&anim_kinds[ANIM_KIND_IK]) return !strcmp(attr,"offset");
 	if(strcmp(attr,"aim")) return 1;
 	XmlNode *bone=rig_find_joint(proot,id);
 	if(!xml_is_bone(bone)) return 0;
@@ -2101,7 +2261,7 @@ static XmlNode *anim_keyframe_pose(Scene *s,XmlNode *clip,XmlNode *proot,float t
 				for(int j=0;j<pose->nkids && !seen;j++) seen=!strcmp(pose->kids[j]->tag,kind->tag) && !strcmp(xml_attr(pose->kids[j],kind->id,""),id);
 				if(seen) continue;
 				XmlNode *out=anim_add(pose,kind->tag,kind->id,id);
-				for(int a=0;a<3 && kind->attrs[a];a++){ float v[3]; if(anim_channel(s,proot,&sp,kind,id,a,v)) anim_set_floats(out,kind->attrs[a],v,kind->counts[a]); }
+				for(int a=0;a<ANIM_CHANNELS && kind->attrs[a];a++){ float v[3]; if(anim_channel(s,proot,&sp,kind,id,a,v)) anim_set_floats(out,kind->attrs[a],v,kind->counts[a]); }
 				if(k==ANIM_KIND_IK){
 					XmlNode *near=anim_key_item(s,keys[sp.u<0.5f?sp.from:sp.to],kind,id);
 					if(!near) near=item;
@@ -2371,8 +2531,12 @@ float scene_clip_duration(Scene *s){
    jiggle. Fibres fan flat muscles from an origin line; bands groove the abs.
    Under a prefab <skin>, bones and muscles become one smooth surface. */
 
-typedef struct { XmlNode *bone; mat4 world; float at[2],on[4]; int hasOn; } muscle_end_t;
 typedef struct { vec3 pos,out; } muscle_point_t;
+/* An anchor is a polyline of points "bone mark [lift]" or "bone at [azimuth elevation [lift]]"
+   joined by "..". Later points may name another bone or drop it to stay on the same one.
+   Fibres spread evenly along the polyline, so one muscle can arise from several bones. */
+typedef struct { XmlNode *bone; mat4 world; vec3 pos,out; } anchor_point_t;
+typedef struct { anchor_point_t p[ANCHOR_MAX_POINTS]; int n; } muscle_end_t;
 
 static XmlNode *muscle_bone(XmlNode *proot,XmlNode *m,const char *name,const char *role){
 	XmlNode *bone=rig_find_joint(proot,name);
@@ -2393,53 +2557,85 @@ static int muscle_floats(XmlNode *m,const char *key,float *out,int most){
 	return n;
 }
 
-/* An end is "bone at [azimuth elevation]", optionally spanned to a second point on the
-   same bone with ".. at [azimuth elevation]" so fibres fan across it. */
-static int muscle_end(Scene *s,XmlNode *m,XmlNode *instance,XmlNode *proot,mat4 instanceM,const char *role,int rest,muscle_end_t *e){
-	char bone[BONE_NAME_CAPACITY],first[MUSCLE_VIA_TEXT];
-	const char *value=xml_attr(m,role,""),*span=strstr(value,"..");
-	memset(e,0,sizeof(*e));
-	snprintf(first,sizeof(first),"%.*s",(int)(span?(size_t)(span-value):strlen(value)),value);
-	int n=sscanf(first,"%63s %f %f %f",bone,&e->at[0],&e->on[0],&e->on[1]);
-	if(n<2){ fprintf(stderr,"[scener] muscle %s: %s '%s' needs 'bone at [azimuth elevation] [.. at [azimuth elevation]]'\n",xml_attr(m,"name","?"),role,value); fflush(stderr); return 0; }
-	e->hasOn=n>=4;
-	e->at[1]=e->at[0]; e->on[2]=e->on[0]; e->on[3]=e->on[1];
-	if(span) sscanf(span+2,"%f %f %f",&e->at[1],&e->on[2],&e->on[3]);
-	e->bone=muscle_bone(proot,m,bone,role);
-	if(!e->bone) return 0;
-	if(rest){ e->world=mat4_mul(instanceM,rig_rest_world(s,e->bone,proot)); return 1; }
-	if(!muscle_joint_world(s,instance,e->bone,&e->world)){ fprintf(stderr,"[scener] muscle %s: bone %s was not placed\n",xml_attr(m,"name","?"),xml_attr(e->bone,"name","")); fflush(stderr); return 0; }
+static int anchor_world(Scene *s,XmlNode *m,XmlNode *instance,XmlNode *proot,mat4 instanceM,XmlNode *bone,int rest,mat4 *world){
+	if(rest){ *world=mat4_mul(instanceM,rig_rest_world(s,bone,proot)); return 1; }
+	if(muscle_joint_world(s,instance,bone,world)) return 1;
+	fprintf(stderr,"[scener] muscle %s: bone %s was not placed\n",xml_attr(m,"name","?"),xml_attr(bone,"name","")); fflush(stderr);
+	return 0;
+}
+
+static int anchor_is_number(const char *token){ char *end; strtof(token,&end); return end!=token && !*end; }
+
+static int anchor_point(Scene *s,XmlNode *m,XmlNode *instance,XmlNode *proot,mat4 instanceM,const char *role,const char *text,XmlNode *bone,int rest,anchor_point_t *out){
+	char tokens[ANCHOR_MAX_TOKENS][BONE_NAME_CAPACITY]; int n=0,used;
+	for(const char *p=text;n<ANCHOR_MAX_TOKENS && sscanf(p," %63s%n",tokens[n],&used)==1;p+=used) n++;
+	int i=0;
+	const BoneShape *shape=bone?bone_shape(bone):NULL;
+	if(i<n && !anchor_is_number(tokens[i]) && !(shape && bone_shape_landmark(shape,tokens[i]))){
+		bone=muscle_bone(proot,m,tokens[i++],role);
+		if(!bone) return 0;
+		shape=bone_shape(bone);
+	}
+	if(!bone || i>=n){ fprintf(stderr,"[scener] muscle %s: %s point '%s' needs 'bone mark [lift]' or 'bone at [azimuth elevation [lift]]'\n",xml_attr(m,"name","?"),role,text); fflush(stderr); return 0; }
+	out->bone=bone;
+	if(!anchor_world(s,m,instance,proot,instanceM,bone,rest,&out->world)) return 0;
+	if(!anchor_is_number(tokens[i])){
+		const BoneLandmark *mark=shape?bone_shape_landmark(shape,tokens[i]):NULL;
+		if(!mark){ fprintf(stderr,"[scener] muscle %s: bone %s has no landmark '%s'\n",xml_attr(m,"name","?"),xml_attr(bone,"name",""),tokens[i]); fflush(stderr); return 0; }
+		float lift=i+1<n?strtof(tokens[i+1],NULL)/CM_PER_METRE:0;
+		out->pos=vadd(mark->pos,vscale(mark->out,lift)); out->out=mark->out;
+		return 1;
+	}
+	float values[4]={0,0,0,0}; int count=0;
+	for(;i<n && count<4;i++) values[count++]=strtof(tokens[i],NULL);
+	BoneGeom g=bone_geom(bone);
+	vec3 dir=count>=3?bone_direction(values[1],values[2]):g.other;
+	out->pos=bone_attach_point(&g,values[0],dir,-(count>=4?values[3]/CM_PER_METRE:0)); out->out=dir;
 	return 1;
 }
 
-static muscle_point_t muscle_surface(XmlNode *bone,mat4 world,float at,vec3 dir,int hasDir,float lift){
-	BoneGeom g=bone_geom(bone);
-	muscle_point_t p;
-	if(!hasDir) dir=g.other;
-	p.pos=mat4_xform_point(world,bone_attach_point(&g,at,dir,-lift));
-	p.out=vnorm(mat4_xform_dir(world,dir));
-	return p;
+static int anchor_parse(Scene *s,XmlNode *m,XmlNode *instance,XmlNode *proot,mat4 instanceM,const char *role,const char *text,int rest,muscle_end_t *e){
+	e->n=0;
+	XmlNode *bone=NULL;
+	while(text && *text && e->n<ANCHOR_MAX_POINTS){
+		const char *span=strstr(text,"..");
+		char part[MUSCLE_VIA_TEXT];
+		snprintf(part,sizeof(part),"%.*s",(int)(span?(size_t)(span-text):strlen(text)),text);
+		if(!anchor_point(s,m,instance,proot,instanceM,role,part,bone,rest,&e->p[e->n])) return 0;
+		bone=e->p[e->n++].bone;
+		text=span?span+2:NULL;
+	}
+	return e->n>0;
+}
+
+static int muscle_end(Scene *s,XmlNode *m,XmlNode *instance,XmlNode *proot,mat4 instanceM,const char *role,int rest,muscle_end_t *e){
+	const char *value=xml_attr(m,role,NULL);
+	if(!value){ fprintf(stderr,"[scener] muscle %s: missing %s\n",xml_attr(m,"name","?"),role); fflush(stderr); return 0; }
+	return anchor_parse(s,m,instance,proot,instanceM,role,value,rest,e);
 }
 
 static muscle_point_t muscle_end_point(const muscle_end_t *e,float f){
-	float az=e->on[0]+(e->on[2]-e->on[0])*f,el=e->on[1]+(e->on[3]-e->on[1])*f;
-	return muscle_surface(e->bone,e->world,e->at[0]+(e->at[1]-e->at[0])*f,bone_direction(az,el),e->hasOn,0);
+	float x=fmaxf(0,fminf(1,f))*(e->n-1);
+	int i=(int)x; if(i>=e->n-1) i=e->n>1?e->n-2:0;
+	float t=e->n>1?x-i:0;
+	const anchor_point_t *a=&e->p[i],*b=&e->p[e->n>1?i+1:i];
+	muscle_point_t p;
+	p.pos=lerp(mat4_xform_point(a->world,a->pos),mat4_xform_point(b->world,b->pos),t);
+	p.out=vnorm(lerp(vnorm(mat4_xform_dir(a->world,a->out)),vnorm(mat4_xform_dir(b->world,b->out)),t));
+	return p;
 }
 
-/* Via points ("bone at azimuth elevation lift; …") bend the path over joints and bony landmarks. */
-static int muscle_vias(Scene *s,XmlNode *m,XmlNode *instance,XmlNode *proot,mat4 instanceM,int rest,muscle_point_t *out,int most){
+/* Via anchors ("…; …") bend the path over joints and bony landmarks; spans fan with the fibres. */
+static int muscle_vias(Scene *s,XmlNode *m,XmlNode *instance,XmlNode *proot,mat4 instanceM,int rest,float f,muscle_point_t *out,int most){
 	const char *value=xml_attr(m,"via",NULL);
 	int n=0;
 	while(value && *value && n<most){
 		const char *end=strchr(value,';');
-		char part[MUSCLE_VIA_TEXT],bone[BONE_NAME_CAPACITY]; float at,az,el,lift=0;
+		char part[MUSCLE_VIA_TEXT];
 		snprintf(part,sizeof(part),"%.*s",(int)(end?(size_t)(end-value):strlen(value)),value);
 		value=end?end+1:NULL;
-		if(sscanf(part,"%63s %f %f %f %f",bone,&at,&az,&el,&lift)<4){ fprintf(stderr,"[scener] muscle %s: via '%s' needs 'bone at azimuth elevation [lift]'\n",xml_attr(m,"name","?"),part); fflush(stderr); continue; }
-		XmlNode *node=muscle_bone(proot,m,bone,"via");
-		mat4 world;
-		if(node && (rest?(world=mat4_mul(instanceM,rig_rest_world(s,node,proot)),1):muscle_joint_world(s,instance,node,&world)))
-			out[n++]=muscle_surface(node,world,at,bone_direction(az,el),1,lift/CM_PER_METRE);
+		muscle_end_t via;
+		if(anchor_parse(s,m,instance,proot,instanceM,"via",part,rest,&via)) out[n++]=muscle_end_point(&via,f);
 	}
 	return n;
 }
@@ -2571,7 +2767,7 @@ static int muscle_fiber(Scene *s,XmlNode *m,XmlNode *instance,XmlNode *proot,mat
 	muscle_point_t ctl[MUSCLE_VIA_CAPACITY+2];
 	if(!muscle_end(s,m,instance,proot,instanceM,"origin",rest,&origin) || !muscle_end(s,m,instance,proot,instanceM,"insertion",rest,&insertion)) return 0;
 	ctl[0]=muscle_end_point(&origin,f);
-	int n=1+muscle_vias(s,m,instance,proot,instanceM,rest,ctl+1,MUSCLE_VIA_CAPACITY);
+	int n=1+muscle_vias(s,m,instance,proot,instanceM,rest,f,ctl+1,MUSCLE_VIA_CAPACITY);
 	ctl[n++]=muscle_end_point(&insertion,f);
 	muscle_path(ctl,n,sh->samples,st);
 	for(int i=0;i<st->n;i++) st->s[i].w=st->s[i].t=sh->thick;
@@ -2620,7 +2816,7 @@ static void muscle_render(Scene *s,XmlNode *m,XmlNode *instance,XmlNode *proot,m
 	/* Fanned fibres merge softly into one sheet; separate muscles keep a crisp groove between them. */
 	float blend=sh.fibers>1?MUSCLE_FAN_BLEND:MUSCLE_DEFAULT_BLEND;
 	Strand restFiber={0},midFiber={0};
-	float middle=sh.fibers>1?0.5f:0;
+	float middle=0.5f;
 	if(!muscle_fiber(s,m,instance,proot,instanceM,1,middle,&sh,&restFiber) || !muscle_fiber(s,m,instance,proot,instanceM,0,middle,&sh,&midFiber)){
 		free(restFiber.s); free(midFiber.s); return;
 	}
@@ -2636,7 +2832,7 @@ static void muscle_render(Scene *s,XmlNode *m,XmlNode *instance,XmlNode *proot,m
 	snprintf(record.name,sizeof(record.name),"%s",name);
 	for(int f=0;f<sh.fibers;f++){
 		Strand st={0};
-		if(!muscle_fiber(s,m,instance,proot,instanceM,0,sh.fibers>1?(float)f/(sh.fibers-1):0,&sh,&st)) continue;
+		if(!muscle_fiber(s,m,instance,proot,instanceM,0,sh.fibers>1?(float)f/(sh.fibers-1):0.5f,&sh,&st)) continue;
 		muscle_sections(&st,&sh,swell,flex,lag);
 		record.volume+=strand_volume(&st);
 		if(s->skinCollect){
@@ -2785,14 +2981,17 @@ static void parse_prefab(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec
 		for(int i=0;i<n->nkids;i++) if(!strcmp(n->kids[i]->tag,"ik")) rig_solve_ik(s,n->kids[i],proot,stepM);
 		XmlNode *skin=skin_node(proot);
 		const char *show=xml_attr(n,"show",skin?xml_attr(skin,"show","skin"):"muscles");
-		if(strcmp(show,"skin") && strcmp(show,"muscles")){ fprintf(stderr,"[scener] skin: unknown show '%s'; use skin or muscles\n",show); show="skin"; }
-		int oldCollect=s->skinCollect,firstPrim=s->nskinPrims; float oldBlend=s->skinBoneBlend;
-		s->skinCollect=skin && !strcmp(show,"skin");
+		int view=0;
+		while(view<3 && strcmp(show,rig_view_names[view])) view++;
+		if(view==3){ fprintf(stderr,"[scener] prefab %s: unknown show '%s'; use skin, muscles or bones\n",xml_attr(n,"name","?"),show); fflush(stderr); view=skin?0:1; }
+		if(view==0 && !skin) view=1;
+		int oldCollect=s->skinCollect,firstPrim=s->nskinPrims,oldView=s->rigView; float oldBlend=s->skinBoneBlend;
+		s->skinCollect=view==0; s->rigView=view;
 		s->skinBoneBlend=SKIN_DEFAULT_BONE_BLEND;
 		parse_nodes(s, proot, stepM, R);
-		muscles_render(s,proot,n,proot,stepM,skin);
+		if(view<2) muscles_render(s,proot,n,proot,stepM,skin);
 		if(s->skinCollect) skin_build(s,skin,firstPrim);
-		s->skinCollect=oldCollect; s->skinBoneBlend=oldBlend;
+		s->skinCollect=oldCollect; s->skinBoneBlend=oldBlend; s->rigView=oldView;
 		s->activeRigPose=staticPose;
 		if(animPose) xml_free(animPose);
 	}
@@ -2851,9 +3050,26 @@ static const struct {
 	{ "muscle",   parse_muscle },
 };
 
+static void xml_mark_used(XmlNode *n){
+	for(int i=0;i<n->nattrs;i++) n->attrs[i].used=1;
+	for(int i=0;i<n->nkids;i++) xml_mark_used(n->kids[i]);
+}
+
+/* view="skin muscles" limits a character detail (cloth, eyes) to those prefab views;
+   a hidden detail is still valid, so its attributes count as used. */
+static int node_in_view(Scene *s,XmlNode *n){
+	const char *view=xml_attr(n,"view",NULL);
+	if(!view || !s->activeRigInstance) return 1;
+	char word[16]; int used;
+	for(const char *p=view;sscanf(p," %15s%n",word,&used)==1;p+=used) if(!strcmp(word,rig_view_names[s->rigView])) return 1;
+	xml_mark_used(n);
+	return 0;
+}
+
 static void parse_nodes(Scene *s, XmlNode *parent, mat4 parentM, mat4 parentR){
 	for(int i=0;i<parent->nkids;i++){
 		XmlNode *n=parent->kids[i];
+		if(!node_in_view(s,n)) continue;
 		void *oldEditNode=s->activeEditNode;
 		mat4 oldEditMatrix=s->activeEditMatrix;
 		int ownsEditNode=!s->activeEditNode;
@@ -2907,11 +3123,7 @@ static void parse_nodes(Scene *s, XmlNode *parent, mat4 parentM, mat4 parentR){
 		if(s->activeRigInstance && (!strcmp(tag,"group") || xml_is_bone(n))){
 			const char *name=xml_attr(n,"name",NULL);
 			if(name){
-				XmlNode *override=rig_override_in((XmlNode*)s->activeRigInstance,name);
-				if(!override) override=rig_override_in((XmlNode*)s->activeRigPose,name);
-				if(override){
-					mat4 turn; M=mat4_mul(M,rig_override_delta(s,n,override,&turn)); R=mat4_mul(R,turn);
-				}
+				mat4 turn; M=mat4_mul(M,rig_pose_delta(s,n,&turn)); R=mat4_mul(R,turn);
 				mat4 extra=rig_rotation(s,n); M=mat4_mul(M,extra); R=mat4_mul(R,extra);
 				RigJointWorld world={s->activeRigInstance,n,M};
 				DA_PUSH(s->rigJointWorlds,s->nrigJointWorlds,s->crigJointWorlds,world);
@@ -3093,8 +3305,8 @@ static const struct { const char *tag; const char *attrs[DEFERRED_ATTRIBUTE_CAPA
 	{ "use-pose", { "instance", "name" } },
 	{ "use-clip", { "instance", "name", "offset" } },
 	{ "pose",     { "name" } },
-	{ "joint",    { "target", "pos", "rot", "aim" } },
-	{ "ik",       { "root", "mid", "tip", "target", "pole", "keepOrientation", "plant" } },
+	{ "joint",    { "target", "pos", "rot", "aim", "twist" } },
+	{ "ik",       { "root", "mid", "tip", "target", "offset", "pole", "keepOrientation", "plant" } },
 	{ "flex",     { "muscle", "amount" } },
 	{ "key",      { "time", "pose" } },
 	{ "map",      { "bone", "joint", "end" } },

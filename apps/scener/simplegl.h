@@ -160,6 +160,19 @@ typedef struct { void *instance; char name[64]; float length,rest,volume,flex; }
 float strand_volume(const Strand *st);
 Mesh strand_mesh(const Strand *st,int slices);
 Mesh skin_surface(const SkinPrim *prims,int nprims,float cell,float fat);
+void mesh_append(Mesh *dst,Mesh src);
+
+/* Anatomical bone shapes (anatomy.c): parts in the bone's joint frame, in metres,
+   and named landmarks that muscles attach to. */
+enum { BONE_PART_SKELETON=1, BONE_PART_SKIN=2, BONE_PART_BOTH=3 };
+typedef struct { SkinPrim prim; float shade; int flags; } BonePart;
+typedef struct { char name[40]; vec3 pos,out; } BoneLandmark;
+typedef struct { const char *kind; vec3 dir; float length,radiusSide,radiusOther,mirror; int segment,segments; } BoneShapeSpec;
+typedef struct { BonePart *parts; int nparts,cparts; BoneLandmark *marks; int nmarks,cmarks; } BoneShape;
+int bone_shape_build(const BoneShapeSpec *spec,BoneShape *out);
+void bone_shape_free(BoneShape *shape);
+const BoneLandmark *bone_shape_landmark(const BoneShape *shape,const char *name);
+Mesh bone_part_mesh(const BonePart *part,int rings,int slices);
 
 int bvh_load(const char *path,BvhClip *clip);
 void bvh_free(BvhClip *clip);
@@ -216,6 +229,7 @@ typedef struct {
 	MuscleState *muscleStates; int nmuscleStates, cmuscleStates;
 	MuscleRecord *muscleRecords; int nmuscleRecords, cmuscleRecords;
 	SkinPrim *skinPrims; int nskinPrims, cskinPrims; int skinCollect; float skinBoneBlend;
+	int rigView;
 	char activeCamera[MAX_CAMERA_NAME];
 	char scenePath[512];
 	char assetRoot[512];

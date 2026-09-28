@@ -163,7 +163,7 @@ static vec3* mirror_profile_y(vec3 *pts,int n){
 	return r;
 }
 
-static void mesh_append(Mesh *dst, Mesh src){
+void mesh_append(Mesh *dst, Mesh src){
 	int base=dst->nverts;
 	for(int i=0;i<src.nverts;i++){
 		int v=mesh_add_vert(dst,src.verts[i].pos,src.verts[i].nrm);

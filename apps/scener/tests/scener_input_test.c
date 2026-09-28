@@ -366,7 +366,7 @@ static void test_animation_clips_and_muscles(void){
 	ASSERT_TRUE(muscles>=HERCULES_MIN_MUSCLES);
 	ASSERT_TRUE(skinTris>SKIN_MIN_TRIANGLES);
 	/* Mirrored muscles route through mirrored vias and match their left side. */
-	static const char *pairs[]={"pectoral","deltoid","trapezius","lat","biceps","quadriceps","calf","sternocleidomastoid"};
+	static const char *pairs[]={"pectoral","deltoid","trapezius","lat","biceps","rectus_femoris","gastrocnemius","sternocleidomastoid","serratus","biceps_femoris"};
 	for(size_t k=0;k<sizeof(pairs)/sizeof(pairs[0]);k++){
 		char left[64],right[64]; snprintf(left,sizeof(left),"left_%s",pairs[k]); snprintf(right,sizeof(right),"right_%s",pairs[k]);
 		const MuscleRecord *l=anim_test_muscle(&s,"Hercules",left),*r=anim_test_muscle(&s,"Hercules",right);
@@ -409,6 +409,65 @@ static void test_animation_clips_and_muscles(void){
 
 	BvhClip missing;
 	ASSERT_TRUE(!bvh_load("apps/scener/mocap/missing.bvh",&missing));
+	PASS();
+}
+
+#define ANATOMY_MIN_MUSCLES 80
+#define ANATOMY_MIN_BONE_MESHES 40
+#define ANATOMY_SIDE_BEND_DEGREES 26.0f
+#define ANATOMY_ANGLE_TOLERANCE 1.5f
+#define ANATOMY_MIN_TWIST_TRAVEL 0.03f
+#define ANATOMY_PROBE v3(0.1f,0,0)
+
+static void *anim_test_instance(Scene *s,const char *name){
+	for(int j=0;j<s->nobjs;j++) if(!strcmp(scene_node_tag(s->objs[j].editNode),"prefab") && !strcmp(scene_node_attr(s->objs[j].editNode,"name"),name)) return s->objs[j].editNode;
+	return NULL;
+}
+
+/* A point fixed in a bone's frame, to see its roll as well as its joint. */
+static vec3 anim_test_point(Scene *s,void *instance,const char *name,vec3 local){
+	mat4 world;
+	if(!scene_rig_select_joint(s,instance,bone_test_joint(s,instance,name)) || !scene_rig_joint_world(s,&world)) return v3(NAN,NAN,NAN);
+	return mat4_xform_point(world,local);
+}
+
+static float anim_test_angle(vec3 a,vec3 b){ return acosf(fmaxf(-1,fminf(1,vdot(vnorm(a),vnorm(b)))))*180.0f/M_PIf; }
+
+static void test_anatomical_skeleton(void){
+	TEST("anatomy: shaped bones, landmark muscles, vertebra chains, forearm twist, bones view and IK offsets");
+	Scene s={0};
+	ASSERT_TRUE(load_scene("apps/scener/scenes/hercules_study.blks",&s));
+	ASSERT_EQUAL(s.ignoredAttributes,0);
+	void *herc=anim_test_instance(&s,"Hercules"),*skeleton=anim_test_instance(&s,"Skeleton");
+	ASSERT_TRUE(herc && skeleton);
+	int muscles=0,skeletonMuscles=0,skeletonMeshes=0;
+	for(int i=0;i<s.nmuscleRecords;i++){ muscles+=s.muscleRecords[i].instance==herc; skeletonMuscles+=s.muscleRecords[i].instance==skeleton; }
+	for(int i=0;i<s.nobjs;i++) skeletonMeshes+=s.objs[i].editNode==skeleton;
+	ASSERT_TRUE(muscles>=ANATOMY_MIN_MUSCLES && skeletonMuscles==0 && skeletonMeshes>=ANATOMY_MIN_BONE_MESHES);
+	/* Two forearm bones, the patella and fibula, and vertebrae generated as chains. */
+	static const char *bones[]={"left_radius","right_radius","left_fibula","left_patella","jaw","spine_5","neck_7"};
+	for(size_t i=0;i<sizeof(bones)/sizeof(bones[0]);i++) ASSERT_TRUE(isfinite(bone_test_world(&s,herc,bones[i]).x));
+	/* Pronation rolls the radius over the ulna while the hand stays put. */
+	vec3 radius=anim_test_point(&s,herc,"left_radius",ANATOMY_PROBE);
+	vec3 restFirst=vsub(bone_test_world(&s,herc,"spine_2"),bone_test_world(&s,herc,"spine")),restLast=vsub(bone_test_world(&s,herc,"ribcage"),bone_test_world(&s,herc,"spine_5"));
+	vec3 hand=bone_test_world(&s,herc,"left_hand"),foot=bone_test_world(&s,herc,"left_foot"),skeletonFoot=bone_test_world(&s,skeleton,"left_foot");
+	scene_select_camera(&s,"Curl");
+	scene_set_time(&s,0);
+	ASSERT_TRUE(vlen(vsub(bone_test_world(&s,herc,"left_hand"),hand))<0.001f);
+	ASSERT_TRUE(vlen(vsub(anim_test_point(&s,herc,"left_radius",ANATOMY_PROBE),radius))>ANATOMY_MIN_TWIST_TRAVEL);
+	/* A rot on a segmented bone is shared by its links, so the lumbar spine curves instead of hinging:
+	   the first vertebra turns a fifth of the bend, the last one all of it. */
+	scene_select_camera(&s,"Stretch");
+	scene_set_time(&s,2.5f);
+	vec3 first=vsub(bone_test_world(&s,herc,"spine_2"),bone_test_world(&s,herc,"spine")),last=vsub(bone_test_world(&s,herc,"ribcage"),bone_test_world(&s,herc,"spine_5"));
+	ASSERT_TRUE(fabsf(anim_test_angle(first,restFirst)-ANATOMY_SIDE_BEND_DEGREES/5)<ANATOMY_ANGLE_TOLERANCE);
+	ASSERT_TRUE(fabsf(anim_test_angle(last,restLast)-ANATOMY_SIDE_BEND_DEGREES)<ANATOMY_ANGLE_TOLERANCE);
+	/* IK offsets are relative to each instance: both hop off the ground wherever they stand. */
+	scene_select_camera(&s,"Hop");
+	scene_set_time(&s,0.8f);
+	ASSERT_TRUE(bone_test_world(&s,herc,"left_foot").z>foot.z+0.08f && bone_test_world(&s,skeleton,"left_foot").z>skeletonFoot.z+0.08f);
+	for(int i=0;i<s.nrigTargets;i++) ASSERT_TRUE(s.rigTargets[i].reachable);
+	scene_free(&s);
 	PASS();
 }
 
@@ -1000,6 +1059,7 @@ int main(void) {
   test_rig_mirror_and_pose_reuse();
   test_bone_skeleton();
   test_animation_clips_and_muscles();
+  test_anatomical_skeleton();
   test_ignored_attributes_reported();
   test_enclosed_light_reported();
   test_nested_arch_emits_wall_parts_once();

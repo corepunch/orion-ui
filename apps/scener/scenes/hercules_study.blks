@@ -1,14 +1,150 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Skeletal animation study: an anatomical strongman beside his ecorche twin
-     (show="muscles"), driven three ways.
-     Walk is a procedural gait, Flex is keyframed with muscle flex channels and
-     Mocap retargets a BVH capture. Render a clip as an image sequence with the
-     render mode's frames option; see docs/character-animation.md. -->
-<scene up="z" ambient="0.32 0.30 0.30" background="0.62 0.66 0.72">
-  <camera name="Rest" pos="-110 -400 125" look="45 10 100" fov="34" />
-  <camera name="Walk" pos="-330 -330 135" look="45 -60 95" fov="38"><use-clip instance="Hercules" name="Walk" /><use-clip instance="Ecorche" name="Walk" /></camera>
-  <camera name="Flex" pos="-40 -380 125" look="45 10 115" fov="36"><use-clip instance="Hercules" name="Flex" /><use-clip instance="Ecorche" name="Flex" /></camera>
-  <camera name="Mocap" pos="-200 -440 140" look="45 10 110" fov="38"><use-clip instance="Hercules" name="JumpingJacks" /><use-clip instance="Ecorche" name="JumpingJacks" /></camera>
+<!-- Anatomical animation study, modelled on the demos that shipped with Di-O-Matic's
+     Hercules muscle plugin for 3ds Max: the same strongman three times, skinned, as an
+     ecorche (show="muscles") and as a skeleton (show="bones"), driven by one clip.
+     Curl       forearm flexion with supination; the radius rolls over the ulna and the
+                biceps, which inserts on the radius, bunches and untwists.
+     Squat      "four muscles per leg": quadriceps, hamstrings, glutes and calves bulge
+                and stretch with planted feet (IK).
+     Stretch    biped stretching; side bends and twists spread over the lumbar and
+                cervical vertebrae.
+     Hop        secondary motion: bellies lag and wobble after the landing.
+     Roar       jaw, neck and shoulder girdle: masseter stretch, head turn, shrug.
+     Walk       procedural gait. Flex: double biceps pose. Mocap: BVH retargeting.
+     Render a clip as an image sequence with the render mode's frames option; see
+     docs/character-animation.md. -->
+<scene up="z" ambient="0.34 0.32 0.32" background="0.62 0.66 0.72">
+  <camera name="Rest" pos="-150 -470 150" look="110 0 100" fov="36" />
+  <camera name="Curl" pos="-300 -380 155" look="110 0 115" fov="34"><use-clip instance="Hercules" name="Curl" /><use-clip instance="Ecorche" name="Curl" /><use-clip instance="Skeleton" name="Curl" /></camera>
+  <camera name="Squat" pos="-330 -380 130" look="110 0 80" fov="36"><use-clip instance="Hercules" name="Squat" /><use-clip instance="Ecorche" name="Squat" /><use-clip instance="Skeleton" name="Squat" /></camera>
+  <camera name="Stretch" pos="-60 -480 150" look="110 0 115" fov="38"><use-clip instance="Hercules" name="Stretch" /><use-clip instance="Ecorche" name="Stretch" /><use-clip instance="Skeleton" name="Stretch" /></camera>
+  <camera name="Hop" pos="-200 -440 140" look="110 0 100" fov="38"><use-clip instance="Hercules" name="Hop" /><use-clip instance="Ecorche" name="Hop" /><use-clip instance="Skeleton" name="Hop" /></camera>
+  <camera name="Roar" pos="-120 -400 170" look="110 0 135" fov="34"><use-clip instance="Hercules" name="Roar" /><use-clip instance="Ecorche" name="Roar" /><use-clip instance="Skeleton" name="Roar" /></camera>
+  <camera name="Walk" pos="-360 -400 140" look="110 -60 95" fov="40"><use-clip instance="Hercules" name="Walk" /><use-clip instance="Ecorche" name="Walk" /><use-clip instance="Skeleton" name="Walk" /></camera>
+  <camera name="Flex" pos="-60 -440 135" look="110 0 115" fov="36"><use-clip instance="Hercules" name="Flex" /><use-clip instance="Ecorche" name="Flex" /><use-clip instance="Skeleton" name="Flex" /></camera>
+  <camera name="Mocap" pos="-220 -500 150" look="110 0 110" fov="40"><use-clip instance="Hercules" name="JumpingJacks" /><use-clip instance="Ecorche" name="JumpingJacks" /><use-clip instance="Skeleton" name="JumpingJacks" /></camera>
+
+  <!-- Curl: alternate arms; twist is forearm roll, negative supinates (palm up). -->
+  <clip name="Curl" length="3" loop="1" ease="smooth">
+    <key time="0">
+      <joint target="left_hand" twist="35" />
+      <joint target="right_forearm" aim="-10 48" /><joint target="right_hand" twist="-80" />
+      <joint target="neck" twist="-24" />
+      <flex muscle="right_biceps" amount="1" /><flex muscle="right_brachialis" amount="0.8" />
+    </key>
+    <key time="1.5">
+      <joint target="left_forearm" aim="10 48" /><joint target="left_hand" twist="-80" />
+      <joint target="right_hand" twist="35" />
+      <joint target="neck" twist="24" />
+      <flex muscle="left_biceps" amount="1" /><flex muscle="left_brachialis" amount="0.8" />
+    </key>
+  </clip>
+
+  <!-- Squat: the pelvis drops and sits back, planted feet keep the legs on IK. -->
+  <clip name="Squat" length="3.6" loop="1" ease="smooth">
+    <key time="0"><ik tip="left_foot" plant="1" pole="0 -1 0" keepOrientation="1" /><ik tip="right_foot" plant="1" pole="0 -1 0" keepOrientation="1" /></key>
+    <key time="1.3">
+      <joint target="pelvis" pos="0 16 -40" rot="16 0 0" />
+      <joint target="spine" rot="10 0 0" /><joint target="ribcage" rot="6 0 0" /><joint target="neck" rot="-22 0 0" />
+      <joint target="left_upper_arm" aim="12 -8" /><joint target="right_upper_arm" aim="-12 -8" />
+      <joint target="left_forearm" aim="8 -2" /><joint target="right_forearm" aim="-8 -2" />
+      <ik tip="left_foot" plant="1" pole="0 -1 0" keepOrientation="1" /><ik tip="right_foot" plant="1" pole="0 -1 0" keepOrientation="1" />
+      <flex muscle="left_rectus_femoris" amount="0.8" /><flex muscle="right_rectus_femoris" amount="0.8" />
+      <flex muscle="left_vastus_lateralis" amount="0.9" /><flex muscle="right_vastus_lateralis" amount="0.9" />
+      <flex muscle="left_vastus_medialis" amount="0.9" /><flex muscle="right_vastus_medialis" amount="0.9" />
+      <flex muscle="left_glute_max" amount="0.7" /><flex muscle="right_glute_max" amount="0.7" />
+    </key>
+    <key time="2.1">
+      <joint target="pelvis" pos="0 16 -40" rot="16 0 0" />
+      <joint target="spine" rot="10 0 0" /><joint target="ribcage" rot="6 0 0" /><joint target="neck" rot="-22 0 0" />
+      <joint target="left_upper_arm" aim="12 -8" /><joint target="right_upper_arm" aim="-12 -8" />
+      <joint target="left_forearm" aim="8 -2" /><joint target="right_forearm" aim="-8 -2" />
+      <ik tip="left_foot" plant="1" pole="0 -1 0" keepOrientation="1" /><ik tip="right_foot" plant="1" pole="0 -1 0" keepOrientation="1" />
+      <flex muscle="left_rectus_femoris" amount="1" /><flex muscle="right_rectus_femoris" amount="1" />
+      <flex muscle="left_vastus_lateralis" amount="1" /><flex muscle="right_vastus_lateralis" amount="1" />
+      <flex muscle="left_vastus_medialis" amount="1" /><flex muscle="right_vastus_medialis" amount="1" />
+      <flex muscle="left_glute_max" amount="1" /><flex muscle="right_glute_max" amount="1" />
+    </key>
+  </clip>
+
+  <!-- Stretch: rot on a segmented bone is shared by all of its vertebrae. -->
+  <clip name="Stretch" length="6.4" loop="1" ease="smooth">
+    <key time="0" />
+    <key time="1.2">
+      <joint target="left_upper_arm" aim="25 76" /><joint target="right_upper_arm" aim="-25 76" />
+      <joint target="left_forearm" aim="10 84" /><joint target="right_forearm" aim="-10 84" />
+      <joint target="left_hand" twist="-60" /><joint target="right_hand" twist="-60" />
+      <joint target="spine" rot="-6 0 0" /><joint target="neck" rot="-10 0 0" />
+    </key>
+    <key time="2.5">
+      <joint target="left_upper_arm" aim="25 76" /><joint target="right_upper_arm" aim="-25 76" />
+      <joint target="left_forearm" aim="10 84" /><joint target="right_forearm" aim="-10 84" />
+      <joint target="left_hand" twist="-60" /><joint target="right_hand" twist="-60" />
+      <joint target="spine" rot="0 -26 0" /><joint target="ribcage" rot="0 -8 0" /><joint target="neck" rot="0 -14 0" />
+    </key>
+    <key time="3.9">
+      <joint target="left_upper_arm" aim="25 76" /><joint target="right_upper_arm" aim="-25 76" />
+      <joint target="left_forearm" aim="10 84" /><joint target="right_forearm" aim="-10 84" />
+      <joint target="left_hand" twist="-60" /><joint target="right_hand" twist="-60" />
+      <joint target="spine" rot="0 26 0" /><joint target="ribcage" rot="0 8 0" /><joint target="neck" rot="0 14 0" />
+    </key>
+    <key time="5.1">
+      <joint target="left_upper_arm" aim="60 20" /><joint target="right_upper_arm" aim="-60 20" />
+      <joint target="left_forearm" aim="60 20" /><joint target="right_forearm" aim="-60 20" />
+      <joint target="spine" twist="40" /><joint target="neck" twist="30" />
+    </key>
+  </clip>
+
+  <!-- Hop: IK offsets lift the feet relative to where they stand, so every instance hops in place. -->
+  <clip name="Hop" length="1.6" loop="1" ease="smooth">
+    <key time="0"><ik tip="left_foot" plant="1" pole="0 -1 0" keepOrientation="1" /><ik tip="right_foot" plant="1" pole="0 -1 0" keepOrientation="1" /></key>
+    <key time="0.35">
+      <joint target="pelvis" pos="0 6 -18" rot="12 0 0" /><joint target="spine" rot="6 0 0" />
+      <joint target="left_upper_arm" aim="150 -50" /><joint target="right_upper_arm" aim="-150 -50" />
+      <ik tip="left_foot" plant="1" pole="0 -1 0" keepOrientation="1" /><ik tip="right_foot" plant="1" pole="0 -1 0" keepOrientation="1" />
+    </key>
+    <key time="0.65">
+      <joint target="pelvis" pos="0 0 16" />
+      <joint target="left_upper_arm" aim="20 60" /><joint target="right_upper_arm" aim="-20 60" />
+      <joint target="left_forearm" aim="15 70" /><joint target="right_forearm" aim="-15 70" />
+      <ik tip="left_foot" plant="1" offset="0 2 18" pole="0 -1 0" keepOrientation="1" /><ik tip="right_foot" plant="1" offset="0 2 18" pole="0 -1 0" keepOrientation="1" />
+    </key>
+    <key time="0.95">
+      <joint target="pelvis" pos="0 0 4" />
+      <joint target="left_upper_arm" aim="40 10" /><joint target="right_upper_arm" aim="-40 10" />
+      <ik tip="left_foot" plant="1" offset="0 0 5" pole="0 -1 0" keepOrientation="1" /><ik tip="right_foot" plant="1" offset="0 0 5" pole="0 -1 0" keepOrientation="1" />
+    </key>
+    <key time="1.1">
+      <joint target="pelvis" pos="0 6 -20" rot="12 0 0" /><joint target="spine" rot="6 0 0" />
+      <joint target="left_upper_arm" aim="60 -40" /><joint target="right_upper_arm" aim="-60 -40" />
+      <ik tip="left_foot" plant="1" pole="0 -1 0" keepOrientation="1" /><ik tip="right_foot" plant="1" pole="0 -1 0" keepOrientation="1" />
+    </key>
+  </clip>
+
+  <!-- Roar: the jaw opens on its own bone, the neck spreads the head turn over seven vertebrae. -->
+  <clip name="Roar" length="4" loop="1" ease="smooth">
+    <key time="0" />
+    <key time="0.9">
+      <joint target="jaw" rot="26 0 0" /><joint target="neck" rot="-16 0 0" /><joint target="head" rot="-8 0 0" />
+      <joint target="left_clavicle" rot="0 -14 0" /><joint target="right_clavicle" rot="0 14 0" />
+      <joint target="left_upper_arm" aim="35 -55" /><joint target="right_upper_arm" aim="-35 -55" />
+      <joint target="left_forearm" aim="-80 -25" /><joint target="right_forearm" aim="80 -25" />
+      <flex muscle="left_trapezius_upper" amount="1" /><flex muscle="right_trapezius_upper" amount="1" />
+      <flex muscle="left_sternocleidomastoid" amount="1" /><flex muscle="right_sternocleidomastoid" amount="1" />
+      <flex muscle="left_pectoral" amount="0.8" /><flex muscle="right_pectoral" amount="0.8" />
+    </key>
+    <key time="1.7">
+      <joint target="jaw" rot="26 0 0" /><joint target="neck" rot="-16 0 0" /><joint target="head" rot="-8 0 0" />
+      <joint target="left_clavicle" rot="0 -14 0" /><joint target="right_clavicle" rot="0 14 0" />
+      <joint target="left_upper_arm" aim="35 -55" /><joint target="right_upper_arm" aim="-35 -55" />
+      <joint target="left_forearm" aim="-80 -25" /><joint target="right_forearm" aim="80 -25" />
+      <flex muscle="left_trapezius_upper" amount="1" /><flex muscle="right_trapezius_upper" amount="1" />
+      <flex muscle="left_sternocleidomastoid" amount="1" /><flex muscle="right_sternocleidomastoid" amount="1" />
+      <flex muscle="left_pectoral" amount="1" /><flex muscle="right_pectoral" amount="1" />
+    </key>
+    <key time="2.6"><joint target="neck" twist="45" /><joint target="jaw" rot="4 0 0" /></key>
+    <key time="3.3"><joint target="neck" twist="-45" /></key>
+  </clip>
 
   <clip name="Walk" gait="walk" cycle="1.1" stride="54" lift="11" duty="0.62" bob="2.5" crouch="3" sway="5" armSwing="24" lean="-4" />
 
@@ -18,8 +154,8 @@
     <joint target="right_upper_arm" aim="-90 8" />
     <joint target="left_forearm" aim="90 12" />
     <joint target="right_forearm" aim="-90 12" />
-    <joint target="left_hand" aim="90 -20" />
-    <joint target="right_hand" aim="-90 -20" />
+    <joint target="left_hand" aim="90 -20" twist="-70" />
+    <joint target="right_hand" aim="-90 -20" twist="-70" />
     <joint target="head" rot="0 0 -15" />
   </pose>
   <clip name="Flex" length="4" loop="1">
@@ -39,14 +175,14 @@
   <material id="herc_cloth" color="0.86 0.82 0.70" shininess="4" />
   <material id="herc_belt" color="0.45 0.28 0.14" shininess="10" />
   <material id="herc_band" color="0.80 0.62 0.22" shininess="40" />
-  <material id="herc_sandal" color="0.40 0.25 0.13" shininess="8" />
-  <material id="herc_hair" color="0.16 0.10 0.07" shininess="6" />
-  <material id="herc_eye" color="0.08 0.07 0.06" shininess="60" />
+  <material id="herc_eye" color="0.92 0.90 0.86" shininess="60" />
+  <material id="herc_iris" color="0.10 0.07 0.05" shininess="80" />
   <material id="ground" color="0.72 0.68 0.60" shininess="2" />
 
   <sun dir="-0.45 0.35 -1" color="1 0.95 0.88" intensity="1.1" castShadows="1" />
   <light pos="300 -250 260" color="0.55 0.65 0.85" intensity="0.5" radius="900" castShadows="0" />
   <box pos="0 -300 -2" size="6000 6000 4" material="ground" />
   <prefab source="characters/hercules" name="Hercules" />
-  <prefab source="characters/hercules" name="Ecorche" show="muscles" pos="90 20 0" />
+  <prefab source="characters/hercules" name="Ecorche" show="muscles" pos="110 0 0" />
+  <prefab source="characters/hercules" name="Skeleton" show="bones" pos="220 0 0" />
 </scene>

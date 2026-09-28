@@ -242,7 +242,7 @@ A scene-level `<pose name="...">` stores reusable joint offsets and IK constrain
 <prefab source="characters/ellipsoid_actor" name="Actor"/>
 ```
 
-`<joint>` uses `target` for a named group or bone, `pos` for local centimetre offset, and `rot` for local Euler degrees. On a bone, `aim="azimuth elevation"` re-points it in its parent's frame before `rot`; prefer it to Euler angles. `<ik>` names a direct parent → child → grandchild joint chain; with only `tip`, the tip's parent and grandparent form the chain. `plant="1"` without `target` pins the tip at its unposed world position, so a foot stays put while the body bends. Its `target` is a **world-space** position in centimetres; `pole` is a world-space direction indicating the preferred bend. `keepOrientation="1"` preserves the tip's original world orientation, useful for feet. The two-bone solver clamps unreachable targets without stretching bones. The Properties panel reports reachability and distance beyond reach; stderr also records unreachable targets. A fixed world target keeps a foot planted when the root or hips move. A saved pose contains the current pose's constraints and the instance's edits, and can be assigned to another camera.
+`<joint>` uses `target` for a named group or bone, `pos` for local centimetre offset, and `rot` for local Euler degrees (positive X leans forward). On a bone, `aim="azimuth elevation"` re-points it in its parent's frame before `rot`; prefer it to Euler angles. `twist` rolls a bone about its own axis in degrees; positive pronates (turns the front medially) on both sides. A `rot` or `twist` on a segmented bone is shared evenly by its links, so `spine` or `neck` bends through every vertebra; `aim` and `pos` apply to the first link. `<ik>` names a direct parent → child → grandchild joint chain; with only `tip`, the tip's parent and grandparent form the chain. `plant="1"` without `target` pins the tip at its unposed world position, so a foot stays put while the body bends. Its `target` is a **world-space** position in centimetres; `offset` moves the goal (planted rest, target or current tip) in the instance's own frame, so one keyed clip lifts the feet of every instance; `pole` is a world-space direction indicating the preferred bend. `keepOrientation="1"` preserves the tip's original world orientation, useful for feet. The two-bone solver clamps unreachable targets without stretching bones. The Properties panel reports reachability and distance beyond reach; stderr also records unreachable targets. A fixed world target keeps a foot planted when the root or hips move. A saved pose contains the current pose's constraints and the instance's edits, and can be assigned to another camera.
 
 ### Animation clips
 
@@ -893,6 +893,24 @@ elevation 90 is up and −90 down.
 | `ground` | 0/1 | 1 | Root bone only: lift so the lowest rest volume touches Z=0 |
 | `volume` | 0/1 | 1 | Omit the body volume and keep only the joint |
 | `pos` | vec3 | 0 0 0 | Root bone only: offset after grounding |
+| `shape` | kind | — | Anatomical bone shape instead of the ellipsoid volume (below) |
+| `envelope` | 0/1 | 0 with `shape` | Also fuse the ellipsoid into the skin: soft mass such as belly and neck |
+| `twistWith` | bone | — | Roll with that bone's `twist` about the line from this joint to the parent's tip (the radius over the ulna) |
+
+`shape` draws a real bone in its rest frame, scaled to `length` (and to
+`radius` for `thorax` and `pelvis`): `skull`, `mandible`, `vertebra cervical`,
+`vertebra lumbar`, `thorax` (twelve thoracic vertebrae, rib pairs, costal
+cartilage and sternum), `pelvis`, `clavicle`, `scapula`, `humerus`, `ulna`,
+`radius`, `hand`, `femur`, `patella`, `tibia`, `fibula` and `foot`. Each kind
+names the landmarks muscles attach to, such as `coracoid` on the scapula or
+`left_asis` on the pelvis; bilateral landmarks of midline bones carry `left_`
+or `right_`. A shaped bone's parts form the skeleton views and the skin; its
+`radius` ellipsoid still places `on` details, numeric anchors and `wrap`, and
+fuses into the skin only with `envelope="1"`. Grounding uses the shape. On a
+segmented chain every link is a vertebra, and its envelope slices overlap so
+the neck and belly stay smooth. See
+[hercules.blk](../../../prefabs/characters/hercules.blk) for the landmark names
+and a full human skeleton.
 
 Bones ignore `rot` and `scale`. `material`, `color`, `shininess`, `rings`,
 `slices` and shadow flags apply to the volume. A segmented bone's links inherit
@@ -934,12 +952,12 @@ individual strands without one.
 | Attribute | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `name` | string | — | Muscle name for `<flex>`; `left_*` muscles get a mirrored `right_*` twin |
-| `origin`, `insertion` | anchor | — | `"bone at azimuth elevation"`: fraction along the bone and direction from its axis to its surface; `"… .. at azimuth elevation"` spans the end so fibres fan across it |
+| `origin`, `insertion` | anchor | — | Points joined by `..`: `"bone landmark [lift]"` names a bony landmark of a shaped bone; `"bone at [azimuth elevation [lift]]"` casts from the bone's axis to its surface. Later points may name another bone or drop it to stay on the same one; fibres spread along the polyline |
 | `radius` | 1–2 floats | 2 | Belly half width across the body, then half thickness, in cm |
 | `profile` | floats | `0.35 0.8 1 0.8 0.35` | Thickness curve from origin to insertion |
 | `tendon` | 1–2 floats | 0 | Fractions at the origin and insertion ends that are tendon |
 | `fibers` | int | 1 | Strands fanned across the end spans, fused into one sheet in the skin |
-| `via` | anchors | — | `"bone at azimuth elevation [lift]; …"` points the path passes through |
+| `via` | anchors | — | Anchors separated by `;` that the path passes through; a `..` span spreads with the fibres |
 | `wrap` | bone names | — | Bones the belly slides over instead of passing through |
 | `bands` | int | 0 | Tendinous grooves across the belly (rectus abdominis) |
 | `bulge` | float | 1 | 1 keeps volume as the ends approach; 0 keeps girth |
@@ -947,6 +965,14 @@ individual strands without one.
 | `jiggle` | float | 0 | Secondary motion (0–1) in rendered sequences |
 
 `material`, `color`, `shininess` and `castShadow` apply to individual strands.
+Unknown bones and landmarks are reported on stderr and skip the muscle.
+
+```xml
+<muscle name="left_biceps" origin="left_scapula coracoid .. supraglenoid" insertion="left_radius radial_tuberosity"
+        via="left_upper_arm anterior_upper 2.4 .. bicipital_groove 1" fibers="2" radius="2.4 2.8" contract="1"/>
+<muscle name="left_lat" origin="pelvis left_iliac_crest_back .. spine_3 spinous .. ribcage t7_spine"
+        insertion="left_upper_arm intertubercular_floor" via="left_scapula inferior_angle 1.2" fibers="7"/>
+```
 
 ### `<skin>`
 
@@ -958,11 +984,13 @@ each instance into one smooth surface, rebuilt every frame.
 | `material` / `color`, `shininess` | — | — | Skin surface |
 | `muscleMaterial` | material | red | Muscle colour in the écorché view |
 | `resolution` | float | 1.1 | Surface cell size in cm |
-| `show` | `skin`/`muscles` | `skin` | `muscles` draws the bones and individual muscles instead |
+| `show` | `skin`/`muscles`/`bones` | `skin` | `muscles` draws the bones and individual muscles, `bones` the skeleton alone |
 | `castShadow` | 0/1 | 1 | Shadow casting |
 
 A prefab instance's `show` overrides the skin's. Bones with `skin="0"` stay
-separate meshes.
+separate meshes. A detail inside a bone may carry `view="skin muscles"` (any of
+`skin`, `muscles`, `bones`) to appear only in those views: cloth and eyes on an
+anatomical figure.
 
 ### `<capsule>`
 

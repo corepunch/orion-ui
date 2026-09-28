@@ -11,6 +11,7 @@
 #define SKIN_MAX_CELLS 12000000
 #define SKIN_RELAX_LIMIT 0.5f
 #define SKIN_EPSILON 0.0000001f
+#define SKIN_MAX_THREADS 16
 #define STRAND_EPSILON 0.000001f
 #define STRAND_FRAME_EPSILON 0.2f
 #define STRAND_VERTICAL 0.9f
@@ -123,6 +124,50 @@ static vec3 grid_gradient(const skin_grid_t *g,vec3 p){
 	          grid_sample(g,vadd(p,v3(0,0,e)))-grid_sample(g,vsub(p,v3(0,0,e))));
 }
 
+/* Samples are independent, so z slabs of the grid fill on separate threads without sharing writes. */
+typedef struct { skin_grid_t *g; const SkinPrim *prims; int nprims; strand_seg_t **segs; int k0,k1; } skin_fill_t;
+
+static void skin_fill_slab(skin_fill_t *w){
+	skin_grid_t *g=w->g; float cell=g->h; vec3 lo=g->origin;
+	for(int p=0;p<w->nprims;p++){
+		const SkinPrim *prim=&w->prims[p];
+		vec3 a,b; prim_bounds(prim,&a,&b);
+		float r=prim->blend+cell*2;
+		int i0=(int)floorf((a.x-r-lo.x)/cell),i1=(int)ceilf((b.x+r-lo.x)/cell);
+		int j0=(int)floorf((a.y-r-lo.y)/cell),j1=(int)ceilf((b.y+r-lo.y)/cell);
+		int k0=(int)floorf((a.z-r-lo.z)/cell),k1=(int)ceilf((b.z+r-lo.z)/cell);
+		i0=i0<0?0:i0; j0=j0<0?0:j0; k0=k0<w->k0?w->k0:k0;
+		i1=i1>=g->nx?g->nx-1:i1; j1=j1>=g->ny?g->ny-1:j1; k1=k1>=w->k1?w->k1-1:k1;
+		int strand=prim->kind==SKIN_PRIM_STRAND,nsegs=strand?prim->strand.n-1:0;
+		for(int k=k0;k<=k1;k++) for(int j=j0;j<=j1;j++) for(int i=i0;i<=i1;i++){
+			float *f=&g->f[i+g->nx*(j+g->ny*k)];
+			vec3 x=v3(lo.x+i*cell,lo.y+j*cell,lo.z+k*cell);
+			*f=smin(*f,strand?strand_distance(w->segs[p],nsegs,x):ellipsoid_distance(prim,x),prim->blend);
+		}
+	}
+}
+
+#ifdef _WIN32
+static void skin_fill_parallel(skin_fill_t *fill){ skin_fill_slab(fill); }
+#else
+#include <pthread.h>
+#include <unistd.h>
+static void *skin_fill_thread(void *arg){ skin_fill_slab((skin_fill_t*)arg); return NULL; }
+static void skin_fill_parallel(skin_fill_t *fill){
+	long cores=sysconf(_SC_NPROCESSORS_ONLN);
+	int n=cores<1?1:cores>SKIN_MAX_THREADS?SKIN_MAX_THREADS:(int)cores;
+	pthread_t threads[SKIN_MAX_THREADS]; skin_fill_t work[SKIN_MAX_THREADS]; int started[SKIN_MAX_THREADS]={0};
+	int nz=fill->k1-fill->k0;
+	for(int t=0;t<n;t++){
+		work[t]=*fill; work[t].k0=fill->k0+nz*t/n; work[t].k1=fill->k0+nz*(t+1)/n;
+		started[t]=t>0 && !pthread_create(&threads[t],NULL,skin_fill_thread,&work[t]);
+		if(t>0 && !started[t]) skin_fill_slab(&work[t]);
+	}
+	skin_fill_slab(&work[0]);
+	for(int t=1;t<n;t++) if(started[t]) pthread_join(threads[t],NULL);
+}
+#endif
+
 Mesh skin_surface(const SkinPrim *prims,int nprims,float cell,float fat){
 	Mesh m={0};
 	vec3 lo=v3(INFINITY,INFINITY,INFINITY),hi=v3(-INFINITY,-INFINITY,-INFINITY);
@@ -139,24 +184,11 @@ Mesh skin_surface(const SkinPrim *prims,int nprims,float cell,float fat){
 	size_t count=(size_t)g.nx*g.ny*g.nz;
 	g.f=malloc(count*sizeof(float));
 	for(size_t i=0;i<count;i++) g.f[i]=SKIN_FAR;
-	/* Primitives only write the samples inside their own padded bounds. */
-	for(int p=0;p<nprims;p++){
-		vec3 a,b; prim_bounds(&prims[p],&a,&b);
-		float r=prims[p].blend+cell*2;
-		int i0=(int)floorf((a.x-r-lo.x)/cell),i1=(int)ceilf((b.x+r-lo.x)/cell);
-		int j0=(int)floorf((a.y-r-lo.y)/cell),j1=(int)ceilf((b.y+r-lo.y)/cell);
-		int k0=(int)floorf((a.z-r-lo.z)/cell),k1=(int)ceilf((b.z+r-lo.z)/cell);
-		i0=i0<0?0:i0; j0=j0<0?0:j0; k0=k0<0?0:k0;
-		i1=i1>=g.nx?g.nx-1:i1; j1=j1>=g.ny?g.ny-1:j1; k1=k1>=g.nz?g.nz-1:k1;
-		int strand=prims[p].kind==SKIN_PRIM_STRAND,nsegs=strand?prims[p].strand.n-1:0;
-		strand_seg_t *segs=strand?strand_segments(&prims[p].strand):NULL;
-		for(int k=k0;k<=k1;k++) for(int j=j0;j<=j1;j++) for(int i=i0;i<=i1;i++){
-			float *f=&g.f[i+g.nx*(j+g.ny*k)];
-			vec3 x=v3(lo.x+i*cell,lo.y+j*cell,lo.z+k*cell);
-			*f=smin(*f,strand?strand_distance(segs,nsegs,x):ellipsoid_distance(&prims[p],x),prims[p].blend);
-		}
-		free(segs);
-	}
+	skin_fill_t fill={&g,prims,nprims,calloc((size_t)nprims,sizeof(strand_seg_t*)),0,g.nz};
+	for(int p=0;p<nprims;p++) if(prims[p].kind==SKIN_PRIM_STRAND) fill.segs[p]=strand_segments(&prims[p].strand);
+	skin_fill_parallel(&fill);
+	for(int p=0;p<nprims;p++) free(fill.segs[p]);
+	free(fill.segs);
 	for(size_t i=0;i<count;i++) g.f[i]-=fat;
 	size_t cells=(size_t)(g.nx-1)*(g.ny-1)*(g.nz-1);
 	int *vid=malloc(cells*sizeof(int));
