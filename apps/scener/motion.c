@@ -118,14 +118,16 @@ float gait_duration(const gait_params_t *p,float total){
 
 float gait_amplitude(const gait_params_t *p,float phase,float total){ return motion_ease(gait_speed_factor(p,phase,total)); }
 
-void gait_foot(const gait_params_t *p,float legPhase,float phase,float total,float distance,float *forward,float *lift){
+/* swing is the fraction of the current step in the air, or -1 while the foot is planted. */
+void gait_foot(const gait_params_t *p,float legPhase,float phase,float total,float distance,float *forward,float *lift,float *swing){
 	int step=(int)ceilf(phase-legPhase-0.5f);
 	if(step<0) step=0;
 	float from=gait_plant(p,legPhase,step-1,total,distance),to=gait_plant(p,legPhase,step,total,distance);
 	float landing=gait_landing_phase(legPhase,step),s=p->swing>0?(phase-(landing-p->swing))/p->swing:1;
-	*forward=from; *lift=0;
-	if(landing>total+GAIT_PHASE_EPSILON || s<=0) return;
+	*forward=from; *lift=0; *swing=-1;
+	if(landing>total+GAIT_PHASE_EPSILON || s<=0 || to==from){ if(s>=1) *forward=to; return; }
 	if(s>=1){ *forward=to; return; }
+	*swing=s;
 	*forward=from+(to-from)*motion_ease(s);
 	*lift=p->lift*fminf(1,(to-from)/p->stride*2)*sinf(M_PIf*s);
 }
@@ -135,6 +137,7 @@ void gait_body(const gait_params_t *p,float phase,float total,gait_body_t *out){
 	out->bob=-p->bounce*a*(0.5f+0.5f*cosf(2*cycle));
 	out->sway=-p->sway*a*sinf(cycle);
 	out->hipTwist=-p->hipTwist*a*sinf(cycle);
+	out->pelvisRoll=p->pelvisRoll*a*sinf(cycle);
 	out->spineTwist=(p->hipTwist+p->spineTwist)*a*sinf(cycle);
 	out->armSwing=-p->armSwing*a*sinf(cycle-GAIT_TWO_PI*GAIT_ARM_LAG);
 }

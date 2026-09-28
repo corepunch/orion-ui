@@ -38,6 +38,8 @@ deployed command from the consuming project's working directory.
 | `math.c` | `vec3`, `mat4`, linear algebra |
 | `mesh.c` | `Mesh` (verts, tris, edges), primitive generators, **modifiers** (taper, twist, bend, stretch, skew) |
 | `motion.c` | Quaternions for pose blending and the CATMotion-style gait curves |
+| `mocap.c` | BVH motion capture loading and forward kinematics |
+| `mocap/`, `tools/fetch_cmu_mocap.py`, `tools/render_mocap_videos.py`, `tools/frames_to_mp4.swift` | CMU clips (fetched), batch mocap videos, AVFoundation MP4 encoder |
 | `scene.c` | Tiny XML parser, scene loading, named cameras, modifier dispatch, **prefab loading** |
 | `render.c` | OpenGL core-profile shader/VBO renderer with stencil shadows |
 | `shadow.c` | Stencil shadow volume construction (silhouette detection + edge extrusion) |
@@ -109,7 +111,9 @@ prefab instance with `<gait>` or `<layer>` children, `rig_timeline_pose()`
 blends the base pose, layers, clips and gait into a generated `<pose>` whose
 joints carry a `_quat` rotation; `parse_prefab()` uses it as the active pose
 and frees it after the instance is built. The gait's travel moves the
-instance.
+instance. `<layer mocap>` goes through `mocap_retarget()`: clips load once into
+`Scene.mocap`, joints map to rig roles by name, and the walk over the rig
+(`mocap_walk()`) turns source directions and hub rotations into joint deltas.
 
 After loading, `load_scene()` reports attributes no parser read
 (`warn_unused_attributes()`: typos, and values overridden such as `color` beside

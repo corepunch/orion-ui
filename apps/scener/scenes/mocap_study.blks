@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Motion capture retargeted onto the CAT biped preset. Fetch the clips with
+     apps/scener/tools/fetch_cmu_mocap.py; tools/render_mocap_videos.py renders one video per clip.
+     Data from the CMU Graphics Lab Motion Capture Database, mocap.cs.cmu.edu (NSF EIA-0196217). -->
+<scene up="z" duration="5.5" ambient="0.38 0.38 0.42" background="neutral">
+  <camera name="Front" follow="Adam" pos="-260 -420 170" look="0 0 90" fov="40" />
+  <camera name="Side" follow="Adam" pos="-480 0 120" look="0 0 90" fov="40" />
+  <material id="tile" color="0.62 0.62 0.64" shininess="4" />
+  <material id="grout" color="0.36 0.36 0.40" shininess="2" />
+  <sun dir="-0.5 0.4 -1" color="1 0.95 0.9" intensity="1" castShadows="1" />
+  <floor style="squares" width="2400" depth="2400" tileWidth="50" gap="1" thickness="4" tileDepth="1" colorVariation="0.08" material="tile" groutMaterial="grout" rot="90 0 0" />
+  <prefab source="characters/presets/biped" name="Adam">
+    <layer mocap="mocap/cmu/02_01.bvh" />
+  </prefab>
+</scene>

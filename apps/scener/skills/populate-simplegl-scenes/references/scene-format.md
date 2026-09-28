@@ -198,6 +198,7 @@ Defines a viewpoint. Multiple cameras are allowed; select one with
 | `pos`     | vec3   | 0 160 500  | Eye position in cm |
 | `look`    | vec3   | 0 120 0  | Look-at target in cm |
 | `fov`     | float  | 60       | Vertical FOV in degrees |
+| `follow`  | string | (none)   | Prefab instance to track: `pos` and `look` become offsets from its root joint over the ground |
 
 When no `<camera>` tag is present, a default "Camera1" is created with the defaults above.
 
@@ -978,6 +979,10 @@ places the body.
 | `bounce`, `sway` | cm | 0, 0.018 × stride | Extra pelvis bob; side-to-side sway |
 | `crouch` | cm | 0 | Constant extra knee bend while walking |
 | `hipTwist`, `spineTwist`, `armSwing` | degrees | 6, 4, 20 | Pelvis twist, spine counter-twist beyond it, arm swing |
+| `pelvisRoll`, `footRoll` | degrees | 3, 20 | Swing-side hip drop; foot pitch at toe-off and heel strike |
+| `armBend`, `armOut` | degrees | 15, 4 | Elbow bend (more on the forward swing); arms away from the body |
+| `direction` | degrees | 0 | Walk direction from the facing: 90 sideways left, 180 backwards |
+| `mode` | `line` / `spot` | `line` | `spot` walks in place (no `distance` needed) |
 
 The pelvis also drops automatically so every foot target stays within a nearly
 straight leg's reach, which produces the dip at double support.
@@ -986,14 +991,18 @@ straight leg's reach, which produces the dip at double support.
 
 | Attribute | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `pose` / `clip` | name | — | What to play; scene entries win over the character's |
+| `pose` / `clip` / `mocap` | name / path | — | What to play; scene entries win over the character's; `mocap` is a BVH path from the asset root |
 | `start`, `end` | seconds | 0, forever | Active span; a clip's local time starts at `start` |
 | `fadeIn`, `fadeOut` | seconds | 0 | Weight ramps (fade-out needs `end`) |
 | `weight` | 0–1 | 1 | Peak weight |
 | `mode` | `absolute` / `additive` | `absolute` | Pull keyed joints toward the pose, or add to them |
 | `mask` | names | all | Joints (and everything below them) the layer affects |
 | `mirror` | 0/1 | 0 | Play reflected, as a mirror pose would |
-| `speed` | float | 1 | Clip playback rate |
+| `speed` | float | 1 | Clip or mocap playback rate |
+| `mode` value `adjustment` | — | — | CAT's name for `additive` |
+| `from`, `to`, `loop` | seconds, 0/1 | one frame, end, 0 | Mocap range within the file and looping |
+| `inPlace` | 0/1 | 0 | Mocap: drop horizontal travel |
+| `legs` | `ik` / `fk` | `ik` | Mocap: feet by leg IK relative to the hips, or bone directions only |
 
 `<clip name length loop ease>` holds `<key t="seconds" pose="…" ease="…">`
 entries in time order. A key is a named pose, its own `<joint>`/`<ik>`

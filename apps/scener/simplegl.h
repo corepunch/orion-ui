@@ -67,15 +67,47 @@ typedef struct {
 	float lead;     /* fraction of the stride a foot lands ahead of its plant spacing */
 	float swing;    /* cycles each foot spends in the air */
 	float ramp;     /* cycles to reach full stride and to come to a stop */
+	float pelvisRoll; /* degrees the swing-side hip drops */
 } gait_params_t;
-typedef struct { float bob, sway, hipTwist, spineTwist, armSwing; } gait_body_t;
+typedef struct { float bob, sway, hipTwist, pelvisRoll, spineTwist, armSwing; } gait_body_t;
 float gait_total_phase(const gait_params_t *p,const float *legPhase,int nlegs,float distance);
 float gait_phase_at(const gait_params_t *p,float total,float seconds);
 float gait_duration(const gait_params_t *p,float total);
 float gait_travel(const gait_params_t *p,float phase,float total,float distance);
 float gait_amplitude(const gait_params_t *p,float phase,float total);
-void gait_foot(const gait_params_t *p,float legPhase,float phase,float total,float distance,float *forward,float *lift);
+void gait_foot(const gait_params_t *p,float legPhase,float phase,float total,float distance,float *forward,float *lift,float *swing);
 void gait_body(const gait_params_t *p,float phase,float total,gait_body_t *out);
+
+/* mocap.c: BVH motion capture. End sites are joints named "<parent>_End". */
+#define BVH_MAX_CHANNELS 6
+#define BVH_CHANNEL_KINDS 6
+typedef struct { char name[64]; int parent; vec3 offset; int nchannels, firstChannel; int channels[BVH_MAX_CHANNELS]; } bvh_joint_t;
+typedef struct { bvh_joint_t *joints; int njoints, cjoints; int nchannels, nframes; float frameTime; float *data; } bvh_clip_t;
+bvh_clip_t *bvh_load(const char *path);
+void bvh_free(bvh_clip_t *c);
+int bvh_find(const bvh_clip_t *c,const char *name);
+float bvh_duration(const bvh_clip_t *c);
+void bvh_evaluate(const bvh_clip_t *c,float seconds,vec3 *pos,quat *rot);
+
+/* A loaded clip and where its joints sit in rig roles (scene.c retargeting). */
+#define MOCAP_PATH_CAPACITY 1024
+#define MOCAP_MAX_CHAIN 16
+enum { MOCAP_HIPS, MOCAP_CHEST, MOCAP_HEAD, MOCAP_HEAD_END,
+	MOCAP_UPLEG, MOCAP_LEG=MOCAP_UPLEG+2, MOCAP_FOOT=MOCAP_LEG+2, MOCAP_TOE=MOCAP_FOOT+2,
+	MOCAP_COLLAR=MOCAP_TOE+2, MOCAP_ARM=MOCAP_COLLAR+2, MOCAP_FOREARM=MOCAP_ARM+2, MOCAP_HAND=MOCAP_FOREARM+2,
+	MOCAP_HAND_END=MOCAP_HAND+2, MOCAP_ROLES=MOCAP_HAND_END+2 };
+
+typedef struct MocapSource {
+	char path[MOCAP_PATH_CAPACITY];
+	bvh_clip_t *clip;
+	int role[MOCAP_ROLES];
+	int spine[MOCAP_MAX_CHAIN],nspine,neck[MOCAP_MAX_CHAIN],nneck;
+	vec3 *refPos,*pos; quat *refRot,*rot;
+	mat4 toBody; /* source world -> body frame axes, from the reference frame */
+	float legLength;
+	float groundShift; /* reference-frame ankle height minus the clip's lowest ankle, source units */
+} MocapSource;
+
 
 typedef struct { vec3 pos,nrm; float u,v; } Vertex;
 typedef struct { int a,b,c; } Tri;
@@ -159,6 +191,7 @@ typedef struct { char target[32]; vec3 pos,rot,scale; } CameraTransform;
 
 typedef struct {
 	char name[MAX_CAMERA_NAME],comment[64]; vec3 pos,look; float fov;
+	char follow[32]; /* instance whose root the camera tracks across the ground */
 	CameraTransform *transforms; int ntransforms,ctransforms;
 } Camera;
 typedef struct { vec3 pos,color,dir; float intensity,radius; int castsShadow,isDirectional; } Light;
@@ -223,6 +256,7 @@ typedef struct {
 	RigRotation *rigRotations; int nrigRotations, crigRotations;
 	RigTargetStatus *rigTargets; int nrigTargets, crigTargets;
 	RigJointWorld *rigJointWorlds; int nrigJointWorlds, crigJointWorlds;
+	struct MocapSource *mocap; int nmocap, cmocap; /* loaded BVH clips, kept across rebuilds */
 	char activeCamera[MAX_CAMERA_NAME];
 	float time; /* seconds on the scene timeline; drives gaits, clips and layers */
 	float duration; /* <scene duration>: playback loops after it; 0 plays on */

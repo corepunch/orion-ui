@@ -31,7 +31,7 @@
     <joint target="tail_2" aim="170 55" />
   </pose>
   <pose name="ClimbDesk">
-    <joint target="spine" pos="0 0 -3" aim="0 62" />
+    <joint target="pelvis" pos="0 0 -3" aim="0 62" />
     <joint target="neck" aim="0 20" />
     <joint target="head" aim="0 -5" />
     <ik tip="left_hind_paw" plant="1" pole="0 -1 0" keepOrientation="1" />
@@ -40,7 +40,7 @@
     <ik tip="right_front_paw" target="77 137 77.3" pole="0 1 0" keepOrientation="1" />
   </pose>
   <pose name="ClimbSill">
-    <joint target="spine" pos="0 0 -3" aim="0 48" />
+    <joint target="pelvis" pos="0 0 -3" aim="0 48" />
     <joint target="neck" aim="0 15" />
     <ik tip="left_hind_paw" plant="1" pole="0 -1 0" keepOrientation="1" />
     <ik tip="right_hind_paw" plant="1" pole="0 -1 0" keepOrientation="1" />
@@ -48,7 +48,7 @@
     <ik tip="right_front_paw" target="95 176 99.3" pole="0 1 0" keepOrientation="1" />
   </pose>
   <pose name="Rest">
-    <joint target="spine" pos="0 0 -6" />
+    <joint target="pelvis" pos="0 0 -6" />
     <joint target="head" aim="-20 -20" />
     <joint target="tail" aim="120 10" />
   </pose>

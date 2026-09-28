@@ -61,7 +61,7 @@ def main():
                 raise RuntimeError(f'conflicting dylib basename: {name}')
     for name in ('orion', 'scener'):
         shutil.copytree(ui / 'build/share' / name, bundle / 'share' / name)
-    for name in ('scenes', 'prefabs'):
+    for name in ('scenes', 'prefabs', 'mocap'):
         shutil.copytree(app / name, bundle / 'share/scener' / name)
     shutil.copytree(app / 'share/screens', bundle / 'share/scener/share/screens')
     revision = subprocess.check_output(['git', '-C', str(app), 'rev-parse', 'HEAD'], text=True).strip()
