@@ -870,7 +870,7 @@ elevation 90 is up and −90 down.
 
 Bones ignore `rot` and `scale`. `material`, `color`, `shininess`, `rings`,
 `slices` and shadow flags apply to the volume. A segmented bone's links inherit
-them and distribute `taper` along the chain. Children with `at` are assigned to
+them, `volume`, and `overlap`, and distribute `taper` along the chain. Children with `at` are assigned to
 the link that owns that fraction of the chain. Generated mirror and segment
 links are not saved; the file keeps what was authored.
 

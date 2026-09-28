@@ -234,4 +234,14 @@ static void test_prefab_finger_defaults(void){
 	ASSERT_TRUE(window_test_load(&s,xml)); ASSERT_EQUAL(s.nobjs,4); ASSERT_EQUAL(s.ignoredAttributes,0); scene_free(&s); PASS();
 }
 
+
+static void test_segmented_joint_only_volumes(void){
+	TEST("bone volumes: generated spine links inherit volume=0 and retain attached shapes");
+	Scene s={0}; ASSERT_TRUE(window_test_load(&s,"<scene up='z'><sun dir='-1 -1 -1'/>"
+		"<spine name='spine' links='3' aim='0 90' length='24' radius='13 9.5' volume='0'>"
+		"<ellipsoid on='0 0' at='0.5' radii='13 9 20' sink='9.5'/></spine></scene>"));
+	ASSERT_EQUAL(s.nobjs,1); ASSERT_EQUAL(s.ignoredAttributes,0);
+	ASSERT_TRUE(!strcmp(scene_node_tag(s.objs[0].editNode),"spine"));
+	scene_free(&s); PASS();
+}
 #endif

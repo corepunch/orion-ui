@@ -1,0 +1,17 @@
+<!-- Biped volume study: relaxed silhouette and bent-knee contact, with simple hands. -->
+<scene up="z" ambient="0.3 0.3 0.33" background="neutral">
+  <camera name="Front" pos="-180 -460 140" look="0 0 92" fov="28" />
+  <camera name="Side" pos="-500 0 120" look="0 0 90" fov="27" />
+  <camera name="Rear" pos="180 460 140" look="0 0 92" fov="28" />
+  <camera name="Crouch" pos="-180 -460 140" look="0 0 80" fov="28"><use-pose instance="Adam" name="Crouch" /></camera>
+  <camera name="SideCrouch" pos="-500 0 120" look="0 0 80" fov="27"><use-pose instance="Adam" name="Crouch" /></camera>
+  <pose name="Crouch">
+    <joint target="pelvis" pos="0 0 -30" />
+    <ik limb="left_leg" offset="0 0 0" />
+    <ik limb="right_leg" offset="0 0 0" />
+  </pose>
+  <sun dir="-0.5 0.4 -1" color="1 0.95 0.9" intensity="1" castShadows="1" />
+  <sun dir="0.6 -0.4 -0.3" color="0.8 0.88 1" intensity="0.35" castShadows="0" />
+  <box pos="0 0 -1" size="400 400 2" color="0.55 0.55 0.58" />
+  <prefab source="characters/presets/biped" name="Adam" />
+</scene>
