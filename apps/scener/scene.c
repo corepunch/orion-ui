@@ -413,7 +413,7 @@ static void rig_expand_segments(XmlNode *n){
 	const char *radius=xml_attr(n,"radius","5");
 	if(sscanf(radius,"%f %f",&side,&other)<2) other=side;
 	XmlNode **links=calloc((size_t)count,sizeof(*links)); links[0]=n;
-	static const char *inherited[]={"material","color","shininess","rings","slices","castShadow","renderable","unlit","overlap"};
+	static const char *inherited[]={"material","color","shininess","rings","slices","castShadow","renderable","unlit","overlap","volume"};
 	for(int k=1;k<count;k++){
 		XmlNode *link=xml_new(n->tag); link->parent=links[k-1];
 		char value[BONE_NAME_CAPACITY];

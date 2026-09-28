@@ -13,22 +13,29 @@
   <material id="hair" color="0.25 0.17 0.11" shininess="12" />
   <material id="eye" color="0.08 0.08 0.10" shininess="60" />
 
-  <hub name="pelvis" aim="0 90" length="12" radius="17 11" material="trousers">
-    <limb name="left_leg" type="leg" at="0.25" from="90 0" mirror="1">
-      <bone name="left_thigh" aim="0 -90" length="44" radius="7.5 8" taper="0.75" material="trousers">
-        <bone name="left_calf" aim="0 -90" length="43" radius="5.5 6" taper="0.75" material="trousers">
+  <hub name="pelvis" aim="0 90" length="14" radius="18 11.5" material="trousers">
+    <ellipsoid on="120 -15" at="0.25" radii="9 8 10" sink="4.5" material="trousers" />
+    <ellipsoid on="-120 -15" at="0.25" radii="9 8 10" sink="4.5" material="trousers" />
+    <limb name="left_leg" type="leg" at="0.25" from="90 0" sink="3.8" mirror="1">
+      <bone name="left_thigh" aim="0 -90" length="44" radius="10.5 11" taper="0.78" overlap="6" material="trousers">
+        <bone name="left_calf" aim="0 -90" length="43" radius="7.5 8" taper="0.65" overlap="4" material="trousers">
+          <ellipsoid on="0 0" at="0" radii="6 5.5 6" sink="4.3" material="trousers" />
           <ankle name="left_foot" aim="0 -12" length="15" radius="4.5 3.5" material="shoes">
             <digit name="left_toe" at="1" from="0 -30" aim="0 -6" links="2" length="7" radius="4.2 2.4" taper="0.8" material="shoes" />
           </ankle>
         </bone>
       </bone>
     </limb>
-    <spine name="spine" links="3" aim="0 90" aimEnd="0 86" length="24" radius="14 9.5" taper="1.1" material="shirt">
-      <hub name="ribcage" aim="0 90" length="20" radius="17 11" material="shirt">
+    <spine name="spine" links="3" aim="0 90" aimEnd="0 86" length="24" radius="13 9.5" taper="1.1" volume="0" material="shirt">
+      <ellipsoid on="0 0" at="0.5" radii="13.5 8.8 23" sink="9.8" material="shirt" />
+      <hub name="ribcage" aim="0 90" length="20" radius="17 10.5" material="shirt">
+        <ellipsoid on="40 0" at="0.68" radii="10.5 4.5 9.5" sink="2.5" material="shirt" />
+        <ellipsoid on="-40 0" at="0.68" radii="10.5 4.5 9.5" sink="2.5" material="shirt" />
         <limb name="left_arm" type="arm" at="0.9" from="90 0" mirror="1">
           <collarbone name="left_collarbone" aim="90 0" length="8" radius="4" material="shirt">
-            <bone name="left_upperarm" aim="90 -82" length="29" radius="5 5.5" taper="0.8" material="shirt">
-              <bone name="left_forearm" aim="0 -86" length="26" radius="4.2 4.4" taper="0.75" material="skin">
+            <bone name="left_upperarm" aim="90 -82" length="29" radius="6.5 7" taper="0.78" overlap="4" material="shirt">
+              <ellipsoid on="90 20" at="0.08" radii="7 7 8" sink="6.5" material="shirt" />
+              <bone name="left_forearm" aim="0 -86" length="26" radius="4.6 4.8" taper="0.75" material="skin">
                 <palm name="left_palm" aim="0 -90" length="9" radius="2 4.2" material="skin">
                   <digit name="left_thumb" at="0.32" across="-0.85" aim="180 -40" aimEnd="-140 -62" links="3" length="7" radius="1" taper="0.8" material="skin" />
                   <digit name="left_index" at="0.82" across="-0.78" aim="-90 -88" aimEnd="-90 -72" links="3" length="8" radius="0.85" taper="0.8" material="skin" />

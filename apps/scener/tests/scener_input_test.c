@@ -1058,6 +1058,7 @@ int main(void) {
   test_capture_auto_contacts();
   test_capture_optional_fingers();
   test_prefab_finger_defaults();
+  test_segmented_joint_only_volumes();
   test_ignored_attributes_reported();
   test_enclosed_light_reported();
   test_nested_arch_emits_wall_parts_once();
