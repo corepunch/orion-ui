@@ -28,7 +28,19 @@ scener --render /absolute/path/room.blks --size 1536x1024 --format jpg --output-
 scener --render /absolute/path/room.blks --camera room-main --size 1536x1024 --format png --output-dir render/room
 scener --layout /absolute/path/room.blks --scale 2 --format jpg --output-dir render/room
 scener /absolute/path/room.blks --cam room-main --screenshot /tmp/preview.png
+scener --render /absolute/path/walk.blks --camera Track --frames 0:7.5:24 --output-dir render/walk
+scener --render /absolute/path/walk.blks --camera Side --time 2.2 --output-dir render/still
+scener --list-joints /absolute/path/walk.blks --camera Side --time 2.2
 ```
+
+`--time SECONDS` evaluates character gaits, layers and clips at that moment.
+`--frames START:END:FPS` with `--render` writes one image per frame from START
+to END inclusive, named `CAMERA_0000.jpg`, `CAMERA_0001.jpg` …; combine it with
+`--camera` to render a single shot. `--list-joints` prints every posed rig
+joint as `instance joint x y z` in world centimetres, for the given camera and
+time; it needs no graphical session. In the editor, Animation → Play / Pause
+(Space) plays the timeline, looping after `<scene duration>`, and Go to Start
+(Shift+Space) rewinds.
 
 Batch outputs use each camera name. `--layout` writes `layout.jpg` or
 `layout.png`: a flat-color orthographic cutaway plan (without lighting or shadows) clipped at 85% of the scene's vertical

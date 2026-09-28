@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Timeline study: the biped preset walks three metres, stops, waves and nods.
+     Render it as a sequence with the CLI frames option, 0:7.5:24 (see CLI.md). -->
+<scene up="z" duration="7.5" ambient="0.35 0.35 0.4" background="neutral">
+  <camera name="Track" pos="-480 120 190" look="0 -150 80" fov="45" />
+  <camera name="Side" pos="-520 -150 100" look="0 -150 90" fov="35" />
+  <clip name="Nod" length="1.2">
+    <key t="0" />
+    <key t="0.4"><joint target="head" rot="14 0 0" /></key>
+    <key t="0.8"><joint target="head" rot="-4 0 0" /></key>
+    <key t="1.2" />
+  </clip>
+  <material id="floor" color="0.55 0.55 0.58" shininess="4" />
+  <sun dir="-0.5 0.4 -1" color="1 0.95 0.9" intensity="1" castShadows="1" />
+  <box pos="0 -150 -1" size="400 700 2" material="floor" />
+  <prefab source="characters/presets/biped" name="Adam">
+    <gait start="0.5" distance="300" />
+    <layer pose="WaveRight" start="5.2" end="6.8" fadeIn="0.4" fadeOut="0.4" />
+    <layer clip="Nod" start="5.4" mode="additive" />
+  </prefab>
+</scene>

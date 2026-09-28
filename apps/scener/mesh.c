@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include "simplegl.h"
 
 #define PROFILE_EPSILON 0.000001f
@@ -10,6 +11,9 @@
 #define ROUNDED_BOX_MAX_CORNER_SEGMENTS 32
 #define ROUNDED_BOX_MAX_BEVEL_SEGMENTS 8
 #define ROUNDED_BOX_POINT_EPSILON 1e-6f
+#define EDGE_HASH_A 0x9e3779b1u
+#define EDGE_HASH_B 0x85ebca77u
+#define EDGE_HASH_C 0xc2b2ae3du
 #define MESH_EDGE_WELD_MAX 1e-4f
 #define MESH_EDGE_WELD_MIN_LENGTH 1e-8f
 #define MESH_EDGE_WELD_FRACTION 0.25f
@@ -46,6 +50,12 @@ void mesh_compute_face_normals(Mesh *m){
         m->triN[i] = vnorm(vcross(vsub(b,a),vsub(c,a)));
     }
 }
+/* Welding and edge pairing use hashes so dense generated meshes (skins) stay
+   linear; the results match the original first-match scans exactly. */
+static uint32_t edge_hash(uint32_t a,uint32_t b){ return (a*EDGE_HASH_A)^(b*EDGE_HASH_B); }
+
+static int64_t weld_cell(float v,float size){ return (int64_t)floorf(v/size); }
+
 void mesh_build_edges(Mesh *m){
     float shortest=INFINITY;
     for(int i=0;i<m->ntris;i++){
@@ -57,36 +67,58 @@ void mesh_build_edges(Mesh *m){
         }
     }
     float threshold=fminf(MESH_EDGE_WELD_MAX,shortest*MESH_EDGE_WELD_FRACTION);
-    int *weld = malloc(sizeof(int)*(size_t)m->nverts);
+    int *weld=malloc(sizeof(int)*(size_t)(m->nverts?m->nverts:1));
+    size_t buckets=1; while(buckets<(size_t)m->nverts*2+1) buckets<<=1;
+    int *head=malloc(sizeof(int)*buckets),*next=malloc(sizeof(int)*(size_t)(m->nverts?m->nverts:1));
+    for(size_t i=0;i<buckets;i++) head[i]=-1;
+    float cell=threshold>0?threshold:MESH_EDGE_WELD_MAX;
     for(int i=0;i<m->nverts;i++){
-        weld[i]=i;
-        for(int j=0;j<i;j++){
-            if(vlen(vsub(m->verts[i].pos,m->verts[j].pos)) < threshold){ weld[i]=weld[j]; break; }
+        vec3 p=m->verts[i].pos;
+        int64_t cx=weld_cell(p.x,cell),cy=weld_cell(p.y,cell),cz=weld_cell(p.z,cell);
+        int best=-1;
+        for(int dz=-1;dz<=1;dz++) for(int dy=-1;dy<=1;dy++) for(int dx=-1;dx<=1;dx++){
+            uint32_t h=edge_hash((uint32_t)(cx+dx)^((uint32_t)(cz+dz)*EDGE_HASH_C),(uint32_t)(cy+dy))&(uint32_t)(buckets-1);
+            for(int j=head[h];j>=0;j=next[j])
+                if((best<0 || j<best) && vlen(vsub(p,m->verts[j].pos))<threshold) best=j;
         }
+        weld[i]=best>=0?weld[best]:i;
+        uint32_t h=edge_hash((uint32_t)cx^((uint32_t)cz*EDGE_HASH_C),(uint32_t)cy)&(uint32_t)(buckets-1);
+        next[i]=head[h]; head[h]=i;
     }
+    free(head); free(next);
     free(m->edges); m->edges=NULL; m->nedges=m->cedges=0;
+    size_t slots=1; while(slots<(size_t)m->ntris*6+1) slots<<=1;
+    /* Open edges by welded (start,end), each bucket a FIFO so the oldest match wins. */
+    int *first=malloc(sizeof(int)*slots),*last=malloc(sizeof(int)*slots),*chain=malloc(sizeof(int)*(size_t)(m->ntris*3+1));
+    for(size_t i=0;i<slots;i++) first[i]=last[i]=-1;
     for(int i=0;i<m->ntris;i++){
         Tri t=m->tris[i];
         int pairs[3][2]={{t.a,t.b},{t.b,t.c},{t.c,t.a}};
         for(int e=0;e<3;e++){
             int v0=pairs[e][0], v1=pairs[e][1];
             int w0=weld[v0], w1=weld[v1];
-            int found=-1;
-            for(int k=0;k<m->nedges;k++){
+            uint32_t h=edge_hash((uint32_t)w1,(uint32_t)w0)&(uint32_t)(slots-1);
+            int found=-1,prev=-1;
+            for(int k=first[h];k>=0;prev=k,k=chain[k]){
                 Edge *ed=&m->edges[k];
-                if(ed->t1<0){
-                    int ew0 = (weld[ed->v0]==w1);
-                    int ew1 = (weld[ed->v1]==w0);
-                    if(ew0 && ew1){ found=k; break; }
-                }
+                if(weld[ed->v0]==w1 && weld[ed->v1]==w0){ found=k; break; }
             }
-            if(found>=0){ m->edges[found].t1=i; }
-            else{
+            if(found>=0){
+                m->edges[found].t1=i;
+                if(prev<0) first[h]=chain[found]; else chain[prev]=chain[found];
+                if(last[h]==found) last[h]=prev;
+            } else {
                 Edge ne={ m->verts[v0].pos, m->verts[v1].pos, i, -1, v0, v1 };
                 DA_PUSH(m->edges,m->nedges,m->cedges,ne);
+                int k=m->nedges-1;
+                uint32_t own=edge_hash((uint32_t)w0,(uint32_t)w1)&(uint32_t)(slots-1);
+                chain[k]=-1;
+                if(last[own]>=0) chain[last[own]]=k; else first[own]=k;
+                last[own]=k;
             }
         }
     }
+    free(first); free(last); free(chain);
     free(weld);
 }
 void mesh_update_edge_positions(Mesh *m){

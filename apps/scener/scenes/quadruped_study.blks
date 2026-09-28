@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The CAT quadruped preset: rest, library poses and a walk.
+     Render the walk from the Walk camera with the CLI frames option, 0:5:24 (see CLI.md). -->
+<scene up="z" duration="5" ambient="0.35 0.35 0.4" background="neutral">
+  <camera name="Front" pos="-120 -160 70" look="0 0 30" fov="35" />
+  <camera name="Side" pos="-220 0 40" look="0 0 30" fov="35" />
+  <camera name="Sit" pos="-120 -160 70" look="0 0 30" fov="35"><use-pose instance="Rex" name="Sit" /></camera>
+  <camera name="Beg" pos="-160 -100 60" look="0 0 35" fov="35"><use-pose instance="Rex" name="Beg" /></camera>
+  <camera name="Look" pos="-120 -160 70" look="0 0 30" fov="35"><use-pose instance="Rex" name="LookRight" /></camera>
+  <camera name="Walk" pos="-260 -90 80" look="0 -80 30" fov="40" />
+  <material id="floor" color="0.55 0.55 0.58" shininess="4" />
+  <sun dir="-0.5 0.4 -1" color="1 0.95 0.9" intensity="1" castShadows="1" />
+  <box pos="0 -60 -1" size="300 400 2" material="floor" />
+  <prefab source="characters/presets/quadruped" name="Rex">
+    <gait start="0.3" distance="160" />
+  </prefab>
+</scene>

@@ -1,18 +1,38 @@
-# Building and posing characters in Scener
+# Building, posing and animating characters in Scener
 
 Scener draws stylized characters from ellipsoids, in the spirit of Ecstatica:
-soft overlapping volumes and silhouettes that read at a glance. Build them as
-`<bone>` skeletons. A bone is a joint plus its body volume, placed by
-constraints rather than coordinates. You say which way a bone points, how long
-and thick it is, and where on its parent it grows from. Scener derives every
-joint position, joins the volumes, mirrors limbs and puts the feet on the
-ground. You never type an xyz coordinate or rotate an ellipsoid by hand.
+soft overlapping volumes and silhouettes that read at a glance. A character is
+a rig in the style of 3ds Max CAT: hubs joined by spines, limbs ending in a
+palm or ankle, digits and tails. Every part is a bone: a joint plus its body
+volume, placed by constraints rather than coordinates. You say which way a part
+points, how long and thick it is, and where on its parent it grows from. Scener
+derives every joint position, joins the volumes, mirrors limbs and puts the feet
+on the ground. You never type an xyz coordinate or rotate an ellipsoid by hand.
 
-The worked example is [kitten.blk](../prefabs/characters/kitten.blk) in
-[kitten_study.blks](../scenes/kitten_study.blks). The canonical attribute table
-is in [scene-format.md](../skills/populate-simplegl-scenes/references/scene-format.md#bone).
-The older hand-placed group rig ([ellipsoid_actor.blk](../prefabs/characters/ellipsoid_actor.blk))
-is still supported; see [Legacy group rigs](#legacy-group-rigs).
+Start from a preset: [biped.blk](../prefabs/characters/presets/biped.blk) or
+[quadruped.blk](../prefabs/characters/presets/quadruped.blk), shown in
+[biped_study.blks](../scenes/biped_study.blks),
+[quadruped_study.blks](../scenes/quadruped_study.blks) and the walking
+[biped_walk.blks](../scenes/biped_walk.blks). The canonical attribute tables are
+in [scene-format.md](../skills/populate-simplegl-scenes/references/scene-format.md#cat-rig-parts).
+Plain `<bone>` skeletons ([mira.blk](../prefabs/characters/mira.blk)) and the
+older hand-placed group rig ([ellipsoid_actor.blk](../prefabs/characters/ellipsoid_actor.blk))
+still work; see [Legacy group rigs](#legacy-group-rigs).
+
+## Start from a preset
+
+Like a CAT rig preset, a preset is a starting file, not a base class. Copy it,
+rename it and edit it; nothing is inherited afterwards.
+
+```sh
+cp apps/scener/prefabs/characters/presets/biped.blk apps/scener/prefabs/characters/steve.blk
+```
+
+A character file carries everything that belongs to the character: its
+skeleton and volumes, its `<material>` definitions, facial features, costume
+parts, a pose library and clips. A scene restyles a character by defining a
+material with the same id; scene materials, poses and clips win over the
+character's own.
 
 ## Body frame and directions
 
@@ -25,43 +45,53 @@ is still supported; see [Legacy group rigs](#legacy-group-rigs).
 - Lengths and radii are centimetres. Every joint frame starts aligned with the
   body, so pose rotations and re-aims always read in body terms.
 
+## CAT rig parts
+
+| CAT part | Element | Notes |
+|---|---|---|
+| Pelvis, ribcage, head | `<hub>` | The root hub is the pelvis; it grounds the whole rig |
+| Spine, neck | `<spine links="N">` | N links named `spine`, `spine_2` …; the next hub chains from its tip |
+| Tail, ears on a chain | `<tail links="N">` | Curve with `aimEnd`, point with `taper` |
+| Arm or leg | `<limb type="arm">`, `<limb type="leg">` | A zero-length container on its hub, placed with `at` and `from` |
+| Collarbone | `<collarbone>` | Optional first bone of an arm |
+| Limb bones | `<bone>` | Upper and lower bones, chained tip to tip |
+| Hand, foot | `<palm>`, `<ankle>` | Ends the limb; an ankle reports ground clearance |
+| Fingers, toes | `<digit links="N">` | Branch off a palm or ankle with `at` and `from` |
+
+Every part takes the same placement and girth attributes as a
+[`<bone>`](../skills/populate-simplegl-scenes/references/scene-format.md#bone).
+`links` is `segments` under its CAT name. A limb's role drives IK and walking:
+legs step, arms swing, and `<ik limb="…">` finds the limb's bones by itself.
+
 ## Build the skeleton
 
-Work from the root outward, like a CAT rig: hub, spine, neck and head, then
-limbs, then tail and small parts.
+Work from the root outward: pelvis hub, spine, ribcage hub, neck and head hub,
+then limbs, then tail and small parts.
 
-1. **Root and spine.** The root bone is usually the spine, from hips toward the
-   chest. Give it `segments` and `aimEnd` to curve it (`aim="0 0" aimEnd="0 8"`
-   for a quadruped back rising toward the shoulders; `aim="0 90"` for an upright
-   biped torso). The root grounds itself: its lowest rest volume touches Z=0.
-2. **Neck and head.** Chain them tip-to-tip (no `at`). A head is a short, fat
-   bone aimed forward, so its volume sits ahead of the neck.
-3. **Limbs.** Attach the first limb bone to the body surface with `at` (fraction
-   along the parent) and `from` (direction to the surface point). Chain the rest
-   tip-to-tip down to a hand or foot. Author only the left side, named `left_*`,
-   with `mirror="1"` on the limb root. Mark feet with `foot="1"`.
-4. **Tail, ears, snout.** Use `segments`, `aimEnd` and `taper` for curves and
+1. **Pelvis and spine.** The pelvis hub is the root. Give the spine `links` and
+   `aimEnd` to curve it (`aim="0 0" aimEnd="0 4"` for a quadruped back rising
+   toward the shoulders; `aim="0 90"` for an upright biped torso). The root
+   grounds itself: its lowest rest volume touches Z=0.
+2. **Ribcage, neck and head.** Hubs and spines chain tip to tip (no `at`). A
+   quadruped head is a short, fat hub aimed forward, so its volume sits ahead of
+   the neck.
+3. **Limbs.** Put a `<limb>` on its hub with `at` (fraction along the hub) and
+   `from` (direction to the surface point), then chain the limb's bones inside
+   it down to a `<palm>` or `<ankle>`. Author only the left side, named `left_*`,
+   with `mirror="1"` on the limb. Set `bend` on a limb whose middle joint bends
+   backward, like a quadruped's front elbow (`bend="180 0"`).
+4. **Tail, ears, snout.** Use `links`, `aimEnd` and `taper` for curves and
    points. A cat's ears are short bones with `taper="0.15"`; a curling tail is
-   one bone with `segments="3" aimEnd="165 85" taper="0.6"`.
-5. **Details.** Put eyes, noses and buttons inside their bone with
-   `on="azimuth elevation"` and `at`. They snap to the bone's surface. Author
+   `<tail links="3" aimEnd="165 85" taper="0.6">`.
+5. **Details.** Put eyes, noses and buttons inside their part with
+   `on="azimuth elevation"` and `at`. They snap to the part's surface. Author
    both eyes explicitly (`on="34 12"` and `on="-34 12"`); `mirror` applies to
-   bones only.
+   rig parts only. Hair, glasses and collars are ellipsoids on the head or
+   ribcage the same way.
 
 Volumes overlap their neighbours automatically (`overlap`, `sink`), which keeps
 bent joints closed. Raise `sink` when a limb looks glued on, and lower it when
 a joint bulges.
-
-### Mapping CAT rig parts
-
-| CAT part | Skeleton equivalent |
-|---|---|
-| Pelvis / ribcage hub | A short fat bone, or the ends of a segmented spine |
-| Spine, neck, tail (N links) | One bone with `segments="N"` and `aimEnd` |
-| Leg / arm | Two or three chained bones plus a foot or hand, `mirror="1"` |
-| Palm / ankle | A short end bone aimed forward (`aim="0 -8"`) |
-| Digits | Usually omit. Add small `taper` bones only when a close shot needs them |
-| Limb IK | `<ik tip="left_front_paw">` infers the limb chain from its tip |
 
 ### Proportions that read
 
@@ -75,47 +105,73 @@ a joint bulges.
 
 ### Fix feet with numbers, not by eye
 
-With `foot="1"`, loading the prefab prints each foot's rest clearance:
+Every `<ankle>` (and any bone with `foot="1"`) reports its rest clearance when
+the prefab loads:
 
 ```
-warning: skeleton spine: foot left_hind_paw rests 1.0 cm above the ground
+warning: skeleton pelvis: foot left_hind_paw rests 3.1 cm above the ground
 ```
 
 Correct the leg lengths from that number: add `gap / sin(|elevation|)` to the
 most vertical limb bone. Repeat until no warnings remain. Any change to the
 spine's slope can move the feet again.
 
-## Pose a character
+`--list-joints` prints every posed joint in world centimetres, at any camera
+and time, so contacts and reaches can be checked by number:
 
-Define poses in the scene and select them per camera:
-
-```xml
-<pose name="Stretch">
-  <joint target="spine" aim="0 -12"/>
-  <ik tip="left_hind_paw" plant="1" pole="0 -1 0" keepOrientation="1"/>
-  <ik tip="right_hind_paw" plant="1" pole="0 -1 0" keepOrientation="1"/>
-  <ik tip="left_front_paw" target="5 -18 2" pole="0 -1 0" keepOrientation="1"/>
-</pose>
-<camera name="Stretching" pos="-80 -45 30" look="0 0 10" fov="40">
-  <use-pose instance="Kitten" name="Stretch"/>
-</camera>
-<prefab source="characters/kitten" name="Kitten"/>
+```sh
+scener --list-joints apps/scener/scenes/biped_study.blks --camera Point
+scener --list-joints apps/scener/scenes/biped_walk.blks --time 2.4
 ```
 
-- **Re-aim, don't rotate.** `<joint target="head" aim="20 25"/>` points the
-  head up and to its left. Aims are relative to the parent's current frame, so
-  aim parents first: spine, then neck, then head. Use `rot` only for roll and
+## Pose a character
+
+A pose is a set of joint re-aims and IK goals. Keep a character's reusable
+poses in its own file, as its pose library; put one-off story poses in the
+scene. Select a pose for an instance with `pose="…"`, or per camera:
+
+```xml
+<!-- in the character file -->
+<pose name="WaveLeft">
+  <ik limb="left_arm" offset="4 -8 72" bend="150 -20"/>
+  <joint target="left_hand" aim="0 90"/>
+  <joint target="head" rot="0 0 15"/>
+</pose>
+<pose name="WaveRight" mirror="WaveLeft"/>
+
+<!-- in the scene -->
+<camera name="Hello" pos="-160 -330 140" look="0 0 100" fov="35">
+  <use-pose instance="Adam" name="WaveRight"/>
+</camera>
+<prefab source="characters/presets/biped" name="Adam"/>
+```
+
+- **Reach with limb IK.** `<ik limb="left_arm" offset="x y z"/>` moves the hand
+  from where it rests by an offset in the character's body frame (cm), so the
+  pose works for any instance anywhere. The IK finds the limb's upper and lower
+  bones and keeps the palm or ankle's orientation. `bend="azimuth elevation"`
+  is the body direction the elbow or knee points toward; legs default to
+  forward, arms to backward, and a limb's own `bend` overrides both.
+  `<ik limb="left_leg"/>` with nothing else plants the foot where it stands.
+  `weight` (0–1) blends between the unposed limb and the goal.
+- **Mirror poses.** `<pose name="WaveRight" mirror="WaveLeft"/>` reflects a
+  pose: `left_`/`right_` names swap, aims, bends and offsets turn to the other
+  side, and rotations reflect. Saving skips the generated entries.
+- **Re-aim, don't rotate.** `<joint target="head" aim="20 25"/>` points a part
+  up and to its left. Aims are relative to the parent's current frame, so aim
+  parents first: spine, then neck, then head. Use `rot` for turns about the
+  part's own axis, such as turning an upright head (`rot="0 0 15"`), and for
   small corrections; its Euler axes are body X (left), Y (back) and Z (up).
-- **IK from the tip.** `<ik tip="left_front_paw" target="…"/>` solves the two
-  joints above the paw. `target` is a world position in centimetres; `pole` is
-  the world direction the knee or elbow should bend toward. Add
-  `keepOrientation="1"` to keep a foot flat.
-- **Plant feet.** `plant="1"` without `target` pins a foot where it stands at
-  rest. Bend or lower the body and the planted feet stay on the floor.
-- **Segment links pose by name.** A three-link tail exposes `tail`, `tail_2` and
+  After limb IK, a palm or ankle `aim` reads in body terms, because the IK keeps
+  its orientation.
+- **World targets.** `<ik tip="left_front_paw" target="…"/>` solves the two
+  joints above any named tip toward a world position in centimetres; `pole` is
+  the world direction the knee or elbow bends toward. Use it for contacts with
+  props in one shot; prefer limb offsets in reusable poses.
+- **Plant feet.** `plant="1"` pins a foot where it stands at rest. Bend or lower
+  the body and the planted feet stay on the floor.
+- **Links pose by name.** A three-link tail exposes `tail`, `tail_2` and
   `tail_3`; aim the later links for a curl.
-- **Mirror a pose.** The editor's Mirror button copies `rot` and `aim` to the
-  `left_`/`right_` partner. Mirrored bones need no `pair` attribute.
 
 Pose in this order: root and spine, planted feet, head and gaze, reaching
 limbs, then tail and ears. Check the pose from the story camera and at least
@@ -126,8 +182,55 @@ Choose a camera where the action reads from the silhouette. Show the actor,
 gesture and target together. A three-quarter view usually reads better than a
 straight front view. Keep props from hiding hands, feet or key joints.
 
-Poses are still states: they have no time, interpolation, blending or playback.
-IK targets are fixed world positions, not live links to props.
+## Animate over time
+
+Scenes have a timeline in seconds. An instance's `<gait>` and `<layer>`
+children play over it, in document order, on top of the instance's pose:
+
+```xml
+<scene up="z" duration="7.5">
+  <clip name="Nod" length="1.2">
+    <key t="0"/>
+    <key t="0.4"><joint target="head" rot="14 0 0"/></key>
+    <key t="1.2"/>
+  </clip>
+  <prefab source="characters/presets/biped" name="Adam">
+    <gait start="0.5" distance="300"/>
+    <layer pose="WaveRight" start="5.2" end="6.8" fadeIn="0.4" fadeOut="0.4"/>
+    <layer clip="Nod" start="5.4" mode="additive"/>
+  </prefab>
+</scene>
+```
+
+- **Walk with `<gait>`.** Like CATMotion, a gait walks the character
+  `distance` cm along its facing, starting at `start` seconds. Legs step
+  through IK and planted feet never slide; the pelvis dips at double support,
+  sways and twists, the spine counter-twists and arms swing. Walks start and
+  stop with shorter steps. Bipeds alternate legs; quadrupeds use a lateral
+  walk, front legs a quarter cycle after the hind legs. `stride`, `speed`,
+  `lift`, `sway`, `hipTwist`, `spineTwist` and `armSwing` tune the style;
+  defaults scale with hip height. After the walk the instance stays where it
+  arrived.
+- **Play a pose or clip with `<layer>`.** `start`, `end`, `fadeIn` and
+  `fadeOut` shape its weight over time. An `absolute` layer pulls the joints it
+  keys toward its pose; an `additive` layer adds on top, so a nod plays over a
+  walk. `mask="right_arm head"` limits a layer to those joints and everything
+  below them, and `mirror="1"` plays it on the other side.
+- **Key poses with `<clip>`.** A clip's `<key t="…">` holds a named `pose`, its
+  own `<joint>`/`<ik>` entries, or both. Keys blend with smooth easing, or
+  `ease="linear"`/`"step"`. `loop="1"` repeats over `length`; otherwise the
+  last key holds.
+
+Render a sequence, or scrub a single moment:
+
+```sh
+scener --render apps/scener/scenes/biped_walk.blks --camera Track --frames 0:7.5:24 --output-dir render/walk
+scener --render apps/scener/scenes/biped_walk.blks --camera Side --time 2.2 --output-dir render/still
+```
+
+In the editor, **Animation → Play / Pause** (Space) plays the timeline in the
+viewport, looping after the scene's `duration`; **Go to Start** (Shift+Space)
+rewinds.
 
 ## Editor
 
@@ -140,6 +243,10 @@ from the XML (aim, length, at), so Pivot and Parent edits refuse bones; edit
 the prefab source instead.
 
 ## Legacy group rigs
+
+Plain `<bone>` skeletons without CAT parts, such as Mira, keep working. Tip IK,
+poses and layers apply to them; `<ik limb="…">` and `<gait>` need `<limb>`
+parts.
 
 Older characters use named `<group>` joints holding scaled `<sphere>` parts.
 Each group origin is an articulation, children are positioned in xyz, and

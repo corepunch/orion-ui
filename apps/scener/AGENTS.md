@@ -37,6 +37,7 @@ deployed command from the consuming project's working directory.
 | `simplegl.h` | Shared declarations for all modules |
 | `math.c` | `vec3`, `mat4`, linear algebra |
 | `mesh.c` | `Mesh` (verts, tris, edges), primitive generators, **modifiers** (taper, twist, bend, stretch, skew) |
+| `motion.c` | Quaternions for pose blending and the CATMotion-style gait curves |
 | `scene.c` | Tiny XML parser, scene loading, named cameras, modifier dispatch, **prefab loading** |
 | `render.c` | OpenGL core-profile shader/VBO renderer with stencil shadows |
 | `shadow.c` | Stencil shadow volume construction (silhouette detection + edge extrusion) |
@@ -46,7 +47,8 @@ deployed command from the consuming project's working directory.
 | `CLI.md`, `deploy.py` | Current batch/capture interface and bundled macOS deployment |
 | `win_viewport.c` | Editor viewport, navigation, rendering and picking |
 | `skills/populate-simplegl-scenes/` | Scene population workflow and format reference |
-| `skills/populate-scener-characters/` | Ellipsoid character and pose authoring workflow |
+| `skills/populate-scener-characters/` | Ellipsoid character, pose and animation authoring workflow |
+| `prefabs/characters/presets/` | CAT rig presets (`biped`, `quadruped`) copied to start characters |
 | `scenes/` | Runnable and diagnostic scene files (`*.blks`) |
 | `prefabs/` | Reusable object files (`chair.blk`, `sofa.blk`, etc.) |
 
@@ -98,7 +100,16 @@ adds reflected `mirror="1"` subtrees. Generated nodes and `_`-prefixed runtime
 attributes are never saved; `xml_write_kids()` writes authored children back
 under their chain. `node_position()` derives bone and `on=` feature positions,
 and `rig_is_joint()` accepts named groups and bones everywhere the rig looks
-for joints.
+for joints. CAT parts (`hub`, `spine`, `tail`, `limb`, `collarbone`, `palm`,
+`ankle`, `digit`) are bones to `xml_is_bone()`; `rig_limb_end()` and
+`rig_limb_type()` give IK and gaits their roles.
+
+Scene time (`Scene.time`, `scene_set_time()`) rebuilds the view. For each
+prefab instance with `<gait>` or `<layer>` children, `rig_timeline_pose()`
+blends the base pose, layers, clips and gait into a generated `<pose>` whose
+joints carry a `_quat` rotation; `parse_prefab()` uses it as the active pose
+and frees it after the instance is built. The gait's travel moves the
+instance.
 
 After loading, `load_scene()` reports attributes no parser read
 (`warn_unused_attributes()`: typos, and values overridden such as `color` beside

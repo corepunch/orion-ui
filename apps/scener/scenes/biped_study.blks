@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The CAT biped preset in its pose library: stand, wave, point, hands on hips, think. -->
+<scene up="z" ambient="0.35 0.35 0.4" background="neutral">
+  <camera name="Front" pos="-160 -330 140" look="0 0 95" fov="35" />
+  <camera name="Side" pos="-360 0 110" look="0 0 95" fov="35" />
+  <camera name="Wave" pos="-160 -330 140" look="0 0 100" fov="35"><use-pose instance="Adam" name="WaveRight" /></camera>
+  <camera name="Point" pos="-160 -330 140" look="0 0 100" fov="35"><use-pose instance="Adam" name="PointLeft" /></camera>
+  <camera name="Hips" pos="-160 -330 140" look="0 0 100" fov="35"><use-pose instance="Adam" name="HandsOnHips" /></camera>
+  <camera name="Think" pos="-160 -330 140" look="0 0 100" fov="35"><use-pose instance="Adam" name="Think" /></camera>
+  <material id="floor" color="0.55 0.55 0.58" shininess="4" />
+  <sun dir="-0.5 0.4 -1" color="1 0.95 0.9" intensity="1" castShadows="1" />
+  <box pos="0 0 -1" size="400 400 2" material="floor" />
+  <prefab source="characters/presets/biped" name="Adam" />
+</scene>

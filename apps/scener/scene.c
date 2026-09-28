@@ -75,6 +75,23 @@
 #define BONE_VERTICAL_LIMIT 0.99f
 #define BONE_NAME_CAPACITY 64
 #define BONE_FOOT_TOLERANCE 0.002f
+#define BONE_POSE_MIRROR_DEPTH 4
+#define ANIM_MAX_KEYS 256
+#define GAIT_MAX_LIMBS 16
+#define GAIT_FRONT_PHASE 0.25f
+#define GAIT_STRIDE_PER_HIP 1.2f
+#define GAIT_REACH_FRACTION 0.97f
+#define GAIT_MIN_SWING 0.05f
+#define GAIT_MAX_SWING 0.5f
+#define GAIT_DEFAULT_CADENCE 0.9f
+#define GAIT_LIFT_PER_STRIDE 0.07f
+#define GAIT_BOUNCE_PER_STRIDE 0.0f
+#define GAIT_SWAY_PER_STRIDE 0.018f
+#define GAIT_DEFAULT_HIP_TWIST 6.0f
+#define GAIT_DEFAULT_SPINE_TWIST 4.0f
+#define GAIT_DEFAULT_ARM_SWING 20.0f
+#define GAIT_DEFAULT_SWING 0.4f
+#define GAIT_DEFAULT_RAMP 1.0f
 #define CM_PER_METRE 100.0f
 #define ENCLOSURE_RAY_X 0.5773f
 #define ENCLOSURE_RAY_Y 0.6211f
@@ -180,8 +197,19 @@ static inline vec3 cvt3ds_inv(Scene *s,vec3 v){ return s->convention3dsMax?v3(v.
    frame starts aligned with the body and mirroring flips X. */
 typedef struct { vec3 dir,side,other,center; float length,radiusSide,radiusOther,along,start,end,taper; } BoneGeom;
 
-static int xml_is_bone(XmlNode *n){ return n && !strcmp(n->tag,"bone"); }
+/* CAT rig parts are bones with a role: hubs joined by spines, limbs ending in a
+   palm or ankle, digits and tails. A <limb> is a zero-length container on its hub. */
+static const char *rig_bone_tags[]={"bone","hub","spine","tail","limb","collarbone","palm","ankle","digit"};
+
+static int xml_is_bone(XmlNode *n){
+	if(!n) return 0;
+	for(size_t i=0;i<sizeof(rig_bone_tags)/sizeof(rig_bone_tags[0]);i++) if(!strcmp(n->tag,rig_bone_tags[i])) return 1;
+	return 0;
+}
+static int xml_is_limb(XmlNode *n){ return n && !strcmp(n->tag,"limb"); }
 static int rig_is_joint(XmlNode *n){ return n && (!strcmp(n->tag,"group") || xml_is_bone(n)) && xml_attr(n,"name",NULL); }
+static int bone_links(XmlNode *n){ return xml_attr_i(n,"links",xml_attr_i(n,"segments",1)); }
+static int bone_has_volume(XmlNode *n){ return xml_attr_i(n,"volume",!xml_is_limb(n)); }
 
 static vec3 bone_direction(float azimuth,float elevation){
 	float a=azimuth*M_PIf/180.0f,e=elevation*M_PIf/180.0f;
@@ -204,13 +232,15 @@ static BoneGeom bone_geom(XmlNode *n){
 	BoneGeom g;
 	g.dir=xml_attr_direction(n,"aim",v3(0,0,1));
 	/* An authored segmented bone is the first link; later links are generated children. */
-	int segments=xml_attr(n,"generated",NULL)?1:xml_attr_i(n,"segments",1);
+	int segments=xml_attr(n,"generated",NULL)?1:bone_links(n);
 	if(segments<1) segments=1;
 	float taper=xml_attr_f(n,"taper",1.0f);
 	g.taper=(1.0f+(taper-1.0f)/segments);
-	g.length=fmaxf(0,xml_attr_f_cm(n,"length",0))/segments;
+	g.length=xml_is_limb(n)?0:fmaxf(0,xml_attr_f_cm(n,"length",0))/segments;
 	float side=BONE_DEFAULT_RADIUS,other=BONE_DEFAULT_RADIUS;
 	const char *radius=xml_attr(n,"radius",NULL);
+	/* A limb sinks into its hub as deep as its first bone would. */
+	for(int i=0;xml_is_limb(n) && !radius && i<n->nkids;i++) if(xml_is_bone(n->kids[i])) radius=xml_attr(n->kids[i],"radius",NULL);
 	if(radius){
 		int count=sscanf(radius,"%f %f",&side,&other);
 		if(count<2) other=side;
@@ -241,6 +271,7 @@ static vec3 bone_attach_point(const BoneGeom *g,float t,vec3 direction,float sin
 static vec3 bone_offset(XmlNode *n);
 
 static float bone_volume_lowest(XmlNode *n,vec3 joint){
+	if(!bone_has_volume(n)) return INFINITY;
 	BoneGeom g=bone_geom(n);
 	vec3 center=vadd(joint,g.center);
 	float a=g.radiusSide*g.side.z,b=g.along*g.dir.z,c=g.radiusOther*g.other.z;
@@ -273,7 +304,7 @@ static vec3 bone_offset(XmlNode *n){
 
 /* Report rest-pose clearance of bones marked foot="1" so authors fix lengths, not guesses. */
 static void bone_report_feet(XmlNode *n,vec3 joint,const char *root){
-	if(xml_attr_i(n,"foot",0) && !xml_attr(n,"_reported",NULL)){
+	if(xml_attr_i(n,"foot",!strcmp(n->tag,"ankle")) && !xml_attr(n,"_reported",NULL)){
 		float gap=bone_volume_lowest(n,joint);
 		xml_set_attr(n,"_reported","1");
 		if(fabsf(gap)>BONE_FOOT_TOLERANCE)
@@ -346,7 +377,7 @@ static int has_shape_parser(const char *tag);
 
 static void rig_expand_segments(XmlNode *n){
 	for(int i=0;i<n->nkids;i++) rig_expand_segments(n->kids[i]);
-	int count=xml_attr_i(n,"segments",1);
+	int count=bone_links(n);
 	if(!xml_is_bone(n) || count<2 || xml_attr(n,"generated",NULL)) return;
 	float az0,el0,az1,el1,taper=xml_attr_f(n,"taper",1.0f),side,other,length=xml_attr_f(n,"length",0);
 	xml_attr_2f(n,"aim",0,90,&az0,&el0);
@@ -356,7 +387,7 @@ static void rig_expand_segments(XmlNode *n){
 	XmlNode **links=calloc((size_t)count,sizeof(*links)); links[0]=n;
 	static const char *inherited[]={"material","color","shininess","rings","slices","castShadow","renderable","unlit","overlap"};
 	for(int k=1;k<count;k++){
-		XmlNode *link=xml_new("bone"); link->parent=links[k-1];
+		XmlNode *link=xml_new(n->tag); link->parent=links[k-1];
 		char value[BONE_NAME_CAPACITY];
 		float t=(float)k/(count-1),scale=1.0f+(taper-1.0f)*k/count,next=1.0f+(taper-1.0f)*(k+1)/count;
 		if(xml_attr(n,"name",NULL)){ snprintf(value,sizeof(value),"%s_%d",xml_attr(n,"name",""),k+1); xml_set_attr(link,"name",value); }
@@ -1273,7 +1304,7 @@ static void parse_bone(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 
 		vec3 rest=bone_offset(n); rest.x=rest.y=0;
 		bone_report_feet(n,rest,xml_attr(n,"name","?"));
 	}
-	if(xml_attr_i(n,"volume",1)){
+	if(bone_has_volume(n)){
 		BoneGeom g=bone_geom(n);
 		Mesh mesh=gen_ellipsoid(g.center,g.side,g.dir,g.other,v3(g.radiusSide,g.along,g.radiusOther),g.taper,
 			xml_attr_i(n,"rings",BONE_DEFAULT_RINGS),xml_attr_i(n,"slices",BONE_DEFAULT_SLICES));
@@ -1710,7 +1741,10 @@ static XmlNode *rig_override_in(XmlNode *container,const char *joint){
 		!strcmp(xml_attr(container->kids[i],"target",""),joint)) return container->kids[i];
 	return NULL;
 }
-static XmlNode *rig_ik_for_tip(XmlNode *container,const char *tip);
+static XmlNode *rig_ik_for_tip(XmlNode *root,XmlNode *container,const char *tip);
+static XmlNode *rig_instance_root(Scene *s,XmlNode *instance);
+static XmlNode *rig_find_pose(Scene *s,XmlNode *proot,const char *name);
+static XmlNode *rig_timeline_pose(Scene *s,XmlNode *instance,XmlNode *proot,XmlNode *base,float *travel);
 
 static XmlNode *rig_pose_for_instance(Scene *s,XmlNode *instance){
 	XmlNode *root=(XmlNode*)s->sceneRoot;
@@ -1722,9 +1756,7 @@ static XmlNode *rig_pose_for_instance(Scene *s,XmlNode *instance){
 		for(int k=0;k<camera->nkids;k++) if(!strcmp(camera->kids[k]->tag,"use-pose") &&
 			!strcmp(xml_attr(camera->kids[k],"instance",""),instanceName?instanceName:"")) poseName=xml_attr(camera->kids[k],"name",poseName);
 	}
-	for(int i=0;poseName && i<root->nkids;i++) if(!strcmp(root->kids[i]->tag,"pose") &&
-		!strcmp(xml_attr(root->kids[i],"name",""),poseName)) return root->kids[i];
-	return NULL;
+	return poseName?rig_find_pose(s,rig_instance_root(s,instance),poseName):NULL;
 }
 
 static mat4 rig_rotation(Scene *s,XmlNode *node){
@@ -1742,6 +1774,12 @@ static mat4 rig_from_to(vec3 from,vec3 to,vec3 fallback);
 /* A pose override may re-aim a bone in its parent frame before its Euler rot. */
 static mat4 rig_override_delta(Scene *s,XmlNode *node,XmlNode *override,mat4 *turn){
 	mat4 rotation=mat4_rot_xyz(cvt3ds(s,xml_attr_v3(override,"rot",v3(0,0,0))));
+	const char *blended=xml_attr(override,"_quat",NULL);
+	quat q;
+	if(blended && sscanf(blended,"%f %f %f %f",&q.w,&q.x,&q.y,&q.z)==4){
+		if(turn) *turn=mat4_from_quat(q);
+		return mat4_mul(mat4_translate(cvt3ds(s,xml_attr_v3_cm(override,"pos",v3(0,0,0)))),mat4_from_quat(q));
+	}
 	if(xml_is_bone(node) && xml_attr(override,"aim",NULL)){
 		BoneGeom g=bone_geom(node);
 		rotation=mat4_mul(rig_from_to(g.dir,xml_attr_direction(override,"aim",g.dir),g.other),rotation);
@@ -1784,8 +1822,61 @@ static mat4 rig_from_to(vec3 from,vec3 to,vec3 fallback){
 
 static mat4 rig_rest_world(Scene *s,XmlNode *node,XmlNode *root);
 
+/* Follow a limb's tip-chained bones to its palm or ankle; digits branch off and are skipped. */
+static XmlNode *rig_limb_end(XmlNode *limb){
+	XmlNode *walk=limb;
+	for(;;){
+		XmlNode *next=NULL;
+		for(int i=0;i<walk->nkids && !next;i++){
+			XmlNode *kid=walk->kids[i];
+			if(xml_is_bone(kid) && !bone_at(kid) && strcmp(kid->tag,"digit")) next=kid;
+		}
+		if(!next) return walk==limb?NULL:walk;
+		walk=next;
+		if(!strcmp(walk->tag,"palm") || !strcmp(walk->tag,"ankle")) return walk;
+	}
+}
+
+static const char *rig_limb_type(XmlNode *limb){
+	const char *type=xml_attr(limb,"type",NULL);
+	if(type) return type;
+	XmlNode *end=rig_limb_end(limb);
+	return end && !strcmp(end->tag,"ankle")?"leg":"arm";
+}
+
+static XmlNode *rig_ik_limb(XmlNode *root,XmlNode *ik){
+	XmlNode *limb=rig_find_joint(root,xml_attr(ik,"limb",""));
+	return xml_is_limb(limb)?limb:NULL;
+}
+
+static XmlNode *rig_ik_tip(XmlNode *root,XmlNode *ik){
+	if(!xml_attr(ik,"limb",NULL)) return rig_find_joint(root,xml_attr(ik,"tip",""));
+	XmlNode *limb=rig_ik_limb(root,ik);
+	return limb?rig_limb_end(limb):NULL;
+}
+
+static const char *rig_ik_tip_name(XmlNode *root,XmlNode *ik){
+	XmlNode *tip=xml_attr(ik,"limb",NULL)?rig_ik_tip(root,ik):NULL;
+	return tip?xml_attr(tip,"name",""):xml_attr(ik,"tip","");
+}
+
+/* Knees and elbows bend toward a body-frame direction: the IK's bend, else its
+   limb's, else forward for legs and backward for arms. */
+static int rig_ik_bend(XmlNode *ik,XmlNode *limb,vec3 *direction){
+	XmlNode *source=xml_attr(ik,"bend",NULL)?ik:limb && xml_attr(limb,"bend",NULL)?limb:NULL;
+	float azimuth=0,elevation=0;
+	if(source) xml_attr_2f(source,"bend",0,0,&azimuth,&elevation);
+	else if(!limb || xml_attr(ik,"pole",NULL)) return 0;
+	else if(strcmp(rig_limb_type(limb),"leg")) azimuth=180;
+	*direction=bone_direction(azimuth,elevation);
+	return 1;
+}
+
 static void rig_solve_ik(Scene *s,XmlNode *ik,XmlNode *root,mat4 instanceM){
-	XmlNode *tip=rig_find_joint(root,xml_attr(ik,"tip",""));
+	XmlNode *limb=rig_ik_limb(root,ik),*tip=rig_ik_tip(root,ik);
+	if(xml_attr(ik,"limb",NULL) && !limb){
+		fprintf(stderr,"[scener] IK names unknown limb '%s'\n",xml_attr(ik,"limb","")); fflush(stderr); return;
+	}
 	/* A tip-only chain uses its parent and grandparent joints. */
 	XmlNode *knee=xml_attr(ik,"mid",NULL)?rig_find_joint(root,xml_attr(ik,"mid","")):tip?tip->parent:NULL;
 	XmlNode *hip=xml_attr(ik,"root",NULL)?rig_find_joint(root,xml_attr(ik,"root","")):knee?knee->parent:NULL;
@@ -1796,9 +1887,14 @@ static void rig_solve_ik(Scene *s,XmlNode *ik,XmlNode *root,mat4 instanceM){
 	mat4 H=rig_world(s,hip,root,instanceM),K=rig_world(s,knee,root,instanceM),T=rig_world(s,tip,root,instanceM),originalT=T;
 	vec3 h=mat4_xform_point(H,v3(0,0,0)),k=mat4_xform_point(K,v3(0,0,0)),t=mat4_xform_point(T,v3(0,0,0));
 	float upper=vlen(vsub(k,h)),lower=vlen(vsub(t,k));
-	vec3 rest=mat4_xform_point(mat4_mul(instanceM,rig_rest_world(s,tip,root)),v3(0,0,0));
-	/* plant="1" pins the tip at its unposed world position, e.g. a foot while the body moves. */
-	vec3 goal=xml_attr_v3_cm(ik,"target",xml_attr_i(ik,"plant",0)?rest:t),pole=xml_attr_v3(ik,"pole",v3(0,-1,0));
+	vec3 restBody=mat4_xform_point(rig_rest_world(s,tip,root),v3(0,0,0));
+	/* plant="1" pins the tip at its unposed world position, e.g. a foot while the body moves.
+	   offset moves that rest point in the character's body frame; limb IK defaults to it. */
+	int body=limb || xml_attr(ik,"offset",NULL) || xml_attr_i(ik,"plant",0);
+	vec3 rest=mat4_xform_point(instanceM,vadd(restBody,xml_attr_v3_cm(ik,"offset",v3(0,0,0))));
+	vec3 goal=xml_attr_v3_cm(ik,"target",body?rest:t),pole=xml_attr_v3(ik,"pole",v3(0,-1,0)),bendDir;
+	if(rig_ik_bend(ik,limb,&bendDir)) pole=vnorm(mat4_xform_dir(instanceM,bendDir));
+	goal=lerp(t,goal,fmaxf(0,fminf(1,xml_attr_f(ik,"weight",1))));
 	if(!isfinite(upper) || !isfinite(lower) || upper<RIG_EPSILON || lower<RIG_EPSILON ||
 		!isfinite(goal.x) || !isfinite(goal.y) || !isfinite(goal.z) ||
 		!isfinite(pole.x) || !isfinite(pole.y) || !isfinite(pole.z)){
@@ -1825,7 +1921,7 @@ static void rig_solve_ik(Scene *s,XmlNode *ik,XmlNode *root,mat4 instanceM){
 	mat4 invK=mat4_affine_inverse(K);
 	mat4 second=rig_from_to(mat4_xform_dir(invK,vsub(t,k)),mat4_xform_dir(invK,vsub(desiredT,k)),bend);
 	rig_set_rotation(s,knee,mat4_mul(rig_rotation(s,knee),second));
-	if(xml_attr_i(ik,"keepOrientation",0)){
+	if(xml_attr_i(ik,"keepOrientation",limb!=NULL)){
 		mat4 newT=rig_world(s,tip,root,instanceM);
 		mat4 correction=mat4_mul(mat4_affine_inverse(newT),originalT);
 		correction.m[12]=correction.m[13]=correction.m[14]=0;
@@ -1898,14 +1994,24 @@ static void collect_negative_boxes(Scene *s, XmlNode *parent, mat4 parentM){
 	}
 }
 
+static void parse_material_tag(Scene *s, XmlNode *n);
+
 static void parse_prefab(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 pos, vec3 rot, vec3 color, float shin, int castsShadow, int renderable, int unlit){
 	(void)parentM; (void)pos; (void)rot; (void)shin; (void)castsShadow; (void)renderable; (void)unlit;
 	const char *source=xml_attr(n,"source",NULL);
 	if(!source) return;
 	XmlNode *proot=load_prefab(s,source);
 	if(!proot){ fprintf(stderr,"prefab not found: %s\n",source); return; }
+	/* A character file carries its own materials; a scene restyles one by defining the same id. */
+	for(int i=0;i<proot->nkids;i++) if(!strcmp(proot->kids[i]->tag,"material") && !find_material(s,xml_attr(proot->kids[i],"id","")))
+		parse_material_tag(s,proot->kids[i]);
 	void *oldRigInstance=s->activeRigInstance,*oldRigPose=s->activeRigPose,*oldRigRoot=s->activeRigRoot;
 	s->activeRigInstance=n; s->activeRigRoot=proot; s->activeRigPose=rig_pose_for_instance(s,n);
+	float travel=0;
+	XmlNode *timeline=rig_timeline_pose(s,n,proot,(XmlNode*)s->activeRigPose,&travel);
+	if(timeline) s->activeRigPose=timeline;
+	/* A gait carries the instance along its body's forward axis (local -Y). */
+	if(travel!=0) M=mat4_mul(M,mat4_translate(v3(0,-travel/CM_PER_METRE,0)));
 	const char *name=xml_attr(n,"name",NULL);
 	if(name){
 		InstanceDef inst; memset(&inst,0,sizeof(inst));
@@ -1941,12 +2047,13 @@ static void parse_prefab(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec
 		s->nrigRotations=0;
 		XmlNode *pose=(XmlNode*)s->activeRigPose;
 		if(pose) for(int i=0;i<pose->nkids;i++) if(!strcmp(pose->kids[i]->tag,"ik") &&
-			!rig_ik_for_tip(n,xml_attr(pose->kids[i],"tip",""))) rig_solve_ik(s,pose->kids[i],proot,stepM);
+			!rig_ik_for_tip(proot,n,rig_ik_tip_name(proot,pose->kids[i]))) rig_solve_ik(s,pose->kids[i],proot,stepM);
 		for(int i=0;i<n->nkids;i++) if(!strcmp(n->kids[i]->tag,"ik")) rig_solve_ik(s,n->kids[i],proot,stepM);
 		parse_nodes(s, proot, stepM, R);
 	}
 	s->nrigRotations=0;
 	s->activeRigInstance=oldRigInstance; s->activeRigPose=oldRigPose; s->activeRigRoot=oldRigRoot;
+	xml_free(timeline);
 
 	s->prefabTintActive=oldTintActive;
 	s->prefabTint=oldTint;
@@ -1988,6 +2095,14 @@ static const struct {
 	{ "capsule",  parse_capsule },
 	{ "ellipsoid", parse_ellipsoid },
 	{ "bone",     parse_bone },
+	{ "hub",      parse_bone },
+	{ "spine",    parse_bone },
+	{ "tail",     parse_bone },
+	{ "limb",     parse_bone },
+	{ "collarbone", parse_bone },
+	{ "palm",     parse_bone },
+	{ "ankle",    parse_bone },
+	{ "digit",    parse_bone },
 	{ "group",    parse_group },
 	{ "light",    parse_light },
 	{ "prefab",   parse_prefab },
@@ -2201,13 +2316,14 @@ static void warn_unknown_children(XmlNode *parent, const char *path, int root, i
 		XmlNode *n=parent->kids[i];
 		int supported=0;
 		if(root) supported=has_shape_parser(n->tag) || !strcmp(n->tag,"bool-negative-box") || !strcmp(n->tag,"bool-negative-arch") || !strcmp(n->tag,"bool-negative-cylinder") ||
-			(prefab ? (!strcmp(n->tag,"attach") || !strcmp(n->tag,"shape")) : has_scene_parser(n->tag) || !strcmp(n->tag,"pose"));
+			(prefab ? (!strcmp(n->tag,"attach") || !strcmp(n->tag,"shape")) : has_scene_parser(n->tag)) || !strcmp(n->tag,"pose") || !strcmp(n->tag,"clip") || (prefab && !strcmp(n->tag,"material"));
 		else if(!strcmp(parent->tag,"group") || xml_is_bone(parent))
 			supported=has_shape_parser(n->tag) || !strcmp(n->tag,"bool-negative-box") || !strcmp(n->tag,"bool-negative-arch") || !strcmp(n->tag,"bool-negative-cylinder") || !strcmp(n->tag,"shape");
 		else if(!strcmp(parent->tag,"camera")) supported=!strcmp(n->tag,"transform") || !strcmp(n->tag,"use-pose");
-		else if(!strcmp(parent->tag,"pose")) supported=!strcmp(n->tag,"joint") || !strcmp(n->tag,"ik");
+		else if(!strcmp(parent->tag,"pose") || !strcmp(parent->tag,"key")) supported=!strcmp(n->tag,"joint") || !strcmp(n->tag,"ik");
+		else if(!strcmp(parent->tag,"clip")) supported=!strcmp(n->tag,"key");
 		else if(!strcmp(parent->tag,"wall")||!strcmp(parent->tag,"floor")||!strcmp(parent->tag,"window")||!strcmp(parent->tag,"door")) supported=0;
-		else if(!strcmp(parent->tag,"prefab")) supported=!strcmp(n->tag,"array") || !strcmp(n->tag,"joint") || !strcmp(n->tag,"ik");
+		else if(!strcmp(parent->tag,"prefab")) supported=!strcmp(n->tag,"array") || !strcmp(n->tag,"joint") || !strcmp(n->tag,"ik") || !strcmp(n->tag,"gait") || !strcmp(n->tag,"layer");
 		else if(has_shape_parser(parent->tag)) supported=has_modifier_parser(n->tag);
 		if(!supported){
 			warn_unsupported_tree(n,path,parent->tag);
@@ -2228,21 +2344,26 @@ static void warn_unknown_elements(XmlNode *root, const char *path, int prefab){
 
 /* Pose data applies only in the cameras that select it, and books read per-camera
    text metadata; these attributes are valid even when this load never reads them. */
-static const struct { const char *tag; const char *attrs[8]; } deferred_attributes[]={
+static const struct { const char *tag; const char *attrs[16]; } deferred_attributes[]={
 	{ "camera",   { "textRect", "textScale" } },
 	{ "group",    { "pair" } },
 	{ "bone",     { "pair" } },
+	{ "limb",     { "pair", "type", "bend", "phase" } },
 	{ "use-pose", { "instance", "name" } },
-	{ "pose",     { "name" } },
+	{ "pose",     { "name", "mirror" } },
 	{ "joint",    { "target", "pos", "rot", "aim" } },
-	{ "ik",       { "root", "mid", "tip", "target", "pole", "keepOrientation", "plant" } },
+	{ "ik",       { "root", "mid", "tip", "target", "pole", "keepOrientation", "plant", "limb", "offset", "bend", "weight" } },
+	{ "clip",     { "name", "length", "loop", "ease" } },
+	{ "key",      { "t", "pose", "ease" } },
+	{ "layer",    { "pose", "clip", "start", "end", "fadeIn", "fadeOut", "weight", "mode", "mask", "mirror", "speed" } },
+	{ "gait",     { "start", "distance", "speed", "stride", "lift", "bounce", "sway", "hipTwist", "spineTwist", "armSwing", "lead", "swing", "ramp", "crouch" } },
 };
 
 static int attribute_deferred(const char *tag,const char *name){
 	if(name[0]=='_' || !strcmp(name,"generated")) return 1;
 	for(size_t i=0;i<sizeof(deferred_attributes)/sizeof(deferred_attributes[0]);i++){
 		if(strcmp(deferred_attributes[i].tag,tag)) continue;
-		for(int k=0;k<8 && deferred_attributes[i].attrs[k];k++) if(!strcmp(deferred_attributes[i].attrs[k],name)) return 1;
+		for(int k=0;k<16 && deferred_attributes[i].attrs[k];k++) if(!strcmp(deferred_attributes[i].attrs[k],name)) return 1;
 	}
 	return 0;
 }
@@ -2378,6 +2499,7 @@ static void scene_rebuild_view(Scene *s){
 	scene_clear_view(s);
 	s->camPos=v3(0,1.6f,5); s->camLook=v3(0,1.2f,0); s->camFov=60;
 	s->convention3dsMax=!strcmp(xml_attr(sceneRoot,"convention",""),"3dsmax");
+	s->duration=fmaxf(0,xml_attr_f(sceneRoot,"duration",0));
 	s->worldUp=!s->convention3dsMax&&!strcmp(xml_attr(sceneRoot,"up","y"),"z")?v3(0,0,1):v3(0,1,0);
 	s->ambient=v3(0.12f,0.12f,0.14f); s->bg=v3(0.08f,0.10f,0.14f);
 	if(prefabMode){ s->ambient=v3(0.48f,0.50f,0.56f); s->bg=v3(0.14f,0.16f,0.20f); }
@@ -2396,6 +2518,7 @@ static void scene_rebuild_view(Scene *s){
 			parse_material_tag(s,sceneRoot->kids[i]);
 	} else if(!s->prefabDocument) for(int i=0;i<root->nkids;i++) for(int j=0;j<(int)(sizeof(scene_tags)/sizeof(scene_tags[0]));j++)
 		if(!strcmp(root->kids[i]->tag,scene_tags[j].tag)){ scene_tags[j].parse(s,root->kids[i]); break; }
+	if(prefabMode) for(int i=0;i<root->nkids;i++) if(!strcmp(root->kids[i]->tag,"material")) parse_material_tag(s,root->kids[i]);
 	if(requestedCamera[0]) for(int i=0;i<s->ncameras;i++) if(!strcmp(s->cameras[i].name,requestedCamera)){
 		s->camPos=s->cameras[i].pos; s->camLook=s->cameras[i].look; s->camFov=s->cameras[i].fov;
 		snprintf(s->activeCamera,sizeof(s->activeCamera),"%s",requestedCamera);
@@ -2642,6 +2765,22 @@ int scene_rig_joint_world(Scene *s,mat4 *matrix){
 	return 0;
 }
 
+void scene_set_time(Scene *s,float seconds){
+	if(!s || !isfinite(seconds)){ fprintf(stderr,"[scener] rejected scene time %g\n",seconds); fflush(stderr); return; }
+	s->time=seconds;
+	scene_rebuild_view(s);
+}
+
+/* One line per posed joint, world centimetres, for checking poses and contacts by number. */
+void scene_print_joints(Scene *s,FILE *out){
+	fprintf(out,"# time=%g camera=%s  instance joint x y z (cm)\n",s->time,s->activeCamera);
+	for(int i=0;i<s->nrigJointWorlds;i++){
+		RigJointWorld *j=&s->rigJointWorlds[i];
+		vec3 p=vscale(mat4_xform_point(j->matrix,v3(0,0,0)),CM_PER_METRE);
+		fprintf(out,"%s %s %.1f %.1f %.1f\n",xml_attr((XmlNode*)j->instance,"name","?"),xml_attr((XmlNode*)j->joint,"name","?"),p.x,p.y,p.z);
+	}
+}
+
 static mat4 rig_rest_world(Scene *s,XmlNode *node,XmlNode *root){
 	if(!node || node==root) return mat4_identity();
 	return mat4_mul(rig_rest_world(s,node->parent,root),xml_node_transform(s,node));
@@ -2723,6 +2862,7 @@ int scene_rig_save_pose(Scene *s,void *instance,const char *name){
 		for(int i=0;i<container->nkids;i++) if(!strcmp(container->kids[i]->tag,"joint") || !strcmp(container->kids[i]->tag,"ik")){
 			XmlNode *src=container->kids[i],*copy=xml_new(src->tag); copy->parent=staging;
 			for(int a=0;a<src->nattrs;a++) xml_set_attr(copy,src->attrs[a].name,src->attrs[a].value);
+			xml_remove_attr(copy,"generated");
 			for(int j=0;j<staging->nkids;j++) if(!strcmp(staging->kids[j]->tag,copy->tag) &&
 				!strcmp(xml_attr(staging->kids[j],!strcmp(copy->tag,"ik")?"tip":"target",""),
 					xml_attr(copy,!strcmp(copy->tag,"ik")?"tip":"target",""))){
@@ -2765,18 +2905,439 @@ int scene_rig_assign_pose(Scene *s,void *instance,const char *name,int cameraOnl
 	return 1;
 }
 
-static XmlNode *rig_ik_for_tip(XmlNode *container,const char *tip){
+static void rig_mirror_ref(XmlNode *n,const char *attribute){
+	const char *value=xml_attr(n,attribute,NULL);
+	char mirrored[BONE_NAME_CAPACITY];
+	if(!value || (strncmp(value,"left_",5) && strncmp(value,"right_",6))) return;
+	rig_mirror_name(value,mirrored,sizeof(mirrored)); xml_set_attr(n,attribute,mirrored);
+}
+static void rig_mirror_x(XmlNode *n,const char *attribute){
+	if(xml_attr(n,attribute,NULL)){ vec3 v=xml_attr_v3(n,attribute,v3(0,0,0)); xml_set_attr_v3(n,attribute,v3(-v.x,v.y,v.z)); }
+}
+static void rig_mirror_azimuth(XmlNode *n,const char *attribute){
+	float azimuth,elevation; char value[64];
+	if(!xml_attr_2f(n,attribute,0,0,&azimuth,&elevation)) return;
+	snprintf(value,sizeof(value),"%.6g %.6g",-azimuth,elevation); xml_set_attr(n,attribute,value);
+}
+
+/* Reflect a pose entry across the body's left-right plane. */
+static void rig_mirror_pose_item(XmlNode *n){
+	if(!strcmp(n->tag,"ik")){
+		rig_mirror_ref(n,"tip"); rig_mirror_ref(n,"mid"); rig_mirror_ref(n,"root"); rig_mirror_ref(n,"limb");
+		rig_mirror_x(n,"target"); rig_mirror_x(n,"offset"); rig_mirror_x(n,"pole"); rig_mirror_azimuth(n,"bend");
+		return;
+	}
+	rig_mirror_ref(n,"target"); rig_mirror_azimuth(n,"aim"); rig_mirror_x(n,"pos");
+	if(xml_attr(n,"rot",NULL)){ vec3 r=xml_attr_v3(n,"rot",v3(0,0,0)); xml_set_attr_v3(n,"rot",v3(r.x,-r.y,-r.z)); }
+}
+
+static XmlNode *rig_find_pose_in(XmlNode *container,const char *name){
+	for(int i=0;container && i<container->nkids;i++) if(!strcmp(container->kids[i]->tag,"pose") &&
+		!strcmp(xml_attr(container->kids[i],"name",""),name)) return container->kids[i];
+	return NULL;
+}
+
+/* Scene poses win over the prefab's pose library. <pose name="WaveRight" mirror="WaveLeft"/>
+   generates the reflected entries on first use; saving skips them. */
+static XmlNode *rig_find_pose(Scene *s,XmlNode *proot,const char *name){
+	static int depth;
+	XmlNode *pose=rig_find_pose_in((XmlNode*)s->sceneRoot,name);
+	if(!pose) pose=rig_find_pose_in(proot,name);
+	const char *source=pose?xml_attr(pose,"mirror",NULL):NULL;
+	if(!source || pose->nkids) return pose;
+	XmlNode *original=NULL;
+	if(depth<BONE_POSE_MIRROR_DEPTH){ depth++; original=rig_find_pose(s,proot,source); depth--; }
+	if(!original || original==pose){
+		fprintf(stderr,"[scener] pose %s mirrors unknown or circular pose %s\n",name,source); fflush(stderr); return pose;
+	}
+	for(int i=0;i<original->nkids;i++){
+		XmlNode *copy=xml_clone(original->kids[i],pose);
+		rig_mirror_pose_item(copy); xml_set_attr(copy,"generated","mirror");
+		DA_PUSH(pose->kids,pose->nkids,pose->ckids,copy);
+	}
+	return pose;
+}
+
+/* ---------------------------------------------- Timeline: layers and gait -- */
+/* An instance's <layer> and <gait> children play over scene time. They evaluate, in
+   document order on top of the instance's pose, into one generated pose per frame. */
+
+typedef struct { const char *name; quat q; vec3 pos; } AnimJoint;
+typedef struct { char tip[BONE_NAME_CAPACITY]; XmlNode *ik; } AnimIk;
+typedef struct { AnimJoint *joints; int njoints,cjoints; AnimIk *iks; int niks,ciks; } AnimPose;
+typedef struct { XmlNode *limb; float phase; } GaitLeg;
+
+static void anim_pose_free(AnimPose *p){
+	for(int i=0;i<p->niks;i++) xml_free(p->iks[i].ik);
+	free(p->joints); free(p->iks); memset(p,0,sizeof(*p));
+}
+
+static AnimJoint *anim_joint_find(const AnimPose *p,const char *name){
+	for(int i=0;i<p->njoints;i++) if(!strcmp(p->joints[i].name,name)) return &p->joints[i];
+	return NULL;
+}
+
+static AnimJoint *anim_joint(AnimPose *p,const char *name){
+	AnimJoint *found=anim_joint_find(p,name);
+	if(found) return found;
+	AnimJoint j={name,quat_identity(),v3(0,0,0)};
+	DA_PUSH(p->joints,p->njoints,p->cjoints,j);
+	return &p->joints[p->njoints-1];
+}
+
+static AnimIk *anim_ik_find(const AnimPose *p,const char *tip){
+	for(int i=0;i<p->niks;i++) if(!strcmp(p->iks[i].tip,tip)) return &p->iks[i];
+	return NULL;
+}
+
+/* Takes ownership of ik. */
+static void anim_put_ik(AnimPose *p,const char *tip,XmlNode *ik){
+	AnimIk *found=anim_ik_find(p,tip);
+	if(found){ xml_free(found->ik); found->ik=ik; return; }
+	AnimIk entry; snprintf(entry.tip,sizeof(entry.tip),"%s",tip); entry.ik=ik;
+	DA_PUSH(p->iks,p->niks,p->ciks,entry);
+}
+
+static const char *rig_mirror_joint_name(const char *name,char *buffer,size_t size){
+	if(strncmp(name,"left_",5) && strncmp(name,"right_",6)) return name;
+	rig_mirror_name(name,buffer,size);
+	return buffer;
+}
+
+static void anim_pose_read(Scene *s,XmlNode *proot,XmlNode *source,int mirror,AnimPose *out){
+	for(int i=0;source && i<source->nkids;i++){
+		XmlNode *kid=source->kids[i];
+		if(!strcmp(kid->tag,"joint")){
+			char pairName[BONE_NAME_CAPACITY];
+			const char *target=xml_attr(kid,"target","");
+			XmlNode *bone=rig_find_joint(proot,target);
+			if(!bone){ fprintf(stderr,"[scener] pose joint '%s' is not in the rig\n",target); fflush(stderr); continue; }
+			mat4 turn,delta=rig_override_delta(s,bone,kid,&turn);
+			quat q=quat_from_mat4(turn); vec3 pos=v3(delta.m[12],delta.m[13],delta.m[14]);
+			if(mirror){
+				XmlNode *pair=rig_find_joint(proot,rig_mirror_joint_name(xml_attr(bone,"name",""),pairName,sizeof(pairName)));
+				if(pair) bone=pair;
+				q=quat_mirror_x(q); pos.x=-pos.x;
+			}
+			AnimJoint *j=anim_joint(out,xml_attr(bone,"name",""));
+			j->q=q; j->pos=pos;
+		} else if(!strcmp(kid->tag,"ik")){
+			XmlNode *copy=xml_clone(kid,NULL);
+			xml_remove_attr(copy,"generated");
+			if(mirror) rig_mirror_pose_item(copy);
+			anim_put_ik(out,rig_ik_tip_name(proot,copy),copy);
+		}
+	}
+}
+
+static int anim_word_in(const char *list,const char *word){
+	size_t length=strlen(word);
+	for(const char *p=list;*p;){
+		while(*p && isspace((unsigned char)*p)) p++;
+		const char *start=p;
+		while(*p && !isspace((unsigned char)*p)) p++;
+		if((size_t)(p-start)==length && !strncmp(start,word,length)) return 1;
+	}
+	return 0;
+}
+
+/* mask="right_arm head" limits a layer to those joints and everything below them. */
+static int anim_masked(XmlNode *proot,const char *mask,const char *joint){
+	if(!mask || !*mask) return 1;
+	for(XmlNode *n=rig_find_joint(proot,joint);n && n!=proot;n=n->parent){
+		const char *name=xml_attr(n,"name",NULL);
+		if(name && anim_word_in(mask,name)) return 1;
+	}
+	return 0;
+}
+
+static void anim_mix_v3(XmlNode *into,XmlNode *from,const char *attribute,float u){
+	if(!xml_attr(into,attribute,NULL) || !xml_attr(from,attribute,NULL)) return;
+	xml_set_attr_v3(into,attribute,lerp(xml_attr_v3(from,attribute,v3(0,0,0)),xml_attr_v3(into,attribute,v3(0,0,0)),u));
+}
+
+/* into becomes from blended toward into by u; attributes into lacks come from from. */
+static void anim_ik_mix(XmlNode *into,XmlNode *from,float u){
+	static const char *vectors[]={"offset","target","pole"};
+	for(size_t i=0;i<sizeof(vectors)/sizeof(vectors[0]);i++){
+		if(!xml_attr(into,vectors[i],NULL) && xml_attr(from,vectors[i],NULL)) xml_set_attr(into,vectors[i],xml_attr(from,vectors[i],""));
+		else anim_mix_v3(into,from,vectors[i],u);
+	}
+	float a0,e0,a1,e1; char value[64];
+	if(xml_attr_2f(from,"bend",0,0,&a0,&e0) && xml_attr_2f(into,"bend",a0,e0,&a1,&e1)){
+		snprintf(value,sizeof(value),"%.6g %.6g",a0+(a1-a0)*u,e0+(e1-e0)*u); xml_set_attr(into,"bend",value);
+	}
+	snprintf(value,sizeof(value),"%.6g",xml_attr_f(from,"weight",1)+(xml_attr_f(into,"weight",1)-xml_attr_f(from,"weight",1))*u);
+	xml_set_attr(into,"weight",value);
+}
+
+static void anim_scale_weight(XmlNode *ik,float scale){
+	char value[32]; snprintf(value,sizeof(value),"%.6g",xml_attr_f(ik,"weight",1)*scale); xml_set_attr(ik,"weight",value);
+}
+
+/* Absolute layers pull the joints they key toward their pose; additive layers add on top. */
+static void anim_pose_apply(XmlNode *proot,AnimPose *acc,const AnimPose *layer,float w,int additive,const char *mask){
+	for(int i=0;i<layer->njoints;i++){
+		const AnimJoint *lj=&layer->joints[i];
+		if(!anim_masked(proot,mask,lj->name)) continue;
+		AnimJoint *j=anim_joint(acc,lj->name);
+		if(additive){ j->q=quat_mul(j->q,quat_slerp(quat_identity(),lj->q,w)); j->pos=vadd(j->pos,vscale(lj->pos,w)); }
+		else { j->q=quat_slerp(j->q,lj->q,w); j->pos=lerp(j->pos,lj->pos,w); }
+	}
+	for(int i=0;i<layer->niks;i++){
+		const AnimIk *li=&layer->iks[i];
+		if(!anim_masked(proot,mask,li->tip)) continue;
+		AnimIk *base=anim_ik_find(acc,li->tip);
+		XmlNode *copy=xml_clone(li->ik,NULL);
+		if(additive && base){
+			vec3 offset=vadd(xml_attr_v3(base->ik,"offset",v3(0,0,0)),vscale(xml_attr_v3(copy,"offset",v3(0,0,0)),w));
+			xml_set_attr_v3(base->ik,"offset",offset); xml_free(copy); continue;
+		}
+		if(base) anim_ik_mix(copy,base->ik,w); else anim_scale_weight(copy,w);
+		anim_put_ik(acc,li->tip,copy);
+	}
+}
+
+/* Full blend of two keyed poses: a joint missing from one side is at rest there. */
+static void anim_pose_mix(XmlNode *proot,const AnimPose *a,const AnimPose *b,float u,AnimPose *out){
+	for(int i=0;i<a->njoints;i++){
+		const AnimJoint *bj=anim_joint_find(b,a->joints[i].name);
+		AnimJoint *j=anim_joint(out,a->joints[i].name);
+		j->q=quat_slerp(a->joints[i].q,bj?bj->q:quat_identity(),u);
+		j->pos=lerp(a->joints[i].pos,bj?bj->pos:v3(0,0,0),u);
+	}
+	for(int i=0;i<b->njoints;i++) if(!anim_joint_find(a,b->joints[i].name)){
+		AnimJoint *j=anim_joint(out,b->joints[i].name);
+		j->q=quat_slerp(quat_identity(),b->joints[i].q,u); j->pos=vscale(b->joints[i].pos,u);
+	}
+	for(int i=0;i<a->niks;i++){
+		const AnimIk *bi=anim_ik_find(b,a->iks[i].tip);
+		XmlNode *copy=xml_clone(bi?bi->ik:a->iks[i].ik,NULL);
+		if(bi) anim_ik_mix(copy,a->iks[i].ik,u); else anim_scale_weight(copy,1-u);
+		anim_put_ik(out,a->iks[i].tip,copy);
+	}
+	for(int i=0;i<b->niks;i++) if(!anim_ik_find(a,b->iks[i].tip)){
+		XmlNode *copy=xml_clone(b->iks[i].ik,NULL);
+		anim_scale_weight(copy,u);
+		anim_put_ik(out,b->iks[i].tip,copy);
+	}
+	(void)proot;
+}
+
+static XmlNode *rig_find_clip(Scene *s,XmlNode *proot,const char *name){
+	XmlNode *containers[]={(XmlNode*)s->sceneRoot,proot};
+	for(int c=0;c<2;c++) for(int i=0;containers[c] && i<containers[c]->nkids;i++)
+		if(!strcmp(containers[c]->kids[i]->tag,"clip") && !strcmp(xml_attr(containers[c]->kids[i],"name",""),name)) return containers[c]->kids[i];
+	return NULL;
+}
+
+/* A key is a named pose, its own joint and ik entries, or a pose refined by them. */
+static void anim_key_read(Scene *s,XmlNode *proot,XmlNode *key,int mirror,AnimPose *out){
+	const char *poseName=xml_attr(key,"pose",NULL);
+	if(poseName){
+		XmlNode *pose=rig_find_pose(s,proot,poseName);
+		if(pose) anim_pose_read(s,proot,pose,mirror,out);
+		else { fprintf(stderr,"[scener] clip key names unknown pose '%s'\n",poseName); fflush(stderr); }
+	}
+	AnimPose own={0};
+	anim_pose_read(s,proot,key,mirror,&own);
+	anim_pose_apply(proot,out,&own,1,0,NULL);
+	anim_pose_free(&own);
+}
+
+static float anim_ease(XmlNode *clip,XmlNode *key,float u){
+	const char *ease=xml_attr(key,"ease",xml_attr(clip,"ease","smooth"));
+	if(!strcmp(ease,"linear")) return u;
+	if(!strcmp(ease,"step")) return u>=1?1:0;
+	if(strcmp(ease,"smooth")){ fprintf(stderr,"[scener] unknown ease '%s'; use smooth, linear or step\n",ease); fflush(stderr); }
+	return motion_ease(u);
+}
+
+static void anim_clip_sample(Scene *s,XmlNode *proot,XmlNode *clip,float t,int mirror,AnimPose *out){
+	XmlNode *keys[ANIM_MAX_KEYS]; int nkeys=0;
+	for(int i=0;i<clip->nkids && nkeys<ANIM_MAX_KEYS;i++) if(!strcmp(clip->kids[i]->tag,"key")) keys[nkeys++]=clip->kids[i];
+	if(!nkeys){ fprintf(stderr,"[scener] clip %s has no keys\n",xml_attr(clip,"name","?")); fflush(stderr); return; }
+	float last=xml_attr_f(keys[nkeys-1],"t",0),length=xml_attr_f(clip,"length",last);
+	int loop=xml_attr_i(clip,"loop",0);
+	if(loop && length>0){ t=fmodf(t,length); if(t<0) t+=length; }
+	int i=-1;
+	for(int k=0;k<nkeys;k++) if(xml_attr_f(keys[k],"t",0)<=t) i=k;
+	int next=i<0?0:i+1<nkeys?i+1:loop?0:-1;
+	if(i<0 || next<0 || next==i){ anim_key_read(s,proot,keys[i<0?0:i],mirror,out); return; }
+	float t0=xml_attr_f(keys[i],"t",0),t1=next>i?xml_attr_f(keys[next],"t",0):length+xml_attr_f(keys[next],"t",0);
+	float u=t1>t0?anim_ease(clip,keys[next],(t-t0)/(t1-t0)):1;
+	AnimPose a={0},b={0};
+	anim_key_read(s,proot,keys[i],mirror,&a); anim_key_read(s,proot,keys[next],mirror,&b);
+	anim_pose_mix(proot,&a,&b,u,out);
+	anim_pose_free(&a); anim_pose_free(&b);
+}
+
+static float anim_layer_weight(XmlNode *layer,float time){
+	float start=xml_attr_f(layer,"start",0),end=xml_attr_f(layer,"end",INFINITY);
+	float fadeIn=xml_attr_f(layer,"fadeIn",0),fadeOut=xml_attr_f(layer,"fadeOut",0),w=xml_attr_f(layer,"weight",1);
+	if(time<start || time>end) return 0;
+	if(fadeIn>0) w*=motion_ease((time-start)/fadeIn);
+	if(fadeOut>0 && isfinite(end)) w*=motion_ease((end-time)/fadeOut);
+	return w;
+}
+
+static void rig_collect_limbs(XmlNode *n,const char *type,GaitLeg *out,int *count){
+	if(xml_is_limb(n) && !strcmp(rig_limb_type(n),type) && *count<GAIT_MAX_LIMBS){ out[*count].limb=n; out[*count].phase=0; (*count)++; }
+	for(int i=0;i<n->nkids;i++) rig_collect_limbs(n->kids[i],type,out,count);
+}
+
+static XmlNode *rig_root_bone(XmlNode *proot){
+	for(int i=0;i<proot->nkids;i++) if(xml_is_bone(proot->kids[i])) return proot->kids[i];
+	return NULL;
+}
+
+/* The arm swings from its first bone past the collarbone. */
+static XmlNode *rig_limb_upper(XmlNode *limb){
+	XmlNode *walk=limb;
+	for(int guard=0;walk && guard<GAIT_MAX_LIMBS;guard++){
+		XmlNode *next=NULL;
+		for(int i=0;i<walk->nkids && !next;i++) if(xml_is_bone(walk->kids[i]) && !bone_at(walk->kids[i])) next=walk->kids[i];
+		if(!next || strcmp(next->tag,"collarbone")) return next;
+		walk=next;
+	}
+	return NULL;
+}
+
+static void anim_rotate(AnimPose *acc,XmlNode *joint,mat4 rotation){
+	if(!joint || !xml_attr(joint,"name",NULL)) return;
+	AnimJoint *j=anim_joint(acc,xml_attr(joint,"name",""));
+	j->q=quat_mul(j->q,quat_from_mat4(rotation));
+}
+
+/* <gait distance="300" start="1"/> walks the character forward: legs plant through IK,
+   the pelvis bobs, sways and twists, the spine counter-twists and the arms swing. */
+static void anim_gait(Scene *s,XmlNode *proot,XmlNode *gait,AnimPose *acc,float *travel){
+	GaitLeg legs[GAIT_MAX_LIMBS],arms[GAIT_MAX_LIMBS]; int nlegs=0,narms=0;
+	rig_collect_limbs(proot,"leg",legs,&nlegs); rig_collect_limbs(proot,"arm",arms,&narms);
+	XmlNode *root=rig_root_bone(proot);
+	float distance=xml_attr_f(gait,"distance",0);
+	if(!nlegs || !root || distance<=0){
+		fprintf(stderr,"[scener] gait needs leg limbs and a positive distance (legs=%d distance=%g)\n",nlegs,distance); fflush(stderr); return;
+	}
+	float legPhase[GAIT_MAX_LIMBS],hip=0,reach=0;
+	for(int i=0;i<nlegs;i++){
+		XmlNode *hub=legs[i].limb->parent,*end=rig_limb_end(legs[i].limb);
+		legPhase[i]=xml_attr_f(legs[i].limb,"phase",(strncmp(xml_attr(legs[i].limb,"name",""),"right_",6)?0:0.5f)+(hub!=root?GAIT_FRONT_PHASE:0));
+		vec3 top=mat4_xform_point(rig_rest_world(s,legs[i].limb,proot),v3(0,0,0));
+		hip=fmaxf(hip,top.z*CM_PER_METRE);
+		if(end) reach=fmaxf(reach,vlen(vsub(top,mat4_xform_point(rig_rest_world(s,end,proot),v3(0,0,0))))*CM_PER_METRE);
+	}
+	gait_params_t p;
+	p.stride=xml_attr_f(gait,"stride",hip*GAIT_STRIDE_PER_HIP);
+	p.speed=xml_attr_f(gait,"speed",p.stride*GAIT_DEFAULT_CADENCE);
+	p.lift=xml_attr_f(gait,"lift",p.stride*GAIT_LIFT_PER_STRIDE);
+	p.bounce=xml_attr_f(gait,"bounce",p.stride*GAIT_BOUNCE_PER_STRIDE);
+	p.sway=xml_attr_f(gait,"sway",p.stride*GAIT_SWAY_PER_STRIDE);
+	p.hipTwist=xml_attr_f(gait,"hipTwist",GAIT_DEFAULT_HIP_TWIST);
+	p.spineTwist=xml_attr_f(gait,"spineTwist",GAIT_DEFAULT_SPINE_TWIST);
+	p.armSwing=xml_attr_f(gait,"armSwing",GAIT_DEFAULT_ARM_SWING);
+	p.swing=fmaxf(GAIT_MIN_SWING,fminf(GAIT_MAX_SWING,xml_attr_f(gait,"swing",GAIT_DEFAULT_SWING)));
+	/* By default a foot's stance is centred under its hip: it lands as far ahead as it leaves behind. */
+	p.lead=xml_attr_f(gait,"lead",(1-p.swing)*0.5f);
+	p.ramp=fmaxf(0,xml_attr_f(gait,"ramp",GAIT_DEFAULT_RAMP));
+	if(p.stride<=0 || p.speed<=0){ fprintf(stderr,"[scener] gait needs positive stride and speed (%g, %g)\n",p.stride,p.speed); fflush(stderr); return; }
+	float total=gait_total_phase(&p,legPhase,nlegs,distance),elapsed=s->time-xml_attr_f(gait,"start",0);
+	float phase=gait_phase_at(&p,total,elapsed),along=gait_travel(&p,phase,total,distance);
+	*travel+=along;
+	/* Before it starts and once it ends a gait only places the body; poses and later gaits own the legs. */
+	if(elapsed<=0 || elapsed>=gait_duration(&p,total)) return;
+	/* Compass gait: the pelvis drops just enough for every foot target to stay within reach
+	   of a nearly straight leg, which gives the natural dip at double support. */
+	float usable=reach*GAIT_REACH_FRACTION,drop=0;
+	for(int i=0;i<nlegs;i++){
+		float forward,lift;
+		gait_foot(&p,legPhase[i],phase,total,distance,&forward,&lift);
+		float ahead=fminf(fabsf(forward-along),usable);
+		drop=fmaxf(drop,reach-lift-sqrtf(usable*usable-ahead*ahead));
+		XmlNode *ik=xml_new("ik");
+		xml_set_attr(ik,"limb",xml_attr(legs[i].limb,"name",""));
+		xml_set_attr_v3(ik,"offset",v3(0,-(forward-along),lift));
+		anim_put_ik(acc,rig_ik_tip_name(proot,ik),ik);
+	}
+	gait_body_t body; gait_body(&p,phase,total,&body);
+	drop=fmaxf(0,drop)+xml_attr_f(gait,"crouch",0)*gait_amplitude(&p,phase,total);
+	AnimJoint *pelvis=anim_joint(acc,xml_attr(root,"name",""));
+	pelvis->pos=vadd(pelvis->pos,vscale(v3(body.sway,0,body.bob-drop),1.0f/CM_PER_METRE));
+	anim_rotate(acc,root,mat4_rot_z(body.hipTwist));
+	for(int i=0;i<root->nkids;i++) if(!strcmp(root->kids[i]->tag,"spine")){ anim_rotate(acc,root->kids[i],mat4_rot_z(body.spineTwist)); break; }
+	for(int i=0;i<narms;i++){
+		int right=!strncmp(xml_attr(arms[i].limb,"name",""),"right_",6);
+		anim_rotate(acc,rig_limb_upper(arms[i].limb),mat4_rot_x(right?-body.armSwing:body.armSwing));
+	}
+}
+
+static XmlNode *anim_pose_node(Scene *s,AnimPose *p){
+	XmlNode *pose=xml_new("pose");
+	xml_set_attr(pose,"name","_timeline");
+	for(int i=0;i<p->njoints;i++){
+		XmlNode *joint=xml_new("joint"); char value[128];
+		joint->parent=pose;
+		xml_set_attr(joint,"target",p->joints[i].name);
+		snprintf(value,sizeof(value),"%.7g %.7g %.7g %.7g",p->joints[i].q.w,p->joints[i].q.x,p->joints[i].q.y,p->joints[i].q.z);
+		xml_set_attr(joint,"_quat",value);
+		xml_set_attr_v3_cm(joint,"pos",cvt3ds_inv(s,p->joints[i].pos));
+		DA_PUSH(pose->kids,pose->nkids,pose->ckids,joint);
+	}
+	for(int i=0;i<p->niks;i++){
+		p->iks[i].ik->parent=pose;
+		DA_PUSH(pose->kids,pose->nkids,pose->ckids,p->iks[i].ik);
+		p->iks[i].ik=NULL;
+	}
+	return pose;
+}
+
+static XmlNode *rig_timeline_pose(Scene *s,XmlNode *instance,XmlNode *proot,XmlNode *base,float *travel){
+	*travel=0;
+	int animated=0;
+	for(int i=0;i<instance->nkids;i++) animated|=!strcmp(instance->kids[i]->tag,"layer") || !strcmp(instance->kids[i]->tag,"gait");
+	if(!animated) return NULL;
+	AnimPose acc={0};
+	anim_pose_read(s,proot,base,0,&acc);
+	for(int i=0;i<instance->nkids;i++){
+		XmlNode *item=instance->kids[i];
+		if(!strcmp(item->tag,"gait")){ anim_gait(s,proot,item,&acc,travel); continue; }
+		if(strcmp(item->tag,"layer")) continue;
+		float w=anim_layer_weight(item,s->time);
+		if(w<=0) continue;
+		const char *poseName=xml_attr(item,"pose",NULL),*clipName=xml_attr(item,"clip",NULL),*mode=xml_attr(item,"mode","absolute");
+		int mirror=xml_attr_i(item,"mirror",0);
+		AnimPose layer={0};
+		if(poseName){
+			XmlNode *pose=rig_find_pose(s,proot,poseName);
+			if(pose) anim_pose_read(s,proot,pose,mirror,&layer);
+			else { fprintf(stderr,"[scener] layer names unknown pose '%s'\n",poseName); fflush(stderr); }
+		} else if(clipName){
+			XmlNode *clip=rig_find_clip(s,proot,clipName);
+			if(clip) anim_clip_sample(s,proot,clip,(s->time-xml_attr_f(item,"start",0))*xml_attr_f(item,"speed",1),mirror,&layer);
+			else { fprintf(stderr,"[scener] layer names unknown clip '%s'\n",clipName); fflush(stderr); }
+		} else { fprintf(stderr,"[scener] layer needs pose or clip\n"); fflush(stderr); }
+		if(strcmp(mode,"absolute") && strcmp(mode,"additive")){ fprintf(stderr,"[scener] layer mode '%s'; use absolute or additive\n",mode); fflush(stderr); }
+		anim_pose_apply(proot,&acc,&layer,fminf(1,w),!strcmp(mode,"additive"),xml_attr(item,"mask",NULL));
+		anim_pose_free(&layer);
+	}
+	XmlNode *node=anim_pose_node(s,&acc);
+	anim_pose_free(&acc);
+	return node;
+}
+
+static XmlNode *rig_ik_for_tip(XmlNode *root,XmlNode *container,const char *tip){
 	if(!container) return NULL;
 	for(int i=0;i<container->nkids;i++) if(!strcmp(container->kids[i]->tag,"ik") &&
-		!strcmp(xml_attr(container->kids[i],"tip",""),tip)) return container->kids[i];
+		!strcmp(rig_ik_tip_name(root,container->kids[i]),tip)) return container->kids[i];
 	return NULL;
 }
 
 vec3 scene_rig_target_value(Scene *s,void *instance,void *tip,const char *attribute){
 	XmlNode *in=(XmlNode*)instance,*j=(XmlNode*)tip;
 	if(!in || !j || !attribute) return v3(0,0,0);
-	XmlNode *ik=rig_ik_for_tip(in,xml_attr(j,"name",""));
-	if(!ik) ik=rig_ik_for_tip(rig_pose_for_instance(s,in),xml_attr(j,"name",""));
+	XmlNode *root=rig_instance_root(s,in);
+	XmlNode *ik=rig_ik_for_tip(root,in,xml_attr(j,"name",""));
+	if(!ik) ik=rig_ik_for_tip(root,rig_pose_for_instance(s,in),xml_attr(j,"name",""));
 	if(!strcmp(attribute,"pole")) return ik?xml_attr_v3(ik,"pole",v3(0,-1,0)):v3(0,-1,0);
 	if(ik) return xml_attr_v3_cm(ik,"target",v3(0,0,0));
 	for(int i=0;i<s->ninstances;i++) if(!strcmp(s->instances[i].name,xml_attr(in,"name",""))){
@@ -2795,7 +3356,7 @@ int scene_rig_set_target(Scene *s,void *instance,void *tip,const char *attribute
 		!rig_is_joint(j) || !rig_is_joint(j->parent) || !rig_is_joint(j->parent->parent) ||
 		(strcmp(attribute,"target") && strcmp(attribute,"pole"))) return 0;
 	if(rig_find_joint(root,xml_attr(j,"name",""))!=j || !xml_attr(j->parent,"name",NULL) || !xml_attr(j->parent->parent,"name",NULL)) return 0;
-	XmlNode *ik=rig_ik_for_tip(in,xml_attr(j,"name",""));
+	XmlNode *ik=rig_ik_for_tip(root,in,xml_attr(j,"name",""));
 	if(!ik){
 		ik=xml_new("ik"); ik->parent=in;
 		xml_set_attr(ik,"root",xml_attr(j->parent->parent,"name",""));

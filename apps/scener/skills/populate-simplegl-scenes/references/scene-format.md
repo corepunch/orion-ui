@@ -16,24 +16,26 @@ make scener
 | File | Root | Purpose | Allowed direct children |
 |------|------|---------|-------------------------|
 | `.blks` | `<scene>` | Complete scene/room | Config tags, reusable profiles, renderable content, groups, prefab instances, cutters, overlays |
-| `.blk` | `<prefab>` | Reusable object or assembly | `<attach>`, `<shape>`, renderable content, nested groups/prefabs, cutters, overlays |
+| `.blk` | `<prefab>` | Reusable object or assembly | `<attach>`, `<shape>`, `<material>`, `<pose>`, `<clip>`, renderable content, nested groups/prefabs, cutters, overlays |
 
 A `.blks` scene is the authority for cameras, ambient/background color,
 materials, character definitions, and directional lights. A `.blk` prefab is
 authored in a stable local coordinate frame and obtains materials from its
-containing scene. It can be opened directly in Scener for editing; Scener then
+containing scene. A character prefab may also define its own `<material>`,
+`<pose>` and `<clip>` entries; the scene's entries of the same name win. It can be opened directly in Scener for editing; Scener then
 provides a default camera and preview lights.
 
 The complete supported element inventory is:
 
 | Placement | Elements |
 |-----------|----------|
-| `<scene>` attributes | `ambient`, `background`, `up`, `convention` |
-| Scene configuration | `<camera>`, `<pose>`, `<material>`, `<sun>`, `<chardef>`, `<shape>` |
+| `<scene>` attributes | `ambient`, `background`, `up`, `convention`, `duration` |
+| Scene configuration | `<camera>`, `<pose>`, `<clip>`, `<material>`, `<sun>`, `<chardef>`, `<shape>` |
+| Character rig parts | `<bone>`, `<hub>`, `<spine>`, `<tail>`, `<limb>`, `<collarbone>`, `<palm>`, `<ankle>`, `<digit>` |
 | Transformable content | `<box>`, `<rect>`, `<rounded-rect>`, `<circle>`, `<ellipse>`, `<star>`, `<rounded-box>`, `<screen>`, `<sphere>`, `<cylinder>`, `<capsule>`, `<arch>`, `<prism>`, `<cone>`, `<pyramid>`, `<torus>`, `<lathe>`, `<loft>`, `<wall>`, `<window>`, `<door>`, `<group>`, `<prefab>`, `<light>`, `<line>`, `<dummy>` |
 | Wall cutters | `<bool-negative-box>`, `<bool-negative-arch>`, `<bool-negative-cylinder>` |
 | Mesh modifiers | `<taper>`, `<twist>`, `<bend>`, `<stretch>`, `<skew>`, `<array>`, `<extrude>`, `<bevel>`, `<mirror>`, `<noise>`, `<shell>` |
-| Context-only children | `<camera><transform>`, `<camera><use-pose>`, `<pose><joint>`, `<pose><ik>`, `<prefab><joint>`, `<prefab><ik>`, `<shape><v>`, `<prefab><attach>` |
+| Context-only children | `<camera><transform>`, `<camera><use-pose>`, `<pose><joint>`, `<pose><ik>`, `<clip><key>`, `<key><joint>`, `<key><ik>`, `<prefab><joint>`, `<prefab><ik>`, `<prefab><gait>`, `<prefab><layer>`, `<shape><v>`, `<prefab><attach>` |
 
 Unknown elements produce an `unsupported XML element` warning. Element names
 and attribute names are case-sensitive.
@@ -230,7 +232,7 @@ for existing characters and hand-built mechanisms.
 
 Named `<group>` elements inside a prefab form a joint hierarchy. Put each group origin at its articulation center; parent and child groups define a bone. A group's `pair` attribute explicitly names its mirrored partner. The editor's Hierarchy tab lists these joints for the selected prefab instance. Rotation and offset controls create `<joint>` overrides on that instance; Pivot and Parent change the shared prefab rig. The viewport move and rotate gizmos act on the selected joint. Moving a tip with an active IK target moves its world target.
 
-A scene-level `<pose name="...">` stores reusable joint offsets and IK constraints. A prefab instance can set `pose="Name"` as its default. A camera selects a different pose for one named instance with `<use-pose instance="Actor" name="Reach"/>`. An instance's own `<joint>` or `<ik>` entry overrides the same joint or chain in the selected pose. Legacy camera `<transform>` targets remain global by name; use poses for independent character instances.
+A `<pose name="...">` stores reusable joint offsets and IK constraints. Poses live in the scene or in the character's prefab (its pose library); a scene pose of the same name wins. `<pose name="B" mirror="A"/>` generates A reflected across the body's left-right plane: `left_`/`right_` names swap, aim and bend azimuths, offset, `pos`, `target` and `pole` X values change sign, and `rot` becomes `(x, −y, −z)`; the generated entries are not saved. A prefab instance can set `pose="Name"` as its default. A camera selects a different pose for one named instance with `<use-pose instance="Actor" name="Reach"/>`. An instance's own `<joint>` or `<ik>` entry overrides the same joint or chain in the selected pose. Legacy camera `<transform>` targets remain global by name; use poses for independent character instances.
 
 ```xml
 <pose name="Reach">
@@ -242,7 +244,7 @@ A scene-level `<pose name="...">` stores reusable joint offsets and IK constrain
 <prefab source="characters/ellipsoid_actor" name="Actor"/>
 ```
 
-`<joint>` uses `target` for a named group or bone, `pos` for local centimetre offset, and `rot` for local Euler degrees. On a bone, `aim="azimuth elevation"` re-points it in its parent's frame before `rot`; prefer it to Euler angles. `<ik>` names a direct parent → child → grandchild joint chain; with only `tip`, the tip's parent and grandparent form the chain. `plant="1"` without `target` pins the tip at its unposed world position, so a foot stays put while the body bends. Its `target` is a **world-space** position in centimetres; `pole` is a world-space direction indicating the preferred bend. `keepOrientation="1"` preserves the tip's original world orientation, useful for feet. The two-bone solver clamps unreachable targets without stretching bones. The Properties panel reports reachability and distance beyond reach; stderr also records unreachable targets. A fixed world target keeps a foot planted when the root or hips move. A saved pose contains the current pose's constraints and the instance's edits, and can be assigned to another camera.
+`<joint>` uses `target` for a named group or bone, `pos` for local centimetre offset, and `rot` for local Euler degrees. On a bone, `aim="azimuth elevation"` re-points it in its parent's frame before `rot`; prefer it to Euler angles. `<ik>` names a direct parent → child → grandchild joint chain; with only `tip`, the tip's parent and grandparent form the chain. `plant="1"` without `target` pins the tip at its unposed world position, so a foot stays put while the body bends. Its `target` is a **world-space** position in centimetres; `pole` is a world-space direction indicating the preferred bend. `keepOrientation="1"` preserves the tip's original world orientation, useful for feet. The two-bone solver clamps unreachable targets without stretching bones. `limb="left_arm"` replaces `tip`/`mid`/`root` with a CAT limb: the chain is the limb's last two bones above its palm or ankle, `keepOrientation` defaults to 1, and without `target` the goal is the tip's rest position moved by `offset` (body-frame cm), so the pose works for every instance. `offset` also works with `tip`. `bend="azimuth elevation"` gives the bend direction in the body frame instead of the world `pole`; limb IK defaults to the limb's `bend`, else forward for legs and backward for arms. `weight` (0–1, default 1) blends the goal with the unsolved tip position. The Properties panel reports reachability and distance beyond reach; stderr also records unreachable targets. A fixed world target keeps a foot planted when the root or hips move. A saved pose contains the current pose's constraints and the instance's edits, and can be assigned to another camera.
 
 Mirroring uses the explicit `pair` and reflects local rotations across the character's X plane (`S R S`, with `S = diag(-1,1,1)`). Paired joints should have reflected rest orientations. Mesh `<mirror>` only changes geometry; it does not mirror a grouped rig or pose.
 
@@ -857,12 +859,12 @@ elevation 90 is up and −90 down.
 | `from` | 2 floats | `aim` | Direction from the parent's axis to that surface point |
 | `sink` | float | ½ min radius | How far the joint sinks below the parent surface, in cm |
 | `overlap` | float | ½ min radius | Volume extension past connected joints, hiding seams |
-| `segments` | int | 1 | Split into N links named `name`, `name_2` … `name_N` |
+| `segments` | int | 1 | Split into N links named `name`, `name_2` … `name_N`; `links` on CAT parts |
 | `aimEnd` | 2 floats | `aim` | Last link direction; links interpolate from `aim`, curving spines, necks and tails |
 | `mirror` | 0/1 | 0 | Also build the reflected subtree, renaming `left_` to `right_` |
-| `foot` | 0/1 | 0 | Report rest-pose ground clearance so limb lengths can be corrected |
+| `foot` | 0/1 | 0 (1 on `<ankle>`) | Report rest-pose ground clearance so limb lengths can be corrected |
 | `ground` | 0/1 | 1 | Root bone only: lift so the lowest rest volume touches Z=0 |
-| `volume` | 0/1 | 1 | Omit the body volume and keep only the joint |
+| `volume` | 0/1 | 1 (0 on `<limb>`) | Omit the body volume and keep only the joint |
 | `pos` | vec3 | 0 0 0 | Root bone only: offset after grounding |
 
 Bones ignore `rot` and `scale`. `material`, `color`, `shininess`, `rings`,
@@ -893,6 +895,113 @@ strongly tapered tip.
   <bone name="tail" at="0" from="180 25" aim="180 35" aimEnd="165 85" segments="3" length="22" radius="1.8" taper="0.6"/>
 </bone>
 ```
+
+### CAT rig parts
+
+`<hub>`, `<spine>`, `<tail>`, `<limb>`, `<collarbone>`, `<palm>`, `<ankle>`
+and `<digit>` are bones with a role, after 3ds Max CAT. They take every
+[`<bone>`](#bone) attribute; the tag tells IK and gaits what the part is.
+`links="N"` is `segments` under its CAT name, and generated links keep the tag.
+
+| Element | Role |
+|---------|------|
+| `<hub>` | Pelvis, ribcage or head. The root hub is the pelvis |
+| `<spine>` | Links between hubs (spine, neck); the next hub chains from its tip |
+| `<tail>` | Links off a hub with a free end |
+| `<limb>` | Arm or leg container: zero length and no volume, placed on its hub with `at`/`from`; its first bone sinks as deep as a direct attachment would |
+| `<collarbone>` | Optional first bone of an arm; arm swing skips it |
+| `<palm>`, `<ankle>` | End of a limb. `<ankle>` defaults to `foot="1"` |
+| `<digit>` | Finger or toe chain, attached to a palm or ankle with `at`/`from` |
+
+Extra `<limb>` attributes:
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `type` | `arm` / `leg` | from the end part | `leg` if the limb ends in an `<ankle>`, else `arm` |
+| `bend` | 2 floats | legs `0 0`, arms `180 0` | Body direction the middle joint bends toward, for limb IK and gaits |
+| `phase` | float | see `<gait>` | Leg step offset in cycles |
+
+```xml
+<hub name="pelvis" aim="0 90" length="12" radius="17 11" material="trousers">
+  <limb name="left_leg" type="leg" at="0.25" from="90 0" mirror="1">
+    <bone name="left_thigh" aim="0 -90" length="44" radius="7.5 8" taper="0.75">
+      <bone name="left_calf" aim="0 -90" length="43" radius="5.5 6" taper="0.75">
+        <ankle name="left_foot" aim="0 -10" length="20" radius="4.5 3.5"/>
+      </bone>
+    </bone>
+  </limb>
+  <spine name="spine" links="2" aim="0 90" aimEnd="0 86" length="24" radius="14 9.5">
+    <hub name="ribcage" aim="0 90" length="20" radius="17 11">
+      <limb name="left_arm" type="arm" at="0.9" from="90 0" mirror="1">
+        <collarbone name="left_clavicle" aim="90 0" length="8" radius="4">
+          <bone name="left_upperarm" aim="90 -82" length="29" radius="5 5.5">
+            <bone name="left_forearm" aim="0 -86" length="26" radius="4.2 4.4">
+              <palm name="left_hand" aim="0 -90" length="10" radius="4.5 2.2"/>
+            </bone>
+          </bone>
+        </collarbone>
+      </limb>
+    </hub>
+  </spine>
+</hub>
+```
+
+Presets live in `prefabs/characters/presets/` (`biped`, `quadruped`). Copy one
+to start a character; nothing is inherited from it afterwards.
+
+### Timeline: `<gait>`, `<layer>`, `<clip>`
+
+Scene time runs in seconds from 0 (`--time`, `--frames`, the editor's
+Animation menu). `<scene duration="…">` sets where editor playback loops. A
+prefab instance's `<gait>` and `<layer>` children evaluate in document order
+on top of its pose (instance attribute, or camera `<use-pose>`) into one pose
+per frame; the instance's own `<joint>`/`<ik>` entries still win.
+
+`<gait>` walks the character along its body's forward axis (local −Y), moving
+the instance. Legs are the rig's `<limb type="leg">` parts; left legs step at
+phase 0, right legs at 0.5, and legs on a hub other than the root a quarter
+cycle later. Feet plant on fixed points, so they never slide; the walk starts
+and stops over `ramp` cycles with shorter steps, and each leg's last step lands
+on the destination. Before `start` and after the walk ends, the gait only
+places the body.
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `start` | seconds | 0 | When the walk begins |
+| `distance` | cm | — | Required. How far to walk |
+| `stride` | cm | 1.2 × hip height | Distance per full cycle (two biped steps) |
+| `speed` | cm/s | 0.9 × stride | Cruise speed |
+| `lift` | cm | 0.07 × stride | Foot clearance in swing |
+| `swing` | cycles | 0.4 | Time each foot spends in the air |
+| `lead` | fraction of stride | centred stance | How far ahead of the hip a foot lands |
+| `ramp` | cycles | 1 | Acceleration and deceleration |
+| `bounce`, `sway` | cm | 0, 0.018 × stride | Extra pelvis bob; side-to-side sway |
+| `crouch` | cm | 0 | Constant extra knee bend while walking |
+| `hipTwist`, `spineTwist`, `armSwing` | degrees | 6, 4, 20 | Pelvis twist, spine counter-twist beyond it, arm swing |
+
+The pelvis also drops automatically so every foot target stays within a nearly
+straight leg's reach, which produces the dip at double support.
+
+`<layer>` plays a `pose` or a `clip`:
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `pose` / `clip` | name | — | What to play; scene entries win over the character's |
+| `start`, `end` | seconds | 0, forever | Active span; a clip's local time starts at `start` |
+| `fadeIn`, `fadeOut` | seconds | 0 | Weight ramps (fade-out needs `end`) |
+| `weight` | 0–1 | 1 | Peak weight |
+| `mode` | `absolute` / `additive` | `absolute` | Pull keyed joints toward the pose, or add to them |
+| `mask` | names | all | Joints (and everything below them) the layer affects |
+| `mirror` | 0/1 | 0 | Play reflected, as a mirror pose would |
+| `speed` | float | 1 | Clip playback rate |
+
+`<clip name length loop ease>` holds `<key t="seconds" pose="…" ease="…">`
+entries in time order. A key is a named pose, its own `<joint>`/`<ik>`
+children, or a pose refined by them. Between keys, joints missing from one key
+are at rest there, and IK goals fade in or out by weight. `ease` is `smooth`
+(default), `linear` or `step`; a key's `ease` shapes the blend into it.
+`loop="1"` repeats every `length` (default: the last key's time) and blends
+the last key back into the first; otherwise the last key holds.
 
 ### `<capsule>`
 

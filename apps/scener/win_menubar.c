@@ -216,6 +216,18 @@ void handle_menu_command(uint16_t id) {
       }
       break;
 
+    case ID_ANIMATION_PLAY:
+      if (doc && doc->viewport_win) send_message(doc->viewport_win, kViewportTogglePlayback, 0, NULL);
+      break;
+
+    case ID_ANIMATION_REWIND:
+      if (doc) {
+        fprintf(stderr, "[scener] rewind time=%g\n", doc->scene.time);
+        scene_set_time(&doc->scene, 0);
+        if (doc->viewport_win) invalidate_window(doc->viewport_win);
+      }
+      break;
+
     case ID_VIEW_SHOW_GRID:
       g_app->debug_flags ^= DBG_NO_SHADOWS;
       break;

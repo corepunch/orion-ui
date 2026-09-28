@@ -29,12 +29,16 @@ enum {
   ID_MODIFY_ARRAY,
 };
 
+/* Private viewport requests. */
+enum { kViewportTogglePlayback = evUser + 800 };
+
 typedef struct scene_doc_s {
   Scene           scene;
   char            filename[512];
   bool            modified;
   window_t       *win;
   window_t       *viewport_win;
+  bool            playing;
   struct scene_doc_s *next;
 } scene_doc_t;
 

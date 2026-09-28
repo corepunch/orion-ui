@@ -306,7 +306,7 @@ static void test_bone_skeleton(void){
 	ASSERT_TRUE(kitten!=NULL);
 	ASSERT_TRUE(bone_test_joint(&s,kitten,"right_shoulder")!=NULL);
 	ASSERT_TRUE(bone_test_joint(&s,kitten,"right_ear")!=NULL);
-	ASSERT_TRUE(bone_test_joint(&s,kitten,"spine_2")!=NULL);
+	ASSERT_TRUE(bone_test_joint(&s,kitten,"ribcage")!=NULL);
 	ASSERT_TRUE(bone_test_joint(&s,kitten,"tail_3")!=NULL);
 	float low=INFINITY;
 	for(int i=0;i<s.nobjs;i++) for(int v=0;v<s.objs[i].mesh.nverts;v++) low=fminf(low,s.objs[i].mesh.verts[v].pos.z);
@@ -920,6 +920,80 @@ static void test_surface_materials_and_roundtrip(void){
 	unlink(s.scenePath); scene_free(&s); scene_free(&restored); PASS();
 }
 
+static vec3 cat_test_joint(Scene *s,const char *name){
+	for(int i=0;i<s->nrigJointWorlds;i++) if(!strcmp(scene_node_attr(s->rigJointWorlds[i].joint,"name"),name))
+		return vscale(mat4_xform_point(s->rigJointWorlds[i].matrix,v3(0,0,0)),100);
+	return v3(NAN,NAN,NAN);
+}
+
+static vec3 cat_test_up(Scene *s,const char *name){
+	for(int i=0;i<s->nrigJointWorlds;i++) if(!strcmp(scene_node_attr(s->rigJointWorlds[i].joint,"name"),name))
+		return vnorm(mat4_xform_dir(s->rigJointWorlds[i].matrix,v3(0,0,1)));
+	return v3(NAN,NAN,NAN);
+}
+
+static void test_cat_rig_preset(void){
+	TEST("CAT rig: hubs, limbs, links, preset materials, limb IK offsets and mirrored library poses");
+	Scene s={0};
+	ASSERT_TRUE(load_scene("apps/scener/scenes/biped_study.blks",&s));
+	ASSERT_EQUAL(s.ignoredAttributes,0);
+	int shirt=0;
+	for(int i=0;i<s.nmats;i++) shirt|=!strcmp(s.mats[i].id,"shirt");
+	ASSERT_TRUE(shirt);
+	ASSERT_TRUE(!isnan(cat_test_joint(&s,"spine_2").x) && isnan(cat_test_joint(&s,"spine_3").x));
+	ASSERT_TRUE(!isnan(cat_test_joint(&s,"right_leg").x) && !isnan(cat_test_joint(&s,"right_thumb_2").x));
+	vec3 left=cat_test_joint(&s,"left_foot"),right=cat_test_joint(&s,"right_foot");
+	ASSERT_TRUE(left.x>5 && fabsf(left.x+right.x)<0.01f && fabsf(left.z-right.z)<0.01f);
+	vec3 restLeft=cat_test_joint(&s,"left_hand"),restRight=cat_test_joint(&s,"right_hand");
+	scene_select_camera(&s,"Point");
+	ASSERT_EQUAL(s.nrigTargets,1);
+	ASSERT_TRUE(s.rigTargets[0].reachable);
+	ASSERT_TRUE(vlen(vsub(cat_test_joint(&s,"left_hand"),vadd(restLeft,v3(22,-43,54))))<0.5f);
+	scene_select_camera(&s,"Wave");
+	vec3 waving=cat_test_joint(&s,"right_hand");
+	ASSERT_TRUE(fabsf(waving.x-(restRight.x-4))<0.5f && waving.z>150);
+	ASSERT_TRUE(vlen(vsub(cat_test_joint(&s,"left_hand"),restLeft))<0.01f);
+	scene_free(&s);
+	PASS();
+}
+
+static void test_timeline_gait_and_layers(void){
+	TEST("timeline: gait plants feet without sliding, travels its distance, layers fade and clips add");
+	Scene s={0};
+	ASSERT_TRUE(load_scene("apps/scener/scenes/biped_walk.blks",&s));
+	ASSERT_EQUAL(s.ignoredAttributes,0);
+	ASSERT_TRUE(fabsf(s.duration-7.5f)<0.001f);
+	vec3 start=cat_test_joint(&s,"left_foot");
+	const char *feet[2]={"left_foot","right_foot"};
+	float plantedY[2]={NAN,NAN}; int lifted[2]={0,0},steps[2]={0,0};
+	for(float t=0.5f;t<5.0f;t+=0.04f){
+		scene_set_time(&s,t);
+		for(int i=0;i<s.nrigTargets;i++) ASSERT_TRUE(s.rigTargets[i].reachable);
+		for(int f=0;f<2;f++){
+			vec3 p=cat_test_joint(&s,feet[f]);
+			if(p.z>start.z+0.3f){ lifted[f]=1; continue; }
+			if(!lifted[f] && !isnan(plantedY[f])) ASSERT_TRUE(fabsf(p.y-plantedY[f])<0.05f);
+			if(lifted[f]) steps[f]++;
+			plantedY[f]=p.y; lifted[f]=0;
+		}
+	}
+	ASSERT_TRUE(steps[0]>=2 && steps[1]>=2);
+	scene_set_time(&s,5.1f);
+	ASSERT_TRUE(fabsf(cat_test_joint(&s,"pelvis").y+300)<0.01f);
+	vec3 nodStart=cat_test_up(&s,"head");
+	ASSERT_TRUE(cat_test_joint(&s,"right_hand").z<100);
+	scene_set_time(&s,6.0f);
+	ASSERT_TRUE(cat_test_joint(&s,"right_hand").z>150);
+	ASSERT_TRUE(fabsf(cat_test_joint(&s,"left_foot").y+300)<0.01f && fabsf(cat_test_joint(&s,"right_foot").y+300)<0.01f);
+	scene_set_time(&s,5.8f);
+	ASSERT_TRUE(vdot(cat_test_up(&s,"head"),nodStart)<cosf(8*M_PIf/180));
+	scene_set_time(&s,7.4f);
+	ASSERT_TRUE(cat_test_joint(&s,"right_hand").z<100);
+	ASSERT_TRUE(vdot(cat_test_up(&s,"head"),nodStart)>cosf(1*M_PIf/180));
+	scene_free(&s);
+	PASS();
+}
+
 int main(void) {
   TEST_START("scener input and command state");
   test_tool_commands_share_document_state();
@@ -930,6 +1004,8 @@ int main(void) {
   test_instance_rig_ik();
   test_rig_mirror_and_pose_reuse();
   test_bone_skeleton();
+  test_cat_rig_preset();
+  test_timeline_gait_and_layers();
   test_ignored_attributes_reported();
   test_enclosed_light_reported();
   test_nested_arch_emits_wall_parts_once();
