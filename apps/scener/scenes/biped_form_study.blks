@@ -5,6 +5,8 @@
   <camera name="Rear" pos="180 460 140" look="0 0 92" fov="28" />
   <camera name="Crouch" pos="-180 -460 140" look="0 0 80" fov="28"><use-pose instance="Adam" name="Crouch" /></camera>
   <camera name="SideCrouch" pos="-500 0 120" look="0 0 80" fov="27"><use-pose instance="Adam" name="Crouch" /></camera>
+  <camera name="Hands" pos="90 -180 85" look="25 -3 75" fov="20" />
+  <camera name="Feet" pos="-65 -150 35" look="0 -6 12" fov="28" />
   <pose name="Crouch">
     <joint target="pelvis" pos="0 0 -30" />
     <ik limb="left_leg" offset="0 0 0" />
