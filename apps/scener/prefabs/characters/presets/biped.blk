@@ -9,7 +9,7 @@
   <material id="skin" color="0.86 0.68 0.56" shininess="10" />
   <material id="shirt" color="0.30 0.42 0.62" shininess="6" />
   <material id="trousers" color="0.22 0.22 0.26" shininess="6" />
-  <material id="shoes" color="0.12 0.10 0.09" shininess="24" />
+  <material id="shoes" color="0.12 0.10 0.09" shininess="8" />
   <material id="hair" color="0.25 0.17 0.11" shininess="12" />
   <material id="eye" color="0.08 0.08 0.10" shininess="60" />
 
@@ -19,9 +19,9 @@
     <limb name="left_leg" type="leg" at="0.25" from="90 0" sink="3.8" mirror="1">
       <bone name="left_thigh" aim="0 -90" length="44" radius="10.5 11" taper="0.78" overlap="6" material="trousers">
         <bone name="left_calf" aim="0 -90" length="43" radius="7.5 8" taper="0.65" overlap="4" material="trousers">
-          <ellipsoid on="0 0" at="0" radii="6 5.5 6" sink="4.3" material="trousers" />
-          <ankle name="left_foot" aim="0 -12" length="15" radius="4.5 3.5" material="shoes">
-            <digit name="left_toe" at="1" from="0 -30" aim="0 -6" links="2" length="7" radius="4.2 2.4" taper="0.8" material="shoes" />
+          <ellipsoid on="0 0" at="0" radii="6.5 6 6.5" sink="2" material="trousers" />
+          <ankle name="left_foot" aim="0 -12" length="18" radius="5.5 4.6" overlap="3" material="shoes">
+            <digit name="left_toe" at="1" from="0 -30" aim="0 -6" links="2" length="4" radius="5 3.5" taper="0.9" overlap="3" material="shoes" />
           </ankle>
         </bone>
       </bone>
@@ -36,7 +36,7 @@
             <bone name="left_upperarm" aim="90 -82" length="29" radius="6.5 7" taper="0.78" overlap="4" material="shirt">
               <ellipsoid on="90 20" at="0.08" radii="7 7 8" sink="6.5" material="shirt" />
               <bone name="left_forearm" aim="0 -86" length="26" radius="4.6 4.8" taper="0.75" material="skin">
-                <palm name="left_palm" aim="0 -90" length="9" radius="2 4.2" material="skin">
+                <palm name="left_palm" aim="0 -90" length="12" radius="3.5 4.8" overlap="2" material="skin">
                   <digit name="left_thumb" at="0.32" across="-0.85" aim="180 -40" aimEnd="-140 -62" links="3" length="7" radius="1" taper="0.8" material="skin" />
                   <digit name="left_index" at="0.82" across="-0.78" aim="-90 -88" aimEnd="-90 -72" links="3" length="8" radius="0.85" taper="0.8" material="skin" />
                   <digit name="left_middle" at="0.94" across="-0.26" aim="-90 -86" aimEnd="-90 -68" links="3" length="8.5" radius="0.9" taper="0.8" material="skin" />

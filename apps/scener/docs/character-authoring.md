@@ -126,7 +126,7 @@ a joint bulges.
   distinct, simple volume; do not add small ellipsoids that blur the outline.
 
 The biped preset separates the rig's joints from its visible body masses.
-Its thigh and calf volumes overlap at the knee, with a small knee volume that
+Its thigh and calf volumes overlap at the knee, with a projecting kneecap volume that
 follows the calf. Paired hip masses join the pelvis to the upper legs. The
 ribcage carries two broad pectoral ellipsoids, and the upper arms carry shoulder
 caps. These are attached shapes, so they follow the existing rig without adding
@@ -135,8 +135,14 @@ motion-capture joints.
 The three-link spine uses `volume="0"` and carries one overlapping abdomen
 ellipsoid. This keeps its articulation while avoiding three visible rings at
 the waist. Generated links inherit `volume`, and attached shapes remain visible.
+The simple hands use broad, rounded palms overlapping the wrists. The shoes
+use overlapping ankle and toe volumes, with a fuller heel and short toe links;
+the toe joints still articulate. These proportions keep the extremities readable
+without requiring individual fingers.
+
 Use [biped_form_study.blks](../scenes/biped_form_study.blks) to inspect front,
-side and rear silhouettes and a planted crouch. Fingers remain off in that study.
+side and rear silhouettes, a planted crouch, and hand/foot close-ups. Fingers
+remain off in that study; `biped_study.blks` shows the articulated option.
 
 ### Fix feet with numbers, not by eye
 
