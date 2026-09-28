@@ -40,6 +40,7 @@ deployed command from the consuming project's working directory.
 | `motion.c` | Quaternions for pose blending and the CATMotion-style gait curves |
 | `mocap.c` | BVH motion capture loading and forward kinematics |
 | `mocap/`, `tools/fetch_cmu_mocap.py`, `tools/render_mocap_videos.py`, `tools/frames_to_mp4.swift` | CMU clips (fetched), batch mocap videos, AVFoundation MP4 encoder |
+| `scene_motion.h`, `scene_capture.h` | Private timeline/gait and capture-profile/contact implementation included by scene.c |
 | `scene.c` | Tiny XML parser, scene loading, named cameras, modifier dispatch, **prefab loading** |
 | `render.c` | OpenGL core-profile shader/VBO renderer with stencil shadows |
 | `shadow.c` | Stencil shadow volume construction (silhouette detection + edge extrusion) |
@@ -113,7 +114,7 @@ joints carry a `_quat` rotation; `parse_prefab()` uses it as the active pose
 and frees it after the instance is built. The gait's travel moves the
 instance. `<layer mocap>` goes through `mocap_retarget()`: clips load once into
 `Scene.mocap`, joints map to rig roles by name, and the walk over the rig
-(`mocap_walk()`) turns source directions and hub rotations into joint deltas.
+(`mocap_walk()`) preserves calibrated limb rotations and available finger tracks; cached support intervals and source knee planes feed IK.
 
 After loading, `load_scene()` reports attributes no parser read
 (`warn_unused_attributes()`: typos, and values overridden such as `color` beside

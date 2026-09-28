@@ -10,6 +10,6 @@
   <sun dir="-0.5 0.4 -1" color="1 0.95 0.9" intensity="1" castShadows="1" />
   <floor style="squares" width="2400" depth="2400" tileWidth="50" gap="1" thickness="4" tileDepth="1" colorVariation="0.08" material="tile" groutMaterial="grout" rot="90 0 0" />
   <prefab source="characters/presets/biped" name="Adam">
-    <layer mocap="mocap/cmu/02_01.bvh" />
+    <layer profile="cmu" mocap="mocap/cmu/02_01.bvh" />
   </prefab>
 </scene>

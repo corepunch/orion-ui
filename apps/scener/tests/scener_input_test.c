@@ -957,39 +957,45 @@ static void test_cat_rig_preset(void){
 	PASS();
 }
 
+#define GAIT_ASSERT(c) do { if(!(c)) fprintf(stderr,"gait assertion line %d: %s\n",__LINE__,#c); ASSERT_TRUE(c); } while(0)
 static void test_timeline_gait_and_layers(void){
 	TEST("timeline: gait plants feet without sliding, travels its distance, layers fade and clips add");
 	Scene s={0};
-	ASSERT_TRUE(load_scene("apps/scener/scenes/biped_walk.blks",&s));
+	GAIT_ASSERT(load_scene("apps/scener/scenes/biped_walk.blks",&s));
 	ASSERT_EQUAL(s.ignoredAttributes,0);
-	ASSERT_TRUE(fabsf(s.duration-7.5f)<0.001f);
+	GAIT_ASSERT(fabsf(s.duration-7.5f)<0.001f);
 	vec3 start=cat_test_joint(&s,"left_foot");
 	const char *feet[2]={"left_foot","right_foot"};
 	float plantedY[2]={NAN,NAN}; int lifted[2]={0,0},steps[2]={0,0};
 	for(float t=0.5f;t<5.0f;t+=0.04f){
 		scene_set_time(&s,t);
-		for(int i=0;i<s.nrigTargets;i++) ASSERT_TRUE(s.rigTargets[i].reachable);
+		for(int i=0;i<s.nrigTargets;i++) GAIT_ASSERT(s.rigTargets[i].reachable);
 		for(int f=0;f<2;f++){
 			vec3 p=cat_test_joint(&s,feet[f]);
+			for(int j=0;j<s.nrigJointWorlds;j++) if(!strcmp(scene_node_attr(s.rigJointWorlds[j].joint,"name"),feet[f])){
+				mat4 foot=s.rigJointWorlds[j].matrix;
+				vec3 pivot=v3(0,foot.m[6]>0?-22*cosf(12*M_PIf/180):0,-start.z);
+				p=vadd(p,vsub(mat4_xform_dir(foot,pivot),pivot));
+			}
 			if(p.z>start.z+0.3f){ lifted[f]=1; continue; }
-			if(!lifted[f] && !isnan(plantedY[f])) ASSERT_TRUE(fabsf(p.y-plantedY[f])<0.05f);
+			if(!lifted[f] && !isnan(plantedY[f])) GAIT_ASSERT(fabsf(p.y-plantedY[f])<0.05f);
 			if(lifted[f]) steps[f]++;
 			plantedY[f]=p.y; lifted[f]=0;
 		}
 	}
-	ASSERT_TRUE(steps[0]>=2 && steps[1]>=2);
+	GAIT_ASSERT(steps[0]>=2 && steps[1]>=2);
 	scene_set_time(&s,5.1f);
-	ASSERT_TRUE(fabsf(cat_test_joint(&s,"pelvis").y+300)<0.01f);
+	GAIT_ASSERT(fabsf(cat_test_joint(&s,"pelvis").y+300)<0.01f);
 	vec3 nodStart=cat_test_up(&s,"head");
-	ASSERT_TRUE(cat_test_joint(&s,"right_palm").z<100);
+	GAIT_ASSERT(cat_test_joint(&s,"right_palm").z<100);
 	scene_set_time(&s,6.0f);
-	ASSERT_TRUE(cat_test_joint(&s,"right_palm").z>150);
-	ASSERT_TRUE(fabsf(cat_test_joint(&s,"left_foot").y+300)<0.01f && fabsf(cat_test_joint(&s,"right_foot").y+300)<0.01f);
+	GAIT_ASSERT(cat_test_joint(&s,"right_palm").z>150);
+	GAIT_ASSERT(fabsf(cat_test_joint(&s,"left_foot").y+300)<0.01f && fabsf(cat_test_joint(&s,"right_foot").y+300)<0.01f);
 	scene_set_time(&s,5.8f);
-	ASSERT_TRUE(vdot(cat_test_up(&s,"head"),nodStart)<cosf(8*M_PIf/180));
+	GAIT_ASSERT(vdot(cat_test_up(&s,"head"),nodStart)<cosf(8*M_PIf/180));
 	scene_set_time(&s,7.4f);
-	ASSERT_TRUE(cat_test_joint(&s,"right_palm").z<100);
-	ASSERT_TRUE(vdot(cat_test_up(&s,"head"),nodStart)>cosf(1*M_PIf/180));
+	GAIT_ASSERT(cat_test_joint(&s,"right_palm").z<100);
+	GAIT_ASSERT(vdot(cat_test_up(&s,"head"),nodStart)>cosf(1*M_PIf/180));
 	scene_free(&s);
 	PASS();
 }
@@ -1027,6 +1033,8 @@ static void test_mocap_retarget(void){
 	PASS();
 }
 
+#include "capture_tests.h"
+
 int main(void) {
   TEST_START("scener input and command state");
   test_tool_commands_share_document_state();
@@ -1040,6 +1048,14 @@ int main(void) {
   test_cat_rig_preset();
   test_timeline_gait_and_layers();
   test_mocap_retarget();
+  test_capture_hand_geometry();
+  test_capture_wrist_and_fingers();
+  test_capture_knee_poles();
+  test_capture_contacts_and_scrubbing();
+  test_capture_loop_and_profiles();
+  test_capture_axis_and_bent_reference();
+  test_capture_hand_support();
+  test_capture_auto_contacts();
   test_ignored_attributes_reported();
   test_enclosed_light_reported();
   test_nested_arch_emits_wall_parts_once();
