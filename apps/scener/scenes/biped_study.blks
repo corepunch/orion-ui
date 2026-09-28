@@ -10,5 +10,5 @@
   <material id="floor" color="0.55 0.55 0.58" shininess="4" />
   <sun dir="-0.5 0.4 -1" color="1 0.95 0.9" intensity="1" castShadows="1" />
   <box pos="0 0 -1" size="400 400 2" material="floor" />
-  <prefab source="characters/presets/biped" name="Adam" />
+  <prefab source="characters/presets/biped" name="Adam" fingers="1" />
 </scene>

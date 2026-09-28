@@ -55,6 +55,7 @@ static void anim_pose_read(Scene *s,XmlNode *proot,XmlNode *source,int mirror,An
 			const char *target=xml_attr(kid,"target","");
 			XmlNode *bone=rig_find_joint(proot,target);
 			if(!bone){ fprintf(stderr,"[scener] pose joint '%s' is not in the rig\n",target); fflush(stderr); continue; }
+			if(!rig_node_enabled(bone,rig_fingers_enabled(proot,s->activeRigInstance))) continue;
 			mat4 turn,delta=rig_override_delta(s,bone,kid,&turn);
 			quat q=quat_from_mat4(turn); vec3 pos=v3(delta.m[12],delta.m[13],delta.m[14]);
 			if(mirror){

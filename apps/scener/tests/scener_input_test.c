@@ -1056,6 +1056,8 @@ int main(void) {
   test_capture_axis_and_bent_reference();
   test_capture_hand_support();
   test_capture_auto_contacts();
+  test_capture_optional_fingers();
+  test_prefab_finger_defaults();
   test_ignored_attributes_reported();
   test_enclosed_light_reported();
   test_nested_arch_emits_wall_parts_once();

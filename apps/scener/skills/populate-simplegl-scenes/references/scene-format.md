@@ -1062,6 +1062,14 @@ boundaries. Supports use the endpoint's bone/digit volumes on a flat plane;
 there is no terrain, prop support or general collision solver. FK limbs ignore
 contacts. Layer blending can soften support constraints.
 
+Character instances and prefab roots accept `fingers="0|1"` (choose one,
+default 0). An instance overrides its prefab default. Off means simple palms:
+hand digit geometry, joint-list entries, capture transfer and support-volume
+contributions are omitted, including thumbs. Wrist/palm motion and toes remain.
+Authored finger definitions are preserved for later opt-in. `handPose` only
+applies to enabled fingers. The biped study explicitly opts in; ordinary gait
+and mocap studies use the simpler default.
+
 The biped preset supplies `HandsOpen`, `HandsRelaxed`, and `HandsFist`. Its
 knuckles use bone `across`: a signed fraction of the parent's second radius,
 combined with longitudinal `at`. This places roots across the palm without

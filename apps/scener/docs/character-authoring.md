@@ -262,11 +262,26 @@ sum of thigh and calf lengths, including bent calibration poses; an explicit
 `scale` is target centimetres per source unit. See the canonical scene-format
 reference for all fields. Correct the profile once and reuse it for that source rig.
 
-Limb rotations preserve axial twist, and available thumb/finger channels are
-transferred. Untracked fingers retain the preset's relaxed shape. CMU 02_01 has
-only six of the thirty finger channels: it cannot supply a complete hand performance.
-Choose `handPose="HandsOpen|HandsRelaxed|HandsFist"` (one name) to override both
-hands, or layer a masked pose for individual corrections.
+Fingers are **off by default**: characters keep simple palm shapes and wrist
+animation. Opt in only for close-ups or gestures that need articulated fingers:
+
+```xml
+<prefab source="characters/presets/biped" name="Adam" fingers="1">
+  <layer profile="cmu" mocap="mocap/cmu/02_01.bvh"/>
+</prefab>
+```
+
+Set `fingers="1"` on a character file's root to change its default, or use
+`fingers="0"` on an instance to override it. The option affects hand digits,
+including thumbs, in geometry, joint lists, retargeting and contact support;
+toes and other body motion are unaffected. It never deletes the authored rig.
+
+BVH can contain finger joints, but their availability depends on the capture.
+Limb rotations preserve axial twist. With fingers enabled, available finger
+channels transfer and untracked fingers retain the preset's relaxed shape.
+CMU 02_01 has only six of thirty finger joint tracks, not a complete hand
+performance. Choose `handPose="HandsOpen|HandsRelaxed|HandsFist"` (one name)
+to override articulated hands, or layer a masked pose for individual corrections.
 
 `legs="ik"` keeps source knee planes, including inverted motion; `legs="fk"`
 uses transferred rotations. Low, slow feet and hands produce cached support
