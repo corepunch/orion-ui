@@ -1,12 +1,16 @@
 #ifndef __CAPTURE_TESTS_H__
 #define __CAPTURE_TESTS_H__
 
-static int capture_test_load(Scene *s,const char *profile,const char *layer){
+static int capture_test_load_hands(Scene *s,const char *profile,const char *layer,const char *attributes){
 	char path[]="apps/scener/scenes/.capture-test-XXXXXX";
 	int fd=mkstemp(path); if(fd<0) return 0;
 	FILE *file=fdopen(fd,"w"); if(!file){ close(fd); unlink(path); return 0; }
-	fprintf(file,"<scene up='z'><sun dir='-1 -1 -1'/>%s<prefab name='Test' source='characters/presets/biped'>%s</prefab></scene>",profile,layer);
+	fprintf(file,"<scene up='z'><sun dir='-1 -1 -1'/>%s<prefab name='Test' source='characters/presets/biped' %s>%s</prefab></scene>",profile,attributes,layer);
 	fclose(file); int ok=load_scene(path,s); unlink(path); return ok;
+}
+
+static int capture_test_load(Scene *s,const char *profile,const char *layer){
+	return capture_test_load_hands(s,profile,layer,"fingers='1'");
 }
 
 static mat4 capture_test_matrix(Scene *s,const char *name){
@@ -96,7 +100,7 @@ static void test_capture_contacts_and_scrubbing(void){
 		ASSERT_TRUE(capture_test_angle(anchor,actual)<0.1f);
 		for(int k=0;k<s.nrigTargets;k++) ASSERT_TRUE(s.rigTargets[k].reachable);
 	}
-	for(int i=0;i<s.nprefabs;i++) snprintf(s.prefabs[i].path,sizeof(s.prefabs[i].path),"/tmp/scener-capture-preset-%d-%d.blk",(int)getpid(),i);
+	for(int i=0;i<s.nprefabs;i++) snprintf(s.prefabs[i].path,sizeof(s.prefabs[i].path),"%s/scener-capture-preset-%d-%d.blk",window_test_temp_dir(),(int)getpid(),i);
 	ASSERT_TRUE(scene_save_all(&s));
 	for(int i=0;i<s.nprefabs;i++) unlink(s.prefabs[i].path);
 	Scene restored={0}; ASSERT_TRUE(load_scene(s.scenePath,&restored));
@@ -140,10 +144,13 @@ static int capture_test_fixture(char *path,int zup){
 
 static void test_capture_axis_and_bent_reference(void){
 	TEST("capture: Y/Z-up profiles agree, bent references use segment length, first frame is retained");
-	Scene s[2]={{0},{0}}; char paths[2][64]={"/tmp/scener-capture-y-XXXXXX","/tmp/scener-capture-z-XXXXXX"};
+	Scene s[2]={0}; char paths[2][WINDOW_TEST_MAX_PATH],cwd[WINDOW_TEST_MAX_PATH];
+	ASSERT_TRUE(getcwd(cwd,sizeof(cwd))!=NULL);
+	const char *temp=window_test_temp_dir(); if(!strcmp(temp,".")) temp=cwd;
 	for(int i=0;i<2;i++){
+		snprintf(paths[i],sizeof(paths[i]),"%s/scener-capture-%d-XXXXXX",temp,i);
 		ASSERT_TRUE(capture_test_fixture(paths[i],i));
-		char profile[256],layer[256];
+		char profile[256],layer[WINDOW_TEST_MAX_PATH+256];
 		snprintf(profile,sizeof(profile),"<capture-profile name='Test' up='%s' referenceFrame='0' firstFrame='0'/>",i?"z":"y");
 		snprintf(layer,sizeof(layer),"<layer profile='Test' mocap='%s' contacts='none'/>",paths[i]);
 		ASSERT_TRUE(capture_test_load(&s[i],profile,layer)); unlink(paths[i]);
@@ -179,6 +186,52 @@ static void test_capture_auto_contacts(void){
 	scene_set_time(&s,0.4f); mat4 after=capture_test_matrix(&s,"left_foot");
 	for(int i=0;i<16;i++) ASSERT_TRUE(fabsf(before.m[i]-after.m[i])<0.00001f);
 	scene_free(&s); PASS();
+}
+
+
+static void test_capture_optional_fingers(void){
+	TEST("capture: fingers default off, coexist with opted-in instances and persist on save");
+	const char *motion="<layer profile='cmu' mocap='mocap/cmu/02_01.bvh' contacts='none'/>";
+	char detailed[512]; snprintf(detailed,sizeof(detailed),"<prefab name='Detailed' source='characters/presets/biped' fingers='1'>%s</prefab>",motion);
+	Scene s={0}; ASSERT_TRUE(capture_test_load_hands(&s,detailed,motion,""));
+	ASSERT_EQUAL(s.ignoredAttributes,0); ASSERT_EQUAL(s.nmocap,1);
+	for(int frame=0;frame<3;frame++){
+		scene_set_time(&s,frame*0.3f);
+		void *simple=NULL,*full=NULL; int fingerJoints[2]={0,0},toes[2]={0,0}; mat4 palms[2];
+		for(int i=0;i<s.nrigJointWorlds;i++){
+			RigJointWorld *j=&s.rigJointWorlds[i]; const char *name=scene_node_attr(j->joint,"name");
+			int detailedInstance=!strcmp(scene_node_attr(j->instance,"name"),"Detailed");
+			if(detailedInstance) full=j->instance; else simple=j->instance;
+			if(strstr(name,"thumb") || strstr(name,"index") || strstr(name,"middle") || strstr(name,"ring") || strstr(name,"pinky")) fingerJoints[detailedInstance]++;
+			if(strstr(name,"toe")) toes[detailedInstance]++;
+			if(!strcmp(name,"left_palm")) palms[detailedInstance]=j->matrix;
+		}
+		ASSERT_TRUE(simple && full); ASSERT_EQUAL(fingerJoints[0],0); ASSERT_EQUAL(fingerJoints[1],30);
+		ASSERT_EQUAL(toes[0],4); ASSERT_EQUAL(toes[1],4);
+		ASSERT_EQUAL(scene_rig_joint_count(&s,full)-scene_rig_joint_count(&s,simple),30);
+		for(int i=0;i<16;i++) ASSERT_TRUE(fabsf(palms[0].m[i]-palms[1].m[i])<0.00001f);
+		for(int i=0;i<scene_rig_joint_count(&s,simple);i++){
+			void *joint=scene_rig_joint_at(&s,simple,i,NULL); ASSERT_TRUE(joint!=NULL);
+			ASSERT_TRUE(strcmp(scene_node_tag(joint),"digit") || strstr(scene_node_attr(joint,"name"),"toe"));
+		}
+	}
+	for(int i=0;i<s.nprefabs;i++) snprintf(s.prefabs[i].path,sizeof(s.prefabs[i].path),"%s/scener-fingers-preset-%d-%d.blk",window_test_temp_dir(),(int)getpid(),i);
+	ASSERT_TRUE(scene_save_all(&s)); for(int i=0;i<s.nprefabs;i++) unlink(s.prefabs[i].path);
+	Scene restored={0}; ASSERT_TRUE(load_scene(s.scenePath,&restored)); scene_set_time(&restored,0.6f);
+	ASSERT_EQUAL(restored.nrigJointWorlds,s.nrigJointWorlds); ASSERT_EQUAL(restored.nobjs,s.nobjs);
+	ASSERT_EQUAL(restored.ignoredAttributes,0);
+	unlink(s.scenePath); scene_free(&restored); scene_free(&s); PASS();
+}
+
+static void test_prefab_finger_defaults(void){
+	TEST("prefab: finger option also works in direct prefab editing and leaves toes enabled");
+	Scene s={0};
+	const char *body="<palm name='hand' ground='0' length='9'><digit name='index' length='4' radius='1'/></palm>"
+		"<ankle name='foot' ground='0' length='15'><digit name='toe' length='4' radius='1'/></ankle>";
+	char xml[512]; snprintf(xml,sizeof(xml),"<prefab>%s</prefab>",body);
+	ASSERT_TRUE(window_test_load(&s,xml)); ASSERT_EQUAL(s.nobjs,3); ASSERT_EQUAL(s.ignoredAttributes,0); scene_free(&s);
+	snprintf(xml,sizeof(xml),"<prefab fingers='1'>%s</prefab>",body);
+	ASSERT_TRUE(window_test_load(&s,xml)); ASSERT_EQUAL(s.nobjs,4); ASSERT_EQUAL(s.ignoredAttributes,0); scene_free(&s); PASS();
 }
 
 #endif

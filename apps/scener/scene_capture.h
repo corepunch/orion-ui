@@ -85,6 +85,10 @@ static int capture_named(const bvh_clip_t *c,const char *name){
 	return found;
 }
 
+static int capture_absolute_path(const char *path){
+	return path[0]=='/' || path[0]=='\\' || (isalpha((unsigned char)path[0]) && path[1]==':' && (path[2]=='/' || path[2]=='\\'));
+}
+
 static XmlNode *capture_profile(Scene *s,XmlNode *proot,const char *name){
 	XmlNode *roots[]={(XmlNode*)s->sceneRoot,proot};
 	for(int r=0;r<2;r++) for(int i=0;roots[r] && i<roots[r]->nkids;i++){
@@ -98,7 +102,7 @@ static XmlNode *capture_profile(Scene *s,XmlNode *proot,const char *name){
 		return n;
 	}
 	char path[MOCAP_PATH_CAPACITY];
-	snprintf(path,sizeof(path),"%s%s%s",name[0]=='/'?"":s->assetRoot,name[0]=='/'||!s->assetRoot[0]?"":"/",name);
+	snprintf(path,sizeof(path),"%s%s%s",capture_absolute_path(name)?"":s->assetRoot,capture_absolute_path(name)||!s->assetRoot[0]?"":"/",name);
 	char *text=read_file(path); XmlNode *n=text?xml_parse(text):NULL; free(text);
 	if(n && !strcmp(n->tag,"capture-profile")) return n;
 	xml_free(n); fprintf(stderr,"[mocap] unknown capture profile '%s'\n",name); fflush(stderr); return NULL;
@@ -223,7 +227,7 @@ static void capture_contacts(MocapSource *m){
 static MocapSource *mocap_source(Scene *s,XmlNode *proot,XmlNode *layer){
 	const char *file=xml_attr(layer,"mocap",""),*profileName=xml_attr(layer,"profile","bvh");
 	char path[MOCAP_PATH_CAPACITY];
-	snprintf(path,sizeof(path),"%s%s%s",file[0]=='/'?"":s->assetRoot,file[0]=='/'||!s->assetRoot[0]?"":"/",file);
+	snprintf(path,sizeof(path),"%s%s%s",capture_absolute_path(file)?"":s->assetRoot,capture_absolute_path(file)||!s->assetRoot[0]?"":"/",file);
 	for(int i=0;i<s->nmocap;i++) if(!strcmp(s->mocap[i].path,path) && !strcmp(s->mocap[i].profileName,profileName) && s->mocap[i].rigDefinition==proot) return s->mocap[i].valid?&s->mocap[i]:NULL;
 	MocapSource m; memset(&m,0,sizeof(m)); m.rigDefinition=proot;
 	memset(m.digits,-1,sizeof(m.digits));
@@ -312,7 +316,7 @@ static mat4 mocap_hub_frame(const MocapSource *m,int joint,int above){
 	return frame;
 }
 
-typedef struct { const MocapSource *m; XmlNode *root; AnimPose *out; } MocapWalk;
+typedef struct { const MocapSource *m; XmlNode *root; AnimPose *out; int fingers; } MocapWalk;
 
 static void mocap_set(MocapWalk *w,XmlNode *bone,mat4 parentWorld,mat4 world,mat4 *result){
 	mat4 delta=mat4_mul(mat4_affine_inverse(parentWorld),world);
@@ -370,6 +374,7 @@ static int capture_digit_joint(const MocapSource *m,const char *name,int side){
 
 /* Walk the rig from a hub: hubDepth 0 is the pelvis, 1 the ribcage, 2 the head. */
 static void mocap_walk(MocapWalk *w,XmlNode *node,mat4 parentWorld,int hubDepth,int link,int links,int limbSide,int limbArm,int limbIndex){
+	if(!rig_node_enabled(node,w->fingers)) return;
 	const MocapSource *m=w->m; const int *r=m->role;
 	mat4 world=parentWorld;
 	int named=xml_attr(node,"name",NULL)!=NULL;
@@ -470,7 +475,7 @@ static vec3 capture_support(Scene *s,XmlNode *node,XmlNode *root,const AnimPose 
 		float radius=sqrtf(a.z*a.z+b.z*b.z+c.z*c.z);
 		lowest=radius>RIG_EPSILON?vsub(center,vscale(vadd(vadd(vscale(a,a.z),vscale(b,b.z)),vscale(c,c.z)),1/radius)):center;
 	}
-	for(int i=0;i<node->nkids;i++) if(xml_is_bone(node->kids[i])){
+	for(int i=0;i<node->nkids;i++) if(xml_is_bone(node->kids[i]) && rig_node_enabled(node->kids[i],rig_fingers_enabled(root,s->activeRigInstance))){
 		vec3 p=capture_support(s,node->kids[i],root,pose); if(p.z<lowest.z) lowest=p;
 	}
 	return lowest;
@@ -479,7 +484,7 @@ static vec3 capture_support(Scene *s,XmlNode *node,XmlNode *root,const AnimPose 
 static void capture_sample(Scene *s,XmlNode *proot,MocapSource *m,float time,float scale,AnimPose *out){
 	bvh_evaluate(m->clip,time,m->pos,m->rot);
 	XmlNode *root=rig_root_bone(proot);
-	MocapWalk walk={m,root,out}; mocap_walk(&walk,root,mat4_identity(),0,0,0,-1,0,0);
+	MocapWalk walk={m,root,out,rig_fingers_enabled(proot,s->activeRigInstance)}; mocap_walk(&walk,root,mat4_identity(),0,0,0,-1,0,0);
 	anim_joint(out,xml_attr(root,"name",""))->pos=mocap_moved(m,m->role[MOCAP_HIPS],scale);
 	(void)s;
 }

@@ -229,6 +229,21 @@ static vec3 xml_attr_direction(XmlNode *n,const char *name,vec3 def){
 	return xml_attr_2f(n,name,0,0,&azimuth,&elevation)?bone_direction(azimuth,elevation):def;
 }
 
+static int rig_fingers_enabled(XmlNode *root,XmlNode *instance){
+	int fallback=root?xml_attr_i(root,"fingers",0):0;
+	return (instance?xml_attr_i(instance,"fingers",fallback):fallback)!=0;
+}
+
+static int rig_node_enabled(XmlNode *node,int fingers){
+	if(fingers) return 1;
+	int digit=0;
+	for(XmlNode *n=node;n;n=n->parent){
+		if(!strcmp(n->tag,"digit")) digit=1;
+		if(digit && !strcmp(n->tag,"palm")) return 0;
+	}
+	return 1;
+}
+
 static const char *bone_at(XmlNode *n){ const char *at=xml_attr(n,"_at",NULL); return at?at:xml_attr(n,"at",NULL); }
 
 static int bone_has_tip_child(XmlNode *n){
@@ -2133,6 +2148,9 @@ static const struct {
 static void parse_nodes(Scene *s, XmlNode *parent, mat4 parentM, mat4 parentR){
 	for(int i=0;i<parent->nkids;i++){
 		XmlNode *n=parent->kids[i];
+		int fingers=rig_fingers_enabled(s->activeRigRoot?s->activeRigRoot:s->editRoot,s->activeRigInstance);
+		if(!rig_node_enabled(n,fingers)) continue;
+		if(!rig_node_enabled(n,0)) xml_set_attr(n,"_finger_active","1");
 		void *oldEditNode=s->activeEditNode;
 		mat4 oldEditMatrix=s->activeEditMatrix;
 		int ownsEditNode=!s->activeEditNode;
@@ -2393,7 +2411,7 @@ static int attribute_deferred(const char *tag,const char *name){
 }
 
 static void warn_unused_attributes(Scene *s,XmlNode *n,const char *path){
-	if(xml_attr(n,"generated",NULL)) return;
+	if(xml_attr(n,"generated",NULL) || (!rig_node_enabled(n,0) && !xml_attr_i(n,"_finger_active",0))) return;
 	for(int i=0;i<n->nattrs;i++) if(!n->attrs[i].used && !attribute_deferred(n->tag,n->attrs[i].name) && ++s->ignoredAttributes)
 		fprintf(stderr,"warning: %s: <%s> ignores attribute '%s' (unknown, misspelled or overridden)\n",path,n->tag,n->attrs[i].name);
 	for(int i=0;i<n->nkids;i++) warn_unused_attributes(s,n->kids[i],path);
@@ -2758,25 +2776,27 @@ static XmlNode *rig_instance_root(Scene *s,XmlNode *instance){
 	return source?load_prefab(s,source):NULL;
 }
 
-static int rig_joint_count_tree(XmlNode *node){
+static int rig_joint_count_tree(XmlNode *node,int fingers){
+	if(!rig_node_enabled(node,fingers)) return 0;
 	int count=rig_is_joint(node);
-	for(int i=0;i<node->nkids;i++) count+=rig_joint_count_tree(node->kids[i]);
+	for(int i=0;i<node->nkids;i++) count+=rig_joint_count_tree(node->kids[i],fingers);
 	return count;
 }
 
 int scene_rig_joint_count(Scene *s,void *instance){
 	XmlNode *root=rig_instance_root(s,(XmlNode*)instance);
-	return root?rig_joint_count_tree(root):0;
+	return root?rig_joint_count_tree(root,rig_fingers_enabled(root,instance)):0;
 }
 
-static XmlNode *rig_joint_at_tree(XmlNode *node,int *index,int level,int *depth){
+static XmlNode *rig_joint_at_tree(XmlNode *node,int *index,int level,int *depth,int fingers){
+	if(!rig_node_enabled(node,fingers)) return NULL;
 	int isJoint=rig_is_joint(node);
 	if(isJoint){
 		if(*index==0){ if(depth) *depth=level; return node; }
 		(*index)--;
 	}
 	for(int i=0;i<node->nkids;i++){
-		XmlNode *found=rig_joint_at_tree(node->kids[i],index,level+isJoint,depth);
+		XmlNode *found=rig_joint_at_tree(node->kids[i],index,level+isJoint,depth,fingers);
 		if(found) return found;
 	}
 	return NULL;
@@ -2784,12 +2804,13 @@ static XmlNode *rig_joint_at_tree(XmlNode *node,int *index,int level,int *depth)
 
 void *scene_rig_joint_at(Scene *s,void *instance,int index,int *depth){
 	XmlNode *root=rig_instance_root(s,(XmlNode*)instance);
-	return root && index>=0?rig_joint_at_tree(root,&index,0,depth):NULL;
+	return root && index>=0?rig_joint_at_tree(root,&index,0,depth,rig_fingers_enabled(root,instance)):NULL;
 }
 
 int scene_rig_select_joint(Scene *s,void *instance,void *joint){
 	XmlNode *in=(XmlNode*)instance,*j=(XmlNode*)joint,*root=rig_instance_root(s,in);
 	if(!root || !j || rig_find_joint(root,xml_attr(j,"name",""))!=j) return 0;
+	if(!rig_node_enabled(j,rig_fingers_enabled(root,in))){ fprintf(stderr,"[scener] finger joint is disabled: %s\n",xml_attr(j,"name","?")); fflush(stderr); return 0; }
 	s->selectedRigInstance=in; s->selectedRigJoint=j; s->selectedNode=in;
 	s->selectedObj=-1;
 	for(int i=0;i<s->nobjs;i++) if(s->objs[i].editNode==in){ s->selectedObj=i; break; }
