@@ -649,7 +649,7 @@ static void mocap_retarget(Scene *s,XmlNode *proot,XmlNode *layer,float seconds,
 	vec3 correction=v3(0,0,0);
 	for(int iteration=0;iteration<CAPTURE_REACH_ITERATIONS;iteration++) for(int i=0;i<ngoals;i++){
 		CaptureGoal *g=&goals[i]; if(g->weight<=0) continue;
-		vec3 v=vsub(g->goal,vadd(g->hip,correction)); float length=vlen(v);
+		vec3 v=vsub(g->goal,vadd(g->hip,vscale(correction,g->weight))); float length=vlen(v);
 		float maxReach=g->upper+g->lower-CAPTURE_REACH_MARGIN,minReach=fabsf(g->upper-g->lower)+CAPTURE_REACH_MARGIN;
 		float error=length-fmaxf(minReach,fminf(maxReach,length));
 		if(length>RIG_EPSILON) correction=vadd(correction,vscale(v,error/length*g->weight));

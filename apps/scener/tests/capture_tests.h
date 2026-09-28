@@ -178,13 +178,17 @@ static void test_capture_hand_support(void){
 }
 
 static void test_capture_auto_contacts(void){
-	TEST("capture: automatic supports are cached and sampling order does not change the pose");
+	TEST("capture: automatic supports scrub deterministically and remain reachable through release");
 	Scene s={0}; ASSERT_TRUE(capture_test_load(&s,"","<layer profile='cmu' mocap='mocap/cmu/02_01.bvh'/>"));
 	ASSERT_TRUE(s.mocap[0].ncontacts>=4);
 	scene_set_time(&s,0.4f); mat4 before=capture_test_matrix(&s,"left_foot");
 	for(int i=0;i<10;i++) scene_set_time(&s,2.5f-i*0.13f);
 	scene_set_time(&s,0.4f); mat4 after=capture_test_matrix(&s,"left_foot");
 	for(int i=0;i<16;i++) ASSERT_TRUE(fabsf(before.m[i]-after.m[i])<0.00001f);
+	for(int frame=0;frame<=42;frame++){
+		scene_set_time(&s,2.5f+frame/120.0f);
+		for(int i=0;i<s.nrigTargets;i++) ASSERT_TRUE(s.rigTargets[i].reachable);
+	}
 	scene_free(&s); PASS();
 }
 
