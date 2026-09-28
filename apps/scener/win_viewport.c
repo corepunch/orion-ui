@@ -47,8 +47,8 @@ typedef struct {
 	float cam_yaw, cam_pitch;
 	vec3 world_up;
 	int last_mouse_x, last_mouse_y, orbiting, left_down;
-	uint32_t navigation_timer;
-	longTime_t last_move_time;
+	uint32_t navigation_timer, playback_timer;
+	longTime_t last_move_time, last_play_time;
 } viewport_state_t;
 
 static const char *vp_present_vs =
@@ -433,13 +433,34 @@ result_t win_viewport(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
 			if (!vp || !vp->orbiting) return false;
 			return wparam == AX_KEY_W || wparam == AX_KEY_S || wparam == AX_KEY_A ||
 				wparam == AX_KEY_D || wparam == AX_KEY_E || wparam == AX_KEY_Q || wparam == AX_KEY_SHIFT;
+		case kViewportTogglePlayback:
+			if (!vp || !doc) return false;
+			if (vp->playback_timer) axCancelTimer(vp->playback_timer);
+			vp->playback_timer = doc->playing ? 0 : axSetTimer(win, TIMER_INTERVAL_MS, NULL, true);
+			doc->playing = vp->playback_timer != 0;
+			vp->last_play_time = axGetMilliseconds();
+			fprintf(stderr, "[scener] playback win=%u %s time=%g duration=%g\n", (unsigned)win->id,
+				doc->playing ? "play" : "pause", doc->scene.time, doc->scene.duration);
+			return true;
 		case evTimer:
-			if (!vp || !doc || wparam != vp->navigation_timer) return false;
+			if (!vp || !doc) return false;
+			if (wparam == vp->playback_timer && vp->playback_timer) {
+				longTime_t now = axGetMilliseconds();
+				float t = doc->scene.time + (float)(now - vp->last_play_time) / 1000.0f;
+				vp->last_play_time = now;
+				if (doc->scene.duration > 0 && t > doc->scene.duration) t = 0;
+				scene_set_time(&doc->scene, t);
+				invalidate_window(win);
+				return true;
+			}
+			if (wparam != vp->navigation_timer) return false;
 			if (vp_move_camera(vp, doc)) invalidate_window(win);
 			return true;
 		case evDestroy:
 			if (vp) {
 				if (vp->orbiting) vp_stop_navigation(win, vp, false);
+				if (vp->playback_timer) axCancelTimer(vp->playback_timer);
+				if (doc) doc->playing = false;
 				render_texture_free(&vp->target);
 				if(vp->present_program) glDeleteProgram(vp->present_program);
 				free(vp);

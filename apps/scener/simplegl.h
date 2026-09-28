@@ -2,6 +2,7 @@
 #define SIMPLEGL_H
 
 #include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -46,6 +47,35 @@ mat4 mat4_perspective(float fovy_deg,float aspect,float znear,float zfar);
 mat4 mat4_ortho(float left,float right,float bottom,float top,float znear,float zfar);
 mat4 mat4_lookat(vec3 eye,vec3 center,vec3 up);
 int ray_intersect_aabb(vec3 origin,vec3 dir,vec3 bbMin,vec3 bbMax,float *tOut);
+
+/* motion.c: rotations for pose blending and the CATMotion-style gait. */
+typedef struct { float w,x,y,z; } quat;
+quat quat_identity(void);
+quat quat_mul(quat a,quat b);
+quat quat_from_mat4(mat4 m);
+mat4 mat4_from_quat(quat q);
+quat quat_slerp(quat a,quat b,float t);
+quat quat_mirror_x(quat q);
+float motion_ease(float t);
+
+#define GAIT_ARM_LAG 0.55f
+typedef struct {
+	float stride;   /* cm travelled per full cycle (two steps for a biped) */
+	float speed;    /* cm per second at cruise */
+	float lift, bounce, sway; /* cm */
+	float hipTwist, spineTwist, armSwing; /* degrees */
+	float lead;     /* fraction of the stride a foot lands ahead of its plant spacing */
+	float swing;    /* cycles each foot spends in the air */
+	float ramp;     /* cycles to reach full stride and to come to a stop */
+} gait_params_t;
+typedef struct { float bob, sway, hipTwist, spineTwist, armSwing; } gait_body_t;
+float gait_total_phase(const gait_params_t *p,const float *legPhase,int nlegs,float distance);
+float gait_phase_at(const gait_params_t *p,float total,float seconds);
+float gait_duration(const gait_params_t *p,float total);
+float gait_travel(const gait_params_t *p,float phase,float total,float distance);
+float gait_amplitude(const gait_params_t *p,float phase,float total);
+void gait_foot(const gait_params_t *p,float legPhase,float phase,float total,float distance,float *forward,float *lift);
+void gait_body(const gait_params_t *p,float phase,float total,gait_body_t *out);
 
 typedef struct { vec3 pos,nrm; float u,v; } Vertex;
 typedef struct { int a,b,c; } Tri;
@@ -194,6 +224,8 @@ typedef struct {
 	RigTargetStatus *rigTargets; int nrigTargets, crigTargets;
 	RigJointWorld *rigJointWorlds; int nrigJointWorlds, crigJointWorlds;
 	char activeCamera[MAX_CAMERA_NAME];
+	float time; /* seconds on the scene timeline; drives gaits, clips and layers */
+	float duration; /* <scene duration>: playback loops after it; 0 plays on */
 	char scenePath[512];
 	char assetRoot[512];
 	int prefabDocument;
@@ -258,6 +290,8 @@ int scene_rig_set_target(Scene *s,void *instance,void *tip,const char *attribute
 vec3 scene_rig_target_value(Scene *s,void *instance,void *tip,const char *attribute);
 int scene_rig_joint_world(Scene *s,mat4 *matrix);
 int scene_rig_reparent_joint(Scene *s,void *instance,void *joint,const char *parentName);
+void scene_set_time(Scene *s,float seconds);
+void scene_print_joints(Scene *s,FILE *out);
 void scene_get_bounds(Scene *s,vec3 *outMin,vec3 *outMax);
 void scene_init_textures(Scene *s);
 void scene_free_textures(Scene *s);

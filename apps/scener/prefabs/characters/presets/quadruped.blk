@@ -1,0 +1,66 @@
+<!-- CAT-style quadruped preset: a medium dog, about 45 cm at the shoulder. Copy this file to
+     start a four-legged character, then edit proportions, materials, features and poses.
+     Body frame Z up, facing local -Y, the character's left at +X. Lengths in centimetres.
+     Structure: pelvis hub, spine, ribcage hub, neck, head hub; hind legs on the pelvis,
+     front legs on the ribcage, tail off the pelvis. Front legs step a quarter cycle after
+     the hind legs on the same side; elbows bend backward (bend="180 0"). -->
+<prefab>
+  <material id="coat" color="0.62 0.45 0.28" shininess="5" />
+  <material id="belly" color="0.86 0.78 0.66" shininess="5" />
+  <material id="nose" color="0.10 0.08 0.08" shininess="40" />
+  <material id="eye" color="0.08 0.07 0.06" shininess="60" />
+
+  <hub name="pelvis" aim="0 0" length="10" radius="9 9.5" material="coat">
+    <limb name="left_hind_leg" type="leg" at="0.35" from="90 -35" mirror="1">
+      <bone name="left_thigh" aim="0 -58" length="16" radius="4.5 5.5" taper="0.7" material="coat">
+        <bone name="left_shank" aim="180 -64" length="20.4" radius="2.6 3" taper="0.8" material="coat">
+          <ankle name="left_hind_paw" aim="0 -12" length="6" radius="3 2" material="belly" />
+        </bone>
+      </bone>
+    </limb>
+    <tail name="tail" at="0" from="180 20" aim="180 30" aimEnd="180 60" links="3" length="26" radius="2.4" taper="0.5" material="coat" />
+    <spine name="spine" links="2" aim="0 0" aimEnd="0 4" length="20" radius="9.5 10" material="coat">
+      <hub name="ribcage" aim="0 6" length="14" radius="11 12.5" material="coat">
+        <limb name="left_front_leg" type="leg" at="0.6" from="90 -45" bend="180 0" mirror="1">
+          <bone name="left_upperarm" aim="0 -88" length="15" radius="3.6 4.2" taper="0.8" material="coat">
+            <bone name="left_forearm" aim="0 -90" length="15" radius="2.6 2.8" taper="0.9" material="coat">
+              <ankle name="left_front_paw" aim="0 -12" length="6" radius="3 2" material="belly" />
+            </bone>
+          </bone>
+        </limb>
+        <spine name="neck" links="2" aim="0 40" aimEnd="0 55" length="14" radius="5.5 6" material="coat">
+          <hub name="head" aim="0 -8" length="14" radius="6.5 6.5" material="coat">
+            <bone name="muzzle" at="0.75" from="0 -20" aim="0 -12" length="9" radius="3.4 3" taper="0.8" material="belly">
+              <sphere on="0 5" at="1" radius="1.4" material="nose" />
+            </bone>
+            <bone name="left_ear" at="0.3" from="60 50" aim="80 20" length="8" radius="3 1" taper="0.5" mirror="1" material="coat" />
+            <sphere on="32 20" at="0.7" radius="1.2" material="eye" />
+            <sphere on="-32 20" at="0.7" radius="1.2" material="eye" />
+          </hub>
+        </spine>
+      </hub>
+    </spine>
+  </hub>
+
+  <pose name="Stand" />
+  <pose name="Sit">
+    <joint target="pelvis" pos="0 4 -14" aim="0 20" />
+    <joint target="neck" aim="0 30" />
+    <joint target="head" aim="0 -20" />
+    <ik limb="left_hind_leg" />
+    <ik limb="right_hind_leg" />
+    <ik limb="left_front_leg" />
+    <ik limb="right_front_leg" />
+  </pose>
+  <pose name="LookLeft">
+    <joint target="neck" aim="30 45" />
+    <joint target="head" rot="0 0 25" />
+  </pose>
+  <pose name="LookRight" mirror="LookLeft" />
+  <pose name="Beg">
+    <joint target="pelvis" pos="0 6 -10" aim="0 70" />
+    <joint target="head" aim="0 10" />
+    <ik limb="left_hind_leg" />
+    <ik limb="right_hind_leg" />
+  </pose>
+</prefab>

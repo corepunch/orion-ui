@@ -101,6 +101,11 @@
         <item name="apply_array" label="Array..." />
       </menu>
 
+      <menu name="animation" label="Animation">
+        <item name="play" label="Play / Pause" shortcut="Space" />
+        <item name="rewind" label="Go to Start" shortcut="Shift+Space" />
+      </menu>
+
       <menu name="window" label="Window" dynamic="true">
         <item name="command_panel" label="Command Panel" />
         <Separator />

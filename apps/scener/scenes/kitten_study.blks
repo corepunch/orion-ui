@@ -13,7 +13,7 @@
     <joint target="tail_2" aim="-150 40" />
   </pose>
   <pose name="Stretch">
-    <joint target="spine" aim="0 -12" />
+    <joint target="pelvis" aim="0 -12" />
     <ik tip="left_hind_paw" plant="1" pole="0 -1 0" keepOrientation="1" />
     <ik tip="right_hind_paw" plant="1" pole="0 -1 0" keepOrientation="1" />
     <ik tip="left_front_paw" target="5 -18 2" pole="0 -1 0" keepOrientation="1" />
