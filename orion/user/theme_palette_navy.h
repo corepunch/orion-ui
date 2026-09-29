@@ -55,7 +55,8 @@
   [brPanelDark]            = NAVY_RECESS, \
   [brPanelDarker]          = NAVY_CHROME, \
   [brTextWarning]          = WEB(0xF2C14E), \
-  [brTextInfo]             = WEB(0x7AB8FF)
+  [brTextInfo]             = WEB(0x7AB8FF), \
+  [brTextSecondary]        = NAVY_TEXT_MUTED
 
 static const uint32_t k_theme_palette_navy[brCount]
   __attribute__((unused)) = { THEME_PALETTE_NAVY_INIT };
