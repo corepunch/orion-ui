@@ -150,8 +150,9 @@ static void test_reel_joint_anchors(void) {
 static void test_reel_mp4_container(void) {
 	TEST("scener reels: frames encode to a complete H.264 MP4");
 #ifndef __APPLE__
-	SKIP("VideoToolbox is macOS only");
-#else
+	if (system("command -v ffmpeg >/dev/null 2>&1") != 0) { SKIP("MP4 output needs VideoToolbox or ffmpeg"); }
+#endif
+	{
 	char path[REEL_TEST_PATH];
 	const char *dir = getenv("TMPDIR");
 	snprintf(path, sizeof(path), "%s/scener-reel-test.mp4", dir && *dir ? dir : ".");
@@ -175,7 +176,7 @@ static void test_reel_mp4_container(void) {
 	for (size_t i = 0; i + 4 < n; i++) avcc |= !memcmp(data + i, "avcC", 4);
 	ASSERT_TRUE(avcc);
 	PASS();
-#endif
+	}
 }
 
 int main(void) {

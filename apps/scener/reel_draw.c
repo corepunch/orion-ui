@@ -3,6 +3,7 @@
    composites 3D scene layers rendered into their own supersampled targets.
    Graphics blend in sRGB like other design tools; scene pixels arrive linear
    and are encoded once. The canvas is stored top row first. */
+#include <stddef.h>
 #include <orion/user/gl_compat.h>
 #include "reel.h"
 
