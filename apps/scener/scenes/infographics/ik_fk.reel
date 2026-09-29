@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- IK vs FK: the same torso turn on two Joes. Everything below renders in
+     Scener: `scener --reel ik_fk.reel --output ik-vs-fk.mp4 --poster ik-vs-fk.png` -->
+<reel width="1600" height="1000" fps="24" duration="6" poster="1.5" background="#090E15">
+  <style name="kicker"  font="sans-medium" size="13" color="#40E0D1" tracking="0.08"/>
+  <style name="title"   font="sans-medium" size="46" color="#F0F5FA" tracking="-0.015" weight="0.012"/>
+  <style name="lede"    font="sans" size="20" color="#8FA1B8"/>
+  <style name="column"  font="sans-medium" size="21" color="#F0F5FA" tracking="0.02"/>
+  <style name="note"    font="sans" size="17" color="#8FA1B8"/>
+  <style name="callout" font="sans-medium" size="14" tracking="0.06"/>
+  <style name="small"   font="sans" size="13" color="#8FA1B8"/>
+  <style name="label"   font="sans-medium" size="16" tracking="0.04"/>
+  <style name="value"   font="sans-medium" size="35" color="#F0F5FA" digits="tabular" weight="0.01"/>
+  <style name="body"    font="sans" size="16" color="#F0F5FA"/>
+  <style name="clock"   font="sans" size="16" color="#8FA1B8" digits="tabular"/>
+
+  <!-- Measurements: world centimetres from the evaluated rig, full float precision. -->
+  <let name="drift" value="dist(FK.left_palm, FK.left_palm@0)"/>
+  <let name="error" value="dist(IK.left_palm, vec(178.7, -15, 118.5))"/>
+
+  <check name="IK wrist holds its target" value="error" max="0.01"/>
+  <check name="FK hand visibly moves" value="drift" over="max" min="10"/>
+  <check name="FK upper arm length" value="abs(dist(FK.left_upperarm, FK.left_forearm) - 22.356)" max="0.01"/>
+  <check name="FK forearm length" value="abs(dist(FK.left_forearm, FK.left_palm) - 22.149)" max="0.01"/>
+  <check name="IK upper arm length" value="abs(dist(IK.left_upperarm, IK.left_forearm) - 22.356)" max="0.01"/>
+  <check name="IK forearm length" value="abs(dist(IK.left_forearm, IK.left_palm) - 22.149)" max="0.01"/>
+  <check name="FK left foot planted" value="dist(FK.left_foot, FK.left_foot@0)" max="0.01"/>
+  <check name="FK right foot planted" value="dist(FK.right_foot, FK.right_foot@0)" max="0.01"/>
+  <check name="IK left foot planted" value="dist(IK.left_foot, IK.left_foot@0)" max="0.01"/>
+  <check name="IK right foot planted" value="dist(IK.right_foot, IK.right_foot@0)" max="0.01"/>
+
+  <scene src="ik_fk.blks" camera="Comparison" x="0" y="205" width="1600" height="640"/>
+
+  <!-- Header -->
+  <text style="kicker" x="64" y="22" valign="top" reveal="fade" at="0.05">MOTION LAB   /   01</text>
+  <text style="title" x="60" y="47" valign="top" reveal="rise" at="0.1">Same motion. Different control.</text>
+  <text style="lede" x="64" y="108" valign="top" reveal="fade" at="0.45" stagger="0.025">Forward and inverse kinematics, demonstrated by Ecstatica II’s Joe.</text>
+  <group motion="rise(0.7, 12)">
+    <text style="column" color="#FFA84A" x="64" y="155" valign="top">01   FK / FORWARD KINEMATICS</text>
+    <text style="note" x="64" y="185" valign="top">Rotate the joints. The hand follows.</text>
+  </group>
+  <group motion="rise(0.8, 12)">
+    <text style="column" color="#40E0D1" x="864" y="155" valign="top">02   IK / INVERSE KINEMATICS</text>
+    <text style="note" x="864" y="185" valign="top">Hold a hand target. The arm adjusts.</text>
+  </group>
+  <line x1="800" y1="153" x2="800" y2="153 + 783 * outCubic(progress(t, 0.2, 1.1))" width="1" color="#8FA1B8" alpha="0.2"/>
+
+  <!-- FK: the hand follows the hierarchy; its path is sampled from the rig. -->
+  <group motion="fadeIn(0.9, 0.4)">
+    <trail anchor="FK.left_palm" width="2" color="#FFA84A" alpha="0.5" dash="5 7"/>
+    <line x1="FK.left_palm@0.sx" y1="FK.left_palm@0.sy" x2="FK.left_palm.sx" y2="FK.left_palm.sy" width="1.5" color="#FFA84A" alpha="0.8" dash="5 7"/>
+    <polyline anchors="FK.left_upperarm FK.left_forearm FK.left_palm" width="7" color="#090E15" alpha="0.75"/>
+    <polyline anchors="FK.left_upperarm FK.left_forearm FK.left_palm" width="2.5" color="#FFA84A" dots="5" dotFill="#090E15"/>
+    <circle x="FK.left_palm@0.sx" y="FK.left_palm@0.sy" radius="17" stroke="2" color="#FFA84A" alpha="0.8"/>
+    <line x1="FK.left_palm@0.sx - 24" y1="FK.left_palm@0.sy" x2="FK.left_palm@0.sx - 13" y2="FK.left_palm@0.sy" color="#FFA84A"/>
+    <line x1="FK.left_palm@0.sx + 13" y1="FK.left_palm@0.sy" x2="FK.left_palm@0.sx + 24" y2="FK.left_palm@0.sy" color="#FFA84A"/>
+    <line x1="FK.left_palm@0.sx" y1="FK.left_palm@0.sy - 24" x2="FK.left_palm@0.sx" y2="FK.left_palm@0.sy - 13" color="#FFA84A"/>
+    <polyline width="1.5" color="#FFA84A" alpha="0.75">
+      <pt x="FK.left_palm.sx" y="FK.left_palm.sy"/><pt x="554" y="351"/><pt x="569" y="351"/>
+    </polyline>
+    <text style="callout" color="#FFA84A" x="577" y="340" valign="top">HAND FOLLOWS</text>
+    <text style="small" x="577" y="362" valign="top">the joint hierarchy</text>
+  </group>
+
+  <!-- IK: the arm solves to a fixed world-space wrist target. -->
+  <group motion="fadeIn(1.0, 0.4)">
+    <polyline anchors="IK.left_upperarm IK.left_forearm IK.left_palm" width="7" color="#090E15" alpha="0.75"/>
+    <polyline anchors="IK.left_upperarm IK.left_forearm IK.left_palm" width="2.5" color="#40E0D1" dots="5" dotFill="#090E15"/>
+    <circle x="IK.left_palm@0.sx" y="IK.left_palm@0.sy" radius="17 * (1 + 0.12 * pulse(fract(t / 1.5) * 1.5, 0, 0.25))" stroke="2" color="#40E0D1" alpha="0.8"/>
+    <line x1="IK.left_palm@0.sx - 24" y1="IK.left_palm@0.sy" x2="IK.left_palm@0.sx - 13" y2="IK.left_palm@0.sy" color="#40E0D1"/>
+    <line x1="IK.left_palm@0.sx + 13" y1="IK.left_palm@0.sy" x2="IK.left_palm@0.sx + 24" y2="IK.left_palm@0.sy" color="#40E0D1"/>
+    <line x1="IK.left_palm@0.sx" y1="IK.left_palm@0.sy - 24" x2="IK.left_palm@0.sx" y2="IK.left_palm@0.sy - 13" color="#40E0D1"/>
+    <polyline width="1.5" color="#40E0D1" alpha="0.75">
+      <pt x="IK.left_palm.sx" y="IK.left_palm.sy"/><pt x="1354" y="376"/><pt x="1369" y="376"/>
+    </polyline>
+    <text style="callout" color="#40E0D1" x="1377" y="365" valign="top">FIXED TARGET</text>
+    <text style="small" x="1377" y="387" valign="top">arm solves to this point</text>
+  </group>
+
+  <!-- Readouts -->
+  <group motion="rise(0.8, 16)">
+    <text style="label" color="#FFA84A" x="64" y="852" valign="top">JOINT ANGLES  ›  HAND POSITION</text>
+    <text style="value" x="64" y="884" valign="top">{drift:%4.1f} cm</text>
+    <text style="note" x="248" y="897" valign="top">hand displacement from start</text>
+  </group>
+  <group motion="rise(0.9, 16)">
+    <text style="label" color="#40E0D1" x="864" y="852" valign="top">HAND TARGET  ›  JOINT ANGLES</text>
+    <text style="value" x="864" y="884" valign="top">{error:%.2f} cm</text>
+    <text style="note" x="1048" y="897" valign="top">IK wrist distance from its target</text>
+  </group>
+
+  <!-- Footer and timeline -->
+  <text style="body" x="64" y="944" valign="top" reveal="fade" at="1.0" stagger="0.02">Same torso turn · feet stay planted · bone lengths stay constant</text>
+  <text style="clock" x="1536" y="945" valign="top" align="right">{t:%04.1f} / {duration:%04.1f} s</text>
+  <rect x="64" y="977.5" width="1472" height="3" radius="1.5" color="#8FA1B8" alpha="0.25"/>
+  <rect x="64" y="977.5" width="1472 * t / duration" height="3" radius="1.5" color="#40E0D1"/>
+</reel>

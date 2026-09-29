@@ -39,9 +39,9 @@ deployed command from the consuming project's working directory.
 | `mesh.c` | `Mesh` (verts, tris, edges), primitive generators, **modifiers** (taper, twist, bend, stretch, skew) |
 | `motion.c` | Quaternions for pose blending and the CATMotion-style gait curves |
 | `mocap.c` | BVH motion capture loading and forward kinematics |
-| `mocap/`, `tools/fetch_cmu_mocap.py`, `tools/render_mocap_videos.py`, `tools/frames_to_mp4.swift` | CMU clips (fetched), batch mocap videos, AVFoundation MP4 encoder |
-| `docs/infographic-studio.md`, `scenes/infographics/` | 3D infographic direction, capability boundaries, and editable IK/FK example |
-| `tools/render_ik_fk_infographic.py`, `tools/compose_ik_fk_infographic.swift` | Example-specific pose validation, annotation composition, poster and video export |
+| `mocap/`, `tools/fetch_cmu_mocap.py`, `tools/render_mocap_videos.py` | CMU clips (fetched), batch mocap videos |
+| `reel.h`, `reel.c`, `reel_expr.c`, `reel_draw.c`, `reel_video.c` | Reels: XML motion graphics, expression compiler/VM, GL 2D renderer with SDF text, H.264 MP4 writer |
+| `docs/reels.md`, `docs/infographic-studio.md`, `scenes/infographics/` | Reel reference, infographic direction, IK/FK example reel |
 | `scene_motion.h`, `scene_capture.h` | Private timeline/gait and capture-profile/contact implementation included by scene.c |
 | `scene.c` | Tiny XML parser, scene loading, named cameras, modifier dispatch, **prefab loading** |
 | `render.c` | OpenGL core-profile shader/VBO renderer with stencil shadows |
@@ -57,16 +57,16 @@ deployed command from the consuming project's working directory.
 | `scenes/` | Runnable and diagnostic scene files (`*.blks`) |
 | `prefabs/` | Reusable object files (`chair.blk`, `sofa.blk`, etc.) |
 
-## 3D infographic workflow
+## Reels and 3D infographics
 
-Scener is evolving toward a studio for 3D infographics. Read
-[docs/infographic-studio.md](docs/infographic-studio.md) for the current
-capability boundaries and development direction. The IK/FK example uses the
-existing native rig/timeline/renderer plus external composition; labels,
-measurement readouts, and trails are not yet native editable scene elements.
-Keep scene motion, measurement definitions, camera projection, and output
-settings consistent when extending it. Document new supported features and
-limits in that guide and the canonical schema when applicable.
+Motion graphics and infographics are `.reel` XML documents rendered entirely
+by Scener (`scener --reel`); read [docs/reels.md](docs/reels.md). Do not add
+external overlay compositors, Swift/Python renderers or per-example image
+pipelines: extend the reel elements, expression functions or renderer in C
+instead, document the addition in docs/reels.md and cover it in
+`tests/scener_reel_test.c`. Validate motion with `<check>` rules and
+`scener --reel FILE --check`. Keep the per-frame path allocation-light: a
+reel should render a 1080p frame in tens of milliseconds.
 
 ## Scene XML authoring
 

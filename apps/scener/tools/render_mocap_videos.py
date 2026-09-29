@@ -2,7 +2,7 @@
 """Render one MP4 per motion capture clip, retargeted onto the CAT biped preset.
 
 Uses scenes/mocap_study.blks as the template (its follow camera tracks the character),
-renders frames with `scener --render --frames`, and encodes them with frames_to_mp4.swift.
+and renders each clip straight to MP4 with `scener --render --frames ... --output CLIP.mp4`.
 
 Usage (from the repository root, after fetch_cmu_mocap.py):
   DYLD_LIBRARY_PATH=$PWD/build/lib python3 apps/scener/tools/render_mocap_videos.py \
@@ -11,10 +11,8 @@ Usage (from the repository root, after fetch_cmu_mocap.py):
 import argparse
 import os
 import re
-import shutil
 import subprocess
 import sys
-import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 APP = os.path.dirname(HERE)
@@ -43,10 +41,6 @@ def main():
     args = parser.parse_args()
 
     os.makedirs(args.output, exist_ok=True)
-    work = tempfile.mkdtemp(prefix="scener-mocap-")
-    encoder = os.path.join(work, "frames_to_mp4")
-    subprocess.run(["swiftc", "-O", os.path.join(HERE, "frames_to_mp4.swift"), "-o", encoder],
-                   check=True, stderr=subprocess.DEVNULL)
     template = open(os.path.join(APP, "scenes", "mocap_study.blks")).read()
     scene = os.path.join(APP, "scenes", "_mocap_video.blks")
     try:
@@ -62,22 +56,15 @@ def main():
             text = re.sub(r'duration="[^"]*"', f'duration="{seconds:.3f}"', text)
             with open(scene, "w") as f:
                 f.write(text)
-            frames = os.path.join(work, clip)
-            os.makedirs(frames, exist_ok=True)
-            subprocess.run([args.scener, "--render", scene, "--camera", args.camera, "--frames",
-                            f"0:{seconds:.3f}:{args.fps}", "--size", args.size, "--format", "jpg",
-                            "--output-dir", frames], check=True,
-                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             slug = re.sub(r"[^a-z0-9]+", "_", label.lower()).strip("_")
             video = os.path.join(args.output, f"{clip}_{slug}.mp4")
-            subprocess.run([encoder, frames, args.camera, str(args.fps), video], check=True,
-                           stdout=subprocess.DEVNULL)
-            shutil.rmtree(frames)
+            subprocess.run([args.scener, "--render", scene, "--camera", args.camera, "--frames",
+                            f"0:{seconds:.3f}:{args.fps}", "--size", args.size, "--output", video],
+                           check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             print(f"wrote {video}  ({seconds:.1f} s)")
     finally:
         if os.path.exists(scene):
             os.remove(scene)
-        shutil.rmtree(work, ignore_errors=True)
 
 
 if __name__ == "__main__":

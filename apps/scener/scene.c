@@ -100,7 +100,7 @@
 #define GAIT_SPOT_SECONDS 3600.0f
 #define MOCAP_NAME_CAPACITY 64
 #define MOCAP_FOOT_POINTS 2
-#define CM_PER_METRE 100.0f
+
 #define ENCLOSURE_RAY_X 0.5773f
 #define ENCLOSURE_RAY_Y 0.6211f
 #define ENCLOSURE_RAY_Z 0.5303f
@@ -2877,6 +2877,17 @@ void scene_print_joints(Scene *s,FILE *out){
 		vec3 p=vscale(mat4_xform_point(j->matrix,v3(0,0,0)),CM_PER_METRE);
 		fprintf(out,"%s %s %.1f %.1f %.1f\n",xml_attr((XmlNode*)j->instance,"name","?"),xml_attr((XmlNode*)j->joint,"name","?"),p.x,p.y,p.z);
 	}
+}
+
+/* World position (renderer units) of instance's posed joint at the current time. */
+int scene_joint_position(Scene *s,const char *instance,const char *joint,vec3 *out){
+	for(int i=0;s && i<s->nrigJointWorlds;i++){
+		RigJointWorld *j=&s->rigJointWorlds[i];
+		if(strcmp(xml_attr((XmlNode*)j->instance,"name",""),instance) || strcmp(xml_attr((XmlNode*)j->joint,"name",""),joint)) continue;
+		*out=mat4_xform_point(j->matrix,v3(0,0,0));
+		return 1;
+	}
+	return 0;
 }
 
 static mat4 rig_rest_world(Scene *s,XmlNode *node,XmlNode *root){

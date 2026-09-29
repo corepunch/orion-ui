@@ -40,10 +40,10 @@ to END inclusive, named `CAMERA_0000.jpg`, `CAMERA_0001.jpg` …; combine it wit
 joint as `instance joint x y z` in world centimetres, for the given camera and
 time; it needs no graphical session.
 
-`tools/render_mocap_videos.py SCENER OUTPUT_DIR` renders one MP4 per fetched CMU
-clip through `--frames` and `tools/frames_to_mp4.swift`; the Swift encoder also
-turns any `--frames` sequence into a video:
-`swift tools/frames_to_mp4.swift FRAME_DIR CAMERA 30 out.mp4`. In the editor, Animation → Play / Pause
+`--render SCENE --camera NAME --frames START:END:FPS --output FILE.mp4` encodes
+the frames straight to H.264 without writing images (VideoToolbox on macOS,
+`ffmpeg` on PATH elsewhere). `tools/render_mocap_videos.py SCENER OUTPUT_DIR`
+renders one MP4 per fetched CMU clip this way. In the editor, Animation → Play / Pause
 (Space) plays the timeline, looping after `<scene duration>`, and Go to Start
 (Shift+Space) rewinds.
 
@@ -76,36 +76,26 @@ Scenes authored for main’s 3ds Max coordinate conversion can declare
 to renderer `(x,z,-y)` and box sizes to `(x,z,y)`, retaining the upstream
 conversion. It takes precedence over `up`; omit it for native Y/Z-up scenes.
 
-## Animated infographic export
+## Reels and animated infographics
 
-The IK/FK example combines the existing frame renderer and joint inspection
-with a Python validation driver and Swift annotation compositor. From the
-repository root on macOS, after building Scener:
+`--reel FILE.reel` renders a programmable motion-graphics document: 3D scene
+layers plus type, shapes, joint-anchored callouts, trails and live
+measurements, all drawn by Scener. See [docs/reels.md](docs/reels.md).
 
 ```sh
-python3 apps/scener/tools/render_ik_fk_infographic.py --help
-python3 apps/scener/tools/render_ik_fk_infographic.py --preview
-python3 apps/scener/tools/render_ik_fk_infographic.py
+scener --reel apps/scener/scenes/infographics/ik_fk.reel --check
+scener --reel apps/scener/scenes/infographics/ik_fk.reel \
+  --output video/ik-fk/ik-vs-fk.mp4 --poster video/ik-fk/ik-vs-fk.png
+scener --reel apps/scener/scenes/infographics/ik_fk.reel --output still.png --time 3
+scener --reel apps/scener/scenes/infographics/ik_fk.reel --output-dir video/ik-fk/frames
 ```
 
-The default output is the ignored `video/ik-fk/` directory. A full run writes
-`ik-vs-fk.mp4`, `ik-vs-fk.png`, sampled `measurements.json`, original frames,
-annotated frames, and diagnostics. The six-second timeline includes its end
-frame: 145 frames at 24 fps produce a 6.04-second, 1600×1000 MP4.
-
-`--preview` samples 0 and 1.5 seconds and renders only the 1.5-second poster.
-Use `--output video/ik-fk-preview` to keep preview metadata separate from a
-completed full export. Existing files at the selected destination are replaced;
-preview mode does not update an existing MP4 there. `--scener PATH` overrides
-the default `build/bin/scener`; the script supplies `build/lib` as its library
-search path. The Swift helpers require macOS command-line tools, AppKit, and
-AVFoundation. Shadowed rendering requires GPU access.
-
-This helper currently targets one scene, camera, character, and layout. It
-does not add native CLI label or infographic flags. See the
-[studio guide](docs/infographic-studio.md) for the pipeline, file contracts,
-extension points, and current limitations, and the
-[example notes](scenes/infographics/README.md) for its motion and scale.
+`--check` evaluates the reel's `<check>` rules on every frame of the timeline
+and needs no graphical session. Rendering runs the same checks first and
+writes nothing when one fails. `--output` takes `.mp4` (the full timeline,
+`floor(duration × fps)` frames) or `.png`/`.jpg` (one frame at `--time`, default
+the reel's `poster`); `--output-dir` writes `frame_NNNN.png`; `--poster FILE`
+adds the poster frame to a video run. `-no-shadows` applies to scene layers.
 
 ## GPU access and shadow validation
 
