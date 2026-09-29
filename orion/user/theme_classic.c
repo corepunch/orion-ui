@@ -338,6 +338,8 @@ static theme_t g_classic_theme = {
   .card_corner_radius     = 0,
   .card_edge_width        = 4,
   .card_ring_width        = 1,
+  .card_padding_x         = 8,
+  .card_padding_y         = 6,
   .control_padding        = BUTTON_PADDING,
   .apply_palette          = classic_apply_palette,
 };

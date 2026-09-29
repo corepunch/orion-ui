@@ -35,8 +35,9 @@ push/pull, green in sync. Diffs are deliberately absent.
 line (branch, to push/pull, staged/modified/new counts), tells you what Commit will do
 ("Commit 3 staged files" or "Nothing staged"), and has an Overview button on every page.
 
-The tile board is the `RepoBoard` control in `components/repo_board.c`; the app pushes
-`git_summary_t` rows into it (`git_workspace_scan` in `git_backend.c`). Pass two or more paths on the command
+The page is built from framework controls only (`view_overview.c`): a `TileGrid` of `Card`s, each holding Labels
+and a `FlowView` of `Badge`s, so wrapping, truncation and row heights come from auto-layout. The app feeds it
+`git_summary_t` rows (`git_workspace_scan` in `git_backend.c`). Pass two or more paths on the command
 line (or `--overview`) to get a temporary, unsaved workspace:
 
 ```bash

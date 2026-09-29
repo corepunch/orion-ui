@@ -147,18 +147,6 @@ void gc_refresh_all(void) {
   gc_update_status();
 }
 
-static void gc_overview_status(char *out, size_t n) {
-  gc_state_t *gc = g_gc; int dirty = 0, push = 0, pull = 0, conf = 0;
-  for (int i = 0; i < gc->tile_count; i++) {
-    const git_summary_t *t = &gc->tiles[i];
-    dirty += (t->staged || t->unstaged || t->untracked) ? 1 : 0; push += t->ahead ? 1 : 0; pull += t->behind ? 1 : 0; conf += t->conflicts ? 1 : 0;
-  }
-  int sel = gc->board_win ? (int)send_message(gc->board_win, rbGetSelection, 0, NULL) : -1;
-  int len = snprintf(out, n, "%d worktrees | %d uncommitted | %d to push | %d to pull%s", gc->tile_count, dirty, push, pull, conf ? " | CONFLICTS" : "");
-  if (sel >= 0 && sel < gc->tile_count && len > 0 && (size_t)len < n)
-    snprintf(out + len, n - (size_t)len, "   -   %s", gc->tiles[sel].path);
-}
-
 void gc_update_status(void) {
   gc_state_t *gc = g_gc;
   if (!gc || !gc->main_win) return;
@@ -205,64 +193,6 @@ void gc_update_status(void) {
 }
 
 // ============================================================
-// Overview
-// ============================================================
-
-static int tile_cmp(const void *pa, const void *pb) {
-  const git_summary_t *a = pa, *b = pb;
-  int c = strcasecmp(a->repo, b->repo); if (c) return c;
-  if (a->linked != b->linked) return a->linked ? 1 : -1;
-  return strcasecmp(a->dir, b->dir);
-}
-
-void gc_overview_refresh(void) {
-  gc_state_t *gc = g_gc; if (!gc) return;
-  uint32_t t0 = axGetMilliseconds();
-  gc->tile_count = git_workspace_scan(gc->recent_repos, gc->recent_repo_count, gc->tiles, GC_MAX_TILES);
-  qsort(gc->tiles, (size_t)gc->tile_count, sizeof(gc->tiles[0]), tile_cmp);
-  if (gc->board_win) send_message(gc->board_win, rbSetTiles, (uint32_t)gc->tile_count, gc->tiles);
-  GC_TRACE("overview_refresh board=%p roots=%d tiles=%d ms=%u", (void *)gc->board_win, gc->recent_repo_count, gc->tile_count, (unsigned)(axGetMilliseconds() - t0));
-  if (gc->tab == GC_TAB_OVERVIEW) gc_update_status();
-}
-
-void gc_overview_open(int index) {
-  gc_state_t *gc = g_gc;
-  if (!gc || index < 0 || index >= gc->tile_count) {
-    fprintf(stderr, "[gc] overview_open rejected index=%d count=%d\n", index, gc ? gc->tile_count : -1); fflush(stderr); return;
-  }
-  const git_summary_t *t = &gc->tiles[index];
-  GC_TRACE("overview_open index=%d path=%s branch=%s", index, t->path, t->branch);
-  if (t->missing) { message_box(gc->main_win, "This folder is missing or is no longer a git repository.", "Open Repository", MB_OK); return; }
-  char path[512]; snprintf(path, sizeof(path), "%s", t->path);
-  bool dirty = t->staged || t->unstaged || t->untracked || t->conflicts;
-  gc_open_repo(path);
-  if (gc->repo) gc_set_view_mode(dirty ? GC_TAB_CHANGES : GC_TAB_HISTORY);
-}
-
-void gc_overview_fetch_all(void) {
-  gc_state_t *gc = g_gc; if (!gc || gc->fetching_all) return;
-  char roots[GC_MAX_RECENT_REPOS][512]; int n = 0;
-  for (int i = 0; i < gc->tile_count && n < GC_MAX_RECENT_REPOS; i++) {
-    if (gc->tiles[i].linked || gc->tiles[i].missing) continue;
-    snprintf(roots[n++], sizeof(roots[0]), "%s", gc->tiles[i].path);
-  }
-  if (!n) { for (; n < gc->recent_repo_count; n++) snprintf(roots[n], sizeof(roots[0]), "%s", gc->recent_repos[n]); }
-  GC_TRACE("fetch_all repos=%d", n);
-  if (git_fetch_all_async(roots, n, gc->main_win)) {
-    gc->fetching_all = true;
-    char msg[96]; snprintf(msg, sizeof(msg), "Fetching %d repositories...", n);
-    send_message(gc->main_win, evStatusBar, 0, msg);
-  } else message_box(gc->main_win, "There are no repositories to fetch.", "Fetch All", MB_OK);
-}
-
-static result_t page_overview_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
-  (void)wparam; (void)lparam;
-  if (msg != evCreate || !g_gc) return false;
-  g_gc->board_win = get_window_item(win, ID_OVERVIEW_PAGE_BOARD);
-  return true;
-}
-
-// ============================================================
 // Main window procedure
 // ============================================================
 
@@ -290,7 +220,7 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
 
       if (overview_tab) {
         gc->overview_page_win = create_window_from_form(
-          &gc_overview_page_form, 0, 0, overview_tab, page_overview_proc, gc->hinstance, NULL);
+          &gc_overview_page_form, 0, 0, overview_tab, gc_page_overview_proc, gc->hinstance, NULL);
       }
       if (changes_tab)
         gc->changes_page_win = create_window_from_form(
@@ -346,12 +276,7 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
     case evCommand: {
       uint16_t code = (uint16_t)HIWORD(wparam);
 
-      if ((code == GC_BOARD_SELECT || code == GC_BOARD_OPEN) && (window_t *)lparam == gc->board_win) {
-        int idx = (int)LOWORD(wparam);
-        GC_TRACE("evCommand board win=%u code=%s tile=%d", (unsigned)gc->board_win->id, code == GC_BOARD_OPEN ? "open" : "select", idx);
-        if (code == GC_BOARD_OPEN) gc_overview_open(idx); else gc_update_status();
-        return true;
-      }
+      if (gc_overview_handle_command(wparam, lparam)) return true;
 
       if (code == tcnSelChange && (window_t *)lparam == gc->tabs_win) {
         int tab = (int)send_message(gc->tabs_win, tcGetSelection, 0, NULL);

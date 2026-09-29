@@ -284,11 +284,10 @@ void draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color) {
   extern uint32_t ui_white_texture;
   if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0) return;
   const theme_t *theme = get_theme();
-  int radius = theme->card_corner_radius, edge = theme->card_edge_width;
-  if (state & CTRL_SELECTED) {
-    uint32_t ring = get_sys_color((state & CTRL_FOCUSED) ? brAccent : brTextDisabled);
-    fill_rounded_rect(ring, rect_inset(r, -theme->card_ring_width), radius + theme->card_ring_width);
-  }
+  int radius = theme->card_corner_radius, edge = theme->card_edge_width, ring = theme->card_ring_width;
+  if (state & CTRL_SELECTED)
+    fill_rounded_rect(get_sys_color(brAccent), r, radius + ring);
+  r = rect_inset(r, ring);
   uint32_t face = get_sys_color((state & CTRL_HOVER) ? brButtonHover : brControlBg);
   if (!(edge_color >> 24)) edge = 0;
   if (radius <= 0) {
@@ -302,8 +301,12 @@ void draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color) {
 }
 
 #define BADGE_PADDING 7
+int measure_badge(ui_font_t font, const char *text) {
+  return text_strwidth(font, text) + 2 * BADGE_PADDING;
+}
+
 int draw_badge(ui_font_t font, const char *text, int x, int y, int height, uint32_t color) {
-  int w = text_strwidth(font, text) + 2 * BADGE_PADDING;
+  int w = measure_badge(font, text);
   fill_rounded_rect(color_with_alpha(color, 0x40), R(x, y, w, height), MIN(5, height / 2));
   draw_text(font, text, x + BADGE_PADDING, y + (height - text_char_height(font)) / 2, color);
   return w;

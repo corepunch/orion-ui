@@ -23,7 +23,7 @@ static ui_font_t label_font(const window_t *win) {
 static uint32_t label_color(const window_t *win) {
   uint32_t packed = (uint32_t)(uintptr_t)(win ? win->userdata : NULL);
   uint8_t idx = (uint8_t)(packed & 0xffu);
-  if ((packed & (1u << 16)) == 0)
+  if ((packed & LABEL_PACK_COLOR_SET) == 0)
     return get_sys_color(brTextNormal);
   if (idx == 0)
     return get_sys_color(brTransparent);
@@ -32,8 +32,21 @@ static uint32_t label_color(const window_t *win) {
   return get_sys_color(brTextNormal);
 }
 
+static bool label_truncates(const window_t *win) {
+  return win && (((uint32_t)(uintptr_t)win->userdata) & LABEL_PACK_TRUNCATE) != 0;
+}
+
 result_t win_label(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
+    case lbSetStyle: {
+      const label_create_params_t *p = (const label_create_params_t *)lparam;
+      if (!p) return false;
+      uint32_t packed = label_pack_userdata(p->color_index, p->font, p->color_set);
+      if (p->truncate) packed |= LABEL_PACK_TRUNCATE;
+      win->userdata = (void *)(uintptr_t)packed;
+      invalidate_window(win);
+      return true;
+    }
     case evCreate:
       if (lparam && (uintptr_t)lparam > 0x1000) {
         const form_ctrl_def_t *cd = (const form_ctrl_def_t *)lparam;
@@ -57,6 +70,12 @@ result_t win_label(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       layout_measure_t *m = (layout_measure_t *)lparam;
       if (!m) return true;
       ui_font_t font = label_font(win);
+      if (label_truncates(win)) {
+        // One line; the arranged width decides how much of it is visible.
+        m->desired_w = text_strwidth(font, win->title) + TEXT_SHADOW_OFFSET;
+        m->desired_h = CONTROL_HEIGHT;
+        return true;
+      }
       int avail_w = m->avail_w > 0 ? m->avail_w : win->frame.w;
       if (avail_w < 1) avail_w = win->frame.w > 0 ? win->frame.w : 1;
       irect16_t wrap_vp = {0, 0, avail_w, 1};
@@ -75,6 +94,14 @@ result_t win_label(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       uint32_t col = label_color(win);
       ui_font_t font = label_font(win);
       irect16_t text_pos = {0, 0, win->frame.w, win->frame.h};
+      if (label_truncates(win)) {
+        char fitted[512];
+        text_ellipsize(font, win->title, win->frame.w - TEXT_SHADOW_OFFSET, fitted, sizeof(fitted));
+        irect16_t shadow_pos = rect_offset(text_pos, TEXT_SHADOW_OFFSET, TEXT_SHADOW_OFFSET);
+        draw_text_clipped(font, fitted, &shadow_pos, get_sys_color(brDarkEdge), 0);
+        draw_text_clipped(font, fitted, &text_pos, col, 0);
+        return true;
+      }
       // Labels taller than a single control row use draw_text_wrapped so that
       // long text reflows naturally within the available width.
       text_wrap_result_t wrap = text_wrap_layout_font(font, win->title, &text_pos, 0, false);
