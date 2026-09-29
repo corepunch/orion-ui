@@ -16,6 +16,9 @@ DESTDIR ?=
 INSTALL ?= install
 ALLOW_HIGHDPI ?= 1
 CFLAGS += -DORION_ALLOW_HIGHDPI=$(ALLOW_HIGHDPI)
+# Optimisation is opt-in: `make clean && make scener OPT=-O2` renders reels about 3x faster.
+OPT ?=
+CFLAGS += $(OPT)
 
 # ── Platform ─────────────────────────────────────────────────────────────
 # Native Windows and MinGW/MSYS share one configuration; IS_WIN gates the

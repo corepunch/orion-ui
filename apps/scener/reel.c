@@ -17,6 +17,7 @@ typedef struct reel_xml_s {
 	char **names, **values; bool *used; int nattrs, cattrs;
 	struct reel_xml_s **kids; int nkids, ckids;
 	int line;
+	bool shot_content; /* a synthesized group holding a <shot>'s children: times inside are shot-local */
 } reel_xml_t;
 
 typedef struct { const char *p, *start; char *error; size_t errsz; } reel_xml_parser_t;
@@ -134,6 +135,13 @@ static const char *reel_attr(reel_xml_t *n, const char *name) {
 	return NULL;
 }
 
+static void reel_xml_set(reel_xml_t *n, const char *name, const char *value) {
+	n->names = realloc(n->names, sizeof(char *) * (size_t)(n->nattrs + 1));
+	n->values = realloc(n->values, sizeof(char *) * (size_t)(n->nattrs + 1));
+	n->used = realloc(n->used, sizeof(bool) * (size_t)(n->nattrs + 1));
+	n->names[n->nattrs] = strdup(name); n->values[n->nattrs] = strdup(value); n->used[n->nattrs++] = false;
+}
+
 /* ── Errors ───────────────────────────────────────────────────────────── */
 
 static char reel_last_error[512];
@@ -153,6 +161,11 @@ static bool reel_expr_attr(reel_t *r, reel_xml_t *x, const char *name, reel_expr
 	const char *source = reel_attr(x, name);
 	if (!source) source = fallback;
 	if (!source) return true;
+	char local[512];
+	if (r->in_shot && (!strcmp(name, "from") || !strcmp(name, "to"))) { /* shot-local seconds */
+		snprintf(local, sizeof(local), "%.6f + (%s)", r->shot_start, source);
+		source = local;
+	}
 	if (!reel_expr_compile(r, source, e)) return reel_fail(r, x->line, "<%s %s>: %s", x->tag, name, r->error);
 	return true;
 }
@@ -161,7 +174,9 @@ static bool reel_expr_attr(reel_t *r, reel_xml_t *x, const char *name, reel_expr
 static bool reel_const_attr(reel_t *r, reel_xml_t *x, const char *name, float *out, float fallback) {
 	reel_expr_t e = {0};
 	*out = fallback;
-	if (!reel_expr_attr(r, x, name, &e, NULL)) return false;
+	const char *source = reel_attr(x, name);
+	if (source && !reel_expr_compile(r, source, &e))
+		return reel_fail(r, x->line, "<%s %s=\"%s\"> must be a constant number (seconds or pixels; no t, joints or names): %s", x->tag, name, source, r->error);
 	if (e.set && !e.constant) { reel_expr_free(&e); return reel_fail(r, x->line, "<%s %s> must be constant", x->tag, name); }
 	if (e.set) *out = e.value;
 	reel_expr_free(&e);
@@ -269,14 +284,32 @@ static bool reel_define(reel_t *r, reel_xml_t *x) {
 		DA_PUSH(r->curves, r->ncurves, r->ccurves, c);
 		return reel_check_unused(r, x);
 	}
+	if (!strcmp(x->tag, "point")) {
+		const char *name = reel_attr(x, "name"), *scene = reel_attr(x, "scene"), *pos = reel_attr(x, "pos");
+		if (!name || !pos) return reel_fail(r, x->line, "<point> needs name and pos=\"x y z\" (world cm)");
+		reel_point_t p = {0};
+		snprintf(p.name, sizeof(p.name), "%s", name);
+		float v[3];
+		if (sscanf(pos, "%f %f %f", &v[0], &v[1], &v[2]) != 3) return reel_fail(r, x->line, "<point %s pos> is \"x y z\" in world centimetres", name);
+		p.layer = -1;
+		if (scene) { for (int i = 0; i < r->nlayers; i++) if (!strcmp(r->layers[i].id, scene)) p.layer = i; }
+		else if (r->in_shot) p.layer = r->shot_layer;
+		else if (r->nlayers == 1) p.layer = 0;
+		if (p.layer < 0) return reel_fail(r, x->line, scene ? "<point %s> names scene %s, which no <scene id> or <shot id> defines" : "<point %s> needs scene=\"id\" (outside a shot, with several scenes)", name, scene);
+		for (int i = 0; i < r->npoints; i++) if (!strcmp(r->points[i].name, name)) return reel_fail(r, x->line, "<point %s> is defined twice", name);
+		p.world = v3(v[0] / CM_PER_METRE, v[1] / CM_PER_METRE, v[2] / CM_PER_METRE);
+		DA_PUSH(r->points, r->npoints, r->cpoints, p);
+		return reel_check_unused(r, x);
+	}
 	return true;
 }
 
 static bool reel_load_layers(reel_t *r, reel_xml_t *x) {
-	if (!strcmp(x->tag, "scene")) {
-		const char *src = reel_attr(x, "src"), *camera = reel_attr(x, "camera");
-		if (!src) return reel_fail(r, x->line, "<scene> needs src");
+	if (!strcmp(x->tag, "scene") || !strcmp(x->tag, "shot")) {
+		const char *src = reel_attr(x, "src"), *camera = reel_attr(x, "camera"), *id = reel_attr(x, "id");
+		if (!src) return reel_fail(r, x->line, "<%s> needs src", x->tag);
 		reel_layer_t layer = {0};
+		if (id) snprintf(layer.id, sizeof(layer.id), "%s", id);
 		if (!reel_path(r, src, layer.src, sizeof(layer.src))) return reel_fail(r, x->line, "scene %s not found", layer.src);
 		if (!load_scene(layer.src, &layer.scene)) return reel_fail(r, x->line, "cannot load scene %s", layer.src);
 		if (camera) {
@@ -345,6 +378,7 @@ static bool reel_motion_attr(reel_t *r, reel_xml_t *x, reel_node_t *n) {
 			} else if (*p == ')') depth--;
 		}
 		if (!nargs) return reel_fail(r, x->line, "motion %s() needs a start time", reel_motion_table[m].name);
+		if (r->in_shot) motion.a[0] += r->shot_start; /* shot-local start */
 		n->motions = realloc(n->motions, sizeof(reel_motion_t) * (size_t)(n->nmotions + 1));
 		n->motions[n->nmotions++] = motion;
 	}
@@ -424,22 +458,28 @@ static bool reel_anchor_list(reel_t *r, reel_xml_t *x, const char *list, reel_no
 static reel_node_t *reel_build(reel_t *r, reel_xml_t *x);
 
 static bool reel_build_kids(reel_t *r, reel_xml_t *x, reel_node_t *n) {
+	bool was_in_shot = r->in_shot;
+	if (x->shot_content) r->in_shot = true;
 	for (int i = 0; i < x->nkids; i++) {
 		reel_xml_t *k = x->kids[i];
-		if (!strcmp(k->tag, "font") || !strcmp(k->tag, "style") || !strcmp(k->tag, "curve")) {
-			if (!reel_define(r, k)) return false;
+		if (!strcmp(k->tag, "font") || !strcmp(k->tag, "style") || !strcmp(k->tag, "curve") || !strcmp(k->tag, "point")) {
+			if (!reel_define(r, k)) { r->in_shot = was_in_shot; return false; }
 			continue;
 		}
 		reel_node_t *kid = reel_build(r, k);
-		if (!kid) return false;
+		if (!kid) { r->in_shot = was_in_shot; return false; }
 		DA_PUSH(n->kids, n->nkids, n->ckids, kid);
 	}
+	r->in_shot = was_in_shot;
 	return true;
 }
+
+static reel_node_t *reel_build_shot(reel_t *r, reel_xml_t *x);
 
 static void reel_node_free(reel_node_t *n);
 
 static reel_node_t *reel_build(reel_t *r, reel_xml_t *x) {
+	if (!strcmp(x->tag, "shot")) return reel_build_shot(r, x);
 	static const struct { const char *tag; reel_kind_t kind; } kinds[] = {
 		{"group", REEL_GROUP}, {"scene", REEL_SCENE}, {"text", REEL_TEXT}, {"rect", REEL_RECT}, {"circle", REEL_CIRCLE},
 		{"line", REEL_LINE}, {"polyline", REEL_POLYLINE}, {"trail", REEL_TRAIL}, {"let", REEL_LET}, {"check", REEL_CHECK}};
@@ -522,6 +562,7 @@ static reel_node_t *reel_build(reel_t *r, reel_xml_t *x) {
 		REEL_TRY(reel_const_attr(r, x, "at", &n->at, 0));
 		REEL_TRY(reel_const_attr(r, x, "stagger", &n->stagger, n->reveal == REEL_REVEAL_TYPE ? 0.03f : 0.07f));
 		REEL_TRY(reel_const_attr(r, x, "exit", &n->exit, -1));
+		if (r->in_shot) { n->at += r->shot_start; if (n->exit >= 0) n->exit += r->shot_start; } /* shot-local seconds */
 		REEL_TRY(reel_text_segments(r, x, n));
 		break;
 	}
@@ -586,6 +627,85 @@ static reel_node_t *reel_build(reel_t *r, reel_xml_t *x) {
 	return n;
 }
 
+/* <shot src camera duration [start] [transition="dip|fade|cut SECONDS"] [id] [x y width height time]>
+   A shot is a scene layer plus overlay children that live for `duration` seconds. Shots follow one another
+   unless `start` is given. Inside a shot, from/to/at/exit and motion start times are shot-local, `st` is
+   the seconds since the shot began and `sdur` its length; the scene plays from its own time 0 (unless
+   `time` is given), so every shot starts its camera and characters from the beginning. */
+static void reel_xml_release_attrs(reel_xml_t *n) {
+	for (int i = 0; i < n->nattrs; i++) { free(n->names[i]); free(n->values[i]); }
+	free(n->names); free(n->values); free(n->used); n->names = n->values = NULL; n->used = NULL; n->nattrs = 0;
+}
+
+static reel_node_t *reel_build_shot(reel_t *r, reel_xml_t *x) {
+	if (r->in_shot) return reel_fail(r, x->line, "<shot> cannot nest inside another <shot>"), NULL;
+	float start = r->shot_cursor, duration = 0, tlen = 0;
+	const char *transition = reel_attr(x, "transition");
+	char kind[16] = "cut";
+	reel_attr(x, "src"); reel_attr(x, "camera"); reel_attr(x, "id");
+	if (reel_attr(x, "start")) { if (!reel_const_attr(r, x, "start", &start, 0)) return NULL; }
+	if (!reel_const_attr(r, x, "duration", &duration, 0)) return NULL;
+	if (duration <= 0) return reel_fail(r, x->line, "<shot> needs a positive duration in seconds"), NULL;
+	if (transition) {
+		int got = sscanf(transition, "%15s %f", kind, &tlen);
+		if (got < 1 || (strcmp(kind, "cut") && strcmp(kind, "dip") && strcmp(kind, "fade")) || (strcmp(kind, "cut") && (got != 2 || tlen <= 0)))
+			return reel_fail(r, x->line, "<shot transition> is \"cut\", \"dip SECONDS\" or \"fade SECONDS\""), NULL;
+	}
+	bool fade = !strcmp(kind, "fade"), dip = !strcmp(kind, "dip");
+	r->shot_cursor = start + duration;
+	char from[64], to[64], ramp[128], scene_time[64], w[16], h[16];
+	snprintf(from, sizeof(from), "%.6f", fade ? start - tlen : start);
+	snprintf(to, sizeof(to), "%.6f", start + duration);
+	snprintf(ramp, sizeof(ramp), fade ? "clamp((t - %.6f) / %.6f, 0, 1)" : "1", start - tlen, tlen);
+	snprintf(scene_time, sizeof(scene_time), "max(t - %.6f, 0)", start);
+	snprintf(w, sizeof(w), "%d", r->width); snprintf(h, sizeof(h), "%d", r->height);
+
+	reel_xml_t sx = {0};
+	sx.tag = "scene"; sx.line = x->line;
+	reel_xml_set(&sx, "src", reel_attr(x, "src")); if (reel_attr(x, "camera")) reel_xml_set(&sx, "camera", reel_attr(x, "camera"));
+	reel_xml_set(&sx, "from", from); reel_xml_set(&sx, "to", to); reel_xml_set(&sx, "alpha", ramp);
+	static const char *const pass[] = {"x", "y", "width", "height"};
+	for (int i = 0; i < 4; i++) { const char *v = reel_attr(x, pass[i]); if (v) reel_xml_set(&sx, pass[i], v); }
+	const char *time = reel_attr(x, "time");
+	reel_xml_set(&sx, "time", time ? time : scene_time);
+	reel_node_t *scene = reel_build(r, &sx);
+	reel_xml_release_attrs(&sx);
+	if (!scene) return NULL;
+
+	reel_xml_t wx = {0}, cx = {0};
+	wx.tag = "group"; wx.line = x->line;
+	reel_node_t *wrap = reel_build(r, &wx);
+	if (!wrap) { reel_node_free(scene); return NULL; }
+	DA_PUSH(wrap->kids, wrap->nkids, wrap->ckids, scene);
+	r->shot_layer = scene->layer; r->shot_start = start; r->shot_duration = duration;
+
+	cx.tag = "group"; cx.line = x->line; cx.shot_content = true;
+	reel_xml_set(&cx, "from", from); reel_xml_set(&cx, "to", to); reel_xml_set(&cx, "alpha", ramp);
+	cx.kids = x->kids; cx.nkids = x->nkids;
+	reel_node_t *content = reel_build(r, &cx);
+	reel_xml_release_attrs(&cx);
+	if (!content) { reel_node_free(wrap); return NULL; }
+	DA_PUSH(wrap->kids, wrap->nkids, wrap->ckids, content);
+
+	if (dip) {
+		char dfrom[64], dto[64], dalpha[128];
+		snprintf(dfrom, sizeof(dfrom), "%.6f", start - tlen / 2); snprintf(dto, sizeof(dto), "%.6f", start + tlen / 2);
+		snprintf(dalpha, sizeof(dalpha), "1 - abs(t - %.6f) / %.6f", start, tlen / 2);
+		reel_xml_t rx = {0};
+		rx.tag = "rect"; rx.line = x->line;
+		reel_xml_set(&rx, "width", w); reel_xml_set(&rx, "height", h); reel_xml_set(&rx, "color", "#000000");
+		reel_xml_set(&rx, "from", dfrom); reel_xml_set(&rx, "to", dto); reel_xml_set(&rx, "alpha", dalpha);
+		reel_node_t *cover = reel_build(r, &rx);
+		reel_xml_release_attrs(&rx);
+		if (!cover) { reel_node_free(wrap); return NULL; }
+		DA_PUSH(wrap->kids, wrap->nkids, wrap->ckids, cover);
+	}
+	r->shots = true;
+	{ reel_shot_mark_t mark = {start, duration}; DA_PUSH(r->shot_marks, r->nshot_marks, r->cshot_marks, mark); }
+	if (!reel_check_unused(r, x)) { reel_node_free(wrap); return NULL; }
+	return wrap;
+}
+
 static void reel_node_release(reel_node_t *n) {
 	reel_expr_t *exprs[] = {&n->x, &n->y, &n->alpha, &n->scale, &n->rotation, &n->from, &n->to, &n->w, &n->h,
 		&n->radius, &n->stroke, &n->x2, &n->y2, &n->time, &n->value};
@@ -600,6 +720,108 @@ static void reel_node_free(reel_node_t *n) {
 	if (!n) return;
 	reel_node_release(n);
 	free(n);
+}
+
+/* ── Templates ────────────────────────────────────────────────────────── */
+
+/* <template name="card" title="" tip="TIP">…$title…$tip…</template> declares a reusable fragment; every attribute
+   other than name is a parameter with a default. <use template="card" title="Hello"/> expands it in place,
+   replacing $param in attribute values and text (`$$` is a literal dollar). Expansion happens before anything is
+   built, so a template can contain any element, including <shot>. */
+enum { REEL_TEMPLATE_DEPTH = 16 };
+
+static char *reel_subst(reel_t *r, int line, const reel_xml_t *tpl, const char *s, char **vals) {
+	size_t cap = strlen(s) * 2 + 64, len = 0;
+	char *out = malloc(cap);
+	for (const char *p = s; *p; p++) {
+		if (*p != '$') { if (len + 2 > cap) out = realloc(out, cap *= 2); out[len++] = *p; continue; }
+		if (p[1] == '$') { if (len + 2 > cap) out = realloc(out, cap *= 2); out[len++] = '$'; p++; continue; }
+		const char *e = p + 1;
+		while (isalnum((unsigned char)*e) || *e == '_') e++;
+		size_t n = (size_t)(e - p - 1);
+		int found = -1, param = 0;
+		for (int i = 0; i < tpl->nattrs; i++) {
+			if (!strcmp(tpl->names[i], "name")) continue;
+			if (strlen(tpl->names[i]) == n && !strncmp(tpl->names[i], p + 1, n)) found = param;
+			param++;
+		}
+		if (found < 0) { free(out); reel_fail(r, line, "template %s has no parameter $%.*s", reel_attr((reel_xml_t *)tpl, "name"), (int)n, p + 1); return NULL; }
+		size_t vl = strlen(vals[found]);
+		while (len + vl + 2 > cap) out = realloc(out, cap *= 2);
+		memcpy(out + len, vals[found], vl); len += vl;
+		p = e - 1;
+	}
+	out[len] = 0;
+	return out;
+}
+
+static reel_xml_t *reel_xml_clone(reel_t *r, const reel_xml_t *tpl, const reel_xml_t *n, char **vals) {
+	reel_xml_t *c = calloc(1, sizeof(*c));
+	c->tag = strdup(n->tag); c->line = n->line;
+	if (n->text) c->text = reel_subst(r, n->line, tpl, n->text, vals);
+	bool ok = !n->text || c->text;
+	for (int i = 0; ok && i < n->nattrs; i++) {
+		char *v = reel_subst(r, n->line, tpl, n->values[i], vals);
+		if (!v) { ok = false; break; }
+		reel_xml_set(c, n->names[i], v); free(v);
+	}
+	for (int i = 0; ok && i < n->nkids; i++) {
+		reel_xml_t *k = reel_xml_clone(r, tpl, n->kids[i], vals);
+		if (!k) { ok = false; break; }
+		DA_PUSH(c->kids, c->nkids, c->ckids, k);
+	}
+	if (!ok) { reel_xml_free(c); return NULL; }
+	return c;
+}
+
+typedef struct { reel_xml_t **defs; int n, c; } reel_templates_t;
+
+static bool reel_expand(reel_t *r, reel_xml_t *x, reel_templates_t *T, int depth) {
+	if (depth > REEL_TEMPLATE_DEPTH) return reel_fail(r, x->line, "templates nest more than %d deep (a template uses itself?)", REEL_TEMPLATE_DEPTH);
+	for (int i = 0; i < x->nkids;) {
+		reel_xml_t *k = x->kids[i];
+		if (!strcmp(k->tag, "template")) {
+			if (!reel_attr(k, "name")) return reel_fail(r, k->line, "<template> needs a name");
+			DA_PUSH(T->defs, T->n, T->c, k);
+			memmove(x->kids + i, x->kids + i + 1, sizeof(*x->kids) * (size_t)(x->nkids - i - 1)); x->nkids--;
+			continue;
+		}
+		if (strcmp(k->tag, "use")) { if (!reel_expand(r, k, T, depth)) return false; i++; continue; }
+		const char *name = reel_attr(k, "template");
+		reel_xml_t *tpl = NULL;
+		for (int d = T->n - 1; d >= 0 && name; d--) if (!strcmp(reel_attr(T->defs[d], "name"), name)) { tpl = T->defs[d]; break; }
+		if (!tpl) return reel_fail(r, k->line, "<use template=\"%s\"> names no earlier <template>", name ? name : "");
+		int np = 0;
+		char *vals[64];
+		for (int a = 0; a < tpl->nattrs; a++) if (strcmp(tpl->names[a], "name")) {
+			if (np == 64) return reel_fail(r, tpl->line, "<template %s> has more than 64 parameters", name);
+			const char *given = reel_attr(k, tpl->names[a]);
+			vals[np++] = strdup(given ? given : tpl->values[a]);
+		}
+		for (int a = 0; a < k->nattrs; a++) {
+			bool known = !strcmp(k->names[a], "template");
+			for (int b = 0; b < tpl->nattrs && !known; b++) known = strcmp(tpl->names[b], "name") && !strcmp(tpl->names[b], k->names[a]);
+			if (!known) { for (int v = 0; v < np; v++) free(vals[v]); return reel_fail(r, k->line, "<use %s> passes %s, which the template does not declare", name, k->names[a]); }
+		}
+		reel_xml_t holder = {0};
+		bool ok = true;
+		for (int c = 0; ok && c < tpl->nkids; c++) {
+			reel_xml_t *copy = reel_xml_clone(r, tpl, tpl->kids[c], vals);
+			if (!copy) { ok = false; break; }
+			DA_PUSH(holder.kids, holder.nkids, holder.ckids, copy);
+		}
+		for (int v = 0; v < np; v++) free(vals[v]);
+		if (ok) { holder.line = k->line; ok = reel_expand(r, &holder, T, depth + 1); }
+		if (!ok) { for (int c = 0; c < holder.nkids; c++) reel_xml_free(holder.kids[c]); free(holder.kids); return false; }
+		x->kids = realloc(x->kids, sizeof(*x->kids) * (size_t)(x->nkids + holder.nkids));
+		memmove(x->kids + i + holder.nkids, x->kids + i + 1, sizeof(*x->kids) * (size_t)(x->nkids - i - 1));
+		memcpy(x->kids + i, holder.kids, sizeof(*x->kids) * (size_t)holder.nkids);
+		x->ckids = x->nkids = x->nkids - 1 + holder.nkids;
+		i += holder.nkids;
+		free(holder.kids);
+		reel_xml_free(k);
+	}
+	return true;
 }
 
 /* ── Loading ──────────────────────────────────────────────────────────── */
@@ -622,11 +844,24 @@ reel_t *reel_load(const char *path) {
 	free(text);
 	if (!x) { reel_fail(r, 0, "%s", error); reel_free(r); return NULL; }
 	bool ok = !strcmp(x->tag, "reel") || reel_fail(r, x->line, "root element must be <reel>, not <%s>", x->tag);
-	float w = 1920, h = 1080;
+	reel_templates_t templates = {0};
+	ok = ok && reel_expand(r, x, &templates, 0);
+	float w = 1920, h = 1080, auto_duration = 1;
 	static const float black[4] = {0, 0, 0, 1};
 	r->root.kind = REEL_GROUP;
+	/* Without duration=, the reel lasts until its last <shot> ends. */
+	if (ok && !reel_attr(x, "duration")) {
+		float cursor = 0, end = 0;
+		for (int i = 0; i < x->nkids; i++) if (!strcmp(x->kids[i]->tag, "shot")) {
+			const char *sv = reel_attr(x->kids[i], "start"), *dv = reel_attr(x->kids[i], "duration");
+			float start = sv ? strtof(sv, NULL) : cursor, dur = dv ? strtof(dv, NULL) : 0;
+			for (int a = 0; a < x->kids[i]->nattrs; a++) x->kids[i]->used[a] = false;
+			cursor = start + dur; end = fmaxf(end, cursor);
+		}
+		if (end > 0) auto_duration = end;
+	}
 	ok = ok && reel_const_attr(r, x, "width", &w, 1920) && reel_const_attr(r, x, "height", &h, 1080) &&
-		reel_const_attr(r, x, "fps", &r->fps, 30) && reel_const_attr(r, x, "duration", &r->duration, 1) &&
+		reel_const_attr(r, x, "fps", &r->fps, 30) && reel_const_attr(r, x, "duration", &r->duration, auto_duration) &&
 		reel_const_attr(r, x, "poster", &r->poster, 0) && reel_color_attr(r, x, "background", r->background, black);
 	float ss = 2;
 	ok = ok && reel_const_attr(r, x, "supersample", &ss, 2);
@@ -637,6 +872,8 @@ reel_t *reel_load(const char *path) {
 		ok = reel_fail(r, x->line, "<reel> needs fps 0..240, a positive duration and supersample 1..4");
 	ok = ok && reel_check_unused(r, x) && reel_load_layers(r, x) && reel_build_kids(r, x, &r->root);
 	reel_xml_free(x);
+	for (int i = 0; i < templates.n; i++) reel_xml_free(templates.defs[i]);
+	free(templates.defs);
 	if (!ok) { reel_free(r); return NULL; }
 	for (int i = 0; i < r->nlayers; i++) r->layers[i].time = 0;
 	reel_seek(r, 0);
@@ -649,7 +886,7 @@ void reel_free(reel_t *r) {
 	for (int i = 0; i < r->nlayers; i++) scene_free(&r->layers[i].scene);
 	for (int i = 0; i < r->nfonts; i++) font_sdf_destroy(r->fonts[i].font);
 	for (int i = 0; i < r->ncurves; i++) { free(r->curves[i].t); free(r->curves[i].v); }
-	free(r->layers); free(r->anchors); free(r->curves); free(r->fonts); free(r->styles);
+	free(r->layers); free(r->anchors); free(r->points); free(r->shot_marks); free(r->curves); free(r->fonts); free(r->styles);
 	free(r->let_names); free(r->lets); free(r->let_nodes); free(r->checks); free(r->tracks);
 	free(r);
 }
@@ -681,8 +918,9 @@ void reel_seek(reel_t *r, float t) {
 		reel_layer_t *l = &r->layers[i];
 		reel_node_t *n = l->node;
 		float lt = n ? reel_expr_eval(&n->time, r) : t;
-		if (lt != l->time || !l->visible) { scene_set_time(&l->scene, lt); l->time = lt; }
-		l->visible = true;
+		/* Posing a scene is the largest per-frame cost: skip layers that are cut away and that no anchor reads. */
+		bool live = l->needed || !n || ((!n->from.set || t >= reel_expr_eval(&n->from, r)) && (!n->to.set || t < reel_expr_eval(&n->to, r)));
+		if (live && (lt != l->time || !l->visible)) { scene_set_time(&l->scene, lt); l->time = lt; l->visible = true; }
 		if (n) {
 			l->rect[0] = reel_expr_eval(&n->x, r); l->rect[1] = reel_expr_eval(&n->y, r);
 			l->rect[2] = reel_expr_eval(&n->w, r); l->rect[3] = reel_expr_eval(&n->h, r);

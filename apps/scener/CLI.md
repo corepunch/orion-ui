@@ -85,9 +85,10 @@ measurements, all drawn by Scener. See [docs/reels.md](docs/reels.md).
 ```sh
 scener --reel apps/scener/scenes/infographics/ik_fk.reel --check
 scener --reel apps/scener/scenes/infographics/ik_fk.reel \
-  --output video/ik-fk/ik-vs-fk.mp4 --poster video/ik-fk/ik-vs-fk.png
+  --output build/video/ik-fk/ik-vs-fk.mp4 --poster build/video/ik-fk/ik-vs-fk.png
 scener --reel apps/scener/scenes/infographics/ik_fk.reel --output still.png --time 3
-scener --reel apps/scener/scenes/infographics/ik_fk.reel --output-dir video/ik-fk/frames
+scener --reel apps/scener/scenes/infographics/ik_fk.reel --output-dir build/video/ik-fk/frames
+scener --reel apps/scener/scenes/infographics/buergeramt.reel --sheet build/video/buergeramt/sheet.png
 ```
 
 `--check` evaluates the reel's `<check>` rules on every frame of the timeline
@@ -95,7 +96,13 @@ and needs no graphical session. Rendering runs the same checks first and
 writes nothing when one fails. `--output` takes `.mp4` (the full timeline,
 `floor(duration × fps)` frames) or `.png`/`.jpg` (one frame at `--time`, default
 the reel's `poster`); `--output-dir` writes `frame_NNNN.png`; `--poster FILE`
-adds the poster frame to a video run. `-no-shadows` applies to scene layers.
+adds the poster frame to a video run. `--sheet FILE.png [--columns N]
+[--sheet-times T,T,…]` writes a contact sheet with one thumbnail per `<shot>`
+for reviewing a whole reel at once. `-no-shadows` applies to scene layers.
+Warnings such as an unreachable IK target print once per joint, not once per
+frame. Reels render about 3× faster from an optimised build:
+`make clean && make scener OPT=-O2`. `unsupported option: --reel` means the
+binary predates reels; rebuild it.
 
 ## GPU access and shadow validation
 

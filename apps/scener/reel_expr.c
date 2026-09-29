@@ -204,10 +204,30 @@ static int reel_anchor_add(reel_t *r, const char *instance, const char *joint, b
 			scene_set_time(scene, r->layers[l].time);
 		}
 		for (int c = 0; c < 3; c++) a.value[c] = (&a.world.x)[c] * CM_PER_METRE;
+		r->layers[l].needed = true;
 		DA_PUSH(r->anchors, r->nanchors, r->canchors, a);
 		return r->nanchors - 1;
 	}
 	return -1;
+}
+
+static int reel_point_find(const reel_t *r, const char *name) {
+	for (int i = 0; i < r->npoints; i++) if (!strcmp(r->points[i].name, name)) return i;
+	return -1;
+}
+
+/* A <point> is a fixed anchor: it never re-poses, but projects through its layer's camera every frame. */
+static int reel_anchor_add_point(reel_t *r, int point) {
+	const reel_point_t *p = &r->points[point];
+	for (int i = 0; i < r->nanchors; i++)
+		if (r->anchors[i].fixed && !r->anchors[i].instance[0] && !strcmp(r->anchors[i].joint, p->name)) return i;
+	reel_anchor_t a = {0};
+	snprintf(a.joint, sizeof(a.joint), "%s", p->name);
+	a.layer = p->layer; a.track = -1; a.fixed = true; a.world = p->world;
+	for (int c = 0; c < 3; c++) a.value[c] = (&a.world.x)[c] * CM_PER_METRE;
+	r->layers[p->layer].needed = true;
+	DA_PUSH(r->anchors, r->nanchors, r->canchors, a);
+	return r->nanchors - 1;
 }
 
 static bool rx_anchor(reel_parser_t *ps, const char *instance, const char *joint, bool fixed, float at, int *index) {
@@ -233,8 +253,13 @@ static bool rx_vector(reel_parser_t *ps) {
 	if (!isalpha((unsigned char)*ps->p) && *ps->p != '_') return rx_fail(ps, "expected a joint or vec(x, y, z)");
 	int n = rx_path(ps, parts, &fixed, &at);
 	if (ps->failed) return false;
-	if (n != 2) { ps->p = start; return rx_fail(ps, "expected Instance.joint"); }
 	int index;
+	if (n == 1 && !fixed && reel_point_find(ps->r, parts[0]) >= 0) {
+		index = reel_anchor_add_point(ps->r, reel_point_find(ps->r, parts[0]));
+		for (int c = 0; c < 3; c++) rx_anchor_load(ps, index, c);
+		return true;
+	}
+	if (n != 2) { ps->p = start; return rx_fail(ps, "expected Instance.joint or a <point> name"); }
 	if (!rx_anchor(ps, parts[0], parts[1], fixed, at, &index)) return false;
 	for (int c = 0; c < 3; c++) rx_anchor_load(ps, index, c);
 	return true;
@@ -266,6 +291,8 @@ static bool rx_call(reel_parser_t *ps, const char *name) {
 	return true;
 }
 
+static bool rx_primary(reel_parser_t *ps);
+
 static bool rx_name(reel_parser_t *ps) {
 	reel_t *r = ps->r;
 	char parts[3][REEL_NAME]; bool fixed; float at = 0;
@@ -282,6 +309,15 @@ static bool rx_name(reel_parser_t *ps) {
 		if (!strcmp(name, "fps"))      { rx_const(ps, r->fps); return true; }
 		if (!strcmp(name, "width"))    { rx_const(ps, (float)r->width); return true; }
 		if (!strcmp(name, "height"))   { rx_const(ps, (float)r->height); return true; }
+		if (r->in_shot && !strcmp(name, "sdur")) { rx_const(ps, r->shot_duration); return true; }
+		if (r->in_shot && !strcmp(name, "st")) { /* seconds since this shot began */
+			char local[64]; const char *saved = ps->p;
+			snprintf(local, sizeof(local), "(t-%.6f)", r->shot_start);
+			ps->p = local;
+			bool ok = rx_primary(ps);
+			ps->p = saved;
+			return ok;
+		}
 		for (int i = r->nlets - 1; i >= 0; i--) if (!strcmp(r->let_names[i], name)) {
 			rx_byte(ps, RX_LET); rx_u16(ps, i); ps->dynamic = true; ps->pushes++;
 			return true;
@@ -292,6 +328,13 @@ static bool rx_name(reel_parser_t *ps) {
 	static const char *const components[] = {"x", "y", "z", "sx", "sy"};
 	int component = -1;
 	if (n < 2) { ps->p = start; return rx_fail(ps, "unknown name %s", parts[0]); }
+	if (n == 2 && reel_point_find(r, parts[0]) >= 0) {
+		for (int c = 0; c < 5; c++) if (!strcmp(parts[1], components[c])) component = c;
+		if (component < 0) { ps->p = start; return rx_fail(ps, "point %s needs .x .y .z (cm) or .sx .sy (canvas px)", parts[0]); }
+		ps->dynamic = true;
+		rx_anchor_load(ps, reel_anchor_add_point(r, reel_point_find(r, parts[0])), component);
+		return true;
+	}
 	if (n == 3) for (int c = 0; c < 5; c++) if (!strcmp(parts[2], components[c])) component = c;
 	if (component < 0) {
 		ps->p = start;

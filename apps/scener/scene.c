@@ -1,6 +1,7 @@
 #include <orion/user/gl_compat.h>
 #include <orion/ui.h>
 #include <orion/user/image.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1809,6 +1810,15 @@ static XmlNode *rig_override_in(XmlNode *container,const char *joint){
 }
 static XmlNode *rig_ik_for_tip(XmlNode *root,XmlNode *container,const char *tip);
 static XmlNode *rig_instance_root(Scene *s,XmlNode *instance);
+/* Prints a warning once per key for the life of the process: per-frame evaluation would otherwise repeat it hundreds of times. */
+static void scene_warn_once(const char *key,const char *fmt,...){
+	enum{WARN_KEYS=128,WARN_KEY_LEN=160};
+	static char seen[WARN_KEYS][WARN_KEY_LEN]; static int nseen;
+	for(int i=0;i<nseen;i++) if(!strcmp(seen[i],key)) return;
+	if(nseen<WARN_KEYS) snprintf(seen[nseen++],WARN_KEY_LEN,"%s",key);
+	char message[512]; va_list ap; va_start(ap,fmt); vsnprintf(message,sizeof(message),fmt,ap); va_end(ap);
+	fprintf(stderr,"[scener] %s\n",message); fflush(stderr);
+}
 static XmlNode *rig_find_pose(Scene *s,XmlNode *proot,const char *name);
 static XmlNode *rig_timeline_pose(Scene *s,XmlNode *instance,XmlNode *proot,XmlNode *base,vec3 *travel);
 
@@ -1822,7 +1832,12 @@ static XmlNode *rig_pose_for_instance(Scene *s,XmlNode *instance){
 		for(int k=0;k<camera->nkids;k++) if(!strcmp(camera->kids[k]->tag,"use-pose") &&
 			!strcmp(xml_attr(camera->kids[k],"instance",""),instanceName?instanceName:"")) poseName=xml_attr(camera->kids[k],"name",poseName);
 	}
-	return poseName?rig_find_pose(s,rig_instance_root(s,instance),poseName):NULL;
+	XmlNode *pose=poseName?rig_find_pose(s,rig_instance_root(s,instance),poseName):NULL;
+	if(poseName && !pose){
+		char key[160]; snprintf(key,sizeof(key),"pose:%s:%s",instanceName?instanceName:"",poseName);
+		scene_warn_once(key,"instance %s uses pose \"%s\", which is defined neither in the scene nor in that character's file (poses belong to one character; run with a character that defines it)",instanceName?instanceName:"?",poseName);
+	}
+	return pose;
 }
 
 static mat4 rig_rotation(Scene *s,XmlNode *node){
@@ -1999,7 +2014,13 @@ static void rig_solve_ik(Scene *s,XmlNode *ik,XmlNode *root,mat4 instanceM){
 	status.target=goal; status.error=fabsf(requested-distance);
 	status.reachable=requested<=upper+lower+RIG_EPSILON && requested>=fabsf(upper-lower)-RIG_EPSILON;
 	DA_PUSH(s->rigTargets,s->nrigTargets,s->crigTargets,status);
-	if(!status.reachable){ fprintf(stderr,"[scener] IK %s:%s target out of reach by %.3f m\n",status.instance,status.joint,status.error); fflush(stderr); }
+	if(!status.reachable){
+		char key[160]; snprintf(key,sizeof(key),"ik-reach:%s:%s",status.instance,status.joint);
+		scene_warn_once(key,"IK %s:%s cannot reach: goal is %.1f cm from the chain root, reach is %.1f..%.1f cm (%.1f cm off). "
+			"Limb offsets are body-frame cm (X left, Y back, Z up) from the rig's REST pose, not from where the limb hangs now; "
+			"use target=\"x y z\" for a world point",status.instance,status.joint,requested*CM_PER_METRE,
+			fabsf(upper-lower)*CM_PER_METRE,(upper+lower)*CM_PER_METRE,status.error*CM_PER_METRE);
+	}
 }
 
 static void collect_negative_boxes(Scene *s, XmlNode *parent, mat4 parentM){

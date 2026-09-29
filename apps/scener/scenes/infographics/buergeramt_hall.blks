@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bürgeramt waiting hall: counter on the far wall, benches, a queue. Z up, centimetres. -->
+<scene up="z" duration="20" ambient="0.30 0.32 0.36" background="0.05 0.07 0.10">
+  <camera name="Wide"    pos="-560 -760 300" look="-20 100 100" fov="38"/>
+  <camera name="Entry"   pos="-120 -820 170" look="-420 -150 95" fov="40"/>
+  <camera name="Counter" pos="330 -160 170"  look="-60 300 110"  fov="34"/>
+  <camera name="Benches" pos="300 -760 250"  look="-60 80 80"  fov="40"/>
+  <light pos="-200 -100 330" color="1 0.96 0.88" intensity="2.0" radius="1400" castShadows="1"/>
+  <light pos="380 -300 260"  color="0.75 0.85 1" intensity="1.0" radius="1200" castShadows="0"/>
+  <box name="Floor" pos="0 0 -3" size="1400 1100 6" color="0.16 0.17 0.19"/>
+  <box name="BackWall" pos="0 470 150" size="1400 12 300" color="0.55 0.57 0.60"/>
+  <box name="LeftWall" pos="-700 0 150" size="12 1100 300" color="0.48 0.50 0.54"/>
+  <box pos="0 462 250" size="1400 4 8" color="0.85 0.10 0.10"/>
+  <!-- service counter with three windows -->
+  <box name="Counter" pos="-60 360 52" size="700 60 104" color="0.62 0.50 0.34"/>
+  <box pos="-60 360 106" size="712 72 5" color="0.30 0.22 0.14"/>
+  <box pos="-290 400 170" size="8 6 130" color="0.35 0.38 0.42"/>
+  <box pos="-60 400 170"  size="8 6 130" color="0.35 0.38 0.42"/>
+  <box pos="170 400 170"  size="8 6 130" color="0.35 0.38 0.42"/>
+  <box name="Sign" pos="-60 452 245" size="330 6 60" color="0.03 0.04 0.05"/>
+  <box pos="-60 448 245" size="310 2 46" color="0.85 0.10 0.10"/>
+  <!-- benches -->
+  <box pos="380 -120 24" size="240 46 6" color="0.30 0.22 0.14"/>
+  <box pos="380 -140 62" size="240 6 60" color="0.30 0.22 0.14"/>
+  <box pos="290 -120 12" size="10 40 24" color="0.2 0.2 0.22"/>
+  <box pos="470 -120 12" size="10 40 24" color="0.2 0.2 0.22"/>
+  <box pos="380 -300 24" size="240 46 6" color="0.30 0.22 0.14"/>
+  <box pos="380 -320 62" size="240 6 60" color="0.30 0.22 0.14"/>
+  <box pos="290 -300 12" size="10 40 24" color="0.2 0.2 0.22"/>
+  <box pos="470 -300 12" size="10 40 24" color="0.2 0.2 0.22"/>
+  <!-- ticket kiosk -->
+  <box pos="-520 -20 70" size="50 40 140" color="0.10 0.35 0.65"/>
+  <box pos="-520 -42 105" size="34 2 24" color="0.75 0.90 1"/>
+  <!-- cast -->
+  <prefab source="../characters/joe/prefabs/character" name="Joe" pos="-60 250 0" rot="0 0 180">
+    <layer pose="PresentLeft" start="0.8" end="4.3" fadeIn="0.5" fadeOut="0.5"/>
+  </prefab>
+  <prefab source="../characters/villager-full/prefabs/character" name="Anna" pos="-60 110 0" rot="0 0 180"/>
+  <prefab source="../characters/villager-slim/prefabs/character" name="Mia" pos="-430 -640 0" rot="0 0 180">
+    <gait start="0.3" distance="470"/>
+  </prefab>
+</scene>

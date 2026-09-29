@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bürgeramt Berlin in four steps: five shots over two rooms.
+     Shots follow one another, so the reel's length is the sum of their durations; inside a shot,
+     from/to/at and motion times count from the shot's start and `st` is the shot clock.
+     scener --reel buergeramt.reel --output build/video/buergeramt/buergeramt.mp4
+     scener --reel buergeramt.reel --sheet build/video/buergeramt/sheet.png    (one thumbnail per shot) -->
+<reel width="1280" height="720" fps="24" poster="12.5" background="#0B0F16">
+  <style name="kicker" font="sans-medium" size="14" color="#FFFFFF" tracking="0.1"/>
+  <style name="big"    font="sans-medium" size="76" color="#FFFFFF" tracking="-0.02" weight="0.014"/>
+  <style name="num"    font="sans-medium" size="64" color="#FF5A4F" digits="tabular" weight="0.012"/>
+  <style name="head"   font="sans-medium" size="34" color="#FFFFFF" tracking="-0.01" weight="0.01"/>
+  <style name="body"   font="sans" size="20" color="#D5DCE6"/>
+  <style name="label"  font="sans-medium" size="13" color="#8FA1B8" tracking="0.1"/>
+  <style name="ticket" font="sans-medium" size="54" color="#FFFFFF" digits="tabular" weight="0.01"/>
+  <style name="sign"   font="sans-medium" size="30" color="#FFFFFF" digits="tabular" tracking="0.04"/>
+
+  <!-- One lower-third card per step: <use template="step" .../> -->
+  <template name="step" num="" title="" body="" tip="">
+    <group motion="rise(0.2, 14)">
+      <rect x="40" y="520" width="620" height="150" radius="10" color="#0B0F16" alpha="0.72"/>
+      <text style="num" x="64" y="586">$num</text>
+      <text style="head" x="156" y="562" reveal="rise" at="0.3">$title</text>
+      <text style="body" x="156" y="598" valign="top" reveal="fade" at="0.6" stagger="0.02">$body</text>
+      <text style="label" x="156" y="636" valign="top" reveal="fade" at="1.0">$tip</text>
+    </group>
+  </template>
+
+  <shot id="hall" src="buergeramt_hall.blks" camera="Wide" duration="4">
+    <rect x="0" y="380" width="1280" height="340" color="#0B0F16" alpha="0.6"/>
+    <text style="big" x="60" y="520" reveal="rise" at="0.2" exit="3.6">Bürgeramt</text>
+    <text style="big" x="60" y="600" reveal="rise" at="0.4" exit="3.6" color="#FF5A4F">in four steps.</text>
+    <text style="body" x="64" y="646" valign="top" reveal="fade" at="1.0" stagger="0.02">How to get a registration, passport or ID sorted in Berlin.</text>
+  </shot>
+
+  <shot src="buergeramt_home.blks" camera="Desk" duration="4.5" transition="dip 0.4">
+    <use template="step" num="01" title="Book online" body="Pick a slot on service.berlin.de. Slots open daily." tip="TIP · CHECK EARLY MORNING"/>
+  </shot>
+
+  <shot src="buergeramt_hall.blks" camera="Entry" duration="4" transition="dip 0.4">
+    <use template="step" num="02" title="Arrive and take a number" body="Bring passport, Anmeldung form and your booking." tip="BE 5 MINUTES EARLY"/>
+  </shot>
+
+  <shot src="buergeramt_hall.blks" camera="Benches" duration="4" transition="dip 0.4">
+    <point name="Sign" pos="-60 448 245"/>
+    <use template="step" num="03" title="Wait for your number" body="Watch the display. Your number is called on screen." tip="USUALLY 10 TO 30 MINUTES"/>
+    <text style="sign" x="Sign.sx" y="Sign.sy" align="center" valign="middle" color="#FFFFFF">A{floor(mix(41, 52, outCubic(progress(st, 0.6, 3.6)))):%.0f}</text>
+    <rect x="920" y="100" width="320" height="130" radius="12" color="#0B0F16" alpha="0.8"/>
+    <text style="label" x="948" y="124" valign="top">NOW SERVING</text>
+    <text style="ticket" x="948" y="150" valign="top" color="#FFD166">A{floor(mix(41, 52, outCubic(progress(st, 0.6, 3.6)))):%.0f}</text>
+    <text style="label" x="1212" y="124" valign="top" align="right">YOUR NUMBER</text>
+    <text style="head" x="1212" y="152" valign="top" align="right" color="#FF5A4F">A52</text>
+  </shot>
+
+  <shot src="buergeramt_hall.blks" camera="Counter" duration="4.5" transition="dip 0.4">
+    <use template="step" num="04" title="Get it done" body="Present your documents at the counter. Most visits take 15 minutes." tip="DANKE · TSCHÜSS"/>
+  </shot>
+
+  <!-- Persistent frame, drawn over every shot -->
+  <rect x="0" y="0" width="1280" height="64" color="#0B0F16" alpha="0.55"/>
+  <rect x="40" y="26" width="10" height="10" radius="5" color="#FF5A4F"/>
+  <text style="kicker" x="62" y="31" valign="middle">BÜRGERAMT BERLIN</text>
+  <text style="label" x="1120" y="31" valign="middle" align="right">{t:%04.1f} s</text>
+  <circle x="1160" y="31" radius="4" color="#FFFFFF" alpha="t &gt;= 4    ? 1 : 0.25"/>
+  <circle x="1180" y="31" radius="4" color="#FFFFFF" alpha="t &gt;= 8.5  ? 1 : 0.25"/>
+  <circle x="1200" y="31" radius="4" color="#FFFFFF" alpha="t &gt;= 12.5 ? 1 : 0.25"/>
+  <circle x="1220" y="31" radius="4" color="#FFFFFF" alpha="t &gt;= 16.5 ? 1 : 0.25"/>
+  <rect x="40" y="704" width="1200" height="3" radius="1.5" color="#FFFFFF" alpha="0.2"/>
+  <rect x="40" y="704" width="1200 * t / duration" height="3" radius="1.5" color="#FF5A4F"/>
+</reel>

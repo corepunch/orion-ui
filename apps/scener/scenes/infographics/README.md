@@ -22,13 +22,28 @@ From the repository root, after `make build/bin/scener`:
 ```sh
 scener --reel apps/scener/scenes/infographics/ik_fk.reel --check
 scener --reel apps/scener/scenes/infographics/ik_fk.reel \
-  --output video/ik-fk/ik-vs-fk.mp4 --poster video/ik-fk/ik-vs-fk.png
+  --output build/video/ik-fk/ik-vs-fk.mp4 --poster build/video/ik-fk/ik-vs-fk.png
 ```
 
-(`DYLD_LIBRARY_PATH="$PWD/build/lib" ./build/bin/scener` for an undeployed build.) The video is 1600×1000, 24 fps, 144 frames, exactly 6 s, and loops without a repeated frame; the poster is the 1.5 s frame. Shadowed rendering needs GPU access; outputs under `video/` are ignored by Git.
+(`DYLD_LIBRARY_PATH="$PWD/build/lib" ./build/bin/scener` for an undeployed build.) The video is 1600×1000, 24 fps, 144 frames, exactly 6 s, and loops without a repeated frame; the poster is the 1.5 s frame. Shadowed rendering needs GPU access; outputs under `build/video/` are ignored by Git.
 
 ## Verification
 
 Ten `<check>` rules run on all 145 sampled times (0–6 s inclusive) before anything is written: the IK wrist stays within 0.01 cm of its target, all four arm segments keep their lengths within 0.01 cm, all four feet stay within 0.01 cm of their start, and the FK hand moves at least 10 cm (it peaks at 16.4 cm at 1.5 s). Joints are read at full float precision, not rounded CLI output. The readouts show the same measurements live: FK hand displacement from its start and IK wrist distance from its target.
 
 Review the neutral pose and both turn extremes before accepting changes. Joint lines are explanatory overlays and intentionally remain visible through the character geometry. The crosshair marks the initial wrist on the FK side and the fixed target on the IK side.
+
+## Bürgeramt in four steps
+
+`buergeramt.reel` is a 21 s explainer built from five shots over two rooms
+(`buergeramt_hall.blks`, `buergeramt_home.blks`): a waiting hall with walking
+characters, and a flat with a desk. It exercises `<shot>` cuts with dip
+transitions, `<template>`/`<use>` for the four step cards, a `<point>` that pins
+the "now serving" number to the counter sign, and text expressions driven by the
+shot clock `st`.
+
+```sh
+scener --reel apps/scener/scenes/infographics/buergeramt.reel --sheet build/video/buergeramt/sheet.png
+scener --reel apps/scener/scenes/infographics/buergeramt.reel \
+  --output build/video/buergeramt/buergeramt.mp4 --poster build/video/buergeramt/poster.png
+```
