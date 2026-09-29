@@ -165,6 +165,39 @@ bool gc_delete_branch(const char *name, bool remote) {
   return true;
 }
 
+int gc_delete_merged_branches(void) {
+  gc_state_t *gc = g_gc;
+  if (!gc || !gc->repo) return -1;
+  return git_delete_merged_branches(gc->repo);
+}
+
+bool gc_prune_remote(const char *remote) {
+  gc_state_t *gc = g_gc;
+  if (!gc || !gc->repo) return false;
+  return git_prune_remote(gc->repo, remote);
+}
+
+bool gc_reload_history_log(const char *ref) {
+  gc_state_t *gc = g_gc;
+  if (!gc || !gc->repo || !gc->history_db) return false;
+  send_db_message(gc->history_db, dbDelete, ID_DB_COMMITS, (void *)(intptr_t)0);
+  git_commit_t raw[500];
+  int count = git_get_log_ref(gc->repo, ref, raw, 500);
+  for (int i = 0; i < count; i++) {
+    db_commit_t rec = {0};
+    strncpy(rec.hash, raw[i].hash, sizeof(rec.hash) - 1);
+    strncpy(rec.author, raw[i].author, sizeof(rec.author) - 1);
+    strncpy(rec.date, raw[i].date, sizeof(rec.date) - 1);
+    strncpy(rec.subject, raw[i].subject, sizeof(rec.subject) - 1);
+    send_db_message(gc->history_db, dbInsert, ID_DB_COMMITS, &rec);
+  }
+  if (gc->log_win)
+    send_message(gc->log_win, tvRefresh, 0, NULL);
+  gc->selected_commit = -1;
+  gc->selected_file = -1;
+  return true;
+}
+
 bool gc_merge_branch(const char *name) {
   gc_state_t *gc = g_gc;
   if (!gc || !gc->repo || !name || !name[0]) return false;

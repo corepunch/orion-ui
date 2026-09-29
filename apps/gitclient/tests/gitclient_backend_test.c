@@ -558,6 +558,92 @@ void test_gc_workspace_scan_worktrees(void) {
     PASS();
 }
 
+void test_gc_branch_kinds_and_activity(void) {
+    TEST("git_get_branches: current/default flags, kind labels, activity");
+    git_repo_t *r = git_repo_open(s_repo);
+    ASSERT_NOT_NULL(r);
+    git_branch_t branches[GCT_MAX_RECORDS];
+    int n = git_get_branches(r, branches, GCT_MAX_RECORDS);
+    ASSERT_TRUE(n >= 2);
+    const char *def = detect_default_branch();
+    int current = 0, defaults = 0;
+    for (int i = 0; i < n; i++) {
+        if (branches[i].is_current) {
+            current++;
+            ASSERT_STR_EQUAL(branches[i].kind, "current");
+            ASSERT_STR_EQUAL(branches[i].name, def);
+        }
+        if (branches[i].is_default && !branches[i].is_remote) defaults++;
+        ASSERT_TRUE(branches[i].kind[0] != '\0');
+    }
+    ASSERT_EQUAL(current, 1);
+    ASSERT_TRUE(defaults >= 1);
+    git_repo_close(r);
+    PASS();
+}
+
+void test_gc_default_branch(void) {
+    TEST("git_default_branch: matches the checked-out default");
+    git_repo_t *r = git_repo_open(s_repo);
+    ASSERT_NOT_NULL(r);
+    char def[128] = {0};
+    ASSERT_TRUE(git_default_branch(r, def, sizeof(def)));
+    ASSERT_STR_EQUAL(def, detect_default_branch());
+    git_repo_close(r);
+    PASS();
+}
+
+void test_gc_delete_merged_branches(void) {
+    TEST("git_delete_merged_branches: drops a merged topic, keeps default");
+    ASSERT_TRUE(gct_git(s_repo, "checkout -b merged-topic"));
+    char path[512];
+    snprintf(path, sizeof(path), "%s/merged.txt", s_repo);
+    ASSERT_TRUE(gct_write_file(path, "x\n"));
+    ASSERT_TRUE(gct_git(s_repo, "add merged.txt"));
+    ASSERT_TRUE(gct_git(s_repo, "commit -m \"merged topic\""));
+    const char *def = detect_default_branch();
+    char ck[64];
+    snprintf(ck, sizeof(ck), "checkout %s", def);
+    ASSERT_TRUE(gct_git(s_repo, ck));
+    char mg[80];
+    snprintf(mg, sizeof(mg), "merge merged-topic -m \"merge topic\"");
+    ASSERT_TRUE(gct_git(s_repo, mg));
+
+    git_repo_t *r = git_repo_open(s_repo);
+    ASSERT_NOT_NULL(r);
+    int n = git_delete_merged_branches(r);
+    ASSERT_TRUE(n >= 1);
+    git_branch_t branches[GCT_MAX_RECORDS];
+    int bn = git_get_branches(r, branches, GCT_MAX_RECORDS);
+    bool still_there = false;
+    for (int i = 0; i < bn; i++)
+        if (!strcmp(branches[i].name, "merged-topic")) still_there = true;
+    ASSERT_FALSE(still_there);
+    git_repo_close(r);
+    PASS();
+}
+
+void test_gc_prune_without_remote(void) {
+    TEST("git_prune_remote: fails cleanly when the repo has no remotes");
+    git_repo_t *r = git_repo_open(s_repo);
+    ASSERT_NOT_NULL(r);
+    ASSERT_FALSE(git_prune_remote(r, NULL));
+    git_repo_close(r);
+    PASS();
+}
+
+void test_gc_reflog_via_log_g(void) {
+    TEST("git_get_log_ref(-g): reflog is readable as a commit list");
+    git_repo_t *r = git_repo_open(s_repo);
+    ASSERT_NOT_NULL(r);
+    git_commit_t commits[GCT_MAX_RECORDS];
+    int n = git_get_log_ref(r, "-g", commits, GCT_MAX_RECORDS);
+    ASSERT_TRUE(n >= 1);
+    ASSERT_TRUE(commits[0].subject[0] != '\0');
+    git_repo_close(r);
+    PASS();
+}
+
 void test_gc_workspace_scan_missing(void) {
     TEST("git_workspace_scan: a vanished folder becomes an 'unavailable' tile, not a crash");
     char roots[1][512] = {"/nonexistent/gitclient/repo"};
@@ -604,6 +690,11 @@ int main(int argc, char *argv[]) {
     test_gc_sync_status_without_upstream();
     test_gc_identity_roundtrip();
     test_gc_workspace_scan_worktrees();
+    test_gc_branch_kinds_and_activity();
+    test_gc_default_branch();
+    test_gc_delete_merged_branches();
+    test_gc_prune_without_remote();
+    test_gc_reflog_via_log_g();
     test_gc_workspace_scan_missing();
 
     teardown_test_repo();

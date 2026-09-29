@@ -108,3 +108,38 @@ void gc_show_about_dialog(window_t *parent) {
     "built with the Orion UI framework.",
     "About", MB_OK);
 }
+
+void gc_show_worktrees_dialog(window_t *parent) {
+  gc_state_t *gc = g_gc;
+  if (!gc || !gc->repo) {
+    message_box(parent, "Open a repository first.", "Worktrees", MB_OK);
+    return;
+  }
+  git_worktree_t wts[GC_MAX_WORKTREES];
+  int n = git_worktree_list(git_repo_path(gc->repo), wts, GC_MAX_WORKTREES);
+  if (n <= 0) {
+    message_box(parent, "No worktrees found.", "Worktrees", MB_OK);
+    return;
+  }
+  char buf[2048];
+  int off = snprintf(buf, sizeof(buf), "%d worktree%s (Overview tiles each one):\n\n",
+                     n, n == 1 ? "" : "s");
+  for (int i = 0; i < n && off < (int)sizeof(buf) - 80; i++) {
+    off += snprintf(buf + off, sizeof(buf) - (size_t)off, "%s%s%s\n",
+                    wts[i].path,
+                    wts[i].linked ? "  (linked)" : "  (main)",
+                    wts[i].prunable ? "  [prunable]" : "");
+  }
+  message_box(parent, buf, "Worktrees", MB_OK);
+}
+
+void gc_show_reflog_dialog(window_t *parent) {
+  gc_state_t *gc = g_gc;
+  if (!gc || !gc->repo) {
+    message_box(parent, "Open a repository first.", "Reflog", MB_OK);
+    return;
+  }
+  gc_set_view_mode(GC_TAB_HISTORY);
+  if (!gc_reload_history_log("-g"))
+    message_box(parent, "Could not read the reflog.", "Reflog", MB_OK);
+}

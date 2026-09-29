@@ -24,6 +24,8 @@ static const db_field_schema_t branches_schema_fields[] = {
   { "hash", DB_TYPE_STRING, 41, false, NULL, NULL },
   { "is_current", DB_TYPE_BOOL, 0, false, NULL, NULL },
   { "is_remote", DB_TYPE_BOOL, 0, false, NULL, NULL },
+  { "activity", DB_TYPE_STRING, 32, false, NULL, NULL },
+  { "kind", DB_TYPE_STRING, 16, false, NULL, NULL },
 };
 
 static const db_field_schema_t commits_schema_fields[] = {
@@ -69,7 +71,7 @@ static const db_field_schema_t tags_schema_fields[] = {
 };
 
 static db_table_schema_t gc_database_tables[] = {
-  { TABLE_BRANCHES, "branches", NULL, branches_schema_fields, 5, NULL, 0 },
+  { TABLE_BRANCHES, "branches", NULL, branches_schema_fields, 7, NULL, 0 },
   { TABLE_COMMITS,  "commits",  NULL, commits_schema_fields,  6, NULL, 0 },
   { TABLE_FILES,    "files",    NULL, files_schema_fields,    5, NULL, 0 },
   { TABLE_DIFF,     "diff",     NULL, diff_schema_fields,     2, NULL, 0 },
@@ -160,6 +162,8 @@ static const db_field_msg_binding_t branch_field_bindings[] = {
   { "hash", GC_COL_BRANCH_HASH },
   { "is_current", GC_COL_BRANCH_IS_CURRENT },
   { "is_remote", GC_COL_BRANCH_IS_REMOTE },
+  { "activity", GC_COL_BRANCH_ACTIVITY },
+  { "kind", GC_COL_BRANCH_KIND },
 };
 static const db_field_msg_binding_t commit_field_bindings[] = {
   { "id", GC_COL_COMMIT_ID }, { "branch_id", GC_COL_COMMIT_BRANCH_ID },
@@ -385,6 +389,9 @@ lresult_t gitclient_db(database_t *db, uint32_t msg, uint32_t wparam, void *lpar
                                          &ctx->branch_capacity, sizeof(db_branche_t),
                                          &ctx->next_branch_id, 32);
           strncpy(rec->name, raw_branches[i].name, sizeof(rec->name) - 1);
+          strncpy(rec->hash, raw_branches[i].hash, sizeof(rec->hash) - 1);
+          strncpy(rec->activity, raw_branches[i].activity, sizeof(rec->activity) - 1);
+          strncpy(rec->kind, raw_branches[i].kind, sizeof(rec->kind) - 1);
           rec->is_current = raw_branches[i].is_current;
           rec->is_remote  = raw_branches[i].is_remote;
           branch_ids[i] = rec->id;

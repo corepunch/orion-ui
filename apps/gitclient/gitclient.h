@@ -109,8 +109,13 @@ typedef struct {
 
 typedef struct {
   char name[256];
+  char hash[41];
+  char activity[32];
+  char kind[16];      /* current | default | local | remote */
   bool is_current;
   bool is_remote;
+  bool is_default;
+  bool is_remote_only;
 } git_branch_t;
 
 typedef struct {
@@ -169,6 +174,8 @@ static inline bool gc_tile_needs_attention(const git_summary_t *t) {
 #define ID_DB_BRANCHES_HASH      2
 #define ID_DB_BRANCHES_IS_CURRENT 3
 #define ID_DB_BRANCHES_IS_REMOTE 4
+#define ID_DB_BRANCHES_ACTIVITY  5
+#define ID_DB_BRANCHES_KIND      6
 
 // Field IDs for commit table
 #define ID_DB_COMMITS_ID         0
@@ -223,6 +230,8 @@ enum {
   GC_COL_ISSUE_STATE, GC_COL_ISSUE_AUTHOR, GC_COL_ISSUE_CREATED_AT,
   GC_COL_PULL_ID, GC_COL_PULL_NUMBER, GC_COL_PULL_TITLE,
   GC_COL_PULL_STATE, GC_COL_PULL_AUTHOR, GC_COL_PULL_BASE,
+  /* appended so existing column IDs stay stable */
+  GC_COL_BRANCH_ACTIVITY, GC_COL_BRANCH_KIND,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -354,6 +363,9 @@ bool gc_commit(const char *message, bool amend);
 bool gc_create_branch(const char *name, const char *from, bool checkout);
 bool gc_checkout_branch(const char *name);
 bool gc_delete_branch(const char *name, bool remote);
+int  gc_delete_merged_branches(void);
+bool gc_prune_remote(const char *remote);
+bool gc_reload_history_log(const char *ref);
 bool gc_merge_branch(const char *name);
 bool gc_rebase_onto(const char *branch);
 bool gc_rename_branch(const char *old_name, const char *new_name);
@@ -399,6 +411,9 @@ bool git_get_diff(git_repo_t *repo, const char *path,
                   bool staged, char *buf, int buf_sz);
 int  git_get_branches(git_repo_t *repo, git_branch_t *out, int max);
 bool git_current_branch(git_repo_t *repo, char *buf, int buf_sz);
+bool git_default_branch(git_repo_t *repo, char *buf, int buf_sz);
+bool git_prune_remote(git_repo_t *repo, const char *remote);
+int  git_delete_merged_branches(git_repo_t *repo);
 int  git_get_remotes(git_repo_t *repo, char (*out)[256], int max);
 bool git_get_remote_url(git_repo_t *repo, const char *name, char *buf, int buf_sz);
 int  git_get_tags(git_repo_t *repo, git_tag_t *out, int max);
@@ -437,6 +452,8 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
 void gc_open_repo(const char *path);
 void gc_refresh_all(void);
 void gc_show_search_dialog(window_t *parent);
+void gc_show_worktrees_dialog(window_t *parent);
+void gc_show_reflog_dialog(window_t *parent);
 void gc_update_status(void);
 void gc_set_view_mode(int tab);
 // Overview page (view_overview.c)

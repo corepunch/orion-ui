@@ -35,6 +35,11 @@ push/pull, green in sync. Diffs are deliberately absent.
 line (branch, to push/pull, staged/modified/new counts), tells you what Commit will do
 ("Commit 3 staged files" or "Nothing staged"), and has an Overview button on every page.
 
+The History sidebar is the branch desk: current / default / local / remote-only rows, last activity,
+and toolbar actions that used to live only in dialogs — **Prune**, **Delete Merged**, and **Worktrees**.
+View → All Commits loads `--all`; View → Reflog loads `git log -g`. Selecting a branch reloads that
+branch's log instead of leaving you stuck on HEAD.
+
 The page is built from framework controls only (`view_overview.c`): a `TileGrid` of `Card`s, each holding Labels
 and a `FlowView` of `Badge`s, so wrapping, truncation and row heights come from auto-layout. The app feeds it
 `git_summary_t` rows (`git_workspace_scan` in `git_backend.c`). Pass two or more paths on the command
