@@ -20,7 +20,7 @@
 #define C_AMBER get_sys_color(brTextWarning)
 #define C_BLUE  get_sys_color(brTextInfo)
 #define C_GREEN get_sys_color(brTextSuccess)
-#define C_GREY  get_sys_color(brTextDisabled)
+#define C_GREY  get_sys_color(brTextSecondary)
 
 typedef struct { irect16_t r; int tile; } slot_t;
 
@@ -135,7 +135,7 @@ static void paint_tile(board_t *b, const slot_t *s, int oy, bool focused) {
   const gc_tile_t *t = &b->tiles[s->tile];
   irect16_t card = rect_offset(s->r, 0, -oy); uint32_t verdict = tile_color(t);
   bool selected = s->tile == b->selected, hot = s->tile == b->hover;
-  uint32_t text = get_sys_color(brTextNormal), dim = get_sys_color(brTextDisabled);
+  uint32_t text = get_sys_color(brTextNormal), dim = get_sys_color(brTextSecondary);
 
   draw_card(card, (selected ? CTRL_SELECTED : 0) | (hot ? CTRL_HOVER : 0) | (focused ? CTRL_FOCUSED : 0),
             color_with_alpha(verdict, EDGE_ALPHA));
@@ -210,7 +210,7 @@ static void paint_board(window_t *win, board_t *b) {
     const char *m = "No repositories yet";
     const char *h = "Use File > Repositories... to add a folder or scan for repositories.";
     draw_text(FONT_SYSTEM, m, (cr.w - text_strwidth(FONT_SYSTEM, m)) / 2, cr.h / 2 - 12, get_sys_color(brTextNormal));
-    draw_text(FONT_SMALL, h, (cr.w - text_strwidth(FONT_SMALL, h)) / 2, cr.h / 2 + 10, get_sys_color(brTextDisabled));
+    draw_text(FONT_SMALL, h, (cr.w - text_strwidth(FONT_SMALL, h)) / 2, cr.h / 2 + 10, get_sys_color(brTextSecondary));
     return;
   }
   if (!b->slot_count) {

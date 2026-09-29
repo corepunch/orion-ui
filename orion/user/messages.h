@@ -479,7 +479,8 @@ typedef enum {
   brPanelDarker          = 26,  // toolbar and tab-strip chrome, outside the client
   brTextWarning          = 27,  // attention needed but not an error (uncommitted, pending)
   brTextInfo             = 28,  // neutral informational status (to push, to pull)
-  brCount                = 29
+  brTextSecondary        = 29,  // readable de-emphasised text (subtitles, metadata); brTextDisabled is for inactive controls
+  brCount                = 30
 } sys_color_idx_t;
 
 // Runtime-accessible theme table (defined in user/theme.c).
