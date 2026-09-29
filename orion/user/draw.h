@@ -17,7 +17,7 @@ static inline uint32_t color_with_alpha(uint32_t color, uint8_t alpha) {
 }
 // A card: a face (brControlBg, brButtonHover when hovered) with an optional accent edge on its left side.
 // The edge is a plain `edge_width`-pixel rectangle; the active theme's card_corner_radius rounds (or not)
-// the card and the edge together. CTRL_SELECTED draws an accent-colour ring in the theme's card_ring_width margin,
+// the card and the edge together. CTRL_SELECTED draws a ring in the accent edge's colour (theme accent when there is no edge) in the theme's card_ring_width margin,
 // which is reserved inside `r` for every card so selecting never shifts content.
 void draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color);
 // Small tinted label ("3 modified"): a rounded fill in `color` at low alpha with the text in `color`.
