@@ -16,7 +16,7 @@ void gc_recent_load(void) {
 }
 
 void gc_recent_save(void) {
-  gc_state_t *gc = g_gc; if (!gc) return;
+  gc_state_t *gc = g_gc; if (!gc || gc->ephemeral) return;
   char buf[GC_MAX_RECENT_REPOS * 513]; size_t used = 0;
   for (int i = 0; i < gc->recent_repo_count; i++) {
     int n = snprintf(buf + used, sizeof(buf) - used, "%s\n", gc->recent_repos[i]);

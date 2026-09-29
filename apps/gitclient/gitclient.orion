@@ -24,6 +24,7 @@
 
         <menu name="view" label="View">
             <item name="window_mode" label="Maximize / Restore" />
+            <item name="overview" label="Overview" shortcut="Ctrl+0" />
             <item name="changes" label="Changes" shortcut="Ctrl+1" />
             <item name="history" label="History" shortcut="Ctrl+2" />
             <item name="github" label="GitHub" shortcut="Ctrl+3" />
@@ -67,6 +68,7 @@
             <item name="sync" label="Sync Current Branch" />
             <Separator />
             <item name="fetch" label="Fetch" shortcut="Ctrl+F" />
+            <item name="fetch_all" label="Fetch All Repositories" shortcut="Ctrl+Shift+R" />
             <item name="pull" label="Pull..." />
             <item name="push" label="Push..." />
             <Separator />
@@ -199,15 +201,32 @@
               role="host"
               flags="toolbar,statusbar">
             <TabView name="views" flags="notitle,nofill,flexspace">
+                <StackView name="overview_tab" text="Overview" flags="notitle,nofill,flexspace" />
                 <StackView name="changes_tab" text="Changes" flags="notitle,nofill,flexspace" />
                 <StackView name="history_tab" text="History" flags="notitle,nofill,flexspace" />
                 <StackView name="github_tab"  text="GitHub"  flags="notitle,nofill,flexspace" />
             </TabView>
         </form>
 
+        <!-- Overview page: every repository and worktree as a tile with only what needs attention. -->
+        <form name="overview_page" width="960" height="600" role="page" auto_layout="1" flags="nofill,flexspace">
+            <Toolbar>
+                <Button name="fetch_all"   command="remote.fetch_all"   icon="download"            text="Fetch All"  tooltip="Fetch every repository in the background" />
+                <Button name="refresh"     command="repo.refresh"       icon="refresh"             text="Refresh"    tooltip="Re-read every repository and worktree" />
+                <spacer />
+                <Button name="open_repo"   command="file.open_repo"     icon="folder"              text="Add Repo"   tooltip="Add a repository to the overview" />
+                <Button name="clone"       command="file.clone"         icon="git-fork"            text="Clone"      tooltip="Clone a repository" />
+                <Button name="repos"       command="file.repositories"  icon="git-repos"           text="Manage"     tooltip="Add, scan for, or remove repositories" />
+            </Toolbar>
+            <requires library="gitclient_components" />
+            <RepoBoard name="board" flags="notitle,nofill,vscroll,flexspace"/>
+        </form>
+
         <!-- Changes page: file list + inline commit panel on left, diff on right. -->
         <form name="changes_page" width="960" height="600" role="page" auto_layout="1" flags="nofill,flexspace">
             <Toolbar>
+                <Button name="overview"    command="view.overview"      icon="view-grid"           text="Overview"   tooltip="Back to all repositories (Ctrl+0)" />
+                <spacer />
                 <Button name="sync"        command="remote.sync"        icon="data-transfer-both"  text="Sync"       tooltip="Publish, pull, or push the current branch" />
                 <Button name="fetch"       command="remote.fetch"       icon="git-fetch"           text="Fetch"      tooltip="Fetch from remote" />
                 <spacer />
@@ -223,6 +242,7 @@
             <requires library="gitclient_components" />
             <SplitView name="changes_split" flags="flexspace">
                 <StackView name="changes_panel" spacing="4" padding="4">
+                    <Label name="summary" text="" />
                     <TableView name="changes_files"
                                source="db.files"
                                master="none"
@@ -248,6 +268,8 @@
         <!-- History page: branches/tags/stash sidebar, log + files + diff. -->
         <form name="history_page" width="960" height="600" role="page" auto_layout="1" flags="nofill,flexspace">
             <Toolbar>
+                <Button name="overview"    command="view.overview"      icon="view-grid"           text="Overview"   tooltip="Back to all repositories (Ctrl+0)" />
+                <spacer />
                 <Button name="sync"        command="remote.sync"        icon="data-transfer-both"  text="Sync"       tooltip="Publish, pull, or push the current branch" />
                 <Button name="fetch"       command="remote.fetch"       icon="git-fetch"           text="Fetch"      tooltip="Fetch from remote" />
                 <spacer />
@@ -297,6 +319,8 @@
         <!-- GitHub page: issues on top, pull requests on bottom. -->
         <form name="github_page" width="960" height="600" role="page" auto_layout="1" flags="nofill,flexspace">
             <Toolbar>
+                <Button name="overview"    command="view.overview"      icon="view-grid"           text="Overview"   tooltip="Back to all repositories (Ctrl+0)" />
+                <spacer />
                 <Button name="refresh" command="repo.refresh" icon="refresh" text="Refresh" tooltip="Refresh GitHub data" />
                 <Button name="repos" command="file.repositories" icon="git-repos" text="Repos" tooltip="Switch or discover repositories" />
             </Toolbar>

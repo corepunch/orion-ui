@@ -508,6 +508,67 @@ void test_gc_identity_roundtrip(void) {
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 
+void test_gc_workspace_scan_worktrees(void) {
+    TEST("git_workspace_scan: lists main + linked worktrees with per-tree state");
+
+    char wt[600];
+    snprintf(wt, sizeof(wt), "%s_wt", s_repo);
+    ASSERT_TRUE(gct_git(s_repo, "checkout -q -b scan-base"));
+    char sub[900];
+    snprintf(sub, sizeof(sub), "worktree add -q -b scan-linked \"%s\"", wt);
+    ASSERT_TRUE(gct_git(s_repo, sub));
+
+    char p[700];
+    snprintf(p, sizeof(p), "%s/file1.txt", s_repo);
+    ASSERT_TRUE(gct_append_file(p, "dirty\n"));
+    snprintf(p, sizeof(p), "%s/untracked.txt", wt);
+    ASSERT_TRUE(gct_write_file(p, "new\n"));
+
+    char roots[1][512];
+    snprintf(roots[0], sizeof(roots[0]), "%s", s_repo);
+    git_summary_t tiles[GC_MAX_TILES];
+    int n = git_workspace_scan(roots, 1, tiles, GC_MAX_TILES);
+    ASSERT_EQUAL(n, 2);
+
+    ASSERT_FALSE(tiles[0].linked);
+    ASSERT_STR_EQUAL(tiles[0].branch, "scan-base");
+    ASSERT_EQUAL(tiles[0].unstaged, 1);
+    ASSERT_EQUAL(tiles[0].untracked, 0);
+    ASSERT_TRUE(tiles[0].no_upstream);
+    ASSERT_TRUE(gc_tile_needs_attention(&tiles[0]));
+
+    ASSERT_TRUE(tiles[1].linked);
+    ASSERT_STR_EQUAL(tiles[1].branch, "scan-linked");
+    ASSERT_EQUAL(tiles[1].untracked, 1);
+    ASSERT_EQUAL(tiles[1].unstaged, 0);
+    ASSERT_STR_EQUAL(tiles[1].repo, tiles[0].repo);
+    ASSERT_TRUE(tiles[1].subject[0] != 0);
+
+    // Scanning through the linked worktree finds the same two trees, without duplicates.
+    snprintf(roots[0], sizeof(roots[0]), "%s", wt);
+    char both[2][512];
+    snprintf(both[0], sizeof(both[0]), "%s", s_repo);
+    snprintf(both[1], sizeof(both[1]), "%s", wt);
+    ASSERT_EQUAL(git_workspace_scan(both, 2, tiles, GC_MAX_TILES), 2);
+
+    ASSERT_TRUE(gct_git(s_repo, "checkout -- file1.txt"));
+    gct_remove_dir(wt);
+    ASSERT_TRUE(gct_git(s_repo, "worktree prune"));
+    ASSERT_TRUE(gct_git(s_repo, "checkout -q main") || gct_git(s_repo, "checkout -q master"));
+    PASS();
+}
+
+void test_gc_workspace_scan_missing(void) {
+    TEST("git_workspace_scan: a vanished folder becomes an 'unavailable' tile, not a crash");
+    char roots[1][512] = {"/nonexistent/gitclient/repo"};
+    git_summary_t tiles[GC_MAX_TILES];
+    int n = git_workspace_scan(roots, 1, tiles, GC_MAX_TILES);
+    ASSERT_EQUAL(n, 1);
+    ASSERT_TRUE(tiles[0].missing);
+    ASSERT_TRUE(gc_tile_needs_attention(&tiles[0]));
+    PASS();
+}
+
 int main(int argc, char *argv[]) {
     (void)argc;
     (void)argv;
@@ -542,6 +603,8 @@ int main(int argc, char *argv[]) {
     test_gc_status_z_handles_spaces_and_renames();
     test_gc_sync_status_without_upstream();
     test_gc_identity_roundtrip();
+    test_gc_workspace_scan_worktrees();
+    test_gc_workspace_scan_missing();
 
     teardown_test_repo();
 

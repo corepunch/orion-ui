@@ -14,16 +14,26 @@
 
 void gc_set_view_mode(int tab) {
   gc_state_t *gc = g_gc; if (!gc || !gc->main_win) return;
-  gc->history_mode = (tab == 1);
+  if (gc->tab != GC_TAB_OVERVIEW && tab == GC_TAB_OVERVIEW) gc->focus_tab = gc->tab ? gc->tab : GC_TAB_CHANGES;
+  gc->tab = tab;
+  gc->last_diff_commit = -2;   // each page owns its own diff window
+  gc->history_mode = (tab == GC_TAB_HISTORY);
   if (gc->tabs_win) send_message(gc->tabs_win, tcSetSelection, (uint32_t)tab, NULL);
 
-  window_t *page = tab == 0 ? gc->changes_page_win :
-                   tab == 1 ? gc->history_page_win :
-                   tab == 2 ? gc->github_page_win : NULL;
+  window_t *page = tab == GC_TAB_OVERVIEW ? gc->overview_page_win :
+                   tab == GC_TAB_CHANGES  ? gc->changes_page_win :
+                   tab == GC_TAB_HISTORY  ? gc->history_page_win :
+                   tab == GC_TAB_GITHUB   ? gc->github_page_win : NULL;
   if (page) set_host_page(gc->main_win, page);
 
   switch (tab) {
-    case 0:
+    case GC_TAB_OVERVIEW:
+      gc->files_win = NULL;
+      gc->diff_win  = NULL;
+      gc_overview_refresh();
+      if (gc->board_win) set_focus(gc->board_win);
+      break;
+    case GC_TAB_CHANGES:
       gc->files_win = gc->changes_files_win;
       gc->diff_win  = gc->changes_diff_win;
       gc->selected_commit = -1;
@@ -31,14 +41,14 @@ void gc_set_view_mode(int tab) {
       if (gc->changes_files_win)
         send_message(gc->changes_files_win, tvSetFilter, ID_DB_FILES_COMMIT_ID, (void *)(intptr_t)0);
       break;
-    case 1:
+    case GC_TAB_HISTORY:
       gc->files_win = gc->history_files_win;
       gc->diff_win  = gc->history_diff_win;
       gc->selected_commit = gc->log_win
         ? (int)send_message(gc->log_win, RVM_GETSELECTION, 0, NULL) : -1;
       gc->selected_file = -1;
       break;
-    case 2:
+    case GC_TAB_GITHUB:
       gc->files_win = NULL;
       gc->diff_win  = NULL;
       page_github_refresh();
@@ -49,7 +59,8 @@ void gc_set_view_mode(int tab) {
   GC_TRACE("set_view_mode tab=%d diff_win=%p files_win=%p",
            tab, (void *)gc->diff_win, (void *)gc->files_win);
 
-  if (tab != 2) gc_diff_refresh();
+  if (tab == GC_TAB_CHANGES || tab == GC_TAB_HISTORY) gc_diff_refresh();
+  gc_update_status();
   invalidate_window(gc->main_win);
 }
 
@@ -91,9 +102,11 @@ void gc_open_repo(const char *path) {
 
 void gc_refresh_all(void) {
   gc_state_t *gc = g_gc;
-  if (!gc || !gc->repo) return;
+  if (!gc) return;
+  if (!gc->repo) { if (gc->tab == GC_TAB_OVERVIEW) gc_overview_refresh(); return; }
 
-  GC_TRACE("refresh_all begin");
+  GC_TRACE("refresh_all begin tab=%d", gc->tab);
+  gc->last_diff_commit = -2;   // the working tree may have changed: never reuse the cached diff
   gc->selected_commit = -1;
   gc->selected_file   = -1;
 
@@ -124,15 +137,26 @@ void gc_refresh_all(void) {
   }
   if (gc->changes_files_win) {
     send_message(gc->changes_files_win, tvSetFilter, ID_DB_FILES_COMMIT_ID, (void *)(intptr_t)0);
-    int active_tab = gc->tabs_win ? (int)send_message(gc->tabs_win, tcGetSelection, 0, NULL) : 0;
-    if (active_tab == 0) gc->selected_commit = -1;
+    if (gc->tab == GC_TAB_CHANGES) gc->selected_commit = -1;
   }
 
-  int active_tab = gc->tabs_win ? (int)send_message(gc->tabs_win, tcGetSelection, 0, NULL) : 0;
-  if (active_tab == 2) page_github_refresh();
+  if (gc->tab == GC_TAB_GITHUB) page_github_refresh();
+  if (gc->tab == GC_TAB_OVERVIEW) gc_overview_refresh();
 
   gc_diff_refresh();
   gc_update_status();
+}
+
+static void gc_overview_status(char *out, size_t n) {
+  gc_state_t *gc = g_gc; int dirty = 0, push = 0, pull = 0, conf = 0;
+  for (int i = 0; i < gc->tile_count; i++) {
+    const git_summary_t *t = &gc->tiles[i];
+    dirty += (t->staged || t->unstaged || t->untracked) ? 1 : 0; push += t->ahead ? 1 : 0; pull += t->behind ? 1 : 0; conf += t->conflicts ? 1 : 0;
+  }
+  int sel = gc->board_win ? (int)send_message(gc->board_win, rbGetSelection, 0, NULL) : -1;
+  int len = snprintf(out, n, "%d worktrees | %d uncommitted | %d to push | %d to pull%s", gc->tile_count, dirty, push, pull, conf ? " | CONFLICTS" : "");
+  if (sel >= 0 && sel < gc->tile_count && len > 0 && (size_t)len < n)
+    snprintf(out + len, n - (size_t)len, "   -   %s", gc->tiles[sel].path);
 }
 
 void gc_update_status(void) {
@@ -142,8 +166,9 @@ void gc_update_status(void) {
   git_sync_status_t st = {0};
   if (gc->repo) git_get_sync_status(gc->repo, &st);
 
-  char status[384] = "No repository";
-  if (gc->repo) {
+  char status[768] = "No repository";
+  if (gc->tab == GC_TAB_OVERVIEW) gc_overview_status(status, sizeof(status));
+  else if (gc->repo) {
     const char *kind = st.initial ? "first commit" : st.detached ? "detached" :
                        st.gone ? "upstream gone" : !st.upstream[0] ? "not published" : NULL;
     snprintf(status, sizeof(status), "Branch: %s%s  ^%d  v%d%s%s%s%s",
@@ -154,10 +179,87 @@ void gc_update_status(void) {
   }
   send_message(gc->main_win, evStatusBar, 0, (void *)status);
   if (gc->repo) {
-    set_window_item_text(gc->main_win, ID_CHANGES_PAGE_COMMIT_HINT,
-                         st.initial ? "Create the first commit" : "Commit staged changes");
+    git_file_status_t *files = malloc(sizeof(*files) * GC_MAX_FILES);
+    int staged = 0, modified = 0, fresh = 0, conflicts = 0, n = files ? git_get_status(gc->repo, files, GC_MAX_FILES) : 0;
+    for (int i = 0; i < n; i++) {
+      if (files[i].conflicted) conflicts++; else if (files[i].untracked) fresh++;
+      else { if (files[i].staged) staged++; if (files[i].worktree_status != ' ') modified++; }
+    }
+    free(files);
+    char summary[256]; int len = snprintf(summary, sizeof(summary), "%s", st.head);
+    if (st.ahead)  len += snprintf(summary + len, sizeof(summary) - len, "  |  %d to push", st.ahead);
+    if (st.behind) len += snprintf(summary + len, sizeof(summary) - len, "  |  %d to pull", st.behind);
+    if (staged)    len += snprintf(summary + len, sizeof(summary) - len, "  |  %d staged", staged);
+    if (modified)  len += snprintf(summary + len, sizeof(summary) - len, "  |  %d modified", modified);
+    if (fresh)     len += snprintf(summary + len, sizeof(summary) - len, "  |  %d new", fresh);
+    if (conflicts) len += snprintf(summary + len, sizeof(summary) - len, "  |  %d CONFLICTED", conflicts);
+    if (!staged && !modified && !fresh && !conflicts) snprintf(summary + len, sizeof(summary) - len, "  |  working tree clean");
+    set_window_item_text(gc->main_win, ID_CHANGES_PAGE_SUMMARY, "%s", summary);
+    char hint[96];
+    if (st.initial) snprintf(hint, sizeof(hint), "Create the first commit");
+    else if (staged) snprintf(hint, sizeof(hint), "Commit %d staged file%s", staged, staged == 1 ? "" : "s");
+    else snprintf(hint, sizeof(hint), "Nothing staged - check files above to include them");
+    set_window_item_text(gc->main_win, ID_CHANGES_PAGE_COMMIT_HINT, "%s", hint);
     set_window_item_text(gc->main_win, ID_CHANGES_PAGE_COMMIT_NOW, "Commit");
   }
+}
+
+// ============================================================
+// Overview
+// ============================================================
+
+static int tile_cmp(const void *pa, const void *pb) {
+  const git_summary_t *a = pa, *b = pb;
+  int c = strcasecmp(a->repo, b->repo); if (c) return c;
+  if (a->linked != b->linked) return a->linked ? 1 : -1;
+  return strcasecmp(a->dir, b->dir);
+}
+
+void gc_overview_refresh(void) {
+  gc_state_t *gc = g_gc; if (!gc) return;
+  uint32_t t0 = axGetMilliseconds();
+  gc->tile_count = git_workspace_scan(gc->recent_repos, gc->recent_repo_count, gc->tiles, GC_MAX_TILES);
+  qsort(gc->tiles, (size_t)gc->tile_count, sizeof(gc->tiles[0]), tile_cmp);
+  if (gc->board_win) send_message(gc->board_win, rbSetTiles, (uint32_t)gc->tile_count, gc->tiles);
+  GC_TRACE("overview_refresh board=%p roots=%d tiles=%d ms=%u", (void *)gc->board_win, gc->recent_repo_count, gc->tile_count, (unsigned)(axGetMilliseconds() - t0));
+  if (gc->tab == GC_TAB_OVERVIEW) gc_update_status();
+}
+
+void gc_overview_open(int index) {
+  gc_state_t *gc = g_gc;
+  if (!gc || index < 0 || index >= gc->tile_count) {
+    fprintf(stderr, "[gc] overview_open rejected index=%d count=%d\n", index, gc ? gc->tile_count : -1); fflush(stderr); return;
+  }
+  const git_summary_t *t = &gc->tiles[index];
+  GC_TRACE("overview_open index=%d path=%s branch=%s", index, t->path, t->branch);
+  if (t->missing) { message_box(gc->main_win, "This folder is missing or is no longer a git repository.", "Open Repository", MB_OK); return; }
+  char path[512]; snprintf(path, sizeof(path), "%s", t->path);
+  bool dirty = t->staged || t->unstaged || t->untracked || t->conflicts;
+  gc_open_repo(path);
+  if (gc->repo) gc_set_view_mode(dirty ? GC_TAB_CHANGES : GC_TAB_HISTORY);
+}
+
+void gc_overview_fetch_all(void) {
+  gc_state_t *gc = g_gc; if (!gc || gc->fetching_all) return;
+  static char roots[GC_MAX_RECENT_REPOS][512]; int n = 0;
+  for (int i = 0; i < gc->tile_count && n < GC_MAX_RECENT_REPOS; i++) {
+    if (gc->tiles[i].linked || gc->tiles[i].missing) continue;
+    snprintf(roots[n++], sizeof(roots[0]), "%s", gc->tiles[i].path);
+  }
+  if (!n) { for (; n < gc->recent_repo_count; n++) snprintf(roots[n], sizeof(roots[0]), "%s", gc->recent_repos[n]); }
+  GC_TRACE("fetch_all repos=%d", n);
+  if (git_fetch_all_async(roots, n, gc->main_win)) {
+    gc->fetching_all = true;
+    char msg[96]; snprintf(msg, sizeof(msg), "Fetching %d repositories...", n);
+    send_message(gc->main_win, evStatusBar, 0, msg);
+  } else message_box(gc->main_win, "There are no repositories to fetch.", "Fetch All", MB_OK);
+}
+
+static result_t page_overview_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  (void)wparam; (void)lparam;
+  if (msg != evCreate || !g_gc) return false;
+  g_gc->board_win = get_window_item(win, ID_OVERVIEW_PAGE_BOARD);
+  return true;
 }
 
 // ============================================================
@@ -181,10 +283,15 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
 
       // Instantiate each page sub-form inside its tab slot.
       // Page procs capture their own outlets in evCreate.
+      window_t *overview_tab = get_window_item(win, ID_MAIN_WINDOW_OVERVIEW_TAB);
       window_t *changes_tab = get_window_item(win, ID_MAIN_WINDOW_CHANGES_TAB);
       window_t *history_tab = get_window_item(win, ID_MAIN_WINDOW_HISTORY_TAB);
       window_t *github_tab  = get_window_item(win, ID_MAIN_WINDOW_GITHUB_TAB);
 
+      if (overview_tab) {
+        gc->overview_page_win = create_window_from_form(
+          &gc_overview_page_form, 0, 0, overview_tab, page_overview_proc, gc->hinstance, NULL);
+      }
       if (changes_tab)
         gc->changes_page_win = create_window_from_form(
           &gc_changes_page_form, 0, 0, changes_tab, page_changes_proc,
@@ -206,7 +313,7 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
 
       send_message(win, evStatusBar, 0, "No repository");
       send_message(win, tbSetStyle, TOOLBAR_STYLE_SHOW_LABELS, NULL);
-      gc_set_view_mode(0);
+      gc_set_view_mode(GC_TAB_CHANGES);
 
       char font_path[600];
       snprintf(font_path, sizeof(font_path),
@@ -239,6 +346,13 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
     case evCommand: {
       uint16_t code = (uint16_t)HIWORD(wparam);
 
+      if ((code == GC_BOARD_SELECT || code == GC_BOARD_OPEN) && (window_t *)lparam == gc->board_win) {
+        int idx = (int)LOWORD(wparam);
+        GC_TRACE("evCommand board win=%u code=%s tile=%d", (unsigned)gc->board_win->id, code == GC_BOARD_OPEN ? "open" : "select", idx);
+        if (code == GC_BOARD_OPEN) gc_overview_open(idx); else gc_update_status();
+        return true;
+      }
+
       if (code == tcnSelChange && (window_t *)lparam == gc->tabs_win) {
         int tab = (int)send_message(gc->tabs_win, tcGetSelection, 0, NULL);
         GC_TRACE("evCommand tcnSelChange -> tab %d", tab);
@@ -253,11 +367,9 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
       }
 
       // Delegate to the active page handler.
-      int active_tab = gc->tabs_win
-        ? (int)send_message(gc->tabs_win, tcGetSelection, 0, NULL) : 0;
-      if (active_tab == 0) return page_changes_handle(win, msg, wparam, lparam);
-      if (active_tab == 1) return page_history_handle(win, msg, wparam, lparam);
-      if (active_tab == 2) return page_github_handle(win, msg, wparam, lparam);
+      if (gc->tab == GC_TAB_CHANGES) return page_changes_handle(win, msg, wparam, lparam);
+      if (gc->tab == GC_TAB_HISTORY) return page_history_handle(win, msg, wparam, lparam);
+      if (gc->tab == GC_TAB_GITHUB)  return page_github_handle(win, msg, wparam, lparam);
       return false;
     }
 
@@ -272,6 +384,7 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
             gc_open_repo(gc_->clone_path);
           gc_->clone_path[0] = '\0';
         } else {
+          if (gc->fetching_all) { gc->fetching_all = false; GC_TRACE("fetch_all done: %s", res->output); }
           gc_refresh_all();
         }
         git_async_result_free(res);
