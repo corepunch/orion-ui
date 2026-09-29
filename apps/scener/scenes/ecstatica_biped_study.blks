@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Studio proportion and flexibility study: one reusable biped, alternate static poses. -->
+<scene up="z" ambient="0.3 0.3 0.3" background="0.13 0.15 0.17">
+  <camera name="Standing" pos="-240 -440 165" look="0 -2 92" fov="29"/>
+  <camera name="Front" pos="0 -490 105" look="0 -2 92" fov="29"/>
+  <camera name="Side" pos="-490 -2 105" look="0 -2 92" fov="29"/>
+  <camera name="Bend" pos="-280 -390 155" look="0 -12 85" fov="30"><use-pose instance="Ecstatica" name="Bend"/></camera>
+  <camera name="Twist" pos="-240 -440 165" look="0 -2 92" fov="29"><use-pose instance="Ecstatica" name="Twist"/></camera>
+  <pose name="Bend">
+    <joint target="abdomen" aim="0 65"/>
+    <joint target="ribcage" aim="0 65"/>
+    <joint target="neck" aim="180 110"/>
+    <joint target="left_shoulder" aim="90 -65"/>
+    <joint target="right_shoulder" aim="-90 -65"/>
+    <joint target="left_elbow" aim="0 -35"/>
+    <joint target="right_elbow" aim="0 -35"/>
+  </pose>
+  <pose name="Twist">
+    <joint target="abdomen" rot="0 10 18"/>
+    <joint target="ribcage" rot="0 8 22"/>
+    <joint target="head" rot="0 0 -15"/>
+    <joint target="left_shoulder" aim="40 -25"/>
+    <joint target="left_elbow" aim="-20 10"/>
+  </pose>
+  <light pos="-180 -230 320" color="1 .94 .85" intensity="1.65" radius="800" castShadows="1"/>
+  <light pos="170 -130 210" color=".8 .87 1" intensity=".65" radius="700" castShadows="0"/>
+  <light pos="30 140 260" color="1 .84 .65" intensity=".8" radius="650" castShadows="0"/>
+  <box pos="0 0 -3" size="480 480 6" color=".28 .29 .27"/>
+  <prefab source="characters/ecstatica_biped" name="Ecstatica"/>
+</scene>

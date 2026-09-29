@@ -19,6 +19,10 @@ Plain `<bone>` skeletons ([mira.blk](../prefabs/characters/mira.blk)) and the
 older hand-placed group rig ([ellipsoid_actor.blk](../prefabs/characters/ellipsoid_actor.blk))
 still work; see [Legacy group rigs](#legacy-group-rigs).
 
+For a source-dimensioned Ecstatica example with independently bending abdomen and
+ribcage volumes, see [the articulated biped study](ecstatica-biped.md), its
+[scene](../scenes/ecstatica_biped_study.blks) and [prefab](../prefabs/characters/ecstatica_biped.blk).
+
 ## Start from a preset
 
 Like a CAT rig preset, a preset is a starting file, not a base class. Copy it,
