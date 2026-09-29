@@ -48,17 +48,21 @@ fill_rect(COLOR_PANEL_BG, 0, 0, win->frame.w, win->frame.h);
 fill_rect(RGBA(255,0,0,255), 10, 10, 50, 50);
 ```
 
-### Rounded shapes and badges
+### Cards, badges and theme colours
 
 ```c
-fill_rounded_rect(color, r, radius);                        // all four corners
-fill_rounded_rect_corners(color, r, radius, CORNERS_LEFT);  // per-corner selection (CORNER_TOP_LEFT, ...)
-uint32_t soft = color_with_alpha(color, 0x40);              // same colour, different alpha
-int w = draw_badge(FONT_SMALL, "3 modified", x, y, 18, get_sys_color(brTextWarning));  // returns width
+// Card with an optional accent edge; the theme rounds (or squares) card and edge together.
+draw_card(r, CTRL_HOVER | CTRL_SELECTED | CTRL_FOCUSED, color_with_alpha(get_sys_color(brTextWarning), 0x78));
+
+// Tinted label ("3 modified"); returns its width so badges can be chained.
+int w = draw_badge(FONT_SMALL, "3 modified", x, y, 18, get_sys_color(brTextWarning));
+
+uint32_t soft = color_with_alpha(color, 0x40);   // same colour, different alpha
 ```
 
-An accent edge that follows a rounded card is two calls: a `CORNERS_LEFT` fill in the accent colour under a
-`CORNERS_RIGHT` fill in the body colour, inset by the stripe width.
+The accent edge is a plain `card_edge_width` rectangle clipped by the card's silhouette in the shader, so
+there is nothing to align or mask by hand. Geometry lives in `theme_t` (`card_corner_radius`,
+`card_edge_width`, `card_ring_width`). Pass an edge colour with zero alpha for no edge.
 
 Status colours come from the theme: `brTextError`, `brTextWarning`, `brTextInfo`, `brTextSuccess`, `brTextDisabled`.
 

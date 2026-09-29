@@ -12,10 +12,8 @@
 #define SUMMARY_H  44
 #define BADGE_H    18
 #define MAX_TILES  64
-#define TILE_RADIUS 7
-#define STRIPE_W    4
 #define TILE_PAD    12
-#define SELECT_RING 2
+#define EDGE_ALPHA  0x78   // calmer than the text colour, closer to the badge tint
 
 // Status semantics come from the active theme, never from literal colours.
 #define C_RED   get_sys_color(brTextError)
@@ -139,13 +137,10 @@ static void paint_tile(board_t *b, const slot_t *s, int oy, bool focused) {
   bool selected = s->tile == b->selected, hot = s->tile == b->hover;
   uint32_t text = get_sys_color(brTextNormal), dim = get_sys_color(brTextDisabled);
 
-  if (selected) fill_rounded_rect(focused ? get_sys_color(brAccent) : dim, rect_inset(card, -SELECT_RING), TILE_RADIUS + SELECT_RING);
-  // The verdict stripe spans the full card height and follows its rounded left corners; the body
-  // covers everything to its right and keeps the card's right corners.
-  fill_rounded_rect_corners(verdict, rect_split_left(card, 2 * TILE_RADIUS), TILE_RADIUS, CORNERS_LEFT);
-  fill_rounded_rect_corners(get_sys_color(hot ? brButtonHover : brControlBg), rect_trim_left(card, STRIPE_W), TILE_RADIUS, CORNERS_RIGHT);
+  draw_card(card, (selected ? CTRL_SELECTED : 0) | (hot ? CTRL_HOVER : 0) | (focused ? CTRL_FOCUSED : 0),
+            color_with_alpha(verdict, EDGE_ALPHA));
 
-  irect16_t body = rect_inset_xy(rect_trim_left(card, STRIPE_W), TILE_PAD, 9);
+  irect16_t body = rect_inset_xy(rect_trim_left(card, get_theme()->card_edge_width), TILE_PAD, 9);
   int line = text_char_height(FONT_SMALL), state_w = text_strwidth(FONT_SMALL, tile_state(t));
   irect16_t title = rect_trim_right(rect_split_top(body, text_char_height(FONT_SYSTEM)), state_w + 12);
   draw_text_ellipsized(FONT_SYSTEM, t->repo, title.x, title.y, title.w, text);

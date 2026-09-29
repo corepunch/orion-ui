@@ -191,6 +191,9 @@ typedef struct {
   // Per-theme geometry metrics used by draw code to avoid hardcoded literals.
   int button_corner_radius;  // rounded-corner radius for push buttons (0 = square)
   int window_corner_radius;  // logical pixels, applied by the SDF compositor
+  int card_corner_radius;    // draw_card(): rounded-corner radius (0 = square)
+  int card_edge_width;       // draw_card(): accent edge width in logical pixels
+  int card_ring_width;       // draw_card(): selection ring thickness
   int window_shadow_blur;    // logical pixels; zero disables shadows
   ipoint16_t window_shadow_offset;
   uint32_t window_shadow_color;
