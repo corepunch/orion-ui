@@ -5,6 +5,7 @@
 #include <orion/user/user.h>
 #include "rect.h"
 #include "text.h"
+#include "theme.h"
 
 // Rectangle drawing functions
 // Color arguments are packed 0xAABBGGRR with sRGB RGB and linear alpha.
@@ -14,17 +15,10 @@ void fill_rounded_rect(uint32_t color, irect16_t r, int radius);
 static inline uint32_t color_with_alpha(uint32_t color, uint8_t alpha) {
   return ((uint32_t)alpha << 24) | (color & 0x00FFFFFFu);
 }
-// Corner selection for fill_rounded_rect_corners(); unselected corners stay square.
-enum {
-  CORNER_TOP_LEFT = 1u << 0, CORNER_TOP_RIGHT = 1u << 1,
-  CORNER_BOTTOM_RIGHT = 1u << 2, CORNER_BOTTOM_LEFT = 1u << 3,
-  CORNERS_LEFT   = CORNER_TOP_LEFT | CORNER_BOTTOM_LEFT,
-  CORNERS_RIGHT  = CORNER_TOP_RIGHT | CORNER_BOTTOM_RIGHT,
-  CORNERS_TOP    = CORNER_TOP_LEFT | CORNER_TOP_RIGHT,
-  CORNERS_BOTTOM = CORNER_BOTTOM_LEFT | CORNER_BOTTOM_RIGHT,
-  CORNERS_ALL    = CORNERS_LEFT | CORNERS_RIGHT
-};
-void fill_rounded_rect_corners(uint32_t color, irect16_t r, int radius, uint32_t corners);
+// A card: a face (brControlBg, brButtonHover when hovered) with an optional accent edge on its left side.
+// The edge is a plain `edge_width`-pixel rectangle; the active theme's card_corner_radius rounds (or not)
+// the card and the edge together. CTRL_SELECTED draws a ring outside `r` (accent when CTRL_FOCUSED).
+void draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color);
 // Small tinted label ("3 modified"): a rounded fill in `color` at low alpha with the text in `color`.
 // Drawn at (x, y) with the given height; returns the badge width so callers can chain badges.
 int  draw_badge(ui_font_t font, const char *text, int x, int y, int height, uint32_t color);
@@ -61,9 +55,9 @@ void draw_rounded_rect_premultiplied(int tex, irect16_t r, int win_w, int win_h,
                                      float radius, float alpha);
 void render_rounded_rect(int tex, irect16_t r, int pixel_w, int pixel_h,
                          float radius, float alpha, uint32_t color);
-// radii: top-left, top-right, bottom-right, bottom-left, in pixels.
-void render_rounded_rect_corners(int tex, irect16_t r, int pixel_w, int pixel_h,
-                                 const float radii[4], float alpha, uint32_t color);
+// Rounded fill whose left `edge_width` pixels are painted in `edge_color`, sharing one rounded silhouette.
+void render_rounded_rect_edged(int tex, irect16_t r, int pixel_w, int pixel_h, float radius,
+                               float alpha, uint32_t color, uint32_t edge_color, float edge_width);
 // Draw a dashed selection-outline rectangle (2–4 GL draw calls depending on dimensions, O(1) regardless of size)
 void draw_sel_rect(irect16_t r);
 

@@ -182,6 +182,22 @@ accel_table_t *accel = load_accelerators(table, ARRAY_LEN(table));
 
 Accelerators fire as `evCommand` with `kAcceleratorNotification` in `HIWORD(wparam)`.
 
+## Shapes come from the theme, not from stacked rectangles
+
+A visual that has a shape (card, badge, pill, tab, ring) is drawn by **one framework call** whose geometry
+comes from the active theme (`card_corner_radius`, `card_edge_width`, ...). Apps and controls never
+approximate it by layering fills, insetting overlapping rounded rects, or clipping one shape with
+another; those tricks leak past the silhouette (sub-pixel slivers at the corners) and ignore the theme.
+
+- An accent edge is a **plain rectangle**. Hand it to the card-drawing function
+  (`draw_card(r, state, edge_color)`); the theme rounds or squares the card and its edge together,
+  in a single pass that shares one silhouette.
+- Colours are theme roles (`brTextError`, `brTextWarning`, `brTextInfo`, `brTextSuccess`, ...). Never
+  write literal RGB values in a control. Derive softer variants with `color_with_alpha()`.
+- Truncated text goes through `draw_text_ellipsized()`; tinted labels through `draw_badge()`.
+- If the primitive you need does not exist, add it to `user/` (and a metric to `theme_t` if its shape
+  varies by theme), document it in `docs/drawing.md`, then use it. Do not build it in the app.
+
 ## Repainting
 
 - Any state change that affects appearance must call `invalidate_window(win)`.

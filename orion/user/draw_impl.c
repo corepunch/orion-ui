@@ -280,17 +280,25 @@ void fill_rounded_rect(uint32_t color, irect16_t r, int radius) {
                       (int)(r.h * scale + 0.5f), radius * scale, 1.0f, color);
 }
 
-void fill_rounded_rect_corners(uint32_t color, irect16_t r, int radius, uint32_t corners) {
+void draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color) {
   extern uint32_t ui_white_texture;
   if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0) return;
-  if (radius <= 0 || !corners) { fill_rect(color, r); return; }
-  float scale = MAX(1.0f, axGetScaling()), rad = radius * scale;
-  const float radii[4] = {
-    corners & CORNER_TOP_LEFT     ? rad : 0.0f, corners & CORNER_TOP_RIGHT   ? rad : 0.0f,
-    corners & CORNER_BOTTOM_RIGHT ? rad : 0.0f, corners & CORNER_BOTTOM_LEFT ? rad : 0.0f,
-  };
-  render_rounded_rect_corners(ui_white_texture, r, (int)(r.w * scale + 0.5f), (int)(r.h * scale + 0.5f),
-                              radii, 1.0f, color);
+  const theme_t *theme = get_theme();
+  int radius = theme->card_corner_radius, edge = theme->card_edge_width;
+  if (state & CTRL_SELECTED) {
+    uint32_t ring = get_sys_color((state & CTRL_FOCUSED) ? brAccent : brTextDisabled);
+    fill_rounded_rect(ring, rect_inset(r, -theme->card_ring_width), radius + theme->card_ring_width);
+  }
+  uint32_t face = get_sys_color((state & CTRL_HOVER) ? brButtonHover : brControlBg);
+  if (!(edge_color >> 24)) edge = 0;
+  if (radius <= 0) {
+    fill_rect(face, r);
+    if (edge) fill_rect(edge_color, rect_split_left(r, edge));
+    return;
+  }
+  float scale = MAX(1.0f, axGetScaling());
+  render_rounded_rect_edged(ui_white_texture, r, (int)(r.w * scale + 0.5f), (int)(r.h * scale + 0.5f),
+                            radius * scale, 1.0f, face, edge_color, edge * scale);
 }
 
 #define BADGE_PADDING 7

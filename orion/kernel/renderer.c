@@ -121,7 +121,8 @@ static vga_renderer_t g_vga = {0};
 // Cached uniforms for the rounded-rect SDF compositor.
 typedef struct {
   GLint size_u;
-  GLint radii_u;
+  GLint radius_u;
+  GLint edge_u;
 } rounded_rect_uniforms_t;
 
 static rounded_rect_uniforms_t g_rounded_rect = {0};
@@ -450,7 +451,8 @@ bool ui_init_prog(void) {
   cache_sprite_uniforms(&g_ref.rounded_rect_sprite);
   if (g_ref.rounded_rect_sprite.program) {
     g_rounded_rect.size_u   = glGetUniformLocation(g_ref.rounded_rect_sprite.program, "size");
-    g_rounded_rect.radii_u = glGetUniformLocation(g_ref.rounded_rect_sprite.program, "radii");
+    g_rounded_rect.radius_u = glGetUniformLocation(g_ref.rounded_rect_sprite.program, "radius");
+    g_rounded_rect.edge_u   = glGetUniformLocation(g_ref.rounded_rect_sprite.program, "edge");
   }
 
   g_ref.vga_program = load_program_from_files("vga.frag.glsl",
@@ -928,11 +930,12 @@ void draw_program_rect(int tex, irect16_t r, uint32_t program, float mix_amount)
 // tex     — source texture (typically an FBO color attachment).
 // r       — destination rectangle in logical coordinates.
 // win_w/h — window size in pixels (used for SDF computation).
-// radii   — corner radii in pixels: top-left, top-right, bottom-right, bottom-left.
+// radius  — corner radius in pixels.
 // alpha   — overall opacity multiplier.
 static void render_rounded_box(int tex, irect16_t r, int win_w, int win_h,
-                                const float radii[4], float alpha, uint32_t color,
-                                float blur, float padding, bool premultiplied) {
+                                float radius, float alpha, uint32_t color,
+                                float blur, float padding, bool premultiplied,
+                                uint32_t edge_color, float edge_width) {
   if (!g_ref.rounded_rect_sprite.program || (!tex && blur <= 0)) return;
   glUseProgram(g_ref.rounded_rect_sprite.program);
   glActiveTexture(GL_TEXTURE0);
@@ -949,12 +952,13 @@ static void render_rounded_box(int tex, irect16_t r, int win_w, int win_h,
               ((color >> 16) & 255) / 255.0f, (color >> 24) / 255.0f);
   // SDF-specific uniforms.
   glUniform2f(g_rounded_rect.size_u, (float)win_w, (float)win_h);
-  float limit = MIN(win_w, win_h) * 0.5f;
-  glUniform4f(g_rounded_rect.radii_u, CLAMP(radii[0], 0.0f, limit), CLAMP(radii[1], 0.0f, limit),
-              CLAMP(radii[2], 0.0f, limit), CLAMP(radii[3], 0.0f, limit));
+  glUniform1f(g_rounded_rect.radius_u, MAX(0.0f, MIN(radius, MIN(win_w, win_h) * 0.5f)));
   premultiplied = premultiplied || R_TextureIsPremultiplied((uint32_t)tex);
   glUniform4f(g_ref.rounded_rect_sprite.params1_u, premultiplied ? 1.0f : 0.0f,
-              0.0f, 0.0f, 0.0f);
+              edge_width, 0.0f, 0.0f);
+  glUniform4f(g_rounded_rect.edge_u,
+              (edge_color & 255) / 255.0f, ((edge_color >> 8) & 255) / 255.0f,
+              ((edge_color >> 16) & 255) / 255.0f, (edge_color >> 24) / 255.0f);
   R_BlendPremultiplied();
   g_ref.mesh.draw_mode = GL_TRIANGLE_FAN;
   R_MeshDraw(&g_ref.mesh);
@@ -962,15 +966,14 @@ static void render_rounded_box(int tex, irect16_t r, int win_w, int win_h,
   glEnable(GL_DEPTH_TEST);
 }
 
-void render_rounded_rect_corners(int tex, irect16_t r, int win_w, int win_h,
-                                 const float radii[4], float alpha, uint32_t color) {
-  render_rounded_box(tex, r, win_w, win_h, radii, alpha, color, 0, 0, false);
-}
-
 void render_rounded_rect(int tex, irect16_t r, int win_w, int win_h,
                           float radius, float alpha, uint32_t color) {
-  const float radii[4] = { radius, radius, radius, radius };
-  render_rounded_rect_corners(tex, r, win_w, win_h, radii, alpha, color);
+  render_rounded_box(tex, r, win_w, win_h, radius, alpha, color, 0, 0, false, 0, 0);
+}
+
+void render_rounded_rect_edged(int tex, irect16_t r, int win_w, int win_h, float radius,
+                               float alpha, uint32_t color, uint32_t edge_color, float edge_width) {
+  render_rounded_box(tex, r, win_w, win_h, radius, alpha, color, 0, 0, false, edge_color, edge_width);
 }
 
 void draw_rect_shadow(irect16_t r, float radius, float blur, ipoint16_t offset, uint32_t color) {
@@ -982,8 +985,7 @@ void draw_rect_shadow(irect16_t r, float radius, float blur, ipoint16_t offset, 
   }
   int padding = (int)(blur * 3 + 1);
   irect16_t bounds = rect_inset(rect_offset(r, offset.x, offset.y), -padding);
-  const float radii[4] = { radius, radius, radius, radius };
-  render_rounded_box(0, bounds, r.w, r.h, radii, 1, color, blur, padding, false);
+  render_rounded_box(0, bounds, r.w, r.h, radius, 1, color, blur, padding, false, 0, 0);
 }
 
 void draw_rounded_rect(int tex, irect16_t r, int win_w, int win_h,
@@ -993,9 +995,8 @@ void draw_rounded_rect(int tex, irect16_t r, int win_w, int win_h,
 
 void draw_rounded_rect_premultiplied(int tex, irect16_t r, int win_w, int win_h,
                                      float radius, float alpha) {
-  const float radii[4] = { radius, radius, radius, radius };
-  render_rounded_box(tex, r, win_w, win_h, radii, alpha, 0xffffffff,
-                     0, 0, true);
+  render_rounded_box(tex, r, win_w, win_h, radius, alpha, 0xffffffff,
+                     0, 0, true, 0, 0);
 }
 
 bool read_texture_rgba(int src_tex, int w, int h, uint8_t *out_rgba) {

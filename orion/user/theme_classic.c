@@ -335,6 +335,9 @@ static theme_t g_classic_theme = {
   .press_icon_offset      = 1,
   .button_corner_radius   = 0,
   .window_corner_radius   = 0,
+  .card_corner_radius     = 0,
+  .card_edge_width        = 4,
+  .card_ring_width        = 1,
   .control_padding        = BUTTON_PADDING,
   .apply_palette          = classic_apply_palette,
 };
