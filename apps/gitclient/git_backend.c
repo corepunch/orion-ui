@@ -486,51 +486,224 @@ bool git_get_diff(git_repo_t *repo, const char *path,
 // Public: branches
 // ============================================================
 
+static void git_copy_field(char *dst, size_t dst_sz, const char *src, int n) {
+  if (n < 0) n = 0;
+  if ((size_t)n >= dst_sz) n = (int)dst_sz - 1;
+  memcpy(dst, src, (size_t)n);
+  dst[n] = '\0';
+}
+
+static const char *git_local_name(const char *name) {
+  const char *slash = strchr(name, '/');
+  return slash ? slash + 1 : name;
+}
+
+bool git_default_branch(git_repo_t *repo, char *buf, int buf_sz) {
+  if (!repo || !buf || buf_sz <= 0) return false;
+  buf[0] = '\0';
+  char raw[256] = {0};
+  const char *sym[] = { "git", "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD", NULL };
+  if (git_run_sync(repo, sym, raw, sizeof(raw))) {
+    gc_trim_line(raw);
+    const char *name = strrchr(raw, '/');
+    name = name ? name + 1 : raw;
+    if (name[0] && strcmp(name, "HEAD") != 0) {
+      strncpy(buf, name, (size_t)buf_sz - 1);
+      buf[buf_sz - 1] = '\0';
+      return true;
+    }
+  }
+  const char *guesses[] = { "main", "master", NULL };
+  for (int i = 0; guesses[i]; i++) {
+    char ref[64];
+    snprintf(ref, sizeof(ref), "refs/heads/%s", guesses[i]);
+    const char *args[] = { "git", "show-ref", "--verify", "--quiet", ref, NULL };
+    char discard[64];
+    if (git_run_sync(repo, args, discard, sizeof(discard))) {
+      strncpy(buf, guesses[i], (size_t)buf_sz - 1);
+      buf[buf_sz - 1] = '\0';
+      return true;
+    }
+  }
+  return git_current_branch(repo, buf, buf_sz);
+}
+
+static int git_branch_rank(const git_branch_t *b) {
+  if (b->is_current) return 0;
+  if (b->is_default && !b->is_remote) return 1;
+  if (!b->is_remote) return 2;
+  return 3;
+}
+
+static int git_branch_cmp(const void *a, const void *b) {
+  const git_branch_t *x = a, *y = b;
+  int rx = git_branch_rank(x), ry = git_branch_rank(y);
+  if (rx != ry) return rx - ry;
+  return strcmp(x->name, y->name);
+}
+
 int git_get_branches(git_repo_t *repo, git_branch_t *out, int max) {
   if (!repo || !out || max <= 0) return 0;
 
-  char buf[16 * 1024] = {0};
-  const char *args[] = { "git", "branch", "-a", "--no-color", NULL };
-  git_run_sync(repo, args, buf, sizeof(buf));
+  char buf[32 * 1024] = {0};
+  const char *args[] = {
+    "git", "for-each-ref",
+    "--format=%(HEAD)%x1f%(refname)%x1f%(objectname:short)%x1f%(committerdate:relative)",
+    "refs/heads", "refs/remotes",
+    NULL
+  };
+  bool listed = git_run_sync(repo, args, buf, sizeof(buf));
+  if (!listed) buf[0] = '\0';
+
+  char def[256] = {0};
+  git_default_branch(repo, def, sizeof(def));
+
+  git_branch_t raw[256];
+  int raw_n = 0;
+  char *p = buf;
+  while (*p && raw_n < 256) {
+    char *nl = strchr(p, '\n');
+    if (nl) *nl = '\0';
+    gc_trim_line(p);
+    if (p[0]) {
+      char *f1 = strchr(p, '\x1f');
+      char *f2 = f1 ? strchr(f1 + 1, '\x1f') : NULL;
+      char *f3 = f2 ? strchr(f2 + 1, '\x1f') : NULL;
+      if (f1 && f2 && f3) {
+        *f1 = *f2 = *f3 = '\0';
+        const char *head = p;
+        const char *ref = f1 + 1;
+        const char *hash = f2 + 1;
+        const char *when = f3 + 1;
+        git_branch_t *b = &raw[raw_n];
+        memset(b, 0, sizeof(*b));
+        b->is_current = (head[0] == '*');
+        if (!strncmp(ref, "refs/heads/", 11)) {
+          git_copy_field(b->name, sizeof(b->name), ref + 11, (int)strlen(ref + 11));
+          b->is_remote = false;
+        } else if (!strncmp(ref, "refs/remotes/", 13)) {
+          const char *name = ref + 13;
+          if (strcmp(name + (strlen(name) > 5 ? strlen(name) - 5 : 0), "/HEAD") == 0 ||
+              !strcmp(name, "origin/HEAD") || strstr(name, "/HEAD")) {
+            if (nl) { p = nl + 1; continue; }
+            break;
+          }
+          git_copy_field(b->name, sizeof(b->name), name, (int)strlen(name));
+          b->is_remote = true;
+        } else {
+          if (nl) { p = nl + 1; continue; }
+          break;
+        }
+        git_copy_field(b->hash, sizeof(b->hash), hash, (int)strlen(hash));
+        git_copy_field(b->activity, sizeof(b->activity), when, (int)strlen(when));
+        if (def[0] && !b->is_remote && !strcmp(b->name, def))
+          b->is_default = true;
+        if (def[0] && b->is_remote && !strcmp(git_local_name(b->name), def))
+          b->is_default = true;
+        if (b->name[0]) raw_n++;
+      }
+    }
+    if (!nl) break;
+    p = nl + 1;
+  }
+
+  if (raw_n == 0) {
+    /* Fallback for older git / Windows format expansion: git branch -a. */
+    char plain[16 * 1024] = {0};
+    const char *br[] = { "git", "branch", "-a", "--no-color", NULL };
+    if (git_run_sync(repo, br, plain, sizeof(plain))) {
+      char *line = plain;
+      while (*line && raw_n < 256) {
+        char *nl = strchr(line, '\n');
+        if (nl) *nl = '\0';
+        if (strlen(line) >= 2) {
+          git_branch_t *b = &raw[raw_n];
+          memset(b, 0, sizeof(*b));
+          b->is_current = (line[0] == '*');
+          const char *name = line + 2;
+          if (!strncmp(name, "remotes/", 8)) { name += 8; b->is_remote = true; }
+          const char *arrow = strstr(name, " -> ");
+          int nlen = arrow ? (int)(arrow - name) : (int)strlen(name);
+          git_copy_field(b->name, sizeof(b->name), name, nlen);
+          if (b->is_remote && strstr(b->name, "/HEAD")) { if (!nl) break; line = nl + 1; continue; }
+          if (def[0] && !b->is_remote && !strcmp(b->name, def)) b->is_default = true;
+          if (b->name[0]) raw_n++;
+        }
+        if (!nl) break;
+        line = nl + 1;
+      }
+    }
+  }
+
+  /* Remote-only: a remote-tracking branch with no local branch of the same short name. */
+  for (int i = 0; i < raw_n; i++) {
+    if (!raw[i].is_remote) continue;
+    const char *local = git_local_name(raw[i].name);
+    bool has_local = false;
+    for (int j = 0; j < raw_n; j++) {
+      if (!raw[j].is_remote && !strcmp(raw[j].name, local)) { has_local = true; break; }
+    }
+    raw[i].is_remote_only = !has_local;
+  }
 
   int count = 0;
-  char *line = buf;
-  while (*line && count < max) {
-    char *nl = strchr(line, '\n');
-    if (!nl) break;
-    *nl = '\0';
-
-    if (strlen(line) < 2) { line = nl + 1; continue; }
-
-    git_branch_t *b = &out[count];
-    b->is_current = (line[0] == '*');
-    b->is_remote  = false;
-
-    const char *name = line + 2;  // skip "* " or "  "
-    if (strncmp(name, "remotes/", 8) == 0) {
-      name += 8;
-      b->is_remote = true;
-    }
-    // Strip trailing whitespace / tracking info (e.g. " -> origin/HEAD")
-    const char *arrow = strstr(name, " -> ");
-    if (arrow) {
-      int n = (int)(arrow - name);
-      if (n >= 256) n = 255;
-      memcpy(b->name, name, (size_t)n);
-      b->name[n] = '\0';
-    } else {
-      strncpy(b->name, name, sizeof(b->name) - 1);
-      b->name[sizeof(b->name) - 1] = '\0';
-    }
-    // Trim trailing spaces/newline residue
-    char *end = b->name + strlen(b->name) - 1;
-    while (end >= b->name && (*end == ' ' || *end == '\r')) *end-- = '\0';
-
-    if (b->name[0]) count++;
-    line = nl + 1;
+  for (int i = 0; i < raw_n && count < max; i++) {
+    /* Keep local branches and remote-only remotes; drop duplicate origin/main when main exists. */
+    if (raw[i].is_remote && !raw[i].is_remote_only) continue;
+    out[count] = raw[i];
+    if (out[count].is_current) strncpy(out[count].kind, "current", sizeof(out[count].kind) - 1);
+    else if (out[count].is_default && !out[count].is_remote) strncpy(out[count].kind, "default", sizeof(out[count].kind) - 1);
+    else if (out[count].is_remote) strncpy(out[count].kind, "remote", sizeof(out[count].kind) - 1);
+    else strncpy(out[count].kind, "local", sizeof(out[count].kind) - 1);
+    count++;
   }
+  qsort(out, (size_t)count, sizeof(out[0]), git_branch_cmp);
   GC_LOG("git_get_branches: %d branches", count);
   return count;
+}
+
+bool git_prune_remote(git_repo_t *repo, const char *remote) {
+  if (!repo) return false;
+  char name[256] = {0};
+  if (remote && remote[0]) {
+    strncpy(name, remote, sizeof(name) - 1);
+  } else {
+    char remotes[8][256];
+    if (git_get_remotes(repo, remotes, 8) <= 0) return false;
+    strncpy(name, remotes[0], sizeof(name) - 1);
+  }
+  char outbuf[4096] = {0};
+  const char *args[] = { "git", "remote", "prune", name, NULL };
+  return git_run_sync(repo, args, outbuf, sizeof(outbuf));
+}
+
+int git_delete_merged_branches(git_repo_t *repo) {
+  if (!repo) return -1;
+  char base[256] = {0}, cur[256] = {0};
+  if (!git_default_branch(repo, base, sizeof(base))) return -1;
+  git_current_branch(repo, cur, sizeof(cur));
+
+  char buf[16 * 1024] = {0};
+  const char *args[] = { "git", "branch", "--merged", base, NULL };
+  if (!git_run_sync(repo, args, buf, sizeof(buf))) return -1;
+
+  int deleted = 0;
+  char *line = buf;
+  while (*line) {
+    char *nl = strchr(line, '\n');
+    if (nl) *nl = '\0';
+    while (*line == ' ' || *line == '*') line++;
+    gc_trim_line(line);
+    if (line[0] && strcmp(line, base) != 0 && strcmp(line, cur) != 0 &&
+        strcmp(line, "main") != 0 && strcmp(line, "master") != 0) {
+      char err[1024] = {0};
+      const char *del[] = { "git", "branch", "-d", line, NULL };
+      if (git_run_sync(repo, del, err, sizeof(err))) deleted++;
+    }
+    if (!nl) break;
+    line = nl + 1;
+  }
+  return deleted;
 }
 
 // ============================================================

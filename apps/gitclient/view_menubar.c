@@ -87,6 +87,17 @@ void gc_handle_command_impl(uint16_t id) {
     case ID_VIEW_CHANGES: gc_set_view_mode(GC_TAB_CHANGES); break;
     case ID_VIEW_HISTORY: gc_set_view_mode(GC_TAB_HISTORY); break;
     case ID_VIEW_GITHUB:  gc_set_view_mode(GC_TAB_GITHUB);  break;
+    case ID_VIEW_ALL_COMMITS:
+      gc_set_view_mode(GC_TAB_HISTORY);
+      if (!gc_reload_history_log("--all"))
+        message_box(gc->main_win, "Could not load the full commit graph.", "All Commits", MB_OK);
+      break;
+    case ID_VIEW_REFLOG:
+      gc_show_reflog_dialog(gc->main_win);
+      break;
+    case ID_VIEW_WORKTREES:
+      gc_show_worktrees_dialog(gc->main_win);
+      break;
     case ID_FILE_OPEN_REPO: {
       char path[512] = {0};
       openfilename_t ofn = {0};
@@ -199,6 +210,24 @@ void gc_handle_command_impl(uint16_t id) {
           gc_refresh_all();
       } else {
         message_box(gc->main_win, "No branch selected.", "Delete", MB_OK);
+      }
+      break;
+    }
+    case ID_BRANCH_DELETE_MERGED: {
+      if (!gc->repo) break;
+      if (message_box(gc->main_win,
+            "Delete local branches already merged into the default branch?\n"
+            "The current branch and main/master are kept.",
+            "Delete Merged", MB_YESNO) != IDYES)
+        break;
+      int n = gc_delete_merged_branches();
+      if (n < 0)
+        message_box(gc->main_win, "Could not list merged branches.", "Delete Merged", MB_OK);
+      else {
+        char msg[128];
+        snprintf(msg, sizeof(msg), "Deleted %d merged branch%s.", n, n == 1 ? "" : "es");
+        message_box(gc->main_win, msg, "Delete Merged", MB_OK);
+        gc_refresh_all();
       }
       break;
     }
@@ -362,6 +391,15 @@ void gc_handle_command_impl(uint16_t id) {
     case ID_REMOTE_MANAGE:
       if (gc->main_win)
         gc_show_remote_dialog(gc->main_win);
+      break;
+    case ID_REMOTE_PRUNE:
+      if (!gc->repo) break;
+      if (gc_prune_remote(NULL)) {
+        message_box(gc->main_win, "Pruned stale remote-tracking branches.", "Prune", MB_OK);
+        gc_refresh_all();
+      } else {
+        message_box(gc->main_win, "Prune failed. Add a remote first.", "Prune", MB_OK);
+      }
       break;
 
     case ID_HELP_ABOUT:

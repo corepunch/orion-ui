@@ -28,6 +28,10 @@
             <item name="changes" label="Changes" shortcut="Ctrl+1" />
             <item name="history" label="History" shortcut="Ctrl+2" />
             <item name="github" label="GitHub" shortcut="Ctrl+3" />
+            <Separator />
+            <item name="all_commits" label="All Commits" />
+            <item name="reflog" label="Reflog" />
+            <item name="worktrees" label="Worktrees" />
         </menu>
 
         <menu name="branch" label="Branch">
@@ -38,6 +42,7 @@
             <item name="rebase" label="Rebase Current" />
             <Separator />
             <item name="delete" label="Delete..." shortcut="Ctrl+D" />
+            <item name="delete_merged" label="Delete Merged Branches..." />
             <item name="rename" label="Rename..." />
         </menu>
 
@@ -73,6 +78,7 @@
             <item name="push" label="Push..." />
             <Separator />
             <item name="manage" label="Manage Remotes..." />
+            <item name="prune" label="Prune Origin" />
         </menu>
 
         <menu name="tag" label="Tag">
@@ -121,6 +127,8 @@
                 <field name="hash" type="string" length="41"/>
                 <field name="is_current" type="bool"/>
                 <field name="is_remote" type="bool"/>
+                <field name="activity" type="string" length="32"/>
+                <field name="kind" type="string" length="16"/>
             </table>
 
             <table name="commits">
@@ -275,6 +283,9 @@
                 <Button name="fetch"       command="remote.fetch"       icon="git-fetch"           text="Fetch"      tooltip="Fetch from remote" />
                 <spacer />
                 <Button name="branch"      command="branch.new"         icon="git-fork"            text="Branch"     tooltip="Create new branch" />
+                <Button name="prune"       command="remote.prune"       icon="git-fetch"           text="Prune"      tooltip="Prune deleted remote-tracking branches" />
+                <Button name="merged"      command="branch.delete_merged" icon="git-diff"             text="Merged"     tooltip="Delete local branches already merged into the default branch" />
+                <Button name="worktrees"   command="view.worktrees"     icon="view-grid"           text="Worktrees"  tooltip="List linked worktrees" />
                 <Button name="search"      command="repo.search"        icon="search"              text="Search"     tooltip="Search repository history" />
                 <spacer />
                 <Button name="refresh"     command="repo.refresh"       icon="refresh"             text="Refresh"    tooltip="Refresh repository" />
@@ -285,7 +296,9 @@
                 <SplitView name="left_split" orientation="vertical" flags="flexspace" width="180">
                     <TableView name="branches" source="db.branches" context-menu="branches"
                                flags="notitle,nofill,vscroll">
-                        <Column field="name" title="" width="0" />
+                        <Column field="name" title="Branch" width="0" />
+                        <Column field="kind" title="" width="64" />
+                        <Column field="activity" title="Activity" width="72" />
                     </TableView>
                     <TableView name="tags" source="db.tags" context-menu="tags"
                                flags="notitle,nofill,vscroll">
