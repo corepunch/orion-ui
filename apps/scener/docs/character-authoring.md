@@ -373,6 +373,21 @@ In the editor, **Animation → Play / Pause** (Space) plays the timeline in the
 viewport, looping after the scene's `duration`; **Go to Start** (Shift+Space)
 rewinds.
 
+## Characters in 3D infographics
+
+The [IK/FK infographic](../scenes/infographics/README.md) uses the existing
+Ecstatica II Joe with calibrated CAT controls to explain hand control. Both
+instances share a torso-turn clip and the same initial FK arm pose; one adds
+a world-space wrist constraint. The sample checks hand error, arm lengths,
+and stationary feet at every output time, then projects sampled joints into
+labels, markers, and a trajectory overlay.
+
+This example uses newly authored motion. Decoded Ecstatica actions, BVH
+retargeting, and procedural gaits are other available motion sources; retain
+their provenance and known timing/contact limits when making an explanation.
+See the [infographic studio guide](infographic-studio.md) for the complete
+render/composition workflow and proposed native annotation features.
+
 ## Editor
 
 Select a prefab instance, open the Hierarchy tab and select a joint. Rotation

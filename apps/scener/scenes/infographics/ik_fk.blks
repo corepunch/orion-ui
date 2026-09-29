@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<scene up="z" duration="6" ambient="0.24 0.27 0.32" background="0.045 0.065 0.095">
+  <camera name="Comparison" comment="Same torso motion; FK follows the hierarchy, IK holds the hand target" pos="0 -650 210" look="0 0 75" fov="20"/>
+  <light pos="-230 -260 380" color="1 0.93 0.84" intensity="2.1" radius="1300" castShadows="1"/>
+  <light pos="250 -160 200" color="0.72 0.85 1" intensity="1.1" radius="1100" castShadows="0"/>
+  <light pos="0 140 280" color="0.65 0.85 1" intensity="1.8" radius="1000" castShadows="0"/>
+  <box name="StudioFloor" pos="0 0 -5" size="10000 10000 6" color="0.075 0.105 0.145"/>
+  <cylinder pos="-140 0 -1" rot="90 0 0" radius="65" height="2" sides="96" color="0.20 0.13 0.095"/>
+  <cylinder pos="140 0 -1" rot="90 0 0" radius="65" height="2" sides="96" color="0.075 0.18 0.18"/>
+  <clip name="TorsoTurn" length="6" loop="1" ease="smooth">
+    <key t="0"><joint target="ribcage" rot="0 0 0"/></key>
+    <key t="1.5"><joint target="ribcage" rot="0 0 -22"/></key>
+    <key t="3"><joint target="ribcage" rot="0 0 0"/></key>
+    <key t="4.5"><joint target="ribcage" rot="0 0 22"/></key>
+    <key t="6"><joint target="ribcage" rot="0 0 0"/></key>
+  </clip>
+  <prefab source="../characters/joe/prefabs/character" name="FK" pos="-140 0 0">
+    <layer clip="TorsoTurn"/>
+    <joint target="left_upperarm" aim="65 -25"/>
+    <joint target="left_forearm" aim="52.5627589 -24.5063990"/>
+  </prefab>
+  <prefab source="../characters/joe/prefabs/character" name="IK" pos="140 0 0">
+    <layer clip="TorsoTurn"/>
+    <joint target="left_upperarm" aim="65 -25"/>
+    <joint target="left_forearm" aim="52.5627589 -24.5063990"/>
+    <ik tip="left_palm" target="178.7 -15 118.5" pole="18.4 -8.6 -9.5" keepOrientation="1"/>
+  </prefab>
+</scene>

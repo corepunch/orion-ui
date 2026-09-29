@@ -3,11 +3,18 @@
 Current Orion build, batch rendering and deployment instructions are in
 [CLI.md](CLI.md).
 
-A very small modular OpenGL scene renderer with real-time **stencil shadow
-volumes**. Shadows are a first-class composition tool: position lights and
+Scener is a scene and animation editor evolving toward a **studio for 3D
+infographics**: editable 3D subjects, character motion, explanatory graphics,
+and reproducible still/video output. The current infographic workflow combines
+native scene rendering with an external annotation compositor; see the
+[infographic studio guide](docs/infographic-studio.md) for implemented features,
+the IK/FK example, and future development areas.
+
+Its modular OpenGL renderer uses real-time **stencil shadow volumes**.
+Shadows are a first-class composition tool: position lights and
 casters to create long silhouettes, pools of light, strong contrast, and
 dramatic architectural shots. Scenes are described in XML and built from
-walls, furniture, and basic primitives.
+walls, furniture, primitives, reusable prefabs, and articulated characters.
 
 Scener is an Orion application. Its renderer is implemented by small C modules
 with shared declarations in **`simplegl.h`**. Scene parsing has no external XML
@@ -15,6 +22,16 @@ or shader-file dependency; windowing, input, image output, and UI are provided
 by Orion and its platform layer.
 
 ## Workflow
+
+For an animated explanation, author the scene and motion, render consistent
+frames, sample the scene data, and compose labels and measurements into the
+final poster or video. The [IK vs FK infographic](scenes/infographics/README.md)
+demonstrates this with an Ecstatica II character, real two-bone IK, projected
+joint markers, a hand trail, and measured displacement. Its new scene and
+helper scripts reuse Scener's existing rig, timeline, solver, and renderer.
+The annotations currently appear in the exported infographic, not the editor.
+
+Scene rendering also supports the illustration workflow below.
 
 ![SimpleGL workflow: AI prompt → 3D scene → render → AI overpaint](docs/workflow.jpeg)
 
@@ -100,10 +117,12 @@ shininess and leaving unmarked parts unchanged.
 <prefab source="items/book" pos="0.5 0 0" color="0.08 0.22 0.56"/>
 ```
 
-Important authoring features still missing are named multi-color material
-slots, per-camera visibility or state variants, animation, object/layer names
-for CLI inspection, orthographic and aspect-safe cameras, general material
-texture mapping beyond screens, and area lights or soft shadows. Prefab-wide
+Scener supports camera-specific transforms and poses, layered character clips,
+procedural gaits, BVH retargeting, FK posing, and two-bone IK. General object
+animation tracks, named multi-color material slots, a dedicated per-camera
+visibility/state system, general object/layer inspection, orthographic and
+aspect-safe story cameras, general material texture mapping beyond screens,
+and area lights or soft shadows remain future work. Prefab-wide
 `material`, `shininess`, `castShadow`, and `renderable` inheritance are also
 not implemented; child shapes continue to own those properties.
 
@@ -252,12 +271,10 @@ Reproduce any camera in the scene with:
   same door/window/negative profiles before extrusion. This preserves matching
   apertures across colors and projecting trim bands, including curved, stacked
   and overlapping openings. It remains wall-specific geometry, not arbitrary CSG.
-- **Static scene ⇒ shadow volumes precomputed once.** Nothing in the scene
-  format can move, so silhouette/volume computation happens once at load
-  (`scene_build_all_shadow_volumes`), not per frame. If you add moving
-  lights or objects later, call `build_shadow_volume()` again per-frame for
-  whatever changed — the function is already factored out for that; only
-  `main()`'s "compute once" call site needs to move into the render loop.
+- **Scene evaluation owns shadow rebuilding.** Shadow volumes are built for
+  the evaluated scene. `scene_set_time()` rebuilds animated character geometry
+  and its shadow volumes, so batch animation retains the same lighting and
+  shadow behavior as still renders. Unchanged scenes reuse their built volumes.
 
 ## Shadow algorithm
 
@@ -300,18 +317,21 @@ reference. Agents creating or changing scene and prefab XML must also follow
 the [`populate-simplegl-scenes`](skills/populate-simplegl-scenes/SKILL.md)
 workflow.
 
-## Known limitations (all fixable, kept out on purpose for scope)
+## Known limitations
 
-- One shadow-casting point light is exercised in the sample and is what the
-  algorithm is written for; multiple lights work (the render loop already
-  iterates `<light>` entries) but cost is O(lights × objects) shadow-volume
-  triangles per frame relatively fast since they're precomputed once.
+- Multiple shadow-casting lights work, but each adds shadow-volume geometry
+  and rendering passes. Animated scene evaluation also rebuilds those volumes.
 - Non-uniform scale (`scale="1 1 3"` on a rotated object) will slightly
   distort shading normals — normals use the rotation part of the transform
   only, not a full inverse-transpose. Fine for boxes/furniture; would matter
   for a heavily stretched sphere.
-- No texturing — flat/vertex colors only.
+- Image textures are supported on `<screen>` surfaces; general material
+  texture mapping is not implemented.
 - Wall cutters must be parallel to the wall; oblique and arbitrary mesh CSG are unsupported.
+- Infographic text, projected callouts, trails, and measurements currently use
+  an example-specific external compositor. Native editable annotations,
+  reusable infographic layouts, and data binding are future work; see the
+  [studio direction](docs/infographic-studio.md#development-direction).
 
 ## Procedural windows
 
