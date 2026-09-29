@@ -45,6 +45,7 @@ Pecs are broad and deeply embedded in the ribcage. Kneecaps and posterior calves
 
 - The new abdomen adds a second torso articulation underneath the source-sized chest. Its halfaxes are 13.248 × 10.8 × 15.3 cm. The volumes overlap to close the waist during bends.
 - The rest pose and joint distances fit our constraint skeleton; they are not the original stored pose solved by Ecstatica's runtime. The overall silhouette is consequently an adaptation even where each part's radii match exactly.
+- Shoulder attachments sit about 3.3 cm behind the torso axis instead of 3.3 cm ahead: `from="104.25 0"` mirrors the previous `75.75°` attachment in depth. Both full arm chains move back by about 6.6 cm, preserving shoulder height, width and all volume dimensions. This deliberate posture adjustment gives the neutral pose a more open chest.
 - Mirrored limbs remove the source's small left/right pose and hand-placement asymmetries. Torso controls are named `abdomen` and `ribcage`, separate from `pelvis`.
 - The original head triangles are represented by a small ellipsoid nose in this example. Two zero-width source ears receive a 0.072 cm thickness so the mesh is nondegenerate. The belt-side patch and source `secret piece` are omitted.
 - Red clothing, olive trousers, brown boots and the face/hair palette follow the supplied images. Scener's light/shadow renderer supplies the shading; the original palette lookup/rasterizer is not emulated.
@@ -62,7 +63,7 @@ Pecs are broad and deeply embedded in the ribcage. Kneecaps and posterior calves
 
 The `Bend` pose re-aims the abdomen and ribcage from 90° to 65° each, producing a distributed 50° forward bend. The neck and arms adjust with the gesture. `Twist` distributes 18° and 22° of yaw between those torso controls and raises the left forearm. Both poses keep the pelvis and leg chains at rest, so the feet stay planted without an unnecessary IK solve.
 
-Review results: one actor appears in every camera; standing front and side views show the distinct knees and calves; hands have no digits; the pecs remain close to the torso; waist volumes remain joined during the bend and twist. Both feet touch the floor, with no `foot … rests` or `IK … out of reach` warnings. The floor and limbs produce readable contact/cast shadows. The neutral pose was also reviewed with zero ambient fill and `-d 8` to check the lighting and blocking.
+Review results: the shoulder-depth adjustment was re-rendered in all five views on 2026-09-29; the side view shows an open chest and rearward shoulder placement, while bend/twist retain connected shoulder volumes. One actor appears in every camera; standing front and side views show the distinct knees and calves; hands have no digits; the pecs remain close to the torso; waist volumes remain joined during the bend and twist. Both feet touch the floor, with no `foot … rests` or `IK … out of reach` warnings. The floor and limbs produce readable contact/cast shadows. The neutral pose was also reviewed with zero ambient fill and `-d 8` to check the lighting and blocking.
 
 ## Run and validate
 
