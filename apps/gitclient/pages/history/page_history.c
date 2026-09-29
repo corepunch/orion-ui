@@ -2,9 +2,9 @@
 
 #include "page_history.h"
 
-// ──────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 // Window proc — captures outlets on evCreate.
-// ──────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 
 result_t page_history_proc(window_t *win, uint32_t msg,
                             uint32_t wparam, void *lparam) {
@@ -24,9 +24,9 @@ result_t page_history_proc(window_t *win, uint32_t msg,
   return true;
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 // Event delegation — called from gc_main_proc when tab 1 is active.
-// ──────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 
 bool page_history_handle(window_t *main_win, uint32_t msg,
                           uint32_t wparam, void *lparam) {
@@ -45,6 +45,18 @@ bool page_history_handle(window_t *main_win, uint32_t msg,
       GC_TRACE("history SELCHANGE branch row=%d", sel);
       gc->selected_commit = -1;
       gc->selected_file   = -1;
+      result_node_t *rows = (result_node_t *)send_db_message(
+        gc->history_db, dbFetch, MAKEDWORD(ID_DB_BRANCHES, 0), (void *)(intptr_t)0);
+      int row = 0;
+      for (result_node_t *n = rows; n; n = n->next, row++) {
+        if (row == sel) {
+          db_branche_t *b = *(db_branche_t **)n->data;
+          if (b && b->name[0])
+            gc_reload_history_log(b->name);
+          break;
+        }
+      }
+      free_result_list(rows);
       return true;
     }
 
