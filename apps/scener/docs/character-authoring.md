@@ -198,7 +198,13 @@ scene. Select a pose for an instance with `pose="…"`, or per camera:
 ```
 
 - **Reach with limb IK.** `<ik limb="left_arm" offset="x y z"/>` moves the hand
-  from where it rests by an offset in the character's body frame (cm), so the
+  from where it rests by an offset in the character's body frame (cm). "Rests"
+  means the rig's *rest pose*, which for the Ecstatica characters holds the arms
+  out to the sides, not where an idle arm hangs; a hand target in front of the
+  body is therefore an offset from there, or a world `target="x y z"`. An
+  unreachable goal is reported once per joint with the goal distance and the
+  limb's reach. `pose="…"` finds poses in the scene or in that character's own
+  file only (`PresentLeft` exists for Joe); an unknown pose is reported once. The
   pose works for any instance anywhere. The IK finds the limb's upper and lower
   bones and keeps the palm or ankle's orientation. `bend="azimuth elevation"`
   is the body direction the elbow or knee points toward; legs default to

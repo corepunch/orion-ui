@@ -29,7 +29,8 @@ typedef struct {
 	bool batch, layout, list_cameras, list_joints, help, version, invalid;
 	float time, frame_start, frame_end, fps;
 	bool frames, time_set, check, output_dir_set;
-	char reel_path[1024], poster_path[1024];
+	char reel_path[1024], poster_path[1024], sheet_path[1024];
+	int sheet_columns, nsheet_times; float sheet_times[64];
 	char output_dir[1024], format[8];
 	float layout_scale;
 	bool debug_flags_set;
@@ -72,6 +73,7 @@ static void cli_usage(void) {
 	     "scener --list-joints SCENE [--camera NAME] [--time SECONDS]\n"
 	     "scener --reel REEL (--output FILE.mp4|FILE.png | --output-dir DIR) [--time SECONDS] [--poster FILE.png]\n"
 	     "scener --reel REEL --check\n"
+	     "scener --reel REEL --sheet FILE.png [--columns N] [--sheet-times T1,T2,...]   one thumbnail per shot (or 12 across the reel)\n"
 	     "scener --render SCENE --camera NAME --frames START:END:FPS --output FILE.mp4 [--size WIDTHxHEIGHT]\n"
 	     "Options: --time SECONDS, --frames START:END:FPS (with --render), --supersample 1..4 (default 2),\n"
 	     "  -no-shadows, -wireframe, -d FLAGS, --help, --version\n"
@@ -104,12 +106,22 @@ static void cli_parse(int argc, char *argv[]) {
 		bool output_dir=!strcmp(arg,"--output-dir")||(!strcmp(arg,"-o")&&(g_cli.batch||g_cli.layout));
 		if(output_dir)output=false;
 		bool camera=!strcmp(arg,"--camera")||!strcmp(arg,"--cam")||!strcmp(arg,"-cam");
-		bool known=output||output_dir||camera||!strcmp(arg,"--reel")||!strcmp(arg,"--poster")||!strcmp(arg,"--size")||!strcmp(arg,"--format")||!strcmp(arg,"--output-dir")||!strcmp(arg,"--scale")||!strcmp(arg,"--supersample")||!strcmp(arg,"-d")||!strcmp(arg,"--time")||!strcmp(arg,"--frames");
+		bool known=output||output_dir||camera||!strcmp(arg,"--reel")||!strcmp(arg,"--poster")||!strcmp(arg,"--sheet")||!strcmp(arg,"--columns")||!strcmp(arg,"--sheet-times")||!strcmp(arg,"--size")||!strcmp(arg,"--format")||!strcmp(arg,"--output-dir")||!strcmp(arg,"--scale")||!strcmp(arg,"--supersample")||!strcmp(arg,"-d")||!strcmp(arg,"--time")||!strcmp(arg,"--frames");
 		if(!known){fprintf(stderr,"unsupported option: %s\n",arg);g_cli.invalid=true;continue;}
 		if(i+1>=argc){fprintf(stderr,"missing value for %s\n",arg);g_cli.invalid=true;continue;}
 		value=argv[++i];
 		if(!strcmp(arg,"--reel")){snprintf(g_cli.reel_path,sizeof(g_cli.reel_path),"%s",value);continue;}
 		if(!strcmp(arg,"--poster")){snprintf(g_cli.poster_path,sizeof(g_cli.poster_path),"%s",value);continue;}
+		if(!strcmp(arg,"--sheet")){snprintf(g_cli.sheet_path,sizeof(g_cli.sheet_path),"%s",value);continue;}
+		if(!strcmp(arg,"--columns")){g_cli.sheet_columns=atoi(value);if(g_cli.sheet_columns<1||g_cli.sheet_columns>16){fprintf(stderr,"invalid columns: %s\n",value);g_cli.invalid=true;}continue;}
+		if(!strcmp(arg,"--sheet-times")){
+			for(char *save=NULL,*tok=strtok_r(strdup(value),", ",&save);tok&&g_cli.nsheet_times<64;tok=strtok_r(NULL,", ",&save)){
+				char *end;float t=strtof(tok,&end);
+				if(*end||!isfinite(t)){fprintf(stderr,"invalid sheet time: %s\n",tok);g_cli.invalid=true;break;}
+				g_cli.sheet_times[g_cli.nsheet_times++]=t;
+			}
+			continue;
+		}
 		if(output){g_cli.screenshot_mode=true;snprintf(g_cli.output_path,sizeof(g_cli.output_path),"%s",value);}
 		else if(camera) snprintf(g_cli.camera_name,sizeof(g_cli.camera_name),"%s",value);
 		else if(output_dir){g_cli.output_dir_set=true;snprintf(g_cli.output_dir,sizeof(g_cli.output_dir),"%s",value);}
@@ -136,14 +148,14 @@ static void cli_parse(int argc, char *argv[]) {
 		}else if(!strcmp(arg,"-d")) g_cli.debug_flags=atoi(value);
 	}
 	if(g_cli.reel_path[0]){
-		bool output=g_cli.output_path[0]||g_cli.output_dir_set;
+		bool output=g_cli.output_path[0]||g_cli.output_dir_set||g_cli.sheet_path[0];
 		if(g_cli.scene_path[0]||g_cli.batch||g_cli.layout||g_cli.list_cameras||g_cli.list_joints||g_cli.frames){fprintf(stderr,"--reel takes no scene or other mode\n");g_cli.invalid=true;}
-		else if(g_cli.check==output){fprintf(stderr,"--reel needs --output FILE, --output-dir DIR or --check\n");g_cli.invalid=true;}
+		else if(g_cli.check==output){fprintf(stderr,"--reel needs --output FILE, --output-dir DIR, --sheet FILE or --check\n");g_cli.invalid=true;}
 		else if(g_cli.output_path[0]&&g_cli.output_dir_set){fprintf(stderr,"--reel takes --output or --output-dir, not both\n");g_cli.invalid=true;}
 		g_cli.screenshot_mode=!g_cli.check;
 		return;
 	}
-	if(g_cli.check||g_cli.poster_path[0]){fprintf(stderr,"--check and --poster require --reel\n");g_cli.invalid=true;}
+	if(g_cli.check||g_cli.poster_path[0]||g_cli.sheet_path[0]){fprintf(stderr,"--check, --poster and --sheet require --reel\n");g_cli.invalid=true;}
 	if(g_cli.screenshot_mode&&!g_cli.scene_path[0]){fprintf(stderr,"rendering requires a scene\n");g_cli.invalid=true;}
 	if(g_cli.list_cameras&&!g_cli.scene_path[0]){fprintf(stderr,"camera listing requires a scene\n");g_cli.invalid=true;}
 	if(g_cli.list_joints&&(!g_cli.scene_path[0]||g_cli.screenshot_mode||g_cli.list_cameras)){fprintf(stderr,"joint listing requires a scene and no other mode\n");g_cli.invalid=true;}
@@ -185,6 +197,37 @@ static bool cli_save_image(const char *path,const uint8_t *pixels,int w,int h){
 	return ok;
 }
 
+/* Contact sheet: box-filtered thumbnails of chosen frames in a grid, for reviewing a whole reel in one image.
+   Times default to the middle of each <shot>, or twelve evenly spaced frames when a reel has no shots. */
+enum{CLI_SHEET_THUMB=480,CLI_SHEET_MAX=64,CLI_SHEET_DEFAULT_COLUMNS=4,CLI_SHEET_DEFAULT_FRAMES=12};
+static bool cli_contact_sheet(reel_t *r,uint8_t *pixels){
+	float times[CLI_SHEET_MAX];int n=0;
+	if(g_cli.nsheet_times)for(;n<g_cli.nsheet_times;n++)times[n]=g_cli.sheet_times[n];
+	else if(r->nshot_marks)for(;n<r->nshot_marks&&n<CLI_SHEET_MAX;n++)times[n]=r->shot_marks[n].start+r->shot_marks[n].duration*0.6f;
+	else for(;n<CLI_SHEET_DEFAULT_FRAMES;n++)times[n]=r->duration*(n+0.5f)/CLI_SHEET_DEFAULT_FRAMES;
+	int cols=g_cli.sheet_columns?g_cli.sheet_columns:n<CLI_SHEET_DEFAULT_COLUMNS?n:CLI_SHEET_DEFAULT_COLUMNS,rows=(n+cols-1)/cols;
+	int tw=CLI_SHEET_THUMB,th=tw*r->height/r->width;
+	uint8_t *sheet=calloc((size_t)cols*tw*rows*th,4);
+	if(!sheet)return false;
+	for(int i=0;i<cols*tw*rows*th;i++)sheet[i*4+3]=255;
+	float sx=(float)r->width/tw,sy=(float)r->height/th;
+	for(int k=0;k<n;k++){
+		if(!reel_gl_render(r,fminf(fmaxf(times[k],0),r->duration-1.0f/r->fps),pixels)){free(sheet);return false;}
+		int ox=(k%cols)*tw,oy=(k/cols)*th;
+		for(int y=0;y<th;y++)for(int x=0;x<tw;x++){
+			int x0=(int)(x*sx),x1=(int)ceilf((x+1)*sx),y0=(int)(y*sy),y1=(int)ceilf((y+1)*sy);
+			if(x1>r->width)x1=r->width;if(y1>r->height)y1=r->height;
+			unsigned sum[3]={0,0,0},count=0;
+			for(int yy=y0;yy<y1;yy++)for(int xx=x0;xx<x1;xx++,count++){const uint8_t *p=pixels+((size_t)yy*r->width+xx)*4;sum[0]+=p[0];sum[1]+=p[1];sum[2]+=p[2];}
+			uint8_t *d=sheet+((size_t)(oy+y)*cols*tw+ox+x)*4;
+			for(int c=0;c<3;c++)d[c]=count?(uint8_t)(sum[c]/count):0;
+		}
+		fprintf(stderr,"[reel] sheet row %d col %d: t=%.2f s\n",k/cols+1,k%cols+1,times[k]);
+	}
+	bool ok=cli_save_image(g_cli.sheet_path,sheet,cols*tw,rows*th);
+	free(sheet);return ok;
+}
+
 /* Renders a reel: a still (--time or .png/.jpg output), an MP4, or a PNG sequence. */
 static bool cli_run_reel(void){
 	reel_t *r=reel_load(g_cli.reel_path);
@@ -197,6 +240,10 @@ static bool cli_run_reel(void){
 	ok=ok&&pixels;
 	double start=axGetMilliseconds();
 	int frames=0;
+	if(ok&&g_cli.sheet_path[0]){
+		ok=cli_contact_sheet(r,pixels);
+		if(ok&&!g_cli.output_path[0]&&!g_cli.output_dir_set){reel_gl_free(r);reel_free(r);free(pixels);return true;}
+	}
 	if(ok&&g_cli.output_path[0]&&!video){
 		ok=reel_gl_render(r,g_cli.time_set?g_cli.time:r->poster,pixels)&&cli_save_image(g_cli.output_path,pixels,r->width,r->height);
 		frames=1;

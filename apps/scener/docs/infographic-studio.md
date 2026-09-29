@@ -25,6 +25,7 @@ or image-sequence step. The first worked example is
 | Type | SDF text at any size with kerning, tracking, tabular digits and weight |
 | Annotations | Joint anchors projected through each layer's camera: chains with joint markers, leaders, crosshairs, sampled trails, live numeric readouts |
 | Measurements and checks | World-space joint positions at float precision, `dist()`, `<check>` rules on every frame (`--check`) |
+| Shots and cuts | `<shot>` sequences scene cameras with dip or fade transitions and shot-local time; `<template>`/`<use>` repeat layouts; `<point>` pins type to props |
 | Delivery | MP4 (VideoToolbox on macOS, ffmpeg elsewhere), PNG/JPEG stills and sequences, from one `scener --reel` run |
 | Scene inspection | `--list-cameras`, `--list-joints` at `--time` |
 
@@ -47,8 +48,8 @@ or image-sequence step. The first worked example is
    styles, lets for measurements, `<check>` rules for what the explanation
    claims, and the graphics.
 3. `scener --reel FILE --check` validates the motion without a GPU.
-4. `scener --reel FILE --output still.png --time T` for review stills at the
-   extremes; then `--output FILE.mp4 --poster FILE.png` for delivery.
+4. `scener --reel FILE --sheet sheet.png` for one thumbnail per shot, then
+   `--output still.png --time T` for review stills at the extremes; then `--output FILE.mp4 --poster FILE.png` for delivery.
 
 Checks are the contract of an explanation: if a caption says the feet stay
 planted, a check says so to 0.01 cm on every frame. They measure joints, not
@@ -64,7 +65,7 @@ The following are proposed extensions, not implemented capabilities:
 2. **More vocabulary.** Arrowheads, images, gradients, text wrapping and
    callout layout, charts bound to lets, and motion blur by sub-frame
    accumulation.
-3. **Camera shots.** Animated cameras and cuts authored in the reel.
+3. **Animated cameras.** Cuts are `<shot>`s; cameras still come from the scene.
 4. **Faster evaluation.** Re-posing characters without rebuilding the whole
    scene each frame, and overlapping GPU readback with encoding.
 

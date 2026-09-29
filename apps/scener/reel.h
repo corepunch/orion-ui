@@ -16,6 +16,7 @@
 #define REEL_STACK 64
 
 typedef struct reel_s reel_t;
+typedef struct { float start, duration; } reel_shot_mark_t;
 
 typedef struct {
 	uint8_t *code; int ncode, ccode;
@@ -45,9 +46,13 @@ typedef struct {
 	float rect[4];           /* canvas x y w h this frame */
 	mat4 view, proj;
 	unsigned fbo, color, depth; int tw, th;
-	bool visible;
+	bool visible;            /* scene has been evaluated at least once */
+	bool needed;             /* anchors read this layer, so it is evaluated on every frame even when hidden */
+	char id[REEL_NAME];      /* <scene id> / <shot id>, the target of <point scene> */
 	struct reel_node_s *node;
 } reel_layer_t;
+
+typedef struct { char name[REEL_NAME]; int layer; vec3 world; } reel_point_t; /* <point>: a fixed world position in a scene layer */
 
 typedef enum {
 	REEL_GROUP, REEL_SCENE, REEL_TEXT, REEL_RECT, REEL_CIRCLE, REEL_LINE, REEL_POLYLINE, REEL_TRAIL,
@@ -99,6 +104,10 @@ struct reel_s {
 	reel_curve_t *curves; int ncurves, ccurves;
 	reel_font_t *fonts; int nfonts, cfonts;
 	reel_style_t *styles; int nstyles, cstyles;
+	reel_point_t *points; int npoints, cpoints;
+	bool in_shot; int shot_layer; float shot_start, shot_duration, shot_cursor; /* <shot> build state: times inside a shot are shot-local */
+	bool shots;
+	reel_shot_mark_t *shot_marks; int nshot_marks, cshot_marks; /* one per <shot>, for contact sheets */
 	char (*let_names)[REEL_NAME]; float *lets; int nlets;
 	reel_node_t **let_nodes; int nlet_nodes, clet_nodes;
 	reel_node_t **checks; int nchecks, cchecks;

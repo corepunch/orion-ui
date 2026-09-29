@@ -179,12 +179,101 @@ static void test_reel_mp4_container(void) {
 	}
 }
 
+static void test_reel_templates(void) {
+	TEST("scener reels: <use> expands templates with defaults, overrides and errors");
+	char path[REEL_TEST_PATH];
+	reel_t *r = reel_test_write(
+		"<reel width=\"320\" height=\"200\" duration=\"1\">\n"
+		"  <style name=\"body\" size=\"20\"/>\n"
+		"  <template name=\"card\" title=\"Hello\" px=\"10\">\n"
+		"    <text style=\"body\" x=\"$px\" y=\"20\">$title, $$5</text>\n"
+		"  </template>\n"
+		"  <group><use template=\"card\"/><use template=\"card\" title=\"Bye\" px=\"30\"/></group>\n"
+		"</reel>\n", path);
+	unlink(path);
+	ASSERT_NOT_NULL(r);
+	reel_node_t *group = r->root.kids[0];
+	ASSERT_EQUAL(group->nkids, 2);
+	ASSERT_STR_EQUAL(group->kids[0]->segments[0].text, "Hello, $5");
+	ASSERT_STR_EQUAL(group->kids[1]->segments[0].text, "Bye, $5");
+	ASSERT_TRUE(reel_test_near(reel_expr_eval(&group->kids[1]->x, r), 30));
+	reel_free(r);
+	static const struct { const char *xml, *error; } cases[] = {
+		{"<reel><template name=\"a\" p=\"\"/><use template=\"a\" q=\"1\"/></reel>", "passes q, which the template does not declare"},
+		{"<reel><use template=\"missing\"/></reel>", "names no earlier <template>"},
+		{"<reel><style name=\"b\"/><template name=\"a\" p=\"\"><text style=\"b\">$oops</text></template><use template=\"a\"/></reel>", "no parameter $oops"},
+		{"<reel><template name=\"a\"><use template=\"a\"/></template><use template=\"a\"/></reel>", "nest more than"},
+	};
+	for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		r = reel_test_write(cases[i].xml, path);
+		unlink(path);
+		if (r) { reel_free(r); FAIL(cases[i].xml); return; }
+		ASSERT(strstr(reel_error(), cases[i].error) != NULL, cases[i].error);
+	}
+	PASS();
+}
+
+static void test_reel_shots(void) {
+	TEST("scener reels: shots run in sequence with shot-local times, transitions and scene points");
+	char cwd[REEL_TEST_PATH], xml[4096], path[REEL_TEST_PATH];
+	ASSERT_NOT_NULL(getcwd(cwd, sizeof(cwd)));
+	snprintf(xml, sizeof(xml),
+		"<reel width=\"320\" height=\"200\" fps=\"10\">\n"
+		"  <style name=\"body\" size=\"20\"/>\n"
+		"  <shot id=\"a\" src=\"%s/apps/scener/scenes/infographics/ik_fk.blks\" camera=\"Comparison\" duration=\"2\">\n"
+		"    <text style=\"body\" from=\"0.5\" at=\"0.25\">first {st:%%.1f}/{sdur:%%.0f}</text>\n"
+		"  </shot>\n"
+		"  <shot id=\"b\" src=\"%s/apps/scener/scenes/infographics/ik_fk.blks\" camera=\"Comparison\" duration=\"3\" transition=\"dip 0.5\">\n"
+		"    <point name=\"Origin\" pos=\"0 0 100\"/>\n"
+		"    <circle x=\"Origin.sx\" y=\"Origin.sy\"/>\n"
+		"  </shot>\n"
+		"</reel>\n", cwd, cwd);
+	reel_t *r = reel_test_write(xml, path);
+	unlink(path);
+	ASSERT_NOT_NULL(r);
+	ASSERT_TRUE(reel_test_near(r->duration, 5));
+	ASSERT_EQUAL(r->nlayers, 2);
+	ASSERT_EQUAL(r->nshot_marks, 2);
+	ASSERT_TRUE(reel_test_near(r->shot_marks[1].start, 2) && reel_test_near(r->shot_marks[1].duration, 3));
+	/* shot a: [0, 2); its overlay lives shot-locally from 0.5 and reveals from 0.25 */
+	reel_node_t *shot_a = r->root.kids[0], *content = shot_a->kids[1], *text = content->kids[0];
+	ASSERT_TRUE(reel_test_near(reel_expr_eval(&text->from, r), 0.5f) && reel_test_near(text->at, 0.25f));
+	/* shot b: starts at 2, so its group is live from 2 and st counts from there */
+	reel_node_t *shot_b = r->root.kids[1];
+	ASSERT_EQUAL(shot_b->nkids, 3); /* scene, content, dip cover */
+	ASSERT_TRUE(reel_test_near(reel_expr_eval(&shot_b->kids[1]->from, r), 2));
+	reel_seek(r, 2.5f);
+	ASSERT_TRUE(reel_test_near(reel_test_eval(r, "1"), 1));
+	/* a scene point projects through its layer's camera: the origin is inside the canvas */
+	float sx = reel_test_eval(r, "Origin.sx"), sy = reel_test_eval(r, "Origin.sy");
+	ASSERT_TRUE(sx > 0 && sx < 320 && sy > 0 && sy < 200);
+	ASSERT_TRUE(reel_test_near(reel_test_eval(r, "Origin.z"), 100));
+	/* the layer of shot a is cut away and unread by anchors, so it is not re-posed while shot b plays */
+	ASSERT_FALSE(r->layers[0].needed);
+	ASSERT_TRUE(r->layers[1].needed);
+	reel_free(r);
+	PASS();
+}
+
+static void test_reel_const_attribute_hint(void) {
+	TEST("scener reels: a constant attribute given a word explains itself");
+	char path[REEL_TEST_PATH];
+	reel_t *r = reel_test_write("<reel>\n<style name=\"b\"/>\n<text style=\"b\" exit=\"rise\">x</text>\n</reel>", path);
+	unlink(path);
+	ASSERT_NULL(r);
+	ASSERT_TRUE(strstr(reel_error(), ":3:") && strstr(reel_error(), "<text exit=\"rise\"> must be a constant number"));
+	PASS();
+}
+
 int main(void) {
 	TEST_START("scener reels");
 	test_reel_expressions();
 	test_reel_document();
 	test_reel_rejects_mistakes();
 	test_reel_joint_anchors();
+	test_reel_templates();
+	test_reel_shots();
+	test_reel_const_attribute_hint();
 	test_reel_mp4_container();
 	TEST_END();
 }
