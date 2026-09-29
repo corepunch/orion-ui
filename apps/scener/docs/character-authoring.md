@@ -23,6 +23,12 @@ For a source-dimensioned Ecstatica example with independently bending abdomen an
 ribcage volumes, see [the articulated biped study](ecstatica-biped.md), its
 [scene](../scenes/ecstatica_biped_study.blks) and [prefab](../prefabs/characters/ecstatica_biped.blk).
 
+## Import Ecstatica characters and toggle costume features
+
+See [the ISO importer](../../../tools/ecstatica/IMPORT.md) for direct Ecstatica I/II conversion, source records, experimental animation previews and CAT adaptations. Character `<option>` defaults can be overridden per instance. Use `if-feature` / `unless-feature` on decorative volumes; joints remain present for IK and animation. The standard biped includes optional gloves, disabled by default.
+
+For preserved Ecstatica volumes under CAT controls and source-based proportion studies, use [the volume-character workflow](volume-characters.md) and [recipe library](../characters/README.md).
+
 ## Start from a preset
 
 Like a CAT rig preset, a preset is a starting file, not a base class. Copy it,

@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='utf-8'?>
+<scene up="z" ambient=".28 .28 .28" background=".13 .15 .17" duration="4">
+  <camera name="Standing" pos="-220 -440 180" look="0 0 115" fov="35" />
+  <camera name="Front" pos="0 -490 105" look="0 0 115" fov="35" />
+  <camera name="Side" pos="-490 0 105" look="0 0 115" fov="35" />
+  <light pos="-180 -270 360" color="1 .94 .85" intensity="1.6" radius="900" castShadows="1" />
+  <light pos="180 -180 180" color=".8 .87 1" intensity=".7" radius="900" castShadows="0" />
+  <box pos="0 0 -2" size="540 540 4" color=".28 .29 .27" />
+  <prefab source="character" name="Character">
+    <gait mode="spot" stride="24" lift="5" speed="36" footRoll="0" armSwing="6" armBend="8" />
+  </prefab>
+  <camera name="Portrait" pos="-25.00927 -107.2147 123.9253" look="-0.009267572 -7.21469 108.9253" fov="30" />
+</scene>

@@ -1,0 +1,15 @@
+{
+  "name": "height-tall",
+  "base": "joe",
+  "height_heads": 8,
+  "frame": 1,
+  "fullness": 0,
+  "muscle": 0,
+  "shoulders": 1,
+  "head_size": 1,
+  "youth": 0,
+  "posture": 0,
+  "gloves": true,
+  "boots": true,
+  "hair": true
+}

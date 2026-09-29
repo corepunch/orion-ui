@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='utf-8'?>
+<scene up="z" ambient=".28 .28 .28" background=".13 .15 .17">
+  <camera name="Standing" pos="-215.441 -387.7939 136.446" look="0 0 71.81368" fov="30" />
+  <camera name="Front" pos="0 -430.8821 86.17642" look="0 0 71.81368" fov="30" />
+  <camera name="Side" pos="-430.8821 0 86.17642" look="0 0 71.81368" fov="30" />
+  <light pos="-143.6274 -215.441 287.2547" color="1 .94 .85" intensity="1.6" radius="718.1368" castShadows="1" />
+  <light pos="143.6274 -143.6274 143.6274" color=".8 .87 1" intensity=".7" radius="718.1368" castShadows="0" />
+  <box pos="0 0 -2" size="430.8821 430.8821 4" color=".28 .29 .27" />
+  <prefab source="source" name="Actor">
+    <option name="gloves" enabled="0" />
+  </prefab>
+</scene>

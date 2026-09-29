@@ -1,0 +1,13 @@
+{
+  "actor": "w_gob1",
+  "record": 2509,
+  "action": 344,
+  "source_scene": "scenes/animations/0344-gobswingfr.blks",
+  "ignored_events": {
+    "VECTOR1": 4,
+    "VECTOR2": 4,
+    "INTERACT": 9
+  },
+  "unmapped_part_ids": [],
+  "timing": "unsigned source phase normalized to requested duration; not recovered game FPS"
+}

@@ -1,0 +1,15 @@
+{
+  "name": "Round-bellied villager \u00b7 w_vil2",
+  "base": "villager-belly",
+  "height_heads": 4.858528587056572,
+  "frame": 1,
+  "fullness": 0,
+  "muscle": 0,
+  "shoulders": 1,
+  "head_size": 1,
+  "youth": 0,
+  "posture": 0,
+  "gloves": true,
+  "boots": true,
+  "hair": true
+}

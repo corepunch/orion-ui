@@ -1,0 +1,360 @@
+{
+  "images": [
+    {
+      "file": "imported-joe-first-review.png",
+      "kind": "user reference or issue screenshot",
+      "sha256": "a3a682fda399900b89dc32a871a285967043a08c625328beadc3032e86152ddb"
+    },
+    {
+      "file": "rejected-faces.jpg",
+      "kind": "user reference or issue screenshot",
+      "sha256": "b0145c33e6c88661b15dde538b8cc23ca643dfd442f00b0b3de6ec0f506d6b14"
+    },
+    {
+      "file": "reported-slider-shoulder-issues.jpg",
+      "kind": "user reference or issue screenshot",
+      "sha256": "7d590b537535b35c3ff5f8bb286477e60cac72af8a92050751dbc3b8b9cd94a4"
+    },
+    {
+      "file": "reference-villager-proportions.jpg",
+      "kind": "user reference or issue screenshot",
+      "sha256": "03bf256dd6f3b2825decd3aea5508b49c5e5786c36e6d98fac55c1448bbbff8f"
+    },
+    {
+      "file": "reported-shoulder-tips.jpg",
+      "kind": "user reference or issue screenshot",
+      "sha256": "d01b2025be6ccca05b033f4f13660ae9440da057878bbca4696951677e602f40"
+    },
+    {
+      "file": "reported-chest-definition.jpg",
+      "kind": "user reference or issue screenshot",
+      "sha256": "e0ae8308ac989a7dc2fd6ba03d6cd2c3d3f02a3c3db02263f4b2229b717fc568"
+    },
+    {
+      "file": "ec2-02566-0066-w-vil2/Standing.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "5a37933d6d84d9f358f2703d92916092deeb3b693e5619ec6b7a41a6972565c4"
+    },
+    {
+      "file": "ec2-02567-0067-w-vil3/Standing.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "9745dfd821d8d61e74456dd3bddd3b0560fe7f65bbb00badeffbc8e7456c8c86"
+    },
+    {
+      "file": "ec2-04176-1676-wiswomn2/Standing.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "271b936f2f9934960a66fc8a293e8dc3747d513fe4ee59b3ea1e91ed0d3fc5b0"
+    },
+    {
+      "file": "ecstatica-biped-light-check/Standing.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "50525d950a593ec7fbe3b585f106e688214847fffaafb97db6751e49a7001546"
+    },
+    {
+      "file": "ecstatica-biped-review/Bend.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "db67af12cc0ad40e67f1318ed9f63fe5827bdd30a5d49b849c1788ffd8c15a7e"
+    },
+    {
+      "file": "ecstatica-biped-review/Front.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "7b9134d33a88541c5d213cbec363057ecbf4ab9bb20bc163a488fc30254994d3"
+    },
+    {
+      "file": "ecstatica-biped-review/Side.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "3d133b573b9faaade9ec03669cc036911ee0ba2cc5cf838e5a849a46b2ee8e26"
+    },
+    {
+      "file": "ecstatica-biped-review/Standing.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "edbf4377b92165ce9d711d4fa4c6f5280fac0d201d17d2f1ba18b56a664c07dd"
+    },
+    {
+      "file": "ecstatica-biped-review/Twist.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "9a7825e6fda429eaeee915bbaaa450966c77a9fc164afda5a4f34bc1dddeabf7"
+    },
+    {
+      "file": "ecstatica-controlled/Standing.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "16929e446559a328f8d6299c4dfd28cda19e2a60314485df08ee051cf2cd805c"
+    },
+    {
+      "file": "ecstatica-pr-legacy-render/Crouching.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "61636e3fb8730ac9ca2183e5ed87337e22e913fb6f063819f174617025b905be"
+    },
+    {
+      "file": "ecstatica-pr-legacy-render/Reaching.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "67bf5c267eabd576d48c71ec82887c41ad0b42d6ec04be70b3c5333506578d42"
+    },
+    {
+      "file": "ecstatica-pr-legacy-render/Standing.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "73d5f09a46c602c1d8aa4066b46806a7b9d23cfb608d1d55b5ada034faf23de4"
+    },
+    {
+      "file": "ecstatica-pr-render/Bend.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "d1a0d7980409550ea35ff21e37877eb51cd3eedc2e296c02a287bf80a4660524"
+    },
+    {
+      "file": "ecstatica-pr-render/Front.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "de69130e0f5a6b65abfb7c9fcf96505b0daaed24cae06f7fe443ec08fbb2b51a"
+    },
+    {
+      "file": "ecstatica-pr-render/Side.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "ed10120ce6f585e4910e8c5265f49b80c1fc552bf97a0f979c81d9ebcd201c29"
+    },
+    {
+      "file": "ecstatica-pr-render/Standing.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "32ec6f8177fca5f38e5922e2d1bc16d184cd91474bd554bf0b07b87cfa088e8a"
+    },
+    {
+      "file": "ecstatica-pr-render/Twist.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "8bccfc11e2a8845bd699234bce57108acdcb4905dc415b80168c63e35cbce225"
+    },
+    {
+      "file": "ecstatica-shoulders-review/Bend.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "b85464bb0a69041838fcb4ce85af5f478cbb24b584096c93a77e442cc25a3755"
+    },
+    {
+      "file": "ecstatica-shoulders-review/Front.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "913d6369b9a568fd50b5dfbb263e9eba947dd2587ebe1ad07f71c5279afed6e7"
+    },
+    {
+      "file": "ecstatica-shoulders-review/Side.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "2eb4fbb91935a71193ebd4ee08e12274a6251098c38f05030da25f8b56a21935"
+    },
+    {
+      "file": "ecstatica-shoulders-review/Standing.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "815205cb8411793bbcd684ee18b5b01f851da7e0f1b3c033069c72eb7ca3e95d"
+    },
+    {
+      "file": "ecstatica-shoulders-review/Twist.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "f2b49be3d675ce83f3bb1f3200f0c045f0fd17a8b432b074cfa8509e07229cc6"
+    },
+    {
+      "file": "ecstatica1-final/Front.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "e66c9d5077abc0a9f9bef2bed03421a218e3eac69b5ef9af3d8a39de8bd68fd7"
+    },
+    {
+      "file": "ecstatica1-final/Side.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "fb7ef8475b08e3331a224e684fdcedfcf0d8bb9210e3bbb3e42f7046c8fad71f"
+    },
+    {
+      "file": "ecstatica1-final/Standing.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "6df77f8448539a19ca30ebb2756fead82e1db526a64509f4402686704a15fb68"
+    },
+    {
+      "file": "ecstatica1-motion-final/Standing_0000.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "e87cb2bcfab09c3ec24228a5dd36550c54042a06c817314a535e48f7ba8c38d3"
+    },
+    {
+      "file": "ecstatica1-motion-final/Standing_0001.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "0cd90d8a092625e33dc446c7550870a67aab2c0ddd141f884777ddd2559d0b0a"
+    },
+    {
+      "file": "ecstatica1-motion-final/Standing_0002.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "c8d29ddb10d2b5086c9d8344b7ee973444d855e2ee87ff6108ba0ec21e447427"
+    },
+    {
+      "file": "ecstatica1-motion-final/Standing_0003.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "64c6a4041d0996d64474246c4c09bc82eb444bec10b0ca8483df2b14e35175b8"
+    },
+    {
+      "file": "ecstatica1-motion-final/Standing_0004.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "b666edc6ba60f20a99e3ceed7202ac08ce936d6b23fe0048e22f94dd51c5e9b1"
+    },
+    {
+      "file": "ecstatica1-red-final/Standing.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "e064cd5a16ea541b8bb618b58af8ad1c8781098e4f9a85ddac9f60b071bb2544"
+    },
+    {
+      "file": "ecstatica2-cat-final/Standing.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "b100da96e7d35a5c6f5a12f142fd25b7371398aa438e5d0c072a694c1b4d381d"
+    },
+    {
+      "file": "ecstatica2-cat-review/Standing.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "e9298a9b5d7c09733a95444db504251f4d1ff1962ec1bcf8396c3b1f4847b2ad"
+    },
+    {
+      "file": "ecstatica2-motion-review/Standing_0000.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "897e68a8cc953c71ab6ad1e261e32f5da108721dc805a52ab48a64c0f820a9dd"
+    },
+    {
+      "file": "ecstatica2-motion-review/Standing_0001.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "4bb49307279865514e730157faa374308ff7e6ee432f4a7a66af4037d0a39d8c"
+    },
+    {
+      "file": "ecstatica2-motion-review/Standing_0002.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "2583631da052c4287250555ad3e65f68f0e0e9f6a7b037bfddb57c8d67dfa236"
+    },
+    {
+      "file": "ecstatica2-motion-review/Standing_0003.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "45b7b2e74d8cd21a35d5ed2bc7db43e8150d4583ec51f59bdb6dfe03469119f6"
+    },
+    {
+      "file": "ecstatica2-motion-review/Standing_0004.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "bdee4d5f2e75ea5ddb3216d0a82d89b7450962ec32742839a94d909eab6765bd"
+    },
+    {
+      "file": "ecstatica2-source-bare/Standing.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "e34ac971b2dcc3d5f1e44421a28551a0b91ba0634d19ae3d243553568f80f349"
+    },
+    {
+      "file": "ecstatica2-source-final/Standing.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "b07b3f7aaf2f08049d31791d20ead61761ca130d9b9ddace0276888f3c209d96"
+    },
+    {
+      "file": "ecstatica2-source-review/Standing.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "f3375033ece0fce302aa563c4d5cbcb09dabc4edcfb4a94bbd9139eb073d22cb"
+    },
+    {
+      "file": "heads-short/render/Front.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "2cbdf48c6502379829510b73da51dde8a9ad0101507cfde6e9ec15cdc6fb553a"
+    },
+    {
+      "file": "heads-tall/render/Front.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "b27918df2012cceb8040ddbeac83ce38918e99091075091a594ba11b8cf06b50"
+    },
+    {
+      "file": "heads2-short/render/Front.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "c98fe39ab0eaad2d722a0e77117c5d48b4e5ddd7796edf595c0f3a2cd2d7eb6b"
+    },
+    {
+      "file": "heads2-tall/render/Front.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "187e5a31abd2b7e8ef63cdd99ce04060566540fae3b3d2c595e1d55d6042b653"
+    },
+    {
+      "file": "source-morph-check-render-open/Standing.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "89295e28ebd991c64e2aa82c1a63cc9706467e365057688d32d0992344030bdc"
+    },
+    {
+      "file": "source-morph-check-render-posture/Standing.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "a49953d962947bc8ea9c3424771024cce538a0a3104550cd08b65de84bca59a5"
+    },
+    {
+      "file": "source-morph-check-render-young/Standing.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "af5579737bc5e3b7e40c75e783dc68f2ef0b455a9dd0dcb81364d7adde4f234e"
+    },
+    {
+      "file": "source-morph-v1-render-fat/Standing.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "e7a73896d7aea3268266accc378f431eac3953d2f50cbe4c35ed248721e697d1"
+    },
+    {
+      "file": "source-morph-v1-render-full/Standing.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "bf13509a015b2707941660fb61e7db0aa6d4b2b147fbc742a1830d55a97b6e73"
+    },
+    {
+      "file": "source-morph-v1-render-joe/Standing.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "dbe2a87eed9f3088b1f136f06c3c2ab98e0597b2a1a243a0939bda8925c375b0"
+    },
+    {
+      "file": "source-morph-v1-render-narrow/Standing.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "6ce81213194d781163e6dbb8099aac5b34e1a7f0b974dc84ea6c7faac0d4f501"
+    },
+    {
+      "file": "source-morph-v1-render-thin/Standing.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "af0688875fdec3b5cc8ca54f885ecb6a5178fb0bb4e0f95f7f922f65dea8314e"
+    },
+    {
+      "file": "source-morph-v1-render-wide/Standing.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "28a291e18d104038f926b274704a61be83dfd342b4c1696723e2839e49992b7f"
+    },
+    {
+      "file": "source-posture-fixed/render/Standing.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "45ac59f9fb5cfd29d8aa4a1ce060fd74021df6a496e34da8f6a4aef160027ac2"
+    },
+    {
+      "file": "source-posture-limited/render/Standing.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "e6d52fbfcdde3bcb398d58649e2d0c2076d4f7e98eb1de54f6e8402eccf6f1da"
+    },
+    {
+      "file": "whole-body-full/render/Standing.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "c1759d55a1b5e683dc572b911596ddd836b7af13cb28bd39b72d9af30babce77"
+    },
+    {
+      "file": "whole-body-lean/render/Standing.png",
+      "kind": "historical native render; may show superseded defects",
+      "sha256": "bec84ee532800a2b3f0669307eebb6c04853be43781f64cf60aba6993396c688"
+    },
+    {
+      "file": "character-studio-final.png",
+      "kind": "historical studio screenshot",
+      "sha256": "0a99fa7e90029593259cc8bbc96d4fe06dae5dce2ed6ab4e12b28740e9ef7fe0"
+    },
+    {
+      "file": "character-studio-review.png",
+      "kind": "historical studio screenshot",
+      "sha256": "443fe5f2f45ad4b3d0185de239305dc2b910983f012ed97c843ece41f9f93d2b"
+    },
+    {
+      "file": "ecstatica-source-studio.png",
+      "kind": "historical studio screenshot",
+      "sha256": "d4fd050dd8a85205dddd1847548ec0327a40d3ffcca8999f0f4b79c8b702cf22"
+    },
+    {
+      "file": "final-ecstatica-studio.png",
+      "kind": "historical studio screenshot",
+      "sha256": "c0029b6bec70436e4665d1234a0def1bff8c4389bed26f48115ef10fd6d96d0c"
+    },
+    {
+      "file": "reported-missing-villager-shoulders.jpg",
+      "kind": "user issue screenshot",
+      "sha256": "e5493b669f57890172d5852076c8e77c31695dff9f48600fb25af4391de1c173"
+    }
+  ],
+  "unavailable": [
+    "reference-ecstatica1.jpg",
+    "reported-torso-bulge.jpg",
+    "reference-ecstatica2.jpg",
+    "reference-ecstatica-side.png"
+  ]
+}

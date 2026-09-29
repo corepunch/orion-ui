@@ -244,6 +244,39 @@ static int rig_node_enabled(XmlNode *node,int fingers){
 	return 1;
 }
 
+static int character_option(XmlNode *root,XmlNode *instance,const char *name){
+	int enabled=0,found=0;
+	XmlNode *sources[]={root,instance};
+	for(int k=0;k<2;k++) if(sources[k]) for(int i=0;i<sources[k]->nkids;i++){
+		XmlNode *option=sources[k]->kids[i];
+		if(strcmp(option->tag,"option")) continue;
+		const char *key=xml_attr(option,"name",""),*value=xml_attr(option,"enabled","1");
+		if(strcmp(key,name)) continue;
+		found=1;
+		if(strcmp(value,"0") && strcmp(value,"1")){
+			fprintf(stderr,"[scener] option %s: enabled must be 0 or 1, got '%s'\n",name,value); fflush(stderr);
+			return 0;
+		}
+		enabled=!strcmp(value,"1");
+	}
+	if(!found){ fprintf(stderr,"[scener] undefined character option '%s'\n",name); fflush(stderr); }
+	return enabled;
+}
+
+static int character_volume_enabled(Scene *s,XmlNode *node){
+	const char *feature=xml_attr(node,"if-feature",NULL),*unless=xml_attr(node,"unless-feature",NULL);
+	if(!feature && !unless) return 1;
+	if(strcmp(node->tag,"ellipsoid") && strcmp(node->tag,"sphere") && strcmp(node->tag,"capsule") &&
+		strcmp(node->tag,"box") && strcmp(node->tag,"cylinder") && strcmp(node->tag,"cone") &&
+		strcmp(node->tag,"prism") && strcmp(node->tag,"torus")){
+		fprintf(stderr,"[scener] feature conditions require a decorative shape, got <%s>\n",node->tag); fflush(stderr);
+		return 1;
+	}
+	XmlNode *root=s->activeRigRoot?s->activeRigRoot:s->editRoot;
+	return (!feature || character_option(root,s->activeRigInstance,feature)) &&
+		(!unless || !character_option(root,s->activeRigInstance,unless));
+}
+
 static const char *bone_at(XmlNode *n){ const char *at=xml_attr(n,"_at",NULL); return at?at:xml_attr(n,"at",NULL); }
 
 static int bone_has_tip_child(XmlNode *n){
@@ -1335,8 +1368,8 @@ static void parse_bone(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 
 		vec3 rest=bone_offset(n); rest.x=rest.y=0;
 		bone_report_feet(n,rest,xml_attr(n,"name","?"));
 	}
+	BoneGeom g=bone_geom(n);
 	if(bone_has_volume(n)){
-		BoneGeom g=bone_geom(n);
 		Mesh mesh=gen_ellipsoid(g.center,g.side,g.dir,g.other,v3(g.radiusSide,g.along,g.radiusOther),g.taper,
 			xml_attr_i(n,"rings",BONE_DEFAULT_RINGS),xml_attr_i(n,"slices",BONE_DEFAULT_SLICES));
 		scene_add_obj(s, mesh, M,R, color,shin,castsShadow,renderable,unlit);
@@ -1710,9 +1743,11 @@ static void parse_dummy(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3
 static XmlNode* load_prefab(Scene *s, const char *name){
 	for(int i=0;i<s->nprefabs;i++)
 		if(!strcmp(s->prefabs[i].ref,name)) return (XmlNode*)s->prefabs[i].root;
-	char path[1024];
-	snprintf(path,sizeof(path),"%s%sprefabs/%s.blk",s->assetRoot,
-		s->assetRoot[0]?"/":"",name);
+	char path[SCENE_PREFAB_PATH_CAPACITY];
+	int length=snprintf(path,sizeof(path),"%s%sprefabs/%s.blk",s->assetRoot,s->assetRoot[0]?"/":"",name);
+	if(strlen(name)>=SCENE_PREFAB_PATH_CAPACITY || length<0 || (size_t)length>=sizeof(path)){
+		fprintf(stderr,"[scener] prefab path exceeds %d bytes: %s\n",SCENE_PREFAB_PATH_CAPACITY-1,name); fflush(stderr); return NULL;
+	}
 	char *buf=read_file(path);
 	if(!buf) return NULL;
 	XmlNode *root=xml_parse(buf);
@@ -1721,7 +1756,7 @@ static XmlNode* load_prefab(Scene *s, const char *name){
 	warn_unknown_elements(root,path,1);
 	rig_expand_segments(root);
 	rig_expand_mirrors(root);
-	PrefabDef pd; memset(&pd,0,sizeof(pd)); strncpy(pd.ref,name,31); pd.root=root;
+	PrefabDef pd; memset(&pd,0,sizeof(pd)); snprintf(pd.ref,sizeof(pd.ref),"%s",name); pd.root=root;
 	strncpy(pd.path,path,sizeof(pd.path)-1);
 	for(int i=0;i<root->nkids;i++){
 		if(!strcmp(root->kids[i]->tag,"attach")){
@@ -2046,7 +2081,7 @@ static void parse_prefab(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec
 	const char *name=xml_attr(n,"name",NULL);
 	if(name){
 		InstanceDef inst; memset(&inst,0,sizeof(inst));
-		strncpy(inst.name,name,31); strncpy(inst.ref,source,31);
+		strncpy(inst.name,name,31); snprintf(inst.ref,sizeof(inst.ref),"%s",source);
 		inst.transform=M; inst.rotMatrix=R;
 		DA_PUSH(s->instances,s->ninstances,s->cinstances,inst);
 	}
@@ -2150,6 +2185,8 @@ static void parse_nodes(Scene *s, XmlNode *parent, mat4 parentM, mat4 parentR){
 		XmlNode *n=parent->kids[i];
 		int fingers=rig_fingers_enabled(s->activeRigRoot?s->activeRigRoot:s->editRoot,s->activeRigInstance);
 		if(!rig_node_enabled(n,fingers)) continue;
+		xml_remove_attr(n,"_option_hidden");
+		if(!character_volume_enabled(s,n)){ xml_set_attr(n,"_option_hidden","1"); continue; }
 		if(!rig_node_enabled(n,0)) xml_set_attr(n,"_finger_active","1");
 		void *oldEditNode=s->activeEditNode;
 		mat4 oldEditMatrix=s->activeEditMatrix;
@@ -2351,7 +2388,7 @@ static void warn_unknown_children(XmlNode *parent, const char *path, int root, i
 		XmlNode *n=parent->kids[i];
 		int supported=0;
 		if(root) supported=has_shape_parser(n->tag) || !strcmp(n->tag,"bool-negative-box") || !strcmp(n->tag,"bool-negative-arch") || !strcmp(n->tag,"bool-negative-cylinder") ||
-			(prefab ? (!strcmp(n->tag,"attach") || !strcmp(n->tag,"shape")) : has_scene_parser(n->tag)) || !strcmp(n->tag,"pose") || !strcmp(n->tag,"clip") || !strcmp(n->tag,"capture-profile") || (prefab && !strcmp(n->tag,"material"));
+			(prefab ? (!strcmp(n->tag,"attach") || !strcmp(n->tag,"shape")) : has_scene_parser(n->tag)) || !strcmp(n->tag,"pose") || !strcmp(n->tag,"clip") || !strcmp(n->tag,"capture-profile") || (prefab && (!strcmp(n->tag,"material") || !strcmp(n->tag,"option")));
 		else if(!strcmp(parent->tag,"group") || xml_is_bone(parent))
 			supported=has_shape_parser(n->tag) || !strcmp(n->tag,"bool-negative-box") || !strcmp(n->tag,"bool-negative-arch") || !strcmp(n->tag,"bool-negative-cylinder") || !strcmp(n->tag,"shape");
 		else if(!strcmp(parent->tag,"camera")) supported=!strcmp(n->tag,"transform") || !strcmp(n->tag,"use-pose");
@@ -2360,7 +2397,7 @@ static void warn_unknown_children(XmlNode *parent, const char *path, int root, i
 		else if(!strcmp(parent->tag,"layer")) supported=!strcmp(n->tag,"contact");
 		else if(!strcmp(parent->tag,"clip")) supported=!strcmp(n->tag,"key");
 		else if(!strcmp(parent->tag,"wall")||!strcmp(parent->tag,"floor")||!strcmp(parent->tag,"window")||!strcmp(parent->tag,"door")) supported=0;
-		else if(!strcmp(parent->tag,"prefab")) supported=!strcmp(n->tag,"array") || !strcmp(n->tag,"joint") || !strcmp(n->tag,"ik") || !strcmp(n->tag,"gait") || !strcmp(n->tag,"layer");
+		else if(!strcmp(parent->tag,"prefab")) supported=!strcmp(n->tag,"array") || !strcmp(n->tag,"joint") || !strcmp(n->tag,"ik") || !strcmp(n->tag,"gait") || !strcmp(n->tag,"layer") || !strcmp(n->tag,"option");
 		else if(has_shape_parser(parent->tag)) supported=has_modifier_parser(n->tag);
 		if(!supported){
 			warn_unsupported_tree(n,path,parent->tag);
@@ -2382,6 +2419,7 @@ static void warn_unknown_elements(XmlNode *root, const char *path, int prefab){
 /* Pose data applies only in the cameras that select it, and books read per-camera
    text metadata; these attributes are valid even when this load never reads them. */
 static const struct { const char *tag; const char *attrs[40]; } deferred_attributes[]={
+	{ "option",   { "name", "enabled" } },
 	{ "camera",   { "textRect", "textScale" } },
 	{ "group",    { "pair" } },
 	{ "bone",     { "pair" } },
@@ -2411,7 +2449,7 @@ static int attribute_deferred(const char *tag,const char *name){
 }
 
 static void warn_unused_attributes(Scene *s,XmlNode *n,const char *path){
-	if(xml_attr(n,"generated",NULL) || (!rig_node_enabled(n,0) && !xml_attr_i(n,"_finger_active",0))) return;
+	if(xml_attr(n,"generated",NULL) || xml_attr(n,"_option_hidden",NULL) || (!rig_node_enabled(n,0) && !xml_attr_i(n,"_finger_active",0))) return;
 	for(int i=0;i<n->nattrs;i++) if(!n->attrs[i].used && !attribute_deferred(n->tag,n->attrs[i].name) && ++s->ignoredAttributes)
 		fprintf(stderr,"warning: %s: <%s> ignores attribute '%s' (unknown, misspelled or overridden)\n",path,n->tag,n->attrs[i].name);
 	for(int i=0;i<n->nkids;i++) warn_unused_attributes(s,n->kids[i],path);

@@ -1,0 +1,209 @@
+<?xml version='1.0' encoding='utf-8'?>
+<prefab fingers="0">
+  <!--CAT adaptation generated from source dimensions. Attachments and neutral pose follow the editable preset; face volumes come from the source.-->
+  <material id="glove" color="0.07 0.055 0.04" shininess="5" />
+  <material id="skin" color="0.92 0.63 0.35" shininess="10" />
+  <material id="shirt" color="0.65 0.035 0.04" shininess="6" />
+  <material id="trousers" color="0.33 0.4 0.035" shininess="6" />
+  <material id="shoes" color="0.4 0.22 0.09" shininess="8" />
+  <material id="hair" color="0.72 0.025 0.05" shininess="12" />
+  <material id="eye" color="0.08 0.08 0.10" shininess="60" />
+  <hub name="pelvis" aim="0 90" length="14" radius="13.248 12.42" material="trousers">
+    <ellipsoid on="120 -15" at="0.25" radii="9 8 10" sink="4.5" material="trousers" />
+    <ellipsoid on="-120 -15" at="0.25" radii="9 8 10" sink="4.5" material="trousers" />
+    <limb name="left_leg" type="leg" at="0.25" from="90 0" sink="3.8" mirror="1">
+      <bone name="left_thigh" aim="0 -90" length="32.712" radius="6.624 9.108" taper="0.78" overlap="6" material="trousers">
+        <bone name="left_calf" aim="0 -90" length="40.024" radius="4.14 4.968" taper="0.65" overlap="4" material="trousers">
+          <ellipsoid on="0 0" at="0" radii="6.5 6 6.5" sink="2" material="trousers" />
+          <ankle name="left_foot" aim="0 -12" length="18" radius="5.5 4.6" overlap="3" material="shoes">
+            <digit name="left_toe" at="1" from="0 -30" aim="0 -6" links="2" length="4" radius="5 3.5" taper="0.9" overlap="3" material="shoes" />
+          </ankle>
+        </bone>
+      </bone>
+    </limb>
+    <spine name="spine" links="3" aim="0 90" aimEnd="0 86" length="24" radius="13 9.5" taper="1.1" volume="0" material="shirt">
+      <ellipsoid on="0 0" at="0.5" radii="13.5 8.8 23" sink="9.8" material="shirt" />
+      <hub name="ribcage" aim="0 90" length="20" radius="14.076 11.592" material="shirt">
+        <ellipsoid on="40 0" at="0.68" radii="10.5 4.5 9.5" sink="2.5" material="shirt" />
+        <ellipsoid on="-40 0" at="0.68" radii="10.5 4.5 9.5" sink="2.5" material="shirt" />
+        <limb name="left_arm" type="arm" at="0.9" from="90 0" mirror="1">
+          <collarbone name="left_collarbone" aim="90 0" length="8" radius="4" material="shirt">
+            <bone name="left_upperarm" aim="90 -82" length="25.12" radius="4.968 5.796" taper="0.78" overlap="4" material="shirt">
+              <ellipsoid on="90 20" at="0.08" radii="7 7 8" sink="6.5" material="shirt" />
+              <bone name="left_forearm" aim="0 -86" length="25.808" radius="4.14 3.312" taper="0.75" material="skin">
+                <palm name="left_palm" aim="0 -90" length="12" radius="3.5 4.8" overlap="2" material="skin" volume="0">
+                  <digit name="left_thumb" at="0.32" across="-0.85" aim="180 -40" aimEnd="-140 -62" links="3" length="7" radius="1" taper="0.8" material="skin" />
+                  <digit name="left_index" at="0.82" across="-0.78" aim="-90 -88" aimEnd="-90 -72" links="3" length="8" radius="0.85" taper="0.8" material="skin" />
+                  <digit name="left_middle" at="0.94" across="-0.26" aim="-90 -86" aimEnd="-90 -68" links="3" length="8.5" radius="0.9" taper="0.8" material="skin" />
+                  <digit name="left_ring" at="0.88" across="0.26" aim="-90 -84" aimEnd="-90 -64" links="3" length="8" radius="0.85" taper="0.8" material="skin" />
+                  <digit name="left_pinky" at="0.74" across="0.78" aim="-90 -82" aimEnd="-90 -60" links="3" length="6.5" radius="0.75" taper="0.8" material="skin" />
+                  <ellipsoid on="0 0" at=".5" sink="4.8" radii="3.8 4.8 7" material="glove" if-feature="gloves" />
+                  <ellipsoid on="0 0" at=".5" sink="4.8" radii="3.8 4.8 7" material="skin" unless-feature="gloves" />
+                </palm>
+              </bone>
+            </bone>
+          </collarbone>
+        </limb>
+        <spine name="neck" aim="0 90" aimEnd="0 80" length="9" radius="5.5" material="skin">
+          <hub name="head" aim="0 90" length="21" radius="9.108 9.936" material="skin" volume="0">
+            <group name="p3_head" pos="0 6.21 -1.92" rot="-90 -0 180" scale="0.207 0.207 0.207">
+              <ellipsoid radii="44 80 48" pos="0 -60 30" color="0.92 0.63 0.35" rings="10" slices="16" />
+              <group name="p10_left_eye" pos="-16 -60 78" rot="0 -0 0">
+                <ellipsoid radii="4 12 4" pos="0 0 0" color="0.4 0.22 0.09" rings="10" slices="16" />
+                <group name="p40_pupil1" pos="0 0 4" rot="0 -0 0">
+                  <ellipsoid radii="4 4 8" pos="0 0 0" color="0.9 0.88 0.75" rings="10" slices="16" />
+                </group>
+              </group>
+              <group name="p11_right_eye" pos="15 -60 78" rot="0 -0 0">
+                <ellipsoid radii="4 12 4" pos="0 0 0" color="0.4 0.22 0.09" rings="10" slices="16" />
+                <group name="p41_pupil2" pos="0 0 4" rot="0 -0 0">
+                  <ellipsoid radii="4 4 4" pos="0 0 0" color="0.9 0.88 0.75" rings="10" slices="16" />
+                </group>
+              </group>
+              <group name="p16_mouth" pos="3 -7 63" rot="67.5 -2.8125 2.8125">
+                <ellipsoid radii="12 4 4" pos="0 0 0" color="0.07 0.055 0.04" rings="10" slices="16" />
+              </group>
+              <group name="p19_left_cheek" pos="11 -48 33" rot="0 -0 0">
+                <ellipsoid radii="32 40 44" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" />
+              </group>
+              <group name="p20_right_cheek" pos="-12 -48 33" rot="0 -0 0">
+                <ellipsoid radii="32 40 44" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" />
+              </group>
+              <group name="p21_right_ear" pos="44 -56 22" rot="14.0625 2.8125 16.875">
+                <ellipsoid radii="0.35 20 16" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" />
+              </group>
+              <group name="p22_left_ear" pos="-44 -56 22" rot="14.0625 -2.8125 -16.875">
+                <ellipsoid radii="0.35 20 16" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" />
+              </group>
+              <group name="p32_pony" pos="0 -55 -39" rot="11.25 -0 0">
+                <ellipsoid radii="20 20 20" pos="0 0 0" color="0.9 0.88 0.75" rings="10" slices="16" />
+                <group name="p39_tail" pos="0 4 -11" rot="61.875 -0 0">
+                  <ellipsoid radii="12 12 36" pos="0 0 -32" color="0.72 0.025 0.05" rings="10" slices="16" />
+                </group>
+              </group>
+              <group name="p36_left_hair" pos="-16 -108 30" rot="0 -0 67.5">
+                <ellipsoid radii="32 48 48" pos="0 0 0" color="0.72 0.025 0.05" rings="10" slices="16" />
+              </group>
+              <group name="p37_right_hair" pos="16 -108 30" rot="0 -0 -67.5">
+                <ellipsoid radii="32 48 48" pos="0 0 0" color="0.72 0.025 0.05" rings="10" slices="16" />
+              </group>
+              <group name="p31_hair" pos="0 -96 14" rot="30.9375 -0 0">
+                <ellipsoid radii="64 44 60" pos="0 0 0" color="0.72 0.025 0.05" rings="10" slices="16" if-feature="hair" />
+              </group>
+            </group>
+          </hub>
+        </spine>
+      </hub>
+    </spine>
+  </hub>
+  <pose name="Stand" />
+  <pose name="WaveLeft">
+    <ik limb="left_arm" offset="4 -8 72" bend="150 -20" />
+    <joint target="left_palm" aim="0 90" />
+    <joint target="head" rot="0 0 15" />
+  </pose>
+  <pose name="WaveRight" mirror="WaveLeft" />
+  <pose name="PointLeft">
+    <ik limb="left_arm" offset="22 -43 54" bend="90 -90" />
+    <joint target="left_palm" aim="30 0" />
+    <joint target="head" rot="0 0 25" />
+  </pose>
+  <pose name="PointRight" mirror="PointLeft" />
+  <pose name="HandsOnHips">
+    <ik limb="left_arm" offset="-2 2 24" bend="130 0" />
+    <ik limb="right_arm" offset="2 2 24" bend="-130 0" />
+  </pose>
+  <pose name="Think">
+    <ik limb="right_arm" offset="21 -9 55" bend="-60 -60" />
+    <joint target="right_palm" aim="0 70" />
+    <ik limb="left_arm" offset="-14 -14 26" bend="150 -60" />
+    <joint target="head" rot="8 0 -10" />
+  </pose>
+  <pose name="HandsOpen">
+    <joint target="left_index" rot="0 -2 0" />
+    <joint target="left_index_2" rot="0 -8 0" />
+    <joint target="left_index_3" rot="0 -8 0" />
+    <joint target="left_middle" rot="0 -4 0" />
+    <joint target="left_middle_2" rot="0 -9 0" />
+    <joint target="left_middle_3" rot="0 -9 0" />
+    <joint target="left_ring" rot="0 -6 0" />
+    <joint target="left_ring_2" rot="0 -10 0" />
+    <joint target="left_ring_3" rot="0 -10 0" />
+    <joint target="left_pinky" rot="0 -8 0" />
+    <joint target="left_pinky_2" rot="0 -11 0" />
+    <joint target="left_pinky_3" rot="0 -11 0" />
+    <joint target="left_thumb" rot="0 0 0" />
+    <joint target="right_index" rot="0 2 0" />
+    <joint target="right_index_2" rot="0 8 0" />
+    <joint target="right_index_3" rot="0 8 0" />
+    <joint target="right_middle" rot="0 4 0" />
+    <joint target="right_middle_2" rot="0 9 0" />
+    <joint target="right_middle_3" rot="0 9 0" />
+    <joint target="right_ring" rot="0 6 0" />
+    <joint target="right_ring_2" rot="0 10 0" />
+    <joint target="right_ring_3" rot="0 10 0" />
+    <joint target="right_pinky" rot="0 8 0" />
+    <joint target="right_pinky_2" rot="0 11 0" />
+    <joint target="right_pinky_3" rot="0 11 0" />
+    <joint target="right_thumb" rot="0 0 0" />
+  </pose>
+  <pose name="HandsRelaxed">
+    <joint target="left_index" rot="0 10 0" />
+    <joint target="left_index_2" rot="0 4 0" />
+    <joint target="left_index_3" rot="0 4 0" />
+    <joint target="left_middle" rot="0 8 0" />
+    <joint target="left_middle_2" rot="0 3 0" />
+    <joint target="left_middle_3" rot="0 3 0" />
+    <joint target="left_ring" rot="0 6 0" />
+    <joint target="left_ring_2" rot="0 2 0" />
+    <joint target="left_ring_3" rot="0 2 0" />
+    <joint target="left_pinky" rot="0 4 0" />
+    <joint target="left_pinky_2" rot="0 1 0" />
+    <joint target="left_pinky_3" rot="0 1 0" />
+    <joint target="left_thumb" rot="0 6 0" />
+    <joint target="right_index" rot="0 -10 0" />
+    <joint target="right_index_2" rot="0 -4 0" />
+    <joint target="right_index_3" rot="0 -4 0" />
+    <joint target="right_middle" rot="0 -8 0" />
+    <joint target="right_middle_2" rot="0 -3 0" />
+    <joint target="right_middle_3" rot="0 -3 0" />
+    <joint target="right_ring" rot="0 -6 0" />
+    <joint target="right_ring_2" rot="0 -2 0" />
+    <joint target="right_ring_3" rot="0 -2 0" />
+    <joint target="right_pinky" rot="0 -4 0" />
+    <joint target="right_pinky_2" rot="0 -1 0" />
+    <joint target="right_pinky_3" rot="0 -1 0" />
+    <joint target="right_thumb" rot="0 -6 0" />
+  </pose>
+  <pose name="HandsFist">
+    <joint target="left_index" rot="0 53 0" />
+    <joint target="left_index_2" rot="0 47 0" />
+    <joint target="left_index_3" rot="0 47 0" />
+    <joint target="left_middle" rot="0 51 0" />
+    <joint target="left_middle_2" rot="0 46 0" />
+    <joint target="left_middle_3" rot="0 46 0" />
+    <joint target="left_ring" rot="0 49 0" />
+    <joint target="left_ring_2" rot="0 45 0" />
+    <joint target="left_ring_3" rot="0 45 0" />
+    <joint target="left_pinky" rot="0 47 0" />
+    <joint target="left_pinky_2" rot="0 44 0" />
+    <joint target="left_pinky_3" rot="0 44 0" />
+    <joint target="left_thumb" rot="0 27.5 0" />
+    <joint target="right_index" rot="0 -53 0" />
+    <joint target="right_index_2" rot="0 -47 0" />
+    <joint target="right_index_3" rot="0 -47 0" />
+    <joint target="right_middle" rot="0 -51 0" />
+    <joint target="right_middle_2" rot="0 -46 0" />
+    <joint target="right_middle_3" rot="0 -46 0" />
+    <joint target="right_ring" rot="0 -49 0" />
+    <joint target="right_ring_2" rot="0 -45 0" />
+    <joint target="right_ring_3" rot="0 -45 0" />
+    <joint target="right_pinky" rot="0 -47 0" />
+    <joint target="right_pinky_2" rot="0 -44 0" />
+    <joint target="right_pinky_3" rot="0 -44 0" />
+    <joint target="right_thumb" rot="0 -27.5 0" />
+  </pose>
+  <option name="hair" enabled="1" />
+  <option name="gloves" enabled="0" />
+  <option name="boots" enabled="1" />
+</prefab>

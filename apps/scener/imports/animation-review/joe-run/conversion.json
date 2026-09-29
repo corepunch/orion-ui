@@ -1,0 +1,15 @@
+{
+  "actor": "Joe",
+  "record": 2500,
+  "action": 8,
+  "source_scene": "scenes/animations/0008-stherorun.blks",
+  "ignored_events": {
+    "MOVE_THING": 11,
+    "VECTOR2": 22,
+    "VECTOR1": 22,
+    "UNKNOWN_71": 7,
+    "INTERACT": 1
+  },
+  "unmapped_part_ids": [],
+  "timing": "unsigned source phase normalized to requested duration; not recovered game FPS"
+}

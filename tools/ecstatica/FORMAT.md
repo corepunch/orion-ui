@@ -450,3 +450,7 @@ Format leads and conventional event names came from Fabian Hachenberg's [pyecsta
 The older library contains incomplete runtime functions, Python-2-era constructs and ambiguous helpers. Its labels are therefore distinguished here from direct observations in the supplied files. Exact dimensions, parent edges, inventory counts, end offsets, the unsigned key-order check, store comparisons and the shade-depth equation were independently checked against this ISO's bytes.
 
 Synthetic regression tests cover all truncated prefixes of a minimal FANT record, nonzero terminator operands, variable NEXT_SCENE attachments, unsupported versions/opcodes, script string padding, mixed-endian sound headers and negative lengths, parent cycles/missing parents, exact dimension offsets, nibble order/wrapping, depth scaling and pixel count limits. Real-disc validation additionally exercises every indexed record and every extracted visual file. These tests establish parser behavior and byte coverage; they do not validate a game-runtime emulator.
+
+## Ecstatica II and direct ISO conversion
+
+See [IMPORT.md](IMPORT.md) for the v55 character/action extension, direct ISO reader, CAT options, generated libraries and explicit conversion limits.

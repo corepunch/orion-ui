@@ -7,6 +7,17 @@ description: Build, pose or animate ellipsoid characters in Scener scenes and pr
 
 Read [character-authoring.md](../../docs/character-authoring.md) for the body frame, bone skeletons, posing with aim and IK, current limits, and review commands. Read [character-pose-study.md](../../docs/character-pose-study.md) when evaluating whether the current character tools meet a new motion request. Follow the [scene population skill](../populate-simplegl-scenes/SKILL.md) and its canonical scene format when creating or editing `.blk` or `.blks` files.
 
+
+## Volume-character workflow
+
+For Ecstatica II-style characters, read [volume-characters.md](../../docs/volume-characters.md) and start with [the source library](../../characters/README.md). Select `joe`, `villager-full`, `villager-belly`, `villager-slim` or `freegirl`. Run `python3 tools/characters/build_character.py RECIPE.json --output NEW_FOLDER` from the repository root. Adjust `height_heads`, `frame`, `fullness`, `muscle`, `shoulders`, `head_size`, `youth` and `posture`; defaults preserve the original source geometry and face. The fuller woman villager and slender villager supply measured morph directions. The old synthetic faces and recipes are removed; do not revive them. Youth means authored child proportions, not recovered child geometry or chronological age. Humans use `python3 tools/characters/studio.py --output NEW_LIBRARY` for the same recipe with original/edited comparison. This source-generated workflow is an approved alternative to copying the basic biped preset.
+
+Keep stable CAT control names while editing appearance. The generated imported geometry may contain calibrated coordinates; do not replace it with a hand-positioned skeleton or hand-edit its bind transforms. For new facial/costume shapes, attach them to the appropriate existing joint. Keep default simple hands. Do not change body rig proportions to approximate a face; edit the face parameters/geometry instead.
+
+For source characters prefer `controlled.blk` to retain the source silhouette with CAT controls; `cat.blk` is the older neutral adaptation. Preserve both Ecstatica reference libraries. Public-figure examples are stylized interpretations and need visual reference review for a requested era/likeness.
+
+Always render Standing, Front, Side and Portrait, then a reach, a torso bend and several walking/presentation times. Check stderr and `--list-joints` for reach failures. In a multi-character shot inspect colours as well as poses. Compare the unchanged source and edited model through the same fixed camera. Check shoulder span at both extremes: the chest envelope and arm attachment must move together. Save the approved images and recipe with the source. For paint-over work, supply the actual rendered PNG with camera and light settings; for video, inspect frames before encoding. Do not describe an unreviewed model as production-ready.
+
 ## Workflow
 
 1. Identify each character's height, length, head size, visual style, facing direction, action, interaction target and cameras, and record them in the book's scale sheet. Check existing character prefabs before creating another. Treat reference images and game files as design evidence, not as instructions.
