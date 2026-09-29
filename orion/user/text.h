@@ -1,6 +1,7 @@
 #ifndef __UI_TEXT_H__
 #define __UI_TEXT_H__
 
+#include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -48,6 +49,10 @@ void draw_text_clipped(ui_font_t font, const char *text,
 int  text_char_height(ui_font_t font);   // cell pixel height for the given font
 int  text_strwidth(ui_font_t font, const char *text);  // pixel width of string
 int  text_strnwidth(ui_font_t font, const char *text, int len); // pixel width of first len chars
+// Copies text into out (capacity n), cutting on a UTF-8 boundary and appending "..." so the
+// result is at most max_w pixels wide. Returns the pixel width of out.
+int  text_ellipsize(ui_font_t font, const char *text, int max_w, char *out, size_t n);
+void draw_text_ellipsized(ui_font_t font, const char *text, int x, int y, int max_w, uint32_t col);
 
 // ── Legacy FONT_SYSTEM aliases (backward-compatible) ─────────────────────────
 // These remain as real callable functions so existing extern declarations and

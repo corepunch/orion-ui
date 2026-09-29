@@ -10,6 +10,24 @@
 // Color arguments are packed 0xAABBGGRR with sRGB RGB and linear alpha.
 void fill_rect(uint32_t color, irect16_t r);
 void fill_rounded_rect(uint32_t color, irect16_t r, int radius);
+// Same colour with a different alpha (0 transparent .. 255 opaque).
+static inline uint32_t color_with_alpha(uint32_t color, uint8_t alpha) {
+  return ((uint32_t)alpha << 24) | (color & 0x00FFFFFFu);
+}
+// Corner selection for fill_rounded_rect_corners(); unselected corners stay square.
+enum {
+  CORNER_TOP_LEFT = 1u << 0, CORNER_TOP_RIGHT = 1u << 1,
+  CORNER_BOTTOM_RIGHT = 1u << 2, CORNER_BOTTOM_LEFT = 1u << 3,
+  CORNERS_LEFT   = CORNER_TOP_LEFT | CORNER_BOTTOM_LEFT,
+  CORNERS_RIGHT  = CORNER_TOP_RIGHT | CORNER_BOTTOM_RIGHT,
+  CORNERS_TOP    = CORNER_TOP_LEFT | CORNER_TOP_RIGHT,
+  CORNERS_BOTTOM = CORNER_BOTTOM_LEFT | CORNER_BOTTOM_RIGHT,
+  CORNERS_ALL    = CORNERS_LEFT | CORNERS_RIGHT
+};
+void fill_rounded_rect_corners(uint32_t color, irect16_t r, int radius, uint32_t corners);
+// Small tinted label ("3 modified"): a rounded fill in `color` at low alpha with the text in `color`.
+// Drawn at (x, y) with the given height; returns the badge width so callers can chain badges.
+int  draw_badge(ui_font_t font, const char *text, int x, int y, int height, uint32_t color);
 // Procedural rounded-box shadow; radius, blur (Gaussian sigma), and offset are logical pixels.
 void draw_rect_shadow(irect16_t r, float radius, float blur, ipoint16_t offset, uint32_t color);
 void draw_gradient_rect(irect16_t r, uint32_t left_color, uint32_t right_color);
@@ -43,6 +61,9 @@ void draw_rounded_rect_premultiplied(int tex, irect16_t r, int win_w, int win_h,
                                      float radius, float alpha);
 void render_rounded_rect(int tex, irect16_t r, int pixel_w, int pixel_h,
                          float radius, float alpha, uint32_t color);
+// radii: top-left, top-right, bottom-right, bottom-left, in pixels.
+void render_rounded_rect_corners(int tex, irect16_t r, int pixel_w, int pixel_h,
+                                 const float radii[4], float alpha, uint32_t color);
 // Draw a dashed selection-outline rectangle (2–4 GL draw calls depending on dimensions, O(1) regardless of size)
 void draw_sel_rect(irect16_t r);
 

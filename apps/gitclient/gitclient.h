@@ -309,6 +309,7 @@ typedef struct {
   bool           fetching_all;
   bool           ephemeral;       // workspace came from the command line; do not persist
 
+  bool diff_cache_valid;
   int  last_diff_commit;
   int  last_diff_file;
   char last_diff_path[512];
@@ -441,6 +442,7 @@ void gc_show_identity_dialog(window_t *parent);
 // ============================================================
 
 void gc_diff_refresh(void);
+void gc_diff_invalidate(void);
 
 // ============================================================
 // Pages (pages/*/page_*.c)

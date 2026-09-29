@@ -16,7 +16,7 @@ void gc_set_view_mode(int tab) {
   gc_state_t *gc = g_gc; if (!gc || !gc->main_win) return;
   if (gc->tab != GC_TAB_OVERVIEW && tab == GC_TAB_OVERVIEW) gc->focus_tab = gc->tab ? gc->tab : GC_TAB_CHANGES;
   gc->tab = tab;
-  gc->last_diff_commit = -2;   // each page owns its own diff window
+  gc_diff_invalidate();   // each page owns its own diff window
   gc->history_mode = (tab == GC_TAB_HISTORY);
   if (gc->tabs_win) send_message(gc->tabs_win, tcSetSelection, (uint32_t)tab, NULL);
 
@@ -106,7 +106,7 @@ void gc_refresh_all(void) {
   if (!gc->repo) { if (gc->tab == GC_TAB_OVERVIEW) gc_overview_refresh(); return; }
 
   GC_TRACE("refresh_all begin tab=%d", gc->tab);
-  gc->last_diff_commit = -2;   // the working tree may have changed: never reuse the cached diff
+  gc_diff_invalidate();   // the working tree may have changed
   gc->selected_commit = -1;
   gc->selected_file   = -1;
 
@@ -241,7 +241,7 @@ void gc_overview_open(int index) {
 
 void gc_overview_fetch_all(void) {
   gc_state_t *gc = g_gc; if (!gc || gc->fetching_all) return;
-  static char roots[GC_MAX_RECENT_REPOS][512]; int n = 0;
+  char roots[GC_MAX_RECENT_REPOS][512]; int n = 0;
   for (int i = 0; i < gc->tile_count && n < GC_MAX_RECENT_REPOS; i++) {
     if (gc->tiles[i].linked || gc->tiles[i].missing) continue;
     snprintf(roots[n++], sizeof(roots[0]), "%s", gc->tiles[i].path);
