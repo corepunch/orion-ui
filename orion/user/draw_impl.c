@@ -285,8 +285,11 @@ void draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color) {
   if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0) return;
   const theme_t *theme = get_theme();
   int radius = theme->card_corner_radius, edge = theme->card_edge_width, ring = theme->card_ring_width;
-  if (state & CTRL_SELECTED)
-    fill_rounded_rect(get_sys_color(brAccent), r, radius + ring);
+  if (state & CTRL_SELECTED) {
+    // The ring matches the accent edge; a card without an edge uses the theme accent.
+    uint32_t ring_color = (edge_color >> 24) ? color_with_alpha(edge_color, 0xFF) : get_sys_color(brAccent);
+    fill_rounded_rect(ring_color, r, radius + ring);
+  }
   r = rect_inset(r, ring);
   uint32_t face = get_sys_color((state & CTRL_HOVER) ? brButtonHover : brControlBg);
   if (!(edge_color >> 24)) edge = 0;
