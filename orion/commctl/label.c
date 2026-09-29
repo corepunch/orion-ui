@@ -73,7 +73,7 @@ result_t win_label(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       if (label_truncates(win)) {
         // One line; the arranged width decides how much of it is visible.
         m->desired_w = text_strwidth(font, win->title) + TEXT_SHADOW_OFFSET;
-        m->desired_h = CONTROL_HEIGHT;
+        m->desired_h = MAX(CONTROL_HEIGHT, text_char_height(font) + TEXT_SHADOW_OFFSET);   // descenders must fit
         return true;
       }
       int avail_w = m->avail_w > 0 ? m->avail_w : win->frame.w;
