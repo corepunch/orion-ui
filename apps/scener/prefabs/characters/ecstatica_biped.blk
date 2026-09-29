@@ -14,7 +14,7 @@
       <bone name="ribcage" aim="0 90" length="18" radius="14.076 11.592" color=".78 .035 .065" shininess="2" rings="16" slices="24" overlap="14.184">
         <ellipsoid name="left_pectoral" on="63.4349 0" at="0.868" sink="9.18849" radii="13.248 9.936 14.076" color=".78 .035 .065" shininess="2" rings="16" slices="24" />
         <ellipsoid name="right_pectoral" on="-63.4349 0" at="0.868" sink="9.18849" radii="13.248 9.936 14.076" color=".78 .035 .065" shininess="2" rings="16" slices="24" />
-        <bone name="left_shoulder" aim="90 -78" length="25.254" radius="4.968 5.796" color=".78 .035 .065" shininess="2" rings="16" slices="24" at="1.305" from="75.75 0" sink="-2.547" mirror="1" overlap="3.933">
+        <bone name="left_shoulder" aim="90 -78" length="25.254" radius="4.968 5.796" color=".78 .035 .065" shininess="2" rings="16" slices="24" at="1.305" from="104.25 0" sink="-2.547" mirror="1" overlap="3.933">
           <ellipsoid name="left_deltoid" on="90 0" at="0.09" sink="2.79" radii="9.108 8.28 9.108" color=".78 .035 .065" rings="16" slices="24" />
           <bone name="left_elbow" aim="0 -86" length="26.082" radius="4.14 3.312" color=".98 .69 .36" shininess="2" rings="16" slices="24" overlap="1.863">
             <bone name="left_hand" aim="0 -86" length="9.936" radius="4.14 4.14" color=".98 .69 .36" shininess="2" rings="16" slices="24" overlap="3.312" />
