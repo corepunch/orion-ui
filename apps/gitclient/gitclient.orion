@@ -1,1 +1,117 @@
-PLACEHOLDER
+<?xml version="1.0" encoding="UTF-8"?>
+<orion
+    version="1"
+    name="gitclient"
+    title="Git Client"
+    root="apps/gitclient">
+
+    <menus var="kGCMenus" count="kGCMenuCount">
+        <menu name="file" label="File">
+            <item name="open_repo" label="Open Repository..." />
+            <item name="repositories" label="Repositories..." />
+            <item name="new_repo" label="Create Repository..." />
+            <item name="clone" label="Clone..." shortcut="Ctrl+Shift+N" />
+            <Separator />
+            <item name="quit" label="Exit" />
+        </menu>
+
+        <menu name="repo" label="Repo">
+            <item name="refresh" label="Refresh" shortcut="F5" />
+            <item name="search" label="Search..." shortcut="Ctrl+Shift+F" />
+            <item name="identity" label="Git Identity..." />
+            <item name="terminal" label="Open Terminal Here" />
+        </menu>
+
+        <menu name="view" label="View">
+            <item name="window_mode" label="Maximize / Restore" />
+            <item name="overview" label="Overview" shortcut="Ctrl+0" />
+            <item name="changes" label="Changes" shortcut="Ctrl+1" />
+            <item name="history" label="History" shortcut="Ctrl+2" />
+            <item name="github" label="GitHub" shortcut="Ctrl+3" />
+            <Separator />
+            <item name="all_commits" label="All Commits" />
+            <item name="reflog" label="Reflog" />
+            <item name="worktrees" label="Worktrees" />
+        </menu>
+
+        <menu name="branch" label="Branch">
+            <item name="new" label="New Branch..." shortcut="Ctrl+N" />
+            <item name="checkout" label="Checkout..." shortcut="Ctrl+P" />
+            <Separator />
+            <item name="merge" label="Merge Into Current" shortcut="Ctrl+M" />
+            <item name="rebase" label="Rebase Current" />
+            <Separator />
+            <item name="delete" label="Delete..." shortcut="Ctrl+D" />
+            <item name="delete_merged" label="Delete Merged Branches..." />
+            <item name="rename" label="Rename..." />
+        </menu>
+
+        <menu name="commit" label="Commit">
+            <item name="commit" label="Commit..." shortcut="Ctrl+K" />
+            <item name="amend" label="Amend Last Commit" />
+            <item name="undo" label="Undo Last Commit" />
+            <Separator />
+            <item name="stash" label="Stash Changes" />
+            <item name="stash_pop" label="Pop Stash" />
+            <item name="stash_drop" label="Drop Stash..." />
+            <Separator />
+            <item name="discard" label="Discard Changes..." />
+        </menu>
+
+        <menu name="files" label="Files">
+            <item name="stage" label="Stage" />
+            <item name="unstage" label="Unstage" />
+            <Separator />
+            <item name="stage_all" label="Stage All" shortcut="Ctrl+Shift+A" />
+            <item name="unstage_all" label="Unstage All" />
+            <Separator />
+            <item name="reveal" label="Reveal in File Manager" />
+            <item name="discard" label="Discard..." />
+        </menu>
+
+        <menu name="remote" label="Remote">
+            <item name="sync" label="Sync Current Branch" />
+            <Separator />
+            <item name="fetch" label="Fetch" shortcut="Ctrl+F" />
+            <item name="fetch_all" label="Fetch All Repositories" shortcut="Ctrl+Shift+R" />
+            <item name="pull" label="Pull..." />
+            <item name="push" label="Push..." />
+            <Separator />
+            <item name="manage" label="Manage Remotes..." />
+            <item name="prune" label="Prune Origin" />
+        </menu>
+
+        <menu name="tag" label="Tag">
+            <item name="create" label="Create Tag..." />
+            <item name="delete" label="Delete Tag..." />
+            <Separator />
+            <item name="push" label="Push Tags" />
+        </menu>
+
+        <menu name="help" label="Help">
+            <item name="about" label="About Git Client" />
+        </menu>
+    </menus>
+
+    <toolbar presentation="compact">
+        <Button name="overview" command="view.overview" icon="view-grid" text="Overview" tooltip="All repositories (Ctrl+0)" />
+        <Button name="changes" command="view.changes" icon="git-commit" text="Changes" tooltip="Working tree (Ctrl+1)" />
+        <Button name="history" command="view.history" icon="git-diff" text="History" tooltip="Commit history (Ctrl+2)" />
+        <Button name="github" command="view.github" icon="git-repos" text="GitHub" tooltip="Issues and pull requests (Ctrl+3)" />
+        <spacer w="10" />
+        <Button name="sync" command="remote.sync" icon="data-transfer-both" text="Sync" tooltip="Publish, pull, or push the current branch" />
+        <Button name="fetch" command="remote.fetch" icon="git-fetch" text="Fetch" tooltip="Fetch from remote" />
+        <Button name="fetch_all" command="remote.fetch_all" icon="download" text="Fetch All" tooltip="Fetch every repository in the background" />
+        <spacer w="10" />
+        <Button name="commit" command="commit.commit" icon="git-commit" text="Commit" tooltip="Commit staged changes" />
+        <Button name="branch" command="branch.new" icon="git-fork" text="Branch" tooltip="Create new branch" />
+        <Button name="search" command="repo.search" icon="search" text="Search" tooltip="Search repository history" />
+        <Button name="prune" command="remote.prune" icon="git-fetch" text="Prune" tooltip="Prune deleted remote-tracking branches" />
+        <Button name="merged" command="branch.delete_merged" icon="git-diff" text="Merged" tooltip="Delete local branches already merged into the default branch" />
+        <Button name="worktrees" command="view.worktrees" icon="view-grid" text="Worktrees" tooltip="List linked worktrees" />
+        <spacer w="10" />
+        <Button name="refresh" command="repo.refresh" icon="refresh" text="Refresh" tooltip="Refresh" />
+        <Button name="repos" command="file.repositories" icon="git-repos" text="Repos" tooltip="Switch or discover repositories" />
+        <Button name="open_repo" command="file.open_repo" icon="folder" text="Add Repo" tooltip="Add a repository" />
+        <Button name="clone" command="file.clone" icon="git-fork" text="Clone" tooltip="Clone a repository" />
+    </toolbar>
