@@ -644,6 +644,78 @@ void test_gc_reflog_via_log_g(void) {
     PASS();
 }
 
+// Scratch repo whose only trunk is "develop" (no main/master, no remote).
+static bool make_develop_repo(char *dir, size_t sz) {
+    if (!gct_make_temp_dir(dir, sz, "orion_gcdev")) return false;
+    if (!gct_git(dir, "init -b develop") && !(gct_git(dir, "init") && gct_git(dir, "checkout -b develop")))
+        return false;
+    char path[512];
+    snprintf(path, sizeof(path), "%s/a.txt", dir);
+    return gct_git(dir, "config user.email ci@test") && gct_git(dir, "config user.name CI") &&
+           gct_write_file(path, "a\n") && gct_git(dir, "add a.txt") &&
+           gct_git(dir, "commit -m \"trunk\"");
+}
+
+void test_gc_delete_merged_keeps_unknown_trunk(void) {
+    TEST("git_delete_merged_branches: no known default -> refuses, trunk survives");
+    char dir[256];
+    ASSERT_TRUE(make_develop_repo(dir, sizeof(dir)));
+    ASSERT_TRUE(gct_git(dir, "checkout -b feature-x"));
+    git_repo_t *r = git_repo_open(dir);
+    ASSERT_NOT_NULL(r);
+    char def[128] = {0};
+    ASSERT_FALSE(git_default_branch(r, def, sizeof(def)));
+    ASSERT_EQUAL(git_delete_merged_branches(r), -1);
+    git_branch_t branches[GCT_MAX_RECORDS];
+    int n = git_get_branches(r, branches, GCT_MAX_RECORDS);
+    bool has_develop = false;
+    for (int i = 0; i < n; i++)
+        if (!strcmp(branches[i].name, "develop")) has_develop = true;
+    ASSERT_TRUE(has_develop);
+    git_repo_close(r);
+    gct_remove_dir(dir);
+    PASS();
+}
+
+void test_gc_default_branch_with_slash(void) {
+    TEST("git_default_branch: origin/HEAD -> origin/release/main keeps the full name");
+    char dir[256];
+    ASSERT_TRUE(make_develop_repo(dir, sizeof(dir)));
+    ASSERT_TRUE(gct_git(dir, "update-ref refs/remotes/origin/release/main HEAD"));
+    ASSERT_TRUE(gct_git(dir, "symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/release/main"));
+    git_repo_t *r = git_repo_open(dir);
+    ASSERT_NOT_NULL(r);
+    char def[128] = {0};
+    ASSERT_TRUE(git_default_branch(r, def, sizeof(def)));
+    ASSERT_STR_EQUAL(def, "release/main");
+    git_repo_close(r);
+    gct_remove_dir(dir);
+    PASS();
+}
+
+void test_gc_branches_skip_only_remote_head(void) {
+    TEST("git_get_branches: hides origin/HEAD but keeps origin/fix/HEAD-detach");
+    char dir[256];
+    ASSERT_TRUE(make_develop_repo(dir, sizeof(dir)));
+    ASSERT_TRUE(gct_git(dir, "update-ref refs/remotes/origin/fix/HEAD-detach HEAD"));
+    ASSERT_TRUE(gct_git(dir, "update-ref refs/remotes/origin/develop HEAD"));
+    ASSERT_TRUE(gct_git(dir, "symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/develop"));
+    git_repo_t *r = git_repo_open(dir);
+    ASSERT_NOT_NULL(r);
+    git_branch_t branches[GCT_MAX_RECORDS];
+    int n = git_get_branches(r, branches, GCT_MAX_RECORDS);
+    bool has_fix = false, has_head = false;
+    for (int i = 0; i < n; i++) {
+        if (!strcmp(branches[i].name, "origin/fix/HEAD-detach")) has_fix = true;
+        if (!strcmp(branches[i].name, "origin/HEAD")) has_head = true;
+    }
+    ASSERT_TRUE(has_fix);
+    ASSERT_FALSE(has_head);
+    git_repo_close(r);
+    gct_remove_dir(dir);
+    PASS();
+}
+
 void test_gc_workspace_scan_missing(void) {
     TEST("git_workspace_scan: a vanished folder becomes an 'unavailable' tile, not a crash");
     char roots[1][512] = {"/nonexistent/gitclient/repo"};
@@ -695,6 +767,9 @@ int main(int argc, char *argv[]) {
     test_gc_delete_merged_branches();
     test_gc_prune_without_remote();
     test_gc_reflog_via_log_g();
+    test_gc_delete_merged_keeps_unknown_trunk();
+    test_gc_default_branch_with_slash();
+    test_gc_branches_skip_only_remote_head();
     test_gc_workspace_scan_missing();
 
     teardown_test_repo();

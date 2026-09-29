@@ -51,21 +51,23 @@ void gc_create_menubar(void) {
   gc_state_t *gc = g_gc;
   if (!gc) return;
 
-  gc->chrome_win = create_application_chrome(
-      "Git Client Chrome",
-      gc_menubar_proc,
-      kGCMenus, kGCMenuCount,
-      gc_toolbar_proc,
-      &gitclient_application_toolbar,
-      gc->hinstance);
-  gc->menubar_win = gc->chrome_win ? app_chrome_menubar(gc->chrome_win) : NULL;
-  gc->toolbar_win = gc->chrome_win ? app_chrome_toolbar(gc->chrome_win) : NULL;
-  if (!gc->menubar_win) {
-    gc->menubar_win = set_app_menu(gc_menubar_proc,
-                                   kGCMenus, kGCMenuCount,
-                                   gc_handle_command,
-                                   gc->hinstance);
-  }
+#ifdef BUILD_AS_GEM
+  // The shell owns the menu row; contribute menus to it and dock only the toolbar.
+  gc->menubar_win = set_app_menu(gc_menubar_proc, kGCMenus, kGCMenuCount,
+                                 gc_handle_command, gc->hinstance);
+  gc->chrome_win  = create_application_chrome("Git Client Chrome", NULL, NULL, 0,
+                                              gc_toolbar_proc, &gitclient_application_toolbar,
+                                              gc->hinstance);
+#else
+  gc->chrome_win  = create_application_chrome("Git Client Chrome", gc_menubar_proc,
+                                              kGCMenus, kGCMenuCount, gc_toolbar_proc,
+                                              &gitclient_application_toolbar, gc->hinstance);
+  gc->menubar_win = app_chrome_menubar(gc->chrome_win);
+  if (!gc->menubar_win)
+    gc->menubar_win = set_app_menu(gc_menubar_proc, kGCMenus, kGCMenuCount,
+                                   gc_handle_command, gc->hinstance);
+#endif
+  gc->toolbar_win = app_chrome_toolbar(gc->chrome_win);
 
   gc->accel = load_accelerators(gitclient_default_accels,
                                 gitclient_default_accel_count);
@@ -203,7 +205,7 @@ void gc_handle_command_impl(uint16_t id) {
         break;
       int n = gc_delete_merged_branches();
       if (n < 0)
-        message_box(gc->main_win, "Could not list merged branches.", "Delete Merged", MB_OK);
+        message_box(gc->main_win, "Could not determine the default branch (origin/HEAD, main or master).", "Delete Merged", MB_OK);
       else {
         char msg[128];
         snprintf(msg, sizeof(msg), "Deleted %d merged branch%s.", n, n == 1 ? "" : "es");
