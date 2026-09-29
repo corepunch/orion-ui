@@ -710,16 +710,13 @@ static void gc_path_basename(const char *path, char *out, size_t n) {
   snprintf(out, n, "%.*s", (int)(end - b), b);
 }
 
-bool git_get_summary(const char *path, const char *repo_name, bool linked, git_summary_t *out) {
-  if (!path || !out) return false;
-  memset(out, 0, sizeof(*out)); out->linked = linked;
-  strncpy(out->path, path, sizeof(out->path) - 1);
-  strncpy(out->repo, repo_name && repo_name[0] ? repo_name : "?", sizeof(out->repo) - 1);
-  gc_path_basename(path, out->dir, sizeof(out->dir));
-  git_repo_t repo = {0}; strncpy(repo.path, path, sizeof(repo.path) - 1);
-  static char buf[256 * 1024];
+#define GC_SUMMARY_BUF (256 * 1024)
+
+// Fills the status-derived fields of `out` using `buf` as scratch space for git output.
+static bool gc_read_summary(git_repo_t *repo_p, char *buf, int buf_sz, git_summary_t *out) {
+  git_repo_t repo = *repo_p;
   const char *st[] = { "git", "status", "--porcelain=v2", "--branch", NULL };
-  if (!git_run_sync(&repo, st, buf, sizeof(buf))) { out->missing = true; return false; }
+  if (!git_run_sync(&repo, st, buf, buf_sz)) { out->missing = true; return false; }
   bool has_upstream = false, has_ab = false; char *cur = buf;
   for (char *l = gc_next_line(&cur); l; l = gc_next_line(&cur)) {
     if (!strncmp(l, "# branch.head ", 14)) {
@@ -737,18 +734,32 @@ bool git_get_summary(const char *path, const char *repo_name, bool linked, git_s
   out->gone = has_upstream && !has_ab;
   if (out->detached) {
     const char *sh[] = { "git", "rev-parse", "--short", "HEAD", NULL };
-    if (git_run_sync(&repo, sh, buf, sizeof(buf))) { gc_trim_line(buf); snprintf(out->branch, sizeof(out->branch), "detached @ %.16s", buf); }
+    if (git_run_sync(&repo, sh, buf, buf_sz)) { gc_trim_line(buf); snprintf(out->branch, sizeof(out->branch), "detached @ %.16s", buf); }
     else strncpy(out->branch, "detached", sizeof(out->branch) - 1);
   }
   const char *lg[] = { "git", "log", "-1", "--format=%s%x1f%cr", NULL };
-  if (git_run_sync(&repo, lg, buf, sizeof(buf))) {
+  if (git_run_sync(&repo, lg, buf, buf_sz)) {
     gc_trim_line(buf); char *sep = strchr(buf, '\x1f');
     if (sep) { *sep = 0; gc_short_age(sep + 1, out->when, sizeof(out->when)); }
     strncpy(out->subject, buf, sizeof(out->subject) - 1);
   } else out->initial = true;
   const char *sl[] = { "git", "stash", "list", NULL };
-  if (git_run_sync(&repo, sl, buf, sizeof(buf))) for (char *p = buf; *p; p++) if (*p == '\n') out->stashes++;
+  if (git_run_sync(&repo, sl, buf, buf_sz)) for (char *p = buf; *p; p++) if (*p == '\n') out->stashes++;
   return true;
+}
+
+bool git_get_summary(const char *path, const char *repo_name, bool linked, git_summary_t *out) {
+  if (!path || !out) return false;
+  memset(out, 0, sizeof(*out)); out->linked = linked;
+  strncpy(out->path, path, sizeof(out->path) - 1);
+  strncpy(out->repo, repo_name && repo_name[0] ? repo_name : "?", sizeof(out->repo) - 1);
+  gc_path_basename(path, out->dir, sizeof(out->dir));
+  git_repo_t repo = {0}; strncpy(repo.path, path, sizeof(repo.path) - 1);
+  char *buf = malloc(GC_SUMMARY_BUF);
+  if (!buf) { fprintf(stderr, "[git] summary buffer allocation failed for %s\n", path); fflush(stderr); out->missing = true; return false; }
+  bool ok = gc_read_summary(&repo, buf, GC_SUMMARY_BUF, out);
+  free(buf);
+  return ok;
 }
 
 int git_workspace_scan(char (*roots)[512], int root_count, git_summary_t *out, int max) {

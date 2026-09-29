@@ -272,6 +272,29 @@ int text_strnwidth(ui_font_t font, const char *text, int len) {
   return strnwidth_impl(font, text, len);
 }
 
+int text_ellipsize(ui_font_t font, const char *text, int max_w, char *out, size_t n) {
+  if (!out || n == 0) return 0;
+  out[0] = '\0';
+  if (!text || max_w <= 0) return 0;
+  if (text_strwidth(font, text) <= max_w) { snprintf(out, n, "%s", text); return text_strwidth(font, out); }
+  static const char kEllipsis[] = "...";
+  int budget = max_w - text_strwidth(font, kEllipsis), len = 0, step;
+  if (budget <= 0) { snprintf(out, n, "%s", kEllipsis); return text_strwidth(font, out); }
+  // Grow the kept prefix one code point at a time while it still fits.
+  for (int total = (int)strlen(text); len < total && (size_t)len + sizeof(kEllipsis) < n; len += step) {
+    utf8_codepoint(text + len, total - len, &step);
+    if (step < 1 || strnwidth_impl(font, text, len + step) > budget) break;
+  }
+  snprintf(out, n, "%.*s%s", len, text, kEllipsis);
+  return text_strwidth(font, out);
+}
+
+void draw_text_ellipsized(ui_font_t font, const char *text, int x, int y, int max_w, uint32_t col) {
+  char fitted[512];
+  text_ellipsize(font, text, max_w, fitted, sizeof(fitted));
+  draw_text(font, fitted, x, y, col);
+}
+
 // ── draw_text / draw_text_small ───────────────────────────────────────────────
 
 void draw_text(ui_font_t font, const char *text, int x, int y, uint32_t col) {

@@ -25,7 +25,7 @@
   [brButtonHover]          = 0xff5a5a5a, \
   [brTextNormal]           = 0xffc0c0c0, \
   [brTextDisabled]         = 0xff808080, \
-  [brTextError]            = 0xffff4444, \
+  [brTextError]            = 0xff4444ff, \
   [brTextSuccess]          = 0xff44ff44, \
   [brBorderFocus]          = 0xff101010, \
   [brBorderActive]         = 0xff808080, \
@@ -34,7 +34,9 @@
   [brModalOverlay]         = 0x40402000, \
   [brToolbarForeground]    = 0xffd8d8d8, \
   [brPanelDark]            = 0xff323232, \
-  [brPanelDarker]          = 0xff262626
+  [brPanelDarker]          = 0xff262626, \
+  [brTextWarning]          = 0xff2ea8e5, \
+  [brTextInfo]             = 0xfff0a04c
 
 static const uint32_t k_theme_palette_dark[brCount]
   __attribute__((unused)) = { THEME_PALETTE_DARK_INIT };

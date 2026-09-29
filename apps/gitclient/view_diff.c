@@ -16,6 +16,11 @@ static void parse_hunks(gc_diff_state_t *st) {
   st->current_hunk = st->hunk_count > 0 ? 0 : -1;
 }
 
+// Forget which diff the viewer shows: the next gc_diff_refresh() re-reads it from git.
+void gc_diff_invalidate(void) {
+  if (g_gc) g_gc->diff_cache_valid = false;
+}
+
 void gc_diff_refresh(void) {
   gc_state_t *gc = g_gc;
   if (!gc || !gc->diff_win) { GC_TRACE("diff_refresh SKIP: gc=%p diff_win=%p", (void *)gc, gc ? (void *)gc->diff_win : NULL); return; }
@@ -48,7 +53,8 @@ void gc_diff_refresh(void) {
     }
   }
 
-  if (gc->last_diff_commit    == gc->selected_commit &&
+  if (gc->diff_cache_valid                           &&
+      gc->last_diff_commit    == gc->selected_commit &&
       gc->last_diff_file      == gc->selected_file    &&
       gc->last_diff_staged    == staged               &&
       gc->last_diff_untracked == untracked            &&
@@ -62,6 +68,7 @@ void gc_diff_refresh(void) {
   st->scroll_y   = 0;
   st->hunk_path[0] = '\0';
 
+  gc->diff_cache_valid    = true;
   gc->last_diff_commit    = gc->selected_commit;
   gc->last_diff_file      = gc->selected_file;
   gc->last_diff_staged    = staged;

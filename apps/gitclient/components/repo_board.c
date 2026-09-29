@@ -10,11 +10,19 @@
 #define GAP        10
 #define PAD        14
 #define SUMMARY_H  44
-#define CHIP_H     18
+#define BADGE_H    18
 #define MAX_TILES  64
+#define TILE_RADIUS 7
+#define STRIPE_W    4
+#define TILE_PAD    12
+#define SELECT_RING 2
 
-enum { C_RED = 0xFF5A5AE8, C_AMBER = 0xFF2EA8E5, C_BLUE = 0xFFF0A04C, C_GREEN = 0xFF6AC24C, C_GREY = 0xFF8C8C8C, C_WHITE = 0xFFFFFFFF };
-#define TINT(c, a) (((uint32_t)(a) << 24) | ((c) & 0x00FFFFFFu))
+// Status semantics come from the active theme, never from literal colours.
+#define C_RED   get_sys_color(brTextError)
+#define C_AMBER get_sys_color(brTextWarning)
+#define C_BLUE  get_sys_color(brTextInfo)
+#define C_GREEN get_sys_color(brTextSuccess)
+#define C_GREY  get_sys_color(brTextDisabled)
 
 typedef struct { irect16_t r; int tile; } slot_t;
 
@@ -119,65 +127,56 @@ static void move_selection(window_t *win, board_t *b, int dx, int dy) {
 
 // ── painting ────────────────────────────────────────────────────────────────
 
-static void ellipsize(ui_font_t font, const char *src, int max_w, char *out, size_t n) {
-  snprintf(out, n, "%s", src);
-  if (max_w <= 0) { out[0] = 0; return; }
-  if (text_strwidth(font, out) <= max_w) return;
-  size_t len = strlen(out);
-  while (len > 1) { out[--len] = 0; char tmp[300]; snprintf(tmp, sizeof(tmp), "%s...", out); if (text_strwidth(font, tmp) <= max_w) { snprintf(out, n, "%s", tmp); return; } }
-}
-
-static void text_at(ui_font_t font, const char *s, int x, int y, int max_w, uint32_t col) {
-  char buf[300]; ellipsize(font, s, max_w, buf, sizeof(buf)); draw_text(font, buf, x, y, col);
-}
-
-// Draws a tinted pill; returns its width (0 when it does not fit before max_x).
-static int chip(int x, int y, int max_x, const char *label, uint32_t color) {
-  int w = text_strwidth(FONT_SMALL, label) + 14; if (x + w > max_x) return 0;
-  fill_rounded_rect(TINT(color, 0x40), R(x, y, w, CHIP_H), 5);
-  draw_text(FONT_SMALL, label, x + 7, y + (CHIP_H - text_char_height(FONT_SMALL)) / 2, color);
-  return w + 5;
+static int badge(irect16_t row, int x, const char *label, uint32_t color) {
+  int w = text_strwidth(FONT_SMALL, label) + 14;
+  if (x + w > row.x + row.w) return 0;
+  return draw_badge(FONT_SMALL, label, x, row.y, row.h, color) + 5;
 }
 
 static void paint_tile(board_t *b, const slot_t *s, int oy, bool focused) {
   const gc_tile_t *t = &b->tiles[s->tile];
-  irect16_t r = rect_offset(s->r, 0, -oy); uint32_t col = tile_color(t);
-  bool sel = s->tile == b->selected, hot = s->tile == b->hover;
-  if (sel) fill_rounded_rect(focused ? get_sys_color(brAccent) : get_sys_color(brTextDisabled), rect_inset(r, -2), 9);
-  fill_rounded_rect(hot ? get_sys_color(brButtonHover) : get_sys_color(brControlBg), r, 7);
-  fill_rounded_rect(col, R(r.x, r.y + 8, 4, r.h - 16), 2);
+  irect16_t card = rect_offset(s->r, 0, -oy); uint32_t verdict = tile_color(t);
+  bool selected = s->tile == b->selected, hot = s->tile == b->hover;
+  uint32_t text = get_sys_color(brTextNormal), dim = get_sys_color(brTextDisabled);
 
-  int x = r.x + 16, right = r.x + r.w - 12, ty = r.y + 9, tc = get_sys_color(brTextNormal), dim = get_sys_color(brTextDisabled);
-  int ch = text_char_height(FONT_SMALL), sw = text_strwidth(FONT_SMALL, tile_state(t));
-  int name_w = right - sw - 12 - x, nw = text_strwidth(FONT_SYSTEM, t->repo); if (nw > name_w) nw = name_w;
-  text_at(FONT_SYSTEM, t->repo, x, ty, name_w, tc);
-  draw_text(FONT_SMALL, tile_state(t), right - sw, ty + 1, col);
+  if (selected) fill_rounded_rect(focused ? get_sys_color(brAccent) : dim, rect_inset(card, -SELECT_RING), TILE_RADIUS + SELECT_RING);
+  // The verdict stripe spans the full card height and follows its rounded left corners; the body
+  // covers everything to its right and keeps the card's right corners.
+  fill_rounded_rect_corners(verdict, rect_split_left(card, 2 * TILE_RADIUS), TILE_RADIUS, CORNERS_LEFT);
+  fill_rounded_rect_corners(get_sys_color(hot ? brButtonHover : brControlBg), rect_trim_left(card, STRIPE_W), TILE_RADIUS, CORNERS_RIGHT);
+
+  irect16_t body = rect_inset_xy(rect_trim_left(card, STRIPE_W), TILE_PAD, 9);
+  int line = text_char_height(FONT_SMALL), state_w = text_strwidth(FONT_SMALL, tile_state(t));
+  irect16_t title = rect_trim_right(rect_split_top(body, text_char_height(FONT_SYSTEM)), state_w + 12);
+  draw_text_ellipsized(FONT_SYSTEM, t->repo, title.x, title.y, title.w, text);
+  draw_text(FONT_SMALL, tile_state(t), body.x + body.w - state_w, title.y + 1, verdict);
   if (t->linked) {
-    const char *d = t->dir; size_t rl = strlen(t->repo); if (!strncmp(d, t->repo, rl) && (d[rl] == '-' || d[rl] == '_')) d += rl + 1;
-    char wt[120]; snprintf(wt, sizeof(wt), "/ %s", d);
-    int wx = x + nw + 6; text_at(FONT_SMALL, wt, wx, ty + 1, right - sw - 10 - wx, dim);
+    const char *dir = t->dir; size_t n = strlen(t->repo);
+    if (!strncmp(dir, t->repo, n) && (dir[n] == '-' || dir[n] == '_')) dir += n + 1;
+    char suffix[120]; snprintf(suffix, sizeof(suffix), "/ %s", dir);
+    int used = MIN(text_strwidth(FONT_SYSTEM, t->repo), title.w) + 6;
+    draw_text_ellipsized(FONT_SMALL, suffix, title.x + used, title.y + 1, title.w - used, dim);
   }
 
-  int y2 = ty + 24;
-  draw_sysicon("git-fork", x - 2, y2 - 2, 16, dim);
-  if (t->missing) text_at(FONT_SMALL, "Folder missing or not a repository", x + 18, y2, right - x - 18, dim);
-  else {
-    char meta[200]; snprintf(meta, sizeof(meta), "%s%s%s", t->branch, t->when[0] ? "  -  " : "", t->when);
-    text_at(FONT_SMALL, meta, x + 18, y2, right - x - 18, tc);
-    text_at(FONT_SMALL, t->initial ? "No commits yet" : t->subject, x, y2 + ch + 3, right - x, dim);
-  }
+  irect16_t where = R(body.x, title.y + 24, body.w, line);
+  draw_sysicon("git-fork", where.x - 2, where.y - 2, 16, dim);
+  irect16_t meta = rect_trim_left(where, 18);
+  if (t->missing) { draw_text_ellipsized(FONT_SMALL, "Folder missing or not a repository", meta.x, meta.y, meta.w, dim); return; }
+  char branch[200]; snprintf(branch, sizeof(branch), "%s%s%s", t->branch, t->when[0] ? "  -  " : "", t->when);
+  draw_text_ellipsized(FONT_SMALL, branch, meta.x, meta.y, meta.w, text);
+  draw_text_ellipsized(FONT_SMALL, t->initial ? "No commits yet" : t->subject, where.x, where.y + line + 3, where.w, dim);
 
-  int cx = x, cy = r.y + r.h - CHIP_H - 10, mx = right; char c[48];
-  if (t->missing) return;
-  if (t->conflicts)  { snprintf(c, sizeof(c), "%d conflict%s", t->conflicts, t->conflicts == 1 ? "" : "s"); cx += chip(cx, cy, mx, c, C_RED); }
-  if (t->staged)     { snprintf(c, sizeof(c), "%d staged", t->staged);        cx += chip(cx, cy, mx, c, C_GREEN); }
-  if (t->unstaged)   { snprintf(c, sizeof(c), "%d modified", t->unstaged);    cx += chip(cx, cy, mx, c, C_AMBER); }
-  if (t->untracked)  { snprintf(c, sizeof(c), "%d new", t->untracked);        cx += chip(cx, cy, mx, c, C_AMBER); }
-  if (t->ahead)      { snprintf(c, sizeof(c), "%d to push", t->ahead);        cx += chip(cx, cy, mx, c, C_BLUE); }
-  if (t->behind)     { snprintf(c, sizeof(c), "%d to pull", t->behind);       cx += chip(cx, cy, mx, c, C_BLUE); }
-  if (t->no_upstream && !t->initial) cx += chip(cx, cy, mx, "no upstream", C_BLUE);
-  if (t->stashes)    { snprintf(c, sizeof(c), "%d stashed", t->stashes);      cx += chip(cx, cy, mx, c, C_GREY); }
-  if (cx == x) chip(cx, cy, mx, "clean", C_GREEN);
+  irect16_t row = rect_split_bottom(body, BADGE_H); row.y -= 1;
+  int x = row.x; char c[48];
+  if (t->conflicts) { snprintf(c, sizeof(c), "%d conflict%s", t->conflicts, t->conflicts == 1 ? "" : "s"); x += badge(row, x, c, C_RED); }
+  if (t->staged)    { snprintf(c, sizeof(c), "%d staged",   t->staged);    x += badge(row, x, c, C_GREEN); }
+  if (t->unstaged)  { snprintf(c, sizeof(c), "%d modified", t->unstaged);  x += badge(row, x, c, C_AMBER); }
+  if (t->untracked) { snprintf(c, sizeof(c), "%d new",      t->untracked); x += badge(row, x, c, C_AMBER); }
+  if (t->ahead)     { snprintf(c, sizeof(c), "%d to push",  t->ahead);     x += badge(row, x, c, C_BLUE); }
+  if (t->behind)    { snprintf(c, sizeof(c), "%d to pull",  t->behind);    x += badge(row, x, c, C_BLUE); }
+  if (t->no_upstream && !t->initial) x += badge(row, x, "no upstream", C_BLUE);
+  if (t->stashes)   { snprintf(c, sizeof(c), "%d stashed",  t->stashes);   x += badge(row, x, c, C_GREY); }
+  if (x == row.x) badge(row, x, "clean", C_GREEN);
 }
 
 static void paint_summary(board_t *b, int cw, int oy) {
@@ -188,21 +187,23 @@ static void paint_summary(board_t *b, int cw, int oy) {
     if (t->staged || t->unstaged || t->untracked) dirty++;
     if (t->ahead) push++; if (t->behind) pull++; if (t->conflicts) conf++;
   }
-  int y = 12 - oy, x = PAD; char s[64];
+  irect16_t strip = R(PAD, 12 - oy, cw - 2 * PAD, BADGE_H + 2); char s[64];
   snprintf(s, sizeof(s), "%d repositories, %d worktrees", repos, b->count);
-  draw_text(FONT_SYSTEM, s, x, y, get_sys_color(brTextNormal)); x += text_strwidth(FONT_SYSTEM, s) + 18;
-  int cy = y - 1;
-  if (conf) { snprintf(s, sizeof(s), "%d with conflicts", conf); x += chip(x, cy, cw, s, C_RED); }
-  if (dirty) { snprintf(s, sizeof(s), "%d uncommitted", dirty);  x += chip(x, cy, cw, s, C_AMBER); }
-  if (push)  { snprintf(s, sizeof(s), "%d to push", push);       x += chip(x, cy, cw, s, C_BLUE); }
-  if (pull)  { snprintf(s, sizeof(s), "%d to pull", pull);       x += chip(x, cy, cw, s, C_BLUE); }
-  if (!conf && !dirty && !push && !pull && b->count) chip(x, cy, cw, "everything is in sync", C_GREEN);
+  draw_text(FONT_SYSTEM, s, strip.x, strip.y + 1, get_sys_color(brTextNormal));
+  int x = strip.x + text_strwidth(FONT_SYSTEM, s) + 18;
+  if (conf)  { snprintf(s, sizeof(s), "%d with conflicts", conf); x += badge(strip, x, s, C_RED) ; }
+  if (dirty) { snprintf(s, sizeof(s), "%d uncommitted", dirty);   x += badge(strip, x, s, C_AMBER); }
+  if (push)  { snprintf(s, sizeof(s), "%d to push", push);        x += badge(strip, x, s, C_BLUE); }
+  if (pull)  { snprintf(s, sizeof(s), "%d to pull", pull);        x += badge(strip, x, s, C_BLUE); }
+  if (!conf && !dirty && !push && !pull && b->count) badge(strip, x, "everything is in sync", C_GREEN);
 
-  const char *fl = b->attention_only ? "Showing: needs attention" : "Showing: all";
-  int fw = text_strwidth(FONT_SMALL, fl) + 20; irect16_t fr = R(cw - PAD - fw, cy, fw, CHIP_H + 2);
-  b->filter_btn = rect_offset(fr, 0, oy);
-  fill_rounded_rect(b->attention_only ? get_sys_color(brAccent) : get_sys_color(brButtonInner), fr, 6);
-  draw_text(FONT_SMALL, fl, fr.x + 10, fr.y + (fr.h - text_char_height(FONT_SMALL)) / 2, b->attention_only ? C_WHITE : get_sys_color(brTextNormal));
+  const char *label = b->attention_only ? "Showing: needs attention" : "Showing: all";
+  int fw = text_strwidth(FONT_SMALL, label) + 20;
+  irect16_t pill = rect_split_right(strip, fw);
+  b->filter_btn = rect_offset(pill, 0, oy);
+  fill_rounded_rect(get_sys_color(b->attention_only ? brAccent : brButtonInner), pill, 6);
+  draw_text(FONT_SMALL, label, pill.x + 10, pill.y + (pill.h - text_char_height(FONT_SMALL)) / 2,
+            get_sys_color(b->attention_only ? brActiveTitlebarText : brTextNormal));
 }
 
 static void paint_board(window_t *win, board_t *b) {

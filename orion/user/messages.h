@@ -477,7 +477,9 @@ typedef enum {
   brToolbarForeground    = 24,  // toolbar icons, labels, and dropdown arrows
   brPanelDark            = 25,  // inactive tabs; one step below the face
   brPanelDarker          = 26,  // toolbar and tab-strip chrome, outside the client
-  brCount                = 27
+  brTextWarning          = 27,  // attention needed but not an error (uncommitted, pending)
+  brTextInfo             = 28,  // neutral informational status (to push, to pull)
+  brCount                = 29
 } sys_color_idx_t;
 
 // Runtime-accessible theme table (defined in user/theme.c).

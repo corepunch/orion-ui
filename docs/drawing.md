@@ -48,6 +48,20 @@ fill_rect(COLOR_PANEL_BG, 0, 0, win->frame.w, win->frame.h);
 fill_rect(RGBA(255,0,0,255), 10, 10, 50, 50);
 ```
 
+### Rounded shapes and badges
+
+```c
+fill_rounded_rect(color, r, radius);                        // all four corners
+fill_rounded_rect_corners(color, r, radius, CORNERS_LEFT);  // per-corner selection (CORNER_TOP_LEFT, ...)
+uint32_t soft = color_with_alpha(color, 0x40);              // same colour, different alpha
+int w = draw_badge(FONT_SMALL, "3 modified", x, y, 18, get_sys_color(brTextWarning));  // returns width
+```
+
+An accent edge that follows a rounded card is two calls: a `CORNERS_LEFT` fill in the accent colour under a
+`CORNERS_RIGHT` fill in the body colour, inset by the stripe width.
+
+Status colours come from the theme: `brTextError`, `brTextWarning`, `brTextInfo`, `brTextSuccess`, `brTextDisabled`.
+
 ### `draw_rect`
 
 Render a textured quad (OpenGL texture).
@@ -93,6 +107,14 @@ int strwidth(const char *text);
 // Example
 int w = strwidth("Hello");
 draw_text_small("Hello", (win->frame.w - w) / 2, 10, COLOR_TEXT_NORMAL);
+```
+
+### Fitting text
+
+```c
+// Cut on a UTF-8 boundary and append "..." so the result is at most max_w pixels wide
+draw_text_ellipsized(FONT_SMALL, title, x, y, max_w, color);
+int w = text_ellipsize(FONT_SMALL, title, max_w, buf, sizeof(buf));   // when you need the string
 ```
 
 ### Initialisation

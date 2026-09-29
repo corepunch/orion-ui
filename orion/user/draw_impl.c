@@ -280,6 +280,27 @@ void fill_rounded_rect(uint32_t color, irect16_t r, int radius) {
                       (int)(r.h * scale + 0.5f), radius * scale, 1.0f, color);
 }
 
+void fill_rounded_rect_corners(uint32_t color, irect16_t r, int radius, uint32_t corners) {
+  extern uint32_t ui_white_texture;
+  if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0) return;
+  if (radius <= 0 || !corners) { fill_rect(color, r); return; }
+  float scale = MAX(1.0f, axGetScaling()), rad = radius * scale;
+  const float radii[4] = {
+    corners & CORNER_TOP_LEFT     ? rad : 0.0f, corners & CORNER_TOP_RIGHT   ? rad : 0.0f,
+    corners & CORNER_BOTTOM_RIGHT ? rad : 0.0f, corners & CORNER_BOTTOM_LEFT ? rad : 0.0f,
+  };
+  render_rounded_rect_corners(ui_white_texture, r, (int)(r.w * scale + 0.5f), (int)(r.h * scale + 0.5f),
+                              radii, 1.0f, color);
+}
+
+#define BADGE_PADDING 7
+int draw_badge(ui_font_t font, const char *text, int x, int y, int height, uint32_t color) {
+  int w = text_strwidth(font, text) + 2 * BADGE_PADDING;
+  fill_rounded_rect(color_with_alpha(color, 0x40), R(x, y, w, height), MIN(5, height / 2));
+  draw_text(font, text, x + BADGE_PADDING, y + (height - text_char_height(font)) / 2, color);
+  return w;
+}
+
 static void color_to_params(uint32_t color, ui_render_effect_params_t *params, int base) {
   if (!params) return;
   params->f[base + 0] = (float)((color      ) & 0xFF) / 255.0f;
