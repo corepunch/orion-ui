@@ -248,4 +248,96 @@ static void test_segmented_joint_only_volumes(void){
 	ASSERT_TRUE(!strcmp(scene_node_tag(s.objs[0].editNode),"spine"));
 	scene_free(&s); PASS();
 }
+static void test_character_cosmetic_options(void){
+  TEST("character options: cosmetic variants retain joints, inherit defaults and persist per instance");
+  char path[512],xml[2048];
+  snprintf(path,sizeof(path),"%s/scener-options-%d.blk",window_test_temp_dir(),getpid());
+  FILE *file=fopen(path,"w"); ASSERT_TRUE(file!=NULL);
+  fputs("<prefab><option name='gloves' enabled='1'/><palm name='hand' ground='0' volume='0'>"
+        "<ellipsoid radii='3 4 5' color='1 0 0' if-feature='gloves'/>"
+        "<ellipsoid radii='2 3 4' color='0 1 0' unless-feature='gloves'/>"
+        "<ellipsoid radii='4 5 2' pos='0 0 4' if-feature='gloves'/></palm>"
+        "<clip name='Turn' length='1'><key t='0'><joint target='hand'/></key><key t='1'><joint target='hand' rot='0 0 45'/></key></clip></prefab>",file);
+  fclose(file);
+  Scene direct={0}; ASSERT_TRUE(load_scene(path,&direct));
+  ASSERT_EQUAL(direct.nobjs,2); ASSERT_EQUAL(direct.ignoredAttributes,0); scene_free(&direct);
+  const char *base=strrchr(path,'/'); base=base?base+1:path;
+  char ref[512]; snprintf(ref,sizeof(ref),"../%.*s",(int)strlen(base)-4,base);
+  /* load_prefab uses assetRoot/prefabs/ref.blk; an existing prefabs directory is needed. */
+  char folder[512]; snprintf(folder,sizeof(folder),"%s/prefabs",window_test_temp_dir());
+  ASSERT_TRUE(axMkDir(folder));
+  snprintf(xml,sizeof(xml),"<scene><sun dir='-1 -1 -1'/><prefab name='Gloved' source='%s'><layer clip='Turn'/></prefab>"
+           "<prefab name='Bare' source='%s'><option name='gloves' enabled='0'/><layer clip='Turn'/></prefab></scene>",ref,ref);
+  Scene s={0}; ASSERT_TRUE(window_test_load(&s,xml));
+  ASSERT_EQUAL(s.nobjs,3); ASSERT_EQUAL(s.ignoredAttributes,0); ASSERT_EQUAL(s.nrigJointWorlds,2);
+  scene_set_time(&s,.5f); ASSERT_EQUAL(s.nobjs,3); ASSERT_EQUAL(s.nrigJointWorlds,2);
+  for(int i=0;i<16;i++) ASSERT_TRUE(fabsf(s.rigJointWorlds[0].matrix.m[i]-s.rigJointWorlds[1].matrix.m[i])<.00001f);
+  ASSERT_TRUE(scene_save_all(&s)); Scene restored={0}; ASSERT_TRUE(load_scene(s.scenePath,&restored));
+  ASSERT_EQUAL(restored.nobjs,3); ASSERT_EQUAL(restored.ignoredAttributes,0);
+  unlink(s.scenePath); unlink(path); scene_free(&restored); scene_free(&s); PASS();
+}
+
 #endif
+
+static int volume_meshes_match(Scene *a,Scene *b){
+  if(a->nobjs!=b->nobjs) return 0;
+  for(int i=0;i<a->nobjs;i++){
+    Mesh *m=&a->objs[i].mesh; int found=0;
+    for(int j=0;j<b->nobjs && !found;j++){
+      Mesh *n=&b->objs[j].mesh;
+      if(m->nverts!=n->nverts || m->ntris!=n->ntris) continue;
+      float error=0;
+      for(int k=0;k<m->nverts;k++) error=fmaxf(error,vlen(vsub(m->verts[k].pos,n->verts[k].pos)));
+      found=error<0.0002f;
+    }
+    if(!found){ fprintf(stderr,"[scener-test] unmatched source volume %d\n",i); return 0; }
+  }
+  return 1;
+}
+
+static void test_preserved_cat_geometry(void){
+  TEST("calibrated CAT: preserves source volumes and imported motion; supports IK, torso bends and gait");
+  const char *base="apps/scener/imports/examples/ecstatica2/scenes/";
+  char path[512]; Scene source={0},cat={0};
+  snprintf(path,sizeof(path),"%spreview.blks",base); ASSERT_TRUE(load_scene(path,&source));
+  snprintf(path,sizeof(path),"%scontrolled.blks",base); ASSERT_TRUE(load_scene(path,&cat));
+  ASSERT_EQUAL(cat.ignoredAttributes,0); ASSERT_TRUE(volume_meshes_match(&source,&cat));
+  vec3 foot=cat_test_joint(&cat,"left_foot"),hand=cat_test_joint(&cat,"left_palm");
+  scene_free(&source); scene_free(&cat);
+  snprintf(path,sizeof(path),"%scontrolled-presentleft.blks",base); ASSERT_TRUE(load_scene(path,&cat));
+  ASSERT_EQUAL(cat.nrigTargets,1); ASSERT_TRUE(cat.rigTargets[0].reachable);
+  ASSERT_TRUE(vlen(vsub(foot,cat_test_joint(&cat,"left_foot")))<.01f);
+  ASSERT_TRUE(vlen(vsub(hand,cat_test_joint(&cat,"left_palm")))>10);
+  scene_free(&cat);
+  snprintf(path,sizeof(path),"%sanimations/0008-stherorun.blks",base); ASSERT_TRUE(load_scene(path,&source));
+  snprintf(path,sizeof(path),"%sanimations/controlled-run.blks",base); ASSERT_TRUE(load_scene(path,&cat));
+  for(int i=0;i<4;i++){
+    scene_set_time(&source,i*.27f); scene_set_time(&cat,i*.27f);
+    ASSERT_TRUE(volume_meshes_match(&source,&cat));
+  }
+  scene_free(&source); scene_free(&cat);
+  snprintf(path,sizeof(path),"%scontrolled-walk.blks",base); ASSERT_TRUE(load_scene(path,&cat));
+  scene_set_time(&cat,.7f); ASSERT_EQUAL(cat.nrigTargets,2);
+  for(int i=0;i<cat.nrigTargets;i++) ASSERT_TRUE(cat.rigTargets[i].reachable);
+  ASSERT_TRUE(vlen(vsub(foot,cat_test_joint(&cat,"left_foot")))>1);
+  scene_free(&cat); PASS();
+}
+
+static void test_volume_character_cast(void){
+  TEST("source morphs: defaults preserve all source vertices and cast references cache once");
+  const char *bases[]={"joe","villager-full","villager-belly","villager-slim","freegirl"};
+  for(int i=0;i<5;i++){
+    char path[512]; Scene source={0},morph={0};
+    snprintf(path,sizeof(path),"apps/scener/characters/%s/scenes/source.blks",bases[i]);
+    ASSERT_TRUE(load_scene(path,&source));
+    snprintf(path,sizeof(path),"apps/scener/characters/%s/scenes/study.blks",bases[i]);
+    ASSERT_TRUE(load_scene(path,&morph)); ASSERT_EQUAL(morph.ignoredAttributes,0);
+    ASSERT_TRUE(volume_meshes_match(&source,&morph));
+    scene_free(&source); scene_free(&morph);
+  }
+  Scene s={0}; ASSERT_TRUE(load_scene("apps/scener/scenes/volume_character_lineup.blks",&s));
+  ASSERT_EQUAL(s.nprefabs,4); ASSERT_EQUAL(s.ninstances,4); ASSERT_EQUAL(s.ignoredAttributes,0);
+  int count=s.nobjs;
+  scene_set_time(&s,1); ASSERT_EQUAL(s.nprefabs,4); ASSERT_EQUAL(s.ninstances,4); ASSERT_EQUAL(s.nobjs,count);
+  scene_free(&s); PASS();
+}

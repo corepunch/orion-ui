@@ -6,6 +6,8 @@
      Arms on the ribcage: Collarbone, Upperarm, Forearm, Palm and five three-knuckle digits.
      Author the left limbs; mirror="1" builds the right ones, as CAT's Paste Mirrored does. -->
 <prefab>
+  <option name="gloves" enabled="0" />
+  <material id="glove" color="0.07 0.055 0.04" shininess="5" />
   <material id="skin" color="0.86 0.68 0.56" shininess="10" />
   <material id="shirt" color="0.30 0.42 0.62" shininess="6" />
   <material id="trousers" color="0.22 0.22 0.26" shininess="6" />
@@ -36,7 +38,9 @@
             <bone name="left_upperarm" aim="90 -82" length="29" radius="6.5 7" taper="0.78" overlap="4" material="shirt">
               <ellipsoid on="90 20" at="0.08" radii="7 7 8" sink="6.5" material="shirt" />
               <bone name="left_forearm" aim="0 -86" length="26" radius="4.6 4.8" taper="0.75" material="skin">
+                <ellipsoid name="left_glove_cuff" on="0 0" at="0.76" sink="4.8" radii="5.2 5.4 7" material="glove" if-feature="gloves" />
                 <palm name="left_palm" aim="0 -90" length="12" radius="3.5 4.8" overlap="2" material="skin">
+                  <ellipsoid name="left_glove_hand" on="0 0" at="0.5" sink="4.8" radii="3.85 5.25 8" material="glove" if-feature="gloves" />
                   <digit name="left_thumb" at="0.32" across="-0.85" aim="180 -40" aimEnd="-140 -62" links="3" length="7" radius="1" taper="0.8" material="skin" />
                   <digit name="left_index" at="0.82" across="-0.78" aim="-90 -88" aimEnd="-90 -72" links="3" length="8" radius="0.85" taper="0.8" material="skin" />
                   <digit name="left_middle" at="0.94" across="-0.26" aim="-90 -86" aimEnd="-90 -68" links="3" length="8.5" radius="0.9" taper="0.8" material="skin" />

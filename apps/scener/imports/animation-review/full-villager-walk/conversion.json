@@ -1,0 +1,12 @@
+{
+  "actor": "w_vil1",
+  "record": 2565,
+  "action": 958,
+  "source_scene": "scenes/animations/0958-vilwalk2.blks",
+  "ignored_events": {
+    "OFFSET_POINT": 25,
+    "MOVE_THING": 10
+  },
+  "unmapped_part_ids": [],
+  "timing": "unsigned source phase normalized to requested duration; not recovered game FPS"
+}

@@ -1058,6 +1058,9 @@ int main(void) {
   test_capture_auto_contacts();
   test_capture_optional_fingers();
   test_prefab_finger_defaults();
+  test_character_cosmetic_options();
+  test_preserved_cat_geometry();
+  test_volume_character_cast();
   test_segmented_joint_only_volumes();
   test_ignored_attributes_reported();
   test_enclosed_light_reported();

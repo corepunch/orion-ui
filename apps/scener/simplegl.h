@@ -212,8 +212,9 @@ typedef struct { ShadowVertex *verts; int nverts,cverts; } ShadowVolume;
 typedef struct { Mesh mesh; vec3 color; float shininess; int castsShadow,renderable,unlit,sanityIgnore,sanityFloor,sanityCheck; void *editNode; mat4 editMatrix; ShadowVolume *shadowParts; int nshadowParts; int texIndex,screenTexture; } SceneObj;
 typedef struct { char path[1024]; unsigned char *pixels; int width,height; unsigned int texture; } ScreenTexture;
 typedef struct { char name[32]; vec3 pos; } AttachPoint;
-typedef struct { char ref[32]; char path[256]; void *root; AttachPoint *attaches; int nattaches, cattaches; } PrefabDef;
-typedef struct { char name[32]; char ref[32]; mat4 transform, rotMatrix; } InstanceDef;
+#define SCENE_PREFAB_PATH_CAPACITY 1024
+typedef struct { char ref[SCENE_PREFAB_PATH_CAPACITY]; char path[SCENE_PREFAB_PATH_CAPACITY]; void *root; AttachPoint *attaches; int nattaches, cattaches; } PrefabDef;
+typedef struct { char name[32]; char ref[SCENE_PREFAB_PATH_CAPACITY]; mat4 transform, rotMatrix; } InstanceDef;
 typedef struct { mat4 transform; Shape2D profile; float depth; } negative_profile_t;
 typedef struct { mat4 transform; vec3 size; } NegativeBox;
 typedef struct { mat4 transform; float width,height,depth; } NegativeArch;

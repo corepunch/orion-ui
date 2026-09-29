@@ -1,0 +1,80 @@
+[
+  {
+    "actor": "Joe",
+    "record": 2500,
+    "action": 8,
+    "source_scene": "scenes/animations/0008-stherorun.blks",
+    "ignored_events": {
+      "MOVE_THING": 11,
+      "VECTOR2": 22,
+      "VECTOR1": 22,
+      "UNKNOWN_71": 7,
+      "INTERACT": 1
+    },
+    "unmapped_part_ids": [],
+    "timing": "unsigned source phase normalized to requested duration; not recovered game FPS",
+    "name": "joe-run",
+    "frames": 25,
+    "fps": 24,
+    "duration": 1.0
+  },
+  {
+    "actor": "w_vil1",
+    "record": 2565,
+    "action": 958,
+    "source_scene": "scenes/animations/0958-vilwalk2.blks",
+    "ignored_events": {
+      "OFFSET_POINT": 25,
+      "MOVE_THING": 10
+    },
+    "unmapped_part_ids": [],
+    "timing": "unsigned source phase normalized to requested duration; not recovered game FPS",
+    "name": "full-villager-walk",
+    "frames": 25,
+    "fps": 24,
+    "duration": 1.0
+  },
+  {
+    "actor": "w_vil3",
+    "record": 2567,
+    "action": 960,
+    "source_scene": "scenes/animations/0960-vilwalk3.blks",
+    "ignored_events": {
+      "VECTOR1": 48,
+      "VECTOR2": 24,
+      "MOVE_THING": 12
+    },
+    "unmapped_part_ids": [
+      23,
+      24,
+      25,
+      26
+    ],
+    "timing": "unsigned source phase normalized to requested duration; not recovered game FPS",
+    "name": "slender-villager-walk",
+    "frames": 25,
+    "fps": 24,
+    "duration": 1.0,
+    "preview_repairs": [
+      "Left shoulder",
+      "Right shoulder"
+    ]
+  },
+  {
+    "actor": "w_gob1",
+    "record": 2509,
+    "action": 344,
+    "source_scene": "scenes/animations/0344-gobswingfr.blks",
+    "ignored_events": {
+      "VECTOR1": 4,
+      "VECTOR2": 4,
+      "INTERACT": 9
+    },
+    "unmapped_part_ids": [],
+    "timing": "unsigned source phase normalized to requested duration; not recovered game FPS",
+    "name": "goblin-swing",
+    "frames": 25,
+    "fps": 24,
+    "duration": 1.0
+  }
+]

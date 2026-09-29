@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='utf-8'?>
+<scene up="z" ambient=".28 .28 .28" background=".13 .15 .17">
+  <camera name="Standing" pos="-239.7528 -431.555 151.8434" look="0 0 79.91759" fov="30" />
+  <camera name="Front" pos="0 -479.5055 95.9011" look="0 0 79.91759" fov="30" />
+  <camera name="Side" pos="-479.5055 0 95.9011" look="0 0 79.91759" fov="30" />
+  <light pos="-159.8352 -239.7528 319.6703" color="1 .94 .85" intensity="1.6" radius="799.1759" castShadows="1" />
+  <light pos="159.8352 -159.8352 159.8352" color=".8 .87 1" intensity=".7" radius="799.1759" castShadows="0" />
+  <box pos="0 0 -2" size="479.5055 479.5055 4" color=".28 .29 .27" />
+  <prefab source="controlled" name="Actor" />
+</scene>

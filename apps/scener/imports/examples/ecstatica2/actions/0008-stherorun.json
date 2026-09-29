@@ -1,0 +1,6464 @@
+{
+  "id": 8,
+  "name": "stherorun",
+  "headers": [
+    {
+      "offset": 34,
+      "opcode": 11,
+      "index": 8,
+      "values": [
+        34,
+        4,
+        -1
+      ],
+      "name": "PSEUDO_ACTION"
+    },
+    {
+      "offset": 44,
+      "opcode": 47,
+      "index": 0,
+      "values": [
+        193,
+        0,
+        0
+      ],
+      "name": "PSEUDO_ACTION_2"
+    }
+  ],
+  "keys": [
+    {
+      "phase": 3840,
+      "events": [
+        {
+          "offset": 64,
+          "opcode": 19,
+          "index": 0,
+          "values": [
+            0,
+            0,
+            16
+          ],
+          "name": "MOVE_THING"
+        },
+        {
+          "offset": 74,
+          "opcode": 1,
+          "index": 59,
+          "values": [
+            -3072,
+            -14976,
+            7424
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 84,
+          "opcode": 5,
+          "index": 58,
+          "values": [
+            0,
+            0,
+            14
+          ],
+          "name": "VECTOR2"
+        },
+        {
+          "offset": 94,
+          "opcode": 4,
+          "index": 58,
+          "values": [
+            11,
+            10,
+            23
+          ],
+          "name": "VECTOR1"
+        },
+        {
+          "offset": 104,
+          "opcode": 1,
+          "index": 58,
+          "values": [
+            -1024,
+            -15104,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 114,
+          "opcode": 1,
+          "index": 3,
+          "values": [
+            -3762,
+            -5094,
+            -5280
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 124,
+          "opcode": 1,
+          "index": 7,
+          "values": [
+            -627,
+            1880,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 134,
+          "opcode": 31,
+          "index": 7,
+          "values": [
+            -136,
+            -358,
+            21
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 144,
+          "opcode": 1,
+          "index": 1,
+          "values": [
+            2616,
+            0,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 154,
+          "opcode": 1,
+          "index": 9,
+          "values": [
+            -12004,
+            -2816,
+            -768
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 164,
+          "opcode": 1,
+          "index": 14,
+          "values": [
+            -314,
+            470,
+            313
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 174,
+          "opcode": 31,
+          "index": 14,
+          "values": [
+            55,
+            -9,
+            -34
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 184,
+          "opcode": 31,
+          "index": 13,
+          "values": [
+            -56,
+            -9,
+            -37
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 194,
+          "opcode": 1,
+          "index": 13,
+          "values": [
+            -314,
+            -471,
+            -314
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 204,
+          "opcode": 2,
+          "index": 0,
+          "values": [
+            -12,
+            -365,
+            6
+          ],
+          "name": "OFFSET"
+        },
+        {
+          "offset": 214,
+          "opcode": 1,
+          "index": 0,
+          "values": [
+            -2869,
+            -44,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 224,
+          "opcode": 1,
+          "index": 2,
+          "values": [
+            -909,
+            42,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 234,
+          "opcode": 31,
+          "index": 27,
+          "values": [
+            104,
+            -371,
+            39
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 244,
+          "opcode": 1,
+          "index": 27,
+          "values": [
+            861,
+            0,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 254,
+          "opcode": 1,
+          "index": 4,
+          "values": [
+            -3762,
+            5093,
+            5532
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 264,
+          "opcode": 1,
+          "index": 57,
+          "values": [
+            -1024,
+            15104,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 274,
+          "opcode": 4,
+          "index": 57,
+          "values": [
+            11,
+            10,
+            23
+          ],
+          "name": "VECTOR1"
+        },
+        {
+          "offset": 284,
+          "opcode": 5,
+          "index": 57,
+          "values": [
+            0,
+            0,
+            14
+          ],
+          "name": "VECTOR2"
+        },
+        {
+          "offset": 294,
+          "opcode": 1,
+          "index": 60,
+          "values": [
+            -3072,
+            14976,
+            -7424
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 304,
+          "opcode": 71,
+          "index": 0,
+          "values": [
+            1580,
+            0,
+            0
+          ],
+          "name": "UNKNOWN_71"
+        }
+      ]
+    },
+    {
+      "phase": 12544,
+      "events": [
+        {
+          "offset": 324,
+          "opcode": 1,
+          "index": 60,
+          "values": [
+            -3072,
+            14976,
+            -7424
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 334,
+          "opcode": 5,
+          "index": 57,
+          "values": [
+            0,
+            0,
+            14
+          ],
+          "name": "VECTOR2"
+        },
+        {
+          "offset": 344,
+          "opcode": 4,
+          "index": 57,
+          "values": [
+            11,
+            10,
+            23
+          ],
+          "name": "VECTOR1"
+        },
+        {
+          "offset": 354,
+          "opcode": 1,
+          "index": 57,
+          "values": [
+            -1024,
+            15104,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 364,
+          "opcode": 1,
+          "index": 4,
+          "values": [
+            -12288,
+            16640,
+            20976
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 374,
+          "opcode": 1,
+          "index": 27,
+          "values": [
+            2816,
+            0,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 384,
+          "opcode": 31,
+          "index": 27,
+          "values": [
+            89,
+            -361,
+            163
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 394,
+          "opcode": 1,
+          "index": 2,
+          "values": [
+            5448,
+            139,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 404,
+          "opcode": 1,
+          "index": 0,
+          "values": [
+            -3277,
+            -141,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 414,
+          "opcode": 2,
+          "index": 0,
+          "values": [
+            -38,
+            -335,
+            4
+          ],
+          "name": "OFFSET"
+        },
+        {
+          "offset": 424,
+          "opcode": 1,
+          "index": 13,
+          "values": [
+            -1024,
+            -1536,
+            -1024
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 434,
+          "opcode": 31,
+          "index": 13,
+          "values": [
+            -49,
+            -12,
+            -80
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 444,
+          "opcode": 31,
+          "index": 14,
+          "values": [
+            49,
+            -11,
+            -70
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 454,
+          "opcode": 1,
+          "index": 14,
+          "values": [
+            -1024,
+            1536,
+            1024
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 464,
+          "opcode": 1,
+          "index": 9,
+          "values": [
+            -11940,
+            -2816,
+            -768
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 474,
+          "opcode": 1,
+          "index": 1,
+          "values": [
+            -1318,
+            0,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 484,
+          "opcode": 31,
+          "index": 7,
+          "values": [
+            -191,
+            -318,
+            103
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 494,
+          "opcode": 1,
+          "index": 7,
+          "values": [
+            -2048,
+            6144,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 504,
+          "opcode": 1,
+          "index": 3,
+          "values": [
+            -12288,
+            -16640,
+            -20150
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 514,
+          "opcode": 1,
+          "index": 58,
+          "values": [
+            -1024,
+            -15104,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 524,
+          "opcode": 4,
+          "index": 58,
+          "values": [
+            11,
+            10,
+            23
+          ],
+          "name": "VECTOR1"
+        },
+        {
+          "offset": 534,
+          "opcode": 5,
+          "index": 58,
+          "values": [
+            0,
+            0,
+            14
+          ],
+          "name": "VECTOR2"
+        },
+        {
+          "offset": 544,
+          "opcode": 1,
+          "index": 59,
+          "values": [
+            -3072,
+            -14976,
+            7424
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 554,
+          "opcode": 19,
+          "index": 0,
+          "values": [
+            0,
+            0,
+            55
+          ],
+          "name": "MOVE_THING"
+        }
+      ]
+    },
+    {
+      "phase": 23296,
+      "events": [
+        {
+          "offset": 574,
+          "opcode": 19,
+          "index": 0,
+          "values": [
+            0,
+            0,
+            76
+          ],
+          "name": "MOVE_THING"
+        },
+        {
+          "offset": 584,
+          "opcode": 1,
+          "index": 59,
+          "values": [
+            -3072,
+            -14976,
+            7424
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 594,
+          "opcode": 5,
+          "index": 58,
+          "values": [
+            0,
+            0,
+            14
+          ],
+          "name": "VECTOR2"
+        },
+        {
+          "offset": 604,
+          "opcode": 4,
+          "index": 58,
+          "values": [
+            11,
+            10,
+            23
+          ],
+          "name": "VECTOR1"
+        },
+        {
+          "offset": 614,
+          "opcode": 1,
+          "index": 58,
+          "values": [
+            -1024,
+            -15104,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 624,
+          "opcode": 1,
+          "index": 3,
+          "values": [
+            -12288,
+            -16640,
+            -23168
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 634,
+          "opcode": 1,
+          "index": 7,
+          "values": [
+            -2048,
+            6144,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 644,
+          "opcode": 31,
+          "index": 7,
+          "values": [
+            -192,
+            -295,
+            139
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 654,
+          "opcode": 1,
+          "index": 1,
+          "values": [
+            -3072,
+            0,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 664,
+          "opcode": 1,
+          "index": 9,
+          "values": [
+            -12032,
+            -2816,
+            -768
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 674,
+          "opcode": 1,
+          "index": 14,
+          "values": [
+            -9216,
+            1536,
+            1024
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 684,
+          "opcode": 31,
+          "index": 14,
+          "values": [
+            49,
+            -70,
+            -54
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 694,
+          "opcode": 31,
+          "index": 13,
+          "values": [
+            -49,
+            -13,
+            -101
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 704,
+          "opcode": 1,
+          "index": 13,
+          "values": [
+            -1024,
+            -1536,
+            -1024
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 714,
+          "opcode": 2,
+          "index": 0,
+          "values": [
+            -44,
+            -314,
+            37
+          ],
+          "name": "OFFSET"
+        },
+        {
+          "offset": 724,
+          "opcode": 1,
+          "index": 0,
+          "values": [
+            -6656,
+            0,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 734,
+          "opcode": 1,
+          "index": 2,
+          "values": [
+            8064,
+            0,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 744,
+          "opcode": 31,
+          "index": 27,
+          "values": [
+            112,
+            -345,
+            166
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 754,
+          "opcode": 1,
+          "index": 27,
+          "values": [
+            2304,
+            0,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 764,
+          "opcode": 1,
+          "index": 4,
+          "values": [
+            -12288,
+            16640,
+            19328
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 774,
+          "opcode": 1,
+          "index": 57,
+          "values": [
+            -1024,
+            15104,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 784,
+          "opcode": 4,
+          "index": 57,
+          "values": [
+            11,
+            10,
+            23
+          ],
+          "name": "VECTOR1"
+        },
+        {
+          "offset": 794,
+          "opcode": 5,
+          "index": 57,
+          "values": [
+            0,
+            0,
+            13
+          ],
+          "name": "VECTOR2"
+        },
+        {
+          "offset": 804,
+          "opcode": 1,
+          "index": 60,
+          "values": [
+            -3072,
+            14976,
+            -7424
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 814,
+          "opcode": 71,
+          "index": 0,
+          "values": [
+            59,
+            0,
+            0
+          ],
+          "name": "UNKNOWN_71"
+        }
+      ]
+    },
+    {
+      "phase": 32256,
+      "events": [
+        {
+          "offset": 834,
+          "opcode": 1,
+          "index": 59,
+          "values": [
+            -3072,
+            -14976,
+            7424
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 844,
+          "opcode": 5,
+          "index": 58,
+          "values": [
+            0,
+            0,
+            14
+          ],
+          "name": "VECTOR2"
+        },
+        {
+          "offset": 854,
+          "opcode": 4,
+          "index": 58,
+          "values": [
+            11,
+            10,
+            23
+          ],
+          "name": "VECTOR1"
+        },
+        {
+          "offset": 864,
+          "opcode": 1,
+          "index": 58,
+          "values": [
+            -1024,
+            -15104,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 874,
+          "opcode": 1,
+          "index": 4,
+          "values": [
+            -12288,
+            16640,
+            18269
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 884,
+          "opcode": 1,
+          "index": 27,
+          "values": [
+            1792,
+            0,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 894,
+          "opcode": 31,
+          "index": 27,
+          "values": [
+            132,
+            -351,
+            109
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 904,
+          "opcode": 1,
+          "index": 1,
+          "values": [
+            -4224,
+            0,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 914,
+          "opcode": 1,
+          "index": 10,
+          "values": [
+            -11546,
+            2816,
+            768
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 924,
+          "opcode": 1,
+          "index": 13,
+          "values": [
+            -5376,
+            -1536,
+            -1024
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 934,
+          "opcode": 31,
+          "index": 13,
+          "values": [
+            -49,
+            -33,
+            -222
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 944,
+          "opcode": 31,
+          "index": 14,
+          "values": [
+            49,
+            -81,
+            0
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 954,
+          "opcode": 1,
+          "index": 14,
+          "values": [
+            -4736,
+            1536,
+            1024
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 964,
+          "opcode": 2,
+          "index": 0,
+          "values": [
+            -33,
+            -351,
+            17
+          ],
+          "name": "OFFSET"
+        },
+        {
+          "offset": 974,
+          "opcode": 1,
+          "index": 37,
+          "values": [
+            0,
+            0,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 984,
+          "opcode": 1,
+          "index": 0,
+          "values": [
+            -5927,
+            729,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 994,
+          "opcode": 1,
+          "index": 2,
+          "values": [
+            7348,
+            -729,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1004,
+          "opcode": 31,
+          "index": 7,
+          "values": [
+            -177,
+            -299,
+            169
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 1014,
+          "opcode": 1,
+          "index": 7,
+          "values": [
+            -2048,
+            6144,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1024,
+          "opcode": 1,
+          "index": 3,
+          "values": [
+            -12288,
+            -16640,
+            -22515
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1034,
+          "opcode": 1,
+          "index": 57,
+          "values": [
+            -1024,
+            15104,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1044,
+          "opcode": 4,
+          "index": 57,
+          "values": [
+            11,
+            10,
+            23
+          ],
+          "name": "VECTOR1"
+        },
+        {
+          "offset": 1054,
+          "opcode": 1,
+          "index": 60,
+          "values": [
+            -3072,
+            14976,
+            -7424
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1064,
+          "opcode": 5,
+          "index": 57,
+          "values": [
+            0,
+            0,
+            13
+          ],
+          "name": "VECTOR2"
+        },
+        {
+          "offset": 1074,
+          "opcode": 19,
+          "index": 0,
+          "values": [
+            0,
+            0,
+            216
+          ],
+          "name": "MOVE_THING"
+        },
+        {
+          "offset": 1084,
+          "opcode": 71,
+          "index": 0,
+          "values": [
+            60,
+            0,
+            0
+          ],
+          "name": "UNKNOWN_71"
+        }
+      ]
+    },
+    {
+      "phase": 34816,
+      "events": [
+        {
+          "offset": 1104,
+          "opcode": 19,
+          "index": 0,
+          "values": [
+            0,
+            0,
+            320
+          ],
+          "name": "MOVE_THING"
+        },
+        {
+          "offset": 1114,
+          "opcode": 1,
+          "index": 59,
+          "values": [
+            -3072,
+            -14976,
+            7424
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1124,
+          "opcode": 1,
+          "index": 60,
+          "values": [
+            -3072,
+            14976,
+            -7424
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1134,
+          "opcode": 5,
+          "index": 58,
+          "values": [
+            0,
+            0,
+            14
+          ],
+          "name": "VECTOR2"
+        },
+        {
+          "offset": 1144,
+          "opcode": 4,
+          "index": 58,
+          "values": [
+            11,
+            10,
+            23
+          ],
+          "name": "VECTOR1"
+        },
+        {
+          "offset": 1154,
+          "opcode": 1,
+          "index": 58,
+          "values": [
+            -1024,
+            -15104,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1164,
+          "opcode": 4,
+          "index": 57,
+          "values": [
+            11,
+            10,
+            23
+          ],
+          "name": "VECTOR1"
+        },
+        {
+          "offset": 1174,
+          "opcode": 1,
+          "index": 57,
+          "values": [
+            -1024,
+            15104,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1184,
+          "opcode": 1,
+          "index": 4,
+          "values": [
+            -12288,
+            16640,
+            10769
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1194,
+          "opcode": 1,
+          "index": 27,
+          "values": [
+            -1280,
+            0,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1204,
+          "opcode": 31,
+          "index": 27,
+          "values": [
+            162,
+            -402,
+            26
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 1214,
+          "opcode": 1,
+          "index": 1,
+          "values": [
+            -1058,
+            0,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1224,
+          "opcode": 1,
+          "index": 10,
+          "values": [
+            -11251,
+            2816,
+            768
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1234,
+          "opcode": 1,
+          "index": 13,
+          "values": [
+            -16768,
+            -1536,
+            -1024
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1244,
+          "opcode": 31,
+          "index": 13,
+          "values": [
+            -49,
+            -100,
+            -256
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 1254,
+          "opcode": 31,
+          "index": 14,
+          "values": [
+            49,
+            -95,
+            131
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 1264,
+          "opcode": 1,
+          "index": 14,
+          "values": [
+            768,
+            1536,
+            1024
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1274,
+          "opcode": 2,
+          "index": 0,
+          "values": [
+            4,
+            -375,
+            32
+          ],
+          "name": "OFFSET"
+        },
+        {
+          "offset": 1284,
+          "opcode": 1,
+          "index": 37,
+          "values": [
+            0,
+            0,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1294,
+          "opcode": 1,
+          "index": 0,
+          "values": [
+            -5485,
+            1171,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1304,
+          "opcode": 1,
+          "index": 2,
+          "values": [
+            2533,
+            -1171,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1314,
+          "opcode": 31,
+          "index": 7,
+          "values": [
+            -106,
+            -399,
+            223
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 1324,
+          "opcode": 1,
+          "index": 7,
+          "values": [
+            -2048,
+            14336,
+            4096
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1334,
+          "opcode": 1,
+          "index": 3,
+          "values": [
+            -12288,
+            -16640,
+            -21254
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1344,
+          "opcode": 2,
+          "index": 10,
+          "values": [
+            49,
+            21,
+            0
+          ],
+          "name": "OFFSET"
+        },
+        {
+          "offset": 1354,
+          "opcode": 5,
+          "index": 57,
+          "values": [
+            0,
+            0,
+            13
+          ],
+          "name": "VECTOR2"
+        }
+      ]
+    },
+    {
+      "phase": 40448,
+      "events": [
+        {
+          "offset": 1374,
+          "opcode": 1,
+          "index": 60,
+          "values": [
+            -3072,
+            14976,
+            -7424
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1384,
+          "opcode": 5,
+          "index": 57,
+          "values": [
+            0,
+            0,
+            14
+          ],
+          "name": "VECTOR2"
+        },
+        {
+          "offset": 1394,
+          "opcode": 4,
+          "index": 57,
+          "values": [
+            11,
+            10,
+            23
+          ],
+          "name": "VECTOR1"
+        },
+        {
+          "offset": 1404,
+          "opcode": 1,
+          "index": 57,
+          "values": [
+            -1024,
+            15104,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1414,
+          "opcode": 1,
+          "index": 4,
+          "values": [
+            -12288,
+            16640,
+            6580
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1424,
+          "opcode": 1,
+          "index": 27,
+          "values": [
+            -1792,
+            0,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1434,
+          "opcode": 31,
+          "index": 27,
+          "values": [
+            162,
+            -402,
+            -14
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 1444,
+          "opcode": 1,
+          "index": 1,
+          "values": [
+            1670,
+            0,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1454,
+          "opcode": 1,
+          "index": 10,
+          "values": [
+            -11110,
+            2816,
+            768
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1464,
+          "opcode": 1,
+          "index": 13,
+          "values": [
+            -21248,
+            -1536,
+            -1024
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1474,
+          "opcode": 31,
+          "index": 13,
+          "values": [
+            -46,
+            -164,
+            -264
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 1484,
+          "opcode": 31,
+          "index": 14,
+          "values": [
+            49,
+            -96,
+            183
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 1494,
+          "opcode": 1,
+          "index": 14,
+          "values": [
+            1536,
+            1536,
+            1024
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1504,
+          "opcode": 2,
+          "index": 0,
+          "values": [
+            16,
+            -393,
+            27
+          ],
+          "name": "OFFSET"
+        },
+        {
+          "offset": 1514,
+          "opcode": 1,
+          "index": 37,
+          "values": [
+            0,
+            0,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1524,
+          "opcode": 1,
+          "index": 0,
+          "values": [
+            -5274,
+            1382,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1534,
+          "opcode": 1,
+          "index": 2,
+          "values": [
+            574,
+            -1383,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1544,
+          "opcode": 31,
+          "index": 7,
+          "values": [
+            -78,
+            -432,
+            220
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 1554,
+          "opcode": 1,
+          "index": 7,
+          "values": [
+            -2048,
+            14336,
+            6144
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1564,
+          "opcode": 1,
+          "index": 3,
+          "values": [
+            -12288,
+            -16640,
+            -20211
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1574,
+          "opcode": 2,
+          "index": 10,
+          "values": [
+            49,
+            21,
+            0
+          ],
+          "name": "OFFSET"
+        },
+        {
+          "offset": 1584,
+          "opcode": 1,
+          "index": 58,
+          "values": [
+            -1024,
+            -15104,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1594,
+          "opcode": 4,
+          "index": 58,
+          "values": [
+            11,
+            10,
+            23
+          ],
+          "name": "VECTOR1"
+        },
+        {
+          "offset": 1604,
+          "opcode": 5,
+          "index": 58,
+          "values": [
+            0,
+            0,
+            14
+          ],
+          "name": "VECTOR2"
+        },
+        {
+          "offset": 1614,
+          "opcode": 1,
+          "index": 59,
+          "values": [
+            -3072,
+            -14976,
+            7424
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1624,
+          "opcode": 19,
+          "index": 0,
+          "values": [
+            0,
+            0,
+            417
+          ],
+          "name": "MOVE_THING"
+        },
+        {
+          "offset": 1634,
+          "opcode": 71,
+          "index": 0,
+          "values": [
+            61,
+            0,
+            0
+          ],
+          "name": "UNKNOWN_71"
+        }
+      ]
+    },
+    {
+      "phase": 45568,
+      "events": [
+        {
+          "offset": 1654,
+          "opcode": 19,
+          "index": 0,
+          "values": [
+            0,
+            0,
+            512
+          ],
+          "name": "MOVE_THING"
+        },
+        {
+          "offset": 1664,
+          "opcode": 1,
+          "index": 59,
+          "values": [
+            -3072,
+            -14976,
+            7424
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1674,
+          "opcode": 5,
+          "index": 58,
+          "values": [
+            0,
+            0,
+            14
+          ],
+          "name": "VECTOR2"
+        },
+        {
+          "offset": 1684,
+          "opcode": 4,
+          "index": 58,
+          "values": [
+            11,
+            10,
+            23
+          ],
+          "name": "VECTOR1"
+        },
+        {
+          "offset": 1694,
+          "opcode": 1,
+          "index": 58,
+          "values": [
+            -1024,
+            -15104,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1704,
+          "opcode": 2,
+          "index": 10,
+          "values": [
+            49,
+            22,
+            0
+          ],
+          "name": "OFFSET"
+        },
+        {
+          "offset": 1714,
+          "opcode": 1,
+          "index": 3,
+          "values": [
+            -12288,
+            -16640,
+            -19456
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1724,
+          "opcode": 1,
+          "index": 7,
+          "values": [
+            -2048,
+            14336,
+            10240
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1734,
+          "opcode": 31,
+          "index": 7,
+          "values": [
+            -61,
+            -441,
+            219
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 1744,
+          "opcode": 1,
+          "index": 2,
+          "values": [
+            1152,
+            -1536,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1754,
+          "opcode": 1,
+          "index": 0,
+          "values": [
+            -5120,
+            1536,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1764,
+          "opcode": 1,
+          "index": 37,
+          "values": [
+            0,
+            0,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1774,
+          "opcode": 2,
+          "index": 0,
+          "values": [
+            24,
+            -378,
+            25
+          ],
+          "name": "OFFSET"
+        },
+        {
+          "offset": 1784,
+          "opcode": 1,
+          "index": 14,
+          "values": [
+            9472,
+            1536,
+            1024
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1794,
+          "opcode": 31,
+          "index": 14,
+          "values": [
+            49,
+            -34,
+            221
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 1804,
+          "opcode": 31,
+          "index": 13,
+          "values": [
+            -45,
+            -210,
+            -235
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 1814,
+          "opcode": 1,
+          "index": 13,
+          "values": [
+            -24064,
+            -1536,
+            -1024
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1824,
+          "opcode": 1,
+          "index": 10,
+          "values": [
+            -11008,
+            2816,
+            768
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1834,
+          "opcode": 1,
+          "index": 1,
+          "values": [
+            2048,
+            0,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1844,
+          "opcode": 31,
+          "index": 27,
+          "values": [
+            162,
+            -426,
+            -34
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 1854,
+          "opcode": 1,
+          "index": 27,
+          "values": [
+            -3584,
+            0,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1864,
+          "opcode": 1,
+          "index": 4,
+          "values": [
+            -12288,
+            16640,
+            5632
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1874,
+          "opcode": 1,
+          "index": 57,
+          "values": [
+            -1024,
+            15104,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1884,
+          "opcode": 4,
+          "index": 57,
+          "values": [
+            11,
+            10,
+            23
+          ],
+          "name": "VECTOR1"
+        },
+        {
+          "offset": 1894,
+          "opcode": 5,
+          "index": 57,
+          "values": [
+            0,
+            0,
+            13
+          ],
+          "name": "VECTOR2"
+        },
+        {
+          "offset": 1904,
+          "opcode": 1,
+          "index": 60,
+          "values": [
+            -3072,
+            14976,
+            -7424
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1914,
+          "opcode": 71,
+          "index": 0,
+          "values": [
+            61,
+            0,
+            0
+          ],
+          "name": "UNKNOWN_71"
+        }
+      ]
+    },
+    {
+      "phase": 50944,
+      "events": [
+        {
+          "offset": 1934,
+          "opcode": 19,
+          "index": 0,
+          "values": [
+            0,
+            0,
+            532
+          ],
+          "name": "MOVE_THING"
+        },
+        {
+          "offset": 1944,
+          "opcode": 1,
+          "index": 59,
+          "values": [
+            -3072,
+            -14976,
+            7424
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1954,
+          "opcode": 5,
+          "index": 58,
+          "values": [
+            0,
+            0,
+            14
+          ],
+          "name": "VECTOR2"
+        },
+        {
+          "offset": 1964,
+          "opcode": 4,
+          "index": 58,
+          "values": [
+            11,
+            10,
+            23
+          ],
+          "name": "VECTOR1"
+        },
+        {
+          "offset": 1974,
+          "opcode": 1,
+          "index": 58,
+          "values": [
+            -1024,
+            -15104,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1984,
+          "opcode": 1,
+          "index": 4,
+          "values": [
+            -12288,
+            16640,
+            8258
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 1994,
+          "opcode": 1,
+          "index": 27,
+          "values": [
+            -3072,
+            0,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2004,
+          "opcode": 31,
+          "index": 27,
+          "values": [
+            165,
+            -422,
+            -5
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 2014,
+          "opcode": 1,
+          "index": 1,
+          "values": [
+            2559,
+            0,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2024,
+          "opcode": 1,
+          "index": 10,
+          "values": [
+            -11187,
+            2816,
+            768
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2034,
+          "opcode": 1,
+          "index": 13,
+          "values": [
+            -23552,
+            -1536,
+            -1024
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2044,
+          "opcode": 31,
+          "index": 13,
+          "values": [
+            -42,
+            -232,
+            -181
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 2054,
+          "opcode": 31,
+          "index": 14,
+          "values": [
+            49,
+            -7,
+            202
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 2064,
+          "opcode": 1,
+          "index": 14,
+          "values": [
+            5376,
+            1536,
+            1024
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2074,
+          "opcode": 2,
+          "index": 0,
+          "values": [
+            26,
+            -357,
+            62
+          ],
+          "name": "OFFSET"
+        },
+        {
+          "offset": 2084,
+          "opcode": 1,
+          "index": 37,
+          "values": [
+            0,
+            0,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2094,
+          "opcode": 1,
+          "index": 0,
+          "values": [
+            -5797,
+            1269,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2104,
+          "opcode": 1,
+          "index": 2,
+          "values": [
+            3299,
+            -1268,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2114,
+          "opcode": 31,
+          "index": 7,
+          "values": [
+            -66,
+            -445,
+            232
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 2124,
+          "opcode": 1,
+          "index": 7,
+          "values": [
+            -2048,
+            14336,
+            14336
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2134,
+          "opcode": 1,
+          "index": 3,
+          "values": [
+            -12288,
+            -16640,
+            -17741
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2144,
+          "opcode": 1,
+          "index": 57,
+          "values": [
+            -1024,
+            15104,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2154,
+          "opcode": 4,
+          "index": 57,
+          "values": [
+            11,
+            10,
+            23
+          ],
+          "name": "VECTOR1"
+        },
+        {
+          "offset": 2164,
+          "opcode": 5,
+          "index": 57,
+          "values": [
+            0,
+            0,
+            13
+          ],
+          "name": "VECTOR2"
+        },
+        {
+          "offset": 2174,
+          "opcode": 1,
+          "index": 60,
+          "values": [
+            -3072,
+            14976,
+            -7424
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2184,
+          "opcode": 46,
+          "index": 0,
+          "values": [
+            5,
+            0,
+            0
+          ],
+          "name": "INTERACT"
+        }
+      ]
+    },
+    {
+      "phase": 55040,
+      "events": [
+        {
+          "offset": 2204,
+          "opcode": 19,
+          "index": 0,
+          "values": [
+            0,
+            0,
+            592
+          ],
+          "name": "MOVE_THING"
+        },
+        {
+          "offset": 2214,
+          "opcode": 1,
+          "index": 59,
+          "values": [
+            -3072,
+            -14976,
+            7424
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2224,
+          "opcode": 5,
+          "index": 58,
+          "values": [
+            0,
+            0,
+            14
+          ],
+          "name": "VECTOR2"
+        },
+        {
+          "offset": 2234,
+          "opcode": 4,
+          "index": 58,
+          "values": [
+            11,
+            10,
+            23
+          ],
+          "name": "VECTOR1"
+        },
+        {
+          "offset": 2244,
+          "opcode": 1,
+          "index": 58,
+          "values": [
+            -1024,
+            -15104,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2254,
+          "opcode": 1,
+          "index": 3,
+          "values": [
+            -12288,
+            -16640,
+            -18370
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2264,
+          "opcode": 1,
+          "index": 7,
+          "values": [
+            -2048,
+            14336,
+            16384
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2274,
+          "opcode": 31,
+          "index": 7,
+          "values": [
+            -74,
+            -392,
+            226
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 2284,
+          "opcode": 1,
+          "index": 2,
+          "values": [
+            2298,
+            -868,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2294,
+          "opcode": 1,
+          "index": 0,
+          "values": [
+            -6812,
+            869,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2304,
+          "opcode": 1,
+          "index": 37,
+          "values": [
+            0,
+            0,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2314,
+          "opcode": 2,
+          "index": 0,
+          "values": [
+            32,
+            -324,
+            78
+          ],
+          "name": "OFFSET"
+        },
+        {
+          "offset": 2324,
+          "opcode": 1,
+          "index": 14,
+          "values": [
+            -256,
+            1536,
+            1024
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2334,
+          "opcode": 31,
+          "index": 14,
+          "values": [
+            49,
+            -8,
+            114
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 2344,
+          "opcode": 31,
+          "index": 13,
+          "values": [
+            -35,
+            -229,
+            -85
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 2354,
+          "opcode": 1,
+          "index": 13,
+          "values": [
+            -22272,
+            -1536,
+            -1024
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2364,
+          "opcode": 1,
+          "index": 10,
+          "values": [
+            -11454,
+            2816,
+            768
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2374,
+          "opcode": 1,
+          "index": 1,
+          "values": [
+            3072,
+            0,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2384,
+          "opcode": 31,
+          "index": 27,
+          "values": [
+            176,
+            -385,
+            2
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 2394,
+          "opcode": 1,
+          "index": 27,
+          "values": [
+            -3328,
+            0,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2404,
+          "opcode": 1,
+          "index": 4,
+          "values": [
+            -12288,
+            16640,
+            7846
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2414,
+          "opcode": 1,
+          "index": 57,
+          "values": [
+            -1024,
+            15104,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2424,
+          "opcode": 4,
+          "index": 57,
+          "values": [
+            11,
+            10,
+            23
+          ],
+          "name": "VECTOR1"
+        },
+        {
+          "offset": 2434,
+          "opcode": 5,
+          "index": 57,
+          "values": [
+            0,
+            0,
+            13
+          ],
+          "name": "VECTOR2"
+        },
+        {
+          "offset": 2444,
+          "opcode": 1,
+          "index": 60,
+          "values": [
+            -3072,
+            14976,
+            -7424
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2454,
+          "opcode": 71,
+          "index": 0,
+          "values": [
+            63,
+            0,
+            0
+          ],
+          "name": "UNKNOWN_71"
+        }
+      ]
+    },
+    {
+      "phase": 59904,
+      "events": [
+        {
+          "offset": 2474,
+          "opcode": 19,
+          "index": 0,
+          "values": [
+            0,
+            0,
+            640
+          ],
+          "name": "MOVE_THING"
+        },
+        {
+          "offset": 2484,
+          "opcode": 1,
+          "index": 59,
+          "values": [
+            -3072,
+            -14976,
+            7424
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2494,
+          "opcode": 5,
+          "index": 58,
+          "values": [
+            0,
+            0,
+            14
+          ],
+          "name": "VECTOR2"
+        },
+        {
+          "offset": 2504,
+          "opcode": 4,
+          "index": 58,
+          "values": [
+            11,
+            10,
+            23
+          ],
+          "name": "VECTOR1"
+        },
+        {
+          "offset": 2514,
+          "opcode": 1,
+          "index": 58,
+          "values": [
+            -1024,
+            -15104,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2524,
+          "opcode": 1,
+          "index": 3,
+          "values": [
+            -12288,
+            -16640,
+            -19922
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2534,
+          "opcode": 1,
+          "index": 7,
+          "values": [
+            -2048,
+            14336,
+            10240
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2544,
+          "opcode": 31,
+          "index": 7,
+          "values": [
+            -94,
+            -343,
+            196
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 2554,
+          "opcode": 1,
+          "index": 2,
+          "values": [
+            2671,
+            -509,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2564,
+          "opcode": 1,
+          "index": 0,
+          "values": [
+            -6748,
+            509,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2574,
+          "opcode": 1,
+          "index": 37,
+          "values": [
+            0,
+            0,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2584,
+          "opcode": 2,
+          "index": 0,
+          "values": [
+            34,
+            -320,
+            69
+          ],
+          "name": "OFFSET"
+        },
+        {
+          "offset": 2594,
+          "opcode": 1,
+          "index": 14,
+          "values": [
+            -574,
+            1536,
+            1024
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2604,
+          "opcode": 31,
+          "index": 14,
+          "values": [
+            49,
+            -6,
+            56
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 2614,
+          "opcode": 31,
+          "index": 13,
+          "values": [
+            -41,
+            -190,
+            -77
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 2624,
+          "opcode": 1,
+          "index": 13,
+          "values": [
+            -19412,
+            -1536,
+            -1024
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2634,
+          "opcode": 1,
+          "index": 10,
+          "values": [
+            -11694,
+            2816,
+            768
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2644,
+          "opcode": 1,
+          "index": 1,
+          "values": [
+            2330,
+            0,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2654,
+          "opcode": 31,
+          "index": 27,
+          "values": [
+            176,
+            -345,
+            34
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 2664,
+          "opcode": 1,
+          "index": 27,
+          "values": [
+            -3328,
+            0,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2674,
+          "opcode": 1,
+          "index": 4,
+          "values": [
+            -12288,
+            16640,
+            6559
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2684,
+          "opcode": 1,
+          "index": 57,
+          "values": [
+            -1024,
+            15104,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2694,
+          "opcode": 4,
+          "index": 57,
+          "values": [
+            11,
+            10,
+            23
+          ],
+          "name": "VECTOR1"
+        },
+        {
+          "offset": 2704,
+          "opcode": 5,
+          "index": 57,
+          "values": [
+            0,
+            0,
+            13
+          ],
+          "name": "VECTOR2"
+        },
+        {
+          "offset": 2714,
+          "opcode": 1,
+          "index": 60,
+          "values": [
+            -3072,
+            14976,
+            -7424
+          ],
+          "name": "ROTATE"
+        }
+      ]
+    },
+    {
+      "phase": 65280,
+      "events": [
+        {
+          "offset": 2734,
+          "opcode": 19,
+          "index": 0,
+          "values": [
+            0,
+            0,
+            720
+          ],
+          "name": "MOVE_THING"
+        },
+        {
+          "offset": 2744,
+          "opcode": 1,
+          "index": 59,
+          "values": [
+            -3072,
+            -14976,
+            7424
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2754,
+          "opcode": 5,
+          "index": 58,
+          "values": [
+            0,
+            0,
+            14
+          ],
+          "name": "VECTOR2"
+        },
+        {
+          "offset": 2764,
+          "opcode": 4,
+          "index": 58,
+          "values": [
+            11,
+            10,
+            23
+          ],
+          "name": "VECTOR1"
+        },
+        {
+          "offset": 2774,
+          "opcode": 1,
+          "index": 58,
+          "values": [
+            -1024,
+            -15104,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2784,
+          "opcode": 1,
+          "index": 4,
+          "values": [
+            -12288,
+            16640,
+            23168
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2794,
+          "opcode": 1,
+          "index": 27,
+          "values": [
+            -768,
+            0,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2804,
+          "opcode": 31,
+          "index": 27,
+          "values": [
+            168,
+            -295,
+            144
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 2814,
+          "opcode": 1,
+          "index": 1,
+          "values": [
+            1024,
+            0,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2824,
+          "opcode": 1,
+          "index": 10,
+          "values": [
+            -12032,
+            2816,
+            768
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2834,
+          "opcode": 1,
+          "index": 13,
+          "values": [
+            -15360,
+            -1536,
+            -1024
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2844,
+          "opcode": 31,
+          "index": 13,
+          "values": [
+            -49,
+            -139,
+            -54
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 2854,
+          "opcode": 31,
+          "index": 14,
+          "values": [
+            49,
+            -1,
+            -25
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 2864,
+          "opcode": 1,
+          "index": 14,
+          "values": [
+            -1024,
+            1536,
+            1024
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2874,
+          "opcode": 2,
+          "index": 0,
+          "values": [
+            28,
+            -326,
+            25
+          ],
+          "name": "OFFSET"
+        },
+        {
+          "offset": 2884,
+          "opcode": 1,
+          "index": 37,
+          "values": [
+            0,
+            0,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2894,
+          "opcode": 1,
+          "index": 0,
+          "values": [
+            -6656,
+            0,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2904,
+          "opcode": 1,
+          "index": 2,
+          "values": [
+            3200,
+            0,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2914,
+          "opcode": 31,
+          "index": 7,
+          "values": [
+            -108,
+            -327,
+            137
+          ],
+          "name": "POSITION"
+        },
+        {
+          "offset": 2924,
+          "opcode": 1,
+          "index": 7,
+          "values": [
+            -2048,
+            14336,
+            10240
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2934,
+          "opcode": 1,
+          "index": 3,
+          "values": [
+            -12288,
+            -16640,
+            -21376
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2944,
+          "opcode": 1,
+          "index": 57,
+          "values": [
+            -1024,
+            15104,
+            0
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2954,
+          "opcode": 4,
+          "index": 57,
+          "values": [
+            11,
+            10,
+            23
+          ],
+          "name": "VECTOR1"
+        },
+        {
+          "offset": 2964,
+          "opcode": 5,
+          "index": 57,
+          "values": [
+            0,
+            0,
+            13
+          ],
+          "name": "VECTOR2"
+        },
+        {
+          "offset": 2974,
+          "opcode": 1,
+          "index": 60,
+          "values": [
+            -3072,
+            14976,
+            -7424
+          ],
+          "name": "ROTATE"
+        },
+        {
+          "offset": 2984,
+          "opcode": 71,
+          "index": 0,
+          "values": [
+            62,
+            0,
+            0
+          ],
+          "name": "UNKNOWN_71"
+        }
+      ]
+    }
+  ],
+  "events": [
+    {
+      "offset": 34,
+      "opcode": 11,
+      "index": 8,
+      "values": [
+        34,
+        4,
+        -1
+      ],
+      "name": "PSEUDO_ACTION"
+    },
+    {
+      "offset": 44,
+      "opcode": 47,
+      "index": 0,
+      "values": [
+        193,
+        0,
+        0
+      ],
+      "name": "PSEUDO_ACTION_2"
+    },
+    {
+      "offset": 54,
+      "opcode": 12,
+      "index": 0,
+      "values": [
+        3840,
+        0,
+        0
+      ],
+      "name": "PSEUDO_KEY"
+    },
+    {
+      "offset": 64,
+      "opcode": 19,
+      "index": 0,
+      "values": [
+        0,
+        0,
+        16
+      ],
+      "name": "MOVE_THING"
+    },
+    {
+      "offset": 74,
+      "opcode": 1,
+      "index": 59,
+      "values": [
+        -3072,
+        -14976,
+        7424
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 84,
+      "opcode": 5,
+      "index": 58,
+      "values": [
+        0,
+        0,
+        14
+      ],
+      "name": "VECTOR2"
+    },
+    {
+      "offset": 94,
+      "opcode": 4,
+      "index": 58,
+      "values": [
+        11,
+        10,
+        23
+      ],
+      "name": "VECTOR1"
+    },
+    {
+      "offset": 104,
+      "opcode": 1,
+      "index": 58,
+      "values": [
+        -1024,
+        -15104,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 114,
+      "opcode": 1,
+      "index": 3,
+      "values": [
+        -3762,
+        -5094,
+        -5280
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 124,
+      "opcode": 1,
+      "index": 7,
+      "values": [
+        -627,
+        1880,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 134,
+      "opcode": 31,
+      "index": 7,
+      "values": [
+        -136,
+        -358,
+        21
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 144,
+      "opcode": 1,
+      "index": 1,
+      "values": [
+        2616,
+        0,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 154,
+      "opcode": 1,
+      "index": 9,
+      "values": [
+        -12004,
+        -2816,
+        -768
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 164,
+      "opcode": 1,
+      "index": 14,
+      "values": [
+        -314,
+        470,
+        313
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 174,
+      "opcode": 31,
+      "index": 14,
+      "values": [
+        55,
+        -9,
+        -34
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 184,
+      "opcode": 31,
+      "index": 13,
+      "values": [
+        -56,
+        -9,
+        -37
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 194,
+      "opcode": 1,
+      "index": 13,
+      "values": [
+        -314,
+        -471,
+        -314
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 204,
+      "opcode": 2,
+      "index": 0,
+      "values": [
+        -12,
+        -365,
+        6
+      ],
+      "name": "OFFSET"
+    },
+    {
+      "offset": 214,
+      "opcode": 1,
+      "index": 0,
+      "values": [
+        -2869,
+        -44,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 224,
+      "opcode": 1,
+      "index": 2,
+      "values": [
+        -909,
+        42,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 234,
+      "opcode": 31,
+      "index": 27,
+      "values": [
+        104,
+        -371,
+        39
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 244,
+      "opcode": 1,
+      "index": 27,
+      "values": [
+        861,
+        0,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 254,
+      "opcode": 1,
+      "index": 4,
+      "values": [
+        -3762,
+        5093,
+        5532
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 264,
+      "opcode": 1,
+      "index": 57,
+      "values": [
+        -1024,
+        15104,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 274,
+      "opcode": 4,
+      "index": 57,
+      "values": [
+        11,
+        10,
+        23
+      ],
+      "name": "VECTOR1"
+    },
+    {
+      "offset": 284,
+      "opcode": 5,
+      "index": 57,
+      "values": [
+        0,
+        0,
+        14
+      ],
+      "name": "VECTOR2"
+    },
+    {
+      "offset": 294,
+      "opcode": 1,
+      "index": 60,
+      "values": [
+        -3072,
+        14976,
+        -7424
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 304,
+      "opcode": 71,
+      "index": 0,
+      "values": [
+        1580,
+        0,
+        0
+      ],
+      "name": "UNKNOWN_71"
+    },
+    {
+      "offset": 314,
+      "opcode": 12,
+      "index": 0,
+      "values": [
+        12544,
+        0,
+        0
+      ],
+      "name": "PSEUDO_KEY"
+    },
+    {
+      "offset": 324,
+      "opcode": 1,
+      "index": 60,
+      "values": [
+        -3072,
+        14976,
+        -7424
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 334,
+      "opcode": 5,
+      "index": 57,
+      "values": [
+        0,
+        0,
+        14
+      ],
+      "name": "VECTOR2"
+    },
+    {
+      "offset": 344,
+      "opcode": 4,
+      "index": 57,
+      "values": [
+        11,
+        10,
+        23
+      ],
+      "name": "VECTOR1"
+    },
+    {
+      "offset": 354,
+      "opcode": 1,
+      "index": 57,
+      "values": [
+        -1024,
+        15104,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 364,
+      "opcode": 1,
+      "index": 4,
+      "values": [
+        -12288,
+        16640,
+        20976
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 374,
+      "opcode": 1,
+      "index": 27,
+      "values": [
+        2816,
+        0,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 384,
+      "opcode": 31,
+      "index": 27,
+      "values": [
+        89,
+        -361,
+        163
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 394,
+      "opcode": 1,
+      "index": 2,
+      "values": [
+        5448,
+        139,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 404,
+      "opcode": 1,
+      "index": 0,
+      "values": [
+        -3277,
+        -141,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 414,
+      "opcode": 2,
+      "index": 0,
+      "values": [
+        -38,
+        -335,
+        4
+      ],
+      "name": "OFFSET"
+    },
+    {
+      "offset": 424,
+      "opcode": 1,
+      "index": 13,
+      "values": [
+        -1024,
+        -1536,
+        -1024
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 434,
+      "opcode": 31,
+      "index": 13,
+      "values": [
+        -49,
+        -12,
+        -80
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 444,
+      "opcode": 31,
+      "index": 14,
+      "values": [
+        49,
+        -11,
+        -70
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 454,
+      "opcode": 1,
+      "index": 14,
+      "values": [
+        -1024,
+        1536,
+        1024
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 464,
+      "opcode": 1,
+      "index": 9,
+      "values": [
+        -11940,
+        -2816,
+        -768
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 474,
+      "opcode": 1,
+      "index": 1,
+      "values": [
+        -1318,
+        0,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 484,
+      "opcode": 31,
+      "index": 7,
+      "values": [
+        -191,
+        -318,
+        103
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 494,
+      "opcode": 1,
+      "index": 7,
+      "values": [
+        -2048,
+        6144,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 504,
+      "opcode": 1,
+      "index": 3,
+      "values": [
+        -12288,
+        -16640,
+        -20150
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 514,
+      "opcode": 1,
+      "index": 58,
+      "values": [
+        -1024,
+        -15104,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 524,
+      "opcode": 4,
+      "index": 58,
+      "values": [
+        11,
+        10,
+        23
+      ],
+      "name": "VECTOR1"
+    },
+    {
+      "offset": 534,
+      "opcode": 5,
+      "index": 58,
+      "values": [
+        0,
+        0,
+        14
+      ],
+      "name": "VECTOR2"
+    },
+    {
+      "offset": 544,
+      "opcode": 1,
+      "index": 59,
+      "values": [
+        -3072,
+        -14976,
+        7424
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 554,
+      "opcode": 19,
+      "index": 0,
+      "values": [
+        0,
+        0,
+        55
+      ],
+      "name": "MOVE_THING"
+    },
+    {
+      "offset": 564,
+      "opcode": 12,
+      "index": 0,
+      "values": [
+        23296,
+        0,
+        0
+      ],
+      "name": "PSEUDO_KEY"
+    },
+    {
+      "offset": 574,
+      "opcode": 19,
+      "index": 0,
+      "values": [
+        0,
+        0,
+        76
+      ],
+      "name": "MOVE_THING"
+    },
+    {
+      "offset": 584,
+      "opcode": 1,
+      "index": 59,
+      "values": [
+        -3072,
+        -14976,
+        7424
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 594,
+      "opcode": 5,
+      "index": 58,
+      "values": [
+        0,
+        0,
+        14
+      ],
+      "name": "VECTOR2"
+    },
+    {
+      "offset": 604,
+      "opcode": 4,
+      "index": 58,
+      "values": [
+        11,
+        10,
+        23
+      ],
+      "name": "VECTOR1"
+    },
+    {
+      "offset": 614,
+      "opcode": 1,
+      "index": 58,
+      "values": [
+        -1024,
+        -15104,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 624,
+      "opcode": 1,
+      "index": 3,
+      "values": [
+        -12288,
+        -16640,
+        -23168
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 634,
+      "opcode": 1,
+      "index": 7,
+      "values": [
+        -2048,
+        6144,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 644,
+      "opcode": 31,
+      "index": 7,
+      "values": [
+        -192,
+        -295,
+        139
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 654,
+      "opcode": 1,
+      "index": 1,
+      "values": [
+        -3072,
+        0,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 664,
+      "opcode": 1,
+      "index": 9,
+      "values": [
+        -12032,
+        -2816,
+        -768
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 674,
+      "opcode": 1,
+      "index": 14,
+      "values": [
+        -9216,
+        1536,
+        1024
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 684,
+      "opcode": 31,
+      "index": 14,
+      "values": [
+        49,
+        -70,
+        -54
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 694,
+      "opcode": 31,
+      "index": 13,
+      "values": [
+        -49,
+        -13,
+        -101
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 704,
+      "opcode": 1,
+      "index": 13,
+      "values": [
+        -1024,
+        -1536,
+        -1024
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 714,
+      "opcode": 2,
+      "index": 0,
+      "values": [
+        -44,
+        -314,
+        37
+      ],
+      "name": "OFFSET"
+    },
+    {
+      "offset": 724,
+      "opcode": 1,
+      "index": 0,
+      "values": [
+        -6656,
+        0,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 734,
+      "opcode": 1,
+      "index": 2,
+      "values": [
+        8064,
+        0,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 744,
+      "opcode": 31,
+      "index": 27,
+      "values": [
+        112,
+        -345,
+        166
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 754,
+      "opcode": 1,
+      "index": 27,
+      "values": [
+        2304,
+        0,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 764,
+      "opcode": 1,
+      "index": 4,
+      "values": [
+        -12288,
+        16640,
+        19328
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 774,
+      "opcode": 1,
+      "index": 57,
+      "values": [
+        -1024,
+        15104,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 784,
+      "opcode": 4,
+      "index": 57,
+      "values": [
+        11,
+        10,
+        23
+      ],
+      "name": "VECTOR1"
+    },
+    {
+      "offset": 794,
+      "opcode": 5,
+      "index": 57,
+      "values": [
+        0,
+        0,
+        13
+      ],
+      "name": "VECTOR2"
+    },
+    {
+      "offset": 804,
+      "opcode": 1,
+      "index": 60,
+      "values": [
+        -3072,
+        14976,
+        -7424
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 814,
+      "opcode": 71,
+      "index": 0,
+      "values": [
+        59,
+        0,
+        0
+      ],
+      "name": "UNKNOWN_71"
+    },
+    {
+      "offset": 824,
+      "opcode": 12,
+      "index": 0,
+      "values": [
+        32256,
+        0,
+        0
+      ],
+      "name": "PSEUDO_KEY"
+    },
+    {
+      "offset": 834,
+      "opcode": 1,
+      "index": 59,
+      "values": [
+        -3072,
+        -14976,
+        7424
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 844,
+      "opcode": 5,
+      "index": 58,
+      "values": [
+        0,
+        0,
+        14
+      ],
+      "name": "VECTOR2"
+    },
+    {
+      "offset": 854,
+      "opcode": 4,
+      "index": 58,
+      "values": [
+        11,
+        10,
+        23
+      ],
+      "name": "VECTOR1"
+    },
+    {
+      "offset": 864,
+      "opcode": 1,
+      "index": 58,
+      "values": [
+        -1024,
+        -15104,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 874,
+      "opcode": 1,
+      "index": 4,
+      "values": [
+        -12288,
+        16640,
+        18269
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 884,
+      "opcode": 1,
+      "index": 27,
+      "values": [
+        1792,
+        0,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 894,
+      "opcode": 31,
+      "index": 27,
+      "values": [
+        132,
+        -351,
+        109
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 904,
+      "opcode": 1,
+      "index": 1,
+      "values": [
+        -4224,
+        0,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 914,
+      "opcode": 1,
+      "index": 10,
+      "values": [
+        -11546,
+        2816,
+        768
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 924,
+      "opcode": 1,
+      "index": 13,
+      "values": [
+        -5376,
+        -1536,
+        -1024
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 934,
+      "opcode": 31,
+      "index": 13,
+      "values": [
+        -49,
+        -33,
+        -222
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 944,
+      "opcode": 31,
+      "index": 14,
+      "values": [
+        49,
+        -81,
+        0
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 954,
+      "opcode": 1,
+      "index": 14,
+      "values": [
+        -4736,
+        1536,
+        1024
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 964,
+      "opcode": 2,
+      "index": 0,
+      "values": [
+        -33,
+        -351,
+        17
+      ],
+      "name": "OFFSET"
+    },
+    {
+      "offset": 974,
+      "opcode": 1,
+      "index": 37,
+      "values": [
+        0,
+        0,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 984,
+      "opcode": 1,
+      "index": 0,
+      "values": [
+        -5927,
+        729,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 994,
+      "opcode": 1,
+      "index": 2,
+      "values": [
+        7348,
+        -729,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1004,
+      "opcode": 31,
+      "index": 7,
+      "values": [
+        -177,
+        -299,
+        169
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 1014,
+      "opcode": 1,
+      "index": 7,
+      "values": [
+        -2048,
+        6144,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1024,
+      "opcode": 1,
+      "index": 3,
+      "values": [
+        -12288,
+        -16640,
+        -22515
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1034,
+      "opcode": 1,
+      "index": 57,
+      "values": [
+        -1024,
+        15104,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1044,
+      "opcode": 4,
+      "index": 57,
+      "values": [
+        11,
+        10,
+        23
+      ],
+      "name": "VECTOR1"
+    },
+    {
+      "offset": 1054,
+      "opcode": 1,
+      "index": 60,
+      "values": [
+        -3072,
+        14976,
+        -7424
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1064,
+      "opcode": 5,
+      "index": 57,
+      "values": [
+        0,
+        0,
+        13
+      ],
+      "name": "VECTOR2"
+    },
+    {
+      "offset": 1074,
+      "opcode": 19,
+      "index": 0,
+      "values": [
+        0,
+        0,
+        216
+      ],
+      "name": "MOVE_THING"
+    },
+    {
+      "offset": 1084,
+      "opcode": 71,
+      "index": 0,
+      "values": [
+        60,
+        0,
+        0
+      ],
+      "name": "UNKNOWN_71"
+    },
+    {
+      "offset": 1094,
+      "opcode": 12,
+      "index": 0,
+      "values": [
+        -30720,
+        0,
+        0
+      ],
+      "name": "PSEUDO_KEY"
+    },
+    {
+      "offset": 1104,
+      "opcode": 19,
+      "index": 0,
+      "values": [
+        0,
+        0,
+        320
+      ],
+      "name": "MOVE_THING"
+    },
+    {
+      "offset": 1114,
+      "opcode": 1,
+      "index": 59,
+      "values": [
+        -3072,
+        -14976,
+        7424
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1124,
+      "opcode": 1,
+      "index": 60,
+      "values": [
+        -3072,
+        14976,
+        -7424
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1134,
+      "opcode": 5,
+      "index": 58,
+      "values": [
+        0,
+        0,
+        14
+      ],
+      "name": "VECTOR2"
+    },
+    {
+      "offset": 1144,
+      "opcode": 4,
+      "index": 58,
+      "values": [
+        11,
+        10,
+        23
+      ],
+      "name": "VECTOR1"
+    },
+    {
+      "offset": 1154,
+      "opcode": 1,
+      "index": 58,
+      "values": [
+        -1024,
+        -15104,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1164,
+      "opcode": 4,
+      "index": 57,
+      "values": [
+        11,
+        10,
+        23
+      ],
+      "name": "VECTOR1"
+    },
+    {
+      "offset": 1174,
+      "opcode": 1,
+      "index": 57,
+      "values": [
+        -1024,
+        15104,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1184,
+      "opcode": 1,
+      "index": 4,
+      "values": [
+        -12288,
+        16640,
+        10769
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1194,
+      "opcode": 1,
+      "index": 27,
+      "values": [
+        -1280,
+        0,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1204,
+      "opcode": 31,
+      "index": 27,
+      "values": [
+        162,
+        -402,
+        26
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 1214,
+      "opcode": 1,
+      "index": 1,
+      "values": [
+        -1058,
+        0,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1224,
+      "opcode": 1,
+      "index": 10,
+      "values": [
+        -11251,
+        2816,
+        768
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1234,
+      "opcode": 1,
+      "index": 13,
+      "values": [
+        -16768,
+        -1536,
+        -1024
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1244,
+      "opcode": 31,
+      "index": 13,
+      "values": [
+        -49,
+        -100,
+        -256
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 1254,
+      "opcode": 31,
+      "index": 14,
+      "values": [
+        49,
+        -95,
+        131
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 1264,
+      "opcode": 1,
+      "index": 14,
+      "values": [
+        768,
+        1536,
+        1024
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1274,
+      "opcode": 2,
+      "index": 0,
+      "values": [
+        4,
+        -375,
+        32
+      ],
+      "name": "OFFSET"
+    },
+    {
+      "offset": 1284,
+      "opcode": 1,
+      "index": 37,
+      "values": [
+        0,
+        0,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1294,
+      "opcode": 1,
+      "index": 0,
+      "values": [
+        -5485,
+        1171,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1304,
+      "opcode": 1,
+      "index": 2,
+      "values": [
+        2533,
+        -1171,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1314,
+      "opcode": 31,
+      "index": 7,
+      "values": [
+        -106,
+        -399,
+        223
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 1324,
+      "opcode": 1,
+      "index": 7,
+      "values": [
+        -2048,
+        14336,
+        4096
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1334,
+      "opcode": 1,
+      "index": 3,
+      "values": [
+        -12288,
+        -16640,
+        -21254
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1344,
+      "opcode": 2,
+      "index": 10,
+      "values": [
+        49,
+        21,
+        0
+      ],
+      "name": "OFFSET"
+    },
+    {
+      "offset": 1354,
+      "opcode": 5,
+      "index": 57,
+      "values": [
+        0,
+        0,
+        13
+      ],
+      "name": "VECTOR2"
+    },
+    {
+      "offset": 1364,
+      "opcode": 12,
+      "index": 0,
+      "values": [
+        -25088,
+        0,
+        0
+      ],
+      "name": "PSEUDO_KEY"
+    },
+    {
+      "offset": 1374,
+      "opcode": 1,
+      "index": 60,
+      "values": [
+        -3072,
+        14976,
+        -7424
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1384,
+      "opcode": 5,
+      "index": 57,
+      "values": [
+        0,
+        0,
+        14
+      ],
+      "name": "VECTOR2"
+    },
+    {
+      "offset": 1394,
+      "opcode": 4,
+      "index": 57,
+      "values": [
+        11,
+        10,
+        23
+      ],
+      "name": "VECTOR1"
+    },
+    {
+      "offset": 1404,
+      "opcode": 1,
+      "index": 57,
+      "values": [
+        -1024,
+        15104,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1414,
+      "opcode": 1,
+      "index": 4,
+      "values": [
+        -12288,
+        16640,
+        6580
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1424,
+      "opcode": 1,
+      "index": 27,
+      "values": [
+        -1792,
+        0,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1434,
+      "opcode": 31,
+      "index": 27,
+      "values": [
+        162,
+        -402,
+        -14
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 1444,
+      "opcode": 1,
+      "index": 1,
+      "values": [
+        1670,
+        0,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1454,
+      "opcode": 1,
+      "index": 10,
+      "values": [
+        -11110,
+        2816,
+        768
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1464,
+      "opcode": 1,
+      "index": 13,
+      "values": [
+        -21248,
+        -1536,
+        -1024
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1474,
+      "opcode": 31,
+      "index": 13,
+      "values": [
+        -46,
+        -164,
+        -264
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 1484,
+      "opcode": 31,
+      "index": 14,
+      "values": [
+        49,
+        -96,
+        183
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 1494,
+      "opcode": 1,
+      "index": 14,
+      "values": [
+        1536,
+        1536,
+        1024
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1504,
+      "opcode": 2,
+      "index": 0,
+      "values": [
+        16,
+        -393,
+        27
+      ],
+      "name": "OFFSET"
+    },
+    {
+      "offset": 1514,
+      "opcode": 1,
+      "index": 37,
+      "values": [
+        0,
+        0,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1524,
+      "opcode": 1,
+      "index": 0,
+      "values": [
+        -5274,
+        1382,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1534,
+      "opcode": 1,
+      "index": 2,
+      "values": [
+        574,
+        -1383,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1544,
+      "opcode": 31,
+      "index": 7,
+      "values": [
+        -78,
+        -432,
+        220
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 1554,
+      "opcode": 1,
+      "index": 7,
+      "values": [
+        -2048,
+        14336,
+        6144
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1564,
+      "opcode": 1,
+      "index": 3,
+      "values": [
+        -12288,
+        -16640,
+        -20211
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1574,
+      "opcode": 2,
+      "index": 10,
+      "values": [
+        49,
+        21,
+        0
+      ],
+      "name": "OFFSET"
+    },
+    {
+      "offset": 1584,
+      "opcode": 1,
+      "index": 58,
+      "values": [
+        -1024,
+        -15104,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1594,
+      "opcode": 4,
+      "index": 58,
+      "values": [
+        11,
+        10,
+        23
+      ],
+      "name": "VECTOR1"
+    },
+    {
+      "offset": 1604,
+      "opcode": 5,
+      "index": 58,
+      "values": [
+        0,
+        0,
+        14
+      ],
+      "name": "VECTOR2"
+    },
+    {
+      "offset": 1614,
+      "opcode": 1,
+      "index": 59,
+      "values": [
+        -3072,
+        -14976,
+        7424
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1624,
+      "opcode": 19,
+      "index": 0,
+      "values": [
+        0,
+        0,
+        417
+      ],
+      "name": "MOVE_THING"
+    },
+    {
+      "offset": 1634,
+      "opcode": 71,
+      "index": 0,
+      "values": [
+        61,
+        0,
+        0
+      ],
+      "name": "UNKNOWN_71"
+    },
+    {
+      "offset": 1644,
+      "opcode": 12,
+      "index": 0,
+      "values": [
+        -19968,
+        0,
+        0
+      ],
+      "name": "PSEUDO_KEY"
+    },
+    {
+      "offset": 1654,
+      "opcode": 19,
+      "index": 0,
+      "values": [
+        0,
+        0,
+        512
+      ],
+      "name": "MOVE_THING"
+    },
+    {
+      "offset": 1664,
+      "opcode": 1,
+      "index": 59,
+      "values": [
+        -3072,
+        -14976,
+        7424
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1674,
+      "opcode": 5,
+      "index": 58,
+      "values": [
+        0,
+        0,
+        14
+      ],
+      "name": "VECTOR2"
+    },
+    {
+      "offset": 1684,
+      "opcode": 4,
+      "index": 58,
+      "values": [
+        11,
+        10,
+        23
+      ],
+      "name": "VECTOR1"
+    },
+    {
+      "offset": 1694,
+      "opcode": 1,
+      "index": 58,
+      "values": [
+        -1024,
+        -15104,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1704,
+      "opcode": 2,
+      "index": 10,
+      "values": [
+        49,
+        22,
+        0
+      ],
+      "name": "OFFSET"
+    },
+    {
+      "offset": 1714,
+      "opcode": 1,
+      "index": 3,
+      "values": [
+        -12288,
+        -16640,
+        -19456
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1724,
+      "opcode": 1,
+      "index": 7,
+      "values": [
+        -2048,
+        14336,
+        10240
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1734,
+      "opcode": 31,
+      "index": 7,
+      "values": [
+        -61,
+        -441,
+        219
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 1744,
+      "opcode": 1,
+      "index": 2,
+      "values": [
+        1152,
+        -1536,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1754,
+      "opcode": 1,
+      "index": 0,
+      "values": [
+        -5120,
+        1536,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1764,
+      "opcode": 1,
+      "index": 37,
+      "values": [
+        0,
+        0,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1774,
+      "opcode": 2,
+      "index": 0,
+      "values": [
+        24,
+        -378,
+        25
+      ],
+      "name": "OFFSET"
+    },
+    {
+      "offset": 1784,
+      "opcode": 1,
+      "index": 14,
+      "values": [
+        9472,
+        1536,
+        1024
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1794,
+      "opcode": 31,
+      "index": 14,
+      "values": [
+        49,
+        -34,
+        221
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 1804,
+      "opcode": 31,
+      "index": 13,
+      "values": [
+        -45,
+        -210,
+        -235
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 1814,
+      "opcode": 1,
+      "index": 13,
+      "values": [
+        -24064,
+        -1536,
+        -1024
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1824,
+      "opcode": 1,
+      "index": 10,
+      "values": [
+        -11008,
+        2816,
+        768
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1834,
+      "opcode": 1,
+      "index": 1,
+      "values": [
+        2048,
+        0,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1844,
+      "opcode": 31,
+      "index": 27,
+      "values": [
+        162,
+        -426,
+        -34
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 1854,
+      "opcode": 1,
+      "index": 27,
+      "values": [
+        -3584,
+        0,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1864,
+      "opcode": 1,
+      "index": 4,
+      "values": [
+        -12288,
+        16640,
+        5632
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1874,
+      "opcode": 1,
+      "index": 57,
+      "values": [
+        -1024,
+        15104,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1884,
+      "opcode": 4,
+      "index": 57,
+      "values": [
+        11,
+        10,
+        23
+      ],
+      "name": "VECTOR1"
+    },
+    {
+      "offset": 1894,
+      "opcode": 5,
+      "index": 57,
+      "values": [
+        0,
+        0,
+        13
+      ],
+      "name": "VECTOR2"
+    },
+    {
+      "offset": 1904,
+      "opcode": 1,
+      "index": 60,
+      "values": [
+        -3072,
+        14976,
+        -7424
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1914,
+      "opcode": 71,
+      "index": 0,
+      "values": [
+        61,
+        0,
+        0
+      ],
+      "name": "UNKNOWN_71"
+    },
+    {
+      "offset": 1924,
+      "opcode": 12,
+      "index": 0,
+      "values": [
+        -14592,
+        0,
+        0
+      ],
+      "name": "PSEUDO_KEY"
+    },
+    {
+      "offset": 1934,
+      "opcode": 19,
+      "index": 0,
+      "values": [
+        0,
+        0,
+        532
+      ],
+      "name": "MOVE_THING"
+    },
+    {
+      "offset": 1944,
+      "opcode": 1,
+      "index": 59,
+      "values": [
+        -3072,
+        -14976,
+        7424
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1954,
+      "opcode": 5,
+      "index": 58,
+      "values": [
+        0,
+        0,
+        14
+      ],
+      "name": "VECTOR2"
+    },
+    {
+      "offset": 1964,
+      "opcode": 4,
+      "index": 58,
+      "values": [
+        11,
+        10,
+        23
+      ],
+      "name": "VECTOR1"
+    },
+    {
+      "offset": 1974,
+      "opcode": 1,
+      "index": 58,
+      "values": [
+        -1024,
+        -15104,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1984,
+      "opcode": 1,
+      "index": 4,
+      "values": [
+        -12288,
+        16640,
+        8258
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 1994,
+      "opcode": 1,
+      "index": 27,
+      "values": [
+        -3072,
+        0,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2004,
+      "opcode": 31,
+      "index": 27,
+      "values": [
+        165,
+        -422,
+        -5
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 2014,
+      "opcode": 1,
+      "index": 1,
+      "values": [
+        2559,
+        0,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2024,
+      "opcode": 1,
+      "index": 10,
+      "values": [
+        -11187,
+        2816,
+        768
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2034,
+      "opcode": 1,
+      "index": 13,
+      "values": [
+        -23552,
+        -1536,
+        -1024
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2044,
+      "opcode": 31,
+      "index": 13,
+      "values": [
+        -42,
+        -232,
+        -181
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 2054,
+      "opcode": 31,
+      "index": 14,
+      "values": [
+        49,
+        -7,
+        202
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 2064,
+      "opcode": 1,
+      "index": 14,
+      "values": [
+        5376,
+        1536,
+        1024
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2074,
+      "opcode": 2,
+      "index": 0,
+      "values": [
+        26,
+        -357,
+        62
+      ],
+      "name": "OFFSET"
+    },
+    {
+      "offset": 2084,
+      "opcode": 1,
+      "index": 37,
+      "values": [
+        0,
+        0,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2094,
+      "opcode": 1,
+      "index": 0,
+      "values": [
+        -5797,
+        1269,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2104,
+      "opcode": 1,
+      "index": 2,
+      "values": [
+        3299,
+        -1268,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2114,
+      "opcode": 31,
+      "index": 7,
+      "values": [
+        -66,
+        -445,
+        232
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 2124,
+      "opcode": 1,
+      "index": 7,
+      "values": [
+        -2048,
+        14336,
+        14336
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2134,
+      "opcode": 1,
+      "index": 3,
+      "values": [
+        -12288,
+        -16640,
+        -17741
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2144,
+      "opcode": 1,
+      "index": 57,
+      "values": [
+        -1024,
+        15104,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2154,
+      "opcode": 4,
+      "index": 57,
+      "values": [
+        11,
+        10,
+        23
+      ],
+      "name": "VECTOR1"
+    },
+    {
+      "offset": 2164,
+      "opcode": 5,
+      "index": 57,
+      "values": [
+        0,
+        0,
+        13
+      ],
+      "name": "VECTOR2"
+    },
+    {
+      "offset": 2174,
+      "opcode": 1,
+      "index": 60,
+      "values": [
+        -3072,
+        14976,
+        -7424
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2184,
+      "opcode": 46,
+      "index": 0,
+      "values": [
+        5,
+        0,
+        0
+      ],
+      "name": "INTERACT"
+    },
+    {
+      "offset": 2194,
+      "opcode": 12,
+      "index": 0,
+      "values": [
+        -10496,
+        0,
+        0
+      ],
+      "name": "PSEUDO_KEY"
+    },
+    {
+      "offset": 2204,
+      "opcode": 19,
+      "index": 0,
+      "values": [
+        0,
+        0,
+        592
+      ],
+      "name": "MOVE_THING"
+    },
+    {
+      "offset": 2214,
+      "opcode": 1,
+      "index": 59,
+      "values": [
+        -3072,
+        -14976,
+        7424
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2224,
+      "opcode": 5,
+      "index": 58,
+      "values": [
+        0,
+        0,
+        14
+      ],
+      "name": "VECTOR2"
+    },
+    {
+      "offset": 2234,
+      "opcode": 4,
+      "index": 58,
+      "values": [
+        11,
+        10,
+        23
+      ],
+      "name": "VECTOR1"
+    },
+    {
+      "offset": 2244,
+      "opcode": 1,
+      "index": 58,
+      "values": [
+        -1024,
+        -15104,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2254,
+      "opcode": 1,
+      "index": 3,
+      "values": [
+        -12288,
+        -16640,
+        -18370
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2264,
+      "opcode": 1,
+      "index": 7,
+      "values": [
+        -2048,
+        14336,
+        16384
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2274,
+      "opcode": 31,
+      "index": 7,
+      "values": [
+        -74,
+        -392,
+        226
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 2284,
+      "opcode": 1,
+      "index": 2,
+      "values": [
+        2298,
+        -868,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2294,
+      "opcode": 1,
+      "index": 0,
+      "values": [
+        -6812,
+        869,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2304,
+      "opcode": 1,
+      "index": 37,
+      "values": [
+        0,
+        0,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2314,
+      "opcode": 2,
+      "index": 0,
+      "values": [
+        32,
+        -324,
+        78
+      ],
+      "name": "OFFSET"
+    },
+    {
+      "offset": 2324,
+      "opcode": 1,
+      "index": 14,
+      "values": [
+        -256,
+        1536,
+        1024
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2334,
+      "opcode": 31,
+      "index": 14,
+      "values": [
+        49,
+        -8,
+        114
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 2344,
+      "opcode": 31,
+      "index": 13,
+      "values": [
+        -35,
+        -229,
+        -85
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 2354,
+      "opcode": 1,
+      "index": 13,
+      "values": [
+        -22272,
+        -1536,
+        -1024
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2364,
+      "opcode": 1,
+      "index": 10,
+      "values": [
+        -11454,
+        2816,
+        768
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2374,
+      "opcode": 1,
+      "index": 1,
+      "values": [
+        3072,
+        0,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2384,
+      "opcode": 31,
+      "index": 27,
+      "values": [
+        176,
+        -385,
+        2
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 2394,
+      "opcode": 1,
+      "index": 27,
+      "values": [
+        -3328,
+        0,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2404,
+      "opcode": 1,
+      "index": 4,
+      "values": [
+        -12288,
+        16640,
+        7846
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2414,
+      "opcode": 1,
+      "index": 57,
+      "values": [
+        -1024,
+        15104,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2424,
+      "opcode": 4,
+      "index": 57,
+      "values": [
+        11,
+        10,
+        23
+      ],
+      "name": "VECTOR1"
+    },
+    {
+      "offset": 2434,
+      "opcode": 5,
+      "index": 57,
+      "values": [
+        0,
+        0,
+        13
+      ],
+      "name": "VECTOR2"
+    },
+    {
+      "offset": 2444,
+      "opcode": 1,
+      "index": 60,
+      "values": [
+        -3072,
+        14976,
+        -7424
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2454,
+      "opcode": 71,
+      "index": 0,
+      "values": [
+        63,
+        0,
+        0
+      ],
+      "name": "UNKNOWN_71"
+    },
+    {
+      "offset": 2464,
+      "opcode": 12,
+      "index": 0,
+      "values": [
+        -5632,
+        0,
+        0
+      ],
+      "name": "PSEUDO_KEY"
+    },
+    {
+      "offset": 2474,
+      "opcode": 19,
+      "index": 0,
+      "values": [
+        0,
+        0,
+        640
+      ],
+      "name": "MOVE_THING"
+    },
+    {
+      "offset": 2484,
+      "opcode": 1,
+      "index": 59,
+      "values": [
+        -3072,
+        -14976,
+        7424
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2494,
+      "opcode": 5,
+      "index": 58,
+      "values": [
+        0,
+        0,
+        14
+      ],
+      "name": "VECTOR2"
+    },
+    {
+      "offset": 2504,
+      "opcode": 4,
+      "index": 58,
+      "values": [
+        11,
+        10,
+        23
+      ],
+      "name": "VECTOR1"
+    },
+    {
+      "offset": 2514,
+      "opcode": 1,
+      "index": 58,
+      "values": [
+        -1024,
+        -15104,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2524,
+      "opcode": 1,
+      "index": 3,
+      "values": [
+        -12288,
+        -16640,
+        -19922
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2534,
+      "opcode": 1,
+      "index": 7,
+      "values": [
+        -2048,
+        14336,
+        10240
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2544,
+      "opcode": 31,
+      "index": 7,
+      "values": [
+        -94,
+        -343,
+        196
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 2554,
+      "opcode": 1,
+      "index": 2,
+      "values": [
+        2671,
+        -509,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2564,
+      "opcode": 1,
+      "index": 0,
+      "values": [
+        -6748,
+        509,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2574,
+      "opcode": 1,
+      "index": 37,
+      "values": [
+        0,
+        0,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2584,
+      "opcode": 2,
+      "index": 0,
+      "values": [
+        34,
+        -320,
+        69
+      ],
+      "name": "OFFSET"
+    },
+    {
+      "offset": 2594,
+      "opcode": 1,
+      "index": 14,
+      "values": [
+        -574,
+        1536,
+        1024
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2604,
+      "opcode": 31,
+      "index": 14,
+      "values": [
+        49,
+        -6,
+        56
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 2614,
+      "opcode": 31,
+      "index": 13,
+      "values": [
+        -41,
+        -190,
+        -77
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 2624,
+      "opcode": 1,
+      "index": 13,
+      "values": [
+        -19412,
+        -1536,
+        -1024
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2634,
+      "opcode": 1,
+      "index": 10,
+      "values": [
+        -11694,
+        2816,
+        768
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2644,
+      "opcode": 1,
+      "index": 1,
+      "values": [
+        2330,
+        0,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2654,
+      "opcode": 31,
+      "index": 27,
+      "values": [
+        176,
+        -345,
+        34
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 2664,
+      "opcode": 1,
+      "index": 27,
+      "values": [
+        -3328,
+        0,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2674,
+      "opcode": 1,
+      "index": 4,
+      "values": [
+        -12288,
+        16640,
+        6559
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2684,
+      "opcode": 1,
+      "index": 57,
+      "values": [
+        -1024,
+        15104,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2694,
+      "opcode": 4,
+      "index": 57,
+      "values": [
+        11,
+        10,
+        23
+      ],
+      "name": "VECTOR1"
+    },
+    {
+      "offset": 2704,
+      "opcode": 5,
+      "index": 57,
+      "values": [
+        0,
+        0,
+        13
+      ],
+      "name": "VECTOR2"
+    },
+    {
+      "offset": 2714,
+      "opcode": 1,
+      "index": 60,
+      "values": [
+        -3072,
+        14976,
+        -7424
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2724,
+      "opcode": 12,
+      "index": 0,
+      "values": [
+        -256,
+        0,
+        0
+      ],
+      "name": "PSEUDO_KEY"
+    },
+    {
+      "offset": 2734,
+      "opcode": 19,
+      "index": 0,
+      "values": [
+        0,
+        0,
+        720
+      ],
+      "name": "MOVE_THING"
+    },
+    {
+      "offset": 2744,
+      "opcode": 1,
+      "index": 59,
+      "values": [
+        -3072,
+        -14976,
+        7424
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2754,
+      "opcode": 5,
+      "index": 58,
+      "values": [
+        0,
+        0,
+        14
+      ],
+      "name": "VECTOR2"
+    },
+    {
+      "offset": 2764,
+      "opcode": 4,
+      "index": 58,
+      "values": [
+        11,
+        10,
+        23
+      ],
+      "name": "VECTOR1"
+    },
+    {
+      "offset": 2774,
+      "opcode": 1,
+      "index": 58,
+      "values": [
+        -1024,
+        -15104,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2784,
+      "opcode": 1,
+      "index": 4,
+      "values": [
+        -12288,
+        16640,
+        23168
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2794,
+      "opcode": 1,
+      "index": 27,
+      "values": [
+        -768,
+        0,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2804,
+      "opcode": 31,
+      "index": 27,
+      "values": [
+        168,
+        -295,
+        144
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 2814,
+      "opcode": 1,
+      "index": 1,
+      "values": [
+        1024,
+        0,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2824,
+      "opcode": 1,
+      "index": 10,
+      "values": [
+        -12032,
+        2816,
+        768
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2834,
+      "opcode": 1,
+      "index": 13,
+      "values": [
+        -15360,
+        -1536,
+        -1024
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2844,
+      "opcode": 31,
+      "index": 13,
+      "values": [
+        -49,
+        -139,
+        -54
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 2854,
+      "opcode": 31,
+      "index": 14,
+      "values": [
+        49,
+        -1,
+        -25
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 2864,
+      "opcode": 1,
+      "index": 14,
+      "values": [
+        -1024,
+        1536,
+        1024
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2874,
+      "opcode": 2,
+      "index": 0,
+      "values": [
+        28,
+        -326,
+        25
+      ],
+      "name": "OFFSET"
+    },
+    {
+      "offset": 2884,
+      "opcode": 1,
+      "index": 37,
+      "values": [
+        0,
+        0,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2894,
+      "opcode": 1,
+      "index": 0,
+      "values": [
+        -6656,
+        0,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2904,
+      "opcode": 1,
+      "index": 2,
+      "values": [
+        3200,
+        0,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2914,
+      "opcode": 31,
+      "index": 7,
+      "values": [
+        -108,
+        -327,
+        137
+      ],
+      "name": "POSITION"
+    },
+    {
+      "offset": 2924,
+      "opcode": 1,
+      "index": 7,
+      "values": [
+        -2048,
+        14336,
+        10240
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2934,
+      "opcode": 1,
+      "index": 3,
+      "values": [
+        -12288,
+        -16640,
+        -21376
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2944,
+      "opcode": 1,
+      "index": 57,
+      "values": [
+        -1024,
+        15104,
+        0
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2954,
+      "opcode": 4,
+      "index": 57,
+      "values": [
+        11,
+        10,
+        23
+      ],
+      "name": "VECTOR1"
+    },
+    {
+      "offset": 2964,
+      "opcode": 5,
+      "index": 57,
+      "values": [
+        0,
+        0,
+        13
+      ],
+      "name": "VECTOR2"
+    },
+    {
+      "offset": 2974,
+      "opcode": 1,
+      "index": 60,
+      "values": [
+        -3072,
+        14976,
+        -7424
+      ],
+      "name": "ROTATE"
+    },
+    {
+      "offset": 2984,
+      "opcode": 71,
+      "index": 0,
+      "values": [
+        62,
+        0,
+        0
+      ],
+      "name": "UNKNOWN_71"
+    }
+  ],
+  "record": {
+    "record": 7508,
+    "offset": 9113120,
+    "bytes": 3040,
+    "sha256": "d131f7a40f002fca6084731cb2a9b275399e7afc02321eef44650a05b81fb11a",
+    "prefix_bytes": 3014,
+    "unparsed_tail_bytes": 26
+  }
+}

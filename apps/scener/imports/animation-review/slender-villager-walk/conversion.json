@@ -1,0 +1,22 @@
+{
+  "actor": "w_vil3",
+  "record": 2567,
+  "action": 960,
+  "source_scene": "scenes/animations/0960-vilwalk3.blks",
+  "ignored_events": {
+    "VECTOR1": 48,
+    "VECTOR2": 24,
+    "MOVE_THING": 12
+  },
+  "unmapped_part_ids": [
+    23,
+    24,
+    25,
+    26
+  ],
+  "timing": "unsigned source phase normalized to requested duration; not recovered game FPS",
+  "preview_repairs": [
+    "Left shoulder: Preview shoulder connection; absent from decoded source",
+    "Right shoulder: Preview shoulder connection; absent from decoded source"
+  ]
+}

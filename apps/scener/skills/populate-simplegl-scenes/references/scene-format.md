@@ -839,6 +839,10 @@ scaled `<sphere>`, its normals stay correct for unequal radii.
 | `rings`   | int   | 12      | Latitude subdivisions |
 | `slices`  | int   | 16      | Longitude subdivisions |
 
+### Character cosmetic options
+
+A prefab declares `<option name="gloves" enabled="0"/>`; an instance can override it with its own `<option name="gloves" enabled="1"/>` child. `enabled` accepts 0 or 1. Decorative ellipsoid, sphere, capsule, box, cylinder, cone, prism and torus volumes may use `if-feature="gloves"` or `unless-feature="gloves"`. Conditions control geometry only; never attach them to bones, groups or architectural cutters. Options preserve joints, IK targets and animation, and persist in saved XML. See [the importer guide](../../../../../tools/ecstatica/IMPORT.md#cosmetic-options-in-any-cat-character).
+
 ### `<bone>`
 
 A character joint plus its body volume, placed by constraints instead of
