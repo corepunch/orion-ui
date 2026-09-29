@@ -38,8 +38,6 @@ ARCH     ?= arm64
 CFLAGS   += -arch $(ARCH)
 LDFLAGS  += -arch $(ARCH)
 LIBS     += -framework OpenGL
-# Scener encodes reel videos with VideoToolbox.
-SCENER_LIBS = -framework VideoToolbox -framework CoreMedia -framework CoreVideo -framework CoreFoundation
 LIB_EXT  = dylib
 LIB_FLAGS = -dynamiclib
 RPATH_FLAGS = -Wl,-rpath,@loader_path/../lib
@@ -170,7 +168,7 @@ $(foreach n,$(EXAMPLES),$(foreach t,$(wildcard $(APPS)/$(n)/tests/*.c),$(eval $(
 # every .c outside $(COMPS), main.c last.  ('#' is backslash-escaped for make.)
 unity_tu = find $(1) -name '*.c' ! -name main.c ! -path '*/$(COMPS)/*' ! -path '*/tests/*' | sort | sed 's/.*/\#include "&"/'; echo '\#include "$(1)/main.c"'
 app_inc  = -I. -I$(call appdir,$*) -I$(call appdir,$*)/$(COMPS) -DSHAREDIR='"../share/$(notdir $(call appdir,$*))"'
-app_libs = $(LDFLAGS) $(CORE_LDLIBS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(call app_plugin,$*) $(LIBS) $(if $(findstring scener,$*),$(SCENER_LIBS))
+app_libs = $(LDFLAGS) $(CORE_LDLIBS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(call app_plugin,$*) $(LIBS)
 
 .PHONY: all install tools platform share library apps plugins gems scener test clean help $(PHONY_APP_NAMES)
 

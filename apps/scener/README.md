@@ -5,10 +5,10 @@ Current Orion build, batch rendering and deployment instructions are in
 
 Scener is a scene and animation editor evolving toward a **studio for 3D
 infographics**: editable 3D subjects, character motion, explanatory graphics,
-and reproducible still/video output. [Reels](docs/reels.md) are programmable
-XML motion graphics that Scener renders natively, 3D layers and graphics alike,
-straight to MP4; see the [infographic studio guide](docs/infographic-studio.md)
-for the direction and the IK/FK example.
+and reproducible still/video output. The current infographic workflow combines
+native scene rendering with an external annotation compositor; see the
+[infographic studio guide](docs/infographic-studio.md) for implemented features,
+the IK/FK example, and future development areas.
 
 Its modular OpenGL renderer uses real-time **stencil shadow volumes**.
 Shadows are a first-class composition tool: position lights and
@@ -23,13 +23,13 @@ by Orion and its platform layer.
 
 ## Workflow
 
-For an animated explanation, author the scene and motion, then a `.reel` that
-places the scene as a layer and adds type, callouts anchored to joints, trails
-and measured readouts as expressions of time. `scener --reel` checks the
-motion and renders the poster and MP4 in one process. The
-[IK vs FK reel](scenes/infographics/README.md) demonstrates this with an
-Ecstatica II character, real two-bone IK, projected joint chains, a hand
-trail, and measured displacement.
+For an animated explanation, author the scene and motion, render consistent
+frames, sample the scene data, and compose labels and measurements into the
+final poster or video. The [IK vs FK infographic](scenes/infographics/README.md)
+demonstrates this with an Ecstatica II character, real two-bone IK, projected
+joint markers, a hand trail, and measured displacement. Its new scene and
+helper scripts reuse Scener's existing rig, timeline, solver, and renderer.
+The annotations currently appear in the exported infographic, not the editor.
 
 Scene rendering also supports the illustration workflow below.
 
@@ -328,8 +328,10 @@ workflow.
 - Image textures are supported on `<screen>` surfaces; general material
   texture mapping is not implemented.
 - Wall cutters must be parallel to the wall; oblique and arbitrary mesh CSG are unsupported.
-- Reels render from the CLI; the editor does not preview them yet. See the
-  [reel limits](docs/reels.md#limits).
+- Infographic text, projected callouts, trails, and measurements currently use
+  an example-specific external compositor. Native editable annotations,
+  reusable infographic layouts, and data binding are future work; see the
+  [studio direction](docs/infographic-studio.md#development-direction).
 
 ## Procedural windows
 

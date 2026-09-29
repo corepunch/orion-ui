@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """Exercise the deployed Scener CLI and actual JPEG/PNG outputs."""
 import argparse
-import shutil
 from pathlib import Path
 import struct
 import subprocess
-import sys
 import tempfile
 import zlib
 
@@ -150,42 +148,7 @@ def main():
         missing = work / 'missing.blks'
         missing.write_text('<scene><screen image="absent.png"/></scene>')
         assert 'cannot load screen image' in run('--list-cameras', missing, success=False).stderr
-
-        reel = work / 'test.reel'
-        reel.write_text('''<reel width="200" height="120" fps="10" duration="0.5" background="#000000">
-<style name="label" size="18" color="#FFFFFF"/>
-<scene src="test.blks" camera="front" x="100" y="0" width="100" height="120"/>
-<rect x="10" y="10" width="40" height="30" radius="4" color="#FF0000"/>
-<rect x="10" y="60" width="80 * t" height="20" color="#00FF00"/>
-<text style="label" x="10" y="110">t={t:%.1f}</text>
-<check name="time stays in range" value="t" min="0" max="0.5"/>
-</reel>''')
-        for arguments in [('--reel', reel), ('--reel', reel, '--check', '--output', 'x.png'), ('--check', scene)]:
-            run(*arguments, success=False)
-        assert 'check time stays in range' in run('--reel', reel, '--check').stdout
-        run('--reel', reel, '--output', 'reel.png', '--time', '0.4', *extra)
-        assert dimensions(work / 'reel.png') == (200, 120)
-        pixels, channels = png_rows(work / 'reel.png')
-        red, green, scene_pixel = pixels[25][30 * channels:30 * channels + 3], pixels[70][40 * channels:40 * channels + 3], pixels[60][150 * channels:150 * channels + 3]
-        assert red[0] > 240 and red[1] < 20 and red[2] < 20, f'reel rect lost its colour: {red}'
-        assert green[1] > 240 and green[0] < 20, f'time expression did not size the bar: {green}'
-        assert max(scene_pixel) > 30, f'scene layer did not render: {scene_pixel}'
-        run('--reel', reel, '--output-dir', 'reel-frames', *extra)
-        assert sorted(p.name for p in (work / 'reel-frames').iterdir()) == [f'frame_{i:04d}.png' for i in range(5)]
-        encodes = sys.platform == 'darwin' or shutil.which('ffmpeg') is not None
-        video = run('--reel', reel, '--output', 'reel.mp4', *extra, success=encodes)
-        if encodes:
-            data = (work / 'reel.mp4').read_bytes()
-            assert data[4:8] == b'ftyp' and b'avcC' in data and b'moov' in data, 'reel MP4 is incomplete'
-            run('--render', scene, '--camera', 'front', '--frames', '0:0.5:10', '--size', '160x120', '--output', 'render.mp4', *extra)
-            assert b'avcC' in (work / 'render.mp4').read_bytes()
-        else:
-            assert 'ffmpeg' in video.stderr
-        failing = work / 'failing.reel'
-        failing.write_text('<reel fps="10" duration="1"><check name="early" value="t" max="0.5"/></reel>')
-        assert 'check early failed' in run('--reel', failing, '--check', success=False).stderr
-        assert not (work / 'never.png').exists() and run('--reel', failing, '--output', 'never.png', success=False)
-        print('PASS: CLI errors, cameras, JPEG/PNG encoding, output dimensions, batch, selection, layout, legacy screenshot, reels')
+        print('PASS: CLI errors, cameras, JPEG/PNG encoding, output dimensions, batch, selection, layout, legacy screenshot')
 
 
 if __name__ == '__main__':

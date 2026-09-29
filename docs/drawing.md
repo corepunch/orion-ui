@@ -164,14 +164,3 @@ draw_rect(tex, 0, 0, W * SCALE, H * SCALE);
 // Update the status bar string (triggers a repaint)
 send_message(win, evStatusBar, 0, (void *)"File saved");
 ```
-
-## Signed-distance fonts
-
-`orion/user/font_sdf.h` builds a signed-distance-field glyph atlas from a TTF
-for text that must stay sharp at any size, scale or rotation (motion graphics,
-zoomable views). It is CPU only: glyphs are generated lazily into an R8 atlas,
-and `font_sdf_take_dirty()` reports the region to upload with your renderer.
-Metrics and `font_sdf_kern()` are in pixels at the atlas base size. The edge
-value is 128 and each texel of distance changes it by `128 / padding`, so a
-shader recovers screen-space coverage from the sample and its derivatives.
-Scener's reel renderer (`apps/scener/reel_draw.c`) is the reference user.
