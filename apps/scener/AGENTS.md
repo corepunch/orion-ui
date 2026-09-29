@@ -40,6 +40,8 @@ deployed command from the consuming project's working directory.
 | `motion.c` | Quaternions for pose blending and the CATMotion-style gait curves |
 | `mocap.c` | BVH motion capture loading and forward kinematics |
 | `mocap/`, `tools/fetch_cmu_mocap.py`, `tools/render_mocap_videos.py`, `tools/frames_to_mp4.swift` | CMU clips (fetched), batch mocap videos, AVFoundation MP4 encoder |
+| `docs/infographic-studio.md`, `scenes/infographics/` | 3D infographic direction, capability boundaries, and editable IK/FK example |
+| `tools/render_ik_fk_infographic.py`, `tools/compose_ik_fk_infographic.swift` | Example-specific pose validation, annotation composition, poster and video export |
 | `scene_motion.h`, `scene_capture.h` | Private timeline/gait and capture-profile/contact implementation included by scene.c |
 | `scene.c` | Tiny XML parser, scene loading, named cameras, modifier dispatch, **prefab loading** |
 | `render.c` | OpenGL core-profile shader/VBO renderer with stencil shadows |
@@ -54,6 +56,17 @@ deployed command from the consuming project's working directory.
 | `prefabs/characters/presets/` | CAT rig presets (`biped`, `quadruped`) copied to start characters |
 | `scenes/` | Runnable and diagnostic scene files (`*.blks`) |
 | `prefabs/` | Reusable object files (`chair.blk`, `sofa.blk`, etc.) |
+
+## 3D infographic workflow
+
+Scener is evolving toward a studio for 3D infographics. Read
+[docs/infographic-studio.md](docs/infographic-studio.md) for the current
+capability boundaries and development direction. The IK/FK example uses the
+existing native rig/timeline/renderer plus external composition; labels,
+measurement readouts, and trails are not yet native editable scene elements.
+Keep scene motion, measurement definitions, camera projection, and output
+settings consistent when extending it. Document new supported features and
+limits in that guide and the canonical schema when applicable.
 
 ## Scene XML authoring
 

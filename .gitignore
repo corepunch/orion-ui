@@ -69,6 +69,7 @@ libcglm*
 *.log
 test.xml
 /output
+/video/
 *.save
 plans/
 third_party/
