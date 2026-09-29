@@ -81,9 +81,12 @@ void gc_handle_command_impl(uint16_t id) {
       if (gc->main_win->maximized) restore_window(gc->main_win);
       else maximize_window(gc->main_win);
       break;
-    case ID_VIEW_CHANGES: gc_set_view_mode(0); break;
-    case ID_VIEW_HISTORY: gc_set_view_mode(1); break;
-    case ID_VIEW_GITHUB:  gc_set_view_mode(2); break;
+    case ID_VIEW_OVERVIEW:
+      gc_set_view_mode(gc->tab == GC_TAB_OVERVIEW && gc->repo ? gc->focus_tab : GC_TAB_OVERVIEW);
+      break;
+    case ID_VIEW_CHANGES: gc_set_view_mode(GC_TAB_CHANGES); break;
+    case ID_VIEW_HISTORY: gc_set_view_mode(GC_TAB_HISTORY); break;
+    case ID_VIEW_GITHUB:  gc_set_view_mode(GC_TAB_GITHUB);  break;
     case ID_FILE_OPEN_REPO: {
       char path[512] = {0};
       openfilename_t ofn = {0};
@@ -343,6 +346,7 @@ void gc_handle_command_impl(uint16_t id) {
       else message_box(gc->main_win,
         "Sync failed. Check the remote, upstream, and working tree.", "Sync", MB_OK);
       break;
+    case ID_REMOTE_FETCH_ALL: gc_overview_fetch_all(); break;
     case ID_REMOTE_FETCH:
       if (gc->main_win)
         gc_show_push_pull_dialog(gc->main_win, GIT_OP_FETCH);

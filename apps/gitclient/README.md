@@ -15,6 +15,39 @@ menu item first, then expose it on other surfaces as needed. This gives menus,
 toolbar buttons, context menus, keyboard shortcuts, and tests one shared action
 identity.
 
+## Two modes: Overview and Focus
+
+**Overview** (Ctrl+0) is a board of tiles, one per repository *and* per linked worktree, so nobody has to
+switch between them through a dropdown. Each tile shows only what needs a decision: uncommitted files
+(staged / modified / new), unpushed and unpulled commits, conflicts, stashes, and whether the branch is
+published. A colour stripe gives the verdict at a glance: red conflicts, amber uncommitted, blue needs
+push/pull, green in sync. Diffs are deliberately absent.
+
+| Input | Action |
+|---|---|
+| Arrow keys | move between tiles |
+| Enter / double-click | open the tile in Focus mode (Changes if dirty, otherwise History) |
+| Ctrl+0 | toggle Overview and the last Focus page |
+| Ctrl+Shift+R | fetch every repository in the background |
+| "Showing" pill | filter to tiles that need attention |
+
+**Focus** is the classic single-repository view (Changes, History, GitHub). It now opens with a summary
+line (branch, to push/pull, staged/modified/new counts), tells you what Commit will do
+("Commit 3 staged files" or "Nothing staged"), and has an Overview button on every page.
+
+The tile board is the `RepoBoard` control in `components/repo_board.c`; the app pushes
+`git_summary_t` rows into it (`git_workspace_scan` in `git_backend.c`). Pass two or more paths on the command
+line (or `--overview`) to get a temporary, unsaved workspace:
+
+```bash
+apps/gitclient/share/demo/make_workspace.sh /tmp/ws      # eight demo repos + two worktrees
+build/bin/gitclient $(cat /tmp/ws/paths.txt)              # Overview
+build/bin/gitclient /tmp/ws/work/api-gateway              # Focus
+```
+
+![Overview](../../docs/screenshots/gitclient_overview.jpg)
+![Focus](../../docs/screenshots/gitclient_focused.jpg)
+
 ## Architecture
 
 The application follows a **database-driven** pattern where the model layer defines data structures and the UI auto-populates from the database. Views contain minimal code — almost no manual population loops, no array management, no hardcoded column setup.

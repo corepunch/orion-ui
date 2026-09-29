@@ -9,6 +9,7 @@
 
 #include <orion/ui.h>
 #include "components/diff_view.h"
+#include "components/repo_board.h"
 #include <orion/commctl/columnview.h>
 #include <orion/commctl/menubar.h>
 #include <orion/user/accel.h>
@@ -127,6 +128,13 @@ typedef struct {
 
 typedef struct git_repo_s git_repo_t;
 
+#define GC_MAX_WORKTREES 16
+#define GC_MAX_TILES     64
+
+typedef struct { char path[512]; bool linked, bare, prunable; } git_worktree_t;
+
+typedef gc_tile_t git_summary_t;
+
 // ============================================================
 // Git operation limits
 // ============================================================
@@ -214,6 +222,7 @@ enum {
 // ═══════════════════════════════════════════════════════════════════════════
 
 #define gc_main_window_form          gitclient_main_window_form
+#define gc_overview_page_form        gitclient_overview_page_form
 #define gc_changes_page_form         gitclient_changes_page_form
 #define gc_history_page_form         gitclient_history_page_form
 #define gc_github_page_form          gitclient_github_page_form
@@ -228,6 +237,8 @@ enum {
 #define gc_branch_rename_dialog_form gitclient_branch_rename_dialog_form
 #define gc_database_schema           gitclient_database_schema
 #define gc_database_api              gitclient_database_api
+
+enum { GC_TAB_OVERVIEW, GC_TAB_CHANGES, GC_TAB_HISTORY, GC_TAB_GITHUB };
 
 typedef enum {
   GIT_OP_FETCH,
@@ -266,6 +277,8 @@ typedef struct {
   window_t    *main_win;
   window_t    *menubar_win;
   window_t    *tabs_win;
+  window_t    *overview_page_win;
+  window_t    *board_win;
   window_t    *changes_page_win;
   window_t    *history_page_win;
   window_t    *github_page_win;
@@ -289,6 +302,12 @@ typedef struct {
   accel_table_t *accel;
   hinstance_t    hinstance;
   bool           history_mode;
+  int            tab;             // active GC_TAB_*
+  int            focus_tab;       // last detail tab, restored when leaving the overview
+  git_summary_t  tiles[GC_MAX_TILES];
+  int            tile_count;
+  bool           fetching_all;
+  bool           ephemeral;       // workspace came from the command line; do not persist
 
   int  last_diff_commit;
   int  last_diff_file;
@@ -372,6 +391,11 @@ bool git_get_remote_url(git_repo_t *repo, const char *name, char *buf, int buf_s
 int  git_get_tags(git_repo_t *repo, git_tag_t *out, int max);
 int  git_get_stash(git_repo_t *repo, git_stash_t *out, int max);
 
+int  git_worktree_list(const char *path, git_worktree_t *out, int max);
+bool git_get_summary(const char *path, const char *repo_name, bool linked, git_summary_t *out);
+int  git_workspace_scan(char (*roots)[512], int root_count, git_summary_t *out, int max);
+bool git_fetch_all_async(char (*roots)[512], int count, window_t *notify_win);
+
 bool git_run_async(git_repo_t *repo, git_op_t op,
                    const char *args[],
                    window_t *notify_win);
@@ -402,6 +426,9 @@ void gc_refresh_all(void);
 void gc_show_search_dialog(window_t *parent);
 void gc_update_status(void);
 void gc_set_view_mode(int tab);
+void gc_overview_refresh(void);
+void gc_overview_open(int index);
+void gc_overview_fetch_all(void);
 void gc_recent_load(void);
 void gc_recent_save(void);
 void gc_recent_add(const char *path);

@@ -669,6 +669,135 @@ int git_get_stash(git_repo_t *repo, git_stash_t *out, int max) {
 }
 
 // ============================================================
+// Workspace overview: per-worktree summaries
+// ============================================================
+
+static char *gc_next_line(char **p) {
+  if (!*p || !**p) return NULL;
+  char *s = *p, *nl = strchr(s, '\n'); if (nl) { *nl = 0; *p = nl + 1; } else *p = s + strlen(s);
+  return s;
+}
+
+// "5 hours ago" -> "5h"; keeps tiles narrow.
+static void gc_short_age(const char *rel, char *out, size_t n) {
+  int v = atoi(rel); const char *u = strchr(rel, ' '); u = u ? u + 1 : "";
+  const char *suffix = !strncmp(u, "second", 6) ? "s" : !strncmp(u, "minute", 6) ? "m" : !strncmp(u, "hour", 4) ? "h" :
+                       !strncmp(u, "day", 3) ? "d" : !strncmp(u, "week", 4) ? "w" : !strncmp(u, "month", 5) ? "mo" : !strncmp(u, "year", 4) ? "y" : NULL;
+  if (suffix) snprintf(out, n, "%d%s ago", v, suffix); else snprintf(out, n, "%s", rel);
+}
+
+int git_worktree_list(const char *path, git_worktree_t *out, int max) {
+  git_repo_t repo = {0}; if (!path || !out || max <= 0) return 0;
+  strncpy(repo.path, path, sizeof(repo.path) - 1);
+  char buf[16 * 1024] = {0}; const char *args[] = { "git", "worktree", "list", "--porcelain", NULL };
+  if (!git_run_sync(&repo, args, buf, sizeof(buf))) return 0;
+  int count = 0; char *cur = buf;
+  for (char *line = gc_next_line(&cur); line && count <= max; line = gc_next_line(&cur)) {
+    if (!strncmp(line, "worktree ", 9)) {
+      if (count == max) break;
+      memset(&out[count], 0, sizeof(out[count]));
+      strncpy(out[count].path, line + 9, sizeof(out[count].path) - 1);
+      out[count].linked = count > 0; count++;
+    } else if (count > 0 && !strcmp(line, "bare")) out[count - 1].bare = true;
+    else if (count > 0 && !strncmp(line, "prunable", 8)) out[count - 1].prunable = true;
+  }
+  return count;
+}
+
+static void gc_path_basename(const char *path, char *out, size_t n) {
+  const char *end = path + strlen(path); while (end > path && (end[-1] == '/' || end[-1] == '\\')) end--;
+  const char *b = end; while (b > path && b[-1] != '/' && b[-1] != '\\') b--;
+  snprintf(out, n, "%.*s", (int)(end - b), b);
+}
+
+bool git_get_summary(const char *path, const char *repo_name, bool linked, git_summary_t *out) {
+  if (!path || !out) return false;
+  memset(out, 0, sizeof(*out)); out->linked = linked;
+  strncpy(out->path, path, sizeof(out->path) - 1);
+  strncpy(out->repo, repo_name && repo_name[0] ? repo_name : "?", sizeof(out->repo) - 1);
+  gc_path_basename(path, out->dir, sizeof(out->dir));
+  git_repo_t repo = {0}; strncpy(repo.path, path, sizeof(repo.path) - 1);
+  static char buf[256 * 1024];
+  const char *st[] = { "git", "status", "--porcelain=v2", "--branch", NULL };
+  if (!git_run_sync(&repo, st, buf, sizeof(buf))) { out->missing = true; return false; }
+  bool has_upstream = false, has_ab = false; char *cur = buf;
+  for (char *l = gc_next_line(&cur); l; l = gc_next_line(&cur)) {
+    if (!strncmp(l, "# branch.head ", 14)) {
+      if (!strcmp(l + 14, "(detached)")) out->detached = true; else strncpy(out->branch, l + 14, sizeof(out->branch) - 1);
+    } else if (!strncmp(l, "# branch.upstream ", 18)) { has_upstream = true; strncpy(out->upstream, l + 18, sizeof(out->upstream) - 1); }
+    else if (!strncmp(l, "# branch.ab ", 12)) { has_ab = sscanf(l + 12, "+%d -%d", &out->ahead, &out->behind) == 2; }
+    else if (l[0] == '?') out->untracked++;
+    else if (l[0] == 'u') out->conflicts++;
+    else if ((l[0] == '1' || l[0] == '2') && l[1] == ' ' && l[2] && l[3]) {
+      if (l[2] != '.') out->staged++;
+      if (l[3] != '.') out->unstaged++;
+    }
+  }
+  out->no_upstream = !has_upstream && !out->detached;
+  out->gone = has_upstream && !has_ab;
+  if (out->detached) {
+    const char *sh[] = { "git", "rev-parse", "--short", "HEAD", NULL };
+    if (git_run_sync(&repo, sh, buf, sizeof(buf))) { gc_trim_line(buf); snprintf(out->branch, sizeof(out->branch), "detached @ %.16s", buf); }
+    else strncpy(out->branch, "detached", sizeof(out->branch) - 1);
+  }
+  const char *lg[] = { "git", "log", "-1", "--format=%s%x1f%cr", NULL };
+  if (git_run_sync(&repo, lg, buf, sizeof(buf))) {
+    gc_trim_line(buf); char *sep = strchr(buf, '\x1f');
+    if (sep) { *sep = 0; gc_short_age(sep + 1, out->when, sizeof(out->when)); }
+    strncpy(out->subject, buf, sizeof(out->subject) - 1);
+  } else out->initial = true;
+  const char *sl[] = { "git", "stash", "list", NULL };
+  if (git_run_sync(&repo, sl, buf, sizeof(buf))) for (char *p = buf; *p; p++) if (*p == '\n') out->stashes++;
+  return true;
+}
+
+int git_workspace_scan(char (*roots)[512], int root_count, git_summary_t *out, int max) {
+  int n = 0;
+  for (int i = 0; i < root_count && n < max; i++) {
+    git_worktree_t wt[GC_MAX_WORKTREES]; int wn = git_worktree_list(roots[i], wt, GC_MAX_WORKTREES);
+    char name[128] = {0};
+    if (wn > 0) gc_path_basename(wt[0].path, name, sizeof(name));
+    if (wn == 0) { git_summary_t *s = &out[n++]; memset(s, 0, sizeof(*s)); strncpy(s->path, roots[i], sizeof(s->path) - 1);
+                   gc_path_basename(roots[i], s->repo, sizeof(s->repo)); strncpy(s->dir, s->repo, sizeof(s->dir) - 1);
+                   strncpy(s->branch, "unavailable", sizeof(s->branch) - 1); s->missing = true; continue; }
+    for (int w = 0; w < wn && n < max; w++) {
+      bool dup = false; for (int k = 0; k < n; k++) if (!strcmp(out[k].path, wt[w].path)) { dup = true; break; }
+      if (dup || wt[w].bare) continue;
+      if (!git_get_summary(wt[w].path, name, wt[w].linked, &out[n])) { strncpy(out[n].branch, "unavailable", sizeof(out[n].branch) - 1); }
+      out[n].prunable = wt[w].prunable; n++;
+    }
+  }
+  return n;
+}
+
+typedef struct { char cmds[GC_MAX_RECENT_REPOS][GC_CMD_BUF_SIZE]; int count; window_t *notify_win; } git_fetch_all_args_t;
+
+static GIT_THREAD_RET git_fetch_all_worker(void *arg) {
+  git_fetch_all_args_t *a = arg;
+  git_async_result_t *res = calloc(1, sizeof(*res));
+  if (res) {
+    res->op = GIT_OP_GENERIC; res->success = true; int failed = 0;
+    for (int i = 0; i < a->count; i++) { char out[512]; if (gc_popen_read(a->cmds[i], out, sizeof(out)) != 0) failed++; }
+    snprintf(res->output, sizeof(res->output), "Fetched %d repositories, %d failed.", a->count - failed, failed);
+    fprintf(stderr, "[gc] %s\n", res->output); fflush(stderr);
+    post_message(a->notify_win, evGitOpDone, (uint32_t)GIT_OP_GENERIC, res);
+  }
+  free(a); return 0;
+}
+
+bool git_fetch_all_async(char (*roots)[512], int count, window_t *notify_win) {
+  if (!notify_win || count <= 0) return false;
+  git_fetch_all_args_t *a = calloc(1, sizeof(*a)); if (!a) return false;
+  a->notify_win = notify_win;
+  for (int i = 0; i < count && a->count < GC_MAX_RECENT_REPOS; i++) {
+    const char *args[] = { "git", "fetch", "--all", "--prune", NULL };
+    gc_build_cmd(roots[i], args, a->cmds[a->count++], GC_CMD_BUF_SIZE);
+  }
+  git_thread_t t; if (!git_thread_create(&t, git_fetch_all_worker, a)) { free(a); return false; }
+  git_thread_detach(t); return true;
+}
+
+// ============================================================
 // Async thread
 // TODO(platform-C): git_run_async() should be replaced by
 // axRunCommandAsync(cmd, op, notify_win, post_msg_id) once the platform

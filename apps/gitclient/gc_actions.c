@@ -14,7 +14,7 @@ static bool gc_action_has_handler(uint16_t id) {
     case ID_FILE_CLONE: case ID_FILE_QUIT:
     case ID_REPO_REFRESH: case ID_REPO_SEARCH: case ID_REPO_IDENTITY:
     case ID_REPO_TERMINAL:
-    case ID_VIEW_WINDOW_MODE: case ID_VIEW_CHANGES: case ID_VIEW_HISTORY: case ID_VIEW_GITHUB:
+    case ID_VIEW_WINDOW_MODE: case ID_VIEW_OVERVIEW: case ID_VIEW_CHANGES: case ID_VIEW_HISTORY: case ID_VIEW_GITHUB:
     case ID_BRANCH_NEW: case ID_BRANCH_CHECKOUT: case ID_BRANCH_MERGE:
     case ID_BRANCH_REBASE: case ID_BRANCH_DELETE: case ID_BRANCH_RENAME:
     case ID_COMMIT_COMMIT: case ID_COMMIT_AMEND: case ID_COMMIT_UNDO:
@@ -22,7 +22,7 @@ static bool gc_action_has_handler(uint16_t id) {
     case ID_COMMIT_DISCARD:
     case ID_FILES_STAGE: case ID_FILES_UNSTAGE: case ID_FILES_STAGE_ALL:
     case ID_FILES_UNSTAGE_ALL: case ID_FILES_REVEAL: case ID_FILES_DISCARD:
-    case ID_REMOTE_SYNC: case ID_REMOTE_FETCH: case ID_REMOTE_PULL:
+    case ID_REMOTE_SYNC: case ID_REMOTE_FETCH: case ID_REMOTE_FETCH_ALL: case ID_REMOTE_PULL:
     case ID_REMOTE_PUSH: case ID_REMOTE_MANAGE:
     case ID_TAG_CREATE: case ID_TAG_DELETE: case ID_TAG_PUSH:
     case ID_HELP_ABOUT:
@@ -50,7 +50,7 @@ gc_action_result_t gc_execute_action(uint16_t id) {
   GC_TRACE("action id=%d name=%s repo=%s view=%s commit=%d file=%d",
            (int)id, name,
            gc && gc->repo ? git_repo_path(gc->repo) : "(none)",
-           gc && gc->history_mode ? "history" : "changes",
+           gc && gc->tab == GC_TAB_OVERVIEW ? "overview" : gc && gc->history_mode ? "history" : "changes",
            gc ? gc->selected_commit : -1,
            gc ? gc->selected_file : -1);
   gc_handle_command_impl(id);

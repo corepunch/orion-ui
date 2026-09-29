@@ -26,13 +26,8 @@ void gc_diff_refresh(void) {
 
   st->unified_mode = gc->unified_diff;
 
-  free(st->lines);
-  st->lines      = NULL;
-  st->line_count = 0;
-  st->scroll_y   = 0;
-  st->hunk_path[0] = '\0';
-
   if (!gc->repo || !gc->history_db) {
+    free(st->lines); st->lines = NULL; st->line_count = 0; st->hunk_count = 0;
     GC_TRACE("diff_refresh SKIP: no repo/db");
     invalidate_window(win);
     return;
@@ -60,6 +55,12 @@ void gc_diff_refresh(void) {
       gc->last_diff_unified   == st->unified_mode     &&
       strcmp(gc->last_diff_path, path ? path : "") == 0)
     return;
+
+  free(st->lines);
+  st->lines      = NULL;
+  st->line_count = 0;
+  st->scroll_y   = 0;
+  st->hunk_path[0] = '\0';
 
   gc->last_diff_commit    = gc->selected_commit;
   gc->last_diff_file      = gc->selected_file;

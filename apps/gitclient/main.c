@@ -85,18 +85,33 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   maximize_window(g_gc->main_win);
   show_window(g_gc->main_win, true);
 
-  // Open an explicit repository, or use the launch directory when it is one.
-  if (argc > 1 && argv[1] && argv[1][0]) {
-    gc_open_repo(argv[1]);
+  // Command line: "gitclient PATH" focuses one repository; two or more paths (or
+  // --overview) define a temporary workspace shown as tiles and never saved.
+  const char *paths[GC_MAX_RECENT_REPOS]; int path_count = 0; bool want_overview = false;
+  for (int i = 1; i < argc; i++) {
+    if (!argv[i] || !argv[i][0]) continue;
+    if (!strcmp(argv[i], "--overview")) want_overview = true;
+    else if (path_count < GC_MAX_RECENT_REPOS) paths[path_count++] = argv[i];
+  }
+  if (path_count > 1 || (want_overview && path_count)) {
+    g_gc->ephemeral = true; g_gc->recent_repo_count = 0;
+    for (int i = path_count - 1; i >= 0; i--) gc_recent_add(paths[i]);
+  }
+  if (path_count > 1 || want_overview) {
+    if (path_count == 0) { /* keep saved repositories */ }
+    if (g_gc->recent_repo_count > 0) gc_open_repo(g_gc->recent_repos[0]);
+    gc_set_view_mode(GC_TAB_OVERVIEW);
+  } else if (path_count == 1) {
+    gc_open_repo(paths[0]);
   } else {
     git_repo_t *cwd_repo = git_repo_open(".");
     if (cwd_repo) {
       git_repo_close(cwd_repo);
       gc_open_repo(".");
-    } else {
-      if (g_gc->recent_repo_count > 0) gc_open_repo(g_gc->recent_repos[0]);
-      else GC_LOG("startup directory is not a repository; waiting for Open Repository");
-    }
+    } else if (g_gc->recent_repo_count > 0) {
+      gc_open_repo(g_gc->recent_repos[0]);
+      if (g_gc->recent_repo_count > 1) gc_set_view_mode(GC_TAB_OVERVIEW);
+    } else GC_LOG("startup directory is not a repository; waiting for Open Repository");
   }
 
   return true;
