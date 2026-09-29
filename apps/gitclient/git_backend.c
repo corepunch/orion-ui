@@ -498,6 +498,12 @@ static const char *git_local_name(const char *name) {
   return slash ? slash + 1 : name;
 }
 
+// "<remote>/HEAD" is the symbolic default pointer, not a branch.
+static bool git_is_remote_head(const char *name) {
+  const char *slash = strchr(name, '/');
+  return slash && !strcmp(slash + 1, "HEAD");
+}
+
 bool git_default_branch(git_repo_t *repo, char *buf, int buf_sz) {
   if (!repo || !buf || buf_sz <= 0) return false;
   buf[0] = '\0';
@@ -505,8 +511,7 @@ bool git_default_branch(git_repo_t *repo, char *buf, int buf_sz) {
   const char *sym[] = { "git", "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD", NULL };
   if (git_run_sync(repo, sym, raw, sizeof(raw))) {
     gc_trim_line(raw);
-    const char *name = strrchr(raw, '/');
-    name = name ? name + 1 : raw;
+    const char *name = !strncmp(raw, "origin/", 7) ? raw + 7 : raw;
     if (name[0] && strcmp(name, "HEAD") != 0) {
       strncpy(buf, name, (size_t)buf_sz - 1);
       buf[buf_sz - 1] = '\0';
@@ -525,7 +530,7 @@ bool git_default_branch(git_repo_t *repo, char *buf, int buf_sz) {
       return true;
     }
   }
-  return git_current_branch(repo, buf, buf_sz);
+  return false;
 }
 
 static int git_branch_rank(const git_branch_t *b) {
@@ -583,8 +588,7 @@ int git_get_branches(git_repo_t *repo, git_branch_t *out, int max) {
           b->is_remote = false;
         } else if (!strncmp(ref, "refs/remotes/", 13)) {
           const char *name = ref + 13;
-          if (strcmp(name + (strlen(name) > 5 ? strlen(name) - 5 : 0), "/HEAD") == 0 ||
-              !strcmp(name, "origin/HEAD") || strstr(name, "/HEAD")) {
+          if (git_is_remote_head(name)) {
             if (nl) { p = nl + 1; continue; }
             break;
           }
@@ -625,7 +629,7 @@ int git_get_branches(git_repo_t *repo, git_branch_t *out, int max) {
           const char *arrow = strstr(name, " -> ");
           int nlen = arrow ? (int)(arrow - name) : (int)strlen(name);
           git_copy_field(b->name, sizeof(b->name), name, nlen);
-          if (b->is_remote && strstr(b->name, "/HEAD")) { if (!nl) break; line = nl + 1; continue; }
+          if (b->is_remote && git_is_remote_head(b->name)) { if (!nl) break; line = nl + 1; continue; }
           if (def[0] && !b->is_remote && !strcmp(b->name, def)) b->is_default = true;
           if (b->name[0]) raw_n++;
         }

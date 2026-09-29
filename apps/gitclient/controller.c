@@ -180,9 +180,11 @@ bool gc_prune_remote(const char *remote) {
 bool gc_reload_history_log(const char *ref) {
   gc_state_t *gc = g_gc;
   if (!gc || !gc->repo || !gc->history_db) return false;
-  send_db_message(gc->history_db, dbDelete, ID_DB_COMMITS, (void *)(intptr_t)0);
   git_commit_t raw[500];
   int count = git_get_log_ref(gc->repo, ref, raw, 500);
+  GC_TRACE("reload_history_log ref=%s count=%d", ref ? ref : "(head)", count);
+  if (count <= 0) return false;
+  send_db_message(gc->history_db, dbDelete, ID_DB_COMMITS, (void *)(intptr_t)0);
   for (int i = 0; i < count; i++) {
     db_commit_t rec = {0};
     strncpy(rec.hash, raw[i].hash, sizeof(rec.hash) - 1);
@@ -195,6 +197,8 @@ bool gc_reload_history_log(const char *ref) {
     send_message(gc->log_win, tvRefresh, 0, NULL);
   gc->selected_commit = -1;
   gc->selected_file = -1;
+  gc_diff_invalidate();
+  gc_diff_refresh();
   return true;
 }
 
