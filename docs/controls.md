@@ -137,6 +137,30 @@ Key points:
 - The OK button's own `btnClicked` handler should still validate — the button might
   be enabled via keyboard accelerator or keyboard-only interaction.
 
+## Card, Badge and TileGrid
+
+Composite tiles are built from controls and laid out by the auto-layout system, the way an
+`NSCollectionViewItem` or `UICollectionViewCell` is built from views. Nothing is painted or positioned by hand.
+
+- **Card**: a vertical stack with a themed face (`draw_card`), hover, an optional accent edge
+  (`cdSetEdgeColor`) and selection state. Children can be Labels, Badges, nested StackViews or FlowViews.
+  Clicks are reported to the parent as `cdnClicked` / `cdnActivated`.
+- **Badge**: a self-measuring tinted label; `bdSetColor` takes a theme colour role.
+- **Label** gains single-line truncation: `lbSetStyle` with `label_create_params_t.truncate` cuts with "..." instead
+  of wrapping. Give a truncating label `WINDOW_FLEXSPACE` in a horizontal stack so it takes the leftover width.
+- **TileGrid**: an adaptive grid. It fits as many columns as the minimum tile width allows (`tgSetMinTileWidth`),
+  stretches the tiles to fill the row, measures each tile at that width, and makes a row as tall as its tallest tile.
+  It scrolls vertically, owns selection and arrow-key navigation, and notifies its root with `tgnSelChange` and
+  `tgnActivate` (`LOWORD` = tile index). `tgClear` destroys the tiles; add new ones with `create_window(..., grid, win_card, ...)`.
+
+```c
+window_t *card = create_window(tooltip, 0, &f, grid, win_card, hinst, NULL);
+send_message(card, cdSetEdgeColor, 0, (void *)(uintptr_t)color_with_alpha(get_sys_color(brTextWarning), 0x78));
+window_t *row = create_window("", 0, &f, card, win_stack, hinst, NULL);
+window_set_layout(row, WINDOW_STACK_HORIZONTAL, 6, (irect16_t){0, 0, 0, 0});   // containers built in code
+// ... add Labels / Badges, then window_layout_sync(grid);
+```
+
 ## Label
 
 ```c

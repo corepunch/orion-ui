@@ -219,7 +219,8 @@
                 <Button name="repos"       command="file.repositories"  icon="git-repos"           text="Manage"     tooltip="Add, scan for, or remove repositories" />
             </Toolbar>
             <requires library="gitclient_components" />
-            <RepoBoard name="board" flags="notitle,nofill,vscroll,flexspace"/>
+            <StackView name="summary" orientation="horizontal" spacing="6" padding="14 10 14 2" />
+            <TileGrid name="board" flags="notitle,nofill,vscroll,flexspace" spacing="6" padding="10 6 10 10" />
         </form>
 
         <!-- Changes page: file list + inline commit panel on left, diff on right. -->

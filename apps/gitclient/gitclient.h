@@ -9,7 +9,6 @@
 
 #include <orion/ui.h>
 #include "components/diff_view.h"
-#include "components/repo_board.h"
 #include <orion/commctl/columnview.h>
 #include <orion/commctl/menubar.h>
 #include <orion/user/accel.h>
@@ -133,7 +132,16 @@ typedef struct git_repo_s git_repo_t;
 
 typedef struct { char path[512]; bool linked, bare, prunable; } git_worktree_t;
 
-typedef gc_tile_t git_summary_t;
+// One overview tile: the at-a-glance state of a single working tree.
+typedef struct {
+  char path[512], repo[96], dir[96], branch[96], upstream[96], subject[160], when[32];
+  int  staged, unstaged, untracked, conflicts, ahead, behind, stashes;
+  bool linked, detached, no_upstream, gone, missing, initial, prunable;
+} git_summary_t;
+
+static inline bool gc_tile_needs_attention(const git_summary_t *t) {
+  return t->missing || t->conflicts || t->staged || t->unstaged || t->untracked || t->ahead || t->behind || t->no_upstream || t->gone;
+}
 
 // ============================================================
 // Git operation limits
@@ -278,7 +286,11 @@ typedef struct {
   window_t    *menubar_win;
   window_t    *tabs_win;
   window_t    *overview_page_win;
-  window_t    *board_win;
+  window_t    *summary_win;       // overview: stack holding the totals and the filter button
+  window_t    *filter_btn;
+  window_t    *board_win;        // overview: TileGrid of Cards
+  bool         attention_only;
+  int          visible_tiles[GC_MAX_TILES];   // grid index -> tiles[] index
   window_t    *changes_page_win;
   window_t    *history_page_win;
   window_t    *github_page_win;
@@ -427,9 +439,13 @@ void gc_refresh_all(void);
 void gc_show_search_dialog(window_t *parent);
 void gc_update_status(void);
 void gc_set_view_mode(int tab);
+// Overview page (view_overview.c)
 void gc_overview_refresh(void);
 void gc_overview_open(int index);
 void gc_overview_fetch_all(void);
+void gc_overview_status(char *out, size_t n);
+bool gc_overview_handle_command(uint32_t wparam, void *lparam);
+result_t gc_page_overview_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 void gc_recent_load(void);
 void gc_recent_save(void);
 void gc_recent_add(const char *path);

@@ -127,6 +127,18 @@ void layout_arrange_window(window_t *win, const irect16_t *rect) {
     layout_stack_arrange_fallback(win, rect);
 }
 
+void window_set_layout(window_t *win, flags_t orientation, int spacing, irect16_t padding) {
+  if (!win || spacing < 0 || spacing > 255) {
+    fprintf(stderr, "[layout] window_set_layout rejected win=%u spacing=%d\n", win ? (unsigned)win->id : 0, spacing);
+    fflush(stderr);
+    return;
+  }
+  win->flags = (win->flags & ~WINDOW_STACK_HORIZONTAL) | (orientation & WINDOW_STACK_HORIZONTAL);
+  win->layout.layout_spacing = (uint8_t)spacing;
+  win->layout.layout_padding = padding;
+  window_layout_sync(win);
+}
+
 void window_layout_sync(window_t *win) {
   if (!win || !(win->flags & WINDOW_AUTO_LAYOUT))
     return;

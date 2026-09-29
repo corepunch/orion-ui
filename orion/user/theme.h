@@ -193,7 +193,8 @@ typedef struct {
   int window_corner_radius;  // logical pixels, applied by the SDF compositor
   int card_corner_radius;    // draw_card(): rounded-corner radius (0 = square)
   int card_edge_width;       // draw_card(): accent edge width in logical pixels
-  int card_ring_width;       // draw_card(): selection ring thickness
+  int card_ring_width;       // draw_card(): selection ring thickness (reserved inside the card bounds)
+  int card_padding_x, card_padding_y; // Card control: content inset from the face edge
   int window_shadow_blur;    // logical pixels; zero disables shadows
   ipoint16_t window_shadow_offset;
   uint32_t window_shadow_color;

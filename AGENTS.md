@@ -189,6 +189,11 @@ comes from the active theme (`card_corner_radius`, `card_edge_width`, ...). Apps
 approximate it by layering fills, insetting overlapping rounded rects, or clipping one shape with
 another; those tricks leak past the silhouette (sub-pixel slivers at the corners) and ignore the theme.
 
+- **Composite views are sub-windows, laid out by auto-layout.** A card, tile or row is a container
+  (`Card`, `StackView`, `FlowView`, `TileGrid`) whose children are ordinary controls (`Label`, `Badge`,
+  buttons). Never build one as a single control that paints its content and hit-tests it with hand-computed
+  coordinates; measure/arrange, truncation, wrapping and reflow belong to the layout system. Containers
+  created in code are configured with `window_set_layout()`.
 - An accent edge is a **plain rectangle**. Hand it to the card-drawing function
   (`draw_card(r, state, edge_color)`); the theme rounds or squares the card and its edge together,
   in a single pass that shares one silhouette.

@@ -379,12 +379,15 @@ typedef struct {
   uint32_t color_index;   // palette index for label text color; 0 = transparent
   ui_font_t font;         // prepared font role for labels
   bool      color_set;    // whether color_index is explicitly set
+  bool      truncate;     // single line: cut with "..." instead of wrapping when too narrow
 } label_create_params_t;
 
+#define LABEL_PACK_COLOR_SET (1u << 16)
+#define LABEL_PACK_TRUNCATE  (1u << 17)
 static inline uint32_t label_pack_userdata(uint32_t color_index, ui_font_t font, bool color_set) {
   return (uint32_t)(color_index & 0xffu) |
          ((uint32_t)(font & 0xffu) << 8) |
-         (color_set ? (1u << 16) : 0u);
+         (color_set ? LABEL_PACK_COLOR_SET : 0u);
 }
 
 // FormEditor component registry metadata/API.
@@ -629,6 +632,9 @@ void resize_window(window_t *win, int new_w, int new_h);
 void layout_measure_window(window_t *win, layout_measure_t *m);
 void layout_arrange_window(window_t *win, const irect16_t *rect);
 void window_layout_sync(window_t *win);
+// Configures a layout container created in code (forms use the orientation/spacing/padding attributes):
+// orientation is WINDOW_STACK_HORIZONTAL or WINDOW_STACK_VERTICAL, spacing is the gap between children.
+void window_set_layout(window_t *win, flags_t orientation, int spacing, irect16_t padding);
 void set_default_window_position(int x, int y);
 
 // Window message functions

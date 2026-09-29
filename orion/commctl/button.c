@@ -290,8 +290,12 @@ result_t win_space(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     case evMeasure: {
       layout_measure_t *m = (layout_measure_t *)lparam;
       if (m) {
-        m->desired_w = MAX(0, win->frame.w);
-        m->desired_h = MAX(0, win->frame.h);
+        // A flexible spacer is a spring: no intrinsic size (1 px; measure treats 0 as "use the frame"),
+        // it takes what the container leaves. Measuring its previous arranged frame would feed the
+        // layout back into itself.
+        bool spring = (win->flags & WINDOW_FLEXSPACE) != 0;
+        m->desired_w = spring ? 1 : MAX(0, win->frame.w);
+        m->desired_h = spring ? 1 : MAX(0, win->frame.h);
       }
       return true;
     }

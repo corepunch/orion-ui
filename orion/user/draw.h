@@ -17,11 +17,14 @@ static inline uint32_t color_with_alpha(uint32_t color, uint8_t alpha) {
 }
 // A card: a face (brControlBg, brButtonHover when hovered) with an optional accent edge on its left side.
 // The edge is a plain `edge_width`-pixel rectangle; the active theme's card_corner_radius rounds (or not)
-// the card and the edge together. CTRL_SELECTED draws a ring outside `r` (accent when CTRL_FOCUSED).
+// the card and the edge together. CTRL_SELECTED draws an accent-colour ring in the theme's card_ring_width margin,
+// which is reserved inside `r` for every card so selecting never shifts content.
 void draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color);
 // Small tinted label ("3 modified"): a rounded fill in `color` at low alpha with the text in `color`.
 // Drawn at (x, y) with the given height; returns the badge width so callers can chain badges.
 int  draw_badge(ui_font_t font, const char *text, int x, int y, int height, uint32_t color);
+int  measure_badge(ui_font_t font, const char *text);   // width draw_badge() will use
+#define BADGE_HEIGHT 18
 // Procedural rounded-box shadow; radius, blur (Gaussian sigma), and offset are logical pixels.
 void draw_rect_shadow(irect16_t r, float radius, float blur, ipoint16_t offset, uint32_t color);
 void draw_gradient_rect(irect16_t r, uint32_t left_color, uint32_t right_color);

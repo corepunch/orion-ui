@@ -18,7 +18,6 @@
 #include "apps/gitclient/gitclient.h"
 #include "apps/gitclient/gc_actions.h"
 
-#include "apps/gitclient/components/repo_board.c"
 #include <stdio.h>
 #include <string.h>
 
@@ -657,57 +656,6 @@ void test_every_menu_action_has_handler(void) {
     PASS();
 }
 
-// 12. RepoBoard: keyboard/mouse selection, open notification, attention filter ──
-
-static int  s_board_open = -1, s_board_select = -1, s_board_events = 0;
-static result_t board_parent_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
-    (void)win; (void)lparam;
-    if (msg == evCommand) {
-        s_board_events++;
-        if (HIWORD(wparam) == GC_BOARD_OPEN)   s_board_open   = LOWORD(wparam);
-        if (HIWORD(wparam) == GC_BOARD_SELECT) s_board_select = LOWORD(wparam);
-        return true;
-    }
-    return msg == evCreate || msg == evDestroy;
-}
-
-void test_repo_board_navigation_and_open(void) {
-    TEST("RepoBoard: arrows move selection, Enter/double-click open, filter hides clean tiles");
-    test_env_init();
-    window_t *parent = test_env_create_window("Board host", 0, 0, 640, 480, board_parent_proc, NULL);
-    ASSERT_NOT_NULL(parent);
-    irect16_t frame = {0, 0, 640, 480};
-    window_t *board = create_window("board", WINDOW_VSCROLL, &frame, parent, gc_repo_board_proc, 0, NULL);
-    ASSERT_NOT_NULL(board);
-
-    gc_tile_t tiles[3]; memset(tiles, 0, sizeof(tiles));
-    snprintf(tiles[0].repo, sizeof(tiles[0].repo), "alpha"); snprintf(tiles[0].path, sizeof(tiles[0].path), "/a"); tiles[0].unstaged = 2;
-    snprintf(tiles[1].repo, sizeof(tiles[1].repo), "beta");  snprintf(tiles[1].path, sizeof(tiles[1].path), "/b");
-    snprintf(tiles[2].repo, sizeof(tiles[2].repo), "gamma"); snprintf(tiles[2].path, sizeof(tiles[2].path), "/c"); tiles[2].ahead = 1;
-    send_message(board, rbSetTiles, 3, tiles);
-    ASSERT_EQUAL((int)send_message(board, rbGetSelection, 0, NULL), 0);
-
-    send_message(board, evKeyDown, AX_KEY_RIGHTARROW, NULL);
-    ASSERT_EQUAL((int)send_message(board, rbGetSelection, 0, NULL), 1);
-    ASSERT_EQUAL(s_board_select, 1);
-    send_message(board, evKeyDown, AX_KEY_ENTER, NULL);
-    ASSERT_EQUAL(s_board_open, 1);
-
-    // Attention-only hides the clean 'beta' tile; navigation skips it.
-    send_message(board, rbSetFilter, 1, NULL);
-    send_message(board, rbSetSelection, 0, NULL);
-    send_message(board, evKeyDown, AX_KEY_RIGHTARROW, NULL);
-    ASSERT_EQUAL((int)send_message(board, rbGetSelection, 0, NULL), 2);
-
-    // Double-click on the first slot opens it (tile 0 sits at the top-left of the grid).
-    s_board_open = -1;
-    send_message(board, rbSetFilter, 0, NULL);
-    send_message(board, evLeftButtonDoubleClick, MAKEDWORD(30, 44 + 30), NULL);
-    ASSERT_EQUAL(s_board_open, 0);
-    test_env_shutdown();
-    PASS();
-}
-
 // ── Entry point ───────────────────────────────────────────────────────────────
 
 int main(void) {
@@ -732,7 +680,6 @@ int main(void) {
     test_toolbar_buttons_reference_menu_command_ids();
     test_action_metadata_and_accelerators();
     test_every_menu_action_has_handler();
-    test_repo_board_navigation_and_open();
 
     gct_remove_dir(s_repo);
 

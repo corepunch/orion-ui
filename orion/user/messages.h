@@ -422,6 +422,21 @@ enum {
   tcSetImageStrip,   // lparam = bitmap_strip_t*; sets shared icon strip for all tabs
   tcSetTabIcon,      // wparam = tab_index; lparam = (void*)(intptr_t)icon_index in the strip; -1 = clear
 };
+// Card / Badge / TileGrid messages, in the spirit of NSCollectionView / UICollectionView items.
+enum {
+  lbSetStyle = evUser + 380, // lparam = label_create_params_t*: colour role, font role, single-line truncation
+  bdSetColor,                // wparam = sys_color_idx_t
+  cdSetEdgeColor,            // lparam = (void *)(uintptr_t) packed colour; alpha 0 = no accent edge
+  cdSetState,                // wparam = ctrl_state_t bits (CTRL_SELECTED | CTRL_FOCUSED)
+  cdnClicked,                // card -> parent (evCommand): LOWORD = card id, lparam = card
+  cdnActivated,              // card -> parent (evCommand): double-click
+  tgSetMinTileWidth,         // wparam = minimum tile width in pixels
+  tgGetSelection,            // returns the selected tile index or -1
+  tgSetSelection,            // wparam = tile index; does not notify
+  tgClear,                   // destroys every tile and clears the selection
+  tgnSelChange,              // tile grid -> root (evCommand): LOWORD = tile index, lparam = grid
+  tgnActivate,               // tile grid -> root (evCommand): Enter or double-click on a tile
+};
 #define TAB_CONTROL_HEIGHT 22
 #define TAB_STYLE_ICONS_ONLY (1u << 0) // show tab icons without page-title labels
 
