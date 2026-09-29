@@ -11,6 +11,9 @@
 /* #define SCENER_USE_TEXTURES */
 
 #define M_PIf 3.14159265358979323846f
+#define SCENER_NEAR 0.1f   /* perspective clip planes, renderer units */
+#define SCENER_FAR 1000.0f
+#define CM_PER_METRE 100.0f /* scene XML is authored in cm; the renderer works in metres */
 
 #define DA_PUSH(arr,count,cap,item) do{ \
 	if((count) >= (cap)){ (cap) = (cap) ? (cap)*2 : 8; \
@@ -339,6 +342,7 @@ int scene_rig_joint_world(Scene *s,mat4 *matrix);
 int scene_rig_reparent_joint(Scene *s,void *instance,void *joint,const char *parentName);
 void scene_set_time(Scene *s,float seconds);
 void scene_print_joints(Scene *s,FILE *out);
+int scene_joint_position(Scene *s,const char *instance,const char *joint,vec3 *out);
 void scene_get_bounds(Scene *s,vec3 *outMin,vec3 *outMax);
 void scene_init_textures(Scene *s);
 void scene_free_textures(Scene *s);

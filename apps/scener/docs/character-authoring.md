@@ -359,8 +359,8 @@ instance's root over the ground, so it tracks walks, gaits and mocap travel.
 
 [mocap_study.blks](../scenes/mocap_study.blks) is the worked example.
 `tools/fetch_cmu_mocap.py` downloads twenty CMU clips and
-`tools/render_mocap_videos.py` renders one MP4 per clip, encoding with
-`tools/frames_to_mp4.swift` (AVFoundation, no ffmpeg needed).
+`tools/render_mocap_videos.py` renders one MP4 per clip with
+`scener --render … --frames … --output CLIP.mp4`.
 
 Render a sequence, or scrub a single moment:
 
@@ -375,18 +375,16 @@ rewinds.
 
 ## Characters in 3D infographics
 
-The [IK/FK infographic](../scenes/infographics/README.md) uses the existing
+The [IK/FK reel](../scenes/infographics/README.md) uses the existing
 Ecstatica II Joe with calibrated CAT controls to explain hand control. Both
 instances share a torso-turn clip and the same initial FK arm pose; one adds
-a world-space wrist constraint. The sample checks hand error, arm lengths,
-and stationary feet at every output time, then projects sampled joints into
-labels, markers, and a trajectory overlay.
+a world-space wrist constraint. The reel anchors callouts, joint chains and a
+hand trail to the posed joints, reads measurements from them, and checks hand
+error, arm lengths and planted feet on every frame; see [reels](reels.md).
 
 This example uses newly authored motion. Decoded Ecstatica actions, BVH
 retargeting, and procedural gaits are other available motion sources; retain
 their provenance and known timing/contact limits when making an explanation.
-See the [infographic studio guide](infographic-studio.md) for the complete
-render/composition workflow and proposed native annotation features.
 
 ## Editor
 

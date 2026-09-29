@@ -25,9 +25,10 @@ python3 tools/ecstatica/render_review.py \
 for name in joe-run full-villager-walk slender-villager-walk goblin-swing; do
   swift apps/scener/tools/frames_to_gif.swift \
     /tmp/e2-review-frames/$name Standing 24 /tmp/e2-review/$name/motion.gif
-  swift apps/scener/tools/frames_to_mp4.swift \
-    /tmp/e2-review-frames/$name Standing 24 /tmp/e2-review/$name/motion.mp4
 done
 ```
+
+For an MP4, render the scene straight to video instead of encoding frames:
+`scener --render SCENE --camera Standing --frames 0:END:24 --output motion.mp4`.
 
 The output sample folders must be new; the renderer refuses to overwrite an existing sample. The scene, original action JSON, source actor JSON and conversion details are stored with every preview. No ISO is included.
