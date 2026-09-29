@@ -205,7 +205,8 @@ static bool reel_check_unused(reel_t *r, reel_xml_t *x) {
 /* ── Definitions ──────────────────────────────────────────────────────── */
 
 static bool reel_path(const reel_t *r, const char *src, char *out, size_t size) {
-	if (src[0] == '/') snprintf(out, size, "%s", src);
+	bool abs = src[0] == '/' || src[0] == '\\' || (src[0] && src[1] == ':');
+	if (abs) snprintf(out, size, "%s", src);
 	else snprintf(out, size, "%s/%s", r->dir, src);
 	FILE *f = fopen(out, "rb");
 	if (f) { fclose(f); return true; }
