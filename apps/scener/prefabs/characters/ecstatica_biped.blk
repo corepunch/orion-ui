@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Ecstatica actor 0 study: Z up, front -Y, left +X; ground Z=0, footprint about 45 x 38 cm; roughly 180 cm tall.
+     Source radii scaled uniformly by 0.207 cm/unit; split abdomen/ribcage and neutral bone rest pose are adaptations. -->
+<prefab>
+  <bone name="pelvis" aim="0 90" length="26.496" radius="13.248 12.42" color=".32 .40 .035" shininess="2" rings="16" slices="24" overlap="0">
+    <bone name="left_hip" aim="0 -90" length="39.33" radius="6.624 9.108" color=".32 .40 .035" shininess="2" rings="16" slices="24" at="0.5" from="90 0" sink="4.347" mirror="1" overlap="2.691">
+      <bone name="left_knee" aim="0 -90" length="43.056" radius="4.14 4.968" color=".44 .24 .105" shininess="2" rings="16" slices="24" overlap="2.484">
+        <ellipsoid name="left_kneecap" on="0 0" at="0.08" sink="2.259" radii="4.968 5.796 8.28" color=".32 .40 .035" rings="16" slices="24" />
+        <ellipsoid name="left_calf" on="180 0" at="0.4" sink="3.159" radii="5.796 6.624 11.592" color=".44 .24 .105" rings="16" slices="24" />
+        <bone name="left_foot" aim="0 0" length="22.563" radius="5.796 2.484" color=".44 .24 .105" shininess="2" rings="16" slices="24" overlap="5.589" foot="1" />
+      </bone>
+    </bone>
+    <bone name="abdomen" aim="0 90" length="16.2" radius="13.248 10.8" color=".78 .035 .065" shininess="2" rings="16" slices="24" overlap="7.2">
+      <bone name="ribcage" aim="0 90" length="18" radius="14.076 11.592" color=".78 .035 .065" shininess="2" rings="16" slices="24" overlap="14.184">
+        <ellipsoid name="left_pectoral" on="63.4349 0" at="0.868" sink="9.18849" radii="13.248 9.936 14.076" color=".78 .035 .065" shininess="2" rings="16" slices="24" />
+        <ellipsoid name="right_pectoral" on="-63.4349 0" at="0.868" sink="9.18849" radii="13.248 9.936 14.076" color=".78 .035 .065" shininess="2" rings="16" slices="24" />
+        <bone name="left_shoulder" aim="90 -78" length="25.254" radius="4.968 5.796" color=".78 .035 .065" shininess="2" rings="16" slices="24" at="1.305" from="75.75 0" sink="-2.547" mirror="1" overlap="3.933">
+          <ellipsoid name="left_deltoid" on="90 0" at="0.09" sink="2.79" radii="9.108 8.28 9.108" color=".78 .035 .065" rings="16" slices="24" />
+          <bone name="left_elbow" aim="0 -86" length="26.082" radius="4.14 3.312" color=".98 .69 .36" shininess="2" rings="16" slices="24" overlap="1.863">
+            <bone name="left_hand" aim="0 -86" length="9.936" radius="4.14 4.14" color=".98 .69 .36" shininess="2" rings="16" slices="24" overlap="3.312" />
+          </bone>
+        </bone>
+        <bone name="neck" aim="0 90" length="19.8" radius="5.796 5.796" color=".98 .69 .36" shininess="2" rings="16" slices="24" overlap="5.004">
+          <bone name="head" aim="0 90" length="26.1" radius="9.108 9.936" color=".98 .69 .36" shininess="2" rings="16" slices="24" overlap="7.02">
+            <ellipsoid name="left_cheek" on="74.7449 0" at="0.27034482758620687" sink="6.69499" radii="6.624 9.108 8.28" color=".98 .69 .36" shininess="2" rings="16" slices="24" />
+            <ellipsoid name="right_cheek" on="-75.9638 0" at="0.27034482758620687" sink="6.48711" radii="6.624 9.108 8.28" color=".98 .69 .36" shininess="2" rings="16" slices="24" />
+            <ellipsoid name="ponytail_tie" on="180 0" at="0.3258620689655172" sink="-4.36643" radii="4.14 4.14 4.14" color=".085 .045 .025" shininess="2" rings="16" slices="24" />
+            <ellipsoid name="ponytail" on="180 0" at="0.19310344827586207" sink="-10.2379" radii="2.484 7.452 2.484" color=".40 .025 .018" shininess="2" rings="16" slices="24" />
+            <ellipsoid name="hair" on="180 0" at="0.6510344827586206" sink="5.56113" radii="13.248 12.42 9.108" color=".40 .025 .018" shininess="2" rings="16" slices="24" rot="-30.9375 0 0" />
+            <ellipsoid name="left_hair" on="90 0" at="0.7462068965517241" sink="3.9744" radii="6.624 9.936 9.936" color=".40 .025 .018" shininess="2" rings="16" slices="24" rot="0 -67.5 0" />
+            <ellipsoid name="right_hair" on="-90 0" at="0.7462068965517241" sink="3.9744" radii="6.624 9.936 9.936" color=".40 .025 .018" shininess="2" rings="16" slices="24" rot="0 67.5 0" />
+            <ellipsoid name="left_eye" on="18.4349 0" at="0.36551724137931035" sink="-0.630571" radii="0.828 0.828 2.484" color=".92 .88 .74" shininess="2" rings="16" slices="24" />
+            <ellipsoid name="right_eye" on="-17.354 0" at="0.36551724137931035" sink="-0.556821" radii="0.828 0.828 2.484" color=".92 .88 .74" shininess="2" rings="16" slices="24" />
+            <ellipsoid name="left_pupil" on="17.049 0" at="0.34965517241379307" sink="-1.4437" radii="0.828 1.656 0.828" color=".085 .045 .025" shininess="2" rings="16" slices="24" />
+            <ellipsoid name="right_pupil" on="-16.0399 0" at="0.34965517241379307" sink="-1.37589" radii="0.828 0.828 0.828" color=".085 .045 .025" shininess="2" rings="16" slices="24" />
+            <ellipsoid name="mouth" on="-5.19443 0" at="-0.054827586206896546" sink="0.577719" radii="2.484 0.828 0.828" color=".085 .045 .025" shininess="2" rings="16" slices="24" />
+            <ellipsoid name="left_ear" on="100.305 0" at="0.33379310344827584" sink="-0.137377" radii="0.072 3.312 4.14" color=".98 .69 .36" shininess="2" rings="16" slices="24" />
+            <ellipsoid name="right_ear" on="-100.305 0" at="0.33379310344827584" sink="-0.137377" radii="0.072 3.312 4.14" color=".98 .69 .36" shininess="2" rings="16" slices="24" />
+            <ellipsoid name="nose" on="0 0" at="0.27" sink="-1.08" radii="1.26 2.07 2.34" color=".98 .69 .36" rings="8" slices="8" />
+          </bone>
+        </bone>
+      </bone>
+    </bone>
+    <ellipsoid name="belt" on="0 0" at="0.8831521739130435" sink="7.97957" radii="13.248 13.248 3.312" color=".085 .045 .025" shininess="2" rings="16" slices="24" />
+    <ellipsoid name="left_buttock" on="129.472 0" at="0.40625" sink="8.10652" radii="10.764 9.936 12.42" color=".32 .40 .035" shininess="2" rings="16" slices="24" />
+    <ellipsoid name="right_buttock" on="-129.472 0" at="0.40625" sink="8.10652" radii="10.764 9.936 12.42" color=".32 .40 .035" shininess="2" rings="16" slices="24" />
+  </bone>
+</prefab>
