@@ -246,7 +246,7 @@ reel_video_t *reel_video_open(const char *path, int width, int height, float fps
 	char command[2048];
 	snprintf(command, sizeof(command), "ffmpeg -loglevel error -y -f rawvideo -pix_fmt rgba -s %dx%d -r %g -i - "
 	         "-c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p -movflags +faststart '%s'", width, height, fps, path);
-	FILE *pipe = system("command -v ffmpeg >/dev/null 2>&1") == 0 ? popen(command, "w") : NULL;
+	FILE *pipe = popen(command, "w");
 	if (!pipe) {
 		fprintf(stderr, "[reel] MP4 output needs ffmpeg on PATH; render PNG frames with --output-dir instead of %s\n", path);
 		fflush(stderr);
