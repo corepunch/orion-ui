@@ -8,11 +8,15 @@
 #include <orion/user/vga_font.h>
 #include <orion/commctl/menubar.h>
 
+// ============================================================
+// Open / refresh
+// ============================================================
+
 void gc_set_view_mode(int tab) {
   gc_state_t *gc = g_gc; if (!gc || !gc->main_win) return;
   if (gc->tab != GC_TAB_OVERVIEW && tab == GC_TAB_OVERVIEW) gc->focus_tab = gc->tab ? gc->tab : GC_TAB_CHANGES;
   gc->tab = tab;
-  gc_diff_invalidate();
+  gc_diff_invalidate();   // each page owns its own diff window
   gc->history_mode = (tab == GC_TAB_HISTORY);
   if (gc->tabs_win) send_message(gc->tabs_win, tcSetSelection, (uint32_t)tab, NULL);
 
@@ -58,4 +62,12 @@ void gc_set_view_mode(int tab) {
   if (tab == GC_TAB_CHANGES || tab == GC_TAB_HISTORY) gc_diff_refresh();
   gc_update_status();
   invalidate_window(gc->main_win);
+}
+
+static const char *gc_repo_display_name(const git_repo_t *repo) {
+  const char *path = git_repo_path((git_repo_t *)repo);
+  const char *slash = path ? strrchr(path, '/') : NULL;
+  const char *backslash = path ? strrchr(path, '\\') : NULL;
+  const char *separator = slash > backslash ? slash : backslash;
+  return separator && separator[1] ? separator + 1 : path;
 }
