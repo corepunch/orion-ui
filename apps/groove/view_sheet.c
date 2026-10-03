@@ -57,10 +57,13 @@ void draw_clip(window_t *win, const block_t *b, irect16_t r, uint32_t color, boo
   if (ring) fill_rounded_rect(get_sys_color(brAccent), rect_inset(r, -2), radius + 2);
   fill_rounded_rect(color, r, radius);
   uint32_t ink = color_with_alpha(get_sys_color(brWindowDarkBg), (color >> 24) < 0xff ? 0x70 : 0x55);
-  for (int k = 0; k < b->audio.npeaks; k++) {
-    int x0 = r.x + k * r.w / b->audio.npeaks, x1 = r.x + (k + 1) * r.w / b->audio.npeaks;
-    int h = MAX(1, b->audio.peaks[k] * (r.h - 14) / 255);
-    fill_rect(ink, R(x0, r.y + r.h - 4 - h, MAX(1, x1 - x0 - 1), h));
+  int np = b->audio.npeaks;
+  for (int x = 0; x < r.w && np > 1; x++) {
+    float f = (x + 0.5f) * np / r.w - 0.5f;
+    int k = f < 0 ? 0 : (int)f, k1 = k + 1 < np ? k + 1 : np - 1;
+    float t = f < 0 ? 0 : f - k, p = b->audio.peaks[k] + (b->audio.peaks[k1] - b->audio.peaks[k]) * t;
+    int h = MAX(1, (int)(p * (r.h - 14) / 255));
+    fill_rect(ink, R(r.x + x, r.y + r.h - 4 - h, 1, h));
   }
   draw_text_ellipsized(FONT_SMALL, b->name, r.x + 6, r.y + 3, r.w - 10, color_with_alpha(get_sys_color(brTextNormal), (color >> 24)));
 }

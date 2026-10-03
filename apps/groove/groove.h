@@ -38,8 +38,8 @@
 // ── Block library ────────────────────────────────────────────────────────
 typedef enum { CAT_DRUMS, CAT_BASS, CAT_PIANO, CAT_GUITAR, CAT_ELECTRONIC, CAT_COUNT } category_t;
 
-#define GR_PEAKS_BAR 32
-#define GR_PEAKS_MAX 128   // 4 bars
+#define GR_PEAKS_BAR 128
+#define GR_PEAKS_MAX 512   // 4 bars
 
 // Rendered audio plus its overview, swapped as one unit when the tempo changes.
 typedef struct {
