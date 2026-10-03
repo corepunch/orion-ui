@@ -8,7 +8,7 @@
 #define TILE_PAD  12
 #define BAR_TILE_W 104
 #define BIN_SLOP 5
-#define MAX_TILES 16
+#define MAX_TILES 32
 
 typedef struct {
   category_t cat;
@@ -19,6 +19,9 @@ typedef struct {
   bool dragging;
 } bin_t;
 
+static int vpos(window_t *win) { return get_scroll_pos(win, SB_VERT); }
+
+// Rects are in content space; wraps to a new row when the next tile would overflow the width.
 static void layout_tiles(window_t *win, bin_t *st) {
   irect16_t cr = get_client_rect(win);
   int x = TILE_PAD, y = TILE_PAD;
@@ -28,6 +31,9 @@ static void layout_tiles(window_t *win, bin_t *st) {
     st->rects[i] = R(x, y, w, TILE_H);
     x += w + TILE_GAP;
   }
+  int content_h = (st->count ? st->rects[st->count - 1].y + TILE_H : 0) + TILE_PAD;
+  scroll_info_t si = { .fMask = SIF_RANGE | SIF_PAGE | SIF_POS, .nMin = 0, .nMax = content_h, .nPage = cr.h, .nPos = vpos(win) };
+  set_scroll_info(win, SB_VERT, &si, false);
 }
 
 static int hit_tile(const bin_t *st, int mx, int my) {
@@ -41,7 +47,7 @@ static void paint_bin(window_t *win, bin_t *st) {
   layout_tiles(win, st);
   for (int i = 0; i < st->count; i++) {
     const block_t *b = block_get(st->ids[i]);
-    irect16_t r = st->rects[i];
+    irect16_t r = rect_offset(st->rects[i], 0, -vpos(win));
     bool lit = i == st->hover || (st->dragging && i == st->press);
     draw_clip(win, b, r, lit ? color_with_alpha(category_color(b->cat), 0xd8) : category_color(b->cat), false);
   }
@@ -66,6 +72,8 @@ result_t win_bin(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       st->hover = st->press = -1;
       return true;
     case evPaint: paint_bin(win, st); return true;
+    case evVScroll: invalidate_window(win); return true;
+    case evResize: invalidate_window(win); return false;
     case evMouseMove: {
       int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam);
       if (st->press >= 0) {
@@ -74,7 +82,7 @@ result_t win_bin(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
           g_app->drag = (drag_t){ .active = true, .block = st->ids[st->press], .from_clip = -1, .track = -1 };
           GR_TRACE("bin drag start win=%u block=%d", (unsigned)win->id, g_app->drag.block);
         }
-        if (st->dragging) send_message(g_app->sheet, shDragOver, MAKEDWORD(window_screen_x(win) + mx, window_screen_y(win) + my), NULL);
+        if (st->dragging) send_message(g_app->sheet, shDragOver, MAKEDWORD(window_screen_x(win) + mx, window_screen_y(win) + my - vpos(win)), NULL);
         return true;
       }
       int h = hit_tile(st, mx, my);
@@ -96,7 +104,7 @@ result_t win_bin(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     }
     case evLeftButtonUp:
       if (st->press < 0) return false;
-      end_drag(win, st, true, window_screen_x(win) + (int16_t)LOWORD(wparam), window_screen_y(win) + (int16_t)HIWORD(wparam));
+      end_drag(win, st, true, window_screen_x(win) + (int16_t)LOWORD(wparam), window_screen_y(win) + (int16_t)HIWORD(wparam) - vpos(win));
       return true;
     case evPointerCancel:
       if (st->press >= 0) end_drag(win, st, false, 0, 0);

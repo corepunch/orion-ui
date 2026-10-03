@@ -225,6 +225,55 @@ GEN(g_pad_am)     { seq(c, "A3+C4+E4 - - - - - - -", 1, 8.0, I_PAD, 0.8f); }
 GEN(g_pad_fg)     { seq(c, "F3+A3+C4 - - - G3+B3+D4 - - -", 1, 4.0, I_PAD, 0.8f); }
 GEN(g_pluck_arp)  { seq(c, "A4 C5 E5 C5 A4 C5 E5 C5 G4 B4 D5 B4 G4 B4 D5 B4", 4, 1.0, I_ARP, 0.9f); }
 GEN(g_riser)      { v_riser(c, c->n); }
+GEN(g_boom_bap) { drums(c, 0, "x.....x...x.....", "....x.......x...", "x.x.x.x.x.x.x.x.", "", ""); }
+GEN(g_disco) { drums(c, 0, "x...x...x...x...", "....x.......x...", "x.x.x.x.x.x.x.x.", "..o...o...o...o.", ""); }
+GEN(g_trap_hats) { drums(c, 0, "x.....x.....x...", "........x.......", "xoxoxxoxoxxoxoxx", "", ""); }
+GEN(g_clap_beat) { drums(c, 0, "x...x...x...x...", "", "..x...x...x...x.", "", "....x.......x..."); }
+GEN(g_shuffle) { drums(c, 0, "x.....x.x.....x.", "....x.......x...", "x.oox.oox.oox.oo", "", ""); }
+GEN(g_kick_rush) { drums(c, 0, "xoxoxoxoxoxoxoxx", "", "", "", ""); }
+GEN(g_sixteenths) { drums(c, 0, "x...x...x...x...", "....x.......x...", "xoxoxoxoxoxoxoxo", "", ""); }
+GEN(g_breakdown) {
+  drums(c, 0, "x.......x.......", "", "", "", "");
+  drums(c, 1, "x...x...x.x.x.xx", "..............xx", "x.x.x.x.x.x.x.x.", "", "");
+}
+GEN(g_clap_fill) { drums(c, 0, "x.......x.......", "", "", "", "........x.x.xxxx"); }
+GEN(g_double_kick) { drums(c, 0, "x.x...x.x.x...x.", "....x.......x...", "x.x.x.x.x.x.x.x.", "", ""); }
+GEN(g_oct_jump) { seq(c, "A1 A2 A1 A2 A1 A2 A1 A2", 2, 0.8, I_BASS, 0.9f); }
+GEN(g_slow_roots) { seq(c, "A1 - - - F1 - - -", 1, 3.6, I_SUB, 0.9f); }
+GEN(g_offbeat) { seq(c, "- A1 - A1 - A1 - A1", 2, 0.8, I_BASS, 0.9f); }
+GEN(g_gallop) { seq(c, "A1 A1 - A1 A1 A1 - A1", 2, 0.7, I_BASS, 0.9f); }
+GEN(g_climb) { seq(c, "A1 B1 C2 D2 E2 D2 C2 B1", 2, 0.9, I_BASS, 0.9f); }
+GEN(g_dub_sub) { seq(c, "A1 - - - E1 - - -", 2, 3.5, I_SUB, 0.9f); }
+GEN(g_slap) { seq(c, "A1 - A2 - A1 - A2 A1 - A1 - A2 - G1 - -", 4, 1.2, I_BASS, 0.9f); }
+GEN(g_fifths) { seq(c, "A1 E2 A1 E2 G1 D2 G1 D2", 2, 0.9, I_BASS, 0.9f); }
+GEN(g_dm_g) { seq(c, "D4+F4+A4 - - - G3+B3+D4 - - -", 1, 3.6, I_PIANO, 0.8f); }
+GEN(g_f_c) { seq(c, "F3+A3+C4 - - - C4+E4+G4 - - -", 1, 3.6, I_PIANO, 0.8f); }
+GEN(g_comping) { seq(c, "A3+C4+E4 - A3+C4+E4 - F3+A3+C4 - G3+B3+D4 -", 1, 1.8, I_PIANO, 0.8f); }
+GEN(g_ballad) { seq(c, "A3 E4 C5 E4 A3 E4 C5 E4", 2, 1.8, I_PIANO, 0.8f); }
+GEN(g_octaves) { seq(c, "A3+A4 - A3+A4 - C4+C5 - E4+E5 -", 2, 1.6, I_PIANO, 0.8f); }
+GEN(g_rolling) { seq(c, "C4 E4 G4 E4 C4 E4 G4 E4 B3 D4 G4 D4 B3 D4 G4 D4", 4, 1.5, I_PIANO, 0.8f); }
+GEN(g_bells) { seq(c, "E5 - B5 - G5 - E5 - D5 - - - A5 - - -", 4, 2.5, I_PIANO, 0.7f); }
+GEN(g_low_chords) { seq(c, "A2+E3+A3 - - - F2+C3+F3 - - -", 1, 3.6, I_PIANO, 0.85f); }
+GEN(g_gospel) { seq(c, "C4+E4+A4 - - - D4+F4+A4 - - -", 1, 3.6, I_PIANO, 0.8f); }
+GEN(g_hook) { seq(c, "A4 - C5 - E5 - C5 - D5 - B4 - G4 - - -", 2, 1.6, I_PIANO, 0.85f); }
+GEN(g_em_strum) { seq(c, "E2+B2+E3+G3+B3+E4 - - E2+B2+E3+G3+B3+E4 - E2+B2+E3+G3+B3+E4 - -", 2, 3.0, I_PLUCK, 0.7f); }
+GEN(g_g_strum) { seq(c, "G2+D3+G3+B3+D4 - - G2+D3+G3+B3+D4 - G2+D3+G3+B3+D4 - -", 2, 3.0, I_PLUCK, 0.7f); }
+GEN(g_chug) { seq(c, "E2 E2 - E2 E2 - E2 - E2 E2 - E2 G2 - E2 -", 4, 0.8, I_MUTE, 0.9f); }
+GEN(g_slow_pick) { seq(c, "A2 E3 A3 C4 E4 C4 A3 E3", 2, 2.0, I_PLUCK, 0.8f); }
+GEN(g_riff_e) { seq(c, "E2+B2 - - E2+B2 - G2+D3 - A2+E3 - - - B2+F#3 - A2+E3 -", 2, 1.5, I_MUTE, 0.8f); }
+GEN(g_chop) { seq(c, "- A3+C4+E4 - A3+C4+E4 - A3+C4+E4 - A3+C4+E4", 2, 0.5, I_MUTE, 0.8f); }
+GEN(g_lead_line) { seq(c, "E4 - G4 - A4 - B4 - D5 - B4 - A4 - G4 -", 4, 1.8, I_PLUCK, 0.8f); }
+GEN(g_ring_out) { seq(c, "A2+E3+A3+C4+E4 - - - - - - -", 1, 7.0, I_PLUCK, 0.7f); }
+GEN(g_acid_two) { seq(c, "E1 - E2 E1 - E1 G1 - E1 - E2 - D2 - B1 -", 4, 1.4, I_ACID, 0.9f); }
+GEN(g_pad_dm) { seq(c, "D3+F3+A3 - - - - - - -", 1, 8.0, I_PAD, 0.8f); }
+GEN(g_pad_cg) { seq(c, "C3+E3+G3 - - - G3+B3+D4 - - -", 1, 4.0, I_PAD, 0.8f); }
+GEN(g_pluck_stabs) { seq(c, "A3+C4+E4 - - A3+C4+E4 - - A3+C4+E4 -", 2, 1.0, I_ARP, 0.9f); }
+GEN(g_fast_arp) { seq(c, "A4 E5 A5 E5 A4 E5 A5 E5 C5 G5 C5 G5 C5 G5 C5 E5", 4, 1.0, I_ARP, 0.9f); }
+GEN(g_sub_pulse) { seq(c, "A1 A1 A1 A1", 1, 0.8, I_SUB, 0.9f); }
+GEN(g_acid_climb) { seq(c, "A1 - B1 - C2 - D2 - E2 - D2 - C2 - B1 -", 4, 1.6, I_ACID, 0.9f); }
+GEN(g_arp_down) { seq(c, "E5 C5 A4 E4 E5 C5 A4 E4 D5 B4 G4 D4 D5 B4 G4 D4", 4, 1.0, I_ARP, 0.9f); }
+GEN(g_arp_dm) { seq(c, "D4 F4 A4 D5 A4 F4 A4 D5 D4 F4 A4 D5 A4 F4 A4 F4", 4, 1.0, I_ARP, 0.9f); }
+GEN(g_sweep) { v_riser(c, c->n); }
 
 static const struct { const char *name; category_t cat; int bars; void (*gen)(ctx_t *); } kDefs[] = {
   { "Four Floor",  CAT_DRUMS,      1, g_four_floor }, { "Break Beat",  CAT_DRUMS,      1, g_break_beat },
@@ -240,6 +289,29 @@ static const struct { const char *name; category_t cat; int bars; void (*gen)(ct
   { "Acid Line",   CAT_ELECTRONIC, 1, g_acid       }, { "Pad Am",      CAT_ELECTRONIC, 2, g_pad_am     },
   { "Pad F - G",   CAT_ELECTRONIC, 2, g_pad_fg     }, { "Pluck Arp",   CAT_ELECTRONIC, 1, g_pluck_arp  },
   { "Riser",       CAT_ELECTRONIC, 2, g_riser      },
+  { "Boom Bap",    CAT_DRUMS     , 1, g_boom_bap },   { "Disco",       CAT_DRUMS     , 1, g_disco },
+  { "Trap Hats",   CAT_DRUMS     , 1, g_trap_hats },   { "Clap Beat",   CAT_DRUMS     , 1, g_clap_beat },
+  { "Shuffle",     CAT_DRUMS     , 1, g_shuffle },   { "Kick Rush",   CAT_DRUMS     , 1, g_kick_rush },
+  { "Sixteenths",  CAT_DRUMS     , 1, g_sixteenths },   { "Breakdown",   CAT_DRUMS     , 2, g_breakdown },
+  { "Clap Fill",   CAT_DRUMS     , 1, g_clap_fill },   { "Double Kick", CAT_DRUMS     , 1, g_double_kick },
+  { "Octave Jump", CAT_BASS      , 1, g_oct_jump },   { "Slow Roots",  CAT_BASS      , 2, g_slow_roots },
+  { "Offbeat",     CAT_BASS      , 1, g_offbeat },   { "Gallop",      CAT_BASS      , 1, g_gallop },
+  { "Climb",       CAT_BASS      , 1, g_climb },   { "Dub Sub",     CAT_BASS      , 1, g_dub_sub },
+  { "Slap",        CAT_BASS      , 1, g_slap },   { "Fifths",      CAT_BASS      , 1, g_fifths },
+  { "Dm - G",      CAT_PIANO     , 2, g_dm_g },   { "F - C",       CAT_PIANO     , 2, g_f_c },
+  { "Comping",     CAT_PIANO     , 2, g_comping },   { "Ballad",      CAT_PIANO     , 1, g_ballad },
+  { "Octaves",     CAT_PIANO     , 1, g_octaves },   { "Rolling",     CAT_PIANO     , 1, g_rolling },
+  { "Bells",       CAT_PIANO     , 1, g_bells },   { "Low Chords",  CAT_PIANO     , 2, g_low_chords },
+  { "Gospel",      CAT_PIANO     , 2, g_gospel },   { "Hook",        CAT_PIANO     , 2, g_hook },
+  { "Em Strum",    CAT_GUITAR    , 1, g_em_strum },   { "G Strum",     CAT_GUITAR    , 1, g_g_strum },
+  { "Chug",        CAT_GUITAR    , 1, g_chug },   { "Slow Pick",   CAT_GUITAR    , 1, g_slow_pick },
+  { "Riff E",      CAT_GUITAR    , 2, g_riff_e },   { "Chop",        CAT_GUITAR    , 1, g_chop },
+  { "Lead Line",   CAT_GUITAR    , 1, g_lead_line },   { "Ring Out",    CAT_GUITAR    , 2, g_ring_out },
+  { "Acid Two",    CAT_ELECTRONIC, 1, g_acid_two },   { "Pad Dm",      CAT_ELECTRONIC, 2, g_pad_dm },
+  { "Pad C - G",   CAT_ELECTRONIC, 2, g_pad_cg },   { "Pluck Stabs", CAT_ELECTRONIC, 1, g_pluck_stabs },
+  { "Fast Arp",    CAT_ELECTRONIC, 1, g_fast_arp },   { "Sub Pulse",   CAT_ELECTRONIC, 1, g_sub_pulse },
+  { "Acid Climb",  CAT_ELECTRONIC, 1, g_acid_climb },   { "Arp Down",    CAT_ELECTRONIC, 1, g_arp_down },
+  { "Arp Dm",      CAT_ELECTRONIC, 1, g_arp_dm },   { "Sweep",       CAT_ELECTRONIC, 1, g_sweep },
 };
 #define NUM_DEFS ((int)(sizeof(kDefs) / sizeof(kDefs[0])))
 

@@ -70,7 +70,7 @@ result_t main_win_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       app->tabs  = create_window("bin", WINDOW_NOTITLE | WINDOW_NOFILL, MAKERECT(0, cr.h - BIN_H, cr.w, BIN_H), win, win_tabview, 0, NULL);
       app->tabs->id = ID_TABS;
       for (int c = 0; c < CAT_COUNT; c++)
-        create_window(kCategoryName[c], WINDOW_NOTITLE | WINDOW_NOFILL, MAKERECT(0, 0, cr.w, BIN_H), app->tabs, win_bin, 0, (void *)(intptr_t)c);
+        create_window(kCategoryName[c], WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL, MAKERECT(0, 0, cr.w, BIN_H), app->tabs, win_bin, 0, (void *)(intptr_t)c);
       app->timer = axSetTimer(win, 33, NULL, true);
       layout(win);
       app_update_status();

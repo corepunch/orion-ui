@@ -29,7 +29,7 @@
 #define GR_BEATS_BAR    4
 #define GR_TRACKS       8
 #define GR_BARS         32
-#define GR_MAX_BLOCKS   64
+#define GR_MAX_BLOCKS   128
 #define GR_MAX_CLIPS    256
 #define GR_BPM_MIN      70
 #define GR_BPM_MAX      170
