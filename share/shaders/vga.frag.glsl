@@ -16,11 +16,11 @@ void main() {
   vec2 cell = floor(g);
   vec2 fracCell = fract(g);
   vec2 cellUv = (cell + vec2(0.5)) / gridSize;
-  vec4 packed = texture(cellTex, cellUv);
+  vec4 cell_data = texture(cellTex, cellUv);
   // R+G = 16-bit glyph index, B = fg, A = bg
-  float ch = floor(packed.r * 255.0 + 0.5) + floor(packed.g * 255.0 + 0.5) * 256.0;
-  int fg = int(floor(packed.b * 255.0 + 0.5));
-  int bg = int(floor(packed.a * 255.0 + 0.5));
+  float ch = floor(cell_data.r * 255.0 + 0.5) + floor(cell_data.g * 255.0 + 0.5) * 256.0;
+  int fg = int(floor(cell_data.b * 255.0 + 0.5));
+  int bg = int(floor(cell_data.a * 255.0 + 0.5));
   float col = mod(ch, ATLAS_COLS);
   float row = floor(ch / ATLAS_COLS);
   float px = floor(fracCell.x * cellSize.x);
