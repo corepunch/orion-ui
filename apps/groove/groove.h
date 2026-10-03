@@ -1,0 +1,153 @@
+#ifndef __GROOVE_H__
+#define __GROOVE_H__
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <math.h>
+
+#include <orion/ui.h>
+#include <orion/commctl/commctl.h>
+#include <orion/user/accel.h>
+#include <orion/user/rect.h>
+
+// Always-on interaction trace (see AGENTS.md).
+#define GR_TRACE(...) do {                                       \
+  fprintf(stderr, "[gr] " __VA_ARGS__);                          \
+  fputc('\n', stderr);                                           \
+  fflush(stderr);                                                \
+} while (0)
+
+#define SCREEN_W        1180
+#define SCREEN_H        760
+
+#define GR_SAMPLE_RATE  44100
+#define GR_BEATS_BAR    4
+#define GR_TRACKS       8
+#define GR_BARS         32
+#define GR_MAX_BLOCKS   64
+#define GR_MAX_CLIPS    256
+#define GR_BPM_MIN      70
+#define GR_BPM_MAX      170
+#define GR_BPM_DEFAULT  120
+
+// ── Block library ────────────────────────────────────────────────────────
+typedef enum { CAT_DRUMS, CAT_BASS, CAT_PIANO, CAT_GUITAR, CAT_ELECTRONIC, CAT_COUNT } category_t;
+
+#define GR_PEAKS_BAR 32
+#define GR_PEAKS_MAX 128   // 4 bars
+
+// Rendered audio plus its overview, swapped as one unit when the tempo changes.
+typedef struct {
+  float   *pcm;            // mono, GR_SAMPLE_RATE, exactly bars * bar_frames long
+  int      frames;
+  uint8_t  peaks[GR_PEAKS_MAX]; // waveform overview, GR_PEAKS_BAR columns per bar
+  int      npeaks;
+} block_pcm_t;
+
+typedef struct {
+  const char *name;
+  category_t  cat;
+  int         bars;       // 1, 2 or 4 — always snaps to whole bars
+  block_pcm_t audio;
+} block_t;
+
+extern const char *const kCategoryName[CAT_COUNT];
+uint32_t category_color(category_t cat);
+
+int            blocks_count(void);
+const block_t *block_get(int id);
+int            blocks_in_category(category_t cat, int *ids, int max);
+// Renders every block for `bpm` into out[]; blocks_swap() installs them and
+// hands the previous buffers back so the caller can free them after unlocking.
+void           blocks_render(int bpm, block_pcm_t out[GR_MAX_BLOCKS]);
+void           blocks_swap(block_pcm_t io[GR_MAX_BLOCKS]);
+void           blocks_free(void);
+int            bar_frames_for_bpm(int bpm);
+
+// ── Song + mixer ─────────────────────────────────────────────────────────
+typedef struct { int block, track, bar; } clip_t;
+
+typedef struct {
+  clip_t   clips[GR_MAX_CLIPS];
+  int      nclips;
+  bool     mute[GR_TRACKS], solo[GR_TRACKS];
+  int      bpm;
+  int64_t  pos;           // playhead, in frames
+  bool     playing, loop;
+  int      preview_block; // -1 = none; one-shot audition from the bin
+  int64_t  preview_pos;
+} song_t;
+
+void song_init(song_t *s);
+int  song_length_bars(const song_t *s);
+int  song_clip_at(const song_t *s, int track, int bar);          // clip index or -1
+bool song_can_place(const song_t *s, int track, int bar, int bars, int ignore_clip);
+int  song_add_clip(song_t *s, int block, int track, int bar);    // clip index or -1
+void song_remove_clip(song_t *s, int idx);
+// Mixes `frames` stereo float frames into lr[] (interleaved) and advances the transport.
+void song_render(song_t *s, float *lr, int frames);
+
+// ── App state ────────────────────────────────────────────────────────────
+typedef struct {
+  bool active;
+  int  block;       // block being dragged
+  int  from_clip;   // clip being moved, or -1 for a fresh block from the bin
+  int  grab_bars;   // bars from the clip's left edge to the grab point
+  int  track, bar;  // current snapped target; track -1 = outside the sheet
+  bool valid;       // target is free
+} drag_t;
+
+typedef struct {
+  window_t     *win, *sheet, *tabs;
+  accel_table_t *accel;
+  hinstance_t   hinstance;
+  song_t        song;
+  int           audio_dev;
+  uint32_t      timer;
+  int           selected_clip;
+  drag_t        drag;
+} groove_t;
+
+extern groove_t *g_app;
+
+// Private messages.
+enum {
+  shDragOver = evUser + 5000, // wparam = MAKEDWORD(screen_x, screen_y)
+  shDrop,                     // wparam = MAKEDWORD(screen_x, screen_y)
+  shDragEnd,                  // clear drag preview
+  shSeekBar,                  // wparam = bar
+};
+
+#define ID_PLAY      101
+#define ID_STOP      102
+#define ID_REWIND    103
+#define ID_LOOP      104
+#define ID_BPM_UP    105
+#define ID_BPM_DOWN  106
+#define ID_DELETE    107
+#define ID_TABS      200
+
+// Controller (controller.c)
+groove_t *app_init(void);
+void      app_shutdown(groove_t *app);
+void      app_lock(void);
+void      app_unlock(void);
+void      app_command(uint16_t id);
+void      app_set_playing(bool playing);
+void      app_seek_bar(int bar);
+void      app_set_bpm(int bpm);
+void      app_preview(int block);
+void      app_select_clip(int idx);
+bool      app_drop(const drag_t *d);          // commits a drag (add or move)
+void      app_update_status(void);
+
+// Views
+extern result_t main_win_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+extern result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+extern result_t win_bin(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+void toolbar_refresh(window_t *win);
+
+#endif
