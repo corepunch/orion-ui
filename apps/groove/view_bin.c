@@ -55,6 +55,7 @@ static void paint_bin(window_t *win, bin_t *st) {
 
 static void end_drag(window_t *win, bin_t *st, bool drop, int sx, int sy) {
   if (st->dragging) send_message(g_app->sheet, drop ? shDrop : shDragEnd, MAKEDWORD(sx, sy), NULL);
+  else if (drop && st->press >= 0) app_preview(st->ids[st->press]);
   st->press = -1;
   st->dragging = false;
   set_capture(NULL);
@@ -97,7 +98,6 @@ result_t win_bin(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       if (h < 0) return false;
       st->press = h;
       st->press_pt = (ipoint16_t){ (int16_t)mx, (int16_t)my };
-      app_preview(st->ids[h]);
       set_capture(win);
       invalidate_window(win);
       return true;

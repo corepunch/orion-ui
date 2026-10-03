@@ -169,7 +169,6 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       if (st->press_clip >= 0) {
         const clip_t *c = &g_app->song.clips[st->press_clip];
         g_app->drag = (drag_t){ .block = c->block, .from_clip = st->press_clip, .grab_bars = bar - c->bar, .track = c->track, .bar = c->bar, .valid = true };
-        app_preview(c->block);
         set_capture(win);
       }
       return true;
@@ -184,6 +183,7 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       return true;
     case evLeftButtonUp:
       if (st->press_clip < 0) return false;
+      if (!st->own_drag) app_preview(g_app->drag.block);
       if (st->own_drag && g_app->drag.track >= 0 && g_app->drag.valid) app_drop(&g_app->drag);
       st->press_clip = -1;
       st->own_drag = false;
