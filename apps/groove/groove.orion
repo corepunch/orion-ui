@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<orion
+    version="1"
+    name="groove"
+    title="Groove"
+    root="apps/groove">
+
+    <menus var="kMenus" count="kNumMenus">
+      <menu name="file" label="File">
+        <item name="new" label="New Song" shortcut="Ctrl+N" />
+        <item name="demo" label="Load Demo Song" />
+        <Separator />
+        <item name="quit" label="Quit" shortcut="Ctrl+Q" />
+      </menu>
+
+      <menu name="edit" label="Edit">
+        <item name="delete" label="Delete Block" shortcut="Delete" />
+      </menu>
+
+      <menu name="transport" label="Transport">
+        <item name="play" label="Play / Pause" shortcut="Space" />
+        <item name="stop" label="Stop" />
+        <item name="rewind" label="Rewind" shortcut="Home" />
+        <item name="loop" label="Loop" shortcut="L" />
+        <Separator />
+        <item name="slower" label="Slower" />
+        <item name="faster" label="Faster" />
+      </menu>
+    </menus>
+</orion>

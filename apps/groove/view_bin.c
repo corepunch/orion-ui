@@ -42,15 +42,8 @@ static void paint_bin(window_t *win, bin_t *st) {
   for (int i = 0; i < st->count; i++) {
     const block_t *b = block_get(st->ids[i]);
     irect16_t r = st->rects[i];
-    ctrl_state_t state = (i == st->hover ? CTRL_HOVER : 0) | (st->dragging && i == st->press ? CTRL_SELECTED : 0);
-    draw_card(r, state, category_color(b->cat));
-    int tx = r.x + get_theme()->card_edge_width + 8;
-    draw_text_ellipsized(FONT_SMALL, b->name, tx, r.y + 6, r.w - (tx - r.x) - 6, get_sys_color(brTextNormal));
-    int wy = r.y + r.h - 8, ww = r.w - (tx - r.x) - 8;
-    for (int k = 0; k < b->audio.npeaks; k++) {
-      int x0 = tx + k * ww / b->audio.npeaks, x1 = tx + (k + 1) * ww / b->audio.npeaks, h = MAX(1, b->audio.peaks[k] * 16 / 255);
-      fill_rect(color_with_alpha(category_color(b->cat), 0xc0), R(x0, wy - h, MAX(1, x1 - x0 - 1), h));
-    }
+    bool lit = i == st->hover || (st->dragging && i == st->press);
+    draw_clip(win, b, r, lit ? color_with_alpha(category_color(b->cat), 0xd8) : category_color(b->cat), false);
   }
 }
 

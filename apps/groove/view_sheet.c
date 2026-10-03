@@ -52,7 +52,7 @@ static void drag_clear(window_t *win) {
   invalidate_window(win);
 }
 
-static void draw_clip(window_t *win, const block_t *b, irect16_t r, uint32_t color, bool ring) {
+void draw_clip(window_t *win, const block_t *b, irect16_t r, uint32_t color, bool ring) {
   int radius = get_theme()->card_corner_radius;
   if (ring) fill_rounded_rect(get_sys_color(brAccent), rect_inset(r, -2), radius + 2);
   fill_rounded_rect(color, r, radius);

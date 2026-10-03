@@ -44,6 +44,24 @@ static void seed_demo(song_t *s) {
   seed(s, "Pluck Arp", 6, 4, 4);
 }
 
+void app_new_song(void) {
+  app_lock();
+  g_app->song.nclips = 0;
+  g_app->song.pos = 0;
+  g_app->selected_clip = -1;
+  app_unlock();
+  GR_TRACE("new song");
+  invalidate_window(g_app->sheet);
+  app_update_status();
+}
+
+void app_load_demo(void) {
+  app_lock();
+  seed_demo(&g_app->song);
+  app_unlock();
+  GR_TRACE("demo loaded clips=%d", g_app->song.nclips);
+}
+
 groove_t *app_init(void) {
   groove_t *app = calloc(1, sizeof(*app));
   block_pcm_t pcm[GR_MAX_BLOCKS];
@@ -53,7 +71,6 @@ groove_t *app_init(void) {
   app->drag.track = -1;
   blocks_render(app->song.bpm, pcm);
   blocks_swap(pcm);
-  seed_demo(&app->song);
   if (axAudioInit()) {
     AXaudiospec want = { GR_SAMPLE_RATE, AX_AUDIO_S16, 2, 1024, audio_cb, app }, got;
     app->audio_dev = axAudioOpen(&want, &got);
@@ -167,6 +184,9 @@ void app_command(uint16_t id) {
     case ID_LOOP:     app_lock(); s->loop = !s->loop; app_unlock(); toolbar_refresh(g_app->win); app_update_status(); break;
     case ID_BPM_UP:   app_set_bpm(s->bpm + 5); break;
     case ID_BPM_DOWN: app_set_bpm(s->bpm - 5); break;
+    case ID_FILE_NEW:  app_new_song(); break;
+    case ID_FILE_DEMO: app_new_song(); app_load_demo(); invalidate_window(g_app->sheet); break;
+    case ID_FILE_QUIT: ui_request_quit(); break;
     case ID_DELETE:
       if (g_app->selected_clip < 0 || g_app->selected_clip >= s->nclips) break;
       app_lock();

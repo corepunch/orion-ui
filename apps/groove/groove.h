@@ -12,6 +12,8 @@
 #include <orion/commctl/commctl.h>
 #include <orion/user/accel.h>
 #include <orion/user/rect.h>
+#include <orion/commctl/menubar.h>
+#include "build/generated/apps/groove/groove.h"
 
 // Always-on interaction trace (see AGENTS.md).
 #define GR_TRACE(...) do {                                       \
@@ -101,7 +103,7 @@ typedef struct {
 } drag_t;
 
 typedef struct {
-  window_t     *win, *sheet, *tabs;
+  window_t     *win, *menubar_win, *sheet, *tabs;
   accel_table_t *accel;
   hinstance_t   hinstance;
   song_t        song;
@@ -121,18 +123,21 @@ enum {
   shSeekBar,                  // wparam = bar
 };
 
-#define ID_PLAY      101
-#define ID_STOP      102
-#define ID_REWIND    103
-#define ID_LOOP      104
-#define ID_BPM_UP    105
-#define ID_BPM_DOWN  106
-#define ID_DELETE    107
+#define ID_PLAY      ID_TRANSPORT_PLAY
+#define ID_STOP      ID_TRANSPORT_STOP
+#define ID_REWIND    ID_TRANSPORT_REWIND
+#define ID_LOOP      ID_TRANSPORT_LOOP
+#define ID_BPM_UP    ID_TRANSPORT_FASTER
+#define ID_BPM_DOWN  ID_TRANSPORT_SLOWER
+#define ID_DELETE    ID_EDIT_DELETE
 #define ID_TABS      200
 
 // Controller (controller.c)
 groove_t *app_init(void);
 void      app_shutdown(groove_t *app);
+void      app_load_demo(void);
+void      app_new_song(void);
+void      create_menubar(void);
 void      app_lock(void);
 void      app_unlock(void);
 void      app_command(uint16_t id);
@@ -149,5 +154,6 @@ extern result_t main_win_proc(window_t *win, uint32_t msg, uint32_t wparam, void
 extern result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 extern result_t win_bin(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 void toolbar_refresh(window_t *win);
+void draw_clip(window_t *win, const block_t *b, irect16_t r, uint32_t color, bool ring);
 
 #endif

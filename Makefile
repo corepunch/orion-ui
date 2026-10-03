@@ -175,9 +175,15 @@ unity_tu = find $(1) -name '*.c' ! -name main.c ! -path '*/$(COMPS)/*' ! -path '
 app_inc  = -I. -I$(call appdir,$*) -I$(call appdir,$*)/$(COMPS) -DSHAREDIR='"../share/$(notdir $(call appdir,$*))"'
 app_libs = $(LDFLAGS) $(CORE_LDLIBS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(call app_plugin,$*) $(LIBS) $(if $(findstring scener,$*),$(SCENER_LIBS))
 
-.PHONY: all install tools platform share library apps plugins gems scener test clean help $(PHONY_APP_NAMES)
+.PHONY: all install tools platform share library apps plugins gems scener test clean help groove groove-demo $(PHONY_APP_NAMES)
 
 all: library apps tools $(if $(IS_WIN),,gems)
+
+# Build and run Groove: empty sheet, or preloaded with the demo song.
+groove: $(BIN_DIR)/groove$(EXE_EXT)
+	@cd $(BIN_DIR) && ./groove$(EXE_EXT)
+groove-demo: $(BIN_DIR)/groove$(EXE_EXT)
+	@cd $(BIN_DIR) && ./groove$(EXE_EXT) --demo
 
 # ── Tools ────────────────────────────────────────────────────────────────
 tools: $(TOOLS_BINS)
@@ -367,6 +373,7 @@ help:
 	@echo "library   - Build shared libraries"
 	@echo "apps      - Build applications"
 	@echo "scener    - Build the Scener application"
+	@echo "groove    - Build and run Groove (empty); groove-demo preloads the demo song"
 	@echo "gems      - Build all .gem shared libraries"
 	@echo "tools     - Build command-line tools"
 	@echo "test      - Build and run tests"

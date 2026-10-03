@@ -2,6 +2,7 @@
 // the block bin (one tab per instrument family) docked at the bottom.
 
 #include "groove.h"
+#include <orion/gem.h>
 
 #define BIN_H 168
 
@@ -31,19 +32,38 @@ static void layout(window_t *win) {
 }
 
 static const accel_t kAccel[] = {
-  { FVIRTKEY, AX_KEY_SPACE,     ID_PLAY    },
-  { FVIRTKEY, AX_KEY_HOME,      ID_REWIND  },
-  { FVIRTKEY, AX_KEY_L,         ID_LOOP    },
-  { FVIRTKEY, AX_KEY_BACKSPACE, ID_DELETE  },
+  { FVIRTKEY | FCONTROL, AX_KEY_N,         ID_FILE_NEW  },
+  { FVIRTKEY | FCONTROL, AX_KEY_Q,         ID_FILE_QUIT },
+  { FVIRTKEY,            AX_KEY_SPACE,     ID_PLAY      },
+  { FVIRTKEY,            AX_KEY_HOME,      ID_REWIND    },
+  { FVIRTKEY,            AX_KEY_L,         ID_LOOP      },
+  { FVIRTKEY,            AX_KEY_BACKSPACE, ID_DELETE    },
+  { FVIRTKEY,            AX_KEY_DEL,       ID_DELETE    },
 };
+
+result_t app_menubar_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  if (msg == evCommand && (HIWORD(wparam) == kMenuBarNotificationItemClick || HIWORD(wparam) == kAcceleratorNotification)) {
+    app_command((uint16_t)LOWORD(wparam));
+    return true;
+  }
+  return win_menubar(win, msg, wparam, lparam);
+}
+
+void create_menubar(void) {
+  g_app->menubar_win = set_app_menu(app_menubar_proc, kMenus, kNumMenus, app_command, g_app->hinstance);
+  g_app->accel = load_accelerators(kAccel, ARRAY_LEN(kAccel));
+  if (g_app->menubar_win && g_app->accel) send_message(g_app->menubar_win, kMenuBarMessageSetAccelerators, 0, g_app->accel);
+}
 
 result_t main_win_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   groove_t *app = g_app;
   if (!app) return false; // late message after app_shutdown
   switch (msg) {
+    case evGetWorkspaceRect:
+      *(irect16_t *)lparam = rect_trim_top(*(irect16_t *)lparam, MENUBAR_HEIGHT);
+      return true;
     case evCreate: {
       app->win = win;
-      app->accel = load_accelerators(kAccel, ARRAY_LEN(kAccel));
       toolbar_refresh(win);
       irect16_t cr = get_client_rect(win);
       app->sheet = create_window("sheet", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_HSCROLL, MAKERECT(0, 0, cr.w, cr.h - BIN_H), win, win_sheet, 0, NULL);
