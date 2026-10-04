@@ -198,6 +198,11 @@ typedef struct {
   int window_shadow_blur;    // logical pixels; zero disables shadows
   ipoint16_t window_shadow_offset;
   uint32_t window_shadow_color;
+  // Drop shadow for a window drawn under the pointer. Offset is usually
+  // downward so the dark part sits under the card, not in a halo the fill hides.
+  int drag_shadow_blur;      // logical pixels; zero disables the lift shadow
+  ipoint16_t drag_shadow_offset;
+  uint32_t drag_shadow_color;
   struct {
     int hover, selected, selected_hover, pressed; // system color roles
   } item_background;

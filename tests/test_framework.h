@@ -84,10 +84,11 @@ static int tests_failed = 0;
 /* SKIP: gracefully skip a test (counts as a pass with a "SKIP" note).
  * Call after TEST() which has already incremented tests_run.
  * Use when the test depends on a feature that is not compiled in. */
-#define SKIP(reason) \
+#define SKIP(reason) do { \
     tests_passed++; \
     printf(COLOR_YELLOW "SKIP" COLOR_RESET ": %s\n", reason); \
-    return;
+    return; \
+} while (0)
 
 /* SKIP_IF_NO_LUA: skip the test when Lua was not compiled in (-DHAVE_LUA). */
 #ifndef HAVE_LUA

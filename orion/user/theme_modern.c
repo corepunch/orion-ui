@@ -383,6 +383,9 @@ static theme_t g_modern_theme = {
   .window_shadow_blur     = 8,
   .window_shadow_offset   = {0, 4},
   .window_shadow_color    = 0x80000000,
+  .drag_shadow_blur       = 6,
+  .drag_shadow_offset     = {0, 8},
+  .drag_shadow_color      = 0xE0000000,
   .item_background        = {
     .hover = brButtonHover, .selected = brAccent,
     .selected_hover = brAccent, .pressed = brAccent,

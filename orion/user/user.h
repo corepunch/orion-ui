@@ -514,6 +514,10 @@ struct window_s {
   win_sb_t hscroll;   // built-in horizontal scrollbar state (WINDOW_HSCROLL)
   win_sb_t vscroll;   // built-in vertical scrollbar state (WINDOW_VSCROLL)
   window_view_t view; // Transforms this window's content; child frames remain in viewport space.
+  // Visual drag. The frame stays put; paint is translated by drag_dx/dy and
+  // skipped at the real frame. See window_set_drag_visual().
+  bool drag_visual;
+  int drag_dx, drag_dy;
   struct window_s *next;
   struct window_s *children;
   struct window_s *parent;
@@ -631,6 +635,12 @@ void update_maximized_window(window_t *win);
 void set_application_workspace(window_t *owner, const irect16_t *area);
 void move_window(window_t *win, int x, int y);
 void resize_window(window_t *win, int new_w, int new_h);
+// Draw `win` under the pointer while its frame stays where it is. dx/dy are
+// screen pixels from that frame to the painted copy. The window is left out of
+// the normal paint walk (hidden in place) and composited above the root, so
+// the copy can leave its parent. Hit-testing still uses the real frame.
+void window_set_drag_visual(window_t *win, int dx, int dy);
+void window_clear_drag_visual(window_t *win);
 void layout_measure_window(window_t *win, layout_measure_t *m);
 void layout_arrange_window(window_t *win, const irect16_t *rect);
 void window_layout_sync(window_t *win);

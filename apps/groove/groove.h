@@ -132,6 +132,9 @@ enum {
 #define ID_DELETE    ID_EDIT_DELETE
 #define ID_TABS      200
 
+// Bin tiles and sheet clips. NOACTIVATE so creating one does not take focus.
+#define GR_CARD_FLAGS (WINDOW_NOFILL | WINDOW_TRANSPARENT | WINDOW_NODRAG | WINDOW_NOACTIVATE | WINDOW_NOTABSTOP)
+
 // Controller (controller.c)
 groove_t *app_init(void);
 void      app_shutdown(groove_t *app);
@@ -155,5 +158,8 @@ extern result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lp
 extern result_t win_bin(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 void toolbar_refresh(window_t *win);
 void draw_clip(window_t *win, const block_t *b, irect16_t r, uint32_t color, bool ring);
+// Moves a card window. A visual drag keeps the painted copy still: the frame
+// delta is added back into the drag offset.
+void card_place(window_t *card, irect16_t cell);
 
 #endif

@@ -66,6 +66,12 @@ there is nothing to align or mask by hand. Geometry lives in `theme_t` (`card_co
 
 Status colours come from the theme: `brTextError`, `brTextWarning`, `brTextInfo`, `brTextSuccess`, `brTextDisabled`.
 
+A rounded outline is one stroke, not two stacked fills. `thickness` is the inside band in logical pixels; `radius` 0 is a square stroke.
+
+```c
+stroke_rounded_rect(get_sys_color(brAccent), r, get_theme()->card_corner_radius, 2);
+```
+
 ### `draw_rect`
 
 Render a textured quad (OpenGL texture).

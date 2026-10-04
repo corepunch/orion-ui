@@ -75,6 +75,13 @@ Use `send_message()` for synchronous behavior and `post_message()` for queued
 work. Menus, toolbars, context menus, and accelerators should converge on the
 same command IDs so one controller path owns each action.
 
+A child can be shown under the pointer without leaving its layout slot.
+`window_set_drag_visual` keeps the frame where it is, omits the in-place paint,
+and composites that same window above the root at a screen offset. Clearing the
+offset paints it on its frame again. The lifted paint includes the theme drag shadow (`drag_shadow_blur`,
+`drag_shadow_offset`, `drag_shadow_color`) underneath the window when the blur
+is non-zero. That drop shadow is separate from the resting window halo.
+
 Window composition keeps texture ownership and drawing in the renderer, while
 the active theme owns `window_corner_radius` in logical pixels (Modern: 8,
 Classic: 0). Rounded UI fills and window textures share the rounded-box SDF

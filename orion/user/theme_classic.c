@@ -340,6 +340,9 @@ static theme_t g_classic_theme = {
   .card_ring_width        = 1,
   .card_padding_x         = 8,
   .card_padding_y         = 6,
+  .drag_shadow_blur       = 6,
+  .drag_shadow_offset     = {0, 8},
+  .drag_shadow_color      = 0xE0000000,
   .control_padding        = BUTTON_PADDING,
   .apply_palette          = classic_apply_palette,
 };
