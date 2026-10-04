@@ -219,8 +219,20 @@ For a matching pressed state, put normal icons in the first row and the same ico
 in the second row, then enable `TOOLBAR_STYLE_PRESSED_STRIP` with `tbSetStyle`.
 Descriptors reference first-row indices; the framework selects the second row
 while pressed. This works for button and split-button icons and compact toolbars.
-Create the set in one ImageGen call and derive the pressed row from that artwork.
-Groove's `apps/groove/share/icons/build_transport.py` is a reproducible example.
+Draw every icon and its states together in one ImageGen atlas.
+
+For strip artwork that includes the complete colored button body, also enable
+`TOOLBAR_STYLE_IMAGE_BUTTONS`. Ordinary strip buttons then use their own silhouette
+instead of a themed background. Active toggles use the pressed row as well;
+named icons and split buttons retain their usual themed backgrounds.
+
+For authored state artwork, enable `TOOLBAR_STYLE_STATE_STRIP`: rows are normal,
+selected, pressed, hover, and disabled. The framework samples the authored row directly,
+including disabled colours, without applying a second tint or opacity reduction.
+`tbLoadAtlas` accepts a `toolbar_atlas_t` with a PNG path, column count, and source
+rectangles in row order. It copies those rectangles and owns the loaded texture;
+failed loads retain the previous atlas. Packed regions allow the original ImageGen
+PNG to be consumed directly, without cutting or transforming its artwork.
 
 For a programmatic toolbar, send `tbSetItems` in `evCreate`. Application chrome
 and declarative form creation load their toolbar metadata automatically.

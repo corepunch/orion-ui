@@ -128,6 +128,8 @@ typedef struct toolbar_state_s {
   window_t       *children;
   // Strip for icon rendering (set via tbSetStrip / tbLoadStrip)
   bitmap_strip_t  strip;
+  irect16_t     *strip_regions;
+  int            strip_region_count;
   uint32_t        strip_tex;    // GL texture owned here; freed on toolbar destroy
   int             btn_size;     // 0 = TB_SPACING default; >0 = custom square size in px
   int             columns;      // vertical grid; 0/1 = single column

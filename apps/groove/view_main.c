@@ -3,6 +3,7 @@
 
 #include "groove.h"
 #include <orion/gem.h>
+#include <orion/user/toolbar.h>
 
 #define BIN_H      280
 #define LIBRARY_H  44
@@ -69,9 +70,14 @@ result_t main_win_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       app->win = win;
       char strip_path[1024];
       int n = snprintf(strip_path, sizeof(strip_path), "%s/../share/groove/icons/transport.png", ui_get_exe_dir());
-      if (g_ui_runtime.running && n > 0 && (size_t)n < sizeof(strip_path)) send_message(win, tbLoadStrip, 64, strip_path);
-      send_message(win, tbSetStyle, TOOLBAR_STYLE_PRESSED_STRIP, NULL);
-      send_message(win, tbSetButtonSize, 38, NULL);
+      irect16_t regions[40];
+      const int row_y[] = {28, 215, 417, 592, 780}, row_h[] = {177, 195, 168, 179, 177};
+      for (int row = 0; row < 5; row++)
+        for (int col = 0; col < 8; col++) regions[row * 8 + col] = R(17 + col * 195, row_y[row], 195, row_h[row]);
+      toolbar_atlas_t atlas = {strip_path, 8, ARRAY_LEN(regions), regions};
+      if (g_ui_runtime.running && n > 0 && (size_t)n < sizeof(strip_path)) send_message(win, tbLoadAtlas, 0, &atlas);
+      send_message(win, tbSetStyle, TOOLBAR_STYLE_STATE_STRIP | TOOLBAR_STYLE_IMAGE_BUTTONS, NULL);
+      send_message(win, tbSetButtonSize, 48, NULL);
       toolbar_refresh(win);
       irect16_t cr = get_client_rect(win);
       app->sheet = create_window("sheet", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_HSCROLL, MAKERECT(0, 0, cr.w, cr.h - BIN_H), win, win_sheet, 0, NULL);

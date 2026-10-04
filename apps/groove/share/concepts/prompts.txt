@@ -1,3 +1,4 @@
+Historical first iteration, superseded for transport artwork by ../icons/transport-state-prompts.txt.
 Built-in ImageGen; references: Glossy Neon Music App Icon Grid.png and groove.png.
 
 UI concept prompt:
@@ -16,4 +17,3 @@ Composition constraint: exact evenly spaced centers at 1/16,3/16,5/16,7/16,9/16,
 
 Post-processing:
 Normalize the eight silhouettes into 64x64 cells. Derive the pressed row by scaling each normal symbol to 94%, reducing RGB brightness to 82%, preserving alpha, and shifting it down one source pixel. Runtime atlas: 512x128, eight columns, normal row then pressed row. Regenerate with build_transport.py; no separately generated icons are consumed.
-

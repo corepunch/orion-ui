@@ -191,28 +191,33 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
 
 }
 
-static void draw_toolbar_icon_in_rect(window_t *win, toolbar_state_t *tb, const char *icon_name, irect16_t r, int offset, bool disabled, bool pressed) {
+static void draw_toolbar_icon_in_rect(window_t *win, toolbar_state_t *tb, const char *icon_name, irect16_t r, int offset, bool disabled, bool pressed, bool selected, bool hot) {
   sysicon_resolved_t res = {0};
   bool from_strip = icon_name && strncmp(icon_name, "strip:", 6) == 0;
   if (from_strip) {
     char *end;
     long index = strtol(icon_name + 6, &end, 10);
     const bitmap_strip_t *strip = &tb->strip;
-    int rows = strip->icon_h > 0 ? strip->sheet_h / strip->icon_h : 0;
+    bool state_strip = (tb->style & TOOLBAR_STYLE_STATE_STRIP) != 0;
+    int rows = tb->strip_regions && strip->cols > 0 ? tb->strip_region_count / strip->cols :
+               strip->icon_h > 0 ? strip->sheet_h / strip->icon_h : 0;
     if (!strip->tex || strip->cols <= 0 || strip->icon_w <= 0 || rows <= 0 ||
         strip->sheet_w <= 0 || strip->cols > strip->sheet_w / strip->icon_w ||
         index < 0 || index >= (long)strip->cols * rows || end == icon_name + 6 || *end ||
-        ((tb->style & TOOLBAR_STYLE_PRESSED_STRIP) && (rows < 2 || index >= strip->cols))) {
+        ((state_strip || (tb->style & TOOLBAR_STYLE_PRESSED_STRIP)) &&
+         (rows < (state_strip ? 5 : 2) || index >= strip->cols))) {
       fprintf(stderr, "[tb] invalid strip win=%u icon=%s texture=%u cols=%d rows=%d\n", win->id, icon_name, strip->tex, strip->cols, rows);
       fflush(stderr);
       return;
     }
-    if (pressed && (tb->style & TOOLBAR_STYLE_PRESSED_STRIP)) index += strip->cols;
+    if (state_strip) index += strip->cols * (disabled ? 4 : pressed ? 2 : selected ? 1 : hot ? 3 : 0);
+    else if (pressed && (tb->style & TOOLBAR_STYLE_PRESSED_STRIP)) index += strip->cols;
     int x = (index % strip->cols) * strip->icon_w, y = (index / strip->cols) * strip->icon_h;
-    res = (sysicon_resolved_t){ .tex = strip->tex, .w = strip->icon_w, .h = strip->icon_h,
-      .u0 = (float)x / strip->sheet_w, .v0 = (float)y / strip->sheet_h,
-      .u1 = (float)(x + strip->icon_w) / strip->sheet_w, .v1 = (float)(y + strip->icon_h) / strip->sheet_h };
-    if (tb->style & TOOLBAR_STYLE_PRESSED_STRIP) offset = 0; // artwork already includes the pressed inset
+    irect16_t region = tb->strip_regions ? tb->strip_regions[index] : R(x, y, strip->icon_w, strip->icon_h);
+    res = (sysicon_resolved_t){ .tex = strip->tex, .w = region.w, .h = region.h,
+      .u0 = (float)region.x / strip->sheet_w, .v0 = (float)region.y / strip->sheet_h,
+      .u1 = (float)(region.x + region.w) / strip->sheet_w, .v1 = (float)(region.y + region.h) / strip->sheet_h };
+    if (tb->style & (TOOLBAR_STYLE_PRESSED_STRIP | TOOLBAR_STYLE_STATE_STRIP)) offset = 0; // artwork already includes the pressed inset
   } else if (!sysicon_resolve(icon_name ? icon_name : "missing", &res)) return;
   bool compact = tb && (tb->style & TOOLBAR_STYLE_COMPACT);
   int w = res.w, h = res.h;
@@ -226,7 +231,7 @@ static void draw_toolbar_icon_in_rect(window_t *win, toolbar_state_t *tb, const 
   irect16_t icon = rect_offset(rect_center(r, w, h), offset, offset);
   draw_sprite_region((int)res.tex, icon,
                      UV_RECT(res.u0, res.v0, res.u1, res.v1),
-                     from_strip ? (disabled ? 0x80ffffffu : 0xffffffffu) :
+                     from_strip ? (disabled && !(tb->style & TOOLBAR_STYLE_STATE_STRIP) ? 0x80ffffffu : 0xffffffffu) :
                      get_sys_color(disabled ? brTextDisabled : (compact ? brTextNormal : brToolbarForeground)), 0);
 }
 
@@ -250,6 +255,8 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
     }
     case TOOLBAR_ITEM_BUTTON: {
       irect16_t local = {0, 0, r.w, r.h};
+      bool image_body = (tb->style & TOOLBAR_STYLE_IMAGE_BUTTONS) && item->icon &&
+                        strncmp(item->icon, "strip:", 6) == 0;
       // Derive each flag independently; let the theme decide rendering.
       ctrl_state_t state = disabled ? CTRL_DISABLED : CTRL_NORMAL;
       if (is_active)  state |= CTRL_SELECTED;
@@ -259,8 +266,8 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
                                      ? THEME_PART_TOOLBAR_LABELED_BUTTON
                                      : THEME_PART_TOOLBAR_BUTTON;
       if (tb->style & TOOLBAR_STYLE_COMPACT) {
-        if (is_pressed) theme_draw(THEME_PART_TOOLBAR_BUTTON, rect_center(local, local.h, local.h), CTRL_PRESSED);
-      } else {
+        if (is_pressed && !image_body) theme_draw(THEME_PART_TOOLBAR_BUTTON, rect_center(local, local.h, local.h), CTRL_PRESSED);
+      } else if (!image_body) {
         theme_draw(part, local, state);
       }
       int poff = is_pressed ? th->press_icon_offset : 0;
@@ -268,7 +275,7 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       irect16_t icon_rect = local;
       if (tb->style & TOOLBAR_STYLE_SHOW_LABELS)
         icon_rect.h = (tb->btn_size > 0) ? tb->btn_size : get_theme()->toolbar_button_size;
-      draw_toolbar_icon_in_rect(win, tb, icon_name, icon_rect, poff, disabled, is_pressed);
+      draw_toolbar_icon_in_rect(win, tb, icon_name, icon_rect, poff, disabled, is_pressed || (image_body && is_active && !(tb->style & TOOLBAR_STYLE_STATE_STRIP)), is_active, is_hot);
       if ((tb->style & TOOLBAR_STYLE_SHOW_LABELS) && item->text) {
         int tx = (local.w - text_strwidth(FONT_SMALLEST, item->text)) / 2 + poff;
         int ty = local.h - text_char_height(FONT_SMALLEST) - 2 + poff;
@@ -294,7 +301,7 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       irect16_t icon_rect = btn_part;
       if (tb->style & TOOLBAR_STYLE_SHOW_LABELS)
         icon_rect.h = (tb->btn_size > 0) ? tb->btn_size : get_theme()->toolbar_button_size;
-      draw_toolbar_icon_in_rect(win, tb, icon_name, icon_rect, btn_poff, disabled, btn_pressed);
+      draw_toolbar_icon_in_rect(win, tb, icon_name, icon_rect, btn_poff, disabled, btn_pressed, is_active, is_hot);
       if ((tb->style & TOOLBAR_STYLE_SHOW_LABELS) && item->text) {
         int tx = (btn_part.w - text_strwidth(FONT_SMALLEST, item->text)) / 2 + btn_poff;
         int ty = btn_part.h - text_char_height(FONT_SMALLEST) - 2 + btn_poff;
@@ -340,6 +347,7 @@ static result_t win_toolbar(window_t *win, uint32_t msg, uint32_t wparam, void *
     case evDestroy:
       if (tb) {
         SAFE_DELETE(tb->strip_tex, R_DeleteTexture);
+        SAFE_DELETE(tb->strip_regions, free);
         SAFE_DELETE(tb->items, free);
         SAFE_DELETE(tb->item_tooltips, free);
         SAFE_DELETE(tb->item_icons, free);
@@ -661,6 +669,8 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
     case tbSetStrip: {
       toolbar_state_t *tb = toolbar_ensure_state(win);
       if (!tb) return true;
+      SAFE_DELETE(tb->strip_regions, free);
+      tb->strip_region_count = 0;
       if (lparam)
         memcpy(&tb->strip, lparam, sizeof(bitmap_strip_t));
       else
@@ -767,10 +777,14 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
       return true;
     }
 
-    case tbLoadStrip: {
-      const char *path = (const char *)lparam;
-      int tile_sz = (int)wparam;
-      if (!path || tile_sz <= 0 || !g_ui_runtime.running) {
+    case tbLoadStrip:
+    case tbLoadAtlas: {
+      const toolbar_atlas_t *atlas = msg == tbLoadAtlas ? lparam : NULL;
+      const char *path = atlas ? atlas->path : msg == tbLoadStrip ? lparam : NULL;
+      int tile_sz = atlas ? 1 : (int)wparam;
+      if (!path || tile_sz <= 0 || !g_ui_runtime.running ||
+          (atlas && (!atlas->regions || atlas->columns <= 0 || atlas->count <= 0 ||
+                     atlas->count % atlas->columns || atlas->count > 4096))) {
         fprintf(stderr, "[tb] load strip rejected win=%u path=%p tile=%d running=%d\n", win->id, (const void *)path, tile_sz, g_ui_runtime.running);
         fflush(stderr);
         return false;
@@ -794,20 +808,46 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
         return false;
       }
 
+      irect16_t *regions = NULL;
+      if (atlas) {
+        for (int i = 0; i < atlas->count; i++) {
+          irect16_t r = atlas->regions[i];
+          if (r.x < 0 || r.y < 0 || r.w <= 0 || r.h <= 0 || r.x + r.w > w || r.y + r.h > h) {
+            image_free(src);
+            fprintf(stderr, "[tb] invalid atlas region win=%u index=%d rect=%d,%d,%d,%d image=%dx%d\n",
+                    win->id, i, r.x, r.y, r.w, r.h, w, h);
+            fflush(stderr);
+            return false;
+          }
+        }
+        regions = malloc((size_t)atlas->count * sizeof(*regions));
+        if (!regions) {
+          image_free(src);
+          fprintf(stderr, "[tb] atlas region allocation failed win=%u count=%d\n", win->id, atlas->count);
+          fflush(stderr);
+          return false;
+        }
+        memcpy(regions, atlas->regions, (size_t)atlas->count * sizeof(*regions));
+      }
+
       uint32_t tex = R_CreateTextureSRGBA8(w, h, src, R_FILTER_LINEAR, R_WRAP_CLAMP);
       image_free(src);
       if (!tex) {
+        free(regions);
         fprintf(stderr, "[tb] strip texture allocation failed win=%u path=%s width=%d height=%d\n", win->id, path, w, h);
         fflush(stderr);
         return false;
       }
       R_DeleteTexture(tb->strip_tex);
+      free(tb->strip_regions);
+      tb->strip_regions = regions;
+      tb->strip_region_count = atlas ? atlas->count : 0;
 
       tb->strip_tex = tex;
       tb->strip.tex = tex;
-      tb->strip.icon_w = tile_sz;
-      tb->strip.icon_h = tile_sz;
-      tb->strip.cols = w / tile_sz;
+      tb->strip.icon_w = atlas ? regions[0].w : tile_sz;
+      tb->strip.icon_h = atlas ? regions[0].h : tile_sz;
+      tb->strip.cols = atlas ? atlas->columns : w / tile_sz;
       tb->strip.sheet_w = w;
       tb->strip.sheet_h = h;
       invalidate_window(win);

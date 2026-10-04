@@ -3,6 +3,7 @@
 #include <orion/user/gl_compat.h>
 #include <orion/user/toolbar.h>
 #include <orion/user/image.h>
+#include <orion/user/color.h>
 #include <string.h>
 
 #if defined(__APPLE__) && !TARGET_OS_IOS
@@ -60,15 +61,52 @@ static void test_png_toolbar(void) {
     glReadPixels(14, 64 - 14 - 1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pressed);
     ok &= normal[0] == 255 && normal[1] == 0 && pressed[0] == 0 && pressed[1] == 255;
     tb.pressed_item = -1;
+    tb.style |= TOOLBAR_STYLE_IMAGE_BUTTONS;
+    toolbar_draw_non_client(&root);
+    uint8_t body_margin[4], active_margin[4], active[4];
+    glReadPixels(3, 64 - 14 - 1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, body_margin);
+    item.flags = TOOLBAR_BUTTON_FLAG_ACTIVE;
+    tb.hot_item = 0;
+    toolbar_draw_non_client(&root);
+    glReadPixels(3, 64 - 14 - 1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, active_margin);
+    glReadPixels(14, 64 - 14 - 1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, active);
+    ok &= active[0] == 0 && active[1] == 255 && memcmp(body_margin, active_margin, 4) == 0;
     item.flags = TOOLBAR_ITEM_FLAG_DISABLED;
     toolbar_draw_non_client(&root);
     uint8_t disabled[4];
     glReadPixels(14, 64 - 14 - 1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, disabled);
     ok &= disabled[0] > disabled[1] && disabled[0] < normal[0];
+    uint8_t states[8 * 40 * 4];
+    const uint8_t colours[][3] = {{255, 0, 0}, {0, 255, 0}, {0, 0, 255}, {255, 255, 0}, {88, 88, 88}};
+    irect16_t regions[] = {R(0, 0, 8, 8), R(0, 8, 8, 8), R(0, 16, 8, 8), R(0, 24, 8, 8), R(0, 32, 8, 8)};
+    for (int i = 0; i < 8 * 40; i++) {
+      memcpy(states + i * 4, colours[i / 64], 3);
+      states[i * 4 + 3] = 255;
+    }
+    ok &= save_image_png(path, states, 8, 40);
+    toolbar_atlas_t atlas = {path, 1, ARRAY_LEN(regions), regions};
+    ok &= toolbar_handle_message(&root, tbLoadAtlas, 0, &atlas);
+    original = tb.strip.tex;
+    regions[0] = R(0, 0, 9, 8);
+    ok &= !toolbar_handle_message(&root, tbLoadAtlas, 0, &atlas) && tb.strip.tex == original;
+    tb.style = TOOLBAR_STYLE_STATE_STRIP | TOOLBAR_STYLE_IMAGE_BUTTONS;
+    for (int row = 0; row < 5; row++) {
+      item.flags = row == 1 ? TOOLBAR_BUTTON_FLAG_ACTIVE : row == 4 ? TOOLBAR_ITEM_FLAG_DISABLED : 0;
+      tb.pressed_item = row == 2 ? 0 : -1;
+      tb.hot_item = row == 3 ? 0 : -1;
+      toolbar_draw_non_client(&root);
+      uint8_t px[4];
+      glReadPixels(14, 64 - 14 - 1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, px);
+      uint8_t gray = (uint8_t)(ui_srgb8_to_linear(88) * 255 + 0.5f);
+      bool match = row == 4 ? px[0] == gray && px[1] == gray && px[2] == gray && px[3] == 255 : memcmp(px, colours[row], 3) == 0;
+      if (!match) fprintf(stderr, "[renderer-test] atlas row=%d pixel=%u,%u,%u\n", row, px[0], px[1], px[2]);
+      ok &= match;
+    }
     ok &= glGetError() == GL_NO_ERROR;
     if (!ok) fprintf(stderr, "[renderer-test] toolbar normal=%u,%u pressed=%u,%u\n", normal[0], normal[1], pressed[0], pressed[1]);
     g_ui_runtime.running = false;
     R_DeleteTexture(tb.strip_tex);
+    free(tb.strip_regions);
     remove(path);
     shutdown_white_texture();
   }
