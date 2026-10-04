@@ -146,6 +146,12 @@ void app_preview(int block) {
   app_unlock();
 }
 
+void app_set_search(const char *text) {
+  GR_TRACE("search win=%p selected=%d old=\"%s\" new=\"%s\"", (void *)g_app->library, g_app->selected_clip, g_app->search, text);
+  snprintf(g_app->search, sizeof(g_app->search), "%s", text ? text : "");
+  if (g_app->tabs) for (window_t *page = g_app->tabs->children; page; page = page->next) send_message(page, binFilter, 0, NULL);
+}
+
 void app_select_clip(int idx) {
   GR_TRACE("select win=%p old=%d new=%d", (void *)g_app->sheet, g_app->selected_clip, idx);
   g_app->selected_clip = idx;

@@ -14,6 +14,12 @@
 // Helper function (will be moved to ui/user/window.c later)
 extern window_t *get_root_window(window_t *window);
 
+typedef struct { char placeholder[128]; } textedit_t;
+
+static void notify_change(window_t *win) {
+  if (win->parent) send_message(win->parent, evCommand, MAKEDWORD(win->id, ednChange), win);
+}
+
 // Text edit control window procedure
 result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
@@ -40,6 +46,9 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       int th = text_char_height(FONT_SMALL);
       int text_x = TEXTEDIT_PADDING_HORZ;
       int text_y = (win->frame.h - th) / 2;
+      const textedit_t *te = win->userdata;
+      if (!win->title[0] && te && te->placeholder[0])
+        draw_text_ellipsized(FONT_SMALL, te->placeholder, text_x, text_y, local.w - 2 * text_x, get_sys_color(brTextSecondary));
       draw_text(FONT_SMALL, win->title, text_x, text_y, get_sys_color(brTextNormal));
       if (g_ui_runtime.focused == win && window_has_state(win, WINDOW_STATE_EDITING)) {
         fill_rect(get_sys_color(brTextNormal),
@@ -51,10 +60,16 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
     }
 #ifdef AX_PLATFORM_IOS
     case evKillFocus:
-    case evDestroy:
       axSetTextInput(FALSE);
       return true;
 #endif
+    case evDestroy:
+#ifdef AX_PLATFORM_IOS
+      axSetTextInput(FALSE);
+#endif
+      free(win->userdata);
+      win->userdata = NULL;
+      return true;
     case evLeftButtonUp:
       if (g_ui_runtime.focused == win) {
         invalidate_window(win);
@@ -80,6 +95,7 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
                 strlen(win->title + win->cursor_pos) + 1);
         win->title[win->cursor_pos] = *(char *)lparam; // Only handle 1-byte characters
         win->cursor_pos++;
+        notify_change(win);
       }
       invalidate_window(win);
       return true;
@@ -109,6 +125,7 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
                     win->title + win->cursor_pos,
                     strlen(win->title + win->cursor_pos) + 1);
             win->cursor_pos--;
+            notify_change(win);
           }
           break;
         case AX_KEY_LEFTARROW:
@@ -145,6 +162,18 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         invalidate_window(win);
       }
       return true;
+
+    case edSetPlaceholder: {
+      textedit_t *te = win->userdata ? win->userdata : allocate_window_data(win, sizeof(textedit_t));
+      if (!te) {
+        fprintf(stderr, "[ed] set_placeholder failed win=%u reason=allocation\n", (unsigned)win->id);
+        fflush(stderr);
+        return false;
+      }
+      snprintf(te->placeholder, sizeof(te->placeholder), "%s", lparam ? (const char *)lparam : "");
+      invalidate_window(win);
+      return true;
+    }
 
     case evGetCursor:
       return curIBeam;

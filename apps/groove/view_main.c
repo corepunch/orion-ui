@@ -4,7 +4,8 @@
 #include "groove.h"
 #include <orion/gem.h>
 
-#define BIN_H 168
+#define BIN_H      280
+#define LIBRARY_H  44
 
 void toolbar_refresh(window_t *win) {
   const song_t *s = &g_app->song;
@@ -27,8 +28,10 @@ void toolbar_refresh(window_t *win) {
 static void layout(window_t *win) {
   groove_t *app = g_app;
   irect16_t cr = get_client_rect(win), bin = rect_split_bottom(cr, BIN_H), top = rect_trim_bottom(cr, BIN_H);
-  if (app->sheet) { move_window(app->sheet, top.x, top.y); resize_window(app->sheet, top.w, top.h); }
-  if (app->tabs)  { move_window(app->tabs, bin.x, bin.y);  resize_window(app->tabs, bin.w, bin.h); }
+  irect16_t head = rect_split_top(bin, LIBRARY_H), pages = rect_trim_top(bin, LIBRARY_H);
+  if (app->sheet)   { move_window(app->sheet, top.x, top.y);     resize_window(app->sheet, top.w, top.h); }
+  if (app->tabs)    { move_window(app->tabs, pages.x, pages.y);  resize_window(app->tabs, pages.w, pages.h); }
+  if (app->library) { move_window(app->library, head.x, head.y); resize_window(app->library, head.w, head.h); }
 }
 
 static const accel_t kAccel[] = {
@@ -74,8 +77,13 @@ result_t main_win_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       app->sheet = create_window("sheet", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_HSCROLL, MAKERECT(0, 0, cr.w, cr.h - BIN_H), win, win_sheet, 0, NULL);
       app->tabs  = create_window("bin", WINDOW_NOTITLE | WINDOW_NOFILL, MAKERECT(0, cr.h - BIN_H, cr.w, BIN_H), win, win_tabview, 0, NULL);
       app->tabs->id = ID_TABS;
-      for (int c = 0; c < CAT_COUNT; c++)
-        create_window(kCategoryName[c], WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL, MAKERECT(0, 0, cr.w, BIN_H), app->tabs, win_bin, 0, (void *)(intptr_t)c);
+      send_message(app->tabs, tcSetStyle, TAB_STYLE_SIDEBAR, NULL);
+      for (int i = 0; i <= CAT_COUNT; i++) { // "All" first, then one page per family
+        int c = i == 0 ? CAT_ALL : i - 1;
+        create_window(c == CAT_ALL ? "All" : kCategoryName[c], WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL,
+                      MAKERECT(0, 0, cr.w, BIN_H), app->tabs, win_bin, 0, (void *)(intptr_t)c);
+      }
+      app->library = create_window("library", WINDOW_NOTITLE | WINDOW_NOFILL, MAKERECT(0, cr.h - BIN_H, cr.w, LIBRARY_H), win, win_library, 0, NULL);
       app->timer = axSetTimer(win, 33, NULL, true);
       layout(win);
       app_update_status();

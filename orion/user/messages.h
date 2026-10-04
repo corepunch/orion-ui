@@ -136,6 +136,7 @@ enum {
   // mirror it to lparam when non-NULL.
   edGetText,        // wparam=buf_size; lparam=char* dst → copies text, returns length
   edSetText,        // wparam=0; lparam=const char* src → replaces text
+  edSetPlaceholder, // lparam=const char* cue text shown while the field is empty (EM_SETCUEBANNER)
   // List (popup) messages
   lstSetItem,             // wparam=item index to pre-select in the dropdown list
   // Individual desktop-style icon control (commctl/icon.c).
@@ -205,6 +206,9 @@ enum {
   spnDragStart,
   spnMoved,
   tbItemDrop,         // evCommand notification: lparam=toolbar_drop_item_t*
+  // Text edit → parent (evCommand) after every user edit of the text (EN_CHANGE).
+  // edUpdate still goes to the root on commit (Enter / Tab). lparam = edit window.
+  ednChange,
 };
 
 // Button state
@@ -422,6 +426,7 @@ enum {
   tcSetStyle,       // wparam = TAB_STYLE_* flags
   tcSetImageStrip,   // lparam = bitmap_strip_t*; sets shared icon strip for all tabs
   tcSetTabIcon,      // wparam = tab_index; lparam = (void*)(intptr_t)icon_index in the strip; -1 = clear
+  tcAdjustRect,      // lparam = irect16_t* control rect, rewritten to the page area inside it (TCM_ADJUSTRECT)
 };
 // Card / Badge / TileGrid messages, in the spirit of NSCollectionView / UICollectionView items.
 enum {
@@ -440,6 +445,8 @@ enum {
 };
 #define TAB_CONTROL_HEIGHT 22
 #define TAB_STYLE_ICONS_ONLY (1u << 0) // show tab icons without page-title labels
+#define TAB_STYLE_SIDEBAR    (1u << 1) // tabs as a vertical list down the left edge; pages fill the rest
+#define TAB_SIDEBAR_ROW_HEIGHT 24
 
 // Analogous to WinAPI CW_USEDEFAULT: pass as x or y to create_window() /
 // create_window_from_form() to let the framework auto-position the window.

@@ -12,6 +12,7 @@
 // ── notification capture ──────────────────────────────────────────────────
 
 static int      g_update_count = 0;
+static int      g_change_count = 0;
 static window_t *g_last_edit   = NULL;
 
 static result_t edit_parent_proc(window_t *win, uint32_t msg,
@@ -22,11 +23,13 @@ static result_t edit_parent_proc(window_t *win, uint32_t msg,
         g_update_count++;
         g_last_edit = (window_t *)lparam;
     }
+    if (msg == evCommand && HIWORD(wparam) == ednChange) g_change_count++;
     return 0;
 }
 
 static void reset_state(void) {
     g_update_count = 0;
+    g_change_count = 0;
     g_last_edit    = NULL;
 }
 
@@ -368,6 +371,32 @@ void test_edit_tab_noop_when_not_editing(void) {
 
 // ── main ──────────────────────────────────────────────────────────────────
 
+void test_edit_change_notifies_parent_per_edit(void) {
+    TEST("win_textedit: every typed char and backspace sends ednChange to the parent");
+
+    test_env_init();
+    reset_state();
+    window_t *parent = test_env_create_window("P", 0, 0, 200, 100,
+                                               edit_parent_proc, NULL);
+    ASSERT_NOT_NULL(parent);
+    window_t *ed = make_edit(parent, 9, "");
+    ASSERT_NOT_NULL(ed);
+    ASSERT_TRUE(send_message(ed, edSetPlaceholder, 0, "Search..."));
+
+    begin_editing(ed);
+    send_message(ed, evTextInput, 0, "h");
+    send_message(ed, evTextInput, 0, "i");
+    ASSERT_EQUAL(g_change_count, 2);
+    send_message(ed, evKeyDown, AX_KEY_BACKSPACE, NULL);
+    ASSERT_STR_EQUAL(ed->title, "h");
+    ASSERT_EQUAL(g_change_count, 3);
+    ASSERT_EQUAL(g_update_count, 0);
+
+    destroy_window(parent);
+    test_env_shutdown();
+    PASS();
+}
+
 int main(int argc, char *argv[]) {
     (void)argc; (void)argv;
     TEST_START("win_textedit tests");
@@ -385,6 +414,7 @@ int main(int argc, char *argv[]) {
     test_edit_escape_exits_editing();
     test_edit_tab_commits_editing();
     test_edit_tab_noop_when_not_editing();
+    test_edit_change_notifies_parent_per_edit();
 
     TEST_END();
 }

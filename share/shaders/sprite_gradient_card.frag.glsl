@@ -25,14 +25,17 @@ void main() {
   float inner_d = box_distance(p, inner, radius);
   float outer = 1.0 - smoothstep(-0.75, 0.75, outer_d);
   float face = 1.0 - smoothstep(-0.75, 0.75, inner_d);
-  float y = clamp((tex.y * size.y - ring) / max(1.0, size.y - 2.0 * ring), 0.0, 1.0);
+  vec2 uv = clamp((tex * size - vec2(ring)) / max(vec2(1.0), size - 2.0 * vec2(ring)), 0.0, 1.0);
+  float y = uv.y, shade = clamp(y * 0.8 + uv.x * 0.2, 0.0, 1.0);
   vec3 base = srgb_to_linear(tint.rgb);
-  vec3 rgb = mix(mix(base, vec3(1.0), 0.04 + 0.05 * params1.z), base * 0.72, y);
+  vec3 top = mix(base, vec3(1.0), 0.12 + 0.10 * params1.z);
+  vec3 rgb = mix(top, base * mix(0.78, 0.95, params1.z), smoothstep(0.0, 1.0, shade));
   if (params1.x > 0.0) {
+    // Light rim around the whole face, brightest along the top edge.
     float rim = 1.0 - smoothstep(params1.x, params1.x + 0.75, abs(inner_d));
-    rgb = mix(rgb, vec3(1.0), rim * (1.0 - smoothstep(0.0, 0.35, y)) * 0.6);
+    rgb = mix(rgb, vec3(1.0), rim * mix(0.55, 0.22, smoothstep(0.0, 0.5, y)));
   }
-  vec3 ring_rgb = mix(base, vec3(1.0), 0.82);
+  vec3 ring_rgb = mix(base, vec3(1.0), 0.9);
   float coverage = params1.y > 0.5 ? outer : face;
   if (params1.y > 0.5) rgb = mix(ring_rgb, rgb, face);
   float a = coverage * tint.a * col.a;

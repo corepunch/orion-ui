@@ -187,6 +187,44 @@ static void test_two_finger_sheet_pan(void) {
   PASS();
 }
 
+static int visible_tiles(window_t *page) {
+  int n = 0;
+  for (window_t *c = page->children; c; c = c->next) n += window_has_state(c, WINDOW_STATE_VISIBLE);
+  return n;
+}
+
+static void test_library_search(void) {
+  TEST("library search filters every bin page by block and family name");
+  test_env_init();
+  g_app = app_init();
+  window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_STATUSBAR, MAKERECT(0, 0, 1000, 700), NULL, main_win_proc, 0, g_app);
+  ASSERT_TRUE(win && g_app->tabs && g_app->library);
+  window_t *all = g_app->tabs->children;
+  ASSERT_TRUE(all && strcmp(all->title, "All") == 0);
+  ASSERT_EQUAL(visible_tiles(all), blocks_count());
+  ASSERT_TRUE(block_matches(0, "") && block_matches(0, "FLOOR") && block_matches(0, "drum") && !block_matches(0, "zzz"));
+
+  window_t *search = NULL;
+  for (window_t *c = g_app->library->children; c; c = c->next) if (c->id == ID_SEARCH) search = c;
+  ASSERT_NOT_NULL(search);
+  set_focus(search);
+  send_message(search, evLeftButtonUp, MAKEDWORD(3, 5), NULL);
+  send_message(search, evTextInput, 0, "f");
+  send_message(search, evTextInput, 0, "l");
+  ASSERT_TRUE(strcmp(g_app->search, "fl") == 0);
+  int expect = 0;
+  for (int i = 0; i < blocks_count(); i++) expect += block_matches(i, "fl");
+  ASSERT_TRUE(expect > 0 && expect < blocks_count());
+  ASSERT_EQUAL(visible_tiles(all), expect);
+  send_message(search, evKeyDown, AX_KEY_BACKSPACE, NULL);
+  send_message(search, evKeyDown, AX_KEY_BACKSPACE, NULL);
+  ASSERT_EQUAL(visible_tiles(all), blocks_count());
+  destroy_window(win);
+  app_shutdown(g_app);
+  test_env_shutdown();
+  PASS();
+}
+
 int main(void) {
   TEST_START("Groove");
   test_blocks();
@@ -195,5 +233,6 @@ int main(void) {
   test_mixer();
   test_sheet_drop();
   test_two_finger_sheet_pan();
+  test_library_search();
   TEST_END();
 }

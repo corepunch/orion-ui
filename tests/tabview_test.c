@@ -65,8 +65,36 @@ void test_tabview_selects_and_arranges_pages(void) {
   destroy_window(host); test_env_shutdown(); PASS();
 }
 
+void test_tabview_sidebar_lists_tabs_vertically(void) {
+  TEST("TabView sidebar style lists tabs down the left edge");
+  test_env_init(); register_commctl_classes();
+  window_t *host = create_window("Host", WINDOW_NOTITLE, MAKERECT(0, 0, 320, 200),
+                                 NULL, host_proc, 0, NULL);
+  window_t *tabs = create_window("", WINDOW_NOTITLE, MAKERECT(0, 0, 320, 200),
+                                 host, "TabView", 0, NULL);
+  window_t *a = create_window("Changes", WINDOW_NOTITLE, MAKERECT(0, 0, 1, 1), tabs, page_proc, 0, NULL);
+  window_t *b = create_window("History", WINDOW_NOTITLE, MAKERECT(0, 0, 1, 1), tabs, page_proc, 0, NULL);
+  ASSERT_TRUE(send_message(tabs, tcSetStyle, TAB_STYLE_SIDEBAR, NULL));
+  irect16_t page = R(0, 0, 320, 200);
+  ASSERT_TRUE(send_message(tabs, tcAdjustRect, 0, &page));
+  ASSERT_TRUE(page.x > 0 && page.y == 0 && page.x + page.w == 320 && page.h == 200);
+  ASSERT_EQUAL(a->frame.x, page.x);
+  ASSERT_EQUAL(a->frame.y, 0);
+
+  g_tab_notifications = 0;
+  send_message(tabs, evLeftButtonDown, MAKEDWORD(10, 6 + TAB_SIDEBAR_ROW_HEIGHT + 4), NULL);
+  ASSERT_EQUAL(send_message(tabs, tcGetSelection, 0, NULL), 1);
+  ASSERT_TRUE(window_has_state(b, WINDOW_STATE_VISIBLE));
+  ASSERT_FALSE(window_has_state(a, WINDOW_STATE_VISIBLE));
+  ASSERT_EQUAL(g_tab_notifications, 1);
+  ASSERT_TRUE(send_message(tabs, evKeyDown, AX_KEY_UPARROW, NULL));
+  ASSERT_EQUAL(send_message(tabs, tcGetSelection, 0, NULL), 0);
+  destroy_window(host); test_env_shutdown(); PASS();
+}
+
 int main(void) {
   TEST_START("TabView tests");
   test_tabview_selects_and_arranges_pages();
+  test_tabview_sidebar_lists_tabs_vertically();
   TEST_END();
 }

@@ -162,17 +162,22 @@ static int card_bottom(int x, int w, int h, int radius) {
   return row < 0 ? 0 : row > h - 1 ? h - 1 : row;
 }
 
+float block_peak(const block_t *b, int x, int w) {
+  int np = b->audio.npeaks;
+  if (np < 2 || w <= 0) return 0;
+  float f = (x + 0.5f) * np / w - 0.5f;
+  int k = f < 0 ? 0 : (int)f, k1 = k + 1 < np ? k + 1 : np - 1;
+  float t = f < 0 ? 0 : f - k;
+  return b->audio.peaks[k] + (b->audio.peaks[k1] - b->audio.peaks[k]) * t;
+}
+
 void draw_clip(window_t *win, const block_t *b, irect16_t r, uint32_t color, ctrl_state_t state) {
   draw_gradient_card(r, state, color);
   r = rect_inset(r, get_theme()->card_ring_width);
   int radius = MAX(0, get_theme()->card_corner_radius - get_theme()->card_ring_width);
   uint32_t ink = color_with_alpha(get_sys_color(brTextOnColor), (color >> 24) * 0x99 / 255);
-  int np = b->audio.npeaks;
-  for (int x = 0; x < r.w && np > 1; x++) {
-    float f = (x + 0.5f) * np / r.w - 0.5f;
-    int k = f < 0 ? 0 : (int)f, k1 = k + 1 < np ? k + 1 : np - 1;
-    float t = f < 0 ? 0 : f - k, p = b->audio.peaks[k] + (b->audio.peaks[k1] - b->audio.peaks[k]) * t;
-    int h = MAX(1, (int)(p * MAX(1, r.h - 14) / 255));
+  for (int x = 0; x < r.w && b->audio.npeaks > 1; x++) {
+    int h = MAX(1, (int)(block_peak(b, x, r.w) * MAX(1, r.h - 14) / 255));
     int bottom = r.y + card_bottom(x, r.w, r.h, radius);
     int y = bottom + 1 - h;
     if (y < r.y) { h -= r.y - y; y = r.y; }

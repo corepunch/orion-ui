@@ -15,9 +15,9 @@ const char *const kCategoryName[CAT_COUNT] = {
 
 uint32_t category_color(category_t cat) {
   static const uint32_t col[CAT_COUNT] = {
-    WEB(0xd9702a), WEB(0x2f7bd1), WEB(0xb8962a), WEB(0x3a9a55), WEB(0x9a4cc4),
-    WEB(0xc4523a), WEB(0xe08a3c), WEB(0xc4b15a), WEB(0xe07a68), WEB(0x7f93a8),
-    WEB(0xc47a3a), WEB(0xd06080), WEB(0x6a7a8a), WEB(0x3f8f62), WEB(0xc45a8a), WEB(0x5a6ec4),
+    WEB(0x1aa6f2), WEB(0xa047f2), WEB(0xffb21e), WEB(0xff4f6c), WEB(0x1fd2b2),
+    WEB(0xff7a2a), WEB(0xff4fa0), WEB(0xf2d02c), WEB(0xff7f5e), WEB(0x5cc6f8),
+    WEB(0xffa12c), WEB(0xe64fd8), WEB(0x7c8cff), WEB(0x36c95c), WEB(0xff63a6), WEB(0x6c5cff),
   };
   return col[cat >= 0 && cat < CAT_COUNT ? cat : 0];
 }

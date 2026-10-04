@@ -72,7 +72,7 @@ A rounded outline is one stroke, not two stacked fills. `thickness` is the insid
 stroke_rounded_rect(get_sys_color(brAccent), r, get_theme()->card_corner_radius, 2);
 ```
 
-`draw_gradient_card(r, state, color)` draws a tinted vertical gradient, top highlight,
+`draw_gradient_card(r, state, color)` draws a light-to-saturated diagonal gradient, a light rim (brightest on top),
 and optional `CTRL_SELECTED` ring in one shader pass with one rounded silhouette.
 `CTRL_HOVER` brightens the face. The input colour's alpha applies to the entire card,
 including its ring and highlight. Theme metrics `card_corner_radius`, `card_ring_width`,

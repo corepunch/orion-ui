@@ -2,6 +2,7 @@
 #define __GROOVE_H__
 
 #include <stdio.h>
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
@@ -59,6 +60,8 @@ typedef struct {
   block_pcm_t audio;
 } block_t;
 
+#define CAT_ALL CAT_COUNT // bin page listing every block
+
 extern const char *const kCategoryName[CAT_COUNT];
 uint32_t category_color(category_t cat);
 
@@ -106,7 +109,7 @@ typedef struct {
 } drag_t;
 
 typedef struct {
-  window_t     *win, *menubar_win, *sheet, *tabs;
+  window_t     *win, *menubar_win, *sheet, *tabs, *library;
   accel_table_t *accel;
   hinstance_t   hinstance;
   song_t        song;
@@ -114,6 +117,7 @@ typedef struct {
   uint32_t      timer;
   int           selected_clip;
   drag_t        drag;
+  char          search[64]; // library filter, matched against block and category names
 } groove_t;
 
 extern groove_t *g_app;
@@ -124,6 +128,7 @@ enum {
   shDrop,                     // wparam = MAKEDWORD(screen_x, screen_y)
   shDragEnd,                  // clear drag preview
   shSeekBar,                  // wparam = bar
+  binFilter,                  // re-apply g_app->search to a bin page
 };
 
 #define ID_PLAY      ID_TRANSPORT_PLAY
@@ -134,6 +139,7 @@ enum {
 #define ID_BPM_DOWN  ID_TRANSPORT_SLOWER
 #define ID_DELETE    ID_EDIT_DELETE
 #define ID_TABS      200
+#define ID_SEARCH    201
 
 // Bin tiles and sheet clips. NOACTIVATE so creating one does not take focus.
 #define GR_CARD_FLAGS (WINDOW_NOFILL | WINDOW_TRANSPARENT | WINDOW_NODRAG | WINDOW_NOACTIVATE | WINDOW_NOTABSTOP)
@@ -154,13 +160,18 @@ void      app_preview(int block);
 void      app_select_clip(int idx);
 bool      app_drop(const drag_t *d);          // commits a drag (add or move)
 void      app_update_status(void);
+void      app_set_search(const char *text);
+bool      block_matches(int id, const char *query);
 
 // Views
 extern result_t main_win_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 extern result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 extern result_t win_bin(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+extern result_t win_library(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 void toolbar_refresh(window_t *win);
 void draw_clip(window_t *win, const block_t *b, irect16_t r, uint32_t color, ctrl_state_t state);
+// Waveform overview of `b` resampled to column x of a w-pixel-wide strip, 0..255.
+float block_peak(const block_t *b, int x, int w);
 // Moves a card window. A visual drag keeps the painted copy still: the frame
 // delta is added back into the drag offset.
 void card_place(window_t *card, irect16_t cell);
