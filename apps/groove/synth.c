@@ -7,10 +7,18 @@
 #define SR  ((float)GR_SAMPLE_RATE)
 #define TAU 6.28318530718f
 
-const char *const kCategoryName[CAT_COUNT] = { "Drums", "Bass", "Piano", "Guitar", "Electronic" };
+const char *const kCategoryName[CAT_COUNT] = {
+  "Drums", "Bass", "Piano", "Guitar", "Electronic",
+  "Kicks", "Snares", "Hats", "Claps", "Cymbals",
+  "Perc", "Fills", "Scratch", "Organ", "Vocals", "FX",
+};
 
 uint32_t category_color(category_t cat) {
-  static const uint32_t col[CAT_COUNT] = { WEB(0xd9702a), WEB(0x2f7bd1), WEB(0xb8962a), WEB(0x3a9a55), WEB(0x9a4cc4) };
+  static const uint32_t col[CAT_COUNT] = {
+    WEB(0xd9702a), WEB(0x2f7bd1), WEB(0xb8962a), WEB(0x3a9a55), WEB(0x9a4cc4),
+    WEB(0xc4523a), WEB(0xe08a3c), WEB(0xc4b15a), WEB(0xe07a68), WEB(0x7f93a8),
+    WEB(0xc47a3a), WEB(0xd06080), WEB(0x6a7a8a), WEB(0x3f8f62), WEB(0xc45a8a), WEB(0x5a6ec4),
+  };
   return col[cat >= 0 && cat < CAT_COUNT ? cat : 0];
 }
 
@@ -156,6 +164,85 @@ static void v_riser(ctx_t *c, int len) {
   }
 }
 
+// Dance-library roles the original five families do not cover. Synthesized
+// here; the reference clips are not copied. See docs/dance-ejay-pxd.md.
+static void kick_len(ctx_t *c, int s, float a, float decay, float len) {
+  double ph = 0;
+  for (int i = 0, n = (int)(len * SR); i < n; i++) {
+    float t = i / SR;
+    ph += TAU * (38.0f + 150.0f * expf(-t * 26.0f)) / SR;
+    mix(c, s + i, a * sinf((float)ph) * expf(-t * decay));
+  }
+}
+static void tom(ctx_t *c, int s, float hz, float a) {
+  double ph = 0;
+  for (int i = 0, n = (int)(0.28f * SR); i < n; i++) {
+    float t = i / SR;
+    ph += TAU * hz * (1.0f + 0.5f * expf(-t * 18.0f)) / SR;
+    mix(c, s + i, a * (sinf((float)ph) * expf(-t * 7.0f) + 0.2f * rnd(c) * expf(-t * 35.0f)));
+  }
+}
+static void cymbal_at(ctx_t *c, int s, float a, float decay, float len) {
+  float prev = 0, lp = 0, k = 1.0f - expf(-TAU * 5500.0f / SR);
+  for (int i = 0, n = (int)(len * SR); i < n; i++) {
+    float t = i / SR, x = rnd(c), y = x - prev;
+    prev = x;
+    lp += k * (y - lp);
+    mix(c, s + i, a * (0.75f * lp + 0.12f * sinf(TAU * 3100.0f * t) + 0.08f * sinf(TAU * 5700.0f * t)) * expf(-t * decay));
+  }
+}
+static void organ_note(ctx_t *c, int s, int g, float hz, float a) {
+  static const float hamp[4] = { 1.0f, 0.55f, 0.28f, 0.16f };
+  int n = g + (int)(0.25f * SR);
+  for (int h = 0; h < 4; h++) {
+    float f = hz * (float)(h * 2 + 1);
+    double ph = 0;
+    if (f > SR / 2.2f) break;
+    for (int i = 0; i < n; i++, ph += TAU * f / SR) {
+      float e = fmin1(i / (0.012f * SR)) * (i < g ? 1.0f : expf(-(i - g) / SR * 5.0f));
+      mix(c, s + i, a * hamp[h] * 0.28f * sinf((float)ph) * e);
+    }
+  }
+}
+static void vox_ah(ctx_t *c, int s, float hz, float a, float len) {
+  double fr = 0; float l1 = 0, b1 = 0, l2 = 0, b2 = 0;
+  float f1 = 2.0f * sinf(3.14159265f * 640.0f / SR), f2 = 2.0f * sinf(3.14159265f * 1400.0f / SR);
+  for (int i = 0, n = (int)(len * SR); i < n; i++, fr += hz / SR) {
+    float t = i / SR, saw = 2.0f * (float)(fr - floor(fr)) - 1.0f;
+    float h1 = saw - l1 - 0.18f * b1, h2 = saw - l2 - 0.22f * b2;
+    b1 += f1 * h1; l1 += f1 * b1; b2 += f2 * h2; l2 += f2 * b2;
+    mix(c, s + i, a * 0.35f * (l1 + 0.6f * l2) * fmin1(i / (0.006f * SR)) * expf(-t * 3.5f));
+  }
+}
+static void scratch_at(ctx_t *c, int s, int n, int up) {
+  float prev = 0, lp = 0;
+  for (int i = 0; i < n; i++) {
+    float u = (float)i / (float)n, fc = up ? 400.0f + 7000.0f * u * u : 7400.0f - 6800.0f * u;
+    float k = 1.0f - expf(-TAU * fc / SR), x = rnd(c), y;
+    lp += k * (x - lp);
+    y = x - lp - 0.3f * prev;
+    prev = x - lp;
+    mix(c, s + i, 0.55f * y * sinf(3.14159265f * u));
+  }
+}
+static void noise_bed(ctx_t *c, int len, float rise) {
+  float low = 0, band = 0;
+  for (int i = 0; i < len; i++) {
+    float u = (float)i / (float)len, fc = rise > 0 ? 200.0f + 4000.0f * u : 4200.0f - 3800.0f * u;
+    float f = 2.0f * sinf(3.14159265f * fc / SR), hi = rnd(c) - low - 0.4f * band;
+    band += f * hi; low += f * band;
+    mix(c, i, 0.3f * band * (rise > 0 ? u : 0.35f + 0.65f * (1.0f - u)));
+  }
+}
+static void impact_at(ctx_t *c, int s) {
+  double ph = 0;
+  for (int i = 0, n = (int)(0.6f * SR); i < n; i++) {
+    float t = i / SR;
+    ph += TAU * (90.0f * expf(-t * 4.0f) + 40.0f) / SR;
+    mix(c, s + i, 0.8f * sinf((float)ph) * expf(-t * 3.0f) + 0.45f * rnd(c) * expf(-t * 18.0f));
+  }
+}
+
 static void voice(ctx_t *c, int s, int g, float hz, float a, inst_t inst, int idx) {
   s += inst == I_PLUCK || inst == I_MUTE ? idx * (int)(0.012f * SR) : inst == I_PIANO ? idx * (int)(0.003f * SR) : 0;
   switch (inst) {
@@ -275,6 +362,58 @@ GEN(g_arp_down) { seq(c, "E5 C5 A4 E4 E5 C5 A4 E4 D5 B4 G4 D4 D5 B4 G4 D4", 4, 1
 GEN(g_arp_dm) { seq(c, "D4 F4 A4 D5 A4 F4 A4 D5 D4 F4 A4 D5 A4 F4 A4 F4", 4, 1.0, I_ARP, 0.9f); }
 GEN(g_sweep) { v_riser(c, c->n); }
 
+GEN(g_dry_floor)  { drums(c, 0, "x...x...x...x...", "", "", "", ""); }
+GEN(g_room_pulse) { for (int i = 0; i < 4; i++) kick_len(c, (int)(i * c->bar / 4.0), 0.9f, 4.2f, 0.55f); }
+GEN(g_half_kick)  { for (int i = 0; i < 2; i++) kick_len(c, (int)(i * c->bar / 2.0), 0.95f, 3.0f, 0.75f); }
+GEN(g_kick_run)   { kick_len(c, 0, 0.9f, 6.0f, 0.4f); for (int i = 8; i < 16; i++) kick_len(c, (int)(i * c->bar / 16.0), 0.7f, 11.0f, 0.11f); }
+GEN(g_back_snap)  { drums(c, 0, "", "....x.......x...", "", "", ""); }
+GEN(g_rim_tick)   { drums(c, 0, "", "..x...x...x...x.", "", "", ""); }
+GEN(g_ghosts)     { drums(c, 0, "", "o.o.x.o.o.o.x.o.", "", "", ""); }
+GEN(g_snare_run)  { drums(c, 0, "", "........xoxoxxxx", "", "", ""); }
+GEN(g_closed_8)   { drums(c, 0, "", "", "x.x.x.x.x.x.x.x.", "", ""); }
+GEN(g_open_off)   { drums(c, 0, "", "", "", "..x...x...x...x.", ""); }
+GEN(g_tick_16)    { drums(c, 0, "", "", "xxxxxxxxxxxxxxxx", "", ""); }
+GEN(g_shuf_hat)   { drums(c, 0, "", "", "x.oox.oox.oox.oo", "", ""); }
+GEN(g_clap_back)  { drums(c, 0, "", "", "", "", "....x.......x..."); }
+GEN(g_clap_stack) { drums(c, 0, "", "", "", "", "....x.......x..."); clap(c, (int)(4 * c->bar / 16.0) + 160, 0.55f); clap(c, (int)(12 * c->bar / 16.0) + 160, 0.55f); }
+GEN(g_clap_doub)  { drums(c, 0, "", "", "", "", "....xx......xx.."); }
+GEN(g_clap_rush2) { drums(c, 0, "", "", "", "", "........xoxoxxxx"); }
+GEN(g_ride_8)     { for (int i = 0; i < 8; i++) cymbal_at(c, (int)(i * c->bar / 8.0), i & 1 ? 0.32f : 0.55f, 16.0f, 0.16f); }
+GEN(g_crash_one)  { cymbal_at(c, 0, 0.9f, 2.0f, 1.5f); }
+GEN(g_bell_pat)   { for (int i = 0; i < 8; i++) cymbal_at(c, (int)(i * c->bar / 8.0), 0.4f, 26.0f, 0.07f); }
+GEN(g_splash)     { for (int i = 0; i < 4; i++) cymbal_at(c, (int)(i * c->bar / 4.0), 0.75f, 7.0f, 0.2f); }
+GEN(g_shaker_16)  { drums(c, 0, "", "", "xoxoxoxoxoxoxoxo", "", ""); }
+GEN(g_tamb_8)     { for (int i = 0; i < 8; i++) hat(c, (int)(i * c->bar / 8.0), 0.75f, 16.0f, 0.14f); }
+GEN(g_conga)      { static const float hz[8] = { 180, 180, 230, 180, 200, 180, 230, 150 }; for (int i = 0; i < 8; i++) tom(c, (int)(i * c->bar / 8.0), hz[i], 0.8f); }
+GEN(g_wood)       { for (int i = 0; i < 4; i++) cymbal_at(c, (int)(i * c->bar / 4.0), 0.45f, 48.0f, 0.04f); }
+GEN(g_tom_down)   { static const float hz[8] = { 240, 210, 180, 150, 130, 110, 92, 74 }; for (int i = 0; i < 8; i++) tom(c, (int)(i * c->bar / 8.0), hz[i], 0.85f); }
+GEN(g_snare_build){ drums(c, 0, "x...............", "o.o.o.o.xoxoxxxx", "", "", ""); }
+GEN(g_kick_tumble){ kick_len(c, 0, 0.9f, 5.0f, 0.4f); for (int i = 8; i < 16; i++) kick_len(c, (int)(i * c->bar / 16.0), 0.75f, 12.0f, 0.1f); }
+GEN(g_hat_lift)   { drums(c, 0, "x...............", "", "x.x.x.x.xxxxxxxx", "", ""); }
+GEN(g_zip_up)     { scratch_at(c, 0, (int)(c->bar * 0.5), 1); }
+GEN(g_zip_down)   { scratch_at(c, 0, (int)(c->bar * 0.5), 0); }
+GEN(g_chop_loop)  { for (int i = 0; i < 4; i++) scratch_at(c, (int)(i * c->bar / 4.0), (int)(c->bar / 4.0 * 0.4), i & 1); }
+GEN(g_brake)      { scratch_at(c, 0, (int)(c->bar * 0.85), 0); }
+GEN(g_org_stab)   { for (int i = 0; i < 4; i += 2) { int s = (int)(i * c->bar / 4.0), g = (int)(c->bar / 4.0); organ_note(c, s, g, midi_hz(57), 0.7f); organ_note(c, s, g, midi_hz(60), 0.5f); organ_note(c, s, g, midi_hz(64), 0.45f); } }
+GEN(g_org_off)    { for (int i = 1; i < 8; i += 2) { int s = (int)(i * c->bar / 8.0), g = (int)(c->bar / 10.0); organ_note(c, s, g, midi_hz(57), 0.65f); organ_note(c, s, g, midi_hz(64), 0.5f); } }
+GEN(g_org_hold)   { int g = c->n - (int)(0.05f * SR); organ_note(c, 0, g, midi_hz(57), 0.6f); organ_note(c, 0, g, midi_hz(64), 0.45f); organ_note(c, 0, g, midi_hz(69), 0.4f); }
+GEN(g_org_fifth)  { for (int i = 0; i < 4; i++) { int s = (int)(i * c->bar / 4.0), g = (int)(c->bar / 5.0), m = i < 2 ? 57 : 53; organ_note(c, s, g, midi_hz(m), 0.65f); organ_note(c, s, g, midi_hz(m + 7), 0.5f); } }
+GEN(g_hey)        { vox_ah(c, 0, midi_hz(60), 0.85f, 0.3f); vox_ah(c, (int)(c->bar / 2.0), midi_hz(64), 0.75f, 0.3f); }
+GEN(g_oh_layer)   { vox_ah(c, 0, midi_hz(55), 0.7f, 0.55f); vox_ah(c, 220, midi_hz(67), 0.4f, 0.45f); }
+GEN(g_ah_hook)    { static const int m[8] = { 64, 67, 69, 67, 65, 64, 62, 60 }; for (int i = 0; i < 8; i++) vox_ah(c, (int)(i * c->bar / 8.0), midi_hz(m[i]), 0.7f, 0.2f); }
+GEN(g_breath)     { for (int i = 0; i < 4; i++) hat(c, (int)(i * c->bar / 4.0), 0.45f, 5.0f, 0.22f); vox_ah(c, (int)(c->bar / 4.0), midi_hz(62), 0.55f, 0.4f); }
+GEN(g_noise_up)   { noise_bed(c, c->n, 1); }
+GEN(g_noise_down) { noise_bed(c, c->n, 0); }
+GEN(g_impact)     { impact_at(c, 0); }
+GEN(g_air)        {
+  float low = 0, band = 0, f = 2.0f * sinf(3.14159265f * 800.0f / SR);
+  for (int i = 0; i < c->n; i++) {
+    float u = (float)i / (float)c->n, hi = rnd(c) - low - 0.55f * band;
+    band += f * hi; low += f * band;
+    mix(c, i, 0.28f * band * sinf(3.14159265f * fmin1(u * 4.0f)));
+  }
+}
+
 static const struct { const char *name; category_t cat; int bars; void (*gen)(ctx_t *); } kDefs[] = {
   { "Four Floor",  CAT_DRUMS,      1, g_four_floor }, { "Break Beat",  CAT_DRUMS,      1, g_break_beat },
   { "Hat Groove",  CAT_DRUMS,      1, g_hat_groove }, { "Snare Fill",  CAT_DRUMS,      1, g_snare_fill },
@@ -312,6 +451,28 @@ static const struct { const char *name; category_t cat; int bars; void (*gen)(ct
   { "Fast Arp",    CAT_ELECTRONIC, 1, g_fast_arp },   { "Sub Pulse",   CAT_ELECTRONIC, 1, g_sub_pulse },
   { "Acid Climb",  CAT_ELECTRONIC, 1, g_acid_climb },   { "Arp Down",    CAT_ELECTRONIC, 1, g_arp_down },
   { "Arp Dm",      CAT_ELECTRONIC, 1, g_arp_dm },   { "Sweep",       CAT_ELECTRONIC, 1, g_sweep },
+  { "Dry Floor",   CAT_KICK,    1, g_dry_floor },  { "Room Pulse",    CAT_KICK,    1, g_room_pulse },
+  { "Half Kick",   CAT_KICK,    1, g_half_kick },  { "Kick Run",      CAT_KICK,    1, g_kick_run },
+  { "Back Snap",   CAT_SNARE,   1, g_back_snap },  { "Rim Tick",      CAT_SNARE,   1, g_rim_tick },
+  { "Ghost Notes", CAT_SNARE,   1, g_ghosts },     { "Snare Run",     CAT_SNARE,   1, g_snare_run },
+  { "Closed 8ths", CAT_HAT,     1, g_closed_8 },   { "Open Offbeat",  CAT_HAT,     1, g_open_off },
+  { "Tick 16ths",  CAT_HAT,     1, g_tick_16 },    { "Shuffle Hat",   CAT_HAT,     1, g_shuf_hat },
+  { "Clap Back",   CAT_CLAP,    1, g_clap_back },  { "Clap Stack",    CAT_CLAP,    1, g_clap_stack },
+  { "Double Clap", CAT_CLAP,    1, g_clap_doub },  { "Clap Rush",     CAT_CLAP,    1, g_clap_rush2 },
+  { "Ride 8ths",   CAT_CYMBAL,  1, g_ride_8 },     { "Crash Down",    CAT_CYMBAL,  1, g_crash_one },
+  { "Bell Pattern",CAT_CYMBAL,  1, g_bell_pat },   { "Splash",        CAT_CYMBAL,  1, g_splash },
+  { "Shaker 16",   CAT_PERC,    1, g_shaker_16 },  { "Tamb 8ths",     CAT_PERC,    1, g_tamb_8 },
+  { "Conga Loop",  CAT_PERC,    1, g_conga },      { "Wood Tick",     CAT_PERC,    1, g_wood },
+  { "Tom Down",    CAT_FILL,    1, g_tom_down },   { "Snare Build",   CAT_FILL,    1, g_snare_build },
+  { "Kick Tumble", CAT_FILL,    1, g_kick_tumble },{ "Hat Lift",      CAT_FILL,    1, g_hat_lift },
+  { "Zip Up",      CAT_SCRATCH, 1, g_zip_up },     { "Zip Down",      CAT_SCRATCH, 1, g_zip_down },
+  { "Chop Loop",   CAT_SCRATCH, 1, g_chop_loop },  { "Brake",         CAT_SCRATCH, 1, g_brake },
+  { "Organ Stab",  CAT_ORGAN,   1, g_org_stab },   { "Offbeat Organ", CAT_ORGAN,   1, g_org_off },
+  { "Organ Hold",  CAT_ORGAN,   2, g_org_hold },   { "Fifth Chop",    CAT_ORGAN,   1, g_org_fifth },
+  { "Hey Chop",    CAT_VOX,     1, g_hey },        { "Oh Layer",      CAT_VOX,     1, g_oh_layer },
+  { "Ah Hook",     CAT_VOX,     1, g_ah_hook },    { "Breath Stack",  CAT_VOX,     1, g_breath },
+  { "Noise Up",    CAT_FX,      2, g_noise_up },   { "Noise Down",    CAT_FX,      2, g_noise_down },
+  { "Impact",      CAT_FX,      1, g_impact },     { "Air Bed",       CAT_FX,      2, g_air },
 };
 #define NUM_DEFS ((int)(sizeof(kDefs) / sizeof(kDefs[0])))
 

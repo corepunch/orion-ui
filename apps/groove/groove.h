@@ -29,7 +29,14 @@
 #define GR_BPM_DEFAULT  120
 
 // ── Block library ────────────────────────────────────────────────────────
-typedef enum { CAT_DRUMS, CAT_BASS, CAT_PIANO, CAT_GUITAR, CAT_ELECTRONIC, CAT_COUNT } category_t;
+// Drums..Electronic are the original loop families. Kicks..FX follow the
+// dance-library roles in apps/groove/docs/dance-ejay-pxd.md.
+typedef enum {
+  CAT_DRUMS, CAT_BASS, CAT_PIANO, CAT_GUITAR, CAT_ELECTRONIC,
+  CAT_KICK, CAT_SNARE, CAT_HAT, CAT_CLAP, CAT_CYMBAL,
+  CAT_PERC, CAT_FILL, CAT_SCRATCH, CAT_ORGAN, CAT_VOX, CAT_FX,
+  CAT_COUNT
+} category_t;
 
 #define GR_PEAKS_BAR 128
 #define GR_PEAKS_MAX 512   // 4 bars
