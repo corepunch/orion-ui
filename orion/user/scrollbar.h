@@ -8,6 +8,7 @@
 
 bool scrollbar_handle_builtin_mouse(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 void scrollbar_handle_builtin_wheel(window_t *win, void *lparam);
+bool scrollbar_handle_builtin_gesture(window_t *win, const ax_gesture_t *gesture);
 // Called from message.c on evTimer for windows with built-in scrollbars.
 // Checks whether timer_id matches a pending overlay-hide timer and, if so,
 // hides the thumb.  Does not consume the timer event.

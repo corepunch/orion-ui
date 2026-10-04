@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <math.h>
 #include "user.h"
 #include "messages.h"
 #include "draw.h"
@@ -208,6 +209,9 @@ static int sb_mouse_axis_delta(void *lparam, bool vertical) {
 static bool sb_try_scroll(window_t *win, win_sb_t *sb, uint32_t scroll_msg, int new_pos) {
   new_pos = ui_sb_clamp_range(sb, new_pos);
   if (new_pos == sb->pos) return false;
+  fprintf(stderr, "[sb] scroll win=%u axis=%s old=%d pos=%d\n", win->id,
+          scroll_msg == evHScroll ? "horizontal" : "vertical", sb->pos, new_pos);
+  fflush(stderr);
   sb->pos = new_pos;
   send_message(win, scroll_msg, (uint32_t)new_pos, NULL);
   invalidate_window(win);
@@ -506,6 +510,46 @@ void scrollbar_handle_builtin_wheel(window_t *win, void *lparam) {
     int delta = -(int16_t)HIWORD((uintptr_t)lparam);
     sb_try_scroll(win, &win->vscroll, evVScroll, win->vscroll.pos + delta);
   }
+}
+
+bool scrollbar_handle_builtin_gesture(window_t *win, const ax_gesture_t *gesture) {
+  if (!win) return false;
+  if (!gesture || gesture->phase > AX_GESTURE_CANCEL || !isfinite(gesture->x) ||
+      !isfinite(gesture->y) || !isfinite(gesture->previous_x) || !isfinite(gesture->previous_y) ||
+      !isfinite(gesture->scale) || gesture->scale <= 0 || !isfinite(gesture->rotation)) {
+    fprintf(stderr, "[sb] invalid gesture win=%u phase=%u\n", win->id, gesture ? gesture->phase : UINT32_MAX);
+    fflush(stderr);
+    return false;
+  }
+  win_sb_t *axes[] = {&win->hscroll, &win->vscroll};
+  const uint32_t flags[] = {WINDOW_HSCROLL, WINDOW_VSCROLL};
+  const uint32_t messages[] = {evHScroll, evVScroll};
+  const float deltas[] = {gesture->previous_x - gesture->x, gesture->previous_y - gesture->y};
+  bool handled = false;
+  for (int axis = 0; axis < 2; axis++) {
+    win_sb_t *sb = axes[axis];
+    bool available = (win->flags & flags[axis]) && sb->visible && sb->enabled && sb->max_val - sb->page > sb->min_val;
+    if (gesture->phase == AX_GESTURE_BEGIN) {
+      sb->gesture_active = available;
+      sb->gesture_remainder = 0;
+    }
+    if (!sb->gesture_active) continue;
+    handled = true;
+    if (gesture->phase == AX_GESTURE_UPDATE && available) {
+      float pos = CLAMP(sb->pos + sb->gesture_remainder + deltas[axis], sb->min_val, sb->max_val - sb->page);
+      int next = (int)lroundf(pos);
+      sb->gesture_remainder = pos - next;
+      sb_try_scroll(win, sb, messages[axis], next);
+    } else if (gesture->phase == AX_GESTURE_END || gesture->phase == AX_GESTURE_CANCEL) {
+      sb->gesture_active = false;
+      sb->gesture_remainder = 0;
+    }
+  }
+  if (handled && gesture->phase != AX_GESTURE_UPDATE) {
+    fprintf(stderr, "[sb] gesture win=%u phase=%u hpos=%d vpos=%d\n", win->id, gesture->phase, win->hscroll.pos, win->vscroll.pos);
+    fflush(stderr);
+  }
+  return handled;
 }
 
 // ── Status-bar merged hscroll ─────────────────────────────────────────────────

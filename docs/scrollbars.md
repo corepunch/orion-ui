@@ -24,6 +24,24 @@ This is the WinAPI equivalent of creating a window with `WS_HSCROLL` /
 `WS_VSCROLL` and calling `SetScrollInfo` / handling `WM_HSCROLL` /
 `WM_VSCROLL`.
 
+### Two-finger panning
+
+Built-in scrollbars also handle native multitouch `evGesture` automatically
+when the window procedure leaves it unhandled. UIKit recognizes two direct
+touches, cancels the single-pointer interaction with `evPointerCancel`, and
+queues the gesture's centroid, scale and rotation. The framework routes the
+begin to the deepest accepting window and retains it through end or cancel.
+
+The scrollbar layer uses centroid movement directly: a finger movement of one
+logical point pans the content by one point, preserving fractional samples.
+Only enabled axes with overflowing content move; positions clamp at their
+normal scroll limits. Pinch and rotation leave the scroll layout unchanged.
+Updates use the same `evHScroll` / `evVScroll`, invalidation and theme-owned
+overlay scrollbar behavior as other scrolling input. Applications need no
+touch recognition or gesture-to-wheel conversion. A canvas that handles
+`evGesture` itself, such as Penciltest's content view, keeps its transform
+behavior.
+
 ### Enabling built-in scrollbars
 
 ```c

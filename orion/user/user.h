@@ -472,6 +472,8 @@ typedef struct {
   int  drag_start_mouse;   // axis coord (window-local) when drag began
   int  drag_mouse;         // accumulated axis coord while dragging
   int  drag_start_pos;     // pos value when drag began
+  bool gesture_active;
+  float gesture_remainder; // Retain fractional points across native pan samples.
   // Modern overlay-scrollbar state.  Ignored when scrollbar_overlay == false.
   bool     overlay_visible;  // thumb is currently revealed (fading in/visible)
   uint32_t hide_timer_id;    // axSetTimer handle for auto-hide delay; 0 = none

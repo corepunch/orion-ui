@@ -57,8 +57,78 @@ static void test_nested_gesture(void) {
   PASS();
 }
 
+static void dispatch_gesture(uint32_t phase, float x, float y, float previous_x, float previous_y) {
+  ui_event_t event = {.message = kEventGesture,
+    .gesture = {phase, x * UI_WINDOW_SCALE, y * UI_WINDOW_SCALE,
+                previous_x * UI_WINDOW_SCALE, previous_y * UI_WINDOW_SCALE, 1.3f, 0.2f}};
+  dispatch_message(&event);
+}
+
+static void test_builtin_pan(void) {
+  TEST("native pan scrolls the starting child by exact points, retaining fractions and clamping at edges");
+  test_env_init();
+  set_theme(THEME_CLASSIC);
+  window_t *root = create_window("Root", WINDOW_NOTITLE, MAKERECT(10, 20, 500, 400), NULL, container_proc, 0, NULL);
+  window_t *child = create_window("Canvas", WINDOW_NOTITLE | WINDOW_HSCROLL | WINDOW_VSCROLL,
+                                 MAKERECT(20, 30, 200, 150), root, container_proc, 0, NULL);
+  window_t *sibling = create_window("Other", WINDOW_NOTITLE | WINDOW_HSCROLL | WINDOW_VSCROLL,
+                                   MAKERECT(250, 30, 200, 150), root, container_proc, 0, NULL);
+  show_window(root, true); show_window(child, true); show_window(sibling, true);
+  set_scroll_content(child, 1000, 800, 100, 100);
+  set_scroll_content(sibling, 1000, 800, 100, 100);
+  dispatch_gesture(AX_GESTURE_BEGIN, 80, 100, 80, 100);
+  dispatch_gesture(AX_GESTURE_UPDATE, 40, 70, 80, 100);
+  ASSERT_EQUAL(child->hscroll.pos, 140); ASSERT_EQUAL(child->vscroll.pos, 130);
+  dispatch_gesture(AX_GESTURE_UPDATE, 380, 100, 40, 70);
+  ASSERT_EQUAL(child->hscroll.pos, 0); ASSERT_EQUAL(child->vscroll.pos, 100);
+  ASSERT_EQUAL(sibling->hscroll.pos, 100); ASSERT_EQUAL(sibling->vscroll.pos, 100);
+  for (int i = 0; i < 5; i++)
+    dispatch_gesture(AX_GESTURE_UPDATE, 380 - (i + 1) * 0.2f, 100, 380 - i * 0.2f, 100);
+  ASSERT_EQUAL(child->hscroll.pos, 1);
+  dispatch_gesture(AX_GESTURE_UPDATE, -2000, -2000, 379, 100);
+  ASSERT_EQUAL(child->hscroll.pos, child->hscroll.max_val - child->hscroll.page);
+  ASSERT_EQUAL(child->vscroll.pos, child->vscroll.max_val - child->vscroll.page);
+  dispatch_gesture(AX_GESTURE_UPDATE, -1999, -1999, -2000, -2000);
+  ASSERT_EQUAL(child->hscroll.pos, child->hscroll.max_val - child->hscroll.page - 1);
+  dispatch_gesture(AX_GESTURE_CANCEL, -1999, -1999, -1999, -1999);
+  ASSERT_FALSE(child->hscroll.gesture_active); ASSERT_FALSE(child->vscroll.gesture_active);
+  int pos = child->hscroll.pos;
+  dispatch_gesture(AX_GESTURE_UPDATE, -2100, -2100, -1999, -1999);
+  ASSERT_EQUAL(child->hscroll.pos, pos);
+  dispatch_gesture(AX_GESTURE_BEGIN, 80, 100, 80, 100);
+  destroy_window(child);
+  dispatch_gesture(AX_GESTURE_UPDATE, 380, 90, 80, 100);
+  ASSERT_EQUAL(sibling->hscroll.pos, 100);
+  test_env_shutdown();
+  PASS();
+}
+
+static void test_pan_axis_availability(void) {
+  TEST("native pan respects disabled axes, ignores invalid payloads and leaves exact-fit views alone");
+  test_env_init();
+  window_t *win = create_window("Canvas", WINDOW_NOTITLE | WINDOW_HSCROLL | WINDOW_VSCROLL,
+                               MAKERECT(0, 0, 200, 150), NULL, container_proc, 0, NULL);
+  show_window(win, true);
+  set_scroll_content(win, 1000, 800, 100, 100);
+  enable_scroll_bar(win, SB_VERT, false);
+  dispatch_gesture(AX_GESTURE_BEGIN, 50, 50, 50, 50);
+  dispatch_gesture(AX_GESTURE_UPDATE, 30, 30, 50, 50);
+  ASSERT_EQUAL(win->hscroll.pos, 120); ASSERT_EQUAL(win->vscroll.pos, 100);
+  ax_gesture_t invalid = {AX_GESTURE_UPDATE, NAN, 30, 50, 50, 1, 0};
+  ASSERT_FALSE(send_message(win, evGesture, 0, &invalid));
+  ASSERT_EQUAL(win->hscroll.pos, 120);
+  dispatch_gesture(AX_GESTURE_END, 30, 30, 30, 30);
+  set_scroll_content(win, 50, 50, 0, 0);
+  ax_gesture_t begin = {AX_GESTURE_BEGIN, 30, 30, 30, 30, 1, 0};
+  ASSERT_FALSE(send_message(win, evGesture, 0, &begin));
+  test_env_shutdown();
+  PASS();
+}
+
 int main(void) {
   TEST_START("Gesture routing");
   test_nested_gesture();
+  test_builtin_pan();
+  test_pan_axis_availability();
   TEST_END();
 }

@@ -120,6 +120,52 @@ static void test_sheet_drop(void) {
   PASS();
 }
 
+static void test_two_finger_sheet_pan(void) {
+  TEST("two-finger canvas pan cancels a clip drag and scrolls through the framework without editing the song");
+  test_env_init();
+  g_app = app_init();
+  window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_STATUSBAR, MAKERECT(0, 0, 800, 600), NULL, main_win_proc, 0, g_app);
+  ASSERT_NOT_NULL(win);
+  show_window(win, true);
+  int clip = song_add_clip(&g_app->song, 0, 0, 0);
+  window_t *sheet = g_app->sheet;
+  int sx = window_screen_x(sheet) + 110, sy = window_screen_y(sheet) + 40;
+  ui_event_t event = {.message = kEventLeftButtonDown, .x = sx * UI_WINDOW_SCALE, .y = sy * UI_WINDOW_SCALE};
+  dispatch_message(&event);
+  ASSERT_TRUE(g_ui_runtime.captured == sheet);
+  event.message = kEventLeftButtonDragged; event.x += 12 * UI_WINDOW_SCALE; event.dx = 12;
+  dispatch_message(&event);
+  ASSERT_TRUE(g_app->drag.active);
+  event.message = kEventPointerCancel;
+  dispatch_message(&event);
+  ASSERT_FALSE(g_app->drag.active);
+  ASSERT_TRUE(g_ui_runtime.captured == NULL);
+  event = (ui_event_t){.message = kEventGesture,
+    .gesture = {AX_GESTURE_BEGIN, sx * UI_WINDOW_SCALE, sy * UI_WINDOW_SCALE,
+                sx * UI_WINDOW_SCALE, sy * UI_WINDOW_SCALE, 1, 0}};
+  dispatch_message(&event);
+  event.gesture = (ax_gesture_t){AX_GESTURE_UPDATE, (sx - 80) * UI_WINDOW_SCALE, (sy + 20) * UI_WINDOW_SCALE,
+                                sx * UI_WINDOW_SCALE, sy * UI_WINDOW_SCALE, 1.2f, 0.1f};
+  dispatch_message(&event);
+  ASSERT_EQUAL(get_scroll_pos(sheet, SB_HORZ), 80);
+  ASSERT_EQUAL(g_app->song.nclips, 1);
+  ASSERT_EQUAL(g_app->song.clips[clip].bar, 0);
+  ASSERT_EQUAL(g_app->song.clips[clip].track, 0);
+  ASSERT_EQUAL(g_app->song.preview_block, -1);
+  event.gesture.phase = AX_GESTURE_END;
+  dispatch_message(&event);
+  event = (ui_event_t){.message = kEventLeftButtonDown,
+    .x = (window_screen_x(sheet) + 78 + 2) * UI_WINDOW_SCALE, .y = sy * UI_WINDOW_SCALE};
+  dispatch_message(&event);
+  ASSERT_EQUAL(g_app->selected_clip, clip);
+  event.message = kEventPointerCancel;
+  dispatch_message(&event);
+  destroy_window(win);
+  app_shutdown(g_app);
+  test_env_shutdown();
+  PASS();
+}
+
 int main(void) {
   TEST_START("Groove");
   test_blocks();
@@ -127,5 +173,6 @@ int main(void) {
   test_song_rules();
   test_mixer();
   test_sheet_drop();
+  test_two_finger_sheet_pan();
   TEST_END();
 }

@@ -332,6 +332,8 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
   }
   if (!value) {
     switch (msg) {
+      case evGesture:
+        return scrollbar_handle_builtin_gesture(win, lparam);
       case evPointerCancel:
         // Existing controls release their pressed state without an inside click.
         win->proc(win, evLeftButtonUp, MAKEDWORD(-1, -1), NULL);

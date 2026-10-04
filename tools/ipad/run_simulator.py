@@ -32,8 +32,11 @@ def main():
     if device['state'] != 'Booted':
         simctl('boot', udid)
     developer = os.environ.get('DEVELOPER_DIR') or subprocess.check_output(['xcode-select', '-p'], text=True).strip()
-    subprocess.run(['open', '-a', str(Path(developer) / 'Applications/Simulator.app'),
-                    '--args', '-CurrentDeviceUDID', udid], check=True)
+    simulator = Path(developer) / 'Applications/Simulator.app'
+    if simulator.is_dir():
+        subprocess.run(['open', '-a', str(simulator), '--args', '-CurrentDeviceUDID', udid], check=True)
+    else:
+        print('Simulator.app is unavailable; launching through the simulator service.', flush=True)
     simctl('bootstatus', udid, '-b')
     simctl('install', udid, str(args.app.resolve()))
     bundle_id = plistlib.loads((args.app / 'Info.plist').read_bytes())['CFBundleIdentifier']

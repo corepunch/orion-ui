@@ -377,8 +377,8 @@ help:
 	@echo "gems      - Build all .gem shared libraries"
 	@echo "tools     - Build command-line tools"
 	@echo "test      - Build and run tests"
-	@echo "ipad-all  - Build separate Image Editor and Pencil Test iPad bundles"
-	@echo "ipad / ipad-simulator / ipad-run / ipad-deploy / ipad-mac - APP=imageeditor|penciltest (ipad-deploy auto-selects one connected iPad)"
+	@echo "ipad-all  - Build separate Image Editor, Pencil Test and Groove iPad bundles"
+	@echo "ipad / ipad-simulator / ipad-run / ipad-deploy / ipad-mac - APP=imageeditor|penciltest|groove (ipad-deploy auto-selects one connected iPad)"
 	@echo "list-devices - List paired devices (see packaging/ipad/README.md)"
 	@echo "ALLOW_HIGHDPI=0 - Disable high-DPI surfaces (use with -B)"
 	@echo "clean     - Remove all build artifacts"
@@ -411,5 +411,6 @@ ipad-mac:
 ipad-all:
 	$(MAKE) -f packaging/ipad/build.mk APP=imageeditor SDK=iphoneos app
 	$(MAKE) -f packaging/ipad/build.mk APP=penciltest SDK=iphoneos app
+	$(MAKE) -f packaging/ipad/build.mk APP=groove SDK=iphoneos app
 list-devices:
 	xcrun devicectl list devices
