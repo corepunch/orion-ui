@@ -60,7 +60,7 @@ static result_t win_tile(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
     case evPaint: {
       const block_t *b = block_get(st->block);
       bool lit = st->hover && !win->drag_visual;
-      draw_clip(win, b, get_client_rect(win), lit ? color_with_alpha(category_color(b->cat), 0xd8) : category_color(b->cat), false);
+      draw_clip(win, b, get_client_rect(win), category_color(b->cat), lit ? CTRL_HOVER : CTRL_NORMAL);
       return true;
     }
     case evMouseMove: {
@@ -72,6 +72,7 @@ static result_t win_tile(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
       int sx, sy;
       tile_screen(win, mx, my, &sx, &sy);
       if (!win->drag_visual && abs(mx - st->press.x) + abs(my - st->press.y) > BIN_SLOP) {
+        GR_TRACE("bin drag win=%p selected=%d block=%d", (void *)win, g_app->selected_clip, st->block);
         g_app->drag = (drag_t){ .active = true, .block = st->block, .from_clip = -1, .track = -1 };
         window_set_drag_visual(win, mx - st->press.x, my - st->press.y);
       }
@@ -85,12 +86,14 @@ static result_t win_tile(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
       if (st->hover) { st->hover = false; invalidate_window(win); }
       return true;
     case evLeftButtonDown:
+      GR_TRACE("bin press win=%p selected=%d block=%d", (void *)win, g_app->selected_clip, st->block);
       st->down = true;
       st->press = (ipoint16_t){ (int16_t)LOWORD(wparam), (int16_t)HIWORD(wparam) };
       set_capture(win);
       return true;
     case evLeftButtonUp: {
       if (!st->down) return false;
+      GR_TRACE("bin release win=%p selected=%d block=%d dragging=%d", (void *)win, g_app->selected_clip, st->block, win->drag_visual);
       int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam), sx, sy;
       tile_screen(win, mx, my, &sx, &sy);
       if (win->drag_visual) send_message(g_app->sheet, shDrop, MAKEDWORD(sx, sy), NULL);

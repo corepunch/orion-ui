@@ -22,6 +22,10 @@ static inline uint32_t color_with_alpha(uint32_t color, uint8_t alpha) {
 // the card and the edge together. CTRL_SELECTED draws a ring in the accent edge's colour (theme accent when there is no edge) in the theme's card_ring_width margin,
 // which is reserved inside `r` for every card so selecting never shifts content.
 void draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color);
+// Tinted vertical gradient, top highlight and selection ring in one themed silhouette.
+void draw_gradient_card(irect16_t r, ctrl_state_t state, uint32_t color);
+void render_gradient_card(irect16_t r, int pixel_w, int pixel_h, float radius,
+                          float ring_width, float highlight_width, ctrl_state_t state, uint32_t color);
 // Small tinted label ("3 modified"): a rounded fill in `color` at low alpha with the text in `color`.
 // Drawn at (x, y) with the given height; returns the badge width so callers can chain badges.
 int  draw_badge(ui_font_t font, const char *text, int x, int y, int height, uint32_t color);

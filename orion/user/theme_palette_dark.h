@@ -37,7 +37,8 @@
   [brPanelDarker]          = 0xff262626, \
   [brTextWarning]          = 0xff2ea8e5, \
   [brTextInfo]             = 0xfff0a04c, \
-  [brTextSecondary]        = 0xff9a9a9a
+  [brTextSecondary]        = 0xff9a9a9a, \
+  [brTextOnColor]          = 0xff101010
 
 static const uint32_t k_theme_palette_dark[brCount]
   __attribute__((unused)) = { THEME_PALETTE_DARK_INIT };

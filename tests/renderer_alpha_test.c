@@ -1,6 +1,9 @@
 #include "test_framework.h"
 #include <orion/ui.h>
 #include <orion/user/gl_compat.h>
+#include <orion/user/toolbar.h>
+#include <orion/user/image.h>
+#include <string.h>
 
 #if defined(__APPLE__) && !TARGET_OS_IOS
 #include <OpenGL/OpenGL.h>
@@ -11,6 +14,121 @@ extern void init_ui_white_texture(void);
 extern void shutdown_white_texture(void);
 
 static uint32_t viewport_texture;
+static void test_png_toolbar(void) {
+  TEST("PNG toolbar preserves colours, selects pressed row and retains texture after failed reload");
+  CGLPixelFormatAttribute attrs[] = {kCGLPFAOpenGLProfile,
+    (CGLPixelFormatAttribute)kCGLOGLPVersion_3_2_Core, 0};
+  CGLPixelFormatObj format = NULL;
+  CGLContextObj context = NULL;
+  GLint count = 0;
+  if (CGLChoosePixelFormat(attrs, &format, &count) != kCGLNoError || !format) { SKIP("Offscreen OpenGL unavailable"); }
+  CGLError error = CGLCreateContext(format, NULL, &context);
+  CGLDestroyPixelFormat(format);
+  if (error != kCGLNoError || !context) { SKIP("Offscreen OpenGL context unavailable"); }
+  CGLSetCurrentContext(context);
+  bool initialized = ui_init_prog(), ok = initialized;
+  uint32_t fbo = 0, texture = 0;
+  int w = 0, h = 0;
+  static window_t root;
+  toolbar_item_t item = {TOOLBAR_ITEM_BUTTON, 1, "strip:0"};
+  irect16_t rect = R(2, 2, 24, 24);
+  toolbar_state_t tb = {.items = &item, .item_rects = &rect, .item_count = 1,
+    .pressed_item = -1, .hot_item = -1, .btn_size = 24, .style = TOOLBAR_STYLE_PRESSED_STRIP};
+  window_t band = {.userdata = &tb};
+  root = (window_t){.frame = {0, 0, 64, 64}, .flags = WINDOW_TOOLBAR | WINDOW_NOTITLE,
+                    .toolbar = &band, .surface_w = 64, .surface_h = 64};
+  if (ok) {
+    init_ui_white_texture();
+    ok = R_EnsureWindowTarget(&fbo, &texture, &w, &h, 64, 64);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    uint8_t pixels[8 * 16 * 4];
+    for (int i = 0; i < 8 * 16; i++) {
+      pixels[i * 4] = i < 64 ? 255 : 0; pixels[i * 4 + 1] = i < 64 ? 0 : 255;
+      pixels[i * 4 + 2] = 0; pixels[i * 4 + 3] = 255;
+    }
+    const char *path = "/tmp/orion-toolbar-atlas-test.png";
+    ok &= save_image_png(path, pixels, 8, 16);
+    g_ui_runtime.running = true;
+    ok &= toolbar_handle_message(&root, tbLoadStrip, 8, (void *)path);
+    uint32_t original = tb.strip.tex;
+    ok &= !toolbar_handle_message(&root, tbLoadStrip, 0, (void *)path) && tb.strip.tex == original;
+    uint8_t normal[4], pressed[4];
+    toolbar_draw_non_client(&root);
+    glReadPixels(14, 64 - 14 - 1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, normal);
+    tb.pressed_item = 0;
+    toolbar_draw_non_client(&root);
+    glReadPixels(14, 64 - 14 - 1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pressed);
+    ok &= normal[0] == 255 && normal[1] == 0 && pressed[0] == 0 && pressed[1] == 255;
+    tb.pressed_item = -1;
+    item.flags = TOOLBAR_ITEM_FLAG_DISABLED;
+    toolbar_draw_non_client(&root);
+    uint8_t disabled[4];
+    glReadPixels(14, 64 - 14 - 1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, disabled);
+    ok &= disabled[0] > disabled[1] && disabled[0] < normal[0];
+    ok &= glGetError() == GL_NO_ERROR;
+    if (!ok) fprintf(stderr, "[renderer-test] toolbar normal=%u,%u pressed=%u,%u\n", normal[0], normal[1], pressed[0], pressed[1]);
+    g_ui_runtime.running = false;
+    R_DeleteTexture(tb.strip_tex);
+    remove(path);
+    shutdown_white_texture();
+  }
+  root.toolbar = NULL;
+  R_DestroyWindowTarget(&fbo, &texture, &w, &h);
+  if (initialized) ui_shutdown_prog();
+  CGLSetCurrentContext(NULL);
+  CGLDestroyContext(context);
+  ASSERT_TRUE(ok);
+  PASS();
+}
+static void read_card_pixel(int x, int y, uint8_t pixel[4]) {
+  glReadPixels(x, 32 - y - 1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+}
+
+static void test_gradient_card(void) {
+  TEST("Gradient card clips sheen and ring, preserves alpha and keeps selection geometry fixed");
+  CGLPixelFormatAttribute attrs[] = {kCGLPFAOpenGLProfile,
+    (CGLPixelFormatAttribute)kCGLOGLPVersion_3_2_Core, 0};
+  CGLPixelFormatObj format = NULL;
+  CGLContextObj context = NULL;
+  GLint count = 0;
+  if (CGLChoosePixelFormat(attrs, &format, &count) != kCGLNoError || !format) { SKIP("Offscreen OpenGL unavailable"); }
+  CGLError error = CGLCreateContext(format, NULL, &context);
+  CGLDestroyPixelFormat(format);
+  if (error != kCGLNoError || !context) { SKIP("Offscreen OpenGL context unavailable"); }
+  CGLSetCurrentContext(context);
+  bool initialized = ui_init_prog(), ok = initialized;
+  uint32_t fbo = 0, texture = 0;
+  int w = 0, h = 0;
+  if (ok) {
+    ok = R_EnsureWindowTarget(&fbo, &texture, &w, &h, 32, 32);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glViewport(0, 0, 32, 32);
+    glDisable(GL_SCISSOR_TEST);
+    set_projection(0, 0, 32, 32);
+    glClearColor(0, 0, 0, 0);
+    glClear(GL_COLOR_BUFFER_BIT);
+    render_gradient_card(R(4, 4, 24, 24), 24, 24, 7, 2, 1, CTRL_NORMAL, 0x80ff8000);
+    uint8_t top[4], bottom[4], corner[4], outside[4], normal_ring[4], selected_ring[4], selected_face[4];
+    read_card_pixel(16, 8, top); read_card_pixel(16, 23, bottom);
+    read_card_pixel(4, 4, corner); read_card_pixel(2, 16, outside); read_card_pixel(4, 16, normal_ring);
+    glClear(GL_COLOR_BUFFER_BIT);
+    render_gradient_card(R(4, 4, 24, 24), 24, 24, 7, 2, 1, CTRL_SELECTED, 0x80ff8000);
+    read_card_pixel(4, 16, selected_ring); read_card_pixel(16, 8, selected_face);
+    ok &= top[2] > bottom[2] && top[3] == 128 && bottom[3] == 128;
+    ok &= corner[3] == 0 && outside[3] == 0 && normal_ring[3] == 0;
+    ok &= selected_ring[3] > 80 && selected_ring[3] <= 128 && memcmp(top, selected_face, 4) == 0;
+    glClear(GL_COLOR_BUFFER_BIT);
+    render_gradient_card(R(4, 4, 24, 24), 24, 24, 0, 1, 0, CTRL_NORMAL, 0xffff8000);
+    read_card_pixel(6, 6, corner);
+    ok &= corner[3] == 255 && glGetError() == GL_NO_ERROR;
+  }
+  R_DestroyWindowTarget(&fbo, &texture, &w, &h);
+  if (initialized) ui_shutdown_prog();
+  CGLSetCurrentContext(NULL);
+  CGLDestroyContext(context);
+  ASSERT_TRUE(ok);
+  PASS();
+}
 static result_t rotated_content_proc(window_t *win, uint32_t msg, uint32_t wp, void *lp) {
   if (msg == evPaint) {
     fill_rect(0xffffffff, wp == WINDOW_PAINT_OVERLAY ? R(2, 2, 3, 3) : R(8, 4, 8, 4));
@@ -276,10 +394,14 @@ static void test_srgb_linear_source_over(void) {
 int main(void) {
   TEST_START("Renderer alpha");
 #if defined(__APPLE__) && !TARGET_OS_IOS
+  test_gradient_card();
   test_view_rotation();
   test_fixed_viewport();
 #endif
   test_onion_alpha();
   test_srgb_linear_source_over();
+#if defined(__APPLE__) && !TARGET_OS_IOS
+  test_png_toolbar();
+#endif
   TEST_END();
 }

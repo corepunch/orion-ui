@@ -372,6 +372,7 @@ typedef struct {
 #define TOOLBAR_ITEM_FLAG_SMALL      (1u << 4)
 #define TOOLBAR_STYLE_GRIP           (1u << 1) // draggable grip on a floating toolbar
 #define TOOLBAR_STYLE_COMPACT        (1u << 2) // menu-bar background, icon-only items
+#define TOOLBAR_STYLE_PRESSED_STRIP  (1u << 3) // strip's second row contains pressed artwork
 #define TOOLBAR_COMPACT_PADDING      2
 #define TOOLBAR_COMPACT_SPACING      6
 #if defined(__APPLE__) && TARGET_OS_IOS
@@ -495,7 +496,8 @@ typedef enum {
   brTextWarning          = 27,  // attention needed but not an error (uncommitted, pending)
   brTextInfo             = 28,  // neutral informational status (to push, to pull)
   brTextSecondary        = 29,  // readable de-emphasised text (subtitles, metadata); brTextDisabled is for inactive controls
-  brCount                = 30
+  brTextOnColor          = 30,  // dark ink on vivid gradient cards and other bright tinted surfaces
+  brCount                = 31
 } sys_color_idx_t;
 
 // Runtime-accessible theme table (defined in user/theme.c).

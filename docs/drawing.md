@@ -72,6 +72,15 @@ A rounded outline is one stroke, not two stacked fills. `thickness` is the insid
 stroke_rounded_rect(get_sys_color(brAccent), r, get_theme()->card_corner_radius, 2);
 ```
 
+`draw_gradient_card(r, state, color)` draws a tinted vertical gradient, top highlight,
+and optional `CTRL_SELECTED` ring in one shader pass with one rounded silhouette.
+`CTRL_HOVER` brightens the face. The input colour's alpha applies to the entire card,
+including its ring and highlight. Theme metrics `card_corner_radius`, `card_ring_width`,
+and `card_highlight_width` own the geometry; Classic uses square corners and no highlight.
+The ring margin is reserved in every state, so selection never moves the content.
+Inset waveform or text content past that margin before painting it.
+Use `brTextOnColor` for dark labels and waveforms on these bright tinted surfaces.
+
 ### `draw_rect`
 
 Render a textured quad (OpenGL texture).

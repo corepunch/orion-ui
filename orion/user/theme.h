@@ -194,6 +194,7 @@ typedef struct {
   int card_corner_radius;    // draw_card(): rounded-corner radius (0 = square)
   int card_edge_width;       // draw_card(): accent edge width in logical pixels
   int card_ring_width;       // draw_card(): selection ring thickness (reserved inside the card bounds)
+  int card_highlight_width;  // draw_gradient_card(): top sheen thickness (0 = none)
   int card_padding_x, card_padding_y; // Card control: content inset from the face edge
   int window_shadow_blur;    // logical pixels; zero disables shadows
   ipoint16_t window_shadow_offset;

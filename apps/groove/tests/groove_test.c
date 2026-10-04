@@ -155,6 +155,24 @@ static void test_two_finger_sheet_pan(void) {
   event.gesture.phase = AX_GESTURE_END;
   dispatch_message(&event);
   event = (ui_event_t){.message = kEventLeftButtonDown,
+    .x = (window_screen_x(sheet) + 38) * UI_WINDOW_SCALE, .y = sy * UI_WINDOW_SCALE};
+  dispatch_message(&event);
+  ASSERT_TRUE(g_app->song.mute[0]);
+  event.message = kEventLeftButtonUp;
+  dispatch_message(&event);
+  char tooltip[256] = {0};
+  ASSERT_TRUE(send_message(sheet, evGetTooltipText, MAKEDWORD(38 + get_scroll_pos(sheet, SB_HORZ), 40), tooltip));
+  ASSERT_TRUE(strcmp(tooltip, "Unmute track 1") == 0);
+  event.message = kEventLeftButtonDown;
+  event.x = (window_screen_x(sheet) + 64) * UI_WINDOW_SCALE;
+  dispatch_message(&event);
+  ASSERT_TRUE(g_app->song.solo[0]);
+  event.message = kEventLeftButtonUp;
+  dispatch_message(&event);
+  ASSERT_EQUAL(g_app->song.nclips, 1);
+  ASSERT_EQUAL(g_app->song.preview_block, -1);
+  ASSERT_FALSE(g_app->drag.active);
+  event = (ui_event_t){.message = kEventLeftButtonDown,
     .x = (window_screen_x(sheet) + 78 + 2) * UI_WINDOW_SCALE, .y = sy * UI_WINDOW_SCALE};
   dispatch_message(&event);
   ASSERT_EQUAL(g_app->selected_clip, clip);

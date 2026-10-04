@@ -8,18 +8,18 @@
 
 void toolbar_refresh(window_t *win) {
   const song_t *s = &g_app->song;
-  static toolbar_item_t items[] = {   // static: the toolbar keeps the pointer
-    { TOOLBAR_ITEM_BUTTON,    ID_REWIND,   "rewind",  0, 0, NULL, "Rewind (Home)" },
-    { TOOLBAR_ITEM_BUTTON,    ID_PLAY,     "play",    0, 0, NULL, "Play / pause (Space)" },
-    { TOOLBAR_ITEM_BUTTON,    ID_STOP,     "square",  0, 0, NULL, "Stop" },
-    { TOOLBAR_ITEM_BUTTON,    ID_LOOP,     "refresh", 0, 0, NULL, "Loop (L)" },
+  static toolbar_item_t items[] = {
+    { TOOLBAR_ITEM_BUTTON,    ID_REWIND,   "strip:0",  0, 0, NULL, "Rewind (Home)" },
+    { TOOLBAR_ITEM_BUTTON,    ID_PLAY,     "strip:1",  0, 0, NULL, "Play / pause (Space)" },
+    { TOOLBAR_ITEM_BUTTON,    ID_STOP,     "strip:3",  0, 0, NULL, "Stop" },
+    { TOOLBAR_ITEM_BUTTON,    ID_LOOP,     "strip:4",  0, 0, NULL, "Loop (L)" },
     { TOOLBAR_ITEM_SEPARATOR, 0,           NULL,      0, 0, NULL, NULL },
-    { TOOLBAR_ITEM_BUTTON,    ID_BPM_DOWN, "minus",   0, 0, NULL, "Slower" },
-    { TOOLBAR_ITEM_BUTTON,    ID_BPM_UP,   "plus",    0, 0, NULL, "Faster" },
+    { TOOLBAR_ITEM_BUTTON,    ID_BPM_DOWN, "strip:5",  0, 0, NULL, "Slower" },
+    { TOOLBAR_ITEM_BUTTON,    ID_BPM_UP,   "strip:6",  0, 0, NULL, "Faster" },
     { TOOLBAR_ITEM_SPACER,    0,           NULL,      0, 0, NULL, NULL },
-    { TOOLBAR_ITEM_BUTTON,    ID_DELETE,   "trash",   0, 0, NULL, "Remove selected block (Delete)" },
+    { TOOLBAR_ITEM_BUTTON,    ID_DELETE,   "strip:7",  0, 0, NULL, "Remove selected block (Delete)" },
   };
-  items[1].icon = s->playing ? "pause" : "play";
+  items[1].icon = s->playing ? "strip:2" : "strip:1";
   send_message(win, tbSetItems, ARRAY_LEN(items), (void *)items);
   if (s->loop) send_message(win, tbSetActiveButton, ID_LOOP, NULL);
 }
@@ -64,6 +64,11 @@ result_t main_win_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       return true;
     case evCreate: {
       app->win = win;
+      char strip_path[1024];
+      int n = snprintf(strip_path, sizeof(strip_path), "%s/../share/groove/icons/transport.png", ui_get_exe_dir());
+      if (g_ui_runtime.running && n > 0 && (size_t)n < sizeof(strip_path)) send_message(win, tbLoadStrip, 64, strip_path);
+      send_message(win, tbSetStyle, TOOLBAR_STYLE_PRESSED_STRIP, NULL);
+      send_message(win, tbSetButtonSize, 38, NULL);
       toolbar_refresh(win);
       irect16_t cr = get_client_rect(win);
       app->sheet = create_window("sheet", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_HSCROLL, MAKERECT(0, 0, cr.w, cr.h - BIN_H), win, win_sheet, 0, NULL);
@@ -80,8 +85,12 @@ result_t main_win_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
     case evTimer:
       if (app->song.playing) { invalidate_window(app->sheet); app_update_status(); }
       return true;
-    case tbButtonClick: app_command((uint16_t)wparam); return true;
+    case tbButtonClick:
+      GR_TRACE("toolbar win=%p command=%u selected=%d playing=%d loop=%d", (void *)win, wparam, app->selected_clip, app->song.playing, app->song.loop);
+      app_command((uint16_t)wparam);
+      return true;
     case evCommand:
+      GR_TRACE("command win=%p id=%u notification=%u selected=%d", (void *)win, LOWORD(wparam), HIWORD(wparam), app->selected_clip);
       if (HIWORD(wparam) == kAcceleratorNotification) { app_command(LOWORD(wparam)); return true; }
       return false;
     case evClose:
