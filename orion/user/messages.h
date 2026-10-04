@@ -127,6 +127,7 @@ enum {
   tbDrawItem,         // paint-only callback: wparam=ident, lparam=toolbar_draw_item_t*
   tbSetStyle,         // wparam=TOOLBAR_STYLE_* flags
   tbLoadStrip,        // wparam=icon tile size in px (square); lparam=const char* path to PNG
+  tbLoadAtlas,        // lparam=toolbar_atlas_t*; loads PNG and copies packed source regions
   tbSetItems,         // wparam=count; lparam=toolbar_item_t* — set toolbar item list (owner-drawn)
   // Fired via evCommand when the user clicks the dropdown arrow of a TOOLBAR_ITEM_DROPDOWN button.
   // LOWORD(wparam) = button ident; HIWORD(wparam) = tbDropdown; lparam = toolbar window.
@@ -377,6 +378,8 @@ typedef struct {
 #define TOOLBAR_STYLE_GRIP           (1u << 1) // draggable grip on a floating toolbar
 #define TOOLBAR_STYLE_COMPACT        (1u << 2) // menu-bar background, icon-only items
 #define TOOLBAR_STYLE_PRESSED_STRIP  (1u << 3) // strip's second row contains pressed artwork
+#define TOOLBAR_STYLE_IMAGE_BUTTONS  (1u << 4) // strip artwork includes the button body
+#define TOOLBAR_STYLE_STATE_STRIP    (1u << 5) // rows: normal, selected, pressed, hover, disabled
 #define TOOLBAR_COMPACT_PADDING      2
 #define TOOLBAR_COMPACT_SPACING      6
 #if defined(__APPLE__) && TARGET_OS_IOS
