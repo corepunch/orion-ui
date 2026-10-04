@@ -18,6 +18,8 @@
 #define SCREEN_W        1180
 #define SCREEN_H        760
 
+#define GR_TRACE(...) do { fprintf(stderr, "[gr] " __VA_ARGS__); fputc('\n', stderr); fflush(stderr); } while (0)
+
 #define GR_SAMPLE_RATE  44100
 #define GR_BEATS_BAR    4
 #define GR_TRACKS       8
@@ -157,7 +159,7 @@ extern result_t main_win_proc(window_t *win, uint32_t msg, uint32_t wparam, void
 extern result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 extern result_t win_bin(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 void toolbar_refresh(window_t *win);
-void draw_clip(window_t *win, const block_t *b, irect16_t r, uint32_t color, bool ring);
+void draw_clip(window_t *win, const block_t *b, irect16_t r, uint32_t color, ctrl_state_t state);
 // Moves a card window. A visual drag keeps the painted copy still: the frame
 // delta is added back into the drag offset.
 void card_place(window_t *card, irect16_t cell);

@@ -92,6 +92,7 @@ typedef struct {
   sprite_program_t indexed_sprite;
   GLuint indexed_palette;
   sprite_program_t gradient_sprite;
+  sprite_program_t gradient_card_sprite;
   sprite_program_t rounded_rect_sprite; // SDF rounded-corner compositor
   GLuint vga_program;    // VGA text renderer program
   R_Mesh mesh;           // Sprite mesh for drawing quads
@@ -294,6 +295,10 @@ static void cache_vga_uniforms(void) {
 static void update_sprite_projection_uniforms(const fmat16_t *projection) {
   GLint prev_prog = 0;
   glGetIntegerv(GL_CURRENT_PROGRAM, &prev_prog);
+  if (g_ref.gradient_card_sprite.program && g_ref.gradient_card_sprite.projection_u >= 0) {
+    glUseProgram(g_ref.gradient_card_sprite.program);
+    glUniformMatrix4fv(g_ref.gradient_card_sprite.projection_u, 1, GL_FALSE, fmat16_data(projection));
+  }
   if (g_ref.copy_sprite.program && g_ref.copy_sprite.projection_u >= 0) {
     glUseProgram(g_ref.copy_sprite.program);
     glUniformMatrix4fv(g_ref.copy_sprite.projection_u, 1, GL_FALSE, fmat16_data(projection));
@@ -442,6 +447,14 @@ bool ui_init_prog(void) {
   }
   cache_sprite_uniforms(&g_ref.gradient_sprite);
 
+  g_ref.gradient_card_sprite.program = load_program_from_files("sprite_gradient_card.frag.glsl",
+                                                               "position", "texcoord", "color");
+  if (!g_ref.gradient_card_sprite.program) {
+    ui_shutdown_prog();
+    return false;
+  }
+  cache_sprite_uniforms(&g_ref.gradient_card_sprite);
+
   g_ref.rounded_rect_sprite.program = load_program_from_files("sprite_rounded_rect.frag.glsl",
                                                                "position", "texcoord", "color");
   if (!g_ref.rounded_rect_sprite.program) {
@@ -526,6 +539,7 @@ void ui_shutdown_prog(void) {
   SAFE_DELETE(g_ref.indexed_sprite.program, glDeleteProgram);
   R_DeleteTexture(g_ref.indexed_palette);
   SAFE_DELETE(g_ref.gradient_sprite.program, glDeleteProgram);
+  SAFE_DELETE(g_ref.gradient_card_sprite.program, glDeleteProgram);
   SAFE_DELETE(g_ref.rounded_rect_sprite.program, glDeleteProgram);
   SAFE_DELETE(g_ref.vga_program, glDeleteProgram);
   R_MeshDestroy(&g_ref.mesh);
@@ -697,6 +711,26 @@ void draw_sprite_region(int tex, irect16_t r,
   glEnable(GL_DEPTH_TEST);
   if (!(flags & DRAW_SPRITE_NO_ALPHA))
     glDisable(GL_BLEND);
+}
+
+void render_gradient_card(irect16_t r, int pixel_w, int pixel_h, float radius,
+                          float ring_width, float highlight_width, ctrl_state_t state, uint32_t color) {
+  sprite_program_t *program = &g_ref.gradient_card_sprite;
+  if (!program->program || pixel_w <= 0 || pixel_h <= 0) return;
+  glUseProgram(program->program);
+  glUniform2f(program->offset_u, r.x, r.y);
+  glUniform2f(program->scale_u, r.w, r.h);
+  glUniform2f(program->uv_offset_u, 0, 0);
+  glUniform2f(program->uv_scale_u, 1, 1);
+  glUniform4f(program->tint_u, (color & 255) / 255.0f, ((color >> 8) & 255) / 255.0f,
+              ((color >> 16) & 255) / 255.0f, (color >> 24) / 255.0f);
+  glUniform4f(program->params0_u, pixel_w, pixel_h, MIN(radius, MIN(pixel_w, pixel_h) * 0.5f), ring_width);
+  glUniform4f(program->params1_u, highlight_width, !!(state & CTRL_SELECTED), !!(state & CTRL_HOVER), 0);
+  R_BlendPremultiplied();
+  g_ref.mesh.draw_mode = GL_TRIANGLE_FAN;
+  R_MeshDraw(&g_ref.mesh);
+  glDisable(GL_BLEND);
+  glEnable(GL_DEPTH_TEST);
 }
 
 void draw_rect_gradient(int tex, int x, int y, int w, int h,

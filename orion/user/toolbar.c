@@ -191,13 +191,34 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
 
 }
 
-static void draw_toolbar_icon_in_rect(toolbar_state_t *tb, const char *icon_name, irect16_t r, int offset, bool disabled) {
-  sysicon_resolved_t res;
-  if (!sysicon_resolve(icon_name ? icon_name : "missing", &res)) return;
+static void draw_toolbar_icon_in_rect(window_t *win, toolbar_state_t *tb, const char *icon_name, irect16_t r, int offset, bool disabled, bool pressed) {
+  sysicon_resolved_t res = {0};
+  bool from_strip = icon_name && strncmp(icon_name, "strip:", 6) == 0;
+  if (from_strip) {
+    char *end;
+    long index = strtol(icon_name + 6, &end, 10);
+    const bitmap_strip_t *strip = &tb->strip;
+    int rows = strip->icon_h > 0 ? strip->sheet_h / strip->icon_h : 0;
+    if (!strip->tex || strip->cols <= 0 || strip->icon_w <= 0 || rows <= 0 ||
+        strip->sheet_w <= 0 || strip->cols > strip->sheet_w / strip->icon_w ||
+        index < 0 || index >= (long)strip->cols * rows || end == icon_name + 6 || *end ||
+        ((tb->style & TOOLBAR_STYLE_PRESSED_STRIP) && (rows < 2 || index >= strip->cols))) {
+      fprintf(stderr, "[tb] invalid strip win=%u icon=%s texture=%u cols=%d rows=%d\n", win->id, icon_name, strip->tex, strip->cols, rows);
+      fflush(stderr);
+      return;
+    }
+    if (pressed && (tb->style & TOOLBAR_STYLE_PRESSED_STRIP)) index += strip->cols;
+    int x = (index % strip->cols) * strip->icon_w, y = (index / strip->cols) * strip->icon_h;
+    res = (sysicon_resolved_t){ .tex = strip->tex, .w = strip->icon_w, .h = strip->icon_h,
+      .u0 = (float)x / strip->sheet_w, .v0 = (float)y / strip->sheet_h,
+      .u1 = (float)(x + strip->icon_w) / strip->sheet_w, .v1 = (float)(y + strip->icon_h) / strip->sheet_h };
+    if (tb->style & TOOLBAR_STYLE_PRESSED_STRIP) offset = 0; // artwork already includes the pressed inset
+  } else if (!sysicon_resolve(icon_name ? icon_name : "missing", &res)) return;
   bool compact = tb && (tb->style & TOOLBAR_STYLE_COMPACT);
   int w = res.w, h = res.h;
-  if (compact && w > 0 && h > 0) {
-    int size = MAX(1, MIN(TOOLBAR_COMPACT_ICON_SIZE, MIN(r.w, r.h)));
+  if (w > 0 && h > 0) {
+    int size = MAX(1, compact ? MIN(TOOLBAR_COMPACT_ICON_SIZE, MIN(r.w, r.h)) : MIN(r.w, r.h) - 4);
+    size = MIN(size, MAX(w, h));
     int extent = MAX(w, h);
     w = MAX(1, w * size / extent);
     h = MAX(1, h * size / extent);
@@ -205,6 +226,7 @@ static void draw_toolbar_icon_in_rect(toolbar_state_t *tb, const char *icon_name
   irect16_t icon = rect_offset(rect_center(r, w, h), offset, offset);
   draw_sprite_region((int)res.tex, icon,
                      UV_RECT(res.u0, res.v0, res.u1, res.v1),
+                     from_strip ? (disabled ? 0x80ffffffu : 0xffffffffu) :
                      get_sys_color(disabled ? brTextDisabled : (compact ? brTextNormal : brToolbarForeground)), 0);
 }
 
@@ -246,7 +268,7 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       irect16_t icon_rect = local;
       if (tb->style & TOOLBAR_STYLE_SHOW_LABELS)
         icon_rect.h = (tb->btn_size > 0) ? tb->btn_size : get_theme()->toolbar_button_size;
-      draw_toolbar_icon_in_rect(tb, icon_name, icon_rect, poff, disabled);
+      draw_toolbar_icon_in_rect(win, tb, icon_name, icon_rect, poff, disabled, is_pressed);
       if ((tb->style & TOOLBAR_STYLE_SHOW_LABELS) && item->text) {
         int tx = (local.w - text_strwidth(FONT_SMALLEST, item->text)) / 2 + poff;
         int ty = local.h - text_char_height(FONT_SMALLEST) - 2 + poff;
@@ -272,7 +294,7 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       irect16_t icon_rect = btn_part;
       if (tb->style & TOOLBAR_STYLE_SHOW_LABELS)
         icon_rect.h = (tb->btn_size > 0) ? tb->btn_size : get_theme()->toolbar_button_size;
-      draw_toolbar_icon_in_rect(tb, icon_name, icon_rect, btn_poff, disabled);
+      draw_toolbar_icon_in_rect(win, tb, icon_name, icon_rect, btn_poff, disabled, btn_pressed);
       if ((tb->style & TOOLBAR_STYLE_SHOW_LABELS) && item->text) {
         int tx = (btn_part.w - text_strwidth(FONT_SMALLEST, item->text)) / 2 + btn_poff;
         int ty = btn_part.h - text_char_height(FONT_SMALLEST) - 2 + btn_poff;
@@ -748,7 +770,11 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
     case tbLoadStrip: {
       const char *path = (const char *)lparam;
       int tile_sz = (int)wparam;
-      if (!path || tile_sz <= 0 || !g_ui_runtime.running) return true;
+      if (!path || tile_sz <= 0 || !g_ui_runtime.running) {
+        fprintf(stderr, "[tb] load strip rejected win=%u path=%p tile=%d running=%d\n", win->id, (const void *)path, tile_sz, g_ui_runtime.running);
+        fflush(stderr);
+        return false;
+      }
 
       toolbar_state_t *tb = toolbar_ensure_state(win);
       if (!tb) return true;
@@ -756,15 +782,26 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
       int w = 0;
       int h = 0;
       uint8_t *src = load_image(path, &w, &h);
-      if (!src) return true;
+      if (!src) {
+        fprintf(stderr, "[tb] load strip failed win=%u path=%s\n", win->id, path);
+        fflush(stderr);
+        return false;
+      }
       if (w < tile_sz || h < tile_sz || (w % tile_sz) != 0 || (h % tile_sz) != 0) {
         image_free(src);
-        return true;
+        fprintf(stderr, "[tb] invalid strip dimensions win=%u path=%s width=%d height=%d tile=%d\n", win->id, path, w, h, tile_sz);
+        fflush(stderr);
+        return false;
       }
 
-      R_DeleteTexture(tb->strip_tex);
-      uint32_t tex = R_CreateTextureSRGBA8(w, h, src, R_FILTER_NEAREST, R_WRAP_CLAMP);
+      uint32_t tex = R_CreateTextureSRGBA8(w, h, src, R_FILTER_LINEAR, R_WRAP_CLAMP);
       image_free(src);
+      if (!tex) {
+        fprintf(stderr, "[tb] strip texture allocation failed win=%u path=%s width=%d height=%d\n", win->id, path, w, h);
+        fflush(stderr);
+        return false;
+      }
+      R_DeleteTexture(tb->strip_tex);
 
       tb->strip_tex = tex;
       tb->strip.tex = tex;

@@ -312,6 +312,15 @@ void draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color) {
                             radius * scale, 1.0f, face, edge_color, edge * scale);
 }
 
+void draw_gradient_card(irect16_t r, ctrl_state_t state, uint32_t color) {
+  if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0) return;
+  const theme_t *theme = get_theme();
+  float scale = MAX(1.0f, axGetScaling());
+  render_gradient_card(r, (int)(r.w * scale + 0.5f), (int)(r.h * scale + 0.5f),
+                       theme->card_corner_radius * scale, theme->card_ring_width * scale,
+                       theme->card_highlight_width * scale, state, color);
+}
+
 #define BADGE_PADDING 7
 int measure_badge(ui_font_t font, const char *text) {
   return text_strwidth(font, text) + 2 * BADGE_PADDING;

@@ -43,7 +43,7 @@ Defined in `orion/user/messages.h`:
 typedef struct {
   toolbar_item_type_t type;    // BUTTON, LABEL, COMBOBOX, TEXTEDIT, SEPARATOR, SPACER, DROPDOWN
   int                 ident;   // command ID / button identifier
-  const char         *icon;    // SVG icon name; NULL = missing icon
+  const char         *icon;    // named icon or "strip:N" atlas index; NULL = missing icon
   int                 w;       // explicit width in pixels (0 = automatic)
   uint32_t            flags;   // BUTTON_PUSHLIKE, BUTTON_AUTORADIO, etc.
   const char         *text;    // label text, or combobox/textedit initial text
@@ -208,6 +208,19 @@ one small-font text row; client layout and input routing use the new height
 automatically.
 
 ## Loading items
+
+PNG artwork uses the existing strip loader. Pass a square source tile size and
+the PNG path to `tbLoadStrip`, then use `icon="strip:0"`, `"strip:1"`, etc.
+Strip icons preserve authored colours, scale to the available button area, and
+fade when disabled. Named SVG icons keep their theme tint. `tbLoadStrip` owns the
+texture and releases it on destruction; `tbSetStrip` borrows a caller-owned texture.
+
+For a matching pressed state, put normal icons in the first row and the same icons
+in the second row, then enable `TOOLBAR_STYLE_PRESSED_STRIP` with `tbSetStyle`.
+Descriptors reference first-row indices; the framework selects the second row
+while pressed. This works for button and split-button icons and compact toolbars.
+Create the set in one ImageGen call and derive the pressed row from that artwork.
+Groove's `apps/groove/share/icons/build_transport.py` is a reproducible example.
 
 For a programmatic toolbar, send `tbSetItems` in `evCreate`. Application chrome
 and declarative form creation load their toolbar metadata automatically.

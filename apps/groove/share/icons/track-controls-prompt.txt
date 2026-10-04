@@ -1,0 +1,10 @@
+Built-in ImageGen. Both icons generated together in one call; transport-source.png was the style reference.
+
+Use case: stylized-concept
+Asset type: single transparent PNG sprite strip for two Groove track toggle icons.
+Input image: the supplied transport icon strip is a style reference only.
+Primary request: Create BOTH icons together in ONE image, arranged horizontally in two equally sized square cells, centered at 25% and 75% of the canvas width. Left: MUTE, a simple coral red speaker silhouette crossed by a bold diagonal slash. Right: SOLO, simple golden yellow over-ear headphones, symbolizing listening to this track alone.
+Match the reference exactly in visual family: chunky glossy polished-plastic shapes, saturated color, bold near-black outline, thin crisp white outer rim, upper-left specular highlight, frontal projection. These are small track-control icons, recognizable at 20 pixels. Keep details minimal and silhouette clear. Fill about 75% of each cell; ample transparent gap between icons. Produce only the full-color active artwork, inactive states will be made from it by deterministic post-processing. Genuine alpha transparency. No letters, no M or S, no faces, no background tiles, no checkerboard, no rays, no external drop shadows.
+
+Post-processing: normalize both icons to 64x64 cells, preserve full-color artwork in the active row, and derive the inactive row with zero saturation and 75% brightness while retaining alpha and identical geometry. Runtime atlas: 128x128; columns mute, solo; rows inactive, active.
+

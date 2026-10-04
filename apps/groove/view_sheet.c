@@ -16,18 +16,44 @@
 #define MAX_ROW    64
 #define SHEET_SLOP 4
 
-typedef struct { int press_clip; ipoint16_t press; bool own_drag; } sheet_t;
+typedef struct { int press_clip; ipoint16_t press; bool own_drag; uint32_t track_icons; } sheet_t;
 
 static result_t win_clip(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 
 static int  hpos(window_t *win)    { return get_scroll_pos(win, SB_HORZ); }
 static int  row_h(window_t *win)   { return CLAMP((get_client_rect(win).h - RULER_H) / GR_TRACKS, MIN_ROW, MAX_ROW); }
 static int  floordiv(int a, int b) { return a >= 0 ? a / b : -((-a + b - 1) / b); }
-static int  bar_x(window_t *win, int bar) { return HDR_W + bar * BAR_W - hpos(win); }
-static int  track_y(window_t *win, int t) { return RULER_H + t * row_h(win); }
-static irect16_t grid_rect(window_t *win) { irect16_t cr = get_client_rect(win); return R(HDR_W, RULER_H, cr.w - HDR_W, row_h(win) * GR_TRACKS); }
-static irect16_t mute_rect(window_t *win, int t) { return R(HDR_W - 46, track_y(win, t) + (row_h(win) - 16) / 2, 20, 16); }
-static irect16_t solo_rect(window_t *win, int t) { return R(HDR_W - 24, track_y(win, t) + (row_h(win) - 16) / 2, 20, 16); }
+static int  bar_x(window_t *win, int bar)  { return HDR_W + bar * BAR_W - hpos(win); }
+static int  track_y(window_t *win, int t)  { return RULER_H + t * row_h(win); }
+static irect16_t grid_rect(window_t *win)  { irect16_t cr = get_client_rect(win); return R(HDR_W, RULER_H, cr.w - HDR_W, row_h(win) * GR_TRACKS); }
+static irect16_t mute_rect(window_t *win, int t) { return rect_center(R(HDR_W - 52, track_y(win, t), 24, row_h(win)), 24, 24); }
+static irect16_t solo_rect(window_t *win, int t) { return rect_offset(mute_rect(win, t), 26, 0); }
+
+static uint32_t load_track_icons(window_t *win) {
+  if (!g_ui_runtime.running) return 0;
+  char path[1024];
+  snprintf(path, sizeof(path), "%s/../share/groove/icons/track-controls.png", ui_get_exe_dir());
+  int w = 0, h = 0;
+  uint8_t *pixels = load_image(path, &w, &h);
+  if (!pixels || w != 128 || h != 128) {
+    fprintf(stderr, "[gr] track icons unavailable win=%u path=%s size=%dx%d\n", win->id, path, w, h);
+    fflush(stderr);
+    image_free(pixels);
+    return 0;
+  }
+  uint32_t texture = R_CreateTextureSRGBA8(w, h, pixels, R_FILTER_LINEAR, R_WRAP_CLAMP);
+  image_free(pixels);
+  if (!texture) { fprintf(stderr, "[gr] track icon texture failed win=%u\n", win->id); fflush(stderr); }
+  return texture;
+}
+
+static void draw_track_toggle(window_t *win, irect16_t r, int icon, bool active) {
+  const sheet_t *st = win->userdata;
+  theme_draw(THEME_PART_TOOLBAR_BUTTON, r, active ? CTRL_SELECTED : CTRL_NORMAL);
+  if (!st->track_icons) return;
+  float x = icon * 0.5f, y = active ? 0.5f : 0.0f;
+  draw_sprite_region(st->track_icons, r, UV_RECT(x, y, x + 0.5f, y + 0.5f), 0xffffffffu, 0);
+}
 
 static void sync_scroll(window_t *win) {
   scroll_info_t si = { .fMask = SIF_RANGE | SIF_PAGE | SIF_POS, .nMin = 0, .nMax = GR_BARS * BAR_W,
@@ -129,23 +155,23 @@ static int card_bottom(int x, int w, int h, int radius) {
   return row < 0 ? 0 : row > h - 1 ? h - 1 : row;
 }
 
-void draw_clip(window_t *win, const block_t *b, irect16_t r, uint32_t color, bool ring) {
-  int radius = get_theme()->card_corner_radius;
-  if (ring) fill_rounded_rect(get_sys_color(brAccent), rect_inset(r, -2), radius + 2);
-  fill_rounded_rect(color, r, radius);
-  uint32_t ink = color_with_alpha(get_sys_color(brWindowDarkBg), (color >> 24) < 0xff ? 0x70 : 0x55);
+void draw_clip(window_t *win, const block_t *b, irect16_t r, uint32_t color, ctrl_state_t state) {
+  draw_gradient_card(r, state, color);
+  r = rect_inset(r, get_theme()->card_ring_width);
+  int radius = MAX(0, get_theme()->card_corner_radius - get_theme()->card_ring_width);
+  uint32_t ink = color_with_alpha(get_sys_color(brTextOnColor), (color >> 24) * 0x99 / 255);
   int np = b->audio.npeaks;
   for (int x = 0; x < r.w && np > 1; x++) {
     float f = (x + 0.5f) * np / r.w - 0.5f;
     int k = f < 0 ? 0 : (int)f, k1 = k + 1 < np ? k + 1 : np - 1;
     float t = f < 0 ? 0 : f - k, p = b->audio.peaks[k] + (b->audio.peaks[k1] - b->audio.peaks[k]) * t;
+    int h = MAX(1, (int)(p * MAX(1, r.h - 14) / 255));
     int bottom = r.y + card_bottom(x, r.w, r.h, radius);
-    int h = MAX(1, (int)(p * (r.h - 14) / 255));
     int y = bottom + 1 - h;
     if (y < r.y) { h -= r.y - y; y = r.y; }
     if (h > 0) fill_rect(ink, R(r.x + x, y, 1, h));
   }
-  draw_text_ellipsized(FONT_SMALL, b->name, r.x + 6, r.y + 3, r.w - 10, color_with_alpha(get_sys_color(brTextNormal), (color >> 24)));
+  draw_text_ellipsized(FONT_SMALL, b->name, r.x + 4, r.y + 3, r.w - 8, color_with_alpha(get_sys_color(brTextOnColor), color >> 24));
 }
 
 static void paint_headers(window_t *win) {
@@ -158,8 +184,8 @@ static void paint_headers(window_t *win) {
     fill_rect(get_sys_color(brDarkEdge), R(0, y + rh - 1, HDR_W, 1));
     draw_text(FONT_SYSTEM, num, 10, y + (rh - text_char_height(FONT_SYSTEM)) / 2, get_sys_color(brTextSecondary));
     irect16_t m = mute_rect(win, t), s = solo_rect(win, t);
-    draw_badge(FONT_SMALLEST, "M", m.x + 5, m.y, m.h, g_app->song.mute[t] ? get_sys_color(brTextError) : get_sys_color(brTextDisabled));
-    draw_badge(FONT_SMALLEST, "S", s.x + 6, s.y, s.h, g_app->song.solo[t] ? get_sys_color(brTextWarning) : get_sys_color(brTextDisabled));
+    draw_track_toggle(win, m, 0, g_app->song.mute[t]);
+    draw_track_toggle(win, s, 1, g_app->song.solo[t]);
   }
 }
 
@@ -189,13 +215,6 @@ static void paint_sheet(window_t *win) {
     fill_rect(get_sys_color(t % 2 ? brColumnViewBg : brWindowDarkBg), R(grid.x, track_y(win, t), grid.w, row_h(win)));
   for (int b = 0; b <= GR_BARS; b++)
     fill_rect(color_with_alpha(get_sys_color(brLightEdge), b % 4 ? 0x14 : 0x38), R(bar_x(win, b), grid.y, 1, grid.h));
-  for (int i = 0; i < s->nclips; i++) {
-    const clip_t *c = &s->clips[i];
-    const block_t *b = block_get(c->block);
-    if ((d->active && d->from_clip == i) || i != g_app->selected_clip) continue;
-    irect16_t r = clip_rect(win, c->track, c->bar, b->bars);
-    fill_rounded_rect(get_sys_color(brAccent), rect_inset(r, -2), get_theme()->card_corner_radius + 2);
-  }
   float saved[16];
   memcpy(saved, get_sprite_matrix(), sizeof saved);
   for (window_t *c = win->children; c; c = c->next) {
@@ -225,6 +244,7 @@ static bool header_click(window_t *win, int cx, int cy) {
     app_lock();
     if (m) g_app->song.mute[t] = !g_app->song.mute[t]; else g_app->song.solo[t] = !g_app->song.solo[t];
     app_unlock();
+    GR_TRACE("track win=%p selected=%d track=%d mute=%d solo=%d", (void *)win, g_app->selected_clip, t, g_app->song.mute[t], g_app->song.solo[t]);
     invalidate_window(win);
     return true;
   }
@@ -244,7 +264,7 @@ static result_t win_clip(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
       const clip_t *c = &g_app->song.clips[idx];
       const block_t *b = block_get(c->block);
       irect16_t cr = get_client_rect(win);
-      draw_clip(win, b, R(1, 2, cr.w - 2, cr.h - 4), category_color(b->cat), false);
+      draw_clip(win, b, R(1, 2, cr.w - 2, cr.h - 4), category_color(b->cat), idx == g_app->selected_clip ? CTRL_SELECTED : CTRL_NORMAL);
       return true;
     }
     case evDestroy: return true;
@@ -263,12 +283,26 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         return false;
       }
       st->press_clip = -1;
+      st->track_icons = load_track_icons(win);
       sync_scroll(win);
       return true;
     case evResize: sync_scroll(win); sync_clips(win); invalidate_window(win); return false;
     case evHScroll: sync_clips(win); invalidate_window(win); return true;
     case evPaint: paint_sheet(win); return true;
     case evHitTest: return true; // clips paint, the sheet keeps the pointer
+    case evGetTooltipText: {
+      if (!lparam) return false;
+      ipoint16_t p = { (int16_t)LOWORD(wparam) - hpos(win), (int16_t)HIWORD(wparam) };
+      if (p.y < RULER_H) return false;
+      int track = (p.y - RULER_H) / row_h(win);
+      if (track >= GR_TRACKS) return false;
+      const char *action;
+      if (rect_contains_point(mute_rect(win, track), p)) action = g_app->song.mute[track] ? "Unmute" : "Mute";
+      else if (rect_contains_point(solo_rect(win, track), p)) action = g_app->song.solo[track] ? "Unsolo" : "Solo";
+      else return false;
+      snprintf(lparam, 256, "%s track %d", action, track + 1);
+      return true;
+    }
 
     case evLeftButtonDown: {
       int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam), cx = mx - hpos(win);
@@ -343,6 +377,7 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       return true;
     case evDestroy:
       if (st && st->press_clip >= 0) set_capture(NULL);
+      if (st && st->track_icons) R_DeleteTexture(st->track_icons);
       free(st);
       win->userdata = NULL;
       return true;
