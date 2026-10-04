@@ -2,18 +2,7 @@ name: Deploy Docs to GitHub Pages
 
 on:
   push:
-    branches: [ main ]
-    paths:
-      - 'docs/**'
-      - 'README.md'
-      - 'packaging/README.md'
-  pull_request:
-    branches: [ main ]
-    paths:
-      - 'docs/**'
-      - 'README.md'
-      - 'packaging/README.md'
-  workflow_dispatch:
+    tags: ['v*']
 
 permissions:
   contents: read
@@ -55,8 +44,6 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     needs: build
-    # Only deploy on push to main (not on PRs)
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     steps:
       - name: Deploy to GitHub Pages
         id: deployment

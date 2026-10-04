@@ -523,10 +523,15 @@ void blocks_swap(block_pcm_t io[GR_MAX_BLOCKS]) {
   for (int i = 0; i < NUM_DEFS; i++) {
     block_pcm_t old = g_blocks[i].audio;
     g_blocks[i].audio = io[i];
+    g_blocks[i].audio_revision++;
     io[i] = old;
   }
 }
 
 void blocks_free(void) {
-  for (int i = 0; i < NUM_DEFS; i++) { free(g_blocks[i].audio.pcm); g_blocks[i].audio = (block_pcm_t){0}; }
+  for (int i = 0; i < NUM_DEFS; i++) {
+    free(g_blocks[i].audio.pcm);
+    g_blocks[i].audio = (block_pcm_t){0};
+    g_blocks[i].audio_revision++;
+  }
 }

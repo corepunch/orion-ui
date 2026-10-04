@@ -11,32 +11,24 @@ jobs:
   build-linux:
     name: Build on Linux
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
         submodules: recursive
-      
+
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y liblua5.4-dev libgl1-mesa-dev libcglm-dev libx11-dev libegl-dev
-        
+        sudo apt-get install -y liblua5.4-dev libgl1-mesa-dev libcglm-dev libx11-dev libegl-dev libxml2-dev
+
     - name: Build library
       run: make library
-      
+
     - name: Build apps
       run: make apps
-      
-    - name: Build and run tests
-      run: |
-        if [ -d "tests" ] && [ "$(ls -A tests/*.c 2>/dev/null)" ]; then
-          make test
-        else
-          echo "No tests found, skipping test build"
-        fi
-      
+
     - name: Upload Linux artifacts
       uses: actions/upload-artifact@v4
       with:
@@ -47,96 +39,21 @@ jobs:
           build/lib/libplatform.so
           build/bin/*
         retention-days: 30
-  
-  build-macos:
-    name: Build on macOS
-    runs-on: macos-latest
-    
+
+  test-linux:
+    name: Test on Linux
+    runs-on: ubuntu-latest
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
         submodules: recursive
-      
+
     - name: Install dependencies
       run: |
-        brew install cglm lua@5.4
-        
-    - name: Build library
-      run: make library
-      
-    - name: Build apps
-      run: make apps
-      
-    - name: Build and run tests
-      run: |
-        if [ -d "tests" ] && [ "$(ls -A tests/*.c 2>/dev/null)" ]; then
-          make test
-        else
-          echo "No tests found, skipping test build"
-        fi
-      
-    - name: Upload macOS artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: orion-macos
-        path: |
-          build/lib/liborion.a
-          build/lib/liborion.dylib
-          build/lib/libplatform.dylib
-          build/bin/*
-        retention-days: 30
+        sudo apt-get update
+        sudo apt-get install -y liblua5.4-dev libgl1-mesa-dev libcglm-dev libx11-dev libegl-dev libxml2-dev
 
-  build-windows:
-    name: Build on Windows
-    runs-on: windows-latest
-    permissions:
-      contents: read
-    defaults:
-      run:
-        shell: msys2 {0}
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        submodules: recursive
-      
-    - name: Setup MSYS2
-      uses: msys2/setup-msys2@v2
-      with:
-        msystem: MINGW64
-        update: true
-        install: >-
-          mingw-w64-x86_64-gcc
-          mingw-w64-x86_64-make
-          mingw-w64-x86_64-pkgconf
-          mingw-w64-x86_64-glew
-          mingw-w64-x86_64-lua
-          mingw-w64-x86_64-cglm
-          mingw-w64-x86_64-libxml2
-          make
-        
-    - name: Build library
-      run: make library
-      
-    - name: Build apps
-      run: make apps
-      
     - name: Build and run tests
-      run: |
-        if [ -d "tests" ] && [ "$(ls -A tests/*.c 2>/dev/null)" ]; then
-          make test
-        else
-          echo "No tests found, skipping test build"
-        fi
-      
-    - name: Upload Windows artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: orion-windows
-        path: |
-          build/lib/liborion.a
-          build/lib/libplatform.dll
-          build/bin/*
-        retention-days: 30
+      run: make test

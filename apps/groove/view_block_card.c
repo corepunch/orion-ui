@@ -33,45 +33,18 @@ void clip_skin_load(groove_t *app) {
   }
 }
 
-// Bottom pixel row of a rounded card at column x, so the waveform sits on the
-// silhouette instead of a padded box. radius 0 is a square bottom.
-static int card_bottom(int x, int w, int h, int radius) {
-  if (h <= 0) return 0;
-  if (radius <= 0) return h - 1;
-  if (radius > w / 2) radius = w / 2;
-  if (radius > h / 2) radius = h / 2;
-  float px = x + 0.5f, dx = 0;
-  if (px < radius) dx = radius - px;
-  else if (px > w - radius) dx = px - (w - radius);
-  if (dx <= 0) return h - 1;
-  float dy = sqrtf((float)radius * radius - dx * dx);
-  int row = (int)((float)h - radius + dy - 0.5f);
-  return row < 0 ? 0 : row > h - 1 ? h - 1 : row;
-}
-
-static float block_peak(const block_t *b, int x, int w) {
-  int np = b->audio.npeaks;
-  if (np < 2 || w <= 0) return 0;
-  float f = (x + 0.5f) * np / w - 0.5f;
-  int k = f < 0 ? 0 : (int)f, k1 = k + 1 < np ? k + 1 : np - 1;
-  float t = f < 0 ? 0 : f - k;
-  return b->audio.peaks[k] + (b->audio.peaks[k1] - b->audio.peaks[k]) * t;
-}
-
-static void paint_block_card(const block_t *b, irect16_t r, uint32_t color, ctrl_state_t state) {
+static void paint_block_card(int block, const block_t *b, irect16_t r, uint32_t color, ctrl_state_t state) {
   r = rect_trim_bottom(rect_trim_top(rect_inset(r, 1), 1), 1);
   static const uint8_t skins[CAT_COUNT] = {0, 1, 2, 3, 4, 5, 7, 2, 5, 0, 5, 7, 1, 6, 7, 1};
   bool skinned = g_app->card_atlas.tex && draw_image_background(r, &g_app->card_backgrounds[skins[b->cat]], state);
   if (!skinned) draw_gradient_card(r, state, color);
   r = rect_inset(r, skinned ? 6 : get_theme()->card_ring_width);
   int radius = skinned ? 0 : MAX(0, get_theme()->card_corner_radius - get_theme()->card_ring_width);
+  irect16_t wave = rect_offset(r, 0, skinned ? 5 : 0);
   uint32_t ink = color_with_alpha(get_sys_color(brTextOnColor), (color >> 24) * 0x99 / 255);
-  for (int x = 0; x < r.w && b->audio.npeaks > 1; x++) {
-    int h = MAX(1, (int)(block_peak(b, x, r.w) * MAX(1, r.h - 14) / 255));
-    int bottom = r.y + card_bottom(x, r.w, r.h, radius);
-    int y = bottom + 1 - h;
-    if (y < r.y) { h -= r.y - y; y = r.y; }
-    if (h > 0) fill_rect(ink, R(r.x + x, y, 1, h));
+  if (wave.w > 0 && wave.h > 0) {
+    uint32_t texture = waveform_texture(g_app, block, (ipoint16_t){wave.w, wave.h}, radius);
+    if (texture) draw_sprite_region(texture, wave, NULL, ink, 0);
   }
   draw_text_ellipsized(FONT_SMALL, b->name, r.x + 4, r.y + 3, r.w - 8, color_with_alpha(get_sys_color(brTextOnColor), color >> 24));
 }
@@ -94,7 +67,7 @@ result_t win_block_card(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       bool lit = st->hover && !win->drag_visual;
       ctrl_state_t state = st->state | (st->down && !win->drag_visual ? CTRL_PRESSED : lit ? CTRL_HOVER : CTRL_NORMAL);
       if (window_has_state(win, WINDOW_STATE_DISABLED)) state |= CTRL_DISABLED;
-      paint_block_card(b, get_client_rect(win), category_color(b->cat), state);
+      paint_block_card(st->block, b, get_client_rect(win), category_color(b->cat), state);
       return true;
     }
     case grCardSetBlock:
@@ -127,7 +100,7 @@ result_t win_block_card(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       int sx, sy;
       card_screen(win, mx, my, &sx, &sy);
       if (!win->drag_visual && abs(mx - st->press.x) + abs(my - st->press.y) > CARD_SLOP) {
-        g_app->drag = (drag_t){ .active = true, .block = st->block, .from_clip = -1, .track = -1 };
+        g_app->drag = (drag_t){ .active = true, .block = st->block, .from_clip = -1, .grab = st->press, .track = -1 };
         window_set_drag_visual(win, mx - st->press.x, my - st->press.y);
       }
       if (win->drag_visual) {

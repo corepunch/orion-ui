@@ -61,6 +61,8 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
       - name: Build release packages
         run: sh scripts/package-release.sh "${{ steps.version.outputs.version }}" "${{ matrix.platform }}" dist
+      - name: Build and run tests
+        run: make test
       - uses: actions/upload-artifact@v4
         with:
           name: packages-${{ matrix.platform }}

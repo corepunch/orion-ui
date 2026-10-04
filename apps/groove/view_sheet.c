@@ -16,7 +16,13 @@
 #define MAX_ROW    64
 #define SHEET_SLOP 4
 
-typedef struct { int press_clip; ipoint16_t press; bool own_drag; uint32_t track_icons; } sheet_t;
+typedef struct {
+  int press_clip;
+  ipoint16_t press;
+  bool own_drag;
+  uint32_t track_icons;
+  groove_drop_anchor_t drop_anchor;
+} sheet_t;
 
 static int  hpos(window_t *win)    { return get_scroll_pos(win, SB_HORZ); }
 static int  row_h(window_t *win)   { return CLAMP((get_client_rect(win).h - RULER_H) / GR_TRACKS, MIN_ROW, MAX_ROW); }
@@ -125,15 +131,25 @@ static void sync_clips(window_t *win) {
   }
 }
 
-// Resolves a client-space point into the drag's snapped target.
+// The pointer must enter the target; the chosen anchor determines placement.
 static void drag_target(window_t *win, int cx, int cy) {
   drag_t *d = &g_app->drag;
+  const sheet_t *st = win->userdata;
   int bars = block_get(d->block)->bars;
   d->track = -1;
   d->valid = false;
   if (!rect_contains_point(grid_rect(win), (ipoint16_t){ (int16_t)cx, (int16_t)cy })) return;
-  d->track = (cy - RULER_H) / row_h(win);
-  d->bar = CLAMP(floordiv(cx - HDR_W + hpos(win), BAR_W) - d->grab_bars, 0, GR_BARS - bars);
+  cx += hpos(win) - HDR_W;
+  cy -= RULER_H;
+  if (st->drop_anchor == GR_DROP_ANCHOR_SAMPLE) {
+    irect16_t sample = R(cx - d->grab.x, cy - d->grab.y, bars * BAR_W, row_h(win));
+    irect16_t center = rect_center(sample, 0, 0);
+    // Candidate centers account for the full width of multi-bar samples.
+    cx = center.x - (sample.w - BAR_W) / 2;
+    cy = center.y;
+  }
+  d->track = CLAMP(floordiv(cy, row_h(win)), 0, GR_TRACKS - 1);
+  d->bar = CLAMP(floordiv(cx, BAR_W), 0, GR_BARS - bars);
   d->valid = song_can_place(&g_app->song, d->track, d->bar, bars, d->from_clip);
 }
 
@@ -260,7 +276,8 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       app_select_clip(st->press_clip);
       if (st->press_clip >= 0) {
         const clip_t *c = &g_app->song.clips[st->press_clip];
-        g_app->drag = (drag_t){ .block = c->block, .from_clip = st->press_clip, .grab_bars = bar - c->bar,
+        ipoint16_t grab = { mx - HDR_W - c->bar * BAR_W, my - track_y(win, c->track) };
+        g_app->drag = (drag_t){ .block = c->block, .from_clip = st->press_clip, .grab = grab,
                                 .track = c->track, .bar = c->bar, .valid = true };
         set_capture(win);
       }
@@ -287,6 +304,7 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     case evLeftButtonUp:
       if (!st || st->press_clip < 0) return false;
       if (!st->own_drag) app_preview(g_app->drag.block);
+      if (st->own_drag) drag_target(win, (int16_t)LOWORD(wparam) - hpos(win), (int16_t)HIWORD(wparam));
       if (st->own_drag && g_app->drag.track >= 0 && g_app->drag.valid) app_drop(&g_app->drag);
       st->press_clip = -1;
       st->own_drag = false;
@@ -303,6 +321,15 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       return true;
     }
 
+    case shSetDropAnchor:
+      if (wparam != GR_DROP_ANCHOR_SAMPLE && wparam != GR_DROP_ANCHOR_POINTER) {
+        fprintf(stderr, "[sh] invalid drop anchor win=%u anchor=%u\n", win->id, wparam);
+        fflush(stderr);
+        return false;
+      }
+      st->drop_anchor = (groove_drop_anchor_t)wparam;
+      invalidate_window(win);
+      return true;
     case shDragOver:
     case shDrop: {
       int cx = (int)LOWORD(wparam) - window_screen_x(win), cy = (int)HIWORD(wparam) - window_screen_y(win);

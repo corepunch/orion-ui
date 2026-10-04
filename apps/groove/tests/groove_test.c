@@ -24,9 +24,11 @@ static void test_blocks(void) {
 
 static void test_tempo(void) {
   TEST("re-rendering at a new tempo resizes blocks and returns the old buffers");
+  uint64_t revision = block_get(0)->audio_revision;
   block_pcm_t pcm[GR_MAX_BLOCKS];
   blocks_render(140, pcm);
   blocks_swap(pcm);
+  ASSERT(block_get(0)->audio_revision > revision, "tempo changes invalidate waveform textures");
   ASSERT(pcm[0].frames == bar_frames_for_bpm(GR_BPM_DEFAULT) * block_get(0)->bars, "old buffer handed back");
   ASSERT(block_get(0)->audio.frames == bar_frames_for_bpm(140) * block_get(0)->bars, "new length");
   for (int i = 0; i < GR_MAX_BLOCKS; i++) free(pcm[i].pcm);
@@ -262,6 +264,132 @@ static void test_shared_block_cards(void) {
   PASS();
 }
 
+static void test_drag_anchor(void) {
+  TEST("library and canvas drops snap the exact card origin, including scrolling and release position; pointer anchoring is optional");
+  test_env_init();
+  g_app = app_init();
+  window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_STATUSBAR, MAKERECT(0, 0, 1000, 700), NULL, main_win_proc, 0, g_app);
+  ASSERT_NOT_NULL(win);
+  show_window(win, true);
+  window_t *sheet = g_app->sheet, *page = g_app->tabs->children, *library = page->children;
+  int block = 0;
+  while (library && block_get(block)->bars < 2) { library = library->next; block++; }
+  ASSERT_NOT_NULL(library);
+  send_message(page, evResize, 0, NULL);
+  set_scroll_info(page, SB_VERT, &(scroll_info_t){ .fMask = SIF_POS, .nPos = 20 }, false);
+  send_message(page, evVScroll, 0, NULL);
+  set_scroll_info(sheet, SB_HORZ, &(scroll_info_t){ .fMask = SIF_POS, .nPos = 120 }, false);
+  send_message(sheet, evHScroll, 0, NULL);
+  int row = CLAMP((get_client_rect(sheet).h - 22) / GR_TRACKS, 26, 64);
+  ipoint16_t grab = {160, row - 4};
+  int sx = window_screen_x(sheet) + GR_SHEET_HEADER_W + 7 * 88 + 40 + grab.x - get_scroll_pos(sheet, SB_HORZ);
+  int sy = window_screen_y(sheet) + 22 + 5 * row + 6 + grab.y;
+  send_message(library, evLeftButtonDown, MAKEDWORD(grab.x, grab.y), NULL);
+  send_message(library, evMouseMove, MAKEDWORD(sx - window_screen_x(library), sy - window_screen_y(library)), NULL);
+  ASSERT_TRUE(g_app->drag.active && library->drag_visual);
+  ASSERT(g_app->drag.grab.x == grab.x, "library horizontal grab offset");
+  ASSERT(g_app->drag.grab.y == grab.y, "library vertical grab offset");
+  ASSERT_TRUE(g_app->drag.valid && g_app->drag.bar == 7 && g_app->drag.track == 5);
+  send_message(library, evLeftButtonUp, MAKEDWORD(sx + 88 - window_screen_x(library), sy - window_screen_y(library)), NULL);
+  int clip = g_app->selected_clip;
+  ASSERT(clip >= 0, "library drop selects the added clip");
+  ASSERT(song_clip_at(&g_app->song, 5, 8) == clip, "library release snaps to card origin");
+  ASSERT(g_app->song.nclips == 1, "library drop adds a clip");
+  ASSERT_FALSE(g_app->drag.active || library->drag_visual);
+  ASSERT_NULL(g_ui_runtime.captured);
+
+  ASSERT_TRUE(send_message(sheet, shSetDropAnchor, GR_DROP_ANCHOR_POINTER, NULL));
+  g_app->drag = (drag_t){ .active = true, .block = block, .from_clip = -1, .grab = grab, .track = -1 };
+  send_message(sheet, shDragOver, MAKEDWORD(sx, sy), NULL);
+  ASSERT_TRUE(g_app->drag.valid && g_app->drag.bar == 9 && g_app->drag.track == 6);
+  send_message(sheet, shDrop, MAKEDWORD(sx, sy), NULL);
+  ASSERT_TRUE(song_clip_at(&g_app->song, 6, 9) >= 0);
+  ASSERT(g_app->song.nclips == 2, "moves and rejected drops preserve clip count");
+  ASSERT_TRUE(send_message(sheet, shSetDropAnchor, GR_DROP_ANCHOR_SAMPLE, NULL));
+
+  send_message(sheet, evResize, 0, NULL);
+  int mx = GR_SHEET_HEADER_W + 8 * 88 + grab.x, my = 22 + 5 * row + grab.y;
+  send_message(sheet, evLeftButtonDown, MAKEDWORD(mx, my), NULL);
+  send_message(sheet, evMouseMove, MAKEDWORD(mx - 6, my), NULL);
+  ASSERT(g_app->drag.bar == 8 && g_app->drag.track == 5, "small movements keep the clip at its nearest grid origin");
+  mx = GR_SHEET_HEADER_W + 6 * 88 + 40 + grab.x;
+  my = 22 + 2 * row + 6 + grab.y;
+  send_message(sheet, evMouseMove, MAKEDWORD(mx, my), NULL);
+  ASSERT_TRUE(g_app->drag.active && g_app->drag.valid);
+  ASSERT_TRUE(g_app->drag.bar == 6 && g_app->drag.track == 2);
+  send_message(sheet, evLeftButtonUp, MAKEDWORD(mx + 20, my), NULL);
+  ASSERT_TRUE(g_app->song.clips[clip].bar == 7 && g_app->song.clips[clip].track == 2);
+  ASSERT(g_app->song.nclips == 2, "moves and rejected drops preserve clip count");
+  ASSERT_FALSE(g_app->drag.active);
+  ASSERT_NULL(g_ui_runtime.captured);
+
+  g_app->drag = (drag_t){ .active = true, .block = block, .from_clip = -1, .grab = grab, .track = -1 };
+  sx = window_screen_x(sheet) + GR_SHEET_HEADER_W + 2;
+  sy = window_screen_y(sheet) + 24;
+  send_message(sheet, shDragOver, MAKEDWORD(sx, sy), NULL);
+  ASSERT_TRUE(g_app->drag.valid && g_app->drag.bar == 0 && g_app->drag.track == 0);
+  send_message(sheet, shDrop, MAKEDWORD(sx - 3, sy), NULL);
+  ASSERT(g_app->song.nclips == 2, "moves and rejected drops preserve clip count");
+  ASSERT_FALSE(g_app->drag.active);
+  destroy_window(win);
+  app_shutdown(g_app);
+  test_env_shutdown();
+  PASS();
+}
+
+static void test_drag_center_boundaries(void) {
+  TEST("real drags use the sample center across half-cell boundaries, independent of grab offset and scrolling");
+  test_env_init();
+  g_app = app_init();
+  window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_STATUSBAR, MAKERECT(0, 0, 1100, 760), NULL, main_win_proc, 0, g_app);
+  ASSERT_NOT_NULL(win);
+  show_window(win, true);
+  window_t *sheet = g_app->sheet, *page = g_app->tabs->children;
+  send_message(page, evResize, 0, NULL);
+  const int percent[] = {20, 49, 51, 80};
+  for (int block = 0; block <= 4; block += 4) {
+    window_t *library = page->children;
+    for (int i = 0; i < block && library; i++) library = library->next;
+    ASSERT_NOT_NULL(library);
+    ipoint16_t size = clip_cell_size(sheet, block_get(block));
+    const ipoint16_t grabs[] = {{5, 5}, {size.x / 2, size.y / 2}, {size.x - 5, size.y - 5}};
+    for (int scroll = 0; scroll <= 83; scroll += 83) {
+      set_scroll_info(sheet, SB_HORZ, &(scroll_info_t){ .fMask = SIF_POS, .nPos = scroll }, false);
+      send_message(sheet, evHScroll, 0, NULL);
+      for (int grab = 0; grab < ARRAY_LEN(grabs); grab++) {
+        ui_event_t event = {.message = kEventLeftButtonDown,
+          .x = (window_screen_x(library) + grabs[grab].x) * UI_WINDOW_SCALE,
+          .y = (window_screen_y(library) + grabs[grab].y) * UI_WINDOW_SCALE};
+        dispatch_message(&event);
+        ASSERT(g_ui_runtime.captured == library, "library receives the routed press");
+        for (int x = 0; x < ARRAY_LEN(percent); x++) for (int y = 0; y < ARRAY_LEN(percent); y++) {
+          int dx = (88 * percent[x] + (percent[x] > 50 ? 99 : 0)) / 100;
+          int dy = (size.y * percent[y] + (percent[y] > 50 ? 99 : 0)) / 100;
+          int sx = window_screen_x(sheet) + GR_SHEET_HEADER_W + 3 * 88 - scroll + dx;
+          int sy = window_screen_y(sheet) + 22 + 2 * size.y + dy;
+          event.message = kEventLeftButtonDragged;
+          event.x = (sx + grabs[grab].x) * UI_WINDOW_SCALE;
+          event.y = (sy + grabs[grab].y) * UI_WINDOW_SCALE;
+          dispatch_message(&event);
+          ASSERT(g_app->drag.active && g_app->drag.valid, "drag preview is valid");
+          ASSERT(window_screen_x(library) + library->drag_dx == sx && window_screen_y(library) + library->drag_dy == sy, "preview is derived from the actual lifted card");
+          ASSERT(g_app->drag.bar == 3 + (percent[x] > 50), "column changes after the center crosses halfway");
+          ASSERT(g_app->drag.track == 2 + (percent[y] > 50), "row changes after the center crosses halfway");
+        }
+        event.message = kEventLeftButtonUp;
+        dispatch_message(&event);
+        ASSERT(g_app->song.nclips == 1 && song_clip_at(&g_app->song, 3, 4) >= 0, "80% diagonal drag commits to the bottom-right placement");
+        ASSERT_FALSE(g_app->drag.active || library->drag_visual);
+        app_new_song();
+      }
+    }
+  }
+  destroy_window(win);
+  app_shutdown(g_app);
+  test_env_shutdown();
+  PASS();
+}
+
 int main(void) {
   TEST_START("Groove");
   test_blocks();
@@ -272,5 +400,7 @@ int main(void) {
   test_two_finger_sheet_pan();
   test_library_search();
   test_shared_block_cards();
+  test_drag_anchor();
+  test_drag_center_boundaries();
   TEST_END();
 }

@@ -56,6 +56,7 @@ typedef struct {
   category_t  cat;
   int         bars;       // 1, 2 or 4 — always snaps to whole bars
   block_pcm_t audio;
+  uint64_t    audio_revision;
 } block_t;
 
 #define CAT_ALL CAT_COUNT // bin page listing every block
@@ -101,10 +102,19 @@ typedef struct {
   bool active;
   int  block;       // block being dragged
   int  from_clip;   // clip being moved, or -1 for a fresh block from the bin
-  int  grab_bars;   // bars from the clip's left edge to the grab point
+  ipoint16_t grab;  // exact cursor offset within the dragged card
   int  track, bar;  // current snapped target; track -1 = outside the sheet
   bool valid;       // target is free
 } drag_t;
+
+typedef enum { GR_DROP_ANCHOR_SAMPLE, GR_DROP_ANCHOR_POINTER } groove_drop_anchor_t;
+
+typedef struct {
+  uint32_t texture;
+  ipoint16_t size;
+  int radius;
+  uint64_t audio_revision;
+} waveform_cache_t;
 
 typedef struct {
   window_t     *win, *menubar_win, *sheet, *tabs, *library;
@@ -118,6 +128,7 @@ typedef struct {
   char          search[64]; // library filter, matched against block and category names
   image_atlas_t card_atlas;
   image_background_t card_backgrounds[8];
+  waveform_cache_t waveforms[GR_MAX_BLOCKS];
 } groove_t;
 
 extern groove_t *g_app;
@@ -128,6 +139,7 @@ enum {
   shDrop,                     // wparam = MAKEDWORD(screen_x, screen_y)
   shDragEnd,                  // clear drag preview
   shSeekBar,                  // wparam = bar
+  shSetDropAnchor,             // wparam = groove_drop_anchor_t; default = sample origin
   binFilter,                  // re-apply g_app->search to a bin page
   grCardSetBlock,              // wparam = block id
   grCardSetState,              // wparam = ctrl_state_t
@@ -174,6 +186,9 @@ extern result_t win_library(window_t *win, uint32_t msg, uint32_t wparam, void *
 void toolbar_refresh(window_t *win);
 ipoint16_t clip_cell_size(window_t *sheet, const block_t *b);
 void clip_skin_load(groove_t *app);
+// Shared logical-pixel alpha masks; audio revision and geometry determine reuse.
+uint32_t waveform_texture(groove_t *app, int block, ipoint16_t size, int radius);
+void waveform_cache_free(groove_t *app);
 // Moves a card window. A visual drag keeps the painted copy still: the frame
 // delta is added back into the drag offset.
 void card_place(window_t *card, irect16_t cell);
