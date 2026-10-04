@@ -18,8 +18,6 @@
 
 typedef struct { int press_clip; ipoint16_t press; bool own_drag; uint32_t track_icons; } sheet_t;
 
-static result_t win_clip(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
-
 static int  hpos(window_t *win)    { return get_scroll_pos(win, SB_HORZ); }
 static int  row_h(window_t *win)   { return CLAMP((get_client_rect(win).h - RULER_H) / GR_TRACKS, MIN_ROW, MAX_ROW); }
 static int  floordiv(int a, int b) { return a >= 0 ? a / b : -((-a + b - 1) / b); }
@@ -68,16 +66,12 @@ static void sync_scroll(window_t *win) {
   set_scroll_info(win, SB_HORZ, &si, false);
 }
 
-static irect16_t clip_rect(window_t *win, int track, int bar, int bars) {
-  return R(bar_x(win, bar) + 1, track_y(win, track) + 2, bars * BAR_W - 2, row_h(win) - 4);
+ipoint16_t clip_cell_size(window_t *sheet, const block_t *b) {
+  return (ipoint16_t){ b->bars * BAR_W, row_h(sheet) };
 }
 
-static int child_index(window_t *win) {
-  int i = 0;
-  if (!win || !win->parent) return -1;
-  for (window_t *c = win->parent->children; c; c = c->next, i++)
-    if (c == win) return i;
-  return -1;
+static irect16_t clip_rect(window_t *win, int track, int bar, int bars) {
+  return R(bar_x(win, bar) + 1, track_y(win, track) + 2, bars * BAR_W - 2, row_h(win) - 4);
 }
 
 static int child_count(window_t *win) {
@@ -113,7 +107,7 @@ static void sync_clips(window_t *win) {
     destroy_window(tail);
   }
   while (child_count(win) < n) {
-    if (!create_window("", GR_CARD_FLAGS, MAKERECT(0, 0, 1, 1), win, win_clip, 0, NULL)) {
+    if (!create_window("", GR_CARD_FLAGS, MAKERECT(0, 0, 1, 1), win, win_block_card, 0, NULL)) {
       fprintf(stderr, "[sh] clip allocation failed index=%d\n", child_count(win));
       fflush(stderr);
       break;
@@ -122,8 +116,12 @@ static void sync_clips(window_t *win) {
   int i = 0;
   for (window_t *c = win->children; c && i < n; c = c->next, i++) {
     const clip_t *cl = &g_app->song.clips[i];
-    const block_t *b = block_get(cl->block);
-    card_place(c, R(bar_x(win, cl->bar), track_y(win, cl->track), b->bars * BAR_W, row_h(win)));
+    send_message(c, grCardSetBlock, cl->block, NULL);
+    send_message(c, grCardSetState, i == g_app->selected_clip ? CTRL_SELECTED : CTRL_NORMAL, NULL);
+    layout_measure_t measure = {0};
+    send_message(c, evMeasure, 0, &measure);
+    ipoint16_t size = {measure.desired_w, measure.desired_h};
+    card_place(c, R(bar_x(win, cl->bar), track_y(win, cl->track), size.x, size.y));
   }
 }
 
@@ -144,46 +142,6 @@ static void drag_clear(window_t *win) {
   if (card) window_clear_drag_visual(card);
   g_app->drag = (drag_t){ .track = -1, .from_clip = -1 };
   invalidate_window(win);
-}
-
-// Bottom pixel row of a rounded card at column x, so the waveform sits on the
-// silhouette instead of a padded box. radius 0 is a square bottom.
-static int card_bottom(int x, int w, int h, int radius) {
-  if (h <= 0) return 0;
-  if (radius <= 0) return h - 1;
-  if (radius > w / 2) radius = w / 2;
-  if (radius > h / 2) radius = h / 2;
-  float px = x + 0.5f, dx = 0;
-  if (px < radius) dx = radius - px;
-  else if (px > w - radius) dx = px - (w - radius);
-  if (dx <= 0) return h - 1;
-  float dy = sqrtf((float)radius * radius - dx * dx);
-  int row = (int)((float)h - radius + dy - 0.5f);
-  return row < 0 ? 0 : row > h - 1 ? h - 1 : row;
-}
-
-float block_peak(const block_t *b, int x, int w) {
-  int np = b->audio.npeaks;
-  if (np < 2 || w <= 0) return 0;
-  float f = (x + 0.5f) * np / w - 0.5f;
-  int k = f < 0 ? 0 : (int)f, k1 = k + 1 < np ? k + 1 : np - 1;
-  float t = f < 0 ? 0 : f - k;
-  return b->audio.peaks[k] + (b->audio.peaks[k1] - b->audio.peaks[k]) * t;
-}
-
-void draw_clip(window_t *win, const block_t *b, irect16_t r, uint32_t color, ctrl_state_t state) {
-  draw_gradient_card(r, state, color);
-  r = rect_inset(r, get_theme()->card_ring_width);
-  int radius = MAX(0, get_theme()->card_corner_radius - get_theme()->card_ring_width);
-  uint32_t ink = color_with_alpha(get_sys_color(brTextOnColor), (color >> 24) * 0x99 / 255);
-  for (int x = 0; x < r.w && b->audio.npeaks > 1; x++) {
-    int h = MAX(1, (int)(block_peak(b, x, r.w) * MAX(1, r.h - 14) / 255));
-    int bottom = r.y + card_bottom(x, r.w, r.h, radius);
-    int y = bottom + 1 - h;
-    if (y < r.y) { h -= r.y - y; y = r.y; }
-    if (h > 0) fill_rect(ink, R(r.x + x, y, 1, h));
-  }
-  draw_text_ellipsized(FONT_SMALL, b->name, r.x + 4, r.y + 3, r.w - 8, color_with_alpha(get_sys_color(brTextOnColor), color >> 24));
 }
 
 static void paint_headers(window_t *win) {
@@ -257,27 +215,6 @@ static bool header_click(window_t *win, int cx, int cy) {
     return true;
   }
   return true;
-}
-
-// The sheet owns the pointer. Clip windows only paint, so a click falls
-// through to the canvas and a two-finger pan can cancel the drag.
-static result_t win_clip(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
-  (void)wparam; (void)lparam;
-  if (!g_app && msg != evDestroy) return false;
-  switch (msg) {
-    case evCreate: return true;
-    case evPaint: {
-      int idx = child_index(win);
-      if (idx < 0 || idx >= g_app->song.nclips) return true;
-      const clip_t *c = &g_app->song.clips[idx];
-      const block_t *b = block_get(c->block);
-      irect16_t cr = get_client_rect(win);
-      draw_clip(win, b, R(1, 2, cr.w - 2, cr.h - 4), category_color(b->cat), idx == g_app->selected_clip ? CTRL_SELECTED : CTRL_NORMAL);
-      return true;
-    }
-    case evDestroy: return true;
-    default: return false;
-  }
 }
 
 result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {

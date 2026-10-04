@@ -11,6 +11,7 @@
 #include <orion/user/user.h>
 #include <orion/user/messages.h>
 #include <orion/user/draw.h>
+#include <orion/user/image_background.h>
 #include <orion/user/theme.h>
 #include "commctl.h"
 #include "layout_shared.h"
@@ -100,7 +101,12 @@ result_t win_card(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       }
       return true;
     case evPaint:
-      if (card) draw_card(get_client_rect(win), (ctrl_state_t)(card->state | (card->hover ? CTRL_HOVER : 0)), card->edge_color);
+      if (card) {
+        ctrl_state_t state = card->state | (card->hover ? CTRL_HOVER : 0);
+        if (window_has_state(win, WINDOW_STATE_DISABLED)) state |= CTRL_DISABLED;
+        if (window_has_state(win, WINDOW_STATE_PRESSED)) state |= CTRL_PRESSED;
+        if (!draw_window_image_background(win, get_client_rect(win), state)) draw_card(get_client_rect(win), state, card->edge_color);
+      }
       layout_paint_children(win);
       return true;
     case evMouseMove:

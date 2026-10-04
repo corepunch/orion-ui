@@ -122,6 +122,77 @@ static void read_card_pixel(int x, int y, uint8_t pixel[4]) {
   glReadPixels(x, 32 - y - 1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
 }
 
+static void test_image_background(void) {
+  TEST("Image backgrounds preserve end caps, authored states, alpha and bounds at small sizes");
+  CGLPixelFormatAttribute attrs[] = {kCGLPFAOpenGLProfile,
+    (CGLPixelFormatAttribute)kCGLOGLPVersion_3_2_Core, 0};
+  CGLPixelFormatObj format = NULL;
+  CGLContextObj context = NULL;
+  GLint count = 0;
+  if (CGLChoosePixelFormat(attrs, &format, &count) != kCGLNoError || !format) { SKIP("Offscreen OpenGL unavailable"); }
+  CGLError error = CGLCreateContext(format, NULL, &context);
+  CGLDestroyPixelFormat(format);
+  if (error != kCGLNoError || !context) { SKIP("Offscreen OpenGL context unavailable"); }
+  CGLSetCurrentContext(context);
+  bool initialized = ui_init_prog(), ok = initialized;
+  uint32_t fbo = 0, texture = 0;
+  int w = 0, h = 0;
+  image_atlas_t atlas = {0};
+  if (ok) {
+    ok = R_EnsureWindowTarget(&fbo, &texture, &w, &h, 32, 32);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glViewport(0, 0, 32, 32);
+    glDisable(GL_SCISSOR_TEST);
+    set_projection(0, 0, 32, 32);
+    uint8_t pixels[10 * 30 * 4];
+    const uint8_t colours[][3] = {{0, 255, 0}, {255, 255, 0}, {0, 0, 255}, {255, 0, 255}, {88, 88, 88}};
+    for (int y = 0; y < 30; y++) for (int x = 0; x < 10; x++) {
+      uint8_t *px = pixels + (y * 10 + x) * 4;
+      memcpy(px, x < 2 ? (uint8_t[]){255, 0, 0} : x >= 8 ? (uint8_t[]){0, 255, 255} : colours[y / 6], 3);
+      px[3] = y % 6 == 0 && (x == 0 || x == 9) ? 0 : 255;
+    }
+    const char *path = "/tmp/orion-image-background-test.png";
+    ok &= save_image_png(path, pixels, 10, 30);
+    g_ui_runtime.running = true;
+    ok &= image_atlas_load(&atlas, path);
+    uint32_t original = atlas.tex;
+    ok &= !image_atlas_load(&atlas, "/tmp/orion-missing-skin.png") && atlas.tex == original;
+    image_background_t bg = {.atlas = &atlas, .source_border = {2, 0, 2, 0}, .border = {2, 0, 2, 0}};
+    for (int i = 0; i < IMAGE_BG_COUNT; i++) bg.states[i] = R(0, i * 6, 10, 6);
+    ctrl_state_t states[] = {CTRL_NORMAL, CTRL_SELECTED | CTRL_HOVER, CTRL_PRESSED | CTRL_SELECTED,
+                            CTRL_HOVER, CTRL_DISABLED | CTRL_PRESSED | CTRL_SELECTED | CTRL_HOVER};
+    for (int i = 0; i < IMAGE_BG_COUNT; i++) {
+      glClearColor(0, 0, 0, 0);
+      glClear(GL_COLOR_BUFFER_BIT);
+      ok &= draw_image_background(R(2, 2, 28, 6), &bg, states[i]);
+      uint8_t left[4], middle[4], right[4], outside[4], corner[4];
+      read_card_pixel(2, 5, left); read_card_pixel(16, 5, middle); read_card_pixel(29, 5, right);
+      read_card_pixel(1, 5, outside); read_card_pixel(2, 2, corner);
+      uint8_t gray = (uint8_t)(ui_srgb8_to_linear(88) * 255 + 0.5f);
+      ok &= left[0] == 255 && left[1] == 0 && right[1] == 255 && right[2] == 255;
+      ok &= i == 4 ? middle[0] == gray && middle[1] == gray && middle[2] == gray : memcmp(middle, colours[i], 3) == 0;
+      ok &= middle[3] == 255 && outside[3] == 0 && corner[3] == 0;
+    }
+    bg.source_border = R(2, 2, 2, 2);
+    bg.border = R(4, 4, 4, 4);
+    glClear(GL_COLOR_BUFFER_BIT);
+    ok &= draw_image_background(R(10, 10, 3, 3), &bg, CTRL_NORMAL);
+    uint8_t outside[4];
+    read_card_pixel(9, 11, outside); ok &= outside[3] == 0;
+    read_card_pixel(13, 11, outside); ok &= outside[3] == 0;
+    ok &= glGetError() == GL_NO_ERROR;
+    image_atlas_free(&atlas);
+    g_ui_runtime.running = false;
+    remove(path);
+  }
+  R_DestroyWindowTarget(&fbo, &texture, &w, &h);
+  if (initialized) ui_shutdown_prog();
+  CGLSetCurrentContext(NULL);
+  CGLDestroyContext(context);
+  ASSERT_TRUE(ok);
+  PASS();
+}
+
 static void test_gradient_card(void) {
   TEST("Gradient card clips sheen and ring, preserves alpha and keeps selection geometry fixed");
   CGLPixelFormatAttribute attrs[] = {kCGLPFAOpenGLProfile,
@@ -433,6 +504,7 @@ int main(void) {
   TEST_START("Renderer alpha");
 #if defined(__APPLE__) && !TARGET_OS_IOS
   test_gradient_card();
+  test_image_background();
   test_view_rotation();
   test_fixed_viewport();
 #endif

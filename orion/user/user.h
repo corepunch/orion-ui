@@ -513,6 +513,7 @@ struct window_s {
   layout_t layout;
   void *userdata;
   void *userdata2;
+  struct image_background_s *image_background; // owned descriptor; borrowed atlas
   win_sb_t hscroll;   // built-in horizontal scrollbar state (WINDOW_HSCROLL)
   win_sb_t vscroll;   // built-in vertical scrollbar state (WINDOW_VSCROLL)
   window_view_t view; // Transforms this window's content; child frames remain in viewport space.

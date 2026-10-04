@@ -116,6 +116,8 @@ typedef struct {
   int           selected_clip;
   drag_t        drag;
   char          search[64]; // library filter, matched against block and category names
+  image_atlas_t card_atlas;
+  image_background_t card_backgrounds[8];
 } groove_t;
 
 extern groove_t *g_app;
@@ -127,6 +129,8 @@ enum {
   shDragEnd,                  // clear drag preview
   shSeekBar,                  // wparam = bar
   binFilter,                  // re-apply g_app->search to a bin page
+  grCardSetBlock,              // wparam = block id
+  grCardSetState,              // wparam = ctrl_state_t
 };
 
 #define ID_PLAY      ID_TRANSPORT_PLAY
@@ -165,11 +169,11 @@ bool      block_matches(int id, const char *query);
 extern result_t main_win_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 extern result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 extern result_t win_bin(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+extern result_t win_block_card(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 extern result_t win_library(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 void toolbar_refresh(window_t *win);
-void draw_clip(window_t *win, const block_t *b, irect16_t r, uint32_t color, ctrl_state_t state);
-// Waveform overview of `b` resampled to column x of a w-pixel-wide strip, 0..255.
-float block_peak(const block_t *b, int x, int w);
+ipoint16_t clip_cell_size(window_t *sheet, const block_t *b);
+void clip_skin_load(groove_t *app);
 // Moves a card window. A visual drag keeps the painted copy still: the frame
 // delta is added back into the drag offset.
 void card_place(window_t *card, irect16_t cell);

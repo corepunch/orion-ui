@@ -517,6 +517,7 @@ void destroy_window(window_t *win) {
   // Release the per-window render target before freeing the struct.
   R_DestroyWindowTarget(&win->surface_fbo, &win->surface_tex,
                         &win->surface_w, &win->surface_h);
+  free(win->image_background);
   free(win);
   if (was_maximized) sync_desktop_window();
 
