@@ -9,7 +9,7 @@
 
 #include "groove.h"
 
-#define HDR_W      78
+#define HDR_W      GR_SHEET_HEADER_W
 #define RULER_H    22
 #define BAR_W      88
 #define MIN_ROW    26
@@ -26,8 +26,15 @@ static int  floordiv(int a, int b) { return a >= 0 ? a / b : -((-a + b - 1) / b)
 static int  bar_x(window_t *win, int bar)  { return HDR_W + bar * BAR_W - hpos(win); }
 static int  track_y(window_t *win, int t)  { return RULER_H + t * row_h(win); }
 static irect16_t grid_rect(window_t *win)  { irect16_t cr = get_client_rect(win); return R(HDR_W, RULER_H, cr.w - HDR_W, row_h(win) * GR_TRACKS); }
-static irect16_t mute_rect(window_t *win, int t) { return rect_center(R(HDR_W - 52, track_y(win, t), 24, row_h(win)), 24, 24); }
-static irect16_t solo_rect(window_t *win, int t) { return rect_offset(mute_rect(win, t), 26, 0); }
+static irect16_t mute_rect(window_t *win, int t) {
+  int size = MIN(24, (row_h(win) - 4) / 2);
+  irect16_t pair = rect_center(R(0, track_y(win, t), HDR_W, row_h(win)), size, size * 2 + 2);
+  return rect_split_top(pair, size);
+}
+static irect16_t solo_rect(window_t *win, int t) {
+  irect16_t mute = mute_rect(win, t);
+  return rect_offset(mute, 0, mute.h + 2);
+}
 
 static uint32_t load_track_icons(window_t *win) {
   if (!g_ui_runtime.running) return 0;
@@ -179,10 +186,7 @@ static void paint_headers(window_t *win) {
   fill_rect(get_sys_color(brPanelDarker), R(0, RULER_H, HDR_W, cr.h - RULER_H));
   for (int t = 0; t < GR_TRACKS; t++) {
     int y = track_y(win, t), rh = row_h(win);
-    char num[8];
-    snprintf(num, sizeof(num), "%d", t + 1);
     fill_rect(get_sys_color(brDarkEdge), R(0, y + rh - 1, HDR_W, 1));
-    draw_text(FONT_SYSTEM, num, 10, y + (rh - text_char_height(FONT_SYSTEM)) / 2, get_sys_color(brTextSecondary));
     irect16_t m = mute_rect(win, t), s = solo_rect(win, t);
     draw_track_toggle(win, m, 0, g_app->song.mute[t]);
     draw_track_toggle(win, s, 1, g_app->song.solo[t]);

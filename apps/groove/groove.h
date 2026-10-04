@@ -23,6 +23,7 @@
 #define GR_SAMPLE_RATE  44100
 #define GR_BEATS_BAR    4
 #define GR_TRACKS       8
+#define GR_SHEET_HEADER_W 32
 #define GR_BARS         32
 #define GR_MAX_BLOCKS   128
 #define GR_MAX_CLIPS    256

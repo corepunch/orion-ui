@@ -502,10 +502,10 @@ void destroy_window(window_t *win) {
     set_host_page(win, NULL);
   if (win->role == WINDOW_ROLE_PAGE && win->page_host)
     set_host_page(win->page_host, NULL);
+  if (g_ui_runtime.tracked == win) track_mouse(NULL);
   send_message(win, evDestroy, 0, NULL);
   if (g_ui_runtime.focused == win) set_focus(NULL);
   if (g_ui_runtime.captured == win) set_capture(NULL);
-  if (g_ui_runtime.tracked == win) track_mouse(NULL);
   if (g_ui_runtime.tracked_toolbar == win) g_ui_runtime.tracked_toolbar = NULL;
   if (g_ui_runtime.dragging == win) g_ui_runtime.dragging = NULL;
   if (g_ui_runtime.resizing == win) g_ui_runtime.resizing = NULL;
