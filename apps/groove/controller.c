@@ -86,6 +86,7 @@ void app_shutdown(groove_t *app) {
   if (app->audio_dev) axAudioClose(app->audio_dev);
   axAudioShutdown();
   blocks_free();
+  image_atlas_free(&app->card_atlas);
   if (g_app == app) g_app = NULL;
   free(app);
 }

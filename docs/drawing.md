@@ -81,6 +81,42 @@ The ring margin is reserved in every state, so selection never moves the content
 Inset waveform or text content past that margin before painting it.
 Use `brTextOnColor` for dark labels and waveforms on these bright tinted surfaces.
 
+### Image-backed backgrounds and skins
+
+`image_atlas_load()` loads a PNG unchanged into a shared sRGB texture. An
+`image_background_t` names source regions for normal, selected, pressed, hover
+and disabled artwork. Backgrounds preserve authored color and alpha; disabled
+art is not tinted again. State priority is disabled, pressed, selected, hover,
+normal. Empty optional states reuse normal. Rejected reloads retain the old atlas.
+
+```c
+image_atlas_t atlas = {0};
+image_atlas_load(&atlas, "skin.png");
+image_background_t face = {
+  .atlas = &atlas,
+  .states = { {0, 0, 200, 128} },
+  .source_border = {28, 0, 28, 0},
+  .border = {8, 0, 8, 0}
+};
+window_set_image_background(button, &face);
+```
+
+Borders use `irect16_t` fields as **left, top, right, bottom**, in source pixels
+and destination logical pixels respectively. Zero top/bottom borders draw only
+three horizontal slices: fixed end caps and a stretched middle, preserving the
+full-height artwork without vertical slicing. Groove uses this form for clips
+in both the library and canvas. Nonzero top/bottom borders enable nine-slice
+scaling for other skins. Small destinations shrink opposing borders
+proportionally without overlap or painting outside the requested bounds.
+
+Buttons, toolbar-button controls and Card containers honor
+`window_set_image_background()`. Passing NULL restores their themed face.
+Custom views can call `draw_image_background()` or
+`draw_window_image_background()` inside `evPaint`. The setter copies the
+descriptor and invalidates the window; destruction frees that copy. The caller
+owns the atlas and must keep it alive until all users are destroyed, then call
+`image_atlas_free()`. Reloaded atlases must keep all source regions in bounds.
+
 ### `draw_rect`
 
 Render a textured quad (OpenGL texture).

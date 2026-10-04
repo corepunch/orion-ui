@@ -225,6 +225,43 @@ static void test_library_search(void) {
   PASS();
 }
 
+static void test_shared_block_cards(void) {
+  TEST("canvas and library share the same card widget, measure, spacing and library drag behavior");
+  test_env_init();
+  g_app = app_init();
+  window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_STATUSBAR, MAKERECT(0, 0, 1000, 700), NULL, main_win_proc, 0, g_app);
+  ASSERT_NOT_NULL(win);
+  int clip = song_add_clip(&g_app->song, 0, 0, 0);
+  send_message(g_app->sheet, evResize, 0, NULL);
+  window_t *canvas = g_app->sheet->children, *page = g_app->tabs->children;
+  window_t *library = page->children;
+  ASSERT_TRUE(canvas && library && canvas->proc == win_block_card && library->proc == canvas->proc);
+  layout_measure_t a = {0}, b = {0};
+  send_message(canvas, evMeasure, 0, &a);
+  send_message(library, evMeasure, 0, &b);
+  ASSERT_EQUAL(a.desired_w, b.desired_w);
+  ASSERT_EQUAL(a.desired_h, b.desired_h);
+  send_message(page, evResize, 0, NULL);
+  ASSERT_EQUAL(library->frame.h, canvas->frame.h);
+  ASSERT_EQUAL(library->next->frame.x, library->frame.x + library->frame.w);
+  send_message(library, evLeftButtonDown, MAKEDWORD(4, 4), NULL);
+  send_message(library, evLeftButtonUp, MAKEDWORD(4, 4), NULL);
+  ASSERT_EQUAL(g_app->song.preview_block, 0);
+  send_message(library, evLeftButtonDown, MAKEDWORD(4, 4), NULL);
+  send_message(library, evMouseMove, MAKEDWORD(12, 4), NULL);
+  ASSERT_TRUE(g_app->drag.active && library->drag_visual);
+  send_message(library, evPointerCancel, 0, NULL);
+  ASSERT_FALSE(g_app->drag.active || library->drag_visual);
+  ASSERT_TRUE(g_ui_runtime.captured == NULL);
+  app_select_clip(clip);
+  send_message(g_app->sheet, evResize, 0, NULL);
+  ASSERT_EQUAL(g_app->song.nclips, 1);
+  destroy_window(win);
+  app_shutdown(g_app);
+  test_env_shutdown();
+  PASS();
+}
+
 int main(void) {
   TEST_START("Groove");
   test_blocks();
@@ -234,5 +271,6 @@ int main(void) {
   test_sheet_drop();
   test_two_finger_sheet_pan();
   test_library_search();
+  test_shared_block_cards();
   TEST_END();
 }

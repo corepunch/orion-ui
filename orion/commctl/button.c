@@ -4,6 +4,7 @@
 #include <orion/user/user.h>
 #include <orion/user/messages.h>
 #include <orion/user/draw.h>
+#include <orion/user/image_background.h>
 #include <orion/user/svg_icon_loader.h>
 #include <orion/user/rect.h>
 #include <orion/user/theme.h>
@@ -64,7 +65,7 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
       if (g_ui_runtime.focused == win)                  state |= CTRL_FOCUSED;
       if (win->flags & BUTTON_DEFAULT)                  state |= CTRL_DEFAULT;
       irect16_t local = {0, 0, win->frame.w, win->frame.h};
-      theme_draw(THEME_PART_BUTTON, local, state);
+      if (!draw_window_image_background(win, local, state)) theme_draw(THEME_PART_BUTTON, local, state);
       irect16_t content = rect_inset_xy(local, get_theme()->control_padding, 2);
       irect16_t label = rect_center(content, strwidth(win->title), CHAR_HEIGHT);
       get_theme()->draw_button_label(label, win->title, state);
@@ -160,7 +161,7 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
       if (window_has_state(win, WINDOW_STATE_DISABLED)) state |= CTRL_DISABLED;
       if (g_ui_runtime.focused == win) state |= CTRL_FOCUSED;
       irect16_t local = {0, 0, win->frame.w, win->frame.h};
-      theme_draw(THEME_PART_TOOLBAR_BUTTON, local, state);
+      if (!draw_window_image_background(win, local, state)) theme_draw(THEME_PART_TOOLBAR_BUTTON, local, state);
       int px = (state & CTRL_PRESSED) && !(state & CTRL_DISABLED) ? get_theme()->press_icon_offset : 0;
       toolbar_button_data_t *bd = (toolbar_button_data_t *)win->userdata;
       bool drew_icon = false;

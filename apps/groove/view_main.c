@@ -68,6 +68,7 @@ result_t main_win_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       return true;
     case evCreate: {
       app->win = win;
+      if (g_ui_runtime.running) clip_skin_load(app);
       char strip_path[1024];
       int n = snprintf(strip_path, sizeof(strip_path), "%s/../share/groove/icons/transport.png", ui_get_exe_dir());
       irect16_t regions[40];
