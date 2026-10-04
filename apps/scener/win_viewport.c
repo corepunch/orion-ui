@@ -439,8 +439,6 @@ result_t win_viewport(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
 			vp->playback_timer = doc->playing ? 0 : axSetTimer(win, TIMER_INTERVAL_MS, NULL, true);
 			doc->playing = vp->playback_timer != 0;
 			vp->last_play_time = axGetMilliseconds();
-			fprintf(stderr, "[scener] playback win=%u %s time=%g duration=%g\n", (unsigned)win->id,
-				doc->playing ? "play" : "pause", doc->scene.time, doc->scene.duration);
 			return true;
 		case evTimer:
 			if (!vp || !doc) return false;

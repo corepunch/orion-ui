@@ -373,12 +373,9 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       }
       // Otherwise select row; the state image toggles independently of row selection.
       int index = report_hit_index(win, data, wparam);
-      fprintf(stderr, "[rv] mousedown win=%u mx=%d my=%d idx=%d old_sel=%d count=%d\n",
-              (unsigned)win->id, mx, my, index, data->selected, data->count);
       if (rv_valid_index(data, index)) {
         uint32_t now = axGetMilliseconds();
         if (data->last_click_index == index && (now - data->last_click_time) < RV_DOUBLE_CLICK_MS) {
-          fprintf(stderr, "[rv]   -> RVN_DBLCLK idx=%d\n", index);
           rv_notify(win, data, index, RVN_DBLCLK);
           rv_reset_click_state(data);
         } else {
@@ -387,14 +384,12 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
           data->last_click_time = now;
           data->last_click_index = index;
           if (old_selection != data->selected) {
-            fprintf(stderr, "[rv]   -> RVN_SELCHANGE idx=%d (was %d)\n", index, old_selection);
             rv_notify(win, data, index, RVN_SELCHANGE);
           }
           rv_invalidate(win, data);
         }
         int checked_index = -1;
         if (report_hit_checkbox(win, data, wparam, &checked_index)) {
-          fprintf(stderr, "[rv]   -> RVN_ITEMCHECK idx=%d\n", checked_index);
           report_toggle_check(win, data, checked_index);
         }
       }
@@ -693,8 +688,6 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
         data->selected = next;
         report_scroll_to_item(win, data, next);
         report_sync_scroll(win, data);
-        fprintf(stderr, "[rv] keydown win=%u -> RVN_SELCHANGE idx=%d (was %d)\n",
-                (unsigned)win->id, next, cur);
         rv_notify(win, data, next, RVN_SELCHANGE);
         rv_invalidate(win, data);
       }

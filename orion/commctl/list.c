@@ -88,7 +88,6 @@ result_t win_list(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       int y = (int16_t)HIWORD(wparam) - MENU_START_Y;
       if (y < 0 || y >= (int)cb->cursor_pos * LIST_HEIGHT) return true;
       win->cursor_pos = y / LIST_HEIGHT;
-      fprintf(stderr, "[list] select win=%u index=%u\n", win->id, win->cursor_pos);
       if (win->cursor_pos < cb->cursor_pos) {
         window_set_state(win, WINDOW_STATE_PRESSED, true);
       } else {

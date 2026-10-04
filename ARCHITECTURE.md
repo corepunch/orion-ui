@@ -378,7 +378,7 @@ For an interaction bug, follow ownership in order:
 5. Confirm the controller mutation.
 6. Confirm invalidation and repaint.
 
-Application traces should log user action boundaries and state mutations.
+Keep routine interaction logging behind debug flags, disabled by default.
 Framework diagnostics should include the module prefix, window ID, and rejected
 values. Avoid per-frame logging.
 

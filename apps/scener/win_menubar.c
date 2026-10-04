@@ -222,7 +222,6 @@ void handle_menu_command(uint16_t id) {
 
     case ID_ANIMATION_REWIND:
       if (doc) {
-        fprintf(stderr, "[scener] rewind time=%g\n", doc->scene.time);
         scene_set_time(&doc->scene, 0);
         if (doc->viewport_win) invalidate_window(doc->viewport_win);
       }

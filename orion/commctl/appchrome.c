@@ -33,11 +33,6 @@ static void app_chrome_resize_children(window_t *win) {
     int menu_width = st->menubar ? send_message(st->menubar, kMenuBarMessageGetContentWidth, 0, NULL) : win->frame.w;
     bool compact = width + menu_width + menu_h + 8 <= win->frame.w;
     toolbar_dock_t dock = compact ? TOOLBAR_DOCK_MENU : TOOLBAR_DOCK_TOP;
-    if (bar->toolbar_dock != dock) {
-      fprintf(stderr, "[chrome] toolbar layout win=%u toolbar=%u compact=%d width=%d menu_width=%d\n",
-              win->id, bar->id, compact, win->frame.w, menu_width);
-      fflush(stderr);
-    }
     bar->toolbar_dock = dock;
     if (compact) {
       irect16_t row = rect_split_top(get_client_rect(win), menu_h);
@@ -110,9 +105,6 @@ static result_t win_app_chrome(window_t *win, uint32_t msg,
         }
       }
       if (!bar) bar = app_chrome_toolbar(win);
-      fprintf(stderr, "[chrome] click ident=%u bar=%u\n",
-              (unsigned)wparam, bar ? bar->id : 0);
-      fflush(stderr);
       return bar ? send_message(bar, msg, wparam, lparam) : false;
     }
     case evDisplayChange: {
@@ -170,9 +162,6 @@ window_t *create_application_chrome(const char *title, winproc_t menubar_proc,
   app_chrome_state_t *st = chrome->userdata;
   st->presentation = toolbar->presentation;
   send_message(app_chrome_toolbar(chrome), tbSetItems, toolbar->count, (void *)toolbar->items);
-  fprintf(stderr, "[chrome] application toolbar win=%u count=%d presentation=%d\n",
-          chrome->id, toolbar->count, toolbar->presentation);
-  fflush(stderr);
   app_chrome_resize_children(chrome);
   return chrome;
 }

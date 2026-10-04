@@ -177,16 +177,12 @@ void sync_desktop_window(void) {
   for (window_t *win = g_ui_runtime.windows; win; win = win->next)
     if (win->maximized && window_has_state(win, WINDOW_STATE_VISIBLE)) replaced = true;
   if ((!g_desktop_enabled || replaced) && get_desktop_window()) {
-    fprintf(stderr, "[desktop] release win=%u replaced=%d\n", g_desktop_window->id, replaced);
-    fflush(stderr);
     destroy_window(g_desktop_window);
   } else if (g_desktop_enabled && !replaced && !get_desktop_window()) {
     g_desktop_window = create_window("Desktop",
       WINDOW_NOTITLE | WINDOW_ALWAYSINBACK | WINDOW_NOTRAYBUTTON | WINDOW_NOACTIVATE,
       MAKERECT(0, 0, ui_get_system_metrics(kSystemMetricScreenWidth),
                      ui_get_system_metrics(kSystemMetricScreenHeight)), NULL, win_desktop, 0, NULL);
-    fprintf(stderr, "[desktop] recreate win=%p\n", (void *)g_desktop_window);
-    fflush(stderr);
   }
   for (window_t *win = g_ui_runtime.windows; win; win = win->next)
     invalidate_window(win);

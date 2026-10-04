@@ -386,10 +386,6 @@ bool maximize_window(window_t *win) {
   win->maximizable = true;
   win->maximized = true;
   win->flags |= WINDOW_NOTITLE | WINDOW_NORESIZE;
-  fprintf(stderr, "[win] maximize win=%u from=%d,%d,%d,%d to=%d,%d,%d,%d\n",
-          win->id, win->frame.x, win->frame.y, win->frame.w, win->frame.h,
-          area.x, area.y, area.w, area.h);
-  fflush(stderr);
   move_window(win, area.x, area.y);
   resize_window(win, area.w, area.h);
   move_to_top(win);
@@ -412,9 +408,6 @@ bool restore_window(window_t *win) {
   frame.y = MAX(area.y, MIN(frame.y, area.y + area.h - frame.h));
   win->maximized = false;
   win->flags = (win->flags & ~(WINDOW_NOTITLE | WINDOW_NORESIZE)) | win->restore_decorations;
-  fprintf(stderr, "[win] restore win=%u rect=%d,%d,%d,%d\n",
-          win->id, frame.x, frame.y, frame.w, frame.h);
-  fflush(stderr);
   move_window(win, frame.x, frame.y);
   resize_window(win, frame.w, frame.h);
   sync_desktop_window();

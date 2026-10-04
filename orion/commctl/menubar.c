@@ -539,8 +539,6 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       if (target && rect_contains_point(menubar_restore_rect(win), point)) {
         close_popup(win, data);
         data->restore_pressed = target;
-        fprintf(stderr, "[mb] restore press win=%u target=%u\n", win->id, target->id);
-        fflush(stderr);
         set_capture(win);
         invalidate_window(win);
         return true;
@@ -569,8 +567,6 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       set_capture(NULL);
       ipoint16_t point = {(int16_t)LOWORD(wparam), (int16_t)HIWORD(wparam)};
       if (target == menubar_maximized_window(win) && rect_contains_point(menubar_restore_rect(win), point)) {
-        fprintf(stderr, "[mb] restore click win=%u target=%u\n", win->id, target->id);
-        fflush(stderr);
         restore_window(target);
       }
       invalidate_window(win);

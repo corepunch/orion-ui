@@ -79,7 +79,6 @@ needs:
 - an enabled/disabled predicate derived from repository and selection state;
 - a single handler or command function;
 - optional default accelerator;
-- trace name and useful parameters;
 - an expected refresh/invalidation effect.
 
 The canonical path should be:
@@ -205,8 +204,6 @@ fixture, plus a short baseline result in the eventual gitclient README.
 - [x] Add generator validation for unknown command references, duplicate action
   names within a menu, duplicate hotkeys, and malformed hotkeys.
 - [x] Add generated action metadata derived from menu declarations.
-- [x] Add always-on `[gc]` traces for action name/ID, source surface, selection,
-  repository state, result, and refresh decision.
 - [x] Normalize application toolbar manifests to fully qualified
   `command="group.action"` references and add missing scener menu declarations
   for toolbar-only editing modes.
@@ -330,18 +327,18 @@ event-posting style in `tests/` and `apps/imageeditor/tests/` are the model.
 - [ ] Exercise local/remote branches, merge/rebase conflicts, tags, stashes,
   untracked files, renamed files, binary files, and large diffs.
 - [ ] Run every toolbar button once from Changes and once from History where it
-  is applicable; verify the `[gc]` trace shows the same action ID as menus.
+  is applicable; verify it invokes the same action as menus.
 - [ ] Exercise default hotkeys with focus in the branch list, history list,
   diff, and commit editor.
-- [ ] Run with the Platform headless surface where supported and retain trace
+- [ ] Run with the Platform headless surface where supported and retain error
   output on failures.
 
 ### Phase 5 — Polish and documentation
 
 - [ ] Update `apps/gitclient/README.md` with the new information architecture,
   action manifest rules, and test commands.
-- [ ] Add a troubleshooting section explaining how to correlate `[gc]`, `[rv]`,
-  and `[tv]` traces.
+- [ ] Add a troubleshooting section explaining message routing and optional
+  debug diagnostics.
 - [ ] Document destructive/network action semantics and hotkeys in the Help
   menu or command palette.
 - [ ] Add a release checklist requiring generated headers to be regenerated and
@@ -363,7 +360,7 @@ surfaces and gives the new UI a tested command contract to consume.
 ## Acceptance criteria
 
 - Every action declared in `.orion` has one stable generated ID, one handler,
-  trace metadata, and at least one automated test.
+  and at least one automated test.
 - Every toolbar button works or is visibly disabled with a documented reason;
   no toolbar action silently falls through the dispatcher.
 - Menu, context menu, toolbar, and default-hotkey invocations produce the same
@@ -375,8 +372,7 @@ surfaces and gives the new UI a tested command contract to consume.
   without losing context during refresh.
 - Destructive and network operations are confirmation/error-safe and show
   progress or failure state.
-- Always-on interaction traces identify source surface, command, selection,
-  state mutation, and refresh cascade.
+- Routine interaction logging is disabled by default; errors remain visible.
 
 ## Open decisions to resolve during Phase 0
 

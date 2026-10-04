@@ -1561,10 +1561,6 @@ void R_SetScreenCompositionMode(R_ScreenCompositionMode mode) {
     return;
   }
   g_screen_composition.requested = mode;
-  fprintf(stderr, "[renderer] screen composition requested mode=%s\n",
-          mode == R_SCREEN_COMPOSITION_AUTO ? "auto" :
-          mode == R_SCREEN_COMPOSITION_FP16 ? "fp16" : "srgb8");
-  fflush(stderr);
 }
 
 R_ScreenCompositionMode R_GetScreenCompositionMode(void) {
@@ -1631,15 +1627,6 @@ static bool screen_target_create(int width, int height,
   }
   *out_fbo = fbo;
   *out_tex = tex;
-  uint64_t bytes_per_pixel = mode == R_SCREEN_COMPOSITION_FP16 ? 8u : 4u;
-  uint64_t pixels = (uint64_t)(unsigned)width * (uint64_t)(unsigned)height;
-  uint64_t bytes = pixels > UINT64_MAX / bytes_per_pixel
-                 ? UINT64_MAX : pixels * bytes_per_pixel;
-  fprintf(stderr, "[renderer] screen target ready mode=%s size=%dx%d bytes_per_pixel=%llu allocation_bytes=%llu\n",
-          mode == R_SCREEN_COMPOSITION_FP16 ? "fp16" : "srgb8",
-          width, height, (unsigned long long)bytes_per_pixel,
-          (unsigned long long)bytes);
-  fflush(stderr);
   return true;
 }
 

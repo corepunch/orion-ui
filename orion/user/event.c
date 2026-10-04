@@ -682,10 +682,6 @@ void dispatch_message(ui_event_t *msg) {
       if (gesture.phase == AX_GESTURE_BEGIN && !gesture_target) {
         gesture_target = win; gesture_target_id = win->id; gesture_scroll = true;
       }
-      if (gesture.phase != AX_GESTURE_UPDATE) {
-        fprintf(stderr, "[input] gesture phase=%u win=%u target=%u\n", gesture.phase, win->id, gesture_target ? gesture_target_id : 0);
-        fflush(stderr);
-      }
       if (gesture.phase == AX_GESTURE_END || gesture.phase == AX_GESTURE_CANCEL) gesture_target = NULL;
       break;
     }
@@ -700,8 +696,6 @@ void dispatch_message(ui_event_t *msg) {
         if ((win == pointer_target || !handle_mouse(evPointerCancel, win, lx, ly, NULL)) &&
             !send_message(win, evPointerCancel, MAKEDWORD(lx, ly), NULL))
           send_message(win, evLeftButtonUp, MAKEDWORD(-1, -1), NULL);
-        fprintf(stderr, "[input] pointer cancel win=%u\n", win->id);
-        fflush(stderr);
       }
       g_ui_runtime.captured = NULL;
       g_ui_runtime.dragging = NULL;
@@ -886,8 +880,6 @@ void dispatch_message(ui_event_t *msg) {
           // window to follow the mouse during that dialog.  Same pattern as
           // toolbar_down_win which is cleared before its send above.
           window_t *closing = g_ui_runtime.dragging;
-          fprintf(stderr, "[win] close win=%u\n", closing->id);
-          fflush(stderr);
           g_ui_runtime.dragging = NULL;
           if (closing->flags & WINDOW_DIALOG) {
             end_dialog(closing, -1);

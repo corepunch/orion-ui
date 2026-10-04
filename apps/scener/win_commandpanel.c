@@ -158,8 +158,6 @@ static result_t rig_panel_proc(window_t *win,uint32_t msg,uint32_t wparam,void *
 		if(HIWORD(wparam)!=btnClicked) return false;
 		int action=LOWORD(wparam);
 		if(action<RIG_EDIT_ROT || action>RIG_ASSIGN_SHOT || !st->instance) return false;
-		fprintf(stderr,"[scener] rig control win=%u action=%d instance=%s\n",(unsigned)win->id,action,
-			scene_node_attr(st->instance,"name")?scene_node_attr(st->instance,"name"):""); fflush(stderr);
 		void *joint=s->selectedRigInstance==st->instance?s->selectedRigJoint:NULL;
 		if(action==RIG_MIRROR){ if(joint && scene_rig_mirror_joint(s,st->instance,joint)) rig_changed(doc); return true; }
 		if(action==RIG_REPARENT){
@@ -399,7 +397,7 @@ result_t win_command_panel(window_t *win, uint32_t msg, uint32_t wparam, void *l
 			return true;
 		}
 		case evCommand: {
-			if (HIWORD(wparam) == tcnSelChange){ fprintf(stderr,"[scener] command tab selection=%u\n",(unsigned)wparam); fflush(stderr); return true; }
+			if (HIWORD(wparam) == tcnSelChange) return true;
 			uint16_t id = LOWORD(wparam);
 			for (int i = 0; st && i < st->datasource->count; i++) if (st->datasource->tabs[i].id == id) {
 				if (st && st->tabview) send_message(st->tabview, tcSetSelection, i, NULL);

@@ -19,8 +19,6 @@
 #define SCREEN_W        1180
 #define SCREEN_H        760
 
-#define GR_TRACE(...) do { fprintf(stderr, "[gr] " __VA_ARGS__); fputc('\n', stderr); fflush(stderr); } while (0)
-
 #define GR_SAMPLE_RATE  44100
 #define GR_BEATS_BAR    4
 #define GR_TRACKS       8

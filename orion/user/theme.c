@@ -12,14 +12,6 @@
 #include "theme.h"
 #include "theme_palette_dark.h"
 
-// Always-on trace for theme switch lifecycle and state transitions.
-// One line per discrete event; keep noise-free so logs stay auditable.
-#define THEME_TRACE(...) do { \
-  fprintf(stderr, "[theme] " __VA_ARGS__); \
-  fputc('\n', stderr); \
-  fflush(stderr); \
-} while (0)
-
 uint32_t g_sys_colors[brCount] = { THEME_PALETTE_DARK_INIT };
 
 // ── Active theme runtime ───────────────────────────────────────────────────
@@ -40,7 +32,6 @@ theme_t *get_theme(void) {
   if (!g_active_theme) {
     g_active_theme = theme_modern_instance();
     g_active_theme->apply_palette();
-    THEME_TRACE("default theme applied name=%s", g_active_theme->name);
   }
   return g_active_theme;
 }
@@ -63,10 +54,11 @@ static bool theme_validate(theme_t *t) {
       t->press_icon_offset < 0 || t->button_corner_radius < 0 || t->window_corner_radius < 0 ||
       t->caption_height <= 0 || t->menubar_height <= 0 || t->toolbar_button_size <= 0 ||
       t->toolbar_padding < 0) {
-    THEME_TRACE("invalid metrics name=%s gutter=%d overlay=%d padding=%d offset=%d radius=%d window_radius=%d caption=%d menu=%d toolbar=%d toolbar_padding=%d",
-                t->name, t->scrollbar_width, t->scrollbar_overlay, t->control_padding,
-                t->press_icon_offset, t->button_corner_radius, t->window_corner_radius,
-                t->caption_height, t->menubar_height, t->toolbar_button_size, t->toolbar_padding);
+    fprintf(stderr, "[theme] invalid metrics name=%s gutter=%d overlay=%d padding=%d offset=%d radius=%d window_radius=%d caption=%d menu=%d toolbar=%d toolbar_padding=%d\n",
+            t->name, t->scrollbar_width, t->scrollbar_overlay, t->control_padding,
+            t->press_icon_offset, t->button_corner_radius, t->window_corner_radius,
+            t->caption_height, t->menubar_height, t->toolbar_button_size, t->toolbar_padding);
+    fflush(stderr);
     return false;
   }
   return true;
@@ -87,26 +79,25 @@ static void post_to_win_tree(window_t *win, uint32_t msg, uint32_t wparam) {
 bool set_theme(theme_style_t style) {
   static bool s_switching = false;
   if (s_switching) {
-    THEME_TRACE("set_theme REJECTED re-entrant style=%d", (int)style);
+    fprintf(stderr, "[theme] set_theme REJECTED re-entrant style=%d\n", (int)style);
+    fflush(stderr);
     return false;
   }
 
   theme_t *candidate = theme_for_style(style);
   if (!candidate) {
-    THEME_TRACE("set_theme REJECTED invalid style=%d", (int)style);
+    fprintf(stderr, "[theme] set_theme REJECTED invalid style=%d\n", (int)style);
+    fflush(stderr);
     return false;
   }
 
-  THEME_TRACE("set_theme ENTER style=%d name=%s", (int)style,
-              candidate && candidate->name ? candidate->name : "?");
-
   if (!theme_validate(candidate)) {
-    THEME_TRACE("set_theme REJECTED validation-failure style=%d", (int)style);
+    fprintf(stderr, "[theme] set_theme REJECTED validation-failure style=%d\n", (int)style);
+    fflush(stderr);
     return false;  // leave current theme active
   }
 
   if (g_active_theme && g_active_theme->style == style) {
-    THEME_TRACE("set_theme REJECTED same-theme name=%s", candidate->name);
     return false;
   }
 
@@ -115,8 +106,6 @@ bool set_theme(theme_style_t style) {
   // delivering evMouseLeave to the capturer and then releasing capture, so
   // the next mouse-move or button-up arrives with no ghost pressed state.
   if (g_ui_runtime.captured) {
-    THEME_TRACE("capture active during theme switch — cancelling capture on %p",
-                (void *)g_ui_runtime.captured);
     window_t *capturer = g_ui_runtime.captured;
     set_capture(NULL);
     post_message(capturer, evMouseLeave, 0, NULL);
@@ -132,11 +121,8 @@ bool set_theme(theme_style_t style) {
   s_switching = true;
   g_active_theme = candidate;
   candidate->apply_palette();
-  THEME_TRACE("palette applied name=%s", candidate->name);
 
   if (g_ui_runtime.running) {
-    THEME_TRACE("broadcasting evThemeChanged style=%d name=%s",
-                (int)style, candidate->name);
     post_to_win_tree(g_ui_runtime.windows, evThemeChanged, (uint32_t)style);
 
     // Repaint only visible top-level windows; hidden windows receive the
@@ -154,14 +140,12 @@ bool set_theme(theme_style_t style) {
         candidate->menubar_height != old_menubar_height ||
         candidate->toolbar_button_size != old_toolbar_size ||
         candidate->toolbar_padding != old_toolbar_padding) {
-      THEME_TRACE("geometry changed, posting evResize to roots");
       for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
         post_message(w, evResize, 0, NULL);
       }
     }
   }
   s_switching = false;
-  THEME_TRACE("set_theme DONE name=%s", candidate->name);
   return true;
 }
 
@@ -181,8 +165,9 @@ void set_sys_colors(int count, const int *indices, const uint32_t *colors) {
 
 void theme_draw(theme_part_t part, irect16_t r, ctrl_state_t state) {
   if (part < 0 || part >= THEME_PART_COUNT) {
-    THEME_TRACE("draw REJECTED part=%d state=%u rect=%d,%d,%d,%d",
-                (int)part, (unsigned)state, r.x, r.y, r.w, r.h);
+    fprintf(stderr, "[theme] draw REJECTED part=%d state=%u rect=%d,%d,%d,%d\n",
+            (int)part, (unsigned)state, r.x, r.y, r.w, r.h);
+    fflush(stderr);
     return;
   }
   if (r.w <= 0 || r.h <= 0) return;
@@ -192,7 +177,8 @@ void theme_draw(theme_part_t part, irect16_t r, ctrl_state_t state) {
 
 uint32_t theme_foreground(theme_part_t part, ctrl_state_t state) {
   if (part < 0 || part >= THEME_PART_COUNT) {
-    THEME_TRACE("foreground REJECTED part=%d state=%u", (int)part, (unsigned)state);
+    fprintf(stderr, "[theme] foreground REJECTED part=%d state=%u\n", (int)part, (unsigned)state);
+    fflush(stderr);
     return get_sys_color(brTextNormal);
   }
   if (state & CTRL_DISABLED) state &= ~(CTRL_HOVER | CTRL_PRESSED);

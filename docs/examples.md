@@ -36,7 +36,7 @@ build/bin/imageeditor images/logo.png
 A repository client with working-tree changes, staging, commit history,
 branches, remotes, tags, stashes, GitHub issues and pull requests, and unified
 or split diffs. It demonstrates tab views, report views, split views, toolbar
-actions, status bars, database adaptors, and always-on interaction tracing.
+actions, status bars, and database adaptors.
 
 ```bash
 orion install gitclient

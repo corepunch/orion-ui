@@ -2713,7 +2713,6 @@ static int scene_create_insert(Scene *s,const char *tag,const char *preset,vec3 
 	if(up.z==1) xml_set_attr(node,"rot",WINDOW_Z_UP_ROTATION);
 	window_spec_free(&w);
 	if(!scene_insert_source_node(s,node)) return 0;
-	fprintf(stderr,"[scener] create %s preset=%s at=(%g,%g,%g)\n",tag,preset,ground.x,ground.y,ground.z);
 	return 1;
 }
 
@@ -2756,7 +2755,6 @@ int scene_create_promo_shape(Scene *s,const char *tag,vec3 ground){
 	if(up.z==1) xml_set_attr(node,"rot",WINDOW_Z_UP_ROTATION);
 	if(screen){ xml_set_attr(node,"color","1 1 1"); xml_set_attr(node,"unlit","1"); xml_set_attr(node,"castShadow","0"); }
 	if(!scene_insert_source_node(s,node)) return 0;
-	fprintf(stderr,"[scener] create %s at=(%g,%g,%g)\n",tag,ground.x,ground.y,ground.z);
 	return 1;
 }
 
@@ -2873,7 +2871,6 @@ int scene_rig_select_joint(Scene *s,void *instance,void *joint){
 	s->selectedRigInstance=in; s->selectedRigJoint=j; s->selectedNode=in;
 	s->selectedObj=-1;
 	for(int i=0;i<s->nobjs;i++) if(s->objs[i].editNode==in){ s->selectedObj=i; break; }
-	fprintf(stderr,"[scener] select rig instance=%s joint=%s\n",xml_attr(in,"name",""),xml_attr(j,"name","")); fflush(stderr);
 	return 1;
 }
 
@@ -2940,7 +2937,6 @@ int scene_rig_reparent_joint(Scene *s,void *instance,void *joint,const char *par
 	}
 	j->parent=parent; DA_PUSH(parent->kids,parent->nkids,parent->ckids,j);
 	xml_set_attr_v3_cm(j,"pos",pos); xml_set_attr_v3(j,"rot",rot);
-	fprintf(stderr,"[scener] reparent rig joint=%s parent=%s\n",xml_attr(j,"name",""),parentName); fflush(stderr);
 	scene_rebuild_view(s);
 	return 1;
 }
@@ -2965,8 +2961,6 @@ int scene_rig_set_joint(Scene *s,void *instance,void *joint,const char *attribut
 		if(!strcmp(attribute,"pos")) xml_set_attr_v3_cm(override,"pos",value);
 		else xml_set_attr_v3(override,"rot",value);
 	} else return 0;
-	fprintf(stderr,"[scener] edit rig instance=%s joint=%s attribute=%s value=%g,%g,%g\n",
-		xml_attr(in,"name",""),xml_attr(j,"name",""),attribute,value.x,value.y,value.z); fflush(stderr);
 	scene_rebuild_view(s);
 	return 1;
 }
@@ -3009,7 +3003,6 @@ int scene_rig_save_pose(Scene *s,void *instance,const char *name){
 	pose->nkids=0; xml_set_attr(pose,"name",name);
 	for(int i=0;i<staging->nkids;i++){ staging->kids[i]->parent=pose; DA_PUSH(pose->kids,pose->nkids,pose->ckids,staging->kids[i]); }
 	staging->nkids=0; xml_free(staging);
-	fprintf(stderr,"[scener] save pose name=%s instance=%s joints=%d\n",name,xml_attr(in,"name",""),pose->nkids); fflush(stderr);
 	return 1;
 }
 
@@ -3030,7 +3023,6 @@ int scene_rig_assign_pose(Scene *s,void *instance,const char *name,int cameraOnl
 		if(!use){ use=xml_new("use-pose"); use->parent=camera; DA_PUSH(camera->kids,camera->nkids,camera->ckids,use); }
 		xml_set_attr(use,"instance",xml_attr(in,"name","")); xml_set_attr(use,"name",name);
 	} else xml_set_attr(in,"pose",name);
-	fprintf(stderr,"[scener] assign pose name=%s instance=%s camera=%s\n",name,xml_attr(in,"name",""),cameraOnly?s->activeCamera:"all"); fflush(stderr);
 	scene_rebuild_view(s);
 	return 1;
 }
@@ -3134,7 +3126,6 @@ int scene_rig_set_target(Scene *s,void *instance,void *tip,const char *attribute
 	}
 	if(!strcmp(attribute,"target")) xml_set_attr_v3_cm(ik,"target",value);
 	else xml_set_attr_v3(ik,"pole",value);
-	fprintf(stderr,"[scener] edit IK instance=%s tip=%s %s=%g,%g,%g\n",xml_attr(in,"name",""),xml_attr(j,"name",""),attribute,value.x,value.y,value.z); fflush(stderr);
 	scene_rebuild_view(s);
 	return 1;
 }
@@ -3157,7 +3148,6 @@ int scene_rig_mirror_joint(Scene *s,void *instance,void *joint){
 	if(src && xml_attr_2f(src,"aim",0,0,&azimuth,&elevation)){
 		char value[64]; snprintf(value,sizeof(value),"%.6g %.6g",-azimuth,elevation); xml_set_attr(dest,"aim",value);
 	} else xml_remove_attr(dest,"aim");
-	fprintf(stderr,"[scener] mirror rig instance=%s from=%s to=%s\n",xml_attr(in,"name",""),name,xml_attr(pair,"name","")); fflush(stderr);
 	scene_rebuild_view(s);
 	return 1;
 }
@@ -3419,7 +3409,6 @@ void gizmo_begin_drag(Scene *s,int handle,int mouseX,int mouseY){
 			s->dragRigTarget=1; s->dragStartPos=scene_rig_target_value(s,s->selectedRigInstance,s->selectedRigJoint,"target");
 			s->dragParentMatrix=mat4_identity(); break;
 		}
-		fprintf(stderr,"[scener] rig drag start joint=%s handle=%d target=%d\n",xml_attr((XmlNode*)s->selectedRigJoint,"name",""),handle,s->dragRigTarget); fflush(stderr);
 		return;
 	}
 	s->draggingHandle=handle;

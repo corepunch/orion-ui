@@ -253,7 +253,6 @@ static bool header_click(window_t *win, int cx, int cy) {
     app_lock();
     if (m) g_app->song.mute[t] = !g_app->song.mute[t]; else g_app->song.solo[t] = !g_app->song.solo[t];
     app_unlock();
-    GR_TRACE("track win=%p selected=%d track=%d mute=%d solo=%d", (void *)win, g_app->selected_clip, t, g_app->song.mute[t], g_app->song.solo[t]);
     invalidate_window(win);
     return true;
   }

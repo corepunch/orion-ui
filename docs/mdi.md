@@ -316,25 +316,8 @@ See [Toolbars](toolbars.md) for the API.
 
 ## Debug logging
 
-Log user-triggered actions and state transitions unconditionally so a report
-can be replayed without rebuilding. Keep noisy implementation diagnostics
-behind a debug flag:
-
-```c
-#define APP_TRACE(...) do {                    \
-  fprintf(stderr, "[myapp] " __VA_ARGS__);     \
-  fputc('\n', stderr);                         \
-  fflush(stderr);                              \
-} while (0)
-
-case evCommand:
-  APP_TRACE("command win=%u id=%u notify=%u",
-            (unsigned)win->id, LOWORD(wparam), HIWORD(wparam));
-  return handle_menu_command(LOWORD(wparam));
-```
-
-Include the window or document ID, command or selection ID, and state needed
-to reconstruct the action. Avoid per-frame logging.
+Keep verbose logging for user actions and state transitions behind a debug
+flag, disabled by default. Report errors and rejected requests to `stderr`.
 
 ---
 

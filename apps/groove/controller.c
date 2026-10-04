@@ -45,7 +45,6 @@ static void seed_demo(song_t *s) {
 }
 
 void app_new_song(void) {
-  GR_TRACE("new song win=%p selected=%d clips=%d", (void *)g_app->win, g_app->selected_clip, g_app->song.nclips);
   app_lock();
   g_app->song.nclips = 0;
   g_app->song.pos = 0;
@@ -56,7 +55,6 @@ void app_new_song(void) {
 }
 
 void app_load_demo(void) {
-  GR_TRACE("load demo win=%p selected=%d", (void *)g_app->win, g_app->selected_clip);
   app_lock();
   seed_demo(&g_app->song);
   app_unlock();
@@ -104,7 +102,6 @@ void app_update_status(void) {
 }
 
 void app_set_playing(bool playing) {
-  GR_TRACE("playing win=%p selected=%d old=%d new=%d", (void *)g_app->win, g_app->selected_clip, g_app->song.playing, playing);
   app_lock();
   g_app->song.playing = playing;
   app_unlock();
@@ -113,7 +110,6 @@ void app_set_playing(bool playing) {
 }
 
 void app_seek_bar(int bar) {
-  GR_TRACE("seek win=%p selected=%d bar=%d", (void *)g_app->win, g_app->selected_clip, bar);
   app_lock();
   g_app->song.pos = (int64_t)CLAMP(bar, 0, GR_BARS - 1) * bar_frames_for_bpm(g_app->song.bpm);
   app_unlock();
@@ -123,7 +119,6 @@ void app_seek_bar(int bar) {
 
 void app_set_bpm(int bpm) {
   song_t *s = &g_app->song;
-  GR_TRACE("tempo win=%p selected=%d old=%d requested=%d", (void *)g_app->win, g_app->selected_clip, s->bpm, bpm);
   block_pcm_t pcm[GR_MAX_BLOCKS];
   bpm = CLAMP(bpm, GR_BPM_MIN, GR_BPM_MAX);
   if (bpm == s->bpm) return;
@@ -139,7 +134,6 @@ void app_set_bpm(int bpm) {
 }
 
 void app_preview(int block) {
-  GR_TRACE("preview win=%p selected=%d block=%d", (void *)g_app->win, g_app->selected_clip, block);
   app_lock();
   g_app->song.preview_block = block;
   g_app->song.preview_pos = 0;
@@ -147,13 +141,11 @@ void app_preview(int block) {
 }
 
 void app_set_search(const char *text) {
-  GR_TRACE("search win=%p selected=%d old=\"%s\" new=\"%s\"", (void *)g_app->library, g_app->selected_clip, g_app->search, text);
   snprintf(g_app->search, sizeof(g_app->search), "%s", text ? text : "");
   if (g_app->tabs) for (window_t *page = g_app->tabs->children; page; page = page->next) send_message(page, binFilter, 0, NULL);
 }
 
 void app_select_clip(int idx) {
-  GR_TRACE("select win=%p old=%d new=%d", (void *)g_app->sheet, g_app->selected_clip, idx);
   g_app->selected_clip = idx;
   invalidate_window(g_app->sheet);
 }
@@ -175,14 +167,11 @@ bool app_drop(const drag_t *d) {
   }
   app_unlock();
   invalidate_window(g_app->sheet);
-  GR_TRACE("drop win=%p selected=%d block=%d from=%d track=%d bar=%d accepted=%d", (void *)g_app->sheet,
-           g_app->selected_clip, d->block, d->from_clip, d->track, d->bar, ok);
   return ok;
 }
 
 void app_command(uint16_t id) {
   song_t *s = &g_app->song;
-  GR_TRACE("action win=%p selected=%d command=%u playing=%d loop=%d bpm=%d", (void *)g_app->win, g_app->selected_clip, id, s->playing, s->loop, s->bpm);
   switch (id) {
     case ID_PLAY:     app_set_playing(!s->playing); break;
     case ID_STOP:     app_set_playing(false); app_seek_bar(0); break;

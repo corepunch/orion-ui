@@ -85,8 +85,6 @@ static void open_dropdown(window_t *win) {
 
   list->vscroll.pos = scroll;
   send_message(list, lstSetItem, (uint32_t)selected, NULL);
-  fprintf(stderr, "[cb] popup win=%u selected=%d rect=%d,%d,%d,%d scroll=%u\n",
-          win->id, selected, rect.x, rect.y, rect.w, rect.h, list->vscroll.pos);
   // c. Popup open: the popup steals mouse events, so the combobox button will
   // not receive evMouseLeave naturally.  Clear the hover flag before the popup
   // becomes visible so the button does not stay highlighted while the list is open.

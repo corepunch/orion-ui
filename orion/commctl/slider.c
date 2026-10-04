@@ -49,8 +49,6 @@ static int sl_value_from_mouse_x(const window_t *win, const slider_state_t *s, i
 
 static void sl_notify(window_t *win, int handle_index, int value) {
   uint16_t notif = (uint16_t)(sliderValueChanged + CLAMP(handle_index, 0, SLIDER_MAX_HANDLES - 1));
-  fprintf(stderr, "[sl] change win=%u handle=%d value=%d\n", win->id, handle_index, value);
-  fflush(stderr);
   if (!win->parent) return;
   send_message(win->parent, evCommand,
                MAKEWPARAM(win->id, notif),

@@ -13,52 +13,10 @@ These macros control verbose debug logging. Set to `1` at build time to enable,
 
 Example: `make CFLAGS="-DGITCLIENT_DEBUG=1 -DTABLEVIEW_DEBUG=1"`
 
-# Interaction trace logging
+# Logging
 
-Every app must include **always-on** trace logging for user-triggered actions (clicks,
-selections, tab switches, diff refreshes, state mutations). Use `fprintf(stderr, ...)`
-— never guard behind a compile-time flag. This makes the event pipeline auditable
-without a recompile.
-
-## App-level code (e.g. `apps/gitclient/`)
-
-Use the `GC_TRACE` macro defined in the app's header:
-
-```c
-// In gitclient.h — always-on, flushes immediately to stderr
-#define GC_TRACE(...) do {                                       \
-  fprintf(stderr, "[gc] " __VA_ARGS__);                          \
-  fputc('\n', stderr);                                           \
-  fflush(stderr);                                                \
-} while (0)
-```
-
-Log at every user-facing event entry point:
-
-- **`evCommand`**: tab switches (`tcnSelChange`), `RVN_SELCHANGE` (branch/log/file
-  selection), `RVN_ITEMCHECK` (staging checkbox), `RVN_DBLCLK`, `btnClicked`,
-  `GC_DIFF_STAGE_HUNK`, `GC_DIFF_TOGGLE_UNIFIED`
-- **State mutations**: `gc_set_view_mode`, `gc_refresh_all`, `gc_open_repo`
-- **Diff pipeline**: `gc_diff_refresh` — log commit/file/path/line-count/hunk-count
-
-Each trace includes the window pointer, selection index, and relevant state
-so the entire cascade (mouse → reportview → RVN_SELCHANGE → gc_diff_refresh)
-is visible in one stream.
-
-## Framework-level code (e.g. `orion/commctl/reportview.c`)
-
-Use bare `fprintf(stderr, ...)` with a local prefix:
-
-```c
-fprintf(stderr, "[rv] mousedown win=%u mx=%d my=%d idx=%d old_sel=%d count=%d\n",
-        (unsigned)win->id, mx, my, index, data->selected, data->count);
-```
-
-Log the window id so app-level `GC_TRACE` can be correlated with the control
-that fired the notification.
-
-**Convention:** app-level traces use the app's prefix (`[gc]`), framework-level
-traces use the module's short prefix (`[rv]` for reportview, `[tv]` for tableview).
+Do not add always-on logging for routine user actions or state changes. Keep
+verbose diagnostics behind the app or module debug flag, disabled by default.
 
 ## Framework error logging
 
@@ -269,7 +227,7 @@ Every app lives in `apps/<name>/` and follows this layout:
 ```
 apps/<name>/
   <name>.orion          ← declarative UI definition (forms, databases, menus, toolbars)
-  <name>.h              ← app header: types, column IDs, prefix aliases, trace macro
+  <name>.h              ← app header: types, column IDs, prefix aliases
   main.c                ← entry point: DB_CLASS registration, create_database, window creation
   controller.c          ← top-level event routing (evCommand dispatch, tab switching)
   view_*.c              ← top-level window procs (main window, menubar, diff viewer)

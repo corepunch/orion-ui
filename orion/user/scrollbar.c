@@ -145,15 +145,9 @@ void set_scroll_content(window_t *win, int width, int height, int x, int y) {
       bars[axis].enabled = bars[axis].page < extent[axis];
     }
   }
-  bool changed = bars[0].visible != win->hscroll.visible || bars[1].visible != win->vscroll.visible;
   win->hscroll = bars[0];
   win->vscroll = bars[1];
   irect16_t after = get_client_rect(win);
-  if (changed) {
-    fprintf(stderr, "[sb] layout win=%u visible=%d,%d content=%dx%d viewport=%dx%d\n",
-            win->id, bars[0].visible, bars[1].visible, width, height, after.w, after.h);
-    fflush(stderr);
-  }
   if (before.w != after.w || before.h != after.h)
     send_message(win, evResize, 0, NULL);
   invalidate_window(win);
@@ -209,9 +203,6 @@ static int sb_mouse_axis_delta(void *lparam, bool vertical) {
 static bool sb_try_scroll(window_t *win, win_sb_t *sb, uint32_t scroll_msg, int new_pos) {
   new_pos = ui_sb_clamp_range(sb, new_pos);
   if (new_pos == sb->pos) return false;
-  fprintf(stderr, "[sb] scroll win=%u axis=%s old=%d pos=%d\n", win->id,
-          scroll_msg == evHScroll ? "horizontal" : "vertical", sb->pos, new_pos);
-  fflush(stderr);
   sb->pos = new_pos;
   send_message(win, scroll_msg, (uint32_t)new_pos, NULL);
   invalidate_window(win);
@@ -544,10 +535,6 @@ bool scrollbar_handle_builtin_gesture(window_t *win, const ax_gesture_t *gesture
       sb->gesture_active = false;
       sb->gesture_remainder = 0;
     }
-  }
-  if (handled && gesture->phase != AX_GESTURE_UPDATE) {
-    fprintf(stderr, "[sb] gesture win=%u phase=%u hpos=%d vpos=%d\n", win->id, gesture->phase, win->hscroll.pos, win->vscroll.pos);
-    fflush(stderr);
   }
   return handled;
 }

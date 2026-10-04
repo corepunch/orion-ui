@@ -76,8 +76,6 @@ lresult_t win_tool_palette_proc(window_t *win, uint32_t msg,
       return true;
 
     case tbButtonClick:
-      fprintf(stderr, "[fe] tool click win=%p ident=%u current=%d\n", (void *)win,
-              wparam, g_app ? g_app->current_tool : -1);
       send_message(win, tbSetActiveButton, wparam, NULL);
       select_tool_by_ident(win, (int)wparam);
       return true;

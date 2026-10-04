@@ -94,11 +94,9 @@ result_t main_win_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       if (app->song.playing) { invalidate_window(app->sheet); app_update_status(); }
       return true;
     case tbButtonClick:
-      GR_TRACE("toolbar win=%p command=%u selected=%d playing=%d loop=%d", (void *)win, wparam, app->selected_clip, app->song.playing, app->song.loop);
       app_command((uint16_t)wparam);
       return true;
     case evCommand:
-      GR_TRACE("command win=%p id=%u notification=%u selected=%d", (void *)win, LOWORD(wparam), HIWORD(wparam), app->selected_clip);
       if (HIWORD(wparam) == kAcceleratorNotification) { app_command(LOWORD(wparam)); return true; }
       return false;
     case evClose:
