@@ -202,7 +202,7 @@ static void draw_toolbar_icon_in_rect(window_t *win, toolbar_state_t *tb, const 
     int rows = tb->strip_regions && strip->cols > 0 ? tb->strip_region_count / strip->cols :
                strip->icon_h > 0 ? strip->sheet_h / strip->icon_h : 0;
     if (!strip->tex || strip->cols <= 0 || strip->icon_w <= 0 || rows <= 0 ||
-        strip->sheet_w <= 0 || strip->cols > strip->sheet_w / strip->icon_w ||
+        strip->sheet_w <= 0 || (!tb->strip_regions && strip->cols > strip->sheet_w / strip->icon_w) ||
         index < 0 || index >= (long)strip->cols * rows || end == icon_name + 6 || *end ||
         ((state_strip || (tb->style & TOOLBAR_STYLE_PRESSED_STRIP)) &&
          (rows < (state_strip ? 5 : 2) || index >= strip->cols))) {
