@@ -114,8 +114,7 @@ bool imageeditor_finish_canvas_interaction(canvas_doc_t *doc, int old_tool) {
 
   if (doc->drawing || doc->stroke.active) {
     canvas_stroke_end(doc, doc->last);
-    IE_TRACE("finish interaction doc=%p old_tool=%s",
-             (void *)doc, tool_id_name(old_tool));
+
     doc->drawing = false;
     changed = true;
   }
@@ -134,15 +133,10 @@ void anim_stop_playback(canvas_doc_t *doc) {
     g_app->anim_timer_id = 0;
   }
   if (was_playing) {
-    IE_TRACE("playback stop win=%p frame=%d restore=%d", (void *)doc->canvas_win,
-             tl->active_frame, tl->playback_start_frame);
     if (doc_anim_load(doc, tl->playback_start_frame)) {
       if (doc->layer.count > 0)
         doc->layer.stack[doc->layer.active]->pixels = doc->pixels;
       doc->canvas_dirty = true;
-    } else {
-      IE_TRACE("playback restore failed win=%p frame=%d target=%d count=%d",
-               (void *)doc->canvas_win, tl->active_frame, tl->playback_start_frame, tl->frame_count);
     }
     if (doc->canvas_win) invalidate_window(doc->canvas_win);
     timeline_win_refresh();
@@ -173,7 +167,6 @@ window_t *create_tool_palette_window(void) {
     g_app->main_toolbar_win = app_chrome_toolbar(g_app->chrome_win);
   }
   window_t *tp = app_chrome_add_toolbar(g_app->chrome_win, TOOLBAR_DOCK_LEFT, win_tool_palette_proc);
-  IE_TRACE("attach tools toolbar win=%p chrome=%p", (void *)tp, (void *)g_app->chrome_win);
   g_app->tool_win = tp;
   return tp;
 }
@@ -347,7 +340,6 @@ void window_menu_rebuild(void) {
 bool imageeditor_open_file_path(const char *path) {
   if (!g_app || !path || !path[0]) return false;
 
-  IE_TRACE("open path=%s", path);
   int img_w = 0, img_h = 0;
 #if IMAGEEDITOR_INDEXED
   uint32_t pal[256] = {0};
@@ -361,7 +353,6 @@ bool imageeditor_open_file_path(const char *path) {
     loaded_anim = flc_load_layers(path, &img_w, &img_h, pal, &background, &show_bg, &loaded_layers);
     if (!loaded_anim) return false;
     if (loaded_layers.background && !IMAGEEDITOR_BW) {
-      IE_TRACE("layered project requires Pencil Test path=%s", path);
       anim_timeline_free(loaded_anim); free(loaded_layers.background);
       return false;
     }
@@ -463,7 +454,6 @@ bool imageeditor_open_file_path(const char *path) {
 static bool save_document_file(canvas_doc_t *doc, const char *path) {
   anim_stop_playback(doc);
   if (!image_io_save(path, doc)) {
-    IE_TRACE("save failed doc=%p path=%s", (void *)doc, path);
     message_box(doc->win, "Could not save the document. Check the filename, available space,\nand that no drawing operation is in progress.", "Save failed", MB_OK);
     return false;
   }
@@ -480,7 +470,6 @@ void handle_menu_command(uint16_t id) {
   // If no document has focus, fall back to the first available document
   if (!doc) doc = g_app->docs;
 
-  IE_TRACE("command dispatch doc=%p id=%u", (void *)doc, id);
   if (IMAGEEDITOR_BW && id >= IE_PENCIL_LAYER_BASE && id < IE_PENCIL_LAYER_BASE + IE_LAYER_COUNT) {
     cmd_pencil_layer(doc, id - IE_PENCIL_LAYER_BASE);
     return;
@@ -707,7 +696,6 @@ void handle_menu_command(uint16_t id) {
     case ID_VIEW_WINDOW_MODE:
       if (g_app->active_doc) {
         window_t *host = g_app->active_doc->win;
-        IE_TRACE("window mode win=%p maximized=%d", (void *)host, host->maximized);
         if (host->maximized) restore_window(host);
         else maximize_window(host);
       }
@@ -792,7 +780,6 @@ void handle_menu_command(uint16_t id) {
       int group = imageeditor_tool_group(id);
       if (group == ID_TOOL_BRUSH) g_app->brush_tool = id;
       if (group == ID_TOOL_RECT) g_app->shape_tool = id;
-      IE_TRACE("tool switch old=%d tool=%d group=%d", old_tool, id, group);
       IE_DEBUG("tool_switch doc=%p %s -> %s",
                (void *)doc,
                tool_id_name(old_tool),
@@ -963,8 +950,7 @@ void handle_menu_command(uint16_t id) {
           }
           doc->anim->playback_start_frame = doc->anim->active_frame;
           doc->anim->playing = true;
-          IE_TRACE("playback start win=%p frame=%d count=%d", (void *)doc->canvas_win,
-                   doc->anim->active_frame, doc->anim->frame_count);
+
           if (doc->canvas_win) invalidate_window(doc->canvas_win);
           timeline_win_refresh();
         }
@@ -1041,7 +1027,6 @@ void handle_menu_command(uint16_t id) {
     }
 
     case ID_WINDOW_TIMELINE:
-      IE_TRACE("frames toggle win=%p", (void *)g_app->timeline_win);
       if (g_app->timeline_win) {
         show_window(g_app->timeline_win, !window_has_state(g_app->timeline_win, WINDOW_STATE_VISIBLE));
       } else {

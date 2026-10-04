@@ -182,7 +182,6 @@ bool gc_reload_history_log(const char *ref) {
   if (!gc || !gc->repo || !gc->history_db) return false;
   git_commit_t raw[500];
   int count = git_get_log_ref(gc->repo, ref, raw, 500);
-  GC_TRACE("reload_history_log ref=%s count=%d", ref ? ref : "(head)", count);
   if (count <= 0) return false;
   send_db_message(gc->history_db, dbDelete, ID_DB_COMMITS, (void *)(intptr_t)0);
   for (int i = 0; i < count; i++) {

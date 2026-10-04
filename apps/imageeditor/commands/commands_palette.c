@@ -33,8 +33,7 @@ static int pencil_unused_palette_index(const canvas_doc_t *doc) {
     anim_frame_t *frame = doc->anim->frames[i];
     if (!frame->data || !frame->data_size) continue;
     if (frame->format != FRAME_FORMAT_INDEXED || frame->data_size < n) {
-      IE_TRACE("palette scan rejected doc=%p frame=%d format=%d size=%zu",
-               (void *)doc, i, frame->format, frame->data_size);
+
       return -1;
     }
     for (size_t p = 0; p < n; p++) used[frame->data[p]] = true;
@@ -65,7 +64,6 @@ bool cmd_pencil_color(canvas_doc_t *doc, int swatch) {
       anim_stop_playback(doc);
       idx = pencil_unused_palette_index(doc);
       if (idx < 0) {
-        IE_TRACE("palette color unavailable doc=%p swatch=%d", (void *)doc, swatch);
         return false;
       }
       if (!ie_doc_begin_op(doc, "Add Palette Color")) return false;
@@ -79,7 +77,6 @@ bool cmd_pencil_color(canvas_doc_t *doc, int swatch) {
   (void)doc;
 #endif
   g_app->fg_color = color;
-  IE_TRACE("palette select doc=%p swatch=%d color=%08x", (void *)doc, swatch, color);
   if (g_app->tool_win) invalidate_window(g_app->tool_win);
   return true;
 }

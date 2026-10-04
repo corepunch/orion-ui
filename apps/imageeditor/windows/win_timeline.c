@@ -55,7 +55,6 @@ static void sync_thumb_array(timeline_state_t *st, int frame_count) {
   GLuint *t = realloc(st->thumbs, sizeof(GLuint) * (size_t)frame_count);
   uint32_t *rev = realloc(st->thumb_rev, sizeof(uint32_t) * (size_t)frame_count);
   if (!t || !rev) {
-    IE_TRACE("frames thumbnail allocation failed count=%d", frame_count);
     return;
   }
   st->thumbs = t;
@@ -183,7 +182,6 @@ static bool timeline_select_frame(window_t *win, timeline_state_t *st,
   if (!win || !st || !doc || !doc->anim) return false;
   if (target_idx < 0 || target_idx >= doc->anim->frame_count) return false;
 
-  IE_TRACE("frame select win=%p index=%d old=%d count=%d", (void *)win, target_idx, doc->anim->active_frame, doc->anim->frame_count);
   anim_stop_playback(doc);
 
   if (doc->anim->active_frame == target_idx) {
@@ -250,12 +248,10 @@ static result_t timeline_proc(window_t *win, uint32_t msg, uint32_t wparam, void
       if (g_app && g_app->timeline_win == win) g_app->timeline_win = NULL;
       return true;
     case evDisplayChange:
-      IE_TRACE("frames display win=%p size=%ux%u", (void *)win, LOWORD(wparam), HIWORD(wparam));
       timeline_layout(win, LOWORD(wparam), HIWORD(wparam), true);
       timeline_build_items(win);
       return true;
     case evClose:
-      IE_TRACE("frames hide win=%p", (void *)win);
       show_window(win, false);
       return true;
     case tbDrawItem:
@@ -267,7 +263,6 @@ static result_t timeline_proc(window_t *win, uint32_t msg, uint32_t wparam, void
         canvas_doc_t *doc = tl_doc();
         int from = (int)(drop->from_ident - FRAME_ITEM_BASE), to = (int)(drop->to_ident - FRAME_ITEM_BASE);
         if (!doc || !doc->anim || from < 0 || to < 0 || from >= doc->anim->frame_count || to >= doc->anim->frame_count) return false;
-        IE_TRACE("frame reorder win=%p from=%d to=%d count=%d", (void *)win, from, to, doc->anim->frame_count);
         cmd_frame_move(doc, from, to);
         return true;
       }
@@ -278,7 +273,6 @@ static result_t timeline_proc(window_t *win, uint32_t msg, uint32_t wparam, void
       if (!delta) return true;
       st->first_frame += delta > 0 ? 1 : -1;
       timeline_layout(win, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight), false);
-      IE_TRACE("frames scroll win=%p first=%d", (void *)win, st->first_frame);
       timeline_build_items(win);
       return true;
     }
@@ -322,7 +316,6 @@ static result_t timeline_proc(window_t *win, uint32_t msg, uint32_t wparam, void
     }
 
     case tbButtonClick:
-      IE_TRACE("frames click win=%p ident=%u", (void *)win, wparam);
       if (wparam >= FRAME_ITEM_BASE) return timeline_select_frame(win, st, wparam - FRAME_ITEM_BASE);
       if (wparam == ID_ANIM_PLAY && tl_doc() && tl_doc()->anim && tl_doc()->anim->playing)
         handle_menu_command(ID_ANIM_STOP);
@@ -403,7 +396,6 @@ void anim_tick(canvas_doc_t *doc) {
       axCancelTimer(g_app->anim_timer_id);
       g_app->anim_timer_id = axSetTimer(g_app->timeline_win, delay, NULL, (bool_t)1);
       if (!g_app->anim_timer_id) {
-        IE_TRACE("playback timer failed doc=%p frame=%d delay=%d", (void *)doc, next, delay);
         anim_stop_playback(doc);
       }
     }

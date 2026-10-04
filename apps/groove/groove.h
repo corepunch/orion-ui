@@ -15,13 +15,6 @@
 #include <orion/commctl/menubar.h>
 #include "build/generated/apps/groove/groove.h"
 
-// Always-on interaction trace (see AGENTS.md).
-#define GR_TRACE(...) do {                                       \
-  fprintf(stderr, "[gr] " __VA_ARGS__);                          \
-  fputc('\n', stderr);                                           \
-  fflush(stderr);                                                \
-} while (0)
-
 #define SCREEN_W        1180
 #define SCREEN_H        760
 

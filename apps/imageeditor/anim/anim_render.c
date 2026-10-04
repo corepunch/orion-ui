@@ -219,7 +219,6 @@ bool anim_render_frame_thumbnail_scaled(const anim_frame_t *frame,
 
   uint8_t *rgba = anim_frame_rgba(frame, w, h, palette);
   if (!rgba) {
-    IE_TRACE("thumbnail expansion failed size=%dx%d", w, h);
     return false;
   }
   // Keep a little resolution in the cached thumbnail and let the linear
@@ -234,7 +233,6 @@ bool anim_render_frame_thumbnail_scaled(const anim_frame_t *frame,
                                           R_FILTER_LINEAR, R_WRAP_CLAMP);
   image_free(small);
   if (!scaled) {
-    IE_TRACE("thumbnail texture allocation failed target=%d", render_size);
     return false;
   }
   if (*tex) R_DeleteTexture(*tex);

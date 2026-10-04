@@ -34,7 +34,6 @@ void page_github_refresh(void) {
   gc_state_t *gc = g_gc;
   if (!gc || !gc->github_db || !gc->repo) return;
 
-  GC_TRACE("page_github_refresh");
   send_db_message(gc->github_db, dbLoad, 0, gc->repo);
 
   if (gc->github_issues_win) send_message(gc->github_issues_win, tvRefresh, 0, NULL);

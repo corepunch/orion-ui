@@ -124,7 +124,6 @@ static bool pencil_path_append(canvas_doc_t *doc, ipoint16_t point, float radius
     int capacity = doc->pencil_stroke.capacity ? doc->pencil_stroke.capacity * 2 : 16;
     void *samples = realloc(doc->pencil_stroke.samples, (size_t)capacity * sizeof(*doc->pencil_stroke.samples));
     if (!samples) {
-      IE_TRACE("pencil path allocation failed doc=%p count=%d", (void *)doc, count);
       return false;
     }
     doc->pencil_stroke.samples = samples;
@@ -261,7 +260,6 @@ static bool pencil_path_begin(canvas_doc_t *doc, ipoint16_t point, float radius)
   doc->pencil_stroke.coverage = malloc(area * sizeof(*doc->pencil_stroke.coverage));
   if (!doc->pencil_stroke.coverage || !pencil_path_append(doc, point, radius)) {
     pencil_path_release(doc);
-    IE_TRACE("pencil stroke allocation failed doc=%p", (void *)doc);
     return false;
   }
   for (size_t i = 0; i < area; i++) doc->pencil_stroke.coverage[i] = doc->pixels[i];
@@ -270,8 +268,7 @@ static bool pencil_path_begin(canvas_doc_t *doc, ipoint16_t point, float radius)
   doc->stroke.soft = true;
   doc->stroke.radius = radius;
   doc->stroke.color = pencil_configured_color();
-  IE_TRACE("pencil stroke begin doc=%p win=%p at=(%d,%d) radius=%.2f opacity=%d",
-           (void *)doc, (void *)doc->canvas_win, point.x, point.y, radius, IE_PENCIL_MAX_OPACITY);
+
   return true;
 }
 
@@ -295,9 +292,7 @@ static void pencil_path_end(canvas_doc_t *doc, ipoint16_t point) {
     float fade = MAX(1.0f, IE_PENCIL_FADE_LENGTH * stroke_backing_scale());
     pencil_stamp(doc, point.x, point.y, fade, fade * 2.0f, 0.0f, 0.0f, 0.0f, doc->stroke.radius, true);
   }
-  IE_TRACE("pencil stroke end doc=%p win=%p at=(%d,%d) samples=%d length=%.1f",
-           (void *)doc, (void *)doc->canvas_win, point.x, point.y,
-           doc->pencil_stroke.count, doc->pencil_stroke.length);
+
   doc->stroke.active = false;
   pencil_path_release(doc);
 }

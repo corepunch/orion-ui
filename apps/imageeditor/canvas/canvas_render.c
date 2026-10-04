@@ -114,7 +114,6 @@ static bool layer_upload_texture(canvas_doc_t *doc, layer_t *lay, irect16_t r) {
       if (!doc->layer.composite_buf)
         doc->layer.composite_buf = malloc((size_t)doc->canvas_w * doc->canvas_h * 4);
       if (!doc->layer.composite_buf) {
-        IE_TRACE("R8 upload allocation failed doc=%p", (void *)doc);
         return false;
       }
       for (int y = 0; y < r.h; y++)
@@ -140,8 +139,7 @@ static bool layer_upload_texture(canvas_doc_t *doc, layer_t *lay, irect16_t r) {
     if (!doc->layer.composite_buf)
       doc->layer.composite_buf = malloc((size_t)doc->canvas_w * doc->canvas_h * 4);
     if (!doc->layer.composite_buf) {
-      IE_TRACE("texture scratch allocation failed doc=%p size=%dx%d",
-               (void *)doc, doc->canvas_w, doc->canvas_h);
+
       return false;
     }
     uint8_t *dst = doc->layer.composite_buf;
@@ -187,7 +185,6 @@ void canvas_upload(canvas_doc_t *doc) {
   for (int i = 0; i < doc->layer.count; i++) {
     layer_t *lay = doc->layer.stack[i];
     if (!lay || !lay->pixels) {
-      IE_TRACE("texture pixels unavailable doc=%p layer=%d", (void *)doc, i);
       complete = false;
       continue;
     }
@@ -197,8 +194,7 @@ void canvas_upload(canvas_doc_t *doc) {
     if (layer_upload_texture(doc, lay, r)) {
       lay->dirty_rect = R(0, 0, 0, 0);
     } else {
-      IE_TRACE("texture upload failed doc=%p layer=%d rect=%d,%d,%d,%d",
-               (void *)doc, i, r.x, r.y, r.w, r.h);
+
       complete = false;
     }
   }

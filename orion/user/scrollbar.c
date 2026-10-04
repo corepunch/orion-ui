@@ -209,9 +209,6 @@ static bool sb_try_scroll(window_t *win, win_sb_t *sb, uint32_t scroll_msg, int 
   new_pos = ui_sb_clamp_range(sb, new_pos);
   if (new_pos == sb->pos) return false;
   sb->pos = new_pos;
-  fprintf(stderr, "[sb] scroll win=%u axis=%s pos=%d page=%d max=%d\n",
-          win->id, scroll_msg == evHScroll ? "h" : "v", new_pos, sb->page, sb->max_val);
-  fflush(stderr);
   send_message(win, scroll_msg, (uint32_t)new_pos, NULL);
   invalidate_window(win);
   if (get_theme()->scrollbar_overlay)

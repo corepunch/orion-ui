@@ -47,7 +47,6 @@ bool page_changes_handle(window_t *main_win, uint32_t msg,
       gc->files_win = gc->changes_files_win;
       gc->diff_win  = gc->changes_diff_win;
       gc->selected_file = sel;
-      GC_TRACE("changes SELCHANGE row=%d", sel);
       gc_diff_refresh();
     }
     return true;
@@ -59,8 +58,7 @@ bool page_changes_handle(window_t *main_win, uint32_t msg,
     db_file_t *file = (db_file_t *)(intptr_t)send_message(
       gc->changes_files_win, tvGetRecord, (uint32_t)row, NULL);
     bool checked = ReportView_GetCheckState(gc->changes_files_win, row);
-    GC_TRACE("changes ITEMCHECK row=%d file=%s checked=%d",
-             row, file ? file->path : "(null)", (int)checked);
+
     if (file) {
       bool ok = checked ? gc_stage_file(file->path) : gc_unstage_file(file->path);
       if (!ok) message_box(main_win, "Operation failed.", "File", MB_OK);
@@ -72,7 +70,6 @@ bool page_changes_handle(window_t *main_win, uint32_t msg,
   if (code == RVN_DBLCLK) {
     if (src != gc->changes_files_win) return false;
     int idx = (int)(int16_t)LOWORD(wparam);
-    GC_TRACE("changes DBLCLK idx=%d", idx);
     if (gc->selected_commit < 0 && gc->repo && idx >= 0) {
       result_node_t *files = (result_node_t *)send_db_message(
         gc->changes_db, dbFetch, MAKEDWORD(ID_DB_FILES, 0), (void *)(intptr_t)0);
@@ -90,7 +87,6 @@ bool page_changes_handle(window_t *main_win, uint32_t msg,
   }
 
   if (code == GC_DIFF_TOGGLE_UNIFIED) {
-    GC_TRACE("changes DIFF_TOGGLE_UNIFIED");
     if (gc->diff_win) {
       gc_diff_state_t *st = (gc_diff_state_t *)gc->diff_win->userdata;
       if (st) { gc->unified_diff = st->unified_mode; gc_diff_refresh(); }
@@ -100,7 +96,6 @@ bool page_changes_handle(window_t *main_win, uint32_t msg,
 
   if (code == GC_DIFF_STAGE_HUNK) {
     int hunk_idx = (int)(int16_t)LOWORD(wparam);
-    GC_TRACE("changes DIFF_STAGE_HUNK idx=%d", hunk_idx);
     if (gc->diff_win) {
       gc_diff_state_t *st = (gc_diff_state_t *)gc->diff_win->userdata;
       if (st && st->hunk_path[0]) {

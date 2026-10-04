@@ -602,7 +602,6 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
     case evHScroll:
       if (state) {
-        IE_TRACE("hscroll win=%u pos=%u", win->id, wparam);
         window_view_set_scroll(win, SB_HORZ, (int)wparam);
         canvas_sync_scrollbars(win, state);
         invalidate_window(win);
@@ -611,7 +610,6 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
     case evVScroll:
       if (state) {
-        IE_TRACE("vscroll win=%u pos=%u", win->id, wparam);
         window_view_set_scroll(win, SB_VERT, (int)wparam);
         canvas_sync_scrollbars(win, state);
         invalidate_window(win);
@@ -647,7 +645,6 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       } else {
         state->gesture_active = false;
       }
-      IE_TRACE("gesture win=%u phase=%u zoom=%.3f", win->id, gesture->phase, window_view_zoom(win));
       return true;
     }
     case evPointerCancel: {
@@ -661,7 +658,6 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         canvas_deselect(doc);
       }
       doc->drawing = false;
-      IE_TRACE("pointer cancel win=%u", win->id);
       invalidate_window(win);
       return true;
     }
@@ -673,7 +669,6 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       if (!doc || !g_app) return true;
       if (state->gesture_active) return true;
       if (doc->drawing || doc->stroke.active) {
-        IE_TRACE("finish previous pointer interaction win=%u tool=%s", win->id, tool_id_name(g_app->current_tool));
         imageeditor_finish_canvas_interaction(doc, g_app->current_tool);
       }
       canvas_stroke_cancel(doc);
@@ -827,7 +822,6 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       if (!ie_doc_begin_op(doc, tool_id_name(tool))) { doc->drawing = false; return true; }
       set_capture(win);
-      IE_TRACE("pointer begin win=%u tool=%s at=(%d,%d) layer=%d", win->id, tool_id_name(tool), px, py, doc->layer.active);
 
       switch (tool) {
         case ID_TOOL_PENCIL:
@@ -1078,8 +1072,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       if (!doc || !g_app) return true;
       int tool = g_app->current_tool;
       bool was_drawing = doc->drawing;
-      IE_TRACE("pointer end win=%u tool=%s drawing=%d stroke=%d pending=%d", win->id, tool_id_name(tool),
-               was_drawing, doc->stroke.active, doc->command.before != NULL);
+
 
       if (doc->drawing && doc->stroke.active) {
         ipoint16_t point = {(int16_t)LOWORD(wparam), (int16_t)HIWORD(wparam)};

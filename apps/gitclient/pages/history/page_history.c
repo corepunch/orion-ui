@@ -42,7 +42,6 @@ bool page_history_handle(window_t *main_win, uint32_t msg,
     int sel = (int)(int16_t)LOWORD(wparam);
 
     if (src == gc->branches_win) {
-      GC_TRACE("history SELCHANGE branch row=%d", sel);
       gc->selected_commit = -1;
       gc->selected_file   = -1;
       result_node_t *rows = (result_node_t *)send_db_message(
@@ -66,7 +65,6 @@ bool page_history_handle(window_t *main_win, uint32_t msg,
         gc->selected_file   = -1;
         gc->files_win = gc->history_files_win;
         gc->diff_win  = gc->history_diff_win;
-        GC_TRACE("history SELCHANGE log row=%d", sel);
         gc_diff_refresh();
       }
       return true;
@@ -77,7 +75,6 @@ bool page_history_handle(window_t *main_win, uint32_t msg,
         gc->files_win = gc->history_files_win;
         gc->diff_win  = gc->history_diff_win;
         gc->selected_file = sel;
-        GC_TRACE("history SELCHANGE files row=%d", sel);
         gc_diff_refresh();
       }
       return true;
@@ -87,14 +84,12 @@ bool page_history_handle(window_t *main_win, uint32_t msg,
   }
 
   if (code == RVN_DBLCLK && src == gc->stash_win) {
-    GC_TRACE("history DBLCLK stash");
     gc_stash_pop();
     gc_refresh_all();
     return true;
   }
 
   if (code == GC_DIFF_TOGGLE_UNIFIED) {
-    GC_TRACE("history DIFF_TOGGLE_UNIFIED");
     if (gc->diff_win) {
       gc_diff_state_t *st = (gc_diff_state_t *)gc->diff_win->userdata;
       if (st) { gc->unified_diff = st->unified_mode; gc_diff_refresh(); }
@@ -104,7 +99,6 @@ bool page_history_handle(window_t *main_win, uint32_t msg,
 
   if (code == GC_DIFF_STAGE_HUNK) {
     int hunk_idx = (int)(int16_t)LOWORD(wparam);
-    GC_TRACE("history DIFF_STAGE_HUNK idx=%d", hunk_idx);
     if (gc->diff_win) {
       gc_diff_state_t *st = (gc_diff_state_t *)gc->diff_win->userdata;
       if (st && st->hunk_path[0]) {

@@ -81,7 +81,6 @@ result_t win_bin(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         if (!st->dragging && abs(mx - st->press_pt.x) + abs(my - st->press_pt.y) > BIN_SLOP) {
           st->dragging = true;
           g_app->drag = (drag_t){ .active = true, .block = st->ids[st->press], .from_clip = -1, .track = -1 };
-          GR_TRACE("bin drag start win=%u block=%d", (unsigned)win->id, g_app->drag.block);
         }
         if (st->dragging) send_message(g_app->sheet, shDragOver, MAKEDWORD(window_screen_x(win) + mx, window_screen_y(win) + my - vpos(win)), NULL);
         return true;
@@ -94,7 +93,6 @@ result_t win_bin(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     case evMouseLeave: st->hover = -1; invalidate_window(win); return true;
     case evLeftButtonDown: {
       int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam), h = hit_tile(st, mx, my);
-      GR_TRACE("bin down win=%u mx=%d my=%d tile=%d", (unsigned)win->id, mx, my, h);
       if (h < 0) return false;
       st->press = h;
       st->press_pt = (ipoint16_t){ (int16_t)mx, (int16_t)my };

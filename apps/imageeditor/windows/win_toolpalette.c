@@ -93,7 +93,6 @@ static void swatch_edit_fg(window_t *owner) {
   int idx = g_app->fg_palette_idx;
   if (doc && idx >= 0 && idx < 256 && idx != doc->ipal.transparent) {
     uint32_t out;
-    IE_TRACE("swatch fg picker pal_idx=%d", idx);
     if (show_color_picker(owner, doc->ipal.entries[idx], &out)) {
       doc->ipal.entries[idx] = out;
       g_app->fg_color = out;
@@ -106,7 +105,6 @@ static void swatch_edit_fg(window_t *owner) {
   }
 #endif
   uint32_t out;
-  IE_TRACE("swatch fg picker");
   if (show_color_picker(owner, g_app->fg_color, &out)) {
     g_app->fg_color = out;
     if (g_app->tool_win)  invalidate_window(g_app->tool_win);
@@ -192,8 +190,7 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       palette_draw_swatches(((toolbar_draw_item_t *)lparam)->rect);
       return true;
     case tbButtonClick:
-      IE_TRACE("tool click win=%p ident=%u current=%d", (void *)win, wparam,
-               g_app ? g_app->current_tool : -1);
+
       if (!g_app) return true;
 #if IMAGEEDITOR_BW
       if (wparam >= IE_PENCIL_LAYER_BASE && wparam < IE_PENCIL_LAYER_BASE + IE_LAYER_COUNT) {
@@ -208,11 +205,9 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
 #endif
       if (wparam == ID_TOOL_SWATCH) {
 #if IMAGEEDITOR_BW
-        IE_TRACE("swatch click win=%p swap fg=%08x bg=%08x", (void *)win,
-                 g_app->fg_color, g_app->bg_color);
+
         swap_foreground_background_colors();
 #else
-        IE_TRACE("swatch click win=%p fg=%08x", (void *)win, g_app->fg_color);
         swatch_edit_fg(win);
 #endif
         return true;

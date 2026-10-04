@@ -250,7 +250,6 @@ int canvas_flood_fill_with_gap(canvas_doc_t *doc, int sx, int sy,
   int ncor = canvas_gap_detect_corners(doc, target, &first, 1);
   ipoint16_t *cand = malloc(sizeof(*cand) * (size_t)MAX(1, nend + ncor));
   if (!cand) {
-    IE_TRACE("fill_gap candidate allocation failed count=%d", nend + ncor);
     free(bar); free(queue);
     return 0;
   }
@@ -259,7 +258,6 @@ int canvas_flood_fill_with_gap(canvas_doc_t *doc, int sx, int sy,
   int side = 2 * (gap_px + 2) + 1;
   uint8_t *connected = malloc((size_t)side * side);
   if (!connected) {
-    IE_TRACE("fill_gap component allocation failed side=%d", side);
     free(cand); free(bar); free(queue);
     return 0;
   }
@@ -335,8 +333,7 @@ int canvas_flood_fill_with_gap(canvas_doc_t *doc, int sx, int sy,
         bridge_pixels++;
       }
 
-  IE_TRACE("fill_gap at=(%d,%d) gap=%d endpoints=%d corners=%d stitches=%d filled=%d slivers=%d bridge_pixels=%d",
-           sx, sy, gap_px, nend, ncor, stitches, filled, slivers, bridge_pixels);
+
   (void)filled; (void)slivers; (void)bridge_pixels;
   free(bar);
   free(queue);

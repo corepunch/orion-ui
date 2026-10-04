@@ -125,17 +125,14 @@ result_t win_tool_options_proc(window_t *win, uint32_t msg, uint32_t wparam, voi
       int x = CLAMP(win->frame.x, 0, MAX(0, width - win->frame.w));
       int y = CLAMP(win->frame.y, 0, MAX(0, height - win->frame.h));
       if (x != win->frame.x || y != win->frame.y) {
-        IE_TRACE("options constrain win=%p position=%d,%d", (void *)win, x, y);
         move_window(win, x, y);
       }
       return true;
     }
     case evClose:
-      IE_TRACE("options close rejected win=%p", (void *)win);
       return true;
     case tbButtonClick: {
       if (!g_app) return false;
-      IE_TRACE("options click win=%p ident=%u tool=%d", (void *)win, wparam, g_app->current_tool);
       int group = imageeditor_tool_group(g_app->current_tool);
       if (imageeditor_tool_group(wparam) == group && (group == ID_TOOL_BRUSH || group == ID_TOOL_RECT)) {
         handle_menu_command(wparam);
@@ -148,7 +145,6 @@ result_t win_tool_options_proc(window_t *win, uint32_t msg, uint32_t wparam, voi
           uint32_t color = g_app->wand.overlay_color;
           if (show_color_picker(win, color, &color)) {
             g_app->wand.overlay_color = color;
-            IE_TRACE("wand overlay color=%u", color);
             if (g_app->active_doc && g_app->active_doc->canvas_win)
               invalidate_window(g_app->active_doc->canvas_win);
           }
@@ -156,7 +152,6 @@ result_t win_tool_options_proc(window_t *win, uint32_t msg, uint32_t wparam, voi
         }
         default: return false;
       }
-      IE_TRACE("options state filled=%d antialias=%d", g_app->shape_filled, g_app->wand.antialias);
       imageeditor_sync_tool_options();
       return true;
     }
@@ -179,12 +174,10 @@ result_t win_tool_options_proc(window_t *win, uint32_t msg, uint32_t wparam, voi
           char label[32];
           snprintf(label, sizeof(label), "Gap %s", fill_gap_name(idx));
           options_slider_tooltip(win, IE_OPT_GAP, label, g_app->fill.gap);
-          IE_TRACE("fill gap win=%p idx=%d px=%d", (void *)win, idx, g_app->fill.gap);
           break;
         }
         default: return false;
       }
-      IE_TRACE("options slider win=%p ident=%u value=%d", (void *)win, slider->id, value);
       invalidate_window(win);
       return true;
     }

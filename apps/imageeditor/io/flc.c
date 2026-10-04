@@ -92,7 +92,6 @@ static bool flc_decode(uint16_t type, const uint8_t *p, size_t size,
       y++;
     }
   } else if (type != 18 && type != FLC_META) {
-    IE_TRACE("FLC unsupported chunk=%u", type);
     return false;
   }
 #undef FLC_NEED
@@ -206,7 +205,7 @@ anim_timeline_t *flc_load_layers(const char *path, int *out_w, int *out_h,
       for (int i = 0; i < 256; i++) if (used[i]) {
         int j = 1;
         while (j < colors && out_pal[j] != pal[i]) j++;
-        if (j == 256) { IE_TRACE("FLC exceeds 255 opaque colors across frames"); goto fail; }
+        if (j == 256) { goto fail; }
         if (j == colors) out_pal[colors++] = pal[i];
         map[i] = j;
       }
@@ -256,10 +255,8 @@ anim_timeline_t *flc_load_layers(const char *path, int *out_w, int *out_h,
   free(layerdata);
   fclose(fp); free(pixels); free(metadata);
   *out_w = w; *out_h = h;
-  IE_TRACE("FLC loaded path=%s size=%dx%d frames=%d", path, w, h, frames);
   return tl;
 fail:
-  IE_TRACE("FLC load failed path=%s", path);
   if (fp) fclose(fp);
   free(pixels); free(block); free(metadata); free(layerdata); anim_timeline_free(tl);
   return NULL;
@@ -347,7 +344,7 @@ bool flc_save(const char *path, const canvas_doc_t *doc) {
       doc->anim->frame_count < 1 || doc->anim->frame_count > 65535 ||
       doc->anim->active_frame < 0 || doc->anim->active_frame >= doc->anim->frame_count ||
       doc->canvas_w < 1 || doc->canvas_h < 1 || doc->canvas_w > 16384 || doc->canvas_h > 16384) {
-    IE_TRACE("FLC save rejected path=%s", path ? path : "(null)"); return false;
+     return false;
   }
   uint64_t n = (uint64_t)doc->canvas_w * doc->canvas_h;
   uint64_t frame_size = 16 + 778 + 6 + n + (n & 1);
@@ -363,7 +360,7 @@ bool flc_save(const char *path, const canvas_doc_t *doc) {
 #else
   int fd = mkstemp(temp);
 #endif
-  if (fd < 0) { IE_TRACE("FLC temporary file failed path=%s errno=%d", path, errno); return false; }
+  if (fd < 0) { return false; }
   FILE *fp = fdopen(fd, "wb");
   if (!fp) { close(fd); remove(temp); return false; }
   uint8_t header[128] = {0};
@@ -392,7 +389,6 @@ bool flc_save(const char *path, const canvas_doc_t *doc) {
   if (ok) ok = rename(temp, path) == 0;
 #endif
   if (!ok) remove(temp);
-  IE_TRACE("FLC save path=%s frames=%d success=%d", path, doc->anim->frame_count, ok);
   return ok;
 }
 #endif

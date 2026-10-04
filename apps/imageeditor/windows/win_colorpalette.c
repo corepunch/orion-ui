@@ -6,7 +6,6 @@
 
 void swap_foreground_background_colors(void) {
   if (!g_app) return;
-  IE_TRACE("swap colors fg=%08x bg=%08x", g_app->fg_color, g_app->bg_color);
   uint32_t tmp = g_app->fg_color;
   g_app->fg_color = g_app->bg_color;
   g_app->bg_color = tmp;

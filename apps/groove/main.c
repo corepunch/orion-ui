@@ -15,7 +15,6 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   if (!win) { app_shutdown(g_app); return false; }
   show_window(win, true);
   maximize_window(win);
-  GR_TRACE("ready bpm=%d clips=%d blocks=%d", g_app->song.bpm, g_app->song.nclips, blocks_count());
   return true;
 }
 

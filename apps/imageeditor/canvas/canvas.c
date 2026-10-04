@@ -99,12 +99,10 @@ void canvas_constrain_tool_drag(int tool_id, uint32_t mods,
 
 // Preview pixels are separate from the command checkpoint.
 bool canvas_shape_begin(canvas_doc_t *doc, int cx, int cy) {
-  IE_TRACE("shape_begin win=%p doc=%p start=(%d,%d)", (void *)doc->canvas_win, (void *)doc, cx, cy);
   size_t sz = (size_t)doc->canvas_w * doc->canvas_h * DOC_BPP;
   free(doc->shape.snapshot);
   doc->shape.snapshot = malloc(sz);
   if (!doc->shape.snapshot) {
-    IE_TRACE("shape preview allocation failed doc=%p size=%zu", (void *)doc, sz);
     return false;
   }
   memcpy(doc->shape.snapshot, doc->pixels, sz);
@@ -166,8 +164,7 @@ void canvas_shape_preview(canvas_doc_t *doc, int x0, int y0, int x1, int y1,
     if (scale > 0) { c = a / scale; s = b / scale; }
   }
   if (tool != ID_TOOL_LINE && (fabsf(s) > 0.00001f || c < 0)) {
-    IE_TRACE("shape_preview win=%p tool=%d start=(%d,%d) end=(%d,%d) rotation=%f",
-             (void *)win, tool, x0, y0, x1, y1, atan2f(s, c));
+
     canvas_shape_rotated(doc, x0, y0, x1, y1, tool, filled, fg, shift_held, c, s);
     return;
   }

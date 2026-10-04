@@ -40,20 +40,7 @@ bool gc_action_handler_for(uint16_t id, const char **name) {
 }
 
 gc_action_result_t gc_execute_action(uint16_t id) {
-  gc_state_t *gc = g_gc;
-  const char *name = NULL;
-  if (!gc_action_handler_for(id, &name)) {
-    GC_TRACE("action rejected id=%d name=%s reason=no-handler",
-             (int)id, gc_action_name(id));
-    return GC_ACTION_UNAVAILABLE;
-  }
-
-  GC_TRACE("action id=%d name=%s repo=%s view=%s commit=%d file=%d",
-           (int)id, name,
-           gc && gc->repo ? git_repo_path(gc->repo) : "(none)",
-           gc && gc->tab == GC_TAB_OVERVIEW ? "overview" : gc && gc->history_mode ? "history" : "changes",
-           gc ? gc->selected_commit : -1,
-           gc ? gc->selected_file : -1);
+  if (!gc_action_handler_for(id, NULL)) return GC_ACTION_UNAVAILABLE;
   gc_handle_command_impl(id);
   return GC_ACTION_DONE;
 }

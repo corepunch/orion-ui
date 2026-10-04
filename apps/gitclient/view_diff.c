@@ -23,17 +23,16 @@ void gc_diff_invalidate(void) {
 
 void gc_diff_refresh(void) {
   gc_state_t *gc = g_gc;
-  if (!gc || !gc->diff_win) { GC_TRACE("diff_refresh SKIP: gc=%p diff_win=%p", (void *)gc, gc ? (void *)gc->diff_win : NULL); return; }
+  if (!gc || !gc->diff_win) { return; }
 
   window_t *win = gc->diff_win;
   gc_diff_state_t *st = (gc_diff_state_t *)win->userdata;
-  if (!st) { GC_TRACE("diff_refresh SKIP: st=NULL"); return; }
+  if (!st) { return; }
 
   st->unified_mode = gc->unified_diff;
 
   if (!gc->repo || !gc->history_db) {
     free(st->lines); st->lines = NULL; st->line_count = 0; st->hunk_count = 0;
-    GC_TRACE("diff_refresh SKIP: no repo/db");
     invalidate_window(win);
     return;
   }
@@ -77,10 +76,6 @@ void gc_diff_refresh(void) {
   if (path) strncpy(gc->last_diff_path, path, sizeof(gc->last_diff_path) - 1);
   else gc->last_diff_path[0] = '\0';
 
-  GC_TRACE("diff_refresh: commit=%d file=%d path=%s staged=%d untracked=%d unified=%d",
-           gc->selected_commit, gc->selected_file,
-           path ? path : (gc->selected_commit >= 0 ? "(full-commit)" : "(full-tree)"),
-           (int)staged, (int)untracked, (int)st->unified_mode);
 
   if (gc->selected_commit >= 0) {
     db_commit_t *c = (db_commit_t *)(intptr_t)send_message(
@@ -120,8 +115,7 @@ void gc_diff_refresh(void) {
   }
 
   if (!st->diff_buf[0]) {
-    GC_TRACE("diff_refresh EMPTY: commit=%d path=%s staged=%d untracked=%d",
-             gc->selected_commit, path ? path : "(none)", (int)staged, (int)untracked);
+
     invalidate_window(win);
     return;
   }
@@ -154,5 +148,4 @@ void gc_diff_refresh(void) {
   };
   set_scroll_info(win, SB_VERT, &si, false);
   invalidate_window(win);
-  GC_TRACE("diff_refresh result: lines=%d hunks=%d", st->line_count, st->hunk_count);
 }

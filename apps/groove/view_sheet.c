@@ -133,7 +133,6 @@ static bool header_click(window_t *win, int cx, int cy) {
     ipoint16_t p = { (int16_t)cx, (int16_t)cy };
     bool m = rect_contains_point(mute_rect(win, t), p), s = rect_contains_point(solo_rect(win, t), p);
     if (!m && !s) continue;
-    GR_TRACE("track=%d %s", t, m ? "mute" : "solo");
     app_lock();
     if (m) g_app->song.mute[t] = !g_app->song.mute[t]; else g_app->song.solo[t] = !g_app->song.solo[t];
     app_unlock();
@@ -158,7 +157,6 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
 
     case evLeftButtonDown: {
       int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam), cx = mx - hpos(win);
-      GR_TRACE("sheet down win=%u mx=%d my=%d cx=%d hpos=%d", (unsigned)win->id, mx, my, cx, hpos(win));
       if (my < RULER_H) { if (cx >= HDR_W) app_seek_bar((mx - HDR_W) / BAR_W); return true; }
       if (header_click(win, cx, my)) return true;
       int track = (my - RULER_H) / row_h(win), bar = floordiv(mx - HDR_W, BAR_W);
@@ -177,7 +175,7 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       if (st->press_clip < 0) return false;
       {
         int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam);
-        if (!st->own_drag && abs(mx - st->press.x) + abs(my - st->press.y) > SHEET_SLOP) { st->own_drag = true; g_app->drag.active = true; GR_TRACE("clip drag start clip=%d", st->press_clip); }
+        if (!st->own_drag && abs(mx - st->press.x) + abs(my - st->press.y) > SHEET_SLOP) { st->own_drag = true; g_app->drag.active = true; }
         if (st->own_drag) { drag_target(win, mx - hpos(win), my); invalidate_window(win); }
       }
       return true;
@@ -203,11 +201,7 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     case shDragOver:
     case shDrop: {
       int cx = (int)LOWORD(wparam) - window_screen_x(win), cy = (int)HIWORD(wparam) - window_screen_y(win);
-      drag_t prev = g_app->drag;
       drag_target(win, cx, cy);
-      const drag_t *d = &g_app->drag;
-      if (msg == shDrop || d->track != prev.track || d->bar != prev.bar || d->valid != prev.valid)
-        GR_TRACE("sheet %s win=%u cx=%d cy=%d track=%d bar=%d valid=%d", msg == shDrop ? "drop" : "over", (unsigned)win->id, cx, cy, d->track, d->bar, d->valid);
       if (msg == shDrop && g_app->drag.track >= 0 && g_app->drag.valid) app_drop(&g_app->drag);
       if (msg == shDrop) drag_clear(win); else invalidate_window(win);
       return true;

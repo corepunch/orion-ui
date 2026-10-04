@@ -103,7 +103,6 @@ bool doc_anim_commit(canvas_doc_t *doc) {
   free(composite);
   if (!ok) {
     free(cels);
-    IE_TRACE("frame commit failed doc=%p frame=%d", (void *)doc, doc->anim->active_frame);
     return false;
   }
   free(frame->cels);

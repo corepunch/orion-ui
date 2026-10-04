@@ -27,8 +27,6 @@
 #define GC_LOG(...) ((void)0)
 #endif
 
-#define GC_TRACE(...) do { fprintf(stderr, "[gc] " __VA_ARGS__); fputc('\n', stderr); fflush(stderr); } while (0)
-
 static const char *gc_status_label(char c) {
   switch (c) {
     case 'M': return "Modified";

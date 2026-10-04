@@ -51,9 +51,7 @@ static void onion_apply_runtime(const onion_skin_state_t *st) {
   g_app->anim_trace_frames = MAX(
       onion_count_nonzero(g_app->anim_trace_prev_opacity, ONION_SKIN_MAX_STEPS),
       onion_count_nonzero(g_app->anim_trace_next_opacity, ONION_SKIN_MAX_STEPS));
-  IE_TRACE("onion apply enabled=%d selected=%s:%d opacity=%g span=%d",
-           st->enabled, st->sel_is_next ? "next" : "prev", st->sel_idx,
-           onion_selected_value(st), g_app->anim_trace_frames);
+
 }
 
 static void onion_restore_runtime(const onion_skin_state_t *st) {
@@ -64,7 +62,6 @@ static void onion_restore_runtime(const onion_skin_state_t *st) {
   g_app->anim_trace_frames = MAX(
       onion_count_nonzero(g_app->anim_trace_prev_opacity, ONION_SKIN_MAX_STEPS),
       onion_count_nonzero(g_app->anim_trace_next_opacity, ONION_SKIN_MAX_STEPS));
-  IE_TRACE("onion restore enabled=%d span=%d", st->original_enabled, g_app->anim_trace_frames);
 }
 
 static void onion_refresh_preview(void) {
@@ -164,9 +161,7 @@ static result_t onion_skin_proc(window_t *win, uint32_t msg,
       uint16_t notif = HIWORD(wparam);
       window_t *src = (window_t *)lparam;
       if (!st || !src) return false;
-      IE_TRACE("onion command win=%p source=%u notification=%u selected=%s:%d opacity=%g",
-               (void *)win, (unsigned)src->id, notif,
-               st->sel_is_next ? "next" : "prev", st->sel_idx, onion_selected_value(st));
+
 
       if (src->id == ID_ONION_SKIN_VALUE &&
           notif == sliderValueChanged) {

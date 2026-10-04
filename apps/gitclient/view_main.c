@@ -56,8 +56,6 @@ void gc_set_view_mode(int tab) {
     default: break;
   }
 
-  GC_TRACE("set_view_mode tab=%d diff_win=%p files_win=%p",
-           tab, (void *)gc->diff_win, (void *)gc->files_win);
 
   if (tab == GC_TAB_CHANGES || tab == GC_TAB_HISTORY) gc_diff_refresh();
   gc_update_status();
@@ -76,10 +74,8 @@ void gc_open_repo(const char *path) {
   gc_state_t *gc = g_gc;
   if (!gc) return;
 
-  GC_TRACE("open_repo: %s", path);
   git_repo_t *next = git_repo_open(path);
   if (!next) {
-    GC_TRACE("open_repo: invalid repo");
     message_box(gc->main_win, "Not a valid git repository.", "Open Repository", MB_OK);
     return;
   }
@@ -105,7 +101,6 @@ void gc_refresh_all(void) {
   if (!gc) return;
   if (!gc->repo) { if (gc->tab == GC_TAB_OVERVIEW) gc_overview_refresh(); return; }
 
-  GC_TRACE("refresh_all begin tab=%d", gc->tab);
   gc_diff_invalidate();
   gc->selected_commit = -1;
   gc->selected_file   = -1;
@@ -255,7 +250,6 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
 
     case tbButtonClick: {
       uint16_t id = (uint16_t)wparam;
-      GC_TRACE("toolbar id=%d", (int)id);
       (void)gc_execute_action(id);
       return true;
     }

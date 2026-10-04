@@ -82,7 +82,6 @@ static doc_snapshot_t *make_snapshot(const canvas_doc_t *doc) {
   return snap;
 fail:
   free_snapshot(snap);
-  IE_TRACE("history snapshot allocation failed doc=%p", (void *)doc);
   return NULL;
 }
 
@@ -130,13 +129,11 @@ static void stack_push(doc_snapshot_t **states, int *count, doc_snapshot_t *snap
 
 bool doc_begin_command(canvas_doc_t *doc, const char *name) {
   if (!doc || doc->command.before) {
-    IE_TRACE("command rejected doc=%p name=%s: operation already active or no document", (void *)doc, name);
     return false;
   }
   doc->command.before = make_snapshot(doc);
   if (!doc->command.before) return false;
   doc->command.name = name;
-  IE_TRACE("command begin doc=%p name=%s frame=%d", (void *)doc, name, doc->anim ? doc->anim->active_frame : -1);
   return true;
 }
 
@@ -189,7 +186,6 @@ static bool snapshot_matches(const canvas_doc_t *doc, const canvas_doc_t *s) {
 void doc_end_command(canvas_doc_t *doc, bool success) {
   if (!doc || !doc->command.before) return;
   doc_snapshot_t *before = doc->command.before;
-  IE_TRACE("command %s doc=%p name=%s", success ? "commit" : "cancel", (void *)doc, doc->command.name);
   doc->command.before = NULL;
   doc->command.name = NULL;
   if (success && snapshot_matches(doc, &before->state)) {
@@ -219,7 +215,6 @@ static bool travel(canvas_doc_t *doc, undo_t *from, undo_t *to) {
   free_snapshot(target);
   stack_push(to->states, &to->count, current);
   doc->modified = true;
-  IE_TRACE("history restore doc=%p undo=%d redo=%d frame=%d", (void *)doc, doc->undo.count, doc->redo.count, doc->anim ? doc->anim->active_frame : -1);
   return true;
 }
 

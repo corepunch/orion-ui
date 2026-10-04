@@ -9,8 +9,7 @@ static void fill_begin(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t d
   (void)view;
   if (!doc || !g_app) return;
   int gap = g_app->fill.gap * MAX(1, g_bw_retina_scale);
-  IE_TRACE("fill begin doc=%p at=(%d,%d) gap=%d scale=%d", (void *)doc,
-           doc_pt.x, doc_pt.y, gap, g_bw_retina_scale);
+
   if (!ie_doc_begin_op(doc, "Fill")) return;
   if (pencil_has_layers(doc) && doc->layer.active == IE_LAYER_COLOR) {
     bool ok = pencil_color_fill(doc, doc_pt.x, doc_pt.y, g_app->fg_color, gap);
@@ -19,7 +18,6 @@ static void fill_begin(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t d
   }
   int stitches = canvas_flood_fill_with_gap(doc, doc_pt.x, doc_pt.y,
                                             g_app->fg_color, gap);
-  IE_TRACE("fill end doc=%p stitches=%d", (void *)doc, stitches);
   (void)stitches;
   ie_doc_commit_op(doc, true);
 }

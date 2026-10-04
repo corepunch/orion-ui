@@ -5,7 +5,6 @@ bool cmd_frame_select(canvas_doc_t *doc, int index) {
   if (doc->command.before) return false;
   anim_stop_playback(doc);
   if (index == doc->anim->active_frame) return true;
-  IE_TRACE("frame select doc=%p from=%d to=%d", (void *)doc, doc->anim->active_frame, index);
   if (!doc_anim_switch(doc, index)) return false;
   doc->layer.stack[doc->layer.active]->pixels = doc->pixels;
   doc->canvas_dirty = true;

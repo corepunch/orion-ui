@@ -163,13 +163,11 @@ static int tile_cmp(const void *pa, const void *pb) {
 
 void gc_overview_refresh(void) {
   gc_state_t *gc = g_gc; if (!gc) return;
-  uint32_t t0 = axGetMilliseconds();
   gc->tile_count = git_workspace_scan(gc->recent_repos, gc->recent_repo_count, gc->tiles, GC_MAX_TILES);
   qsort(gc->tiles, (size_t)gc->tile_count, sizeof(gc->tiles[0]), tile_cmp);
   rebuild_summary();
   rebuild_board();
   window_layout_sync(gc->overview_page_win);   // the strip's height comes from its children
-  GC_TRACE("overview_refresh roots=%d tiles=%d ms=%u", gc->recent_repo_count, gc->tile_count, (unsigned)(axGetMilliseconds() - t0));
   if (gc->tab == GC_TAB_OVERVIEW) gc_update_status();
 }
 
@@ -191,7 +189,6 @@ void gc_overview_open(int index) {
     fprintf(stderr, "[gc] overview_open rejected index=%d count=%d\n", index, gc ? gc->tile_count : -1); fflush(stderr); return;
   }
   const git_summary_t *t = &gc->tiles[index];
-  GC_TRACE("overview_open index=%d path=%s branch=%s", index, t->path, t->branch);
   if (t->missing) { message_box(gc->main_win, "This folder is missing or is no longer a git repository.", "Open Repository", MB_OK); return; }
   char path[512]; snprintf(path, sizeof(path), "%s", t->path);
   bool dirty = t->staged || t->unstaged || t->untracked || t->conflicts;
@@ -207,7 +204,6 @@ void gc_overview_fetch_all(void) {
     snprintf(roots[n++], sizeof(roots[0]), "%s", gc->tiles[i].path);
   }
   if (!n) { for (; n < gc->recent_repo_count; n++) snprintf(roots[n], sizeof(roots[0]), "%s", gc->recent_repos[n]); }
-  GC_TRACE("fetch_all repos=%d", n);
   if (git_fetch_all_async(roots, n, gc->main_win)) {
     gc->fetching_all = true;
     char msg[96]; snprintf(msg, sizeof(msg), "Fetching %d repositories...", n);
@@ -221,14 +217,12 @@ bool gc_overview_handle_command(uint32_t wparam, void *lparam) {
   if (!gc || !lparam) return false;
   if ((code == tgnSelChange || code == tgnActivate) && (window_t *)lparam == gc->board_win) {
     int index = (int)LOWORD(wparam);
-    GC_TRACE("evCommand board win=%u code=%s tile=%d", (unsigned)gc->board_win->id, code == tgnActivate ? "activate" : "select", index);
     if (index < 0 || index >= gc->tile_count) return true;
     if (code == tgnActivate) gc_overview_open(gc->visible_tiles[index]); else gc_update_status();
     return true;
   }
   if (code == btnClicked && (window_t *)lparam == gc->filter_btn) {
     gc->attention_only = !gc->attention_only;
-    GC_TRACE("overview filter attention_only=%d", (int)gc->attention_only);
     rebuild_summary();
     rebuild_board();
     window_layout_sync(gc->overview_page_win);
