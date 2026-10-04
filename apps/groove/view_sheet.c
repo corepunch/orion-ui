@@ -1,27 +1,31 @@
 // VIEW: the sheet — track headers on the left, bar ruler on top, one lane per
-// track. Blocks snap to whole bars. It is both a drop target for blocks dragged
-// from the bin (shDragOver / shDrop) and the source of drags that move clips.
+// track. Blocks snap to whole bars. It is the drop target for tiles dragged
+// from the bin (shDragOver / shDrop). Each clip is a child window; dragging
+// one lifts that window with window_set_drag_visual.
 //
 // Coordinates: mouse messages arrive in content space (client + scroll), so
-// `mx - hpos` is the client x; painting is in client space.
+// `mx - hpos` is the client x. Clip windows receive their own client space.
+// Painting is in client space.
 
 #include "groove.h"
 
-#define HDR_W   78
-#define RULER_H 22
-#define BAR_W   88
-#define MIN_ROW 26
-#define MAX_ROW 64
+#define HDR_W      78
+#define RULER_H    22
+#define BAR_W      88
+#define MIN_ROW    26
+#define MAX_ROW    64
 #define SHEET_SLOP 4
 
 typedef struct { int press_clip; ipoint16_t press; bool own_drag; } sheet_t;
 
-static int  hpos(window_t *win)   { return get_scroll_pos(win, SB_HORZ); }
-static int  row_h(window_t *win)  { return CLAMP((get_client_rect(win).h - RULER_H) / GR_TRACKS, MIN_ROW, MAX_ROW); }
+static result_t win_clip(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+
+static int  hpos(window_t *win)    { return get_scroll_pos(win, SB_HORZ); }
+static int  row_h(window_t *win)   { return CLAMP((get_client_rect(win).h - RULER_H) / GR_TRACKS, MIN_ROW, MAX_ROW); }
 static int  floordiv(int a, int b) { return a >= 0 ? a / b : -((-a + b - 1) / b); }
-static int  bar_x(window_t *win, int bar)  { return HDR_W + bar * BAR_W - hpos(win); }
-static int  track_y(window_t *win, int t)  { return RULER_H + t * row_h(win); }
-static irect16_t grid_rect(window_t *win)  { irect16_t cr = get_client_rect(win); return R(HDR_W, RULER_H, cr.w - HDR_W, row_h(win) * GR_TRACKS); }
+static int  bar_x(window_t *win, int bar) { return HDR_W + bar * BAR_W - hpos(win); }
+static int  track_y(window_t *win, int t) { return RULER_H + t * row_h(win); }
+static irect16_t grid_rect(window_t *win) { irect16_t cr = get_client_rect(win); return R(HDR_W, RULER_H, cr.w - HDR_W, row_h(win) * GR_TRACKS); }
 static irect16_t mute_rect(window_t *win, int t) { return R(HDR_W - 46, track_y(win, t) + (row_h(win) - 16) / 2, 20, 16); }
 static irect16_t solo_rect(window_t *win, int t) { return R(HDR_W - 24, track_y(win, t) + (row_h(win) - 16) / 2, 20, 16); }
 
@@ -33,6 +37,61 @@ static void sync_scroll(window_t *win) {
 
 static irect16_t clip_rect(window_t *win, int track, int bar, int bars) {
   return R(bar_x(win, bar) + 1, track_y(win, track) + 2, bars * BAR_W - 2, row_h(win) - 4);
+}
+
+static int child_index(window_t *win) {
+  int i = 0;
+  if (!win || !win->parent) return -1;
+  for (window_t *c = win->parent->children; c; c = c->next, i++)
+    if (c == win) return i;
+  return -1;
+}
+
+static int child_count(window_t *win) {
+  int n = 0;
+  for (window_t *c = win->children; c; c = c->next) n++;
+  return n;
+}
+
+static window_t *child_at(window_t *win, int index) {
+  for (window_t *c = win->children; c; c = c->next)
+    if (index-- == 0) return c;
+  return NULL;
+}
+
+void card_place(window_t *card, irect16_t cell) {
+  if (!card) return;
+  int ox = card->frame.x, oy = card->frame.y;
+  bool moved = ox != cell.x || oy != cell.y;
+  if (moved) move_window(card, cell.x, cell.y);
+  if (card->frame.w != cell.w || card->frame.h != cell.h)
+    resize_window(card, cell.w, cell.h);
+  if (moved && card->drag_visual)
+    window_set_drag_visual(card, card->drag_dx + ox - cell.x, card->drag_dy + oy - cell.y);
+}
+
+// One child per clip, in song order. The tail is dropped when a clip is
+// removed; a window under visual drag is left alive until the drag ends.
+static void sync_clips(window_t *win) {
+  int n = g_app->song.nclips;
+  while (child_count(win) > n) {
+    window_t *tail = child_at(win, child_count(win) - 1);
+    if (!tail || tail->drag_visual) break;
+    destroy_window(tail);
+  }
+  while (child_count(win) < n) {
+    if (!create_window("", GR_CARD_FLAGS, MAKERECT(0, 0, 1, 1), win, win_clip, 0, NULL)) {
+      fprintf(stderr, "[sh] clip allocation failed index=%d\n", child_count(win));
+      fflush(stderr);
+      break;
+    }
+  }
+  int i = 0;
+  for (window_t *c = win->children; c && i < n; c = c->next, i++) {
+    const clip_t *cl = &g_app->song.clips[i];
+    const block_t *b = block_get(cl->block);
+    card_place(c, R(bar_x(win, cl->bar), track_y(win, cl->track), b->bars * BAR_W, row_h(win)));
+  }
 }
 
 // Resolves a client-space point into the drag's snapped target.
@@ -48,8 +107,26 @@ static void drag_target(window_t *win, int cx, int cy) {
 }
 
 static void drag_clear(window_t *win) {
+  window_t *card = child_at(win, g_app->drag.from_clip);
+  if (card) window_clear_drag_visual(card);
   g_app->drag = (drag_t){ .track = -1, .from_clip = -1 };
   invalidate_window(win);
+}
+
+// Bottom pixel row of a rounded card at column x, so the waveform sits on the
+// silhouette instead of a padded box. radius 0 is a square bottom.
+static int card_bottom(int x, int w, int h, int radius) {
+  if (h <= 0) return 0;
+  if (radius <= 0) return h - 1;
+  if (radius > w / 2) radius = w / 2;
+  if (radius > h / 2) radius = h / 2;
+  float px = x + 0.5f, dx = 0;
+  if (px < radius) dx = radius - px;
+  else if (px > w - radius) dx = px - (w - radius);
+  if (dx <= 0) return h - 1;
+  float dy = sqrtf((float)radius * radius - dx * dx);
+  int row = (int)((float)h - radius + dy - 0.5f);
+  return row < 0 ? 0 : row > h - 1 ? h - 1 : row;
 }
 
 void draw_clip(window_t *win, const block_t *b, irect16_t r, uint32_t color, bool ring) {
@@ -62,8 +139,11 @@ void draw_clip(window_t *win, const block_t *b, irect16_t r, uint32_t color, boo
     float f = (x + 0.5f) * np / r.w - 0.5f;
     int k = f < 0 ? 0 : (int)f, k1 = k + 1 < np ? k + 1 : np - 1;
     float t = f < 0 ? 0 : f - k, p = b->audio.peaks[k] + (b->audio.peaks[k1] - b->audio.peaks[k]) * t;
+    int bottom = r.y + card_bottom(x, r.w, r.h, radius);
     int h = MAX(1, (int)(p * (r.h - 14) / 255));
-    fill_rect(ink, R(r.x + x, r.y + r.h - 4 - h, 1, h));
+    int y = bottom + 1 - h;
+    if (y < r.y) { h -= r.y - y; y = r.y; }
+    if (h > 0) fill_rect(ink, R(r.x + x, y, 1, h));
   }
   draw_text_ellipsized(FONT_SMALL, b->name, r.x + 6, r.y + 3, r.w - 10, color_with_alpha(get_sys_color(brTextNormal), (color >> 24)));
 }
@@ -101,24 +181,33 @@ static void paint_sheet(window_t *win) {
   irect16_t cr = get_client_rect(win), grid = grid_rect(win);
   const song_t *s = &g_app->song;
   const drag_t *d = &g_app->drag;
-  int rh = row_h(win), bar = bar_frames_for_bpm(s->bpm);
+  int bar = bar_frames_for_bpm(s->bpm);
+  sync_clips(win);
   fill_rect(get_sys_color(brWorkspaceBg), cr);
   set_clip_rect(win, grid);
   for (int t = 0; t < GR_TRACKS; t++)
-    fill_rect(get_sys_color(t % 2 ? brColumnViewBg : brWindowDarkBg), R(grid.x, track_y(win, t), grid.w, rh));
+    fill_rect(get_sys_color(t % 2 ? brColumnViewBg : brWindowDarkBg), R(grid.x, track_y(win, t), grid.w, row_h(win)));
   for (int b = 0; b <= GR_BARS; b++)
     fill_rect(color_with_alpha(get_sys_color(brLightEdge), b % 4 ? 0x14 : 0x38), R(bar_x(win, b), grid.y, 1, grid.h));
   for (int i = 0; i < s->nclips; i++) {
     const clip_t *c = &s->clips[i];
     const block_t *b = block_get(c->block);
-    bool lifted = d->active && d->from_clip == i;
-    uint32_t color = category_color(b->cat);
-    draw_clip(win, b, clip_rect(win, c->track, c->bar, b->bars), lifted ? color_with_alpha(color, 0x60) : color, i == g_app->selected_clip);
+    if ((d->active && d->from_clip == i) || i != g_app->selected_clip) continue;
+    irect16_t r = clip_rect(win, c->track, c->bar, b->bars);
+    fill_rounded_rect(get_sys_color(brAccent), rect_inset(r, -2), get_theme()->card_corner_radius + 2);
   }
+  float saved[16];
+  memcpy(saved, get_sprite_matrix(), sizeof saved);
+  for (window_t *c = win->children; c; c = c->next) {
+    if (!window_has_state(c, WINDOW_STATE_VISIBLE) || c->drag_visual) continue;
+    send_message(c, evPaint, 0, NULL);
+  }
+  end_draw_transform(saved);
+  set_clip_rect(win, grid);
   if (d->active && d->track >= 0) {
     const block_t *b = block_get(d->block);
-    draw_clip(win, b, clip_rect(win, d->track, d->bar, b->bars),
-              color_with_alpha(d->valid ? category_color(b->cat) : get_sys_color(brTextError), 0xb0), false);
+    stroke_rounded_rect(d->valid ? category_color(b->cat) : get_sys_color(brTextError),
+                        clip_rect(win, d->track, d->bar, b->bars), get_theme()->card_corner_radius, 2);
   }
   int px = HDR_W + (int)((double)s->pos / bar * BAR_W) - hpos(win);
   fill_rect(get_sys_color(brAccent), R(px - 1, RULER_H, 2, grid.h));
@@ -142,45 +231,82 @@ static bool header_click(window_t *win, int cx, int cy) {
   return true;
 }
 
+// The sheet owns the pointer. Clip windows only paint, so a click falls
+// through to the canvas and a two-finger pan can cancel the drag.
+static result_t win_clip(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  (void)wparam; (void)lparam;
+  if (!g_app && msg != evDestroy) return false;
+  switch (msg) {
+    case evCreate: return true;
+    case evPaint: {
+      int idx = child_index(win);
+      if (idx < 0 || idx >= g_app->song.nclips) return true;
+      const clip_t *c = &g_app->song.clips[idx];
+      const block_t *b = block_get(c->block);
+      irect16_t cr = get_client_rect(win);
+      draw_clip(win, b, R(1, 2, cr.w - 2, cr.h - 4), category_color(b->cat), false);
+      return true;
+    }
+    case evDestroy: return true;
+    default: return false;
+  }
+}
+
 result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   sheet_t *st = win->userdata;
   if (!g_app && msg != evDestroy) return false;
   switch (msg) {
     case evCreate:
-      if (!(st = allocate_window_data(win, sizeof(*st)))) { fprintf(stderr, "[sh] allocation failed win=%u\n", (unsigned)win->id); fflush(stderr); return false; }
+      if (!(st = allocate_window_data(win, sizeof(*st)))) {
+        fprintf(stderr, "[sh] allocation failed win=%u\n", (unsigned)win->id);
+        fflush(stderr);
+        return false;
+      }
       st->press_clip = -1;
       sync_scroll(win);
       return true;
-    case evResize: sync_scroll(win); invalidate_window(win); return false;
-    case evHScroll: invalidate_window(win); return true;
+    case evResize: sync_scroll(win); sync_clips(win); invalidate_window(win); return false;
+    case evHScroll: sync_clips(win); invalidate_window(win); return true;
     case evPaint: paint_sheet(win); return true;
+    case evHitTest: return true; // clips paint, the sheet keeps the pointer
 
     case evLeftButtonDown: {
       int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam), cx = mx - hpos(win);
       if (my < RULER_H) { if (cx >= HDR_W) app_seek_bar((mx - HDR_W) / BAR_W); return true; }
       if (header_click(win, cx, my)) return true;
       int track = (my - RULER_H) / row_h(win), bar = floordiv(mx - HDR_W, BAR_W);
-      if (track >= GR_TRACKS) return true;
+      if (track < 0 || track >= GR_TRACKS) return true;
       st->press_clip = song_clip_at(&g_app->song, track, bar);
       st->press = (ipoint16_t){ (int16_t)mx, (int16_t)my };
       app_select_clip(st->press_clip);
       if (st->press_clip >= 0) {
         const clip_t *c = &g_app->song.clips[st->press_clip];
-        g_app->drag = (drag_t){ .block = c->block, .from_clip = st->press_clip, .grab_bars = bar - c->bar, .track = c->track, .bar = c->bar, .valid = true };
+        g_app->drag = (drag_t){ .block = c->block, .from_clip = st->press_clip, .grab_bars = bar - c->bar,
+                                .track = c->track, .bar = c->bar, .valid = true };
         set_capture(win);
       }
       return true;
     }
     case evMouseMove:
-      if (st->press_clip < 0) return false;
+      if (!st || st->press_clip < 0) return false;
       {
         int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam);
-        if (!st->own_drag && abs(mx - st->press.x) + abs(my - st->press.y) > SHEET_SLOP) { st->own_drag = true; g_app->drag.active = true; }
-        if (st->own_drag) { drag_target(win, mx - hpos(win), my); invalidate_window(win); }
+        if (!st->own_drag && abs(mx - st->press.x) + abs(my - st->press.y) > SHEET_SLOP) {
+          st->own_drag = true;
+          g_app->drag.active = true;
+          window_t *card = child_at(win, st->press_clip);
+          if (card) window_set_drag_visual(card, mx - st->press.x, my - st->press.y);
+        }
+        if (st->own_drag) {
+          window_t *card = child_at(win, st->press_clip);
+          if (card) window_set_drag_visual(card, mx - st->press.x, my - st->press.y);
+          drag_target(win, mx - hpos(win), my);
+          invalidate_window(win);
+        }
       }
       return true;
     case evLeftButtonUp:
-      if (st->press_clip < 0) return false;
+      if (!st || st->press_clip < 0) return false;
       if (!st->own_drag) app_preview(g_app->drag.block);
       if (st->own_drag && g_app->drag.track >= 0 && g_app->drag.valid) app_drop(&g_app->drag);
       st->press_clip = -1;
@@ -208,7 +334,12 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     }
     case shDragEnd: drag_clear(win); return true;
     case evPointerCancel:
-      if (st->press_clip >= 0) { st->press_clip = -1; st->own_drag = false; set_capture(NULL); drag_clear(win); }
+      if (st && st->press_clip >= 0) {
+        st->press_clip = -1;
+        st->own_drag = false;
+        set_capture(NULL);
+        drag_clear(win);
+      }
       return true;
     case evDestroy:
       if (st && st->press_clip >= 0) set_capture(NULL);

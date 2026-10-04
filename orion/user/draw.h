@@ -11,6 +11,8 @@
 // Color arguments are packed 0xAABBGGRR with sRGB RGB and linear alpha.
 void fill_rect(uint32_t color, irect16_t r);
 void fill_rounded_rect(uint32_t color, irect16_t r, int radius);
+// Inset stroke of `thickness` logical pixels. One silhouette, same radius as a card.
+void stroke_rounded_rect(uint32_t color, irect16_t r, int radius, int thickness);
 // Same colour with a different alpha (0 transparent .. 255 opaque).
 static inline uint32_t color_with_alpha(uint32_t color, uint8_t alpha) {
   return ((uint32_t)alpha << 24) | (color & 0x00FFFFFFu);
@@ -58,6 +60,8 @@ void draw_rounded_rect_premultiplied(int tex, irect16_t r, int win_w, int win_h,
                                      float radius, float alpha);
 void render_rounded_rect(int tex, irect16_t r, int pixel_w, int pixel_h,
                          float radius, float alpha, uint32_t color);
+void render_rounded_rect_stroke(int tex, irect16_t r, int pixel_w, int pixel_h,
+                                float radius, float alpha, uint32_t color, float stroke);
 // Rounded fill whose left `edge_width` pixels are painted in `edge_color`, sharing one rounded silhouette.
 void render_rounded_rect_edged(int tex, irect16_t r, int pixel_w, int pixel_h, float radius,
                                float alpha, uint32_t color, uint32_t edge_color, float edge_width);

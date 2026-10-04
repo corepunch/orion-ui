@@ -197,12 +197,57 @@ static bool bind_root_surface(window_t *root) {
   return true;
 }
 
+static void drag_offset(const window_t *win, int *dx, int *dy, bool *lifted) {
+  *dx = *dy = 0;
+  *lifted = false;
+  for (const window_t *a = win; a; a = a->parent) {
+    if (!a->drag_visual) continue;
+    *dx += a->drag_dx;
+    *dy += a->drag_dy;
+    *lifted = true;
+  }
+}
+
+static irect16_t isect_rect(irect16_t a, irect16_t b) {
+  int left = MAX(a.x, b.x), top = MAX(a.y, b.y);
+  int right = MIN(a.x + a.w, b.x + b.w), bottom = MIN(a.y + a.h, b.y + b.h);
+  return R(left, top, MAX(0, right - left), MAX(0, bottom - top));
+}
+
+// Drop shadow under a lifted window. The proc stays on the tight client scissor,
+// so the offset part of the shadow remains visible underneath the fill.
+static void paint_lift_shadow(window_t *root, window_t *win, irect16_t clip) {
+  theme_t *theme = get_theme();
+  int blur = theme->drag_shadow_blur;
+  if (blur <= 0) return;
+  int pad = blur * 3 + 1;
+  int ax = theme->drag_shadow_offset.x < 0 ? -theme->drag_shadow_offset.x : theme->drag_shadow_offset.x;
+  int ay = theme->drag_shadow_offset.y < 0 ? -theme->drag_shadow_offset.y : theme->drag_shadow_offset.y;
+  irect16_t wide = R(clip.x - pad - ax - 1, clip.y - pad - ay - 1,
+                     clip.w + 2 * (pad + ax + 1), clip.h + 2 * (pad + ay + 1));
+  set_scissor_fbo(root, isect_rect(wide, R(0, 0, root->frame.w, root->frame.h)));
+  draw_rect_shadow(get_client_rect(win), (float)theme->card_corner_radius, (float)blur,
+                   theme->drag_shadow_offset, theme->drag_shadow_color);
+  set_scissor_fbo(root, clip);
+}
+
+// Lifted windows were omitted from the in-place walk. Paint them above the root.
+static void paint_drag_visuals(window_t *win) {
+  for (window_t *c = win->children; c; c = c->next) {
+    if (!window_has_state(c, WINDOW_STATE_VISIBLE)) continue;
+    if (c->drag_visual) send_message(c, evPaint, 0, NULL);
+    paint_drag_visuals(c);
+  }
+}
+
 // Send message to window (synchronous)
 intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   if (!win) return false;
   irect16_t const *frame = &win->frame;
   window_t *root = get_root_window(win);
   intptr_t value = 0;
+  irect16_t paint_clip = {0};
+  bool paint_ready = false;
   // Call registered hooks
   for (winhook_t *hook = g_hooks; hook; hook = hook->next) {
     if (msg == hook->msg) {
@@ -245,29 +290,39 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         // windows, cx/cy equal the child's frame.x/y so that drawing at (0,0)
         // appears at the child's screen position rather than at the root's
         // client origin.
+        int lift_x = 0, lift_y = 0;
+        bool lifted = false;
+        drag_offset(win, &lift_x, &lift_y, &lifted);
         int cx = 0;
         int cy = 0;
         if (win->parent) {
-          cx = window_screen_x(win) - window_screen_x(root);
-          cy = window_screen_y(win) - (window_screen_y(root) + t);
+          cx = window_screen_x(win) - window_screen_x(root) + lift_x;
+          cy = window_screen_y(win) - (window_screen_y(root) + t) + lift_y;
         }
         int scroll_x = win->parent ? 0 : win->hscroll.pos;
         int scroll_y = win->parent ? 0 : win->vscroll.pos;
         set_projection(scroll_x - cx, -t - cy + scroll_y,
                        root->frame.w + scroll_x - cx,
                        root->frame.h - t - cy + scroll_y);
-        // Every child is clipped to its own client area and every ancestor's
-        // viewport, including children without built-in scrollbars.
+        // In place, clip to this window and every ancestor. A lifted window
+        // (or a descendant of one) is clipped to the root and its own shifted
+        // client, so the copy can leave the parent it still belongs to.
         irect16_t clip = R(0, 0, root->frame.w, root->frame.h);
-        for (window_t *owner = win; owner; owner = owner->parent) {
-          irect16_t cr = get_client_rect(owner);
-          cr = rect_offset(cr, window_screen_x(owner) - root->frame.x,
-                           window_screen_y(owner) - root->frame.y + titlebar_height(owner));
-          int left = MAX(clip.x, cr.x), top = MAX(clip.y, cr.y);
-          int right = MIN(clip.x + clip.w, cr.x + cr.w);
-          int bottom = MIN(clip.y + clip.h, cr.y + cr.h);
-          clip = R(left, top, MAX(0, right - left), MAX(0, bottom - top));
+        if (lifted && win->parent) {
+          irect16_t cr = get_client_rect(win);
+          cr = rect_offset(cr, window_screen_x(win) - root->frame.x + lift_x,
+                           window_screen_y(win) - root->frame.y + titlebar_height(win) + lift_y);
+          clip = isect_rect(clip, cr);
+        } else {
+          for (window_t *owner = win; owner; owner = owner->parent) {
+            irect16_t cr = get_client_rect(owner);
+            cr = rect_offset(cr, window_screen_x(owner) - root->frame.x,
+                             window_screen_y(owner) - root->frame.y + titlebar_height(owner));
+            clip = isect_rect(clip, cr);
+          }
         }
+        paint_clip = clip;
+        paint_ready = true;
         set_scissor_fbo(root, clip);
       }
       break;
@@ -321,6 +376,8 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
     if (send_message(win->parent, evParentNotify, 0, &pn))
       return true;
   }
+  if (paint_ready && win->drag_visual)
+    paint_lift_shadow(root, win, paint_clip);
   // The same window-owned matrix defines painting and pointer delivery.
   float saved_projection[16];
   bool view_paint = msg == evPaint && g_ui_runtime.running && win->view.enabled;
@@ -340,7 +397,7 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         return true;
       case evPaint:
         for (window_t *sub = win->children; sub; sub = sub->next) {
-          if (window_has_state(sub, WINDOW_STATE_VISIBLE))
+          if (window_has_state(sub, WINDOW_STATE_VISIBLE) && !sub->drag_visual)
             send_message(sub, evPaint, wparam, lparam);
         }
         break;
@@ -484,6 +541,9 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
     });
     draw_builtin_scrollbars(win);
   }
+  // After the root's own children, including when the root paints them itself.
+  if (msg == evPaint && !win->parent && g_ui_runtime.running)
+    paint_drag_visuals(win);
   return value;
 }
 

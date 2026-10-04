@@ -10,7 +10,7 @@ uniform float alpha;
 uniform vec2 size;       // window size in pixels
 uniform float radius;    // corner radius in pixels
 uniform vec4 params0;    // shadow sigma, expanded-quad padding; sigma=0 means texture
-uniform vec4 params1;    // x = source is premultiplied linear RGB, y = left edge width in pixels
+uniform vec4 params1;    // x = premultiplied source, y = left edge width, z = inset stroke width (px)
 uniform vec4 edge;       // left edge colour (sRGB, straight alpha); used when params1.y > 0
 
 float srgb_to_linear(float x) {
@@ -44,20 +44,25 @@ void main() {
   vec3 tint_linear = vec3(srgb_to_linear(tint.r), srgb_to_linear(tint.g),
                           srgb_to_linear(tint.b));
   float aa = 1.0;
-  if (radius > 0.0) {
-  // Map texcoord [0,1] to pixel space centered at the window center.
+  float stroke = params1.z;
+  if (radius > 0.0 || stroke > 0.0) {
     vec2 pixel = tex * size;
     vec2 center = size * 0.5;
-    float d = roundedBoxSDF(pixel - center, size * 0.5, radius);
-    // Smooth AA: spread transition over ~1.5 pixels.
-    aa = 1.0 - smoothstep(-1.5, 1.5, d);
+    float d = roundedBoxSDF(pixel - center, size * 0.5, max(radius, 0.0));
+    float outer = 1.0 - smoothstep(-1.5, 1.5, d);
+    if (stroke > 0.0) {
+      float inner = 1.0 - smoothstep(-1.5, 1.5, d + stroke);
+      aa = max(0.0, outer - inner);
+    } else {
+      aa = outer;
+    }
   }
   float factor = alpha * aa * col.a * tint.a;
   vec3 straight_rgb = src.rgb * col.rgb * tint_linear;
   if (params1.x < 0.5) straight_rgb *= src.a;
   float src_a = src.a;
   // A plain rectangular edge, clipped by the same rounded silhouette as the fill.
-  if (params1.y > 0.0 && tex.x * size.x < params1.y) {
+  if (stroke <= 0.0 && params1.y > 0.0 && tex.x * size.x < params1.y) {
     straight_rgb = vec3(srgb_to_linear(edge.r), srgb_to_linear(edge.g), srgb_to_linear(edge.b));
     factor = alpha * aa * col.a * edge.a;
     src_a = 1.0;

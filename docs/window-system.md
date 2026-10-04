@@ -104,6 +104,28 @@ Use `allocate_window_data()` when the state belongs exclusively to one window.
 Persistent application/model objects should not store live `window_t *` handles
 unless they are controller or view state.
 
+## Visual Drag
+
+`window_set_drag_visual(win, dx, dy)` paints a child at a screen-pixel offset
+from its real frame. The frame does not move, so layout and hit-testing stay
+on the original rectangle. While the offset is set, the window is skipped in
+the normal child paint (the parent background shows through) and the same
+`evPaint` is composited above the root, clipped to the root rather than to
+its parents, so the copy can cross sibling windows. `window_clear_drag_visual`
+puts that paint back on the frame.
+
+```c
+window_set_drag_visual(card, mx - press.x, my - press.y);  // follow the cursor
+window_clear_drag_visual(card);                            // it reappears
+```
+
+A lifted window draws the theme drag shadow (`drag_shadow_blur`,
+`drag_shadow_offset`, `drag_shadow_color`) under that paint. The offset is
+downward, so the dark part sits underneath the window instead of in a halo
+the fill covers. Zero blur draws none. The window procedure stays clipped to
+the window rectangle. Resting top-level windows keep the separate
+`window_shadow_*` halo.
+
 ## Lifecycle
 
 1. `create_window` allocates the window and sends `evCreate`.
