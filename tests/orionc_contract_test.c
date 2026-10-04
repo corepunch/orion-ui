@@ -57,6 +57,7 @@ static const char *kValid = ""
   "  <menus>\n"
   "    <menu name=\"repo\" label=\"Repo\">\n"
   "      <item name=\"refresh\" label=\"Refresh\" shortcut=\"F5;Ctrl+F5\" />\n"
+  "      <item name=\"rewind\" label=\"Rewind\" shortcut=\"Home\" />\n"
   "    </menu>\n"
   "  </menus>\n"
   "  <forms>\n"
@@ -73,6 +74,7 @@ void test_valid_manifest_accepted(void) {
     char out[16384] = {0};
     int rc = run_orionc(kValid, "valid", out, sizeof(out));
     ASSERT_EQUAL(rc, 0);
+    ASSERT_TRUE(contains(out, "{ FVIRTKEY, AX_KEY_HOME, ID_REPO_REWIND }"));
     ASSERT_TRUE(contains(out, ".role = WINDOW_ROLE_HOST"));
     ASSERT_TRUE(contains(out, ".role = WINDOW_ROLE_PAGE"));
     ASSERT_TRUE(contains(out, "test_page_toolbar"));

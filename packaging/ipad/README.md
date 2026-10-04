@@ -1,12 +1,14 @@
-# Image Editor and Pencil Test on iPad
+# Image Editor, Pencil Test and Groove on iPad
 
 These are separate, statically linked iPad apps built directly with Xcode SDK
 commands, following `books`' Makefile workflow. No Xcode project or third-party
 iOS dependencies are required. The default deployment target is iPadOS 16.
 
 ```sh
-make ipad-all                         # both device bundles
+make ipad-all                         # all three device bundles
 make ipad APP=imageeditor         # one device bundle
+make ipad APP=groove              # Groove device bundle
+make ipad-run APP=groove          # build, install, launch Groove in Simulator
 make ipad-simulator APP=penciltest
 make ipad-run APP=penciltest       # build, install, launch in Simulator
 make list-devices
@@ -22,14 +24,17 @@ iPhones, and unavailable devices. It fails if there are zero or multiple eligibl
 iPads. `DEVICE` may also select a device or simulator by name or
 UDID. Device installation uses an installed development certificate and a
 matching provisioning profile; optionally supply `TEAM=...`, `PROFILE=...`,
-and `BUNDLE_ID=...`. Defaults are `com.orion.imageeditor` and
-`com.orion.penciltest`, so the apps coexist and have independent Documents and
-settings directories. Use a distinct bundle identifier for each app.
+and `BUNDLE_ID=...`. Defaults are `com.orion.imageeditor`,
+`com.orion.penciltest` and `com.orion.groove`, so the apps coexist and have
+independent Documents and settings directories. Use a distinct bundle identifier
+for each app.
 
 Outputs are `build/ipad/<SDK>-<ARCH>/<app>/<app>.app`. Advanced builds can invoke
 `make -f packaging/ipad/build.mk APP=penciltest SDK=iphoneos IOS_MIN=16.0 app`
 and override `BUILD_DIR` or `ARCH`. The `orionc` resource compiler runs on the
 host; all app and framework code is compiled with the selected iOS SDK.
+If `Simulator.app` is absent but a simulator runtime is available, `ipad-run`
+still installs and launches the app through `simctl` without opening a window.
 
 The UIKit backend lives in the `platform` submodule, under `platform/ios`.
 Commit changes in that submodule as well as the parent repository when saving
@@ -64,3 +69,11 @@ preserve each icon's artwork and colors, remove the labels and surrounding
 page margin, and extend its tile background to square edges for the iPad mask.
 `tools/ipad/bundle.py` produces the required icon sizes with `sips` and compiles
 the asset catalog with `actool`.
+
+Groove uses `apps/groove/share/icon.png` as its universal 1024×1024 master.
+The same opaque PNG ships with the app's shared resources and supplies every
+iPad icon size. It was redrawn with the built-in imagegen tool from the supplied
+music-note character reference, preserving its headphones, wink, glossy yellow
+and orange artwork, and blue radial background. The background extends to the
+square edges so iPadOS applies the outer mask. The generation prompt is saved
+in `apps/groove/share/icon-prompt.txt`.

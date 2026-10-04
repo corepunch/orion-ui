@@ -9,8 +9,8 @@ BUNDLE_ID ?= com.orion.$(APP)
 TEAM ?=
 PROFILE ?=
 DEVICE ?=
-ifeq ($(filter $(APP),imageeditor penciltest),)
-$(error APP must be imageeditor or penciltest)
+ifeq ($(filter $(APP),imageeditor penciltest groove),)
+$(error APP must be imageeditor, penciltest or groove)
 endif
 ifeq ($(filter $(SDK),iphoneos iphonesimulator),)
 $(error SDK must be iphoneos or iphonesimulator)
@@ -30,18 +30,21 @@ else ifeq ($(filter classic modern light navy,$(THEME_$(APP))),)
 $(error unknown THEME_$(APP)=$(THEME_$(APP)) (want classic, modern, light, or navy))
 endif
 APP_THEME_FLAGS := $(if $(filter-out modern,$(THEME_$(APP))),-DORION_THEME=$(THEME_$(APP)))
-APP_FLAGS := -DSTBTT_STATIC $(if $(filter penciltest,$(APP)),-DIMAGEEDITOR_BW=1 -DIMAGEEDITOR_BW_RETINA) $(APP_THEME_FLAGS) -Iapps/imageeditor -Iapps/imageeditor/components -DSHAREDIR='"../share/imageeditor"'
+APP_SOURCE := $(if $(filter penciltest,$(APP)),imageeditor,$(APP))
+APP_DIR := apps/$(APP_SOURCE)
+APP_FLAGS := -DSTBTT_STATIC $(if $(filter penciltest,$(APP)),-DIMAGEEDITOR_BW=1 -DIMAGEEDITOR_BW_RETINA) $(APP_THEME_FLAGS) -I$(APP_DIR) -I$(APP_DIR)/components -DSHAREDIR='"../share/$(APP_SOURCE)"'
 USER_SRCS := $(filter-out orion/user/dialog.c orion/user/component_registry.c,$(wildcard orion/user/*.c))
 KERNEL_SRCS := $(wildcard orion/kernel/*.c)
 COMMCTL_SRCS := $(filter-out orion/commctl/tray.c,$(wildcard orion/commctl/*.c))
 COMMDLG_SRCS := $(wildcard orion/commdlg/*.c)
-COMPONENT_SRCS := $(wildcard apps/imageeditor/components/*.c)
+COMPONENT_SRCS := $(wildcard $(APP_DIR)/components/*.c)
 OBJECTS := $(addprefix $(BUILD_ROOT)/,user.o kernel.o commctl.o) $(addprefix $(BUILD_ROOT)/,$(COMMDLG_SRCS:.c=.o) $(COMPONENT_SRCS:.c=.o))
-APP_SRCS := $(shell find apps/imageeditor -name '*.c' ! -path '*/components/*' ! -path '*/tests/*' ! -name main.c | sort) apps/imageeditor/main.c
+APP_SRCS := $(shell find $(APP_DIR) -name '*.c' ! -path '*/components/*' ! -path '*/tests/*' ! -name main.c | sort) $(APP_DIR)/main.c
+APP_HEADERS := $(shell find $(APP_DIR) -name '*.h' ! -path '*/tests/*')
 PLATFORM_LIB := $(BUILD_ROOT)/platform/libplatform.a
 HOST_TOOL := $(abspath $(BUILD_DIR))/host/orionc
-GENERATED := build/generated/apps/imageeditor/imageeditor.h
-LIBS := -lxml2 -lm -framework UIKit -framework CoreGraphics -framework Foundation -framework OpenGLES -framework QuartzCore -framework Security -framework UniformTypeIdentifiers
+GENERATED := build/generated/$(APP_DIR)/$(APP_SOURCE).h
+LIBS := -lxml2 -lm -framework UIKit -framework CoreGraphics -framework Foundation -framework OpenGLES -framework QuartzCore -framework Security -framework UniformTypeIdentifiers -framework AudioToolbox
 
 .PHONY: app run deploy mac settings platform
 settings:
@@ -57,9 +60,9 @@ $(PLATFORM_LIB): platform
 $(HOST_TOOL): tools/orionc.c $(wildcard orion/user/*.h)
 	@mkdir -p "$(@D)"
 	xcrun --sdk macosx clang -std=c11 -O2 -I. -I"$(shell xcrun --sdk macosx --show-sdk-path)/usr/include/libxml2" $< -lxml2 -o "$@"
-$(GENERATED): apps/imageeditor/imageeditor.orion $(HOST_TOOL)
+$(GENERATED): $(APP_DIR)/$(APP_SOURCE).orion $(HOST_TOOL)
 	@mkdir -p "$(@D)"
-	"$(HOST_TOOL)" --input $< --output $@ --prefix imageeditor
+	"$(HOST_TOOL)" --input $< --output $@ --prefix $(APP_SOURCE)
 define unity_core
 $(BUILD_ROOT)/$(1).o: $(2) $(BUILD_ROOT)/settings $(GENERATED) packaging/ipad/build.mk
 	@printf '%s\n' $(2) | sed 's/.*/\#include "&"/' > "$(BUILD_ROOT)/$(1).c"
@@ -70,8 +73,8 @@ $(eval $(call unity_core,kernel,$(KERNEL_SRCS)))
 $(eval $(call unity_core,commctl,$(COMMCTL_SRCS)))
 $(BUILD_ROOT)/%.o: %.c $(BUILD_ROOT)/settings $(GENERATED) packaging/ipad/build.mk
 	@mkdir -p "$(@D)"
-	$(COMPILER) $(FLAGS) -Iapps/imageeditor -Iapps/imageeditor/components -c "$<" -o "$@"
-$(APP_ROOT)/app.o: $(APP_SRCS) $(GENERATED) $(APP_ROOT)/settings packaging/ipad/build.mk
+	$(COMPILER) $(FLAGS) -I$(APP_DIR) -I$(APP_DIR)/components -c "$<" -o "$@"
+$(APP_ROOT)/app.o: $(APP_SRCS) $(APP_HEADERS) $(GENERATED) $(APP_ROOT)/settings packaging/ipad/build.mk
 	@printf '%s\n' $(APP_SRCS) | sed 's/.*/\#include "&"/' > "$(APP_ROOT)/app.c"
 	$(COMPILER) $(FLAGS) $(APP_FLAGS) -c "$(APP_ROOT)/app.c" -o "$@"
 $(APP_ROOT)/$(APP): $(OBJECTS) $(APP_ROOT)/app.o $(PLATFORM_LIB)

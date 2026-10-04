@@ -132,6 +132,14 @@ clockwise rotation). `event.c` routes `evGesture` through the child hierarchy,
 converts both points into window-local coordinates before the content-view
 transform, and retains the accepting window until end/cancel. Unhandled gestures
 fall back to two-finger scrolling.
+Windows with built-in scrollbars accept unhandled `evGesture` in the default
+message handler. The scrollbar layer pans eligible axes by the centroid delta
+in logical points, retaining fractional movement and clamping at content bounds.
+The router retains that window throughout the gesture, including when the
+centroid leaves its viewport. Applications only maintain their scroll ranges
+and respond to `evHScroll` / `evVScroll`; they do not translate touches or
+apply wheel sensitivity. Canvas procedures may handle `evGesture` first to
+apply their content view's zoom, rotation and pan.
 `evPointerCancel` aborts the first finger's interaction before a gesture begins.
 Apple Pencil strokes retain priority over finger gestures.
 

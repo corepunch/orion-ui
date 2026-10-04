@@ -323,6 +323,7 @@ static bool parse_hotkey(const char *spec, char *fvirt, size_t fv_cap,
   else if (eq(keyname, "ESCAPE") || eq(keyname, "ESC")) snprintf(k, sizeof(k), "AX_KEY_ESCAPE");
   else if (eq(keyname, "BACKSPACE")) snprintf(k, sizeof(k), "AX_KEY_BACKSPACE");
   else if (eq(keyname, "TAB")) snprintf(k, sizeof(k), "AX_KEY_TAB");
+  else if (eq(keyname, "HOME")) snprintf(k, sizeof(k), "AX_KEY_HOME");
   else if (eq(keyname, "PAGE UP")) snprintf(k, sizeof(k), "AX_KEY_PGUP");
   else if (eq(keyname, "PAGE DOWN")) snprintf(k, sizeof(k), "AX_KEY_PGDN");
   else if (eq(keyname, "DELETE") || eq(keyname, "DEL")) snprintf(k, sizeof(k), "AX_KEY_DEL");

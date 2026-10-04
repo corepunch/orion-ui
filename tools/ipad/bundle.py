@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Package a standalone Orion editor for iPad, using only SDK tools."""
+"""Package a standalone Orion app for iPad, using only SDK tools."""
 import argparse
 import json
 from pathlib import Path
@@ -12,7 +12,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('root', 'target', 'binary'):
         parser.add_argument('--' + name, type=Path, required=True)
-    parser.add_argument('--app', choices=('imageeditor', 'penciltest'), required=True)
+    parser.add_argument('--app', choices=('imageeditor', 'penciltest', 'groove'), required=True)
     parser.add_argument('--bundle-id', required=True)
     parser.add_argument('--sdk', choices=('iphoneos', 'iphonesimulator'), required=True)
     parser.add_argument('--sdk-version', required=True)
@@ -21,7 +21,10 @@ def main():
     root, target = args.root.resolve(), args.target.resolve()
     if target.suffix != '.app' or target == root or target in root.parents:
         raise SystemExit('Target must be a separate .app bundle')
-    icon = root / 'packaging/ipad/icons' / (args.app + '.png')
+    source = 'imageeditor' if args.app == 'penciltest' else args.app
+    icon = root / 'apps' / args.app / 'share' / 'icon.png'
+    if not icon.is_file():
+        icon = root / 'packaging/ipad/icons' / (args.app + '.png')
     if not icon.is_file():
         raise SystemExit('Missing app icon: ' + str(icon))
     if target.exists():
@@ -29,7 +32,7 @@ def main():
     target.mkdir(parents=True)
     (target / 'bin').mkdir()  # bin/../share paths resolve inside the bundle.
     shutil.copytree(root / 'share', target / 'share/orion')
-    shutil.copytree(root / 'apps/imageeditor/share', target / 'share/imageeditor')
+    shutil.copytree(root / 'apps' / source / 'share', target / 'share' / source)
     shutil.copy2(args.binary, target / args.app)
     catalog = target.parent / 'AppIcon.xcassets'
     appicons = catalog / 'AppIcon.appiconset'
@@ -50,7 +53,7 @@ def main():
         'CFBundleIdentifier': args.bundle_id,
         'CFBundleExecutable': args.app,
         'CFBundleName': args.app,
-        'CFBundleDisplayName': 'Pencil Test' if args.app == 'penciltest' else 'Image Editor',
+        'CFBundleDisplayName': {'penciltest': 'Pencil Test', 'imageeditor': 'Image Editor', 'groove': 'Groove'}[args.app],
         'CFBundleDevelopmentRegion': 'en',
         'CFBundleInfoDictionaryVersion': '6.0',
         'CFBundlePackageType': 'APPL',
