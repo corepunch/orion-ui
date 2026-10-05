@@ -324,7 +324,7 @@ $(GEM_BINS) $(PHONY_APP_GEMS): $(GEM_DIR)/%.gem: $(CORE_LIBS) $(GENERATED_HEADER
 	@$(GEM_NM) $@ 2>/dev/null | grep -q '$(GEM_SYM)' || { echo 'FAIL missing gem_get_interface'; exit 1; }
 
 # ── Tests ────────────────────────────────────────────────────────────────
-test: $(TEST_BINS)
+test: share $(TEST_BINS)
 	@echo "Running tests..."
 	@$(COPY_DLLS)
 	@for t in $(TEST_BINS); do \
