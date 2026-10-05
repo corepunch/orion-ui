@@ -194,7 +194,7 @@ static void test_image_background(void) {
 }
 
 static void test_plastic_surface(void) {
-  TEST("Plastic states preserve bounds, disable interaction shading and keep the solid glyph crisp");
+  TEST("Plastic states preserve bounds, disable interaction shading and deboss the glyph");
   CGLPixelFormatAttribute attrs[] = {kCGLPFAOpenGLProfile,
     (CGLPixelFormatAttribute)kCGLOGLPVersion_3_2_Core, 0};
   CGLPixelFormatObj format = NULL;
@@ -242,17 +242,17 @@ static void test_plastic_surface(void) {
     glClear(GL_COLOR_BUFFER_BIT);
     render_plastic_surface(R(2, 2, 28, 28), 10, 2, 3, CTRL_NORMAL, 0x8036aa48,
                             0x80000000, glyph, NULL, (ipoint16_t){16, 16});
-    uint8_t face[4], rim[4], top[4], center[4];
+    uint8_t face[4], rim[4], top[4], center[4], bottom[4];
     read_card_pixel(8, 16, face); read_card_pixel(16, 28, rim);
-    read_card_pixel(16, 12, top); read_card_pixel(16, 16, center);
-    ok &= face[3] == 128 && rim[3] > 0 && rim[3] < 128 && memcmp(top, center, 4) == 0;
+    read_card_pixel(16, 12, top); read_card_pixel(16, 16, center); read_card_pixel(16, 19, bottom);
+    ok &= face[3] == 128 && rim[3] > 0 && rim[3] < 128 && top[1] < center[1] && bottom[1] > center[1];
     for (int size = 4; size <= 24; size += 4) {
       glClear(GL_COLOR_BUFFER_BIT);
       render_plastic_surface(R(4, 4, size, 8), 100, 2, 3, CTRL_SELECTED, WEB(0x48aa36), 0x80000000, 0, NULL, (ipoint16_t){0, 0});
     }
     ok &= glGetError() == GL_NO_ERROR;
-    if (!ok) fprintf(stderr, "[renderer-test] plastic normal=%u pressed=%u hover=%u alpha=%u,%u glyph=%u,%u\n",
-                      samples[0][1], samples[2][1], samples[3][1], face[3], rim[3], top[1], center[1]);
+    if (!ok) fprintf(stderr, "[renderer-test] plastic normal=%u pressed=%u hover=%u alpha=%u,%u glyph=%u,%u,%u\n",
+                      samples[0][1], samples[2][1], samples[3][1], face[3], rim[3], top[1], center[1], bottom[1]);
   }
   R_DeleteTexture(glyph);
   R_DestroyWindowTarget(&fbo, &texture, &w, &h);
