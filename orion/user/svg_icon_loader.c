@@ -237,19 +237,23 @@ void svg_add_icons_dir(const char *dir) {
 }
 
 bool sysicon_resolve(const char *name, sysicon_resolved_t *out) {
-    if (!name || !name[0] || !out) {
-        fprintf(stderr, "[svg] invalid icon request name=%p out=%p\n", (const void *)name, (void *)out);
+    return sysicon_resolve_size(name, SYSICON_SIZE, out);
+}
+
+bool sysicon_resolve_size(const char *name, int size, sysicon_resolved_t *out) {
+    if (!name || !name[0] || !out || size <= 0 || size > 512) {
+        fprintf(stderr, "[svg] invalid icon request name=%p size=%d out=%p\n", (const void *)name, size, (void *)out);
         fflush(stderr);
         return false;
     }
 
     if (bmp_icon_resolve(name, out)) return true;
 
-    int raster_size = svg_raster_size(SYSICON_SIZE);
+    int raster_size = svg_raster_size(size);
     if (!raster_size) return false;
     sysicon_cache_t *entry = NULL;
     for (int i = 0; i < g_sysicon_cache_n; i++) {
-        if (strcmp(g_sysicon_cache[i].name, name) == 0) {
+        if (g_sysicon_cache[i].w == size && strcmp(g_sysicon_cache[i].name, name) == 0) {
             entry = &g_sysicon_cache[i];
             if (entry->raster_size != raster_size) break;
             out->tex = g_sysicon_cache[i].tex;
@@ -260,9 +264,18 @@ bool sysicon_resolve(const char *name, sysicon_resolved_t *out) {
         }
     }
 
-    if (!g_icon_dir_count || (!entry && g_sysicon_cache_n >= 64)) return false;
+    if (!g_icon_dir_count || (!entry && g_sysicon_cache_n >= ARRAY_LEN(g_sysicon_cache))) {
+        fprintf(stderr, "[svg] icon cache unavailable name=%s size=%d dirs=%d entries=%d\n",
+                name, size, g_icon_dir_count, g_sysicon_cache_n);
+        fflush(stderr);
+        return false;
+    }
     uint8_t *pixels = (uint8_t *)malloc((size_t)raster_size * raster_size * 4);
-    if (!pixels) return false;
+    if (!pixels) {
+        fprintf(stderr, "[svg] icon allocation failed name=%s raster=%d\n", name, raster_size);
+        fflush(stderr);
+        return false;
+    }
     bool drawn = false;
     char path[5120];
     for (int di = 0; di < g_icon_dir_count && !drawn; di++) {
@@ -279,9 +292,9 @@ bool sysicon_resolve(const char *name, sysicon_resolved_t *out) {
     if (entry) R_DeleteTexture(entry->tex);
     strncpy(e->name, name, sizeof(e->name) - 1);
     e->name[sizeof(e->name) - 1] = '\0';
-    e->tex = tex; e->w = SYSICON_SIZE; e->h = SYSICON_SIZE;
+    e->tex = tex; e->w = size; e->h = size;
     e->raster_size = raster_size;
     out->tex = tex; out->u0 = 0.0f; out->v0 = 0.0f; out->u1 = 1.0f; out->v1 = 1.0f;
-    out->w = SYSICON_SIZE; out->h = SYSICON_SIZE;
+    out->w = size; out->h = size;
     return true;
 }

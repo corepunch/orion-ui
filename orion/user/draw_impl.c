@@ -332,13 +332,13 @@ void draw_gradient_card(irect16_t r, ctrl_state_t state, uint32_t color) {
 void draw_plastic_button(irect16_t r, ctrl_state_t state, uint32_t color, const char *icon) {
   if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0) return;
   const theme_t *theme = get_theme();
+  int shadow = MIN(theme->plastic_shadow_size, MIN(r.w, r.h) / 10);
+  int size = MAX(0, MIN(20, MIN(r.w, r.h) - 2 * shadow - 4));
   sysicon_resolved_t glyph = {0};
-  if (icon && !sysicon_resolve(icon, &glyph)) {
+  if (icon && size > 0 && !sysicon_resolve_size(icon, size, &glyph)) {
     fprintf(stderr, "[draw] plastic icon unavailable name=%s\n", icon);
     fflush(stderr);
   }
-  int shadow = MIN(theme->plastic_shadow_size, MIN(r.w, r.h) / 10);
-  int size = MAX(0, MIN(20, MIN(r.w, r.h) - 2 * shadow - 4));
   ipoint16_t icon_size = {size, size};
   int extent = MAX(glyph.w, glyph.h);
   if (extent > 0) icon_size = (ipoint16_t){size * glyph.w / extent, size * glyph.h / extent};

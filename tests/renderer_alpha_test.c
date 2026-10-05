@@ -194,7 +194,7 @@ static void test_image_background(void) {
 }
 
 static void test_plastic_surface(void) {
-  TEST("Plastic states preserve bounds, disable interaction shading and recess the glyph in one pass");
+  TEST("Plastic states preserve bounds, disable interaction shading and keep the solid glyph crisp");
   CGLPixelFormatAttribute attrs[] = {kCGLPFAOpenGLProfile,
     (CGLPixelFormatAttribute)kCGLOGLPVersion_3_2_Core, 0};
   CGLPixelFormatObj format = NULL;
@@ -215,9 +215,9 @@ static void test_plastic_surface(void) {
     glDisable(GL_SCISSOR_TEST);
     set_projection(0, 0, 32, 32);
     glClearColor(0, 0, 0, 0);
-    uint8_t mask[8 * 8 * 4] = {0};
-    for (int y = 2; y < 6; y++) for (int x = 2; x < 6; x++) mask[(y * 8 + x) * 4 + 3] = 255;
-    glyph = R_CreateTextureRGBA(8, 8, mask, R_FILTER_LINEAR, R_WRAP_CLAMP);
+    uint8_t mask[16 * 16 * 4] = {0};
+    for (int y = 4; y < 12; y++) for (int x = 4; x < 12; x++) mask[(y * 16 + x) * 4 + 3] = 255;
+    glyph = R_CreateTextureRGBA(16, 16, mask, R_FILTER_LINEAR, R_WRAP_CLAMP);
     uint8_t samples[5][4], disabled_only[32 * 32 * 4], disabled_flags[32 * 32 * 4];
     ctrl_state_t states[] = {CTRL_NORMAL, CTRL_SELECTED, CTRL_PRESSED, CTRL_HOVER, CTRL_DISABLED};
     for (int i = 0; i < ARRAY_LEN(states); i++) {
@@ -245,7 +245,7 @@ static void test_plastic_surface(void) {
     uint8_t face[4], rim[4], top[4], center[4];
     read_card_pixel(8, 16, face); read_card_pixel(16, 28, rim);
     read_card_pixel(16, 12, top); read_card_pixel(16, 16, center);
-    ok &= face[3] == 128 && rim[3] > 0 && rim[3] < 128 && top[1] < center[1];
+    ok &= face[3] == 128 && rim[3] > 0 && rim[3] < 128 && memcmp(top, center, 4) == 0;
     for (int size = 4; size <= 24; size += 4) {
       glClear(GL_COLOR_BUFFER_BIT);
       render_plastic_surface(R(4, 4, size, 8), 100, 2, 3, CTRL_SELECTED, WEB(0x48aa36), 0x80000000, 0, NULL, (ipoint16_t){0, 0});

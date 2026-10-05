@@ -102,10 +102,39 @@ static void test_named_icon_density(void) {
   PASS();
 }
 
+static void test_named_icon_draw_size(void) {
+  TEST("SVG glyph masks use the final draw size and cache sizes independently at 1x and Retina");
+  svg_set_icons_dir("apps/groove/share/icons");
+  const int sizes[] = {12, 20, 24};
+  for (int density = 1; density <= 2; density++) {
+    test_density = density;
+    sysicon_resolved_t icons[3];
+    for (int i = 0; i < ARRAY_LEN(sizes); i++) {
+      ASSERT_TRUE(sysicon_resolve_size("phosphor-stop-fill", sizes[i], &icons[i]));
+      ASSERT_EQUAL(uploaded_w, sizes[i] * density * UI_WINDOW_SCALE);
+      ASSERT_EQUAL(uploaded_h, uploaded_w);
+      ASSERT_EQUAL(icons[i].w, sizes[i]);
+      ASSERT_EQUAL(icons[i].h, sizes[i]);
+    }
+    int before = upload_count;
+    for (int i = 0; i < ARRAY_LEN(sizes); i++) {
+      sysicon_resolved_t cached;
+      ASSERT_TRUE(sysicon_resolve_size("phosphor-stop-fill", sizes[i], &cached));
+      ASSERT_EQUAL(cached.tex, icons[i].tex);
+    }
+    ASSERT_EQUAL(upload_count, before);
+  }
+  sysicon_resolved_t icon;
+  ASSERT_FALSE(sysicon_resolve_size("phosphor-play-fill", 0, &icon));
+  ASSERT_FALSE(sysicon_resolve_size("phosphor-play-fill", 513, &icon));
+  PASS();
+}
+
 int main(void) {
   TEST_START("SVG Retina rasterization");
   test_strip_density();
   test_named_icon_density();
+  test_named_icon_draw_size();
   free(uploaded_pixels);
   TEST_END();
 }
