@@ -178,11 +178,12 @@ static void sidebar_paint(window_t *win, tabview_state_t *st) {
     irect16_t r = sidebar_row(win, st, i);
     if (r.y + r.h < 0 || r.y > bar.h) continue;
     ctrl_state_t state = i == st->selected ? CTRL_SELECTED : CTRL_NORMAL;
-    if (i == st->selected) { selected = c; theme_draw(THEME_PART_LIST_ITEM, r, state); }
+    // Same capsule as a menu item; the theme insets it, so widen the rect to land on the row.
+    if (i == st->selected) { selected = c; theme_draw(THEME_PART_MENU_ITEM, rect_inset_xy(r, -MENU_CAPSULE_INSET, 0), state); }
     int x = r.x + SIDEBAR_PAD;
     if (tab_has_icon(st, i)) { draw_tab_icon(st, i, x, r.y, r.h); x += st->strip.icon_w + tab_icon_gap(st); }
     draw_text_ellipsized(FONT_SYSTEM, c->title, x, r.y + (r.h - text_char_height(FONT_SYSTEM)) / 2,
-                         r.x + r.w - SIDEBAR_PAD - x, theme_foreground(THEME_PART_LIST_ITEM, state));
+                         r.x + r.w - SIDEBAR_PAD - x, theme_foreground(THEME_PART_MENU_ITEM, state));
   }
   set_clip_rect(win, cr);
   if (selected) send_message(selected, evPaint, 0, NULL);

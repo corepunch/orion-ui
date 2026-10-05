@@ -366,6 +366,9 @@ Use `tcGetSelection` and `tcSetSelection` to query or change the zero-based
 page index. User selection sends `evCommand` with `tcnSelChange` and the
 `TabView` in `lparam`.
 
+The sidebar style (`tcSetStyle` with `TAB_STYLE_SIDEBAR`) marks the selected
+row with `THEME_PART_MENU_ITEM`, the same capsule the menus draw.
+
 ## SegmentedControl
 
 `SegmentedControl` is a row of mutually exclusive segments: a radio group in
