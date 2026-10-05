@@ -39,6 +39,34 @@ color to `draw_icon16` / `draw_toolbar_icon_in_rect`.
 
 ## Icon strips
 
+### Offline button atlases
+
+Groove's transport uses a single PNG atlas built from SVG glyphs. Regenerate it
+with `make groove-icons`, or use the reusable tool directly:
+
+```sh
+make build/bin/svg_atlas_render
+python3 tools/build_button_atlas.py apps/groove/share/icons/transport.json
+```
+
+The JSON manifest controls glyph order, colour, optional solid glyph fill,
+logical cell size, raster scale, and press offset. SVG paths are relative to
+the manifest. Every glyph uses a 24×24 viewBox. Python uses only the standard
+library; the offline C rasterizer uses the bundled NanoSVG and stb PNG writer.
+The tool assembles and rasterizes the entire atlas together, with rows ordered
+**normal, selected, pressed, hover, disabled**. Every cell has identical bounds;
+only the pressed glyph moves down by 2 logical pixels in the 32-point source
+cell. At the current 28-point toolbar size this is 1.75 points. Faces and hit
+rectangles stay fixed. There is no cropping, resizing by opaque bounds, or
+runtime tint applied to these states.
+
+The generated `transport.h` records the raster cell size, column count, and
+state count alongside `transport.png`; the loader uses that cell size with
+`tbLoadStrip`, `TOOLBAR_STYLE_STATE_STRIP`, and `TOOLBAR_STYLE_IMAGE_BUTTONS`.
+The engine loads the PNG directly. SVG is used only by the offline atlas tool
+for these transport buttons. `--output PATH` writes a preview PNG without
+changing the committed atlas/header.
+
 | Strip | Index enum | Tile size | Source | Loaded by |
 |---|---|---|---|---|
 | **sysicon** | `sysicon_*` in `orion/user/icons.h` | `SYSICON_SIZE` (24 px) | `share/icons/*.svg` | `orion/user/init.c` |

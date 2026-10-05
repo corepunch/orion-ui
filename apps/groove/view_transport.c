@@ -1,6 +1,7 @@
 // Transport toolbar hosted in the library header.
 
 #include "groove.h"
+#include "share/icons/transport.h"
 #include <orion/user/toolbar.h>
 
 static const toolbar_item_t kTransportItems[] = {
@@ -30,12 +31,7 @@ result_t win_transport(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       g_app->library = win;
       char strip_path[1024];
       int n = snprintf(strip_path, sizeof(strip_path), "%s/../share/groove/icons/transport.png", ui_get_exe_dir());
-      irect16_t regions[40];
-      const int row_y[] = {28, 215, 417, 592, 780}, row_h[] = {177, 195, 168, 179, 177};
-      for (int row = 0; row < 5; row++)
-        for (int col = 0; col < 8; col++) regions[row * 8 + col] = R(17 + col * 195, row_y[row], 195, row_h[row]);
-      toolbar_atlas_t atlas = {strip_path, 8, ARRAY_LEN(regions), regions};
-      if (g_ui_runtime.running && n > 0 && (size_t)n < sizeof(strip_path)) send_message(win, tbLoadAtlas, 0, &atlas);
+      if (g_ui_runtime.running && n > 0 && (size_t)n < sizeof(strip_path)) send_message(win, tbLoadStrip, TRANSPORT_ATLAS_CELL_SIZE, strip_path);
       send_message(win, tbSetStyle, TOOLBAR_STYLE_STATE_STRIP | TOOLBAR_STYLE_IMAGE_BUTTONS, NULL);
 #ifdef AX_PLATFORM_IOS
       send_message(win, tbSetButtonSize, BUTTON_HEIGHT + 4, NULL);

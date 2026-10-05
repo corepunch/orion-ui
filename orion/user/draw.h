@@ -11,6 +11,10 @@
 // Color arguments are packed 0xAABBGGRR with sRGB RGB and linear alpha.
 void fill_rect(uint32_t color, irect16_t r);
 void fill_rounded_rect(uint32_t color, irect16_t r, int radius);
+// Vertical, linear-light gradient with one rounded silhouette; radius 0 fills a row.
+void fill_gradient_rounded_rect(uint32_t top, uint32_t bottom, irect16_t r, int radius);
+void render_rounded_rect_gradient(int tex, irect16_t r, int pixel_w, int pixel_h,
+                                  float radius, uint32_t top, uint32_t bottom);
 // Inset stroke of `thickness` logical pixels. One silhouette, same radius as a card.
 void stroke_rounded_rect(uint32_t color, irect16_t r, int radius, int thickness);
 // Same colour with a different alpha (0 transparent .. 255 opaque).

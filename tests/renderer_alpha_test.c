@@ -238,6 +238,58 @@ static void test_gradient_card(void) {
   ASSERT_TRUE(ok);
   PASS();
 }
+static void test_selection_gradient(void) {
+  TEST("Selection gradients interpolate in linear light, preserve alpha and share one silhouette");
+  CGLPixelFormatAttribute attrs[] = {kCGLPFAOpenGLProfile,
+    (CGLPixelFormatAttribute)kCGLOGLPVersion_3_2_Core, 0};
+  CGLPixelFormatObj format = NULL;
+  CGLContextObj context = NULL;
+  GLint count = 0;
+  if (CGLChoosePixelFormat(attrs, &format, &count) != kCGLNoError || !format) { SKIP("Offscreen OpenGL unavailable"); }
+  CGLError error = CGLCreateContext(format, NULL, &context);
+  CGLDestroyPixelFormat(format);
+  if (error != kCGLNoError || !context) { SKIP("Offscreen OpenGL context unavailable"); }
+  CGLSetCurrentContext(context);
+  bool initialized = ui_init_prog(), ok = initialized;
+  uint32_t fbo = 0, texture = 0;
+  int w = 0, h = 0;
+  if (ok) {
+    init_ui_white_texture();
+    extern uint32_t ui_white_texture;
+    ok = R_EnsureWindowTarget(&fbo, &texture, &w, &h, 32, 32);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glViewport(0, 0, 32, 32);
+    glDisable(GL_SCISSOR_TEST);
+    set_projection(0, 0, 32, 32);
+    R_SetFramebufferSRGB(true);
+    glClearColor(0, 0, 0, 0);
+    glClear(GL_COLOR_BUFFER_BIT);
+    render_rounded_rect_gradient(ui_white_texture, R(4, 4, 24, 24), 24, 24, 6,
+                                  0xffffffff, 0xff000000);
+    uint8_t top[4], mid[4], bottom[4], corner[4], outside[4];
+    read_card_pixel(16, 8, top); read_card_pixel(16, 16, mid); read_card_pixel(16, 23, bottom);
+    read_card_pixel(4, 4, corner); read_card_pixel(2, 16, outside);
+    ok &= top[0] > mid[0] && mid[0] > bottom[0] && mid[0] > 170 && mid[0] < 200;
+    ok &= top[3] == 255 && bottom[3] == 255 && corner[3] == 0 && outside[3] == 0;
+    glClear(GL_COLOR_BUFFER_BIT);
+    render_rounded_rect_gradient(ui_white_texture, R(4, 4, 24, 24), 24, 24, 0,
+                                  0x800000ff, 0x8000ff00);
+    read_card_pixel(16, 8, top); read_card_pixel(16, 23, bottom); read_card_pixel(4, 4, corner);
+    ok &= top[0] > bottom[0] && bottom[1] > top[1] && top[3] == 128 && bottom[3] == 128 && corner[3] == 128;
+    glClear(GL_COLOR_BUFFER_BIT);
+    render_rounded_rect(ui_white_texture, R(4, 4, 24, 24), 24, 24, 0, 1, 0xffff0000);
+    read_card_pixel(16, 8, top); read_card_pixel(16, 23, bottom);
+    ok &= top[2] == 255 && memcmp(top, bottom, 4) == 0 && glGetError() == GL_NO_ERROR;
+    R_SetFramebufferSRGB(false);
+    shutdown_white_texture();
+  }
+  R_DestroyWindowTarget(&fbo, &texture, &w, &h);
+  if (initialized) ui_shutdown_prog();
+  CGLSetCurrentContext(NULL);
+  CGLDestroyContext(context);
+  ASSERT_TRUE(ok);
+  PASS();
+}
 static result_t rotated_content_proc(window_t *win, uint32_t msg, uint32_t wp, void *lp) {
   if (msg == evPaint) {
     fill_rect(0xffffffff, wp == WINDOW_PAINT_OVERLAY ? R(2, 2, 3, 3) : R(8, 4, 8, 4));
@@ -504,6 +556,7 @@ int main(void) {
   TEST_START("Renderer alpha");
 #if defined(__APPLE__) && !TARGET_OS_IOS
   test_gradient_card();
+  test_selection_gradient();
   test_image_background();
   test_view_rotation();
   test_fixed_viewport();
