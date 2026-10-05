@@ -31,7 +31,8 @@ result_t win_transport(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       g_app->library = win;
       char strip_path[1024];
       int n = snprintf(strip_path, sizeof(strip_path), "%s/../share/groove/icons/transport.png", ui_get_exe_dir());
-      if (g_ui_runtime.running && n > 0 && (size_t)n < sizeof(strip_path)) send_message(win, tbLoadStrip, TRANSPORT_ATLAS_CELL_SIZE, strip_path);
+      toolbar_atlas_t atlas = {strip_path, TRANSPORT_ATLAS_COLUMNS, ARRAY_LEN(k_transport_atlas_regions), k_transport_atlas_regions};
+      if (g_ui_runtime.running && n > 0 && (size_t)n < sizeof(strip_path)) send_message(win, tbLoadAtlas, 0, &atlas);
       send_message(win, tbSetStyle, TOOLBAR_STYLE_STATE_STRIP | TOOLBAR_STYLE_IMAGE_BUTTONS, NULL);
 #ifdef AX_PLATFORM_IOS
       send_message(win, tbSetButtonSize, BUTTON_HEIGHT + 4, NULL);

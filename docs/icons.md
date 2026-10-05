@@ -41,31 +41,37 @@ color to `draw_icon16` / `draw_toolbar_icon_in_rect`.
 
 ### Offline button atlases
 
-Groove's transport uses a single PNG atlas built from SVG glyphs. Regenerate it
-with `make groove-icons`, or use the reusable tool directly:
+Groove's transport uses the debossed glossy enamel PNG atlas authored with
+ImageGen. The complete set and all five states are authored together. Stage the
+source artwork and regenerate its fixed cell metadata with `make groove-icons`:
 
 ```sh
-make build/bin/svg_atlas_render
 python3 tools/build_button_atlas.py apps/groove/share/icons/transport.json
 ```
 
-The JSON manifest controls glyph order, colour, optional solid glyph fill,
-logical cell size, raster scale, and press offset. SVG paths are relative to
-the manifest. Every glyph uses a 24×24 viewBox. Python uses only the standard
-library; the offline C rasterizer uses the bundled NanoSVG and stb PNG writer.
-The tool assembles and rasterizes the entire atlas together, with rows ordered
-**normal, selected, pressed, hover, disabled**. Every cell has identical bounds;
-only the pressed glyph moves down by 2 logical pixels in the 32-point source
-cell. At the current 28-point toolbar size this is 1.75 points. Faces and hit
-rectangles stay fixed. There is no cropping, resizing by opaque bounds, or
-runtime tint applied to these states.
+The manifest names the authored source, column count, cell size and grid origin.
+The tool validates that all **normal, selected, pressed, hover, disabled** cells
+fit in the source, copies the PNG byte-for-byte, and emits `transport.h` with
+identical 198×198 source bounds for every state. The two-pixel transparent
+remainder at the image edge is outside the cells. It does not recolour, resize,
+reshape or derive any state artwork. Pressed depression and inward glyph bevels
+come directly from the authored artwork; the toolbar adds no further press offset.
+The engine loads the PNG with `tbLoadAtlas`, `TOOLBAR_STYLE_STATE_STRIP`, and
+`TOOLBAR_STYLE_IMAGE_BUTTONS`. Hit rectangles and destination sizes remain fixed.
 
-The generated `transport.h` records the raster cell size, column count, and
-state count alongside `transport.png`; the loader uses that cell size with
-`tbLoadStrip`, `TOOLBAR_STYLE_STATE_STRIP`, and `TOOLBAR_STYLE_IMAGE_BUTTONS`.
-The engine loads the PNG directly. SVG is used only by the offline atlas tool
-for these transport buttons. `--output PATH` writes a preview PNG without
-changing the committed atlas/header.
+The reusable tool also supports SVG manifests: `transport-svg.json` retains the
+original SVG source example. Its glyphs use a 24×24 viewBox, with manifest-defined
+colours, solid fills, raster scale and press offset. This mode assembles the
+complete atlas as one SVG and renders it through the bundled NanoSVG/stb C tool:
+
+```sh
+make build/bin/svg_atlas_render
+python3 tools/build_button_atlas.py apps/groove/share/icons/transport-svg.json --output /tmp/transport-svg-preview.png
+```
+
+Python uses only the standard library. In either mode `--output PATH` writes a
+preview PNG without updating the committed atlas/header. The source concepts and
+ImageGen prompts live in `apps/groove/share/concepts/`.
 
 | Strip | Index enum | Tile size | Source | Loaded by |
 |---|---|---|---|---|
