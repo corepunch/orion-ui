@@ -81,6 +81,7 @@ static int sl_hit_handle(const window_t *win, const slider_state_t *s, int mx, i
 result_t win_slider(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   slider_state_t *s = (slider_state_t *)win->userdata;
   switch (msg) {
+    case evQueryDrag: return DRAG_NOW;
     case evCreate: {
       slider_state_t *ns = allocate_window_data(win, sizeof(slider_state_t));
       if (!ns) {

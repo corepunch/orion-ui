@@ -358,6 +358,9 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       }
       return false;
     }
+    case evQueryDrag: // column edges resize; rows scroll
+      return data && report_hit_column_edge(win, data, get_client_rect(win).w,
+                                            (int16_t)LOWORD(wparam), (int16_t)HIWORD(wparam)) >= 0 ? DRAG_NOW : DRAG_NONE;
     case evLeftButtonDown: {
       // Start column resize drag if on a column edge
       irect16_t cr = get_client_rect(win);

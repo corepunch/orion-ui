@@ -632,6 +632,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       return true;
     }
 
+    case evQueryDrag: return DRAG_NOW; // one finger paints; two fingers pan and zoom
     case evGesture: {
       if (!state || !doc || !lparam) return false;
       const ax_gesture_t *gesture = lparam;

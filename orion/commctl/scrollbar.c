@@ -113,6 +113,7 @@ result_t win_scrollbar(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
   scrollbar_state_t *s = (scrollbar_state_t *)win->userdata;
 
   switch (msg) {
+    case evQueryDrag: return DRAG_NOW;
     case evCreate: {
       scrollbar_state_t *ns = allocate_window_data(win, sizeof(scrollbar_state_t));
       ns->min_val    = 0;

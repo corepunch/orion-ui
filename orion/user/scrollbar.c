@@ -478,8 +478,71 @@ bool scrollbar_handle_builtin_mouse(window_t *win, uint32_t msg, uint32_t wparam
 // Checks whether the timer ID matches a pending overlay-hide timer and, if so,
 // hides the corresponding thumb.  Does NOT consume the event (the window proc
 // may also have timers of its own).
+// ── Touch momentum ────────────────────────────────────────────────────────────
+
+static bool sb_available(window_t *win, win_sb_t *sb, uint32_t flag) {
+  return (win->flags & flag) && sb->visible && sb->enabled && sb->max_val - sb->page > sb->min_val;
+}
+
+bool scrollbar_can_scroll(window_t *win) {
+  return win && (sb_available(win, &win->hscroll, WINDOW_HSCROLL) || sb_available(win, &win->vscroll, WINDOW_VSCROLL));
+}
+
+static bool sb_stop_fling(win_sb_t *sb) {
+  if (!sb->fling_timer_id) return false;
+  axCancelTimer(sb->fling_timer_id);
+  sb->fling_timer_id = 0;
+  sb->fling_velocity = 0;
+  return true;
+}
+
+bool scrollbar_stop_fling(window_t *win) {
+  if (!win) return false;
+  bool h = sb_stop_fling(&win->hscroll), v = sb_stop_fling(&win->vscroll);
+  return h || v;
+}
+
+void scrollbar_fling(window_t *win, float vx, float vy) {
+  if (!win || !isfinite(vx) || !isfinite(vy)) {
+    fprintf(stderr, "[sb] fling rejected win=%u vx=%f vy=%f\n", win ? win->id : 0, vx, vy);
+    fflush(stderr);
+    return;
+  }
+  win_sb_t *axes[] = {&win->hscroll, &win->vscroll};
+  const uint32_t flags[] = {WINDOW_HSCROLL, WINDOW_VSCROLL};
+  const float velocity[] = {vx, vy};
+  for (int axis = 0; axis < 2; axis++) {
+    win_sb_t *sb = axes[axis];
+    sb_stop_fling(sb);
+    if (!sb_available(win, sb, flags[axis]) || fabsf(velocity[axis]) < FLING_MIN_SPEED) continue;
+    sb->fling_velocity = velocity[axis];
+    sb->fling_pos = (float)sb->pos;
+    sb->fling_time = (uint32_t)axGetMilliseconds();
+    sb->fling_timer_id = axSetTimer(win, 16, NULL, true);
+    if (!sb->fling_timer_id) {
+      fprintf(stderr, "[sb] fling timer unavailable win=%u axis=%d\n", win->id, axis);
+      fflush(stderr);
+    }
+  }
+}
+
+static void sb_fling_step(window_t *win, win_sb_t *sb, uint32_t flag, uint32_t scroll_msg) {
+  uint32_t now = (uint32_t)axGetMilliseconds();
+  float dt = (float)MIN(now - sb->fling_time, 50u);
+  sb->fling_time = now;
+  if (!sb_available(win, sb, flag)) { sb_stop_fling(sb); return; }
+  float lo = (float)sb->min_val, hi = (float)(sb->max_val - sb->page);
+  float pos = sb->fling_pos + sb->fling_velocity * dt;
+  sb->fling_pos = CLAMP(pos, lo, hi);
+  sb->fling_velocity *= powf(FLING_DECAY, dt);
+  sb_try_scroll(win, sb, scroll_msg, (int)lroundf(sb->fling_pos));
+  if (sb->fling_pos != pos || fabsf(sb->fling_velocity) < FLING_MIN_SPEED) sb_stop_fling(sb);
+}
+
 void scrollbar_handle_builtin_timer(window_t *win, uint32_t timer_id) {
   if (!timer_id) return;
+  if (win->hscroll.fling_timer_id == timer_id) { sb_fling_step(win, &win->hscroll, WINDOW_HSCROLL, evHScroll); return; }
+  if (win->vscroll.fling_timer_id == timer_id) { sb_fling_step(win, &win->vscroll, WINDOW_VSCROLL, evVScroll); return; }
   if ((win->flags & WINDOW_HSCROLL) && win->hscroll.hide_timer_id == timer_id) {
     sb_overlay_hide(win, &win->hscroll);
     return;
@@ -491,6 +554,7 @@ void scrollbar_handle_builtin_timer(window_t *win, uint32_t timer_id) {
 
 void scrollbar_handle_builtin_wheel(window_t *win, void *lparam) {
   if (!win) return;
+  scrollbar_stop_fling(win);
   // sb_try_scroll already calls sb_overlay_reveal in overlay mode when the
   // position changes, so no additional reveal call is needed here.
   if ((win->flags & WINDOW_HSCROLL) && win->hscroll.visible && win->hscroll.enabled) {
@@ -519,8 +583,9 @@ bool scrollbar_handle_builtin_gesture(window_t *win, const ax_gesture_t *gesture
   bool handled = false;
   for (int axis = 0; axis < 2; axis++) {
     win_sb_t *sb = axes[axis];
-    bool available = (win->flags & flags[axis]) && sb->visible && sb->enabled && sb->max_val - sb->page > sb->min_val;
+    bool available = sb_available(win, sb, flags[axis]);
     if (gesture->phase == AX_GESTURE_BEGIN) {
+      sb_stop_fling(sb);
       sb->gesture_active = available;
       sb->gesture_remainder = 0;
     }

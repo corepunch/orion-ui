@@ -19,6 +19,21 @@
 // Two clicks within this time are considered a double-click
 #define DOUBLE_CLICK_MS         500u
 
+// One-finger touch scrolling: distance in points a finger travels before the
+// press becomes a scroll, and how long a resting finger waits before its
+// press is delivered to the content under it (the content may still be
+// swiped afterwards unless it captured the pointer).
+#define TOUCH_SLOP              8
+#define TOUCH_HOLD_MS           150u
+
+// Touch-and-hold that picks up an item answering DRAG_AFTER_HOLD.
+#define TOUCH_LONG_PRESS_MS     500u
+
+// Momentum after a touch swipe: velocity retained per millisecond, and the
+// speed in points/ms below which the content stops.
+#define FLING_DECAY             0.998f
+#define FLING_MIN_SPEED         0.05f
+
 // ──────────────────────────────────────────────────────────────────────────
 // Window System
 // ──────────────────────────────────────────────────────────────────────────

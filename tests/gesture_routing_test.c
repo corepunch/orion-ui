@@ -125,10 +125,120 @@ static void test_pan_axis_availability(void) {
   PASS();
 }
 
+static int presses, releases, cancels, row_press_y;
+static result_t row_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  switch (msg) {
+    case evCreate: case evPaint: case evDestroy: return true;
+    case evLeftButtonDown: presses++; row_press_y = (int16_t)HIWORD(wparam); return true;
+    case evLeftButtonUp: releases++; return true;
+    case evPointerCancel: cancels++; return true;
+    default: return false;
+  }
+}
+static result_t grab_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  if (msg == evQueryDrag) return DRAG_NOW;
+  return row_proc(win, msg, wparam, lparam);
+}
+static result_t hold_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  if (msg == evQueryDrag) return DRAG_AFTER_HOLD;
+  return row_proc(win, msg, wparam, lparam);
+}
+
+static void dispatch_finger(uint32_t message, int x, int y, uint32_t time) {
+  ui_event_t event = {.message = message, .wParam = MAKEDWORD(x * UI_WINDOW_SCALE, y * UI_WINDOW_SCALE),
+                      .pointer = {.flags = AX_POINTER_TOUCH, .time = time}};
+  dispatch_message(&event);
+}
+
+static void test_touch_pan(void) {
+  TEST("a finger swipe scrolls the content under it; a tap clicks; claimed drags and the stylus do not scroll");
+  test_env_init();
+  set_theme(THEME_CLASSIC);
+  window_t *list = create_window("List", WINDOW_NOTITLE | WINDOW_VSCROLL, MAKERECT(0, 0, 200, 300), NULL, row_proc, 0, NULL);
+  window_t *grab = create_window("Card", WINDOW_NOTITLE, MAKERECT(0, 0, 100, 40), list, grab_proc, 0, NULL);
+  show_window(list, true); show_window(grab, true);
+  set_scroll_content(list, 200, 2000, 0, 0);
+
+  presses = releases = 0;
+  dispatch_finger(kEventLeftButtonDown, 50, 200, 1000);
+  ASSERT_EQUAL(presses, 0);
+  dispatch_finger(kEventLeftButtonDragged, 52, 196, 1010);
+  dispatch_finger(kEventLeftButtonUp, 52, 196, 1020);
+  ASSERT_EQUAL(presses, 1); ASSERT_EQUAL(releases, 1); ASSERT_EQUAL(row_press_y, 200);
+  ASSERT_EQUAL(list->vscroll.pos, 0);
+
+  presses = releases = 0;
+  dispatch_finger(kEventLeftButtonDown, 50, 200, 2000);
+  dispatch_finger(kEventLeftButtonDragged, 50, 180, 2016);
+  dispatch_finger(kEventLeftButtonDragged, 50, 140, 2032);
+  ASSERT_EQUAL(list->vscroll.pos, 60 - TOUCH_SLOP);
+  dispatch_finger(kEventLeftButtonUp, 50, 140, 2300);
+  ASSERT_EQUAL(presses, 0); ASSERT_EQUAL(releases, 0);
+  ASSERT_EQUAL(list->vscroll.fling_timer_id, 0u);
+
+  dispatch_finger(kEventLeftButtonDown, 50, 200, 3000);
+  ASSERT_EQUAL(presses, 0);
+  dispatch_finger(kEventLeftButtonDragged, 50, 150, 3016);
+  dispatch_finger(kEventLeftButtonDragged, 50, 100, 3032);
+  dispatch_finger(kEventLeftButtonUp, 50, 100, 3040);
+  ASSERT_EQUAL(presses, 0);
+  ASSERT_TRUE(list->vscroll.fling_timer_id != 0);
+  dispatch_finger(kEventLeftButtonDown, 50, 200, 3100);
+  ASSERT_EQUAL(list->vscroll.fling_timer_id, 0u);
+  dispatch_finger(kEventLeftButtonUp, 50, 200, 3110);
+  ASSERT_EQUAL(presses, 0);
+
+  int pos = list->vscroll.pos;
+  dispatch_finger(kEventLeftButtonDown, 20, 20, 4000);
+  ASSERT_EQUAL(presses, 1);
+  dispatch_finger(kEventLeftButtonDragged, 20, 80, 4016);
+  dispatch_finger(kEventLeftButtonUp, 20, 80, 4032);
+  ASSERT_EQUAL(list->vscroll.pos, pos);
+
+  window_t *item = create_window("Item", WINDOW_NOTITLE, MAKERECT(0, 100, 100, 40), list, hold_proc, 0, NULL);
+  show_window(item, true);
+  list->vscroll.pos = 0;
+  presses = 0;
+  dispatch_finger(kEventLeftButtonDown, 20, 110, 5000);
+  dispatch_finger(kEventLeftButtonDragged, 20, 60, 5016);
+  dispatch_finger(kEventLeftButtonUp, 20, 60, 5300);
+  ASSERT_EQUAL(presses, 0); ASSERT_EQUAL(list->vscroll.pos, 50 - TOUCH_SLOP);
+  list->vscroll.pos = 0;
+  // Tests run no platform loop; timer ids are sequential, so post the hold timer by hand.
+  uint32_t hold = axSetTimer(list, 100000, NULL, false) + 1;
+  axCancelTimer(hold - 1);
+  dispatch_finger(kEventLeftButtonDown, 20, 110, 6000);
+  ASSERT_EQUAL(presses, 0);
+  ui_event_t fire = {.target = list, .message = kEventTimer, .wParam = hold};
+  dispatch_message(&fire);
+  ASSERT_EQUAL(presses, 1);
+  dispatch_finger(kEventLeftButtonDragged, 20, 60, 6516);
+  ASSERT_EQUAL(list->vscroll.pos, 0);
+  dispatch_finger(kEventLeftButtonUp, 20, 60, 6532);
+  ASSERT_EQUAL(releases, 2);
+  // A busy main thread can queue the hold timer behind the next sample; its timestamp decides.
+  presses = 0;
+  dispatch_finger(kEventLeftButtonDown, 20, 110, 7000);
+  dispatch_finger(kEventLeftButtonDragged, 20, 60, 7000 + TOUCH_LONG_PRESS_MS);
+  ASSERT_EQUAL(presses, 1); ASSERT_EQUAL(list->vscroll.pos, 0);
+  dispatch_finger(kEventLeftButtonUp, 20, 60, 7600);
+
+  presses = 0;
+  ui_event_t pen = {.message = kEventLeftButtonDown, .wParam = MAKEDWORD(50 * UI_WINDOW_SCALE, 200 * UI_WINDOW_SCALE),
+                    .pointer = {.flags = AX_POINTER_STYLUS}};
+  dispatch_message(&pen);
+  ASSERT_EQUAL(presses, 1);
+  pen.message = kEventLeftButtonUp;
+  dispatch_message(&pen);
+  test_env_shutdown();
+  PASS();
+}
+
 int main(void) {
   TEST_START("Gesture routing");
   test_nested_gesture();
   test_builtin_pan();
   test_pan_axis_availability();
+  test_touch_pan();
   TEST_END();
 }

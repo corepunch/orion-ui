@@ -268,6 +268,11 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       return true;
     }
 
+    case evQueryDrag: { // clips drag; a swipe over empty lanes scrolls
+      int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam);
+      if (my < RULER_H || mx - hpos(win) < HDR_W) return false;
+      return song_clip_at(&g_app->song, (my - RULER_H) / row_h(win), position_at(mx - HDR_W)) >= 0 ? DRAG_NOW : DRAG_NONE;
+    }
     case evLeftButtonDown: {
       int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam), cx = mx - hpos(win);
       if (my < RULER_H) { if (cx >= HDR_W) app_seek_position(floordiv(mx - HDR_W, SNAP_W) * GR_SNAP_TICKS); return true; }

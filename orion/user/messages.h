@@ -93,8 +93,20 @@ enum {
   // this to populate themselves; other recipients ignore it.
   // wparam = 0; lparam = database_t *.
   evSetDatabase,
+  // Sent before a finger press over scrollable content is delivered, to the
+  // window under the finger and then each ancestor up to the scrollable one.
+  // wparam = MAKEDWORD(x, y) in content space (as evLeftButtonDown).
+  // Return DRAG_NOW when a drag starting there belongs to the window (drawing,
+  // sliders): it gets the press at once and the content does not scroll.
+  // Return DRAG_AFTER_HOLD for items that are picked up by touch-and-hold
+  // (drag-and-drop out of a list): a swipe scrolls, a tap clicks, and holding
+  // for TOUCH_LONG_PRESS_MS delivers the press and hands the drag over.
+  // Return DRAG_NONE (false) to let a swipe scroll and a tap click.
+  evQueryDrag,
   evUser = 1000
 };
+
+enum { DRAG_NONE, DRAG_NOW, DRAG_AFTER_HOLD };
 
 // Compatibility alias: callers that use evLayout map to evArrange.
 #define evLayout evArrange
