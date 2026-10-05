@@ -1,5 +1,5 @@
 // VIEW: the sidebar tabview pages are sound bins. Each holds one instrument's
-// family (or all of them), filtered by the search text. Each card is a child
+// family (or all of them), filtered by the search text and the genre. Each card is a child
 // window. Pressing it auditions the block; dragging carries a copy of that
 // window with window_set_drag_copy, so the card stays in the bin.
 
@@ -20,8 +20,10 @@ bool block_matches(int id, const char *query) {
   const block_t *b = block_get(id);
   if (!b) return false;
   if (!query || !query[0]) return true;
-  const char *hay[] = { b->name, kCategoryName[b->cat] };
-  for (int h = 0; h < 2; h++)
+  const char *hay[2 + GENRE_COUNT] = { b->name, kCategoryName[b->cat] };
+  int count = 2;
+  for (int g = 0; g < GENRE_COUNT; g++) if (b->genres & (1 << g)) hay[count++] = kGenreName[g];
+  for (int h = 0; h < count; h++)
     for (const char *p = hay[h]; *p; p++) {
       int k = 0;
       while (query[k] && p[k] && tolower((unsigned char)p[k]) == tolower((unsigned char)query[k])) k++;
@@ -30,11 +32,11 @@ bool block_matches(int id, const char *query) {
   return false;
 }
 
-// Shows the cards that match the search, hides the rest.
+// Shows the cards that pass the search text and the genre filter, hides the rest.
 static int apply_filter(window_t *win, bin_t *st) {
   int i = 0, shown = 0;
   for (window_t *c = win->children; c && i < st->count; c = c->next, i++) {
-    bool match = block_matches(st->ids[i], g_app->search);
+    bool match = block_visible(st->ids[i]);
     if (match != window_has_state(c, WINDOW_STATE_VISIBLE)) show_window(c, match);
     shown += match;
   }
@@ -86,9 +88,10 @@ result_t win_bin(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       layout_tiles(win, st);
       irect16_t cr = get_client_rect(win);
       fill_rect(get_sys_color(brControlBg), cr);
-      if (g_app->search[0] && !apply_filter(win, st)) {
+      if ((g_app->search[0] || g_app->genre) && !apply_filter(win, st)) {
         char msg[96];
-        snprintf(msg, sizeof(msg), "No sounds match \"%s\"", g_app->search);
+        if (g_app->search[0]) snprintf(msg, sizeof(msg), "No sounds match \"%s\"", g_app->search);
+        else snprintf(msg, sizeof(msg), "No sounds in this genre");
         draw_text(FONT_SYSTEM, msg, TILE_PAD + 4, TILE_PAD + 4, get_sys_color(brTextSecondary));
       }
       return false;

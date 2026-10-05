@@ -54,6 +54,12 @@ result_t main_win_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
     case evResize: return false;
     case evTimer:
       if (app->song.playing) invalidate_window(app->sheet);
+      app->peak_credit = GR_PEAKS_PER_TICK;
+      if (app->peaks_pending) {
+        app->peaks_pending = false;
+        if (app->library) invalidate_window(app->library);
+        invalidate_window(app->sheet);
+      }
       return true;
     case tbButtonClick:
       app_command((uint16_t)wparam);

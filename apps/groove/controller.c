@@ -30,8 +30,10 @@ static int find_block(const char *name) {
 
 static void seed(song_t *s, const char *name, int track, int bar, int count) {
   int b = find_block(name);
-  if (b < 0) return;
+  if (b < 0 || !app_block_audio(b)) return;
+  app_lock();
   for (int i = 0; i < count; i++) song_add_clip(s, b, track, (bar + i * block_get(b)->bars) * GR_TICKS_BAR);
+  app_unlock();
 }
 
 static void seed_demo(song_t *s) {
@@ -44,30 +46,79 @@ static void seed_demo(song_t *s) {
   seed(s, "Pluck Arp", 6, 4, 4);
 }
 
+static bool block_in_song(int id) {
+  for (int i = 0; i < g_app->song.nclips; i++) if (g_app->song.clips[i].block == id) return true;
+  return false;
+}
+
+bool app_block_audio(int id) {
+  const block_t *b = block_get(id);
+  int bpm = g_app->song.bpm;
+  block_pcm_t pcm;
+  if (!b) { fprintf(stderr, "[gr] block audio rejected block=%d count=%d\n", id, blocks_count()); fflush(stderr); return false; }
+  if (b->audio.pcm && b->audio_bpm == bpm) return true;
+  if (!block_render(id, bpm, &pcm)) return false;
+  app_lock();
+  block_install(id, bpm, &pcm);
+  app_unlock();
+  free(pcm.pcm);
+  return true;
+}
+
+bool app_block_peaks(int id) {
+  const block_t *b = block_get(id);
+  int bpm = g_app->song.bpm;
+  block_pcm_t pcm;
+  if (!b) { fprintf(stderr, "[gr] block peaks rejected block=%d count=%d\n", id, blocks_count()); fflush(stderr); return false; }
+  if (b->audio_bpm == bpm && b->audio.npeaks) return true;
+  if (g_app->peak_credit <= 0) { g_app->peaks_pending = true; return false; }
+  g_app->peak_credit--;
+  if (!block_render(id, bpm, &pcm)) return false;
+  free(pcm.pcm); // only the overview is needed; the audio is rendered again if the block is used
+  pcm.pcm = NULL;
+  pcm.frames = 0;
+  app_lock();
+  block_install(id, bpm, &pcm);
+  app_unlock();
+  free(pcm.pcm);
+  return true;
+}
+
+// Detaches every loaded buffer under the lock and frees them after it.
+static void release_all_audio(void) {
+  float **stale = calloc((size_t)blocks_count(), sizeof(*stale));
+  if (!stale) { fprintf(stderr, "[gr] release allocation failed count=%d\n", blocks_count()); fflush(stderr); return; }
+  app_lock();
+  g_app->song.preview_block = -1;
+  for (int i = 0; i < blocks_count(); i++) stale[i] = block_release(i);
+  app_unlock();
+  for (int i = 0; i < blocks_count(); i++) free(stale[i]);
+  free(stale);
+  g_app->auditioned = -1;
+}
+
 void app_new_song(void) {
   app_lock();
   g_app->song.nclips = 0;
   g_app->song.pos = 0;
   g_app->selected_clip = -1;
   app_unlock();
+  release_all_audio();
   invalidate_window(g_app->sheet);
 }
 
 void app_load_demo(void) {
-  app_lock();
   seed_demo(&g_app->song);
-  app_unlock();
 }
 
 groove_t *app_init(void) {
   groove_t *app = calloc(1, sizeof(*app));
-  block_pcm_t pcm[GR_MAX_BLOCKS];
   if (!app) { fprintf(stderr, "[gr] app_init: allocation failed\n"); fflush(stderr); return NULL; }
   song_init(&app->song);
   app->selected_clip = -1;
   app->drag.track = -1;
-  blocks_render(app->song.bpm, pcm);
-  blocks_swap(pcm);
+  app->auditioned = -1;
+  app->peak_credit = GR_PEAKS_PER_TICK;
   if (axAudioInit()) {
     AXaudiospec want = { GR_SAMPLE_RATE, AX_AUDIO_S16, 2, 1024, audio_cb, app }, got;
     app->audio_dev = axAudioOpen(&want, &got);
@@ -104,32 +155,79 @@ void app_seek_position(int position) {
   invalidate_window(g_app->sheet);
 }
 
+// The blocks the song plays are re-rendered before the lock is taken and
+// swapped in with the tempo. Everything else is dropped and renders again
+// when it is next shown or used.
 void app_set_bpm(int bpm) {
   song_t *s = &g_app->song;
-  block_pcm_t pcm[GR_MAX_BLOCKS];
+  int ids[GR_MAX_CLIPS], n = 0;
   bpm = CLAMP(bpm, GR_BPM_MIN, GR_BPM_MAX);
   if (bpm == s->bpm) return;
-  blocks_render(bpm, pcm);
+  for (int i = 0; i < s->nclips; i++) {
+    int k = 0;
+    while (k < n && ids[k] != s->clips[i].block) k++;
+    if (k == n) ids[n++] = s->clips[i].block;
+  }
+  block_pcm_t *pcm = calloc((size_t)MAX(n, 1), sizeof(*pcm));
+  float **stale = calloc((size_t)blocks_count(), sizeof(*stale));
+  if (!pcm || !stale) {
+    fprintf(stderr, "[gr] tempo change allocation failed bpm=%d blocks=%d\n", bpm, n);
+    fflush(stderr);
+    free(pcm); free(stale);
+    return;
+  }
+  for (int i = 0; i < n; i++) block_render(ids[i], bpm, &pcm[i]);
   app_lock();
   s->pos = s->pos * bar_frames_for_bpm(bpm) / bar_frames_for_bpm(s->bpm);
   s->bpm = bpm;
   s->preview_block = -1;
-  blocks_swap(pcm);
+  for (int i = 0; i < blocks_count(); i++) stale[i] = block_release(i);
+  for (int i = 0; i < n; i++) block_install(ids[i], bpm, &pcm[i]);
   app_unlock();
-  for (int i = 0; i < GR_MAX_BLOCKS; i++) free(pcm[i].pcm);
+  for (int i = 0; i < blocks_count(); i++) free(stale[i]);
+  free(stale);
+  free(pcm);
+  g_app->auditioned = -1;
   invalidate_window(g_app->sheet);
+  if (g_app->library) invalidate_window(g_app->library);
 }
 
 void app_preview(int block) {
+  int old = g_app->auditioned;
+  float *stale = NULL;
+  if (!app_block_audio(block)) return;
   app_lock();
   g_app->song.preview_block = block;
   g_app->song.preview_pos = 0;
+  if (old >= 0 && old != block && !block_in_song(old)) stale = block_release(old);
   app_unlock();
+  free(stale);
+  g_app->auditioned = block;
+}
+
+static void library_refilter(void) {
+  if (g_app->tabs) for (window_t *page = g_app->tabs->children; page; page = page->next) send_message(page, binFilter, 0, NULL);
 }
 
 void app_set_search(const char *text) {
   snprintf(g_app->search, sizeof(g_app->search), "%s", text ? text : "");
-  if (g_app->tabs) for (window_t *page = g_app->tabs->children; page; page = page->next) send_message(page, binFilter, 0, NULL);
+  library_refilter();
+}
+
+void app_set_genre(uint8_t genre) {
+  if (genre & (genre - 1) || genre & ~GENRE_ANY) {
+    fprintf(stderr, "[gr] genre filter rejected value=0x%x\n", genre);
+    fflush(stderr);
+    return;
+  }
+  if (genre == g_app->genre) return;
+  g_app->genre = genre;
+  library_refilter();
+}
+
+bool block_visible(int id) {
+  const block_t *b = block_get(id);
+  return b && (!g_app->genre || (b->genres & g_app->genre)) && block_matches(id, g_app->search);
 }
 
 void app_select_clip(int idx) {
@@ -139,11 +237,11 @@ void app_select_clip(int idx) {
 
 bool app_drop(const drag_t *d) {
   song_t *s = &g_app->song;
-  bool ok = false;
+  bool ok = false, audio = d->from_clip < 0 && app_block_audio(d->block); // render before taking the lock
   app_lock();
   if (d->from_clip >= 0 && d->from_clip < s->nclips) {
     if ((ok = song_move_clip(s, d->from_clip, d->track, d->position))) g_app->selected_clip = d->from_clip;
-  } else if (d->from_clip < 0) {
+  } else if (d->from_clip < 0 && audio) {
     int idx = song_add_clip(s, d->block, d->track, d->position);
     if ((ok = idx >= 0)) g_app->selected_clip = idx;
   }
