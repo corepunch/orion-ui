@@ -41,5 +41,8 @@ typedef struct {
 // Returned dimensions are logical pixels; texture resolution follows display density.
 // Returns false if the icon cannot be found in any registered icons directory.
 bool sysicon_resolve(const char *name, sysicon_resolved_t *out);
+// Rasterize at the final logical draw size to avoid filtering a canonical 24px mask down.
+// Separate sizes coexist in the cache; display-density changes refresh each entry.
+bool sysicon_resolve_size(const char *name, int size, sysicon_resolved_t *out);
 
 #endif

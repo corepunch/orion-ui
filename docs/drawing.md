@@ -246,9 +246,11 @@ Scener's reel renderer (`apps/scener/reel_draw.c`) is the reference user.
 ### Procedural plastic surfaces
 
 `draw_plastic_button(rect, state, color, icon)` draws a tinted plastic button and
-recessed white SVG glyph in one shader pass. `color` is packed `0xAABBGGRR`; zero
-uses `brAccent`. Icon names use the existing SVG cache. The shader adds a smooth
-vertical gradient, directional bevel, inset glyph shadow and a small drop shadow.
+solid white SVG glyph in one shader pass. `color` is packed `0xAABBGGRR`; zero
+uses `brAccent`. Icon names use the SVG cache at their final draw size, avoiding a second scaling
+of the glyph mask. Glyph placement and press offsets snap to device pixels, and
+the glyph has no emboss, highlight halo or inner shadow. The shader adds a smooth
+vertical gradient, directional button bevel and a small drop shadow.
 Normal, hover, selected, pressed and disabled states share the same allocated
 rectangle. Disabled takes precedence over interaction flags.
 

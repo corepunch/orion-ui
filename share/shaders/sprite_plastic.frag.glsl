@@ -66,14 +66,12 @@ void main() {
   rgb = mix(rgb, vec3(0.93), ring * selected * 0.9);
 
   if (glyph_box.z > 0.0 && glyph_box.w > 0.0) {
-    vec2 gp = tex * size - vec2(0.0, pressed * min(0.6, margin * 0.3));
+    vec2 pixel = max(fwidth(tex * size), vec2(0.001));
+    vec2 origin = floor(glyph_box.xy / pixel + 0.5) * pixel;
+    float press_offset = floor(min(0.6, margin * 0.3) / pixel.y + 0.5) * pixel.y;
+    vec2 gp = tex * size + glyph_box.xy - origin - vec2(0.0, pressed * press_offset);
     float mask = glyph_mask(gp);
-    float lower = glyph_mask(gp - vec2(0.0, 0.7));
-    float highlight = max(0.0, lower - mask);
-    rgb = mix(rgb, vec3(1.0), highlight * (0.42 - disabled * 0.25));
     vec3 white = vec3(mix(0.90, 0.52, disabled));
-    float inner_shadow = max(0.0, mask - lower);
-    white *= 1.0 - 0.58 * inner_shadow;
     rgb = mix(rgb, white, mask);
   }
   float a = face * tint.a * col.a;
