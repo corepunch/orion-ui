@@ -415,7 +415,10 @@ static void test_edit_leading_icon(void) {
   icon[0] = '\0';
   send_message(ed, edSetPlaceholder, 0, "Find...");
   send_message(ed, evMeasure, 0, &after);
-  int inset = MIN(20, MAX(0, ed->frame.h - 4)) + TEXTEDIT_PADDING_HORZ;
+  // The icon sits in the capsule end (same inset as top/bottom), then a 6 px gap.
+  int size = MIN(20, MAX(0, ed->frame.h - 4)), text_x = (ed->frame.h - size) / 2 + size + 6;
+  int inset = text_x - TEXTEDIT_PADDING_HORZ;
+  ASSERT(text_x < TEXTEDIT_PADDING_HORZ + size + TEXTEDIT_PADDING_HORZ, "the icon padding is tighter than plain text padding on both sides");
   ASSERT_EQUAL(after.desired_w, before.desired_w + inset);
   ASSERT_TRUE(g_ui_runtime.focused == ed);
   ASSERT_EQUAL(ed->cursor_pos, 2);

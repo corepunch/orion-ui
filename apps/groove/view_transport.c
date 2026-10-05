@@ -45,16 +45,21 @@ result_t win_transport(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       for (int i = 0; i < ARRAY_LEN(colors); i++) send_message(win, tbSetItemColor, colors[i].id, (void *)&colors[i].color);
       window_t *search = get_window_item(win, ID_SEARCH);
       if (search) send_message(search, edSetPlaceholder, 0, "Search sounds...");
-      g_app->tabs = create_window("Sounds", WINDOW_NOTITLE | WINDOW_NOFILL,
+      g_app->tabs = create_window("Sounds", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOACTIVATE,
                                   MAKERECT(0, 0, 1, 1), win, win_tabview, win->hinstance, NULL);
       g_app->tabs->id = ID_TABS;
       send_message(g_app->tabs, tcSetStyle, TAB_STYLE_SIDEBAR, NULL);
-      for (int i = 0; i <= CAT_COUNT; i++) {
-        int category = i == 0 ? CAT_ALL : i - 1;
-        create_window(category == CAT_ALL ? "All" : kCategoryName[category], WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL,
+#ifdef GR_ALL_TAB
+      create_window("All", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL,
+                    MAKERECT(0, 0, 1, 1), g_app->tabs, win_bin, win->hinstance, (void *)(intptr_t)CAT_ALL);
+#endif
+      for (int category = 0; category < CAT_COUNT; category++)
+        create_window(kCategoryName[category], WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL,
                       MAKERECT(0, 0, 1, 1), g_app->tabs, win_bin, win->hinstance, (void *)(intptr_t)category);
-      }
       dock_window(g_app->tabs, DOCK_FILL, 0, DOCK_NOFLOAT, 0, 0);
+      g_app->results = create_window("Results", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL | WINDOW_NOACTIVATE | WINDOW_HIDDEN,
+                                     MAKERECT(0, 0, 1, 1), win, win_bin, win->hinstance, (void *)(intptr_t)CAT_SEARCH);
+      if (g_app->results) dock_window(g_app->results, DOCK_FILL, 0, DOCK_NOFLOAT, 0, 0);
       transport_refresh();
       return true;
     }

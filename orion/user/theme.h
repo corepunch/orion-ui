@@ -134,6 +134,7 @@ typedef enum {
   THEME_PART_TOOLBAR_SEPARATOR,
   THEME_PART_TOOLBAR_GRIP,
   THEME_PART_PANEL,
+  THEME_PART_SIDEBAR,         // source-list column beside content (TabView sidebar style)
   THEME_PART_PANEL_BORDER,
   THEME_PART_WINDOW_BORDER,
   THEME_PART_RESIZE_GRIP,

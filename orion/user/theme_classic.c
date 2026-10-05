@@ -211,6 +211,10 @@ static void classic_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state
       }
       break;
     case THEME_PART_PANEL:               classic_draw_panel_bg(r); break;
+    case THEME_PART_SIDEBAR:
+      fill_rect(get_sys_color(brPanelDark), r);
+      fill_rect(get_sys_color(brDarkEdge), rect_split_right(r, 1));
+      break;
     case THEME_PART_TITLEBAR:            classic_draw_titlebar_bg(r, state & CTRL_FOCUSED); break;
     case THEME_PART_WINDOW_CLOSE:        draw_theme_icon_in_rect(THEME_ICON_CLOSE, r, foreground); break;
     case THEME_PART_STATUSBAR:           classic_draw_statusbar_bg(r); break;

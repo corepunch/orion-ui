@@ -21,8 +21,7 @@ static bool card_on_screen(const window_t *win) {
 }
 
 static void paint_block_card(int block, const block_t *b, irect16_t r, int visible_width, uint32_t color, ctrl_state_t state) {
-  r = rect_trim_bottom(rect_trim_top(rect_inset(r, 1), 1), 1);
-  draw_plastic_card(r, state, color);
+  draw_plastic_card(r, state, color); // its shadow margin is the only gap between neighbouring cards
   r = rect_inset(r, MIN(2, get_theme()->plastic_shadow_size) + get_theme()->card_ring_width);
   int radius = MAX(0, get_theme()->card_corner_radius - get_theme()->card_ring_width);
   irect16_t wave = r;

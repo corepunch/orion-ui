@@ -69,7 +69,7 @@ ipoint16_t clip_cell_size(window_t *sheet, const block_t *b) {
 }
 
 static irect16_t clip_rect(window_t *win, int track, int position, int bars) {
-  return R(position_x(win, position) + 1, track_y(win, track) + 2, bars * BAR_W - 2, row_h(win) - 4);
+  return R(position_x(win, position), track_y(win, track), bars * BAR_W, row_h(win));
 }
 
 static int child_count(window_t *win) {
