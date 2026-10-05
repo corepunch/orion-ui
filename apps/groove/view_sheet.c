@@ -45,7 +45,8 @@ static irect16_t solo_rect(window_t *win, int t) {
 static void draw_track_toggle(irect16_t r, const char *icon, bool active) {
   ctrl_state_t state = active ? CTRL_SELECTED : CTRL_NORMAL;
   theme_draw(THEME_PART_TOOLBAR_BUTTON, r, state);
-  draw_sysicon(icon, r.x, r.y, r.w, theme_foreground(THEME_PART_TOOLBAR_BUTTON, state));
+  irect16_t glyph = rect_center(r, r.w * 2 / 3, r.h * 2 / 3);
+  draw_sysicon(icon, glyph.x, glyph.y, glyph.w, theme_foreground(THEME_PART_TOOLBAR_BUTTON, state));
 }
 
 static void sync_scroll(window_t *win) {

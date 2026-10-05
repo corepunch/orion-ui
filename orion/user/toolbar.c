@@ -38,8 +38,10 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
   int bsz = (tb->btn_size > 0) ? tb->btn_size : get_theme()->toolbar_button_size;
   int item_h = toolbar_state_item_height(tb);
   int padding = toolbar_effective_padding(parent);
-  int spacing = (tb->style & TOOLBAR_STYLE_COMPACT) ? TOOLBAR_COMPACT_SPACING : TOOLBAR_SPACING;
+  int spacing = (tb->style & TOOLBAR_STYLE_IMAGE_BUTTONS) ? 0 :
+                (tb->style & TOOLBAR_STYLE_COMPACT) ? TOOLBAR_COMPACT_SPACING : TOOLBAR_SPACING;
   bool vertical = tb->orientation == TOOLBAR_VERTICAL;
+  int vertical_spacing = (tb->style & TOOLBAR_STYLE_IMAGE_BUTTONS) ? 0 : TOOLBAR_SPACING;
   int grip_h = (vertical && (tb->style & TOOLBAR_STYLE_GRIP)) ? TOOLBAR_GRIP_HEIGHT : 0;
   int grip_w = (!vertical && (tb->style & TOOLBAR_STYLE_GRIP)) ? TOOLBAR_GRIP_WIDTH : 0;
   int cursor = padding + grip_h;
@@ -103,7 +105,7 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
       if (small) {
         // Half-size cell: two minis + one gap fill a normal button cell, so a
         // 2x2 block takes one normal row (within 1px when bsz is odd).
-        int mini = (bsz - TOOLBAR_SPACING) / 2;
+        int mini = (bsz - vertical_spacing) / 2;
         if (mini < 1) mini = 1;
         int pair = 1;
         if (i + 1 < tb->item_count) {
@@ -114,16 +116,16 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
         }
         if (parent->toolbar_dock == TOOLBAR_DOCK_LEFT && cursor > base_y &&
             cursor + mini + base_y > parent->frame.h) {
-          x += column_w + TOOLBAR_SPACING;
+          x += column_w + vertical_spacing;
           cursor = base_y;
           column_w = 0;
         }
-        column_w = MAX(column_w, pair == 2 ? mini * 2 + TOOLBAR_SPACING : mini);
+        column_w = MAX(column_w, pair == 2 ? mini * 2 + vertical_spacing : mini);
         for (int col = 0; col < pair; col++)
           if (tb->item_rects)
-            tb->item_rects[i + col] = (irect16_t){x + col * (mini + TOOLBAR_SPACING),
+            tb->item_rects[i + col] = (irect16_t){x + col * (mini + vertical_spacing),
                                                   y + cursor - base_y, mini, mini};
-        cursor += mini + TOOLBAR_SPACING;
+        cursor += mini + vertical_spacing;
         i += pair - 1;
         continue;
       }
@@ -133,13 +135,13 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
       }
       if (tb->columns <= 1 && parent->toolbar_dock == TOOLBAR_DOCK_LEFT && cursor > base_y &&
           cursor + h + base_y > parent->frame.h) {
-        x += column_w + TOOLBAR_SPACING;
+        x += column_w + vertical_spacing;
         cursor = base_y;
         column_w = 0;
       }
       column_w = MAX(column_w, w);
       y += cursor - base_y;
-      cursor += h + TOOLBAR_SPACING;
+      cursor += h + vertical_spacing;
     }
     if (tb->item_rects)
       tb->item_rects[i] = (irect16_t){x, y, w, h};
@@ -238,7 +240,9 @@ static void draw_toolbar_icon_in_rect(window_t *win, toolbar_state_t *tb, const 
   bool compact = tb && (tb->style & TOOLBAR_STYLE_COMPACT);
   int w = res.w, h = res.h;
   if (w > 0 && h > 0) {
-    int size = MAX(1, compact ? MIN(TOOLBAR_COMPACT_ICON_SIZE, MIN(r.w, r.h)) : MIN(r.w, r.h) - 4);
+    bool image_body = from_strip && (tb->style & TOOLBAR_STYLE_IMAGE_BUTTONS);
+    int size = MAX(1, image_body ? MIN(r.w, r.h) :
+                      compact ? MIN(TOOLBAR_COMPACT_ICON_SIZE, MIN(r.w, r.h)) : MIN(r.w, r.h) - 4);
     size = MIN(size, MAX(w, h));
     int extent = MAX(w, h);
     w = MAX(1, w * size / extent);
@@ -512,6 +516,7 @@ int toolbar_effective_bsz(window_t const *win) {
 
 int toolbar_effective_padding(window_t const *win) {
   toolbar_state_t *tb = window_toolbar_state((window_t *)win);
+  if (tb && (tb->style & TOOLBAR_STYLE_IMAGE_BUTTONS)) return 0;
   return tb && (tb->style & TOOLBAR_STYLE_COMPACT) ? TOOLBAR_COMPACT_PADDING
                                                 : get_theme()->toolbar_padding;
 }

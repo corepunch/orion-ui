@@ -247,6 +247,9 @@ For strip artwork that includes the complete colored button body, also enable
 `TOOLBAR_STYLE_IMAGE_BUTTONS`. Ordinary strip buttons then use their own silhouette
 instead of a themed background. Active toggles use the pressed row as well;
 named icons and split buttons retain their usual themed backgrounds.
+Image toolbars add no outer padding or inter-item spacing, and strip artwork
+fills its available button bounds without an extra inset, preserving its aspect
+ratio. Artwork supplies its own margins; explicit separators and spacers remain.
 
 For authored state artwork, enable `TOOLBAR_STYLE_STATE_STRIP`: rows are normal,
 selected, pressed, hover, and disabled. The framework samples the authored row directly,
