@@ -14,7 +14,18 @@
 // Helper function (will be moved to ui/user/window.c later)
 extern window_t *get_root_window(window_t *window);
 
-typedef struct { char placeholder[128]; } textedit_t;
+typedef struct { char placeholder[128], leading_icon[64]; } textedit_t;
+
+static irect16_t textedit_icon_rect(window_t *win) {
+  int size = MIN(20, MAX(0, win->frame.h - 4));
+  irect16_t content = rect_trim_left(R(0, 0, win->frame.w, win->frame.h), TEXTEDIT_PADDING_HORZ);
+  return rect_center(rect_split_left(content, size), size, size);
+}
+
+static int textedit_text_x(window_t *win) {
+  const textedit_t *te = win->userdata;
+  return TEXTEDIT_PADDING_HORZ + (te && te->leading_icon[0] ? textedit_icon_rect(win).w + TEXTEDIT_PADDING_HORZ : 0);
+}
 
 static void notify_change(window_t *win) {
   if (win->parent) send_message(win->parent, evCommand, MAKEDWORD(win->id, ednChange), win);
@@ -31,7 +42,7 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       layout_measure_t *m = (layout_measure_t *)lparam;
       if (m) {
         m->desired_w = MAX(TEXTEDIT_MIN_WIDTH,
-                           text_strwidth(FONT_SMALL, win->title) + TEXTEDIT_PADDING_HORZ * 2);
+                           text_strwidth(FONT_SMALL, win->title) + textedit_text_x(win) + TEXTEDIT_PADDING_HORZ);
         m->desired_h = control_predefined_height(win->flags);
       }
       return true;
@@ -44,11 +55,15 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       if (window_has_state(win, WINDOW_STATE_DISABLED)) state |= CTRL_DISABLED;
       theme_draw(THEME_PART_FIELD, local, state);
       int th = text_char_height(FONT_SMALL);
-      int text_x = TEXTEDIT_PADDING_HORZ;
+      int text_x = textedit_text_x(win);
       int text_y = (win->frame.h - th) / 2;
       const textedit_t *te = win->userdata;
+      if (te && te->leading_icon[0]) {
+        irect16_t icon = textedit_icon_rect(win);
+        draw_sysicon(te->leading_icon, icon.x, icon.y, icon.w, get_sys_color(state & CTRL_DISABLED ? brTextDisabled : brTextSecondary));
+      }
       if (!win->title[0] && te && te->placeholder[0])
-        draw_text_ellipsized(FONT_SMALL, te->placeholder, text_x, text_y, local.w - 2 * text_x, get_sys_color(brTextSecondary));
+        draw_text_ellipsized(FONT_SMALL, te->placeholder, text_x, text_y, MAX(0, local.w - text_x - TEXTEDIT_PADDING_HORZ), get_sys_color(brTextSecondary));
       draw_text(FONT_SMALL, win->title, text_x, text_y, get_sys_color(brTextNormal));
       if (g_ui_runtime.focused == win && window_has_state(win, WINDOW_STATE_EDITING)) {
         fill_rect(get_sys_color(brTextNormal),
@@ -77,7 +92,7 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
 #ifdef AX_PLATFORM_IOS
         axSetTextInput(TRUE);
 #endif
-        int text_x = TEXTEDIT_PADDING_HORZ;
+        int text_x = textedit_text_x(win);
         win->cursor_pos = 0;
         for (int i = 0; i <= (int)strlen(win->title); i++) {
           int x1 = text_x + text_strnwidth(FONT_SMALL, win->title, i);
@@ -163,14 +178,16 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       }
       return true;
 
+    case edSetLeadingIcon:
     case edSetPlaceholder: {
       textedit_t *te = win->userdata ? win->userdata : allocate_window_data(win, sizeof(textedit_t));
       if (!te) {
-        fprintf(stderr, "[ed] set_placeholder failed win=%u reason=allocation\n", (unsigned)win->id);
+        fprintf(stderr, "[ed] set decoration failed win=%u msg=%u reason=allocation\n", (unsigned)win->id, msg);
         fflush(stderr);
         return false;
       }
-      snprintf(te->placeholder, sizeof(te->placeholder), "%s", lparam ? (const char *)lparam : "");
+      if (msg == edSetLeadingIcon) snprintf(te->leading_icon, sizeof(te->leading_icon), "%s", lparam ? (const char *)lparam : "");
+      else snprintf(te->placeholder, sizeof(te->placeholder), "%s", lparam ? (const char *)lparam : "");
       invalidate_window(win);
       return true;
     }

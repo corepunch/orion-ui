@@ -195,6 +195,28 @@ The `WINDOW_TOOLBAR` flag tells the framework to render the window as a
 non-client band.  The band height is computed automatically from button size +
 padding + bevels (`TOOLBAR_BAND_HEIGHT` = 28px at default 22px buttons).
 
+A toolbar window can also be an ordinary child of a content window: pass its
+parent to `create_window()` and arrange its frame like other children. Its
+height is `titlebar_height(toolbar)`. This is useful for a transport row above
+a sound library. The child retains the framework's toolbar input routing,
+tooltips, artwork states and embedded controls without reserving a toolbar
+band in the main window.
+
+Use `TOOLBAR_ITEM_TEXTEDIT` for a search field. Its `icon` names an optional
+SVG drawn inside the field before the placeholder and entered text (for
+example, `"search"`). The text edit reserves that space for text and cursor
+placement; standalone fields can use `edSetLeadingIcon` for the same behavior.
+A `TOOLBAR_ITEM_SPACER` with
+`TOOLBAR_ITEM_FLAG_FLEXSPACE` shares the remaining horizontal width with other
+flexible spacers, keeping following items aligned to the right as the toolbar
+resizes. Vertical toolbars retain the spacer's ordinary size.
+
+To change a button's icon without recreating embedded controls, send
+`tbSetItemIcon` with the command ID in `wparam` and an icon name in `lparam`
+(`NULL` clears the icon). The toolbar copies the name and preserves the
+field's text, focus and selection. Use `tbSetActiveButton` for toggle state;
+reserve `tbSetItems` for changes to the item list.
+
 For a WinAPI-style large toolbar with captions below icons, enable the label
 style after setting the items:
 

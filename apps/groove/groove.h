@@ -21,6 +21,8 @@
 
 #define GR_SAMPLE_RATE  44100
 #define GR_BEATS_BAR    4
+#define GR_TICKS_BAR    256
+#define GR_SNAP_TICKS   (GR_TICKS_BAR / 4)
 #define GR_TRACKS       8
 #define GR_SHEET_HEADER_W 32
 #define GR_BARS         32
@@ -54,7 +56,7 @@ typedef struct {
 typedef struct {
   const char *name;
   category_t  cat;
-  int         bars;       // 1, 2 or 4 — always snaps to whole bars
+  int         bars;       // duration: 1, 2 or 4 bars
   block_pcm_t audio;
   uint64_t    audio_revision;
 } block_t;
@@ -75,11 +77,12 @@ void           blocks_free(void);
 int            bar_frames_for_bpm(int bpm);
 
 // ── Song + mixer ─────────────────────────────────────────────────────────
-typedef struct { int block, track, bar; } clip_t;
+typedef struct { int block, track, position; uint64_t order; } clip_t; // position in ticks
 
 typedef struct {
   clip_t   clips[GR_MAX_CLIPS];
   int      nclips;
+  uint64_t clip_order;    // latest drop wins when starts coincide
   bool     mute[GR_TRACKS], solo[GR_TRACKS];
   int      bpm;
   int64_t  pos;           // playhead, in frames
@@ -89,10 +92,13 @@ typedef struct {
 } song_t;
 
 void song_init(song_t *s);
-int  song_length_bars(const song_t *s);
-int  song_clip_at(const song_t *s, int track, int bar);          // clip index or -1
-bool song_can_place(const song_t *s, int track, int bar, int bars, int ignore_clip);
-int  song_add_clip(song_t *s, int block, int track, int bar);    // clip index or -1
+int  song_length_ticks(const song_t *s);
+int  song_clip_end(const song_t *s, int idx); // effective endpoint; source duration stays intact
+int  song_clip_at(const song_t *s, int track, int position);    // clip index or -1
+bool song_can_place(const song_t *s, int track, int position, int ticks, int ignore_clip);
+int  song_add_clip(song_t *s, int block, int track, int position); // clip index or -1
+bool song_move_clip(song_t *s, int idx, int track, int position);
+int64_t position_frames_for_bpm(int position, int bpm);
 void song_remove_clip(song_t *s, int idx);
 // Mixes `frames` stereo float frames into lr[] (interleaved) and advances the transport.
 void song_render(song_t *s, float *lr, int frames);
@@ -103,8 +109,8 @@ typedef struct {
   int  block;       // block being dragged
   int  from_clip;   // clip being moved, or -1 for a fresh block from the bin
   ipoint16_t grab;  // exact cursor offset within the dragged card
-  int  track, bar;  // current snapped target; track -1 = outside the sheet
-  bool valid;       // target is free
+  int  track, position; // snapped target in ticks; track -1 = outside the sheet
+  bool valid;       // target is within song bounds
 } drag_t;
 
 typedef enum { GR_DROP_ANCHOR_SAMPLE, GR_DROP_ANCHOR_POINTER } groove_drop_anchor_t;
@@ -138,7 +144,7 @@ enum {
   shDragOver = evUser + 5000, // wparam = MAKEDWORD(screen_x, screen_y)
   shDrop,                     // wparam = MAKEDWORD(screen_x, screen_y)
   shDragEnd,                  // clear drag preview
-  shSeekBar,                  // wparam = bar
+  shSeekPosition,             // wparam = position in ticks
   shSetDropAnchor,             // wparam = groove_drop_anchor_t; default = sample origin
   binFilter,                  // re-apply g_app->search to a bin page
   grCardSetBlock,              // wparam = block id
@@ -168,12 +174,11 @@ void      app_lock(void);
 void      app_unlock(void);
 void      app_command(uint16_t id);
 void      app_set_playing(bool playing);
-void      app_seek_bar(int bar);
+void      app_seek_position(int position);
 void      app_set_bpm(int bpm);
 void      app_preview(int block);
 void      app_select_clip(int idx);
 bool      app_drop(const drag_t *d);          // commits a drag (add or move)
-void      app_update_status(void);
 void      app_set_search(const char *text);
 bool      block_matches(int id, const char *query);
 
@@ -182,8 +187,8 @@ extern result_t main_win_proc(window_t *win, uint32_t msg, uint32_t wparam, void
 extern result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 extern result_t win_bin(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 extern result_t win_block_card(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
-extern result_t win_library(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
-void toolbar_refresh(window_t *win);
+extern result_t win_transport(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+void transport_refresh(void);
 ipoint16_t clip_cell_size(window_t *sheet, const block_t *b);
 void clip_skin_load(groove_t *app);
 // Shared logical-pixel alpha masks; audio revision and geometry determine reuse.

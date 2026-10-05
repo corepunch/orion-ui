@@ -146,6 +146,22 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
     if (!vertical) x += w + spacing;
   }
 
+  if (!vertical && tb->item_rects) {
+    int flex_count = 0, offset = 0;
+    for (int i = 0; i < tb->item_count; i++)
+      if (tb->items[i].type == TOOLBAR_ITEM_SPACER && (tb->items[i].flags & TOOLBAR_ITEM_FLAG_FLEXSPACE)) flex_count++;
+    int extra = MAX(0, parent->frame.w - padding - (x - spacing));
+    for (int i = 0; i < tb->item_count; i++) {
+      tb->item_rects[i].x += offset;
+      if (tb->items[i].type != TOOLBAR_ITEM_SPACER || !(tb->items[i].flags & TOOLBAR_ITEM_FLAG_FLEXSPACE)) continue;
+      int share = extra / flex_count;
+      tb->item_rects[i].w += share;
+      offset += share;
+      extra -= share;
+      flex_count--;
+    }
+  }
+
   if (vertical && tb->columns > 1) {
     int cell_w = bsz;
     for (int i = 0; i < tb->item_count; i++)
@@ -557,6 +573,32 @@ void toolbar_draw_non_client(window_t *win) {
 
 bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
+    case evResize: {
+      toolbar_state_t *tb = toolbar_get_state(win);
+      if (tb && tb->items) compute_toolbar_item_rects(win, tb);
+      return true;
+    }
+    case tbSetItemIcon: {
+      toolbar_state_t *tb = toolbar_get_state(win);
+      const char *icon = lparam;
+      for (int i = 0; tb && tb->items && tb->item_icons && i < tb->item_count; i++) {
+        if ((uint32_t)tb->items[i].ident != wparam) continue;
+        char name[sizeof(tb->item_icons[i])];
+        snprintf(name, sizeof(name), "%s", icon ? icon : "");
+        if (strcmp(name, tb->item_icons[i]) == 0) return true;
+        memcpy(tb->item_icons[i], name, strlen(name) + 1);
+        tb->items[i].icon = name[0] ? tb->item_icons[i] : NULL;
+        if (tb->items[i].type == TOOLBAR_ITEM_TEXTEDIT) {
+          for (window_t *tc = tb->children; tc; tc = tc->next)
+            if (tc->id == wparam) send_message(tc, edSetLeadingIcon, 0, (void *)tb->items[i].icon);
+        }
+        invalidate_window(win);
+        return true;
+      }
+      fprintf(stderr, "[tb] set icon rejected win=%u ident=%u: item unavailable\n", win->id, wparam);
+      fflush(stderr);
+      return false;
+    }
     case tbSetItems: {
       toolbar_state_t *tb = toolbar_ensure_state(win);
       if (!tb) return true;
@@ -637,10 +679,16 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
                                        WINDOW_NOTITLE | WINDOW_NOFILL |
                                        ((item->type == TOOLBAR_ITEM_SLIDER && tb->orientation == TOOLBAR_VERTICAL) ? SLIDER_VERTICAL : 0),
                                        &rf, win, cls, win->hinstance, NULL);
-          if (!tc) continue;
+          if (!tc) {
+            fprintf(stderr, "[tb] embedded control allocation failed win=%u ident=%d class=%s\n", win->id, item->ident, cls);
+            fflush(stderr);
+            continue;
+          }
 
           tc->id = (uint32_t)item->ident;
           tc->frame = r;
+          if (item->type == TOOLBAR_ITEM_TEXTEDIT && item->icon)
+            send_message(tc, edSetLeadingIcon, 0, (void *)item->icon);
 
           window_t *prev = NULL;
           window_t *c = win->children;

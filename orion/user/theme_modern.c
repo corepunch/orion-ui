@@ -21,7 +21,6 @@
 // Radius constants (logical pixels).
 #define RADIUS_TOOLBAR_ITEM  4
 #define RADIUS_BUTTON        ((BUTTON_HEIGHT + 1) / 2)
-#define RADIUS_FIELD         12
 #define RADIUS_MENU_ITEM     6
 #define RADIUS_TAB           6
 
@@ -160,7 +159,7 @@ static uint32_t modern_surface_midpoint(uint32_t a, uint32_t b) {
 
 static void modern_draw_field_bg(irect16_t r, ctrl_state_t state) {
   bool focused = (state & CTRL_FOCUSED) && !(state & CTRL_DISABLED);
-  int radius = MIN(RADIUS_FIELD, MIN(r.w, r.h) / 2);
+  int radius = (MIN(r.w, r.h) + 1) / 2;
   uint32_t border, fill;
   if (modern_navy()) {
     border = focused ? get_sys_color(brAccent) : get_sys_color(brLightEdge);

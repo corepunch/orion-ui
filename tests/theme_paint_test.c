@@ -362,10 +362,29 @@ static void test_button_capsules(void) {
   PASS();
 }
 
+static void test_field_capsules(void) {
+  TEST("Modern fields keep fully rounded ends at desktop and touch toolbar heights");
+  const int heights[] = {34, 40};
+  const theme_style_t styles[] = {THEME_MODERN, THEME_LIGHT, THEME_NAVY};
+  const ctrl_state_t states[] = {CTRL_NORMAL, CTRL_FOCUSED, CTRL_DISABLED};
+  for (int t = 0; t < ARRAY_LEN(styles); t++) {
+    theme_t *theme = paint_with_theme(styles[t]);
+    for (int h = 0; h < ARRAY_LEN(heights); h++) for (int st = 0; st < ARRAY_LEN(states); st++) {
+      memset(pixels, 0, sizeof(pixels));
+      theme->draw_part(THEME_PART_FIELD, R(10, 10, 100, heights[h]), states[st]);
+      ASSERT_EQUAL(pixels[10][10 + heights[h] / 2 - 6], 0);
+      ASSERT_NOT_EQUAL(pixels[10 + heights[h] / 2][10], 0);
+      ASSERT_NOT_EQUAL(pixels[10][60], 0);
+    }
+  }
+  PASS();
+}
+
 int main(void) {
   TEST_START("theme paint output");
   test_modern_surfaces();
   test_button_capsules();
+  test_field_capsules();
   test_modern_button_states();
   test_translated_separator();
   test_classic_window_border();

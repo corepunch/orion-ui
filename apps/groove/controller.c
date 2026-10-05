@@ -31,7 +31,7 @@ static int find_block(const char *name) {
 static void seed(song_t *s, const char *name, int track, int bar, int count) {
   int b = find_block(name);
   if (b < 0) return;
-  for (int i = 0; i < count; i++) song_add_clip(s, b, track, bar + i * block_get(b)->bars);
+  for (int i = 0; i < count; i++) song_add_clip(s, b, track, (bar + i * block_get(b)->bars) * GR_TICKS_BAR);
 }
 
 static void seed_demo(song_t *s) {
@@ -51,7 +51,6 @@ void app_new_song(void) {
   g_app->selected_clip = -1;
   app_unlock();
   invalidate_window(g_app->sheet);
-  app_update_status();
 }
 
 void app_load_demo(void) {
@@ -92,31 +91,18 @@ void app_shutdown(groove_t *app) {
   free(app);
 }
 
-static int bar_of(const song_t *s) { return (int)(s->pos / bar_frames_for_bpm(s->bpm)); }
-
-void app_update_status(void) {
-  char buf[64];
-  const song_t *s = &g_app->song;
-  int bar = bar_frames_for_bpm(s->bpm), beat = (int)((s->pos % bar) / (bar / GR_BEATS_BAR));
-  snprintf(buf, sizeof(buf), "%d BPM   %02d.%d   %s%s", s->bpm, bar_of(s) + 1, beat + 1,
-           s->playing ? "Playing" : "Stopped", s->loop ? "   Loop" : "");
-  send_message(g_app->win, evStatusBar, 0, buf);
-}
-
 void app_set_playing(bool playing) {
   app_lock();
   g_app->song.playing = playing;
   app_unlock();
-  toolbar_refresh(g_app->win);
-  app_update_status();
+  transport_refresh();
 }
 
-void app_seek_bar(int bar) {
+void app_seek_position(int position) {
   app_lock();
-  g_app->song.pos = (int64_t)CLAMP(bar, 0, GR_BARS - 1) * bar_frames_for_bpm(g_app->song.bpm);
+  g_app->song.pos = position_frames_for_bpm(CLAMP(position, 0, GR_BARS * GR_TICKS_BAR - GR_SNAP_TICKS), g_app->song.bpm);
   app_unlock();
   invalidate_window(g_app->sheet);
-  app_update_status();
 }
 
 void app_set_bpm(int bpm) {
@@ -132,7 +118,7 @@ void app_set_bpm(int bpm) {
   blocks_swap(pcm);
   app_unlock();
   for (int i = 0; i < GR_MAX_BLOCKS; i++) free(pcm[i].pcm);
-  app_update_status();
+  invalidate_window(g_app->sheet);
 }
 
 void app_preview(int block) {
@@ -157,14 +143,9 @@ bool app_drop(const drag_t *d) {
   bool ok = false;
   app_lock();
   if (d->from_clip >= 0 && d->from_clip < s->nclips) {
-    int bars = block_get(s->clips[d->from_clip].block)->bars;
-    if ((ok = song_can_place(s, d->track, d->bar, bars, d->from_clip))) {
-      s->clips[d->from_clip].track = d->track;
-      s->clips[d->from_clip].bar = d->bar;
-      g_app->selected_clip = d->from_clip;
-    }
+    if ((ok = song_move_clip(s, d->from_clip, d->track, d->position))) g_app->selected_clip = d->from_clip;
   } else if (d->from_clip < 0) {
-    int idx = song_add_clip(s, d->block, d->track, d->bar);
+    int idx = song_add_clip(s, d->block, d->track, d->position);
     if ((ok = idx >= 0)) g_app->selected_clip = idx;
   }
   app_unlock();
@@ -176,9 +157,9 @@ void app_command(uint16_t id) {
   song_t *s = &g_app->song;
   switch (id) {
     case ID_PLAY:     app_set_playing(!s->playing); break;
-    case ID_STOP:     app_set_playing(false); app_seek_bar(0); break;
-    case ID_REWIND:   app_seek_bar(0); break;
-    case ID_LOOP:     app_lock(); s->loop = !s->loop; app_unlock(); toolbar_refresh(g_app->win); app_update_status(); break;
+    case ID_STOP:     app_set_playing(false); app_seek_position(0); break;
+    case ID_REWIND:   app_seek_position(0); break;
+    case ID_LOOP:     app_lock(); s->loop = !s->loop; app_unlock(); transport_refresh(); break;
     case ID_BPM_UP:   app_set_bpm(s->bpm + 5); break;
     case ID_BPM_DOWN: app_set_bpm(s->bpm - 5); break;
     case ID_FILE_NEW:  app_new_song(); break;

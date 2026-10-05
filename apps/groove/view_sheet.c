@@ -1,5 +1,5 @@
 // VIEW: the sheet — track headers on the left, bar ruler on top, one lane per
-// track. Blocks snap to whole bars. It is the drop target for tiles dragged
+// track. Blocks snap to quarter bars. It is the drop target for tiles dragged
 // from the bin (shDragOver / shDrop). Each clip is a child window; dragging
 // one lifts that window with window_set_drag_visual.
 //
@@ -12,6 +12,7 @@
 #define HDR_W      GR_SHEET_HEADER_W
 #define RULER_H    22
 #define BAR_W      88
+#define SNAP_W     (BAR_W * GR_SNAP_TICKS / GR_TICKS_BAR)
 #define MIN_ROW    26
 #define MAX_ROW    64
 #define SHEET_SLOP 4
@@ -20,7 +21,6 @@ typedef struct {
   int press_clip;
   ipoint16_t press;
   bool own_drag;
-  uint32_t track_icons;
   groove_drop_anchor_t drop_anchor;
 } sheet_t;
 
@@ -28,6 +28,8 @@ static int  hpos(window_t *win)    { return get_scroll_pos(win, SB_HORZ); }
 static int  row_h(window_t *win)   { return CLAMP((get_client_rect(win).h - RULER_H) / GR_TRACKS, MIN_ROW, MAX_ROW); }
 static int  floordiv(int a, int b) { return a >= 0 ? a / b : -((-a + b - 1) / b); }
 static int  bar_x(window_t *win, int bar)  { return HDR_W + bar * BAR_W - hpos(win); }
+static int  position_x(window_t *win, int position) { return HDR_W + position * BAR_W / GR_TICKS_BAR - hpos(win); }
+static int  position_at(int x) { return floordiv(x * GR_TICKS_BAR, BAR_W); }
 static int  track_y(window_t *win, int t)  { return RULER_H + t * row_h(win); }
 static irect16_t grid_rect(window_t *win)  { irect16_t cr = get_client_rect(win); return R(HDR_W, RULER_H, cr.w - HDR_W, row_h(win) * GR_TRACKS); }
 static irect16_t mute_rect(window_t *win, int t) {
@@ -40,30 +42,10 @@ static irect16_t solo_rect(window_t *win, int t) {
   return rect_offset(mute, 0, mute.h + 2);
 }
 
-static uint32_t load_track_icons(window_t *win) {
-  if (!g_ui_runtime.running) return 0;
-  char path[1024];
-  snprintf(path, sizeof(path), "%s/../share/groove/icons/track-controls.png", ui_get_exe_dir());
-  int w = 0, h = 0;
-  uint8_t *pixels = load_image(path, &w, &h);
-  if (!pixels || w != 128 || h != 128) {
-    fprintf(stderr, "[gr] track icons unavailable win=%u path=%s size=%dx%d\n", win->id, path, w, h);
-    fflush(stderr);
-    image_free(pixels);
-    return 0;
-  }
-  uint32_t texture = R_CreateTextureSRGBA8(w, h, pixels, R_FILTER_LINEAR, R_WRAP_CLAMP);
-  image_free(pixels);
-  if (!texture) { fprintf(stderr, "[gr] track icon texture failed win=%u\n", win->id); fflush(stderr); }
-  return texture;
-}
-
-static void draw_track_toggle(window_t *win, irect16_t r, int icon, bool active) {
-  const sheet_t *st = win->userdata;
-  theme_draw(THEME_PART_TOOLBAR_BUTTON, r, active ? CTRL_SELECTED : CTRL_NORMAL);
-  if (!st->track_icons) return;
-  float x = icon * 0.5f, y = active ? 0.5f : 0.0f;
-  draw_sprite_region(st->track_icons, r, UV_RECT(x, y, x + 0.5f, y + 0.5f), 0xffffffffu, 0);
+static void draw_track_toggle(irect16_t r, const char *icon, bool active) {
+  ctrl_state_t state = active ? CTRL_SELECTED : CTRL_NORMAL;
+  theme_draw(THEME_PART_TOOLBAR_BUTTON, r, state);
+  draw_sysicon(icon, r.x, r.y, r.w, theme_foreground(THEME_PART_TOOLBAR_BUTTON, state));
 }
 
 static void sync_scroll(window_t *win) {
@@ -76,8 +58,8 @@ ipoint16_t clip_cell_size(window_t *sheet, const block_t *b) {
   return (ipoint16_t){ b->bars * BAR_W, row_h(sheet) };
 }
 
-static irect16_t clip_rect(window_t *win, int track, int bar, int bars) {
-  return R(bar_x(win, bar) + 1, track_y(win, track) + 2, bars * BAR_W - 2, row_h(win) - 4);
+static irect16_t clip_rect(window_t *win, int track, int position, int bars) {
+  return R(position_x(win, position) + 1, track_y(win, track) + 2, bars * BAR_W - 2, row_h(win) - 4);
 }
 
 static int child_count(window_t *win) {
@@ -127,7 +109,11 @@ static void sync_clips(window_t *win) {
     layout_measure_t measure = {0};
     send_message(c, evMeasure, 0, &measure);
     ipoint16_t size = {measure.desired_w, measure.desired_h};
-    card_place(c, R(bar_x(win, cl->bar), track_y(win, cl->track), size.x, size.y));
+    int end = song_clip_end(&g_app->song, i);
+    if (!c->drag_visual) size.x = position_x(win, end) - position_x(win, cl->position);
+    if (window_has_state(c, WINDOW_STATE_VISIBLE) != (size.x > 0)) show_window(c, size.x > 0);
+    size.x = MAX(1, size.x);
+    card_place(c, R(position_x(win, cl->position), track_y(win, cl->track), size.x, size.y));
   }
 }
 
@@ -145,12 +131,12 @@ static void drag_target(window_t *win, int cx, int cy) {
     irect16_t sample = R(cx - d->grab.x, cy - d->grab.y, bars * BAR_W, row_h(win));
     irect16_t center = rect_center(sample, 0, 0);
     // Candidate centers account for the full width of multi-bar samples.
-    cx = center.x - (sample.w - BAR_W) / 2;
+    cx = center.x - (sample.w - SNAP_W) / 2;
     cy = center.y;
   }
   d->track = CLAMP(floordiv(cy, row_h(win)), 0, GR_TRACKS - 1);
-  d->bar = CLAMP(floordiv(cx, BAR_W), 0, GR_BARS - bars);
-  d->valid = song_can_place(&g_app->song, d->track, d->bar, bars, d->from_clip);
+  d->position = CLAMP(floordiv(cx, SNAP_W) * GR_SNAP_TICKS, 0, (GR_BARS - bars) * GR_TICKS_BAR);
+  d->valid = song_can_place(&g_app->song, d->track, d->position, bars * GR_TICKS_BAR, d->from_clip);
 }
 
 static void drag_clear(window_t *win) {
@@ -167,8 +153,8 @@ static void paint_headers(window_t *win) {
     int y = track_y(win, t), rh = row_h(win);
     fill_rect(get_sys_color(brDarkEdge), R(0, y + rh - 1, HDR_W, 1));
     irect16_t m = mute_rect(win, t), s = solo_rect(win, t);
-    draw_track_toggle(win, m, 0, g_app->song.mute[t]);
-    draw_track_toggle(win, s, 1, g_app->song.solo[t]);
+    draw_track_toggle(m, "volume-off", g_app->song.mute[t]);
+    draw_track_toggle(s, "headphones", g_app->song.solo[t]);
   }
 }
 
@@ -182,6 +168,8 @@ static void paint_ruler(window_t *win, int cur_bar) {
     if (b == cur_bar) fill_rect(color_with_alpha(get_sys_color(brAccent), 0x50), R(bar_x(win, b), 0, BAR_W, RULER_H));
     fill_rect(color_with_alpha(get_sys_color(brLightEdge), b % 4 ? 0x30 : 0x80), R(bar_x(win, b), b % 4 ? RULER_H - 6 : 2, 1, b % 4 ? 6 : RULER_H - 2));
     draw_text(FONT_SMALLEST, num, bar_x(win, b) + 5, 5, get_sys_color(b % 4 ? brTextSecondary : brTextNormal));
+    for (int step = GR_SNAP_TICKS; step < GR_TICKS_BAR; step += GR_SNAP_TICKS)
+      fill_rect(color_with_alpha(get_sys_color(brLightEdge), 0x20), R(position_x(win, b * GR_TICKS_BAR + step), RULER_H - 4, 1, 4));
   }
   set_clip_rect(win, R(0, 0, win->frame.w, win->frame.h));
 }
@@ -196,8 +184,10 @@ static void paint_sheet(window_t *win) {
   set_clip_rect(win, grid);
   for (int t = 0; t < GR_TRACKS; t++)
     fill_rect(get_sys_color(t % 2 ? brColumnViewBg : brWindowDarkBg), R(grid.x, track_y(win, t), grid.w, row_h(win)));
-  for (int b = 0; b <= GR_BARS; b++)
-    fill_rect(color_with_alpha(get_sys_color(brLightEdge), b % 4 ? 0x14 : 0x38), R(bar_x(win, b), grid.y, 1, grid.h));
+  for (int position = 0; position <= GR_BARS * GR_TICKS_BAR; position += GR_SNAP_TICKS) {
+    int alpha = position % GR_TICKS_BAR ? 0x0a : position % (4 * GR_TICKS_BAR) ? 0x14 : 0x38;
+    fill_rect(color_with_alpha(get_sys_color(brLightEdge), alpha), R(position_x(win, position), grid.y, 1, grid.h));
+  }
   float saved[16];
   memcpy(saved, get_sprite_matrix(), sizeof saved);
   for (window_t *c = win->children; c; c = c->next) {
@@ -209,7 +199,7 @@ static void paint_sheet(window_t *win) {
   if (d->active && d->track >= 0) {
     const block_t *b = block_get(d->block);
     stroke_rounded_rect(d->valid ? category_color(b->cat) : get_sys_color(brTextError),
-                        clip_rect(win, d->track, d->bar, b->bars), get_theme()->card_corner_radius, 2);
+                        clip_rect(win, d->track, d->position, b->bars), get_theme()->card_corner_radius, 2);
   }
   int px = HDR_W + (int)((double)s->pos / bar * BAR_W) - hpos(win);
   fill_rect(get_sys_color(brAccent), R(px - 1, RULER_H, 2, grid.h));
@@ -244,7 +234,6 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         return false;
       }
       st->press_clip = -1;
-      st->track_icons = load_track_icons(win);
       sync_scroll(win);
       return true;
     case evResize: sync_scroll(win); sync_clips(win); invalidate_window(win); return false;
@@ -267,18 +256,18 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
 
     case evLeftButtonDown: {
       int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam), cx = mx - hpos(win);
-      if (my < RULER_H) { if (cx >= HDR_W) app_seek_bar((mx - HDR_W) / BAR_W); return true; }
+      if (my < RULER_H) { if (cx >= HDR_W) app_seek_position(floordiv(mx - HDR_W, SNAP_W) * GR_SNAP_TICKS); return true; }
       if (header_click(win, cx, my)) return true;
-      int track = (my - RULER_H) / row_h(win), bar = floordiv(mx - HDR_W, BAR_W);
+      int track = (my - RULER_H) / row_h(win), position = position_at(mx - HDR_W);
       if (track < 0 || track >= GR_TRACKS) return true;
-      st->press_clip = song_clip_at(&g_app->song, track, bar);
+      st->press_clip = song_clip_at(&g_app->song, track, position);
       st->press = (ipoint16_t){ (int16_t)mx, (int16_t)my };
       app_select_clip(st->press_clip);
       if (st->press_clip >= 0) {
         const clip_t *c = &g_app->song.clips[st->press_clip];
-        ipoint16_t grab = { mx - HDR_W - c->bar * BAR_W, my - track_y(win, c->track) };
+        ipoint16_t grab = { mx - HDR_W - c->position * BAR_W / GR_TICKS_BAR, my - track_y(win, c->track) };
         g_app->drag = (drag_t){ .block = c->block, .from_clip = st->press_clip, .grab = grab,
-                                .track = c->track, .bar = c->bar, .valid = true };
+                                .track = c->track, .position = c->position, .valid = true };
         set_capture(win);
       }
       return true;
@@ -291,7 +280,11 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
           st->own_drag = true;
           g_app->drag.active = true;
           window_t *card = child_at(win, st->press_clip);
-          if (card) window_set_drag_visual(card, mx - st->press.x, my - st->press.y);
+          if (card) {
+            ipoint16_t size = clip_cell_size(win, block_get(g_app->drag.block));
+            resize_window(card, size.x, size.y);
+            window_set_drag_visual(card, mx - st->press.x, my - st->press.y);
+          }
         }
         if (st->own_drag) {
           window_t *card = child_at(win, st->press_clip);
@@ -314,7 +307,7 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     case evRightButtonDown: {
       int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam);
       if (my < RULER_H || mx - hpos(win) < HDR_W) return false;
-      int idx = song_clip_at(&g_app->song, (my - RULER_H) / row_h(win), floordiv(mx - HDR_W, BAR_W));
+      int idx = song_clip_at(&g_app->song, (my - RULER_H) / row_h(win), position_at(mx - HDR_W));
       if (idx < 0) return false;
       app_select_clip(idx);
       app_command(ID_DELETE);
@@ -349,7 +342,6 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       return true;
     case evDestroy:
       if (st && st->press_clip >= 0) set_capture(NULL);
-      if (st && st->track_icons) R_DeleteTexture(st->track_icons);
       free(st);
       win->userdata = NULL;
       return true;
