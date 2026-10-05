@@ -102,12 +102,14 @@ result_t win_block_card(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       if (win->parent == g_app->sheet) return false;
       if (st->hover) { st->hover = false; invalidate_window(win); }
       return true;
+    case evQueryDrag: return win->parent == g_app->sheet ? DRAG_NONE : DRAG_AFTER_HOLD; // swipe scrolls the library, hold picks up
     case evLeftButtonDown:
       if (win->parent == g_app->sheet) return false;
       st->down = true;
       st->press = (ipoint16_t){ (int16_t)LOWORD(wparam), (int16_t)HIWORD(wparam) };
       set_capture(win);
       invalidate_window(win);
+      app_preview(st->block);
       return true;
     case evLeftButtonUp: {
       if (win->parent == g_app->sheet) return false;
@@ -115,7 +117,6 @@ result_t win_block_card(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam), sx, sy;
       card_screen(win, mx, my, &sx, &sy);
       if (win->drag_visual) send_message(g_app->sheet, shDrop, MAKEDWORD(sx, sy), NULL);
-      else app_preview(st->block);
       window_clear_drag_visual(win);
       st->down = false;
       set_capture(NULL);

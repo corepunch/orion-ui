@@ -157,6 +157,17 @@ apply their content view's zoom, rotation and pan.
 `evPointerCancel` aborts the first finger's interaction before a gesture begins.
 Apple Pencil strokes retain priority over finger gestures.
 
+One finger scrolls too. Finger samples carry `AX_POINTER_TOUCH` and a
+timestamp; `touch_filter()` in `event.c` holds back a press over content whose
+built-in scrollbars can move. A tap delivers the press and release together;
+travelling past `TOUCH_SLOP` drives the same `evGesture` pan and, on release,
+`scrollbar_fling()` momentum; resting for `TOUCH_HOLD_MS` delivers the press.
+Before holding a press back, the router asks the window under the finger and its
+ancestors `evQueryDrag`: `DRAG_NOW` (painting canvases, sliders, sheet clips)
+takes the press at once, `DRAG_AFTER_HOLD` (library cards) is picked up after
+`TOUCH_LONG_PRESS_MS`. A platform timer reports the hold while the finger rests;
+sample timestamps decide when a busy main thread queues the timer late.
+
 Windows can opt into a content view with `window_view_init()`. A single matrix
 on the window owns content zoom, rotation, translation, and Retina scaling.
 `orion/user/view.c` owns all transform arithmetic, including anchored gestures,

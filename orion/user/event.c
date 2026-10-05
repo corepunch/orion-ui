@@ -14,6 +14,7 @@
 #include "toolbar.h"
 #include "dock.h"
 #include "theme.h"
+#include "scrollbar.h"
 #include <orion/kernel/kernel.h>
 
 // External functions
@@ -388,6 +389,203 @@ void move_to_top(window_t* _win) {
   request_composite();
 }
 
+// ── One-finger touch scrolling ───────────────────────────────────────────────
+// A finger press over scrollable content is held back until the finger lifts
+// (a tap: press and release are delivered together), rests for TOUCH_HOLD_MS
+// (the press is delivered; a later swipe cancels it unless the window captured
+// the pointer), or travels past TOUCH_SLOP (the content scrolls and never sees
+// the press). Windows answer evQueryDrag: DRAG_NOW takes the press at once;
+// DRAG_AFTER_HOLD waits TOUCH_LONG_PRESS_MS, then takes the press and the
+// drag that follows. Both waits run on a platform timer so the press lands
+// while the finger rests. Stylus and mouse input never pan.
+enum { TOUCH_IDLE, TOUCH_PENDING, TOUCH_HELD, TOUCH_PANNING };
+static struct {
+  int phase;
+  ui_event_t press;
+  window_t *scroller;
+  uint32_t scroller_id, hold_timer;
+  bool consumed;               // the press stopped momentum; it does not tap
+  bool long_press;             // the hold picks up an item; a later swipe never cancels it
+  float x, y;                  // last sample, platform points
+  float vx, vy, vel_x, vel_y;  // finger velocity (points/ms) and its sample anchor
+  uint32_t time, vel_time;
+} touch;
+static bool touch_bypass;
+
+static uint32_t touch_time(ui_event_t const *msg) {
+  return msg->pointer.time ? msg->pointer.time : (uint32_t)axGetMilliseconds();
+}
+
+static bool touch_scroller_alive(void) {
+  return touch.scroller && is_window(touch.scroller) && touch.scroller->id == touch.scroller_id;
+}
+
+static void touch_send_gesture(uint32_t phase, float x, float y) {
+  if (!touch_scroller_alive()) return;
+  window_t *w = touch.scroller;
+  ax_gesture_t g = {phase, LOCAL_X(x, y, w), LOCAL_Y(x, y, w), LOCAL_X(touch.x, touch.y, w), LOCAL_Y(touch.x, touch.y, w), 1, 0};
+  send_message(w, evGesture, MAKEDWORD((int)g.x, (int)g.y), &g);
+}
+
+static void touch_reset(void) {
+  if (touch.hold_timer) axCancelTimer(touch.hold_timer);
+  if (touch.phase == TOUCH_PANNING) touch_send_gesture(AX_GESTURE_CANCEL, touch.x, touch.y);
+  touch.phase = TOUCH_IDLE;
+  touch.hold_timer = 0;
+  touch.scroller = NULL;
+}
+
+static void touch_redispatch(ui_event_t *msg) {
+  touch_bypass = true;
+  dispatch_message(msg);
+  touch_bypass = false;
+}
+
+static void touch_deliver_press(void) {
+  if (touch.hold_timer) axCancelTimer(touch.hold_timer);
+  touch.hold_timer = 0;
+  ui_event_t press = touch.press;
+  touch_redispatch(&press);
+}
+
+// The finger rested long enough: deliver the press. The timer reports this
+// while the finger is still; a sample that arrives first (a busy main thread
+// queues the timer behind it) proves it by its timestamp.
+static void touch_hold(void) {
+  touch.phase = touch.long_press ? TOUCH_IDLE : TOUCH_HELD;
+  touch_deliver_press();
+  if (touch.long_press) touch.scroller = NULL;
+}
+
+static bool touch_held_since_press(ui_event_t const *msg) {
+  uint32_t hold = touch.long_press ? TOUCH_LONG_PRESS_MS : TOUCH_HOLD_MS;
+  return touch.phase == TOUCH_PENDING && !touch.consumed && touch_time(msg) - touch_time(&touch.press) >= hold;
+}
+
+// The scrollable window a finger press at (px, py) would pan, or NULL when the
+// press belongs to the window under it. *consumed is set when the press lands
+// on content still moving from an earlier swipe; *long_press when an item
+// under the finger is picked up by touch-and-hold.
+static window_t *touch_scroller_at(int px, int py, bool *consumed, bool *long_press) {
+  *consumed = *long_press = false;
+  if (g_ui_runtime.captured || g_ui_runtime.dragging || g_ui_runtime.resizing) return NULL;
+  int sx = SCALE_POINT(px), sy = SCALE_POINT(py);
+  window_t *hit = find_window(sx, sy);
+  for (window_t *w = hit; w; w = w->parent)
+    if (scrollbar_stop_fling(w)) { *consumed = true; return w; }
+  for (window_t *w = hit; w; w = w->parent) {
+    if (window_has_state(w, WINDOW_STATE_DISABLED)) return NULL;
+    if (!rect_contains_point(get_client_rect(w), (ipoint16_t){sx - win_abs_x(w), sy - win_abs_y(w)})) return NULL;
+    result_t drag = *long_press ? DRAG_NONE : send_message(w, evQueryDrag, MAKEDWORD(LOCAL_X(px, py, w), LOCAL_Y(px, py, w)), NULL);
+    if (drag == DRAG_NOW) return NULL;
+    if (drag == DRAG_AFTER_HOLD) *long_press = true;
+    if (scrollbar_can_scroll(w)) return w;
+  }
+  return NULL;
+}
+
+static void touch_track(ui_event_t const *msg) {
+  uint32_t t = touch_time(msg);
+  float dt = (float)(t - touch.vel_time);
+  if (dt >= 8) {
+    float k = MIN(dt / 50.0f, 1.0f);
+    touch.vx += ((msg->x - touch.vel_x) / dt - touch.vx) * k;
+    touch.vy += ((msg->y - touch.vel_y) / dt - touch.vy) * k;
+    touch.vel_x = msg->x; touch.vel_y = msg->y; touch.vel_time = t;
+  }
+  touch.time = t;
+}
+
+// Returns true when the event was consumed by touch scrolling.
+static bool touch_filter(ui_event_t *msg) {
+  if (touch_bypass) return false;
+  bool finger = (msg->pointer.flags & AX_POINTER_TOUCH) != 0;
+  switch (msg->message) {
+    case kEventLeftButtonDown: {
+      touch_reset();
+      if (!finger) return false;
+      bool consumed, long_press;
+      window_t *w = touch_scroller_at(msg->x, msg->y, &consumed, &long_press);
+      if (!w) return false;
+      uint32_t t = touch_time(msg);
+      touch.phase = TOUCH_PENDING; touch.press = *msg; touch.consumed = consumed; touch.long_press = long_press;
+      touch.scroller = w; touch.scroller_id = w->id;
+      touch.x = touch.vel_x = msg->x; touch.y = touch.vel_y = msg->y;
+      touch.vx = touch.vy = 0; touch.time = touch.vel_time = t;
+      touch.hold_timer = consumed ? 0 : axSetTimer(w, long_press ? TOUCH_LONG_PRESS_MS : TOUCH_HOLD_MS, NULL, false);
+      return true;
+    }
+    case kEventTimer:
+      if (!touch.hold_timer || msg->wParam != touch.hold_timer || msg->target != touch.scroller) return false;
+      touch.hold_timer = 0;
+      if (touch.phase == TOUCH_PENDING) touch_hold();
+      return true;
+    case kEventLeftDoubleClick:
+      if (touch.phase != TOUCH_PENDING) return false;
+      if (touch.consumed) return true;
+      touch.phase = TOUCH_HELD;
+      touch_deliver_press();
+      return false;
+    case kEventLeftButtonDragged: {
+      if (touch_held_since_press(msg)) touch_hold();
+      if (touch.phase == TOUCH_IDLE) return false;
+      if (!touch_scroller_alive()) { bool held = touch.phase == TOUCH_HELD; touch_reset(); return !held; }
+      touch_track(msg);
+      if (touch.phase == TOUCH_PANNING) {
+        touch_send_gesture(AX_GESTURE_UPDATE, msg->x, msg->y);
+        touch.x = msg->x; touch.y = msg->y;
+        return true;
+      }
+      float dx = SCALE_POINT((float)msg->x - touch.press.x), dy = SCALE_POINT((float)msg->y - touch.press.y);
+      if (dx * dx + dy * dy <= TOUCH_SLOP * TOUCH_SLOP) return touch.phase == TOUCH_PENDING;
+      if (touch.phase == TOUCH_HELD) {
+        if (g_ui_runtime.captured || g_ui_runtime.dragging || g_ui_runtime.resizing) { touch_reset(); return false; }
+        ui_event_t cancel = *msg;
+        cancel.message = kEventPointerCancel;
+        touch_redispatch(&cancel);
+      }
+      if (touch.hold_timer) axCancelTimer(touch.hold_timer);
+      touch.hold_timer = 0;
+      // Scrolling starts where the finger left the slop, so the content
+      // follows the rest of the motion without a jump.
+      float k = TOUCH_SLOP / sqrtf(dx * dx + dy * dy);
+      touch.phase = TOUCH_PANNING;
+      touch.x = touch.press.x + (msg->x - (float)touch.press.x) * k;
+      touch.y = touch.press.y + (msg->y - (float)touch.press.y) * k;
+      touch_send_gesture(AX_GESTURE_BEGIN, touch.x, touch.y);
+      touch_send_gesture(AX_GESTURE_UPDATE, msg->x, msg->y);
+      touch.x = msg->x; touch.y = msg->y;
+      return true;
+    }
+    case kEventLeftButtonUp: {
+      if (touch_held_since_press(msg)) touch_hold();
+      int phase = touch.phase;
+      if (phase == TOUCH_PENDING && !touch.consumed && touch_scroller_alive()) {
+        touch.phase = TOUCH_IDLE;
+        touch_deliver_press();
+        touch.scroller = NULL;
+        return false;
+      }
+      if (phase == TOUCH_PANNING) {
+        touch_send_gesture(AX_GESTURE_END, msg->x, msg->y);
+        touch.phase = TOUCH_IDLE;
+        bool moving = touch_time(msg) - touch.time < 50;
+        if (moving && touch_scroller_alive())
+          scrollbar_fling(touch.scroller, -SCALE_POINT(touch.vx), -SCALE_POINT(touch.vy));
+      }
+      touch_reset();
+      return phase == TOUCH_PENDING || phase == TOUCH_PANNING;
+    }
+    case kEventPointerCancel: {
+      int phase = touch.phase;
+      touch_reset();
+      return phase == TOUCH_PENDING || phase == TOUCH_PANNING;
+    }
+    default:
+      return false;
+  }
+}
+
 // Dispatch a platform AXmessage to the Orion window system.
 void dispatch_message(ui_event_t *msg) {
   // Sentinel events are wakeup-only — clear the pending flag and skip.
@@ -400,6 +598,7 @@ void dispatch_message(ui_event_t *msg) {
 
   update_key_state(msg);
   update_pointer_state(msg);
+  if (touch_filter(msg)) return;
   if (dock_handle_event(msg)) return;
 
   window_t *win;
