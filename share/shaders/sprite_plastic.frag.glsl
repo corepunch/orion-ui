@@ -81,19 +81,16 @@ void main() {
     vec2 origin = floor(glyph_box.xy / pixel + 0.5) * pixel;
     float press_offset = floor(min(0.6, margin * 0.3) / pixel.y + 0.5) * pixel.y;
     vec2 gp = tex * size + glyph_box.xy - origin - vec2(0.0, pressed * press_offset);
-    vec2 wall = max(floor(vec2(0.6) / pixel + 0.5), vec2(1.0)) * pixel;
     float mask = glyph_mask(gp);
-    float upper = glyph_mask(gp - wall), lower = glyph_mask(gp + wall);
-    float shade = mask * (1.0 - upper);   // upper/left inner wall faces away from the light
-    float catchlight = mask * (1.0 - lower);
-    float lip = lower * (1.0 - mask);     // face rim just above/left of the cavity
+    // Debossed cavity: the anti-aliased mask gradient gives the wall normal, lit from the upper left.
+    float e = 1.25;
+    vec2 g = vec2(glyph_mask(gp + vec2(e, 0.0)) - glyph_mask(gp - vec2(e, 0.0)),
+                  glyph_mask(gp + vec2(0.0, e)) - glyph_mask(gp - vec2(0.0, e))) * 0.5;
+    float wall = dot(g, normalize(vec2(-0.6, -0.8))) * 2.0 * (1.0 - 0.5 * disabled);
     vec3 floor_col = mix(mix(pow(base, vec3(0.35)), vec3(1.0), 0.62), vec3(0.62), disabled);
-    float glint = glyph_mask(gp - wall) * (1.0 - mask); // face rim below/right of the cavity
-    rgb = mix(rgb, pow(base, vec3(1.4)) * 0.3, lip * 0.6);
-    rgb = mix(rgb, vec3(1.0), glint * 0.25);
-    rgb = mix(rgb, floor_col, mask);
-    rgb = mix(rgb, pow(base, vec3(1.3)) * 0.38, shade * 0.9);
-    rgb = mix(rgb, vec3(1.0), catchlight * 0.85);
+    vec3 face = mix(floor_col, pow(base, vec3(1.3)) * 0.45, clamp(-wall, 0.0, 1.0));
+    face = mix(face, vec3(1.0), clamp(wall, 0.0, 1.0) * 0.9);
+    rgb = mix(rgb, face, mask);
   }
   float a = face * tint.a * col.a;
   float sa = shadow * shadow_color.a * tint.a * col.a * (1.0 - face);
