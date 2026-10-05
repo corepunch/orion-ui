@@ -5,6 +5,7 @@
 #include <string.h>
 #include "simplegl.h"
 #include "shader.h"
+#include <orion/kernel/renderer.h>
 
 #define MAX_BATCH_VERTS 65536
 
@@ -65,64 +66,13 @@ static const char *s_image_fs =
     "out vec4 frag;\n"
     "void main(){ vec4 pixel=texture(uImage,vUV); frag=vec4(pixel.rgb*uColor,pixel.a); }\n";
 
-static GLuint compile_line_shader(GLenum type, const char *src) {
-    GLuint s = glCreateShader(type);
-    glShaderSource(s, 1, &src, NULL);
-    glCompileShader(s);
-    GLint ok;
-    glGetShaderiv(s, GL_COMPILE_STATUS, &ok);
-    if (!ok) { char log[1024]; glGetShaderInfoLog(s,sizeof(log),NULL,log); fprintf(stderr,"[scener] shader compile failed: %s\n",log); glDeleteShader(s); return 0; }
-    return s;
-}
-
-static GLuint link_program(GLuint vs, GLuint fs) {
-    GLuint p = glCreateProgram();
-    glAttachShader(p, vs);
-    glAttachShader(p, fs);
-    glBindAttribLocation(p, 0, "aPos");
-    glBindAttribLocation(p, 1, "aColor");
-    glLinkProgram(p);
-    GLint ok;
-    glGetProgramiv(p, GL_LINK_STATUS, &ok);
-    if (!ok) { char log[1024]; glGetProgramInfoLog(p,sizeof(log),NULL,log); fprintf(stderr,"[scener] shader link failed: %s\n",log); glDeleteProgram(p); return 0; }
-    return p;
-}
-
-static GLuint link_shadow_program(GLuint vs, GLuint fs) {
-    GLuint p = glCreateProgram();
-    glAttachShader(p, vs);
-    glAttachShader(p, fs);
-    glBindAttribLocation(p, 0, "aPos");
-    glLinkProgram(p);
-    GLint ok;
-    glGetProgramiv(p, GL_LINK_STATUS, &ok);
-    if (!ok) { char log[1024]; glGetProgramInfoLog(p,sizeof(log),NULL,log); fprintf(stderr,"[scener] shader link failed: %s\n",log); glDeleteProgram(p); return 0; }
-    return p;
-}
-
 static void ensure_image_prog(void) {
-    if(s_image_prog) return;
-    GLuint vs=compile_line_shader(GL_VERTEX_SHADER,s_image_vs);
-    GLuint fs=compile_line_shader(GL_FRAGMENT_SHADER,s_image_fs);
-    if(vs&&fs){
-        s_image_prog=glCreateProgram();
-        glAttachShader(s_image_prog,vs); glAttachShader(s_image_prog,fs);
-        glBindAttribLocation(s_image_prog,0,"aPos"); glBindAttribLocation(s_image_prog,1,"aUV");
-        glLinkProgram(s_image_prog);
-        GLint ok=0; glGetProgramiv(s_image_prog,GL_LINK_STATUS,&ok);
-        if(!ok){
-            char log[1024]; glGetProgramInfoLog(s_image_prog,sizeof(log),NULL,log);
-            fprintf(stderr,"[scener] image shader link failed: %s\n",log);
-            glDeleteProgram(s_image_prog); s_image_prog=0;
-        } else {
-            s_image_viewproj_loc=glGetUniformLocation(s_image_prog,"uViewProj");
-            s_image_color_loc=glGetUniformLocation(s_image_prog,"uColor");
-            s_image_sampler_loc=glGetUniformLocation(s_image_prog,"uImage");
-            glGenVertexArrays(1,&s_image_vao); glGenBuffers(1,&s_image_vbo); glGenBuffers(1,&s_image_ebo);
-        }
-    }
-    if(vs) glDeleteShader(vs);
-    if(fs) glDeleteShader(fs);
+    if (s_image_prog) return;
+    if (!ui_load_program_from_source(s_image_vs, s_image_fs, "aPos", "aUV", NULL, &s_image_prog)) return;
+    s_image_viewproj_loc = glGetUniformLocation(s_image_prog, "uViewProj");
+    s_image_color_loc = glGetUniformLocation(s_image_prog, "uColor");
+    s_image_sampler_loc = glGetUniformLocation(s_image_prog, "uImage");
+    glGenVertexArrays(1, &s_image_vao); glGenBuffers(1, &s_image_vbo); glGenBuffers(1, &s_image_ebo);
 }
 
 static GLuint screen_texture(ScreenTexture *image) {
@@ -177,30 +127,16 @@ void render_deinit(void) {
 
 void ensure_line_prog(void) {
     if (s_line_prog) return;
-    GLuint vs = compile_line_shader(GL_VERTEX_SHADER, s_line_vs);
-    GLuint fs = compile_line_shader(GL_FRAGMENT_SHADER, s_line_fs);
-    if (vs && fs) {
-        s_line_prog = link_program(vs, fs);
-        s_line_viewproj_loc = glGetUniformLocation(s_line_prog, "uViewProj");
-        if(s_line_prog)fprintf(stderr,"[scener] ambient shader linked\n");
-    }
-    if (vs) glDeleteShader(vs);
-    if (fs) glDeleteShader(fs);
+    if (!ui_load_program_from_source(s_line_vs, s_line_fs, "aPos", "aColor", NULL, &s_line_prog)) return;
+    s_line_viewproj_loc = glGetUniformLocation(s_line_prog, "uViewProj");
 }
 
 static void ensure_shadow_prog(void) {
     if (s_shadow_prog) return;
-    GLuint vs = compile_line_shader(GL_VERTEX_SHADER, s_shadow_vs);
-    GLuint fs = compile_line_shader(GL_FRAGMENT_SHADER, s_shadow_fs);
-    if (vs && fs) {
-        s_shadow_prog = link_shadow_program(vs, fs);
-        s_shadow_proj_loc = glGetUniformLocation(s_shadow_prog, "uProj");
-        s_shadow_view_loc = glGetUniformLocation(s_shadow_prog, "uView");
-        s_shadow_color_loc = glGetUniformLocation(s_shadow_prog, "uColor");
-        if(s_shadow_prog)fprintf(stderr,"[scener] stencil shader linked\n");
-    }
-    if (vs) glDeleteShader(vs);
-    if (fs) glDeleteShader(fs);
+    if (!ui_load_program_from_source(s_shadow_vs, s_shadow_fs, "aPos", NULL, NULL, &s_shadow_prog)) return;
+    s_shadow_proj_loc = glGetUniformLocation(s_shadow_prog, "uProj");
+    s_shadow_view_loc = glGetUniformLocation(s_shadow_prog, "uView");
+    s_shadow_color_loc = glGetUniformLocation(s_shadow_prog, "uColor");
 }
 
 static void ensure_buffers(void) {

@@ -1,17 +1,3 @@
-#version 150 core
-
-in vec2 tex;
-in vec4 col;
-out vec4 outColor;
-uniform sampler2D tex0;
-uniform vec4 tint;
-uniform vec4 params0; // logical size, radius, bevel
-uniform vec4 params1; // reserved shadow margin, pressed, hover, selected
-uniform vec4 glyph_uv; // atlas endpoints
-uniform vec4 glyph_box; // logical origin and size
-uniform vec4 shadow_color;
-uniform float disabled;
-
 vec3 srgb_to_linear(vec3 c) {
   return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(vec3(0.04045), c));
 }
@@ -27,7 +13,8 @@ float glyph_mask(vec2 p) {
   return texture(tex0, mix(glyph_uv.xy, glyph_uv.zw, uv)).a;
 }
 
-void main() {
+vec4 frag() {
+  vec4 outColor;
   vec2 size = params0.xy;
   float margin = params1.x;
   float pressed = params1.y * (1.0 - disabled);
@@ -95,4 +82,5 @@ void main() {
   float a = face * tint.a * col.a;
   float sa = shadow * shadow_color.a * tint.a * col.a * (1.0 - face);
   outColor = vec4(rgb * col.rgb * a + shadow_color.rgb * sa, a + sa);
+  return outColor;
 }

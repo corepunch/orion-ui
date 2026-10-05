@@ -15,6 +15,7 @@
 #include <orion/user/gl_compat.h>
 #include <orion/user/color.h>
 #include "fmat16.h"
+#include "vendor/gl_shader/gl_shader.c"
 
 #define OFFSET_OF(type, field) (void*)((size_t)&(((type *)0)->field))
 
@@ -71,66 +72,66 @@ wall_vertex_t sprite_verts[] = {
   {1, 0, 0, 1, 0, 0, 0, 0, -1}, // bottom right
 };
 
-// Sprite system state
 typedef struct {
-  GLuint program;
-  GLint projection_u;
-  GLint offset_u;
-  GLint scale_u;
-  GLint uv_offset_u;
-  GLint uv_scale_u;
-  GLint tint_u;
-  GLint alpha_u;
-  GLint params0_u;
-  GLint params1_u;
-  GLint tex0_u;
+  float projection[16], offset[2], scale[2], uv_offset[2], uv_scale[2];
+  float tint[4], alpha, params0[4], params1[4], size[2], radius, edge[4];
+  float glyph_uv[4], glyph_box[4], shadow_color[4], disabled;
+  float grid_size[2], cell_size[2];
+  int tex0, palette_tex, cell_tex, font_tex, vga_palette_tex;
+} sprite_state_t;
+
+typedef struct {
+  shaderProg_t shader;
+  shader_desc_t desc;
+  sprite_state_t state;
 } sprite_program_t;
 
 typedef struct {
-  sprite_program_t copy_sprite;
-  sprite_program_t present_sprite;
-  sprite_program_t indexed_sprite;
+  sprite_program_t copy_sprite, present_sprite, indexed_sprite;
   GLuint indexed_palette;
-  sprite_program_t gradient_sprite;
-  sprite_program_t gradient_card_sprite;
-  sprite_program_t plastic_sprite;
-  sprite_program_t rounded_rect_sprite; // SDF rounded-corner compositor
-  GLuint vga_program;    // VGA text renderer program
-  R_Mesh mesh;           // Sprite mesh for drawing quads
-  fmat16_t projection;   // Orthographic projection matrix
+  sprite_program_t gradient_sprite, gradient_card_sprite, plastic_sprite, rounded_rect_sprite;
+  R_Mesh mesh;
+  fmat16_t projection;
 } renderer_system_t;
 
 renderer_system_t g_ref = {0};
 static fmat16_t g_active_projection;
+static struct { sprite_program_t program; GLuint palette_texture; } g_vga;
 
-typedef struct {
-  GLuint program;
-  GLint projection;
-  GLint offset;
-  GLint scale;
-  GLint uv_offset;
-  GLint uv_scale;
-  GLint grid_size;
-  GLint cell_size;
-  GLint cell_tex;
-  GLint font_tex;
-  GLint palette_tex;
-  GLuint palette_texture;
-} vga_renderer_t;
+#define SPRITE_UNIFORM(field, name, type) {offsetof(sprite_state_t, field), name, type, PRECISION_DEFAULT}
+static const shaderUniform_t sprite_uniforms[] = {
+  SPRITE_UNIFORM(projection, "projection", UT_FLOAT_MAT4),
+  SPRITE_UNIFORM(offset, "offset", UT_FLOAT_VEC2), SPRITE_UNIFORM(scale, "scale", UT_FLOAT_VEC2),
+  SPRITE_UNIFORM(uv_offset, "uv_offset", UT_FLOAT_VEC2), SPRITE_UNIFORM(uv_scale, "uv_scale", UT_FLOAT_VEC2),
+  SPRITE_UNIFORM(tint, "tint", UT_FLOAT_VEC4), SPRITE_UNIFORM(alpha, "alpha", UT_FLOAT),
+  SPRITE_UNIFORM(params0, "params0", UT_FLOAT_VEC4), SPRITE_UNIFORM(params1, "params1", UT_FLOAT_VEC4),
+  SPRITE_UNIFORM(tex0, "tex0", UT_SAMPLER_2D), SPRITE_UNIFORM(palette_tex, "palette_tex", UT_SAMPLER_2D),
+  SPRITE_UNIFORM(size, "size", UT_FLOAT_VEC2), SPRITE_UNIFORM(radius, "radius", UT_FLOAT),
+  SPRITE_UNIFORM(edge, "edge", UT_FLOAT_VEC4), SPRITE_UNIFORM(glyph_uv, "glyph_uv", UT_FLOAT_VEC4),
+  SPRITE_UNIFORM(glyph_box, "glyph_box", UT_FLOAT_VEC4), SPRITE_UNIFORM(shadow_color, "shadow_color", UT_FLOAT_VEC4),
+  SPRITE_UNIFORM(disabled, "disabled", UT_FLOAT), SPRITE_UNIFORM(grid_size, "gridSize", UT_FLOAT_VEC2),
+  SPRITE_UNIFORM(cell_size, "cellSize", UT_FLOAT_VEC2), SPRITE_UNIFORM(cell_tex, "cellTex", UT_SAMPLER_2D),
+  SPRITE_UNIFORM(font_tex, "fontTex", UT_SAMPLER_2D), SPRITE_UNIFORM(vga_palette_tex, "paletteTex", UT_SAMPLER_2D),
+};
+#undef SPRITE_UNIFORM
 
-static vga_renderer_t g_vga = {0};
-
-// Cached uniforms for the rounded-rect SDF compositor.
-typedef struct {
-  GLint size_u;
-  GLint radius_u;
-  GLint edge_u;
-} rounded_rect_uniforms_t;
-
-static rounded_rect_uniforms_t g_rounded_rect = {0};
-static struct {
-  GLint glyph_uv, glyph_box, disabled, shadow_color;
-} g_plastic;
+static gs_options_t renderer_shader_options(void) {
+  return (gs_options_t){.dialect =
+#ifdef ORION_OPENGL_ES
+    GLSL_DIALECT_ES3
+#else
+    GLSL_DIALECT_150
+#endif
+  };
+}
+static void sprite_vec2(float *v, float x, float y) { v[0] = x; v[1] = y; }
+static void sprite_vec4(float *v, float x, float y, float z, float w) { v[0] = x; v[1] = y; v[2] = z; v[3] = w; }
+static void delete_sprite_program(sprite_program_t *prog) {
+  gs_delete(&prog->shader);
+  free((void *)prog->desc.VertexBody);
+  free((void *)prog->desc.FragmentBody);
+  memset(prog, 0, sizeof(*prog));
+}
 
 typedef struct {
   GLuint fbo;
@@ -232,198 +233,57 @@ static char *read_shader_file(const char *name) {
   return read_text_file(path);
 }
 
-// Compile a shader
-GLuint compile_shader(GLenum type, const char* src) {
-  GLuint shader = glCreateShader(type);
-#ifdef ORION_OPENGL_ES
-  const char *body = src;
-  if (strncmp(body, "#version", 8) == 0 && strchr(body, '\n')) body = strchr(body, '\n') + 1;
-  const char *parts[] = {"#version 300 es\nprecision highp float;\nprecision highp int;\n", body};
-  glShaderSource(shader, 2, parts, NULL);
-#else
-  glShaderSource(shader, 1, &src, 0);
-#endif
-  glCompileShader(shader);
-  
-  // Check for errors
-  GLint status;
-  glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
-  if (status == GL_FALSE) {
-    GLint log_length;
-    glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &log_length);
-    char* log = malloc(log_length);
-    glGetShaderInfoLog(shader, log_length, NULL, log);
-    printf("Shader compilation error: %s\n", log);
-    free(log);
-  }
-  
-  return shader;
-}
-
 int get_sprite_prog(void) {
-  return g_ref.copy_sprite.program;
+  return g_ref.copy_sprite.shader.progid;
 }
 
 int get_sprite_vao(void) {
   return g_ref.mesh.vao;
 }
 
-static void cache_sprite_uniforms(sprite_program_t *prog) {
-  if (!prog || !prog->program) return;
-  prog->projection_u = glGetUniformLocation(prog->program, "projection");
-  prog->offset_u     = glGetUniformLocation(prog->program, "offset");
-  prog->scale_u      = glGetUniformLocation(prog->program, "scale");
-  prog->uv_offset_u  = glGetUniformLocation(prog->program, "uv_offset");
-  prog->uv_scale_u   = glGetUniformLocation(prog->program, "uv_scale");
-  prog->tint_u       = glGetUniformLocation(prog->program, "tint");
-  prog->alpha_u      = glGetUniformLocation(prog->program, "alpha");
-  prog->params0_u    = glGetUniformLocation(prog->program, "params0");
-  prog->params1_u    = glGetUniformLocation(prog->program, "params1");
-  prog->tex0_u       = glGetUniformLocation(prog->program, "tex0");
-}
-
-static void cache_vga_uniforms(void) {
-  if (!g_ref.vga_program) return;
-  g_vga.projection  = glGetUniformLocation(g_ref.vga_program, "projection");
-  g_vga.offset      = glGetUniformLocation(g_ref.vga_program, "offset");
-  g_vga.scale       = glGetUniformLocation(g_ref.vga_program, "scale");
-  g_vga.uv_offset   = glGetUniformLocation(g_ref.vga_program, "uv_offset");
-  g_vga.uv_scale    = glGetUniformLocation(g_ref.vga_program, "uv_scale");
-  g_vga.grid_size   = glGetUniformLocation(g_ref.vga_program, "gridSize");
-  g_vga.cell_size   = glGetUniformLocation(g_ref.vga_program, "cellSize");
-  g_vga.cell_tex    = glGetUniformLocation(g_ref.vga_program, "cellTex");
-  g_vga.font_tex    = glGetUniformLocation(g_ref.vga_program, "fontTex");
-  g_vga.palette_tex = glGetUniformLocation(g_ref.vga_program, "paletteTex");
-}
-
 static void update_sprite_projection_uniforms(const fmat16_t *projection) {
-  GLint prev_prog = 0;
-  glGetIntegerv(GL_CURRENT_PROGRAM, &prev_prog);
-  if (g_ref.plastic_sprite.program && g_ref.plastic_sprite.projection_u >= 0) {
-    glUseProgram(g_ref.plastic_sprite.program);
-    glUniformMatrix4fv(g_ref.plastic_sprite.projection_u, 1, GL_FALSE, fmat16_data(projection));
-  }
-  if (g_ref.gradient_card_sprite.program && g_ref.gradient_card_sprite.projection_u >= 0) {
-    glUseProgram(g_ref.gradient_card_sprite.program);
-    glUniformMatrix4fv(g_ref.gradient_card_sprite.projection_u, 1, GL_FALSE, fmat16_data(projection));
-  }
-  if (g_ref.copy_sprite.program && g_ref.copy_sprite.projection_u >= 0) {
-    glUseProgram(g_ref.copy_sprite.program);
-    glUniformMatrix4fv(g_ref.copy_sprite.projection_u, 1, GL_FALSE, fmat16_data(projection));
-  }
-  if (g_ref.gradient_sprite.program && g_ref.gradient_sprite.projection_u >= 0) {
-    glUseProgram(g_ref.gradient_sprite.program);
-    glUniformMatrix4fv(g_ref.gradient_sprite.projection_u, 1, GL_FALSE, fmat16_data(projection));
-  }
-  if (g_ref.rounded_rect_sprite.program && g_ref.rounded_rect_sprite.projection_u >= 0) {
-    glUseProgram(g_ref.rounded_rect_sprite.program);
-    glUniformMatrix4fv(g_ref.rounded_rect_sprite.projection_u, 1, GL_FALSE, fmat16_data(projection));
-  }
-  glUseProgram((GLuint)prev_prog);
+  sprite_program_t *programs[] = {&g_ref.copy_sprite, &g_ref.present_sprite, &g_ref.gradient_sprite,
+    &g_ref.gradient_card_sprite, &g_ref.plastic_sprite, &g_ref.rounded_rect_sprite, &g_ref.indexed_sprite, &g_vga.program};
+  for (size_t i = 0; i < ARRAY_LEN(programs); i++)
+    memcpy(programs[i]->state.projection, fmat16_data(projection), sizeof(programs[i]->state.projection));
 }
 
-static GLuint link_program_from_sources(const char *vs_src, const char *fs_src) {
-  GLuint vs = compile_shader(GL_VERTEX_SHADER, vs_src);
-  GLuint fs = compile_shader(GL_FRAGMENT_SHADER, fs_src);
-  if (!vs || !fs) {
-    if (vs) glDeleteShader(vs);
-    if (fs) glDeleteShader(fs);
-    return 0;
+bool ui_load_program_with_attributes(const char *vs_src, const char *fs_src,
+                                      const char *const *names, size_t count, uint32_t *out_program) {
+  if (!out_program || (!names && count) || count > MAX_SHADER_ATTRIBS) {
+    fprintf(stderr, "[renderer] invalid source program output or attribute count=%zu\n", count);
+    fflush(stderr);
+    return false;
   }
-
-  GLuint program = glCreateProgram();
-  if (!program) {
-    glDeleteShader(vs);
-    glDeleteShader(fs);
-    return 0;
-  }
-
-  glAttachShader(program, vs);
-  glAttachShader(program, fs);
-  glDeleteShader(vs);
-  glDeleteShader(fs);
-  return program;
+  shaderAttrib_t attrs[MAX_SHADER_ATTRIBS] = {0};
+  for (size_t i = 0; i < count; i++) attrs[i] = (shaderAttrib_t){names[i], (uint32_t)i};
+  gs_options_t options = renderer_shader_options();
+  GLuint id = gs_link_sources(vs_src, fs_src, attrs, count, &options);
+  if (!id) return false;
+  *out_program = id;
+  return true;
 }
-
 bool ui_load_program_from_source(const char *vs_src, const char *fs_src,
                                  const char *attrib0, const char *attrib1,
                                  const char *attrib2, uint32_t *out_program) {
-  if (!vs_src || !fs_src || !attrib0 || !attrib1 || !out_program) return false;
-  GLuint program = link_program_from_sources(vs_src, fs_src);
-  if (!program) return false;
+  const char *names[] = {attrib0, attrib1, attrib2};
+  return ui_load_program_with_attributes(vs_src, fs_src, names, ARRAY_LEN(names), out_program);
+}
+void ui_delete_program(uint32_t program) { if (program) glDeleteProgram(program); }
 
-  glBindAttribLocation(program, 0, attrib0);
-  glBindAttribLocation(program, 1, attrib1);
-  if (attrib2)
-    glBindAttribLocation(program, 2, attrib2);
-  glLinkProgram(program);
-
-  GLint linked = GL_FALSE;
-  glGetProgramiv(program, GL_LINK_STATUS, &linked);
-  if (linked != GL_TRUE) {
-    GLint n = 0;
-    glGetProgramiv(program, GL_INFO_LOG_LENGTH, &n);
-    if (n > 1) {
-      char *log = malloc((size_t)n);
-      if (log) {
-        glGetProgramInfoLog(program, n, NULL, log);
-        printf("Shader link error (source): %s\n", log);
-        free(log);
-      }
-    }
-    glDeleteProgram(program);
+static bool load_sprite_program(sprite_program_t *prog, const char *name) {
+  prog->desc = (shader_desc_t){.Name = name,
+    .Attributes = {{"position", 0, UT_FLOAT_VEC2}, {"texcoord", 1, UT_FLOAT_VEC2}, {"color", 2, UT_COLOR}},
+    .Shared = {{"tex", UT_FLOAT_VEC2}, {"col", UT_COLOR}},
+    .VertexBody = read_shader_file("sprite.vert.glsl"), .FragmentBody = read_shader_file(name)};
+  memcpy(prog->desc.Uniforms, sprite_uniforms, sizeof(sprite_uniforms));
+  gs_options_t options = renderer_shader_options();
+  if (!gs_load(&prog->shader, &prog->desc, &prog->state, sizeof(prog->state), &options)) {
+    delete_sprite_program(prog);
     return false;
   }
-
-  *out_program = program;
+  memcpy(prog->state.projection, fmat16_data(&g_active_projection), sizeof(prog->state.projection));
   return true;
-}
-
-void ui_delete_program(uint32_t program) {
-  if (program) glDeleteProgram(program);
-}
-
-static GLuint load_program_from_files(const char *fs_name,
-                                      const char *attrib0, const char *attrib1,
-                                      const char *attrib2) {
-  const char *vs_name = "common.vert.glsl";
-  char *vs_src = read_shader_file(vs_name);
-  char *fs_src = read_shader_file(fs_name);
-  if (!vs_src || !fs_src) {
-    printf("Shader load error: %s / %s\n", vs_name, fs_name);
-    free(vs_src);
-    free(fs_src);
-    return 0;
-  }
-
-  GLuint program = link_program_from_sources(vs_src, fs_src);
-  free(vs_src);
-  free(fs_src);
-  if (!program) return 0;
-
-  glBindAttribLocation(program, 0, attrib0);
-  glBindAttribLocation(program, 1, attrib1);
-  if (attrib2)
-    glBindAttribLocation(program, 2, attrib2);
-  glLinkProgram(program);
-
-  GLint linked = GL_FALSE;
-  glGetProgramiv(program, GL_LINK_STATUS, &linked);
-  if (linked != GL_TRUE) {
-    GLint n = 0;
-    glGetProgramiv(program, GL_INFO_LOG_LENGTH, &n);
-    if (n > 1) {
-      char *log = malloc((size_t)n);
-      if (log) {
-        glGetProgramInfoLog(program, n, NULL, log);
-        printf("Shader link error (%s/%s): %s\n", vs_name, fs_name, log);
-        free(log);
-      }
-    }
-    glDeleteProgram(program);
-    return 0;
-  }
-  return program;
 }
 
 // Initialize the sprite system
@@ -431,66 +291,21 @@ bool ui_init_prog(void) {
   memset(&g_ref, 0, sizeof(g_ref));
   memset(&g_vga, 0, sizeof(g_vga));
 
-  g_ref.copy_sprite.program = load_program_from_files("sprite_copy.frag.glsl",
-                                                      "position", "texcoord", "color");
-  if (!g_ref.copy_sprite.program) {
-    ui_shutdown_prog();
-    return false;
+  static const struct { size_t offset; const char *name; } programs[] = {
+    {offsetof(renderer_system_t, copy_sprite), "sprite_copy.frag.glsl"},
+    {offsetof(renderer_system_t, present_sprite), "sprite_present.frag.glsl"},
+    {offsetof(renderer_system_t, gradient_sprite), "sprite_gradient.frag.glsl"},
+    {offsetof(renderer_system_t, gradient_card_sprite), "sprite_gradient_card.frag.glsl"},
+    {offsetof(renderer_system_t, plastic_sprite), "sprite_plastic.frag.glsl"},
+    {offsetof(renderer_system_t, rounded_rect_sprite), "sprite_rounded_rect.frag.glsl"},
+  };
+  for (size_t i = 0; i < ARRAY_LEN(programs); i++) {
+    if (!load_sprite_program((sprite_program_t *)((char *)&g_ref + programs[i].offset), programs[i].name)) {
+      ui_shutdown_prog();
+      return false;
+    }
   }
-  cache_sprite_uniforms(&g_ref.copy_sprite);
-
-  g_ref.present_sprite.program = load_program_from_files("sprite_present.frag.glsl",
-                                                         "position", "texcoord", "color");
-  if (!g_ref.present_sprite.program) {
-    ui_shutdown_prog();
-    return false;
-  }
-  cache_sprite_uniforms(&g_ref.present_sprite);
-
-  g_ref.gradient_sprite.program = load_program_from_files("sprite_gradient.frag.glsl",
-                                                          "position", "texcoord", "color");
-  if (!g_ref.gradient_sprite.program) {
-    ui_shutdown_prog();
-    return false;
-  }
-  cache_sprite_uniforms(&g_ref.gradient_sprite);
-
-  g_ref.gradient_card_sprite.program = load_program_from_files("sprite_gradient_card.frag.glsl",
-                                                               "position", "texcoord", "color");
-  if (!g_ref.gradient_card_sprite.program) {
-    ui_shutdown_prog();
-    return false;
-  }
-  cache_sprite_uniforms(&g_ref.gradient_card_sprite);
-
-  g_ref.plastic_sprite.program = load_program_from_files("sprite_plastic.frag.glsl", "position", "texcoord", "color");
-  if (!g_ref.plastic_sprite.program) { ui_shutdown_prog(); return false; }
-  cache_sprite_uniforms(&g_ref.plastic_sprite);
-  g_plastic.glyph_uv     = glGetUniformLocation(g_ref.plastic_sprite.program, "glyph_uv");
-  g_plastic.glyph_box    = glGetUniformLocation(g_ref.plastic_sprite.program, "glyph_box");
-  g_plastic.disabled     = glGetUniformLocation(g_ref.plastic_sprite.program, "disabled");
-  g_plastic.shadow_color = glGetUniformLocation(g_ref.plastic_sprite.program, "shadow_color");
-
-  g_ref.rounded_rect_sprite.program = load_program_from_files("sprite_rounded_rect.frag.glsl",
-                                                               "position", "texcoord", "color");
-  if (!g_ref.rounded_rect_sprite.program) {
-    ui_shutdown_prog();
-    return false;
-  }
-  cache_sprite_uniforms(&g_ref.rounded_rect_sprite);
-  if (g_ref.rounded_rect_sprite.program) {
-    g_rounded_rect.size_u   = glGetUniformLocation(g_ref.rounded_rect_sprite.program, "size");
-    g_rounded_rect.radius_u = glGetUniformLocation(g_ref.rounded_rect_sprite.program, "radius");
-    g_rounded_rect.edge_u   = glGetUniformLocation(g_ref.rounded_rect_sprite.program, "edge");
-  }
-
-  g_ref.vga_program = load_program_from_files("vga.frag.glsl",
-                                              "position", "texcoord", NULL);
-  if (!g_ref.vga_program) {
-    ui_shutdown_prog();
-    return false;
-  }
-  cache_vga_uniforms();
+  if (!load_sprite_program(&g_vga.program, "vga.frag.glsl")) { ui_shutdown_prog(); return false; }
   g_vga.palette_texture = R_CreateTextureSRGBA8(256, 1, NULL,
                                                 R_FILTER_NEAREST, R_WRAP_CLAMP);
   if (!g_vga.palette_texture) {
@@ -527,8 +342,8 @@ bool ui_init_prog(void) {
   fmat16_copy(&g_ref.projection, &g_active_projection);
 
   update_sprite_projection_uniforms(&g_ref.projection);
-  glUseProgram(g_ref.vga_program);
-  glUniformMatrix4fv(g_vga.projection, 1, GL_FALSE, fmat16_data(&g_ref.projection));
+
+  memcpy(g_vga.program.state.projection, fmat16_data(&g_ref.projection), sizeof(g_vga.program.state.projection));
 
   const char *composition = getenv("ORION_SCREEN_COMPOSITION");
   if (composition && strcmp(composition, "srgb8") == 0)
@@ -550,36 +365,42 @@ void ui_shutdown_prog(void) {
   // Delete shader program and buffers
   R_DestroyScreenComposition();
   R_DeleteTexture(g_vga.palette_texture);
-  SAFE_DELETE(g_ref.copy_sprite.program, glDeleteProgram);
-  SAFE_DELETE(g_ref.present_sprite.program, glDeleteProgram);
-  SAFE_DELETE(g_ref.indexed_sprite.program, glDeleteProgram);
+  delete_sprite_program(&g_ref.copy_sprite);
+  delete_sprite_program(&g_ref.present_sprite);
+  delete_sprite_program(&g_ref.indexed_sprite);
   R_DeleteTexture(g_ref.indexed_palette);
-  SAFE_DELETE(g_ref.gradient_sprite.program, glDeleteProgram);
-  SAFE_DELETE(g_ref.gradient_card_sprite.program, glDeleteProgram);
-  SAFE_DELETE(g_ref.plastic_sprite.program, glDeleteProgram);
-  SAFE_DELETE(g_ref.rounded_rect_sprite.program, glDeleteProgram);
-  SAFE_DELETE(g_ref.vga_program, glDeleteProgram);
+  delete_sprite_program(&g_ref.gradient_sprite);
+  delete_sprite_program(&g_ref.gradient_card_sprite);
+  delete_sprite_program(&g_ref.plastic_sprite);
+  delete_sprite_program(&g_ref.rounded_rect_sprite);
+  delete_sprite_program(&g_vga.program);
   R_MeshDestroy(&g_ref.mesh);
 }
 
-void push_sprite_args(int tex, int x, int y, int w, int h, float alpha) {
-  if (!g_ref.copy_sprite.program) return;
-  glUseProgram(g_ref.copy_sprite.program);
+static void prepare_sprite_args(int tex, int x, int y, int w, int h, float alpha) {
+  if (!g_ref.copy_sprite.shader.progid) return;
+
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, tex);
-  glUniform1i(g_ref.copy_sprite.tex0_u, 0);
-  glUniform2f(g_ref.copy_sprite.offset_u, x, y);
-  glUniform2f(g_ref.copy_sprite.scale_u, w, h);
-  glUniform1f(g_ref.copy_sprite.alpha_u, alpha);
-  glUniform4f(g_ref.copy_sprite.params0_u, 0.0f, 0.0f, 0.0f, 0.0f);
-  glUniform4f(g_ref.copy_sprite.params1_u, 0.0f, 0.0f, 0.0f, 0.0f);
-  glUniform2f(g_ref.copy_sprite.uv_offset_u, 0.0f, 0.0f);
-  glUniform2f(g_ref.copy_sprite.uv_scale_u, 1.0f, 1.0f);
-  glUniform4f(g_ref.copy_sprite.tint_u, 1.0f, 1.0f, 1.0f, 1.0f);
+  g_ref.copy_sprite.state.tex0 = 0;
+  sprite_vec2(g_ref.copy_sprite.state.offset, x, y);
+  sprite_vec2(g_ref.copy_sprite.state.scale, w, h);
+  g_ref.copy_sprite.state.alpha = alpha;
+  sprite_vec4(g_ref.copy_sprite.state.params0, 0.0f, 0.0f, 0.0f, 0.0f);
+  sprite_vec4(g_ref.copy_sprite.state.params1, 0.0f, 0.0f, 0.0f, 0.0f);
+  sprite_vec2(g_ref.copy_sprite.state.uv_offset, 0.0f, 0.0f);
+  sprite_vec2(g_ref.copy_sprite.state.uv_scale, 1.0f, 1.0f);
+  sprite_vec4(g_ref.copy_sprite.state.tint, 1.0f, 1.0f, 1.0f, 1.0f);
+}
+
+void push_sprite_args(int tex, int x, int y, int w, int h, float alpha) {
+  if (!g_ref.copy_sprite.shader.progid) return;
+  prepare_sprite_args(tex, x, y, w, h, alpha);
+  gs_apply(&g_ref.copy_sprite.shader, &g_ref.copy_sprite.state);
 }
 
 void set_projection(int x, int y, int w, int h) {
-  if (!g_ref.vga_program) return;
+  if (!g_vga.program.shader.progid) return;
   fmat16_t projection;
   fmat16_ortho(x, w, h, y, -1, 1, &projection);
   fmat16_copy(&projection, &g_active_projection);
@@ -611,11 +432,10 @@ void begin_draw_transform(const view_matrix_t *view, float saved[16]) {
 
 // Draw a sprite at the specified screen position
 void draw_rect_ex(int tex, irect16_t r, int type, float alpha) {
-  if (!g_ref.vga_program) return;
-  push_sprite_args(tex, r.x, r.y, r.w, r.h, alpha);
+  if (!g_vga.program.shader.progid) return;
+  prepare_sprite_args(tex, r.x, r.y, r.w, r.h, alpha);
   bool premultiplied = R_TextureIsPremultiplied((uint32_t)tex);
-  glUniform4f(g_ref.copy_sprite.params1_u, premultiplied ? 1.0f : 0.0f,
-              0.0f, 0.0f, 0.0f);
+  sprite_vec4(g_ref.copy_sprite.state.params1, premultiplied ? 1.0f : 0.0f, 0.0f, 0.0f, 0.0f);
   
   // Source-over alpha keeps opaque window surfaces opaque under faded sprites.
   glEnable(GL_BLEND);
@@ -627,6 +447,7 @@ void draw_rect_ex(int tex, irect16_t r, int type, float alpha) {
   
   // Use the appropriate drawing mode
   g_ref.mesh.draw_mode = type ? GL_LINE_LOOP : GL_TRIANGLE_FAN;
+  if (!gs_apply(&g_ref.copy_sprite.shader, &g_ref.copy_sprite.state)) return;
   R_MeshDraw(&g_ref.mesh);
   
   // Reset state
@@ -647,14 +468,13 @@ void draw_indexed_rect(uint32_t tex, irect16_t r, const uint32_t palette[256], i
     return;
   }
   sprite_program_t *prog = &g_ref.indexed_sprite;
-  if (!prog->program) {
-    prog->program = load_program_from_files("sprite_indexed.frag.glsl", "position", "texcoord", "color");
-    if (!prog->program) {
+  if (!prog->shader.progid) {
+    load_sprite_program(prog, "sprite_indexed.frag.glsl");
+    if (!prog->shader.progid) {
       fprintf(stderr, "[renderer] indexed shader unavailable\n");
       fflush(stderr);
       return;
     }
-    cache_sprite_uniforms(prog);
   }
   uint8_t rgba[256 * 4];
   for (int i = 0; i < 256; i++) {
@@ -669,17 +489,18 @@ void draw_indexed_rect(uint32_t tex, irect16_t r, const uint32_t palette[256], i
   glBindTexture(GL_TEXTURE_2D, g_ref.indexed_palette);
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, tex);
-  glUseProgram(prog->program);
-  glUniformMatrix4fv(prog->projection_u, 1, GL_FALSE, fmat16_data(&g_active_projection));
-  glUniform2f(prog->offset_u, r.x, r.y);
-  glUniform2f(prog->scale_u, r.w, r.h);
-  glUniform2f(prog->uv_offset_u, 0, 0);
-  glUniform2f(prog->uv_scale_u, 1, 1);
-  glUniform1f(prog->alpha_u, alpha);
-  glUniform1i(prog->tex0_u, 0);
-  glUniform1i(glGetUniformLocation(prog->program, "palette_tex"), 1);
+
+  memcpy(prog->state.projection, fmat16_data(&g_active_projection), sizeof(prog->state.projection));
+  sprite_vec2(prog->state.offset, r.x, r.y);
+  sprite_vec2(prog->state.scale, r.w, r.h);
+  sprite_vec2(prog->state.uv_offset, 0, 0);
+  sprite_vec2(prog->state.uv_scale, 1, 1);
+  prog->state.alpha = alpha;
+  prog->state.tex0 = 0;
+  prog->state.palette_tex = 1;
   R_BlendPremultiplied();
   g_ref.mesh.draw_mode = GL_TRIANGLE_FAN;
+  if (!gs_apply(&prog->shader, &prog->state)) return;
   R_MeshDraw(&g_ref.mesh);
   glEnable(GL_DEPTH_TEST);
   glDisable(GL_BLEND);
@@ -690,9 +511,9 @@ void draw_indexed_rect(uint32_t tex, irect16_t r, const uint32_t palette[256], i
 void draw_sprite_region(int tex, irect16_t r,
                         frect_t const *uv,
                         uint32_t color, uint32_t flags) {
-  if (!g_ref.vga_program) return;
-  const sprite_program_t *prog = &g_ref.copy_sprite;
-  if (!prog || !prog->program) return;
+  if (!g_vga.program.shader.progid) return;
+  sprite_program_t *prog = &g_ref.copy_sprite;
+  if (!prog || !prog->shader.progid) return;
   float u0 = uv ? uv->x : 0.0f;
   float v0 = uv ? uv->y : 0.0f;
   float u1 = uv ? uv->w : 1.0f;
@@ -701,19 +522,18 @@ void draw_sprite_region(int tex, irect16_t r,
   float alpha = ((color >> 24) & 0xFF) / 255.0f;
   if (flags & DRAW_SPRITE_NO_ALPHA)
     alpha = 1.0f;
-  push_sprite_args(tex, r.x, r.y, r.w, r.h, alpha);
+  prepare_sprite_args(tex, r.x, r.y, r.w, r.h, alpha);
   bool premultiplied = R_TextureIsPremultiplied((uint32_t)tex);
-  glUniform4f(prog->params1_u, premultiplied ? 1.0f : 0.0f,
-              0.0f, 0.0f, 0.0f);
+  sprite_vec4(prog->state.params1, premultiplied ? 1.0f : 0.0f, 0.0f, 0.0f, 0.0f);
 
   float tr = ((color      ) & 0xFF) / 255.0f;
   float tg = ((color >>  8) & 0xFF) / 255.0f;
   float tb = ((color >> 16) & 0xFF) / 255.0f;
   float ta = 1.0f;
-  glUniform4f(prog->tint_u, tr, tg, tb, ta);
+  sprite_vec4(prog->state.tint, tr, tg, tb, ta);
 
-  glUniform2f(prog->uv_offset_u, u0, v0);
-  glUniform2f(prog->uv_scale_u, u1 - u0, v1 - v0);
+  sprite_vec2(prog->state.uv_offset, u0, v0);
+  sprite_vec2(prog->state.uv_scale, u1 - u0, v1 - v0);
   if (flags & DRAW_SPRITE_NO_ALPHA) {
     glDisable(GL_BLEND);
   } else if (premultiplied) {
@@ -724,6 +544,7 @@ void draw_sprite_region(int tex, irect16_t r,
   }
   glDisable(GL_DEPTH_TEST);
   g_ref.mesh.draw_mode = GL_TRIANGLE_FAN;
+  if (!gs_apply(&prog->shader, &prog->state)) return;
   R_MeshDraw(&g_ref.mesh);
   glEnable(GL_DEPTH_TEST);
   if (!(flags & DRAW_SPRITE_NO_ALPHA))
@@ -733,18 +554,18 @@ void draw_sprite_region(int tex, irect16_t r,
 void render_gradient_card(irect16_t r, int pixel_w, int pixel_h, float radius,
                           float ring_width, float highlight_width, ctrl_state_t state, uint32_t color) {
   sprite_program_t *program = &g_ref.gradient_card_sprite;
-  if (!program->program || pixel_w <= 0 || pixel_h <= 0) return;
-  glUseProgram(program->program);
-  glUniform2f(program->offset_u, r.x, r.y);
-  glUniform2f(program->scale_u, r.w, r.h);
-  glUniform2f(program->uv_offset_u, 0, 0);
-  glUniform2f(program->uv_scale_u, 1, 1);
-  glUniform4f(program->tint_u, (color & 255) / 255.0f, ((color >> 8) & 255) / 255.0f,
-              ((color >> 16) & 255) / 255.0f, (color >> 24) / 255.0f);
-  glUniform4f(program->params0_u, pixel_w, pixel_h, MIN(radius, MIN(pixel_w, pixel_h) * 0.5f), ring_width);
-  glUniform4f(program->params1_u, highlight_width, !!(state & CTRL_SELECTED), !!(state & CTRL_HOVER), 0);
+  if (!program->shader.progid || pixel_w <= 0 || pixel_h <= 0) return;
+
+  sprite_vec2(program->state.offset, r.x, r.y);
+  sprite_vec2(program->state.scale, r.w, r.h);
+  sprite_vec2(program->state.uv_offset, 0, 0);
+  sprite_vec2(program->state.uv_scale, 1, 1);
+  sprite_vec4(program->state.tint, (color & 255) / 255.0f, ((color >> 8) & 255) / 255.0f, ((color >> 16) & 255) / 255.0f, (color >> 24) / 255.0f);
+  sprite_vec4(program->state.params0, pixel_w, pixel_h, MIN(radius, MIN(pixel_w, pixel_h) * 0.5f), ring_width);
+  sprite_vec4(program->state.params1, highlight_width, !!(state & CTRL_SELECTED), !!(state & CTRL_HOVER), 0);
   R_BlendPremultiplied();
   g_ref.mesh.draw_mode = GL_TRIANGLE_FAN;
+  if (!gs_apply(&program->shader, &program->state)) return;
   R_MeshDraw(&g_ref.mesh);
   glDisable(GL_BLEND);
   glEnable(GL_DEPTH_TEST);
@@ -755,7 +576,7 @@ void render_plastic_surface(irect16_t r, float radius, float bevel, float shadow
                             uint32_t icon_tex, const frect_t *icon_uv, ipoint16_t icon_size) {
   sprite_program_t *program = &g_ref.plastic_sprite;
   if (r.w <= 0 || r.h <= 0) return;
-  if (!program->program) {
+  if (!program->shader.progid) {
     fprintf(stderr, "[renderer] plastic shader unavailable rect=%d,%d,%d,%d\n", r.x, r.y, r.w, r.h);
     fflush(stderr);
     return;
@@ -764,27 +585,24 @@ void render_plastic_surface(irect16_t r, float radius, float bevel, float shadow
   shadow = CLAMP(shadow, 0, MAX(0, MIN(r.w, r.h) * 0.5f - 1));
   float glyph_w = MIN(MAX(0, icon_size.x), MAX(0, r.w - 2 * shadow - 4));
   float glyph_h = MIN(MAX(0, icon_size.y), MAX(0, r.h - 2 * shadow - 4));
-  glUseProgram(program->program);
+
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, icon_tex ? icon_tex : g_vga.palette_texture);
-  glUniform1i(program->tex0_u, 0);
-  glUniform2f(program->offset_u, r.x, r.y);
-  glUniform2f(program->scale_u, r.w, r.h);
-  glUniform2f(program->uv_offset_u, 0, 0);
-  glUniform2f(program->uv_scale_u, 1, 1);
-  glUniform4f(program->tint_u, (color & 255) / 255.0f, ((color >> 8) & 255) / 255.0f,
-              ((color >> 16) & 255) / 255.0f, (color >> 24) / 255.0f);
-  glUniform4f(program->params0_u, r.w, r.h, MAX(0, radius), MAX(0, bevel));
-  glUniform4f(program->params1_u, shadow, !!(state & CTRL_PRESSED), !!(state & CTRL_HOVER), !!(state & CTRL_SELECTED));
-  glUniform1f(g_plastic.disabled, !!(state & CTRL_DISABLED));
-  glUniform4f(g_plastic.shadow_color, ui_srgb8_to_linear(shadow_color & 255),
-              ui_srgb8_to_linear((shadow_color >> 8) & 255), ui_srgb8_to_linear((shadow_color >> 16) & 255),
-              (shadow_color >> 24) / 255.0f);
-  glUniform4f(g_plastic.glyph_uv, uv.x, uv.y, uv.w, uv.h);
-  glUniform4f(g_plastic.glyph_box, (r.w - glyph_w) * 0.5f, (r.h - glyph_h) * 0.5f,
-              icon_tex ? glyph_w : 0, icon_tex ? glyph_h : 0);
+  program->state.tex0 = 0;
+  sprite_vec2(program->state.offset, r.x, r.y);
+  sprite_vec2(program->state.scale, r.w, r.h);
+  sprite_vec2(program->state.uv_offset, 0, 0);
+  sprite_vec2(program->state.uv_scale, 1, 1);
+  sprite_vec4(program->state.tint, (color & 255) / 255.0f, ((color >> 8) & 255) / 255.0f, ((color >> 16) & 255) / 255.0f, (color >> 24) / 255.0f);
+  sprite_vec4(program->state.params0, r.w, r.h, MAX(0, radius), MAX(0, bevel));
+  sprite_vec4(program->state.params1, shadow, !!(state & CTRL_PRESSED), !!(state & CTRL_HOVER), !!(state & CTRL_SELECTED));
+  program->state.disabled = !!(state & CTRL_DISABLED);
+  sprite_vec4(program->state.shadow_color, ui_srgb8_to_linear(shadow_color & 255), ui_srgb8_to_linear((shadow_color >> 8) & 255), ui_srgb8_to_linear((shadow_color >> 16) & 255), (shadow_color >> 24) / 255.0f);
+  sprite_vec4(program->state.glyph_uv, uv.x, uv.y, uv.w, uv.h);
+  sprite_vec4(program->state.glyph_box, (r.w - glyph_w) * 0.5f, (r.h - glyph_h) * 0.5f, icon_tex ? glyph_w : 0, icon_tex ? glyph_h : 0);
   R_BlendPremultiplied();
   g_ref.mesh.draw_mode = GL_TRIANGLE_FAN;
+  if (!gs_apply(&program->shader, &program->state)) return;
   R_MeshDraw(&g_ref.mesh);
   glDisable(GL_BLEND);
   glEnable(GL_DEPTH_TEST);
@@ -794,23 +612,24 @@ void draw_rect_gradient(int tex, int x, int y, int w, int h,
                         const ui_render_effect_params_t *params) {
   static const ui_render_effect_params_t kZeroParams = {{0}};
   const ui_render_effect_params_t *p = params ? params : &kZeroParams;
-  if (!g_ref.vga_program || !g_ref.gradient_sprite.program) return;
-  glUseProgram(g_ref.gradient_sprite.program);
+  if (!g_vga.program.shader.progid || !g_ref.gradient_sprite.shader.progid) return;
+
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, tex);
-  glUniform1i(g_ref.gradient_sprite.tex0_u, 0);
-  glUniform2f(g_ref.gradient_sprite.offset_u, x, y);
-  glUniform2f(g_ref.gradient_sprite.scale_u, w, h);
-  glUniform1f(g_ref.gradient_sprite.alpha_u, 1.0f);
-  glUniform4f(g_ref.gradient_sprite.params0_u, p->f[0], p->f[1], p->f[2], p->f[3]);
-  glUniform4f(g_ref.gradient_sprite.params1_u, p->f[4], p->f[5], p->f[6], p->f[7]);
-  glUniform2f(g_ref.gradient_sprite.uv_offset_u, 0.0f, 0.0f);
-  glUniform2f(g_ref.gradient_sprite.uv_scale_u, 1.0f, 1.0f);
-  glUniform4f(g_ref.gradient_sprite.tint_u, 1.0f, 1.0f, 1.0f, 1.0f);
+  g_ref.gradient_sprite.state.tex0 = 0;
+  sprite_vec2(g_ref.gradient_sprite.state.offset, x, y);
+  sprite_vec2(g_ref.gradient_sprite.state.scale, w, h);
+  g_ref.gradient_sprite.state.alpha = 1.0f;
+  sprite_vec4(g_ref.gradient_sprite.state.params0, p->f[0], p->f[1], p->f[2], p->f[3]);
+  sprite_vec4(g_ref.gradient_sprite.state.params1, p->f[4], p->f[5], p->f[6], p->f[7]);
+  sprite_vec2(g_ref.gradient_sprite.state.uv_offset, 0.0f, 0.0f);
+  sprite_vec2(g_ref.gradient_sprite.state.uv_scale, 1.0f, 1.0f);
+  sprite_vec4(g_ref.gradient_sprite.state.tint, 1.0f, 1.0f, 1.0f, 1.0f);
   glEnable(GL_BLEND);
   glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
   glDisable(GL_DEPTH_TEST);
   g_ref.mesh.draw_mode = GL_TRIANGLE_FAN;
+  if (!gs_apply(&g_ref.gradient_sprite.shader, &g_ref.gradient_sprite.state)) return;
   R_MeshDraw(&g_ref.mesh);
   glEnable(GL_DEPTH_TEST);
   glDisable(GL_BLEND);
@@ -820,7 +639,7 @@ void draw_rect_program_params_blend(int tex, int x, int y, int w, int h,
                                     float alpha, ui_layer_blend_t blend,
                                     uint32_t program, float mix_amount,
                                     const ui_render_effect_params_t *params) {
-  if (!g_ref.vga_program || !program) return;
+  if (!g_vga.program.shader.progid || !program) return;
   glEnable(GL_BLEND);
   glBlendEquation(GL_FUNC_ADD);
   switch (blend) {
@@ -848,11 +667,10 @@ void draw_rect_program_params_blend(int tex, int x, int y, int w, int h,
 
 void draw_rect_blend(int tex, int x, int y, int w, int h, float alpha,
                      ui_layer_blend_t blend) {
-  if (!g_ref.vga_program) return;
-  push_sprite_args(tex, x, y, w, h, alpha);
+  if (!g_vga.program.shader.progid) return;
+  prepare_sprite_args(tex, x, y, w, h, alpha);
   bool premultiplied = R_TextureIsPremultiplied((uint32_t)tex);
-  glUniform4f(g_ref.copy_sprite.params1_u, premultiplied ? 1.0f : 0.0f,
-              0.0f, 0.0f, 0.0f);
+  sprite_vec4(g_ref.copy_sprite.state.params1, premultiplied ? 1.0f : 0.0f, 0.0f, 0.0f, 0.0f);
   glEnable(GL_BLEND);
   glBlendEquation(GL_FUNC_ADD);
   switch (blend) {
@@ -876,6 +694,7 @@ void draw_rect_blend(int tex, int x, int y, int w, int h, float alpha,
   }
   glDisable(GL_DEPTH_TEST);
   g_ref.mesh.draw_mode = GL_TRIANGLE_FAN;
+  if (!gs_apply(&g_ref.copy_sprite.shader, &g_ref.copy_sprite.state)) return;
   R_MeshDraw(&g_ref.mesh);
   glEnable(GL_DEPTH_TEST);
   glDisable(GL_BLEND);
@@ -886,7 +705,11 @@ static void draw_rect_program_common(int tex, int x, int y, int w, int h,
                                      float mix_amount,
                                      const ui_render_effect_params_t *params,
                                      bool premultiplied_output) {
-  if (!g_ref.vga_program || !program) return;
+  if (!g_vga.program.shader.progid || !program) return;
+  sprite_program_t *builtins[] = {&g_ref.copy_sprite, &g_ref.present_sprite, &g_ref.indexed_sprite,
+    &g_ref.gradient_sprite, &g_ref.gradient_card_sprite, &g_ref.plastic_sprite, &g_ref.rounded_rect_sprite};
+  for (size_t i = 0; i < ARRAY_LEN(builtins); i++)
+    if (builtins[i]->shader.progid == program) gs_invalidate(&builtins[i]->shader);
   glUseProgram(program);
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, tex);
@@ -954,7 +777,7 @@ static bool bake_texture_program_common(int src_tex, int w, int h,
                                         uint32_t program, float mix_amount,
                                         const ui_render_effect_params_t *params,
                                         uint32_t *out_tex) {
-  if (!g_ref.vga_program || src_tex == 0 || w <= 0 || h <= 0 || !program || !out_tex)
+  if (!g_vga.program.shader.progid || src_tex == 0 || w <= 0 || h <= 0 || !program || !out_tex)
     return false;
 
   GLuint tex = R_CreateTextureRGBA(w, h, NULL, R_FILTER_LINEAR, R_WRAP_CLAMP);
@@ -1027,33 +850,29 @@ static void render_rounded_box(int tex, irect16_t r, int win_w, int win_h,
                                 float radius, float alpha, uint32_t color,
                                 float blur, float padding, bool premultiplied,
                                 uint32_t edge_color, float edge_width, float stroke, bool gradient) {
-  if (!g_ref.rounded_rect_sprite.program || (!tex && blur <= 0)) return;
-  glUseProgram(g_ref.rounded_rect_sprite.program);
+  if (!g_ref.rounded_rect_sprite.shader.progid || (!tex && blur <= 0)) return;
+
   glActiveTexture(GL_TEXTURE0);
   // A shadow passes tex 0 and never samples. Binding the default name makes
   // the macOS GL layer warn and substitute a zero texture.
   if (tex) glBindTexture(GL_TEXTURE_2D, (GLuint)tex);
-  glUniform1i(g_ref.rounded_rect_sprite.tex0_u, 0);
-  glUniform2f(g_ref.rounded_rect_sprite.offset_u, (float)r.x, (float)r.y);
-  glUniform2f(g_ref.rounded_rect_sprite.scale_u, (float)r.w, (float)r.h);
-  glUniform1f(g_ref.rounded_rect_sprite.alpha_u, alpha);
-  glUniform4f(g_ref.rounded_rect_sprite.params0_u, blur, padding, gradient ? 1.0f : 0.0f, 0.0f);
-  glUniform2f(g_ref.rounded_rect_sprite.uv_offset_u, 0.0f, 1.0f);
-  glUniform2f(g_ref.rounded_rect_sprite.uv_scale_u, 1.0f, -1.0f);
-  glUniform4f(g_ref.rounded_rect_sprite.tint_u,
-              (color & 255) / 255.0f, ((color >> 8) & 255) / 255.0f,
-              ((color >> 16) & 255) / 255.0f, (color >> 24) / 255.0f);
+  g_ref.rounded_rect_sprite.state.tex0 = 0;
+  sprite_vec2(g_ref.rounded_rect_sprite.state.offset, (float)r.x, (float)r.y);
+  sprite_vec2(g_ref.rounded_rect_sprite.state.scale, (float)r.w, (float)r.h);
+  g_ref.rounded_rect_sprite.state.alpha = alpha;
+  sprite_vec4(g_ref.rounded_rect_sprite.state.params0, blur, padding, gradient ? 1.0f : 0.0f, 0.0f);
+  sprite_vec2(g_ref.rounded_rect_sprite.state.uv_offset, 0.0f, 1.0f);
+  sprite_vec2(g_ref.rounded_rect_sprite.state.uv_scale, 1.0f, -1.0f);
+  sprite_vec4(g_ref.rounded_rect_sprite.state.tint, (color & 255) / 255.0f, ((color >> 8) & 255) / 255.0f, ((color >> 16) & 255) / 255.0f, (color >> 24) / 255.0f);
   // SDF-specific uniforms.
-  glUniform2f(g_rounded_rect.size_u, (float)win_w, (float)win_h);
-  glUniform1f(g_rounded_rect.radius_u, MAX(0.0f, MIN(radius, MIN(win_w, win_h) * 0.5f)));
+  sprite_vec2(g_ref.rounded_rect_sprite.state.size, (float)win_w, (float)win_h);
+  g_ref.rounded_rect_sprite.state.radius = MAX(0.0f, MIN(radius, MIN(win_w, win_h) * 0.5f));
   premultiplied = premultiplied || R_TextureIsPremultiplied((uint32_t)tex);
-  glUniform4f(g_ref.rounded_rect_sprite.params1_u, premultiplied ? 1.0f : 0.0f,
-              edge_width, MAX(0.0f, stroke), 0.0f);
-  glUniform4f(g_rounded_rect.edge_u,
-              (edge_color & 255) / 255.0f, ((edge_color >> 8) & 255) / 255.0f,
-              ((edge_color >> 16) & 255) / 255.0f, (edge_color >> 24) / 255.0f);
+  sprite_vec4(g_ref.rounded_rect_sprite.state.params1, premultiplied ? 1.0f : 0.0f, edge_width, MAX(0.0f, stroke), 0.0f);
+  sprite_vec4(g_ref.rounded_rect_sprite.state.edge, (edge_color & 255) / 255.0f, ((edge_color >> 8) & 255) / 255.0f, ((edge_color >> 16) & 255) / 255.0f, (edge_color >> 24) / 255.0f);
   R_BlendPremultiplied();
   g_ref.mesh.draw_mode = GL_TRIANGLE_FAN;
+  if (!gs_apply(&g_ref.rounded_rect_sprite.shader, &g_ref.rounded_rect_sprite.state)) return;
   R_MeshDraw(&g_ref.mesh);
   glDisable(GL_BLEND);
   glEnable(GL_DEPTH_TEST);
@@ -1103,7 +922,7 @@ void draw_rounded_rect_premultiplied(int tex, irect16_t r, int win_w, int win_h,
 }
 
 bool read_texture_rgba(int src_tex, int w, int h, uint8_t *out_rgba) {
-  if (!g_ref.vga_program || src_tex == 0 || w <= 0 || h <= 0 || !out_rgba) {
+  if (!g_vga.program.shader.progid || src_tex == 0 || w <= 0 || h <= 0 || !out_rgba) {
     fprintf(stderr, "[renderer] texture readback rejected tex=%d size=%dx%d\n",
             src_tex, w, h);
     fflush(stderr);
@@ -1787,7 +1606,7 @@ bool R_BeginScreenComposition(int width, int height, uint32_t clear_color) {
 }
 
 void R_PresentScreenComposition(int width, int height) {
-  if (!g_screen_composition.tex || !g_ref.present_sprite.program ||
+  if (!g_screen_composition.tex || !g_ref.present_sprite.shader.progid ||
       width <= 0 || height <= 0) {
     fprintf(stderr, "[renderer] screen presentation rejected tex=%u size=%dx%d\n",
             g_screen_composition.tex, width, height);
@@ -1813,20 +1632,20 @@ void R_PresentScreenComposition(int width, int height) {
   float encode_srgb = 1.0f;
 #endif
   sprite_program_t *prog = &g_ref.present_sprite;
-  glUseProgram(prog->program);
+
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, g_screen_composition.tex);
-  glUniform1i(prog->tex0_u, 0);
-  glUniformMatrix4fv(prog->projection_u, 1, GL_FALSE,
-                     fmat16_data(&g_active_projection));
-  glUniform2f(prog->offset_u, 0.0f, 0.0f);
-  glUniform2f(prog->scale_u, (float)screen_width, (float)screen_height);
-  glUniform2f(prog->uv_offset_u, 0.0f, 1.0f);
-  glUniform2f(prog->uv_scale_u, 1.0f, -1.0f);
-  glUniform1f(prog->alpha_u, 1.0f);
-  glUniform4f(prog->params0_u, encode_srgb, 0.0f, 0.0f, 0.0f);
-  glUniform4f(prog->tint_u, 1.0f, 1.0f, 1.0f, 1.0f);
+  prog->state.tex0 = 0;
+  memcpy(prog->state.projection, fmat16_data(&g_active_projection), sizeof(prog->state.projection));
+  sprite_vec2(prog->state.offset, 0.0f, 0.0f);
+  sprite_vec2(prog->state.scale, (float)screen_width, (float)screen_height);
+  sprite_vec2(prog->state.uv_offset, 0.0f, 1.0f);
+  sprite_vec2(prog->state.uv_scale, 1.0f, -1.0f);
+  prog->state.alpha = 1.0f;
+  sprite_vec4(prog->state.params0, encode_srgb, 0.0f, 0.0f, 0.0f);
+  sprite_vec4(prog->state.tint, 1.0f, 1.0f, 1.0f, 1.0f);
   g_ref.mesh.draw_mode = GL_TRIANGLE_FAN;
+  if (!gs_apply(&prog->shader, &prog->state)) return;
   R_MeshDraw(&g_ref.mesh);
   glEnable(GL_DEPTH_TEST);
 }
@@ -1847,7 +1666,7 @@ bool R_DrawVGABuffer(const R_VgaBuffer *buf,
                      int dst_w_px, int dst_h_px,
                      const R_FontSheet *font,
                      const uint32_t palette256[256]) {
-  if (!g_ref.vga_program || !buf || !buf->vga_buffer || !font ||
+  if (!g_vga.program.shader.progid || !buf || !buf->vga_buffer || !font ||
       !font->texture || font->cell_w <= 0 || font->cell_h <= 0 ||
       !palette256 || buf->width <= 0 || buf->height <= 0 ||
       dst_w_px <= 0 || dst_h_px <= 0)
@@ -1860,17 +1679,16 @@ bool R_DrawVGABuffer(const R_VgaBuffer *buf,
     pal[i * 4 + 3] = (uint8_t)(palette256[i] >> 24);
   }
 
-  glUseProgram(g_ref.vga_program);
-  glUniformMatrix4fv(g_vga.projection, 1, GL_FALSE, fmat16_data(&g_active_projection));
-  glUniform2f(g_vga.offset, (float)x, (float)y);
-  glUniform2f(g_vga.scale, (float)dst_w_px, (float)dst_h_px);
-  glUniform2f(g_vga.uv_offset, 0.0f, 0.0f);
-  glUniform2f(g_vga.uv_scale, 1.0f, 1.0f);
-  glUniform2f(g_vga.grid_size, (float)buf->width, (float)buf->height);
-  glUniform2f(g_vga.cell_size, (float)font->cell_w, (float)font->cell_h);
-  glUniform1i(g_vga.cell_tex, 0);
-  glUniform1i(g_vga.font_tex, 1);
-  glUniform1i(g_vga.palette_tex, 2);
+  memcpy(g_vga.program.state.projection, fmat16_data(&g_active_projection), sizeof(g_vga.program.state.projection));
+  sprite_vec2(g_vga.program.state.offset, (float)x, (float)y);
+  sprite_vec2(g_vga.program.state.scale, (float)dst_w_px, (float)dst_h_px);
+  sprite_vec2(g_vga.program.state.uv_offset, 0.0f, 0.0f);
+  sprite_vec2(g_vga.program.state.uv_scale, 1.0f, 1.0f);
+  sprite_vec2(g_vga.program.state.grid_size, (float)buf->width, (float)buf->height);
+  sprite_vec2(g_vga.program.state.cell_size, (float)font->cell_w, (float)font->cell_h);
+  g_vga.program.state.cell_tex = 0;
+  g_vga.program.state.font_tex = 1;
+  g_vga.program.state.vga_palette_tex = 2;
 
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, (GLuint)buf->vga_buffer);
@@ -1887,6 +1705,7 @@ bool R_DrawVGABuffer(const R_VgaBuffer *buf,
   glDisable(GL_DEPTH_TEST);
   glDisable(GL_BLEND);
   glBindVertexArray(g_ref.mesh.vao);
+  if (!gs_apply(&g_vga.program.shader, &g_vga.program.state)) return false;
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
   glBindVertexArray(0);
   glEnable(GL_DEPTH_TEST);

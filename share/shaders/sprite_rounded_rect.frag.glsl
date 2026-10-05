@@ -1,18 +1,3 @@
-#version 150 core
-
-in vec2 tex;
-in vec4 col;
-out vec4 outColor;
-
-uniform sampler2D tex0;
-uniform vec4 tint;
-uniform float alpha;
-uniform vec2 size;       // window size in pixels
-uniform float radius;    // corner radius in pixels
-uniform vec4 params0;    // shadow sigma, expanded-quad padding; z = vertical gradient; sigma=0 means texture
-uniform vec4 params1;    // x = premultiplied source, y = left edge width, z = inset stroke width (px)
-uniform vec4 edge;       // edge or gradient bottom colour (sRGB, straight alpha)
-
 float srgb_to_linear(float x) {
   return x <= 0.04045 ? x / 12.92 : pow((x + 0.055) / 1.055, 2.4);
 }
@@ -23,7 +8,8 @@ float roundedBoxSDF(vec2 p, vec2 b, float r) {
   return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
 }
 
-void main() {
+vec4 frag() {
+  vec4 outColor;
   if (params0.x > 0.0) {
     vec2 p = (tex - 0.5) * (size + 2.0 * params0.y);
     float d = roundedBoxSDF(p, size * 0.5, radius);
@@ -38,7 +24,7 @@ void main() {
                            srgb_to_linear(tint.b));
     float shadow_alpha = tint.a * alpha * coverage;
     outColor = vec4(shadow_rgb * shadow_alpha, shadow_alpha);
-    return;
+    return outColor;
   }
   vec4 src = texture(tex0, tex);
   vec3 tint_linear = vec3(srgb_to_linear(tint.r), srgb_to_linear(tint.g),
@@ -63,7 +49,7 @@ void main() {
     float y = clamp(1.0 - tex.y, 0.0, 1.0);
     float a = mix(tint.a, edge.a, y) * alpha * aa * col.a;
     outColor = vec4(mix(tint_linear, bottom, y) * col.rgb * a, a);
-    return;
+    return outColor;
   }
   float factor = alpha * aa * col.a * tint.a;
   vec3 straight_rgb = src.rgb * col.rgb * tint_linear;
@@ -76,4 +62,5 @@ void main() {
     src_a = 1.0;
   }
   outColor = vec4(straight_rgb * factor, src_a * factor);
+  return outColor;
 }

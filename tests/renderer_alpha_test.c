@@ -15,6 +15,64 @@ extern void init_ui_white_texture(void);
 extern void shutdown_white_texture(void);
 
 static uint32_t viewport_texture;
+static void test_shader_state_restore(void) {
+  TEST("Typed sprite state survives raw effects and lazy indexed shader creation");
+  CGLPixelFormatAttribute attrs[] = {kCGLPFAOpenGLProfile,
+    (CGLPixelFormatAttribute)kCGLOGLPVersion_3_2_Core, 0};
+  CGLPixelFormatObj format = NULL;
+  CGLContextObj context = NULL;
+  GLint count = 0;
+  if (CGLChoosePixelFormat(attrs, &format, &count) != kCGLNoError || !format) { SKIP("Offscreen OpenGL unavailable"); }
+  CGLError error = CGLCreateContext(format, NULL, &context);
+  CGLDestroyPixelFormat(format);
+  if (error != kCGLNoError || !context) { SKIP("Offscreen OpenGL context unavailable"); }
+  CGLSetCurrentContext(context);
+  bool initialized = ui_init_prog(), ok = initialized;
+  uint32_t fbo = 0, surface = 0, white = 0, indexed = 0;
+  int w = 0, h = 0;
+  if (ok) {
+    ok = R_EnsureWindowTarget(&fbo, &surface, &w, &h, 1, 1);
+    white = R_CreateTextureRGBA(1, 1, (uint8_t[]){255, 255, 255, 255}, R_FILTER_NEAREST, R_WRAP_CLAMP);
+    indexed = R_CreateTextureR8(1, 1, (uint8_t[]){1}, R_FILTER_NEAREST, R_WRAP_CLAMP);
+    ok &= white && indexed;
+  }
+  if (ok) {
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glViewport(0, 0, 1, 1);
+    glDisable(GL_SCISSOR_TEST);
+    R_SetFramebufferSRGB(false);
+    set_projection(0, 0, 1, 1);
+    glClearColor(0, 0, 0, 0);
+    uint8_t original[4], effect[4], restored[4], palette_pixel[4];
+    glClear(GL_COLOR_BUFFER_BIT);
+    draw_sprite_region(white, R(0, 0, 1, 1), NULL, 0x800000FF, 0);
+    glReadPixels(0, 0, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, original);
+    glClear(GL_COLOR_BUFFER_BIT);
+    draw_rect_program_blend(white, 0, 0, 1, 1, 0.75f, UI_LAYER_BLEND_NORMAL, get_sprite_prog(), 0);
+    glReadPixels(0, 0, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, effect);
+    glClear(GL_COLOR_BUFFER_BIT);
+    draw_sprite_region(white, R(0, 0, 1, 1), NULL, 0x800000FF, 0);
+    glReadPixels(0, 0, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, restored);
+    uint32_t palette[256] = {0};
+    palette[1] = 0xFFFF0000;
+    glClear(GL_COLOR_BUFFER_BIT);
+    draw_indexed_rect(indexed, R(0, 0, 1, 1), palette, 0, 1);
+    glReadPixels(0, 0, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, palette_pixel);
+    ok &= original[0] == 128 && original[1] == 0 && original[3] == 128;
+    ok &= memcmp(original, effect, 4) != 0 && memcmp(original, restored, 4) == 0;
+    ok &= palette_pixel[0] == 0 && palette_pixel[1] == 0 && palette_pixel[2] == 255 && palette_pixel[3] == 255;
+    ok &= glGetError() == GL_NO_ERROR;
+  }
+  R_DeleteTexture(white);
+  R_DeleteTexture(indexed);
+  R_DestroyWindowTarget(&fbo, &surface, &w, &h);
+  if (initialized) ui_shutdown_prog();
+  CGLSetCurrentContext(NULL);
+  CGLDestroyContext(context);
+  ASSERT_TRUE(ok);
+  PASS();
+}
+
 static void test_png_toolbar(void) {
   TEST("PNG toolbar preserves colours, selects pressed row and retains texture after failed reload");
   CGLPixelFormatAttribute attrs[] = {kCGLPFAOpenGLProfile,
@@ -625,6 +683,7 @@ static void test_srgb_linear_source_over(void) {
 int main(void) {
   TEST_START("Renderer alpha");
 #if defined(__APPLE__) && !TARGET_OS_IOS
+  test_shader_state_restore();
   test_plastic_surface();
   test_gradient_card();
   test_selection_gradient();

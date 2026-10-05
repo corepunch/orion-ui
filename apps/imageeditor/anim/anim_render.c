@@ -51,52 +51,10 @@ static const char k1BitFragSrc[] =
 static GLuint s_indexed_prog = 0;
 static GLuint s_1bit_prog    = 0;
 
-static GLuint compile_shader(GLenum type, const char *src) {
-  GLuint sh = glCreateShader(type);
-  if (!sh) return 0;
-#ifdef ORION_OPENGL_ES
-  const char *body = strchr(src, '\n');
-  const char *parts[] = {"#version 300 es\nprecision highp float;\nprecision highp int;\n", body ? body + 1 : src};
-  glShaderSource(sh, 2, parts, NULL);
-#else
-  glShaderSource(sh, 1, &src, NULL);
-#endif
-  glCompileShader(sh);
-  GLint ok = 0;
-  glGetShaderiv(sh, GL_COMPILE_STATUS, &ok);
-  if (!ok) {
-    char log[512];
-    glGetShaderInfoLog(sh, sizeof(log), NULL, log);
-    IE_DEBUG("anim_render shader compile error: %s", log);
-    glDeleteShader(sh);
-    return 0;
-  }
-  return sh;
-}
-
 static GLuint link_program(const char *vert_src, const char *frag_src) {
-  GLuint vs = compile_shader(GL_VERTEX_SHADER,   vert_src);
-  if (!vs) return 0;
-  GLuint fs = compile_shader(GL_FRAGMENT_SHADER, frag_src);
-  if (!fs) { glDeleteShader(vs); return 0; }
-
-  GLuint prog = glCreateProgram();
-  glAttachShader(prog, vs);
-  glAttachShader(prog, fs);
-  glLinkProgram(prog);
-  glDeleteShader(vs);
-  glDeleteShader(fs);
-
-  GLint ok = 0;
-  glGetProgramiv(prog, GL_LINK_STATUS, &ok);
-  if (!ok) {
-    char log[512];
-    glGetProgramInfoLog(prog, sizeof(log), NULL, log);
-    IE_DEBUG("anim_render program link error: %s", log);
-    glDeleteProgram(prog);
-    return 0;
-  }
-  return prog;
+  uint32_t program = 0;
+  ui_load_program_from_source(vert_src, frag_src, "a_pos", "a_uv", NULL, &program);
+  return program;
 }
 
 bool anim_render_init(void) {

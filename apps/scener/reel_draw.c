@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <orion/user/gl_compat.h>
 #include "reel.h"
+#include <orion/kernel/renderer.h>
 
 enum { REEL_KIND_BOX, REEL_KIND_SEGMENT, REEL_KIND_GLYPH, REEL_KIND_IMAGE };
 enum { REEL_PASS_ALL, REEL_PASS_INTERIOR, REEL_PASS_FRINGE };
@@ -67,15 +68,6 @@ static const char *reel_fs =
 	"  frag=vec4(col.rgb,col.a*c);\n"
 	"}\n";
 
-static GLuint reel_shader(GLenum type, const char *src) {
-	GLuint s = glCreateShader(type);
-	glShaderSource(s, 1, &src, NULL);
-	glCompileShader(s);
-	GLint ok = 0; glGetShaderiv(s, GL_COMPILE_STATUS, &ok);
-	if (!ok) { char log[1024]; glGetShaderInfoLog(s, sizeof(log), NULL, log); fprintf(stderr, "[reel] shader: %s\n", log); fflush(stderr); glDeleteShader(s); return 0; }
-	return s;
-}
-
 static bool reel_target(GLuint *fbo, GLuint *color, GLuint *depth, int w, int h, GLenum format) {
 	glGenFramebuffers(1, fbo); glGenTextures(1, color); glGenRenderbuffers(1, depth);
 	glBindTexture(GL_TEXTURE_2D, *color);
@@ -105,17 +97,10 @@ bool reel_gl_init(reel_t *r, int flags) {
 	reel_gl_t *g = calloc(1, sizeof(*g));
 	r->gl = g;
 	g->flags = flags;
-	GLuint vs = reel_shader(GL_VERTEX_SHADER, reel_vs), fs = reel_shader(GL_FRAGMENT_SHADER, reel_fs);
-	if (!vs || !fs) return false;
-	g->prog = glCreateProgram();
-	glAttachShader(g->prog, vs); glAttachShader(g->prog, fs);
-	static const char *const names[] = {"aPos", "aUV", "aP0", "aP1", "aClip", "aColor", "aKind"};
-	for (int i = 0; i < 7; i++) glBindAttribLocation(g->prog, (GLuint)i, names[i]);
-	glBindFragDataLocation(g->prog, 0, "frag");
-	glLinkProgram(g->prog);
-	glDeleteShader(vs); glDeleteShader(fs);
-	GLint linked = 0; glGetProgramiv(g->prog, GL_LINK_STATUS, &linked);
-	if (!linked) { fprintf(stderr, "[reel] shader program failed to link\n"); fflush(stderr); return false; }
+	const char *names[] = {"aPos", "aUV", "aP0", "aP1", "aClip", "aColor", "aKind"};
+	if (!ui_load_program_with_attributes(reel_vs, reel_fs, names, 7, &g->prog)) {
+		free(g); r->gl = NULL; return false;
+	}
 	g->canvas_loc = glGetUniformLocation(g->prog, "uCanvas");
 	g->atlas_loc = glGetUniformLocation(g->prog, "uAtlas");
 	g->image_loc = glGetUniformLocation(g->prog, "uImage");

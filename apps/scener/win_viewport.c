@@ -62,21 +62,9 @@ static const char *vp_present_fs =
 	"in vec2 tex; in vec4 col; out vec4 outColor; uniform sampler2D tex0; uniform vec4 tint; uniform float alpha;\n"
 	"void main(){ outColor=texture(tex0,vec2(tex.x,1.0-tex.y))*col*tint; outColor.a*=alpha; }\n";
 
-static GLuint vp_compile_shader(GLenum type, const char *source) {
-	GLuint shader=glCreateShader(type); glShaderSource(shader,1,&source,NULL); glCompileShader(shader);
-	GLint ok=0; glGetShaderiv(shader,GL_COMPILE_STATUS,&ok);
-	if(!ok){ char log[1024]; glGetShaderInfoLog(shader,sizeof(log),NULL,log); fprintf(stderr,"viewport shader: %s\n",log); glDeleteShader(shader); return 0; }
-	return shader;
-}
-
 static GLuint vp_create_present_program(void) {
-	GLuint vs=vp_compile_shader(GL_VERTEX_SHADER,vp_present_vs), fs=vp_compile_shader(GL_FRAGMENT_SHADER,vp_present_fs);
-	if(!vs||!fs){ if(vs) glDeleteShader(vs); if(fs) glDeleteShader(fs); return 0; }
-	GLuint program=glCreateProgram(); glAttachShader(program,vs); glAttachShader(program,fs);
-	glBindAttribLocation(program,0,"position"); glBindAttribLocation(program,1,"texcoord"); glBindAttribLocation(program,2,"color");
-	glLinkProgram(program); glDeleteShader(vs); glDeleteShader(fs);
-	GLint ok=0; glGetProgramiv(program,GL_LINK_STATUS,&ok);
-	if(!ok){ char log[1024]; glGetProgramInfoLog(program,sizeof(log),NULL,log); fprintf(stderr,"viewport program: %s\n",log); glDeleteProgram(program); return 0; }
+	uint32_t program = 0;
+	ui_load_program_from_source(vp_present_vs, vp_present_fs, "position", "texcoord", "color", &program);
 	return program;
 }
 

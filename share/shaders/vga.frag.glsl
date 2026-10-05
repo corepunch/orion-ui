@@ -1,17 +1,7 @@
-#version 150 core
-
-in vec2 tex;
-out vec4 outColor;
-
-uniform sampler2D cellTex;
-uniform sampler2D fontTex;
-uniform sampler2D paletteTex;
-uniform vec2 gridSize;
-uniform vec2 cellSize;   // (glyph_cell_w, glyph_cell_h) in pixels
-
 #define ATLAS_COLS 256.0
 
-void main() {
+vec4 frag() {
+  vec4 outColor;
   vec2 g = tex * gridSize;
   vec2 cell = floor(g);
   vec2 fracCell = fract(g);
@@ -32,4 +22,5 @@ void main() {
   vec4 bgColor = texture(paletteTex, vec2((float(bg) + 0.5) / 256.0, 0.5));
   vec4 fgColor = texture(paletteTex, vec2((float(fg) + 0.5) / 256.0, 0.5));
   outColor = mix(bgColor, fgColor, a);
+  return outColor;
 }

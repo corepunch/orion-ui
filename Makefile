@@ -231,7 +231,7 @@ share: | $(SHARE_DIR)
 # ── Core libraries ───────────────────────────────────────────────────────
 library: $(CORE_LIBS)
 
-CORE_HEADERS = $(wildcard orion/*.h orion/user/*.h orion/kernel/*.h orion/commctl/*.h orion/commdlg/*.h)
+CORE_HEADERS = $(wildcard vendor/gl_shader/*.[ch]) $(wildcard orion/*.h orion/user/*.h orion/kernel/*.h orion/commctl/*.h orion/commdlg/*.h)
 
 # unity_lib <name> <srcs> <lib-deps> <extra-cflags> <link-libs>
 # The sources are #included into a single translation unit fed via stdin.
@@ -269,7 +269,7 @@ INSTALL_GEMS = $(if $(IS_WIN),,$(GEM_BINS) $(PHONY_APP_GEMS))
 install: all
 	@echo "INSTALL $(DESTDIR)$(PREFIX)"
 	@$(INSTALL) -d "$(DESTDIR)$(PREFIX)/bin" "$(DESTDIR)$(PREFIX)/lib" \
-	    "$(DESTDIR)$(PREFIX)/include/orion" "$(DESTDIR)$(PREFIX)/include/platform" \
+	    "$(DESTDIR)$(PREFIX)/include/vendor/gl_shader" "$(DESTDIR)$(PREFIX)/include/orion" "$(DESTDIR)$(PREFIX)/include/platform" \
 	    "$(DESTDIR)$(PREFIX)/lib/orion/gems" "$(DESTDIR)$(PREFIX)/share" \
 	    "$(DESTDIR)$(PREFIX)/share/doc/orion"
 	@$(INSTALL) -m 755 $(INSTALL_BINS) "$(DESTDIR)$(PREFIX)/bin/"
@@ -279,6 +279,7 @@ install: all
 	  $(INSTALL) -d "$$(dirname "$$dest")"; \
 	  $(INSTALL) -m 644 "$$file" "$$dest"; \
 	done
+	@$(INSTALL) -m 644 vendor/gl_shader/gl_shader.h vendor/gl_shader/gl_shader.c vendor/gl_shader/LICENSE "$(DESTDIR)$(PREFIX)/include/vendor/gl_shader/"
 	@$(INSTALL) -m 644 platform/platform.h platform/events.h "$(DESTDIR)$(PREFIX)/include/platform/"
 	@if [ -n "$(INSTALL_GEMS)" ]; then \
 	  $(INSTALL) -m 755 $(INSTALL_GEMS) "$(DESTDIR)$(PREFIX)/lib/orion/gems/"; \
