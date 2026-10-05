@@ -82,15 +82,15 @@ void main() {
     float press_offset = floor(min(0.6, margin * 0.3) / pixel.y + 0.5) * pixel.y;
     vec2 gp = tex * size + glyph_box.xy - origin - vec2(0.0, pressed * press_offset);
     float mask = glyph_mask(gp);
-    // Debossed cavity: the anti-aliased mask gradient gives the wall normal, lit from the upper left.
-    float e = 1.25;
-    vec2 g = vec2(glyph_mask(gp + vec2(e, 0.0)) - glyph_mask(gp - vec2(e, 0.0)),
-                  glyph_mask(gp + vec2(0.0, e)) - glyph_mask(gp - vec2(0.0, e))) * 0.5;
-    float wall = dot(g, normalize(vec2(-0.6, -0.8))) * 2.0 * (1.0 - 0.5 * disabled);
-    vec3 floor_col = mix(mix(pow(base, vec3(0.35)), vec3(1.0), 0.62), vec3(0.62), disabled);
-    vec3 face = mix(floor_col, pow(base, vec3(1.3)) * 0.45, clamp(-wall, 0.0, 1.0));
-    face = mix(face, vec3(1.0), clamp(wall, 0.0, 1.0) * 0.9);
-    rgb = mix(rgb, face, mask);
+    // Letterpress: a light copy one point below, the dark glyph over it, a soft inner shadow under its top edge.
+    float step_y = max(floor(1.0 / pixel.y + 0.5), 1.0) * pixel.y;
+    float below = glyph_mask(gp - vec2(0.0, step_y));
+    float above = (glyph_mask(gp - vec2(0.0, step_y * 0.5)) + glyph_mask(gp - vec2(0.0, step_y)) +
+                   glyph_mask(gp - vec2(0.0, step_y * 1.5))) / 3.0;
+    vec3 catchlight = mix(pow(base, vec3(0.4)), vec3(1.0), 0.55);
+    vec3 ink = mix(pow(base, vec3(1.35)) * 0.34, vec3(0.30), disabled);
+    rgb = mix(rgb, catchlight, below * (1.0 - mask) * mix(0.75, 0.35, disabled));
+    rgb = mix(rgb, mix(ink, ink * 0.35, (1.0 - above) * 0.85), mask);
   }
   float a = face * tint.a * col.a;
   float sa = shadow * shadow_color.a * tint.a * col.a * (1.0 - face);
