@@ -132,8 +132,6 @@ typedef struct {
   int           selected_clip;
   drag_t        drag;
   char          search[64]; // library filter, matched against block and category names
-  image_atlas_t card_atlas;
-  image_background_t card_backgrounds[8];
   waveform_cache_t waveforms[GR_MAX_BLOCKS];
 } groove_t;
 
@@ -190,7 +188,6 @@ extern result_t win_block_card(window_t *win, uint32_t msg, uint32_t wparam, voi
 extern result_t win_transport(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 void transport_refresh(void);
 ipoint16_t clip_cell_size(window_t *sheet, const block_t *b);
-void clip_skin_load(groove_t *app);
 // Shared logical-pixel alpha masks; audio revision and geometry determine reuse.
 uint32_t waveform_texture(groove_t *app, int block, ipoint16_t size, int radius);
 void waveform_cache_free(groove_t *app);

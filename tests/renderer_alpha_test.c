@@ -193,6 +193,76 @@ static void test_image_background(void) {
   PASS();
 }
 
+static void test_plastic_surface(void) {
+  TEST("Plastic states preserve bounds, disable interaction shading and recess the glyph in one pass");
+  CGLPixelFormatAttribute attrs[] = {kCGLPFAOpenGLProfile,
+    (CGLPixelFormatAttribute)kCGLOGLPVersion_3_2_Core, 0};
+  CGLPixelFormatObj format = NULL;
+  CGLContextObj context = NULL;
+  GLint count = 0;
+  if (CGLChoosePixelFormat(attrs, &format, &count) != kCGLNoError || !format) { SKIP("Offscreen OpenGL unavailable"); }
+  CGLError error = CGLCreateContext(format, NULL, &context);
+  CGLDestroyPixelFormat(format);
+  if (error != kCGLNoError || !context) { SKIP("Offscreen OpenGL context unavailable"); }
+  CGLSetCurrentContext(context);
+  bool initialized = ui_init_prog(), ok = initialized;
+  uint32_t fbo = 0, texture = 0, glyph = 0;
+  int w = 0, h = 0;
+  if (ok) {
+    ok = R_EnsureWindowTarget(&fbo, &texture, &w, &h, 32, 32);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glViewport(0, 0, 32, 32);
+    glDisable(GL_SCISSOR_TEST);
+    set_projection(0, 0, 32, 32);
+    glClearColor(0, 0, 0, 0);
+    uint8_t mask[8 * 8 * 4] = {0};
+    for (int y = 2; y < 6; y++) for (int x = 2; x < 6; x++) mask[(y * 8 + x) * 4 + 3] = 255;
+    glyph = R_CreateTextureRGBA(8, 8, mask, R_FILTER_LINEAR, R_WRAP_CLAMP);
+    uint8_t samples[5][4], disabled_only[32 * 32 * 4], disabled_flags[32 * 32 * 4];
+    ctrl_state_t states[] = {CTRL_NORMAL, CTRL_SELECTED, CTRL_PRESSED, CTRL_HOVER, CTRL_DISABLED};
+    for (int i = 0; i < ARRAY_LEN(states); i++) {
+      glClear(GL_COLOR_BUFFER_BIT);
+      render_plastic_surface(R(2, 2, 28, 28), 10, 2, 3, states[i], WEB(0x48aa36),
+                              0x80000000, glyph, NULL, (ipoint16_t){16, 16});
+      read_card_pixel(8, 16, samples[i]);
+      uint8_t pixels[32 * 32 * 4];
+      glReadPixels(0, 0, 32, 32, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+      for (int y = 0; y < 32; y++) for (int x = 0; x < 32; x++) {
+        if (x < 2 || x >= 30 || y < 2 || y >= 30) ok &= pixels[(y * 32 + x) * 4 + 3] == 0;
+      }
+      if (i == 4) memcpy(disabled_only, pixels, sizeof(pixels));
+    }
+    ok &= samples[2][1] < samples[0][1] && samples[3][1] > samples[0][1];
+    ok &= abs(samples[4][0] - samples[4][1]) <= 1 && abs(samples[4][1] - samples[4][2]) <= 1;
+    glClear(GL_COLOR_BUFFER_BIT);
+    render_plastic_surface(R(2, 2, 28, 28), 10, 2, 3, CTRL_DISABLED | CTRL_HOVER | CTRL_PRESSED | CTRL_SELECTED,
+                            WEB(0x48aa36), 0x80000000, glyph, NULL, (ipoint16_t){16, 16});
+    glReadPixels(0, 0, 32, 32, GL_RGBA, GL_UNSIGNED_BYTE, disabled_flags);
+    ok &= memcmp(disabled_only, disabled_flags, sizeof(disabled_only)) == 0;
+    glClear(GL_COLOR_BUFFER_BIT);
+    render_plastic_surface(R(2, 2, 28, 28), 10, 2, 3, CTRL_NORMAL, 0x8036aa48,
+                            0x80000000, glyph, NULL, (ipoint16_t){16, 16});
+    uint8_t face[4], rim[4], top[4], center[4];
+    read_card_pixel(8, 16, face); read_card_pixel(16, 28, rim);
+    read_card_pixel(16, 12, top); read_card_pixel(16, 16, center);
+    ok &= face[3] == 128 && rim[3] > 0 && rim[3] < 128 && top[1] < center[1];
+    for (int size = 4; size <= 24; size += 4) {
+      glClear(GL_COLOR_BUFFER_BIT);
+      render_plastic_surface(R(4, 4, size, 8), 100, 2, 3, CTRL_SELECTED, WEB(0x48aa36), 0x80000000, 0, NULL, (ipoint16_t){0, 0});
+    }
+    ok &= glGetError() == GL_NO_ERROR;
+    if (!ok) fprintf(stderr, "[renderer-test] plastic normal=%u pressed=%u hover=%u alpha=%u,%u glyph=%u,%u\n",
+                      samples[0][1], samples[2][1], samples[3][1], face[3], rim[3], top[1], center[1]);
+  }
+  R_DeleteTexture(glyph);
+  R_DestroyWindowTarget(&fbo, &texture, &w, &h);
+  if (initialized) ui_shutdown_prog();
+  CGLSetCurrentContext(NULL);
+  CGLDestroyContext(context);
+  ASSERT_TRUE(ok);
+  PASS();
+}
+
 static void test_gradient_card(void) {
   TEST("Gradient card clips sheen and ring, preserves alpha and keeps selection geometry fixed");
   CGLPixelFormatAttribute attrs[] = {kCGLPFAOpenGLProfile,
@@ -555,6 +625,7 @@ static void test_srgb_linear_source_over(void) {
 int main(void) {
   TEST_START("Renderer alpha");
 #if defined(__APPLE__) && !TARGET_OS_IOS
+  test_plastic_surface();
   test_gradient_card();
   test_selection_gradient();
   test_image_background();

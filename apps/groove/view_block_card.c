@@ -14,33 +14,12 @@ static void card_screen(window_t *win, int mx, int my, int *sx, int *sy) {
   *sy = window_screen_y(win) + my;
 }
 
-void clip_skin_load(groove_t *app) {
-  char path[1024];
-  snprintf(path, sizeof(path), "%s/../share/groove/skins/clip-cards.png", ui_get_exe_dir());
-  if (!image_atlas_load(&app->card_atlas, path)) return;
-  const int columns[] = {23, 241, 459, 677, 895, 1113, 1332, 1550};
-  const int rows[] = {96, 233, 371, 513, 656}, heights[] = {120, 122, 125, 125, 120};
-  for (int col = 0; col < ARRAY_LEN(app->card_backgrounds); col++) {
-    image_background_t *bg = &app->card_backgrounds[col];
-    bg->atlas = &app->card_atlas;
-    bg->source_border = R(28, 0, 28, 0);
-    bg->border = R(8, 0, 8, 0);
-    for (int row = 0; row < IMAGE_BG_COUNT; row++) bg->states[row] = R(columns[col], rows[row], 202, heights[row]);
-    if (!image_background_validate(bg)) {
-      image_atlas_free(&app->card_atlas);
-      return;
-    }
-  }
-}
-
 static void paint_block_card(int block, const block_t *b, irect16_t r, int visible_width, uint32_t color, ctrl_state_t state) {
   r = rect_trim_bottom(rect_trim_top(rect_inset(r, 1), 1), 1);
-  static const uint8_t skins[CAT_COUNT] = {0, 1, 2, 3, 4, 5, 7, 2, 5, 0, 5, 7, 1, 6, 7, 1};
-  bool skinned = g_app->card_atlas.tex && draw_image_background(r, &g_app->card_backgrounds[skins[b->cat]], state);
-  if (!skinned) draw_gradient_card(r, state, color);
-  r = rect_inset(r, skinned ? 6 : get_theme()->card_ring_width);
-  int radius = skinned ? 0 : MAX(0, get_theme()->card_corner_radius - get_theme()->card_ring_width);
-  irect16_t wave = rect_offset(r, 0, skinned ? 5 : 0);
+  draw_plastic_card(r, state, color);
+  r = rect_inset(r, MIN(2, get_theme()->plastic_shadow_size) + get_theme()->card_ring_width);
+  int radius = MAX(0, get_theme()->card_corner_radius - get_theme()->card_ring_width);
+  irect16_t wave = r;
   uint32_t ink = color_with_alpha(get_sys_color(brTextOnColor), (color >> 24) * 0x99 / 255);
   if (wave.w > 0 && wave.h > 0) {
     uint32_t texture = waveform_texture(g_app, block, (ipoint16_t){wave.w, wave.h}, radius);

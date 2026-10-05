@@ -30,6 +30,12 @@ void draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color);
 void draw_gradient_card(irect16_t r, ctrl_state_t state, uint32_t color);
 void render_gradient_card(irect16_t r, int pixel_w, int pixel_h, float radius,
                           float ring_width, float highlight_width, ctrl_state_t state, uint32_t color);
+// Single shader pass; shadow is reserved inside r, so controls never paint outside their bounds.
+void draw_plastic_button(irect16_t r, ctrl_state_t state, uint32_t color, const char *icon);
+void draw_plastic_card(irect16_t r, ctrl_state_t state, uint32_t color);
+void render_plastic_surface(irect16_t r, float radius, float bevel, float shadow,
+                            ctrl_state_t state, uint32_t color, uint32_t shadow_color,
+                            uint32_t icon_tex, const frect_t *icon_uv, ipoint16_t icon_size);
 // Small tinted label ("3 modified"): a rounded fill in `color` at low alpha with the text in `color`.
 // Drawn at (x, y) with the given height; returns the badge width so callers can chain badges.
 int  draw_badge(ui_font_t font, const char *text, int x, int y, int height, uint32_t color);

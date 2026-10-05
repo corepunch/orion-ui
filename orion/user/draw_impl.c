@@ -329,6 +329,33 @@ void draw_gradient_card(irect16_t r, ctrl_state_t state, uint32_t color) {
                        theme->card_highlight_width * scale, state, color);
 }
 
+void draw_plastic_button(irect16_t r, ctrl_state_t state, uint32_t color, const char *icon) {
+  if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0) return;
+  const theme_t *theme = get_theme();
+  sysicon_resolved_t glyph = {0};
+  if (icon && !sysicon_resolve(icon, &glyph)) {
+    fprintf(stderr, "[draw] plastic icon unavailable name=%s\n", icon);
+    fflush(stderr);
+  }
+  int shadow = MIN(theme->plastic_shadow_size, MIN(r.w, r.h) / 10);
+  int size = MAX(0, MIN(20, MIN(r.w, r.h) - 2 * shadow - 4));
+  ipoint16_t icon_size = {size, size};
+  int extent = MAX(glyph.w, glyph.h);
+  if (extent > 0) icon_size = (ipoint16_t){size * glyph.w / extent, size * glyph.h / extent};
+  render_plastic_surface(r, theme->plastic_corner_radius, theme->plastic_bevel_width,
+                          shadow, state, color ? color : get_sys_color(brAccent),
+                          theme->drag_shadow_color, glyph.tex,
+                          UV_RECT(glyph.u0, glyph.v0, glyph.u1, glyph.v1), icon_size);
+}
+
+void draw_plastic_card(irect16_t r, ctrl_state_t state, uint32_t color) {
+  if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0) return;
+  const theme_t *theme = get_theme();
+  render_plastic_surface(r, theme->card_corner_radius, theme->card_highlight_width,
+                          MIN(2, theme->plastic_shadow_size), state, color,
+                          theme->drag_shadow_color, 0, NULL, (ipoint16_t){0, 0});
+}
+
 #define BADGE_PADDING 7
 int measure_badge(ui_font_t font, const char *text) {
   return text_strwidth(font, text) + 2 * BADGE_PADDING;

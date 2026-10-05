@@ -469,6 +469,20 @@ static void test_library_transport(void) {
   ASSERT_EQUAL(g_app->tabs->frame.y, 0);
   ASSERT_EQUAL(window_screen_y(g_app->tabs), window_screen_y(bar) + titlebar_height(bar));
   toolbar_state_t *tb = toolbar_get_state(bar);
+  ASSERT_EQUAL(tb->style, TOOLBAR_STYLE_PLASTIC);
+  ASSERT_EQUAL(tb->strip.tex, 0);
+  ASSERT_TRUE(strcmp(tb->items[1].icon, "lucide-rewind") == 0);
+  ASSERT_TRUE(tb->items[2].color != tb->items[3].color);
+  uint32_t original_color = tb->items[2].color, color = WEB(0x2277bb);
+  ASSERT_TRUE(send_message(bar, tbSetItemColor, ID_PLAY, &color));
+  ASSERT_EQUAL(tb->items[2].color, color);
+  ASSERT_TRUE(get_window_item(bar, ID_SEARCH) == search);
+  ASSERT_FALSE(send_message(bar, tbSetItemColor, ID_SEARCH, &color));
+  ASSERT_FALSE(send_message(bar, tbSetItemColor, 0xffff, &color));
+  ASSERT_TRUE(send_message(bar, tbSetItemColor, ID_PLAY, NULL));
+  ASSERT_EQUAL(tb->items[2].color, 0);
+  ASSERT_TRUE(send_message(bar, tbSetItemColor, ID_PLAY, &original_color));
+
 #ifdef AX_PLATFORM_IOS
   ASSERT_EQUAL(toolbar_effective_bsz(bar), BUTTON_HEIGHT + 4);
   ASSERT_EQUAL(search->frame.h, BUTTON_HEIGHT);
@@ -495,7 +509,7 @@ static void test_library_transport(void) {
   dispatch_message(&event);
   event.message = kEventLeftButtonUp;
   dispatch_message(&event);
-  ASSERT_TRUE(g_app->song.playing && strcmp(tb->items[2].icon, "strip:2") == 0);
+  ASSERT_TRUE(g_app->song.playing && strcmp(tb->items[2].icon, "lucide-pause") == 0);
   r = tb->item_rects[4];
   event.message = kEventLeftButtonDown;
   event.x = (window_screen_x(bar) + r.x + r.w / 2) * UI_WINDOW_SCALE;

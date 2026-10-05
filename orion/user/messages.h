@@ -376,6 +376,8 @@ typedef struct {
 #define tbSetItemIcon (evUser + 952)
 // lparam=SVG icon name (copied, NULL clears); inside the text field before its text.
 #define edSetLeadingIcon (evUser + 953)
+// wparam=item ident, lparam=uint32_t* packed colour (NULL restores theme accent).
+#define tbSetItemColor (evUser + 954)
 #define TOOLBAR_ITEM_FLAG_REORDERABLE (1u << 2) // drop onto another reorderable item
 // Half-size cell: in a single-column vertical toolbar consecutive SMALL
 // buttons/customs pack 2 per row, so 2x2 of them fills one normal button cell.
@@ -385,6 +387,7 @@ typedef struct {
 #define TOOLBAR_STYLE_COMPACT        (1u << 2) // menu-bar background, icon-only items
 #define TOOLBAR_STYLE_PRESSED_STRIP  (1u << 3) // strip's second row contains pressed artwork
 #define TOOLBAR_STYLE_IMAGE_BUTTONS  (1u << 4) // strip artwork includes the button body
+#define TOOLBAR_STYLE_PLASTIC        (1u << 6) // procedural coloured body with recessed SVG glyph
 #define TOOLBAR_STYLE_STATE_STRIP    (1u << 5) // rows: normal, selected, pressed, hover, disabled
 #define TOOLBAR_COMPACT_PADDING      2
 #define TOOLBAR_COMPACT_SPACING      6
@@ -425,6 +428,7 @@ typedef struct {
   uint32_t            flags;  // extra style flags (BUTTON_PUSHLIKE, BUTTON_AUTORADIO, …)
   const char         *text;   // label text, or combobox/textedit initial text
   const char         *tooltip; // tooltip text shown on hover; NULL = none
+  uint32_t            color;  // packed 0xAABBGGRR plastic face colour; 0 uses theme accent
 } toolbar_item_t;
 
 // Tab control messages and notifications (WinAPI TCM_*/TCN_* analogues).

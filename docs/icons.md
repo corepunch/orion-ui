@@ -39,39 +39,18 @@ color to `draw_icon16` / `draw_toolbar_icon_in_rect`.
 
 ## Icon strips
 
-### Offline button atlases
+### Procedural Groove buttons
 
-Groove's transport uses the debossed glossy enamel PNG atlas authored with
-ImageGen. The complete set and all five states are authored together. Stage the
-source artwork and regenerate its fixed cell metadata with `make groove-icons`:
+Groove uses [Lucide](https://lucide.dev) SVGs from
+`apps/groove/share/icons/lucide-*.svg`. The `lucide-` prefix avoids collisions with
+the framework's global icon pool. The loader rasterizes each SVG at display
+density and caches only its alpha mask; no pre-rendered button/state atlas is
+loaded or generated. License notices remain in `LUCIDE-LICENSE` beside the SVGs.
 
-```sh
-python3 tools/build_button_atlas.py apps/groove/share/icons/transport.json
-```
-
-The manifest names the authored source, column count, cell size and grid origin.
-The tool validates that all **normal, selected, pressed, hover, disabled** cells
-fit in the source, copies the PNG byte-for-byte, and emits `transport.h` with
-identical 198×198 source bounds for every state. The two-pixel transparent
-remainder at the image edge is outside the cells. It does not recolour, resize,
-reshape or derive any state artwork. Pressed depression and inward glyph bevels
-come directly from the authored artwork; the toolbar adds no further press offset.
-The engine loads the PNG with `tbLoadAtlas`, `TOOLBAR_STYLE_STATE_STRIP`, and
-`TOOLBAR_STYLE_IMAGE_BUTTONS`. Hit rectangles and destination sizes remain fixed.
-
-The reusable tool also supports SVG manifests: `transport-svg.json` retains the
-original SVG source example. Its glyphs use a 24×24 viewBox, with manifest-defined
-colours, solid fills, raster scale and press offset. This mode assembles the
-complete atlas as one SVG and renders it through the bundled NanoSVG/stb C tool:
-
-```sh
-make build/bin/svg_atlas_render
-python3 tools/build_button_atlas.py apps/groove/share/icons/transport-svg.json --output /tmp/transport-svg-preview.png
-```
-
-Python uses only the standard library. In either mode `--output PATH` writes a
-preview PNG without updating the committed atlas/header. The source concepts and
-ImageGen prompts live in `apps/groove/share/concepts/`.
+`TOOLBAR_STYLE_PLASTIC` draws the coloured surface, bevel, small shadow and white
+recessed glyph together in the procedural shader. Per-button `color` values and
+`tbSetItemColor` supply the face colour. The same shader draws sample card
+surfaces without a glyph. See [Drawing](drawing.md) and [Toolbars](toolbars.md).
 
 | Strip | Index enum | Tile size | Source | Loaded by |
 |---|---|---|---|---|
