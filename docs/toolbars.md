@@ -421,3 +421,12 @@ left toolbars, paints only its bands, and passes workspace hit tests through to
 document windows. Pass a NULL menu procedure to `create_app_chrome` when the
 shell supplies the application menu. ImageEditor uses this arrangement in both
 standalone and GEM builds; its tools are no longer a floating palette window.
+
+## Docking and merged captions
+
+Toolbars use the shared [workspace docking manager](docking.md). Existing
+`create_docked_toolbar` callers automatically participate. Add
+`WINDOW_TITLETOOLBAR` alongside `WINDOW_TOOLBAR` to share a single row between the
+window title, app items, and window controls. Configure app items with `tbSetItems`
+as usual; the framework supplies the caption items. Locate items by command ID,
+because framework items also occupy positions in the toolbar state.

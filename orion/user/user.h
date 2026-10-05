@@ -525,7 +525,10 @@ struct window_s {
   struct window_s *children;
   struct window_s *parent;
   struct window_s *toolbar; // toolbar host window (win_toolbar); state lives in toolbar->userdata
-  uint8_t toolbar_dock; // 0 = ordinary child, 1 = top toolbar, 2 = left toolbar
+  struct dock_state_s *dock;
+  bool dock_layout_busy;
+  irect16_t dock_content;
+  uint8_t toolbar_dock; // toolbar measurement/compact presentation hint; dock owns placement
   struct window_s *active_page; // selected page projected by a WINDOW_ROLE_HOST
   struct window_s *page_host; // WINDOW_ROLE_HOST currently projecting this page
   uint32_t surface_fbo; // Offscreen render target for per-window composition.

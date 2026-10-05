@@ -12,6 +12,7 @@
 #include "messages.h"
 #include "rect.h"
 #include "toolbar.h"
+#include "dock.h"
 #include "theme.h"
 #include <orion/kernel/kernel.h>
 
@@ -41,7 +42,7 @@ static inline int win_abs_x(window_t *w) {
 }
 static inline int win_abs_y(window_t *w) {
   if (!w->parent) return w->frame.y + titlebar_height(w);
-  return window_screen_y(w);
+  return window_screen_y(w) + titlebar_height(w);
 }
 
 #define LOCAL_X(px, py, WIN) (SCALE_POINT(px) - win_abs_x(WIN) + (WIN)->hscroll.pos)
@@ -177,13 +178,13 @@ static int handle_mouse(int msg, window_t *win, int x, int y, void *lparam) {
     // Controls should not need to know whether an event came directly from a
     // root window or through one or more nested layout containers.
     int lx = x - c->frame.x + (int)c->hscroll.pos;
-    int ly = y - c->frame.y + (int)c->vscroll.pos;
+    int ly = y - c->frame.y - titlebar_height(c) + (int)c->vscroll.pos;
     ax_gesture_t local;
     void *payload = lparam;
     if (msg == evGesture && lparam) {
       local = *(ax_gesture_t *)lparam;
       float dx = -win->hscroll.pos - c->frame.x + c->hscroll.pos;
-      float dy = -win->vscroll.pos - c->frame.y + c->vscroll.pos;
+      float dy = -win->vscroll.pos - c->frame.y - titlebar_height(c) + c->vscroll.pos;
       local.x += dx; local.previous_x += dx;
       local.y += dy; local.previous_y += dy;
       payload = &local;
@@ -399,6 +400,7 @@ void dispatch_message(ui_event_t *msg) {
 
   update_key_state(msg);
   update_pointer_state(msg);
+  if (dock_handle_event(msg)) return;
 
   window_t *win;
   int px, py; // platform logical coordinates
@@ -572,9 +574,9 @@ void dispatch_message(ui_event_t *msg) {
             g_ui_runtime.tracked_toolbar = tb_host;
           }
           if (tb_host) {
-            int title_h = (hover->flags & WINDOW_NOTITLE) ? 0 : window_caption_height(hover);
-            int tb_x = sx - hover->frame.x;
-            int tb_y = sy - (hover->frame.y + title_h);
+            int title_h = toolbar_content_offset(hover);
+            int tb_x = sx - window_screen_x(hover);
+            int tb_y = sy - (window_screen_y(hover) + title_h);
             send_message(tb_host, evMouseMove,
                          MAKEDWORD((uint16_t)tb_x, (uint16_t)tb_y), NULL);
             char tip_buf[256] = {0};
@@ -621,7 +623,8 @@ void dispatch_message(ui_event_t *msg) {
           } else {
             int lx_c = (int16_t)LOCAL_X(px, py, hover);
             int ly_c = (int16_t)LOCAL_Y(px, py, hover);
-            cursor_id = (int)send_message(hover, evGetCursor,
+            cursor_id = dock_cursor(hover, (ipoint16_t){sx, sy});
+            if (cursor_id < 0) cursor_id = (int)send_message(hover, evGetCursor,
                                           MAKEDWORD((uint16_t)lx_c, (uint16_t)ly_c), NULL);
           }
           axSetCursor(cursor_id);
@@ -788,11 +791,11 @@ void dispatch_message(ui_event_t *msg) {
           // For WINDOW_NOTITLE toolbars, don't drag if the click hits a toolbar
           // button — only drag from empty space.
           bool skip_drag = false;
-          if (toolbar_host && (win->flags & WINDOW_NOTITLE)) {
+          if (toolbar_host && ((win->flags & WINDOW_NOTITLE) || toolbar_merged_title(win))) {
             toolbar_state_t *tb = window_toolbar_state(win);
             int tb_x = sx - window_screen_x(win);
             int tb_y = sy - window_screen_y(win);
-            if (tb && toolbar_item_hit(tb, tb_x, tb_y) >= 0)
+            if (toolbar_hit_action(tb, tb_x, tb_y))
               skip_drag = true;
           }
           if (!skip_drag) {
@@ -812,7 +815,7 @@ void dispatch_message(ui_event_t *msg) {
           if (msg->message == kEventLeftButtonDown &&
               (win->flags & WINDOW_TOOLBAR) && toolbar_host) {
             // Route to toolbar host's mouse handler (owner-draw item dispatch)
-            int title_h = (win->flags & WINDOW_NOTITLE) ? 0 : window_caption_height(win);
+            int title_h = toolbar_content_offset(win);
             int tb_x = sx - window_screen_x(win);
             int tb_y = sy - (window_screen_y(win) + title_h);
             if (!toolbar_dispatch_embedded_mouse(win, evLeftButtonDown, tb_x, tb_y)) {
@@ -901,7 +904,7 @@ void dispatch_message(ui_event_t *msg) {
       {
         if (window_has_state(win, WINDOW_STATE_DISABLED)) return;
         // Deliver to client area only if mouse is at or below the title bar / toolbar.
-        if (SCALE_POINT(py) >= win->frame.y + titlebar_height(win) || win == g_ui_runtime.captured) {
+        if (SCALE_POINT(py) >= window_screen_y(win) + titlebar_height(win) || win == g_ui_runtime.captured) {
           // For WINDOW_NOTITLE toolbars, route button-up to toolbar host
           // (toolbar items are owner-drawn, not child windows).
           if ((win->flags & WINDOW_TOOLBAR) && (win->flags & WINDOW_NOTITLE) && win->toolbar) {
@@ -929,7 +932,7 @@ void dispatch_message(ui_event_t *msg) {
           if (msg->message == kEventLeftButtonUp) {
             window_t *tb_host = find_toolbar_host_at(win, sx, sy);
             if ((win->flags & WINDOW_TOOLBAR) && tb_host) {
-              int title_h = (win->flags & WINDOW_NOTITLE) ? 0 : window_caption_height(win);
+              int title_h = toolbar_content_offset(win);
               int tb_x = sx - window_screen_x(win);
               int tb_y = sy - (window_screen_y(win) + title_h);
               if (!toolbar_dispatch_embedded_mouse(win, evLeftButtonUp, tb_x, tb_y)) {

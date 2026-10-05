@@ -27,10 +27,11 @@ irect16_t imageeditor_document_workspace_rect(void) {
   if (screen_h <= 0) screen_h = SCREEN_H;
 
 #if IMAGEEDITOR_BW
-  int left = g_app && g_app->tool_win ? window_screen_x(g_app->tool_win) + g_app->tool_win->frame.w : PALETTE_WIN_W;
-  int top = g_app && g_app->main_toolbar_win ? window_screen_y(g_app->main_toolbar_win) + g_app->main_toolbar_win->frame.h
-                                             : MENUBAR_HEIGHT + APP_TOOLBAR_H;
-  return rect_trim_left(rect_trim_top(R(0, 0, screen_w, screen_h), top), left);
+  if (g_app && g_app->chrome_win) {
+    window_t *host = g_app->chrome_win;
+    return rect_offset(dock_content_rect(host), window_screen_x(host), window_screen_y(host));
+  }
+  return rect_trim_top(R(0, 0, screen_w, screen_h), MENUBAR_HEIGHT);
 #elif defined(AX_PLATFORM_IOS)
   irect16_t area = rect_trim_top(R(0, 0, screen_w, screen_h), APP_TOOLBAR_Y + APP_TOOLBAR_H);
   return rect_inset(rect_trim_right(rect_trim_left(area, PALETTE_WIN_W + 8), RIGHT_PANE_WIN_W + 8), 4);

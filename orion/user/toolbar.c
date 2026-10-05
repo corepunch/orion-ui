@@ -2,11 +2,25 @@
 #include <string.h>
 
 #include "toolbar.h"
+#include "dock.h"
 #include "messages.h"
 #include "draw.h"
 #include "image.h"
 #include "svg_icon_loader.h"
 #include "theme.h"
+
+#define TB_WINDOW_TITLE    (-101)
+#define TB_WINDOW_CLOSE    (-102)
+#define TB_WINDOW_COLLAPSE (-103)
+
+bool toolbar_merged_title(const window_t *win) {
+  return win && (win->flags & (WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NOTITLE)) ==
+    (WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR);
+}
+
+int toolbar_content_offset(const window_t *win) {
+  return (win->flags & WINDOW_NOTITLE) || toolbar_merged_title(win) ? 0 : window_caption_height(win);
+}
 
 int toolbar_item_hit(const toolbar_state_t *tb, int tx, int ty) {
   if (!tb || !tb->item_rects) return -1;
@@ -17,6 +31,15 @@ int toolbar_item_hit(const toolbar_state_t *tb, int tx, int ty) {
       return i;
   }
   return -1;
+}
+
+bool toolbar_hit_action(const toolbar_state_t *tb, int x, int y) {
+  for (int i = 0; tb && tb->item_rects && i < tb->item_count; i++) {
+    int type = tb->items[i].type;
+    if (type != TOOLBAR_ITEM_LABEL && type != TOOLBAR_ITEM_SPACER && type != TOOLBAR_ITEM_SEPARATOR &&
+        rect_contains_point(tb->item_rects[i], (ipoint16_t){x, y})) return true;
+  }
+  return false;
 }
 
 static int toolbar_state_item_height(const toolbar_state_t *tb) {
@@ -194,6 +217,21 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
     }
   }
 
+  if (!vertical && toolbar_merged_title(parent) && tb->item_rects) {
+    int end = MAX(0, parent->frame.w - padding);
+    for (int i = tb->item_count - 1; i >= 0; i--) {
+      if (tb->items[i].ident != TB_WINDOW_CLOSE && tb->items[i].ident != TB_WINDOW_COLLAPSE) continue;
+      irect16_t *r = &tb->item_rects[i];
+      r->w = MIN(r->w, end); r->x = end - r->w;
+      end = MAX(0, r->x - spacing);
+    }
+    for (int i = 0; i < tb->item_count; i++) {
+      if (tb->items[i].ident == TB_WINDOW_CLOSE || tb->items[i].ident == TB_WINDOW_COLLAPSE) continue;
+      irect16_t *r = &tb->item_rects[i];
+      r->x = MIN(r->x, end); r->w = MIN(r->w, end - r->x);
+    }
+  }
+
   for (window_t *tc = tb->children; tc; tc = tc->next) {
     for (int i = 0; i < tb->item_count; i++) {
       if ((uint32_t)tb->items[i].ident == tc->id && tb->item_rects) {
@@ -258,6 +296,7 @@ static void draw_toolbar_icon_in_rect(window_t *win, toolbar_state_t *tb, const 
 static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int i) {
   toolbar_item_t *item = &tb->items[i];
   irect16_t r = tb->item_rects[i];
+  if (r.w <= 0 || r.h <= 0) return;
   bool disabled = (item->flags & TOOLBAR_ITEM_FLAG_DISABLED) != 0;
   bool is_pressed = !disabled && (tb->pressed_item == i);
   bool compact = (tb->style & TOOLBAR_STYLE_COMPACT) != 0;
@@ -295,7 +334,10 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       irect16_t icon_rect = local;
       if (tb->style & TOOLBAR_STYLE_SHOW_LABELS)
         icon_rect.h = (tb->btn_size > 0) ? tb->btn_size : get_theme()->toolbar_button_size;
-      draw_toolbar_icon_in_rect(win, tb, icon_name, icon_rect, poff, disabled, is_pressed || (image_body && is_active && !(tb->style & TOOLBAR_STYLE_STATE_STRIP)), is_active, is_hot);
+      if (item->ident == TB_WINDOW_CLOSE || item->ident == TB_WINDOW_COLLAPSE)
+        draw_theme_icon_in_rect(item->ident == TB_WINDOW_CLOSE ? THEME_ICON_CLOSE : THEME_ICON_RESTORE,
+                                icon_rect, get_sys_color(brTextNormal));
+      else draw_toolbar_icon_in_rect(win, tb, icon_name, icon_rect, poff, disabled, is_pressed || (image_body && is_active && !(tb->style & TOOLBAR_STYLE_STATE_STRIP)), is_active, is_hot);
       if ((tb->style & TOOLBAR_STYLE_SHOW_LABELS) && item->text) {
         int tx = (local.w - text_strwidth(FONT_SMALLEST, item->text)) / 2 + poff;
         int ty = local.h - text_char_height(FONT_SMALLEST) - 2 + poff;
@@ -340,7 +382,7 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       break;
     case TOOLBAR_ITEM_LABEL: {
       int ty = (r.h - text_char_height(FONT_SMALLEST)) / 2;
-      draw_text(FONT_SMALLEST, item->text ? item->text : "", 2, ty, get_sys_color(disabled ? brTextDisabled : brToolbarForeground));
+      draw_text_ellipsized(FONT_SMALLEST, item->ident == TB_WINDOW_TITLE ? win->title : (item->text ? item->text : ""), 2, ty, MAX(0, r.w - 4), get_sys_color(disabled ? brTextDisabled : brToolbarForeground));
       break;
     }
     case TOOLBAR_ITEM_SLIDER:
@@ -390,6 +432,7 @@ static result_t win_toolbar(window_t *win, uint32_t msg, uint32_t wparam, void *
         return false;
 
       tb->pressed_item = idx;
+      set_capture(win);
       tb->pressed_in_arrow = (item->type == TOOLBAR_ITEM_DROPDOWN) &&
                              (tx >= tb->item_rects[idx].x + tb->item_rects[idx].w - DROPDOWN_ARROW_W);
       invalidate_window(win->parent);
@@ -401,6 +444,7 @@ static result_t win_toolbar(window_t *win, uint32_t msg, uint32_t wparam, void *
       int tx = (int16_t)LOWORD(wparam);
       int ty = (int16_t)HIWORD(wparam);
       int saved_idx = tb->pressed_item;
+      if (g_ui_runtime.captured == win) set_capture(NULL);
       bool saved_in_arrow = tb->pressed_in_arrow;
 
       tb->pressed_item = -1;
@@ -413,7 +457,7 @@ static result_t win_toolbar(window_t *win, uint32_t msg, uint32_t wparam, void *
         if (hit >= 0 && (tb->items[saved_idx].flags & TOOLBAR_ITEM_FLAG_REORDERABLE) &&
             (tb->items[hit].flags & TOOLBAR_ITEM_FLAG_REORDERABLE)) {
           toolbar_drop_item_t drop = {tb->items[saved_idx].ident, tb->items[hit].ident};
-          send_message(get_root_window(win), evCommand, MAKEDWORD(0, tbItemDrop), &drop);
+          send_message(win->parent ? win->parent : win, evCommand, MAKEDWORD(0, tbItemDrop), &drop);
         }
         return true;
       }
@@ -423,6 +467,17 @@ static result_t win_toolbar(window_t *win, uint32_t msg, uint32_t wparam, void *
       // Docked palettes are children of app chrome; get_root_window() would send
       // every click to the top band and skip the left tool strip.
       window_t *owner = win->parent ? win->parent : get_root_window(win);
+      if (item->ident == TB_WINDOW_CLOSE) {
+        if (owner->dock) show_window(owner, false);
+        else if (!send_message(owner, evClose, 0, NULL)) destroy_window(owner);
+        return true;
+      }
+      if (item->ident == TB_WINDOW_COLLAPSE) {
+        if (owner->dock) dock_collapse(owner, !owner->dock->collapsed);
+        else if (owner->maximized) restore_window(owner);
+        else maximize_window(owner);
+        return true;
+      }
       if (item->type == TOOLBAR_ITEM_DROPDOWN && saved_in_arrow) {
         send_message(owner, evCommand,
                      MAKEDWORD((uint16_t)item->ident, (uint16_t)tbDropdown), win);
@@ -443,6 +498,11 @@ static result_t win_toolbar(window_t *win, uint32_t msg, uint32_t wparam, void *
       return true;
     }
 
+    case evPointerCancel:
+      if (tb) { tb->pressed_item = -1; tb->pressed_in_arrow = false; }
+      if (g_ui_runtime.captured == win) set_capture(NULL);
+      invalidate_window(win->parent);
+      return true;
     case evMouseLeave:
       if (tb && tb->hot_item >= 0) {
         tb->hot_item = -1;
@@ -540,14 +600,18 @@ void toolbar_draw_non_client(window_t *win) {
   toolbar_state_t *tb = toolbar_ensure_state(win);
   window_t *root = get_root_window(win);
   int bsz = toolbar_effective_item_height(win);
-  int title_h = (win->flags & WINDOW_NOTITLE) ? 0 : window_caption_height(win);
+  int title_h = toolbar_content_offset(win);
   int total_h = win->toolbar_dock == TOOLBAR_DOCK_LEFT ? win->frame.h
                 : bsz + 2 * toolbar_effective_padding(win);
   int root_x = window_screen_x(win) - root->frame.x;
   int root_y = window_screen_y(win) - root->frame.y;
+  for (window_t *a = win; a; a = a->parent) {
+    if (a->drag_visual) { root_x += a->drag_dx; root_y += a->drag_dy; }
+  }
   irect16_t tb_rect = {root_x, root_y + title_h, win->frame.w, total_h};
 
   set_viewport_for_fbo(root);
+  set_scissor_fbo(root, R(0, 0, root->frame.w, root->frame.h));
   set_projection(0, 0, root->frame.w, root->frame.h);
   theme_draw(tb && (tb->style & TOOLBAR_STYLE_COMPACT) ? THEME_PART_MENU_BAR : THEME_PART_TOOLBAR,
              tb_rect, CTRL_NORMAL);
@@ -605,8 +669,37 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
       return false;
     }
     case tbSetItems: {
+      toolbar_item_t *merged = NULL;
+      if (toolbar_merged_title(win)) {
+        int count = (int)wparam;
+        if (count < 0 || count > 4096 || (count && !lparam)) {
+          fprintf(stderr, "[tb] invalid title toolbar items win=%u count=%d\n", win->id, count);
+          fflush(stderr);
+          return false;
+        }
+        bool collapse = win->parent || !(win->flags & WINDOW_NORESIZE);
+        bool flex = false;
+        toolbar_item_t *input = lparam;
+        for (int i = 0; i < count; i++)
+          if (input[i].type == TOOLBAR_ITEM_SPACER && (input[i].flags & TOOLBAR_ITEM_FLAG_FLEXSPACE)) flex = true;
+        int n = count + 1 + !flex + !(win->flags & WINDOW_NOCLOSE) + collapse;
+        merged = calloc(n, sizeof(*merged));
+        if (!merged) {
+          fprintf(stderr, "[tb] title toolbar allocation failed win=%u count=%d\n", win->id, n);
+          fflush(stderr);
+          return false;
+        }
+        merged[0] = (toolbar_item_t){.type = TOOLBAR_ITEM_LABEL, .ident = TB_WINDOW_TITLE, .text = win->title};
+        if (count) memcpy(merged + 1, lparam, count * sizeof(*merged));
+        int i = count + 1;
+        if (!flex) merged[i++] = (toolbar_item_t){.type = TOOLBAR_ITEM_SPACER, .flags = TOOLBAR_ITEM_FLAG_FLEXSPACE};
+        if (collapse) merged[i++] = (toolbar_item_t){.type = TOOLBAR_ITEM_BUTTON, .ident = TB_WINDOW_COLLAPSE, .tooltip = "Collapse / restore"};
+        if (!(win->flags & WINDOW_NOCLOSE)) merged[i++] = (toolbar_item_t){.type = TOOLBAR_ITEM_BUTTON, .ident = TB_WINDOW_CLOSE, .tooltip = "Hide window"};
+        wparam = n;
+        lparam = merged;
+      }
       toolbar_state_t *tb = toolbar_ensure_state(win);
-      if (!tb) return true;
+      if (!tb) { free(merged); return true; }
 
       int pressed_ident = 0;
       bool preserve_pressed = tb->pressed_item >= 0 &&
@@ -714,6 +807,7 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
         }
       }
 
+      free(merged);
       post_message(win, evRefreshStencil, 0, NULL);
       invalidate_window(win);
       return true;
@@ -758,7 +852,10 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
         if (lparam) tb->items[i].flags &= ~TOOLBAR_ITEM_FLAG_DISABLED;
         else tb->items[i].flags |= TOOLBAR_ITEM_FLAG_DISABLED;
         if (old != tb->items[i].flags) {
-          if (!lparam && tb->pressed_item == i) tb->pressed_item = -1;
+          if (!lparam && tb->pressed_item == i) {
+            tb->pressed_item = -1;
+            if (g_ui_runtime.captured == win->toolbar) set_capture(NULL);
+          }
           if (!lparam && tb->hot_item == i) tb->hot_item = -1;
           invalidate_window(win);
         }
@@ -918,8 +1015,8 @@ bool toolbar_handle_notitle_nc_left_button_up(window_t *win, uint32_t wparam) {
 
   int sx = (int)(int16_t)LOWORD(wparam);
   int sy = (int)(int16_t)HIWORD(wparam);
-  int tb_x = sx - win->frame.x;
-  int tb_y = sy - win->frame.y;
+  int tb_x = sx - window_screen_x(win);
+  int tb_y = sy - window_screen_y(win);
 
   if (win->toolbar) {
     toolbar_state_t *tb = (toolbar_state_t *)win->toolbar->userdata;
@@ -957,35 +1054,7 @@ bool toolbar_dispatch_embedded_mouse(window_t *parent, uint32_t msg, int tb_x, i
 }
 
 irect16_t layout_docked_toolbars(window_t *owner, irect16_t area) {
-  if (!owner) {
-    fprintf(stderr, "[tb] dock layout rejected: missing owner\n");
-    fflush(stderr);
-    return area;
-  }
-  for (int dock = TOOLBAR_DOCK_TOP; dock <= TOOLBAR_DOCK_LEFT; dock++) {
-    for (window_t *bar = owner->children; bar; bar = bar->next) {
-      if (bar->toolbar_dock != dock || !window_has_state(bar, WINDOW_STATE_VISIBLE)) continue;
-      irect16_t old_frame = bar->frame;
-      int size = titlebar_height(bar);
-      if (dock == TOOLBAR_DOCK_LEFT) {
-        toolbar_state_t *tb = toolbar_get_state(bar);
-        bar->frame.h = area.h;
-        compute_toolbar_item_rects(bar, tb);
-        size = toolbar_effective_bsz(bar) + 2 * toolbar_effective_padding(bar);
-        for (int i = 0; tb && tb->item_rects && i < tb->item_count; i++)
-          size = MAX(size, tb->item_rects[i].x + tb->item_rects[i].w + toolbar_effective_padding(bar));
-      }
-      irect16_t band = dock == TOOLBAR_DOCK_TOP ? rect_split_top(area, MIN(size, area.h))
-                                               : rect_split_left(area, MIN(size, area.w));
-      area = dock == TOOLBAR_DOCK_TOP ? rect_trim_top(area, band.h) : rect_trim_left(area, band.w);
-      if (memcmp(&old_frame, &band, sizeof(band))) {
-        bar->frame = band;
-        send_message(bar, evResize, 0, NULL);
-        invalidate_window(bar);
-      }
-    }
-  }
-  return area;
+  return dock_layout(owner, area);
 }
 
 window_t *create_docked_toolbar(window_t *owner, toolbar_dock_t dock, winproc_t proc) {
@@ -996,16 +1065,16 @@ window_t *create_docked_toolbar(window_t *owner, toolbar_dock_t dock, winproc_t 
   }
   irect16_t area = get_client_rect(owner);
   window_t *bar = create_window("", WINDOW_TOOLBAR | WINDOW_NOTITLE | WINDOW_NORESIZE |
-                                WINDOW_NODRAG | WINDOW_NOTRAYBUTTON,
+                                WINDOW_NOTRAYBUTTON,
                                 &area, owner, proc, owner->hinstance, NULL);
   if (!bar) {
     fprintf(stderr, "[tb] dock allocation failed win=%u dock=%d\n", owner->id, dock);
     fflush(stderr);
     return NULL;
   }
-  bar->toolbar_dock = dock;
-  send_message(bar, tbSetOrientation, dock == TOOLBAR_DOCK_LEFT ? TOOLBAR_VERTICAL : TOOLBAR_HORIZONTAL, NULL);
-  layout_docked_toolbars(owner, area);
+  toolbar_state_t *tb = toolbar_get_state(bar);
+  send_message(bar, tbSetStyle, (tb ? tb->style : 0) | TOOLBAR_STYLE_GRIP, NULL);
+  dock_window(bar, dock == TOOLBAR_DOCK_LEFT ? DOCK_LEFT : DOCK_TOP, DOCK_ALL_EDGES, DOCK_TOOLBAR, 0, 0);
   invalidate_window(owner);
   return bar;
 }

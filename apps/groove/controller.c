@@ -162,6 +162,16 @@ void app_command(uint16_t id) {
     case ID_LOOP:     app_lock(); s->loop = !s->loop; app_unlock(); transport_refresh(); break;
     case ID_BPM_UP:   app_set_bpm(s->bpm + 5); break;
     case ID_BPM_DOWN: app_set_bpm(s->bpm - 5); break;
+    case ID_WINDOW_LIBRARY:
+      show_window(g_app->library, true);
+      dock_collapse(g_app->library, false);
+      break;
+    case ID_WINDOW_RESET:
+      show_window(g_app->library, true);
+      dock_collapse(g_app->library, false);
+      dock_set_side(g_app->library, DOCK_BOTTOM);
+      if (g_app->menubar_win) dock_set_side(g_app->menubar_win, DOCK_TOP);
+      break;
     case ID_FILE_NEW:  app_new_song(); break;
     case ID_FILE_DEMO: app_new_song(); app_load_demo(); invalidate_window(g_app->sheet); break;
     case ID_FILE_QUIT: ui_request_quit(); break;

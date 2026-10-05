@@ -26,6 +26,15 @@ generate this boilerplate automatically.
 
 ---
 
+## Documents and dockable utility windows
+
+MDI-style workspaces can also contain one editable document and several utility
+windows. Groove's Arrangement fills its parent workspace; Library owns its browser
+and uses a merged caption/transport toolbar, docked at the bottom by default.
+Pencil Test's menu, toolbars, options, and Frames window use the same framework
+manager. See [Workspace Docking](docking.md) for ownership, APIs, merged captions,
+and floating behavior. Menus can float as a vertical stack.
+
 ## Quick-start skeleton
 
 ```c

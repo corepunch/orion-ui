@@ -101,7 +101,7 @@ chrome host, have no compositor corner mask or shadow. Their children define
 their visible shapes; the native OS owns the application's outer window shape.
 
 Maximized window geometry is framework-owned. The application chrome publishes
-the client rectangle remaining after its menu and docked top/left toolbars, and
+the client rectangle remaining after its docked menus, toolbars, and utility panes, and
 the window manager applies that rectangle to every maximized window in the same
 application instance. Floating palettes do not reduce the maximize rectangle;
 applications must not duplicate chrome measurements in `evGetWorkspaceRect`.
@@ -113,6 +113,13 @@ share the menu row and reserve the restore-button slot; narrow layouts and
 shell-owned menus use the normal toolbar band. A form's nested `<Toolbar>`
 remains local to that window. Both declarations reuse the same toolbar items
 and command IDs.
+
+Workspace docking lives in `orion/user/dock.c`. It owns allowed edges, stable band
+order, remaining document area, splitters, collapse, and internal floating state.
+Floating panes retain their parent and controls. Menus and toolbars use the same
+manager; controls provide orientation/measurement and apps provide content.
+`WINDOW_TITLETOOLBAR` merges a window's caption into ordinary toolbar items, with
+one paint/input path for app actions and window controls. See [Workspace Docking](docs/docking.md).
 
 ## Input And Coordinate Spaces
 

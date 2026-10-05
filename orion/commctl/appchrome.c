@@ -4,9 +4,11 @@
 #include <orion/user/draw.h>
 #include <orion/user/theme.h>
 #include <orion/user/toolbar.h>
+#include <orion/user/dock.h>
 
 typedef struct {
   window_t *menubar;
+  window_t *toolbar;
   toolbar_presentation_t presentation;
 } app_chrome_state_t;
 
@@ -20,18 +22,19 @@ typedef struct {
 static void app_chrome_resize_children(window_t *win) {
   app_chrome_state_t *st = (app_chrome_state_t *)win->userdata;
   if (!st) return;
+  st->menubar = app_chrome_menubar(win);
   int menu_h = get_theme()->menubar_height;
-  if (st->menubar) resize_window(st->menubar, win->frame.w, menu_h);
   window_t *bar = app_chrome_toolbar(win);
-  if (bar && st->presentation == TOOLBAR_PRESENTATION_COMPACT) {
-    send_message(bar, tbSetStyle, TOOLBAR_STYLE_COMPACT, NULL);
+  if (bar && bar->dock && bar->dock->side == DOCK_TOP && st->presentation == TOOLBAR_PRESENTATION_COMPACT) {
+    send_message(bar, tbSetStyle, TOOLBAR_STYLE_COMPACT | TOOLBAR_STYLE_GRIP, NULL);
     send_message(bar, tbSetButtonSize, menu_h - 2 * TOOLBAR_COMPACT_PADDING, NULL);
     toolbar_state_t *tb = toolbar_get_state(bar);
     int width = 2 * TOOLBAR_COMPACT_PADDING;
     for (int i = 0; tb && tb->item_rects && i < tb->item_count; i++)
       width = MAX(width, tb->item_rects[i].x + tb->item_rects[i].w + TOOLBAR_COMPACT_PADDING);
     int menu_width = st->menubar ? send_message(st->menubar, kMenuBarMessageGetContentWidth, 0, NULL) : win->frame.w;
-    bool compact = width + menu_width + menu_h + 8 <= win->frame.w;
+    bool compact = st->menubar && st->menubar->dock && st->menubar->dock->side == DOCK_TOP &&
+                   width + menu_width + menu_h + 8 <= win->frame.w;
     toolbar_dock_t dock = compact ? TOOLBAR_DOCK_MENU : TOOLBAR_DOCK_TOP;
     bar->toolbar_dock = dock;
     if (compact) {
@@ -39,14 +42,13 @@ static void app_chrome_resize_children(window_t *win) {
       bar->frame = rect_split_right(rect_trim_right(row, menu_h), width);
       invalidate_window(bar);
     } else {
-      send_message(bar, tbSetStyle, 0, NULL);
+      send_message(bar, tbSetStyle, TOOLBAR_STYLE_GRIP, NULL);
       send_message(bar, tbSetButtonSize, 0, NULL);
     }
   }
-  irect16_t area = layout_docked_toolbars(win,
-      rect_trim_top(get_client_rect(win), st->menubar ? menu_h : 0));
+  irect16_t area = dock_layout(win, get_client_rect(win));
   area = rect_offset(area, window_screen_x(win), window_screen_y(win));
-  set_application_workspace(win, &area);
+  if (area.w > 0 && area.h > 0) set_application_workspace(win, &area);
 }
 
 static result_t win_app_chrome(window_t *win, uint32_t msg,
@@ -56,22 +58,37 @@ static result_t win_app_chrome(window_t *win, uint32_t msg,
     case evCreate: {
       app_chrome_create_t *cfg = (app_chrome_create_t *)lparam;
       st = allocate_window_data(win, sizeof(*st));
-      if (!cfg || !cfg->toolbar_proc) return false;
+      if (!st || !cfg || !cfg->toolbar_proc) {
+        fprintf(stderr, "[chrome] creation failed win=%u state=%p config=%p\n", win->id, (void *)st, (void *)cfg);
+        fflush(stderr);
+        return false;
+      }
       if (cfg->menubar_proc)
         st->menubar = create_window("menubar", WINDOW_NOTITLE | WINDOW_NORESIZE,
                                     MAKERECT(0, 0, win->frame.w, get_theme()->menubar_height),
                                     win, cfg->menubar_proc, 0, NULL);
+      if (st->menubar) {
+        send_message(st->menubar, kMenuBarMessageSetMenus, cfg->menu_count, (void *)cfg->menus);
+        dock_window(st->menubar, DOCK_TOP, DOCK_ALL_EDGES, DOCK_MENU, 0, 0);
+      }
       window_t *toolbar = create_docked_toolbar(win, TOOLBAR_DOCK_TOP, cfg->toolbar_proc);
+      st->toolbar = toolbar;
       app_chrome_resize_children(win);
-      if (st->menubar)
-        send_message(st->menubar, kMenuBarMessageSetMenus,
-                     (uint32_t)cfg->menu_count, (void *)cfg->menus);
       return toolbar != NULL;
     }
     case evHitTest: {
       ipoint16_t point = {(int16_t)LOWORD(wparam), (int16_t)HIWORD(wparam)};
       if (!lparam) return false;
       *(window_t **)lparam = NULL;
+      for (window_t *c = win->children; c; c = c->next)
+        if (c->dock && window_has_state(c, WINDOW_STATE_VISIBLE) && rect_contains_point(c->dock->splitter, point))
+          *(window_t **)lparam = win;
+      window_t *floating = dock_hit_test(win, point);
+      if (floating) {
+        *(window_t **)lparam = floating;
+        send_message(floating, evHitTest, MAKEDWORD(point.x - floating->frame.x, point.y - floating->frame.y - titlebar_height(floating)), lparam);
+        return true;
+      }
       window_t *bar = app_chrome_toolbar(win);
       if (bar && bar->toolbar_dock == TOOLBAR_DOCK_MENU && window_has_state(bar, WINDOW_STATE_VISIBLE) &&
           rect_contains_point(bar->frame, point)) {
@@ -81,13 +98,14 @@ static result_t win_app_chrome(window_t *win, uint32_t msg,
       for (window_t *child = win->children; child; child = child->next) {
         if (!window_has_state(child, WINDOW_STATE_VISIBLE) || !rect_contains_point(child->frame, point)) continue;
         *(window_t **)lparam = child;
-        send_message(child, evHitTest, MAKEDWORD(point.x - child->frame.x, point.y - child->frame.y), lparam);
+        send_message(child, evHitTest, MAKEDWORD(point.x - child->frame.x, point.y - child->frame.y - titlebar_height(child)), lparam);
         break;
       }
       return true;
     }
     case evPaint:
       return false;
+    case evDockChanged:
     case evResize:
       app_chrome_resize_children(win);
       return true;
@@ -138,12 +156,17 @@ window_t *create_app_chrome(const char *title, winproc_t menubar_proc,
 
 window_t *app_chrome_menubar(window_t *chrome) {
   app_chrome_state_t *st = chrome ? (app_chrome_state_t *)chrome->userdata : NULL;
-  return st ? st->menubar : NULL;
+  for (window_t *c = chrome ? chrome->children : NULL; c; c = c->next)
+    if (st && c == st->menubar) return c;
+  return NULL;
 }
 
 window_t *app_chrome_toolbar(window_t *chrome) {
-  for (window_t *bar = chrome ? chrome->children : NULL; bar; bar = bar->next)
-    if (bar->toolbar_dock == TOOLBAR_DOCK_TOP || bar->toolbar_dock == TOOLBAR_DOCK_MENU) return bar;
+  app_chrome_state_t *st = chrome ? chrome->userdata : NULL;
+  for (window_t *c = chrome ? chrome->children : NULL; c; c = c->next)
+    if (st && c == st->toolbar) return c;
+  for (window_t *c = chrome ? chrome->children : NULL; c; c = c->next)
+    if (c->dock && (c->dock->flags & DOCK_TOOLBAR) && c->dock->side == DOCK_TOP) return c;
   return NULL;
 }
 

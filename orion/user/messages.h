@@ -239,6 +239,7 @@ enum {
 #define WINDOW_NOTRAYBUTTON (1 << 9)
 #define WINDOW_DIALOG       (1 << 10)
 #define WINDOW_TOOLBAR      (1 << 11)
+#define WINDOW_TITLETOOLBAR (1 << 15) // with WINDOW_TOOLBAR: caption and actions share one band
 #define WINDOW_STATUSBAR    (1 << 12)
 // Button style flags (analogous to WinAPI BS_* styles)
 // BUTTON_PUSHLIKE: button stays visually pressed while win->value == true (like a toggle/check button)
