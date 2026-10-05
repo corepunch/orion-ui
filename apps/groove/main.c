@@ -3,15 +3,20 @@
 
 #include "groove.h"
 #include <orion/gem.h>
+#include <orion/user/svg_icon_loader.h>
 
 bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
+  register_commctl_classes();
+  char icons_path[1024];
+  int n = snprintf(icons_path, sizeof(icons_path), "%s/../share/groove/icons", ui_get_exe_dir());
+  if (n > 0 && (size_t)n < sizeof(icons_path)) svg_add_icons_dir(icons_path);
   g_app = app_init();
   if (!g_app) return false;
   for (int i = 1; i < argc; i++) if (!strcmp(argv[i], "--demo")) app_load_demo();
   g_app->hinstance = hinstance;
   create_menubar();
   int sw = ui_get_system_metrics(kSystemMetricScreenWidth), sh = ui_get_system_metrics(kSystemMetricScreenHeight);
-  window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_STATUSBAR, MAKERECT(0, MENUBAR_HEIGHT, sw, sh - MENUBAR_HEIGHT), NULL, main_win_proc, hinstance, g_app);
+  window_t *win = create_window("Groove", 0, MAKERECT(0, MENUBAR_HEIGHT, sw, sh - MENUBAR_HEIGHT), NULL, main_win_proc, hinstance, g_app);
   if (!win) { app_shutdown(g_app); return false; }
   show_window(win, true);
   maximize_window(win);

@@ -371,10 +371,15 @@ typedef struct {
 #define tbEnableItem (evUser + 950)
 // Vertical toolbar grid (1..4 columns); non-button items occupy a full row.
 #define tbSetColumns (evUser + 951)
+// wparam=item ident, lparam=icon name (NULL clears); preserves embedded controls.
+#define tbSetItemIcon (evUser + 952)
+// lparam=SVG icon name (copied, NULL clears); inside the text field before its text.
+#define edSetLeadingIcon (evUser + 953)
 #define TOOLBAR_ITEM_FLAG_REORDERABLE (1u << 2) // drop onto another reorderable item
 // Half-size cell: in a single-column vertical toolbar consecutive SMALL
 // buttons/customs pack 2 per row, so 2x2 of them fills one normal button cell.
 #define TOOLBAR_ITEM_FLAG_SMALL      (1u << 4)
+#define TOOLBAR_ITEM_FLAG_FLEXSPACE  (1u << 5) // horizontal spacer shares remaining width
 #define TOOLBAR_STYLE_GRIP           (1u << 1) // draggable grip on a floating toolbar
 #define TOOLBAR_STYLE_COMPACT        (1u << 2) // menu-bar background, icon-only items
 #define TOOLBAR_STYLE_PRESSED_STRIP  (1u << 3) // strip's second row contains pressed artwork
@@ -414,7 +419,7 @@ typedef enum {
 typedef struct {
   toolbar_item_type_t type;   // item type
   int                 ident;  // command ID / button identifier
-  const char         *icon;   // BUTTON: SVG base name, e.g. "git-fork", "undo"; NULL = no icon
+  const char         *icon;   // SVG base name; TEXTEDIT uses it as a leading icon; NULL = none
   int                 w;      // explicit width in pixels (0 = automatic)
   uint32_t            flags;  // extra style flags (BUTTON_PUSHLIKE, BUTTON_AUTORADIO, …)
   const char         *text;   // label text, or combobox/textedit initial text

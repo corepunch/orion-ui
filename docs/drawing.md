@@ -68,6 +68,9 @@ Status colours come from the theme: `brTextError`, `brTextWarning`, `brTextInfo`
 
 A rounded outline is one stroke, not two stacked fills. `thickness` is the inside band in logical pixels; `radius` 0 is a square stroke.
 
+Modern text fields and comboboxes use capsule ends: their radius follows half the
+field height, including desktop and iPad toolbar sizes. Classic keeps its bevelled geometry.
+
 ```c
 stroke_rounded_rect(get_sys_color(brAccent), r, get_theme()->card_corner_radius, 2);
 ```

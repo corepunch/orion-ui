@@ -257,6 +257,7 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
   // Handle special messages
   switch (msg) {
     case evResize:
+      if (win->flags & WINDOW_TOOLBAR) toolbar_handle_message(win, msg, wparam, lparam);
       layout_docked_toolbars(win, get_client_rect(win));
       break;
     case evNCPaint:
@@ -326,6 +327,8 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         set_scissor_fbo(root, clip);
       }
       break;
+    case tbSetItemIcon:
+      return toolbar_handle_message(win, msg, wparam, lparam);
     case tbEnableItem:
     case tbSetItems:
     case tbSetColumns:

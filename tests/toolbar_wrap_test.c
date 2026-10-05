@@ -982,6 +982,71 @@ void test_multiple_docked_toolbars(void) {
     PASS();
 }
 
+static void test_toolbar_flexible_spacers(void) {
+  TEST("horizontal flexible spacers share remaining width and keep embedded fields aligned after resizing");
+  test_env_init();
+  window_t *win = create_window("", WINDOW_TOOLBAR | WINDOW_NOTITLE, MAKERECT(0, 0, 600, 60), NULL, noop_proc, 0, NULL);
+  toolbar_item_t items[] = {
+    {.type = TOOLBAR_ITEM_BUTTON, .ident = 1},
+    {.type = TOOLBAR_ITEM_SPACER, .flags = TOOLBAR_ITEM_FLAG_FLEXSPACE},
+    {.type = TOOLBAR_ITEM_BUTTON, .ident = 2},
+    {.type = TOOLBAR_ITEM_SPACER, .flags = TOOLBAR_ITEM_FLAG_FLEXSPACE},
+    {.type = TOOLBAR_ITEM_TEXTEDIT, .ident = 3, .w = 140},
+  };
+  send_message(win, tbSetItems, ARRAY_LEN(items), items);
+  toolbar_state_t *tb = toolbar_get_state(win);
+  window_t *field = get_window_item(win, 3);
+  ASSERT_NOT_NULL(field);
+  for (int width = 600; width >= 360; width -= 120) {
+    resize_window(win, width, 60);
+    ASSERT_EQUAL(tb->item_rects[0].x, toolbar_effective_padding(win));
+    ASSERT(abs(tb->item_rects[1].w - tb->item_rects[3].w) <= 1, "flexible spacers share width evenly");
+    ASSERT_EQUAL(field->frame.x + field->frame.w + toolbar_effective_padding(win), width);
+    ASSERT_TRUE(get_window_item(win, 3) == field);
+    for (int i = 1; i < ARRAY_LEN(items); i++)
+      ASSERT(tb->item_rects[i].x >= tb->item_rects[i - 1].x + tb->item_rects[i - 1].w, "items never overlap");
+  }
+  send_message(win, tbSetOrientation, TOOLBAR_VERTICAL, NULL);
+  ASSERT_EQUAL(tb->item_rects[1].h, TOOLBAR_SPACING_GAP_WIDTH);
+  ASSERT_EQUAL(tb->item_rects[3].h, TOOLBAR_SPACING_GAP_WIDTH);
+  destroy_window(win);
+  test_env_shutdown();
+  PASS();
+}
+
+static void test_toolbar_set_item_icon(void) {
+  TEST("updating a toolbar icon owns its name and preserves embedded text, focus and pressed state");
+  test_env_init();
+  window_t *win = create_window("", WINDOW_TOOLBAR | WINDOW_NOTITLE, MAKERECT(0, 0, 400, 60), NULL, noop_proc, 0, NULL);
+  toolbar_item_t items[] = {
+    {.type = TOOLBAR_ITEM_BUTTON, .ident = 1, .icon = "play"},
+    {.type = TOOLBAR_ITEM_TEXTEDIT, .ident = 2, .w = 140},
+  };
+  send_message(win, tbSetItems, ARRAY_LEN(items), items);
+  toolbar_state_t *tb = toolbar_get_state(win);
+  window_t *field = get_window_item(win, 2);
+  ASSERT_NOT_NULL(field);
+  send_message(field, edSetText, 0, "typed query");
+  set_focus(field);
+  irect16_t button = tb->item_rects[0];
+  send_message(win->toolbar, evLeftButtonDown, MAKEDWORD(button.x + 2, button.y + 2), NULL);
+  char icon[] = "pause";
+  ASSERT_TRUE(send_message(win, tbSetItemIcon, 1, icon));
+  icon[0] = 'x';
+  ASSERT_TRUE(strcmp(tb->items[0].icon, "pause") == 0);
+  ASSERT_EQUAL(tb->pressed_item, 0);
+  ASSERT_TRUE(get_window_item(win, 2) == field && g_ui_runtime.focused == field);
+  char text[32];
+  send_message(field, edGetText, sizeof(text), text);
+  ASSERT_TRUE(strcmp(text, "typed query") == 0);
+  ASSERT_FALSE(send_message(win, tbSetItemIcon, 999, "missing"));
+  ASSERT_TRUE(send_message(win, tbSetItemIcon, 1, NULL));
+  ASSERT_TRUE(tb->items[0].icon == NULL);
+  destroy_window(win);
+  test_env_shutdown();
+  PASS();
+}
+
 static int custom_draw_count;
 static toolbar_draw_item_t custom_draw;
 static result_t custom_draw_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
@@ -1302,6 +1367,8 @@ int main(int argc, char *argv[]) {
     TEST_START("Toolbar child-window tests");
 
     test_toolbar_reorderable_items();
+    test_toolbar_flexible_spacers();
+    test_toolbar_set_item_icon();
     test_vertical_grid_columns();
     test_vertical_small_items_pack();
     test_toolbar_embedded_slider_drag();

@@ -397,6 +397,46 @@ void test_edit_change_notifies_parent_per_edit(void) {
     PASS();
 }
 
+static void test_edit_leading_icon(void) {
+  TEST("leading icon reserves text space and cursor hit-testing without changing text or focus");
+  test_env_init();
+  reset_state();
+  window_t *parent = test_env_create_window("P", 0, 0, 400, 100, edit_parent_proc, NULL);
+  const char *text = "                                        ";
+  window_t *ed = make_edit(parent, 9, text);
+  ASSERT_NOT_NULL(ed);
+  layout_measure_t before = {0}, after = {0};
+  send_message(ed, evMeasure, 0, &before);
+  send_message(ed, edSetPlaceholder, 0, "Search...");
+  begin_editing(ed);
+  ed->cursor_pos = 2;
+  char icon[] = "search";
+  ASSERT_TRUE(send_message(ed, edSetLeadingIcon, 0, icon));
+  icon[0] = '\0';
+  send_message(ed, edSetPlaceholder, 0, "Find...");
+  send_message(ed, evMeasure, 0, &after);
+  int inset = MIN(20, MAX(0, ed->frame.h - 4)) + TEXTEDIT_PADDING_HORZ;
+  ASSERT_EQUAL(after.desired_w, before.desired_w + inset);
+  ASSERT_TRUE(g_ui_runtime.focused == ed);
+  ASSERT_EQUAL(ed->cursor_pos, 2);
+  ASSERT_EQUAL(g_change_count, 0);
+  int x = TEXTEDIT_PADDING_HORZ + inset + text_strnwidth(FONT_SMALL, ed->title, 2);
+  send_message(ed, evLeftButtonUp, MAKEDWORD(x, ed->frame.h / 2), NULL);
+  ASSERT_EQUAL(ed->cursor_pos, 2);
+  send_message(ed, evLeftButtonUp, MAKEDWORD(TEXTEDIT_PADDING_HORZ, ed->frame.h / 2), NULL);
+  ASSERT_EQUAL(ed->cursor_pos, 0);
+  ASSERT_TRUE(send_message(ed, edSetLeadingIcon, 0, NULL));
+  send_message(ed, evMeasure, 0, &after);
+  ASSERT_EQUAL(after.desired_w, before.desired_w);
+  x = TEXTEDIT_PADDING_HORZ + text_strnwidth(FONT_SMALL, ed->title, 2);
+  send_message(ed, evLeftButtonUp, MAKEDWORD(x, ed->frame.h / 2), NULL);
+  ASSERT_EQUAL(ed->cursor_pos, 2);
+  ASSERT_STR_EQUAL(ed->title, text);
+  destroy_window(parent);
+  test_env_shutdown();
+  PASS();
+}
+
 int main(int argc, char *argv[]) {
     (void)argc; (void)argv;
     TEST_START("win_textedit tests");
@@ -415,6 +455,7 @@ int main(int argc, char *argv[]) {
     test_edit_tab_commits_editing();
     test_edit_tab_noop_when_not_editing();
     test_edit_change_notifies_parent_per_edit();
+    test_edit_leading_icon();
 
     TEST_END();
 }

@@ -33,7 +33,7 @@ void clip_skin_load(groove_t *app) {
   }
 }
 
-static void paint_block_card(int block, const block_t *b, irect16_t r, uint32_t color, ctrl_state_t state) {
+static void paint_block_card(int block, const block_t *b, irect16_t r, int visible_width, uint32_t color, ctrl_state_t state) {
   r = rect_trim_bottom(rect_trim_top(rect_inset(r, 1), 1), 1);
   static const uint8_t skins[CAT_COUNT] = {0, 1, 2, 3, 4, 5, 7, 2, 5, 0, 5, 7, 1, 6, 7, 1};
   bool skinned = g_app->card_atlas.tex && draw_image_background(r, &g_app->card_backgrounds[skins[b->cat]], state);
@@ -46,7 +46,8 @@ static void paint_block_card(int block, const block_t *b, irect16_t r, uint32_t 
     uint32_t texture = waveform_texture(g_app, block, (ipoint16_t){wave.w, wave.h}, radius);
     if (texture) draw_sprite_region(texture, wave, NULL, ink, 0);
   }
-  draw_text_ellipsized(FONT_SMALL, b->name, r.x + 4, r.y + 3, r.w - 8, color_with_alpha(get_sys_color(brTextOnColor), color >> 24));
+  int text_width = MAX(0, MIN(r.w - 8, visible_width - 2 * (r.x + 4)));
+  draw_text_ellipsized(FONT_SMALL, b->name, r.x + 4, r.y + 3, text_width, color_with_alpha(get_sys_color(brTextOnColor), color >> 24));
 }
 
 result_t win_block_card(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
@@ -67,7 +68,10 @@ result_t win_block_card(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       bool lit = st->hover && !win->drag_visual;
       ctrl_state_t state = st->state | (st->down && !win->drag_visual ? CTRL_PRESSED : lit ? CTRL_HOVER : CTRL_NORMAL);
       if (window_has_state(win, WINDOW_STATE_DISABLED)) state |= CTRL_DISABLED;
-      paint_block_card(st->block, b, get_client_rect(win), category_color(b->cat), state);
+      irect16_t r = get_client_rect(win);
+      int visible_width = r.w;
+      if (win->parent == g_app->sheet) r.w = clip_cell_size(g_app->sheet, b).x;
+      paint_block_card(st->block, b, r, visible_width, category_color(b->cat), state);
       return true;
     }
     case grCardSetBlock:

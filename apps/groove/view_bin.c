@@ -1,5 +1,4 @@
-// VIEW: the sound library — a header (titles + search field) above a sidebar
-// tabview whose pages are bins. A bin holds the sample cards of one instrument
+// VIEW: the sidebar tabview pages are sound bins. Each holds one instrument's
 // family (or all of them), filtered by the search text. Each card is a child
 // window. Pressing it auditions the block; dragging lifts that same window with
 // window_set_drag_visual.
@@ -9,8 +8,6 @@
 #define TILE_GAP   0
 #define TILE_PAD   0
 #define MAX_TILES  GR_MAX_BLOCKS
-#define SEARCH_W   240
-#define HEADER_PAD 14
 
 typedef struct {
   category_t cat;
@@ -111,75 +108,6 @@ result_t win_bin(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       free(st);
       win->userdata = NULL;
       return true;
-    default: return false;
-  }
-}
-
-// Library header: "Sounds" over the sidebar, "Library" and the search field
-// over the bin pages. Aligned to the tabview's page area via tcAdjustRect.
-static window_t *child_by_id(window_t *win, uint32_t id) {
-  for (window_t *c = win->children; c; c = c->next) if (c->id == id) return c;
-  return NULL;
-}
-
-enum { ID_SOUNDS_TITLE = 1, ID_LIBRARY_TITLE };
-
-static irect16_t library_page(window_t *win) {
-  irect16_t r = get_client_rect(win);
-  if (g_app->tabs) send_message(g_app->tabs, tcAdjustRect, 0, &r);
-  return r;
-}
-
-static void library_layout(window_t *win) {
-  irect16_t cr = get_client_rect(win), page = library_page(win);
-  window_t *sounds = child_by_id(win, ID_SOUNDS_TITLE), *library = child_by_id(win, ID_LIBRARY_TITLE), *search = child_by_id(win, ID_SEARCH);
-  if (sounds)  move_window(sounds,  HEADER_PAD, (cr.h - sounds->frame.h) / 2);
-  if (library) move_window(library, page.x + HEADER_PAD, (cr.h - library->frame.h) / 2);
-  if (search) {
-    irect16_t f = rect_split_right(rect_trim_right(cr, HEADER_PAD), MIN(SEARCH_W, page.w / 2));
-    f = rect_center(f, f.w, search->frame.h);
-    move_window(search, f.x, f.y);
-    resize_window(search, f.w, f.h);
-  }
-}
-
-static void library_title(window_t *win, const char *text, uint32_t id) {
-  window_t *label = create_window(text, WINDOW_NOTITLE, MAKERECT(0, 0, 120, 20), win, win_label, 0, NULL);
-  if (!label) { fprintf(stderr, "[bin] title allocation failed text=%s\n", text); fflush(stderr); return; }
-  label->id = id;
-  label_create_params_t style = { brTextNormal, FONT_SYSTEM, true, false };
-  send_message(label, lbSetStyle, 0, &style);
-}
-
-result_t win_library(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
-  if (!g_app && msg != evDestroy) return false;
-  switch (msg) {
-    case evCreate: {
-      library_title(win, "Sounds", ID_SOUNDS_TITLE);
-      library_title(win, "Library", ID_LIBRARY_TITLE);
-      window_t *search = create_window("", 0, MAKERECT(0, 0, SEARCH_W, 24), win, win_textedit, 0, NULL);
-      if (!search) { fprintf(stderr, "[bin] search allocation failed win=%u\n", (unsigned)win->id); fflush(stderr); return true; }
-      search->id = ID_SEARCH;
-      send_message(search, edSetPlaceholder, 0, "Search sounds...");
-      return true;
-    }
-    case evResize: library_layout(win); return false;
-    case evPaint: {
-      irect16_t cr = get_client_rect(win), page = library_page(win);
-      library_layout(win);
-      theme_draw(THEME_PART_PANEL, rect_split_left(cr, page.x), CTRL_NORMAL);
-      fill_rect(get_sys_color(brControlBg), rect_trim_left(cr, page.x));
-      return false;
-    }
-    case evCommand:
-      if (LOWORD(wparam) == ID_SEARCH && HIWORD(wparam) == ednChange) {
-        char text[sizeof(g_app->search)];
-        send_message((window_t *)lparam, edGetText, sizeof(text), text);
-        app_set_search(text);
-        return true;
-      }
-      return false;
-    case evDestroy: return true;
     default: return false;
   }
 }
