@@ -205,10 +205,6 @@ $(ORIONC_BIN) $(BIN_DIR)/svg_atlas_render$(EXE_EXT): $(BIN_DIR)/%$(EXE_EXT): too
 
 $(BIN_DIR)/svg_atlas_render$(EXE_EXT): tools/nanosvg.h tools/nanosvgrast.h orion/user/stb_image_write.h
 
-.PHONY: groove-icons
-groove-icons: $(BIN_DIR)/svg_atlas_render$(EXE_EXT)
-	python3 tools/build_button_atlas.py apps/groove/share/icons/transport.json --renderer $(BIN_DIR)/svg_atlas_render$(EXE_EXT)
-
 $(GENERATED_DIR)/$(APPS)/%.h: $(APPS)/%.orion $(ORIONC_BIN) | $(GENERATED_DIR)
 	@mkdir -p $(dir $@)
 	@echo "GEN     $@"

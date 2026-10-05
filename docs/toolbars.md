@@ -430,3 +430,13 @@ Toolbars use the shared [workspace docking manager](docking.md). Existing
 window title, app items, and window controls. Configure app items with `tbSetItems`
 as usual; the framework supplies the caption items. Locate items by command ID,
 because framework items also occupy positions in the toolbar state.
+
+### Coloured procedural buttons
+
+Set `TOOLBAR_STYLE_PLASTIC` with `tbSetStyle` to draw toolbar buttons as procedural
+plastic with recessed white SVG icons. Set `toolbar_item_t.color` to a packed
+`0xAABBGGRR` face colour; zero uses the theme accent. Update it without recreating
+embedded controls with `send_message(toolbar, tbSetItemColor, command_id, &color)`;
+the message copies the `uint32_t` immediately. A null colour pointer restores the
+theme accent. Unavailable IDs and non-button items are rejected with diagnostics.
+Window caption controls retain the active theme's normal drawing.

@@ -328,6 +328,7 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         set_scissor_fbo(root, clip);
       }
       break;
+    case tbSetItemColor:
     case tbSetItemIcon:
       return toolbar_handle_message(win, msg, wparam, lparam);
     case tbEnableItem:

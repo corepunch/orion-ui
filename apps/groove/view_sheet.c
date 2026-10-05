@@ -44,9 +44,7 @@ static irect16_t solo_rect(window_t *win, int t) {
 
 static void draw_track_toggle(irect16_t r, const char *icon, bool active) {
   ctrl_state_t state = active ? CTRL_SELECTED : CTRL_NORMAL;
-  theme_draw(THEME_PART_TOOLBAR_BUTTON, r, state);
-  irect16_t glyph = rect_center(r, r.w * 2 / 3, r.h * 2 / 3);
-  draw_sysicon(icon, glyph.x, glyph.y, glyph.w, theme_foreground(THEME_PART_TOOLBAR_BUTTON, state));
+  draw_plastic_button(r, state, get_sys_color(active ? brAccent : brControlBg), icon);
 }
 
 static void sync_scroll(window_t *win) {
@@ -154,8 +152,8 @@ static void paint_headers(window_t *win) {
     int y = track_y(win, t), rh = row_h(win);
     fill_rect(get_sys_color(brDarkEdge), R(0, y + rh - 1, HDR_W, 1));
     irect16_t m = mute_rect(win, t), s = solo_rect(win, t);
-    draw_track_toggle(m, "volume-off", g_app->song.mute[t]);
-    draw_track_toggle(s, "headphones", g_app->song.solo[t]);
+    draw_track_toggle(m, "lucide-volume-off", g_app->song.mute[t]);
+    draw_track_toggle(s, "lucide-headphones", g_app->song.solo[t]);
   }
 }
 

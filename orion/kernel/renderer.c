@@ -93,6 +93,7 @@ typedef struct {
   GLuint indexed_palette;
   sprite_program_t gradient_sprite;
   sprite_program_t gradient_card_sprite;
+  sprite_program_t plastic_sprite;
   sprite_program_t rounded_rect_sprite; // SDF rounded-corner compositor
   GLuint vga_program;    // VGA text renderer program
   R_Mesh mesh;           // Sprite mesh for drawing quads
@@ -127,6 +128,9 @@ typedef struct {
 } rounded_rect_uniforms_t;
 
 static rounded_rect_uniforms_t g_rounded_rect = {0};
+static struct {
+  GLint glyph_uv, glyph_box, disabled, shadow_color;
+} g_plastic;
 
 typedef struct {
   GLuint fbo;
@@ -295,6 +299,10 @@ static void cache_vga_uniforms(void) {
 static void update_sprite_projection_uniforms(const fmat16_t *projection) {
   GLint prev_prog = 0;
   glGetIntegerv(GL_CURRENT_PROGRAM, &prev_prog);
+  if (g_ref.plastic_sprite.program && g_ref.plastic_sprite.projection_u >= 0) {
+    glUseProgram(g_ref.plastic_sprite.program);
+    glUniformMatrix4fv(g_ref.plastic_sprite.projection_u, 1, GL_FALSE, fmat16_data(projection));
+  }
   if (g_ref.gradient_card_sprite.program && g_ref.gradient_card_sprite.projection_u >= 0) {
     glUseProgram(g_ref.gradient_card_sprite.program);
     glUniformMatrix4fv(g_ref.gradient_card_sprite.projection_u, 1, GL_FALSE, fmat16_data(projection));
@@ -455,6 +463,14 @@ bool ui_init_prog(void) {
   }
   cache_sprite_uniforms(&g_ref.gradient_card_sprite);
 
+  g_ref.plastic_sprite.program = load_program_from_files("sprite_plastic.frag.glsl", "position", "texcoord", "color");
+  if (!g_ref.plastic_sprite.program) { ui_shutdown_prog(); return false; }
+  cache_sprite_uniforms(&g_ref.plastic_sprite);
+  g_plastic.glyph_uv     = glGetUniformLocation(g_ref.plastic_sprite.program, "glyph_uv");
+  g_plastic.glyph_box    = glGetUniformLocation(g_ref.plastic_sprite.program, "glyph_box");
+  g_plastic.disabled     = glGetUniformLocation(g_ref.plastic_sprite.program, "disabled");
+  g_plastic.shadow_color = glGetUniformLocation(g_ref.plastic_sprite.program, "shadow_color");
+
   g_ref.rounded_rect_sprite.program = load_program_from_files("sprite_rounded_rect.frag.glsl",
                                                                "position", "texcoord", "color");
   if (!g_ref.rounded_rect_sprite.program) {
@@ -540,6 +556,7 @@ void ui_shutdown_prog(void) {
   R_DeleteTexture(g_ref.indexed_palette);
   SAFE_DELETE(g_ref.gradient_sprite.program, glDeleteProgram);
   SAFE_DELETE(g_ref.gradient_card_sprite.program, glDeleteProgram);
+  SAFE_DELETE(g_ref.plastic_sprite.program, glDeleteProgram);
   SAFE_DELETE(g_ref.rounded_rect_sprite.program, glDeleteProgram);
   SAFE_DELETE(g_ref.vga_program, glDeleteProgram);
   R_MeshDestroy(&g_ref.mesh);
@@ -726,6 +743,46 @@ void render_gradient_card(irect16_t r, int pixel_w, int pixel_h, float radius,
               ((color >> 16) & 255) / 255.0f, (color >> 24) / 255.0f);
   glUniform4f(program->params0_u, pixel_w, pixel_h, MIN(radius, MIN(pixel_w, pixel_h) * 0.5f), ring_width);
   glUniform4f(program->params1_u, highlight_width, !!(state & CTRL_SELECTED), !!(state & CTRL_HOVER), 0);
+  R_BlendPremultiplied();
+  g_ref.mesh.draw_mode = GL_TRIANGLE_FAN;
+  R_MeshDraw(&g_ref.mesh);
+  glDisable(GL_BLEND);
+  glEnable(GL_DEPTH_TEST);
+}
+
+void render_plastic_surface(irect16_t r, float radius, float bevel, float shadow,
+                            ctrl_state_t state, uint32_t color, uint32_t shadow_color,
+                            uint32_t icon_tex, const frect_t *icon_uv, ipoint16_t icon_size) {
+  sprite_program_t *program = &g_ref.plastic_sprite;
+  if (r.w <= 0 || r.h <= 0) return;
+  if (!program->program) {
+    fprintf(stderr, "[renderer] plastic shader unavailable rect=%d,%d,%d,%d\n", r.x, r.y, r.w, r.h);
+    fflush(stderr);
+    return;
+  }
+  frect_t uv = icon_uv ? *icon_uv : (frect_t){0, 0, 1, 1};
+  shadow = CLAMP(shadow, 0, MAX(0, MIN(r.w, r.h) * 0.5f - 1));
+  float glyph_w = MIN(MAX(0, icon_size.x), MAX(0, r.w - 2 * shadow - 4));
+  float glyph_h = MIN(MAX(0, icon_size.y), MAX(0, r.h - 2 * shadow - 4));
+  glUseProgram(program->program);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, icon_tex ? icon_tex : g_vga.palette_texture);
+  glUniform1i(program->tex0_u, 0);
+  glUniform2f(program->offset_u, r.x, r.y);
+  glUniform2f(program->scale_u, r.w, r.h);
+  glUniform2f(program->uv_offset_u, 0, 0);
+  glUniform2f(program->uv_scale_u, 1, 1);
+  glUniform4f(program->tint_u, (color & 255) / 255.0f, ((color >> 8) & 255) / 255.0f,
+              ((color >> 16) & 255) / 255.0f, (color >> 24) / 255.0f);
+  glUniform4f(program->params0_u, r.w, r.h, MAX(0, radius), MAX(0, bevel));
+  glUniform4f(program->params1_u, shadow, !!(state & CTRL_PRESSED), !!(state & CTRL_HOVER), !!(state & CTRL_SELECTED));
+  glUniform1f(g_plastic.disabled, !!(state & CTRL_DISABLED));
+  glUniform4f(g_plastic.shadow_color, ui_srgb8_to_linear(shadow_color & 255),
+              ui_srgb8_to_linear((shadow_color >> 8) & 255), ui_srgb8_to_linear((shadow_color >> 16) & 255),
+              (shadow_color >> 24) / 255.0f);
+  glUniform4f(g_plastic.glyph_uv, uv.x, uv.y, uv.w, uv.h);
+  glUniform4f(g_plastic.glyph_box, (r.w - glyph_w) * 0.5f, (r.h - glyph_h) * 0.5f,
+              icon_tex ? glyph_w : 0, icon_tex ? glyph_h : 0);
   R_BlendPremultiplied();
   g_ref.mesh.draw_mode = GL_TRIANGLE_FAN;
   R_MeshDraw(&g_ref.mesh);

@@ -41,7 +41,6 @@ result_t main_win_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
     case evCreate: {
       app->win = win;
       create_menubar();
-      if (g_ui_runtime.running) clip_skin_load(app);
       app->sheet = create_window("Arrangement", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_HSCROLL,
                                   MAKERECT(0, 0, 1, 1), win, win_sheet, app->hinstance, NULL);
       app->library = create_window("Library", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE,
