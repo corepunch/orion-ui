@@ -1,0 +1,6 @@
+Phosphor Icons, fill weight (plus/minus: bold weight, solid paths)
+Source: https://github.com/phosphor-icons/core
+Revision: 2b75f3ad12b420c9504ef05df8d2564a28f8500e
+Assets: assets/fill/<name>-fill.svg; assets/bold/{plus,minus}-bold.svg
+Bold plus/minus preserve solid symbols; Fill variants include a square background.
+Local SVG width/height: 24px; original 256-unit viewBox and filled paths preserved.

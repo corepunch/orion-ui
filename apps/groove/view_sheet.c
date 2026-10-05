@@ -152,8 +152,8 @@ static void paint_headers(window_t *win) {
     int y = track_y(win, t), rh = row_h(win);
     fill_rect(get_sys_color(brDarkEdge), R(0, y + rh - 1, HDR_W, 1));
     irect16_t m = mute_rect(win, t), s = solo_rect(win, t);
-    draw_track_toggle(m, "lucide-volume-off", g_app->song.mute[t]);
-    draw_track_toggle(s, "lucide-headphones", g_app->song.solo[t]);
+    draw_track_toggle(m, "phosphor-speaker-slash-fill", g_app->song.mute[t]);
+    draw_track_toggle(s, "phosphor-headphones-fill", g_app->song.solo[t]);
   }
 }
 
