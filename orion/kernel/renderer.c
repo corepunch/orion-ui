@@ -1308,45 +1308,73 @@ bool R_ReadTextureSRGBA8(uint32_t tex, int w, int h, uint8_t *out_rgba) {
   return true;
 }
 
+// Clear error flags left by earlier GL calls so the glGetError() check that
+// follows reports only its own calls. Bounded: without a usable context
+// glGetError() can keep returning an error.
+static void drain_stale_gl_errors(const char *before) {
+  for (int i = 0; i < 16; i++) {
+    GLenum error = glGetError();
+    if (error == GL_NO_ERROR) return;
+    fprintf(stderr, "[renderer] stale GL error before %s error=0x%x\n", before, error);
+    fflush(stderr);
+  }
+}
+
 bool capture_framebuffer_rgba(int w, int h, uint8_t *out_rgba) {
-  if (w <= 0 || h <= 0 || !out_rgba)
+  if (w <= 0 || h <= 0 || !out_rgba) {
+    fprintf(stderr, "[renderer] framebuffer capture rejected size=%dx%d out=%p\n",
+            w, h, (void *)out_rgba);
+    fflush(stderr);
     return false;
+  }
 
   GLint prev_fbo = 0;
   GLint prev_read = 0;
+  GLint source = GL_NONE;
   GLint prev_view[4] = {0};
   GLint prev_scissor[4] = {0};
 
+  drain_stale_gl_errors("framebuffer capture");
   glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prev_fbo);
   glGetIntegerv(GL_READ_BUFFER, &prev_read);
   glGetIntegerv(GL_VIEWPORT, prev_view);
   glGetIntegerv(GL_SCISSOR_BOX, prev_scissor);
 
-  glViewport(0, 0, w, h);
-  glScissor(0, 0, w, h);
-  glPixelStorei(GL_PACK_ALIGNMENT, 1);
   size_t row_sz = (size_t)w * 4;
   uint8_t *tmp = malloc((size_t)h * row_sz);
   if (!tmp) {
-    glViewport(prev_view[0], prev_view[1], prev_view[2], prev_view[3]);
-    glScissor(prev_scissor[0], prev_scissor[1], prev_scissor[2], prev_scissor[3]);
-    glReadBuffer((GLenum)prev_read);
-    glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)prev_fbo);
+    fprintf(stderr, "[renderer] framebuffer capture allocation failed size=%dx%d\n", w, h);
+    fflush(stderr);
     return false;
   }
-  glReadBuffer(prev_fbo == 0 ? GL_BACK : GL_COLOR_ATTACHMENT0);
+  glViewport(0, 0, w, h);
+  glScissor(0, 0, w, h);
+  glPixelStorei(GL_PACK_ALIGNMENT, 1);
+  // Read the colour buffer the frame was drawn into. On the default
+  // framebuffer that is GL_BACK only when the context is double-buffered; a
+  // single-buffered one has just GL_FRONT and rejects GL_BACK.
+  glGetIntegerv(GL_DRAW_BUFFER0, &source);
+  glReadBuffer((GLenum)source);
   glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, tmp);
+  GLenum error = glGetError();
+
+  glViewport(prev_view[0], prev_view[1], prev_view[2], prev_view[3]);
+  glScissor(prev_scissor[0], prev_scissor[1], prev_scissor[2], prev_scissor[3]);
+  glReadBuffer((GLenum)prev_read);
+  glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)prev_fbo);
+  if (error != GL_NO_ERROR) {
+    fprintf(stderr, "[renderer] framebuffer capture failed fbo=%d buffer=0x%x size=%dx%d error=0x%x\n",
+            prev_fbo, source, w, h, error);
+    fflush(stderr);
+    free(tmp);
+    return false;
+  }
   for (int y = 0; y < h; y++) {
     memcpy(out_rgba + (size_t)y * row_sz,
            tmp + (size_t)(h - 1 - y) * row_sz,
            row_sz);
   }
   free(tmp);
-
-  glViewport(prev_view[0], prev_view[1], prev_view[2], prev_view[3]);
-  glScissor(prev_scissor[0], prev_scissor[1], prev_scissor[2], prev_scissor[3]);
-  glReadBuffer((GLenum)prev_read);
-  glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)prev_fbo);
   return true;
 }
 
@@ -1404,6 +1432,7 @@ uint32_t R_CreateTexture(int w, int h, R_TextureFormat format,
   GLenum data_type = format == R_TEXTURE_RGBA16F_LINEAR ? GL_FLOAT : GL_UNSIGNED_BYTE;
   GLuint tex = 0;
   GLint previous_unpack = 4;
+  drain_stale_gl_errors("RGBA texture creation");
   glGetIntegerv(GL_UNPACK_ALIGNMENT, &previous_unpack);
   glGenTextures(1, &tex);
   if (!tex) {
@@ -1468,6 +1497,7 @@ int R_GetMaxTextureSize(void) {
 uint32_t R_CreateTextureR8(int w, int h, const void *pixels,
                             R_TextureFilter filter, R_TextureWrap wrap) {
   GLuint tex = 0;
+  drain_stale_gl_errors("R8 texture creation");
   glGenTextures(1, &tex);
   glBindTexture(GL_TEXTURE_2D, tex);
   GLenum gl_filter = (filter == R_FILTER_LINEAR) ? GL_LINEAR : GL_NEAREST;
@@ -1553,6 +1583,7 @@ bool R_UpdateTextureRGBA(uint32_t tex, int x, int y, int w, int h,
     }
     upload = premultiplied;
   }
+  drain_stale_gl_errors("RGBA texture update");
   glBindTexture(GL_TEXTURE_2D, (GLuint)tex);
   GLint previous_unpack = 4;
   glGetIntegerv(GL_UNPACK_ALIGNMENT, &previous_unpack);
