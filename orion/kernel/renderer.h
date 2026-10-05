@@ -9,6 +9,9 @@
 #include <stdint.h>
 #include <orion/user/gl_compat.h>
 
+bool ui_load_program_with_attributes(const char *vs_src, const char *fs_src,
+                                      const char *const *names, size_t count, uint32_t *out_program);
+
 // Texture filter mode
 typedef enum {
   R_FILTER_NEAREST = 0,   // Nearest-neighbour (pixel art / UI)

@@ -320,6 +320,9 @@ Image-editor effect shaders keep their existing sRGB math: the loader converts
 premultiplied linear samples to straight sRGB inputs and converts shader output
 back to premultiplied linear before blending or to straight sRGB for readback.
 
+The [shared shader module](docs/shaders.md) owns generated GLSL interfaces,
+program compilation and typed uniform submission for built-in renderer programs.
+
 ## Theme System
 
 The theme system provides a runtime-switchable drawing vtable (`theme_t`) that

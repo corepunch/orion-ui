@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "shader.h"
+#include <orion/kernel/renderer.h>
 
 #define SRGB_TO_LINEAR_GAMMA 2.2f
 
@@ -96,53 +97,12 @@ static const char *fs_src =
 "    fragColor=vec4(encoded,1.0);\n"
 "}\n";
 
-static GLuint compile_shader(GLenum type, const char *src){
-	GLuint s = glCreateShader(type);
-	glShaderSource(s, 1, &src, NULL);
-	glCompileShader(s);
-	GLint ok;
-	glGetShaderiv(s, GL_COMPILE_STATUS, &ok);
-	if(!ok){
-		char info[512];
-		glGetShaderInfoLog(s, 512, NULL, info);
-		fprintf(stderr, "shader compile error:\n%s\n", info);
-		glDeleteShader(s);
-		return 0;
-	}
-	return s;
-}
-
 static vec3 srgb_to_linear(vec3 color){
 	return v3(powf(color.x,2.2f),powf(color.y,2.2f),powf(color.z,2.2f));
 }
 
 void shader_init(void){
-	GLuint vs = compile_shader(GL_VERTEX_SHADER, vs_src);
-	GLuint fs = compile_shader(GL_FRAGMENT_SHADER, fs_src);
-	if(!vs || !fs){
-		if(vs) glDeleteShader(vs);
-		if(fs) glDeleteShader(fs);
-		fprintf(stderr, "shader_init: failed to compile shaders, continuing without PBR\n");
-		prog = 0;
-		return;
-	}
-	prog = glCreateProgram();
-	glAttachShader(prog, vs);
-	glAttachShader(prog, fs);
-	glBindAttribLocation(prog, 0, "aPos");
-	glBindAttribLocation(prog, 1, "aNrm");
-	glLinkProgram(prog);
-	GLint ok;
-	glGetProgramiv(prog, GL_LINK_STATUS, &ok);
-	if(!ok){
-		char info[512];
-		glGetProgramInfoLog(prog, 512, NULL, info);
-		fprintf(stderr, "shader link error:\n%s\n", info);
-		glDeleteProgram(prog);
-		prog = 0;
-	}
-	glDeleteShader(vs);
-	glDeleteShader(fs);
+	if (!ui_load_program_from_source(vs_src, fs_src, "aPos", "aNrm", NULL, &prog)) return;
 
 	vlocPos = 0;
 	vlocNrm = 1;

@@ -1,12 +1,3 @@
-#version 150 core
-
-in vec2 tex;
-in vec4 col;
-out vec4 outColor;
-uniform vec4 tint;
-uniform vec4 params0; // pixel size, corner radius, reserved ring width
-uniform vec4 params1; // highlight width, selected, hover
-
 vec3 srgb_to_linear(vec3 c) {
   return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(vec3(0.04045), c));
 }
@@ -16,7 +7,8 @@ float box_distance(vec2 p, vec2 b, float r) {
   return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
 }
 
-void main() {
+vec4 frag() {
+  vec4 outColor;
   vec2 size = params0.xy, p = (tex - 0.5) * size;
   float ring = min(params0.w, max(0.0, min(size.x, size.y) * 0.5 - 1.0));
   vec2 inner = size * 0.5 - vec2(ring);
@@ -40,4 +32,5 @@ void main() {
   if (params1.y > 0.5) rgb = mix(ring_rgb, rgb, face);
   float a = coverage * tint.a * col.a;
   outColor = vec4(rgb * col.rgb * a, a);
+  return outColor;
 }
