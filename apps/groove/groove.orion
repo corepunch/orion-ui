@@ -26,5 +26,9 @@
         <item name="slower" label="Slower" />
         <item name="faster" label="Faster" />
       </menu>
+      <menu name="window" label="Window">
+        <item name="library" label="Show Library" />
+        <item name="reset" label="Reset Workspace" />
+      </menu>
     </menus>
 </orion>

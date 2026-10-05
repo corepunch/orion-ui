@@ -19,6 +19,8 @@
 #include <orion/user/accel.h>
 #include <orion/user/theme.h>
 #include "menubar.h"
+#include <orion/user/dock.h>
+#include <orion/user/toolbar.h>
 #include "popup_item.h"
 
 #define MENU_ITEM_H      POPUP_ITEM_HEIGHT
@@ -27,6 +29,7 @@
 
 typedef struct {
   menu_def_t      *menus;       // shallow copy of the menu_def_t array
+  bool             vertical;
   int              count;       // number of menus
   int             *menu_x;      // x offset for each label (window-local)
   window_t        *open_popup;  // currently visible dropdown, or NULL
@@ -422,12 +425,19 @@ static void open_submenu_popup(window_t *popup, popup_data_t *pd, int index) {
                                         pd->accel, px, py, pd->notify_win);
 }
 
+static irect16_t menubar_item_rect(window_t *win, menubar_data_t *data, int index) {
+  int grip = win->dock ? (data->vertical ? TOOLBAR_GRIP_HEIGHT : TOOLBAR_GRIP_WIDTH) : 0;
+  if (data->vertical) return R(0, grip + index * get_theme()->menubar_height, win->frame.w, get_theme()->menubar_height);
+  return R(data->menu_x[index] - 2 + grip, 0, strwidth(data->menus[index].label) + MENU_LABEL_PAD, get_theme()->menubar_height);
+}
+
 static void open_popup(window_t *mb_win, menubar_data_t *data, int idx) {
   close_popup(mb_win, data);
 
   const menu_def_t *menu = &data->menus[idx];
-  int px = window_screen_x(mb_win) + data->menu_x[idx] - 1; // TODO: why -1?
-  int py = window_screen_y(mb_win) + mb_win->frame.h;
+  irect16_t label = menubar_item_rect(mb_win, data, idx);
+  int px = window_screen_x(mb_win) + (data->vertical ? label.w : label.x);
+  int py = window_screen_y(mb_win) + (data->vertical ? label.y : label.h);
 
   window_t *popup = create_popup_window(mb_win, NULL, menu->items,
                                         menu->item_count, data->accel,
@@ -441,6 +451,8 @@ static void open_popup(window_t *mb_win, menubar_data_t *data, int idx) {
 // ---- menu bar proc -------------------------------------------------------
 
 static window_t *menubar_maximized_window(window_t *win) {
+  menubar_data_t *data = win->userdata;
+  if (data && data->vertical) return NULL;
   hinstance_t owner = get_root_window(win)->hinstance;
   window_t *target = NULL;
   for (window_t *root = g_ui_runtime.windows; root; root = root->next)
@@ -490,17 +502,34 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       if (data) data->accel = (accel_table_t *)lparam;
       return true;
 
+    case evDockOrient:
+      if (!data) return false;
+      close_popup(win, data);
+      data->vertical = wparam != 0;
+      invalidate_window(win);
+      return true;
+    case evDockMeasure: {
+      if (!data || !lparam) return false;
+      int width = 0;
+      for (int i = 0; i < data->count; i++) width = MAX(width, strwidth(data->menus[i].label) + MENU_LABEL_PAD);
+      *(ipoint16_t *)lparam = (ipoint16_t){MAX(80, width),
+        data->vertical ? TOOLBAR_GRIP_HEIGHT + data->count * get_theme()->menubar_height : get_theme()->menubar_height};
+      return true;
+    }
     case kMenuBarMessageGetContentWidth:
       if (!data || !data->count) return 4;
-      return data->menu_x[data->count - 1] + strwidth(data->menus[data->count - 1].label) + MENU_LABEL_PAD;
+      return (win->dock ? TOOLBAR_GRIP_WIDTH : 0) + data->menu_x[data->count - 1] + strwidth(data->menus[data->count - 1].label) + MENU_LABEL_PAD;
 
     case evThemeChanged:
-      if (!win->parent && win->frame.h != get_theme()->menubar_height)
+      if (!win->dock && !win->parent && win->frame.h != get_theme()->menubar_height)
         resize_window(win, win->frame.w, get_theme()->menubar_height);
       return true;
 
     case evPaint: {
       theme_draw(THEME_PART_MENU_BAR, R(0, 0, win->frame.w, win->frame.h), CTRL_NORMAL);
+      if (win->dock) theme_draw(THEME_PART_TOOLBAR_GRIP, data->vertical
+          ? rect_split_top(get_client_rect(win), TOOLBAR_GRIP_HEIGHT)
+          : rect_split_left(get_client_rect(win), TOOLBAR_GRIP_WIDTH), CTRL_NORMAL);
       window_t *maximized = menubar_maximized_window(win);
       irect16_t restore = menubar_restore_rect(win);
       if (maximized) {
@@ -509,8 +538,7 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       if (!data || !data->menus) return true;
       if (data->active_idx >= 0 && data->active_idx < data->count) {
         int i = data->active_idx;
-        irect16_t selection = R(data->menu_x[i] - 2, 0,
-            strwidth(data->menus[i].label) + MENU_LABEL_PAD, win->frame.h - 1);
+        irect16_t selection = menubar_item_rect(win, data, i);
         // Capsule padding can overlap adjacent hit targets; paint behind all labels.
         if (theme_is_modern(get_theme())) {
           selection = rect_center(selection, strwidth(data->menus[i].label), selection.h);
@@ -520,10 +548,8 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       }
       for (int i = 0; i < data->count; i++) {
         bool active = (i == data->active_idx);
-        int label_w = strwidth(data->menus[i].label) + MENU_LABEL_PAD;
-        int label_x0 = data->menu_x[i] - 2;
-        if (maximized && label_x0 + label_w > restore.x) break;
-        irect16_t label_rect = {label_x0, 0, label_w, win->frame.h};
+        irect16_t label_rect = menubar_item_rect(win, data, i);
+        if (maximized && label_rect.x + label_rect.w > restore.x) break;
         draw_text_small_clipped(data->menus[i].label, &label_rect,
                         theme_foreground(THEME_PART_MENU_ITEM,
                                          active ? CTRL_SELECTED : CTRL_NORMAL),
@@ -544,12 +570,8 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
         return true;
       }
       if (!data || !data->menus) return true;
-      int lx = (int16_t)LOWORD(wparam);
       for (int i = 0; i < data->count; i++) {
-        int label_w = strwidth(data->menus[i].label) + MENU_LABEL_PAD;
-        int x0 = data->menu_x[i] - 2;
-        int x1 = x0 + label_w;
-        if (lx >= x0 && lx < x1) {
+        if (rect_contains_point(menubar_item_rect(win, data, i), point)) {
           open_popup(win, data, i);
           invalidate_window(win);
           return true;
@@ -574,7 +596,7 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
     }
 
     case evDisplayChange: {
-      win->frame.w = LOWORD(wparam);
+      if (!win->dock) win->frame.w = LOWORD(wparam);
       return false;
     }
 

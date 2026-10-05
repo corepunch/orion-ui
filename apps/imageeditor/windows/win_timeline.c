@@ -3,16 +3,13 @@
 
 #define FRAME_ITEM_BASE 0x10000u
 #define FRAME_MAX_VISIBLE 8
-#define FRAME_MARGIN 12
 
 typedef struct {
-  int first_frame, visible_count, screen_w, screen_h;
-  ipoint16_t last_position;
-  bool user_placed;
+  int first_frame, visible_count;
   GLuint *thumbs;
   uint32_t *thumb_rev;
   int thumb_count;
-  bool thumbs_dirty, thumbs_active_only, positioned;
+  bool thumbs_dirty, thumbs_active_only;
   canvas_doc_t *last_doc;
   int last_count;
 } timeline_state_t;
@@ -113,21 +110,11 @@ static int timeline_fixed_width(void) {
 // after the previous frame and after the spacer, so spacer + 2*SPACING = GAP.
 #define TIMELINE_FRAME_SPACER_W (TIMELINE_FRAME_GAP - 2 * TOOLBAR_SPACING)
 
-static int timeline_frame_strip_width(int visible_count) {
-  if (visible_count <= 0) return 0;
-  return visible_count * TIMELINE_THUMB_W +
-         (visible_count - 1) * TIMELINE_FRAME_GAP;
-}
-
-static void timeline_layout(window_t *win, int width, int height, bool follow) {
+static void timeline_layout(window_t *win, bool follow) {
   timeline_state_t *st = win->userdata;
   canvas_doc_t *doc = tl_doc();
   int count = doc && doc->anim ? doc->anim->frame_count : 0;
-  if (width <= 0) width = st->screen_w > 0 ? st->screen_w : SCREEN_W;
-  if (height <= 0) height = st->screen_h > 0 ? st->screen_h : SCREEN_H;
-  st->screen_w = width;
-  st->screen_h = height;
-  int available = MAX(1, width - APP_TOOLS_W - 2 * FRAME_MARGIN);
+  int available = MAX(1, win->frame.w);
   st->visible_count = MIN(MAX(1, count), CLAMP((available - timeline_fixed_width()) /
                           (TIMELINE_THUMB_W + TIMELINE_FRAME_GAP), 1, FRAME_MAX_VISIBLE));
   st->first_frame = CLAMP(st->first_frame, 0, MAX(0, count - st->visible_count));
@@ -136,19 +123,6 @@ static void timeline_layout(window_t *win, int width, int height, bool follow) {
     if (active < st->first_frame) st->first_frame = active;
     if (active >= st->first_frame + st->visible_count) st->first_frame = active - st->visible_count + 1;
   }
-  int w = timeline_fixed_width() + timeline_frame_strip_width(st->visible_count);
-  int x = win->frame.x, y = win->frame.y;
-  if (st->positioned && (x != st->last_position.x || y != st->last_position.y)) st->user_placed = true;
-  if (!st->user_placed) {
-    x = APP_TOOLS_W + (width - APP_TOOLS_W - w) / 2;
-    y = height - TIMELINE_WIN_H - FRAME_MARGIN;
-  }
-  x = CLAMP(x, 0, MAX(0, width - w));
-  y = CLAMP(y, 0, MAX(0, height - TIMELINE_WIN_H));
-  if (win->frame.w != w || win->frame.h != TIMELINE_WIN_H) resize_window(win, w, TIMELINE_WIN_H);
-  if (win->frame.x != x || win->frame.y != y) move_window(win, x, y);
-  st->positioned = true;
-  st->last_position = (ipoint16_t){x, y};
 }
 
 static void timeline_build_items(window_t *win) {
@@ -247,8 +221,8 @@ static result_t timeline_proc(window_t *win, uint32_t msg, uint32_t wparam, void
       }
       if (g_app && g_app->timeline_win == win) g_app->timeline_win = NULL;
       return true;
-    case evDisplayChange:
-      timeline_layout(win, LOWORD(wparam), HIWORD(wparam), true);
+    case evResize:
+      timeline_layout(win, true);
       timeline_build_items(win);
       return true;
     case evClose:
@@ -272,7 +246,7 @@ static result_t timeline_proc(window_t *win, uint32_t msg, uint32_t wparam, void
       int delta = dx ? dx : -dy;
       if (!delta) return true;
       st->first_frame += delta > 0 ? 1 : -1;
-      timeline_layout(win, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight), false);
+      timeline_layout(win, false);
       timeline_build_items(win);
       return true;
     }
@@ -329,9 +303,10 @@ window_t *create_timeline_window(void) {
   if (!g_app) return NULL;
   window_t *win = create_window("Frames", WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON |
     WINDOW_NORESIZE | WINDOW_NOTITLE | WINDOW_TOOLBAR,
-    MAKERECT(0, 0, 500, TIMELINE_WIN_H), NULL, timeline_proc, g_app->hinstance, NULL);
+    MAKERECT(0, 0, 500, TIMELINE_WIN_H), g_app->chrome_win, timeline_proc, g_app->hinstance, NULL);
   if (!win) return NULL;
   g_app->timeline_win = win;
+  if (win->parent) dock_window(win, DOCK_BOTTOM, DOCK_EDGE(DOCK_TOP) | DOCK_EDGE(DOCK_BOTTOM), DOCK_TOOLBAR, 0, 0);
   timeline_toolbar_sync();
   show_window(win, IMAGEEDITOR_BW || (tl_doc() && tl_doc()->anim && tl_doc()->anim->frame_count > 1));
   return win;
@@ -340,7 +315,7 @@ window_t *create_timeline_window(void) {
 void timeline_toolbar_sync(void) {
   if (!g_app || !g_app->timeline_win) return;
   window_t *win = g_app->timeline_win;
-  timeline_layout(win, ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight), true);
+  timeline_layout(win, true);
   timeline_build_items(win);
 }
 

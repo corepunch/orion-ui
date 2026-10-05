@@ -9,6 +9,7 @@
 #include <ctype.h>
 
 #include "user.h"
+#include "dock.h"
 #include "messages.h"
 #include "draw.h"
 #include "theme.h"
@@ -143,8 +144,8 @@ static window_t *alloc_window(char const *title, flags_t flags, irect16_t const 
   win->layout.layout_fixed_h = frame ? frame->h : 0;
   win->proc = proc;
   // Child controls participate in client-area layout, so they should not
-  // reserve a title bar unless a caller explicitly creates a root window.
-  if (parent)
+  // reserve a caption unless they explicitly request a merged title toolbar.
+  if (parent && (flags & (WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR)) != (WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR))
     flags |= WINDOW_NOTITLE;
   
   // Phase 3: Merge class defaults with instance flags.
@@ -489,6 +490,7 @@ void clear_window_children(window_t *win) {
 // Destroy a window
 void destroy_window(window_t *win) {
   bool was_maximized = win->maximized;
+  window_t *dock_parent = win->dock ? win->parent : NULL;
   window_t *root = get_root_window(win);
   invalidate_overlaps(win);
   if (win->role == WINDOW_ROLE_HOST && win->active_page)
@@ -496,6 +498,7 @@ void destroy_window(window_t *win) {
   if (win->role == WINDOW_ROLE_PAGE && win->page_host)
     set_host_page(win->page_host, NULL);
   if (g_ui_runtime.tracked == win) track_mouse(NULL);
+  dock_forget_window(win);
   send_message(win, evDestroy, 0, NULL);
   if (g_ui_runtime.focused == win) set_focus(NULL);
   if (g_ui_runtime.captured == win) set_capture(NULL);
@@ -519,6 +522,10 @@ void destroy_window(window_t *win) {
                         &win->surface_w, &win->surface_h);
   free(win->image_background);
   free(win);
+  if (dock_parent && is_window(dock_parent)) {
+    dock_layout(dock_parent, get_client_rect(dock_parent));
+    send_message(dock_parent, evDockChanged, 0, NULL);
+  }
   if (was_maximized) sync_desktop_window();
 
   if (root && root != win && is_window(root) && window_has_state(root, WINDOW_STATE_VISIBLE)) {
@@ -572,7 +579,7 @@ int window_screen_y(window_t const *win) {
   bool toolbar_child = win->parent->toolbar == win;
   for (window_t *child = tb ? tb->children : NULL; child; child = child->next)
     if (child == win) toolbar_child = true;
-  if (toolbar_child) inset = (win->parent->flags & WINDOW_NOTITLE) ? 0 : window_caption_height(win->parent);
+  if (toolbar_child) inset = toolbar_content_offset(win->parent);
   return window_screen_y(win->parent) + inset + win->frame.y;
 }
 
@@ -612,7 +619,7 @@ irect16_t center_window_rect(irect16_t frame_rect, window_t const *owner) {
 // Analogous to DM_GETDEFID in WinAPI dialog management.
 window_t *find_default_button(window_t *win) {
   for (window_t *child = win ? win->children : NULL; child; child = child->next) {
-    if (child->flags & BUTTON_DEFAULT) return child;
+    if ((child->flags & BUTTON_DEFAULT) && !(child->flags & WINDOW_TOOLBAR)) return child;
     window_t *found = find_default_button(child);
     if (found) return found;
   }
@@ -673,7 +680,7 @@ bool window_in_drag_area(window_t const *win, int sy) {
   if (win->maximized || win->parent || (win->flags & WINDOW_NODRAG)) return false;
   int t = titlebar_height(win);
   if (sy < win->frame.y || sy >= win->frame.y + t) return false;
-  if (!(win->flags & WINDOW_TOOLBAR) || (win->flags & WINDOW_NOTITLE)) return true;
+  if (!(win->flags & WINDOW_TOOLBAR) || (win->flags & WINDOW_NOTITLE) || toolbar_merged_title(win)) return true;
   // Has both title bar and toolbar: only the caption row is draggable.
   return sy < win->frame.y + window_caption_height(win);
 }
@@ -684,7 +691,7 @@ bool window_in_drag_area_at(window_t const *win, int sx, int sy) {
     if (sy < win->frame.y || sy >= win->frame.y + titlebar_height(win)) return false;
     toolbar_state_t *tb = window_toolbar_state((window_t *)win);
     if (tb && (tb->style & TOOLBAR_STYLE_GRIP)) {
-      int title_h = (win->flags & WINDOW_NOTITLE) ? 0 : window_caption_height(win);
+      int title_h = toolbar_content_offset(win);
       if (tb->orientation == TOOLBAR_VERTICAL)
         return CONTAINS(sx, sy, win->frame.x, win->frame.y + title_h,
                         win->frame.w, TOOLBAR_GRIP_HEIGHT);
@@ -754,7 +761,7 @@ void adjust_window_rect(irect16_t *r, flags_t flags) {
   if (!r) return;
   // Compute non-client heights for the given flags.
   int t = 0;
-  if (!(flags & WINDOW_NOTITLE)) t += (flags & WINDOW_TOOLWINDOW) ? (FONT_SIZE + 5) : get_theme()->caption_height;
+  if (!(flags & WINDOW_NOTITLE) && (flags & (WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR)) != (WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR)) t += (flags & WINDOW_TOOLWINDOW) ? (FONT_SIZE + 5) : get_theme()->caption_height;
   if (flags & WINDOW_TOOLBAR)    t += theme_toolbar_band_height();
   int s = (flags & WINDOW_STATUSBAR) ? STATUSBAR_HEIGHT : 0;
   // Horizontal scrollbar: adds get_theme()->scrollbar_width to the bottom unless it is
@@ -1124,18 +1131,32 @@ static void create_form_children(window_t *parent, const form_ctrl_def_t *childr
   }
 }
 
+static bool window_contains_window(window_t *owner, window_t *child) {
+  for (; child; child = child->parent) if (child == owner) return true;
+  return false;
+}
+
 // Show or hide window
 void show_window(window_t *win, bool visible) {
   if (!visible) {
-    if (g_ui_runtime.focused == win) set_focus(NULL);
-    if (g_ui_runtime.captured == win) set_capture(NULL);
-    if (g_ui_runtime.tracked == win) track_mouse(NULL);
+    dock_cancel_window(win);
+    if (window_contains_window(win, g_ui_runtime.focused)) set_focus(NULL);
+    if (window_contains_window(win, g_ui_runtime.captured)) {
+      send_message(g_ui_runtime.captured, evPointerCancel, 0, NULL);
+      set_capture(NULL);
+    }
+    if (window_contains_window(win, g_ui_runtime.tracked)) track_mouse(NULL);
   } else {
     move_to_top(win);
     if (!(win->flags & WINDOW_NOACTIVATE))
       set_focus(win);
   }
   window_set_state(win, WINDOW_STATE_VISIBLE, visible);
+  if (win->dock && win->parent) {
+    dock_layout(win->parent, get_client_rect(win->parent));
+    send_message(win->parent, evDockChanged, 0, NULL);
+    invalidate_window(win->parent);
+  }
   post_message(win, evShowWindow, visible, NULL);
   if (win->maximized) sync_desktop_window();
   if (!visible) request_composite();

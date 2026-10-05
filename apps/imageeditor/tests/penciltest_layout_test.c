@@ -50,15 +50,15 @@ static void test_ipad_options_keep_toolbar_geometry(void) {
   ASSERT_EQUAL(options->frame.w, PALETTE_WIN_W);
   ASSERT_EQUAL(options->frame.w, g_app->tool_win->frame.w);
   ASSERT_EQUAL(options->frame.x, TOOL_OPTIONS_WIN_X);
-  ASSERT_EQUAL(options->frame.y, TOOL_OPTIONS_WIN_Y);
-  move_window(options, 100, 160);
+  ASSERT_EQUAL(window_screen_y(options), TOOL_OPTIONS_WIN_Y);
+  ASSERT_TRUE(dock_float(options, R(100, 160, options->frame.w, options->frame.h)));
   send_message(doc->win, evDisplayChange, MAKEDWORD(1080, 758), NULL);
   send_message(options, evDisplayChange, MAKEDWORD(1080, 758), NULL);
   ASSERT_EQUAL(options->frame.x, 100);
   ASSERT_EQUAL(options->frame.y, 160);
   ASSERT_EQUAL(options->frame.w, PALETTE_WIN_W);
-  move_window(options, 1000, 700);
-  send_message(options, evDisplayChange, MAKEDWORD(758, 1080), NULL);
+  ASSERT_TRUE(dock_float(options, R(1000, 700, options->frame.w, options->frame.h)));
+  send_message(g_app->chrome_win, evDisplayChange, MAKEDWORD(758, 1080), NULL);
   ASSERT_TRUE(options->frame.x + options->frame.w <= 758);
   ASSERT_TRUE(options->frame.y + options->frame.h <= 1080);
   ASSERT_EQUAL(options->frame.w, PALETTE_WIN_W);
@@ -66,8 +66,8 @@ static void test_ipad_options_keep_toolbar_geometry(void) {
   PASS();
 }
 
-static void test_pencil_canvas_extends_behind_timeline(void) {
-  TEST("Pencil Test maximized canvas covers the client behind the timeline");
+static void test_pencil_canvas_reserves_docked_timeline(void) {
+  TEST("Pencil Test maximized canvas reserves the docked timeline and expands when it floats");
   penciltest_setup();
   int w, h;
   penciltest_default_size(&w, &h);
@@ -98,8 +98,10 @@ static void test_pencil_canvas_extends_behind_timeline(void) {
   ASSERT_TRUE(fabsf(bounds.h - visible_h) < 0.01f);
   ASSERT_EQUAL(area.x, g_app->tool_win->frame.w);
   ASSERT_EQUAL(area.y, window_screen_y(g_app->main_toolbar_win) + g_app->main_toolbar_win->frame.h);
-  ASSERT_EQUAL(area.y + area.h, 758);
-  ASSERT_TRUE(g_app->timeline_win->frame.y < doc->win->frame.y + doc->win->frame.h);
+  ASSERT_EQUAL(area.y + area.h, window_screen_y(g_app->timeline_win));
+  ASSERT_TRUE(dock_float(g_app->timeline_win, R(100, 400, 600, TIMELINE_WIN_H)));
+  ASSERT_EQUAL(doc->win->frame.y + doc->win->frame.h, 758);
+  ASSERT_EQUAL(imageeditor_document_workspace_rect().h, area.h + g_app->timeline_win->frame.h);
   canvas_doc_t *loaded = create_document("image.pcx", CANVAS_W, CANVAS_H);
   ASSERT_NOT_NULL(loaded);
   ASSERT_EQUAL(loaded->canvas_w, CANVAS_W * g_bw_retina_scale);
@@ -268,7 +270,7 @@ static void test_legacy_palette_extension(void) {
 int main(void) {
   TEST_START("Pencil Test iPad layout");
   test_ipad_options_keep_toolbar_geometry();
-  test_pencil_canvas_extends_behind_timeline();
+  test_pencil_canvas_reserves_docked_timeline();
   test_pencil_paper_and_ink();
   test_onion_tint_is_not_gray();
   test_no_fg_bg_swatch();

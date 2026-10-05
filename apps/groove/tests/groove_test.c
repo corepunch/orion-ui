@@ -462,10 +462,12 @@ static void test_library_transport(void) {
   ASSERT_TRUE(!(win->flags & WINDOW_TOOLBAR) && win->toolbar == NULL);
   ASSERT_TRUE(bar && (bar->flags & WINDOW_TOOLBAR) && bar->parent == win);
   ASSERT_TRUE(search && search->parent == bar);
-  ASSERT_EQUAL(g_app->sheet->frame.y, 0);
-  ASSERT_EQUAL(bar->frame.y, g_app->sheet->frame.h);
-  ASSERT_EQUAL(bar->frame.h, titlebar_height(bar));
-  ASSERT_EQUAL(g_app->tabs->frame.y, bar->frame.y + bar->frame.h);
+  ASSERT_EQUAL(g_app->sheet->frame.y, g_app->menubar_win->frame.h);
+  ASSERT_EQUAL(bar->frame.y, g_app->sheet->frame.y + g_app->sheet->frame.h + DOCK_SPLITTER);
+  ASSERT_EQUAL(bar->frame.h, 280);
+  ASSERT_TRUE(g_app->tabs->parent == bar);
+  ASSERT_EQUAL(g_app->tabs->frame.y, 0);
+  ASSERT_EQUAL(window_screen_y(g_app->tabs), window_screen_y(bar) + titlebar_height(bar));
   toolbar_state_t *tb = toolbar_get_state(bar);
 #ifdef AX_PLATFORM_IOS
   ASSERT_EQUAL(toolbar_effective_bsz(bar), BUTTON_HEIGHT + 4);
@@ -474,36 +476,36 @@ static void test_library_transport(void) {
   ASSERT_EQUAL(toolbar_effective_bsz(bar), TB_SPACING);
   ASSERT_EQUAL(search->frame.h, TB_SPACING - 4);
 #endif
-  ASSERT_EQUAL(bar->frame.h, toolbar_effective_bsz(bar) + 2 * toolbar_effective_padding(bar));
+  ASSERT_EQUAL(titlebar_height(bar), toolbar_effective_bsz(bar) + 2 * toolbar_effective_padding(bar));
   ASSERT_EQUAL(search->frame.y, toolbar_effective_padding(bar) + 2);
-  ASSERT_EQUAL(tb->items[tb->item_count - 1].type, TOOLBAR_ITEM_TEXTEDIT);
-  ASSERT_TRUE(strcmp(tb->items[tb->item_count - 1].icon, "search") == 0);
+  ASSERT_EQUAL(tb->items[11].type, TOOLBAR_ITEM_TEXTEDIT);
+  ASSERT_TRUE(strcmp(tb->items[11].icon, "search") == 0);
   for (int width = 1000; width >= 720; width -= 280) {
     resize_window(win, width, 700);
     ASSERT_TRUE(get_window_item(bar, ID_SEARCH) == search);
-    ASSERT_EQUAL(search->frame.x + search->frame.w + toolbar_effective_padding(bar), bar->frame.w);
+    ASSERT_TRUE(search->frame.x + search->frame.w < tb->item_rects[tb->item_count - 1].x);
     for (int i = 0; i < tb->item_count; i++) {
       ASSERT_TRUE(tb->item_rects[i].x >= 0 && tb->item_rects[i].x + tb->item_rects[i].w <= bar->frame.w);
     }
   }
-  irect16_t r = tb->item_rects[1];
+  irect16_t r = tb->item_rects[2];
   ui_event_t event = {.message = kEventLeftButtonDown,
     .x = (window_screen_x(bar) + r.x + r.w / 2) * UI_WINDOW_SCALE,
     .y = (window_screen_y(bar) + r.y + r.h / 2) * UI_WINDOW_SCALE};
   dispatch_message(&event);
   event.message = kEventLeftButtonUp;
   dispatch_message(&event);
-  ASSERT_TRUE(g_app->song.playing && strcmp(tb->items[1].icon, "strip:2") == 0);
-  r = tb->item_rects[3];
+  ASSERT_TRUE(g_app->song.playing && strcmp(tb->items[2].icon, "strip:2") == 0);
+  r = tb->item_rects[4];
   event.message = kEventLeftButtonDown;
   event.x = (window_screen_x(bar) + r.x + r.w / 2) * UI_WINDOW_SCALE;
   dispatch_message(&event);
   event.message = kEventLeftButtonUp;
   dispatch_message(&event);
   ASSERT_FALSE(g_app->song.loop);
-  ASSERT_FALSE(tb->items[3].flags & TOOLBAR_BUTTON_FLAG_ACTIVE);
+  ASSERT_FALSE(tb->items[4].flags & TOOLBAR_BUTTON_FLAG_ACTIVE);
   app_command(ID_LOOP);
-  ASSERT_TRUE(tb->items[3].flags & TOOLBAR_BUTTON_FLAG_ACTIVE);
+  ASSERT_TRUE(tb->items[4].flags & TOOLBAR_BUTTON_FLAG_ACTIVE);
   char tooltip[256] = {0};
   ASSERT_TRUE(send_message(bar->toolbar, evGetTooltipText, MAKEDWORD(r.x + 4, r.y + 4), tooltip));
   ASSERT_TRUE(strcmp(tooltip, "Loop (L)") == 0);

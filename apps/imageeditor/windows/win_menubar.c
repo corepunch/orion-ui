@@ -179,10 +179,14 @@ window_t *create_tool_options_window(void) {
       WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOTITLE | WINDOW_TOOLBAR,
       MAKERECT(TOOL_OPTIONS_WIN_X, TOOL_OPTIONS_WIN_Y,
                TOOL_OPTIONS_WIN_W, TOOL_OPTIONS_WIN_H),
-      NULL, win_tool_options_proc, g_app->hinstance, NULL);
+      g_app->chrome_win, win_tool_options_proc, g_app->hinstance, NULL);
   show_window(tw, true);
   g_app->tool_options_win = tw;
   imageeditor_sync_tool_options();
+  if (tw && tw->parent) {
+    tw->frame.y -= window_screen_y(tw->parent);
+    dock_window(tw, DOCK_FLOAT, DOCK_ALL_EDGES, DOCK_TOOLBAR, 0, 0);
+  }
   return tw;
 }
 

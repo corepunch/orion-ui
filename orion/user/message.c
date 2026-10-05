@@ -12,6 +12,7 @@
 #include "draw.h"
 #include "scrollbar.h"
 #include "toolbar.h"
+#include "dock.h"
 #include <orion/kernel/renderer.h>
 
 #define CONTAINS(x, y, x1, y1, w1, h1) \
@@ -270,7 +271,7 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         if (!(win->flags&WINDOW_TRANSPARENT) && wparam == 0) {
           draw_panel(win);
         }
-        if (!(win->flags&WINDOW_NOTITLE)) {
+        if (!(win->flags&WINDOW_NOTITLE) && !toolbar_merged_title(win)) {
           draw_window_controls(win);
         }
         toolbar_draw_non_client(win);
@@ -298,7 +299,7 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         int cy = 0;
         if (win->parent) {
           cx = window_screen_x(win) - window_screen_x(root) + lift_x;
-          cy = window_screen_y(win) - (window_screen_y(root) + t) + lift_y;
+          cy = window_screen_y(win) + titlebar_height(win) - (window_screen_y(root) + t) + lift_y;
         }
         int scroll_x = win->parent ? 0 : win->hscroll.pos;
         int scroll_y = win->parent ? 0 : win->vscroll.pos;
@@ -400,10 +401,14 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         win->proc(win, evLeftButtonUp, MAKEDWORD(-1, -1), NULL);
         return true;
       case evPaint:
+        if (g_ui_runtime.running) dock_paint(win);
         for (window_t *sub = win->children; sub; sub = sub->next) {
-          if (window_has_state(sub, WINDOW_STATE_VISIBLE) && !sub->drag_visual)
+          if (window_has_state(sub, WINDOW_STATE_VISIBLE) && !sub->drag_visual && !dock_is_floating(sub))
             send_message(sub, evPaint, wparam, lparam);
         }
+        for (window_t *sub = win->children; sub; sub = sub->next)
+          if (window_has_state(sub, WINDOW_STATE_VISIBLE) && !sub->drag_visual && dock_is_floating(sub))
+            send_message(sub, evPaint, wparam, lparam);
         break;
       case evWheel:
         // Only drive built-in scrollbars when they are actually visible.
@@ -419,7 +424,7 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
           int16_t cly = (int16_t)HIWORD(wparam);
           uint32_t parent_wp = MAKEDWORD(
             (uint16_t)(clx + win->frame.x - win->hscroll.pos + win->parent->hscroll.pos),
-            (uint16_t)(cly + win->frame.y - win->vscroll.pos + win->parent->vscroll.pos));
+            (uint16_t)(cly + win->frame.y + titlebar_height(win) - win->vscroll.pos + win->parent->vscroll.pos));
           send_message(win->parent, evWheel, parent_wp, lparam);
         }
         break;
@@ -462,6 +467,12 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         {
           int x = (int16_t)LOWORD(wparam), y = (int16_t)HIWORD(wparam);
           if (!rect_contains_point(get_client_rect(win), (ipoint16_t){x, y})) break;
+          window_t *floating = dock_hit_test(win, (ipoint16_t){x, y});
+          if (floating) {
+            *(window_t **)lparam = floating;
+            send_message(floating, evHitTest, MAKEDWORD(x - floating->frame.x, y - floating->frame.y - titlebar_height(floating)), lparam);
+            break;
+          }
           for (window_t *item = win->children; item; item = item->next) {
             if (!window_has_state(item, WINDOW_STATE_VISIBLE)) continue;
             irect16_t r = item->frame;
@@ -469,7 +480,7 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
               *(window_t **)lparam = item;
               send_message(item, evHitTest,
                            MAKEDWORD((uint16_t)(x - r.x),
-                                     (uint16_t)(y - r.y)),
+                                     (uint16_t)(y - r.y - titlebar_height(item))),
                            lparam);
             }
           }
@@ -535,6 +546,8 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       (win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL))) {
     int root_t = titlebar_height(root);
     irect16_t wf = win_frame_in_screen(win, root, root_t);
+    for (window_t *a = win; a; a = a->parent)
+      if (a->drag_visual) wf = rect_offset(wf, a->drag_dx, a->drag_dy);
     int scroll_x = 0;
     int scroll_y = 0;
     set_viewport_for_fbo(root);
@@ -545,6 +558,7 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
     });
     draw_builtin_scrollbars(win);
   }
+  if (msg == evPaint && g_ui_runtime.running) dock_paint_overlay(win);
   // After the root's own children, including when the root paints them itself.
   if (msg == evPaint && !win->parent && g_ui_runtime.running)
     paint_drag_visuals(win);

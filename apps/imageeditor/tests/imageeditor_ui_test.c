@@ -416,8 +416,10 @@ void test_ie_timeline_keyboard_navigation(void) {
 }
 
 static void test_ie_floating_frames(void) {
-  TEST("Frames: compact layout, actual toolbar clicks/reordering, overflow, visibility");
+  TEST("Frames: docked layout, toolbar clicks/reordering, floating, overflow, visibility");
   ie_setup();
+  create_main_toolbar_window();
+  send_message(g_app->chrome_win, evDisplayChange, MAKEDWORD(1080, 758), NULL);
   canvas_doc_t *doc = create_document(NULL, 32, 20);
   restore_window(doc->win);
   window_view_center(doc->canvas_win);
@@ -427,10 +429,11 @@ static void test_ie_floating_frames(void) {
   ASSERT_TRUE(win->flags & WINDOW_NOTITLE);
   ASSERT_EQUAL(win->frame.h, TIMELINE_WIN_H);
   ASSERT_EQUAL(win->frame.h, TOOLBAR_BAND_HEIGHT);
-  int single_w = win->frame.w;
+  ASSERT_TRUE(win->parent == g_app->chrome_win);
+  ASSERT_EQUAL(win->dock->side, DOCK_BOTTOM);
   handle_menu_command(ID_ANIM_NEW_FRAME);
   ASSERT_TRUE(window_has_state(win, WINDOW_STATE_VISIBLE));
-  ASSERT_TRUE(win->frame.w > single_w);
+  ASSERT_EQUAL(win->frame.w, g_app->chrome_win->frame.w);
   toolbar_state_t *tb = window_toolbar_state(win);
   int first = -1, second = -1;
   for (int i = 0; i < tb->item_count; i++) {
@@ -444,7 +447,7 @@ static void test_ie_floating_frames(void) {
   ASSERT_EQUAL(a.h, TB_SPACING);
   ASSERT_EQUAL(b.x - (a.x + a.w), TIMELINE_FRAME_GAP);
   ASSERT_EQUAL(a.y, toolbar_effective_padding(win));
-  ASSERT_EQUAL(win->frame.w - (b.x + b.w), toolbar_effective_padding(win));
+  ASSERT_TRUE(win->frame.w >= b.x + b.w + toolbar_effective_padding(win));
   uint32_t pa = MAKEDWORD(a.x + a.w / 2, a.y + a.h / 2);
   uint32_t pb = MAKEDWORD(b.x + b.w / 2, b.y + b.h / 2);
   send_message(win->toolbar, evLeftButtonDown, pa, NULL);
@@ -458,9 +461,9 @@ static void test_ie_floating_frames(void) {
   ASSERT_EQUAL(doc->anim->active_frame, 1);
   ASSERT_TRUE(doc->modified);
   for (int i = 0; i < 12; i++) handle_menu_command(ID_ANIM_NEW_FRAME);
-  send_message(win, evDisplayChange, MAKEDWORD(758, 1080), NULL);
-  ASSERT_TRUE(win->frame.w < 758);
-  ASSERT_EQUAL(win->frame.y + win->frame.h, 1080 - 12);
+  send_message(g_app->chrome_win, evDisplayChange, MAKEDWORD(758, 1080), NULL);
+  ASSERT_EQUAL(win->frame.w, 758);
+  ASSERT_EQUAL(window_screen_y(win) + win->frame.h, 1080);
   tb = window_toolbar_state(win);
   for (int i = 0; i < tb->item_count; i++)
     ASSERT_TRUE(tb->item_rects[i].x + tb->item_rects[i].w <= win->frame.w);
@@ -469,8 +472,8 @@ static void test_ie_floating_frames(void) {
   ASSERT_EQUAL(doc->anim->active_frame, active);
   send_message(win, evKeyDown, AX_KEY_HOME, NULL);
   ASSERT_EQUAL(doc->anim->active_frame, 0);
-  move_window(win, 20, 150);
-  send_message(win, evDisplayChange, MAKEDWORD(1080, 758), NULL);
+  ASSERT_TRUE(dock_float(win, R(20, 150, 700, win->frame.h)));
+  send_message(g_app->chrome_win, evDisplayChange, MAKEDWORD(1080, 758), NULL);
   ASSERT_EQUAL(win->frame.x, 20);
   ASSERT_EQUAL(win->frame.y, 150);
   handle_menu_command(ID_WINDOW_TIMELINE);

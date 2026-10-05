@@ -90,7 +90,7 @@ int window_caption_height(window_t const *win) {
 
 int titlebar_height(window_t const *win) {
   int t = 0;
-  if (!(win->flags & WINDOW_NOTITLE)) t += window_caption_height(win);
+  if (!(win->flags & WINDOW_NOTITLE) && !toolbar_merged_title(win)) t += window_caption_height(win);
   if (win->flags & WINDOW_TOOLBAR) {
     t += toolbar_effective_item_height(win) + 2 * toolbar_effective_padding(win);
   }

@@ -106,7 +106,12 @@ void imageeditor_sync_tool_options(void) {
                              wand ? g_app->wand.spread : 2 * kBrushSizes[CLAMP(g_app->brush_size, 0, NUM_BRUSH_SIZES - 1)] + 1);
     }
   }
-  resize_window(win, PALETTE_WIN_W, toolbar_effective_item_height(win) + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH));
+  int height = toolbar_effective_item_height(win) + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH);
+  if (dock_is_floating(win)) {
+    irect16_t r = win->frame; r.h = height;
+    dock_float(win, r);
+  } else if (!win->dock) resize_window(win, PALETTE_WIN_W, height);
+  else dock_content_rect(win->parent);
   if (focus && is_window(focus)) g_ui_runtime.focused = focus;
   invalidate_window(win);
 }
@@ -119,16 +124,6 @@ result_t win_tool_options_proc(window_t *win, uint32_t msg, uint32_t wparam, voi
       send_message(win, tbSetStyle, TOOLBAR_STYLE_GRIP, NULL);
       return true;
     case evPaint: return true;
-    case evDisplayChange: {
-      int width = LOWORD(wparam), height = HIWORD(wparam);
-      if (width <= 0 || height <= 0) return false;
-      int x = CLAMP(win->frame.x, 0, MAX(0, width - win->frame.w));
-      int y = CLAMP(win->frame.y, 0, MAX(0, height - win->frame.h));
-      if (x != win->frame.x || y != win->frame.y) {
-        move_window(win, x, y);
-      }
-      return true;
-    }
     case evClose:
       return true;
     case tbButtonClick: {
