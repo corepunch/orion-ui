@@ -74,7 +74,10 @@ typedef struct {
   uint64_t    audio_revision;
 } block_t;
 
+#ifdef GR_ALL_TAB
 #define CAT_ALL CAT_COUNT // bin page listing every block
+#endif
+#define CAT_SEARCH (CAT_COUNT + 1) // search results: every block, matched by search text alone
 
 extern const char *const kCategoryName[CAT_COUNT];
 extern const char *const kGenreName[GENRE_COUNT]; // index = bit number of the GENRE_* flag
@@ -141,7 +144,7 @@ typedef struct {
 } waveform_cache_t;
 
 typedef struct {
-  window_t     *win, *menubar_win, *sheet, *tabs, *library;
+  window_t     *win, *menubar_win, *sheet, *tabs, *library, *results; // results replaces tabs while searching
   accel_table_t *accel;
   hinstance_t   hinstance;
   song_t        song;
@@ -208,6 +211,7 @@ void      app_set_search(const char *text);
 void      app_set_genre(uint8_t genre);        // 0 = every genre, else one GENRE_* flag
 bool      block_matches(int id, const char *query);
 bool      block_visible(int id);               // passes both the search text and the genre filter
+bool      app_searching(void);                 // the search text is not empty, so results show instead of the bins
 // Blocks load lazily. Audio stays loaded for blocks in the song and the one
 // being auditioned; a card that only draws a waveform keeps the overview alone.
 bool      app_block_audio(int id);

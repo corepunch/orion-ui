@@ -6,7 +6,8 @@
 // grows to MAX(TAB_CONTROL_HEIGHT, icon_h + 4).
 //
 // TAB_STYLE_SIDEBAR lists the tabs as rows down the left edge (a source list)
-// instead of a header strip. The list scrolls with the wheel when it overflows.
+// instead of a header strip. The list is an internal child window with a
+// built-in vertical scrollbar; it is not a page, so tcGetPage skips it.
 
 #include <orion/user/user.h>
 #include <orion/user/messages.h>
@@ -21,16 +22,32 @@ typedef struct {
   bitmap_strip_t strip;
   int *tab_icons;
   int tab_icon_count;
-  int scroll;   // sidebar list offset, in pixels
+  window_t *list; // sidebar row list, NULL outside TAB_STYLE_SIDEBAR
 } tabview_state_t;
 
 #define SIDEBAR_PAD 6
 
 static bool is_sidebar(const tabview_state_t *st) { return st && (st->style & TAB_STYLE_SIDEBAR); }
 
+// Pages are the children other than the sidebar list.
+static window_t *page_from(const tabview_state_t *st, window_t *c) {
+  while (c && st && c == st->list) c = c->next;
+  return c;
+}
+#define FOR_EACH_PAGE(win, st, c) for (window_t *c = page_from(st, (win)->children); c; c = page_from(st, c->next))
+
 static int tab_count(window_t *win) {
-  int n = 0; for (window_t *c = win ? win->children : NULL; c; c = c->next) n++;
+  tabview_state_t *st = win ? win->userdata : NULL;
+  int n = 0;
+  if (win) FOR_EACH_PAGE(win, st, c) n++;
   return n;
+}
+
+static window_t *tab_page(window_t *win, int index) {
+  tabview_state_t *st = win->userdata;
+  int i = 0;
+  FOR_EACH_PAGE(win, st, c) if (i++ == index) return c;
+  return NULL;
 }
 
 static int tab_header_height(tabview_state_t *st) {
@@ -54,33 +71,42 @@ static int tab_width(window_t *page, tabview_state_t *st, int idx) {
   return w;
 }
 
-static int sidebar_width(window_t *win, tabview_state_t *st) {
+// Width of the row column; the list window adds its scrollbar when one shows.
+static int sidebar_rows_width(window_t *win, tabview_state_t *st) {
   int w = 96, i = 0;
-  for (window_t *c = win->children; c; c = c->next, i++) {
+  FOR_EACH_PAGE(win, st, c) {
     int iw = tab_has_icon(st, i) ? st->strip.icon_w + tab_icon_gap(st) : 0;
     w = MAX(w, strwidth(c->title) + iw + 4 * SIDEBAR_PAD);
+    i++;
   }
   return w;
 }
 
+static int sidebar_width(window_t *win, tabview_state_t *st) {
+  bool bar = st->list && st->list->vscroll.visible && !get_theme()->scrollbar_overlay;
+  return sidebar_rows_width(win, st) + (bar ? SCROLLBAR_WIDTH : 0);
+}
+
+// Row rectangle in the list's content space.
 static irect16_t sidebar_row(window_t *win, tabview_state_t *st, int idx) {
-  return R(SIDEBAR_PAD, SIDEBAR_PAD + idx * TAB_SIDEBAR_ROW_HEIGHT - st->scroll,
-           sidebar_width(win, st) - 2 * SIDEBAR_PAD, TAB_SIDEBAR_ROW_HEIGHT);
+  return R(SIDEBAR_PAD, SIDEBAR_PAD + idx * TAB_SIDEBAR_ROW_HEIGHT,
+           sidebar_rows_width(win, st) - 2 * SIDEBAR_PAD, TAB_SIDEBAR_ROW_HEIGHT);
 }
 
-static int sidebar_max_scroll(window_t *win) {
-  return MAX(0, tab_count(win) * TAB_SIDEBAR_ROW_HEIGHT + 2 * SIDEBAR_PAD - get_client_rect(win).h);
-}
-
-static void sidebar_scroll_to(window_t *win, tabview_state_t *st, int scroll) {
-  st->scroll = CLAMP(scroll, 0, sidebar_max_scroll(win));
+static void sidebar_sync_scroll(window_t *win, tabview_state_t *st, int pos) {
+  int content_h = tab_count(win) * TAB_SIDEBAR_ROW_HEIGHT + 2 * SIDEBAR_PAD;
+  scroll_info_t si = { .fMask = SIF_RANGE | SIF_PAGE | SIF_POS, .nMin = 0, .nMax = content_h,
+                       .nPage = get_client_rect(st->list).h, .nPos = pos };
+  set_scroll_info(st->list, SB_VERT, &si, false);
 }
 
 static void sidebar_reveal(window_t *win, tabview_state_t *st, int idx) {
   irect16_t r = sidebar_row(win, st, idx);
-  int h = get_client_rect(win).h;
-  if (r.y < SIDEBAR_PAD) sidebar_scroll_to(win, st, st->scroll + r.y - SIDEBAR_PAD);
-  else if (r.y + r.h > h - SIDEBAR_PAD) sidebar_scroll_to(win, st, st->scroll + r.y + r.h - h + SIDEBAR_PAD);
+  int pos = get_scroll_pos(st->list, SB_VERT), h = get_client_rect(st->list).h;
+  if (r.y - SIDEBAR_PAD < pos) pos = r.y - SIDEBAR_PAD;
+  else if (r.y + r.h + SIDEBAR_PAD > pos + h) pos = r.y + r.h + SIDEBAR_PAD - h;
+  sidebar_sync_scroll(win, st, pos);
+  invalidate_window(st->list);
 }
 
 static void draw_tab_icon(tabview_state_t *st, int idx, int x, int y, int h) {
@@ -133,10 +159,15 @@ static void tab_arrange(window_t *win) {
   int count = tab_count(win);
   if (st->selected >= count) st->selected = MAX(0, count - 1);
   irect16_t page_rect = tab_page_rect(win, st, get_client_rect(win));
-  if (is_sidebar(st)) sidebar_scroll_to(win, st, st->scroll);
+  if (is_sidebar(st) && st->list) {
+    st->list->frame = rect_split_left(get_client_rect(win), sidebar_width(win, st));
+    sidebar_sync_scroll(win, st, get_scroll_pos(st->list, SB_VERT));
+    st->list->frame.w = sidebar_width(win, st); // the scrollbar may have just appeared
+    page_rect = tab_page_rect(win, st, get_client_rect(win));
+  }
   int i = 0;
-  for (window_t *c = win->children; c; c = c->next, i++) {
-    bool visible = i == st->selected;
+  FOR_EACH_PAGE(win, st, c) {
+    bool visible = i++ == st->selected;
     window_set_state(c, WINDOW_STATE_VISIBLE, visible);
     c->frame = page_rect;
     if (visible) { layout_arrange_t a = {page_rect}; send_message(c, evArrange, 0, &a); }
@@ -160,7 +191,7 @@ static bool tab_select(window_t *win, int index, bool notify) {
   }
   if (index == st->selected) return false;
   st->selected = index;
-  if (is_sidebar(st)) sidebar_reveal(win, st, index);
+  if (is_sidebar(st) && st->list) sidebar_reveal(win, st, index);
   tab_arrange(win);
   invalidate_window(win);
   if (notify && win->parent)
@@ -168,48 +199,77 @@ static bool tab_select(window_t *win, int index, bool notify) {
   return true;
 }
 
-static void sidebar_paint(window_t *win, tabview_state_t *st) {
-  irect16_t cr = get_client_rect(win), bar = rect_split_left(cr, sidebar_width(win, st));
-  theme_draw(THEME_PART_PANEL, bar, CTRL_NORMAL);
-  set_clip_rect(win, bar);
-  int i = 0;
-  window_t *selected = NULL;
-  for (window_t *c = win->children; c; c = c->next, i++) {
-    irect16_t r = sidebar_row(win, st, i);
-    if (r.y + r.h < 0 || r.y > bar.h) continue;
-    ctrl_state_t state = i == st->selected ? CTRL_SELECTED : CTRL_NORMAL;
-    // Same capsule as a menu item; the theme insets it, so widen the rect to land on the row.
-    if (i == st->selected) { selected = c; theme_draw(THEME_PART_MENU_ITEM, rect_inset_xy(r, -MENU_CAPSULE_INSET, 0), state); }
-    int x = r.x + SIDEBAR_PAD;
-    if (tab_has_icon(st, i)) { draw_tab_icon(st, i, x, r.y, r.h); x += st->strip.icon_w + tab_icon_gap(st); }
-    draw_text_ellipsized(FONT_SYSTEM, c->title, x, r.y + (r.h - text_char_height(FONT_SYSTEM)) / 2,
-                         r.x + r.w - SIDEBAR_PAD - x, theme_foreground(THEME_PART_MENU_ITEM, state));
+// The sidebar row list: paints the tab rows, scrolls through the framework,
+// and selects on its owner tabview.
+static result_t win_tabview_list(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  window_t *tabs = win->parent;
+  tabview_state_t *st = tabs ? tabs->userdata : NULL;
+  if (!st) return false;
+  switch (msg) {
+    case evPaint: {
+      int scroll = get_scroll_pos(win, SB_VERT), h = get_client_rect(win).h, i = 0;
+      theme_draw(THEME_PART_SIDEBAR, get_client_rect(win), CTRL_NORMAL);
+      FOR_EACH_PAGE(tabs, st, c) {
+        irect16_t r = rect_offset(sidebar_row(tabs, st, i), 0, -scroll);
+        if (r.y + r.h >= 0 && r.y <= h) {
+          ctrl_state_t state = i == st->selected ? CTRL_SELECTED : CTRL_NORMAL;
+          // Same capsule as a menu item; the theme insets it, so widen the rect to land on the row.
+          if (i == st->selected) theme_draw(THEME_PART_MENU_ITEM, rect_inset_xy(r, -MENU_CAPSULE_INSET, 0), state);
+          int x = r.x + SIDEBAR_PAD;
+          if (tab_has_icon(st, i)) { draw_tab_icon(st, i, x, r.y, r.h); x += st->strip.icon_w + tab_icon_gap(st); }
+          draw_text_ellipsized(FONT_SYSTEM, c->title, x, r.y + (r.h - text_char_height(FONT_SYSTEM)) / 2,
+                               r.x + r.w - SIDEBAR_PAD - x, theme_foreground(THEME_PART_MENU_ITEM, state));
+        }
+        i++;
+      }
+      return true;
+    }
+    case evLeftButtonDown: {
+      ipoint16_t pt = { (int16_t)LOWORD(wparam), (int16_t)HIWORD(wparam) };
+      set_focus(tabs);
+      for (int i = 0, n = tab_count(tabs); i < n; i++)
+        if (rect_contains_point(sidebar_row(tabs, st, i), pt)) { tab_select(tabs, i, true); break; }
+      return true;
+    }
+    case evVScroll: invalidate_window(win); return true;
+    default: return false;
   }
-  set_clip_rect(win, cr);
-  if (selected) send_message(selected, evPaint, 0, NULL);
 }
 
-static void tab_paint(window_t *win) {
+static void sidebar_set(window_t *win, tabview_state_t *st, bool on) {
+  if (on == (st->list != NULL)) return;
+  if (!on) { window_t *list = st->list; st->list = NULL; destroy_window(list); return; }
+  st->list = create_window("", WINDOW_NOTITLE | WINDOW_VSCROLL | WINDOW_NOTABSTOP, MAKERECT(0, 0, 1, 1),
+                           win, win_tabview_list, win->hinstance, NULL);
+  if (!st->list) {
+    fprintf(stderr, "[tv] sidebar list creation failed win=%u\n", (unsigned)win->id);
+    fflush(stderr);
+  }
+}
+
+static bool tab_paint(window_t *win) {
   tabview_state_t *st = (tabview_state_t *)win->userdata;
-  if (is_sidebar(st)) { sidebar_paint(win, st); return; }
+  if (is_sidebar(st)) return false; // the list and the selected page paint as children
   irect16_t cr = get_client_rect(win);
   int th = st ? tab_header_height(st) : TAB_CONTROL_HEIGHT;
   theme_draw(THEME_PART_TAB_BAR, rect_split_top(cr, th), CTRL_NORMAL);
-  if (!st) return;
+  if (!st) return true;
 
   int selected_x = 2;
   window_t *selected = NULL;
   int x = 2, i = 0;
-  for (window_t *c = win->children; c; c = c->next, i++) {
+  FOR_EACH_PAGE(win, st, c) {
     if (i == st->selected) { selected = c; selected_x = x; }
     else draw_tab_item(c, x, false, st, i);
     x += tab_width(c, st, i) + 1;
+    i++;
   }
 
   irect16_t page = rect_trim_top(cr, th - 1);
   theme_draw(THEME_PART_TAB_PANE, page, CTRL_NORMAL);
   if (selected) draw_tab_item(selected, selected_x, true, st, st->selected);
   if (selected) send_message(selected, evPaint, 0, NULL);
+  return true;
 }
 
 static void tab_cleanup_icons(tabview_state_t *st) {
@@ -262,7 +322,7 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       return true;
     }
     case evResize: tab_arrange(win); return true;
-    case evPaint: tab_paint(win); return true;
+    case evPaint: return tab_paint(win);
     case evLeftButtonDown: {
       if (!st) {
         fprintf(stderr, "[tv] mousedown rejected win=%u reason=no_state\n",
@@ -271,22 +331,15 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
         return false;
       }
       int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam);
-      if (is_sidebar(st)) {
-        if (mx >= sidebar_width(win, st)) return false;
-        int i = 0;
-        for (window_t *c = win->children; c; c = c->next, i++)
-          if (rect_contains_point(sidebar_row(win, st, i), (ipoint16_t){ (int16_t)mx, (int16_t)my })) {
-            set_focus(win); tab_select(win, i, true); return true;
-          }
-        return true;
-      }
+      if (is_sidebar(st)) return false;
       int th = tab_header_height(st);
       if (my < 0 || my >= th) return false;
       int left = 2, i = 0;
-      for (window_t *c = win->children; c; c = c->next, i++) {
+      FOR_EACH_PAGE(win, st, c) {
         int w = tab_width(c, st, i);
         if (mx >= left && mx < left + w) { set_focus(win); tab_select(win, i, true); return true; }
         left += w + 1;
+        i++;
       }
       return true;
     }
@@ -300,13 +353,18 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       if (wparam == (is_sidebar(st) ? AX_KEY_UPARROW : AX_KEY_LEFTARROW))    return tab_select(win, st->selected - 1, true);
       if (wparam == (is_sidebar(st) ? AX_KEY_DOWNARROW : AX_KEY_RIGHTARROW)) return tab_select(win, st->selected + 1, true);
       return false;
-    case evWheel:
-      if (!is_sidebar(st)) return false;
-      sidebar_scroll_to(win, st, st->scroll - (int16_t)HIWORD((uintptr_t)lparam));
-      invalidate_window(win);
-      return true;
     case tcGetSelection: return st ? st->selected : -1;
     case tcSetSelection: return tab_select(win, (int)wparam, false) || (st && st->selected == (int)wparam);
+    case tcGetCount: return tab_count(win);
+    case tcGetPage: {
+      window_t *page = tab_page(win, (int)wparam);
+      if (!page) {
+        fprintf(stderr, "[tv] get_page rejected win=%u index=%d count=%d\n",
+                (unsigned)win->id, (int)wparam, tab_count(win));
+        fflush(stderr);
+      }
+      return (result_t)(intptr_t)page;
+    }
     case tcSetStyle: {
       const uint32_t known = TAB_STYLE_ICONS_ONLY | TAB_STYLE_SIDEBAR;
       if (!st || (wparam & ~known)) {
@@ -317,6 +375,7 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
         return false;
       }
       st->style = wparam;
+      sidebar_set(win, st, is_sidebar(st));
       tab_arrange(win); invalidate_window(win);
       return true;
     }

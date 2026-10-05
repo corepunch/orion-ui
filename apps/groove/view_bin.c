@@ -1,5 +1,6 @@
 // VIEW: the sidebar tabview pages are sound bins. Each holds one instrument's
-// family (or all of them), filtered by the search text and the genre. Each card is a child
+// family, filtered by the genre. The search results bin holds every block and
+// matches the search text alone, ignoring family and genre. Each card is a child
 // window. Pressing it auditions the block; dragging carries a copy of that
 // window with window_set_drag_copy, so the card stays in the bin.
 
@@ -32,11 +33,11 @@ bool block_matches(int id, const char *query) {
   return false;
 }
 
-// Shows the cards that pass the search text and the genre filter, hides the rest.
+// Shows the cards that pass the bin's filter, hides the rest.
 static int apply_filter(window_t *win, bin_t *st) {
   int i = 0, shown = 0;
   for (window_t *c = win->children; c && i < st->count; c = c->next, i++) {
-    bool match = block_visible(st->ids[i]);
+    bool match = st->cat == CAT_SEARCH ? block_matches(st->ids[i], g_app->search) : block_visible(st->ids[i]);
     if (match != window_has_state(c, WINDOW_STATE_VISIBLE)) show_window(c, match);
     shown += match;
   }
@@ -74,8 +75,13 @@ result_t win_bin(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         return false;
       }
       st->cat = (category_t)(intptr_t)lparam;
+#ifdef GR_ALL_TAB
       if (st->cat == CAT_ALL) for (int i = 0; i < blocks_count() && i < MAX_TILES; i++) st->ids[st->count++] = i;
-      else st->count = blocks_in_category(st->cat, st->ids, MAX_TILES);
+      else
+#endif
+      if (st->cat == CAT_SEARCH) for (int i = 0; i < blocks_count() && i < MAX_TILES; i++) st->ids[st->count++] = i;
+      else
+      st->count = blocks_in_category(st->cat, st->ids, MAX_TILES);
       for (int i = 0; i < st->count; i++) {
         if (!create_window("", GR_CARD_FLAGS, MAKERECT(0, 0, 1, 1), win, win_block_card, 0, (void *)(intptr_t)st->ids[i])) {
           fprintf(stderr, "[bin] tile allocation failed cat=%d index=%d\n", (int)st->cat, i);
@@ -90,7 +96,7 @@ result_t win_bin(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       fill_rect(get_sys_color(brControlBg), cr);
       if ((g_app->search[0] || g_app->genre) && !apply_filter(win, st)) {
         char msg[96];
-        if (g_app->search[0]) snprintf(msg, sizeof(msg), "No sounds match \"%s\"", g_app->search);
+        if (st->cat == CAT_SEARCH) snprintf(msg, sizeof(msg), "No sounds match \"%s\"", g_app->search);
         else snprintf(msg, sizeof(msg), "No sounds in this genre");
         draw_text(FONT_SYSTEM, msg, TILE_PAD + 4, TILE_PAD + 4, get_sys_color(brTextSecondary));
       }

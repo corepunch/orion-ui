@@ -441,6 +441,8 @@ enum {
   tcSetImageStrip,   // lparam = bitmap_strip_t*; sets shared icon strip for all tabs
   tcSetTabIcon,      // wparam = tab_index; lparam = (void*)(intptr_t)icon_index in the strip; -1 = clear
   tcAdjustRect,      // lparam = irect16_t* control rect, rewritten to the page area inside it (TCM_ADJUSTRECT)
+  tcGetCount,        // returns the number of pages (TCM_GETITEMCOUNT)
+  tcGetPage,         // wparam = page index; returns the page window_t*, or NULL when out of range
 };
 // Card / Badge / TileGrid messages, in the spirit of NSCollectionView / UICollectionView items.
 enum {

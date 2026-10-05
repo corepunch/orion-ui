@@ -16,15 +16,20 @@ extern window_t *get_root_window(window_t *window);
 
 typedef struct { char placeholder[128], leading_icon[64]; } textedit_t;
 
+#define TEXTEDIT_ICON_GAP 6
+
+// Inset by the vertical margin on the left too, so the icon sits centred in the
+// rounded end of a capsule field.
 static irect16_t textedit_icon_rect(window_t *win) {
-  int size = MIN(20, MAX(0, win->frame.h - 4));
-  irect16_t content = rect_trim_left(R(0, 0, win->frame.w, win->frame.h), TEXTEDIT_PADDING_HORZ);
-  return rect_center(rect_split_left(content, size), size, size);
+  int size = MIN(20, MAX(0, win->frame.h - 4)), inset = (win->frame.h - size) / 2;
+  return R(inset, inset, size, size);
 }
 
 static int textedit_text_x(window_t *win) {
   const textedit_t *te = win->userdata;
-  return TEXTEDIT_PADDING_HORZ + (te && te->leading_icon[0] ? textedit_icon_rect(win).w + TEXTEDIT_PADDING_HORZ : 0);
+  if (!te || !te->leading_icon[0]) return TEXTEDIT_PADDING_HORZ;
+  irect16_t icon = textedit_icon_rect(win);
+  return icon.x + icon.w + TEXTEDIT_ICON_GAP;
 }
 
 static void notify_change(window_t *win) {

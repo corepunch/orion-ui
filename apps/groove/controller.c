@@ -206,12 +206,20 @@ void app_preview(int block) {
 }
 
 static void library_refilter(void) {
-  if (g_app->tabs) for (window_t *page = g_app->tabs->children; page; page = page->next) send_message(page, binFilter, 0, NULL);
+  int pages = g_app->tabs ? (int)send_message(g_app->tabs, tcGetCount, 0, NULL) : 0;
+  for (int i = 0; i < pages; i++) send_message((window_t *)send_message(g_app->tabs, tcGetPage, i, NULL), binFilter, 0, NULL);
+  if (g_app->results) send_message(g_app->results, binFilter, 0, NULL);
 }
+
+bool app_searching(void) { return g_app->search[0] != 0; }
 
 void app_set_search(const char *text) {
   snprintf(g_app->search, sizeof(g_app->search), "%s", text ? text : "");
   library_refilter();
+  if (g_app->results && app_searching() != window_has_state(g_app->results, WINDOW_STATE_VISIBLE)) {
+    show_window(g_app->tabs, !app_searching());
+    show_window(g_app->results, app_searching());
+  }
 }
 
 void app_set_genre(uint8_t genre) {

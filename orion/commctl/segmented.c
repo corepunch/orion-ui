@@ -18,23 +18,26 @@ typedef struct {
   int  count, selected, pressed, hot;
 } segmented_state_t;
 
-static int sg_natural_width(const segmented_state_t *s, int i) {
-  return text_strwidth(FONT_SMALL, s->label[i]) + 2 * SEGMENTED_PADDING;
+// A segment is never narrower than it is tall, so a short label still forms a
+// capsule whose ends are concentric with the track's (taller controls on touch).
+static int sg_natural_width(const window_t *win, const segmented_state_t *s, int i) {
+  int h = win->frame.h > 1 ? win->frame.h : control_predefined_height(win->flags);
+  return MAX(text_strwidth(FONT_SMALL, s->label[i]) + 2 * SEGMENTED_PADDING, h - 2 * SEGMENTED_INSET);
 }
 
-static int sg_desired_width(const segmented_state_t *s) {
+static int sg_desired_width(const window_t *win, const segmented_state_t *s) {
   int w = 2 * SEGMENTED_INSET;
-  for (int i = 0; i < s->count; i++) w += sg_natural_width(s, i);
+  for (int i = 0; i < s->count; i++) w += sg_natural_width(win, s, i);
   return w;
 }
 
 // Segments keep their natural proportions; spare or missing width is shared.
 static irect16_t sg_segment_rect(const window_t *win, const segmented_state_t *s, int index) {
   irect16_t track = rect_inset(R(0, 0, win->frame.w, win->frame.h), SEGMENTED_INSET);
-  int natural = MAX(1, sg_desired_width(s) - 2 * SEGMENTED_INSET), acc = 0, x0 = 0, x1 = 0;
+  int natural = MAX(1, sg_desired_width(win, s) - 2 * SEGMENTED_INSET), acc = 0, x0 = 0, x1 = 0;
   for (int i = 0; i <= index; i++) {
     x0 = x1;
-    acc += sg_natural_width(s, i);
+    acc += sg_natural_width(win, s, i);
     x1 = (int)((int64_t)acc * track.w / natural);
   }
   return R(track.x + x0, track.y, x1 - x0, track.h);
@@ -95,12 +98,12 @@ result_t win_segmented(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
         return false;
       }
       sg_set_segments(win, s, win->title);
-      if (win->frame.w <= 1) win->frame.w = sg_desired_width(s);
+      if (win->frame.w <= 1) win->frame.w = sg_desired_width(win, s);
       if (win->frame.h <= 1) control_apply_predefined_height(win, "segmented");
       return true;
     case evMeasure: {
       layout_measure_t *m = lparam;
-      if (m) { m->desired_w = sg_desired_width(s); m->desired_h = control_predefined_height(win->flags); }
+      if (m) { m->desired_w = sg_desired_width(win, s); m->desired_h = control_predefined_height(win->flags); }
       return true;
     }
     case evArrange:

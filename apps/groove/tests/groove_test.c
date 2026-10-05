@@ -6,6 +6,9 @@
 #include "apps/groove/groove.h"
 #include <orion/user/toolbar.h>
 
+static window_t *bin_page(int index) { return (window_t *)send_message(g_app->tabs, tcGetPage, index, NULL); }
+static int bin_pages(void) { return (int)send_message(g_app->tabs, tcGetCount, 0, NULL); }
+
 static float peak_of(const float *p, int n) { float m = 0; for (int i = 0; i < n; i++) m = fmaxf(m, fabsf(p[i])); return m; }
 
 // Renders one block and installs it, as the controller does on demand.
@@ -276,7 +279,7 @@ static void test_overlap_sheet(void) {
   window_t *win = create_window("Groove", 0, MAKERECT(0, 0, 1100, 760), NULL, main_win_proc, 0, g_app);
   ASSERT_NOT_NULL(win);
   show_window(win, true);
-  window_t *sheet = g_app->sheet, *library = g_app->tabs->children->children;
+  window_t *sheet = g_app->sheet, *library = bin_page(0)->children;
   int long_block = 0, start = 3 * GR_TICKS_BAR + GR_SNAP_TICKS, cut = start + GR_SNAP_TICKS;
   while (long_block < blocks_count() && block_get(long_block)->bars < 2) long_block++;
   ASSERT(long_block < blocks_count(), "multi-bar block exists");
@@ -461,15 +464,23 @@ static int visible_tiles(window_t *page) {
   return n;
 }
 
+// What the library shows: the search results while searching, else the family
+// pages. Every block lives in exactly one family page, so each counts once.
+static int library_visible(void) {
+  if (window_has_state(g_app->results, WINDOW_STATE_VISIBLE)) return visible_tiles(g_app->results);
+  int n = 0;
+  for (int i = 0; i < bin_pages(); i++)
+    if (strcmp(bin_page(i)->title, "All")) n += visible_tiles(bin_page(i));
+  return n;
+}
+
 static void test_library_search(void) {
-  TEST("library search filters every bin page by block and family name");
+  TEST("library search swaps the family bins for results from every family, keeping focus in the field");
   test_env_init();
   g_app = app_init();
   window_t *win = create_window("Groove", 0, MAKERECT(0, 0, 1000, 700), NULL, main_win_proc, 0, g_app);
   ASSERT_TRUE(win && g_app->tabs && g_app->library);
-  window_t *all = g_app->tabs->children;
-  ASSERT_TRUE(all && strcmp(all->title, "All") == 0);
-  ASSERT_EQUAL(visible_tiles(all), blocks_count());
+  ASSERT_EQUAL(library_visible(), blocks_count());
   ASSERT_TRUE(block_matches(0, "") && block_matches(0, "FLOOR") && block_matches(0, "drum") && !block_matches(0, "zzz"));
 
   window_t *search = get_window_item(g_app->library, ID_SEARCH);
@@ -482,18 +493,23 @@ static void test_library_search(void) {
   int expect = 0;
   for (int i = 0; i < blocks_count(); i++) expect += block_matches(i, "fl");
   ASSERT_TRUE(expect > 0 && expect < blocks_count());
-  ASSERT_EQUAL(visible_tiles(all), expect);
+  ASSERT_EQUAL(library_visible(), expect);
+  ASSERT(window_has_state(g_app->results, WINDOW_STATE_VISIBLE) && !window_has_state(g_app->tabs, WINDOW_STATE_VISIBLE),
+         "results replace the family bins while searching");
+  ASSERT(g_ui_runtime.focused == search, "showing the results leaves focus in the search field");
   app_set_playing(true);
   app_command(ID_LOOP);
   ASSERT_TRUE(get_window_item(g_app->library, ID_SEARCH) == search && g_ui_runtime.focused == search);
   char text[64];
   send_message(search, edGetText, sizeof(text), text);
   ASSERT_TRUE(strcmp(text, "fl") == 0);
-  ASSERT_EQUAL(visible_tiles(all), expect);
+  ASSERT_EQUAL(library_visible(), expect);
   app_set_playing(false);
   send_message(search, evKeyDown, AX_KEY_BACKSPACE, NULL);
   send_message(search, evKeyDown, AX_KEY_BACKSPACE, NULL);
-  ASSERT_EQUAL(visible_tiles(all), blocks_count());
+  ASSERT_EQUAL(library_visible(), blocks_count());
+  ASSERT(window_has_state(g_app->tabs, WINDOW_STATE_VISIBLE) && !window_has_state(g_app->results, WINDOW_STATE_VISIBLE),
+         "clearing the search brings the family bins back");
   destroy_window(win);
   app_shutdown(g_app);
   test_env_shutdown();
@@ -584,7 +600,7 @@ static void test_library_transport(void) {
   send_message(search, evTextInput, 0, "a");
   send_message(search, evTextInput, 0, "t");
   ASSERT(strcmp(g_app->search, "hat") == 0, "toolbar field changes reach the library filter");
-  ASSERT(visible_tiles(g_app->tabs->children) > 0 && visible_tiles(g_app->tabs->children) < blocks_count(), "embedded search filters the library");
+  ASSERT(library_visible() > 0 && library_visible() < blocks_count(), "embedded search filters the library");
   destroy_window(win);
   app_shutdown(g_app);
   test_env_shutdown();
@@ -599,7 +615,7 @@ static void test_shared_block_cards(void) {
   ASSERT_NOT_NULL(win);
   int clip = song_add_clip(&g_app->song, 0, 0, 0);
   send_message(g_app->sheet, evResize, 0, NULL);
-  window_t *canvas = g_app->sheet->children, *page = g_app->tabs->children;
+  window_t *canvas = g_app->sheet->children, *page = bin_page(0);
   window_t *library = page->children;
   ASSERT_TRUE(canvas && library && canvas->proc == win_block_card && library->proc == canvas->proc);
   layout_measure_t a = {0}, b = {0};
@@ -635,7 +651,7 @@ static void test_drag_anchor(void) {
   window_t *win = create_window("Groove", 0, MAKERECT(0, 0, 1000, 700), NULL, main_win_proc, 0, g_app);
   ASSERT_NOT_NULL(win);
   show_window(win, true);
-  window_t *sheet = g_app->sheet, *page = g_app->tabs->children, *library = page->children;
+  window_t *sheet = g_app->sheet, *page = bin_page(0), *library = page->children;
   int block = 0;
   while (library && block_get(block)->bars < 2) { library = library->next; block++; }
   ASSERT_NOT_NULL(library);
@@ -708,7 +724,7 @@ static void test_drag_center_boundaries(void) {
   window_t *win = create_window("Groove", 0, MAKERECT(0, 0, 1100, 760), NULL, main_win_proc, 0, g_app);
   ASSERT_NOT_NULL(win);
   show_window(win, true);
-  window_t *sheet = g_app->sheet, *page = g_app->tabs->children;
+  window_t *sheet = g_app->sheet, *page = bin_page(0);
   send_message(page, evResize, 0, NULL);
   const int percent[] = {20, 49, 51, 80};
   for (int block = 0; block <= 4; block += 4) {
@@ -823,13 +839,13 @@ static void test_lazy_audio(void) {
 }
 
 static void test_genre_filter(void) {
-  TEST("the toolbar genre control filters every bin page, combines with search, and All restores the library");
+  TEST("the toolbar genre control filters every bin page, search ignores it, and All restores the library");
   test_env_init();
   g_app = app_init();
   window_t *win = create_window("Groove", 0, MAKERECT(0, 0, 1180, 700), NULL, main_win_proc, 0, g_app);
   ASSERT_NOT_NULL(win);
   show_window(win, true);
-  window_t *bar = g_app->library, *genre = get_window_item(bar, ID_GENRE), *all = g_app->tabs->children;
+  window_t *bar = g_app->library, *genre = get_window_item(bar, ID_GENRE);
   ASSERT_TRUE(genre && genre->parent == bar);
   ASSERT_EQUAL(send_message(genre, sgGetCount, 0, NULL), GENRE_COUNT + 1);
   ASSERT_EQUAL(send_message(genre, sgGetSelection, 0, NULL), 0);
@@ -850,25 +866,31 @@ static void test_genre_filter(void) {
     ASSERT(g_app->genre == (1 << g) && send_message(genre, sgGetSelection, 0, NULL) == g + 1, "a routed click selects one genre");
     int expect = 0;
     for (int i = 0; i < blocks_count(); i++) expect += (block_get(i)->genres >> g) & 1;
-    ASSERT(expect > 0 && expect < blocks_count() && visible_tiles(all) == expect, "the All page shows exactly the tagged blocks");
+    ASSERT(expect > 0 && expect < blocks_count() && library_visible() == expect, "the library shows exactly the tagged blocks");
     int page_index = 0;
-    for (window_t *page = all->next; page; page = page->next, page_index++) {
+    for (int p = 0; p < bin_pages(); p++) {
+      window_t *page = bin_page(p);
+      if (!strcmp(page->title, "All")) continue;
       int ids[GR_MAX_BLOCKS], n = blocks_in_category(page_index, ids, GR_MAX_BLOCKS), in_genre = 0;
       for (int i = 0; i < n; i++) in_genre += (block_get(ids[i])->genres >> g) & 1;
       ASSERT(visible_tiles(page) == in_genre, "family pages follow the same genre");
+      page_index++;
     }
   }
   ASSERT_EQUAL(g_app->genre, GENRE_TECHNO);
   app_set_search("kick");
-  int both = 0;
-  for (int i = 0; i < blocks_count(); i++) both += (block_get(i)->genres & GENRE_TECHNO) && block_matches(i, "kick");
-  ASSERT(both > 0 && visible_tiles(all) == both, "search narrows inside the chosen genre");
+  int kicks = 0, techno_kicks = 0;
+  for (int i = 0; i < blocks_count(); i++) {
+    kicks += block_matches(i, "kick");
+    techno_kicks += (block_get(i)->genres & GENRE_TECHNO) && block_matches(i, "kick");
+  }
+  ASSERT(techno_kicks < kicks && library_visible() == kicks, "search covers every genre, not just the chosen one");
   ASSERT(block_matches(0, "dance") && block_matches(0, "TECHNO") && !block_matches(0, "hip hop"), "search also matches genre names");
   app_set_search("");
   app_set_genre(GENRE_DANCE | GENRE_RAVE);
   ASSERT(g_app->genre == GENRE_TECHNO, "the filter holds one genre; a combined mask is rejected");
   app_set_genre(0);
-  ASSERT(visible_tiles(all) == blocks_count(), "All restores every block");
+  ASSERT(library_visible() == blocks_count(), "All restores every block");
   destroy_window(win);
   app_shutdown(g_app);
   test_env_shutdown();
