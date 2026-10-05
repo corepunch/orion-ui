@@ -17,6 +17,8 @@ their full width when locating their center. Pointer anchoring uses the cell und
 cursor instead. The drop preview and committed placement use the same
 calculation, including horizontal scrolling. Placement clamps at song edges;
 overlapping drops are allowed. The cursor must be inside the sheet grid.
+Library cards stay in the library while a copy follows the cursor. Releasing a
+clip that is being moved outside the sheet grid removes it from the song.
 
 On each track, a clip is visible and audible only up to the next clip's start.
 This cutoff is derived from the current arrangement; the block, start position,

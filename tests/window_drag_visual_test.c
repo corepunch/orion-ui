@@ -72,6 +72,12 @@ static void test_drag_visual_moves_paint_only(void) {
           hole[0], hole[1], hole[2], lifted[0], lifted[1], lifted[2],
           under[0], under[1], under[2], side[0], side[1], side[2], far_px[0], far_px[1], far_px[2]);
 
+  window_set_drag_copy(card, 100, 0);
+  send_message(root, evPaint, 0, NULL);
+  uint8_t copy_home[4] = {0}, copy_away[4] = {0};
+  read_logical(root, 40, 70, copy_home);
+  read_logical(root, 140, 70, copy_away);
+
   window_clear_drag_visual(card);
   frame_held = frame_held && card->frame.x == frame_x && card->frame.y == frame_y;
   send_message(root, evPaint, 0, NULL);
@@ -93,6 +99,8 @@ static void test_drag_visual_moves_paint_only(void) {
   ASSERT_TRUE(under[0] < 180 && under[1] == 0 && under[2] == 0);
   ASSERT_TRUE(under[0] < side[0]);
   ASSERT_TRUE(is_red(far_px));
+  ASSERT_TRUE(is_green(copy_home));
+  ASSERT_TRUE(is_green(copy_away));
   ASSERT_TRUE(is_green(back));
   ASSERT_TRUE(is_red(cleared));
   ASSERT_TRUE(is_red(under_gone));

@@ -1,7 +1,7 @@
 // VIEW: the sidebar tabview pages are sound bins. Each holds one instrument's
 // family (or all of them), filtered by the search text. Each card is a child
-// window. Pressing it auditions the block; dragging lifts that same window with
-// window_set_drag_visual.
+// window. Pressing it auditions the block; dragging carries a copy of that
+// window with window_set_drag_copy, so the card stays in the bin.
 
 #include "groove.h"
 

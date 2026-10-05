@@ -198,15 +198,24 @@ static bool bind_root_surface(window_t *root) {
   return true;
 }
 
-static void drag_offset(const window_t *win, int *dx, int *dy, bool *lifted) {
+// True while the lifted copies are composited above the root. A drag copy is
+// painted in both passes; a plain drag visual only in this one.
+static bool g_lift_pass;
+
+static bool lifted_now(const window_t *a) {
+  return a->drag_visual && (!a->drag_copy || g_lift_pass);
+}
+
+bool window_lift_offset(const window_t *win, int *dx, int *dy) {
+  bool lifted = false;
   *dx = *dy = 0;
-  *lifted = false;
   for (const window_t *a = win; a; a = a->parent) {
-    if (!a->drag_visual) continue;
+    if (!lifted_now(a)) continue;
     *dx += a->drag_dx;
     *dy += a->drag_dy;
-    *lifted = true;
+    lifted = true;
   }
+  return lifted;
 }
 
 static irect16_t isect_rect(irect16_t a, irect16_t b) {
@@ -233,12 +242,18 @@ static void paint_lift_shadow(window_t *root, window_t *win, irect16_t clip) {
 }
 
 // Lifted windows were omitted from the in-place walk. Paint them above the root.
-static void paint_drag_visuals(window_t *win) {
+static void paint_lifted(window_t *win) {
   for (window_t *c = win->children; c; c = c->next) {
     if (!window_has_state(c, WINDOW_STATE_VISIBLE)) continue;
     if (c->drag_visual) send_message(c, evPaint, 0, NULL);
-    paint_drag_visuals(c);
+    paint_lifted(c);
   }
+}
+
+static void paint_drag_visuals(window_t *win) {
+  g_lift_pass = true;
+  paint_lifted(win);
+  g_lift_pass = false;
 }
 
 // Send message to window (synchronous)
@@ -292,9 +307,8 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         // windows, cx/cy equal the child's frame.x/y so that drawing at (0,0)
         // appears at the child's screen position rather than at the root's
         // client origin.
-        int lift_x = 0, lift_y = 0;
-        bool lifted = false;
-        drag_offset(win, &lift_x, &lift_y, &lifted);
+        int lift_x, lift_y;
+        bool lifted = window_lift_offset(win, &lift_x, &lift_y);
         int cx = 0;
         int cy = 0;
         if (win->parent) {
@@ -382,7 +396,7 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
     if (send_message(win->parent, evParentNotify, 0, &pn))
       return true;
   }
-  if (paint_ready && win->drag_visual)
+  if (paint_ready && lifted_now(win))
     paint_lift_shadow(root, win, paint_clip);
   // The same window-owned matrix defines painting and pointer delivery.
   float saved_projection[16];
@@ -404,11 +418,11 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       case evPaint:
         if (g_ui_runtime.running) dock_paint(win);
         for (window_t *sub = win->children; sub; sub = sub->next) {
-          if (window_has_state(sub, WINDOW_STATE_VISIBLE) && !sub->drag_visual && !dock_is_floating(sub))
+          if (window_has_state(sub, WINDOW_STATE_VISIBLE) && !lifted_now(sub) && !dock_is_floating(sub))
             send_message(sub, evPaint, wparam, lparam);
         }
         for (window_t *sub = win->children; sub; sub = sub->next)
-          if (window_has_state(sub, WINDOW_STATE_VISIBLE) && !sub->drag_visual && dock_is_floating(sub))
+          if (window_has_state(sub, WINDOW_STATE_VISIBLE) && !lifted_now(sub) && dock_is_floating(sub))
             send_message(sub, evPaint, wparam, lparam);
         break;
       case evWheel:
@@ -547,8 +561,8 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       (win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL))) {
     int root_t = titlebar_height(root);
     irect16_t wf = win_frame_in_screen(win, root, root_t);
-    for (window_t *a = win; a; a = a->parent)
-      if (a->drag_visual) wf = rect_offset(wf, a->drag_dx, a->drag_dy);
+    int lift_x, lift_y;
+    if (window_lift_offset(win, &lift_x, &lift_y)) wf = rect_offset(wf, lift_x, lift_y);
     int scroll_x = 0;
     int scroll_y = 0;
     set_viewport_for_fbo(root);

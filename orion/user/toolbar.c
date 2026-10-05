@@ -612,9 +612,9 @@ void toolbar_draw_non_client(window_t *win) {
                 : bsz + 2 * toolbar_effective_padding(win);
   int root_x = window_screen_x(win) - root->frame.x;
   int root_y = window_screen_y(win) - root->frame.y;
-  for (window_t *a = win; a; a = a->parent) {
-    if (a->drag_visual) { root_x += a->drag_dx; root_y += a->drag_dy; }
-  }
+  int lift_x, lift_y;
+  window_lift_offset(win, &lift_x, &lift_y);
+  root_x += lift_x; root_y += lift_y;
   irect16_t tb_rect = {root_x, root_y + title_h, win->frame.w, total_h};
 
   set_viewport_for_fbo(root);
