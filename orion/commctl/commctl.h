@@ -106,6 +106,7 @@ result_t win_filelist(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
 result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_scrollbar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_slider(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+result_t win_segmented(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_gradient(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 

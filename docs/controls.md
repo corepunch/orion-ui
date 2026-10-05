@@ -366,6 +366,44 @@ Use `tcGetSelection` and `tcSetSelection` to query or change the zero-based
 page index. User selection sends `evCommand` with `tcnSelChange` and the
 `TabView` in `lparam`.
 
+## SegmentedControl
+
+`SegmentedControl` is a row of mutually exclusive segments: a radio group in
+one control (compare `NSSegmentedControl`, or a row of `BUTTON_AUTORADIO`
+buttons). Exactly one segment is selected. Labels come from the window title,
+separated by `|`:
+
+```c
+window_t *seg = create_window("All|Dance|Hip Hop", WINDOW_NOTITLE,
+    MAKERECT(10, 10, 220, CONTROL_HEIGHT_REGULAR), parent, win_segmented, 0, NULL);
+
+// Receive the change in the parent's proc:
+case evCommand:
+    if (HIWORD(wparam) == sgnSelChange)
+        apply_filter((int)send_message((window_t *)lparam, sgGetSelection, 0, NULL));
+```
+
+| Message | Meaning |
+|---|---|
+| `sgSetSegments` | `lparam` = `"One|Two|Three"`; replaces every segment, keeps the selection if it still exists |
+| `sgAddSegment` | `lparam` = label; returns the new index, or -1 when the control holds `SEGMENTED_MAX_SEGMENTS` |
+| `sgGetCount` | number of segments |
+| `sgGetSelection` / `sgSetSelection` | selected index; setting does not notify, `wparam` -1 clears |
+| `sgGetSegmentRect` | `wparam` = index, `lparam` = `irect16_t *` in control coordinates |
+| `sgnSelChange` | notification to the parent through `evCommand` when the user picks another segment |
+
+A click selects on release, and only when the release is on the pressed
+segment. Clicking the selected segment does nothing. With keyboard focus,
+Left and Right move the selection. Segments keep the proportions of their
+labels and share any spare width.
+
+The track is `THEME_PART_SEGMENTED_TRACK` and each segment is
+`THEME_PART_SEGMENT` with `CTRL_SELECTED`, `CTRL_HOVER` or `CTRL_PRESSED`.
+Modern themes draw a capsule inside a field-shaped track; Classic draws a row
+of push-like buttons with the chosen one sunken.
+
+In a toolbar use `TOOLBAR_ITEM_SEGMENTED` (see [toolbars.md](toolbars.md)).
+
 ## Console
 
 ```c

@@ -111,6 +111,11 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
         y = field_y;
         h = field_h;
         break;
+      case TOOLBAR_ITEM_SEGMENTED: // w = 0 is replaced by the control's own measure in tbSetItems
+        w = item->w > 0 ? item->w : (bsz * 6);
+        y = field_y;
+        h = field_h;
+        break;
       case TOOLBAR_ITEM_SEPARATOR:
         w = item->w > 0 ? item->w : 6;
         break;
@@ -393,6 +398,7 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       break;
     }
     case TOOLBAR_ITEM_SLIDER:
+    case TOOLBAR_ITEM_SEGMENTED:
     case TOOLBAR_ITEM_SPACER:
     case TOOLBAR_ITEM_COMBOBOX:
     case TOOLBAR_ITEM_TEXTEDIT:
@@ -783,14 +789,16 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
         }
 
         window_t **tail = &tb->children;
+        bool refit = false;
         for (int i = 0; tb->items && i < n && tb->item_rects; i++) {
           toolbar_item_t *item = &tb->items[i];
           if (item->type != TOOLBAR_ITEM_COMBOBOX && item->type != TOOLBAR_ITEM_TEXTEDIT &&
-              item->type != TOOLBAR_ITEM_SLIDER)
+              item->type != TOOLBAR_ITEM_SLIDER && item->type != TOOLBAR_ITEM_SEGMENTED)
             continue;
 
           const char *cls = item->type == TOOLBAR_ITEM_COMBOBOX ? "ComboBox"
-                            : item->type == TOOLBAR_ITEM_SLIDER ? "Slider" : "TextBox";
+                            : item->type == TOOLBAR_ITEM_SLIDER ? "Slider"
+                            : item->type == TOOLBAR_ITEM_SEGMENTED ? "SegmentedControl" : "TextBox";
           irect16_t r = tb->item_rects[i];
           irect16_t rf = {r.x, r.y, r.w, r.h};
           window_t *tc = create_window(item->text ? item->text : "",
@@ -807,6 +815,11 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
           tc->frame = r;
           if (item->type == TOOLBAR_ITEM_TEXTEDIT && item->icon)
             send_message(tc, edSetLeadingIcon, 0, (void *)item->icon);
+          if (item->type == TOOLBAR_ITEM_SEGMENTED && item->w <= 0) {
+            layout_measure_t measure = {0};
+            send_message(tc, evMeasure, 0, &measure);
+            if (measure.desired_w > 0) { item->w = measure.desired_w; refit = true; }
+          }
 
           window_t *prev = NULL;
           window_t *c = win->children;
@@ -825,6 +838,7 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
           *tail = tc;
           tail = &tc->next;
         }
+        if (refit) compute_toolbar_item_rects(win, tb);
       }
 
       free(merged);

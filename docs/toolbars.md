@@ -41,7 +41,7 @@ Defined in `orion/user/messages.h`:
 
 ```c
 typedef struct {
-  toolbar_item_type_t type;    // BUTTON, LABEL, COMBOBOX, TEXTEDIT, SEPARATOR, SPACER, DROPDOWN
+  toolbar_item_type_t type;    // BUTTON, LABEL, COMBOBOX, TEXTEDIT, SEGMENTED, SEPARATOR, SPACER, DROPDOWN
   int                 ident;   // command ID / button identifier
   const char         *icon;    // named icon or "strip:N" atlas index; NULL = missing icon
   int                 w;       // explicit width in pixels (0 = automatic)
@@ -60,6 +60,7 @@ Item types:
 | `TOOLBAR_ITEM_COMBOBOX` | Drop-down combobox (embedded child window) |
 | `TOOLBAR_ITEM_TEXTEDIT` | Single-line text input (embedded child window) |
 | `TOOLBAR_ITEM_SLIDER` | Slider occupying exactly three icon slots along the toolbar orientation |
+| `TOOLBAR_ITEM_SEGMENTED` | `SegmentedControl` radio group (embedded child window); `text` holds the labels, `"One|Two|Three"` |
 | `TOOLBAR_ITEM_SEPARATOR` | Narrow vertical divider |
 | `TOOLBAR_ITEM_SPACER` | Invisible gap (no interaction) |
 | `TOOLBAR_ITEM_DROPDOWN` | Split button: left fires `tbButtonClick`, right arrow fires `tbDropdown` |
@@ -77,6 +78,13 @@ two inter-icon gaps; its width matches one icon in a vertical toolbar.
 Orientation follows the toolbar automatically. Configure its range and value
 through `slSetRange` / `slSetPos` on `get_window_item(toolbar, ident)` and handle
 `sliderValueChanged` through `evCommand`. Declarative toolbars can use `<slider>`.
+
+`TOOLBAR_ITEM_SEGMENTED` embeds a `SegmentedControl` at field height, next to
+text fields. With `w` = 0 the item takes the width the control measures for
+its labels. Read it with `sgGetSelection` on `get_window_item(toolbar, ident)`
+and handle `sgnSelChange` through `evCommand` in the toolbar's owner.
+Declarative toolbars can use `<SegmentedControl text="All|Open|Closed" />`.
+Hover feedback is not routed to controls embedded in a toolbar.
 
 ## Two ways to define items
 

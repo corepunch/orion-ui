@@ -93,6 +93,22 @@ static void modern_draw_toolbar_item_bg(irect16_t r, ctrl_state_t state,
   else fill_rounded_rect(color, r, RADIUS_TOOLBAR_ITEM);
 }
 
+// ── Segmented control ────────────────────────────────────────────────────────
+
+// A capsule inside the field-shaped track: selection gradient when chosen,
+// a soft fill while hovered or pressed.
+static void modern_draw_segment(irect16_t r, ctrl_state_t state) {
+  int radius = (MIN(r.w, r.h) + 1) / 2;
+  if (state & CTRL_SELECTED) {
+    if (state & CTRL_DISABLED) fill_rounded_rect(get_sys_color(brButtonInner), r, radius);
+    else modern_draw_selection(r, radius);
+  } else if (state & CTRL_PRESSED) {
+    fill_rounded_rect(get_sys_color(brButtonInner), r, radius);
+  } else if (state & CTRL_HOVER) {
+    fill_rounded_rect(get_sys_color(brButtonHover), r, radius);
+  }
+}
+
 // ── Panel ─────────────────────────────────────────────────────────────────────
 
 static void modern_draw_panel_bg(irect16_t r) {
@@ -267,6 +283,8 @@ static void modern_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state)
     case THEME_PART_STATUSBAR:           modern_draw_statusbar_bg(r); break;
     case THEME_PART_LIST_ITEM:           modern_draw_list_item_bg(r, state); break;
     case THEME_PART_SLIDER_THUMB:        modern_draw_slider_thumb(r, state & CTRL_PRESSED); break;
+    case THEME_PART_SEGMENTED_TRACK:     modern_draw_field_bg(r, state); break;
+    case THEME_PART_SEGMENT:             modern_draw_segment(r, state); break;
     case THEME_PART_MENU_ITEM:           if (!disabled) modern_draw_menu_item_bg(r, state); break;
     case THEME_PART_SURFACE:             fill_rect(get_sys_color(brControlBg), r); break;
     case THEME_PART_FIELD:               modern_draw_field_bg(r, state); break;
@@ -327,7 +345,7 @@ static void modern_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state)
 
 static uint32_t modern_foreground(theme_part_t part, ctrl_state_t state) {
   if (state & CTRL_DISABLED) return get_sys_color(brTextDisabled);
-  if ((state & CTRL_SELECTED) && (part == THEME_PART_LIST_ITEM ||
+  if ((state & CTRL_SELECTED) && (part == THEME_PART_LIST_ITEM || part == THEME_PART_SEGMENT ||
       part == THEME_PART_TOOLBAR_BUTTON || part == THEME_PART_TOOLBAR_LABELED_BUTTON))
     return get_sys_color(brActiveTitlebarText);
   if (part == THEME_PART_BUTTON && (state & CTRL_DEFAULT))
