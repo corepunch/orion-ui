@@ -283,18 +283,22 @@ static void invalidate_overlaps(window_t *win) {
 }
 
 // Paint offset only. The frame, and therefore layout and hit-testing, stay put.
-void window_set_drag_visual(window_t *win, int dx, int dy) {
+static void set_drag(window_t *win, int dx, int dy, bool copy) {
   if (!win) return;
-  if (win->drag_visual && win->drag_dx == dx && win->drag_dy == dy) return;
+  if (win->drag_visual && win->drag_copy == copy && win->drag_dx == dx && win->drag_dy == dy) return;
   win->drag_visual = true;
+  win->drag_copy = copy;
   win->drag_dx = dx;
   win->drag_dy = dy;
   invalidate_window(win);
 }
 
+void window_set_drag_visual(window_t *win, int dx, int dy) { set_drag(win, dx, dy, false); }
+void window_set_drag_copy(window_t *win, int dx, int dy)   { set_drag(win, dx, dy, true); }
+
 void window_clear_drag_visual(window_t *win) {
   if (!win || !win->drag_visual) return;
-  win->drag_visual = false;
+  win->drag_visual = win->drag_copy = false;
   win->drag_dx = win->drag_dy = 0;
   invalidate_window(win);
 }

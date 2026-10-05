@@ -84,10 +84,10 @@ result_t win_block_card(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       card_screen(win, mx, my, &sx, &sy);
       if (!win->drag_visual && abs(mx - st->press.x) + abs(my - st->press.y) > CARD_SLOP) {
         g_app->drag = (drag_t){ .active = true, .block = st->block, .from_clip = -1, .grab = st->press, .track = -1 };
-        window_set_drag_visual(win, mx - st->press.x, my - st->press.y);
+        window_set_drag_copy(win, mx - st->press.x, my - st->press.y);
       }
       if (win->drag_visual) {
-        window_set_drag_visual(win, mx - st->press.x, my - st->press.y);
+        window_set_drag_copy(win, mx - st->press.x, my - st->press.y);
         send_message(g_app->sheet, shDragOver, MAKEDWORD(sx, sy), NULL);
       }
       return true;

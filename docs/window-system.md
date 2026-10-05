@@ -119,6 +119,12 @@ window_set_drag_visual(card, mx - press.x, my - press.y);  // follow the cursor
 window_clear_drag_visual(card);                            // it reappears
 ```
 
+`window_set_drag_copy(win, dx, dy)` lifts the same way but keeps painting the
+window on its frame as well, so the pointer carries a copy and the original
+stays visible, as when dragging out of a palette. `window_clear_drag_visual`
+ends either kind. `window_lift_offset()` reports the offset a window paints at
+in the current pass (zero for a drag copy's in-place paint).
+
 A lifted window draws the theme drag shadow (`drag_shadow_blur`,
 `drag_shadow_offset`, `drag_shadow_color`) under that paint. The offset is
 downward, so the dark part sits underneath the window instead of in a halo

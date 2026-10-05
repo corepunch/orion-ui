@@ -565,7 +565,7 @@ static void test_shared_block_cards(void) {
   ASSERT_EQUAL(g_app->song.preview_block, 0);
   send_message(library, evLeftButtonDown, MAKEDWORD(4, 4), NULL);
   send_message(library, evMouseMove, MAKEDWORD(12, 4), NULL);
-  ASSERT_TRUE(g_app->drag.active && library->drag_visual);
+  ASSERT_TRUE(g_app->drag.active && library->drag_visual && library->drag_copy);
   send_message(library, evPointerCancel, 0, NULL);
   ASSERT_FALSE(g_app->drag.active || library->drag_visual);
   ASSERT_TRUE(g_ui_runtime.captured == NULL);
@@ -704,6 +704,39 @@ static void test_drag_center_boundaries(void) {
   PASS();
 }
 
+static void test_drag_off_sheet_removes(void) {
+  TEST("dropping a moved clip outside the grid removes it; dropping inside keeps it");
+  test_env_init();
+  g_app = app_init();
+  window_t *win = create_window("Groove", 0, MAKERECT(0, 0, 800, 600), NULL, main_win_proc, 0, g_app);
+  ASSERT_NOT_NULL(win);
+  show_window(win, true);
+  song_add_clip(&g_app->song, 0, 0, 0);
+  song_add_clip(&g_app->song, 0, 1, 0);
+  window_t *sheet = g_app->sheet;
+  send_message(sheet, evResize, 0, NULL);
+  int x = GR_SHEET_HEADER_W + 32, y = 22 + 8;
+  send_message(sheet, evLeftButtonDown, MAKEDWORD(x, y), NULL);
+  send_message(sheet, evMouseMove, MAKEDWORD(x + 12, y), NULL);
+  send_message(sheet, evLeftButtonUp, MAKEDWORD(x + 12, y), NULL);
+  ASSERT_EQUAL(g_app->song.nclips, 2);
+  send_message(sheet, evLeftButtonDown, MAKEDWORD(x, y), NULL);
+  send_message(sheet, evMouseMove, MAKEDWORD(x, 4), NULL);
+  window_t *lifted = sheet->children;
+  while (lifted && !lifted->drag_visual) lifted = lifted->next;
+  ASSERT_TRUE(g_app->drag.active && lifted && !lifted->drag_copy);
+  send_message(sheet, evLeftButtonUp, MAKEDWORD(x, 4), NULL);
+  ASSERT_EQUAL(g_app->song.nclips, 1);
+  ASSERT_EQUAL(g_app->song.clips[0].track, 1);
+  ASSERT_FALSE(g_app->drag.active);
+  ASSERT_EQUAL(g_app->selected_clip, -1);
+  ASSERT_TRUE(g_ui_runtime.captured == NULL);
+  destroy_window(win);
+  app_shutdown(g_app);
+  test_env_shutdown();
+  PASS();
+}
+
 int main(void) {
   TEST_START("Groove");
   test_blocks();
@@ -720,5 +753,6 @@ int main(void) {
   test_shared_block_cards();
   test_drag_anchor();
   test_drag_center_boundaries();
+  test_drag_off_sheet_removes();
   TEST_END();
 }

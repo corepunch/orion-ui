@@ -1,7 +1,8 @@
 // VIEW: the sheet — track headers on the left, bar ruler on top, one lane per
 // track. Blocks snap to quarter bars. It is the drop target for tiles dragged
 // from the bin (shDragOver / shDrop). Each clip is a child window; dragging
-// one lifts that window with window_set_drag_visual.
+// one lifts that window with window_set_drag_visual, and dropping it outside
+// the grid removes the clip.
 //
 // Coordinates: mouse messages arrive in content space (client + scroll), so
 // `mx - hpos` is the client x. Clip windows receive their own client space.
@@ -312,10 +313,12 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       if (!st->own_drag) app_preview(g_app->drag.block);
       if (st->own_drag) drag_target(win, (int16_t)LOWORD(wparam) - hpos(win), (int16_t)HIWORD(wparam));
       if (st->own_drag && g_app->drag.track >= 0 && g_app->drag.valid) app_drop(&g_app->drag);
+      bool removed = st->own_drag && g_app->drag.track < 0;
       st->press_clip = -1;
       st->own_drag = false;
       set_capture(NULL);
       drag_clear(win);
+      if (removed) app_command(ID_DELETE); // dragged off the grid; the pressed clip is selected
       return true;
     case evRightButtonDown: {
       int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam);
