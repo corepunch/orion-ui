@@ -417,6 +417,7 @@ typedef enum {
   TOOLBAR_ITEM_DROPDOWN  = 6,  // split button: left half fires tbButtonClick, right arrow fires tbDropdown
   TOOLBAR_ITEM_CUSTOM,        // drawn by the owner during tbDrawItem
   TOOLBAR_ITEM_SLIDER,        // embedded Slider; occupies three icon slots
+  TOOLBAR_ITEM_SEGMENTED,     // embedded SegmentedControl; text = "One|Two|Three", w = 0 fits the labels
 } toolbar_item_type_t;
 
 // Descriptor for a single toolbar item (used with tbSetItems).
@@ -456,6 +457,21 @@ enum {
   tgnSelChange,              // tile grid -> root (evCommand): LOWORD = tile index, lparam = grid
   tgnActivate,               // tile grid -> root (evCommand): Enter or double-click on a tile
 };
+// Segmented control messages (NSSegmentedControl / auto-radio group analogue).
+// Segment labels are separated by '|' in the window title or sgSetSegments.
+enum {
+  sgSetSegments = evUser + 400, // lparam = const char* "One|Two|Three"; replaces every segment
+  sgAddSegment,                 // lparam = const char* label; returns the new index or -1
+  sgGetCount,                   // returns the number of segments
+  sgGetSelection,               // returns the selected index or -1
+  sgSetSelection,               // wparam = index (-1 clears); does not notify
+  sgGetSegmentRect,             // wparam = index; lparam = irect16_t* out, in control coordinates
+  sgnSelChange,                 // control -> parent (evCommand): LOWORD = control id, lparam = control
+};
+#define SEGMENTED_MAX_SEGMENTS 12
+#define SEGMENTED_LABEL_MAX    32
+#define SEGMENTED_PADDING      8  // horizontal label padding inside one segment
+#define SEGMENTED_INSET        2  // track margin around the segments
 #define TAB_CONTROL_HEIGHT 22
 #define TAB_STYLE_ICONS_ONLY (1u << 0) // show tab icons without page-title labels
 #define TAB_STYLE_SIDEBAR    (1u << 1) // tabs as a vertical list down the left edge; pages fill the rest

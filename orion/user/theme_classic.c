@@ -216,6 +216,8 @@ static void classic_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state
     case THEME_PART_STATUSBAR:           classic_draw_statusbar_bg(r); break;
     case THEME_PART_LIST_ITEM:           classic_draw_list_item_bg(r, state); break;
     case THEME_PART_SLIDER_THUMB:        classic_draw_slider_thumb(r, state & CTRL_PRESSED); break;
+    case THEME_PART_SEGMENTED_TRACK:     fill_rect(get_sys_color(brControlBg), r); break;
+    case THEME_PART_SEGMENT:             classic_draw_button_bg(r, state); break; // push-like row: the chosen one stays sunken
     case THEME_PART_MENU_ITEM:           if (!disabled) classic_draw_menu_item_bg(r, state); break;
     case THEME_PART_SURFACE:             fill_rect(get_sys_color(brControlBg), r); break;
     case THEME_PART_FIELD:
