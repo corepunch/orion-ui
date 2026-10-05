@@ -42,9 +42,19 @@ static irect16_t solo_rect(window_t *win, int t) {
   return rect_offset(mute, 0, mute.h + 2);
 }
 
-static void draw_track_toggle(irect16_t r, const char *icon, bool active) {
-  ctrl_state_t state = active ? CTRL_SELECTED : CTRL_NORMAL;
-  draw_plastic_button(r, state, get_sys_color(active ? brAccent : brControlBg), icon);
+static void draw_track_toggle(irect16_t r, const char *icon, bool active, uint32_t on_color) {
+  draw_plastic_button(r, active ? CTRL_SELECTED : CTRL_NORMAL, active ? on_color : get_sys_color(brControlBg), icon);
+}
+
+// Hue of the track's earliest clip, so the lane and header match the cards they hold.
+static uint32_t track_color(int t) {
+  static const category_t fallback[GR_TRACKS] = {0, 7, 1, 2, 4, 3, 13, 15};
+  const song_t *s = &g_app->song;
+  int best = -1;
+  for (int i = 0; i < s->nclips; i++)
+    if (s->clips[i].track == t && (best < 0 || s->clips[i].position < s->clips[best].position)) best = i;
+  const block_t *b = best >= 0 ? block_get(s->clips[best].block) : NULL;
+  return category_color(b ? b->cat : fallback[t]);
 }
 
 static void sync_scroll(window_t *win) {
@@ -152,8 +162,9 @@ static void paint_headers(window_t *win) {
     int y = track_y(win, t), rh = row_h(win);
     fill_rect(get_sys_color(brDarkEdge), R(0, y + rh - 1, HDR_W, 1));
     irect16_t m = mute_rect(win, t), s = solo_rect(win, t);
-    draw_track_toggle(m, "phosphor-speaker-slash-fill", g_app->song.mute[t]);
-    draw_track_toggle(s, "phosphor-headphones-fill", g_app->song.solo[t]);
+    fill_rect(track_color(t), R(0, y + 2, 3, rh - 5));
+    draw_track_toggle(m, "phosphor-speaker-slash-fill", g_app->song.mute[t], WEB(0xff4f6c));
+    draw_track_toggle(s, "phosphor-headphones-fill", g_app->song.solo[t], WEB(0xffb21e));
   }
 }
 
@@ -181,8 +192,11 @@ static void paint_sheet(window_t *win) {
   sync_clips(win);
   fill_rect(get_sys_color(brWorkspaceBg), cr);
   set_clip_rect(win, grid);
-  for (int t = 0; t < GR_TRACKS; t++)
-    fill_rect(get_sys_color(t % 2 ? brColumnViewBg : brWindowDarkBg), R(grid.x, track_y(win, t), grid.w, row_h(win)));
+  for (int t = 0; t < GR_TRACKS; t++) {
+    irect16_t lane = R(grid.x, track_y(win, t), grid.w, row_h(win));
+    fill_rect(get_sys_color(t % 2 ? brColumnViewBg : brWindowDarkBg), lane);
+    fill_rect(color_with_alpha(track_color(t), 0x0e), lane);
+  }
   for (int position = 0; position <= GR_BARS * GR_TICKS_BAR; position += GR_SNAP_TICKS) {
     int alpha = position % GR_TICKS_BAR ? 0x0a : position % (4 * GR_TICKS_BAR) ? 0x14 : 0x38;
     fill_rect(color_with_alpha(get_sys_color(brLightEdge), alpha), R(position_x(win, position), grid.y, 1, grid.h));
