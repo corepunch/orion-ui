@@ -14,6 +14,12 @@ static void card_screen(window_t *win, int mx, int my, int *sx, int *sy) {
   *sy = window_screen_y(win) + my;
 }
 
+// Cards scrolled out of their parent do not ask for a waveform.
+static bool card_on_screen(const window_t *win) {
+  irect16_t view = get_client_rect(win->parent);
+  return win->frame.x < view.w && win->frame.x + win->frame.w > 0 && win->frame.y < view.h && win->frame.y + win->frame.h > 0;
+}
+
 static void paint_block_card(int block, const block_t *b, irect16_t r, int visible_width, uint32_t color, ctrl_state_t state) {
   r = rect_trim_bottom(rect_trim_top(rect_inset(r, 1), 1), 1);
   draw_plastic_card(r, state, color);
@@ -50,6 +56,7 @@ result_t win_block_card(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       irect16_t r = get_client_rect(win);
       int visible_width = r.w;
       if (win->parent == g_app->sheet) r.w = clip_cell_size(g_app->sheet, b).x;
+      if (win->parent && card_on_screen(win)) app_block_peaks(st->block); // a stale overview stays up until the new one is ready
       paint_block_card(st->block, b, r, visible_width, category_color(b->cat), state);
       return true;
     }

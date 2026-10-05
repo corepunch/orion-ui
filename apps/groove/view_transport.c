@@ -1,4 +1,4 @@
-// Transport toolbar hosted in the library header.
+// Transport, genre filter and search, hosted in the library header.
 
 #include "groove.h"
 #include <orion/user/toolbar.h>
@@ -14,7 +14,9 @@ static const toolbar_item_t kTransportItems[] = {
   { TOOLBAR_ITEM_SPACER,    0,          NULL,      0, 0, NULL, NULL },
   { TOOLBAR_ITEM_BUTTON,    ID_DELETE,  "phosphor-trash-fill",       0, 0, NULL, "Remove selected block (Delete)" },
   { TOOLBAR_ITEM_SPACER,    0,          NULL,      0, TOOLBAR_ITEM_FLAG_FLEXSPACE, NULL, NULL },
-  { TOOLBAR_ITEM_TEXTEDIT,  ID_SEARCH,  "search", 240, 0, NULL, "Search sounds" },
+  { TOOLBAR_ITEM_SEGMENTED, ID_GENRE,   NULL,      0, 0, "All|Dance|Hip Hop|Rave|Techno", "Genre" }, // "All", then kGenreName order
+  { TOOLBAR_ITEM_SPACER,    0,          NULL,      6, 0, NULL, NULL },
+  { TOOLBAR_ITEM_TEXTEDIT,  ID_SEARCH,  "search", 160, 0, NULL, "Search sounds" },
 };
 
 void transport_refresh(void) {
@@ -62,6 +64,11 @@ result_t win_transport(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
         char text[sizeof(g_app->search)];
         send_message((window_t *)lparam, edGetText, sizeof(text), text);
         app_set_search(text);
+        return true;
+      }
+      if (LOWORD(wparam) == ID_GENRE && HIWORD(wparam) == sgnSelChange) {
+        int selected = (int)send_message((window_t *)lparam, sgGetSelection, 0, NULL); // segment 0 is "All"
+        app_set_genre(selected > 0 ? (uint8_t)(1 << (selected - 1)) : 0);
         return true;
       }
       return false;

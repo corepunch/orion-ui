@@ -8,28 +8,70 @@
 
 static float peak_of(const float *p, int n) { float m = 0; for (int i = 0; i < n; i++) m = fmaxf(m, fabsf(p[i])); return m; }
 
+// Renders one block and installs it, as the controller does on demand.
+static void load_block(int id, int bpm) {
+  block_pcm_t pcm;
+  if (!block_render(id, bpm, &pcm)) return;
+  block_install(id, bpm, &pcm);
+  free(pcm.pcm);
+}
+
 static void test_blocks(void) {
-  TEST("every block renders finite, non-silent, bar-aligned audio");
-  block_pcm_t pcm[GR_MAX_BLOCKS];
-  blocks_render(GR_BPM_DEFAULT, pcm);
-  blocks_swap(pcm);
+  TEST("every block renders finite, non-silent, bar-aligned audio at the slowest, default and fastest tempo");
+  ASSERT(blocks_count() > 400 && blocks_count() <= GR_MAX_BLOCKS, "library size");
+  const int tempos[] = { GR_BPM_MIN, GR_BPM_DEFAULT, GR_BPM_MAX };
   for (int i = 0; i < blocks_count(); i++) {
     const block_t *b = block_get(i);
-    ASSERT(b->audio.pcm && b->audio.frames == b->bars * bar_frames_for_bpm(GR_BPM_DEFAULT), "frame count");
-    for (int k = 0; k < b->audio.frames; k++) ASSERT(isfinite(b->audio.pcm[k]), "NaN or inf sample");
-    ASSERT(peak_of(b->audio.pcm, b->audio.frames) > 0.5f && peak_of(b->audio.pcm, b->audio.frames) <= 0.86f, "normalized peak");
-    ASSERT(fabsf(b->audio.pcm[b->audio.frames - 1]) < 0.01f, "tail is faded");
+    block_pcm_t pcm;
+    ASSERT(b->name && b->name[0] && b->cat < CAT_COUNT && (b->bars == 1 || b->bars == 2 || b->bars == 4), "metadata");
+    ASSERT(b->genres && !(b->genres & ~GENRE_ANY), "every block carries at least one known genre tag");
+    for (int k = 0; k < i; k++) ASSERT(strcmp(block_get(k)->name, b->name) != 0, "names are unique");
+    int bpm = tempos[i % 3]; // each block at one tempo keeps the run short; the three tempos cover the engine
+    ASSERT(block_render(i, bpm, &pcm), "recipe renders");
+    ASSERT(pcm.pcm && pcm.frames == b->bars * bar_frames_for_bpm(bpm), "frame count");
+    ASSERT(pcm.npeaks == b->bars * GR_PEAKS_BAR, "overview size");
+    for (int k = 0; k < pcm.frames; k++) ASSERT(isfinite(pcm.pcm[k]), "NaN or inf sample");
+    ASSERT(peak_of(pcm.pcm, pcm.frames) >= 0.39f && peak_of(pcm.pcm, pcm.frames) <= 0.86f, "levelled peak");
+    ASSERT(fabsf(pcm.pcm[pcm.frames - 1]) < 0.01f, "tail is faded");
+    free(pcm.pcm);
   }
+  block_pcm_t none;
+  ASSERT(!block_render(-1, GR_BPM_DEFAULT, &none) && !block_render(blocks_count(), GR_BPM_DEFAULT, &none), "out-of-range ids are rejected");
+  PASS();
+}
+
+static void test_genres(void) {
+  TEST("genre tags are flags: every genre covers every core family, and shared blocks carry several");
+  const category_t core[] = { CAT_DRUMS, CAT_KICK, CAT_SNARE, CAT_HAT, CAT_CLAP, CAT_CYMBAL, CAT_PERC, CAT_FILL,
+                              CAT_BASS, CAT_KEYS, CAT_SYNTH, CAT_PAD, CAT_STAB, CAT_VOX, CAT_FX };
+  int shared = 0;
+  for (int g = 0; g < GENRE_COUNT; g++) {
+    int total = 0;
+    ASSERT(kGenreName[g] && kGenreName[g][0], "genre name");
+    for (int i = 0; i < blocks_count(); i++) total += (block_get(i)->genres >> g) & 1;
+    ASSERT(total >= 150, "each genre offers a full palette");
+    for (int c = 0; c < ARRAY_LEN(core); c++) {
+      int n = 0;
+      for (int i = 0; i < blocks_count(); i++) n += block_get(i)->cat == core[c] && ((block_get(i)->genres >> g) & 1);
+      ASSERT(n >= 3, "each genre has at least three blocks in every core family");
+    }
+  }
+  for (int i = 0; i < blocks_count(); i++) shared += (block_get(i)->genres & (block_get(i)->genres - 1)) != 0;
+  ASSERT(shared > 100, "many blocks belong to more than one genre");
+  int ids[GR_MAX_BLOCKS], sum = 0;
+  for (int c = 0; c < CAT_COUNT; c++) { int n = blocks_in_category(c, ids, GR_MAX_BLOCKS); ASSERT(n > 0, "no empty family tab"); sum += n; }
+  ASSERT_EQUAL(sum, blocks_count());
   PASS();
 }
 
 static void test_tempo(void) {
-  TEST("re-rendering at a new tempo resizes blocks and returns the old buffers");
+  TEST("installing a block for a new tempo resizes it and hands the old buffer back");
+  load_block(0, GR_BPM_DEFAULT);
   uint64_t revision = block_get(0)->audio_revision;
-  block_pcm_t pcm[GR_MAX_BLOCKS];
-  blocks_render(140, pcm);
-  blocks_swap(pcm);
-  ASSERT(block_get(0)->audio_revision > revision, "tempo changes invalidate waveform textures");
+  block_pcm_t pcm[1];
+  ASSERT_TRUE(block_render(0, 140, &pcm[0]));
+  block_install(0, 140, &pcm[0]);
+  ASSERT(block_get(0)->audio_revision > revision && block_get(0)->audio_bpm == 140, "tempo changes invalidate waveform textures");
   ASSERT(pcm[0].frames == bar_frames_for_bpm(GR_BPM_DEFAULT) * block_get(0)->bars, "old buffer handed back");
   ASSERT(block_get(0)->audio.frames == bar_frames_for_bpm(140) * block_get(0)->bars, "new length");
   song_t s;
@@ -54,10 +96,10 @@ static void test_tempo(void) {
   s.playing = true; s.loop = true; s.pos = end - 1;
   song_render(&s, lr, 2);
   ASSERT(s.playing && s.pos == 1 && lr[2] == 0, "fractional endpoint loops into the initial silence");
-  for (int i = 0; i < GR_MAX_BLOCKS; i++) free(pcm[i].pcm);
-  blocks_render(GR_BPM_DEFAULT, pcm);
-  blocks_swap(pcm);
-  for (int i = 0; i < GR_MAX_BLOCKS; i++) free(pcm[i].pcm);
+  free(pcm[0].pcm);
+  float *released = block_release(0);
+  ASSERT(released && !block_get(0)->audio.pcm && block_get(0)->audio.npeaks > 0, "releasing drops the PCM and keeps the overview");
+  free(released);
   PASS();
 }
 
@@ -93,6 +135,7 @@ static void test_mixer(void) {
   int bar = bar_frames_for_bpm(s.bpm);
   static float lr[2 * 4096];
   int blk = 0;
+  load_block(blk, s.bpm);
   int position = GR_TICKS_BAR + GR_SNAP_TICKS;
   int64_t start = position_frames_for_bpm(position, s.bpm), end = start + bar;
   song_add_clip(&s, blk, 0, position);
@@ -150,8 +193,12 @@ static void test_sheet_drop(void) {
   g_app->selected_clip = song_clip_at(&g_app->song, track, bar * GR_TICKS_BAR + GR_SNAP_TICKS);
   app_command(ID_DELETE);
   ASSERT_EQUAL(g_app->song.nclips, before);
+  ASSERT_TRUE(app_drop(&(drag_t){ .block = 0, .from_clip = -1, .track = 0, .position = 0 }));
+  ASSERT_TRUE(app_block_audio(1));
   app_set_bpm(140);
-  ASSERT(g_app->song.bpm == 140 && block_get(0)->audio.frames == bar_frames_for_bpm(140) * block_get(0)->bars, "bpm change re-renders");
+  ASSERT(g_app->song.bpm == 140 && block_get(0)->audio.frames == bar_frames_for_bpm(140) * block_get(0)->bars, "bpm change re-renders the blocks in the song");
+  ASSERT(!block_get(1)->audio.pcm, "blocks the song does not use are dropped until they are needed again");
+  ASSERT(app_block_audio(1) && block_get(1)->audio.frames == bar_frames_for_bpm(140) * block_get(1)->bars, "and render at the new tempo on demand");
   destroy_window(win);
   app_shutdown(g_app);
   test_env_shutdown();
@@ -165,6 +212,8 @@ static void test_overlap_audio(void) {
   int long_block = 0;
   while (long_block < blocks_count() && block_get(long_block)->bars < 2) long_block++;
   ASSERT(long_block < blocks_count(), "multi-bar block exists");
+  load_block(0, s.bpm);
+  load_block(long_block, s.bpm);
   ASSERT_EQUAL(song_add_clip(&s, long_block, 0, 0), 0);
   clip_t original = s.clips[0];
   const block_t *a = block_get(long_block), *b = block_get(0);
@@ -492,8 +541,9 @@ static void test_library_transport(void) {
 #endif
   ASSERT_EQUAL(titlebar_height(bar), toolbar_effective_bsz(bar) + 2 * toolbar_effective_padding(bar));
   ASSERT_EQUAL(search->frame.y, toolbar_effective_padding(bar) + 2);
-  ASSERT_EQUAL(tb->items[11].type, TOOLBAR_ITEM_TEXTEDIT);
-  ASSERT_TRUE(strcmp(tb->items[11].icon, "search") == 0);
+  ASSERT_EQUAL(tb->items[11].type, TOOLBAR_ITEM_SEGMENTED);
+  ASSERT_EQUAL(tb->items[13].type, TOOLBAR_ITEM_TEXTEDIT);
+  ASSERT_TRUE(strcmp(tb->items[13].icon, "search") == 0);
   for (int width = 1000; width >= 720; width -= 280) {
     resize_window(win, width, 700);
     ASSERT_TRUE(get_window_item(bar, ID_SEARCH) == search);
@@ -737,9 +787,98 @@ static void test_drag_off_sheet_removes(void) {
   PASS();
 }
 
+static void test_lazy_audio(void) {
+  TEST("blocks load on demand: overviews keep no PCM, auditions swap theirs, drops keep the song's audio");
+  test_env_init();
+  g_app = app_init();
+  ASSERT_NOT_NULL(g_app);
+  window_t *win = create_window("Groove", 0, MAKERECT(0, 0, 1000, 700), NULL, main_win_proc, 0, g_app);
+  ASSERT_NOT_NULL(win);
+  for (int i = 0; i < blocks_count(); i++) ASSERT(!block_get(i)->audio.pcm, "nothing is rendered at start-up");
+  int credit = g_app->peak_credit;
+  ASSERT_EQUAL(credit, GR_PEAKS_PER_TICK);
+  ASSERT(app_block_peaks(2) && block_get(2)->audio.npeaks > 0 && !block_get(2)->audio.pcm, "an overview keeps peaks only");
+  ASSERT(g_app->peak_credit == credit - 1 && app_block_peaks(2) && g_app->peak_credit == credit - 1, "a ready overview costs nothing");
+  g_app->peak_credit = 0;
+  ASSERT(!app_block_peaks(3) && g_app->peaks_pending && !block_get(3)->audio.npeaks, "past the per-tick budget the card waits for the next tick");
+  app_preview(5);
+  ASSERT(g_app->song.preview_block == 5 && block_get(5)->audio.pcm && block_get(5)->audio.npeaks > 0, "audition loads the block");
+  app_preview(6);
+  ASSERT(block_get(6)->audio.pcm && !block_get(5)->audio.pcm, "the next audition releases the previous one");
+  ASSERT_TRUE(app_drop(&(drag_t){ .block = 6, .from_clip = -1, .track = 0, .position = 0 }));
+  app_preview(7);
+  ASSERT(block_get(6)->audio.pcm, "a block placed in the song stays loaded");
+  static float lr[2 * 512];
+  g_app->song.preview_block = -1;
+  g_app->song.playing = true;
+  song_render(&g_app->song, lr, 512);
+  ASSERT(peak_of(lr, 1024) > 0, "the dropped clip is audible");
+  app_new_song();
+  ASSERT(!block_get(6)->audio.pcm && !block_get(7)->audio.pcm && g_app->song.preview_block == -1, "a new song releases everything");
+  ASSERT_FALSE(app_block_audio(-1) || app_block_peaks(blocks_count()));
+  destroy_window(win);
+  app_shutdown(g_app);
+  test_env_shutdown();
+  PASS();
+}
+
+static void test_genre_filter(void) {
+  TEST("the toolbar genre control filters every bin page, combines with search, and All restores the library");
+  test_env_init();
+  g_app = app_init();
+  window_t *win = create_window("Groove", 0, MAKERECT(0, 0, 1180, 700), NULL, main_win_proc, 0, g_app);
+  ASSERT_NOT_NULL(win);
+  show_window(win, true);
+  window_t *bar = g_app->library, *genre = get_window_item(bar, ID_GENRE), *all = g_app->tabs->children;
+  ASSERT_TRUE(genre && genre->parent == bar);
+  ASSERT_EQUAL(send_message(genre, sgGetCount, 0, NULL), GENRE_COUNT + 1);
+  ASSERT_EQUAL(send_message(genre, sgGetSelection, 0, NULL), 0);
+  ASSERT_EQUAL(g_app->genre, 0);
+  toolbar_state_t *tb = toolbar_get_state(bar);
+  window_t *search = get_window_item(bar, ID_SEARCH);
+  ASSERT(genre->frame.x + genre->frame.w <= search->frame.x && search->frame.w == 160, "genre control and search both fit at the default width");
+  ASSERT_TRUE(tb->item_rects[tb->item_count - 1].x + tb->item_rects[tb->item_count - 1].w <= bar->frame.w);
+  for (int g = 0; g < GENRE_COUNT; g++) {
+    irect16_t r;
+    ASSERT_TRUE(send_message(genre, sgGetSegmentRect, g + 1, &r));
+    ui_event_t event = {.message = kEventLeftButtonDown,
+      .x = (window_screen_x(genre) + r.x + r.w / 2) * UI_WINDOW_SCALE,
+      .y = (window_screen_y(genre) + r.y + r.h / 2) * UI_WINDOW_SCALE};
+    dispatch_message(&event);
+    event.message = kEventLeftButtonUp;
+    dispatch_message(&event);
+    ASSERT(g_app->genre == (1 << g) && send_message(genre, sgGetSelection, 0, NULL) == g + 1, "a routed click selects one genre");
+    int expect = 0;
+    for (int i = 0; i < blocks_count(); i++) expect += (block_get(i)->genres >> g) & 1;
+    ASSERT(expect > 0 && expect < blocks_count() && visible_tiles(all) == expect, "the All page shows exactly the tagged blocks");
+    int page_index = 0;
+    for (window_t *page = all->next; page; page = page->next, page_index++) {
+      int ids[GR_MAX_BLOCKS], n = blocks_in_category(page_index, ids, GR_MAX_BLOCKS), in_genre = 0;
+      for (int i = 0; i < n; i++) in_genre += (block_get(ids[i])->genres >> g) & 1;
+      ASSERT(visible_tiles(page) == in_genre, "family pages follow the same genre");
+    }
+  }
+  ASSERT_EQUAL(g_app->genre, GENRE_TECHNO);
+  app_set_search("kick");
+  int both = 0;
+  for (int i = 0; i < blocks_count(); i++) both += (block_get(i)->genres & GENRE_TECHNO) && block_matches(i, "kick");
+  ASSERT(both > 0 && visible_tiles(all) == both, "search narrows inside the chosen genre");
+  ASSERT(block_matches(0, "dance") && block_matches(0, "TECHNO") && !block_matches(0, "hip hop"), "search also matches genre names");
+  app_set_search("");
+  app_set_genre(GENRE_DANCE | GENRE_RAVE);
+  ASSERT(g_app->genre == GENRE_TECHNO, "the filter holds one genre; a combined mask is rejected");
+  app_set_genre(0);
+  ASSERT(visible_tiles(all) == blocks_count(), "All restores every block");
+  destroy_window(win);
+  app_shutdown(g_app);
+  test_env_shutdown();
+  PASS();
+}
+
 int main(void) {
   TEST_START("Groove");
   test_blocks();
+  test_genres();
   test_tempo();
   test_song_rules();
   test_mixer();
@@ -749,6 +888,8 @@ int main(void) {
   test_fractional_selection();
   test_two_finger_sheet_pan();
   test_library_search();
+  test_genre_filter();
+  test_lazy_audio();
   test_library_transport();
   test_shared_block_cards();
   test_drag_anchor();

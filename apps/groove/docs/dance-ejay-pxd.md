@@ -1,6 +1,6 @@
 # Dance eJay sample library
 
-Reference for the Groove block bin. The disc is a late-1990s Dance eJay CD at `/Users/igor/Downloads/Dance eJay` (about 4456 files). Groove synthesizes its own loops in the same roles. It does not import the original audio.
+Reference for the Groove block bin. The disc is a late-1990s Dance eJay CD at `/Users/igor/Downloads/Dance eJay` (about 4456 files). It holds the full Dance eJay library and demos of Dance eJay 2, HipHop eJay, Rave eJay and Techno eJay. Groove synthesizes its own loops in the same roles. It does not import the original audio.
 
 The player is the 16-bit `DANCE/DMACHINE/DANCE.EXE` plus `DANCE02.DLL` ("DanceMachine Audio-DLL", Bernhard Throll / THROLL GmbH, 1997). Both are NE binaries, not PE.
 
@@ -121,20 +121,83 @@ The button title's first line is the family. A keyword pass over all 1352 files,
 
 The large "other" bucket is mostly vocal hooks and atmospheres (`Come on!`, `Spinning Wheel`, `Chilly`), plus one-word bits such as the Robot set. Those are roles, not a folder the player ships.
 
-Groove already had Drums, Bass, Piano, Guitar, and Electronic. The bin now also has a tab for each explicit family the titles name, with bass lines staying in Bass and chord or piano loops staying in Piano and Electronic:
+## The other products on the disc
 
-| tab | role taken from the reference |
+`DEMO/` holds playable demos of four more eJay titles. Together with the full Dance library they define the four genres Groove tags its blocks with: Dance, Hip Hop, Rave and Techno.
+
+| folder | product | clips | bar length | tempo |
+|---|---|---:|---:|---:|
+| `DANCE/` | Dance eJay (full) | 1352 | 75600 | 140 BPM |
+| `DEMO/DANCE/` | Dance eJay demo | 152 | 75600 | 140 BPM |
+| `DEMO/DANCE2/` | Dance eJay 2 demo | 279 | 75600 | 140 BPM |
+| `DEMO/HIPHOP/` | HipHop eJay demo | 181 | 110250 | 96 BPM |
+| `DEMO/RAVE/` | Rave eJay demo | 216 | 58800 | 180 BPM |
+| `DEMO/TECHNO/` | Techno eJay demo | 157 | 75600 | 140 BPM |
+
+### HipHop and Rave: one file per clip, group in the label
+
+These use the same `tPxD` container, but the label has six lines instead of two:
+
+```
+thick \r\n goon \r\n HipHop eJay \r\n \r\n bass \r\n 110250
+title    variation  product        (empty)  group    samples per bar
+```
+
+The fifth line is the sound group the product files the clip under, which Dance eJay never stored:
+
+| product | groups (clips in the demo) |
 |---|---|
-| Kicks | dry, room, half-time, and end-of-bar kicks |
-| Snares | backbeat, rim, ghosts, end roll |
-| Hats | closed, open, sixteenths, shuffle |
-| Claps | backbeat, stacked, doubles, rush |
-| Cymbals | ride, crash, bell, splash |
-| Perc | shaker, tambourine, conga, wood |
-| Fills | tom run, snare build, kick tumble, hat lift |
-| Scratch | forward zip, reverse, chopped loop, brake |
-| Organ | stab, offbeat chop, held chord, fifths |
-| Vocals | short synthetic chops, not recorded phrases |
-| FX | rising noise, falling noise, impact, air bed |
+| HipHop eJay | loop 16, drum 21, bass 21, guitar 20, key 20, rap 29, voice 26, effect 28 |
+| Rave eJay | loop 19, drum 23, bass 18, sequence 17, sphere 18, voice 20, effect 18, special 19, hyper 64 |
 
-Block names in those tabs are original. They describe the same job as the reference clips.
+"sphere" is pads and atmospheres, "sequence" is synth riffs and arpeggios, and "hyper" is one-shot hits for the built-in pattern generator.
+
+### Techno and Dance 2: one archive plus a catalogue
+
+`EJAY/PXD/R_DEMO20` (Techno) and `D_EJAY2/PXD/DDEMO20` (Dance 2) are single files holding every clip back to back, each still a `tPxD` record. The matching `.INF` is a text catalogue. After a `[SAMPLES]` line it has twelve lines per clip:
+
+```
+14539        id
+6            flags
+"T1FX537"    code: product digit, two-letter group, number, optional L/R
+0            byte offset in the archive
+38056        byte length
+"jam-"       button label, line 1
+"mer1"       button label, line 2
+1
+7            group number
+""  0  ""
+```
+
+The two letters in the code are the group:
+
+| code | group | code | group |
+|---|---|---|---|
+| `LA` | loop | `SQ` | sequence |
+| `DA` `DB` `DC` `DD` `DF` | kick, snare, hihat, cymbal, percussion | `SR` | sphere (Techno) |
+| `BS` | bass | `LY` | layer (Dance 2) |
+| `GT` | guitar (Dance 2) | `RP` `VC` `VF` `VX` | rap, voice |
+| `FX` | effect | `EX` | xtra |
+| `MA`–`MG` | Dance 2 groove-generator one-shots: kick, snare, hat, cymbal, percussion, tom, hit | | |
+
+The groove-generator one-shots are the only clips shorter than half a bar: 4725, 9450 and 18900 samples (a sixteenth, an eighth and a quarter note at 140 BPM).
+
+## What Groove takes from this
+
+Groove takes the roles, not the audio and not the names. Each block has one family, which is its tab, and one or more genre tags, which the toolbar's genre control filters on. How the sounds are made is in [sound-synthesis.md](sound-synthesis.md).
+
+| tab | reference group it stands for |
+|---|---|
+| Drums | loop: complete beats |
+| Kicks, Snares, Hats, Claps, Cymbals, Perc, Fills | drum: one part per clip |
+| Bass | bass (the Dance titles call these "line") |
+| Keys, Organ | key: piano, electric piano, organ |
+| Guitar | guitar (HipHop, Dance 2) |
+| Synth | sequence: riffs, arpeggios, leads |
+| Pads | sphere, layer |
+| Stabs | hyper, xtra: short chord hits |
+| Vocals | voice and rap, as synthetic vowel chops, not recorded phrases |
+| Scratch | the scratch clips in the HipHop effect group |
+| FX | effect: sweeps, drops, sirens, impacts |
+
+Block names are original. They describe the same job as the reference clips.
