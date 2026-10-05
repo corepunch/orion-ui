@@ -4,15 +4,15 @@
 #include <orion/user/toolbar.h>
 
 static const toolbar_item_t kTransportItems[] = {
-  { TOOLBAR_ITEM_BUTTON,    ID_REWIND,   "lucide-rewind", 0, 0, NULL, "Rewind (Home)" },
-  { TOOLBAR_ITEM_BUTTON,    ID_PLAY,     "lucide-play", 0, 0, NULL, "Play / pause (Space)" },
-  { TOOLBAR_ITEM_BUTTON,    ID_STOP,     "lucide-square", 0, 0, NULL, "Stop" },
-  { TOOLBAR_ITEM_BUTTON,    ID_LOOP,     "lucide-repeat", 0, 0, NULL, "Loop (L)" },
+  { TOOLBAR_ITEM_BUTTON,    ID_REWIND,  "phosphor-rewind-fill",      0, 0, NULL, "Rewind (Home)" },
+  { TOOLBAR_ITEM_BUTTON,    ID_PLAY,    "phosphor-play-fill",        0, 0, NULL, "Play / pause (Space)" },
+  { TOOLBAR_ITEM_BUTTON,    ID_STOP,    "phosphor-stop-fill",        0, 0, NULL, "Stop" },
+  { TOOLBAR_ITEM_BUTTON,    ID_LOOP,    "phosphor-repeat-fill",      0, 0, NULL, "Loop (L)" },
   { TOOLBAR_ITEM_SEPARATOR, 0,          NULL,      0, 0, NULL, NULL },
-  { TOOLBAR_ITEM_BUTTON,    ID_BPM_DOWN, "lucide-minus", 0, 0, NULL, "Slower" },
-  { TOOLBAR_ITEM_BUTTON,    ID_BPM_UP,   "lucide-plus", 0, 0, NULL, "Faster" },
+  { TOOLBAR_ITEM_BUTTON,    ID_BPM_DOWN, "phosphor-minus-bold",       0, 0, NULL, "Slower" },
+  { TOOLBAR_ITEM_BUTTON,    ID_BPM_UP,  "phosphor-plus-bold",        0, 0, NULL, "Faster" },
   { TOOLBAR_ITEM_SPACER,    0,          NULL,      0, 0, NULL, NULL },
-  { TOOLBAR_ITEM_BUTTON,    ID_DELETE,   "lucide-trash-2", 0, 0, NULL, "Remove selected block (Delete)" },
+  { TOOLBAR_ITEM_BUTTON,    ID_DELETE,  "phosphor-trash-fill",       0, 0, NULL, "Remove selected block (Delete)" },
   { TOOLBAR_ITEM_SPACER,    0,          NULL,      0, TOOLBAR_ITEM_FLAG_FLEXSPACE, NULL, NULL },
   { TOOLBAR_ITEM_TEXTEDIT,  ID_SEARCH,  "search", 240, 0, NULL, "Search sounds" },
 };
@@ -20,7 +20,7 @@ static const toolbar_item_t kTransportItems[] = {
 void transport_refresh(void) {
   window_t *win = g_app->library;
   if (!win) return;
-  send_message(win, tbSetItemIcon, ID_PLAY, (void *)(g_app->song.playing ? "lucide-pause" : "lucide-play"));
+  send_message(win, tbSetItemIcon, ID_PLAY, (void *)(g_app->song.playing ? "phosphor-pause-fill" : "phosphor-play-fill"));
   send_message(win, tbSetActiveButton, g_app->song.loop ? ID_LOOP : 0, NULL);
 }
 

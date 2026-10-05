@@ -471,7 +471,7 @@ static void test_library_transport(void) {
   toolbar_state_t *tb = toolbar_get_state(bar);
   ASSERT_EQUAL(tb->style, TOOLBAR_STYLE_PLASTIC);
   ASSERT_EQUAL(tb->strip.tex, 0);
-  ASSERT_TRUE(strcmp(tb->items[1].icon, "lucide-rewind") == 0);
+  ASSERT_TRUE(strcmp(tb->items[1].icon, "phosphor-rewind-fill") == 0);
   ASSERT_TRUE(tb->items[2].color != tb->items[3].color);
   uint32_t original_color = tb->items[2].color, color = WEB(0x2277bb);
   ASSERT_TRUE(send_message(bar, tbSetItemColor, ID_PLAY, &color));
@@ -509,7 +509,7 @@ static void test_library_transport(void) {
   dispatch_message(&event);
   event.message = kEventLeftButtonUp;
   dispatch_message(&event);
-  ASSERT_TRUE(g_app->song.playing && strcmp(tb->items[2].icon, "lucide-pause") == 0);
+  ASSERT_TRUE(g_app->song.playing && strcmp(tb->items[2].icon, "phosphor-pause-fill") == 0);
   r = tb->item_rects[4];
   event.message = kEventLeftButtonDown;
   event.x = (window_screen_x(bar) + r.x + r.w / 2) * UI_WINDOW_SCALE;
