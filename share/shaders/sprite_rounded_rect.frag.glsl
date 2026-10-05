@@ -9,9 +9,9 @@ uniform vec4 tint;
 uniform float alpha;
 uniform vec2 size;       // window size in pixels
 uniform float radius;    // corner radius in pixels
-uniform vec4 params0;    // shadow sigma, expanded-quad padding; sigma=0 means texture
+uniform vec4 params0;    // shadow sigma, expanded-quad padding; z = vertical gradient; sigma=0 means texture
 uniform vec4 params1;    // x = premultiplied source, y = left edge width, z = inset stroke width (px)
-uniform vec4 edge;       // left edge colour (sRGB, straight alpha); used when params1.y > 0
+uniform vec4 edge;       // edge or gradient bottom colour (sRGB, straight alpha)
 
 float srgb_to_linear(float x) {
   return x <= 0.04045 ? x / 12.92 : pow((x + 0.055) / 1.055, 2.4);
@@ -56,6 +56,14 @@ void main() {
     } else {
       aa = outer;
     }
+  }
+  if (params0.z > 0.5) {
+    vec3 bottom = vec3(srgb_to_linear(edge.r), srgb_to_linear(edge.g), srgb_to_linear(edge.b));
+    // Texture coordinates are flipped for the compositor: top is tex.y = 1.
+    float y = clamp(1.0 - tex.y, 0.0, 1.0);
+    float a = mix(tint.a, edge.a, y) * alpha * aa * col.a;
+    outColor = vec4(mix(tint_linear, bottom, y) * col.rgb * a, a);
+    return;
   }
   float factor = alpha * aa * col.a * tint.a;
   vec3 straight_rgb = src.rgb * col.rgb * tint_linear;

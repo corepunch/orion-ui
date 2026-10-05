@@ -4,24 +4,24 @@
 #include <stdint.h>
 #include <orion/user/theme.h>
 
-// Navy chrome + purple accent sampled from the Pencil Test reference artwork.
+// Blue chrome and cyan selection shared by Modern and Navy.
 // Caption follows Win95/XP: active = accent, inactive = dull bar, not the face.
 // Near-duplicate surfaces share one swatch. Menu, toolbar, status, and the
 // document mat are NAVY_CHROME; inactive tabs sit one step under the face.
 // WEB() packs CSS #rrggbb with R in the low byte.
 
-#define NAVY_SHADOW     WEB(0x1A2A42)
-#define NAVY_CHROME     WEB(0x20324C)
-#define NAVY_RECESS     WEB(0x283A53)
-#define NAVY_FACE       WEB(0x2F3F58)
-#define NAVY_RAISED     WEB(0x33445B)
-#define NAVY_HOVER      WEB(0x425473)
-#define NAVY_LINE       WEB(0x536882)
-#define NAVY_HAIRLINE   WEB(0x657894)
+#define NAVY_SHADOW     WEB(0x0D1B34)
+#define NAVY_CHROME     WEB(0x142440)
+#define NAVY_RECESS     WEB(0x1C3152)
+#define NAVY_FACE       WEB(0x243D60)
+#define NAVY_RAISED     WEB(0x294669)
+#define NAVY_HOVER      WEB(0x365B85)
+#define NAVY_LINE       WEB(0x456B96)
+#define NAVY_HAIRLINE   WEB(0x658BB3)
 #define NAVY_TEXT       WEB(0xF8FAFF)
 #define NAVY_TEXT_MUTED WEB(0xA8B7CC)
-#define NAVY_ACCENT     WEB(0x8270F7)
-#define NAVY_FOCUS      WEB(0xA090FF)
+#define NAVY_ACCENT     WEB(0x168CFA)
+#define NAVY_FOCUS      WEB(0x6DDCFF)
 #define NAVY_FOLDER     WEB(0x8FC7FF)
 #define NAVY_ERROR      WEB(0xC42B1C)
 #define NAVY_SUCCESS    WEB(0x63C994)
@@ -57,7 +57,9 @@
   [brTextWarning]          = WEB(0xF2C14E), \
   [brTextInfo]             = WEB(0x7AB8FF), \
   [brTextSecondary]        = NAVY_TEXT_MUTED, \
-  [brTextOnColor]          = 0xff101010
+  [brTextOnColor]          = 0xff101010, \
+  [brSelectionTop]         = WEB(0x37C9FF), \
+  [brSelectionBottom]      = WEB(0x0879EA)
 
 static const uint32_t k_theme_palette_navy[brCount]
   __attribute__((unused)) = { THEME_PALETTE_NAVY_INIT };

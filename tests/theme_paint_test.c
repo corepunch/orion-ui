@@ -28,6 +28,18 @@ static void paint_rounded(uint32_t color, irect16_t r, int radius) {
     }
   }
 }
+static void paint_gradient(uint32_t top, uint32_t bottom, irect16_t r, int radius) {
+  paint_rounded(0xffffffff, r, radius);
+  for (int y = MAX(0, r.y); y < MIN(64, r.y + r.h); y++) {
+    float t = (y - r.y + 0.5f) / r.h;
+    uint32_t color = 0;
+    for (int shift = 0; shift < 32; shift += 8)
+      color |= (uint32_t)lroundf(((top >> shift) & 255) * (1 - t) + ((bottom >> shift) & 255) * t) << shift;
+    for (int x = MAX(0, r.x); x < MIN(128, r.x + r.w); x++)
+      if (pixels[y][x]) pixels[y][x] = color;
+  }
+}
+#define fill_gradient_rounded_rect paint_gradient
 #define fill_rounded_rect paint_rounded
 #define fill_rect paint_fill
 #define draw_wire_rect paint_wire
@@ -43,6 +55,7 @@ theme_t *paint_light_instance(void);
 #undef fill_rect
 #undef draw_wire_rect
 #undef fill_rounded_rect
+#undef fill_gradient_rounded_rect
 #undef theme_classic_instance
 #undef theme_modern_instance
 #undef theme_navy_instance
@@ -50,6 +63,7 @@ theme_t *paint_light_instance(void);
 
 static theme_t *paint_with_theme(theme_style_t style) {
   if (get_theme()->style != style) set_theme(style);
+  get_theme()->apply_palette();
   return paint_modern_instance();
 }
 
@@ -171,8 +185,12 @@ static void test_flat_tool_items(void) {
     ASSERT_EQUAL(pixels[39][39], 0);
     ASSERT_EQUAL(pixels[25][10], pixels[25][25]);
     ASSERT_EQUAL(pixels[25][39], pixels[25][25]);
-    ASSERT_EQUAL(pixels[10][25], pixels[25][25]);
-    ASSERT_EQUAL(pixels[39][25], pixels[25][25]);
+    if (states[i] & (CTRL_SELECTED | CTRL_PRESSED)) {
+      ASSERT_NOT_EQUAL(pixels[10][25], pixels[39][25]);
+    } else {
+      ASSERT_EQUAL(pixels[10][25], pixels[25][25]);
+      ASSERT_EQUAL(pixels[39][25], pixels[25][25]);
+    }
     if (i == 0) { ASSERT_EQUAL(pixels[25][25], 0); }
     else { ASSERT_NOT_EQUAL(pixels[25][25], 0); }
     if (i == 2) {
@@ -191,6 +209,7 @@ static void test_palette_overrides(void) {
   TEST("Modern active parts and panels follow runtime palette overrides");
   theme_t *theme = paint_with_theme(THEME_NAVY);
   g_sys_colors[brAccent] = 0xff123456;
+  g_sys_colors[brSelectionTop] = g_sys_colors[brSelectionBottom] = g_sys_colors[brAccent];
   g_sys_colors[brControlBg] = 0xff654321;
   theme_part_t parts[] = {THEME_PART_TOOLBAR_BUTTON, THEME_PART_LIST_ITEM, THEME_PART_BUTTON};
   ctrl_state_t states[] = {CTRL_SELECTED, CTRL_SELECTED | CTRL_HOVER, CTRL_SELECTED | CTRL_PRESSED};
@@ -220,13 +239,12 @@ static void test_full_row_selection(void) {
   theme_t *theme = paint_with_theme(THEME_NAVY);
   memset(pixels, 0, sizeof(pixels));
   theme->draw_part(THEME_PART_LIST_ITEM, R(10, 10, 80, 30), CTRL_SELECTED);
-  ASSERT_EQUAL(pixels[10][10], get_sys_color(brAccent));
-  ASSERT_EQUAL(pixels[25][10], get_sys_color(brAccent));
-  ASSERT_EQUAL(pixels[10][50], get_sys_color(brAccent));
-  ASSERT_EQUAL(pixels[25][14], get_sys_color(brAccent));
-  ASSERT_EQUAL(pixels[25][50], get_sys_color(brAccent));
-  ASSERT_EQUAL(pixels[25][89], get_sys_color(brAccent));
-  ASSERT_EQUAL(pixels[39][10], get_sys_color(brAccent));
+  ASSERT_NOT_EQUAL(pixels[10][50], pixels[39][50]);
+  ASSERT_EQUAL(pixels[10][10], pixels[10][50]);
+  ASSERT_EQUAL(pixels[25][10], pixels[25][50]);
+  ASSERT_EQUAL(pixels[25][14], pixels[25][50]);
+  ASSERT_EQUAL(pixels[25][89], pixels[25][50]);
+  ASSERT_EQUAL(pixels[39][10], pixels[39][50]);
   ASSERT_EQUAL(pixels[9][10], 0);
   ASSERT_EQUAL(pixels[40][10], 0);
   ASSERT_EQUAL(pixels[25][90], 0);
@@ -236,8 +254,9 @@ static void test_full_row_selection(void) {
   theme->draw_part(THEME_PART_MENU_ITEM, R(10, 10, 80, 24), CTRL_HOVER);
   ASSERT_EQUAL(recorded_radius, 11);
   ASSERT_EQUAL(pixels[11][14], 0);
-  ASSERT_EQUAL(pixels[11][25], get_sys_color(brAccent));
-  ASSERT_EQUAL(pixels[22][14], get_sys_color(brAccent));
+  ASSERT_NOT_EQUAL(pixels[11][25], 0);
+  ASSERT_NOT_EQUAL(pixels[22][14], 0);
+  ASSERT_NOT_EQUAL(pixels[11][25], pixels[22][14]);
   ASSERT_EQUAL(pixels[22][13], 0);
   PASS();
 }
@@ -261,10 +280,10 @@ static void test_scrollbar_thickness(void) {
 }
 
 static void test_default_modern_chrome(void) {
-  TEST("Default Modern uses the dark palette, accent titlebars, and inner slider tracks");
+  TEST("Default Modern uses the blue palette, accent titlebars, and light slider tracks");
   theme_t *theme = paint_with_theme(THEME_MODERN);
-  ASSERT_EQUAL(get_sys_color(brControlBg), 0xff3c3c3c);
-  ASSERT_EQUAL(get_sys_color(brAccent), 0xffD77800);
+  ASSERT_EQUAL(get_sys_color(brControlBg), WEB(0x243D60));
+  ASSERT_EQUAL(get_sys_color(brAccent), WEB(0x168CFA));
   memset(pixels, 0, sizeof(pixels));
   theme->draw_part(THEME_PART_TITLEBAR, R(10, 10, 80, 30), CTRL_FOCUSED);
   ASSERT_EQUAL(pixels[25][50], get_sys_color(brAccent));
@@ -273,7 +292,7 @@ static void test_default_modern_chrome(void) {
   ASSERT_EQUAL(pixels[25][50], get_sys_color(brPanelDarker));
   memset(pixels, 0, sizeof(pixels));
   theme->draw_part(THEME_PART_SLIDER_TRACK, R(20, 20, 2, 40), CTRL_NORMAL);
-  ASSERT_EQUAL(pixels[30][20], get_sys_color(brButtonInner));
+  ASSERT_EQUAL(pixels[30][20], get_sys_color(brLightEdge));
   PASS();
 }
 

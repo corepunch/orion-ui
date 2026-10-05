@@ -50,6 +50,19 @@ fill_rect(RGBA(255,0,0,255), 10, 10, 50, 50);
 
 ### Cards, badges and theme colours
 
+`fill_gradient_rounded_rect(top, bottom, r, radius)` paints a vertical gradient
+in one SDF pass. The endpoints are packed sRGB colours; interpolation happens
+in linear light, with alpha interpolated independently. Radius 0 fills the
+complete rectangle, while a positive radius masks the same fill with one
+antialiased silhouette. Coordinates and radius are logical pixels, including
+Retina scaling. No gradient texture or per-row geometry is allocated.
+
+Modern and Navy share blue surfaces and cyan selection. Selected/pressed
+toolbar items, list/sidebar rows, and active menu items use `brSelectionTop`
+and `brSelectionBottom` from the active palette. `set_sys_colors()` can override
+either endpoint. Light keeps equal endpoints for a solid selection; Classic
+keeps its original palette and drawing.
+
 ```c
 // Card with an optional accent edge; the theme rounds (or squares) card and edge together.
 draw_card(r, CTRL_HOVER | CTRL_SELECTED | CTRL_FOCUSED, color_with_alpha(get_sys_color(brTextWarning), 0x78));

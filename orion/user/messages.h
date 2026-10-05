@@ -513,7 +513,9 @@ typedef enum {
   brTextInfo             = 28,  // neutral informational status (to push, to pull)
   brTextSecondary        = 29,  // readable de-emphasised text (subtitles, metadata); brTextDisabled is for inactive controls
   brTextOnColor          = 30,  // dark ink on vivid gradient cards and other bright tinted surfaces
-  brCount                = 31
+  brSelectionTop         = 31,  // selection gradient endpoints (sRGB)
+  brSelectionBottom      = 32,
+  brCount                = 33
 } sys_color_idx_t;
 
 // Runtime-accessible theme table (defined in user/theme.c).

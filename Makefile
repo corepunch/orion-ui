@@ -133,7 +133,7 @@ PHONY_APP_NAMES = penciltest
 
 # Per-app theme for standalone binaries only. Gems never receive this flag —
 # get_theme() is already the shell's live theme (and its palette).
-# Values: classic, modern (dark, omit / default), light, navy.
+# Values: classic, modern (blue, omit / default), light, navy.
 # Example: THEME_imageeditor = navy
 # Override per build: make imageeditor THEME_imageeditor=modern
 THEME_imageeditor ?= navy
@@ -197,10 +197,17 @@ $(BIN_DIR)/%$(EXE_EXT): tools/%.c $(CORE_LIBS) | $(BIN_DIR)
 	@$(COPY_DLLS)
 
 # Self-contained tools that don't need the core libraries.
-$(ORIONC_BIN):                          TOOL_LINK = $(LDFLAGS) $(LIBS)
-$(ORIONC_BIN): $(BIN_DIR)/%$(EXE_EXT): tools/%.c | $(BIN_DIR)
+$(ORIONC_BIN): TOOL_LINK = $(LDFLAGS) $(LIBS)
+$(BIN_DIR)/svg_atlas_render$(EXE_EXT): TOOL_LINK = $(LDFLAGS) -lm
+$(ORIONC_BIN) $(BIN_DIR)/svg_atlas_render$(EXE_EXT): $(BIN_DIR)/%$(EXE_EXT): tools/%.c | $(BIN_DIR)
 	@echo "TOOL    $@"
 	@$(CC) $(TOOLS_CFLAGS) -I. -Itools -o $@ $< $(TOOL_LINK)
+
+$(BIN_DIR)/svg_atlas_render$(EXE_EXT): tools/nanosvg.h tools/nanosvgrast.h orion/user/stb_image_write.h
+
+.PHONY: groove-icons
+groove-icons: $(BIN_DIR)/svg_atlas_render$(EXE_EXT)
+	python3 tools/build_button_atlas.py apps/groove/share/icons/transport.json --renderer $(BIN_DIR)/svg_atlas_render$(EXE_EXT)
 
 $(GENERATED_DIR)/$(APPS)/%.h: $(APPS)/%.orion $(ORIONC_BIN) | $(GENERATED_DIR)
 	@mkdir -p $(dir $@)
@@ -389,7 +396,7 @@ help:
 	@$(foreach a,$(PHONY_APP_NAMES),echo "  $a - $(call appdir,$(a)) + $(PHONY_APPS_CFLAGS_$(a))";)
 	@echo ""
 	@echo "Themes (standalone only; gems inherit the shell's get_theme()):"
-	@echo "  THEME_<app>=classic|modern|light|navy   (modern=dark default; imageeditor/penciltest=navy)"
+	@echo "  THEME_<app>=classic|modern|light|navy   (modern=blue default; imageeditor/penciltest=navy)"
 	@echo ""
 	@echo "$(LIB_DIR)   - Libraries"
 	@echo "$(BIN_DIR)   - Binaries and tests"
