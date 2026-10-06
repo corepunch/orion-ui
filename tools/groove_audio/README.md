@@ -5,6 +5,13 @@ cut WAV samples, and test whether its backing could be approximated with Groove'
 existing synthesizer. Source recordings, generated samples, model weights and
 rendered studies are deliberately excluded from this directory's Git history.
 
+The selected vocal extraction for the `song2` library is documented in
+[Selected Take Me Higher extraction](selected-vocal-extraction.md). That recipe
+reproduces the approved `01-existing-mel.wav` audition from the untouched
+Mel-Band RoFormer master. Use it as the baseline for future vocal samples;
+the automatic cutter and later cleanup experiments described elsewhere are
+different processing paths.
+
 The pipeline runs locally. Model weights are downloaded on first use. The synth
 study compiles the repository's current `apps/groove/synth.c`; it does not alter the
 application or maintain a second copy of the engine.
