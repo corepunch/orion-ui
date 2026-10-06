@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+work/
+*.wav
+*.mp3
+*.flac
+*.f32
+*.mid
+*.zip
+*.ckpt
+*.th
+*.safetensors

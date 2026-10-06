@@ -224,3 +224,10 @@ A typical block renders in about 10 ms unoptimized. The slowest, a four-bar pian
 2. If no existing voice fits, add one to `synth.c`, give it a name in `sy_inst_t` and a case in `sy_voice()`.
 3. Run the Groove tests. `test_blocks` renders every row and fails on a pattern that does not fit, a duplicate name, silence or a bad level.
 4. Listen to it in the app next to a kick and a bass from the same genre.
+
+## Studying a reference recording
+
+The [audio study tools](../../../tools/groove_audio/README.md) document local vocal
+separation, automatic WAV chops, and an approximate eight-bar reconstruction with
+this engine. Their source recordings, generated samples and model caches are kept
+out of Git. These tools do not add sample playback to Groove.

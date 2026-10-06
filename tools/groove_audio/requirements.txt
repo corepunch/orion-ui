@@ -1,0 +1,8 @@
+# Python 3.12; tested versions. MLX alignment is optional and installed separately.
+audio-separator[cpu]==0.47.0
+librosa==0.11.0
+numpy>=2,<3
+scipy>=1.13,<2
+soundfile>=0.13,<1
+imageio-ffmpeg>=0.6,<1
+torchaudio==2.11.0

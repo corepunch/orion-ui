@@ -66,6 +66,7 @@ tests/test_*.txt
 *.deb
 libcglm*
 :memory:
+:memory:.ses
 *.log
 test.xml
 /output
