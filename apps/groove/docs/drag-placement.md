@@ -4,7 +4,8 @@ Positions use integer ticks: one bar is 256 ticks. The default grid step is
 64 ticks (one beat), so there are four possible starts per bar. Blocks retain
 their original duration of 1, 2 or 4 bars. Clip lookup, cropping, audio
 starts and the song's loop endpoint all retain fractional positions. The
-ruler shows the subdivisions and seeks in the same 64-tick steps.
+ruler shows the subdivisions. A tap on the ruler, or on the arrangement
+where no clip is visible, seeks in the same 64-tick steps.
 
 The sheet defaults to `GR_DROP_ANCHOR_SAMPLE`. Library drags and moves of
 existing clips retain the exact cursor offset inside the card, in logical

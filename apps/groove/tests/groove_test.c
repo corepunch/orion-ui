@@ -346,7 +346,7 @@ static void test_overlap_sheet(void) {
 }
 
 static void test_fractional_selection(void) {
-  TEST("fractional clips select and delete at their visible edges after scrolling; ruler seeks by quarter bars");
+  TEST("fractional clips select and delete at their visible edges after scrolling; empty canvas and the ruler seek by quarter bars");
   test_env_init();
   g_app = app_init();
   window_t *win = create_window("Groove", 0, MAKERECT(0, 0, 800, 600), NULL, main_win_proc, 0, g_app);
@@ -361,12 +361,22 @@ static void test_fractional_selection(void) {
   send_message(sheet, evHScroll, 0, NULL);
   ASSERT_EQUAL(sheet->children->frame.x, left - scroll);
   const int offsets[] = {-1, 0, 87, 88};
+  int64_t held = g_app->song.pos;
+  int snap_w = 88 * GR_SNAP_TICKS / GR_TICKS_BAR;
   for (int i = 0; i < ARRAY_LEN(offsets); i++) {
     ui_event_t event = {.message = kEventLeftButtonDown,
       .x = (window_screen_x(sheet) + left - scroll + offsets[i]) * UI_WINDOW_SCALE,
       .y = (window_screen_y(sheet) + 30) * UI_WINDOW_SCALE};
     dispatch_message(&event);
-    ASSERT_EQUAL(g_app->selected_clip, i == 1 || i == 2 ? clip : -1);
+    bool on_clip = i == 1 || i == 2;
+    ASSERT_EQUAL(g_app->selected_clip, on_clip ? clip : -1);
+    if (on_clip) {
+      ASSERT_EQUAL(g_app->song.pos, held);
+    } else {
+      int snapped = (3 * 88 + snap_w + offsets[i]) / snap_w * GR_SNAP_TICKS;
+      held = position_frames_for_bpm(snapped, g_app->song.bpm);
+      ASSERT_EQUAL(g_app->song.pos, held);
+    }
     event.message = kEventPointerCancel;
     dispatch_message(&event);
   }

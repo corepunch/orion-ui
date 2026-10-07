@@ -31,6 +31,7 @@ static int  floordiv(int a, int b) { return a >= 0 ? a / b : -((-a + b - 1) / b)
 static int  bar_x(window_t *win, int bar)  { return HDR_W + bar * BAR_W - hpos(win); }
 static int  position_x(window_t *win, int position) { return HDR_W + position * BAR_W / GR_TICKS_BAR - hpos(win); }
 static int  position_at(int x) { return floordiv(x * GR_TICKS_BAR, BAR_W); }
+static int  seek_ticks(int content_x) { return floordiv(content_x - HDR_W, SNAP_W) * GR_SNAP_TICKS; }
 static int  track_y(window_t *win, int t)  { return RULER_H + t * row_h(win); }
 static irect16_t grid_rect(window_t *win)  { irect16_t cr = get_client_rect(win); return R(HDR_W, RULER_H, cr.w - HDR_W, row_h(win) * GR_TRACKS); }
 static irect16_t mute_rect(window_t *win, int t) {
@@ -219,6 +220,9 @@ static void paint_sheet(window_t *win) {
   fill_rect(get_sys_color(brAccent), R(px - 1, RULER_H, 2, grid.h));
   set_clip_rect(win, R(0, 0, win->frame.w, win->frame.h));
   paint_ruler(win, (int)(s->pos / bar));
+  set_clip_rect(win, R(HDR_W, 0, cr.w - HDR_W, RULER_H));
+  fill_rect(get_sys_color(brAccent), R(px - 1, 0, 2, RULER_H));
+  set_clip_rect(win, R(0, 0, win->frame.w, win->frame.h));
   paint_headers(win);
 }
 
@@ -275,20 +279,18 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     }
     case evLeftButtonDown: {
       int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam), cx = mx - hpos(win);
-      if (my < RULER_H) { if (cx >= HDR_W) app_seek_position(floordiv(mx - HDR_W, SNAP_W) * GR_SNAP_TICKS); return true; }
+      if (my < RULER_H) { if (cx >= HDR_W) app_seek_position(seek_ticks(mx)); return true; }
       if (header_click(win, cx, my)) return true;
       int track = (my - RULER_H) / row_h(win), position = position_at(mx - HDR_W);
-      if (track < 0 || track >= GR_TRACKS) return true;
-      st->press_clip = song_clip_at(&g_app->song, track, position);
+      st->press_clip = track >= 0 && track < GR_TRACKS ? song_clip_at(&g_app->song, track, position) : -1;
       st->press = (ipoint16_t){ (int16_t)mx, (int16_t)my };
       app_select_clip(st->press_clip);
-      if (st->press_clip >= 0) {
-        const clip_t *c = &g_app->song.clips[st->press_clip];
-        ipoint16_t grab = { mx - HDR_W - c->position * BAR_W / GR_TICKS_BAR, my - track_y(win, c->track) };
-        g_app->drag = (drag_t){ .block = c->block, .from_clip = st->press_clip, .grab = grab,
-                                .track = c->track, .position = c->position, .valid = true };
-        set_capture(win);
-      }
+      if (st->press_clip < 0) { app_seek_position(seek_ticks(mx)); return true; }
+      const clip_t *c = &g_app->song.clips[st->press_clip];
+      ipoint16_t grab = { mx - HDR_W - c->position * BAR_W / GR_TICKS_BAR, my - track_y(win, c->track) };
+      g_app->drag = (drag_t){ .block = c->block, .from_clip = st->press_clip, .grab = grab,
+                              .track = c->track, .position = c->position, .valid = true };
+      set_capture(win);
       return true;
     }
     case evMouseMove:
