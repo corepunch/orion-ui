@@ -26,6 +26,7 @@ typedef struct {
 } tabview_state_t;
 
 #define SIDEBAR_PAD 6
+#define TAB_TOP_PAD 1
 
 static bool is_sidebar(const tabview_state_t *st) { return st && (st->style & TAB_STYLE_SIDEBAR); }
 
@@ -124,11 +125,12 @@ static void draw_tab_icon(tabview_state_t *st, int idx, int x, int y, int h) {
 }
 
 static void draw_tab_item(window_t *page, int x, bool selected, tabview_state_t *st, int idx) {
-  int w = tab_width(page, st, idx), y = selected ? 0 : 2;
+  int w = tab_width(page, st, idx);
   int th = tab_header_height(st);
-  // Selected tab is flush with the pane so header and content are one face.
-  // Inactive tabs sit on the tab-bar chrome with a 2px shelf above the pane.
-  int h = selected ? th : th - y - 2;
+  // 1px of tab-bar chrome above the tabs, so a face does not meet the panel above.
+  // Selected tab stays flush with the pane. Inactive tabs keep a 2px shelf above it.
+  int y = (selected ? 0 : 2) + TAB_TOP_PAD;
+  int h = selected ? th - y : th - y - 2;
   ctrl_state_t state = selected ? CTRL_SELECTED : CTRL_NORMAL;
   theme_draw(THEME_PART_TAB, R(x, y, w, h), state);
   bool has_icon = tab_has_icon(st, idx);

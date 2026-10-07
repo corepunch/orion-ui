@@ -24,16 +24,20 @@
 #define RADIUS_MENU_ITEM     6
 #define RADIUS_TAB           6
 
+// Secondary-button resting border. Navy uses the palette hairline;
+// default keeps the original quiet gray outline.
+#define MODERN_DEFAULT_SECONDARY_BORDER  0xff767676
+
 #if defined(__APPLE__) && TARGET_OS_IOS
 #define MODERN_MENUBAR_HEIGHT 29
 #else
 #define MODERN_MENUBAR_HEIGHT (FONT_SIZE + 12)
 #endif
 
-static bool modern_blue(void) { return get_theme()->style == THEME_NAVY || get_theme()->style == THEME_MODERN; }
+static bool modern_navy(void) { return get_theme()->style == THEME_NAVY; }
 
 static uint32_t modern_secondary_border(void) {
-  return get_sys_color(modern_blue() ? brLightEdge : brBorderActive);
+  return modern_navy() ? get_sys_color(brLightEdge) : MODERN_DEFAULT_SECONDARY_BORDER;
 }
 
 // ── Buttons ──────────────────────────────────────────────────────────────────
@@ -178,7 +182,7 @@ static void modern_draw_field_bg(irect16_t r, ctrl_state_t state) {
   bool focused = (state & CTRL_FOCUSED) && !(state & CTRL_DISABLED);
   int radius = (MIN(r.w, r.h) + 1) / 2;
   uint32_t border, fill;
-  if (modern_blue()) {
+  if (modern_navy()) {
     border = focused ? get_sys_color(brAccent) : get_sys_color(brLightEdge);
     fill = get_sys_color(brWindowDarkBg);
   } else {
@@ -228,7 +232,7 @@ static void modern_draw_menu_item_bg(irect16_t r, ctrl_state_t state) {
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 
-static void modern_apply_palette(void) { theme_copy_palette(k_theme_palette_navy); }
+static void modern_apply_palette(void) { theme_copy_palette(k_theme_palette_dark); }
 static void light_apply_palette(void)  { theme_copy_palette(k_theme_palette_light); }
 static void navy_apply_palette(void)   { theme_copy_palette(k_theme_palette_navy); }
 
@@ -323,7 +327,7 @@ static void modern_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state)
     case THEME_PART_MENU_POPUP:          fill_rounded_rect(get_sys_color(brControlBg), r, RADIUS_MENU_ITEM); break;
     case THEME_PART_SEPARATOR:           fill_rect(get_sys_color(brButtonInner), r); break;
     case THEME_PART_SLIDER_TRACK:
-      fill_rect(get_sys_color(modern_blue() ? brLightEdge : brButtonInner), r);
+      fill_rect(get_sys_color(modern_navy() ? brLightEdge : brButtonInner), r);
       break;
     case THEME_PART_SCROLLBAR_TRACK:     fill_rect(get_sys_color(brStatusbarBg), r); break;
     case THEME_PART_SCROLLBAR_THUMB:
