@@ -65,14 +65,20 @@ typedef struct git_repo_s git_repo_t;
 
 #define GC_MAX_WORKTREES 16
 #define GC_MAX_TILES 64
-typedef struct { char path[512]; bool linked, bare, prunable; } git_worktree_t;
+#define GC_WORKSPACE_MAGIC "gitclient-workspace 1"
+typedef struct {
+  char path[512], branch[96];
+  bool linked, bare, prunable, detached;
+} git_worktree_t;
 typedef struct {
   char path[512], repo[96], dir[96], branch[96], upstream[96], subject[160], when[32];
   int staged, unstaged, untracked, conflicts, ahead, behind, stashes;
+  int worktrees, dirty_worktrees, other_attention;
   bool linked, detached, no_upstream, gone, missing, initial, prunable;
 } git_summary_t;
 static inline bool gc_tile_needs_attention(const git_summary_t *t) {
-  return t->missing || t->conflicts || t->staged || t->unstaged || t->untracked || t->ahead || t->behind || t->no_upstream || t->gone;
+  return t->missing || t->conflicts || t->staged || t->unstaged || t->untracked || t->ahead || t->behind
+      || t->no_upstream || t->gone || t->dirty_worktrees || t->other_attention;
 }
 
 #define GC_MAX_BRANCHES 256
@@ -207,6 +213,14 @@ typedef struct {
   int tile_count;
   bool fetching_all;
   bool ephemeral;
+  char workspace[GC_MAX_RECENT_REPOS][512];
+  int workspace_count;
+  char workspace_file[512];
+  bool workspace_dirty;
+  window_t *worktree_combo;
+  char worktree_paths[GC_MAX_WORKTREES][512];
+  int worktree_count;
+  bool worktree_filling;
   bool diff_cache_valid;
   int last_diff_commit;
   int last_diff_file;
@@ -279,6 +293,9 @@ bool git_get_remote_url(git_repo_t *repo, const char *name, char *buf, int buf_s
 int  git_get_tags(git_repo_t *repo, git_tag_t *out, int max);
 int  git_get_stash(git_repo_t *repo, git_stash_t *out, int max);
 int  git_worktree_list(const char *path, git_worktree_t *out, int max);
+void git_worktree_label(const git_worktree_t *wt, char *out, size_t n);
+bool git_path_absolute(const char *in, char *out, size_t n);
+bool git_locate(const char *path, char *checkout, size_t checkout_n, char *main_root, size_t main_n);
 bool git_get_summary(const char *path, const char *repo_name, bool linked, git_summary_t *out);
 int  git_workspace_scan(char (*roots)[512], int root_count, git_summary_t *out, int max);
 bool git_fetch_all_async(char (*roots)[512], int count, window_t *notify_win);
@@ -294,6 +311,11 @@ result_t gc_toolbar_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
 
 result_t gc_main_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 void gc_open_repo(const char *path);
+void gc_add_repo(const char *path);
+void gc_update_title(void);
+void gc_sync_worktree_bar(void);
+bool gc_handle_open_file(const char *path);
+int  gc_fill_worktree_combo(window_t *combo, const char *select_path, char (*paths)[512], int max);
 void gc_refresh_all(void);
 void gc_show_search_dialog(window_t *parent);
 void gc_show_worktrees_dialog(window_t *parent);
@@ -309,6 +331,13 @@ result_t gc_page_overview_proc(window_t *win, uint32_t msg, uint32_t wparam, voi
 void gc_recent_load(void);
 void gc_recent_save(void);
 void gc_recent_add(const char *path);
+bool gc_workspace_file_is(const char *path);
+int  gc_workspace_read(const char *file, char (*out)[512], int max);
+bool gc_workspace_write(const char *file, char (*paths)[512], int count);
+bool gc_workspace_add(const char *path);
+bool gc_workspace_open(const char *file, bool confirm);
+bool gc_workspace_save(const char *file);
+bool gc_workspace_unsaved(void);
 void gc_show_repositories_dialog(window_t *parent);
 void gc_show_create_repo_dialog(window_t *parent);
 void gc_show_identity_dialog(window_t *parent);

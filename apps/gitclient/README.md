@@ -17,23 +17,28 @@ identity.
 
 ## Two modes: Overview and Focus
 
-**Overview** (Ctrl+0) is a board of tiles, one per repository *and* per linked worktree, so nobody has to
-switch between them through a dropdown. Each tile shows only what needs a decision: uncommitted files
-(staged / modified / new), unpushed and unpulled commits, conflicts, stashes, and whether the branch is
-published. A colour stripe gives the verdict at a glance: red conflicts, amber uncommitted, blue needs
-push/pull, green in sync. Diffs are deliberately absent.
+**Overview** (Ctrl+0) is a board of cards, one per repository. Each card shows the main checkout's
+branch and file badges, whether uncommitted changes remain anywhere in the repository, and how many
+worktrees it has. A colour stripe gives the verdict at a glance: red conflicts, amber uncommitted,
+blue needs push/pull or attention, green in sync. Diffs are deliberately absent.
+
+Drop a git folder onto the window to add another card. File → Save Workspace writes a `.gitworkspace`
+file of main-worktree roots; pass that file to reopen every repository at once.
 
 | Input | Action |
 |---|---|
 | Arrow keys | move between tiles |
 | Enter / double-click | open the tile in Focus mode (Changes if dirty, otherwise History) |
 | Ctrl+0 | toggle Overview and the last Focus page |
+| Ctrl+O | open a workspace file |
+| Ctrl+S | save the workspace |
 | Ctrl+Shift+R | fetch every repository in the background |
 | "Showing" pill | filter to tiles that need attention |
 
-**Focus** is the classic single-repository view (Changes, History, GitHub). It now opens with a summary
+**Focus** is the classic single-repository view (Changes, History, GitHub). It opens with a summary
 line (branch, to push/pull, staged/modified/new counts), tells you what Commit will do
-("Commit 3 staged files" or "Nothing staged"), and has an Overview button on every page.
+("Commit 3 staged files" or "Nothing staged"), and has an Overview button on every page. The worktree
+combo under the menu switches checkouts; View → Worktrees opens the same switcher.
 
 The History sidebar is the branch desk: current / default / local / remote-only rows, last activity,
 and toolbar actions that used to live only in dialogs — **Prune**, **Delete Merged**, and **Worktrees**.
@@ -42,13 +47,14 @@ branch's log instead of leaving you stuck on HEAD.
 
 The page is built from framework controls only (`view_overview.c`): a `TileGrid` of `Card`s, each holding Labels
 and a `FlowView` of `Badge`s, so wrapping, truncation and row heights come from auto-layout. The app feeds it
-`git_summary_t` rows (`git_workspace_scan` in `git_backend.c`). Pass two or more paths on the command
-line (or `--overview`) to get a temporary, unsaved workspace:
+`git_summary_t` rows (`git_workspace_scan` in `git_backend.c`). A saved workspace, several folder arguments,
+or `--overview` opens the board:
 
 ```bash
-apps/gitclient/share/demo/make_workspace.sh /tmp/ws      # eight demo repos + two worktrees
-build/bin/gitclient $(cat /tmp/ws/paths.txt)              # Overview
-build/bin/gitclient /tmp/ws/work/api-gateway              # Focus
+apps/gitclient/share/demo/make_workspace.sh /tmp/ws
+build/bin/gitclient /tmp/ws/workspace.gitworkspace
+build/bin/gitclient $(cat /tmp/ws/paths.txt)
+build/bin/gitclient /tmp/ws/work/api-gateway
 ```
 
 ![Overview](../../docs/screenshots/gitclient_overview.jpg)

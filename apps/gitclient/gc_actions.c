@@ -10,7 +10,8 @@ static const char *gc_action_name(uint16_t id) {
 
 static bool gc_action_has_handler(uint16_t id) {
   switch (id) {
-    case ID_FILE_OPEN_REPO: case ID_FILE_REPOSITORIES: case ID_FILE_NEW_REPO:
+    case ID_FILE_OPEN_REPO: case ID_FILE_OPEN_WORKSPACE: case ID_FILE_SAVE_WORKSPACE:
+    case ID_FILE_REPOSITORIES: case ID_FILE_NEW_REPO:
     case ID_FILE_CLONE: case ID_FILE_QUIT:
     case ID_REPO_REFRESH: case ID_REPO_SEARCH: case ID_REPO_IDENTITY:
     case ID_REPO_TERMINAL:

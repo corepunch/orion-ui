@@ -16,6 +16,35 @@ gc_state_t *g_gc = NULL;
 // gem_init / gem_shutdown
 // ============================================================
 
+static void gc_startup_open_first(void) {
+  for (int i = 0; i < g_gc->workspace_count; i++) {
+    char checkout[512], main_root[512];
+    if (!git_locate(g_gc->workspace[i], checkout, sizeof(checkout), main_root, sizeof(main_root))) continue;
+    gc_open_repo(checkout);
+    if (g_gc->repo) return;
+  }
+}
+
+static void gc_startup_seed_recents(void) {
+  char snap[GC_MAX_RECENT_REPOS][512];
+  int n = g_gc->recent_repo_count;
+  if (n > GC_MAX_RECENT_REPOS) n = GC_MAX_RECENT_REPOS;
+  memcpy(snap, g_gc->recent_repos, (size_t)n * 512);
+  for (int i = 0; i < n; i++) {
+    char checkout[512], main_root[512];
+    const char *root = snap[i];
+    if (git_locate(snap[i], checkout, sizeof(checkout), main_root, sizeof(main_root))) root = main_root;
+    bool have = false;
+    for (int j = 0; j < g_gc->workspace_count; j++)
+      if (!strcmp(g_gc->workspace[j], root)) { have = true; break; }
+    if (have || g_gc->workspace_count >= GC_MAX_RECENT_REPOS) continue;
+    strncpy(g_gc->workspace[g_gc->workspace_count], root, 511);
+    g_gc->workspace[g_gc->workspace_count][511] = 0;
+    g_gc->workspace_count++;
+  }
+  g_gc->workspace_dirty = false;
+}
+
 bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
 #if GITCLIENT_DEBUG
   {
@@ -85,32 +114,40 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   maximize_window(g_gc->main_win);
   show_window(g_gc->main_win, true);
 
-  // Command line: "gitclient PATH" focuses one repository; two or more paths (or
-  // --overview) define a temporary workspace shown as tiles and never saved.
+#ifndef BUILD_AS_GEM
+  ui_register_open_file_handler(gc_handle_open_file);
+#endif
+
   const char *paths[GC_MAX_RECENT_REPOS]; int path_count = 0; bool want_overview = false;
   for (int i = 1; i < argc; i++) {
     if (!argv[i] || !argv[i][0]) continue;
     if (!strcmp(argv[i], "--overview")) want_overview = true;
     else if (path_count < GC_MAX_RECENT_REPOS) paths[path_count++] = argv[i];
   }
-  if (path_count > 1 || (want_overview && path_count)) {
-    g_gc->ephemeral = true; g_gc->recent_repo_count = 0;
-    for (int i = path_count - 1; i >= 0; i--) gc_recent_add(paths[i]);
-  }
-  if (path_count > 1 || want_overview) {
-    if (path_count == 0) { /* keep saved repositories */ }
-    if (g_gc->recent_repo_count > 0) gc_open_repo(g_gc->recent_repos[0]);
-    gc_set_view_mode(GC_TAB_OVERVIEW);
-  } else if (path_count == 1) {
-    gc_open_repo(paths[0]);
+  if (path_count == 1 && gc_workspace_file_is(paths[0])) {
+    gc_workspace_open(paths[0], false);
+    if (want_overview) gc_set_view_mode(GC_TAB_OVERVIEW);
+  } else if (path_count > 0) {
+    for (int i = 0; i < path_count; i++) gc_workspace_add(paths[i]);
+    g_gc->workspace_dirty = false;
+    if (path_count == 1 && !want_overview) {
+      gc_open_repo(paths[0]);
+      g_gc->workspace_dirty = false;
+    } else {
+      gc_startup_open_first();
+      g_gc->workspace_dirty = false;
+      gc_set_view_mode(GC_TAB_OVERVIEW);
+    }
   } else {
-    git_repo_t *cwd_repo = git_repo_open(".");
-    if (cwd_repo) {
-      git_repo_close(cwd_repo);
+    char checkout[512], main_root[512];
+    if (git_locate(".", checkout, sizeof(checkout), main_root, sizeof(main_root))) {
       gc_open_repo(".");
+      g_gc->workspace_dirty = false;
     } else if (g_gc->recent_repo_count > 0) {
-      gc_open_repo(g_gc->recent_repos[0]);
-      if (g_gc->recent_repo_count > 1) gc_set_view_mode(GC_TAB_OVERVIEW);
+      gc_startup_seed_recents();
+      gc_startup_open_first();
+      g_gc->workspace_dirty = false;
+      if (g_gc->workspace_count > 1) gc_set_view_mode(GC_TAB_OVERVIEW);
     } else GC_LOG("startup directory is not a repository; waiting for Open Repository");
   }
 

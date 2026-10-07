@@ -46,7 +46,7 @@ static result_t repos_proc(window_t *win, uint32_t msg, uint32_t wparam, void *l
   }
   window_t *list = get_window_item(win, ID_REPOSITORIES_DIALOG_REPO_LIST); char path[512] = {0};
   if (list) strncpy(path, list->title, sizeof(path) - 1);
-  if (id == ID_REPOSITORIES_DIALOG_OPEN && path[0]) { end_dialog(win, 1); gc_open_repo(path); return true; }
+  if (id == ID_REPOSITORIES_DIALOG_OPEN && path[0]) { end_dialog(win, 1); gc_add_repo(path); return true; }
   if (id == ID_REPOSITORIES_DIALOG_REMOVE && path[0] && g_gc) {
     for (int i = 0; i < g_gc->recent_repo_count; i++) if (!strcmp(g_gc->recent_repos[i], path)) {
       memmove(g_gc->recent_repos[i], g_gc->recent_repos[i + 1], (size_t)(g_gc->recent_repo_count - i - 1) * 512);
@@ -86,7 +86,7 @@ static result_t create_proc(window_t *win, uint32_t msg, uint32_t wparam, void *
   }
   if (id == ID_CREATE_REPO_DIALOG_OK) {
     dialog_pull(win, st, create_repo_bindings, ARRAY_LEN(create_repo_bindings));
-    if (st->path[0] && gc_init_repo(st->path)) { end_dialog(win, 1); gc_open_repo(st->path); }
+    if (st->path[0] && gc_init_repo(st->path)) { end_dialog(win, 1); gc_add_repo(st->path); }
     else set_window_item_text(win, ID_CREATE_REPO_DIALOG_STATUS, "Could not create the repository.");
     return true;
   }

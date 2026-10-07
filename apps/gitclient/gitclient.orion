@@ -8,6 +8,8 @@
     <menus var="kGCMenus" count="kGCMenuCount">
         <menu name="file" label="File">
             <item name="open_repo" label="Open Repository..." />
+            <item name="open_workspace" label="Open Workspace..." shortcut="Ctrl+O" />
+            <item name="save_workspace" label="Save Workspace..." shortcut="Ctrl+S" />
             <item name="repositories" label="Repositories..." />
             <item name="new_repo" label="Create Repository..." />
             <item name="clone" label="Clone..." shortcut="Ctrl+Shift+N" />
@@ -216,6 +218,10 @@
 
     <forms>
         <form name="main_window" title="Git Client" width="960" height="640" role="host" flags="statusbar">
+            <StackView name="worktree_bar" orientation="horizontal" spacing="6" padding="8 2 8 2">
+                <Label name="worktree_label" text="Worktree" />
+                <ComboBox name="worktree" flags="flexspace" />
+            </StackView>
             <TabView name="views" flags="notitle,nofill,flexspace">
                 <StackView name="overview_tab" text="Overview" flags="notitle,nofill,flexspace" />
                 <StackView name="changes_tab" text="Changes" flags="notitle,nofill,flexspace" />
@@ -481,6 +487,15 @@
             <ComboBox name="branches" flags="flexspace" />
             <StackView orientation="horizontal" spacing="4">
                 <Button name="new_branch" text="New Branch..." />
+                <Space />
+                <Button name="ok" text="Switch" flags="default" />
+                <Button name="cancel" text="Cancel" />
+            </StackView>
+        </form>
+        <form name="worktree_dialog" title="Worktrees" width="520" auto_layout="1" spacing="6" padding="8">
+            <Label text="Switch to a worktree:" />
+            <ComboBox name="list" flags="flexspace" />
+            <StackView orientation="horizontal" spacing="4">
                 <Space />
                 <Button name="ok" text="Switch" flags="default" />
                 <Button name="cancel" text="Cancel" />
