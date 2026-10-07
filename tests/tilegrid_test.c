@@ -63,7 +63,7 @@ static void test_adaptive_columns_and_rows(void) {
 }
 
 static void test_selection_keyboard_and_notifications(void) {
-    TEST("TileGrid: click selects, arrows move, Enter/double-click activate, clear resets");
+    TEST("TileGrid: click selects and activates, arrows move, Enter activates, clear resets");
     test_env_init();
     window_t *host = test_env_create_window("host", 0, 0, 640, 480, host_proc, NULL);
     window_t *grid = make_grid(host, 7, 200);
@@ -73,6 +73,11 @@ static void test_selection_keyboard_and_notifications(void) {
     send_message(grid, evCommand, MAKEDWORD(third->id, cdnClicked), third);
     ASSERT_EQUAL((int)send_message(grid, tgGetSelection, 0, NULL), 2);
     ASSERT_EQUAL(s_select, 2);
+    ASSERT_EQUAL(s_activate, 2);
+
+    s_activate = -1;
+    send_message(grid, evCommand, MAKEDWORD(third->id, cdnClicked), third);
+    ASSERT_EQUAL(s_activate, 2);                                // the selected tile still opens
 
     send_message(grid, evKeyDown, AX_KEY_LEFTARROW, NULL);
     ASSERT_EQUAL(s_select, 1);

@@ -280,10 +280,10 @@ static void test_scrollbar_thickness(void) {
 }
 
 static void test_default_modern_chrome(void) {
-  TEST("Default Modern uses the blue palette, accent titlebars, and light slider tracks");
+  TEST("Default Modern uses the dark palette, accent titlebars, and inner slider tracks");
   theme_t *theme = paint_with_theme(THEME_MODERN);
-  ASSERT_EQUAL(get_sys_color(brControlBg), WEB(0x243D60));
-  ASSERT_EQUAL(get_sys_color(brAccent), WEB(0x168CFA));
+  ASSERT_EQUAL(get_sys_color(brControlBg), 0xff3c3c3c);
+  ASSERT_EQUAL(get_sys_color(brAccent), 0xffD77800);
   memset(pixels, 0, sizeof(pixels));
   theme->draw_part(THEME_PART_TITLEBAR, R(10, 10, 80, 30), CTRL_FOCUSED);
   ASSERT_EQUAL(pixels[25][50], get_sys_color(brAccent));
@@ -292,7 +292,7 @@ static void test_default_modern_chrome(void) {
   ASSERT_EQUAL(pixels[25][50], get_sys_color(brPanelDarker));
   memset(pixels, 0, sizeof(pixels));
   theme->draw_part(THEME_PART_SLIDER_TRACK, R(20, 20, 2, 40), CTRL_NORMAL);
-  ASSERT_EQUAL(pixels[30][20], get_sys_color(brLightEdge));
+  ASSERT_EQUAL(pixels[30][20], get_sys_color(brButtonInner));
   PASS();
 }
 

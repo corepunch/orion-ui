@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <orion/user/theme.h>
 
-// Blue chrome and cyan selection shared by Modern and Navy.
+// Blue chrome and cyan selection for the Navy theme.
 // Caption follows Win95/XP: active = accent, inactive = dull bar, not the face.
 // Near-duplicate surfaces share one swatch. Menu, toolbar, status, and the
 // document mat are NAVY_CHROME; inactive tabs sit one step under the face.

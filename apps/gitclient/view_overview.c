@@ -70,7 +70,7 @@ static void make_badgef(window_t *parent, sys_color_idx_t role, const char *fmt,
 
 static void build_card(window_t *grid, const git_summary_t *t) {
   char tip[700];
-  snprintf(tip, sizeof(tip), "%s\n%s%s%s\n%d worktree%s\nDouble-click to open",
+  snprintf(tip, sizeof(tip), "%s\n%s%s%s\n%d worktree%s\nClick to open",
            t->path, t->branch, t->upstream[0] ? " -> " : "", t->upstream,
            t->worktrees, t->worktrees == 1 ? "" : "s");
   window_t *card = make_view(grid, win_card, 0, 0, tip);

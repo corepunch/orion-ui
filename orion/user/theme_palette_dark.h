@@ -4,8 +4,8 @@
 #include <stdint.h>
 #include <orion/user/messages.h>
 
-// Historical dark palette for Classic, which restores its caption, status bar,
-// and accent colors in classic_apply_palette().
+// Pre-navy dark palette for Modern. Classic starts here and restores its
+// historical caption, status bar, and accent colors in classic_apply_palette().
 
 #define THEME_PALETTE_DARK_INIT \
   [brTransparent]          = 0x00000000, \

@@ -28,7 +28,7 @@ file of main-worktree roots; pass that file to reopen every repository at once.
 | Input | Action |
 |---|---|
 | Arrow keys | move between tiles |
-| Enter / double-click | open the tile in Focus mode (Changes if dirty, otherwise History) |
+| Click / Enter | open the tile in Focus mode (Changes if dirty, otherwise History) |
 | Ctrl+0 | toggle Overview and the last Focus page |
 | Ctrl+O | open a workspace file |
 | Ctrl+S | save the workspace |

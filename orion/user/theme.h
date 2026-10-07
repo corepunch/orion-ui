@@ -102,7 +102,7 @@ typedef enum {
 
 typedef enum {
   THEME_CLASSIC = 0,  // bevels + dark palette
-  THEME_MODERN  = 1,  // flat + blue palette (process default)
+  THEME_MODERN  = 1,  // flat + dark palette (process default)
   THEME_LIGHT   = 2,  // flat + light WinUI palette
   THEME_NAVY    = 3,  // flat + blue palette
 } theme_style_t;

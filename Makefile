@@ -133,7 +133,7 @@ PHONY_APP_NAMES = penciltest
 
 # Per-app theme for standalone binaries only. Gems never receive this flag —
 # get_theme() is already the shell's live theme (and its palette).
-# Values: classic, modern (blue, omit / default), light, navy.
+# Values: classic, modern (dark, omit / default), light, navy.
 # Example: THEME_imageeditor = navy
 # Override per build: make imageeditor THEME_imageeditor=modern
 THEME_imageeditor ?= navy
@@ -393,7 +393,7 @@ help:
 	@$(foreach a,$(PHONY_APP_NAMES),echo "  $a - $(call appdir,$(a)) + $(PHONY_APPS_CFLAGS_$(a))";)
 	@echo ""
 	@echo "Themes (standalone only; gems inherit the shell's get_theme()):"
-	@echo "  THEME_<app>=classic|modern|light|navy   (modern=blue default; imageeditor/penciltest=navy)"
+	@echo "  THEME_<app>=classic|modern|light|navy   (modern=dark default; imageeditor/penciltest=navy)"
 	@echo ""
 	@echo "$(LIB_DIR)   - Libraries"
 	@echo "$(BIN_DIR)   - Binaries and tests"

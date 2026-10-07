@@ -228,7 +228,8 @@ result_t win_tilegrid(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       if (index < 0 || (code != cdnClicked && code != cdnActivated)) return false;
       set_focus(win);
       tilegrid_select(win, index, true);
-      if (code == cdnActivated) tilegrid_notify(win, index, tgnActivate);
+      // A click opens the tile, including a second click on the tile already selected.
+      if (code == cdnClicked || code == cdnActivated) tilegrid_notify(win, index, tgnActivate);
       return true;
     }
     case evKeyDown:
