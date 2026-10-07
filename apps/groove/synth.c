@@ -31,6 +31,16 @@ static float osc_pulse(float *ph, float dt, float pw) {
   *ph += dt; if (*ph >= 1.0f) *ph -= 1.0f;
   return v;
 }
+// Triangle harmonics fall fast, so the corners stay in range without a BLEP.
+static float osc_tri(float *ph, float dt) {
+  float v = 4.0f * fabsf(*ph - 0.5f) - 1.0f;
+  *ph += dt; if (*ph >= 1.0f) *ph -= 1.0f;
+  return v;
+}
+// One note, three channels: triangle is the body, pulse the hollow mid, saw the edge.
+static float osc_chans(float *tri, float *pul, float *saw, float dt, float pw, float a_tri, float a_pul, float a_saw) {
+  return a_tri * osc_tri(tri, dt) + a_pul * osc_pulse(pul, dt, pw) + a_saw * osc_saw(saw, dt * 1.005f);
+}
 // Fixed-pitch sine as a two-multiply recurrence; far cheaper than sinf per sample.
 typedef struct { double s0, s1, k; } sine_t;
 static void sine_init(sine_t *o, float hz, float phase) {
@@ -65,26 +75,27 @@ static float glide(const sy_note_t *n, float t, float time) {
 }
 
 // ── Starter drums ────────────────────────────────────────────────────────
-void sy_kick(sy_ctx_t *c, int s, float a) {
-  double ph = 0;
-  for (int i = 0, n = (int)(0.32f * SR); i < n; i++) {
-    float t = i / SR;
-    ph += TAU * (44.0f + 120.0f * expf(-t * 28.0f)) / SR;
-    sy_mix(c, s + i, a * sinf((float)ph) * expf(-t * 8.5f));
-  }
-}
+void sy_kick(sy_ctx_t *c, int s, float a) { sy_kick_len(c, s, a, 8.5f, 0.32f); }
 void sy_snare(sy_ctx_t *c, int s, float a) {
-  for (int i = 0, n = (int)(0.25f * SR); i < n; i++) {
-    float t = i / SR;
-    sy_mix(c, s + i, a * (sy_rnd(c) * expf(-t * 20.0f) * 0.55f + sinf(TAU * 190.0f * t) * expf(-t * 30.0f) * 0.6f));
+  svf_t crack = {0}, bp = {0};
+  svf_set(&crack, 2800.0f, 0.6f); svf_set(&bp, 900.0f, 1.1f);
+  for (int i = 0, n = (int)(0.28f * SR); i < n; i++) {
+    float t = i / SR, nse = sy_rnd(c);
+    float body = (sinf(TAU * 190.0f * t) + 0.5f * sinf(TAU * 330.0f * t)) * expf(-t * 24.0f);
+    float noise = 0.9f * svf_run(&crack, nse, F_BP) * expf(-t * 16.0f) + 0.55f * svf_run(&bp, sy_rnd(c), F_BP) * expf(-t * 12.0f);
+    sy_mix(c, s + i, a * 0.7f * (body + noise));
   }
 }
 void sy_hat(sy_ctx_t *c, int s, float a, float decay, float len) {
-  float prev = 0;
+  svf_t hp = {0}, bp = {0}, lp = {0};
+  float ph[3] = { 0.1f, 0.45f, 0.8f };
+  static const float hz[3] = { 317.0f, 491.0f, 787.0f };
+  svf_set(&hp, 4200.0f, 0.7f); svf_set(&bp, 2000.0f, 0.9f); svf_set(&lp, 11500.0f, 0.7f);
   for (int i = 0, n = (int)(len * SR); i < n; i++) {
-    float t = i / SR, x = sy_rnd(c), y = x - prev;
-    prev = x;
-    sy_mix(c, s + i, a * 0.45f * y * expf(-t * decay));
+    float m = 0, nse = sy_rnd(c);
+    for (int o = 0; o < 3; o++) m += osc_pulse(&ph[o], hz[o] / SR, 0.5f);
+    float y = 0.45f * svf_run(&hp, 0.5f * nse + 0.5f * m / 3.0f, F_HP) + 0.75f * svf_run(&bp, nse, F_BP);
+    sy_mix(c, s + i, a * 0.4f * svf_run(&lp, y, F_LP) * expf(-i / SR * decay));
   }
 }
 void sy_clap(sy_ctx_t *c, int s, float a) {
@@ -98,10 +109,16 @@ void sy_clap(sy_ctx_t *c, int s, float a) {
 }
 void sy_kick_len(sy_ctx_t *c, int s, float a, float decay, float len) {
   double ph = 0;
+  float prev = 0;
+  svf_t bp = {0};
+  svf_set(&bp, 1300.0f, 1.15f);
   for (int i = 0, n = (int)(len * SR); i < n; i++) {
-    float t = i / SR;
-    ph += TAU * (38.0f + 150.0f * expf(-t * 26.0f)) / SR;
-    sy_mix(c, s + i, a * sinf((float)ph) * expf(-t * decay));
+    float t = i / SR, nse = sy_rnd(c);
+    ph += TAU * (42.0f + 170.0f * expf(-t * 26.0f)) / SR;
+    float v = sinf((float)ph) * expf(-t * decay);
+    v += 0.5f * svf_run(&bp, nse, F_BP) * expf(-t * 24.0f) + 0.3f * (nse - prev) * expf(-t * 360.0f);
+    prev = nse;
+    sy_mix(c, s + i, a * tanhf(1.5f * v) / tanhf(1.5f));
   }
 }
 void sy_tom(sy_ctx_t *c, int s, float hz, float a) {
@@ -113,32 +130,35 @@ void sy_tom(sy_ctx_t *c, int s, float hz, float a) {
   }
 }
 void sy_cymbal(sy_ctx_t *c, int s, float a, float decay, float len) {
-  float prev = 0, lp = 0, k = 1.0f - expf(-TAU * 5500.0f / SR);
+  svf_t hp = {0}, bp = {0}, lp = {0};
+  float ph[4] = { 0.1f, 0.32f, 0.58f, 0.84f };
+  static const float hz[4] = { 211.0f, 317.0f, 463.0f, 691.0f };
+  svf_set(&hp, 3600.0f, 0.75f); svf_set(&bp, 1600.0f, 0.85f); svf_set(&lp, 10500.0f, 0.7f);
   for (int i = 0, n = (int)(len * SR); i < n; i++) {
-    float t = i / SR, x = sy_rnd(c), y = x - prev;
-    prev = x;
-    lp += k * (y - lp);
-    sy_mix(c, s + i, a * (0.75f * lp + 0.12f * sinf(TAU * 3100.0f * t) + 0.08f * sinf(TAU * 5700.0f * t)) * expf(-t * decay));
+    float m = 0, nse = sy_rnd(c);
+    for (int o = 0; o < 4; o++) m += osc_pulse(&ph[o], hz[o] / SR, 0.5f);
+    float y = 0.45f * svf_run(&hp, 0.45f * nse + 0.55f * m / 4.0f, F_HP) + 0.7f * svf_run(&bp, nse, F_BP);
+    sy_mix(c, s + i, a * 0.5f * svf_run(&lp, y, F_LP) * expf(-i / SR * decay));
   }
 }
 
 // ── Kits ─────────────────────────────────────────────────────────────────
 typedef struct {
   float kf, ksweep, krate, kdecay, klen, kclick, kdrive; // kick: floor Hz, sweep Hz, sweep rate, decay, seconds, click, drive
-  float stone, sbody, snoise, sdecay, sbright;           // snare: tone Hz, body, noise, noise decay, noise high-pass Hz
+  float stone, sbody, snoise, sdecay, sbright;           // snare: tone Hz, body, noise, noise decay, crack-band Hz
   float hdecay, odecay, hmetal, hhp;                     // hats: closed and open decay, metal-to-noise mix, high-pass Hz
   float cfc, cdecay;                                     // clap: band centre Hz, tail decay
   float tune;                                            // toms and hand percussion pitch factor
 } kit_t;
 
 static const kit_t kKits[KIT_COUNT] = {
-  [KIT_CLASSIC] = { 52, 230, 38,  9.0f, 0.40f, 0.50f, 1.5f,  190, 0.50f, 0.75f, 16, 2500,   75,  9.0f, 0.75f, 7500,  1250, 20, 1.00f },
-  [KIT_909]     = { 52, 230, 38,  9.0f, 0.40f, 0.50f, 1.5f,  190, 0.50f, 0.75f, 16, 2500,   75,  9.0f, 0.75f, 7500,  1250, 20, 1.00f },
-  [KIT_808]     = { 47,  95, 42,  3.0f, 0.90f, 0.12f, 0.0f,  172, 0.70f, 0.45f, 24, 4200,   95, 12.0f, 0.90f, 8200,  1100, 26, 0.90f },
-  [KIT_HARD]    = { 58, 420, 30,  5.5f, 0.42f, 0.60f, 6.0f,  215, 0.45f, 0.95f, 12, 1700,   60,  7.0f, 0.60f, 6800,  1450, 15, 1.10f },
-  [KIT_TECHNO]  = { 46, 170, 46,  6.5f, 0.50f, 0.30f, 2.4f,  265, 0.40f, 0.60f, 28, 5200,  110, 11.0f, 0.80f, 9000,  1700, 24, 0.85f },
-  [KIT_BREAK]   = { 64, 120, 55, 13.0f, 0.30f, 0.90f, 1.0f,  205, 0.60f, 0.85f, 13, 1100,   55,  8.0f, 0.35f, 6000,   950, 16, 1.05f },
-  [KIT_LOFI]    = { 56, 105, 36,  8.0f, 0.40f, 0.20f, 3.0f,  182, 0.60f, 0.60f, 18, 1500,   70, 10.0f, 0.40f, 5200,  1000, 20, 0.95f },
+  [KIT_CLASSIC] = { 54, 200, 36,  8.5f, 0.38f, 0.55f, 1.8f,  188, 0.55f, 0.70f, 15, 2200,   70,  8.5f, 0.65f, 4600,  1200, 18, 1.00f },
+  [KIT_909]     = { 52, 230, 38,  9.0f, 0.40f, 0.55f, 4.2f,  190, 0.55f, 0.70f, 14, 2800,   70,  8.5f, 0.62f, 4000,  1250, 20, 1.00f },
+  [KIT_808]     = { 47,  95, 42,  3.0f, 0.90f, 0.12f, 0.0f,  172, 0.70f, 0.45f, 24, 4200,   95, 12.0f, 0.85f, 5000,  1100, 26, 0.90f },
+  [KIT_HARD]    = { 58, 420, 30,  5.5f, 0.42f, 0.60f, 6.0f,  215, 0.45f, 0.95f, 12, 1700,   60,  7.0f, 0.55f, 4000,  1450, 15, 1.10f },
+  [KIT_TECHNO]  = { 46, 170, 46,  6.5f, 0.50f, 0.35f, 2.4f,  265, 0.40f, 0.60f, 28, 5200,  110, 11.0f, 0.75f, 5400,  1700, 24, 0.85f },
+  [KIT_BREAK]   = { 64, 120, 55, 13.0f, 0.30f, 0.90f, 1.6f,  205, 0.60f, 0.85f, 13, 1100,   55,  8.0f, 0.30f, 3800,   950, 16, 1.05f },
+  [KIT_LOFI]    = { 56, 105, 36,  8.0f, 0.40f, 0.25f, 3.0f,  182, 0.60f, 0.60f, 18, 1500,   70, 10.0f, 0.35f, 3200,  1000, 20, 0.95f },
 };
 
 static float tail_window(int i, int n) { return fmin1((n - i) / (0.004f * SR)); }
@@ -146,42 +166,50 @@ static float tail_window(int i, int n) { return fmin1((n - i) / (0.004f * SR)); 
 static void k_kick(sy_ctx_t *c, const kit_t *k, int s, float a) {
   double ph = 0;
   float norm = k->kdrive > 0 ? 1.0f / tanhf(k->kdrive) : 1.0f, prev = 0;
+  svf_t bp = {0};
+  svf_set(&bp, 1250.0f, 1.15f);
   for (int i = 0, n = (int)(k->klen * SR); i < n; i++) {
     float t = i / SR, x = sy_rnd(c);
     ph += TAU * (k->kf + k->ksweep * expf(-t * k->krate)) / SR;
     float v = sinf((float)ph) * expf(-t * k->kdecay);
     if (k->kdrive > 0) v = tanhf(v * k->kdrive) * norm;
-    v += k->kclick * 0.5f * (x - prev) * expf(-t * 450.0f);
+    v += k->kclick * (0.25f * (x - prev) * expf(-t * 420.0f) + 0.7f * svf_run(&bp, x, F_BP) * expf(-t * 24.0f));
     prev = x;
     sy_mix(c, s + i, a * v * tail_window(i, n));
   }
 }
 static void k_snare(sy_ctx_t *c, const kit_t *k, int s, float a) {
-  svf_t hp = {0};
+  svf_t crack = {0}, bp = {0};
   double p1 = 0, p2 = 0;
-  svf_set(&hp, k->sbright, 0.9f);
+  svf_set(&crack, k->sbright, 0.6f);
+  svf_set(&bp, fmaxf(450.0f, k->sbright * 0.35f), 1.1f);
   for (int i = 0, n = (int)(0.3f * SR); i < n; i++) {
-    float t = i / SR, bend = 1.0f + 0.35f * expf(-t * 45.0f);
+    float t = i / SR, bend = 1.0f + 0.35f * expf(-t * 45.0f), nse = sy_rnd(c);
     p1 += TAU * k->stone * bend / SR; p2 += TAU * k->stone * 1.78f * bend / SR;
-    float body = (sinf((float)p1) + 0.55f * sinf((float)p2)) * expf(-t * 26.0f);
-    float noise = svf_run(&hp, sy_rnd(c), F_HP) * expf(-t * k->sdecay);
-    sy_mix(c, s + i, a * 0.75f * (k->sbody * body + k->snoise * noise) * tail_window(i, n));
+    float body = (sinf((float)p1) + 0.55f * sinf((float)p2)) * expf(-t * 14.0f);
+    float noise = svf_run(&crack, nse, F_BP) * expf(-t * k->sdecay);
+    float mid = svf_run(&bp, sy_rnd(c), F_BP) * expf(-t * k->sdecay * 0.55f);
+    sy_mix(c, s + i, a * 0.7f * (k->sbody * body + k->snoise * (1.1f * noise + 0.5f * mid)) * tail_window(i, n));
   }
 }
-// Six detuned square waves, the classic drum-machine cymbal source.
-static float metal(double ph[6], float pitch) {
+// Six band-limited pulses at the drum-machine cymbal ratios.
+static float metal(float ph[6], float pitch) {
   static const float hz[6] = { 205.3f, 304.4f, 369.6f, 522.7f, 540.0f, 800.0f };
   float m = 0;
-  for (int o = 0; o < 6; o++) { ph[o] += hz[o] * pitch / SR; ph[o] -= floor(ph[o]); m += ph[o] < 0.5 ? 1.0f : -1.0f; }
+  for (int o = 0; o < 6; o++) m += osc_pulse(&ph[o], hz[o] * pitch / SR, 0.5f);
   return m / 6.0f;
 }
 static void k_metal(sy_ctx_t *c, int s, float a, float decay, float len, float pitch, float metal_mix, float hp_hz) {
-  svf_t hp = {0};
-  double ph[6] = {0};
+  svf_t hp = {0}, bp = {0}, lp = {0};
+  float ph[6] = { 0.05f, 0.2f, 0.37f, 0.55f, 0.7f, 0.88f };
   svf_set(&hp, hp_hz, 0.8f);
+  svf_set(&bp, fmaxf(700.0f, hp_hz * 0.42f), 0.85f);
+  svf_set(&lp, fminf(14000.0f, hp_hz * 2.8f), 0.7f);
   for (int i = 0, n = (int)(len * SR); i < n; i++) {
-    float x = metal_mix * 2.5f * metal(ph, pitch) + (1.0f - metal_mix) * sy_rnd(c);
-    sy_mix(c, s + i, a * 0.5f * svf_run(&hp, x, F_HP) * expf(-i / SR * decay) * fmin1(i / (0.0005f * SR)) * tail_window(i, n));
+    float nse = sy_rnd(c);
+    float x = metal_mix * 2.2f * metal(ph, pitch) + (1.0f - metal_mix) * nse;
+    float y = 0.48f * svf_run(&hp, x, F_HP) + 0.8f * svf_run(&bp, nse, F_BP);
+    sy_mix(c, s + i, a * 0.45f * svf_run(&lp, y, F_LP) * expf(-i / SR * decay) * fmin1(i / (0.0005f * SR)) * tail_window(i, n));
   }
 }
 static void k_clap(sy_ctx_t *c, const kit_t *k, int s, float a) {
@@ -221,13 +249,12 @@ static void k_shaker(sy_ctx_t *c, int s, float a, float hp_hz, float attack, flo
 
 void sy_hit(sy_ctx_t *c, sy_kit_t kit, char lane, int s, float a) {
   const kit_t *k = &kKits[kit < KIT_COUNT ? kit : KIT_909];
-  bool classic = kit == KIT_CLASSIC;
   switch (lane) {
-    case 'k': if (classic) sy_kick(c, s, a);                else k_kick(c, k, s, a);                                              break;
-    case 's': if (classic) sy_snare(c, s, a);               else k_snare(c, k, s, a);                                             break;
-    case 'h': if (classic) sy_hat(c, s, a, 70.0f, 0.10f);   else k_metal(c, s, a * 1.8f, k->hdecay, 0.12f, 1.0f, k->hmetal, k->hhp); break;
-    case 'o': if (classic) sy_hat(c, s, a, 10.0f, 0.35f);   else k_metal(c, s, a * 1.8f, k->odecay, 0.45f, 1.0f, k->hmetal, k->hhp); break;
-    case 'c': if (classic) sy_clap(c, s, a);                else k_clap(c, k, s, a);                                              break;
+    case 'k': k_kick(c, k, s, a);                                                    break;
+    case 's': k_snare(c, k, s, a);                                                   break;
+    case 'h': k_metal(c, s, a * 1.8f, k->hdecay, 0.12f, 1.0f, k->hmetal, k->hhp);    break;
+    case 'o': k_metal(c, s, a * 1.8f, k->odecay, 0.45f, 1.0f, k->hmetal, k->hhp);    break;
+    case 'c': k_clap(c, k, s, a);                                                    break;
     case 'r': k_knock(c, s, a * 0.6f, 1750.0f * k->tune, 480.0f * k->tune, 80.0f, 0.5f);       break; // rim
     case 'w': k_knock(c, s, a * 0.55f, 2450.0f * k->tune, 2460.0f * k->tune, 55.0f, 0.1f);      break; // clave / wood
     case 'g': k_knock(c, s, a * 0.7f, 330.0f * k->tune, 345.0f * k->tune, 20.0f, 0.25f);       break; // high conga
@@ -236,10 +263,10 @@ void sy_hit(sy_ctx_t *c, sy_kit_t kit, char lane, int s, float a) {
     case 't': sy_tom(c, s, 155.0f * k->tune, a * 0.7f);                                                break;
     case 'l': sy_tom(c, s, 105.0f * k->tune, a * 0.7f);                                                break;
     case 'b': k_cowbell(c, s, a, k->tune);                                                      break;
-    case 'y': k_metal(c, s, a * 1.5f, 2.6f, 1.6f, 1.0f, 0.45f, 4800.0f);                        break; // crash
-    case 'd': k_metal(c, s, a * 1.1f, 9.0f, 0.5f, 1.45f, 0.9f, 6200.0f);                        break; // ride
+    case 'y': k_metal(c, s, a * 1.5f, 2.6f, 1.6f, 1.0f, 0.45f, 3400.0f);                        break; // crash
+    case 'd': k_metal(c, s, a * 1.1f, 9.0f, 0.5f, 1.45f, 0.9f, 4200.0f);                        break; // ride
     case 'm': k_shaker(c, s, a * 0.9f, 5500.0f, 0.012f, 55.0f);                                 break; // shaker
-    case 'a': k_metal(c, s, a * 1.4f, 22.0f, 0.2f, 2.2f, 0.5f, 7000.0f);                        break; // tambourine
+    case 'a': k_metal(c, s, a * 1.4f, 22.0f, 0.2f, 2.2f, 0.5f, 4600.0f);                        break; // tambourine
     case 'z': sy_sweep_tone(c, s, (int)(0.25f * SR), 3200.0f * k->tune, 110.0f, 0.5f, a * 0.7f, 14.0f); break; // zap
     default:
       fprintf(stderr, "[synth] unknown drum lane '%c'\n", lane);
@@ -285,16 +312,29 @@ static void v_piano(sy_ctx_t *c, int s, int g, float hz, float a) {
       sy_mix(c, s + i, a * hamp[h] * 0.33f * sinf((float)ph) * e);
     }
   }
+  float tri = 0.3f, prev = 0;
+  for (int i = 0; i < n; i++) {
+    float t = i / SR, e = expf(-t * 2.0f) * fmin1(i / (0.003f * SR));
+    if (i > g) e *= expf(-(i - g) / SR * 9.0f);
+    sy_mix(c, s + i, a * 0.16f * osc_tri(&tri, hz / SR) * e);
+  }
+  for (int i = 0, len = (int)(0.012f * SR); i < len; i++) { // hammer
+    float x = sy_rnd(c), y = x - prev;
+    prev = x;
+    sy_mix(c, s + i, a * 0.2f * y * (1.0f - (float)i / len));
+  }
 }
 static void v_bass(sy_ctx_t *c, int s, int g, float hz, float a, bool bright) {
   int n = g + (int)(0.06f * SR);
-  double fr = 0; float lp = 0;
-  for (int i = 0; i < n; i++, fr += hz / SR) {
-    float t = i / SR, f = (float)(fr - floor(fr)), saw = 2.0f * f - 1.0f;
+  float tri = 0.15f, pul = 0.4f, saw = 0.72f, sub = 0.05f;
+  svf_t lp = {0};
+  for (int i = 0; i < n; i++) {
+    float t = i / SR;
     float e = fmin1(i / (0.004f * SR)) * (0.6f + 0.4f * expf(-t * 6.0f)) * (i < g ? 1.0f : expf(-(i - g) / SR * 60.0f));
-    float k = 1.0f - expf(-TAU * (250.0f + 1200.0f * expf(-t * 12.0f)) / SR);
-    lp += k * (saw - lp);
-    sy_mix(c, s + i, a * e * (bright ? lp * 0.8f + sinf(TAU * f) * 0.6f : sinf(TAU * f) * 0.95f));
+    if (!(i & 15)) svf_set(&lp, bright ? 420.0f + 1500.0f * expf(-t * 6.0f) : 70.0f + 180.0f * expf(-t * 6.0f), 0.85f);
+    float x = bright ? osc_chans(&tri, &pul, &saw, hz / SR, 0.4f, 0.55f, 0.4f, 0.5f) + 0.3f * osc_tri(&sub, hz * 0.5f / SR)
+                     : osc_tri(&tri, hz / SR);
+    sy_mix(c, s + i, a * e * svf_run(&lp, x * 0.55f, F_LP));
   }
 }
 static void v_pluck(sy_ctx_t *c, int s, int g, float hz, float a, float damp) {
@@ -312,34 +352,34 @@ static void v_pluck(sy_ctx_t *c, int s, int g, float hz, float a, float damp) {
 }
 static void v_acid(sy_ctx_t *c, const sy_note_t *n) {
   int len = n->g + (int)(0.05f * SR);
-  double fr = 0; float low = 0, band = 0, top = n->accent ? 5200.0f : 3500.0f;
+  float saw = 0.2f, sub = 0.6f;
+  svf_t lp = {0};
   for (int i = 0; i < len; i++) {
-    float t = i / SR, saw = 2.0f * (float)(fr - floor(fr)) - 1.0f;
-    float f = 2.0f * sinf(SY_PI * (300.0f + top * expf(-t * 9.0f)) / SR);
-    float hi = saw - low - 0.2f * band;
-    fr += glide(n, t, 0.06f) / SR;
-    band += f * hi;
-    low += f * band;
-    sy_mix(c, n->s + i, n->a * 0.55f * low * fmin1(i / (0.003f * SR)) * (i < n->g ? 1.0f : expf(-(i - n->g) / SR * 80.0f)));
+    float t = i / SR, hz = glide(n, t, 0.06f), top = n->accent ? 4600.0f : 3000.0f;
+    if (!(i & 15)) svf_set(&lp, 280.0f + top * expf(-t * 8.0f), n->accent ? 2.8f : 2.0f);
+    float y = svf_run(&lp, osc_saw(&saw, hz / SR), F_LP) + 0.5f * osc_tri(&sub, hz * 0.5f / SR);
+    sy_mix(c, n->s + i, n->a * 0.5f * y * fmin1(i / (0.003f * SR)) * (i < n->g ? 1.0f : expf(-(i - n->g) / SR * 80.0f)));
   }
 }
 static void v_pad(sy_ctx_t *c, int s, int g, float hz, float a) {
   int n = g + (int)(0.5f * SR);
-  double fr[3] = { 0, 0.3, 0.7 }; float lp = 0, k = 1.0f - expf(-TAU * 1400.0f / SR);
-  const float det[3] = { 1.0f, 1.004f, 0.996f };
+  float tri[3] = { 0.1f, 0.4f, 0.75f }, pul[3] = { 0.2f, 0.55f, 0.85f }, saw[3] = { 0.05f, 0.3f, 0.6f };
+  const float det[3] = { 1.0f, 1.006f, 0.994f };
+  svf_t lp = {0};
   for (int i = 0; i < n; i++) {
     float t = i / SR, x = 0;
-    for (int o = 0; o < 3; o++) { fr[o] += hz * det[o] / SR; x += 2.0f * (float)(fr[o] - floor(fr[o])) - 1.0f; }
-    lp += k * (x / 3.0f - lp);
-    sy_mix(c, s + i, a * 0.5f * lp * fmin1(t / 0.3f) * (i < g ? 1.0f : expf(-(i - g) / SR * 5.0f)));
+    if (!(i & 15)) svf_set(&lp, 1500.0f + 450.0f * sinf(TAU * 0.15f * t), 0.75f);
+    for (int o = 0; o < 3; o++) x += osc_chans(&tri[o], &pul[o], &saw[o], hz * det[o] / SR, 0.35f, 0.5f, 0.22f, 0.4f);
+    sy_mix(c, s + i, a * 0.22f * svf_run(&lp, x, F_LP) * fmin1(t / 0.3f) * (i < g ? 1.0f : expf(-(i - g) / SR * 5.0f)));
   }
 }
 static void v_arp(sy_ctx_t *c, int s, float hz, float a) {
-  double fr = 0; float lp = 0, k = 1.0f - expf(-TAU * 3200.0f / SR);
-  for (int i = 0, n = (int)(0.3f * SR); i < n; i++, fr += hz / SR) {
-    float t = i / SR, sq = (fr - floor(fr)) < 0.3 ? 1.0f : -1.0f;
-    lp += k * (sq - lp);
-    sy_mix(c, s + i, a * 0.4f * lp * expf(-t * 11.0f) * fmin1(i / (0.002f * SR)));
+  float tri = 0.2f, pul = 0.55f, saw = 0.1f;
+  svf_t lp = {0};
+  svf_set(&lp, 2400.0f, 0.9f);
+  for (int i = 0, n = (int)(0.3f * SR); i < n; i++) {
+    float x = osc_chans(&tri, &pul, &saw, hz / SR, 0.3f, 0.45f, 0.7f, 0.25f);
+    sy_mix(c, s + i, a * 0.4f * svf_run(&lp, x, F_LP) * expf(-i / SR * 11.0f) * fmin1(i / (0.002f * SR)));
   }
 }
 void sy_riser(sy_ctx_t *c, int len) {
@@ -426,7 +466,18 @@ static void v_hpiano(sy_ctx_t *c, const sy_note_t *n) {
   static const float mult[7] = { 1.0f, 2.001f, 3.003f, 4.006f, 5.01f, 6.015f, 7.02f };
   static const float amp[7]  = { 0.42f, 0.25f, 0.18f, 0.15f, 0.12f, 0.10f, 0.08f };
   static const float dec[7]  = { 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f };
+  float tri = 0.25f, prev = 0;
   v_partials(c, n, 7, mult, amp, dec, 0.002f, 11.0f, 0.45f, 1.0f, 0.0f);
+  for (int i = 0, len = n->g + (int)(0.4f * SR); i < len; i++) {
+    float e = expf(-i / SR * 3.0f) * fmin1(i / (0.002f * SR));
+    if (i > n->g) e *= expf(-(i - n->g) / SR * 11.0f);
+    sy_mix(c, n->s + i, n->a * 0.14f * osc_tri(&tri, n->hz / SR) * e);
+  }
+  for (int i = 0, len = (int)(0.01f * SR); i < len; i++) {
+    float x = sy_rnd(c), y = x - prev;
+    prev = x;
+    sy_mix(c, n->s + i, n->a * 0.16f * y * (1.0f - (float)i / len));
+  }
 }
 static void v_organ(sy_ctx_t *c, const sy_note_t *n) {
   static const float mult[6] = { 1, 2, 3, 4, 6, 8 }, amp[6] = { 0.30f, 0.24f, 0.15f, 0.10f, 0.06f, 0.04f }, dec[6] = {0};
@@ -434,6 +485,13 @@ static void v_organ(sy_ctx_t *c, const sy_note_t *n) {
   v_partials(c, n, 6, mult, amp, dec, 0.003f, 30.0f, 0.2f, 6.2f, 0.05f);
   v_partials(c, n, 1, pmult, pamp, pdec, 0.001f, 30.0f, 0.2f, 6.2f, 0.0f);
   for (int i = 0, len = (int)(0.01f * SR); i < len; i++) sy_mix(c, n->s + i, n->a * 0.1f * sy_rnd(c) * (1.0f - (float)i / len)); // key click
+  float tri = 0.2f, pul = 0.55f, saw = 0.8f;
+  int len = n->g + (int)(0.2f * SR);
+  for (int i = 0; i < len; i++) {
+    float t = i / SR, e = fmin1(i / (0.004f * SR)) * (i < n->g ? 1.0f : expf(-(i - n->g) / SR * 30.0f));
+    float x = osc_chans(&tri, &pul, &saw, n->hz * 1.003f / SR, 0.5f, 0.45f, 0.32f, 0.16f);
+    sy_mix(c, n->s + i, n->a * 0.22f * x * e * (1.0f + 0.04f * sinf(TAU * 6.1f * t)));
+  }
 }
 static void v_vibes(sy_ctx_t *c, const sy_note_t *n) {
   static const float mult[3] = { 1, 4, 10 }, amp[3] = { 0.5f, 0.18f, 0.05f }, dec[3] = { 2.2f, 9.0f, 25.0f };
@@ -467,15 +525,15 @@ static void v_fm(sy_ctx_t *c, const sy_note_t *n, float ratio, float index, floa
 // ── Basses, leads, layers ────────────────────────────────────────────────
 static void v_reese(sy_ctx_t *c, const sy_note_t *n) {
   int len = n->g + (int)(0.12f * SR);
-  float p1 = 0, p2 = 0.37f;
+  float p1 = 0, p2 = 0.37f, pul = 0.2f, tri = 0.55f;
   svf_t lp = {0};
-  sine_t sub;
-  sine_init(&sub, n->hz, 0);
   for (int i = 0; i < len; i++) {
     float t = i / SR;
-    if (!(i & 15)) svf_set(&lp, 430.0f + 330.0f * sinf(TAU * 0.35f * t + n->step) + (n->accent ? 500.0f : 0.0f), 1.2f);
-    float x = osc_saw(&p1, n->hz * 0.994f / SR) + osc_saw(&p2, n->hz * 1.006f / SR);
-    sy_mix(c, n->s + i, n->a * (0.5f * svf_run(&lp, x, F_LP) + 0.4f * sine_next(&sub)) * env(i, n->g, 0.008f, 35.0f));
+    if (!(i & 15)) svf_set(&lp, 560.0f + 420.0f * sinf(TAU * 0.35f * t + n->step) + (n->accent ? 650.0f : 0.0f), 1.05f);
+    float dt = n->hz / SR;
+    float x = osc_saw(&p1, dt * 0.994f) + osc_saw(&p2, dt * 1.006f) + 0.4f * osc_pulse(&pul, dt, 0.45f);
+    float y = svf_run(&lp, x * 0.45f, F_LP) + 0.4f * osc_tri(&tri, dt);
+    sy_mix(c, n->s + i, n->a * y * env(i, n->g, 0.008f, 35.0f));
   }
 }
 // One filtered oscillator pair with an envelope on the cutoff: the workhorse
@@ -488,7 +546,7 @@ typedef struct {
 } mono_t;
 static void v_mono(sy_ctx_t *c, const sy_note_t *n, const mono_t *m) {
   int len = n->g + (int)(5.0f / m->release * SR);
-  float p1 = 0, p2 = 0.41f, p3 = 0.17f, p4 = 0.63f, e = 1, ek = expf(-m->adec / SR), vib = 1, pw = 0.5f;
+  float p0 = 0.12f, p1 = 0, p2 = 0.41f, p3 = 0.17f, p4 = 0.63f, e = 1, ek = expf(-m->adec / SR), vib = 1, pw = 0.5f;
   float depth = m->fenv * (n->accent ? 1.5f : 1.0f);
   svf_t lp = {0};
   for (int i = 0; i < len; i++) {
@@ -499,11 +557,13 @@ static void v_mono(sy_ctx_t *c, const sy_note_t *n, const mono_t *m) {
       vib = 1.0f + (t > 0.18f ? m->vib * sinf(TAU * 5.5f * t) : 0.0f);
       pw = 0.5f + 0.3f * sinf(TAU * 0.9f * t);
     }
-    float dt = glide(n, t, m->glide) * vib / SR, x = osc_saw(&p1, dt);
-    if (m->det > 0)   x += osc_saw(&p2, dt * (1.0f + m->det));
-    if (m->oct > 0)   x += m->oct * osc_saw(&p3, dt * 2.0f);
-    if (m->pulse > 0) x += m->pulse * osc_pulse(&p4, dt, pw);
-    x = svf_run(&lp, x * 0.5f, F_LP);
+    float dt = glide(n, t, m->glide) * vib / SR;
+    float x = osc_saw(&p1, dt) + 0.5f * osc_tri(&p0, dt);
+    x += osc_saw(&p2, dt * (m->det > 0 ? 1.0f + m->det : 1.007f)) * (m->det > 0 ? 1.0f : 0.35f);
+    if (m->oct > 0) x += m->oct * osc_saw(&p3, dt * 2.0f);
+    x += (m->pulse > 0 ? m->pulse : 0.28f) * osc_pulse(&p4, dt, pw);
+    x += 0.03f * sy_rnd(c);
+    x = svf_run(&lp, x * 0.4f, F_LP);
     if (m->drive > 0) x = tanhf(x * m->drive);
     sy_mix(c, n->s + i, n->a * 0.8f * x * e * env(i, n->g, m->attack, m->release));
     e *= ek;
@@ -518,11 +578,11 @@ static const mono_t kBrass  = { 0.005f,  0,    0,     350, 3000, -28.f, 1.1f, 0.
 static void v_stack(sy_ctx_t *c, const sy_note_t *n, int count, const float *det, float fc, float fenv, float frate,
                     float attack, float release, float gain) {
   int len = n->g + (int)(5.0f / release * SR);
-  float ph[7];
+  float ph[7], sub = 0.23f;
   svf_t lp = {0};
   for (int o = 0; o < count; o++) ph[o] = 0.5f + 0.5f * sy_rnd(c) * 0.999f;
   for (int i = 0; i < len; i++) {
-    float x = 0;
+    float x = 0.45f * osc_tri(&sub, n->hz / SR);
     if (!(i & 15)) svf_set(&lp, fc + fenv * expf(-i / SR * frate), 0.9f);
     for (int o = 0; o < count; o++) x += osc_saw(&ph[o], n->hz * (1.0f + det[o]) / SR);
     sy_mix(c, n->s + i, n->a * gain * svf_run(&lp, x, F_LP) * env(i, n->g, attack, release));
@@ -659,8 +719,8 @@ void sy_voice(sy_ctx_t *c, sy_inst_t inst, const sy_note_t *note) {
     case I_ORGAN:    v_organ(c, &n);                                                        break;
     case I_VIBES:    v_vibes(c, &n);                                                        break;
     case I_BELL:     v_fm(c, &n, 3.5f, 2.6f, 3.2f, 0.25f, 2.4f, 5.0f, 1.0f, 0.0f);          break;
-    case I_FMBASS:   v_fm(c, &n, 1.0f, 3.2f, 18.0f, 0.5f, 0.8f, 60.0f, 0.08f, 0.0f);        break;
-    case I_DONK:     v_fm(c, &n, 2.0f, 4.5f, 32.0f, 0.15f, 6.0f, 70.0f, 0.08f, 0.0f);       break;
+    case I_FMBASS:   v_fm(c, &n, 1.0f, 3.2f, 10.0f, 1.3f, 0.8f, 60.0f, 0.08f, 0.0f);        break;
+    case I_DONK:     v_fm(c, &n, 2.0f, 4.5f, 28.0f, 0.7f, 6.0f, 70.0f, 0.08f, 0.0f);        break;
     case I_FMSEQ:    v_fm(c, &n, 1.414f, 3.0f, 12.0f, 0.0f, 8.0f, 40.0f, 0.1f, 0.0f);       break;
     case I_REESE:    v_reese(c, &n);                                                        break;
     case I_MOOG:     v_mono(c, &n, &kMoog);                                                 break;
