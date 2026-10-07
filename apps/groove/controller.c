@@ -114,6 +114,7 @@ void app_load_demo(void) {
 groove_t *app_init(void) {
   groove_t *app = calloc(1, sizeof(*app));
   if (!app) { fprintf(stderr, "[gr] app_init: allocation failed\n"); fflush(stderr); return NULL; }
+  if (!block_pictograms_load(app)) { free(app); return NULL; }
   song_init(&app->song);
   app->selected_clip = -1;
   app->drag.track = -1;
@@ -136,6 +137,7 @@ void app_shutdown(groove_t *app) {
   if (app->audio_dev) axAudioClose(app->audio_dev);
   axAudioShutdown();
   waveform_cache_free(app);
+  if (app->pictograms) R_DeleteTexture(app->pictograms);
   blocks_free();
   if (g_app == app) g_app = NULL;
   free(app);
