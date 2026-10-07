@@ -157,6 +157,7 @@ typedef struct {
   int           auditioned; // block whose PCM the last audition loaded, or -1
   int           peak_credit;   // waveform overviews the cards may still render this timer tick
   bool          peaks_pending; // a card went without its overview; repaint next tick
+  uint32_t      pictograms;   // shared category atlas, in category_t order
   waveform_cache_t waveforms[GR_MAX_BLOCKS];
 } groove_t;
 
@@ -225,6 +226,7 @@ extern result_t win_block_card(window_t *win, uint32_t msg, uint32_t wparam, voi
 extern result_t win_transport(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 void transport_refresh(void);
 ipoint16_t clip_cell_size(window_t *sheet, const block_t *b);
+bool block_pictograms_load(groove_t *app);
 // Shared logical-pixel alpha masks; audio revision and geometry determine reuse.
 uint32_t waveform_texture(groove_t *app, int block, ipoint16_t size, int radius);
 void waveform_cache_free(groove_t *app);

@@ -1,6 +1,41 @@
 #include "groove.h"
 
 #define CARD_SLOP 5
+#define PICTOGRAM_COLS 6
+#define PICTOGRAM_ROWS 3
+#define PICTOGRAM_CELL 128
+
+bool block_pictograms_load(groove_t *app) {
+  if (!g_ui_runtime.running || app->pictograms) return true;
+  char path[1024];
+  int n = snprintf(path, sizeof(path), "%s/../share/groove/icons/class-pictograms.png", ui_get_exe_dir());
+  if (n < 0 || (size_t)n >= sizeof(path)) {
+    fprintf(stderr, "[gr] pictogram path too long length=%d capacity=%zu\n", n, sizeof(path));
+    fflush(stderr);
+    return false;
+  }
+  int w = 0, h = 0;
+  uint8_t *pixels = load_image(path, &w, &h);
+  if (!pixels) {
+    fprintf(stderr, "[gr] pictogram atlas load failed path=%s\n", path);
+    fflush(stderr);
+    return false;
+  }
+  if (w != PICTOGRAM_COLS * PICTOGRAM_CELL || h != PICTOGRAM_ROWS * PICTOGRAM_CELL || CAT_COUNT != PICTOGRAM_COLS * PICTOGRAM_ROWS) {
+    fprintf(stderr, "[gr] pictogram atlas rejected path=%s size=%dx%d categories=%d\n", path, w, h, CAT_COUNT);
+    fflush(stderr);
+    image_free(pixels);
+    return false;
+  }
+  app->pictograms = R_CreateTextureSRGBA8(w, h, pixels, R_FILTER_LINEAR, R_WRAP_CLAMP);
+  image_free(pixels);
+  if (!app->pictograms) {
+    fprintf(stderr, "[gr] pictogram texture allocation failed size=%dx%d\n", w, h);
+    fflush(stderr);
+    return false;
+  }
+  return true;
+}
 
 typedef struct {
   int block;
@@ -22,6 +57,7 @@ static bool card_on_screen(const window_t *win) {
 
 static void paint_block_card(int block, const block_t *b, irect16_t r, int visible_width, uint32_t color, ctrl_state_t state) {
   draw_plastic_card(r, state, color); // its shadow margin is the only gap between neighbouring cards
+  int icon_size = r.h * 3 / 4;
   r = rect_inset(r, MIN(2, get_theme()->plastic_shadow_size) + get_theme()->card_ring_width);
   int radius = MAX(0, get_theme()->card_corner_radius - get_theme()->card_ring_width);
   irect16_t wave = r;
@@ -30,7 +66,17 @@ static void paint_block_card(int block, const block_t *b, irect16_t r, int visib
     uint32_t texture = waveform_texture(g_app, block, (ipoint16_t){wave.w, wave.h}, radius);
     if (texture) draw_sprite_region(texture, wave, NULL, ink, 0);
   }
-  int text_width = MAX(0, MIN(r.w - 8, visible_width - 2 * (r.x + 4)));
+  icon_size = MIN(icon_size, MIN(r.w - 8, r.h));
+  if (icon_size > 0) {
+    irect16_t icon = rect_center(rect_split_left(r, icon_size + 8), icon_size, icon_size);
+    int col = b->cat % PICTOGRAM_COLS, row = b->cat / PICTOGRAM_COLS;
+    if (g_app->pictograms) draw_sprite_region(g_app->pictograms, icon,
+      UV_RECT((float)col / PICTOGRAM_COLS, (float)row / PICTOGRAM_ROWS,
+              (float)(col + 1) / PICTOGRAM_COLS, (float)(row + 1) / PICTOGRAM_ROWS),
+      color_with_alpha(0xFFFFFFFFu, color >> 24), 0);
+    r = rect_trim_left(r, icon_size + 8);
+  }
+  int text_width = MAX(0, MIN(r.w - 8, visible_width - r.x - 8));
   draw_text_ellipsized(FONT_SMALL, b->name, r.x + 4, r.y + 3, text_width, color_with_alpha(get_sys_color(brTextOnColor), color >> 24));
 }
 
