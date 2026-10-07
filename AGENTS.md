@@ -207,6 +207,23 @@ All app icons live in `apps/<name>/share/icons/` as 24×24 SVG files. When drawi
 - **6-unit grid for repeating elements.** Rows, grid cells, and tick marks land at multiples of 6: y=6, 12, 18. This keeps repeated elements evenly spaced and optically balanced.
 - **No SVG cruft.** Custom icon files contain only `<svg>` and `<path>` elements — no `<defs>`, `<use>`, `id=`, `class=`, `style=`, comments, or namespace boilerplate beyond `xmlns=`.
 
+# Sample reference
+
+Groove sound, role, and timbre decisions are judged against two local WAV
+libraries. They are listed in `.gitignore`. Leave them untracked.
+
+| Library | Path | Catalogue |
+|---|---|---|
+| Dance eJay | `apps/groove/ejay-samples/` | `index.tsv`: product, group, name, variation, bpm, samples, seconds, source, path |
+| MTV Music Generator | `apps/groove/mtv-samples/` | `index.tsv`: genre, group, name, sample, instrument, kit, samples, seconds, path |
+
+Read the catalogue, then the clip. Dance eJay folders are musical families. MTV
+folders are the instrument pool; the genre of a riff is the `genre` column.
+The eJay container format is `apps/groove/docs/dance-ejay-pxd.md`.
+
+Keep the commercial audio and the original titles out of the app. Groove
+synthesizes or records its own material in the same roles.
+
 # Repository layout
 
 ```

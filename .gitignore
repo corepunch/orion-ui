@@ -76,3 +76,7 @@ plans/
 third_party/
 fonts/
 !share/fonts/
+
+# Local reference WAVs. See AGENTS.md "Sample reference".
+/apps/groove/ejay-samples/
+/apps/groove/mtv-samples/
