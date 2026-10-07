@@ -1,7 +1,7 @@
-// Overview page: every repository and worktree as a Card in a TileGrid.
+// Overview page: one Card per repository in the workspace.
 //
-// The page is built from framework controls only. Each card is a Card (vertical stack) holding a title
-// row, a branch line, the last commit subject and a FlowView of Badges; the TileGrid columns, wraps and
+// Each card is a Card (vertical stack) holding a title row, the main checkout's branch, the last commit
+// subject and a FlowView of Badges (uncommitted files, worktree count). The TileGrid columns, wraps and
 // scrolls them, and owns selection and keyboard navigation.
 
 #include "gitclient.h"
@@ -11,24 +11,29 @@
 
 // ── verdict ────────────────────────────────────────────────────────────────────
 
+static bool tile_dirty(const git_summary_t *t) {
+  return t->staged || t->unstaged || t->untracked || t->dirty_worktrees;
+}
+
 static sys_color_idx_t tile_role(const git_summary_t *t) {
   if (t->missing)                                          return brTextSecondary;
   if (t->conflicts)                                        return brTextError;
-  if (t->staged || t->unstaged || t->untracked)            return brTextWarning;
-  if (t->ahead || t->behind || t->no_upstream || t->gone)  return brTextInfo;
+  if (tile_dirty(t))                                       return brTextWarning;
+  if (t->ahead || t->behind || t->no_upstream || t->gone || t->other_attention) return brTextInfo;
   return brTextSuccess;
 }
 
 static const char *tile_state(const git_summary_t *t) {
   if (t->missing)                                          return "Unavailable";
   if (t->conflicts)                                        return "Conflicts";
-  if (t->staged && !t->unstaged && !t->untracked)          return "Ready to commit";
-  if (t->staged || t->unstaged || t->untracked)            return "Uncommitted";
+  if (t->staged && !t->unstaged && !t->untracked && t->dirty_worktrees <= 1) return "Ready to commit";
+  if (tile_dirty(t))                                       return "Uncommitted";
   if (t->ahead && t->behind)                               return "Diverged";
   if (t->ahead)                                            return "Unpushed";
   if (t->behind)                                           return "Behind";
   if (t->no_upstream && !t->initial)                       return "Unpublished";
   if (t->gone)                                             return "Upstream gone";
+  if (t->other_attention)                                  return "Needs attention";
   return "Up to date";
 }
 
@@ -64,7 +69,10 @@ static void make_badgef(window_t *parent, sys_color_idx_t role, const char *fmt,
 }
 
 static void build_card(window_t *grid, const git_summary_t *t) {
-  char tip[700]; snprintf(tip, sizeof(tip), "%s\n%s%s%s\nDouble-click to open", t->path, t->branch, t->upstream[0] ? " -> " : "", t->upstream);
+  char tip[700];
+  snprintf(tip, sizeof(tip), "%s\n%s%s%s\n%d worktree%s\nDouble-click to open",
+           t->path, t->branch, t->upstream[0] ? " -> " : "", t->upstream,
+           t->worktrees, t->worktrees == 1 ? "" : "s");
   window_t *card = make_view(grid, win_card, 0, 0, tip);
   if (!card) return;
   sys_color_idx_t verdict = tile_role(t);
@@ -94,6 +102,10 @@ static void build_card(window_t *grid, const git_summary_t *t) {
   if (t->behind)    make_badgef(badges, brTextInfo,    "%d to pull",  t->behind);
   if (t->no_upstream && !t->initial) make_badge(badges, "no upstream", brTextInfo);
   if (t->stashes)   make_badgef(badges, brTextSecondary, "%d stashed", t->stashes);
+  if (t->worktrees > 0) make_badgef(badges, brTextSecondary, t->worktrees == 1 ? "%d worktree" : "%d worktrees", t->worktrees);
+  if (t->dirty_worktrees > 1) make_badgef(badges, brTextWarning, "%d dirty", t->dirty_worktrees);
+  else if (t->dirty_worktrees == 1 && !t->staged && !t->unstaged && !t->untracked && !t->conflicts)
+    make_badge(badges, "uncommitted", brTextWarning);
   if (!badges->children) make_badge(badges, "clean", brTextSuccess);
 }
 
@@ -101,13 +113,13 @@ static void rebuild_summary(void) {
   gc_state_t *gc = g_gc;
   if (!gc->summary_win) return;
   while (gc->summary_win->children) destroy_window(gc->summary_win->children);
-  int repos = 0, dirty = 0, push = 0, pull = 0, conf = 0; const char *last = NULL;
+  int repos = 0, trees = 0, dirty = 0, push = 0, pull = 0, conf = 0;
   for (int i = 0; i < gc->tile_count; i++) {
     const git_summary_t *t = &gc->tiles[i];
-    if (!last || strcmp(last, t->repo)) { repos++; last = t->repo; }
-    dirty += (t->staged || t->unstaged || t->untracked) ? 1 : 0; push += t->ahead ? 1 : 0; pull += t->behind ? 1 : 0; conf += t->conflicts ? 1 : 0;
+    repos++; trees += t->worktrees;
+    dirty += tile_dirty(t) ? 1 : 0; push += t->ahead ? 1 : 0; pull += t->behind ? 1 : 0; conf += t->conflicts ? 1 : 0;
   }
-  char text[64]; snprintf(text, sizeof(text), "%d repositories, %d worktrees", repos, gc->tile_count);
+  char text[80]; snprintf(text, sizeof(text), "%d repositories, %d worktrees", repos, trees);
   window_t *summary = gc->summary_win;
   make_label(summary, text, FONT_SYSTEM, brTextNormal, false);
   if (conf)  make_badgef(summary, brTextError,   "%d with conflicts", conf);
@@ -163,7 +175,7 @@ static int tile_cmp(const void *pa, const void *pb) {
 
 void gc_overview_refresh(void) {
   gc_state_t *gc = g_gc; if (!gc) return;
-  gc->tile_count = git_workspace_scan(gc->recent_repos, gc->recent_repo_count, gc->tiles, GC_MAX_TILES);
+  gc->tile_count = git_workspace_scan(gc->workspace, gc->workspace_count, gc->tiles, GC_MAX_TILES);
   qsort(gc->tiles, (size_t)gc->tile_count, sizeof(gc->tiles[0]), tile_cmp);
   rebuild_summary();
   rebuild_board();
@@ -172,13 +184,14 @@ void gc_overview_refresh(void) {
 }
 
 void gc_overview_status(char *out, size_t n) {
-  gc_state_t *gc = g_gc; int dirty = 0, push = 0, pull = 0, conf = 0;
+  gc_state_t *gc = g_gc; int trees = 0, dirty = 0, push = 0, pull = 0, conf = 0;
   for (int i = 0; i < gc->tile_count; i++) {
     const git_summary_t *t = &gc->tiles[i];
-    dirty += (t->staged || t->unstaged || t->untracked) ? 1 : 0; push += t->ahead ? 1 : 0; pull += t->behind ? 1 : 0; conf += t->conflicts ? 1 : 0;
+    trees += t->worktrees; dirty += tile_dirty(t) ? 1 : 0; push += t->ahead ? 1 : 0; pull += t->behind ? 1 : 0; conf += t->conflicts ? 1 : 0;
   }
   int sel = gc->board_win ? (int)send_message(gc->board_win, tgGetSelection, 0, NULL) : -1;
-  int len = snprintf(out, n, "%d worktrees | %d uncommitted | %d to push | %d to pull%s", gc->tile_count, dirty, push, pull, conf ? " | CONFLICTS" : "");
+  int len = snprintf(out, n, "%d repositories, %d worktrees | %d uncommitted | %d to push | %d to pull%s",
+                     gc->tile_count, trees, dirty, push, pull, conf ? " | CONFLICTS" : "");
   if (sel >= 0 && sel < gc->tile_count && len > 0 && (size_t)len < n)
     snprintf(out + len, n - (size_t)len, "   -   %s", gc->tiles[gc->visible_tiles[sel]].path);
 }
@@ -203,7 +216,7 @@ void gc_overview_fetch_all(void) {
     if (gc->tiles[i].linked || gc->tiles[i].missing) continue;
     snprintf(roots[n++], sizeof(roots[0]), "%s", gc->tiles[i].path);
   }
-  if (!n) { for (; n < gc->recent_repo_count; n++) snprintf(roots[n], sizeof(roots[0]), "%s", gc->recent_repos[n]); }
+  if (!n) { for (; n < gc->workspace_count && n < GC_MAX_RECENT_REPOS; n++) snprintf(roots[n], sizeof(roots[0]), "%s", gc->workspace[n]); }
   if (git_fetch_all_async(roots, n, gc->main_win)) {
     gc->fetching_all = true;
     char msg[96]; snprintf(msg, sizeof(msg), "Fetching %d repositories...", n);

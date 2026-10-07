@@ -112,7 +112,51 @@ void gc_handle_command_impl(uint16_t id) {
       ofn.nMaxFile    = sizeof(path);
       ofn.Flags       = OFN_PICKFOLDER;
       if (get_folder_name(&ofn))
-        gc_open_repo(path);
+        gc_add_repo(path);
+      break;
+    }
+    case ID_FILE_OPEN_WORKSPACE: {
+      char path[512] = {0};
+      openfilename_t ofn = {0};
+      ofn.lStructSize  = sizeof(ofn);
+      ofn.hwndOwner    = gc->main_win;
+      ofn.lpstrFile    = path;
+      ofn.nMaxFile     = sizeof(path);
+      ofn.lpstrFilter  = "Git Client Workspace\0*.gitworkspace\0All Files\0*.*\0";
+      ofn.nFilterIndex = 1;
+      ofn.Flags        = OFN_FILEMUSTEXIST;
+      if (get_open_filename(&ofn)) gc_workspace_open(path, true);
+      break;
+    }
+    case ID_FILE_SAVE_WORKSPACE: {
+      if (gc->workspace_file[0]) {
+        if (!gc_workspace_save(gc->workspace_file))
+          message_box(gc->main_win, "Could not save the workspace.", "Save Workspace", MB_OK);
+        break;
+      }
+      char path[512];
+      snprintf(path, sizeof(path), "workspace.gitworkspace");
+      openfilename_t ofn = {0};
+      ofn.lStructSize  = sizeof(ofn);
+      ofn.hwndOwner    = gc->main_win;
+      ofn.lpstrFile    = path;
+      ofn.nMaxFile     = sizeof(path);
+      ofn.lpstrFilter  = "Git Client Workspace\0*.gitworkspace\0All Files\0*.*\0";
+      ofn.nFilterIndex = 1;
+      ofn.Flags        = OFN_OVERWRITEPROMPT;
+      if (!get_save_filename(&ofn)) break;
+      const char *base = path;
+      for (const char *p = path; *p; p++) if (*p == '/' || *p == '\\') base = p + 1;
+      if (!strchr(base, '.')) {
+        size_t len = strlen(path);
+        if (len + strlen(".gitworkspace") >= sizeof(path)) {
+          message_box(gc->main_win, "Could not save the workspace.", "Save Workspace", MB_OK);
+          break;
+        }
+        memcpy(path + len, ".gitworkspace", strlen(".gitworkspace") + 1);
+      }
+      if (!gc_workspace_save(path))
+        message_box(gc->main_win, "Could not save the workspace.", "Save Workspace", MB_OK);
       break;
     }
     case ID_FILE_CLONE:

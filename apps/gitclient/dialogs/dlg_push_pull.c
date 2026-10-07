@@ -109,28 +109,50 @@ void gc_show_about_dialog(window_t *parent) {
     "About", MB_OK);
 }
 
+typedef struct {
+  char paths[GC_MAX_WORKTREES][512];
+  int  count;
+  char chosen[512];
+} wt_dlg_state_t;
+
+static result_t wt_dlg_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  wt_dlg_state_t *st = (wt_dlg_state_t *)win->userdata;
+  if (msg == evCreate) {
+    win->userdata = lparam; st = (wt_dlg_state_t *)lparam;
+    window_t *list = get_window_item(win, ID_WORKTREE_DIALOG_LIST);
+    const char *cur = (g_gc && g_gc->repo) ? git_repo_path(g_gc->repo) : NULL;
+    if (st && list) st->count = gc_fill_worktree_combo(list, cur, st->paths, GC_MAX_WORKTREES);
+    return true;
+  }
+  if (msg != evCommand || HIWORD(wparam) != btnClicked || !st) return false;
+  uint16_t id = LOWORD(wparam);
+  if (id == ID_WORKTREE_DIALOG_CANCEL) { end_dialog(win, 0); return true; }
+  if (id == ID_WORKTREE_DIALOG_OK) {
+    window_t *list = get_window_item(win, ID_WORKTREE_DIALOG_LIST);
+    int sel = list ? (int)send_message(list, cbGetCurrentSelection, 0, NULL) : -1;
+    if (sel >= 0 && sel < st->count && st->paths[sel][0]) {
+      strncpy(st->chosen, st->paths[sel], sizeof(st->chosen) - 1);
+      st->chosen[sizeof(st->chosen) - 1] = 0;
+      end_dialog(win, 1);
+    }
+    return true;
+  }
+  return false;
+}
+
 void gc_show_worktrees_dialog(window_t *parent) {
   gc_state_t *gc = g_gc;
   if (!gc || !gc->repo) {
     message_box(parent, "Open a repository first.", "Worktrees", MB_OK);
     return;
   }
-  git_worktree_t wts[GC_MAX_WORKTREES];
-  int n = git_worktree_list(git_repo_path(gc->repo), wts, GC_MAX_WORKTREES);
-  if (n <= 0) {
-    message_box(parent, "No worktrees found.", "Worktrees", MB_OK);
+  wt_dlg_state_t st = {0};
+  show_dialog_from_form(&gitclient_worktree_dialog_form, "Worktrees", parent, wt_dlg_proc, &st);
+  if (!st.chosen[0]) return;
+  char cur[512] = {0};
+  if (gc->repo && git_path_absolute(git_repo_path(gc->repo), cur, sizeof(cur)) && !strcmp(cur, st.chosen))
     return;
-  }
-  char buf[2048];
-  int off = snprintf(buf, sizeof(buf), "%d worktree%s (Overview tiles each one):\n\n",
-                     n, n == 1 ? "" : "s");
-  for (int i = 0; i < n && off < (int)sizeof(buf) - 80; i++) {
-    off += snprintf(buf + off, sizeof(buf) - (size_t)off, "%s%s%s\n",
-                    wts[i].path,
-                    wts[i].linked ? "  (linked)" : "  (main)",
-                    wts[i].prunable ? "  [prunable]" : "");
-  }
-  message_box(parent, buf, "Worktrees", MB_OK);
+  gc_open_repo(st.chosen);
 }
 
 void gc_show_reflog_dialog(window_t *parent) {

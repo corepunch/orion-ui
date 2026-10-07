@@ -509,7 +509,7 @@ void test_gc_identity_roundtrip(void) {
 // ── Entry point ───────────────────────────────────────────────────────────────
 
 void test_gc_workspace_scan_worktrees(void) {
-    TEST("git_workspace_scan: lists main + linked worktrees with per-tree state");
+    TEST("git_workspace_scan: one card per repo, with worktree and dirty counts");
 
     char wt[600];
     snprintf(wt, sizeof(wt), "%s_wt", s_repo);
@@ -528,28 +528,24 @@ void test_gc_workspace_scan_worktrees(void) {
     snprintf(roots[0], sizeof(roots[0]), "%s", s_repo);
     git_summary_t tiles[GC_MAX_TILES];
     int n = git_workspace_scan(roots, 1, tiles, GC_MAX_TILES);
-    ASSERT_EQUAL(n, 2);
+    ASSERT_EQUAL(n, 1);
 
     ASSERT_FALSE(tiles[0].linked);
     ASSERT_STR_EQUAL(tiles[0].branch, "scan-base");
     ASSERT_EQUAL(tiles[0].unstaged, 1);
     ASSERT_EQUAL(tiles[0].untracked, 0);
+    ASSERT_EQUAL(tiles[0].worktrees, 2);
+    ASSERT_EQUAL(tiles[0].dirty_worktrees, 2);
+    ASSERT_TRUE(tiles[0].other_attention >= 1);
     ASSERT_TRUE(tiles[0].no_upstream);
     ASSERT_TRUE(gc_tile_needs_attention(&tiles[0]));
 
-    ASSERT_TRUE(tiles[1].linked);
-    ASSERT_STR_EQUAL(tiles[1].branch, "scan-linked");
-    ASSERT_EQUAL(tiles[1].untracked, 1);
-    ASSERT_EQUAL(tiles[1].unstaged, 0);
-    ASSERT_STR_EQUAL(tiles[1].repo, tiles[0].repo);
-    ASSERT_TRUE(tiles[1].subject[0] != 0);
-
-    // Scanning through the linked worktree finds the same two trees, without duplicates.
-    snprintf(roots[0], sizeof(roots[0]), "%s", wt);
+    // The linked checkout is the same repository, so both roots collapse to one card.
     char both[2][512];
     snprintf(both[0], sizeof(both[0]), "%s", s_repo);
     snprintf(both[1], sizeof(both[1]), "%s", wt);
-    ASSERT_EQUAL(git_workspace_scan(both, 2, tiles, GC_MAX_TILES), 2);
+    ASSERT_EQUAL(git_workspace_scan(both, 2, tiles, GC_MAX_TILES), 1);
+    ASSERT_EQUAL(tiles[0].worktrees, 2);
 
     ASSERT_TRUE(gct_git(s_repo, "checkout -- file1.txt"));
     gct_remove_dir(wt);
@@ -723,7 +719,107 @@ void test_gc_workspace_scan_missing(void) {
     int n = git_workspace_scan(roots, 1, tiles, GC_MAX_TILES);
     ASSERT_EQUAL(n, 1);
     ASSERT_TRUE(tiles[0].missing);
+    ASSERT_EQUAL(tiles[0].worktrees, 0);
     ASSERT_TRUE(gc_tile_needs_attention(&tiles[0]));
+    PASS();
+}
+
+void test_gc_locate_and_workspace_file(void) {
+    TEST("git_locate and workspace file: main root, relative paths, roundtrip");
+    char abs_repo[512], checkout[512], main_root[512];
+    ASSERT_TRUE(git_path_absolute(s_repo, abs_repo, sizeof(abs_repo)));
+
+    char sub[600];
+    snprintf(sub, sizeof(sub), "%s/subdir", s_repo);
+#ifdef _WIN32
+    ASSERT_TRUE(_mkdir(sub) == 0);
+#else
+    ASSERT_TRUE(mkdir(sub, 0755) == 0);
+#endif
+    ASSERT_TRUE(git_locate(sub, checkout, sizeof(checkout), main_root, sizeof(main_root)));
+    ASSERT_STR_EQUAL(checkout, abs_repo);
+    ASSERT_STR_EQUAL(main_root, abs_repo);
+
+    char file[700];
+    snprintf(file, sizeof(file), "%s/file1.txt", s_repo);
+    ASSERT_TRUE(git_locate(file, checkout, sizeof(checkout), main_root, sizeof(main_root)));
+    ASSERT_STR_EQUAL(checkout, abs_repo);
+    ASSERT_STR_EQUAL(main_root, abs_repo);
+
+    char wt[600];
+    snprintf(wt, sizeof(wt), "%s_locwt", s_repo);
+    ASSERT_TRUE(gct_git(s_repo, "checkout -q -b loc-base"));
+    char cmd[900];
+    snprintf(cmd, sizeof(cmd), "worktree add -q -b loc-linked \"%s\"", wt);
+    ASSERT_TRUE(gct_git(s_repo, cmd));
+    char abs_wt[512];
+    ASSERT_TRUE(git_path_absolute(wt, abs_wt, sizeof(abs_wt)));
+    ASSERT_TRUE(git_locate(wt, checkout, sizeof(checkout), main_root, sizeof(main_root)));
+    ASSERT_STR_EQUAL(checkout, abs_wt);
+    ASSERT_STR_EQUAL(main_root, abs_repo);
+
+    char dir[256];
+    ASSERT_TRUE(gct_make_temp_dir(dir, sizeof(dir), "orion_gcws"));
+    char ws[400];
+    snprintf(ws, sizeof(ws), "%s/board.gitworkspace", dir);
+    char body[1600];
+    snprintf(body, sizeof(body), "\n# kept\n%s\n%s\nmissing-rel\n", GC_WORKSPACE_MAGIC, abs_repo);
+    ASSERT_TRUE(gct_write_file(ws, body));
+    ASSERT_TRUE(gc_workspace_file_is(ws));
+    ASSERT_FALSE(gc_workspace_file_is(dir));
+    ASSERT_FALSE(gc_workspace_file_is(file));
+
+    char roots[4][512];
+    int n = gc_workspace_read(ws, roots, 4);
+    ASSERT_EQUAL(n, 2);
+    ASSERT_STR_EQUAL(roots[0], abs_repo);
+    char joined[700];
+    snprintf(joined, sizeof(joined), "%s/missing-rel", dir);
+    ASSERT_STR_EQUAL(roots[1], joined);
+
+    char bad[400];
+    snprintf(bad, sizeof(bad), "%s/bad.txt", dir);
+    ASSERT_TRUE(gct_write_file(bad, "not a workspace\n/tmp\n"));
+    ASSERT_EQUAL(gc_workspace_read(bad, roots, 4), -1);
+    ASSERT_FALSE(gc_workspace_file_is(bad));
+
+    char empty[400];
+    snprintf(empty, sizeof(empty), "%s/empty.gitworkspace", dir);
+    ASSERT_TRUE(gct_write_file(empty, GC_WORKSPACE_MAGIC "\n"));
+    ASSERT_TRUE(gc_workspace_file_is(empty));
+    ASSERT_EQUAL(gc_workspace_read(empty, roots, 4), 0);
+
+    char stored[2][512];
+    snprintf(stored[0], sizeof(stored[0]), "%s", abs_repo);
+    snprintf(stored[1], sizeof(stored[1]), "%s", abs_wt);
+    char round[400];
+    snprintf(round, sizeof(round), "%s/round.gitworkspace", dir);
+    ASSERT_TRUE(gc_workspace_write(round, stored, 2));
+    n = gc_workspace_read(round, roots, 4);
+    ASSERT_EQUAL(n, 2);
+    ASSERT_STR_EQUAL(roots[0], abs_repo);
+    ASSERT_STR_EQUAL(roots[1], abs_wt);
+
+    bool saved_ephemeral = g_gc->ephemeral;
+    int saved_recent = g_gc->recent_repo_count;
+    g_gc->ephemeral = true;
+    g_gc->workspace_count = 0;
+    g_gc->workspace_dirty = false;
+    g_gc->workspace_file[0] = 0;
+    ASSERT_TRUE(gc_workspace_add(s_repo));
+    ASSERT_TRUE(gc_workspace_add(wt));
+    ASSERT_EQUAL(g_gc->workspace_count, 1);
+    ASSERT_STR_EQUAL(g_gc->workspace[0], abs_repo);
+    g_gc->workspace_count = 0;
+    g_gc->workspace_dirty = false;
+    g_gc->workspace_file[0] = 0;
+    g_gc->recent_repo_count = saved_recent;
+    g_gc->ephemeral = saved_ephemeral;
+
+    gct_remove_dir(wt);
+    ASSERT_TRUE(gct_git(s_repo, "worktree prune"));
+    ASSERT_TRUE(gct_git(s_repo, "checkout -q main") || gct_git(s_repo, "checkout -q master"));
+    gct_remove_dir(dir);
     PASS();
 }
 
@@ -771,6 +867,7 @@ int main(int argc, char *argv[]) {
     test_gc_default_branch_with_slash();
     test_gc_branches_skip_only_remote_head();
     test_gc_workspace_scan_missing();
+    test_gc_locate_and_workspace_file();
 
     teardown_test_repo();
 

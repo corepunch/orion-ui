@@ -7,6 +7,7 @@
 #include "pages/github/page_github.h"
 #include <orion/user/vga_font.h>
 #include <orion/commctl/menubar.h>
+#include <sys/stat.h>
 
 // ============================================================
 // Open / refresh
@@ -70,30 +71,132 @@ static const char *gc_repo_display_name(const git_repo_t *repo) {
   return separator && separator[1] ? separator + 1 : path;
 }
 
+static bool gc_path_is_dir(const char *path) {
+  struct stat st;
+  if (!path || stat(path, &st) != 0) return false;
+#ifdef S_ISDIR
+  return S_ISDIR(st.st_mode);
+#else
+  return (st.st_mode & _S_IFMT) == _S_IFDIR;
+#endif
+}
+
+void gc_update_title(void) {
+  gc_state_t *gc = g_gc;
+  if (!gc || !gc->main_win) return;
+  const char *name = "Git Client";
+  char file_name[256];
+  if (gc->workspace_file[0]) {
+    const char *base = gc->workspace_file;
+    for (const char *p = base; *p; p++) if (*p == '/' || *p == '\\') base = p + 1;
+    snprintf(file_name, sizeof(file_name), "%s", base);
+    name = file_name;
+  } else if (gc->workspace_count > 1) name = "Workspace";
+  else if (gc->repo) name = gc_repo_display_name(gc->repo);
+  char title[600];
+  snprintf(title, sizeof(title), "Git Client - %s%s", name, gc_workspace_unsaved() ? " *" : "");
+  strncpy(gc->main_win->title, title, sizeof(gc->main_win->title) - 1);
+  gc->main_win->title[sizeof(gc->main_win->title) - 1] = '\0';
+  invalidate_window(gc->main_win);
+}
+
+int gc_fill_worktree_combo(window_t *combo, const char *select_path, char (*paths)[512], int max) {
+  gc_state_t *gc = g_gc;
+  if (!combo || !gc || !paths || max <= 0) return 0;
+  gc->worktree_filling = true;
+  send_message(combo, cbClear, 0, NULL);
+  git_worktree_t wts[GC_MAX_WORKTREES];
+  int listed = gc->repo ? git_worktree_list(git_repo_path(gc->repo), wts, GC_MAX_WORKTREES) : 0;
+  char want[512];
+  bool have = select_path && git_path_absolute(select_path, want, sizeof(want));
+  char labels[GC_MAX_WORKTREES][64];
+  int shown = 0, sel = 0;
+  for (int i = 0; i < listed && shown < max && shown < GC_MAX_WORKTREES; i++) {
+    if (wts[i].bare) continue;
+    git_worktree_label(&wts[i], labels[shown], sizeof(labels[shown]));
+    for (int k = 2; k < 10; k++) {
+      bool clash = false;
+      for (int j = 0; j < shown; j++) if (!strcmp(labels[j], labels[shown])) clash = true;
+      if (!clash) break;
+      char next[64];
+      snprintf(next, sizeof(next), "%.54s #%d", labels[shown], k);
+      memcpy(labels[shown], next, sizeof(labels[shown]));
+    }
+    send_message(combo, cbAddString, 0, labels[shown]);
+    if (!git_path_absolute(wts[i].path, paths[shown], 512)) {
+      strncpy(paths[shown], wts[i].path, 511); paths[shown][511] = 0;
+    }
+    if (have && !strcmp(paths[shown], want)) sel = shown;
+    shown++;
+  }
+  if (!shown) send_message(combo, cbAddString, 0, (void *)(gc->repo ? "No worktrees" : "No repository"));
+  else send_message(combo, cbSetCurrentSelection, (uint32_t)sel, NULL);
+  invalidate_window(combo);
+  gc->worktree_filling = false;
+  return shown;
+}
+
+void gc_sync_worktree_bar(void) {
+  gc_state_t *gc = g_gc;
+  if (!gc || !gc->worktree_combo) return;
+  const char *cur = gc->repo ? git_repo_path(gc->repo) : NULL;
+  gc->worktree_count = gc_fill_worktree_combo(gc->worktree_combo, cur, gc->worktree_paths, GC_MAX_WORKTREES);
+}
+
 void gc_open_repo(const char *path) {
   gc_state_t *gc = g_gc;
-  if (!gc) return;
-
-  git_repo_t *next = git_repo_open(path);
+  if (!gc || !path || !path[0]) return;
+  char checkout[512], main_root[512];
+  if (!git_locate(path, checkout, sizeof(checkout), main_root, sizeof(main_root))) {
+    message_box(gc->main_win, "Not a valid git repository.", "Open Repository", MB_OK);
+    return;
+  }
+  if (gc->repo) {
+    char cur[512];
+    if (git_path_absolute(git_repo_path(gc->repo), cur, sizeof(cur)) && !strcmp(cur, checkout)) {
+      gc_sync_worktree_bar();
+      return;
+    }
+  }
+  git_repo_t *next = git_repo_open(checkout);
   if (!next) {
     message_box(gc->main_win, "Not a valid git repository.", "Open Repository", MB_OK);
     return;
   }
   git_repo_close(gc->repo);
   gc->repo = next;
-
-  strncpy(gc->repo_path, path, sizeof(gc->repo_path) - 1);
-  gc_recent_add(git_repo_path(gc->repo));
-
-  if (gc->main_win) {
-    char title[600];
-    snprintf(title, sizeof(title), "Git Client - %s", gc_repo_display_name(gc->repo));
-    strncpy(gc->main_win->title, title, sizeof(gc->main_win->title) - 1);
-    gc->main_win->title[sizeof(gc->main_win->title) - 1] = '\0';
-    invalidate_window(gc->main_win);
-  }
-
+  strncpy(gc->repo_path, checkout, sizeof(gc->repo_path) - 1);
+  gc->repo_path[sizeof(gc->repo_path) - 1] = 0;
+  gc_workspace_add(checkout);
+  gc_sync_worktree_bar();
+  gc_update_title();
   gc_refresh_all();
+}
+
+void gc_add_repo(const char *path) {
+  gc_state_t *gc = g_gc;
+  if (!gc) return;
+  int before = gc->workspace_count;
+  gc_open_repo(path);
+  if (gc->repo && gc->workspace_count > before && gc->workspace_count > 1)
+    gc_set_view_mode(GC_TAB_OVERVIEW);
+}
+
+bool gc_handle_open_file(const char *path) {
+  gc_state_t *gc = g_gc;
+  if (!gc || !path || !path[0]) return false;
+  if (gc_workspace_file_is(path)) return gc_workspace_open(path, true);
+  if (!gc_path_is_dir(path)) {
+    if (gc->main_win) message_box(gc->main_win, "Drop a git folder, or a gitclient workspace file.", "Git Client", MB_OK);
+    return false;
+  }
+  char checkout[512], main_root[512];
+  if (!git_locate(path, checkout, sizeof(checkout), main_root, sizeof(main_root))) {
+    if (gc->main_win) message_box(gc->main_win, "That folder is not a git repository.", "Git Client", MB_OK);
+    return false;
+  }
+  gc_add_repo(checkout);
+  return gc->repo != NULL;
 }
 
 void gc_refresh_all(void) {
@@ -159,6 +262,11 @@ void gc_update_status(void) {
              st.upstream[0] ? "  " : "", st.upstream[0] ? st.upstream : "",
              kind ? "  (" : "", kind ? kind : "");
     if (kind) strncat(status, ")", sizeof(status) - strlen(status) - 1);
+    if (gc->worktree_count > 1) {
+      size_t len = strlen(status);
+      if (len < sizeof(status))
+        snprintf(status + len, sizeof(status) - len, "  |  %d worktrees", gc->worktree_count);
+    }
   }
   send_message(gc->main_win, evStatusBar, 0, (void *)status);
   if (gc->repo) {
@@ -201,6 +309,10 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
       gc->main_win = win;
 
       gc->tabs_win = get_window_item(win, ID_MAIN_WINDOW_VIEWS);
+      gc->worktree_combo = get_window_item(win, ID_MAIN_WINDOW_WORKTREE);
+      window_t *worktree_bar = get_window_item(win, ID_MAIN_WINDOW_WORKTREE_BAR);
+      if (worktree_bar)
+        for (window_t *c = worktree_bar->children; c; c = c->next) c->layout.v_align = LAYOUT_ALIGN_CENTER;
 
       window_t *overview_tab = get_window_item(win, ID_MAIN_WINDOW_OVERVIEW_TAB);
       window_t *changes_tab = get_window_item(win, ID_MAIN_WINDOW_CHANGES_TAB);
@@ -259,6 +371,14 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
 
       if (gc_overview_handle_command(wparam, lparam)) return true;
 
+      if (code == cbSelectionChange && gc->worktree_combo && (window_t *)lparam == gc->worktree_combo) {
+        if (gc->worktree_filling) return true;
+        int sel = (int)send_message(gc->worktree_combo, cbGetCurrentSelection, 0, NULL);
+        if (sel < 0 || sel >= gc->worktree_count) return true;
+        gc_open_repo(gc->worktree_paths[sel]);
+        return true;
+      }
+
       if (code == tcnSelChange && (window_t *)lparam == gc->tabs_win) {
         int tab = (int)send_message(gc->tabs_win, tcGetSelection, 0, NULL);
         gc_set_view_mode(tab);
@@ -284,7 +404,7 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
         } else if (res->op == GIT_OP_CLONE) {
           gc_state_t *gc_ = g_gc;
           if (gc_ && gc_->clone_path[0])
-            gc_open_repo(gc_->clone_path);
+            gc_add_repo(gc_->clone_path);
           gc_->clone_path[0] = '\0';
         } else {
           if (gc->fetching_all) { gc->fetching_all = false; }
@@ -297,7 +417,7 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
 
     case evOpenRepo:
       if (lparam)
-        gc_open_repo((const char *)lparam);
+        gc_add_repo((const char *)lparam);
       return true;
 
     default:

@@ -5,7 +5,9 @@
 # extra worktrees (a hotfix and a PR review). Every morning she needs to know what she
 # left uncommitted or unpushed yesterday, and what her teammates pushed overnight.
 #
-# usage: make_workspace.sh DIR      then: gitclient $(cat DIR/paths.txt)   (or --overview)
+# usage: make_workspace.sh DIR
+#        gitclient DIR/workspace.gitworkspace
+#        gitclient $(cat DIR/paths.txt)
 set -e
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE
 ROOT=${1:?usage: make_workspace.sh DIR}
@@ -72,4 +74,6 @@ new_repo docs-site; new_repo design-tokens
 cd work/design-tokens; commit "Tokens: add elevation scale" 70 tokens/elevation.txt; git push -q origin main; cd "$ROOT"
 
 for d in work/*/; do [ -d "${d}.git" ] && echo "$ROOT/${d%/}"; done > paths.txt
+{ echo "gitclient-workspace 1"; cat paths.txt; } > workspace.gitworkspace
 echo "workspace ready: $ROOT ($(wc -l < paths.txt | tr -d ' ') repositories)"
+echo "open with: gitclient $ROOT/workspace.gitworkspace"
