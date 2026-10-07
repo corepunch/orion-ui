@@ -39,7 +39,7 @@ There are six ways the engine produces a signal. Every voice combines a few of t
 | technique | what it is | used for |
 |---|---|---|
 | Sine with a moving pitch | `sin` of a phase that advances faster or slower over time | kicks, toms, sub bass, zaps, sirens |
-| Saw and pulse waves | bright waves with many harmonics; edges are rounded (PolyBLEP) so high notes do not alias | basses, leads, stabs, strings, hoover |
+| Triangle, pulse and saw | three channels on one note. The triangle is the body, the pulse the hollow mid, the saw the edge. Pulse and saw edges are rounded (PolyBLEP) so high notes do not alias | basses, leads, stabs, pads, strings, organ, hoover |
 | Filtered noise | random samples through a low-, band- or high-pass filter | snares, claps, shakers, risers, breath |
 | Additive | a handful of sine partials, each with its own decay | piano, organ, vibes |
 | FM | one sine bends the phase of another; a falling amount gives a bright attack and a dull tail | electric piano, bells, FM bass |
@@ -54,9 +54,9 @@ Two more pieces shape those signals:
 
 | hit | recipe |
 |---|---|
-| kick | a sine that drops from a few hundred Hz to about 50 Hz in 30 ms, an exponential decay, a noise click at the start, optional soft clipping |
-| snare | two short sine tones plus high-passed noise with its own decay |
-| hat, ride, crash | six square waves at unrelated pitches (the classic drum-machine cymbal source), mixed with noise, high-passed; the decay time separates closed, open and crash |
+| kick | a sine that drops from a few hundred Hz to about 50 Hz in 30 ms, an exponential decay, a short click, and a band-passed beater around 1.3 kHz so the hit has a mid body. Soft clipping is optional |
+| snare | two short sine tones, a band around 1 kHz, and a wider crack band centred per kit, each with its own decay |
+| hat, ride, crash | six band-limited pulses at unrelated pitches (the classic drum-machine cymbal source), mixed with a darker noise band, high-passed, then rolled off so the sizzle stays out of the top octave |
 | clap | band-passed noise in three quick bursts, then a tail |
 | rim, clave, conga | two decaying sines and a noise snap |
 | cowbell | two pulse waves through a band-pass |
@@ -65,7 +65,7 @@ A kit is a table of numbers for these voices (`kKits` in `synth.c`). The same pa
 
 | kit | character |
 |---|---|
-| `KIT_CLASSIC` | the original starter voices |
+| `KIT_CLASSIC` | the same hit models as the other kits, with a rounder kick |
 | `KIT_909` | punchy kick, snappy snare, bright hats |
 | `KIT_808` | long sub kick, tight snare |
 | `KIT_HARD` | overdriven kick, loud noisy snare |
