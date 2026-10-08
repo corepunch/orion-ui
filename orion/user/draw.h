@@ -44,6 +44,8 @@ void render_plastic_surface(irect16_t r, float radius, float bevel, float shadow
 // Drawn at (x, y) with the given height; returns the badge width so callers can chain badges.
 int  draw_badge(ui_font_t font, const char *text, int x, int y, int height, uint32_t color);
 int  measure_badge(ui_font_t font, const char *text);   // width draw_badge() will use
+// Explicit bounds and independent text/fill colours; round uses capsule or circular ends.
+void draw_badge_ex(ui_font_t font, const char *text, irect16_t r, uint32_t text_color, uint32_t background_color, bool round);
 #define BADGE_HEIGHT 18
 // Procedural rounded-box shadow; radius, blur (Gaussian sigma), and offset are logical pixels.
 void draw_rect_shadow(irect16_t r, float radius, float blur, ipoint16_t offset, uint32_t color);

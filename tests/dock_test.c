@@ -77,6 +77,35 @@ static void test_dock_ownership_and_layout(void) {
   PASS();
 }
 
+static void test_dock_form_resize(void) {
+  TEST("docked forms reflow their content across the full pane after resize and floating");
+  test_env_init();
+  window_t *host = dock_test_host();
+  form_ctrl_def_t child = { .class_name = "Space", .id = 51, .size = {800, 200},
+                            .flags = WINDOW_FLEXSPACE | WINDOW_VSCROLL };
+  form_def_t form = { .name = "Library", .width = 800, .height = 280,
+                     .flags = WINDOW_AUTO_LAYOUT | WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR,
+                     .children = &child, .child_count = 1 };
+  window_t *pane = create_window_from_form(&form, 0, 0, host, dock_test_proc, 0, NULL);
+  ASSERT_NOT_NULL(pane);
+  window_t *content = get_window_item(pane, 51);
+  ASSERT_NOT_NULL(content);
+  ASSERT_TRUE(dock_window(pane, DOCK_BOTTOM, DOCK_ALL_EDGES, DOCK_RESIZABLE, 280, 90));
+  for (int width = 1180; width >= 700; width -= 240) {
+    resize_window(host, width, 700);
+    irect16_t client = get_client_rect(pane);
+    ASSERT_EQUAL(pane->frame.w, get_client_rect(host).w);
+    ASSERT_EQUAL(content->frame.w, client.w);
+    ASSERT_EQUAL(content->frame.h, client.h);
+    ASSERT_EQUAL(content->frame.x, 0);
+  }
+  ASSERT_TRUE(dock_float(pane, R(20, 20, 500, 300)));
+  ASSERT_EQUAL(content->frame.w, get_client_rect(pane).w);
+  ASSERT_EQUAL(content->frame.h, get_client_rect(pane).h);
+  test_env_shutdown();
+  PASS();
+}
+
 static void test_dock_pointer_and_caption(void) {
   TEST("merged title toolbar routes buttons and nested scrolled content without dragging");
   test_env_init(); dock_clicks = 0;
@@ -261,6 +290,7 @@ static void test_dock_fixed_pane(void) {
 int main(void) {
   TEST_START("Workspace docking");
   test_dock_ownership_and_layout();
+  test_dock_form_resize();
   test_dock_pointer_and_caption();
   test_dock_drag_and_resize();
   test_dock_collapse_and_limits();

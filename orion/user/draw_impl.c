@@ -365,10 +365,18 @@ int measure_badge(ui_font_t font, const char *text) {
 
 int draw_badge(ui_font_t font, const char *text, int x, int y, int height, uint32_t color) {
   int w = measure_badge(font, text);
-  const theme_t *theme = get_theme();
-  fill_rounded_rect(color_with_alpha(color, (uint8_t)theme->badge_tint_alpha), R(x, y, w, height), MIN(theme->badge_corner_radius, height / 2));
-  draw_text(font, text, x + theme->badge_padding, y + (height - text_char_height(font)) / 2, color);
+  draw_badge_ex(font, text, R(x, y, w, height), color,
+                color_with_alpha(color, (uint8_t)get_theme()->badge_tint_alpha), false);
   return w;
+}
+
+void draw_badge_ex(ui_font_t font, const char *text, irect16_t r, uint32_t text_color, uint32_t background_color, bool round) {
+  if (r.w <= 0 || r.h <= 0) return;
+  const theme_t *theme = get_theme();
+  int radius = MIN(r.w, r.h) / 2;
+  if (!round) radius = MIN(theme->badge_corner_radius, radius);
+  fill_rounded_rect(background_color, r, radius);
+  draw_text_clipped(font, text, &r, text_color, TEXT_ALIGN_CENTER);
 }
 
 static void color_to_params(uint32_t color, ui_render_effect_params_t *params, int base) {

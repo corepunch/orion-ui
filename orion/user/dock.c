@@ -28,6 +28,7 @@ static void dock_place(window_t *win, irect16_t frame) {
   if (!memcmp(&win->frame, &frame, sizeof(frame))) return;
   win->frame = frame;
   send_message(win, evResize, 0, NULL);
+  window_layout_sync(win);
   invalidate_window(win);
 }
 

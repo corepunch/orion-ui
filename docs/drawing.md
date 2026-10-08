@@ -70,6 +70,10 @@ draw_card(r, CTRL_HOVER | CTRL_SELECTED | CTRL_FOCUSED, color_with_alpha(get_sys
 // Tinted label ("3 modified"); returns its width so badges can be chained.
 int w = draw_badge(FONT_SMALL, "3 modified", x, y, 18, get_sys_color(brTextWarning));
 
+// Independent foreground and background, with capsule/circular ends.
+draw_badge_ex(FONT_SMALLEST, "1", R(x, y, 16, 16), get_sys_color(brActiveTitlebarText),
+              color_with_alpha(get_sys_color(brModalOverlay), 0xB8), true);
+
 uint32_t soft = color_with_alpha(color, 0x40);   // same colour, different alpha
 ```
 

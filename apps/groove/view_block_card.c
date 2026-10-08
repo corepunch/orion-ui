@@ -5,6 +5,7 @@
 #define PICTOGRAM_ROWS 3
 #define PICTOGRAM_CELL 128
 #define CARD_LABEL_PADDING 4
+#define CARD_LABEL_BG 0xB8000000u
 
 bool block_pictograms_load(groove_t *app) {
   if (!g_ui_runtime.running || app->pictograms) return true;
@@ -81,21 +82,21 @@ static void paint_card_label(const block_t *b, irect16_t r, int icon_width, int 
   if (text_x + label_w > label_right) text_x = label_right - label_w;
   text_x = MAX(r.x + CARD_LABEL_PADDING, text_x);
   irect16_t label = R(text_x, r.y + CARD_LABEL_PADDING, label_w, text_h + 1);
-  fill_rounded_rect(color_with_alpha(0xFF000000u, 0xB8), label,
-                    MIN(get_theme()->card_corner_radius, label.h / 2));
-  draw_text_clipped(FONT_SMALLEST, fitted, &label, color_with_alpha(0xFFFFFFFFu, color >> 24), TEXT_ALIGN_CENTER);
+  draw_badge_ex(FONT_SMALLEST, fitted, label, color_with_alpha(0xFFFFFFFFu, color >> 24),
+                CARD_LABEL_BG, true);
 }
 
 static void paint_card_variant(const block_t *b, irect16_t r, int visible_width) {
   if (!b->variant) return;
   char text[8];
   snprintf(text, sizeof(text), "%u", b->variant);
-  int badge_w = measure_badge(FONT_SMALL, text);
-  int badge_h = MIN(badge_w, r.h - 2 * CARD_LABEL_PADDING);
-  int right = r.x + MIN(r.w, visible_width) - CARD_LABEL_PADDING;
-  int x = right - badge_w, y = r.y + r.h - CARD_LABEL_PADDING - badge_h;
-  if (badge_h <= 0 || x < r.x + CARD_LABEL_PADDING) return;
-  draw_badge(FONT_SMALL, text, x, y, badge_h, 0xFFFFFFFFu);
+  int size = MAX(text_char_height(FONT_SMALLEST) + 1, text_strwidth(FONT_SMALLEST, text) + 2 * CARD_LABEL_PADDING);
+  r.w = MIN(r.w, visible_width);
+  irect16_t area = rect_inset(r, CARD_LABEL_PADDING / 2);
+  if (size > area.w || size > area.h) return;
+  irect16_t badge = rect_split_right(rect_split_bottom(area, size), size);
+  draw_badge_ex(FONT_SMALLEST, text, badge, 0xFFFFFFFFu,
+                CARD_LABEL_BG, true);
 }
 
 static void paint_block_card(int block, const block_t *b, irect16_t r, int visible_width, uint32_t color, ctrl_state_t state) {

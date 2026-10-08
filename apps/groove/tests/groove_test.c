@@ -613,8 +613,8 @@ static void test_library_transport(void) {
   ASSERT_EQUAL(tb->style, TOOLBAR_STYLE_PLASTIC);
   for (int i = 0; i < tb->item_count; i++) ASSERT(tb->items[i].type != TOOLBAR_ITEM_LABEL, "the merged caption shows no title");
   ASSERT_EQUAL(toolbar_index(ID_REWIND), 0);
-  ASSERT(tb->strip.tex && tb->strip.cols == 6 && tb->strip.icon_w == 128 && tb->strip.icon_h == 128,
-         "the family toolbar uses the loaded pictogram atlas");
+  ASSERT(tb->strip.tex == g_app->pictograms && tb->strip.cols == 6 && tb->strip.icon_w == 128 && tb->strip.icon_h == 128,
+         "the family toolbar uses the shared pictogram atlas metadata in headless tests");
   ASSERT_TRUE(strcmp(tb->items[toolbar_index(ID_REWIND)].icon, "phosphor-rewind-fill") == 0);
   ASSERT_TRUE(tb->items[toolbar_index(ID_PLAY)].color != 0 && tb->items[toolbar_index(ID_PLAY)].color == tb->items[toolbar_index(ID_FORWARD)].color);
   ASSERT(toolbar_index(ID_PLAY) == toolbar_index(ID_REWIND) + 1 && toolbar_index(ID_FORWARD) == toolbar_index(ID_PLAY) + 1, "rewind, play, forward sit together");
