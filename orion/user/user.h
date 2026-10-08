@@ -473,11 +473,6 @@ typedef struct {
   int  drag_start_mouse;   // axis coord (window-local) when drag began
   int  drag_mouse;         // accumulated axis coord while dragging
   int  drag_start_pos;     // pos value when drag began
-  bool gesture_active;
-  float gesture_remainder; // Retain fractional points across native pan samples.
-  uint32_t fling_timer_id;   // momentum timer after a touch swipe; 0 = none
-  uint32_t fling_time;       // last momentum step, ms
-  float fling_pos, fling_velocity; // points and points/ms
   // Modern overlay-scrollbar state.  Ignored when scrollbar_overlay == false.
   bool     overlay_visible;  // thumb is currently revealed (fading in/visible)
   uint32_t hide_timer_id;    // axSetTimer handle for auto-hide delay; 0 = none

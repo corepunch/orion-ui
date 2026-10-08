@@ -488,18 +488,26 @@ bool scrollbar_can_scroll(window_t *win) {
   return win && (sb_available(win, &win->hscroll, WINDOW_HSCROLL) || sb_available(win, &win->vscroll, WINDOW_VSCROLL));
 }
 
-static bool sb_stop_fling(win_sb_t *sb) {
-  if (!sb->fling_timer_id) return false;
-  axCancelTimer(sb->fling_timer_id);
-  sb->fling_timer_id = 0;
-  sb->fling_velocity = 0;
-  return true;
+// One global momentum record: only one touch fling or pan gesture is live at a time.
+static struct {
+  uint32_t win_id, timer_id, time;
+  float pos[2], velocity[2];
+} g_fling;
+static struct { uint32_t win_id; bool active[2]; float remainder[2]; } g_pan;
+
+static void fling_cancel(void) {
+  if (g_fling.timer_id) axCancelTimer(g_fling.timer_id);
+  memset(&g_fling, 0, sizeof(g_fling));
+}
+
+bool scrollbar_is_flinging(const window_t *win) {
+  return win && g_fling.timer_id && g_fling.win_id == win->id;
 }
 
 bool scrollbar_stop_fling(window_t *win) {
-  if (!win) return false;
-  bool h = sb_stop_fling(&win->hscroll), v = sb_stop_fling(&win->vscroll);
-  return h || v;
+  if (!scrollbar_is_flinging(win)) return false;
+  fling_cancel();
+  return true;
 }
 
 void scrollbar_fling(window_t *win, float vx, float vy) {
@@ -508,41 +516,54 @@ void scrollbar_fling(window_t *win, float vx, float vy) {
     fflush(stderr);
     return;
   }
+  fling_cancel();
   win_sb_t *axes[] = {&win->hscroll, &win->vscroll};
   const uint32_t flags[] = {WINDOW_HSCROLL, WINDOW_VSCROLL};
   const float velocity[] = {vx, vy};
+  bool any = false;
   for (int axis = 0; axis < 2; axis++) {
-    win_sb_t *sb = axes[axis];
-    sb_stop_fling(sb);
-    if (!sb_available(win, sb, flags[axis]) || fabsf(velocity[axis]) < FLING_MIN_SPEED) continue;
-    sb->fling_velocity = velocity[axis];
-    sb->fling_pos = (float)sb->pos;
-    sb->fling_time = (uint32_t)axGetMilliseconds();
-    sb->fling_timer_id = axSetTimer(win, 16, NULL, true);
-    if (!sb->fling_timer_id) {
-      fprintf(stderr, "[sb] fling timer unavailable win=%u axis=%d\n", win->id, axis);
-      fflush(stderr);
-    }
+    if (!sb_available(win, axes[axis], flags[axis]) || fabsf(velocity[axis]) < FLING_MIN_SPEED) continue;
+    g_fling.velocity[axis] = velocity[axis];
+    g_fling.pos[axis] = (float)axes[axis]->pos;
+    any = true;
+  }
+  if (!any) return;
+  g_fling.win_id = win->id;
+  g_fling.time = (uint32_t)axGetMilliseconds();
+  g_fling.timer_id = axSetTimer(win, 16, NULL, true);
+  if (!g_fling.timer_id) {
+    fprintf(stderr, "[sb] fling timer unavailable win=%u\n", win->id);
+    fflush(stderr);
+    memset(&g_fling, 0, sizeof(g_fling));
   }
 }
 
-static void sb_fling_step(window_t *win, win_sb_t *sb, uint32_t flag, uint32_t scroll_msg) {
+static void sb_fling_step(window_t *win) {
   uint32_t now = (uint32_t)axGetMilliseconds();
-  float dt = (float)MIN(now - sb->fling_time, 50u);
-  sb->fling_time = now;
-  if (!sb_available(win, sb, flag)) { sb_stop_fling(sb); return; }
-  float lo = (float)sb->min_val, hi = (float)(sb->max_val - sb->page);
-  float pos = sb->fling_pos + sb->fling_velocity * dt;
-  sb->fling_pos = CLAMP(pos, lo, hi);
-  sb->fling_velocity *= powf(FLING_DECAY, dt);
-  sb_try_scroll(win, sb, scroll_msg, (int)lroundf(sb->fling_pos));
-  if (sb->fling_pos != pos || fabsf(sb->fling_velocity) < FLING_MIN_SPEED) sb_stop_fling(sb);
+  float dt = (float)MIN(now - g_fling.time, 50u);
+  g_fling.time = now;
+  win_sb_t *axes[] = {&win->hscroll, &win->vscroll};
+  const uint32_t flags[] = {WINDOW_HSCROLL, WINDOW_VSCROLL};
+  const uint32_t messages[] = {evHScroll, evVScroll};
+  bool live = false;
+  for (int axis = 0; axis < 2; axis++) {
+    win_sb_t *sb = axes[axis];
+    if (g_fling.velocity[axis] == 0) continue;
+    if (!sb_available(win, sb, flags[axis])) { g_fling.velocity[axis] = 0; continue; }
+    float lo = (float)sb->min_val, hi = (float)(sb->max_val - sb->page);
+    float pos = g_fling.pos[axis] + g_fling.velocity[axis] * dt;
+    g_fling.pos[axis] = CLAMP(pos, lo, hi);
+    g_fling.velocity[axis] *= powf(FLING_DECAY, dt);
+    sb_try_scroll(win, sb, messages[axis], (int)lroundf(g_fling.pos[axis]));
+    if (g_fling.pos[axis] != pos || fabsf(g_fling.velocity[axis]) < FLING_MIN_SPEED) g_fling.velocity[axis] = 0;
+    else live = true;
+  }
+  if (!live) fling_cancel();
 }
 
 void scrollbar_handle_builtin_timer(window_t *win, uint32_t timer_id) {
   if (!timer_id) return;
-  if (win->hscroll.fling_timer_id == timer_id) { sb_fling_step(win, &win->hscroll, WINDOW_HSCROLL, evHScroll); return; }
-  if (win->vscroll.fling_timer_id == timer_id) { sb_fling_step(win, &win->vscroll, WINDOW_VSCROLL, evVScroll); return; }
+  if (g_fling.timer_id == timer_id && g_fling.win_id == win->id) { sb_fling_step(win); return; }
   if ((win->flags & WINDOW_HSCROLL) && win->hscroll.hide_timer_id == timer_id) {
     sb_overlay_hide(win, &win->hscroll);
     return;
@@ -585,20 +606,19 @@ bool scrollbar_handle_builtin_gesture(window_t *win, const ax_gesture_t *gesture
     win_sb_t *sb = axes[axis];
     bool available = sb_available(win, sb, flags[axis]);
     if (gesture->phase == AX_GESTURE_BEGIN) {
-      sb_stop_fling(sb);
-      sb->gesture_active = available;
-      sb->gesture_remainder = 0;
+      if (axis == 0) { scrollbar_stop_fling(win); memset(&g_pan, 0, sizeof(g_pan)); g_pan.win_id = win->id; }
+      g_pan.active[axis] = available;
     }
-    if (!sb->gesture_active) continue;
+    if (g_pan.win_id != win->id || !g_pan.active[axis]) continue;
     handled = true;
     if (gesture->phase == AX_GESTURE_UPDATE && available) {
-      float pos = CLAMP(sb->pos + sb->gesture_remainder + deltas[axis], sb->min_val, sb->max_val - sb->page);
+      float pos = CLAMP(sb->pos + g_pan.remainder[axis] + deltas[axis], sb->min_val, sb->max_val - sb->page);
       int next = (int)lroundf(pos);
-      sb->gesture_remainder = pos - next;
+      g_pan.remainder[axis] = pos - next;
       sb_try_scroll(win, sb, messages[axis], next);
     } else if (gesture->phase == AX_GESTURE_END || gesture->phase == AX_GESTURE_CANCEL) {
-      sb->gesture_active = false;
-      sb->gesture_remainder = 0;
+      g_pan.active[axis] = false;
+      g_pan.remainder[axis] = 0;
     }
   }
   return handled;
