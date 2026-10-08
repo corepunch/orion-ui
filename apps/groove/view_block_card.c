@@ -57,8 +57,14 @@ static void card_screen(window_t *win, int mx, int my, int *sx, int *sy) {
 
 // Cards scrolled out of their parent do not ask for a waveform.
 static bool card_on_screen(const window_t *win) {
-  irect16_t view = get_client_rect(win->parent);
-  return win->frame.x < view.w && win->frame.x + win->frame.w > 0 && win->frame.y < view.h && win->frame.y + win->frame.h > 0;
+  const window_t *viewport = win->parent;
+  irect16_t frame = win->frame;
+  if (g_app && g_app->bin && win->parent && win->parent->parent == g_app->bin) {
+    frame = rect_offset(frame, win->parent->frame.x, win->parent->frame.y);
+    viewport = g_app->bin;
+  }
+  irect16_t view = get_client_rect((window_t *)viewport);
+  return frame.x < view.w && frame.x + frame.w > 0 && frame.y < view.h && frame.y + frame.h > 0;
 }
 
 static void paint_card_label(const block_t *b, irect16_t r, int icon_width, int visible_width, uint32_t color) {
@@ -128,7 +134,7 @@ result_t win_block_card(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
         fflush(stderr);
         return false;
       }
-      st->block = (int)(intptr_t)lparam;
+      st->block = (uintptr_t)lparam > 0x100000u ? -1 : (int)(intptr_t)lparam;
       return true;
     case evPaint: {
       const block_t *b = block_get(st->block);

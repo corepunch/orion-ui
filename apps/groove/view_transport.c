@@ -58,11 +58,13 @@ result_t win_transport(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
 #else
       send_message(win, tbSetButtonSize, TB_SPACING, NULL);
 #endif
-      set_items(win);
+      if (!toolbar_get_state(win)->item_count) set_items(win);
       transport_tint(win);
-      g_app->bin = create_window("Sounds", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL | WINDOW_NOACTIVATE,
-                                 MAKERECT(0, 0, 1, 1), win, win_bin, win->hinstance, NULL);
-      if (g_app->bin) dock_window(g_app->bin, DOCK_FILL, 0, DOCK_NOFLOAT, 0, 0);
+      if (!g_app->bin) {
+        g_app->bin = create_window("Sounds", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL | WINDOW_NOACTIVATE,
+                                   MAKERECT(0, 0, 1, 1), win, win_bin, win->hinstance, NULL);
+        if (g_app->bin) dock_window(g_app->bin, DOCK_FILL, 0, DOCK_NOFLOAT, 0, 0);
+      }
       transport_refresh();
       return true;
     }

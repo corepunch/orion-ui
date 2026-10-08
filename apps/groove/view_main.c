@@ -61,6 +61,19 @@ result_t main_win_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
     case evCreate: {
       app->win = win;
       create_menubar();
+      if (app->sheet) {
+        app->library = create_window_from_form(&groove_library_window_form, 0, 0, win,
+                                                win_transport, app->hinstance, NULL);
+        if (!app->library) {
+          fprintf(stderr, "[groove] library form creation failed parent=%u\n", (unsigned)win->id);
+          fflush(stderr);
+          return false;
+        }
+        dock_window(app->sheet, DOCK_FILL, 0, DOCK_NOFLOAT, 0, 100);
+        dock_window(app->library, DOCK_BOTTOM, DOCK_EDGE(DOCK_BOTTOM), DOCK_RESIZABLE | DOCK_NOFLOAT, 280, 100);
+        app->timer = axSetTimer(win, 33, NULL, true);
+        return true;
+      }
       app->sheet = create_window("Arrangement", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_HSCROLL,
                                   MAKERECT(0, 0, 1, 1), win, win_sheet, app->hinstance, NULL);
       app->tracks = create_window("Tracks", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOACTIVATE | WINDOW_NOTABSTOP | WINDOW_NODRAG,

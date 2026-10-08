@@ -5,6 +5,10 @@
     title="Groove"
     root="apps/groove">
 
+    <plugins>
+      <plugin name="groove_components" />
+    </plugins>
+
     <menus var="kMenus" count="kNumMenus">
       <menu name="file" label="File">
         <item name="new" label="New Song" shortcut="Ctrl+N" />
@@ -38,4 +42,58 @@
         <Button name="delete" command="edit.delete" icon="trash" text="Delete" tooltip="Remove selected block (Delete)" />
         <Button name="loop" command="transport.loop" icon="repeat" checked-icon="arrow-right-to-line" text="Loop" tooltip="Loop (L)" />
     </toolbar>
+
+    <databases>
+      <database name="library" class="groove_library_db">
+        <table name="blocks" model="library_block_t">
+          <field name="id" type="integer" key="YES" />
+          <field name="name" type="string" length="64" />
+          <field name="category" type="integer" />
+          <field name="genres" type="integer" />
+          <field name="bars" type="integer" />
+          <field name="variant" type="integer" />
+        </table>
+      </database>
+    </databases>
+
+    <forms>
+      <form name="main_window" title="Groove" width="1180" height="760"
+            flags="WINDOW_AUTO_LAYOUT" spacing="0" padding="0">
+        <GrooveArrangement name="arrangement" flags="WINDOW_FLEXSPACE" />
+      </form>
+
+      <form name="library_window" title="Library" width="800" height="280"
+            flags="WINDOW_AUTO_LAYOUT | WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE"
+            spacing="0" padding="0">
+        <Toolbar>
+          <Button name="rewind" command="transport.rewind" icon="phosphor-rewind-fill" tooltip="Rewind (Home)" />
+          <Button name="play" command="transport.play" icon="phosphor-play-fill" checked-icon="phosphor-pause-fill" tooltip="Play / pause (Space)" control-size="large" />
+          <Button name="forward" command="transport.forward" icon="phosphor-fast-forward-fill" tooltip="Go to end (End)" />
+          <spacer flags="TOOLBAR_ITEM_FLAG_FLEXSPACE" />
+          <Button name="family_drums" icon="strip:0" flags="TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP" tooltip="Drums" />
+          <Button name="family_kick" icon="strip:1" flags="TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP" tooltip="Kicks" />
+          <Button name="family_snare" icon="strip:2" flags="TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP" tooltip="Snares" />
+          <Button name="family_hat" icon="strip:3" flags="TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP" tooltip="Hats" />
+          <Button name="family_clap" icon="strip:4" flags="TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP" tooltip="Claps" />
+          <Button name="family_cymbal" icon="strip:5" flags="TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP" tooltip="Cymbals" />
+          <Button name="family_perc" icon="strip:6" flags="TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP" tooltip="Percussion" />
+          <Button name="family_fill" icon="strip:7" flags="TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP" tooltip="Fills" />
+          <Button name="family_bass" icon="strip:8" flags="TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP" tooltip="Bass" />
+          <Button name="family_keys" icon="strip:9" flags="TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP" tooltip="Keys" />
+          <Button name="family_organ" icon="strip:10" flags="TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP" tooltip="Organ" />
+          <Button name="family_guitar" icon="strip:11" flags="TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP" tooltip="Guitar" />
+          <Button name="family_synth" icon="strip:12" flags="TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP" tooltip="Synth" />
+          <Button name="family_pad" icon="strip:13" flags="TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP" tooltip="Pads" />
+          <Button name="family_stab" icon="strip:14" flags="TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP" tooltip="Stabs" />
+          <Button name="family_vox" icon="strip:15" flags="TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP" tooltip="Vocals" />
+          <Button name="family_scratch" icon="strip:16" flags="TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP" tooltip="Scratch" />
+          <Button name="family_fx" icon="strip:17" flags="TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP" tooltip="Effects" />
+        </Toolbar>
+        <GrooveBlockBin name="bin" source="library.blocks" flags="WINDOW_FLEXSPACE">
+          <FlowView name="blocks" spacing="4" padding="0" flags="WINDOW_FLEXSPACE">
+            <GrooveBlockCard name="item_template" width="128" height="44" />
+          </FlowView>
+        </GrooveBlockBin>
+      </form>
+    </forms>
 </orion>

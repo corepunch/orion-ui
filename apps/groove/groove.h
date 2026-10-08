@@ -150,6 +150,7 @@ typedef struct {
 
 typedef struct {
   window_t     *win, *chrome, *menubar_win, *toolbar, *sheet, *tracks, *library, *bin; // chrome: menu bar with the compact toolbar
+  database_t   *library_db;
   accel_table_t *accel;
   hinstance_t   hinstance;
   song_t        song;
@@ -190,7 +191,7 @@ enum {
 #define ID_DELETE    ID_EDIT_DELETE
 // Above every auto-assigned card id (1..GR_MAX_BLOCKS inside a bin), so
 // get_window_item() cannot find a card first.
-#define ID_FAMILY(cat) (ID_CONTROL_BASE + 4 + (cat)) // library toolbar: one button per category_t
+#define ID_FAMILY(cat) (ID_LIBRARY_WINDOW_FAMILY_DRUMS + (cat)) // contiguous family actions emitted from groove.orion
 #define ID_GENRE     (ID_CONTROL_BASE + 3)
 #define ID_MUTE(t)   (ID_CONTROL_BASE + 32 + (t))    // track header buttons
 #define ID_SOLO(t)   (ID_CONTROL_BASE + 48 + (t))
@@ -220,6 +221,7 @@ bool      app_drop(const drag_t *d);          // commits a drag (add or move)
 void      app_set_genre(uint8_t genre);        // 0 = every genre, else one GENRE_* flag
 void      app_set_category(int category);      // one category_t
 bool      block_visible(int id);               // passes the family and genre filters
+lresult_t groove_library_db(database_t *db, uint32_t msg, uint32_t wparam, void *lparam);
 // Blocks load lazily. Audio stays loaded for blocks in the song and the one
 // being auditioned; a card that only draws a waveform keeps the overview alone.
 bool      app_block_audio(int id);

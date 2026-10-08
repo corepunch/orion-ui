@@ -261,6 +261,7 @@ typedef struct form_ctrl_def_s {
   const void       *lparam;  // custom control creation parameter (e.g. tableview_params_t*)
   const struct menu_item_s *context_menu; // generated declarative menu; not owned
   int               context_menu_count;
+  const char       *source; // optional datasource reference, e.g. "library.blocks"
 } form_ctrl_def_t;
 
 // Describes a complete form (window + children) as a serializable definition
