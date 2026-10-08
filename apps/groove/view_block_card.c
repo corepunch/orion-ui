@@ -4,6 +4,7 @@
 #define PICTOGRAM_COLS 6
 #define PICTOGRAM_ROWS 3
 #define PICTOGRAM_CELL 128
+#define CARD_LABEL_PADDING 4
 
 bool block_pictograms_load(groove_t *app) {
   if (!g_ui_runtime.running || app->pictograms) return true;
@@ -55,6 +56,25 @@ static bool card_on_screen(const window_t *win) {
   return win->frame.x < view.w && win->frame.x + win->frame.w > 0 && win->frame.y < view.h && win->frame.y + win->frame.h > 0;
 }
 
+static void paint_card_label(const block_t *b, irect16_t r, int icon_width, int visible_width, uint32_t color) {
+  int text_h = text_char_height(FONT_SMALLEST);
+  int area_w = MAX(0, MIN(r.w, visible_width) - 2 * CARD_LABEL_PADDING);
+  int natural_w = text_strwidth(FONT_SMALLEST, b->name);
+  int max_text_w = MAX(0, area_w - 2 * CARD_LABEL_PADDING);
+  int text_w = MIN(natural_w, max_text_w);
+  int label_w = text_w + 2 * CARD_LABEL_PADDING;
+  int text_x = r.x + icon_width + CARD_LABEL_PADDING;
+
+  int label_right = r.x + MIN(r.w, visible_width) - CARD_LABEL_PADDING;
+  if (text_x + label_w > label_right) text_x = label_right - label_w;
+  text_x = MAX(r.x + CARD_LABEL_PADDING, text_x);
+  irect16_t label = R(text_x, r.y + CARD_LABEL_PADDING, label_w, text_h + CARD_LABEL_PADDING);
+  fill_rounded_rect(color_with_alpha(0xFF000000u, 0xB8), label,
+                    MIN(get_theme()->card_corner_radius, label.h / 2));
+  draw_text_ellipsized(FONT_SMALLEST, b->name, label.x + CARD_LABEL_PADDING, label.y,
+                       max_text_w, color_with_alpha(0xFFFFFFFFu, color >> 24));
+}
+
 static void paint_block_card(int block, const block_t *b, irect16_t r, int visible_width, uint32_t color, ctrl_state_t state) {
   draw_plastic_card(r, state, color); // its shadow margin is the only gap between neighbouring cards
   int icon_size = r.h * 3 / 4;
@@ -66,6 +86,7 @@ static void paint_block_card(int block, const block_t *b, irect16_t r, int visib
     uint32_t texture = waveform_texture(g_app, block, (ipoint16_t){wave.w, wave.h}, radius);
     if (texture) draw_sprite_region(texture, wave, NULL, ink, 0);
   }
+  int icon_width = 0;
   icon_size = MIN(icon_size, MIN(r.w - 8, r.h));
   if (icon_size > 0) {
     irect16_t icon = rect_center(rect_split_left(r, icon_size + 8), icon_size, icon_size);
@@ -74,10 +95,9 @@ static void paint_block_card(int block, const block_t *b, irect16_t r, int visib
       UV_RECT((float)col / PICTOGRAM_COLS, (float)row / PICTOGRAM_ROWS,
               (float)(col + 1) / PICTOGRAM_COLS, (float)(row + 1) / PICTOGRAM_ROWS),
       color_with_alpha(0xFFFFFFFFu, color >> 24), 0);
-    r = rect_trim_left(r, icon_size + 8);
+    icon_width = icon_size + 8;
   }
-  int text_width = MAX(0, MIN(r.w - 8, visible_width - r.x - 8));
-  draw_text_ellipsized(FONT_SMALL, b->name, r.x + 4, r.y + 3, text_width, color_with_alpha(get_sys_color(brTextOnColor), color >> 24));
+  paint_card_label(b, r, icon_width, visible_width, color);
 }
 
 result_t win_block_card(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
