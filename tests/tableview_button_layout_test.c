@@ -81,14 +81,14 @@ void test_tableview_button_layout(void) {
     
     // Print layout info for debugging
     printf("\n    Main client rect: y=%d h=%d\n", cr.y, cr.h);
-    printf("    Tableview: y=%d h=%d flags=0x%x (should expand)\n",
-           tableview->frame.y, tableview->frame.h, tableview->flags);
+    printf("    Tableview: y=%d h=%d flags=0x%llx (should expand)\n",
+           tableview->frame.y, tableview->frame.h, (unsigned long long)tableview->flags);
     printf("    Separator: y=%d h=%d\n", separator->frame.y, separator->frame.h);
-    printf("    Actions:   y=%d h=%d flags=0x%x (should be ~19-25px)\n",
-           actions->frame.y, actions->frame.h, actions->flags);
+    printf("    Actions:   y=%d h=%d flags=0x%llx (should be ~19-25px)\n",
+           actions->frame.y, actions->frame.h, (unsigned long long)actions->flags);
     printf("    Button1:   y=%d h=%d\n", btn1->frame.y, btn1->frame.h);
     printf("    Button2:   y=%d h=%d\n", btn2->frame.y, btn2->frame.h);
-    printf("    Space:     y=%d h=%d flags=0x%x\n", space->frame.y, space->frame.h, space->flags);
+    printf("    Space:     y=%d h=%d flags=0x%llx\n", space->frame.y, space->frame.h, (unsigned long long)space->flags);
     
     // Verify tableview takes significant vertical space (at least 70% of client height)
     ASSERT(tableview->frame.h >= cr.h * 0.7,
