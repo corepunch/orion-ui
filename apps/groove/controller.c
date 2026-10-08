@@ -139,6 +139,9 @@ void app_shutdown(groove_t *app) {
   axAudioShutdown();
   waveform_cache_free(app);
   if (app->pictograms) R_DeleteTexture(app->pictograms);
+  if (app->library_db) destroy_database(app->library_db);
+  app->library_db = NULL;
+  ui_set_database(NULL);
   blocks_free();
   if (g_app == app) g_app = NULL;
   free(app);
