@@ -38,7 +38,9 @@ Exact row-major subjects:
 4 Hats: two stacked cymbal discs.
 5 Claps: two hands about to clap.
 6 Cymbals: one broad crash cymbal.
-7 Perc: one compact conga.
+7 Perc: one classic conga with a clearly tapered warm-wood shell, a shallow
+   round drumhead on top, and a few metal side lugs. Keep the head rim narrow;
+   do not add a second disc, backing plate, or oversized dark ring behind it.
 8 Fills: three compact descending toms.
 9 Bass: compact red electric bass with broad body and short neck.
 10 Keys: compact piano keyboard.
@@ -46,7 +48,8 @@ Exact row-major subjects:
 12 Guitar: compact blue electric guitar with broad body and short neck.
 13 Synth: compact desktop synth with a few large controls and keys.
 14 Pads: compact warm wood violin and short diagonal bow.
-15 Stabs: forward-facing trumpet bell with only a few valve shapes.
+15 Stabs: forward-facing trumpet bell with three simple valve shapes above it.
+   Keep the bell unobstructed; omit the large loop of tubing behind the bell.
 16 Vocals: bold red open lips.
 17 Scratch: black vinyl record with a simple tonearm.
 18 FX: compact rising red-and-gold swoosh with one burst.
