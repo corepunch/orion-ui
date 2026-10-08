@@ -58,7 +58,7 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
     char icons_dir[512];
     int n = snprintf(icons_dir, sizeof(icons_dir), "%s/" SHAREDIR "/icons", ui_get_exe_dir());
     if (n > 0 && (size_t)n < sizeof(icons_dir))
-      svg_add_icons_dir(icons_dir);
+      svg_add_icons_dir(hinstance, icons_dir);
   }
 #endif
   register_commctl_classes();

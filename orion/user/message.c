@@ -254,8 +254,20 @@ static void paint_drag_visuals(window_t *win) {
   g_lift_pass = false;
 }
 
-// Send message to window (synchronous)
+static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+
+// Send message to window (synchronous). While the window handles it, icon lookups resolve in
+// its application instance's directories; instance-less windows inherit the sender's scope.
 intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  if (!win) return false;
+  hinstance_t scope = svg_icon_scope();
+  if (win->hinstance) svg_set_icon_scope(win->hinstance);
+  intptr_t result = send_message_impl(win, msg, wparam, lparam);
+  svg_set_icon_scope(scope);
+  return result;
+}
+
+static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   if (!win) return false;
   irect16_t const *frame = &win->frame;
   window_t *root = get_root_window(win);

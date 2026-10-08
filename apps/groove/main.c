@@ -9,7 +9,7 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   register_commctl_classes();
   char icons_path[1024];
   int n = snprintf(icons_path, sizeof(icons_path), "%s/../share/groove/icons", ui_get_exe_dir());
-  if (n > 0 && (size_t)n < sizeof(icons_path)) svg_add_icons_dir(icons_path);
+  if (n > 0 && (size_t)n < sizeof(icons_path)) svg_add_icons_dir(hinstance, icons_path);
   g_app = app_init();
   if (!g_app) return false;
   for (int i = 1; i < argc; i++) if (!strcmp(argv[i], "--demo")) app_load_demo();
