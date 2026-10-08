@@ -70,23 +70,38 @@ static void make_badgef(window_t *parent, sys_color_idx_t role, const char *fmt,
 
 static void build_card(window_t *grid, const git_summary_t *t) {
   char tip[700];
-  snprintf(tip, sizeof(tip), "%s\n%s%s%s\n%d worktree%s\nClick to open",
+  snprintf(tip, sizeof(tip), "%s\n%s%s%s\n%d worktree%s\nDouble-click to open",
            t->path, t->branch, t->upstream[0] ? " -> " : "", t->upstream,
            t->worktrees, t->worktrees == 1 ? "" : "s");
   window_t *card = make_view(grid, win_card, 0, 0, tip);
   if (!card) return;
+  int card_inset = get_theme()->card_ring_width + get_theme()->card_padding_y;
+  card->layout.layout_padding = (irect16_t){card_inset, card_inset, card_inset, card_inset};
   sys_color_idx_t verdict = tile_role(t);
   send_message(card, cdSetEdgeColor, 0, (void *)(uintptr_t)color_with_alpha(get_sys_color(verdict), EDGE_ALPHA));
 
-  window_t *title = make_view(card, win_stack, WINDOW_STACK_HORIZONTAL, 6, "");
-  make_label(title, t->repo, FONT_SYSTEM, brTextNormal, !t->linked);
+  window_t *header = create_window_from_form(&gitclient_overview_card_header_form, 0, 0, card, win_stack, g_gc->hinstance, NULL);
+  if (!header) return;
+  char name[256]; snprintf(name, sizeof(name), "%s", t->repo);
   if (t->linked) {
     const char *dir = t->dir; size_t n = strlen(t->repo);
     if (!strncmp(dir, t->repo, n) && (dir[n] == '-' || dir[n] == '_')) dir += n + 1;
-    char suffix[120]; snprintf(suffix, sizeof(suffix), "/ %s", dir);
-    make_label(title, suffix, FONT_SMALL, brTextSecondary, true);
+    snprintf(name, sizeof(name), "%s / %s", t->repo, dir);
   }
-  make_label(title, tile_state(t), FONT_SMALL, verdict, false);
+  window_t *title = get_window_item(header, ID_OVERVIEW_CARD_HEADER_TITLE);
+  window_t *status = get_window_item(header, ID_OVERVIEW_CARD_HEADER_STATUS);
+  window_t *close = get_window_item(header, ID_OVERVIEW_CARD_HEADER_CLOSE);
+  set_window_item_text(header, ID_OVERVIEW_CARD_HEADER_TITLE, "%s", name);
+  set_window_item_text(header, ID_OVERVIEW_CARD_HEADER_STATUS, "%s", tile_state(t));
+  label_create_params_t title_style = {.color_index = brTextNormal, .font = FONT_SYSTEM, .color_set = true, .truncate = true};
+  label_create_params_t status_style = {.color_index = verdict, .font = FONT_SMALL, .color_set = true, .truncate = true};
+  send_message(title, lbSetStyle, 0, &title_style);
+  send_message(status, lbSetStyle, 0, &status_style);
+  send_message(close, btnSetIconName, 0, "lucide-x");
+  send_message(close, btnSetTooltip, 0, "Close repository");
+  close->layout.layout_fixed_w = control_predefined_height(close->flags);
+  for (window_t *c = close->parent->children; c; c = c->next) c->layout.v_align = LAYOUT_ALIGN_CENTER;
+  close->layout.v_align = LAYOUT_ALIGN_START;
 
   if (t->missing) { make_label(card, "Folder missing or not a repository", FONT_SMALL, brTextSecondary, false); return; }
   char where[200]; snprintf(where, sizeof(where), "%s%s%s", t->branch, t->when[0] ? "  -  " : "", t->when);
@@ -228,6 +243,20 @@ void gc_overview_fetch_all(void) {
 bool gc_overview_handle_command(uint32_t wparam, void *lparam) {
   gc_state_t *gc = g_gc; uint16_t code = HIWORD(wparam);
   if (!gc || !lparam) return false;
+  if (code == btnClicked && LOWORD(wparam) == ID_OVERVIEW_CARD_HEADER_CLOSE) {
+    window_t *card = lparam;
+    while (card && card->parent != gc->board_win) card = card->parent;
+    if (!card || !gc->board_win) return false;
+    int index = 0;
+    for (window_t *c = gc->board_win->children; c && c != card; c = c->next) index++;
+    if (index >= gc->tile_count) return true;
+    char path[512]; snprintf(path, sizeof(path), "%s", gc->tiles[gc->visible_tiles[index]].path);
+    if (gc_workspace_remove(path)) {
+      send_message(gc->board_win, tgClear, 0, NULL);
+      gc_overview_refresh();
+    }
+    return true;
+  }
   if ((code == tgnSelChange || code == tgnActivate) && (window_t *)lparam == gc->board_win) {
     int index = (int)LOWORD(wparam);
     if (index < 0 || index >= gc->tile_count) return true;

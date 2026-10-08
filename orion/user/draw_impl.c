@@ -324,7 +324,12 @@ void theme_default_draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_colo
     fill_rounded_rect(ring_color, r, radius + ring);
   }
   r = rect_inset(r, ring);
-  uint32_t face = get_sys_color((state & CTRL_HOVER) ? brButtonHover : brControlBg);
+  uint32_t face = get_sys_color(brControlBg);
+  if (state & CTRL_HOVER) {
+    uint32_t hover = get_sys_color(brButtonHover);
+    // Average the packed channels without carries between them.
+    face = ((face & 0xfefefefeu) >> 1) + ((hover & 0xfefefefeu) >> 1) + (face & hover & 0x01010101u);
+  }
   if (!(edge_color >> 24)) edge = 0;
   if (radius <= 0) {
     fill_rect(face, r);

@@ -167,15 +167,16 @@ Composite tiles are built from controls and laid out by the auto-layout system, 
 
 - **Card**: a vertical stack with a themed face (`draw_card`), hover, an optional accent edge
   (`cdSetEdgeColor`) and selection state. Children can be Labels, Badges, nested StackViews or FlowViews.
-  Clicks are reported to the parent as `cdnClicked` / `cdnActivated`.
+  Clicks on the face, labels, badges and nested layouts are reported to the parent as `cdnClicked` / `cdnActivated`.
+  Interactive children, such as buttons, receive their own input.
 - **Badge**: a self-measuring tinted label; `bdSetColor` takes a theme colour role.
 - **Label** gains single-line truncation: `lbSetStyle` with `label_create_params_t.truncate` cuts with "..." instead
   of wrapping. Give a truncating label `WINDOW_FLEXSPACE` in a horizontal stack so it takes the leftover width.
 - **TileGrid**: an adaptive grid. It fits as many columns as the minimum tile width allows (`tgSetMinTileWidth`),
   stretches the tiles to fill the row, measures each tile at that width, and makes a row as tall as its tallest tile.
   It scrolls vertically, owns selection and arrow-key navigation, and notifies its root with `tgnSelChange`
-  (selection moved) and `tgnActivate` (click, Enter, or double-click; `LOWORD` = tile index). A click activates
-  even when that tile is already selected. `tgClear` destroys the tiles; add new ones with `create_window(..., grid, win_card, ...)`.
+  (selection moved) and `tgnActivate` (Enter or double-click; `LOWORD` = tile index). A single click selects
+  the tile and focuses the grid. `tgClear` destroys the tiles; add new ones with `create_window(..., grid, win_card, ...)`.
 
 ```c
 window_t *card = create_window(tooltip, 0, &f, grid, win_card, hinst, NULL);

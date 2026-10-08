@@ -522,7 +522,7 @@ enum {
   tgSetSelection,            // wparam = tile index; does not notify
   tgClear,                   // destroys every tile and clears the selection
   tgnSelChange,              // tile grid -> root (evCommand): LOWORD = tile index, lparam = grid
-  tgnActivate,               // tile grid -> root (evCommand): click, Enter, or double-click on a tile
+  tgnActivate,               // tile grid -> root (evCommand): Enter or double-click on a tile
 };
 // Segmented control messages (NSSegmentedControl / auto-radio group analogue).
 // Segment labels are separated by '|' in the window title or sgSetSegments.

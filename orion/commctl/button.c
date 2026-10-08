@@ -115,7 +115,8 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
       if (plastic && x && x->icon[0]) return true;   // the plastic face engraves the glyph itself
       if (x && x->icon[0]) {
         sysicon_resolved_t glyph;
-        if (sysicon_resolve(x->icon, &glyph)) {
+        int size = MIN(SYSICON_SIZE, MIN(local.w, local.h) - 4);
+        if (size > 0 && sysicon_resolve_size(x->icon, size, &glyph)) {
           irect16_t at = rect_center(local, glyph.w, glyph.h);
           draw_sprite_region((int)glyph.tex, at, UV_RECT(glyph.u0, glyph.v0, glyph.u1, glyph.v1),
                              theme_foreground(THEME_PART_BUTTON, state), 0);

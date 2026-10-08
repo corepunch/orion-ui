@@ -241,6 +241,13 @@
             <StackView name="summary" orientation="horizontal" spacing="6" padding="14 10 14 2" />
             <TileGrid name="board" flags="notitle,nofill,vscroll,flexspace" spacing="6" padding="10 6 10 10" />
         </form>
+        <form name="overview_card_header" width="232" height="16" auto_layout="1" flags="notitle,nofill" spacing="0" padding="0">
+            <StackView name="row" orientation="horizontal" spacing="6">
+                <Label name="title" text="" font="system" flags="flexspace" />
+                <Label name="status" text="" font="small" />
+                <Button name="close" text="" width="16" control-size="small" />
+            </StackView>
+        </form>
         <form name="changes_page" width="960" height="600" role="page" auto_layout="1" flags="nofill,flexspace">
             <requires library="gitclient_components" />
             <SplitView name="changes_split" split-ratio="0.30" flags="flexspace">

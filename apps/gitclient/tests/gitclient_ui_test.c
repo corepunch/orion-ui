@@ -672,6 +672,62 @@ void test_reload_history_log_invalidates_diff_and_reports_failure(void) {
     git_repo_close(repo); destroy_database(db); test_env_shutdown(); PASS();
 }
 
+static result_t overview_test_host(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  (void)win;
+  if (msg == evCommand) return gc_overview_handle_command(wparam, lparam);
+  return msg == evCreate || msg == evDestroy;
+}
+
+void test_overview_close_filtered_cards(void) {
+  TEST("overview: close targets the filtered card, removes missing repositories and handles an empty board");
+  test_env_init();
+  gc_state_t saved = g_test_state;
+  memset(&g_test_state, 0, sizeof(g_test_state));
+  window_t *host = test_env_create_window("overview", 0, 0, 640, 480, overview_test_host, NULL);
+  g_test_state.main_win = host;
+  g_test_state.tab = GC_TAB_OVERVIEW;
+  g_test_state.overview_page_win = create_window_from_form(&gitclient_overview_page_form, 0, 0, host, gc_page_overview_proc, 0, NULL);
+  snprintf(g_test_state.workspace[0], 512, "%s/missing-a", s_repo);
+  snprintf(g_test_state.workspace[1], 512, "%s", s_repo);
+  snprintf(g_test_state.workspace[2], 512, "%s/missing-z", s_repo);
+  g_test_state.workspace_count = 3;
+  gc_overview_refresh();
+  for (int i = 0; i < g_test_state.tile_count; i++)
+    if (!g_test_state.tiles[i].missing) g_test_state.tiles[i].no_upstream = false;
+  ASSERT_TRUE(gc_overview_handle_command(MAKEDWORD(g_test_state.filter_btn->id, btnClicked), g_test_state.filter_btn));
+  ASSERT_TRUE(g_test_state.attention_only);
+  window_t *card = g_test_state.board_win->children->next;
+  ASSERT_NOT_NULL(card);
+  ASSERT_NULL(card->next);
+  window_t *close = get_window_item(card, ID_OVERVIEW_CARD_HEADER_CLOSE);
+  window_t *status = get_window_item(card, ID_OVERVIEW_CARD_HEADER_STATUS);
+  ASSERT_NOT_NULL(close);
+  ASSERT_NOT_NULL(status);
+  ASSERT_EQUAL(close->parent, status->parent);
+  ASSERT_EQUAL(close->frame.w, close->frame.h);
+  ASSERT_TRUE(close->frame.x >= status->frame.x + status->frame.w);
+  send_message(close, evLeftButtonDown, 0, NULL);
+  send_message(close, evLeftButtonUp, 0, NULL);
+  ASSERT_EQUAL(g_test_state.workspace_count, 2);
+  ASSERT_STR_EQUAL(g_test_state.workspace[1], s_repo);
+  ASSERT_TRUE(g_test_state.workspace_dirty);
+  ASSERT_TRUE(axPathExists(s_repo));
+  ASSERT_TRUE(gc_overview_handle_command(MAKEDWORD(g_test_state.filter_btn->id, btnClicked), g_test_state.filter_btn));
+  while (g_test_state.board_win->children) {
+    close = get_window_item(g_test_state.board_win->children, ID_OVERVIEW_CARD_HEADER_CLOSE);
+    ASSERT_NOT_NULL(close);
+    send_message(close, evLeftButtonDown, 0, NULL);
+    send_message(close, evLeftButtonUp, 0, NULL);
+  }
+  ASSERT_EQUAL(g_test_state.workspace_count, 0);
+  ASSERT_EQUAL(g_test_state.tile_count, 0);
+  ASSERT_EQUAL(send_message(g_test_state.board_win, tgGetSelection, 0, NULL), -1);
+  ASSERT_TRUE(axPathExists(s_repo));
+  test_env_shutdown();
+  g_test_state = saved;
+  PASS();
+}
+
 int main(void) {
     if (!setup_repo()) {
         printf("ERROR: could not create test repository (is git in PATH?)\n");
@@ -695,6 +751,7 @@ int main(void) {
     test_action_metadata_and_accelerators();
     test_every_menu_action_has_handler();
     test_reload_history_log_invalidates_diff_and_reports_failure();
+    test_overview_close_filtered_cards();
 
     gct_remove_dir(s_repo);
 

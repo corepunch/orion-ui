@@ -155,6 +155,22 @@ bool gc_workspace_add(const char *path) {
   return gc_workspace_insert(main_root, true, true);
 }
 
+bool gc_workspace_remove(const char *path) {
+  gc_state_t *gc = g_gc; if (!gc || !path || !path[0]) return false;
+  for (int i = 0; i < gc->workspace_count; i++) {
+    char checkout[512], root[512];
+    if (!git_locate(gc->workspace[i], checkout, sizeof(checkout), root, sizeof(root)))
+      snprintf(root, sizeof(root), "%s", gc->workspace[i]);
+    if (strcmp(root, path)) continue;
+    memmove(&gc->workspace[i], &gc->workspace[i + 1], (size_t)(gc->workspace_count - i - 1) * sizeof(gc->workspace[0]));
+    gc->workspace[--gc->workspace_count][0] = 0;
+    gc->workspace_dirty = true;
+    gc_update_title();
+    return true;
+  }
+  return false;
+}
+
 bool gc_workspace_save(const char *file) {
   gc_state_t *gc = g_gc; if (!gc || !file || !file[0]) return false;
   if (!gc_workspace_write(file, gc->workspace, gc->workspace_count)) return false;

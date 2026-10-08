@@ -80,6 +80,7 @@ uint32_t soft = color_with_alpha(color, 0x40);   // same colour, different alpha
 The accent edge is a plain `card_edge_width` rectangle clipped by the card's silhouette in the shader, so
 there is nothing to align or mask by hand. Geometry lives in `theme_t` (`card_corner_radius`,
 `card_edge_width`, `card_ring_width`). Pass an edge colour with zero alpha for no edge.
+The hovered card face is the 50% midpoint of `brControlBg` and `brButtonHover`.
 
 Status colours come from the theme: `brTextError`, `brTextWarning`, `brTextInfo`, `brTextSuccess`, `brTextDisabled`.
 

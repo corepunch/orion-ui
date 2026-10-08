@@ -345,6 +345,7 @@ bool gc_workspace_file_is(const char *path);
 int  gc_workspace_read(const char *file, char (*out)[512], int max);
 bool gc_workspace_write(const char *file, char (*paths)[512], int count);
 bool gc_workspace_add(const char *path);
+bool gc_workspace_remove(const char *path);
 bool gc_workspace_open(const char *file, bool confirm);
 bool gc_workspace_save(const char *file);
 bool gc_workspace_unsaved(void);

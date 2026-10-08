@@ -121,6 +121,22 @@ result_t win_card(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     case evLeftButtonDoubleClick:
       card_notify(win, cdnActivated);
       return true;
+    case evParentNotify: {
+      const parent_notify_t *pn = lparam;
+      if (!pn || !pn->child) {
+        fprintf(stderr, "[card] win=%u parent notification missing child\n", (unsigned)win->id);
+        fflush(stderr);
+        return false;
+      }
+      window_t *child = pn->child;
+      bool passive = child->proc == win_label || child->proc == win_badge || child->proc == win_space ||
+                     (child->flags & WINDOW_LAYOUT_CONTAINER);
+      if (passive && (pn->child_msg == evLeftButtonDown || pn->child_msg == evLeftButtonDoubleClick)) {
+        card_notify(win, pn->child_msg == evLeftButtonDown ? cdnClicked : cdnActivated);
+        return true;
+      }
+      return false;
+    }
     case evGetTooltipText:
       if (!lparam || !win->title[0]) return false;
       strncpy((char *)lparam, win->title, 255);
