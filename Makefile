@@ -176,7 +176,7 @@ unity_tu = find $(1) -name '*.c' ! -name main.c ! -path '*/$(COMPS)/*' ! -path '
 app_inc  = -I. -I$(call appdir,$*) -I$(call appdir,$*)/$(COMPS) -DSHAREDIR='"../share/$(notdir $(call appdir,$*))"'
 app_libs = $(LDFLAGS) $(CORE_LDLIBS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(call app_plugin,$*) $(LIBS) $(if $(findstring scener,$*),$(SCENER_LIBS))
 
-.PHONY: all install tools platform share library apps plugins gems scener test clean help groove groove-demo $(PHONY_APP_NAMES)
+.PHONY: all install tools platform share library apps plugins gems scener test clean help groove groove-demo mac-deploy $(PHONY_APP_NAMES)
 
 all: library apps tools $(if $(IS_WIN),,gems)
 
@@ -381,6 +381,7 @@ help:
 	@echo "test      - Build and run tests"
 	@echo "ipad-all  - Build separate Image Editor, Pencil Test and Groove iPad bundles"
 	@echo "ipad / ipad-simulator / ipad-run / ipad-deploy / ipad-mac - APP=imageeditor|penciltest|groove (ipad-deploy auto-selects one connected iPad)"
+	@echo "mac-deploy - Build a native macOS app bundle with its app icon (APP=<appname>)"
 	@echo "list-devices - List paired devices (see packaging/ipad/README.md)"
 	@echo "ALLOW_HIGHDPI=0 - Disable high-DPI surfaces (use with -B)"
 	@echo "clean     - Remove all build artifacts"
@@ -414,5 +415,7 @@ ipad-all:
 	$(MAKE) -f packaging/ipad/build.mk APP=imageeditor SDK=iphoneos app
 	$(MAKE) -f packaging/ipad/build.mk APP=penciltest SDK=iphoneos app
 	$(MAKE) -f packaging/ipad/build.mk APP=groove SDK=iphoneos app
+mac-deploy:
+	$(MAKE) -f packaging/macos/build.mk APP=$(APP) APP_SOURCE=$(or $(PHONY_APPS_SRC_$(APP)),$(APP)) deploy
 list-devices:
 	xcrun devicectl list devices

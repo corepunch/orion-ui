@@ -102,6 +102,22 @@ Use `$HOME/.local/include` and `$HOME/.local/lib` when Orion was installed with
 additional third-party libraries. Add Lua only when an application uses
 scripting or the interactive terminal.
 
+## Build a macOS App Bundle
+
+On macOS, build a Finder-launchable `.app` bundle for any standalone app with a
+PNG icon in its `share` directory:
+
+```sh
+make mac-deploy APP=terminal
+make mac-deploy APP=gitclient
+```
+
+The output is `build/macos/<app>.app`. The target builds the app, bundles its
+Orion and app resources and non-system dynamic libraries, converts
+`apps/<app>/share/icon.png` to the Finder `.icns` icon, and ad-hoc signs the
+bundle for local launch. Override the bundle identifier with
+`BUNDLE_ID=com.example.myapp`.
+
 The primary headers are:
 
 ```c
