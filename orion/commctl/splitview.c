@@ -19,6 +19,7 @@
 //   // The first two children of the splitview become left/right panes.
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 #include <orion/user/user.h>
@@ -41,11 +42,17 @@ static bool splitview_is_splitter(window_t *win) {
   return win && win->proc == win_splitter;
 }
 
-static int splitview_orientation(void *lparam) {
+static splitview_params_t splitview_params(void *lparam) {
+  splitview_params_t params = { SPLIT_VERT, 0.5 };
   if (!lparam || (uintptr_t)lparam <= SPLIT_HORZ)
-    return (int)(intptr_t)lparam;
-  const form_ctrl_def_t *cd = (const form_ctrl_def_t *)lparam;
-  return cd->lparam ? (int)(intptr_t)cd->lparam : SPLIT_VERT;
+    params.orientation = (int)(intptr_t)lparam;
+  else {
+    const form_ctrl_def_t *cd = (const form_ctrl_def_t *)lparam;
+    if ((uintptr_t)cd->lparam <= SPLIT_HORZ)
+      params.orientation = (int)(intptr_t)cd->lparam;
+    else params = *(const splitview_params_t *)cd->lparam;
+  }
+  return params;
 }
 
 static void splitview_get_panes(window_t *win, window_t **left, window_t **right, window_t **splitter) {
@@ -112,8 +119,14 @@ result_t win_splitview(window_t *win, uint32_t msg,
     case evCreate: {
       splitview_state_t *st = allocate_window_data(win, sizeof(splitview_state_t));
       if (!st) return false;
-      st->orientation = splitview_orientation(lparam);
-      st->split_ratio = 0.5;
+      splitview_params_t params = splitview_params(lparam);
+      st->orientation = params.orientation;
+      st->split_ratio = params.split_ratio;
+      if (!(st->split_ratio >= 0.0 && st->split_ratio <= 1.0)) {
+        fprintf(stderr, "[splitview] invalid split ratio win=%u ratio=%g; using 0.5\n", (unsigned)win->id, st->split_ratio);
+        fflush(stderr);
+        st->split_ratio = 0.5;
+      }
       st->divider_w = 6;
       st->dragging = false;
 

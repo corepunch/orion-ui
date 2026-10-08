@@ -271,7 +271,7 @@
                         <Column field="kind" title="" width="64" />
                         <Column field="activity" title="Activity" width="72" />
                     </TableView>
-                    <SplitView name="tags_worktrees_split" flags="flexspace">
+                    <SplitView name="tags_worktrees_split" split-ratio="0.35" flags="flexspace">
                         <SplitView name="tags_stash_split" orientation="vertical" flags="flexspace">
                             <TableView name="tags" source="db.tags" context-menu="tags" flags="notitle,nofill,vscroll">
                                 <Column field="name" title="Tag" width="0" />

@@ -208,6 +208,11 @@ int      win_splitter_orientation(window_t *win);
 // The first two children of the splitview become the left/top and right/bottom
 // panes; a splitter bar is created automatically between them.
 // The parent does NOT need to handle spnDragStart — the drag loop is internal.
+// Declarative forms may supply splitview_params_t through form_ctrl_def_t.lparam.
+typedef struct {
+  int orientation;
+  double split_ratio;  // Fraction of available space given to the left/top pane.
+} splitview_params_t;
 result_t win_splitview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 window_t *splitview_get_left(window_t *win);
 window_t *splitview_get_right(window_t *win);

@@ -25,6 +25,20 @@ For focused API details and message contracts, use the sections below. For
 guidance on capturing and presenting a complete application, see the
 [Application Presentation Guide](app-presentation).
 
+## SplitView
+
+`SplitView` arranges two panes with a draggable divider. In `.orion`,
+`split-ratio` sets the initial fraction of available space for the left pane
+(or top pane with `orientation="vertical"`). It defaults to `0.5` and accepts
+values from `0` to `1`; resizing keeps the current ratio and minimum pane size.
+
+```xml
+<SplitView name="tags_worktrees" split-ratio="0.35">
+    <TableView name="tags" source="db.tags" />
+    <TableView name="worktrees" source="db.worktrees" />
+</SplitView>
+```
+
 ## Scrollbar
 
 See [Scrollbars](scrollbars) for the complete scrollbar documentation covering both **built-in window scrollbars** (`WINDOW_HSCROLL` / `WINDOW_VSCROLL` + `set_scroll_info()`) and the **standalone `win_scrollbar` control**.

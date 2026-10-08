@@ -879,7 +879,20 @@ static void emit_controls_ex(FILE *f, xmlNodePtr parent, const char *form, const
     snprintf(color, sizeof(color), "%u", (unsigned)enum_parse_token(a.v[A_COLOR], kColors, ARRAY_LEN(kColors), brTextNormal));
     if (elem(c, "tableview")) snprintf(lparam, sizeof(lparam), "&%s_%s_tableview_params", form, nz(a.v[A_NAME], "unnamed"));
     if (elem(c, "combobox") && attr(c, "source")) snprintf(lparam, sizeof(lparam), "&%s_%s_combobox_params", form, nz(a.v[A_NAME], "unnamed"));
-    if (elem(c, "SplitView")) snprintf(lparam, sizeof(lparam), "(void *)%s", eq(a.v[A_ORIENT], "vertical") ? "SPLIT_HORZ" : "SPLIT_VERT");
+    if (elem(c, "SplitView")) {
+      const char *orientation = eq(a.v[A_ORIENT], "vertical") ? "SPLIT_HORZ" : "SPLIT_VERT";
+      char *raw_ratio = attrs_first(c, "split-ratio", "split_ratio");
+      if (raw_ratio) {
+        char *end;
+        double ratio = strtod(raw_ratio, &end);
+        if (end == raw_ratio || *end || !(ratio >= 0.0 && ratio <= 1.0)) {
+          fprintf(stderr, "orionc: invalid split-ratio '%s' on SplitView '%s'; using 0.5\n", raw_ratio, nz(a.v[A_NAME], "unnamed"));
+          ratio = 0.5;
+        }
+        snprintf(lparam, sizeof(lparam), "&(const splitview_params_t){ %s, %.17g }", orientation, ratio);
+      } else snprintf(lparam, sizeof(lparam), "(void *)%s", orientation);
+      free(raw_ratio);
+    }
     if (a.v[A_FIELD]) add_binding(bindings, id, a.v[A_FIELD], klass);
     
     // Track button IDs for ok_id/cancel_id form metadata
