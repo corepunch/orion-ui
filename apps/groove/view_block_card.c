@@ -5,6 +5,7 @@
 #define PICTOGRAM_ROWS 3
 #define PICTOGRAM_CELL 128
 #define CARD_LABEL_PADDING 4
+#define CARD_TAG_INSET 2
 #define CARD_LABEL_BG 0xB8000000u
 
 bool block_pictograms_load(groove_t *app) {
@@ -71,17 +72,18 @@ static bool card_on_screen(const window_t *win) {
 static void paint_card_label(const block_t *b, irect16_t r, int icon_width, int visible_width, uint32_t color) {
   char fitted[512];
   int text_h = text_char_height(FONT_SMALLEST);
-  int area_w = MAX(0, MIN(r.w, visible_width) - 2 * CARD_LABEL_PADDING);
-  int max_text_w = MAX(0, area_w - 2 * CARD_LABEL_PADDING);
+  r.w = MIN(r.w, visible_width);
+  irect16_t area = rect_inset(r, CARD_TAG_INSET);
+  int max_text_w = MAX(0, area.w - 2 * CARD_LABEL_PADDING);
   int text_w = text_ellipsize(FONT_SMALLEST, b->display_name, max_text_w, fitted, sizeof(fitted));
   if (!text_w || text_w > max_text_w) return;
   int label_w = text_w + 2 * CARD_LABEL_PADDING;
-  int text_x = r.x + icon_width + CARD_LABEL_PADDING;
+  int text_x = r.x + icon_width;
 
-  int label_right = r.x + MIN(r.w, visible_width) - CARD_LABEL_PADDING;
+  int label_right = area.x + area.w;
   if (text_x + label_w > label_right) text_x = label_right - label_w;
-  text_x = MAX(r.x + CARD_LABEL_PADDING, text_x);
-  irect16_t label = R(text_x, r.y + CARD_LABEL_PADDING, label_w, text_h + 1);
+  text_x = MAX(area.x, text_x);
+  irect16_t label = R(text_x, area.y, label_w, text_h + 1);
   draw_badge_ex(FONT_SMALLEST, fitted, label, color_with_alpha(0xFFFFFFFFu, color >> 24),
                 CARD_LABEL_BG, true);
 }
@@ -92,7 +94,7 @@ static void paint_card_variant(const block_t *b, irect16_t r, int visible_width)
   snprintf(text, sizeof(text), "%u", b->variant);
   int size = MAX(text_char_height(FONT_SMALLEST) + 1, text_strwidth(FONT_SMALLEST, text) + 2 * CARD_LABEL_PADDING);
   r.w = MIN(r.w, visible_width);
-  irect16_t area = rect_inset(r, CARD_LABEL_PADDING / 2);
+  irect16_t area = rect_inset(r, CARD_TAG_INSET);
   if (size > area.w || size > area.h) return;
   irect16_t badge = rect_split_right(rect_split_bottom(area, size), size);
   draw_badge_ex(FONT_SMALLEST, text, badge, 0xFFFFFFFFu,
