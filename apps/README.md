@@ -61,6 +61,32 @@ The usual ownership split is:
 - **View** owns window procedures, painting, hit testing, and notifications.
 - **Declarative resources** own static forms, menus, toolbars, accelerators, and bindings.
 
+## Compose apps from framework components
+
+Prefer Orion's existing controls, layouts, forms, and datasources over app-local
+UI implementations. Before adding a custom widget or assembling a screen in C,
+check whether a framework component or `.orion` declaration already covers it.
+When a reusable behavior is missing, extend Orion and use that feature from the
+app instead of copying the behavior into an app window procedure.
+
+Use `.orion` as the source of truth for static screens and commands. Declare
+forms, menus, toolbars, accelerators, datasource schemas, bindings, and item
+templates there when supported. Let engine-rendered views read records from
+datasources. A typical data-backed collection is a form containing a FlowView,
+bound to a datasource, with an item template defining each record's controls.
+Static toolbar actions belong in the declarative toolbar; use a toolbar
+datasource for dynamic/data-driven items when the engine supports it.
+
+Define every custom control as a named window class with a focused procedure.
+Register classes used by forms at runtime and in FormEditor/component metadata.
+Keep datasource adaptation, app command/state routing, and window rendering in
+separate modules. Avoid maintaining a C-built duplicate of a form already
+declared in `.orion`.
+
+See the [`orion-app-composition` skill](../.agents/skills/orion-app-composition/SKILL.md)
+for the implementation checklist and the distinction between forms, layout
+controls, item templates, and datasources.
+
 For designer-style apps, keep project I/O, persistent document models,
 component metadata, canvas runtime state, layout, and inspectors in separate
 modules. Persistent records must not contain `window_t *` or renderer handles.
