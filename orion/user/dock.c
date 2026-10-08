@@ -32,7 +32,7 @@ static void dock_place(window_t *win, irect16_t frame) {
 }
 
 static void dock_refresh(window_t *host) {
-  if (!host || host->dock_layout_busy) return;
+  if (!host || (host->dock_host && host->dock_host->busy)) return;
   dock_layout(host, get_client_rect(host));
   send_message(host, evDockChanged, 0, NULL);
   invalidate_window(host);
@@ -42,7 +42,7 @@ static void dock_orient(window_t *win) {
   dock_state_t *d = win->dock;
   if (d->flags & DOCK_TOOLBAR) {
     bool vertical = dock_vertical(d->side == DOCK_FLOAT ? d->last_side : d->side);
-    win->toolbar_dock = vertical ? TOOLBAR_DOCK_LEFT : TOOLBAR_DOCK_TOP;
+    toolbar_set_dock_hint(win, vertical ? TOOLBAR_DOCK_LEFT : TOOLBAR_DOCK_TOP);
     send_message(win, tbSetOrientation, vertical ? TOOLBAR_VERTICAL : TOOLBAR_HORIZONTAL, NULL);
   }
   if (d->flags & DOCK_MENU) send_message(win, evDockOrient, d->side == DOCK_FLOAT || dock_vertical(d->side), NULL);
@@ -127,8 +127,12 @@ static int64_t dock_order(window_t *win) {
 
 irect16_t dock_layout(window_t *host, irect16_t area) {
   if (!host) { dock_error(NULL, "missing host", 0); return area; }
-  if (host->dock_layout_busy) return host->dock_content;
-  host->dock_layout_busy = true;
+  if (!host->dock_host && !(host->dock_host = calloc(1, sizeof(*host->dock_host)))) {
+    dock_error(host, "host allocation failed", 0);
+    return area;
+  }
+  if (host->dock_host->busy) return host->dock_host->content;
+  host->dock_host->busy = true;
   area.w = MAX(0, area.w); area.h = MAX(0, area.h);
   int64_t order = -1;
   for (;;) {
@@ -140,7 +144,7 @@ irect16_t dock_layout(window_t *host, irect16_t area) {
     order = dock_order(pane);
     d->splitter = R(0, 0, 0, 0);
     if (!window_has_state(pane, WINDOW_STATE_VISIBLE) || d->side == DOCK_FILL ||
-        ((d->flags & DOCK_TOOLBAR) && pane->toolbar_dock == TOOLBAR_DOCK_MENU)) continue;
+        ((d->flags & DOCK_TOOLBAR) && toolbar_dock_hint(pane) == TOOLBAR_DOCK_MENU)) continue;
     if (d->side == DOCK_FLOAT) {
       irect16_t r = d->floating, bounds = get_client_rect(host);
       if (d->flags & DOCK_MENU) {
@@ -174,10 +178,10 @@ irect16_t dock_layout(window_t *host, irect16_t area) {
     d->splitter = splitter;
     dock_place(pane, band);
   }
-  host->dock_content = area;
+  host->dock_host->content = area;
   for (window_t *c = host->children; c; c = c->next)
     if (c->dock && c->dock->side == DOCK_FILL && window_has_state(c, WINDOW_STATE_VISIBLE)) dock_place(c, area);
-  host->dock_layout_busy = false;
+  host->dock_host->busy = false;
   return area;
 }
 
@@ -327,6 +331,8 @@ void dock_forget_window(window_t *win) {
   if (dock_drag.win == win) memset(&dock_drag, 0, sizeof(dock_drag));
   free(win->dock);
   win->dock = NULL;
+  free(win->dock_host);
+  win->dock_host = NULL;
 }
 
 void dock_paint(window_t *host) {

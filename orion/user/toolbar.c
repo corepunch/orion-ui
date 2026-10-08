@@ -145,7 +145,7 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
               (next->type == TOOLBAR_ITEM_BUTTON || next->type == TOOLBAR_ITEM_CUSTOM))
             pair = 2;
         }
-        if (parent->toolbar_dock == TOOLBAR_DOCK_LEFT && cursor > base_y &&
+        if (toolbar_dock_hint(parent) == TOOLBAR_DOCK_LEFT && cursor > base_y &&
             cursor + mini + base_y > parent->frame.h) {
           x += column_w + vertical_spacing;
           cursor = base_y;
@@ -164,7 +164,7 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
         h = w;
         w = bsz;
       }
-      if (tb->columns <= 1 && parent->toolbar_dock == TOOLBAR_DOCK_LEFT && cursor > base_y &&
+      if (tb->columns <= 1 && toolbar_dock_hint(parent) == TOOLBAR_DOCK_LEFT && cursor > base_y &&
           cursor + h + base_y > parent->frame.h) {
         x += column_w + vertical_spacing;
         cursor = base_y;
@@ -212,7 +212,7 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
         row_h = MAX(row_h, tb->item_rects[i + count].h);
         count++;
       }
-      if (parent->toolbar_dock == TOOLBAR_DOCK_LEFT && cursor > base_y &&
+      if (toolbar_dock_hint(parent) == TOOLBAR_DOCK_LEFT && cursor > base_y &&
           cursor + row_h + base_y > parent->frame.h) {
         x += grid_w + spacing;
         cursor = base_y;
@@ -576,6 +576,16 @@ toolbar_state_t *toolbar_ensure_state(window_t *win) {
   return window_toolbar_state(win);
 }
 
+uint8_t toolbar_dock_hint(const window_t *win) {
+  toolbar_state_t *tb = window_toolbar_state((window_t *)win);
+  return tb ? tb->dock_hint : TOOLBAR_DOCK_TOP;
+}
+
+void toolbar_set_dock_hint(window_t *win, uint8_t hint) {
+  toolbar_state_t *tb = toolbar_ensure_state(win);
+  if (tb) tb->dock_hint = hint;
+}
+
 toolbar_state_t *toolbar_get_state(window_t *win) {
   return window_toolbar_state(win);
 }
@@ -611,7 +621,7 @@ void toolbar_draw_non_client(window_t *win) {
   window_t *root = get_root_window(win);
   int bsz = toolbar_effective_item_height(win);
   int title_h = toolbar_content_offset(win);
-  int total_h = win->toolbar_dock == TOOLBAR_DOCK_LEFT ? win->frame.h
+  int total_h = toolbar_dock_hint(win) == TOOLBAR_DOCK_LEFT ? win->frame.h
                 : bsz + 2 * toolbar_effective_padding(win);
   int root_x = window_screen_x(win) - root->frame.x;
   int root_y = window_screen_y(win) - root->frame.y;

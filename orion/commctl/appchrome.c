@@ -36,7 +36,7 @@ static void app_chrome_resize_children(window_t *win) {
     bool compact = st->menubar && st->menubar->dock && st->menubar->dock->side == DOCK_TOP &&
                    width + menu_width + menu_h + TOOLBAR_COMPACT_SPACING - 2 * TOOLBAR_COMPACT_PADDING + 8 <= win->frame.w;
     toolbar_dock_t dock = compact ? TOOLBAR_DOCK_MENU : TOOLBAR_DOCK_TOP;
-    bar->toolbar_dock = dock;
+    toolbar_set_dock_hint(bar, dock);
     if (compact) {
       // The menu bar's restore button fills the last menu_h square. Its centre sits one
       // compact pitch (button + TOOLBAR_COMPACT_SPACING) past the last button's centre.
@@ -93,7 +93,7 @@ static result_t win_app_chrome(window_t *win, uint32_t msg,
         return true;
       }
       window_t *bar = app_chrome_toolbar(win);
-      if (bar && bar->toolbar_dock == TOOLBAR_DOCK_MENU && window_has_state(bar, WINDOW_STATE_VISIBLE) &&
+      if (bar && toolbar_dock_hint(bar) == TOOLBAR_DOCK_MENU && window_has_state(bar, WINDOW_STATE_VISIBLE) &&
           rect_contains_point(bar->frame, point)) {
         *(window_t **)lparam = bar;
         return true;

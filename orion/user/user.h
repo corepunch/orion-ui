@@ -133,6 +133,7 @@ typedef struct toolbar_state_s {
   int             columns;      // vertical grid; 0/1 = single column
   toolbar_orientation_t orientation;
   uint32_t        style;        // TOOLBAR_STYLE_* flags
+  uint8_t         dock_hint;    // toolbar_dock_t measurement/compact presentation hint; dock owns placement
 } toolbar_state_t;
 
 // Window definition structure (for declarative window creation)
@@ -517,9 +518,7 @@ struct window_s {
   struct window_s *parent;
   struct window_s *toolbar; // toolbar host window (win_toolbar); state lives in toolbar->userdata
   struct dock_state_s *dock;
-  bool dock_layout_busy;
-  irect16_t dock_content;
-  uint8_t toolbar_dock; // toolbar measurement/compact presentation hint; dock owns placement
+  struct dock_host_s *dock_host; // lazily allocated by dock_layout (hosts only)
   struct window_pages_s *pages; // lazily allocated host/page link (role HOST or PAGE)
   const struct menu_item_s *context_menu; // generated declarative menu; not owned
   int                       context_menu_count;

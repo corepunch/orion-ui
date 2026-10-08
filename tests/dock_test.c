@@ -162,7 +162,7 @@ static void test_dock_collapse_and_limits(void) {
   ASSERT_FALSE(dock_window(pane, DOCK_BOTTOM, DOCK_ALL_EDGES, 0, 100, 0));
   resize_window(host, 30, 50);
   ASSERT_TRUE(pane->frame.w >= 0 && pane->frame.h >= 0);
-  ASSERT_TRUE(host->dock_content.w >= 0 && host->dock_content.h >= 0);
+  ASSERT_TRUE(host->dock_host->content.w >= 0 && host->dock_host->content.h >= 0);
   test_env_shutdown();
   PASS();
 }

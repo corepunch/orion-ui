@@ -20,6 +20,8 @@ irect16_t layout_docked_toolbars(window_t *owner, irect16_t area);
 
 toolbar_state_t *toolbar_ensure_state(window_t *win);
 toolbar_state_t *toolbar_get_state(window_t *win);
+uint8_t toolbar_dock_hint(const window_t *win);              // toolbar_dock_t; TOOLBAR_DOCK_TOP when unset
+void    toolbar_set_dock_hint(window_t *win, uint8_t hint);
 int toolbar_effective_bsz(window_t const *win);
 int toolbar_effective_item_height(window_t const *win);
 int toolbar_effective_padding(window_t const *win);

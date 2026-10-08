@@ -24,6 +24,12 @@ typedef struct dock_state_s {
   irect16_t floating, splitter;
 } dock_state_t;
 
+// Per-host layout bookkeeping, allocated on the first dock_layout().
+typedef struct dock_host_s {
+  bool busy;           // re-entrancy guard while panes are being placed
+  irect16_t content;   // area left over for non-docked content
+} dock_host_t;
+
 bool dock_window(window_t *win, dock_side_t side, uint32_t allowed, uint32_t flags, int extent, int minimum);
 bool dock_set_side(window_t *win, dock_side_t side);
 bool dock_float(window_t *win, irect16_t frame);

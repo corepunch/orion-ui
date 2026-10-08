@@ -1302,7 +1302,7 @@ static void test_vertical_grid_columns(void) {
   ASSERT_EQUAL(tb->item_rects[3].y, tb->item_rects[6].y);
   send_message(win, tbSetColumns, 0, NULL);
   ASSERT_EQUAL(tb->columns, 4);
-  win->toolbar_dock = TOOLBAR_DOCK_LEFT;
+  toolbar_set_dock_hint(win, TOOLBAR_DOCK_LEFT);
   win->frame.h = 2 * TB_SPACING;
   send_message(win, tbSetColumns, 2, NULL);
   ASSERT_EQUAL(tb->item_rects[3].y, tb->item_rects[4].y);

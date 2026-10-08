@@ -656,7 +656,7 @@ static void test_library_transport(void) {
   int pitch = ct->item_rects[1].x - ct->item_rects[0].x;
   int last = g_app->toolbar->frame.x + ct->item_rects[1].x + ct->item_rects[1].w / 2;
   irect16_t restore = rect_split_right(get_client_rect(g_app->menubar_win), get_client_rect(g_app->menubar_win).h);
-  ASSERT(g_app->toolbar->toolbar_dock == TOOLBAR_DOCK_MENU && restore.x + restore.w / 2 - last == pitch,
+  ASSERT(toolbar_dock_hint(g_app->toolbar) == TOOLBAR_DOCK_MENU && restore.x + restore.w / 2 - last == pitch,
          "compact buttons and the menu bar's restore button share one pitch");
   ASSERT(g_app->song.loop && bar_checked(g_app->toolbar, ID_LOOP), "a new song loops, and the compact button shows it");
   ASSERT_TRUE(strcmp(ct->items[1].checked_icon, "arrow-right-to-line") == 0);
