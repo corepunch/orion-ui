@@ -111,8 +111,10 @@ static void classic_draw_checkbox_box(irect16_t r, bool checked, ctrl_state_t st
     fill_rect(get_sys_color(brFlare),        R(r.x, r.y, 1, 1));
   }
 
-  if (checked)
-    draw_theme_icon_in_rect(THEME_ICON_CHECKMARK, r, get_sys_color(brTextNormal));
+  if (checked) {
+    irect16_t check = rect_center(r, MIN(r.w, r.h), MIN(r.w, r.h));
+    draw_theme_icon(THEME_ICON_CHECKMARK, check.x, check.y, check.w, get_sys_color(brTextNormal));
+  }
 }
 
 // ── Combobox ─────────────────────────────────────────────────────────────────
