@@ -92,8 +92,8 @@ void card_place(window_t *card, irect16_t cell) {
   if (moved) move_window(card, cell.x, cell.y);
   if (card->frame.w != cell.w || card->frame.h != cell.h)
     resize_window(card, cell.w, cell.h);
-  if (moved && card->drag_visual)
-    window_set_drag_visual(card, card->drag_dx + ox - cell.x, card->drag_dy + oy - cell.y);
+  if (moved && window_is_lifted(card))
+    window_set_drag_visual(card, window_lift_delta(card).x + ox - cell.x, window_lift_delta(card).y + oy - cell.y);
 }
 
 // One child per clip, in song order. The tail is dropped when a clip is
@@ -102,7 +102,7 @@ static void sync_clips(window_t *win) {
   int n = g_app->song.nclips;
   while (child_count(win) > n) {
     window_t *tail = child_at(win, child_count(win) - 1);
-    if (!tail || tail->drag_visual) break;
+    if (!tail || window_is_lifted(tail)) break;
     destroy_window(tail);
   }
   while (child_count(win) < n) {
@@ -121,7 +121,7 @@ static void sync_clips(window_t *win) {
     send_message(c, evMeasure, 0, &measure);
     ipoint16_t size = {measure.desired_w, measure.desired_h};
     int end = song_clip_end(&g_app->song, i);
-    if (!c->drag_visual) size.x = position_x(win, end) - position_x(win, cl->position);
+    if (!window_is_lifted(c)) size.x = position_x(win, end) - position_x(win, cl->position);
     if (window_has_state(c, WINDOW_STATE_VISIBLE) != (size.x > 0)) show_window(c, size.x > 0);
     size.x = MAX(1, size.x);
     card_place(c, R(position_x(win, cl->position), track_y(win, cl->track), size.x, size.y));
@@ -206,7 +206,7 @@ static void paint_sheet(window_t *win) {
   float saved[16];
   memcpy(saved, get_sprite_matrix(), sizeof saved);
   for (window_t *c = win->children; c; c = c->next) {
-    if (!window_has_state(c, WINDOW_STATE_VISIBLE) || c->drag_visual) continue;
+    if (!window_has_state(c, WINDOW_STATE_VISIBLE) || window_is_lifted(c)) continue;
     send_message(c, evPaint, 0, NULL);
   }
   end_draw_transform(saved);

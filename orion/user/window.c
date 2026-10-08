@@ -282,14 +282,26 @@ static void invalidate_overlaps(window_t *win) {
   }
 }
 
+// One global lift record (≈ ImageList_BeginDrag): only one drag is active at a time.
+static struct { window_t *win; bool copy; int dx, dy; } g_lift;
+
+bool window_is_lifted(const window_t *win) { return win && g_lift.win == win; }
+bool window_lift_is_copy(const window_t *win) { return window_is_lifted(win) && g_lift.copy; }
+ipoint16_t window_lift_delta(const window_t *win) {
+  return window_is_lifted(win) ? (ipoint16_t){g_lift.dx, g_lift.dy} : (ipoint16_t){0, 0};
+}
+
 // Paint offset only. The frame, and therefore layout and hit-testing, stay put.
 static void set_drag(window_t *win, int dx, int dy, bool copy) {
-  if (!win) return;
-  if (win->drag_visual && win->drag_copy == copy && win->drag_dx == dx && win->drag_dy == dy) return;
-  win->drag_visual = true;
-  win->drag_copy = copy;
-  win->drag_dx = dx;
-  win->drag_dy = dy;
+  if (!win) {
+    fprintf(stderr, "[win] lift rejected: window unavailable dx=%d dy=%d copy=%d\n", dx, dy, copy);
+    fflush(stderr);
+    return;
+  }
+  if (window_is_lifted(win) && g_lift.copy == copy && g_lift.dx == dx && g_lift.dy == dy) return;
+  window_t *previous = g_lift.win;
+  g_lift.win = win; g_lift.copy = copy; g_lift.dx = dx; g_lift.dy = dy;
+  if (previous && previous != win && is_window(previous)) invalidate_window(previous);
   invalidate_window(win);
 }
 
@@ -297,9 +309,13 @@ void window_set_drag_visual(window_t *win, int dx, int dy) { set_drag(win, dx, d
 void window_set_drag_copy(window_t *win, int dx, int dy)   { set_drag(win, dx, dy, true); }
 
 void window_clear_drag_visual(window_t *win) {
-  if (!win || !win->drag_visual) return;
-  win->drag_visual = win->drag_copy = false;
-  win->drag_dx = win->drag_dy = 0;
+  if (!win) {
+    fprintf(stderr, "[win] lift clear rejected: window unavailable\n");
+    fflush(stderr);
+    return;
+  }
+  if (!window_is_lifted(win)) return;
+  memset(&g_lift, 0, sizeof(g_lift));
   invalidate_window(win);
 }
 
@@ -514,10 +530,10 @@ void destroy_window(window_t *win) {
   window_t *dock_parent = win->dock ? win->parent : NULL;
   window_t *root = get_root_window(win);
   invalidate_overlaps(win);
-  if (win->role == WINDOW_ROLE_HOST && win->active_page)
+  if (win->role == WINDOW_ROLE_HOST && window_active_page(win))
     set_host_page(win, NULL);
-  if (win->role == WINDOW_ROLE_PAGE && win->page_host)
-    set_host_page(win->page_host, NULL);
+  if (win->role == WINDOW_ROLE_PAGE && window_page_host(win))
+    set_host_page(window_page_host(win), NULL);
   if (g_ui_runtime.tracked == win) track_mouse(NULL);
   dock_forget_window(win);
   send_message(win, evDestroy, 0, NULL);
@@ -541,6 +557,9 @@ void destroy_window(window_t *win) {
   // Release the per-window render target before freeing the struct.
   window_surface_release(win);
   free(win->placement);
+  free(win->pages);
+  free(win->view);
+  if (g_lift.win == win) g_lift.win = NULL;
   for (int i = 0; i < MAX_WORKSPACES; i++) if (g_workspaces[i].owner == win) g_workspaces[i].owner = NULL;
   free(win);
   if (dock_parent && is_window(dock_parent)) {
@@ -1001,8 +1020,16 @@ window_t *create_window_from_form(form_def_t const *def, int x, int y,
   if (!win) return NULL;
 
   win->role = def->role;
-  win->page_toolbar_items = (const toolbar_item_t *)def->toolbar_items;
-  win->page_toolbar_count = def->toolbar_count;
+  if (def->toolbar_items || def->toolbar_count) {
+    if (!win->pages) win->pages = calloc(1, sizeof(*win->pages));
+    if (win->pages) {
+      win->pages->toolbar_items = (const toolbar_item_t *)def->toolbar_items;
+      win->pages->toolbar_count = def->toolbar_count;
+    } else {
+      fprintf(stderr, "[window] page toolbar allocation failed win=%u\n", win->id);
+      fflush(stderr);
+    }
+  }
 
   
   if (def->flags & WINDOW_AUTO_LAYOUT)
@@ -1060,20 +1087,30 @@ bool set_host_page(window_t *host, window_t *page) {
     fflush(stderr);
     return false;
   }
-  if (host->active_page == page) return true;
-
-  if (page && page->page_host && page->page_host != host)
-    set_host_page(page->page_host, NULL);
-
-  if (host->active_page) {
-    send_message(host->active_page, evDeactivate, 0, host);
-    host->active_page->page_host = NULL;
+  if (window_active_page(host) == page) return true;
+  if (!host->pages && !(host->pages = calloc(1, sizeof(*host->pages)))) {
+    fprintf(stderr, "[window] set_host_page rejected host=%u: link allocation failed\n", host->id);
+    fflush(stderr);
+    return false;
   }
-  host->active_page = page;
-  send_message(host, tbSetItems, page ? (uint32_t)page->page_toolbar_count : 0,
-               page ? (void *)page->page_toolbar_items : NULL);
+  if (page && !page->pages && !(page->pages = calloc(1, sizeof(*page->pages)))) {
+    fprintf(stderr, "[window] set_host_page rejected page=%u: link allocation failed\n", page->id);
+    fflush(stderr);
+    return false;
+  }
+
+  if (page && window_page_host(page) && window_page_host(page) != host)
+    set_host_page(window_page_host(page), NULL);
+
+  if (window_active_page(host)) {
+    send_message(window_active_page(host), evDeactivate, 0, host);
+    window_active_page(host)->pages->host = NULL;
+  }
+  host->pages->active_page = page;
+  send_message(host, tbSetItems, page ? (uint32_t)page->pages->toolbar_count : 0,
+               page ? (void *)page->pages->toolbar_items : NULL);
   if (page) {
-    page->page_host = host;
+    page->pages->host = host;
     send_message(page, evActivate, 0, host);
   }
   invalidate_window(host);

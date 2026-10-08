@@ -234,7 +234,7 @@ static void test_view_rotation(void) {
     set_projection(0, 0, 64, 64);
     g_ui_runtime.running = true;
     window_t win = {.frame = {0, 0, 64, 64}, .flags = WINDOW_NOTITLE, .proc = rotated_content_proc,
-      .view = {.enabled = true, .width = 64, .height = 64, .pixel_ratio = 1,
+      .view = &(window_view_t){.enabled = true, .width = 64, .height = 64, .pixel_ratio = 1,
                .matrix = {.a = 0, .b = 1, .tx = 66, .ty = 3}}};
     window_surface_adopt(&win, fbo, texture, 64, 64);
     send_message(&win, evPaint, 0, NULL);

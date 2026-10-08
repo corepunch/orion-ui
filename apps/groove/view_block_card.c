@@ -133,8 +133,8 @@ result_t win_block_card(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
     case evPaint: {
       const block_t *b = block_get(st->block);
       if (!b) return true;
-      bool lit = st->hover && !win->drag_visual;
-      ctrl_state_t state = st->state | (st->down && !win->drag_visual ? CTRL_PRESSED : lit ? CTRL_HOVER : CTRL_NORMAL);
+      bool lit = st->hover && !window_is_lifted(win);
+      ctrl_state_t state = st->state | (st->down && !window_is_lifted(win) ? CTRL_PRESSED : lit ? CTRL_HOVER : CTRL_NORMAL);
       if (window_has_state(win, WINDOW_STATE_DISABLED)) state |= CTRL_DISABLED;
       irect16_t r = get_client_rect(win);
       int visible_width = r.w;
@@ -172,11 +172,11 @@ result_t win_block_card(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       if (!st->down) return true;
       int sx, sy;
       card_screen(win, mx, my, &sx, &sy);
-      if (!win->drag_visual && abs(mx - st->press.x) + abs(my - st->press.y) > CARD_SLOP) {
+      if (!window_is_lifted(win) && abs(mx - st->press.x) + abs(my - st->press.y) > CARD_SLOP) {
         g_app->drag = (drag_t){ .active = true, .block = st->block, .from_clip = -1, .grab = st->press, .track = -1 };
         window_set_drag_copy(win, mx - st->press.x, my - st->press.y);
       }
-      if (win->drag_visual) {
+      if (window_is_lifted(win)) {
         window_set_drag_copy(win, mx - st->press.x, my - st->press.y);
         send_message(g_app->sheet, shDragOver, MAKEDWORD(sx, sy), NULL);
       }
@@ -200,7 +200,7 @@ result_t win_block_card(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       if (!st->down) return false;
       int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam), sx, sy;
       card_screen(win, mx, my, &sx, &sy);
-      if (win->drag_visual) send_message(g_app->sheet, shDrop, MAKEDWORD(sx, sy), NULL);
+      if (window_is_lifted(win)) send_message(g_app->sheet, shDrop, MAKEDWORD(sx, sy), NULL);
       window_clear_drag_visual(win);
       st->down = false;
       set_capture(NULL);
@@ -210,7 +210,7 @@ result_t win_block_card(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
     case evPointerCancel:
       if (win->parent == g_app->sheet) return false;
       if (!st->down) return false;
-      if (win->drag_visual) send_message(g_app->sheet, shDragEnd, 0, NULL);
+      if (window_is_lifted(win)) send_message(g_app->sheet, shDragEnd, 0, NULL);
       window_clear_drag_visual(win);
       st->down = false;
       set_capture(NULL);

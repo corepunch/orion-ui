@@ -122,10 +122,10 @@ static void test_dock_drag_and_resize(void) {
   int x = grab.x, y = grab.y;
   dock_mouse(kEventLeftButtonDown, x, y);
   dock_mouse(kEventLeftButtonDragged, x + 150, y - 100);
-  ASSERT_TRUE(pane->drag_visual);
+  ASSERT_TRUE(window_is_lifted(pane));
   dock_mouse(kEventLeftButtonUp, x + 150, y - 100);
   ASSERT_TRUE(dock_is_floating(pane));
-  ASSERT_FALSE(pane->drag_visual);
+  ASSERT_FALSE(window_is_lifted(pane));
   grab = dock_caption_point(pane);
   x = grab.x; y = grab.y;
   dock_mouse(kEventLeftButtonDown, x, y);

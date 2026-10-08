@@ -18,8 +18,8 @@ static void test_screen_aligned_shapes(void) {
     g_bw_retina_scale = retina;
     for (int a = 0; a < ARRAY_LEN(angles); a++) {
       float c = cosf(angles[a]), s = sinf(angles[a]), scale = 1.5f / retina;
-      win.view.enabled = true;
-      win.view.matrix = (view_matrix_t){scale * c, scale * s, 17, -9};
+      win.view = &(window_view_t){.enabled = true};
+      win.view->matrix = (view_matrix_t){scale * c, scale * s, 17, -9};
       for (int t = 0; t < ARRAY_LEN(tools); t++) {
         for (int filled = 0; filled <= 1; filled++) {
           for (int shift = 0; shift <= 1; shift++) {
@@ -159,7 +159,7 @@ static void test_cancel_stroke(void) {
   g_app->fg_color = MAKE_COLOR(0, 0, 0, 255);
   canvas_doc_t *doc = create_document(NULL, 64, 64);
   ASSERT_NOT_NULL(doc);
-  doc->canvas_win->view.free_pan = true;
+  doc->canvas_win->view->free_pan = true;
   ax_gesture_t rotation = {AX_GESTURE_UPDATE, 32, 32, 32, 32, 2, 1.57079632679f};
   window_view_apply_gesture(doc->canvas_win, &rotation);
   ipoint16_t point = window_content_to_client(doc->canvas_win, (ipoint16_t){20, 20});

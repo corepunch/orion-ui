@@ -488,7 +488,7 @@ typedef struct {
   int width, height;
   float pixel_ratio;
   view_matrix_t matrix;
-  ipoint16_t pointer, drag_pointer;
+  ipoint16_t drag_pointer; // client-space pointer at the last pan step
 } window_view_t;
 
 struct window_s {
@@ -511,11 +511,7 @@ struct window_s {
   void *userdata2;
   win_sb_t hscroll;   // built-in horizontal scrollbar state (WINDOW_HSCROLL)
   win_sb_t vscroll;   // built-in vertical scrollbar state (WINDOW_VSCROLL)
-  window_view_t view; // Transforms this window's content; child frames remain in viewport space.
-  // Visual drag. The frame stays put; paint is translated by drag_dx/dy and
-  // skipped at the real frame unless drag_copy. See window_set_drag_visual().
-  bool drag_visual, drag_copy;
-  int drag_dx, drag_dy;
+  window_view_t *view; // Lazily allocated by window_view_init. Transforms this window's content; child frames remain in viewport space.
   struct window_s *next;
   struct window_s *children;
   struct window_s *parent;
@@ -524,10 +520,7 @@ struct window_s {
   bool dock_layout_busy;
   irect16_t dock_content;
   uint8_t toolbar_dock; // toolbar measurement/compact presentation hint; dock owns placement
-  struct window_s *active_page; // selected page projected by a WINDOW_ROLE_HOST
-  struct window_s *page_host; // WINDOW_ROLE_HOST currently projecting this page
-  const toolbar_item_t *page_toolbar_items; // declarative page contribution; not owned
-  int page_toolbar_count;
+  struct window_pages_s *pages; // lazily allocated host/page link (role HOST or PAGE)
   const struct menu_item_s *context_menu; // generated declarative menu; not owned
   int                       context_menu_count;
 };
@@ -547,8 +540,8 @@ float window_view_zoom(const window_t *win);
 void window_view_set_zoom(window_t *win, float zoom, const ipoint16_t *content_anchor);
 void window_view_center(window_t *win);
 void window_view_pan(window_t *win, ipoint16_t delta);
-void window_view_begin_drag(window_t *win);
-void window_view_drag(window_t *win);
+void window_view_begin_drag(window_t *win, ipoint16_t client_pt);
+void window_view_drag(window_t *win, ipoint16_t client_pt);
 void window_view_set_scroll(window_t *win, int axis, int pos);
 int window_view_scroll(const window_t *win, int axis);
 frect_t window_view_bounds(const window_t *win);
@@ -559,10 +552,22 @@ ipoint16_t window_client_to_content(const window_t *win, ipoint16_t point);
 // Platform/router entry: client coordinates in, content coordinates delivered to the proc.
 result_t send_pointer_message(window_t *win, uint32_t msg, uint32_t point, void *lparam);
 
+typedef struct window_pages_s {
+  window_t *active_page;                  // HOST: selected page it projects
+  window_t *host;                         // PAGE: host currently projecting it
+  const toolbar_item_t *toolbar_items;    // PAGE: declarative toolbar contribution; not owned
+  int toolbar_count;
+} window_pages_t;
+
+static inline window_t *window_active_page(const window_t *host) { return host && host->pages ? host->pages->active_page : NULL; }
+static inline window_t *window_page_host(const window_t *page)   { return page && page->pages ? page->pages->host : NULL; }
+
 typedef struct window_placement_s {
   irect16_t restore_frame;       // normal-state frame while maximized
   flags_t   restore_decorations; // WINDOW_NOTITLE | WINDOW_NORESIZE bits to put back on restore
 } window_placement_t;
+
+static inline bool window_has_view(const window_t *win) { return win && win->view && win->view->enabled; }
 
 static inline bool window_has_state(const window_t *win, flags_t state_flag) {
   return win && ((win->flags & state_flag) != 0u);
@@ -663,6 +668,9 @@ void window_set_drag_visual(window_t *win, int dx, int dy);
 // copy and the original stays put (dragging out of a palette).
 void window_set_drag_copy(window_t *win, int dx, int dy);
 void window_clear_drag_visual(window_t *win);
+bool       window_is_lifted(const window_t *win);      // true while win is the active lifted drag visual
+bool       window_lift_is_copy(const window_t *win);
+ipoint16_t window_lift_delta(const window_t *win);     // paint offset of the lift; {0,0} when not lifted
 // Offset at which `win` paints in the current paint pass; false when in place.
 bool window_lift_offset(const window_t *win, int *dx, int *dy);
 void layout_measure_window(window_t *win, layout_measure_t *m);

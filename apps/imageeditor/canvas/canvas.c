@@ -158,8 +158,8 @@ void canvas_shape_preview(canvas_doc_t *doc, int x0, int y0, int x1, int y1,
   }
   window_t *win = doc->canvas_win;
   float c = 1, s = 0;
-  if (tool != ID_TOOL_LINE && win && win->view.enabled) {
-    float a = win->view.matrix.a, b = win->view.matrix.b;
+  if (tool != ID_TOOL_LINE && window_has_view(win)) {
+    float a = win->view->matrix.a, b = win->view->matrix.b;
     float scale = hypotf(a, b);
     if (scale > 0) { c = a / scale; s = b / scale; }
   }

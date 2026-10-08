@@ -70,11 +70,11 @@ static void test_precise_pan(void) {
   window_view_init(&win, 200, 160, 1, true);
   window_view_set_zoom(&win, 32, NULL);
   send_pointer_message(&win, evLeftButtonDown, MAKEDWORD(20, 20), NULL);
-  window_view_begin_drag(&win);
-  float start = win.view.matrix.tx;
+  window_view_begin_drag(&win, (ipoint16_t){20, 20});
+  float start = win.view->matrix.tx;
   send_pointer_message(&win, evMouseMove, MAKEDWORD(21, 20), NULL);
-  window_view_drag(&win);
-  ASSERT_TRUE(fabsf(win.view.matrix.tx - start - 1) < 0.001f);
+  window_view_drag(&win, (ipoint16_t){21, 20});
+  ASSERT_TRUE(fabsf(win.view->matrix.tx - start - 1) < 0.001f);
   PASS();
 }
 

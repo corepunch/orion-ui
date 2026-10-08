@@ -201,7 +201,7 @@ static bool bind_root_surface(window_t *root) {
 static bool g_lift_pass;
 
 static bool lifted_now(const window_t *a) {
-  return a->drag_visual && (!a->drag_copy || g_lift_pass);
+  return window_is_lifted(a) && (!window_lift_is_copy(a) || g_lift_pass);
 }
 
 bool window_lift_offset(const window_t *win, int *dx, int *dy) {
@@ -209,8 +209,8 @@ bool window_lift_offset(const window_t *win, int *dx, int *dy) {
   *dx = *dy = 0;
   for (const window_t *a = win; a; a = a->parent) {
     if (!lifted_now(a)) continue;
-    *dx += a->drag_dx;
-    *dy += a->drag_dy;
+    *dx += window_lift_delta(a).x;
+    *dy += window_lift_delta(a).y;
     lifted = true;
   }
   return lifted;
@@ -243,7 +243,7 @@ static void paint_lift_shadow(window_t *root, window_t *win, irect16_t clip) {
 static void paint_lifted(window_t *win) {
   for (window_t *c = win->children; c; c = c->next) {
     if (!window_has_state(c, WINDOW_STATE_VISIBLE)) continue;
-    if (c->drag_visual) send_message(c, evPaint, 0, NULL);
+    if (window_is_lifted(c)) send_message(c, evPaint, 0, NULL);
     paint_lifted(c);
   }
 }
@@ -398,8 +398,8 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
     paint_lift_shadow(root, win, paint_clip);
   // The same window-owned matrix defines painting and pointer delivery.
   float saved_projection[16];
-  bool view_paint = msg == evPaint && g_ui_runtime.running && win->view.enabled;
-  if (view_paint) begin_draw_transform(&win->view.matrix, saved_projection);
+  bool view_paint = msg == evPaint && g_ui_runtime.running && window_has_view(win);
+  if (view_paint) begin_draw_transform(&win->view->matrix, saved_projection);
   value = win->proc(win, msg, wparam, lparam);
   if (view_paint) {
     end_draw_transform(saved_projection);

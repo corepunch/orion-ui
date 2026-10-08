@@ -168,7 +168,7 @@ static void canvas_sync_scrollbars(window_t *win, canvas_win_state_t *state) {
   frect_t bounds = window_view_bounds(win);
   set_scroll_content(owner, (int)ceilf(bounds.w), (int)ceilf(bounds.h),
                      window_view_scroll(win, SB_HORZ), window_view_scroll(win, SB_VERT));
-  if (!win->view.free_pan) {
+  if (!win->view->free_pan) {
     window_view_set_scroll(win, SB_HORZ, get_scroll_pos(owner, SB_HORZ));
     window_view_set_scroll(win, SB_VERT, get_scroll_pos(owner, SB_VERT));
   }
@@ -682,7 +682,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
       if (g_app->current_tool == ID_TOOL_HAND) {
         state->pan.active = true;
         set_capture(win);
-        window_view_begin_drag(win);
+        window_view_begin_drag(win, window_content_to_client(win, (ipoint16_t){lx, ly}));
         IE_DEBUG("pan_begin doc=%p at=(%d,%d)", (void *)doc, lx, ly);
         return true;
       }
@@ -934,7 +934,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
 
       // Hand tool: update pan while dragging
       if (state->pan.active) {
-        window_view_drag(win);
+        window_view_drag(win, window_content_to_client(win, (ipoint16_t){(int16_t)LOWORD(wparam), (int16_t)HIWORD(wparam)}));
         canvas_sync_scrollbars(win, state);
         invalidate_window(win);
         return true;

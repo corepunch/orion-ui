@@ -386,7 +386,7 @@ static void test_overlap_sheet(void) {
   event.message = kEventLeftButtonDragged;
   event.x += 6 * UI_WINDOW_SCALE;
   dispatch_message(&event);
-  ASSERT_TRUE(original->drag_visual);
+  ASSERT_TRUE(window_is_lifted(original));
   ASSERT_EQUAL(original->frame.w, 2 * 88);
   event.message = kEventPointerCancel;
   dispatch_message(&event);
@@ -702,9 +702,9 @@ static void test_shared_block_cards(void) {
   ASSERT_EQUAL(g_app->song.preview_block, 0);
   send_message(library, evLeftButtonDown, MAKEDWORD(4, 4), NULL);
   send_message(library, evMouseMove, MAKEDWORD(12, 4), NULL);
-  ASSERT_TRUE(g_app->drag.active && library->drag_visual && library->drag_copy);
+  ASSERT_TRUE(g_app->drag.active && window_is_lifted(library) && window_lift_is_copy(library));
   send_message(library, evPointerCancel, 0, NULL);
-  ASSERT_FALSE(g_app->drag.active || library->drag_visual);
+  ASSERT_FALSE(g_app->drag.active || window_is_lifted(library));
   ASSERT_TRUE(g_ui_runtime.captured == NULL);
   app_select_clip(clip);
   send_message(g_app->sheet, evResize, 0, NULL);
@@ -737,7 +737,7 @@ static void test_drag_anchor(void) {
   int sy = window_screen_y(sheet) + 22 + 5 * row + 6 + grab.y;
   send_message(library, evLeftButtonDown, MAKEDWORD(grab.x, grab.y), NULL);
   send_message(library, evMouseMove, MAKEDWORD(sx - window_screen_x(library), sy - window_screen_y(library)), NULL);
-  ASSERT_TRUE(g_app->drag.active && library->drag_visual);
+  ASSERT_TRUE(g_app->drag.active && window_is_lifted(library));
   ASSERT(g_app->drag.grab.x == grab.x, "library horizontal grab offset");
   ASSERT(g_app->drag.grab.y == grab.y, "library vertical grab offset");
   ASSERT_TRUE(g_app->drag.valid && g_app->drag.position == 7 * GR_TICKS_BAR && g_app->drag.track == 5);
@@ -746,7 +746,7 @@ static void test_drag_anchor(void) {
   ASSERT(clip >= 0, "library drop selects the added clip");
   ASSERT(song_clip_at(&g_app->song, 5, 8 * GR_TICKS_BAR) == clip, "library release snaps to card origin");
   ASSERT(g_app->song.nclips == 1, "library drop adds a clip");
-  ASSERT_FALSE(g_app->drag.active || library->drag_visual);
+  ASSERT_FALSE(g_app->drag.active || window_is_lifted(library));
   ASSERT_NULL(g_ui_runtime.captured);
 
   ASSERT_TRUE(send_message(sheet, shSetDropAnchor, GR_DROP_ANCHOR_POINTER, NULL));
@@ -823,14 +823,14 @@ static void test_drag_center_boundaries(void) {
           event.y = (sy + grabs[grab].y) * UI_WINDOW_SCALE;
           dispatch_message(&event);
           ASSERT(g_app->drag.active && g_app->drag.valid, "drag preview is valid");
-          ASSERT(window_screen_x(library) + library->drag_dx == sx && window_screen_y(library) + library->drag_dy == sy, "preview is derived from the actual lifted card");
+          ASSERT(window_screen_x(library) + window_lift_delta(library).x == sx && window_screen_y(library) + window_lift_delta(library).y == sy, "preview is derived from the actual lifted card");
           ASSERT(g_app->drag.position == 3 * GR_TICKS_BAR + GR_SNAP_TICKS * (1 + (percent[x] > 50)), "column changes after the center crosses halfway");
           ASSERT(g_app->drag.track == 2 + (percent[y] > 50), "row changes after the center crosses halfway");
         }
         event.message = kEventLeftButtonUp;
         dispatch_message(&event);
         ASSERT(g_app->song.nclips == 1 && song_clip_at(&g_app->song, 3, 3 * GR_TICKS_BAR + 2 * GR_SNAP_TICKS) >= 0, "80% diagonal drag commits to the bottom-right placement");
-        ASSERT_FALSE(g_app->drag.active || library->drag_visual);
+        ASSERT_FALSE(g_app->drag.active || window_is_lifted(library));
         app_new_song();
       }
     }
@@ -860,8 +860,8 @@ static void test_drag_off_sheet_removes(void) {
   send_message(sheet, evLeftButtonDown, MAKEDWORD(x, y), NULL);
   send_message(sheet, evMouseMove, MAKEDWORD(x, 4), NULL);
   window_t *lifted = sheet->children;
-  while (lifted && !lifted->drag_visual) lifted = lifted->next;
-  ASSERT_TRUE(g_app->drag.active && lifted && !lifted->drag_copy);
+  while (lifted && !window_is_lifted(lifted)) lifted = lifted->next;
+  ASSERT_TRUE(g_app->drag.active && lifted && !window_lift_is_copy(lifted));
   send_message(sheet, evLeftButtonUp, MAKEDWORD(x, 4), NULL);
   ASSERT_EQUAL(g_app->song.nclips, 1);
   ASSERT_EQUAL(g_app->song.clips[0].track, 1);

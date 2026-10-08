@@ -149,10 +149,9 @@ static uint32_t pointer_target_id;
 
 // Handle mouse events on child windows.
 result_t send_pointer_message(window_t *win, uint32_t msg, uint32_t point, void *lparam) {
-  if (win && win->view.enabled && (msg == evMouseMove || msg == evLeftButtonDown ||
+  if (window_has_view(win) && (msg == evMouseMove || msg == evLeftButtonDown ||
       msg == evLeftButtonUp || msg == evLeftButtonDoubleClick || msg == evRightButtonDown || msg == evRightButtonUp)) {
     ipoint16_t client = {(int16_t)LOWORD(point), (int16_t)HIWORD(point)};
-    win->view.pointer = client;
     ipoint16_t content = window_client_to_content(win, client);
     point = MAKEDWORD(content.x, content.y);
     if (msg == evMouseMove && lparam) {
