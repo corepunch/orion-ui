@@ -180,6 +180,7 @@ static void classic_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state
   bool disabled = (state & CTRL_DISABLED) != 0;
   uint32_t foreground = get_sys_color(disabled ? brTextDisabled : brTextNormal);
   switch (part) {
+    case THEME_PART_CARD: break; // cards paint through draw_card
     case THEME_PART_BUTTON:
       fill_rect((state & CTRL_FOCUSED) ? get_sys_color(brAccent) :
                 (state & CTRL_DEFAULT) ? 0xff000000 : get_sys_color(brControlBg), rect_inset(r, -1));

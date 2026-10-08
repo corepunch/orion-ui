@@ -264,6 +264,7 @@ static void modern_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state)
   bool disabled = (state & CTRL_DISABLED) != 0;
   uint32_t foreground = get_sys_color(disabled ? brTextDisabled : brTextNormal);
   switch (part) {
+    case THEME_PART_CARD:                break; // cards paint through draw_card
     case THEME_PART_BUTTON:              modern_draw_button_bg(r, state); break;
     case THEME_PART_CHECKBOX:            modern_draw_checkbox_box(r, state & CTRL_SELECTED, state); break;
     case THEME_PART_COMBOBOX:            modern_draw_field_bg(r, state); break;

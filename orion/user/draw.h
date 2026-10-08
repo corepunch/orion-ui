@@ -116,4 +116,22 @@ void draw_builtin_scrollbars(window_t *win);
 // Composite all visible root windows from their FBO textures to the screen.
 void composite_root_windows(void);
 
+// One redirected surface handed to the compositor (≈ a DWM visual). Sizes of the texture are
+// physical pixels; the frame, shadow and projection are logical.
+typedef struct R_CompositeLayer {
+  uint32_t tex;
+  int w, h;                    // texture size, physical pixels
+  irect16_t frame;             // logical screen rect
+  float corner_radius;         // physical pixels; clamped to half the surface
+  bool shadow;
+  float shadow_radius, shadow_blur;
+  ipoint16_t shadow_offset;
+  uint32_t shadow_color;
+  bool border;                 // draw_border runs after the surface
+  void *user;                  // opaque to the compositor; handed back to draw_border
+} R_CompositeLayer;
+void R_Composite(const R_CompositeLayer *layers, int count, uint32_t clear_color,
+                 int logical_w, int logical_h,
+                 void (*draw_border)(const R_CompositeLayer *layer));
+
 #endif

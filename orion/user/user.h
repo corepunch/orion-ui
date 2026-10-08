@@ -525,6 +525,12 @@ window_surface_t *window_surface(const window_t *win);        // NULL when the w
 bool              window_has_surface(const window_t *win);
 window_surface_t *window_surface_ensure(window_t *win);
 void              window_surface_release(window_t *win);
+// Compositor attributes of a root window (≈ DWMWA_*). WCA_AUTO derives the value from the theme and
+// window state; any other value (>= 0) overrides it: corner radius in logical pixels, or 0/1 for the flags.
+typedef enum { WCA_CORNERS, WCA_SHADOW, WCA_BORDER, WCA_COUNT } window_composition_attr_t;
+#define WCA_AUTO (-1)
+void window_set_composition_attr(window_t *win, window_composition_attr_t attr, int value);
+int  window_composition_attr(const window_t *win, window_composition_attr_t attr); // resolved value
 void              window_surface_adopt(window_t *win, uint32_t fbo, uint32_t tex, int w, int h);
 
 enum { WINDOW_PAINT_CONTENT = 0, WINDOW_PAINT_OVERLAY = 1 };

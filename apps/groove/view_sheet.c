@@ -218,7 +218,7 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       return song_clip_at(&g_app->song, (my - RULER_H) / row_h(win), position_at(mx)) >= 0 ? DRAG_NOW : DRAG_NONE;
     }
     case evLeftButtonDown: {
-      int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam), cx = mx - hpos(win);
+      int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam);
       if (my < RULER_H) { app_seek_position(seek_ticks(mx)); return true; }
       int track = (my - RULER_H) / row_h(win), position = position_at(mx);
       st->press_clip = track >= 0 && track < GR_TRACKS ? song_clip_at(&g_app->song, track, position) : -1;

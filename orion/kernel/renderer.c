@@ -1775,3 +1775,67 @@ void R_ClearWindowTarget(uint32_t fbo) {
   if (scissor) glEnable(GL_SCISSOR_TEST);
   glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)previous);
 }
+
+// ── Raster state and window targets: the only GL the window system reaches ─────────────────
+
+void R_BindWindowTarget(uint32_t fbo) { glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)fbo); }
+void R_SetViewport(int x, int y, int w, int h) { glViewport(x, y, w, h); }
+void R_SetScissor(int x, int y, int w, int h) { glEnable(GL_SCISSOR_TEST); glScissor(x, y, w, h); }
+void R_DisableScissor(void) { glDisable(GL_SCISSOR_TEST); }
+
+void R_PrintDeviceInfo(void) {
+  printf("GL_VERSION  : %s\n", glGetString(GL_VERSION));
+  printf("GLSL_VERSION: %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
+}
+
+// ── Compositor ────────────────────────────────────────────────────────────────────────────
+// The window system describes each redirected surface (position, shape, shadow, border); the
+// compositor owns how they reach the screen: one reusable physical-pixel target, shadows, SDF
+// rounded corners, then presentation. Windows never see any of it.
+
+void R_Composite(const R_CompositeLayer *layers, int count, uint32_t clear_color,
+                 int logical_w, int logical_h,
+                 void (*draw_border)(const R_CompositeLayer *layer)) {
+  if (count < 0 || (count > 0 && !layers) || logical_w <= 0 || logical_h <= 0) {
+    fprintf(stderr, "[renderer] composite rejected layers=%p count=%d logical=%dx%d\n",
+            (const void *)layers, count, logical_w, logical_h);
+    fflush(stderr);
+    return;
+  }
+  // iOS and offscreen hosts present a platform-owned, nonzero framebuffer.
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  axBindFramebuffer();
+  struct AXsize size;
+  axGetSize(&size);
+  float scale = axGetScaling();
+  int screen_w = (int)((float)size.width * scale + 0.5f);
+  int screen_h = (int)((float)size.height * scale + 0.5f);
+  bool composed = R_BeginScreenComposition(screen_w, screen_h, clear_color);
+  if (!composed) {
+    glViewport(0, 0, screen_w, screen_h);
+    R_SetFramebufferSRGB(true);
+  }
+  glDisable(GL_SCISSOR_TEST);
+  glDisable(GL_DEPTH_TEST);
+  glEnable(GL_BLEND);
+  glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+  glViewport(0, 0, screen_w, screen_h);
+  set_projection(0, 0, logical_w, logical_h);
+
+  for (int i = 0; i < count; i++) {
+    const R_CompositeLayer *l = &layers[i];
+    if (!l->tex) continue;
+    float radius = MIN(l->corner_radius, (float)MIN(l->w, l->h) / 2);   // physical pixels
+    if (l->shadow)
+      draw_rect_shadow(l->frame, l->shadow_radius, l->shadow_blur, l->shadow_offset, l->shadow_color);
+    draw_rounded_rect_premultiplied((int)l->tex, l->frame, l->w, l->h, radius, 1.0f);
+    if (l->border && draw_border) draw_border(l);
+  }
+
+  glDisable(GL_BLEND);
+  glEnable(GL_DEPTH_TEST);
+  if (composed) {
+    axBindFramebuffer();
+    R_PresentScreenComposition(screen_w, screen_h);
+  }
+}

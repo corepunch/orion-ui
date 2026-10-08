@@ -20,8 +20,6 @@
 // External references
 extern window_t *get_root_window(window_t *window);
 
-static bool g_scissor_valid = false;
-static irect16_t g_scissor_rect = {0};
 
 // When non-NULL, viewport/projection/scissor functions redirect from
 // screen-space to FBO-local coordinates automatically.
@@ -42,16 +40,7 @@ static irect16_t fbo_rect(window_t const *root, irect16_t r) {
 }
 
 static void set_scissor_cached(irect16_t const *r) {
-  if (!r) return;
-  glEnable(GL_SCISSOR_TEST);
-  if (g_scissor_valid &&
-      g_scissor_rect.x == r->x && g_scissor_rect.y == r->y &&
-      g_scissor_rect.w == r->w && g_scissor_rect.h == r->h) {
-    return;
-  }
-  g_scissor_rect = *r;
-  g_scissor_valid = true;
-  glScissor(r->x, r->y, r->w, r->h);
+  if (r) R_SetScissor(r->x, r->y, r->w, r->h);
 }
 
 // Returns true if win is the root window that currently "owns" keyboard focus
@@ -202,15 +191,13 @@ void set_viewport(irect16_t frame) {
   if (g_fbo_root) {
     // FBO callers use root-local, top-left coordinates.
     irect16_t r = fbo_rect(g_fbo_root, frame);
-    glViewport(r.x, r.y, r.w, r.h);
-    glEnable(GL_SCISSOR_TEST);
-    glScissor(r.x, r.y, r.w, r.h);
-    g_scissor_valid = false;
+    R_SetViewport(r.x, r.y, r.w, r.h);
+    R_SetScissor(r.x, r.y, r.w, r.h);
     return;
   }
   irect16_t ogl_rect = get_opengl_rect(frame);
   
-  glViewport(ogl_rect.x, ogl_rect.y, ogl_rect.w, ogl_rect.h);
+  R_SetViewport(ogl_rect.x, ogl_rect.y, ogl_rect.w, ogl_rect.h);
   set_scissor_cached(&ogl_rect);
 }
 
@@ -220,9 +207,7 @@ void set_clip_rect(window_t const *win, irect16_t r) {
     ipoint16_t origin = win ? window_origin_in_root(win) : (ipoint16_t){0, 0};
     irect16_t local = rect_offset(r, origin.x, origin.y);
     irect16_t clip = fbo_rect(g_fbo_root, local);
-    glEnable(GL_SCISSOR_TEST);
-    glScissor(clip.x, clip.y, clip.w, clip.h);
-    g_scissor_valid = false;
+    R_SetScissor(clip.x, clip.y, clip.w, clip.h);
     return;
   }
   irect16_t absolute = win
@@ -244,9 +229,8 @@ void set_viewport_for_fbo(window_t *root) {
   int w = surf->w;
   int h = surf->h;
   if (w <= 0 || h <= 0) return;
-  glViewport(0, 0, w, h);
-  glDisable(GL_SCISSOR_TEST);
-  g_scissor_valid = false;
+  R_SetViewport(0, 0, w, h);
+  R_DisableScissor();
   float scale = ui_surface_scale();
   int log_w = (int)roundf((float)w / scale);
   int log_h = (int)roundf((float)h / scale);
@@ -257,8 +241,7 @@ void set_viewport_for_fbo(window_t *root) {
 void set_scissor_fbo(window_t const *root, irect16_t r) {
   if (!g_ui_runtime.running || !root) return;
   irect16_t clip = fbo_rect(root, r);
-  glEnable(GL_SCISSOR_TEST);
-  glScissor(clip.x, clip.y, clip.w, clip.h);
+  R_SetScissor(clip.x, clip.y, clip.w, clip.h);
 }
 
 // ── Stencil no-ops (kept for API compat, superseded by FBO compositing) ───
@@ -484,64 +467,45 @@ void draw_checkerboard(irect16_t r, int square_px) {
                      0xFFFFFFFF, 0);
 }
 
-// Composite all visible root windows from their FBO textures to the
-// default framebuffer, applying SDF rounded-corner masking.
+static void composite_border(const R_CompositeLayer *layer) {
+  window_t *w = layer->user;
+  theme_draw(THEME_PART_WINDOW_BORDER, layer->frame, window_has_focus(w) ? CTRL_FOCUSED : CTRL_NORMAL);
+}
+
+// Describe every visible root window's surface to the compositor. Appearance (corners, shadow,
+// border) comes from the window's composition attributes, never from per-case tests here.
 void composite_root_windows(void) {
   if (!g_ui_runtime.running) return;
   g_fbo_root = NULL;
-
-  // iOS and offscreen hosts present a platform-owned, nonzero framebuffer.
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  axBindFramebuffer();
-  struct AXsize size;
-  axGetSize(&size);
-  float scale = axGetScaling();
-  int screen_w = (int)((float)size.width * scale + 0.5f);
-  int screen_h = (int)((float)size.height * scale + 0.5f);
-  bool composed = R_BeginScreenComposition(screen_w, screen_h,
-                                            get_sys_color(brPanelDarker));
-  if (!composed) {
-    glViewport(0, 0, screen_w, screen_h);
-    R_SetFramebufferSRGB(true);
-  }
-  glDisable(GL_SCISSOR_TEST);
-  glDisable(GL_DEPTH_TEST);
-  glEnable(GL_BLEND);
-  glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
-                      GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-
-  // Set projection for screen-space compositing.
-  set_fullscreen();
-
-  theme_t *theme = get_theme();
-  float base_radius = theme->window_corner_radius * axGetScaling();
-
+  static R_CompositeLayer *layers;
+  static int capacity;
+  int count = 0;
   for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
     if (!window_has_state(w, WINDOW_STATE_VISIBLE)) continue;
     window_surface_t *surf = window_surface(w);
     if (!surf || !surf->tex) continue;
-
-    // Clamp radius to half the smallest dimension (in physical pixels).
-    int max_r = MIN(surf->w, surf->h) / 2;
-    float radius = (window_is_maximized(w) || (w->flags & WINDOW_TRANSPARENT)) ? 0.0f : base_radius;
-    if (radius > max_r) radius = (float)max_r;
-
-    if (!window_is_maximized(w) && !(w->flags & WINDOW_TRANSPARENT))
-      draw_rect_shadow(w->frame, theme->window_corner_radius, theme->window_shadow_blur,
-                       theme->window_shadow_offset, theme->window_shadow_color);
-    draw_rounded_rect_premultiplied((int)surf->tex,
-                                    (irect16_t){w->frame.x, w->frame.y, w->frame.w, w->frame.h},
-                                    surf->w, surf->h,
-                                    radius, 1.0f);
-    if (!window_is_maximized(w) && !(w->flags & WINDOW_TRANSPARENT))
-      theme_draw(THEME_PART_WINDOW_BORDER, w->frame,
-                 window_has_focus(w) ? CTRL_FOCUSED : CTRL_NORMAL);
+    if (count == capacity) {
+      int grown = capacity ? capacity * 2 : 16;
+      R_CompositeLayer *p = realloc(layers, (size_t)grown * sizeof(*p));
+      if (!p) {
+        fprintf(stderr, "[draw] composite layer allocation failed count=%d\n", grown);
+        fflush(stderr);
+        break;
+      }
+      layers = p;
+      capacity = grown;
+    }
+    const theme_t *theme = get_theme();
+    layers[count++] = (R_CompositeLayer){
+      .tex = surf->tex, .w = surf->w, .h = surf->h, .frame = w->frame,
+      .corner_radius = (float)window_composition_attr(w, WCA_CORNERS) * axGetScaling(),
+      .shadow = window_composition_attr(w, WCA_SHADOW) != 0,
+      .shadow_radius = (float)theme->window_corner_radius, .shadow_blur = (float)theme->window_shadow_blur,
+      .shadow_offset = theme->window_shadow_offset, .shadow_color = theme->window_shadow_color,
+      .border = window_composition_attr(w, WCA_BORDER) != 0, .user = w,
+    };
   }
-
-  glDisable(GL_BLEND);
-  glEnable(GL_DEPTH_TEST);
-  if (composed) {
-    axBindFramebuffer();
-    R_PresentScreenComposition(screen_w, screen_h);
-  }
+  R_Composite(layers, count, get_sys_color(brPanelDarker),
+              ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight),
+              composite_border);
 }

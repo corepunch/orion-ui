@@ -232,8 +232,7 @@ bool ui_init_graphics(int flags, const char *title, int width, int height) {
   }
 #endif
 
-  printf("GL_VERSION  : %s\n", glGetString(GL_VERSION));
-  printf("GLSL_VERSION: %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
+  R_PrintDeviceInfo();
 
   if (!(flags & UI_INIT_HIDDEN))
     axSetSwapInterval(1);

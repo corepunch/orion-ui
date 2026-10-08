@@ -190,7 +190,7 @@ static bool bind_root_surface(window_t *root) {
   if (!surf || !R_EnsureWindowTarget(&surf->fbo, &surf->tex, &surf->w, &surf->h,
                                      ui_surface_px(root->frame.w), ui_surface_px(root->frame.h)))
     return false;
-  glBindFramebuffer(GL_FRAMEBUFFER, surf->fbo);
+  R_BindWindowTarget(surf->fbo);
   R_SetFramebufferSRGB(true);
   set_viewport_for_fbo(root);
   return true;
@@ -291,7 +291,7 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
       if (g_ui_runtime.running) {
         if (!bind_root_surface(root)) return false;
         if (win == root && (win->flags & WINDOW_TRANSPARENT)) R_ClearWindowTarget(window_surface(root)->fbo);
-        glBindFramebuffer(GL_FRAMEBUFFER, window_surface(root)->fbo);
+        R_BindWindowTarget(window_surface(root)->fbo);
         set_viewport_for_fbo(root);
         if (!(win->flags&WINDOW_TRANSPARENT) && wparam == 0) {
           draw_panel(win);
