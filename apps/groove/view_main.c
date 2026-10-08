@@ -5,6 +5,8 @@
 
 static const accel_t kAccel[] = {
   { FVIRTKEY | FCONTROL, AX_KEY_N,         ID_FILE_NEW  },
+  { FVIRTKEY | FCONTROL, AX_KEY_O,         ID_FILE_OPEN },
+  { FVIRTKEY | FCONTROL, AX_KEY_S,         ID_FILE_SAVE },
   { FVIRTKEY | FCONTROL, AX_KEY_Q,         ID_FILE_QUIT },
   { FVIRTKEY,            AX_KEY_SPACE,     ID_PLAY      },
   { FVIRTKEY,            AX_KEY_HOME,      ID_REWIND    },

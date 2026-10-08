@@ -8,6 +8,10 @@
     <menus var="kMenus" count="kNumMenus">
       <menu name="file" label="File">
         <item name="new" label="New Song" shortcut="Ctrl+N" />
+        <item name="open" label="Open Song..." shortcut="Ctrl+O" />
+        <item name="save" label="Save Song" shortcut="Ctrl+S" />
+        <item name="saveas" label="Save Song As..." />
+        <Separator />
         <item name="demo" label="Load Demo Song" />
         <Separator />
         <item name="quit" label="Quit" shortcut="Ctrl+Q" />

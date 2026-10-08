@@ -5,8 +5,47 @@
 #include "test_env.h"
 #include "apps/groove/groove.h"
 #include <orion/user/toolbar.h>
+#include <unistd.h>
 
 static float peak_of(const float *p, int n) { float m = 0; for (int i = 0; i < n; i++) m = fmaxf(m, fabsf(p[i])); return m; }
+
+static void test_project_io(void) {
+  TEST("Groove projects round-trip arrangement and mixer state, and invalid files leave the song intact");
+  test_env_init();
+  g_app = app_init();
+  window_t *win = create_window("Groove", 0, MAKERECT(0, 0, 800, 600), NULL, main_win_proc, 0, g_app);
+  ASSERT_NOT_NULL(win);
+  g_app->song.bpm = 128;
+  g_app->song.loop = false;
+  g_app->song.mute[2] = true;
+  g_app->song.solo[5] = true;
+  ASSERT(song_add_clip(&g_app->song, 0, 1, 0) == 0, "first clip added");
+  ASSERT(song_add_clip(&g_app->song, 1, 1, 0) == 1, "same-position clip added");
+  ASSERT(song_add_clip(&g_app->song, 2, 6, 4 * GR_TICKS_BAR) == 2, "later clip added");
+  char path[128];
+  snprintf(path, sizeof(path), "/tmp/orion-groove-project-%ld", (long)getpid());
+  char saved[140]; snprintf(saved, sizeof(saved), "%s.groove", path);
+  char bad[140]; snprintf(bad, sizeof(bad), "%s-bad.groove", path);
+  ASSERT_TRUE(app_save_song(path));
+  ASSERT(access(saved, F_OK) == 0, "save appends the project extension");
+  app_new_song();
+  ASSERT_TRUE(app_open_song(saved));
+  ASSERT(g_app->song.bpm == 128 && !g_app->song.loop && g_app->song.mute[2] && g_app->song.solo[5], "tempo, loop, mute and solo are restored");
+  ASSERT(g_app->song.nclips == 3 && g_app->song.clips[0].block == 0 && g_app->song.clips[1].block == 1 && g_app->song.clips[2].track == 6, "clip blocks and placements are restored");
+  ASSERT(g_app->song.clips[0].position == 0 && g_app->song.clips[1].position == 0 && g_app->song.clips[2].position == 4 * GR_TICKS_BAR, "clip positions are restored");
+  ASSERT(g_app->song.clips[0].order == 1 && g_app->song.clips[1].order == 2 && g_app->song.clip_order == 3, "same-position stacking order is restored");
+  ASSERT(block_get(0)->audio.pcm && block_get(0)->audio_bpm == 128, "loaded arrangement audio is ready at its saved tempo");
+  FILE *f = fopen(bad, "wb"); ASSERT_NOT_NULL(f); fputs("ORION_GROOVE 1\n70 1 0 0 1\n99999 0 0 1\n", f); fclose(f);
+  int old_clips = g_app->song.nclips;
+  ASSERT_FALSE(app_open_song(bad));
+  ASSERT_EQUAL(g_app->song.nclips, old_clips);
+  ASSERT_EQUAL(g_app->song.bpm, 128);
+  remove(saved); remove(bad);
+  destroy_window(win);
+  app_shutdown(g_app);
+  test_env_shutdown();
+  PASS();
+}
 
 // Renders one block and installs it, as the controller does on demand.
 static void load_block(int id, int bpm) {
@@ -195,10 +234,10 @@ static void test_sheet_drop(void) {
   ASSERT_EQUAL(g_app->song.nclips, before);
   ASSERT_TRUE(app_drop(&(drag_t){ .block = 0, .from_clip = -1, .track = 0, .position = 0 }));
   ASSERT_TRUE(app_block_audio(1));
-  app_set_bpm(140);
-  ASSERT(g_app->song.bpm == 140 && block_get(0)->audio.frames == bar_frames_for_bpm(140) * block_get(0)->bars, "bpm change re-renders the blocks in the song");
+  app_set_bpm(141);
+  ASSERT(g_app->song.bpm == 141 && block_get(0)->audio.frames == bar_frames_for_bpm(141) * block_get(0)->bars, "bpm change re-renders the blocks in the song");
   ASSERT(!block_get(1)->audio.pcm, "blocks the song does not use are dropped until they are needed again");
-  ASSERT(app_block_audio(1) && block_get(1)->audio.frames == bar_frames_for_bpm(140) * block_get(1)->bars, "and render at the new tempo on demand");
+  ASSERT(app_block_audio(1) && block_get(1)->audio.frames == bar_frames_for_bpm(141) * block_get(1)->bars, "and render at the new tempo on demand");
   destroy_window(win);
   app_shutdown(g_app);
   test_env_shutdown();
@@ -879,6 +918,7 @@ int main(void) {
   test_blocks();
   test_genres();
   test_tempo();
+  test_project_io();
   test_song_rules();
   test_mixer();
   test_overlap_audio();

@@ -147,6 +147,7 @@ typedef struct {
   int           audio_dev;
   uint32_t      timer;
   int           selected_clip;
+  char          filename[512];
   drag_t        drag;
   uint8_t       genre;      // library filter: 0 = every genre, else one GENRE_* flag
   int           category;   // library filter: the one category_t the bin shows
@@ -191,6 +192,8 @@ groove_t *app_init(void);
 void      app_shutdown(groove_t *app);
 void      app_load_demo(void);
 void      app_new_song(void);
+bool      app_open_song(const char *path);
+bool      app_save_song(const char *path);
 void      create_menubar(void);
 void      app_lock(void);
 void      app_unlock(void);

@@ -99,11 +99,11 @@ static void release_all_audio(void) {
 
 void app_new_song(void) {
   app_lock();
-  g_app->song.nclips = 0;
-  g_app->song.pos = 0;
+  song_init(&g_app->song);
   g_app->selected_clip = -1;
   app_unlock();
   release_all_audio();
+  g_app->filename[0] = 0;
   invalidate_window(g_app->sheet);
 }
 
@@ -245,6 +245,33 @@ void app_select_clip(int idx) {
   invalidate_window(g_app->sheet);
 }
 
+static void open_song_dialog(void) {
+  char path[512] = {0};
+  openfilename_t ofn = {0};
+  ofn.lStructSize = sizeof(ofn);
+  ofn.hwndOwner = g_app->menubar_win;
+  ofn.lpstrFile = path;
+  ofn.nMaxFile = sizeof(path);
+  ofn.lpstrFilter = "Groove Songs\0*.groove\0All Files\0*.*\0";
+  ofn.Flags = OFN_FILEMUSTEXIST;
+  if (get_open_filename(&ofn) && !app_open_song(path))
+    message_box(g_app->menubar_win, "Could not open this Groove song. The file may be damaged or use an unsupported version.", "Open failed", MB_OK);
+}
+
+static void save_song_as_dialog(void) {
+  char path[512] = {0};
+  snprintf(path, sizeof(path), "%s", g_app->filename[0] ? g_app->filename : "Untitled.groove");
+  openfilename_t ofn = {0};
+  ofn.lStructSize = sizeof(ofn);
+  ofn.hwndOwner = g_app->menubar_win;
+  ofn.lpstrFile = path;
+  ofn.nMaxFile = sizeof(path);
+  ofn.lpstrFilter = "Groove Song\0*.groove\0";
+  ofn.Flags = OFN_OVERWRITEPROMPT;
+  if (get_save_filename(&ofn) && !app_save_song(path))
+    message_box(g_app->menubar_win, "Could not save the Groove song. Check the filename and available space.", "Save failed", MB_OK);
+}
+
 bool app_drop(const drag_t *d) {
   song_t *s = &g_app->song;
   bool ok = false, audio = d->from_clip < 0 && app_block_audio(d->block); // render before taking the lock
@@ -278,6 +305,13 @@ void app_command(uint16_t id) {
       if (g_app->menubar_win) dock_set_side(g_app->menubar_win, DOCK_TOP);
       break;
     case ID_FILE_NEW:  app_new_song(); break;
+    case ID_FILE_OPEN: open_song_dialog(); break;
+    case ID_FILE_SAVE:
+      if (g_app->filename[0]) {
+        if (!app_save_song(g_app->filename)) message_box(g_app->menubar_win, "Could not save the Groove song. Check the filename and available space.", "Save failed", MB_OK);
+      } else save_song_as_dialog();
+      break;
+    case ID_FILE_SAVEAS: save_song_as_dialog(); break;
     case ID_FILE_DEMO: app_new_song(); app_load_demo(); invalidate_window(g_app->sheet); break;
     case ID_FILE_QUIT: ui_request_quit(); break;
     case ID_DELETE:
