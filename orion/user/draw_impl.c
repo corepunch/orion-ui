@@ -302,6 +302,10 @@ void stroke_rounded_rect(uint32_t color, irect16_t r, int radius, int thickness)
 }
 
 void draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color) {
+  get_theme()->draw_card(r, state, edge_color);
+}
+
+void theme_default_draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color) {
   extern uint32_t ui_white_texture;
   if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0) return;
   const theme_t *theme = get_theme();
@@ -354,15 +358,15 @@ void draw_plastic_card(irect16_t r, ctrl_state_t state, uint32_t color) {
                           theme->drag_shadow_color, 0, NULL, (ipoint16_t){0, 0});
 }
 
-#define BADGE_PADDING 7
 int measure_badge(ui_font_t font, const char *text) {
-  return text_strwidth(font, text) + 2 * BADGE_PADDING;
+  return text_strwidth(font, text) + 2 * get_theme()->badge_padding;
 }
 
 int draw_badge(ui_font_t font, const char *text, int x, int y, int height, uint32_t color) {
   int w = measure_badge(font, text);
-  fill_rounded_rect(color_with_alpha(color, 0x40), R(x, y, w, height), MIN(5, height / 2));
-  draw_text(font, text, x + BADGE_PADDING, y + (height - text_char_height(font)) / 2, color);
+  const theme_t *theme = get_theme();
+  fill_rounded_rect(color_with_alpha(color, (uint8_t)theme->badge_tint_alpha), R(x, y, w, height), MIN(theme->badge_corner_radius, height / 2));
+  draw_text(font, text, x + theme->badge_padding, y + (height - text_char_height(font)) / 2, color);
   return w;
 }
 

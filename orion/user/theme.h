@@ -176,6 +176,7 @@ typedef struct {
   void (*draw_statusbar_text)(irect16_t r, const char *text);
   void (*draw_button_label)(irect16_t r, const char *text, ctrl_state_t state);
   void (*draw_combobox)(irect16_t r, const char *text, ctrl_state_t state);
+  void (*draw_card)(irect16_t r, ctrl_state_t state, uint32_t edge_color); // card face, selection ring and accent edge in one silhouette
   uint32_t (*foreground)(theme_part_t part, ctrl_state_t state);
 
   // Scrollbar geometry policy.  scrollbar_overlay=true means Modern overlay
@@ -221,6 +222,10 @@ typedef struct {
     int hover, selected, selected_hover, pressed; // system color roles
   } item_background;
   int control_padding;       // standard inset from control frame to content area
+  int tab_pane_frame;        // TabView page inset from the tab bar frame (bevel width; 0 = flat)
+  int menu_capsule;          // 1 = menu-bar selection is a padded capsule around the label; 0 = full item cell
+  int badge_padding, badge_corner_radius; // Badge: horizontal text inset and corner radius
+  int badge_tint_alpha;      // Badge: alpha of the tinted face behind the text (0..255)
 
   // Writes the theme's palette into g_sys_colors.  Called by set_theme()
   // before evThemeChanged is broadcast so controls see the new colors
@@ -228,9 +233,6 @@ typedef struct {
   void (*apply_palette)(void);
 } theme_t;
 
-static inline bool theme_is_modern(const theme_t *t) {
-  return t && t->style != THEME_CLASSIC;
-}
 
 static inline void theme_copy_palette(const uint32_t *src) {
   for (int i = 0; i < brCount; i++) g_sys_colors[i] = src[i];
@@ -255,6 +257,7 @@ static inline int theme_toolbar_band_height(void) {
 // Paint semantic parts only inside the established paint path. Disabled state
 // suppresses hover/pressed feedback while preserving selection and focus.
 void theme_draw(theme_part_t part, irect16_t r, ctrl_state_t state);
+void theme_default_draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color); // shared card painter for flat themes
 uint32_t theme_foreground(theme_part_t part, ctrl_state_t state);
 
 // Built-in theme singletons. Light and Navy share Modern drawing.

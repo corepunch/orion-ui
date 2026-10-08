@@ -540,7 +540,7 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
         int i = data->active_idx;
         irect16_t selection = menubar_item_rect(win, data, i);
         // Capsule padding can overlap adjacent hit targets; paint behind all labels.
-        if (theme_is_modern(get_theme())) {
+        if (get_theme()->menu_capsule) {
           selection = rect_center(selection, strwidth(data->menus[i].label), selection.h);
           selection = rect_inset_xy(selection, -(MENU_CAPSULE_PAD + MENU_CAPSULE_INSET), 0);
         }
