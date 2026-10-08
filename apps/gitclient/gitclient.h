@@ -13,7 +13,6 @@
 #include <orion/commctl/menubar.h>
 #include <orion/commctl/appchrome.h>
 #include <orion/user/accel.h>
-#include <orion/user/icons.h>
 
 #include "build/generated/apps/gitclient/gitclient.h"
 

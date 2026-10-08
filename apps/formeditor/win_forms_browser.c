@@ -4,7 +4,6 @@
 
 #include "formeditor.h"
 #include <orion/commctl/commctl.h>
-#include <orion/user/icons.h>
 
 #define FORMS_ID_NEW     1
 #define FORMS_ID_DELETE  2

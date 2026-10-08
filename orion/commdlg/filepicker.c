@@ -18,7 +18,6 @@
 #include <orion/commctl/filelist.h>
 #include <orion/commctl/commctl.h>
 #include <orion/user/user.h>
-#include <orion/user/icons.h>
 #include <orion/user/messages.h>
 
 // ---------------------------------------------------------------------------
