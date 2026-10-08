@@ -38,16 +38,26 @@ bool app_save_song(const char *path) {
   snapshot = g_app->song;
   app_unlock();
   song_t *s = &snapshot;
+  int asset_ids[GR_MAX_CLIPS], nassets = 0;
+  for (int i = 0; i < s->nclips; i++) {
+    int id = s->clips[i].block, j = 0;
+    while (j < nassets && asset_ids[j] != id) j++;
+    if (j == nassets) asset_ids[nassets++] = id;
+  }
   char tmp_path[sizeof(temp)];
   snprintf(tmp_path, sizeof(tmp_path), "%s", temp);
   FILE *f = fopen(tmp_path, "wb");
   if (!f) return false;
   uint32_t mute = track_flags(s->mute), solo = track_flags(s->solo);
-  bool ok = fprintf(f, "ORION_GROOVE 1\n%d %d %" PRIu32 " %" PRIu32 " %d\n",
-                    s->bpm, s->loop ? 1 : 0, mute, solo, s->nclips) > 0;
+  bool ok = fprintf(f, "ORION_GROOVE 2\n%d %d %" PRIu32 " %" PRIu32 " %d %d\n",
+                    s->bpm, s->loop ? 1 : 0, mute, solo, nassets, s->nclips) > 0;
+  for (int i = 0; ok && i < nassets; i++)
+    ok = fprintf(f, "B %d\t%s\n", asset_ids[i], block_get(asset_ids[i])->name) > 0;
   for (int i = 0; ok && i < s->nclips; i++) {
     const clip_t *c = &s->clips[i];
-    ok = fprintf(f, "%d %d %d %" PRIu64 "\n", c->block, c->track, c->position, c->order) > 0;
+    int asset = 0;
+    while (asset < nassets && asset_ids[asset] != c->block) asset++;
+    ok = asset < nassets && fprintf(f, "%d %d %d %" PRIu64 "\n", asset, c->track, c->position, c->order) > 0;
   }
   if (fclose(f) != 0) ok = false;
 #ifdef _WIN32
@@ -65,21 +75,37 @@ bool app_open_song(const char *path) {
   FILE *f = fopen(path, "rb");
   if (!f) return false;
   char magic[32];
-  int version = 0, bpm = 0, loop = 0, nclips = 0;
+  int version = 0, bpm = 0, loop = 0, nassets = 0, nclips = 0;
   uint32_t mute = 0, solo = 0;
   song_t next;
   song_init(&next);
-  bool ok = fscanf(f, "%31s %d", magic, &version) == 2 && !strcmp(magic, "ORION_GROOVE") && version == 1 &&
-            fscanf(f, "%d %d %" SCNu32 " %" SCNu32 " %d", &bpm, &loop, &mute, &solo, &nclips) == 5 &&
-            bpm >= GR_BPM_MIN && bpm <= GR_BPM_MAX && (loop == 0 || loop == 1) &&
-            !(mute & ~((1u << GR_TRACKS) - 1)) && !(solo & ~((1u << GR_TRACKS) - 1)) && nclips >= 0 && nclips <= GR_MAX_CLIPS;
+  bool ok = fscanf(f, "%31s %d", magic, &version) == 2 && !strcmp(magic, "ORION_GROOVE") && (version == 1 || version == 2);
+  if (ok && version == 1)
+    ok = fscanf(f, "%d %d %" SCNu32 " %" SCNu32 " %d", &bpm, &loop, &mute, &solo, &nclips) == 5;
+  else if (ok)
+    ok = fscanf(f, "%d %d %" SCNu32 " %" SCNu32 " %d %d", &bpm, &loop, &mute, &solo, &nassets, &nclips) == 6;
+  ok = ok && bpm >= GR_BPM_MIN && bpm <= GR_BPM_MAX && (loop == 0 || loop == 1) &&
+       !(mute & ~((1u << GR_TRACKS) - 1)) && !(solo & ~((1u << GR_TRACKS) - 1)) &&
+       nassets >= 0 && nassets <= GR_MAX_CLIPS && nclips >= 0 && nclips <= GR_MAX_CLIPS;
   next.bpm = bpm;
   next.loop = loop != 0;
   if (ok) { flags_from_bits(next.mute, mute); flags_from_bits(next.solo, solo); }
+  int asset_ids[GR_MAX_CLIPS];
+  for (int i = 0; ok && i < nassets; i++) {
+    char kind = 0, name[256];
+    int block = -1;
+    if (fscanf(f, " %c %d", &kind, &block) != 2 || kind != 'B' || fgetc(f) != '\t' || !fgets(name, sizeof(name), f)) { ok = false; break; }
+    name[strcspn(name, "\r\n")] = 0;
+    const block_t *b = block_get(block);
+    if (!b || strcmp(name, b->name)) { ok = false; break; }
+    for (int j = 0; j < i; j++) if (asset_ids[j] == block) ok = false;
+    if (ok) asset_ids[i] = block;
+  }
   for (int i = 0; ok && i < nclips; i++) {
-    int block, track, position;
+    int source, track, position;
     uint64_t order;
-    if (fscanf(f, "%d %d %d %" SCNu64, &block, &track, &position, &order) != 4) { ok = false; break; }
+    if (fscanf(f, "%d %d %d %" SCNu64, &source, &track, &position, &order) != 4) { ok = false; break; }
+    int block = version == 1 ? source : source >= 0 && source < nassets ? asset_ids[source] : -1;
     const block_t *b = block_get(block);
     int ticks = b ? b->bars * GR_TICKS_BAR : 0;
     if (!b || !song_can_place(&next, track, position, ticks, -1) || !order) { ok = false; break; }
