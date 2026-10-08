@@ -3,6 +3,7 @@
 
 #include "groove.h"
 
+#define TILE_GAP   0
 #define TILE_PAD   0
 #define MAX_TILES  GR_MAX_BLOCKS
 
@@ -47,9 +48,10 @@ static bool block_source_load(bin_t *st, const char *source) {
 }
 
 // Shows the cards that pass the bin's filter, hides the rest.
-static int apply_filter(bin_t *st) {
+static int apply_filter(window_t *win, bin_t *st) {
   int i = 0, shown = 0;
-  for (window_t *c = st->flow ? st->flow->children : NULL; c && i < st->count; c = c->next, i++) {
+  window_t *parent = st->flow ? st->flow : win;
+  for (window_t *c = parent->children; c && i < st->count; c = c->next, i++) {
     bool match = block_visible(st->ids[i]);
     if (match != window_has_state(c, WINDOW_STATE_VISIBLE)) show_window(c, match);
     shown += match;
@@ -60,7 +62,24 @@ static int apply_filter(bin_t *st) {
 // Keep one FlowView child sized to its measured content and shift it with the bin viewport.
 static void layout_tiles(window_t *win, bin_t *st) {
   irect16_t cr = get_client_rect(win);
-  if (!st->flow) return;
+  if (!st->flow) {
+    int x = TILE_PAD, y = TILE_PAD, i = 0, bottom = 0, row_height = 0;
+    for (window_t *c = win->children; c && i < st->count; c = c->next, i++) {
+      if (!window_has_state(c, WINDOW_STATE_VISIBLE)) continue;
+      layout_measure_t measure = {0};
+      send_message(c, evMeasure, 0, &measure);
+      ipoint16_t size = {measure.desired_w, measure.desired_h};
+      if (x + size.x > cr.w - TILE_PAD && x > TILE_PAD) { x = TILE_PAD; y += row_height + TILE_GAP; row_height = 0; }
+      card_place(c, R(x, y - vpos(win), size.x, size.y));
+      row_height = MAX(row_height, size.y);
+      bottom = y + row_height;
+      x += size.x + TILE_GAP;
+    }
+    int content_h = bottom + TILE_PAD;
+    scroll_info_t si = { .fMask = SIF_RANGE | SIF_PAGE | SIF_POS, .nMin = 0, .nMax = content_h, .nPage = cr.h, .nPos = vpos(win) };
+    set_scroll_info(win, SB_VERT, &si, false);
+    return;
+  }
   layout_measure_t measure = { .avail_w = cr.w, .avail_h = cr.h };
   send_message(st->flow, evMeasure, 0, &measure);
   int content_h = MAX(cr.h, measure.desired_h);
@@ -83,15 +102,6 @@ result_t win_bin(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       g_app->bin = win;
       for (window_t *c = win->children; c; c = c->next)
         if (window_is_class(c, "FlowView")) { st->flow = c; break; }
-      if (!st->flow) {
-        st->flow = create_window("Blocks", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOACTIVATE,
-                                 MAKERECT(0, 0, 1, 1), win, win_flowview, win->hinstance, NULL);
-        if (!st->flow) {
-          fprintf(stderr, "[bin] FlowView allocation failed win=%u\n", (unsigned)win->id);
-          fflush(stderr);
-          return false;
-        }
-      }
       const form_ctrl_def_t *def = (uintptr_t)lparam > 0x100000u ? lparam : NULL;
       if (def && def->source) {
         if (!block_source_load(st, def->source)) return false;
@@ -107,30 +117,31 @@ result_t win_bin(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
           for (int cat = 0; cat < CAT_COUNT; cat++) st->count += blocks_in_category(cat, st->ids + st->count, MAX_TILES - st->count);
         }
       }
-      window_t *template = st->flow->children;
+      window_t *template = st->flow ? st->flow->children : NULL;
       if (template && st->count) {
         send_message(template, grCardSetBlock, st->ids[0], NULL);
         show_window(template, true);
       }
       for (int i = template && st->count ? 1 : 0; i < st->count; i++) {
-        if (!create_window("", GR_CARD_FLAGS, MAKERECT(0, 0, 1, 1), st->flow, win_block_card, 0, (void *)(intptr_t)st->ids[i])) {
+        window_t *parent = st->flow ? st->flow : win;
+        if (!create_window("", GR_CARD_FLAGS, MAKERECT(0, 0, 1, 1), parent, win_block_card, 0, (void *)(intptr_t)st->ids[i])) {
           fprintf(stderr, "[bin] tile allocation failed index=%d block=%d\n", i, st->ids[i]);
           fflush(stderr);
         }
       }
       if (template && !st->count) show_window(template, false);
-      apply_filter(st);
+      apply_filter(win, st);
       return true;
     case evPaint: {
       layout_tiles(win, st);
       irect16_t cr = get_client_rect(win);
       fill_rect(get_sys_color(brControlBg), cr);
-      if (!apply_filter(st))
+      if (!apply_filter(win, st))
         draw_text(FONT_SYSTEM, "No sounds in this family", TILE_PAD + 4, TILE_PAD + 4, get_sys_color(brTextSecondary));
       return false;
     }
     case binFilter:
-      apply_filter(st);
+      apply_filter(win, st);
       set_scroll_info(win, SB_VERT, &(scroll_info_t){ .fMask = SIF_POS, .nPos = 0 }, false);
       layout_tiles(win, st);
       invalidate_window(win);
