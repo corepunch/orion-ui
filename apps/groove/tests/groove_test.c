@@ -10,6 +10,14 @@
 
 static float peak_of(const float *p, int n) { float m = 0; for (int i = 0; i < n; i++) m = fmaxf(m, fabsf(p[i])); return m; }
 
+// The mute/solo button with this id inside the track header column.
+static window_t *tracks_find(uint32_t id) {
+  for (window_t *row = g_app->tracks ? g_app->tracks->children : NULL; row; row = row->next)
+    for (window_t *b = row->children; b; b = b->next)
+      if (b->id == id) return b;
+  return NULL;
+}
+
 static void test_project_io(void) {
   TEST("Groove projects round-trip arrangement and mixer state, and invalid files leave the song intact");
   test_env_init();
@@ -246,7 +254,7 @@ static void test_sheet_drop(void) {
   show_window(win, true);
   int before = g_app->song.nclips;
   int track = 7, bar = 10;
-  int sx = window_screen_x(g_app->sheet) + GR_SHEET_HEADER_W + bar * 88 + 20;
+  int sx = window_screen_x(g_app->sheet) + bar * 88 + 20;
   int row = CLAMP((get_client_rect(g_app->sheet).h - 22) / GR_TRACKS, 26, 64);
   int sy = window_screen_y(g_app->sheet) + 22 + track * row + row / 2;
   g_app->drag = (drag_t){ .active = true, .block = 0, .from_clip = -1, .track = -1 };
@@ -363,7 +371,7 @@ static void test_overlap_sheet(void) {
     .y = (window_screen_y(library) + 4) * UI_WINDOW_SCALE};
   dispatch_message(&event);
   ASSERT_TRUE(g_ui_runtime.captured == library);
-  int x = GR_SHEET_HEADER_W + cut * 88 / GR_TICKS_BAR - scroll;
+  int x = cut * 88 / GR_TICKS_BAR - scroll;
   event.message = kEventLeftButtonDragged;
   event.x = (window_screen_x(sheet) + x + 4) * UI_WINDOW_SCALE;
   event.y = (window_screen_y(sheet) + 22 + 4) * UI_WINDOW_SCALE;
@@ -424,7 +432,7 @@ static void test_fractional_selection(void) {
   int position = 3 * GR_TICKS_BAR + GR_SNAP_TICKS;
   int clip = song_add_clip(&g_app->song, 0, 0, position);
   ASSERT(clip >= 0, "fractional clip added");
-  int scroll = 83, left = GR_SHEET_HEADER_W + 3 * 88 + 22;
+  int scroll = 83, left = 3 * 88 + 22;
   set_scroll_info(sheet, SB_HORZ, &(scroll_info_t){ .fMask = SIF_POS, .nPos = scroll }, false);
   send_message(sheet, evHScroll, 0, NULL);
   ASSERT_EQUAL(sheet->children->frame.x, left - scroll);
@@ -482,7 +490,7 @@ static void test_two_finger_sheet_pan(void) {
   show_window(win, true);
   int clip = song_add_clip(&g_app->song, 0, 0, 0);
   window_t *sheet = g_app->sheet;
-  int sx = window_screen_x(sheet) + GR_SHEET_HEADER_W + 32, sy = window_screen_y(sheet) + 40;
+  int sx = window_screen_x(sheet) + 32, sy = window_screen_y(sheet) + 40;
   ui_event_t event = {.message = kEventLeftButtonDown, .x = sx * UI_WINDOW_SCALE, .y = sy * UI_WINDOW_SCALE};
   dispatch_message(&event);
   ASSERT_TRUE(g_ui_runtime.captured == sheet);
@@ -507,29 +515,33 @@ static void test_two_finger_sheet_pan(void) {
   ASSERT_EQUAL(g_app->song.preview_block, -1);
   event.gesture.phase = AX_GESTURE_END;
   dispatch_message(&event);
-  int row = CLAMP((get_client_rect(sheet).h - 22) / GR_TRACKS, 26, 64);
-  int size = MIN(24, (row - 4) / 2), mute_y = 22 + (row - size * 2 - 2) / 2 + size / 2;
+  window_t *mute = tracks_find(ID_MUTE(0)), *solo = tracks_find(ID_SOLO(0));
+  ASSERT_TRUE(mute && solo && window_screen_y(mute) >= window_screen_y(sheet) + GR_RULER_H);
+  ASSERT_TRUE(window_screen_x(mute) + mute->frame.w <= window_screen_x(sheet));
   event = (ui_event_t){.message = kEventLeftButtonDown,
-    .x = (window_screen_x(sheet) + GR_SHEET_HEADER_W / 2) * UI_WINDOW_SCALE,
-    .y = (window_screen_y(sheet) + mute_y) * UI_WINDOW_SCALE};
+    .x = (window_screen_x(mute) + mute->frame.w / 2) * UI_WINDOW_SCALE,
+    .y = (window_screen_y(mute) + mute->frame.h / 2) * UI_WINDOW_SCALE};
+  dispatch_message(&event);
+  event.message = kEventLeftButtonUp;
   dispatch_message(&event);
   ASSERT_TRUE(g_app->song.mute[0]);
-  event.message = kEventLeftButtonUp;
-  dispatch_message(&event);
+  invalidate_window(g_app->tracks);
+  send_message(g_app->tracks, evPaint, 0, NULL);
+  ASSERT_TRUE(mute->value);
   char tooltip[256] = {0};
-  ASSERT_TRUE(send_message(sheet, evGetTooltipText, MAKEDWORD(GR_SHEET_HEADER_W / 2 + get_scroll_pos(sheet, SB_HORZ), mute_y), tooltip));
-  ASSERT_TRUE(strcmp(tooltip, "Unmute track 1") == 0);
+  ASSERT_TRUE(send_message(mute, evGetTooltipText, 0, tooltip) && strcmp(tooltip, "Mute track") == 0);
   event.message = kEventLeftButtonDown;
-  event.y += (size + 2) * UI_WINDOW_SCALE;
+  event.x = (window_screen_x(solo) + solo->frame.w / 2) * UI_WINDOW_SCALE;
+  event.y = (window_screen_y(solo) + solo->frame.h / 2) * UI_WINDOW_SCALE;
+  dispatch_message(&event);
+  event.message = kEventLeftButtonUp;
   dispatch_message(&event);
   ASSERT_TRUE(g_app->song.solo[0]);
-  event.message = kEventLeftButtonUp;
-  dispatch_message(&event);
   ASSERT_EQUAL(g_app->song.nclips, 1);
   ASSERT_EQUAL(g_app->song.preview_block, -1);
   ASSERT_FALSE(g_app->drag.active);
   event = (ui_event_t){.message = kEventLeftButtonDown,
-    .x = (window_screen_x(sheet) + GR_SHEET_HEADER_W + 2) * UI_WINDOW_SCALE, .y = sy * UI_WINDOW_SCALE};
+    .x = (window_screen_x(sheet) + 2) * UI_WINDOW_SCALE, .y = sy * UI_WINDOW_SCALE};
   dispatch_message(&event);
   ASSERT_EQUAL(g_app->selected_clip, clip);
   event.message = kEventPointerCancel;
@@ -733,7 +745,7 @@ static void test_drag_anchor(void) {
   send_message(sheet, evHScroll, 0, NULL);
   int row = CLAMP((get_client_rect(sheet).h - 22) / GR_TRACKS, 26, 64);
   ipoint16_t grab = {160, row - 4};
-  int sx = window_screen_x(sheet) + GR_SHEET_HEADER_W + 7 * 88 + 10 + grab.x - get_scroll_pos(sheet, SB_HORZ);
+  int sx = window_screen_x(sheet) + 7 * 88 + 10 + grab.x - get_scroll_pos(sheet, SB_HORZ);
   int sy = window_screen_y(sheet) + 22 + 5 * row + 6 + grab.y;
   send_message(library, evLeftButtonDown, MAKEDWORD(grab.x, grab.y), NULL);
   send_message(library, evMouseMove, MAKEDWORD(sx - window_screen_x(library), sy - window_screen_y(library)), NULL);
@@ -759,11 +771,11 @@ static void test_drag_anchor(void) {
   ASSERT_TRUE(send_message(sheet, shSetDropAnchor, GR_DROP_ANCHOR_SAMPLE, NULL));
 
   send_message(sheet, evResize, 0, NULL);
-  int mx = GR_SHEET_HEADER_W + 8 * 88 + grab.x, my = 22 + 5 * row + grab.y;
+  int mx = 8 * 88 + grab.x, my = 22 + 5 * row + grab.y;
   send_message(sheet, evLeftButtonDown, MAKEDWORD(mx, my), NULL);
   send_message(sheet, evMouseMove, MAKEDWORD(mx - 6, my), NULL);
   ASSERT(g_app->drag.position == 8 * GR_TICKS_BAR && g_app->drag.track == 5, "small movements keep the clip at its nearest grid origin");
-  mx = GR_SHEET_HEADER_W + 6 * 88 + 10 + grab.x;
+  mx = 6 * 88 + 10 + grab.x;
   my = 22 + 2 * row + 6 + grab.y;
   send_message(sheet, evMouseMove, MAKEDWORD(mx, my), NULL);
   ASSERT_TRUE(g_app->drag.active && g_app->drag.valid);
@@ -775,7 +787,7 @@ static void test_drag_anchor(void) {
   ASSERT_NULL(g_ui_runtime.captured);
 
   g_app->drag = (drag_t){ .active = true, .block = block, .from_clip = -1, .grab = grab, .track = -1 };
-  sx = window_screen_x(sheet) + GR_SHEET_HEADER_W + 2;
+  sx = window_screen_x(sheet) + 2;
   sy = window_screen_y(sheet) + 24;
   send_message(sheet, shDragOver, MAKEDWORD(sx, sy), NULL);
   ASSERT_TRUE(g_app->drag.valid && g_app->drag.position == 0 && g_app->drag.track == 0);
@@ -816,7 +828,7 @@ static void test_drag_center_boundaries(void) {
         for (int x = 0; x < ARRAY_LEN(percent); x++) for (int y = 0; y < ARRAY_LEN(percent); y++) {
           int dx = (22 * percent[x] + (percent[x] > 50 ? 99 : 0)) / 100;
           int dy = (size.y * percent[y] + (percent[y] > 50 ? 99 : 0)) / 100;
-          int sx = window_screen_x(sheet) + GR_SHEET_HEADER_W + 3 * 88 + 22 - scroll + dx;
+          int sx = window_screen_x(sheet) + 3 * 88 + 22 - scroll + dx;
           int sy = window_screen_y(sheet) + 22 + 2 * size.y + dy;
           event.message = kEventLeftButtonDragged;
           event.x = (sx + grabs[grab].x) * UI_WINDOW_SCALE;
@@ -852,7 +864,7 @@ static void test_drag_off_sheet_removes(void) {
   song_add_clip(&g_app->song, 0, 1, 0);
   window_t *sheet = g_app->sheet;
   send_message(sheet, evResize, 0, NULL);
-  int x = GR_SHEET_HEADER_W + 32, y = 22 + 8;
+  int x = 32, y = 22 + 8;
   send_message(sheet, evLeftButtonDown, MAKEDWORD(x, y), NULL);
   send_message(sheet, evMouseMove, MAKEDWORD(x + 12, y), NULL);
   send_message(sheet, evLeftButtonUp, MAKEDWORD(x + 12, y), NULL);

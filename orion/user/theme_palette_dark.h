@@ -40,7 +40,8 @@
   [brTextSecondary]        = 0xff9a9a9a, \
   [brTextOnColor]          = 0xff101010, \
   [brSelectionTop]         = 0xffD77800, \
-  [brSelectionBottom]      = 0xffD77800
+  [brSelectionBottom]      = 0xffD77800, \
+  [brPlasticNeutral]       = 0xffd0d0d0
 
 static const uint32_t k_theme_palette_dark[brCount]
   __attribute__((unused)) = { THEME_PALETTE_DARK_INIT };

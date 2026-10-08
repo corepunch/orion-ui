@@ -331,7 +331,8 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       if (plastic) {
         irect16_t face = local;
         if (tb->style & TOOLBAR_STYLE_SHOW_LABELS) face.h -= text_char_height(FONT_SMALLEST) + 2;
-        draw_plastic_button(face, state, item->color, icon, item->style & CONTROL_SIZE_MASK);
+        theme_draw_ex(THEME_PART_TOOLBAR_BUTTON, face, state | CTRL_PLASTIC,
+                      &(theme_draw_opts_t){.color = item->color, .icon = icon, .control_size = item->style & CONTROL_SIZE_MASK});
       } else if (tb->style & TOOLBAR_STYLE_COMPACT) {
         if (is_pressed || is_active)
           theme_draw(THEME_PART_TOOLBAR_BUTTON, rect_center(local, local.h, local.h), is_pressed ? CTRL_PRESSED : CTRL_SELECTED);

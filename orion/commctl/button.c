@@ -1,5 +1,6 @@
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include <orion/user/user.h>
 #include <orion/user/messages.h>
@@ -33,9 +34,50 @@ static void autoradio_select(window_t *win) {
   invalidate_window(win);
 }
 
+// Optional per-button extras, allocated on first use (btnSetIconName / btnSetFaceColor).
+typedef struct {
+  char     icon[64];
+  uint32_t face_color;   // plastic face; 0 = theme accent
+  char     tooltip[96];
+} button_extras_t;
+
+static button_extras_t *button_extras(window_t *win, bool create) {
+  if (!win->userdata && create) win->userdata = calloc(1, sizeof(button_extras_t));
+  return win->userdata;
+}
+
 // Button control window procedure (text label buttons).
 result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
+    case evDestroy:
+      free(win->userdata);
+      win->userdata = NULL;
+      return true;
+    case evGetTooltipText: {
+      button_extras_t *x = button_extras(win, false);
+      if (!x || !x->tooltip[0] || !lparam) return false;
+      snprintf(lparam, 256, "%s", x->tooltip);
+      return true;
+    }
+    case btnSetIconName:
+    case btnSetTooltip:
+    case btnSetFaceColor: {
+      button_extras_t *x = button_extras(win, true);
+      if (!x) {
+        fprintf(stderr, "[button] extras allocation failed win=%u\n", win->id);
+        fflush(stderr);
+        return false;
+      }
+      if (msg == btnSetIconName) snprintf(x->icon, sizeof(x->icon), "%s", lparam ? (const char *)lparam : "");
+      else if (msg == btnSetTooltip) snprintf(x->tooltip, sizeof(x->tooltip), "%s", lparam ? (const char *)lparam : "");
+      else {
+        uint32_t color = lparam ? *(const uint32_t *)lparam : 0;
+        if (x->face_color == color) return true;
+        x->face_color = color;
+      }
+      invalidate_window(win);
+      return true;
+    }
     case evCreate:
       win->frame.w = MAX(win->frame.w, strwidth(win->title) + MAX(BUTTON_PADDING, (control_predefined_height(win->flags) + 1) / 2) * 2);
       control_apply_predefined_height(win, "button");
@@ -64,7 +106,22 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
       if (g_ui_runtime.focused == win)                  state |= CTRL_FOCUSED;
       if (win->flags & BUTTON_DEFAULT)                  state |= CTRL_DEFAULT;
       irect16_t local = {0, 0, win->frame.w, win->frame.h};
-      theme_draw(THEME_PART_BUTTON, local, state);
+      button_extras_t *x = button_extras(win, false);
+      bool plastic = (win->flags & WINDOW_PLASTIC) != 0;
+      theme_draw_ex(THEME_PART_BUTTON, local, plastic ? state | CTRL_PLASTIC : state,
+                    &(theme_draw_opts_t){.color = x ? x->face_color : 0, .icon = x && x->icon[0] ? x->icon : NULL,
+                                         .control_size = win->flags & CONTROL_SIZE_MASK,
+                                         .round = (win->flags & WINDOW_ROUND) != 0});
+      if (plastic && x && x->icon[0]) return true;   // the plastic face engraves the glyph itself
+      if (x && x->icon[0]) {
+        sysicon_resolved_t glyph;
+        if (sysicon_resolve(x->icon, &glyph)) {
+          irect16_t at = rect_center(local, glyph.w, glyph.h);
+          draw_sprite_region((int)glyph.tex, at, UV_RECT(glyph.u0, glyph.v0, glyph.u1, glyph.v1),
+                             theme_foreground(THEME_PART_BUTTON, state), 0);
+        }
+        return true;
+      }
       irect16_t content = rect_inset_xy(local, get_theme()->control_padding, 2);
       irect16_t label = rect_center(content, strwidth(win->title), CHAR_HEIGHT);
       get_theme()->draw_button_label(label, win->title, state);

@@ -59,7 +59,8 @@
   [brTextSecondary]        = NAVY_TEXT_MUTED, \
   [brTextOnColor]          = 0xff101010, \
   [brSelectionTop]         = WEB(0x37C9FF), \
-  [brSelectionBottom]      = WEB(0x0879EA)
+  [brSelectionBottom]      = WEB(0x0879EA), \
+  [brPlasticNeutral]       = WEB(0xc8d2e0)
 
 static const uint32_t k_theme_palette_navy[brCount]
   __attribute__((unused)) = { THEME_PALETTE_NAVY_INIT };

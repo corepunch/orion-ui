@@ -421,6 +421,7 @@ static theme_t g_modern_theme = {
   .plastic_corner_radius = CORNER_RADIUS_CIRCULAR,
   .plastic_bevel_width   = 2,
   .plastic_shadow_size   = 3,
+  .plastic = { .gloss = 1.0f, .rim = 0.55f, .ink = 0.10f, .lift = 0.10f, .glyph_size = 20, .shadow_color = 0xE0000000 },
   .card_padding_x         = 12,
   .card_padding_y         = 8,
   .window_shadow_blur     = 8,

@@ -26,12 +26,19 @@ static inline uint32_t color_with_alpha(uint32_t color, uint8_t alpha) {
 // the card and the edge together. CTRL_SELECTED draws a ring in the accent edge's colour (theme accent when there is no edge) in the theme's card_ring_width margin,
 // which is reserved inside `r` for every card so selecting never shifts content.
 void draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color);
+// Framework internals behind theme_draw_ex(CTRL_PLASTIC); controls and apps never call these directly.
 // Single shader pass; shadow is reserved inside r, so controls never paint outside their bounds.
 // control_size (CONTROL_SIZE_*) picks the glyph size; CONTROL_SIZE_LARGE renders it CONTROL_LARGE_GROWTH bigger.
-void draw_plastic_button(irect16_t r, ctrl_state_t state, uint32_t color, const char *icon, uint32_t control_size);
+void draw_plastic_button(irect16_t r, ctrl_state_t state, uint32_t color, const char *icon, uint32_t control_size, bool round);
 void draw_plastic_card(irect16_t r, ctrl_state_t state, uint32_t color);
+// Kernel entry point: plain floats only, so the renderer knows nothing about control state.
+// pressed/hover/selected/disabled are 0..1; gloss/rim/ink/lift come from theme_t.plastic.
+typedef struct {
+  float pressed, hover, selected, disabled;
+  float gloss, rim, ink, lift;
+} plastic_look_t;
 void render_plastic_surface(irect16_t r, float radius, float bevel, float shadow,
-                            ctrl_state_t state, uint32_t color, uint32_t shadow_color,
+                            const plastic_look_t *look, uint32_t color, uint32_t shadow_color,
                             uint32_t icon_tex, const frect_t *icon_uv, ipoint16_t icon_size);
 // Small tinted label ("3 modified"): a rounded fill in `color` at low alpha with the text in `color`.
 // Drawn at (x, y) with the given height; returns the badge width so callers can chain badges.

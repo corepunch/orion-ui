@@ -117,6 +117,8 @@ enum {
   btnGetCheck,
   btnSetImage,       // wparam = icon index (iBitmap); lparam = bitmap_strip_t*
   btnSetIconName,    // wparam = 0; lparam = const char* SVG base name (NULL to clear)
+  btnSetTooltip,     // wparam = 0; lparam = const char* hover text (copied; NULL clears)
+  btnSetFaceColor,   // wparam = 0; lparam = uint32_t* packed plastic face colour (NULL restores the theme accent)
   cbAddString,
   cbGetCurrentSelection, // returns index; if lparam=int* also writes index (or kComboBoxError)
   cbGetCurrentValue,     // returns value_field data (e.g., ID) for foreign key binding
@@ -282,6 +284,8 @@ enum {
 #define WINDOW_STATE_DISABLED  (1u << 28)
 // Extended window bits (32+): states and styles that do not fit the low word.
 #define WINDOW_STATE_MAXIMIZED (1ull << 34)  // ≈ WS_MAXIMIZE
+#define WINDOW_PLASTIC         (1ull << 36)  // paint with the theme's plastic material (Button, Card)
+#define WINDOW_ROUND           (1ull << 37)  // Button: circular silhouette (BUTTON_STYLE_ROUND)
 #define WINDOW_MAXIMIZEBOX     (1ull << 35)  // ≈ WS_MAXIMIZEBOX: caption exposes a restore/maximize command
 
 // Auto-layout alignment values used by layout_measure_t / layout_arrange_t.
@@ -588,7 +592,8 @@ typedef enum {
   brTextOnColor          = 30,  // dark ink on vivid gradient cards and other bright tinted surfaces
   brSelectionTop         = 31,  // selection gradient endpoints (sRGB)
   brSelectionBottom      = 32,
-  brCount                = 33
+  brPlasticNeutral       = 33,  // neutral plastic face (transport buttons): silver
+  brCount                = 34
 } sys_color_idx_t;
 
 // Runtime-accessible theme table (defined in user/theme.c).

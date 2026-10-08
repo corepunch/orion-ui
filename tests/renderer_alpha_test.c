@@ -77,6 +77,18 @@ static void read_card_pixel(int x, int y, uint8_t pixel[4]) {
   glReadPixels(x, 32 - y - 1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
 }
 
+static plastic_look_t look_for(ctrl_state_t state) {
+  return (plastic_look_t){.pressed = !!(state & CTRL_PRESSED), .hover = !!(state & CTRL_HOVER),
+    .selected = !!(state & CTRL_SELECTED), .disabled = !!(state & CTRL_DISABLED),
+    .gloss = 1.0f, .rim = 0.55f, .ink = 0.10f, .lift = 0.10f};
+}
+
+static const plastic_look_t *look_ptr(ctrl_state_t state) {
+  static plastic_look_t look;
+  look = look_for(state);
+  return &look;
+}
+
 static void test_plastic_surface(void) {
   TEST("Plastic states preserve bounds, disable interaction shading and letterpress the glyph");
   CGLPixelFormatAttribute attrs[] = {kCGLPFAOpenGLProfile,
@@ -106,7 +118,7 @@ static void test_plastic_surface(void) {
     ctrl_state_t states[] = {CTRL_NORMAL, CTRL_SELECTED, CTRL_PRESSED, CTRL_HOVER, CTRL_DISABLED};
     for (int i = 0; i < ARRAY_LEN(states); i++) {
       glClear(GL_COLOR_BUFFER_BIT);
-      render_plastic_surface(R(2, 2, 28, 28), 10, 2, 3, states[i], WEB(0x48aa36),
+      render_plastic_surface(R(2, 2, 28, 28), 10, 2, 3, look_ptr(states[i]), WEB(0x48aa36),
                               0x80000000, glyph, NULL, (ipoint16_t){16, 16});
       read_card_pixel(8, 16, samples[i]);
       uint8_t pixels[32 * 32 * 4];
@@ -119,12 +131,12 @@ static void test_plastic_surface(void) {
     ok &= samples[2][1] < samples[0][1] && samples[3][1] > samples[0][1];
     ok &= abs(samples[4][0] - samples[4][1]) <= 1 && abs(samples[4][1] - samples[4][2]) <= 1;
     glClear(GL_COLOR_BUFFER_BIT);
-    render_plastic_surface(R(2, 2, 28, 28), 10, 2, 3, CTRL_DISABLED | CTRL_HOVER | CTRL_PRESSED | CTRL_SELECTED,
+    render_plastic_surface(R(2, 2, 28, 28), 10, 2, 3, look_ptr(CTRL_DISABLED | CTRL_HOVER | CTRL_PRESSED | CTRL_SELECTED),
                             WEB(0x48aa36), 0x80000000, glyph, NULL, (ipoint16_t){16, 16});
     glReadPixels(0, 0, 32, 32, GL_RGBA, GL_UNSIGNED_BYTE, disabled_flags);
     ok &= memcmp(disabled_only, disabled_flags, sizeof(disabled_only)) == 0;
     glClear(GL_COLOR_BUFFER_BIT);
-    render_plastic_surface(R(2, 2, 28, 28), 10, 2, 3, CTRL_NORMAL, 0x8036aa48,
+    render_plastic_surface(R(2, 2, 28, 28), 10, 2, 3, look_ptr(CTRL_NORMAL), 0x8036aa48,
                             0x80000000, glyph, NULL, (ipoint16_t){16, 16});
     uint8_t face[4], rim[4], top[4], center[4], under[4], beside[4];
     read_card_pixel(8, 16, face); read_card_pixel(16, 28, rim);
@@ -132,7 +144,7 @@ static void test_plastic_surface(void) {
     ok &= face[3] == 128 && rim[3] > 0 && rim[3] < 128 && top[1] < center[1] && center[1] < beside[1] && under[1] > beside[1];
     for (int size = 4; size <= 24; size += 4) {
       glClear(GL_COLOR_BUFFER_BIT);
-      render_plastic_surface(R(4, 4, size, 8), 100, 2, 3, CTRL_SELECTED, WEB(0x48aa36), 0x80000000, 0, NULL, (ipoint16_t){0, 0});
+      render_plastic_surface(R(4, 4, size, 8), 100, 2, 3, look_ptr(CTRL_SELECTED), WEB(0x48aa36), 0x80000000, 0, NULL, (ipoint16_t){0, 0});
     }
     ok &= glGetError() == GL_NO_ERROR;
     if (!ok) fprintf(stderr, "[renderer-test] plastic normal=%u pressed=%u hover=%u alpha=%u,%u glyph=%u,%u catch=%u,%u\n",

@@ -75,7 +75,7 @@ wall_vertex_t sprite_verts[] = {
 typedef struct {
   float projection[16], offset[2], scale[2], uv_offset[2], uv_scale[2];
   float tint[4], alpha, params0[4], params1[4], size[2], radius, edge[4];
-  float glyph_uv[4], glyph_box[4], shadow_color[4], disabled;
+  float glyph_uv[4], glyph_box[4], shadow_color[4], material[4], disabled;
   float grid_size[2], cell_size[2];
   int tex0, palette_tex, cell_tex, font_tex, vga_palette_tex;
 } sprite_state_t;
@@ -108,7 +108,7 @@ static const shaderUniform_t sprite_uniforms[] = {
   SPRITE_UNIFORM(tex0, "tex0", UT_SAMPLER_2D), SPRITE_UNIFORM(palette_tex, "palette_tex", UT_SAMPLER_2D),
   SPRITE_UNIFORM(size, "size", UT_FLOAT_VEC2), SPRITE_UNIFORM(radius, "radius", UT_FLOAT),
   SPRITE_UNIFORM(edge, "edge", UT_FLOAT_VEC4), SPRITE_UNIFORM(glyph_uv, "glyph_uv", UT_FLOAT_VEC4),
-  SPRITE_UNIFORM(glyph_box, "glyph_box", UT_FLOAT_VEC4), SPRITE_UNIFORM(shadow_color, "shadow_color", UT_FLOAT_VEC4),
+  SPRITE_UNIFORM(glyph_box, "glyph_box", UT_FLOAT_VEC4), SPRITE_UNIFORM(shadow_color, "shadow_color", UT_FLOAT_VEC4), SPRITE_UNIFORM(material, "material", UT_FLOAT_VEC4),
   SPRITE_UNIFORM(disabled, "disabled", UT_FLOAT), SPRITE_UNIFORM(grid_size, "gridSize", UT_FLOAT_VEC2),
   SPRITE_UNIFORM(cell_size, "cellSize", UT_FLOAT_VEC2), SPRITE_UNIFORM(cell_tex, "cellTex", UT_SAMPLER_2D),
   SPRITE_UNIFORM(font_tex, "fontTex", UT_SAMPLER_2D), SPRITE_UNIFORM(vga_palette_tex, "paletteTex", UT_SAMPLER_2D),
@@ -550,10 +550,15 @@ void draw_sprite_region(int tex, irect16_t r,
 }
 
 void render_plastic_surface(irect16_t r, float radius, float bevel, float shadow,
-                            ctrl_state_t state, uint32_t color, uint32_t shadow_color,
+                            const plastic_look_t *look, uint32_t color, uint32_t shadow_color,
                             uint32_t icon_tex, const frect_t *icon_uv, ipoint16_t icon_size) {
   sprite_program_t *program = &g_ref.plastic_sprite;
   if (r.w <= 0 || r.h <= 0) return;
+  if (!look) {
+    fprintf(stderr, "[renderer] plastic surface rejected rect=%d,%d,%d,%d: missing look\n", r.x, r.y, r.w, r.h);
+    fflush(stderr);
+    return;
+  }
   if (!program->shader.progid) {
     fprintf(stderr, "[renderer] plastic shader unavailable rect=%d,%d,%d,%d\n", r.x, r.y, r.w, r.h);
     fflush(stderr);
@@ -573,8 +578,9 @@ void render_plastic_surface(irect16_t r, float radius, float bevel, float shadow
   sprite_vec2(program->state.uv_scale, 1, 1);
   sprite_vec4(program->state.tint, (color & 255) / 255.0f, ((color >> 8) & 255) / 255.0f, ((color >> 16) & 255) / 255.0f, (color >> 24) / 255.0f);
   sprite_vec4(program->state.params0, r.w, r.h, MAX(0, radius), MAX(0, bevel));
-  sprite_vec4(program->state.params1, shadow, !!(state & CTRL_PRESSED), !!(state & CTRL_HOVER), !!(state & CTRL_SELECTED));
-  program->state.disabled = !!(state & CTRL_DISABLED);
+  sprite_vec4(program->state.params1, shadow, look->pressed, look->hover, look->selected);
+  sprite_vec4(program->state.material, look->gloss, look->rim, look->ink, look->lift);
+  program->state.disabled = look->disabled;
   sprite_vec4(program->state.shadow_color, ui_srgb8_to_linear(shadow_color & 255), ui_srgb8_to_linear((shadow_color >> 8) & 255), ui_srgb8_to_linear((shadow_color >> 16) & 255), (shadow_color >> 24) / 255.0f);
   sprite_vec4(program->state.glyph_uv, uv.x, uv.y, uv.w, uv.h);
   sprite_vec4(program->state.glyph_box, (r.w - glyph_w) * 0.5f, (r.h - glyph_h) * 0.5f, icon_tex ? glyph_w : 0, icon_tex ? glyph_h : 0);

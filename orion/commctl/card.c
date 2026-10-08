@@ -104,7 +104,7 @@ result_t win_card(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         ctrl_state_t state = card->state | (card->hover ? CTRL_HOVER : 0);
         if (window_has_state(win, WINDOW_STATE_DISABLED)) state |= CTRL_DISABLED;
         if (window_has_state(win, WINDOW_STATE_PRESSED)) state |= CTRL_PRESSED;
-        draw_card(get_client_rect(win), state, card->edge_color);
+        theme_draw_ex(THEME_PART_CARD, get_client_rect(win), state, &(theme_draw_opts_t){.edge_color = card->edge_color});
       }
       layout_paint_children(win);
       return true;

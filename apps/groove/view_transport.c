@@ -41,6 +41,13 @@ static void set_items(window_t *win) {
   send_message(win, tbSetItems, ARRAY_LEN(items), items); // copies the icon names and tooltips
 }
 
+// The iTunes-style transport buttons take the theme's neutral plastic.
+static void transport_tint(window_t *win) {
+  static const uint16_t transport[] = { ID_REWIND, ID_PLAY, ID_FORWARD };
+  uint32_t neutral = get_sys_color(brPlasticNeutral);
+  for (int i = 0; i < ARRAY_LEN(transport); i++) send_message(win, tbSetItemColor, transport[i], &neutral);
+}
+
 result_t win_transport(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
     case evCreate: {
@@ -52,9 +59,7 @@ result_t win_transport(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       send_message(win, tbSetButtonSize, TB_SPACING, NULL);
 #endif
       set_items(win);
-      static const uint32_t silver = WEB(0xd0d0d0); // iTunes transport
-      static const uint16_t transport[] = { ID_REWIND, ID_PLAY, ID_FORWARD };
-      for (int i = 0; i < ARRAY_LEN(transport); i++) send_message(win, tbSetItemColor, transport[i], (void *)&silver);
+      transport_tint(win);
       g_app->bin = create_window("Sounds", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL | WINDOW_NOACTIVATE,
                                  MAKERECT(0, 0, 1, 1), win, win_bin, win->hinstance, NULL);
       if (g_app->bin) dock_window(g_app->bin, DOCK_FILL, 0, DOCK_NOFLOAT, 0, 0);
@@ -69,6 +74,7 @@ result_t win_transport(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
     //     return true;
     //   }
     //   return false;
+    case evThemeChanged: transport_tint(win); return false;
     case evPaint: return false;
     case evDestroy:
       if (g_app && g_app->library == win) g_app->library = NULL;

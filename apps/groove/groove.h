@@ -24,7 +24,10 @@
 #define GR_TICKS_BAR    256
 #define GR_SNAP_TICKS   (GR_TICKS_BAR / 4)
 #define GR_TRACKS       8
-#define GR_SHEET_HEADER_W 32
+#define GR_SHEET_HEADER_W 32 // width of the track header column beside the sheet
+#define GR_RULER_H      22
+#define GR_MIN_ROW      26
+#define GR_MAX_ROW      64
 #define GR_BARS         32
 #define GR_MAX_BLOCKS   512
 #define GR_MAX_CLIPS    256
@@ -79,6 +82,10 @@ typedef struct {
 extern const char *const kCategoryName[CAT_COUNT];
 extern const char *const kGenreName[GENRE_COUNT]; // index = bit number of the GENRE_* flag
 uint32_t category_color(category_t cat);
+uint32_t track_color(int track);              // hue of the track's earliest clip (view_sheet.c)
+int      sheet_row_h(window_t *sheet);         // height of one track lane, shared by the sheet and the header column
+result_t win_tracks(window_t *win, uint32_t msg, uint32_t wparam, void *lparam); // view_tracks.c
+void     tracks_sync(void);
 
 int            blocks_count(void);
 const block_t *block_get(int id);
@@ -142,7 +149,7 @@ typedef struct {
 } waveform_cache_t;
 
 typedef struct {
-  window_t     *win, *chrome, *menubar_win, *toolbar, *sheet, *library, *bin; // chrome: menu bar with the compact toolbar
+  window_t     *win, *chrome, *menubar_win, *toolbar, *sheet, *tracks, *library, *bin; // chrome: menu bar with the compact toolbar
   accel_table_t *accel;
   hinstance_t   hinstance;
   song_t        song;
@@ -185,6 +192,8 @@ enum {
 // get_window_item() cannot find a card first.
 #define ID_FAMILY(cat) (ID_CONTROL_BASE + 4 + (cat)) // library toolbar: one button per category_t
 #define ID_GENRE     (ID_CONTROL_BASE + 3)
+#define ID_MUTE(t)   (ID_CONTROL_BASE + 32 + (t))    // track header buttons
+#define ID_SOLO(t)   (ID_CONTROL_BASE + 48 + (t))
 
 #define GR_PEAKS_PER_TICK 4 // waveform overviews rendered per 33 ms tick while a bin fills in
 
