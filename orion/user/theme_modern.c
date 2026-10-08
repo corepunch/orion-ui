@@ -164,7 +164,7 @@ static void modern_draw_checkbox_box(irect16_t r, bool checked, ctrl_state_t sta
 
   if (checked) {
     uint32_t check_col = (state & CTRL_DISABLED) ? get_sys_color(brTextDisabled)
-                                                 : get_sys_color(brAccent);
+                                                 : get_sys_color(brTextNormal);
     irect16_t check = rect_center(r, MIN(r.w, r.h), MIN(r.w, r.h));
     draw_theme_icon(THEME_ICON_CHECKMARK, check.x, check.y, check.w, check_col);
   }
