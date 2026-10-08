@@ -1,6 +1,5 @@
-// Sound engine: every block in the library is computed from the recipes in
-// library.c by the drum kits, pitched voices and effects below. Nothing is
-// sampled. See docs/sound-synthesis.md.
+// Synth engine for the non-vocal blocks; vocal samples are decoded separately.
+// See docs/sound-synthesis.md.
 
 #include "synth.h"
 

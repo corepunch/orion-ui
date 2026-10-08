@@ -38,6 +38,7 @@ typedef struct {
   const char *pat;              // drum lanes or note steps; NULL when `fn` renders the block
   const char *arg;              // vowel words for the formant voices
   void      (*fn)(sy_ctx_t *c);
+  const char *sample;           // optional MP3 sample, rendered instead of a synth recipe
 } def_t;
 
 // ── Hand-written recipes ─────────────────────────────────────────────────
@@ -68,10 +69,6 @@ GEN(g_org_stab) { for (int i = 0; i < 4; i += 2) { int s = (int)(i * c->bar / 4.
 GEN(g_org_off) { for (int i = 1; i < 8; i += 2) { int s = (int)(i * c->bar / 8.0), g = (int)(c->bar / 10.0); sy_organ_note(c, s, g, sy_midi_hz(57), 0.65f); sy_organ_note(c, s, g, sy_midi_hz(64), 0.5f); } }
 GEN(g_org_hold) { int g = c->n - (int)(0.05f * SR); sy_organ_note(c, 0, g, sy_midi_hz(57), 0.6f); sy_organ_note(c, 0, g, sy_midi_hz(64), 0.45f); sy_organ_note(c, 0, g, sy_midi_hz(69), 0.4f); }
 GEN(g_org_fifth) { for (int i = 0; i < 4; i++) { int s = (int)(i * c->bar / 4.0), g = (int)(c->bar / 5.0), m = i < 2 ? 57 : 53; sy_organ_note(c, s, g, sy_midi_hz(m), 0.65f); sy_organ_note(c, s, g, sy_midi_hz(m + 7), 0.5f); } }
-GEN(g_hey) { sy_vox_ah(c, 0, sy_midi_hz(60), 0.85f, 0.3f); sy_vox_ah(c, (int)(c->bar / 2.0), sy_midi_hz(64), 0.75f, 0.3f); }
-GEN(g_oh_layer) { sy_vox_ah(c, 0, sy_midi_hz(55), 0.7f, 0.55f); sy_vox_ah(c, 220, sy_midi_hz(67), 0.4f, 0.45f); }
-GEN(g_ah_hook) { static const int m[8] = { 64, 67, 69, 67, 65, 64, 62, 60 }; for (int i = 0; i < 8; i++) sy_vox_ah(c, (int)(i * c->bar / 8.0), sy_midi_hz(m[i]), 0.7f, 0.2f); }
-GEN(g_breath) { for (int i = 0; i < 4; i++) sy_hat(c, (int)(i * c->bar / 4.0), 0.45f, 5.0f, 0.22f); sy_vox_ah(c, (int)(c->bar / 4.0), sy_midi_hz(62), 0.55f, 0.4f); }
 GEN(g_noise_up) { sy_noise_bed(c, c->n, 1); }
 GEN(g_noise_down) { sy_noise_bed(c, c->n, 0); }
 GEN(g_impact) { sy_impact(c, 0); }
@@ -161,10 +158,11 @@ GEN(f_rumble)      { // kick, plus its own reverb tail low-passed and ducked und
 #define LOOP (X_ECHO | X_FOLD)          // echo that wraps into the next pass
 #define WIDE (X_HALL | X_FOLD)          // hall that wraps into the next pass
 // Drum row, note row, note row with vowel words, hand-written row.
-#define D(name, cat, genres, bars, kit, fx, lanes)                    { name, cat, genres, bars, kit,  fx, 0,   0,    lanes, NULL,  NULL }
-#define N(name, cat, genres, bars, inst, fx, spb, hold, steps)        { name, cat, genres, bars, inst, fx, spb, hold, steps, NULL,  NULL }
-#define V(name, cat, genres, bars, inst, fx, spb, hold, steps, words) { name, cat, genres, bars, inst, fx, spb, hold, steps, words, NULL }
-#define F(name, cat, genres, bars, fx, fn)                            { name, cat, genres, bars, 0,    fx, 0,   0,    NULL,  NULL,  fn }
+#define D(name, cat, genres, bars, kit, fx, lanes)                    { name, cat, genres, bars, kit,  fx, 0,   0,    lanes, NULL,  NULL, NULL }
+#define N(name, cat, genres, bars, inst, fx, spb, hold, steps)        { name, cat, genres, bars, inst, fx, spb, hold, steps, NULL,  NULL, NULL }
+#define V(name, cat, genres, bars, inst, fx, spb, hold, steps, words) { name, cat, genres, bars, inst, fx, spb, hold, steps, words, NULL, NULL }
+#define F(name, cat, genres, bars, fx, fn)                            { name, cat, genres, bars, 0,    fx, 0,   0,    NULL,  NULL,  fn, NULL }
+#define M(name, genres, bars, file)                                   { name, CAT_VOX, genres, bars, 0, 0, 0, 0, NULL, NULL, NULL, file }
 
 // Chords of the house key. Everything tonal is in A minor so blocks stack.
 #define Am  "A3+C4+E4"
@@ -282,10 +280,11 @@ static const def_t kDefs[] = {
   F("Offbeat Organ",   CAT_ORGAN,   DAN | HIP,       1, 0, g_org_off),
   F("Organ Hold",      CAT_ORGAN,   DAN | HIP,       2, 0, g_org_hold),
   F("Fifth Chop",      CAT_ORGAN,   DAN | HIP,       1, 0, g_org_fifth),
-  F("Hey Chop",        CAT_VOX,     ANY,             1, 0, g_hey),
-  F("Oh Layer",        CAT_VOX,     ANY,             1, 0, g_oh_layer),
-  F("Ah Hook",         CAT_VOX,     ANY,             1, 0, g_ah_hook),
-  F("Breath Stack",    CAT_VOX,     ANY,             1, 0, g_breath),
+  M("Feel It",         ANY,             1, "01_feel_it_140bpm_1bar.mp3"),
+  M("So High",         ANY,             1, "02_so_high_140bpm_1bar.mp3"),
+  M("Move With Me",    ANY,             1, "03_move_with_me_140bpm_1bar.mp3"),
+  M("Light the Night", ANY,             2, "04_light_the_night_140bpm_2bars.mp3"),
+  M("Ooh Yeah",        ANY,             2, "05_ooh_yeah_140bpm_2bars.mp3"),
   F("Noise Up",        CAT_FX,      ANY,             2, 0, g_noise_up),
   F("Noise Down",      CAT_FX,      ANY,             2, 0, g_noise_down),
   F("Impact",          CAT_FX,      ANY,             1, 0, g_impact),
@@ -375,12 +374,6 @@ static const def_t kDefs[] = {
   N("Funky Wah",       CAT_GUITAR, DAN | HIP,   1, I_WAH,      0,               4, 0.8f, Am " - " Am " " Am " - " Am " - " Am " - " Am " - " Am " " Am " - " Am " -"),
   N("Disco Chops",     CAT_GUITAR, DAN,         1, I_CLEAN,    X_CHORUS,        4, 0.5f, "- - " Am " - - - " Am " " Am " - - " Am " - - " G_ " " G_ " -"),
   N("Space Guitar",    CAT_GUITAR, DAN,         2, I_CLEAN,    LOOP,            2, 1.5f, "A3 E4 A4 - C5 - A4 E4 G3 D4 G4 - B4 - G4 D4"),
-  V("Yeah Chop",       CAT_VOX,    ANY,         1, I_VOX,      X_ROOM,          2, 1.2f, "A3 - - - - C4 - -", "iea"),
-  V("Hey Hey",         CAT_VOX,    DAN | RAV,   1, I_VOX,      X_ROOM,          2, 0.8f, "- - C4 - - - C4 E4", "hei"),
-  V("Wo-Oh Hook",      CAT_VOX,    DAN | RAV,   1, I_VOX,      LOOP,            2, 1.0f, "E4 _ D4 - C4 _ A3 -", "uo ou"),
-  V("Robot Talk",      CAT_VOX,    DAN | TEC,   1, I_ROBOT,    0,               4, 0.8f, "A2 A2 - A2 A2 - A2 - A2 A2 - A2 - A2 A2 -", "u i e a o"),
-  V("Diva Ah",         CAT_VOX,    DAN,         2, I_VOX,      WIDE,            2, 1.0f, "E4 _ _ _ _ _ D4 _ C4 _ _ _ _ _ - -", "a"),
-  V("Oh Yeah",         CAT_VOX,    DAN | HIP,   1, I_VOX,      X_ROOM,          2, 1.0f, "C4 _ E4 _ - - - -", "ou iea"),
   F("Uplifter",        CAT_FX,     ANY,         2, X_ROOM,     f_uplifter),
   F("Downlifter",      CAT_FX,     ANY,         2, X_ROOM,     f_downlifter),
   D("Laser Zaps",      CAT_FX,     DAN | RAV | TEC, 1, KIT_909, LOOP,           "z=x.....x...x....."),
@@ -464,11 +457,6 @@ static const def_t kDefs[] = {
   F("Scratch Fill",    CAT_SCRATCH, HIP,        1, 0,          f_scratch_fill),
   F("Scratch & Swish", CAT_SCRATCH, HIP | DAN,  1, 0,          f_scratch_swish),
   F("Rewind",          CAT_SCRATCH, HIP | RAV,  1, 0,          f_rewind),
-  V("Uh Hits",         CAT_VOX,    HIP,         1, I_VOX,      X_ROOM,          4, 1.0f, "- - A2 - - - - A2 - - A2 - - - - -", "h@"),
-  V("Ah Ha",           CAT_VOX,    HIP | DAN,   1, I_VOX,      X_ROOM,          2, 0.8f, "C4 E4 - - - - - -", "a ha"),
-  V("Crew Hey",        CAT_VOX,    HIP | RAV,   1, I_VOX,      X_ROOM | X_CHORUS, 2, 1.0f, "G3+A3+C4+E4 - - - G3+A3+C4+E4 - - -", "hei"),
-  V("Wow Drop",        CAT_VOX,    HIP,         1, I_VOX,      X_ROOM,          2, 1.0f, "E4 _ _ - - - - -", "uau"),
-  V("Robot MC",        CAT_VOX,    HIP | TEC,   1, I_ROBOT,    X_SWING | X_CRUSH, 4, 0.8f, "A2 A2 - A2 - A2 A2 - A2 - A2 A2 - A2 - -", "o e i a u e"),
   F("Vinyl Stop",      CAT_FX,     HIP | DAN,   1, 0,          f_vinyl_stop),
   F("Dub Siren",       CAT_FX,     HIP | RAV,   1, LOOP,       f_dub_siren),
   F("Radio Static",    CAT_FX,     HIP | TEC,   2, 0,          f_static),
@@ -543,11 +531,6 @@ static const def_t kDefs[] = {
   N("Bell Hit",        CAT_STAB,   RAV | TEC,   1, I_BELL,     X_HALL,          1, 2.0f, "A4+E5 - - -"),
   N("Brass Blast",     CAT_STAB,   RAV,         1, I_BRASS,    X_ROOM | X_DRIVE, 4, 1.5f, "A2+A3+E4+A4 - - - - - - - A2+A3+E4+A4 - A2+A3+E4+A4 - - - - -"),
   N("Dirty Flute",     CAT_STAB,   RAV,         1, I_WHISTLE,  X_DRIVE | X_ROOM, 4, 1.0f, "A4 - C5 A4 - - E5 - D5~ - - - - - - -"),
-  V("Big Ahh",         CAT_VOX,    RAV | DAN,   1, I_VOX,      X_HALL,          2, 1.0f, "E4 _ _ _ - - - -", "a"),
-  V("Low Uhh",         CAT_VOX,    RAV,         1, I_VOX,      X_ROOM | X_DRIVE, 2, 1.0f, "A2 _ - - - - - -", "h@"),
-  V("Hey Rush",        CAT_VOX,    RAV,         1, I_VOX,      X_ROOM,          2, 0.7f, "C4 - C4 - C4 - C4 C4", "hei"),
-  V("Robot Rave",      CAT_VOX,    RAV | TEC,   1, I_ROBOT,    LOOP,            4, 0.8f, "A3 A3 - A3 - - A3 - A3 A3 - A3 - - C4 -", "e i e i a o"),
-  V("Choir Stabs",     CAT_VOX,    RAV | DAN,   1, I_CHOIR,    X_ROOM,          4, 1.0f, Am " - - " Am " - - " Am " - - - " G_ " - - - - -", "a"),
   F("Multi Siren",     CAT_FX,     RAV,         1, X_ROOM,     f_siren),
   F("Space Jump",      CAT_FX,     RAV | TEC,   1, LOOP,       f_space_jump),
   F("Noise Swell",     CAT_FX,     RAV | TEC,   2, X_ROOM,     f_noise_swell),
@@ -625,10 +608,6 @@ static const def_t kDefs[] = {
   N("Blip Stab",       CAT_STAB,   TEC,         1, I_BLEEP,    LOOP,            4, 1.0f, "A5+E6 - - - - - - - - - - - - - - -"),
   N("Moog Phrase",     CAT_STAB,   TEC,         1, I_MOOG,     LOOP,            4, 1.5f, "A3 - - C4~ - - A3~ - E4 - - D4~ - C4~ - -"),
   N("Chord Memory",    CAT_STAB,   TEC | RAV,   1, I_STAB,     0,               4, 0.8f, Am " - - G3+A#3+D4 - - " Am " - - C4+D#4+G4 - - " Am " - - -"),
-  V("Stutter Ah",      CAT_VOX,    TEC,         1, I_VOX,      X_ROOM,          4, 0.6f, "A3 A3 A3 A3 - - - - - - - - - - - -", "a"),
-  V("Ooh Stutter",     CAT_VOX,    TEC,         1, I_VOX,      X_ROOM,          4, 0.7f, "C4 _ C4 C4 C4 - - - - - - - - - - -", "ou u u u"),
-  V("Robo Girl",       CAT_VOX,    TEC,         1, I_ROBOT,    LOOP,            4, 0.8f, "A4 - A4 A4 - A4 - - E4 - A4 - - A4 - -", "i a e o"),
-  V("Vocoder Chords",  CAT_VOX,    TEC | DAN,   2, I_ROBOT,    X_CHORUS,        2, 1.0f, Am " _ - " Am " - - " G_ " _ " F_ " _ - " F_ " - - " G_ " _", "a o e"),
   F("Signal Jam",      CAT_FX,     TEC,         1, X_CRUSH | LOOP, f_signal_jam),
   F("High Sweep",      CAT_FX,     TEC,         1, X_ROOM,     f_high_sweep),
   F("Rain Down",       CAT_FX,     TEC,         2, LOOP,       f_rain),
@@ -703,8 +682,21 @@ bool block_render(int id, int bpm, block_pcm_t *out) {
   const def_t *d = &kDefs[id];
   if (!recipe_fits(d)) return false;
   int bar = bar_frames_for_bpm(bpm), n = bar * d->bars;
-  sy_ctx_t c = { calloc((size_t)n + SY_TAIL, sizeof(float)), n, bar, 0x9e3779b9u + (uint32_t)id * 7919u, d->fx & X_SWING ? 0.28f : 0.0f };
   memset(out, 0, sizeof(*out));
+  if (d->sample) {
+    if (!groove_mp3_load(d->sample, n, &out->pcm)) return false;
+    out->frames = n;
+    level(out->pcm, n);
+    out->npeaks = d->bars * GR_PEAKS_BAR;
+    for (int k = 0; k < out->npeaks; k++) {
+      int a = (int)((int64_t)n * k / out->npeaks), b = (int)((int64_t)n * (k + 1) / out->npeaks);
+      float m = 0;
+      for (int j = a; j < b; j++) if (fabsf(out->pcm[j]) > m) m = fabsf(out->pcm[j]);
+      out->peaks[k] = (uint8_t)(fminf(1.0f, m) * 255.0f);
+    }
+    return true;
+  }
+  sy_ctx_t c = { calloc((size_t)n + SY_TAIL, sizeof(float)), n, bar, 0x9e3779b9u + (uint32_t)id * 7919u, d->fx & X_SWING ? 0.28f : 0.0f };
   if (!c.buf) { fprintf(stderr, "[synth] allocation failed block=%d frames=%d\n", id, n); fflush(stderr); return false; }
   if (d->fn)       d->fn(&c);
   else if (d->spb) sy_seq(&c, d->pat, d->spb, d->hold, (sy_inst_t)d->voice, d->arg);
@@ -773,6 +765,7 @@ void blocks_free(void) {
 #undef N
 #undef V
 #undef F
+#undef M
 #undef Am
 #undef F_
 #undef C_

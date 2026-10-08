@@ -174,11 +174,7 @@ Splitting the library into one folder per genre would have meant either copying 
 
 The genre control in the library toolbar holds one genre or All: `visible = (filter == 0 || (block.genres & filter)) && matches(search)`. The search field also matches genre names.
 
-Of the 451 blocks, 211 carry more than one tag and 46 carry all four.
-
-| | Dance | Hip Hop | Rave | Techno |
-|---|---:|---:|---:|---:|
-| blocks tagged | 204 | 181 | 186 | 190 |
+The five vocal samples carry all four genre tags. The other blocks use genre tags to share suitable sounds across styles.
 
 Every tonal block is written in A minor (chords Am, F, C, G, Dm, Em), so any two blocks can be stacked without clashing.
 
@@ -190,7 +186,7 @@ Each block is scaled so its peak is 0.85. A sustained sound at that peak is far 
 
 ## When blocks are rendered
 
-Rendering all 451 blocks takes about 5 seconds in the default unoptimized build (1.5 seconds with `OPT=-O2`) and would hold 200 MB at 120 BPM, 344 MB at 70 BPM. So blocks are rendered on demand, on the main thread, and only what is in use stays loaded:
+Blocks are rendered or decoded on demand, on the main thread, and only what is in use stays loaded:
 
 | need | what happens | what is kept |
 |---|---|---|
@@ -199,12 +195,11 @@ Rendering all 451 blocks takes about 5 seconds in the default unoptimized build 
 | a block is dropped on the sheet | the block is rendered before the audio lock is taken | PCM, while the song lasts |
 | the tempo changes | blocks in the song are re-rendered and swapped in under the lock; all others are dropped | as above |
 
-A typical block renders in about 10 ms unoptimized. The slowest, a four-bar piano progression, takes about 150 ms. The audio callback never renders; it reads buffers that the main thread installed under the audio lock.
+A typical synthesized block renders in about 10 ms unoptimized. The slowest, a four-bar piano progression, takes about 150 ms. The audio callback never renders; it reads buffers that the main thread installed under the audio lock.
 
 ## Limitations
 
-- **No recordings.** There is no sung or spoken phrase, no rap, and no real instrument. The vocal blocks are vowels and vowel glides. More than half of the reference library is vocal hooks and atmospheres, and HipHop eJay adds a rap group; synthesis does not replace that material.
-- **No consonants.** The formant voice can say "yeah", "hey", "oh" and "wow" after a fashion. It cannot say a word with s, t, k or m in it.
+- **Vocals are the exception to synthesis.** The five blocks in the Vocals family decode MP3 clips from `share/vocals/`; every other family is synthesized. The family remains grouped as a vocal sample bin, like the voice group in eJay.
 - **Electronic sounds are close; acoustic ones are sketches.** Drum machines, acid, FM bass, saw stacks and noise sweeps are what the original hardware did, so they hold up. Piano, guitar, strings, brass and choir are simple models and sound like it.
 - **Mono.** A block is one channel. The reference also stored mono clips and split wide sounds into L and R halves; Groove has no stereo pairs, and chorus here only thickens the sound.
 - **One fixed sound per block.** There is no per-clip pitch, filter or volume. A block in another key needs another row.
@@ -215,12 +210,12 @@ A typical block renders in about 10 ms unoptimized. The slowest, a four-bar pian
 - **Decay times do not follow tempo.** Envelopes are in seconds, so at 180 BPM long kicks overlap and at 70 BPM short sounds leave gaps.
 - **Folded tails.** A `LOOP` or `WIDE` block starts with the tail of its own ending, which is right when it repeats and slightly wrong the first time it plays.
 - **A small pause on first use.** A block that was never rendered is rendered on click or drop. On a slow machine a long pad can take a noticeable moment.
-- **Fewer blocks than the reference.** Dance eJay has 1352 clip files under 484 titles; many are L/R halves and numbered variations of one idea. Groove has 451 blocks. Drums, the seven drum-part families, bass, keys, synth, pads, stabs, vocals and FX have at least three blocks in every genre (usually many more). Guitar, organ and scratch are tagged only for the genres whose reference product has them. Numbered variations of one idea are not reproduced.
+- **Fewer blocks than the reference.** Dance eJay has 1352 clip files under 484 titles; many are L/R halves and numbered variations of one idea. Groove has 432 blocks, including five vocal samples available in every genre. Guitar, organ and scratch are tagged only for the genres whose reference product has them. Numbered variations of one idea are not reproduced.
 - **Not checked by ear in CI.** The tests verify that every block renders, is finite, levelled and the right length. They cannot tell whether it sounds good.
 
 ## Adding a block
 
-1. Add a row to `kDefs` in `library.c`, under the genre it mainly belongs to. Pick the family, the genre tags, the bars, a kit or instrument, effect flags and the pattern.
+1. Add a row to `kDefs` in `library.c`, under the genre it mainly belongs to. Pick the family, the genre tags, the bars, a kit or instrument, effect flags and the pattern. Vocal sample rows use `M(...)` and a matching MP3 in `share/vocals/`.
 2. If no existing voice fits, add one to `synth.c`, give it a name in `sy_inst_t` and a case in `sy_voice()`.
 3. Run the Groove tests. `test_blocks` renders every row and fails on a pattern that does not fit, a duplicate name, silence or a bad level.
 4. Listen to it in the app next to a kick and a bass from the same genre.

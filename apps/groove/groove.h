@@ -90,6 +90,7 @@ int            blocks_in_category(category_t cat, int *ids, int max);
 // block_render() is pure and leaves the result with the caller; the other
 // three change what the audio callback reads, so call them under the audio lock.
 bool           block_render(int id, int bpm, block_pcm_t *out);
+bool           groove_mp3_load(const char *filename, int frames, float **pcm);
 // Installs *io for `bpm` and hands the previous audio back in *io to free after unlocking.
 void           block_install(int id, int bpm, block_pcm_t *io);
 // Detaches the PCM and returns it for the caller to free; the overview stays.

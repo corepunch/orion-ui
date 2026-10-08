@@ -181,9 +181,9 @@ app_libs = $(LDFLAGS) $(CORE_LDLIBS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(call a
 all: library apps tools $(if $(IS_WIN),,gems)
 
 # Build and run Groove: empty sheet, or preloaded with the demo song.
-groove: $(BIN_DIR)/groove$(EXE_EXT)
+groove: share $(BIN_DIR)/groove$(EXE_EXT)
 	@cd $(BIN_DIR) && ./groove$(EXE_EXT)
-groove-demo: $(BIN_DIR)/groove$(EXE_EXT)
+groove-demo: share $(BIN_DIR)/groove$(EXE_EXT)
 	@cd $(BIN_DIR) && ./groove$(EXE_EXT) --demo
 
 # ── Tools ────────────────────────────────────────────────────────────────
