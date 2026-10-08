@@ -696,8 +696,7 @@ void request_composite(void);
 window_t *get_window_item(window_t const *win, uint32_t id);
 bool is_window(window_t *win);
 void ui_rc_poll(void); // service pending remote-control screenshot requests and queries
-bool window_in_drag_area(window_t const *win, int sy);
-bool window_in_drag_area_at(window_t const *win, int sx, int sy);
+int  window_nc_hit_test(window_t *win, int sx, int sy);   // HT_* under a screen point
 window_t *get_root_window(window_t *window);
 // Framework-owned desktop root created by UI_INIT_DESKTOP, or NULL when the
 // current runtime has no desktop. Desktop icon controls should parent here.

@@ -28,7 +28,7 @@ static void test_maximize_restore(void) {
   ASSERT_TRUE(window_is_maximized(win));
   ASSERT_EQUAL(win->frame.y, 24);
   ASSERT_EQUAL(win->frame.w, 800);
-  ASSERT_FALSE(window_in_drag_area(win, 24));
+  ASSERT_TRUE(window_nc_hit_test(win, 10, 24) != HT_CAPTION);
   ASSERT_TRUE(win->flags & WINDOW_NOTITLE);
   ASSERT_TRUE(win->flags & WINDOW_NORESIZE);
   ASSERT_TRUE(maximize_window(win));

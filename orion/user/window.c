@@ -710,36 +710,48 @@ void invalidate_window(window_t *win) {
   post_message(root, evPaint, 0, NULL);
 }
 
-// Returns true when the absolute screen Y coordinate 'sy' falls within the
-// draggable title-bar row of 'win'.  For windows with WINDOW_TOOLBAR the
-// toolbar rows sit below the title bar and must NOT initiate a drag.
-// Windows without a toolbar are entirely draggable above client area.
-// Windows with WINDOW_NOTITLE have no title row; their toolbar area is the
-// only non-client space and may be dragged from freely (e.g. tool palettes).
-bool window_in_drag_area(window_t const *win, int sy) {
-  if (window_is_maximized(win) || win->parent || (win->flags & WINDOW_NODRAG)) return false;
-  int t = titlebar_height(win);
-  if (sy < win->frame.y || sy >= win->frame.y + t) return false;
-  if (!(win->flags & WINDOW_TOOLBAR) || (win->flags & WINDOW_NOTITLE) || toolbar_merged_title(win)) return true;
-  // Has both title bar and toolbar: only the caption row is draggable.
-  return sy < win->frame.y + window_caption_height(win);
-}
-
-bool window_in_drag_area_at(window_t const *win, int sx, int sy) {
-  if (!win || window_is_maximized(win) || win->parent || (win->flags & WINDOW_NODRAG)) return false;
-  if (win->flags & WINDOW_TOOLBAR) {
-    if (sy < win->frame.y || sy >= win->frame.y + titlebar_height(win)) return false;
-    toolbar_state_t *tb = window_toolbar_state((window_t *)win);
-    if (tb && (tb->style & TOOLBAR_STYLE_GRIP)) {
-      int title_h = toolbar_content_offset(win);
-      if (tb->orientation == TOOLBAR_VERTICAL)
-        return CONTAINS(sx, sy, win->frame.x, win->frame.y + title_h,
-                        win->frame.w, get_theme()->toolbar_grip_size);
-      return CONTAINS(sx, sy, win->frame.x, win->frame.y + title_h,
-                      get_theme()->toolbar_grip_size, titlebar_height(win) - title_h);
-    }
+// Non-client hit-test (≈ WM_NCHITTEST): which part of `win` lies under the screen point. A window
+// proc may answer evNcHitTest first; HT_NOWHERE from the proc means "default". The default knows
+// the caption row (with its close and maximize buttons), toolbar grips and the caption-toolbar band
+// (draggable except over its items), and the bottom-right grow box of a root window.
+int window_nc_hit_test(window_t *win, int sx, int sy) {
+  if (!win || !is_window(win)) return HT_NOWHERE;
+  int custom = (int)send_message(win, evNcHitTest, MAKEDWORD((uint16_t)sx, (uint16_t)sy), NULL);
+  if (custom != HT_NOWHERE) return custom;
+  irect16_t frame = win->frame;
+  if (!win->parent) {
+    int lx = sx - frame.x, ly = sy - frame.y;
+    if (lx >= frame.w - get_theme()->scrollbar_width && ly >= frame.h - get_theme()->scrollbar_width &&
+        lx < frame.w && ly < frame.h && !(win->flags & WINDOW_NORESIZE))
+      return HT_GROWBOX;
   }
-  return window_in_drag_area(win, sy);
+  int band = titlebar_height(win);
+  if (win->parent || sx < frame.x || sx >= frame.x + frame.w || sy < frame.y || sy >= frame.y + band) return HT_CLIENT;
+  int caption_h = caption_extent(win->flags);
+  if (caption_h > 0 && sy < frame.y + caption_h) {
+    irect16_t titlebar = rect_split_top(frame, caption_h);
+    irect16_t close_btn = rect_split_right(titlebar, caption_h);
+    irect16_t max_btn = rect_split_right(rect_trim_right(titlebar, caption_h), caption_h);
+    if (!(win->flags & (WINDOW_NOCLOSE)) && rect_contains_point(close_btn, (ipoint16_t){sx, sy})) return HT_CLOSE;
+    if ((win->flags & WINDOW_MAXIMIZEBOX) &&
+        !(win->flags & (WINDOW_NORESIZE | WINDOW_DIALOG | WINDOW_ALWAYSINBACK | WINDOW_ALWAYSONTOP)) &&
+        rect_contains_point(max_btn, (ipoint16_t){sx, sy})) return HT_MAXBUTTON;
+    return (window_is_maximized(win) || (win->flags & WINDOW_NODRAG)) ? HT_CLIENT : HT_CAPTION;
+  }
+  if (window_is_maximized(win) || (win->flags & WINDOW_NODRAG)) return HT_CLIENT;
+  // Below the caption row: the toolbar band. A grip owns the drag; otherwise a caption-less band
+  // (WINDOW_NOTITLE or merged into the toolbar) drags from its empty space and leaves items alone.
+  toolbar_state_t *tb = (win->flags & WINDOW_TOOLBAR) ? window_toolbar_state(win) : NULL;
+  if (tb && (tb->style & TOOLBAR_STYLE_GRIP)) {
+    int title_h = toolbar_content_offset(win);
+    irect16_t grip = tb->orientation == TOOLBAR_VERTICAL
+        ? R(frame.x, frame.y + title_h, frame.w, get_theme()->toolbar_grip_size)
+        : R(frame.x, frame.y + title_h, get_theme()->toolbar_grip_size, band - title_h);
+    return rect_contains_point(grip, (ipoint16_t){sx, sy}) ? HT_CAPTION : HT_CLIENT;
+  }
+  if (!(win->flags & WINDOW_TOOLBAR)) return HT_CAPTION;
+  if (caption_h > 0) return HT_CLIENT;   // titled window with a toolbar: only the caption row drags
+  return toolbar_hit_action(tb, sx - frame.x, sy - frame.y) ? HT_CLIENT : HT_CAPTION;
 }
 
 // Get child window by ID

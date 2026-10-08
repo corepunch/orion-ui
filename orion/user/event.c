@@ -809,14 +809,8 @@ void dispatch_message(ui_event_t *msg) {
         if (hover && !window_has_state(hover, WINDOW_STATE_DISABLED)) {
           window_t *root = hover;
           while (root->parent) root = root->parent;
-          int root_lx = sx - root->frame.x;
-          int root_ly = sy - root->frame.y;
           int cursor_id = curArrow;
-          if (root_lx >= root->frame.w - get_theme()->scrollbar_width &&
-              root_ly >= root->frame.h - get_theme()->scrollbar_width &&
-              !(root->flags & WINDOW_NORESIZE) &&
-              root->parent)
-          {
+          if (window_nc_hit_test(root, sx, sy) == HT_GROWBOX) {
             cursor_id = curResizeNWSE;
           } else {
             int lx_c = (int16_t)LOCAL_X(px, py, hover);
@@ -974,41 +968,20 @@ void dispatch_message(ui_event_t *msg) {
             send_message(new_root, evActivate, WA_CLICKACTIVE, old_root);
         }
         window_t *resize_target = (win == click_root || win->parent) ? click_root : NULL;
-        int root_lx = resize_target ? sx - resize_target->frame.x : 0;
-        int root_ly = resize_target ? sy - resize_target->frame.y : 0;
-        if (resize_target &&
-            root_lx >= resize_target->frame.w - get_theme()->scrollbar_width &&
-            root_ly >= resize_target->frame.h - get_theme()->scrollbar_width &&
-            !(resize_target->flags&WINDOW_NORESIZE) &&
-            win != g_ui_runtime.captured)
-        {
+        int nc_hit = HT_CLIENT;
+        if (win != g_ui_runtime.captured) {
+          if (resize_target && window_nc_hit_test(resize_target, sx, sy) == HT_GROWBOX) nc_hit = HT_GROWBOX;
+          else nc_hit = window_nc_hit_test(win, sx, sy);
+        }
+        if (nc_hit == HT_GROWBOX) {
           g_ui_runtime.resizing = resize_target;
           resize_anchor[0] = sx - (resize_target->frame.x + resize_target->frame.w);
           resize_anchor[1] = sy - (resize_target->frame.y + resize_target->frame.h);
-        } else if (!window_is_maximized(win) && window_in_drag_area_at(win, sx, sy) && win != g_ui_runtime.captured) {
-          // For WINDOW_NOTITLE toolbars, don't drag if the click hits a toolbar
-          // button — only drag from empty space.
-          bool skip_drag = false;
-          if (toolbar_host && ((win->flags & WINDOW_NOTITLE) || toolbar_merged_title(win))) {
-            toolbar_state_t *tb = window_toolbar_state(win);
-            int tb_x = sx - window_screen_x(win);
-            int tb_y = sy - window_screen_y(win);
-            if (toolbar_hit_action(tb, tb_x, tb_y))
-              skip_drag = true;
-          }
-          if (!skip_drag) {
-            g_ui_runtime.dragging = win;
-            drag_anchor[0] = SCALE_POINT(px) - win->frame.x;
-            drag_anchor[1] = SCALE_POINT(py) - win->frame.y;
-          } else {
-            // Route to toolbar instead of dragging
-            int tb_x = sx - window_screen_x(win);
-            int tb_y = sy - window_screen_y(win);
-            if (!toolbar_dispatch_embedded_mouse(win, evLeftButtonDown, tb_x, tb_y)) {
-              send_message(toolbar_host, evLeftButtonDown,
-                           MAKEDWORD((uint16_t)tb_x, (uint16_t)tb_y), NULL);
-            }
-          }
+        } else if (nc_hit == HT_CAPTION || nc_hit == HT_CLOSE || nc_hit == HT_MAXBUTTON) {
+          // The caption buttons are tracked as a caption press and resolved on release.
+          g_ui_runtime.dragging = win;
+          drag_anchor[0] = SCALE_POINT(px) - win->frame.x;
+          drag_anchor[1] = SCALE_POINT(py) - win->frame.y;
         } else {
           if (msg->message == kEventLeftButtonDown &&
               (win->flags & WINDOW_TOOLBAR) && toolbar_host) {
@@ -1061,17 +1034,10 @@ void dispatch_message(ui_event_t *msg) {
       if (g_ui_runtime.dragging) {
         int sx = SCALE_POINT(px);
         int sy = SCALE_POINT(py);
-        int caption_h = window_caption_height(g_ui_runtime.dragging);
-        irect16_t titlebar  = rect_split_top(g_ui_runtime.dragging->frame, caption_h);
-        irect16_t close_btn = rect_split_right(titlebar, caption_h);
-        bool on_close = !(g_ui_runtime.dragging->flags & (WINDOW_NOTITLE | WINDOW_NOCLOSE))
-                        && sx >= close_btn.x && sx < close_btn.x + close_btn.w
-                        && sy >= close_btn.y && sy < close_btn.y + close_btn.h;
         window_t *dragged = g_ui_runtime.dragging;
-        irect16_t max_btn = rect_split_right(rect_trim_right(titlebar, caption_h), caption_h);
-        bool on_maximize = msg->message == kEventLeftButtonUp && ((dragged->flags & WINDOW_MAXIMIZEBOX) != 0) && !dragged->parent &&
-          !(dragged->flags & (WINDOW_NOTITLE | WINDOW_NORESIZE | WINDOW_DIALOG | WINDOW_ALWAYSINBACK | WINDOW_ALWAYSONTOP)) &&
-          rect_contains_point(max_btn, (ipoint16_t){sx, sy});
+        int release_hit = window_nc_hit_test(dragged, sx, sy);
+        bool on_close = release_hit == HT_CLOSE;
+        bool on_maximize = msg->message == kEventLeftButtonUp && release_hit == HT_MAXBUTTON;
         if (on_maximize) {
           g_ui_runtime.dragging = NULL;
           maximize_window(dragged);

@@ -25,6 +25,7 @@ enum {
   evSetFocus,
   evKillFocus,
   evHitTest,
+  evNcHitTest,        // wparam = MAKEDWORD(screen_x, screen_y); return an HT_* code, or 0 for the default (≈ WM_NCHITTEST)
   // Sent to a parent before selected mouse/key events are delivered to a
   // child window, analogous to WinAPI WM_PARENTNOTIFY but consumable.
   // wparam = 0; lparam = parent_notify_t*. Return true to consume the event.
@@ -107,6 +108,16 @@ enum {
 };
 
 enum { DRAG_NONE, DRAG_NOW, DRAG_AFTER_HOLD };
+
+// Non-client hit-test codes (≈ HT*) returned by window_nc_hit_test() and evNcHitTest handlers.
+enum {
+  HT_NOWHERE   = 0,
+  HT_CLIENT    = 1,   // client area, or a toolbar item: the pointer goes to the client or the toolbar
+  HT_CAPTION   = 2,   // draggable caption, toolbar grip, or empty caption-toolbar space
+  HT_GROWBOX   = 4,   // bottom-right resize corner
+  HT_MAXBUTTON = 9,
+  HT_CLOSE     = 20,
+};
 
 // Compatibility alias: callers that use evLayout map to evArrange.
 #define evLayout evArrange
