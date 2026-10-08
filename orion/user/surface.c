@@ -93,3 +93,23 @@ int window_composition_attr(const window_t *win, window_composition_attr_t attr)
     default:          return 0;
   }
 }
+
+// Read a root window's redirected surface (≈ PrintWindow with PW_RENDERFULLCONTENT): straight-alpha
+// RGBA, top row first, at physical resolution. The caller frees *out_rgba with free().
+bool window_capture(const window_t *win, uint8_t **out_rgba, int *out_w, int *out_h) {
+  window_surface_t *surf = window_surface(win);
+  if (!surf || !surf->tex || !out_rgba || !out_w || !out_h) {
+    fprintf(stderr, "[surface] capture rejected win=%u surface=%p out=%p\n", win ? win->id : 0, (void *)surf, (void *)out_rgba);
+    fflush(stderr);
+    return false;
+  }
+  uint8_t *rgba = malloc((size_t)surf->w * surf->h * 4);
+  if (!rgba) {
+    fprintf(stderr, "[surface] capture allocation failed win=%u size=%dx%d\n", win->id, surf->w, surf->h);
+    fflush(stderr);
+    return false;
+  }
+  if (!R_ReadTextureSRGBA8(surf->tex, surf->w, surf->h, rgba)) { free(rgba); return false; }
+  *out_rgba = rgba; *out_w = surf->w; *out_h = surf->h;
+  return true;
+}

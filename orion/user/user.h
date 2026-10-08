@@ -531,6 +531,7 @@ typedef enum { WCA_CORNERS, WCA_SHADOW, WCA_BORDER, WCA_COUNT } window_compositi
 #define WCA_AUTO (-1)
 void window_set_composition_attr(window_t *win, window_composition_attr_t attr, int value);
 int  window_composition_attr(const window_t *win, window_composition_attr_t attr); // resolved value
+bool              window_capture(const window_t *win, uint8_t **out_rgba, int *out_w, int *out_h);
 void              window_surface_adopt(window_t *win, uint32_t fbo, uint32_t tex, int w, int h);
 
 enum { WINDOW_PAINT_CONTENT = 0, WINDOW_PAINT_OVERLAY = 1 };

@@ -5,6 +5,8 @@
 #include "user.h"
 #include "draw.h"
 #include <orion/kernel/kernel.h>
+#include <orion/kernel/renderer.h>
+#include "image.h"
 
 // Remote-control queries (list_windows, get_rect, get_ctrl_rect, get_text, get_value,
 // click_ctrl), answered on the main thread from the live window tree. ui_rc_poll() runs
@@ -99,6 +101,19 @@ static void ui_rc_query(const char *req, char *resp, int resplen) {
     axPostMessageW(NULL, kEventLeftButtonDown, MAKEDWORD(p.x, p.y), NULL);
     axPostMessageW(NULL, kEventLeftButtonUp,   MAKEDWORD(p.x, p.y), NULL);
     snprintf(resp, (size_t)resplen, "ok\n");
+    return;
+  }
+  if (strncmp(req, "capture_window ", 15) == 0) {   // capture_window <path.png> <title>: the window's own surface
+    char path[512], title[512];
+    window_t *w = NULL;
+    uint8_t *rgba = NULL;
+    int pw = 0, ph = 0;
+    if (sscanf(req + 15, "%511s %511[^\t\n]", path, title) == 2) w = rc_find_window(title);
+    if (!w || w->parent) { snprintf(resp, (size_t)resplen, "err no window\n"); return; }
+    if (!window_capture(w, &rgba, &pw, &ph)) { snprintf(resp, (size_t)resplen, "err no surface\n"); return; }
+    bool ok = save_image_png(path, rgba, pw, ph);
+    free(rgba);
+    snprintf(resp, (size_t)resplen, ok ? "ok\n" : "err save failed\n");
     return;
   }
   snprintf(resp, (size_t)resplen, "err unknown query\n");
