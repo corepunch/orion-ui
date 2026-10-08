@@ -250,7 +250,7 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
         if (!(win->flags&WINDOW_TRANSPARENT) && wparam == 0) {
           draw_panel(win);
         }
-        if (!(win->flags&WINDOW_NOTITLE) && !toolbar_merged_title(win)) {
+        if (caption_extent(win->flags) > 0) {
           draw_window_controls(win);
         }
         toolbar_draw_non_client(win);

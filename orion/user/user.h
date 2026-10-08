@@ -599,6 +599,10 @@ static inline toolbar_state_t *window_toolbar_state(window_t *win) {
 // is set) the toolbar band.  Used by event routing and layout.
 int titlebar_height(window_t const *win);
 int window_caption_height(window_t const *win);
+// The single definition of the caption band: its height for a window with these flags, 0 when it has no
+// caption row (WINDOW_NOTITLE, or WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR merging the caption into the toolbar).
+bool caption_merged_into_toolbar(flags_t flags);
+int  caption_extent(flags_t flags);
 int statusbar_height(window_t const *win);
 int window_screen_x(window_t const *win);
 int window_screen_y(window_t const *win);

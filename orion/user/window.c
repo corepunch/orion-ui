@@ -145,7 +145,7 @@ static window_t *alloc_window(char const *title, flags_t flags, irect16_t const 
   win->proc = proc;
   // Child controls participate in client-area layout, so they should not
   // reserve a caption unless they explicitly request a merged title toolbar.
-  if (parent && (flags & (WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR)) != (WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR))
+  if (parent && !caption_merged_into_toolbar(flags))
     flags |= WINDOW_NOTITLE;
   
   // Phase 3: Merge class defaults with instance flags.
@@ -801,7 +801,7 @@ void adjust_window_rect(irect16_t *r, flags_t flags) {
   if (!r) return;
   // Compute non-client heights for the given flags.
   int t = 0;
-  if (!(flags & WINDOW_NOTITLE) && (flags & (WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR)) != (WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR)) t += (flags & WINDOW_TOOLWINDOW) ? (FONT_SIZE + 5) : get_theme()->caption_height;
+  t += caption_extent(flags);
   if (flags & WINDOW_TOOLBAR)    t += theme_toolbar_band_height();
   int s = (flags & WINDOW_STATUSBAR) ? STATUSBAR_HEIGHT : 0;
   // Horizontal scrollbar: adds get_theme()->scrollbar_width to the bottom unless it is

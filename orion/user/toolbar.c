@@ -15,12 +15,11 @@
 static bool toolbar_set_checked(toolbar_state_t *tb, int i, bool checked);
 
 bool toolbar_merged_title(const window_t *win) {
-  return win && (win->flags & (WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NOTITLE)) ==
-    (WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR);
+  return win && !(win->flags & WINDOW_NOTITLE) && caption_merged_into_toolbar(win->flags);
 }
 
 int toolbar_content_offset(const window_t *win) {
-  return (win->flags & WINDOW_NOTITLE) || toolbar_merged_title(win) ? 0 : window_caption_height(win);
+  return caption_extent(win->flags);
 }
 
 int toolbar_item_hit(const toolbar_state_t *tb, int tx, int ty) {

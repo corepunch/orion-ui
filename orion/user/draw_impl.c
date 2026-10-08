@@ -82,9 +82,17 @@ int window_caption_height(window_t const *win) {
   return (win && (win->flags & WINDOW_TOOLWINDOW)) ? (FONT_SIZE + 5) : get_theme()->caption_height;
 }
 
+bool caption_merged_into_toolbar(flags_t flags) {
+  return (flags & (WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR)) == (WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR);
+}
+
+int caption_extent(flags_t flags) {
+  if ((flags & WINDOW_NOTITLE) || caption_merged_into_toolbar(flags)) return 0;
+  return (flags & WINDOW_TOOLWINDOW) ? (FONT_SIZE + 5) : get_theme()->caption_height;
+}
+
 int titlebar_height(window_t const *win) {
-  int t = 0;
-  if (!(win->flags & WINDOW_NOTITLE) && !toolbar_merged_title(win)) t += window_caption_height(win);
+  int t = caption_extent(win->flags);
   if (win->flags & WINDOW_TOOLBAR) {
     t += toolbar_effective_item_height(win) + 2 * toolbar_effective_padding(win);
   }
