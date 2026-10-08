@@ -251,6 +251,7 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         fflush(stderr);
         return false;
       }
+      g_app->sheet = win;
       st->press_clip = -1;
       sync_scroll(win);
       return true;
@@ -364,6 +365,7 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       }
       return true;
     case evDestroy:
+      if (g_app && g_app->sheet == win) g_app->sheet = NULL;
       if (st && st->press_clip >= 0) set_capture(NULL);
       free(st);
       win->userdata = NULL;
