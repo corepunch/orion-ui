@@ -489,10 +489,14 @@
         </form>
         <form name="create_repo_dialog" title="Create Repository" width="500" auto_layout="1" spacing="6" padding="8">
             <Label text="Repository folder:" />
-            <StackView orientation="horizontal" spacing="4">
-                <TextEdit name="path" flags="flexspace" />
-                <Button name="browse" text="Choose..." />
-            </StackView>
+            <GridView name="fields" spacing="4">
+                <Column name="inputs">
+                    <TextEdit name="path" />
+                </Column>
+                <Column name="field_actions" width="auto">
+                    <Button name="browse" text="Choose..." />
+                </Column>
+            </GridView>
             <Label name="status" text="The folder will be created and initialized with branch main." />
             <StackView orientation="horizontal" spacing="4">
                 <Space />
@@ -501,10 +505,16 @@
             </StackView>
         </form>
         <form name="identity_dialog" title="Git Identity" width="460" auto_layout="1" spacing="6" padding="8">
-            <Label text="Name:" />
-            <TextEdit name="name" />
-            <Label text="Email:" />
-            <TextEdit name="email" />
+            <GridView name="fields" spacing="6">
+                <Column name="labels" width="auto">
+                    <Label text="Name:" />
+                    <Label text="Email:" />
+                </Column>
+                <Column name="inputs">
+                    <TextEdit name="name" />
+                    <TextEdit name="email" />
+                </Column>
+            </GridView>
             <CheckBox name="global" text="Use for all repositories" />
             <Label name="status" text="Stored in this repository unless global is selected." />
             <StackView orientation="horizontal" spacing="4">
@@ -514,9 +524,16 @@
             </StackView>
         </form>
         <form name="switch_branch_dialog" title="Switch Branch" width="440" auto_layout="1" spacing="6" padding="8">
-            <Label text="Find a branch:" />
-            <TextEdit name="query" />
-            <ComboBox name="branches" flags="flexspace" />
+            <GridView name="fields" spacing="6">
+                <Column name="labels" width="auto">
+                    <Label text="Find:" />
+                    <Label text="Branch:" />
+                </Column>
+                <Column name="inputs">
+                    <TextEdit name="query" />
+                    <ComboBox name="branches" />
+                </Column>
+            </GridView>
             <StackView orientation="horizontal" spacing="4">
                 <Button name="new_branch" text="New Branch..." />
                 <Space />

@@ -23,8 +23,6 @@ BUNDLE := $(APP_ROOT)/$(APP).app
 COMPILER := xcrun --sdk $(SDK) clang
 MIN_FLAG := $(if $(filter iphoneos,$(SDK)),-miphoneos-version-min,-mios-simulator-version-min)=$(IOS_MIN)
 FLAGS := -isysroot "$(SDK_PATH)" -arch $(ARCH) $(MIN_FLAG) -std=c11 -O2 -g -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-parameter -Wno-unused-function -Wno-deprecated-declarations -MMD -MP -I. -I"$(SDK_PATH)/usr/include/libxml2" -DORION_ALLOW_HIGHDPI=1
-THEME_imageeditor ?= navy
-THEME_penciltest  ?= navy
 ifeq ($(THEME_$(APP)),)
 else ifeq ($(filter classic modern light navy,$(THEME_$(APP))),)
 $(error unknown THEME_$(APP)=$(THEME_$(APP)) (want classic, modern, light, or navy))
