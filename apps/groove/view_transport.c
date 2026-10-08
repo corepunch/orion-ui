@@ -53,6 +53,9 @@ result_t win_transport(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
     case evCreate: {
       g_app->library = win;
       send_message(win, tbSetStyle, TOOLBAR_STYLE_PLASTIC, NULL);
+      block_pictograms_load(g_app);
+      bitmap_strip_t strip = block_pictogram_strip();
+      send_message(win, tbSetStrip, 0, &strip);
 #ifdef AX_PLATFORM_IOS
       send_message(win, tbSetButtonSize, BUTTON_HEIGHT + 4, NULL);
 #else

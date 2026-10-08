@@ -90,12 +90,12 @@ static void paint_card_variant(const block_t *b, irect16_t r, int visible_width)
   if (!b->variant) return;
   char text[8];
   snprintf(text, sizeof(text), "%u", b->variant);
-  int badge_h = MIN(BADGE_HEIGHT, r.h - 2 * CARD_LABEL_PADDING);
-  int badge_w = measure_badge(FONT_SMALLEST, text);
+  int badge_w = measure_badge(FONT_SMALL, text);
+  int badge_h = MIN(badge_w, r.h - 2 * CARD_LABEL_PADDING);
   int right = r.x + MIN(r.w, visible_width) - CARD_LABEL_PADDING;
   int x = right - badge_w, y = r.y + r.h - CARD_LABEL_PADDING - badge_h;
   if (badge_h <= 0 || x < r.x + CARD_LABEL_PADDING) return;
-  draw_badge(FONT_SMALLEST, text, x, y, badge_h, get_sys_color(brTextOnColor));
+  draw_badge(FONT_SMALL, text, x, y, badge_h, 0xFFFFFFFFu);
 }
 
 static void paint_block_card(int block, const block_t *b, irect16_t r, int visible_width, uint32_t color, ctrl_state_t state) {
