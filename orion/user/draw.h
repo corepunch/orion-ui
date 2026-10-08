@@ -31,7 +31,8 @@ void draw_gradient_card(irect16_t r, ctrl_state_t state, uint32_t color);
 void render_gradient_card(irect16_t r, int pixel_w, int pixel_h, float radius,
                           float ring_width, float highlight_width, ctrl_state_t state, uint32_t color);
 // Single shader pass; shadow is reserved inside r, so controls never paint outside their bounds.
-void draw_plastic_button(irect16_t r, ctrl_state_t state, uint32_t color, const char *icon);
+// control_size (CONTROL_SIZE_*) picks the glyph size; CONTROL_SIZE_LARGE renders it CONTROL_LARGE_GROWTH bigger.
+void draw_plastic_button(irect16_t r, ctrl_state_t state, uint32_t color, const char *icon, uint32_t control_size);
 void draw_plastic_card(irect16_t r, ctrl_state_t state, uint32_t color);
 void render_plastic_surface(irect16_t r, float radius, float bevel, float shadow,
                             ctrl_state_t state, uint32_t color, uint32_t shadow_color,

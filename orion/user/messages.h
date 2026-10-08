@@ -369,6 +369,8 @@ typedef struct {
 #define CONTROL_SIZE_MINI     (2u << 29)
 #define CONTROL_SIZE_LARGE    (3u << 29)
 #define CONTROL_SIZE_MASK     (3u << 29)
+// A CONTROL_SIZE_LARGE toolbar button, and its glyph, grow by this many logical pixels.
+#define CONTROL_LARGE_GROWTH  4
 
 #define TB_SPACING              TOOLBAR_HEIGHT  // equals TOOLBAR_HEIGHT so toolbar buttons are square
 #define TOOLBAR_PADDING         2               // pixels of margin between toolbar border and button area (all sides)
@@ -401,6 +403,7 @@ typedef struct {
 #define TOOLBAR_ITEM_FLAG_SMALL      (1u << 4)
 #define TOOLBAR_ITEM_FLAG_FLEXSPACE  (1u << 5) // horizontal spacer shares remaining width
 #define TOOLBAR_ITEM_FLAG_ARTWORK    (1u << 6) // button icon is full-colour artwork filling the button; no plastic body
+// Item flags also take CONTROL_SIZE_LARGE: a button CONTROL_LARGE_GROWTH bigger, centred on its row.
 #define TOOLBAR_STYLE_GRIP           (1u << 1) // draggable grip on a floating toolbar
 #define TOOLBAR_STYLE_COMPACT        (1u << 2) // menu-bar background, icon-only items
 #define TOOLBAR_STYLE_PRESSED_STRIP  (1u << 3) // strip's second row contains pressed artwork

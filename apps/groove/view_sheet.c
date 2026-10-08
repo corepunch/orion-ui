@@ -45,7 +45,7 @@ static irect16_t solo_rect(window_t *win, int t) {
 }
 
 static void draw_track_toggle(irect16_t r, const char *icon, bool active, uint32_t on_color) {
-  draw_plastic_button(r, active ? CTRL_SELECTED : CTRL_NORMAL, active ? on_color : get_sys_color(brControlBg), icon);
+  draw_plastic_button(r, active ? CTRL_SELECTED : CTRL_NORMAL, active ? on_color : get_sys_color(brControlBg), icon, CONTROL_SIZE_REGULAR);
 }
 
 // Hue of the track's earliest clip, so the lane and header match the cards they hold.

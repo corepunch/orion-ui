@@ -9,7 +9,7 @@
 
 static const toolbar_item_t kTransportItems[] = {
   { TOOLBAR_ITEM_BUTTON,    ID_REWIND,     "phosphor-rewind-fill",       0, 0, NULL, "Rewind (Home)" },
-  { TOOLBAR_ITEM_BUTTON,    ID_PLAY,       "phosphor-play-fill",         0, 0, NULL, "Play / pause (Space)", 0, "phosphor-pause-fill" },
+  { TOOLBAR_ITEM_BUTTON,    ID_PLAY,       "phosphor-play-fill",         0, CONTROL_SIZE_LARGE, NULL, "Play / pause (Space)", 0, "phosphor-pause-fill" },
   { TOOLBAR_ITEM_BUTTON,    ID_FORWARD,    "phosphor-fast-forward-fill", 0, 0, NULL, "Go to end (End)" },
   { TOOLBAR_ITEM_SPACER,    0,             NULL,      0, TOOLBAR_ITEM_FLAG_FLEXSPACE, NULL, NULL },
   // Genre filter, hidden for now: the library always shows every genre.
@@ -53,10 +53,9 @@ result_t win_transport(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       send_message(win, tbSetButtonSize, TB_SPACING, NULL);
 #endif
       set_items(win);
-      static const struct { uint16_t id; uint32_t color; } colors[] = {
-        { ID_REWIND, WEB(0x3689da) }, { ID_PLAY, WEB(0x48aa36) }, { ID_FORWARD, WEB(0x3689da) },
-      };
-      for (int i = 0; i < ARRAY_LEN(colors); i++) send_message(win, tbSetItemColor, colors[i].id, (void *)&colors[i].color);
+      static const uint32_t silver = WEB(0xd0d0d0); // iTunes transport
+      static const uint16_t transport[] = { ID_REWIND, ID_PLAY, ID_FORWARD };
+      for (int i = 0; i < ARRAY_LEN(transport); i++) send_message(win, tbSetItemColor, transport[i], (void *)&silver);
       g_app->bin = create_window("Sounds", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL | WINDOW_NOACTIVATE,
                                  MAKERECT(0, 0, 1, 1), win, win_bin, win->hinstance, NULL);
       if (g_app->bin) dock_window(g_app->bin, DOCK_FILL, 0, DOCK_NOFLOAT, 0, 0);
