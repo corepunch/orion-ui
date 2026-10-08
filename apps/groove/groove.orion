@@ -22,9 +22,6 @@
         <item name="stop" label="Stop" />
         <item name="rewind" label="Rewind" shortcut="Home" />
         <item name="loop" label="Loop" shortcut="L" />
-        <Separator />
-        <item name="slower" label="Slower" />
-        <item name="faster" label="Faster" />
       </menu>
       <menu name="window" label="Window">
         <item name="library" label="Show Library" />

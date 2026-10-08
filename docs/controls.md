@@ -394,6 +394,9 @@ case evCommand:
 | `sgGetCount` | number of segments |
 | `sgGetSelection` / `sgSetSelection` | selected index; setting does not notify, `wparam` -1 clears |
 | `sgGetSegmentRect` | `wparam` = index, `lparam` = `irect16_t *` in control coordinates |
+| `sgSetImageStrip` | `lparam` = `bitmap_strip_t *` (copied; the texture stays the caller's), shared by every segment |
+| `sgSetSegmentIcon` | `wparam` = index, `lparam` = `(void *)(intptr_t)` icon index in the strip, -1 clears |
+| `sgSetStyle` | `wparam` = `SEGMENTED_STYLE_*` flags |
 | `sgnSelChange` | notification to the parent through `evCommand` when the user picks another segment |
 
 A click selects on release, and only when the release is on the pressed
@@ -405,6 +408,12 @@ The track is `THEME_PART_SEGMENTED_TRACK` and each segment is
 `THEME_PART_SEGMENT` with `CTRL_SELECTED`, `CTRL_HOVER` or `CTRL_PRESSED`.
 Modern themes draw a capsule inside a field-shaped track; Classic draws a row
 of push-like buttons with the chosen one sunken.
+
+Icons work as on `TabView` (`tcSetImageStrip` / `tcSetTabIcon`): an icon is
+drawn before its label. With `SEGMENTED_STYLE_ICONS_ONLY` a segment that has an
+icon shows the icon alone, hugging it (never narrower than tall), and answers
+`evGetTooltipText` with its label. Segments without an icon keep their label,
+so an "All" segment can lead a row of icons. `sgSetSegments` clears the icons.
 
 In a toolbar use `TOOLBAR_ITEM_SEGMENTED` (see [toolbars.md](toolbars.md)).
 

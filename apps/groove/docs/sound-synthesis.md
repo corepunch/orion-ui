@@ -75,7 +75,10 @@ A kit is a table of numbers for these voices (`kKits` in `synth.c`). The same pa
 
 ### Vocals
 
-There is no recorded voice. `I_VOX` is a saw wave (standing in for the vocal cords) through three band-pass filters placed at the formants of a vowel. Gliding the three filters from one vowel to the next produces a word-like sound: `"iea"` reads as "yeah", `"hei"` adds a breath and reads as "hey", `"ou"` as "oh". `I_ROBOT` uses a pulse wave at a fixed pitch and jumps between vowels. `I_CHOIR` is three detuned saws through one fixed vowel.
+Vocal `M(...)` rows play original generated MP3 samples from `share/vocals/`.
+Their production and timing checks are documented in
+[Generating and verifying Groove samples](../../../tools/groove_audio/sample-production.md).
+The synth voices remain available: `I_VOX` is a saw wave (standing in for the vocal cords) through three band-pass filters placed at the formants of a vowel. Gliding the three filters from one vowel to the next produces a word-like sound: `"iea"` reads as "yeah", `"hei"` adds a breath and reads as "hey", `"ou"` as "oh". `I_ROBOT` uses a pulse wave at a fixed pitch and jumps between vowels. `I_CHOIR` is three detuned saws through one fixed vowel.
 
 ### Scratches
 

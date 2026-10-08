@@ -141,10 +141,60 @@ static void test_toolbar_item(void) {
   PASS();
 }
 
+static void test_icons(void) {
+  TEST("strip icons replace labels in icons-only style, name their segment in a tooltip, and refit the toolbar item");
+  test_env_init();
+  window_t *bar = create_window("", WINDOW_TOOLBAR | WINDOW_NOTITLE | WINDOW_NORESIZE,
+                                MAKERECT(40, 50, 600, 60), NULL, host_proc, 0, NULL);
+  toolbar_item_t items[] = {
+    { TOOLBAR_ITEM_SEGMENTED, ID_SEG, NULL,      0, 0, "All|Kick drum|Snare drum", "Family" },
+    { TOOLBAR_ITEM_BUTTON,    2,      "missing", 0, 0, NULL, "Button" },
+  };
+  send_message(bar, tbSetItems, ARRAY_LEN(items), items);
+  show_window(bar, true);
+  window_t *seg = get_window_item(bar, ID_SEG);
+  ASSERT_NOT_NULL(seg);
+  int labelled = seg->frame.w;
+  bitmap_strip_t strip = { .tex = 0, .icon_w = 40, .icon_h = 16, .cols = 2, .sheet_w = 80, .sheet_h = 16 }; // wider than the segments are tall
+  ASSERT_FALSE(send_message(seg, sgSetImageStrip, 0, NULL));
+  ASSERT_TRUE(send_message(seg, sgSetImageStrip, 0, &strip));
+  ASSERT_TRUE(send_message(seg, sgSetSegmentIcon, 1, (void *)(intptr_t)0) && send_message(seg, sgSetSegmentIcon, 2, (void *)(intptr_t)1));
+  ASSERT_FALSE(send_message(seg, sgSetSegmentIcon, 3, (void *)(intptr_t)0));
+  ASSERT_FALSE(send_message(seg, sgSetStyle, 0x80, NULL));
+  char tip[256] = {0};
+  irect16_t r;
+  send_message(seg, sgGetSegmentRect, 1, &r);
+  ASSERT(!send_message(seg, evGetTooltipText, MAKEDWORD(r.x + 2, r.y + 2), tip), "a segment that shows its label has no tooltip");
+  ASSERT_TRUE(send_message(seg, sgSetStyle, SEGMENTED_STYLE_ICONS_ONLY, NULL));
+  ASSERT_TRUE(send_message(bar, tbFitItem, ID_SEG, NULL));
+  toolbar_state_t *tb = toolbar_get_state(bar);
+  layout_measure_t m = {0};
+  send_message(seg, evMeasure, 0, &m);
+  ASSERT(seg->frame.w == m.desired_w && seg->frame.w > labelled, "the toolbar refits the control to its icon segments");
+  ASSERT(tb->item_rects[1].x >= seg->frame.x + seg->frame.w, "following items move up to the fitted control");
+  send_message(seg, sgGetSegmentRect, 1, &r);
+  ASSERT(r.w == strip.icon_w + 2 * SEGMENTED_INSET, "an icon-only segment hugs its icon");
+  ASSERT_TRUE(send_message(seg, evGetTooltipText, MAKEDWORD(r.x + 2, r.y + 2), tip) && strcmp(tip, "Kick drum") == 0);
+  ASSERT_TRUE(send_message(bar->toolbar, evGetTooltipText, MAKEDWORD(seg->frame.x + r.x + 2, seg->frame.y + r.y + 2), tip) && strcmp(tip, "Kick drum") == 0);
+  ASSERT_TRUE(send_message(bar->toolbar, evGetTooltipText, MAKEDWORD(seg->frame.x + 4, seg->frame.y + 4), tip) && strcmp(tip, "Family") == 0);
+  g_changes = 0;
+  ipoint16_t p = segment_center(seg, 2);
+  click_at(p.x, p.y);
+  ASSERT(g_changes == 1 && g_last_selection == 2, "icon segments select like labelled ones");
+  ASSERT_FALSE(send_message(bar, tbFitItem, 2, NULL));
+  send_message(seg, sgSetSegments, 0, "A|B");
+  send_message(seg, sgGetSegmentRect, 1, &r);
+  ASSERT(!send_message(seg, evGetTooltipText, MAKEDWORD(r.x + 2, r.y + 2), tip), "replacing the segments clears their icons");
+  destroy_window(bar);
+  test_env_shutdown();
+  PASS();
+}
+
 int main(void) {
   TEST_START("SegmentedControl");
   test_selection();
   test_radio_input();
   test_toolbar_item();
+  test_icons();
   TEST_END();
 }

@@ -119,6 +119,7 @@ groove_t *app_init(void) {
   app->selected_clip = -1;
   app->drag.track = -1;
   app->auditioned = -1;
+  app->category = CAT_DRUMS;
   app->peak_credit = GR_PEAKS_PER_TICK;
   if (axAudioInit()) {
     AXaudiospec want = { GR_SAMPLE_RATE, AX_AUDIO_S16, 2, 1024, audio_cb, app }, got;
@@ -208,20 +209,19 @@ void app_preview(int block) {
 }
 
 static void library_refilter(void) {
-  int pages = g_app->tabs ? (int)send_message(g_app->tabs, tcGetCount, 0, NULL) : 0;
-  for (int i = 0; i < pages; i++) send_message((window_t *)send_message(g_app->tabs, tcGetPage, i, NULL), binFilter, 0, NULL);
-  if (g_app->results) send_message(g_app->results, binFilter, 0, NULL);
+  if (g_app->bin) send_message(g_app->bin, binFilter, 0, NULL);
 }
 
-bool app_searching(void) { return g_app->search[0] != 0; }
-
-void app_set_search(const char *text) {
-  snprintf(g_app->search, sizeof(g_app->search), "%s", text ? text : "");
-  library_refilter();
-  if (g_app->results && app_searching() != window_has_state(g_app->results, WINDOW_STATE_VISIBLE)) {
-    show_window(g_app->tabs, !app_searching());
-    show_window(g_app->results, app_searching());
+void app_set_category(int category) {
+  if (category < 0 || category >= CAT_COUNT) {
+    fprintf(stderr, "[gr] family filter rejected value=%d count=%d\n", category, CAT_COUNT);
+    fflush(stderr);
+    return;
   }
+  if (category == g_app->category) return;
+  g_app->category = category;
+  library_refilter();
+  transport_refresh();
 }
 
 void app_set_genre(uint8_t genre) {
@@ -237,7 +237,7 @@ void app_set_genre(uint8_t genre) {
 
 bool block_visible(int id) {
   const block_t *b = block_get(id);
-  return b && (!g_app->genre || (b->genres & g_app->genre)) && block_matches(id, g_app->search);
+  return b && (int)b->cat == g_app->category && (!g_app->genre || (b->genres & g_app->genre));
 }
 
 void app_select_clip(int idx) {
@@ -267,8 +267,6 @@ void app_command(uint16_t id) {
     case ID_STOP:     app_set_playing(false); app_seek_position(0); break;
     case ID_REWIND:   app_seek_position(0); break;
     case ID_LOOP:     app_lock(); s->loop = !s->loop; app_unlock(); transport_refresh(); break;
-    case ID_BPM_UP:   app_set_bpm(s->bpm + 5); break;
-    case ID_BPM_DOWN: app_set_bpm(s->bpm - 5); break;
     case ID_WINDOW_LIBRARY:
       show_window(g_app->library, true);
       dock_collapse(g_app->library, false);
@@ -289,6 +287,9 @@ void app_command(uint16_t id) {
       g_app->selected_clip = -1;
       app_unlock();
       invalidate_window(g_app->sheet);
+      break;
+    default:
+      if (id >= ID_FAMILY(0) && id < ID_FAMILY(CAT_COUNT)) app_set_category(id - ID_FAMILY(0));
       break;
   }
 }

@@ -1,5 +1,11 @@
 # Groove audio study tools
 
+For original sample creation and grid verification, start with
+[Generating and verifying Groove samples](sample-production.md). It covers
+generation prompts, isolation, musical attack alignment, gapless MP3 checks
+through Groove's decoder, and reproducible Python/Pillow waveform comparisons.
+`verify_sample.py` and `decode_sample.c` implement the file checks and plots.
+
 These scripts preserve the workflow used to isolate vocals from **Take Me Higher**,
 cut WAV samples, and test whether its backing could be approximated with Groove's
 existing synthesizer. Source recordings, generated samples, model weights and
@@ -129,8 +135,9 @@ Groove's voices. Packaging validates levels, formats, sample ordering and ZIP
 integrity, and does not apply further fades when repeated.
 
 This demonstrates which sound families the existing mono synth can approximate.
-It is not an exact melody or timbre recreation, and it does not implement vocal
-sample playback in Groove. More accurate matching needs note corrections, patch
+It is not an exact melody or timbre recreation; these study scripts themselves
+do not implement sample playback. Groove now has MP3 vocal sample rows, covered
+in the sample-production guide. More accurate matching needs note corrections, patch
 tuning and possibly stereo voices. See
 [the engine guide](../../apps/groove/docs/sound-synthesis.md) for recipe syntax.
 

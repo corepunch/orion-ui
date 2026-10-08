@@ -390,11 +390,16 @@ typedef struct {
 #define edSetLeadingIcon (evUser + 953)
 // wparam=item ident, lparam=uint32_t* packed colour (NULL restores theme accent).
 #define tbSetItemColor (evUser + 954)
+// wparam=ident of an embedded control; re-measures it and lays the toolbar out again (TB_AUTOSIZE).
+#define tbFitItem (evUser + 955)
+// wparam=button ident, lparam=(void *)(intptr_t)checked; other buttons keep their state (TB_CHECKBUTTON).
+#define tbCheckButton (evUser + 956)
 #define TOOLBAR_ITEM_FLAG_REORDERABLE (1u << 2) // drop onto another reorderable item
 // Half-size cell: in a single-column vertical toolbar consecutive SMALL
 // buttons/customs pack 2 per row, so 2x2 of them fills one normal button cell.
 #define TOOLBAR_ITEM_FLAG_SMALL      (1u << 4)
 #define TOOLBAR_ITEM_FLAG_FLEXSPACE  (1u << 5) // horizontal spacer shares remaining width
+#define TOOLBAR_ITEM_FLAG_ARTWORK    (1u << 6) // button icon is full-colour artwork filling the button; no plastic body
 #define TOOLBAR_STYLE_GRIP           (1u << 1) // draggable grip on a floating toolbar
 #define TOOLBAR_STYLE_COMPACT        (1u << 2) // menu-bar background, icon-only items
 #define TOOLBAR_STYLE_PRESSED_STRIP  (1u << 3) // strip's second row contains pressed artwork
@@ -480,9 +485,13 @@ enum {
   sgGetSelection,               // returns the selected index or -1
   sgSetSelection,               // wparam = index (-1 clears); does not notify
   sgGetSegmentRect,             // wparam = index; lparam = irect16_t* out, in control coordinates
+  sgSetImageStrip,              // lparam = bitmap_strip_t* (copied, texture not owned); shared by every segment
+  sgSetSegmentIcon,             // wparam = index; lparam = (void*)(intptr_t)icon index in the strip; -1 = clear
+  sgSetStyle,                   // wparam = SEGMENTED_STYLE_* flags
   sgnSelChange,                 // control -> parent (evCommand): LOWORD = control id, lparam = control
 };
-#define SEGMENTED_MAX_SEGMENTS 12
+#define SEGMENTED_MAX_SEGMENTS 24
+#define SEGMENTED_STYLE_ICONS_ONLY (1u << 0) // a segment with an icon shows it alone; its label becomes the tooltip
 #define SEGMENTED_LABEL_MAX    32
 #define SEGMENTED_PADDING      8  // horizontal label padding inside one segment
 #define SEGMENTED_INSET        2  // track margin around the segments

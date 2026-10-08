@@ -6,9 +6,6 @@
 #include "apps/groove/groove.h"
 #include <orion/user/toolbar.h>
 
-static window_t *bin_page(int index) { return (window_t *)send_message(g_app->tabs, tcGetPage, index, NULL); }
-static int bin_pages(void) { return (int)send_message(g_app->tabs, tcGetCount, 0, NULL); }
-
 static float peak_of(const float *p, int n) { float m = 0; for (int i = 0; i < n; i++) m = fmaxf(m, fabsf(p[i])); return m; }
 
 // Renders one block and installs it, as the controller does on demand.
@@ -279,7 +276,7 @@ static void test_overlap_sheet(void) {
   window_t *win = create_window("Groove", 0, MAKERECT(0, 0, 1100, 760), NULL, main_win_proc, 0, g_app);
   ASSERT_NOT_NULL(win);
   show_window(win, true);
-  window_t *sheet = g_app->sheet, *library = bin_page(0)->children;
+  window_t *sheet = g_app->sheet, *library = g_app->bin->children;
   int long_block = 0, start = 3 * GR_TICKS_BAR + GR_SNAP_TICKS, cut = start + GR_SNAP_TICKS;
   while (long_block < blocks_count() && block_get(long_block)->bars < 2) long_block++;
   ASSERT(long_block < blocks_count(), "multi-bar block exists");
@@ -474,75 +471,50 @@ static int visible_tiles(window_t *page) {
   return n;
 }
 
-// What the library shows: the search results while searching, else the family
-// pages. Every block lives in exactly one family page, so each counts once.
-static int library_visible(void) {
-  if (window_has_state(g_app->results, WINDOW_STATE_VISIBLE)) return visible_tiles(g_app->results);
-  int n = 0;
-  for (int i = 0; i < bin_pages(); i++)
-    if (strcmp(bin_page(i)->title, "All")) n += visible_tiles(bin_page(i));
-  return n;
+static int library_visible(void) { return visible_tiles(g_app->bin); }
+
+// Index of a library toolbar item, by command ident.
+static int toolbar_index(uint16_t ident) {
+  toolbar_state_t *tb = toolbar_get_state(g_app->library);
+  for (int i = 0; i < tb->item_count; i++) if (tb->items[i].ident == ident) return i;
+  return -1;
 }
 
-static void test_library_search(void) {
-  TEST("library search swaps the family bins for results from every family, keeping focus in the field");
-  test_env_init();
-  g_app = app_init();
-  window_t *win = create_window("Groove", 0, MAKERECT(0, 0, 1000, 700), NULL, main_win_proc, 0, g_app);
-  ASSERT_TRUE(win && g_app->tabs && g_app->library);
-  ASSERT_EQUAL(library_visible(), blocks_count());
-  ASSERT_TRUE(block_matches(0, "") && block_matches(0, "FLOOR") && block_matches(0, "drum") && !block_matches(0, "zzz"));
+static void click_toolbar(uint16_t ident) {
+  window_t *bar = g_app->library;
+  int i = toolbar_index(ident);
+  ASSERT_TRUE(i >= 0);
+  irect16_t r = toolbar_get_state(bar)->item_rects[i];
+  ui_event_t event = {.message = kEventLeftButtonDown,
+    .x = (window_screen_x(bar) + r.x + r.w / 2) * UI_WINDOW_SCALE,
+    .y = (window_screen_y(bar) + r.y + r.h / 2) * UI_WINDOW_SCALE};
+  dispatch_message(&event);
+  event.message = kEventLeftButtonUp;
+  dispatch_message(&event);
+}
 
-  window_t *search = get_window_item(g_app->library, ID_SEARCH);
-  ASSERT_NOT_NULL(search);
-  set_focus(search);
-  send_message(search, evLeftButtonUp, MAKEDWORD(3, 5), NULL);
-  send_message(search, evTextInput, 0, "f");
-  send_message(search, evTextInput, 0, "l");
-  ASSERT_TRUE(strcmp(g_app->search, "fl") == 0);
-  int expect = 0;
-  for (int i = 0; i < blocks_count(); i++) expect += block_matches(i, "fl");
-  ASSERT_TRUE(expect > 0 && expect < blocks_count());
-  ASSERT_EQUAL(library_visible(), expect);
-  ASSERT(window_has_state(g_app->results, WINDOW_STATE_VISIBLE) && !window_has_state(g_app->tabs, WINDOW_STATE_VISIBLE),
-         "results replace the family bins while searching");
-  ASSERT(g_ui_runtime.focused == search, "showing the results leaves focus in the search field");
-  app_set_playing(true);
-  app_command(ID_LOOP);
-  ASSERT_TRUE(get_window_item(g_app->library, ID_SEARCH) == search && g_ui_runtime.focused == search);
-  char text[64];
-  send_message(search, edGetText, sizeof(text), text);
-  ASSERT_TRUE(strcmp(text, "fl") == 0);
-  ASSERT_EQUAL(library_visible(), expect);
-  app_set_playing(false);
-  send_message(search, evKeyDown, AX_KEY_BACKSPACE, NULL);
-  send_message(search, evKeyDown, AX_KEY_BACKSPACE, NULL);
-  ASSERT_EQUAL(library_visible(), blocks_count());
-  ASSERT(window_has_state(g_app->tabs, WINDOW_STATE_VISIBLE) && !window_has_state(g_app->results, WINDOW_STATE_VISIBLE),
-         "clearing the search brings the family bins back");
-  destroy_window(win);
-  app_shutdown(g_app);
-  test_env_shutdown();
-  PASS();
+static bool toolbar_checked(uint16_t ident) {
+  int i = toolbar_index(ident);
+  return i >= 0 && (toolbar_get_state(g_app->library)->items[i].flags & TOOLBAR_BUTTON_FLAG_ACTIVE);
 }
 
 static void test_library_transport(void) {
-  TEST("transport and search share the library toolbar; nested mouse routing and resizing preserve search");
+  TEST("transport and the family buttons share one toolbar row; nested mouse routing reaches every button");
   test_env_init();
   g_app = app_init();
   window_t *win = create_window("Groove", 0, MAKERECT(0, 0, 1000, 700), NULL, main_win_proc, 0, g_app);
   ASSERT_NOT_NULL(win);
   show_window(win, true);
-  window_t *bar = g_app->library, *search = get_window_item(bar, ID_SEARCH);
+  window_t *bar = g_app->library;
   ASSERT_TRUE(!(win->flags & WINDOW_TOOLBAR) && win->toolbar == NULL);
   ASSERT_TRUE(bar && (bar->flags & WINDOW_TOOLBAR) && bar->parent == win);
-  ASSERT_TRUE(search && search->parent == bar);
+  ASSERT(get_window_item(bar, ID_GENRE) == NULL, "the genre filter is hidden");
   ASSERT_EQUAL(g_app->sheet->frame.y, g_app->menubar_win->frame.h);
   ASSERT_EQUAL(bar->frame.y, g_app->sheet->frame.y + g_app->sheet->frame.h + DOCK_SPLITTER);
   ASSERT_EQUAL(bar->frame.h, 280);
-  ASSERT_TRUE(g_app->tabs->parent == bar);
-  ASSERT_EQUAL(g_app->tabs->frame.y, 0);
-  ASSERT_EQUAL(window_screen_y(g_app->tabs), window_screen_y(bar) + titlebar_height(bar));
+  ASSERT_TRUE(g_app->bin->parent == bar);
+  ASSERT_EQUAL(g_app->bin->frame.y, 0);
+  ASSERT_EQUAL(window_screen_y(g_app->bin), window_screen_y(bar) + titlebar_height(bar));
   toolbar_state_t *tb = toolbar_get_state(bar);
   ASSERT_EQUAL(tb->style, TOOLBAR_STYLE_PLASTIC);
   ASSERT_EQUAL(tb->strip.tex, 0);
@@ -551,8 +523,8 @@ static void test_library_transport(void) {
   uint32_t original_color = tb->items[2].color, color = WEB(0x2277bb);
   ASSERT_TRUE(send_message(bar, tbSetItemColor, ID_PLAY, &color));
   ASSERT_EQUAL(tb->items[2].color, color);
-  ASSERT_TRUE(get_window_item(bar, ID_SEARCH) == search);
-  ASSERT_FALSE(send_message(bar, tbSetItemColor, ID_SEARCH, &color));
+  ASSERT_FALSE(send_message(bar, tbSetItemColor, ID_GENRE, &color));
+  ASSERT_FALSE(send_message(bar, tbCheckButton, ID_GENRE, (void *)1));
   ASSERT_FALSE(send_message(bar, tbSetItemColor, 0xffff, &color));
   ASSERT_TRUE(send_message(bar, tbSetItemColor, ID_PLAY, NULL));
   ASSERT_EQUAL(tb->items[2].color, 0);
@@ -560,20 +532,12 @@ static void test_library_transport(void) {
 
 #ifdef AX_PLATFORM_IOS
   ASSERT_EQUAL(toolbar_effective_bsz(bar), BUTTON_HEIGHT + 4);
-  ASSERT_EQUAL(search->frame.h, BUTTON_HEIGHT);
 #else
   ASSERT_EQUAL(toolbar_effective_bsz(bar), TB_SPACING);
-  ASSERT_EQUAL(search->frame.h, TB_SPACING - 4);
 #endif
   ASSERT_EQUAL(titlebar_height(bar), toolbar_effective_bsz(bar) + 2 * toolbar_effective_padding(bar));
-  ASSERT_EQUAL(search->frame.y, toolbar_effective_padding(bar) + 2);
-  ASSERT_EQUAL(tb->items[11].type, TOOLBAR_ITEM_SEGMENTED);
-  ASSERT_EQUAL(tb->items[13].type, TOOLBAR_ITEM_TEXTEDIT);
-  ASSERT_TRUE(strcmp(tb->items[13].icon, "search") == 0);
   for (int width = 1000; width >= 720; width -= 280) {
     resize_window(win, width, 700);
-    ASSERT_TRUE(get_window_item(bar, ID_SEARCH) == search);
-    ASSERT_TRUE(search->frame.x + search->frame.w < tb->item_rects[tb->item_count - 1].x);
     for (int i = 0; i < tb->item_count; i++) {
       ASSERT_TRUE(tb->item_rects[i].x >= 0 && tb->item_rects[i].x + tb->item_rects[i].w <= bar->frame.w);
     }
@@ -599,18 +563,13 @@ static void test_library_transport(void) {
   char tooltip[256] = {0};
   ASSERT_TRUE(send_message(bar->toolbar, evGetTooltipText, MAKEDWORD(r.x + 4, r.y + 4), tooltip));
   ASSERT_TRUE(strcmp(tooltip, "Loop (L)") == 0);
-  event.message = kEventLeftButtonDown;
-  event.x = (window_screen_x(search) + 12) * UI_WINDOW_SCALE;
-  event.y = (window_screen_y(search) + search->frame.h / 2) * UI_WINDOW_SCALE;
-  dispatch_message(&event);
-  event.message = kEventLeftButtonUp;
-  dispatch_message(&event);
-  ASSERT(g_ui_runtime.focused == search && window_has_state(search, WINDOW_STATE_EDITING), "routed toolbar search click focuses and edits the field");
-  send_message(search, evTextInput, 0, "h");
-  send_message(search, evTextInput, 0, "a");
-  send_message(search, evTextInput, 0, "t");
-  ASSERT(strcmp(g_app->search, "hat") == 0, "toolbar field changes reach the library filter");
-  ASSERT(library_visible() > 0 && library_visible() < blocks_count(), "embedded search filters the library");
+  resize_window(win, SCREEN_W, 700);
+  r = tb->item_rects[toolbar_index(ID_FAMILY(CAT_GUITAR))];
+  ASSERT(send_message(bar->toolbar, evGetTooltipText, MAKEDWORD(r.x + 4, r.y + 4), tooltip) &&
+         strcmp(tooltip, kCategoryName[CAT_GUITAR]) == 0, "a family button names its family");
+  click_toolbar(ID_FAMILY(CAT_GUITAR));
+  ASSERT(g_app->category == CAT_GUITAR && library_visible() > 0 && library_visible() < blocks_count(), "a routed family click switches the library");
+  ASSERT(g_app->song.loop && toolbar_checked(ID_LOOP) && toolbar_checked(ID_FAMILY(CAT_GUITAR)), "the family check leaves Loop checked");
   destroy_window(win);
   app_shutdown(g_app);
   test_env_shutdown();
@@ -625,7 +584,7 @@ static void test_shared_block_cards(void) {
   ASSERT_NOT_NULL(win);
   int clip = song_add_clip(&g_app->song, 0, 0, 0);
   send_message(g_app->sheet, evResize, 0, NULL);
-  window_t *canvas = g_app->sheet->children, *page = bin_page(0);
+  window_t *canvas = g_app->sheet->children, *page = g_app->bin;
   window_t *library = page->children;
   ASSERT_TRUE(canvas && library && canvas->proc == win_block_card && library->proc == canvas->proc);
   layout_measure_t a = {0}, b = {0};
@@ -661,7 +620,7 @@ static void test_drag_anchor(void) {
   window_t *win = create_window("Groove", 0, MAKERECT(0, 0, 1000, 700), NULL, main_win_proc, 0, g_app);
   ASSERT_NOT_NULL(win);
   show_window(win, true);
-  window_t *sheet = g_app->sheet, *page = bin_page(0), *library = page->children;
+  window_t *sheet = g_app->sheet, *page = g_app->bin, *library = page->children;
   int block = 0;
   while (library && block_get(block)->bars < 2) { library = library->next; block++; }
   ASSERT_NOT_NULL(library);
@@ -734,7 +693,7 @@ static void test_drag_center_boundaries(void) {
   window_t *win = create_window("Groove", 0, MAKERECT(0, 0, 1100, 760), NULL, main_win_proc, 0, g_app);
   ASSERT_NOT_NULL(win);
   show_window(win, true);
-  window_t *sheet = g_app->sheet, *page = bin_page(0);
+  window_t *sheet = g_app->sheet, *page = g_app->bin;
   send_message(page, evResize, 0, NULL);
   const int percent[] = {20, 49, 51, 80};
   for (int block = 0; block <= 4; block += 4) {
@@ -849,58 +808,66 @@ static void test_lazy_audio(void) {
 }
 
 static void test_genre_filter(void) {
-  TEST("the toolbar genre control filters every bin page, search ignores it, and All restores the library");
+  TEST("the genre filter narrows the family to tagged blocks, and every genre restores it");
   test_env_init();
   g_app = app_init();
   window_t *win = create_window("Groove", 0, MAKERECT(0, 0, 1180, 700), NULL, main_win_proc, 0, g_app);
   ASSERT_NOT_NULL(win);
   show_window(win, true);
-  window_t *bar = g_app->library, *genre = get_window_item(bar, ID_GENRE);
-  ASSERT_TRUE(genre && genre->parent == bar);
-  ASSERT_EQUAL(send_message(genre, sgGetCount, 0, NULL), GENRE_COUNT + 1);
-  ASSERT_EQUAL(send_message(genre, sgGetSelection, 0, NULL), 0);
   ASSERT_EQUAL(g_app->genre, 0);
-  toolbar_state_t *tb = toolbar_get_state(bar);
-  window_t *search = get_window_item(bar, ID_SEARCH);
-  ASSERT(genre->frame.x + genre->frame.w <= search->frame.x && search->frame.w == 160, "genre control and search both fit at the default width");
-  ASSERT_TRUE(tb->item_rects[tb->item_count - 1].x + tb->item_rects[tb->item_count - 1].w <= bar->frame.w);
+  int ids[GR_MAX_BLOCKS], n = blocks_in_category(g_app->category, ids, GR_MAX_BLOCKS);
   for (int g = 0; g < GENRE_COUNT; g++) {
-    irect16_t r;
-    ASSERT_TRUE(send_message(genre, sgGetSegmentRect, g + 1, &r));
-    ui_event_t event = {.message = kEventLeftButtonDown,
-      .x = (window_screen_x(genre) + r.x + r.w / 2) * UI_WINDOW_SCALE,
-      .y = (window_screen_y(genre) + r.y + r.h / 2) * UI_WINDOW_SCALE};
-    dispatch_message(&event);
-    event.message = kEventLeftButtonUp;
-    dispatch_message(&event);
-    ASSERT(g_app->genre == (1 << g) && send_message(genre, sgGetSelection, 0, NULL) == g + 1, "a routed click selects one genre");
+    app_set_genre((uint8_t)(1 << g));
     int expect = 0;
-    for (int i = 0; i < blocks_count(); i++) expect += (block_get(i)->genres >> g) & 1;
-    ASSERT(expect > 0 && expect < blocks_count() && library_visible() == expect, "the library shows exactly the tagged blocks");
-    int page_index = 0;
-    for (int p = 0; p < bin_pages(); p++) {
-      window_t *page = bin_page(p);
-      if (!strcmp(page->title, "All")) continue;
-      int ids[GR_MAX_BLOCKS], n = blocks_in_category(page_index, ids, GR_MAX_BLOCKS), in_genre = 0;
-      for (int i = 0; i < n; i++) in_genre += (block_get(ids[i])->genres >> g) & 1;
-      ASSERT(visible_tiles(page) == in_genre, "family pages follow the same genre");
-      page_index++;
-    }
+    for (int i = 0; i < n; i++) expect += (block_get(ids[i])->genres >> g) & 1;
+    ASSERT(expect > 0 && expect < n && library_visible() == expect, "the library shows exactly the tagged blocks of the family");
   }
   ASSERT_EQUAL(g_app->genre, GENRE_TECHNO);
-  app_set_search("kick");
-  int kicks = 0, techno_kicks = 0;
-  for (int i = 0; i < blocks_count(); i++) {
-    kicks += block_matches(i, "kick");
-    techno_kicks += (block_get(i)->genres & GENRE_TECHNO) && block_matches(i, "kick");
-  }
-  ASSERT(techno_kicks < kicks && library_visible() == kicks, "search covers every genre, not just the chosen one");
-  ASSERT(block_matches(0, "dance") && block_matches(0, "TECHNO") && !block_matches(0, "hip hop"), "search also matches genre names");
-  app_set_search("");
   app_set_genre(GENRE_DANCE | GENRE_RAVE);
   ASSERT(g_app->genre == GENRE_TECHNO, "the filter holds one genre; a combined mask is rejected");
   app_set_genre(0);
-  ASSERT(library_visible() == blocks_count(), "All restores every block");
+  ASSERT(library_visible() == n, "every genre restores the whole family");
+  destroy_window(win);
+  app_shutdown(g_app);
+  test_env_shutdown();
+  PASS();
+}
+
+static void test_family_filter(void) {
+  TEST("family buttons pick the one family the bin shows, as a radio group, and combine with genre");
+  test_env_init();
+  g_app = app_init();
+  window_t *win = create_window("Groove", 0, MAKERECT(0, 0, 1180, 700), NULL, main_win_proc, 0, g_app);
+  ASSERT_NOT_NULL(win);
+  show_window(win, true);
+  window_t *bar = g_app->library;
+  toolbar_state_t *tb = toolbar_get_state(bar);
+  int ids[GR_MAX_BLOCKS];
+  ASSERT(g_app->category == CAT_DRUMS && toolbar_checked(ID_FAMILY(CAT_DRUMS)), "the library opens on Drums");
+  ASSERT_EQUAL(library_visible(), blocks_in_category(CAT_DRUMS, ids, GR_MAX_BLOCKS));
+  int first = toolbar_index(ID_FAMILY(0));
+  ASSERT(first >= 0 && toolbar_index(ID_FAMILY(CAT_COUNT - 1)) == first + CAT_COUNT - 1, "one button per family, in order");
+  for (int i = first; i < first + CAT_COUNT; i++) {
+    irect16_t r = tb->item_rects[i];
+    ASSERT(tb->items[i].type == TOOLBAR_ITEM_BUTTON && (tb->items[i].flags & TOOLBAR_ITEM_FLAG_ARTWORK), "family buttons draw artwork");
+    ASSERT(r.w == toolbar_effective_bsz(bar) && r.h == toolbar_effective_bsz(bar), "family buttons are full toolbar size");
+    ASSERT(r.x + r.w <= bar->frame.w, "every button fits one row at the default width");
+  }
+  ASSERT(strcmp(tb->items[first + CAT_GUITAR].icon, "strip:11") == 0 && CAT_GUITAR == 11, "a family button shows its atlas cell");
+  for (int c = CAT_COUNT - 1; c >= 0; c--) {
+    click_toolbar(ID_FAMILY(c));
+    ASSERT(g_app->category == c && library_visible() == blocks_in_category(c, ids, GR_MAX_BLOCKS), "a routed click shows one family");
+    int checked = 0;
+    for (int i = first; i < first + CAT_COUNT; i++) checked += (tb->items[i].flags & TOOLBAR_BUTTON_FLAG_ACTIVE) != 0;
+    ASSERT(checked == 1 && toolbar_checked(ID_FAMILY(c)), "exactly the chosen family is checked");
+  }
+  app_set_genre(GENRE_DANCE);
+  int n = blocks_in_category(CAT_DRUMS, ids, GR_MAX_BLOCKS), dance_drums = 0;
+  for (int i = 0; i < n; i++) dance_drums += (block_get(ids[i])->genres & GENRE_DANCE) != 0;
+  ASSERT(dance_drums > 0 && dance_drums < n && library_visible() == dance_drums, "family and genre combine");
+  app_set_category(CAT_COUNT);
+  app_set_category(-1);
+  ASSERT(g_app->category == CAT_DRUMS, "a value outside the families is rejected");
   destroy_window(win);
   app_shutdown(g_app);
   test_env_shutdown();
@@ -919,8 +886,8 @@ int main(void) {
   test_overlap_sheet();
   test_fractional_selection();
   test_two_finger_sheet_pan();
-  test_library_search();
   test_genre_filter();
+  test_family_filter();
   test_lazy_audio();
   test_library_transport();
   test_shared_block_cards();

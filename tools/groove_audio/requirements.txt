@@ -5,4 +5,5 @@ numpy>=2,<3
 scipy>=1.13,<2
 soundfile>=0.13,<1
 imageio-ffmpeg>=0.6,<1
+Pillow>=10.1,<13
 torchaudio==2.11.0

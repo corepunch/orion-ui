@@ -1361,12 +1361,46 @@ static void test_vertical_small_items_pack(void) {
   PASS();
 }
 
+void test_toolbar_check_button(void) {
+    TEST("tbCheckButton checks one button without clearing the others and rejects non-buttons");
+
+    test_env_init();
+
+    irect16_t frame = {0, 0, 200, 60};
+    window_t *win = create_window("W", WINDOW_TOOLBAR | WINDOW_NORESIZE,
+                                  &frame, NULL, noop_proc, 0, NULL);
+    ASSERT_NOT_NULL(win);
+
+    toolbar_item_t items[] = {
+        {TOOLBAR_ITEM_BUTTON, 10, NULL, 0, 0, NULL},
+        {TOOLBAR_ITEM_BUTTON, 11, NULL, 0, 0, NULL},
+        {TOOLBAR_ITEM_SPACER, 12, NULL, 0, 0, NULL},
+    };
+    send_message(win, tbSetItems, 3, items);
+    toolbar_state_t *tb = require_toolbar_state(win);
+    ASSERT_NOT_NULL(tb);
+
+    ASSERT_TRUE(send_message(win, tbCheckButton, 10, (void *)1));
+    ASSERT_TRUE(send_message(win, tbCheckButton, 11, (void *)1));
+    ASSERT_TRUE((tb->items[0].flags & TOOLBAR_BUTTON_FLAG_ACTIVE) && (tb->items[1].flags & TOOLBAR_BUTTON_FLAG_ACTIVE));
+    ASSERT_TRUE(send_message(win, tbCheckButton, 10, NULL));
+    ASSERT_FALSE(tb->items[0].flags & TOOLBAR_BUTTON_FLAG_ACTIVE);
+    ASSERT_TRUE(tb->items[1].flags & TOOLBAR_BUTTON_FLAG_ACTIVE);
+    ASSERT_FALSE(send_message(win, tbCheckButton, 12, (void *)1));
+    ASSERT_FALSE(send_message(win, tbCheckButton, 99, (void *)1));
+
+    destroy_window(win);
+    test_env_shutdown();
+    PASS();
+}
+
 int main(int argc, char *argv[]) {
     (void)argc;
     (void)argv;
     TEST_START("Toolbar child-window tests");
 
     test_toolbar_reorderable_items();
+    test_toolbar_check_button();
     test_toolbar_flexible_spacers();
     test_toolbar_set_item_icon();
     test_vertical_grid_columns();

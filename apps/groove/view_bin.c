@@ -1,6 +1,5 @@
-// VIEW: the sidebar tabview pages are sound bins. Each holds one instrument's
-// family, filtered by the genre. The search results bin holds every block and
-// matches the search text alone, ignoring family and genre. Each card is a child
+// VIEW: the sound bin holds a card for every block and shows the ones that pass
+// the library toolbar's family and genre filters. Each card is a child
 // window. Pressing it auditions the block; dragging carries a copy of that
 // window with window_set_drag_copy, so the card stays in the bin.
 
@@ -11,33 +10,16 @@
 #define MAX_TILES  GR_MAX_BLOCKS
 
 typedef struct {
-  category_t cat;
   int ids[MAX_TILES], count;
 } bin_t;
 
 static int vpos(window_t *win) { return get_scroll_pos(win, SB_VERT); }
 
-bool block_matches(int id, const char *query) {
-  const block_t *b = block_get(id);
-  if (!b) return false;
-  if (!query || !query[0]) return true;
-  const char *hay[2 + GENRE_COUNT] = { b->name, kCategoryName[b->cat] };
-  int count = 2;
-  for (int g = 0; g < GENRE_COUNT; g++) if (b->genres & (1 << g)) hay[count++] = kGenreName[g];
-  for (int h = 0; h < count; h++)
-    for (const char *p = hay[h]; *p; p++) {
-      int k = 0;
-      while (query[k] && p[k] && tolower((unsigned char)p[k]) == tolower((unsigned char)query[k])) k++;
-      if (!query[k]) return true;
-    }
-  return false;
-}
-
 // Shows the cards that pass the bin's filter, hides the rest.
 static int apply_filter(window_t *win, bin_t *st) {
   int i = 0, shown = 0;
   for (window_t *c = win->children; c && i < st->count; c = c->next, i++) {
-    bool match = st->cat == CAT_SEARCH ? block_matches(st->ids[i], g_app->search) : block_visible(st->ids[i]);
+    bool match = block_visible(st->ids[i]);
     if (match != window_has_state(c, WINDOW_STATE_VISIBLE)) show_window(c, match);
     shown += match;
   }
@@ -74,17 +56,11 @@ result_t win_bin(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         fflush(stderr);
         return false;
       }
-      st->cat = (category_t)(intptr_t)lparam;
-#ifdef GR_ALL_TAB
-      if (st->cat == CAT_ALL) for (int i = 0; i < blocks_count() && i < MAX_TILES; i++) st->ids[st->count++] = i;
-      else
-#endif
-      if (st->cat == CAT_SEARCH) for (int i = 0; i < blocks_count() && i < MAX_TILES; i++) st->ids[st->count++] = i;
-      else
-      st->count = blocks_in_category(st->cat, st->ids, MAX_TILES);
+      // Family by family, so "All" reads as the old tabs one after another.
+      for (int cat = 0; cat < CAT_COUNT; cat++) st->count += blocks_in_category(cat, st->ids + st->count, MAX_TILES - st->count);
       for (int i = 0; i < st->count; i++) {
         if (!create_window("", GR_CARD_FLAGS, MAKERECT(0, 0, 1, 1), win, win_block_card, 0, (void *)(intptr_t)st->ids[i])) {
-          fprintf(stderr, "[bin] tile allocation failed cat=%d index=%d\n", (int)st->cat, i);
+          fprintf(stderr, "[bin] tile allocation failed index=%d block=%d\n", i, st->ids[i]);
           fflush(stderr);
         }
       }
@@ -94,12 +70,8 @@ result_t win_bin(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       layout_tiles(win, st);
       irect16_t cr = get_client_rect(win);
       fill_rect(get_sys_color(brControlBg), cr);
-      if ((g_app->search[0] || g_app->genre) && !apply_filter(win, st)) {
-        char msg[96];
-        if (st->cat == CAT_SEARCH) snprintf(msg, sizeof(msg), "No sounds match \"%s\"", g_app->search);
-        else snprintf(msg, sizeof(msg), "No sounds in this genre");
-        draw_text(FONT_SYSTEM, msg, TILE_PAD + 4, TILE_PAD + 4, get_sys_color(brTextSecondary));
-      }
+      if (!apply_filter(win, st))
+        draw_text(FONT_SYSTEM, "No sounds in this family", TILE_PAD + 4, TILE_PAD + 4, get_sys_color(brTextSecondary));
       return false;
     }
     case binFilter:

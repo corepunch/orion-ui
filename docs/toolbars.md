@@ -84,7 +84,21 @@ text fields. With `w` = 0 the item takes the width the control measures for
 its labels. Read it with `sgGetSelection` on `get_window_item(toolbar, ident)`
 and handle `sgnSelChange` through `evCommand` in the toolbar's owner.
 Declarative toolbars can use `<SegmentedControl text="All|Open|Closed" />`.
+After changing the control's content (`sgAddSegment`, icons, style), send
+`tbFitItem` with its ident: the toolbar re-measures it and lays the row out
+again, like `TB_AUTOSIZE`. Over an icon-only segment the toolbar shows the
+segment's own tooltip; elsewhere it shows the item's `tooltip`.
 Hover feedback is not routed to controls embedded in a toolbar.
+
+`tbCheckButton` (`wparam` = ident, `lparam` = checked) sets one button's
+checked state and leaves the others alone, like `TB_CHECKBUTTON`; use it for
+toggles and for radio groups the owner keeps in step. `tbSetActiveButton`
+checks exactly one button in the whole toolbar.
+
+`TOOLBAR_ITEM_FLAG_ARTWORK` marks a button whose icon is full-colour artwork,
+such as a `strip:N` cell. It is drawn as large as the button allows, over the
+theme's toolbar-button background (empty at rest, accent when checked), never
+on a plastic body.
 
 ## Two ways to define items
 

@@ -30,11 +30,11 @@
 #define GR_MAX_CLIPS    256
 #define GR_BPM_MIN      70
 #define GR_BPM_MAX      180
-#define GR_BPM_DEFAULT  120
+#define GR_BPM_DEFAULT  140
 
 // ── Block library ────────────────────────────────────────────────────────
-// A block has one instrument family (its bin tab) and any number of genre
-// tags. Families follow the roles in apps/groove/docs/dance-ejay-pxd.md.
+// A block has one instrument family and any number of genre tags; the
+// library filters on both. Families follow the roles in apps/groove/docs/dance-ejay-pxd.md.
 typedef enum {
   CAT_DRUMS, CAT_KICK, CAT_SNARE, CAT_HAT, CAT_CLAP, CAT_CYMBAL, CAT_PERC, CAT_FILL,
   CAT_BASS, CAT_KEYS, CAT_ORGAN, CAT_GUITAR, CAT_SYNTH, CAT_PAD, CAT_STAB,
@@ -73,11 +73,6 @@ typedef struct {
   int         audio_bpm;  // tempo `audio` was rendered for; 0 = never rendered
   uint64_t    audio_revision;
 } block_t;
-
-#ifdef GR_ALL_TAB
-#define CAT_ALL CAT_COUNT // bin page listing every block
-#endif
-#define CAT_SEARCH (CAT_COUNT + 1) // search results: every block, matched by search text alone
 
 extern const char *const kCategoryName[CAT_COUNT];
 extern const char *const kGenreName[GENRE_COUNT]; // index = bit number of the GENRE_* flag
@@ -145,7 +140,7 @@ typedef struct {
 } waveform_cache_t;
 
 typedef struct {
-  window_t     *win, *menubar_win, *sheet, *tabs, *library, *results; // results replaces tabs while searching
+  window_t     *win, *menubar_win, *sheet, *library, *bin;
   accel_table_t *accel;
   hinstance_t   hinstance;
   song_t        song;
@@ -153,8 +148,8 @@ typedef struct {
   uint32_t      timer;
   int           selected_clip;
   drag_t        drag;
-  char          search[64]; // library filter, matched against block, family and genre names
   uint8_t       genre;      // library filter: 0 = every genre, else one GENRE_* flag
+  int           category;   // library filter: the one category_t the bin shows
   int           auditioned; // block whose PCM the last audition loaded, or -1
   int           peak_credit;   // waveform overviews the cards may still render this timer tick
   bool          peaks_pending; // a card went without its overview; repaint next tick
@@ -171,7 +166,7 @@ enum {
   shDragEnd,                  // clear drag preview
   shSeekPosition,             // wparam = position in ticks
   shSetDropAnchor,             // wparam = groove_drop_anchor_t; default = sample origin
-  binFilter,                  // re-apply the search text and genre to a bin page
+  binFilter,                  // re-apply the family and genre filters to the bin
   grCardSetBlock,              // wparam = block id
   grCardSetState,              // wparam = ctrl_state_t
 };
@@ -180,13 +175,10 @@ enum {
 #define ID_STOP      ID_TRANSPORT_STOP
 #define ID_REWIND    ID_TRANSPORT_REWIND
 #define ID_LOOP      ID_TRANSPORT_LOOP
-#define ID_BPM_UP    ID_TRANSPORT_FASTER
-#define ID_BPM_DOWN  ID_TRANSPORT_SLOWER
 #define ID_DELETE    ID_EDIT_DELETE
 // Above every auto-assigned card id (1..GR_MAX_BLOCKS inside a bin), so
 // get_window_item() cannot find a card first.
-#define ID_TABS      (ID_CONTROL_BASE + 1)
-#define ID_SEARCH    (ID_CONTROL_BASE + 2)
+#define ID_FAMILY(cat) (ID_CONTROL_BASE + 4 + (cat)) // library toolbar: one button per category_t
 #define ID_GENRE     (ID_CONTROL_BASE + 3)
 
 #define GR_PEAKS_PER_TICK 4 // waveform overviews rendered per 33 ms tick while a bin fills in
@@ -209,11 +201,9 @@ void      app_set_bpm(int bpm);
 void      app_preview(int block);
 void      app_select_clip(int idx);
 bool      app_drop(const drag_t *d);          // commits a drag (add or move)
-void      app_set_search(const char *text);
 void      app_set_genre(uint8_t genre);        // 0 = every genre, else one GENRE_* flag
-bool      block_matches(int id, const char *query);
-bool      block_visible(int id);               // passes both the search text and the genre filter
-bool      app_searching(void);                 // the search text is not empty, so results show instead of the bins
+void      app_set_category(int category);      // one category_t
+bool      block_visible(int id);               // passes the family and genre filters
 // Blocks load lazily. Audio stays loaded for blocks in the song and the one
 // being auditioned; a card that only draws a waveform keeps the overview alone.
 bool      app_block_audio(int id);
@@ -228,6 +218,7 @@ extern result_t win_transport(window_t *win, uint32_t msg, uint32_t wparam, void
 void transport_refresh(void);
 ipoint16_t clip_cell_size(window_t *sheet, const block_t *b);
 bool block_pictograms_load(groove_t *app);
+bitmap_strip_t block_pictogram_strip(void); // the category atlas as an icon strip, in category_t order
 // Shared logical-pixel alpha masks; audio revision and geometry determine reuse.
 uint32_t waveform_texture(groove_t *app, int block, ipoint16_t size, int radius);
 void waveform_cache_free(groove_t *app);

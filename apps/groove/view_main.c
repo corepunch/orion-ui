@@ -1,4 +1,4 @@
-// VIEW: the sheet above the library toolbar and instrument-family bins.
+// VIEW: the sheet above the library: a filter toolbar over one sound bin.
 
 #include "groove.h"
 #include <orion/gem.h>

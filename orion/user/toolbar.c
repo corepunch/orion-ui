@@ -330,7 +330,7 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       theme_part_t part = (tb->style & TOOLBAR_STYLE_SHOW_LABELS)
                                      ? THEME_PART_TOOLBAR_LABELED_BUTTON
                                      : THEME_PART_TOOLBAR_BUTTON;
-      bool plastic = (tb->style & TOOLBAR_STYLE_PLASTIC) &&
+      bool plastic = (tb->style & TOOLBAR_STYLE_PLASTIC) && !(item->flags & TOOLBAR_ITEM_FLAG_ARTWORK) &&
                      item->ident != TB_WINDOW_CLOSE && item->ident != TB_WINDOW_COLLAPSE;
       if (plastic) {
         irect16_t face = local;
@@ -526,6 +526,10 @@ static result_t win_toolbar(window_t *win, uint32_t msg, uint32_t wparam, void *
     case evGetTooltipText: {
       if (!tb || !lparam) return false;
       int idx = toolbar_item_hit(tb, LOWORD(wparam), HIWORD(wparam));
+      for (window_t *tc = tb->children; idx >= 0 && tc; tc = tc->next) // an embedded control may name its own parts
+        if (tc->id == (uint32_t)tb->items[idx].ident &&
+            send_message(tc, evGetTooltipText, MAKEDWORD(LOWORD(wparam) - tc->frame.x, HIWORD(wparam) - tc->frame.y), lparam))
+          return true;
       if (idx < 0 || !tb->items[idx].tooltip || !tb->items[idx].tooltip[0])
         return false;
       char *buf = (char *)lparam;
@@ -691,6 +695,24 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
         return true;
       }
       fprintf(stderr, "[tb] set icon rejected win=%u ident=%u: item unavailable\n", win->id, wparam);
+      fflush(stderr);
+      return false;
+    }
+    case tbFitItem: {
+      toolbar_state_t *tb = toolbar_get_state(win);
+      for (int i = 0; tb && tb->items && i < tb->item_count; i++) {
+        if ((uint32_t)tb->items[i].ident != wparam) continue;
+        for (window_t *tc = tb->children; tc; tc = tc->next) {
+          if (tc->id != wparam) continue;
+          layout_measure_t measure = {0};
+          send_message(tc, evMeasure, 0, &measure);
+          if (measure.desired_w > 0) tb->items[i].w = measure.desired_w;
+          compute_toolbar_item_rects(win, tb);
+          invalidate_window(win);
+          return true;
+        }
+      }
+      fprintf(stderr, "[tb] fit rejected win=%u ident=%u: embedded control unavailable\n", win->id, wparam);
       fflush(stderr);
       return false;
     }
@@ -860,6 +882,19 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
       return true;
     }
 
+    case tbCheckButton: {
+      toolbar_state_t *tb = toolbar_get_state(win);
+      for (int i = 0; tb && tb->items && i < tb->item_count; i++) {
+        if ((uint32_t)tb->items[i].ident != wparam) continue;
+        if (tb->items[i].type != TOOLBAR_ITEM_BUTTON) break;
+        uint32_t flags = lparam ? tb->items[i].flags | TOOLBAR_BUTTON_FLAG_ACTIVE : tb->items[i].flags & ~TOOLBAR_BUTTON_FLAG_ACTIVE;
+        if (flags != tb->items[i].flags) { tb->items[i].flags = flags; invalidate_window(win); }
+        return true;
+      }
+      fprintf(stderr, "[tb] check rejected win=%u ident=%u: button unavailable\n", win->id, wparam);
+      fflush(stderr);
+      return false;
+    }
     case tbSetActiveButton: {
       toolbar_state_t *tb = toolbar_get_state(win);
       uint32_t ident = wparam;

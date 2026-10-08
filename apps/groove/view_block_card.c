@@ -38,6 +38,11 @@ bool block_pictograms_load(groove_t *app) {
   return true;
 }
 
+bitmap_strip_t block_pictogram_strip(void) {
+  return (bitmap_strip_t){ .tex = g_app ? g_app->pictograms : 0, .icon_w = PICTOGRAM_CELL, .icon_h = PICTOGRAM_CELL, .cols = PICTOGRAM_COLS,
+                           .sheet_w = PICTOGRAM_COLS * PICTOGRAM_CELL, .sheet_h = PICTOGRAM_ROWS * PICTOGRAM_CELL };
+}
+
 typedef struct {
   int block;
   ctrl_state_t state;
@@ -57,22 +62,22 @@ static bool card_on_screen(const window_t *win) {
 }
 
 static void paint_card_label(const block_t *b, irect16_t r, int icon_width, int visible_width, uint32_t color) {
+  char fitted[512];
   int text_h = text_char_height(FONT_SMALLEST);
   int area_w = MAX(0, MIN(r.w, visible_width) - 2 * CARD_LABEL_PADDING);
-  int natural_w = text_strwidth(FONT_SMALLEST, b->name);
   int max_text_w = MAX(0, area_w - 2 * CARD_LABEL_PADDING);
-  int text_w = MIN(natural_w, max_text_w);
+  int text_w = text_ellipsize(FONT_SMALLEST, b->name, max_text_w, fitted, sizeof(fitted));
+  if (!text_w || text_w > max_text_w) return;
   int label_w = text_w + 2 * CARD_LABEL_PADDING;
   int text_x = r.x + icon_width + CARD_LABEL_PADDING;
 
   int label_right = r.x + MIN(r.w, visible_width) - CARD_LABEL_PADDING;
   if (text_x + label_w > label_right) text_x = label_right - label_w;
   text_x = MAX(r.x + CARD_LABEL_PADDING, text_x);
-  irect16_t label = R(text_x, r.y + CARD_LABEL_PADDING, label_w, text_h + CARD_LABEL_PADDING);
+  irect16_t label = R(text_x, r.y + CARD_LABEL_PADDING, label_w, text_h + 1);
   fill_rounded_rect(color_with_alpha(0xFF000000u, 0xB8), label,
                     MIN(get_theme()->card_corner_radius, label.h / 2));
-  draw_text_ellipsized(FONT_SMALLEST, b->name, label.x + CARD_LABEL_PADDING, label.y,
-                       max_text_w, color_with_alpha(0xFFFFFFFFu, color >> 24));
+  draw_text_clipped(FONT_SMALLEST, fitted, &label, color_with_alpha(0xFFFFFFFFu, color >> 24), TEXT_ALIGN_CENTER);
 }
 
 static void paint_block_card(int block, const block_t *b, irect16_t r, int visible_width, uint32_t color, ctrl_state_t state) {

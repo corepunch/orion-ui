@@ -53,7 +53,7 @@ Capacity is a sample count at 44100 Hz on a 140 BPM grid. One beat is 18900 samp
 | 604800 | 8 | 73 |
 | 1209600 | 16 | 2 |
 
-A few files sit a handful of samples off those sizes (75630, 75649, …). The command stream never produces more samples than this capacity. 671 of 1352 files fill it within 2 percent. The rest are shorter than the slot they were allocated. None run past it.
+A few files sit a handful of samples off those sizes (75630, 75649, …). The player checks the capacity when a slot ends, so one slot can write a sample past the dword. The export clamps to the capacity. 671 of 1352 files fill the slot within 2 percent. The rest are shorter than the slot they were allocated.
 
 The product's mix export is 44.1 kHz 16-bit stereo. A library clip is mono.
 
@@ -77,23 +77,17 @@ Bytes before the first `F4`–`FF` are replays. On an empty dictionary they emit
 
 ## Delta table
 
-`gs` is a runtime allocation (`GlobalAlloc` of `0x7D0` bytes, then `GlobalLock`). The selector is stored at data offset `0x3166`. No int16 codebook is stored in the DLL.
+`gs` is a 256-entry int16 table built at runtime. `DANCE02.DLL` `GlobalAlloc`s `0x7D0` bytes, `GlobalLock`s it, and stores the selector at data offset `0x3166`. The builder is the function at segment offset `0x3346`. The same curve is in the 32-bit codecs `PXD32D4.DLL`, `PXD32HA.DLL`, `PXD32RA.DLL` and `PXD32R4.DLL`. No codebook is stored on the disc.
 
-The index histogram of all 1352 files is centered on `0x80`: that byte is the most common, then `0x7F` and `0x81`, and the mean of `(index - 128)` is about `+0.6`. So index 128 is the zero delta.
+`table[128] = 0`. The doubles are 2.2, 1.0565, 0.52 and 0.00022. For `i` from 1 to 127 the step is 1 when `i < 6`, otherwise `trunc(a - 0.52)` toward zero, and `table[128 + i]` is the running sum. After every step, including the first five, `a = a * b` and `b = b - 0.00022`, starting from `a = 2.2` and `b = 1.0565`. Entries 127 down to 0 are the negations of entries 129 through 256. Entry 256 is never written, so `table[0] = 0`. Each entry is then shifted left by 1.
 
-`delta = (int16)(index - 128)` (range −128..127) is the table that decodes. A leaky integrator (`y = delta + 0.995 * y`) then measures like the title:
+Around silence the shifted steps are 0, ±2, ±4, ±6, ±8, ±10, and then the curve steepens. `table[255] = 25266` and `table[1] = -25266`.
 
-| clip | zero-crossing rate |
-|---|---:|
-| Eurobass | 250 Hz |
-| Kick B | 800 Hz |
-| Come on! | 1300 Hz |
-| Hihat / electric | 1500 Hz |
-| Clap | 1800 Hz |
-| Scratch | 2400 Hz |
-| Tambourine / Fast | 2900 Hz |
+Playback does `predictor += table[index]` with a wrapping int16 (`add dx, gs:[bx]`, `bx = index << 1`). A solo clip starts at 0 and stores that predictor. The mix-buffer add saturates; with a zeroed buffer it never fires.
 
-A raw wrapping int16 sum also stays in range on tonal clips (Come on! peaks near 13000). Loud noisy clips walk into the rails because a small DC bias in the deltas integrates over a whole bar. The player's saturate-on-store path is the one that matches the mix buffer.
+`delta = (int16)(index - 128)` is not this table. On these files that linear map averages about `+0.6` per sample, so the sum climbs, wraps, and the tail sits on a flat DC. That is the silent-with-clicks export. The library WAVs use the player curve.
+
+Index 255 is a real step of +25266, not a sentinel. A clip that emits it (claps, and loops that begin with the single-sample command `FF FF`) keeps that offset for the rest of the slot. The sound is the variation around the offset. The export does not high-pass it.
 
 ## Families
 

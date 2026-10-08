@@ -344,6 +344,8 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       break;
     case tbSetItemColor:
     case tbSetItemIcon:
+    case tbFitItem:
+    case tbCheckButton:
       return toolbar_handle_message(win, msg, wparam, lparam);
     case tbEnableItem:
     case tbSetItems:

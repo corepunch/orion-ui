@@ -1,29 +1,47 @@
-// Transport, genre filter and search, hosted in the library header.
+// Transport and the library's family filter, hosted in the library header.
+// Families are plain toolbar buttons showing their pictograms at full button
+// size, so a finger can hit them; the checked one is the family the bin shows.
 
 #include "groove.h"
 #include <orion/user/toolbar.h>
 
+#define FAMILY_FLAGS TOOLBAR_ITEM_FLAG_ARTWORK
+
 static const toolbar_item_t kTransportItems[] = {
-  { TOOLBAR_ITEM_BUTTON,    ID_REWIND,  "phosphor-rewind-fill",      0, 0, NULL, "Rewind (Home)" },
-  { TOOLBAR_ITEM_BUTTON,    ID_PLAY,    "phosphor-play-fill",        0, 0, NULL, "Play / pause (Space)" },
-  { TOOLBAR_ITEM_BUTTON,    ID_STOP,    "phosphor-stop-fill",        0, 0, NULL, "Stop" },
-  { TOOLBAR_ITEM_BUTTON,    ID_LOOP,    "phosphor-repeat-fill",      0, 0, NULL, "Loop (L)" },
-  { TOOLBAR_ITEM_SEPARATOR, 0,          NULL,      0, 0, NULL, NULL },
-  { TOOLBAR_ITEM_BUTTON,    ID_BPM_DOWN, "phosphor-minus-bold",       0, 0, NULL, "Slower" },
-  { TOOLBAR_ITEM_BUTTON,    ID_BPM_UP,  "phosphor-plus-bold",        0, 0, NULL, "Faster" },
-  { TOOLBAR_ITEM_SPACER,    0,          NULL,      0, 0, NULL, NULL },
-  { TOOLBAR_ITEM_BUTTON,    ID_DELETE,  "phosphor-trash-fill",       0, 0, NULL, "Remove selected block (Delete)" },
-  { TOOLBAR_ITEM_SPACER,    0,          NULL,      0, TOOLBAR_ITEM_FLAG_FLEXSPACE, NULL, NULL },
-  { TOOLBAR_ITEM_SEGMENTED, ID_GENRE,   NULL,      0, 0, "All|Dance|Hip Hop|Rave|Techno", "Genre" }, // "All", then kGenreName order
-  { TOOLBAR_ITEM_SPACER,    0,          NULL,      6, 0, NULL, NULL },
-  { TOOLBAR_ITEM_TEXTEDIT,  ID_SEARCH,  "search", 160, 0, NULL, "Search sounds" },
+  { TOOLBAR_ITEM_BUTTON,    ID_REWIND,     "phosphor-rewind-fill",      0, 0, NULL, "Rewind (Home)" },
+  { TOOLBAR_ITEM_BUTTON,    ID_PLAY,       "phosphor-play-fill",        0, 0, NULL, "Play / pause (Space)" },
+  { TOOLBAR_ITEM_BUTTON,    ID_STOP,       "phosphor-stop-fill",        0, 0, NULL, "Stop" },
+  { TOOLBAR_ITEM_BUTTON,    ID_LOOP,       "phosphor-repeat-fill",      0, 0, NULL, "Loop (L)" },
+  { TOOLBAR_ITEM_SPACER,    0,             NULL,      0, 0, NULL, NULL },
+  { TOOLBAR_ITEM_BUTTON,    ID_DELETE,     "phosphor-trash-fill",       0, 0, NULL, "Remove selected block (Delete)" },
+  { TOOLBAR_ITEM_SPACER,    0,             NULL,      0, TOOLBAR_ITEM_FLAG_FLEXSPACE, NULL, NULL },
+  // Genre filter, hidden for now: the library always shows every genre.
+  // { TOOLBAR_ITEM_SPACER,    0,          NULL,      6, 0, NULL, NULL },
+  // { TOOLBAR_ITEM_SEGMENTED, ID_GENRE,   NULL,      0, 0, "All|Dance|Hip Hop|Rave|Techno", "Genre" }, // "All", then kGenreName order
 };
 
 void transport_refresh(void) {
   window_t *win = g_app->library;
   if (!win) return;
   send_message(win, tbSetItemIcon, ID_PLAY, (void *)(g_app->song.playing ? "phosphor-pause-fill" : "phosphor-play-fill"));
-  send_message(win, tbSetActiveButton, g_app->song.loop ? ID_LOOP : 0, NULL);
+  send_message(win, tbCheckButton, ID_LOOP, (void *)(intptr_t)g_app->song.loop);
+  for (int cat = 0; cat < CAT_COUNT; cat++)
+    send_message(win, tbCheckButton, ID_FAMILY(cat), (void *)(intptr_t)(cat == g_app->category));
+}
+
+// The transport items, then one pictogram button per family in category_t order.
+static void set_items(window_t *win) {
+  enum { N = ARRAY_LEN(kTransportItems) };
+  toolbar_item_t items[N + CAT_COUNT];
+  char icons[CAT_COUNT][16];
+  memcpy(items, kTransportItems, sizeof(kTransportItems));
+  for (int cat = 0; cat < CAT_COUNT; cat++) {
+    snprintf(icons[cat], sizeof(icons[cat]), "strip:%d", cat);
+    items[N + cat] = (toolbar_item_t){ TOOLBAR_ITEM_BUTTON, ID_FAMILY(cat), icons[cat], 0, FAMILY_FLAGS, NULL, kCategoryName[cat] };
+  }
+  bitmap_strip_t strip = block_pictogram_strip();
+  send_message(win, tbSetStrip, 0, &strip);
+  send_message(win, tbSetItems, ARRAY_LEN(items), items); // copies the icon names and tooltips
 }
 
 result_t win_transport(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
@@ -36,47 +54,27 @@ result_t win_transport(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
 #else
       send_message(win, tbSetButtonSize, TB_SPACING, NULL);
 #endif
-      send_message(win, tbSetItems, ARRAY_LEN(kTransportItems), (void *)kTransportItems);
+      set_items(win);
       static const struct { uint16_t id; uint32_t color; } colors[] = {
         { ID_REWIND, WEB(0x3689da) }, { ID_PLAY, WEB(0x48aa36) }, { ID_STOP, WEB(0xdb4960) },
-        { ID_LOOP, WEB(0xe4a42d) }, { ID_BPM_DOWN, WEB(0x3689da) }, { ID_BPM_UP, WEB(0x3689da) },
+        { ID_LOOP, WEB(0xe4a42d) },
         { ID_DELETE, WEB(0xa365ce) },
       };
       for (int i = 0; i < ARRAY_LEN(colors); i++) send_message(win, tbSetItemColor, colors[i].id, (void *)&colors[i].color);
-      window_t *search = get_window_item(win, ID_SEARCH);
-      if (search) send_message(search, edSetPlaceholder, 0, "Search sounds...");
-      g_app->tabs = create_window("Sounds", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOACTIVATE,
-                                  MAKERECT(0, 0, 1, 1), win, win_tabview, win->hinstance, NULL);
-      g_app->tabs->id = ID_TABS;
-      send_message(g_app->tabs, tcSetStyle, TAB_STYLE_SIDEBAR, NULL);
-#ifdef GR_ALL_TAB
-      create_window("All", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL,
-                    MAKERECT(0, 0, 1, 1), g_app->tabs, win_bin, win->hinstance, (void *)(intptr_t)CAT_ALL);
-#endif
-      for (int category = 0; category < CAT_COUNT; category++)
-        create_window(kCategoryName[category], WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL,
-                      MAKERECT(0, 0, 1, 1), g_app->tabs, win_bin, win->hinstance, (void *)(intptr_t)category);
-      dock_window(g_app->tabs, DOCK_FILL, 0, DOCK_NOFLOAT, 0, 0);
-      g_app->results = create_window("Results", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL | WINDOW_NOACTIVATE | WINDOW_HIDDEN,
-                                     MAKERECT(0, 0, 1, 1), win, win_bin, win->hinstance, (void *)(intptr_t)CAT_SEARCH);
-      if (g_app->results) dock_window(g_app->results, DOCK_FILL, 0, DOCK_NOFLOAT, 0, 0);
+      g_app->bin = create_window("Sounds", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL | WINDOW_NOACTIVATE,
+                                 MAKERECT(0, 0, 1, 1), win, win_bin, win->hinstance, NULL);
+      if (g_app->bin) dock_window(g_app->bin, DOCK_FILL, 0, DOCK_NOFLOAT, 0, 0);
       transport_refresh();
       return true;
     }
     case tbButtonClick: app_command((uint16_t)wparam); return true;
-    case evCommand:
-      if (LOWORD(wparam) == ID_SEARCH && HIWORD(wparam) == ednChange) {
-        char text[sizeof(g_app->search)];
-        send_message((window_t *)lparam, edGetText, sizeof(text), text);
-        app_set_search(text);
-        return true;
-      }
-      if (LOWORD(wparam) == ID_GENRE && HIWORD(wparam) == sgnSelChange) {
-        int selected = (int)send_message((window_t *)lparam, sgGetSelection, 0, NULL); // segment 0 is "All"
-        app_set_genre(selected > 0 ? (uint8_t)(1 << (selected - 1)) : 0);
-        return true;
-      }
-      return false;
+    // case evCommand:
+    //   if (LOWORD(wparam) == ID_GENRE && HIWORD(wparam) == sgnSelChange) {
+    //     int selected = (int)send_message((window_t *)lparam, sgGetSelection, 0, NULL); // segment 0 is "All"
+    //     app_set_genre(selected > 0 ? (uint8_t)(1 << (selected - 1)) : 0);
+    //     return true;
+    //   }
+    //   return false;
     case evPaint: return false;
     case evDestroy:
       if (g_app && g_app->library == win) g_app->library = NULL;

@@ -1,74 +1,65 @@
 Issue: https://github.com/corepunch/orion-ui/issues/260
-Tool: built-in ImageGen. All 18 icons were restyled together in one complete
-atlas, with one complete-atlas cleanup pass. No individual icons or visual
-states were generated separately.
+Tool: built-in ImageGen. Generate all 18 icons together in one transparent atlas.
+Do not generate icons or visual states separately.
 
-Art direction: modern 3D objects with studio lighting, smooth gradients,
-metallic rims, lacquered surfaces, ivory keys/drumheads, satin wood and
-refined material reflections. No pixelation or ink outlines. The compact
-square/circle-filling compositions retain the Music 2000-inspired use case.
+Use case: generate
+Asset: compact category pictograms overlaid on Groove sample cards.
+Generate without a reference image so the old detailed rendering does not
+influence the new style. Follow the subject list, order, and palette below.
 
-class-pictograms.png: transparent RGBA PNG, 6 columns by 3 rows, 128x128
-cells. Row-major order matches category_t in groove.h:
-Drums, Kicks, Snares, Hats, Claps, Cymbals, Perc, Fills, Bass, Keys, Organ,
-Guitar, Synth, Pads, Stabs, Vocals, Scratch, FX.
+Primary request: create a cohesive family of compact, square-like 3D instrument
+icons. Preserve dimensional studio rendering and smooth color gradients, but
+build each object from a few chunky, toy-like forms. Each icon should fit a
+square footprint and read clearly at 32–64 px. Keep necks, handles, stands,
+and other extensions very short and tucked in; angle long instruments within
+their cells. Give every icon a similarly full, balanced visual weight.
 
-Complete glyph bounds were cropped from the generated 1774x887 atlas with
-2px edge padding, then proportionally downscaled with premultiplied-alpha
-Lanczos to fit 124x124 and centered in 128x128 cells. Cropping follows the
-actual glyph bounds to keep complete objects and prevent neighboring glyph
-fragments from crossing cell boundaries. Only cropping, resizing and packing
-were applied; the lighting and gradients come directly from ImageGen.
+Style: polished stylized 3D, softly rounded shapes, broad bevels, gentle
+contact shading, and smooth restrained gradients. Use a simple soft key light
+and clear color blocking. Keep materials matte to satin, with only a few broad
+highlights. Avoid photorealistic materials and tiny reflections. Limit each
+icon to a handful of broad parts; simplify strings, keys, buttons, rims, and
+hardware into large marks or omit them. The set should feel dimensional and
+friendly without looking intricate or noisy.
 
-The painter overlays each icon at 75% of the sample height, vertically
-centered on the left, with the waveform spanning the full sample width.
+Composition: one complete atlas, exactly 6 columns by 3 rows of equal square
+cells, 2:1 overall ratio. One centered icon per cell, fully contained with
+clear transparent padding. Preserve true transparency; no cell dividers,
+background plates, borders, or detached shadows.
 
-Full-atlas modern rendering prompt:
-Use case: style-transfer
-Asset: production-quality transparent PNG atlas for Groove music sample decorations.
-Input: the attached 18-icon atlas is the EDIT TARGET and a reference for subjects, compact compositions and exact category order ONLY.
-Primary request: completely re-render ALL 18 icons together as luxurious MODERN 3D product-design icons with physically believable studio lighting, sophisticated smooth gradients, depth, beautiful material transitions and refined reflections. The current source looks dated and cartoonish; dramatically upgrade rendering quality while retaining the same purpose and compositions.
+Broad color cues: red drums and bass, blue guitar, warm wood percussion and
+violin, brass cymbals and trumpet, ivory keys, charcoal organ and synth, red
+lips, black vinyl, red-and-gold FX.
 
-Modern art direction:
-Premium contemporary audio-app / spatial-interface icon set, meticulously crafted miniature objects, polished professional industrial design. Broad softly bevelled forms and smooth curved surfaces with natural contact occlusion between parts. Studio key light from upper-left, gentle cool fill from right, subtle rim light to keep silhouettes legible over saturated colored cards. Rich continuous tonal gradients describe volume; reflections follow geometry. Red and blue lacquered instrument bodies with clear-coat depth, brushed aluminium/chrome rims and fixtures, softly textured ivory drumheads, warm satin timber, lustrous brass cymbals/trumpet, ceramic piano keys, machined dark graphite synth, glossy sculptural red lips, deep black vinyl with restrained concentric sheen. Realistic materials, stylized compact geometry, tasteful and elegant rather than toy-like.
-Do NOT retain the source's heavy black drawn outlines, comic contours, cel-shading, flat blocks, oversized white cartoon glints, or cheap clip-art appearance. Silhouette contrast comes from realistic shading/bevels and naturally dark material edges, not ink strokes. Absolutely smooth antialiased surfaces, no pixels, no dithering, no retro Windows 3.1, no old-game style, no flat vector icons. Rendering quality comparable to high-end contemporary product imagery. No noisy micro-details, no extraneous decorations.
+Exact row-major subjects:
+1 Drums: compact kit with one large kick and two small drums.
+2 Kicks: single bass drum face.
+3 Snares: snare with two crossed sticks.
+4 Hats: two stacked cymbal discs.
+5 Claps: two hands about to clap.
+6 Cymbals: one broad crash cymbal.
+7 Perc: one compact conga.
+8 Fills: three compact descending toms.
+9 Bass: compact red electric bass with broad body and short neck.
+10 Keys: compact piano keyboard.
+11 Organ: compact organ with two keyboard rows and a few drawbars.
+12 Guitar: compact blue electric guitar with broad body and short neck.
+13 Synth: compact desktop synth with a few large controls and keys.
+14 Pads: compact warm wood violin and short diagonal bow.
+15 Stabs: forward-facing trumpet bell with only a few valve shapes.
+16 Vocals: bold red open lips.
+17 Scratch: black vinyl record with a simple tonearm.
+18 FX: compact rising red-and-gold swoosh with one burst.
 
-Composition invariants:
-ONE atlas, exactly 6 columns x 3 rows of equally sized square cells, aspect ratio 2:1. Exactly 18 icons, same row-major order as source. Each object nearly fills its square or circle footprint, 90-96% of cell dimensions, with a narrow transparent safety margin. Dense short proportions, short necks/stands, diagonal compositions for long instruments. No perspective rotation that makes them thin or small. Balanced common visual weight. Consistent lighting across the entire set.
-Real transparent alpha around each object, no background plates, circles, tiles, borders, grid lines, ground planes, or detached drop shadows. No letters, text, numbers, logos or watermarks. These overlay a waveform at 75% of a sample card's height.
+Avoid flat vector artwork, photorealism, intricate 3D rendering, tiny hardware,
+thin stands, long narrow necks, many strings, screws, small knobs, repeated
+tiny keys, surface textures, sharp specular glints, text, logos, extra or
+missing objects, clipped silhouettes, and stray fragments. Output the complete
+transparent atlas only.
 
-Exact row-major subjects (do not swap/omit/add):
-ROW 1:
-1 Drums: compact front-facing kit, large circular white kick below, squat red snare upper-right, brass hi-hat upper-left, short stands.
-2 Kicks: single large white bass-drum face with dark physical rim, one beater dot, two tiny spurs.
-3 Snares: circular white snare, brushed chrome rim, two wood sticks crossed on head.
-4 Hats: TWO bright brass cymbals stacked side-view, clearly visible gap, short rod/base.
-5 Claps: two broad sculptural warm peach hands about to clap, palms facing, thumbs up, hands only.
-6 Cymbals: ONE broad tilted nearly round lustrous brass crash cymbal, tiny stand.
-ROW 2:
-7 Perc: broad compact tapered satin timber conga, ivory head.
-8 Fills: tightly packed three descending lacquer-red toms with chrome rims.
-9 Bass: diagonal red electric bass, broad solid slab body with rounded corners and NO cutaways, four strings, short thick neck and four tuner pegs.
-10 Keys: square piano keyboard slab, dark red lacquer case upper half, bold ivory/black keys lower half.
-11 Organ: square timber/graphite organ panel with two stacked manuals and thick vertical drawbars at right, no knobs.
-12 Guitar: diagonal blue electric guitar, broad double-cut horned body, short thick neck, two pickups and a pick across strings.
-ROW 3:
-13 Synth: square premium dark graphite desktop synth, metal knobs above short ivory/black keybed.
-14 Pads: compact violin diagonally filling square, broad warm varnished wood body, short neck, bow opposite diagonal.
-15 Stabs: large round brass trumpet bell facing viewer, dark deep interior, three valve buttons above and short stem below.
-16 Vocals: broad nearly round sculptural glossy red open lips, a few ivory teeth, dark cavity; elegant refined gradients.
-17 Scratch: circular deep black vinyl, small red center label, machined silver tonearm upper-right across it.
-18 FX: thick rising red/gold curved swoosh with small luminous dimensional burst at upper-right, broad square-filling shape.
+The sample-card painter overlays each icon at 75% of card height. Favor a
+compact square silhouette and broad readable forms over instrument accuracy.
 
-Render every icon in this single atlas at high resolution with fine clean antialiasing and full premium modern shading. Maintain all 18 distinct recognizable subjects and compact compositions.
-
-Full-atlas cleanup prompt:
-Precise production cleanup of this COMPLETE 18-icon atlas. Preserve the beautiful modern 3D materials, lighting, smooth gradients, forms, subject order and colors of ALL icons. Keep exactly 6 columns by 3 rows of square cells and transparent alpha. Do NOT revert to cartoon/clip-art or add black strokes.
-
-Fix atlas isolation: every icon must be a perfectly clean isolated cutout, entirely contained inside its own cell. Arrange the 18 complete objects with generous clear transparent safety gutters of about 8% of each cell edge; center them consistently, scale down slightly if needed so no object's extremities touch a cell boundary. Remove ALL detached colored speckles, red/yellow/white fringes, clipped neighboring-object pieces, stray fragments, stray black lines under objects, and ground shadows in the transparent area. Keep intentional tiny cymbal stands/spurs and the two clap accent marks as part of their correct icon. No stray pieces near the lips or toms. Every glyph must be whole, no clipping or cross-cell contamination. Transparent areas must truly contain nothing. Crisp smooth antialiased object contours, professional clean alpha for use over arbitrary colors.
-
-Keep modern polished renders with sophisticated studio lighting and gradients exactly as now. Compact square/circular compositions and short diagonal necks remain. Row-major subjects unchanged:
-drum kit, kick, snare with crossed sticks, hi-hats, clap hands, crash;
-conga, three toms, red slab-body bass, piano keys, organ, blue electric guitar;
-desktop synth, violin/bow, forward trumpet bell, red lips, vinyl/tonearm, rising swoosh/burst.
-Output the FULL atlas, not separate icon files. No background, labels, grids, ground planes, detached shadows, speckles, outlines, pixels or borders.
+Packing: split the complete generated atlas into its 18 glyphs, remove detached
+small alpha fragments, crop to each complete glyph, and proportionally resize
+with premultiplied-alpha Lanczos into centered 128x128 transparent cells.

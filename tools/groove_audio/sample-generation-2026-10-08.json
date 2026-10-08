@@ -1,0 +1,195 @@
+{
+  "date": "2026-10-08",
+  "provider": "Runway",
+  "model": "lyria-3-clip",
+  "bpm": 140,
+  "meter": "4/4",
+  "sample_rate": 44100,
+  "generation_note": "Prompts are requests, not verified transcripts, pitches or event times. Task IDs identify existing raw assets; no signed download URLs are retained.",
+  "separation": {
+    "model": "vocals_mel_band_roformer.ckpt",
+    "segment_size": 512,
+    "overlap": 4,
+    "batch_size": 1,
+    "native_fp16": true,
+    "override_model_segment_size": true,
+    "gap_between_crops_seconds": 0.5
+  },
+  "editing": {
+    "first_stage": "FFmpeg atempo per landmark interval, pitch-preserving WSOLA, followed by exact-length tail padding/trimming",
+    "segment_ramp_ms": 2,
+    "last_fade_ms": 12,
+    "highpass_hz": 55,
+    "highpass_order": 2,
+    "peak_dbfs": -2,
+    "second_stage": "Advance internal segments by the measured envelope delay minus 2 ms; linear crossfade the overlap. Retain initial consonants.",
+    "proxy_window_ms": 210,
+    "proxy_rms_bin_frames": 44,
+    "proxy_threshold_fraction": 0.18
+  },
+  "export": {
+    "channels": 1,
+    "master": "PCM24 WAV",
+    "delivery": "libmp3lame 320 kbps MP3 with Xing gapless header and TBPM tag"
+  },
+  "verification_limits": "Internal offsets are forward envelope proxies, not independent auditory validation. Raw audio and source isolation must be retained to reproduce the edits. Final decoder is Groove minimp3_ex.",
+  "samples": [
+    {
+      "file": "01_feel_it_140bpm_1bar.mp3",
+      "generation_task_id": "fc73ea86-9a11-483b-bdbd-2af31a9ed576",
+      "exact_prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLE. A single unaccompanied adult woman singing a tiny original melodic hook, isolated human voice in an acoustically dead vocal booth. Confident bright female alto, punchy soulful chest voice. Exact 140 BPM phrasing, 4/4 time, A minor. Sing ONLY: 'Feel it'. Two sung syllables. 'Feel' begins at 0 seconds, 'it' at 0.857 seconds; finish at 1.60 seconds. The very first sound is the sung word at time zero: no lead-in, no count-in, no introductory breath, no pause. One short take only, no repetition, no extended arrangement. Absolutely voice only: no music backing, no instruments, no percussion, no beatboxing, no bass, no piano, no synth, no pads, no chords, no harmony, no doubling. The metronome is silent; it is only an internal timing reference. Natural clean dry sound, no reverb or delay. This is a vocal one-shot for a sampler, not a song.",
+      "raw_take_sha256": "81282659bdcdd9710e142c0ead008df33fd39618b9bfa7334b220d8638152e3f",
+      "requested_bars": 1,
+      "delivered_bars": 1,
+      "raw_crop_start_seconds": 0,
+      "raw_crop_frames": 92610,
+      "source_landmarks_seconds_relative_to_crop": [
+        0.0676,
+        0.994,
+        1.75
+      ],
+      "target_beats_including_endpoint": [
+        0,
+        2,
+        4
+      ],
+      "internal_segment_advance_ms": [
+        0.0,
+        0.0
+      ],
+      "final_mp3_sha256": "99aadf3e92cb20abac57f781f5964d864880a9e0a0610d4e6a6a1efaade16937",
+      "forward_envelope_proxy_offsets_ms": [
+        86.803,
+        0.998
+      ]
+    },
+    {
+      "file": "02_so_high_140bpm_1bar.mp3",
+      "generation_task_id": "074db528-210a-4a2b-b725-a1a018089b42",
+      "exact_prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLE. A single unaccompanied adult woman singing a tiny original melodic hook, isolated human voice in an acoustically dead vocal booth. Pure airy female soprano, delicate light head voice. Exact 140 BPM phrasing, 4/4 time, A minor. Sing ONLY: 'So high'. Two sung syllables. 'So' begins at 0 seconds, 'high' at 0.857 seconds; finish at 1.60 seconds. The very first sound is the sung word at time zero: no lead-in, no count-in, no introductory breath, no pause. One short take only, no repetition, no extended arrangement. Absolutely voice only: no music backing, no instruments, no percussion, no beatboxing, no bass, no piano, no synth, no pads, no chords, no harmony, no doubling. The metronome is silent; it is only an internal timing reference. Natural clean dry sound, no reverb or delay. This is a vocal one-shot for a sampler, not a song.",
+      "raw_take_sha256": "a5817d36212fada03c6229a99147a5aa2a19e374d746551e836fa3e78b763a3d",
+      "requested_bars": 1,
+      "delivered_bars": 1,
+      "raw_crop_start_seconds": 0,
+      "raw_crop_frames": 92158,
+      "source_landmarks_seconds_relative_to_crop": [
+        0.077,
+        0.49,
+        1.72
+      ],
+      "target_beats_including_endpoint": [
+        0,
+        1,
+        4
+      ],
+      "internal_segment_advance_ms": [
+        0.0,
+        0.0
+      ],
+      "final_mp3_sha256": "caf1dcb4d3be7468c74d5dd22fc5e864bc7b6d412be7ff9be773b6dcc4e90440",
+      "forward_envelope_proxy_offsets_ms": [
+        25.941,
+        0.998
+      ]
+    },
+    {
+      "file": "03_move_with_me_140bpm_1bar.mp3",
+      "generation_task_id": "dbe69bfc-546a-4716-9bef-5f26f292b48b",
+      "exact_prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLE. A single unaccompanied adult woman singing a tiny original melodic hook, isolated human voice in an acoustically dead vocal booth. Warm husky female mezzo-soprano with a soulful melodic inflection. Exact 140 BPM phrasing, 4/4 time, A minor. Sing ONLY: 'Move with me'. 'Move' begins at 0 seconds, 'with' at 0.857 seconds, 'me' at 1.714 seconds, sustaining then releasing before 3.30 seconds. The very first sound is the sung word at time zero: no lead-in, no count-in, no introductory breath, no pause. One short take only, no repetition, no extended arrangement. Absolutely voice only: no music backing, no instruments, no percussion, no beatboxing, no bass, no piano, no synth, no pads, no chords, no harmony, no doubling. The metronome is silent; it is only an internal timing reference. Natural clean dry sound, no reverb or delay. This is a vocal one-shot for a sampler, not a song.",
+      "raw_take_sha256": "40e13f869110261b0cad8f19cf0292f32c2fcf5558503b4b73b6d2e9710c49e1",
+      "requested_bars": 2,
+      "delivered_bars": 1,
+      "raw_crop_start_seconds": 0,
+      "raw_crop_frames": 72765,
+      "source_landmarks_seconds_relative_to_crop": [
+        0.071,
+        0.449,
+        0.873,
+        1.62
+      ],
+      "target_beats_including_endpoint": [
+        0,
+        1,
+        2,
+        4
+      ],
+      "internal_segment_advance_ms": [
+        0.0,
+        48.889,
+        12.971
+      ],
+      "final_mp3_sha256": "d896adc7635d2aa035a987c16ae5ffcd65dd04a12e49af7d04546bdc80f75d86",
+      "forward_envelope_proxy_offsets_ms": [
+        8.98,
+        1.995,
+        1.995
+      ]
+    },
+    {
+      "file": "04_light_the_night_140bpm_2bars.mp3",
+      "generation_task_id": "a7114985-f2b0-43e5-b390-901694fca346",
+      "exact_prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLE. A single unaccompanied adult woman singing a tiny original melodic hook, isolated human voice in an acoustically dead vocal booth. Powerful clear female alto, joyful open vowels and a rising melodic hook. Exact 140 BPM phrasing, 4/4 time, A minor. Sing ONLY: 'Light the night'. 'Light' begins at 0 seconds, 'the' at 0.857 seconds, 'night' at 1.714 seconds, sustaining then releasing before 3.30 seconds. The very first sound is the sung word at time zero: no lead-in, no count-in, no introductory breath, no pause. One short take only, no repetition, no extended arrangement. Absolutely voice only: no music backing, no instruments, no percussion, no beatboxing, no bass, no piano, no synth, no pads, no chords, no harmony, no doubling. The metronome is silent; it is only an internal timing reference. Natural clean dry sound, no reverb or delay. This is a vocal one-shot for a sampler, not a song.",
+      "raw_take_sha256": "a2f0a4bd36baa695c1c88bdb32581f16136ef8c7b0c671d23ac23078d1dd9dd2",
+      "requested_bars": 2,
+      "delivered_bars": 2,
+      "raw_crop_start_seconds": 0,
+      "raw_crop_frames": 242550,
+      "source_landmarks_seconds_relative_to_crop": [
+        0.0402,
+        0.87,
+        1.735,
+        2.6,
+        5.22
+      ],
+      "target_beats_including_endpoint": [
+        0,
+        1,
+        2,
+        4,
+        8
+      ],
+      "internal_segment_advance_ms": [
+        0.0,
+        30.93,
+        35.918,
+        29.932
+      ],
+      "final_mp3_sha256": "1a43f71bef9507f42988f19aa15f36f862eed9c69996bf68920643635ae199e2",
+      "forward_envelope_proxy_offsets_ms": [
+        18.957,
+        1.995,
+        1.995,
+        1.995
+      ]
+    },
+    {
+      "file": "05_ooh_yeah_140bpm_2bars.mp3",
+      "generation_task_id": "70c8e586-83e0-44c7-8c1c-5186ff5d72f4",
+      "exact_prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLE. A single unaccompanied adult woman singing a tiny original melodic hook, isolated human voice in an acoustically dead vocal booth. Expressive smooth female soprano, wordless melisma and gentle controlled vibrato. Exact 140 BPM phrasing, 4/4 time, A minor. Sing ONLY: 'Ooh yeah'. 'Ooh' begins at 0 seconds, 'yeah' at 1.714 seconds, sustaining a brief melodic turn and releasing before 3.30 seconds. The very first sound is the sung word at time zero: no lead-in, no count-in, no introductory breath, no pause. One short take only, no repetition, no extended arrangement. Absolutely voice only: no music backing, no instruments, no percussion, no beatboxing, no bass, no piano, no synth, no pads, no chords, no harmony, no doubling. The metronome is silent; it is only an internal timing reference. Natural clean dry sound, no reverb or delay. This is a vocal one-shot for a sampler, not a song.",
+      "raw_take_sha256": "dbdd30b0134ad43e5739550f2841ac73c42c338ab60a441d059d769832b16435",
+      "requested_bars": 2,
+      "delivered_bars": 2,
+      "raw_crop_start_seconds": 3.15,
+      "raw_crop_frames": 191835,
+      "source_landmarks_seconds_relative_to_crop": [
+        0.38,
+        2.215,
+        3.78
+      ],
+      "target_beats_including_endpoint": [
+        0,
+        4,
+        8
+      ],
+      "internal_segment_advance_ms": [
+        0.0,
+        0.0
+      ],
+      "final_mp3_sha256": "1293ecf822fbce52d2e475674dd8172e03a93b33218d1744370da23a1bf50b51",
+      "forward_envelope_proxy_offsets_ms": [
+        11.973,
+        1.995
+      ]
+    }
+  ]
+}
