@@ -20,9 +20,9 @@ static result_t cmd_parent_proc(window_t *win, uint32_t msg,
     (void)win;
     if (msg == evCreate)  return 1;
     if (msg == evDestroy) return 1;
-    if (msg == tbButtonClick) {
+    if (msg == evCommand && HIWORD(wparam) == btnClicked) {
         g_click_count++;
-        g_last_cmd_id  = (int)wparam;
+        g_last_cmd_id  = (int)LOWORD(wparam);
         g_last_sender  = (window_t *)lparam;
     }
     return 0;

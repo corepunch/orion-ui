@@ -571,7 +571,7 @@ static void click_toolbar(uint16_t ident) { click_bar(g_app->library, ident); }
 
 static bool bar_checked(window_t *bar, uint16_t ident) {
   int i = bar_index(bar, ident);
-  return i >= 0 && (toolbar_get_state(bar)->items[i].flags & TOOLBAR_BUTTON_FLAG_ACTIVE);
+  return i >= 0 && (toolbar_get_state(bar)->items[i].state & TBSTATE_CHECKED);
 }
 static bool toolbar_checked(uint16_t ident) { return bar_checked(g_app->library, ident); }
 
@@ -951,7 +951,7 @@ static void test_family_filter(void) {
   ASSERT(first >= 0 && toolbar_index(ID_FAMILY(CAT_COUNT - 1)) == first + CAT_COUNT - 1, "one button per family, in order");
   for (int i = first; i < first + CAT_COUNT; i++) {
     irect16_t r = tb->item_rects[i];
-    ASSERT(tb->items[i].type == TOOLBAR_ITEM_BUTTON && (tb->items[i].flags & TOOLBAR_ITEM_FLAG_ARTWORK), "family buttons draw artwork");
+    ASSERT(tb->items[i].type == TOOLBAR_ITEM_BUTTON && (tb->items[i].style & TOOLBAR_ITEM_FLAG_ARTWORK), "family buttons draw artwork");
     ASSERT(r.w == toolbar_effective_bsz(bar) && r.h == toolbar_effective_bsz(bar), "family buttons are full toolbar size");
     ASSERT(r.x + r.w <= bar->frame.w, "every button fits one row at the default width");
   }
@@ -960,7 +960,7 @@ static void test_family_filter(void) {
     click_toolbar(ID_FAMILY(c));
     ASSERT(g_app->category == c && library_visible() == blocks_in_category(c, ids, GR_MAX_BLOCKS), "a routed click shows one family");
     int checked = 0;
-    for (int i = first; i < first + CAT_COUNT; i++) checked += (tb->items[i].flags & TOOLBAR_BUTTON_FLAG_ACTIVE) != 0;
+    for (int i = first; i < first + CAT_COUNT; i++) checked += (tb->items[i].state & TBSTATE_CHECKED) != 0;
     ASSERT(checked == 1 && toolbar_checked(ID_FAMILY(c)), "exactly the chosen family is checked");
   }
   app_set_genre(GENRE_DANCE);

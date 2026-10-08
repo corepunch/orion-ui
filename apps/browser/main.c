@@ -341,32 +341,31 @@ static result_t browser_proc(window_t *win, uint32_t msg, uint32_t wparam, void 
             break;
         }
       }
+      if (HIWORD(wparam) == btnClicked && st) {
+        int ident = LOWORD(wparam);
+        if (ident == ID_TB_BACK && st->history_index > 0) {
+          st->history_index--;
+          browser_navigate(win, st->history[st->history_index], false);
+          return true;
+        }
+        if (ident == ID_TB_FWD && st->history_index + 1 < st->history_count) {
+          st->history_index++;
+          browser_navigate(win, st->history[st->history_index], false);
+          return true;
+        }
+        if (ident == ID_TB_HOME) {
+          browser_navigate(win, st->home_url, true);
+          return true;
+        }
+        if (ident == ID_TB_REFRESH) {
+          if (st->current_url[0])
+            browser_navigate(win, st->current_url, false);
+          return true;
+        }
+      }
       if (HIWORD(wparam) == edUpdate && LOWORD(wparam) == ID_TB_ADDR) {
         window_t *src = (window_t *)lparam;
         browser_navigate(win, src ? src->title : "", true);
-        return true;
-      }
-      return false;
-
-    case tbButtonClick:
-      if (!st) return false;
-      if ((int)wparam == ID_TB_BACK && st->history_index > 0) {
-        st->history_index--;
-        browser_navigate(win, st->history[st->history_index], false);
-        return true;
-      }
-      if ((int)wparam == ID_TB_FWD && st->history_index + 1 < st->history_count) {
-        st->history_index++;
-        browser_navigate(win, st->history[st->history_index], false);
-        return true;
-      }
-      if ((int)wparam == ID_TB_HOME) {
-        browser_navigate(win, st->home_url, true);
-        return true;
-      }
-      if ((int)wparam == ID_TB_REFRESH) {
-        if (st->current_url[0])
-          browser_navigate(win, st->current_url, false);
         return true;
       }
       return false;

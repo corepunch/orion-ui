@@ -238,10 +238,6 @@ result_t win_layers_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
       }
       return true;
 
-    case tbButtonClick:
-      handle_menu_command((uint16_t)wparam);
-      return true;
-
     case evLeftButtonDown: {
       if (!st || !g_app || !g_app->active_doc) return false;
       canvas_doc_t *doc = g_app->active_doc;
@@ -291,6 +287,7 @@ result_t win_layers_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
     case evCommand: {
       uint16_t code = HIWORD(wparam);
       uint16_t id = LOWORD(wparam);
+      if (code == btnClicked) { handle_menu_command(id); return true; }
       if (code == cbSelectionChange && st && g_app && g_app->active_doc) {
         canvas_doc_t *doc = g_app->active_doc;
         if (id == ID_LAYER_BLEND_COMBO && lparam && doc->layer.active >= 0 &&

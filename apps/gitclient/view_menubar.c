@@ -40,8 +40,8 @@ result_t gc_menubar_proc(window_t *win, uint32_t msg,
 result_t gc_toolbar_proc(window_t *win, uint32_t msg,
                         uint32_t wparam, void *lparam) {
   (void)lparam;
-  if (msg == tbButtonClick) {
-    (void)gc_execute_action((uint16_t)wparam);
+  if (msg == evCommand && HIWORD(wparam) == btnClicked) {
+    (void)gc_execute_action(LOWORD(wparam));
     return true;
   }
   return false;

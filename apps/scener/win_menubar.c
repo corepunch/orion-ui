@@ -8,8 +8,9 @@ result_t scener_toolbar_proc(window_t *win, uint32_t msg,
     case evCreate:
       scener_sync_main_toolbar();
       return true;
-    case tbButtonClick:
-      handle_menu_command((uint16_t)wparam);
+    case evCommand:
+      if (HIWORD(wparam) != btnClicked) return false;
+      handle_menu_command(LOWORD(wparam));
       scener_sync_main_toolbar();
       return true;
     case evDestroy:
@@ -37,7 +38,7 @@ void scener_sync_main_toolbar(void) {
   if (!g_app || !g_app->main_toolbar_win) return;
   window_t *toolbar = g_app->main_toolbar_win;
   int active = scener_active_tool();
-  send_message(toolbar, tbSetActiveButton, (uint32_t)active, NULL);
+  send_message(toolbar, tbCheckButton, (uint32_t)active, (void *)(intptr_t)1);
 }
 
 void scener_sync_tool_ui(void) {

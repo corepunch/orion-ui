@@ -63,7 +63,8 @@ void imageeditor_sync_tool_options(void) {
     int n = group == ID_TOOL_BRUSH ? ARRAY_LEN(brush_tools) : ARRAY_LEN(shape_tools);
     for (int i = 0; i < n; i++) {
       items[count] = choices[i];
-      items[count++].flags = choices[i].ident == tool ? TOOLBAR_BUTTON_FLAG_ACTIVE : 0;
+      items[count].style |= TBSTYLE_CHECKGROUP;
+      items[count++].state = choices[i].ident == tool ? TBSTATE_CHECKED : 0;
     }
   }
   if (group == ID_TOOL_BRUSH || tool == ID_TOOL_ERASER) {
@@ -72,14 +73,14 @@ void imageeditor_sync_tool_options(void) {
   } else if (group == ID_TOOL_RECT) {
     items[count++] = (toolbar_item_t){.type = TOOLBAR_ITEM_BUTTON, .ident = IE_OPT_FILLED,
                                     .icon = "ie-fill", .tooltip = g_app->shape_filled ? "Filled — click for outline" : "Outline — click to fill",
-                                    .flags = g_app->shape_filled ? TOOLBAR_BUTTON_FLAG_ACTIVE : 0};
+                                    .style = TBSTYLE_CHECK, .state = g_app->shape_filled ? TBSTATE_CHECKED : 0};
   } else if (tool == ID_TOOL_FILL) {
     items[count++] = (toolbar_item_t){.type = TOOLBAR_ITEM_SLIDER, .ident = IE_OPT_GAP,
                                     .tooltip = "Gap detection"};
   } else if (tool == ID_TOOL_MAGIC_WAND) {
     items[count++] = (toolbar_item_t){.type = TOOLBAR_ITEM_BUTTON, .ident = IE_OPT_AA,
                                     .icon = "ie-magic-wand", .tooltip = "Antialias selection edges",
-                                    .flags = g_app->wand.antialias ? TOOLBAR_BUTTON_FLAG_ACTIVE : 0};
+                                    .style = TBSTYLE_CHECK, .state = g_app->wand.antialias ? TBSTATE_CHECKED : 0};
     items[count++] = (toolbar_item_t){.type = TOOLBAR_ITEM_SLIDER, .ident = IE_OPT_SPREAD,
                                     .tooltip = "Selection tolerance"};
     items[count++] = (toolbar_item_t){.type = TOOLBAR_ITEM_BUTTON, .ident = IE_OPT_COLOR,
@@ -126,31 +127,31 @@ result_t win_tool_options_proc(window_t *win, uint32_t msg, uint32_t wparam, voi
     case evPaint: return true;
     case evClose:
       return true;
-    case tbButtonClick: {
-      if (!g_app) return false;
-      int group = imageeditor_tool_group(g_app->current_tool);
-      if (imageeditor_tool_group(wparam) == group && (group == ID_TOOL_BRUSH || group == ID_TOOL_RECT)) {
-        handle_menu_command(wparam);
+    case evCommand: {
+      if (g_app && HIWORD(wparam) == btnClicked) {
+        int ident = LOWORD(wparam);
+        int group = imageeditor_tool_group(g_app->current_tool);
+        if (imageeditor_tool_group(ident) == group && (group == ID_TOOL_BRUSH || group == ID_TOOL_RECT)) {
+          handle_menu_command(ident);
+          return true;
+        }
+        switch (ident) {
+          case IE_OPT_FILLED: g_app->shape_filled = !g_app->shape_filled; break;
+          case IE_OPT_AA:     g_app->wand.antialias = !g_app->wand.antialias; break;
+          case IE_OPT_COLOR: {
+            uint32_t color = g_app->wand.overlay_color;
+            if (show_color_picker(win, color, &color)) {
+              g_app->wand.overlay_color = color;
+              if (g_app->active_doc && g_app->active_doc->canvas_win)
+                invalidate_window(g_app->active_doc->canvas_win);
+            }
+            break;
+          }
+          default: return false;
+        }
+        imageeditor_sync_tool_options();
         return true;
       }
-      switch (wparam) {
-        case IE_OPT_FILLED: g_app->shape_filled = !g_app->shape_filled; break;
-        case IE_OPT_AA:     g_app->wand.antialias = !g_app->wand.antialias; break;
-        case IE_OPT_COLOR: {
-          uint32_t color = g_app->wand.overlay_color;
-          if (show_color_picker(win, color, &color)) {
-            g_app->wand.overlay_color = color;
-            if (g_app->active_doc && g_app->active_doc->canvas_win)
-              invalidate_window(g_app->active_doc->canvas_win);
-          }
-          break;
-        }
-        default: return false;
-      }
-      imageeditor_sync_tool_options();
-      return true;
-    }
-    case evCommand: {
       if (!g_app || HIWORD(wparam) != sliderValueChanged || !lparam) return false;
       window_t *slider = lparam;
       int value = (int)send_message(slider, slGetPos, 0, NULL);

@@ -9,7 +9,7 @@ static result_t dock_test_proc(window_t *win, uint32_t msg, uint32_t wparam, voi
   switch (msg) {
     case evCreate: case evDestroy: return true;
     case evPaint: return false;
-    case tbButtonClick: dock_clicks++; return true;
+    case evCommand: if (HIWORD(wparam) != btnClicked) return false; dock_clicks++; return true;
     case evLeftButtonDown:
       dock_point = (ipoint16_t){(int16_t)LOWORD(wparam), (int16_t)HIWORD(wparam)};
       return true;
@@ -26,7 +26,7 @@ static window_t *dock_test_pane(window_t *host, dock_side_t side, int extent) {
                                   MAKERECT(10, 10, 500, 240), host, dock_test_proc, 0, NULL);
   toolbar_item_t items[] = {
     {.type = TOOLBAR_ITEM_BUTTON, .ident = 41, .icon = "play"},
-    {.type = TOOLBAR_ITEM_SPACER, .flags = TOOLBAR_ITEM_FLAG_FLEXSPACE},
+    {.type = TOOLBAR_ITEM_SPACER, .style = TOOLBAR_ITEM_FLAG_FLEXSPACE},
     {.type = TOOLBAR_ITEM_TEXTEDIT, .ident = 42, .w = 160},
   };
   send_message(pane, tbSetItems, ARRAY_LEN(items), items);

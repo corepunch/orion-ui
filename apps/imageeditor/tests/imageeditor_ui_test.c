@@ -1102,9 +1102,9 @@ void test_ie_grouped_tool_options(void) {
     for (int i = 0; i < 3; i++) {
       ASSERT_EQUAL(tb->items[i].type, TOOLBAR_ITEM_BUTTON);
       ASSERT_EQUAL(tb->items[i].ident, brushes[i]);
-      send_message(options, tbButtonClick, brushes[i], NULL);
+      send_message(options, evCommand, MAKEDWORD(brushes[i], btnClicked), NULL);
       ASSERT_EQUAL(g_app->current_tool, brushes[i]);
-      ASSERT_TRUE(tb->items[i].flags & TOOLBAR_BUTTON_FLAG_ACTIVE);
+      ASSERT_TRUE(tb->items[i].state & TBSTATE_CHECKED);
     }
     ASSERT_EQUAL(tb->items[3].type, TOOLBAR_ITEM_SLIDER);
     ASSERT_EQUAL(g_app->current_tool, ID_TOOL_SPRAY);
@@ -1122,15 +1122,15 @@ void test_ie_grouped_tool_options(void) {
     for (int i = 0; i < 5; i++) {
       ASSERT_EQUAL(tb->item_count, 6);
       ASSERT_EQUAL(tb->items[i].ident, shapes[i]);
-      send_message(options, tbButtonClick, shapes[i], NULL);
+      send_message(options, evCommand, MAKEDWORD(shapes[i], btnClicked), NULL);
       ASSERT_EQUAL(g_app->current_tool, shapes[i]);
       ASSERT_EQUAL(g_app->shape_tool, shapes[i]);
       ASSERT_EQUAL(imageeditor_tool_group(g_app->current_tool), ID_TOOL_RECT);
     }
-    send_message(options, tbButtonClick, IE_OPT_FILLED, NULL);
+    send_message(options, evCommand, MAKEDWORD(IE_OPT_FILLED, btnClicked), NULL);
     ASSERT_TRUE(g_app->shape_filled);
-    ASSERT_TRUE(tb->items[5].flags & TOOLBAR_BUTTON_FLAG_ACTIVE);
-    send_message(options, tbButtonClick, IE_OPT_FILLED, NULL);
+    ASSERT_TRUE(tb->items[5].state & TBSTATE_CHECKED);
+    send_message(options, evCommand, MAKEDWORD(IE_OPT_FILLED, btnClicked), NULL);
     ASSERT_FALSE(g_app->shape_filled);
     handle_menu_command(ID_TOOL_MAGIC_WAND);
     ASSERT_EQUAL(tb->item_count, 3);

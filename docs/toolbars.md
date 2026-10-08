@@ -20,8 +20,9 @@ canonical way to build application-level and per-window toolbars.
 
 A toolbar is a window with the `WINDOW_TOOLBAR` flag.  Items are described by
 `toolbar_item_t` structs and loaded with the `tbSetItems` message.  When a
-button is clicked the toolbar sends `tbButtonClick` to its parent, carrying the
-button's `ident`. For application actions, that identifier must be the command
+button is clicked the toolbar flips its checked state (for `TBSTYLE_CHECK` /
+`TBSTYLE_CHECKGROUP` buttons) and sends
+`evCommand(MAKEDWORD(ident, btnClicked), toolbar)` to its owner. For application actions, that identifier must be the command
 ID of a menu-declared action.
 
 ## Menus are the application capability map
@@ -45,11 +46,12 @@ typedef struct {
   int                 ident;   // command ID / button identifier
   const char         *icon;    // named icon or "strip:N" atlas index; NULL = missing icon
   int                 w;       // explicit width in pixels (0 = automatic)
-  uint32_t            flags;   // BUTTON_PUSHLIKE, BUTTON_AUTORADIO, etc.
+  uint32_t            style;   // TBSTYLE_CHECK, TBSTYLE_CHECKGROUP, TOOLBAR_ITEM_FLAG_*, CONTROL_SIZE_*
   const char         *text;    // label text, or combobox/textedit initial text
   const char         *tooltip; // hover tooltip; NULL = none
   uint32_t            color;   // plastic face colour; 0 = theme accent
-  const char         *checked_icon; // icon while checked; NULL = checked highlight
+  const char         *checked_icon; // icon while TBSTATE_CHECKED; NULL = same icon
+  uint32_t            state;   // initial TBSTATE_CHECKED / TBSTATE_DISABLED
 } toolbar_item_t;
 ```
 
@@ -65,7 +67,7 @@ Item types:
 | `TOOLBAR_ITEM_SEGMENTED` | `SegmentedControl` radio group (embedded child window); `text` holds the labels, `"One|Two|Three"` |
 | `TOOLBAR_ITEM_SEPARATOR` | Narrow vertical divider |
 | `TOOLBAR_ITEM_SPACER` | Invisible gap (no interaction) |
-| `TOOLBAR_ITEM_DROPDOWN` | Split button: left fires `tbButtonClick`, right arrow fires `tbDropdown` |
+| `TOOLBAR_ITEM_DROPDOWN` | Split button: left fires `btnClicked`, right arrow fires `tbDropdown` |
 
 ## Floating options toolbars
 
@@ -92,10 +94,15 @@ again, like `TB_AUTOSIZE`. Over an icon-only segment the toolbar shows the
 segment's own tooltip; elsewhere it shows the item's `tooltip`.
 Hover feedback is not routed to controls embedded in a toolbar.
 
-`tbCheckButton` (`wparam` = ident, `lparam` = checked) sets one button's
-checked state and leaves the others alone, like `TB_CHECKBUTTON`; use it for
-toggles and for radio groups the owner keeps in step. `tbSetActiveButton`
-checks exactly one button in the whole toolbar.
+Item *style* is fixed by the descriptor; item *state* changes at runtime.
+`TBSTYLE_CHECK` buttons toggle `TBSTATE_CHECKED` themselves on each click.
+Consecutive `TBSTYLE_CHECKGROUP` buttons form a radio group: clicking one checks
+it and clears the rest of the run (separators and ordinary buttons end a run).
+Read state back with `tbGetState` / `toolbar_is_button_checked()` and write it with
+`tbSetState`. `tbCheckButton` (`wparam` = ident, `lparam` = checked) sets one
+button's checked state like `TB_CHECKBUTTON`; checking a `CHECKGROUP` button
+clears its group. Apps only call it when the state changes for a reason other
+than a click on that button (a menu command, undo, a document switch).
 
 `TOOLBAR_ITEM_FLAG_ARTWORK` marks a button whose icon is full-colour artwork,
 such as a `strip:N` cell. It is drawn as large as the button allows, over the
@@ -240,8 +247,7 @@ resizes. Vertical toolbars retain the spacer's ordinary size.
 To change a button's icon without recreating embedded controls, send
 `tbSetItemIcon` with the command ID in `wparam` and an icon name in `lparam`
 (`NULL` clears the icon). The toolbar copies the name and preserves the
-field's text, focus and selection. Use `tbCheckButton` (or `tbSetActiveButton`
-for a radio group) for toggle state; reserve `tbSetItems` for changes to the
+field's text, focus and selection. Use `tbCheckButton` / `tbSetState` for toggle state; reserve `tbSetItems` for changes to the
 item list.
 
 A toggle whose icon changes with its state (play/pause, repeat/stop-at-end)
@@ -280,8 +286,9 @@ result_t my_toolbar_proc(window_t *win, uint32_t msg,
       send_message(win, tbSetItems,
                    ARRAY_LEN(kLayersToolbar), (void *)kLayersToolbar);
       return true;
-    case tbButtonClick:
-      handle_menu_command((uint16_t)wparam);
+    case evCommand:
+      if (HIWORD(wparam) != btnClicked) return false;
+      handle_menu_command(LOWORD(wparam));
       return true;
   }
   return false;
@@ -304,9 +311,9 @@ The key design rule: **every toolbar click routes through the same
 `handle_menu_command()` function as menu items and keyboard shortcuts.**
 
 ```c
-case tbButtonClick:
-  handle_menu_command((uint16_t)wparam);
-  return true;
+case evCommand:
+  if (HIWORD(wparam) == btnClicked) { handle_menu_command(LOWORD(wparam)); return true; }
+  return false;
 ```
 
 This means:
@@ -343,7 +350,7 @@ void imageeditor_sync_main_toolbar(void) {
 Call the sync function:
 - After `tbSetItems` (initial load)
 - After any state change that affects toggle buttons
-- After handling a `tbButtonClick` that toggles state
+- After handling a `btnClicked` command that changes state the toolbar cannot see
 
 ## `app_chrome` — menubar + toolbar wrapper
 
@@ -363,7 +370,6 @@ g_app->main_toolbar_win = app_chrome_toolbar(g_app->chrome_win);
 The chrome window:
 - Automatically resizes both children on `evDisplayChange`
 - Routes `evPaint` to both children
-- Routes `tbButtonClick` from the toolbar to the toolbar proc
 - Provides accessor functions: `app_chrome_menubar()`, `app_chrome_toolbar()`
 
 ## Summary of the pattern
@@ -376,7 +382,7 @@ The chrome window:
 │       ↓                         ↓                        │
 │         evCreate → tbSetItems → toolbar                  │
 │                          ↓                               │
-│              tbButtonClick(ident)                         │
+│        evCommand(ident, btnClicked)                       │
 │                          ↓                               │
 │               handle_menu_command(id)                     │
 │                          ↓                               │
@@ -403,7 +409,7 @@ receives `tbDrawItem`, with the item identifier in `wparam` and a borrowed
 `toolbar_draw_item_t *` in `lparam`. Its `rect` is item-local (origin 0,0),
 `state` contains `CTRL_*` flags, and `index` identifies the item. Draw only during
 this callback; invalidate the toolbar window when the custom content changes.
-The toolbar owns hover, pressed state, tooltips, and `tbButtonClick` delivery.
+The toolbar owns hover, pressed state, tooltips, and `btnClicked` delivery.
 
 The former toolbox control and `bx*` messages have been removed. Component
 registration uses `toolbar_icon` and `FE_COMPONENT_SHOW_TOOLBAR`.

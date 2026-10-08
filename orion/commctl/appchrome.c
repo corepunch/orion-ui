@@ -115,19 +115,6 @@ static result_t win_app_chrome(window_t *win, uint32_t msg,
     case evThemeChanged:
       app_chrome_resize_children(win);
       return true;
-    case tbButtonClick: {
-      window_t *src = (window_t *)lparam;
-      window_t *bar = NULL;
-      for (window_t *child = win->children; child; child = child->next) {
-        if (!(child->flags & WINDOW_TOOLBAR)) continue;
-        if (src == child || (src && src->parent == child)) {
-          bar = child;
-          break;
-        }
-      }
-      if (!bar) bar = app_chrome_toolbar(win);
-      return bar ? send_message(bar, msg, wparam, lparam) : false;
-    }
     case evDisplayChange: {
       resize_window(win, LOWORD(wparam), MAX(1, (int)HIWORD(wparam) - win->frame.y));
       return true;

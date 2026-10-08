@@ -208,8 +208,9 @@ result_t main_toolbar_proc(window_t *win, uint32_t msg,
     case evCreate:
       imageeditor_sync_main_toolbar();
       return true;
-    case tbButtonClick:
-      handle_menu_command((uint16_t)wparam);
+    case evCommand:
+      if (HIWORD(wparam) != btnClicked) return false;
+      handle_menu_command(LOWORD(wparam));
       imageeditor_sync_main_toolbar();
       return true;
     case evDestroy:
@@ -789,7 +790,7 @@ void handle_menu_command(uint16_t id) {
                tool_id_name(old_tool),
                tool_id_name((int)id));
       if (g_app->tool_win)
-        send_message(g_app->tool_win, tbSetActiveButton, (uint32_t)group, NULL);
+        send_message(g_app->tool_win, tbCheckButton, (uint32_t)group, (void *)(intptr_t)1);
       imageeditor_sync_tool_options();
       break;
     }
@@ -799,7 +800,7 @@ void handle_menu_command(uint16_t id) {
         show_window(g_app->tool_win, true);
       } else {
         window_t *tp = create_tool_palette_window();
-        send_message(tp, tbSetActiveButton, (uint32_t)imageeditor_tool_group(g_app->current_tool), NULL);
+        send_message(tp, tbCheckButton, (uint32_t)imageeditor_tool_group(g_app->current_tool), (void *)(intptr_t)1);
       }
       break;
 

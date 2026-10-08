@@ -352,7 +352,7 @@ static int fe_build_toolbar_items(xmlNodePtr form_node, toolbar_item_t *items,
       .ident = 0,
       .icon = fe_parse_sysicon_name(icon_name),
       .w = 0,
-      .flags = 0,
+      .style = 0,
       .text = NULL,
     };
   }

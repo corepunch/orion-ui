@@ -31,6 +31,8 @@ int toolbar_content_offset(const window_t *win);
 
 void toolbar_draw_non_client(window_t *win);
 
+int  toolbar_item_state(window_t *win, int ident);          // tbGetState: TBSTATE_* bits, -1 when absent
+bool toolbar_is_button_checked(window_t *win, int ident);   // TB_ISBUTTONCHECKED
 bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 
 bool toolbar_handle_notitle_nc_left_button_up(window_t *win, uint32_t wparam);

@@ -12,6 +12,8 @@
 #define TB_WINDOW_CLOSE    (-102)
 #define TB_WINDOW_COLLAPSE (-103)
 
+static bool toolbar_set_checked(toolbar_state_t *tb, int i, bool checked);
+
 bool toolbar_merged_title(const window_t *win) {
   return win && (win->flags & (WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NOTITLE)) ==
     (WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR);
@@ -25,7 +27,7 @@ int toolbar_item_hit(const toolbar_state_t *tb, int tx, int ty) {
   if (!tb || !tb->item_rects) return -1;
   for (int i = 0; i < tb->item_count; i++) {
     irect16_t r = tb->item_rects[i];
-    if (tb->items[i].flags & TOOLBAR_ITEM_FLAG_DISABLED) continue;
+    if (tb->items[i].state & TBSTATE_DISABLED) continue;
     if (rect_contains_point(r, (ipoint16_t){tx, ty}))
       return i;
   }
@@ -84,7 +86,7 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
         w = item->w > 0 ? item->w : bsz;
         if (!item->w && (tb->style & TOOLBAR_STYLE_SHOW_LABELS) && item->text)
           w = MAX(w, text_strwidth(FONT_SMALLEST, item->text) + 8);
-        if ((item->flags & CONTROL_SIZE_MASK) == CONTROL_SIZE_LARGE) { // grows into the band padding, centred on the row
+        if ((item->style & CONTROL_SIZE_MASK) == CONTROL_SIZE_LARGE) { // grows into the band padding, centred on the row
           if (!item->w) w += CONTROL_LARGE_GROWTH;
           h += CONTROL_LARGE_GROWTH;
           if (!vertical) y -= CONTROL_LARGE_GROWTH / 2;
@@ -131,7 +133,7 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
     }
 
     if (vertical) {
-      bool small = tb->columns <= 1 && (item->flags & TOOLBAR_ITEM_FLAG_SMALL) != 0 &&
+      bool small = tb->columns <= 1 && (item->style & TOOLBAR_ITEM_FLAG_SMALL) != 0 &&
                    (item->type == TOOLBAR_ITEM_BUTTON || item->type == TOOLBAR_ITEM_CUSTOM);
       if (small) {
         // Half-size cell: two minis + one gap fill a normal button cell, so a
@@ -141,7 +143,7 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
         int pair = 1;
         if (i + 1 < tb->item_count) {
           toolbar_item_t *next = &tb->items[i + 1];
-          if ((next->flags & TOOLBAR_ITEM_FLAG_SMALL) != 0 &&
+          if ((next->style & TOOLBAR_ITEM_FLAG_SMALL) != 0 &&
               (next->type == TOOLBAR_ITEM_BUTTON || next->type == TOOLBAR_ITEM_CUSTOM))
             pair = 2;
         }
@@ -182,11 +184,11 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
   if (!vertical && tb->item_rects) {
     int flex_count = 0, offset = 0;
     for (int i = 0; i < tb->item_count; i++)
-      if (tb->items[i].type == TOOLBAR_ITEM_SPACER && (tb->items[i].flags & TOOLBAR_ITEM_FLAG_FLEXSPACE)) flex_count++;
+      if (tb->items[i].type == TOOLBAR_ITEM_SPACER && (tb->items[i].style & TOOLBAR_ITEM_FLAG_FLEXSPACE)) flex_count++;
     int extra = MAX(0, parent->frame.w - padding - (x - spacing));
     for (int i = 0; i < tb->item_count; i++) {
       tb->item_rects[i].x += offset;
-      if (tb->items[i].type != TOOLBAR_ITEM_SPACER || !(tb->items[i].flags & TOOLBAR_ITEM_FLAG_FLEXSPACE)) continue;
+      if (tb->items[i].type != TOOLBAR_ITEM_SPACER || !(tb->items[i].style & TOOLBAR_ITEM_FLAG_FLEXSPACE)) continue;
       int share = extra / flex_count;
       tb->item_rects[i].w += share;
       offset += share;
@@ -295,11 +297,11 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
   toolbar_item_t *item = &tb->items[i];
   irect16_t r = tb->item_rects[i];
   if (r.w <= 0 || r.h <= 0) return;
-  bool disabled = (item->flags & TOOLBAR_ITEM_FLAG_DISABLED) != 0;
+  bool disabled = (item->state & TBSTATE_DISABLED) != 0;
   bool is_pressed = !disabled && (tb->pressed_item == i);
   bool compact = (tb->style & TOOLBAR_STYLE_COMPACT) != 0;
   bool interactive = !compact || (tb->style & TOOLBAR_STYLE_PLASTIC);
-  bool is_active  = !disabled && (item->flags & TOOLBAR_BUTTON_FLAG_ACTIVE) != 0; // compact rows keep checks, not hover
+  bool is_active  = !disabled && (item->state & TBSTATE_CHECKED) != 0; // compact rows keep checks, not hover
   bool is_hot     = !disabled && interactive && (tb->hot_item == i);
   theme_t *th = get_theme();
 
@@ -313,10 +315,9 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
     }
     case TOOLBAR_ITEM_BUTTON: {
       irect16_t local = {0, 0, r.w, r.h};
-      // A button with a checked icon shows its check by swapping the icon, not by a highlight.
+      // A checked button swaps to its checked image, which is a state image like any other.
       const char *icon = is_active && item->checked_icon ? item->checked_icon : item->icon;
       const char *icon_name = icon ? icon : "missing";
-      if (item->checked_icon) is_active = false;
       // Derive each flag independently; let the theme decide rendering.
       ctrl_state_t state = disabled ? CTRL_DISABLED : CTRL_NORMAL;
       if (is_active)  state |= CTRL_SELECTED;
@@ -325,12 +326,12 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       theme_part_t part = (tb->style & TOOLBAR_STYLE_SHOW_LABELS)
                                      ? THEME_PART_TOOLBAR_LABELED_BUTTON
                                      : THEME_PART_TOOLBAR_BUTTON;
-      bool plastic = (tb->style & TOOLBAR_STYLE_PLASTIC) && !(item->flags & TOOLBAR_ITEM_FLAG_ARTWORK) &&
+      bool plastic = (tb->style & TOOLBAR_STYLE_PLASTIC) && !(item->style & TOOLBAR_ITEM_FLAG_ARTWORK) &&
                      item->ident != TB_WINDOW_CLOSE && item->ident != TB_WINDOW_COLLAPSE;
       if (plastic) {
         irect16_t face = local;
         if (tb->style & TOOLBAR_STYLE_SHOW_LABELS) face.h -= text_char_height(FONT_SMALLEST) + 2;
-        draw_plastic_button(face, state, item->color, icon, item->flags & CONTROL_SIZE_MASK);
+        draw_plastic_button(face, state, item->color, icon, item->style & CONTROL_SIZE_MASK);
       } else if (tb->style & TOOLBAR_STYLE_COMPACT) {
         if (is_pressed || is_active)
           theme_draw(THEME_PART_TOOLBAR_BUTTON, rect_center(local, local.h, local.h), is_pressed ? CTRL_PRESSED : CTRL_SELECTED);
@@ -461,10 +462,10 @@ static result_t win_toolbar(window_t *win, uint32_t msg, uint32_t wparam, void *
       if (saved_idx >= tb->item_count) return true;
       int hit = toolbar_item_hit(tb, tx, ty);
       if (hit != saved_idx) {
-        if (hit >= 0 && (tb->items[saved_idx].flags & TOOLBAR_ITEM_FLAG_REORDERABLE) &&
-            (tb->items[hit].flags & TOOLBAR_ITEM_FLAG_REORDERABLE)) {
+        if (hit >= 0 && (tb->items[saved_idx].style & TOOLBAR_ITEM_FLAG_REORDERABLE) &&
+            (tb->items[hit].style & TOOLBAR_ITEM_FLAG_REORDERABLE)) {
           toolbar_drop_item_t drop = {tb->items[saved_idx].ident, tb->items[hit].ident};
-          send_message(win->parent ? win->parent : win, evCommand, MAKEDWORD(0, tbItemDrop), &drop);
+          send_message(win->parent ? win->parent : win, evCommand, MAKEDWORD((uint16_t)drop.to_ident, (uint16_t)tbItemDrop), &drop);
         }
         return true;
       }
@@ -489,7 +490,10 @@ static result_t win_toolbar(window_t *win, uint32_t msg, uint32_t wparam, void *
         send_message(owner, evCommand,
                      MAKEDWORD((uint16_t)item->ident, (uint16_t)tbDropdown), win);
       } else {
-        send_message(owner, tbButtonClick, (uint32_t)item->ident, win);
+        if (item->style & TBSTYLE_CHECK) toolbar_set_checked(tb, saved_idx, !(item->state & TBSTATE_CHECKED));
+        else if (item->style & TBSTYLE_CHECKGROUP) toolbar_set_checked(tb, saved_idx, true);
+        invalidate_window(win->parent);
+        send_message(owner, evCommand, MAKEDWORD((uint16_t)item->ident, (uint16_t)btnClicked), win);
       }
       return true;
     }
@@ -660,6 +664,52 @@ void toolbar_draw_non_client(window_t *win) {
   set_fullscreen();
 }
 
+// TBSTYLE_CHECKGROUP buttons form a radio run: consecutive items that carry the style.
+// TBSTATE_* bits of the item with this ident, or -1 when absent (TB_GETSTATE).
+int toolbar_item_state(window_t *win, int ident) {
+  toolbar_state_t *tb = toolbar_get_state(win);
+  for (int i = 0; tb && tb->items && i < tb->item_count; i++)
+    if (tb->items[i].ident == ident) return (int)tb->items[i].state;
+  fprintf(stderr, "[tb] get state rejected win=%u ident=%d: item unavailable\n", win ? win->id : 0, ident);
+  fflush(stderr);
+  return -1;
+}
+
+bool toolbar_is_button_checked(window_t *win, int ident) {
+  int state = toolbar_item_state(win, ident);
+  return state >= 0 && (state & TBSTATE_CHECKED);
+}
+
+static bool toolbar_set_checked(toolbar_state_t *tb, int i, bool checked) {
+  toolbar_item_t *item = &tb->items[i];
+  bool changed = ((item->state & TBSTATE_CHECKED) != 0) != checked;
+  if (checked && (item->style & TBSTYLE_CHECKGROUP)) {
+    int lo = i, hi = i;
+    while (lo > 0 && (tb->items[lo - 1].style & TBSTYLE_CHECKGROUP)) lo--;
+    while (hi + 1 < tb->item_count && (tb->items[hi + 1].style & TBSTYLE_CHECKGROUP)) hi++;
+    for (int j = lo; j <= hi; j++)
+      if (j != i && (tb->items[j].state & TBSTATE_CHECKED)) { tb->items[j].state &= ~TBSTATE_CHECKED; changed = true; }
+  }
+  item->state = checked ? item->state | TBSTATE_CHECKED : item->state & ~TBSTATE_CHECKED;
+  return changed;
+}
+
+static bool toolbar_set_item_state(window_t *win, toolbar_state_t *tb, int i, uint32_t state) {
+  bool changed = false;
+  if ((tb->items[i].state ^ state) & TBSTATE_DISABLED) {
+    tb->items[i].state ^= TBSTATE_DISABLED;
+    changed = true;
+    if (state & TBSTATE_DISABLED) {
+      if (tb->pressed_item == i) {
+        tb->pressed_item = -1;
+        if (g_ui_runtime.captured == win->toolbar) set_capture(NULL);
+      }
+      if (tb->hot_item == i) tb->hot_item = -1;
+    }
+  }
+  return toolbar_set_checked(tb, i, (state & TBSTATE_CHECKED) != 0) || changed;
+}
+
 bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
     case evResize: {
@@ -732,7 +782,7 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
         bool flex = false;
         toolbar_item_t *input = lparam;
         for (int i = 0; i < count; i++)
-          if (input[i].type == TOOLBAR_ITEM_SPACER && (input[i].flags & TOOLBAR_ITEM_FLAG_FLEXSPACE)) flex = true;
+          if (input[i].type == TOOLBAR_ITEM_SPACER && (input[i].style & TOOLBAR_ITEM_FLAG_FLEXSPACE)) flex = true;
         int n = count + !flex + !(win->flags & WINDOW_NOCLOSE) + collapse;
         merged = calloc(n, sizeof(*merged));
         if (!merged) {
@@ -742,7 +792,7 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
         }
         if (count) memcpy(merged, lparam, count * sizeof(*merged)); // the caption shows no title, only the window controls
         int i = count;
-        if (!flex) merged[i++] = (toolbar_item_t){.type = TOOLBAR_ITEM_SPACER, .flags = TOOLBAR_ITEM_FLAG_FLEXSPACE};
+        if (!flex) merged[i++] = (toolbar_item_t){.type = TOOLBAR_ITEM_SPACER, .style = TOOLBAR_ITEM_FLAG_FLEXSPACE};
         if (collapse) merged[i++] = (toolbar_item_t){.type = TOOLBAR_ITEM_BUTTON, .ident = TB_WINDOW_COLLAPSE, .tooltip = "Collapse / restore"};
         if (!(win->flags & WINDOW_NOCLOSE)) merged[i++] = (toolbar_item_t){.type = TOOLBAR_ITEM_BUTTON, .ident = TB_WINDOW_CLOSE, .tooltip = "Hide window"};
         wparam = n;
@@ -897,52 +947,31 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
       return true;
     }
 
-    case tbCheckButton: {
+    case tbCheckButton:
+    case tbSetState: {
       toolbar_state_t *tb = toolbar_get_state(win);
+      bool check = msg == tbCheckButton;
       for (int i = 0; tb && tb->items && i < tb->item_count; i++) {
         if ((uint32_t)tb->items[i].ident != wparam) continue;
-        if (tb->items[i].type != TOOLBAR_ITEM_BUTTON) break;
-        uint32_t flags = lparam ? tb->items[i].flags | TOOLBAR_BUTTON_FLAG_ACTIVE : tb->items[i].flags & ~TOOLBAR_BUTTON_FLAG_ACTIVE;
-        if (flags != tb->items[i].flags) { tb->items[i].flags = flags; invalidate_window(win); }
+        if (check && tb->items[i].type != TOOLBAR_ITEM_BUTTON && tb->items[i].type != TOOLBAR_ITEM_CUSTOM) break;
+        uint32_t want = check ? (lparam ? TBSTATE_CHECKED : 0) : (uint32_t)(uintptr_t)lparam;
+        bool changed = check ? toolbar_set_checked(tb, i, want != 0)
+                             : toolbar_set_item_state(win, tb, i, want);
+        if (changed) invalidate_window(win);
         return true;
       }
-      fprintf(stderr, "[tb] check rejected win=%u ident=%u: button unavailable\n", win->id, wparam);
+      fprintf(stderr, "[tb] %s rejected win=%u ident=%u: %s\n", check ? "check" : "set state", win->id, wparam,
+              check ? "button unavailable" : "item unavailable");
       fflush(stderr);
       return false;
     }
-    case tbSetActiveButton: {
-      toolbar_state_t *tb = toolbar_get_state(win);
-      uint32_t ident = wparam;
-      if (tb && tb->items) {
-        for (int i = 0; i < tb->item_count; i++) {
-          bool active = ((uint32_t)tb->items[i].ident == ident);
-          if (active)
-            tb->items[i].flags |= TOOLBAR_BUTTON_FLAG_ACTIVE;
-          else
-            tb->items[i].flags &= ~TOOLBAR_BUTTON_FLAG_ACTIVE;
-        }
-      }
-      for (window_t *tc = tb ? tb->children : NULL; tc; tc = tc->next)
-        tc->value = (tc->id == ident);
-      invalidate_window(win);
-      return true;
-    }
-
     case tbEnableItem: {
       toolbar_state_t *tb = toolbar_get_state(win);
       for (int i = 0; tb && i < tb->item_count; i++) {
         if ((uint32_t)tb->items[i].ident != wparam) continue;
-        uint32_t old = tb->items[i].flags;
-        if (lparam) tb->items[i].flags &= ~TOOLBAR_ITEM_FLAG_DISABLED;
-        else tb->items[i].flags |= TOOLBAR_ITEM_FLAG_DISABLED;
-        if (old != tb->items[i].flags) {
-          if (!lparam && tb->pressed_item == i) {
-            tb->pressed_item = -1;
-            if (g_ui_runtime.captured == win->toolbar) set_capture(NULL);
-          }
-          if (!lparam && tb->hot_item == i) tb->hot_item = -1;
-          invalidate_window(win);
-        }
+        uint32_t state = tb->items[i].state;
+        state = lparam ? state & ~TBSTATE_DISABLED : state | TBSTATE_DISABLED;
+        if (toolbar_set_item_state(win, tb, i, state)) invalidate_window(win);
         return true;
       }
       fprintf(stderr, "[tb] enable rejected win=%u ident=%u: item unavailable\n", win->id, wparam);

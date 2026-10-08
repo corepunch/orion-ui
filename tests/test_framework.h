@@ -47,7 +47,7 @@ static int tests_failed = 0;
 
 #define FAIL(msg) \
     tests_failed++; \
-    printf(COLOR_RED "FAIL" COLOR_RESET ": %s\n", msg);
+    printf(COLOR_RED "FAIL" COLOR_RESET ": %s (%s:%d)\n", msg, __FILE__, __LINE__);
 
 #define ASSERT(condition, msg) \
     if (!(condition)) { \

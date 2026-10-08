@@ -78,7 +78,7 @@ disables both history actions; otherwise availability comes from the active
 document's corresponding stack. Empty history and no document disable both.
 
 The framework represents disabled menu entries with `menu_item_t.disabled` and
-disabled toolbar items with `TOOLBAR_ITEM_FLAG_DISABLED`, updated through
+disabled toolbar items with `TBSTATE_DISABLED`, updated through
 `tbEnableItem`. Disabled entries are drawn muted and excluded from hit-testing.
 Disabling a toolbar item also cancels its pending press. Commands independently
 reject unavailable undo/redo, including accelerator and programmatic dispatch.

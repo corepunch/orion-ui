@@ -5,7 +5,7 @@
 #include "groove.h"
 #include <orion/user/toolbar.h>
 
-#define FAMILY_FLAGS TOOLBAR_ITEM_FLAG_ARTWORK
+#define FAMILY_FLAGS (TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP) // consecutive family buttons are one radio group
 
 static const toolbar_item_t kTransportItems[] = {
   { TOOLBAR_ITEM_BUTTON,    ID_REWIND,     "phosphor-rewind-fill",       0, 0, NULL, "Rewind (Home)" },
@@ -23,8 +23,7 @@ void transport_refresh(void) {
   window_t *win = g_app->library;
   if (!win) return;
   send_message(win, tbCheckButton, ID_PLAY, (void *)(intptr_t)g_app->shown_playing);
-  for (int cat = 0; cat < CAT_COUNT; cat++)
-    send_message(win, tbCheckButton, ID_FAMILY(cat), (void *)(intptr_t)(cat == g_app->category));
+  send_message(win, tbCheckButton, ID_FAMILY(g_app->category), (void *)(intptr_t)1);
 }
 
 // The transport items, then one pictogram button per family in category_t order.
@@ -62,7 +61,7 @@ result_t win_transport(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       transport_refresh();
       return true;
     }
-    case tbButtonClick: app_command((uint16_t)wparam); return true;
+    case evCommand: if (HIWORD(wparam) != btnClicked) return false; app_command(LOWORD(wparam)); return true;
     // case evCommand:
     //   if (LOWORD(wparam) == ID_GENRE && HIWORD(wparam) == sgnSelChange) {
     //     int selected = (int)send_message((window_t *)lparam, sgGetSelection, 0, NULL); // segment 0 is "All"

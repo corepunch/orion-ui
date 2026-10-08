@@ -189,7 +189,7 @@ static void test_coloring_palette(void) {
   ASSERT_EQUAL(g_app->tool_win->frame.w, PALETTE_WIN_W);
   int mini = (TOOL_PALETTE_BTN_SIZE - TOOLBAR_SPACING) / 2;
   for (int i = 0; i < 4; i++) {
-    ASSERT_TRUE(tb->items[i].flags & TOOLBAR_ITEM_FLAG_SMALL);
+    ASSERT_TRUE(tb->items[i].style & TOOLBAR_ITEM_FLAG_SMALL);
     ASSERT_EQUAL(tb->item_rects[i].w, mini);
     ASSERT_EQUAL(tb->item_rects[i].h, mini);
   }

@@ -5,29 +5,29 @@
 
 static const toolbar_item_t k_tools[] = {
 #if IMAGEEDITOR_BW
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_BRUSH, .icon = "ie-pencil", .tooltip = "Pencil / Brush"},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_ERASER, .icon = "ie-eraser", .tooltip = "Eraser"},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_FILL, .icon = "ie-fill", .tooltip = "Fill"},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_EYEDROPPER, .icon = "ie-eyedropper", .tooltip = "Eyedropper"},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_SELECT, .icon = "ie-select", .tooltip = "Select"},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_MOVE, .icon = "ie-move", .tooltip = "Move"},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_HAND, .icon = "ie-hand", .tooltip = "Hand"},
+  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_BRUSH, .icon = "ie-pencil", .tooltip = "Pencil / Brush", .style = TBSTYLE_CHECKGROUP},
+  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_ERASER, .icon = "ie-eraser", .tooltip = "Eraser", .style = TBSTYLE_CHECKGROUP},
+  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_FILL, .icon = "ie-fill", .tooltip = "Fill", .style = TBSTYLE_CHECKGROUP},
+  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_EYEDROPPER, .icon = "ie-eyedropper", .tooltip = "Eyedropper", .style = TBSTYLE_CHECKGROUP},
+  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_SELECT, .icon = "ie-select", .tooltip = "Select", .style = TBSTYLE_CHECKGROUP},
+  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_MOVE, .icon = "ie-move", .tooltip = "Move", .style = TBSTYLE_CHECKGROUP},
+  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_HAND, .icon = "ie-hand", .tooltip = "Hand", .style = TBSTYLE_CHECKGROUP},
 #else
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_SELECT, .icon = "ie-select", .tooltip = "Select"},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_MOVE, .icon = "ie-move", .tooltip = "Move"},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_MAGIC_WAND, .icon = "ie-magic-wand", .tooltip = "Magic Wand"},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_CROP, .icon = "ie-crop", .tooltip = "Crop"},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_HAND, .icon = "ie-hand", .tooltip = "Hand"},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_EYEDROPPER, .icon = "ie-eyedropper", .tooltip = "Eyedropper"},
+  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_SELECT, .icon = "ie-select", .tooltip = "Select", .style = TBSTYLE_CHECKGROUP},
+  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_MOVE, .icon = "ie-move", .tooltip = "Move", .style = TBSTYLE_CHECKGROUP},
+  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_MAGIC_WAND, .icon = "ie-magic-wand", .tooltip = "Magic Wand", .style = TBSTYLE_CHECKGROUP},
+  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_CROP, .icon = "ie-crop", .tooltip = "Crop", .style = TBSTYLE_CHECKGROUP},
+  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_HAND, .icon = "ie-hand", .tooltip = "Hand", .style = TBSTYLE_CHECKGROUP},
+  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_EYEDROPPER, .icon = "ie-eyedropper", .tooltip = "Eyedropper", .style = TBSTYLE_CHECKGROUP},
 #ifndef AX_PLATFORM_IOS
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_ZOOM, .icon = "ie-zoom-in", .tooltip = "Zoom"},
+  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_ZOOM, .icon = "ie-zoom-in", .tooltip = "Zoom", .style = TBSTYLE_CHECKGROUP},
 #endif
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_BRUSH, .icon = "ie-brush", .tooltip = "Brush"},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_FILL, .icon = "ie-fill", .tooltip = "Fill"},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_ERASER, .icon = "ie-eraser", .tooltip = "Eraser"},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_TEXT, .icon = "ie-text", .tooltip = "Text"},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_RECT, .icon = "ie-rect", .tooltip = "Shapes"},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_MAGNIFIER, .icon = "ie-zoom-out", .tooltip = "Magnifier"},
+  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_BRUSH, .icon = "ie-brush", .tooltip = "Brush", .style = TBSTYLE_CHECKGROUP},
+  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_FILL, .icon = "ie-fill", .tooltip = "Fill", .style = TBSTYLE_CHECKGROUP},
+  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_ERASER, .icon = "ie-eraser", .tooltip = "Eraser", .style = TBSTYLE_CHECKGROUP},
+  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_TEXT, .icon = "ie-text", .tooltip = "Text", .style = TBSTYLE_CHECKGROUP},
+  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_RECT, .icon = "ie-rect", .tooltip = "Shapes", .style = TBSTYLE_CHECKGROUP},
+  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_MAGNIFIER, .icon = "ie-zoom-out", .tooltip = "Magnifier", .style = TBSTYLE_CHECKGROUP},
 #endif
   {.type = TOOLBAR_ITEM_CUSTOM, .ident = ID_TOOL_SWATCH, .tooltip = "Foreground / background colors"},
 };
@@ -124,7 +124,7 @@ static void pencil_toolbar_items(window_t *win) {
   for (int i = 0; i < 4; i++)
     items[count++] = (toolbar_item_t){.type = TOOLBAR_ITEM_CUSTOM,
       .ident = IE_PENCIL_LAYER_BASE + order[i], .tooltip = tips[order[i]],
-      .flags = TOOLBAR_ITEM_FLAG_SMALL};
+      .style = TOOLBAR_ITEM_FLAG_SMALL};
   items[count++] = (toolbar_item_t){.type = TOOLBAR_ITEM_SEPARATOR};
   for (int i = 0; i < ARRAY_LEN(k_tools); i++) {
     if (k_tools[i].ident == ID_TOOL_SWATCH) continue;
@@ -136,10 +136,10 @@ static void pencil_toolbar_items(window_t *win) {
     for (int i = 0; i < IE_PENCIL_COLORS; i++)
       items[count++] = (toolbar_item_t){.type = TOOLBAR_ITEM_CUSTOM,
         .ident = IE_PENCIL_PALETTE_BASE + i, .tooltip = k_pencil_color_names[i],
-        .flags = TOOLBAR_ITEM_FLAG_SMALL};
+        .style = TOOLBAR_ITEM_FLAG_SMALL};
   }
   send_message(win, tbSetItems, count, items);
-  send_message(win, tbSetActiveButton, g_app ? imageeditor_tool_group(g_app->current_tool) : ID_TOOL_BRUSH, NULL);
+  send_message(win, tbCheckButton, g_app ? imageeditor_tool_group(g_app->current_tool) : ID_TOOL_BRUSH, (void *)(intptr_t)1);
   win->value = layer + 1;
 }
 #endif
@@ -165,7 +165,7 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
 #else
       send_message(win, tbSetItems, ARRAY_LEN(k_tools), (void *)k_tools);
 #endif
-      send_message(win, tbSetActiveButton, g_app ? imageeditor_tool_group(g_app->current_tool) : ID_TOOL_SELECT, NULL);
+      send_message(win, tbCheckButton, g_app ? imageeditor_tool_group(g_app->current_tool) : ID_TOOL_SELECT, (void *)(intptr_t)1);
       return true;
     }
     case tbDrawItem:
@@ -189,8 +189,9 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       if (wparam != ID_TOOL_SWATCH || !lparam) return false;
       palette_draw_swatches(((toolbar_draw_item_t *)lparam)->rect);
       return true;
-    case tbButtonClick:
-
+    case evCommand:
+      if (HIWORD(wparam) != btnClicked) return false;
+      wparam = LOWORD(wparam);
       if (!g_app) return true;
 #if IMAGEEDITOR_BW
       if (wparam >= IE_PENCIL_LAYER_BASE && wparam < IE_PENCIL_LAYER_BASE + IE_LAYER_COUNT) {

@@ -11,9 +11,6 @@ typedef enum { DOCK_FLOAT, DOCK_TOP, DOCK_LEFT, DOCK_BOTTOM, DOCK_RIGHT, DOCK_FI
 #define DOCK_MENU      4u
 #define DOCK_NOFLOAT   8u
 #define DOCK_SPLITTER  5
-#define evDockChanged (evUser + 910)
-#define evDockOrient  (evUser + 911) // wparam: true for a vertical menu
-#define evDockMeasure (evUser + 912) // lparam: ipoint16_t preferred menu size
 
 // The host owns its panes in every state, including floating. Extents are logical pixels.
 typedef struct dock_state_s {

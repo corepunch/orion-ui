@@ -196,18 +196,6 @@ lresult_t win_plugins_browser_proc(window_t *win, uint32_t msg,
       return true;
     }
 
-    case tbButtonClick:
-      switch ((uint16_t)wparam) {
-        case PLUGINS_ID_ADD:
-          plugins_add(win);
-          return true;
-        case PLUGINS_ID_LOAD:
-          plugins_load_selected(st, win);
-          return true;
-        default:
-          return false;
-      }
-
     case evResize:
       if (st && st->list_win) {
         irect16_t cr = get_client_rect(win);
@@ -216,7 +204,12 @@ lresult_t win_plugins_browser_proc(window_t *win, uint32_t msg,
       return false;
 
     case evCommand:
-      return false;
+      if (HIWORD(wparam) != btnClicked) return false;
+      switch (LOWORD(wparam)) {
+        case PLUGINS_ID_ADD:  plugins_add(win); return true;
+        case PLUGINS_ID_LOAD: plugins_load_selected(st, win); return true;
+        default: return false;
+      }
 
     case evDestroy:
       if (st)

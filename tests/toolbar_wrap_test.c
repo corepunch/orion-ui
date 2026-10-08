@@ -25,8 +25,8 @@ static result_t click_capture_proc(window_t *win, uint32_t msg,
                                     uint32_t wparam, void *lparam) {
     (void)win; (void)lparam;
     if (msg == evCreate || msg == evDestroy) return 1;
-    if (msg == tbButtonClick) {
-        g_last_click_ident = (int)wparam;
+    if (msg == evCommand && HIWORD(wparam) == btnClicked) {
+        g_last_click_ident = (int)LOWORD(wparam);
         g_click_count++;
         return 1;
     }
@@ -47,8 +47,8 @@ static result_t test_chrome_toolbar_proc(window_t *win, uint32_t msg,
         send_message(win, tbSetItems, 1, &item);
         return 1;
     }
-    if (msg == tbButtonClick) {
-        g_chrome_toolbar_click = (int)wparam;
+    if (msg == evCommand && HIWORD(wparam) == btnClicked) {
+        g_chrome_toolbar_click = (int)LOWORD(wparam);
         return 1;
     }
     return 0;
@@ -66,8 +66,8 @@ static result_t test_left_toolbar_proc(window_t *win, uint32_t msg,
         send_message(win, tbSetItems, 2, items);
         return 1;
     }
-    if (msg == tbButtonClick) {
-        g_chrome_left_click = (int)wparam;
+    if (msg == evCommand && HIWORD(wparam) == btnClicked) {
+        g_chrome_left_click = (int)LOWORD(wparam);
         return 1;
     }
     return 0;
@@ -258,9 +258,9 @@ void test_toolbar_set_active_button(void) {
     ASSERT_NOT_NULL(win);
 
     toolbar_item_t items[] = {
-        {TOOLBAR_ITEM_BUTTON, 10, 0, 0, TOOLBAR_BUTTON_FLAG_ACTIVE, NULL},
-        {TOOLBAR_ITEM_BUTTON, 11, NULL, 0, 0,                          NULL},
-        {TOOLBAR_ITEM_BUTTON, 12, NULL, 0, 0,                          NULL},
+        {.type = TOOLBAR_ITEM_BUTTON, .ident = 10, .style = TBSTYLE_CHECKGROUP, .state = TBSTATE_CHECKED},
+        {.type = TOOLBAR_ITEM_BUTTON, .ident = 11, .style = TBSTYLE_CHECKGROUP},
+        {.type = TOOLBAR_ITEM_BUTTON, .ident = 12, .style = TBSTYLE_CHECKGROUP},
     };
     send_message(win, tbSetItems, 3, items);
 
@@ -269,30 +269,33 @@ void test_toolbar_set_active_button(void) {
     ASSERT_EQUAL(tb->item_count, 3);
 
     // After SetItems, first button starts active.
-    ASSERT_TRUE((tb->items[0].flags & TOOLBAR_BUTTON_FLAG_ACTIVE) != 0);
-    ASSERT_FALSE((tb->items[1].flags & TOOLBAR_BUTTON_FLAG_ACTIVE) != 0);
-    ASSERT_FALSE((tb->items[2].flags & TOOLBAR_BUTTON_FLAG_ACTIVE) != 0);
+    ASSERT_TRUE((tb->items[0].state & TBSTATE_CHECKED) != 0);
+    ASSERT_FALSE((tb->items[1].state & TBSTATE_CHECKED) != 0);
+    ASSERT_FALSE((tb->items[2].state & TBSTATE_CHECKED) != 0);
 
     // Activate ident 11.
-    send_message(win, tbSetActiveButton, 11, NULL);
+    send_message(win, tbCheckButton, 11, (void *)1);
 
-    ASSERT_FALSE((tb->items[0].flags & TOOLBAR_BUTTON_FLAG_ACTIVE) != 0);
-    ASSERT_TRUE((tb->items[1].flags & TOOLBAR_BUTTON_FLAG_ACTIVE) != 0);
-    ASSERT_FALSE((tb->items[2].flags & TOOLBAR_BUTTON_FLAG_ACTIVE) != 0);
+    ASSERT_FALSE((tb->items[0].state & TBSTATE_CHECKED) != 0);
+    ASSERT_TRUE((tb->items[1].state & TBSTATE_CHECKED) != 0);
+    ASSERT_FALSE((tb->items[2].state & TBSTATE_CHECKED) != 0);
 
     // Activate ident 12.
-    send_message(win, tbSetActiveButton, 12, NULL);
+    send_message(win, tbCheckButton, 12, (void *)1);
 
-    ASSERT_FALSE((tb->items[0].flags & TOOLBAR_BUTTON_FLAG_ACTIVE) != 0);
-    ASSERT_FALSE((tb->items[1].flags & TOOLBAR_BUTTON_FLAG_ACTIVE) != 0);
-    ASSERT_TRUE((tb->items[2].flags & TOOLBAR_BUTTON_FLAG_ACTIVE) != 0);
+    ASSERT_FALSE((tb->items[0].state & TBSTATE_CHECKED) != 0);
+    ASSERT_FALSE((tb->items[1].state & TBSTATE_CHECKED) != 0);
+    ASSERT_TRUE((tb->items[2].state & TBSTATE_CHECKED) != 0);
 
-    // Unknown ident clears all.
-    send_message(win, tbSetActiveButton, 99, NULL);
-
-    ASSERT_FALSE((tb->items[0].flags & TOOLBAR_BUTTON_FLAG_ACTIVE) != 0);
-    ASSERT_FALSE((tb->items[1].flags & TOOLBAR_BUTTON_FLAG_ACTIVE) != 0);
-    ASSERT_FALSE((tb->items[2].flags & TOOLBAR_BUTTON_FLAG_ACTIVE) != 0);
+    // Unknown idents are rejected and leave the group alone; state reads back through tbGetState.
+    ASSERT_FALSE(send_message(win, tbCheckButton, 99, (void *)1));
+    ASSERT_EQUAL((int)send_message(win, tbGetState, 12, NULL), TBSTATE_CHECKED);
+    ASSERT_EQUAL((int)send_message(win, tbGetState, 99, NULL), -1);
+    ASSERT_TRUE(toolbar_is_button_checked(win, 12));
+    ASSERT_FALSE(toolbar_is_button_checked(win, 10));
+    send_message(win, tbSetState, 10, (void *)(uintptr_t)(TBSTATE_CHECKED | TBSTATE_DISABLED));
+    ASSERT_EQUAL((int)send_message(win, tbGetState, 10, NULL), TBSTATE_CHECKED | TBSTATE_DISABLED);
+    ASSERT_FALSE(toolbar_is_button_checked(win, 12));
 
     destroy_window(win);
     test_env_shutdown();
@@ -988,9 +991,9 @@ static void test_toolbar_flexible_spacers(void) {
   window_t *win = create_window("", WINDOW_TOOLBAR | WINDOW_NOTITLE, MAKERECT(0, 0, 600, 60), NULL, noop_proc, 0, NULL);
   toolbar_item_t items[] = {
     {.type = TOOLBAR_ITEM_BUTTON, .ident = 1},
-    {.type = TOOLBAR_ITEM_SPACER, .flags = TOOLBAR_ITEM_FLAG_FLEXSPACE},
+    {.type = TOOLBAR_ITEM_SPACER, .style = TOOLBAR_ITEM_FLAG_FLEXSPACE},
     {.type = TOOLBAR_ITEM_BUTTON, .ident = 2},
-    {.type = TOOLBAR_ITEM_SPACER, .flags = TOOLBAR_ITEM_FLAG_FLEXSPACE},
+    {.type = TOOLBAR_ITEM_SPACER, .style = TOOLBAR_ITEM_FLAG_FLEXSPACE},
     {.type = TOOLBAR_ITEM_TEXTEDIT, .ident = 3, .w = 140},
   };
   send_message(win, tbSetItems, ARRAY_LEN(items), items);
@@ -1086,7 +1089,7 @@ static void test_toolbar_vertical_custom_item(void) {
   dispatch_left_mouse_at(win->frame.x + r.x + 4, win->frame.y + TITLEBAR_HEIGHT + r.y + 4, kEventLeftButtonUp);
   ASSERT_EQUAL(g_click_count, 1);
   ASSERT_EQUAL(g_last_click_ident, 2);
-  send_message(win, tbSetActiveButton, 2, NULL);
+  send_message(win, tbCheckButton, 2, (void *)1);
   custom_draw_count = 0;
   toolbar_draw_non_client(win);
   ASSERT_EQUAL(custom_draw_count, 1);
@@ -1152,8 +1155,8 @@ static void test_toolbar_reorderable_items(void) {
   window_t *win = create_window("Frames", WINDOW_TOOLBAR | WINDOW_NOTITLE | WINDOW_NORESIZE,
     MAKERECT(20, 30, 300, TOOLBAR_BAND_HEIGHT), NULL, drop_capture_proc, 0, NULL);
   toolbar_item_t items[] = {
-    {.type = TOOLBAR_ITEM_CUSTOM, .ident = 101, .flags = TOOLBAR_ITEM_FLAG_REORDERABLE},
-    {.type = TOOLBAR_ITEM_CUSTOM, .ident = 102, .flags = TOOLBAR_ITEM_FLAG_REORDERABLE},
+    {.type = TOOLBAR_ITEM_CUSTOM, .ident = 101, .style = TOOLBAR_ITEM_FLAG_REORDERABLE},
+    {.type = TOOLBAR_ITEM_CUSTOM, .ident = 102, .style = TOOLBAR_ITEM_FLAG_REORDERABLE},
     {.type = TOOLBAR_ITEM_BUTTON, .ident = 103},
   };
   send_message(win, tbSetItems, ARRAY_LEN(items), items);
@@ -1246,7 +1249,7 @@ static void test_toolbar_disabled_item(void) {
     .x = (win->frame.x + r.x + 4) * UI_WINDOW_SCALE,
     .y = (win->frame.y + r.y + 4) * UI_WINDOW_SCALE};
   send_message(win, tbEnableItem, 88, NULL);
-  ASSERT_TRUE(tb->items[0].flags & TOOLBAR_ITEM_FLAG_DISABLED);
+  ASSERT_TRUE(tb->items[0].state & TBSTATE_DISABLED);
   dispatch_message(&ev);
   ev.message = kEventLeftButtonUp;
   dispatch_message(&ev);
@@ -1320,14 +1323,14 @@ static void test_vertical_small_items_pack(void) {
                                 MAKERECT(0, 0, 160, 400), NULL, click_capture_proc, 0, NULL);
   ASSERT_NOT_NULL(win);
   toolbar_item_t items[] = {
-    {.type = TOOLBAR_ITEM_CUSTOM, .ident = 1, .flags = TOOLBAR_ITEM_FLAG_SMALL},
-    {.type = TOOLBAR_ITEM_CUSTOM, .ident = 2, .flags = TOOLBAR_ITEM_FLAG_SMALL},
-    {.type = TOOLBAR_ITEM_CUSTOM, .ident = 3, .flags = TOOLBAR_ITEM_FLAG_SMALL},
-    {.type = TOOLBAR_ITEM_CUSTOM, .ident = 4, .flags = TOOLBAR_ITEM_FLAG_SMALL},
+    {.type = TOOLBAR_ITEM_CUSTOM, .ident = 1, .style = TOOLBAR_ITEM_FLAG_SMALL},
+    {.type = TOOLBAR_ITEM_CUSTOM, .ident = 2, .style = TOOLBAR_ITEM_FLAG_SMALL},
+    {.type = TOOLBAR_ITEM_CUSTOM, .ident = 3, .style = TOOLBAR_ITEM_FLAG_SMALL},
+    {.type = TOOLBAR_ITEM_CUSTOM, .ident = 4, .style = TOOLBAR_ITEM_FLAG_SMALL},
     {.type = TOOLBAR_ITEM_BUTTON, .ident = 5},
-    {.type = TOOLBAR_ITEM_CUSTOM, .ident = 6, .flags = TOOLBAR_ITEM_FLAG_SMALL},
-    {.type = TOOLBAR_ITEM_CUSTOM, .ident = 7, .flags = TOOLBAR_ITEM_FLAG_SMALL},
-    {.type = TOOLBAR_ITEM_CUSTOM, .ident = 8, .flags = TOOLBAR_ITEM_FLAG_SMALL},
+    {.type = TOOLBAR_ITEM_CUSTOM, .ident = 6, .style = TOOLBAR_ITEM_FLAG_SMALL},
+    {.type = TOOLBAR_ITEM_CUSTOM, .ident = 7, .style = TOOLBAR_ITEM_FLAG_SMALL},
+    {.type = TOOLBAR_ITEM_CUSTOM, .ident = 8, .style = TOOLBAR_ITEM_FLAG_SMALL},
   };
   send_message(win, tbSetOrientation, TOOLBAR_VERTICAL, NULL);
   send_message(win, tbSetItems, ARRAY_LEN(items), items);
@@ -1382,10 +1385,10 @@ void test_toolbar_check_button(void) {
 
     ASSERT_TRUE(send_message(win, tbCheckButton, 10, (void *)1));
     ASSERT_TRUE(send_message(win, tbCheckButton, 11, (void *)1));
-    ASSERT_TRUE((tb->items[0].flags & TOOLBAR_BUTTON_FLAG_ACTIVE) && (tb->items[1].flags & TOOLBAR_BUTTON_FLAG_ACTIVE));
+    ASSERT_TRUE((tb->items[0].state & TBSTATE_CHECKED) && (tb->items[1].state & TBSTATE_CHECKED));
     ASSERT_TRUE(send_message(win, tbCheckButton, 10, NULL));
-    ASSERT_FALSE(tb->items[0].flags & TOOLBAR_BUTTON_FLAG_ACTIVE);
-    ASSERT_TRUE(tb->items[1].flags & TOOLBAR_BUTTON_FLAG_ACTIVE);
+    ASSERT_FALSE(tb->items[0].state & TBSTATE_CHECKED);
+    ASSERT_TRUE(tb->items[1].state & TBSTATE_CHECKED);
     ASSERT_FALSE(send_message(win, tbCheckButton, 12, (void *)1));
     ASSERT_FALSE(send_message(win, tbCheckButton, 99, (void *)1));
 
