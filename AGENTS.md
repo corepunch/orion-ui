@@ -189,6 +189,44 @@ it, not to keep the custom implementation.  Adding a message or option to a
 framework control is always preferable to duplicating the control's event
 routing, hit-testing, keyboard handling, and accessibility.
 
+## Build applications from Orion components
+
+For app UI work, compose framework controls and layouts before writing app-specific
+window procedures. Inspect the existing controls, `.orion` parser/code generator,
+and reference apps (especially `socialfeed` for database-bound forms and
+`formeditor` for declarative component registration) before choosing an approach.
+If a reusable capability is missing, add it to Orion and make the app consume it;
+do not recreate control behavior or a small UI framework inside the app.
+
+- Treat the app's `.orion` file as the source of truth for static UI: forms,
+  menus, toolbars, accelerators, datasource schemas, bindings, and repeated-item
+  templates belong there whenever the engine supports them. Keep C for runtime
+  behavior, data access, and genuinely dynamic state; avoid a parallel C-built
+  version of a declarative view.
+- Model data shown by engine-rendered views with datasources. Use datasource
+  bindings for library/document records and other data-driven collections; use
+  declarative toolbar/menu definitions for static commands, and add a toolbar
+  datasource when toolbar contents are genuinely data-driven and the engine can
+  render that source. Extend the engine generically if the needed binding is
+  missing.
+- Separate the concepts: a **form** defines a screen or document view; a
+  **FlowView** or other layout control arranges its children; a repeated-item
+  template defines each record's presentation; a **datasource** supplies those
+  records. For example, a library can be a form containing a FlowView bound to
+  a library datasource, with a card template for each block.
+- Give each custom window/control a named window class and a focused window
+  procedure. Register every class used by declarative forms both at runtime and
+  with FormEditor/component metadata so forms can be opened and edited there.
+  Keep database adaptation, command routing, and view behavior in separate
+  modules with narrow responsibilities.
+- When the engine cannot yet instantiate a declared form or repeat a template,
+  implement the missing generic framework support first where practical. If a
+  temporary app-specific bridge is unavoidable, keep it small, name the gap,
+  and avoid duplicating static layout or control behavior in that bridge.
+
+For a substantial app UI change, follow the project skill
+[`orion-app-composition`](.agents/skills/orion-app-composition/SKILL.md).
+
 # Icon design
 
 Use [Lucide](https://lucide.dev) for icons whenever a suitable icon exists.
