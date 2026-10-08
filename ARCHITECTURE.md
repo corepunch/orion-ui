@@ -121,6 +121,11 @@ manager; controls provide orientation/measurement and apps provide content.
 `WINDOW_TITLETOOLBAR` merges a window's caption into ordinary toolbar items, with
 one paint/input path for app actions and window controls. See [Workspace Docking](docs/docking.md).
 
+Non-client hit-testing is one function: `window_nc_hit_test()` sends `evNcHitTest` (a proc may claim
+the point) and otherwise answers `HT_CAPTION`, `HT_CLOSE`, `HT_MAXBUTTON`, `HT_GROWBOX` or `HT_CLIENT`;
+the input router uses it to start drags and resizes and to resolve caption buttons on release. The
+caption band has a single definition, `caption_extent(flags)`.
+
 ## Input And Coordinate Spaces
 
 The window system owns parent-to-child routing and conversion. A window
@@ -282,6 +287,27 @@ persistent model objects.
 Screenshots use the same framebuffer boundary. `ui_request_screenshot()` waits
 for a fully painted frame, while `ui_save_screenshot()` captures the current
 completed frame immediately. The path extension selects PNG or JPEG encoding.
+
+### Compositing
+
+Orion follows the Windows DWM model. Only root windows are redirected: each paints into a
+compositor-owned surface (`window_surface()`, keyed by window; `window_has_surface()` is the only
+question callers ask), children share their root's surface, and window procs never bind targets or
+issue GL. A move, z-order change or activation recomposes without repainting; only
+`invalidate_window()` repaints a surface. `composite_root_windows()` describes each visible surface
+(frame, corner radius, shadow, border from `window_composition_attr()`, defaulting to theme and state;
+override with `window_set_composition_attr()`) and `R_Composite()` in the renderer draws shadows, SDF
+corners and the border, then presents. Surfaces are allocated at `ui_surface_px()` physical pixels, using
+the same float scale (`ui_surface_scale()`) in paint and composite. `window_capture()` reads a root
+surface (≈ `PrintWindow`); `ui_save_screenshot()` reads the composed frame. Raster state goes through
+`R_BindWindowTarget`, `R_SetViewport` and `R_SetScissor`; `orion/user` contains no `gl*` calls.
+
+### Window styles
+
+`window_t.flags` is 64 bits. Bits 0-15 are class styles (`BUTTON_*`, `SLIDER_VERTICAL`), 16-31 generic
+window styles, and bits 32+ extended styles and state (`WINDOW_TITLETOOLBAR`, `WINDOW_NOCOLLAPSE`,
+`WINDOW_STATE_MAXIMIZED`, `WINDOW_MAXIMIZEBOX`, `WINDOW_PLASTIC`, `WINDOW_ROUND`). Keep masks 64-bit:
+`~flag` on a 32-bit constant clears the high word.
 
 ### Color and Alpha
 
