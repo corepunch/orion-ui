@@ -42,7 +42,7 @@ static void dock_orient(window_t *win) {
   dock_state_t *d = win->dock;
   if (d->flags & DOCK_TOOLBAR) {
     bool vertical = dock_vertical(d->side == DOCK_FLOAT ? d->last_side : d->side);
-    toolbar_set_dock_hint(win, vertical ? TOOLBAR_DOCK_LEFT : TOOLBAR_DOCK_TOP);
+    send_message(win, tbModifyStyle, TOOLBAR_STYLE_WRAPABLE, (void *)(uintptr_t)(vertical ? TOOLBAR_STYLE_WRAPABLE : 0));
     send_message(win, tbSetOrientation, vertical ? TOOLBAR_VERTICAL : TOOLBAR_HORIZONTAL, NULL);
   }
   if (d->flags & DOCK_MENU) send_message(win, evDockOrient, d->side == DOCK_FLOAT || dock_vertical(d->side), NULL);
@@ -202,7 +202,7 @@ static bool dock_grip(window_t *win, ipoint16_t point) {
   if (d->side == DOCK_FILL || (d->flags & DOCK_NOFLOAT) || (win->flags & WINDOW_NODRAG)) return false;
   if (d->flags & DOCK_MENU) {
     bool vertical = d->side == DOCK_FLOAT || dock_vertical(d->side);
-    return vertical ? point.y < TOOLBAR_GRIP_HEIGHT : point.x < TOOLBAR_GRIP_WIDTH;
+    return vertical ? point.y < get_theme()->toolbar_grip_size : point.x < get_theme()->toolbar_grip_size;
   }
   if (point.y >= titlebar_height(win)) return false;
   if (win->flags & WINDOW_TOOLBAR) {

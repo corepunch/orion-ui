@@ -340,6 +340,11 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         set_scissor_fbo(root, clip);
       }
       break;
+    case tbSetButtonInfo:
+    case tbGetButtonInfo:
+    case tbGetItemRect:
+    case tbGetIdealSize:
+      return toolbar_handle_message(win, msg, wparam, lparam);
     case tbGetState:
       return toolbar_item_state(win, (int)wparam);
     case tbSetItemColor:
@@ -355,6 +360,7 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
     case tbSetButtonSize:
     case tbSetOrientation:
     case tbSetStyle:
+    case tbModifyStyle:
       (void)toolbar_handle_message(win, msg, wparam, lparam);
       break;
     case evStatusBar:

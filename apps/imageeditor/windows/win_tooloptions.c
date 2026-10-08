@@ -25,12 +25,10 @@ int imageeditor_tool_group(int tool) {
 }
 
 static void options_slider_tooltip(window_t *win, int ident, const char *name, int value) {
-  toolbar_state_t *tb = toolbar_get_state(win);
-  for (int i = 0; tb && tb->item_tooltips && i < tb->item_count; i++) {
-    if (tb->items[i].ident != ident) continue;
-    snprintf(tb->item_tooltips[i], sizeof(tb->item_tooltips[i]), "%s: %d", name, value);
-    tb->items[i].tooltip = tb->item_tooltips[i];
-  }
+  char tip[64];
+  snprintf(tip, sizeof(tip), "%s: %d", name, value);
+  toolbar_button_info_t info = {.mask = TBIF_TOOLTIP, .ident = ident, .tooltip = tip};
+  send_message(win, tbSetButtonInfo, 0, &info);
 }
 
 static int fill_gap_to_index(int gap) {

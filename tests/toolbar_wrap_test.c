@@ -1201,7 +1201,7 @@ void test_compact_application_toolbar(void) {
   ASSERT_NOT_NULL(bar);
   ASSERT_EQUAL(bar->frame.y, 0);
   ASSERT_EQUAL(bar->frame.h, MENUBAR_HEIGHT);
-  ASSERT_EQUAL(bar->frame.x + bar->frame.w, 600 - MENUBAR_HEIGHT - (TOOLBAR_COMPACT_SPACING - 2 * TOOLBAR_COMPACT_PADDING)); // restore button one pitch away
+  ASSERT_EQUAL(bar->frame.x + bar->frame.w, 600 - MENUBAR_HEIGHT - (get_theme()->toolbar_compact_spacing - 2 * get_theme()->toolbar_compact_padding)); // restore button one pitch away
   toolbar_state_t *tb = require_toolbar_state(bar);
   irect16_t r = tb->item_rects[0];
   ASSERT_EQUAL(r.y, 2);
@@ -1305,7 +1305,7 @@ static void test_vertical_grid_columns(void) {
   ASSERT_EQUAL(tb->item_rects[3].y, tb->item_rects[6].y);
   send_message(win, tbSetColumns, 0, NULL);
   ASSERT_EQUAL(tb->columns, 4);
-  toolbar_set_dock_hint(win, TOOLBAR_DOCK_LEFT);
+  send_message(win, tbModifyStyle, TOOLBAR_STYLE_WRAPABLE, (void *)(uintptr_t)TOOLBAR_STYLE_WRAPABLE);
   win->frame.h = 2 * TB_SPACING;
   send_message(win, tbSetColumns, 2, NULL);
   ASSERT_EQUAL(tb->item_rects[3].y, tb->item_rects[4].y);

@@ -102,7 +102,7 @@ static void rebuild_thumbnails(timeline_state_t *st) {
 }
 
 static int timeline_fixed_width(void) {
-  return TOOLBAR_GRIP_WIDTH + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH) +
+  return get_theme()->toolbar_grip_size + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH) +
          7 * (40 + TOOLBAR_SPACING) + 6 + TOOLBAR_SPACING;
 }
 

@@ -62,11 +62,11 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
   int bsz = (tb->btn_size > 0) ? tb->btn_size : get_theme()->toolbar_button_size;
   int item_h = toolbar_state_item_height(tb);
   int padding = toolbar_effective_padding(parent);
-  int spacing = (tb->style & TOOLBAR_STYLE_COMPACT) ? TOOLBAR_COMPACT_SPACING : TOOLBAR_SPACING;
+  int spacing = (tb->style & TOOLBAR_STYLE_COMPACT) ? get_theme()->toolbar_compact_spacing : TOOLBAR_SPACING;
   bool vertical = tb->orientation == TOOLBAR_VERTICAL;
   int vertical_spacing = TOOLBAR_SPACING;
-  int grip_h = (vertical && (tb->style & TOOLBAR_STYLE_GRIP)) ? TOOLBAR_GRIP_HEIGHT : 0;
-  int grip_w = (!vertical && (tb->style & TOOLBAR_STYLE_GRIP)) ? TOOLBAR_GRIP_WIDTH : 0;
+  int grip_h = (vertical && (tb->style & TOOLBAR_STYLE_GRIP)) ? get_theme()->toolbar_grip_size : 0;
+  int grip_w = (!vertical && (tb->style & TOOLBAR_STYLE_GRIP)) ? get_theme()->toolbar_grip_size : 0;
   int cursor = padding + grip_h;
   int x = padding + grip_w;
   int base_y = padding + grip_h;
@@ -96,7 +96,7 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
         w = item->w > 0 ? item->w : bsz;
         if (!item->w && (tb->style & TOOLBAR_STYLE_SHOW_LABELS) && item->text)
           w = MAX(w, text_strwidth(FONT_SMALLEST, item->text) + 8);
-        w += DROPDOWN_ARROW_W;
+        w += get_theme()->toolbar_dropdown_arrow_w;
         break;
       case TOOLBAR_ITEM_LABEL:
         w = item->w > 0 ? item->w
@@ -147,7 +147,7 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
               (next->type == TOOLBAR_ITEM_BUTTON || next->type == TOOLBAR_ITEM_CUSTOM))
             pair = 2;
         }
-        if (toolbar_dock_hint(parent) == TOOLBAR_DOCK_LEFT && cursor > base_y &&
+        if ((tb->style & TOOLBAR_STYLE_WRAPABLE) && cursor > base_y &&
             cursor + mini + base_y > parent->frame.h) {
           x += column_w + vertical_spacing;
           cursor = base_y;
@@ -166,7 +166,7 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
         h = w;
         w = bsz;
       }
-      if (tb->columns <= 1 && toolbar_dock_hint(parent) == TOOLBAR_DOCK_LEFT && cursor > base_y &&
+      if (tb->columns <= 1 && (tb->style & TOOLBAR_STYLE_WRAPABLE) && cursor > base_y &&
           cursor + h + base_y > parent->frame.h) {
         x += column_w + vertical_spacing;
         cursor = base_y;
@@ -214,7 +214,7 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
         row_h = MAX(row_h, tb->item_rects[i + count].h);
         count++;
       }
-      if (toolbar_dock_hint(parent) == TOOLBAR_DOCK_LEFT && cursor > base_y &&
+      if ((tb->style & TOOLBAR_STYLE_WRAPABLE) && cursor > base_y &&
           cursor + row_h + base_y > parent->frame.h) {
         x += grid_w + spacing;
         cursor = base_y;
@@ -280,7 +280,7 @@ static void draw_toolbar_icon_in_rect(window_t *win, toolbar_state_t *tb, const 
   bool compact = tb && (tb->style & TOOLBAR_STYLE_COMPACT);
   int w = res.w, h = res.h;
   if (w > 0 && h > 0) {
-    int size = MAX(1, compact ? MIN(TOOLBAR_COMPACT_ICON_SIZE, MIN(r.w, r.h)) : MIN(r.w, r.h) - 4);
+    int size = MAX(1, compact ? MIN(get_theme()->toolbar_compact_icon, MIN(r.w, r.h)) : MIN(r.w, r.h) - 4);
     size = MIN(size, MAX(w, h));
     int extent = MAX(w, h);
     w = MAX(1, w * size / extent);
@@ -354,7 +354,7 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       break;
     }
     case TOOLBAR_ITEM_DROPDOWN: {
-      int aw = DROPDOWN_ARROW_W;
+      int aw = get_theme()->toolbar_dropdown_arrow_w;
       irect16_t btn_part = {0, 0, r.w - aw, r.h};
       irect16_t arr_part = {r.w - aw, 0, aw, r.h};
       bool arrow_pressed = is_pressed && tb->pressed_in_arrow;
@@ -442,7 +442,7 @@ static result_t win_toolbar(window_t *win, uint32_t msg, uint32_t wparam, void *
       tb->pressed_item = idx;
       set_capture(win);
       tb->pressed_in_arrow = (item->type == TOOLBAR_ITEM_DROPDOWN) &&
-                             (tx >= tb->item_rects[idx].x + tb->item_rects[idx].w - DROPDOWN_ARROW_W);
+                             (tx >= tb->item_rects[idx].x + tb->item_rects[idx].w - get_theme()->toolbar_dropdown_arrow_w);
       invalidate_window(win->parent);
       return true;
     }
@@ -601,7 +601,7 @@ int toolbar_effective_bsz(window_t const *win) {
 
 int toolbar_effective_padding(window_t const *win) {
   toolbar_state_t *tb = window_toolbar_state((window_t *)win);
-  return tb && (tb->style & TOOLBAR_STYLE_COMPACT) ? TOOLBAR_COMPACT_PADDING
+  return tb && (tb->style & TOOLBAR_STYLE_COMPACT) ? get_theme()->toolbar_compact_padding
                                                 : get_theme()->toolbar_padding;
 }
 
@@ -609,7 +609,7 @@ int toolbar_effective_item_height(window_t const *win) {
   toolbar_state_t *tb = window_toolbar_state((window_t *)win);
   int height = toolbar_state_item_height(tb);
   if (tb && tb->orientation == TOOLBAR_VERTICAL && (tb->style & TOOLBAR_STYLE_GRIP))
-    height += TOOLBAR_GRIP_HEIGHT;
+    height += get_theme()->toolbar_grip_size;
   if (tb && tb->orientation == TOOLBAR_VERTICAL && tb->item_rects) {
     for (int i = 0; i < tb->item_count; i++)
       height = MAX(height, tb->item_rects[i].y + tb->item_rects[i].h -
@@ -625,7 +625,7 @@ void toolbar_draw_non_client(window_t *win) {
   window_t *root = get_root_window(win);
   int bsz = toolbar_effective_item_height(win);
   int title_h = toolbar_content_offset(win);
-  int total_h = toolbar_dock_hint(win) == TOOLBAR_DOCK_LEFT ? win->frame.h
+  int total_h = (tb && (tb->style & TOOLBAR_STYLE_WRAPABLE)) ? win->frame.h
                 : bsz + 2 * toolbar_effective_padding(win);
   int root_x = window_screen_x(win) - root->frame.x;
   int root_y = window_screen_y(win) - root->frame.y;
@@ -642,8 +642,8 @@ void toolbar_draw_non_client(window_t *win) {
 
   if (tb && (tb->style & TOOLBAR_STYLE_GRIP)) {
     irect16_t grip = tb->orientation == TOOLBAR_VERTICAL
-      ? rect_split_top(tb_rect, TOOLBAR_GRIP_HEIGHT)
-      : rect_split_left(tb_rect, TOOLBAR_GRIP_WIDTH);
+      ? rect_split_top(tb_rect, get_theme()->toolbar_grip_size)
+      : rect_split_left(tb_rect, get_theme()->toolbar_grip_size);
     theme_draw(THEME_PART_TOOLBAR_GRIP, grip, CTRL_NORMAL);
   }
   set_viewport(tb_rect);
@@ -710,6 +710,50 @@ static bool toolbar_set_item_state(window_t *win, toolbar_state_t *tb, int i, ui
   return toolbar_set_checked(tb, i, (state & TBSTATE_CHECKED) != 0) || changed;
 }
 
+// Apply the fields of `info` named by its mask to item i (TB_SETBUTTONINFO). Strings are copied into
+// the toolbar's owned per-item buffers.
+static bool toolbar_apply_info(window_t *win, toolbar_state_t *tb, int i, const toolbar_button_info_t *info) {
+  toolbar_item_t *it = &tb->items[i];
+  bool changed = false, relayout = false;
+  if ((info->mask & TBIF_IMAGE) && tb->item_icons) {
+    char name[sizeof(tb->item_icons[i])];
+    snprintf(name, sizeof(name), "%s", info->icon ? info->icon : "");
+    if (strcmp(name, tb->item_icons[i]) != 0) {
+      memcpy(tb->item_icons[i], name, strlen(name) + 1);
+      it->icon = name[0] ? tb->item_icons[i] : NULL;
+      if (it->type == TOOLBAR_ITEM_TEXTEDIT)
+        for (window_t *tc = tb->children; tc; tc = tc->next)
+          if ((int)tc->id == it->ident) send_message(tc, edSetLeadingIcon, 0, (void *)it->icon);
+      changed = true;
+    }
+  }
+  if ((info->mask & TBIF_TOOLTIP) && tb->item_tooltips) {
+    char text[sizeof(tb->item_tooltips[i])];
+    snprintf(text, sizeof(text), "%s", info->tooltip ? info->tooltip : "");
+    if (strcmp(text, tb->item_tooltips[i]) != 0) {
+      memcpy(tb->item_tooltips[i], text, strlen(text) + 1);
+      changed = true;
+    }
+    it->tooltip = text[0] ? tb->item_tooltips[i] : NULL;
+  }
+  if ((info->mask & TBIF_CHECKEDIMAGE) && tb->item_checked_icons) {
+    char name[sizeof(tb->item_checked_icons[i])];
+    snprintf(name, sizeof(name), "%s", info->checked_icon ? info->checked_icon : "");
+    if (strcmp(name, tb->item_checked_icons[i]) != 0) {
+      memcpy(tb->item_checked_icons[i], name, strlen(name) + 1);
+      changed = true;
+    }
+    it->checked_icon = name[0] ? tb->item_checked_icons[i] : NULL;
+  }
+  if ((info->mask & TBIF_COLOR) && it->color != info->color) { it->color = info->color; changed = true; }
+  if ((info->mask & TBIF_STYLE) && it->style != info->style) { it->style = info->style; changed = relayout = true; }
+  if ((info->mask & TBIF_SIZE) && it->w != info->w) { it->w = info->w; changed = relayout = true; }
+  if ((info->mask & TBIF_STATE) && toolbar_set_item_state(win, tb, i, info->state)) changed = true;
+  if (relayout) compute_toolbar_item_rects(win, tb);
+  if (changed) invalidate_window(win);
+  return true;
+}
+
 bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
     case evResize: {
@@ -722,9 +766,8 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
       for (int i = 0; tb && tb->items && i < tb->item_count; i++) {
         if ((uint32_t)tb->items[i].ident != wparam) continue;
         if (tb->items[i].type != TOOLBAR_ITEM_BUTTON) break;
-        uint32_t color = lparam ? *(const uint32_t *)lparam : 0;
-        if (tb->items[i].color != color) { tb->items[i].color = color; invalidate_window(win); }
-        return true;
+        toolbar_button_info_t info = {.mask = TBIF_COLOR, .ident = (int)wparam, .color = lparam ? *(const uint32_t *)lparam : 0};
+        return toolbar_apply_info(win, tb, i, &info);
       }
       fprintf(stderr, "[tb] set color rejected win=%u ident=%u: button unavailable\n", win->id, wparam);
       fflush(stderr);
@@ -732,22 +775,65 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
     }
     case tbSetItemIcon: {
       toolbar_state_t *tb = toolbar_get_state(win);
-      const char *icon = lparam;
-      for (int i = 0; tb && tb->items && tb->item_icons && i < tb->item_count; i++) {
+      for (int i = 0; tb && tb->items && i < tb->item_count; i++) {
         if ((uint32_t)tb->items[i].ident != wparam) continue;
-        char name[sizeof(tb->item_icons[i])];
-        snprintf(name, sizeof(name), "%s", icon ? icon : "");
-        if (strcmp(name, tb->item_icons[i]) == 0) return true;
-        memcpy(tb->item_icons[i], name, strlen(name) + 1);
-        tb->items[i].icon = name[0] ? tb->item_icons[i] : NULL;
-        if (tb->items[i].type == TOOLBAR_ITEM_TEXTEDIT) {
-          for (window_t *tc = tb->children; tc; tc = tc->next)
-            if (tc->id == wparam) send_message(tc, edSetLeadingIcon, 0, (void *)tb->items[i].icon);
-        }
-        invalidate_window(win);
-        return true;
+        toolbar_button_info_t info = {.mask = TBIF_IMAGE, .ident = (int)wparam, .icon = lparam};
+        return toolbar_apply_info(win, tb, i, &info);
       }
       fprintf(stderr, "[tb] set icon rejected win=%u ident=%u: item unavailable\n", win->id, wparam);
+      fflush(stderr);
+      return false;
+    }
+    case tbSetButtonInfo:
+    case tbGetButtonInfo: {
+      toolbar_state_t *tb = toolbar_get_state(win);
+      toolbar_button_info_t *info = lparam;
+      if (!info) {
+        fprintf(stderr, "[tb] button info rejected win=%u: null info\n", win->id);
+        fflush(stderr);
+        return false;
+      }
+      for (int i = 0; tb && tb->items && i < tb->item_count; i++) {
+        if (tb->items[i].ident != info->ident) continue;
+        if (msg == tbSetButtonInfo) return toolbar_apply_info(win, tb, i, info);
+        toolbar_item_t *it = &tb->items[i];
+        if (info->mask & TBIF_IMAGE)        info->icon = it->icon;
+        if (info->mask & TBIF_STYLE)        info->style = it->style;
+        if (info->mask & TBIF_STATE)        info->state = it->state;
+        if (info->mask & TBIF_TOOLTIP)      info->tooltip = it->tooltip;
+        if (info->mask & TBIF_CHECKEDIMAGE) info->checked_icon = it->checked_icon;
+        if (info->mask & TBIF_COLOR)        info->color = it->color;
+        if (info->mask & TBIF_SIZE)         info->w = it->w;
+        return true;
+      }
+      fprintf(stderr, "[tb] button info rejected win=%u ident=%d: item unavailable\n", win->id, info->ident);
+      fflush(stderr);
+      return false;
+    }
+    case tbGetIdealSize: {
+      toolbar_state_t *tb = toolbar_get_state(win);
+      isize16_t *size = lparam;
+      if (!tb || !size || !tb->item_rects) {
+        fprintf(stderr, "[tb] ideal size rejected win=%u state=%p out=%p\n", win->id, (void *)tb, lparam);
+        fflush(stderr);
+        return false;
+      }
+      int pad = toolbar_effective_padding(win), w = 2 * pad, h = 2 * pad;
+      for (int i = 0; i < tb->item_count; i++) {
+        w = MAX(w, tb->item_rects[i].x + tb->item_rects[i].w + pad);
+        h = MAX(h, tb->item_rects[i].y + tb->item_rects[i].h + pad);
+      }
+      *size = (isize16_t){w, h};
+      return true;
+    }
+    case tbGetItemRect: {
+      toolbar_state_t *tb = toolbar_get_state(win);
+      for (int i = 0; tb && tb->items && tb->item_rects && lparam && i < tb->item_count; i++) {
+        if ((uint32_t)tb->items[i].ident != wparam) continue;
+        *(irect16_t *)lparam = tb->item_rects[i];
+        return true;
+      }
+      fprintf(stderr, "[tb] item rect rejected win=%u ident=%u: item unavailable\n", win->id, wparam);
       fflush(stderr);
       return false;
     }
@@ -1028,11 +1114,13 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
       return true;
     }
 
-    case tbSetStyle: {
+    case tbSetStyle:
+    case tbModifyStyle: {
       toolbar_state_t *tb = toolbar_ensure_state(win);
       if (!tb) return true;
-      if (tb->style != wparam) {
-        tb->style = wparam;
+      uint32_t style = msg == tbSetStyle ? wparam : (tb->style & ~wparam) | ((uint32_t)(uintptr_t)lparam & wparam);
+      if (tb->style != style) {
+        tb->style = style;
         compute_toolbar_item_rects(win, tb);
         post_message(win, evRefreshStencil, 0, NULL);
         invalidate_window(get_root_window(win));

@@ -188,6 +188,12 @@ typedef struct {
   int menubar_height;
   int toolbar_button_size;
   int toolbar_padding;
+  int toolbar_compact_padding;   // menu-bar-row toolbar: outer margin
+  int toolbar_compact_spacing;   // menu-bar-row toolbar: gap between buttons
+  int toolbar_compact_icon;      // menu-bar-row toolbar: glyph size
+  int toolbar_compact_menu_gap;  // clearance kept between a compact toolbar and the menus
+  int toolbar_grip_size;         // drag grip thickness of a floating toolbar or menu bar
+  int toolbar_dropdown_arrow_w;  // width of a split button's arrow zone
 
   // Icon/label press offset in logical pixels.  Classic shifts content by 1
   // when a button is pressed to simulate physical depression; Modern keeps

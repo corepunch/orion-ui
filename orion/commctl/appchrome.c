@@ -26,26 +26,25 @@ static void app_chrome_resize_children(window_t *win) {
   int menu_h = get_theme()->menubar_height;
   window_t *bar = app_chrome_toolbar(win);
   if (bar && bar->dock && bar->dock->side == DOCK_TOP && st->presentation == TOOLBAR_PRESENTATION_COMPACT) {
-    send_message(bar, tbSetStyle, TOOLBAR_STYLE_COMPACT | TOOLBAR_STYLE_GRIP, NULL);
-    send_message(bar, tbSetButtonSize, menu_h - 2 * TOOLBAR_COMPACT_PADDING, NULL);
-    toolbar_state_t *tb = toolbar_get_state(bar);
-    int width = 2 * TOOLBAR_COMPACT_PADDING;
-    for (int i = 0; tb && tb->item_rects && i < tb->item_count; i++)
-      width = MAX(width, tb->item_rects[i].x + tb->item_rects[i].w + TOOLBAR_COMPACT_PADDING);
+    send_message(bar, tbModifyStyle, TOOLBAR_STYLE_COMPACT | TOOLBAR_STYLE_GRIP, (void *)(uintptr_t)(TOOLBAR_STYLE_COMPACT | TOOLBAR_STYLE_GRIP));
+    send_message(bar, tbSetButtonSize, menu_h - 2 * get_theme()->toolbar_compact_padding, NULL);
+    isize16_t ideal = {2 * get_theme()->toolbar_compact_padding, 0};
+    send_message(bar, tbGetIdealSize, 0, &ideal);
+    int width = ideal.w;
     int menu_width = st->menubar ? send_message(st->menubar, kMenuBarMessageGetContentWidth, 0, NULL) : win->frame.w;
     bool compact = st->menubar && st->menubar->dock && st->menubar->dock->side == DOCK_TOP &&
-                   width + menu_width + menu_h + TOOLBAR_COMPACT_SPACING - 2 * TOOLBAR_COMPACT_PADDING + 8 <= win->frame.w;
+                   width + menu_width + menu_h + get_theme()->toolbar_compact_spacing - 2 * get_theme()->toolbar_compact_padding + get_theme()->toolbar_compact_menu_gap <= win->frame.w;
     toolbar_dock_t dock = compact ? TOOLBAR_DOCK_MENU : TOOLBAR_DOCK_TOP;
     toolbar_set_dock_hint(bar, dock);
     if (compact) {
       // The menu bar's restore button fills the last menu_h square. Its centre sits one
-      // compact pitch (button + TOOLBAR_COMPACT_SPACING) past the last button's centre.
+      // compact pitch (button + get_theme()->toolbar_compact_spacing) past the last button's centre.
       irect16_t row = rect_split_top(get_client_rect(win), menu_h);
-      int slot = menu_h + TOOLBAR_COMPACT_SPACING - 2 * TOOLBAR_COMPACT_PADDING;
+      int slot = menu_h + get_theme()->toolbar_compact_spacing - 2 * get_theme()->toolbar_compact_padding;
       bar->frame = rect_split_right(rect_trim_right(row, slot), width);
       invalidate_window(bar);
     } else {
-      send_message(bar, tbSetStyle, TOOLBAR_STYLE_GRIP, NULL);
+      send_message(bar, tbModifyStyle, TOOLBAR_STYLE_COMPACT | TOOLBAR_STYLE_GRIP, (void *)(uintptr_t)TOOLBAR_STYLE_GRIP);
       send_message(bar, tbSetButtonSize, 0, NULL);
     }
   }

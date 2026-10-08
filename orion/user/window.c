@@ -734,9 +734,9 @@ bool window_in_drag_area_at(window_t const *win, int sx, int sy) {
       int title_h = toolbar_content_offset(win);
       if (tb->orientation == TOOLBAR_VERTICAL)
         return CONTAINS(sx, sy, win->frame.x, win->frame.y + title_h,
-                        win->frame.w, TOOLBAR_GRIP_HEIGHT);
+                        win->frame.w, get_theme()->toolbar_grip_size);
       return CONTAINS(sx, sy, win->frame.x, win->frame.y + title_h,
-                      TOOLBAR_GRIP_WIDTH, titlebar_height(win) - title_h);
+                      get_theme()->toolbar_grip_size, titlebar_height(win) - title_h);
     }
   }
   return window_in_drag_area(win, sy);

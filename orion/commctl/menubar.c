@@ -426,7 +426,7 @@ static void open_submenu_popup(window_t *popup, popup_data_t *pd, int index) {
 }
 
 static irect16_t menubar_item_rect(window_t *win, menubar_data_t *data, int index) {
-  int grip = win->dock ? (data->vertical ? TOOLBAR_GRIP_HEIGHT : TOOLBAR_GRIP_WIDTH) : 0;
+  int grip = win->dock ? (data->vertical ? get_theme()->toolbar_grip_size : get_theme()->toolbar_grip_size) : 0;
   if (data->vertical) return R(0, grip + index * get_theme()->menubar_height, win->frame.w, get_theme()->menubar_height);
   return R(data->menu_x[index] - 2 + grip, 0, strwidth(data->menus[index].label) + MENU_LABEL_PAD, get_theme()->menubar_height);
 }
@@ -513,12 +513,12 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       int width = 0;
       for (int i = 0; i < data->count; i++) width = MAX(width, strwidth(data->menus[i].label) + MENU_LABEL_PAD);
       *(ipoint16_t *)lparam = (ipoint16_t){MAX(80, width),
-        data->vertical ? TOOLBAR_GRIP_HEIGHT + data->count * get_theme()->menubar_height : get_theme()->menubar_height};
+        data->vertical ? get_theme()->toolbar_grip_size + data->count * get_theme()->menubar_height : get_theme()->menubar_height};
       return true;
     }
     case kMenuBarMessageGetContentWidth:
       if (!data || !data->count) return 4;
-      return (win->dock ? TOOLBAR_GRIP_WIDTH : 0) + data->menu_x[data->count - 1] + strwidth(data->menus[data->count - 1].label) + MENU_LABEL_PAD;
+      return (win->dock ? get_theme()->toolbar_grip_size : 0) + data->menu_x[data->count - 1] + strwidth(data->menus[data->count - 1].label) + MENU_LABEL_PAD;
 
     case evThemeChanged:
       if (!win->dock && !win->parent && win->frame.h != get_theme()->menubar_height)
@@ -528,8 +528,8 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
     case evPaint: {
       theme_draw(THEME_PART_MENU_BAR, R(0, 0, win->frame.w, win->frame.h), CTRL_NORMAL);
       if (win->dock) theme_draw(THEME_PART_TOOLBAR_GRIP, data->vertical
-          ? rect_split_top(get_client_rect(win), TOOLBAR_GRIP_HEIGHT)
-          : rect_split_left(get_client_rect(win), TOOLBAR_GRIP_WIDTH), CTRL_NORMAL);
+          ? rect_split_top(get_client_rect(win), get_theme()->toolbar_grip_size)
+          : rect_split_left(get_client_rect(win), get_theme()->toolbar_grip_size), CTRL_NORMAL);
       window_t *maximized = menubar_maximized_window(win);
       irect16_t restore = menubar_restore_rect(win);
       if (maximized) {

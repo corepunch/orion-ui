@@ -395,6 +395,12 @@ static theme_t g_modern_theme = {
   .menubar_height         = MODERN_MENUBAR_HEIGHT,
   .toolbar_button_size    = TB_SPACING,
   .toolbar_padding        = TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH,
+  .toolbar_compact_padding   = 2,
+  .toolbar_compact_spacing   = 6,
+  .toolbar_compact_icon      = TOOLBAR_COMPACT_ICON_SIZE,
+  .toolbar_compact_menu_gap  = 8,
+  .toolbar_grip_size         = 12,
+  .toolbar_dropdown_arrow_w  = 12,
   // Use the same reserved-space scrollbar geometry as Classic for now.  The
   // overlay/auto-hide treatment is deliberately deferred until it has a
   // complete input and layout contract.

@@ -397,6 +397,11 @@ enum {
   tbCheckButton,               // wparam=button ident, lparam=(void *)(intptr_t)checked (TB_CHECKBUTTON); checking a CHECKGROUP button clears its group
   tbGetState,                  // wparam=item ident; returns TBSTATE_* bits, or -1 when absent (TB_GETSTATE)
   tbSetState,                  // wparam=item ident, lparam=(void *)(uintptr_t)TBSTATE_* bits (TB_SETSTATE)
+  tbSetButtonInfo,             // lparam=toolbar_button_info_t* (TB_SETBUTTONINFO): applies the fields named by mask
+  tbGetButtonInfo,             // lparam=toolbar_button_info_t* (TB_GETBUTTONINFO): fills the fields named by mask
+  tbModifyStyle,               // wparam=TOOLBAR_STYLE_* mask, lparam=(void *)(uintptr_t)new bit values; other bits keep (TB_SETEXTENDEDSTYLE)
+  tbGetIdealSize,              // lparam=isize16_t* receives the band size that fits every item (TB_GETMAXSIZE)
+  tbGetItemRect,               // wparam=item ident, lparam=irect16_t* in toolbar-band coordinates (TB_GETITEMRECT)
 };
 // Dock host notifications.
 enum {
@@ -413,18 +418,14 @@ enum {
 // Item flags also take CONTROL_SIZE_LARGE: a button CONTROL_LARGE_GROWTH bigger, centred on its row.
 #define TOOLBAR_STYLE_GRIP           (1u << 1) // draggable grip on a floating toolbar
 #define TOOLBAR_STYLE_COMPACT        (1u << 2) // menu-bar background, icon-only items
+#define TOOLBAR_STYLE_WRAPABLE       (1u << 7) // vertical toolbar flows into a new column at the window height (≈ TBSTYLE_WRAPABLE)
 #define TOOLBAR_STYLE_PLASTIC        (1u << 6) // procedural coloured body with recessed SVG glyph
-#define TOOLBAR_COMPACT_PADDING      2
-#define TOOLBAR_COMPACT_SPACING      6
 #if defined(__APPLE__) && TARGET_OS_IOS
 #define TOOLBAR_COMPACT_ICON_SIZE   20
 #else
 #define TOOLBAR_COMPACT_ICON_SIZE   16
 #endif
-#define TOOLBAR_GRIP_HEIGHT          12
-#define TOOLBAR_GRIP_WIDTH           12
 #define TOOLBAR_STYLE_SHOW_LABELS    (1u << 0) // WinAPI-style text below button icons
-#define DROPDOWN_ARROW_W             12          // pixel width of the dropdown arrow zone in TOOLBAR_ITEM_DROPDOWN
 
 typedef enum {
   TOOLBAR_HORIZONTAL = 0,
@@ -458,6 +459,25 @@ typedef struct {
   const char         *checked_icon; // shown instead of icon while TBSTATE_CHECKED
   uint32_t            state;  // initial TBSTATE_* bits; live state is read back through tbGetState
 } toolbar_item_t;
+
+// Per-item extras addressed by `ident`; `mask` selects the valid fields (≈ TBBUTTONINFO).
+#define TBIF_IMAGE        (1u << 0) // icon
+#define TBIF_STYLE        (1u << 1)
+#define TBIF_STATE        (1u << 2)
+#define TBIF_TOOLTIP      (1u << 3)
+#define TBIF_CHECKEDIMAGE (1u << 4) // checked_icon
+#define TBIF_COLOR        (1u << 5)
+#define TBIF_SIZE         (1u << 6) // w
+typedef struct {
+  uint32_t    mask;
+  int         ident;
+  const char *icon;          // copied on set (NULL or "" clears); borrowed on get
+  uint32_t    style, state;
+  const char *tooltip;       // copied on set; borrowed on get
+  const char *checked_icon;  // copied on set; borrowed on get
+  uint32_t    color;
+  int         w;
+} toolbar_button_info_t;
 
 // Tab control messages and notifications (WinAPI TCM_*/TCN_* analogues).
 enum {

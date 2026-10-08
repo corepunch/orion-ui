@@ -177,14 +177,14 @@ static void test_dock_menu(void) {
   send_message(menu, kMenuBarMessageSetMenus, ARRAY_LEN(menus), menus);
   ASSERT_TRUE(dock_window(menu, DOCK_TOP, DOCK_ALL_EDGES, DOCK_MENU, 0, 0));
   ASSERT_TRUE(dock_float(menu, R(100, 100, 120, 100)));
-  ASSERT_EQUAL(menu->frame.h, TOOLBAR_GRIP_HEIGHT + 3 * get_theme()->menubar_height);
+  ASSERT_EQUAL(menu->frame.h, get_theme()->toolbar_grip_size + 3 * get_theme()->menubar_height);
   int x = window_screen_x(menu) + menu->frame.w / 2;
-  int y = window_screen_y(menu) + TOOLBAR_GRIP_HEIGHT + get_theme()->menubar_height + 4;
+  int y = window_screen_y(menu) + get_theme()->toolbar_grip_size + get_theme()->menubar_height + 4;
   dock_mouse(kEventLeftButtonDown, x, y);
   window_t *popup = g_ui_runtime.captured;
   ASSERT_NOT_NULL(popup);
   ASSERT_EQUAL(popup->frame.x, window_screen_x(menu) + menu->frame.w);
-  ASSERT_EQUAL(popup->frame.y, window_screen_y(menu) + TOOLBAR_GRIP_HEIGHT + get_theme()->menubar_height);
+  ASSERT_EQUAL(popup->frame.y, window_screen_y(menu) + get_theme()->toolbar_grip_size + get_theme()->menubar_height);
   ASSERT_TRUE(dock_set_side(menu, DOCK_TOP));
   ASSERT_FALSE(is_window(popup));
   ASSERT_NULL(g_ui_runtime.captured);
