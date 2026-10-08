@@ -94,6 +94,7 @@ static inline bool gc_tile_needs_attention(const git_summary_t *t) {
 #define ID_DB_TAGS TABLE_TAGS
 #define ID_DB_STASH TABLE_STASH
 #define ID_DB_REMOTES TABLE_REMOTES
+#define ID_DB_WORKTREES TABLE_WORKTREES
 #define ID_DB_BRANCHES_ID 0
 #define ID_DB_BRANCHES_NAME 1
 #define ID_DB_BRANCHES_HASH 2
@@ -125,6 +126,15 @@ static inline bool gc_tile_needs_attention(const git_summary_t *t) {
 #define ID_DB_REMOTES_ID 0
 #define ID_DB_REMOTES_NAME 1
 #define ID_DB_REMOTES_URL 2
+#define ID_DB_WORKTREES_ID 0
+#define ID_DB_WORKTREES_NAME 1
+#define ID_DB_WORKTREES_PATH 2
+#define ID_DB_WORKTREES_BRANCH 3
+#define ID_DB_WORKTREES_STATUS 4
+#define ID_DB_WORKTREES_IS_CURRENT 5
+#define ID_DB_WORKTREES_IS_LINKED 6
+#define ID_DB_WORKTREES_IS_DETACHED 7
+#define ID_DB_WORKTREES_IS_PRUNABLE 8
 
 enum {
   GC_COL_BRANCH_ID, GC_COL_BRANCH_NAME, GC_COL_BRANCH_HASH,
@@ -142,6 +152,9 @@ enum {
   GC_COL_PULL_ID, GC_COL_PULL_NUMBER, GC_COL_PULL_TITLE,
   GC_COL_PULL_STATE, GC_COL_PULL_AUTHOR, GC_COL_PULL_BASE,
   GC_COL_BRANCH_ACTIVITY, GC_COL_BRANCH_KIND,
+  GC_COL_WORKTREE_ID, GC_COL_WORKTREE_NAME, GC_COL_WORKTREE_PATH, GC_COL_WORKTREE_BRANCH,
+  GC_COL_WORKTREE_STATUS, GC_COL_WORKTREE_IS_CURRENT, GC_COL_WORKTREE_IS_LINKED,
+  GC_COL_WORKTREE_IS_DETACHED, GC_COL_WORKTREE_IS_PRUNABLE,
 };
 
 #define gc_main_window_form gitclient_main_window_form
@@ -216,10 +229,9 @@ typedef struct {
   int workspace_count;
   char workspace_file[512];
   bool workspace_dirty;
-  window_t *worktree_combo;
-  char worktree_paths[GC_MAX_WORKTREES][512];
+  window_t *worktrees_win;
   int worktree_count;
-  bool worktree_filling;
+  bool worktree_syncing;
   bool diff_cache_valid;
   int last_diff_commit;
   int last_diff_file;
@@ -312,7 +324,6 @@ result_t gc_main_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
 void gc_open_repo(const char *path);
 void gc_add_repo(const char *path);
 void gc_update_title(void);
-void gc_sync_worktree_bar(void);
 bool gc_handle_open_file(const char *path);
 int  gc_fill_worktree_combo(window_t *combo, const char *select_path, char (*paths)[512], int max);
 void gc_refresh_all(void);

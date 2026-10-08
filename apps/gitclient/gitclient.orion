@@ -191,6 +191,17 @@
                 <field name="name" type="string" length="256"/>
                 <field name="url" type="string" length="512"/>
             </table>
+            <table name="worktrees">
+                <field name="id" type="integer" key="YES"/>
+                <field name="name" type="string" length="256"/>
+                <field name="path" type="string" length="512"/>
+                <field name="branch" type="string" length="96"/>
+                <field name="status" type="string" length="16"/>
+                <field name="is_current" type="bool"/>
+                <field name="is_linked" type="bool"/>
+                <field name="is_detached" type="bool"/>
+                <field name="is_prunable" type="bool"/>
+            </table>
         </database>
         <database name="github_db" class="github_database_proc">
             <table name="issues">
@@ -218,10 +229,6 @@
 
     <forms>
         <form name="main_window" title="Git Client" width="960" height="640" role="host" flags="statusbar" spacing="0">
-            <StackView name="worktree_bar" orientation="horizontal" spacing="6" padding="8 4 8 4">
-                <Label name="worktree_label" text="Worktree" />
-                <ComboBox name="worktree" flags="flexspace" />
-            </StackView>
             <TabView name="views" flags="notitle,nofill,flexspace">
                 <StackView name="overview_tab" text="Overview" flags="notitle,nofill,flexspace" />
                 <StackView name="changes_tab" text="Changes" flags="notitle,nofill,flexspace" />
@@ -264,14 +271,22 @@
                         <Column field="kind" title="" width="64" />
                         <Column field="activity" title="Activity" width="72" />
                     </TableView>
-                    <TableView name="tags" source="db.tags" context-menu="tags" flags="notitle,nofill,vscroll">
-                        <Column field="name" title="Tag" width="0" />
-                        <Column field="date" title="Date" width="80" />
-                    </TableView>
-                    <TableView name="stash_list" source="db.stash" context-menu="stash" flags="notitle,nofill,vscroll">
-                        <Column field="message" title="Stash" width="0" />
-                        <Column field="branch" title="Branch" width="80" />
-                    </TableView>
+                    <SplitView name="tags_worktrees_split" flags="flexspace">
+                        <SplitView name="tags_stash_split" orientation="vertical" flags="flexspace">
+                            <TableView name="tags" source="db.tags" context-menu="tags" flags="notitle,nofill,vscroll">
+                                <Column field="name" title="Tag" width="0" />
+                                <Column field="date" title="Date" width="80" />
+                            </TableView>
+                            <TableView name="stash_list" source="db.stash" context-menu="stash" flags="notitle,nofill,vscroll">
+                                <Column field="message" title="Stash" width="0" />
+                                <Column field="branch" title="Branch" width="80" />
+                            </TableView>
+                        </SplitView>
+                        <TableView name="worktrees" source="db.worktrees" master="none" flags="notitle,nofill,vscroll">
+                            <Column field="name" title="Worktree" width="0" />
+                            <Column field="status" title="State" width="64" />
+                        </TableView>
+                    </SplitView>
                 </SplitView>
                 <SplitView name="history_content_split" flags="flexspace">
                     <SplitView name="log_files_split" orientation="vertical" flags="flexspace">

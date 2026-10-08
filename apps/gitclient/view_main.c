@@ -103,7 +103,6 @@ void gc_update_title(void) {
 int gc_fill_worktree_combo(window_t *combo, const char *select_path, char (*paths)[512], int max) {
   gc_state_t *gc = g_gc;
   if (!combo || !gc || !paths || max <= 0) return 0;
-  gc->worktree_filling = true;
   send_message(combo, cbClear, 0, NULL);
   git_worktree_t wts[GC_MAX_WORKTREES];
   int listed = gc->repo ? git_worktree_list(git_repo_path(gc->repo), wts, GC_MAX_WORKTREES) : 0;
@@ -132,15 +131,7 @@ int gc_fill_worktree_combo(window_t *combo, const char *select_path, char (*path
   if (!shown) send_message(combo, cbAddString, 0, (void *)(gc->repo ? "No worktrees" : "No repository"));
   else send_message(combo, cbSetCurrentSelection, (uint32_t)sel, NULL);
   invalidate_window(combo);
-  gc->worktree_filling = false;
   return shown;
-}
-
-void gc_sync_worktree_bar(void) {
-  gc_state_t *gc = g_gc;
-  if (!gc || !gc->worktree_combo) return;
-  const char *cur = gc->repo ? git_repo_path(gc->repo) : NULL;
-  gc->worktree_count = gc_fill_worktree_combo(gc->worktree_combo, cur, gc->worktree_paths, GC_MAX_WORKTREES);
 }
 
 void gc_open_repo(const char *path) {
@@ -154,7 +145,7 @@ void gc_open_repo(const char *path) {
   if (gc->repo) {
     char cur[512];
     if (git_path_absolute(git_repo_path(gc->repo), cur, sizeof(cur)) && !strcmp(cur, checkout)) {
-      gc_sync_worktree_bar();
+      gc_refresh_all();
       return;
     }
   }
@@ -168,7 +159,6 @@ void gc_open_repo(const char *path) {
   strncpy(gc->repo_path, checkout, sizeof(gc->repo_path) - 1);
   gc->repo_path[sizeof(gc->repo_path) - 1] = 0;
   gc_workspace_add(checkout);
-  gc_sync_worktree_bar();
   gc_update_title();
   gc_refresh_all();
 }
@@ -215,8 +205,7 @@ void gc_refresh_all(void) {
     send_message(gc->branches_win, tvRefresh, 0, NULL);
   if (gc->tags_win)
     send_message(gc->tags_win, tvRefresh, 0, NULL);
-  if (gc->stash_win)
-    send_message(gc->stash_win, tvRefresh, 0, NULL);
+  page_history_refresh_sidebar();
 
   if (gc->branches_win) {
     result_node_t *rows = (result_node_t *)send_db_message(
@@ -309,10 +298,6 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
       gc->main_win = win;
 
       gc->tabs_win = get_window_item(win, ID_MAIN_WINDOW_VIEWS);
-      gc->worktree_combo = get_window_item(win, ID_MAIN_WINDOW_WORKTREE);
-      window_t *worktree_bar = get_window_item(win, ID_MAIN_WINDOW_WORKTREE_BAR);
-      if (worktree_bar)
-        for (window_t *c = worktree_bar->children; c; c = c->next) c->layout.v_align = LAYOUT_ALIGN_CENTER;
 
       window_t *overview_tab = get_window_item(win, ID_MAIN_WINDOW_OVERVIEW_TAB);
       window_t *changes_tab = get_window_item(win, ID_MAIN_WINDOW_CHANGES_TAB);
@@ -368,14 +353,6 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
       }
 
       if (gc_overview_handle_command(wparam, lparam)) return true;
-
-      if (code == cbSelectionChange && gc->worktree_combo && (window_t *)lparam == gc->worktree_combo) {
-        if (gc->worktree_filling) return true;
-        int sel = (int)send_message(gc->worktree_combo, cbGetCurrentSelection, 0, NULL);
-        if (sel < 0 || sel >= gc->worktree_count) return true;
-        gc_open_repo(gc->worktree_paths[sel]);
-        return true;
-      }
 
       if (code == tcnSelChange && (window_t *)lparam == gc->tabs_win) {
         int tab = (int)send_message(gc->tabs_win, tcGetSelection, 0, NULL);

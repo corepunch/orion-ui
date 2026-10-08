@@ -3,7 +3,7 @@
 // Unlike socialfeed, there is NO persistence. The database is a read-only cache
 // of git state, cleared and repopulated on each gc_refresh_all().
 //
-// Serves the History tab: branches, commits, history files, tags, stash, remotes.
+// Serves the History tab: branches, commits, history files, tags, stash, remotes, worktrees.
 
 #include "gitclient.h"
 #include <platform/platform.h>
@@ -70,6 +70,18 @@ static const db_field_schema_t tags_schema_fields[] = {
   { "date", DB_TYPE_STRING, 20, false, NULL, NULL },
 };
 
+static const db_field_schema_t worktrees_schema_fields[] = {
+  { "id", DB_TYPE_INT, 0, true, NULL, NULL },
+  { "name", DB_TYPE_STRING, 256, false, NULL, NULL },
+  { "path", DB_TYPE_STRING, 512, false, NULL, NULL },
+  { "branch", DB_TYPE_STRING, 96, false, NULL, NULL },
+  { "status", DB_TYPE_STRING, 16, false, NULL, NULL },
+  { "is_current", DB_TYPE_BOOL, 0, false, NULL, NULL },
+  { "is_linked", DB_TYPE_BOOL, 0, false, NULL, NULL },
+  { "is_detached", DB_TYPE_BOOL, 0, false, NULL, NULL },
+  { "is_prunable", DB_TYPE_BOOL, 0, false, NULL, NULL },
+};
+
 static db_table_schema_t gc_database_tables[] = {
   { TABLE_BRANCHES, "branches", NULL, branches_schema_fields, 7, NULL, 0 },
   { TABLE_COMMITS,  "commits",  NULL, commits_schema_fields,  6, NULL, 0 },
@@ -78,6 +90,7 @@ static db_table_schema_t gc_database_tables[] = {
   { TABLE_TAGS,     "tags",     NULL, tags_schema_fields,     4, NULL, 0 },
   { TABLE_STASH,    "stash",    NULL, stash_schema_fields,    4, NULL, 0 },
   { TABLE_REMOTES,  "remotes",  NULL, remotes_schema_fields,  3, NULL, 0 },
+  { TABLE_WORKTREES, "worktrees", NULL, worktrees_schema_fields, 9, NULL, 0 },
 };
 
 static db_schema_def_t gitclient_database_schema = {
@@ -156,6 +169,7 @@ GC_OBJECT_PROC(diff_object_proc, diff_fields, GC_COL_DIFF_ID)
 GC_OBJECT_PROC(tag_object_proc, tags_fields, GC_COL_TAG_ID)
 GC_OBJECT_PROC(stash_object_proc, stash_fields, GC_COL_STASH_ID)
 GC_OBJECT_PROC(remote_object_proc, remotes_fields, GC_COL_REMOTE_ID)
+GC_OBJECT_PROC(worktree_object_proc, worktrees_fields, GC_COL_WORKTREE_ID)
 
 static const db_field_msg_binding_t branch_field_bindings[] = {
   { "id", GC_COL_BRANCH_ID }, { "name", GC_COL_BRANCH_NAME },
@@ -190,6 +204,13 @@ static const db_field_msg_binding_t stash_field_bindings[] = {
 static const db_field_msg_binding_t remote_field_bindings[] = {
   { "id", GC_COL_REMOTE_ID }, { "name", GC_COL_REMOTE_NAME },
   { "url", GC_COL_REMOTE_URL },
+};
+static const db_field_msg_binding_t worktree_field_bindings[] = {
+  { "id", GC_COL_WORKTREE_ID }, { "name", GC_COL_WORKTREE_NAME },
+  { "path", GC_COL_WORKTREE_PATH }, { "branch", GC_COL_WORKTREE_BRANCH },
+  { "status", GC_COL_WORKTREE_STATUS }, { "is_current", GC_COL_WORKTREE_IS_CURRENT },
+  { "is_linked", GC_COL_WORKTREE_IS_LINKED }, { "is_detached", GC_COL_WORKTREE_IS_DETACHED },
+  { "is_prunable", GC_COL_WORKTREE_IS_PRUNABLE },
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -233,6 +254,9 @@ typedef struct {
   int remote_count;
   int remote_capacity;
   int next_remote_id;
+
+  db_worktree_t worktrees[GC_MAX_WORKTREES];
+  int worktree_count;
 } gc_db_context_t;
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -376,6 +400,8 @@ lresult_t gitclient_db(database_t *db, uint32_t msg, uint32_t wparam, void *lpar
       clear_table((void **)&ctx->tags,     &ctx->tag_count,     &ctx->tag_capacity,     &ctx->next_tag_id);
       clear_table((void **)&ctx->stash,    &ctx->stash_count,   &ctx->stash_capacity,   &ctx->next_stash_id);
       clear_table((void **)&ctx->remotes,  &ctx->remote_count,  &ctx->remote_capacity,  &ctx->next_remote_id);
+      memset(ctx->worktrees, 0, sizeof(ctx->worktrees));
+      ctx->worktree_count = 0;
 
       // Branches
       int branch_count = 0;
@@ -465,6 +491,25 @@ lresult_t gitclient_db(database_t *db, uint32_t msg, uint32_t wparam, void *lpar
         }
       }
 
+      git_worktree_t raw_worktrees[GC_MAX_WORKTREES];
+      int worktree_count = git_worktree_list(git_repo_path(repo), raw_worktrees, ARRAY_LEN(raw_worktrees));
+      char current_path[512];
+      if (!git_path_absolute(git_repo_path(repo), current_path, sizeof(current_path)))
+        snprintf(current_path, sizeof(current_path), "%s", git_repo_path(repo));
+      for (int i = 0; i < worktree_count; i++) {
+        const git_worktree_t *raw = &raw_worktrees[i];
+        if (raw->bare) continue;
+        db_worktree_t *rec = &ctx->worktrees[ctx->worktree_count++];
+        rec->id = ctx->worktree_count;
+        git_worktree_label(raw, rec->name, sizeof(rec->name));
+        if (!git_path_absolute(raw->path, rec->path, sizeof(rec->path)))
+          snprintf(rec->path, sizeof(rec->path), "%s", raw->path);
+        snprintf(rec->branch, sizeof(rec->branch), "%s", raw->branch);
+        rec->is_current = !strcmp(rec->path, current_path);
+        rec->is_linked = raw->linked; rec->is_detached = raw->detached; rec->is_prunable = raw->prunable;
+        snprintf(rec->status, sizeof(rec->status), "%s", rec->is_current ? "Current" : rec->is_prunable ? "Prunable" :
+                 rec->is_detached ? "Detached" : rec->is_linked ? "Linked" : "Main");
+      }
       return 1;
     }
 
@@ -582,6 +627,11 @@ lresult_t gitclient_db(database_t *db, uint32_t msg, uint32_t wparam, void *lpar
                       &ctx->remote_capacity, &ctx->next_remote_id);
           return 1;
         }
+        if (table_id == ID_DB_WORKTREES) {
+          memset(ctx->worktrees, 0, sizeof(ctx->worktrees));
+          ctx->worktree_count = 0;
+          return 1;
+        }
       }
       return 0;
     }
@@ -685,6 +735,8 @@ lresult_t gitclient_db(database_t *db, uint32_t msg, uint32_t wparam, void *lpar
         return fetch_all(ctx->stash, ctx->stash_count, sizeof(db_stash_t));
       if (table_id == ID_DB_REMOTES)
         return fetch_all(ctx->remotes, ctx->remote_count, sizeof(db_remote_t));
+      if (table_id == ID_DB_WORKTREES)
+        return fetch_all(ctx->worktrees, ctx->worktree_count, sizeof(db_worktree_t));
       return (lresult_t)NULL;
     }
 
@@ -736,6 +788,14 @@ lresult_t gitclient_db(database_t *db, uint32_t msg, uint32_t wparam, void *lpar
                                         sizeof(db_remote_t), (int)value);
         return (lresult_t)NULL;
       }
+      if (table_id == ID_DB_WORKTREES) {
+        if (search_field == ID_DB_WORKTREES_ID)
+          return (lresult_t)find_by_id(ctx->worktrees, ctx->worktree_count, sizeof(db_worktree_t), (int)value);
+        if (search_field == ID_DB_WORKTREES_PATH)
+          for (int i = 0; i < ctx->worktree_count; i++)
+            if (value && !strcmp(ctx->worktrees[i].path, (const char *)value)) return (lresult_t)&ctx->worktrees[i];
+        return (lresult_t)NULL;
+      }
       return (lresult_t)NULL;
     }
 
@@ -751,6 +811,7 @@ lresult_t gitclient_db(database_t *db, uint32_t msg, uint32_t wparam, void *lpar
         case ID_DB_TAGS:     return (lresult_t)tag_object_proc;
         case ID_DB_STASH:    return (lresult_t)stash_object_proc;
         case ID_DB_REMOTES:  return (lresult_t)remote_object_proc;
+        case ID_DB_WORKTREES: return (lresult_t)worktree_object_proc;
         default:             return (lresult_t)NULL;
       }
 
@@ -778,6 +839,9 @@ lresult_t gitclient_db(database_t *db, uint32_t msg, uint32_t wparam, void *lpar
         case ID_DB_REMOTES:
           if (count_out) *count_out = ARRAY_LEN(remote_field_bindings);
           return (lresult_t)remote_field_bindings;
+        case ID_DB_WORKTREES:
+          if (count_out) *count_out = ARRAY_LEN(worktree_field_bindings);
+          return (lresult_t)worktree_field_bindings;
         default:
           if (count_out) *count_out = 0;
           return (lresult_t)NULL;
@@ -814,6 +878,9 @@ lresult_t gitclient_db(database_t *db, uint32_t msg, uint32_t wparam, void *lpar
         case ID_DB_REMOTES:
           if (count_out) *count_out = ARRAY_LEN(remotes_fields);
           return (lresult_t)remotes_fields;
+        case ID_DB_WORKTREES:
+          if (count_out) *count_out = ARRAY_LEN(worktrees_fields);
+          return (lresult_t)worktrees_fields;
         default:
           if (count_out) *count_out = 0;
           return (lresult_t)NULL;

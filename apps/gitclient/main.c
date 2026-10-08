@@ -75,7 +75,7 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   }
 
   // Register database classes and create databases.
-  // history_db  — branches, commits, history files, tags, stash, remotes (default for form).
+  // history_db  — branches, commits, history files, tags, stash, remotes, worktrees (default for form).
   // changes_db  — working-tree files from git status (wired in page_changes_proc evCreate).
   // github_db   — issues and pull requests from the gh CLI (wired in page_github_proc evCreate).
   DB_CLASS(gitclient_db);
