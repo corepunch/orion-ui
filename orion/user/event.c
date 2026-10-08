@@ -1202,6 +1202,7 @@ int get_message(ui_event_t *evt) {
       return 0;
     }
   } else {
+    ui_rc_poll(); // remote-control queries are serviced once per loop pass, wherever the loop runs
     r = axGetMessage(evt);
     if (!r) return 0;
     s_draining_queue = true;

@@ -303,14 +303,6 @@ static uint32_t run_dialog_loop(window_t *dlg, window_t *parent) {
   }
   show_window(dlg, true);
   while (g_ui_runtime.running && is_window(dlg)) {
-    // Modal dialogs run their own message loop, so remote-control screenshot
-    // requests and read queries must be polled here too — otherwise they
-    // stall until the dialog closes (the outer GEM_STANDALONE_MAIN loop
-    // never runs meanwhile).
-    char rc_screenshot_path[1024];
-    if (axRCPopScreenshot(rc_screenshot_path, sizeof(rc_screenshot_path)))
-      ui_request_screenshot(rc_screenshot_path, 90, false);
-    axRCProcessQuery();
     while (get_message(&event)) {
       dispatch_message(&event);
     }

@@ -684,6 +684,7 @@ void request_composite(void);
 // Window query functions
 window_t *get_window_item(window_t const *win, uint32_t id);
 bool is_window(window_t *win);
+void ui_rc_poll(void); // service pending remote-control screenshot requests and queries
 bool window_in_drag_area(window_t const *win, int sy);
 bool window_in_drag_area_at(window_t const *win, int sx, int sy);
 window_t *get_root_window(window_t *window);
