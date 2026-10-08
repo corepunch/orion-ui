@@ -89,7 +89,7 @@ typedef struct {
 typedef struct {
   sprite_program_t copy_sprite, present_sprite, indexed_sprite;
   GLuint indexed_palette;
-  sprite_program_t gradient_sprite, gradient_card_sprite, plastic_sprite, rounded_rect_sprite;
+  sprite_program_t gradient_sprite, plastic_sprite, rounded_rect_sprite;
   R_Mesh mesh;
   fmat16_t projection;
 } renderer_system_t;
@@ -243,7 +243,7 @@ int get_sprite_vao(void) {
 
 static void update_sprite_projection_uniforms(const fmat16_t *projection) {
   sprite_program_t *programs[] = {&g_ref.copy_sprite, &g_ref.present_sprite, &g_ref.gradient_sprite,
-    &g_ref.gradient_card_sprite, &g_ref.plastic_sprite, &g_ref.rounded_rect_sprite, &g_ref.indexed_sprite, &g_vga.program};
+    &g_ref.plastic_sprite, &g_ref.rounded_rect_sprite, &g_ref.indexed_sprite, &g_vga.program};
   for (size_t i = 0; i < ARRAY_LEN(programs); i++)
     memcpy(programs[i]->state.projection, fmat16_data(projection), sizeof(programs[i]->state.projection));
 }
@@ -295,7 +295,6 @@ bool ui_init_prog(void) {
     {offsetof(renderer_system_t, copy_sprite), "sprite_copy.frag.glsl"},
     {offsetof(renderer_system_t, present_sprite), "sprite_present.frag.glsl"},
     {offsetof(renderer_system_t, gradient_sprite), "sprite_gradient.frag.glsl"},
-    {offsetof(renderer_system_t, gradient_card_sprite), "sprite_gradient_card.frag.glsl"},
     {offsetof(renderer_system_t, plastic_sprite), "sprite_plastic.frag.glsl"},
     {offsetof(renderer_system_t, rounded_rect_sprite), "sprite_rounded_rect.frag.glsl"},
   };
@@ -370,7 +369,6 @@ void ui_shutdown_prog(void) {
   delete_sprite_program(&g_ref.indexed_sprite);
   R_DeleteTexture(g_ref.indexed_palette);
   delete_sprite_program(&g_ref.gradient_sprite);
-  delete_sprite_program(&g_ref.gradient_card_sprite);
   delete_sprite_program(&g_ref.plastic_sprite);
   delete_sprite_program(&g_ref.rounded_rect_sprite);
   delete_sprite_program(&g_vga.program);
@@ -551,26 +549,6 @@ void draw_sprite_region(int tex, irect16_t r,
     glDisable(GL_BLEND);
 }
 
-void render_gradient_card(irect16_t r, int pixel_w, int pixel_h, float radius,
-                          float ring_width, float highlight_width, ctrl_state_t state, uint32_t color) {
-  sprite_program_t *program = &g_ref.gradient_card_sprite;
-  if (!program->shader.progid || pixel_w <= 0 || pixel_h <= 0) return;
-
-  sprite_vec2(program->state.offset, r.x, r.y);
-  sprite_vec2(program->state.scale, r.w, r.h);
-  sprite_vec2(program->state.uv_offset, 0, 0);
-  sprite_vec2(program->state.uv_scale, 1, 1);
-  sprite_vec4(program->state.tint, (color & 255) / 255.0f, ((color >> 8) & 255) / 255.0f, ((color >> 16) & 255) / 255.0f, (color >> 24) / 255.0f);
-  sprite_vec4(program->state.params0, pixel_w, pixel_h, MIN(radius, MIN(pixel_w, pixel_h) * 0.5f), ring_width);
-  sprite_vec4(program->state.params1, highlight_width, !!(state & CTRL_SELECTED), !!(state & CTRL_HOVER), 0);
-  R_BlendPremultiplied();
-  g_ref.mesh.draw_mode = GL_TRIANGLE_FAN;
-  if (!gs_apply(&program->shader, &program->state)) return;
-  R_MeshDraw(&g_ref.mesh);
-  glDisable(GL_BLEND);
-  glEnable(GL_DEPTH_TEST);
-}
-
 void render_plastic_surface(irect16_t r, float radius, float bevel, float shadow,
                             ctrl_state_t state, uint32_t color, uint32_t shadow_color,
                             uint32_t icon_tex, const frect_t *icon_uv, ipoint16_t icon_size) {
@@ -707,7 +685,7 @@ static void draw_rect_program_common(int tex, int x, int y, int w, int h,
                                      bool premultiplied_output) {
   if (!g_vga.program.shader.progid || !program) return;
   sprite_program_t *builtins[] = {&g_ref.copy_sprite, &g_ref.present_sprite, &g_ref.indexed_sprite,
-    &g_ref.gradient_sprite, &g_ref.gradient_card_sprite, &g_ref.plastic_sprite, &g_ref.rounded_rect_sprite};
+    &g_ref.gradient_sprite, &g_ref.plastic_sprite, &g_ref.rounded_rect_sprite};
   for (size_t i = 0; i < ARRAY_LEN(builtins); i++)
     if (builtins[i]->shader.progid == program) gs_invalidate(&builtins[i]->shader);
   glUseProgram(program);

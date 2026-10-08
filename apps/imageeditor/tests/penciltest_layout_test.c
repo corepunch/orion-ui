@@ -83,7 +83,7 @@ static void test_pencil_canvas_reserves_docked_timeline(void) {
   ASSERT_EQUAL(override.y, area.y);
   ASSERT_EQUAL(override.w, area.w);
   ASSERT_EQUAL(override.h, area.h);
-  ASSERT_TRUE(doc->win->maximized);
+  ASSERT_TRUE(window_is_maximized(doc->win));
   ASSERT_EQUAL(doc->win->frame.x, area.x);
   ASSERT_EQUAL(doc->win->frame.y, area.y);
   ASSERT_EQUAL(doc->win->frame.w, area.w);

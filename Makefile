@@ -198,12 +198,9 @@ $(BIN_DIR)/%$(EXE_EXT): tools/%.c $(CORE_LIBS) | $(BIN_DIR)
 
 # Self-contained tools that don't need the core libraries.
 $(ORIONC_BIN): TOOL_LINK = $(LDFLAGS) $(LIBS)
-$(BIN_DIR)/svg_atlas_render$(EXE_EXT): TOOL_LINK = $(LDFLAGS) -lm
-$(ORIONC_BIN) $(BIN_DIR)/svg_atlas_render$(EXE_EXT): $(BIN_DIR)/%$(EXE_EXT): tools/%.c | $(BIN_DIR)
+$(ORIONC_BIN): $(BIN_DIR)/%$(EXE_EXT): tools/%.c | $(BIN_DIR)
 	@echo "TOOL    $@"
 	@$(CC) $(TOOLS_CFLAGS) -I. -Itools -o $@ $< $(TOOL_LINK)
-
-$(BIN_DIR)/svg_atlas_render$(EXE_EXT): tools/nanosvg.h tools/nanosvgrast.h orion/user/stb_image_write.h
 
 $(GENERATED_DIR)/$(APPS)/%.h: $(APPS)/%.orion $(ORIONC_BIN) | $(GENERATED_DIR)
 	@mkdir -p $(dir $@)

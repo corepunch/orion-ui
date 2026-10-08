@@ -13,7 +13,6 @@
 #include <orion/user/theme.h>
 #include <orion/user/accel.h>
 #include <orion/user/image.h>
-#include <orion/user/image_background.h>
 #include <orion/user/color.h>
 #include <orion/user/database.h>
 

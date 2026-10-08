@@ -700,7 +700,7 @@ void handle_menu_command(uint16_t id) {
     case ID_VIEW_WINDOW_MODE:
       if (g_app->active_doc) {
         window_t *host = g_app->active_doc->win;
-        if (host->maximized) restore_window(host);
+        if (window_is_maximized(host)) restore_window(host);
         else maximize_window(host);
       }
       break;

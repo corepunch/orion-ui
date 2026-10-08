@@ -26,10 +26,6 @@ static inline uint32_t color_with_alpha(uint32_t color, uint8_t alpha) {
 // the card and the edge together. CTRL_SELECTED draws a ring in the accent edge's colour (theme accent when there is no edge) in the theme's card_ring_width margin,
 // which is reserved inside `r` for every card so selecting never shifts content.
 void draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color);
-// Tinted vertical gradient, top highlight and selection ring in one themed silhouette.
-void draw_gradient_card(irect16_t r, ctrl_state_t state, uint32_t color);
-void render_gradient_card(irect16_t r, int pixel_w, int pixel_h, float radius,
-                          float ring_width, float highlight_width, ctrl_state_t state, uint32_t color);
 // Single shader pass; shadow is reserved inside r, so controls never paint outside their bounds.
 // control_size (CONTROL_SIZE_*) picks the glyph size; CONTROL_SIZE_LARGE renders it CONTROL_LARGE_GROWTH bigger.
 void draw_plastic_button(irect16_t r, ctrl_state_t state, uint32_t color, const char *icon, uint32_t control_size);
@@ -97,6 +93,8 @@ void set_viewport(irect16_t frame);
 void set_projection(int x, int y, int w, int h);
 void set_clip_rect(window_t const *, irect16_t r);
 void set_viewport_for_fbo(window_t *root);
+float ui_surface_scale(void);          // HiDPI scale (>= 1.0), shared by paint and composite
+int   ui_surface_px(int logical);      // logical length -> physical surface pixels
 void set_scissor_fbo(window_t const *root, irect16_t r);
 
 // Stencil management (internal use)

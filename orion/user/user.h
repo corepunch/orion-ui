@@ -14,7 +14,7 @@ typedef struct window_s window_t;
 struct menu_item_s;
 typedef struct irect16_s irect16_t;
 typedef struct database_s database_t;
-typedef uint32_t flags_t;
+typedef uint64_t flags_t;
 typedef intptr_t result_t;
 
 // Application instance handle (analogous to WinAPI HINSTANCE).
@@ -127,11 +127,8 @@ typedef struct toolbar_state_s {
   // Embedded control child windows (COMBOBOX / TEXTEDIT / SLIDER).
   // These are real window_t children with toolbar-band-relative frames.
   window_t       *children;
-  // Strip for icon rendering (set via tbSetStrip / tbLoadStrip)
+  // Strip for icon rendering (set via tbSetStrip; caller owns the texture)
   bitmap_strip_t  strip;
-  irect16_t     *strip_regions;
-  int            strip_region_count;
-  uint32_t        strip_tex;    // GL texture owned here; freed on toolbar destroy
   int             btn_size;     // 0 = TB_SPACING default; >0 = custom square size in px
   int             columns;      // vertical grid; 0/1 = single column
   toolbar_orientation_t orientation;
@@ -496,18 +493,13 @@ typedef struct {
 
 struct window_s {
   irect16_t frame;
-  irect16_t restore_frame;
-  irect16_t workspace;
-  uint32_t restore_decorations;
-  bool workspace_valid;
-  bool maximized;
-  bool maximizable; // app exposes a restore command when title bar is hidden
+  struct window_placement_s *placement; // lazily allocated on maximize (≈ WINDOWPLACEMENT)
   uint32_t id;
   uint64_t editor_id;    // optional design-time stable identity; 0 outside editors
   window_role_t role;
-  // Runtime style/state flags share one 32-bit word.
+  // Runtime style/state flags share one 64-bit word; bits 32+ hold extended window styles.
   // WINDOW_*/BUTTON_* use low bits; WINDOW_STATE_* uses high bits.
-  uint32_t flags;
+  flags_t flags;
   hinstance_t hinstance;  // owning app instance (0 = system/unowned)
   winproc_t proc;
   uint32_t value;
@@ -517,7 +509,6 @@ struct window_s {
   layout_t layout;
   void *userdata;
   void *userdata2;
-  struct image_background_s *image_background; // owned descriptor; borrowed atlas
   win_sb_t hscroll;   // built-in horizontal scrollbar state (WINDOW_HSCROLL)
   win_sb_t vscroll;   // built-in vertical scrollbar state (WINDOW_VSCROLL)
   window_view_t view; // Transforms this window's content; child frames remain in viewport space.
@@ -535,14 +526,19 @@ struct window_s {
   uint8_t toolbar_dock; // toolbar measurement/compact presentation hint; dock owns placement
   struct window_s *active_page; // selected page projected by a WINDOW_ROLE_HOST
   struct window_s *page_host; // WINDOW_ROLE_HOST currently projecting this page
-  uint32_t surface_fbo; // Offscreen render target for per-window composition.
-  uint32_t surface_tex; // Backing texture for the render target.
-  int surface_w, surface_h; // Render target size in physical pixels.
   const toolbar_item_t *page_toolbar_items; // declarative page contribution; not owned
   int page_toolbar_count;
   const struct menu_item_s *context_menu; // generated declarative menu; not owned
   int                       context_menu_count;
 };
+
+// Compositor-private per-root-window redirection surface (physical pixels).
+typedef struct { uint32_t fbo, tex; int w, h; } window_surface_t;
+window_surface_t *window_surface(const window_t *win);        // NULL when the window has none
+bool              window_has_surface(const window_t *win);
+window_surface_t *window_surface_ensure(window_t *win);
+void              window_surface_release(window_t *win);
+void              window_surface_adopt(window_t *win, uint32_t fbo, uint32_t tex, int w, int h);
 
 enum { WINDOW_PAINT_CONTENT = 0, WINDOW_PAINT_OVERLAY = 1 };
 void window_view_init(window_t *win, int width, int height, float pixel_ratio, bool free_pan);
@@ -563,11 +559,24 @@ ipoint16_t window_client_to_content(const window_t *win, ipoint16_t point);
 // Platform/router entry: client coordinates in, content coordinates delivered to the proc.
 result_t send_pointer_message(window_t *win, uint32_t msg, uint32_t point, void *lparam);
 
-static inline bool window_has_state(const window_t *win, uint32_t state_flag) {
+typedef struct window_placement_s {
+  irect16_t restore_frame;       // normal-state frame while maximized
+  flags_t   restore_decorations; // WINDOW_NOTITLE | WINDOW_NORESIZE bits to put back on restore
+} window_placement_t;
+
+static inline bool window_has_state(const window_t *win, flags_t state_flag) {
   return win && ((win->flags & state_flag) != 0u);
 }
 
-static inline void window_set_state(window_t *win, uint32_t state_flag, bool enabled) {
+static inline bool window_is_maximized(const window_t *win) {
+  return win && (win->flags & WINDOW_STATE_MAXIMIZED) != 0;
+}
+
+static inline irect16_t window_restore_frame(const window_t *win) {
+  return win->placement ? win->placement->restore_frame : win->frame;
+}
+
+static inline void window_set_state(window_t *win, flags_t state_flag, bool enabled) {
   if (!win) return;
   if (enabled)
     win->flags |= state_flag;
@@ -749,12 +758,12 @@ void reset_message_queue(void);
 // Dialog functions
 void end_dialog(window_t *win, uint32_t code);
 uint32_t show_dialog_ex(char const *title, int width, int height,
-                       window_t *parent, uint32_t flags,
+                       window_t *parent, flags_t flags,
                        winproc_t proc, void *param);
 uint32_t show_dialog(char const *title, int width, int height,
                      window_t *parent, winproc_t proc, void *param);
 uint32_t show_dialog_from_form_ex(form_def_t const *def, char const *title,
-                                  window_t *parent, uint32_t flags,
+                                  window_t *parent, flags_t flags,
                                   winproc_t proc, void *param);
 uint32_t show_dialog_from_form(form_def_t const *def, char const *title,
                                window_t *parent, winproc_t proc, void *param);

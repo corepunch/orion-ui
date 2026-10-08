@@ -196,8 +196,8 @@ void test_ie_document_windows_cascade(void) {
     ASSERT_NOT_NULL(d1);
     ASSERT_NOT_NULL(d2);
 
-    irect16_t a = d1->win->maximized ? d1->win->restore_frame : d1->win->frame;
-    irect16_t b = d2->win->maximized ? d2->win->restore_frame : d2->win->frame;
+    irect16_t a = window_is_maximized(d1->win) ? window_restore_frame(d1->win) : d1->win->frame;
+    irect16_t b = window_is_maximized(d2->win) ? window_restore_frame(d2->win) : d2->win->frame;
     ASSERT_EQUAL(b.x, a.x + DEFAULT_WINDOW_CASCADE_X);
     ASSERT_EQUAL(b.y, a.y + DEFAULT_WINDOW_CASCADE_Y);
 
@@ -215,8 +215,8 @@ void test_ie_large_document_windows_cascade(void) {
     ASSERT_NOT_NULL(d1);
     ASSERT_NOT_NULL(d2);
 
-    irect16_t a = d1->win->maximized ? d1->win->restore_frame : d1->win->frame;
-    irect16_t b = d2->win->maximized ? d2->win->restore_frame : d2->win->frame;
+    irect16_t a = window_is_maximized(d1->win) ? window_restore_frame(d1->win) : d1->win->frame;
+    irect16_t b = window_is_maximized(d2->win) ? window_restore_frame(d2->win) : d2->win->frame;
     ASSERT_EQUAL(b.x, a.x + DEFAULT_WINDOW_CASCADE_X);
     ASSERT_EQUAL(b.y, a.y + DEFAULT_WINDOW_CASCADE_Y);
 

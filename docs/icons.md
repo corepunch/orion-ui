@@ -18,7 +18,7 @@ through GPU textures; the icon grid receives a `bitmap_strip_t` and tile indices
 ```
 share/icons/*.svg
       │
-      │  startup (svg_build_strip)
+      │  on demand (sysicon_resolve)
       ▼
 nanosvg → RGBA pixel buffer → R_CreateTextureRGBA → GPU texture
       │
@@ -224,8 +224,6 @@ MISSING icon[N] "x"   ← mapped to "x" but share/icons/x.svg not found
 `sysicon_sword`, etc.) are expected and harmless.  `MISSING` lines mean a named
 SVG isn't on disk — run the download script or add a custom file.
 
-If **every** icon in a strip is missing or unmapped, `svg_build_strip` returns
-`false` and the strip stays empty (icons render as blank tiles — no crash).
 
 ---
 

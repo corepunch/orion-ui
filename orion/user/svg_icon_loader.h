@@ -5,22 +5,6 @@
 #include <stdbool.h>
 #include "draw.h"
 
-// Build a bitmap_strip_t by rasterizing SVG files from a directory.
-//
-// svg_names : array of `count` iconoir base names (no .svg extension);
-//             NULL entries produce blank tiles.
-// icon_size : logical tile size in pixels (square); rasterized at display density.
-// cols      : sheet columns; rows are computed automatically.
-// missing   : optional FILE* to receive one diagnostic line per blank tile.
-//
-// On success, fills *out and returns true.  The texture is uploaded to GPU and
-// must be released with R_DeleteTexture(out->tex) when done.
-bool svg_build_strip(const char *icons_dir,
-                     const char **svg_names, int count,
-                     int icon_size, int cols,
-                     bitmap_strip_t *out,
-                     FILE *missing);
-
 // Set the primary icons directory (global pool, e.g. share/orion/icons).
 void svg_set_icons_dir(const char *dir);
 

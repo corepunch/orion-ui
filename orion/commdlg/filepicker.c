@@ -888,7 +888,7 @@ static result_t fp_proc(window_t *win, uint32_t msg,
 static bool fp_run(openfilename_t *ofn, bool save_mode,
                    const char *title) {
   if (!ofn || !ofn->lpstrFile || ofn->nMaxFile == 0) return false;
-  uint32_t flags = WINDOW_DIALOG | WINDOW_NOTRAYBUTTON | WINDOW_TOOLBAR;
+  flags_t flags = WINDOW_DIALOG | WINDOW_NOTRAYBUTTON | WINDOW_TOOLBAR;
 
   fp_state_t ps = {0};
   ps.save_mode     = save_mode;

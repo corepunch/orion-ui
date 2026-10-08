@@ -349,7 +349,7 @@ uint32_t show_dialog_ex(char const *title,
                         int width,
                         int height,
                         window_t *parent,
-                        uint32_t flags,
+                        flags_t flags,
                         winproc_t proc,
                         void *param)
 {
@@ -380,7 +380,7 @@ uint32_t show_dialog(char const *title,
 // place — analogous to WinAPI DialogBoxIndirectParam.
 // title overrides def->name when non-NULL.  The dialog is centered on owner.
 uint32_t show_dialog_from_form_ex(form_def_t const *def, char const *title,
-                                  window_t *parent, uint32_t flags,
+                                  window_t *parent, flags_t flags,
                                   winproc_t proc, void *param)
 {
   if (!def || !proc) return 0;

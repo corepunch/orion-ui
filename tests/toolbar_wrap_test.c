@@ -1222,7 +1222,7 @@ void test_compact_application_toolbar(void) {
   uint32_t restore_point = MAKEDWORD(600 - MENUBAR_HEIGHT / 2, MENUBAR_HEIGHT / 2);
   send_message(menu_win, evLeftButtonDown, restore_point, NULL);
   send_message(menu_win, evLeftButtonUp, restore_point, NULL);
-  ASSERT_FALSE(doc->maximized);
+  ASSERT_FALSE(window_is_maximized(doc));
   destroy_window(doc);
   destroy_window(chrome);
   test_env_shutdown();

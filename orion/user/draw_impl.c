@@ -3,6 +3,7 @@
 
 #include <platform/platform.h>
 #include "gl_compat.h"
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,12 +29,16 @@ static window_t *g_fbo_root = NULL;
 
 // OpenGL's framebuffer origin is bottom-left. Keep that backend detail here;
 // every public drawing/scissor API uses logical top-left coordinates.
+float ui_surface_scale(void) { return MAX(1.0f, axGetScaling()); }
+
+int ui_surface_px(int logical) { return (int)ceilf((float)logical * ui_surface_scale()); }
+
 static irect16_t fbo_rect(window_t const *root, irect16_t r) {
-  int scale = (int)axGetScaling();
-  if (scale < 1) scale = 1;
-  return R(r.x * scale,
-           root->surface_h - (r.y + r.h) * scale,
-           r.w * scale, r.h * scale);
+  float scale = ui_surface_scale();
+  int x0 = (int)roundf(r.x * scale), x1 = (int)roundf((r.x + r.w) * scale);
+  int y0 = (int)roundf(r.y * scale), y1 = (int)roundf((r.y + r.h) * scale);
+  window_surface_t *surf = window_surface(root);
+  return R(x0, (surf ? surf->h : 0) - y1, x1 - x0, y1 - y0);
 }
 
 static void set_scissor_cached(irect16_t const *r) {
@@ -138,7 +143,7 @@ void draw_button(irect16_t r, int dx, int dy, bool pressed) {
 // Draw window panel — border/grip via theme, fill guarded by WINDOW_NOFILL.
 void draw_panel(window_t const *win) {
   irect16_t r = R(0, 0, win->frame.w, win->frame.h);
-  if (win->maximized) {
+  if (window_is_maximized(win)) {
     if (!(win->flags & WINDOW_NOFILL)) fill_rect(get_sys_color(brControlBg), r);
     return;
   }
@@ -163,7 +168,7 @@ void draw_window_controls(window_t *win) {
                                   rect_split_top(r, caption_h), win->title,
                                   (window_has_focus(win) ? CTRL_FOCUSED : CTRL_NORMAL) |
                                   ((win->flags & WINDOW_NOCLOSE) ? CTRL_NO_CLOSE : 0),
-                                  win->maximizable && !win->parent && !(win->flags & (WINDOW_NORESIZE | WINDOW_DIALOG | WINDOW_ALWAYSINBACK | WINDOW_ALWAYSONTOP)));
+                                  ((win->flags & WINDOW_MAXIMIZEBOX) != 0) && !win->parent && !(win->flags & (WINDOW_NORESIZE | WINDOW_DIALOG | WINDOW_ALWAYSINBACK | WINDOW_ALWAYSONTOP)));
 }
 
 // Draw status bar
@@ -234,16 +239,17 @@ void set_clip_rect(window_t const *win, irect16_t r) {
 void set_viewport_for_fbo(window_t *root) {
   if (!g_ui_runtime.running || !root) return;
   g_fbo_root = root;
-  int w = root->surface_w;
-  int h = root->surface_h;
+  window_surface_t *surf = window_surface(root);
+  if (!surf) return;
+  int w = surf->w;
+  int h = surf->h;
   if (w <= 0 || h <= 0) return;
   glViewport(0, 0, w, h);
   glDisable(GL_SCISSOR_TEST);
   g_scissor_valid = false;
-  int scale = (int)axGetScaling();
-  if (scale < 1) scale = 1;
-  int log_w = w / scale;
-  int log_h = h / scale;
+  float scale = ui_surface_scale();
+  int log_w = (int)roundf((float)w / scale);
+  int log_h = (int)roundf((float)h / scale);
   set_projection(0, 0, log_w, log_h);
 }
 
@@ -256,8 +262,6 @@ void set_scissor_fbo(window_t const *root, irect16_t r) {
 }
 
 // ── Stencil no-ops (kept for API compat, superseded by FBO compositing) ───
-void paint_window_stencil(window_t const *w) { (void)w; }
-void repaint_stencil(void) {}
 void ui_set_stencil_for_window(uint32_t id) { (void)id; }
 void ui_set_stencil_for_root_window(uint32_t id) { (void)id; }
 
@@ -318,15 +322,6 @@ void draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color) {
   float scale = MAX(1.0f, axGetScaling());
   render_rounded_rect_edged(ui_white_texture, r, (int)(r.w * scale + 0.5f), (int)(r.h * scale + 0.5f),
                             radius * scale, 1.0f, face, edge_color, edge * scale);
-}
-
-void draw_gradient_card(irect16_t r, ctrl_state_t state, uint32_t color) {
-  if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0) return;
-  const theme_t *theme = get_theme();
-  float scale = MAX(1.0f, axGetScaling());
-  render_gradient_card(r, (int)(r.w * scale + 0.5f), (int)(r.h * scale + 0.5f),
-                       theme->card_corner_radius * scale, theme->card_ring_width * scale,
-                       theme->card_highlight_width * scale, state, color);
 }
 
 #define PLASTIC_GLYPH_SIZE 20
@@ -509,21 +504,22 @@ void composite_root_windows(void) {
 
   for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
     if (!window_has_state(w, WINDOW_STATE_VISIBLE)) continue;
-    if (!w->surface_tex) continue;
+    window_surface_t *surf = window_surface(w);
+    if (!surf || !surf->tex) continue;
 
     // Clamp radius to half the smallest dimension (in physical pixels).
-    int max_r = w->surface_w < w->surface_h ? w->surface_w / 2 : w->surface_h / 2;
-    float radius = (w->maximized || (w->flags & WINDOW_TRANSPARENT)) ? 0.0f : base_radius;
+    int max_r = MIN(surf->w, surf->h) / 2;
+    float radius = (window_is_maximized(w) || (w->flags & WINDOW_TRANSPARENT)) ? 0.0f : base_radius;
     if (radius > max_r) radius = (float)max_r;
 
-    if (!w->maximized && !(w->flags & WINDOW_TRANSPARENT))
+    if (!window_is_maximized(w) && !(w->flags & WINDOW_TRANSPARENT))
       draw_rect_shadow(w->frame, theme->window_corner_radius, theme->window_shadow_blur,
                        theme->window_shadow_offset, theme->window_shadow_color);
-    draw_rounded_rect_premultiplied((int)w->surface_tex,
+    draw_rounded_rect_premultiplied((int)surf->tex,
                                     (irect16_t){w->frame.x, w->frame.y, w->frame.w, w->frame.h},
-                                    w->surface_w, w->surface_h,
+                                    surf->w, surf->h,
                                     radius, 1.0f);
-    if (!w->maximized && !(w->flags & WINDOW_TRANSPARENT))
+    if (!window_is_maximized(w) && !(w->flags & WINDOW_TRANSPARENT))
       theme_draw(THEME_PART_WINDOW_BORDER, w->frame,
                  window_has_focus(w) ? CTRL_FOCUSED : CTRL_NORMAL);
   }

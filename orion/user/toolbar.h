@@ -14,12 +14,6 @@ typedef struct {
   toolbar_presentation_t presentation;
 } application_toolbar_t;
 
-typedef struct {
-  const char *path;
-  int columns, count;
-  const irect16_t *regions;
-} toolbar_atlas_t;
-
 // Docked toolbars are owned children; use the remaining rectangle for content.
 window_t *create_docked_toolbar(window_t *owner, toolbar_dock_t dock, winproc_t proc);
 irect16_t layout_docked_toolbars(window_t *owner, irect16_t area);

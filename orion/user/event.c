@@ -255,7 +255,7 @@ void move_to_top(window_t* _win) {
 
   window_t *win = get_root_window(_win);
   if (!win) return;
-  if (g_ui_runtime.running && !win->surface_tex) invalidate_window(win);
+  if (g_ui_runtime.running && !window_has_surface(win)) invalidate_window(win);
 
   if (win->flags & WINDOW_ALWAYSINBACK) {
     request_composite();
@@ -986,7 +986,7 @@ void dispatch_message(ui_event_t *msg) {
           g_ui_runtime.resizing = resize_target;
           resize_anchor[0] = sx - (resize_target->frame.x + resize_target->frame.w);
           resize_anchor[1] = sy - (resize_target->frame.y + resize_target->frame.h);
-        } else if (!win->maximized && window_in_drag_area_at(win, sx, sy) && win != g_ui_runtime.captured) {
+        } else if (!window_is_maximized(win) && window_in_drag_area_at(win, sx, sy) && win != g_ui_runtime.captured) {
           // For WINDOW_NOTITLE toolbars, don't drag if the click hits a toolbar
           // button — only drag from empty space.
           bool skip_drag = false;
@@ -1070,7 +1070,7 @@ void dispatch_message(ui_event_t *msg) {
                         && sy >= close_btn.y && sy < close_btn.y + close_btn.h;
         window_t *dragged = g_ui_runtime.dragging;
         irect16_t max_btn = rect_split_right(rect_trim_right(titlebar, caption_h), caption_h);
-        bool on_maximize = msg->message == kEventLeftButtonUp && dragged->maximizable && !dragged->parent &&
+        bool on_maximize = msg->message == kEventLeftButtonUp && ((dragged->flags & WINDOW_MAXIMIZEBOX) != 0) && !dragged->parent &&
           !(dragged->flags & (WINDOW_NOTITLE | WINDOW_NORESIZE | WINDOW_DIALOG | WINDOW_ALWAYSINBACK | WINDOW_ALWAYSONTOP)) &&
           rect_contains_point(max_btn, (ipoint16_t){sx, sy});
         if (on_maximize) {

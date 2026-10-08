@@ -262,33 +262,10 @@ automatically.
 
 ## Loading items
 
-PNG artwork uses the existing strip loader. Pass a square source tile size and
-the PNG path to `tbLoadStrip`, then use `icon="strip:0"`, `"strip:1"`, etc.
-Strip icons preserve authored colours, scale to the available button area, and
-fade when disabled. Named SVG icons keep their theme tint. `tbLoadStrip` owns the
-texture and releases it on destruction; `tbSetStrip` borrows a caller-owned texture.
-
-For a matching pressed state, put normal icons in the first row and the same icons
-in the second row, then enable `TOOLBAR_STYLE_PRESSED_STRIP` with `tbSetStyle`.
-Descriptors reference first-row indices; the framework selects the second row
-while pressed. This works for button and split-button icons and compact toolbars.
-Draw every icon and its states together in one ImageGen atlas.
-
-For strip artwork that includes the complete colored button body, also enable
-`TOOLBAR_STYLE_IMAGE_BUTTONS`. Ordinary strip buttons then use their own silhouette
-instead of a themed background. Active toggles use the pressed row as well;
-named icons and split buttons retain their usual themed backgrounds.
-Image toolbars add no outer padding or inter-item spacing, and strip artwork
-fills its available button bounds without an extra inset, preserving its aspect
-ratio. Artwork supplies its own margins; explicit separators and spacers remain.
-
-For authored state artwork, enable `TOOLBAR_STYLE_STATE_STRIP`: rows are normal,
-selected, pressed, hover, and disabled. The framework samples the authored row directly,
-including disabled colours, without applying a second tint or opacity reduction.
-`tbLoadAtlas` accepts a `toolbar_atlas_t` with a PNG path, column count, and source
-rectangles in row order. It copies those rectangles and owns the loaded texture;
-failed loads retain the previous atlas. Packed regions allow the original ImageGen
-PNG to be consumed directly, without cutting or transforming its artwork.
+Bitmap artwork is supplied as a caller-owned strip texture through `tbSetStrip`;
+reference its tiles with `icon="strip:0"`, `"strip:1"`, etc. Strip icons preserve
+authored colours, scale to the available button area, and fade when disabled.
+Named SVG icons keep their theme tint.
 
 For a programmatic toolbar, send `tbSetItems` in `evCreate`. Application chrome
 and declarative form creation load their toolbar metadata automatically.

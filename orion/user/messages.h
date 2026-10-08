@@ -138,8 +138,6 @@ enum {
   tbSetOrientation,   // wparam=toolbar_orientation_t
   tbDrawItem,         // paint-only callback: wparam=ident, lparam=toolbar_draw_item_t*
   tbSetStyle,         // wparam=TOOLBAR_STYLE_* flags
-  tbLoadStrip,        // wparam=icon tile size in px (square); lparam=const char* path to PNG
-  tbLoadAtlas,        // lparam=toolbar_atlas_t*; loads PNG and copies packed source regions
   tbSetItems,         // wparam=count; lparam=toolbar_item_t* — set toolbar item list (owner-drawn)
   // Fired via evCommand when the user clicks the dropdown arrow of a TOOLBAR_ITEM_DROPDOWN button.
   // LOWORD(wparam) = button ident; HIWORD(wparam) = tbDropdown; lparam = toolbar window.
@@ -251,8 +249,8 @@ enum {
 #define WINDOW_NOTRAYBUTTON (1 << 9)
 #define WINDOW_DIALOG       (1 << 10)
 #define WINDOW_TOOLBAR      (1 << 11)
-#define WINDOW_TITLETOOLBAR (1 << 15) // with WINDOW_TOOLBAR: caption and actions share one band
-#define WINDOW_NOCOLLAPSE   (1 << 14) // with WINDOW_TITLETOOLBAR: no collapse/restore button; dock_collapse refuses
+#define WINDOW_TITLETOOLBAR (1ull << 32) // with WINDOW_TOOLBAR: caption and actions share one band
+#define WINDOW_NOCOLLAPSE   (1ull << 33) // with WINDOW_TITLETOOLBAR: no collapse/restore button; dock_collapse refuses
 #define WINDOW_STATUSBAR    (1 << 12)
 // Button style flags (analogous to WinAPI BS_* styles)
 // BUTTON_PUSHLIKE: button stays visually pressed while win->value == true (like a toggle/check button)
@@ -283,6 +281,9 @@ enum {
 #define WINDOW_STATE_PRESSED   (1u << 26)
 #define WINDOW_STATE_VISIBLE   (1u << 27)
 #define WINDOW_STATE_DISABLED  (1u << 28)
+// Extended window bits (32+): states and styles that do not fit the low word.
+#define WINDOW_STATE_MAXIMIZED (1ull << 34)  // ≈ WS_MAXIMIZE
+#define WINDOW_MAXIMIZEBOX     (1ull << 35)  // ≈ WS_MAXIMIZEBOX: caption exposes a restore/maximize command
 
 // Auto-layout alignment values used by layout_measure_t / layout_arrange_t.
 // 0 = stretch (default), matching WPF/SwiftUI "fill available space".
@@ -381,7 +382,6 @@ typedef struct {
 #define TOOLBAR_LABEL_PADDING           8       // horizontal padding added to auto-computed label width (left+right)
 #define TOOLBAR_COMBOBOX_DEFAULT_WIDTH_MULT  3  // default combobox width = button_size * this multiplier
 #define TOOLBAR_BUTTON_FLAG_ACTIVE   (1u << 0)
-#define TOOLBAR_BUTTON_FLAG_PRESSED  (1u << 1)
 #define TOOLBAR_ITEM_FLAG_DISABLED   (1u << 3)
 // wparam=item ident, lparam=(void *)(intptr_t)enabled
 #define tbEnableItem (evUser + 950)
@@ -406,10 +406,7 @@ typedef struct {
 // Item flags also take CONTROL_SIZE_LARGE: a button CONTROL_LARGE_GROWTH bigger, centred on its row.
 #define TOOLBAR_STYLE_GRIP           (1u << 1) // draggable grip on a floating toolbar
 #define TOOLBAR_STYLE_COMPACT        (1u << 2) // menu-bar background, icon-only items
-#define TOOLBAR_STYLE_PRESSED_STRIP  (1u << 3) // strip's second row contains pressed artwork
-#define TOOLBAR_STYLE_IMAGE_BUTTONS  (1u << 4) // strip artwork includes the button body
 #define TOOLBAR_STYLE_PLASTIC        (1u << 6) // procedural coloured body with recessed SVG glyph
-#define TOOLBAR_STYLE_STATE_STRIP    (1u << 5) // rows: normal, selected, pressed, hover, disabled
 #define TOOLBAR_COMPACT_PADDING      2
 #define TOOLBAR_COMPACT_SPACING      6
 #if defined(__APPLE__) && TARGET_OS_IOS

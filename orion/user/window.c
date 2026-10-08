@@ -265,7 +265,7 @@ void request_composite(void) {
 static void invalidate_window_chrome(window_t *win) {
   window_t *root = get_root_window(win);
   if (!root) return;
-  if (g_ui_runtime.running && root->surface_tex) {
+  if (g_ui_runtime.running && window_has_surface(root)) {
     post_message(root, evNCPaint, 1, NULL); // chrome only; do not wipe baked client
     request_composite();
     return;
@@ -332,11 +332,16 @@ void resize_window(window_t *win, int new_w, int new_h) {
   invalidate_window(win);
 }
 
+// Per-application workspace registry (≈ SPI_GETWORKAREA scoped to an app instance).
+#define MAX_WORKSPACES 16
+static struct { window_t *owner; irect16_t area; } g_workspaces[MAX_WORKSPACES];
+
 static bool registered_workspace_rect(hinstance_t hinstance, irect16_t *area) {
-  for (window_t *owner = g_ui_runtime.windows; owner; owner = owner->next) {
-    if (owner->parent || owner->hinstance != hinstance || !owner->workspace_valid ||
+  for (int i = 0; i < MAX_WORKSPACES; i++) {
+    window_t *owner = g_workspaces[i].owner;
+    if (!owner || !is_window(owner) || owner->parent || owner->hinstance != hinstance ||
         !window_has_state(owner, WINDOW_STATE_VISIBLE)) continue;
-    *area = owner->workspace;
+    *area = g_workspaces[i].area;
     return true;
   }
   return false;
@@ -349,10 +354,20 @@ void set_application_workspace(window_t *owner, const irect16_t *area) {
     fflush(stderr);
     return;
   }
-  owner->workspace = *area;
-  owner->workspace_valid = true;
+  int slot = -1;
+  for (int i = 0; i < MAX_WORKSPACES; i++) {
+    if (g_workspaces[i].owner == owner) { slot = i; break; }
+    if (slot < 0 && (!g_workspaces[i].owner || !is_window(g_workspaces[i].owner))) slot = i;
+  }
+  if (slot < 0) {
+    fprintf(stderr, "[win] workspace rejected owner=%u: registry full (%d)\n", owner->id, MAX_WORKSPACES);
+    fflush(stderr);
+    return;
+  }
+  g_workspaces[slot].owner = owner;
+  g_workspaces[slot].area = *area;
   for (window_t *win = g_ui_runtime.windows; win; win = win->next)
-    if (win != owner && !win->parent && win->hinstance == owner->hinstance && win->maximized)
+    if (win != owner && !win->parent && win->hinstance == owner->hinstance && window_is_maximized(win))
       update_maximized_window(win);
 }
 
@@ -369,7 +384,7 @@ static bool window_workspace_rect(window_t *win, irect16_t *area) {
 }
 
 void update_maximized_window(window_t *win) {
-  if (!win || !is_window(win) || !win->maximized) return;
+  if (!win || !is_window(win) || !window_is_maximized(win)) return;
   irect16_t area;
   if (!window_workspace_rect(win, &area)) return;
   move_window(win, area.x, area.y);
@@ -383,14 +398,17 @@ bool maximize_window(window_t *win) {
     fflush(stderr);
     return false;
   }
-  if (win->maximized) return true;
+  if (window_is_maximized(win)) return true;
   irect16_t area;
   if (!window_workspace_rect(win, &area)) return false;
-  win->restore_frame = win->frame;
-  win->restore_decorations = win->flags & (WINDOW_NOTITLE | WINDOW_NORESIZE);
-  win->maximizable = true;
-  win->maximized = true;
-  win->flags |= WINDOW_NOTITLE | WINDOW_NORESIZE;
+  if (!win->placement && !(win->placement = calloc(1, sizeof(*win->placement)))) {
+    fprintf(stderr, "[win] maximize rejected win=%u: placement allocation failed\n", win->id);
+    fflush(stderr);
+    return false;
+  }
+  win->placement->restore_frame = win->frame;
+  win->placement->restore_decorations = win->flags & (WINDOW_NOTITLE | WINDOW_NORESIZE);
+  win->flags |= WINDOW_STATE_MAXIMIZED | WINDOW_MAXIMIZEBOX | WINDOW_NOTITLE | WINDOW_NORESIZE;
   move_window(win, area.x, area.y);
   resize_window(win, area.w, area.h);
   move_to_top(win);
@@ -399,20 +417,19 @@ bool maximize_window(window_t *win) {
 }
 
 bool restore_window(window_t *win) {
-  if (!win || !is_window(win) || !win->maximized) {
+  if (!win || !is_window(win) || !window_is_maximized(win)) {
     fprintf(stderr, "[win] restore rejected win=%p: requires maximized window\n", (void *)win);
     fflush(stderr);
     return false;
   }
   irect16_t area;
   if (!window_workspace_rect(win, &area)) return false;
-  irect16_t frame = win->restore_frame;
+  irect16_t frame = window_restore_frame(win);
   frame.w = MIN(frame.w, area.w);
   frame.h = MIN(frame.h, area.h);
   frame.x = MAX(area.x, MIN(frame.x, area.x + area.w - frame.w));
   frame.y = MAX(area.y, MIN(frame.y, area.y + area.h - frame.h));
-  win->maximized = false;
-  win->flags = (win->flags & ~(WINDOW_NOTITLE | WINDOW_NORESIZE)) | win->restore_decorations;
+  win->flags = (win->flags & ~(WINDOW_STATE_MAXIMIZED | WINDOW_NOTITLE | WINDOW_NORESIZE)) | win->placement->restore_decorations;
   move_window(win, frame.x, frame.y);
   resize_window(win, frame.w, frame.h);
   sync_desktop_window();
@@ -493,7 +510,7 @@ void clear_window_children(window_t *win) {
 
 // Destroy a window
 void destroy_window(window_t *win) {
-  bool was_maximized = win->maximized;
+  bool was_maximized = window_is_maximized(win);
   window_t *dock_parent = win->dock ? win->parent : NULL;
   window_t *root = get_root_window(win);
   invalidate_overlaps(win);
@@ -522,9 +539,9 @@ void destroy_window(window_t *win) {
   if (win->toolbar) destroy_window(win->toolbar);
   clear_window_children(win);
   // Release the per-window render target before freeing the struct.
-  R_DestroyWindowTarget(&win->surface_fbo, &win->surface_tex,
-                        &win->surface_w, &win->surface_h);
-  free(win->image_background);
+  window_surface_release(win);
+  free(win->placement);
+  for (int i = 0; i < MAX_WORKSPACES; i++) if (g_workspaces[i].owner == win) g_workspaces[i].owner = NULL;
   free(win);
   if (dock_parent && is_window(dock_parent)) {
     dock_layout(dock_parent, get_client_rect(dock_parent));
@@ -681,7 +698,7 @@ void invalidate_window(window_t *win) {
 // Windows with WINDOW_NOTITLE have no title row; their toolbar area is the
 // only non-client space and may be dragged from freely (e.g. tool palettes).
 bool window_in_drag_area(window_t const *win, int sy) {
-  if (win->maximized || win->parent || (win->flags & WINDOW_NODRAG)) return false;
+  if (window_is_maximized(win) || win->parent || (win->flags & WINDOW_NODRAG)) return false;
   int t = titlebar_height(win);
   if (sy < win->frame.y || sy >= win->frame.y + t) return false;
   if (!(win->flags & WINDOW_TOOLBAR) || (win->flags & WINDOW_NOTITLE) || toolbar_merged_title(win)) return true;
@@ -690,7 +707,7 @@ bool window_in_drag_area(window_t const *win, int sy) {
 }
 
 bool window_in_drag_area_at(window_t const *win, int sx, int sy) {
-  if (!win || win->maximized || win->parent || (win->flags & WINDOW_NODRAG)) return false;
+  if (!win || window_is_maximized(win) || win->parent || (win->flags & WINDOW_NODRAG)) return false;
   if (win->flags & WINDOW_TOOLBAR) {
     if (sy < win->frame.y || sy >= win->frame.y + titlebar_height(win)) return false;
     toolbar_state_t *tb = window_toolbar_state((window_t *)win);
@@ -1162,9 +1179,9 @@ void show_window(window_t *win, bool visible) {
     invalidate_window(win->parent);
   }
   post_message(win, evShowWindow, visible, NULL);
-  if (win->maximized) sync_desktop_window();
+  if (window_is_maximized(win)) sync_desktop_window();
   if (!visible) request_composite();
-  else if (g_ui_runtime.running && get_root_window(win) && !get_root_window(win)->surface_tex)
+  else if (g_ui_runtime.running && get_root_window(win) && !window_has_surface(get_root_window(win)))
     invalidate_window(win);
 }
 

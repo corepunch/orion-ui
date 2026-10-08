@@ -186,13 +186,11 @@ static bool bind_root_surface(window_t *root) {
     fflush(stderr);
     return false;
   }
-  int scale = (int)axGetScaling();
-  if (scale < 1) scale = 1;
-  if (!R_EnsureWindowTarget(&root->surface_fbo, &root->surface_tex,
-                            &root->surface_w, &root->surface_h,
-                            root->frame.w * scale, root->frame.h * scale))
+  window_surface_t *surf = window_surface_ensure(root);
+  if (!surf || !R_EnsureWindowTarget(&surf->fbo, &surf->tex, &surf->w, &surf->h,
+                                     ui_surface_px(root->frame.w), ui_surface_px(root->frame.h)))
     return false;
-  glBindFramebuffer(GL_FRAMEBUFFER, root->surface_fbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, surf->fbo);
   R_SetFramebufferSRGB(true);
   set_viewport_for_fbo(root);
   return true;
@@ -280,8 +278,8 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       // Skip OpenGL calls if graphics aren't initialized (e.g., in tests)
       if (g_ui_runtime.running) {
         if (!bind_root_surface(root)) return false;
-        if (win == root && (win->flags & WINDOW_TRANSPARENT)) R_ClearWindowTarget(root->surface_fbo);
-        glBindFramebuffer(GL_FRAMEBUFFER, root->surface_fbo);
+        if (win == root && (win->flags & WINDOW_TRANSPARENT)) R_ClearWindowTarget(window_surface(root)->fbo);
+        glBindFramebuffer(GL_FRAMEBUFFER, window_surface(root)->fbo);
         set_viewport_for_fbo(root);
         if (!(win->flags&WINDOW_TRANSPARENT) && wparam == 0) {
           draw_panel(win);
@@ -355,8 +353,6 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
     case tbSetButtonSize:
     case tbSetOrientation:
     case tbSetStyle:
-    case tbLoadStrip:
-    case tbLoadAtlas:
       (void)toolbar_handle_message(win, msg, wparam, lparam);
       break;
     case evStatusBar:
@@ -446,7 +442,6 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         }
         break;
       case evPaintStencil:
-        paint_window_stencil(win);
         break;
       case evMeasure: {
         layout_measure_t *m = (layout_measure_t *)lparam;

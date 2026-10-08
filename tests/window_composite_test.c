@@ -21,7 +21,7 @@ static result_t color_paint_proc(window_t *win, uint32_t msg, uint32_t wp, void 
 }
 
 static void read_window_pixel(window_t *win, int x, int y, uint8_t pixel[4]) {
-  glBindFramebuffer(GL_FRAMEBUFFER, win->surface_fbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, window_surface(win)->fbo);
   glReadPixels(x, y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
 }
 
@@ -78,7 +78,7 @@ static void test_platform_framebuffer(void) {
     set_scroll_info(status, SB_HORZ, &info, false);
     send_message(status, evNCPaint, 0, NULL);
     send_message(status, evPaint, 0, NULL);
-    int scale = status->surface_w / status->frame.w;
+    int scale = window_surface(status)->w / status->frame.w;
     uint8_t row_pixel[4];
     glReadPixels(190 * scale, 5 * scale, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, row_pixel);
     fprintf(stderr, "[composite-test] status hscroll=%d pixel=%u,%u,%u\n",
@@ -120,11 +120,11 @@ static void test_paint_binds_own_surface(void) {
   g_paint_color = 0xFF0000FF;
   send_message(bar, evPaint, 0, NULL);
 
-  int bar_scale = bar->surface_h / bar->frame.h;
-  int popup_scale = popup->surface_h / popup->frame.h;
+  int bar_scale = window_surface(bar)->h / bar->frame.h;
+  int popup_scale = window_surface(popup)->h / popup->frame.h;
   uint8_t bar_px[4] = {0}, popup_center[4] = {0}, popup_bottom[4] = {0};
-  read_window_pixel(bar, 100 * bar_scale, (bar->surface_h / 2), bar_px);
-  read_window_pixel(popup, 40 * popup_scale, popup->surface_h / 2, popup_center);
+  read_window_pixel(bar, 100 * bar_scale, (window_surface(bar)->h / 2), bar_px);
+  read_window_pixel(popup, 40 * popup_scale, window_surface(popup)->h / 2, popup_center);
   read_window_pixel(popup, 40 * popup_scale, 2 * popup_scale, popup_bottom);
   fprintf(stderr, "[paint-target] bar=%u,%u,%u popup_c=%u,%u,%u popup_b=%u,%u,%u\n",
           bar_px[0], bar_px[1], bar_px[2],

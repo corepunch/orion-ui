@@ -15,10 +15,10 @@ static result_t paint_color(window_t *win, uint32_t msg, uint32_t wp, void *lp) 
 }
 
 static void read_logical(window_t *root, int x, int y, uint8_t px[4]) {
-  int scale = root->surface_w / root->frame.w;
+  int scale = window_surface(root)->w / root->frame.w;
   if (scale < 1) scale = 1;
-  glBindFramebuffer(GL_FRAMEBUFFER, root->surface_fbo);
-  glReadPixels(x * scale + scale / 2, root->surface_h - (y * scale + scale / 2),
+  glBindFramebuffer(GL_FRAMEBUFFER, window_surface(root)->fbo);
+  glReadPixels(x * scale + scale / 2, window_surface(root)->h - (y * scale + scale / 2),
                1, 1, GL_RGBA, GL_UNSIGNED_BYTE, px);
 }
 

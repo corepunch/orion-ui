@@ -273,7 +273,7 @@ void        close_form_doc(window_t *doc);
 void form_doc_update_title(window_t *doc);
 void form_doc_activate(window_t *doc);
 void form_doc_show_only(window_t *doc);
-irect16_t form_doc_frame_for_size(int form_w, int form_h, uint32_t form_flags);
+irect16_t form_doc_frame_for_size(int form_w, int form_h, flags_t form_flags);
 
 bool fe_project_load(const char *path);
 bool fe_project_save(const char *path);

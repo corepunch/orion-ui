@@ -456,7 +456,7 @@ static window_t *menubar_maximized_window(window_t *win) {
   hinstance_t owner = get_root_window(win)->hinstance;
   window_t *target = NULL;
   for (window_t *root = g_ui_runtime.windows; root; root = root->next)
-    if (root->hinstance == owner && root->maximized &&
+    if (root->hinstance == owner && window_is_maximized(root) &&
         window_has_state(root, WINDOW_STATE_VISIBLE)) target = root;
   return target;
 }
