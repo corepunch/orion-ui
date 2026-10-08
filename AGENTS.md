@@ -203,6 +203,13 @@ do not recreate control behavior or a small UI framework inside the app.
   templates belong there whenever the engine supports them. Keep C for runtime
   behavior, data access, and genuinely dynamic state; avoid a parallel C-built
   version of a declarative view.
+- Lay out related labeled form fields in one `GridView`, with a shared
+  `<Column width="auto">` for labels and a stretching input column. All text
+  inputs and dropdowns in that group must share their left and right edges.
+  Put trailing actions such as Browse in a separate grid column when needed.
+  Use `StackView` for action rows and independent groups; separate horizontal
+  stacks for each field measure labels independently and misalign inputs.
+  Follow `imageeditor.orion`'s `image_resize` form as the reference.
 - Model data shown by engine-rendered views with datasources. Use datasource
   bindings for library/document records and other data-driven collections; use
   declarative toolbar/menu definitions for static commands, and add a toolbar

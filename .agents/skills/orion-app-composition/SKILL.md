@@ -31,6 +31,21 @@ Put static forms, menus, toolbars, accelerators, datasource schemas, bindings, a
 
 Declare static toolbar commands in `.orion`. A toolbar datasource is appropriate when toolbar items are data-driven and the engine supports rendering that source; do not add an adapter merely to move static command declarations out of the resource file. If a binding or rendering capability is missing, prefer adding generic Orion support and then using it from `.orion`.
 
+## Align form fields with grids
+
+Use one `GridView` for each group of related labeled fields. Put labels in a
+`<Column width="auto">` and text inputs and dropdowns in a stretching input
+column so their left and right edges align across every row. Let the grid
+measure label widths and row heights; do not assign per-row label widths or
+mark individual single-line inputs `flexspace` to force alignment. Put trailing
+actions such as Browse in a separate grid column when equal field widths are
+needed. Keep checkboxes, status text and action rows outside the field grid.
+
+Use `StackView` for action rows and independent groups. Separate horizontal
+stacks for each label/input row measure their labels independently and produce
+unequal input widths. Use `apps/imageeditor/imageeditor.orion`'s `image_resize`
+form as the reference for a grid containing both text inputs and a dropdown.
+
 ## Register and isolate custom components
 
 For every custom window/control referenced from a form:
@@ -45,6 +60,7 @@ If the framework cannot yet instantiate forms or repeat item templates, add the 
 ## Completion checklist
 
 - Static UI lives in `.orion` wherever the engine supports it.
+- Related labeled fields share grid columns so text inputs and dropdowns align.
 - Existing Orion controls and layouts are reused; missing reusable behavior is implemented in the framework rather than copied into the app.
 - Data-driven collections use a datasource and declarative item template.
 - Every custom form component has a named class registered at runtime and in FormEditor metadata.

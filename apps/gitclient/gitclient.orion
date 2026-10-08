@@ -339,14 +339,16 @@
             </StackView>
         </form>
         <form name="new_branch_dialog" title="New Branch" width="276" auto_layout="1" spacing="6" padding="8">
-            <StackView orientation="horizontal" spacing="6">
-                <Label text="Name:" />
-                <TextEdit name="name" flags="flexspace" />
-            </StackView>
-            <StackView orientation="horizontal" spacing="6">
-                <Label text="From:" />
-                <ComboBox name="from" flags="flexspace" control-size="regular" source="db.branches" display="name" value="name" filter_field="is_remote" filter_value="0" />
-            </StackView>
+            <GridView name="fields" spacing="6">
+                <Column name="labels" width="auto">
+                    <Label text="Name:" />
+                    <Label text="From:" />
+                </Column>
+                <Column name="inputs">
+                    <TextEdit name="name" />
+                    <ComboBox name="from" control-size="regular" source="db.branches" display="name" value="name" filter_field="is_remote" filter_value="0" />
+                </Column>
+            </GridView>
             <CheckBox name="checkout" text="Checkout after creation" />
             <StackView orientation="horizontal" spacing="6">
                 <Space />
@@ -355,10 +357,14 @@
             </StackView>
         </form>
         <form name="branch_rename_dialog" title="Rename Branch" width="276" auto_layout="1" spacing="6" padding="8">
-            <StackView orientation="horizontal" spacing="6">
-                <Label text="New name:" />
-                <TextEdit name="name" flags="flexspace" />
-            </StackView>
+            <GridView name="fields" spacing="6">
+                <Column name="labels" width="auto">
+                    <Label text="New name:" />
+                </Column>
+                <Column name="inputs">
+                    <TextEdit name="name" />
+                </Column>
+            </GridView>
             <StackView orientation="horizontal" spacing="6">
                 <Space />
                 <Button name="ok" text="Rename" flags="default" />
@@ -366,15 +372,20 @@
             </StackView>
         </form>
         <form name="clone_dialog" title="Clone Repository" width="420" auto_layout="1" spacing="6" padding="8">
-            <StackView orientation="horizontal" spacing="6">
-                <Label text="URL:" />
-                <TextEdit name="url" flags="flexspace" />
-            </StackView>
-            <StackView orientation="horizontal" spacing="6">
-                <Label text="Path:" />
-                <TextEdit name="path" flags="flexspace" />
-                <Button name="browse" text="..." />
-            </StackView>
+            <GridView name="fields" spacing="6">
+                <Column name="labels" width="auto">
+                    <Label text="URL:" />
+                    <Label text="Path:" />
+                </Column>
+                <Column name="inputs">
+                    <TextEdit name="url" />
+                    <TextEdit name="path" />
+                </Column>
+                <Column name="field_actions" width="auto">
+                    <Label text="" />
+                    <Button name="browse" text="..." />
+                </Column>
+            </GridView>
             <Label name="status" text="" />
             <StackView orientation="horizontal" spacing="6">
                 <Space />
@@ -383,16 +394,18 @@
             </StackView>
         </form>
         <form name="remote_dialog" title="Manage Remotes" width="400" height="320" auto_layout="1" spacing="6" padding="8">
-            <Label text="Remotes:" />
-            <ComboBox name="remote_list" flags="flexspace" />
-            <StackView orientation="horizontal" spacing="6">
-                <Label text="Name:" />
-                <TextEdit name="name" flags="flexspace" />
-            </StackView>
-            <StackView orientation="horizontal" spacing="6">
-                <Label text="URL:" />
-                <TextEdit name="url" flags="flexspace" />
-            </StackView>
+            <GridView name="fields" spacing="6">
+                <Column name="labels" width="auto">
+                    <Label text="Remotes:" />
+                    <Label text="Name:" />
+                    <Label text="URL:" />
+                </Column>
+                <Column name="inputs">
+                    <ComboBox name="remote_list" />
+                    <TextEdit name="name" />
+                    <TextEdit name="url" />
+                </Column>
+            </GridView>
             <StackView orientation="horizontal" spacing="6">
                 <Button name="add" text="Add" />
                 <Button name="update" text="Update" />
@@ -425,14 +438,16 @@
             </StackView>
         </form>
         <form name="create_tag_dialog" title="Create Tag" width="320" auto_layout="1" spacing="6" padding="8">
-            <StackView orientation="horizontal" spacing="6">
-                <Label text="Name:" />
-                <TextEdit name="name" flags="flexspace" />
-            </StackView>
-            <StackView orientation="horizontal" spacing="6">
-                <Label text="Ref:" />
-                <TextEdit name="ref" flags="flexspace" />
-            </StackView>
+            <GridView name="fields" spacing="6">
+                <Column name="labels" width="auto">
+                    <Label text="Name:" />
+                    <Label text="Ref:" />
+                </Column>
+                <Column name="inputs">
+                    <TextEdit name="name" />
+                    <TextEdit name="ref" />
+                </Column>
+            </GridView>
             <StackView orientation="horizontal" spacing="6">
                 <Space />
                 <Button name="ok" text="Create" flags="default" />
@@ -440,14 +455,16 @@
             </StackView>
         </form>
         <form name="push_pull_dialog" title="Remote Operation" width="262" auto_layout="1" spacing="6" padding="8">
-            <StackView orientation="horizontal" spacing="6">
-                <Label text="Remote:" />
-                <ComboBox name="remote" flags="flexspace" source="db.remotes" display="name" value="name" />
-            </StackView>
-            <StackView orientation="horizontal" spacing="6">
-                <Label text="Branch:" />
-                <ComboBox name="branch" flags="flexspace" source="db.branches" display="name" value="name" filter_field="is_remote" filter_value="0" />
-            </StackView>
+            <GridView name="fields" spacing="6">
+                <Column name="labels" width="auto">
+                    <Label text="Remote:" />
+                    <Label text="Branch:" />
+                </Column>
+                <Column name="inputs">
+                    <ComboBox name="remote" source="db.remotes" display="name" value="name" />
+                    <ComboBox name="branch" source="db.branches" display="name" value="name" filter_field="is_remote" filter_value="0" />
+                </Column>
+            </GridView>
             <CheckBox name="prune" text="Prune deleted remote branches" />
             <CheckBox name="force" text="Force" />
             <StackView orientation="horizontal" spacing="6">
