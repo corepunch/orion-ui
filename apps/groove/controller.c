@@ -328,6 +328,8 @@ void app_command(uint16_t id) {
       break;
     default:
       if (id >= ID_FAMILY(0) && id < ID_FAMILY(CAT_COUNT)) app_set_category(id - ID_FAMILY(0));
+      else if (id >= ID_MUTE(0) && id < ID_MUTE(GR_TRACKS)) { app_lock(); s->mute[id - ID_MUTE(0)] = !s->mute[id - ID_MUTE(0)]; app_unlock(); tracks_sync(); }
+      else if (id >= ID_SOLO(0) && id < ID_SOLO(GR_TRACKS)) { app_lock(); s->solo[id - ID_SOLO(0)] = !s->solo[id - ID_SOLO(0)]; app_unlock(); tracks_sync(); }
       break;
   }
 }

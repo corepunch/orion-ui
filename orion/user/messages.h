@@ -25,6 +25,7 @@ enum {
   evSetFocus,
   evKillFocus,
   evHitTest,
+  evNcHitTest,        // wparam = MAKEDWORD(screen_x, screen_y); return an HT_* code, or 0 for the default (≈ WM_NCHITTEST)
   // Sent to a parent before selected mouse/key events are delivered to a
   // child window, analogous to WinAPI WM_PARENTNOTIFY but consumable.
   // wparam = 0; lparam = parent_notify_t*. Return true to consume the event.
@@ -108,6 +109,16 @@ enum {
 
 enum { DRAG_NONE, DRAG_NOW, DRAG_AFTER_HOLD };
 
+// Non-client hit-test codes (≈ HT*) returned by window_nc_hit_test() and evNcHitTest handlers.
+enum {
+  HT_NOWHERE   = 0,
+  HT_CLIENT    = 1,   // client area, or a toolbar item: the pointer goes to the client or the toolbar
+  HT_CAPTION   = 2,   // draggable caption, toolbar grip, or empty caption-toolbar space
+  HT_GROWBOX   = 4,   // bottom-right resize corner
+  HT_MAXBUTTON = 9,
+  HT_CLOSE     = 20,
+};
+
 // Compatibility alias: callers that use evLayout map to evArrange.
 #define evLayout evArrange
 
@@ -117,6 +128,8 @@ enum {
   btnGetCheck,
   btnSetImage,       // wparam = icon index (iBitmap); lparam = bitmap_strip_t*
   btnSetIconName,    // wparam = 0; lparam = const char* SVG base name (NULL to clear)
+  btnSetTooltip,     // wparam = 0; lparam = const char* hover text (copied; NULL clears)
+  btnSetFaceColor,   // wparam = 0; lparam = uint32_t* packed plastic face colour (NULL restores the theme accent)
   cbAddString,
   cbGetCurrentSelection, // returns index; if lparam=int* also writes index (or kComboBoxError)
   cbGetCurrentValue,     // returns value_field data (e.g., ID) for foreign key binding
@@ -124,9 +137,7 @@ enum {
   cbGetListBoxText,
   cbClear,            // clear all items and reset title
   sbAddWindow,
-  tbButtonClick,
   tbSetStrip,         // wparam=0, lparam=bitmap_strip_t* (or NULL to clear)
-  tbSetActiveButton,  // wparam=ident of button to mark active
   sbSetInfo,        // lparam = scrollbar_info_t*
   sbGetPos,         // returns current scroll position
   slSetRange,       // lparam = slider_range_t* (min/max)
@@ -138,11 +149,10 @@ enum {
   tbSetOrientation,   // wparam=toolbar_orientation_t
   tbDrawItem,         // paint-only callback: wparam=ident, lparam=toolbar_draw_item_t*
   tbSetStyle,         // wparam=TOOLBAR_STYLE_* flags
-  tbLoadStrip,        // wparam=icon tile size in px (square); lparam=const char* path to PNG
-  tbLoadAtlas,        // lparam=toolbar_atlas_t*; loads PNG and copies packed source regions
   tbSetItems,         // wparam=count; lparam=toolbar_item_t* — set toolbar item list (owner-drawn)
   // Fired via evCommand when the user clicks the dropdown arrow of a TOOLBAR_ITEM_DROPDOWN button.
   // LOWORD(wparam) = button ident; HIWORD(wparam) = tbDropdown; lparam = toolbar window.
+  // A plain click is evCommand with HIWORD(wparam) = btnClicked, LOWORD = button ident, lparam = toolbar window.
   tbDropdown,
   // Text edit getter/setter messages (single-line and multiline controls).
   // Getter pattern is WinAPI-like: return value in result_t and optionally
@@ -218,7 +228,7 @@ enum {
   //   Not sent by win_splitter itself; parent may use it to notify grandparents.
   spnDragStart,
   spnMoved,
-  tbItemDrop,         // evCommand notification: lparam=toolbar_drop_item_t*
+  tbItemDrop,         // evCommand notification: MAKEDWORD(target ident, tbItemDrop), lparam=toolbar_drop_item_t*
   // Text edit → parent (evCommand) after every user edit of the text (EN_CHANGE).
   // edUpdate still goes to the root on commit (Enter / Tab). lparam = edit window.
   ednChange,
@@ -251,8 +261,8 @@ enum {
 #define WINDOW_NOTRAYBUTTON (1 << 9)
 #define WINDOW_DIALOG       (1 << 10)
 #define WINDOW_TOOLBAR      (1 << 11)
-#define WINDOW_TITLETOOLBAR (1 << 15) // with WINDOW_TOOLBAR: caption and actions share one band
-#define WINDOW_NOCOLLAPSE   (1 << 14) // with WINDOW_TITLETOOLBAR: no collapse/restore button; dock_collapse refuses
+#define WINDOW_TITLETOOLBAR (1ull << 32) // with WINDOW_TOOLBAR: caption and actions share one band
+#define WINDOW_NOCOLLAPSE   (1ull << 33) // with WINDOW_TITLETOOLBAR: no collapse/restore button; dock_collapse refuses
 #define WINDOW_STATUSBAR    (1 << 12)
 // Button style flags (analogous to WinAPI BS_* styles)
 // BUTTON_PUSHLIKE: button stays visually pressed while win->value == true (like a toggle/check button)
@@ -283,6 +293,11 @@ enum {
 #define WINDOW_STATE_PRESSED   (1u << 26)
 #define WINDOW_STATE_VISIBLE   (1u << 27)
 #define WINDOW_STATE_DISABLED  (1u << 28)
+// Extended window bits (32+): states and styles that do not fit the low word.
+#define WINDOW_STATE_MAXIMIZED (1ull << 34)  // ≈ WS_MAXIMIZE
+#define WINDOW_PLASTIC         (1ull << 36)  // paint with the theme's plastic material (Button, Card)
+#define WINDOW_ROUND           (1ull << 37)  // Button: circular silhouette (BUTTON_STYLE_ROUND)
+#define WINDOW_MAXIMIZEBOX     (1ull << 35)  // ≈ WS_MAXIMIZEBOX: caption exposes a restore/maximize command
 
 // Auto-layout alignment values used by layout_measure_t / layout_arrange_t.
 // 0 = stretch (default), matching WPF/SwiftUI "fill available space".
@@ -380,23 +395,35 @@ typedef struct {
 #define TOOLBAR_BAND_HEIGHT     (TB_SPACING + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH))
 #define TOOLBAR_LABEL_PADDING           8       // horizontal padding added to auto-computed label width (left+right)
 #define TOOLBAR_COMBOBOX_DEFAULT_WIDTH_MULT  3  // default combobox width = button_size * this multiplier
-#define TOOLBAR_BUTTON_FLAG_ACTIVE   (1u << 0)
-#define TOOLBAR_BUTTON_FLAG_PRESSED  (1u << 1)
-#define TOOLBAR_ITEM_FLAG_DISABLED   (1u << 3)
-// wparam=item ident, lparam=(void *)(intptr_t)enabled
-#define tbEnableItem (evUser + 950)
-// Vertical toolbar grid (1..4 columns); non-button items occupy a full row.
-#define tbSetColumns (evUser + 951)
-// wparam=item ident, lparam=icon name (NULL clears); preserves embedded controls.
-#define tbSetItemIcon (evUser + 952)
-// lparam=SVG icon name (copied, NULL clears); inside the text field before its text.
-#define edSetLeadingIcon (evUser + 953)
-// wparam=item ident, lparam=uint32_t* packed colour (NULL restores theme accent).
-#define tbSetItemColor (evUser + 954)
-// wparam=ident of an embedded control; re-measures it and lays the toolbar out again (TB_AUTOSIZE).
-#define tbFitItem (evUser + 955)
-// wparam=button ident, lparam=(void *)(intptr_t)checked; other buttons keep their state (TB_CHECKBUTTON).
-#define tbCheckButton (evUser + 956)
+// Toolbar item state (≈ TBSTATE_*): changes at runtime through tbSetState / tbCheckButton / tbEnableItem.
+#define TBSTATE_CHECKED  (1u << 0)
+#define TBSTATE_DISABLED (1u << 1)
+// Toolbar item style (≈ TBSTYLE_*): fixed by the descriptor.
+#define TBSTYLE_CHECK      BUTTON_PUSHLIKE  // the toolbar toggles TBSTATE_CHECKED on each click
+#define TBSTYLE_CHECKGROUP BUTTON_AUTORADIO // clicking checks this button and clears its group (consecutive CHECKGROUP buttons)
+// Toolbar messages.  Notifications travel as evCommand(MAKEDWORD(ident, code), toolbar) to the owner.
+enum {
+  tbEnableItem = evUser + 950, // wparam=item ident, lparam=(void *)(intptr_t)enabled
+  tbSetColumns,                // vertical toolbar grid (1..4 columns); non-button items occupy a full row
+  tbSetItemIcon,               // wparam=item ident, lparam=icon name (NULL clears); preserves embedded controls
+  edSetLeadingIcon,            // lparam=SVG icon name (copied, NULL clears); inside the text field before its text
+  tbSetItemColor,              // wparam=item ident, lparam=uint32_t* packed colour (NULL restores theme accent)
+  tbFitItem,                   // wparam=ident of an embedded control; re-measures it and lays the toolbar out again (TB_AUTOSIZE)
+  tbCheckButton,               // wparam=button ident, lparam=(void *)(intptr_t)checked (TB_CHECKBUTTON); checking a CHECKGROUP button clears its group
+  tbGetState,                  // wparam=item ident; returns TBSTATE_* bits, or -1 when absent (TB_GETSTATE)
+  tbSetState,                  // wparam=item ident, lparam=(void *)(uintptr_t)TBSTATE_* bits (TB_SETSTATE)
+  tbSetButtonInfo,             // lparam=toolbar_button_info_t* (TB_SETBUTTONINFO): applies the fields named by mask
+  tbGetButtonInfo,             // lparam=toolbar_button_info_t* (TB_GETBUTTONINFO): fills the fields named by mask
+  tbModifyStyle,               // wparam=TOOLBAR_STYLE_* mask, lparam=(void *)(uintptr_t)new bit values; other bits keep (TB_SETEXTENDEDSTYLE)
+  tbGetIdealSize,              // lparam=isize16_t* receives the band size that fits every item (TB_GETMAXSIZE)
+  tbGetItemRect,               // wparam=item ident, lparam=irect16_t* in toolbar-band coordinates (TB_GETITEMRECT)
+};
+// Dock host notifications.
+enum {
+  evDockChanged = evUser + 910,
+  evDockOrient,                // wparam: true for a vertical menu
+  evDockMeasure,               // lparam: ipoint16_t preferred menu size
+};
 #define TOOLBAR_ITEM_FLAG_REORDERABLE (1u << 2) // drop onto another reorderable item
 // Half-size cell: in a single-column vertical toolbar consecutive SMALL
 // buttons/customs pack 2 per row, so 2x2 of them fills one normal button cell.
@@ -406,21 +433,14 @@ typedef struct {
 // Item flags also take CONTROL_SIZE_LARGE: a button CONTROL_LARGE_GROWTH bigger, centred on its row.
 #define TOOLBAR_STYLE_GRIP           (1u << 1) // draggable grip on a floating toolbar
 #define TOOLBAR_STYLE_COMPACT        (1u << 2) // menu-bar background, icon-only items
-#define TOOLBAR_STYLE_PRESSED_STRIP  (1u << 3) // strip's second row contains pressed artwork
-#define TOOLBAR_STYLE_IMAGE_BUTTONS  (1u << 4) // strip artwork includes the button body
+#define TOOLBAR_STYLE_WRAPABLE       (1u << 7) // vertical toolbar flows into a new column at the window height (≈ TBSTYLE_WRAPABLE)
 #define TOOLBAR_STYLE_PLASTIC        (1u << 6) // procedural coloured body with recessed SVG glyph
-#define TOOLBAR_STYLE_STATE_STRIP    (1u << 5) // rows: normal, selected, pressed, hover, disabled
-#define TOOLBAR_COMPACT_PADDING      2
-#define TOOLBAR_COMPACT_SPACING      6
 #if defined(__APPLE__) && TARGET_OS_IOS
 #define TOOLBAR_COMPACT_ICON_SIZE   20
 #else
 #define TOOLBAR_COMPACT_ICON_SIZE   16
 #endif
-#define TOOLBAR_GRIP_HEIGHT          12
-#define TOOLBAR_GRIP_WIDTH           12
 #define TOOLBAR_STYLE_SHOW_LABELS    (1u << 0) // WinAPI-style text below button icons
-#define DROPDOWN_ARROW_W             12          // pixel width of the dropdown arrow zone in TOOLBAR_ITEM_DROPDOWN
 
 typedef enum {
   TOOLBAR_HORIZONTAL = 0,
@@ -435,7 +455,7 @@ typedef enum {
   TOOLBAR_ITEM_TEXTEDIT  = 3,  // single-line text input (embedded child window)
   TOOLBAR_ITEM_SEPARATOR = 4,  // narrow visual separator (owner-drawn)
   TOOLBAR_ITEM_SPACER    = 5,  // invisible gap (owner-drawn, no interaction)
-  TOOLBAR_ITEM_DROPDOWN  = 6,  // split button: left half fires tbButtonClick, right arrow fires tbDropdown
+  TOOLBAR_ITEM_DROPDOWN  = 6,  // split button: left half fires btnClicked, right arrow fires tbDropdown
   TOOLBAR_ITEM_CUSTOM,        // drawn by the owner during tbDrawItem
   TOOLBAR_ITEM_SLIDER,        // embedded Slider; occupies three icon slots
   TOOLBAR_ITEM_SEGMENTED,     // embedded SegmentedControl; text = "One|Two|Three", w = 0 fits the labels
@@ -447,12 +467,32 @@ typedef struct {
   int                 ident;  // command ID / button identifier
   const char         *icon;   // SVG base name; TEXTEDIT uses it as a leading icon; NULL = none
   int                 w;      // explicit width in pixels (0 = automatic)
-  uint32_t            flags;  // extra style flags (BUTTON_PUSHLIKE, BUTTON_AUTORADIO, …)
+  uint32_t            style;  // TBSTYLE_CHECK / TBSTYLE_CHECKGROUP, TOOLBAR_ITEM_FLAG_*, CONTROL_SIZE_*
   const char         *text;   // label text, or combobox/textedit initial text
   const char         *tooltip; // tooltip text shown on hover; NULL = none
   uint32_t            color;  // packed 0xAABBGGRR plastic face colour; 0 uses theme accent
-  const char         *checked_icon; // shown instead of icon while checked (tbCheckButton), with no checked highlight
+  const char         *checked_icon; // shown instead of icon while TBSTATE_CHECKED
+  uint32_t            state;  // initial TBSTATE_* bits; live state is read back through tbGetState
 } toolbar_item_t;
+
+// Per-item extras addressed by `ident`; `mask` selects the valid fields (≈ TBBUTTONINFO).
+#define TBIF_IMAGE        (1u << 0) // icon
+#define TBIF_STYLE        (1u << 1)
+#define TBIF_STATE        (1u << 2)
+#define TBIF_TOOLTIP      (1u << 3)
+#define TBIF_CHECKEDIMAGE (1u << 4) // checked_icon
+#define TBIF_COLOR        (1u << 5)
+#define TBIF_SIZE         (1u << 6) // w
+typedef struct {
+  uint32_t    mask;
+  int         ident;
+  const char *icon;          // copied on set (NULL or "" clears); borrowed on get
+  uint32_t    style, state;
+  const char *tooltip;       // copied on set; borrowed on get
+  const char *checked_icon;  // copied on set; borrowed on get
+  uint32_t    color;
+  int         w;
+} toolbar_button_info_t;
 
 // Tab control messages and notifications (WinAPI TCM_*/TCN_* analogues).
 enum {
@@ -563,7 +603,8 @@ typedef enum {
   brTextOnColor          = 30,  // dark ink on vivid gradient cards and other bright tinted surfaces
   brSelectionTop         = 31,  // selection gradient endpoints (sRGB)
   brSelectionBottom      = 32,
-  brCount                = 33
+  brPlasticNeutral       = 33,  // neutral plastic face (transport buttons): silver
+  brCount                = 34
 } sys_color_idx_t;
 
 // Runtime-accessible theme table (defined in user/theme.c).

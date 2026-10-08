@@ -1127,7 +1127,7 @@ void test_host_projects_page_toolbar(void) {
   ASSERT_NOT_NULL(first);
   ASSERT_NOT_NULL(second);
   ASSERT_TRUE(set_host_page(host, first));
-  ASSERT_EQUAL(host->active_page, first);
+  ASSERT_EQUAL(window_active_page(host), first);
   ASSERT_EQUAL(kPageActivations, 1);
 
   toolbar_state_t *toolbar = window_toolbar_state(host);
@@ -1136,12 +1136,12 @@ void test_host_projects_page_toolbar(void) {
   ASSERT_EQUAL(toolbar->items[0].ident, 701);
 
   ASSERT_TRUE(set_host_page(host, second));
-  ASSERT_EQUAL(host->active_page, second);
-  ASSERT_EQUAL(second->page_host, host);
+  ASSERT_EQUAL(window_active_page(host), second);
+  ASSERT_EQUAL(window_page_host(second), host);
   ASSERT_EQUAL(kPageActivations, 2);
   ASSERT_EQUAL(kPageDeactivations, 1);
   destroy_window(second);
-  ASSERT_NULL(host->active_page);
+  ASSERT_NULL(window_active_page(host));
   ASSERT_EQUAL(toolbar->item_count, 0);
   ASSERT_EQUAL(kPageDeactivations, 2);
   destroy_window(host);

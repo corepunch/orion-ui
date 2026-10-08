@@ -341,7 +341,7 @@ canvas_doc_t *create_document_pixels(const char *filename, int w, int h) {
   cwin->flags &= ~WINDOW_NOTABSTOP;
   doc->canvas_win = cwin;
 
-  dwin->maximizable = true;
+  dwin->flags |= WINDOW_MAXIMIZEBOX;
   maximize_window(dwin);
   cr = get_client_rect(dwin);
   resize_window(cwin, cr.w, cr.h);

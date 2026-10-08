@@ -175,7 +175,7 @@ void sync_desktop_window(void) {
   g_syncing_desktop = true;
   bool replaced = false;
   for (window_t *win = g_ui_runtime.windows; win; win = win->next)
-    if (win->maximized && window_has_state(win, WINDOW_STATE_VISIBLE)) replaced = true;
+    if (window_is_maximized(win) && window_has_state(win, WINDOW_STATE_VISIBLE)) replaced = true;
   if ((!g_desktop_enabled || replaced) && get_desktop_window()) {
     destroy_window(g_desktop_window);
   } else if (g_desktop_enabled && !replaced && !get_desktop_window()) {
@@ -232,8 +232,7 @@ bool ui_init_graphics(int flags, const char *title, int width, int height) {
   }
 #endif
 
-  printf("GL_VERSION  : %s\n", glGetString(GL_VERSION));
-  printf("GLSL_VERSION: %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
+  R_PrintDeviceInfo();
 
   if (!(flags & UI_INIT_HIDDEN))
     axSetSwapInterval(1);

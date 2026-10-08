@@ -18,7 +18,6 @@
 #include <orion/commctl/filelist.h>
 #include <orion/commctl/commctl.h>
 #include <orion/user/user.h>
-#include <orion/user/icons.h>
 #include <orion/user/messages.h>
 
 // ---------------------------------------------------------------------------
@@ -773,17 +772,6 @@ static result_t fp_proc(window_t *win, uint32_t msg,
       fp_sync_accept_button(ps);
       return true;
 
-    case tbButtonClick:
-      if (wparam == FP_ID_TOOL_UP) {
-        fp_navigate_to_parent(ps);
-        return true;
-      }
-      if (wparam == FP_ID_TOOL_NEW_FOLDER) {
-        fp_create_folder(win, ps);
-        return true;
-      }
-      return false;
-
     // ------------------------------------------------------------------
     case evCommand: {
       uint16_t code = HIWORD(wparam);
@@ -851,6 +839,8 @@ static result_t fp_proc(window_t *win, uint32_t msg,
       if (code == btnClicked) {
         window_t *btn = (window_t *)lparam;
         if (!btn) return true;
+        if (LOWORD(wparam) == FP_ID_TOOL_UP) { fp_navigate_to_parent(ps); return true; }
+        if (LOWORD(wparam) == FP_ID_TOOL_NEW_FOLDER) { fp_create_folder(win, ps); return true; }
 
         if (btn->id == FP_ID_CANCEL) {
           end_dialog(win, 0);
@@ -888,7 +878,7 @@ static result_t fp_proc(window_t *win, uint32_t msg,
 static bool fp_run(openfilename_t *ofn, bool save_mode,
                    const char *title) {
   if (!ofn || !ofn->lpstrFile || ofn->nMaxFile == 0) return false;
-  uint32_t flags = WINDOW_DIALOG | WINDOW_NOTRAYBUTTON | WINDOW_TOOLBAR;
+  flags_t flags = WINDOW_DIALOG | WINDOW_NOTRAYBUTTON | WINDOW_TOOLBAR;
 
   fp_state_t ps = {0};
   ps.save_mode     = save_mode;

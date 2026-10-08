@@ -40,8 +40,8 @@ result_t gc_menubar_proc(window_t *win, uint32_t msg,
 result_t gc_toolbar_proc(window_t *win, uint32_t msg,
                         uint32_t wparam, void *lparam) {
   (void)lparam;
-  if (msg == tbButtonClick) {
-    (void)gc_execute_action((uint16_t)wparam);
+  if (msg == evCommand && HIWORD(wparam) == btnClicked) {
+    (void)gc_execute_action(LOWORD(wparam));
     return true;
   }
   return false;
@@ -84,7 +84,7 @@ void gc_handle_command_impl(uint16_t id) {
 
   switch (id) {
     case ID_VIEW_WINDOW_MODE:
-      if (gc->main_win->maximized) restore_window(gc->main_win);
+      if (window_is_maximized(gc->main_win)) restore_window(gc->main_win);
       else maximize_window(gc->main_win);
       break;
     case ID_VIEW_OVERVIEW:

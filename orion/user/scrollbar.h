@@ -16,6 +16,7 @@ bool scrollbar_can_scroll(window_t *win);
 void scrollbar_fling(window_t *win, float vx, float vy);
 // Stops momentum; returns true when the window was still moving.
 bool scrollbar_stop_fling(window_t *win);
+bool scrollbar_is_flinging(const window_t *win);
 // Called from message.c on evTimer for windows with built-in scrollbars.
 // Checks whether timer_id matches a pending overlay-hide timer and, if so,
 // hides the thumb.  Does not consume the timer event.

@@ -33,7 +33,7 @@ static void test_ipad_default_canvas_fills_client(void) {
   ASSERT_TRUE(w != CANVAS_W || h != CANVAS_H);
   canvas_doc_t *doc = create_document(NULL, w, h);
   ASSERT_NOT_NULL(doc);
-  ASSERT_TRUE(doc->win->maximized);
+  ASSERT_TRUE(window_is_maximized(doc->win));
   irect16_t area = imageeditor_document_workspace_rect();
   ASSERT_EQUAL(doc->win->frame.x, area.x);
   ASSERT_EQUAL(doc->win->frame.y, area.y);

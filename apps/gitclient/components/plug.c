@@ -1,5 +1,4 @@
 #include <orion/ui.h>
-#include <orion/user/icons.h>
 #include "diff_view.h"
 
 static const fe_component_desc_t k_gitclient_components[] = {

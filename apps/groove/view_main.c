@@ -31,7 +31,7 @@ static result_t app_toolbar_proc(window_t *win, uint32_t msg, uint32_t wparam, v
   (void)lparam;
   switch (msg) {
     case evCreate: return true;
-    case tbButtonClick: app_command((uint16_t)wparam); return true;
+    case evCommand: if (HIWORD(wparam) != btnClicked) return false; app_command(LOWORD(wparam)); return true;
     case evDestroy:
       if (g_app && g_app->toolbar == win) g_app->toolbar = NULL;
       return false;
@@ -76,9 +76,12 @@ result_t main_win_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       }
       app->sheet = create_window("Arrangement", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_HSCROLL,
                                   MAKERECT(0, 0, 1, 1), win, win_sheet, app->hinstance, NULL);
+      app->tracks = create_window("Tracks", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOACTIVATE | WINDOW_NOTABSTOP | WINDOW_NODRAG,
+                                  MAKERECT(0, 0, GR_SHEET_HEADER_W, 1), win, win_tracks, app->hinstance, NULL);
       app->library = create_window("Library", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE,
                                     MAKERECT(0, 0, 800, 280), win, win_transport, app->hinstance, NULL);
       dock_window(app->library, DOCK_BOTTOM, DOCK_EDGE(DOCK_BOTTOM), DOCK_RESIZABLE | DOCK_NOFLOAT, 280, 100);
+      if (app->tracks) dock_window(app->tracks, DOCK_LEFT, DOCK_EDGE(DOCK_LEFT), DOCK_NOFLOAT, GR_SHEET_HEADER_W, GR_SHEET_HEADER_W);
       dock_window(app->sheet, DOCK_FILL, 0, DOCK_NOFLOAT, 0, 100);
       app->timer = axSetTimer(win, 33, NULL, true);
       return true;
@@ -95,11 +98,8 @@ result_t main_win_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
         invalidate_window(app->sheet);
       }
       return true;
-    case tbButtonClick:
-      app_command((uint16_t)wparam);
-      return true;
     case evCommand:
-      if (HIWORD(wparam) == kAcceleratorNotification) { app_command(LOWORD(wparam)); return true; }
+      if (HIWORD(wparam) == kAcceleratorNotification || HIWORD(wparam) == btnClicked) { app_command(LOWORD(wparam)); return true; }
       return false;
     case evClose:
       ui_request_quit();

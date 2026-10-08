@@ -360,14 +360,12 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
     case evPaint:
       return false;
 
-    case tbButtonClick: {
-      uint16_t id = (uint16_t)wparam;
-      (void)gc_execute_action(id);
-      return true;
-    }
-
     case evCommand: {
       uint16_t code = (uint16_t)HIWORD(wparam);
+      if (code == btnClicked && lparam && ((window_t *)lparam)->flags & WINDOW_TOOLBAR) {
+        (void)gc_execute_action(LOWORD(wparam));
+        return true;
+      }
 
       if (gc_overview_handle_command(wparam, lparam)) return true;
 

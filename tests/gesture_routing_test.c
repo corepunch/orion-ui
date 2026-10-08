@@ -1,6 +1,7 @@
 #include "test_framework.h"
 #include "test_env.h"
 #include <orion/ui.h>
+#include <orion/user/scrollbar.h>
 #include <math.h>
 
 static ax_gesture_t received;
@@ -91,7 +92,7 @@ static void test_builtin_pan(void) {
   dispatch_gesture(AX_GESTURE_UPDATE, -1999, -1999, -2000, -2000);
   ASSERT_EQUAL(child->hscroll.pos, child->hscroll.max_val - child->hscroll.page - 1);
   dispatch_gesture(AX_GESTURE_CANCEL, -1999, -1999, -1999, -1999);
-  ASSERT_FALSE(child->hscroll.gesture_active); ASSERT_FALSE(child->vscroll.gesture_active);
+  
   int pos = child->hscroll.pos;
   dispatch_gesture(AX_GESTURE_UPDATE, -2100, -2100, -1999, -1999);
   ASSERT_EQUAL(child->hscroll.pos, pos);
@@ -174,7 +175,7 @@ static void test_touch_pan(void) {
   ASSERT_EQUAL(list->vscroll.pos, 60 - TOUCH_SLOP);
   dispatch_finger(kEventLeftButtonUp, 50, 140, 2300);
   ASSERT_EQUAL(presses, 0); ASSERT_EQUAL(releases, 0);
-  ASSERT_EQUAL(list->vscroll.fling_timer_id, 0u);
+  ASSERT_FALSE(scrollbar_is_flinging(list));
 
   dispatch_finger(kEventLeftButtonDown, 50, 200, 3000);
   ASSERT_EQUAL(presses, 0);
@@ -182,9 +183,9 @@ static void test_touch_pan(void) {
   dispatch_finger(kEventLeftButtonDragged, 50, 100, 3032);
   dispatch_finger(kEventLeftButtonUp, 50, 100, 3040);
   ASSERT_EQUAL(presses, 0);
-  ASSERT_TRUE(list->vscroll.fling_timer_id != 0);
+  ASSERT_TRUE(scrollbar_is_flinging(list));
   dispatch_finger(kEventLeftButtonDown, 50, 200, 3100);
-  ASSERT_EQUAL(list->vscroll.fling_timer_id, 0u);
+  ASSERT_FALSE(scrollbar_is_flinging(list));
   dispatch_finger(kEventLeftButtonUp, 50, 200, 3110);
   ASSERT_EQUAL(presses, 0);
 

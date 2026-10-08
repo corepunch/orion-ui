@@ -14,18 +14,14 @@ typedef struct {
   toolbar_presentation_t presentation;
 } application_toolbar_t;
 
-typedef struct {
-  const char *path;
-  int columns, count;
-  const irect16_t *regions;
-} toolbar_atlas_t;
-
 // Docked toolbars are owned children; use the remaining rectangle for content.
 window_t *create_docked_toolbar(window_t *owner, toolbar_dock_t dock, winproc_t proc);
 irect16_t layout_docked_toolbars(window_t *owner, irect16_t area);
 
 toolbar_state_t *toolbar_ensure_state(window_t *win);
 toolbar_state_t *toolbar_get_state(window_t *win);
+uint8_t toolbar_dock_hint(const window_t *win);              // toolbar_dock_t; TOOLBAR_DOCK_TOP when unset
+void    toolbar_set_dock_hint(window_t *win, uint8_t hint);
 int toolbar_effective_bsz(window_t const *win);
 int toolbar_effective_item_height(window_t const *win);
 int toolbar_effective_padding(window_t const *win);
@@ -35,6 +31,8 @@ int toolbar_content_offset(const window_t *win);
 
 void toolbar_draw_non_client(window_t *win);
 
+int  toolbar_item_state(window_t *win, int ident);          // tbGetState: TBSTATE_* bits, -1 when absent
+bool toolbar_is_button_checked(window_t *win, int ident);   // TB_ISBUTTONCHECKED
 bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 
 bool toolbar_handle_notitle_nc_left_button_up(window_t *win, uint32_t wparam);

@@ -173,6 +173,14 @@ bool R_BeginScreenComposition(int width, int height, uint32_t clear_color);
 void R_PresentScreenComposition(int width, int height);
 void R_DestroyScreenComposition(void);
 void R_SetFramebufferSRGB(bool enabled);
+
+// Raster state in framebuffer pixels (origin bottom-left). The window system issues no GL itself.
+void R_BindWindowTarget(uint32_t fbo);
+void R_SetViewport(int x, int y, int w, int h);
+void R_SetScissor(int x, int y, int w, int h);   // enables the scissor test
+void R_DisableScissor(void);
+void R_PrintDeviceInfo(void);
+
 void R_BlendPremultiplied(void);
 
 // Blend state

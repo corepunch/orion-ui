@@ -149,7 +149,7 @@ static void draw_tab_item(window_t *page, int x, bool selected, tabview_state_t 
 static irect16_t tab_page_rect(window_t *win, tabview_state_t *st, irect16_t r) {
   if (is_sidebar(st)) return rect_trim_left(r, sidebar_width(win, st));
   irect16_t page_rect = rect_trim_top(r, tab_header_height(st));
-  int frame = theme_is_modern(get_theme()) ? 0 : 2;
+  int frame = get_theme()->tab_pane_frame;
   page_rect.x += frame; page_rect.w = MAX(0, page_rect.w - 2 * frame);
   page_rect.h = MAX(0, page_rect.h - frame);
   return page_rect;

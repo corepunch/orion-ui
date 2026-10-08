@@ -91,8 +91,9 @@ send_message(win, tbAddButtons,
              sizeof(buttons)/sizeof(buttons[0]), buttons);
 
 // In window proc – receive toolbar click
-case tbButtonClick:
-    switch (wparam) {  // ident
+case evCommand:
+    if (HIWORD(wparam) != btnClicked) break;
+    switch (LOWORD(wparam)) {  // ident
         case ID_OPEN: open_file(); break;
         case ID_SAVE: save_file(); break;
     }

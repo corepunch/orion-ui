@@ -279,15 +279,15 @@ static void history_availability(void) {
     if (tb->items[i].ident == ID_EDIT_REDO) redo = i;
   }
   ASSERT_TRUE(undo >= 0 && redo >= 0);
-  ASSERT_TRUE(tb->items[undo].flags & TOOLBAR_ITEM_FLAG_DISABLED);
-  ASSERT_TRUE(tb->items[redo].flags & TOOLBAR_ITEM_FLAG_DISABLED);
+  ASSERT_TRUE(tb->items[undo].state & TBSTATE_DISABLED);
+  ASSERT_TRUE(tb->items[redo].state & TBSTATE_DISABLED);
   ASSERT_TRUE(ie_doc_begin_op(doc, "Ink"));
   canvas_set_pixel(doc, 4, 4, g_app->fg_color);
   ie_doc_commit_op(doc, true);
-  ASSERT_FALSE(tb->items[undo].flags & TOOLBAR_ITEM_FLAG_DISABLED);
+  ASSERT_FALSE(tb->items[undo].state & TBSTATE_DISABLED);
   cmd_undo(doc);
-  ASSERT_TRUE(tb->items[undo].flags & TOOLBAR_ITEM_FLAG_DISABLED);
-  ASSERT_FALSE(tb->items[redo].flags & TOOLBAR_ITEM_FLAG_DISABLED);
+  ASSERT_TRUE(tb->items[undo].state & TBSTATE_DISABLED);
+  ASSERT_FALSE(tb->items[redo].state & TBSTATE_DISABLED);
   for (int i = 0; i < kNumMenus; i++) {
     for (int j = 0; j < kMenus[i].item_count; j++) {
       const menu_item_t *item = &kMenus[i].items[j];
@@ -296,10 +296,10 @@ static void history_availability(void) {
     }
   }
   cmd_redo(doc);
-  ASSERT_TRUE(tb->items[redo].flags & TOOLBAR_ITEM_FLAG_DISABLED);
+  ASSERT_TRUE(tb->items[redo].state & TBSTATE_DISABLED);
   close_document(doc);
-  ASSERT_TRUE(tb->items[undo].flags & TOOLBAR_ITEM_FLAG_DISABLED);
-  ASSERT_TRUE(tb->items[redo].flags & TOOLBAR_ITEM_FLAG_DISABLED);
+  ASSERT_TRUE(tb->items[undo].state & TBSTATE_DISABLED);
+  ASSERT_TRUE(tb->items[redo].state & TBSTATE_DISABLED);
   destroy_window(g_app->chrome_win);
   g_app->chrome_win = NULL;
   PASS();

@@ -1,7 +1,7 @@
 #include "imageeditor.h"
 #include <orion/user/toolbar.h>
 
-#define FRAME_ITEM_BASE 0x10000u
+#define FRAME_ITEM_BASE 0x8000u // item idents travel in LOWORD(wparam)
 #define FRAME_MAX_VISIBLE 8
 
 typedef struct {
@@ -102,7 +102,7 @@ static void rebuild_thumbnails(timeline_state_t *st) {
 }
 
 static int timeline_fixed_width(void) {
-  return TOOLBAR_GRIP_WIDTH + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH) +
+  return get_theme()->toolbar_grip_size + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH) +
          7 * (40 + TOOLBAR_SPACING) + 6 + TOOLBAR_SPACING;
 }
 
@@ -132,14 +132,16 @@ static void timeline_build_items(window_t *win) {
   toolbar_item_t items[ARRAY_LEN(kTimelineToolbar) + 2 * FRAME_MAX_VISIBLE];
   memcpy(items, kTimelineToolbar, sizeof(kTimelineToolbar));
   int n = ARRAY_LEN(kTimelineToolbar);
-  items[1].icon = doc && doc->anim && doc->anim->playing ? "square" : "play";
-  items[3].flags = g_app && g_app->anim_trace_enabled ? TOOLBAR_BUTTON_FLAG_ACTIVE : 0;
+  items[1].icon = "play";
+  items[1].checked_icon = "square";
+  items[1].state = doc && doc->anim && doc->anim->playing ? TBSTATE_CHECKED : 0;
+  items[3].state = g_app && g_app->anim_trace_enabled ? TBSTATE_CHECKED : 0;
   for (int i = st->first_frame; i < MIN(count, st->first_frame + st->visible_count); i++) {
     if (i > st->first_frame)
       items[n++] = (toolbar_item_t){.type = TOOLBAR_ITEM_SPACER, .w = TIMELINE_FRAME_SPACER_W};
     items[n++] = (toolbar_item_t){.type = TOOLBAR_ITEM_CUSTOM, .ident = FRAME_ITEM_BASE + i,
-      .w = TIMELINE_THUMB_W, .flags = TOOLBAR_ITEM_FLAG_REORDERABLE |
-        (i == doc->anim->active_frame ? TOOLBAR_BUTTON_FLAG_ACTIVE : 0), .tooltip = "Select frame; drag to reorder"};
+      .w = TIMELINE_THUMB_W, .style = TOOLBAR_ITEM_FLAG_REORDERABLE,
+      .state = i == doc->anim->active_frame ? TBSTATE_CHECKED : 0, .tooltip = "Select frame; drag to reorder"};
   }
   send_message(win, tbSetItems, n, items);
 }
@@ -232,6 +234,14 @@ static result_t timeline_proc(window_t *win, uint32_t msg, uint32_t wparam, void
       if (wparam >= FRAME_ITEM_BASE && lparam) timeline_draw_frame(win, wparam - FRAME_ITEM_BASE, lparam);
       return true;
     case evCommand:
+      if (HIWORD(wparam) == btnClicked) {
+        uint32_t ident = LOWORD(wparam);
+        if (ident >= FRAME_ITEM_BASE) return timeline_select_frame(win, st, ident - FRAME_ITEM_BASE);
+        if (ident == ID_ANIM_PLAY && tl_doc() && tl_doc()->anim && tl_doc()->anim->playing)
+          handle_menu_command(ID_ANIM_STOP);
+        else handle_menu_command(ident);
+        return true;
+      }
       if (HIWORD(wparam) == tbItemDrop && lparam) {
         toolbar_drop_item_t *drop = lparam;
         canvas_doc_t *doc = tl_doc();
@@ -289,12 +299,6 @@ static result_t timeline_proc(window_t *win, uint32_t msg, uint32_t wparam, void
       return timeline_select_frame(win, st, target);
     }
 
-    case tbButtonClick:
-      if (wparam >= FRAME_ITEM_BASE) return timeline_select_frame(win, st, wparam - FRAME_ITEM_BASE);
-      if (wparam == ID_ANIM_PLAY && tl_doc() && tl_doc()->anim && tl_doc()->anim->playing)
-        handle_menu_command(ID_ANIM_STOP);
-      else handle_menu_command(wparam);
-      return true;
     default: return false;
   }
 }

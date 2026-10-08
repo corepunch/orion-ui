@@ -48,7 +48,7 @@ void form_doc_show_only(window_t *doc) {
 // create_form_doc / close_form_doc
 // ============================================================
 
-irect16_t form_doc_frame_for_size(int form_w, int form_h, uint32_t form_flags) {
+irect16_t form_doc_frame_for_size(int form_w, int form_h, flags_t form_flags) {
   int max_w = SCREEN_W - 4;
   int max_h = SCREEN_H - get_theme()->menubar_height - 4;
   bool has_status = (form_flags & WINDOW_STATUSBAR) != 0;
@@ -91,7 +91,7 @@ window_t *create_form_doc(int w, int h) {
   doc->modified  = false;
 
   // Document window
-  uint32_t doc_flags = fe_default_auto_layout_enabled() ? WINDOW_AUTO_LAYOUT : 0;
+  flags_t doc_flags = fe_default_auto_layout_enabled() ? WINDOW_AUTO_LAYOUT : 0;
   doc_flags &= ~WINDOW_STACK_HORIZONTAL;
   irect16_t doc_frame = form_doc_frame_for_size(w, h, doc_flags);
   set_default_window_position(DOC_START_X, DOC_START_Y);

@@ -73,182 +73,20 @@ static void test_shader_state_restore(void) {
   PASS();
 }
 
-static void test_png_toolbar(void) {
-  TEST("PNG toolbar preserves colours, selects pressed row and retains texture after failed reload");
-  CGLPixelFormatAttribute attrs[] = {kCGLPFAOpenGLProfile,
-    (CGLPixelFormatAttribute)kCGLOGLPVersion_3_2_Core, 0};
-  CGLPixelFormatObj format = NULL;
-  CGLContextObj context = NULL;
-  GLint count = 0;
-  if (CGLChoosePixelFormat(attrs, &format, &count) != kCGLNoError || !format) { SKIP("Offscreen OpenGL unavailable"); }
-  CGLError error = CGLCreateContext(format, NULL, &context);
-  CGLDestroyPixelFormat(format);
-  if (error != kCGLNoError || !context) { SKIP("Offscreen OpenGL context unavailable"); }
-  CGLSetCurrentContext(context);
-  bool initialized = ui_init_prog(), ok = initialized;
-  uint32_t fbo = 0, texture = 0;
-  int w = 0, h = 0;
-  static window_t root;
-  toolbar_item_t item = {TOOLBAR_ITEM_BUTTON, 1, "strip:0"};
-  irect16_t rect = R(2, 2, 24, 24);
-  toolbar_state_t tb = {.items = &item, .item_rects = &rect, .item_count = 1,
-    .pressed_item = -1, .hot_item = -1, .btn_size = 24, .style = TOOLBAR_STYLE_PRESSED_STRIP};
-  window_t band = {.userdata = &tb};
-  root = (window_t){.frame = {0, 0, 64, 64}, .flags = WINDOW_TOOLBAR | WINDOW_NOTITLE,
-                    .toolbar = &band, .surface_w = 64, .surface_h = 64};
-  if (ok) {
-    init_ui_white_texture();
-    ok = R_EnsureWindowTarget(&fbo, &texture, &w, &h, 64, 64);
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    uint8_t pixels[8 * 16 * 4];
-    for (int i = 0; i < 8 * 16; i++) {
-      pixels[i * 4] = i < 64 ? 255 : 0; pixels[i * 4 + 1] = i < 64 ? 0 : 255;
-      pixels[i * 4 + 2] = 0; pixels[i * 4 + 3] = 255;
-    }
-    const char *path = "/tmp/orion-toolbar-atlas-test.png";
-    ok &= save_image_png(path, pixels, 8, 16);
-    g_ui_runtime.running = true;
-    ok &= toolbar_handle_message(&root, tbLoadStrip, 8, (void *)path);
-    uint32_t original = tb.strip.tex;
-    ok &= !toolbar_handle_message(&root, tbLoadStrip, 0, (void *)path) && tb.strip.tex == original;
-    uint8_t normal[4], pressed[4];
-    toolbar_draw_non_client(&root);
-    glReadPixels(14, 64 - 14 - 1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, normal);
-    tb.pressed_item = 0;
-    toolbar_draw_non_client(&root);
-    glReadPixels(14, 64 - 14 - 1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pressed);
-    ok &= normal[0] == 255 && normal[1] == 0 && pressed[0] == 0 && pressed[1] == 255;
-    tb.pressed_item = -1;
-    tb.style |= TOOLBAR_STYLE_IMAGE_BUTTONS;
-    toolbar_draw_non_client(&root);
-    uint8_t body_margin[4], active_margin[4], active[4];
-    glReadPixels(3, 64 - 14 - 1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, body_margin);
-    item.flags = TOOLBAR_BUTTON_FLAG_ACTIVE;
-    tb.hot_item = 0;
-    toolbar_draw_non_client(&root);
-    glReadPixels(3, 64 - 14 - 1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, active_margin);
-    glReadPixels(14, 64 - 14 - 1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, active);
-    ok &= active[0] == 0 && active[1] == 255 && memcmp(body_margin, active_margin, 4) == 0;
-    item.flags = TOOLBAR_ITEM_FLAG_DISABLED;
-    toolbar_draw_non_client(&root);
-    uint8_t disabled[4];
-    glReadPixels(14, 64 - 14 - 1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, disabled);
-    ok &= disabled[0] > disabled[1] && disabled[0] < normal[0];
-    uint8_t states[8 * 40 * 4];
-    const uint8_t colours[][3] = {{255, 0, 0}, {0, 255, 0}, {0, 0, 255}, {255, 255, 0}, {88, 88, 88}};
-    irect16_t regions[] = {R(0, 0, 8, 8), R(0, 8, 8, 8), R(0, 16, 8, 8), R(0, 24, 8, 8), R(0, 32, 8, 8)};
-    for (int i = 0; i < 8 * 40; i++) {
-      memcpy(states + i * 4, colours[i / 64], 3);
-      states[i * 4 + 3] = 255;
-    }
-    ok &= save_image_png(path, states, 8, 40);
-    toolbar_atlas_t atlas = {path, 1, ARRAY_LEN(regions), regions};
-    ok &= toolbar_handle_message(&root, tbLoadAtlas, 0, &atlas);
-    original = tb.strip.tex;
-    regions[0] = R(0, 0, 9, 8);
-    ok &= !toolbar_handle_message(&root, tbLoadAtlas, 0, &atlas) && tb.strip.tex == original;
-    tb.style = TOOLBAR_STYLE_STATE_STRIP | TOOLBAR_STYLE_IMAGE_BUTTONS;
-    for (int row = 0; row < 5; row++) {
-      item.flags = row == 1 ? TOOLBAR_BUTTON_FLAG_ACTIVE : row == 4 ? TOOLBAR_ITEM_FLAG_DISABLED : 0;
-      tb.pressed_item = row == 2 ? 0 : -1;
-      tb.hot_item = row == 3 ? 0 : -1;
-      toolbar_draw_non_client(&root);
-      uint8_t px[4];
-      glReadPixels(14, 64 - 14 - 1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, px);
-      uint8_t gray = (uint8_t)(ui_srgb8_to_linear(88) * 255 + 0.5f);
-      bool match = row == 4 ? px[0] == gray && px[1] == gray && px[2] == gray && px[3] == 255 : memcmp(px, colours[row], 3) == 0;
-      if (!match) fprintf(stderr, "[renderer-test] atlas row=%d pixel=%u,%u,%u\n", row, px[0], px[1], px[2]);
-      ok &= match;
-    }
-    ok &= glGetError() == GL_NO_ERROR;
-    if (!ok) fprintf(stderr, "[renderer-test] toolbar normal=%u,%u pressed=%u,%u\n", normal[0], normal[1], pressed[0], pressed[1]);
-    g_ui_runtime.running = false;
-    R_DeleteTexture(tb.strip_tex);
-    free(tb.strip_regions);
-    remove(path);
-    shutdown_white_texture();
-  }
-  root.toolbar = NULL;
-  R_DestroyWindowTarget(&fbo, &texture, &w, &h);
-  if (initialized) ui_shutdown_prog();
-  CGLSetCurrentContext(NULL);
-  CGLDestroyContext(context);
-  ASSERT_TRUE(ok);
-  PASS();
-}
 static void read_card_pixel(int x, int y, uint8_t pixel[4]) {
   glReadPixels(x, 32 - y - 1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
 }
 
-static void test_image_background(void) {
-  TEST("Image backgrounds preserve end caps, authored states, alpha and bounds at small sizes");
-  CGLPixelFormatAttribute attrs[] = {kCGLPFAOpenGLProfile,
-    (CGLPixelFormatAttribute)kCGLOGLPVersion_3_2_Core, 0};
-  CGLPixelFormatObj format = NULL;
-  CGLContextObj context = NULL;
-  GLint count = 0;
-  if (CGLChoosePixelFormat(attrs, &format, &count) != kCGLNoError || !format) { SKIP("Offscreen OpenGL unavailable"); }
-  CGLError error = CGLCreateContext(format, NULL, &context);
-  CGLDestroyPixelFormat(format);
-  if (error != kCGLNoError || !context) { SKIP("Offscreen OpenGL context unavailable"); }
-  CGLSetCurrentContext(context);
-  bool initialized = ui_init_prog(), ok = initialized;
-  uint32_t fbo = 0, texture = 0;
-  int w = 0, h = 0;
-  image_atlas_t atlas = {0};
-  if (ok) {
-    ok = R_EnsureWindowTarget(&fbo, &texture, &w, &h, 32, 32);
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glViewport(0, 0, 32, 32);
-    glDisable(GL_SCISSOR_TEST);
-    set_projection(0, 0, 32, 32);
-    uint8_t pixels[10 * 30 * 4];
-    const uint8_t colours[][3] = {{0, 255, 0}, {255, 255, 0}, {0, 0, 255}, {255, 0, 255}, {88, 88, 88}};
-    for (int y = 0; y < 30; y++) for (int x = 0; x < 10; x++) {
-      uint8_t *px = pixels + (y * 10 + x) * 4;
-      memcpy(px, x < 2 ? (uint8_t[]){255, 0, 0} : x >= 8 ? (uint8_t[]){0, 255, 255} : colours[y / 6], 3);
-      px[3] = y % 6 == 0 && (x == 0 || x == 9) ? 0 : 255;
-    }
-    const char *path = "/tmp/orion-image-background-test.png";
-    ok &= save_image_png(path, pixels, 10, 30);
-    g_ui_runtime.running = true;
-    ok &= image_atlas_load(&atlas, path);
-    uint32_t original = atlas.tex;
-    ok &= !image_atlas_load(&atlas, "/tmp/orion-missing-skin.png") && atlas.tex == original;
-    image_background_t bg = {.atlas = &atlas, .source_border = {2, 0, 2, 0}, .border = {2, 0, 2, 0}};
-    for (int i = 0; i < IMAGE_BG_COUNT; i++) bg.states[i] = R(0, i * 6, 10, 6);
-    ctrl_state_t states[] = {CTRL_NORMAL, CTRL_SELECTED | CTRL_HOVER, CTRL_PRESSED | CTRL_SELECTED,
-                            CTRL_HOVER, CTRL_DISABLED | CTRL_PRESSED | CTRL_SELECTED | CTRL_HOVER};
-    for (int i = 0; i < IMAGE_BG_COUNT; i++) {
-      glClearColor(0, 0, 0, 0);
-      glClear(GL_COLOR_BUFFER_BIT);
-      ok &= draw_image_background(R(2, 2, 28, 6), &bg, states[i]);
-      uint8_t left[4], middle[4], right[4], outside[4], corner[4];
-      read_card_pixel(2, 5, left); read_card_pixel(16, 5, middle); read_card_pixel(29, 5, right);
-      read_card_pixel(1, 5, outside); read_card_pixel(2, 2, corner);
-      uint8_t gray = (uint8_t)(ui_srgb8_to_linear(88) * 255 + 0.5f);
-      ok &= left[0] == 255 && left[1] == 0 && right[1] == 255 && right[2] == 255;
-      ok &= i == 4 ? middle[0] == gray && middle[1] == gray && middle[2] == gray : memcmp(middle, colours[i], 3) == 0;
-      ok &= middle[3] == 255 && outside[3] == 0 && corner[3] == 0;
-    }
-    bg.source_border = R(2, 2, 2, 2);
-    bg.border = R(4, 4, 4, 4);
-    glClear(GL_COLOR_BUFFER_BIT);
-    ok &= draw_image_background(R(10, 10, 3, 3), &bg, CTRL_NORMAL);
-    uint8_t outside[4];
-    read_card_pixel(9, 11, outside); ok &= outside[3] == 0;
-    read_card_pixel(13, 11, outside); ok &= outside[3] == 0;
-    ok &= glGetError() == GL_NO_ERROR;
-    image_atlas_free(&atlas);
-    g_ui_runtime.running = false;
-    remove(path);
-  }
-  R_DestroyWindowTarget(&fbo, &texture, &w, &h);
-  if (initialized) ui_shutdown_prog();
-  CGLSetCurrentContext(NULL);
-  CGLDestroyContext(context);
-  ASSERT_TRUE(ok);
-  PASS();
+static plastic_look_t look_for(ctrl_state_t state) {
+  return (plastic_look_t){.pressed = !!(state & CTRL_PRESSED), .hover = !!(state & CTRL_HOVER),
+    .selected = !!(state & CTRL_SELECTED), .disabled = !!(state & CTRL_DISABLED),
+    .gloss = 1.0f, .rim = 0.55f, .ink = 0.10f, .lift = 0.10f};
+}
+
+static const plastic_look_t *look_ptr(ctrl_state_t state) {
+  static plastic_look_t look;
+  look = look_for(state);
+  return &look;
 }
 
 static void test_plastic_surface(void) {
@@ -280,7 +118,7 @@ static void test_plastic_surface(void) {
     ctrl_state_t states[] = {CTRL_NORMAL, CTRL_SELECTED, CTRL_PRESSED, CTRL_HOVER, CTRL_DISABLED};
     for (int i = 0; i < ARRAY_LEN(states); i++) {
       glClear(GL_COLOR_BUFFER_BIT);
-      render_plastic_surface(R(2, 2, 28, 28), 10, 2, 3, states[i], WEB(0x48aa36),
+      render_plastic_surface(R(2, 2, 28, 28), 10, 2, 3, look_ptr(states[i]), WEB(0x48aa36),
                               0x80000000, glyph, NULL, (ipoint16_t){16, 16});
       read_card_pixel(8, 16, samples[i]);
       uint8_t pixels[32 * 32 * 4];
@@ -293,12 +131,12 @@ static void test_plastic_surface(void) {
     ok &= samples[2][1] < samples[0][1] && samples[3][1] > samples[0][1];
     ok &= abs(samples[4][0] - samples[4][1]) <= 1 && abs(samples[4][1] - samples[4][2]) <= 1;
     glClear(GL_COLOR_BUFFER_BIT);
-    render_plastic_surface(R(2, 2, 28, 28), 10, 2, 3, CTRL_DISABLED | CTRL_HOVER | CTRL_PRESSED | CTRL_SELECTED,
+    render_plastic_surface(R(2, 2, 28, 28), 10, 2, 3, look_ptr(CTRL_DISABLED | CTRL_HOVER | CTRL_PRESSED | CTRL_SELECTED),
                             WEB(0x48aa36), 0x80000000, glyph, NULL, (ipoint16_t){16, 16});
     glReadPixels(0, 0, 32, 32, GL_RGBA, GL_UNSIGNED_BYTE, disabled_flags);
     ok &= memcmp(disabled_only, disabled_flags, sizeof(disabled_only)) == 0;
     glClear(GL_COLOR_BUFFER_BIT);
-    render_plastic_surface(R(2, 2, 28, 28), 10, 2, 3, CTRL_NORMAL, 0x8036aa48,
+    render_plastic_surface(R(2, 2, 28, 28), 10, 2, 3, look_ptr(CTRL_NORMAL), 0x8036aa48,
                             0x80000000, glyph, NULL, (ipoint16_t){16, 16});
     uint8_t face[4], rim[4], top[4], center[4], under[4], beside[4];
     read_card_pixel(8, 16, face); read_card_pixel(16, 28, rim);
@@ -306,7 +144,7 @@ static void test_plastic_surface(void) {
     ok &= face[3] == 128 && rim[3] > 0 && rim[3] < 128 && top[1] < center[1] && center[1] < beside[1] && under[1] > beside[1];
     for (int size = 4; size <= 24; size += 4) {
       glClear(GL_COLOR_BUFFER_BIT);
-      render_plastic_surface(R(4, 4, size, 8), 100, 2, 3, CTRL_SELECTED, WEB(0x48aa36), 0x80000000, 0, NULL, (ipoint16_t){0, 0});
+      render_plastic_surface(R(4, 4, size, 8), 100, 2, 3, look_ptr(CTRL_SELECTED), WEB(0x48aa36), 0x80000000, 0, NULL, (ipoint16_t){0, 0});
     }
     ok &= glGetError() == GL_NO_ERROR;
     if (!ok) fprintf(stderr, "[renderer-test] plastic normal=%u pressed=%u hover=%u alpha=%u,%u glyph=%u,%u catch=%u,%u\n",
@@ -321,51 +159,6 @@ static void test_plastic_surface(void) {
   PASS();
 }
 
-static void test_gradient_card(void) {
-  TEST("Gradient card clips sheen and ring, preserves alpha and keeps selection geometry fixed");
-  CGLPixelFormatAttribute attrs[] = {kCGLPFAOpenGLProfile,
-    (CGLPixelFormatAttribute)kCGLOGLPVersion_3_2_Core, 0};
-  CGLPixelFormatObj format = NULL;
-  CGLContextObj context = NULL;
-  GLint count = 0;
-  if (CGLChoosePixelFormat(attrs, &format, &count) != kCGLNoError || !format) { SKIP("Offscreen OpenGL unavailable"); }
-  CGLError error = CGLCreateContext(format, NULL, &context);
-  CGLDestroyPixelFormat(format);
-  if (error != kCGLNoError || !context) { SKIP("Offscreen OpenGL context unavailable"); }
-  CGLSetCurrentContext(context);
-  bool initialized = ui_init_prog(), ok = initialized;
-  uint32_t fbo = 0, texture = 0;
-  int w = 0, h = 0;
-  if (ok) {
-    ok = R_EnsureWindowTarget(&fbo, &texture, &w, &h, 32, 32);
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glViewport(0, 0, 32, 32);
-    glDisable(GL_SCISSOR_TEST);
-    set_projection(0, 0, 32, 32);
-    glClearColor(0, 0, 0, 0);
-    glClear(GL_COLOR_BUFFER_BIT);
-    render_gradient_card(R(4, 4, 24, 24), 24, 24, 7, 2, 1, CTRL_NORMAL, 0x80ff8000);
-    uint8_t top[4], bottom[4], corner[4], outside[4], normal_ring[4], selected_ring[4], selected_face[4];
-    read_card_pixel(16, 8, top); read_card_pixel(16, 23, bottom);
-    read_card_pixel(4, 4, corner); read_card_pixel(2, 16, outside); read_card_pixel(4, 16, normal_ring);
-    glClear(GL_COLOR_BUFFER_BIT);
-    render_gradient_card(R(4, 4, 24, 24), 24, 24, 7, 2, 1, CTRL_SELECTED, 0x80ff8000);
-    read_card_pixel(4, 16, selected_ring); read_card_pixel(16, 8, selected_face);
-    ok &= top[2] > bottom[2] && top[3] == 128 && bottom[3] == 128;
-    ok &= corner[3] == 0 && outside[3] == 0 && normal_ring[3] == 0;
-    ok &= selected_ring[3] > 80 && selected_ring[3] <= 128 && memcmp(top, selected_face, 4) == 0;
-    glClear(GL_COLOR_BUFFER_BIT);
-    render_gradient_card(R(4, 4, 24, 24), 24, 24, 0, 1, 0, CTRL_NORMAL, 0xffff8000);
-    read_card_pixel(6, 6, corner);
-    ok &= corner[3] == 255 && glGetError() == GL_NO_ERROR;
-  }
-  R_DestroyWindowTarget(&fbo, &texture, &w, &h);
-  if (initialized) ui_shutdown_prog();
-  CGLSetCurrentContext(NULL);
-  CGLDestroyContext(context);
-  ASSERT_TRUE(ok);
-  PASS();
-}
 static void test_selection_gradient(void) {
   TEST("Selection gradients interpolate in linear light, preserve alpha and share one silhouette");
   CGLPixelFormatAttribute attrs[] = {kCGLPFAOpenGLProfile,
@@ -453,9 +246,9 @@ static void test_view_rotation(void) {
     set_projection(0, 0, 64, 64);
     g_ui_runtime.running = true;
     window_t win = {.frame = {0, 0, 64, 64}, .flags = WINDOW_NOTITLE, .proc = rotated_content_proc,
-      .surface_fbo = fbo, .surface_tex = texture, .surface_w = 64, .surface_h = 64,
-      .view = {.enabled = true, .width = 64, .height = 64, .pixel_ratio = 1,
+      .view = &(window_view_t){.enabled = true, .width = 64, .height = 64, .pixel_ratio = 1,
                .matrix = {.a = 0, .b = 1, .tx = 66, .ty = 3}}};
+    window_surface_adopt(&win, fbo, texture, 64, 64);
     send_message(&win, evPaint, 0, NULL);
     uint8_t rotated[4], original[4], overlay[4];
     glReadPixels(60, 64 - 15 - 1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, rotated);
@@ -510,11 +303,9 @@ static void test_fixed_viewport(void) {
     child.flags = WINDOW_NOTITLE;
     child.parent = &root;
     child.proc = viewport_proc;
-    root.surface_w = 217;
-    root.surface_h = 188;
-    R_EnsureWindowTarget(&root.surface_fbo, &root.surface_tex,
-                         &root.surface_w, &root.surface_h, 217, 188);
-    glBindFramebuffer(GL_FRAMEBUFFER, root.surface_fbo);
+    window_surface_t *surf = window_surface_ensure(&root);
+    R_EnsureWindowTarget(&surf->fbo, &surf->tex, &surf->w, &surf->h, 217, 188);
+    glBindFramebuffer(GL_FRAMEBUFFER, surf->fbo);
     glDisable(GL_SCISSOR_TEST);
     glClearColor(0, 0, 0, 1);
     glClear(GL_COLOR_BUFFER_BIT);
@@ -524,9 +315,10 @@ static void test_fixed_viewport(void) {
     glReadPixels(199, 188 - TITLEBAR_HEIGHT - 149 - 1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
     ok = pixel[0] == 255 && pixel[1] == 255 && pixel[2] == 255;
     g_ui_runtime.running = false;
-    glDeleteTextures(1, &root.surface_tex);
+    glDeleteTextures(1, &surf->tex);
     glDeleteTextures(1, &viewport_texture);
-    glDeleteFramebuffers(1, &root.surface_fbo);
+    glDeleteFramebuffers(1, &surf->fbo);
+    window_surface_release(&root);
     ui_shutdown_prog();
   }
   CGLSetCurrentContext(NULL);
@@ -685,16 +477,13 @@ int main(void) {
 #if defined(__APPLE__) && !TARGET_OS_IOS
   test_shader_state_restore();
   test_plastic_surface();
-  test_gradient_card();
   test_selection_gradient();
-  test_image_background();
   test_view_rotation();
   test_fixed_viewport();
 #endif
   test_onion_alpha();
   test_srgb_linear_source_over();
 #if defined(__APPLE__) && !TARGET_OS_IOS
-  test_png_toolbar();
 #endif
   TEST_END();
 }

@@ -442,7 +442,7 @@ result_t win_components_proc(window_t *win, uint32_t msg,
             if (g_app) {
               g_app->current_tool = ID_TOOL_SELECT;
               if (g_app->windows[FE_WIN_TOOL])
-                send_message(g_app->windows[FE_WIN_TOOL], tbSetActiveButton, (uint32_t)ID_TOOL_SELECT, NULL);
+                send_message(g_app->windows[FE_WIN_TOOL], tbCheckButton, (uint32_t)ID_TOOL_SELECT, (void *)(intptr_t)1);
             }
           }
           components_hide_ghost();

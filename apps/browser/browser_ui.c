@@ -1,5 +1,4 @@
 #include "browser.h"
-#include <orion/user/icons.h>
 
 void browser_set_body_text(window_t *win, const char *text) {
   window_t *body = get_window_item(win, ID_BODY_VIEW);

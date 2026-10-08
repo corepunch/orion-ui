@@ -264,6 +264,7 @@ static void modern_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state)
   bool disabled = (state & CTRL_DISABLED) != 0;
   uint32_t foreground = get_sys_color(disabled ? brTextDisabled : brTextNormal);
   switch (part) {
+    case THEME_PART_CARD:                break; // cards paint through draw_card
     case THEME_PART_BUTTON:              modern_draw_button_bg(r, state); break;
     case THEME_PART_CHECKBOX:            modern_draw_checkbox_box(r, state & CTRL_SELECTED, state); break;
     case THEME_PART_COMBOBOX:            modern_draw_field_bg(r, state); break;
@@ -386,6 +387,7 @@ static theme_t g_modern_theme = {
   .name                   = "Modern",
   .draw_button_label      = modern_draw_button_label,
   .draw_combobox          = modern_draw_combobox,
+  .draw_card              = theme_default_draw_card,
   .foreground             = modern_foreground,
   .draw_part              = modern_draw_part,
   .draw_window_chrome     = modern_draw_window_chrome,
@@ -395,6 +397,17 @@ static theme_t g_modern_theme = {
   .menubar_height         = MODERN_MENUBAR_HEIGHT,
   .toolbar_button_size    = TB_SPACING,
   .toolbar_padding        = TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH,
+  .tab_pane_frame            = 0,
+  .menu_capsule              = 1,
+  .badge_padding             = 7,
+  .badge_corner_radius       = 5,
+  .badge_tint_alpha          = 0x40,
+  .toolbar_compact_padding   = 2,
+  .toolbar_compact_spacing   = 6,
+  .toolbar_compact_icon      = TOOLBAR_COMPACT_ICON_SIZE,
+  .toolbar_compact_menu_gap  = 8,
+  .toolbar_grip_size         = 12,
+  .toolbar_dropdown_arrow_w  = 12,
   // Use the same reserved-space scrollbar geometry as Classic for now.  The
   // overlay/auto-hide treatment is deliberately deferred until it has a
   // complete input and layout contract.
@@ -409,6 +422,7 @@ static theme_t g_modern_theme = {
   .plastic_corner_radius = CORNER_RADIUS_CIRCULAR,
   .plastic_bevel_width   = 2,
   .plastic_shadow_size   = 3,
+  .plastic = { .gloss = 1.0f, .rim = 0.55f, .ink = 0.10f, .lift = 0.10f, .glyph_size = 20, .shadow_color = 0xE0000000 },
   .card_padding_x         = 12,
   .card_padding_y         = 8,
   .window_shadow_blur     = 8,

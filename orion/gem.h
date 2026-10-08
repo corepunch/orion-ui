@@ -152,130 +152,6 @@ extern hinstance_t g_gem_hinstance;
 #define GEM_MAIN(n_, v_, t_)            /* no-op */
 
 // ---------------------------------------------------------------------------
-// gem_rc_query — main-thread handler for RC read queries.
-//
-// Registered via axRCSetQueryHandler so the RC server can answer
-// list_windows, get_rect, get_ctrl_rect, get_text, get_value, and
-// click_ctrl commands by reading the live window tree.
-// ---------------------------------------------------------------------------
-static inline void
-gem_rc_query(const char *req, char *resp, int resplen)
-{
-  /* list_windows */
-  if (strcmp(req, "list_windows") == 0) {
-    char *p = resp;
-    int   left = resplen - 1;
-    for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
-      int n = snprintf(p, (size_t)left, "window %d %d %d %d %s\n",
-                       (int)w->frame.x, (int)w->frame.y,
-                       (int)w->frame.w, (int)w->frame.h, w->title);
-      if (n <= 0 || n >= left) break;
-      p += n; left -= n;
-    }
-    snprintf(p, (size_t)(left + 1), "ok\n");
-    return;
-  }
-
-  /* get_focus */
-  if (strcmp(req, "get_focus") == 0) {
-    window_t *f = g_ui_runtime.focused;
-    snprintf(resp, (size_t)resplen, "focused %s\nok\n", f ? f->title : "");
-    return;
-  }
-
-  /* get_rect <title> */
-  if (strncmp(req, "get_rect ", 9) == 0) {
-    const char *title = req + 9;
-    for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
-      if (strcmp(w->title, title) == 0) {
-        snprintf(resp, (size_t)resplen, "rect %d %d %d %d\nok\n",
-                 (int)w->frame.x, (int)w->frame.y,
-                 (int)w->frame.w, (int)w->frame.h);
-        return;
-      }
-    }
-    snprintf(resp, (size_t)resplen, "err no window\n");
-    return;
-  }
-
-  /* get_ctrl_rect <ctrl_id> <title> */
-  if (strncmp(req, "get_ctrl_rect ", 14) == 0) {
-    int ctrl_id; char title[512];
-    if (sscanf(req + 14, "%d %511[^\t\n]", &ctrl_id, title) == 2) {
-      for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
-        if (strcmp(w->title, title) == 0) {
-          window_t *c = get_window_item(w, (uint32_t)ctrl_id);
-          if (!c) { snprintf(resp, (size_t)resplen, "err no ctrl\n"); return; }
-          snprintf(resp, (size_t)resplen, "rect %d %d %d %d\nok\n",
-                   window_screen_x(c), window_screen_y(c),
-                   (int)c->frame.w, (int)c->frame.h);
-          return;
-        }
-      }
-    }
-    snprintf(resp, (size_t)resplen, "err no window\n");
-    return;
-  }
-
-  /* get_text <ctrl_id> <title> */
-  if (strncmp(req, "get_text ", 9) == 0) {
-    int ctrl_id; char title[512];
-    if (sscanf(req + 9, "%d %511[^\t\n]", &ctrl_id, title) == 2) {
-      for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
-        if (strcmp(w->title, title) == 0) {
-          window_t *c = get_window_item(w, (uint32_t)ctrl_id);
-          if (!c) { snprintf(resp, (size_t)resplen, "err no ctrl\n"); return; }
-          snprintf(resp, (size_t)resplen, "text %s\nok\n", c->title);
-          return;
-        }
-      }
-    }
-    snprintf(resp, (size_t)resplen, "err no window\n");
-    return;
-  }
-
-  /* get_value <ctrl_id> <title> */
-  if (strncmp(req, "get_value ", 10) == 0) {
-    int ctrl_id; char title[512];
-    if (sscanf(req + 10, "%d %511[^\t\n]", &ctrl_id, title) == 2) {
-      for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
-        if (strcmp(w->title, title) == 0) {
-          window_t *c = get_window_item(w, (uint32_t)ctrl_id);
-          if (!c) { snprintf(resp, (size_t)resplen, "err no ctrl\n"); return; }
-          snprintf(resp, (size_t)resplen, "value %u\nok\n", (unsigned)c->value);
-          return;
-        }
-      }
-    }
-    snprintf(resp, (size_t)resplen, "err no window\n");
-    return;
-  }
-
-  /* click_ctrl <ctrl_id> <title> */
-  if (strncmp(req, "click_ctrl ", 11) == 0) {
-    int ctrl_id; char title[512];
-    if (sscanf(req + 11, "%d %511[^\t\n]", &ctrl_id, title) == 2) {
-      for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
-        if (strcmp(w->title, title) == 0) {
-          window_t *c = get_window_item(w, (uint32_t)ctrl_id);
-          if (!c) { snprintf(resp, (size_t)resplen, "err no ctrl\n"); return; }
-          int cx = window_screen_x(c) + (int)c->frame.w / 2;
-          int cy = window_screen_y(c) + (int)c->frame.h / 2;
-          axPostMessageW(NULL, kEventLeftButtonDown, MAKEDWORD(cx, cy), NULL);
-          axPostMessageW(NULL, kEventLeftButtonUp,   MAKEDWORD(cx, cy), NULL);
-          snprintf(resp, (size_t)resplen, "ok\n");
-          return;
-        }
-      }
-    }
-    snprintf(resp, (size_t)resplen, "err no window\n");
-    return;
-  }
-
-  snprintf(resp, (size_t)resplen, "err unknown query\n");
-}
-
-// ---------------------------------------------------------------------------
 // GEM_STANDALONE_MAIN — standard standalone entry point for MDI applications.
 //
 // Generates the canonical int main() for an MDI app that uses gem_init /
@@ -349,8 +225,6 @@ gem_rc_query(const char *req, char *resp, int resplen)
       ui_shutdown_graphics();                                               \
       return 1;                                                             \
     }                                                                       \
-    if (gem_rc_port)                                                        \
-      axRCSetQueryHandler(gem_rc_query);                                    \
     if (gem_screenshot_path &&                                              \
         !ui_request_screenshot(gem_screenshot_path, 90, true)) {           \
       gem_shutdown();                                                       \
@@ -358,10 +232,6 @@ gem_rc_query(const char *req, char *resp, int resplen)
       return 1;                                                             \
     }                                                                       \
     while (ui_is_running()) {                                               \
-      char gem_rc_screenshot[1024];                                         \
-      if (axRCPopScreenshot(gem_rc_screenshot, sizeof(gem_rc_screenshot)))  \
-        ui_request_screenshot(gem_rc_screenshot, 90, false);                \
-      axRCProcessQuery();                                                   \
       ui_event_t e;                                                         \
       while (get_message(&e)) {                                             \
         if (!translate_accelerator((menubar_), &e, (accel_)))              \

@@ -13,7 +13,7 @@
 #include <limits.h>
 
 #include <platform/platform.h>
-#include "bmp_icon_loader.h"
+#include "image.h"
 #include "svg_icon_loader.h"
 
 // ---------------------------------------------------------------------------
@@ -113,131 +113,82 @@ static void svg_unpremultiply_rgba(uint8_t *rgba, size_t pixels) {
 }
 
 // ---------------------------------------------------------------------------
-// Public: generic strip builder
+// On-demand icon resolution (sysicon_resolve)
+//
+// Icon directories are scoped by application instance (≈ LoadImage(hInst, ...)): a directory
+// registered for an instance is searched only while that instance's windows run, so hosted
+// apps cannot shadow each other's icons. Directories registered with hinstance 0 form the
+// shared system pool. A name resolves to a .bmp (bitmap art, nearest-filtered) or an .svg
+// (rasterized at the draw size) in the first matching directory. Resolved textures live in
+// one LRU cache keyed by (scope, name, size).
 // ---------------------------------------------------------------------------
 
-bool svg_build_strip(const char *icons_dir,
-                     const char **svg_names, int count,
-                     int icon_size, int cols,
-                     bitmap_strip_t *out,
-                     FILE *missing) {
-    if (!icons_dir || !svg_names || count <= 0 || icon_size <= 0 || cols <= 0 || !out) {
-        fprintf(stderr, "[svg] invalid strip parameters count=%d size=%d cols=%d\n",
-                count, icon_size, cols);
-        fflush(stderr);
-        return false;
-    }
+#define MAX_ICON_DIRS 32
+#define ICON_CACHE_MAX 256
 
-    int raster_size = svg_raster_size(icon_size);
-    int rows = 1 + (count - 1) / cols;
-    if (!raster_size) return false;
-    if (cols > INT_MAX / raster_size || rows > INT_MAX / raster_size) {
-        fprintf(stderr, "[svg] strip dimensions overflow count=%d size=%d cols=%d\n",
-                count, raster_size, cols);
-        fflush(stderr);
-        return false;
-    }
-    int sheet_w = cols * raster_size;
-    int sheet_h = rows * raster_size;
-    if ((size_t)sheet_w > SIZE_MAX / 4 / (size_t)sheet_h) {
-        fprintf(stderr, "[svg] strip allocation overflow width=%d height=%d\n", sheet_w, sheet_h);
-        fflush(stderr);
-        return false;
-    }
-
-    uint8_t *sheet = calloc((size_t)sheet_w * sheet_h * 4, 1);
-    if (!sheet) return false;
-
-    uint8_t *tile = malloc((size_t)raster_size * raster_size * 4);
-    if (!tile) { free(sheet); return false; }
-
-    int ok_count = 0;
-    for (int i = 0; i < count; i++) {
-        const char *name  = svg_names[i];
-        bool drawn = false;
-        if (name && name[0]) {
-            char path[4096];
-            snprintf(path, sizeof(path), "%s/%s.svg", icons_dir, name);
-            drawn = rasterize_svg(path, raster_size, tile);
-            if (drawn) {
-                svg_unpremultiply_rgba(tile, (size_t)raster_size * raster_size);
-                ok_count++;
-            } else if (missing) {
-                fprintf(missing, "MISSING icon[%d] \"%s\"\n", i, name);
-            }
-        } else if (missing) {
-            fprintf(missing, "UNMAPPED icon[%d]\n", i);
-        }
-
-        if (!drawn) memset(tile, 0, (size_t)raster_size * raster_size * 4);
-
-        int col = i % cols;
-        int row = i / cols;
-        for (int y = 0; y < raster_size; y++) {
-            memcpy(sheet + ((size_t)(row * raster_size + y) * sheet_w + col * raster_size) * 4,
-                   tile  + (size_t)y * raster_size * 4,
-                   (size_t)raster_size * 4);
-        }
-    }
-
-    free(tile);
-
-    // Refuse to upload a fully-blank sheet: if no SVGs were found the caller
-    // should fall back to its PNG (or accept an empty strip).
-    if (ok_count == 0) {
-        free(sheet);
-        return false;
-    }
-
-    uint32_t tex = R_CreateTextureSRGBA8(sheet_w, sheet_h, (uint8_t *)sheet,
-                                         R_FILTER_LINEAR, R_WRAP_CLAMP);
-    free(sheet);
-    if (!tex) return false;
-
-    out->tex     = tex;
-    out->icon_w  = icon_size;
-    out->icon_h  = icon_size;
-    out->cols    = cols;
-    // UV ratios and layout stay logical even when the texture has more texels.
-    out->sheet_w = cols * icon_size;
-    out->sheet_h = rows * icon_size;
-    return true;
-}
-
-
-// ---------------------------------------------------------------------------
-// On-demand icon resolution (sysicon_resolve / svg_set_icons_dir)
-// ---------------------------------------------------------------------------
-
-#define MAX_ICON_DIRS 8
-static char g_icon_dirs[MAX_ICON_DIRS][4096];
-static int  g_icon_dir_count;
+static struct { hinstance_t scope; char path[4096]; } g_icon_dirs[MAX_ICON_DIRS];
+static int g_icon_dir_count;
+static hinstance_t g_icon_scope;
 
 typedef struct {
-    char     name[64];
-    uint32_t tex;
-    int      w, h;
-    int      raster_size;
+    char       name[64];
+    hinstance_t scope;
+    int        size;         // requested logical size; 0 for bitmap art, which has one size
+    uint32_t   tex;
+    int        w, h;
+    int        raster_size;
+    uint32_t   last_use;
 } sysicon_cache_t;
-static sysicon_cache_t g_sysicon_cache[64];
+static sysicon_cache_t g_sysicon_cache[ICON_CACHE_MAX];
 static int             g_sysicon_cache_n;
+static uint32_t        g_sysicon_clock;
+
+void svg_set_icon_scope(hinstance_t hinstance) { g_icon_scope = hinstance; }
+hinstance_t svg_icon_scope(void) { return g_icon_scope; }
 
 void svg_set_icons_dir(const char *dir) {
     g_icon_dir_count = 0;
-    if (dir && dir[0]) {
-        strncpy(g_icon_dirs[0], dir, sizeof(g_icon_dirs[0]) - 1);
-        g_icon_dir_count = 1;
-    }
+    if (dir && dir[0]) svg_add_icons_dir(0, dir);
 }
 
-void svg_add_icons_dir(const char *dir) {
-    if (!dir || !dir[0] || g_icon_dir_count >= MAX_ICON_DIRS) return;
-    strncpy(g_icon_dirs[g_icon_dir_count], dir, sizeof(g_icon_dirs[0]) - 1);
+void svg_add_icons_dir(hinstance_t hinstance, const char *dir) {
+    if (!dir || !dir[0]) {
+        fprintf(stderr, "[svg] icon dir rejected scope=%u: empty path\n", hinstance);
+        fflush(stderr);
+        return;
+    }
+    for (int i = 0; i < g_icon_dir_count; i++)
+        if (g_icon_dirs[i].scope == hinstance && strcmp(g_icon_dirs[i].path, dir) == 0) return;
+    if (g_icon_dir_count >= MAX_ICON_DIRS) {
+        fprintf(stderr, "[svg] icon dir rejected scope=%u dir=%s: registry full (%d)\n", hinstance, dir, MAX_ICON_DIRS);
+        fflush(stderr);
+        return;
+    }
+    g_icon_dirs[g_icon_dir_count].scope = hinstance;
+    snprintf(g_icon_dirs[g_icon_dir_count].path, sizeof(g_icon_dirs[0].path), "%s", dir);
     g_icon_dir_count++;
 }
 
 bool sysicon_resolve(const char *name, sysicon_resolved_t *out) {
     return sysicon_resolve_size(name, SYSICON_SIZE, out);
+}
+
+static bool icon_dir_visible(int i) {
+    return g_icon_dirs[i].scope == 0 || g_icon_dirs[i].scope == g_icon_scope;
+}
+
+static sysicon_cache_t *icon_cache_slot(void) {
+    if (g_sysicon_cache_n < ICON_CACHE_MAX) return &g_sysicon_cache[g_sysicon_cache_n++];
+    sysicon_cache_t *oldest = &g_sysicon_cache[0];
+    for (int i = 1; i < g_sysicon_cache_n; i++)
+        if ((int32_t)(g_sysicon_cache[i].last_use - oldest->last_use) < 0) oldest = &g_sysicon_cache[i];
+    R_DeleteTexture(oldest->tex);
+    memset(oldest, 0, sizeof(*oldest));
+    return oldest;
+}
+
+static void icon_fill_result(sysicon_resolved_t *out, const sysicon_cache_t *e) {
+    *out = (sysicon_resolved_t){.tex = e->tex, .u0 = 0.0f, .v0 = 0.0f, .u1 = 1.0f, .v1 = 1.0f, .w = e->w, .h = e->h};
 }
 
 bool sysicon_resolve_size(const char *name, int size, sysicon_resolved_t *out) {
@@ -246,55 +197,67 @@ bool sysicon_resolve_size(const char *name, int size, sysicon_resolved_t *out) {
         fflush(stderr);
         return false;
     }
-
-    if (bmp_icon_resolve(name, out)) return true;
-
     int raster_size = svg_raster_size(size);
     if (!raster_size) return false;
-    sysicon_cache_t *entry = NULL;
+
+    sysicon_cache_t *stale = NULL;
     for (int i = 0; i < g_sysicon_cache_n; i++) {
-        if (g_sysicon_cache[i].w == size && strcmp(g_sysicon_cache[i].name, name) == 0) {
-            entry = &g_sysicon_cache[i];
-            if (entry->raster_size != raster_size) break;
-            out->tex = g_sysicon_cache[i].tex;
-            out->u0 = 0.0f; out->v0 = 0.0f; out->u1 = 1.0f; out->v1 = 1.0f;
-            out->w  = g_sysicon_cache[i].w;
-            out->h  = g_sysicon_cache[i].h;
-            return true;
-        }
+        sysicon_cache_t *e = &g_sysicon_cache[i];
+        if (e->scope != g_icon_scope || strcmp(e->name, name) != 0 || (e->size && e->size != size)) continue;
+        if (e->size && e->raster_size != raster_size) { stale = e; break; }  // density changed: rerasterize
+        e->last_use = ++g_sysicon_clock;
+        icon_fill_result(out, e);
+        return true;
     }
 
-    if (!g_icon_dir_count || (!entry && g_sysicon_cache_n >= ARRAY_LEN(g_sysicon_cache))) {
-        fprintf(stderr, "[svg] icon cache unavailable name=%s size=%d dirs=%d entries=%d\n",
-                name, size, g_icon_dir_count, g_sysicon_cache_n);
+    if (!g_icon_dir_count) {
+        fprintf(stderr, "[svg] icon unavailable name=%s size=%d scope=%u: no icon directories registered\n", name, size, g_icon_scope);
         fflush(stderr);
         return false;
     }
-    uint8_t *pixels = (uint8_t *)malloc((size_t)raster_size * raster_size * 4);
-    if (!pixels) {
-        fprintf(stderr, "[svg] icon allocation failed name=%s raster=%d\n", name, raster_size);
-        fflush(stderr);
-        return false;
-    }
-    bool drawn = false;
+
     char path[5120];
-    for (int di = 0; di < g_icon_dir_count && !drawn; di++) {
-        snprintf(path, sizeof(path), "%s/%s.svg", g_icon_dirs[di], name);
-        drawn = rasterize_svg(path, raster_size, pixels);
+    uint8_t *pixels = NULL;
+    int w = size, h = size;
+    bool bitmap = false;
+    // Own scope and the system pool first; windows created without an instance fall back to every directory.
+    for (int pass = 0; pass < 2 && !pixels; pass++)
+        for (int i = 0; i < g_icon_dir_count && !pixels; i++) {   // bitmap art wins over SVG
+            if (pass == 0 && !icon_dir_visible(i)) continue;
+            snprintf(path, sizeof(path), "%s/%s.bmp", g_icon_dirs[i].path, name);
+            if ((pixels = load_image(path, &w, &h))) bitmap = true;
+        }
+    if (!bitmap) {
+        pixels = (uint8_t *)malloc((size_t)raster_size * raster_size * 4);
+        if (!pixels) {
+            fprintf(stderr, "[svg] icon allocation failed name=%s raster=%d\n", name, raster_size);
+            fflush(stderr);
+            return false;
+        }
+        bool drawn = false;
+        for (int pass = 0; pass < 2 && !drawn; pass++)
+            for (int i = 0; i < g_icon_dir_count && !drawn; i++) {
+                if (pass == 0 && !icon_dir_visible(i)) continue;
+                snprintf(path, sizeof(path), "%s/%s.svg", g_icon_dirs[i].path, name);
+                drawn = rasterize_svg(path, raster_size, pixels);
+            }
+        if (!drawn) { free(pixels); return false; }
+        svg_unpremultiply_rgba(pixels, (size_t)raster_size * raster_size);
     }
-    if (!drawn) { free(pixels); return false; }
-    svg_unpremultiply_rgba(pixels, (size_t)raster_size * raster_size);
-    uint32_t tex = R_CreateTextureSRGBA8(raster_size, raster_size, pixels,
-                                         R_FILTER_LINEAR, R_WRAP_CLAMP);
-    free(pixels);
+    uint32_t tex = bitmap ? R_CreateTextureSRGBA8(w, h, pixels, R_FILTER_NEAREST, R_WRAP_CLAMP)
+                          : R_CreateTextureSRGBA8(raster_size, raster_size, pixels, R_FILTER_LINEAR, R_WRAP_CLAMP);
+    if (bitmap) image_free(pixels); else free(pixels);
     if (!tex) return false;
-    sysicon_cache_t *e = entry ? entry : &g_sysicon_cache[g_sysicon_cache_n++];
-    if (entry) R_DeleteTexture(entry->tex);
-    strncpy(e->name, name, sizeof(e->name) - 1);
-    e->name[sizeof(e->name) - 1] = '\0';
-    e->tex = tex; e->w = size; e->h = size;
+
+    sysicon_cache_t *e = stale;
+    if (stale) R_DeleteTexture(stale->tex);
+    else e = icon_cache_slot();
+    snprintf(e->name, sizeof(e->name), "%s", name);
+    e->scope = g_icon_scope;
+    e->size = bitmap ? 0 : size;
+    e->tex = tex; e->w = bitmap ? w : size; e->h = bitmap ? h : size;
     e->raster_size = raster_size;
-    out->tex = tex; out->u0 = 0.0f; out->v0 = 0.0f; out->u1 = 1.0f; out->v1 = 1.0f;
-    out->w = size; out->h = size;
+    e->last_use = ++g_sysicon_clock;
+    icon_fill_result(out, e);
     return true;
 }

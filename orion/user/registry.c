@@ -1,5 +1,4 @@
 #include "user.h"
-#include "icons.h"
 
 #include <ctype.h>
 

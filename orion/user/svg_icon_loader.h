@@ -5,29 +5,19 @@
 #include <stdbool.h>
 #include "draw.h"
 
-// Build a bitmap_strip_t by rasterizing SVG files from a directory.
-//
-// svg_names : array of `count` iconoir base names (no .svg extension);
-//             NULL entries produce blank tiles.
-// icon_size : logical tile size in pixels (square); rasterized at display density.
-// cols      : sheet columns; rows are computed automatically.
-// missing   : optional FILE* to receive one diagnostic line per blank tile.
-//
-// On success, fills *out and returns true.  The texture is uploaded to GPU and
-// must be released with R_DeleteTexture(out->tex) when done.
-bool svg_build_strip(const char *icons_dir,
-                     const char **svg_names, int count,
-                     int icon_size, int cols,
-                     bitmap_strip_t *out,
-                     FILE *missing);
-
 // Set the primary icons directory (global pool, e.g. share/orion/icons).
 void svg_set_icons_dir(const char *dir);
 
-// Append an additional icons directory to the search path.
-// Icons not found in the primary pool are looked up here in registration order.
-// Use this for app-specific icon sets (e.g. apps/gitclient/share/icons).
-void svg_add_icons_dir(const char *dir);
+// Append an icons directory (SVG or BMP files) to the search path, scoped to an application
+// instance (≈ LoadImage(hInst, ...)): icons resolve from a scoped directory only while that
+// instance paints. hinstance 0 joins the shared system pool. Pass g_gem_hinstance from apps.
+// Directories are searched in registration order; a full registry rejects with a log line.
+void svg_add_icons_dir(hinstance_t hinstance, const char *dir);
+
+// The instance whose directories sysicon_resolve() consults; the message dispatcher sets it
+// to the receiving window's hinstance for the duration of each message.
+void svg_set_icon_scope(hinstance_t hinstance);
+hinstance_t svg_icon_scope(void);
 
 // Resolved draw info for a named icon.
 typedef struct {
@@ -37,7 +27,7 @@ typedef struct {
 } sysicon_resolved_t;
 
 // Resolve an SVG base name (e.g. "git-fork", "undo") to GPU draw info.
-// Loads the SVG on demand and refreshes cached pixels when display density changes.
+// Loads the BMP or SVG on demand; textures live in an LRU cache and SVGs are re-rasterized when display density changes.
 // Returned dimensions are logical pixels; texture resolution follows display density.
 // Returns false if the icon cannot be found in any registered icons directory.
 bool sysicon_resolve(const char *name, sysicon_resolved_t *out);

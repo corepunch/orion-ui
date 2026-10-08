@@ -20,9 +20,9 @@ static result_t cmd_parent_proc(window_t *win, uint32_t msg,
     (void)win;
     if (msg == evCreate)  return 1;
     if (msg == evDestroy) return 1;
-    if (msg == tbButtonClick) {
+    if (msg == evCommand && HIWORD(wparam) == btnClicked) {
         g_click_count++;
-        g_last_cmd_id  = (int)wparam;
+        g_last_cmd_id  = (int)LOWORD(wparam);
         g_last_sender  = (window_t *)lparam;
     }
     return 0;
@@ -46,7 +46,7 @@ static void simulate_click(window_t *btn) {
 // ---- tests -------------------------------------------------------------- //
 
 void test_toolbar_button_click(void) {
-    TEST("win_toolbar_button: left-click fires tbButtonClick");
+    TEST("win_toolbar_button: left-click fires evCommand(btnClicked)");
 
     test_env_init();
     test_env_enable_tracking(true);
@@ -75,7 +75,7 @@ void test_toolbar_button_click(void) {
 }
 
 void test_toolbar_button_keyboard_return(void) {
-    TEST("win_toolbar_button: RETURN key fires tbButtonClick");
+    TEST("win_toolbar_button: RETURN key fires evCommand(btnClicked)");
 
     test_env_init();
     test_env_enable_tracking(true);
@@ -106,7 +106,7 @@ void test_toolbar_button_keyboard_return(void) {
 }
 
 void test_toolbar_button_keyboard_space(void) {
-    TEST("win_toolbar_button: SPACE key fires tbButtonClick");
+    TEST("win_toolbar_button: SPACE key fires evCommand(btnClicked)");
 
     test_env_init();
     test_env_enable_tracking(true);

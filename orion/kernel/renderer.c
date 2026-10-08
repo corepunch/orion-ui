@@ -75,7 +75,7 @@ wall_vertex_t sprite_verts[] = {
 typedef struct {
   float projection[16], offset[2], scale[2], uv_offset[2], uv_scale[2];
   float tint[4], alpha, params0[4], params1[4], size[2], radius, edge[4];
-  float glyph_uv[4], glyph_box[4], shadow_color[4], disabled;
+  float glyph_uv[4], glyph_box[4], shadow_color[4], material[4], disabled;
   float grid_size[2], cell_size[2];
   int tex0, palette_tex, cell_tex, font_tex, vga_palette_tex;
 } sprite_state_t;
@@ -89,7 +89,7 @@ typedef struct {
 typedef struct {
   sprite_program_t copy_sprite, present_sprite, indexed_sprite;
   GLuint indexed_palette;
-  sprite_program_t gradient_sprite, gradient_card_sprite, plastic_sprite, rounded_rect_sprite;
+  sprite_program_t gradient_sprite, plastic_sprite, rounded_rect_sprite;
   R_Mesh mesh;
   fmat16_t projection;
 } renderer_system_t;
@@ -108,7 +108,7 @@ static const shaderUniform_t sprite_uniforms[] = {
   SPRITE_UNIFORM(tex0, "tex0", UT_SAMPLER_2D), SPRITE_UNIFORM(palette_tex, "palette_tex", UT_SAMPLER_2D),
   SPRITE_UNIFORM(size, "size", UT_FLOAT_VEC2), SPRITE_UNIFORM(radius, "radius", UT_FLOAT),
   SPRITE_UNIFORM(edge, "edge", UT_FLOAT_VEC4), SPRITE_UNIFORM(glyph_uv, "glyph_uv", UT_FLOAT_VEC4),
-  SPRITE_UNIFORM(glyph_box, "glyph_box", UT_FLOAT_VEC4), SPRITE_UNIFORM(shadow_color, "shadow_color", UT_FLOAT_VEC4),
+  SPRITE_UNIFORM(glyph_box, "glyph_box", UT_FLOAT_VEC4), SPRITE_UNIFORM(shadow_color, "shadow_color", UT_FLOAT_VEC4), SPRITE_UNIFORM(material, "material", UT_FLOAT_VEC4),
   SPRITE_UNIFORM(disabled, "disabled", UT_FLOAT), SPRITE_UNIFORM(grid_size, "gridSize", UT_FLOAT_VEC2),
   SPRITE_UNIFORM(cell_size, "cellSize", UT_FLOAT_VEC2), SPRITE_UNIFORM(cell_tex, "cellTex", UT_SAMPLER_2D),
   SPRITE_UNIFORM(font_tex, "fontTex", UT_SAMPLER_2D), SPRITE_UNIFORM(vga_palette_tex, "paletteTex", UT_SAMPLER_2D),
@@ -243,7 +243,7 @@ int get_sprite_vao(void) {
 
 static void update_sprite_projection_uniforms(const fmat16_t *projection) {
   sprite_program_t *programs[] = {&g_ref.copy_sprite, &g_ref.present_sprite, &g_ref.gradient_sprite,
-    &g_ref.gradient_card_sprite, &g_ref.plastic_sprite, &g_ref.rounded_rect_sprite, &g_ref.indexed_sprite, &g_vga.program};
+    &g_ref.plastic_sprite, &g_ref.rounded_rect_sprite, &g_ref.indexed_sprite, &g_vga.program};
   for (size_t i = 0; i < ARRAY_LEN(programs); i++)
     memcpy(programs[i]->state.projection, fmat16_data(projection), sizeof(programs[i]->state.projection));
 }
@@ -295,7 +295,6 @@ bool ui_init_prog(void) {
     {offsetof(renderer_system_t, copy_sprite), "sprite_copy.frag.glsl"},
     {offsetof(renderer_system_t, present_sprite), "sprite_present.frag.glsl"},
     {offsetof(renderer_system_t, gradient_sprite), "sprite_gradient.frag.glsl"},
-    {offsetof(renderer_system_t, gradient_card_sprite), "sprite_gradient_card.frag.glsl"},
     {offsetof(renderer_system_t, plastic_sprite), "sprite_plastic.frag.glsl"},
     {offsetof(renderer_system_t, rounded_rect_sprite), "sprite_rounded_rect.frag.glsl"},
   };
@@ -370,7 +369,6 @@ void ui_shutdown_prog(void) {
   delete_sprite_program(&g_ref.indexed_sprite);
   R_DeleteTexture(g_ref.indexed_palette);
   delete_sprite_program(&g_ref.gradient_sprite);
-  delete_sprite_program(&g_ref.gradient_card_sprite);
   delete_sprite_program(&g_ref.plastic_sprite);
   delete_sprite_program(&g_ref.rounded_rect_sprite);
   delete_sprite_program(&g_vga.program);
@@ -551,31 +549,16 @@ void draw_sprite_region(int tex, irect16_t r,
     glDisable(GL_BLEND);
 }
 
-void render_gradient_card(irect16_t r, int pixel_w, int pixel_h, float radius,
-                          float ring_width, float highlight_width, ctrl_state_t state, uint32_t color) {
-  sprite_program_t *program = &g_ref.gradient_card_sprite;
-  if (!program->shader.progid || pixel_w <= 0 || pixel_h <= 0) return;
-
-  sprite_vec2(program->state.offset, r.x, r.y);
-  sprite_vec2(program->state.scale, r.w, r.h);
-  sprite_vec2(program->state.uv_offset, 0, 0);
-  sprite_vec2(program->state.uv_scale, 1, 1);
-  sprite_vec4(program->state.tint, (color & 255) / 255.0f, ((color >> 8) & 255) / 255.0f, ((color >> 16) & 255) / 255.0f, (color >> 24) / 255.0f);
-  sprite_vec4(program->state.params0, pixel_w, pixel_h, MIN(radius, MIN(pixel_w, pixel_h) * 0.5f), ring_width);
-  sprite_vec4(program->state.params1, highlight_width, !!(state & CTRL_SELECTED), !!(state & CTRL_HOVER), 0);
-  R_BlendPremultiplied();
-  g_ref.mesh.draw_mode = GL_TRIANGLE_FAN;
-  if (!gs_apply(&program->shader, &program->state)) return;
-  R_MeshDraw(&g_ref.mesh);
-  glDisable(GL_BLEND);
-  glEnable(GL_DEPTH_TEST);
-}
-
 void render_plastic_surface(irect16_t r, float radius, float bevel, float shadow,
-                            ctrl_state_t state, uint32_t color, uint32_t shadow_color,
+                            const plastic_look_t *look, uint32_t color, uint32_t shadow_color,
                             uint32_t icon_tex, const frect_t *icon_uv, ipoint16_t icon_size) {
   sprite_program_t *program = &g_ref.plastic_sprite;
   if (r.w <= 0 || r.h <= 0) return;
+  if (!look) {
+    fprintf(stderr, "[renderer] plastic surface rejected rect=%d,%d,%d,%d: missing look\n", r.x, r.y, r.w, r.h);
+    fflush(stderr);
+    return;
+  }
   if (!program->shader.progid) {
     fprintf(stderr, "[renderer] plastic shader unavailable rect=%d,%d,%d,%d\n", r.x, r.y, r.w, r.h);
     fflush(stderr);
@@ -595,8 +578,9 @@ void render_plastic_surface(irect16_t r, float radius, float bevel, float shadow
   sprite_vec2(program->state.uv_scale, 1, 1);
   sprite_vec4(program->state.tint, (color & 255) / 255.0f, ((color >> 8) & 255) / 255.0f, ((color >> 16) & 255) / 255.0f, (color >> 24) / 255.0f);
   sprite_vec4(program->state.params0, r.w, r.h, MAX(0, radius), MAX(0, bevel));
-  sprite_vec4(program->state.params1, shadow, !!(state & CTRL_PRESSED), !!(state & CTRL_HOVER), !!(state & CTRL_SELECTED));
-  program->state.disabled = !!(state & CTRL_DISABLED);
+  sprite_vec4(program->state.params1, shadow, look->pressed, look->hover, look->selected);
+  sprite_vec4(program->state.material, look->gloss, look->rim, look->ink, look->lift);
+  program->state.disabled = look->disabled;
   sprite_vec4(program->state.shadow_color, ui_srgb8_to_linear(shadow_color & 255), ui_srgb8_to_linear((shadow_color >> 8) & 255), ui_srgb8_to_linear((shadow_color >> 16) & 255), (shadow_color >> 24) / 255.0f);
   sprite_vec4(program->state.glyph_uv, uv.x, uv.y, uv.w, uv.h);
   sprite_vec4(program->state.glyph_box, (r.w - glyph_w) * 0.5f, (r.h - glyph_h) * 0.5f, icon_tex ? glyph_w : 0, icon_tex ? glyph_h : 0);
@@ -707,7 +691,7 @@ static void draw_rect_program_common(int tex, int x, int y, int w, int h,
                                      bool premultiplied_output) {
   if (!g_vga.program.shader.progid || !program) return;
   sprite_program_t *builtins[] = {&g_ref.copy_sprite, &g_ref.present_sprite, &g_ref.indexed_sprite,
-    &g_ref.gradient_sprite, &g_ref.gradient_card_sprite, &g_ref.plastic_sprite, &g_ref.rounded_rect_sprite};
+    &g_ref.gradient_sprite, &g_ref.plastic_sprite, &g_ref.rounded_rect_sprite};
   for (size_t i = 0; i < ARRAY_LEN(builtins); i++)
     if (builtins[i]->shader.progid == program) gs_invalidate(&builtins[i]->shader);
   glUseProgram(program);
@@ -1790,4 +1774,68 @@ void R_ClearWindowTarget(uint32_t fbo) {
   glClear(GL_COLOR_BUFFER_BIT);
   if (scissor) glEnable(GL_SCISSOR_TEST);
   glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)previous);
+}
+
+// ── Raster state and window targets: the only GL the window system reaches ─────────────────
+
+void R_BindWindowTarget(uint32_t fbo) { glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)fbo); }
+void R_SetViewport(int x, int y, int w, int h) { glViewport(x, y, w, h); }
+void R_SetScissor(int x, int y, int w, int h) { glEnable(GL_SCISSOR_TEST); glScissor(x, y, w, h); }
+void R_DisableScissor(void) { glDisable(GL_SCISSOR_TEST); }
+
+void R_PrintDeviceInfo(void) {
+  printf("GL_VERSION  : %s\n", glGetString(GL_VERSION));
+  printf("GLSL_VERSION: %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
+}
+
+// ── Compositor ────────────────────────────────────────────────────────────────────────────
+// The window system describes each redirected surface (position, shape, shadow, border); the
+// compositor owns how they reach the screen: one reusable physical-pixel target, shadows, SDF
+// rounded corners, then presentation. Windows never see any of it.
+
+void R_Composite(const R_CompositeLayer *layers, int count, uint32_t clear_color,
+                 int logical_w, int logical_h,
+                 void (*draw_border)(const R_CompositeLayer *layer)) {
+  if (count < 0 || (count > 0 && !layers) || logical_w <= 0 || logical_h <= 0) {
+    fprintf(stderr, "[renderer] composite rejected layers=%p count=%d logical=%dx%d\n",
+            (const void *)layers, count, logical_w, logical_h);
+    fflush(stderr);
+    return;
+  }
+  // iOS and offscreen hosts present a platform-owned, nonzero framebuffer.
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  axBindFramebuffer();
+  struct AXsize size;
+  axGetSize(&size);
+  float scale = axGetScaling();
+  int screen_w = (int)((float)size.width * scale + 0.5f);
+  int screen_h = (int)((float)size.height * scale + 0.5f);
+  bool composed = R_BeginScreenComposition(screen_w, screen_h, clear_color);
+  if (!composed) {
+    glViewport(0, 0, screen_w, screen_h);
+    R_SetFramebufferSRGB(true);
+  }
+  glDisable(GL_SCISSOR_TEST);
+  glDisable(GL_DEPTH_TEST);
+  glEnable(GL_BLEND);
+  glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+  glViewport(0, 0, screen_w, screen_h);
+  set_projection(0, 0, logical_w, logical_h);
+
+  for (int i = 0; i < count; i++) {
+    const R_CompositeLayer *l = &layers[i];
+    if (!l->tex) continue;
+    float radius = MIN(l->corner_radius, (float)MIN(l->w, l->h) / 2);   // physical pixels
+    if (l->shadow)
+      draw_rect_shadow(l->frame, l->shadow_radius, l->shadow_blur, l->shadow_offset, l->shadow_color);
+    draw_rounded_rect_premultiplied((int)l->tex, l->frame, l->w, l->h, radius, 1.0f);
+    if (l->border && draw_border) draw_border(l);
+  }
+
+  glDisable(GL_BLEND);
+  glEnable(GL_DEPTH_TEST);
+  if (composed) {
+    axBindFramebuffer();
+    R_PresentScreenComposition(screen_w, screen_h);
+  }
 }

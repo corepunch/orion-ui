@@ -9,7 +9,7 @@ static result_t dock_test_proc(window_t *win, uint32_t msg, uint32_t wparam, voi
   switch (msg) {
     case evCreate: case evDestroy: return true;
     case evPaint: return false;
-    case tbButtonClick: dock_clicks++; return true;
+    case evCommand: if (HIWORD(wparam) != btnClicked) return false; dock_clicks++; return true;
     case evLeftButtonDown:
       dock_point = (ipoint16_t){(int16_t)LOWORD(wparam), (int16_t)HIWORD(wparam)};
       return true;
@@ -26,7 +26,7 @@ static window_t *dock_test_pane(window_t *host, dock_side_t side, int extent) {
                                   MAKERECT(10, 10, 500, 240), host, dock_test_proc, 0, NULL);
   toolbar_item_t items[] = {
     {.type = TOOLBAR_ITEM_BUTTON, .ident = 41, .icon = "play"},
-    {.type = TOOLBAR_ITEM_SPACER, .flags = TOOLBAR_ITEM_FLAG_FLEXSPACE},
+    {.type = TOOLBAR_ITEM_SPACER, .style = TOOLBAR_ITEM_FLAG_FLEXSPACE},
     {.type = TOOLBAR_ITEM_TEXTEDIT, .ident = 42, .w = 160},
   };
   send_message(pane, tbSetItems, ARRAY_LEN(items), items);
@@ -122,10 +122,10 @@ static void test_dock_drag_and_resize(void) {
   int x = grab.x, y = grab.y;
   dock_mouse(kEventLeftButtonDown, x, y);
   dock_mouse(kEventLeftButtonDragged, x + 150, y - 100);
-  ASSERT_TRUE(pane->drag_visual);
+  ASSERT_TRUE(window_is_lifted(pane));
   dock_mouse(kEventLeftButtonUp, x + 150, y - 100);
   ASSERT_TRUE(dock_is_floating(pane));
-  ASSERT_FALSE(pane->drag_visual);
+  ASSERT_FALSE(window_is_lifted(pane));
   grab = dock_caption_point(pane);
   x = grab.x; y = grab.y;
   dock_mouse(kEventLeftButtonDown, x, y);
@@ -162,7 +162,7 @@ static void test_dock_collapse_and_limits(void) {
   ASSERT_FALSE(dock_window(pane, DOCK_BOTTOM, DOCK_ALL_EDGES, 0, 100, 0));
   resize_window(host, 30, 50);
   ASSERT_TRUE(pane->frame.w >= 0 && pane->frame.h >= 0);
-  ASSERT_TRUE(host->dock_content.w >= 0 && host->dock_content.h >= 0);
+  ASSERT_TRUE(host->dock_host->content.w >= 0 && host->dock_host->content.h >= 0);
   test_env_shutdown();
   PASS();
 }
@@ -177,14 +177,14 @@ static void test_dock_menu(void) {
   send_message(menu, kMenuBarMessageSetMenus, ARRAY_LEN(menus), menus);
   ASSERT_TRUE(dock_window(menu, DOCK_TOP, DOCK_ALL_EDGES, DOCK_MENU, 0, 0));
   ASSERT_TRUE(dock_float(menu, R(100, 100, 120, 100)));
-  ASSERT_EQUAL(menu->frame.h, TOOLBAR_GRIP_HEIGHT + 3 * get_theme()->menubar_height);
+  ASSERT_EQUAL(menu->frame.h, get_theme()->toolbar_grip_size + 3 * get_theme()->menubar_height);
   int x = window_screen_x(menu) + menu->frame.w / 2;
-  int y = window_screen_y(menu) + TOOLBAR_GRIP_HEIGHT + get_theme()->menubar_height + 4;
+  int y = window_screen_y(menu) + get_theme()->toolbar_grip_size + get_theme()->menubar_height + 4;
   dock_mouse(kEventLeftButtonDown, x, y);
   window_t *popup = g_ui_runtime.captured;
   ASSERT_NOT_NULL(popup);
   ASSERT_EQUAL(popup->frame.x, window_screen_x(menu) + menu->frame.w);
-  ASSERT_EQUAL(popup->frame.y, window_screen_y(menu) + TOOLBAR_GRIP_HEIGHT + get_theme()->menubar_height);
+  ASSERT_EQUAL(popup->frame.y, window_screen_y(menu) + get_theme()->toolbar_grip_size + get_theme()->menubar_height);
   ASSERT_TRUE(dock_set_side(menu, DOCK_TOP));
   ASSERT_FALSE(is_window(popup));
   ASSERT_NULL(g_ui_runtime.captured);

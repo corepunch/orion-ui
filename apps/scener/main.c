@@ -430,7 +430,7 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
     int n = snprintf(icons_path, sizeof(icons_path), "%s/../share/scener/icons",
                      ui_get_exe_dir());
     if (n > 0 && (size_t)n < sizeof(icons_path))
-      bmp_add_icons_dir(icons_path);
+      svg_add_icons_dir(hinstance, icons_path);
   }
 
   if (g_cli.reel_path[0]) {

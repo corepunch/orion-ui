@@ -196,8 +196,8 @@ void test_ie_document_windows_cascade(void) {
     ASSERT_NOT_NULL(d1);
     ASSERT_NOT_NULL(d2);
 
-    irect16_t a = d1->win->maximized ? d1->win->restore_frame : d1->win->frame;
-    irect16_t b = d2->win->maximized ? d2->win->restore_frame : d2->win->frame;
+    irect16_t a = window_is_maximized(d1->win) ? window_restore_frame(d1->win) : d1->win->frame;
+    irect16_t b = window_is_maximized(d2->win) ? window_restore_frame(d2->win) : d2->win->frame;
     ASSERT_EQUAL(b.x, a.x + DEFAULT_WINDOW_CASCADE_X);
     ASSERT_EQUAL(b.y, a.y + DEFAULT_WINDOW_CASCADE_Y);
 
@@ -215,8 +215,8 @@ void test_ie_large_document_windows_cascade(void) {
     ASSERT_NOT_NULL(d1);
     ASSERT_NOT_NULL(d2);
 
-    irect16_t a = d1->win->maximized ? d1->win->restore_frame : d1->win->frame;
-    irect16_t b = d2->win->maximized ? d2->win->restore_frame : d2->win->frame;
+    irect16_t a = window_is_maximized(d1->win) ? window_restore_frame(d1->win) : d1->win->frame;
+    irect16_t b = window_is_maximized(d2->win) ? window_restore_frame(d2->win) : d2->win->frame;
     ASSERT_EQUAL(b.x, a.x + DEFAULT_WINDOW_CASCADE_X);
     ASSERT_EQUAL(b.y, a.y + DEFAULT_WINDOW_CASCADE_Y);
 
@@ -698,7 +698,7 @@ void test_ie_tool_selection_via_command(void) {
 
 // Reopened tool window reflects the current (non-default) tool selection.
 void test_ie_reopen_tool_window_syncs_active_tool(void) {
-    TEST("ID_WINDOW_TOOLS after close: current tool preserved and tbSetActiveButton sent");
+    TEST("ID_WINDOW_TOOLS after close: current tool preserved and tbCheckButton sent");
 
     ie_setup();
     ie_create_palette_windows();
@@ -714,7 +714,7 @@ void test_ie_reopen_tool_window_syncs_active_tool(void) {
     ASSERT_NOT_NULL(g_app->tool_win);
 
     // g_app->current_tool must still reflect the active tool, and the new
-    // window must exist (tbSetActiveButton is sent on creation).
+    // window must exist (tbCheckButton is sent on creation).
     ASSERT_EQUAL(g_app->current_tool, ID_TOOL_PENCIL);
     ASSERT_TRUE(is_window(g_app->tool_win));
 
@@ -1102,9 +1102,9 @@ void test_ie_grouped_tool_options(void) {
     for (int i = 0; i < 3; i++) {
       ASSERT_EQUAL(tb->items[i].type, TOOLBAR_ITEM_BUTTON);
       ASSERT_EQUAL(tb->items[i].ident, brushes[i]);
-      send_message(options, tbButtonClick, brushes[i], NULL);
+      send_message(options, evCommand, MAKEDWORD(brushes[i], btnClicked), NULL);
       ASSERT_EQUAL(g_app->current_tool, brushes[i]);
-      ASSERT_TRUE(tb->items[i].flags & TOOLBAR_BUTTON_FLAG_ACTIVE);
+      ASSERT_TRUE(tb->items[i].state & TBSTATE_CHECKED);
     }
     ASSERT_EQUAL(tb->items[3].type, TOOLBAR_ITEM_SLIDER);
     ASSERT_EQUAL(g_app->current_tool, ID_TOOL_SPRAY);
@@ -1122,15 +1122,15 @@ void test_ie_grouped_tool_options(void) {
     for (int i = 0; i < 5; i++) {
       ASSERT_EQUAL(tb->item_count, 6);
       ASSERT_EQUAL(tb->items[i].ident, shapes[i]);
-      send_message(options, tbButtonClick, shapes[i], NULL);
+      send_message(options, evCommand, MAKEDWORD(shapes[i], btnClicked), NULL);
       ASSERT_EQUAL(g_app->current_tool, shapes[i]);
       ASSERT_EQUAL(g_app->shape_tool, shapes[i]);
       ASSERT_EQUAL(imageeditor_tool_group(g_app->current_tool), ID_TOOL_RECT);
     }
-    send_message(options, tbButtonClick, IE_OPT_FILLED, NULL);
+    send_message(options, evCommand, MAKEDWORD(IE_OPT_FILLED, btnClicked), NULL);
     ASSERT_TRUE(g_app->shape_filled);
-    ASSERT_TRUE(tb->items[5].flags & TOOLBAR_BUTTON_FLAG_ACTIVE);
-    send_message(options, tbButtonClick, IE_OPT_FILLED, NULL);
+    ASSERT_TRUE(tb->items[5].state & TBSTATE_CHECKED);
+    send_message(options, evCommand, MAKEDWORD(IE_OPT_FILLED, btnClicked), NULL);
     ASSERT_FALSE(g_app->shape_filled);
     handle_menu_command(ID_TOOL_MAGIC_WAND);
     ASSERT_EQUAL(tb->item_count, 3);

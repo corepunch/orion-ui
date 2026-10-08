@@ -145,7 +145,7 @@ static window_t *alloc_window(char const *title, flags_t flags, irect16_t const 
   win->proc = proc;
   // Child controls participate in client-area layout, so they should not
   // reserve a caption unless they explicitly request a merged title toolbar.
-  if (parent && (flags & (WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR)) != (WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR))
+  if (parent && !caption_merged_into_toolbar(flags))
     flags |= WINDOW_NOTITLE;
   
   // Phase 3: Merge class defaults with instance flags.
@@ -265,7 +265,7 @@ void request_composite(void) {
 static void invalidate_window_chrome(window_t *win) {
   window_t *root = get_root_window(win);
   if (!root) return;
-  if (g_ui_runtime.running && root->surface_tex) {
+  if (g_ui_runtime.running && window_has_surface(root)) {
     post_message(root, evNCPaint, 1, NULL); // chrome only; do not wipe baked client
     request_composite();
     return;
@@ -282,14 +282,26 @@ static void invalidate_overlaps(window_t *win) {
   }
 }
 
+// One global lift record (≈ ImageList_BeginDrag): only one drag is active at a time.
+static struct { window_t *win; bool copy; int dx, dy; } g_lift;
+
+bool window_is_lifted(const window_t *win) { return win && g_lift.win == win; }
+bool window_lift_is_copy(const window_t *win) { return window_is_lifted(win) && g_lift.copy; }
+ipoint16_t window_lift_delta(const window_t *win) {
+  return window_is_lifted(win) ? (ipoint16_t){g_lift.dx, g_lift.dy} : (ipoint16_t){0, 0};
+}
+
 // Paint offset only. The frame, and therefore layout and hit-testing, stay put.
 static void set_drag(window_t *win, int dx, int dy, bool copy) {
-  if (!win) return;
-  if (win->drag_visual && win->drag_copy == copy && win->drag_dx == dx && win->drag_dy == dy) return;
-  win->drag_visual = true;
-  win->drag_copy = copy;
-  win->drag_dx = dx;
-  win->drag_dy = dy;
+  if (!win) {
+    fprintf(stderr, "[win] lift rejected: window unavailable dx=%d dy=%d copy=%d\n", dx, dy, copy);
+    fflush(stderr);
+    return;
+  }
+  if (window_is_lifted(win) && g_lift.copy == copy && g_lift.dx == dx && g_lift.dy == dy) return;
+  window_t *previous = g_lift.win;
+  g_lift.win = win; g_lift.copy = copy; g_lift.dx = dx; g_lift.dy = dy;
+  if (previous && previous != win && is_window(previous)) invalidate_window(previous);
   invalidate_window(win);
 }
 
@@ -297,9 +309,13 @@ void window_set_drag_visual(window_t *win, int dx, int dy) { set_drag(win, dx, d
 void window_set_drag_copy(window_t *win, int dx, int dy)   { set_drag(win, dx, dy, true); }
 
 void window_clear_drag_visual(window_t *win) {
-  if (!win || !win->drag_visual) return;
-  win->drag_visual = win->drag_copy = false;
-  win->drag_dx = win->drag_dy = 0;
+  if (!win) {
+    fprintf(stderr, "[win] lift clear rejected: window unavailable\n");
+    fflush(stderr);
+    return;
+  }
+  if (!window_is_lifted(win)) return;
+  memset(&g_lift, 0, sizeof(g_lift));
   invalidate_window(win);
 }
 
@@ -332,11 +348,16 @@ void resize_window(window_t *win, int new_w, int new_h) {
   invalidate_window(win);
 }
 
+// Per-application workspace registry (≈ SPI_GETWORKAREA scoped to an app instance).
+#define MAX_WORKSPACES 16
+static struct { window_t *owner; irect16_t area; } g_workspaces[MAX_WORKSPACES];
+
 static bool registered_workspace_rect(hinstance_t hinstance, irect16_t *area) {
-  for (window_t *owner = g_ui_runtime.windows; owner; owner = owner->next) {
-    if (owner->parent || owner->hinstance != hinstance || !owner->workspace_valid ||
+  for (int i = 0; i < MAX_WORKSPACES; i++) {
+    window_t *owner = g_workspaces[i].owner;
+    if (!owner || !is_window(owner) || owner->parent || owner->hinstance != hinstance ||
         !window_has_state(owner, WINDOW_STATE_VISIBLE)) continue;
-    *area = owner->workspace;
+    *area = g_workspaces[i].area;
     return true;
   }
   return false;
@@ -349,10 +370,20 @@ void set_application_workspace(window_t *owner, const irect16_t *area) {
     fflush(stderr);
     return;
   }
-  owner->workspace = *area;
-  owner->workspace_valid = true;
+  int slot = -1;
+  for (int i = 0; i < MAX_WORKSPACES; i++) {
+    if (g_workspaces[i].owner == owner) { slot = i; break; }
+    if (slot < 0 && (!g_workspaces[i].owner || !is_window(g_workspaces[i].owner))) slot = i;
+  }
+  if (slot < 0) {
+    fprintf(stderr, "[win] workspace rejected owner=%u: registry full (%d)\n", owner->id, MAX_WORKSPACES);
+    fflush(stderr);
+    return;
+  }
+  g_workspaces[slot].owner = owner;
+  g_workspaces[slot].area = *area;
   for (window_t *win = g_ui_runtime.windows; win; win = win->next)
-    if (win != owner && !win->parent && win->hinstance == owner->hinstance && win->maximized)
+    if (win != owner && !win->parent && win->hinstance == owner->hinstance && window_is_maximized(win))
       update_maximized_window(win);
 }
 
@@ -369,7 +400,7 @@ static bool window_workspace_rect(window_t *win, irect16_t *area) {
 }
 
 void update_maximized_window(window_t *win) {
-  if (!win || !is_window(win) || !win->maximized) return;
+  if (!win || !is_window(win) || !window_is_maximized(win)) return;
   irect16_t area;
   if (!window_workspace_rect(win, &area)) return;
   move_window(win, area.x, area.y);
@@ -383,14 +414,17 @@ bool maximize_window(window_t *win) {
     fflush(stderr);
     return false;
   }
-  if (win->maximized) return true;
+  if (window_is_maximized(win)) return true;
   irect16_t area;
   if (!window_workspace_rect(win, &area)) return false;
-  win->restore_frame = win->frame;
-  win->restore_decorations = win->flags & (WINDOW_NOTITLE | WINDOW_NORESIZE);
-  win->maximizable = true;
-  win->maximized = true;
-  win->flags |= WINDOW_NOTITLE | WINDOW_NORESIZE;
+  if (!win->placement && !(win->placement = calloc(1, sizeof(*win->placement)))) {
+    fprintf(stderr, "[win] maximize rejected win=%u: placement allocation failed\n", win->id);
+    fflush(stderr);
+    return false;
+  }
+  win->placement->restore_frame = win->frame;
+  win->placement->restore_decorations = win->flags & (WINDOW_NOTITLE | WINDOW_NORESIZE);
+  win->flags |= WINDOW_STATE_MAXIMIZED | WINDOW_MAXIMIZEBOX | WINDOW_NOTITLE | WINDOW_NORESIZE;
   move_window(win, area.x, area.y);
   resize_window(win, area.w, area.h);
   move_to_top(win);
@@ -399,20 +433,19 @@ bool maximize_window(window_t *win) {
 }
 
 bool restore_window(window_t *win) {
-  if (!win || !is_window(win) || !win->maximized) {
+  if (!win || !is_window(win) || !window_is_maximized(win)) {
     fprintf(stderr, "[win] restore rejected win=%p: requires maximized window\n", (void *)win);
     fflush(stderr);
     return false;
   }
   irect16_t area;
   if (!window_workspace_rect(win, &area)) return false;
-  irect16_t frame = win->restore_frame;
+  irect16_t frame = window_restore_frame(win);
   frame.w = MIN(frame.w, area.w);
   frame.h = MIN(frame.h, area.h);
   frame.x = MAX(area.x, MIN(frame.x, area.x + area.w - frame.w));
   frame.y = MAX(area.y, MIN(frame.y, area.y + area.h - frame.h));
-  win->maximized = false;
-  win->flags = (win->flags & ~(WINDOW_NOTITLE | WINDOW_NORESIZE)) | win->restore_decorations;
+  win->flags = (win->flags & ~(WINDOW_STATE_MAXIMIZED | WINDOW_NOTITLE | WINDOW_NORESIZE)) | win->placement->restore_decorations;
   move_window(win, frame.x, frame.y);
   resize_window(win, frame.w, frame.h);
   sync_desktop_window();
@@ -493,14 +526,14 @@ void clear_window_children(window_t *win) {
 
 // Destroy a window
 void destroy_window(window_t *win) {
-  bool was_maximized = win->maximized;
+  bool was_maximized = window_is_maximized(win);
   window_t *dock_parent = win->dock ? win->parent : NULL;
   window_t *root = get_root_window(win);
   invalidate_overlaps(win);
-  if (win->role == WINDOW_ROLE_HOST && win->active_page)
+  if (win->role == WINDOW_ROLE_HOST && window_active_page(win))
     set_host_page(win, NULL);
-  if (win->role == WINDOW_ROLE_PAGE && win->page_host)
-    set_host_page(win->page_host, NULL);
+  if (win->role == WINDOW_ROLE_PAGE && window_page_host(win))
+    set_host_page(window_page_host(win), NULL);
   if (g_ui_runtime.tracked == win) track_mouse(NULL);
   dock_forget_window(win);
   send_message(win, evDestroy, 0, NULL);
@@ -522,9 +555,12 @@ void destroy_window(window_t *win) {
   if (win->toolbar) destroy_window(win->toolbar);
   clear_window_children(win);
   // Release the per-window render target before freeing the struct.
-  R_DestroyWindowTarget(&win->surface_fbo, &win->surface_tex,
-                        &win->surface_w, &win->surface_h);
-  free(win->image_background);
+  window_surface_release(win);
+  free(win->placement);
+  free(win->pages);
+  free(win->view);
+  if (g_lift.win == win) g_lift.win = NULL;
+  for (int i = 0; i < MAX_WORKSPACES; i++) if (g_workspaces[i].owner == win) g_workspaces[i].owner = NULL;
   free(win);
   if (dock_parent && is_window(dock_parent)) {
     dock_layout(dock_parent, get_client_rect(dock_parent));
@@ -674,36 +710,48 @@ void invalidate_window(window_t *win) {
   post_message(root, evPaint, 0, NULL);
 }
 
-// Returns true when the absolute screen Y coordinate 'sy' falls within the
-// draggable title-bar row of 'win'.  For windows with WINDOW_TOOLBAR the
-// toolbar rows sit below the title bar and must NOT initiate a drag.
-// Windows without a toolbar are entirely draggable above client area.
-// Windows with WINDOW_NOTITLE have no title row; their toolbar area is the
-// only non-client space and may be dragged from freely (e.g. tool palettes).
-bool window_in_drag_area(window_t const *win, int sy) {
-  if (win->maximized || win->parent || (win->flags & WINDOW_NODRAG)) return false;
-  int t = titlebar_height(win);
-  if (sy < win->frame.y || sy >= win->frame.y + t) return false;
-  if (!(win->flags & WINDOW_TOOLBAR) || (win->flags & WINDOW_NOTITLE) || toolbar_merged_title(win)) return true;
-  // Has both title bar and toolbar: only the caption row is draggable.
-  return sy < win->frame.y + window_caption_height(win);
-}
-
-bool window_in_drag_area_at(window_t const *win, int sx, int sy) {
-  if (!win || win->maximized || win->parent || (win->flags & WINDOW_NODRAG)) return false;
-  if (win->flags & WINDOW_TOOLBAR) {
-    if (sy < win->frame.y || sy >= win->frame.y + titlebar_height(win)) return false;
-    toolbar_state_t *tb = window_toolbar_state((window_t *)win);
-    if (tb && (tb->style & TOOLBAR_STYLE_GRIP)) {
-      int title_h = toolbar_content_offset(win);
-      if (tb->orientation == TOOLBAR_VERTICAL)
-        return CONTAINS(sx, sy, win->frame.x, win->frame.y + title_h,
-                        win->frame.w, TOOLBAR_GRIP_HEIGHT);
-      return CONTAINS(sx, sy, win->frame.x, win->frame.y + title_h,
-                      TOOLBAR_GRIP_WIDTH, titlebar_height(win) - title_h);
-    }
+// Non-client hit-test (≈ WM_NCHITTEST): which part of `win` lies under the screen point. A window
+// proc may answer evNcHitTest first; HT_NOWHERE from the proc means "default". The default knows
+// the caption row (with its close and maximize buttons), toolbar grips and the caption-toolbar band
+// (draggable except over its items), and the bottom-right grow box of a root window.
+int window_nc_hit_test(window_t *win, int sx, int sy) {
+  if (!win || !is_window(win)) return HT_NOWHERE;
+  int custom = (int)send_message(win, evNcHitTest, MAKEDWORD((uint16_t)sx, (uint16_t)sy), NULL);
+  if (custom != HT_NOWHERE) return custom;
+  irect16_t frame = win->frame;
+  if (!win->parent) {
+    int lx = sx - frame.x, ly = sy - frame.y;
+    if (lx >= frame.w - get_theme()->scrollbar_width && ly >= frame.h - get_theme()->scrollbar_width &&
+        lx < frame.w && ly < frame.h && !(win->flags & WINDOW_NORESIZE))
+      return HT_GROWBOX;
   }
-  return window_in_drag_area(win, sy);
+  int band = titlebar_height(win);
+  if (win->parent || sx < frame.x || sx >= frame.x + frame.w || sy < frame.y || sy >= frame.y + band) return HT_CLIENT;
+  int caption_h = caption_extent(win->flags);
+  if (caption_h > 0 && sy < frame.y + caption_h) {
+    irect16_t titlebar = rect_split_top(frame, caption_h);
+    irect16_t close_btn = rect_split_right(titlebar, caption_h);
+    irect16_t max_btn = rect_split_right(rect_trim_right(titlebar, caption_h), caption_h);
+    if (!(win->flags & (WINDOW_NOCLOSE)) && rect_contains_point(close_btn, (ipoint16_t){sx, sy})) return HT_CLOSE;
+    if ((win->flags & WINDOW_MAXIMIZEBOX) &&
+        !(win->flags & (WINDOW_NORESIZE | WINDOW_DIALOG | WINDOW_ALWAYSINBACK | WINDOW_ALWAYSONTOP)) &&
+        rect_contains_point(max_btn, (ipoint16_t){sx, sy})) return HT_MAXBUTTON;
+    return (window_is_maximized(win) || (win->flags & WINDOW_NODRAG)) ? HT_CLIENT : HT_CAPTION;
+  }
+  if (window_is_maximized(win) || (win->flags & WINDOW_NODRAG)) return HT_CLIENT;
+  // Below the caption row: the toolbar band. A grip owns the drag; otherwise a caption-less band
+  // (WINDOW_NOTITLE or merged into the toolbar) drags from its empty space and leaves items alone.
+  toolbar_state_t *tb = (win->flags & WINDOW_TOOLBAR) ? window_toolbar_state(win) : NULL;
+  if (tb && (tb->style & TOOLBAR_STYLE_GRIP)) {
+    int title_h = toolbar_content_offset(win);
+    irect16_t grip = tb->orientation == TOOLBAR_VERTICAL
+        ? R(frame.x, frame.y + title_h, frame.w, get_theme()->toolbar_grip_size)
+        : R(frame.x, frame.y + title_h, get_theme()->toolbar_grip_size, band - title_h);
+    return rect_contains_point(grip, (ipoint16_t){sx, sy}) ? HT_CAPTION : HT_CLIENT;
+  }
+  if (!(win->flags & WINDOW_TOOLBAR)) return HT_CAPTION;
+  if (caption_h > 0) return HT_CLIENT;   // titled window with a toolbar: only the caption row drags
+  return toolbar_hit_action(tb, sx - frame.x, sy - frame.y) ? HT_CLIENT : HT_CAPTION;
 }
 
 // Get child window by ID
@@ -765,7 +813,7 @@ void adjust_window_rect(irect16_t *r, flags_t flags) {
   if (!r) return;
   // Compute non-client heights for the given flags.
   int t = 0;
-  if (!(flags & WINDOW_NOTITLE) && (flags & (WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR)) != (WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR)) t += (flags & WINDOW_TOOLWINDOW) ? (FONT_SIZE + 5) : get_theme()->caption_height;
+  t += caption_extent(flags);
   if (flags & WINDOW_TOOLBAR)    t += theme_toolbar_band_height();
   int s = (flags & WINDOW_STATUSBAR) ? STATUSBAR_HEIGHT : 0;
   // Horizontal scrollbar: adds get_theme()->scrollbar_width to the bottom unless it is
@@ -984,8 +1032,16 @@ window_t *create_window_from_form(form_def_t const *def, int x, int y,
   if (!win) return NULL;
 
   win->role = def->role;
-  win->page_toolbar_items = (const toolbar_item_t *)def->toolbar_items;
-  win->page_toolbar_count = def->toolbar_count;
+  if (def->toolbar_items || def->toolbar_count) {
+    if (!win->pages) win->pages = calloc(1, sizeof(*win->pages));
+    if (win->pages) {
+      win->pages->toolbar_items = (const toolbar_item_t *)def->toolbar_items;
+      win->pages->toolbar_count = def->toolbar_count;
+    } else {
+      fprintf(stderr, "[window] page toolbar allocation failed win=%u\n", win->id);
+      fflush(stderr);
+    }
+  }
 
   
   if (def->flags & WINDOW_AUTO_LAYOUT)
@@ -1043,20 +1099,30 @@ bool set_host_page(window_t *host, window_t *page) {
     fflush(stderr);
     return false;
   }
-  if (host->active_page == page) return true;
-
-  if (page && page->page_host && page->page_host != host)
-    set_host_page(page->page_host, NULL);
-
-  if (host->active_page) {
-    send_message(host->active_page, evDeactivate, 0, host);
-    host->active_page->page_host = NULL;
+  if (window_active_page(host) == page) return true;
+  if (!host->pages && !(host->pages = calloc(1, sizeof(*host->pages)))) {
+    fprintf(stderr, "[window] set_host_page rejected host=%u: link allocation failed\n", host->id);
+    fflush(stderr);
+    return false;
   }
-  host->active_page = page;
-  send_message(host, tbSetItems, page ? (uint32_t)page->page_toolbar_count : 0,
-               page ? (void *)page->page_toolbar_items : NULL);
+  if (page && !page->pages && !(page->pages = calloc(1, sizeof(*page->pages)))) {
+    fprintf(stderr, "[window] set_host_page rejected page=%u: link allocation failed\n", page->id);
+    fflush(stderr);
+    return false;
+  }
+
+  if (page && window_page_host(page) && window_page_host(page) != host)
+    set_host_page(window_page_host(page), NULL);
+
+  if (window_active_page(host)) {
+    send_message(window_active_page(host), evDeactivate, 0, host);
+    window_active_page(host)->pages->host = NULL;
+  }
+  host->pages->active_page = page;
+  send_message(host, tbSetItems, page ? (uint32_t)page->pages->toolbar_count : 0,
+               page ? (void *)page->pages->toolbar_items : NULL);
   if (page) {
-    page->page_host = host;
+    page->pages->host = host;
     send_message(page, evActivate, 0, host);
   }
   invalidate_window(host);
@@ -1162,9 +1228,9 @@ void show_window(window_t *win, bool visible) {
     invalidate_window(win->parent);
   }
   post_message(win, evShowWindow, visible, NULL);
-  if (win->maximized) sync_desktop_window();
+  if (window_is_maximized(win)) sync_desktop_window();
   if (!visible) request_composite();
-  else if (g_ui_runtime.running && get_root_window(win) && !get_root_window(win)->surface_tex)
+  else if (g_ui_runtime.running && get_root_window(win) && !window_has_surface(get_root_window(win)))
     invalidate_window(win);
 }
 

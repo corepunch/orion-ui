@@ -4,7 +4,6 @@
 
 #include "formeditor.h"
 #include <orion/commctl/commctl.h>
-#include <orion/user/icons.h>
 
 #define FORMS_ID_NEW     1
 #define FORMS_ID_DELETE  2
@@ -190,18 +189,6 @@ lresult_t win_forms_browser_proc(window_t *win, uint32_t msg,
       return true;
     }
 
-    case tbButtonClick:
-      switch ((uint16_t)wparam) {
-        case FORMS_ID_NEW:
-          forms_add_new();
-          return true;
-        case FORMS_ID_DELETE:
-          forms_delete_active();
-          return true;
-        default:
-          return false;
-      }
-
     case evResize:
       if (st && st->list_win) {
         irect16_t cr = get_client_rect(win);
@@ -211,6 +198,13 @@ lresult_t win_forms_browser_proc(window_t *win, uint32_t msg,
 
     case evCommand: {
       uint16_t notif = HIWORD(wparam);
+      if (notif == btnClicked) {
+        switch (LOWORD(wparam)) {
+          case FORMS_ID_NEW:    forms_add_new(); return true;
+          case FORMS_ID_DELETE: forms_delete_active(); return true;
+          default: return false;
+        }
+      }
       if (!st || lparam != st->list_win)
         return false;
       if (notif == RVN_SELCHANGE)

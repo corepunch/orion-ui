@@ -180,6 +180,7 @@ static void classic_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state
   bool disabled = (state & CTRL_DISABLED) != 0;
   uint32_t foreground = get_sys_color(disabled ? brTextDisabled : brTextNormal);
   switch (part) {
+    case THEME_PART_CARD: break; // cards paint through draw_card
     case THEME_PART_BUTTON:
       fill_rect((state & CTRL_FOCUSED) ? get_sys_color(brAccent) :
                 (state & CTRL_DEFAULT) ? 0xff000000 : get_sys_color(brControlBg), rect_inset(r, -1));
@@ -328,6 +329,7 @@ static theme_t g_classic_theme = {
   .name                   = "Classic",
   .draw_button_label      = classic_draw_button_label,
   .draw_combobox          = classic_draw_combobox,
+  .draw_card              = theme_default_draw_card,
   .foreground             = classic_foreground,
   .draw_part              = classic_draw_part,
   .draw_window_chrome     = classic_draw_window_chrome,
@@ -338,6 +340,17 @@ static theme_t g_classic_theme = {
   .menubar_height         = FONT_SIZE + 5,
   .toolbar_button_size    = SYSICON_SIZE + 4,
   .toolbar_padding        = TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH,
+  .tab_pane_frame            = 2,
+  .menu_capsule              = 0,
+  .badge_padding             = 7,
+  .badge_corner_radius       = 5,
+  .badge_tint_alpha          = 0x40,
+  .toolbar_compact_padding   = 2,
+  .toolbar_compact_spacing   = 6,
+  .toolbar_compact_icon      = TOOLBAR_COMPACT_ICON_SIZE,
+  .toolbar_compact_menu_gap  = 8,
+  .toolbar_grip_size         = 12,
+  .toolbar_dropdown_arrow_w  = 12,
   .press_icon_offset      = 1,
   .button_corner_radius   = 0,
   .window_corner_radius   = 0,
@@ -348,6 +361,7 @@ static theme_t g_classic_theme = {
   .plastic_corner_radius = CORNER_RADIUS_CIRCULAR,
   .plastic_bevel_width   = 2,
   .plastic_shadow_size   = 3,
+  .plastic = { .gloss = 0.7f, .rim = 0.7f, .ink = 0.12f, .lift = 0.08f, .glyph_size = 20, .shadow_color = 0xE0000000 },
   .card_padding_x         = 8,
   .card_padding_y         = 6,
   .drag_shadow_blur       = 6,

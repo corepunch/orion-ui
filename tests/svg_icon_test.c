@@ -20,49 +20,14 @@ static uint32_t test_upload(int w, int h, const void *pixels,
   return (uint32_t)++upload_count;
 }
 static void test_delete(uint32_t tex) { delete_count++; }
-static bool test_bmp_resolve(const char *name, sysicon_resolved_t *out) { return false; }
 
 #define axGetScaling test_scaling
 #define R_CreateTextureSRGBA8 test_upload
 #define R_DeleteTexture test_delete
-#define bmp_icon_resolve test_bmp_resolve
 #include <orion/user/svg_icon_loader.c>
 #undef axGetScaling
 #undef R_CreateTextureSRGBA8
 #undef R_DeleteTexture
-#undef bmp_icon_resolve
-
-static bool tile_has_coverage(int x, int y, int size) {
-  for (int row = y; row < y + size; row++)
-    for (int col = x; col < x + size; col++)
-      if (uploaded_pixels[((size_t)row * uploaded_w + col) * 4 + 3]) return true;
-  return false;
-}
-
-static void test_strip_density(void) {
-  TEST("SVG strips preserve logical sizes and UV tiles at 1x, 1.5x and 2x");
-  const char *names[] = {"zoom-in", NULL, "undo"};
-  const float densities[] = {1.0f, 1.5f, 2.0f};
-  for (int i = 0; i < 3; i++) {
-    test_density = densities[i];
-    bitmap_strip_t strip = {0};
-    ASSERT_TRUE(svg_build_strip("share/icons", names, 3, 24, 2, &strip, NULL));
-    int raster = (int)ceilf(24 * test_density * UI_WINDOW_SCALE);
-    ASSERT_EQUAL(uploaded_w, raster * 2);
-    ASSERT_EQUAL(uploaded_h, raster * 2);
-    ASSERT_EQUAL(uploaded_filter, R_FILTER_LINEAR);
-    ASSERT_EQUAL(strip.icon_w, 24);
-    ASSERT_EQUAL(strip.icon_h, 24);
-    ASSERT_EQUAL(strip.sheet_w, 48);
-    ASSERT_EQUAL(strip.sheet_h, 48);
-    ASSERT_EQUAL(strip.cols, 2);
-    ASSERT_TRUE(tile_has_coverage(0, 0, raster));
-    ASSERT_FALSE(tile_has_coverage(raster, 0, raster));
-    ASSERT_TRUE(tile_has_coverage(0, raster, raster));
-    ASSERT_FALSE(tile_has_coverage(raster, raster, raster));
-  }
-  PASS();
-}
 
 static void test_named_icon_density(void) {
   TEST("named SVG icons rerasterize at Retina density and reuse the cache");
@@ -132,7 +97,6 @@ static void test_named_icon_draw_size(void) {
 
 int main(void) {
   TEST_START("SVG Retina rasterization");
-  test_strip_density();
   test_named_icon_density();
   test_named_icon_draw_size();
   free(uploaded_pixels);

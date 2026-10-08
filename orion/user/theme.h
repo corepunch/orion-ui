@@ -101,6 +101,7 @@ typedef enum {
   CTRL_DISABLED = 1 << 3,   // input disabled; takes priority over transient states
   CTRL_FOCUSED  = 1 << 4,   // keyboard focus ring required
   CTRL_DEFAULT  = 1 << 5,   // primary action / default button
+  CTRL_PLASTIC  = 1 << 6,   // paint with the theme's plastic material (≈ SetWindowTheme visual style)
 } ctrl_state_t;
 
 typedef enum {
@@ -120,6 +121,7 @@ typedef enum {
 // class/part pairs. Bounds and interaction state come from the caller.
 typedef enum {
   THEME_PART_BUTTON,
+  THEME_PART_CARD,            // card face; CTRL_SELECTED draws the ring, opts->edge_color the accent edge
   THEME_PART_CHECKBOX,
   THEME_PART_COMBOBOX,
   THEME_PART_COMBOBOX_ARROW,
@@ -176,6 +178,7 @@ typedef struct {
   void (*draw_statusbar_text)(irect16_t r, const char *text);
   void (*draw_button_label)(irect16_t r, const char *text, ctrl_state_t state);
   void (*draw_combobox)(irect16_t r, const char *text, ctrl_state_t state);
+  void (*draw_card)(irect16_t r, ctrl_state_t state, uint32_t edge_color); // card face, selection ring and accent edge in one silhouette
   uint32_t (*foreground)(theme_part_t part, ctrl_state_t state);
 
   // Scrollbar geometry policy.  scrollbar_overlay=true means Modern overlay
@@ -188,6 +191,12 @@ typedef struct {
   int menubar_height;
   int toolbar_button_size;
   int toolbar_padding;
+  int toolbar_compact_padding;   // menu-bar-row toolbar: outer margin
+  int toolbar_compact_spacing;   // menu-bar-row toolbar: gap between buttons
+  int toolbar_compact_icon;      // menu-bar-row toolbar: glyph size
+  int toolbar_compact_menu_gap;  // clearance kept between a compact toolbar and the menus
+  int toolbar_grip_size;         // drag grip thickness of a floating toolbar or menu bar
+  int toolbar_dropdown_arrow_w;  // width of a split button's arrow zone
 
   // Icon/label press offset in logical pixels.  Classic shifts content by 1
   // when a button is pressed to simulate physical depression; Modern keeps
@@ -200,8 +209,16 @@ typedef struct {
   int card_corner_radius;    // draw_card(): rounded-corner radius (0 = square)
   int card_edge_width;       // draw_card(): accent edge width in logical pixels
   int card_ring_width;       // draw_card(): selection ring thickness (reserved inside the card bounds)
-  int card_highlight_width;  // draw_gradient_card(): top sheen thickness (0 = none)
+  int card_highlight_width;  // plastic card bevel width (0 = none)
   int plastic_corner_radius, plastic_bevel_width, plastic_shadow_size; // procedural button geometry; radius may be CORNER_RADIUS_CIRCULAR
+  struct {                   // plastic material, handed to the shader as uniforms
+    float gloss;             // strength of the top highlight band (1 = reference)
+    float rim;               // lit/shaded bevel strength along the silhouette
+    float ink;               // glyph darkness: base-colour fraction kept in the engraved glyph
+    float lift;              // face lightening while hovered
+    int   glyph_size;        // largest glyph, logical pixels
+    uint32_t shadow_color;   // drop shadow tint (alpha = strength)
+  } plastic;
   int card_padding_x, card_padding_y; // Card control: content inset from the face edge
   int window_shadow_blur;    // logical pixels; zero disables shadows
   ipoint16_t window_shadow_offset;
@@ -215,6 +232,10 @@ typedef struct {
     int hover, selected, selected_hover, pressed; // system color roles
   } item_background;
   int control_padding;       // standard inset from control frame to content area
+  int tab_pane_frame;        // TabView page inset from the tab bar frame (bevel width; 0 = flat)
+  int menu_capsule;          // 1 = menu-bar selection is a padded capsule around the label; 0 = full item cell
+  int badge_padding, badge_corner_radius; // Badge: horizontal text inset and corner radius
+  int badge_tint_alpha;      // Badge: alpha of the tinted face behind the text (0..255)
 
   // Writes the theme's palette into g_sys_colors.  Called by set_theme()
   // before evThemeChanged is broadcast so controls see the new colors
@@ -222,9 +243,6 @@ typedef struct {
   void (*apply_palette)(void);
 } theme_t;
 
-static inline bool theme_is_modern(const theme_t *t) {
-  return t && t->style != THEME_CLASSIC;
-}
 
 static inline void theme_copy_palette(const uint32_t *src) {
   for (int i = 0; i < brCount; i++) g_sys_colors[i] = src[i];
@@ -249,6 +267,20 @@ static inline int theme_toolbar_band_height(void) {
 // Paint semantic parts only inside the established paint path. Disabled state
 // suppresses hover/pressed feedback while preserving selection and focus.
 void theme_draw(theme_part_t part, irect16_t r, ctrl_state_t state);
+
+// Extra inputs for parts whose look depends on more than bounds and state.
+typedef struct {
+  uint32_t    color;         // plastic face colour (0 = theme accent) / card plastic tint
+  uint32_t    edge_color;    // THEME_PART_CARD accent edge (alpha 0 = none)
+  const char *icon;          // plastic button glyph (SVG name)
+  uint32_t    control_size;  // CONTROL_SIZE_*: LARGE grows the glyph
+  bool        round;         // force a circular silhouette (BUTTON_STYLE_ROUND)
+} theme_draw_opts_t;
+// theme_draw() with opts; CTRL_PLASTIC in state selects the plastic material for buttons, toolbar buttons and cards.
+void theme_draw_ex(theme_part_t part, irect16_t r, ctrl_state_t state, const theme_draw_opts_t *opts);
+// The area a part leaves for content (≈ GetThemeBackgroundContentRect).
+irect16_t theme_content_rect(theme_part_t part, irect16_t r, ctrl_state_t state);
+void theme_default_draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color); // shared card painter for flat themes
 uint32_t theme_foreground(theme_part_t part, ctrl_state_t state);
 
 // Built-in theme singletons. Light and Navy share Modern drawing.

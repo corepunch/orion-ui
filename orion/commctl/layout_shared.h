@@ -84,7 +84,9 @@ static inline layout_measure_t layout_measure_child(window_t *child, int avail_w
   return m;
 }
 
+// Docked panes are placed by their dock host (dock_layout), never by the host's auto-layout.
 static inline void layout_arrange_child(window_t *child, irect16_t rect) {
+  if (child && child->dock) return;
   rect = layout_inset_rect(rect, layout_margin_for(child));
   layout_arrange_t a = {
     .rect = rect,

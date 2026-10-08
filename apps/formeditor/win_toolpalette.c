@@ -8,7 +8,7 @@ static void build_tool_items(void) {
   g_tools[g_tool_count++] = (toolbar_item_t){
       .type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_SELECT,
       .icon = "cursor-pointer",
-      .tooltip = "Select",
+      .tooltip = "Select", .style = TBSTYLE_CHECKGROUP,
   };
 
   for (int i = 0; i < fe_component_count() && g_tool_count < FE_MAX_COMPONENTS + 1; i++) {
@@ -20,7 +20,7 @@ static void build_tool_items(void) {
     g_tools[g_tool_count++] = (toolbar_item_t){
         .type = TOOLBAR_ITEM_BUTTON, .ident = i,
         .icon = c->toolbar_icon,
-        .tooltip = c->class_name,
+        .tooltip = c->class_name, .style = TBSTYLE_CHECKGROUP,
     };
   }
 }
@@ -50,7 +50,7 @@ static void populate_toolbar(window_t *win) {
   send_message(win, tbSetItems, (uint32_t)g_tool_count, g_tools);
 
   int current = g_app ? g_app->current_tool : ID_TOOL_SELECT;
-  send_message(win, tbSetActiveButton, (uint32_t)current, NULL);
+  send_message(win, tbCheckButton, (uint32_t)current, (void *)(intptr_t)1);
 }
 
 window_t *formeditor_create_tool_toolbar(hinstance_t hinstance) {
@@ -75,9 +75,9 @@ lresult_t win_tool_palette_proc(window_t *win, uint32_t msg,
       populate_toolbar(win);
       return true;
 
-    case tbButtonClick:
-      send_message(win, tbSetActiveButton, wparam, NULL);
-      select_tool_by_ident(win, (int)wparam);
+    case evCommand:
+      if (HIWORD(wparam) != btnClicked) return false;
+      select_tool_by_ident(win, (int)LOWORD(wparam));
       return true;
     case evPaint:   return true;
     case evDestroy:

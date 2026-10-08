@@ -14,7 +14,7 @@ typedef struct window_s window_t;
 struct menu_item_s;
 typedef struct irect16_s irect16_t;
 typedef struct database_s database_t;
-typedef uint32_t flags_t;
+typedef uint64_t flags_t;
 typedef intptr_t result_t;
 
 // Application instance handle (analogous to WinAPI HINSTANCE).
@@ -127,15 +127,13 @@ typedef struct toolbar_state_s {
   // Embedded control child windows (COMBOBOX / TEXTEDIT / SLIDER).
   // These are real window_t children with toolbar-band-relative frames.
   window_t       *children;
-  // Strip for icon rendering (set via tbSetStrip / tbLoadStrip)
+  // Strip for icon rendering (set via tbSetStrip; caller owns the texture)
   bitmap_strip_t  strip;
-  irect16_t     *strip_regions;
-  int            strip_region_count;
-  uint32_t        strip_tex;    // GL texture owned here; freed on toolbar destroy
   int             btn_size;     // 0 = TB_SPACING default; >0 = custom square size in px
   int             columns;      // vertical grid; 0/1 = single column
   toolbar_orientation_t orientation;
   uint32_t        style;        // TOOLBAR_STYLE_* flags
+  uint8_t         dock_hint;    // toolbar_dock_t measurement/compact presentation hint; dock owns placement
 } toolbar_state_t;
 
 // Window definition structure (for declarative window creation)
@@ -476,11 +474,6 @@ typedef struct {
   int  drag_start_mouse;   // axis coord (window-local) when drag began
   int  drag_mouse;         // accumulated axis coord while dragging
   int  drag_start_pos;     // pos value when drag began
-  bool gesture_active;
-  float gesture_remainder; // Retain fractional points across native pan samples.
-  uint32_t fling_timer_id;   // momentum timer after a touch swipe; 0 = none
-  uint32_t fling_time;       // last momentum step, ms
-  float fling_pos, fling_velocity; // points and points/ms
   // Modern overlay-scrollbar state.  Ignored when scrollbar_overlay == false.
   bool     overlay_visible;  // thumb is currently revealed (fading in/visible)
   uint32_t hide_timer_id;    // axSetTimer handle for auto-hide delay; 0 = none
@@ -492,23 +485,18 @@ typedef struct {
   int width, height;
   float pixel_ratio;
   view_matrix_t matrix;
-  ipoint16_t pointer, drag_pointer;
+  ipoint16_t drag_pointer; // client-space pointer at the last pan step
 } window_view_t;
 
 struct window_s {
   irect16_t frame;
-  irect16_t restore_frame;
-  irect16_t workspace;
-  uint32_t restore_decorations;
-  bool workspace_valid;
-  bool maximized;
-  bool maximizable; // app exposes a restore command when title bar is hidden
+  struct window_placement_s *placement; // lazily allocated on maximize (≈ WINDOWPLACEMENT)
   uint32_t id;
   uint64_t editor_id;    // optional design-time stable identity; 0 outside editors
   window_role_t role;
-  // Runtime style/state flags share one 32-bit word.
+  // Runtime style/state flags share one 64-bit word; bits 32+ hold extended window styles.
   // WINDOW_*/BUTTON_* use low bits; WINDOW_STATE_* uses high bits.
-  uint32_t flags;
+  flags_t flags;
   hinstance_t hinstance;  // owning app instance (0 = system/unowned)
   winproc_t proc;
   uint32_t value;
@@ -518,32 +506,34 @@ struct window_s {
   layout_t layout;
   void *userdata;
   void *userdata2;
-  struct image_background_s *image_background; // owned descriptor; borrowed atlas
   win_sb_t hscroll;   // built-in horizontal scrollbar state (WINDOW_HSCROLL)
   win_sb_t vscroll;   // built-in vertical scrollbar state (WINDOW_VSCROLL)
-  window_view_t view; // Transforms this window's content; child frames remain in viewport space.
-  // Visual drag. The frame stays put; paint is translated by drag_dx/dy and
-  // skipped at the real frame unless drag_copy. See window_set_drag_visual().
-  bool drag_visual, drag_copy;
-  int drag_dx, drag_dy;
+  window_view_t *view; // Lazily allocated by window_view_init. Transforms this window's content; child frames remain in viewport space.
   struct window_s *next;
   struct window_s *children;
   struct window_s *parent;
   struct window_s *toolbar; // toolbar host window (win_toolbar); state lives in toolbar->userdata
   struct dock_state_s *dock;
-  bool dock_layout_busy;
-  irect16_t dock_content;
-  uint8_t toolbar_dock; // toolbar measurement/compact presentation hint; dock owns placement
-  struct window_s *active_page; // selected page projected by a WINDOW_ROLE_HOST
-  struct window_s *page_host; // WINDOW_ROLE_HOST currently projecting this page
-  uint32_t surface_fbo; // Offscreen render target for per-window composition.
-  uint32_t surface_tex; // Backing texture for the render target.
-  int surface_w, surface_h; // Render target size in physical pixels.
-  const toolbar_item_t *page_toolbar_items; // declarative page contribution; not owned
-  int page_toolbar_count;
+  struct dock_host_s *dock_host; // lazily allocated by dock_layout (hosts only)
+  struct window_pages_s *pages; // lazily allocated host/page link (role HOST or PAGE)
   const struct menu_item_s *context_menu; // generated declarative menu; not owned
   int                       context_menu_count;
 };
+
+// Compositor-private per-root-window redirection surface (physical pixels).
+typedef struct { uint32_t fbo, tex; int w, h; } window_surface_t;
+window_surface_t *window_surface(const window_t *win);        // NULL when the window has none
+bool              window_has_surface(const window_t *win);
+window_surface_t *window_surface_ensure(window_t *win);
+void              window_surface_release(window_t *win);
+// Compositor attributes of a root window (≈ DWMWA_*). WCA_AUTO derives the value from the theme and
+// window state; any other value (>= 0) overrides it: corner radius in logical pixels, or 0/1 for the flags.
+typedef enum { WCA_CORNERS, WCA_SHADOW, WCA_BORDER, WCA_COUNT } window_composition_attr_t;
+#define WCA_AUTO (-1)
+void window_set_composition_attr(window_t *win, window_composition_attr_t attr, int value);
+int  window_composition_attr(const window_t *win, window_composition_attr_t attr); // resolved value
+bool              window_capture(const window_t *win, uint8_t **out_rgba, int *out_w, int *out_h);
+void              window_surface_adopt(window_t *win, uint32_t fbo, uint32_t tex, int w, int h);
 
 enum { WINDOW_PAINT_CONTENT = 0, WINDOW_PAINT_OVERLAY = 1 };
 void window_view_init(window_t *win, int width, int height, float pixel_ratio, bool free_pan);
@@ -552,8 +542,8 @@ float window_view_zoom(const window_t *win);
 void window_view_set_zoom(window_t *win, float zoom, const ipoint16_t *content_anchor);
 void window_view_center(window_t *win);
 void window_view_pan(window_t *win, ipoint16_t delta);
-void window_view_begin_drag(window_t *win);
-void window_view_drag(window_t *win);
+void window_view_begin_drag(window_t *win, ipoint16_t client_pt);
+void window_view_drag(window_t *win, ipoint16_t client_pt);
 void window_view_set_scroll(window_t *win, int axis, int pos);
 int window_view_scroll(const window_t *win, int axis);
 frect_t window_view_bounds(const window_t *win);
@@ -564,11 +554,36 @@ ipoint16_t window_client_to_content(const window_t *win, ipoint16_t point);
 // Platform/router entry: client coordinates in, content coordinates delivered to the proc.
 result_t send_pointer_message(window_t *win, uint32_t msg, uint32_t point, void *lparam);
 
-static inline bool window_has_state(const window_t *win, uint32_t state_flag) {
+typedef struct window_pages_s {
+  window_t *active_page;                  // HOST: selected page it projects
+  window_t *host;                         // PAGE: host currently projecting it
+  const toolbar_item_t *toolbar_items;    // PAGE: declarative toolbar contribution; not owned
+  int toolbar_count;
+} window_pages_t;
+
+static inline window_t *window_active_page(const window_t *host) { return host && host->pages ? host->pages->active_page : NULL; }
+static inline window_t *window_page_host(const window_t *page)   { return page && page->pages ? page->pages->host : NULL; }
+
+typedef struct window_placement_s {
+  irect16_t restore_frame;       // normal-state frame while maximized
+  flags_t   restore_decorations; // WINDOW_NOTITLE | WINDOW_NORESIZE bits to put back on restore
+} window_placement_t;
+
+static inline bool window_has_view(const window_t *win) { return win && win->view && win->view->enabled; }
+
+static inline bool window_has_state(const window_t *win, flags_t state_flag) {
   return win && ((win->flags & state_flag) != 0u);
 }
 
-static inline void window_set_state(window_t *win, uint32_t state_flag, bool enabled) {
+static inline bool window_is_maximized(const window_t *win) {
+  return win && (win->flags & WINDOW_STATE_MAXIMIZED) != 0;
+}
+
+static inline irect16_t window_restore_frame(const window_t *win) {
+  return win->placement ? win->placement->restore_frame : win->frame;
+}
+
+static inline void window_set_state(window_t *win, flags_t state_flag, bool enabled) {
   if (!win) return;
   if (enabled)
     win->flags |= state_flag;
@@ -585,6 +600,10 @@ static inline toolbar_state_t *window_toolbar_state(window_t *win) {
 // is set) the toolbar band.  Used by event routing and layout.
 int titlebar_height(window_t const *win);
 int window_caption_height(window_t const *win);
+// The single definition of the caption band: its height for a window with these flags, 0 when it has no
+// caption row (WINDOW_NOTITLE, or WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR merging the caption into the toolbar).
+bool caption_merged_into_toolbar(flags_t flags);
+int  caption_extent(flags_t flags);
 int statusbar_height(window_t const *win);
 int window_screen_x(window_t const *win);
 int window_screen_y(window_t const *win);
@@ -655,6 +674,9 @@ void window_set_drag_visual(window_t *win, int dx, int dy);
 // copy and the original stays put (dragging out of a palette).
 void window_set_drag_copy(window_t *win, int dx, int dy);
 void window_clear_drag_visual(window_t *win);
+bool       window_is_lifted(const window_t *win);      // true while win is the active lifted drag visual
+bool       window_lift_is_copy(const window_t *win);
+ipoint16_t window_lift_delta(const window_t *win);     // paint offset of the lift; {0,0} when not lifted
 // Offset at which `win` paints in the current paint pass; false when in place.
 bool window_lift_offset(const window_t *win, int *dx, int *dy);
 void layout_measure_window(window_t *win, layout_measure_t *m);
@@ -674,8 +696,8 @@ void request_composite(void);
 // Window query functions
 window_t *get_window_item(window_t const *win, uint32_t id);
 bool is_window(window_t *win);
-bool window_in_drag_area(window_t const *win, int sy);
-bool window_in_drag_area_at(window_t const *win, int sx, int sy);
+void ui_rc_poll(void); // service pending remote-control screenshot requests and queries
+int  window_nc_hit_test(window_t *win, int sx, int sy);   // HT_* under a screen point
 window_t *get_root_window(window_t *window);
 // Framework-owned desktop root created by UI_INIT_DESKTOP, or NULL when the
 // current runtime has no desktop. Desktop icon controls should parent here.
@@ -750,12 +772,12 @@ void reset_message_queue(void);
 // Dialog functions
 void end_dialog(window_t *win, uint32_t code);
 uint32_t show_dialog_ex(char const *title, int width, int height,
-                       window_t *parent, uint32_t flags,
+                       window_t *parent, flags_t flags,
                        winproc_t proc, void *param);
 uint32_t show_dialog(char const *title, int width, int height,
                      window_t *parent, winproc_t proc, void *param);
 uint32_t show_dialog_from_form_ex(form_def_t const *def, char const *title,
-                                  window_t *parent, uint32_t flags,
+                                  window_t *parent, flags_t flags,
                                   winproc_t proc, void *param);
 uint32_t show_dialog_from_form(form_def_t const *def, char const *title,
                                window_t *parent, winproc_t proc, void *param);

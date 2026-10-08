@@ -175,6 +175,42 @@ void theme_draw(theme_part_t part, irect16_t r, ctrl_state_t state) {
   get_theme()->draw_part(part, r, state);
 }
 
+static bool theme_part_is_plastic(theme_part_t part) {
+  return part == THEME_PART_BUTTON || part == THEME_PART_CARD ||
+         part == THEME_PART_TOOLBAR_BUTTON || part == THEME_PART_TOOLBAR_LABELED_BUTTON;
+}
+
+void theme_draw_ex(theme_part_t part, irect16_t r, ctrl_state_t state, const theme_draw_opts_t *opts) {
+  if (part < 0 || part >= THEME_PART_COUNT) {
+    fprintf(stderr, "[theme] draw_ex REJECTED part=%d state=%u rect=%d,%d,%d,%d\n",
+            (int)part, (unsigned)state, r.x, r.y, r.w, r.h);
+    fflush(stderr);
+    return;
+  }
+  if (r.w <= 0 || r.h <= 0) return;
+  if (state & CTRL_DISABLED) state &= ~(CTRL_HOVER | CTRL_PRESSED);
+  theme_draw_opts_t none = {0};
+  if (!opts) opts = &none;
+  bool plastic = (state & CTRL_PLASTIC) && theme_part_is_plastic(part);
+  state &= ~CTRL_PLASTIC;
+  if (part == THEME_PART_CARD) {
+    if (plastic) draw_plastic_card(r, state, opts->color);
+    else get_theme()->draw_card(r, state, opts->edge_color);
+  } else if (plastic) {
+    draw_plastic_button(r, state, opts->color, opts->icon, opts->control_size, opts->round);
+  } else {
+    get_theme()->draw_part(part, r, state);
+  }
+}
+
+irect16_t theme_content_rect(theme_part_t part, irect16_t r, ctrl_state_t state) {
+  const theme_t *theme = get_theme();
+  if (part != THEME_PART_CARD) return r;
+  int ring = theme->card_ring_width;
+  if (state & CTRL_PLASTIC) ring += MIN(2, theme->plastic_shadow_size);  // the shadow margin is the only gap between neighbours
+  return rect_inset(r, ring);
+}
+
 uint32_t theme_foreground(theme_part_t part, ctrl_state_t state) {
   if (part < 0 || part >= THEME_PART_COUNT) {
     fprintf(stderr, "[theme] foreground REJECTED part=%d state=%u\n", (int)part, (unsigned)state);

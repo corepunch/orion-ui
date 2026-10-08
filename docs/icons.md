@@ -18,7 +18,7 @@ through GPU textures; the icon grid receives a `bitmap_strip_t` and tile indices
 ```
 share/icons/*.svg
       │
-      │  startup (svg_build_strip)
+      │  on demand (sysicon_resolve)
       ▼
 nanosvg → RGBA pixel buffer → R_CreateTextureRGBA → GPU texture
       │
@@ -57,8 +57,7 @@ surfaces without a glyph. See [Drawing](drawing.md) and [Toolbars](toolbars.md).
 
 | Strip | Index enum | Tile size | Source | Loaded by |
 |---|---|---|---|---|
-| **sysicon** | `sysicon_*` in `orion/user/icons.h` | `SYSICON_SIZE` (24 px) | `share/icons/*.svg` | `orion/user/init.c` |
-| **picker** | `icon_id_t` in `orion/user/sysicons.h` | 16 px | `share/icons/*.svg` | `orion/user/init.c` |
+| **sysicon** | SVG base name | `SYSICON_SIZE` (24 px) | `share/icons/*.svg` | `sysicon_resolve()` on demand |
 | **imageeditor tools** | `IE_ICONS` in `apps/imageeditor/image-editor.h` | 24 px | `share/icons/*.svg` | `apps/imageeditor/windows/win_toolpalette.c` |
 | **Form Editor components** | `IC_*` in `apps/formeditor/controls-icons.h` | 48 px source, drawn at 24 px | `apps/formeditor/share/controls-icons-48.png` | `apps/formeditor/win_components.c` |
 
@@ -166,18 +165,7 @@ Or drop a custom 24 × 24 SVG (stroke-based, `currentColor` for the stroke) in
 
 ### 3. Map it
 
-**For a new sysicon** — add an entry to `k_sysicon_names[]` in
-`orion/user/svg_icon_loader.c`:
-
-```c
-[sysicon_my_new_icon - SYSICON_BASE] = "my-icon",
-```
-
-Then add the enum value to `orion/user/icons.h`:
-
-```c
-sysicon_my_new_icon,    // inside the anonymous enum
-```
+**For a new sysicon** — add `<name>.svg` to `share/icons/` (or an app pool) and use the base name; there is no enum to extend.
 
 **For an imageeditor tool** — add to `k_tool_svg_names[]` in
 `apps/imageeditor/windows/win_toolpalette.c` and add to `IE_ICONS` in
@@ -224,8 +212,6 @@ MISSING icon[N] "x"   ← mapped to "x" but share/icons/x.svg not found
 `sysicon_sword`, etc.) are expected and harmless.  `MISSING` lines mean a named
 SVG isn't on disk — run the download script or add a custom file.
 
-If **every** icon in a strip is missing or unmapped, `svg_build_strip` returns
-`false` and the strip stays empty (icons render as blank tiles — no crash).
 
 ---
 
@@ -335,8 +321,6 @@ After generating:
 | `share/icons/*.svg` | Global icon pool (orion system icons) |
 | `apps/<name>/share/icons/*.svg` | App-specific icon pool (loaded via `svg_add_icons_dir`) |
 | `orion/user/svg_icon_loader.h/.c` | Strip builder, sysicon/picker mappings, `sysicon_resolve()`, `svg_add_icons_dir()` |
-| `orion/user/icons.h` | `sysicon_*` enum and `SYSICON_BASE` (owner-drawn code only) |
-| `orion/user/sysicons.h` | `icon_id_t` enum for file-picker icons |
 | `orion/user/messages.h` | `SYSICON_SIZE`, `TOOLBAR_HEIGHT`, `TB_SPACING`; `toolbar_item_t` |
 | `orion/user/draw_impl.c` | `draw_icon16`, `draw_icon`, `draw_theme_icon` |
 | `orion/user/init.c` | `init_sysicon_strip`, `init_icons_strip`, `svg_set_icons_dir()` |

@@ -186,37 +186,21 @@ static bool bind_root_surface(window_t *root) {
     fflush(stderr);
     return false;
   }
-  int scale = (int)axGetScaling();
-  if (scale < 1) scale = 1;
-  if (!R_EnsureWindowTarget(&root->surface_fbo, &root->surface_tex,
-                            &root->surface_w, &root->surface_h,
-                            root->frame.w * scale, root->frame.h * scale))
+  window_surface_t *surf = window_surface_ensure(root);
+  if (!surf || !R_EnsureWindowTarget(&surf->fbo, &surf->tex, &surf->w, &surf->h,
+                                     ui_surface_px(root->frame.w), ui_surface_px(root->frame.h)))
     return false;
-  glBindFramebuffer(GL_FRAMEBUFFER, root->surface_fbo);
+  R_BindWindowTarget(surf->fbo);
   R_SetFramebufferSRGB(true);
   set_viewport_for_fbo(root);
   return true;
 }
 
-// True while the lifted copies are composited above the root. A drag copy is
-// painted in both passes; a plain drag visual only in this one.
-static bool g_lift_pass;
-
-static bool lifted_now(const window_t *a) {
-  return a->drag_visual && (!a->drag_copy || g_lift_pass);
-}
-
-bool window_lift_offset(const window_t *win, int *dx, int *dy) {
-  bool lifted = false;
-  *dx = *dy = 0;
-  for (const window_t *a = win; a; a = a->parent) {
-    if (!lifted_now(a)) continue;
-    *dx += a->drag_dx;
-    *dy += a->drag_dy;
-    lifted = true;
-  }
-  return lifted;
-}
+// Paint orchestration for lifted windows lives in paint.c.
+bool paint_lifted_now(const window_t *win);
+void paint_lift_shadow(window_t *root, window_t *win, irect16_t clip);
+void paint_drag_visuals(window_t *root);
+#define lifted_now paint_lifted_now
 
 static irect16_t isect_rect(irect16_t a, irect16_t b) {
   int left = MAX(a.x, b.x), top = MAX(a.y, b.y);
@@ -224,40 +208,20 @@ static irect16_t isect_rect(irect16_t a, irect16_t b) {
   return R(left, top, MAX(0, right - left), MAX(0, bottom - top));
 }
 
-// Drop shadow under a lifted window. The proc stays on the tight client scissor,
-// so the offset part of the shadow remains visible underneath the fill.
-static void paint_lift_shadow(window_t *root, window_t *win, irect16_t clip) {
-  theme_t *theme = get_theme();
-  int blur = theme->drag_shadow_blur;
-  if (blur <= 0) return;
-  int pad = blur * 3 + 1;
-  int ax = theme->drag_shadow_offset.x < 0 ? -theme->drag_shadow_offset.x : theme->drag_shadow_offset.x;
-  int ay = theme->drag_shadow_offset.y < 0 ? -theme->drag_shadow_offset.y : theme->drag_shadow_offset.y;
-  irect16_t wide = R(clip.x - pad - ax - 1, clip.y - pad - ay - 1,
-                     clip.w + 2 * (pad + ax + 1), clip.h + 2 * (pad + ay + 1));
-  set_scissor_fbo(root, isect_rect(wide, R(0, 0, root->frame.w, root->frame.h)));
-  draw_rect_shadow(get_client_rect(win), (float)theme->card_corner_radius, (float)blur,
-                   theme->drag_shadow_offset, theme->drag_shadow_color);
-  set_scissor_fbo(root, clip);
-}
+static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 
-// Lifted windows were omitted from the in-place walk. Paint them above the root.
-static void paint_lifted(window_t *win) {
-  for (window_t *c = win->children; c; c = c->next) {
-    if (!window_has_state(c, WINDOW_STATE_VISIBLE)) continue;
-    if (c->drag_visual) send_message(c, evPaint, 0, NULL);
-    paint_lifted(c);
-  }
-}
-
-static void paint_drag_visuals(window_t *win) {
-  g_lift_pass = true;
-  paint_lifted(win);
-  g_lift_pass = false;
-}
-
-// Send message to window (synchronous)
+// Send message to window (synchronous). While the window handles it, icon lookups resolve in
+// its application instance's directories; instance-less windows inherit the sender's scope.
 intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  if (!win) return false;
+  hinstance_t scope = svg_icon_scope();
+  if (win->hinstance) svg_set_icon_scope(win->hinstance);
+  intptr_t result = send_message_impl(win, msg, wparam, lparam);
+  svg_set_icon_scope(scope);
+  return result;
+}
+
+static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   if (!win) return false;
   irect16_t const *frame = &win->frame;
   window_t *root = get_root_window(win);
@@ -280,13 +244,13 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       // Skip OpenGL calls if graphics aren't initialized (e.g., in tests)
       if (g_ui_runtime.running) {
         if (!bind_root_surface(root)) return false;
-        if (win == root && (win->flags & WINDOW_TRANSPARENT)) R_ClearWindowTarget(root->surface_fbo);
-        glBindFramebuffer(GL_FRAMEBUFFER, root->surface_fbo);
+        if (win == root && (win->flags & WINDOW_TRANSPARENT)) R_ClearWindowTarget(window_surface(root)->fbo);
+        R_BindWindowTarget(window_surface(root)->fbo);
         set_viewport_for_fbo(root);
         if (!(win->flags&WINDOW_TRANSPARENT) && wparam == 0) {
           draw_panel(win);
         }
-        if (!(win->flags&WINDOW_NOTITLE) && !toolbar_merged_title(win)) {
+        if (caption_extent(win->flags) > 0) {
           draw_window_controls(win);
         }
         toolbar_draw_non_client(win);
@@ -342,21 +306,27 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         set_scissor_fbo(root, clip);
       }
       break;
+    case tbSetButtonInfo:
+    case tbGetButtonInfo:
+    case tbGetItemRect:
+    case tbGetIdealSize:
+      return toolbar_handle_message(win, msg, wparam, lparam);
+    case tbGetState:
+      return toolbar_item_state(win, (int)wparam);
     case tbSetItemColor:
     case tbSetItemIcon:
     case tbFitItem:
     case tbCheckButton:
+    case tbSetState:
       return toolbar_handle_message(win, msg, wparam, lparam);
     case tbEnableItem:
     case tbSetItems:
     case tbSetColumns:
     case tbSetStrip:
-    case tbSetActiveButton:
     case tbSetButtonSize:
     case tbSetOrientation:
     case tbSetStyle:
-    case tbLoadStrip:
-    case tbLoadAtlas:
+    case tbModifyStyle:
       (void)toolbar_handle_message(win, msg, wparam, lparam);
       break;
     case evStatusBar:
@@ -402,8 +372,8 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
     paint_lift_shadow(root, win, paint_clip);
   // The same window-owned matrix defines painting and pointer delivery.
   float saved_projection[16];
-  bool view_paint = msg == evPaint && g_ui_runtime.running && win->view.enabled;
-  if (view_paint) begin_draw_transform(&win->view.matrix, saved_projection);
+  bool view_paint = msg == evPaint && g_ui_runtime.running && window_has_view(win);
+  if (view_paint) begin_draw_transform(&win->view->matrix, saved_projection);
   value = win->proc(win, msg, wparam, lparam);
   if (view_paint) {
     end_draw_transform(saved_projection);
@@ -446,7 +416,6 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         }
         break;
       case evPaintStencil:
-        paint_window_stencil(win);
         break;
       case evMeasure: {
         layout_measure_t *m = (layout_measure_t *)lparam;

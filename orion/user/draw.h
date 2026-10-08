@@ -26,16 +26,19 @@ static inline uint32_t color_with_alpha(uint32_t color, uint8_t alpha) {
 // the card and the edge together. CTRL_SELECTED draws a ring in the accent edge's colour (theme accent when there is no edge) in the theme's card_ring_width margin,
 // which is reserved inside `r` for every card so selecting never shifts content.
 void draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color);
-// Tinted vertical gradient, top highlight and selection ring in one themed silhouette.
-void draw_gradient_card(irect16_t r, ctrl_state_t state, uint32_t color);
-void render_gradient_card(irect16_t r, int pixel_w, int pixel_h, float radius,
-                          float ring_width, float highlight_width, ctrl_state_t state, uint32_t color);
+// Framework internals behind theme_draw_ex(CTRL_PLASTIC); controls and apps never call these directly.
 // Single shader pass; shadow is reserved inside r, so controls never paint outside their bounds.
 // control_size (CONTROL_SIZE_*) picks the glyph size; CONTROL_SIZE_LARGE renders it CONTROL_LARGE_GROWTH bigger.
-void draw_plastic_button(irect16_t r, ctrl_state_t state, uint32_t color, const char *icon, uint32_t control_size);
+void draw_plastic_button(irect16_t r, ctrl_state_t state, uint32_t color, const char *icon, uint32_t control_size, bool round);
 void draw_plastic_card(irect16_t r, ctrl_state_t state, uint32_t color);
+// Kernel entry point: plain floats only, so the renderer knows nothing about control state.
+// pressed/hover/selected/disabled are 0..1; gloss/rim/ink/lift come from theme_t.plastic.
+typedef struct {
+  float pressed, hover, selected, disabled;
+  float gloss, rim, ink, lift;
+} plastic_look_t;
 void render_plastic_surface(irect16_t r, float radius, float bevel, float shadow,
-                            ctrl_state_t state, uint32_t color, uint32_t shadow_color,
+                            const plastic_look_t *look, uint32_t color, uint32_t shadow_color,
                             uint32_t icon_tex, const frect_t *icon_uv, ipoint16_t icon_size);
 // Small tinted label ("3 modified"): a rounded fill in `color` at low alpha with the text in `color`.
 // Drawn at (x, y) with the given height; returns the badge width so callers can chain badges.
@@ -97,6 +100,8 @@ void set_viewport(irect16_t frame);
 void set_projection(int x, int y, int w, int h);
 void set_clip_rect(window_t const *, irect16_t r);
 void set_viewport_for_fbo(window_t *root);
+float ui_surface_scale(void);          // HiDPI scale (>= 1.0), shared by paint and composite
+int   ui_surface_px(int logical);      // logical length -> physical surface pixels
 void set_scissor_fbo(window_t const *root, irect16_t r);
 
 // Stencil management (internal use)
@@ -110,5 +115,23 @@ void draw_builtin_scrollbars(window_t *win);
 
 // Composite all visible root windows from their FBO textures to the screen.
 void composite_root_windows(void);
+
+// One redirected surface handed to the compositor (≈ a DWM visual). Sizes of the texture are
+// physical pixels; the frame, shadow and projection are logical.
+typedef struct R_CompositeLayer {
+  uint32_t tex;
+  int w, h;                    // texture size, physical pixels
+  irect16_t frame;             // logical screen rect
+  float corner_radius;         // physical pixels; clamped to half the surface
+  bool shadow;
+  float shadow_radius, shadow_blur;
+  ipoint16_t shadow_offset;
+  uint32_t shadow_color;
+  bool border;                 // draw_border runs after the surface
+  void *user;                  // opaque to the compositor; handed back to draw_border
+} R_CompositeLayer;
+void R_Composite(const R_CompositeLayer *layers, int count, uint32_t clear_color,
+                 int logical_w, int logical_h,
+                 void (*draw_border)(const R_CompositeLayer *layer));
 
 #endif

@@ -97,12 +97,11 @@ result_t main_win_proc(window_t *win, uint32_t msg,
       }
       return false;
 
-    case tbButtonClick:
-      handle_menu_command((uint16_t)wparam);
-      return true;
-
     case evCommand: {
       switch (HIWORD(wparam)) {
+        case btnClicked:
+          handle_menu_command((uint16_t)LOWORD(wparam));
+          return true;
         case kMenuBarNotificationItemClick:
           handle_menu_command((uint16_t)LOWORD(wparam));
           return true;

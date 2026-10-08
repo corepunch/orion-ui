@@ -10,12 +10,9 @@
 
 #include "groove.h"
 
-#define HDR_W      GR_SHEET_HEADER_W
-#define RULER_H    22
+#define RULER_H    GR_RULER_H
 #define BAR_W      88
 #define SNAP_W     (BAR_W * GR_SNAP_TICKS / GR_TICKS_BAR)
-#define MIN_ROW    26
-#define MAX_ROW    64
 #define SHEET_SLOP 4
 
 typedef struct {
@@ -26,30 +23,18 @@ typedef struct {
 } sheet_t;
 
 static int  hpos(window_t *win)    { return get_scroll_pos(win, SB_HORZ); }
-static int  row_h(window_t *win)   { return CLAMP((get_client_rect(win).h - RULER_H) / GR_TRACKS, MIN_ROW, MAX_ROW); }
+int  sheet_row_h(window_t *win) { return CLAMP((get_client_rect(win).h - RULER_H) / GR_TRACKS, GR_MIN_ROW, GR_MAX_ROW); }
+static int  row_h(window_t *win)   { return sheet_row_h(win); }
 static int  floordiv(int a, int b) { return a >= 0 ? a / b : -((-a + b - 1) / b); }
-static int  bar_x(window_t *win, int bar)  { return HDR_W + bar * BAR_W - hpos(win); }
-static int  position_x(window_t *win, int position) { return HDR_W + position * BAR_W / GR_TICKS_BAR - hpos(win); }
+static int  bar_x(window_t *win, int bar)  { return bar * BAR_W - hpos(win); }
+static int  position_x(window_t *win, int position) { return position * BAR_W / GR_TICKS_BAR - hpos(win); }
 static int  position_at(int x) { return floordiv(x * GR_TICKS_BAR, BAR_W); }
-static int  seek_ticks(int content_x) { return floordiv(content_x - HDR_W, SNAP_W) * GR_SNAP_TICKS; }
+static int  seek_ticks(int content_x) { return floordiv(content_x, SNAP_W) * GR_SNAP_TICKS; }
 static int  track_y(window_t *win, int t)  { return RULER_H + t * row_h(win); }
-static irect16_t grid_rect(window_t *win)  { irect16_t cr = get_client_rect(win); return R(HDR_W, RULER_H, cr.w - HDR_W, row_h(win) * GR_TRACKS); }
-static irect16_t mute_rect(window_t *win, int t) {
-  int size = MIN(24, (row_h(win) - 4) / 2);
-  irect16_t pair = rect_center(R(0, track_y(win, t), HDR_W, row_h(win)), size, size * 2 + 2);
-  return rect_split_top(pair, size);
-}
-static irect16_t solo_rect(window_t *win, int t) {
-  irect16_t mute = mute_rect(win, t);
-  return rect_offset(mute, 0, mute.h + 2);
-}
-
-static void draw_track_toggle(irect16_t r, const char *icon, bool active, uint32_t on_color) {
-  draw_plastic_button(r, active ? CTRL_SELECTED : CTRL_NORMAL, active ? on_color : get_sys_color(brControlBg), icon, CONTROL_SIZE_REGULAR);
-}
+static irect16_t grid_rect(window_t *win)  { irect16_t cr = get_client_rect(win); return R(0, RULER_H, cr.w, row_h(win) * GR_TRACKS); }
 
 // Hue of the track's earliest clip, so the lane and header match the cards they hold.
-static uint32_t track_color(int t) {
+uint32_t track_color(int t) {
   static const category_t fallback[GR_TRACKS] = {0, 7, 1, 2, 4, 3, 13, 15};
   const song_t *s = &g_app->song;
   int best = -1;
@@ -61,7 +46,7 @@ static uint32_t track_color(int t) {
 
 static void sync_scroll(window_t *win) {
   scroll_info_t si = { .fMask = SIF_RANGE | SIF_PAGE | SIF_POS, .nMin = 0, .nMax = GR_BARS * BAR_W,
-                       .nPage = get_client_rect(win).w - HDR_W, .nPos = hpos(win) };
+                       .nPage = get_client_rect(win).w, .nPos = hpos(win) };
   set_scroll_info(win, SB_HORZ, &si, false);
 }
 
@@ -92,8 +77,8 @@ void card_place(window_t *card, irect16_t cell) {
   if (moved) move_window(card, cell.x, cell.y);
   if (card->frame.w != cell.w || card->frame.h != cell.h)
     resize_window(card, cell.w, cell.h);
-  if (moved && card->drag_visual)
-    window_set_drag_visual(card, card->drag_dx + ox - cell.x, card->drag_dy + oy - cell.y);
+  if (moved && window_is_lifted(card))
+    window_set_drag_visual(card, window_lift_delta(card).x + ox - cell.x, window_lift_delta(card).y + oy - cell.y);
 }
 
 // One child per clip, in song order. The tail is dropped when a clip is
@@ -102,7 +87,7 @@ static void sync_clips(window_t *win) {
   int n = g_app->song.nclips;
   while (child_count(win) > n) {
     window_t *tail = child_at(win, child_count(win) - 1);
-    if (!tail || tail->drag_visual) break;
+    if (!tail || window_is_lifted(tail)) break;
     destroy_window(tail);
   }
   while (child_count(win) < n) {
@@ -121,7 +106,7 @@ static void sync_clips(window_t *win) {
     send_message(c, evMeasure, 0, &measure);
     ipoint16_t size = {measure.desired_w, measure.desired_h};
     int end = song_clip_end(&g_app->song, i);
-    if (!c->drag_visual) size.x = position_x(win, end) - position_x(win, cl->position);
+    if (!window_is_lifted(c)) size.x = position_x(win, end) - position_x(win, cl->position);
     if (window_has_state(c, WINDOW_STATE_VISIBLE) != (size.x > 0)) show_window(c, size.x > 0);
     size.x = MAX(1, size.x);
     card_place(c, R(position_x(win, cl->position), track_y(win, cl->track), size.x, size.y));
@@ -136,7 +121,7 @@ static void drag_target(window_t *win, int cx, int cy) {
   d->track = -1;
   d->valid = false;
   if (!rect_contains_point(grid_rect(win), (ipoint16_t){ (int16_t)cx, (int16_t)cy })) return;
-  cx += hpos(win) - HDR_W;
+  cx += hpos(win);
   cy -= RULER_H;
   if (st->drop_anchor == GR_DROP_ANCHOR_SAMPLE) {
     irect16_t sample = R(cx - d->grab.x, cy - d->grab.y, bars * BAR_W, row_h(win));
@@ -157,23 +142,9 @@ static void drag_clear(window_t *win) {
   invalidate_window(win);
 }
 
-static void paint_headers(window_t *win) {
-  irect16_t cr = get_client_rect(win);
-  fill_rect(get_sys_color(brPanelDarker), R(0, RULER_H, HDR_W, cr.h - RULER_H));
-  for (int t = 0; t < GR_TRACKS; t++) {
-    int y = track_y(win, t), rh = row_h(win);
-    fill_rect(get_sys_color(brDarkEdge), R(0, y + rh - 1, HDR_W, 1));
-    irect16_t m = mute_rect(win, t), s = solo_rect(win, t);
-    fill_rect(track_color(t), R(0, y + 2, 3, rh - 5));
-    draw_track_toggle(m, "phosphor-speaker-slash-fill", g_app->song.mute[t], WEB(0xff4f6c));
-    draw_track_toggle(s, "phosphor-headphones-fill", g_app->song.solo[t], WEB(0xffb21e));
-  }
-}
-
 static void paint_ruler(window_t *win, int cur_bar) {
   irect16_t cr = get_client_rect(win);
   fill_rect(get_sys_color(brPanelDark), R(0, 0, cr.w, RULER_H));
-  set_clip_rect(win, R(HDR_W, 0, cr.w - HDR_W, RULER_H));
   for (int b = 0; b < GR_BARS; b++) {
     char num[8];
     snprintf(num, sizeof(num), "%d", b + 1);
@@ -206,7 +177,7 @@ static void paint_sheet(window_t *win) {
   float saved[16];
   memcpy(saved, get_sprite_matrix(), sizeof saved);
   for (window_t *c = win->children; c; c = c->next) {
-    if (!window_has_state(c, WINDOW_STATE_VISIBLE) || c->drag_visual) continue;
+    if (!window_has_state(c, WINDOW_STATE_VISIBLE) || window_is_lifted(c)) continue;
     send_message(c, evPaint, 0, NULL);
   }
   end_draw_transform(saved);
@@ -216,29 +187,12 @@ static void paint_sheet(window_t *win) {
     stroke_rounded_rect(d->valid ? category_color(b->cat) : get_sys_color(brTextError),
                         clip_rect(win, d->track, d->position, b->bars), get_theme()->card_corner_radius, 2);
   }
-  int px = HDR_W + (int)((double)s->pos / bar * BAR_W) - hpos(win);
+  int px = (int)((double)s->pos / bar * BAR_W) - hpos(win);
   fill_rect(get_sys_color(brAccent), R(px - 1, RULER_H, 2, grid.h));
   set_clip_rect(win, R(0, 0, win->frame.w, win->frame.h));
   paint_ruler(win, (int)(s->pos / bar));
-  set_clip_rect(win, R(HDR_W, 0, cr.w - HDR_W, RULER_H));
   fill_rect(get_sys_color(brAccent), R(px - 1, 0, 2, RULER_H));
   set_clip_rect(win, R(0, 0, win->frame.w, win->frame.h));
-  paint_headers(win);
-}
-
-static bool header_click(window_t *win, int cx, int cy) {
-  if (cx >= HDR_W || cy < RULER_H) return false;
-  for (int t = 0; t < GR_TRACKS; t++) {
-    ipoint16_t p = { (int16_t)cx, (int16_t)cy };
-    bool m = rect_contains_point(mute_rect(win, t), p), s = rect_contains_point(solo_rect(win, t), p);
-    if (!m && !s) continue;
-    app_lock();
-    if (m) g_app->song.mute[t] = !g_app->song.mute[t]; else g_app->song.solo[t] = !g_app->song.solo[t];
-    app_unlock();
-    invalidate_window(win);
-    return true;
-  }
-  return true;
 }
 
 result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
@@ -255,40 +209,25 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       st->press_clip = -1;
       sync_scroll(win);
       return true;
-    case evResize: sync_scroll(win); sync_clips(win); invalidate_window(win); return false;
+    case evResize: sync_scroll(win); sync_clips(win); tracks_sync(); invalidate_window(win); return false;
     case evHScroll: sync_clips(win); invalidate_window(win); return true;
     case evPaint: paint_sheet(win); return true;
     case evHitTest: return true; // clips paint, the sheet keeps the pointer
-    case evGetTooltipText: {
-      if (!lparam) return false;
-      ipoint16_t p = { (int16_t)LOWORD(wparam) - hpos(win), (int16_t)HIWORD(wparam) };
-      if (p.y < RULER_H) return false;
-      int track = (p.y - RULER_H) / row_h(win);
-      if (track >= GR_TRACKS) return false;
-      const char *action;
-      if (rect_contains_point(mute_rect(win, track), p)) action = g_app->song.mute[track] ? "Unmute" : "Mute";
-      else if (rect_contains_point(solo_rect(win, track), p)) action = g_app->song.solo[track] ? "Unsolo" : "Solo";
-      else return false;
-      snprintf(lparam, 256, "%s track %d", action, track + 1);
-      return true;
-    }
-
     case evQueryDrag: { // clips drag; a swipe over empty lanes scrolls
       int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam);
-      if (my < RULER_H || mx - hpos(win) < HDR_W) return false;
-      return song_clip_at(&g_app->song, (my - RULER_H) / row_h(win), position_at(mx - HDR_W)) >= 0 ? DRAG_NOW : DRAG_NONE;
+      if (my < RULER_H) return false;
+      return song_clip_at(&g_app->song, (my - RULER_H) / row_h(win), position_at(mx)) >= 0 ? DRAG_NOW : DRAG_NONE;
     }
     case evLeftButtonDown: {
-      int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam), cx = mx - hpos(win);
-      if (my < RULER_H) { if (cx >= HDR_W) app_seek_position(seek_ticks(mx)); return true; }
-      if (header_click(win, cx, my)) return true;
-      int track = (my - RULER_H) / row_h(win), position = position_at(mx - HDR_W);
+      int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam);
+      if (my < RULER_H) { app_seek_position(seek_ticks(mx)); return true; }
+      int track = (my - RULER_H) / row_h(win), position = position_at(mx);
       st->press_clip = track >= 0 && track < GR_TRACKS ? song_clip_at(&g_app->song, track, position) : -1;
       st->press = (ipoint16_t){ (int16_t)mx, (int16_t)my };
       app_select_clip(st->press_clip);
       if (st->press_clip < 0) { app_seek_position(seek_ticks(mx)); return true; }
       const clip_t *c = &g_app->song.clips[st->press_clip];
-      ipoint16_t grab = { mx - HDR_W - c->position * BAR_W / GR_TICKS_BAR, my - track_y(win, c->track) };
+      ipoint16_t grab = { mx - c->position * BAR_W / GR_TICKS_BAR, my - track_y(win, c->track) };
       g_app->drag = (drag_t){ .block = c->block, .from_clip = st->press_clip, .grab = grab,
                               .track = c->track, .position = c->position, .valid = true };
       set_capture(win);
@@ -330,8 +269,8 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       return true;
     case evRightButtonDown: {
       int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam);
-      if (my < RULER_H || mx - hpos(win) < HDR_W) return false;
-      int idx = song_clip_at(&g_app->song, (my - RULER_H) / row_h(win), position_at(mx - HDR_W));
+      if (my < RULER_H) return false;
+      int idx = song_clip_at(&g_app->song, (my - RULER_H) / row_h(win), position_at(mx));
       if (idx < 0) return false;
       app_select_clip(idx);
       app_command(ID_DELETE);

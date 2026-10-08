@@ -5,7 +5,7 @@
 #include "groove.h"
 #include <orion/user/toolbar.h>
 
-#define FAMILY_FLAGS TOOLBAR_ITEM_FLAG_ARTWORK
+#define FAMILY_FLAGS (TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP) // consecutive family buttons are one radio group
 
 static const toolbar_item_t kTransportItems[] = {
   { TOOLBAR_ITEM_BUTTON,    ID_REWIND,     "phosphor-rewind-fill",       0, 0, NULL, "Rewind (Home)" },
@@ -23,8 +23,7 @@ void transport_refresh(void) {
   window_t *win = g_app->library;
   if (!win) return;
   send_message(win, tbCheckButton, ID_PLAY, (void *)(intptr_t)g_app->shown_playing);
-  for (int cat = 0; cat < CAT_COUNT; cat++)
-    send_message(win, tbCheckButton, ID_FAMILY(cat), (void *)(intptr_t)(cat == g_app->category));
+  send_message(win, tbCheckButton, ID_FAMILY(g_app->category), (void *)(intptr_t)1);
 }
 
 // The transport items, then one pictogram button per family in category_t order.
@@ -42,6 +41,13 @@ static void set_items(window_t *win) {
   send_message(win, tbSetItems, ARRAY_LEN(items), items); // copies the icon names and tooltips
 }
 
+// The iTunes-style transport buttons take the theme's neutral plastic.
+static void transport_tint(window_t *win) {
+  static const uint16_t transport[] = { ID_REWIND, ID_PLAY, ID_FORWARD };
+  uint32_t neutral = get_sys_color(brPlasticNeutral);
+  for (int i = 0; i < ARRAY_LEN(transport); i++) send_message(win, tbSetItemColor, transport[i], &neutral);
+}
+
 result_t win_transport(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
     case evCreate: {
@@ -53,9 +59,7 @@ result_t win_transport(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       send_message(win, tbSetButtonSize, TB_SPACING, NULL);
 #endif
       if (!toolbar_get_state(win)->item_count) set_items(win);
-      static const uint32_t silver = WEB(0xd0d0d0); // iTunes transport
-      static const uint16_t transport[] = { ID_REWIND, ID_PLAY, ID_FORWARD };
-      for (int i = 0; i < ARRAY_LEN(transport); i++) send_message(win, tbSetItemColor, transport[i], (void *)&silver);
+      transport_tint(win);
       if (!g_app->bin) {
         g_app->bin = create_window("Sounds", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL | WINDOW_NOACTIVATE,
                                    MAKERECT(0, 0, 1, 1), win, win_bin, win->hinstance, NULL);
@@ -64,7 +68,7 @@ result_t win_transport(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       transport_refresh();
       return true;
     }
-    case tbButtonClick: app_command((uint16_t)wparam); return true;
+    case evCommand: if (HIWORD(wparam) != btnClicked) return false; app_command(LOWORD(wparam)); return true;
     // case evCommand:
     //   if (LOWORD(wparam) == ID_GENRE && HIWORD(wparam) == sgnSelChange) {
     //     int selected = (int)send_message((window_t *)lparam, sgGetSelection, 0, NULL); // segment 0 is "All"
@@ -72,6 +76,7 @@ result_t win_transport(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
     //     return true;
     //   }
     //   return false;
+    case evThemeChanged: transport_tint(win); return false;
     case evPaint: return false;
     case evDestroy:
       if (g_app && g_app->library == win) g_app->library = NULL;

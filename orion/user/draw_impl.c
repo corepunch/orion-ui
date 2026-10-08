@@ -3,6 +3,7 @@
 
 #include <platform/platform.h>
 #include "gl_compat.h"
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,8 +20,6 @@
 // External references
 extern window_t *get_root_window(window_t *window);
 
-static bool g_scissor_valid = false;
-static irect16_t g_scissor_rect = {0};
 
 // When non-NULL, viewport/projection/scissor functions redirect from
 // screen-space to FBO-local coordinates automatically.
@@ -28,25 +27,20 @@ static window_t *g_fbo_root = NULL;
 
 // OpenGL's framebuffer origin is bottom-left. Keep that backend detail here;
 // every public drawing/scissor API uses logical top-left coordinates.
+float ui_surface_scale(void) { return MAX(1.0f, axGetScaling()); }
+
+int ui_surface_px(int logical) { return (int)ceilf((float)logical * ui_surface_scale()); }
+
 static irect16_t fbo_rect(window_t const *root, irect16_t r) {
-  int scale = (int)axGetScaling();
-  if (scale < 1) scale = 1;
-  return R(r.x * scale,
-           root->surface_h - (r.y + r.h) * scale,
-           r.w * scale, r.h * scale);
+  float scale = ui_surface_scale();
+  int x0 = (int)roundf(r.x * scale), x1 = (int)roundf((r.x + r.w) * scale);
+  int y0 = (int)roundf(r.y * scale), y1 = (int)roundf((r.y + r.h) * scale);
+  window_surface_t *surf = window_surface(root);
+  return R(x0, (surf ? surf->h : 0) - y1, x1 - x0, y1 - y0);
 }
 
 static void set_scissor_cached(irect16_t const *r) {
-  if (!r) return;
-  glEnable(GL_SCISSOR_TEST);
-  if (g_scissor_valid &&
-      g_scissor_rect.x == r->x && g_scissor_rect.y == r->y &&
-      g_scissor_rect.w == r->w && g_scissor_rect.h == r->h) {
-    return;
-  }
-  g_scissor_rect = *r;
-  g_scissor_valid = true;
-  glScissor(r->x, r->y, r->w, r->h);
+  if (r) R_SetScissor(r->x, r->y, r->w, r->h);
 }
 
 // Returns true if win is the root window that currently "owns" keyboard focus
@@ -88,9 +82,17 @@ int window_caption_height(window_t const *win) {
   return (win && (win->flags & WINDOW_TOOLWINDOW)) ? (FONT_SIZE + 5) : get_theme()->caption_height;
 }
 
+bool caption_merged_into_toolbar(flags_t flags) {
+  return (flags & (WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR)) == (WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR);
+}
+
+int caption_extent(flags_t flags) {
+  if ((flags & WINDOW_NOTITLE) || caption_merged_into_toolbar(flags)) return 0;
+  return (flags & WINDOW_TOOLWINDOW) ? (FONT_SIZE + 5) : get_theme()->caption_height;
+}
+
 int titlebar_height(window_t const *win) {
-  int t = 0;
-  if (!(win->flags & WINDOW_NOTITLE) && !toolbar_merged_title(win)) t += window_caption_height(win);
+  int t = caption_extent(win->flags);
   if (win->flags & WINDOW_TOOLBAR) {
     t += toolbar_effective_item_height(win) + 2 * toolbar_effective_padding(win);
   }
@@ -138,7 +140,7 @@ void draw_button(irect16_t r, int dx, int dy, bool pressed) {
 // Draw window panel — border/grip via theme, fill guarded by WINDOW_NOFILL.
 void draw_panel(window_t const *win) {
   irect16_t r = R(0, 0, win->frame.w, win->frame.h);
-  if (win->maximized) {
+  if (window_is_maximized(win)) {
     if (!(win->flags & WINDOW_NOFILL)) fill_rect(get_sys_color(brControlBg), r);
     return;
   }
@@ -150,7 +152,7 @@ void draw_panel(window_t const *win) {
 // Draw a theme icon centred inside rect r.
 void draw_theme_icon_in_rect(int id, irect16_t r, uint32_t col) {
   int size = (id == THEME_ICON_CLOSE || id == THEME_ICON_MAXIMIZE || id == THEME_ICON_RESTORE)
-    ? MIN(TOOLBAR_COMPACT_ICON_SIZE, MIN(r.w, r.h)) : THEME_ICON_SIZE;
+    ? MIN(get_theme()->toolbar_compact_icon, MIN(r.w, r.h)) : THEME_ICON_SIZE;
   irect16_t icon = rect_center(r, size, size);
   draw_theme_icon(id, icon.x, icon.y, size, col);
 }
@@ -163,7 +165,7 @@ void draw_window_controls(window_t *win) {
                                   rect_split_top(r, caption_h), win->title,
                                   (window_has_focus(win) ? CTRL_FOCUSED : CTRL_NORMAL) |
                                   ((win->flags & WINDOW_NOCLOSE) ? CTRL_NO_CLOSE : 0),
-                                  win->maximizable && !win->parent && !(win->flags & (WINDOW_NORESIZE | WINDOW_DIALOG | WINDOW_ALWAYSINBACK | WINDOW_ALWAYSONTOP)));
+                                  ((win->flags & WINDOW_MAXIMIZEBOX) != 0) && !win->parent && !(win->flags & (WINDOW_NORESIZE | WINDOW_DIALOG | WINDOW_ALWAYSINBACK | WINDOW_ALWAYSONTOP)));
 }
 
 // Draw status bar
@@ -197,15 +199,13 @@ void set_viewport(irect16_t frame) {
   if (g_fbo_root) {
     // FBO callers use root-local, top-left coordinates.
     irect16_t r = fbo_rect(g_fbo_root, frame);
-    glViewport(r.x, r.y, r.w, r.h);
-    glEnable(GL_SCISSOR_TEST);
-    glScissor(r.x, r.y, r.w, r.h);
-    g_scissor_valid = false;
+    R_SetViewport(r.x, r.y, r.w, r.h);
+    R_SetScissor(r.x, r.y, r.w, r.h);
     return;
   }
   irect16_t ogl_rect = get_opengl_rect(frame);
   
-  glViewport(ogl_rect.x, ogl_rect.y, ogl_rect.w, ogl_rect.h);
+  R_SetViewport(ogl_rect.x, ogl_rect.y, ogl_rect.w, ogl_rect.h);
   set_scissor_cached(&ogl_rect);
 }
 
@@ -215,9 +215,7 @@ void set_clip_rect(window_t const *win, irect16_t r) {
     ipoint16_t origin = win ? window_origin_in_root(win) : (ipoint16_t){0, 0};
     irect16_t local = rect_offset(r, origin.x, origin.y);
     irect16_t clip = fbo_rect(g_fbo_root, local);
-    glEnable(GL_SCISSOR_TEST);
-    glScissor(clip.x, clip.y, clip.w, clip.h);
-    g_scissor_valid = false;
+    R_SetScissor(clip.x, clip.y, clip.w, clip.h);
     return;
   }
   irect16_t absolute = win
@@ -234,16 +232,16 @@ void set_clip_rect(window_t const *win, irect16_t r) {
 void set_viewport_for_fbo(window_t *root) {
   if (!g_ui_runtime.running || !root) return;
   g_fbo_root = root;
-  int w = root->surface_w;
-  int h = root->surface_h;
+  window_surface_t *surf = window_surface(root);
+  if (!surf) return;
+  int w = surf->w;
+  int h = surf->h;
   if (w <= 0 || h <= 0) return;
-  glViewport(0, 0, w, h);
-  glDisable(GL_SCISSOR_TEST);
-  g_scissor_valid = false;
-  int scale = (int)axGetScaling();
-  if (scale < 1) scale = 1;
-  int log_w = w / scale;
-  int log_h = h / scale;
+  R_SetViewport(0, 0, w, h);
+  R_DisableScissor();
+  float scale = ui_surface_scale();
+  int log_w = (int)roundf((float)w / scale);
+  int log_h = (int)roundf((float)h / scale);
   set_projection(0, 0, log_w, log_h);
 }
 
@@ -251,13 +249,10 @@ void set_viewport_for_fbo(window_t *root) {
 void set_scissor_fbo(window_t const *root, irect16_t r) {
   if (!g_ui_runtime.running || !root) return;
   irect16_t clip = fbo_rect(root, r);
-  glEnable(GL_SCISSOR_TEST);
-  glScissor(clip.x, clip.y, clip.w, clip.h);
+  R_SetScissor(clip.x, clip.y, clip.w, clip.h);
 }
 
 // ── Stencil no-ops (kept for API compat, superseded by FBO compositing) ───
-void paint_window_stencil(window_t const *w) { (void)w; }
-void repaint_stencil(void) {}
 void ui_set_stencil_for_window(uint32_t id) { (void)id; }
 void ui_set_stencil_for_root_window(uint32_t id) { (void)id; }
 
@@ -298,6 +293,10 @@ void stroke_rounded_rect(uint32_t color, irect16_t r, int radius, int thickness)
 }
 
 void draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color) {
+  get_theme()->draw_card(r, state, edge_color);
+}
+
+void theme_default_draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color) {
   extern uint32_t ui_white_texture;
   if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0) return;
   const theme_t *theme = get_theme();
@@ -320,23 +319,22 @@ void draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color) {
                             radius * scale, 1.0f, face, edge_color, edge * scale);
 }
 
-void draw_gradient_card(irect16_t r, ctrl_state_t state, uint32_t color) {
-  if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0) return;
+static plastic_look_t plastic_look(ctrl_state_t state) {
   const theme_t *theme = get_theme();
-  float scale = MAX(1.0f, axGetScaling());
-  render_gradient_card(r, (int)(r.w * scale + 0.5f), (int)(r.h * scale + 0.5f),
-                       theme->card_corner_radius * scale, theme->card_ring_width * scale,
-                       theme->card_highlight_width * scale, state, color);
+  return (plastic_look_t){
+    .pressed = !!(state & CTRL_PRESSED), .hover = !!(state & CTRL_HOVER),
+    .selected = !!(state & CTRL_SELECTED), .disabled = !!(state & CTRL_DISABLED),
+    .gloss = theme->plastic.gloss, .rim = theme->plastic.rim, .ink = theme->plastic.ink, .lift = theme->plastic.lift,
+  };
 }
 
-#define PLASTIC_GLYPH_SIZE 20
-void draw_plastic_button(irect16_t r, ctrl_state_t state, uint32_t color, const char *icon, uint32_t control_size) {
+void draw_plastic_button(irect16_t r, ctrl_state_t state, uint32_t color, const char *icon, uint32_t control_size, bool round) {
   if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0) return;
   const theme_t *theme = get_theme();
   int shadow = MIN(theme->plastic_shadow_size, MIN(r.w, r.h) / 10);
-  int glyph_max = PLASTIC_GLYPH_SIZE + ((control_size & CONTROL_SIZE_MASK) == CONTROL_SIZE_LARGE ? CONTROL_LARGE_GROWTH : 0);
+  int glyph_max = theme->plastic.glyph_size + ((control_size & CONTROL_SIZE_MASK) == CONTROL_SIZE_LARGE ? CONTROL_LARGE_GROWTH : 0);
   int size = MAX(0, MIN(glyph_max, MIN(r.w, r.h) - 2 * shadow - 4));
-  float radius = theme->plastic_corner_radius == CORNER_RADIUS_CIRCULAR ? MIN(r.w, r.h) * 0.5f : theme->plastic_corner_radius;
+  float radius = round || theme->plastic_corner_radius == CORNER_RADIUS_CIRCULAR ? MIN(r.w, r.h) * 0.5f : theme->plastic_corner_radius;
   sysicon_resolved_t glyph = {0};
   if (icon && size > 0 && !sysicon_resolve_size(icon, size, &glyph)) {
     fprintf(stderr, "[draw] plastic icon unavailable name=%s\n", icon);
@@ -345,29 +343,31 @@ void draw_plastic_button(irect16_t r, ctrl_state_t state, uint32_t color, const 
   ipoint16_t icon_size = {size, size};
   int extent = MAX(glyph.w, glyph.h);
   if (extent > 0) icon_size = (ipoint16_t){size * glyph.w / extent, size * glyph.h / extent};
+  plastic_look_t look = plastic_look(state);
   render_plastic_surface(r, radius, theme->plastic_bevel_width,
-                          shadow, state, color ? color : get_sys_color(brAccent),
-                          theme->drag_shadow_color, glyph.tex,
+                          shadow, &look, color ? color : get_sys_color(brAccent),
+                          theme->plastic.shadow_color, glyph.tex,
                           UV_RECT(glyph.u0, glyph.v0, glyph.u1, glyph.v1), icon_size);
 }
 
 void draw_plastic_card(irect16_t r, ctrl_state_t state, uint32_t color) {
   if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0) return;
   const theme_t *theme = get_theme();
+  plastic_look_t look = plastic_look(state);
   render_plastic_surface(r, theme->card_corner_radius, theme->card_highlight_width,
-                          MIN(2, theme->plastic_shadow_size), state, color,
-                          theme->drag_shadow_color, 0, NULL, (ipoint16_t){0, 0});
+                          MIN(2, theme->plastic_shadow_size), &look, color,
+                          theme->plastic.shadow_color, 0, NULL, (ipoint16_t){0, 0});
 }
 
-#define BADGE_PADDING 7
 int measure_badge(ui_font_t font, const char *text) {
-  return text_strwidth(font, text) + 2 * BADGE_PADDING;
+  return text_strwidth(font, text) + 2 * get_theme()->badge_padding;
 }
 
 int draw_badge(ui_font_t font, const char *text, int x, int y, int height, uint32_t color) {
   int w = measure_badge(font, text);
-  fill_rounded_rect(color_with_alpha(color, 0x40), R(x, y, w, height), MIN(5, height / 2));
-  draw_text(font, text, x + BADGE_PADDING, y + (height - text_char_height(font)) / 2, color);
+  const theme_t *theme = get_theme();
+  fill_rounded_rect(color_with_alpha(color, (uint8_t)theme->badge_tint_alpha), R(x, y, w, height), MIN(theme->badge_corner_radius, height / 2));
+  draw_text(font, text, x + theme->badge_padding, y + (height - text_char_height(font)) / 2, color);
   return w;
 }
 
@@ -475,63 +475,45 @@ void draw_checkerboard(irect16_t r, int square_px) {
                      0xFFFFFFFF, 0);
 }
 
-// Composite all visible root windows from their FBO textures to the
-// default framebuffer, applying SDF rounded-corner masking.
+static void composite_border(const R_CompositeLayer *layer) {
+  window_t *w = layer->user;
+  theme_draw(THEME_PART_WINDOW_BORDER, layer->frame, window_has_focus(w) ? CTRL_FOCUSED : CTRL_NORMAL);
+}
+
+// Describe every visible root window's surface to the compositor. Appearance (corners, shadow,
+// border) comes from the window's composition attributes, never from per-case tests here.
 void composite_root_windows(void) {
   if (!g_ui_runtime.running) return;
   g_fbo_root = NULL;
-
-  // iOS and offscreen hosts present a platform-owned, nonzero framebuffer.
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  axBindFramebuffer();
-  struct AXsize size;
-  axGetSize(&size);
-  float scale = axGetScaling();
-  int screen_w = (int)((float)size.width * scale + 0.5f);
-  int screen_h = (int)((float)size.height * scale + 0.5f);
-  bool composed = R_BeginScreenComposition(screen_w, screen_h,
-                                            get_sys_color(brPanelDarker));
-  if (!composed) {
-    glViewport(0, 0, screen_w, screen_h);
-    R_SetFramebufferSRGB(true);
-  }
-  glDisable(GL_SCISSOR_TEST);
-  glDisable(GL_DEPTH_TEST);
-  glEnable(GL_BLEND);
-  glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
-                      GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-
-  // Set projection for screen-space compositing.
-  set_fullscreen();
-
-  theme_t *theme = get_theme();
-  float base_radius = theme->window_corner_radius * axGetScaling();
-
+  static R_CompositeLayer *layers;
+  static int capacity;
+  int count = 0;
   for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
     if (!window_has_state(w, WINDOW_STATE_VISIBLE)) continue;
-    if (!w->surface_tex) continue;
-
-    // Clamp radius to half the smallest dimension (in physical pixels).
-    int max_r = w->surface_w < w->surface_h ? w->surface_w / 2 : w->surface_h / 2;
-    float radius = (w->maximized || (w->flags & WINDOW_TRANSPARENT)) ? 0.0f : base_radius;
-    if (radius > max_r) radius = (float)max_r;
-
-    if (!w->maximized && !(w->flags & WINDOW_TRANSPARENT))
-      draw_rect_shadow(w->frame, theme->window_corner_radius, theme->window_shadow_blur,
-                       theme->window_shadow_offset, theme->window_shadow_color);
-    draw_rounded_rect_premultiplied((int)w->surface_tex,
-                                    (irect16_t){w->frame.x, w->frame.y, w->frame.w, w->frame.h},
-                                    w->surface_w, w->surface_h,
-                                    radius, 1.0f);
-    if (!w->maximized && !(w->flags & WINDOW_TRANSPARENT))
-      theme_draw(THEME_PART_WINDOW_BORDER, w->frame,
-                 window_has_focus(w) ? CTRL_FOCUSED : CTRL_NORMAL);
+    window_surface_t *surf = window_surface(w);
+    if (!surf || !surf->tex) continue;
+    if (count == capacity) {
+      int grown = capacity ? capacity * 2 : 16;
+      R_CompositeLayer *p = realloc(layers, (size_t)grown * sizeof(*p));
+      if (!p) {
+        fprintf(stderr, "[draw] composite layer allocation failed count=%d\n", grown);
+        fflush(stderr);
+        break;
+      }
+      layers = p;
+      capacity = grown;
+    }
+    const theme_t *theme = get_theme();
+    layers[count++] = (R_CompositeLayer){
+      .tex = surf->tex, .w = surf->w, .h = surf->h, .frame = w->frame,
+      .corner_radius = (float)window_composition_attr(w, WCA_CORNERS) * axGetScaling(),
+      .shadow = window_composition_attr(w, WCA_SHADOW) != 0,
+      .shadow_radius = (float)theme->window_corner_radius, .shadow_blur = (float)theme->window_shadow_blur,
+      .shadow_offset = theme->window_shadow_offset, .shadow_color = theme->window_shadow_color,
+      .border = window_composition_attr(w, WCA_BORDER) != 0, .user = w,
+    };
   }
-
-  glDisable(GL_BLEND);
-  glEnable(GL_DEPTH_TEST);
-  if (composed) {
-    axBindFramebuffer();
-    R_PresentScreenComposition(screen_w, screen_h);
-  }
+  R_Composite(layers, count, get_sys_color(brPanelDarker),
+              ui_get_system_metrics(kSystemMetricScreenWidth), ui_get_system_metrics(kSystemMetricScreenHeight),
+              composite_border);
 }
