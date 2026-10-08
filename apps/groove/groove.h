@@ -142,7 +142,7 @@ typedef struct {
 } waveform_cache_t;
 
 typedef struct {
-  window_t     *win, *menubar_win, *sheet, *library, *bin;
+  window_t     *win, *chrome, *menubar_win, *toolbar, *sheet, *library, *bin; // chrome: menu bar with the compact toolbar
   accel_table_t *accel;
   hinstance_t   hinstance;
   song_t        song;
@@ -156,6 +156,7 @@ typedef struct {
   int           auditioned; // block whose PCM the last audition loaded, or -1
   int           peak_credit;   // waveform overviews the cards may still render this timer tick
   bool          peaks_pending; // a card went without its overview; repaint next tick
+  bool          shown_playing; // song.playing as the transport shows it; the mixer stops at the end
   uint32_t      pictograms;   // shared category atlas, in category_t order
   waveform_cache_t waveforms[GR_MAX_BLOCKS];
 } groove_t;
@@ -177,6 +178,7 @@ enum {
 #define ID_PLAY      ID_TRANSPORT_PLAY
 #define ID_STOP      ID_TRANSPORT_STOP
 #define ID_REWIND    ID_TRANSPORT_REWIND
+#define ID_FORWARD   ID_TRANSPORT_FORWARD
 #define ID_LOOP      ID_TRANSPORT_LOOP
 #define ID_DELETE    ID_EDIT_DELETE
 // Above every auto-assigned card id (1..GR_MAX_BLOCKS inside a bin), so

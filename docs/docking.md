@@ -87,8 +87,13 @@ pane in both docked and floating states.
 child controls, an opted-in child retains its caption. Declarative forms can use
 `flags="toolbar titletoolbar"`.
 
-`tbSetItems` adds a static window-title label and framework collapse/restore and
-close buttons to the application's items. The same item rectangles, theme drawing,
+`tbSetItems` appends framework collapse/restore and close buttons to the
+application's items. The merged row shows no window title.
+
+A pane that must stay put drops both buttons and the ability to float:
+create it with `WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE` and dock it with
+`DOCK_NOFLOAT`, allowing only its own edge. `dock_collapse(pane, true)` is then
+rejected, and dragging or double-clicking the caption does nothing. The same item rectangles, theme drawing,
 hover/press handling, capture, and embedded-control routing serve all of them.
 Framework commands are consumed before application commands. Do not depend on item
 indices: use command IDs to locate application items. The title label reads the

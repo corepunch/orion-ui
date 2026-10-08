@@ -8,12 +8,9 @@
 #define FAMILY_FLAGS TOOLBAR_ITEM_FLAG_ARTWORK
 
 static const toolbar_item_t kTransportItems[] = {
-  { TOOLBAR_ITEM_BUTTON,    ID_REWIND,     "phosphor-rewind-fill",      0, 0, NULL, "Rewind (Home)" },
-  { TOOLBAR_ITEM_BUTTON,    ID_PLAY,       "phosphor-play-fill",        0, 0, NULL, "Play / pause (Space)" },
-  { TOOLBAR_ITEM_BUTTON,    ID_STOP,       "phosphor-stop-fill",        0, 0, NULL, "Stop" },
-  { TOOLBAR_ITEM_BUTTON,    ID_LOOP,       "phosphor-repeat-fill",      0, 0, NULL, "Loop (L)" },
-  { TOOLBAR_ITEM_SPACER,    0,             NULL,      0, 0, NULL, NULL },
-  { TOOLBAR_ITEM_BUTTON,    ID_DELETE,     "phosphor-trash-fill",       0, 0, NULL, "Remove selected block (Delete)" },
+  { TOOLBAR_ITEM_BUTTON,    ID_REWIND,     "phosphor-rewind-fill",       0, 0, NULL, "Rewind (Home)" },
+  { TOOLBAR_ITEM_BUTTON,    ID_PLAY,       "phosphor-play-fill",         0, 0, NULL, "Play / pause (Space)", 0, "phosphor-pause-fill" },
+  { TOOLBAR_ITEM_BUTTON,    ID_FORWARD,    "phosphor-fast-forward-fill", 0, 0, NULL, "Go to end (End)" },
   { TOOLBAR_ITEM_SPACER,    0,             NULL,      0, TOOLBAR_ITEM_FLAG_FLEXSPACE, NULL, NULL },
   // Genre filter, hidden for now: the library always shows every genre.
   // { TOOLBAR_ITEM_SPACER,    0,          NULL,      6, 0, NULL, NULL },
@@ -21,10 +18,11 @@ static const toolbar_item_t kTransportItems[] = {
 };
 
 void transport_refresh(void) {
+  g_app->shown_playing = g_app->song.playing;
+  if (g_app->toolbar) send_message(g_app->toolbar, tbCheckButton, ID_LOOP, (void *)(intptr_t)g_app->song.loop); // compact toolbar
   window_t *win = g_app->library;
   if (!win) return;
-  send_message(win, tbSetItemIcon, ID_PLAY, (void *)(g_app->song.playing ? "phosphor-pause-fill" : "phosphor-play-fill"));
-  send_message(win, tbCheckButton, ID_LOOP, (void *)(intptr_t)g_app->song.loop);
+  send_message(win, tbCheckButton, ID_PLAY, (void *)(intptr_t)g_app->shown_playing);
   for (int cat = 0; cat < CAT_COUNT; cat++)
     send_message(win, tbCheckButton, ID_FAMILY(cat), (void *)(intptr_t)(cat == g_app->category));
 }
@@ -56,9 +54,7 @@ result_t win_transport(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
 #endif
       set_items(win);
       static const struct { uint16_t id; uint32_t color; } colors[] = {
-        { ID_REWIND, WEB(0x3689da) }, { ID_PLAY, WEB(0x48aa36) }, { ID_STOP, WEB(0xdb4960) },
-        { ID_LOOP, WEB(0xe4a42d) },
-        { ID_DELETE, WEB(0xa365ce) },
+        { ID_REWIND, WEB(0x3689da) }, { ID_PLAY, WEB(0x48aa36) }, { ID_FORWARD, WEB(0x3689da) },
       };
       for (int i = 0; i < ARRAY_LEN(colors); i++) send_message(win, tbSetItemColor, colors[i].id, (void *)&colors[i].color);
       g_app->bin = create_window("Sounds", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL | WINDOW_NOACTIVATE,

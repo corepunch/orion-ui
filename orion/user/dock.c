@@ -95,6 +95,7 @@ bool dock_float(window_t *win, irect16_t frame) {
 
 bool dock_collapse(window_t *win, bool collapsed) {
   if (!win || !win->dock || !(win->dock->flags & DOCK_RESIZABLE)) return dock_error(win, "collapse unavailable", collapsed);
+  if (collapsed && (win->flags & WINDOW_NOCOLLAPSE)) return dock_error(win, "collapse disabled by WINDOW_NOCOLLAPSE", collapsed);
   win->dock->collapsed = collapsed;
   dock_refresh(win->parent);
   return true;

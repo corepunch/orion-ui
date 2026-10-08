@@ -120,6 +120,7 @@ typedef struct toolbar_state_s {
   irect16_t      *item_rects;     // computed band-relative rect per item (malloc'd)
   char          (*item_tooltips)[256]; // owned tooltip string copies (parallel to items)
   char          (*item_icons)[64];     // owned icon name copies for dynamically-built items
+  char          (*item_checked_icons)[64]; // owned checked_icon copies (parallel to items)
   int             hot_item;       // index of hovered item; -1 = none
   int             pressed_item;   // index of currently pressed item; -1 = none
   bool            pressed_in_arrow; // true when the press was in the dropdown arrow zone

@@ -9,7 +9,6 @@
 #include "svg_icon_loader.h"
 #include "theme.h"
 
-#define TB_WINDOW_TITLE    (-101)
 #define TB_WINDOW_CLOSE    (-102)
 #define TB_WINDOW_COLLAPSE (-103)
 
@@ -306,7 +305,7 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
   bool is_pressed = !disabled && (tb->pressed_item == i);
   bool compact = (tb->style & TOOLBAR_STYLE_COMPACT) != 0;
   bool interactive = !compact || (tb->style & TOOLBAR_STYLE_PLASTIC);
-  bool is_active  = !disabled && interactive && (item->flags & TOOLBAR_BUTTON_FLAG_ACTIVE) != 0;
+  bool is_active  = !disabled && (item->flags & TOOLBAR_BUTTON_FLAG_ACTIVE) != 0; // compact rows keep checks, not hover
   bool is_hot     = !disabled && interactive && (tb->hot_item == i);
   theme_t *th = get_theme();
 
@@ -322,6 +321,10 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       irect16_t local = {0, 0, r.w, r.h};
       bool image_body = (tb->style & TOOLBAR_STYLE_IMAGE_BUTTONS) && item->icon &&
                         strncmp(item->icon, "strip:", 6) == 0;
+      // A button with a checked icon shows its check by swapping the icon, not by a highlight.
+      const char *icon = is_active && item->checked_icon ? item->checked_icon : item->icon;
+      const char *icon_name = icon ? icon : "missing";
+      if (item->checked_icon) is_active = false;
       // Derive each flag independently; let the theme decide rendering.
       ctrl_state_t state = disabled ? CTRL_DISABLED : CTRL_NORMAL;
       if (is_active)  state |= CTRL_SELECTED;
@@ -335,14 +338,14 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       if (plastic) {
         irect16_t face = local;
         if (tb->style & TOOLBAR_STYLE_SHOW_LABELS) face.h = toolbar_effective_bsz(win);
-        draw_plastic_button(face, state, item->color, item->icon);
+        draw_plastic_button(face, state, item->color, icon);
       } else if (tb->style & TOOLBAR_STYLE_COMPACT) {
-        if (is_pressed && !image_body) theme_draw(THEME_PART_TOOLBAR_BUTTON, rect_center(local, local.h, local.h), CTRL_PRESSED);
+        if ((is_pressed || is_active) && !image_body)
+          theme_draw(THEME_PART_TOOLBAR_BUTTON, rect_center(local, local.h, local.h), is_pressed ? CTRL_PRESSED : CTRL_SELECTED);
       } else if (!image_body) {
         theme_draw(part, local, state);
       }
       int poff = is_pressed ? th->press_icon_offset : 0;
-      const char *icon_name = item->icon ? item->icon : "missing";
       irect16_t icon_rect = local;
       if (tb->style & TOOLBAR_STYLE_SHOW_LABELS)
         icon_rect.h = (tb->btn_size > 0) ? tb->btn_size : get_theme()->toolbar_button_size;
@@ -394,7 +397,7 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       break;
     case TOOLBAR_ITEM_LABEL: {
       int ty = (r.h - text_char_height(FONT_SMALLEST)) / 2;
-      draw_text_ellipsized(FONT_SMALLEST, item->ident == TB_WINDOW_TITLE ? win->title : (item->text ? item->text : ""), 2, ty, MAX(0, r.w - 4), get_sys_color(disabled ? brTextDisabled : brToolbarForeground));
+      draw_text_ellipsized(FONT_SMALLEST, item->text ? item->text : "", 2, ty, MAX(0, r.w - 4), get_sys_color(disabled ? brTextDisabled : brToolbarForeground));
       break;
     }
     case TOOLBAR_ITEM_SLIDER:
@@ -426,6 +429,7 @@ static result_t win_toolbar(window_t *win, uint32_t msg, uint32_t wparam, void *
         SAFE_DELETE(tb->items, free);
         SAFE_DELETE(tb->item_tooltips, free);
         SAFE_DELETE(tb->item_icons, free);
+        SAFE_DELETE(tb->item_checked_icons, free);
         SAFE_DELETE(tb->item_rects, free);
         free(tb);
         win->userdata = NULL;
@@ -725,21 +729,20 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
           fflush(stderr);
           return false;
         }
-        bool collapse = win->parent || !(win->flags & WINDOW_NORESIZE);
+        bool collapse = (win->parent || !(win->flags & WINDOW_NORESIZE)) && !(win->flags & WINDOW_NOCOLLAPSE);
         bool flex = false;
         toolbar_item_t *input = lparam;
         for (int i = 0; i < count; i++)
           if (input[i].type == TOOLBAR_ITEM_SPACER && (input[i].flags & TOOLBAR_ITEM_FLAG_FLEXSPACE)) flex = true;
-        int n = count + 1 + !flex + !(win->flags & WINDOW_NOCLOSE) + collapse;
+        int n = count + !flex + !(win->flags & WINDOW_NOCLOSE) + collapse;
         merged = calloc(n, sizeof(*merged));
         if (!merged) {
           fprintf(stderr, "[tb] title toolbar allocation failed win=%u count=%d\n", win->id, n);
           fflush(stderr);
           return false;
         }
-        merged[0] = (toolbar_item_t){.type = TOOLBAR_ITEM_LABEL, .ident = TB_WINDOW_TITLE, .text = win->title};
-        if (count) memcpy(merged + 1, lparam, count * sizeof(*merged));
-        int i = count + 1;
+        if (count) memcpy(merged, lparam, count * sizeof(*merged)); // the caption shows no title, only the window controls
+        int i = count;
         if (!flex) merged[i++] = (toolbar_item_t){.type = TOOLBAR_ITEM_SPACER, .flags = TOOLBAR_ITEM_FLAG_FLEXSPACE};
         if (collapse) merged[i++] = (toolbar_item_t){.type = TOOLBAR_ITEM_BUTTON, .ident = TB_WINDOW_COLLAPSE, .tooltip = "Collapse / restore"};
         if (!(win->flags & WINDOW_NOCLOSE)) merged[i++] = (toolbar_item_t){.type = TOOLBAR_ITEM_BUTTON, .ident = TB_WINDOW_CLOSE, .tooltip = "Hide window"};
@@ -759,6 +762,7 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
       SAFE_DELETE(tb->items, free);
       SAFE_DELETE(tb->item_tooltips, free);
       SAFE_DELETE(tb->item_icons, free);
+      SAFE_DELETE(tb->item_checked_icons, free);
       tb->item_count = 0;
       SAFE_DELETE(tb->item_rects, free);
       tb->hot_item = -1;
@@ -797,6 +801,20 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
               tb->items[i].icon = tb->item_icons[i];
             }
           }
+        }
+
+        tb->item_checked_icons = calloc((size_t)n, sizeof(*tb->item_checked_icons));
+        for (int i = 0; tb->items && i < n; i++) {
+          const char *alt = tb->items[i].checked_icon;
+          tb->items[i].checked_icon = NULL;
+          if (!alt || !alt[0]) continue;
+          if (!tb->item_checked_icons) {
+            fprintf(stderr, "[tb] checked icon allocation failed win=%u ident=%d\n", win->id, tb->items[i].ident);
+            fflush(stderr);
+            break;
+          }
+          snprintf(tb->item_checked_icons[i], sizeof(tb->item_checked_icons[i]), "%s", alt);
+          tb->items[i].checked_icon = tb->item_checked_icons[i];
         }
 
         compute_toolbar_item_rects(win, tb);

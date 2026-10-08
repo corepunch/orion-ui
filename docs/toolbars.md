@@ -48,6 +48,8 @@ typedef struct {
   uint32_t            flags;   // BUTTON_PUSHLIKE, BUTTON_AUTORADIO, etc.
   const char         *text;    // label text, or combobox/textedit initial text
   const char         *tooltip; // hover tooltip; NULL = none
+  uint32_t            color;   // plastic face colour; 0 = theme accent
+  const char         *checked_icon; // icon while checked; NULL = checked highlight
 } toolbar_item_t;
 ```
 
@@ -139,7 +141,9 @@ Declare the application's main toolbar directly under `<orion>`, alongside
 `presentation="normal"` (the default) creates the usual toolbar band below
 the menu. `presentation="compact"` puts small icon buttons at the right of
 the menu row, leaving the far-right restore-button slot free. Icons have a
-background highlight only while pressed. Compact
+background highlight while pressed or checked (`tbCheckButton`, for toggles),
+never on hover. A toggle with `checked-icon="..."` shows that icon instead of
+the checked highlight. Compact
 icons are 16 logical pixels; square pressed backgrounds have 2 pixels of
 vertical padding, with 6 pixels between button boxes. If there is
 insufficient room beside the menu labels, the toolbar uses the normal band
@@ -236,8 +240,13 @@ resizes. Vertical toolbars retain the spacer's ordinary size.
 To change a button's icon without recreating embedded controls, send
 `tbSetItemIcon` with the command ID in `wparam` and an icon name in `lparam`
 (`NULL` clears the icon). The toolbar copies the name and preserves the
-field's text, focus and selection. Use `tbSetActiveButton` for toggle state;
-reserve `tbSetItems` for changes to the item list.
+field's text, focus and selection. Use `tbCheckButton` (or `tbSetActiveButton`
+for a radio group) for toggle state; reserve `tbSetItems` for changes to the
+item list.
+
+A toggle whose icon changes with its state (play/pause, repeat/stop-at-end)
+sets `checked_icon` (`checked-icon` in `.orion`). While checked the button draws
+that icon and no checked highlight; the owner only sends `tbCheckButton`.
 
 For a WinAPI-style large toolbar with captions below icons, enable the label
 style after setting the items:
@@ -449,8 +458,8 @@ standalone and GEM builds; its tools are no longer a floating palette window.
 Toolbars use the shared [workspace docking manager](docking.md). Existing
 `create_docked_toolbar` callers automatically participate. Add
 `WINDOW_TITLETOOLBAR` alongside `WINDOW_TOOLBAR` to share a single row between the
-window title, app items, and window controls. Configure app items with `tbSetItems`
-as usual; the framework supplies the caption items. Locate items by command ID,
+app items and the window controls. The merged row shows no window title. Configure
+app items with `tbSetItems` as usual; the framework appends the window controls. Locate items by command ID,
 because framework items also occupy positions in the toolbar state.
 
 ### Coloured procedural buttons

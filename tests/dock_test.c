@@ -34,6 +34,12 @@ static window_t *dock_test_pane(window_t *host, dock_side_t side, int extent) {
   return pane;
 }
 
+// A point on the caption with no item under it: the middle of the flexible spacer.
+static ipoint16_t dock_caption_point(window_t *pane) {
+  irect16_t gap = toolbar_get_state(pane)->item_rects[1];
+  return (ipoint16_t){ (int16_t)(window_screen_x(pane) + gap.x + gap.w / 2), (int16_t)(window_screen_y(pane) + gap.y + gap.h / 2) };
+}
+
 static void dock_mouse(int msg, int x, int y) {
   ui_event_t e = {.message = msg, .x = x * UI_WINDOW_SCALE, .y = y * UI_WINDOW_SCALE};
   dispatch_message(&e);
@@ -78,11 +84,11 @@ static void test_dock_pointer_and_caption(void) {
   toolbar_state_t *tb = toolbar_get_state(pane);
   ASSERT_TRUE(toolbar_merged_title(pane));
   ASSERT_EQUAL(titlebar_height(pane), toolbar_effective_item_height(pane) + 2 * toolbar_effective_padding(pane));
-  irect16_t button = tb->item_rects[1];
+  irect16_t button = tb->item_rects[0];
   int x = window_screen_x(pane) + button.x + button.w / 2;
   int y = window_screen_y(pane) + button.y + button.h / 2;
   dock_mouse(kEventMouseMoved, x, y);
-  ASSERT_EQUAL(tb->hot_item, 1);
+  ASSERT_EQUAL(tb->hot_item, 0);
   dock_mouse(kEventLeftButtonDown, x, y);
   dock_mouse(kEventLeftButtonUp, x, y);
   ASSERT_EQUAL(dock_clicks, 1);
@@ -112,14 +118,16 @@ static void test_dock_drag_and_resize(void) {
   TEST("caption drag floats and redocks; splitters resize and pointer cancellation restores extent");
   test_env_init();
   window_t *host = dock_test_host(), *pane = dock_test_pane(host, DOCK_BOTTOM, 240);
-  int x = window_screen_x(pane) + 6, y = window_screen_y(pane) + 12;
+  ipoint16_t grab = dock_caption_point(pane);
+  int x = grab.x, y = grab.y;
   dock_mouse(kEventLeftButtonDown, x, y);
   dock_mouse(kEventLeftButtonDragged, x + 150, y - 100);
   ASSERT_TRUE(pane->drag_visual);
   dock_mouse(kEventLeftButtonUp, x + 150, y - 100);
   ASSERT_TRUE(dock_is_floating(pane));
   ASSERT_FALSE(pane->drag_visual);
-  x = window_screen_x(pane) + 6; y = window_screen_y(pane) + 12;
+  grab = dock_caption_point(pane);
+  x = grab.x; y = grab.y;
   dock_mouse(kEventLeftButtonDown, x, y);
   int top = window_screen_y(host) + titlebar_height(host) + 2;
   dock_mouse(kEventLeftButtonDragged, x, top);
@@ -201,7 +209,8 @@ static void test_dock_floating_resize_and_close(void) {
   dock_mouse(kEventPointerCancel, x, y);
   ASSERT_EQUAL(pane->frame.w, 500);
   ASSERT_EQUAL(pane->frame.h, 240);
-  dock_mouse(kEventLeftDoubleClick, window_screen_x(pane) + 6, window_screen_y(pane) + 12);
+  ipoint16_t grab = dock_caption_point(pane);
+  dock_mouse(kEventLeftDoubleClick, grab.x, grab.y);
   ASSERT_EQUAL(pane->dock->side, DOCK_BOTTOM);
   toolbar_state_t *tb = toolbar_get_state(pane);
   irect16_t button = tb->item_rects[tb->item_count - 2];
@@ -221,6 +230,34 @@ static void test_dock_floating_resize_and_close(void) {
   PASS();
 }
 
+static void test_dock_fixed_pane(void) {
+  TEST("WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE with DOCK_NOFLOAT: no caption buttons, no collapse, no floating");
+  test_env_init();
+  window_t *host = dock_test_host();
+  window_t *pane = create_window("Library", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE,
+                                 MAKERECT(10, 10, 500, 240), host, dock_test_proc, 0, NULL);
+  toolbar_item_t items[] = {{.type = TOOLBAR_ITEM_BUTTON, .ident = 41, .icon = "play"}};
+  send_message(pane, tbSetItems, ARRAY_LEN(items), items);
+  ASSERT_TRUE(dock_window(pane, DOCK_BOTTOM, DOCK_EDGE(DOCK_BOTTOM), DOCK_RESIZABLE | DOCK_NOFLOAT, 240, 90));
+  toolbar_state_t *tb = toolbar_get_state(pane);
+  ASSERT(tb->item_count == 2 && tb->items[0].ident == 41 && tb->items[1].type == TOOLBAR_ITEM_SPACER, "only the app items and a flexible spacer");
+  ASSERT_FALSE(dock_collapse(pane, true));
+  ASSERT_FALSE(pane->dock->collapsed);
+  ASSERT_TRUE(dock_collapse(pane, false));
+  ASSERT_FALSE(dock_float(pane, R(20, 20, 300, 200)));
+  ASSERT_FALSE(dock_set_side(pane, DOCK_TOP));
+  irect16_t gap = tb->item_rects[1];
+  int x = window_screen_x(pane) + gap.x + gap.w / 2, y = window_screen_y(pane) + gap.y + gap.h / 2;
+  dock_mouse(kEventLeftDoubleClick, x, y);
+  dock_mouse(kEventLeftButtonDown, x, y);
+  dock_mouse(kEventLeftButtonDragged, x, y - 200);
+  dock_mouse(kEventLeftButtonUp, x, y - 200);
+  ASSERT(pane->dock->side == DOCK_BOTTOM, "the caption neither floats nor moves the pane");
+  destroy_window(host);
+  test_env_shutdown();
+  PASS();
+}
+
 int main(void) {
   TEST_START("Workspace docking");
   test_dock_ownership_and_layout();
@@ -229,5 +266,6 @@ int main(void) {
   test_dock_collapse_and_limits();
   test_dock_menu();
   test_dock_floating_resize_and_close();
+  test_dock_fixed_pane();
   TEST_END();
 }
