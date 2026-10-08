@@ -66,6 +66,8 @@ typedef struct {
 
 typedef struct {
   const char *name;
+  const char *display_name;
+  uint16_t    variant;    // 0 = unversioned; otherwise a visible 1-based sample variant
   category_t  cat;
   uint8_t     genres;     // GENRE_* tags
   int         bars;       // duration: 1, 2 or 4 bars

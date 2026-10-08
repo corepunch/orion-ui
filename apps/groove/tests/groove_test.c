@@ -64,6 +64,11 @@ static void load_block(int id, int bpm) {
   free(pcm.pcm);
 }
 
+static const block_t *named_block(const char *name) {
+  for (int i = 0; i < blocks_count(); i++) if (!strcmp(block_get(i)->name, name)) return block_get(i);
+  return NULL;
+}
+
 static void test_blocks(void) {
   TEST("every block renders finite, non-silent, bar-aligned audio at the slowest, default and fastest tempo");
   ASSERT(blocks_count() > 400 && blocks_count() <= GR_MAX_BLOCKS, "library size");
@@ -72,6 +77,7 @@ static void test_blocks(void) {
     const block_t *b = block_get(i);
     block_pcm_t pcm;
     ASSERT(b->name && b->name[0] && b->cat < CAT_COUNT && (b->bars == 1 || b->bars == 2 || b->bars == 4), "metadata");
+    ASSERT(b->display_name && b->display_name[0] && b->variant <= 99, "display label and numeric variant metadata");
     ASSERT(b->genres && !(b->genres & ~GENRE_ANY), "every block carries at least one known genre tag");
     for (int k = 0; k < i; k++) ASSERT(strcmp(block_get(k)->name, b->name) != 0, "names are unique");
     int bpm = tempos[i % 3]; // each block at one tempo keeps the run short; the three tempos cover the engine
@@ -82,6 +88,21 @@ static void test_blocks(void) {
     ASSERT(peak_of(pcm.pcm, pcm.frames) >= 0.39f && peak_of(pcm.pcm, pcm.frames) <= 0.86f, "levelled peak");
     ASSERT(fabsf(pcm.pcm[pcm.frames - 1]) < 0.01f, "tail is faded");
     free(pcm.pcm);
+  }
+  const char *piano_chords[] = { "Am - F", "C - G", "Dm - G", "F - C" };
+  for (int i = 0; i < ARRAY_LEN(piano_chords); i++) {
+    const block_t *b = named_block(piano_chords[i]);
+    ASSERT(b && !strcmp(b->display_name, "Piano Chords") && b->variant == i + 1, "piano chord variants share a name and carry their number");
+  }
+  const char *pad_progressions[] = { "Pad Am", "Pad F - G", "Pad C - G" };
+  for (int i = 0; i < ARRAY_LEN(pad_progressions); i++) {
+    const block_t *b = named_block(pad_progressions[i]);
+    ASSERT(b && !strcmp(b->display_name, "Pad Progression") && b->variant == i + 1, "pad progression variants share a name and carry their number");
+  }
+  const char *four_floors[] = { "Four Floor", "Disco", "Clap Beat" };
+  for (int i = 0; i < ARRAY_LEN(four_floors); i++) {
+    const block_t *b = named_block(four_floors[i]);
+    ASSERT(b && !strcmp(b->display_name, "Four-on-Floor") && b->variant == i + 1, "four-on-floor beats share a name and carry their number");
   }
   block_pcm_t none;
   ASSERT(!block_render(-1, GR_BPM_DEFAULT, &none) && !block_render(blocks_count(), GR_BPM_DEFAULT, &none), "out-of-range ids are rejected");

@@ -66,7 +66,7 @@ static void paint_card_label(const block_t *b, irect16_t r, int icon_width, int 
   int text_h = text_char_height(FONT_SMALLEST);
   int area_w = MAX(0, MIN(r.w, visible_width) - 2 * CARD_LABEL_PADDING);
   int max_text_w = MAX(0, area_w - 2 * CARD_LABEL_PADDING);
-  int text_w = text_ellipsize(FONT_SMALLEST, b->name, max_text_w, fitted, sizeof(fitted));
+  int text_w = text_ellipsize(FONT_SMALLEST, b->display_name, max_text_w, fitted, sizeof(fitted));
   if (!text_w || text_w > max_text_w) return;
   int label_w = text_w + 2 * CARD_LABEL_PADDING;
   int text_x = r.x + icon_width + CARD_LABEL_PADDING;
@@ -78,6 +78,18 @@ static void paint_card_label(const block_t *b, irect16_t r, int icon_width, int 
   fill_rounded_rect(color_with_alpha(0xFF000000u, 0xB8), label,
                     MIN(get_theme()->card_corner_radius, label.h / 2));
   draw_text_clipped(FONT_SMALLEST, fitted, &label, color_with_alpha(0xFFFFFFFFu, color >> 24), TEXT_ALIGN_CENTER);
+}
+
+static void paint_card_variant(const block_t *b, irect16_t r, int visible_width) {
+  if (!b->variant) return;
+  char text[8];
+  snprintf(text, sizeof(text), "%u", b->variant);
+  int badge_h = MIN(BADGE_HEIGHT, r.h - 2 * CARD_LABEL_PADDING);
+  int badge_w = measure_badge(FONT_SMALLEST, text);
+  int right = r.x + MIN(r.w, visible_width) - CARD_LABEL_PADDING;
+  int x = right - badge_w, y = r.y + r.h - CARD_LABEL_PADDING - badge_h;
+  if (badge_h <= 0 || x < r.x + CARD_LABEL_PADDING) return;
+  draw_badge(FONT_SMALLEST, text, x, y, badge_h, get_sys_color(brTextOnColor));
 }
 
 static void paint_block_card(int block, const block_t *b, irect16_t r, int visible_width, uint32_t color, ctrl_state_t state) {
@@ -103,6 +115,7 @@ static void paint_block_card(int block, const block_t *b, irect16_t r, int visib
     icon_width = icon_size + 8;
   }
   paint_card_label(b, r, icon_width, visible_width, color);
+  paint_card_variant(b, r, visible_width);
 }
 
 result_t win_block_card(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {

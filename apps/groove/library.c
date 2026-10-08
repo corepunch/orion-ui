@@ -39,6 +39,8 @@ typedef struct {
   const char *arg;              // vowel words for the formant voices
   void      (*fn)(sy_ctx_t *c);
   const char *sample;           // optional MP3 sample, rendered instead of a synth recipe
+  const char *display_name;    // shared family name when this recipe is one numbered variant
+  uint16_t    variant;
 } def_t;
 
 // ── Hand-written recipes ─────────────────────────────────────────────────
@@ -158,11 +160,13 @@ GEN(f_rumble)      { // kick, plus its own reverb tail low-passed and ducked und
 #define LOOP (X_ECHO | X_FOLD)          // echo that wraps into the next pass
 #define WIDE (X_HALL | X_FOLD)          // hall that wraps into the next pass
 // Drum row, note row, note row with vowel words, hand-written row.
-#define D(name, cat, genres, bars, kit, fx, lanes)                    { name, cat, genres, bars, kit,  fx, 0,   0,    lanes, NULL,  NULL, NULL }
-#define N(name, cat, genres, bars, inst, fx, spb, hold, steps)        { name, cat, genres, bars, inst, fx, spb, hold, steps, NULL,  NULL, NULL }
-#define V(name, cat, genres, bars, inst, fx, spb, hold, steps, words) { name, cat, genres, bars, inst, fx, spb, hold, steps, words, NULL, NULL }
-#define F(name, cat, genres, bars, fx, fn)                            { name, cat, genres, bars, 0,    fx, 0,   0,    NULL,  NULL,  fn, NULL }
-#define M(name, genres, bars, file)                                   { name, CAT_VOX, genres, bars, 0, 0, 0, 0, NULL, NULL, NULL, file }
+#define D(name, cat, genres, bars, kit, fx, lanes)                    { name, cat, genres, bars, kit,  fx, 0,   0,    lanes, NULL,  NULL, NULL, NULL, 0 }
+#define DV(name, label, ver, cat, genres, bars, kit, fx, lanes)       { name, cat, genres, bars, kit,  fx, 0,   0,    lanes, NULL,  NULL, NULL, label, ver }
+#define N(name, cat, genres, bars, inst, fx, spb, hold, steps)        { name, cat, genres, bars, inst, fx, spb, hold, steps, NULL,  NULL, NULL, NULL, 0 }
+#define NV(name, label, ver, cat, genres, bars, inst, fx, spb, hold, steps) { name, cat, genres, bars, inst, fx, spb, hold, steps, NULL, NULL, NULL, label, ver }
+#define V(name, cat, genres, bars, inst, fx, spb, hold, steps, words) { name, cat, genres, bars, inst, fx, spb, hold, steps, words, NULL, NULL, NULL, 0 }
+#define F(name, cat, genres, bars, fx, fn)                            { name, cat, genres, bars, 0,    fx, 0,   0,    NULL,  NULL,  fn, NULL, NULL, 0 }
+#define M(name, genres, bars, file)                                   { name, CAT_VOX, genres, bars, 0, 0, 0, 0, NULL, NULL, NULL, file, NULL, 0 }
 
 // Chords of the house key. Everything tonal is in A minor so blocks stack.
 #define Am  "A3+C4+E4"
@@ -175,7 +179,7 @@ GEN(f_rumble)      { // kick, plus its own reverb tail low-passed and ducked und
 
 static const def_t kDefs[] = {
   // ── Starter library ──
-  D("Four Floor",      CAT_DRUMS,   DAN | RAV | TEC, 1, KIT_CLASSIC, 0, "k=x...x...x...x... h=o.o.o.o.o.o.o.o. o=..x...x...x...x. c=....x.......x..."),
+  DV("Four Floor", "Four-on-Floor", 1, CAT_DRUMS, DAN | RAV | TEC, 1, KIT_CLASSIC, 0, "k=x...x...x...x... h=o.o.o.o.o.o.o.o. o=..x...x...x...x. c=....x.......x..."),
   D("Break Beat",      CAT_DRUMS,   HIP | RAV,       1, KIT_CLASSIC, 0, "k=x.....x...x..... s=....x.......x..x h=x.x.x.x.x.x.x.x."),
   D("Hat Groove",      CAT_DRUMS,   ANY,             1, KIT_CLASSIC, 0, "h=xooxooxooxooxoox"),
   D("Snare Fill",      CAT_DRUMS,   ANY,             1, KIT_CLASSIC, 0, "k=x............... s=o.o.o.o.xoxoxxxx"),
@@ -184,8 +188,8 @@ static const def_t kDefs[] = {
   N("Walking",         CAT_BASS,    HIP,             2, I_BASS,   0, 1, 0.9f, "A1 C2 D2 E2 G1 E2 D2 C2"),
   N("Sub Drone",       CAT_BASS,    HIP | RAV | TEC, 1, I_SUB,    0, 1, 4.0f, "A1 - - -"),
   N("Funk Bass",       CAT_BASS,    DAN | HIP,       1, I_BASS,   0, 4, 1.5f, "A1 - - A1 - - A2 - A1 - - E2 - G1 - -"),
-  N("Am - F",          CAT_KEYS,    DAN | HIP,       2, I_PIANO,  0, 1, 3.6f, "A3+C4+E4 - - - F3+A3+C4 - - -"),
-  N("C - G",           CAT_KEYS,    DAN | HIP,       2, I_PIANO,  0, 1, 3.6f, "C4+E4+G4 - - - G3+B3+D4 - - -"),
+  NV("Am - F", "Piano Chords", 1, CAT_KEYS, DAN | HIP, 2, I_PIANO, 0, 1, 3.6f, "A3+C4+E4 - - - F3+A3+C4 - - -"),
+  NV("C - G", "Piano Chords", 2, CAT_KEYS, DAN | HIP, 2, I_PIANO, 0, 1, 3.6f, "C4+E4+G4 - - - G3+B3+D4 - - -"),
   N("Stabs",           CAT_KEYS,    DAN | RAV,       1, I_PIANO,  0, 2, 1.0f, "A3+C4+E4 - - A3+C4+E4 - - A3+C4+E4 -"),
   N("Arp Am",          CAT_KEYS,    DAN,             1, I_PIANO,  0, 4, 2.0f, "A3 C4 E4 A4 E4 C4 E4 A4 A3 C4 E4 A4 E4 C4 E4 C4"),
   N("Melody",          CAT_KEYS,    DAN | HIP,       2, I_PIANO,  0, 2, 1.6f, "E5 - - D5 C5 - A4 - - - C5 - D5 - E5 -"),
@@ -194,14 +198,14 @@ static const def_t kDefs[] = {
   N("Power Riff",      CAT_GUITAR,  HIP | RAV,       2, I_MUTE,   0, 2, 1.5f, "A2+E3 - - A2+E3 - C3+G3 - D3+A3 - - - E3+B3 - D3+A3 - -"),
   N("Pick Arp",        CAT_GUITAR,  DAN | HIP,       1, I_PLUCK,  0, 2, 1.5f, "E3 A3 C4 E4 C4 A3 C4 A3"),
   N("Acid Line",       CAT_SYNTH,   RAV | TEC,       1, I_ACID,   0, 4, 1.4f, "A1 - A2 A1 - A1 C2 - A1 - A2 - G1 - E2 -"),
-  N("Pad Am",          CAT_PAD,     ANY,             2, I_PAD,    0, 1, 8.0f, "A3+C4+E4 - - - - - - -"),
-  N("Pad F - G",       CAT_PAD,     ANY,             2, I_PAD,    0, 1, 4.0f, "F3+A3+C4 - - - G3+B3+D4 - - -"),
+  NV("Pad Am", "Pad Progression", 1, CAT_PAD, ANY, 2, I_PAD, 0, 1, 8.0f, "A3+C4+E4 - - - - - - -"),
+  NV("Pad F - G", "Pad Progression", 2, CAT_PAD, ANY, 2, I_PAD, 0, 1, 4.0f, "F3+A3+C4 - - - G3+B3+D4 - - -"),
   N("Pluck Arp",       CAT_SYNTH,   DAN | RAV,       1, I_ARP,    0, 4, 1.0f, "A4 C5 E5 C5 A4 C5 E5 C5 G4 B4 D5 B4 G4 B4 D5 B4"),
   F("Riser",           CAT_FX,      ANY,             2, 0, g_riser),
   D("Boom Bap",        CAT_DRUMS,   HIP,             1, KIT_CLASSIC, 0, "k=x.....x...x..... s=....x.......x... h=x.x.x.x.x.x.x.x."),
-  D("Disco",           CAT_DRUMS,   DAN,             1, KIT_CLASSIC, 0, "k=x...x...x...x... s=....x.......x... h=x.x.x.x.x.x.x.x. o=..o...o...o...o."),
+  DV("Disco", "Four-on-Floor", 2, CAT_DRUMS, DAN, 1, KIT_CLASSIC, 0, "k=x...x...x...x... s=....x.......x... h=x.x.x.x.x.x.x.x. o=..o...o...o...o."),
   D("Trap Hats",       CAT_DRUMS,   HIP,             1, KIT_CLASSIC, 0, "k=x.....x.....x... s=........x....... h=xoxoxxoxoxxoxoxx"),
-  D("Clap Beat",       CAT_DRUMS,   DAN | TEC,       1, KIT_CLASSIC, 0, "k=x...x...x...x... h=..x...x...x...x. c=....x.......x..."),
+  DV("Clap Beat", "Four-on-Floor", 3, CAT_DRUMS, DAN | TEC, 1, KIT_CLASSIC, 0, "k=x...x...x...x... h=..x...x...x...x. c=....x.......x..."),
   D("Shuffle",         CAT_DRUMS,   DAN | HIP,       1, KIT_CLASSIC, 0, "k=x.....x.x.....x. s=....x.......x... h=x.oox.oox.oox.oo"),
   D("Kick Rush",       CAT_DRUMS,   RAV | TEC,       1, KIT_CLASSIC, 0, "k=xoxoxoxoxoxoxoxx"),
   D("Sixteenths",      CAT_DRUMS,   DAN | TEC,       1, KIT_CLASSIC, 0, "k=x...x...x...x... s=....x.......x... h=xoxoxoxoxoxoxoxo"),
@@ -216,8 +220,8 @@ static const def_t kDefs[] = {
   N("Dub Sub",         CAT_BASS,    HIP | TEC,       1, I_SUB,    0, 2, 3.5f, "A1 - - - E1 - - -"),
   N("Slap",            CAT_BASS,    DAN | HIP,       1, I_BASS,   0, 4, 1.2f, "A1 - A2 - A1 - A2 A1 - A1 - A2 - G1 - -"),
   N("Fifths",          CAT_BASS,    DAN,             1, I_BASS,   0, 2, 0.9f, "A1 E2 A1 E2 G1 D2 G1 D2"),
-  N("Dm - G",          CAT_KEYS,    DAN | HIP,       2, I_PIANO,  0, 1, 3.6f, "D4+F4+A4 - - - G3+B3+D4 - - -"),
-  N("F - C",           CAT_KEYS,    DAN | HIP,       2, I_PIANO,  0, 1, 3.6f, "F3+A3+C4 - - - C4+E4+G4 - - -"),
+  NV("Dm - G", "Piano Chords", 3, CAT_KEYS, DAN | HIP, 2, I_PIANO, 0, 1, 3.6f, "D4+F4+A4 - - - G3+B3+D4 - - -"),
+  NV("F - C", "Piano Chords", 4, CAT_KEYS, DAN | HIP, 2, I_PIANO, 0, 1, 3.6f, "F3+A3+C4 - - - C4+E4+G4 - - -"),
   N("Comping",         CAT_KEYS,    DAN | HIP,       2, I_PIANO,  0, 1, 1.8f, "A3+C4+E4 - A3+C4+E4 - F3+A3+C4 - G3+B3+D4 -"),
   N("Ballad",          CAT_KEYS,    HIP,             1, I_PIANO,  0, 2, 1.8f, "A3 E4 C5 E4 A3 E4 C5 E4"),
   N("Octaves",         CAT_KEYS,    DAN | RAV,       1, I_PIANO,  0, 2, 1.6f, "A3+A4 - A3+A4 - C4+C5 - E4+E5 -"),
@@ -236,7 +240,7 @@ static const def_t kDefs[] = {
   N("Ring Out",        CAT_GUITAR,  DAN | HIP,       2, I_PLUCK,  0, 1, 7.0f, "A2+E3+A3+C4+E4 - - - - - - -"),
   N("Acid Two",        CAT_SYNTH,   RAV | TEC,       1, I_ACID,   0, 4, 1.4f, "E1 - E2 E1 - E1 G1 - E1 - E2 - D2 - B1 -"),
   N("Pad Dm",          CAT_PAD,     ANY,             2, I_PAD,    0, 1, 8.0f, "D3+F3+A3 - - - - - - -"),
-  N("Pad C - G",       CAT_PAD,     ANY,             2, I_PAD,    0, 1, 4.0f, "C3+E3+G3 - - - G3+B3+D4 - - -"),
+  NV("Pad C - G", "Pad Progression", 3, CAT_PAD, ANY, 2, I_PAD, 0, 1, 4.0f, "C3+E3+G3 - - - G3+B3+D4 - - -"),
   N("Pluck Stabs",     CAT_SYNTH,   DAN | RAV,       1, I_ARP,    0, 2, 1.0f, "A3+C4+E4 - - A3+C4+E4 - - A3+C4+E4 -"),
   N("Fast Arp",        CAT_SYNTH,   DAN | RAV,       1, I_ARP,    0, 4, 1.0f, "A4 E5 A5 E5 A4 E5 A5 E5 C5 G5 C5 G5 C5 G5 C5 E5"),
   N("Sub Pulse",       CAT_SYNTH,   HIP | TEC,       1, I_SUB,    0, 1, 0.8f, "A1 A1 A1 A1"),
@@ -624,7 +628,8 @@ static bool    g_meta;
 static void meta(void) {
   if (g_meta) return;
   for (int i = 0; i < NUM_DEFS; i++) {
-    g_blocks[i].name = kDefs[i].name; g_blocks[i].cat = kDefs[i].cat; g_blocks[i].genres = kDefs[i].genres; g_blocks[i].bars = kDefs[i].bars;
+    g_blocks[i].name = kDefs[i].name; g_blocks[i].display_name = kDefs[i].display_name ? kDefs[i].display_name : kDefs[i].name;
+    g_blocks[i].variant = kDefs[i].variant; g_blocks[i].cat = kDefs[i].cat; g_blocks[i].genres = kDefs[i].genres; g_blocks[i].bars = kDefs[i].bars;
   }
   g_meta = true;
 }
@@ -762,7 +767,9 @@ void blocks_free(void) {
 #undef LOOP
 #undef WIDE
 #undef D
+#undef DV
 #undef N
+#undef NV
 #undef V
 #undef F
 #undef M
