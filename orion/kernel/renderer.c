@@ -834,7 +834,7 @@ static void render_rounded_box(int tex, irect16_t r, int win_w, int win_h,
                                 float radius, float alpha, uint32_t color,
                                 float blur, float padding, bool premultiplied,
                                 uint32_t edge_color, float edge_width, float stroke, int fill_style, float tail, float tail_x) {
-  if (!g_ref.rounded_rect_sprite.shader.progid || (!tex && blur <= 0)) return;
+  if (!g_ref.rounded_rect_sprite.shader.progid || (!tex && blur <= 0 && fill_style != 2)) return;
 
   glActiveTexture(GL_TEXTURE0);
   // A shadow passes tex 0 and never samples. Binding the default name makes
@@ -868,9 +868,9 @@ void render_rounded_rect(int tex, irect16_t r, int win_w, int win_h,
 }
 
 void render_tooltip_bubble(irect16_t r, isize16_t face_size, float radius, float tail,
-                          float tail_x, float padding, uint32_t color, uint32_t shadow) {
+                          float tail_x, float padding, uint32_t color) {
   render_rounded_box(0, r, face_size.w, face_size.h, radius, 1, color,
-                     MAX(1.0f, padding / 3), padding, false, shadow, 0, 0, 2, tail, tail_x);
+                     0, padding, false, 0, 0, 0, 2, tail, tail_x);
 }
 
 void render_rounded_rect_gradient(int tex, irect16_t r, int pixel_w, int pixel_h,

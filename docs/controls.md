@@ -114,6 +114,9 @@ case evCommand:
 the secondary text colour. A `MultiEdit` with an explicit `height` keeps that
 viewport height and scrolls longer content. `TextEdit` sends `ednChange` to the
 root window as its text changes, allowing immediate button validation.
+Both editors share horizontal text padding and vertical padding derived from
+their intrinsic control size. `MultiEdit` shows its vertical scrollbar only
+when the wrapped text exceeds the available height.
 
 When a dialog button should be disabled until the user fills a field with valid
 input, gate the button on every `edUpdate`:
@@ -342,6 +345,9 @@ declare a default `shortcut="Ctrl+S"`, which the generator exposes through the
 same command ID.
 
 ### Data-bound TableView checkboxes
+
+Set `column-titles="false"` on a declarative `TableView` to hide its column
+header row while retaining the columns and checkbox bindings.
 
 `TableView` supports WinAPI-style list-view state images with a DBKit-style
 boolean binding. Declare `check-field` on the view; the field need not also be

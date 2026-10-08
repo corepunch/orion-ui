@@ -15,9 +15,9 @@
 #include <orion/user/messages.h>
 #include <orion/user/draw.h>
 #include <orion/user/theme.h>
+#include "commctl.h"
 
 #define ME_BUF_SIZE 2048
-#define ME_PADDING  3
 #define ME_MIN_WIDTH  80
 // Maximum number of characters that can be stored (leave room for the NUL).
 #define ME_MAX_LEN  (ME_BUF_SIZE - 2)
@@ -104,22 +104,25 @@ static void me_ensure_visible(me_state_t *s, int max_w, int vis_h) {
 // the full frame without a title bar; only the vertical scrollbar strip is carved out.
 static void me_text_dims(window_t *win, int *tw, int *th) {
   bool has_v = (win->flags & WINDOW_VSCROLL) && win->vscroll.visible;
-  *tw = win->frame.w - (has_v ? get_theme()->scrollbar_width : 0) - ME_PADDING * 2;
-  *th = win->frame.h - ME_PADDING * 2;
+  *tw = win->frame.w - (has_v ? get_theme()->scrollbar_width : 0) - TEXTEDIT_PADDING_HORZ * 2;
+  *th = win->frame.h - control_text_padding_y(win->flags) * 2;
   if (*tw < 1) *tw = 1;
   if (*th < 1) *th = 1;
 }
 
 // Synchronise the built-in vertical scrollbar with the current text height.
-// Only does anything when WINDOW_VSCROLL is set.  The bar remains permanently
-// visible (forced by show_scroll_bar in evCreate) but is disabled/greyed out
-// when the entire text fits in the viewport without scrolling.
+// Measure without the gutter first so deleting text can hide the scrollbar.
 static void me_sync_scrollbar(window_t *win, me_state_t *s) {
   if (!(win->flags & WINDOW_VSCROLL)) return;
   int tw, th;
-  me_text_dims(win, &tw, &th);
+  tw = MAX(1, win->frame.w - TEXTEDIT_PADDING_HORZ * 2);
+  th = MAX(1, win->frame.h - control_text_padding_y(win->flags) * 2);
   int total_h = calc_text_height(s->buf, tw);
   bool needs_scroll = (total_h > th);
+  if (needs_scroll) {
+    tw = MAX(1, tw - get_theme()->scrollbar_width);
+    total_h = calc_text_height(s->buf, tw);
+  }
   int max_scroll = needs_scroll ? (total_h - th) : 0;
   if (s->scroll_y > max_scroll) s->scroll_y = max_scroll;
   if (s->scroll_y < 0)         s->scroll_y = 0;
@@ -155,10 +158,6 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       s->len      = (int)strlen(s->buf);
       s->cursor   = s->len;
       s->scroll_y = 0;
-      // When WINDOW_VSCROLL is set, lock the bar permanently visible so it is
-      // always shown (enabled/disabled to indicate whether scrolling is needed).
-      if (win->flags & WINDOW_VSCROLL)
-        show_scroll_bar(win, SB_VERT, true);
       me_sync_scrollbar(win, s);
       return true;
     }
@@ -171,7 +170,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
         m->desired_w = MAX(ME_MIN_WIDTH,
                            text_strwidth(FONT_SMALL, win->title) + TEXTEDIT_PADDING_HORZ * 2);
         m->desired_h = MAX(text_char_height(FONT_SMALL) * 4,
-                           calc_text_height_font(FONT_SMALL, s ? s->buf : win->title, avail_w) + ME_PADDING * 2);
+                           calc_text_height_font(FONT_SMALL, s ? s->buf : win->title, MAX(1, avail_w - TEXTEDIT_PADDING_HORZ * 2)) + control_text_padding_y(win->flags) * 2);
         if (!(win->flags & WINDOW_FLEXSPACE) && win->layout.layout_fixed_h > 0)
           m->desired_h = win->layout.layout_fixed_h;
       }
@@ -202,8 +201,8 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
 
       int tw, th;
       me_text_dims(win, &tw, &th);
-      int tx = ME_PADDING;
-      int ty = ME_PADDING;
+      int tx = TEXTEDIT_PADDING_HORZ;
+      int ty = control_text_padding_y(win->flags);
 
       set_clip_rect(win, R(tx, ty, tw, th));
 
@@ -236,8 +235,8 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       int tw, th;
       me_text_dims(win, &tw, &th);
       // wparam carries client-local x (LOWORD) and y (HIWORD).
-      int lx = (int)(int16_t)LOWORD(wparam) - ME_PADDING;
-      int ly = (int)(int16_t)HIWORD(wparam) - ME_PADDING + s->scroll_y;
+      int lx = (int)(int16_t)LOWORD(wparam) - TEXTEDIT_PADDING_HORZ;
+      int ly = (int)(int16_t)HIWORD(wparam) - control_text_padding_y(win->flags);
       int target_y = (ly / SMALL_LINE_HEIGHT) * SMALL_LINE_HEIGHT;
       if (target_y < 0) target_y = 0;
       s->cursor = me_find_at_xy(s->buf, s->len, lx, target_y, tw);

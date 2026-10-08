@@ -259,22 +259,6 @@ void gc_update_status(void) {
   }
   send_message(gc->main_win, evStatusBar, 0, (void *)status);
   if (gc->repo) {
-    git_file_status_t *files = malloc(sizeof(*files) * GC_MAX_FILES);
-    int staged = 0, modified = 0, fresh = 0, conflicts = 0, n = files ? git_get_status(gc->repo, files, GC_MAX_FILES) : 0;
-    for (int i = 0; i < n; i++) {
-      if (files[i].conflicted) conflicts++; else if (files[i].untracked) fresh++;
-      else { if (files[i].staged) staged++; if (files[i].worktree_status != ' ') modified++; }
-    }
-    free(files);
-    char summary[256]; int len = snprintf(summary, sizeof(summary), "%s", st.head);
-    if (st.ahead)  len += snprintf(summary + len, sizeof(summary) - len, "  |  %d to push", st.ahead);
-    if (st.behind) len += snprintf(summary + len, sizeof(summary) - len, "  |  %d to pull", st.behind);
-    if (staged)    len += snprintf(summary + len, sizeof(summary) - len, "  |  %d staged", staged);
-    if (modified)  len += snprintf(summary + len, sizeof(summary) - len, "  |  %d modified", modified);
-    if (fresh)     len += snprintf(summary + len, sizeof(summary) - len, "  |  %d new", fresh);
-    if (conflicts) len += snprintf(summary + len, sizeof(summary) - len, "  |  %d CONFLICTED", conflicts);
-    if (!staged && !modified && !fresh && !conflicts) snprintf(summary + len, sizeof(summary) - len, "  |  working tree clean");
-    set_window_item_text(gc->main_win, ID_CHANGES_PAGE_SUMMARY, "%s", summary);
     set_window_item_text(gc->main_win, ID_CHANGES_PAGE_COMMIT_NOW, st.detached ? "Commit" : "Commit to %s", st.head);
   }
   page_changes_update_commit();

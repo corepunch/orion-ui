@@ -240,6 +240,8 @@ typedef struct {
   int tooltip_corner_radius, tooltip_tail_size;
   int multiline_field_corner_radius;
   int tooltip_padding_x, tooltip_padding_y, tooltip_gap, tooltip_shadow_size;
+  int tooltip_shadow_blur;
+  ipoint16_t tooltip_shadow_offset;
 
   // Writes the theme's palette into g_sys_colors.  Called by set_theme()
   // before evThemeChanged is broadcast so controls see the new colors

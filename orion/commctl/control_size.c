@@ -1,5 +1,6 @@
 #include <orion/user/user.h>
 #include <orion/user/messages.h>
+#include <orion/user/text.h>
 #include "commctl.h"
 
 int control_predefined_height(flags_t flags) {
@@ -9,6 +10,10 @@ int control_predefined_height(flags_t flags) {
     case CONTROL_SIZE_LARGE: return CONTROL_HEIGHT_LARGE;
     default:                 return CONTROL_HEIGHT_REGULAR;
   }
+}
+
+int control_text_padding_y(flags_t flags) {
+  return MAX(0, (control_predefined_height(flags) - text_char_height(FONT_SMALL)) / 2);
 }
 
 void control_apply_predefined_height(window_t *win, const char *module) {

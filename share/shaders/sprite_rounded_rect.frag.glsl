@@ -38,11 +38,9 @@ vec4 frag() {
     float d = bubbleSDF(p);
     float aa = max(0.75, fwidth(d));
     float face = 1.0 - smoothstep(-aa, aa, d);
-    float shadow = exp(-max(d, 0.0) * max(d, 0.0) / (2.0 * params0.x * params0.x));
-    float fa = tint.a * face, sa = edge.a * shadow * (1.0 - fa);
+    float fa = tint.a * face * alpha;
     vec3 fill_rgb = vec3(srgb_to_linear(tint.r), srgb_to_linear(tint.g), srgb_to_linear(tint.b));
-    vec3 shadow_rgb = vec3(srgb_to_linear(edge.r), srgb_to_linear(edge.g), srgb_to_linear(edge.b));
-    return vec4(fill_rgb * fa + shadow_rgb * sa, fa + sa);
+    return vec4(fill_rgb * fa, fa);
   }
   if (params0.x > 0.0) {
     vec2 p = (tex - 0.5) * (size + 2.0 * params0.y);

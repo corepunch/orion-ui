@@ -361,6 +361,7 @@ result_t win_tableview(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       // Setup as reportview
       send_message(win, RVM_SETVIEWMODE, RVM_VIEW_REPORT, NULL);
       send_message(win, RVM_SETCELLSTYLE, s->cell_style, NULL);
+      send_message(win, RVM_SETCOLUMNTITLESVISIBLE, !params->hide_column_titles, NULL);
       if (s->check_field)
         send_message(win, RVM_SETEXTENDEDSTYLE, RVS_EX_CHECKBOXES,
                      (void *)(uintptr_t)RVS_EX_CHECKBOXES);

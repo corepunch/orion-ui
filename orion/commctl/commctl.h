@@ -16,6 +16,7 @@ void register_commctl_classes(void);
 // Intrinsic sizing shared by button-like controls.  Height is framework-owned;
 // callers choose a CONTROL_SIZE_* style instead of supplying pixel heights.
 int  control_predefined_height(flags_t flags);
+int  control_text_padding_y(flags_t flags);
 void control_apply_predefined_height(window_t *win, const char *module);
 bool control_arrange_predefined_height(window_t *win, const layout_arrange_t *arrange);
 
@@ -152,6 +153,7 @@ typedef struct {
   int master_filter_field;     // Child FK field used by dbFetch (integer FK only)
   const char *master_key;      // Parent field referenced by the FK (must be integer)
   reportview_cell_style_t cell_style; // REPORTVIEW_CELL_COLUMNS (default) or TWO_LINE
+  bool hide_column_titles;
 } tableview_params_t;
 
 result_t win_tableview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);

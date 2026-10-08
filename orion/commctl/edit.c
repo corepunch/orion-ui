@@ -61,7 +61,7 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       theme_draw(THEME_PART_FIELD, local, state);
       int th = text_char_height(FONT_SMALL);
       int text_x = textedit_text_x(win);
-      int text_y = (win->frame.h - th) / 2;
+      int text_y = MIN(control_text_padding_y(win->flags), MAX(0, (win->frame.h - th) / 2));
       const textedit_t *te = win->userdata;
       if (te && te->leading_icon[0]) {
         irect16_t icon = textedit_icon_rect(win);

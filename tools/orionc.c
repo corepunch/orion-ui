@@ -748,15 +748,17 @@ static void emit_tableviews(FILE *f, xmlNodePtr parent, xmlNodePtr form_node,
       if (master && foreign_field[0]) cstr(master_key_q, sizeof(master_key_q), foreign_field);
       else snprintf(master_key_q, sizeof(master_key_q), "NULL");
       char *check_field = attrs_first(c, "check-field", "check_field");
+      char *column_titles = attr(c, "column-titles");
       char check_field_q[ORIONC_STRING_SIZE];
       if (check_field && *check_field) cstr(check_field_q, sizeof(check_field_q), check_field);
       else snprintf(check_field_q, sizeof(check_field_q), "NULL");
       // LIMITATION: master_filter_field / filter_value are int-based,
       // so only integer FK values work.  String FKs (UUID, hash) would
       // be converted to 0 by the runtime's strtol() call.
-      OUT("static const tableview_params_t %s = { .db = NULL, .table_id = TABLE_%s, .filter_field = 0, .filter_value = 0, .field_names = %s_fields, .column_titles = %s_titles, .column_widths = %s_widths, .column_min_widths = %s_min_widths, .check_field = %s, .master_id = %s, .master_filter_field = %d, .master_key = %s, .cell_style = %s };\n\n",
+      OUT("static const tableview_params_t %s = { .db = NULL, .table_id = TABLE_%s, .filter_field = 0, .filter_value = 0, .field_names = %s_fields, .column_titles = %s_titles, .column_widths = %s_widths, .column_min_widths = %s_min_widths, .check_field = %s, .master_id = %s, .master_filter_field = %d, .master_key = %s, .cell_style = %s, .hide_column_titles = %s };\n\n",
           param, table_id, param, param, param, param, check_field_q, master_id,
-          relation_field, master_key_q, cell_style_value);
+          relation_field, master_key_q, cell_style_value, column_titles && eq(column_titles, "false") ? "true" : "false");
+      free(column_titles);
       free(cell_style);
       free(check_field);
       free(master_name_attr);
