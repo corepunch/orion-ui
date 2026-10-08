@@ -275,13 +275,9 @@ void gc_update_status(void) {
     if (conflicts) len += snprintf(summary + len, sizeof(summary) - len, "  |  %d CONFLICTED", conflicts);
     if (!staged && !modified && !fresh && !conflicts) snprintf(summary + len, sizeof(summary) - len, "  |  working tree clean");
     set_window_item_text(gc->main_win, ID_CHANGES_PAGE_SUMMARY, "%s", summary);
-    char hint[96];
-    if (st.initial) snprintf(hint, sizeof(hint), "Create the first commit");
-    else if (staged) snprintf(hint, sizeof(hint), "Commit %d staged file%s", staged, staged == 1 ? "" : "s");
-    else snprintf(hint, sizeof(hint), "Nothing staged - check files above to include them");
-    set_window_item_text(gc->main_win, ID_CHANGES_PAGE_COMMIT_HINT, "%s", hint);
-    set_window_item_text(gc->main_win, ID_CHANGES_PAGE_COMMIT_NOW, "Commit");
+    set_window_item_text(gc->main_win, ID_CHANGES_PAGE_COMMIT_NOW, st.detached ? "Commit" : "Commit to %s", st.head);
   }
+  page_changes_update_commit();
 }
 
 result_t gc_main_proc(window_t *win, uint32_t msg,

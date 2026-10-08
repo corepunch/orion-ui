@@ -913,16 +913,18 @@ static void emit_controls_ex(FILE *f, xmlNodePtr parent, const char *form, const
     char *context = attrs_first(c, "context-menu", "context_menu"), *source = attr(c, "source"), context_items[192] = "NULL", context_count[192] = "0", sourceq[ORIONC_STRING_SIZE] = "NULL";
     if (context && *context) { char context_id[128]; ident(context_id, sizeof(context_id), context, true); snprintf(context_items, sizeof(context_items), "CONTEXT_MENU_%s_ITEMS", context_id); snprintf(context_count, sizeof(context_count), "CONTEXT_MENU_%s_COUNT", context_id); }
     if (source && *source) cstr(sourceq, sizeof(sourceq), source);
+    char *placeholder = attr(c, "placeholder"), placeholderq[ORIONC_STRING_SIZE] = "NULL";
+    if (placeholder) cstr(placeholderq, sizeof(placeholderq), placeholder);
     cstr(classq, sizeof(classq), klass); cstr(textq, sizeof(textq), a.v[A_TEXT]); cstr(nameq, sizeof(nameq), a.v[A_NAME]);
-    OUT("  { %s, %s, { %d, %d }, %s, %s, %s, %u, %u, NULL, 0, %s, { %d, %d, %d, %d }, { %d, %d, %d, %d }, %s, %s, %s, %s, %s, %s, %s, %s, %s },\n",
+    OUT("  { %s, %s, { %d, %d }, %s, %s, %s, %u, %u, NULL, 0, %s, { %d, %d, %d, %d }, { %d, %d, %d, %d }, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s },\n",
         classq, id, sz.w, sz.h, flags, textq, nameq,
         (unsigned)enum_parse_token(a.v[A_HA], kAlignH, ARRAY_LEN(kAlignH), 0),
         (unsigned)enum_parse_token(a.v[A_VA], kAlignV, ARRAY_LEN(kAlignV), 0),
         spacing, pad.x, pad.y, pad.w, pad.h, mar.x, mar.y, mar.w, mar.h,
-        nz(parent_id, "0"), font, a.v[A_FONT] ? "true" : "false", color, a.v[A_COLOR] ? "true" : "false", lparam, context_items, context_count, sourceq);
+        nz(parent_id, "0"), font, a.v[A_FONT] ? "true" : "false", color, a.v[A_COLOR] ? "true" : "false", lparam, context_items, context_count, sourceq, placeholderq);
     (*count)++;
     emit_controls_ex(f, c, form, id, bindings, count, btn_ids);
-    free(context); free(source); free_attrs(&a);
+    free(context); free(source); free(placeholder); free_attrs(&a);
   }
 }
 

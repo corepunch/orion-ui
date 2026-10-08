@@ -125,6 +125,14 @@ Icon IDs are defined in the `icon8_t` / `icon16_t` enums in `messages.h`.
 
 ## Text Rendering
 
+### Tooltip bubbles
+
+`draw_tooltip_bubble(rect, tail_x, tail_on_top)` draws a rounded face, attached
+tail and soft shadow in one renderer pass. `rect` includes the theme's shadow
+margin, and `tail_x` is relative to that rectangle. The theme supplies the
+corner radius, tail size, text padding, gap and shadow size. The framework uses
+this primitive for all standard tooltips.
+
 ### Small Bitmap Font (6x8 pixels)
 
 ```c

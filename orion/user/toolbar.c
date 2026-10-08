@@ -22,15 +22,19 @@ int toolbar_content_offset(const window_t *win) {
   return caption_extent(win->flags);
 }
 
-int toolbar_item_hit(const toolbar_state_t *tb, int tx, int ty) {
+static int toolbar_item_at(const toolbar_state_t *tb, int tx, int ty, bool include_disabled) {
   if (!tb || !tb->item_rects) return -1;
   for (int i = 0; i < tb->item_count; i++) {
     irect16_t r = tb->item_rects[i];
-    if (tb->items[i].state & TBSTATE_DISABLED) continue;
+    if (!include_disabled && (tb->items[i].state & TBSTATE_DISABLED)) continue;
     if (rect_contains_point(r, (ipoint16_t){tx, ty}))
       return i;
   }
   return -1;
+}
+
+int toolbar_item_hit(const toolbar_state_t *tb, int tx, int ty) {
+  return toolbar_item_at(tb, tx, ty, false);
 }
 
 bool toolbar_hit_action(const toolbar_state_t *tb, int x, int y) {
@@ -521,9 +525,24 @@ static result_t win_toolbar(window_t *win, uint32_t msg, uint32_t wparam, void *
       }
       return false;
 
+    case evGetTooltipRect: {
+      if (!tb || !lparam) return false;
+      int idx = toolbar_item_at(tb, (int16_t)LOWORD(wparam), (int16_t)HIWORD(wparam), true);
+      if (idx < 0) return false;
+      irect16_t anchor = tb->item_rects[idx];
+      for (window_t *tc = tb->children; tc; tc = tc->next) {
+        if (tc->id != (uint32_t)tb->items[idx].ident) continue;
+        irect16_t part;
+        if (send_message(tc, evGetTooltipRect, MAKEDWORD(LOWORD(wparam) - tc->frame.x, HIWORD(wparam) - tc->frame.y), &part))
+          anchor = rect_offset(part, tc->frame.x, tc->frame.y);
+        break;
+      }
+      *(irect16_t *)lparam = anchor;
+      return true;
+    }
     case evGetTooltipText: {
       if (!tb || !lparam) return false;
-      int idx = toolbar_item_hit(tb, LOWORD(wparam), HIWORD(wparam));
+      int idx = toolbar_item_at(tb, (int16_t)LOWORD(wparam), (int16_t)HIWORD(wparam), true);
       for (window_t *tc = tb->children; idx >= 0 && tc; tc = tc->next) // an embedded control may name its own parts
         if (tc->id == (uint32_t)tb->items[idx].ident &&
             send_message(tc, evGetTooltipText, MAKEDWORD(LOWORD(wparam) - tc->frame.x, HIWORD(wparam) - tc->frame.y), lparam))

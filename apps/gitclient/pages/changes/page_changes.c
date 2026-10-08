@@ -2,6 +2,40 @@
 
 #include "page_changes.h"
 #include "../../gc_actions.h"
+#include <ctype.h>
+
+void page_changes_update_commit(void) {
+  gc_state_t *gc = g_gc;
+  if (!gc || !gc->main_win) return;
+  int count = 0, staged = 0, conflicts = 0;
+  result_node_t *rows = gc->changes_db ? (result_node_t *)send_db_message(
+    gc->changes_db, dbFetch, MAKEDWORD(ID_DB_FILES, 0), NULL) : NULL;
+  for (result_node_t *n = rows; n; n = n->next) {
+    const db_file_t *file = *(db_file_t **)n->data;
+    count++; staged += file->staged; conflicts += file->status[0] == 'U';
+  }
+  free_result_list(rows);
+  window_t *all = get_window_item(gc->main_win, ID_CHANGES_PAGE_STAGE_ALL);
+  window_t *commit = get_window_item(gc->main_win, ID_CHANGES_PAGE_COMMIT_NOW);
+  window_t *summary = get_window_item(gc->main_win, ID_CHANGES_PAGE_COMMIT_SUMMARY);
+  char text[512] = {0};
+  if (summary) send_message(summary, edGetText, sizeof(text), text);
+  bool have_summary = false;
+  for (const unsigned char *p = (const unsigned char *)text; *p; p++)
+    if (!isspace(*p)) { have_summary = true; break; }
+  if (all) {
+    set_window_item_text(gc->main_win, ID_CHANGES_PAGE_STAGE_ALL, "%d changed file%s", count, count == 1 ? "" : "s");
+    send_message(all, btnSetCheck, count && staged == count ? btnStateChecked : btnStateUnchecked, NULL);
+    enable_window(all, gc->repo && count > 0);
+    invalidate_window(all);
+  }
+  if (commit) {
+    const char *tip = !gc->repo ? "Open a repository to commit" : conflicts ? "Resolve conflicts before committing" :
+                      !staged ? "Select one or more files to commit" : !have_summary ? "Enter a commit summary" : "Commit staged changes";
+    send_message(commit, btnSetTooltip, 0, (void *)tip);
+    enable_window(commit, gc->repo && staged > 0 && !conflicts && have_summary);
+  }
+}
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Window proc — captures outlets on evCreate, otherwise transparent to parent.
@@ -22,6 +56,8 @@ result_t page_changes_proc(window_t *win, uint32_t msg,
   if (gc->changes_files_win && gc->changes_db)
     send_message(gc->changes_files_win, evSetDatabase, 0, gc->changes_db);
 
+  page_changes_update_commit();
+
   return true;
 }
 
@@ -38,6 +74,11 @@ bool page_changes_handle(window_t *main_win, uint32_t msg,
   uint16_t code = (uint16_t)HIWORD(wparam);
   uint16_t id   = (uint16_t)LOWORD(wparam);
   window_t *src = (window_t *)lparam;
+
+  if ((code == ednChange || code == edUpdate) && id == ID_CHANGES_PAGE_COMMIT_SUMMARY) {
+    page_changes_update_commit();
+    return true;
+  }
 
   if (code == RVN_SELCHANGE) {
     if (src != gc->changes_files_win) return false;
@@ -107,8 +148,18 @@ bool page_changes_handle(window_t *main_win, uint32_t msg,
   }
 
   if (code == btnClicked || code == 0) {
+    if (id == ID_CHANGES_PAGE_STAGE_ALL) {
+      bool checked = send_message(src, btnGetCheck, 0, NULL) == btnStateChecked;
+      if (!(checked ? gc_stage_all() : gc_unstage_all()))
+        message_box(main_win, "Could not update staged files.", "Stage Files", MB_OK);
+      gc_refresh_all();
+      return true;
+    }
     if (id == ID_CHANGES_PAGE_COMMIT_NOW) {
-      char summary[256] = {0}, desc[512] = {0}, message[800] = {0};
+      page_changes_update_commit();
+      window_t *commit = get_window_item(main_win, ID_CHANGES_PAGE_COMMIT_NOW);
+      if (!commit || window_has_state(commit, WINDOW_STATE_DISABLED)) return true;
+      char summary[512] = {0}, desc[2048] = {0}, message[2600] = {0};
       window_t *sw = get_window_item(main_win, ID_CHANGES_PAGE_COMMIT_SUMMARY);
       window_t *dw = get_window_item(main_win, ID_CHANGES_PAGE_COMMIT_DESCRIPTION);
       if (sw) send_message(sw, edGetText, sizeof(summary), summary);

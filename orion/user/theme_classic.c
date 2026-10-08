@@ -345,6 +345,8 @@ static theme_t g_classic_theme = {
   .badge_padding             = 7,
   .badge_corner_radius       = 5,
   .badge_tint_alpha          = 0x40,
+  .tooltip_corner_radius = 4, .tooltip_tail_size = 6,
+  .tooltip_padding_x = 8, .tooltip_padding_y = 5, .tooltip_gap = 2, .tooltip_shadow_size = 8,
   .toolbar_compact_padding   = 2,
   .toolbar_compact_spacing   = 6,
   .toolbar_compact_icon      = TOOLBAR_COMPACT_ICON_SIZE,

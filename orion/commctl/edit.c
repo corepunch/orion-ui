@@ -33,7 +33,7 @@ static int textedit_text_x(window_t *win) {
 }
 
 static void notify_change(window_t *win) {
-  if (win->parent) send_message(win->parent, evCommand, MAKEDWORD(win->id, ednChange), win);
+  if (win->parent) send_message(get_root_window(win), evCommand, MAKEDWORD(win->id, ednChange), win);
 }
 
 // Text edit control window procedure

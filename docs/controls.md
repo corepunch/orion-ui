@@ -109,6 +109,12 @@ case evCommand:
 
 ## Form validation (button gating pattern)
 
+`TextEdit` and `MultiEdit` accept `placeholder="..."` in declarative forms, or
+`edSetPlaceholder` with a string in `lparam`. Empty fields display this cue in
+the secondary text colour. A `MultiEdit` with an explicit `height` keeps that
+viewport height and scrolls longer content. `TextEdit` sends `ednChange` to the
+root window as its text changes, allowing immediate button validation.
+
 When a dialog button should be disabled until the user fills a field with valid
 input, gate the button on every `edUpdate`:
 
@@ -183,6 +189,17 @@ create_window("Name:", WINDOW_NOTITLE,
     MAKERECT(10, 10, 60, CONTROL_HEIGHT),
     parent, win_label, 0, NULL);
 ```
+
+## Tooltips
+
+Framework tooltips use rounded bubbles with a tail pointing to the hovered
+element. They appear above the element, flip below near the screen edge, and
+remain within the screen. Disabled controls can still display tooltips.
+Set tooltip text with `btnSetTooltip`, or answer `evGetTooltipText` in a control.
+Controls containing several hit targets can answer `evGetTooltipRect` with the
+target's content-space bounds in `lparam`; `wparam` carries the queried point.
+The default anchor is the whole control. Toolbar items and segmented controls
+provide their own target bounds. Bubble geometry comes from the active theme.
 
 ## Combobox
 

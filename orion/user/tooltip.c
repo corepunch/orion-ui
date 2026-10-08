@@ -1,177 +1,124 @@
-// Tooltip system — singleton tooltip popup for toolbar buttons.
-//
-// Usage:
-//   tooltip_update(source_win, text, screen_x, screen_y)
-//     Call on every mouse-move with the window/control currently under the
-//     cursor and the tooltip text it should show (NULL or "" = no tooltip).
-//     Starts a TOOLTIP_DELAY_MS one-shot timer; shows the popup when it fires.
-//   tooltip_cancel()
-//     Immediately hide any visible tooltip and disarm the pending timer.
-//     Also called internally when the source changes.
-//
-// The tooltip window is created lazily on first use and lives for the
-// lifetime of the process (cleanup_all_windows destroys it on shutdown).
-
+// Framework tooltip: element-anchored bubble with one shared silhouette.
 #include <string.h>
 #include <stdbool.h>
-
+#include <stdio.h>
 #include "user.h"
 #include "messages.h"
 #include "draw.h"
 #include "text.h"
 #include <platform/platform.h>
 
-// Delay in milliseconds before the tooltip appears (matches WinAPI default).
-#define TOOLTIP_DELAY_MS  600
-// Inner padding between tooltip border and text. The right side is kept a bit
-// tighter because bitmap glyph advances already include trailing side bearing.
-#define TOOLTIP_PAD_L     4
-#define TOOLTIP_PAD_R     2
-#define TOOLTIP_PAD_Y     1
-// Offset of the tooltip below the cursor hot-spot.
-#define TOOLTIP_Y_OFFSET  18
+#define TOOLTIP_DELAY_MS 600
+#define TOOLTIP_MAX_WIDTH 360
 
-// ── Global tooltip state ─────────────────────────────────────────────────────
+static window_t *g_tooltip_win;
+static window_t *g_tooltip_src;
+static char g_tooltip_pending[256];
+static irect16_t g_tooltip_anchor;
+static uint32_t g_tooltip_timer_id;
+static int g_tooltip_tail_x;
+static bool g_tooltip_tail_on_top;
 
-static window_t *g_tooltip_win         = NULL; // singleton popup (lazily created)
-static char      g_tooltip_pending[256] = {0};  // text waiting to be shown
-static int       g_tooltip_sx          = 0;    // cursor screen-x when delay started
-static int       g_tooltip_sy          = 0;    // cursor screen-y when delay started
-static uint32_t  g_tooltip_timer_id    = 0;    // axSetTimer handle (0 = none)
-static window_t *g_tooltip_src         = NULL; // window that triggered the pending tooltip
+static bool tooltip_source_visible(window_t *src) {
+  if (!is_window(src)) return false;
+  for (window_t *win = src; win; win = win->parent) {
+    // Toolbar hosts are hidden dispatch windows; their parent paints the band.
+    if (win->parent && win->parent->toolbar == win) continue;
+    if (!window_has_state(win, WINDOW_STATE_VISIBLE)) return false;
+  }
+  return true;
+}
 
-// ── Tooltip window procedure ─────────────────────────────────────────────────
-
-static result_t tooltip_win_proc(window_t *win, uint32_t msg,
-                                 uint32_t wparam, void *lparam) {
-  (void)wparam; (void)lparam;
+static result_t tooltip_win_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  (void)lparam;
   switch (msg) {
-    case evCreate:
+    case evCreate: return true;
+    case evDestroy:
+      if (g_tooltip_timer_id) axCancelTimer(g_tooltip_timer_id);
+      g_tooltip_timer_id = 0;
+      g_tooltip_win = g_tooltip_src = NULL;
+      g_tooltip_pending[0] = '\0';
       return true;
-
     case evPaint: {
-      int w = win->frame.w;
-      int h = win->frame.h;
-      // Yellow tooltip background (matches Windows classic tooltip colour).
-      fill_rect(0xFFFFFFE1, R(0, 0, w, h));
-      // 1-pixel black border.
-      fill_rect(0xFF000000, R(0,     0,     w, 1));
-      fill_rect(0xFF000000, R(0,     h - 1, w, 1));
-      fill_rect(0xFF000000, R(0,     0,     1, h));
-      fill_rect(0xFF000000, R(w - 1, 0,     1, h));
-      draw_text(FONT_SMALL, win->title, TOOLTIP_PAD_L, TOOLTIP_PAD_Y, 0xFF000000);
+      const theme_t *theme = get_theme();
+      draw_tooltip_bubble(R(0, 0, win->frame.w, win->frame.h), g_tooltip_tail_x, g_tooltip_tail_on_top);
+      int pad = theme->tooltip_shadow_size;
+      irect16_t text = rect_inset_xy(R(0, 0, win->frame.w, win->frame.h),
+                                     pad + theme->tooltip_padding_x, pad + theme->tooltip_padding_y);
+      if (g_tooltip_tail_on_top) text = rect_trim_top(text, theme->tooltip_tail_size);
+      else text = rect_trim_bottom(text, theme->tooltip_tail_size);
+      draw_text_wrapped(win->title, &text, get_sys_color(brTextNormal));
       return true;
     }
-
     case evTimer: {
-      // One-shot timer fired — validate it is our pending timer before showing.
       if ((uint32_t)wparam != g_tooltip_timer_id) return true;
       g_tooltip_timer_id = 0;
-      if (!window_has_state(win, WINDOW_STATE_VISIBLE) && g_tooltip_pending[0]) {
-        int tw = text_strwidth(FONT_SMALL, g_tooltip_pending);
-        int th = text_char_height(FONT_SMALL);
-        int w  = tw + TOOLTIP_PAD_L + TOOLTIP_PAD_R;
-        int h  = th + TOOLTIP_PAD_Y * 2;
-        int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
-        int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
-        int x  = g_tooltip_sx;
-        int y  = g_tooltip_sy + TOOLTIP_Y_OFFSET;
-        // Flip above cursor if the tooltip would go off screen at the bottom.
-        if (y + h > sh) y = g_tooltip_sy - h - 4;
-        // Clamp horizontally.
-        if (x + w > sw) x = sw - w;
-        if (x < 0) x = 0;
-        if (y < 0) y = 0;
-
-        win->frame.x = x;
-        win->frame.y = y;
-        win->frame.w = w;
-        win->frame.h = h;
-        strncpy(win->title, g_tooltip_pending, sizeof(win->title) - 1);
-        win->title[sizeof(win->title) - 1] = '\0';
-        show_window(win, true);
-        invalidate_window(win);
-      }
+      if (!g_tooltip_pending[0] || !tooltip_source_visible(g_tooltip_src)) return true;
+      const theme_t *theme = get_theme();
+      int pad = theme->tooltip_shadow_size;
+      int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
+      int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
+      int max_text = MAX(1, MIN(TOOLTIP_MAX_WIDTH, sw - 2 * (pad + theme->tooltip_padding_x)));
+      int tw = MAX(1, MIN(text_strwidth(FONT_SMALL, g_tooltip_pending), max_text));
+      int th = calc_text_height_font(FONT_SMALL, g_tooltip_pending, tw);
+      int w = tw + 2 * (pad + theme->tooltip_padding_x);
+      w = MAX(w, 2 * (pad + theme->tooltip_corner_radius + theme->tooltip_tail_size));
+      int h = th + 2 * (pad + theme->tooltip_padding_y) + theme->tooltip_tail_size;
+      int center = g_tooltip_anchor.x + g_tooltip_anchor.w / 2;
+      int x = MAX(0, MIN(center - w / 2, sw - w));
+      int y = g_tooltip_anchor.y - theme->tooltip_gap - h + pad;
+      g_tooltip_tail_on_top = y < 0;
+      if (g_tooltip_tail_on_top) y = g_tooltip_anchor.y + g_tooltip_anchor.h + theme->tooltip_gap - pad;
+      y = MAX(0, MIN(y, sh - h));
+      int margin = pad + theme->tooltip_corner_radius + theme->tooltip_tail_size;
+      g_tooltip_tail_x = MAX(margin, MIN(center - x, w - margin));
+      win->frame = R(x, y, w, h);
+      snprintf(win->title, sizeof(win->title), "%s", g_tooltip_pending);
+      show_window(win, true);
+      invalidate_window(win);
       return true;
     }
+    // Tooltips do not intercept pointer hit-testing through their shadow.
+    case evHitTest:
+      if (lparam) *(window_t **)lparam = NULL;
+      return true;
   }
   return false;
 }
 
-// ── Internal helpers ─────────────────────────────────────────────────────────
-
-static void ensure_tooltip_win(void) {
-  if (g_tooltip_win) return;
-  g_tooltip_win = create_window("",
-      WINDOW_NOTITLE | WINDOW_NORESIZE | WINDOW_ALWAYSONTOP |
-      WINDOW_NOTRAYBUTTON | WINDOW_NOFILL | WINDOW_NOACTIVATE |
-      WINDOW_TRANSPARENT,
-      MAKERECT(0, 0, 10, 10),
-      NULL, tooltip_win_proc, 0, NULL);
-  if (g_tooltip_win)
-    show_window(g_tooltip_win, false);
-}
-
-// ── Public API ────────────────────────────────────────────────────────────────
-
-// Hide any visible tooltip and cancel the pending show-timer.
 void tooltip_cancel(void) {
-  if (g_tooltip_timer_id) {
-    axCancelTimer(g_tooltip_timer_id);
-    g_tooltip_timer_id = 0;
-  }
-  if (g_tooltip_win && window_has_state(g_tooltip_win, WINDOW_STATE_VISIBLE))
+  if (g_tooltip_timer_id) axCancelTimer(g_tooltip_timer_id);
+  g_tooltip_timer_id = 0;
+  if (is_window(g_tooltip_win) && window_has_state(g_tooltip_win, WINDOW_STATE_VISIBLE))
     show_window(g_tooltip_win, false);
   g_tooltip_pending[0] = '\0';
   g_tooltip_src = NULL;
 }
 
-// Update the tooltip for the currently hovered control.
-//
-// src_win  — the window acting as the tooltip source (used to detect when the
-//            hovered target changes; may be NULL to cancel).
-// text     — tooltip text to show; NULL or "" cancels.
-// sx, sy   — current cursor position in screen coordinates.
-//
-// Rules:
-//   • If text is NULL/"": cancel any pending/visible tooltip and return.
-//   • If the same source window and text are already pending or visible:
-//     update cursor pos but keep the running timer (prevents restarting the
-//     timer on every mouse-move while hovering the same button).
-//   • If source window changed (even with identical text): treat as a new
-//     hover — cancel previous and arm a fresh delay timer.
-//   • Otherwise: cancel previous, arm a new TOOLTIP_DELAY_MS one-shot timer.
 void tooltip_update(window_t *src_win, const char *text, int sx, int sy) {
-  if (!text || !text[0]) {
-    tooltip_cancel();
-    return;
-  }
-
-  // Same source window and same text: keep the running timer, just update pos.
-  if (g_tooltip_src == src_win) {
-    if (g_tooltip_timer_id && strcmp(g_tooltip_pending, text) == 0) {
-      g_tooltip_sx = sx;
-      g_tooltip_sy = sy;
-      return;
-    }
-    if (g_tooltip_win && window_has_state(g_tooltip_win, WINDOW_STATE_VISIBLE) &&
-        strcmp(g_tooltip_win->title, text) == 0) {
-      return;
-    }
-  }
-
-  // New source or new text: restart the delay timer.
+  if (!src_win || !text || !text[0]) { tooltip_cancel(); return; }
+  int ox = window_screen_x(src_win), oy = window_screen_y(src_win);
+  irect16_t anchor = R(ox, oy, src_win->frame.w, src_win->frame.h), part;
+  int cx = sx - ox + (int)src_win->hscroll.pos;
+  int cy = sy - oy - titlebar_height(src_win) + (int)src_win->vscroll.pos;
+  if (send_message(src_win, evGetTooltipRect, MAKEDWORD(cx, cy), &part))
+    anchor = rect_offset(part, ox - (int)src_win->hscroll.pos,
+                         oy + titlebar_height(src_win) - (int)src_win->vscroll.pos);
+  if (g_tooltip_src == src_win && !memcmp(&anchor, &g_tooltip_anchor, sizeof(anchor)) &&
+      !strcmp(g_tooltip_pending, text)) return;
   tooltip_cancel();
-
   g_tooltip_src = src_win;
-  strncpy(g_tooltip_pending, text, sizeof(g_tooltip_pending) - 1);
-  g_tooltip_pending[sizeof(g_tooltip_pending) - 1] = '\0';
-  g_tooltip_sx = sx;
-  g_tooltip_sy = sy;
-
-  ensure_tooltip_win();
+  g_tooltip_anchor = anchor;
+  snprintf(g_tooltip_pending, sizeof(g_tooltip_pending), "%s", text);
+  if (!is_window(g_tooltip_win))
+    g_tooltip_win = create_window("", WINDOW_NOTITLE | WINDOW_NORESIZE | WINDOW_ALWAYSONTOP |
+      WINDOW_NOTRAYBUTTON | WINDOW_NOFILL | WINDOW_NOACTIVATE | WINDOW_TRANSPARENT | WINDOW_HIDDEN,
+      MAKERECT(0, 0, 10, 10), NULL, tooltip_win_proc, 0, NULL);
   if (g_tooltip_win) {
-    g_tooltip_timer_id = axSetTimer(g_tooltip_win, TOOLTIP_DELAY_MS,
-                                    NULL, FALSE);
+    g_tooltip_timer_id = axSetTimer(g_tooltip_win, TOOLTIP_DELAY_MS, NULL, FALSE);
+    if (!g_tooltip_timer_id) {
+      fprintf(stderr, "[tooltip] window %u: hover timer allocation failed\n", src_win->id);
+      fflush(stderr);
+    }
   }
 }

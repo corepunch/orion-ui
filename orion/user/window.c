@@ -965,6 +965,7 @@ static void create_form_children_flat(window_t *parent, const form_ctrl_def_t *c
     child->layout.layout_margin = cd->margin;
     child->layout.layout_padding = cd->padding;
     child->layout.layout_spacing = cd->layout_spacing;
+    if (cd->placeholder) send_message(child, edSetPlaceholder, 0, (void *)cd->placeholder);
 
     if (form_children_have_parent(children, child_count, child->id))
       create_form_children_flat(child, children, child_count, child->id);
@@ -1178,6 +1179,7 @@ static void create_form_children(window_t *parent, const form_ctrl_def_t *childr
     child->layout.layout_margin = cd->margin;
     child->layout.layout_padding = cd->padding;
     child->layout.layout_spacing = cd->layout_spacing;
+    if (cd->placeholder) send_message(child, edSetPlaceholder, 0, (void *)cd->placeholder);
 
     if (cd->children && cd->child_count > 0)
       create_form_children(child, cd->children, cd->child_count);

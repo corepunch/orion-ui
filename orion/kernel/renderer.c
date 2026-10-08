@@ -833,7 +833,7 @@ void draw_program_rect(int tex, irect16_t r, uint32_t program, float mix_amount)
 static void render_rounded_box(int tex, irect16_t r, int win_w, int win_h,
                                 float radius, float alpha, uint32_t color,
                                 float blur, float padding, bool premultiplied,
-                                uint32_t edge_color, float edge_width, float stroke, bool gradient) {
+                                uint32_t edge_color, float edge_width, float stroke, int fill_style, float tail, float tail_x) {
   if (!g_ref.rounded_rect_sprite.shader.progid || (!tex && blur <= 0)) return;
 
   glActiveTexture(GL_TEXTURE0);
@@ -844,7 +844,7 @@ static void render_rounded_box(int tex, irect16_t r, int win_w, int win_h,
   sprite_vec2(g_ref.rounded_rect_sprite.state.offset, (float)r.x, (float)r.y);
   sprite_vec2(g_ref.rounded_rect_sprite.state.scale, (float)r.w, (float)r.h);
   g_ref.rounded_rect_sprite.state.alpha = alpha;
-  sprite_vec4(g_ref.rounded_rect_sprite.state.params0, blur, padding, gradient ? 1.0f : 0.0f, 0.0f);
+  sprite_vec4(g_ref.rounded_rect_sprite.state.params0, blur, padding, (float)fill_style, tail);
   sprite_vec2(g_ref.rounded_rect_sprite.state.uv_offset, 0.0f, 1.0f);
   sprite_vec2(g_ref.rounded_rect_sprite.state.uv_scale, 1.0f, -1.0f);
   sprite_vec4(g_ref.rounded_rect_sprite.state.tint, (color & 255) / 255.0f, ((color >> 8) & 255) / 255.0f, ((color >> 16) & 255) / 255.0f, (color >> 24) / 255.0f);
@@ -852,7 +852,7 @@ static void render_rounded_box(int tex, irect16_t r, int win_w, int win_h,
   sprite_vec2(g_ref.rounded_rect_sprite.state.size, (float)win_w, (float)win_h);
   g_ref.rounded_rect_sprite.state.radius = MAX(0.0f, MIN(radius, MIN(win_w, win_h) * 0.5f));
   premultiplied = premultiplied || R_TextureIsPremultiplied((uint32_t)tex);
-  sprite_vec4(g_ref.rounded_rect_sprite.state.params1, premultiplied ? 1.0f : 0.0f, edge_width, MAX(0.0f, stroke), 0.0f);
+  sprite_vec4(g_ref.rounded_rect_sprite.state.params1, premultiplied ? 1.0f : 0.0f, edge_width, MAX(0.0f, stroke), tail_x);
   sprite_vec4(g_ref.rounded_rect_sprite.state.edge, (edge_color & 255) / 255.0f, ((edge_color >> 8) & 255) / 255.0f, ((edge_color >> 16) & 255) / 255.0f, (edge_color >> 24) / 255.0f);
   R_BlendPremultiplied();
   g_ref.mesh.draw_mode = GL_TRIANGLE_FAN;
@@ -864,22 +864,28 @@ static void render_rounded_box(int tex, irect16_t r, int win_w, int win_h,
 
 void render_rounded_rect(int tex, irect16_t r, int win_w, int win_h,
                           float radius, float alpha, uint32_t color) {
-  render_rounded_box(tex, r, win_w, win_h, radius, alpha, color, 0, 0, false, 0, 0, 0, false);
+  render_rounded_box(tex, r, win_w, win_h, radius, alpha, color, 0, 0, false, 0, 0, 0, 0, 0, 0);
+}
+
+void render_tooltip_bubble(irect16_t r, isize16_t face_size, float radius, float tail,
+                          float tail_x, float padding, uint32_t color, uint32_t shadow) {
+  render_rounded_box(0, r, face_size.w, face_size.h, radius, 1, color,
+                     MAX(1.0f, padding / 3), padding, false, shadow, 0, 0, 2, tail, tail_x);
 }
 
 void render_rounded_rect_gradient(int tex, irect16_t r, int pixel_w, int pixel_h,
                                   float radius, uint32_t top, uint32_t bottom) {
-  render_rounded_box(tex, r, pixel_w, pixel_h, radius, 1, top, 0, 0, false, bottom, 0, 0, true);
+  render_rounded_box(tex, r, pixel_w, pixel_h, radius, 1, top, 0, 0, false, bottom, 0, 0, 1, 0, 0);
 }
 
 void render_rounded_rect_stroke(int tex, irect16_t r, int win_w, int win_h,
                                 float radius, float alpha, uint32_t color, float stroke) {
-  render_rounded_box(tex, r, win_w, win_h, radius, alpha, color, 0, 0, false, 0, 0, stroke, false);
+  render_rounded_box(tex, r, win_w, win_h, radius, alpha, color, 0, 0, false, 0, 0, stroke, 0, 0, 0);
 }
 
 void render_rounded_rect_edged(int tex, irect16_t r, int win_w, int win_h, float radius,
                                float alpha, uint32_t color, uint32_t edge_color, float edge_width) {
-  render_rounded_box(tex, r, win_w, win_h, radius, alpha, color, 0, 0, false, edge_color, edge_width, 0, false);
+  render_rounded_box(tex, r, win_w, win_h, radius, alpha, color, 0, 0, false, edge_color, edge_width, 0, 0, 0, 0);
 }
 
 void draw_rect_shadow(irect16_t r, float radius, float blur, ipoint16_t offset, uint32_t color) {
@@ -891,7 +897,7 @@ void draw_rect_shadow(irect16_t r, float radius, float blur, ipoint16_t offset, 
   }
   int padding = (int)(blur * 3 + 1);
   irect16_t bounds = rect_inset(rect_offset(r, offset.x, offset.y), -padding);
-  render_rounded_box(0, bounds, r.w, r.h, radius, 1, color, blur, padding, false, 0, 0, 0, false);
+  render_rounded_box(0, bounds, r.w, r.h, radius, 1, color, blur, padding, false, 0, 0, 0, 0, 0, 0);
 }
 
 void draw_rounded_rect(int tex, irect16_t r, int win_w, int win_h,
@@ -902,7 +908,7 @@ void draw_rounded_rect(int tex, irect16_t r, int win_w, int win_h,
 void draw_rounded_rect_premultiplied(int tex, irect16_t r, int win_w, int win_h,
                                      float radius, float alpha) {
   render_rounded_box(tex, r, win_w, win_h, radius, alpha, 0xffffffff,
-                     0, 0, true, 0, 0, 0, false);
+                     0, 0, true, 0, 0, 0, 0, 0, 0);
 }
 
 bool read_texture_rgba(int src_tex, int w, int h, uint8_t *out_rgba) {

@@ -8,8 +8,42 @@ float roundedBoxSDF(vec2 p, vec2 b, float r) {
   return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
 }
 
+float cross2(vec2 a, vec2 b) { return a.x * b.y - a.y * b.x; }
+
+float triangleSDF(vec2 p, vec2 a, vec2 b, vec2 c) {
+  vec2 e0 = b - a, e1 = c - b, e2 = a - c;
+  vec2 v0 = p - a, v1 = p - b, v2 = p - c;
+  vec2 q0 = v0 - e0 * clamp(dot(v0, e0) / dot(e0, e0), 0.0, 1.0);
+  vec2 q1 = v1 - e1 * clamp(dot(v1, e1) / dot(e1, e1), 0.0, 1.0);
+  vec2 q2 = v2 - e2 * clamp(dot(v2, e2) / dot(e2, e2), 0.0, 1.0);
+  vec3 signs = vec3(cross2(e0, v0), cross2(e1, v1), cross2(e2, v2));
+  bool inside = all(greaterThanEqual(signs, vec3(0.0))) || all(lessThanEqual(signs, vec3(0.0)));
+  return sqrt(min(dot(q0, q0), min(dot(q1, q1), dot(q2, q2)))) * (inside ? -1.0 : 1.0);
+}
+
+float bubbleSDF(vec2 p) {
+  float tail = abs(params0.w), top = params0.w > 0.0 ? tail : 0.0;
+  vec2 body = vec2(size.x, size.y - tail);
+  float box = roundedBoxSDF(p - vec2(body.x * 0.5, top + body.y * 0.5), body * 0.5, radius);
+  float base = params0.w > 0.0 ? tail + 0.5 : body.y - 0.5;
+  float tip = params0.w > 0.0 ? 0.0 : size.y;
+  float tri = triangleSDF(p, vec2(params1.w - tail, base), vec2(params1.w + tail, base), vec2(params1.w, tip));
+  return min(box, tri);
+}
+
 vec4 frag() {
   vec4 outColor;
+  if (params0.z > 1.5) {
+    vec2 p = vec2(tex.x, 1.0 - tex.y) * (size + 2.0 * params0.y) - params0.y;
+    float d = bubbleSDF(p);
+    float aa = max(0.75, fwidth(d));
+    float face = 1.0 - smoothstep(-aa, aa, d);
+    float shadow = exp(-max(d, 0.0) * max(d, 0.0) / (2.0 * params0.x * params0.x));
+    float fa = tint.a * face, sa = edge.a * shadow * (1.0 - fa);
+    vec3 fill_rgb = vec3(srgb_to_linear(tint.r), srgb_to_linear(tint.g), srgb_to_linear(tint.b));
+    vec3 shadow_rgb = vec3(srgb_to_linear(edge.r), srgb_to_linear(edge.g), srgb_to_linear(edge.b));
+    return vec4(fill_rgb * fa + shadow_rgb * sa, fa + sa);
+  }
   if (params0.x > 0.0) {
     vec2 p = (tex - 0.5) * (size + 2.0 * params0.y);
     float d = roundedBoxSDF(p, size * 0.5, radius);

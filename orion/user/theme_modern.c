@@ -180,7 +180,7 @@ static uint32_t modern_surface_midpoint(uint32_t a, uint32_t b) {
 
 static void modern_draw_field_bg(irect16_t r, ctrl_state_t state) {
   bool focused = (state & CTRL_FOCUSED) && !(state & CTRL_DISABLED);
-  int radius = (MIN(r.w, r.h) + 1) / 2;
+  int radius = (state & CTRL_MULTILINE) ? get_theme()->multiline_field_corner_radius : (MIN(r.w, r.h) + 1) / 2;
   uint32_t border, fill;
   if (modern_navy()) {
     border = focused ? get_sys_color(brAccent) : get_sys_color(brLightEdge);
@@ -402,6 +402,9 @@ static theme_t g_modern_theme = {
   .badge_padding             = 7,
   .badge_corner_radius       = 5,
   .badge_tint_alpha          = 0x40,
+  .tooltip_corner_radius = 6, .tooltip_tail_size = 6,
+  .multiline_field_corner_radius = 6,
+  .tooltip_padding_x = 8, .tooltip_padding_y = 5, .tooltip_gap = 2, .tooltip_shadow_size = 8,
   .toolbar_compact_padding   = 2,
   .toolbar_compact_spacing   = 6,
   .toolbar_compact_icon      = TOOLBAR_COMPACT_ICON_SIZE,

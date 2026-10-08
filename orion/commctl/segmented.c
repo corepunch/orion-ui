@@ -156,6 +156,12 @@ result_t win_segmented(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       }
       return true;
     }
+    case evGetTooltipRect: {
+      int hit = sg_hit(win, s, (int16_t)LOWORD(wparam), (int16_t)HIWORD(wparam));
+      if (hit < 0 || !lparam) return false;
+      *(irect16_t *)lparam = sg_segment_rect(win, s, hit);
+      return true;
+    }
     case evGetTooltipText: {
       int hit = sg_hit(win, s, (int16_t)LOWORD(wparam), (int16_t)HIWORD(wparam));
       if (hit < 0 || sg_shows_label(s, hit) || !lparam) return false;

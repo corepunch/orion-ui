@@ -246,18 +246,18 @@
             <SplitView name="changes_split" flags="flexspace">
                 <StackView name="changes_panel" spacing="4" padding="4">
                     <Label name="summary" text="" />
+                    <CheckBox name="stage_all" text="0 changed files" />
                     <TableView name="changes_files" source="db.files" master="none" check-field="staged" context-menu="files" flags="notitle,nofill,vscroll,flexspace">
                         <Column field="path" title="File" width="0" />
                         <Column field="status" title="Status" width="64" />
                     </TableView>
-                    <Label name="commit_hint" text="Commit staged changes" />
-                    <TextEdit name="commit_summary" text="" />
-                    <TextEdit name="commit_description" text="" />
+                    <TextEdit name="commit_summary" placeholder="Summary (required)" />
+                    <MultiEdit name="commit_description" placeholder="Description" height="64" flags="vscroll" />
                     <StackView name="commit_actions" orientation="horizontal" spacing="4">
                         <Button name="stash_inline" text="Stash" />
                         <Space />
-                        <Button name="commit_now" text="Commit" flags="default" />
                     </StackView>
+                    <Button name="commit_now" text="Commit" flags="default" />
                 </StackView>
                 <DiffView name="changes_diff" flags="notitle,nofill,vscroll,flexspace"/>
             </SplitView>

@@ -104,6 +104,9 @@ enum {
   // for TOUCH_LONG_PRESS_MS delivers the press and hands the drag over.
   // Return DRAG_NONE (false) to let a swipe scroll and a tap click.
   evQueryDrag,
+  // Optional tooltip anchor: wparam is the queried content point; lparam is
+  // irect16_t* in this window's content space. Default is the whole control.
+  evGetTooltipRect,
   evUser = 1000
 };
 

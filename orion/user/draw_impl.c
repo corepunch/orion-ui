@@ -275,6 +275,18 @@ void fill_rounded_rect(uint32_t color, irect16_t r, int radius) {
                       (int)(r.h * scale + 0.5f), radius * scale, 1.0f, color);
 }
 
+void draw_tooltip_bubble(irect16_t r, int tail_x, bool tail_on_top) {
+  const theme_t *theme = get_theme();
+  int pad = theme->tooltip_shadow_size;
+  float scale = ui_surface_scale();
+  isize16_t size = { (int)((r.w - 2 * pad) * scale), (int)((r.h - 2 * pad) * scale) };
+  if (size.w <= 0 || size.h <= 0) return;
+  render_tooltip_bubble(r, size, theme->tooltip_corner_radius * scale,
+                       theme->tooltip_tail_size * scale * (tail_on_top ? 1 : -1),
+                       (tail_x - pad) * scale, pad * scale,
+                       get_sys_color(brPanelDark), color_with_alpha(get_sys_color(brDarkEdge), 120));
+}
+
 void fill_gradient_rounded_rect(uint32_t top, uint32_t bottom, irect16_t r, int radius) {
   extern uint32_t ui_white_texture;
   if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0) return;

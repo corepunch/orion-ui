@@ -735,10 +735,9 @@ void dispatch_message(ui_event_t *msg) {
       } else if (((win = g_ui_runtime.captured) ||
                   (win = find_window(SCALE_POINT(px), SCALE_POINT(py)))))
       {
-        if (window_has_state(win, WINDOW_STATE_DISABLED)) return;
         int16_t lx = (int16_t)LOCAL_X(px, py, win);
         int16_t ly = (int16_t)LOCAL_Y(px, py, win);
-        if (win == g_ui_runtime.captured || ly >= 0) {
+        if (!window_has_state(win, WINDOW_STATE_DISABLED) && (win == g_ui_runtime.captured || ly >= 0)) {
           void *motion = (void*)(intptr_t)MAKEDWORD(rdx, rdy);
           if (win == g_ui_runtime.captured ||
               !handle_mouse(evMouseMove, win, lx, ly, motion))
@@ -759,7 +758,7 @@ void dispatch_message(ui_event_t *msg) {
       {
         int sx = SCALE_POINT(px), sy = SCALE_POINT(py);
         window_t *hover = find_window(sx, sy);
-        if (hover && !window_has_state(hover, WINDOW_STATE_DISABLED)) {
+        if (hover) {
           // Route toolbar mousemove to the host window for hover tracking
           window_t *tb_host = find_toolbar_host_at(hover, sx, sy);
           // b. Deliver evMouseLeave to the toolbar host when the pointer leaves

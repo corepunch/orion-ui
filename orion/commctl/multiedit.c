@@ -9,6 +9,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include <orion/user/user.h>
 #include <orion/user/messages.h>
@@ -23,6 +24,7 @@
 
 typedef struct {
   char buf[ME_BUF_SIZE];
+  char placeholder[128];
   int  len;        // strlen(buf)
   int  cursor;     // byte offset of caret in buf
   int  scroll_y;   // vertical scroll in pixels
@@ -144,8 +146,10 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
     case evCreate: {
       s = (me_state_t *)allocate_window_data(win, sizeof(me_state_t));
       if (!s) return true;
-      // Multiedit participates in auto-layout as a flexible child.
-      win->flags |= WINDOW_FLEXSPACE;
+      // Explicit form heights keep the viewport fixed as text grows.
+      const form_ctrl_def_t *cd = (const form_ctrl_def_t *)lparam;
+      if (cd && cd->size.h > 0) win->flags &= ~WINDOW_FLEXSPACE;
+      else win->flags |= WINDOW_FLEXSPACE;
       strncpy(s->buf, win->title, ME_BUF_SIZE - 1);
       s->buf[ME_BUF_SIZE - 1] = '\0';
       s->len      = (int)strlen(s->buf);
@@ -168,6 +172,8 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
                            text_strwidth(FONT_SMALL, win->title) + TEXTEDIT_PADDING_HORZ * 2);
         m->desired_h = MAX(text_char_height(FONT_SMALL) * 4,
                            calc_text_height_font(FONT_SMALL, s ? s->buf : win->title, avail_w) + ME_PADDING * 2);
+        if (!(win->flags & WINDOW_FLEXSPACE) && win->layout.layout_fixed_h > 0)
+          m->desired_h = win->layout.layout_fixed_h;
       }
       return true;
     }
@@ -190,6 +196,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       bool focused = (g_ui_runtime.focused == win);
 
       ctrl_state_t state = focused ? CTRL_FOCUSED : CTRL_NORMAL;
+      state |= CTRL_MULTILINE;
       if (window_has_state(win, WINDOW_STATE_DISABLED)) state |= CTRL_DISABLED;
       theme_draw(THEME_PART_FIELD, R(0, 0, win->frame.w, win->frame.h), state);
 
@@ -203,6 +210,8 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       // Draw wrapped text, offset upward by scroll_y.
       irect16_t vp = { tx, ty - s->scroll_y, tw, th + s->scroll_y };
       draw_text_wrapped(s->buf, &vp, get_sys_color(brTextNormal));
+      if (!s->len && s->placeholder[0])
+        draw_text_ellipsized(FONT_SMALL, s->placeholder, tx, ty, tw, get_sys_color(brTextSecondary));
 
       // Draw caret when focused.
       if (focused) {
@@ -396,6 +405,16 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
           return false;
       }
     }
+
+    case edSetPlaceholder:
+      if (!s) {
+        fprintf(stderr, "[multiedit] window %u: placeholder requires control state\n", win->id);
+        fflush(stderr);
+        return false;
+      }
+      snprintf(s->placeholder, sizeof(s->placeholder), "%s", lparam ? (const char *)lparam : "");
+      invalidate_window(win);
+      return true;
 
     // ── edSetText ───────────────────────────────────────────
     case edSetText: {

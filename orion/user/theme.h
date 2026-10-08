@@ -102,6 +102,7 @@ typedef enum {
   CTRL_FOCUSED  = 1 << 4,   // keyboard focus ring required
   CTRL_DEFAULT  = 1 << 5,   // primary action / default button
   CTRL_PLASTIC  = 1 << 6,   // paint with the theme's plastic material (≈ SetWindowTheme visual style)
+  CTRL_MULTILINE = 1 << 7,  // field contains multiple lines
 } ctrl_state_t;
 
 typedef enum {
@@ -236,6 +237,9 @@ typedef struct {
   int menu_capsule;          // 1 = menu-bar selection is a padded capsule around the label; 0 = full item cell
   int badge_padding, badge_corner_radius; // Badge: horizontal text inset and corner radius
   int badge_tint_alpha;      // Badge: alpha of the tinted face behind the text (0..255)
+  int tooltip_corner_radius, tooltip_tail_size;
+  int multiline_field_corner_radius;
+  int tooltip_padding_x, tooltip_padding_y, tooltip_gap, tooltip_shadow_size;
 
   // Writes the theme's palette into g_sys_colors.  Called by set_theme()
   // before evThemeChanged is broadcast so controls see the new colors
