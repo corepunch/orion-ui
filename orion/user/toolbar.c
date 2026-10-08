@@ -85,6 +85,11 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
         w = item->w > 0 ? item->w : bsz;
         if (!item->w && (tb->style & TOOLBAR_STYLE_SHOW_LABELS) && item->text)
           w = MAX(w, text_strwidth(FONT_SMALLEST, item->text) + 8);
+        if ((item->flags & CONTROL_SIZE_MASK) == CONTROL_SIZE_LARGE) { // grows into the band padding, centred on the row
+          if (!item->w) w += CONTROL_LARGE_GROWTH;
+          h += CONTROL_LARGE_GROWTH;
+          if (!vertical) y -= CONTROL_LARGE_GROWTH / 2;
+        }
         break;
       case TOOLBAR_ITEM_DROPDOWN:
         w = item->w > 0 ? item->w : bsz;
@@ -337,8 +342,8 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
                      item->ident != TB_WINDOW_CLOSE && item->ident != TB_WINDOW_COLLAPSE;
       if (plastic) {
         irect16_t face = local;
-        if (tb->style & TOOLBAR_STYLE_SHOW_LABELS) face.h = toolbar_effective_bsz(win);
-        draw_plastic_button(face, state, item->color, icon);
+        if (tb->style & TOOLBAR_STYLE_SHOW_LABELS) face.h -= text_char_height(FONT_SMALLEST) + 2;
+        draw_plastic_button(face, state, item->color, icon, item->flags & CONTROL_SIZE_MASK);
       } else if (tb->style & TOOLBAR_STYLE_COMPACT) {
         if ((is_pressed || is_active) && !image_body)
           theme_draw(THEME_PART_TOOLBAR_BUTTON, rect_center(local, local.h, local.h), is_pressed ? CTRL_PRESSED : CTRL_SELECTED);

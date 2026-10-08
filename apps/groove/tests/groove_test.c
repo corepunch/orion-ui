@@ -603,7 +603,7 @@ static void test_library_transport(void) {
   ASSERT_EQUAL(toolbar_index(ID_REWIND), 0);
   ASSERT_EQUAL(tb->strip.tex, 0);
   ASSERT_TRUE(strcmp(tb->items[toolbar_index(ID_REWIND)].icon, "phosphor-rewind-fill") == 0);
-  ASSERT_TRUE(tb->items[toolbar_index(ID_PLAY)].color != tb->items[toolbar_index(ID_FORWARD)].color);
+  ASSERT_TRUE(tb->items[toolbar_index(ID_PLAY)].color != 0 && tb->items[toolbar_index(ID_PLAY)].color == tb->items[toolbar_index(ID_FORWARD)].color);
   ASSERT(toolbar_index(ID_PLAY) == toolbar_index(ID_REWIND) + 1 && toolbar_index(ID_FORWARD) == toolbar_index(ID_PLAY) + 1, "rewind, play, forward sit together");
   ASSERT(toolbar_index(ID_STOP) < 0 && toolbar_index(ID_DELETE) < 0, "stop is menu-only and delete moved to the compact toolbar");
   uint32_t original_color = tb->items[toolbar_index(ID_PLAY)].color, color = WEB(0x2277bb);
@@ -628,6 +628,10 @@ static void test_library_transport(void) {
       ASSERT_TRUE(tb->item_rects[i].x >= 0 && tb->item_rects[i].x + tb->item_rects[i].w <= bar->frame.w);
     }
   }
+  irect16_t play = tb->item_rects[toolbar_index(ID_PLAY)], fwd = tb->item_rects[toolbar_index(ID_FORWARD)];
+  ASSERT(play.w == fwd.w + CONTROL_LARGE_GROWTH && play.h == fwd.h + CONTROL_LARGE_GROWTH &&
+         play.y + play.h / 2 == fwd.y + fwd.h / 2 && play.y >= 0 && play.y + play.h <= titlebar_height(bar),
+         "the large play button is centred on the row and stays inside the band");
   irect16_t r = tb->item_rects[toolbar_index(ID_PLAY)];
   ui_event_t event = {.message = kEventLeftButtonDown,
     .x = (window_screen_x(bar) + r.x + r.w / 2) * UI_WINDOW_SCALE,

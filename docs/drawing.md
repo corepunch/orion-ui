@@ -245,10 +245,11 @@ Scener's reel renderer (`apps/scener/reel_draw.c`) is the reference user.
 
 ### Procedural plastic surfaces
 
-`draw_plastic_button(rect, state, color, icon)` draws a tinted plastic button and
+`draw_plastic_button(rect, state, color, icon, control_size)` draws a tinted plastic button and
 solid white SVG glyph in one shader pass. `color` is packed `0xAABBGGRR`; zero
 uses `brAccent`. Icon names use the SVG cache at their final draw size, avoiding a second scaling
-of the glyph mask. Glyph placement and press offsets snap to device pixels, and
+of the glyph mask. `CONTROL_SIZE_LARGE` rasterizes the glyph `CONTROL_LARGE_GROWTH` pixels
+bigger; toolbar items carrying that flag are the same amount bigger, centred on their row. Glyph placement and press offsets snap to device pixels, and
 the glyph has no emboss, highlight halo or inner shadow. The shader adds a smooth
 vertical gradient, directional button bevel and a small drop shadow.
 Normal, hover, selected, pressed and disabled states share the same allocated
@@ -257,7 +258,9 @@ rectangle. Disabled takes precedence over interaction flags.
 The shadow stays inside `rect`; no extra layer, framebuffer or neighbouring
 repaint margin is needed. Theme metrics `plastic_corner_radius`,
 `plastic_bevel_width` and `plastic_shadow_size` are logical pixels. Radius clamps
-to half the face size, allowing rounded rectangles, capsules and circles. SDF
+to half the face size, allowing rounded rectangles, capsules and circles;
+`CORNER_RADIUS_CIRCULAR` (-1) asks for that full rounding at any size, like
+AppKit's circular bezel. SDF
 antialiasing uses screen derivatives to follow display density and transforms.
 
 `draw_plastic_card(rect, state, color)` uses the same shader with the theme's

@@ -41,8 +41,8 @@ vec4 frag() {
   bool has_glyph = glyph_box.z > 0.0 && glyph_box.w > 0.0;
   float gloss_k = (has_glyph ? 1.0 : 0.55) * (1.0 - 0.6 * disabled) * (1.0 - 0.55 * pressed);
   float y = clamp((p.y + half_size.y) / (2.0 * half_size.y), 0.0, 1.0);
-  vec3 top = mix(pow(base, vec3(has_glyph ? 0.62 : 0.78)), vec3(1.0), (has_glyph ? 0.08 : 0.02) + hover * 0.10);
-  vec3 bottom = pow(base, vec3(1.18)) * (0.62 + hover * 0.08);
+  vec3 top = mix(pow(base, vec3(has_glyph ? 0.62 : 0.78)), vec3(1.0), (has_glyph ? 0.25 : 0.02) + hover * 0.10);
+  vec3 bottom = pow(base, vec3(1.18)) * ((has_glyph ? 0.28 : 0.62) + hover * 0.08);
   vec3 rgb = mix(top, bottom, smoothstep(0.0, 1.0, y));
   rgb = mix(rgb, pow(base, vec3(0.5)), smoothstep(0.72, 1.0, y) * 0.45 * gloss_k);
   rgb *= 1.0 - pressed * 0.22;
@@ -75,7 +75,7 @@ vec4 frag() {
     float above = (glyph_mask(gp - vec2(0.0, step_y * 0.5)) + glyph_mask(gp - vec2(0.0, step_y)) +
                    glyph_mask(gp - vec2(0.0, step_y * 1.5))) / 3.0;
     vec3 catchlight = mix(pow(base, vec3(0.4)), vec3(1.0), 0.55);
-    vec3 ink = mix(pow(base, vec3(1.35)) * 0.34, vec3(0.30), disabled);
+    vec3 ink = mix(pow(base, vec3(1.35)) * 0.10, vec3(0.30), disabled);
     rgb = mix(rgb, catchlight, below * (1.0 - mask) * mix(0.75, 0.35, disabled));
     rgb = mix(rgb, mix(ink, ink * 0.35, (1.0 - above) * 0.85), mask);
   }

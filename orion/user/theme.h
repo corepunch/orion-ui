@@ -50,6 +50,9 @@ typedef enum {
 // Default logical size for compact control glyphs.
 #define THEME_ICON_SIZE  9
 
+// Corner radius metric value: round the short side fully (AppKit's circular bezel).
+#define CORNER_RADIUS_CIRCULAR (-1)
+
 // ── Text rendering ────────────────────────────────────────────────────────
 
 // Standard 1-pixel drop-shadow offset used for all text labels.
@@ -198,7 +201,7 @@ typedef struct {
   int card_edge_width;       // draw_card(): accent edge width in logical pixels
   int card_ring_width;       // draw_card(): selection ring thickness (reserved inside the card bounds)
   int card_highlight_width;  // draw_gradient_card(): top sheen thickness (0 = none)
-  int plastic_corner_radius, plastic_bevel_width, plastic_shadow_size; // procedural button geometry
+  int plastic_corner_radius, plastic_bevel_width, plastic_shadow_size; // procedural button geometry; radius may be CORNER_RADIUS_CIRCULAR
   int card_padding_x, card_padding_y; // Card control: content inset from the face edge
   int window_shadow_blur;    // logical pixels; zero disables shadows
   ipoint16_t window_shadow_offset;
