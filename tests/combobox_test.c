@@ -376,6 +376,37 @@ static void dispatch_mouse_at(int x, int y, uint32_t message) {
     dispatch_message(&event);
 }
 
+void test_cb_dropdown_matches_control_width(void) {
+    TEST("win_combobox: popup matches both control edges for short and long labels after resize");
+    test_env_init();
+    window_t *parent = test_env_create_window("P", 40, 50, 600, 400, cb_parent_proc, NULL);
+    ASSERT_NOT_NULL(parent);
+    window_t *container = create_window("", WINDOW_NOTITLE, MAKERECT(15, 20, 500, 200), parent, cb_parent_proc, 0, NULL);
+    ASSERT_NOT_NULL(container);
+    window_t *cb = make_combobox(container, 20);
+    ASSERT_NOT_NULL(cb);
+    const char *labels[] = {"main", "A very long worktree label that must not widen its dropdown popup beyond the control"};
+    const int widths[] = {120, 440};
+    for (int w = 0; w < ARRAY_LEN(widths); w++) {
+        resize_window(cb, widths[w], cb->frame.h);
+        for (int i = 0; i < ARRAY_LEN(labels); i++) {
+            send_message(cb, cbClear, 0, NULL);
+            send_message(cb, cbAddString, 0, (void *)labels[i]);
+            send_message(cb, cbSetCurrentSelection, 0, NULL);
+            send_message(cb, evLeftButtonUp, 0, NULL);
+            window_t *list = g_ui_runtime.captured;
+            ASSERT_NOT_NULL(list);
+            ASSERT_EQUAL(list->frame.x, window_screen_x(cb));
+            ASSERT_EQUAL(list->frame.w, cb->frame.w);
+            send_message(list, evKeyDown, AX_KEY_ESCAPE, NULL);
+            ASSERT_NULL(g_ui_runtime.captured);
+        }
+    }
+    destroy_window(parent);
+    test_env_shutdown();
+    PASS();
+}
+
 void test_cb_dropdown_shows_at_most_eight_items(void) {
     TEST("win_combobox: dropdown shows at most eight items with scrollbar");
 
@@ -484,7 +515,7 @@ void test_cb_dropdown_outside_click_cancels(void) {
     window_t *list = open_test_dropdown(cb, 10, 2);
     ASSERT_NOT_NULL(list);
     int font_h = text_char_height(FONT_SMALL);
-    ASSERT_EQUAL(list->frame.x + MENU_SIDE_PAD, window_screen_x(cb) + TEXTEDIT_PADDING_HORZ);
+    ASSERT_EQUAL(list->frame.x, window_screen_x(cb));
     ASSERT_EQUAL(list->frame.y + MENU_START_Y + 2 * CONTROL_HEIGHT_REGULAR
                  - (int)list->vscroll.pos + (CONTROL_HEIGHT_REGULAR - font_h) / 2,
                  window_screen_y(cb) + (cb->frame.h - font_h) / 2);
@@ -575,6 +606,7 @@ int main(int argc, char *argv[]) {
     test_cb_down_arrow_at_last_item_no_change();
     test_cb_up_arrow_moves_selection();
     test_cb_up_arrow_at_first_item_no_change();
+    test_cb_dropdown_matches_control_width();
     test_cb_dropdown_shows_at_most_eight_items();
     test_cb_dropdown_keyboard_keeps_selection_visible();
     test_cb_dropdown_mouse_wheel_scrolls();

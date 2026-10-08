@@ -19,8 +19,8 @@ static inline void popup_item_paint(irect16_t row, const char *text, ctrl_state_
     buf[n] = 0;
     text = buf;
   }
-  if (text) draw_text_clipped(font, text, &label,
-                             theme_foreground(THEME_PART_MENU_ITEM, state), 0);
+  if (text) draw_text_ellipsized(font, text, label.x, label.y + (label.h - text_char_height(font)) / 2,
+                                MAX(0, label.w), theme_foreground(THEME_PART_MENU_ITEM, state));
 }
 
 #endif
