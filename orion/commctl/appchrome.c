@@ -34,12 +34,15 @@ static void app_chrome_resize_children(window_t *win) {
       width = MAX(width, tb->item_rects[i].x + tb->item_rects[i].w + TOOLBAR_COMPACT_PADDING);
     int menu_width = st->menubar ? send_message(st->menubar, kMenuBarMessageGetContentWidth, 0, NULL) : win->frame.w;
     bool compact = st->menubar && st->menubar->dock && st->menubar->dock->side == DOCK_TOP &&
-                   width + menu_width + menu_h + 8 <= win->frame.w;
+                   width + menu_width + menu_h + TOOLBAR_COMPACT_SPACING - 2 * TOOLBAR_COMPACT_PADDING + 8 <= win->frame.w;
     toolbar_dock_t dock = compact ? TOOLBAR_DOCK_MENU : TOOLBAR_DOCK_TOP;
     bar->toolbar_dock = dock;
     if (compact) {
+      // The menu bar's restore button fills the last menu_h square. Its centre sits one
+      // compact pitch (button + TOOLBAR_COMPACT_SPACING) past the last button's centre.
       irect16_t row = rect_split_top(get_client_rect(win), menu_h);
-      bar->frame = rect_split_right(rect_trim_right(row, menu_h), width);
+      int slot = menu_h + TOOLBAR_COMPACT_SPACING - 2 * TOOLBAR_COMPACT_PADDING;
+      bar->frame = rect_split_right(rect_trim_right(row, slot), width);
       invalidate_window(bar);
     } else {
       send_message(bar, tbSetStyle, TOOLBAR_STYLE_GRIP, NULL);

@@ -252,6 +252,7 @@ enum {
 #define WINDOW_DIALOG       (1 << 10)
 #define WINDOW_TOOLBAR      (1 << 11)
 #define WINDOW_TITLETOOLBAR (1 << 15) // with WINDOW_TOOLBAR: caption and actions share one band
+#define WINDOW_NOCOLLAPSE   (1 << 14) // with WINDOW_TITLETOOLBAR: no collapse/restore button; dock_collapse refuses
 #define WINDOW_STATUSBAR    (1 << 12)
 // Button style flags (analogous to WinAPI BS_* styles)
 // BUTTON_PUSHLIKE: button stays visually pressed while win->value == true (like a toggle/check button)
@@ -447,6 +448,7 @@ typedef struct {
   const char         *text;   // label text, or combobox/textedit initial text
   const char         *tooltip; // tooltip text shown on hover; NULL = none
   uint32_t            color;  // packed 0xAABBGGRR plastic face colour; 0 uses theme accent
+  const char         *checked_icon; // shown instead of icon while checked (tbCheckButton), with no checked highlight
 } toolbar_item_t;
 
 // Tab control messages and notifications (WinAPI TCM_*/TCN_* analogues).

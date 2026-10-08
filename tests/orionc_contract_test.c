@@ -58,6 +58,7 @@ static const char *kValid = ""
   "    <menu name=\"repo\" label=\"Repo\">\n"
   "      <item name=\"refresh\" label=\"Refresh\" shortcut=\"F5;Ctrl+F5\" />\n"
   "      <item name=\"rewind\" label=\"Rewind\" shortcut=\"Home\" />\n"
+  "      <item name=\"forward\" label=\"Go to End\" shortcut=\"End\" />\n"
   "    </menu>\n"
   "  </menus>\n"
   "  <forms>\n"
@@ -75,6 +76,7 @@ void test_valid_manifest_accepted(void) {
     int rc = run_orionc(kValid, "valid", out, sizeof(out));
     ASSERT_EQUAL(rc, 0);
     ASSERT_TRUE(contains(out, "{ FVIRTKEY, AX_KEY_HOME, ID_REPO_REWIND }"));
+    ASSERT_TRUE(contains(out, "{ FVIRTKEY, AX_KEY_END, ID_REPO_FORWARD }"));
     ASSERT_TRUE(contains(out, ".role = WINDOW_ROLE_HOST"));
     ASSERT_TRUE(contains(out, ".role = WINDOW_ROLE_PAGE"));
     ASSERT_TRUE(contains(out, "test_page_toolbar"));
@@ -191,9 +193,10 @@ void test_application_toolbar_declaration(void) {
   char out[12000] = {0};
   const char *valid = "<orion><menus><menu name=\"file\" label=\"File\">"
     "<item name=\"new\" label=\"New\" /></menu></menus>"
-    "<toolbar presentation=\"compact\"><Button command=\"file.new\" icon=\"page-plus\" /></toolbar></orion>";
+    "<toolbar presentation=\"compact\"><Button command=\"file.new\" icon=\"page-plus\" checked-icon=\"page\" /></toolbar></orion>";
   ASSERT_EQUAL(run_orionc(valid, "app_toolbar", out, sizeof(out)), 0);
   ASSERT_TRUE(contains(out, "application_toolbar_t test_application_toolbar"));
+  ASSERT_TRUE(contains(out, "\"page-plus\", 0, 0, NULL, NULL, 0, \"page\" }"));
   ASSERT_TRUE(contains(out, "TOOLBAR_PRESENTATION_COMPACT"));
   ASSERT_FALSE(contains(out, "form_def_t"));
   ASSERT_TRUE(run_orionc("<orion><toolbar presentation=\"tiny\" /></orion>", "bad_presentation", out, sizeof(out)) != 0);

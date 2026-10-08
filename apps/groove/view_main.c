@@ -1,7 +1,9 @@
-// VIEW: the sheet above the library: a filter toolbar over one sound bin.
+// VIEW: the application chrome (menu bar and compact toolbar), then the sheet
+// above the library: a transport and family toolbar over one sound bin.
 
 #include "groove.h"
 #include <orion/gem.h>
+#include <orion/commctl/appchrome.h>
 
 static const accel_t kAccel[] = {
   { FVIRTKEY | FCONTROL, AX_KEY_N,         ID_FILE_NEW  },
@@ -10,6 +12,7 @@ static const accel_t kAccel[] = {
   { FVIRTKEY | FCONTROL, AX_KEY_Q,         ID_FILE_QUIT },
   { FVIRTKEY,            AX_KEY_SPACE,     ID_PLAY      },
   { FVIRTKEY,            AX_KEY_HOME,      ID_REWIND    },
+  { FVIRTKEY,            AX_KEY_END,       ID_FORWARD   },
   { FVIRTKEY,            AX_KEY_L,         ID_LOOP      },
   { FVIRTKEY,            AX_KEY_BACKSPACE, ID_DELETE    },
   { FVIRTKEY,            AX_KEY_DEL,       ID_DELETE    },
@@ -23,15 +26,30 @@ result_t app_menubar_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lp
   return win_menubar(win, msg, wparam, lparam);
 }
 
+// The compact toolbar shares the menu row when it fits (groove.orion <toolbar>).
+static result_t app_toolbar_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  (void)lparam;
+  switch (msg) {
+    case evCreate: return true;
+    case tbButtonClick: app_command((uint16_t)wparam); return true;
+    case evDestroy:
+      if (g_app && g_app->toolbar == win) g_app->toolbar = NULL;
+      return false;
+    default: return false;
+  }
+}
+
 void create_menubar(void) {
 #ifdef BUILD_AS_GEM
   g_app->menubar_win = set_app_menu(app_menubar_proc, kMenus, kNumMenus, app_command, g_app->hinstance);
+  g_app->chrome = create_application_chrome("Groove Chrome", NULL, NULL, 0, app_toolbar_proc,
+                                            &groove_application_toolbar, g_app->hinstance);
 #else
-  g_app->menubar_win = create_window("Menu", WINDOW_NOTITLE | WINDOW_NORESIZE, MAKERECT(0, 0, 1, 1),
-                                     g_app->win, app_menubar_proc, g_app->hinstance, NULL);
-  send_message(g_app->menubar_win, kMenuBarMessageSetMenus, kNumMenus, (void *)kMenus);
-  dock_window(g_app->menubar_win, DOCK_TOP, DOCK_ALL_EDGES, DOCK_MENU, 0, 0);
+  g_app->chrome = create_application_chrome("Groove Chrome", app_menubar_proc, kMenus, kNumMenus, app_toolbar_proc,
+                                            &groove_application_toolbar, g_app->hinstance);
+  g_app->menubar_win = app_chrome_menubar(g_app->chrome);
 #endif
+  g_app->toolbar = app_chrome_toolbar(g_app->chrome);
   g_app->accel = load_accelerators(kAccel, ARRAY_LEN(kAccel));
   if (g_app->menubar_win && g_app->accel) send_message(g_app->menubar_win, kMenuBarMessageSetAccelerators, 0, g_app->accel);
 }
@@ -45,9 +63,9 @@ result_t main_win_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       create_menubar();
       app->sheet = create_window("Arrangement", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_HSCROLL,
                                   MAKERECT(0, 0, 1, 1), win, win_sheet, app->hinstance, NULL);
-      app->library = create_window("Library", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE,
+      app->library = create_window("Library", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE,
                                     MAKERECT(0, 0, 800, 280), win, win_transport, app->hinstance, NULL);
-      dock_window(app->library, DOCK_BOTTOM, DOCK_EDGE(DOCK_TOP) | DOCK_EDGE(DOCK_BOTTOM), DOCK_RESIZABLE, 280, 100);
+      dock_window(app->library, DOCK_BOTTOM, DOCK_EDGE(DOCK_BOTTOM), DOCK_RESIZABLE | DOCK_NOFLOAT, 280, 100);
       dock_window(app->sheet, DOCK_FILL, 0, DOCK_NOFLOAT, 0, 100);
       app->timer = axSetTimer(win, 33, NULL, true);
       return true;
@@ -55,7 +73,8 @@ result_t main_win_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
     case evPaint: return false;
     case evResize: return false;
     case evTimer:
-      if (app->song.playing) invalidate_window(app->sheet);
+      if (app->song.playing || app->shown_playing) invalidate_window(app->sheet);
+      if (app->song.playing != app->shown_playing) transport_refresh(); // the mixer stopped at the song's end
       app->peak_credit = GR_PEAKS_PER_TICK;
       if (app->peaks_pending) {
         app->peaks_pending = false;
@@ -75,6 +94,12 @@ result_t main_win_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
     case evDestroy:
       if (app->accel) free_accelerators(app->accel);
       app->accel = NULL;
+      if (app->chrome) destroy_window(app->chrome);
+      app->chrome = NULL;
+#ifndef BUILD_AS_GEM
+      app->menubar_win = NULL; // owned by the chrome
+#endif
+      app->toolbar = NULL;
       return true;
     default: return false;
   }

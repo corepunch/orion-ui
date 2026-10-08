@@ -293,6 +293,7 @@ void app_command(uint16_t id) {
     case ID_PLAY:     app_set_playing(!s->playing); break;
     case ID_STOP:     app_set_playing(false); app_seek_position(0); break;
     case ID_REWIND:   app_seek_position(0); break;
+    case ID_FORWARD:  app_seek_position(song_length_ticks(s)); break;
     case ID_LOOP:     app_lock(); s->loop = !s->loop; app_unlock(); transport_refresh(); break;
     case ID_WINDOW_LIBRARY:
       show_window(g_app->library, true);

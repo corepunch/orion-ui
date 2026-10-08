@@ -5,6 +5,7 @@
 #include "test_env.h"
 #include "apps/groove/groove.h"
 #include <orion/user/toolbar.h>
+#include <orion/commctl/appchrome.h>
 #include <unistd.h>
 
 static float peak_of(const float *p, int n) { float m = 0; for (int i = 0; i < n; i++) m = fmaxf(m, fabsf(p[i])); return m; }
@@ -47,8 +48,9 @@ static void test_project_io(void) {
   ASSERT_EQUAL(g_app->song.nclips, old_clips);
   ASSERT_EQUAL(g_app->song.bpm, 128);
   f = fopen(bad, "wb"); ASSERT_NOT_NULL(f); fputs("ORION_GROOVE 1\n120 1 0 0 1\n0 2 512 7\n", f); fclose(f);
-  ASSERT_TRUE(app_open_song(bad));
-  ASSERT(g_app->song.nclips == 1 && g_app->song.clips[0].block == 0 && g_app->song.clips[0].position == 512, "loads version 1 projects");
+  ASSERT_FALSE(app_open_song(bad));
+  ASSERT_EQUAL(g_app->song.nclips, old_clips);
+  ASSERT_EQUAL(g_app->song.bpm, 128);
   remove(saved); remove(bad);
   destroy_window(win);
   app_shutdown(g_app);
@@ -461,6 +463,10 @@ static void test_fractional_selection(void) {
   app_load_demo();
   ASSERT(g_app->song.nclips > 0 && song_length_ticks(&g_app->song) == 8 * GR_TICKS_BAR, "demo timing retains its original length");
   for (int i = 0; i < g_app->song.nclips; i++) ASSERT_EQUAL(g_app->song.clips[i].position % GR_TICKS_BAR, 0);
+  app_command(ID_FORWARD);
+  ASSERT(g_app->song.pos == position_frames_for_bpm(8 * GR_TICKS_BAR, g_app->song.bpm), "forward jumps to the end of the song");
+  app_command(ID_REWIND);
+  ASSERT_EQUAL(g_app->song.pos, 0);
   destroy_window(win);
   app_shutdown(g_app);
   test_env_shutdown();
@@ -542,16 +548,16 @@ static int visible_tiles(window_t *page) {
 
 static int library_visible(void) { return visible_tiles(g_app->bin); }
 
-// Index of a library toolbar item, by command ident.
-static int toolbar_index(uint16_t ident) {
-  toolbar_state_t *tb = toolbar_get_state(g_app->library);
-  for (int i = 0; i < tb->item_count; i++) if (tb->items[i].ident == ident) return i;
+// Index of a toolbar item, by command ident.
+static int bar_index(window_t *bar, uint16_t ident) {
+  toolbar_state_t *tb = toolbar_get_state(bar);
+  for (int i = 0; tb && i < tb->item_count; i++) if (tb->items[i].ident == ident) return i;
   return -1;
 }
+static int toolbar_index(uint16_t ident) { return bar_index(g_app->library, ident); }
 
-static void click_toolbar(uint16_t ident) {
-  window_t *bar = g_app->library;
-  int i = toolbar_index(ident);
+static void click_bar(window_t *bar, uint16_t ident) {
+  int i = bar_index(bar, ident);
   ASSERT_TRUE(i >= 0);
   irect16_t r = toolbar_get_state(bar)->item_rects[i];
   ui_event_t event = {.message = kEventLeftButtonDown,
@@ -561,11 +567,13 @@ static void click_toolbar(uint16_t ident) {
   event.message = kEventLeftButtonUp;
   dispatch_message(&event);
 }
+static void click_toolbar(uint16_t ident) { click_bar(g_app->library, ident); }
 
-static bool toolbar_checked(uint16_t ident) {
-  int i = toolbar_index(ident);
-  return i >= 0 && (toolbar_get_state(g_app->library)->items[i].flags & TOOLBAR_BUTTON_FLAG_ACTIVE);
+static bool bar_checked(window_t *bar, uint16_t ident) {
+  int i = bar_index(bar, ident);
+  return i >= 0 && (toolbar_get_state(bar)->items[i].flags & TOOLBAR_BUTTON_FLAG_ACTIVE);
 }
+static bool toolbar_checked(uint16_t ident) { return bar_checked(g_app->library, ident); }
 
 static void test_library_transport(void) {
   TEST("transport and the family buttons share one toolbar row; nested mouse routing reaches every button");
@@ -578,7 +586,12 @@ static void test_library_transport(void) {
   ASSERT_TRUE(!(win->flags & WINDOW_TOOLBAR) && win->toolbar == NULL);
   ASSERT_TRUE(bar && (bar->flags & WINDOW_TOOLBAR) && bar->parent == win);
   ASSERT(get_window_item(bar, ID_GENRE) == NULL, "the genre filter is hidden");
-  ASSERT_EQUAL(g_app->sheet->frame.y, g_app->menubar_win->frame.h);
+  ASSERT((bar->flags & (WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE)) == (WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE) && (bar->dock->flags & DOCK_NOFLOAT),
+         "the library stays docked, with no close or collapse button");
+  ASSERT_EQUAL(g_app->sheet->frame.y, 0);
+  ASSERT(g_app->chrome && g_app->menubar_win && app_chrome_menubar(g_app->chrome) == g_app->menubar_win, "the chrome owns the menu bar");
+  ASSERT(g_app->toolbar == app_chrome_toolbar(g_app->chrome) && bar_index(g_app->toolbar, ID_DELETE) == 0 && bar_index(g_app->toolbar, ID_LOOP) == 1,
+         "delete and loop live on the compact toolbar");
   ASSERT_EQUAL(bar->frame.y, g_app->sheet->frame.y + g_app->sheet->frame.h + DOCK_SPLITTER);
   ASSERT_EQUAL(bar->frame.h, 280);
   ASSERT_TRUE(g_app->bin->parent == bar);
@@ -586,17 +599,21 @@ static void test_library_transport(void) {
   ASSERT_EQUAL(window_screen_y(g_app->bin), window_screen_y(bar) + titlebar_height(bar));
   toolbar_state_t *tb = toolbar_get_state(bar);
   ASSERT_EQUAL(tb->style, TOOLBAR_STYLE_PLASTIC);
+  for (int i = 0; i < tb->item_count; i++) ASSERT(tb->items[i].type != TOOLBAR_ITEM_LABEL, "the merged caption shows no title");
+  ASSERT_EQUAL(toolbar_index(ID_REWIND), 0);
   ASSERT_EQUAL(tb->strip.tex, 0);
-  ASSERT_TRUE(strcmp(tb->items[1].icon, "phosphor-rewind-fill") == 0);
-  ASSERT_TRUE(tb->items[2].color != tb->items[3].color);
-  uint32_t original_color = tb->items[2].color, color = WEB(0x2277bb);
+  ASSERT_TRUE(strcmp(tb->items[toolbar_index(ID_REWIND)].icon, "phosphor-rewind-fill") == 0);
+  ASSERT_TRUE(tb->items[toolbar_index(ID_PLAY)].color != tb->items[toolbar_index(ID_FORWARD)].color);
+  ASSERT(toolbar_index(ID_PLAY) == toolbar_index(ID_REWIND) + 1 && toolbar_index(ID_FORWARD) == toolbar_index(ID_PLAY) + 1, "rewind, play, forward sit together");
+  ASSERT(toolbar_index(ID_STOP) < 0 && toolbar_index(ID_DELETE) < 0, "stop is menu-only and delete moved to the compact toolbar");
+  uint32_t original_color = tb->items[toolbar_index(ID_PLAY)].color, color = WEB(0x2277bb);
   ASSERT_TRUE(send_message(bar, tbSetItemColor, ID_PLAY, &color));
-  ASSERT_EQUAL(tb->items[2].color, color);
+  ASSERT_EQUAL(tb->items[toolbar_index(ID_PLAY)].color, color);
   ASSERT_FALSE(send_message(bar, tbSetItemColor, ID_GENRE, &color));
   ASSERT_FALSE(send_message(bar, tbCheckButton, ID_GENRE, (void *)1));
   ASSERT_FALSE(send_message(bar, tbSetItemColor, 0xffff, &color));
   ASSERT_TRUE(send_message(bar, tbSetItemColor, ID_PLAY, NULL));
-  ASSERT_EQUAL(tb->items[2].color, 0);
+  ASSERT_EQUAL(tb->items[toolbar_index(ID_PLAY)].color, 0);
   ASSERT_TRUE(send_message(bar, tbSetItemColor, ID_PLAY, &original_color));
 
 #ifdef AX_PLATFORM_IOS
@@ -611,34 +628,46 @@ static void test_library_transport(void) {
       ASSERT_TRUE(tb->item_rects[i].x >= 0 && tb->item_rects[i].x + tb->item_rects[i].w <= bar->frame.w);
     }
   }
-  irect16_t r = tb->item_rects[2];
+  irect16_t r = tb->item_rects[toolbar_index(ID_PLAY)];
   ui_event_t event = {.message = kEventLeftButtonDown,
     .x = (window_screen_x(bar) + r.x + r.w / 2) * UI_WINDOW_SCALE,
     .y = (window_screen_y(bar) + r.y + r.h / 2) * UI_WINDOW_SCALE};
   dispatch_message(&event);
   event.message = kEventLeftButtonUp;
   dispatch_message(&event);
-  ASSERT_TRUE(g_app->song.playing && strcmp(tb->items[2].icon, "phosphor-pause-fill") == 0);
-  r = tb->item_rects[4];
-  event.message = kEventLeftButtonDown;
-  event.x = (window_screen_x(bar) + r.x + r.w / 2) * UI_WINDOW_SCALE;
-  dispatch_message(&event);
-  event.message = kEventLeftButtonUp;
-  dispatch_message(&event);
-  ASSERT_FALSE(g_app->song.loop);
-  ASSERT_FALSE(tb->items[4].flags & TOOLBAR_BUTTON_FLAG_ACTIVE);
-  app_command(ID_LOOP);
-  ASSERT_TRUE(tb->items[4].flags & TOOLBAR_BUTTON_FLAG_ACTIVE);
+  ASSERT(g_app->song.playing && toolbar_checked(ID_PLAY), "play checks the play button");
+  ASSERT_TRUE(strcmp(tb->items[toolbar_index(ID_PLAY)].checked_icon, "phosphor-pause-fill") == 0);
+  click_toolbar(ID_PLAY);
+  ASSERT(!g_app->song.playing && !toolbar_checked(ID_PLAY), "pause stops playback and shows play again");
+  click_toolbar(ID_PLAY);
+  g_app->song.playing = false; // the mixer reached the end
+  send_message(win, evTimer, 0, NULL);
+  ASSERT(!toolbar_checked(ID_PLAY), "the next tick shows play once the mixer stops");
+  click_toolbar(ID_PLAY);
+  ASSERT(g_app->song.playing && toolbar_checked(ID_PLAY), "so the button starts playback again");
+  app_set_playing(false);
+  ASSERT(toolbar_index(ID_LOOP) < 0, "loop is not on the library toolbar");
+  resize_window(g_app->chrome, 1000, 700); // the headless display reports no screen size
+  toolbar_state_t *ct = toolbar_get_state(g_app->toolbar);
+  int pitch = ct->item_rects[1].x - ct->item_rects[0].x;
+  int last = g_app->toolbar->frame.x + ct->item_rects[1].x + ct->item_rects[1].w / 2;
+  irect16_t restore = rect_split_right(get_client_rect(g_app->menubar_win), get_client_rect(g_app->menubar_win).h);
+  ASSERT(g_app->toolbar->toolbar_dock == TOOLBAR_DOCK_MENU && restore.x + restore.w / 2 - last == pitch,
+         "compact buttons and the menu bar's restore button share one pitch");
+  ASSERT(g_app->song.loop && bar_checked(g_app->toolbar, ID_LOOP), "a new song loops, and the compact button shows it");
+  ASSERT_TRUE(strcmp(ct->items[1].checked_icon, "arrow-right-to-line") == 0);
+  click_bar(g_app->toolbar, ID_LOOP);
+  ASSERT(!g_app->song.loop && !bar_checked(g_app->toolbar, ID_LOOP), "the compact loop button toggles loop off");
+  click_bar(g_app->toolbar, ID_LOOP);
+  ASSERT(g_app->song.loop && bar_checked(g_app->toolbar, ID_LOOP), "and back on");
   char tooltip[256] = {0};
-  ASSERT_TRUE(send_message(bar->toolbar, evGetTooltipText, MAKEDWORD(r.x + 4, r.y + 4), tooltip));
-  ASSERT_TRUE(strcmp(tooltip, "Loop (L)") == 0);
   resize_window(win, SCREEN_W, 700);
   r = tb->item_rects[toolbar_index(ID_FAMILY(CAT_GUITAR))];
   ASSERT(send_message(bar->toolbar, evGetTooltipText, MAKEDWORD(r.x + 4, r.y + 4), tooltip) &&
          strcmp(tooltip, kCategoryName[CAT_GUITAR]) == 0, "a family button names its family");
   click_toolbar(ID_FAMILY(CAT_GUITAR));
   ASSERT(g_app->category == CAT_GUITAR && library_visible() > 0 && library_visible() < blocks_count(), "a routed family click switches the library");
-  ASSERT(g_app->song.loop && toolbar_checked(ID_LOOP) && toolbar_checked(ID_FAMILY(CAT_GUITAR)), "the family check leaves Loop checked");
+  ASSERT(g_app->song.loop && bar_checked(g_app->toolbar, ID_LOOP) && toolbar_checked(ID_FAMILY(CAT_GUITAR)), "the family check leaves Loop checked");
   destroy_window(win);
   app_shutdown(g_app);
   test_env_shutdown();

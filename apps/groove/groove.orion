@@ -25,6 +25,7 @@
         <item name="play" label="Play / Pause" shortcut="Space" />
         <item name="stop" label="Stop" />
         <item name="rewind" label="Rewind" shortcut="Home" />
+        <item name="forward" label="Go to End" shortcut="End" />
         <item name="loop" label="Loop" shortcut="L" />
       </menu>
       <menu name="window" label="Window">
@@ -32,4 +33,9 @@
         <item name="reset" label="Reset Workspace" />
       </menu>
     </menus>
+
+    <toolbar presentation="compact">
+        <Button name="delete" command="edit.delete" icon="trash" text="Delete" tooltip="Remove selected block (Delete)" />
+        <Button name="loop" command="transport.loop" icon="repeat" checked-icon="arrow-right-to-line" text="Loop" tooltip="Loop (L)" />
+    </toolbar>
 </orion>

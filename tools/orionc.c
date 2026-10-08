@@ -325,6 +325,7 @@ static bool parse_hotkey(const char *spec, char *fvirt, size_t fv_cap,
   else if (eq(keyname, "BACKSPACE")) snprintf(k, sizeof(k), "AX_KEY_BACKSPACE");
   else if (eq(keyname, "TAB")) snprintf(k, sizeof(k), "AX_KEY_TAB");
   else if (eq(keyname, "HOME")) snprintf(k, sizeof(k), "AX_KEY_HOME");
+  else if (eq(keyname, "END")) snprintf(k, sizeof(k), "AX_KEY_END");
   else if (eq(keyname, "PAGE UP")) snprintf(k, sizeof(k), "AX_KEY_PGUP");
   else if (eq(keyname, "PAGE DOWN")) snprintf(k, sizeof(k), "AX_KEY_PGDN");
   else if (eq(keyname, "DELETE") || eq(keyname, "DEL")) snprintf(k, sizeof(k), "AX_KEY_DEL");
@@ -491,17 +492,18 @@ static void emit_toolbar(FILE *f, xmlNodePtr toolbar, const char *symbol,
     char scope[128]; ident(scope, sizeof(scope), scope_name, true);
     OUT("static const toolbar_item_t %s[] = {\n", symbol);
     EACH_ELEMENT(it, toolbar) if (toolbar_type(it)) {
-      char *command = attr(it, "command"), *menu = attr(it, "menu"), *name = attr(it, "name"), *icon = attr(it, "icon"), *w = attr(it, "w"), *flags = attr(it, "flags"), *text = attr(it, "text"), *tooltip = attr(it, "tooltip");
-      char id[256] = "0", textq[ORIONC_STRING_SIZE], tipq[ORIONC_STRING_SIZE], iconq[256];
+      char *command = attr(it, "command"), *menu = attr(it, "menu"), *name = attr(it, "name"), *icon = attr(it, "icon"), *w = attr(it, "w"), *flags = attr(it, "flags"), *text = attr(it, "text"), *tooltip = attr(it, "tooltip"), *checked = attr(it, "checked-icon");
+      char id[256] = "0", textq[ORIONC_STRING_SIZE], tipq[ORIONC_STRING_SIZE], iconq[256], checkedq[260] = "";
       if (!elem(it, "separator") && !elem(it, "spacer"))
         resolve_action(id, sizeof(id), command, menu, scope, name, text);
       if (text && *text) cstr(textq, sizeof(textq), text); else snprintf(textq, sizeof(textq), "NULL");
       if (tooltip && *tooltip) cstr(tipq, sizeof(tipq), tooltip); else snprintf(tipq, sizeof(tipq), "NULL");
       if (icon && *icon) snprintf(iconq, sizeof(iconq), "\"%s\"", icon); else snprintf(iconq, sizeof(iconq), "NULL");
+      if (checked && *checked) snprintf(checkedq, sizeof(checkedq), ", 0, \"%s\"", checked); // color, checked_icon
       emit_if(f, it, false);
-      OUT("  { %s, %s, %s, %s, %s, %s, %s },\n", toolbar_type(it), id, iconq, nz(w, "0"), nz(flags, "0"), textq, tipq);
+      OUT("  { %s, %s, %s, %s, %s, %s, %s%s },\n", toolbar_type(it), id, iconq, nz(w, "0"), nz(flags, "0"), textq, tipq, checkedq);
       emit_if(f, it, true);
-      free(command); free(menu); free(name); free(icon); free(w); free(flags); free(text); free(tooltip);
+      free(command); free(menu); free(name); free(icon); free(w); free(flags); free(text); free(tooltip); free(checked);
     }
     OUT("};\n\n");
   }
