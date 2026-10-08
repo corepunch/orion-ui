@@ -7,7 +7,7 @@
 //   - Layer name
 //
 // A WINDOW_TOOLBAR at the top provides: New, Duplicate, Delete, Move Up,
-// Move Down via sysicon_* icons.  The toolbar fires tbButtonClick with the
+// Move Down via sysicon_* icons.  The toolbar sends evCommand(btnClicked) with the
 // corresponding ID_LAYER_* command ident, which is forwarded to
 // handle_menu_command() — the same handler used by the Layer menu.
 //

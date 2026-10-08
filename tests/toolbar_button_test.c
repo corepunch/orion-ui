@@ -46,7 +46,7 @@ static void simulate_click(window_t *btn) {
 // ---- tests -------------------------------------------------------------- //
 
 void test_toolbar_button_click(void) {
-    TEST("win_toolbar_button: left-click fires tbButtonClick");
+    TEST("win_toolbar_button: left-click fires evCommand(btnClicked)");
 
     test_env_init();
     test_env_enable_tracking(true);
@@ -75,7 +75,7 @@ void test_toolbar_button_click(void) {
 }
 
 void test_toolbar_button_keyboard_return(void) {
-    TEST("win_toolbar_button: RETURN key fires tbButtonClick");
+    TEST("win_toolbar_button: RETURN key fires evCommand(btnClicked)");
 
     test_env_init();
     test_env_enable_tracking(true);
@@ -106,7 +106,7 @@ void test_toolbar_button_keyboard_return(void) {
 }
 
 void test_toolbar_button_keyboard_space(void) {
-    TEST("win_toolbar_button: SPACE key fires tbButtonClick");
+    TEST("win_toolbar_button: SPACE key fires evCommand(btnClicked)");
 
     test_env_init();
     test_env_enable_tracking(true);

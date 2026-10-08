@@ -163,7 +163,7 @@ descriptor containing items, count, and presentation. Pass it to
 `create_application_chrome(title, menubar_proc, menus, menu_count, toolbar_proc,
 &imageeditor_application_toolbar, hinstance)`. Application chrome loads the
 items and owns layout and lifetime; `toolbar_proc` handles the existing
-`tbButtonClick` commands. There is no synthetic toolbar form or separate item
+`btnClicked` commands. There is no synthetic toolbar form or separate item
 loading in the application's `evCreate` handler.
 
 Only one root toolbar is allowed. Unknown presentations and unresolved command

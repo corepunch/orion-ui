@@ -698,7 +698,7 @@ void test_ie_tool_selection_via_command(void) {
 
 // Reopened tool window reflects the current (non-default) tool selection.
 void test_ie_reopen_tool_window_syncs_active_tool(void) {
-    TEST("ID_WINDOW_TOOLS after close: current tool preserved and tbSetActiveButton sent");
+    TEST("ID_WINDOW_TOOLS after close: current tool preserved and tbCheckButton sent");
 
     ie_setup();
     ie_create_palette_windows();
@@ -714,7 +714,7 @@ void test_ie_reopen_tool_window_syncs_active_tool(void) {
     ASSERT_NOT_NULL(g_app->tool_win);
 
     // g_app->current_tool must still reflect the active tool, and the new
-    // window must exist (tbSetActiveButton is sent on creation).
+    // window must exist (tbCheckButton is sent on creation).
     ASSERT_EQUAL(g_app->current_tool, ID_TOOL_PENCIL);
     ASSERT_TRUE(is_window(g_app->tool_win));
 
