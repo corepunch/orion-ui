@@ -403,7 +403,7 @@ static theme_t g_modern_theme = {
   .badge_corner_radius       = 5,
   .badge_tint_alpha          = 0x40,
   .tooltip_corner_radius = 6, .tooltip_tail_size = 6,
-  .multiline_field_corner_radius = 6,
+  .multiline_field_corner_radius = (CONTROL_HEIGHT_REGULAR + 1) / 2,
   .tooltip_padding_x = 8, .tooltip_padding_y = 5, .tooltip_gap = 2, .tooltip_shadow_size = 10,
   .tooltip_shadow_blur = 2, .tooltip_shadow_offset = {0, 3},
   .toolbar_compact_padding   = 2,

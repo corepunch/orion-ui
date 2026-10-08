@@ -238,7 +238,7 @@ typedef struct {
   int badge_padding, badge_corner_radius; // Badge: horizontal text inset and corner radius
   int badge_tint_alpha;      // Badge: alpha of the tinted face behind the text (0..255)
   int tooltip_corner_radius, tooltip_tail_size;
-  int multiline_field_corner_radius;
+  int multiline_field_corner_radius; // derived from the single-line control height
   int tooltip_padding_x, tooltip_padding_y, tooltip_gap, tooltip_shadow_size;
   int tooltip_shadow_blur;
   ipoint16_t tooltip_shadow_offset;
