@@ -200,8 +200,15 @@ Scener's reel renderer (`apps/scener/reel_draw.c`) is the reference user.
 
 ### Procedural plastic surfaces
 
-`draw_plastic_button(rect, state, color, icon, control_size)` draws a tinted plastic button and
-solid white SVG glyph in one shader pass. `color` is packed `0xAABBGGRR`; zero
+Plastic is a theme material, reached through the theme like every other look:
+`theme_draw_ex(part, rect, state | CTRL_PLASTIC, &(theme_draw_opts_t){.color, .icon, .control_size, .round})`
+for `THEME_PART_BUTTON`, `THEME_PART_TOOLBAR_BUTTON` and `THEME_PART_CARD`. Buttons opt in with
+`WINDOW_PLASTIC` (and `WINDOW_ROUND` for a circular silhouette); toolbars with `TOOLBAR_STYLE_PLASTIC`.
+`theme_content_rect(THEME_PART_CARD, rect, state | CTRL_PLASTIC)` returns the area left for content.
+The material comes from `theme_t.plastic` (`gloss`, `rim`, `ink`, `lift`, `glyph_size`, `shadow_color`)
+and reaches the shader as uniforms; the kernel entry `render_plastic_surface` takes a `plastic_look_t`
+of floats and never sees `ctrl_state_t`. `draw_plastic_button` below is the framework painter behind it:
+it draws a tinted plastic button and solid white SVG glyph in one shader pass. `color` is packed `0xAABBGGRR`; zero
 uses `brAccent`. Icon names use the SVG cache at their final draw size, avoiding a second scaling
 of the glyph mask. `CONTROL_SIZE_LARGE` rasterizes the glyph `CONTROL_LARGE_GROWTH` pixels
 bigger; toolbar items carrying that flag are the same amount bigger, centred on their row. Glyph placement and press offsets snap to device pixels, and
@@ -218,6 +225,6 @@ to half the face size, allowing rounded rectangles, capsules and circles;
 AppKit's circular bezel. SDF
 antialiasing uses screen derivatives to follow display density and transforms.
 
-`draw_plastic_card(rect, state, color)` uses the same shader with the theme's
+`draw_plastic_card(rect, state, color)` (also reached via `THEME_PART_CARD`) uses the same shader with the theme's
 card radius and a shallow bevel, without a glyph. Waveforms and labels remain
 ordinary content drawn over the procedural surface.
