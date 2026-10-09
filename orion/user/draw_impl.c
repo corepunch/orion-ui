@@ -275,20 +275,33 @@ void fill_rounded_rect(uint32_t color, irect16_t r, int radius) {
                       (int)(r.h * scale + 0.5f), radius * scale, 1.0f, color);
 }
 
-void draw_tooltip_bubble(irect16_t r, int tail_x, bool tail_on_top) {
+irect16_t tooltip_bubble_body_rect(irect16_t r, tooltip_tail_side_t side) {
+  const theme_t *theme = get_theme();
+  r = rect_inset(r, theme->tooltip_shadow_size);
+  switch (side) {
+    case TOOLTIP_TAIL_TOP:    return rect_trim_top(r, theme->tooltip_tail_size);
+    case TOOLTIP_TAIL_BOTTOM: return rect_trim_bottom(r, theme->tooltip_tail_size);
+    case TOOLTIP_TAIL_LEFT:   return rect_trim_left(r, theme->tooltip_tail_size);
+    case TOOLTIP_TAIL_RIGHT:  return rect_trim_right(r, theme->tooltip_tail_size);
+  }
+  fprintf(stderr, "[draw] invalid tooltip tail side=%d\n", side);
+  fflush(stderr);
+  return R(0, 0, 0, 0);
+}
+
+void draw_tooltip_bubble(irect16_t r, int tail_offset, tooltip_tail_side_t side) {
   const theme_t *theme = get_theme();
   int pad = theme->tooltip_shadow_size;
   float scale = ui_surface_scale();
   isize16_t size = { (int)((r.w - 2 * pad) * scale), (int)((r.h - 2 * pad) * scale) };
   if (size.w <= 0 || size.h <= 0) return;
-  irect16_t body = rect_inset(r, pad);
-  if (tail_on_top) body = rect_trim_top(body, theme->tooltip_tail_size);
-  else body = rect_trim_bottom(body, theme->tooltip_tail_size);
+  irect16_t body = tooltip_bubble_body_rect(r, side);
+  if (body.w <= 0 || body.h <= 0) return;
   draw_rect_shadow(body, theme->tooltip_corner_radius, theme->tooltip_shadow_blur,
                     theme->tooltip_shadow_offset, color_with_alpha(get_sys_color(brDarkEdge), 120));
   render_tooltip_bubble(r, size, theme->tooltip_corner_radius * scale,
-                       theme->tooltip_tail_size * scale * (tail_on_top ? 1 : -1),
-                       (tail_x - pad) * scale, pad * scale,
+                       theme->tooltip_tail_size * scale,
+                       (tail_offset - pad) * scale, pad * scale, side,
                        get_sys_color(brPanelDark));
 }
 

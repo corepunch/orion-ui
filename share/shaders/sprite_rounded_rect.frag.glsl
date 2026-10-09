@@ -22,11 +22,13 @@ float triangleSDF(vec2 p, vec2 a, vec2 b, vec2 c) {
 }
 
 float bubbleSDF(vec2 p) {
+  vec2 extent = size;
+  if (params0.z > 2.5) { p = p.yx; extent = extent.yx; }
   float tail = abs(params0.w), top = params0.w > 0.0 ? tail : 0.0;
-  vec2 body = vec2(size.x, size.y - tail);
+  vec2 body = vec2(extent.x, extent.y - tail);
   float box = roundedBoxSDF(p - vec2(body.x * 0.5, top + body.y * 0.5), body * 0.5, radius);
   float base = params0.w > 0.0 ? tail + 0.5 : body.y - 0.5;
-  float tip = params0.w > 0.0 ? 0.0 : size.y;
+  float tip = params0.w > 0.0 ? 0.0 : extent.y;
   float tri = triangleSDF(p, vec2(params1.w - tail, base), vec2(params1.w + tail, base), vec2(params1.w, tip));
   return min(box, tri);
 }

@@ -25,6 +25,7 @@ void    toolbar_set_dock_hint(window_t *win, uint8_t hint);
 int toolbar_effective_bsz(window_t const *win);
 int toolbar_effective_item_height(window_t const *win);
 int toolbar_effective_padding(window_t const *win);
+irect16_t toolbar_band_rect(const window_t *win);           // window-local painted band, excluding the caption
 
 bool toolbar_merged_title(const window_t *win);
 int toolbar_content_offset(const window_t *win);

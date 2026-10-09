@@ -637,21 +637,26 @@ int toolbar_effective_item_height(window_t const *win) {
   return height;
 }
 
+irect16_t toolbar_band_rect(const window_t *win) {
+  toolbar_state_t *tb = window_toolbar_state((window_t *)win);
+  int height = tb && (tb->style & TOOLBAR_STYLE_WRAPABLE) ? win->frame.h
+               : toolbar_effective_item_height(win) + 2 * toolbar_effective_padding(win);
+  return R(0, toolbar_content_offset(win), win->frame.w, height);
+}
+
 void toolbar_draw_non_client(window_t *win) {
   if (!win || !(win->flags & WINDOW_TOOLBAR)) return;
 
   toolbar_state_t *tb = toolbar_ensure_state(win);
   window_t *root = get_root_window(win);
-  int bsz = toolbar_effective_item_height(win);
-  int title_h = toolbar_content_offset(win);
-  int total_h = (tb && (tb->style & TOOLBAR_STYLE_WRAPABLE)) ? win->frame.h
-                : bsz + 2 * toolbar_effective_padding(win);
+  irect16_t band = toolbar_band_rect(win);
+  int total_h = band.h;
   int root_x = window_screen_x(win) - root->frame.x;
   int root_y = window_screen_y(win) - root->frame.y;
   int lift_x, lift_y;
   window_lift_offset(win, &lift_x, &lift_y);
   root_x += lift_x; root_y += lift_y;
-  irect16_t tb_rect = {root_x, root_y + title_h, win->frame.w, total_h};
+  irect16_t tb_rect = rect_offset(band, root_x, root_y);
 
   set_viewport_for_fbo(root);
   set_scissor_fbo(root, R(0, 0, root->frame.w, root->frame.h));

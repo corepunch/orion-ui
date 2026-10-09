@@ -850,7 +850,8 @@ int dialog_pull_command(window_t *win, void *state,
 
 // ── Tooltip API ───────────────────────────────────────────────────────────────
 // Tooltips are shown immediately on hover for controls and toolbar items,
-// including disabled controls. Bubbles point at the element and flip at edges.
+// including disabled controls. Toolbar bubbles point inward from their dock edge;
+// other controls prefer above. Bubbles point at the element and flip at screen edges.
 // The tooltip text follows the "Name (Hotkey)" convention used by WinAPI apps.
 //
 // tooltip_update() is called from event.c on every kEventMouseMoved; callers

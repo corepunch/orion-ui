@@ -128,12 +128,17 @@ Icon IDs are defined in the `icon8_t` / `icon16_t` enums in `messages.h`.
 
 ### Tooltip bubbles
 
-`draw_tooltip_bubble(rect, tail_x, tail_on_top)` draws a rounded face and attached
+`draw_tooltip_bubble(rect, tail_offset, side)` draws a rounded face and attached
 tail in one fill pass. Its shadow reuses `draw_rect_shadow()` on the rectangular
 body, with a downward offset; the tail does not change shadow rendering.
-`rect` includes the theme's shadow margin, and `tail_x` is relative to that
-rectangle. The theme supplies the geometry and spacing. The framework uses
-this primitive for all standard tooltips.
+`rect` includes the theme's shadow margin, and `tail_offset` is relative to that
+rectangle along the arrow's edge. `side` is `TOOLTIP_TAIL_TOP`, `BOTTOM`, `LEFT`,
+or `RIGHT`. `tooltip_bubble_body_rect(rect, side)` returns the body without the
+shadow margin or arrow, for laying out text. The theme supplies the geometry
+and spacing. Toolbar tooltips appear toward the workspace: right of a left
+toolbar, left of a right toolbar, below a top toolbar, and above a bottom toolbar.
+They flip to the opposite side when needed to stay on-screen. Other controls
+prefer a tooltip above the element. All tooltips appear immediately.
 
 ### Small Bitmap Font (6x8 pixels)
 

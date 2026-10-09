@@ -12,10 +12,12 @@
 void fill_rect(uint32_t color, irect16_t r);
 void fill_rounded_rect(uint32_t color, irect16_t r, int radius);
 // One rounded bubble face and tail over the existing rounded rectangle shadow.
-// r includes tooltip_shadow_size on every side; tail_x is measured within r.
-void draw_tooltip_bubble(irect16_t r, int tail_x, bool tail_on_top);
+typedef enum { TOOLTIP_TAIL_TOP, TOOLTIP_TAIL_BOTTOM, TOOLTIP_TAIL_LEFT, TOOLTIP_TAIL_RIGHT } tooltip_tail_side_t;
+// r includes tooltip_shadow_size on every side; tail_offset is measured along that side within r.
+irect16_t tooltip_bubble_body_rect(irect16_t r, tooltip_tail_side_t side);
+void draw_tooltip_bubble(irect16_t r, int tail_offset, tooltip_tail_side_t side);
 void render_tooltip_bubble(irect16_t r, isize16_t face_size, float radius, float tail,
-                          float tail_x, float padding, uint32_t color);
+                          float tail_offset, float padding, tooltip_tail_side_t side, uint32_t color);
 // Vertical, linear-light gradient with one rounded silhouette; radius 0 fills a row.
 void fill_gradient_rounded_rect(uint32_t top, uint32_t bottom, irect16_t r, int radius);
 void render_rounded_rect_gradient(int tex, irect16_t r, int pixel_w, int pixel_h,

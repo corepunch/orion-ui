@@ -6,6 +6,8 @@
 #include "messages.h"
 #include "draw.h"
 #include "text.h"
+#include "toolbar.h"
+#include "dock.h"
 
 #define TOOLTIP_MAX_WIDTH 360
 
@@ -13,8 +15,37 @@ static window_t *g_tooltip_win;
 static window_t *g_tooltip_src;
 static char g_tooltip_text[256];
 static irect16_t g_tooltip_anchor;
-static int g_tooltip_tail_x;
-static bool g_tooltip_tail_on_top;
+static irect16_t g_tooltip_bar_rect;
+static int g_tooltip_tail_offset;
+static tooltip_tail_side_t g_tooltip_preferred_side, g_tooltip_tail_side;
+
+static tooltip_tail_side_t tooltip_preferred_side(window_t *src, irect16_t *bounds) {
+  for (window_t *win = src; win; win = win->parent) {
+    window_t *owner = NULL;
+    if (win->parent && win->parent->toolbar == win) owner = win->parent;
+    else if (win == src && (win->flags & WINDOW_TOOLBAR)) owner = win;
+    else if (win->parent) {
+      toolbar_state_t *tb = toolbar_get_state(win->parent);
+      for (window_t *child = tb ? tb->children : NULL; child; child = child->next)
+        if (child == win) { owner = win->parent; break; }
+    }
+    if (!owner) continue;
+    *bounds = rect_offset(toolbar_band_rect(owner), window_screen_x(owner), window_screen_y(owner));
+    dock_side_t side = owner->dock ? owner->dock->side : DOCK_FLOAT;
+    if (side == DOCK_FLOAT && owner->dock) side = owner->dock->last_side;
+    toolbar_state_t *tb = toolbar_get_state(owner);
+    if (side == DOCK_FLOAT || side == DOCK_FILL)
+      side = tb && tb->orientation == TOOLBAR_VERTICAL ? DOCK_LEFT : DOCK_TOP;
+    switch (side) {
+      case DOCK_LEFT:   return TOOLTIP_TAIL_LEFT;
+      case DOCK_RIGHT:  return TOOLTIP_TAIL_RIGHT;
+      case DOCK_TOP:    return TOOLTIP_TAIL_TOP;
+      case DOCK_BOTTOM: return TOOLTIP_TAIL_BOTTOM;
+      default:         break;
+    }
+  }
+  return TOOLTIP_TAIL_BOTTOM;
+}
 
 static bool tooltip_source_visible(window_t *src) {
   if (!is_window(src)) return false;
@@ -32,20 +63,36 @@ static void tooltip_show(window_t *win) {
   int pad = theme->tooltip_shadow_size;
   int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
   int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
-  int max_text = MAX(1, MIN(TOOLTIP_MAX_WIDTH, sw - 2 * (pad + theme->tooltip_padding_x)));
+  bool horizontal = g_tooltip_preferred_side == TOOLTIP_TAIL_LEFT || g_tooltip_preferred_side == TOOLTIP_TAIL_RIGHT;
+  int tail = theme->tooltip_tail_size;
+  int max_text = MAX(1, MIN(TOOLTIP_MAX_WIDTH, sw - 2 * (pad + theme->tooltip_padding_x) - (horizontal ? tail : 0)));
   int tw = MAX(1, MIN(text_strwidth(FONT_SMALL, g_tooltip_text), max_text));
   int th = calc_text_height_font(FONT_SMALL, g_tooltip_text, tw);
-  int w = tw + 2 * (pad + theme->tooltip_padding_x);
-  w = MAX(w, 2 * (pad + theme->tooltip_corner_radius + theme->tooltip_tail_size));
-  int h = th + 2 * (pad + theme->tooltip_padding_y) + theme->tooltip_tail_size;
-  int center = g_tooltip_anchor.x + g_tooltip_anchor.w / 2;
-  int x = MAX(0, MIN(center - w / 2, sw - w));
-  int y = g_tooltip_anchor.y - theme->tooltip_gap - h + pad;
-  g_tooltip_tail_on_top = y < 0;
-  if (g_tooltip_tail_on_top) y = g_tooltip_anchor.y + g_tooltip_anchor.h + theme->tooltip_gap - pad;
+  int margin = pad + theme->tooltip_corner_radius + tail;
+  int w = tw + 2 * (pad + theme->tooltip_padding_x) + (horizontal ? tail : 0);
+  int h = th + 2 * (pad + theme->tooltip_padding_y) + (horizontal ? 0 : tail);
+  if (horizontal) h = MAX(h, 2 * margin);
+  else w = MAX(w, 2 * margin);
+  ipoint16_t center = {g_tooltip_anchor.x + g_tooltip_anchor.w / 2, g_tooltip_anchor.y + g_tooltip_anchor.h / 2};
+  irect16_t bar = g_tooltip_bar_rect;
+  int gap = theme->tooltip_gap - pad;
+  int x = center.x - w / 2, y = center.y - h / 2;
+  g_tooltip_tail_side = g_tooltip_preferred_side;
+  if (horizontal) {
+    int left = bar.x - gap - w, right = bar.x + bar.w + gap;
+    x = g_tooltip_tail_side == TOOLTIP_TAIL_LEFT ? right : left;
+    if (x < 0 && right + w <= sw) { x = right; g_tooltip_tail_side = TOOLTIP_TAIL_LEFT; }
+    else if (x + w > sw && left >= 0) { x = left; g_tooltip_tail_side = TOOLTIP_TAIL_RIGHT; }
+  } else {
+    int top = bar.y - gap - h, bottom = bar.y + bar.h + gap;
+    y = g_tooltip_tail_side == TOOLTIP_TAIL_TOP ? bottom : top;
+    if (y < 0 && bottom + h <= sh) { y = bottom; g_tooltip_tail_side = TOOLTIP_TAIL_TOP; }
+    else if (y + h > sh && top >= 0) { y = top; g_tooltip_tail_side = TOOLTIP_TAIL_BOTTOM; }
+  }
+  x = MAX(0, MIN(x, sw - w));
   y = MAX(0, MIN(y, sh - h));
-  int margin = pad + theme->tooltip_corner_radius + theme->tooltip_tail_size;
-  g_tooltip_tail_x = MAX(margin, MIN(center - x, w - margin));
+  g_tooltip_tail_offset = horizontal ? MAX(margin, MIN(center.y - y, h - margin))
+                                      : MAX(margin, MIN(center.x - x, w - margin));
   win->frame = R(x, y, w, h);
   snprintf(win->title, sizeof(win->title), "%s", g_tooltip_text);
   show_window(win, true);
@@ -62,12 +109,10 @@ static result_t tooltip_win_proc(window_t *win, uint32_t msg, uint32_t wparam, v
       return true;
     case evPaint: {
       const theme_t *theme = get_theme();
-      draw_tooltip_bubble(R(0, 0, win->frame.w, win->frame.h), g_tooltip_tail_x, g_tooltip_tail_on_top);
-      int pad = theme->tooltip_shadow_size;
-      irect16_t text = rect_inset_xy(R(0, 0, win->frame.w, win->frame.h),
-                                     pad + theme->tooltip_padding_x, pad + theme->tooltip_padding_y);
-      if (g_tooltip_tail_on_top) text = rect_trim_top(text, theme->tooltip_tail_size);
-      else text = rect_trim_bottom(text, theme->tooltip_tail_size);
+      irect16_t bounds = R(0, 0, win->frame.w, win->frame.h);
+      draw_tooltip_bubble(bounds, g_tooltip_tail_offset, g_tooltip_tail_side);
+      irect16_t text = rect_inset_xy(tooltip_bubble_body_rect(bounds, g_tooltip_tail_side),
+                                     theme->tooltip_padding_x, theme->tooltip_padding_y);
       draw_text_wrapped(win->title, &text, get_sys_color(brTextNormal));
       return true;
     }
@@ -95,11 +140,16 @@ void tooltip_update(window_t *src_win, const char *text, int sx, int sy) {
   if (send_message(src_win, evGetTooltipRect, MAKEDWORD(cx, cy), &part))
     anchor = rect_offset(part, ox - (int)src_win->hscroll.pos,
                          oy + titlebar_height(src_win) - (int)src_win->vscroll.pos);
+  irect16_t bar = anchor;
+  tooltip_tail_side_t side = tooltip_preferred_side(src_win, &bar);
   if (g_tooltip_src == src_win && !memcmp(&anchor, &g_tooltip_anchor, sizeof(anchor)) &&
+      !memcmp(&bar, &g_tooltip_bar_rect, sizeof(bar)) && side == g_tooltip_preferred_side &&
       !strcmp(g_tooltip_text, text)) return;
   tooltip_cancel();
   g_tooltip_src = src_win;
   g_tooltip_anchor = anchor;
+  g_tooltip_bar_rect = bar;
+  g_tooltip_preferred_side = side;
   snprintf(g_tooltip_text, sizeof(g_tooltip_text), "%s", text);
   if (!is_window(g_tooltip_win))
     g_tooltip_win = create_window("", WINDOW_NOTITLE | WINDOW_NORESIZE | WINDOW_ALWAYSONTOP |
