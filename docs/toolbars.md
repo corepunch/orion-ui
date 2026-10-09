@@ -6,6 +6,35 @@ canonical way to build application-level and per-window toolbars.
 
 ## Overview
 
+### Activity bars
+
+An activity bar is a vertical navigation toolbar. It uses the same button size
+as PencilTest's tool palette (`TB_SPACING`), theme painting, tooltips, and
+`TBSTYLE_CHECKGROUP` selection that Groove uses for its instrument filters.
+Buttons send ordinary `evCommand` / `btnClicked` notifications to the parent;
+the app decides whether that command selects a page, a tool, or a filter.
+
+Declare its items in the form, using existing commands when appropriate:
+
+```xml
+<ActivityBar name="activity">
+  <Toolbar>
+    <Button command="view.overview" icon="view-grid" checked-icon="view-grid-fill" text="Overview" tooltip="Overview (Ctrl+0)" />
+    <Button command="view.changes" icon="git-commit" text="Changes" tooltip="Changes (Ctrl+1)" />
+  </Toolbar>
+</ActivityBar>
+```
+
+`ActivityBar` is registered with both the runtime and FormEditor. Its buttons
+automatically form radio groups. Use `tbCheckButton` to synchronize selection
+when a menu or accelerator changes the active view. Supply `checked-icon` for
+an authored filled variant while selected; `icon` remains the outline variant.
+Dock the control with
+`DOCK_LEFT`, `DOCK_TOOLBAR | DOCK_NOFLOAT`; dock the app's pages with `DOCK_FILL`
+and show the active page. The dock manager owns sizing and resizing.
+
+### Toolbar bands
+
 ```text
 ┌─────────────────────────────────────────────────────┐
 │  Menu bar                                           │

@@ -849,7 +849,7 @@ int dialog_pull_command(window_t *win, void *state,
                         uint16_t command);
 
 // ── Tooltip API ───────────────────────────────────────────────────────────────
-// Tooltips are shown after a short hover delay for controls and toolbar items,
+// Tooltips are shown immediately on hover for controls and toolbar items,
 // including disabled controls. Bubbles point at the element and flip at edges.
 // The tooltip text follows the "Name (Hotkey)" convention used by WinAPI apps.
 //
@@ -861,13 +861,13 @@ int dialog_pull_command(window_t *win, void *state,
 
 // Update the tooltip for the currently hovered control.
 // src_win — the window acting as source (NULL = no tooltip).
-// text    — text to show; NULL or "" cancels any pending tooltip.
+// text    — text to show; NULL or "" hides the tooltip.
 // sx, sy  — pointer screen coordinates used to identify a source sub-element.
 // evGetTooltipRect optionally returns that sub-element's content-space bounds;
 // otherwise the whole control is the anchor. Popup placement never follows the pointer.
 void tooltip_update(window_t *src_win, const char *text, int sx, int sy);
 
-// Immediately hide any visible tooltip and disarm the pending show-timer.
+// Immediately hide any visible tooltip.
 void tooltip_cancel(void);
 
 #endif

@@ -411,6 +411,13 @@ static void collect_control_ids(ids_t *ids, xmlNodePtr parent, const char *form)
   }
 }
 
+static void collect_activitybar_ids(ids_t *ids, cmd_refs_t *refs, xmlNodePtr parent, const char *scope) {
+  EACH_ELEMENT(c, parent) if (is_control(parent, c)) {
+    if (elem(c, "activitybar")) collect_toolbar_ids(ids, refs, child(c, "toolbar"), scope);
+    collect_activitybar_ids(ids, refs, c, scope);
+  }
+}
+
 static int count_menu_items(xmlNodePtr menu) {
   int n = 0; EACH_ELEMENT(it, menu) if (elem(it, "item") || elem(it, "separator") || elem(it, "submenu")) n++; return n;
 }
@@ -501,11 +508,28 @@ static void emit_toolbar(FILE *f, xmlNodePtr toolbar, const char *symbol,
       if (icon && *icon) snprintf(iconq, sizeof(iconq), "\"%s\"", icon); else snprintf(iconq, sizeof(iconq), "NULL");
       if (checked && *checked) snprintf(checkedq, sizeof(checkedq), ", 0, \"%s\"", checked); // color, checked_icon
       emit_if(f, it, false);
-      OUT("  { %s, %s, %s, %s, %s, %s, %s%s },\n", toolbar_type(it), id, iconq, nz(w, "0"), nz(flags, "0"), textq, tipq, checkedq);
+      OUT("  { %s, %s, %s, %s, %s%s, %s, %s%s },\n", toolbar_type(it), id, iconq, nz(w, "0"), nz(flags, "0"),
+          elem(toolbar->parent, "activitybar") && elem(it, "button") ? " | TBSTYLE_CHECKGROUP" : "", textq, tipq, checkedq);
       emit_if(f, it, true);
       free(command); free(menu); free(name); free(icon); free(w); free(flags); free(text); free(tooltip); free(checked);
     }
     OUT("};\n\n");
+  }
+}
+
+static void emit_activitybars(FILE *f, xmlNodePtr parent, const char *form) {
+  EACH_ELEMENT(c, parent) if (is_control(parent, c)) {
+    if (elem(c, "activitybar")) {
+      char *name = attr(c, "name"), symbol[256];
+      snprintf(symbol, sizeof(symbol), "%s_%s_activity_items", form, nz(name, "unnamed"));
+      xmlNodePtr toolbar = child(c, "toolbar");
+      if (toolbar) {
+        emit_toolbar(f, toolbar, symbol, form);
+        OUT("static const activitybar_params_t %s_%s_activity_params = { %s, ARRAY_LEN(%s) };\n\n", form, nz(name, "unnamed"), symbol, symbol);
+      }
+      free(name);
+    }
+    emit_activitybars(f, c, form);
   }
 }
 
@@ -880,6 +904,7 @@ static void emit_controls_ex(FILE *f, xmlNodePtr parent, const char *form, const
     snprintf(font, sizeof(font), "%s", eq(a.v[A_FONT], "system") ? "FONT_SYSTEM" : eq(a.v[A_FONT], "smallest") ? "FONT_SMALLEST" : "FONT_SMALL");
     snprintf(color, sizeof(color), "%u", (unsigned)enum_parse_token(a.v[A_COLOR], kColors, ARRAY_LEN(kColors), brTextNormal));
     if (elem(c, "tableview")) snprintf(lparam, sizeof(lparam), "&%s_%s_tableview_params", form, nz(a.v[A_NAME], "unnamed"));
+    if (elem(c, "activitybar") && child(c, "toolbar")) snprintf(lparam, sizeof(lparam), "&%s_%s_activity_params", form, nz(a.v[A_NAME], "unnamed"));
     if (elem(c, "combobox") && attr(c, "source")) snprintf(lparam, sizeof(lparam), "&%s_%s_combobox_params", form, nz(a.v[A_NAME], "unnamed"));
     if (elem(c, "SplitView")) {
       const char *orientation = eq(a.v[A_ORIENT], "vertical") ? "SPLIT_HORZ" : "SPLIT_VERT";
@@ -972,6 +997,7 @@ static bool emit_form(FILE *f, xmlNodePtr form, const char *prefix, xmlNodePtr d
   emit_tableviews(f, form, form, database, form_id);
   emit_comboboxes(f, form, form_id);
   emit_toolbar(f, toolbar, toolbar_symbol, name);
+  emit_activitybars(f, form, form_id);
   OUT("static const form_ctrl_def_t %s_%s_children[] = {\n", prefix, form_id);
   int count = 0; bindings_t bindings = {0}; button_ids_t btn_ids = {0}; 
   emit_controls_ex(f, form, form_id, "0", &bindings, &count, &btn_ids); LINE("};\n\n");
@@ -1044,7 +1070,7 @@ int main(int argc, char **argv) {
   }
   ids_t commands = {0}, controls = {0}; cmd_refs_t refs = {0}; action_meta_list_t meta = {0};
   EACH_ELEMENT(m, menus) if (elem(m, "menu")) { char *name = attr(m, "name"), scope[128]; ident(scope, sizeof(scope), name, true); collect_menu_ids(&commands, &meta, m, scope, name); free(name); }
-  EACH_ELEMENT(form, forms) if (elem(form, "form")) { char *name = attr(form, "name"); collect_toolbar_ids(&commands, &refs, child(form, "toolbar"), name); free(name); }
+  EACH_ELEMENT(form, forms) if (elem(form, "form")) { char *name = attr(form, "name"); collect_toolbar_ids(&commands, &refs, child(form, "toolbar"), name); collect_activitybar_ids(&commands, &refs, form, name); free(name); }
   collect_toolbar_ids(&commands, &refs, app_toolbar, "application");
   collect_context_ids(&commands, &refs, contexts);
   EACH_ELEMENT(form, forms) if (elem(form, "form")) { char *name = attr(form, "name"), form_id[128]; if (!only || eq(name, only)) { ident(form_id, sizeof(form_id), name, false); collect_control_ids(&controls, form, form_id); } free(name); }

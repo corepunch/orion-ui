@@ -240,21 +240,13 @@ For a substantial app UI change, follow the project skill
 
 # Icon design
 
-Use [Lucide](https://lucide.dev) for icons whenever a suitable icon exists.
+Use only [Phosphor](https://phosphoricons.com/) for app and UI icons.
 
-All app icons live in `apps/<name>/share/icons/` as 24×24 SVG files. When drawing or modifying icons:
-
-- **Fill the canvas.** Draw within x=2..22, y=2..22 (2 px margin from each edge). Total visual content must span at least 20×20 px — shapes that huddle in the center look small and timid.
-- **Minimum 2 px clearance.** No two stroke lines may be closer than 2 px at any point, including parallel lines, tab edges against body edges, and overlapping shapes.
-- **No fill — stroke only.** Use `stroke="currentColor"` with `fill="none"` so icons adapt to any theme color.
-- **Stroke weight: 2 px.** Use `stroke-width="2"` on custom icons. At 50 % scale (12×12), this renders as exactly 1 px — clean and sharp. `stroke-width="1.5"` becomes 0.75 px at 12×12, causing sub-pixel blur. (Downloaded iconoir icons ship with 1.5 and are left as-is.)
-- **Even coordinates only.** Place all path points and control points on even integer values (0, 2, 4, 6, 8 …). At 50 % scale, odd coordinates land on half-pixels and anti-alias; even coordinates stay sharp. Bezier curves that need smooth arcs may use even-valued intermediate control points.
-- **Round caps and joins.** Every `<path>` must carry `stroke-linecap="round" stroke-linejoin="round"` — this is the defining trait of the iconoir style.
-- **Prefer `<path>` over `<circle>` and `<rect>`.** Use SVG path commands for all shapes. Reserve `<circle>` only for icons whose subject is literally a circle (e.g., a badge or coin).
-- **Dots as tiny segments.** Render a dot with a near-zero-length diagonal path: `M x y L x+0.01 y-0.01` with `stroke-linecap="round"`. Never use `<circle r="0">`.
-- **Rounded corners on containers.** Soften all closed box shapes with bezier-encoded corners — never sharp 90° corners on a container. Small boxes (≈6×3 px): ~0.6 px radius (`C…0.7314…`). Full-width containers (spanning x=2..22): ~4 px radius (`C6.47715 2 / C22 6.47715` pattern).
-- **6-unit grid for repeating elements.** Rows, grid cells, and tick marks land at multiples of 6: y=6, 12, 18. This keeps repeated elements evenly spaced and optically balanced.
-- **No SVG cruft.** Custom icon files contain only `<svg>` and `<path>` elements — no `<defs>`, `<use>`, `id=`, `class=`, `style=`, comments, or namespace boilerplate beyond `xmlns=`.
+- Store app icons in `apps/<name>/share/icons/` as SVG files displayed at 24×24 px.
+- Use upstream authored assets. Preserve their path geometry and viewBox; do not redraw icons or impose a different stroke weight or coordinate grid.
+- Use Phosphor's regular weight for unselected icons and the matching fill weight for selected icons. Supply the filled asset through `checked-icon` where supported.
+- Keep icons theme-aware with `currentColor`, preserving the upstream outline or filled artwork.
+- Record the upstream revision and asset names, and include Phosphor's license with the assets.
 
 # Sample reference
 

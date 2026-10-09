@@ -508,6 +508,33 @@ static int runtime_count_children(xmlNodePtr node) {
 static form_ctrl_def_t *runtime_build_defs(runtime_build_ctx_t *ctx, xmlNodePtr parent,
                                            int *out_count);
 
+static void runtime_fill_activity_params(runtime_build_ctx_t *ctx, xmlNodePtr node, const void **out) {
+  xmlNodePtr toolbar = NULL;
+  for (xmlNodePtr c = node->children; c; c = c->next)
+    if (c->type == XML_ELEMENT_NODE && str_ieq((const char *)c->name, "Toolbar")) { toolbar = c; break; }
+  if (!toolbar) return;
+  int count = 0;
+  for (xmlNodePtr c = toolbar->children; c; c = c->next)
+    if (c->type == XML_ELEMENT_NODE && str_ieq((const char *)c->name, "Button")) count++;
+  activitybar_params_t *params = runtime_alloc(ctx, sizeof(*params));
+  toolbar_item_t *items = count ? runtime_alloc(ctx, count * sizeof(*items)) : NULL;
+  if (!params || (count && !items)) {
+    fprintf(stderr, "[form] activity bar allocation failed count=%d\n", count);
+    fflush(stderr);
+    return;
+  }
+  for (xmlNodePtr c = toolbar->children; c; c = c->next) {
+    if (c->type != XML_ELEMENT_NODE || !str_ieq((const char *)c->name, "Button")) continue;
+    items[params->count++] = (toolbar_item_t){
+      .type = TOOLBAR_ITEM_BUTTON, .ident = ctx->next_generated_id++, .style = TBSTYLE_CHECKGROUP,
+      .icon = runtime_xml_attr_dup(ctx, c, "icon"), .text = runtime_xml_attr_dup(ctx, c, "text"),
+      .tooltip = runtime_xml_attr_dup(ctx, c, "tooltip"), .checked_icon = runtime_xml_attr_dup(ctx, c, "checked-icon")
+    };
+  }
+  params->items = items;
+  *out = params;
+}
+
 static void runtime_fill_def(runtime_build_ctx_t *ctx, xmlNodePtr node,
                              form_ctrl_def_t *out) {
   memset(out, 0, sizeof(*out));
@@ -566,6 +593,8 @@ static void runtime_fill_def(runtime_build_ctx_t *ctx, xmlNodePtr node,
     runtime_fill_table_params(ctx, node, &out->lparam);
   } else if (xmlStrcasecmp(node->name, BAD_CAST "ComboBox") == 0) {
     runtime_fill_combo_params(ctx, node, &out->lparam);
+  } else if (str_ieq((const char *)node->name, "ActivityBar")) {
+    runtime_fill_activity_params(ctx, node, &out->lparam);
   }
 
   out->children = runtime_build_defs(ctx, node, &out->child_count);

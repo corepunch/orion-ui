@@ -219,6 +219,30 @@ static void test_content_column_width(void) {
   PASS();
 }
 
+static void test_activitybar_declaration(void) {
+  TEST("orionc: nested activity buttons share validated commands and stay out of the form child tree");
+  char out[12000] = {0};
+  const char *fixture = "<orion><menus><menu name=\"view\" label=\"View\">"
+    "<item name=\"overview\" label=\"Overview\" /></menu></menus>"
+    "<forms><form name=\"main\" width=\"400\"><ActivityBar name=\"activity\"><Toolbar>"
+    "<Button command=\"view.overview\" icon=\"view-grid\" checked-icon=\"view-grid-fill\" text=\"Overview\" />"
+    "<Button name=\"filter\" icon=\"filter\" tooltip=\"Filter\" />"
+    "</Toolbar></ActivityBar></form></forms></orion>";
+  ASSERT_EQUAL(run_orionc(fixture, "activity", out, sizeof(out)), 0);
+  ASSERT_TRUE(contains(out, "TOOLBAR_ITEM_BUTTON, ID_VIEW_OVERVIEW"));
+  ASSERT_TRUE(contains(out, "TOOLBAR_ITEM_BUTTON, ID_MAIN_FILTER"));
+  ASSERT_TRUE(contains(out, "0 | TBSTYLE_CHECKGROUP"));
+  ASSERT_TRUE(contains(out, ", 0, \"view-grid-fill\""));
+  ASSERT_TRUE(contains(out, "activitybar_params_t main_activity_activity_params"));
+  ASSERT_TRUE(contains(out, "\"ActivityBar\", ID_MAIN_ACTIVITY"));
+  ASSERT_TRUE(contains(out, ".child_count = 1"));
+  const char *invalid = "<orion><forms><form name=\"main\" width=\"400\"><ActivityBar name=\"activity\">"
+    "<Toolbar><Button command=\"view.missing\" /></Toolbar></ActivityBar></form></forms></orion>";
+  ASSERT_TRUE(run_orionc(invalid, "activity_bad_command", out, sizeof(out)) != 0);
+  ASSERT_TRUE(contains(out, "unknown command reference 'view.missing'"));
+  PASS();
+}
+
 #endif
 
 int main(void) {
@@ -226,6 +250,7 @@ int main(void) {
 #if !defined(_WIN32)
     test_valid_manifest_accepted();
     test_content_column_width();
+    test_activitybar_declaration();
     test_application_toolbar_declaration();
     test_top_level_toolbars_rejected();
     test_toolbar_reference_rejected();

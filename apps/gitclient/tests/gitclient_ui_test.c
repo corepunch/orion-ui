@@ -17,6 +17,7 @@
 #include "gitclient_test_helpers.h"
 #include "apps/gitclient/gitclient.h"
 #include "apps/gitclient/gc_actions.h"
+#include <orion/user/toolbar.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -555,7 +556,7 @@ void test_toolbar_buttons_reference_menu_command_ids(void) {
     ASSERT_NOT_NULL(gitclient_application_toolbar.items);
     ASSERT_TRUE(app_toolbar_has_action(ID_REMOTE_SYNC));
     ASSERT_TRUE(app_toolbar_has_action(ID_REPO_REFRESH));
-    ASSERT_TRUE(app_toolbar_has_action(ID_VIEW_OVERVIEW));
+    ASSERT_FALSE(app_toolbar_has_action(ID_VIEW_OVERVIEW));
     ASSERT_TRUE(app_toolbar_has_action(ID_REMOTE_PRUNE));
     ASSERT_FALSE(app_toolbar_has_action(ID_FILES_STAGE_ALL));
     const toolbar_item_t *items = gitclient_application_toolbar.items;
@@ -728,6 +729,81 @@ void test_overview_close_filtered_cards(void) {
   PASS();
 }
 
+void test_activitybar_navigation(void) {
+  TEST("activity bar: clicks and View commands select one page, preserve state and resize beside the rail");
+  test_env_init();
+  if (!ui_init_graphics(UI_INIT_HIDDEN, "activity-bar-test", 960, 640)) {
+    SKIP("Offscreen graphics unavailable");
+  }
+  gc_state_t saved = g_test_state;
+  database_t *saved_db = ui_get_database();
+  memset(&g_test_state, 0, sizeof(g_test_state));
+  g_test_state.history_db = make_db();
+  g_test_state.changes_db = make_changes_db();
+  DB_CLASS(github_database_proc);
+  g_test_state.github_db = create_database("gc-test-github", "github_database_proc", NULL);
+  ui_set_database(g_test_state.history_db);
+  register_database("db", g_test_state.history_db);
+  register_database("github_db", g_test_state.github_db);
+  char plugin[4096];
+  snprintf(plugin, sizeof(plugin), "%s/../lib/gitclient_components%s", ui_get_exe_dir(), AX_DYNLIB_EXT);
+  ASSERT_TRUE(fe_load_component_plugin(plugin));
+  window_t *host = create_window_from_form(&gitclient_main_window_form, 0, 0, NULL, gc_main_proc, 0, NULL);
+  ASSERT_NOT_NULL(host);
+  window_t *bar = g_test_state.activity_win;
+  ASSERT_NOT_NULL(bar);
+  toolbar_state_t *tb = toolbar_get_state(bar);
+  ASSERT_EQUAL(tb->orientation, TOOLBAR_VERTICAL);
+  ASSERT_EQUAL(tb->btn_size, TB_SPACING);
+  ASSERT_EQUAL(tb->item_count, 4);
+  ASSERT_STR_EQUAL(tb->items[0].checked_icon, "gc-nav-overview-fill");
+  ASSERT_STR_EQUAL(tb->items[1].checked_icon, "gc-nav-changes-fill");
+  ASSERT_STR_EQUAL(tb->items[2].checked_icon, "gc-nav-history-fill");
+  ASSERT_STR_EQUAL(tb->items[3].checked_icon, "gc-nav-github-fill");
+  ASSERT_EQUAL(bar->frame.w, TB_SPACING + 2 * toolbar_effective_padding(bar));
+  ASSERT_EQUAL(g_test_state.tab, GC_TAB_CHANGES);
+  window_t *summary = get_window_item(host, ID_CHANGES_PAGE_COMMIT_SUMMARY);
+  send_message(summary, edSetText, 0, "Keep this draft");
+  window_t *pages[] = {g_test_state.overview_page_win, g_test_state.changes_page_win,
+                      g_test_state.history_page_win, g_test_state.github_page_win};
+  const uint16_t commands[] = {ID_VIEW_OVERVIEW, ID_VIEW_CHANGES, ID_VIEW_HISTORY, ID_VIEW_GITHUB};
+  for (int view = 0; view < ARRAY_LEN(pages); view++) {
+    irect16_t item;
+    ASSERT_TRUE(send_message(bar, tbGetItemRect, commands[view], &item));
+    uint32_t point = MAKEDWORD(item.x + item.w / 2, item.y + item.h / 2);
+    send_message(bar->toolbar, evLeftButtonDown, point, NULL);
+    send_message(bar->toolbar, evLeftButtonUp, point, NULL);
+    ASSERT_EQUAL(g_test_state.tab, view);
+    ASSERT_EQUAL(window_active_page(host), pages[view]);
+    for (int i = 0; i < ARRAY_LEN(pages); i++) {
+      ASSERT_EQUAL(window_has_state(pages[i], WINDOW_STATE_VISIBLE), i == view);
+      ASSERT_EQUAL(toolbar_is_button_checked(bar, commands[i]), i == view);
+    }
+    ASSERT_EQUAL(pages[view]->frame.x, bar->frame.w);
+    ASSERT_EQUAL(pages[view]->frame.w, get_client_rect(host).w - bar->frame.w);
+  }
+  send_message(host, evCommand, MAKEDWORD(ID_VIEW_CHANGES, kMenuBarNotificationItemClick), NULL);
+  ASSERT_EQUAL(g_test_state.tab, GC_TAB_CHANGES);
+  ASSERT_TRUE(toolbar_is_button_checked(bar, ID_VIEW_CHANGES));
+  char draft[64];
+  send_message(summary, edGetText, sizeof(draft), draft);
+  ASSERT_STR_EQUAL(draft, "Keep this draft");
+  host->frame.w = 600; host->frame.h = 400;
+  send_message(host, evResize, 0, NULL);
+  ASSERT_EQUAL(bar->frame.w, TB_SPACING + 2 * toolbar_effective_padding(bar));
+  ASSERT_EQUAL(pages[GC_TAB_CHANGES]->frame.w, get_client_rect(host).w - bar->frame.w);
+  ASSERT_EQUAL(pages[GC_TAB_CHANGES]->frame.h, get_client_rect(host).h);
+  destroy_window(host);
+  destroy_database(g_test_state.history_db);
+  destroy_database(g_test_state.changes_db);
+  destroy_database(g_test_state.github_db);
+  ui_set_database(saved_db);
+  test_env_shutdown();
+  ui_shutdown_graphics();
+  g_test_state = saved;
+  PASS();
+}
+
 int main(void) {
     if (!setup_repo()) {
         printf("ERROR: could not create test repository (is git in PATH?)\n");
@@ -752,6 +828,7 @@ int main(void) {
     test_every_menu_action_has_handler();
     test_reload_history_log_invalidates_diff_and_reports_failure();
     test_overview_close_filtered_cards();
+    test_activitybar_navigation();
 
     gct_remove_dir(s_repo);
 

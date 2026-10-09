@@ -381,6 +381,35 @@ void test_socialfeed_project_loads_runtime_and_database(void) {
   PASS();
 }
 
+void test_activitybar_preview(void) {
+  TEST("ActivityBar: registered component previews authored icons, tooltips and radio selection");
+  setup();
+  window_t *doc = g_app->active_form;
+  install_form_xml(doc,
+    "<form name=\"main\" width=\"400\" height=\"300\">"
+    "<ActivityBar name=\"activity\"><Toolbar>"
+    "<Button command=\"view.overview\" icon=\"view-grid\" text=\"Overview\" tooltip=\"All repositories\" />"
+    "<Button command=\"view.changes\" icon=\"git-commit\" checked-icon=\"git-commit-fill\" text=\"Changes\" tooltip=\"Working tree\" />"
+    "</Toolbar></ActivityBar></form>");
+  window_t *bar = descendant_by_class(doc, "ActivityBar");
+  ASSERT_NOT_NULL(bar);
+  toolbar_state_t *tb = window_toolbar_state(bar);
+  ASSERT_NOT_NULL(tb);
+  ASSERT_EQUAL(tb->orientation, TOOLBAR_VERTICAL);
+  ASSERT_EQUAL(tb->btn_size, TB_SPACING);
+  ASSERT_EQUAL(tb->item_count, 2);
+  ASSERT_STR_EQUAL(tb->items[0].icon, "view-grid");
+  ASSERT_STR_EQUAL(tb->items[1].tooltip, "Working tree");
+  ASSERT_STR_EQUAL(tb->items[1].checked_icon, "git-commit-fill");
+  ASSERT_TRUE(tb->items[0].state & TBSTATE_CHECKED);
+  send_message(bar, tbCheckButton, tb->items[1].ident, (void *)(intptr_t)1);
+  ASSERT_FALSE(tb->items[0].state & TBSTATE_CHECKED);
+  ASSERT_TRUE(tb->items[1].state & TBSTATE_CHECKED);
+  ASSERT_NULL(descendant_by_class(bar, "Button"));
+  teardown();
+  PASS();
+}
+
 int main(void) {
   TEST_START("Form Editor Window-First Recovery");
   test_window_first_document_state();
@@ -392,5 +421,6 @@ int main(void) {
   test_database_field_drop_updates_xml_column();
   test_database_field_drop_rejects_other_database();
   test_socialfeed_project_loads_runtime_and_database();
+  test_activitybar_preview();
   TEST_END();
 }

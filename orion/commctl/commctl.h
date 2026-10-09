@@ -47,6 +47,11 @@ typedef struct {
 // Common control window procedures
 result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+typedef struct {
+  const toolbar_item_t *items;
+  int count;
+} activitybar_params_t;
+result_t win_activitybar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_checkbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_iconview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);

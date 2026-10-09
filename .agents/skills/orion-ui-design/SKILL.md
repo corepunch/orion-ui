@@ -43,7 +43,7 @@ and its WinAPI-inspired architecture.
 - Use `GridView` for labeled form fields so labels and inputs share edges.
 - Use `StackView` / `FlowView` / `Card` for grouping. Composite views are sub-windows laid out by the layout system, not single custom-painted controls.
 - Accent edges and cards use framework drawing functions that respect the theme silhouette.
-- Icons: Lucide or project SVG icons following the stroke-only, even-coordinate, 2 px stroke rules in AGENTS.md.
+- Icons: use only Phosphor upstream SVG assets, following AGENTS.md. Use matching regular and fill weights for unselected and selected states.
 
 ## Controls mapping (Win32 / Orion)
 

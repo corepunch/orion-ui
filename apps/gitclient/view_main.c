@@ -7,6 +7,7 @@
 #include "pages/github/page_github.h"
 #include <orion/user/vga_font.h>
 #include <orion/commctl/menubar.h>
+#include <orion/user/dock.h>
 #include <sys/stat.h>
 
 // ============================================================
@@ -15,17 +16,26 @@
 
 void gc_set_view_mode(int tab) {
   gc_state_t *gc = g_gc; if (!gc || !gc->main_win) return;
+  if (tab < GC_TAB_OVERVIEW || tab > GC_TAB_GITHUB) {
+    fprintf(stderr, "[gitclient] view rejected win=%u view=%d\n", gc->main_win->id, tab);
+    fflush(stderr);
+    return;
+  }
   if (gc->tab != GC_TAB_OVERVIEW && tab == GC_TAB_OVERVIEW) gc->focus_tab = gc->tab ? gc->tab : GC_TAB_CHANGES;
   gc->tab = tab;
   gc_diff_invalidate();   // each page owns its own diff window
   gc->history_mode = (tab == GC_TAB_HISTORY);
-  if (gc->tabs_win) send_message(gc->tabs_win, tcSetSelection, (uint32_t)tab, NULL);
+  static const uint16_t view_commands[] = {ID_VIEW_OVERVIEW, ID_VIEW_CHANGES, ID_VIEW_HISTORY, ID_VIEW_GITHUB};
+  if (gc->activity_win) send_message(gc->activity_win, tbCheckButton, view_commands[tab], (void *)(intptr_t)1);
 
   window_t *page = tab == GC_TAB_OVERVIEW ? gc->overview_page_win :
                    tab == GC_TAB_CHANGES  ? gc->changes_page_win :
                    tab == GC_TAB_HISTORY  ? gc->history_page_win :
                    tab == GC_TAB_GITHUB   ? gc->github_page_win : NULL;
   if (page) set_host_page(gc->main_win, page);
+  window_t *pages[] = {gc->overview_page_win, gc->changes_page_win, gc->history_page_win, gc->github_page_win};
+  for (int i = 0; i < ARRAY_LEN(pages); i++)
+    if (pages[i]) show_window(pages[i], pages[i] == page);
 
   switch (tab) {
     case GC_TAB_OVERVIEW:
@@ -277,29 +287,20 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
       win->userdata = gc;
       gc->main_win = win;
 
-      gc->tabs_win = get_window_item(win, ID_MAIN_WINDOW_VIEWS);
-
-      window_t *overview_tab = get_window_item(win, ID_MAIN_WINDOW_OVERVIEW_TAB);
-      window_t *changes_tab = get_window_item(win, ID_MAIN_WINDOW_CHANGES_TAB);
-      window_t *history_tab = get_window_item(win, ID_MAIN_WINDOW_HISTORY_TAB);
-      window_t *github_tab  = get_window_item(win, ID_MAIN_WINDOW_GITHUB_TAB);
-
-      if (overview_tab) {
-        gc->overview_page_win = create_window_from_form(
-          &gc_overview_page_form, 0, 0, overview_tab, gc_page_overview_proc, gc->hinstance, NULL);
-      }
-      if (changes_tab)
-        gc->changes_page_win = create_window_from_form(
-          &gc_changes_page_form, 0, 0, changes_tab, page_changes_proc,
-          gc->hinstance, NULL);
-      if (history_tab)
-        gc->history_page_win = create_window_from_form(
-          &gc_history_page_form, 0, 0, history_tab, page_history_proc,
-          gc->hinstance, NULL);
-      if (github_tab)
-        gc->github_page_win = create_window_from_form(
-          &gc_github_page_form, 0, 0, github_tab, page_github_proc,
-          gc->hinstance, NULL);
+      gc->activity_win = get_window_item(win, ID_MAIN_WINDOW_ACTIVITY);
+      if (gc->activity_win)
+        dock_window(gc->activity_win, DOCK_LEFT, DOCK_EDGE(DOCK_LEFT), DOCK_TOOLBAR | DOCK_NOFLOAT, 0, 0);
+      gc->overview_page_win = create_window_from_form(
+        &gc_overview_page_form, 0, 0, win, gc_page_overview_proc, gc->hinstance, NULL);
+      gc->changes_page_win = create_window_from_form(
+        &gc_changes_page_form, 0, 0, win, page_changes_proc, gc->hinstance, NULL);
+      gc->history_page_win = create_window_from_form(
+        &gc_history_page_form, 0, 0, win, page_history_proc, gc->hinstance, NULL);
+      gc->github_page_win = create_window_from_form(
+        &gc_github_page_form, 0, 0, win, page_github_proc, gc->hinstance, NULL);
+      window_t *pages[] = {gc->overview_page_win, gc->changes_page_win, gc->history_page_win, gc->github_page_win};
+      for (int i = 0; i < ARRAY_LEN(pages); i++)
+        if (pages[i]) dock_window(pages[i], DOCK_FILL, 0, DOCK_NOFLOAT, 0, 0);
 
       send_message(win, evStatusBar, 0, "No repository");
       gc_set_view_mode(GC_TAB_CHANGES);
@@ -333,12 +334,6 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
       }
 
       if (gc_overview_handle_command(wparam, lparam)) return true;
-
-      if (code == tcnSelChange && (window_t *)lparam == gc->tabs_win) {
-        int tab = (int)send_message(gc->tabs_win, tcGetSelection, 0, NULL);
-        gc_set_view_mode(tab);
-        return true;
-      }
 
       if (code == kMenuBarNotificationItemClick) {
         (void)gc_execute_action(LOWORD(wparam));

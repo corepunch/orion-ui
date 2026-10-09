@@ -194,7 +194,7 @@ typedef struct {
   window_t *menubar_win;
   window_t *chrome_win;
   window_t *toolbar_win;
-  window_t *tabs_win;
+  window_t *activity_win;
   window_t *overview_page_win;
   window_t *summary_win;
   window_t *filter_btn;

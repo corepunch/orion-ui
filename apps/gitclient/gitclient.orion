@@ -96,11 +96,6 @@
     </menus>
 
     <toolbar presentation="compact">
-        <Button name="overview" command="view.overview" icon="view-grid" text="Overview" tooltip="All repositories (Ctrl+0)" />
-        <Button name="changes" command="view.changes" icon="git-commit" text="Changes" tooltip="Working tree (Ctrl+1)" />
-        <Button name="history" command="view.history" icon="git-diff" text="History" tooltip="Commit history (Ctrl+2)" />
-        <Button name="github" command="view.github" icon="git-repos" text="GitHub" tooltip="Issues and pull requests (Ctrl+3)" />
-        <spacer w="10" />
         <Button name="sync" command="remote.sync" icon="data-transfer-both" text="Sync" tooltip="Publish, pull, or push the current branch" />
         <Button name="fetch" command="remote.fetch" icon="git-fetch" text="Fetch" tooltip="Fetch from remote" />
         <Button name="fetch_all" command="remote.fetch_all" icon="download" text="Fetch All" tooltip="Fetch every repository in the background" />
@@ -229,12 +224,14 @@
 
     <forms>
         <form name="main_window" title="Git Client" width="960" height="640" role="host" flags="statusbar" spacing="0">
-            <TabView name="views" flags="notitle,nofill,flexspace">
-                <StackView name="overview_tab" text="Overview" flags="notitle,nofill,flexspace" />
-                <StackView name="changes_tab" text="Changes" flags="notitle,nofill,flexspace" />
-                <StackView name="history_tab" text="History" flags="notitle,nofill,flexspace" />
-                <StackView name="github_tab"  text="GitHub"  flags="notitle,nofill,flexspace" />
-            </TabView>
+            <ActivityBar name="activity" flags="notitle">
+                <Toolbar>
+                    <Button name="overview" command="view.overview" icon="gc-nav-overview" checked-icon="gc-nav-overview-fill" text="Overview" tooltip="All repositories (Ctrl+0)" />
+                    <Button name="changes" command="view.changes" icon="gc-nav-changes" checked-icon="gc-nav-changes-fill" text="Changes" tooltip="Working tree (Ctrl+1)" />
+                    <Button name="history" command="view.history" icon="gc-nav-history" checked-icon="gc-nav-history-fill" text="History" tooltip="Commit history (Ctrl+2)" />
+                    <Button name="github" command="view.github" icon="gc-nav-github" checked-icon="gc-nav-github-fill" text="GitHub" tooltip="Issues and pull requests (Ctrl+3)" />
+                </Toolbar>
+            </ActivityBar>
         </form>
         <form name="overview_page" width="960" height="600" role="page" auto_layout="1" flags="nofill,flexspace">
             <requires library="gitclient_components" />
