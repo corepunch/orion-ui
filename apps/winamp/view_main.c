@@ -1,6 +1,6 @@
 // VIEW: the root window. It stacks the three skinned windows (a vertical
-// auto-layout from winamp.orion) and picks one whole-device-pixel scale for
-// all of them: landscape fits the main window alone, portrait fits the width.
+// auto-layout from winamp.orion) and picks one scale for all of them:
+// landscape fits the main window alone, portrait fills the screen width.
 
 #include "winamp.h"
 
@@ -15,18 +15,16 @@ void app_relayout(void) {
   if (!win) return;
   irect16_t cr = get_client_rect(win);
   if (cr.w <= 0 || cr.h <= 0) return;
-  float s = ui_surface_scale();
+  // Edge to edge: portrait spans the full width, landscape the largest main window that fits.
   g_app->landscape = cr.w > cr.h;
-  float fit = g_app->landscape ? MIN(cr.w * s / WA_W, cr.h * s / WA_MAIN_H) : cr.w * s / WA_W;
-  int k = (int)floorf(fit);
-  g_app->pt_per_px = (k >= 1 ? (float)k : fit) / s;
+  g_app->pt_per_px = g_app->landscape ? MIN((float)cr.w / WA_W, (float)cr.h / WA_MAIN_H) : (float)cr.w / WA_W;
   bool eq = !g_app->landscape && g_app->show_eq, pl = !g_app->landscape && g_app->show_pl;
   if (g_app->equalizer) show_window(g_app->equalizer, eq);
   if (g_app->playlist) show_window(g_app->playlist, pl);
   int total = (int)lroundf((WA_MAIN_H + (eq ? WA_EQ_H : 0)) * g_app->pt_per_px);
   int pad = pl ? 0 : MAX(0, (cr.h - total) / 2);
   window_set_layout(win, WINDOW_STACK_VERTICAL, 0, R(0, pad, 0, 0));
-  WA_DEBUG("layout %dx%d scale=%.2f k=%d pt=%.3f landscape=%d", cr.w, cr.h, s, k, g_app->pt_per_px, g_app->landscape);
+  WA_DEBUG("layout %dx%d pt=%.3f landscape=%d", cr.w, cr.h, g_app->pt_per_px, g_app->landscape);
   for (window_t *c = win->children; c; c = c->next)
     WA_DEBUG("child %s frame=%d,%d,%d,%d visible=%d", c->title, c->frame.x, c->frame.y, c->frame.w, c->frame.h, window_has_state(c, WINDOW_STATE_VISIBLE));
   WA_DEBUG("player=%p eq=%p pl=%p", (void *)g_app->player, (void *)g_app->equalizer, (void *)g_app->playlist);

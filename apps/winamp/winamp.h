@@ -4,7 +4,7 @@
 // The windows are drawn from a Winamp 2.x skin (an unpacked folder or a .wsz
 // in Documents). A skin is a fixed bitmap atlas with fixed coordinates, so
 // each window composes its sprites into a skin-resolution canvas and draws it
-// scaled by a whole number of device pixels; skin hit regions are tables.
+// scaled to the screen; skin hit regions are tables.
 
 #ifndef __WINAMP_H__
 #define __WINAMP_H__
