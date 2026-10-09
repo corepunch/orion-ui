@@ -856,6 +856,7 @@ int dialog_pull_command(window_t *win, void *state,
 //
 // tooltip_update() is called from event.c on every kEventMouseMoved; callers
 // do not need to call it directly.
+// Hover lookup uses the nearest ancestor with tooltip text when a child has none.
 //
 // tooltip_cancel() can be called by any code that needs to hide the tooltip
 // immediately (e.g. on button click or window close).

@@ -1,0 +1,2322 @@
+[
+  {
+    "number": 6,
+    "file": "06_pulse_in_my_heart_140bpm_2bars.mp3",
+    "title": "Pulse in My Heart",
+    "role": "rhythmic hook",
+    "lyrics_requested": "Pulse in My Heart",
+    "bpm": 140,
+    "bars": 2,
+    "frames": 151200,
+    "sample_rate": 44100,
+    "channels": 1,
+    "seconds": 3.4285714285714284,
+    "source_anchors_seconds": [
+      0.0810204081632653,
+      0.813,
+      1.204,
+      1.668,
+      3.57
+    ],
+    "target_anchors_beats": [
+      0,
+      2,
+      3,
+      4,
+      8
+    ],
+    "interval_atempo_rates": [
+      0.8477493380406002,
+      0.904528693247292,
+      1.0900553122839365,
+      1.1117802743869505
+    ],
+    "source_anchor_method": "Isolated waveform/spectrogram reviewed with approximate unprompted ASR hints for lyrics; main note/word attacks, not every consonant. Natural vowel transitions can be continuous.",
+    "final_mp3_sha256": "e1c1c0a80a0f5a48b4987a31425fc90ab33cc81cf894fc50cc80c92d329906a2",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_frames": 1105,
+    "leading_signal_ms_at_minus55db": 0.9070294784580499,
+    "peak_dbfs": -2.0018514647192083,
+    "attack_waveform_matches": [
+      {
+        "target_beat": 0,
+        "offset_ms": 0.0,
+        "correlation": 0.99999
+      },
+      {
+        "target_beat": 2,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 3,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 4,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "attack_waveform_placement": true
+    },
+    "checks_pass": true,
+    "limits": "Correlations verify placement of reviewed acoustic landmarks, not the perceptual accuracy of the original landmark annotation. Natural consonants may precede a voiced attack. Exact singer identity, pitch/key, lyric accuracy and absence of faint backing leakage are not established by waveform measurements; no listening-based verification claimed."
+  },
+  {
+    "number": 7,
+    "file": "07_we_own_this_moment_140bpm_2bars.mp3",
+    "title": "We Own This Moment",
+    "role": "rhythmic hook",
+    "lyrics_requested": "We Own This Moment",
+    "bpm": 140,
+    "bars": 2,
+    "frames": 151200,
+    "sample_rate": 44100,
+    "channels": 1,
+    "seconds": 3.4285714285714284,
+    "source_anchors_seconds": [
+      3.4203174603174604,
+      3.92,
+      4.465,
+      4.78,
+      5.205,
+      6.91
+    ],
+    "target_anchors_beats": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      8
+    ],
+    "interval_atempo_rates": [
+      1.1806867941922101,
+      1.2958054851348237,
+      0.7114542521318276,
+      0.990896519935469,
+      0.9944771524251917
+    ],
+    "source_anchor_method": "Isolated waveform/spectrogram reviewed with approximate unprompted ASR hints for lyrics; main note/word attacks, not every consonant. Natural vowel transitions can be continuous.",
+    "final_mp3_sha256": "4f0704da70f691efbd1f29d3636f48cda58a5d0b793cfeada1af2eb61938a645",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_frames": 1105,
+    "leading_signal_ms_at_minus55db": 0.8163265306122449,
+    "peak_dbfs": -1.999515337009644,
+    "attack_waveform_matches": [
+      {
+        "target_beat": 0,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 1,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 2,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 3,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 4,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "attack_waveform_placement": true
+    },
+    "checks_pass": true,
+    "limits": "Correlations verify placement of reviewed acoustic landmarks, not the perceptual accuracy of the original landmark annotation. Natural consonants may precede a voiced attack. Exact singer identity, pitch/key, lyric accuracy and absence of faint backing leakage are not established by waveform measurements; no listening-based verification claimed."
+  },
+  {
+    "number": 8,
+    "file": "08_stay_close_to_me_140bpm_2bars.mp3",
+    "title": "Stay Close to Me",
+    "role": "warm hook",
+    "lyrics_requested": "Stay Close to Me",
+    "bpm": 140,
+    "bars": 2,
+    "frames": 151200,
+    "sample_rate": 44100,
+    "channels": 1,
+    "seconds": 3.4285714285714284,
+    "source_anchors_seconds": [
+      0.07564625850340136,
+      0.815,
+      1.615,
+      2.078,
+      3.39
+    ],
+    "target_anchors_beats": [
+      0,
+      2,
+      4,
+      5,
+      8
+    ],
+    "interval_atempo_rates": [
+      0.8567409532215358,
+      0.9304942630185349,
+      1.087462548974418,
+      1.0210131264051054
+    ],
+    "source_anchor_method": "Isolated waveform/spectrogram reviewed with approximate unprompted ASR hints for lyrics; main note/word attacks, not every consonant. Natural vowel transitions can be continuous.",
+    "final_mp3_sha256": "d0c0ef6ce8a27b984529bb28c8d3540ab7ccc73b542340876da967def2803883",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_frames": 1105,
+    "leading_signal_ms_at_minus55db": 2.131519274376417,
+    "peak_dbfs": -1.999515337009644,
+    "attack_waveform_matches": [
+      {
+        "target_beat": 0,
+        "offset_ms": 0.0,
+        "correlation": 0.99994
+      },
+      {
+        "target_beat": 2,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 4,
+        "offset_ms": 0.0,
+        "correlation": 0.99993
+      },
+      {
+        "target_beat": 5,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "attack_waveform_placement": true
+    },
+    "checks_pass": true,
+    "limits": "Correlations verify placement of reviewed acoustic landmarks, not the perceptual accuracy of the original landmark annotation. Natural consonants may precede a voiced attack. Exact singer identity, pitch/key, lyric accuracy and absence of faint backing leakage are not established by waveform measurements; no listening-based verification claimed."
+  },
+  {
+    "number": 9,
+    "file": "09_turn_up_the_glow_140bpm_2bars.mp3",
+    "title": "Turn Up the Glow",
+    "role": "dance call",
+    "lyrics_requested": "Turn Up the Glow",
+    "bpm": 140,
+    "bars": 2,
+    "frames": 151200,
+    "sample_rate": 44100,
+    "channels": 1,
+    "seconds": 3.4285714285714284,
+    "source_anchors_seconds": [
+      0.08394557823129252,
+      0.457,
+      0.787,
+      1.014,
+      3.47
+    ],
+    "target_anchors_beats": [
+      0,
+      1,
+      2,
+      2.5,
+      8
+    ],
+    "interval_atempo_rates": [
+      0.8589536759622033,
+      0.7495390643005301,
+      1.0708322792815583,
+      1.04257563033416
+    ],
+    "source_anchor_method": "Isolated waveform/spectrogram reviewed with approximate unprompted ASR hints for lyrics; main note/word attacks, not every consonant. Natural vowel transitions can be continuous.",
+    "final_mp3_sha256": "76e69e67ddd6a4c20a4140d20c7cd619a89627747cf01ef6773c189368105686",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_frames": 1105,
+    "leading_signal_ms_at_minus55db": 0.9750566893424036,
+    "peak_dbfs": -2.00786153697734,
+    "attack_waveform_matches": [
+      {
+        "target_beat": 0,
+        "offset_ms": 0.0,
+        "correlation": 0.99997
+      },
+      {
+        "target_beat": 1,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 2,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 2.5,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "attack_waveform_placement": true
+    },
+    "checks_pass": true,
+    "limits": "Correlations verify placement of reviewed acoustic landmarks, not the perceptual accuracy of the original landmark annotation. Natural consonants may precede a voiced attack. Exact singer identity, pitch/key, lyric accuracy and absence of faint backing leakage are not established by waveform measurements; no listening-based verification claimed."
+  },
+  {
+    "number": 10,
+    "file": "10_spark_in_my_soul_140bpm_2bars.mp3",
+    "title": "Spark in My Soul",
+    "role": "soulful hook",
+    "lyrics_requested": "Spark in My Soul",
+    "bpm": 140,
+    "bars": 2,
+    "frames": 151200,
+    "sample_rate": 44100,
+    "channels": 1,
+    "seconds": 3.4285714285714284,
+    "source_anchors_seconds": [
+      0.03392290249433107,
+      0.935,
+      1.365,
+      1.799,
+      3.62
+    ],
+    "target_anchors_beats": [
+      0,
+      2,
+      3,
+      4,
+      8
+    ],
+    "interval_atempo_rates": [
+      1.0534532215357457,
+      1.0035722516708918,
+      1.0138280709840977,
+      1.0635465053473048
+    ],
+    "source_anchor_method": "Isolated waveform/spectrogram reviewed with approximate unprompted ASR hints for lyrics; main note/word attacks, not every consonant. Natural vowel transitions can be continuous.",
+    "final_mp3_sha256": "78d1ea0eaf19236fb779adec130646258063e434c1c7079ecc2f210dfdcccae6",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_frames": 1105,
+    "leading_signal_ms_at_minus55db": 1.1564625850340136,
+    "peak_dbfs": -1.999515337009644,
+    "attack_waveform_matches": [
+      {
+        "target_beat": 0,
+        "offset_ms": 0.0,
+        "correlation": 0.99998
+      },
+      {
+        "target_beat": 2,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 3,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 4,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "attack_waveform_placement": true
+    },
+    "checks_pass": true,
+    "limits": "Correlations verify placement of reviewed acoustic landmarks, not the perceptual accuracy of the original landmark annotation. Natural consonants may precede a voiced attack. Exact singer identity, pitch/key, lyric accuracy and absence of faint backing leakage are not established by waveform measurements; no listening-based verification claimed."
+  },
+  {
+    "number": 11,
+    "file": "11_make_it_shine_140bpm_2bars.mp3",
+    "title": "Make It Shine",
+    "role": "spacious hook",
+    "lyrics_requested": "Make It Shine",
+    "bpm": 140,
+    "bars": 2,
+    "frames": 151200,
+    "sample_rate": 44100,
+    "channels": 1,
+    "seconds": 3.4285714285714284,
+    "source_anchors_seconds": [
+      3.4097732426303855,
+      3.965,
+      4.695,
+      6.96
+    ],
+    "target_anchors_beats": [
+      0,
+      2,
+      4,
+      8
+    ],
+    "interval_atempo_rates": [
+      0.6327504413062666,
+      0.8453773168578994,
+      1.3279410176082964
+    ],
+    "source_anchor_method": "Isolated waveform/spectrogram reviewed with approximate unprompted ASR hints for lyrics; main note/word attacks, not every consonant. Natural vowel transitions can be continuous.",
+    "final_mp3_sha256": "7b7c1bbe9881ea37f679d16a09cf5fae048674530fbe9d4fff458cabc42f429f",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_frames": 1105,
+    "leading_signal_ms_at_minus55db": 1.655328798185941,
+    "peak_dbfs": -2.0058577174579795,
+    "attack_waveform_matches": [
+      {
+        "target_beat": 0,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 2,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 4,
+        "offset_ms": 0.0,
+        "correlation": 0.9999
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "attack_waveform_placement": true
+    },
+    "checks_pass": true,
+    "limits": "Correlations verify placement of reviewed acoustic landmarks, not the perceptual accuracy of the original landmark annotation. Natural consonants may precede a voiced attack. Exact singer identity, pitch/key, lyric accuracy and absence of faint backing leakage are not established by waveform measurements; no listening-based verification claimed."
+  },
+  {
+    "number": 12,
+    "file": "12_all_night_alive_140bpm_2bars.mp3",
+    "title": "All Night Alive",
+    "role": "uplift hook",
+    "lyrics_requested": "All Night Alive",
+    "bpm": 140,
+    "bars": 2,
+    "frames": 151200,
+    "sample_rate": 44100,
+    "channels": 1,
+    "seconds": 3.4285714285714284,
+    "source_anchors_seconds": [
+      1.354671201814059,
+      1.986,
+      2.645,
+      2.925,
+      4.7
+    ],
+    "target_anchors_beats": [
+      0,
+      1,
+      2,
+      3,
+      8
+    ],
+    "interval_atempo_rates": [
+      1.5152108780825075,
+      1.585445955289237,
+      0.6224936621341323,
+      0.8254873273376652
+    ],
+    "source_anchor_method": "Isolated waveform/spectrogram reviewed with approximate unprompted ASR hints for lyrics; main note/word attacks, not every consonant. Natural vowel transitions can be continuous.",
+    "final_mp3_sha256": "f8860324a2a7ed206f6a74b6377ea75e19f7e83689299591f39084b7d5d5ba90",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_frames": 1105,
+    "leading_signal_ms_at_minus55db": 1.0430839002267573,
+    "peak_dbfs": -1.9998490310736532,
+    "attack_waveform_matches": [
+      {
+        "target_beat": 0,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 1,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 2,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 3,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "attack_waveform_placement": true
+    },
+    "checks_pass": true,
+    "limits": "Correlations verify placement of reviewed acoustic landmarks, not the perceptual accuracy of the original landmark annotation. Natural consonants may precede a voiced attack. Exact singer identity, pitch/key, lyric accuracy and absence of faint backing leakage are not established by waveform measurements; no listening-based verification claimed."
+  },
+  {
+    "number": 13,
+    "file": "13_feel_the_rush_140bpm_2bars.mp3",
+    "title": "Feel the Rush",
+    "role": "soulful call",
+    "lyrics_requested": "Feel the Rush",
+    "bpm": 140,
+    "bars": 2,
+    "frames": 151200,
+    "sample_rate": 44100,
+    "channels": 1,
+    "seconds": 3.4285714285714284,
+    "source_anchors_seconds": [
+      0.049546485260770975,
+      0.635,
+      0.918,
+      4.44
+    ],
+    "target_anchors_beats": [
+      0,
+      1,
+      2,
+      8
+    ],
+    "interval_atempo_rates": [
+      1.3986517630790505,
+      0.630099101175386,
+      1.374767558289229
+    ],
+    "source_anchor_method": "Isolated waveform/spectrogram reviewed with approximate unprompted ASR hints for lyrics; main note/word attacks, not every consonant. Natural vowel transitions can be continuous.",
+    "final_mp3_sha256": "90bee9c2280257be918e0ff29b73c9f566ffea5e8a12e57763dbf49fdca97baf",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_frames": 1105,
+    "leading_signal_ms_at_minus55db": 0.9297052154195011,
+    "peak_dbfs": -2.0055237924771387,
+    "attack_waveform_matches": [
+      {
+        "target_beat": 0,
+        "offset_ms": 0.0,
+        "correlation": 0.99988
+      },
+      {
+        "target_beat": 1,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 2,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "attack_waveform_placement": true
+    },
+    "checks_pass": true,
+    "limits": "Correlations verify placement of reviewed acoustic landmarks, not the perceptual accuracy of the original landmark annotation. Natural consonants may precede a voiced attack. Exact singer identity, pitch/key, lyric accuracy and absence of faint backing leakage are not established by waveform measurements; no listening-based verification claimed."
+  },
+  {
+    "number": 14,
+    "file": "14_together_we_rise_140bpm_2bars.mp3",
+    "title": "Together We Rise",
+    "role": "uplift hook",
+    "lyrics_requested": "Together We Rise",
+    "bpm": 140,
+    "bars": 2,
+    "frames": 151200,
+    "sample_rate": 44100,
+    "channels": 1,
+    "seconds": 3.4285714285714284,
+    "source_anchors_seconds": [
+      0.088140589569161,
+      0.575,
+      0.994,
+      1.95,
+      4.19
+    ],
+    "target_anchors_beats": [
+      0,
+      1,
+      2,
+      4,
+      8
+    ],
+    "interval_atempo_rates": [
+      1.148075593454713,
+      0.9756856418529615,
+      1.1202559576345985,
+      1.313060386734363
+    ],
+    "source_anchor_method": "Isolated waveform/spectrogram reviewed with approximate unprompted ASR hints for lyrics; main note/word attacks, not every consonant. Natural vowel transitions can be continuous.",
+    "final_mp3_sha256": "6193802b4a544770394bd8f9d2ddc875cab938a59d9c3d7e5e6a1967b2df4666",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_frames": 1105,
+    "leading_signal_ms_at_minus55db": 1.0430839002267573,
+    "peak_dbfs": -2.0015176937184154,
+    "attack_waveform_matches": [
+      {
+        "target_beat": 0,
+        "offset_ms": 0.0,
+        "correlation": 0.99999
+      },
+      {
+        "target_beat": 1,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 2,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 4,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "attack_waveform_placement": true
+    },
+    "checks_pass": true,
+    "limits": "Correlations verify placement of reviewed acoustic landmarks, not the perceptual accuracy of the original landmark annotation. Natural consonants may precede a voiced attack. Exact singer identity, pitch/key, lyric accuracy and absence of faint backing leakage are not established by waveform measurements; no listening-based verification claimed."
+  },
+  {
+    "number": 15,
+    "file": "15_come_into_the_light_140bpm_4bars.mp3",
+    "title": "Come into the Light",
+    "role": "rhythmic hook",
+    "lyrics_requested": "Come into the Light",
+    "bpm": 140,
+    "bars": 4,
+    "frames": 302400,
+    "sample_rate": 44100,
+    "channels": 1,
+    "seconds": 6.857142857142857,
+    "source_anchors_seconds": [
+      0.0690702947845805,
+      0.951,
+      1.828,
+      2.708,
+      3.588,
+      7.15
+    ],
+    "target_anchors_beats": [
+      0,
+      2,
+      4,
+      6,
+      8,
+      16
+    ],
+    "interval_atempo_rates": [
+      1.0301467343336275,
+      1.0241615180935568,
+      1.027802294792586,
+      1.027802294792586,
+      1.0393168332709681
+    ],
+    "source_anchor_method": "Isolated waveform/spectrogram reviewed with approximate unprompted ASR hints for lyrics; main note/word attacks, not every consonant. Natural vowel transitions can be continuous.",
+    "final_mp3_sha256": "1c74e105624e790c2a9ac7cb65fb9695d9bd56ff930096623254ba3ac6b9b3ac",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_frames": 1105,
+    "leading_signal_ms_at_minus55db": 0.9297052154195011,
+    "peak_dbfs": -1.9991816557649835,
+    "attack_waveform_matches": [
+      {
+        "target_beat": 0,
+        "offset_ms": 0.0,
+        "correlation": 0.99998
+      },
+      {
+        "target_beat": 2,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 4,
+        "offset_ms": 0.0,
+        "correlation": 0.99995
+      },
+      {
+        "target_beat": 6,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 8,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "attack_waveform_placement": true
+    },
+    "checks_pass": true,
+    "limits": "Correlations verify placement of reviewed acoustic landmarks, not the perceptual accuracy of the original landmark annotation. Natural consonants may precede a voiced attack. Exact singer identity, pitch/key, lyric accuracy and absence of faint backing leakage are not established by waveform measurements; no listening-based verification claimed."
+  },
+  {
+    "number": 16,
+    "file": "16_never_let_go_140bpm_2bars.mp3",
+    "title": "Never Let Go",
+    "role": "warm hook",
+    "lyrics_requested": "Never Let Go",
+    "bpm": 140,
+    "bars": 2,
+    "frames": 151200,
+    "sample_rate": 44100,
+    "channels": 1,
+    "seconds": 3.4285714285714284,
+    "source_anchors_seconds": [
+      0.060430839002267575,
+      0.603,
+      1.438,
+      3.48
+    ],
+    "target_anchors_beats": [
+      0,
+      1,
+      4,
+      8
+    ],
+    "interval_atempo_rates": [
+      1.2896404701544135,
+      0.6396402929871636,
+      1.1951496165064275
+    ],
+    "source_anchor_method": "Isolated waveform/spectrogram reviewed with approximate unprompted ASR hints for lyrics; main note/word attacks, not every consonant. Natural vowel transitions can be continuous.",
+    "final_mp3_sha256": "0fec947e1fbfeea8abd701a0f04192e24a06acc332acd6a7d096fe3a4d0ed457",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_frames": 1105,
+    "leading_signal_ms_at_minus55db": 0.9750566893424036,
+    "peak_dbfs": -2.003854360109651,
+    "attack_waveform_matches": [
+      {
+        "target_beat": 0,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 1,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 4,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "attack_waveform_placement": true
+    },
+    "checks_pass": true,
+    "limits": "Correlations verify placement of reviewed acoustic landmarks, not the perceptual accuracy of the original landmark annotation. Natural consonants may precede a voiced attack. Exact singer identity, pitch/key, lyric accuracy and absence of faint backing leakage are not established by waveform measurements; no listening-based verification claimed."
+  },
+  {
+    "number": 17,
+    "file": "17_higher_every_time_140bpm_4bars.mp3",
+    "title": "Higher Every Time",
+    "role": "uplift hook",
+    "lyrics_requested": "Higher Every Time",
+    "bpm": 140,
+    "bars": 4,
+    "frames": 302400,
+    "sample_rate": 44100,
+    "channels": 1,
+    "seconds": 6.857142857142857,
+    "source_anchors_seconds": [
+      0.07918367346938776,
+      1.109,
+      1.847,
+      3.578,
+      6.67
+    ],
+    "target_anchors_beats": [
+      0,
+      2,
+      4,
+      8,
+      16
+    ],
+    "interval_atempo_rates": [
+      1.2100342012356575,
+      0.8550860547219771,
+      1.009951928270498,
+      0.9008192120596568
+    ],
+    "source_anchor_method": "Isolated waveform/spectrogram reviewed with approximate unprompted ASR hints for lyrics; main note/word attacks, not every consonant. Natural vowel transitions can be continuous.",
+    "final_mp3_sha256": "cc1ae26c758ced5b47de624f4546991c43ea47e247eb86de7bb6ad297c9874d9",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_frames": 1105,
+    "leading_signal_ms_at_minus55db": 2.9478458049886624,
+    "peak_dbfs": -2.0021852485462475,
+    "attack_waveform_matches": [
+      {
+        "target_beat": 0,
+        "offset_ms": 0.0,
+        "correlation": 0.99999
+      },
+      {
+        "target_beat": 2,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 4,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 8,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "attack_waveform_placement": true
+    },
+    "checks_pass": true,
+    "limits": "Correlations verify placement of reviewed acoustic landmarks, not the perceptual accuracy of the original landmark annotation. Natural consonants may precede a voiced attack. Exact singer identity, pitch/key, lyric accuracy and absence of faint backing leakage are not established by waveform measurements; no listening-based verification claimed."
+  },
+  {
+    "number": 18,
+    "file": "18_can_you_hear_my_heartbeat_140bpm_4bars.mp3",
+    "title": "Can You Hear My Heartbeat",
+    "role": "long melodic hook",
+    "lyrics_requested": "Can You Hear My Heartbeat",
+    "bpm": 140,
+    "bars": 4,
+    "frames": 302400,
+    "sample_rate": 44100,
+    "channels": 1,
+    "seconds": 6.857142857142857,
+    "source_anchors_seconds": [
+      0.08600907029478458,
+      0.49,
+      0.978,
+      1.855,
+      2.848,
+      4.185,
+      6.77
+    ],
+    "target_anchors_beats": [
+      0,
+      1,
+      2,
+      4,
+      6,
+      10,
+      16
+    ],
+    "interval_atempo_rates": [
+      0.9375432127218253,
+      1.1510140585388338,
+      1.0241615180935568,
+      1.1652416151809355,
+      0.7753186777573728,
+      1.0053550994135316
+    ],
+    "source_anchor_method": "Isolated waveform/spectrogram reviewed with approximate unprompted ASR hints for lyrics; main note/word attacks, not every consonant. Natural vowel transitions can be continuous.",
+    "final_mp3_sha256": "968f3108b1effc0a2385f6c5f7262d2cc92f3d74fe1c2ea304c1d7d1bccfd6dc",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_frames": 1105,
+    "leading_signal_ms_at_minus55db": 0.8616780045351474,
+    "peak_dbfs": -2.0008501901916267,
+    "attack_waveform_matches": [
+      {
+        "target_beat": 0,
+        "offset_ms": 0.0,
+        "correlation": 0.99996
+      },
+      {
+        "target_beat": 1,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 2,
+        "offset_ms": 0.0,
+        "correlation": 0.99999
+      },
+      {
+        "target_beat": 4,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 6,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 10,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "attack_waveform_placement": true
+    },
+    "checks_pass": true,
+    "limits": "Correlations verify placement of reviewed acoustic landmarks, not the perceptual accuracy of the original landmark annotation. Natural consonants may precede a voiced attack. Exact singer identity, pitch/key, lyric accuracy and absence of faint backing leakage are not established by waveform measurements; no listening-based verification claimed."
+  },
+  {
+    "number": 19,
+    "file": "19_we_can_dance_until_the_morning_140bpm_2bars.mp3",
+    "title": "We Can Dance Until the Morning",
+    "role": "long melodic hook",
+    "lyrics_requested": "We Can Dance Until the Morning",
+    "bpm": 140,
+    "bars": 2,
+    "frames": 151200,
+    "sample_rate": 44100,
+    "channels": 1,
+    "seconds": 3.4285714285714284,
+    "source_anchors_seconds": [
+      0.0791609977324263,
+      0.352,
+      0.783,
+      1.25,
+      1.648,
+      2.139,
+      2.337,
+      2.963,
+      3.55
+    ],
+    "target_anchors_beats": [
+      0,
+      0.5,
+      1.5,
+      2.5,
+      3.5,
+      4.5,
+      5,
+      6.5,
+      8
+    ],
+    "interval_atempo_rates": [
+      1.326587401973185,
+      1.0061650149804102,
+      1.0976607513251901,
+      0.9223323346393179,
+      1.1586194975800876,
+      0.9091828990640021,
+      0.9722450197716929,
+      0.9081175856151608
+    ],
+    "source_anchor_method": "Isolated waveform/spectrogram reviewed with approximate unprompted ASR hints for lyrics; main note/word attacks, not every consonant. Natural vowel transitions can be continuous.",
+    "final_mp3_sha256": "fa6bad640113fd499971fc8ab3cab62058e1b2747d066d2d4f2985974c6dada5",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_frames": 1105,
+    "leading_signal_ms_at_minus55db": 2.2675736961451247,
+    "peak_dbfs": -1.9908437880580245,
+    "attack_waveform_matches": [
+      {
+        "target_beat": 0,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 0.5,
+        "offset_ms": 0.0,
+        "correlation": 0.99998
+      },
+      {
+        "target_beat": 1.5,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 2.5,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 3.5,
+        "offset_ms": 0.0,
+        "correlation": 0.99999
+      },
+      {
+        "target_beat": 4.5,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 5,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 6.5,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "attack_waveform_placement": true
+    },
+    "checks_pass": true,
+    "limits": "Correlations verify placement of reviewed acoustic landmarks, not the perceptual accuracy of the original landmark annotation. Natural consonants may precede a voiced attack. Exact singer identity, pitch/key, lyric accuracy and absence of faint backing leakage are not established by waveform measurements; no listening-based verification claimed."
+  },
+  {
+    "number": 20,
+    "file": "20_hold_me_in_the_rhythm_140bpm_4bars.mp3",
+    "title": "Hold Me in the Rhythm",
+    "role": "long soulful hook",
+    "lyrics_requested": "Hold Me in the Rhythm",
+    "bpm": 140,
+    "bars": 4,
+    "frames": 302400,
+    "sample_rate": 44100,
+    "channels": 1,
+    "seconds": 6.857142857142857,
+    "source_anchors_seconds": [
+      0.10954648526077097,
+      1.025,
+      2.846,
+      3.279,
+      3.715,
+      6.83
+    ],
+    "target_anchors_beats": [
+      0,
+      2,
+      6,
+      7,
+      8,
+      16
+    ],
+    "interval_atempo_rates": [
+      1.07091240070609,
+      1.0635600086421086,
+      1.0112353076745795,
+      1.018898363678267,
+      0.9075947506281071
+    ],
+    "source_anchor_method": "Isolated waveform/spectrogram reviewed with approximate unprompted ASR hints for lyrics; main note/word attacks, not every consonant. Natural vowel transitions can be continuous.",
+    "final_mp3_sha256": "27189eef881b99f2aec89d01267ec7ed7601e6a17244e51237bc5b635c05a05b",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_frames": 1105,
+    "leading_signal_ms_at_minus55db": 0.5442176870748299,
+    "peak_dbfs": -2.0028528546830096,
+    "attack_waveform_matches": [
+      {
+        "target_beat": 0,
+        "offset_ms": 0.0,
+        "correlation": 0.99999
+      },
+      {
+        "target_beat": 2,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 6,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 7,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 8,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "attack_waveform_placement": true
+    },
+    "checks_pass": true,
+    "limits": "Correlations verify placement of reviewed acoustic landmarks, not the perceptual accuracy of the original landmark annotation. Natural consonants may precede a voiced attack. Exact singer identity, pitch/key, lyric accuracy and absence of faint backing leakage are not established by waveform measurements; no listening-based verification claimed."
+  },
+  {
+    "number": 21,
+    "file": "21_let_the_colours_carry_you_140bpm_4bars.mp3",
+    "title": "Let the Colours Carry You",
+    "role": "long melodic hook",
+    "lyrics_requested": "Let the Colours Carry You",
+    "bpm": 140,
+    "bars": 4,
+    "frames": 302400,
+    "sample_rate": 44100,
+    "channels": 1,
+    "seconds": 6.857142857142857,
+    "source_anchors_seconds": [
+      0.09038548752834467,
+      0.592,
+      1.012,
+      1.884,
+      2.778,
+      3.57,
+      6.77
+    ],
+    "target_anchors_beats": [
+      0,
+      1,
+      2,
+      4,
+      6,
+      8,
+      16
+    ],
+    "interval_atempo_rates": [
+      1.185584235999078,
+      0.9782207882000461,
+      1.018065975286849,
+      1.0448477493380406,
+      0.9207579435127978,
+      0.932645533757417
+    ],
+    "source_anchor_method": "Isolated waveform/spectrogram reviewed with approximate unprompted ASR hints for lyrics; main note/word attacks, not every consonant. Natural vowel transitions can be continuous.",
+    "final_mp3_sha256": "d3dfadbe5f621a16734e31824cc46aea2c9f885b4b3d375d1156fcc80b99e6be",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_frames": 1105,
+    "leading_signal_ms_at_minus55db": 0.6122448979591837,
+    "peak_dbfs": -1.9978470589601351,
+    "attack_waveform_matches": [
+      {
+        "target_beat": 0,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 1,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 2,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 4,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 6,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 8,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "attack_waveform_placement": true
+    },
+    "checks_pass": true,
+    "limits": "Correlations verify placement of reviewed acoustic landmarks, not the perceptual accuracy of the original landmark annotation. Natural consonants may precede a voiced attack. Exact singer identity, pitch/key, lyric accuracy and absence of faint backing leakage are not established by waveform measurements; no listening-based verification claimed."
+  },
+  {
+    "number": 22,
+    "file": "22_lift_your_voice_and_touch_the_sky_140bpm_4bars.mp3",
+    "title": "Lift Your Voice and Touch the Sky",
+    "role": "long uplift hook",
+    "lyrics_requested": "Lift Your Voice and Touch the Sky",
+    "bpm": 140,
+    "bars": 4,
+    "frames": 302400,
+    "sample_rate": 44100,
+    "channels": 1,
+    "seconds": 6.857142857142857,
+    "source_anchors_seconds": [
+      0.08854875283446711,
+      0.589,
+      1.014,
+      1.89,
+      2.77,
+      3.42,
+      4.073,
+      6.79
+    ],
+    "target_anchors_beats": [
+      0,
+      1,
+      2,
+      4,
+      6,
+      8,
+      10,
+      16
+    ],
+    "interval_atempo_rates": [
+      1.1826457709149574,
+      0.990896519935469,
+      1.0229479258605472,
+      1.027802294792586,
+      0.7480417034421889,
+      0.751682480141218,
+      1.057395222428837
+    ],
+    "source_anchor_method": "Isolated waveform/spectrogram reviewed with approximate unprompted ASR hints for lyrics; main note/word attacks, not every consonant. Natural vowel transitions can be continuous.",
+    "final_mp3_sha256": "fef6f312cf8689f76aef9c3af026416d27a693473caaf77401f9e5ba24599833",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_frames": 1105,
+    "leading_signal_ms_at_minus55db": 0.8390022675736961,
+    "peak_dbfs": -1.9885106186636752,
+    "attack_waveform_matches": [
+      {
+        "target_beat": 0,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 1,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 2,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 4,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 6,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 8,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 10,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "attack_waveform_placement": true
+    },
+    "checks_pass": true,
+    "limits": "Correlations verify placement of reviewed acoustic landmarks, not the perceptual accuracy of the original landmark annotation. Natural consonants may precede a voiced attack. Exact singer identity, pitch/key, lyric accuracy and absence of faint backing leakage are not established by waveform measurements; no listening-based verification claimed."
+  },
+  {
+    "number": 23,
+    "file": "23_open_up_your_heart_tonight_140bpm_4bars.mp3",
+    "title": "Open Up Your Heart Tonight",
+    "role": "long melodic hook",
+    "lyrics_requested": "Open Up Your Heart Tonight",
+    "bpm": 140,
+    "bars": 4,
+    "frames": 302400,
+    "sample_rate": 44100,
+    "channels": 1,
+    "seconds": 6.857142857142857,
+    "source_anchors_seconds": [
+      0.06328798185941042,
+      0.557,
+      0.8,
+      1.457,
+      1.878,
+      2.757,
+      3.63,
+      6.74
+    ],
+    "target_anchors_beats": [
+      0,
+      1,
+      1.5,
+      3,
+      4,
+      6,
+      8,
+      16
+    ],
+    "interval_atempo_rates": [
+      1.1655335330721364,
+      1.1601315456615229,
+      1.023278370514064,
+      0.9807559345471307,
+      1.0265887025595763,
+      1.0192795675198587,
+      0.9061247126744
+    ],
+    "source_anchor_method": "Isolated waveform/spectrogram reviewed with approximate unprompted ASR hints for lyrics; main note/word attacks, not every consonant. Natural vowel transitions can be continuous.",
+    "final_mp3_sha256": "3aa00d7287466bb87e5fc156093003216019e3d312ed49c677462e9891d42d7d",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_frames": 1105,
+    "leading_signal_ms_at_minus55db": 2.9478458049886624,
+    "peak_dbfs": -1.9991816557649835,
+    "attack_waveform_matches": [
+      {
+        "target_beat": 0,
+        "offset_ms": 0.0,
+        "correlation": 0.99997
+      },
+      {
+        "target_beat": 1,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 1.5,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 3,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 4,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 6,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 8,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "attack_waveform_placement": true
+    },
+    "checks_pass": true,
+    "limits": "Correlations verify placement of reviewed acoustic landmarks, not the perceptual accuracy of the original landmark annotation. Natural consonants may precede a voiced attack. Exact singer identity, pitch/key, lyric accuracy and absence of faint backing leakage are not established by waveform measurements; no listening-based verification claimed."
+  },
+  {
+    "number": 24,
+    "file": "24_scat_doo_ba_dee_dah_140bpm_2bars.mp3",
+    "title": "Scat Doo Ba Dee Dah",
+    "role": "wordless scat",
+    "lyrics_requested": "doo ba dee dah",
+    "bpm": 140,
+    "bars": 2,
+    "frames": 151200,
+    "sample_rate": 44100,
+    "channels": 1,
+    "seconds": 3.4285714285714284,
+    "source_anchors_seconds": [
+      0.08235827664399092,
+      0.55,
+      0.986,
+      1.635,
+      3.47
+    ],
+    "target_anchors_beats": [
+      0,
+      1,
+      2,
+      4,
+      8
+    ],
+    "interval_atempo_rates": [
+      1.099274026273335,
+      1.018898363678267,
+      0.7468281112091791,
+      1.0718780382413309
+    ],
+    "source_anchor_method": "Isolated waveform/spectrogram reviewed with approximate unprompted ASR hints for lyrics; main note/word attacks, not every consonant. Natural vowel transitions can be continuous.",
+    "final_mp3_sha256": "e348d084056015b01844f67a667a5e343e918fe19b93ee10ddbc7c128b3d4b96",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_frames": 1105,
+    "leading_signal_ms_at_minus55db": 0.9297052154195011,
+    "peak_dbfs": -1.9971798374482028,
+    "attack_waveform_matches": [
+      {
+        "target_beat": 0,
+        "offset_ms": 0.0,
+        "correlation": 0.99999
+      },
+      {
+        "target_beat": 1,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 2,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 4,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "attack_waveform_placement": true
+    },
+    "checks_pass": true,
+    "limits": "Correlations verify placement of reviewed acoustic landmarks, not the perceptual accuracy of the original landmark annotation. Natural consonants may precede a voiced attack. Exact singer identity, pitch/key, lyric accuracy and absence of faint backing leakage are not established by waveform measurements; no listening-based verification claimed."
+  },
+  {
+    "number": 25,
+    "file": "25_scat_sha_bee_doo_wah_140bpm_2bars.mp3",
+    "title": "Scat Sha Bee Doo Wah",
+    "role": "wordless scat",
+    "lyrics_requested": "sha bee doo wah",
+    "bpm": 140,
+    "bars": 2,
+    "frames": 151200,
+    "sample_rate": 44100,
+    "channels": 1,
+    "seconds": 3.4285714285714284,
+    "source_anchors_seconds": [
+      0.06458049886621316,
+      0.265,
+      1.129,
+      1.56,
+      3.48
+    ],
+    "target_anchors_beats": [
+      0,
+      0.5,
+      2.5,
+      3.5,
+      8
+    ],
+    "interval_atempo_rates": [
+      0.922590437642297,
+      1.0083572374227714,
+      1.0061650149804102,
+      0.9954733791583839
+    ],
+    "source_anchor_method": "Isolated waveform/spectrogram reviewed with approximate unprompted ASR hints for lyrics; main note/word attacks, not every consonant. Natural vowel transitions can be continuous.",
+    "final_mp3_sha256": "29f80153de2289981e40545c16472f82d97e6d66ebf8fba1eee66064f3fc75ee",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_frames": 1105,
+    "leading_signal_ms_at_minus55db": 1.3378684807256236,
+    "peak_dbfs": -2.004855981025761,
+    "attack_waveform_matches": [
+      {
+        "target_beat": 0,
+        "offset_ms": 0.0,
+        "correlation": 0.99997
+      },
+      {
+        "target_beat": 0.5,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 2.5,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 3.5,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "attack_waveform_placement": true
+    },
+    "checks_pass": true,
+    "limits": "Correlations verify placement of reviewed acoustic landmarks, not the perceptual accuracy of the original landmark annotation. Natural consonants may precede a voiced attack. Exact singer identity, pitch/key, lyric accuracy and absence of faint backing leakage are not established by waveform measurements; no listening-based verification claimed."
+  },
+  {
+    "number": 26,
+    "file": "26_scat_ba_da_bop_140bpm_2bars.mp3",
+    "title": "Scat Ba Da Bop",
+    "role": "wordless scat",
+    "lyrics_requested": "ba da bop",
+    "bpm": 140,
+    "bars": 2,
+    "frames": 151200,
+    "sample_rate": 44100,
+    "channels": 1,
+    "seconds": 3.4285714285714284,
+    "source_anchors_seconds": [
+      0.12959183673469388,
+      0.457,
+      0.832,
+      1.7
+    ],
+    "target_anchors_beats": [
+      0,
+      1,
+      2,
+      8
+    ],
+    "interval_atempo_rates": [
+      0.7429707305830836,
+      0.8638511177690712,
+      0.7933268545513443
+    ],
+    "source_anchor_method": "Isolated waveform/spectrogram reviewed with approximate unprompted ASR hints for lyrics; main note/word attacks, not every consonant. Natural vowel transitions can be continuous.",
+    "final_mp3_sha256": "ffb5a0e51f02bd5e5f1706e6b12fabb991476f63d2bd1ee2120cf14bbbf293d8",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_frames": 1105,
+    "leading_signal_ms_at_minus55db": 1.4512471655328798,
+    "peak_dbfs": -2.0001827379579966,
+    "attack_waveform_matches": [
+      {
+        "target_beat": 0,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 1,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 2,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "attack_waveform_placement": true
+    },
+    "checks_pass": true,
+    "limits": "Correlations verify placement of reviewed acoustic landmarks, not the perceptual accuracy of the original landmark annotation. Natural consonants may precede a voiced attack. Exact singer identity, pitch/key, lyric accuracy and absence of faint backing leakage are not established by waveform measurements; no listening-based verification claimed."
+  },
+  {
+    "number": 27,
+    "file": "27_vowels_oo_ee_ah_140bpm_2bars.mp3",
+    "title": "Vowels Oo Ee Ah",
+    "role": "wordless vowels",
+    "lyrics_requested": "oo ee ah",
+    "bpm": 140,
+    "bars": 2,
+    "frames": 151200,
+    "sample_rate": 44100,
+    "channels": 1,
+    "seconds": 3.4285714285714284,
+    "source_anchors_seconds": [
+      0.07251700680272109,
+      1.007,
+      1.997,
+      4.43
+    ],
+    "target_anchors_beats": [
+      0,
+      2,
+      4,
+      8
+    ],
+    "interval_atempo_rates": [
+      1.0940809796999118,
+      1.1616008384819065,
+      1.4279869288106297
+    ],
+    "source_anchor_method": "Isolated waveform/spectrogram reviewed with approximate unprompted ASR hints for lyrics; main note/word attacks, not every consonant. Natural vowel transitions can be continuous.",
+    "final_mp3_sha256": "835bf7f61b26b2df779810e46b807ad6166f311abe323ca5face06a7268901b2",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_frames": 1105,
+    "leading_signal_ms_at_minus55db": 1.2698412698412698,
+    "peak_dbfs": -2.0008501901916267,
+    "attack_waveform_matches": [
+      {
+        "target_beat": 0,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 2,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 4,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "attack_waveform_placement": true
+    },
+    "checks_pass": true,
+    "limits": "Correlations verify placement of reviewed acoustic landmarks, not the perceptual accuracy of the original landmark annotation. Natural consonants may precede a voiced attack. Exact singer identity, pitch/key, lyric accuracy and absence of faint backing leakage are not established by waveform measurements; no listening-based verification claimed."
+  },
+  {
+    "number": 28,
+    "file": "28_scat_da_ya_da_ya_140bpm_2bars.mp3",
+    "title": "Scat Da Ya Da Ya",
+    "role": "wordless scat",
+    "lyrics_requested": "da ya da ya",
+    "bpm": 140,
+    "bars": 2,
+    "frames": 151200,
+    "sample_rate": 44100,
+    "channels": 1,
+    "seconds": 3.4285714285714284,
+    "source_anchors_seconds": [
+      0.44160997732426305,
+      0.763,
+      1.435,
+      2.001,
+      3.68
+    ],
+    "target_anchors_beats": [
+      0,
+      1,
+      2,
+      4,
+      8
+    ],
+    "interval_atempo_rates": [
+      0.7276446185757087,
+      1.6185757086886379,
+      0.6458517210944396,
+      0.9789888732850816
+    ],
+    "source_anchor_method": "Isolated waveform/spectrogram reviewed with approximate unprompted ASR hints for lyrics; main note/word attacks, not every consonant. Natural vowel transitions can be continuous.",
+    "final_mp3_sha256": "231b15153af16a3bd2291f1a9227e49a025fd5f39d1438b2906d81fcaa04052a",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_frames": 1105,
+    "leading_signal_ms_at_minus55db": 1.1111111111111112,
+    "peak_dbfs": -2.0008501901916267,
+    "attack_waveform_matches": [
+      {
+        "target_beat": 0,
+        "offset_ms": 0.0,
+        "correlation": 0.99999
+      },
+      {
+        "target_beat": 1,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 2,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 4,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "attack_waveform_placement": true
+    },
+    "checks_pass": true,
+    "limits": "Correlations verify placement of reviewed acoustic landmarks, not the perceptual accuracy of the original landmark annotation. Natural consonants may precede a voiced attack. Exact singer identity, pitch/key, lyric accuracy and absence of faint backing leakage are not established by waveform measurements; no listening-based verification claimed."
+  },
+  {
+    "number": 29,
+    "file": "29_hum_mm_ah_oo_140bpm_2bars.mp3",
+    "title": "Hum Mm Ah Oo",
+    "role": "wordless hum/vowels",
+    "lyrics_requested": "mm ah oo",
+    "bpm": 140,
+    "bars": 2,
+    "frames": 151200,
+    "sample_rate": 44100,
+    "channels": 1,
+    "seconds": 3.4285714285714284,
+    "source_anchors_seconds": [
+      0.10748299319727891,
+      0.529,
+      0.962,
+      1.84
+    ],
+    "target_anchors_beats": [
+      0,
+      1,
+      2,
+      8
+    ],
+    "interval_atempo_rates": [
+      0.9820811246831067,
+      1.0112353076745795,
+      0.7934095953559843
+    ],
+    "source_anchor_method": "Isolated waveform/spectrogram reviewed with approximate unprompted ASR hints for lyrics; main note/word attacks, not every consonant. Natural vowel transitions can be continuous.",
+    "final_mp3_sha256": "3222ad2caaafbbb4a99930eb67041e97dff759383f43270e8386a1b176917d23",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_frames": 1105,
+    "leading_signal_ms_at_minus55db": 1.4058956916099772,
+    "peak_dbfs": -1.9991816557649835,
+    "attack_waveform_matches": [
+      {
+        "target_beat": 0,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 1,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 2,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "attack_waveform_placement": true
+    },
+    "checks_pass": true,
+    "limits": "Correlations verify placement of reviewed acoustic landmarks, not the perceptual accuracy of the original landmark annotation. Natural consonants may precede a voiced attack. Exact singer identity, pitch/key, lyric accuracy and absence of faint backing leakage are not established by waveform measurements; no listening-based verification claimed."
+  },
+  {
+    "number": 30,
+    "file": "30_scat_doo_ba_dee_doo_ba_dah_140bpm_2bars.mp3",
+    "title": "Scat Doo Ba Dee Doo Ba Dah",
+    "role": "long wordless scat",
+    "lyrics_requested": "doo ba dee doo ba dah",
+    "bpm": 140,
+    "bars": 2,
+    "frames": 151200,
+    "sample_rate": 44100,
+    "channels": 1,
+    "seconds": 3.4285714285714284,
+    "source_anchors_seconds": [
+      0.08292517006802722,
+      0.53,
+      0.96,
+      1.3948,
+      1.6453,
+      2.0414,
+      3.48
+    ],
+    "target_anchors_beats": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      8
+    ],
+    "interval_atempo_rates": [
+      1.0470154413459323,
+      1.0036298686333256,
+      1.0158446646692787,
+      0.5475339940078359,
+      0.9174925097948836,
+      1.1222351149466967
+    ],
+    "source_anchor_method": "Isolated waveform/spectrogram reviewed with approximate unprompted ASR hints for lyrics; main note/word attacks, not every consonant. Natural vowel transitions can be continuous.",
+    "final_mp3_sha256": "a5224b7cc66bce0bf64eaf3a5d7737916222b534789ae79475cb1eaab942c576",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_frames": 1105,
+    "leading_signal_ms_at_minus55db": 1.0204081632653061,
+    "peak_dbfs": -2.0008501901916267,
+    "attack_waveform_matches": [
+      {
+        "target_beat": 0,
+        "offset_ms": 0.0,
+        "correlation": 0.99999
+      },
+      {
+        "target_beat": 1,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 2,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 3,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 4,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 5,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "attack_waveform_placement": true
+    },
+    "checks_pass": true,
+    "limits": "Correlations verify placement of reviewed acoustic landmarks, not the perceptual accuracy of the original landmark annotation. Natural consonants may precede a voiced attack. Exact singer identity, pitch/key, lyric accuracy and absence of faint backing leakage are not established by waveform measurements; no listening-based verification claimed."
+  },
+  {
+    "number": 31,
+    "file": "31_scat_sha_ba_dee_ya_sha_ba_doo_140bpm_2bars.mp3",
+    "title": "Scat Sha Ba Dee Ya Sha Ba Doo",
+    "role": "long wordless scat",
+    "lyrics_requested": "sha ba dee ya sha ba doo",
+    "bpm": 140,
+    "bars": 2,
+    "frames": 151200,
+    "sample_rate": 44100,
+    "channels": 1,
+    "seconds": 3.4285714285714284,
+    "source_anchors_seconds": [
+      0.03528344671201814,
+      0.439,
+      0.854,
+      1.501,
+      2.15,
+      2.596,
+      2.7258,
+      3.41
+    ],
+    "target_anchors_beats": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      5.5,
+      8
+    ],
+    "interval_atempo_rates": [
+      0.9368518091726205,
+      0.9654874395021894,
+      1.5550241991242222,
+      1.5600944918183914,
+      1.0443074441115465,
+      0.5287123703516317,
+      0.7914685392015924
+    ],
+    "source_anchor_method": "Isolated waveform/spectrogram reviewed with approximate unprompted ASR hints for lyrics; main note/word attacks, not every consonant. Natural vowel transitions can be continuous.",
+    "final_mp3_sha256": "0db2d72331880c850b993a63cb690ca5a3991f8d7d0384237e72092d974e1ce1",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_frames": 1105,
+    "leading_signal_ms_at_minus55db": 1.2244897959183674,
+    "peak_dbfs": -2.003854360109651,
+    "attack_waveform_matches": [
+      {
+        "target_beat": 0,
+        "offset_ms": 0.0,
+        "correlation": 0.99999
+      },
+      {
+        "target_beat": 1,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 2,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 3,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 4,
+        "offset_ms": 0.0,
+        "correlation": 0.99999
+      },
+      {
+        "target_beat": 5,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 5.5,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "attack_waveform_placement": true
+    },
+    "checks_pass": true,
+    "limits": "Correlations verify placement of reviewed acoustic landmarks, not the perceptual accuracy of the original landmark annotation. Natural consonants may precede a voiced attack. Exact singer identity, pitch/key, lyric accuracy and absence of faint backing leakage are not established by waveform measurements; no listening-based verification claimed."
+  },
+  {
+    "number": 32,
+    "file": "32_scat_da_ba_da_ba_dee_yah_140bpm_2bars.mp3",
+    "title": "Scat Da Ba Da Ba Dee Yah",
+    "role": "long wordless scat",
+    "lyrics_requested": "da ba da ba dee yah",
+    "bpm": 140,
+    "bars": 2,
+    "frames": 151200,
+    "sample_rate": 44100,
+    "channels": 1,
+    "seconds": 3.4285714285714284,
+    "source_anchors_seconds": [
+      0.07805442176870749,
+      0.381,
+      0.52,
+      0.797,
+      0.98,
+      1.22,
+      1.79
+    ],
+    "target_anchors_beats": [
+      0,
+      0.5,
+      1,
+      1.5,
+      2,
+      2.5,
+      8
+    ],
+    "interval_atempo_rates": [
+      1.4945610928408803,
+      0.5800657728307614,
+      1.349860865165697,
+      0.8254490260561599,
+      1.1434353655451557,
+      0.7896709843692472
+    ],
+    "source_anchor_method": "Isolated waveform/spectrogram reviewed with approximate unprompted ASR hints for lyrics; main note/word attacks, not every consonant. Natural vowel transitions can be continuous.",
+    "final_mp3_sha256": "6c386953722d9734d563b182b5823b9b105353396951c1c011d62b528bce0bee",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_frames": 1105,
+    "leading_signal_ms_at_minus55db": 2.834467120181406,
+    "peak_dbfs": -1.9998490310736532,
+    "attack_waveform_matches": [
+      {
+        "target_beat": 0,
+        "offset_ms": 0.0,
+        "correlation": 0.99998
+      },
+      {
+        "target_beat": 0.5,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 1,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 1.5,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 2,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 2.5,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "attack_waveform_placement": true
+    },
+    "checks_pass": true,
+    "limits": "Correlations verify placement of reviewed acoustic landmarks, not the perceptual accuracy of the original landmark annotation. Natural consonants may precede a voiced attack. Exact singer identity, pitch/key, lyric accuracy and absence of faint backing leakage are not established by waveform measurements; no listening-based verification claimed."
+  },
+  {
+    "number": 33,
+    "file": "33_vowels_oo_ah_ee_oh_140bpm_4bars.mp3",
+    "title": "Vowels Oo Ah Ee Oh",
+    "role": "long wordless vowels",
+    "lyrics_requested": "oo ah ee oh",
+    "bpm": 140,
+    "bars": 4,
+    "frames": 302400,
+    "sample_rate": 44100,
+    "channels": 1,
+    "seconds": 6.857142857142857,
+    "source_anchors_seconds": [
+      0.08349206349206349,
+      1.008,
+      1.819,
+      3.508,
+      7.12
+    ],
+    "target_anchors_beats": [
+      0,
+      2,
+      4,
+      8,
+      16
+    ],
+    "interval_atempo_rates": [
+      1.0819450573698146,
+      0.943871359223301,
+      0.9849438262936157,
+      1.0540506227615332
+    ],
+    "source_anchor_method": "Isolated waveform/spectrogram reviewed with approximate unprompted ASR hints for lyrics; main note/word attacks, not every consonant. Natural vowel transitions can be continuous.",
+    "final_mp3_sha256": "6492760c7db6f00a314681acb5da9f7389ff716c5a25754f3f608a2995e1b0ca",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_frames": 1105,
+    "leading_signal_ms_at_minus55db": 4.761904761904763,
+    "peak_dbfs": -2.004855981025761,
+    "attack_waveform_matches": [
+      {
+        "target_beat": 0,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 2,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 4,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 8,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "attack_waveform_placement": true
+    },
+    "checks_pass": true,
+    "limits": "Correlations verify placement of reviewed acoustic landmarks, not the perceptual accuracy of the original landmark annotation. Natural consonants may precede a voiced attack. Exact singer identity, pitch/key, lyric accuracy and absence of faint backing leakage are not established by waveform measurements; no listening-based verification claimed."
+  },
+  {
+    "number": 34,
+    "file": "34_scat_ba_doo_bee_ba_doo_wah_140bpm_2bars.mp3",
+    "title": "Scat Ba Doo Bee Ba Doo Wah",
+    "role": "long wordless scat",
+    "lyrics_requested": "ba doo bee ba doo wah",
+    "bpm": 140,
+    "bars": 2,
+    "frames": 151200,
+    "sample_rate": 44100,
+    "channels": 1,
+    "seconds": 3.4285714285714284,
+    "source_anchors_seconds": [
+      0.09113378684807256,
+      0.508,
+      0.987,
+      1.634,
+      2.073,
+      2.754,
+      3.5
+    ],
+    "target_anchors_beats": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      6,
+      8
+    ],
+    "interval_atempo_rates": [
+      0.9702696473841899,
+      1.1281401244526388,
+      1.5549665821617884,
+      1.0265038027195206,
+      0.7857458075904677,
+      0.864822374227714
+    ],
+    "source_anchor_method": "Isolated waveform/spectrogram reviewed with approximate unprompted ASR hints for lyrics; main note/word attacks, not every consonant. Natural vowel transitions can be continuous.",
+    "final_mp3_sha256": "036f27a5b10acfc8739daf3ebfb1b053ed7b7221b8a794261fc176b82dd22c45",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_frames": 1105,
+    "leading_signal_ms_at_minus55db": 0.6349206349206349,
+    "peak_dbfs": -1.999515337009644,
+    "attack_waveform_matches": [
+      {
+        "target_beat": 0,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 1,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 2,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 3,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 4,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 6,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "attack_waveform_placement": true
+    },
+    "checks_pass": true,
+    "limits": "Correlations verify placement of reviewed acoustic landmarks, not the perceptual accuracy of the original landmark annotation. Natural consonants may precede a voiced attack. Exact singer identity, pitch/key, lyric accuracy and absence of faint backing leakage are not established by waveform measurements; no listening-based verification claimed."
+  },
+  {
+    "number": 35,
+    "file": "35_vowels_ah_eh_oh_ah_140bpm_4bars.mp3",
+    "title": "Vowels Ah Eh Oh Ah",
+    "role": "long wordless vowels",
+    "lyrics_requested": "ah eh oh ah",
+    "bpm": 140,
+    "bars": 4,
+    "frames": 302400,
+    "sample_rate": 44100,
+    "channels": 1,
+    "seconds": 6.857142857142857,
+    "source_anchors_seconds": [
+      0.09063492063492064,
+      1.097,
+      2.777,
+      4.079,
+      6.9
+    ],
+    "target_anchors_beats": [
+      0,
+      2,
+      6,
+      10,
+      16
+    ],
+    "interval_atempo_rates": [
+      1.1815147837599294,
+      0.9795830182564546,
+      0.7544830938749055,
+      1.0983943641825205
+    ],
+    "source_anchor_method": "Isolated waveform/spectrogram reviewed with approximate unprompted ASR hints for lyrics; main note/word attacks, not every consonant. Natural vowel transitions can be continuous.",
+    "final_mp3_sha256": "6944d59334680c7e00b266b3e063b182abab4df3d385e75fb9a27740a856923e",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_frames": 1105,
+    "leading_signal_ms_at_minus55db": 0.9750566893424036,
+    "peak_dbfs": -1.9988479873386873,
+    "attack_waveform_matches": [
+      {
+        "target_beat": 0,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 2,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 6,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      },
+      {
+        "target_beat": 10,
+        "offset_ms": 0.0,
+        "correlation": 1.0
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "attack_waveform_placement": true
+    },
+    "checks_pass": true,
+    "limits": "Correlations verify placement of reviewed acoustic landmarks, not the perceptual accuracy of the original landmark annotation. Natural consonants may precede a voiced attack. Exact singer identity, pitch/key, lyric accuracy and absence of faint backing leakage are not established by waveform measurements; no listening-based verification claimed."
+  }
+]

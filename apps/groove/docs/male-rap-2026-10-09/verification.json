@@ -1,0 +1,2155 @@
+[
+  {
+    "name": "male_rap_come_on_move_140bpm_2bars",
+    "title": "Come On Move",
+    "source": "/Users/igor/Developer/mapview/ui/tools/groove_audio/work/male-rap-2026-10-09/isolated/01.wav",
+    "bars": 2,
+    "source_seconds": [
+      0.191769,
+      1.050249,
+      1.73,
+      2.76,
+      3.38
+    ],
+    "target_beats": [
+      0.0,
+      2.0,
+      4.0,
+      6.0,
+      8.0
+    ],
+    "delivered_lyrics": "Come on come on get up move now",
+    "changes": [],
+    "annotation": "Main phoneme/phrase starts selected independently from isolated PCM waveforms, then refined within narrow reviewed windows using local signal threshold. ASR used only to identify words; not used as timing ground truth. Final source value is retained release endpoint.",
+    "source_frames": [
+      8457,
+      46316,
+      76293,
+      121716,
+      149058
+    ],
+    "target_frames": [
+      0,
+      37800,
+      75600,
+      113400,
+      151200
+    ],
+    "intervals": [
+      {
+        "fitted_frames": 37800,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 1.0016273168578993
+      },
+      {
+        "fitted_frames": 37800,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.7842288172992057
+      },
+      {
+        "fitted_frames": 37800,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 1.210254854368932
+      },
+      {
+        "fitted_frames": 37800,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.7115511915269197
+      }
+    ],
+    "file": "male_rap_come_on_move_140bpm_2bars.mp3",
+    "frames": 151200,
+    "settings": {
+      "bpm": 140,
+      "sample_rate": 44100,
+      "channels": 1,
+      "highpass_hz": 55,
+      "preserved_attack_ms": 35,
+      "boundary_ramp_ms": 1.5,
+      "final_fade_ms": 20,
+      "peak_dbfs": -2,
+      "short_release_rate": 0.8
+    },
+    "source_sha256": "df9002f46009840fe9bea4c8f3dad094ae2e75fe3d868716a0665ca414ca9ad0",
+    "mp3_sha256": "de42c13fa5b4be5cad5a6c92a4f3a03dba3e778be9e4ac9c1950e35ec8d0dc17",
+    "wav_sha256": "4ea62b7ff3277c5ae993192c15d86622bff9e082258af5eaa43dbd43527d7ae8",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_samples": 1105,
+    "leading_signal_ms_at_minus55db": 0.5668934240362812,
+    "attack_matches": [
+      {
+        "target_beat": 0.0,
+        "source_seconds": 0.191769,
+        "offset_ms": 0.0,
+        "correlation": 0.9999602157247292,
+        "verified": true
+      },
+      {
+        "target_beat": 2.0,
+        "source_seconds": 1.050249,
+        "offset_ms": 0.0,
+        "correlation": 0.9999490799742053,
+        "verified": true
+      },
+      {
+        "target_beat": 4.0,
+        "source_seconds": 1.73,
+        "offset_ms": 0.0,
+        "correlation": 0.9999643365412663,
+        "verified": true
+      },
+      {
+        "target_beat": 6.0,
+        "source_seconds": 2.76,
+        "offset_ms": 0.0,
+        "correlation": 0.9999998489766366,
+        "verified": true
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "supplied_attack_placement": true
+    },
+    "checks_pass": true,
+    "visual_review_required": true,
+    "limits": "Template matching verifies placement of supplied source annotations, not perceptual annotation correctness. Review every image and listen when available. Singer identity, key, lyrics and zero backing leakage are not established by these measurements. No listening is performed."
+  },
+  {
+    "name": "male_rap_light_up_the_floor_140bpm_4bars",
+    "title": "Light Up the Floor",
+    "source": "/Users/igor/Developer/mapview/ui/tools/groove_audio/work/male-rap-2026-10-09/isolated/01.wav",
+    "bars": 4,
+    "source_seconds": [
+      8.393333,
+      12.02,
+      15.2
+    ],
+    "target_beats": [
+      0.0,
+      8.0,
+      16.0
+    ],
+    "delivered_lyrics": "Step in the light, let your feet ignite Bring that spark to the floor tonight",
+    "changes": [
+      "Retained the first two complete rap lines; each line spans two bars. Main line attacks replace the initial four-line schedule."
+    ],
+    "annotation": "Main phoneme/phrase starts selected independently from isolated PCM waveforms, then refined within narrow reviewed windows using local signal threshold. ASR used only to identify words; not used as timing ground truth. Final source value is retained release endpoint. Refined from STFT review of consonants, preceding releases and actual silence: {1: 12.02}.",
+    "source_frames": [
+      370146,
+      530082,
+      670320
+    ],
+    "target_frames": [
+      0,
+      151200,
+      302400
+    ],
+    "intervals": [
+      {
+        "fitted_frames": 151200,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 1.058373870743572
+      },
+      {
+        "fitted_frames": 151200,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.926752017961191
+      }
+    ],
+    "file": "male_rap_light_up_the_floor_140bpm_4bars.mp3",
+    "frames": 302400,
+    "settings": {
+      "bpm": 140,
+      "sample_rate": 44100,
+      "channels": 1,
+      "highpass_hz": 55,
+      "preserved_attack_ms": 35,
+      "boundary_ramp_ms": 1.5,
+      "final_fade_ms": 20,
+      "peak_dbfs": -2,
+      "short_release_rate": 0.8
+    },
+    "source_sha256": "df9002f46009840fe9bea4c8f3dad094ae2e75fe3d868716a0665ca414ca9ad0",
+    "mp3_sha256": "2e517ecad1e9ef2681174540d8f3c368146bc7a75c570edd53d247bdabd90241",
+    "wav_sha256": "4d3d54f2b1433cde2f8946d8f93a46c2ecc0e5bb223417c01e9ffaa255cfbecd",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_samples": 1105,
+    "leading_signal_ms_at_minus55db": 0.3401360544217687,
+    "attack_matches": [
+      {
+        "target_beat": 0.0,
+        "source_seconds": 8.393333,
+        "offset_ms": 0.0,
+        "correlation": 0.9999632207412239,
+        "verified": true
+      },
+      {
+        "target_beat": 8.0,
+        "source_seconds": 12.02,
+        "offset_ms": 0.0,
+        "correlation": 0.9999987768952775,
+        "verified": true
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "supplied_attack_placement": true
+    },
+    "checks_pass": true,
+    "visual_review_required": true,
+    "limits": "Template matching verifies placement of supplied source annotations, not perceptual annotation correctness. Review every image and listen when available. Singer identity, key, lyrics and zero backing leakage are not established by these measurements. No listening is performed."
+  },
+  {
+    "name": "male_rap_hands_up_high_140bpm_2bars",
+    "title": "Hands Up High",
+    "source": "/Users/igor/Developer/mapview/ui/tools/groove_audio/work/male-rap-2026-10-09/isolated/02.wav",
+    "bars": 2,
+    "source_seconds": [
+      0.082381,
+      0.93,
+      1.790476,
+      2.755011,
+      3.6
+    ],
+    "target_beats": [
+      0.0,
+      2.0,
+      4.0,
+      6.0,
+      8.0
+    ],
+    "delivered_lyrics": "Hands up hands up reach high touch sky",
+    "changes": [],
+    "annotation": "Main phoneme/phrase starts selected independently from isolated PCM waveforms, then refined within narrow reviewed windows using local signal threshold. ASR used only to identify words; not used as timing ground truth. Final source value is retained release endpoint.",
+    "source_frames": [
+      3633,
+      41013,
+      78960,
+      121496,
+      158760
+    ],
+    "target_frames": [
+      0,
+      37800,
+      75600,
+      113400,
+      151200
+    ],
+    "intervals": [
+      {
+        "fitted_frames": 37800,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.9884157105030892
+      },
+      {
+        "fitted_frames": 37800,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 1.0040545013239188
+      },
+      {
+        "fitted_frames": 37800,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 1.1306266548984996
+      },
+      {
+        "fitted_frames": 37800,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.985216240070609
+      }
+    ],
+    "file": "male_rap_hands_up_high_140bpm_2bars.mp3",
+    "frames": 151200,
+    "settings": {
+      "bpm": 140,
+      "sample_rate": 44100,
+      "channels": 1,
+      "highpass_hz": 55,
+      "preserved_attack_ms": 35,
+      "boundary_ramp_ms": 1.5,
+      "final_fade_ms": 20,
+      "peak_dbfs": -2,
+      "short_release_rate": 0.8
+    },
+    "source_sha256": "5ed33026a43be2c2a3c43533082a34ddbe123fdf4c2215108c04db19bec82cbe",
+    "mp3_sha256": "5ba36d31265f95b4c52056409ec979bcdfae67dbec0537f256a0f545f1ccfbe7",
+    "wav_sha256": "d78675c50dc088e3e1a621c37e5c3c8f5dbd4016d3af85df59433ce48cb2ef01",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_samples": 1105,
+    "leading_signal_ms_at_minus55db": 0.45351473922902497,
+    "attack_matches": [
+      {
+        "target_beat": 0.0,
+        "source_seconds": 0.082381,
+        "offset_ms": 0.0,
+        "correlation": 0.9999986773621129,
+        "verified": true
+      },
+      {
+        "target_beat": 2.0,
+        "source_seconds": 0.93,
+        "offset_ms": 0.0,
+        "correlation": 0.9999944930900151,
+        "verified": true
+      },
+      {
+        "target_beat": 4.0,
+        "source_seconds": 1.790476,
+        "offset_ms": 0.0,
+        "correlation": 0.9999992546422616,
+        "verified": true
+      },
+      {
+        "target_beat": 6.0,
+        "source_seconds": 2.755011,
+        "offset_ms": 0.0,
+        "correlation": 0.9999931162135441,
+        "verified": true
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "supplied_attack_placement": true
+    },
+    "checks_pass": true,
+    "visual_review_required": true,
+    "limits": "Template matching verifies placement of supplied source annotations, not perceptual annotation correctness. Review every image and listen when available. Singer identity, key, lyrics and zero backing leakage are not established by these measurements. No listening is performed."
+  },
+  {
+    "name": "male_rap_power_in_motion_140bpm_4bars",
+    "title": "Power in Motion",
+    "source": "/Users/igor/Developer/mapview/ui/tools/groove_audio/work/male-rap-2026-10-09/isolated/02.wav",
+    "bars": 4,
+    "source_seconds": [
+      4.599184,
+      8.032,
+      11.52
+    ],
+    "target_beats": [
+      0.0,
+      8.0,
+      16.0
+    ],
+    "delivered_lyrics": "Power in motion, we ride that wave Step to the rhythm, be loud, be brave",
+    "changes": [
+      "Retained the first two complete rap lines; each line spans two bars. Main line attacks replace the initial four-line schedule."
+    ],
+    "annotation": "Main phoneme/phrase starts selected independently from isolated PCM waveforms, then refined within narrow reviewed windows using local signal threshold. ASR used only to identify words; not used as timing ground truth. Final source value is retained release endpoint. Refined from STFT review of consonants, preceding releases and actual silence: {1: 8.032}.",
+    "source_frames": [
+      202824,
+      354211,
+      508032
+    ],
+    "target_frames": [
+      0,
+      151200,
+      302400
+    ],
+    "intervals": [
+      {
+        "fitted_frames": 151200,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 1.0012495322606512
+      },
+      {
+        "fitted_frames": 151200,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 1.0175134976212112
+      }
+    ],
+    "file": "male_rap_power_in_motion_140bpm_4bars.mp3",
+    "frames": 302400,
+    "settings": {
+      "bpm": 140,
+      "sample_rate": 44100,
+      "channels": 1,
+      "highpass_hz": 55,
+      "preserved_attack_ms": 35,
+      "boundary_ramp_ms": 1.5,
+      "final_fade_ms": 20,
+      "peak_dbfs": -2,
+      "short_release_rate": 0.8
+    },
+    "source_sha256": "5ed33026a43be2c2a3c43533082a34ddbe123fdf4c2215108c04db19bec82cbe",
+    "mp3_sha256": "257974b5b583dd0ecb905bd496d460685923bc0d0c3f2a03c148273a11135f9e",
+    "wav_sha256": "b417eb1a5e2f8dfcc9194ced36b369a6e7137bf95350f5761a04d3306a9f462d",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_samples": 1105,
+    "leading_signal_ms_at_minus55db": 0.36281179138321995,
+    "attack_matches": [
+      {
+        "target_beat": 0.0,
+        "source_seconds": 4.599184,
+        "offset_ms": 0.0,
+        "correlation": 0.9999970550877874,
+        "verified": true
+      },
+      {
+        "target_beat": 8.0,
+        "source_seconds": 8.032,
+        "offset_ms": 0.0,
+        "correlation": 0.9999927240194438,
+        "verified": true
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "supplied_attack_placement": true
+    },
+    "checks_pass": true,
+    "visual_review_required": true,
+    "limits": "Template matching verifies placement of supplied source annotations, not perceptual annotation correctness. Review every image and listen when available. Singer identity, key, lyrics and zero backing leakage are not established by these measurements. No listening is performed."
+  },
+  {
+    "name": "male_rap_go_go_move_fast_140bpm_2bars",
+    "title": "Go Go Move Fast",
+    "source": "/Users/igor/Developer/mapview/ui/tools/groove_audio/work/male-rap-2026-10-09/isolated/03.wav",
+    "bars": 2,
+    "source_seconds": [
+      0.035442,
+      1.004989,
+      1.824989,
+      2.64
+    ],
+    "target_beats": [
+      0.0,
+      2.0,
+      4.0,
+      8.0
+    ],
+    "delivered_lyrics": "Go go, go go, move fast.",
+    "changes": [
+      "Retained three complete call groups, omitting the final let-go that overlaps the following rap; natural release plus tail padding fills two bars."
+    ],
+    "annotation": "Main phoneme/phrase starts selected independently from isolated PCM waveforms, then refined within narrow reviewed windows using local signal threshold. ASR used only to identify words; not used as timing ground truth. Final source value is retained release endpoint. Refined from STFT review of consonants, preceding releases and actual silence: {4: 3.38}.",
+    "source_frames": [
+      1563,
+      44320,
+      80482,
+      116424
+    ],
+    "target_frames": [
+      0,
+      37800,
+      75600,
+      151200
+    ],
+    "intervals": [
+      {
+        "fitted_frames": 37800,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 1.1367221977052073
+      },
+      {
+        "fitted_frames": 37800,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.9548212709620476
+      },
+      {
+        "fitted_frames": 44928,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.7928729485524617
+      }
+    ],
+    "file": "male_rap_go_go_move_fast_140bpm_2bars.mp3",
+    "frames": 151200,
+    "settings": {
+      "bpm": 140,
+      "sample_rate": 44100,
+      "channels": 1,
+      "highpass_hz": 55,
+      "preserved_attack_ms": 35,
+      "boundary_ramp_ms": 1.5,
+      "final_fade_ms": 20,
+      "peak_dbfs": -2,
+      "short_release_rate": 0.8
+    },
+    "source_sha256": "5a7651152dbd0b3fdbf2465ff02fc23ed0b2143f8bd050f337a8f4782d0a7c1b",
+    "mp3_sha256": "5bb511bd50eb8450c334620d435d0852bb86d50df758546ab7d2cdab26d3c07f",
+    "wav_sha256": "d24d93677ff335fcf0b4ba83a2518bca996c3b70787d7c382a7e48a57210534d",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_samples": 1105,
+    "leading_signal_ms_at_minus55db": 0.9070294784580499,
+    "attack_matches": [
+      {
+        "target_beat": 0.0,
+        "source_seconds": 0.035442,
+        "offset_ms": 0.0,
+        "correlation": 0.9999985027864035,
+        "verified": true
+      },
+      {
+        "target_beat": 2.0,
+        "source_seconds": 1.004989,
+        "offset_ms": 0.0,
+        "correlation": 0.999913631136268,
+        "verified": true
+      },
+      {
+        "target_beat": 4.0,
+        "source_seconds": 1.824989,
+        "offset_ms": 0.0,
+        "correlation": 0.9999995689782191,
+        "verified": true
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "supplied_attack_placement": true
+    },
+    "checks_pass": true,
+    "visual_review_required": true,
+    "limits": "Template matching verifies placement of supplied source annotations, not perceptual annotation correctness. Review every image and listen when available. Singer identity, key, lyrics and zero backing leakage are not established by these measurements. No listening is performed."
+  },
+  {
+    "name": "male_rap_fresh_step_140bpm_2bars",
+    "title": "Fresh Step",
+    "source": "/Users/igor/Developer/mapview/ui/tools/groove_audio/work/male-rap-2026-10-09/isolated/03.wav",
+    "bars": 2,
+    "source_seconds": [
+      6.992,
+      8.752,
+      10.35
+    ],
+    "target_beats": [
+      0.0,
+      4.0,
+      8.0
+    ],
+    "delivered_lyrics": "One fresh step and we start to fly. Keep that fire running sky high.",
+    "changes": [
+      "Retained the generated lyric substitution \"in a midnight train\"; separated the initial Street consonant from the preceding Go release using STFT.",
+      "Retained the last two complete rap lines in two bars, avoiding the opening transition that overlaps the preceding call."
+    ],
+    "annotation": "Main phoneme/phrase starts selected independently from isolated PCM waveforms, then refined within narrow reviewed windows using local signal threshold. ASR used only to identify words; not used as timing ground truth. Final source value is retained release endpoint. Refined from STFT review of consonants, preceding releases and actual silence: {0: 3.395}.",
+    "source_frames": [
+      308347,
+      385963,
+      456435
+    ],
+    "target_frames": [
+      0,
+      75600,
+      151200
+    ],
+    "intervals": [
+      {
+        "fitted_frames": 75600,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 1.0272226423247273
+      },
+      {
+        "fitted_frames": 75600,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.9307551042454358
+      }
+    ],
+    "file": "male_rap_fresh_step_140bpm_2bars.mp3",
+    "frames": 151200,
+    "settings": {
+      "bpm": 140,
+      "sample_rate": 44100,
+      "channels": 1,
+      "highpass_hz": 55,
+      "preserved_attack_ms": 35,
+      "boundary_ramp_ms": 1.5,
+      "final_fade_ms": 20,
+      "peak_dbfs": -2,
+      "short_release_rate": 0.8
+    },
+    "source_sha256": "5a7651152dbd0b3fdbf2465ff02fc23ed0b2143f8bd050f337a8f4782d0a7c1b",
+    "mp3_sha256": "3203f4b7ff333a21bf2f050476d1d6c5634b2c0e97582ff03f612e36adba95bd",
+    "wav_sha256": "2ba93d04827e2d85ee75abd1e4bebace126c37f981c9e2dec074636962123596",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_samples": 1105,
+    "leading_signal_ms_at_minus55db": 1.0204081632653061,
+    "attack_matches": [
+      {
+        "target_beat": 0.0,
+        "source_seconds": 6.992,
+        "offset_ms": 0.0,
+        "correlation": 0.9999963521144252,
+        "verified": true
+      },
+      {
+        "target_beat": 4.0,
+        "source_seconds": 8.752,
+        "offset_ms": 0.0,
+        "correlation": 0.9999455814604897,
+        "verified": true
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "supplied_attack_placement": true
+    },
+    "checks_pass": true,
+    "visual_review_required": true,
+    "limits": "Template matching verifies placement of supplied source annotations, not perceptual annotation correctness. Review every image and listen when available. Singer identity, key, lyrics and zero backing leakage are not established by these measurements. No listening is performed."
+  },
+  {
+    "name": "male_rap_hey_yo_jump_140bpm_2bars",
+    "title": "Hey Yo Jump",
+    "source": "/Users/igor/Developer/mapview/ui/tools/groove_audio/work/male-rap-2026-10-09/isolated/04.wav",
+    "bars": 2,
+    "source_seconds": [
+      0.05839,
+      0.924989,
+      1.79,
+      2.654989,
+      3.5
+    ],
+    "target_beats": [
+      0.0,
+      2.0,
+      4.0,
+      6.0,
+      8.0
+    ],
+    "delivered_lyrics": "Hey yo hey yo jump up let\u2019s go",
+    "changes": [],
+    "annotation": "Main phoneme/phrase starts selected independently from isolated PCM waveforms, then refined within narrow reviewed windows using local signal threshold. ASR used only to identify words; not used as timing ground truth. Final source value is retained release endpoint.",
+    "source_frames": [
+      2575,
+      40792,
+      78939,
+      117085,
+      154350
+    ],
+    "target_frames": [
+      0,
+      37800,
+      75600,
+      113400,
+      151200
+    ],
+    "intervals": [
+      {
+        "fitted_frames": 37800,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 1.0115015445719329
+      },
+      {
+        "fitted_frames": 37800,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 1.009570829655781
+      },
+      {
+        "fitted_frames": 37800,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 1.0095432480141218
+      },
+      {
+        "fitted_frames": 37800,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.9852438217122683
+      }
+    ],
+    "file": "male_rap_hey_yo_jump_140bpm_2bars.mp3",
+    "frames": 151200,
+    "settings": {
+      "bpm": 140,
+      "sample_rate": 44100,
+      "channels": 1,
+      "highpass_hz": 55,
+      "preserved_attack_ms": 35,
+      "boundary_ramp_ms": 1.5,
+      "final_fade_ms": 20,
+      "peak_dbfs": -2,
+      "short_release_rate": 0.8
+    },
+    "source_sha256": "4412168d2808d0caad1ef62a403a357877cac43c3bf356e62d6eb97ad2f5da99",
+    "mp3_sha256": "ad5e396858bb28884a7ca982228fa8e79a61485b628493e7426a08f51e37cca5",
+    "wav_sha256": "730bc5b6d69f491db77cc813f0a16e7f0c0ca906bc9512f6048f9a449279cb33",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_samples": 1105,
+    "leading_signal_ms_at_minus55db": 0.31746031746031744,
+    "attack_matches": [
+      {
+        "target_beat": 0.0,
+        "source_seconds": 0.05839,
+        "offset_ms": 0.0,
+        "correlation": 0.999979418756654,
+        "verified": true
+      },
+      {
+        "target_beat": 2.0,
+        "source_seconds": 0.924989,
+        "offset_ms": 0.0,
+        "correlation": 0.9999900892176152,
+        "verified": true
+      },
+      {
+        "target_beat": 4.0,
+        "source_seconds": 1.79,
+        "offset_ms": 0.0,
+        "correlation": 0.9999589379714079,
+        "verified": true
+      },
+      {
+        "target_beat": 6.0,
+        "source_seconds": 2.654989,
+        "offset_ms": 0.0,
+        "correlation": 0.9999986284372149,
+        "verified": true
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "supplied_attack_placement": true
+    },
+    "checks_pass": true,
+    "visual_review_required": true,
+    "limits": "Template matching verifies placement of supplied source annotations, not perceptual annotation correctness. Review every image and listen when available. Singer identity, key, lyrics and zero backing leakage are not established by these measurements. No listening is performed."
+  },
+  {
+    "name": "male_rap_room_to_rise_140bpm_4bars",
+    "title": "Room to Rise",
+    "source": "/Users/igor/Developer/mapview/ui/tools/groove_audio/work/male-rap-2026-10-09/isolated/04.wav",
+    "bars": 4,
+    "source_seconds": [
+      4.100091,
+      5.535011,
+      6.9,
+      8.436,
+      9.88
+    ],
+    "target_beats": [
+      0.0,
+      4.0,
+      8.0,
+      12.0,
+      16.0
+    ],
+    "delivered_lyrics": "Make some room, let the whole crew rise Feel that flash when the bass collides Left to the right, now turn it loose Put your hands up and bring that juice",
+    "changes": [],
+    "annotation": "Main phoneme/phrase starts selected independently from isolated PCM waveforms, then refined within narrow reviewed windows using local signal threshold. ASR used only to identify words; not used as timing ground truth. Final source value is retained release endpoint. Refined from STFT review of consonants, preceding releases and actual silence: {3: 8.436}.",
+    "source_frames": [
+      180814,
+      244094,
+      304290,
+      372028,
+      435708
+    ],
+    "target_frames": [
+      0,
+      75600,
+      151200,
+      226800,
+      302400
+    ],
+    "intervals": [
+      {
+        "fitted_frames": 75600,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.8336394080155558
+      },
+      {
+        "fitted_frames": 75600,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.791995246840229
+      },
+      {
+        "fitted_frames": 75600,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.8938370962514853
+      },
+      {
+        "fitted_frames": 75600,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.8390407259371286
+      }
+    ],
+    "file": "male_rap_room_to_rise_140bpm_4bars.mp3",
+    "frames": 302400,
+    "settings": {
+      "bpm": 140,
+      "sample_rate": 44100,
+      "channels": 1,
+      "highpass_hz": 55,
+      "preserved_attack_ms": 35,
+      "boundary_ramp_ms": 1.5,
+      "final_fade_ms": 20,
+      "peak_dbfs": -2,
+      "short_release_rate": 0.8
+    },
+    "source_sha256": "4412168d2808d0caad1ef62a403a357877cac43c3bf356e62d6eb97ad2f5da99",
+    "mp3_sha256": "d25de634d8bf7b7e4a5ae79044284fe4e48680c42c88c86eb98679930b4334a3",
+    "wav_sha256": "9f9c5371e208df6f83e8f7bd96ccc0be6d816949afcd97ac525a225cd2cfa653",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_samples": 1105,
+    "leading_signal_ms_at_minus55db": 0.6802721088435374,
+    "attack_matches": [
+      {
+        "target_beat": 0.0,
+        "source_seconds": 4.100091,
+        "offset_ms": 0.0,
+        "correlation": 0.9999997576661542,
+        "verified": true
+      },
+      {
+        "target_beat": 4.0,
+        "source_seconds": 5.535011,
+        "offset_ms": 0.0,
+        "correlation": 0.9999039800770817,
+        "verified": true
+      },
+      {
+        "target_beat": 8.0,
+        "source_seconds": 6.9,
+        "offset_ms": 0.0,
+        "correlation": 0.9999907482069238,
+        "verified": true
+      },
+      {
+        "target_beat": 12.0,
+        "source_seconds": 8.436,
+        "offset_ms": 0.0,
+        "correlation": 0.9999749850183641,
+        "verified": true
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "supplied_attack_placement": true
+    },
+    "checks_pass": true,
+    "visual_review_required": true,
+    "limits": "Template matching verifies placement of supplied source annotations, not perceptual annotation correctness. Review every image and listen when available. Singer identity, key, lyrics and zero backing leakage are not established by these measurements. No listening is performed."
+  },
+  {
+    "name": "male_rap_bring_that_beat_140bpm_2bars",
+    "title": "Bring That Beat",
+    "source": "/Users/igor/Developer/mapview/ui/tools/groove_audio/work/male-rap-2026-10-09/isolated/05.wav",
+    "bars": 2,
+    "source_seconds": [
+      0.087166,
+      0.896145,
+      1.726553,
+      2.540748,
+      3.21
+    ],
+    "target_beats": [
+      0.0,
+      2.0,
+      4.0,
+      6.0,
+      8.0
+    ],
+    "delivered_lyrics": "Bring that beat back bring that beat back",
+    "changes": [],
+    "annotation": "Main phoneme/phrase starts selected independently from isolated PCM waveforms, then refined within narrow reviewed windows using local signal threshold. ASR used only to identify words; not used as timing ground truth. Final source value is retained release endpoint.",
+    "source_frames": [
+      3844,
+      39520,
+      76141,
+      112047,
+      141561
+    ],
+    "target_frames": [
+      0,
+      37800,
+      75600,
+      113400,
+      151200
+    ],
+    "intervals": [
+      {
+        "fitted_frames": 37800,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.9414165931156222
+      },
+      {
+        "fitted_frames": 37800,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.9674812444836717
+      },
+      {
+        "fitted_frames": 37800,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.9477603706972639
+      },
+      {
+        "fitted_frames": 37800,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.7714585172109444
+      }
+    ],
+    "file": "male_rap_bring_that_beat_140bpm_2bars.mp3",
+    "frames": 151200,
+    "settings": {
+      "bpm": 140,
+      "sample_rate": 44100,
+      "channels": 1,
+      "highpass_hz": 55,
+      "preserved_attack_ms": 35,
+      "boundary_ramp_ms": 1.5,
+      "final_fade_ms": 20,
+      "peak_dbfs": -2,
+      "short_release_rate": 0.8
+    },
+    "source_sha256": "bdac44baae1ec228c24da2ff2863ded31179cbff13a3ba9e4bbbae6f2ea6a495",
+    "mp3_sha256": "26420b9ab25be61cab311ccee58159a95c6b7d741cd2dac66f6c7d76fc87c2e0",
+    "wav_sha256": "68eb30fccc48d191086a5acb5d358c1851bba4c55d3c55a1efcd528d0993cd24",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_samples": 1105,
+    "leading_signal_ms_at_minus55db": 0.4988662131519275,
+    "attack_matches": [
+      {
+        "target_beat": 0.0,
+        "source_seconds": 0.087166,
+        "offset_ms": 0.0,
+        "correlation": 0.9999933361847507,
+        "verified": true
+      },
+      {
+        "target_beat": 2.0,
+        "source_seconds": 0.896145,
+        "offset_ms": 0.0,
+        "correlation": 0.9999879090175533,
+        "verified": true
+      },
+      {
+        "target_beat": 4.0,
+        "source_seconds": 1.726553,
+        "offset_ms": 0.0,
+        "correlation": 0.9999898938783061,
+        "verified": true
+      },
+      {
+        "target_beat": 6.0,
+        "source_seconds": 2.540748,
+        "offset_ms": 0.0,
+        "correlation": 0.9999907994663738,
+        "verified": true
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "supplied_attack_placement": true
+    },
+    "checks_pass": true,
+    "visual_review_required": true,
+    "limits": "Template matching verifies placement of supplied source annotations, not perceptual annotation correctness. Review every image and listen when available. Singer identity, key, lyrics and zero backing leakage are not established by these measurements. No listening is performed."
+  },
+  {
+    "name": "male_rap_pulse_patrol_140bpm_4bars",
+    "title": "Pulse Patrol",
+    "source": "/Users/igor/Developer/mapview/ui/tools/groove_audio/work/male-rap-2026-10-09/isolated/05.wav",
+    "bars": 4,
+    "source_seconds": [
+      4.89542,
+      7.045125,
+      9.23,
+      11.4,
+      14.1
+    ],
+    "target_beats": [
+      0.0,
+      4.0,
+      8.0,
+      12.0,
+      16.0
+    ],
+    "delivered_lyrics": "We got the pulse and we hold it tight Shake off the dust, step into the light Four on the floor and the pressure grows Ride that rhythm wherever it goes",
+    "changes": [],
+    "annotation": "Main phoneme/phrase starts selected independently from isolated PCM waveforms, then refined within narrow reviewed windows using local signal threshold. ASR used only to identify words; not used as timing ground truth. Final source value is retained release endpoint.",
+    "source_frames": [
+      215888,
+      310690,
+      407043,
+      502740,
+      621810
+    ],
+    "target_frames": [
+      0,
+      75600,
+      151200,
+      226800,
+      302400
+    ],
+    "intervals": [
+      {
+        "fitted_frames": 75600,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 1.2592902668251054
+      },
+      {
+        "fitted_frames": 75600,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 1.280233877066004
+      },
+      {
+        "fitted_frames": 75600,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 1.2713757156746246
+      },
+      {
+        "fitted_frames": 75600,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 1.586988225126931
+      }
+    ],
+    "file": "male_rap_pulse_patrol_140bpm_4bars.mp3",
+    "frames": 302400,
+    "settings": {
+      "bpm": 140,
+      "sample_rate": 44100,
+      "channels": 1,
+      "highpass_hz": 55,
+      "preserved_attack_ms": 35,
+      "boundary_ramp_ms": 1.5,
+      "final_fade_ms": 20,
+      "peak_dbfs": -2,
+      "short_release_rate": 0.8
+    },
+    "source_sha256": "bdac44baae1ec228c24da2ff2863ded31179cbff13a3ba9e4bbbae6f2ea6a495",
+    "mp3_sha256": "478f137837b27b1f61bcbf20fa33e5339139a4e7a0d96f216459cf090f82e348",
+    "wav_sha256": "d2c76612f9f3f9fd1298229e779d5729da59f22af53ff68d52108a837e855406",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_samples": 1105,
+    "leading_signal_ms_at_minus55db": 0.9750566893424036,
+    "attack_matches": [
+      {
+        "target_beat": 0.0,
+        "source_seconds": 4.89542,
+        "offset_ms": 0.0,
+        "correlation": 0.9999836971480135,
+        "verified": true
+      },
+      {
+        "target_beat": 4.0,
+        "source_seconds": 7.045125,
+        "offset_ms": 0.0,
+        "correlation": 0.9999272039210854,
+        "verified": true
+      },
+      {
+        "target_beat": 8.0,
+        "source_seconds": 9.23,
+        "offset_ms": 0.0,
+        "correlation": 0.9998587775140444,
+        "verified": true
+      },
+      {
+        "target_beat": 12.0,
+        "source_seconds": 11.4,
+        "offset_ms": 0.0,
+        "correlation": 0.9999618836894278,
+        "verified": true
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "supplied_attack_placement": true
+    },
+    "checks_pass": true,
+    "visual_review_required": true,
+    "limits": "Template matching verifies placement of supplied source annotations, not perceptual annotation correctness. Review every image and listen when available. Singer identity, key, lyrics and zero backing leakage are not established by these measurements. No listening is performed."
+  },
+  {
+    "name": "male_rap_all_right_tonight_140bpm_2bars",
+    "title": "All Right Tonight",
+    "source": "/Users/igor/Developer/mapview/ui/tools/groove_audio/work/male-rap-2026-10-09/isolated/06.wav",
+    "bars": 2,
+    "source_seconds": [
+      0.121995,
+      0.984966,
+      1.59,
+      2.45585,
+      3.6
+    ],
+    "target_beats": [
+      0.0,
+      2.0,
+      4.0,
+      6.0,
+      8.0
+    ],
+    "delivered_lyrics": "All right all right feel good tonight",
+    "changes": [],
+    "annotation": "Main phoneme/phrase starts selected independently from isolated PCM waveforms, then refined within narrow reviewed windows using local signal threshold. ASR used only to identify words; not used as timing ground truth. Final source value is retained release endpoint.",
+    "source_frames": [
+      5380,
+      43437,
+      70119,
+      108303,
+      158760
+    ],
+    "target_frames": [
+      0,
+      37800,
+      75600,
+      113400,
+      151200
+    ],
+    "intervals": [
+      {
+        "fitted_frames": 37800,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 1.0070884819064432
+      },
+      {
+        "fitted_frames": 37800,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.693347308031774
+      },
+      {
+        "fitted_frames": 37800,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 1.0105913503971757
+      },
+      {
+        "fitted_frames": 37800,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 1.3491008384819065
+      }
+    ],
+    "file": "male_rap_all_right_tonight_140bpm_2bars.mp3",
+    "frames": 151200,
+    "settings": {
+      "bpm": 140,
+      "sample_rate": 44100,
+      "channels": 1,
+      "highpass_hz": 55,
+      "preserved_attack_ms": 35,
+      "boundary_ramp_ms": 1.5,
+      "final_fade_ms": 20,
+      "peak_dbfs": -2,
+      "short_release_rate": 0.8
+    },
+    "source_sha256": "4ff187eec799b58d76f4943c9ad508c8bc54ac1179c0aabd1fb15134d9a01da4",
+    "mp3_sha256": "84f4171dc5778dd37da5acfe7175d23350f9507d48e1c3cf59b7f26d65138117",
+    "wav_sha256": "b4071e3c20d8cb9031e11779e54dda274724219288e2a6c17e5e2b0296ac4c50",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_samples": 1105,
+    "leading_signal_ms_at_minus55db": 0.20408163265306123,
+    "attack_matches": [
+      {
+        "target_beat": 0.0,
+        "source_seconds": 0.121995,
+        "offset_ms": 0.0,
+        "correlation": 0.9999946078293196,
+        "verified": true
+      },
+      {
+        "target_beat": 2.0,
+        "source_seconds": 0.984966,
+        "offset_ms": 0.0,
+        "correlation": 0.9999913434870985,
+        "verified": true
+      },
+      {
+        "target_beat": 4.0,
+        "source_seconds": 1.59,
+        "offset_ms": 0.0,
+        "correlation": 0.9997999368186388,
+        "verified": true
+      },
+      {
+        "target_beat": 6.0,
+        "source_seconds": 2.45585,
+        "offset_ms": 0.0,
+        "correlation": 0.9999395947330122,
+        "verified": true
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "supplied_attack_placement": true
+    },
+    "checks_pass": true,
+    "visual_review_required": true,
+    "limits": "Template matching verifies placement of supplied source annotations, not perceptual annotation correctness. Review every image and listen when available. Singer identity, key, lyrics and zero backing leakage are not established by these measurements. No listening is performed."
+  },
+  {
+    "name": "male_rap_forward_fire_140bpm_4bars",
+    "title": "Forward Fire",
+    "source": "/Users/igor/Developer/mapview/ui/tools/groove_audio/work/male-rap-2026-10-09/isolated/06.wav",
+    "bars": 4,
+    "source_seconds": [
+      5.118,
+      8.530295,
+      12.02
+    ],
+    "target_beats": [
+      0.0,
+      8.0,
+      16.0
+    ],
+    "delivered_lyrics": "Forward fire, never standing still Find that spark and you find that thrill",
+    "changes": [
+      "Retained the first two complete rap lines; each line spans two bars. Main line attacks replace the initial four-line schedule."
+    ],
+    "annotation": "Main phoneme/phrase starts selected independently from isolated PCM waveforms, then refined within narrow reviewed windows using local signal threshold. ASR used only to identify words; not used as timing ground truth. Final source value is retained release endpoint. Refined from STFT review of consonants, preceding releases and actual silence: {0: 5.118}.",
+    "source_frames": [
+      225704,
+      376186,
+      530082
+    ],
+    "target_frames": [
+      0,
+      151200,
+      302400
+    ],
+    "intervals": [
+      {
+        "fitted_frames": 151200,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.9952023306783557
+      },
+      {
+        "fitted_frames": 151200,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 1.0180146469236115
+      }
+    ],
+    "file": "male_rap_forward_fire_140bpm_4bars.mp3",
+    "frames": 302400,
+    "settings": {
+      "bpm": 140,
+      "sample_rate": 44100,
+      "channels": 1,
+      "highpass_hz": 55,
+      "preserved_attack_ms": 35,
+      "boundary_ramp_ms": 1.5,
+      "final_fade_ms": 20,
+      "peak_dbfs": -2,
+      "short_release_rate": 0.8
+    },
+    "source_sha256": "4ff187eec799b58d76f4943c9ad508c8bc54ac1179c0aabd1fb15134d9a01da4",
+    "mp3_sha256": "6b0a294bedcc07467d9daaa5bbdf691f99e5ce24401daa3bce35063a3ca75334",
+    "wav_sha256": "4d3ebc16d56c0919eeeda3678275389cc27506bef67f7f68acdcf5589f8e7751",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_samples": 1105,
+    "leading_signal_ms_at_minus55db": 1.8140589569160999,
+    "attack_matches": [
+      {
+        "target_beat": 0.0,
+        "source_seconds": 5.118,
+        "offset_ms": 0.0,
+        "correlation": 0.9999250712174627,
+        "verified": true
+      },
+      {
+        "target_beat": 8.0,
+        "source_seconds": 8.530295,
+        "offset_ms": 0.0,
+        "correlation": 0.9999882900264471,
+        "verified": true
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "supplied_attack_placement": true
+    },
+    "checks_pass": true,
+    "visual_review_required": true,
+    "limits": "Template matching verifies placement of supplied source annotations, not perceptual annotation correctness. Review every image and listen when available. Singer identity, key, lyrics and zero backing leakage are not established by these measurements. No listening is performed."
+  },
+  {
+    "name": "male_rap_one_more_time_crew_140bpm_2bars",
+    "title": "One More Time Crew",
+    "source": "/Users/igor/Developer/mapview/ui/tools/groove_audio/work/male-rap-2026-10-09/isolated/07.wav",
+    "bars": 2,
+    "source_seconds": [
+      0.091746,
+      0.890113,
+      1.744989,
+      2.544989,
+      3.58
+    ],
+    "target_beats": [
+      0.0,
+      2.0,
+      4.0,
+      6.0,
+      8.0
+    ],
+    "delivered_lyrics": "One more one more one more time crew",
+    "changes": [],
+    "annotation": "Main phoneme/phrase starts selected independently from isolated PCM waveforms, then refined within narrow reviewed windows using local signal threshold. ASR used only to identify words; not used as timing ground truth. Final source value is retained release endpoint.",
+    "source_frames": [
+      4046,
+      39254,
+      76954,
+      112234,
+      157878
+    ],
+    "target_frames": [
+      0,
+      37800,
+      75600,
+      113400,
+      151200
+    ],
+    "intervals": [
+      {
+        "fitted_frames": 37800,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.9285083848190644
+      },
+      {
+        "fitted_frames": 37800,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.9972418358340689
+      },
+      {
+        "fitted_frames": 37800,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.9304942630185349
+      },
+      {
+        "fitted_frames": 37800,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 1.21635039717564
+      }
+    ],
+    "file": "male_rap_one_more_time_crew_140bpm_2bars.mp3",
+    "frames": 151200,
+    "settings": {
+      "bpm": 140,
+      "sample_rate": 44100,
+      "channels": 1,
+      "highpass_hz": 55,
+      "preserved_attack_ms": 35,
+      "boundary_ramp_ms": 1.5,
+      "final_fade_ms": 20,
+      "peak_dbfs": -2,
+      "short_release_rate": 0.8
+    },
+    "source_sha256": "33da4f8a6244d8cb8a429a1b8455a35a5a4c14ff8584f5b605eb4e34ba55009e",
+    "mp3_sha256": "7ed32c3b40633f4b0dd5fcdcc21485d6b0988f274124804146f2ccdcf244bb37",
+    "wav_sha256": "4fb5d5d1dc67d5527a079b24ef99fc7b4750ba9e2d3810a064da3e7cf7c8de66",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_samples": 1105,
+    "leading_signal_ms_at_minus55db": 0.3854875283446712,
+    "attack_matches": [
+      {
+        "target_beat": 0.0,
+        "source_seconds": 0.091746,
+        "offset_ms": 0.0,
+        "correlation": 0.9999994015902708,
+        "verified": true
+      },
+      {
+        "target_beat": 2.0,
+        "source_seconds": 0.890113,
+        "offset_ms": 0.0,
+        "correlation": 0.999999797538761,
+        "verified": true
+      },
+      {
+        "target_beat": 4.0,
+        "source_seconds": 1.744989,
+        "offset_ms": 0.0,
+        "correlation": 0.9999987362368281,
+        "verified": true
+      },
+      {
+        "target_beat": 6.0,
+        "source_seconds": 2.544989,
+        "offset_ms": 0.0,
+        "correlation": 0.9999431690486619,
+        "verified": true
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "supplied_attack_placement": true
+    },
+    "checks_pass": true,
+    "visual_review_required": true,
+    "limits": "Template matching verifies placement of supplied source annotations, not perceptual annotation correctness. Review every image and listen when available. Singer identity, key, lyrics and zero backing leakage are not established by these measurements. No listening is performed."
+  },
+  {
+    "name": "male_rap_concrete_glow_140bpm_4bars",
+    "title": "Concrete Glow",
+    "source": "/Users/igor/Developer/mapview/ui/tools/groove_audio/work/male-rap-2026-10-09/isolated/07.wav",
+    "bars": 4,
+    "source_seconds": [
+      6.872,
+      10.275,
+      13.27
+    ],
+    "target_beats": [
+      0.0,
+      8.0,
+      16.0
+    ],
+    "delivered_lyrics": "Concrete glow under dancing feet Every new step makes the night complete",
+    "changes": [
+      "Retained the first two complete rap lines; each line spans two bars. Main line attacks replace the initial four-line schedule."
+    ],
+    "annotation": "Main phoneme/phrase starts selected independently from isolated PCM waveforms, then refined within narrow reviewed windows using local signal threshold. ASR used only to identify words; not used as timing ground truth. Final source value is retained release endpoint. Refined from STFT review of consonants, preceding releases and actual silence: {0: 6.872, 1: 10.275}.",
+    "source_frames": [
+      303055,
+      453128,
+      585207
+    ],
+    "target_frames": [
+      0,
+      151200,
+      302400
+    ],
+    "intervals": [
+      {
+        "fitted_frames": 151200,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.9924693964826001
+      },
+      {
+        "fitted_frames": 151200,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.8722336558507511
+      }
+    ],
+    "file": "male_rap_concrete_glow_140bpm_4bars.mp3",
+    "frames": 302400,
+    "settings": {
+      "bpm": 140,
+      "sample_rate": 44100,
+      "channels": 1,
+      "highpass_hz": 55,
+      "preserved_attack_ms": 35,
+      "boundary_ramp_ms": 1.5,
+      "final_fade_ms": 20,
+      "peak_dbfs": -2,
+      "short_release_rate": 0.8
+    },
+    "source_sha256": "33da4f8a6244d8cb8a429a1b8455a35a5a4c14ff8584f5b605eb4e34ba55009e",
+    "mp3_sha256": "268deb8c354cc7a14fd5d1769b3b66a369005f3d85d3ef0e737874dfbbd190fb",
+    "wav_sha256": "d9a3c0218eed978f606d2f68bd1f9bc70704b68443cba42b8eb2318fbcbf91db",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_samples": 1105,
+    "leading_signal_ms_at_minus55db": 0.6575963718820862,
+    "attack_matches": [
+      {
+        "target_beat": 0.0,
+        "source_seconds": 6.872,
+        "offset_ms": 0.0,
+        "correlation": 0.9999858592730978,
+        "verified": true
+      },
+      {
+        "target_beat": 8.0,
+        "source_seconds": 10.275,
+        "offset_ms": 0.0,
+        "correlation": 0.9999728967747015,
+        "verified": true
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "supplied_attack_placement": true
+    },
+    "checks_pass": true,
+    "visual_review_required": true,
+    "limits": "Template matching verifies placement of supplied source annotations, not perceptual annotation correctness. Review every image and listen when available. Singer identity, key, lyrics and zero backing leakage are not established by these measurements. No listening is performed."
+  },
+  {
+    "name": "male_rap_rock_this_place_140bpm_4bars",
+    "title": "Rock This Place",
+    "source": "/Users/igor/Developer/mapview/ui/tools/groove_audio/work/male-rap-2026-10-09/isolated/08.wav",
+    "bars": 4,
+    "source_seconds": [
+      0.088027,
+      1.8,
+      3.515057,
+      5.170385,
+      6.86
+    ],
+    "target_beats": [
+      0.0,
+      4.0,
+      8.0,
+      12.0,
+      16.0
+    ],
+    "delivered_lyrics": "Rock this rock this rock this whole place",
+    "changes": [
+      "Expanded from two to four bars to preserve the slower authored call delivery."
+    ],
+    "annotation": "Main phoneme/phrase starts selected independently from isolated PCM waveforms, then refined within narrow reviewed windows using local signal threshold. ASR used only to identify words; not used as timing ground truth. Final source value is retained release endpoint.",
+    "source_frames": [
+      3882,
+      79380,
+      155014,
+      228014,
+      302526
+    ],
+    "target_frames": [
+      0,
+      75600,
+      151200,
+      226800,
+      302400
+    ],
+    "intervals": [
+      {
+        "fitted_frames": 75600,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.9986226639299989
+      },
+      {
+        "fitted_frames": 75600,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 1.0004591120233337
+      },
+      {
+        "fitted_frames": 75600,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.9648914335097764
+      },
+      {
+        "fitted_frames": 75600,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.9853084152533218
+      }
+    ],
+    "file": "male_rap_rock_this_place_140bpm_4bars.mp3",
+    "frames": 302400,
+    "settings": {
+      "bpm": 140,
+      "sample_rate": 44100,
+      "channels": 1,
+      "highpass_hz": 55,
+      "preserved_attack_ms": 35,
+      "boundary_ramp_ms": 1.5,
+      "final_fade_ms": 20,
+      "peak_dbfs": -2,
+      "short_release_rate": 0.8
+    },
+    "source_sha256": "1b7a164f127b3091703b9ac33630b52195631cdfc3d220b6bba47628181d34d8",
+    "mp3_sha256": "438cd7df596f4bd438ad7db5987a87e2a333410567bd014e4c46c59539ba705d",
+    "wav_sha256": "bc81c0314d9d9a9b72f3e5a050c092b698f9d0054aa59526b8bf13619b0009af",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_samples": 1105,
+    "leading_signal_ms_at_minus55db": 0.5895691609977325,
+    "attack_matches": [
+      {
+        "target_beat": 0.0,
+        "source_seconds": 0.088027,
+        "offset_ms": 0.0,
+        "correlation": 0.999998992876237,
+        "verified": true
+      },
+      {
+        "target_beat": 4.0,
+        "source_seconds": 1.8,
+        "offset_ms": 0.0,
+        "correlation": 0.9999989337767174,
+        "verified": true
+      },
+      {
+        "target_beat": 8.0,
+        "source_seconds": 3.515057,
+        "offset_ms": 0.0,
+        "correlation": 0.9999993543885797,
+        "verified": true
+      },
+      {
+        "target_beat": 12.0,
+        "source_seconds": 5.170385,
+        "offset_ms": 0.0,
+        "correlation": 0.9999875153131189,
+        "verified": true
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "supplied_attack_placement": true
+    },
+    "checks_pass": true,
+    "visual_review_required": true,
+    "limits": "Template matching verifies placement of supplied source annotations, not perceptual annotation correctness. Review every image and listen when available. Singer identity, key, lyrics and zero backing leakage are not established by these measurements. No listening is performed."
+  },
+  {
+    "name": "male_rap_raise_the_roofline_140bpm_4bars",
+    "title": "Raise the Roofline",
+    "source": "/Users/igor/Developer/mapview/ui/tools/groove_audio/work/male-rap-2026-10-09/isolated/08.wav",
+    "bars": 4,
+    "source_seconds": [
+      8.655896,
+      12.03542,
+      15.18
+    ],
+    "target_beats": [
+      0.0,
+      8.0,
+      16.0
+    ],
+    "delivered_lyrics": "Raise the roofline, open the door Bring that feeling back to the floor",
+    "changes": [
+      "Retained the first two complete rap lines; each line spans two bars. Main line attacks replace the initial four-line schedule."
+    ],
+    "annotation": "Main phoneme/phrase starts selected independently from isolated PCM waveforms, then refined within narrow reviewed windows using local signal threshold. ASR used only to identify words; not used as timing ground truth. Final source value is retained release endpoint.",
+    "source_frames": [
+      381725,
+      530762,
+      669438
+    ],
+    "target_frames": [
+      0,
+      151200,
+      302400
+    ],
+    "intervals": [
+      {
+        "fitted_frames": 151200,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.9855468541187791
+      },
+      {
+        "fitted_frames": 151200,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.9163147484898702
+      }
+    ],
+    "file": "male_rap_raise_the_roofline_140bpm_4bars.mp3",
+    "frames": 302400,
+    "settings": {
+      "bpm": 140,
+      "sample_rate": 44100,
+      "channels": 1,
+      "highpass_hz": 55,
+      "preserved_attack_ms": 35,
+      "boundary_ramp_ms": 1.5,
+      "final_fade_ms": 20,
+      "peak_dbfs": -2,
+      "short_release_rate": 0.8
+    },
+    "source_sha256": "1b7a164f127b3091703b9ac33630b52195631cdfc3d220b6bba47628181d34d8",
+    "mp3_sha256": "c9e7397ce253fc6ed6f0b0a5ea8a5e64d21f7e19a999c46aa60aff5e615dc770",
+    "wav_sha256": "9104db11f2a3f69e08ca4da5d15715b6839a8d42542b39cf7d24c651e458144f",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_samples": 1105,
+    "leading_signal_ms_at_minus55db": 0.5442176870748299,
+    "attack_matches": [
+      {
+        "target_beat": 0.0,
+        "source_seconds": 8.655896,
+        "offset_ms": 0.0,
+        "correlation": 0.9999991995811859,
+        "verified": true
+      },
+      {
+        "target_beat": 8.0,
+        "source_seconds": 12.03542,
+        "offset_ms": 0.0,
+        "correlation": 0.999984920049935,
+        "verified": true
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "supplied_attack_placement": true
+    },
+    "checks_pass": true,
+    "visual_review_required": true,
+    "limits": "Template matching verifies placement of supplied source annotations, not perceptual annotation correctness. Review every image and listen when available. Singer identity, key, lyrics and zero backing leakage are not established by these measurements. No listening is performed."
+  },
+  {
+    "name": "male_rap_yeah_keep_moving_140bpm_4bars",
+    "title": "Yeah Keep Moving",
+    "source": "/Users/igor/Developer/mapview/ui/tools/groove_audio/work/male-rap-2026-10-09/isolated/09.wav",
+    "bars": 4,
+    "source_seconds": [
+      0.084036,
+      1.780023,
+      3.46059,
+      5.160068,
+      6.22
+    ],
+    "target_beats": [
+      0.0,
+      4.0,
+      8.0,
+      12.0,
+      16.0
+    ],
+    "delivered_lyrics": "Yeah yeah yeah yeah keep on moving",
+    "changes": [
+      "Expanded from two to four bars to preserve the slower authored call delivery."
+    ],
+    "annotation": "Main phoneme/phrase starts selected independently from isolated PCM waveforms, then refined within narrow reviewed windows using local signal threshold. ASR used only to identify words; not used as timing ground truth. Final source value is retained release endpoint.",
+    "source_frames": [
+      3706,
+      78499,
+      152612,
+      227559,
+      274302
+    ],
+    "target_frames": [
+      0,
+      75600,
+      151200,
+      226800,
+      302400
+    ],
+    "intervals": [
+      {
+        "fitted_frames": 75600,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.9891028410932268
+      },
+      {
+        "fitted_frames": 75600,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.9799206006265528
+      },
+      {
+        "fitted_frames": 75600,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.9911823484930323
+      },
+      {
+        "fitted_frames": 58429,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.7945679880460579
+      }
+    ],
+    "file": "male_rap_yeah_keep_moving_140bpm_4bars.mp3",
+    "frames": 302400,
+    "settings": {
+      "bpm": 140,
+      "sample_rate": 44100,
+      "channels": 1,
+      "highpass_hz": 55,
+      "preserved_attack_ms": 35,
+      "boundary_ramp_ms": 1.5,
+      "final_fade_ms": 20,
+      "peak_dbfs": -2,
+      "short_release_rate": 0.8
+    },
+    "source_sha256": "e331d61916c04940e0f5faa2e3a72bd8c0979c4322d7e308fb8218ec057ee812",
+    "mp3_sha256": "077d621482909d23fa044a5a0dae7376d3f41db8a97eb9e942336945de2e0c16",
+    "wav_sha256": "ef317d45c7525674cf66745ae2fc94c57ddf87d77e08993afce6474614baefae",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_samples": 1105,
+    "leading_signal_ms_at_minus55db": 0.6122448979591837,
+    "attack_matches": [
+      {
+        "target_beat": 0.0,
+        "source_seconds": 0.084036,
+        "offset_ms": 0.0,
+        "correlation": 0.9999949436844919,
+        "verified": true
+      },
+      {
+        "target_beat": 4.0,
+        "source_seconds": 1.780023,
+        "offset_ms": 0.0,
+        "correlation": 0.9999970338874428,
+        "verified": true
+      },
+      {
+        "target_beat": 8.0,
+        "source_seconds": 3.46059,
+        "offset_ms": 0.0,
+        "correlation": 0.9999837222094898,
+        "verified": true
+      },
+      {
+        "target_beat": 12.0,
+        "source_seconds": 5.160068,
+        "offset_ms": 0.0,
+        "correlation": 0.9999998595455933,
+        "verified": true
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "supplied_attack_placement": true
+    },
+    "checks_pass": true,
+    "visual_review_required": true,
+    "limits": "Template matching verifies placement of supplied source annotations, not perceptual annotation correctness. Review every image and listen when available. Singer identity, key, lyrics and zero backing leakage are not established by these measurements. No listening is performed."
+  },
+  {
+    "name": "male_rap_signal_to_move_140bpm_4bars",
+    "title": "Signal to Move",
+    "source": "/Users/igor/Developer/mapview/ui/tools/groove_audio/work/male-rap-2026-10-09/isolated/09.wav",
+    "bars": 4,
+    "source_seconds": [
+      6.80161,
+      10.361,
+      13.36
+    ],
+    "target_beats": [
+      0.0,
+      8.0,
+      16.0
+    ],
+    "delivered_lyrics": "Send that signal from wall to wall Big bright rhythm, a call for all",
+    "changes": [
+      "Retained the first two complete rap lines; each line spans two bars. Main line attacks replace the initial four-line schedule."
+    ],
+    "annotation": "Main phoneme/phrase starts selected independently from isolated PCM waveforms, then refined within narrow reviewed windows using local signal threshold. ASR used only to identify words; not used as timing ground truth. Final source value is retained release endpoint. Refined from STFT review of consonants, preceding releases and actual silence: {1: 10.361}.",
+    "source_frames": [
+      299951,
+      456920,
+      589176
+    ],
+    "target_frames": [
+      0,
+      151200,
+      302400
+    ],
+    "intervals": [
+      {
+        "fitted_frames": 151200,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 1.0385484043406212
+      },
+      {
+        "fitted_frames": 151200,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.8734163682044155
+      }
+    ],
+    "file": "male_rap_signal_to_move_140bpm_4bars.mp3",
+    "frames": 302400,
+    "settings": {
+      "bpm": 140,
+      "sample_rate": 44100,
+      "channels": 1,
+      "highpass_hz": 55,
+      "preserved_attack_ms": 35,
+      "boundary_ramp_ms": 1.5,
+      "final_fade_ms": 20,
+      "peak_dbfs": -2,
+      "short_release_rate": 0.8
+    },
+    "source_sha256": "e331d61916c04940e0f5faa2e3a72bd8c0979c4322d7e308fb8218ec057ee812",
+    "mp3_sha256": "cac6fc7c39ac3a68e86bd1faaf53964c63faa8dd7234b85357273c718f6bd588",
+    "wav_sha256": "822604c0daf47c6e765e21b1dab9a617c4a5177e9bbf9212bc1d9e0b69d12c9f",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_samples": 1105,
+    "leading_signal_ms_at_minus55db": 1.4512471655328798,
+    "attack_matches": [
+      {
+        "target_beat": 0.0,
+        "source_seconds": 6.80161,
+        "offset_ms": 0.0,
+        "correlation": 0.9999717358034634,
+        "verified": true
+      },
+      {
+        "target_beat": 8.0,
+        "source_seconds": 10.361,
+        "offset_ms": 0.0,
+        "correlation": 0.9999989750965126,
+        "verified": true
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "supplied_attack_placement": true
+    },
+    "checks_pass": true,
+    "visual_review_required": true,
+    "limits": "Template matching verifies placement of supplied source annotations, not perceptual annotation correctness. Review every image and listen when available. Singer identity, key, lyrics and zero backing leakage are not established by these measurements. No listening is performed."
+  },
+  {
+    "name": "male_rap_turn_it_up_crew_140bpm_4bars",
+    "title": "Turn It Up Crew",
+    "source": "/Users/igor/Developer/mapview/ui/tools/groove_audio/work/male-rap-2026-10-09/isolated/10.wav",
+    "bars": 4,
+    "source_seconds": [
+      0.08839,
+      1.801973,
+      3.510499,
+      5.235011,
+      6.72
+    ],
+    "target_beats": [
+      0.0,
+      4.0,
+      8.0,
+      12.0,
+      16.0
+    ],
+    "delivered_lyrics": "Turn it up now turn it up crew",
+    "changes": [
+      "Expanded from two to four bars to preserve the slower authored call delivery."
+    ],
+    "annotation": "Main phoneme/phrase starts selected independently from isolated PCM waveforms, then refined within narrow reviewed windows using local signal threshold. ASR used only to identify words; not used as timing ground truth. Final source value is retained release endpoint.",
+    "source_frames": [
+      3898,
+      79467,
+      154813,
+      230864,
+      296352
+    ],
+    "target_frames": [
+      0,
+      75600,
+      151200,
+      226800,
+      302400
+    ],
+    "intervals": [
+      {
+        "fitted_frames": 75600,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.9995813978610781
+      },
+      {
+        "fitted_frames": 75600,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.9965701631198012
+      },
+      {
+        "fitted_frames": 75600,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 1.0060899859565735
+      },
+      {
+        "fitted_frames": 75600,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.863454682942638
+      }
+    ],
+    "file": "male_rap_turn_it_up_crew_140bpm_4bars.mp3",
+    "frames": 302400,
+    "settings": {
+      "bpm": 140,
+      "sample_rate": 44100,
+      "channels": 1,
+      "highpass_hz": 55,
+      "preserved_attack_ms": 35,
+      "boundary_ramp_ms": 1.5,
+      "final_fade_ms": 20,
+      "peak_dbfs": -2,
+      "short_release_rate": 0.8
+    },
+    "source_sha256": "452f61e72f6d2d697eeffd982fdfe3923189c657c6ae052eac96d0a90c3bcbcf",
+    "mp3_sha256": "18f8ccd033a1b7974b980023b709ef59f124695feca27d4907a0ee0345150ab6",
+    "wav_sha256": "4547781d642073c3157764dbd3847f77ac48c65af434c59f702857593729693a",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_samples": 1105,
+    "leading_signal_ms_at_minus55db": 0.6575963718820862,
+    "attack_matches": [
+      {
+        "target_beat": 0.0,
+        "source_seconds": 0.08839,
+        "offset_ms": 0.0,
+        "correlation": 0.9999638406211324,
+        "verified": true
+      },
+      {
+        "target_beat": 4.0,
+        "source_seconds": 1.801973,
+        "offset_ms": 0.0,
+        "correlation": 0.9999900611813481,
+        "verified": true
+      },
+      {
+        "target_beat": 8.0,
+        "source_seconds": 3.510499,
+        "offset_ms": 0.0,
+        "correlation": 0.9999455649992088,
+        "verified": true
+      },
+      {
+        "target_beat": 12.0,
+        "source_seconds": 5.235011,
+        "offset_ms": 0.0,
+        "correlation": 0.9999900688322889,
+        "verified": true
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "supplied_attack_placement": true
+    },
+    "checks_pass": true,
+    "visual_review_required": true,
+    "limits": "Template matching verifies placement of supplied source annotations, not perceptual annotation correctness. Review every image and listen when available. Singer identity, key, lyrics and zero backing leakage are not established by these measurements. No listening is performed."
+  },
+  {
+    "name": "male_rap_night_shift_charge_140bpm_4bars",
+    "title": "Night Shift Charge",
+    "source": "/Users/igor/Developer/mapview/ui/tools/groove_audio/work/male-rap-2026-10-09/isolated/10.wav",
+    "bars": 4,
+    "source_seconds": [
+      8.625079,
+      12.084989,
+      15.28
+    ],
+    "target_beats": [
+      0.0,
+      8.0,
+      16.0
+    ],
+    "delivered_lyrics": "Night shift charge with a fresh new sound Feel that current go round and round",
+    "changes": [
+      "Retained the first two complete rap lines; each line spans two bars. Main line attacks replace the initial four-line schedule."
+    ],
+    "annotation": "Main phoneme/phrase starts selected independently from isolated PCM waveforms, then refined within narrow reviewed windows using local signal threshold. ASR used only to identify words; not used as timing ground truth. Final source value is retained release endpoint.",
+    "source_frames": [
+      380366,
+      532948,
+      673848
+    ],
+    "target_frames": [
+      0,
+      151200,
+      302400
+    ],
+    "intervals": [
+      {
+        "fitted_frames": 151200,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 1.0092345111455605
+      },
+      {
+        "fitted_frames": 151200,
+        "preserved_head_frames": 1544,
+        "atempo_rate": 0.9311754958037098
+      }
+    ],
+    "file": "male_rap_night_shift_charge_140bpm_4bars.mp3",
+    "frames": 302400,
+    "settings": {
+      "bpm": 140,
+      "sample_rate": 44100,
+      "channels": 1,
+      "highpass_hz": 55,
+      "preserved_attack_ms": 35,
+      "boundary_ramp_ms": 1.5,
+      "final_fade_ms": 20,
+      "peak_dbfs": -2,
+      "short_release_rate": 0.8
+    },
+    "source_sha256": "452f61e72f6d2d697eeffd982fdfe3923189c657c6ae052eac96d0a90c3bcbcf",
+    "mp3_sha256": "3d94d2d5fe25af0ffafc98eb5962c7e341f54ce61adfefb009f4cff56546bdaf",
+    "wav_sha256": "4bab4d4258617647992dc93423c1d221fb0170bebb9e5893738025ebc2029766",
+    "decoder": "Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE",
+    "removed_encoder_delay_samples": 1105,
+    "leading_signal_ms_at_minus55db": 0.45351473922902497,
+    "attack_matches": [
+      {
+        "target_beat": 0.0,
+        "source_seconds": 8.625079,
+        "offset_ms": 0.0,
+        "correlation": 0.9999997700026001,
+        "verified": true
+      },
+      {
+        "target_beat": 8.0,
+        "source_seconds": 12.084989,
+        "offset_ms": 0.0,
+        "correlation": 0.9998909723225977,
+        "verified": true
+      }
+    ],
+    "checks": {
+      "exact_bar_frames": true,
+      "mono_44100": true,
+      "finite": true,
+      "non_silent": true,
+      "below_full_scale": true,
+      "leading_signal_within_5ms": true,
+      "supplied_attack_placement": true
+    },
+    "checks_pass": true,
+    "visual_review_required": true,
+    "limits": "Template matching verifies placement of supplied source annotations, not perceptual annotation correctness. Review every image and listen when available. Singer identity, key, lyrics and zero backing leakage are not established by these measurements. No listening is performed."
+  }
+]

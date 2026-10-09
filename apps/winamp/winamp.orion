@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<orion
+    version="1"
+    name="winamp"
+    title="Winamp"
+    root="apps/winamp">
+
+    <!-- Winamp 2 keyboard layout; the skinned windows raise the same commands. -->
+    <menus var="kMenus" count="kNumMenus">
+      <menu name="playback" label="Playback">
+        <item name="prev" label="Previous" shortcut="Z" />
+        <item name="play" label="Play" shortcut="X" />
+        <item name="pause" label="Pause" shortcut="C" />
+        <item name="stop" label="Stop" shortcut="V" />
+        <item name="next" label="Next" shortcut="B" />
+        <item name="open" label="Add Files..." shortcut="L" />
+      </menu>
+      <menu name="options" label="Options">
+        <item name="shuffle" label="Shuffle" shortcut="S" />
+        <item name="repeat" label="Repeat" shortcut="R" />
+        <item name="time" label="Time Elapsed / Remaining" shortcut="Ctrl+T" />
+      </menu>
+      <menu name="window" label="Window">
+        <item name="equalizer" label="Equalizer" shortcut="Alt+G" />
+        <item name="playlist" label="Playlist Editor" shortcut="Alt+E" />
+      </menu>
+      <menu name="eq" label="Equalizer">
+        <item name="toggle" label="Enable Equalizer" />
+        <item name="auto" label="Auto" />
+        <item name="preset" label="Next Preset" />
+      </menu>
+      <menu name="list" label="Playlist">
+        <item name="remove" label="Remove Selected" shortcut="Delete" />
+        <item name="rescan" label="Rescan Documents" />
+      </menu>
+    </menus>
+
+    <forms>
+      <!-- The three classic windows. WinampMain positions them for the
+           orientation: landscape shows the player alone, portrait stacks
+           player, equalizer and playlist. -->
+      <form name="main_window" title="Winamp" width="550" height="900" flags="WINDOW_NOTITLE" spacing="0" padding="0">
+        <WinampPlayer name="player" h_align="center" />
+        <WinampEqualizer name="equalizer" h_align="center" />
+        <WinampPlaylist name="playlist" h_align="center" flags="WINDOW_FLEXSPACE" />
+      </form>
+    </forms>
+</orion>

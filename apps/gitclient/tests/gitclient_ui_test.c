@@ -700,10 +700,14 @@ void test_overview_close_filtered_cards(void) {
   window_t *card = g_test_state.board_win->children->next;
   ASSERT_NOT_NULL(card);
   ASSERT_NULL(card->next);
+  char tooltip[256] = {0};
+  ASSERT_FALSE(send_message(card, evGetTooltipText, 0, tooltip));
   window_t *close = get_window_item(card, ID_OVERVIEW_CARD_HEADER_CLOSE);
   window_t *status = get_window_item(card, ID_OVERVIEW_CARD_HEADER_STATUS);
   ASSERT_NOT_NULL(close);
   ASSERT_NOT_NULL(status);
+  ASSERT_TRUE(send_message(close, evGetTooltipText, 0, tooltip));
+  ASSERT_STR_EQUAL(tooltip, "Close repository");
   ASSERT_EQUAL(close->parent, status->parent);
   ASSERT_EQUAL(close->frame.w, close->frame.h);
   ASSERT_TRUE(close->frame.x >= status->frame.x + status->frame.w);

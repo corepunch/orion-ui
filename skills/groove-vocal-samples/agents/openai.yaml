@@ -1,0 +1,4 @@
+interface:
+  display_name: "Groove Vocal Samples"
+  short_description: "Generate isolated vocals and align Groove’s 140 BPM grid"
+  default_prompt: "Use $groove-vocal-samples to plan, generate, align and verify original vocal samples for Groove at 140 BPM."

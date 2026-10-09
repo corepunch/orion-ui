@@ -776,26 +776,20 @@ void dispatch_message(ui_event_t *msg) {
             int tb_y = sy - (window_screen_y(hover) + title_h);
             send_message(tb_host, evMouseMove,
                          MAKEDWORD((uint16_t)tb_x, (uint16_t)tb_y), NULL);
+          }
+          window_t *source = tb_host ? tb_host : hover;
+          for (; source; source = source->parent) {
             char tip_buf[256] = {0};
-            if (send_message(tb_host, evGetTooltipText,
-                             MAKEDWORD((uint16_t)tb_x, (uint16_t)tb_y),
-                             tip_buf) && tip_buf[0]) {
-              tooltip_update(tb_host, tip_buf, sx, sy);
-            } else {
-              tooltip_update(NULL, NULL, sx, sy);
-            }
-          } else {
-            char tip_buf[256] = {0};
-            int lx_h = (int16_t)LOCAL_X(px, py, hover);
-            int ly_h = (int16_t)LOCAL_Y(px, py, hover);
-            if (send_message(hover, evGetTooltipText,
+            int lx_h = (int16_t)LOCAL_X(px, py, source);
+            int ly_h = (int16_t)LOCAL_Y(px, py, source);
+            if (send_message(source, evGetTooltipText,
                              MAKEDWORD((uint16_t)lx_h, (uint16_t)ly_h),
                              tip_buf) && tip_buf[0]) {
-              tooltip_update(hover, tip_buf, sx, sy);
-            } else {
-              tooltip_update(NULL, NULL, sx, sy);
+              tooltip_update(source, tip_buf, sx, sy);
+              break;
             }
           }
+          if (!source) tooltip_cancel();
         } else {
           // Mouse is outside any interactive window; clear toolbar hover too.
           if (g_ui_runtime.tracked_toolbar) {

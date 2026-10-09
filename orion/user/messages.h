@@ -70,6 +70,8 @@ enum {
   //          client area (same coordinate system as evMouseMove).
   // lparam = char[256] output buffer — write the NUL-terminated tooltip text
   //          here and return true; return false if no tooltip at that position.
+  // Hover lookup continues through ancestors until one supplies nonempty text;
+  // that ancestor also owns the tooltip anchor.
   evGetTooltipText,
   // Query a window for the desired cursor shape at a given client position.
   // wparam = MAKEDWORD(client_x, client_y) — position inside the window's

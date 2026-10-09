@@ -1,0 +1,162 @@
+[
+  {
+    "name": "male_rap_come_on_move_140bpm_2bars",
+    "comparison_inspected": true,
+    "final_waveform_inspected": true,
+    "source_waveform_inspected": true,
+    "notes": "Main phrase starts, preserved attacks and release inspected on shared-axis comparison and final PCM waveform.",
+    "listened": false
+  },
+  {
+    "name": "male_rap_light_up_the_floor_140bpm_4bars",
+    "comparison_inspected": true,
+    "final_waveform_inspected": true,
+    "source_waveform_inspected": true,
+    "notes": "Main phrase starts, preserved attacks and release inspected on shared-axis comparison and final PCM waveform.",
+    "listened": false
+  },
+  {
+    "name": "male_rap_hands_up_high_140bpm_2bars",
+    "comparison_inspected": true,
+    "final_waveform_inspected": true,
+    "source_waveform_inspected": true,
+    "notes": "Main phrase starts, preserved attacks and release inspected on shared-axis comparison and final PCM waveform.",
+    "listened": false
+  },
+  {
+    "name": "male_rap_power_in_motion_140bpm_4bars",
+    "comparison_inspected": true,
+    "final_waveform_inspected": true,
+    "source_waveform_inspected": true,
+    "notes": "Main phrase starts, preserved attacks and release inspected on shared-axis comparison and final PCM waveform.",
+    "listened": false
+  },
+  {
+    "name": "male_rap_go_go_move_fast_140bpm_2bars",
+    "comparison_inspected": true,
+    "final_waveform_inspected": true,
+    "source_waveform_inspected": true,
+    "notes": "Selected three complete call groups; tail silence is intentional after the fast release.",
+    "listened": false
+  },
+  {
+    "name": "male_rap_fresh_step_140bpm_2bars",
+    "comparison_inspected": true,
+    "final_waveform_inspected": true,
+    "source_waveform_inspected": true,
+    "notes": "Selected last two complete rap lines to avoid the overlapping opening transition.",
+    "listened": false
+  },
+  {
+    "name": "male_rap_hey_yo_jump_140bpm_2bars",
+    "comparison_inspected": true,
+    "final_waveform_inspected": true,
+    "source_waveform_inspected": true,
+    "notes": "Main phrase starts, preserved attacks and release inspected on shared-axis comparison and final PCM waveform.",
+    "listened": false
+  },
+  {
+    "name": "male_rap_room_to_rise_140bpm_4bars",
+    "comparison_inspected": true,
+    "final_waveform_inspected": true,
+    "source_waveform_inspected": true,
+    "notes": "Main phrase starts, preserved attacks and release inspected on shared-axis comparison and final PCM waveform.",
+    "listened": false
+  },
+  {
+    "name": "male_rap_bring_that_beat_140bpm_2bars",
+    "comparison_inspected": true,
+    "final_waveform_inspected": true,
+    "source_waveform_inspected": true,
+    "notes": "ASR confuses beat with be; exact diction requires listening.",
+    "listened": false
+  },
+  {
+    "name": "male_rap_pulse_patrol_140bpm_4bars",
+    "comparison_inspected": true,
+    "final_waveform_inspected": true,
+    "source_waveform_inspected": true,
+    "notes": "Main phrase starts, preserved attacks and release inspected on shared-axis comparison and final PCM waveform.",
+    "listened": false
+  },
+  {
+    "name": "male_rap_all_right_tonight_140bpm_2bars",
+    "comparison_inspected": true,
+    "final_waveform_inspected": true,
+    "source_waveform_inspected": true,
+    "notes": "ASR inconsistently omits the second All right; waveform retains the four authored phrase groups.",
+    "listened": false
+  },
+  {
+    "name": "male_rap_forward_fire_140bpm_4bars",
+    "comparison_inspected": true,
+    "final_waveform_inspected": true,
+    "source_waveform_inspected": true,
+    "notes": "Main phrase starts, preserved attacks and release inspected on shared-axis comparison and final PCM waveform.",
+    "listened": false
+  },
+  {
+    "name": "male_rap_one_more_time_crew_140bpm_2bars",
+    "comparison_inspected": true,
+    "final_waveform_inspected": true,
+    "source_waveform_inspected": true,
+    "notes": "Main phrase starts, preserved attacks and release inspected on shared-axis comparison and final PCM waveform.",
+    "listened": false
+  },
+  {
+    "name": "male_rap_concrete_glow_140bpm_4bars",
+    "comparison_inspected": true,
+    "final_waveform_inspected": true,
+    "source_waveform_inspected": true,
+    "notes": "Main phrase starts, preserved attacks and release inspected on shared-axis comparison and final PCM waveform.",
+    "listened": false
+  },
+  {
+    "name": "male_rap_rock_this_place_140bpm_4bars",
+    "comparison_inspected": true,
+    "final_waveform_inspected": true,
+    "source_waveform_inspected": true,
+    "notes": "Main phrase starts, preserved attacks and release inspected on shared-axis comparison and final PCM waveform.",
+    "listened": false
+  },
+  {
+    "name": "male_rap_raise_the_roofline_140bpm_4bars",
+    "comparison_inspected": true,
+    "final_waveform_inspected": true,
+    "source_waveform_inspected": true,
+    "notes": "Main phrase starts, preserved attacks and release inspected on shared-axis comparison and final PCM waveform.",
+    "listened": false
+  },
+  {
+    "name": "male_rap_yeah_keep_moving_140bpm_4bars",
+    "comparison_inspected": true,
+    "final_waveform_inspected": true,
+    "source_waveform_inspected": true,
+    "notes": "Isolated/final ASR hallucinates repeated yeah tokens; original raw ASR recognized keep on moving. Exact lyrics remain unverified.",
+    "listened": false
+  },
+  {
+    "name": "male_rap_signal_to_move_140bpm_4bars",
+    "comparison_inspected": true,
+    "final_waveform_inspected": true,
+    "source_waveform_inspected": true,
+    "notes": "Main phrase starts, preserved attacks and release inspected on shared-axis comparison and final PCM waveform.",
+    "listened": false
+  },
+  {
+    "name": "male_rap_turn_it_up_crew_140bpm_4bars",
+    "comparison_inspected": true,
+    "final_waveform_inspected": true,
+    "source_waveform_inspected": true,
+    "notes": "Main phrase starts, preserved attacks and release inspected on shared-axis comparison and final PCM waveform.",
+    "listened": false
+  },
+  {
+    "name": "male_rap_night_shift_charge_140bpm_4bars",
+    "comparison_inspected": true,
+    "final_waveform_inspected": true,
+    "source_waveform_inspected": true,
+    "notes": "Main phrase starts, preserved attacks and release inspected on shared-axis comparison and final PCM waveform.",
+    "listened": false
+  }
+]

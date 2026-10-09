@@ -1,0 +1,2001 @@
+{
+  "batch": "male-rap-2026-10-09",
+  "samples": [
+    {
+      "number": 1,
+      "pair": 1,
+      "title": "Come On Move",
+      "slug": "come_on_move",
+      "filename": "male_rap_come_on_move_140bpm_2bars.mp3",
+      "role": "crowd hype chant",
+      "lyrics": "Come on come on get up move now",
+      "phrases": [
+        "Come on",
+        "come on",
+        "get up",
+        "move now"
+      ],
+      "syllables": [
+        [
+          "Come",
+          "on"
+        ],
+        [
+          "come",
+          "on"
+        ],
+        [
+          "get",
+          "up"
+        ],
+        [
+          "move",
+          "now"
+        ]
+      ],
+      "voice": "One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice.",
+      "sound": "Percussive nonmelodic rap, strong line starts, rising calls and downward line-ending accents.",
+      "bpm": 140,
+      "meter": "4/4",
+      "bars": 2,
+      "attack_beats": [
+        0,
+        2,
+        4,
+        6
+      ],
+      "attack_seconds": [
+        0.0,
+        0.8571428571428571,
+        1.7142857142857142,
+        2.5714285714285716
+      ],
+      "slot_seconds": 3.4285714285714284,
+      "full_prompt": "Original early-1990s Eurodance crowd hype chant, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"Come on / come on / get up / move now\". Each slash separates one rhythmic phrase. 2 bars total, 3.428571 seconds. Phrase attacks: \"Come on\" starts at beat 0, 0.000000 seconds; \"come on\" starts at beat 2, 0.857143 seconds; \"get up\" starts at beat 4, 1.714286 seconds; \"move now\" starts at beat 6, 2.571429 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 3.348571 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise.",
+      "syllable_attack_beats": [
+        [
+          0.0,
+          0.75
+        ],
+        [
+          2.0,
+          2.75
+        ],
+        [
+          4.0,
+          4.75
+        ],
+        [
+          6.0,
+          6.75
+        ]
+      ]
+    },
+    {
+      "number": 2,
+      "pair": 1,
+      "title": "Light Up the Floor",
+      "slug": "light_up_the_floor",
+      "filename": "male_rap_light_up_the_floor_140bpm_4bars.mp3",
+      "role": "four-line rhythmic rap",
+      "lyrics": "Step in the light, let your feet ignite Bring that spark to the floor tonight Push that sound till the walls come down We bring the heat when the beat comes round",
+      "phrases": [
+        "Step in the light, let your feet ignite",
+        "Bring that spark to the floor tonight",
+        "Push that sound till the walls come down",
+        "We bring the heat when the beat comes round"
+      ],
+      "syllables": [
+        [
+          "Step",
+          "in",
+          "the",
+          "light",
+          "let",
+          "your",
+          "feet",
+          "ignite"
+        ],
+        [
+          "Bring",
+          "that",
+          "spark",
+          "to",
+          "the",
+          "floor",
+          "to",
+          "night"
+        ],
+        [
+          "Push",
+          "that",
+          "sound",
+          "till",
+          "the",
+          "walls",
+          "come",
+          "down"
+        ],
+        [
+          "We",
+          "bring",
+          "the",
+          "heat",
+          "when",
+          "the",
+          "beat",
+          "comes",
+          "round"
+        ]
+      ],
+      "voice": "One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice.",
+      "sound": "Percussive nonmelodic rap, strong line starts, rising calls and downward line-ending accents.",
+      "bpm": 140,
+      "meter": "4/4",
+      "bars": 4,
+      "attack_beats": [
+        0,
+        4,
+        8,
+        12
+      ],
+      "attack_seconds": [
+        0.0,
+        1.7142857142857142,
+        3.4285714285714284,
+        5.142857142857143
+      ],
+      "slot_seconds": 6.857142857142857,
+      "full_prompt": "Original early-1990s Eurodance four-line rhythmic rap, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"Step in the light, let your feet ignite / Bring that spark to the floor tonight / Push that sound till the walls come down / We bring the heat when the beat comes round\". Each slash separates one rhythmic phrase. 4 bars total, 6.857143 seconds. Phrase attacks: \"Step in the light, let your feet ignite\" starts at beat 0, 0.000000 seconds; \"Bring that spark to the floor tonight\" starts at beat 4, 1.714286 seconds; \"Push that sound till the walls come down\" starts at beat 8, 3.428571 seconds; \"We bring the heat when the beat comes round\" starts at beat 12, 5.142857 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 6.777143 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise.",
+      "syllable_attack_beats": [
+        [
+          0.0,
+          0.4375,
+          0.875,
+          1.3125,
+          1.75,
+          2.1875,
+          2.625,
+          3.0625
+        ],
+        [
+          4.0,
+          4.4375,
+          4.875,
+          5.3125,
+          5.75,
+          6.1875,
+          6.625,
+          7.0625
+        ],
+        [
+          8.0,
+          8.4375,
+          8.875,
+          9.3125,
+          9.75,
+          10.1875,
+          10.625,
+          11.0625
+        ],
+        [
+          12.0,
+          12.388889,
+          12.777778,
+          13.166667,
+          13.555556,
+          13.944444,
+          14.333333,
+          14.722222,
+          15.111111
+        ]
+      ]
+    },
+    {
+      "number": 3,
+      "pair": 2,
+      "title": "Hands Up High",
+      "slug": "hands_up_high",
+      "filename": "male_rap_hands_up_high_140bpm_2bars.mp3",
+      "role": "crowd hype chant",
+      "lyrics": "Hands up hands up reach high touch sky",
+      "phrases": [
+        "Hands up",
+        "hands up",
+        "reach high",
+        "touch sky"
+      ],
+      "syllables": [
+        [
+          "Hands",
+          "up"
+        ],
+        [
+          "hands",
+          "up"
+        ],
+        [
+          "reach",
+          "high"
+        ],
+        [
+          "touch",
+          "sky"
+        ]
+      ],
+      "voice": "One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice.",
+      "sound": "Percussive nonmelodic rap, strong line starts, rising calls and downward line-ending accents.",
+      "bpm": 140,
+      "meter": "4/4",
+      "bars": 2,
+      "attack_beats": [
+        0,
+        2,
+        4,
+        6
+      ],
+      "attack_seconds": [
+        0.0,
+        0.8571428571428571,
+        1.7142857142857142,
+        2.5714285714285716
+      ],
+      "slot_seconds": 3.4285714285714284,
+      "full_prompt": "Original early-1990s Eurodance crowd hype chant, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"Hands up / hands up / reach high / touch sky\". Each slash separates one rhythmic phrase. 2 bars total, 3.428571 seconds. Phrase attacks: \"Hands up\" starts at beat 0, 0.000000 seconds; \"hands up\" starts at beat 2, 0.857143 seconds; \"reach high\" starts at beat 4, 1.714286 seconds; \"touch sky\" starts at beat 6, 2.571429 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 3.348571 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise.",
+      "syllable_attack_beats": [
+        [
+          0.0,
+          0.75
+        ],
+        [
+          2.0,
+          2.75
+        ],
+        [
+          4.0,
+          4.75
+        ],
+        [
+          6.0,
+          6.75
+        ]
+      ]
+    },
+    {
+      "number": 4,
+      "pair": 2,
+      "title": "Power in Motion",
+      "slug": "power_in_motion",
+      "filename": "male_rap_power_in_motion_140bpm_4bars.mp3",
+      "role": "four-line rhythmic rap",
+      "lyrics": "Power in motion, we ride that wave Step to the rhythm, be loud, be brave Turn up the fire and let it roll Move with the music, body and soul",
+      "phrases": [
+        "Power in motion, we ride that wave",
+        "Step to the rhythm, be loud, be brave",
+        "Turn up the fire and let it roll",
+        "Move with the music, body and soul"
+      ],
+      "syllables": [
+        [
+          "Pow",
+          "er",
+          "in",
+          "mo",
+          "tion",
+          "we",
+          "ride",
+          "that",
+          "wave"
+        ],
+        [
+          "Step",
+          "to",
+          "the",
+          "rhyth",
+          "m",
+          "be",
+          "loud",
+          "be",
+          "brave"
+        ],
+        [
+          "Turn",
+          "up",
+          "the",
+          "fi",
+          "re",
+          "and",
+          "let",
+          "it",
+          "roll"
+        ],
+        [
+          "Move",
+          "with",
+          "the",
+          "mu",
+          "sic",
+          "bod",
+          "y",
+          "and",
+          "soul"
+        ]
+      ],
+      "voice": "One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice.",
+      "sound": "Percussive nonmelodic rap, strong line starts, rising calls and downward line-ending accents.",
+      "bpm": 140,
+      "meter": "4/4",
+      "bars": 4,
+      "attack_beats": [
+        0,
+        4,
+        8,
+        12
+      ],
+      "attack_seconds": [
+        0.0,
+        1.7142857142857142,
+        3.4285714285714284,
+        5.142857142857143
+      ],
+      "slot_seconds": 6.857142857142857,
+      "full_prompt": "Original early-1990s Eurodance four-line rhythmic rap, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"Power in motion, we ride that wave / Step to the rhythm, be loud, be brave / Turn up the fire and let it roll / Move with the music, body and soul\". Each slash separates one rhythmic phrase. 4 bars total, 6.857143 seconds. Phrase attacks: \"Power in motion, we ride that wave\" starts at beat 0, 0.000000 seconds; \"Step to the rhythm, be loud, be brave\" starts at beat 4, 1.714286 seconds; \"Turn up the fire and let it roll\" starts at beat 8, 3.428571 seconds; \"Move with the music, body and soul\" starts at beat 12, 5.142857 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 6.777143 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise.",
+      "syllable_attack_beats": [
+        [
+          0.0,
+          0.388889,
+          0.777778,
+          1.166667,
+          1.555556,
+          1.944444,
+          2.333333,
+          2.722222,
+          3.111111
+        ],
+        [
+          4.0,
+          4.388889,
+          4.777778,
+          5.166667,
+          5.555556,
+          5.944444,
+          6.333333,
+          6.722222,
+          7.111111
+        ],
+        [
+          8.0,
+          8.388889,
+          8.777778,
+          9.166667,
+          9.555556,
+          9.944444,
+          10.333333,
+          10.722222,
+          11.111111
+        ],
+        [
+          12.0,
+          12.388889,
+          12.777778,
+          13.166667,
+          13.555556,
+          13.944444,
+          14.333333,
+          14.722222,
+          15.111111
+        ]
+      ]
+    },
+    {
+      "number": 5,
+      "pair": 3,
+      "title": "Go Go Now",
+      "slug": "go_go_now",
+      "filename": "male_rap_go_go_now_140bpm_2bars.mp3",
+      "role": "crowd hype chant",
+      "lyrics": "Go go go go move fast let go",
+      "phrases": [
+        "Go go",
+        "go go",
+        "move fast",
+        "let go"
+      ],
+      "syllables": [
+        [
+          "Go",
+          "go"
+        ],
+        [
+          "go",
+          "go"
+        ],
+        [
+          "move",
+          "fast"
+        ],
+        [
+          "let",
+          "go"
+        ]
+      ],
+      "voice": "One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice.",
+      "sound": "Percussive nonmelodic rap, strong line starts, rising calls and downward line-ending accents.",
+      "bpm": 140,
+      "meter": "4/4",
+      "bars": 2,
+      "attack_beats": [
+        0,
+        2,
+        4,
+        6
+      ],
+      "attack_seconds": [
+        0.0,
+        0.8571428571428571,
+        1.7142857142857142,
+        2.5714285714285716
+      ],
+      "slot_seconds": 3.4285714285714284,
+      "full_prompt": "Original early-1990s Eurodance crowd hype chant, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"Go go / go go / move fast / let go\". Each slash separates one rhythmic phrase. 2 bars total, 3.428571 seconds. Phrase attacks: \"Go go\" starts at beat 0, 0.000000 seconds; \"go go\" starts at beat 2, 0.857143 seconds; \"move fast\" starts at beat 4, 1.714286 seconds; \"let go\" starts at beat 6, 2.571429 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 3.348571 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise.",
+      "syllable_attack_beats": [
+        [
+          0.0,
+          0.75
+        ],
+        [
+          2.0,
+          2.75
+        ],
+        [
+          4.0,
+          4.75
+        ],
+        [
+          6.0,
+          6.75
+        ]
+      ]
+    },
+    {
+      "number": 6,
+      "pair": 3,
+      "title": "Streetlight Spark",
+      "slug": "streetlight_spark",
+      "filename": "male_rap_streetlight_spark_140bpm_4bars.mp3",
+      "role": "four-line rhythmic rap",
+      "lyrics": "Streetlight spark and a midnight train Kick that doubt out into the rain One fresh step and we start to fly Keep that fire running sky high",
+      "phrases": [
+        "Streetlight spark and a midnight train",
+        "Kick that doubt out into the rain",
+        "One fresh step and we start to fly",
+        "Keep that fire running sky high"
+      ],
+      "syllables": [
+        [
+          "Street",
+          "light",
+          "spark",
+          "and",
+          "a",
+          "mid",
+          "night",
+          "train"
+        ],
+        [
+          "Kick",
+          "that",
+          "doubt",
+          "out",
+          "in",
+          "to",
+          "the",
+          "rain"
+        ],
+        [
+          "One",
+          "fresh",
+          "step",
+          "and",
+          "we",
+          "start",
+          "to",
+          "fly"
+        ],
+        [
+          "Keep",
+          "that",
+          "fi",
+          "re",
+          "run",
+          "ning",
+          "sky",
+          "high"
+        ]
+      ],
+      "voice": "One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice.",
+      "sound": "Percussive nonmelodic rap, strong line starts, rising calls and downward line-ending accents.",
+      "bpm": 140,
+      "meter": "4/4",
+      "bars": 4,
+      "attack_beats": [
+        0,
+        4,
+        8,
+        12
+      ],
+      "attack_seconds": [
+        0.0,
+        1.7142857142857142,
+        3.4285714285714284,
+        5.142857142857143
+      ],
+      "slot_seconds": 6.857142857142857,
+      "full_prompt": "Original early-1990s Eurodance four-line rhythmic rap, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"Streetlight spark and a midnight train / Kick that doubt out into the rain / One fresh step and we start to fly / Keep that fire running sky high\". Each slash separates one rhythmic phrase. 4 bars total, 6.857143 seconds. Phrase attacks: \"Streetlight spark and a midnight train\" starts at beat 0, 0.000000 seconds; \"Kick that doubt out into the rain\" starts at beat 4, 1.714286 seconds; \"One fresh step and we start to fly\" starts at beat 8, 3.428571 seconds; \"Keep that fire running sky high\" starts at beat 12, 5.142857 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 6.777143 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise.",
+      "syllable_attack_beats": [
+        [
+          0.0,
+          0.4375,
+          0.875,
+          1.3125,
+          1.75,
+          2.1875,
+          2.625,
+          3.0625
+        ],
+        [
+          4.0,
+          4.4375,
+          4.875,
+          5.3125,
+          5.75,
+          6.1875,
+          6.625,
+          7.0625
+        ],
+        [
+          8.0,
+          8.4375,
+          8.875,
+          9.3125,
+          9.75,
+          10.1875,
+          10.625,
+          11.0625
+        ],
+        [
+          12.0,
+          12.4375,
+          12.875,
+          13.3125,
+          13.75,
+          14.1875,
+          14.625,
+          15.0625
+        ]
+      ]
+    },
+    {
+      "number": 7,
+      "pair": 4,
+      "title": "Hey Yo Jump",
+      "slug": "hey_yo_jump",
+      "filename": "male_rap_hey_yo_jump_140bpm_2bars.mp3",
+      "role": "crowd hype chant",
+      "lyrics": "Hey yo hey yo jump up let\u2019s go",
+      "phrases": [
+        "Hey yo",
+        "hey yo",
+        "jump up",
+        "let\u2019s go"
+      ],
+      "syllables": [
+        [
+          "Hey",
+          "yo"
+        ],
+        [
+          "hey",
+          "yo"
+        ],
+        [
+          "jump",
+          "up"
+        ],
+        [
+          "let\u2019s",
+          "go"
+        ]
+      ],
+      "voice": "One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice.",
+      "sound": "Percussive nonmelodic rap, strong line starts, rising calls and downward line-ending accents.",
+      "bpm": 140,
+      "meter": "4/4",
+      "bars": 2,
+      "attack_beats": [
+        0,
+        2,
+        4,
+        6
+      ],
+      "attack_seconds": [
+        0.0,
+        0.8571428571428571,
+        1.7142857142857142,
+        2.5714285714285716
+      ],
+      "slot_seconds": 3.4285714285714284,
+      "full_prompt": "Original early-1990s Eurodance crowd hype chant, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"Hey yo / hey yo / jump up / let\u2019s go\". Each slash separates one rhythmic phrase. 2 bars total, 3.428571 seconds. Phrase attacks: \"Hey yo\" starts at beat 0, 0.000000 seconds; \"hey yo\" starts at beat 2, 0.857143 seconds; \"jump up\" starts at beat 4, 1.714286 seconds; \"let\u2019s go\" starts at beat 6, 2.571429 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 3.348571 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise.",
+      "syllable_attack_beats": [
+        [
+          0.0,
+          0.75
+        ],
+        [
+          2.0,
+          2.75
+        ],
+        [
+          4.0,
+          4.75
+        ],
+        [
+          6.0,
+          6.75
+        ]
+      ]
+    },
+    {
+      "number": 8,
+      "pair": 4,
+      "title": "Room to Rise",
+      "slug": "room_to_rise",
+      "filename": "male_rap_room_to_rise_140bpm_4bars.mp3",
+      "role": "four-line rhythmic rap",
+      "lyrics": "Make some room, let the whole crew rise Feel that flash when the bass collides Left to the right, now turn it loose Put your hands up and bring that juice",
+      "phrases": [
+        "Make some room, let the whole crew rise",
+        "Feel that flash when the bass collides",
+        "Left to the right, now turn it loose",
+        "Put your hands up and bring that juice"
+      ],
+      "syllables": [
+        [
+          "Make",
+          "some",
+          "room",
+          "let",
+          "the",
+          "whole",
+          "crew",
+          "rise"
+        ],
+        [
+          "Feel",
+          "that",
+          "flash",
+          "when",
+          "the",
+          "bass",
+          "col",
+          "lides"
+        ],
+        [
+          "Left",
+          "to",
+          "the",
+          "right",
+          "now",
+          "turn",
+          "it",
+          "loose"
+        ],
+        [
+          "Put",
+          "your",
+          "hands",
+          "up",
+          "and",
+          "bring",
+          "that",
+          "juice"
+        ]
+      ],
+      "voice": "One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice.",
+      "sound": "Percussive nonmelodic rap, strong line starts, rising calls and downward line-ending accents.",
+      "bpm": 140,
+      "meter": "4/4",
+      "bars": 4,
+      "attack_beats": [
+        0,
+        4,
+        8,
+        12
+      ],
+      "attack_seconds": [
+        0.0,
+        1.7142857142857142,
+        3.4285714285714284,
+        5.142857142857143
+      ],
+      "slot_seconds": 6.857142857142857,
+      "full_prompt": "Original early-1990s Eurodance four-line rhythmic rap, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"Make some room, let the whole crew rise / Feel that flash when the bass collides / Left to the right, now turn it loose / Put your hands up and bring that juice\". Each slash separates one rhythmic phrase. 4 bars total, 6.857143 seconds. Phrase attacks: \"Make some room, let the whole crew rise\" starts at beat 0, 0.000000 seconds; \"Feel that flash when the bass collides\" starts at beat 4, 1.714286 seconds; \"Left to the right, now turn it loose\" starts at beat 8, 3.428571 seconds; \"Put your hands up and bring that juice\" starts at beat 12, 5.142857 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 6.777143 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise.",
+      "syllable_attack_beats": [
+        [
+          0.0,
+          0.4375,
+          0.875,
+          1.3125,
+          1.75,
+          2.1875,
+          2.625,
+          3.0625
+        ],
+        [
+          4.0,
+          4.4375,
+          4.875,
+          5.3125,
+          5.75,
+          6.1875,
+          6.625,
+          7.0625
+        ],
+        [
+          8.0,
+          8.4375,
+          8.875,
+          9.3125,
+          9.75,
+          10.1875,
+          10.625,
+          11.0625
+        ],
+        [
+          12.0,
+          12.4375,
+          12.875,
+          13.3125,
+          13.75,
+          14.1875,
+          14.625,
+          15.0625
+        ]
+      ]
+    },
+    {
+      "number": 9,
+      "pair": 5,
+      "title": "Bring That Beat",
+      "slug": "bring_that_beat",
+      "filename": "male_rap_bring_that_beat_140bpm_2bars.mp3",
+      "role": "crowd hype chant",
+      "lyrics": "Bring that beat back bring that beat back",
+      "phrases": [
+        "Bring that",
+        "beat back",
+        "bring that",
+        "beat back"
+      ],
+      "syllables": [
+        [
+          "Bring",
+          "that"
+        ],
+        [
+          "beat",
+          "back"
+        ],
+        [
+          "bring",
+          "that"
+        ],
+        [
+          "beat",
+          "back"
+        ]
+      ],
+      "voice": "One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice.",
+      "sound": "Percussive nonmelodic rap, strong line starts, rising calls and downward line-ending accents.",
+      "bpm": 140,
+      "meter": "4/4",
+      "bars": 2,
+      "attack_beats": [
+        0,
+        2,
+        4,
+        6
+      ],
+      "attack_seconds": [
+        0.0,
+        0.8571428571428571,
+        1.7142857142857142,
+        2.5714285714285716
+      ],
+      "slot_seconds": 3.4285714285714284,
+      "full_prompt": "Original early-1990s Eurodance crowd hype chant, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"Bring that / beat back / bring that / beat back\". Each slash separates one rhythmic phrase. 2 bars total, 3.428571 seconds. Phrase attacks: \"Bring that\" starts at beat 0, 0.000000 seconds; \"beat back\" starts at beat 2, 0.857143 seconds; \"bring that\" starts at beat 4, 1.714286 seconds; \"beat back\" starts at beat 6, 2.571429 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 3.348571 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise.",
+      "syllable_attack_beats": [
+        [
+          0.0,
+          0.75
+        ],
+        [
+          2.0,
+          2.75
+        ],
+        [
+          4.0,
+          4.75
+        ],
+        [
+          6.0,
+          6.75
+        ]
+      ]
+    },
+    {
+      "number": 10,
+      "pair": 5,
+      "title": "Pulse Patrol",
+      "slug": "pulse_patrol",
+      "filename": "male_rap_pulse_patrol_140bpm_4bars.mp3",
+      "role": "four-line rhythmic rap",
+      "lyrics": "We got the pulse and we hold it tight Shake off the dust, step into the light Four on the floor and the pressure grows Ride that rhythm wherever it goes",
+      "phrases": [
+        "We got the pulse and we hold it tight",
+        "Shake off the dust, step into the light",
+        "Four on the floor and the pressure grows",
+        "Ride that rhythm wherever it goes"
+      ],
+      "syllables": [
+        [
+          "We",
+          "got",
+          "the",
+          "pulse",
+          "and",
+          "we",
+          "hold",
+          "it",
+          "tight"
+        ],
+        [
+          "Shake",
+          "off",
+          "the",
+          "dust",
+          "step",
+          "in",
+          "to",
+          "the",
+          "light"
+        ],
+        [
+          "Four",
+          "on",
+          "the",
+          "floor",
+          "and",
+          "the",
+          "pres",
+          "sure",
+          "grows"
+        ],
+        [
+          "Ride",
+          "that",
+          "rhyth",
+          "m",
+          "wher",
+          "ev",
+          "er",
+          "it",
+          "goes"
+        ]
+      ],
+      "voice": "One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice.",
+      "sound": "Percussive nonmelodic rap, strong line starts, rising calls and downward line-ending accents.",
+      "bpm": 140,
+      "meter": "4/4",
+      "bars": 4,
+      "attack_beats": [
+        0,
+        4,
+        8,
+        12
+      ],
+      "attack_seconds": [
+        0.0,
+        1.7142857142857142,
+        3.4285714285714284,
+        5.142857142857143
+      ],
+      "slot_seconds": 6.857142857142857,
+      "full_prompt": "Original early-1990s Eurodance four-line rhythmic rap, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"We got the pulse and we hold it tight / Shake off the dust, step into the light / Four on the floor and the pressure grows / Ride that rhythm wherever it goes\". Each slash separates one rhythmic phrase. 4 bars total, 6.857143 seconds. Phrase attacks: \"We got the pulse and we hold it tight\" starts at beat 0, 0.000000 seconds; \"Shake off the dust, step into the light\" starts at beat 4, 1.714286 seconds; \"Four on the floor and the pressure grows\" starts at beat 8, 3.428571 seconds; \"Ride that rhythm wherever it goes\" starts at beat 12, 5.142857 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 6.777143 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise.",
+      "syllable_attack_beats": [
+        [
+          0.0,
+          0.388889,
+          0.777778,
+          1.166667,
+          1.555556,
+          1.944444,
+          2.333333,
+          2.722222,
+          3.111111
+        ],
+        [
+          4.0,
+          4.388889,
+          4.777778,
+          5.166667,
+          5.555556,
+          5.944444,
+          6.333333,
+          6.722222,
+          7.111111
+        ],
+        [
+          8.0,
+          8.388889,
+          8.777778,
+          9.166667,
+          9.555556,
+          9.944444,
+          10.333333,
+          10.722222,
+          11.111111
+        ],
+        [
+          12.0,
+          12.388889,
+          12.777778,
+          13.166667,
+          13.555556,
+          13.944444,
+          14.333333,
+          14.722222,
+          15.111111
+        ]
+      ]
+    },
+    {
+      "number": 11,
+      "pair": 6,
+      "title": "All Right Tonight",
+      "slug": "all_right_tonight",
+      "filename": "male_rap_all_right_tonight_140bpm_2bars.mp3",
+      "role": "crowd hype chant",
+      "lyrics": "All right all right feel good tonight",
+      "phrases": [
+        "All right",
+        "all right",
+        "feel good",
+        "tonight"
+      ],
+      "syllables": [
+        [
+          "All",
+          "right"
+        ],
+        [
+          "all",
+          "right"
+        ],
+        [
+          "feel",
+          "good"
+        ],
+        [
+          "to",
+          "night"
+        ]
+      ],
+      "voice": "One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice.",
+      "sound": "Percussive nonmelodic rap, strong line starts, rising calls and downward line-ending accents.",
+      "bpm": 140,
+      "meter": "4/4",
+      "bars": 2,
+      "attack_beats": [
+        0,
+        2,
+        4,
+        6
+      ],
+      "attack_seconds": [
+        0.0,
+        0.8571428571428571,
+        1.7142857142857142,
+        2.5714285714285716
+      ],
+      "slot_seconds": 3.4285714285714284,
+      "full_prompt": "Original early-1990s Eurodance crowd hype chant, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"All right / all right / feel good / tonight\". Each slash separates one rhythmic phrase. 2 bars total, 3.428571 seconds. Phrase attacks: \"All right\" starts at beat 0, 0.000000 seconds; \"all right\" starts at beat 2, 0.857143 seconds; \"feel good\" starts at beat 4, 1.714286 seconds; \"tonight\" starts at beat 6, 2.571429 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 3.348571 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise.",
+      "syllable_attack_beats": [
+        [
+          0.0,
+          0.75
+        ],
+        [
+          2.0,
+          2.75
+        ],
+        [
+          4.0,
+          4.75
+        ],
+        [
+          6.0,
+          6.75
+        ]
+      ]
+    },
+    {
+      "number": 12,
+      "pair": 6,
+      "title": "Forward Fire",
+      "slug": "forward_fire",
+      "filename": "male_rap_forward_fire_140bpm_4bars.mp3",
+      "role": "four-line rhythmic rap",
+      "lyrics": "Forward fire, never standing still Find that spark and you find that thrill Move with a purpose, let shoulders sway Bring your own light to a brand new day",
+      "phrases": [
+        "Forward fire, never standing still",
+        "Find that spark and you find that thrill",
+        "Move with a purpose, let shoulders sway",
+        "Bring your own light to a brand new day"
+      ],
+      "syllables": [
+        [
+          "For",
+          "ward",
+          "fi",
+          "re",
+          "nev",
+          "er",
+          "stand",
+          "ing",
+          "still"
+        ],
+        [
+          "Find",
+          "that",
+          "spark",
+          "and",
+          "you",
+          "find",
+          "that",
+          "thrill"
+        ],
+        [
+          "Move",
+          "with",
+          "a",
+          "pur",
+          "pose",
+          "let",
+          "shoul",
+          "ders",
+          "sway"
+        ],
+        [
+          "Bring",
+          "your",
+          "own",
+          "light",
+          "to",
+          "a",
+          "brand",
+          "new",
+          "day"
+        ]
+      ],
+      "voice": "One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice.",
+      "sound": "Percussive nonmelodic rap, strong line starts, rising calls and downward line-ending accents.",
+      "bpm": 140,
+      "meter": "4/4",
+      "bars": 4,
+      "attack_beats": [
+        0,
+        4,
+        8,
+        12
+      ],
+      "attack_seconds": [
+        0.0,
+        1.7142857142857142,
+        3.4285714285714284,
+        5.142857142857143
+      ],
+      "slot_seconds": 6.857142857142857,
+      "full_prompt": "Original early-1990s Eurodance four-line rhythmic rap, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"Forward fire, never standing still / Find that spark and you find that thrill / Move with a purpose, let shoulders sway / Bring your own light to a brand new day\". Each slash separates one rhythmic phrase. 4 bars total, 6.857143 seconds. Phrase attacks: \"Forward fire, never standing still\" starts at beat 0, 0.000000 seconds; \"Find that spark and you find that thrill\" starts at beat 4, 1.714286 seconds; \"Move with a purpose, let shoulders sway\" starts at beat 8, 3.428571 seconds; \"Bring your own light to a brand new day\" starts at beat 12, 5.142857 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 6.777143 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise.",
+      "syllable_attack_beats": [
+        [
+          0.0,
+          0.388889,
+          0.777778,
+          1.166667,
+          1.555556,
+          1.944444,
+          2.333333,
+          2.722222,
+          3.111111
+        ],
+        [
+          4.0,
+          4.4375,
+          4.875,
+          5.3125,
+          5.75,
+          6.1875,
+          6.625,
+          7.0625
+        ],
+        [
+          8.0,
+          8.388889,
+          8.777778,
+          9.166667,
+          9.555556,
+          9.944444,
+          10.333333,
+          10.722222,
+          11.111111
+        ],
+        [
+          12.0,
+          12.388889,
+          12.777778,
+          13.166667,
+          13.555556,
+          13.944444,
+          14.333333,
+          14.722222,
+          15.111111
+        ]
+      ]
+    },
+    {
+      "number": 13,
+      "pair": 7,
+      "title": "One More Time Crew",
+      "slug": "one_more_time_crew",
+      "filename": "male_rap_one_more_time_crew_140bpm_2bars.mp3",
+      "role": "crowd hype chant",
+      "lyrics": "One more one more one more time crew",
+      "phrases": [
+        "One more",
+        "one more",
+        "one more",
+        "time crew"
+      ],
+      "syllables": [
+        [
+          "One",
+          "more"
+        ],
+        [
+          "one",
+          "more"
+        ],
+        [
+          "one",
+          "more"
+        ],
+        [
+          "time",
+          "crew"
+        ]
+      ],
+      "voice": "One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice.",
+      "sound": "Percussive nonmelodic rap, strong line starts, rising calls and downward line-ending accents.",
+      "bpm": 140,
+      "meter": "4/4",
+      "bars": 2,
+      "attack_beats": [
+        0,
+        2,
+        4,
+        6
+      ],
+      "attack_seconds": [
+        0.0,
+        0.8571428571428571,
+        1.7142857142857142,
+        2.5714285714285716
+      ],
+      "slot_seconds": 3.4285714285714284,
+      "full_prompt": "Original early-1990s Eurodance crowd hype chant, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"One more / one more / one more / time crew\". Each slash separates one rhythmic phrase. 2 bars total, 3.428571 seconds. Phrase attacks: \"One more\" starts at beat 0, 0.000000 seconds; \"one more\" starts at beat 2, 0.857143 seconds; \"one more\" starts at beat 4, 1.714286 seconds; \"time crew\" starts at beat 6, 2.571429 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 3.348571 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise.",
+      "syllable_attack_beats": [
+        [
+          0.0,
+          0.75
+        ],
+        [
+          2.0,
+          2.75
+        ],
+        [
+          4.0,
+          4.75
+        ],
+        [
+          6.0,
+          6.75
+        ]
+      ]
+    },
+    {
+      "number": 14,
+      "pair": 7,
+      "title": "Concrete Glow",
+      "slug": "concrete_glow",
+      "filename": "male_rap_concrete_glow_140bpm_4bars.mp3",
+      "role": "four-line rhythmic rap",
+      "lyrics": "Concrete glow under dancing feet Every new step makes the night complete Pass that energy round the room Let that spirit go boom boom boom",
+      "phrases": [
+        "Concrete glow under dancing feet",
+        "Every new step makes the night complete",
+        "Pass that energy round the room",
+        "Let that spirit go boom boom boom"
+      ],
+      "syllables": [
+        [
+          "Con",
+          "crete",
+          "glow",
+          "un",
+          "der",
+          "danc",
+          "ing",
+          "feet"
+        ],
+        [
+          "Ev",
+          "er",
+          "y",
+          "new",
+          "step",
+          "makes",
+          "the",
+          "night",
+          "com",
+          "plete"
+        ],
+        [
+          "Pass",
+          "that",
+          "en",
+          "er",
+          "gy",
+          "round",
+          "the",
+          "room"
+        ],
+        [
+          "Let",
+          "that",
+          "spir",
+          "it",
+          "go",
+          "boom",
+          "boom",
+          "boom"
+        ]
+      ],
+      "voice": "One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice.",
+      "sound": "Percussive nonmelodic rap, strong line starts, rising calls and downward line-ending accents.",
+      "bpm": 140,
+      "meter": "4/4",
+      "bars": 4,
+      "attack_beats": [
+        0,
+        4,
+        8,
+        12
+      ],
+      "attack_seconds": [
+        0.0,
+        1.7142857142857142,
+        3.4285714285714284,
+        5.142857142857143
+      ],
+      "slot_seconds": 6.857142857142857,
+      "full_prompt": "Original early-1990s Eurodance four-line rhythmic rap, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"Concrete glow under dancing feet / Every new step makes the night complete / Pass that energy round the room / Let that spirit go boom boom boom\". Each slash separates one rhythmic phrase. 4 bars total, 6.857143 seconds. Phrase attacks: \"Concrete glow under dancing feet\" starts at beat 0, 0.000000 seconds; \"Every new step makes the night complete\" starts at beat 4, 1.714286 seconds; \"Pass that energy round the room\" starts at beat 8, 3.428571 seconds; \"Let that spirit go boom boom boom\" starts at beat 12, 5.142857 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 6.777143 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise.",
+      "syllable_attack_beats": [
+        [
+          0.0,
+          0.4375,
+          0.875,
+          1.3125,
+          1.75,
+          2.1875,
+          2.625,
+          3.0625
+        ],
+        [
+          4.0,
+          4.35,
+          4.7,
+          5.05,
+          5.4,
+          5.75,
+          6.1,
+          6.45,
+          6.8,
+          7.15
+        ],
+        [
+          8.0,
+          8.4375,
+          8.875,
+          9.3125,
+          9.75,
+          10.1875,
+          10.625,
+          11.0625
+        ],
+        [
+          12.0,
+          12.4375,
+          12.875,
+          13.3125,
+          13.75,
+          14.1875,
+          14.625,
+          15.0625
+        ]
+      ]
+    },
+    {
+      "number": 15,
+      "pair": 8,
+      "title": "Rock This Place",
+      "slug": "rock_this_place",
+      "filename": "male_rap_rock_this_place_140bpm_2bars.mp3",
+      "role": "crowd hype chant",
+      "lyrics": "Rock this rock this rock this whole place",
+      "phrases": [
+        "Rock this",
+        "rock this",
+        "rock this",
+        "whole place"
+      ],
+      "syllables": [
+        [
+          "Rock",
+          "this"
+        ],
+        [
+          "rock",
+          "this"
+        ],
+        [
+          "rock",
+          "this"
+        ],
+        [
+          "whole",
+          "place"
+        ]
+      ],
+      "voice": "One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice.",
+      "sound": "Percussive nonmelodic rap, strong line starts, rising calls and downward line-ending accents.",
+      "bpm": 140,
+      "meter": "4/4",
+      "bars": 2,
+      "attack_beats": [
+        0,
+        2,
+        4,
+        6
+      ],
+      "attack_seconds": [
+        0.0,
+        0.8571428571428571,
+        1.7142857142857142,
+        2.5714285714285716
+      ],
+      "slot_seconds": 3.4285714285714284,
+      "full_prompt": "Original early-1990s Eurodance crowd hype chant, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"Rock this / rock this / rock this / whole place\". Each slash separates one rhythmic phrase. 2 bars total, 3.428571 seconds. Phrase attacks: \"Rock this\" starts at beat 0, 0.000000 seconds; \"rock this\" starts at beat 2, 0.857143 seconds; \"rock this\" starts at beat 4, 1.714286 seconds; \"whole place\" starts at beat 6, 2.571429 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 3.348571 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise.",
+      "syllable_attack_beats": [
+        [
+          0.0,
+          0.75
+        ],
+        [
+          2.0,
+          2.75
+        ],
+        [
+          4.0,
+          4.75
+        ],
+        [
+          6.0,
+          6.75
+        ]
+      ]
+    },
+    {
+      "number": 16,
+      "pair": 8,
+      "title": "Raise the Roofline",
+      "slug": "raise_the_roofline",
+      "filename": "male_rap_raise_the_roofline_140bpm_4bars.mp3",
+      "role": "four-line rhythmic rap",
+      "lyrics": "Raise the roofline, open the door Bring that feeling back to the floor No slow motion, we keep it live Hands in the air, let the whole room thrive",
+      "phrases": [
+        "Raise the roofline, open the door",
+        "Bring that feeling back to the floor",
+        "No slow motion, we keep it live",
+        "Hands in the air, let the whole room thrive"
+      ],
+      "syllables": [
+        [
+          "Raise",
+          "the",
+          "roof",
+          "line",
+          "o",
+          "pen",
+          "the",
+          "door"
+        ],
+        [
+          "Bring",
+          "that",
+          "feel",
+          "ing",
+          "back",
+          "to",
+          "the",
+          "floor"
+        ],
+        [
+          "No",
+          "slow",
+          "mo",
+          "tion",
+          "we",
+          "keep",
+          "it",
+          "live"
+        ],
+        [
+          "Hands",
+          "in",
+          "the",
+          "air",
+          "let",
+          "the",
+          "whole",
+          "room",
+          "thrive"
+        ]
+      ],
+      "voice": "One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice.",
+      "sound": "Percussive nonmelodic rap, strong line starts, rising calls and downward line-ending accents.",
+      "bpm": 140,
+      "meter": "4/4",
+      "bars": 4,
+      "attack_beats": [
+        0,
+        4,
+        8,
+        12
+      ],
+      "attack_seconds": [
+        0.0,
+        1.7142857142857142,
+        3.4285714285714284,
+        5.142857142857143
+      ],
+      "slot_seconds": 6.857142857142857,
+      "full_prompt": "Original early-1990s Eurodance four-line rhythmic rap, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"Raise the roofline, open the door / Bring that feeling back to the floor / No slow motion, we keep it live / Hands in the air, let the whole room thrive\". Each slash separates one rhythmic phrase. 4 bars total, 6.857143 seconds. Phrase attacks: \"Raise the roofline, open the door\" starts at beat 0, 0.000000 seconds; \"Bring that feeling back to the floor\" starts at beat 4, 1.714286 seconds; \"No slow motion, we keep it live\" starts at beat 8, 3.428571 seconds; \"Hands in the air, let the whole room thrive\" starts at beat 12, 5.142857 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 6.777143 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise.",
+      "syllable_attack_beats": [
+        [
+          0.0,
+          0.4375,
+          0.875,
+          1.3125,
+          1.75,
+          2.1875,
+          2.625,
+          3.0625
+        ],
+        [
+          4.0,
+          4.4375,
+          4.875,
+          5.3125,
+          5.75,
+          6.1875,
+          6.625,
+          7.0625
+        ],
+        [
+          8.0,
+          8.4375,
+          8.875,
+          9.3125,
+          9.75,
+          10.1875,
+          10.625,
+          11.0625
+        ],
+        [
+          12.0,
+          12.388889,
+          12.777778,
+          13.166667,
+          13.555556,
+          13.944444,
+          14.333333,
+          14.722222,
+          15.111111
+        ]
+      ]
+    },
+    {
+      "number": 17,
+      "pair": 9,
+      "title": "Yeah Keep Moving",
+      "slug": "yeah_keep_moving",
+      "filename": "male_rap_yeah_keep_moving_140bpm_2bars.mp3",
+      "role": "crowd hype chant",
+      "lyrics": "Yeah yeah yeah yeah keep on moving",
+      "phrases": [
+        "Yeah yeah",
+        "yeah yeah",
+        "keep on",
+        "moving"
+      ],
+      "syllables": [
+        [
+          "Yeah",
+          "yeah"
+        ],
+        [
+          "yeah",
+          "yeah"
+        ],
+        [
+          "keep",
+          "on"
+        ],
+        [
+          "mov",
+          "ing"
+        ]
+      ],
+      "voice": "One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice.",
+      "sound": "Percussive nonmelodic rap, strong line starts, rising calls and downward line-ending accents.",
+      "bpm": 140,
+      "meter": "4/4",
+      "bars": 2,
+      "attack_beats": [
+        0,
+        2,
+        4,
+        6
+      ],
+      "attack_seconds": [
+        0.0,
+        0.8571428571428571,
+        1.7142857142857142,
+        2.5714285714285716
+      ],
+      "slot_seconds": 3.4285714285714284,
+      "full_prompt": "Original early-1990s Eurodance crowd hype chant, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"Yeah yeah / yeah yeah / keep on / moving\". Each slash separates one rhythmic phrase. 2 bars total, 3.428571 seconds. Phrase attacks: \"Yeah yeah\" starts at beat 0, 0.000000 seconds; \"yeah yeah\" starts at beat 2, 0.857143 seconds; \"keep on\" starts at beat 4, 1.714286 seconds; \"moving\" starts at beat 6, 2.571429 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 3.348571 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise.",
+      "syllable_attack_beats": [
+        [
+          0.0,
+          0.75
+        ],
+        [
+          2.0,
+          2.75
+        ],
+        [
+          4.0,
+          4.75
+        ],
+        [
+          6.0,
+          6.75
+        ]
+      ]
+    },
+    {
+      "number": 18,
+      "pair": 9,
+      "title": "Signal to Move",
+      "slug": "signal_to_move",
+      "filename": "male_rap_signal_to_move_140bpm_4bars.mp3",
+      "role": "four-line rhythmic rap",
+      "lyrics": "Send that signal from wall to wall Big bright rhythm, a call for all Step together and feel that swing Bring your voice, let the whole room ring",
+      "phrases": [
+        "Send that signal from wall to wall",
+        "Big bright rhythm, a call for all",
+        "Step together and feel that swing",
+        "Bring your voice, let the whole room ring"
+      ],
+      "syllables": [
+        [
+          "Send",
+          "that",
+          "sig",
+          "nal",
+          "from",
+          "wall",
+          "to",
+          "wall"
+        ],
+        [
+          "Big",
+          "bright",
+          "rhyth",
+          "m",
+          "a",
+          "call",
+          "for",
+          "all"
+        ],
+        [
+          "Step",
+          "to",
+          "ge",
+          "ther",
+          "and",
+          "feel",
+          "that",
+          "swing"
+        ],
+        [
+          "Bring",
+          "your",
+          "voice",
+          "let",
+          "the",
+          "whole",
+          "room",
+          "ring"
+        ]
+      ],
+      "voice": "One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice.",
+      "sound": "Percussive nonmelodic rap, strong line starts, rising calls and downward line-ending accents.",
+      "bpm": 140,
+      "meter": "4/4",
+      "bars": 4,
+      "attack_beats": [
+        0,
+        4,
+        8,
+        12
+      ],
+      "attack_seconds": [
+        0.0,
+        1.7142857142857142,
+        3.4285714285714284,
+        5.142857142857143
+      ],
+      "slot_seconds": 6.857142857142857,
+      "full_prompt": "Original early-1990s Eurodance four-line rhythmic rap, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"Send that signal from wall to wall / Big bright rhythm, a call for all / Step together and feel that swing / Bring your voice, let the whole room ring\". Each slash separates one rhythmic phrase. 4 bars total, 6.857143 seconds. Phrase attacks: \"Send that signal from wall to wall\" starts at beat 0, 0.000000 seconds; \"Big bright rhythm, a call for all\" starts at beat 4, 1.714286 seconds; \"Step together and feel that swing\" starts at beat 8, 3.428571 seconds; \"Bring your voice, let the whole room ring\" starts at beat 12, 5.142857 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 6.777143 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise.",
+      "syllable_attack_beats": [
+        [
+          0.0,
+          0.4375,
+          0.875,
+          1.3125,
+          1.75,
+          2.1875,
+          2.625,
+          3.0625
+        ],
+        [
+          4.0,
+          4.4375,
+          4.875,
+          5.3125,
+          5.75,
+          6.1875,
+          6.625,
+          7.0625
+        ],
+        [
+          8.0,
+          8.4375,
+          8.875,
+          9.3125,
+          9.75,
+          10.1875,
+          10.625,
+          11.0625
+        ],
+        [
+          12.0,
+          12.4375,
+          12.875,
+          13.3125,
+          13.75,
+          14.1875,
+          14.625,
+          15.0625
+        ]
+      ]
+    },
+    {
+      "number": 19,
+      "pair": 10,
+      "title": "Turn It Up Crew",
+      "slug": "turn_it_up_crew",
+      "filename": "male_rap_turn_it_up_crew_140bpm_2bars.mp3",
+      "role": "crowd hype chant",
+      "lyrics": "Turn it up now turn it up crew",
+      "phrases": [
+        "Turn it",
+        "up now",
+        "turn it",
+        "up crew"
+      ],
+      "syllables": [
+        [
+          "Turn",
+          "it"
+        ],
+        [
+          "up",
+          "now"
+        ],
+        [
+          "turn",
+          "it"
+        ],
+        [
+          "up",
+          "crew"
+        ]
+      ],
+      "voice": "One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice.",
+      "sound": "Percussive nonmelodic rap, strong line starts, rising calls and downward line-ending accents.",
+      "bpm": 140,
+      "meter": "4/4",
+      "bars": 2,
+      "attack_beats": [
+        0,
+        2,
+        4,
+        6
+      ],
+      "attack_seconds": [
+        0.0,
+        0.8571428571428571,
+        1.7142857142857142,
+        2.5714285714285716
+      ],
+      "slot_seconds": 3.4285714285714284,
+      "full_prompt": "Original early-1990s Eurodance crowd hype chant, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"Turn it / up now / turn it / up crew\". Each slash separates one rhythmic phrase. 2 bars total, 3.428571 seconds. Phrase attacks: \"Turn it\" starts at beat 0, 0.000000 seconds; \"up now\" starts at beat 2, 0.857143 seconds; \"turn it\" starts at beat 4, 1.714286 seconds; \"up crew\" starts at beat 6, 2.571429 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 3.348571 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise.",
+      "syllable_attack_beats": [
+        [
+          0.0,
+          0.75
+        ],
+        [
+          2.0,
+          2.75
+        ],
+        [
+          4.0,
+          4.75
+        ],
+        [
+          6.0,
+          6.75
+        ]
+      ]
+    },
+    {
+      "number": 20,
+      "pair": 10,
+      "title": "Night Shift Charge",
+      "slug": "night_shift_charge",
+      "filename": "male_rap_night_shift_charge_140bpm_4bars.mp3",
+      "role": "four-line rhythmic rap",
+      "lyrics": "Night shift charge with a fresh new sound Feel that current go round and round Feet keep flying, the floor stays hot Give that moment everything you got",
+      "phrases": [
+        "Night shift charge with a fresh new sound",
+        "Feel that current go round and round",
+        "Feet keep flying, the floor stays hot",
+        "Give that moment everything you got"
+      ],
+      "syllables": [
+        [
+          "Night",
+          "shift",
+          "charge",
+          "with",
+          "a",
+          "fresh",
+          "new",
+          "sound"
+        ],
+        [
+          "Feel",
+          "that",
+          "cur",
+          "rent",
+          "go",
+          "round",
+          "and",
+          "round"
+        ],
+        [
+          "Feet",
+          "keep",
+          "fly",
+          "ing",
+          "the",
+          "floor",
+          "stays",
+          "hot"
+        ],
+        [
+          "Give",
+          "that",
+          "mo",
+          "ment",
+          "ev",
+          "ery",
+          "thing",
+          "you",
+          "got"
+        ]
+      ],
+      "voice": "One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice.",
+      "sound": "Percussive nonmelodic rap, strong line starts, rising calls and downward line-ending accents.",
+      "bpm": 140,
+      "meter": "4/4",
+      "bars": 4,
+      "attack_beats": [
+        0,
+        4,
+        8,
+        12
+      ],
+      "attack_seconds": [
+        0.0,
+        1.7142857142857142,
+        3.4285714285714284,
+        5.142857142857143
+      ],
+      "slot_seconds": 6.857142857142857,
+      "full_prompt": "Original early-1990s Eurodance four-line rhythmic rap, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"Night shift charge with a fresh new sound / Feel that current go round and round / Feet keep flying, the floor stays hot / Give that moment everything you got\". Each slash separates one rhythmic phrase. 4 bars total, 6.857143 seconds. Phrase attacks: \"Night shift charge with a fresh new sound\" starts at beat 0, 0.000000 seconds; \"Feel that current go round and round\" starts at beat 4, 1.714286 seconds; \"Feet keep flying, the floor stays hot\" starts at beat 8, 3.428571 seconds; \"Give that moment everything you got\" starts at beat 12, 5.142857 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 6.777143 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise.",
+      "syllable_attack_beats": [
+        [
+          0.0,
+          0.4375,
+          0.875,
+          1.3125,
+          1.75,
+          2.1875,
+          2.625,
+          3.0625
+        ],
+        [
+          4.0,
+          4.4375,
+          4.875,
+          5.3125,
+          5.75,
+          6.1875,
+          6.625,
+          7.0625
+        ],
+        [
+          8.0,
+          8.4375,
+          8.875,
+          9.3125,
+          9.75,
+          10.1875,
+          10.625,
+          11.0625
+        ],
+        [
+          12.0,
+          12.388889,
+          12.777778,
+          13.166667,
+          13.555556,
+          13.944444,
+          14.333333,
+          14.722222,
+          15.111111
+        ]
+      ]
+    }
+  ],
+  "takes": [
+    {
+      "pair": 1,
+      "samples": [
+        1,
+        2
+      ],
+      "prompt": "Record exactly TWO separate dry solo male rap sampler phrases, using the same male voice for both. No backing track anywhere. PART A starts immediately. After A finishes, leave exactly two seconds of silence, then perform PART B once. After B, silence only. Do not say part labels. PART A instructions: Original early-1990s Eurodance crowd hype chant, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"Come on / come on / get up / move now\". Each slash separates one rhythmic phrase. 2 bars total, 3.428571 seconds. Phrase attacks: \"Come on\" starts at beat 0, 0.000000 seconds; \"come on\" starts at beat 2, 0.857143 seconds; \"get up\" starts at beat 4, 1.714286 seconds; \"move now\" starts at beat 6, 2.571429 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 3.348571 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise. PART B instructions (times relative to B start): Original early-1990s Eurodance four-line rhythmic rap, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"Step in the light, let your feet ignite / Bring that spark to the floor tonight / Push that sound till the walls come down / We bring the heat when the beat comes round\". Each slash separates one rhythmic phrase. 4 bars total, 6.857143 seconds. Phrase attacks: \"Step in the light, let your feet ignite\" starts at beat 0, 0.000000 seconds; \"Bring that spark to the floor tonight\" starts at beat 4, 1.714286 seconds; \"Push that sound till the walls come down\" starts at beat 8, 3.428571 seconds; \"We bring the heat when the beat comes round\" starts at beat 12, 5.142857 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 6.777143 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise."
+    },
+    {
+      "pair": 2,
+      "samples": [
+        3,
+        4
+      ],
+      "prompt": "Record exactly TWO separate dry solo male rap sampler phrases, using the same male voice for both. No backing track anywhere. PART A starts immediately. After A finishes, leave exactly two seconds of silence, then perform PART B once. After B, silence only. Do not say part labels. PART A instructions: Original early-1990s Eurodance crowd hype chant, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"Hands up / hands up / reach high / touch sky\". Each slash separates one rhythmic phrase. 2 bars total, 3.428571 seconds. Phrase attacks: \"Hands up\" starts at beat 0, 0.000000 seconds; \"hands up\" starts at beat 2, 0.857143 seconds; \"reach high\" starts at beat 4, 1.714286 seconds; \"touch sky\" starts at beat 6, 2.571429 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 3.348571 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise. PART B instructions (times relative to B start): Original early-1990s Eurodance four-line rhythmic rap, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"Power in motion, we ride that wave / Step to the rhythm, be loud, be brave / Turn up the fire and let it roll / Move with the music, body and soul\". Each slash separates one rhythmic phrase. 4 bars total, 6.857143 seconds. Phrase attacks: \"Power in motion, we ride that wave\" starts at beat 0, 0.000000 seconds; \"Step to the rhythm, be loud, be brave\" starts at beat 4, 1.714286 seconds; \"Turn up the fire and let it roll\" starts at beat 8, 3.428571 seconds; \"Move with the music, body and soul\" starts at beat 12, 5.142857 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 6.777143 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise."
+    },
+    {
+      "pair": 3,
+      "samples": [
+        5,
+        6
+      ],
+      "prompt": "Record exactly TWO separate dry solo male rap sampler phrases, using the same male voice for both. No backing track anywhere. PART A starts immediately. After A finishes, leave exactly two seconds of silence, then perform PART B once. After B, silence only. Do not say part labels. PART A instructions: Original early-1990s Eurodance crowd hype chant, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"Go go / go go / move fast / let go\". Each slash separates one rhythmic phrase. 2 bars total, 3.428571 seconds. Phrase attacks: \"Go go\" starts at beat 0, 0.000000 seconds; \"go go\" starts at beat 2, 0.857143 seconds; \"move fast\" starts at beat 4, 1.714286 seconds; \"let go\" starts at beat 6, 2.571429 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 3.348571 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise. PART B instructions (times relative to B start): Original early-1990s Eurodance four-line rhythmic rap, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"Streetlight spark and a midnight train / Kick that doubt out into the rain / One fresh step and we start to fly / Keep that fire running sky high\". Each slash separates one rhythmic phrase. 4 bars total, 6.857143 seconds. Phrase attacks: \"Streetlight spark and a midnight train\" starts at beat 0, 0.000000 seconds; \"Kick that doubt out into the rain\" starts at beat 4, 1.714286 seconds; \"One fresh step and we start to fly\" starts at beat 8, 3.428571 seconds; \"Keep that fire running sky high\" starts at beat 12, 5.142857 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 6.777143 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise."
+    },
+    {
+      "pair": 4,
+      "samples": [
+        7,
+        8
+      ],
+      "prompt": "Record exactly TWO separate dry solo male rap sampler phrases, using the same male voice for both. No backing track anywhere. PART A starts immediately. After A finishes, leave exactly two seconds of silence, then perform PART B once. After B, silence only. Do not say part labels. PART A instructions: Original early-1990s Eurodance crowd hype chant, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"Hey yo / hey yo / jump up / let\u2019s go\". Each slash separates one rhythmic phrase. 2 bars total, 3.428571 seconds. Phrase attacks: \"Hey yo\" starts at beat 0, 0.000000 seconds; \"hey yo\" starts at beat 2, 0.857143 seconds; \"jump up\" starts at beat 4, 1.714286 seconds; \"let\u2019s go\" starts at beat 6, 2.571429 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 3.348571 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise. PART B instructions (times relative to B start): Original early-1990s Eurodance four-line rhythmic rap, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"Make some room, let the whole crew rise / Feel that flash when the bass collides / Left to the right, now turn it loose / Put your hands up and bring that juice\". Each slash separates one rhythmic phrase. 4 bars total, 6.857143 seconds. Phrase attacks: \"Make some room, let the whole crew rise\" starts at beat 0, 0.000000 seconds; \"Feel that flash when the bass collides\" starts at beat 4, 1.714286 seconds; \"Left to the right, now turn it loose\" starts at beat 8, 3.428571 seconds; \"Put your hands up and bring that juice\" starts at beat 12, 5.142857 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 6.777143 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise."
+    },
+    {
+      "pair": 5,
+      "samples": [
+        9,
+        10
+      ],
+      "prompt": "Record exactly TWO separate dry solo male rap sampler phrases, using the same male voice for both. No backing track anywhere. PART A starts immediately. After A finishes, leave exactly two seconds of silence, then perform PART B once. After B, silence only. Do not say part labels. PART A instructions: Original early-1990s Eurodance crowd hype chant, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"Bring that / beat back / bring that / beat back\". Each slash separates one rhythmic phrase. 2 bars total, 3.428571 seconds. Phrase attacks: \"Bring that\" starts at beat 0, 0.000000 seconds; \"beat back\" starts at beat 2, 0.857143 seconds; \"bring that\" starts at beat 4, 1.714286 seconds; \"beat back\" starts at beat 6, 2.571429 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 3.348571 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise. PART B instructions (times relative to B start): Original early-1990s Eurodance four-line rhythmic rap, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"We got the pulse and we hold it tight / Shake off the dust, step into the light / Four on the floor and the pressure grows / Ride that rhythm wherever it goes\". Each slash separates one rhythmic phrase. 4 bars total, 6.857143 seconds. Phrase attacks: \"We got the pulse and we hold it tight\" starts at beat 0, 0.000000 seconds; \"Shake off the dust, step into the light\" starts at beat 4, 1.714286 seconds; \"Four on the floor and the pressure grows\" starts at beat 8, 3.428571 seconds; \"Ride that rhythm wherever it goes\" starts at beat 12, 5.142857 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 6.777143 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise."
+    },
+    {
+      "pair": 6,
+      "samples": [
+        11,
+        12
+      ],
+      "prompt": "Record exactly TWO separate dry solo male rap sampler phrases, using the same male voice for both. No backing track anywhere. PART A starts immediately. After A finishes, leave exactly two seconds of silence, then perform PART B once. After B, silence only. Do not say part labels. PART A instructions: Original early-1990s Eurodance crowd hype chant, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"All right / all right / feel good / tonight\". Each slash separates one rhythmic phrase. 2 bars total, 3.428571 seconds. Phrase attacks: \"All right\" starts at beat 0, 0.000000 seconds; \"all right\" starts at beat 2, 0.857143 seconds; \"feel good\" starts at beat 4, 1.714286 seconds; \"tonight\" starts at beat 6, 2.571429 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 3.348571 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise. PART B instructions (times relative to B start): Original early-1990s Eurodance four-line rhythmic rap, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"Forward fire, never standing still / Find that spark and you find that thrill / Move with a purpose, let shoulders sway / Bring your own light to a brand new day\". Each slash separates one rhythmic phrase. 4 bars total, 6.857143 seconds. Phrase attacks: \"Forward fire, never standing still\" starts at beat 0, 0.000000 seconds; \"Find that spark and you find that thrill\" starts at beat 4, 1.714286 seconds; \"Move with a purpose, let shoulders sway\" starts at beat 8, 3.428571 seconds; \"Bring your own light to a brand new day\" starts at beat 12, 5.142857 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 6.777143 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise."
+    },
+    {
+      "pair": 7,
+      "samples": [
+        13,
+        14
+      ],
+      "prompt": "Record exactly TWO separate dry solo male rap sampler phrases, using the same male voice for both. No backing track anywhere. PART A starts immediately. After A finishes, leave exactly two seconds of silence, then perform PART B once. After B, silence only. Do not say part labels. PART A instructions: Original early-1990s Eurodance crowd hype chant, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"One more / one more / one more / time crew\". Each slash separates one rhythmic phrase. 2 bars total, 3.428571 seconds. Phrase attacks: \"One more\" starts at beat 0, 0.000000 seconds; \"one more\" starts at beat 2, 0.857143 seconds; \"one more\" starts at beat 4, 1.714286 seconds; \"time crew\" starts at beat 6, 2.571429 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 3.348571 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise. PART B instructions (times relative to B start): Original early-1990s Eurodance four-line rhythmic rap, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"Concrete glow under dancing feet / Every new step makes the night complete / Pass that energy round the room / Let that spirit go boom boom boom\". Each slash separates one rhythmic phrase. 4 bars total, 6.857143 seconds. Phrase attacks: \"Concrete glow under dancing feet\" starts at beat 0, 0.000000 seconds; \"Every new step makes the night complete\" starts at beat 4, 1.714286 seconds; \"Pass that energy round the room\" starts at beat 8, 3.428571 seconds; \"Let that spirit go boom boom boom\" starts at beat 12, 5.142857 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 6.777143 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise."
+    },
+    {
+      "pair": 8,
+      "samples": [
+        15,
+        16
+      ],
+      "prompt": "Record exactly TWO separate dry solo male rap sampler phrases, using the same male voice for both. No backing track anywhere. PART A starts immediately. After A finishes, leave exactly two seconds of silence, then perform PART B once. After B, silence only. Do not say part labels. PART A instructions: Original early-1990s Eurodance crowd hype chant, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"Rock this / rock this / rock this / whole place\". Each slash separates one rhythmic phrase. 2 bars total, 3.428571 seconds. Phrase attacks: \"Rock this\" starts at beat 0, 0.000000 seconds; \"rock this\" starts at beat 2, 0.857143 seconds; \"rock this\" starts at beat 4, 1.714286 seconds; \"whole place\" starts at beat 6, 2.571429 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 3.348571 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise. PART B instructions (times relative to B start): Original early-1990s Eurodance four-line rhythmic rap, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"Raise the roofline, open the door / Bring that feeling back to the floor / No slow motion, we keep it live / Hands in the air, let the whole room thrive\". Each slash separates one rhythmic phrase. 4 bars total, 6.857143 seconds. Phrase attacks: \"Raise the roofline, open the door\" starts at beat 0, 0.000000 seconds; \"Bring that feeling back to the floor\" starts at beat 4, 1.714286 seconds; \"No slow motion, we keep it live\" starts at beat 8, 3.428571 seconds; \"Hands in the air, let the whole room thrive\" starts at beat 12, 5.142857 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 6.777143 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise."
+    },
+    {
+      "pair": 9,
+      "samples": [
+        17,
+        18
+      ],
+      "prompt": "Record exactly TWO separate dry solo male rap sampler phrases, using the same male voice for both. No backing track anywhere. PART A starts immediately. After A finishes, leave exactly two seconds of silence, then perform PART B once. After B, silence only. Do not say part labels. PART A instructions: Original early-1990s Eurodance crowd hype chant, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"Yeah yeah / yeah yeah / keep on / moving\". Each slash separates one rhythmic phrase. 2 bars total, 3.428571 seconds. Phrase attacks: \"Yeah yeah\" starts at beat 0, 0.000000 seconds; \"yeah yeah\" starts at beat 2, 0.857143 seconds; \"keep on\" starts at beat 4, 1.714286 seconds; \"moving\" starts at beat 6, 2.571429 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 3.348571 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise. PART B instructions (times relative to B start): Original early-1990s Eurodance four-line rhythmic rap, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"Send that signal from wall to wall / Big bright rhythm, a call for all / Step together and feel that swing / Bring your voice, let the whole room ring\". Each slash separates one rhythmic phrase. 4 bars total, 6.857143 seconds. Phrase attacks: \"Send that signal from wall to wall\" starts at beat 0, 0.000000 seconds; \"Big bright rhythm, a call for all\" starts at beat 4, 1.714286 seconds; \"Step together and feel that swing\" starts at beat 8, 3.428571 seconds; \"Bring your voice, let the whole room ring\" starts at beat 12, 5.142857 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 6.777143 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise."
+    },
+    {
+      "pair": 10,
+      "samples": [
+        19,
+        20
+      ],
+      "prompt": "Record exactly TWO separate dry solo male rap sampler phrases, using the same male voice for both. No backing track anywhere. PART A starts immediately. After A finishes, leave exactly two seconds of silence, then perform PART B once. After B, silence only. Do not say part labels. PART A instructions: Original early-1990s Eurodance crowd hype chant, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"Turn it / up now / turn it / up crew\". Each slash separates one rhythmic phrase. 2 bars total, 3.428571 seconds. Phrase attacks: \"Turn it\" starts at beat 0, 0.000000 seconds; \"up now\" starts at beat 2, 0.857143 seconds; \"turn it\" starts at beat 4, 1.714286 seconds; \"up crew\" starts at beat 6, 2.571429 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 3.348571 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise. PART B instructions (times relative to B start): Original early-1990s Eurodance four-line rhythmic rap, urgent joyful dance-floor energy. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat crowd-hype energy, rhythmic spoken rap with emphatic pitch inflections. Clear English, close dry microphone, one solo voice. Exact 140 BPM, 4/4 straight timing. Rap ONLY these lyrics: \"Night shift charge with a fresh new sound / Feel that current go round and round / Feet keep flying, the floor stays hot / Give that moment everything you got\". Each slash separates one rhythmic phrase. 4 bars total, 6.857143 seconds. Phrase attacks: \"Night shift charge with a fresh new sound\" starts at beat 0, 0.000000 seconds; \"Feel that current go round and round\" starts at beat 4, 1.714286 seconds; \"Feet keep flying, the floor stays hot\" starts at beat 8, 3.428571 seconds; \"Give that moment everything you got\" starts at beat 12, 5.142857 seconds. Crisp percussive syllables, punch the initial and final word of each line; no melodic singing. First phoneme immediately at time zero. Clean final release before 6.777143 seconds. One performance only; no extra words or repeats. Entirely isolated a cappella human rap: NO instruments, backing music, beatboxing, drums, bass, synth, claps, clicks or metronome. NO harmonies, doubling, choir, reverb, delay or crowd noise."
+    }
+  ],
+  "status": "planned",
+  "verification_limits": "No listening capability; waveform, decoded PCM, source landmark placement and unprompted ASR checks planned."
+}

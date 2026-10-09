@@ -54,6 +54,12 @@ static void test_immediate_toolbar_tooltip(void) {
   window_t *tip = find_tooltip(item.tooltip);
   ASSERT_NOT_NULL(tip);
   ASSERT_TRUE(window_has_state(tip, WINDOW_STATE_VISIBLE));
+  tooltip_cancel();
+  int sx = window_screen_x(owner->toolbar) + rect.x + 1;
+  int sy = window_screen_y(owner->toolbar) + rect.y + 1;
+  ui_event_t hover = {.message = kEventMouseMoved, .wParam = MAKEDWORD(sx * UI_WINDOW_SCALE, sy * UI_WINDOW_SCALE)};
+  dispatch_message(&hover);
+  ASSERT_TRUE(window_has_state(tip, WINDOW_STATE_VISIBLE));
   tooltip_update(NULL, NULL, 0, 0);
   ASSERT_FALSE(window_has_state(tip, WINDOW_STATE_VISIBLE));
   show_window(owner, false);
@@ -107,6 +113,64 @@ static void test_toolbar_tooltip_sides(void) {
   PASS();
 }
 
+static void hover_tooltip_target(window_t *target, int x, int y) {
+  int sx = window_screen_x(target) + x, sy = window_screen_y(target) + titlebar_height(target) + y;
+  ui_event_t event = {.message = kEventMouseMoved, .wParam = MAKEDWORD(sx * UI_WINDOW_SCALE, sy * UI_WINDOW_SCALE)};
+  dispatch_message(&event);
+}
+
+static ipoint16_t queried_tooltip_point;
+static void record_tooltip_query(window_t *win, uint32_t msg, uint32_t wparam, void *lparam, void *userdata) {
+  if (win == userdata)
+    queried_tooltip_point = (ipoint16_t){(int16_t)LOWORD(wparam), (int16_t)HIWORD(wparam)};
+}
+
+static void test_inherited_tooltip(void) {
+  TEST("tooltip: labels inherit the nearest parent hint without moving its anchor, child hints override, and empty ancestry hides it");
+  test_env_init();
+  window_t *root = create_window("Root", WINDOW_NOTITLE, MAKERECT(20, 30, 400, 300), NULL, owner_proc, 0, NULL);
+  window_t *card = create_window("Card hint", WINDOW_NOTITLE, MAKERECT(30, 40, 240, 160), root, win_card, 0, NULL);
+  window_t *header = create_window("", WINDOW_NOTITLE, MAKERECT(20, 20, 200, 100), card, owner_proc, 0, NULL);
+  window_t *label = create_window("Visible label", WINDOW_NOTITLE, MAKERECT(10, 10, 100, 20), header, win_label, 0, NULL);
+  window_t *button = create_window("Action", WINDOW_NOTITLE, MAKERECT(10, 50, 80, 24), header, win_button, 0, NULL);
+  send_message(button, btnSetTooltip, 0, "Child hint");
+  show_window(root, true); show_window(card, true); show_window(header, true);
+  show_window(label, true); show_window(button, true);
+  header->frame = R(20, 20, 200, 100);
+  label->frame = R(10, 10, 100, 20);
+  button->frame = R(10, 50, 80, 24);
+  hover_tooltip_target(card, 5, 5);
+  window_t *tip = find_tooltip("Card hint");
+  ASSERT_NOT_NULL(tip);
+  ASSERT_TRUE(window_has_state(tip, WINDOW_STATE_VISIBLE));
+  irect16_t anchor = tip->frame;
+  ASSERT_TRUE(find_window(window_screen_x(label) + 2, window_screen_y(label) + 2) == label);
+  hover_tooltip_target(label, 2, 2);
+  ASSERT_STR_EQUAL(tip->title, "Card hint");
+  ASSERT_TRUE(window_has_state(tip, WINDOW_STATE_VISIBLE));
+  ASSERT_TRUE(!memcmp(&anchor, &tip->frame, sizeof(anchor)));
+  hover_tooltip_target(button, 2, 2);
+  ASSERT_STR_EQUAL(tip->title, "Child hint");
+  hover_tooltip_target(label, 3, 3);
+  ASSERT_STR_EQUAL(tip->title, "Card hint");
+  ASSERT_TRUE(!memcmp(&anchor, &tip->frame, sizeof(anchor)));
+  register_window_hook(evGetTooltipText, record_tooltip_query, card);
+  card->hscroll.pos = 7; card->vscroll.pos = 9;
+  hover_tooltip_target(label, 2, 2);
+  ASSERT_EQUAL(queried_tooltip_point.x, 39);
+  ASSERT_EQUAL(queried_tooltip_point.y, 41);
+  card->title[0] = '\0';
+  hover_tooltip_target(label, 2, 2);
+  ASSERT_FALSE(window_has_state(tip, WINDOW_STATE_VISIBLE));
+  hover_tooltip_target(button, 2, 2);
+  ASSERT_STR_EQUAL(tip->title, "Child hint");
+  ASSERT_TRUE(window_has_state(tip, WINDOW_STATE_VISIBLE));
+  hover_tooltip_target(root, 390, 290);
+  ASSERT_FALSE(window_has_state(tip, WINDOW_STATE_VISIBLE));
+  test_env_shutdown();
+  PASS();
+}
+
 static void test_tooltip_bubble_tails(void) {
   TEST("tooltip: all four arrows share a filled silhouette with transparent space beside the tail");
   uint32_t fbo = 0, texture = 0;
@@ -149,6 +213,7 @@ int main(void) {
   test_immediate_control_tooltip();
   test_immediate_toolbar_tooltip();
   test_toolbar_tooltip_sides();
+  test_inherited_tooltip();
   test_tooltip_bubble_tails();
   ui_shutdown_graphics();
   TEST_END();

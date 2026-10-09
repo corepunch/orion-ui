@@ -9,9 +9,12 @@ BUNDLE_ID ?= com.orion.$(APP)
 TEAM ?=
 PROFILE ?=
 DEVICE ?=
-ifeq ($(filter $(APP),imageeditor penciltest groove),)
-$(error APP must be imageeditor, penciltest or groove)
+ifeq ($(filter $(APP),imageeditor penciltest groove winamp),)
+$(error APP must be imageeditor, penciltest, groove or winamp)
 endif
+# Winamp is an iPhone app; the others target iPad.
+FAMILY := $(if $(filter winamp,$(APP)),iphone,ipad)
+FAMILY_NAME := $(if $(filter iphone,$(FAMILY)),iPhone,iPad)
 ifeq ($(filter $(SDK),iphoneos iphonesimulator),)
 $(error SDK must be iphoneos or iphonesimulator)
 endif
@@ -78,19 +81,19 @@ $(APP_ROOT)/app.o: $(APP_SRCS) $(APP_HEADERS) $(GENERATED) $(APP_ROOT)/settings 
 $(APP_ROOT)/$(APP): $(OBJECTS) $(APP_ROOT)/app.o $(PLATFORM_LIB)
 	$(COMPILER) -isysroot "$(SDK_PATH)" -arch $(ARCH) $(MIN_FLAG) $(OBJECTS) "$(APP_ROOT)/app.o" $(PLATFORM_LIB) $(LIBS) -o "$@"
 app: $(APP_ROOT)/$(APP)
-	python3 tools/ipad/bundle.py --root "$(CURDIR)" --target "$(BUNDLE)" --binary "$<" --app $(APP) --bundle-id "$(BUNDLE_ID)" --sdk $(SDK) --sdk-version $(SDK_VERSION) --minimum $(IOS_MIN)
+	python3 tools/ipad/bundle.py --root "$(CURDIR)" --target "$(BUNDLE)" --binary "$<" --app $(APP) --bundle-id "$(BUNDLE_ID)" --sdk $(SDK) --sdk-version $(SDK_VERSION) --minimum $(IOS_MIN) --family $(FAMILY)
 ifeq ($(SDK),iphonesimulator)
 	codesign --force --sign - "$(BUNDLE)"
 endif
 run: app
 	@test "$(SDK)" = iphonesimulator || { echo 'Use SDK=iphonesimulator'; exit 1; }
-	python3 tools/ipad/run_simulator.py "$(BUNDLE)" $(if $(DEVICE),--device "$(DEVICE)")
+	python3 tools/ipad/run_simulator.py "$(BUNDLE)" --family $(FAMILY) $(if $(DEVICE),--device "$(DEVICE)")
 deploy: app
 	@test "$(SDK)" = iphoneos -a "$(ARCH)" = arm64 || { echo 'Deploy requires SDK=iphoneos ARCH=arm64'; exit 1; }
 	@device="$(DEVICE)"; \
 	if [ -z "$$device" ]; then \
 		devices="$$(xcrun devicectl list devices)" || exit $$?; \
-		device="$$(printf '%s\n' "$$devices" | awk '/iPad/ && !/simulated/ { \
+		device="$$(printf '%s\n' "$$devices" | awk '/$(FAMILY_NAME)/ && !/simulated/ { \
 			for (i = 1; i <= NF; i++) { \
 				if ($$i !~ /^([[:xdigit:]]{8}-[[:xdigit:]]{16}|[[:xdigit:]]{8}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{12})$$/) continue; \
 				state = i + 1; if ($$state == "(UDID)") state++; \
@@ -99,10 +102,10 @@ deploy: app
 		}')"; \
 		count="$$(printf '%s\n' "$$device" | sed '/^$$/d' | wc -l | tr -d ' ')"; \
 		if [ "$$count" -ne 1 ]; then \
-			echo "Expected exactly one available physical iPad; found $$count. Use make list-devices and set DEVICE=..." >&2; \
+			echo "Expected exactly one available physical $(FAMILY_NAME); found $$count. Use make list-devices and set DEVICE=..." >&2; \
 			exit 1; \
 		fi; \
-		echo "Auto-selected iPad $$device"; \
+		echo "Auto-selected $(FAMILY_NAME) $$device"; \
 	fi; \
 	python3 tools/ipad/sign.py "$(BUNDLE)" $(if $(TEAM),--team "$(TEAM)") $(if $(PROFILE),--profile "$(PROFILE)"); \
 	xcrun devicectl device install app --device "$$device" "$(BUNDLE)"; \

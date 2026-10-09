@@ -39,9 +39,9 @@ static const char *tile_state(const git_summary_t *t) {
 
 // ── view construction ──────────────────────────────────────────────────────────
 
-static window_t *make_view(window_t *parent, winproc_t proc, flags_t orientation, int spacing, const char *tooltip) {
+static window_t *make_view(window_t *parent, winproc_t proc, flags_t orientation, int spacing) {
   irect16_t frame = {0, 0, 10, 10};
-  window_t *view = create_window(tooltip, 0, &frame, parent, proc, g_gc->hinstance, NULL);
+  window_t *view = create_window("", 0, &frame, parent, proc, g_gc->hinstance, NULL);
   if (view && proc != win_card) window_set_layout(view, orientation, spacing, (irect16_t){0, 0, 0, 0});
   return view;
 }
@@ -69,11 +69,7 @@ static void make_badgef(window_t *parent, sys_color_idx_t role, const char *fmt,
 }
 
 static void build_card(window_t *grid, const git_summary_t *t) {
-  char tip[700];
-  snprintf(tip, sizeof(tip), "%s\n%s%s%s\n%d worktree%s\nDouble-click to open",
-           t->path, t->branch, t->upstream[0] ? " -> " : "", t->upstream,
-           t->worktrees, t->worktrees == 1 ? "" : "s");
-  window_t *card = make_view(grid, win_card, 0, 0, tip);
+  window_t *card = make_view(grid, win_card, 0, 0);
   if (!card) return;
   int card_inset = get_theme()->card_ring_width + get_theme()->card_padding_y;
   card->layout.layout_padding = (irect16_t){card_inset, card_inset, card_inset, card_inset};
@@ -108,7 +104,7 @@ static void build_card(window_t *grid, const git_summary_t *t) {
   make_label(card, where, FONT_SMALL, brTextNormal, false);
   make_label(card, t->initial ? "No commits yet" : t->subject, FONT_SMALL, brTextSecondary, false);
 
-  window_t *badges = make_view(card, win_flow, WINDOW_STACK_HORIZONTAL, 5, "");
+  window_t *badges = make_view(card, win_flow, WINDOW_STACK_HORIZONTAL, 5);
   if (t->conflicts) make_badgef(badges, brTextError,   t->conflicts == 1 ? "%d conflict" : "%d conflicts", t->conflicts);
   if (t->staged)    make_badgef(badges, brTextSuccess, "%d staged",   t->staged);
   if (t->unstaged)  make_badgef(badges, brTextWarning, "%d modified", t->unstaged);

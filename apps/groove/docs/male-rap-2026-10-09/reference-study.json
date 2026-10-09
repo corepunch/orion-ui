@@ -1,0 +1,65 @@
+[
+  {
+    "library": "ejay-samples",
+    "relative_path": "apps/groove/ejay-samples/dance2/rap/come on 2.wav",
+    "genre": "dance2",
+    "seconds": 1.7142630385487527,
+    "channels": 1,
+    "peak": 0.3187255859375,
+    "activity_peaks_seconds": [
+      0.33,
+      0.49,
+      0.65
+    ],
+    "inspection": "Decoded PCM and 10 ms peak envelope, not listening; concise percussive calls versus repeated two-bar phrases."
+  },
+  {
+    "library": "ejay-samples",
+    "relative_path": "apps/groove/ejay-samples/dance2/rap/every body.wav",
+    "genre": "dance2",
+    "seconds": 3.428548752834467,
+    "channels": 1,
+    "peak": 0.31829833984375,
+    "activity_peaks_seconds": [
+      0.51,
+      0.73,
+      0.89,
+      1.22
+    ],
+    "inspection": "Decoded PCM and 10 ms peak envelope, not listening; concise percussive calls versus repeated two-bar phrases."
+  },
+  {
+    "library": "mtv-samples",
+    "relative_path": "apps/groove/mtv-samples/rapping/Danny/ar yeh1c.wav",
+    "genre": "Beat",
+    "seconds": 1.2838095238095237,
+    "channels": 1,
+    "peak": 0.95245361328125,
+    "activity_peaks_seconds": [
+      0.06,
+      0.22,
+      0.52,
+      0.85,
+      1.18
+    ],
+    "inspection": "Decoded PCM and 10 ms peak envelope, not listening; concise percussive calls versus repeated two-bar phrases."
+  },
+  {
+    "library": "mtv-samples",
+    "relative_path": "apps/groove/mtv-samples/rapping/Danny/here we go.wav",
+    "genre": "Beat",
+    "seconds": 2.01015873015873,
+    "channels": 1,
+    "peak": 0.94439697265625,
+    "activity_peaks_seconds": [
+      0.18,
+      0.33,
+      0.5700000000000001,
+      1.04,
+      1.24,
+      1.45,
+      1.6
+    ],
+    "inspection": "Decoded PCM and 10 ms peak envelope, not listening; concise percussive calls versus repeated two-bar phrases."
+  }
+]

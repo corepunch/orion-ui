@@ -1,0 +1,1654 @@
+{
+  "date": "2026-10-09",
+  "provider": "Runway",
+  "model": "lyria-3-clip",
+  "bpm": 140,
+  "meter": "4/4",
+  "voice_description": "One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling.",
+  "voice_identity_limitation": "Music tool exposes no voice ID or audio reference; prompt-level timbre consistency only.",
+  "reference_summary": "MTV singing catalogue: rhythmic female hooks, extended melodic calls, articulated non-lexical scat, sustained vowels and humming. Six reference WAVs were inspected computationally; no reference recording or original commercial title is included.",
+  "voice_approval": "User approved matching the same female vocal character rather than requiring an exact singer identity.",
+  "sample_rate": 44100,
+  "channels": 1,
+  "delivery": "320 kbps mono MP3 with Xing gapless header and TBPM=140",
+  "separation": {
+    "model": "vocals_mel_band_roformer.ckpt",
+    "native_fp16": true,
+    "device": "MPS",
+    "segment_size": 256,
+    "overlap": 2,
+    "batch_size": 1,
+    "gap_between_raw_regions_seconds": 0.5
+  },
+  "editing": {
+    "method": "Pitch-preserving FFmpeg atempo between reviewed main acoustic landmarks; first 35 ms of each attack preserved to prevent WSOLA displacement.",
+    "highpass_hz": 55,
+    "highpass_order": 2,
+    "preserved_attack_ms": 35,
+    "boundary_ramp_ms": 1.5,
+    "final_fade_ms": 20,
+    "peak_dbfs": -2,
+    "final_release_policy": "When final source/target duration ratio is below 0.70, stretch the release at rate 0.80 and pad its remaining slot with silence. No silent lead-in."
+  },
+  "verification": {
+    "decoder": "Groove minimp3_ex with MP3D_SEEK_TO_SAMPLE",
+    "checks": "Exact bar frames, mono 44.1 kHz, finite/nonzero/no-clipping, signal within 5 ms at -55 dBFS, bidirectional +/-60 ms correlation search for each preserved attack waveform.",
+    "attack_match_window_ms": 25,
+    "attack_match_skip_ms": 4,
+    "attack_match_tolerance_ms": 2,
+    "minimum_correlation": 0.75,
+    "limits": "Landmark placement is checked against reviewed source waveform/spectrogram annotations; this does not independently prove perceptual annotation accuracy. ASR is a computational lyric check, not listening. Natural consonants and legato transitions remain. Exact singer identity, key/pitch and zero faint accompaniment leakage are not established. No auditory verification is claimed."
+  },
+  "samples": [
+    {
+      "number": 6,
+      "title": "Pulse in My Heart",
+      "bars": 2,
+      "syllables": [
+        "Pulse",
+        "in",
+        "my",
+        "heart"
+      ],
+      "target_beats": [
+        0,
+        1,
+        2,
+        4
+      ],
+      "sound": "A punchy four-note ascending hook; hold heart warmly, then clean release.",
+      "role": "rhythmic hook",
+      "slug": "pulse_in_my_heart",
+      "requested_lyrics": "Pulse in my heart",
+      "lyrics": "Pulse in My Heart",
+      "prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. A punchy four-note ascending hook; hold heart warmly, then clean release. Sing ONLY this one original phrase: \"Pulse in My Heart\". One complete 2-bar take, 3.428571 seconds total. Syllable attack schedule (time from beginning): Pulse at 0.000000s; in at 0.428571s; my at 0.857143s; heart at 1.714286s. Release the final note cleanly before 3.349s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "generation_task_id": "160ca7cb-8dde-412a-ba0f-8ebfd5ea0612",
+      "exact_prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. A punchy four-note ascending hook; hold heart warmly, then clean release. Sing ONLY this one original phrase: \"Pulse in My Heart\". One complete 2-bar take, 3.428571 seconds total. Syllable attack schedule (time from beginning): Pulse at 0.000000s; in at 0.428571s; my at 0.857143s; heart at 1.714286s. Release the final note cleanly before 3.349s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "raw_take_sha256": "400cbffaad70e02f157817440350079c6408eb7e7e45a875c3a09c1666d98e5f",
+      "delivery_file": "06_pulse_in_my_heart_140bpm_2bars.mp3",
+      "delivered_bars": 2,
+      "source_landmarks_seconds": [
+        0.0810204081632653,
+        0.813,
+        1.204,
+        1.668,
+        3.57
+      ],
+      "target_beats_including_endpoint": [
+        0,
+        2,
+        3,
+        4,
+        8
+      ],
+      "atempo_rates": [
+        0.8477493380406002,
+        0.904528693247292,
+        1.0900553122839365,
+        1.1117802743869505
+      ],
+      "final_mp3_sha256": "e1c1c0a80a0f5a48b4987a31425fc90ab33cc81cf894fc50cc80c92d329906a2",
+      "unprompted_final_asr_text": "Pulse in my heart"
+    },
+    {
+      "number": 7,
+      "title": "We Own This Moment",
+      "bars": 2,
+      "syllables": [
+        "We",
+        "own",
+        "this",
+        "mo",
+        "ment"
+      ],
+      "target_beats": [
+        0,
+        1,
+        2,
+        4,
+        5
+      ],
+      "sound": "Confident chest voice, rise on own, a small descending two-note ending on moment.",
+      "role": "rhythmic hook",
+      "slug": "we_own_this_moment",
+      "requested_lyrics": "We own this mo ment",
+      "lyrics": "We Own This Moment",
+      "prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Confident chest voice, rise on own, a small descending two-note ending on moment. Sing ONLY this one original phrase: \"We Own This Moment\". One complete 2-bar take, 3.428571 seconds total. Syllable attack schedule (time from beginning): We at 0.000000s; own at 0.428571s; this at 0.857143s; mo at 1.714286s; ment at 2.142857s. Release the final note cleanly before 3.349s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "generation_task_id": "0066cbff-95a5-4631-85a1-ffb1426485d4",
+      "exact_prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Confident chest voice, rise on own, a small descending two-note ending on moment. Sing ONLY this one original phrase: \"We Own This Moment\". One complete 2-bar take, 3.428571 seconds total. Syllable attack schedule (time from beginning): We at 0.000000s; own at 0.428571s; this at 0.857143s; mo at 1.714286s; ment at 2.142857s. Release the final note cleanly before 3.349s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "raw_take_sha256": "0663e76b2c04f9099cf56145d8a518412760f214e57b7fe7572b243957116bee",
+      "delivery_file": "07_we_own_this_moment_140bpm_2bars.mp3",
+      "delivered_bars": 2,
+      "source_landmarks_seconds": [
+        3.4203174603174604,
+        3.92,
+        4.465,
+        4.78,
+        5.205,
+        6.91
+      ],
+      "target_beats_including_endpoint": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        8
+      ],
+      "atempo_rates": [
+        1.1806867941922101,
+        1.2958054851348237,
+        0.7114542521318276,
+        0.990896519935469,
+        0.9944771524251917
+      ],
+      "final_mp3_sha256": "4f0704da70f691efbd1f29d3636f48cda58a5d0b793cfeada1af2eb61938a645",
+      "unprompted_final_asr_text": "We own this moment"
+    },
+    {
+      "number": 8,
+      "title": "Stay Close to Me",
+      "bars": 2,
+      "syllables": [
+        "Stay",
+        "close",
+        "to",
+        "me"
+      ],
+      "target_beats": [
+        0,
+        1,
+        2,
+        4
+      ],
+      "sound": "Intimate warm legato; close has a firm attack, me is a sustained resolved note.",
+      "role": "warm hook",
+      "slug": "stay_close_to_me",
+      "requested_lyrics": "Stay close to me",
+      "lyrics": "Stay Close to Me",
+      "prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Intimate warm legato; close has a firm attack, me is a sustained resolved note. Sing ONLY this one original phrase: \"Stay Close to Me\". One complete 2-bar take, 3.428571 seconds total. Syllable attack schedule (time from beginning): Stay at 0.000000s; close at 0.428571s; to at 0.857143s; me at 1.714286s. Release the final note cleanly before 3.349s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "generation_task_id": "ad9aace8-2831-42bb-90cc-383aeb7b6de3",
+      "exact_prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Intimate warm legato; close has a firm attack, me is a sustained resolved note. Sing ONLY this one original phrase: \"Stay Close to Me\". One complete 2-bar take, 3.428571 seconds total. Syllable attack schedule (time from beginning): Stay at 0.000000s; close at 0.428571s; to at 0.857143s; me at 1.714286s. Release the final note cleanly before 3.349s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "raw_take_sha256": "43598e7c8554c4a4740a08e44e2709968d13fa4dec0980cfd1d11bfc1a1ec2fa",
+      "delivery_file": "08_stay_close_to_me_140bpm_2bars.mp3",
+      "delivered_bars": 2,
+      "source_landmarks_seconds": [
+        0.07564625850340136,
+        0.815,
+        1.615,
+        2.078,
+        3.39
+      ],
+      "target_beats_including_endpoint": [
+        0,
+        2,
+        4,
+        5,
+        8
+      ],
+      "atempo_rates": [
+        0.8567409532215358,
+        0.9304942630185349,
+        1.087462548974418,
+        1.0210131264051054
+      ],
+      "final_mp3_sha256": "d0c0ef6ce8a27b984529bb28c8d3540ab7ccc73b542340876da967def2803883",
+      "unprompted_final_asr_text": "Stay close to me"
+    },
+    {
+      "number": 9,
+      "title": "Turn Up the Glow",
+      "bars": 2,
+      "syllables": [
+        "Turn",
+        "up",
+        "the",
+        "glow"
+      ],
+      "target_beats": [
+        0,
+        1,
+        2,
+        4
+      ],
+      "sound": "Bright soulful call, clipped first three words and an open sustained glow.",
+      "role": "dance call",
+      "slug": "turn_up_the_glow",
+      "requested_lyrics": "Turn up the glow",
+      "lyrics": "Turn Up the Glow",
+      "prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Bright soulful call, clipped first three words and an open sustained glow. Sing ONLY this one original phrase: \"Turn Up the Glow\". One complete 2-bar take, 3.428571 seconds total. Syllable attack schedule (time from beginning): Turn at 0.000000s; up at 0.428571s; the at 0.857143s; glow at 1.714286s. Release the final note cleanly before 3.349s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "generation_task_id": "974b7355-f1c3-4d07-a26c-423c3dac97ad",
+      "exact_prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Bright soulful call, clipped first three words and an open sustained glow. Sing ONLY this one original phrase: \"Turn Up the Glow\". One complete 2-bar take, 3.428571 seconds total. Syllable attack schedule (time from beginning): Turn at 0.000000s; up at 0.428571s; the at 0.857143s; glow at 1.714286s. Release the final note cleanly before 3.349s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "raw_take_sha256": "c1082d9ab381d211a9bfe434a2bfe2b593862998294c79d6399482e86232825e",
+      "delivery_file": "09_turn_up_the_glow_140bpm_2bars.mp3",
+      "delivered_bars": 2,
+      "source_landmarks_seconds": [
+        0.08394557823129252,
+        0.457,
+        0.787,
+        1.014,
+        3.47
+      ],
+      "target_beats_including_endpoint": [
+        0,
+        1,
+        2,
+        2.5,
+        8
+      ],
+      "atempo_rates": [
+        0.8589536759622033,
+        0.7495390643005301,
+        1.0708322792815583,
+        1.04257563033416
+      ],
+      "final_mp3_sha256": "76e69e67ddd6a4c20a4140d20c7cd619a89627747cf01ef6773c189368105686",
+      "unprompted_final_asr_text": "Turn up the glow"
+    },
+    {
+      "number": 10,
+      "title": "Spark in My Soul",
+      "bars": 2,
+      "syllables": [
+        "Spark",
+        "in",
+        "my",
+        "soul"
+      ],
+      "target_beats": [
+        0,
+        1,
+        2,
+        4
+      ],
+      "sound": "Slightly husky confident attack, minor pentatonic melody, long soulful soul.",
+      "role": "soulful hook",
+      "slug": "spark_in_my_soul",
+      "requested_lyrics": "Spark in my soul",
+      "lyrics": "Spark in My Soul",
+      "prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Slightly husky confident attack, minor pentatonic melody, long soulful soul. Sing ONLY this one original phrase: \"Spark in My Soul\". One complete 2-bar take, 3.428571 seconds total. Syllable attack schedule (time from beginning): Spark at 0.000000s; in at 0.428571s; my at 0.857143s; soul at 1.714286s. Release the final note cleanly before 3.349s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "generation_task_id": "5e47e2a9-2498-498c-b2ef-e0b74788eddf",
+      "exact_prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Slightly husky confident attack, minor pentatonic melody, long soulful soul. Sing ONLY this one original phrase: \"Spark in My Soul\". One complete 2-bar take, 3.428571 seconds total. Syllable attack schedule (time from beginning): Spark at 0.000000s; in at 0.428571s; my at 0.857143s; soul at 1.714286s. Release the final note cleanly before 3.349s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "raw_take_sha256": "fb3c3119d8306158c0dc52645835476a676763db7dadb10fcba94f42eaf4a63f",
+      "delivery_file": "10_spark_in_my_soul_140bpm_2bars.mp3",
+      "delivered_bars": 2,
+      "source_landmarks_seconds": [
+        0.03392290249433107,
+        0.935,
+        1.365,
+        1.799,
+        3.62
+      ],
+      "target_beats_including_endpoint": [
+        0,
+        2,
+        3,
+        4,
+        8
+      ],
+      "atempo_rates": [
+        1.0534532215357457,
+        1.0035722516708918,
+        1.0138280709840977,
+        1.0635465053473048
+      ],
+      "final_mp3_sha256": "78d1ea0eaf19236fb779adec130646258063e434c1c7079ecc2f210dfdcccae6",
+      "unprompted_final_asr_text": "Spark in my soul"
+    },
+    {
+      "number": 11,
+      "title": "Make It Shine",
+      "bars": 2,
+      "syllables": [
+        "Make",
+        "it",
+        "shine"
+      ],
+      "target_beats": [
+        0,
+        2,
+        4
+      ],
+      "sound": "Three distinct notes; short make and it, warm rising shine with restrained vibrato.",
+      "role": "spacious hook",
+      "slug": "make_it_shine",
+      "requested_lyrics": "Make it shine",
+      "lyrics": "Make It Shine",
+      "prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Three distinct notes; short make and it, warm rising shine with restrained vibrato. Sing ONLY this one original phrase: \"Make It Shine\". One complete 2-bar take, 3.428571 seconds total. Syllable attack schedule (time from beginning): Make at 0.000000s; it at 0.857143s; shine at 1.714286s. Release the final note cleanly before 3.349s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "generation_task_id": "b83858d1-9e79-4cdf-bf6b-2bbeb7b5ef30",
+      "exact_prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Three distinct notes; short make and it, warm rising shine with restrained vibrato. Sing ONLY this one original phrase: \"Make It Shine\". One complete 2-bar take, 3.428571 seconds total. Syllable attack schedule (time from beginning): Make at 0.000000s; it at 0.857143s; shine at 1.714286s. Release the final note cleanly before 3.349s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "raw_take_sha256": "77231c8d9f0a01b1f0037bba4f748e188476f9d5134fe4a07f46a4931b28ee6f",
+      "delivery_file": "11_make_it_shine_140bpm_2bars.mp3",
+      "delivered_bars": 2,
+      "source_landmarks_seconds": [
+        3.4097732426303855,
+        3.965,
+        4.695,
+        6.96
+      ],
+      "target_beats_including_endpoint": [
+        0,
+        2,
+        4,
+        8
+      ],
+      "atempo_rates": [
+        0.6327504413062666,
+        0.8453773168578994,
+        1.3279410176082964
+      ],
+      "final_mp3_sha256": "7b7c1bbe9881ea37f679d16a09cf5fae048674530fbe9d4fff458cabc42f429f",
+      "unprompted_final_asr_text": "Make it shine!"
+    },
+    {
+      "number": 12,
+      "title": "All Night Alive",
+      "bars": 2,
+      "syllables": [
+        "All",
+        "night",
+        "a",
+        "live"
+      ],
+      "target_beats": [
+        0,
+        2,
+        4,
+        5
+      ],
+      "sound": "Buoyant open vowels; a short rising pickup inside alive, strong live then release.",
+      "role": "uplift hook",
+      "slug": "all_night_alive",
+      "requested_lyrics": "All night a live",
+      "lyrics": "All Night Alive",
+      "prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Buoyant open vowels; a short rising pickup inside alive, strong live then release. Sing ONLY this one original phrase: \"All Night Alive\". One complete 2-bar take, 3.428571 seconds total. Syllable attack schedule (time from beginning): All at 0.000000s; night at 0.857143s; a at 1.714286s; live at 2.142857s. Release the final note cleanly before 3.349s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "generation_task_id": "e164c9a9-184b-409a-8a49-1bfc3f5340f3",
+      "exact_prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Buoyant open vowels; a short rising pickup inside alive, strong live then release. Sing ONLY this one original phrase: \"All Night Alive\". One complete 2-bar take, 3.428571 seconds total. Syllable attack schedule (time from beginning): All at 0.000000s; night at 0.857143s; a at 1.714286s; live at 2.142857s. Release the final note cleanly before 3.349s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "raw_take_sha256": "d9e5d87f74d8122d82095e2eed18f746ebccc09ad6d71cef0f41438392acecc9",
+      "delivery_file": "12_all_night_alive_140bpm_2bars.mp3",
+      "delivered_bars": 2,
+      "source_landmarks_seconds": [
+        1.354671201814059,
+        1.986,
+        2.645,
+        2.925,
+        4.7
+      ],
+      "target_beats_including_endpoint": [
+        0,
+        1,
+        2,
+        3,
+        8
+      ],
+      "atempo_rates": [
+        1.5152108780825075,
+        1.585445955289237,
+        0.6224936621341323,
+        0.8254873273376652
+      ],
+      "final_mp3_sha256": "f8860324a2a7ed206f6a74b6377ea75e19f7e83689299591f39084b7d5d5ba90",
+      "unprompted_final_asr_text": "All night alive"
+    },
+    {
+      "number": 13,
+      "title": "Feel the Rush",
+      "bars": 2,
+      "syllables": [
+        "Feel",
+        "the",
+        "rush"
+      ],
+      "target_beats": [
+        0,
+        2,
+        4
+      ],
+      "sound": "Punchy breath-supported chest voice, a short melodic turn on the final vowel of rush.",
+      "role": "soulful call",
+      "slug": "feel_the_rush",
+      "requested_lyrics": "Feel the rush",
+      "lyrics": "Feel the Rush",
+      "prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Punchy breath-supported chest voice, a short melodic turn on the final vowel of rush. Sing ONLY this one original phrase: \"Feel the Rush\". One complete 2-bar take, 3.428571 seconds total. Syllable attack schedule (time from beginning): Feel at 0.000000s; the at 0.857143s; rush at 1.714286s. Release the final note cleanly before 3.349s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "generation_task_id": "06f30308-edd3-446c-bbe3-ff3a41a61978",
+      "exact_prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Punchy breath-supported chest voice, a short melodic turn on the final vowel of rush. Sing ONLY this one original phrase: \"Feel the Rush\". One complete 2-bar take, 3.428571 seconds total. Syllable attack schedule (time from beginning): Feel at 0.000000s; the at 0.857143s; rush at 1.714286s. Release the final note cleanly before 3.349s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "raw_take_sha256": "e94ba4128602853a95df26b1627e2bab47de507694e6083263fd6f752c475fe0",
+      "delivery_file": "13_feel_the_rush_140bpm_2bars.mp3",
+      "delivered_bars": 2,
+      "source_landmarks_seconds": [
+        0.049546485260770975,
+        0.635,
+        0.918,
+        4.44
+      ],
+      "target_beats_including_endpoint": [
+        0,
+        1,
+        2,
+        8
+      ],
+      "atempo_rates": [
+        1.3986517630790505,
+        0.630099101175386,
+        1.374767558289229
+      ],
+      "final_mp3_sha256": "90bee9c2280257be918e0ff29b73c9f566ffea5e8a12e57763dbf49fdca97baf",
+      "unprompted_final_asr_text": "Feel the rush"
+    },
+    {
+      "number": 14,
+      "title": "Together We Rise",
+      "bars": 2,
+      "syllables": [
+        "To",
+        "ge",
+        "ther",
+        "we",
+        "rise"
+      ],
+      "target_beats": [
+        0,
+        1,
+        2,
+        4,
+        6
+      ],
+      "sound": "Connected to-ge-ther followed by separated we and a bright ascending rise.",
+      "role": "uplift hook",
+      "slug": "together_we_rise",
+      "requested_lyrics": "To ge ther we rise",
+      "lyrics": "Together We Rise",
+      "prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Connected to-ge-ther followed by separated we and a bright ascending rise. Sing ONLY this one original phrase: \"Together We Rise\". One complete 2-bar take, 3.428571 seconds total. Syllable attack schedule (time from beginning): To at 0.000000s; ge at 0.428571s; ther at 0.857143s; we at 1.714286s; rise at 2.571429s. Release the final note cleanly before 3.349s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "generation_task_id": "342402a5-dab8-4339-a9cd-c00a6b55b695",
+      "exact_prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Connected to-ge-ther followed by separated we and a bright ascending rise. Sing ONLY this one original phrase: \"Together We Rise\". One complete 2-bar take, 3.428571 seconds total. Syllable attack schedule (time from beginning): To at 0.000000s; ge at 0.428571s; ther at 0.857143s; we at 1.714286s; rise at 2.571429s. Release the final note cleanly before 3.349s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "raw_take_sha256": "7b7749bf5856e694f97f4f94132ebf1621d0d8eeb28decf3b37374cafa0e568c",
+      "delivery_file": "14_together_we_rise_140bpm_2bars.mp3",
+      "delivered_bars": 2,
+      "source_landmarks_seconds": [
+        0.088140589569161,
+        0.575,
+        0.994,
+        1.95,
+        4.19
+      ],
+      "target_beats_including_endpoint": [
+        0,
+        1,
+        2,
+        4,
+        8
+      ],
+      "atempo_rates": [
+        1.148075593454713,
+        0.9756856418529615,
+        1.1202559576345985,
+        1.313060386734363
+      ],
+      "final_mp3_sha256": "6193802b4a544770394bd8f9d2ddc875cab938a59d9c3d7e5e6a1967b2df4666",
+      "unprompted_final_asr_text": "Together we rise."
+    },
+    {
+      "number": 15,
+      "title": "Come into the Light",
+      "bars": 2,
+      "syllables": [
+        "Come",
+        "in",
+        "to",
+        "the",
+        "light"
+      ],
+      "target_beats": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sound": "Forward rhythmic quarter-note run into a held light, confident and inviting.",
+      "role": "rhythmic hook",
+      "slug": "come_into_the_light",
+      "requested_lyrics": "Come in to the light",
+      "lyrics": "Come into the Light",
+      "prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Forward rhythmic quarter-note run into a held light, confident and inviting. Sing ONLY this one original phrase: \"Come into the Light\". One complete 2-bar take, 3.428571 seconds total. Syllable attack schedule (time from beginning): Come at 0.000000s; in at 0.428571s; to at 0.857143s; the at 1.285714s; light at 1.714286s. Release the final note cleanly before 3.349s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "generation_task_id": "4a05284c-e023-42ee-98d3-d3815ae5be6d",
+      "exact_prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Forward rhythmic quarter-note run into a held light, confident and inviting. Sing ONLY this one original phrase: \"Come into the Light\". One complete 2-bar take, 3.428571 seconds total. Syllable attack schedule (time from beginning): Come at 0.000000s; in at 0.428571s; to at 0.857143s; the at 1.285714s; light at 1.714286s. Release the final note cleanly before 3.349s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "raw_take_sha256": "4f75193ebc0ff82b4586d25bb0ff74ba950dd53e35b570b685d4fc37fb23cbce",
+      "delivery_file": "15_come_into_the_light_140bpm_4bars.mp3",
+      "delivered_bars": 4,
+      "source_landmarks_seconds": [
+        0.0690702947845805,
+        0.951,
+        1.828,
+        2.708,
+        3.588,
+        7.15
+      ],
+      "target_beats_including_endpoint": [
+        0,
+        2,
+        4,
+        6,
+        8,
+        16
+      ],
+      "atempo_rates": [
+        1.0301467343336275,
+        1.0241615180935568,
+        1.027802294792586,
+        1.027802294792586,
+        1.0393168332709681
+      ],
+      "final_mp3_sha256": "1c74e105624e790c2a9ac7cb65fb9695d9bd56ff930096623254ba3ac6b9b3ac",
+      "unprompted_final_asr_text": "Come into the light"
+    },
+    {
+      "number": 16,
+      "title": "Never Let Go",
+      "bars": 2,
+      "syllables": [
+        "Ne",
+        "ver",
+        "let",
+        "go"
+      ],
+      "target_beats": [
+        0,
+        1,
+        2,
+        4
+      ],
+      "sound": "Two clear notes for never, firm let, descending sustained go.",
+      "role": "warm hook",
+      "slug": "never_let_go",
+      "requested_lyrics": "Ne ver let go",
+      "lyrics": "Never Let Go",
+      "prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Two clear notes for never, firm let, descending sustained go. Sing ONLY this one original phrase: \"Never Let Go\". One complete 2-bar take, 3.428571 seconds total. Syllable attack schedule (time from beginning): Ne at 0.000000s; ver at 0.428571s; let at 0.857143s; go at 1.714286s. Release the final note cleanly before 3.349s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "generation_task_id": "d15aa31e-855e-45dc-a00b-92044cbf7c10",
+      "exact_prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Two clear notes for never, firm let, descending sustained go. Sing ONLY this one original phrase: \"Never Let Go\". One complete 2-bar take, 3.428571 seconds total. Syllable attack schedule (time from beginning): Ne at 0.000000s; ver at 0.428571s; let at 0.857143s; go at 1.714286s. Release the final note cleanly before 3.349s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "raw_take_sha256": "e663df2031d1bc4932f7335860ea9853849b708042631aa0e58667cf3cb909dd",
+      "delivery_file": "16_never_let_go_140bpm_2bars.mp3",
+      "delivered_bars": 2,
+      "source_landmarks_seconds": [
+        0.060430839002267575,
+        0.603,
+        1.438,
+        3.48
+      ],
+      "target_beats_including_endpoint": [
+        0,
+        1,
+        4,
+        8
+      ],
+      "atempo_rates": [
+        1.2896404701544135,
+        0.6396402929871636,
+        1.1951496165064275
+      ],
+      "final_mp3_sha256": "0fec947e1fbfeea8abd701a0f04192e24a06acc332acd6a7d096fe3a4d0ed457",
+      "unprompted_final_asr_text": "Never let go"
+    },
+    {
+      "number": 17,
+      "title": "Higher Every Time",
+      "bars": 2,
+      "syllables": [
+        "Hi",
+        "er",
+        "e",
+        "vry",
+        "time"
+      ],
+      "target_beats": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sound": "Compact five-note rising phrase, pronounce higher as two syllables and every as two; hold time.",
+      "role": "uplift hook",
+      "slug": "higher_every_time",
+      "requested_lyrics": "Hi er e vry time",
+      "lyrics": "Higher Every Time",
+      "prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Compact five-note rising phrase, pronounce higher as two syllables and every as two; hold time. Sing ONLY this one original phrase: \"Higher Every Time\". One complete 2-bar take, 3.428571 seconds total. Syllable attack schedule (time from beginning): Hi at 0.000000s; er at 0.428571s; e at 0.857143s; vry at 1.285714s; time at 1.714286s. Release the final note cleanly before 3.349s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "generation_task_id": "9d254e09-13f5-47a4-8cc3-59439b847ac3",
+      "exact_prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Compact five-note rising phrase, pronounce higher as two syllables and every as two; hold time. Sing ONLY this one original phrase: \"Higher Every Time\". One complete 2-bar take, 3.428571 seconds total. Syllable attack schedule (time from beginning): Hi at 0.000000s; er at 0.428571s; e at 0.857143s; vry at 1.285714s; time at 1.714286s. Release the final note cleanly before 3.349s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "raw_take_sha256": "dbab203f21785f3d6ed96a38726099da2214f565e67caedefb1bd7ea4c0cf1a2",
+      "delivery_file": "17_higher_every_time_140bpm_4bars.mp3",
+      "delivered_bars": 4,
+      "source_landmarks_seconds": [
+        0.07918367346938776,
+        1.109,
+        1.847,
+        3.578,
+        6.67
+      ],
+      "target_beats_including_endpoint": [
+        0,
+        2,
+        4,
+        8,
+        16
+      ],
+      "atempo_rates": [
+        1.2100342012356575,
+        0.8550860547219771,
+        1.009951928270498,
+        0.9008192120596568
+      ],
+      "final_mp3_sha256": "cc1ae26c758ced5b47de624f4546991c43ea47e247eb86de7bb6ad297c9874d9",
+      "unprompted_final_asr_text": "Higher every time"
+    },
+    {
+      "number": 18,
+      "title": "Can You Hear My Heartbeat",
+      "bars": 4,
+      "syllables": [
+        "Can",
+        "you",
+        "hear",
+        "my",
+        "heart",
+        "beat"
+      ],
+      "target_beats": [
+        0,
+        2,
+        4,
+        6,
+        8,
+        10
+      ],
+      "sound": "Spacious soulful question, each word distinct; heartbeat is two notes, final beat sustains then releases.",
+      "role": "long melodic hook",
+      "slug": "can_you_hear_my_heartbeat",
+      "requested_lyrics": "Can you hear my heart beat",
+      "lyrics": "Can You Hear My Heartbeat",
+      "prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Spacious soulful question, each word distinct; heartbeat is two notes, final beat sustains then releases. Sing ONLY this one original phrase: \"Can You Hear My Heartbeat\". One complete 4-bar take, 6.857143 seconds total. Syllable attack schedule (time from beginning): Can at 0.000000s; you at 0.857143s; hear at 1.714286s; my at 2.571429s; heart at 3.428571s; beat at 4.285714s. Release the final note cleanly before 6.777s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "generation_task_id": "e64ce231-ae59-4ada-b750-7ebb0cc18da8",
+      "exact_prompt": "Dry isolated solo female a cappella vocal sample. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Sing only \"Can you hear my heartbeat\". Spacious soulful A minor melody, 140 BPM, four bars in 4/4 (6.857 seconds). Start immediately with Can; you on beat 3, hear on beat 5, my on beat 7, heart on beat 9, beat on beat 11, finish before beat 17. One phrase only. No music, instruments, percussion, backing vocals, doubling, reverb or delay.",
+      "raw_take_sha256": "0b90a40ab215df2aa177ab168d9054a40d123907f744d90e0c31a6d3be95377f",
+      "delivery_file": "18_can_you_hear_my_heartbeat_140bpm_4bars.mp3",
+      "delivered_bars": 4,
+      "source_landmarks_seconds": [
+        0.08600907029478458,
+        0.49,
+        0.978,
+        1.855,
+        2.848,
+        4.185,
+        6.77
+      ],
+      "target_beats_including_endpoint": [
+        0,
+        1,
+        2,
+        4,
+        6,
+        10,
+        16
+      ],
+      "atempo_rates": [
+        0.9375432127218253,
+        1.1510140585388338,
+        1.0241615180935568,
+        1.1652416151809355,
+        0.7753186777573728,
+        1.0053550994135316
+      ],
+      "final_mp3_sha256": "968f3108b1effc0a2385f6c5f7262d2cc92f3d74fe1c2ea304c1d7d1bccfd6dc",
+      "unprompted_final_asr_text": "Can you hear my heart beat?"
+    },
+    {
+      "number": 19,
+      "title": "We Can Dance Until the Morning",
+      "bars": 4,
+      "syllables": [
+        "We",
+        "can",
+        "dance",
+        "un",
+        "til",
+        "the",
+        "mor",
+        "ning"
+      ],
+      "target_beats": [
+        0,
+        1,
+        2,
+        4,
+        5,
+        6,
+        8,
+        9
+      ],
+      "sound": "An energetic first bar opens into a lyrical falling ending; clear syllables, no repeated chorus.",
+      "role": "long melodic hook",
+      "slug": "we_can_dance_until_the_morning",
+      "requested_lyrics": "We can dance un til the mor ning",
+      "lyrics": "We Can Dance Until the Morning",
+      "prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. An energetic first bar opens into a lyrical falling ending; clear syllables, no repeated chorus. Sing ONLY this one original phrase: \"We Can Dance Until the Morning\". One complete 4-bar take, 6.857143 seconds total. Syllable attack schedule (time from beginning): We at 0.000000s; can at 0.428571s; dance at 0.857143s; un at 1.714286s; til at 2.142857s; the at 2.571429s; mor at 3.428571s; ning at 3.857143s. Release the final note cleanly before 6.777s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "generation_task_id": "dd86181c-2ab0-46b3-bfa7-d9d3f8d8a8e3",
+      "exact_prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. An energetic first bar opens into a lyrical falling ending; clear syllables, no repeated chorus. Sing ONLY this one original phrase: \"We Can Dance Until the Morning\". One complete 4-bar take, 6.857143 seconds total. Syllable attack schedule (time from beginning): We at 0.000000s; can at 0.428571s; dance at 0.857143s; un at 1.714286s; til at 2.142857s; the at 2.571429s; mor at 3.428571s; ning at 3.857143s. Release the final note cleanly before 6.777s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "raw_take_sha256": "845da6c4822a6fc71a6f7583d15c49ad1e2a3d5a227ee0a041f72c8f3213125e",
+      "delivery_file": "19_we_can_dance_until_the_morning_140bpm_2bars.mp3",
+      "delivered_bars": 2,
+      "source_landmarks_seconds": [
+        0.0791609977324263,
+        0.352,
+        0.783,
+        1.25,
+        1.648,
+        2.139,
+        2.337,
+        2.963,
+        3.55
+      ],
+      "target_beats_including_endpoint": [
+        0,
+        0.5,
+        1.5,
+        2.5,
+        3.5,
+        4.5,
+        5,
+        6.5,
+        8
+      ],
+      "atempo_rates": [
+        1.326587401973185,
+        1.0061650149804102,
+        1.0976607513251901,
+        0.9223323346393179,
+        1.1586194975800876,
+        0.9091828990640021,
+        0.9722450197716929,
+        0.9081175856151608
+      ],
+      "final_mp3_sha256": "fa6bad640113fd499971fc8ab3cab62058e1b2747d066d2d4f2985974c6dada5",
+      "unprompted_final_asr_text": "We can dance until the morning!"
+    },
+    {
+      "number": 20,
+      "title": "Hold Me in the Rhythm",
+      "bars": 4,
+      "syllables": [
+        "Hold",
+        "me",
+        "in",
+        "the",
+        "rhy",
+        "thm"
+      ],
+      "target_beats": [
+        0,
+        2,
+        4,
+        6,
+        8,
+        10
+      ],
+      "sound": "Warm intimate sustained notes, rhythm on two sung syllables, a small final melisma.",
+      "role": "long soulful hook",
+      "slug": "hold_me_in_the_rhythm",
+      "requested_lyrics": "Hold me in the rhy thm",
+      "lyrics": "Hold Me in the Rhythm",
+      "prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Warm intimate sustained notes, rhythm on two sung syllables, a small final melisma. Sing ONLY this one original phrase: \"Hold Me in the Rhythm\". One complete 4-bar take, 6.857143 seconds total. Syllable attack schedule (time from beginning): Hold at 0.000000s; me at 0.857143s; in at 1.714286s; the at 2.571429s; rhy at 3.428571s; thm at 4.285714s. Release the final note cleanly before 6.777s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "generation_task_id": "31cd02c5-434b-4b5c-9975-449ce6845bc6",
+      "exact_prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Warm intimate sustained notes, rhythm on two sung syllables, a small final melisma. Sing ONLY this one original phrase: \"Hold Me in the Rhythm\". One complete 4-bar take, 6.857143 seconds total. Syllable attack schedule (time from beginning): Hold at 0.000000s; me at 0.857143s; in at 1.714286s; the at 2.571429s; rhy at 3.428571s; thm at 4.285714s. Release the final note cleanly before 6.777s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "raw_take_sha256": "6f4ecb347cae368284e671286d6a58670f2ee4114ce6e907139e0eadbfd5c1a4",
+      "delivery_file": "20_hold_me_in_the_rhythm_140bpm_4bars.mp3",
+      "delivered_bars": 4,
+      "source_landmarks_seconds": [
+        0.10954648526077097,
+        1.025,
+        2.846,
+        3.279,
+        3.715,
+        6.83
+      ],
+      "target_beats_including_endpoint": [
+        0,
+        2,
+        6,
+        7,
+        8,
+        16
+      ],
+      "atempo_rates": [
+        1.07091240070609,
+        1.0635600086421086,
+        1.0112353076745795,
+        1.018898363678267,
+        0.9075947506281071
+      ],
+      "final_mp3_sha256": "27189eef881b99f2aec89d01267ec7ed7601e6a17244e51237bc5b635c05a05b",
+      "unprompted_final_asr_text": "Hold me in the rhythm"
+    },
+    {
+      "number": 21,
+      "title": "Let the Colours Carry You",
+      "bars": 4,
+      "syllables": [
+        "Let",
+        "the",
+        "co",
+        "lours",
+        "ca",
+        "rry",
+        "you"
+      ],
+      "target_beats": [
+        0,
+        2,
+        4,
+        5,
+        8,
+        9,
+        12
+      ],
+      "sound": "Gentle ascending phrase with paired syllables for colours and carry; final you is a smooth resolved note.",
+      "role": "long melodic hook",
+      "slug": "let_the_colours_carry_you",
+      "requested_lyrics": "Let the co lours ca rry you",
+      "lyrics": "Let the Colours Carry You",
+      "prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Gentle ascending phrase with paired syllables for colours and carry; final you is a smooth resolved note. Sing ONLY this one original phrase: \"Let the Colours Carry You\". One complete 4-bar take, 6.857143 seconds total. Syllable attack schedule (time from beginning): Let at 0.000000s; the at 0.857143s; co at 1.714286s; lours at 2.142857s; ca at 3.428571s; rry at 3.857143s; you at 5.142857s. Release the final note cleanly before 6.777s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "generation_task_id": "6de00751-45c5-4fee-9134-7ff6f8e37559",
+      "exact_prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Gentle ascending phrase with paired syllables for colours and carry; final you is a smooth resolved note. Sing ONLY this one original phrase: \"Let the Colours Carry You\". One complete 4-bar take, 6.857143 seconds total. Syllable attack schedule (time from beginning): Let at 0.000000s; the at 0.857143s; co at 1.714286s; lours at 2.142857s; ca at 3.428571s; rry at 3.857143s; you at 5.142857s. Release the final note cleanly before 6.777s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "raw_take_sha256": "673191b9398510000bc5535fa1428c95fde0d46771dbc57e0b63f198ef33622d",
+      "delivery_file": "21_let_the_colours_carry_you_140bpm_4bars.mp3",
+      "delivered_bars": 4,
+      "source_landmarks_seconds": [
+        0.09038548752834467,
+        0.592,
+        1.012,
+        1.884,
+        2.778,
+        3.57,
+        6.77
+      ],
+      "target_beats_including_endpoint": [
+        0,
+        1,
+        2,
+        4,
+        6,
+        8,
+        16
+      ],
+      "atempo_rates": [
+        1.185584235999078,
+        0.9782207882000461,
+        1.018065975286849,
+        1.0448477493380406,
+        0.9207579435127978,
+        0.932645533757417
+      ],
+      "final_mp3_sha256": "d3dfadbe5f621a16734e31824cc46aea2c9f885b4b3d375d1156fcc80b99e6be",
+      "unprompted_final_asr_text": "Let the colors carry you"
+    },
+    {
+      "number": 22,
+      "title": "Lift Your Voice and Touch the Sky",
+      "bars": 4,
+      "syllables": [
+        "Lift",
+        "your",
+        "voice",
+        "and",
+        "touch",
+        "the",
+        "sky"
+      ],
+      "target_beats": [
+        0,
+        2,
+        4,
+        6,
+        8,
+        10,
+        12
+      ],
+      "sound": "An uplifting stepped rise, controlled power, open sky sustained without changing singer or register.",
+      "role": "long uplift hook",
+      "slug": "lift_your_voice_and_touch_the_sky",
+      "requested_lyrics": "Lift your voice and touch the sky",
+      "lyrics": "Lift Your Voice and Touch the Sky",
+      "prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. An uplifting stepped rise, controlled power, open sky sustained without changing singer or register. Sing ONLY this one original phrase: \"Lift Your Voice and Touch the Sky\". One complete 4-bar take, 6.857143 seconds total. Syllable attack schedule (time from beginning): Lift at 0.000000s; your at 0.857143s; voice at 1.714286s; and at 2.571429s; touch at 3.428571s; the at 4.285714s; sky at 5.142857s. Release the final note cleanly before 6.777s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "generation_task_id": "99886bb2-586f-4072-b224-a76d627c6cdf",
+      "exact_prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. An uplifting stepped rise, controlled power, open sky sustained without changing singer or register. Sing ONLY this one original phrase: \"Lift Your Voice and Touch the Sky\". One complete 4-bar take, 6.857143 seconds total. Syllable attack schedule (time from beginning): Lift at 0.000000s; your at 0.857143s; voice at 1.714286s; and at 2.571429s; touch at 3.428571s; the at 4.285714s; sky at 5.142857s. Release the final note cleanly before 6.777s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "raw_take_sha256": "84b1465e767c283d735fc2b09d0def748c370dc967d25238e869d18017cc5f41",
+      "delivery_file": "22_lift_your_voice_and_touch_the_sky_140bpm_4bars.mp3",
+      "delivered_bars": 4,
+      "source_landmarks_seconds": [
+        0.08854875283446711,
+        0.589,
+        1.014,
+        1.89,
+        2.77,
+        3.42,
+        4.073,
+        6.79
+      ],
+      "target_beats_including_endpoint": [
+        0,
+        1,
+        2,
+        4,
+        6,
+        8,
+        10,
+        16
+      ],
+      "atempo_rates": [
+        1.1826457709149574,
+        0.990896519935469,
+        1.0229479258605472,
+        1.027802294792586,
+        0.7480417034421889,
+        0.751682480141218,
+        1.057395222428837
+      ],
+      "final_mp3_sha256": "fef6f312cf8689f76aef9c3af026416d27a693473caaf77401f9e5ba24599833",
+      "unprompted_final_asr_text": "Lift your voice and touch the sky."
+    },
+    {
+      "number": 23,
+      "title": "Open Up Your Heart Tonight",
+      "bars": 4,
+      "syllables": [
+        "O",
+        "pen",
+        "up",
+        "your",
+        "heart",
+        "to",
+        "night"
+      ],
+      "target_beats": [
+        0,
+        1,
+        2,
+        4,
+        6,
+        8,
+        10
+      ],
+      "sound": "Inviting sync-free melodic call; open and tonight each have two notes, warm full final night.",
+      "role": "long melodic hook",
+      "slug": "open_up_your_heart_tonight",
+      "requested_lyrics": "O pen up your heart to night",
+      "lyrics": "Open Up Your Heart Tonight",
+      "prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Inviting sync-free melodic call; open and tonight each have two notes, warm full final night. Sing ONLY this one original phrase: \"Open Up Your Heart Tonight\". One complete 4-bar take, 6.857143 seconds total. Syllable attack schedule (time from beginning): O at 0.000000s; pen at 0.428571s; up at 0.857143s; your at 1.714286s; heart at 2.571429s; to at 3.428571s; night at 4.285714s. Release the final note cleanly before 6.777s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "generation_task_id": "cadf03d0-51cc-4d50-a7ee-e2c6deb7a9db",
+      "exact_prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Inviting sync-free melodic call; open and tonight each have two notes, warm full final night. Sing ONLY this one original phrase: \"Open Up Your Heart Tonight\". One complete 4-bar take, 6.857143 seconds total. Syllable attack schedule (time from beginning): O at 0.000000s; pen at 0.428571s; up at 0.857143s; your at 1.714286s; heart at 2.571429s; to at 3.428571s; night at 4.285714s. Release the final note cleanly before 6.777s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "raw_take_sha256": "79d0231670b8f44d4e8168d7715127a9f2029a76957fc2036efc5716705d5961",
+      "delivery_file": "23_open_up_your_heart_tonight_140bpm_4bars.mp3",
+      "delivered_bars": 4,
+      "source_landmarks_seconds": [
+        0.06328798185941042,
+        0.557,
+        0.8,
+        1.457,
+        1.878,
+        2.757,
+        3.63,
+        6.74
+      ],
+      "target_beats_including_endpoint": [
+        0,
+        1,
+        1.5,
+        3,
+        4,
+        6,
+        8,
+        16
+      ],
+      "atempo_rates": [
+        1.1655335330721364,
+        1.1601315456615229,
+        1.023278370514064,
+        0.9807559345471307,
+        1.0265887025595763,
+        1.0192795675198587,
+        0.9061247126744
+      ],
+      "final_mp3_sha256": "3aa00d7287466bb87e5fc156093003216019e3d312ed49c677462e9891d42d7d",
+      "unprompted_final_asr_text": "Open up your heart tonight"
+    },
+    {
+      "number": 24,
+      "title": "Scat Doo Ba Dee Dah",
+      "bars": 2,
+      "syllables": [
+        "doo",
+        "ba",
+        "dee",
+        "dah"
+      ],
+      "target_beats": [
+        0,
+        1,
+        2,
+        4
+      ],
+      "sound": "Wordless jazz-house scat: rounded doo, crisp ba, bright dee, warm long dah; playful rising then falling melody.",
+      "role": "wordless scat",
+      "slug": "scat_doo_ba_dee_dah",
+      "requested_lyrics": "doo ba dee dah",
+      "lyrics": "doo ba dee dah",
+      "prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Wordless jazz-house scat: rounded doo, crisp ba, bright dee, warm long dah; playful rising then falling melody. Sing ONLY this one original phrase: \"doo ba dee dah\". These are NON-LEXICAL sung scat/vowel syllables, not words or beatboxing. One complete 2-bar take, 3.428571 seconds total. Syllable attack schedule (time from beginning): doo at 0.000000s; ba at 0.428571s; dee at 0.857143s; dah at 1.714286s. Release the final note cleanly before 3.349s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "generation_task_id": "547323e4-e3b5-436c-9936-387818569161",
+      "exact_prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Wordless jazz-house scat: rounded doo, crisp ba, bright dee, warm long dah; playful rising then falling melody. Sing ONLY this one original phrase: \"doo ba dee dah\". These are NON-LEXICAL sung scat/vowel syllables, not words or beatboxing. One complete 2-bar take, 3.428571 seconds total. Syllable attack schedule (time from beginning): doo at 0.000000s; ba at 0.428571s; dee at 0.857143s; dah at 1.714286s. Release the final note cleanly before 3.349s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "raw_take_sha256": "c4a1e97c0b3dc2e1d61d77106264111d0f26e391724b094811899a142660d555",
+      "delivery_file": "24_scat_doo_ba_dee_dah_140bpm_2bars.mp3",
+      "delivered_bars": 2,
+      "source_landmarks_seconds": [
+        0.08235827664399092,
+        0.55,
+        0.986,
+        1.635,
+        3.47
+      ],
+      "target_beats_including_endpoint": [
+        0,
+        1,
+        2,
+        4,
+        8
+      ],
+      "atempo_rates": [
+        1.099274026273335,
+        1.018898363678267,
+        0.7468281112091791,
+        1.0718780382413309
+      ],
+      "final_mp3_sha256": "e348d084056015b01844f67a667a5e343e918fe19b93ee10ddbc7c128b3d4b96",
+      "unprompted_final_asr_text": null
+    },
+    {
+      "number": 25,
+      "title": "Scat Sha Bee Doo Wah",
+      "bars": 2,
+      "syllables": [
+        "sha",
+        "bee",
+        "doo",
+        "wah"
+      ],
+      "target_beats": [
+        0,
+        1,
+        2,
+        4
+      ],
+      "sound": "Wordless scat with soft sha consonant, light bee, rounded doo and open long wah.",
+      "role": "wordless scat",
+      "slug": "scat_sha_bee_doo_wah",
+      "requested_lyrics": "sha bee doo wah",
+      "lyrics": "sha bee doo wah",
+      "prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Wordless scat with soft sha consonant, light bee, rounded doo and open long wah. Sing ONLY this one original phrase: \"sha bee doo wah\". These are NON-LEXICAL sung scat/vowel syllables, not words or beatboxing. One complete 2-bar take, 3.428571 seconds total. Syllable attack schedule (time from beginning): sha at 0.000000s; bee at 0.428571s; doo at 0.857143s; wah at 1.714286s. Release the final note cleanly before 3.349s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "generation_task_id": "ef0d0ab9-4711-444b-badf-b3d1d3217e8d",
+      "exact_prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Wordless scat with soft sha consonant, light bee, rounded doo and open long wah. Sing ONLY this one original phrase: \"sha bee doo wah\". These are NON-LEXICAL sung scat/vowel syllables, not words or beatboxing. One complete 2-bar take, 3.428571 seconds total. Syllable attack schedule (time from beginning): sha at 0.000000s; bee at 0.428571s; doo at 0.857143s; wah at 1.714286s. Release the final note cleanly before 3.349s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "raw_take_sha256": "249666b3414a2386d111c5a42561edad4fabef99cdad05fbb18223b2e465f85a",
+      "delivery_file": "25_scat_sha_bee_doo_wah_140bpm_2bars.mp3",
+      "delivered_bars": 2,
+      "source_landmarks_seconds": [
+        0.06458049886621316,
+        0.265,
+        1.129,
+        1.56,
+        3.48
+      ],
+      "target_beats_including_endpoint": [
+        0,
+        0.5,
+        2.5,
+        3.5,
+        8
+      ],
+      "atempo_rates": [
+        0.922590437642297,
+        1.0083572374227714,
+        1.0061650149804102,
+        0.9954733791583839
+      ],
+      "final_mp3_sha256": "29f80153de2289981e40545c16472f82d97e6d66ebf8fba1eee66064f3fc75ee",
+      "unprompted_final_asr_text": null
+    },
+    {
+      "number": 26,
+      "title": "Scat Ba Da Bop",
+      "bars": 2,
+      "syllables": [
+        "ba",
+        "da",
+        "bop"
+      ],
+      "target_beats": [
+        0,
+        2,
+        4
+      ],
+      "sound": "Three bouncy sung notes, not spoken percussion; a pitched long bop with a tidy final consonant.",
+      "role": "wordless scat",
+      "slug": "scat_ba_da_bop",
+      "requested_lyrics": "ba da bop",
+      "lyrics": "ba da bop",
+      "prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Three bouncy sung notes, not spoken percussion; a pitched long bop with a tidy final consonant. Sing ONLY this one original phrase: \"ba da bop\". These are NON-LEXICAL sung scat/vowel syllables, not words or beatboxing. One complete 2-bar take, 3.428571 seconds total. Syllable attack schedule (time from beginning): ba at 0.000000s; da at 0.857143s; bop at 1.714286s. Release the final note cleanly before 3.349s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "generation_task_id": "6fd00364-2dbb-46c5-ab8c-351f44d6b40e",
+      "exact_prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Three bouncy sung notes, not spoken percussion; a pitched long bop with a tidy final consonant. Sing ONLY this one original phrase: \"ba da bop\". These are NON-LEXICAL sung scat/vowel syllables, not words or beatboxing. One complete 2-bar take, 3.428571 seconds total. Syllable attack schedule (time from beginning): ba at 0.000000s; da at 0.857143s; bop at 1.714286s. Release the final note cleanly before 3.349s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "raw_take_sha256": "338edeb625600af1645dff6868439642a3692ef17d33eaae5857a858e6090e06",
+      "delivery_file": "26_scat_ba_da_bop_140bpm_2bars.mp3",
+      "delivered_bars": 2,
+      "source_landmarks_seconds": [
+        0.12959183673469388,
+        0.457,
+        0.832,
+        1.7
+      ],
+      "target_beats_including_endpoint": [
+        0,
+        1,
+        2,
+        8
+      ],
+      "atempo_rates": [
+        0.7429707305830836,
+        0.8638511177690712,
+        0.7933268545513443
+      ],
+      "final_mp3_sha256": "ffb5a0e51f02bd5e5f1706e6b12fabb991476f63d2bd1ee2120cf14bbbf293d8",
+      "unprompted_final_asr_text": null
+    },
+    {
+      "number": 27,
+      "title": "Vowels Oo Ee Ah",
+      "bars": 2,
+      "syllables": [
+        "oo",
+        "ee",
+        "ah"
+      ],
+      "target_beats": [
+        0,
+        2,
+        4
+      ],
+      "sound": "Pure wordless rounded oo, clear ee and open sustained ah, gently rising melody and slight vibrato.",
+      "role": "wordless vowels",
+      "slug": "vowels_oo_ee_ah",
+      "requested_lyrics": "oo ee ah",
+      "lyrics": "oo ee ah",
+      "prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Pure wordless rounded oo, clear ee and open sustained ah, gently rising melody and slight vibrato. Sing ONLY this one original phrase: \"oo ee ah\". These are NON-LEXICAL sung scat/vowel syllables, not words or beatboxing. One complete 2-bar take, 3.428571 seconds total. Syllable attack schedule (time from beginning): oo at 0.000000s; ee at 0.857143s; ah at 1.714286s. Release the final note cleanly before 3.349s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "generation_task_id": "4397230b-1a77-4940-8b64-86a47ef614a7",
+      "exact_prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Pure wordless rounded oo, clear ee and open sustained ah, gently rising melody and slight vibrato. Sing ONLY this one original phrase: \"oo ee ah\". These are NON-LEXICAL sung scat/vowel syllables, not words or beatboxing. One complete 2-bar take, 3.428571 seconds total. Syllable attack schedule (time from beginning): oo at 0.000000s; ee at 0.857143s; ah at 1.714286s. Release the final note cleanly before 3.349s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "raw_take_sha256": "7ff5766c6a0537a4f6636530dc9d9779ed5545a52e026725e01277ff66394f95",
+      "delivery_file": "27_vowels_oo_ee_ah_140bpm_2bars.mp3",
+      "delivered_bars": 2,
+      "source_landmarks_seconds": [
+        0.07251700680272109,
+        1.007,
+        1.997,
+        4.43
+      ],
+      "target_beats_including_endpoint": [
+        0,
+        2,
+        4,
+        8
+      ],
+      "atempo_rates": [
+        1.0940809796999118,
+        1.1616008384819065,
+        1.4279869288106297
+      ],
+      "final_mp3_sha256": "835bf7f61b26b2df779810e46b807ad6166f311abe323ca5face06a7268901b2",
+      "unprompted_final_asr_text": null
+    },
+    {
+      "number": 28,
+      "title": "Scat Da Ya Da Ya",
+      "bars": 2,
+      "syllables": [
+        "da",
+        "ya",
+        "da",
+        "ya"
+      ],
+      "target_beats": [
+        0,
+        2,
+        4,
+        6
+      ],
+      "sound": "Four separated pitched scat syllables, lilting question-and-answer contour, short clean releases.",
+      "role": "wordless scat",
+      "slug": "scat_da_ya_da_ya",
+      "requested_lyrics": "da ya da ya",
+      "lyrics": "da ya da ya",
+      "prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Four separated pitched scat syllables, lilting question-and-answer contour, short clean releases. Sing ONLY this one original phrase: \"da ya da ya\". These are NON-LEXICAL sung scat/vowel syllables, not words or beatboxing. One complete 2-bar take, 3.428571 seconds total. Syllable attack schedule (time from beginning): da at 0.000000s; ya at 0.857143s; da at 1.714286s; ya at 2.571429s. Release the final note cleanly before 3.349s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "generation_task_id": "63788571-a808-4fc1-b92c-ddc83d7bc57f",
+      "exact_prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Four separated pitched scat syllables, lilting question-and-answer contour, short clean releases. Sing ONLY this one original phrase: \"da ya da ya\". These are NON-LEXICAL sung scat/vowel syllables, not words or beatboxing. One complete 2-bar take, 3.428571 seconds total. Syllable attack schedule (time from beginning): da at 0.000000s; ya at 0.857143s; da at 1.714286s; ya at 2.571429s. Release the final note cleanly before 3.349s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "raw_take_sha256": "82d301ee85672729cf8ca817dccd0fe9ab2d90b6ff019851bb6f15d9cd22a224",
+      "delivery_file": "28_scat_da_ya_da_ya_140bpm_2bars.mp3",
+      "delivered_bars": 2,
+      "source_landmarks_seconds": [
+        0.44160997732426305,
+        0.763,
+        1.435,
+        2.001,
+        3.68
+      ],
+      "target_beats_including_endpoint": [
+        0,
+        1,
+        2,
+        4,
+        8
+      ],
+      "atempo_rates": [
+        0.7276446185757087,
+        1.6185757086886379,
+        0.6458517210944396,
+        0.9789888732850816
+      ],
+      "final_mp3_sha256": "231b15153af16a3bd2291f1a9227e49a025fd5f39d1438b2906d81fcaa04052a",
+      "unprompted_final_asr_text": null
+    },
+    {
+      "number": 29,
+      "title": "Hum Mm Ah Oo",
+      "bars": 2,
+      "syllables": [
+        "mm",
+        "ah",
+        "oo"
+      ],
+      "target_beats": [
+        0,
+        2,
+        4
+      ],
+      "sound": "Wordless voiced hum opening directly into an ah and a rounded oo; same singer, no spoken text.",
+      "role": "wordless hum/vowels",
+      "slug": "hum_mm_ah_oo",
+      "requested_lyrics": "mm ah oo",
+      "lyrics": "mm ah oo",
+      "prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Wordless voiced hum opening directly into an ah and a rounded oo; same singer, no spoken text. Sing ONLY this one original phrase: \"mm ah oo\". These are NON-LEXICAL sung scat/vowel syllables, not words or beatboxing. One complete 2-bar take, 3.428571 seconds total. Syllable attack schedule (time from beginning): mm at 0.000000s; ah at 0.857143s; oo at 1.714286s. Release the final note cleanly before 3.349s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "generation_task_id": "5d1e5b7e-c817-4eb3-b421-348680ef95d0",
+      "exact_prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Wordless voiced hum opening directly into an ah and a rounded oo; same singer, no spoken text. Sing ONLY this one original phrase: \"mm ah oo\". These are NON-LEXICAL sung scat/vowel syllables, not words or beatboxing. One complete 2-bar take, 3.428571 seconds total. Syllable attack schedule (time from beginning): mm at 0.000000s; ah at 0.857143s; oo at 1.714286s. Release the final note cleanly before 3.349s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "raw_take_sha256": "35d7c49ede5e55b080964442c7ecefccbfb187bb4559bd5114382f93b03907c1",
+      "delivery_file": "29_hum_mm_ah_oo_140bpm_2bars.mp3",
+      "delivered_bars": 2,
+      "source_landmarks_seconds": [
+        0.10748299319727891,
+        0.529,
+        0.962,
+        1.84
+      ],
+      "target_beats_including_endpoint": [
+        0,
+        1,
+        2,
+        8
+      ],
+      "atempo_rates": [
+        0.9820811246831067,
+        1.0112353076745795,
+        0.7934095953559843
+      ],
+      "final_mp3_sha256": "3222ad2caaafbbb4a99930eb67041e97dff759383f43270e8386a1b176917d23",
+      "unprompted_final_asr_text": null
+    },
+    {
+      "number": 30,
+      "title": "Scat Doo Ba Dee Doo Ba Dah",
+      "bars": 4,
+      "syllables": [
+        "doo",
+        "ba",
+        "dee",
+        "doo",
+        "ba",
+        "dah"
+      ],
+      "target_beats": [
+        0,
+        2,
+        4,
+        8,
+        10,
+        12
+      ],
+      "sound": "Two related wordless scat motifs, first light and curious, second warmer and resolved; melodic long dah.",
+      "role": "long wordless scat",
+      "slug": "scat_doo_ba_dee_doo_ba_dah",
+      "requested_lyrics": "doo ba dee doo ba dah",
+      "lyrics": "doo ba dee doo ba dah",
+      "prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Two related wordless scat motifs, first light and curious, second warmer and resolved; melodic long dah. Sing ONLY this one original phrase: \"doo ba dee doo ba dah\". These are NON-LEXICAL sung scat/vowel syllables, not words or beatboxing. One complete 4-bar take, 6.857143 seconds total. Syllable attack schedule (time from beginning): doo at 0.000000s; ba at 0.857143s; dee at 1.714286s; doo at 3.428571s; ba at 4.285714s; dah at 5.142857s. Release the final note cleanly before 6.777s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "generation_task_id": "057ecfb1-5798-490f-9a1e-5a870fe718a0",
+      "exact_prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Two related wordless scat motifs, first light and curious, second warmer and resolved; melodic long dah. Sing ONLY this one original phrase: \"doo ba dee doo ba dah\". These are NON-LEXICAL sung scat/vowel syllables, not words or beatboxing. One complete 4-bar take, 6.857143 seconds total. Syllable attack schedule (time from beginning): doo at 0.000000s; ba at 0.857143s; dee at 1.714286s; doo at 3.428571s; ba at 4.285714s; dah at 5.142857s. Release the final note cleanly before 6.777s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "raw_take_sha256": "2bf0ee2b94350a0f0bba33aced81983c52a8a7dc37ff74a27be790af6e13f26e",
+      "delivery_file": "30_scat_doo_ba_dee_doo_ba_dah_140bpm_2bars.mp3",
+      "delivered_bars": 2,
+      "source_landmarks_seconds": [
+        0.08292517006802722,
+        0.53,
+        0.96,
+        1.3948,
+        1.6453,
+        2.0414,
+        3.48
+      ],
+      "target_beats_including_endpoint": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        8
+      ],
+      "atempo_rates": [
+        1.0470154413459323,
+        1.0036298686333256,
+        1.0158446646692787,
+        0.5475339940078359,
+        0.9174925097948836,
+        1.1222351149466967
+      ],
+      "final_mp3_sha256": "a5224b7cc66bce0bf64eaf3a5d7737916222b534789ae79475cb1eaab942c576",
+      "unprompted_final_asr_text": null
+    },
+    {
+      "number": 31,
+      "title": "Scat Sha Ba Dee Ya Sha Ba Doo",
+      "bars": 4,
+      "syllables": [
+        "sha",
+        "ba",
+        "dee",
+        "ya",
+        "sha",
+        "ba",
+        "doo"
+      ],
+      "target_beats": [
+        0,
+        2,
+        4,
+        6,
+        8,
+        10,
+        12
+      ],
+      "sound": "Fluid wordless scat in a minor pentatonic curve; distinct articulated syllables and held final doo.",
+      "role": "long wordless scat",
+      "slug": "scat_sha_ba_dee_ya_sha_ba_doo",
+      "requested_lyrics": "sha ba dee ya sha ba doo",
+      "lyrics": "sha ba dee ya sha ba doo",
+      "prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Fluid wordless scat in a minor pentatonic curve; distinct articulated syllables and held final doo. Sing ONLY this one original phrase: \"sha ba dee ya sha ba doo\". These are NON-LEXICAL sung scat/vowel syllables, not words or beatboxing. One complete 4-bar take, 6.857143 seconds total. Syllable attack schedule (time from beginning): sha at 0.000000s; ba at 0.857143s; dee at 1.714286s; ya at 2.571429s; sha at 3.428571s; ba at 4.285714s; doo at 5.142857s. Release the final note cleanly before 6.777s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "generation_task_id": "70357c77-acec-4d24-aa36-0b103428408e",
+      "exact_prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Fluid wordless scat in a minor pentatonic curve; distinct articulated syllables and held final doo. Sing ONLY this one original phrase: \"sha ba dee ya sha ba doo\". These are NON-LEXICAL sung scat/vowel syllables, not words or beatboxing. One complete 4-bar take, 6.857143 seconds total. Syllable attack schedule (time from beginning): sha at 0.000000s; ba at 0.857143s; dee at 1.714286s; ya at 2.571429s; sha at 3.428571s; ba at 4.285714s; doo at 5.142857s. Release the final note cleanly before 6.777s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "raw_take_sha256": "b7d593adeb905af6772fabb40c2ad6fe1f25cdbf6f33f6daf278ee322a753584",
+      "delivery_file": "31_scat_sha_ba_dee_ya_sha_ba_doo_140bpm_2bars.mp3",
+      "delivered_bars": 2,
+      "source_landmarks_seconds": [
+        0.03528344671201814,
+        0.439,
+        0.854,
+        1.501,
+        2.15,
+        2.596,
+        2.7258,
+        3.41
+      ],
+      "target_beats_including_endpoint": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        5.5,
+        8
+      ],
+      "atempo_rates": [
+        0.9368518091726205,
+        0.9654874395021894,
+        1.5550241991242222,
+        1.5600944918183914,
+        1.0443074441115465,
+        0.5287123703516317,
+        0.7914685392015924
+      ],
+      "final_mp3_sha256": "0db2d72331880c850b993a63cb690ca5a3991f8d7d0384237e72092d974e1ce1",
+      "unprompted_final_asr_text": null
+    },
+    {
+      "number": 32,
+      "title": "Scat Da Ba Da Ba Dee Yah",
+      "bars": 4,
+      "syllables": [
+        "da",
+        "ba",
+        "da",
+        "ba",
+        "dee",
+        "yah"
+      ],
+      "target_beats": [
+        0,
+        2,
+        4,
+        6,
+        8,
+        12
+      ],
+      "sound": "Playful alternating da-ba pitched notes followed by a bright dee and a relaxed open yah.",
+      "role": "long wordless scat",
+      "slug": "scat_da_ba_da_ba_dee_yah",
+      "requested_lyrics": "da ba da ba dee yah",
+      "lyrics": "da ba da ba dee yah",
+      "prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Playful alternating da-ba pitched notes followed by a bright dee and a relaxed open yah. Sing ONLY this one original phrase: \"da ba da ba dee yah\". These are NON-LEXICAL sung scat/vowel syllables, not words or beatboxing. One complete 4-bar take, 6.857143 seconds total. Syllable attack schedule (time from beginning): da at 0.000000s; ba at 0.857143s; da at 1.714286s; ba at 2.571429s; dee at 3.428571s; yah at 5.142857s. Release the final note cleanly before 6.777s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "generation_task_id": "9bdb9258-7411-4bb4-816f-7c7b40dce297",
+      "exact_prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Playful alternating da-ba pitched notes followed by a bright dee and a relaxed open yah. Sing ONLY this one original phrase: \"da ba da ba dee yah\". These are NON-LEXICAL sung scat/vowel syllables, not words or beatboxing. One complete 4-bar take, 6.857143 seconds total. Syllable attack schedule (time from beginning): da at 0.000000s; ba at 0.857143s; da at 1.714286s; ba at 2.571429s; dee at 3.428571s; yah at 5.142857s. Release the final note cleanly before 6.777s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "raw_take_sha256": "b204453beef7d2378dedac8263106c94ad6ddd6539648022cdf2361ecdcea66f",
+      "delivery_file": "32_scat_da_ba_da_ba_dee_yah_140bpm_2bars.mp3",
+      "delivered_bars": 2,
+      "source_landmarks_seconds": [
+        0.07805442176870749,
+        0.381,
+        0.52,
+        0.797,
+        0.98,
+        1.22,
+        1.79
+      ],
+      "target_beats_including_endpoint": [
+        0,
+        0.5,
+        1,
+        1.5,
+        2,
+        2.5,
+        8
+      ],
+      "atempo_rates": [
+        1.4945610928408803,
+        0.5800657728307614,
+        1.349860865165697,
+        0.8254490260561599,
+        1.1434353655451557,
+        0.7896709843692472
+      ],
+      "final_mp3_sha256": "6c386953722d9734d563b182b5823b9b105353396951c1c011d62b528bce0bee",
+      "unprompted_final_asr_text": null
+    },
+    {
+      "number": 33,
+      "title": "Vowels Oo Ah Ee Oh",
+      "bars": 4,
+      "syllables": [
+        "oo",
+        "ah",
+        "ee",
+        "oh"
+      ],
+      "target_beats": [
+        0,
+        4,
+        8,
+        12
+      ],
+      "sound": "Four long wordless vowel notes, one per bar, a smooth minor melodic arc, clean separate attacks.",
+      "role": "long wordless vowels",
+      "slug": "vowels_oo_ah_ee_oh",
+      "requested_lyrics": "oo ah ee oh",
+      "lyrics": "oo ah ee oh",
+      "prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Four long wordless vowel notes, one per bar, a smooth minor melodic arc, clean separate attacks. Sing ONLY this one original phrase: \"oo ah ee oh\". These are NON-LEXICAL sung scat/vowel syllables, not words or beatboxing. One complete 4-bar take, 6.857143 seconds total. Syllable attack schedule (time from beginning): oo at 0.000000s; ah at 1.714286s; ee at 3.428571s; oh at 5.142857s. Release the final note cleanly before 6.777s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "generation_task_id": "7537d5ff-30d6-4d50-bdd7-fd2513b5a9f8",
+      "exact_prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Four long wordless vowel notes, one per bar, a smooth minor melodic arc, clean separate attacks. Sing ONLY this one original phrase: \"oo ah ee oh\". These are NON-LEXICAL sung scat/vowel syllables, not words or beatboxing. One complete 4-bar take, 6.857143 seconds total. Syllable attack schedule (time from beginning): oo at 0.000000s; ah at 1.714286s; ee at 3.428571s; oh at 5.142857s. Release the final note cleanly before 6.777s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "raw_take_sha256": "648f613c831b2df4eacd31299f084dcc1d48466154f7e46547aeac170edd49ea",
+      "delivery_file": "33_vowels_oo_ah_ee_oh_140bpm_4bars.mp3",
+      "delivered_bars": 4,
+      "source_landmarks_seconds": [
+        0.08349206349206349,
+        1.008,
+        1.819,
+        3.508,
+        7.12
+      ],
+      "target_beats_including_endpoint": [
+        0,
+        2,
+        4,
+        8,
+        16
+      ],
+      "atempo_rates": [
+        1.0819450573698146,
+        0.943871359223301,
+        0.9849438262936157,
+        1.0540506227615332
+      ],
+      "final_mp3_sha256": "6492760c7db6f00a314681acb5da9f7389ff716c5a25754f3f608a2995e1b0ca",
+      "unprompted_final_asr_text": null
+    },
+    {
+      "number": 34,
+      "title": "Scat Ba Doo Bee Ba Doo Wah",
+      "bars": 4,
+      "syllables": [
+        "ba",
+        "doo",
+        "bee",
+        "ba",
+        "doo",
+        "wah"
+      ],
+      "target_beats": [
+        0,
+        2,
+        4,
+        8,
+        10,
+        12
+      ],
+      "sound": "Two wordless three-note figures, warm ba, rounded doo, bright bee and a soft descending wah ending.",
+      "role": "long wordless scat",
+      "slug": "scat_ba_doo_bee_ba_doo_wah",
+      "requested_lyrics": "ba doo bee ba doo wah",
+      "lyrics": "ba doo bee ba doo wah",
+      "prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Two wordless three-note figures, warm ba, rounded doo, bright bee and a soft descending wah ending. Sing ONLY this one original phrase: \"ba doo bee ba doo wah\". These are NON-LEXICAL sung scat/vowel syllables, not words or beatboxing. One complete 4-bar take, 6.857143 seconds total. Syllable attack schedule (time from beginning): ba at 0.000000s; doo at 0.857143s; bee at 1.714286s; ba at 3.428571s; doo at 4.285714s; wah at 5.142857s. Release the final note cleanly before 6.777s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "generation_task_id": "e39d57dd-c5ef-4f91-af8e-9dd6773e97a2",
+      "exact_prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Two wordless three-note figures, warm ba, rounded doo, bright bee and a soft descending wah ending. Sing ONLY this one original phrase: \"ba doo bee ba doo wah\". These are NON-LEXICAL sung scat/vowel syllables, not words or beatboxing. One complete 4-bar take, 6.857143 seconds total. Syllable attack schedule (time from beginning): ba at 0.000000s; doo at 0.857143s; bee at 1.714286s; ba at 3.428571s; doo at 4.285714s; wah at 5.142857s. Release the final note cleanly before 6.777s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "raw_take_sha256": "4cd0f27c0f2a00a42585698e07c8968498d9081787bf319464a3d32385a2b78d",
+      "delivery_file": "34_scat_ba_doo_bee_ba_doo_wah_140bpm_2bars.mp3",
+      "delivered_bars": 2,
+      "source_landmarks_seconds": [
+        0.09113378684807256,
+        0.508,
+        0.987,
+        1.634,
+        2.073,
+        2.754,
+        3.5
+      ],
+      "target_beats_including_endpoint": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        6,
+        8
+      ],
+      "atempo_rates": [
+        0.9702696473841899,
+        1.1281401244526388,
+        1.5549665821617884,
+        1.0265038027195206,
+        0.7857458075904677,
+        0.864822374227714
+      ],
+      "final_mp3_sha256": "036f27a5b10acfc8739daf3ebfb1b053ed7b7221b8a794261fc176b82dd22c45",
+      "unprompted_final_asr_text": null
+    },
+    {
+      "number": 35,
+      "title": "Vowels Ah Eh Oh Ah",
+      "bars": 4,
+      "syllables": [
+        "ah",
+        "eh",
+        "oh",
+        "ah"
+      ],
+      "target_beats": [
+        0,
+        4,
+        8,
+        12
+      ],
+      "sound": "Four open wordless vowel notes with controlled little melodic turns near their releases; build then settle.",
+      "role": "long wordless vowels",
+      "slug": "vowels_ah_eh_oh_ah",
+      "requested_lyrics": "ah eh oh ah",
+      "lyrics": "ah eh oh ah",
+      "prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Four open wordless vowel notes with controlled little melodic turns near their releases; build then settle. Sing ONLY this one original phrase: \"ah eh oh ah\". These are NON-LEXICAL sung scat/vowel syllables, not words or beatboxing. One complete 4-bar take, 6.857143 seconds total. Syllable attack schedule (time from beginning): ah at 0.000000s; eh at 1.714286s; oh at 3.428571s; ah at 5.142857s. Release the final note cleanly before 6.777s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "generation_task_id": "612bd227-f24a-4fa8-b825-35bb85af14a4",
+      "exact_prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult female singer throughout: warm clear resonant alto / low mezzo, soulful chest voice, slight natural husky edge, bright open vowels, restrained controlled vibrato. Intimate close microphone, consistent timbre and register A3-C5. No change of singer, no choir, no backing singers, no harmony, no doubling. Exact 140 BPM, 4/4, A minor, straight timing. Four open wordless vowel notes with controlled little melodic turns near their releases; build then settle. Sing ONLY this one original phrase: \"ah eh oh ah\". These are NON-LEXICAL sung scat/vowel syllables, not words or beatboxing. One complete 4-bar take, 6.857143 seconds total. Syllable attack schedule (time from beginning): ah at 0.000000s; eh at 1.714286s; oh at 3.428571s; ah at 5.142857s. Release the final note cleanly before 6.777s. Begin the first phoneme immediately at time zero: no lead-in, no count-in, no introductory breath or pause. One take only, no repeats, no intro/outro, no extra lyrics. Absolutely isolated human singing voice only: NO MUSIC, no instruments, drums, percussion, bass, piano, synth, pads, chords, beatboxing, claps, clicks or audible metronome. No reverb, delay, echoes or room ambience. The tempo is a silent internal reference. This is a short dry vocal asset for a grid sampler, not a song.",
+      "raw_take_sha256": "e35ed9e59a811eb64539c73e57fa3f6305a84e9532222e6baaa15ae0ba45bf8c",
+      "delivery_file": "35_vowels_ah_eh_oh_ah_140bpm_4bars.mp3",
+      "delivered_bars": 4,
+      "source_landmarks_seconds": [
+        0.09063492063492064,
+        1.097,
+        2.777,
+        4.079,
+        6.9
+      ],
+      "target_beats_including_endpoint": [
+        0,
+        2,
+        6,
+        10,
+        16
+      ],
+      "atempo_rates": [
+        1.1815147837599294,
+        0.9795830182564546,
+        0.7544830938749055,
+        1.0983943641825205
+      ],
+      "final_mp3_sha256": "6944d59334680c7e00b266b3e063b182abab4df3d385e75fb9a27740a856923e",
+      "unprompted_final_asr_text": null
+    }
+  ]
+}

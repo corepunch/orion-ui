@@ -1,6 +1,6 @@
 # How Groove makes its sounds
 
-Groove ships no audio files. Every block in the library is computed by a small synthesizer written in C, from a one-line recipe. This document explains how a recipe becomes sound, how blocks are tagged, and what the approach cannot do.
+Groove synthesizes its instrumental library in C and plays original generated MP3 vocal samples. This document explains how recipes and samples become blocks, how blocks are tagged, and what the approach cannot do.
 
 The code is in three files:
 
@@ -78,6 +78,28 @@ A kit is a table of numbers for these voices (`kKits` in `synth.c`). The same pa
 Vocal `M(...)` rows play original generated MP3 samples from `share/vocals/`.
 Their production and timing checks are documented in
 [Generating and verifying Groove samples](../../../tools/groove_audio/sample-production.md).
+The [October 9 batch catalogue](vocals-2026-10-09/index.csv) adds 30 female samples:
+18 lyrical hooks and 12 wordless scat, vowel or humming phrases. There are 21
+two-bar and nine four-bar slots at 140 BPM. The
+[batch recipe](vocals-2026-10-09/manifest.json) records the exact generation prompts,
+source landmarks, final rhythms and hashes. The
+[verification report](vocals-2026-10-09/verification.json) and waveform sheets
+([1](vocals-2026-10-09/contact-sheet-1.png),
+[2](vocals-2026-10-09/contact-sheet-2.png),
+[3](vocals-2026-10-09/contact-sheet-3.png)) check decoded lengths, initial signal
+and placement of the preserved attack waveforms. These are computational checks;
+they do not establish exact singer identity or replace auditory review.
+
+The [male rap catalogue](male-rap-2026-10-09/index.csv) adds 20 original Eurodance
+rap and hype samples: eight two-bar and twelve four-bar slots at 140 BPM.
+The [manifest](male-rap-2026-10-09/manifest.json) preserves requested and delivered
+lyrics, generation task IDs through `tasks.json`, source landmarks and processing
+settings. The [verification](male-rap-2026-10-09/verification.json) checks the actual
+Groove decoder output; every before/after and final waveform was visually reviewed.
+Speech recognition is advisory and has ambiguous results for several calls.
+Listening-based quality, voice consistency and complete backing removal remain
+unverified. Raw takes, stems and PCM masters stay in the ignored audio work folder.
+
 The synth voices remain available: `I_VOX` is a saw wave (standing in for the vocal cords) through three band-pass filters placed at the formants of a vowel. Gliding the three filters from one vowel to the next produces a word-like sound: `"iea"` reads as "yeah", `"hei"` adds a breath and reads as "hey", `"ou"` as "oh". `I_ROBOT` uses a pulse wave at a fixed pitch and jumps between vowels. `I_CHOIR` is three detuned saws through one fixed vowel.
 
 ### Scratches

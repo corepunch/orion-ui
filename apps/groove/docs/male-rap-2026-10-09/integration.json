@@ -1,0 +1,11 @@
+{
+  "build_command": "make share build/bin/groove build/bin/test_groove_test",
+  "build_pass": true,
+  "test_command": "./build/bin/test_groove_test",
+  "tests_total": 19,
+  "tests_passed": 19,
+  "resource_hashes_match": 20,
+  "library_rows_appended": 20,
+  "existing_library_order_preserved": true,
+  "relaunch_required": true
+}

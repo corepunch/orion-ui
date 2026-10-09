@@ -139,6 +139,10 @@ and spacing. Toolbar tooltips appear toward the workspace: right of a left
 toolbar, left of a right toolbar, below a top toolbar, and above a bottom toolbar.
 They flip to the opposite side when needed to stay on-screen. Other controls
 prefer a tooltip above the element. All tooltips appear immediately.
+Hover lookup starts with the deepest child and continues through its parents
+until one supplies tooltip text. That source also supplies the anchor, so moving
+across a card's labels keeps its tooltip stable. A child's own tooltip takes
+precedence over its parent's.
 
 ### Small Bitmap Font (6x8 pixels)
 
