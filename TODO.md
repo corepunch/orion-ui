@@ -80,3 +80,16 @@ These icons are intentionally unchanged for now. Revisit them if Lucide adds a s
 - `apps/gitclient/share/icons/git-repos.svg`
 - `apps/imageeditor/share/icons/ie-polygon.svg`
 - `apps/imageeditor/share/icons/ie-rounded-rect.svg`
+
+# Winamp: skinned windows
+
+The player and equalizer use `SpriteButton` / `SpriteSlider` (`orion/commctl/sprite.c`) and the skin loads from `apps/winamp/share/base-2.91.wsz`. Still to do:
+
+- **Three real desktop windows.** Split the stacked player / equalizer / playlist into separate draggable, docking windows on desktop; keep the stacked layout on iPhone.
+- **Playlist resize.** Resize in the skin's 25×29 steps from the bottom-right corner (follows the window split).
+- **Playlist bottom bar as sprites.** ADD / REM / SEL / MISC and the mini transport are still baked into `PLEDIT.BMP`; build them from the skin's button sprites and popup menus.
+- **Window regions and caption dragging.** Add `SetWindowRgn`-style regions (hit test first, then a compositor mask in `R_Composite`, using the skin's `REGION.TXT`) and `evNcHitTest` / `HT_CAPTION` dragging by the skin title bar.
+- **Shade mode.** The collapsed title-bar view of each window.
+- **Title-bar buttons.** Menu, minimize, shade and close are drawn but do nothing.
+- **Skin switching.** `player_apply_skin` / `eq_apply_skin` re-send sprites, but nothing calls them after startup; freeing the old skin bitmaps would leave children with dangling pointers.
+- **Skin cursors.** Load the `.cur` files shipped in the skin.

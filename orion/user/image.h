@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 // Load an image file into a heap-allocated straight-alpha RGBA pixel buffer.
 // RGB bytes are sRGB encoded; untagged PNGs use the sRGB fallback. PNGs with
@@ -15,6 +16,12 @@
 // out_w and out_h must not be NULL.
 // Release the returned buffer with image_free().
 uint8_t *load_image(const char *path, int *out_w, int *out_h);
+
+// Same as load_image() for an encoded image already in memory. Returns NULL on failure.
+uint8_t *load_image_memory(const void *data, size_t size, int *out_w, int *out_h);
+
+// Inflates a raw deflate stream (no zlib header). Release with free(); NULL on failure.
+uint8_t *inflate_raw(const void *data, size_t size, size_t *out_size);
 
 // Release a pixel buffer returned by load_image().
 void image_free(uint8_t *pixels);

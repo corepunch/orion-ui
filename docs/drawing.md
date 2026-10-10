@@ -251,3 +251,22 @@ antialiasing uses screen derivatives to follow display density and transforms.
 `draw_plastic_card(rect, state, color)` (also reached via `THEME_PART_CARD`) uses the same shader with the theme's
 card radius and a shallow bevel, without a glyph. Waveforms and labels remain
 ordinary content drawn over the procedural surface.
+
+## Bitmaps and block transfers (`user/gdi.h`)
+
+`bitmap_t` is the HBITMAP analogue: straight-alpha sRGB RGBA8 pixels, created with
+`bitmap_create`, `bitmap_load` or `bitmap_load_memory` (PNG, JPEG, BMP including
+RLE8). The GPU texture is created on the first blit and shared by every window.
+`bitmap_set_color_key(bm, rgb)` makes one colour transparent, `bitmap_pixel`
+reads a pixel.
+
+Inside `evPaint`, `bit_blt(dst, bm, src_origin)` copies at 1:1, `stretch_blt(dst, bm, src)`
+scales a bitmap rect to `dst`, and `tile_blt(dst, bm, src)` repeats it. Scaling is
+nearest-neighbour. Source areas outside the bitmap are clipped and `dst` shrinks
+by the same fraction, so a short sprite sheet leaves the rest untouched.
+
+`user/zip.h` reads `.zip` / `.wsz` archives from memory, matching entries by file
+name. `SpriteButton` and `SpriteSlider` (`commctl/sprite.c`) are the controls built
+on these calls: sprites are bitmap rects stretched to the control's frame, so a
+skin scales with the window. SpriteSlider answers the Slider messages
+(`slSetRange`, `slSetPos`, `slGetPos`, `sliderValueChanged`) and adds `spsnReleased`.

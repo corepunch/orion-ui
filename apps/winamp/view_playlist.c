@@ -148,8 +148,6 @@ result_t win_winamp_playlist(window_t *win, uint32_t msg, uint32_t wparam, void 
         irect16_t r = bottom_rect(&v->canvas, &kBottom[i]);
         canvas_fill(&v->canvas, R(r.x, r.y, r.w, 1), g_app->skin.pl_current);   // pressed: lit top edge
       }
-      float pt = g_app->pt_per_px;
-      canvas_present(&v->canvas, R(0, 0, (int)lroundf(WA_W * pt), (int)lroundf(v->canvas.h * pt)));
       paint_rows(win, v);
       return true;
     }

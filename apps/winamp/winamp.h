@@ -43,15 +43,13 @@ enum {
   SKIN_PLAYPAUS, SKIN_MONOSTER, SKIN_NUMBERS, SKIN_TEXT, SKIN_EQMAIN, SKIN_PLEDIT, SKIN_COUNT
 };
 
-typedef struct { uint8_t *px; int w, h; } wa_bitmap_t;   // straight sRGB RGBA
-
 typedef struct {
-  wa_bitmap_t bmp[SKIN_COUNT];
+  bitmap_t *bmp[SKIN_COUNT];
   uint32_t vis[24];                                       // packed RGBA (0xAABBGGRR)
   uint32_t pl_normal, pl_current, pl_normal_bg, pl_selected_bg;
 } wa_skin_t;
 
-typedef struct { uint8_t *px; int w, h; uint32_t tex; } wa_canvas_t;
+typedef struct { int w, h; } wa_canvas_t;                  // skin-pixel extent; drawn at g_app->pt_per_px
 typedef struct { uint16_t id; irect16_t r; } wa_region_t;   // skin hit region
 
 typedef enum { WA_STOPPED, WA_PLAYING, WA_PAUSED } wa_state_t;
@@ -160,8 +158,15 @@ void canvas_blit(wa_canvas_t *c, int sheet, irect16_t src, int dx, int dy);
 void canvas_tile(wa_canvas_t *c, int sheet, irect16_t src, irect16_t dst);
 void canvas_text(wa_canvas_t *c, const char *text, int x, int y, int max_w, int scroll_px);
 void canvas_digit(wa_canvas_t *c, int digit, int x, int y);
-void canvas_present(wa_canvas_t *c, irect16_t dst);
 ipoint16_t skin_point(window_t *win, const wa_canvas_t *c, uint32_t wparam);
+irect16_t skin_rect(irect16_t r);                           // skin pixels -> window points
+window_t *skin_add_control(window_t *parent, const char *class_name, uint16_t id);
+void skin_place(window_t *child, irect16_t skin_px);        // frame = skin_rect(skin_px)
+int  skin_slider_pos(window_t *parent, uint16_t id);        // value of the SpriteSlider child `id`
+bool skin_slider_dragging(window_t *parent, uint16_t id);
+// Sprite sets for the skin's controls; each is the skin's own artwork, stretched to the control.
+void skin_button_sprites(int sheet, irect16_t up, irect16_t down, sprite_button_t *out);
+void skin_toggle_sprites(int sheet, irect16_t up, irect16_t down, irect16_t on, irect16_t on_down, sprite_button_t *out);
 
 // Views
 result_t win_winamp_main(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);

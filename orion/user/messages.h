@@ -540,6 +540,16 @@ enum {
   sgSetStyle,                   // wparam = SEGMENTED_STYLE_* flags
   sgnSelChange,                 // control -> parent (evCommand): LOWORD = control id, lparam = control
 };
+// Sprite controls (SpriteButton / SpriteSlider): bitmap-skinned variants of Button and Slider.
+// SpriteSlider also answers slSetRange / slSetPos / slGetPos and notifies with sliderValueChanged,
+// exactly like Slider; SpriteButton toggles with btnSetCheck / btnGetCheck and notifies btnClicked.
+enum {
+  spbSetSprites = evUser + 500,   // lparam = sprite_button_t* (copied; the bitmap stays caller-owned)
+  spsSetSprites,                  // lparam = sprite_slider_t* (copied; the bitmap stays caller-owned)
+  spsSetThumbVisible,             // wparam = 0 hides the thumb (e.g. no track loaded), nonzero shows it
+  spsIsDragging,                  // returns nonzero while the thumb is held
+  spsnReleased,                   // slider -> parent (evCommand): LOWORD = control id, lparam = slider; the thumb was let go
+};
 #define SEGMENTED_MAX_SEGMENTS 24
 #define SEGMENTED_STYLE_ICONS_ONLY (1u << 0) // a segment with an icon shows it alone; its label becomes the tooltip
 #define SEGMENTED_LABEL_MAX    32
