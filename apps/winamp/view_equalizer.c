@@ -1,21 +1,18 @@
-// VIEW: the equalizer window — ON/AUTO/PRESETS, the response graph, the
-// preamp and ten band sliders, drawn from EQMAIN.BMP.
+// VIEW: the equalizer window — EQMAIN.BMP artwork and the response graph painted here; ON/AUTO/PRESETS
+// and the preamp and ten band sliders are SpriteButton / SpriteSlider children.
 
 #include "winamp.h"
 
 enum { SL_PREAMP = 1, SL_BAND0 = 2 };   // SL_BAND0 + band
+#define EQ_STEPS 10                      // slider units per dB; range -12..+12 dB
 
-static const wa_region_t kButtons[] = {
+static const wa_region_t kEqButtons[] = {
   { ID_EQ_TOGGLE, {  14, 18, 26, 12 } },
   { ID_EQ_AUTO,   {  40, 18, 32, 12 } },
   { ID_EQ_PRESET, { 217, 18, 44, 12 } },
 };
 
-typedef struct {
-  wa_canvas_t canvas;
-  uint16_t pressed;
-  bool inside;
-} eq_view_t;
+typedef struct { wa_canvas_t canvas; } eq_view_t;
 
 static irect16_t slider_rect(int id) {
   return id == SL_PREAMP ? R(21, 38, 14, 63) : R(78 + 18 * (id - SL_BAND0), 38, 14, 63);
@@ -23,22 +20,55 @@ static irect16_t slider_rect(int id) {
 
 static float slider_db(int id) { return id == SL_PREAMP ? g_app->preamp_db : g_app->eq_db[id - SL_BAND0]; }
 
-static int eq_hit(ipoint16_t p) {
-  for (int i = 0; i < (int)ARRAY_LEN(kButtons); i++) if (rect_contains_point(kButtons[i].r, p)) return kButtons[i].id;
-  // Sliders take the whole column below the graph so narrow thumbs are easy to grab.
-  for (int id = SL_PREAMP; id < SL_BAND0 + WA_BANDS; id++) {
-    irect16_t r = slider_rect(id);
-    if (rect_contains_point(R(r.x - 2, r.y - 4, r.w + 4, r.h + 8), p)) return id;
+static void eq_button_sprites(uint16_t id, sprite_button_t *d) {
+  switch (id) {
+    case ID_EQ_TOGGLE: skin_toggle_sprites(SKIN_EQMAIN, R(10, 119, 26, 12), R(128, 119, 26, 12), R(69, 119, 26, 12), R(187, 119, 26, 12), d); break;
+    case ID_EQ_AUTO:   skin_toggle_sprites(SKIN_EQMAIN, R(36, 119, 32, 12), R(155, 119, 32, 12), R(95, 119, 32, 12), R(214, 119, 32, 12), d); break;
+    default:           skin_button_sprites(SKIN_EQMAIN, R(224, 164, 44, 12), R(224, 176, 44, 12), d); break;
   }
-  return 0;
 }
 
-static void draw_slider(wa_canvas_t *c, int id, bool pressed) {
-  irect16_t r = slider_rect(id);
-  float t = (slider_db(id) + 12.0f) / 24.0f;
-  int frame = (int)lroundf(t * 27);
-  canvas_blit(c, SKIN_EQMAIN, R(13 + (frame % 14) * 15, 164 + (frame / 14) * 65, 14, 63), r.x, r.y);
-  canvas_blit(c, SKIN_EQMAIN, R(0, pressed ? 176 : 164, 11, 11), r.x + 1, r.y + (int)lroundf((1 - t) * 51));
+// 28 track frames laid out 14 per row in EQMAIN.BMP; the frame follows the gain.
+static void eq_slider_sprites(sprite_slider_t *d) {
+  *d = (sprite_slider_t){
+    .bm = g_app->skin.bmp[SKIN_EQMAIN], .native = { 14, 63 }, .track = R(13, 164, 14, 63), .frame_step = { 15, 65 },
+    .frames = 28, .columns = 14, .thumb = R(0, 164, 11, 11), .thumb_down = R(0, 176, 11, 11),
+    .travel = R(1, 0, 0, 51), .vertical = true,
+  };
+}
+
+static void eq_apply_skin(window_t *win) {
+  for (int i = 0; i < (int)ARRAY_LEN(kEqButtons); i++) {
+    window_t *c = get_window_item(win, kEqButtons[i].id);
+    sprite_button_t d;
+    eq_button_sprites(kEqButtons[i].id, &d);
+    if (c) send_message(c, spbSetSprites, 0, &d);
+  }
+  sprite_slider_t d;
+  eq_slider_sprites(&d);
+  for (int id = SL_PREAMP; id < SL_BAND0 + WA_BANDS; id++) {
+    window_t *c = get_window_item(win, id);
+    if (c) send_message(c, spsSetSprites, 0, &d);
+  }
+}
+
+static void eq_place(window_t *win) {
+  for (int i = 0; i < (int)ARRAY_LEN(kEqButtons); i++) { window_t *c = get_window_item(win, kEqButtons[i].id); if (c) skin_place(c, kEqButtons[i].r); }
+  for (int id = SL_PREAMP; id < SL_BAND0 + WA_BANDS; id++) { window_t *c = get_window_item(win, id); if (c) skin_place(c, slider_rect(id)); }
+}
+
+// A held slider keeps its own value; the rest follow the app. Changes only, because each setter repaints.
+static void eq_sync(window_t *win) {
+  for (int id = SL_PREAMP; id < SL_BAND0 + WA_BANDS; id++) {
+    window_t *c = get_window_item(win, id);
+    int want = (int)lroundf(slider_db(id) * EQ_STEPS);
+    if (c && !send_message(c, spsIsDragging, 0, NULL) && skin_slider_pos(win, id) != want) send_message(c, slSetPos, 0, (void *)(intptr_t)want);
+  }
+  struct { uint16_t id; bool want; } toggles[] = { { ID_EQ_TOGGLE, g_app->engine.eq_on }, { ID_EQ_AUTO, g_app->eq_auto } };
+  for (int i = 0; i < 2; i++) {
+    window_t *c = get_window_item(win, toggles[i].id);
+    if (c && (send_message(c, btnGetCheck, 0, NULL) != 0) != toggles[i].want) send_message(c, btnSetCheck, toggles[i].want, NULL);
+  }
 }
 
 // Response curve: linear between band points across the 113-px graph.
@@ -61,28 +91,11 @@ static void draw_graph(wa_canvas_t *c) {
 
 static void eq_paint(eq_view_t *v) {
   wa_canvas_t *c = &v->canvas;
-  bool down = v->inside;
   canvas_blit(c, SKIN_EQMAIN, R(0, 0, WA_W, WA_EQ_H), 0, 0);
   canvas_blit(c, SKIN_EQMAIN, R(0, 134, WA_W, 14), 0, 0);
   canvas_blit(c, SKIN_EQMAIN, R(0, 116, 9, 9), 264, 3);
-  bool on = g_app->engine.eq_on;
-  bool on_down = down && v->pressed == ID_EQ_TOGGLE, auto_down = down && v->pressed == ID_EQ_AUTO;
-  canvas_blit(c, SKIN_EQMAIN, R(on ? (on_down ? 187 : 69) : (on_down ? 128 : 10), 119, 26, 12), 14, 18);
-  canvas_blit(c, SKIN_EQMAIN, R(g_app->eq_auto ? (auto_down ? 214 : 95) : (auto_down ? 155 : 36), 119, 32, 12), 40, 18);
-  canvas_blit(c, SKIN_EQMAIN, R(224, down && v->pressed == ID_EQ_PRESET ? 176 : 164, 44, 12), 217, 18);
   draw_graph(c);
-  for (int id = SL_PREAMP; id < SL_BAND0 + WA_BANDS; id++) draw_slider(c, id, v->pressed == id);
 }
-
-static void eq_slider_move(eq_view_t *v, ipoint16_t p) {
-  irect16_t r = slider_rect(v->pressed);
-  float t = 1 - (float)(p.y - r.y - 5) / 51;
-  float db = MAX(0.0f, MIN(1.0f, t)) * 24 - 12;
-  if (fabsf(db) < 0.8f) db = 0;
-  app_set_eq(v->pressed == SL_PREAMP ? -1 : v->pressed - SL_BAND0, db);
-}
-
-static bool eq_is_slider(uint16_t id) { return id >= SL_PREAMP && id < SL_BAND0 + WA_BANDS; }
 
 result_t win_winamp_equalizer(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   eq_view_t *v = win->userdata;
@@ -91,52 +104,41 @@ result_t win_winamp_equalizer(window_t *win, uint32_t msg, uint32_t wparam, void
       v = allocate_window_data(win, sizeof(eq_view_t));
       if (!v || !canvas_resize(&v->canvas, WA_W, WA_EQ_H)) return false;
       if (g_app) g_app->equalizer = win;
+      for (int i = 0; i < (int)ARRAY_LEN(kEqButtons); i++) skin_add_control(win, "SpriteButton", kEqButtons[i].id);
+      for (int id = SL_PREAMP; id < SL_BAND0 + WA_BANDS; id++) {
+        window_t *c = skin_add_control(win, "SpriteSlider", (uint16_t)id);
+        slider_range_t r = { -12 * EQ_STEPS, 12 * EQ_STEPS };
+        if (c) send_message(c, slSetRange, 0, &r);
+      }
+      eq_apply_skin(win);
       return true;
     case evMeasure:
       skin_view_measure(g_app && g_app->show_eq && !g_app->landscape ? WA_EQ_H : 0, lparam);
       return true;
+    case evResize:
+      eq_place(win);
+      return false;
     case evPaint:
       if (!g_app) return true;
+      eq_sync(win);
       eq_paint(v);
-      canvas_present(&v->canvas, R(0, 0, (int)lroundf(WA_W * g_app->pt_per_px), (int)lroundf(WA_EQ_H * g_app->pt_per_px)));
-      return true;
+      return false;                              // let the framework paint the child controls
     case evQueryDrag:
       return DRAG_NOW;
-    case evLeftButtonDown: {
-      ipoint16_t p = skin_point(win, &v->canvas, wparam);
-      v->pressed = (uint16_t)eq_hit(p);
-      v->inside = v->pressed != 0;
-      if (!v->pressed) return true;
-      set_capture(win);
-      if (eq_is_slider(v->pressed)) eq_slider_move(v, p);
-      invalidate_window(win);
-      return true;
-    }
-    case evMouseMove: {
-      if (!v->pressed) return false;
-      ipoint16_t p = skin_point(win, &v->canvas, wparam);
-      if (eq_is_slider(v->pressed)) eq_slider_move(v, p);
-      else {
-        for (int i = 0; i < (int)ARRAY_LEN(kButtons); i++)
-          if (kButtons[i].id == v->pressed) v->inside = rect_contains_point(kButtons[i].r, p);
+    case evCommand: {
+      uint16_t id = LOWORD(wparam);
+      if (HIWORD(wparam) == btnClicked) { app_command(id); return true; }
+      if (HIWORD(wparam) != sliderValueChanged) return false;
+      float db = skin_slider_pos(win, id) / (float)EQ_STEPS;
+      if (fabsf(db) < 0.8f) {                    // detent at 0 dB
+        db = 0;
+        window_t *c = get_window_item(win, id);
+        if (c) send_message(c, slSetPos, 0, (void *)(intptr_t)0);
       }
+      app_set_eq(id == SL_PREAMP ? -1 : id - SL_BAND0, db);
       invalidate_window(win);
       return true;
     }
-    case evLeftButtonUp: {
-      if (!v->pressed) return false;
-      uint16_t id = v->pressed;
-      bool inside = v->inside;
-      v->pressed = 0;
-      v->inside = false;
-      set_capture(NULL);
-      if (!eq_is_slider(id) && inside) app_command(id);
-      invalidate_window(win);
-      return true;
-    }
-    case evPointerCancel:
-      if (v && v->pressed) { v->pressed = 0; v->inside = false; set_capture(NULL); invalidate_window(win); }
-      return true;
     case evDestroy:
       if (v) { canvas_free(&v->canvas); free(v); win->userdata = NULL; }
       if (g_app && g_app->equalizer == win) g_app->equalizer = NULL;

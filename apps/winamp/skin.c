@@ -2,7 +2,6 @@
 // into skin-resolution canvases.
 
 #include "winamp.h"
-#include <orion/user/stb_image.h>
 #include <ctype.h>
 #include <sys/stat.h>
 
@@ -20,67 +19,18 @@ static const char *kTextRows[3] = {
 
 static uint32_t rgba(int r, int g, int b) { return 0xFF000000u | (uint32_t)b << 16 | (uint32_t)g << 8 | (uint32_t)r; }
 
-typedef struct { const char *name; uint8_t *data; size_t size; } skin_file_t;
-
-// ── .wsz (zip) reader: stored and deflated entries, central directory only ──
-
-static uint32_t rd16(const uint8_t *p) { return p[0] | p[1] << 8; }
-static uint32_t rd32(const uint8_t *p) { return p[0] | p[1] << 8 | p[2] << 16 | (uint32_t)p[3] << 24; }
-
-static const char *base_name(const char *path) {
-  const char *s = strrchr(path, '/'), *b = strrchr(path, '\\');
-  if (b && (!s || b > s)) s = b;
-  return s ? s + 1 : path;
-}
-
 static uint8_t *read_file(const char *path, size_t *size) {
   FILE *fp = fopen(path, "rb");
   if (!fp) return NULL;
   uint8_t *data = NULL;
   long n = fseek(fp, 0, SEEK_END) ? -1 : ftell(fp);
-  if (n > 0 && !fseek(fp, 0, SEEK_SET) && (data = malloc((size_t)n))) {
+  if (n > 0 && !fseek(fp, 0, SEEK_SET) && (data = malloc((size_t)n + 1))) {
     if (fread(data, 1, (size_t)n, fp) != (size_t)n) { free(data); data = NULL; }
+    else data[n] = 0;
   }
   fclose(fp);
   if (data) *size = (size_t)n;
   return data;
-}
-
-static uint8_t *zip_extract(const uint8_t *zip, size_t size, const char *want, size_t *out_size) {
-  if (size < 22) return NULL;
-  size_t eocd = size - 22;
-  while (eocd > 0 && rd32(zip + eocd) != 0x06054b50) eocd--;
-  if (rd32(zip + eocd) != 0x06054b50) return NULL;
-  uint32_t entries = rd16(zip + eocd + 10), at = rd32(zip + eocd + 16);
-  for (uint32_t i = 0; i < entries && at + 46 <= size; i++) {
-    const uint8_t *cd = zip + at;
-    if (rd32(cd) != 0x02014b50) break;
-    uint32_t method = rd16(cd + 10), csize = rd32(cd + 20), usize = rd32(cd + 24);
-    uint32_t nlen = rd16(cd + 28), xlen = rd16(cd + 30), clen = rd16(cd + 32), local = rd32(cd + 42);
-    char name[256];
-    snprintf(name, sizeof(name), "%.*s", (int)MIN(nlen, sizeof(name) - 1), (const char *)cd + 46);
-    at += 46 + nlen + xlen + clen;
-    if (strcasecmp(base_name(name), want) || local + 30 > size) continue;
-    const uint8_t *lh = zip + local;
-    size_t data_at = local + 30 + rd16(lh + 26) + rd16(lh + 28);
-    if (data_at + csize > size) return NULL;
-    if (method == 0) {
-      uint8_t *out = malloc(csize ? csize : 1);
-      if (out) { memcpy(out, zip + data_at, csize); *out_size = csize; }
-      return out;
-    }
-    if (method == 8) {
-      int len = 0;
-      uint8_t *out = (uint8_t *)stbi_zlib_decode_noheader_malloc((const char *)zip + data_at, (int)csize, &len);
-      if (out && (uint32_t)len != usize) { fprintf(stderr, "[wa] wsz entry %s inflated to %d of %u bytes\n", name, len, usize); fflush(stderr); }
-      if (out) *out_size = (size_t)len;
-      return out;
-    }
-    fprintf(stderr, "[wa] wsz entry %s uses unsupported method %u\n", name, method);
-    fflush(stderr);
-    return NULL;
-  }
-  return NULL;
 }
 
 // Folder lookups ignore case: skins ship MAIN.BMP, Main.bmp and main.bmp alike.
@@ -97,10 +47,12 @@ static uint8_t *dir_extract(const char *dir, const char *want, size_t *size) {
   return read_file(path, size);
 }
 
-typedef struct { const char *path; uint8_t *zip; size_t zip_size; } skin_source_t;
+typedef struct { const char *path; uint8_t *image; zip_t *zip; } skin_source_t;
 
 static uint8_t *source_extract(skin_source_t *src, const char *name, size_t *size) {
-  return src->zip ? zip_extract(src->zip, src->zip_size, name, size) : dir_extract(src->path, name, size);
+  if (!src->zip) return dir_extract(src->path, name, size);
+  int i = zip_find(src->zip, name);
+  return i < 0 ? NULL : zip_extract(src->zip, i, size);
 }
 
 static void parse_viscolor(wa_skin_t *s, const char *text) {
@@ -145,17 +97,21 @@ static void skin_defaults(wa_skin_t *s) {
 }
 
 void skin_free(wa_skin_t *s) {
-  for (int i = 0; i < SKIN_COUNT; i++) { stbi_image_free(s->bmp[i].px); s->bmp[i] = (wa_bitmap_t){0}; }
+  for (int i = 0; i < SKIN_COUNT; i++) { bitmap_free(s->bmp[i]); s->bmp[i] = NULL; }
 }
 
 bool skin_load(wa_skin_t *s, const char *path) {
-  skin_source_t src = { path, NULL, 0 };
+  skin_source_t src = { path, NULL, NULL };
   struct stat st;
   if (stat(path, &st)) { fprintf(stderr, "[wa] skin not found path=%s\n", path); fflush(stderr); return false; }
-  if (!S_ISDIR(st.st_mode) && !(src.zip = read_file(path, &src.zip_size))) {
-    fprintf(stderr, "[wa] skin read failed path=%s\n", path);
-    fflush(stderr);
-    return false;
+  if (!S_ISDIR(st.st_mode)) {
+    size_t zip_size = 0;
+    if (!(src.image = read_file(path, &zip_size)) || !(src.zip = zip_open_memory(src.image, zip_size))) {
+      fprintf(stderr, "[wa] skin read failed path=%s\n", path);
+      fflush(stderr);
+      free(src.image);
+      return false;
+    }
   }
   wa_skin_t next = {0};
   skin_defaults(&next);
@@ -164,27 +120,25 @@ bool skin_load(wa_skin_t *s, const char *path) {
     size_t size = 0;
     uint8_t *data = source_extract(&src, kSkinFiles[i], &size);
     if (!data && i == SKIN_NUMBERS) data = source_extract(&src, "nums_ex.bmp", &size);
-    int n = 0;
-    if (data) next.bmp[i].px = stbi_load_from_memory(data, (int)size, &next.bmp[i].w, &next.bmp[i].h, &n, 4);
+    if (data) next.bmp[i] = bitmap_load_memory(data, size);
     free(data);
-    if (!next.bmp[i].px) { fprintf(stderr, "[wa] skin %s missing or unreadable in %s\n", kSkinFiles[i], path); fflush(stderr); ok = false; }
+    if (!next.bmp[i]) { fprintf(stderr, "[wa] skin %s missing or unreadable in %s\n", kSkinFiles[i], path); fflush(stderr); ok = false; }
   }
   size_t size = 0;
   char *text = (char *)source_extract(&src, "viscolor.txt", &size);
-  if (text) { text = realloc(text, size + 1); text[size] = 0; parse_viscolor(&next, text); free(text); }
+  if (text) { parse_viscolor(&next, text); free(text); }
   if ((text = (char *)source_extract(&src, "pledit.txt", &size))) {
-    text = realloc(text, size + 1);
-    text[size] = 0;
     parse_hex_color(text, "Normal", &next.pl_normal);
     parse_hex_color(text, "Current", &next.pl_current);
     parse_hex_color(text, "NormalBG", &next.pl_normal_bg);
     parse_hex_color(text, "SelectedBG", &next.pl_selected_bg);
     free(text);
   }
-  free(src.zip);
+  zip_close(src.zip);
+  free(src.image);
   // A skin missing a bitmap keeps the default skin's bitmap for that sheet.
   for (int i = 0; i < SKIN_COUNT; i++) {
-    if (next.bmp[i].px) { stbi_image_free(s->bmp[i].px); s->bmp[i] = next.bmp[i]; }
+    if (next.bmp[i]) { bitmap_free(s->bmp[i]); s->bmp[i] = next.bmp[i]; }
   }
   memcpy(s->vis, next.vis, sizeof(s->vis));
   s->pl_normal = next.pl_normal; s->pl_current = next.pl_current;
@@ -192,50 +146,75 @@ bool skin_load(wa_skin_t *s, const char *path) {
   return ok;
 }
 
+// The bundled classic skin is used as shipped, as a .wsz; the unpacked folder is the fallback.
 bool skin_load_default(wa_skin_t *s) {
-  char path[1024];
+  static const char *kDefaults[] = { "base-2.91.wsz", "skin" };
   skin_defaults(s);
-  snprintf(path, sizeof(path), "%s/../share/winamp/skin", ui_get_exe_dir());
-  struct stat st;
-  if (stat(path, &st)) snprintf(path, sizeof(path), "apps/winamp/share/skin");
-  return skin_load(s, path);
+  for (int i = 0; i < (int)ARRAY_LEN(kDefaults); i++) {
+    char path[1024];
+    struct stat st;
+    snprintf(path, sizeof(path), "%s/../share/winamp/%s", ui_get_exe_dir(), kDefaults[i]);
+    if (stat(path, &st)) snprintf(path, sizeof(path), "apps/winamp/share/%s", kDefaults[i]);
+    if (!stat(path, &st) && skin_load(s, path)) return true;
+  }
+  return false;
 }
 
-// ── Canvas ──────────────────────────────────────────────────────────────────
+// ── Skin surface ────────────────────────────────────────────────────────────
+// Views address a window in skin pixels; sprites reach the screen through
+// gdi's BitBlt at g_app->pt_per_px, so no pixels are composed on the CPU.
+
+irect16_t skin_rect(irect16_t r) {
+  float pt = g_app ? g_app->pt_per_px : 1.0f;
+  int x0 = (int)lroundf(r.x * pt), y0 = (int)lroundf(r.y * pt);
+  return R(x0, y0, (int)lroundf((r.x + r.w) * pt) - x0, (int)lroundf((r.y + r.h) * pt) - y0);
+}
+
+window_t *skin_add_control(window_t *parent, const char *class_name, uint16_t id) {
+  irect16_t r = R(0, 0, 1, 1);
+  window_t *w = create_window_class("", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOTABSTOP, &r, parent, class_name, g_app->hinstance, NULL);
+  if (!w) { fprintf(stderr, "[wa] %s creation failed id=%u\n", class_name, id); fflush(stderr); return NULL; }
+  w->id = id;
+  return w;
+}
+
+void skin_place(window_t *child, irect16_t skin_px) {
+  irect16_t r = skin_rect(skin_px);
+  move_window(child, r.x, r.y);
+  resize_window(child, r.w, r.h);
+}
+
+int skin_slider_pos(window_t *parent, uint16_t id) {
+  window_t *c = get_window_item(parent, id);
+  return c ? (int)send_message(c, slGetPos, 0, NULL) : 0;
+}
+
+bool skin_slider_dragging(window_t *parent, uint16_t id) {
+  window_t *c = get_window_item(parent, id);
+  return c && send_message(c, spsIsDragging, 0, NULL);
+}
+
+void skin_button_sprites(int sheet, irect16_t up, irect16_t down, sprite_button_t *out) {
+  *out = (sprite_button_t){ .bm = g_app->skin.bmp[sheet], .up = up, .down = down };
+}
+
+void skin_toggle_sprites(int sheet, irect16_t up, irect16_t down, irect16_t on, irect16_t on_down, sprite_button_t *out) {
+  *out = (sprite_button_t){ .bm = g_app->skin.bmp[sheet], .up = up, .down = down, .on = on, .on_down = on_down, .toggle = true };
+}
 
 bool canvas_resize(wa_canvas_t *c, int w, int h) {
   if (w <= 0 || h <= 0) { fprintf(stderr, "[wa] canvas resize rejected %dx%d\n", w, h); fflush(stderr); return false; }
-  if (c->px && c->w == w && c->h == h) return true;
-  uint8_t *px = calloc((size_t)w * h, 4);
-  if (!px) { fprintf(stderr, "[wa] canvas allocation failed %dx%d\n", w, h); fflush(stderr); return false; }
-  free(c->px);
-  c->px = px; c->w = w; c->h = h;
+  c->w = w; c->h = h;
   return true;
 }
 
-void canvas_free(wa_canvas_t *c) {
-  free(c->px);
-  R_DeleteTexture(c->tex);
-  *c = (wa_canvas_t){0};
-}
+void canvas_free(wa_canvas_t *c) { *c = (wa_canvas_t){0}; }
 
-void canvas_fill(wa_canvas_t *c, irect16_t r, uint32_t color) {
-  int x0 = MAX(0, r.x), y0 = MAX(0, r.y), x1 = MIN(c->w, r.x + r.w), y1 = MIN(c->h, r.y + r.h);
-  for (int y = y0; y < y1; y++)
-    for (int x = x0; x < x1; x++) memcpy(c->px + ((size_t)y * c->w + x) * 4, &color, 4);
-}
+void canvas_fill(wa_canvas_t *c, irect16_t r, uint32_t color) { (void)c; fill_rect(color, skin_rect(r)); }
 
-// Copies a sprite; source pixels outside a short bitmap are left untouched,
-// as Winamp does for skins whose sheets are smaller than the reference.
 void canvas_blit(wa_canvas_t *c, int sheet, irect16_t src, int dx, int dy) {
-  const wa_bitmap_t *b = &g_app->skin.bmp[sheet];
-  if (!b->px || !c->px) return;
-  for (int y = 0; y < src.h; y++) {
-    int sy = src.y + y, ty = dy + y;
-    if (sy < 0 || sy >= b->h || ty < 0 || ty >= c->h) continue;
-    int x0 = MAX(0, MAX(-src.x, -dx)), x1 = MIN(src.w, MIN(b->w - src.x, c->w - dx));
-    if (x1 > x0) memcpy(c->px + ((size_t)ty * c->w + dx + x0) * 4, b->px + ((size_t)sy * b->w + src.x + x0) * 4, (size_t)(x1 - x0) * 4);
-  }
+  (void)c;
+  stretch_blt(skin_rect(R(dx, dy, src.w, src.h)), g_app->skin.bmp[sheet], src);
 }
 
 void canvas_tile(wa_canvas_t *c, int sheet, irect16_t src, irect16_t dst) {
@@ -273,14 +252,6 @@ void canvas_text(wa_canvas_t *c, const char *text, int x, int y, int max_w, int 
 
 void canvas_digit(wa_canvas_t *c, int digit, int x, int y) {
   canvas_blit(c, SKIN_NUMBERS, R(digit * 9, 0, 9, 13), x, y);
-}
-
-void canvas_present(wa_canvas_t *c, irect16_t dst) {
-  if (!c->px) return;
-  R_DeleteTexture(c->tex);
-  c->tex = R_CreateTextureSRGBA8(c->w, c->h, c->px, R_FILTER_NEAREST, R_WRAP_CLAMP);
-  if (!c->tex) { fprintf(stderr, "[wa] canvas texture creation failed %dx%d\n", c->w, c->h); fflush(stderr); return; }
-  draw_sprite_region((int)c->tex, dst, NULL, 0xFFFFFFFFu, DRAW_SPRITE_NO_ALPHA);
 }
 
 // Window-local pointer position (wparam) to canvas pixels.

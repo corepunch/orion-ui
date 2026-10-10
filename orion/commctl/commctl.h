@@ -2,6 +2,7 @@
 #define __UI_COMMCTL_H__
 
 #include <orion/user/user.h>
+#include <orion/user/gdi.h>
 #include "columnview.h"
 #include "menubar.h"
 #include "appchrome.h"
@@ -44,7 +45,32 @@ typedef struct {
   int max_val;
 } slider_range_t;
 
+// Bitmap-skinned button. Sprites are rects in `bm`, stretched to the control's frame, so the same
+// skin serves any scale. `on`/`on_down` (w == 0: fall back to up/down) show while checked.
+typedef struct {
+  const bitmap_t *bm;
+  irect16_t up, down, on, on_down;
+  bool toggle;        // reflects btnGetCheck with the on sprites
+  bool auto_check;    // a click flips the checked state; otherwise the owner drives it with btnSetCheck
+} sprite_button_t;
+
+// Bitmap-skinned slider. All coordinates are in "native" skin pixels (the control's size at 1:1) and are
+// scaled to the real frame. Frame i of the track is `track` moved by (i % columns, i / columns) * frame_step;
+// the frame follows the value, or its distance from the centre when by_magnitude (balance).
+typedef struct {
+  const bitmap_t *bm;
+  isize16_t native;
+  irect16_t track;
+  ipoint16_t frame_step;
+  int frames, columns;
+  irect16_t thumb, thumb_down;
+  irect16_t travel;   // x, y: thumb origin at the minimum; w, h: span along the axis (0 on the other)
+  bool vertical, by_magnitude;
+} sprite_slider_t;
+
 // Common control window procedures
+result_t win_spritebutton(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+result_t win_spriteslider(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 typedef struct {

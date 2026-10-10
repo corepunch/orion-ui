@@ -275,6 +275,43 @@ static uint8_t *image_apply_orientation(uint8_t *src, int *w, int *h,
   return dst;
 }
 
+// stb_image rejects RLE-compressed BMPs, which classic skins ship. Expands an 8-bit RLE8 BMP into a
+// plain bottom-up 8-bit BMP; returns NULL (without a diagnostic) for anything else.
+static uint8_t *image_expand_bmp_rle(const uint8_t *d, size_t n, size_t *out_n) {
+  if (n < 54 || d[0] != 'B' || d[1] != 'M' || image_read32_le(d + 14) != 40) return NULL;
+  uint32_t data_at = image_read32_le(d + 10), comp = image_read32_le(d + 30);
+  int w = (int)image_read32_le(d + 18), h = (int)image_read32_le(d + 22);
+  if (comp != 1 || d[28] != 8 || w <= 0 || h == 0 || data_at > n || data_at < 54) return NULL;
+  int rows = h < 0 ? -h : h;
+  size_t stride = ((size_t)w + 3) & ~(size_t)3, pixels = stride * (size_t)rows;
+  uint8_t *out = calloc(1, data_at + pixels);
+  if (!out) {
+    fprintf(stderr, "[image] RLE BMP allocation failed size=%dx%d\n", w, rows);
+    fflush(stderr);
+    return NULL;
+  }
+  memcpy(out, d, data_at);
+  out[30] = out[31] = out[32] = out[33] = 0;                       // BI_RGB
+  size_t at = data_at;
+  int x = 0, y = 0;
+  while (at + 1 < n && y < rows) {
+    int count = d[at], value = d[at + 1];
+    at += 2;
+    uint8_t *row = out + data_at + (size_t)y * stride;
+    if (count) {
+      for (int i = 0; i < count && x < w; i++) row[x++] = (uint8_t)value;
+    } else if (value == 0) { x = 0; y++; }
+    else if (value == 1) break;
+    else if (value == 2) { if (at + 1 >= n) break; x += d[at]; y += d[at + 1]; at += 2; }
+    else {
+      for (int i = 0; i < value && at + (size_t)i < n && x < w; i++) row[x++] = d[at + i];
+      at += (size_t)value + (value & 1);
+    }
+  }
+  *out_n = data_at + pixels;
+  return out;
+}
+
 uint8_t *load_image(const char *path, int *out_w, int *out_h) {
   if (!out_w || !out_h) return NULL;
   *out_w = 0;
@@ -291,6 +328,14 @@ uint8_t *load_image(const char *path, int *out_w, int *out_h) {
   }
   int channels;
   uint8_t *pixels = stbi_load(path, out_w, out_h, &channels, 4);
+  if (!pixels) {
+    FILE *f = fopen(path, "rb");
+    long len = f && !fseek(f, 0, SEEK_END) ? ftell(f) : -1;
+    uint8_t *raw = len > 0 && !fseek(f, 0, SEEK_SET) ? malloc((size_t)len) : NULL;
+    if (raw && fread(raw, 1, (size_t)len, f) == (size_t)len) pixels = load_image_memory(raw, (size_t)len, out_w, out_h);
+    free(raw);
+    if (f) fclose(f);
+  }
   if (!pixels)
     return NULL;
   return image_apply_orientation(pixels, out_w, out_h, orientation);
@@ -307,4 +352,38 @@ bool save_image_png(const char *path, const uint8_t *pixels, int w, int h) {
 bool save_image_jpg(const char *path, const uint8_t *pixels, int w, int h,
                     int quality) {
   return stbi_write_jpg(path, w, h, 4, pixels, quality) != 0;
+}
+
+uint8_t *load_image_memory(const void *data, size_t size, int *out_w, int *out_h) {
+  int n = 0;
+  *out_w = *out_h = 0;
+  if (!size) return NULL;
+  size_t flat_size = 0;
+  uint8_t *flat = image_expand_bmp_rle(data, size, &flat_size);
+  uint8_t *px = stbi_load_from_memory(flat ? flat : data, (int)(flat ? flat_size : size), out_w, out_h, &n, 4);
+  free(flat);
+  return px;
+}
+
+uint8_t *inflate_raw(const void *data, size_t size, size_t *out_size) {
+  // stb_image's inflater mis-reads the last symbols when the stream ends exactly at the buffer end,
+  // so it is given a zero-padded copy.
+  uint8_t *padded = malloc(size + 8);
+  if (!padded) {
+    fprintf(stderr, "[image] inflate allocation failed size=%zu\n", size);
+    fflush(stderr);
+    return NULL;
+  }
+  memcpy(padded, data, size);
+  memset(padded + size, 0, 8);
+  int len = 0;
+  uint8_t *out = (uint8_t *)stbi_zlib_decode_noheader_malloc((const char *)padded, (int)size + 8, &len);
+  free(padded);
+  if (!out) {
+    fprintf(stderr, "[image] inflate failed size=%zu reason=%s\n", size, stbi_failure_reason());
+    fflush(stderr);
+    return NULL;
+  }
+  *out_size = (size_t)len;
+  return out;
 }
