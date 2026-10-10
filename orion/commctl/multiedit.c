@@ -149,9 +149,10 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
     case evCreate: {
       s = (me_state_t *)allocate_window_data(win, sizeof(me_state_t));
       if (!s) return true;
-      // Explicit form heights keep the viewport fixed as text grows.
+      // Flexible unless the form gives a height without asking for flexspace;
+      // a fixed height keeps the viewport fixed as text grows.
       const form_ctrl_def_t *cd = (const form_ctrl_def_t *)lparam;
-      if (cd && cd->size.h > 0) win->flags &= ~WINDOW_FLEXSPACE;
+      if (cd && cd->size.h > 0 && !(cd->flags & WINDOW_FLEXSPACE)) win->flags &= ~WINDOW_FLEXSPACE;
       else win->flags |= WINDOW_FLEXSPACE;
       strncpy(s->buf, win->title, ME_BUF_SIZE - 1);
       s->buf[ME_BUF_SIZE - 1] = '\0';

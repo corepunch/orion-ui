@@ -896,9 +896,9 @@ static void emit_controls_ex(FILE *f, xmlNodePtr parent, const char *form, const
     read_control_attrs(c, &a); control_id(id, sizeof(id), form, a.v[A_NAME], (char *)c->name, ordinal++); ident(klass, sizeof(klass), (char *)c->name, false);
     if (has_controls(c) && !elem(c, "column")) sz = (rect_t){0};
     rect_attr(c, "padding", &pad) || rect_attr(c, "layout_padding", &pad); rect_attr(c, "margin", &mar) || rect_attr(c, "layout_margin", &mar);
-    // Auto-add WINDOW_FLEXSPACE for space and multiedit elements (WPF-style)
+    // Auto-add WINDOW_FLEXSPACE for space, and for multiedit without an explicit height (WPF-style)
     char resolved[256]; resolve_flags(resolved, sizeof(resolved), nz(a.v[A_FLAGS], "0"));
-    const char *auto_flex = (elem(c, "space") || elem(c, "multiedit")) ? " | WINDOW_FLEXSPACE" : "";
+    const char *auto_flex = (elem(c, "space") || (elem(c, "multiedit") && sz.h <= 0)) ? " | WINDOW_FLEXSPACE" : "";
     snprintf(flags, sizeof(flags), "(%s)%s%s%s", resolved, enum_parse_token(a.v[A_ORIENT], kOrient, ARRAY_LEN(kOrient), WINDOW_STACK_VERTICAL) & WINDOW_STACK_HORIZONTAL ? " | WINDOW_STACK_HORIZONTAL" : "", auto_flex, control_size_flag(c));
     snprintf(spacing, sizeof(spacing), "%u", byte_attr(a.v[A_SPACING], ORIONC_DEFAULT_SPACING));
     snprintf(font, sizeof(font), "%s", eq(a.v[A_FONT], "system") ? "FONT_SYSTEM" : eq(a.v[A_FONT], "smallest") ? "FONT_SMALLEST" : "FONT_SMALL");

@@ -582,7 +582,7 @@ static void runtime_fill_def(runtime_build_ctx_t *ctx, xmlNodePtr node,
     out->flags |= WINDOW_STACK_HORIZONTAL;
 
   if (str_ieq((const char *)node->name, "Space") ||
-      str_ieq((const char *)node->name, "MultiEdit")) {
+      (str_ieq((const char *)node->name, "MultiEdit") && out->size.h <= 0)) {
     out->flags |= WINDOW_FLEXSPACE;
   }
 
