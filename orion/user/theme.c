@@ -211,6 +211,12 @@ irect16_t theme_content_rect(theme_part_t part, irect16_t r, ctrl_state_t state)
   return rect_inset(r, ring);
 }
 
+int theme_control_extent(int regular, uint32_t style) {
+  int pct = get_theme()->control_size_pct[CONTROL_SIZE_INDEX(style)];
+  if (pct <= 0) pct = 100;
+  return MAX(1, (regular * pct + 50) / 100);
+}
+
 uint32_t theme_foreground(theme_part_t part, ctrl_state_t state) {
   if (part < 0 || part >= THEME_PART_COUNT) {
     fprintf(stderr, "[theme] foreground REJECTED part=%d state=%u\n", (int)part, (unsigned)state);

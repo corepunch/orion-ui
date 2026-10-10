@@ -198,6 +198,7 @@ typedef struct {
   int toolbar_compact_menu_gap;  // clearance kept between a compact toolbar and the menus
   int toolbar_grip_size;         // drag grip thickness of a floating toolbar or menu bar
   int toolbar_dropdown_arrow_w;  // width of a split button's arrow zone
+  int toolbar_large_inset;       // gap a bigger-than-regular button keeps from the band edges
 
   // Icon/label press offset in logical pixels.  Classic shifts content by 1
   // when a button is pressed to simulate physical depression; Modern keeps
@@ -220,6 +221,7 @@ typedef struct {
     int   glyph_size;        // largest glyph, logical pixels
     uint32_t shadow_color;   // drop shadow tint (alpha = strength)
   } plastic;
+  int control_size_pct[4];   // CONTROL_SIZE_INDEX order: regular, small, mini, large as a percentage of regular
   int card_padding_x, card_padding_y; // Card control: content inset from the face edge
   int window_shadow_blur;    // logical pixels; zero disables shadows
   ipoint16_t window_shadow_offset;
@@ -279,13 +281,15 @@ typedef struct {
   uint32_t    color;         // plastic face colour (0 = theme accent) / card plastic tint
   uint32_t    edge_color;    // THEME_PART_CARD accent edge (alpha 0 = none)
   const char *icon;          // plastic button glyph (SVG name)
-  uint32_t    control_size;  // CONTROL_SIZE_*: LARGE grows the glyph
+  uint32_t    control_size;  // CONTROL_SIZE_*: scales the glyph by control_size_pct
   bool        round;         // force a circular silhouette (BUTTON_STYLE_ROUND)
 } theme_draw_opts_t;
 // theme_draw() with opts; CTRL_PLASTIC in state selects the plastic material for buttons, toolbar buttons and cards.
 void theme_draw_ex(theme_part_t part, irect16_t r, ctrl_state_t state, const theme_draw_opts_t *opts);
 // The area a part leaves for content (≈ GetThemeBackgroundContentRect).
 irect16_t theme_content_rect(theme_part_t part, irect16_t r, ctrl_state_t state);
+// `regular` scaled to the CONTROL_SIZE_* in `style` by the theme's control_size_pct (≈ NSControlSize).
+int theme_control_extent(int regular, uint32_t style);
 void theme_default_draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color); // shared card painter for flat themes
 uint32_t theme_foreground(theme_part_t part, ctrl_state_t state);
 

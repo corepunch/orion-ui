@@ -35,7 +35,7 @@ static inline uint32_t color_with_alpha(uint32_t color, uint8_t alpha) {
 void draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color);
 // Framework internals behind theme_draw_ex(CTRL_PLASTIC); controls and apps never call these directly.
 // Single shader pass; shadow is reserved inside r, so controls never paint outside their bounds.
-// control_size (CONTROL_SIZE_*) picks the glyph size; CONTROL_SIZE_LARGE renders it CONTROL_LARGE_GROWTH bigger.
+// control_size (CONTROL_SIZE_*) scales the glyph by the theme's control_size_pct.
 void draw_plastic_button(irect16_t r, ctrl_state_t state, uint32_t color, const char *icon, uint32_t control_size, bool round);
 void draw_plastic_card(irect16_t r, ctrl_state_t state, uint32_t color);
 // Kernel entry point: plain floats only, so the renderer knows nothing about control state.

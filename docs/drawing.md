@@ -233,8 +233,8 @@ and reaches the shader as uniforms; the kernel entry `render_plastic_surface` ta
 of floats and never sees `ctrl_state_t`. `draw_plastic_button` below is the framework painter behind it:
 it draws a tinted plastic button and solid white SVG glyph in one shader pass. `color` is packed `0xAABBGGRR`; zero
 uses `brAccent`. Icon names use the SVG cache at their final draw size, avoiding a second scaling
-of the glyph mask. `CONTROL_SIZE_LARGE` rasterizes the glyph `CONTROL_LARGE_GROWTH` pixels
-bigger; toolbar items carrying that flag are the same amount bigger, centred on their row. Glyph placement and press offsets snap to device pixels, and
+of the glyph mask. `control_size` scales the glyph by the theme's `control_size_pct`
+(see the toolbar guide for the size system). Glyph placement and press offsets snap to device pixels, and
 the glyph has no emboss, highlight halo or inner shadow. The shader adds a smooth
 vertical gradient, directional button bevel and a small drop shadow.
 Normal, hover, selected, pressed and disabled states share the same allocated

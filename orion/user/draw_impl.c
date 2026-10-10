@@ -367,7 +367,7 @@ void draw_plastic_button(irect16_t r, ctrl_state_t state, uint32_t color, const 
   if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0) return;
   const theme_t *theme = get_theme();
   int shadow = MIN(theme->plastic_shadow_size, MIN(r.w, r.h) / 10);
-  int glyph_max = theme->plastic.glyph_size + ((control_size & CONTROL_SIZE_MASK) == CONTROL_SIZE_LARGE ? CONTROL_LARGE_GROWTH : 0);
+  int glyph_max = theme_control_extent(theme->plastic.glyph_size, control_size);
   int size = MAX(0, MIN(glyph_max, MIN(r.w, r.h) - 2 * shadow - 4));
   float radius = round || theme->plastic_corner_radius == CORNER_RADIUS_CIRCULAR ? MIN(r.w, r.h) * 0.5f : theme->plastic_corner_radius;
   sysicon_resolved_t glyph = {0};

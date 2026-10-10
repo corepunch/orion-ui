@@ -642,9 +642,14 @@ static void test_library_transport(void) {
     }
   }
   irect16_t play = tb->item_rects[toolbar_index(ID_PLAY)], fwd = tb->item_rects[toolbar_index(ID_FORWARD)];
-  ASSERT(play.w == fwd.w + CONTROL_LARGE_GROWTH && play.h == fwd.h + CONTROL_LARGE_GROWTH &&
-         play.y + play.h / 2 == fwd.y + fwd.h / 2 && play.y >= 0 && play.y + play.h <= titlebar_height(bar),
-         "the large play button is centred on the row and stays inside the band");
+  int inset = get_theme()->toolbar_large_inset, small = theme_control_extent(toolbar_effective_bsz(bar), CONTROL_SIZE_SMALL);
+#ifndef AX_PLATFORM_IOS
+  ASSERT_EQUAL(small, 32);
+#endif
+  ASSERT(play.w == play.h && play.y == inset && play.y + play.h == titlebar_height(bar) - inset,
+         "the large play button fills the band to the theme inset without growing it");
+  ASSERT(fwd.w == small && fwd.h == small && small < toolbar_effective_bsz(bar) && play.y + play.h / 2 == fwd.y + fwd.h / 2,
+         "rewind and forward are small and share play's centreline");
   irect16_t r = tb->item_rects[toolbar_index(ID_PLAY)];
   ui_event_t event = {.message = kEventLeftButtonDown,
     .x = (window_screen_x(bar) + r.x + r.w / 2) * UI_WINDOW_SCALE,

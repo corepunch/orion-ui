@@ -5,18 +5,6 @@
 #include "groove.h"
 #include <orion/user/toolbar.h>
 
-#define FAMILY_FLAGS (TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP) // consecutive family buttons are one radio group
-
-static const toolbar_item_t kTransportItems[] = {
-  { TOOLBAR_ITEM_BUTTON,    ID_REWIND,     "phosphor-rewind-fill",       0, 0, NULL, "Rewind (Home)" },
-  { TOOLBAR_ITEM_BUTTON,    ID_PLAY,       "phosphor-play-fill",         0, CONTROL_SIZE_LARGE, NULL, "Play / pause (Space)", 0, "phosphor-pause-fill" },
-  { TOOLBAR_ITEM_BUTTON,    ID_FORWARD,    "phosphor-fast-forward-fill", 0, 0, NULL, "Go to end (End)" },
-  { TOOLBAR_ITEM_SPACER,    0,             NULL,      0, TOOLBAR_ITEM_FLAG_FLEXSPACE, NULL, NULL },
-  // Genre filter, hidden for now: the library always shows every genre.
-  // { TOOLBAR_ITEM_SPACER,    0,          NULL,      6, 0, NULL, NULL },
-  // { TOOLBAR_ITEM_SEGMENTED, ID_GENRE,   NULL,      0, 0, "All|Dance|Hip Hop|Rave|Techno", "Genre" }, // "All", then kGenreName order
-};
-
 void transport_refresh(void) {
   g_app->shown_playing = g_app->song.playing;
   if (g_app->toolbar) send_message(g_app->toolbar, tbCheckButton, ID_LOOP, (void *)(intptr_t)g_app->song.loop); // compact toolbar
@@ -26,19 +14,10 @@ void transport_refresh(void) {
   send_message(win, tbCheckButton, ID_FAMILY(g_app->category), (void *)(intptr_t)1);
 }
 
-// The transport items, then one pictogram button per family in category_t order.
+// A library window created without the form (tests) takes the form's own toolbar:
+// the transport, then one pictogram button per family in category_t order.
 static void set_items(window_t *win) {
-  enum { N = ARRAY_LEN(kTransportItems) };
-  toolbar_item_t items[N + CAT_COUNT];
-  char icons[CAT_COUNT][16];
-  memcpy(items, kTransportItems, sizeof(kTransportItems));
-  for (int cat = 0; cat < CAT_COUNT; cat++) {
-    snprintf(icons[cat], sizeof(icons[cat]), "strip:%d", cat);
-    items[N + cat] = (toolbar_item_t){ TOOLBAR_ITEM_BUTTON, ID_FAMILY(cat), icons[cat], 0, FAMILY_FLAGS, NULL, kCategoryName[cat] };
-  }
-  bitmap_strip_t strip = block_pictogram_strip();
-  send_message(win, tbSetStrip, 0, &strip);
-  send_message(win, tbSetItems, ARRAY_LEN(items), items); // copies the icon names and tooltips
+  send_message(win, tbSetItems, (uint32_t)groove_library_window_form.toolbar_count, (void *)groove_library_window_form.toolbar_items);
 }
 
 // The iTunes-style transport buttons take the theme's neutral plastic.

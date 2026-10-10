@@ -66,9 +66,9 @@
             flags="WINDOW_AUTO_LAYOUT | WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE"
             spacing="0" padding="0">
         <Toolbar>
-          <Button name="rewind" command="transport.rewind" icon="phosphor-rewind-fill" tooltip="Rewind (Home)" />
+          <Button name="rewind" command="transport.rewind" icon="phosphor-rewind-fill" tooltip="Rewind (Home)" control-size="small" />
           <Button name="play" command="transport.play" icon="phosphor-play-fill" checked-icon="phosphor-pause-fill" tooltip="Play / pause (Space)" control-size="large" />
-          <Button name="forward" command="transport.forward" icon="phosphor-fast-forward-fill" tooltip="Go to end (End)" />
+          <Button name="forward" command="transport.forward" icon="phosphor-fast-forward-fill" tooltip="Go to end (End)" control-size="small" />
           <spacer flags="TOOLBAR_ITEM_FLAG_FLEXSPACE" />
           <Button name="family_drums" icon="strip:0" flags="TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP" tooltip="Drums" />
           <Button name="family_kick" icon="strip:1" flags="TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP" tooltip="Kicks" />

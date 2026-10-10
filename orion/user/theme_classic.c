@@ -356,6 +356,7 @@ static theme_t g_classic_theme = {
   .toolbar_compact_menu_gap  = 8,
   .toolbar_grip_size         = 12,
   .toolbar_dropdown_arrow_w  = 12,
+  .toolbar_large_inset    = 2,
   .press_icon_offset      = 1,
   .button_corner_radius   = 0,
   .window_corner_radius   = 0,
@@ -367,6 +368,7 @@ static theme_t g_classic_theme = {
   .plastic_bevel_width   = 2,
   .plastic_shadow_size   = 3,
   .plastic = { .gloss = 0.7f, .rim = 0.7f, .ink = 0.12f, .lift = 0.08f, .glyph_size = 20, .shadow_color = 0xE0000000 },
+  .control_size_pct = { 100, 84, 71, 133 }, // AppKit round bezels (regular 21, small 18, mini 15, large 28); small lands on 32 of a 38 px row
   .card_padding_x         = 8,
   .card_padding_y         = 6,
   .drag_shadow_blur       = 6,

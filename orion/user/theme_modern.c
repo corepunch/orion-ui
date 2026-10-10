@@ -413,6 +413,7 @@ static theme_t g_modern_theme = {
   .toolbar_compact_menu_gap  = 8,
   .toolbar_grip_size         = 12,
   .toolbar_dropdown_arrow_w  = 12,
+  .toolbar_large_inset    = 2,
   // Use the same reserved-space scrollbar geometry as Classic for now.  The
   // overlay/auto-hide treatment is deliberately deferred until it has a
   // complete input and layout contract.
@@ -428,6 +429,7 @@ static theme_t g_modern_theme = {
   .plastic_bevel_width   = 2,
   .plastic_shadow_size   = 3,
   .plastic = { .gloss = 1.0f, .rim = 0.55f, .ink = 0.10f, .lift = 0.10f, .glyph_size = 20, .shadow_color = 0xE0000000 },
+  .control_size_pct = { 100, 84, 71, 133 }, // AppKit round bezels (regular 21, small 18, mini 15, large 28); small lands on 32 of a 38 px row
   .card_padding_x         = 12,
   .card_padding_y         = 8,
   .window_shadow_blur     = 8,

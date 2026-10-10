@@ -493,6 +493,8 @@ static void emit_context_menus(FILE *f, xmlNodePtr contexts) {
   }
 }
 
+static const char *control_size_flag(xmlNodePtr n);
+
 static void emit_toolbar(FILE *f, xmlNodePtr toolbar, const char *symbol,
                          const char *scope_name) {
   if (toolbar) {
@@ -508,8 +510,9 @@ static void emit_toolbar(FILE *f, xmlNodePtr toolbar, const char *symbol,
       if (icon && *icon) snprintf(iconq, sizeof(iconq), "\"%s\"", icon); else snprintf(iconq, sizeof(iconq), "NULL");
       if (checked && *checked) snprintf(checkedq, sizeof(checkedq), ", 0, \"%s\"", checked); // color, checked_icon
       emit_if(f, it, false);
-      OUT("  { %s, %s, %s, %s, %s%s, %s, %s%s },\n", toolbar_type(it), id, iconq, nz(w, "0"), nz(flags, "0"),
-          elem(toolbar->parent, "activitybar") && elem(it, "button") ? " | TBSTYLE_CHECKGROUP" : "", textq, tipq, checkedq);
+      OUT("  { %s, %s, %s, %s, %s%s%s, %s, %s%s },\n", toolbar_type(it), id, iconq, nz(w, "0"), nz(flags, "0"),
+          elem(toolbar->parent, "activitybar") && elem(it, "button") ? " | TBSTYLE_CHECKGROUP" : "",
+          elem(it, "button") ? control_size_flag(it) : "", textq, tipq, checkedq);
       emit_if(f, it, true);
       free(command); free(menu); free(name); free(icon); free(w); free(flags); free(text); free(tooltip); free(checked);
     }

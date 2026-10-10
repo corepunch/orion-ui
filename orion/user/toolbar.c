@@ -46,9 +46,27 @@ bool toolbar_hit_action(const toolbar_state_t *tb, int x, int y) {
   return false;
 }
 
+static int toolbar_state_bsz(const toolbar_state_t *tb) {
+  return (tb && tb->btn_size > 0) ? tb->btn_size : get_theme()->toolbar_button_size;
+}
+
+// Caption band under the icon of a TOOLBAR_STYLE_SHOW_LABELS button.
+static int toolbar_label_extra(const toolbar_state_t *tb) {
+  return (tb && (tb->style & TOOLBAR_STYLE_SHOW_LABELS)) ? text_char_height(FONT_SMALLEST) + 2 : 0;
+}
+
+// Square cell of a button-like item: the regular button size scaled by the item's CONTROL_SIZE_*.
+// The row never grows: a bigger cell spreads into the band padding and stops toolbar_large_inset
+// short of the band edges, like the iTunes play button.
+static int toolbar_item_cell(const toolbar_state_t *tb, const toolbar_item_t *item, int padding) {
+  int bsz = toolbar_state_bsz(tb);
+  int limit = bsz + 2 * MAX(0, padding - get_theme()->toolbar_large_inset);
+  return MIN(theme_control_extent(bsz, item->style), MAX(bsz, limit));
+}
+
+// Row height: the regular cell plus the caption band.
 static int toolbar_state_item_height(const toolbar_state_t *tb) {
-  int bsz = (tb && tb->btn_size > 0) ? tb->btn_size : get_theme()->toolbar_button_size;
-  return bsz + ((tb && (tb->style & TOOLBAR_STYLE_SHOW_LABELS)) ? text_char_height(FONT_SMALLEST) + 2 : 0);
+  return toolbar_state_bsz(tb) + toolbar_label_extra(tb);
 }
 
 static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
@@ -62,7 +80,7 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
     fflush(stderr);
     return;
   }
-  int bsz = (tb->btn_size > 0) ? tb->btn_size : get_theme()->toolbar_button_size;
+  int bsz = toolbar_state_bsz(tb);
   int item_h = toolbar_state_item_height(tb);
   int padding = toolbar_effective_padding(parent);
   int spacing = (tb->style & TOOLBAR_STYLE_COMPACT) ? get_theme()->toolbar_compact_spacing : TOOLBAR_SPACING;
@@ -86,21 +104,15 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
     switch (item->type) {
       case TOOLBAR_ITEM_CUSTOM:
       case TOOLBAR_ITEM_BUTTON:
-        w = item->w > 0 ? item->w : bsz;
+      case TOOLBAR_ITEM_DROPDOWN: {
+        int cell = toolbar_item_cell(tb, item, padding);
+        w = item->w > 0 ? item->w : cell;
         if (!item->w && (tb->style & TOOLBAR_STYLE_SHOW_LABELS) && item->text)
           w = MAX(w, text_strwidth(FONT_SMALLEST, item->text) + 8);
-        if ((item->style & CONTROL_SIZE_MASK) == CONTROL_SIZE_LARGE) { // grows into the band padding, centred on the row
-          if (!item->w) w += CONTROL_LARGE_GROWTH;
-          h += CONTROL_LARGE_GROWTH;
-          if (!vertical) y -= CONTROL_LARGE_GROWTH / 2;
-        }
+        if (item->type == TOOLBAR_ITEM_DROPDOWN) w += get_theme()->toolbar_dropdown_arrow_w;
+        h = cell + toolbar_label_extra(tb);
         break;
-      case TOOLBAR_ITEM_DROPDOWN:
-        w = item->w > 0 ? item->w : bsz;
-        if (!item->w && (tb->style & TOOLBAR_STYLE_SHOW_LABELS) && item->text)
-          w = MAX(w, text_strwidth(FONT_SMALLEST, item->text) + 8);
-        w += get_theme()->toolbar_dropdown_arrow_w;
-        break;
+      }
       case TOOLBAR_ITEM_LABEL:
         w = item->w > 0 ? item->w
                         : (text_strwidth(FONT_SMALLEST, item->text ? item->text : "") + TOOLBAR_LABEL_PADDING);
@@ -134,6 +146,7 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
         w = 0;
         break;
     }
+    if (!vertical) y = base_y + item_h / 2 - h / 2; // every item is centred on the row's axis
 
     if (vertical) {
       bool small = tb->columns <= 1 && (item->style & TOOLBAR_ITEM_FLAG_SMALL) != 0 &&
@@ -333,7 +346,7 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
                      item->ident != TB_WINDOW_CLOSE && item->ident != TB_WINDOW_COLLAPSE;
       if (plastic) {
         irect16_t face = local;
-        if (tb->style & TOOLBAR_STYLE_SHOW_LABELS) face.h -= text_char_height(FONT_SMALLEST) + 2;
+        face.h -= toolbar_label_extra(tb);
         theme_draw_ex(THEME_PART_TOOLBAR_BUTTON, face, state | CTRL_PLASTIC,
                       &(theme_draw_opts_t){.color = item->color, .icon = icon, .control_size = item->style & CONTROL_SIZE_MASK});
       } else if (tb->style & TOOLBAR_STYLE_COMPACT) {
@@ -344,8 +357,7 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       }
       int poff = is_pressed ? th->press_icon_offset : 0;
       irect16_t icon_rect = local;
-      if (tb->style & TOOLBAR_STYLE_SHOW_LABELS)
-        icon_rect.h = (tb->btn_size > 0) ? tb->btn_size : get_theme()->toolbar_button_size;
+      icon_rect.h -= toolbar_label_extra(tb);
       if (item->ident == TB_WINDOW_CLOSE || item->ident == TB_WINDOW_COLLAPSE)
         draw_theme_icon_in_rect(item->ident == TB_WINDOW_CLOSE ? THEME_ICON_CLOSE : THEME_ICON_RESTORE,
                                 icon_rect, get_sys_color(brTextNormal));
@@ -373,8 +385,7 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       int btn_poff = btn_pressed ? th->press_icon_offset : 0;
       const char *icon_name = item->icon ? item->icon : "missing";
       irect16_t icon_rect = btn_part;
-      if (tb->style & TOOLBAR_STYLE_SHOW_LABELS)
-        icon_rect.h = (tb->btn_size > 0) ? tb->btn_size : get_theme()->toolbar_button_size;
+      icon_rect.h -= toolbar_label_extra(tb);
       draw_toolbar_icon_in_rect(win, tb, icon_name, icon_rect, btn_poff, disabled);
       if ((tb->style & TOOLBAR_STYLE_SHOW_LABELS) && item->text) {
         int tx = (btn_part.w - text_strwidth(FONT_SMALLEST, item->text)) / 2 + btn_poff;
@@ -614,8 +625,7 @@ toolbar_state_t *toolbar_get_state(window_t *win) {
 }
 
 int toolbar_effective_bsz(window_t const *win) {
-  toolbar_state_t *tb = window_toolbar_state((window_t *)win);
-  return (tb && tb->btn_size > 0) ? tb->btn_size : get_theme()->toolbar_button_size;
+  return toolbar_state_bsz(window_toolbar_state((window_t *)win));
 }
 
 int toolbar_effective_padding(window_t const *win) {
@@ -843,9 +853,12 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
         return false;
       }
       int pad = toolbar_effective_padding(win), w = 2 * pad, h = 2 * pad;
+      bool vertical = tb->orientation == TOOLBAR_VERTICAL;
+      if (!vertical) h = toolbar_state_item_height(tb) + 2 * pad; // the band; large cells stay inside it
       for (int i = 0; i < tb->item_count; i++) {
-        w = MAX(w, tb->item_rects[i].x + tb->item_rects[i].w + pad);
-        h = MAX(h, tb->item_rects[i].y + tb->item_rects[i].h + pad);
+        irect16_t r = tb->item_rects[i];
+        w = MAX(w, r.x + r.w + pad);
+        h = MAX(h, vertical ? r.y + r.h + pad : r.y + r.h);
       }
       *size = (isize16_t){w, h};
       return true;

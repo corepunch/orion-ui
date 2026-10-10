@@ -508,6 +508,19 @@ static int runtime_count_children(xmlNodePtr node) {
 static form_ctrl_def_t *runtime_build_defs(runtime_build_ctx_t *ctx, xmlNodePtr parent,
                                            int *out_count);
 
+// control-size="mini|small|regular|large" as a CONTROL_SIZE_* style; anything else is reported and regular.
+static flags_t runtime_control_size(runtime_build_ctx_t *ctx, xmlNodePtr node) {
+  char *control_size = runtime_xml_attr_dup(ctx, node, "control-size");
+  if (!control_size) control_size = runtime_xml_attr_dup(ctx, node, "control_size");
+  if (!control_size || str_ieq(control_size, "regular")) return CONTROL_SIZE_REGULAR;
+  if (str_ieq(control_size, "mini"))  return CONTROL_SIZE_MINI;
+  if (str_ieq(control_size, "small")) return CONTROL_SIZE_SMALL;
+  if (str_ieq(control_size, "large")) return CONTROL_SIZE_LARGE;
+  fprintf(stderr, "[form] invalid control-size='%s' class=%s; using regular\n", control_size, (const char *)node->name);
+  fflush(stderr);
+  return CONTROL_SIZE_REGULAR;
+}
+
 static void runtime_fill_activity_params(runtime_build_ctx_t *ctx, xmlNodePtr node, const void **out) {
   xmlNodePtr toolbar = NULL;
   for (xmlNodePtr c = node->children; c; c = c->next)
@@ -526,7 +539,7 @@ static void runtime_fill_activity_params(runtime_build_ctx_t *ctx, xmlNodePtr no
   for (xmlNodePtr c = toolbar->children; c; c = c->next) {
     if (c->type != XML_ELEMENT_NODE || !str_ieq((const char *)c->name, "Button")) continue;
     items[params->count++] = (toolbar_item_t){
-      .type = TOOLBAR_ITEM_BUTTON, .ident = ctx->next_generated_id++, .style = TBSTYLE_CHECKGROUP,
+      .type = TOOLBAR_ITEM_BUTTON, .ident = ctx->next_generated_id++, .style = TBSTYLE_CHECKGROUP | runtime_control_size(ctx, c),
       .icon = runtime_xml_attr_dup(ctx, c, "icon"), .text = runtime_xml_attr_dup(ctx, c, "text"),
       .tooltip = runtime_xml_attr_dup(ctx, c, "tooltip"), .checked_icon = runtime_xml_attr_dup(ctx, c, "checked-icon")
     };
@@ -559,17 +572,7 @@ static void runtime_fill_def(runtime_build_ctx_t *ctx, xmlNodePtr node,
   out->id = (uint32_t)runtime_xml_attr_int(node, "id", 0);
   out->size.w = (int16_t)runtime_xml_attr_int(node, "width", 0);
   out->size.h = (int16_t)runtime_xml_attr_int(node, "height", 0);
-  out->flags = runtime_parse_flags(flags_expr);
-  char *control_size = runtime_xml_attr_dup(ctx, node, "control-size");
-  if (!control_size) control_size = runtime_xml_attr_dup(ctx, node, "control_size");
-  if (control_size && str_ieq(control_size, "mini")) out->flags |= CONTROL_SIZE_MINI;
-  else if (control_size && str_ieq(control_size, "small")) out->flags |= CONTROL_SIZE_SMALL;
-  else if (control_size && str_ieq(control_size, "large")) out->flags |= CONTROL_SIZE_LARGE;
-  else if (control_size && !str_ieq(control_size, "regular")) {
-    fprintf(stderr, "[form] invalid control-size='%s' class=%s; using regular\n",
-            control_size, (const char *)node->name);
-    fflush(stderr);
-  }
+  out->flags = runtime_parse_flags(flags_expr) | runtime_control_size(ctx, node);
   out->text = text ? text : "";
   out->name = name ? name : "";
   out->layout_spacing = (uint8_t)runtime_xml_attr_int(node, "spacing", 4);
